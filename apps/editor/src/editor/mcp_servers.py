@@ -372,7 +372,17 @@ async def cover_image(request: Request) -> Response:
     return FileResponse(cov["file_path"], headers={"x-cover-source": cov["source"]})
 
 
-routes = [Route("/health", lambda _r: JSONResponse({"ok": True, "servers": list(SERVERS)})),
+async def cover_requests(_request: Request) -> Response:
+    return JSONResponse({"books": await asyncio.to_thread(catalog.cover_requests)})
+
+
+async def cover_store(request: Request) -> Response:
+    return JSONResponse(await asyncio.to_thread(catalog.store_crm_lookup, await request.json()))
+
+
+routes = [Route("/catalog/cover-requests", cover_requests),
+          Route("/catalog/covers", cover_store, methods=["POST"]),
+          Route("/health", lambda _r: JSONResponse({"ok": True, "servers": list(SERVERS)})),
           Route("/covers/{book_id}", cover_image)]
 routes += [Mount(f"/{name}", app=srv.streamable_http_app(transport_security=security))
            for name, srv in SERVERS.items()]

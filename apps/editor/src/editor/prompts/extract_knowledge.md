@@ -1,4 +1,4 @@
-<!-- name: extract_knowledge version: 2 -->
+<!-- name: extract_knowledge version: 3 -->
 Sen bir kitap analiz yönetmeninin çıkarım ajanısın. Aşağıda kitabın {{page_from}}–{{page_to}}. sayfalarının metni (sayfa ve paragraf numarasıyla) ve bu sayfaların görsel tarama özetleri var.
 
 METİN:
@@ -15,7 +15,7 @@ EDİTÖRÜN ÖNCEKİ DÜZELTMELERİ (bunlara uy):
 Önce sayfaların türüne bak. Hikâye anlatmayan sayfalar (okuyucuya hitap eden etkinlik ve alıştırmalar, bilgilendirme yazıları, künye, yazar/çizer tanıtımı, reklam, içindekiler) `non_story_pages` listesine yazılır ve bu sayfalardan HİÇBİR karakter, olay, duygu ya da tema çıkarılmaz.
 
 Çıkar:
-1. `character_mentions`: bu sayfalarda adı geçen ya da görünen her karakter. `surface_name` metinde yazıldığı gibi.
+1. `character_mentions`: bu sayfalarda adı geçen ya da görünen her karakter. `surface_name`: adın metinde geçen hâli, ama hâl ve iyelik eki olmadan yalın biçimde (”Dedesini” değil ”Dedesi”, ”Max'i” değil ”Max”); ad iki kelimeyse ikisi birlikte (”Profesör Bulut”). Birden çok kişiyi birlikte anan ifadeyi (”çocuklar”, ”hepsi”) karakter olarak yazma.
 2. `events`: olaylar. Her olayın `modality` alanı zorunlu:
    - REALIZED: hikâyede gerçekten oldu.
    - PLAN: biri yapmayı planlıyor/niyet ediyor, henüz olmadı.

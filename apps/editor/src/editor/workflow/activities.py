@@ -121,6 +121,11 @@ async def resolve_identity(generation_id: str) -> dict:
 
 
 @activity.defn
+async def visual_identity(generation_id: str) -> dict:
+    return await vision.resolve_visual_identity(generation_id)
+
+
+@activity.defn
 async def continuity_checks(generation_id: str) -> dict:
     """Deep model on characters seen on >= 3 pages (analysis §6: süreklilik)."""
     rows = await _t(db.all_rows,
@@ -229,7 +234,7 @@ async def release_models(aliases_: list[str]) -> dict:
     return r.json()
 
 
-ALL = [build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+ALL = [visual_identity, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

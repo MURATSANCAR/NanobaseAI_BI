@@ -313,79 +313,81 @@ def save_emotion(generation_id: str, character: str, page: int, emotion: str, in
 
 # ------------------------------------------------------ identity merge
 async def resolve_character_identity(generation_id: str) -> dict:
-    """Mentions -> characters. CONFIRMED only with >= 0.85 and evidence on
-    at least two pages; otherwise CANDIDATE ("Belirsiz karakter kesin kimlik
-    olarak kaydedilemez")."""
+    """Names are resolved from the TEXT only. The model groups text mentions; the
+    alias list is not the model's to write: it is exactly the set of names under
+    which the merged mentions occur in the book, so a figure label or a note can
+    never become an alias. Appearance is not part of identity here; drawn figures are
+    attached afterwards by reference images (vision.resolve_visual_identity).
+    CONFIRMED needs >= 0.85 and evidence on at least two pages."""
     ms = db.all_rows(
-        "SELECT cm.id, cm.page_no, cm.surface_name, cm.via, cm.appearance, cm.resolution,"
-        " cm.confidence, e.quote FROM character_mention cm JOIN evidence e ON e.id=cm.evidence_id"
-        " WHERE cm.generation_id=%s AND cm.character_id IS NULL ORDER BY cm.page_no", generation_id)
+        "SELECT cm.id, cm.page_no, cm.surface_name, cm.confidence, e.quote FROM character_mention cm"
+        " JOIN evidence e ON e.id=cm.evidence_id WHERE cm.generation_id=%s AND cm.character_id IS NULL"
+        " AND cm.via IN ('TEXT','BOTH') AND cm.surface_name IS NOT NULL ORDER BY cm.page_no",
+        generation_id)
     if not ms:
         return {"characters": 0}
     short = {str(m["id"]): f"m{i}" for i, m in enumerate(ms)}
     back = {v: k for k, v in short.items()}
-    lines = [f"{short[str(m['id'])]} | s{m['page_no']} | {m['surface_name'] or '(adsız)'} | {m['via']}"
-             f"{' | BELİRSİZ' if m['resolution'] == 'UNCERTAIN' else ''} | "
-             f"{json.dumps(m['appearance'], ensure_ascii=False)[:200]} | “{m['quote'][:160]}”"
-             for m in ms]
+    lines = [f"{short[str(m['id'])]} | s{m['page_no']} | {m['surface_name']} | “{m['quote'][:200]}”" for m in ms]
     ref, body = prompts.render("resolve_identity", mentions="\n".join(lines),
                                corrections=corrections_text(generation_id))
     out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
                                                  prompt=ref, schema=schemas.IDENTITY,
                                                  max_tokens=16000, temperature=0.0, thinking=True)
     by_id = {str(m["id"]): m for m in ms}
-    conflicted = {x["mention_id"] for x in out["conflicts"]}
+    conflicted = {back[x["mention_id"]] for x in out["conflicts"] if x["mention_id"] in back}
+    claimed: set[str] = set()
     made = []
     with db.tx() as c:
-        idx = ledger.PageIndex.load(c, generation_id)
         for ch in out["characters"]:
-            mids = [back[x] for x in ch["mention_ids"] if x in back and back[x] in by_id]
+            mids = [back[x] for x in ch["mention_ids"] if x in back and back[x] not in claimed]
             if not mids:
                 continue
-            # pages that count as evidence of this character: mentions whose own identity
-            # is not uncertain (an unnamed cover figure does not set the first page)
-            sure = sorted({by_id[m]["page_no"] for m in mids if by_id[m]["resolution"] != "UNCERTAIN"})
-            pages = sure or sorted({by_id[m]["page_no"] for m in mids})
+            claimed.update(mids)
+            # the names this character carries in the book, most frequent first
+            counts: dict[str, list] = {}
+            for m in mids:
+                n = by_id[m]["surface_name"].strip()
+                counts.setdefault(ledger.norm(n), [n, 0])[1] += 1
+            names = [v[0] for v in sorted(counts.values(), key=lambda v: -v[1])]
+            canonical = ch["canonical_name"].strip()
+            if ledger.norm(canonical) not in counts:        # the model may not invent a name
+                canonical = names[0]
+            aliases = [n for n in names if ledger.norm(n) != ledger.norm(canonical)]
+            pages = sorted({by_id[m]["page_no"] for m in mids})
             conf = float(ch["identity_confidence"])
             if len(pages) < 2:
                 conf = min(conf, 0.7)
-            status = "CONFIRMED" if conf >= 0.85 and not (set(ch["mention_ids"]) & conflicted) \
-                else "CANDIDATE"
+            status = "CONFIRMED" if conf >= 0.85 and not (set(mids) & conflicted) else "CANDIDATE"
             evs = []
             for m in mids[:8]:
                 e = c.execute("SELECT evidence_id FROM character_mention WHERE id=%s", (m,)).fetchone()
                 evs.append((str(e["evidence_id"]), True, by_id[m]["page_no"]))
             cid = ledger.save_claim(
-                c, generation_id, kind="CHARACTER_IDENTITY", subject=ch["canonical_name"],
-                claim=f"{ch['canonical_name']}" + (f" (diğer adlar: {', '.join(ch['aliases'])})"
-                                                  if ch["aliases"] else "") + f": {ch['description']}",
+                c, generation_id, kind="CHARACTER_IDENTITY", subject=canonical,
+                claim=canonical + (f" (diğer adlar: {', '.join(aliases)})" if aliases else "")
+                + f": {ch['description']}",
                 evidence=evs, confidence=conf, created_by="knowledge:identity", model_call_id=call_id,
-                payload={"merge_basis": ch["merge_basis"], "aliases": ch["aliases"],
-                         "identity_status": status})
+                payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status})
             row = c.execute(
                 "INSERT INTO character(generation_id, canonical_name, aliases, description,"
                 " identity_status, identity_confidence, first_page, claim_id) VALUES"
                 " (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-                (generation_id, ch["canonical_name"], ch["aliases"], ch["description"], status,
-                 conf, pages[0], cid)).fetchone()
+                (generation_id, canonical, aliases, ch["description"], status, conf, pages[0], cid)).fetchone()
             for m in mids:
-                mc = float(by_id[m]["confidence"])
-                res = "RESOLVED" if (mc >= 0.75 and conf >= 0.75 and m not in {back.get(x) for x in conflicted}
-                                     and by_id[m]["resolution"] != "UNCERTAIN") else "UNCERTAIN"
+                sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted
                 c.execute("UPDATE character_mention SET character_id=%s, resolution=%s WHERE id=%s",
-                          (row["id"], res, m))
-            made.append({"name": ch["canonical_name"], "status": status, "confidence": conf,
+                          (row["id"], "RESOLVED" if sure else "UNCERTAIN", m))
+            made.append({"name": canonical, "aliases": aliases, "status": status, "confidence": conf,
                          "pages": pages[:12]})
             if status != "CONFIRMED" and len(pages) >= 3 and cid:
                 ledger.queue_review(c, generation_id, claim_id=cid, priority=2,
                                     reason=f"Karakter kimliği kesinleşmedi ({conf:.2f}): "
-                                           f"{ch['canonical_name']} — {ch['merge_basis']}")
-        for x in out["conflicts"]:
-            m = back.get(x["mention_id"])
-            if m:
-                c.execute("UPDATE character_mention SET resolution='UNCERTAIN' WHERE id=%s", (m,))
+                                           f"{canonical} — {ch['merge_basis']}")
+        for m in conflicted:
+            c.execute("UPDATE character_mention SET resolution='UNCERTAIN' WHERE id=%s", (m,))
     return {"characters": len(made), "confirmed": sum(1 for m in made if m["status"] == "CONFIRMED"),
-            "unresolved_mentions": len(out["unresolved_mention_ids"]), "conflicts": len(out["conflicts"]),
+            "unresolved_mentions": len(ms) - len(claimed), "conflicts": len(out["conflicts"]),
             "list": made}
 
 

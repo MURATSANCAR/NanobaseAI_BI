@@ -124,6 +124,9 @@ BOOK_METADATA = obj({"fields": arr(obj({
                                          "ISBN", "AGE_RANGE", "GENRE", "EDITION"]},
     "value": STR, "page": INT, "quote": STR}))})
 
+MATCH_FIGURES = obj({"matches": arr(obj({
+    "figure": STR, "reference": STR, "confidence": NUM, "reason": STR}))})
+
 CONTRADICTIONS = obj({"candidates": arr(obj({
     "kind": {"type": "string", "enum": ["TIMELINE", "CHARACTER", "TEXT_VISUAL",
                                         "CONTINUITY", "IDENTITY"]},

@@ -81,7 +81,9 @@ class BookFullAnalysis:
             # 8. Karakter kimliklerini birleştirme (+ süreklilik kontrolü, derin model)
             await self.step(8, "Karakter kimlikleri")
             ident = await self.act("resolve_identity", gid)
-            await self.step(8, "Karakter sürekliliği", {"characters": ident.get("characters")})
+            await self.step(8, "Görsel kimlik (referans eşleştirme)", {"characters": ident.get("characters")})
+            vis = await self.act("visual_identity", gid)
+            await self.step(8, "Karakter sürekliliği", vis)
             cont = await self.act("continuity_checks", gid)
             await self.act("release_models", ["book-vision-deep"], timeout=SHORT)
             # 9. Gerçekleşmiş olay / plan / hayal / şaka ayrımı
@@ -124,7 +126,7 @@ class BookFullAnalysis:
             except ActivityError as e:
                 card, failures["catalog_card"] = None, [str(e.cause or e)[:500]]
             summary = {"generation_id": gid, "pages": len(pages), "ocr_pages": len(man["needs_ocr"]),
-                       "uncertain_pages": uncertain, "extract": ext, "identity": ident,
+                       "uncertain_pages": uncertain, "extract": ext, "identity": ident, "visual_identity": vis,
                        "continuity": cont, "modality": mod, "merge": mrg, "narrative_roles": roles, "emotions_themes": emo,
                        "index": idx, "book_summary": book, "critic": crit, "contradictions": con,
                        "regression_passed": reg["passed"], "report_id": rep["report_id"], "catalog_card": card,

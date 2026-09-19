@@ -307,6 +307,143 @@ async def compare_character_appearances(generation_id: str, character: str,
     return {"character": character, "pages": pages, **out}
 
 
+def _crop(png_path: str, bbox: list[int], out: Path) -> Path:
+    """Figure crop (with a small margin) used as a reference image."""
+    import pymupdf
+    pm = pymupdf.Pixmap(png_path)
+    mx, my = (bbox[2] - bbox[0]) * 0.08, (bbox[3] - bbox[1]) * 0.08
+    rect = pymupdf.IRect(max(0, int((bbox[0] - mx) / 1000 * pm.width)), max(0, int((bbox[1] - my) / 1000 * pm.height)),
+                         min(pm.width, int((bbox[2] + mx) / 1000 * pm.width)),
+                         min(pm.height, int((bbox[3] + my) / 1000 * pm.height)))
+    sub = pymupdf.Pixmap(pm.colorspace, rect, pm.alpha)
+    sub.copy(pm, rect)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    sub.save(str(out))
+    return out
+
+
+async def resolve_visual_identity(generation_id: str) -> dict:
+    """Who a drawn figure is, decided by reference images instead of by the scan's
+    own guess (measured: in scenes with several children the scan swaps them).
+
+    1. Anchors: a page with exactly one drawn figure whose name is grounded in the text
+       on/next to that page and belongs to a text character. Its crop is a reference.
+    2. Every other figure is shown to book-vision-deep next to the reference crops and
+       matched by appearance, or left NONE.
+    Only anchored and reference-matched figures become RESOLVED; the rest stay uncertain
+    and unattached, so continuity checks and appearance profiles never mix characters."""
+    chars = db.all_rows("SELECT id, canonical_name, aliases FROM character WHERE generation_id=%s",
+                        generation_id)
+    figs = db.all_rows(
+        "SELECT cm.id, cm.page_no, cm.surface_name, cm.resolution, cm.confidence, vr.bbox, vr.label"
+        " FROM character_mention cm JOIN evidence e ON e.id=cm.evidence_id JOIN visual_region vr ON"
+        " vr.id=e.region_id WHERE cm.generation_id=%s AND cm.via='VISUAL' ORDER BY cm.page_no, vr.id",
+        generation_id)
+    if not chars or not figs:
+        return {"figures": len(figs), "anchors": 0, "matched": 0}
+    gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
+    bv = str(gen["book_version_id"])
+    name_to: dict[str, set] = {}
+    for ch in chars:
+        for n in [ch["canonical_name"], *ch["aliases"]]:
+            name_to.setdefault(ledger.norm(n), set()).add(str(ch["id"]))
+    unique = {n: next(iter(v)) for n, v in name_to.items() if len(v) == 1}
+    cname = {str(ch["id"]): ch["canonical_name"] for ch in chars}
+    by_page: dict[int, list] = {}
+    for f in figs:
+        by_page.setdefault(f["page_no"], []).append(f)
+    gallery: dict[str, Path] = {}
+    gdir = Path(render_page(bv, figs[0]["page_no"])["path"]).parent / "gallery" / generation_id
+    stats = {"figures": len(figs), "anchors": 0, "matched": 0, "scan_name_corrected": 0,
+             "left_uncertain": 0, "characters_with_reference": 0}
+    anchored_pages = set()
+    with db.tx() as c:
+        c.execute("UPDATE character_mention SET character_id=NULL WHERE generation_id=%s AND via='VISUAL'",
+                  (generation_id,))
+        for page, fs in by_page.items():
+            f = fs[0]
+            cid = unique.get(ledger.norm(f["surface_name"] or ""))
+            if len(fs) == 1 and cid and f["resolution"] != "UNCERTAIN" and float(f["confidence"]) >= 0.75:
+                anchored_pages.add(page)
+                stats["anchors"] += 1
+                c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED',"
+                          " appearance = appearance || %s WHERE id=%s",
+                          (cid, db.J({"identified_by": "anchor"}), f["id"]))
+                if cid not in gallery:
+                    gallery[cid] = _crop(render_page(bv, page)["path"], f["bbox"], gdir / f"{cid}-p{page}.png")
+    stats["characters_with_reference"] = len(gallery)
+    if not gallery:
+        with db.tx() as c:
+            n = c.execute("UPDATE character_mention SET resolution='UNCERTAIN' WHERE generation_id=%s AND"
+                          " via='VISUAL' AND character_id IS NULL", (generation_id,)).rowcount
+        stats["left_uncertain"] = n
+        return stats
+    with db.tx() as c:
+        idx = ledger.PageIndex.load(c, generation_id)
+    sem = asyncio.Semaphore(settings().deep_concurrency * 2)
+
+    async def match(page: int, fs: list[dict]) -> tuple[list[dict], dict]:
+        near = " ".join(idx.text.get(p, "") for p in (page - 1, page, page + 1))
+        refs = sorted(gallery, key=lambda cid: -sum(1 for n, x in unique.items() if x == cid and n in near))[:5]
+        ref_ids = {f"R{i + 1}": cid for i, cid in enumerate(refs)}
+        parts: list[dict] = []
+        for rid, cid in ref_ids.items():
+            parts += [{"type": "text", "text": f"Referans {rid}: {cname[cid]}"},
+                      image_part(gallery[cid].read_bytes())]
+        fig_ids = {f"F{i + 1}": f for i, f in enumerate(fs)}
+        ref, body = prompts.render(
+            "match_figures", page_no=str(page),
+            references=", ".join(f"{r} = {cname[cid]}" for r, cid in ref_ids.items()),
+            figures="\n".join(f"{k}: kutu {f['bbox']}" for k, f in fig_ids.items()))
+        parts += [{"type": "text", "text": f"Sayfa {page}:"},
+                  image_part(Path(render_page(bv, page, 1200)["path"]).read_bytes()),
+                  {"type": "text", "text": body}]
+        async with sem:
+            out, _ = await Llm(generation_id).chat(
+                "book-vision-deep", [{"role": "user", "content": parts}], prompt=ref,
+                schema=schemas.MATCH_FIGURES, pages=[page], max_tokens=8192, temperature=0.0)
+        return [{"fig": fig_ids.get(m["figure"]), "cid": ref_ids.get(m["reference"]),
+                 "conf": float(m["confidence"]), "reason": m["reason"]} for m in out["matches"]], fig_ids
+
+    todo = [(p, fs) for p, fs in by_page.items() if p not in anchored_pages]
+    results = await asyncio.gather(*(match(p, fs) for p, fs in todo), return_exceptions=True)
+    with db.tx() as c:
+        for (page, fs), res in zip(todo, results):
+            chosen: dict[str, dict] = {}
+            if not isinstance(res, Exception):
+                for m in res[0]:
+                    if m["fig"] and m["cid"] and m["conf"] >= 0.75 and \
+                            m["conf"] > chosen.get(m["cid"], {"conf": 0})["conf"]:
+                        chosen[m["cid"]] = m            # one figure per reference: the surest
+            hit = {str(m["fig"]["id"]): (cid, m) for cid, m in chosen.items()}
+            for f in fs:
+                got = hit.get(str(f["id"]))
+                if got:
+                    cid, m = got
+                    scan = unique.get(ledger.norm(f["surface_name"] or ""))
+                    if scan and scan != cid:
+                        stats["scan_name_corrected"] += 1
+                    stats["matched"] += 1
+                    c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED',"
+                              " confidence=%s, appearance = appearance || %s WHERE id=%s",
+                              (cid, min(m["conf"], 0.95), db.J({"identified_by": "reference",
+                               "scan_name": f["surface_name"], "match_reason": m["reason"][:400]}), f["id"]))
+                else:
+                    stats["left_uncertain"] += 1
+                    c.execute("UPDATE character_mention SET character_id=NULL, resolution='UNCERTAIN',"
+                              " confidence=LEAST(confidence, 0.6) WHERE id=%s", (f["id"],))
+        # appearance profile: only what was seen on figures that are surely this character
+        for ch in chars:
+            obs = c.execute("SELECT page_no, appearance FROM character_mention WHERE character_id=%s AND"
+                            " via='VISUAL' AND resolution='RESOLVED' ORDER BY page_no", (ch["id"],)).fetchall()
+            c.execute("UPDATE character SET appearance=%s WHERE id=%s",
+                      (db.J({"observations": [{"page": o["page_no"], **{k: v for k, v in o["appearance"].items()
+                                                                        if k in ("hair", "skin", "age_look", "clothes",
+                                                                                 "colors", "distinctive")}}
+                                              for o in obs]}), ch["id"]))
+    return stats
+
+
 async def scan_pages(generation_id: str, pages: list[int], depth: str, concurrency: int,
                      on_done=None) -> list[dict]:
     sem = asyncio.Semaphore(concurrency)

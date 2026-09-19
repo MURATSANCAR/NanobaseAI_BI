@@ -120,6 +120,61 @@ def set_uploaded_cover(book_id: str, file_name: str, added_by: str) -> dict:
     return _store_cover(book_id, "UPLOADED", dest, None, added_by)
 
 
+PRIORITY = {"UPLOADED": 3, "CRM": 2, "PDF_PAGE": 1}
+
+
+def cover_requests() -> list[dict]:
+    """Books whose current cover is not an editor upload: the CRM connector looks these up
+    (again on every run, so a newer CRM image replaces an older one)."""
+    rows = db.all_rows(
+        "SELECT c.book_id, c.title, c.metadata, cv.source, cv.source_date FROM book_card c LEFT JOIN"
+        " book_cover cv ON cv.book_id=c.book_id AND cv.is_current WHERE c.is_current AND"
+        " coalesce(cv.source,'PDF_PAGE') <> 'UPLOADED'")
+    return [{"book_id": str(r["book_id"]), "title": r["title"],
+             "isbns": [x["value"] for x in (r["metadata"] or {}).get("ISBN", [])],
+             "current_source": r["source"], "current_date": str(r["source_date"]) if r["source_date"] else None}
+            for r in rows]
+
+
+def store_crm_lookup(rep: dict) -> dict:
+    """Result of one CRM lookup. A fetched image becomes the book's cover unless an editor
+    uploaded one, or the CRM image we already hold is the same or newer."""
+    import base64
+    from datetime import datetime
+    book_id = rep["book_id"]
+    outcome, stored = rep["outcome"], None
+    if outcome == "STORED":
+        data = base64.b64decode(rep["image_b64"])
+        chosen = rep["chosen"]
+        cur = current_cover(book_id)
+        cur_full = db.one("SELECT source, source_date, sha256 FROM book_cover WHERE book_id=%s AND is_current",
+                          book_id) if cur else None
+        sha = hashlib.sha256(data).hexdigest()
+        when = datetime.fromisoformat(chosen["date"])
+        if cur_full and cur_full["source"] == "UPLOADED":
+            outcome = "KEPT_UPLOADED"
+        elif cur_full and cur_full["source"] == "CRM" and (cur_full["sha256"] == sha or (
+                cur_full["source_date"] and cur_full["source_date"].replace(tzinfo=None) >= when.replace(tzinfo=None))):
+            outcome = "KEPT_CURRENT"
+        else:
+            bv = db.one("SELECT id FROM book_version WHERE book_id=%s ORDER BY created_at DESC LIMIT 1", book_id)
+            ext = Path(rep.get("file_name") or "cover.jpg").suffix.lower()
+            if ext not in COVER_EXT:
+                ext = ".jpg"
+            dest = _book_dir(str(bv["id"])) / f"cover-crm-{sha[:12]}{ext}"
+            dest.write_bytes(data)
+            stored = _store_cover(book_id, "CRM", dest, None, "crm-connector")
+            db.one("UPDATE book_cover SET source_date=%s, source_ref=%s WHERE id=%s RETURNING id", when,
+                   db.J({"crm_book_id": rep.get("crm_book_id"), "matched_by": rep.get("matched_by"),
+                         "kind": chosen["kind"], "path": chosen["path"], "name": chosen.get("name")}),
+                   stored["cover_id"])
+    db.one("INSERT INTO cover_lookup(book_id, matched_by, crm_book_id, crm_title, candidates, chosen, outcome,"
+           " detail) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id", book_id, rep.get("matched_by"),
+           rep.get("crm_book_id"), rep.get("crm_title"), db.J(rep.get("candidates") or []),
+           db.J(rep["chosen"]) if rep.get("chosen") else None, outcome, rep.get("detail"))
+    return {"book_id": book_id, "outcome": outcome, "cover": stored}
+
+
 def ensure_cover(book_id: str, generation_id: str) -> dict | None:
     """Until a cover is uploaded: the most illustrated front-matter page of the PDF
     (else the most illustrated page of the book) stands in, marked PDF_PAGE."""
