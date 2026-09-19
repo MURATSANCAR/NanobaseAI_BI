@@ -73,6 +73,18 @@ def _redact(obj: Any) -> Any:
     return obj
 
 
+def _looping(text: str) -> bool:
+    """True when the tail of an answer is one short pattern repeated over and over."""
+    tail = text[-600:]
+    if len(tail) < 200:
+        return False
+    for n in range(2, 80):
+        unit = tail[-n:]
+        if unit.strip() and tail.endswith(unit * 6):
+            return True
+    return False
+
+
 class ModelError(RuntimeError):
     pass
 
@@ -142,9 +154,10 @@ class Llm:
                     raise
                 # A deterministic retry repeats a degenerate loop token for token:
                 # move away from it instead (measured 2026-09-19, page 8 x3 identical).
-                if "finish_reason=length" in str(e):
+                if "finish_reason=length" in str(e) and not _looping((resp or {}).get("content") or ""):
                     # The first budget is sized for speed; it must never be the reason a page
-                    # is lost. A retry gets twice the room (bounded by the model's context).
+                    # is lost: thinking that did not fit gets twice the room (bounded by the
+                    # model's context). A loop gets no extra room, only a push out of the loop.
                     req["max_tokens"] = min(req["max_tokens"] * 2, MAX_RETRY_TOKENS)
                 if "finish_reason=length" in str(e) and (req.get("chat_template_kwargs") or {}).get("enable_thinking"):
                     # thinking used the whole budget and left no answer: answer directly
