@@ -687,39 +687,17 @@
    "reference_sql": "SELECT m.ay, ISNULL(k.giris,0) AS kasa_giris, ISNULL(k.cikis,0) AS kasa_cikis, ISNULL(k.giris,0)-ISNULL(k.cikis,0) AS kasa_fark, ISNULL(b.giris,0) AS banka_giris, ISNULL(b.cikis,0) AS banka_cikis, ISNULL(b.giris,0)-ISNULL(b.cikis,0) AS banka_fark, ISNULL(k.giris,0)-ISNULL(k.cikis,0)+ISNULL(b.giris,0)-ISNULL(b.cikis,0) AS toplam_fark FROM (SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AS ay UNION ALL SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE()), 0)) m LEFT JOIN (SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0) AS ay, SUM(CASE WHEN SIGN=0 THEN AMOUNT ELSE 0 END) AS giris, SUM(CASE WHEN SIGN=1 THEN AMOUNT ELSE 0 END) AS cikis FROM LG_411_01_KSLINES WHERE CANCELLED=0 AND DATE_>=DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AND DATE_<DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())+1, 0) GROUP BY DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0)) k ON k.ay=m.ay LEFT JOIN (SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0) AS ay, SUM(CASE WHEN SIGN=0 THEN AMOUNT ELSE 0 END) AS giris, SUM(CASE WHEN SIGN=1 THEN AMOUNT ELSE 0 END) AS cikis FROM LG_411_01_BNFLINE WHERE CANCELLED=0 AND DATE_>=DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AND DATE_<DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())+1, 0) GROUP BY DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0)) b ON b.ay=m.ay ORDER BY m.ay",
    "checks": [
     {
-     "kind": "sum",
-     "answer": [
+     "kind": "values_present",
+     "reference": [
       "kasa_giris",
-      "kasa_giris_toplam"
-     ],
-     "reference": "kasa_giris"
-    },
-    {
-     "kind": "sum",
-     "answer": [
       "kasa_cikis",
-      "kasa_cikis_toplam"
-     ],
-     "reference": "kasa_cikis"
-    },
-    {
-     "kind": "sum",
-     "answer": [
       "banka_giris",
-      "banka_giris_toplam"
+      "banka_cikis"
      ],
-     "reference": "banka_giris"
-    },
-    {
-     "kind": "sum",
-     "answer": [
-      "banka_cikis",
-      "banka_cikis_toplam"
-     ],
-     "reference": "banka_cikis"
+     "tolerance": 0.001
     }
    ],
-   "note": "2026-09-18: 'geçen aya göre' = bu ay (Eylül 2026) ile geçen ay (Ağustos 2026); referans iki ayı GETDATE() ile kendisi hesaplar, ay başına bir satır. Ağustos: kasa giriş 2.010.740,30 / çıkış 4.936,30 / net 2.005.804,00; banka giriş 128.207.044,76 / çıkış 121.907.968,00 / net 6.299.076,76; toplam net 8.304.880,76. Eylül'de kasa ve banka hareketi yok (veri 2026-08'de bitiyor) → 0. Dayanak: Kural 15 (KSLINES/BNFLINE, SIGN 0 giriş, 1 çıkış, CANCELLED=0, ayrı alt sorgular). Köprünün Ağustos rakamları referansla birebir aynı; ancak köprü iki ayı INNER JOIN ile birleştirdiği için boş Eylül satırı düştü, tek satır döndü ve 'değişim' gösterilmedi (sunum eksiği, rakam hatası değil). Kontroller ay satırlarının toplamı üzerinden (boş ay satırı olsa da olmasa da aynı); cevap ayları sütuna çevirirse kolon adayları genişletilmelidir. Bilgi: Temmuz 2026 kasa 152.328,60 / 38.179,65; banka 354.758.968,95 / 302.631.790,06."
+   "note": "2026-09-18: 'geçen aya göre' = bu ay (Eylül 2026) ile geçen ay (Ağustos 2026); referans iki ayı GETDATE() ile kendisi he | 2026-09-19: cevap ay-ekli kolonlarda (bu_ay/gecen_ay); values_present ile 8 temel sayı biçimden bağımsız doğrulanır. Kritik: DATEADD join çapraz-birleştirme yanlış alarmı g3'te düzeldi."
   },
   {
    "n": 28,
