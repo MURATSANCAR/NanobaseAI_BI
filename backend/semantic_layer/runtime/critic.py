@@ -680,8 +680,16 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
         # in. With several tables an unqualified name could belong to any of them, so it is left to the
         # database (fail open, as everywhere here).
         single = next(iter(tables.values())) if len(tables) == 1 else None
+        # Statement-produced names (SELECT aliases, CTE/derived-table outputs) are not table columns;
+        # a bare reference to one (ORDER BY, HAVING, outer SELECT) is legitimate. Without this, a
+        # computed alias like `... AS sevk_adedi_basina_maliyet` was flagged an invented column and a
+        # correct answer became a refusal (Q66 gerilemesi).
+        aliased = {a.alias_or_name.upper() for a in tree.find_all(exp.Alias) if a.alias_or_name}
+        aliased |= {c.alias_or_name.upper() for c in tree.find_all(exp.CTE) if c.alias_or_name}
         for c in select.find_all(exp.Column):
             if not _in_scope(c, select) or c.name == "*":
+                continue
+            if not c.table and c.name.upper() in aliased:
                 continue
             prof = tables.get(c.table.upper()) if c.table else single
             if prof is None or not prof.columns:
