@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 13:10 UTC — Editör: kalite planı tek belgede
+
+Anlaşılan doğrulama hattı ve adımları `docs/editor/2026-09-19-quality-plan.md`'de toplandı; sonradan çıkan dört açık plana eklendi: kitap düzeyinde anlatıcı kimliği (C3), beş yeni kitapta analiz (B2), roman dilimleri için kitap (B3), canlıda büyük kitap desteği (O1). Roadmap ve proje belleği plana bağlandı.
+
 ## 2026-09-19 12:50 UTC — Editör: V16-r6 canlıda
 
 Doğrulanmış yayın aracıyla PASS; araç içi release/altyapı denetimleri ve R5 neslinde dağıtım sonrası kaynak, anlam kökeni ve yayın kapısı denetimleri geçti. Varsayılan davranış R5 ile aynı (anlam V7, sınırlar 50 MiB/100 sayfa); büyük kitap desteği ve aday kapılar kapalı. [Kayıt](editor/2026-09-19-v16-r6-release.md).

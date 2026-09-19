@@ -1,5 +1,7 @@
 # Editör: roadmap kapsamı ve gerçek koşu durumu
 
+> **19 Eylül — güncel plan:** Canlı V16-r6. Kalite çalışması tek doğrulama hattına bağlandı (etiket → aday → skor → kabul/kuyruk → regresyon). Adımlar, sahipleri, bağımlılıkları ve kabul ölçütleri: [kalite planı](2026-09-19-quality-plan.md). Yeni eklenen açıklar: kitap düzeyinde anlatıcı kimliği, beş yeni kitapta analiz, roman dilimleri 2/4 için kitap, canlıda büyük kitap desteğinin açılması.
+
 [Güncel durum ve sonraki görevlerin tek giriş noktası](2026-09-18-current-status-and-handoff.md). Canlı R5 dondurulmuş; semantik V8 / rol V8 adaydır, yayımlanmadı.
 
 ## Son aday düzeltmesi — kaynak ilişkileri
