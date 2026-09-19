@@ -35,13 +35,13 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 | API (`nanobase_api`) | 8790 |
 | Query Gateway | 8792 |
 | Semantic Bridge (Timaş) | 8795 |
-| LLM (OpenAI uyumlu) | Yerel GPU, sunulan ad `nanobaseAI`, arkada `Qwen/Qwen3.8-27B-FP8` (2026-09-19; Flash-Next silindi). GPU `tt-gpu`, 2×H100 NVL, iki karta bölünmüş tek vLLM (TP2, MTP, port 8001, `/data/qwen27`). CPU host erişimi `127.0.0.1:18885/v1` (GPU→CPU ters tüneli, Mac'e bağlı değil); TİMAŞ VM `https://portal.nanobase.ai/gpu-llm/v1`. Ayrıntı `docs/TT-GPU-SUNUCUSU.md` §4.0. |
+| LLM (OpenAI uyumlu) | Yerel GPU, sunulan ad `nanobaseAI`, arkada `Qwen/Qwen3.8-27B-FP8` (2026-09-19; Flash-Next silindi). GPU `tt-gpu`, 2×H100 NVL; vLLM yalnız GPU 0'da (TP1, MTP, port 8001, `/data/qwen27`, 2026-09-19 21:10'dan beri; GPU 1 editörün). CPU host erişimi `127.0.0.1:18885/v1` (GPU→CPU ters tüneli, Mac'e bağlı değil); TİMAŞ VM `https://portal.nanobase.ai/gpu-llm/v1`. Ayrıntı `docs/TT-GPU-SUNUCUSU.md` §4.0. |
 | Gömme servisi | 8083 (embedder, CPU) |
 | Meta DB (Postgres) | 5434 |
 | Zeki AI sohbet | 127.0.0.1:4000 (ayrı Docker, `~/zeki-chat` deposu); portalda `/timas/sohbet/` altında AD oturumu arkasında sunulur |
 | Portal giriş servisi | 8796 (`timas-login`, AD + oturum çerezi + `/chat-sso`) |
 | BI uygulama VM (müşteri) | http://192.168.0.55/timas/ |
-| Editör (tt-gpu, yalnız 127.0.0.1) | Model gateway 19100 · Hermes API 19110 · Temporal UI 19120 · Postgres 19130. Modeller (`editor-model-*`, vLLM 0.29.0) yalnız istendiğinde açılır, 600 sn boşta kapanır. BI modeli `qwen38-27b` iki kartın ~%80'ini tuttuğu için editörün büyük modelleri BI açıkken açılamaz (gateway `gpu_busy` döner, BI'a dokunmaz) — paylaşım kararı açık |
+| Editör (tt-gpu, yalnız 127.0.0.1) | Model gateway 19100 · Hermes API 19110 · Temporal UI 19120 · Postgres 19130. Modeller (`editor-model-*`, vLLM 0.29.0) yalnız istendiğinde açılır, 600 sn boşta kapanır. GPU yerleşimi (kullanıcı kararı 2026-09-19): BI modeli `qwen38-27b` yalnız GPU 0, editörün bütün modelleri GPU 1; gateway editör dışı konteynere dokunmaz |
 
 Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`, `llm-tt-gpu`, `timas-logo-network-access`.
 

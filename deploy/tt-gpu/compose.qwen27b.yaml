@@ -1,5 +1,5 @@
-# Qwen3.8-27B-FP8 on the 2 x H100 NVL host: one server, one port, the model
-# split across both cards (tensor parallel). Installed as
+# Qwen3.8-27B-FP8 on the 2 x H100 NVL host: one server, one port, on GPU 0 only
+# (2026-09-19, user decision: GPU 1 belongs to the editor module, apps/editor). Installed as
 # /data/qwen27/docker-compose.yml. Replaces /data/qwen38 (Flash-Next); both bind
 # port 8001, so only one of them runs at a time.
 # Keep activation headroom: gpu-memory-utilization alone is not a hard
@@ -29,14 +29,14 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              device_ids: ['0', '1']
+              device_ids: ['0']
               capabilities: [gpu]
     command:
       - Qwen/Qwen3.8-27B-FP8
       - --served-model-name
       - nanobaseAI
       - --tensor-parallel-size
-      - '2'
+      - '1'
       - --numa-bind
       - --gpu-memory-utilization
       - '0.80'

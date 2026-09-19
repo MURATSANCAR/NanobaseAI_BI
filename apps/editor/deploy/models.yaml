@@ -1,4 +1,8 @@
 # Model Gateway alias table (NIHAI-KARAR.md §2, §6).
+#
+# GPU placement (2026-09-19, user decision): BI's qwen38-27b runs alone on
+# GPU 0; the whole editor (every alias below) lives on GPU 1. Models that do
+# not fit together are swapped by the gateway (idle editor models stop first).
 # Hermes and the analysis workers only ever see the alias. The real model,
 # revision and GPU live here and in the ledger's model_call provenance rows.
 #
@@ -25,8 +29,8 @@ aliases:
     real_model: Qwen/Qwen3.8-27B-FP8
     role: Planlama, sentez, özet, karar
     kind: chat
-    gpu: 0
-    mem_fraction: 0.50
+    gpu: 1
+    mem_fraction: 0.48
     args:
       - --max-model-len=131072
       - --max-num-seqs=32
@@ -44,12 +48,12 @@ aliases:
     real_model: Qwen/Qwen3-Embedding-8B
     role: Kitap/karakter/olay semantik araması
     kind: embedding
-    gpu: 0
-    mem_fraction: 0.20
+    gpu: 1
+    mem_fraction: 0.21
     args:
       - --runner=pooling
       - --convert=embed
-      - --max-model-len=32768
+      - --max-model-len=8192
 
   book-reranker:
     container: editor-model-reranker
@@ -57,12 +61,12 @@ aliases:
     real_model: Qwen/Qwen3-Reranker-8B
     role: Kanıt ve sayfa sıralaması
     kind: rerank
-    gpu: 0
-    mem_fraction: 0.22
+    gpu: 1
+    mem_fraction: 0.23
     args:
       - --runner=pooling
       - --convert=classify
-      - --max-model-len=32768
+      - --max-model-len=8192
       - '--hf-overrides={"architectures":["Qwen3ForSequenceClassification"],"classifier_from_token":["no","yes"],"is_original_qwen3_reranker":true}'
 
   book-vision-fast:
@@ -87,7 +91,7 @@ aliases:
     role: Zor görsel, karakter ve sahne analizi
     kind: chat
     gpu: 1
-    mem_fraction: 0.85
+    mem_fraction: 0.90
     args:
       - --max-model-len=40960
       - --max-num-seqs=8
@@ -100,9 +104,10 @@ aliases:
     container: editor-model-audio
     model_dir: Qwen3-Omni-30B-A3B-Captioner
     real_model: Qwen/Qwen3-Omni-30B-A3B-Captioner
+    image: editor-vllm-audio:0.29.0
     role: İleride sesli kitap/ses analizi
     kind: chat
-    gpu: 0
+    gpu: 1
     mem_fraction: 0.80
     args:
       - --max-model-len=32768

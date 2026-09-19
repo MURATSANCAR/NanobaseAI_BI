@@ -23,8 +23,8 @@ Hepsi `/data/editor` altında (tt-gpu). BI'ın konteynerleri, ağı, veritabanı
 
 1. **vLLM / SGLang** — metin ikisini de sayar; tek sunucu olarak vLLM seçildi (Qwen3-VL, Qwen3-Embedding, Qwen3-Reranker ve Qwen3-Omni için resmî destek).
 2. **book-director = "Ana Qwen reasoning modeliniz"** — bu, BI'ın da kullandığı `Qwen/Qwen3.8-27B-FP8` (revizyon `017b9c7af6`). Ortak kullanım olmasın diye editörün kendi kopyası var (`/data/editor/models/Qwen3.8-27B-FP8`), kendi konteynerinde koşar.
-3. **book-audio** yerleşimi metinde yok ("ileride"). GPU 0'a, yalnız istendiğinde açılacak şekilde kondu.
-4. **GPU 1'de 32B ve 8B aynı anda değil.** Qwen3-VL-32B-Thinking BF16 66,7 GB; KV cache ile kartın %85'ini ister. 8B tarama (adım 5) ile 32B derin inceleme (adım 6) ardışık adımlar olduğu için gateway kartta birini kapatıp diğerini açar. GPU 0'da ana model (%50) + embedding (%20) + reranker (%22) birlikte sığar.
+3. **book-audio** yerleşimi metinde yok ("ileride"); editörün kartında (GPU 1), yalnız istendiğinde açılır.
+4. **GPU yerleşimi (2026-09-19, kullanıcı kararı):** metin §6 editöre iki kart ayırıyordu; BI'ın modeli aynı sunucuda koştuğu için kullanıcı kararıyla BI (`qwen38-27b`) yalnız GPU 0'da, editörün bütün modelleri GPU 1'de. §6'daki "GPU 0: ana model + embedding + reranker" ve "GPU 1: 32B + 8B" grupları tek kartta ardışık açılır: ana model (%48) + embedding (%21) + reranker (%23) birlikte sığar (soru-cevapta üçü aynı anda gerekir; embedding ve reranker 8K bağlamla çalışır, pasajlar paragraf boyunda — 32K'de %20 payla KV önbelleği yetmiyordu); 8B tarama (%40) ana modelle birlikte sığar; 32B Thinking (%90) ve ses modeli (%80) kartta yalnız çalışır, gateway boştaki editör modellerini kapatıp yer açar. İş akışının adımları zaten ardışık (tarama → derin inceleme → çıkarım → indeks) olduğu için bu takas adım sınırlarında olur.
 5. **Altıncı MCP sunucusu `book_jobs_mcp`.** "Hermes job_id oluşturmalı" ve "Hermes → MCP → Temporal" için gerekli: `start_analysis_job`, `get_job_status`, `cancel_job` ve salt okunur görünümler (`list_books`, `latest_generation`, `list_review_queue`, `get_report`). `book_document_mcp`'ye ayrıca `list_inbox` eklendi. Metindeki araçların hepsi adıyla var.
 6. **OCR** ayrı bir motorla değil, book-vision-fast (Qwen3-VL OCR yeteneği) ile yapılır; metinde başka model yok.
 7. **Görsel kanıt**: sayfa + görsel bölge kaydına bağlıdır. Metin alıntısı sayfa metninde birebir aranır (`quote_verified`); görsel kanıt modelin kayıtlı gözlemidir.
@@ -47,9 +47,9 @@ Hepsi `/data/editor` altında (tt-gpu). BI'ın konteynerleri, ağı, veritabanı
 
 Model konteynerleri gateway tarafından `models.yaml`'dan oluşturulur ve durdurulmuş bekler. İlk istekte açılır (`/health` gelene kadar bekler), `idle_stop_sec` (600 sn) boyunca istek gelmezse durur. İş akışı bittiğinde `release_models` bütün editör modellerini kapatır. Kartta yer yoksa gateway yalnız boştaki **editör** modellerini kapatır; editöre ait olmayan bir konteynere dokunmaz, `503 gpu_busy` ile kartı kimin tuttuğunu döner.
 
-## BI ile GPU paylaşımı (açık konu)
+## BI ile GPU paylaşımı
 
-BI'ın `qwen38-27b` konteyneri iki kartın da ~78 GB'ını tutar (`--gpu-memory-utilization 0.80`, TP2). O açıkken kartlarda ~18 GB boş kalır: editörün ana modeli ve 32B görsel modeli açılamaz. Editör bunu çözmek için BI'a dokunmaz; nasıl paylaşılacağı kullanıcı kararıdır (BI'ı editör koşusunda durdurmak, BI'ın payını düşürmek ya da BI'ı tek karta almak).
+2026-09-19 21:10'da kullanıcı kararıyla BI'ın `qwen38-27b` konteyneri tek karta (GPU 0, TP1) alındı (`deploy/tt-gpu/compose.qwen27b.yaml`); öncesinde iki kartın ~78 GB'ını tutuyordu ve editörün büyük modelleri açılamıyordu. GPU 1 tamamen editörün. Gateway yine de editöre ait olmayan hiçbir konteynere dokunmaz.
 
 ## İndirme
 
