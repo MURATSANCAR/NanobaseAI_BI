@@ -1,5 +1,30 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 23:50 — Editör: ilk gerçek kitap üç nesil koştu; GPU paylaşımı, kendi kendini denetleyen düzeltmeler
+
+**GPU yerleşimi (kullanıcı kararı):** BI'ın `qwen38-27b` konteyneri iki karttan tek karta alındı (GPU 0, TP1; `deploy/tt-gpu/compose.qwen27b.yaml`, 6 dk'da açıldı, doğrudan ve 18885 tünelinden doğrulandı). GPU 1 tamamen editörün; altı modelin altısı orada gerçek çağrıyla denendi (`python -m editor.smoke`). Tek kartta paylar: ana model %48 + embedding %21 + reranker %23 birlikte; 32B derin %90 ve ses %80 tek başına. Embedding/reranker 8K bağlam (32K'de KV yetmiyordu). Ses modeli için `vllm[audio]` ekli imaj (`images/vllm-audio`).
+
+**İki ana kural (kullanıcı):** (1) kitaba özel geliştirme yok; (2) veriye elle müdahale yok, hatayı uygulama kendi bulur ve düzeltir. `apps/editor/docs/UYGULAMA-NOTLARI.md` başında.
+
+**"Ekrana Sığmayan Macera" (48 s.) üç nesil, aynı içerik, her biri ayrı generation_id:**
+
+| | Nesil 1 | Nesil 2 | Nesil 3 |
+|---|---|---|---|
+| Süre | 67 dk | 26 dk | 27 dk |
+| Başarısız model çağrısı | 35/185 | 8/117 | 6/92 |
+| Resimsiz sayfada uydurma figür | 70 | 0 | 0 |
+| Ön sayfada kesin kimlikli figür | 2 | 0 | 0 |
+| Etkinlik/kitapçık sayfasından olay | 8 | 0 | 0 |
+| Güveni 1,00 olan olay | 67 | 0 | 0 |
+| Editör kuyruğu | 23 | 46 | 39 |
+| Regresyon | 10/10 | 16/16 | 16/16 |
+
+- **Nesil 1'de içerik okunarak bulunanlar:** metin sayfalarında görsel modelin uydurduğu figürler (144 görsel anmanın 70'i), kapaktaki robotların yanlış adlandırılıp kesin kimlik alması, okuyucu etkinliklerinin hikâye olayı sayılması, çıkarımın her olaya 1,00 güven vermesi, söz eylemlerinin PLAN etiketlenmesi, ardışık eylemlerin tek olaya birleştirilmesi, düşünme modunun token sınırını tüketip boş cevap dönmesi (kimlik adımı 9 kez düştü; çalışan işe denemeler arasındaki boşlukta işçi yeniden başlatılarak düzeltme verildi, iş kaldığı adımdan sürdü). Uygulamanın çelişki ve kip kontrolü bunların çoğunu kendi de yakalayıp kuyruğa atmıştı.
+- **Genel mekanizmalar (nesil 2):** sayfanın metin dışı mürekkep oranı (`page.nontext_ink`) — %2 altı sayfaya görsel model sorulmaz; figür kutusunda mürekkep yoksa figür kaydedilmez; ad sayfa/komşu sayfa metninde geçmiyorsa ya da sayfa ön sayfaysa kimlik belirsiz kalır; çıkarım hikâye dışı sayfaları işaretler (`page_role`); prompt v2 (söz eylemi/içerik ayrımı, güven ölçüsü); birleştirme yalnız aynı/komşu sayfa; sınırına takılan çağrı açıkça kaydedilir, yeniden denemede düşünme kapanır ve sıcaklık artar; metin alanlarına uzunluk sınırı; regresyona 6 yeni değişmez.
+- **Nesil 3 (kullanıcı kararı, karar metninden ölçüme dayalı sapma):** resimli sayfalar doğrudan 32B derin modele (`EDITOR_VISION_SCREEN=deep`), 8B yalnız OCR. Ölçüm: hızlı model resimli sayfaların %23'ünde figürü yanlış adlandırmış, bir kısmında işaretsiz ve yüksek güvenle; resimli 26 sayfanın 26'sı zaten derine gidiyordu. "Önemli olay" kararı tek sayfaya bakan modelden alınmaz (derin model de 22 sayfanın 17'sine önemli diyordu): ana model birleştirilmiş zaman çizelgesinde anlatı rolü verir (`event.narrative_role`; bu kitapta 1 giriş, 1 tetikleyici, 2 dönüm noktası, 1 doruk, 2 çözüm).
+- **Açık:** Hermes uçtan uca hiç denenmedi (sohbetle iş başlatma, skill'ler, Critic/Editor Review alt ajanları, soru-cevap); editör kararı döngüsü denenmedi; arayüz yok; bütün eşikler tek kitapta ölçüldü — ikinci kitap şart; editör kuyruğunun büyümesi (güvenler artık şişkin değil, 0,55 eşiğinin hemen altında ~24 duygu/tema iddiası) eşik mi formül mü, ikinci kitapla bakılacak; nesil 3'te bir birleştirme hâlâ tartışmalı (aynı sayfada ardışık iki eylem); derin model sayfa başına 2–8 dk ve düşünme bazen 16K sınırına takılıyor (FP8 sürümü seçenek, karar kullanıcıda).
+- `convaiinnovations/laya` (0,4B karar modeli) incelendi, alınmadı: görsel yok, Türkçe 0,437, kendi kartına göre yanlışken de güveni ≥0,885, sıfır atışta şansa yakın; aynı çıktı kendi modelimizden `choice`+`logprobs` ile eğitimsiz alınır.
+
 ## 2026-09-19 18:40 — Editör modülü (Hermes Book Director): hazırlık ve kurulum
 
 Kullanıcının "Nihai karar" analizine birebir uyan, BI'dan tamamen ayrı yeni modül: `apps/editor`. Karar metni kelimesi kelimesine `apps/editor/docs/NIHAI-KARAR.md`'de; metnin açık bıraktığı yerler ve gerekçeler `docs/UYGULAMA-NOTLARI.md`'de. Kod yalnız depoda; veritabanı, vektör deposu, model kopyaları, konteynerler ve ağ TT GPU sunucusunda `/data/editor` altında ve editöre ait (BI'ın Qdrant'ı, modeli, HF önbelleği kullanılmaz).
