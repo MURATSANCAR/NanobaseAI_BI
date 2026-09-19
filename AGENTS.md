@@ -1,19 +1,5 @@
 # Çalışma kuralları
 
-## Editör çalışma kaydı ve veri bütünlüğü
-
-Kullanıcının 18 Eylül 2026'da yeniden kesinleştirdiği bağlayıcı kural: Editörde hiçbir üretim kodu veya geliştirme mevcut kitaba özel yapılamaz; yapı yüklenen bütün kitaplar için genel olmalıdır. Bu kural OCR, yerleşim, kaynak seçimi, figür/karakter/konuşmacı, olay, edebî analiz, arama, soru-cevap, prompt, arayüz, veri modeli, migration, yapılandırma ve kurulumun tamamını kapsar.
-
-Üretim kodu, prompt ve kabul kapılarında kitap adı/hash'i, sabit sayfa numarası, karakter adı, bilinen cümle veya beklenen cevap üzerinden özel durum, gizli sözlük, cevap anahtarı ya da koşullu istisna kurulmaz. Aynı istisnayı config, veritabanı veya prompt dosyasına taşımak da yasaktır. İşleme kararları yüklenen kaynağın ölçümleri, geometrisi ve doğrulanabilir kanıtlarından türetilir; dil, dosya boyutu, sayfa ve işlem sınırları açık genel sözleşme/yapılandırma ile yönetilir.
-
-Gerçek kitap kimlikleri ve sorunlu sayfalar yalnız ayrı doğrulama senaryolarında ve kanıt kayıtlarında bulunabilir; beklenen cevap üretim akışına/model girdisine sızdırılmaz. Bir kitaptaki başarı farklı kitaplarda doğrulanmış başarı sayılmaz; aynı yazılan adlar tek karakter kimliği olarak kanıtsız birleştirilmez. Her düzeltmede genel hata sınıfı ve farklı kitaplara uygulanabilirlik açıklanır; genellenebilirlik kanıtı yoksa açıkça DOĞRULANAMADI yazılır. Modülün ayrıntılı kuralı: [apps/editor/AGENTS.md](apps/editor/AGENTS.md).
-
-Kitap metni, model cevabı, konuşmacı ve inceleme kararı elle düzeltilmez; beklenen cevap model girdisine taşınmaz. Genel kod düzeltilir ve gerçek kaynak yeni nesilde yeniden doğrulanır. İşleme tamamlanması anlamsal kabul değildir.
-
-Bulunan hata için genel kod düzeltmesi, başarısız gerçek senaryonun yeniden doğrulanması ve kanıt kaydı tamamlanmadan sonraki adıma geçilmez. Başarısız deney çözüm sayılmaz. Dış kaynak veya insan kararı gerektiren engel açık yazılır; doğrulanmayan iş kapatılmaz.
-
-17 Eylül yapılan işler, sürümler ve gerçek kabul sınırları [güncel durum belgesinde](docs/editor/2026-09-17-status-and-handoff.md) tutulur. Editör README, OCR/frontend belgeleri, roadmap, kabul defteri, proje belleği ve günlük ilgili değişikliklerde birlikte güncellenir; geçmiş sonuçlar kendi nesil/tarihleriyle korunur.
-
 @/Users/msancar/.codex/RTK.md
 
 ## Ürün tasarımının ana kuralı: mobil uyumluluk
@@ -44,25 +30,6 @@ Bu bir çalışma/kabul kuralıdır; zamanlanmış otomasyon talebi değildir. Y
 Kullanıcının 2026-09-09 düzeltmesi bağlayıcıdır: tek şirket vardır; farklı veritabanları şirketin yıllar içinde alınan yedekleridir. `411`, `211` gibi teknik kodlardan ayrı firma/şirket üretmeyin, kullanıcıya bu kodlarla şirket seçtirmeyin. Fiziksel nesne adları korunabilir; teknik kaynak kimliğini iş anlamındaki şirket kimliğiyle karıştırmayın.
 
 Veritabanı–yedek tarihi–işlem dönemi eşlemesi ve örtüşen kayıtlarda esas alınacak kaynak doğrulanmadan yedekleri bağımsız şirketler gibi toplamayın. Sırf SQL sonuçları aynı çıktı diye yanlış kaynak varsayımına dayanan bir referansı iş doğruluğu kanıtı saymayın. Önceki ayrı-firma varsayımı ve bu varsayıma dayanan kabul yorumları geçersizdir.
-
-## Editör modülü: aynı depo, bağımsız uygulama
-
-Kullanıcının 2026-09-16 kararı bağlayıcıdır: Editör modülü bu ana proje deposunda, BI'dan izole bir uygulama olarak geliştirilecek; sonrasında BI ekranlarına tanımlı API sözleşmeleri üzerinden bağlanacaktır.
-
-- Hedef kök `apps/editor/` dizinidir; frontend, backend, Dockerfile, `compose.yaml`, `.env.example` ve README bu modül altında tutulur. Bu bir mimari karardır; uygulamanın henüz oluşturulduğu anlamına gelmez.
-- Editör kendi bağımlılıklarına, yapılandırmasına ve Docker servislerine sahip olur; BI çalışmadan da başlatılıp kullanılabilmeli, bağımsız derlenip yayınlanabilmelidir.
-- Kalıcı veri gerekiyorsa Editörün kendi veri alanı ve migration'ları olur. BI'ın iç koduna veya veritabanı tablolarına doğrudan bağımlılık kurulmaz; entegrasyon tanımlı API'ler üzerinden yapılır.
-- Editörün bütün arayüzleri mobil öncelikli olur; yukarıdaki mobil doğrulama ve ilgili gerçek DB kabul kuralları bu modül için de geçerlidir.
-- Kalıcı `editor` dalı veya ikinci trunk açılmaz. Küçük işler `main` üzerinde, kapsamlı işler `main`den açılan kısa ömürlü `codex/editor-...` dallarında yürütülür; tamamlanan iş `main`e alınır ve dal silinir. Bağımsız dağıtım, uzun ömürlü ayrı branch gerektirmez.
-
-## Editör kaynak güvenliği — 2026-09-16
-
-- Kullanıcının açık talebi: kalite hataları genel uygulama kodu/iş akışı üzerinden düzeltilir. Codex kitap metnini, modelin cevabını, kişi/konuşmacı etiketini veya kabul kararını elle düzelterek koşuyu başarılı gösteremez. Beklenen kitap cevapları prompt, özel kural veya veri kaydına yazılmaz. Değişiklik sonrası gerçek kaynak sistem tarafından yeniden işlenir; önceki nesil kanıt olarak korunur.
-- Yeni okumalar sayfa sayfa, yeni analiz neslinde ilerler; önceki hatalı koşunun kayıtları silinmez veya yeni koşuya doğrulanmış veri olarak taşınmaz.
-- Alıntı metni konumlu `source_spans` üzerinden gelir; ham metin, bbox, okuyucu/model sürümü ve uyuşmazlık durumu korunur. PDF metin katmanı bozuksa tek kaynak veya doğrulayıcı sayılamaz.
-- `visual_observations` görsel gözlem adaylarıdır. Doğrulanmamış serbest `visuals.description` sahne/iddia/cevap girdisi olarak kullanılamaz.
-- Kaynak sayfasının bulunması anlamsal doğruluk değildir. Alıntı, olumsuzluk, kişi/sayı ve konuşmacı kontrolleri geçmeyen iddia incelemeye ayrılır; ona bağlı kabul/sentez durur, diğer sayfaların kaynak okuması sürebilir.
-- Konuşmacı için yeterli kaynak yoksa UNKNOWN kalır. Okunan/kaydedilen sayfa sayısı ile doğrulanmış sayfa/iddia sayısı ayrı gösterilir. Optik anlaşma editör onayı değildir.
 
 ## Tek branch kuralı: yalnız main
 

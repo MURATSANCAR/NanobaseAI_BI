@@ -17,41 +17,8 @@
 **Açık:** "fatura kesildi" hâlâ CRM'e gidiyor — iki kelimelik, iki veritabanında da anlamlı ifade; sözlük onayıyla çözülmez, kaynak hakemliği/netleştirme işi (18 Eylül sırasının 4. adımı; 1.100 soruda ~16 Logo sorusu bu türden). Makine kelimesi olmadan CRM'e kaçan Logo soruları ayrı kusur ("aylar", "il", "eylülde" → ACCOUNTBASE.NEW_EYLUL). Hızlı kapı temel çizgisi yenilenmedi (katalog 61083 → 70548, 18 okuma değişti). Onaylar ekranında gerçek CRM kelimeleri ("hakediş", "sözleşme süresi") kişi onayı bekliyor.
 ## 2026-09-19 — GPU: ana model Qwen3.8-27B-FP8, sunulan ad `nanobaseAI`; Flash-Next silindi
 
-Neden: Flash-Next (186 GB) iki H100'e ancak n-gram tablosu RAM'e atılarak sığıyordu (resmî tarif 4 kart); OCR'la bellek taşması ve soğuk açılışta bellek sıçraması buradan geliyordu. Kullanıcı kararıyla Qwen3.8-27B-FP8'e geçildi, Flash-Next kalıcı silindi (komutu kullanıcı çalıştırdı). 27B iki karta bölünmüş tek sunucu olarak (TP2, NUMA bağlı, MTP 3, önek önbelleği, 131K) `vllm/vllm-openai:v0.27.1` ile port 8001'de açıldı. Sunulan model adı kullanıcı isteğiyle `nanobaseAI`: BI köprüsü, Editör (api/worker) ve TİMAŞ VM 55 bu ada çevrildi (`scripts/server/model-name-switch.sh`); depodaki varsayılanlar da. Ölçüm: tek istek 177 tok/sn (Flash-Next 130), 32 eşzamanlı 2.256 tok/sn (1.500), 20k token istem 2,2 sn / önbellekle 0,4 sn; KV 1,6 M token. Düşünme kapalı, kapalı küme + logprobs ve Türkçe görsel okuma doğrulandı. Açık: Editör 91 iddia sondası ve gerçek kitap koşusu, set100 tamamı, OCR ile eşzamanlı yük. Ayrıntı: `docs/TT-GPU-SUNUCUSU.md` §4.0.
+Neden: Flash-Next (186 GB) iki H100'e ancak n-gram tablosu RAM'e atılarak sığıyordu (resmî tarif 4 kart); Soğuk açılışta bellek sıçraması buradan geliyordu. Kullanıcı kararıyla Qwen3.8-27B-FP8'e geçildi, Flash-Next kalıcı silindi (komutu kullanıcı çalıştırdı). 27B iki karta bölünmüş tek sunucu olarak (TP2, NUMA bağlı, MTP 3, önek önbelleği, 131K) `vllm/vllm-openai:v0.27.1` ile port 8001'de açıldı. Sunulan model adı kullanıcı isteğiyle `nanobaseAI`: BI köprüsü ve TİMAŞ VM 55 bu ada çevrildi (`scripts/server/model-name-switch.sh`); depodaki varsayılanlar da. Ölçüm: tek istek 177 tok/sn (Flash-Next 130), 32 eşzamanlı 2.256 tok/sn (1.500), 20k token istem 2,2 sn / önbellekle 0,4 sn; KV 1,6 M token. Düşünme kapalı, kapalı küme + logprobs ve Türkçe görsel okuma doğrulandı. Açık: set100 tamamı. Ayrıntı: `docs/TT-GPU-SUNUCUSU.md` §4.0.
 
-## 2026-09-19 13:40 UTC — Editör: prod geliştirme planı v1.1 depoya alındı
-
-Kullanıcının `Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani.docx` belgesi (v1.1, 16 Eylül, SHA-256 `7e36c213…`, belgelerin ilk günden referans verdiği sürüm) `docs/editor/plan/` altına özgün haliyle ve tabloları korunmuş Markdown metin kopyasıyla kaydedildi. Kalite planı v1.1'e bağlandı: pilot kapsamı yalnız resimli çocuk kitabı olduğu için roman/yetişkin genişlemesi (B3, C3) planın yeni sürümünü gerektiriyor; v1.1 §16 gereği bir kitap yalnız son doğrulama için ayrılmalı (şimdiye kadarki ayarların hepsi aynı kitapta yapıldı).
-
-## 2026-09-19 13:10 UTC — Editör: kalite planı tek belgede
-
-Anlaşılan doğrulama hattı ve adımları `docs/editor/2026-09-19-quality-plan.md`'de toplandı; sonradan çıkan dört açık plana eklendi: kitap düzeyinde anlatıcı kimliği (C3), beş yeni kitapta analiz (B2), roman dilimleri için kitap (B3), canlıda büyük kitap desteği (O1). Roadmap ve proje belleği plana bağlandı.
-
-## 2026-09-19 12:50 UTC — Editör: V16-r6 canlıda
-
-Doğrulanmış yayın aracıyla PASS; araç içi release/altyapı denetimleri ve R5 neslinde dağıtım sonrası kaynak, anlam kökeni ve yayın kapısı denetimleri geçti. Varsayılan davranış R5 ile aynı (anlam V7, sınırlar 50 MiB/100 sayfa); büyük kitap desteği ve aday kapılar kapalı. [Kayıt](editor/2026-09-19-v16-r6-release.md).
-
-## 2026-09-19 12:30 UTC — Editör: V16-r6 yayını hazırlandı, dağıtılmadı
-
-`main` `21e2abb`'den hazırlık dizini, canlı imajlar üzerine ağsız derleme, kanıtlar ve sözleşme üretildi; dağıtım aracının bütün ön denetimleri geçti. Varsayılan davranış R5 ile aynı (sınırlar, anlam V7); fark büyük kitap altyapısı ve varsayılan kapalı ayarlar. Yedekten dönüş kabulü R5 gibi v15-r7 kanıtıyla bağlandı. [Yayın kaydı](editor/2026-09-19-v16-r6-release.md).
-
-## 2026-09-19 09:50 UTC — Editör: main canlıyla aynı davranışa getirildi
-
-`main`'deki semantik V8 kapısı (üç çağrılı rol grafı) ve yeniden işleme planı ucu doğrulanmadan üretim akışına girmişti. İkisi de varsayılanı kapalı ayarların arkasına alındı (`EDITOR_ROLE_BINDING_GATE`, `EDITOR_REPROCESSING_PLAN`); kod silinmedi. Kapalıyken anlam incelemesi V7'dir ve canlı kaynak `1200bdd` ile aynı davranır (fark yalnız ayar kontrolü); retrieval bağımlılık listesi de V7'de değişmez. **Neden:** tek trunk kuralı gereği canlıya çıkacak olan `main`'dir; 14 gerçek pasajda V8 5 geçti/9 inceleme verdi. Canlıya giden fark: büyük kitap düzeltmeleri (sınırlar ayardan, 0007, gateway akışı, ayrıştırıcı belleği) ve `editor_eval` aracı; varsayılan sınırlar değişmedi.
-
-## 2026-09-19 09:30 UTC — Editör: ortak etiket ve regresyon altyapısı (editor_eval)
-
-Dört ayrı kural yaması yerine tek doğrulama hattı: etiket → aday → skor → otomatik kabul ya da editör kuyruğu → regresyon. `apps/editor/scripts/eval.py`: PostgreSQL'de `editor_eval` şeması (sahibi `editor_owner`; `editor_app`'e yetki yok, yani üretim kodu etiketleri okuyamaz — ayrım veritabanı yetkisiyle zorlanır). Görevler: konuşma sınırı (CONTINUES/ENDS/UNCERTAIN), OCR bölgesi (gold_text + hata sınıfı), iddia sadakati (FAITHFUL/NOT_FAITHUL/AMBIGUOUS + hata sınıfı + özne/yüklem aralığı), anlatıcı kimliği. Kanıt dosyalarından öğe yükler, aday çıktılarını ham saklar, etiketleme dosyası verir/alır; ölçüt: sınır F1, yanlış bölme/birleştirme, CER/WER, diakritik doğruluğu, kapsama, sessiz geçiş, iki editör arası kappa. Eşik sabit hash bölmesinin kalibrasyon kısmında seçilir, test kısmında raporlanır. Henüz sunucuda çalıştırılmadı.
-
-Prod kapsamı notu: `main` canlı kaynaktan (`1200bdd`) sonra başka bir oturumun eklediği semantik V8 kapısını (üç çağrılı rol grafı üretim kabulüne AND) ve doğrulanmamış yeniden işleme planı ucunu da içeriyor. 14 gerçek pasajda bu kapı 5 geçti/9 inceleme verdi. `main`'i olduğu gibi canlıya çıkarmak bunları da canlıya alır.
-
-## 2026-09-19 08:45 UTC — Editör: altı gerçek kitap, birinci kişi anlatıcılı ilk veri
-
-Üç yeni kitap kabul kurulumunda kaynak hazırlığından geçti (128, 128, 144 sayfa; API/PG + Poppler PASS). Büyük kitap yolunda altı engel kapandı: şema, DB kısıtı ve ayrıştırıcıda sabit 50 MB; iki yerde sabit 100 sayfa; gateway tamponu; 6 GiB ayrıştırıcı belleği (tepe 9,74 GiB ölçüldü). Altı kitabın konuşma profili çıkarıldı: Dedem (tırnaklı diyalog) ve Levent (konuşma çizgili diyalog) birinci kişi anlatıcılı; ölçüm protokolünün 3. dilimi için ilk gerçek veri. Kişi eki kapısı anlatıcı metninde uygulanamaz ve bunu açıkça raporluyor; anlatıcı kimliği kurulmadan bu açık kapanmaz. [Ölçüm](editor/2026-09-18-generality-measurements.md).
-
-## 2026-09-19 07:00 UTC — Editör: devam satırında kural + model birleşimi
-
-Konuşma çizgili satırın altındaki satırın konuşma mı anlatıcı mı olduğu: alt satıra taşan aktarma cümlesi kuralı (13/13) önce, kalan yerde yalnız 0,8 üstü emin model. 87 etiketli örnekte 56 karar/55 doğru, 31 çekimser; yalnız model 48/42 idi ve yanlışların hepsi kuralın kapattığı sınıftı. İlk ölçümde alt satırı yeni tırnakla açılan 9 örnek yanlış etiketlenmişti, çıkarıldı. Yeni model çağrısı yok; kural bu örneklerin hatalarına bakılarak düzeltildi, görülmemiş veri yok. [Ölçüm](editor/2026-09-18-generality-measurements.md).
 ## 2026-09-19 10:00 UTC — BI: tablo seçimi için tek token + olasılık sondası (NanoJev fikri, eğitimsiz)
 
 Soru: NanoJev (0.6B karar modeli, iki günlük depo, 25 indirme) Logo/CRM SQL doğruluğuna yarar mı? Model SQL yazmaz, yayınlanan ağırlıklar yalnız labirent/Snake bilir; aynı çıktı (kapalı küme + aday olasılığı) canlı Qwen'den `structured_outputs.choice` + `logprobs` ile eğitimsiz alınır. Ölçüm betiği `tests/text2sql/probe-table-choice-logprob.py` (salt okuma, canlı köprüye dokunmaz): derleyicinin sunacağı her aday tablo için "gerekli mi?" E/H tek token, çağrılar eşzamanlı.
@@ -72,10 +39,6 @@ VM "0" cevabının SQL'i (federated açıkken): model "fatura kesildi"yi Logo IN
 - `timas-vm-crm-federated.sh` "olduğu gibi koşma" uyarısıyla depoda kalıyor; iki kaynaklı hazır olunca (kaynak sahipliği/kaçırma çözülünce) tam katalog senkronuyla ve bakım penceresinde kullanılacak.
 - Not: TİMAŞ tüneli gün içinde birkaç kez düştü (bu kayıt sırasında da düşük); her düşüşte hem test hem VM müşteri DB'lerine erişimi kaybediyor, telefon onaylı yeniden bağlanma gerekiyor — kalıcı çözüm MFA muafiyetli servis hesabı.
 
-## 2026-09-19 06:20 UTC — Editör: sayfa sınırının sabit kopyası ve ayrıştırıcı belleği
-
-Yükleme yolu açıldıktan sonra üç yeni kitap ayrıştırmada düştü. "Dedem Tekrar Çocuk Oldu" ve "Anne Terliği" (128'er sayfa) tam ayrıştırıldı, 128/128 sayfa muhasebeli; `parse_contract.validate_source` sayfa sınırını 100 olarak sabit yazdığı için `SOURCE_ACCOUNTING_INCOMPLETE` verdi. Artık `EDITOR_MAX_PAGES` okur; değişken ortak `x-app` ortamına da eklendi (worker da aynı doğrulamayı çağırıyor). "Levent Dünya Harikalarının Peşinde" (144 sayfa, 360 MB) render'dan sonra Docling'de bellek sınırında öldü: ayrıştırıcı 6 GiB, tepe 6,00 GiB, `oom_kill 1`. Ayrıştırıcı belleği `EDITOR_PARSER_MEMORY` ile ayarlanabilir oldu (varsayılan 6g). Bu, büyük kitap yolunda beşinci ve altıncı engel; hepsi aynı kökten: yol 50 MB/100 sayfa üstünde hiç sınanmamıştı. Başarısız yükleme kalıcıdır; yeniden deneme yeni yükleme kaydıyla yapılır.
-
 ## 2026-09-19 — VM iki kaynaklı deneme: katalog sürüm tutarsızlığı, geri alındı (Logo kurtarıldı)
 
 Model geçişi (VM → GPU) sağlam ve canlı. İki kaynaklı (CRM × Logo) açma denendi, **geri alındı**; üretim güvende (Logo yine 81.760).
@@ -86,24 +49,6 @@ Model geçişi (VM → GPU) sağlam ve canlı. İki kaynaklı (CRM × Logo) açm
 - **Geri alma:** `--rollback` katalog yedeğini geri yükledi, `.env`/override eski hâline döndü, bridge+jobs yeniden yaratıldı. Doğrulandı: federated/CRM env yok, CRM kavram 3, Logo 81.760. Betiğe uyarı başlığı eklendi; olduğu gibi TEKRAR KOŞULMAMALI.
 - **Doğru yol (bir sonraki, aceleye getirmeden, tercihen bakım penceresinde):** ya `sl_catalog_version` dâhil TAM katalog taşınmalı (14 GB anlık görüntü — önce eski sürümler budanır), ya da VM'de gerçek tarama + kural madenciliği koşturulup VM kendi tutarlı kataloğunu kendi sürümünde kurmalı. İki kaynaklı planın kendisi test sunucusunda çalışıyor; sorun VM'e katalog aktarımı.
 - Rsync/ssh sırasında Mac tarafında iki kez ağ kopması yaşandı; betikler nohup ile sunucuda detached koşturuldu, kopma etkilemedi. VM'e hiç yarım/bozuk durum bırakılmadı.
-
-## 2026-09-19 05:35 UTC — Editör: yükleme gövdesi gateway'de tamponlanmıyor
-
-DB kısıtı kaldırıldıktan sonra üç yükleme gateway'de düştü: nginx gövdeyi 32 MiB'lik `/tmp` tmpfs'e yazmaya çalıştı (`No space left on device`). API gövdeyi zaten parça parça diske akıtıyor. `deploy/nginx.conf` yükleme içeriği yolunda (`/v1/uploads/{id}/content`) `proxy_request_buffering off` ve 600 sn gönderme/okuma süresi kullanır. Aynı genel sorun sınırın üç kopyası ile birlikte bulundu: büyük kitap yükleme yolu hiç sınanmamıştı.
-
-## 2026-09-19 05:30 UTC — Editör: yükleme sınırının üçüncü kopyası (DB kısıtı)
-
-Üç yeni kitabın yüklemesi bu kez 500 verdi: `uploads_expected_bytes_check` kısıtı 52.428.800 baytı tabloya sabitlemiş (0003). Aynı sınır şema, ayrıştırıcı ve DB'de üç ayrı yerde yazılıydı; yalnız ayrıştırıcı ayarı okuyordu. Migration `0007_upload_limit_setting` DB kısıtını `expected_bytes>0`'a indirir; asıl sınırı API ve ayrıştırıcı `EDITOR_MAX_SOURCE_BYTES` ile uygular. Kabul kurulumunda API imajı `nanobase-editor:upload-limit-overlay-20260919` (çalışan V9 imajı + tek dosya bindirme, kullanıcı çalıştırdı); DB kısıtı henüz değiştirilmedi, üç yükleme bekliyor.
-
-## 2026-09-19 00:45 UTC — Editör: yükleme sınırı hatası, devam satırı ölçümü, üç yeni kitap
-
-Genel hata: `book_api.py` yükleme şeması 52.428.800 baytı sabit yazıyordu; belgelenen `EDITOR_MAX_SOURCE_BYTES` yalnız ayrıştırıcıda okunuyordu, nginx `client_max_body_size 50m` idi. Şema artık ortamdan okur, değişken ortak `x-app` bloğuna eklendi, nginx 512m (asıl sınırı API uygular). Bulunma nedeni: kullanıcının verdiği üç yeni kitap (54/58/360 MB) kabul kurulumunda 422 ile reddedildi; kurulum `.env`'i kullanıcı tarafından 400 MiB/200 sayfaya çıkarıldı, kod yaması henüz kurulmadı. PDF'ler `/data/nanobaseai/editor-qualifications/incoming-books/` altında.
-
-Devam satırı kararı tek token + logprobs ile ölçüldü (`scripts/probe-continuation-logprob.py`; etiket tırnaklı kitaptan türetildi, tırnaklar silinip konuşma çizgili biçimde soruldu): 48 sayfalık kitapta 67 örnek, 0,5 eşiğinde 65 karar/45 doğru, 0,8 eşiğinde 41 karar/34 doğru. Emin ama yanlış 7 örneğin hepsi aynı sınıf: alt satırdaki anlatıcı ara cümlesi ("dedi Bilge heyecanla") konuşmanın devamı sanılıyor. **Sonuç:** kural tabanlı anlatıcı ara cümlesi tespiti ile birlikte kullanılmalı; tek başına yetmez. Kanıt `evidence/continuation-logprob-probe-20260918T213430Z.json`. Üretime bağlı değil.
-
-## 2026-09-18 21:30 UTC — Editör: NanoJev incelemesi ve büyük Qwen'den kapalı kümeli olasılık
-
-NanoJev (Qwen3-0.6B + karar başlıkları, MIT, iki günlük depo) incelendi: mimari ~60 satır, veri biçimi metin görevine uygun, kitap bazlı eğitim/test ayrımı yapılabilir; ama Türkçe eğitim verisi yok ve canlı Qwen GPU belleğinin %82'sini tutuyor. Aynı çıktı sözleşmesi canlı büyük Qwen'den eğitimsiz alındı: vLLM `structured_outputs.choice` + `logprobs`. 91 gerçek iddiada tek token'lık "özne aynı mı" sorusu: bilinen yanlış PDF27 en düşük 2. (P=0,22), iki geçiş arasında fark 0,0, 78 iddia ≥0,9. **Neden:** serbest JSON formu aynı hatayı geçiriyor ve kararsızdı; tek token kapalı küme ikisini de çözüyor. NanoJev eğitimi şimdilik gereksiz. Etiket olmadan oran ölçülemez; üretime bağlı değil. [Ölçüm](editor/2026-09-18-choice-logprob-probe.md).
 
 ## 2026-09-19 — Müşteri VM'i GPU modeline geçti (harici sağlayıcıdan çıkıldı)
 
@@ -123,10 +68,6 @@ Müşteri VM'i (192.168.0.55) harici sağlayıcıdan (`integrate.api.nvidia.com`
 - **Kök nedenler (etki sırasıyla):** 377 ret katalogda olmayan temel iş terimi (tahsilat, açık alacak, vade, döviz, il, çeyrek, ziyaret, kargo, yazar, telif); yanlış cevaplarda alış/satış TRCODE karışması, adet yerine tutar, "kitap" listesinde hammadde/kafe ürünü, TOP/GROUP BY eksik, çelişkili WHERE; 58 boş sonucun çoğu "bugün/bu ay" — Logo 2026 verisi 17.08'de bitiyor, cevap bunu söylemiyor; 58 ret soruda "Logo"/"CRM" adı geçtiği için, 34 ret sıradan kelime ("itibarıyla", "lira", "den") yüzünden; 3 iki kaynaklı soruda plan devreye girmedi.
 - **Doğrulanmamış:** 4 soruda `/tmp/semantic-results-*` geçici dosyası bulunamadı; köprü koşu sırasında yeniden başlamadı, eşzamanlı istekte dizin temizliğinden şüpheleniliyor.
 - Kod/katalog değişikliği yok; bu yalnız ölçüm. Okunan kaynak ölçüsü görünümleri (AA_*, MIND_*) tanımadığı için gürültülü.
-## 2026-09-18 21:20 UTC — Editör: konuşma çizgisinde konuşma sonu kuralları
-
-Kişi eki kapısı v4: çizgili satır içindeki devrik aktarma cümlesi ("…, dedi Kirpicik.") ve ardışık çizgili satır kuralı kodlandı. Gerçek iki kitapta 123 konuşma parçasının yalnız 15'i kesinleşti. **Neden önemli:** sayfa metni satır sarmasını paragraf sonundan ayıramıyor; çözüm satır geometrisinde. R5/R7 sonucu değişmedi, üretime bağlı değil. [Ölçüm](editor/2026-09-18-generality-measurements.md).
-
 ## 2026-09-19 — Müşteri VM'i: sürüm farkı, harici model ve GPU'ya geçiş betiği (yayın kullanıcıda)
 
 - **Test sunucusu (nanobase-direct) günceldi:** backend, bilgi paketi, arayüz kaynağı ve giriş servisi `main` ile 184 dosyada eş; derlenmiş kokpit son arayüz değişikliğinden sonra üretilmiş. Derlenecek/kurulacak bir şey yok. Sunucuda `main`de olmayan tek dosya: `scripts/server/portal-login/set_demo_username.py` (demo giriş kalıntısı; demo giriş kaldırılmıştı — silinmesi ayrı iş).
@@ -148,10 +89,6 @@ Kişi eki kapısı v4: çizgili satır içindeki devrik aktarma cümlesi ("…, 
 ## 2026-09-18 19:30 UTC — 1000 soruluk son kullanıcı seti (CFO / CEO / muhasebeci, Logo + CRM karışık)
 
 `tests/text2sql/set1000.jsonl`: elle yazılmış 1000 Türkçe son kullanıcı sorusu (şablon çarpımı değil). Alanlar `id` (K0001–K1000), `soru`, `kaynak` (logo 424 / crm 315 / ikisi 261), `rol` (CFO 413 / CEO 306 / muhasebeci 281), `konu`. **Neden:** set100 en zor sorulardı; gerçek kullanıcının gündelik, stratejik ve mutabakat/denetim sorularını kapsayan geniş bir liste istendi. Birebir yineleme ve set100 ile çakışma betikle ayıklandı. **Bu yalnız liste:** hiçbir soru köprüde sorulmadı, `beklenen`/referans SQL yok, `kaynak` etiketi yazarın beklentisidir (ölçüm değil). Sıradaki: hızlı kapıyla (`resolver-gate.py`) kaynak okumasını ölçmek, sonra tam koşu.
-## 2026-09-18 13:20 UTC — Editör: genellik ölçümleri ve doğrulama seti
-
-Diakritik itiraz kuralı kodlandı (`source_diacritic_witness.py`, aday): 328 gerçek inceleme bölgesinin 32'sinde tek okuyucunun itirazı, iki bağımsız okuyucunun anlaştığı metne karşı yalnız diakritikte ayrışan geçersiz bir sözcük; metin düzeltmesi 0. Üç gerçek kitabın sayfa metninde konuşma işaretlemesi ölçüldü: ölçüm kitabı yalnız tırnak kullanıyor, diğer ikisi konuşma çizgisi (86 ve 36 satır) ve birinci kişi yüklemlerin çoğu işaretli konuşma dışında. **Neden:** kişi eki kapısı bu kitaplarda sessizce devre dışı kalırdı; v3 artık `NOT_APPLICABLE` ve nedenini döndürüyor, R5/R7 sonucu değişmedi. Yakalama oranını ölçebilmek için üretimden ayrı, kapı sonucu içermeyen 164 satırlık etiketleme dosyası üretildi; etiketleme bekliyor. Hiçbiri üretime bağlı değil. [Ölçümler](editor/2026-09-18-generality-measurements.md).
-
 ## 2026-09-18 19:00 UTC — Tam kapının ilk turu ve kapıyla ölçülen ilk düzeltme (Q28)
 
 - **İlk tam tur (7 altın soru × 3):** SAĞLAM 2 (Q21, Q68) · KARARSIZ 2 (Q28 1/3, Q71 2/3) · BOZUK 2 (Q19, Q69) · VERİ 1 (Q24 — altın dosyada kontrol türü yanlıştı). Tek seferlik "doğrulandı" ile gerçek durum arasındaki fark ilk kez sayıyla görüldü.
@@ -162,19 +99,11 @@ Diakritik itiraz kuralı kodlandı (`source_diacritic_witness.py`, aday): 328 ge
 
 ## 2026-09-18 17:30 UTC — Tam kapı, model yolu Mac'ten bağımsız, tek kelimelik eşleme kaynağı seçemez
 
-- **Model yolu:** Mac'teki TT VPN gün içinde ikinci kez kesildi (15:43 yerel; terminal kapatılmış), iki koşu 502'de asılı kaldı. Köprü kullanıcı kararıyla Mac'siz GPU tüneline alındı: `/etc/nanobase/semantic-bridge.env` satır 63 `OPENAI_API_BASE` ve satır 66 `SEMANTIC_SELECTOR_BASE` `127.0.0.1:18881` → `127.0.0.1:18885` (Editörün `editor-gpu-tunnel` hattı, aynı `qwen3.8-flash-next`). Geri almak: iki satırı 18881 yapıp köprüyü yeniden başlatmak. Gece koşuları artık Mac'e bağlı değil.
+- **Model yolu:** Mac'teki TT VPN gün içinde ikinci kez kesildi (15:43 yerel; terminal kapatılmış), iki koşu 502'de asılı kaldı. Köprü kullanıcı kararıyla Mac'siz GPU tüneline alındı: `/etc/nanobase/semantic-bridge.env` satır 63 `OPENAI_API_BASE` ve satır 66 `SEMANTIC_SELECTOR_BASE` `127.0.0.1:18881` → `127.0.0.1:18885` (GPU→CPU ters tüneli, aynı `qwen3.8-flash-next`). Geri almak: iki satırı 18881 yapıp köprüyü yeniden başlatmak. Gece koşuları artık Mac'e bağlı değil.
 - **Tam kapı (3. adım, kuruldu; altın dosya dolduruluyor):** `tests/text2sql/answer-gate.py` — her altın soru gerçek API'den `--repeat` (3) kez sorulur, cevabın tamamı `/api/v1/result/{id}` ile alınır, bağımsız referans SQL aynı anda canlı veritabanında koşar; kontroller `rows / sum / value / pairs / lookup / empty`; hüküm SAĞLAM / KARARSIZ / BOZUK / VERİ; answer / deny / clarify sayaçları ayrı; SQL eşitliği geçme koşulu değil (yalnız "kaç farklı SQL" notu). `verified` bir soru SAĞLAM değilse çıkış kodu 1. Altın: `tests/text2sql/answers-set100.json` (şimdilik Q19, Q21, Q24, Q28, Q68, Q69, Q71 — yalnız bağımsız referansı yazılıp canlıda koşturulanlar). Holdout: `tests/text2sql/set100-split.json`, kaynak katmanlı %20 (21 soru), `sha1(id)` sırası; Q68 holdout'a düştü — kuralı ayrımdan önce yazılmıştı, bundan sonra holdout sorusuna bakılarak kural yazılmaz.
 - **İlk hükümler:** Q68 SAĞLAM 3/3 (532 satır, toplam ve ilk 10 müşteri referansla eş, tek SQL). Referans yazmak dünkü bir "doğru"yu düşürdü: **Q28 6.179 değil 6.181** — model "tamamen sevk edilmemiş"i "hiç sevk edilmemiş" (`SHIPPEDAMOUNT = 0`) okumuş, kısmen sevk edilmiş 2 satırı atmış. Q21'de model bazı koşularda `CARDTYPE IN (1,3)` ekliyor (227.383 / referans 227.385). Q19 bugün netleştirme soruyor (gece cevap veriyordu).
 - **4. adımın ilk parçası — tek kelimelik eşleme veritabanı seçemez:** ölçüsüz soruda kaynağı, yerleşmiş ifadeler (≥2 kelime), tablonun kendi adı (ENTITY) ve ölçüler tam oyla, tek kelimelik kolon/etiket eşlemeleri **yarım oyla** belirler; başka kaynakta yerleşmiş bir slot varken "tek kaynaklı kolonlar" kısa yolu kullanılmaz (`Resolver._names_a_source`). Hızlı kapıyla iki turda ölçüldü: ilk hâl (tek kelime = sıfır oy) 6 soruyu yeniden okuttu — 3 iyi (Q24, Q48, Q82), 3 kötü (Q26 Logo→CRM, Q44 sözleşme tablosu düştü, Q73 tek kaynağa indi); yarım oylu hâl yalnız 2 soruyu değiştirdi, ikisi de iyileşme (Q24 artık CRM'e gitmiyor; Q82 iki kaynak). Q24 gerçek köprüde: boş sonuç + bilgi paketi gerekçesi, referans 0 satır. Hızlı kapı temel çizgisi bu okumayla yenilendi.
 - Açık: altın dosyanın kalan ~60 sorusu; 4. adımın devamı (çakışmada netleştirme, eleme izi); Q10/Q11/Q18/Q40/Q45 hâlâ bozuk. Yerel test koşulmadı.
-
-## 2026-09-18 12:20 UTC — Editör: tek çağrılı özne seçimi adayı, 14 gerçek pasaj
-
-Üç çağrılı rol grafına alternatif olarak modelin yalnız kapalı form doldurduğu, kararı kodun verdiği `source_subject_choice.py` adayı yazıldı ve canlı API/PG salt okunur sürücüsüyle 14 gerçek pasajda ölçüldü: 11 PASS/3 inceleme, 14 çağrı, 46 sn (rol V8 birleşik: 5/9). **Neden:** V8 doğru iddiaları da reddediyor ve pahalı. Bulgu: tek çağrı kesin yanlış PDF27 iddiasını tek başına geçirdi; model çağırmayan kişi eki kapısıyla AND olunca yakalandı (10/4). İkinci koşuda 14 kararın 1'i değişti; aday kararlı değil ve muğlak bir iddiayı geçirdi. Üretime bağlanmadı, V8 yerine önerilmiyor. [Ölçüm](editor/2026-09-18-subject-choice-candidate.md).
-
-## 2026-09-18 12:10 UTC — Editör: diakritik çelişkilerinde sözlük tanığı ölçümü
-
-328 gerçek inceleme bölgesinde, model çağırmadan ölçüldü: NFC eşdeğerliği hiçbir çelişkiyi kapatmıyor (0; varsayım reddedildi). Paddle ↔ Tesseract yalnız diakritikte ayrışan 74 bölgenin 52'sinde sözlük tanığı tek geçerli sözcüğü buluyor; seçilen sözcük hizalı temiz PDF sözcüğüyle 56 karşılaştırmanın 55'inde, en az 3 harflilerde 53/53 aynı. **Neden:** 253 inceleme bölgesinin bir kısmı anlam değil diakritik farkı; hata iki okuyucuya da dağıldığı için "tek okuyucuya güven" çözmüyor. Yan bulgu: Paddle 5 bölgede Romence `ș` (U+0219) üretiyor. Kural kodlanmadı, kapıya bağlanmadı; PDF'i bozuk sayfalarda doğruluk ölçülemedi. [Ölçüm](editor/2026-09-18-diacritic-witness-probe.md).
 
 ## 2026-09-18 16:30 UTC — Hızlı kapı (çözücü anlık görüntüsü) ve dondurma özeti
 
@@ -194,23 +123,6 @@ Diakritik itiraz kuralı kodlandı (`source_diacritic_witness.py`, aday): 328 ge
 - **Süreç düzeltmesi:** `scripts/testset_regress.py <sorular> <koşu> --before <an>` — bir koşuyu `sl_query_log`'daki önceki cevaplarla karşılaştırır, bozulan varsa çıkış kodu 1. Her kod/katalog/kural değişikliğinden sonra 100 soru yeniden sorulup bu betikle karşılaştırılmadan iş bitmiş sayılmaz; tek soruyu doğrulamak yetmiyor.
 - Kural düzeltmesi sonrası ikinci tam koşu `run100-0918c.jsonl` başlatıldı. Yerel test koşulmadı.
 
-## 2026-09-18 12:00 UTC — Editör: belgelerin okunması, açık kaynak araştırması, birinci kişi–ad uyumu adayı
-
-Editörün 88 md belgesi okundu; açık sorunlar için üç başlıkta açık kaynak araştırması yapıldı (balon–figür–karakter kimliği, iddia–kaynak ilişki doğrulama, OCR okuyucu uzlaşması). Sonuç: uçtan uca hazır ve ticari kullanılabilir çözüm yok; Magi (ticari değil, manga dışında zayıf), NLI tabanlı denetçiler (sözcük örtüşürken rol hatasına kör, Türkçe yok), CorPipe (NC lisans), VNLP (AGPL) elendi. Seçilen yön: deterministik Türkçe biçimbilim kapısı, tek kapalı kümeli LLM çağrısı, DINOv2 kümeleme, sözlük tanıklı OCR uzlaşması.
-
-İlk adım uygulandı: `source_person_agreement.py` adayı, kaynakta birinci kişi çekimli yüklemi iddiada aynı konuşmanın içinde üçüncü kişi geçen ada bağlayan iddiayı model çağırmadan işaretler. **Neden:** V16-r5'te kabul edilmiş PDF27 hatası bu sınıftandı ve mevcut kapılar ile üç çağrılı rol grafı onu güvenilir yakalayamıyordu. Gerçek sunucuda, kayıtlı 91 (R5) ve 100 (R7) kabul edilmiş iddiada: yalnız bilinen yanlış iddia işaretlendi, yüklemi taşıyan diğer 30 iddia işaretlenmedi; model çağrısı 0, yazım 0. Kural R5'e bakılarak geliştirildi, R7 ilk koşuda bir yanlış işaret verdi; görülmemiş veri ve başka kitap kabulü yok. Üretime bağlanmadı. [Ayrıntı](editor/2026-09-18-person-agreement-candidate.md).
-## 2026-09-18 — Editör durumunun ve açık planın kapsamlı belge kapanışı
-
-[Güncel devir kaydı](editor/2026-09-18-current-status-and-handoff.md) son doğrulanmış canlı R5 ile yayımlanmamış semantik V8/rol V8 adayını ayırır. Koşu/nesil/sürüm ve kod hashleri, 48 sayfa kaynak muhasebesi, 774 incelemenin nedenleri, soru/indeks/mobil/restore kabulü, genel kod düzeltmeleri ve sunucudaki kanıt yolları kaydedildi. Son 8 pasajın 3 doğru kabul/2 yanlış fail reddi/1 güvensiz iç önerme engeli/2 yanlış ret ayrımı ve P0–P7'nin bütün açık kapsamı yazıldı; tam anlamsal/üretim kabulü verilmedi.
-
-Roadmap'in 22 bölüm tablosu, kalite engelleri, final kabul, aday tarihçesi, modül README, eski devir yönlendirmesi, proje belleği ve CLAUDE belge girişleri paralelde güncellendi. Tarihsel “koşu sürüyor” ve eski kaynak sayıları güncel sonuçlarla karıştırılmayacak biçimde işaretlendi. Bu tur yalnız Markdown: yeni ürün testi/model koşusu, dağıtım, kod veya kitap/review verisi değişikliği yok. Belge bağlantıları ve diff bütünlüğü statik olarak kontrol edilir; bu kontrol gerçek ürün kabulü değildir.
-
-**Tarihçe okuma kuralı:** Aşağıdaki kayıtların “sürüyor/canlı” ifadeleri ilgili kayıt anına aittir; güncel Editör durumu yukarıdaki devir belgesindedir. Önceki kanıtlar ve diğer iş kollarının günlükleri korunur.
-
-## 2026-09-18 — Rol V8: kaynak okuma kökeni ve somut yanlış kabullerin kapatılması
-
-Genel okuma projectionı, büyük başlangıç harfi/satırsonu bölünmelerini ham OCR'a yazmadan geometri ve kompakt karakter aralıklarıyla doğrular.14 gerçekpasajAPI/PG+bağımsızprojeksiyon kabulü geçti. Son8pasaj birleşik kontrolünde3doğru kabul,2yanlışfailaktarımı ve1eksikiçönerme engeli doğrulandı;2doğru dolaylıanlatım hâlâgereksizret. Kaynak/reviewhashleri aynı,0uygulamayazımı; modelsonuçlarına ellemüdahale yok. Alıntı/sentez/retrieval/bağımsızUIverifier sözleşmeleri güncellendi. V8aday yayınlanmadı;R5livekorundu, tamkitaptekrarı yok. [Sonuç, kanıtveaçıkkapsam](editor/2026-09-18-role-binding-v8-candidate.md).
-
 ## 2026-09-18 12:30 UTC — En zor 100: iki kaynaklı (CRM × Logo) sorular uçtan uca çalışıyor, Q69 doğrulandı
 
 Q69, Q72, Q75–Q78'in ortak kök nedeni: çözücü tek kaynak seçip diğer veritabanındaki **sertifikalı** kavramı "tanımsız" sayıyor, iki sunuculu plan hiç devreye girmiyordu. Hepsi genel kural, soruya özel SQL/kalıp yok; her adım nanobase-direct köprüsünde gerçek soruyla denendi.
@@ -222,23 +134,15 @@ Q69, Q72, Q75–Q78'in ortak kök nedeni: çözücü tek kaynak seçip diğer ve
 - **Q69 sonucu:** `federated: true`, barkod bazında hedef + ciro. Üç barkodda (1520508003222, 1520508003512, 1520508058536) hedef ve ciro, CRM ve Logo'ya ayrı atılan bağımsız sorgularla birebir. **Kısmen:** hedef adet, ciro ₺ — cevap ikisinin farkını alıyor (birim uyuşmazlığı); kitap adı yerine barkod dönüyor. `new_ToplamHedef` kolonuna birim ("adet") notu açık iş.
 - **Açık:** Q72/Q75/Q77/Q78 tarafındaki CRM tabloları (kampanya, bekleyen ürün, etkinlik, reklam planı) ile Logo arasında ölçülmüş bağ yok → `discover_cross_links.py` ile ölçülmeli; Q70 stok bakiyesine varsayılan yıl; Q73 termin↔irsaliye; Q74 'tahsilat'; Q76 senaryo↔kitap bağı. Yerel test koşulmadı; 100 soruluk tam koşu (`~/testset/run100-0918b.jsonl`) regresyon için başlatıldı.
 
-## 2026-09-18 — V8 kişi–eylem ve konuşmacı–alıntı kapıları
-
-Genel rol adayı, alıntı ve sentezde eski semantik/qualification/obligation kapılarıyla AND olarak bağlandı. Kaynak konuşmacı–içerik kenarı, anonim ortak özne, tırnaklı zamir ve birebir NOMINAL cümlecik taşınması kodda düzeltildi. Retrieval yeniden denetimi, kod parmak izi ve üç kabul betiği V8'e uyarlandı; bağımsız literal/kenar/hash/çağrı doğrulayıcısı eklendi. Gerçek yedi kayıt tekrarları format/çıkarım değişkenliğini gösterdi: son bağımsız kanıt 5 yapısal doğrulama/1 kişi çatışması reddi/1 inceleme. Yeni kodun 14 gerçek pasajla birleşik kontrolü sürüyor; canlı dağıtım/tam anlam kabulü verilmedi. Kaynak/review/model çıktıları elle değiştirilmedi, yerel test yok. [Ayrıntı](editor/2026-09-18-role-binding-v8-candidate.md).
-
 ## 2026-09-18 11:00 UTC — En zor 100: Q68–Q78, faturasız sevkiyatın müşterisi ve yanlış "kapsam dışı" reddi
 
-TT VPN (Mac, `~/bin/ttvpn-mac`) 06:50'de düştüğü için köprünün model yolu `127.0.0.1:18881` 502 veriyordu; kullanıcı VPN'i yeniden açınca test Q68'den sürdü. Aynı model Mac'siz Editör tünelinde (`127.0.0.1:18885`) çalışıyor; BI köprüsü oraya **alınmadı** (env satır 63/66 hâlâ 18881) — VPN her düştüğünde LLM gerektiren sorular durur. Her soru gerçek köprü API'sinden (`/api/v1/ask`, nanobase-direct) soruldu; referanslar `connector_from_file` ile doğrudan Logo/CRM'den.
+TT VPN (Mac, `~/bin/ttvpn-mac`) 06:50'de düştüğü için köprünün model yolu `127.0.0.1:18881` 502 veriyordu; kullanıcı VPN'i yeniden açınca test Q68'den sürdü. Aynı model Mac'siz GPU tünelinde (`127.0.0.1:18885`) çalışıyor; BI köprüsü oraya **alınmadı** (env satır 63/66 hâlâ 18881) — VPN her düştüğünde LLM gerektiren sorular durur. Her soru gerçek köprü API'sinden (`/api/v1/ask`, nanobase-direct) soruldu; referanslar `connector_from_file` ile doğrudan Logo/CRM'den.
 
 - **Q68 DOĞRU (düzeltildi):** "sevk edilmiş ama faturalanmamış işler müşteri bazında" boş dönüyordu. Müşteri eşlemesinin referans kuralı müşteriyi fatura üzerinden INNER JOIN ile okutuyor, sorunun filtresi ise `STLINE.INVOICEREF = 0` istiyordu. Genel kural: sorunun kendi filtresi kuralın ara bağını (`via_column`) boş değere sabitliyorsa kural o soruda uygulanmaz, olgunun kendi referansı kullanılır (`reference_contracts._via_declared_absent`; derleyici, istem "ZORUNLU İLİŞKİ" bloğu ve kapı aynı işlevi okur). Sonuç 532 müşteri; ilk dört müşteri adedi ve 33.627 satır / 2.852 irsaliye / 13.004.505,45 ₺ bağımsız `LG_411_01_STLINE` sorgusuyla eş. Eksik: cevap adet veriyor, sevk tutarı sütunu yok.
 - **Q71 dürüst ret (düzeltildi):** model SQL yazmayınca, bütün kavramlar çözülmüş olsa da "Yalnızca bu veri kaynağındaki…" deniyordu. `refusal_for` artık bu durumda anlaşılan kavramları sayan `uncombined` cümlesini verir. Yeniden soruda bilgi paketi uyarısı döndü (tahakkuk kayıtları yalnız 2014); CRM'de doğrulandı: `NEW_ODEMEBASE` 2014'te 50 kayıt, başka yıl yok. Telifin yüzde × satıştan **hesaplanması** açık.
 - **Yanlış / cevapsız:** Q69 `SQL_INVALID` (model `INVOICE.DOCODE`'u stok kodu saydı; eleştirmen işlev sarmalı eşitliği çapraz birleştirme sayıyor), Q76 anlamsız tek satır (proje boş, 16 ₺ — satış senaryosu tablosundan), Q78 `SQL_INVALID` (eleştirmen şişirmeyi doğru yakaladı, cevap yok).
 - **Ret, doğrulanmadı:** Q72 ('planlanan' tanımsız), Q73 (termin ↔ irsaliye iki kaynak bağı yok), Q74 ('tahsilat'), Q75 ('bekleyen'), Q77 ('etkinlik sonrası'). Q70 cevap verdi (14.605 satır) ama stok bakiyesi yalnız 2026 hareketinden — DOĞRULANAMADI.
 - Q68–Q78: 1 doğru, 1 dürüst ret, 3 yanlış, 6 doğrulanmadı. Q79–Q100 sorulmadı. Kurulan dosyalar `runtime/{reference_contracts,compiler,audit}.py`, sunucu md5 = `main`. Yerel test koşulmadı.
-
-## 2026-09-18 — Kişi–eylem bağı için genel aday ve gerçek sınırı
-
-Kaynak grafı iddiadan, iddia grafı kaynaktan ayrı çıkarılan source_role_bindings adayı eklendi; literal token kimliği, kişi ve ortak özne kontrolleri var. Gerçek7kayıt pilotlarında cümlecik şemasının nested/UNKNOWN hataları kodda düzeltildi. SonV3, kaynak/iddia grafını değiştirmeden7hizalama çağrısıyla3doğruörneği geçirdi ve kesin yanlış isimli kişi aktarımını doğru roleperson gerekçesiyle reddetti; bağımsızmodelsiz kanıt geçti. Üç doğru alıntı/aktarım örneği hâlâ inceleme gerektiriyor; üretime bağlanmadı ve tam kitabın kabulü verilmedi. Hiçbir kitap/inceleme/model çıktısı elle değiştirilmedi. [Bulgular ve gerçek kanıtlar](editor/v16-quality-blockers.md).
 
 ## 2026-09-18 — R5 dolu geri yükleme ve mobil kabulü kapandı
 
@@ -247,84 +151,6 @@ Aynı frozen R5 yedeği ayrı kuruluma geri yüklendi; kaynak/türetilmiş API/P
 ## 2026-09-18 — R5 tam koşu ve yeni soru kabulü, ilişki bağlama açığı
 
 Mevcut sürüm değiştirilmeden48/48teknik kaynak/ledger, semantic provenance ve yayın kapıları geçti. Yeni iki gerçek UI sorusu API/PG eşliği ve dört genişlikte geçti;91pasaj bağımsızAPI/PG/Qdrant kabulü tamamlandı. Dolu restore aynı frozen sürümle başladı. İçerik incelemesi birinci kişi yüklemini metindeki başka isme atayan kesin yanlışPASS buldu; token desteği fail–yüklem ilişkisini kanıtlamıyor. Başarı olarak kapatılmadı,91gerçekiddia/kaynak/review kanıtı korundu.774incelemebiriminin neden ayrımı sürüyor; bütününü OCRhatası saymıyoruz. Yanözellik adayı durduruldu, yeni tam koşu başlamadı.
-
-## 2026-09-18 — V16-r5 canlı dağıtım, tam koşu ve çevrimdışı paket
-
-52 backend/11 web dosyasıyla dondurulan main1200bdd sürümü gerçek API/PG ve release kontrolünden geçerek canlıya alındı. Yeni iş8032d654/nesil116bb4a8 kaynak→amaç→iddia sırasıyla çalışıyor; 48 sayfanın okuma/amaç aşaması tamamlandı, anlam kabulü bekleniyor. Son19kayıt pilotu12kabul/7ret; bağımsız kaynak kontrolü geçti, bir muhafazakâr yanlış ret açık. Kitap verisine/inceleme kararına elle müdahale yok. R5 çevrimdışı paket ve gerçek CPU import238dosya/8imaj ile geçti; yeni nesil restore kabulü henüz yapılmadı. Canlı P5 etki API gerçek eski nesil/PG referansıyla geçti; mobil tekrar320/390/768/1440px,134bağlı kayıt ve gerçek sayfalama ile PASS (`source-impact-ui-93791cba-493c-46c2-8e2b-e58dab0c4fa7/verification.json`). [Dağıtım ve kalite](editor/2026-09-18-source-analysis-v16.md), [paket kanıtı](editor/2026-09-18-v16-r5-offline-package.md).
-
-## 2026-09-18 — R5 genel söz edimi/gramer kapısı ve iki gerçek aday kabulü
-
-Token denetiminin belirsiz artikel ve edilgen söz edimini yanlış reddetmesi genel dil sözleşmesinde düzeltildi; kaynak/kimlik kapıları gevşetilmedi. Aynı iki gerçek model adayı V7birleşik kabulü ve ayrı API/PG/literal/hash doğrulamasından geçti; veriler değişmedi.52backenddosyalı R5imajları derlendi; son19kayıt regresyonu sürüyor, ana yayın değiştirilmedi. [Kanıtlar](editor/2026-09-18-source-analysis-v16.md).
-
-## 2026-09-18 — V16-r4 adayı, yanlış retlerin kodda giderilmesi
-
-Gerçek karşılaştırmada lexical belirsizlik kapısının iki gereksiz reddi bulundu; V2 tam-cümle token kapsamı ve öneri tanığı bu ikisini kaldırdı, iki gerçek belirsizlik kaybı engeli kaldı. Anonim adayın kaynaksız özne türü eklemesi kapı gevşetilmeden önericide düzeltildi; aynı birimden birden fazla bağımsız söz edimi çıkarma sözleşmesi netleşti. Yeni gerçek kaynak pilotu iki öznesiz aday üretti. R4 ikiimaj52kaynakdosyasıyla derlendi; birleşik19kayıt+ikiyeniaday kabulü sürüyor, henüz yayımlanmadı. [Kanıtlar](editor/2026-09-18-source-analysis-v16.md).
-
-## 2026-09-18 — Semantik V6 gerçek kabulü başarısız; V7 dayanak sözleşmesi
-
-19 gerçek kayıt model tekrarı konum/sahiplik ve belirsizlik kayıplarını hâlâ geçirdi; V6 yayımlanmadı. Genel lexical belirsizlik kapısı ve eksiksiz token bazında kaynak desteği sözleşmesi kodlandı. İlk dayanak pilotunun16karakter-konum hatası kaynak-ID seçimiyle giderildi; yeni pilot sürüyor. Teknik eşlik ile anlam doğruluğu ayrı kaydedildi; kaynak/inceleme/model çıktısına elle müdahale yok. [V16/V7 ayrıntısı](editor/2026-09-18-source-analysis-v16.md).
-
-## 2026-09-18 — R7 tam teknik kabulü ve kaynak destekli anlam hataları
-
-R7 48 sayfa/1494 kaynak birimi tamamlandı; 100 pasaj ve iki gerçek soru API/PG/Qdrant/mobil kontrolünden geçti. Restore ağ çakışması IPAM envanteriyle, yeniden koşulabilirlik sabit kanıt adları yerine benzersiz dosyalarla düzeltildi. Yeni restore ve indeks kontrolü geçti; son mobil/temizlik de 08:43:33 UTC’de geçti. İçerik incelemesinde beş kaynak dışı isim ataması, belirsizlik kaybı ve açık konum/sahiplik sorunları bulundu. V16 genel kaynak yüzeyi kapısı beş isim atamasını gerçek kayıtlarda engelledi; belirsizlik için yeni anlamsal eksen eklenip gerçek tekrar kontrolüne alındı. Balonun bütün OCR satırlarının tek birim olması ve anonim söz edimi gerçek bileşende geçti; karakter kimliği kabulü değildir. Kitap verisi değiştirilmedi, yerel test çalıştırılmadı. [Ayrıntılı bulgular](editor/2026-09-18-semantic-source-audit.md).
-
-## 2026-09-18 07:00 UTC — Paralel P5 kabulü ve genel analiz sıralama düzeltmesi
-
-R7 kaynak denetimi 48/48, başarısız 0; tam anlam/restore henüz sürüyor. İzole P5 etki API'si 134 bağlı kayıt, 164 ilişki ve snapshot sayfalama/ACL korumalarını geçti. Gerçek UI320/390/768/1440px, tembel GET, sıfır mutasyon ve değişmeyen kaynak hashleriyle geçti. Test etiket seçicisi hatası genel betikte düzeltildi, başarısız kanıt korundu. [UI kanıtı](editor/2026-09-18-source-impact-ui.md).
-
-Kaynak adayının yanlış etkinlik sınıfıyla balon diyaloğunu atladığı gerçek çıktı/orijinal render ile görüldü. V16 genel kaynak→amaç→iddia sırası, amaç hash referansı, rol çelişkisi/öykü dışı/unknown inceleme ledgerı ve çağrılar arası fencing kodlandı. Paralel statik incelemenin verifier/pilot/izin listesi bulguları giderildi; yeni purpose=false gerçek API/PG bileşenleri model çağrısız geçti. İki R1 imajı 50 dosya eşliğini geçti; parent-reuse v15 desteğinin sonraki düzeltmesi R2 derlemesi gerektirir. Yeni model pilotu aktif R7 bitince tek koşu olarak planlandı; kitabın cevabı veya karakter ismi elle verilmedi. [V16 kanıtı](editor/2026-09-18-source-analysis-v16.md).
-
-## 2026-09-18 06:36 UTC — R7 kaynaklı soru kabulü, yeni tam V15 koşusu
-
-V2 soru akışı iki gerçek soru/API/PG ve320/390/768/1440px kabulünü geçti. Yeni aktör etiketi hatası kapandı;53pasajın bağımsız API/PG/Qdrant exactvektör/hash kontrolü geçti. Yeni iş19893f4c/nesil382da5b3 uygulamada başladı; monitor635347/qualifier635348, gerçek kaynak aynı ve elle karar yok. Paket06:38:33UTCgeçti; tam nesil/restore bekleniyor. Kodmain6b2494c;27refte main dışında commit0; pushkimlikeksikliğiyle başarısız. [Kanıtlar](editor/2026-09-18-source-analysis-v15.md).
-
-## 2026-09-18 — Kullanıcı talebi: kitaba özel geliştirme kesinlikle yasak
-
-Bütün Editör üretim kodu/prompt/config/UI/veri modeli/kurulumunun tüm kitaplarda geçerli genel yapı olması bağlayıcı kural olarak ana AGENTS, modül AGENTS, CLAUDE, README, proje belleği ve roadmap belgelerine yazıldı. Kitap/sayfa/karakter/hash/beklenen cevapla istisna ve istisnayı config veya veritabanına taşıma yasaklandı; gerçek regresyon örneği ile üretim kararı ayrıldı. Kod incelemesindeki hedefli taramada backend/frontend içinde mevcut kitabın adları/kimlikleriyle eşleşme bulunmadı; bu sınırlı statik tarama tüm kitaplarda canlı kabul değildir. Mevcut gerçek doğrulama çalışması sürüyor.
-
-## 2026-09-18 — V15-r7: kaynak kimlik yetkisi, gerçek soru/mobil ve CPU sınırları
-
-R6 gerçek iki soru ve dört mobil genişlik geçti; ilk2iddia/PARTIAL, desteksiz doğum tarihi0iddia/INSUFFICIENT_EVIDENCE. Bağımsız içerik incelemesi actor konum/eyleyen hatası buldu; R7 kaynak pasajının aynı alan yetkisi dışındaki actor/speaker etiketlerini engeller, eski v1 cevapları güncel göstermez. R7 canlı49backend/10web ve altyapıPASS; yeni gerçekQAakışı çalışıyor. API/worker2CPU/1GiB yapılandırılabilir sınırlar gerçekkonteyner/izolasyonla doğrulandı.48sayfa/1466birim/162sözcükbağımlılığı salt-okunur kaynak kontrolü PASS. İki eski arama manifestini güncel sayan bağımsız verifier betiği kurulu kodhash seçimine düzeltildi; başarısızkanıtkorundu. [Detaylar](editor/2026-09-18-source-analysis-v15.md).
-
-## 2026-09-18 — V15-r6: gerçek soru akışındaki hataların genel kod düzeltmesi
-
-R5 ilk gerçek soru modelde tamamlandı ancak kaynak doğrulaması DB işlemi açıkken çalıştığı için API500/IdleInTransactionSessionTimeout verdi. Cevap okuması kısa DB işlemi sonrasına taşındı. Kaynak satır sonu sözcük parçalarının beraber atıf zorunluluğu eklendi; boş cevaplar dahil kesin indeks hash'i ve ayrı cevap inceleme kapısı bağlandı. R6 sunucuda ağsız build/deploy,49backend/10web dosya eşliği ve gerçek altyapı geçti. Yeni gerçek soru UI koşusu devam ediyor; tamV15henüzbaşlamadı, anlamsal başarı ilan edilmedi. Başarısız kayıtlar ve kaynak verileri korundu. Triage yanlış katman sayımı düzeltilip gerçekR5API/PGile61uygun iddia yeniden doğrulandı. [Kanıt/ayrıntı](editor/2026-09-18-source-analysis-v15.md).
-
-## 2026-09-18 06:10 UTC — V14-r5 tam kabul, V15 kaynaklı soru akışı canlı
-
-V14-r5 gerçek48sayfa API/PG/atıf/yayın korumaları ve dolu yedek/ayrı restore/dört mobil genişlik kabulünü tamamladı.896 anlaşma/253 inceleme,61 sınırlı uygun iddia; tam anlamsal kabul yok. Yeni V15-r5 backend/document ve source-preview-v15-r2 web49/10 dosya eşliği ve gerçek altyapı kontrolüyle yayımlandı. Kaynak birimi grupları, kaynaklı hibrit arama, güncel insan kararlarıyla eski cevabı gizleme, kitap yazma yetkili soru taslağı ve gerçek soru formu bağlandı. Vektörler exact readback değerleriyle PG manifestinde saklanıyor; customer restore modeli tekrar çağırmadan yeniden kuracak. [Kod/sürüm](editor/2026-09-18-source-analysis-v15.md).
-
-Son web imajının yüklemeden analiz açma regresyonu64sayfalık gerçek farklı kitap/API18810/PG ile dört genişlikte geçti. İlk yeni soru UI denemesi hatalı tam-label seçicisi yüzünden soru oluşturmadan durdu; ekran görüntüsü ve başarısız kanıt korundu. Doğrulama betiği gerçek `.selectors select` alanına bağlandı, aynı gerçek akış yeniden başlatıldı; ürün veya kitap cevabı elle değiştirilmedi. Yeni soru/tam V15/arama restore kabulü henüz açık.
-
-## 2026-09-18 05:50 UTC — Kapsam düzeltmesi ve gerçek analiz navigasyonu
-
-Kullanıcının kesintisiz devam talebiyle V15 kaynak birimi gruplaması, birim bazlı eksik kayıtları, grup arası iş fencing ve bağımsız V3 verifier geliştirildi. Gerçek48sayfa planında2058birim/190çağrı, son s10pilotunda37birim/4çağrı/11aday/2inceleme; anlamsal kabul verilmedi. İki backend/document aday imajı CPU'da ağsız derlendi, R5 devam ettiği için ana kaynaklar değiştirilmedi. [Kod ve kanıt](editor/2026-09-18-source-unit-coverage.md).
-
-Yüklemeden başlatılan analizin kesin iş kimliğini izleyen frontend düzeltmesi gerçek başka kitap/API18810/PG ile320/390/768/1440 genişliklerinde geçti. Daha yeni bir iş varken ilk işi açma ve reload idempotency doğrulandı; iki kontrollü iş API ile iptal edildi, kaynak/karar değişmedi. Geçici aday gateway kapatıldı. Ana web yayını ve yeni birleşik sürüm kabulü henüz bekler. [Kanıt](editor/2026-09-18-upload-analysis-navigation-acceptance.md).
-
-## 2026-09-18 05:28UTC — R5 model kesilmesi ve güçlü OCR uzlaşması
-
-Kullanıcının devam talebiyle iki genel düzeltme yapıldı.10/32 gerçek kesilmiş model çağrıları aynı girdili tek ek denemeyle tamamlandı; partial JSON kullanılmadı. Temiz PDF,iki kırpım ve OCR-VL noktalaması birlikte uyuşursa tek bölgesel OCR vetosu kayıtlı olarak aşılır.1149 gerçek API/PG bölgesinde9 ek destekli bölge;13 mevcut seçim korundu. CPU R5 imajları ağsız derlendi ve boş iş kuyruğu kontrolünden sonra yayımlandı;47 backend/9 web eşliği ve gerçek API/PG/28ACL geçti. Yeni iş4b0895be/nesild9ff5c60 ile tam koşu ve ayrı qualifier başlatıldı; başarı ilanı için bu neslin tam koşu/restore sonucu gerekiyor. [Ayrıntı](editor/2026-09-18-source-analysis-v14-r5.md).
-
-## 2026-09-18 04:25 UTC — R4 tam teknik koşu, restore ve mobil PASS
-
-R4 nesli08ca6877 COMPLETED/NEEDS_REVIEW:48 kaynak/amaç/anlam/figür sayfası,64 uygun sınırlı iddia/27 taslak, eksik atıf0. Tüm gerçek API/PG ve yayın korumaları geçti; ayrı dolu yedek/restore ve320/390/768/1440px mobil kontrolü04:25:11UTC PASS. Hedef servisler/ağ istisnaları temizlendi, kanıt korundu.262 kaynak incelemesi, genel kimlik0,10/32 kesilmiş ikinci denetim ve tam anlamsal kabul açık. Triage koşu seçimi düzeltmesi efb794f CPU normal scripts yoluna kuruldu ve gerçek R4 API/PG tekrarı geçti; uygulama imajı değişmedi, dondurulmuş paket sonradan değiştirilmedi. GPU yönetim VPN kapalı olsa da sunucular arası model tüneliyle tam koşu tamamlandı; son GPU soğuk kurulum ve GitHub push erişim nedeniyle açık. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 04:01 UTC — R4 kaynak 48/48; seçili nesil triage düzeltmesi
-
-R4 kaynak kontrolleri 48/48, hata 0; kaynak sonrası kontroller sürüyor. Paket/import geçti, yeni neslin ayrı restore/mobil kabulü bekleniyor. Kaynak kalite tanılama betiği sabit eski koşu dosyası yerine `EDITOR_VERIFY_RUN_FILE` okur ve kullanılan dosyayı kanıta yazar. Gerçek R4 API/bağımsız PostgreSQL kontrolü geçti: 1.149 bölge, 887 anlaşma/262 inceleme; veri/karar yazımı 0. CPU kanıtı `evidence/source-quality-triage-20260918T040054080902Z.json`. Çalışan qualifier paketini değiştirmemek için güncellenmiş tanılama ayrı runtime dosyasında çalıştırıldı. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — R3 tam analiz ve kurulum doğrulaması başladı
-
-GPU ikinci cold-boot, aktif model isteği nedeniyle stop adımından önce güvenle durdu; model kesilmedi. Cache-v3 hash/import ve gerçek HF offline çözümleme PASS, tam cold-boot açık. R3 yeni iş49660185/nesil97814b6c gerçek API üzerinden başladı; monitor3140379 ve qualifier3140380 ayrı süreçler. Yeni paket üretimi geçti, kaynak/amaç/anlam/atıf ve ayrı restore/mobil zinciri çalışıyor. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — R3 kodu canlı; GPU offline cache ref düzeltmesi
-
-R3 backend/document/web yayımlandı,47 dosya ve9 web kaynak/çıktı eşliği geçti; yeni kitap koşusu GPU bakımı bitene kadar başlatılmadı. Gerçek soğuk GPU açılışı paket cache refs/main dosyasındaki fazladan newline nedeniyle başarısız oldu. Bundle/export ve import doğrulaması kodda düzeltildi; eski paket korunarak cache-v2 türetildi. Import artık gerçek HF kütüphanesiyle internet kapalı snapshot çözümlemesi de yapıyor. Mevcut runner’lar gerçek paralel çıkarımla geri döndü. İki modelin HF offline çözümlemesi geçti; python alias eksikliği sağlık/probe komutlarında python3 kullanılarak düzeltildi. Cache-v3 import, tüm hashler ve iki gerçek HF çözümlemesi PASS; ikinci soğuk açılış518950 PID ile sürüyor. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — R2 restore PASS; bilgi/öykü kapsamı için R3 düzeltmesi
-
-R2’nin gerçek ayrı restore, kaynak/türetilmiş/atıf/yayın ve dört genişlikte mobil kabulü geçti, geçici ortam kapandı. İçerik incelemesinde45. sayfadaki bilgi eki öykü temasına karışmıştı; bütün sayfaları açık içerik alanıyla sınıflandıran V4, kaynak hashli öykü kapısını anlam/figür/çapraz akışa ekledi. Gerçek45 pilotu0 öykü iddiası/0 sentez verdi;16 etkinlik,5/29/38 öykü sınıfları korundu. Son kod gerçek45/5/6 kontrolünde geçti;45 kapalı,5 iki uygun iddia,6 inceleme. R3 imajları ağsız derlendi, henüz canlı değil. GPU internet kapalı/boş-cache kurulum denetimi başlatıldı. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
 
 ## 2026-09-18 (gece) — En zor 100: Q28–Q59 kök neden düzeltmeleri, CRM bilgi paketi ve metadata ilişkileri
 
@@ -340,101 +166,19 @@ Kullanıcı uyurken tek başına ilerlendi; her soru doğrudan Logo/CRM veritaba
 - **06:55 ek — Q67 kapandı, TT VPN düştü:** 'faturası kesilmemiş sipariş' bildirilmiş yokluk sorgusuyla deterministik cevaplanıyor (297 sipariş / 10.296.472,39 ₺, birebir): `absence.py` özne filtresi + dönemsiz soru + önekten bağımsız eşleşme; kapı yokluk alt sorgusunda gerçek referans anahtarı arar (`_uncorrelated_absence`), yokluk etiketi filtre sayılmaz; 'sistemde' uydurma kavramı reddedildi; Logo Kural 18. **06:50'de Mac'teki TT VPN (openconnect, e-posta OTP) düştü → GPU model rotası 502; LLM gereken sorular (Q68, Q70–Q72 kuyrukta) cevaplanamıyor.** Kullanıcının `~/bin/ttvpn-mac` ile yeniden bağlanması gerekiyor; deterministik yol çalışıyor.
 - **Açık:** Q38 kitap kırılımı; Q68 (faturalaşmamış sevkiyat — 'faturalanmamış sevkiyat' kavramı ve eş anlamlıları eklendi, VPN dönünce doğrulanacak; doğrudan referans: 33.627 satır / 2.852 irsaliye / 13.004.505,45 ₺, en büyük İstanbul Valiliği YİKOB 4,06 Mn ₺); Q69–Q100 (Q67 'faturası kesilmemiş sipariş' CRM tarafında yanlış tutar sütunu — Logo ORFLINE/STLINE INVOICEREF tanımı gerekiyor; Q68 sevk edilip faturalanmamış işler; Q69 kitap bazında hedef/ciro Logo görünümü T_SATIS_HEDEFI_KITAP_17 boş döndü). Gece VPN/GPU rotası bir kez kısa süre düştü (kendiliğinden döndü; MFA gerekmedi).
 
-## 2026-09-18 — V14-r2 tam teknik koşu ve atıf kontrolü
-
-48 sayfa kaynak/figür/anlam işi COMPLETED/NEEDS_REVIEW.63 sınırlı uygun iddia,65 inceleme,31 sentez ifadesi;7 ek dayanaklı iddianın kaynakları eksiksiz taşındı. Gerçek API/PG kaynak, türetilmiş kayıtlar, atıf, yayın kapıları ve sürüm/izolasyon kontrolü geçti. Yedek/ayrı restore başladı;262 kaynak ve genel karakter kimliği açık, üretim kabulü verilmedi. GitHub push kimlik eksikliğiyle başarısız; kod yerel main üzerinde. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — V14-r2 canlı; yeni tam koşu ve ayrı restore zinciri
-
-R1'in48 kaynak/kimlik/anlam kaydı ve27 sentez ifadesinde tam atıf kontrolü geçti;5/8/29 anlamsal hataları korunarak R2'ye geçildi. Backend/document R2 ve web R3 yayımlandı;47 dosya yerel/sunucu/imaj hash eşliği `88837115...`, gerçek API/PG/28 ACL PASS. Yeni nesil `3db56430-4821-41c6-a513-4d6e4645bcd6`, iş `efeeb1cb-4741-48f6-87a0-7b4e5285f786`. Canlı5/8 sistem çıktıları kaynak sözcüklerini doğru üretti. Paket/import geçti; ayrı restore, tam atıf ve dört genişlikte mobil kabul zinciri kaynak koşusunu bekliyor. GPU boş-cache/internal-ağ açılış aracı hazırlandı; kitap işleri tamamlanmadan çalıştırılmayacak. Yeni tam kabul henüz açık. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — R2 sözcük sınırı düzeltmeleri gerçek kaynakla sınandı
-
-R1'de8. sayfada satıra bölünen sözcük anlamı ve5. sayfada ayrı büyük başlangıç harfi nedeniyle yanlış kişi adı üretildi. Ham OCR değişmedi; genel geometriye dayalı ayrı okuma görünümü, iki kaynaklı başlangıç harfi birleşimi ve eksik sözcük kapısı eklendi. Yeni5/8 çıktıları sistemden doğru kaynak sözcükleriyle geldi; eski yanlış5 iddiası yeni kapıda reddedildi.29'un gerçek ACTIVITY kaydı ve kayıtlı alt bölgeleriyle bağlam/çapraz kontrol1 sınırlı diyalog bağı verdi, genel kimlik0. Isınmış GPU'da2 Qwen+12 OCR PASS/min5114MiB/restart0. İzolasyon aracındaki ağsız reread-worker varsayımı düzeltildi ve gerçek tekrar geçti. R2 henüz canlı değil;16/38 son-hash ve tam nesil/restore kabulü devam edecek. [Kanıtlar](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — V14 R1 sayfa amacı ve kurulum aracı açığı
-
-Gerçek R1 koşusunda29. sayfanın konuşma sorusu ACTIVITY önerildi; yalnız UNKNOWN etiketleri komşu kaynakla inceleyen koşul bu hatayı atlıyordu. R2 adayı bütün non-narrative önerileri ayrı bağlamda inceleyecek ve ham ilk kararı koruyacak. Gerçek29/16 karşı kontrolleri sırasıyla anlatı/etkinlik verdi; token kesintisi başarısız kanıtı korundu, tam JSON dışında kabul yok. Mevcut R1 sürümü yerinde değiştirilmedi. Müşteri kabul aracı external model uçları/seçili koşu/tam atıf restore kontrolüne hazırlanıyor, gerçek restore henüz bekler. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
-
 ## 2026-09-18 — V14 canlı yeni nesil başlatıldı
 
 Değişmez OCR birimi ve tam kaynak aktarımı kodu `73b62fd` ile main'e kaydedildi. Backend/document V14-r1, web R3;47 backend dosyası ve9 web dosyası imajlarla eşleşti, gerçek API/PG/28 ACL geçti. İlk ağsız bağımlılık derleme hatası korunarak R2 imajlarının kilit hashleri doğrulandı ve yalnız uygulama kodu ağsız katmanlandı. Yeni iş `af2264d8-6f77-4860-be29-a5294283e49b`, nesil `6dca7f01-590c-4a28-a969-a8c8fbb67776`; müşteri paketi paralel hazırlanıyor. Tam48 sayfa/atıf/UI/restore henüz açık; HTTPS GitHub push kimliği bulunmadığı için yayın engelli.
-
-## 2026-09-18 — V14 kaynak birimi ve atıf kapsamı düzeltmesi hazırlandı
-
-Gerçek R2 bağımsız denetimi6 ek dayanaklı iddia/4 eksik sentez bağlantısı buldu. Modelin alıntıyı yeniden yazması yerine değişmez OCR birimi seçimi eklendi; ham öneri ve kaynak hashleri saklanır. Anlam V2, tam sayfa incelemesine ek olarak yalnız gerçekten taşınan kaynaklarla kör denetim yapar; null actor/speaker metindeki atamayı kontrol dışı bırakamaz. Sentez ek dayanakları ham metin/kutu/hash eşliğiyle doğrular ve taşır. Gerçek19/28/38/16 pilotları,19'da iki ek ret ve38'de tam dayanak aktarımı kanıtı verdi. V14 tam kitap kabulü henüz açık; veri elle değiştirilmedi. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — güncel R2 tam kayıtlı ayrı restore kabulü
-
-Tamamlanan gerçek R2 kitabı tutarlı yedekten yeni external model kurulumuna döndü. Snapshot'taki DB/artifact kayıtları birebir eşleşti; migration,28 ACL/401, özgün PDF/48 render ve backend/web kaynak hashleri geçti.48 kaynak/kimlik/anlam sayfası,27 fragment,12 figür karşılaştırması ve24 sentez ifadesi restore API/PG ve dört genişlikte gerçek tarayıcıyla kontrol edildi. OCR/VL, metinsel karakter, küçük kaynak, diyalog ve sentez kontrolleri birlikte PASS. Hedef servisler durduruldu, dar geçici nginx/UFW kuralları kaldırıldı; volume ve kanıt korundu. Arama rebuild/cevap ve tam anlamsal kabul açık. HTTPS push kimliği yok; GitHub SSH publickey de reddedildi, origin güncel değildir. [Kanıt](editor/2026-09-18-external-installation-acceptance.md).
-
-## 2026-09-18 — R2 kapanışı, GPU paketi ve Mac'siz çıkarım
-
-R2 attempt2 COMPLETED/NEEDS_REVIEW;48/48 kaynak ile bütün türetilmiş API/PG kayıtları eşleşti.51 sınırlı iddia/24 taslak ifade,262 açık kaynak ve0 genel karakter kimliği var. Dolu fragment/kimlik/anlam/sentez/diyalog ekranları320/390/768/1440px tekrarında geçti; ilk verifier yeni diyalog etiketini beklenen listeye katmıyordu, API'ye birebir karşılaştırma düzeltilip önceki log korundu. GPU paketi172 dosya/3 imaj hash eşliğiyle importtan geçti. GPU→CPU systemd ters tüneli kuruldu; mevcut admin SSH config eşliği ve komut/izinsiz port/local forward reddi doğrulandı. Drop-in include eksikliği gerçek denemeyle yakalanıp yalnız ilgili dosyaya Include eklenerek giderildi. Aynı gerçek model isteği doğrudan3,184sn, Mac yolunda20,870sn; OCR0,878sn. Nginx graceful geçişi sonrası sürüm/API/PG altyapı kontrolü geçti. Güncel tutarlı yedek ve ayrı restore başlatılacak; tam anlamsal veya üretim kabulü yok. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
-
-## 2026-09-18 — gerçek eşzamanlı GPU yükünde bellek hatası
-
-Takip: yeni profilde gerçek iki Qwen görsel isteği ve12 OCR çağrısı örtüşerek200/stop geçti; konteyner yeniden başlatma yok, örneklenen en düşük boş bellek11.896MiB. API retry attempt2 başlatıldı; kitap kaynakları elle değiştirilmedi. Eski GPU paketinin model/imaj dosyaları korunarak yeni çalışma profilini taşıyan ayrı paket türetildi; tüm byte hashlerinin import kontrolü sürüyor.
-
-R2 kaynak48/48 geçti; Qwen/OCR eşzamanlıyken runner CUDA OOM verdi ve sağlık ucu yanıltıcı200 döndürdü. İş FAILED oldu; tamamlanan27 fragment/6 bağlam/17 anlam/28 kimlik kaydı korunur. Qwen bellek0.90→0.82, istek64→16, batched-token8192 ve chunked-prefill ayarıyla yeniden başlatıldı; eşzamanlı gerçek kırpım kontrolü ve API retry henüz beklenir. Eski GPU profilinin paketi üretim kabulü sayılmaz. R2/web R3 uygulama offline import hashleri geçti. Ayrı gerçek6. sayfa ayrıntı ölçümü önceki betimlemeyi tümüyle desteklemedi; yeni kanıt yazıldı, kitap verisi değiştirilmedi. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
-
-## 2026-09-18 — yeni sürüm nesli, mobil hata durumu ve doğal OCR yaşam döngüsü
-
-R2 kod manifesti eski neslin retry'ını doğru biçimde reddetti; koruma kaldırılmadan kaynak atalı yeni nesil `c046c684-8821-4770-bab3-fb7dc9c25b05` başlatıldı. Backend R2 hash/gerçek altyapı kontrolü geçti. Web R3, uzun hata kodunun320px taşmasını ve kaynak yüklenme durumunu düzeltti; dört genişlikte gerçek fragment/ham üst kaynak/okuyucu/bbox eşliği ve altı sekme geçti. GPU OCR doğal603sn idle kapanması ve gerçek kırpımla yeniden açılıp200 yanıtı doğrulandı; model elle durdurulmadı. [Sürüm ve kanıt](editor/2026-09-18-source-analysis-v13.md), [gateway](../apps/editor/gpu/README.md).
-
-## 2026-09-18 — V13 tam koşuda UUID ve kapsam hataları düzeltildi
-
-V13 kaynak48/48 ve anlamsal kayıtları üretip kimlik kolunda TypeError ile FAILED oldu. Gerçek PostgreSQL UUID türüyle yeniden üretildi; yalnız UUID için kanonik hash dönüşümü eklendi. Tam48 sayfa ve27 fragmentte meşru NEEDS_REVIEW ölçümlerinin provenance hatası sayılması ve uzak okunmamış balonun komşu sayfa bağlantısını engellemesi giderildi. Gerçek API/PG/native-type eşliği48 sayfada1 sınırlı konuşma bağlantısı/0 scope_error verdi; eksik kaynaklı37. sayfa reddi korundu. Fragment arayüzündeki erken bulunamadı mesajı yüklenme durumuyla ayrıldı. İlk başarısız loglar korunur; R2 mevcut checkpointleri API retry ile sürdürecektir. [Ayrıntı](editor/2026-09-18-source-analysis-v13.md).
-
-## 2026-09-18 — OCR gateway yarış düzeltmesi ve gerçek kalite dökümü
-
-GPU gateway kaynak kodunda boşta kapanma kararı ile yeni isteğin kabulü arasında yarış bulundu; aynı lifecycle/state kilitleriyle kapanma kararı atomikleştirildi. Monotonic süre, gövde sınırı ve açık upstream hataları eklendi. Ayrı uzak GPU aday konteynerinde gerçek kitap kırpımı200/stop, hatalı uzunluk400 ve aşırı gövde413 geçti; aday durduruldu. Ana gateway henüz değişmedi; idle sınır kabulü açık. V12 gerçek API/PG kalite dökümü887 anlaşmalı/262 inceleme bölgesi,52 sentez adayı,23 taslak ifade gösterdi. Genel salt okunur döküm scripti eklendi. [Gateway kanıtı](../apps/editor/gpu/README.md).
-
-## 2026-09-18 — V12 48 sayfa teknik kontrol ve V13 paralel hazırlık
-
-V12 ana koşu 48/48 teknik kontrolden geçti. Gerçek API ve bağımsız PostgreSQL üzerinde 1.149 kaynak, 48 kimlik, 48 anlamsal inceleme, 12 figür karşılaştırması ve bir sentezin bütünlüğü doğrulandı; tam anlamsal kabul false kaldı. V13 küçük bölge/sayfa bağlamı/konuşma bağlantısı ve mobil arayüzü paralel geliştirildi; API/document/web aday imajları canlı hizmetlerden ayrı hazırlandı. Paralel ajan kullanım limiti sonrası entegrasyon ana oturumda sürüyor. [Kanıt ve açık sınırlar](editor/2026-09-18-source-analysis-v13.md).
-
-## 2026-09-18 — V12 izleyici bağlantı kesintisinden toparlandı
-
-Gateway değişiminde s1/s2 salt okunur kontrolü ConnectionRefused aldı; uygulama analizi sürdü. Kontrol GET'lerine sınırlı geçici hata tekrarı ve izleyiciye mevcut durum/ayrı deneme logu eklendi. Aynı gerçek sayfalar yeniden geçti; ilk20 teknik denetim20 geçti/0 başarısız. İlk hata logları korunur, anlamsal kabul iddiası yok. V12 webin dört genişlik OCR regresyonu ve hash eşliği geçti. Harici GPU uygulama offline paketi üretildi; import/restore ayrıca doğrulanıyor. [Ayrıntı](editor/2026-09-18-source-analysis-v12.md).
-
-## 2026-09-18 — paralel figür kimliği ve kaynaklı anlam denetimi
-
-- Kullanıcının paralel yürütme isteğiyle kimlik çözümü, anlamsal kontrol ve kaynak arayüzü ayrı ele alındı. Değişmez kaynaklar korunur; kitap cevabı/verisi elle yazılmaz.
-- PaddleOCR-VL seçilmiş metninin okuyucu kökeni görünür oldu; gerçek API/Chrome 320/390/768/1440 px kontrolü geçti. Backend 43 dosya/hash eşliğiyle V12-r1 yayımlandı; R9 22 teknik sayfa kontrolü/0 hata ile korunup yeni nesle geçildi.
-- Gerçek s7/s38 ayrı model denetimi kaynak kapılarını korudu. S38 iki taslak kabul, iki kaynak dışı genişleme reddi; bu tam kitap kabulü değildir. Gerçek figür çifti farklı bulundu, isim atanmadı.
-- Müşteri harici GPU endpoint sözleşmesi ve uygulama offline paket modu eklendi; mevcut sunucu preflight hatasız. Harici GPU imaj/ağırlıkları bu uygulama paketine dahil değildir; yeni offline import/restore kabulü açık.
-- [Ayrıntılı sürüm/kanıt kaydı](editor/2026-09-18-source-analysis-v12.md), [müşteri kurulum kapsamı](editor/2026-09-18-deployment-gaps.md).
 
 ## 2026-09-18 — Kampüs: podcast + ajanda + kitap seçme kartları geri geldi
 
 Kullanıcı isteğiyle 2026-09-17'de kaldırılan tasarım kartlarından üçü Kampüs ekranına (`src/canvas/kampus/KampusPage.tsx`) geri getirildi: **Sesli Bülten (podcast)** ve **Önemli Günler & Ajanda** sol sütunda, **Yeni Kitaplar (kitap seçme)** sağ sütunda odalar kartının altında. Sol sütundaki "Şirket Nabzı" kartı (ve içindeki "Günün modun" mod seçici) kaldırıldı; ilgili ölü kod (`mood/setMood/moodQ/prefsApi/Activity`) temizlendi. Podcast oynat/duraklat ve kitap seçme UI olarak çalışır; gerçek ses kaynağı ve kitap kataloğu **sonra** bağlanacak. Bu, "çalışmayan düğme bırakılmaz" kuralının bu üç kart için kullanıcı onayıyla geçici olarak esnetilmesidir. Canlı doğrulama sunucu build'inde yapılır.
 
-## 2026-09-18 — Qwen/OCR paralel akışının gerçek kabulü
-
-Qwen ana model ve ihtiyaç halinde GPU OCR bağlandı. Eski sürüme sessiz yönlendirme, paralel kırpım429 ve yeni OCR'ın inceleme API'sinde görünmemesi kodda giderildi. R6 ilk11 sayfa API/PG/kanıt denetimi ve320/390/768/1440px OCR görünümü geçti; figür kimliği/semantik açık. R9 gereksiz simge OCR'ını azaltır, tek-glif kaynaklarını ve NEEDS_REVIEW kayıtlarını korur. [Ayrıntı ve başarısız koşular](editor/2026-09-18-qwen-ocr-parallel.md).
-
-## 2026-09-18 — Kitap seslendirme kaynak hazırlığı
-
-Kullanıcı ses kaynağını Anilosan15/Turkish_TTS_Data olarak değiştirdi. İlk shard SHA-256 ile doğrulandı, 747 özgün WAV (84,13 dakika) ve metin manifesti çıkarıldı. Tam küme 30.606 kayıt/20,68 GB; tamamı indirilmedi. sıla veri kümesi etiketidir; lisans belirtilmemiş. Mevcut kitaptan API/PG eşliği doğrulanan metinle CPU üzerinde 11,56 sn/24 kHz pilot üretildi. Model tekrar/EOS uyarısı verdi; içerik tamlığı ve dinleme kalitesi DOĞRULANAMADI, ürün kabulü yok. [Hazırlık ve sonraki kabul adımları](../apps/editor/speech/README.md).
-
-## 2026-09-18 — Qwen ana model / paralel OCR V11
-
-Bağımsız görsel gözlem ve ihtiyaç halinde GPU bölgesel OCR paralelleştirildi; kaynak bağımlı iddialar ikisini bekler. Ham ölçüm/provenance ve çelişki kapıları korunur. Gerçek yeni nesil kabulü sürüyor. [Ayrıntı](editor/2026-09-18-qwen-ocr-parallel.md).
-
-## 2026-09-18 — GPU OCR açılış hatası düzeltildi
-
-Yeniden başlatma aynı bellek hatasıyla503 verdi. OCR rezervasyonu %5 → %4 indirildi; gerçek GPU gateway healthy ve model listesi200 doğrulandı. Qwen kesilmedi; boşta kapanma600 saniye korundu. Komut override'ı depoya eklendi. Gerçek OCR ve tam yaşam döngüsü kabulü ayrı açık işlerdir. [Kayıt](editor/2026-09-18-paddleocr-vl-readiness.md).
-
-## 2026-09-18 — PaddleOCR-VL kurulum sonrası canlı kontrol
-
-Gateway8010 bulundu; sağlık503 ve model başlangıcında 4.65 GiB talebe karşı 4.0 GiB boş bellek hatası doğrulandı. GPU servis ayarları ve kitap verileri değiştirilmedi; entegrasyon kabulü verilmedi. [Kanıt ve sonraki adım](editor/2026-09-18-paddleocr-vl-readiness.md).
-
 ## 2026-09-18 — Harici NVIDIA API sağlayıcısından yerel Flash-Next geçişi
 
 - Kullanıcı kararı: model çağrıları Türk Telekom GPU sunucusundaki Flash-Next üzerinden çalışacak; harici NVIDIA API adresi, eski model varsayılanı ve aktif sağlayıcı override dosyaları kaldırılır. Tarihsel günlük girişleri korunur. NVIDIA GPU sürücüleri/CUDA kapsam dışıdır.
-- Mac VPN/SOCKS tüneli CPU localhost18881 üzerinden GPU8001 adresine yönlendirildi. Editor Docker özel ağları için18882 nginx/UFW erişimi kuruldu; herkese açık model portu eklenmedi.
-- BI semantic/admin/kurulum varsayılanları değişti. Editor model adresi, adı, backend ve bağlam ayarı yapılandırılabilir oldu; vLLM tokenizer/chat-template desteği ve eski modele ait adayların yeni model sonucu diye yeniden kullanılmasını engelleyen kontrol eklendi.
+- Mac VPN/SOCKS tüneli CPU localhost18881 üzerinden GPU8001 adresine yönlendirildi; herkese açık model portu eklenmedi.
+- BI semantic/admin/kurulum varsayılanları değişti.
 - Gerçek API/DB kabulü ve güncel yayın sonucu bu bölümde tamamlanınca kaydedilecek; yalnız kod değişikliği başarı değildir.
 
 ## 2026-09-18 — Soru 23–27, genelleme ölçümü ve doğrudan veritabanı denetimi
@@ -451,17 +195,11 @@ Gateway8010 bulundu; sağlık503 ve model başlangıcında 4.65 GiB talebe karş
 - Temizlik: canlı `config.py`, `admin.py`, `llm_client.py` repo sürümüyle eşitlendi (fark yalnız sağlayıcı varsayılanlarıydı); `nanobase-language-pool` ek dosyası ve `nanobase-vocabulary.service` içindeki silinmiş env dosyası satırı kaldırıldı (servis bu yüzden `failed` idi); `semantic-bridge.env` içindeki eski yorum düzeltildi; kalıcı bellek notları yeniden yazıldı (`llm-tt-gpu`). Bırakılanlar: günlükteki tarihsel kayıtlar (silinmez), GPU **donanımı** anlatan satırlar (`nvidia-smi`, `nvidia-container-toolkit`, `lspci`) ve ana sayfadaki "NVIDIA Inception Program Üyesi" rozeti (pazarlama içeriği — kaldırılması ayrı karar).
 - Soru 22 (vadesi geçmiş, tahsil edilmemiş alacaklar): yeni modelle 19 sn'de dürüst red — 2026 kopyasında borç kapama işlenmediği için yaşlandırma yapılamaz (bilgi paketi uyarısı). Bağımsız ölçüm aynı şeyi gösteriyor: 2.079.343 vadesi geçmiş plan satırının hiçbirinde `PAID > 0` yok; "açık" görünen 1,63 Mr ₺ gerçek alacak değil. Karne 1–22 doğru.
 
-## 2026-09-18 — PaddleOCR-VL-1.6: ihtiyaç olunca açılan OCR servisi
-
-- TT GPU makinesine PaddleOCR-VL-1.6 Docker olarak kuruldu. Küçük bir kapı konteyneri (port 8010) ilk istekte OCR konteynerini başlatır, 10 dakika istek gelmezse durdurur; kullanılmadığında GPU belleği tutmaz. Soğuk açılış 68,6 sn, boşta kapanma ve belleğin geri dönüşü ölçülerek doğrulandı; Flash-Next ile aynı kartta kalan dar payda çalışıyor.
-- İki gerçek sayfada deneme: kutu koordinatı ve eksiksiz metin veriyor, fakat Türkçe harflerde hatalı ("DUR!" → "DURI", ş/ğ/ı düşüyor). Flash-Next'in tersi: o harfleri doğru okuyup cümle atlamıştı. İş bölümü buna göre düşünülecek; editöre bağlama ve 1.149 bölgelik karşılaştırma kullanıcı onayını bekliyor. [Ayrıntı](TT-GPU-SUNUCUSU.md).
-
 ## 2026-09-18 — Qwen3.8-Flash-Next iki H100'de açıldı
 
 - 186 GB indirme bitti, 144 dosya boyutu kaynakla eşleşti. Model resmî doğrulanmış olmayan 2 × H100 NVL düzeninde ilk ayarlarla açıldı: kart başına 64,6 GiB ağırlık, 950.590 token KV önbelleği, bellek hatası yok.
 - NVLink olmadığı için iletişim yolu denetlendi (doğrudan erişim açık, PCIe Gen5 x16). İşçi süreçlerinin NUMA'ya bağlı olmadığı görüldü; `--numa-bind` + `SYS_NICE` eklendi ve bağlanma süreç düzeyinde doğrulandı.
 - Ölçüm: tek istek ≈ 130 tok/sn, 32 eşzamanlı ≈ 1.500 tok/sn, BI sorusundan doğru T-SQL 0,7–2,0 sn. İlk ölçüm soğuk olduğu için NUMA kazancı ayrıştırılmadı.
-- Kitap sayfası denemesi: balonu harfi harfine okudu, fakat bir düz yazı sayfasında anlatı cümlesi atladı ve diyaloğu balon diye etiketledi. Editörde tek kaynak olarak kullanılmayacak; OCR kararı değişmedi. Golden set ve 1.149 bölgelik karşılaştırma açık. [Ayrıntı](TT-GPU-SUNUCUSU.md).
 
 ## 2026-09-17 — Türk Telekom GPU sunucusu: Mac üzerinden VPN, envanter, Qwen3.8-Flash-Next hazırlığı
 
@@ -470,7 +208,6 @@ Gateway8010 bulundu; sağlık503 ve model başlangıcında 4.65 GiB talebe karş
 - Envanter çıkarıldı: iki GPU'yu dolduran Gemma-4-31B vLLM'leri 13 ve 20 gündür istek almıyordu; durduruldu, silinmedi. Kullanıcı Qwen3.8-27B dosyalarını, Docker derleme önbelleğini ve kullanılmayan imaj/konteynerleri sildi (sistem diski 175 → 269 GB boş). `mssql-logo` çalışmaya devam ediyor.
 - Ölçüldü: GPU'lar arasında NVLink yok (`SYS`); internet çıkışı toplam ≈ 100 Mbit ile sınırlı (iki bağımsız kaynakla sınandı), bu yüzden 186 GB'lık indirme yaklaşık 5 saat sürüyor.
 - `Qwen/Qwen3.8-Flash-Next-FP8` indirmesi `/data/hf-cache` altına başlatıldı (xet takıldı, düz HTTP'ye alındı), özel vLLM imajı çekildi, iki GPU'yu tek model olarak kullanan `/data/qwen38/docker-compose.yml` yazıldı ve doğrulandı. Model henüz başlatılmadı; iki H100 tarifte doğrulanmış bir yapılandırma değil, açılmama ihtimali gerçek. Geri dönüş: Qwen3.8-27B-FP8 tek kartta veya mevcut Gemma.
-- Editör için OCR kararı verildi, denenmedi: «Ekrana Sığmayan Macera»da düz yazı PDF'te gömülü, balon yazıları eğriye çevrilmiş. Ana okuyucu PaddleOCR-VL-1.6, ikinci bağımsız okuyucu ve konuşmacı ataması Flash-Next; kanıt yolu kayıtlı 1.149 bölgenin yeniden koşturulması. [Ayrıntı](TT-GPU-SUNUCUSU.md).
 
 ## 2026-09-17 — Türk Telekom VPN istemcisi hazırlandı, ağ geçidine erişim kapalı
 
@@ -506,199 +243,11 @@ Gateway8010 bulundu; sağlık503 ve model başlangıcında 4.65 GiB talebe karş
 - **Kanıt:** `nanobase-direct:~/llm-gate/evidence/` (`load-*.json`, `features-*.json`, `ask-*.json`, `restart-*.json`), koşturucular `~/llm-gate/accept.py`, `pgtest.py`, `probe.py`.
 - **Canlı şema değişikliği (eklemeli):** `sl_llm_queue`'ya 3 boş geçilebilir kolon (`module`, `priority`, `beats`), yeni tablolar `sl_llm_gate`, `sl_llm_job`. Eski kod bu kolonları görmez; geri almak gerekirse kolon/tablolar durabilir.
 - Tasarım ve kullanım: [docs/LLM-KAPISI.md](LLM-KAPISI.md). **Dağıtım:** kabulden sonra test sunucusunun canlı ağacına yalnız değişen 11 dosya kondu (öncesinde canlı dosyaların md5'i `main` tabanıyla birebir; sonrasında 11/11 yerelle aynı; `app.py` root sahipliği korundu), `nanobase-semantic-bridge` yeniden başlatıldı: `/health` ok, 8 slot / 2 ayrılmış, işleyici ayakta; canlı `:8795` üzerinden bir iş bırakıldı → 202, `DONE`, doğru cevap, sıra beklemesi 24 ms (model 200 sn); modelsiz «2026 net ciro» sorusu `deterministic` yoldan 11,6 sn'de döndü (bu yol değişmedi; rakamın doğruluğu bu işin kapsamında ayrıca doğrulanmadı). Müşteri VM'ine (192.168.0.55) **kurulmadı**.
-## 2026-09-17 — Yeni kitap için otomatik bölgesel yeniden okuma
-
-- V10 kaynak hattı, inceleme gerektiren bölgeyi kitap metni/cevap beklemeden bbox ve kaynak hashleriyle ağsız tüketiciye gönderir; sonuç gelmeden kaynak span'larını tamamlamaz. İlk 61 gerçek bölge bileşen kontrolü geçti; tam ürün kabulü değildir.
-- Lease kaybının kalıcı iptal kaydına takılması bulundu; attempt bazlı istek/rapor ve tamamlanmış artifactten toparlanma eklendi. V10-r2 gerçek hata ve yeni kitap kabulü sürüyor; eski bileşen sonucu yeni helper hashine taşınmaz.
-- Müşteri paketine tüketici dahil edilmesi, eksik kuyruk için kurulum öncesi hata ve yedekte tüketicinin durdurulması kodlandı. Yeni offline/restore kabulü bekleniyor. [Kapsam](editor/2026-09-17-reread-deployment.md).
-
-## 2026-09-17 — Kaynaklı kırpım vetosu ve otomatik sürüm devamı
-
-- Bölgesel Paddle + temiz PDF + aynı kutunun stabil iki PSM ölçümüyle eski tam sayfa ikinci okuyucu vetosunu kaynak/provenance koruyarak ele alan kod eklendi. Gerçek 1.149 kayıtta önceki 39/39 iyileşme, 14 yeni aday ve 0 gerileme doğrulandı; bu üretim874 sonucu değildir.
-- V8 koşusu kesilmeden V9 sabit imajı hazırlandı; gerçek sunucuda sınırlı ve hata halinde duran sürüm devam betiği başlatıldı. V8 tamamlanınca ayrı ortamda V9 analiz/API-PG/mobil kontrollerini yürütür. Ana yayını değiştirmez. [Ayrıntı](editor/2026-09-17-crop-source-continuation.md).
-
-## 2026-09-17 — V8 anlatı kapısı ve açık görsel kapsam
-
-- Künye/etkinlik/UNKNOWN sayfalardaki EVENT dışı iddiaların MATCH kapısından geçmesi kodda düzeltildi. Gerçek 48 sayfanın 15 adayı artık engellenir; 124 anlatı/karma adayın kapı sonucu korunur.
-- Küçük görsellerin sessiz atlanması düzeltildi: 52 dışlanan bölge açık kapsam kaydı olur; 19 eski büyük bölge ve model bütçesi korunur. Arayüz kapsamın ölçülmediği eski nesilleri de açık gösterir.
-- V7 dokuz sayfalık kontrolü korunarak API ile iptal edildi; ayrı ortama V8 kuruldu ve 7e7db466 nesli başlatıldı. Backend 39 dosya/hash ve web kaynak/çıktı eşliği geçti; gerçek 2/13/29 sayfa API/PG/ata kaynak/anlatı/kapsam ve dört genişlikte mobil kabulü geçti. Tam kitap koşusu sürüyor.
-- Türkçe-only OCR profili gerçek 26 bölge/104 kısa çağrıda yeni eşleşme getirmedi ve bir eşleşmeyi bozdu; varsayılan dil profili değiştirilmedi. [OCR kanıtı](editor/2026-09-17-ocr-residual-audit.md).
-
-## 2026-09-17 — İki ek gerçek kitap ve V7 soğuk başlangıç kanıtı
-
-- 64 ve 32 sayfalık iki ek özgün PDF gerçek API/parser/PostgreSQL ve bağımsız Poppler/hash kontrollerinden geçti. Kaynak hazırlama kabulüdür; anlamsal analiz kabulü değildir.
-- V7 ab85c397 gerçek model açılışındaki üç bağlantı hatası ve iki 503 sonrasında otomatik toparlandı; 29. sayfa taze model çağrısı tamamlandı. Dört mobil/masaüstü genişlikte kaynak arayüzü geçti.
-- 13. sayfada isim metni olsa da balon/figür kaydı yok; 29. sayfada figür olsa da kaynaklı isim bağlantısı yok. Elle kimlik atanmadı; görsel bölge kapsamı genel kod düzeltmesine alındı. [Kanıtlar](editor/2026-09-17-page-resume.md).
-
-## 2026-09-17 — Sayfa atasıyla devam, kısa model girdisi ve öncelik
-
-- V7 aynı içerik zincirindeki en yakın tamamlanmış sayfayı seçer; eksik sayfa önceki atadan gelir. Gerçek API/PG sayfa 2/7 ölçümü geçti; kayıtlar yeniden kaynak kapısından geçer.
-- Kaydedilen metin/geometri değişmeden model girdisi sıkıştırıldı. Gerçek tokenizer 3.952→1.873 token ölçtü; hız/kalite kabulü ayrıca yapılacak. Genel priority_pages parametresi sorunlu sayfayı öne alır, kalan sayfaları atlamaz.
-- R2 beşinci sayfa tamamlanınca API ile iptal edildi; sonuçlar korundu. V7 ayrı ortam kabulüne geçiliyor; ana sürüm v5. [Ayrıntı](editor/2026-09-17-page-resume.md).
-
-## 2026-09-17 — Bölgesel OCR kaynak seçimi ve model açılışı hatası
-
-- Bağımsız okuyucularla desteklenen kırpılmış OCR için genel kaynak seçim fonksiyonu ve v6 entegrasyonu eklendi. Ham metin, kutu ve bütün okuyucu kökenleri korunur; eski model adayları değişen kaynakta yeniden kullanılmaz. Gerçek 1.149 kayıtta 39 aday yükselme/0 gerileme ölçüldü.
-- Gerçek restore koşusunda ilk iki sayfanın kaynak kabulü geçti; model açılışındaki HTTP hatası işi durdurdu. Geçici reddetmeler için sınırlı tekrar ve açık durum kodu eklendi; R2 soğuk başlangıç kabulü sürüyor. Tam v6 kabulü yok; ana yayın doğrulanmış v5.
-- [Ayrıntı ve gerçek kanıt](editor/2026-09-17-regional-source-selection.md).
-
-## 2026-09-17 — V5 ana yayın kabulü tamamlandı
-
-- `text-attribution-v5-20260917`, ana nesil `14a79646`: 48/48, 10 metin atfı, 0 claim-speaker; kaynak 821/328 ve anlamsal kabul açık. Tam API/PG, backend/web hash ve dört genişlikte atıf/kutu kontrolü geçti. Bağımsız restore ortamında sekiz gerçek kesilen-yükleme senaryosu geçti.
-- Kaynak/atıf denetiminde tamamlanmış nesiller toplu API/PG okunarak karşılaştırılır; çalışan nesillerin sayfa sınırı ayrı tutulur.
-- Sonraki bölgesel OCR adayında gerçek 1.149 kaydın bağımsız hesabı 39 olası iyileşme/0 gerileme gösterdi; bu v6 üretim kabulü değildir. V6 ayrı ortamda gerçek akışa bağlanıyor.
-- Main commit mevcut; origin push eksik HTTPS kimliği nedeniyle başarısız. [V5 kanıt](editor/2026-09-17-text-attribution.md).
-
-## 2026-09-17 — V5 metin atıfları ve kesilen yükleme kabulü
-
-- Gerçek restore ortamında 48 sayfalık yeni nesil tamamlandı; kaynaklı metin atıfları UI/API eşliği ve bbox bağlantıları dört genişlikte geçti. Backend 36 dosya ve web kaynak/çıktı hashleri aynı.
-- Nullable kayıt derleme hatası kodda düzeltildi; denetçi seçicileri ve tamamlanma sırasındaki snapshot hatası düzeltildi. Gerçek akışlar yeniden kontrol ediliyor; eski hata logları korundu.
-- Ana yayına geçiş, tam atıf kontrolü ve kesilen yükleme matrisi devam ediyor; görsel kimlik/anlamsal kabul açık. [Kanıt ve ayrıntılar](editor/2026-09-17-text-attribution.md).
-
-## 2026-09-17 — Editörün farklı kitaplara genellenebilirlik incelemesi
-
-- Kullanıcının başka kitaplar da yükleneceği talebi AGENTS.md kuralına işlendi; kitap/sayfa/karaktere özel üretim çözümü yasak, gerçek regresyon girdileri ayrı.
-- Paralel kod incelemesinde yeni metin atıf adayının ortak/kısmi özne, geniş alıntı ve sayfa sınırı riskleri bulundu. Çalışma ağacındaki aday muhafazakârlaştırıldı; aynı ad eşliği karakter kimliğine çevrilmiyor.
-- Gerçek sunucuda 1.149 API kaydı bağımsız PostgreSQL sorgusuyla aynı; sıkılaştırılan aday 10 açık atıf üretti, kaynaklar önce/sonra değişmedi. Yeni adayın SHA ve ayrıntısı `evidence/text-attribution-generality-candidate.json`. Bu salt okunur kaynak/provenans ölçümüdür; yayımlanmış uçtan uca veya anlamsal kabul değildir.
-- Sayfa/boyut limit sözleşmesi, küçük görsel kapsamı ve farklı kitaplarla kabul açık. [Ayrıntılar](editor/2026-09-17-generality-review.md).
-
 ## 2026-09-17 — Tüm oturumların belge denetimi; proje belleğindeki bayat bilgiler düzeltildi
 
-- Neden: kullanıcı "tüm konuşmalarda yapılan işlere bak, md dosyalarını güncelle" dedi. 16 Eylül 10:16'daki önceki denetimden sonra etkin olan BI oturumları (CRM tablo/kolon araştırması — soru 5–18 turu, sağ üst zoom, AD Administrators erişimi, kurumsal sohbet analizi, promt izleyici) ve `main` commit'leri günlükle tek tek karşılaştırıldı. Sonuç: her oturum kendi günlük girişini yazmış, eksik giriş yok; 12 `claude/*` dalının hepsi `main`de (taşınmamış commit 0), worktree'ler temiz. Ana dizinde commit'lenmemiş iki editör dosyası (`apps/editor/README.md`, `scripts/verify-word-boundaries.py`) süren editör işine aittir, dokunulmadı.
-- `PROJECT-MEMORY.md` düzeltmeleri (özet, arşiv değil): (1) "VPN hesabı kısıtı" paragrafı bayattı — 14 Eylül'deki yalnız-RDP kısıtı kalktı, 16–17 Eylül'de test sunucusundan Logo `.155`, CRM `.28` ve VM `.55` gerçek sorgu/yayınla kullanıldı; paragraf güncel erişim kapsamı + aynı belirtide ne yapılacağı olarak yeniden yazıldı. (2) Depoda olmayan `deploy/llm-server` Stack ve dizin haritasından çıkarıldı (LLM NVIDIA hosted). (3) Dizin haritasına eksikler eklendi: `apps/editor/`, `docs/editor/`, `docs/TIMAS-IS-TANIMLARI.md`, bilgi paketi dizini, `docs/analiz`, `deploy/nginx|docker|helm|k8s`, `scripts/server/deploy-customer-vm.sh`. (4) Dosyanın en üstüne yığılmış iki tarihli editör bölümü Editör başlığının altına alındı; giriş ve "Proje ne" yeniden en üstte. (5) Soru hattına test durumu (1–18 doğru, 801 birim testi) ve yerel model kararı (ölçüldü, benimsenmedi) eklendi.
+- Neden: kullanıcı "tüm konuşmalarda yapılan işlere bak, md dosyalarını güncelle" dedi. 16 Eylül 10:16'daki önceki denetimden sonra etkin olan BI oturumları (CRM tablo/kolon araştırması — soru 5–18 turu, sağ üst zoom, AD Administrators erişimi, kurumsal sohbet analizi, promt izleyici) ve `main` commit'leri günlükle tek tek karşılaştırıldı. Sonuç: her oturum kendi günlük girişini yazmış, eksik giriş yok; 12 `claude/*` dalının hepsi `main`de (taşınmamış commit 0), worktree'ler temiz.
+- `PROJECT-MEMORY.md` düzeltmeleri (özet, arşiv değil): (1) "VPN hesabı kısıtı" paragrafı bayattı — 14 Eylül'deki yalnız-RDP kısıtı kalktı, 16–17 Eylül'de test sunucusundan Logo `.155`, CRM `.28` ve VM `.55` gerçek sorgu/yayınla kullanıldı; paragraf güncel erişim kapsamı + aynı belirtide ne yapılacağı olarak yeniden yazıldı. (2) Depoda olmayan `deploy/llm-server` Stack ve dizin haritasından çıkarıldı (LLM NVIDIA hosted). (3) Dizin haritasına eksikler eklendi: `docs/TIMAS-IS-TANIMLARI.md`, bilgi paketi dizini, `docs/analiz`, `deploy/nginx|docker|helm|k8s`, `scripts/server/deploy-customer-vm.sh`. (5) Soru hattına test durumu (1–18 doğru, 801 birim testi) ve yerel model kararı (ölçüldü, benimsenmedi) eklendi.
 - Kod değişikliği yok; yalnız belge.
-
-## 2026-09-17 — Sıkılaşan kaynak kapısının yeni nesil kabulü
-
-- `source-boundaries-v4-r2-20260917`, `99881d8f` nesli 48/48 tamamlandı: 1.149 bölge, 821 anlaşma / 328 inceleme. 7 yanlış eşlik kaldırıldı; ham okumalar aynı kaldı; geçersiz kaynaktan geçen aday 0. Gerçek API/PG, yayın kapıları, kaynak inceleme ve OCR aday bağlantıları geçti.
-- Yalnız kaynak güvenilirliği azaldığında değişmeyen, kabul edilmemiş model adayları yeniden denetlenir. Metin/kutu değişimi veya kaynak artışı yeni çıkarım gerektirir; gerçek geçmiş nesillerin 44–48. sayfalarında bu karşı kontrol geçti. Yeni aday model çağrısı 0; anlamsal kabul yok.
-- İlk nesil API ile iptal edildi ve korundu. Denetim için yeni konteyner oluşturma beklemesi mevcut çalışan API üzerinden doğrulamaya çevrildi, gerçek tekrar geçti. Yeni sürümün offline/restore kabulü ayrıca sürüyor. [Ayrıntı ve kanıt](editor/2026-09-17-word-boundary-gate.md).
-
-## 2026-09-17 — Editör kelime sınırı hatası
-
-- Optik kapının farklı kelime bölünmelerini eşit sayması gerçek kitapta bulundu ve genel kodda düzeltildi. 1.149 gerçek API/PG bölgesinde 7 yanlış eşlik kaldırıldı; eski ham veriler korundu. Aday ve yayımlanmış kod kontrolü geçti; yeni nesil ayrıca yürütülüyor.
-- `source-boundaries-v4-20260917` sunucuda; API sürüm kaydı ve worker yönlendirmesi v4 ile eşitlendi. Bağımsız kelime tarayıcılı gerçek regresyon denetçisi eklendi. Kitap metni veya konuşmacı elle düzeltilmedi.
-- [Kod, gerçek kanıt, yeni nesil ve açık kabul](editor/2026-09-17-word-boundary-gate.md). Hata kapatılmadan diğer adıma geçmeme talebi AGENTS.md'ye eklendi.
-
-## 2026-09-17 — V4 paket kabulü ve font eşleme deneyi
-
-- `book-access-v4-20260917` kendi offline paketinden 14 tablolu gerçek yedek/restore, API/PG/OCR ve mobil kontrolleri 10:00:32 UTC'de geçti. Restore ACL hatası kapatıldı; kaynak/anlamsal kabul açık.
-- Font incelemesinde 2.320 UTF-16 kod biriminin 1.160 bozuk harf gösterimi olduğu ayrıldı. Vektör/GSUB eşleme kodu deneyinde 1.156 gösterim tek karşılık buldu, 4 belirsiz kaldı. Gerçek 101 API/PG bölgesinde 68 PDF adayı kullanılabilir olsa da mevcut OCR kapısında iyileşme 0; ana veri ve 321 açık bölge değişmedi. Kod deney olarak arşivlendi, üretimde çözülmüş diye yazılmadı.
-- 29. sayfa figür–karakter kimliği sorunu teşhis edildi, henüz kodla çözüldüğü doğrulanmadı. Bildirimlerde bulgu, kod değişikliği ve gerçek kabul ayrı tutulur.
-- [Ayrıntılar ve kanıtlar](editor/2026-09-17-restore-acl-and-source-triage.md). Runtime yerel `main`de/sunucuda; GitHub push kimlik bilgisi yokluğu nedeniyle açık.
-
-## 2026-09-17 — Editör restore ACL hatası ve kaynak sorunlarının ölçümü
-
-- V3 ayrı restore kabulü `/v1/system` 500 ile başarısız oldu; neden yeni yetki tablolarında uygulama DB izinlerinin yeniden kurulmamasıydı. `migrate.py` düzeltildi, gerçek PG'de 28 izin kontrolü eklendi. Aynı gerçek yedeğin yeni v4 kurulumuna dönüşü, 14 tablo/artifact eşliği, API/PG, yetki ve dört genişlikte mobil ekran kabulü geçti.
-- 321 açık kaynak bölgesinin örtüşen hata nedenleri bağımsız API/PG karşılaştırmasıyla çıkarıldı. Kelime kutusu kırpımı üç gerçek sayfada 5 iyileşme/2 gerileme gösterdi; ana OCR'ye alınmadı ve veriler değiştirilmedi. Tüm kitap ölçümü ayrıca izleniyor.
-- [Hata, genel kod çözümü, imaj/kod hashleri ve kanıtlar](editor/2026-09-17-restore-acl-and-source-triage.md). Yerel test yok; bütün ürün kabulleri bağlı gerçek kitap/API/PG üzerinde.
-
-
-## 2026-09-17 — Editör kitap kapsamlı yetki sürümü
-
-`book-access-v3-20260917` ana sunucuya yayımlandı. Gerçek kitap/API/PostgreSQL, kaynak kayıtlarının değişmezliği, kapsam dışı erişim, okuyucu yazma yasağı ve anahtar iptali geçti; yönetici/okuyucu ekranları 320/390/768/1440 px doğrulandı. Yeni sürüm için offline/restore kabulü ayrı yürütülüyor. 48 sayfa işlenmiş olsa da 321 kaynak bölgesi ve konuşmacı/anlamsal kabul açık. Ayrıntılar: `docs/editor/2026-09-17-book-access.md`.
-
-
-Kronolojik kayıt. En yeni en üstte. Hiç silinmez, sadece eklenir. "Ne zaman ne oldu" sorusunun cevabı — canlı özet için [PROJECT-MEMORY.md](../PROJECT-MEMORY.md)'ye bak.
-
-Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
-
----
-
-## 2026-09-17 — Yükleme sürümünün offline restore kabulü
-
-- `upload-queue-v2-20260917` kendi paketiyle dış indirme olmadan içe alındı, gerçek kitap yedeği ayrı kuruluma geri döndü. Uploads/outbox dahil on tablo ve kaynak dosyaları eşleşti.
-- Geri yüklenen gerçek API/PG, OCR adayları ve 320/390/768/1440 px arayüz 08:15:30 UTC’de geçti. Hedef servisler durduruldu; veriler/kanıtlar korundu. Bu anlamsal analiz kabulü değildir.
-- Kullanıcı/kitap kapsamlı yetki çalışması ayrı kurulumda sürüyor; ana yayın henüz değiştirilmedi. [Yükleme kabulü](editor/2026-09-17-upload-pipeline.md), [yetki adayının kod ve kontrolleri](editor/2026-09-17-book-access.md).
-
-## 2026-09-17 — Editör otomatik PDF yükleme ve ağsız ayrıştırma
-
-- Yeni PDF için operatör betiği gereği kaldırıldı: kalıcı dosya kuyruğu, ağsız parser, 202/job_id, kaynak doğrulama, iptal ve hata durumları eklendi. Arayüz yükleme/yeniden takip akışı gerçek kitapla dört genişlikte çalıştı.
-- Boş ayrı PostgreSQL/artifact kurulumunda özgün PDF'nin 48 sayfası hazırlandı; HTTP/PG ve bağımsız pdfinfo/özgün bayt karşılaştırması geçti. Kuyruk kapasitesi, mühürleme, iptal ve servis yeniden başlatma geçti; kaynak manifesti ve editör kararları değişmedi.
-- `upload-queue-v2-20260917` ana sunucuya kuruldu; gerçek yükleme mevcut içerik sürümüne bağlandı. 32 backend dosyası ve web kaynak/çıktı hashleri doğrulandı. macOS metadata ve eski web build hataları gerçek kurulum testinde giderildi. Yeni sürümün offline restore kabulü ayrı izleniyor.
-- Kitabın 321 inceleme bölgesi ve anlamsal kabul açık. [Sürüm, hatalar ve kanıtlar](editor/2026-09-17-upload-pipeline.md).
-
-## 2026-09-17 — Editör son sürüm ayrı kurulum ve restore kabulü
-
-- `source-review-v2-r2-20260917`, `b652f63c` nesli: offline paket/import, gerçek kitap yedeği, ayrı kurulumda restore, API/PG ve OCR aday eşliği geçti. Geri yüklenen arayüz gerçek Chrome’da 320/390/768/1440 px doğrulandı (07:18:10 UTC).
-- Docker boş IPAM yapılandırması hatası giderildi; hash/veri eşliği denetimli devam eklendi. Aktif OCR yazıcısı varken yedek başlamaması gerçek kitap okuyucusuyla doğrulandı. Kaynak veriler elle değiştirilmedi.
-- 321 inceleme bölgesi ve anlamsal kabul açık; tüm roadmap tamamlandı denmez. [Kod, hatalar ve kanıt](editor/2026-09-17-source-v3.md).
-
-## 2026-09-17 — Editör çok nesilli yeniden kullanım doğrulandı
-
-- Son `b652f63c` nesli 48/48 tamamlandı; 1.149 span, 828 anlaşma/321 inceleme. 371 yeniden okuma ve 92 çelişki korunuyor; önceki veri değişmedi. 48 sayfada yeniden kullanılan ham adaylar, görseller ve yeni kaynak kimlikleri gerçek API/PG ile doğrulandı; yeni model çağrısı 0.
-- Üç nesil üzerinden 15 OCR-VL adayının gerçek kaynak bağlantısı geçti. API/worker son imajı `source-review-v2-r2-20260917`; 28 backend dosyası çalışan imajla eşleşti. Soru/yayın kapısı açık sorunlar bitmeden açılmadı.
-- Son offline paket ve import/hash/imaj kontrolü geçti; yedek/restore kontrolü devam ediyor. [Son kimlikler ve kanıtlar](editor/2026-09-17-source-v3.md).
-
-## 2026-09-17 — Editör v3 tamamlandı, inceleme entegrasyonu doğrulandı
-
-- V3 yeni nesli 48/48 sayfada tamamlandı, 828 anlaşma/321 inceleme ve NEEDS_REVIEW. Kaynak metin/konuşmacı/review elle değiştirilmedi.
-- Ek OCR ölçümleri kaynak kimliği ve değişmez artifact kökeniyle API/ekrana bağlandı. Gerçek API/PG ve dört mobil/masaüstü genişliğinde kontroller geçti; kesilmiş ve Latin dışı adaylar görünür, kabul kapısı kapalı.
-- V3'ten tekrar kullanımda yeniden okuma ölçümlerinin aktarılmadığı gerçek veride kanıtlandı (371 yerine 0). Genel köken izleme ve hash/kutu denetimi düzeltildi; ikinci tekrar kontrolü hazırlanıyor. [Kanıtlar](editor/2026-09-17-source-v3.md).
-
-## 2026-09-17 — Editör OCR-VL gerçek pilot sonucu
-
-- 15 bölge tamamlandı: 14 EOS/1 kesilmiş çıktı; toplam 67,11 sn, medyan 3,519 sn. Yalnız bir sözcüklü metin mevcut okuyucularla eşleşti. Ek okuyucu ana metin kaynağına yükseltilmedi; inceleme kararları değiştirilmedi.
-- Aynı ilk kırpımda önbellekli/önbelleksiz çıktı birebir eşit, 10,54 → 1,935 sn; bu tüm bölgelerin kalite kabulü değildir. Gerçek API/PG/artifact hash ve kaynak değişmezliği kontrolü geçti.
-- Aday ölçümlerini gerçek source_span kimliklerine bağlayan inceleme API/ekran entegrasyonu hazırlandı; kaynak ve konuşmacı kabulü kapalı kalır. [Detay ve sınırlar](editor/2026-09-17-source-v3.md).
-
-## 2026-09-17 — Editör CPU OCR ve kurulum denetimi sağlamlaştırması
-
-- Gerçek pilotta kapalı üretim önbelleği saptandı; yeni sürüm önbellek ve bölge başına süre sınırıyla ayrı artifact alanında çalışıyor. Eski çıktılar korunuyor, başarısız/kesilmiş sonuçlar kabul edilmez.
-- Kurulum denetçisi aktif dosya yazan araçları bekler ve Docker'da mevcut ağlarla çakışmayan alt ağları seçer. Tamamlanmış paket aşamasından güvenli devam desteği eklendi. Okuyucu sürümü değiştiği için eski paket denemesi durduruldu; yeni restore kabulü henüz yok.
-- [Sürüm ve ölçümler](editor/2026-09-17-source-v3.md). Kitap verisi değiştirilmedi, yerel test çalıştırılmadı.
-
-## 2026-09-17 — Editör kaynak kutuları ve sınırlı OCR-VL pilotu
-
-- Kaynak ekranına özgün sayfada metin kutusu gösterme, kullanılabilir PDF/yeniden okuma karşılaştırması ve ölçüm yeniden kullanımı bilgisi eklendi. Sunucuda web imajı dağıtıldı; gerçek Chrome/API/PG ile 320/390/768/1440 px, altı sekme, metin/kutu eşliği ve çıkış kontrolü geçti.
-- Ağsız PaddleOCR-VL aracı 4 CPU/10 GiB sınırıyla 15 gerçek başarısız bölgeyi işliyor. İki ilk entegrasyon hatası genel araç kodunda giderildi, loglar korundu. İlk tamamlanan sonuç okuyucularla eşleşmedi; metin kabulü yapılmadı. Gerçek API/PG/artifact denetçisi ve isteğe bağlı offline paket desteği eklendi.
-- V3 inceleme API'si ilk 45 sayfada gerçek DB ile eşleşti; yayın/soru kapıları kapalı, kaynaklar değişmedi. Tam koşu ve OCR pilotu devam ediyor. [Ayrıntı](editor/2026-09-17-source-v3.md).
-
-## 2026-09-17 — Editör v3: bozuk PDF Unicode ve yeniden okuma entegrasyonu
-
-- Ek düzlem özel kullanım karakterlerinin metin sayılması genel kodda düzeltildi. Gerçek API/PG/artifact tekrarında 778 → 828 okuyucu anlaşması, 371 → 321 inceleme; eski kaynak kayıtları değişmedi. 92 kararlı yeniden okuma çelişkisi engellendi.
-- V3 gerçek API üzerinden yeni nesilde başlatıldı; değişmeyen 43 sayfanın ham adayları kökeni korunarak tekrar kapılardan geçirilir. Son beş sayfada yeni çıkarım sürüyor. 28 backend dosyası çalışan imajla eşleşti.
-- Ağsız ve sınırlı PaddleOCR-VL pilot araçları eklendi; sabit model revision/hashleri doğrulandı. Henüz çıkarım veya anlamsal kabul sonucu yok. Kitap metni/review elle değiştirilmedi; yerel ürün testi yok.
-- [Ayrıntı, kimlikler ve açık plan](editor/2026-09-17-source-v3.md).
-
-## 2026-09-17 — 371 sorunlu bölge otomatik yeniden okundu
-
-- Genel `region_reread.py`, sunucu koşucusu ve gerçek API/artifact/PG doğrulayıcısı eklendi. Ağsız belge konteyneri özgün kutuları kırpıp Tesseract PSM 7/13 ile okur; kod/model/render/kırpım hashleri, ham sonuçlar ve skorlar ayrı değişmez artifact’larda tutulur. Eski veri veya review elle değiştirilmez.
-- Pilot s.16/29/38: 25 bölge, 7 kararlı okuma, 5 desteklenen aday. S.29’da desteklenen aday yok. Tam koşu: 46 sayfa/371 bölge, 175 kararlı, 147 mevcut okuyucuyla eşleşen aday; hiçbirine anlamsal kabul verilmedi.
-- `region-rereads` API’si ve `source-review` bağlantısı dağıtıldı. Kaynak API/PG eşliği ve kayıt parmak izi korundu. API/worker ve belge imajı ayrı hashlerle kayıtlı; 28 backend dosyası çalışan API ile eşleşti.
-- Son gerçek doğrulama 46 sayfa/371 bölgede API/artifact/PG eşliği, filtre, yetki ve inceleme bağlantısı üzerinden geçti. Son sürümde soru/yayın kapıları 401/409; review ve soru sayısı 0.
-- [Yöntem, dağıtım ve kabul sınırları](editor/2026-09-17-region-reread.md). Yeni offline paket/restore kabulü ve adayların anlamsal çözümü açık.
-
-## 2026-09-17 — Kaynak inceleme API ve balon–figür aday bağlantısı
-
-- Genel `source_review.py` eklendi: uyuşmazlık nedenleri, eksik/kullanılamayan okuyucular ve kırpım koordinatından sayfa koordinatına figür dönüşümü. Kuyruk tek figüre değse de karakter kimliği kanıtı olmadan konuşmacı atanmaz.
-- Yetkili `GET /v1/generations/{generation}/source-review` dağıtıldı. Sunucudaki gerçek API/PG ile 48 sayfa, filtre, kaynak parmak izi ve koordinat kontrolü geçti; 27 backend dosyası eşleşti. İlk açılış 502 kontrolü başarısız kaydedilip API hazır olduğunda tekrarlandı.
-- Veri veya review elle değiştirilmedi; 371 bölge incelemede, iki balon adayında kimlik/çoklu eşleşme açığı sürüyor. Yeni OCR okuması veya anlamsal kabul yapılmadı. Önceki v2 restore kabulü bu yeni imaja aktarılmaz.
-- [Sürüm, kanıtlar ve açık işler](editor/2026-09-17-source-review.md).
-
-## 2026-09-17 — Editör tam kaynak koşusu ve restore sonucu belgelendi
-
-- Gerçek sunucu API’si ve son kanıt dosyaları yeniden okundu: v2 iş COMPLETED, nesil NEEDS_REVIEW. 48/48 sayfa, 1.149 span; 778 okuyucu anlaşması ve 371 inceleme bölgesi. 48 sayfanın altı kayıt türü API/PG eşliğinde geçti; manuel review ve kaynak düzeltmesi 0.
-- Offline 8 imaj/94 dosya/dört GGUF paketi ve tam kitap yedeği ayrı kuruluma geri yüklendi. Kaynak/restore API-PG, sürüm/izolasyon ve restore mobil ekran kontrolü geçti; hedef servisler kanıtları koruyarak durduruldu. Anlamsal sentez/arama/soru kabulü açık.
-- Bütün Editör Markdown belgeleri ve kök README/AGENTS/CLAUDE/proje belleği güncellendi; tarihsel pilotlar güncel v2 sonucundan ayrıldı. Genel kod düzeltmeleri, sürüm/iş kimlikleri, kanıt yolları, kurulum sınırları ve açık roadmap ayrıntılı devir belgesinde toplandı.
-- Bu tur dokümantasyondur: uygulama veya kitap verisi değiştirilmedi, yerel ürün testi başlatılmadı. [Ayrıntılı kayıt](editor/2026-09-17-status-and-handoff.md).
-
-## 2026-09-16 — Editör v2 dağıtımı ve kurulum denetimi hazırlığı
-
-- 20:19:50 UTC: V2 offline paket export/importu geçti (8 imaj, 94 dosya, dört GGUF ve OCR); bütün dosya hashleri ve yüklenen imaj kimlikleri doğrulandı. Tek seferlik denetçi kitabın tamamlanmasını bekliyor; ardından ayrı kurulumda gerçek yedek/restore/API/PG/tarayıcı kontrolü yapacak. Restore ve anlamsal kitap kabulü henüz verilmedi.
-- V2 ilk iki sayfasında gerçek API/PG kaynak eşliği geçti; ilk sayfada altı kayıt türü kontrol edildi. Soru/yayın kapıları 401/409 ile doğru kapalı kaldı; DB'de yeni soru işi veya review yok. S.38 sınırlı gerçek OCR kontrolünde 24 bölgenin 20'si eşleşti, olumsuzluk korundu (33,016 sn); bu ana koşunun s.38 kabulü değildir.
-- Kurulum denetçisinin üst klasör izin hatası yalnız ayrı 0700 denetim kökü oluşturularak giderildi; kaynak kitap ve kurulum izinleri korunur. Yeni süreç paket üretimini başlattı; henüz geri yükleme sonucu yok.
-- `6f14bb9` kodu yeni API/worker imajıyla dağıtıldı; 26 backend dosyasının hash eşliği ve 10 servis izolasyonu geçti. V1 API iptali tamamlandı; 18 ham OCR/görsel, 17 aday/kontrol sayfası korundu. Yeni nesil `a9471749-7447-4826-b003-f25e53943763` gerçek API üzerinden başladı. Kullanıcı kitabının verileri elle değiştirilmedi.
-- Gerçek Chrome/API ile 320/390/768/1440 px kontrolü yeni API üzerinde geçti. Konuşmacı/anlamsal kabul, sentez/indeks/soru-cevap açık; işlem bitişi kabul değildir.
-- Paketleme `node_modules`, `.git` ve özel `.env*` dosyalarını dışlar; `.env.example` gerçek release kimliğini taşır. Tek seferlik kurulum denetçisi paket export/importu, koşu tamamlanınca tutarlı yedek ve ayrı ağ/port/secret/volume ile restore kontrolünü yürütmek üzere hazırlandı. Henüz çalışmamış adımlar başarı sayılmaz. Canlı proje belleğindeki çelişen eski koşu özetleri tarihsel raporlara yönlendirildi.
-- GitHub push bu oturumda HTTPS kullanıcı kimliği bulunmadığı için başarısız; yerel main commit'i origin'e gönderilmiş sayılmaz.
-
-## 2026-09-16 — Editör: veriyi değiştirmeden sistem kalite düzeltmesi
-
-- Kullanıcının kod üzerinden düzeltme ve gözetimsiz koşu denetimi talebi kaydedildi; kitap metni/model cevabı/review kararı elle değiştirilemez.
-- Gerçek API/PG karşılaştırmasında kelime kutusunun bütün PDF/Tesseract satırıyla kıyaslandığı bulundu. Kelime geometrisiyle eşleştirme hazırlandı; s.16 anlaşan bölge 1/56 → 46/56. Ham metin değiştirilmedi; bu anlamsal kabul değildir.
-- Alıntıda kelime sınırı, yinelenen referans, sıra/kesinti kontrolü ve okunamayan bölge işaretleri eklendi. Yeni imajla 18 sayfanın ham ölçümleri salt okunur tekrar işlendi; 46 adayda 31 alıntı eşleşmesi, 4 kesintili kaynak, 11 uyuşmazlık.
-- Takibe tarihli Markdown ve her 10 sayfa/terminal durumda API-PG denetimi eklendi. [Ayrıntılı kayıt ve açık işler](editor/2026-09-16-system-quality-followup.md). Yeni sürümün canlı dağıtım/kabulü ayrıca kaydedilecek.
 
 ## 2026-09-17 — Arayüz denetimi: çalışmayan düğme ve sahte içerik kalmadı
 
@@ -717,38 +266,6 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Düzeltme: kabuk `onZoom` gelmezse yakınlaştırmayı kendisi tutar ve `useShellZoom`/`ZoomStage` ile ekrana verir; her ekranın `main` içeriği `ZoomStage` ile sarıldı (CSS `zoom`, dış kap sabit → üst şerit/ray hizası bozulmaz, taşan kısım main'in kaydırmasında). Pano kart sürükleme/boyutlandırma farkı ölçeğe bölünür; `@media print` içinde zoom 1. `ZOOM_MIN/MAX` tek yerde (Shell).
 - Doğrulama: portal (nanobase-direct) kaynağı bu 11 dosyada main ile aynıydı → yalnız değişen dosyalar kopyalandı, sunucuda derlendi (`tsc -b` geçti), `cockpit/dist` güncellendi. Tarayıcıda timasai kısa oturumuyla `/planli-raporlar` %130 ve `/panolar` %80 ölçüldü (`getComputedStyle().zoom`), yatay taşma yok; oturum silindi.
 - **Müşteri VM'i (192.168.0.55) güncellenmedi:** iş sırasında OpenVPN tüneli düştü (`tun0` yok, "No route to host"). Yeniden bağlanmak telefon MFA onayı ister; tünel açılınca `/home/ai/bi-docker/src` içine yalnız bu 11 dosya kopyalanıp `docker compose build web && up -d web` koşulacak (önce VM'deki dosyaların md5'i main'in önceki hâliyle karşılaştırılır). `/tmp/bi-docker` main'den geri; toptan deploy betiği bu iş için kullanılmamalı.
-
-## 2026-09-16 — Editör sayfa bazlı konumlu kaynak akışı
-
-- Kullanıcının talebiyle eski kitap işi iptal edildi, 48 kaynak/48 görsel/12 sahne korundu; eski otomatik soru ve takip süreçleri durduruldu. İlk yeni canary de yerel PDF konumları eklenince korunarak kapatıldı. Yeni nesil `7a19f9eb-7e3e-40d0-822b-ac5e557960b4` sıralı sayfa akışına başladı.
-- PaddleOCR ana Compose servisine alındı. Yerel PDF kelime kutuları ağsız belge aracıyla 48 sayfa için çıkarıldı. OCR/PDF/bölgesel okuma ve konumlar source_spans'a, yerleşim/balon adayları ve görsel gözlemler ayrı kayıtlara yazılır. Eski serbest görsel açıklama iddia girdisi değildir. Uyuşmazlık ve kimlik belirsizliği incelemeye ayrılır; hiçbir optik eşleşme otomatik semantik kabul olmaz.
-- Yeni okuma kartları dört gerçek tarayıcı genişliğinde/API ile kontrol edildi. Son neslin ilk iki sayfasının kayıtları bağımsız PG ile eşleşti. Ana akış sürüyor; beş hedef sayfa senaryosu, konuşmacı/semantik kabul, sentez/indeks ve yeni tam paket restore kabulü henüz tamamlanmadı. [Ayrıntılı durum](editor/2026-09-16-source-spans.md).
-
-## 2026-09-16 — Editör PaddleOCR gerçek sayfa pilotu
-
-- Türkçe destekli PP-OCRv5 ayrı, özel ağdaki Docker servisine eklendi; model revision/taban imaj sabit, ağırlıklar imaj içinde, 4 CPU/4 GiB. Offline paket için `--with-ocr` seçeneği eklendi; tam paket restore bu turda koşulmadı.
-- Gerçek PDF 38, yetkili API ve bağımsız PostgreSQL/hash karşılaştırmasıyla işlendi. 1600/2400 px süreleri 30,353/31,610 s; kritik olumsuzluk doğru, eski VLM alıntısı genel uyuşmazlık kapısında bloke. Dört bölgede harf/noktalama uyuşmazlığı var; tam kitap kabulü verilmedi. Kitap içeriği ve beklenen cevap uygulamaya yazılmadı.
-- Gerçek denemede görülen kırpım sonrası kelime sırası bozulması doğrudan satır tanımayla, OCR'ın sağlık yanıtını geciktirmesi ayrı sağlık iş parçacığıyla düzeltildi; son imajla aynı sayfa yeniden koşuldu, yük altında 15/15 sağlık yanıtı alındı. [Kanıt ve kapsam](editor/2026-09-16-ocr-page-pilot.md).
-
-## 2026-09-16 — Editör kaynak adaylarının görünürlüğü ve geri dönüş denetimi
-
-- Sahne içindeki kişi/olay adayları açılabilir; atıflar özgün PDF sayfasına döner. Gerçek sunucu Chrome/API ile 320/390/768/1440 px kontrol edildi. Cevap statüsü ve modelin sınırlamaları görünür; analiz değişiminde eski cevaplar temizlenir. Henüz dolu cevap kabulü verilmedi.
-- Yeni koşuda önceki 13 reddedilmiş görselin açıklama/render eşliği doğrulandı; yeni PDF 6 bulgusuyla en az 14 sayfada bilinen hata var. Bu bağımsız değerlendirme model girdisine veya yeni generation review kayıtlarına yazılmadı. Sahne/cevaba yayılımı bekleniyor.
-- Gateway yenilemesinde takip betiğinin ConnectionResetError ile çıkması gerçek ortamda görüldü; işçi etkilenmedi. HTTP/bağlantı kesilmeleri için sınırlı retry eklendi, eski hata korunarak tek takipçi ve soru kapasite gözlemcisi yeniden başlatıldı. Önceki 502 kesintisi dört denemede toparlandı.
-- Yedek/restore'a 8 kitap tablosu ve tüm artifact hashleri eklendi; karşılaştırma hedef işçiden önce yapılır. Canlı sunucudan 340 dosya/207.058.811 bayt referansı üretildi. Tam dolu-kitap restore ve indeks kabulü bekleniyor. Tam cevap/API/bağımsız DB karşılaştırma betiği 13 sorunun ardından çalıştırılmak üzere hazırdır; çalışmış sayılmaz.
-
-## 2026-09-16 — Editör sahne çıktı bütçesinin gerçek koşu hatasıyla düzeltilmesi
-
-- Müdahalesiz kitap koşusunda üç dört-sayfalık sahne çağrısı 1800 çıktı token sınırında kesildi; uygulama bunları tamamlanmış saymayıp alt gruplarla yeniden okudu. Tekrarlı okuma ciddi süre maliyeti oluşturdu. Sahne çıktı bütçesi 3600 yapıldı; gerçek tokenizer ile toplam 8192 bağlam sınırı ve gerektiğinde grup bölme korunuyor. İstem ve kitap içeriği değiştirilmedi. Çağrı metadata’sına max_output_tokens eklendi.
-- Tamamlanan 48 kaynak, 48 görsel ve ilk sahne korundu; API/işçi aynı yeni imajla yeniden açıldı, lease üzerinden aynı işin ikinci denemesi başladı. Sahne başarısı henüz verilmedi. API/işçi imajı sha256:238b1b94b695b21566659f54f77196d1417d7024f84f1f185f5229439bad8ef2; backend a02c5a988346369b5bf9a2787a1e47039d14e516b31107405b607b6c68f29265.
-- Kaynak/işlem/editör durumları ayrı gösterilen ekranda analiz seçeneğinin durum etiketi canlı sorguyla güncellenir. Yeni dağıtımda 9 servisin kaynak/ağ sınırları, API dış TCP engeli ve düşük yetkili DB rolü doğrulandı; sağlık kontrolleri iş doğruluğu veya SLO kabulü değildir.
-
-## 2026-09-16 — Editör gerçek kaynak inceleme ekranı
-
-- Bağımsız React/TypeScript ekranı gerçek operatör API’sine bağlandı: kitap/analiz seçimi, üç ayrı durum, özgün kaynak görüntüsü, OCR/PDF ve değiştirilmemiş model adayları, mevcut sahne/varlık/olay/yorum/soru kayıtları. Salt okunur; kabul koşusuna düzeltme/karar girmez. Anahtar yalnız oturum belleğinde tutulur.
-- Sunucu Chrome’da 320/390/768/1440 px ve altı sekme doğrulandı; yatay taşma yok, kontroller en az 44px, kaynak geçişi ve çıkış çalışıyor. İlk dağıtımda yanlış JavaScript MIME türü ve atomik kopyalama sonrası eski bind-mount inode’u saptandı; MIME yapılandırması/gateway yeniden oluşturması sonrası aynı koşu geçti. Kitap/analiz listesi tam API sonucu bağımsız PostgreSQL ile eşleşti; 48 kaynak görüntüsünün API hashleri kaynakla eşleşti.
-- Vite 6.4.3 kilitlendi; sunucu derlemesi ve npm denetimi geçti (0 bildirilen açık). Embedding/reranker CPU/thread sınırları ayrı yapılandırılır, bu koşuda dörder. Yeni indeks geri kurma betiği hazırlanmıştır; dolu gerçek analiz restore kabulü henüz yapılmadı. Eski offline paket yeni web imajını içermez.
-- Müdahalesiz kitap koşusu devam ediyor; ilk künye grubu hikâye olayı üretmedi. PDF 6’daki uyuyan/mavi gözlü betimlemesi özgün görselle desteklenmiyor; model kaydına dokunmadan kalite raporuna başarısızlık olarak kaydedildi. Uçtan uca/üretim kabulü verilmedi.
 
 ## 2026-09-17 — Tek tek tur, soru 5–7: kaynak seçimi, eleştirmen ve kapı kökten düzeltmeleri
 
@@ -800,40 +317,6 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Testler: 744 geçti (yeni: `test_no_sql_caveat.py`, eleştirmen COUNT(*)/AVG/DATEDIFF, kilitli adımın alt sorgu/CTE'den geçişi). Canlıya yalnız değişen dosyalar, md5 karşılaştırmasıyla kuruldu.
 
 ---
-
-## 2026-09-16 — Editör kabulünün müdahalesiz sistem koşusu olarak ayrılması
-
-- Kullanıcı, kitabın Codex tarafından analiz edilmesini/düzeltilmesini değil, roadmap'in mevcut yerel altyapıyla eksiksiz sınanmasını istediğini netleştirdi. Kaynak düzeltmesi API kayıt sayısı canlıda 0 doğrulandı; hazırlanan açıklamalar uygulanmadı.
-- Eski nesildeki ret kararlarının sahne girdisini filtrelemesi nedeniyle önceki koşu müdahalesiz kabul sayılmadı. Eski iş API üzerinden iptal edilip korundu; aynı kaynak ve özgün model çıktılarıyla, ret/düzeltme kararı olmayan `6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b` nesli başlatıldı. Yeniden kullanılan görseller yeni üretim olarak sayılmaz.
-- CPU kullanım izni kapsamında yalnız Editör LLM 48 CPU/48 thread ve dört slotla yeniden açıldı. 22 plan bölümünün mevcut kanıtları ve açıkları `docs/editor/roadmap-live-status.md` içinde görünür kılındı. Gerçek API/DB bütünlük betiği, müdahalesiz nesilde sıfır review/correction ve sahne girdilerinin model kökenini denetleyecek şekilde genişletildi. Uçtan uca/semantik kabul henüz verilmedi.
-
-## 2026-09-16 — Editör gerçek kitap için ön yüzsüz analiz koşusu
-
-- Kullanıcı daha fazla CPU kullanımına izin verdi. Canlı boş kapasite ölçümü sonrası 32 CPU/32 thread + 4 model slotu (8192 token/slot) devreye alındı. Bağımsız görsel/sahne/destek grupları en fazla dört eşzamanlı çağrıyla, aynı işin lease/fencing korumasında işlenir. Gerçek başlatmada PID 128 sınırının libgomp hatasına neden olduğu görüldü; LLM sınırı 512 oldu ve servis sağlıklı başladı. İlk paralel kaynak kayıtları gerçek API/DB'de oluştu. Ortak sağlık uçları 200; tam SLO kabulü yok. Kaynak incelemesinde ilk 13 görselin 9'u yanlış metin/ayrıntı nedeniyle reddedildi. B01–B18 ve V01–V08 için geçilmiş test gibi sunulmayan takip tablosu eklendi. Soru takipçisi bir başarısız soruda diğer soru sonuçlarını kaybetmez; hata ve inceleme kararlarını raporda korur.
-
-- Gerçek görsel çıktılarında 6. sayfanın desteklenmeyen göz rengi ve 10. sayfanın hediye yorumu API review ile reddedildi; özgün model kayıtları korundu. Yeni görsel istemi küçük belirsiz ayrıntıları ve metinsel olay yorumunu sınırlar; sahne çıkarımı reddedilen görsel betimlemeyi dışlar. Deneme limiti dolan işler FAILED olur; gerekçeli operatör retry ek deneme açar, deneme geçmişini sıfırlamaz. Gerçek kaynaklarla 48 pasajın embedding tokenizer uzunluğu ölçüldü: en büyük 696 token, 2048 sınırının altında. Olay birleştirme/iddia/ilişki ve iki aşamalı edebî sentez eklendi; anlamsal kabul henüz verilmedi.
-
-- Kaynak denetiminde Docling'in çok sayfalı paragrafını her sayfaya bütün olarak bağlama sorunu bulundu. Özgün kaynak ve iptal edilmiş iki generation korundu; 2400px sayfa içi OCR/kelime koordinatları eklendi. Tesseract TSV'nin tırnakları CSV kaçışı gibi yorumlanınca metne satır metadata'sı sızdığı gerçek kitapta görüldü; `QUOTE_NONE` ile düzeltildi, 48 sayfada tekrar çalıştırıldı. 29. sayfanın balonu ve 44. sayfanın gerçek bitişi görselle karşılaştırıldı. Güncel generation `18c22ea1-35e8-4e49-b762-82b3320ed49c`.
-- Hostta yaklaşık %20 boş CPU ölçüldükten sonra yalnız Editör LLM 8 CPU/8 thread sınırına alındı; varsayılan müşteri profili 4 olarak kaldı. Legal/BI sağlık uçları geçiş öncesi 200. Model yeniden başlama kaynaklı bağlantı hatası başarılı analiz sayılmadı; aynı iş API retry ile devam ettirildi. Model referansları metin kaybetmeden kısa sunucu kimlikleriyle taşınır, sonuçta UUID'lere çözülüp kapsam kontrolünden geçer.
-- Kullanıcı, ön yüz varmış gibi gerçek kitabın analiz belgesindeki akıştan geçirilmesini istedi. Eser/baskı/yükleme/kaynak sürümü, kalıcı işler, immutable generation kayıtları, outbox, inceleme ve kaynak/görsel API'leri eklendi. Ağsız parserın doğruladığı gerçek PDF yeniden HTTP üzerinden yüklendi; hash ve içerik sürümü eşleşti.
-- İşçi PostgreSQL SKIP LOCKED, lease, fencing ve LangGraph checkpoint ile görsel/sahne/destek/sentez/indeks adımlarını yürütür. Sorular generation'a sabitlenir, yerel dense + BM25 + reranker kaynaklarını kullanır; editör önizlemesi son cevap/onay sayılmaz. Modelin kaynak referansları sunucuda denetlenir.
-- Gerçek sunucuda 48 kaydın tam API sonucu bağımsız PostgreSQL sorgusuyla eşleşti; aynı yükleme idempotency, yarım yükleme reddi, anonim kaynak/görsel 401 ve tamamlanmamış nesli etkinleştirme 409 doğrulandı. Yerel/sentetik test çalıştırılmadı. İşçi güncellemesi sonrası ilk tamamlanan sayfa korundu, aynı iş lease üzerinden devam etti.
-- Uzun analiz koşusu başlatıldı: generation `d84c2009-5974-4725-884f-99da0aebd8bd`; ilk görsel sayfa 311,825 sn. Tüm aşamalar ve 13 kabul sorusu bitmeden uçtan uca tamamlandı iddiası yok. Tek operatör erişimi, henüz ayrıştırılmamış PDF için açık hata, insan editör kabulü ve gerçek ikinci baskı B18 eksikliği belgelenmiştir. Offline müşteri paketi önceki altyapı sürümüdür.
-
-## 2026-09-16 — Editör bağımsız altyapı ve taşınabilir kurulum
-
-- Kullanıcının analiz belgesi v1.1 okundu; sunucu canlı envanteri çıkarıldı. `apps/editor/` ve `/data/nanobaseai/editor` altında BI'dan bağımsız Docker altyapısı kuruldu: PostgreSQL/Alembic, LangGraph checkpointer, FastAPI, heartbeat işçisi, Qdrant, Prometheus, nginx; ayrıca ağsız Docling/Poppler/Tesseract Türkçe aracı. Ayrı kaynak sınırları, ağ/volume'lar ve kurulum sırları kullanıldı.
-- Müşteri taşınabilirliği için sürüm/hash sabitleme, VPN/host/Docker ağ çakışması ön kontrolü, offline imaj paketi, yerel içerik etiketleriyle `--pull never` kurulumu, DB+artifact yedeği ve yeni ortama restore betikleri eklendi. İlk otomatik Docker ağı VPN ile örtüşünce yalnız Editör ağı kaldırılıp yapılandırılabilir `10.203.48.0/24` ve `10.203.49.0/24` ağları kullanıldı.
-- Gerçek `Ekrana Sığmayan Macera` PDF'si (19.806.912 bayt, SHA-256 `94747e819a760fef5e3cef39bb3284c543e217923e2560a3e5719e1060774e50`) sunucuda 48/48 sayfa render + tam sayfa Türkçe/İngilizce OCR/Docling olarak 378,22 sn'de işlendi. Gerçek API'nin tam manifesti bağımsız Editör PostgreSQL sorgusuyla, kaynak/render dosyaları hash'lerle doğrulandı; yetkisiz kaynak isteği 401. Yeni proje/port/ağ/sırlarla offline temel paketten restore aynı kaynağı doğruladı; deneme ortamı kapatıldı, yedek korundu. Yerel test veya sentetik veri kullanılmadı.
-- Yerel CPU model profili: ana aday Qwen3.8-27B Q4_K_M + Q8 projektör indirildi ve hash doğrulandı; mevcut BGE embedding/reranker ağırlıkları bağımsız servislere alındı. Varsayılan tam sayfa VLM bütçesinin CPU ön işleme hızı düşük bulundu; ilk deneme durduruldu ve görsel bütçesi açıkça 256 token olarak yapılandırıldı. Bu ayar edebî/görsel okuma kalitesi kabulü değildir.
-- Kapsam sınırı: çalışan altyapı, tamamlanmış kitap analiz ürünü değildir. `pilot_ready=false`; iş kuyruğu/fencing, outbox/generation, kullanıcı-kitap yetkisi, karakter/olay ve atıflı cevap hattı, React editör ekranları ve kapsamlı ortak yük/üç kitap/editör kabulü henüz tamamlanmadı. Ayrıntılı kanıtlar: [Editör altyapı raporu](editor/2026-09-16-infrastructure.md).
-- Son teknik model denemesi gerçek 28–29. sayfalarla tamamlandı: embedding 1024 boyut/4,999 sn; reranker 2 aday/9,346 sn; 256 görsel token sınırında Qwen görsel cevap 191,843 sn, 55 çıktı token ve `finish_reason=stop`. Anlamsal kalite incelenmedi; CPU gecikmesi etkileşimli kapasite kabulü değildir. Nihai offline müşteri paketi `/data/nanobaseai/editor/dist/editor-customer-20260916` (22.875.535.072 bayt); tüm dosya hash'leri ve imaj ID'leri import sırasında doğrulandı. Son paket betikleriyle ayrı `editor-restore-final` ortamında gerçek kitap/DB/artefact geri yüklemesi yeniden doğrulandı; ortam kapatıldı.
-
-## 2026-09-16 — Editör modülü mimari ve branch kararı
-
-- Kullanıcının onayıyla Editörün aynı depoda `apps/editor/` altında, kendi Docker/Compose, frontend/backend, bağımlılık ve yapılandırmasıyla BI'dan bağımsız geliştirilmesi kural olarak kaydedildi. Kalıcı veri gerekiyorsa kendi veri alanı ve migration'ları olacak; BI ekranlarına tanımlı API sözleşmeleri üzerinden bağlanacak.
-- Kalıcı `editor` branch'i açılmayacak; tek trunk `main` ve gerektiğinde kısa ömürlü `codex/editor-...` dalları kullanılacak. Mobil öncelik ve ilgili gerçek DB kabul kuralları geçerli.
-- `AGENTS.md` ve `PROJECT-MEMORY.md` güncellendi. Yalnız dokümantasyon değişti; uygulama/Docker kurulmadı, ürün testi veya DB sorgusu çalıştırılmadı.
 
 ## 2026-09-16
 
@@ -954,26 +437,3 @@ Her giriş: tarih, ne yapıldı/değişti, neden (varsa).
 - Tüm dallar `main`e merge edildi (`perf/full-overhaul-2026-08`, `claude/interesting-dhawan-1fa99d`, `claude/timesfm-repo-review-a60864`, `claude/vpn-crm-database-connection-91863b`, `claude/whatlaunched-dashboard-submit-1b30a9`, `claude/zeki-timas-planning-b75b7f`, `claude/project-memory-dev-log-5c3fa0`) ve kaynak dallar silindi (worktree'de checkout'lu olanlar hariç — onlar ilgili oturumlar kapanınca silinecek). Karar: bundan sonra tek trunk `main`, kalıcı ikinci dal açılmayacak. Kural: [AGENTS.md](../AGENTS.md#tek-branch-kuralı-yalnız-main). Sınır: remote'a push/silme, bu ortamda GitHub kimlik doğrulaması (gh CLI) olmadığı için henüz yapılamadı — yalnız local main güncel.
 - CLAUDE.md + PROJECT-MEMORY.md + bu günlük kuruldu. Amaç: her oturumun proje mimarisini/geçmişini otomatik okuyup güncel tutması. Sınır: bu bir talimat, hook değil — oturumdaki Claude talimatı okuyup uygularsa çalışır, zorlayıcı bir mekanizma değil. Gerçek zorlama (`.claude/settings.json` hook, örn. commit sonrası günlük kontrolü) istenirse ayrı bir iş olarak yapılabilir.
 
-## 2026-09-18 02:51 UTC — Editör R3 takip
-
-R3 kaynak kontrolü43/48, hata0; gerçek ana API/PG koşusu sürüyor. Güncel paket/import geçti; dolu restore ve mobil kabul henüz bekleniyor. GPU offline kurulum doğrulayıcısı artık paket Docker healthcheck başarısını ayrıca bekliyor; yeni kontrolün canlı kabulü henüz yok. Kitap verisi veya inceleme kararı değiştirilmedi. Ayrıntı: [V14 kayıtları](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — Editör anlamsal atıf sözleşmesi V5
-
-Okunmamış kaynak kimliklerinin model tarafından atıf seçilmesi genel kodda engellendi; gerçek21/22/28 sayfa API/PG aday kontrolleri tamamlandı, kaynak verisi değişmedi. R4 imajları ağsız derlendi; R3 kabulü biterken dağıtım bekliyor. Tam kitap kabulü değildir. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 03:19UTC — Editör R3 kabulü ve R4 yayını
-
-R3 ayrı dolu yedek/restore, gerçekAPI/PG/atıf/yayın engeli ve dört genişlik mobil PASS; geçici hedef/ağ temizlendi. R4 V5atıf sözleşmesi canlı;47 backend/imaj eşliği ve28ACL PASS. GPUsoğuk açılış kontrolü çalışırken yeni kitap işi başlatılmadı.262 kaynak incelemesi ve anlamsal kabul açık; kaynak verisi elle değiştirilmedi. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — Editör GPU ilk-kurulum OOM
-
-Gerçek boş-cache offline açılışta Qwen torch Inductor autotuning47,69GiB ek bellek istedi ve OOM verdi. Cache ref düzeltmesi çalıştı, ancak tamGPUkurulum kabulü başarısız. Aynı imaj/modelle `--enforce-eager` immutable paket adayı eklendi; canlı runner değiştirilmedi. Asıl servisler geri doğrulanmadan R4analizi başlamayacak. [Kanıt](editor/2026-09-18-source-analysis-v14.md).
-
-## 2026-09-18 — GPU paketinde CPUoffload ayarı kaybı
-
-Gerçek aynı-imaj karşılaştırması64,58/88,42GiB bellek farkını, paketleyicide eksik VLLM_PLE_CPU_OFFLOAD=1/NCCL ayarlarını gösterdi. Allowlist, runtime manifesti ve importer/runtime eşlik kontrolleri eklendi; runtime-env-v5 import PASS, eski paket yeni importer tarafından reddedildi. Yeni cold-boot başlatma isteğinde yönetimVPN kapandı; sonuç DOĞRULANAMADI. Doğrudan model tüneli çalışıyor. [Kanıt](editor/2026-09-18-gpu-cold-boot.md).
-
-## 2026-09-18 03:49UTC — Editör R4 tam kitap koşusu
-
-Yayımlanmış V5semantik modül gerçek21/22/28 sayfaAPI/PG kontrolünde atıf şema sorununu tekrarlamadı; kaynak yazımı0. Yeni ana nesil08ca6877, iş28aad122, ayrı monitor/qualifier başlatıldı. İlk11 kaynak kontrolü geçti. YönetimVPN kesik olsa da doğrudanGPU→CPU model tüneli çalışıyor; GPUsoncoldboot sonucu ayrı DOĞRULANAMADI. [Ayrıntı](editor/2026-09-18-source-analysis-v14.md).

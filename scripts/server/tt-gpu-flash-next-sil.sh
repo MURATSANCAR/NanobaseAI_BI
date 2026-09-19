@@ -3,36 +3,24 @@
 # model yeniden gerekirse 186 GB, 100 Mbit hattan ≈ 4,5 saatte iner.
 #
 # Kullanıcı çalıştırır (tt-gpu üzerinde). Canlı Flash-Next çalışıyorsa önce durdurur: o andan 27B açılana
-# kadar BI köprüsü, Editör ve TİMAŞ VM modelsiz kalır.
+# kadar BI köprüsü ve TİMAŞ VM modelsiz kalır.
 #   bash tt-gpu-flash-next-sil.sh            # aşağıdaki "kesin Flash-Next" listesini siler
-#   bash tt-gpu-flash-next-sil.sh --editor   # ek olarak Editörün Flash-Next içeren çevrimdışı paketini ve
-#                                            # soğuk açılış denemesi konteynerlerini de siler (192 GB)
 set -euo pipefail
 
 MODEL_DIR=/data/hf-cache/hub/models--Qwen--Qwen3.8-Flash-Next-FP8
 RUN_DIR=/data/qwen38
-EDITOR_BUNDLE=/data/editor-gpu-releases/source-analysis-v13-gateway-v2-20260918
 
 echo "== silinecekler"
 docker ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}' | grep -E '^(qwen38-flash-next|qwen38-download)\b' || true
 sudo du -sh "$MODEL_DIR" "$RUN_DIR" 2>/dev/null || true
 docker images --format '{{.Repository}}:{{.Tag}}\t{{.Size}}' | grep -E 'qwen38-flash-next' || true
-if [[ "${1:-}" == "--editor" ]]; then
-  docker ps -a --format '{{.Names}}\t{{.Status}}' | grep '^editor-gpu-cold-' || true
-  sudo du -sh "$EDITOR_BUNDLE" 2>/dev/null || true
-fi
 read -r -p "Hepsi kalıcı silinecek. Devam? (evet yazın) " ok
 [[ "$ok" == "evet" ]] || { echo "vazgeçildi"; exit 1; }
 
 echo "== konteynerler (kayıt dosyaları konteynerle birlikte gider)"
 docker rm -f qwen38-flash-next qwen38-download 2>/dev/null || true
-if [[ "${1:-}" == "--editor" ]]; then
-  docker ps -aq --filter name=editor-gpu-cold- | xargs -r docker rm -f
-  docker rmi nanobase-editor-gpu/image:fc120ece0a388cc0aa1caad4 2>/dev/null || true
-  sudo rm -rf "$EDITOR_BUNDLE"
-fi
 
-echo "== imaj (28,8 GB; soğuk açılış konteynerleri duruyorsa etiket kalkar, katmanlar onlar silinince gider)"
+echo "== imaj (28,8 GB)"
 docker rmi vllm/vllm-openai:qwen38-flash-next || true
 
 echo "== model dosyaları, çalıştırma dizini, derleme önbelleği, indirme kaydı"
