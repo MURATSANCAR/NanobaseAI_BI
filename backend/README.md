@@ -16,7 +16,7 @@ FE (:5174/bi or portal/bi) → bridge :8787 → DB-GPT :5670 → LLM :8010/:8015
 | Local (server) | `http://127.0.0.1:8010/v1` |
 | Remote proxy | `http://38.247.162.28:8015/v1` |
 | Key | `nanobase-local` |
-| Model | `qwen3.8-flash-next` (yerel GPU Flash-Next) |
+| Model | `nanobaseAI` (yerel GPU, arkada Qwen3.8-27B-FP8) |
 
 ## Setup
 

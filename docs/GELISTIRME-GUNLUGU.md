@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 — GPU: ana model Qwen3.8-27B-FP8, sunulan ad `nanobaseAI`; Flash-Next silindi
+
+Neden: Flash-Next (186 GB) iki H100'e ancak n-gram tablosu RAM'e atılarak sığıyordu (resmî tarif 4 kart); OCR'la bellek taşması ve soğuk açılışta bellek sıçraması buradan geliyordu. Kullanıcı kararıyla Qwen3.8-27B-FP8'e geçildi, Flash-Next kalıcı silindi (komutu kullanıcı çalıştırdı). 27B iki karta bölünmüş tek sunucu olarak (TP2, NUMA bağlı, MTP 3, önek önbelleği, 131K) `vllm/vllm-openai:v0.27.1` ile port 8001'de açıldı. Sunulan model adı kullanıcı isteğiyle `nanobaseAI`: BI köprüsü, Editör (api/worker) ve TİMAŞ VM 55 bu ada çevrildi (`scripts/server/model-name-switch.sh`); depodaki varsayılanlar da. Ölçüm: tek istek 177 tok/sn (Flash-Next 130), 32 eşzamanlı 2.256 tok/sn (1.500), 20k token istem 2,2 sn / önbellekle 0,4 sn; KV 1,6 M token. Düşünme kapalı, kapalı küme + logprobs ve Türkçe görsel okuma doğrulandı. Açık: Editör 91 iddia sondası ve gerçek kitap koşusu, set100 tamamı, OCR ile eşzamanlı yük. Ayrıntı: `docs/TT-GPU-SUNUCUSU.md` §4.0.
+
 ## 2026-09-19 13:40 UTC — Editör: prod geliştirme planı v1.1 depoya alındı
 
 Kullanıcının `Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani.docx` belgesi (v1.1, 16 Eylül, SHA-256 `7e36c213…`, belgelerin ilk günden referans verdiği sürüm) `docs/editor/plan/` altına özgün haliyle ve tabloları korunmuş Markdown metin kopyasıyla kaydedildi. Kalite planı v1.1'e bağlandı: pilot kapsamı yalnız resimli çocuk kitabı olduğu için roman/yetişkin genişlemesi (B3, C3) planın yeni sürümünü gerektiriyor; v1.1 §16 gereği bir kitap yalnız son doğrulama için ayrılmalı (şimdiye kadarki ayarların hepsi aynı kitapta yapıldı).

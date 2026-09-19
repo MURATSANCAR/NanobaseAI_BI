@@ -15,7 +15,7 @@ import time
 from runner_environment import capture_environment
 
 p=argparse.ArgumentParser();p.add_argument('source');p.add_argument('destination')
-p.add_argument('--container',default='qwen38-flash-next')
+p.add_argument('--container',default='qwen38-27b')
 p.add_argument('--ocr-container',default='paddleocr-vl')
 p.add_argument('--enforce-eager',action='store_true',
                help='Derive an explicit cold-boot candidate without torch.compile or CUDA graphs.')

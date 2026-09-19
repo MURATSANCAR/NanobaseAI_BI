@@ -102,7 +102,7 @@ visuals=[];fresh_visuals=[]
 for r in rows['visual_observations']:
     for o in r['data']['observations']:
         m=o['metrics'];visuals.append(m)
-        assert m['model_name']=='qwen3.8-flash-next' and m['model_backend']=='vllm','MAIN_MODEL_MISMATCH'
+        assert m['model_name']=='nanobaseAI' and m['model_backend']=='vllm','MAIN_MODEL_MISMATCH'
         origin=o.get('reused_from_generation') or r['data'].get('reused_from_generation')
         expected=db['code_manifest']
         seen=set()

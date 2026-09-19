@@ -21,7 +21,7 @@ import urllib.request
 p=argparse.ArgumentParser()
 for name in ('bundle','output','verification-script','visual-artifact','fragment-artifact','pair-artifact'):
     p.add_argument('--'+name,required=True)
-p.add_argument('--live-qwen',default='qwen38-flash-next')
+p.add_argument('--live-qwen',default='qwen38-27b')
 p.add_argument('--live-ocr',default='paddleocr-vl')
 p.add_argument('--live-gateway',default='paddleocr-gateway')
 args=p.parse_args()
@@ -72,7 +72,7 @@ def wait_qwen(base,seconds=1800,container=None):
         try:
             if request(base+'/health')[0]==200:
                 models=json.loads(request(base+'/v1/models')[1])
-                if any(row['id']=='qwen3.8-flash-next' for row in models['data']):return round(time.monotonic()-start,3)
+                if any(row['id']=='nanobaseAI' for row in models['data']):return round(time.monotonic()-start,3)
         except (OSError,ValueError,KeyError):pass
         time.sleep(10)
     raise RuntimeError('QWEN_BOOT_TIMEOUT')

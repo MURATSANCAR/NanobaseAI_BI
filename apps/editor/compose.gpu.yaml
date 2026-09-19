@@ -8,7 +8,7 @@ services:
     environment: &gpu-env
       EDITOR_MODEL_BACKEND: vllm
       EDITOR_MODEL_BASE_URL: ${EDITOR_MODEL_BASE_URL:?Set the private GPU URL reachable from Editor containers}
-      EDITOR_MODEL_NAME: ${EDITOR_MODEL_NAME:-qwen3.8-flash-next}
+      EDITOR_MODEL_NAME: ${EDITOR_MODEL_NAME:-nanobaseAI}
       EDITOR_MODEL_CONTEXT: ${EDITOR_MODEL_CONTEXT:-32768}
       EDITOR_OCR_VL_BASE_URL: ${EDITOR_OCR_VL_BASE_URL:?Set the on-demand private OCR gateway URL}
       EDITOR_OCR_VL_MODEL: ${EDITOR_OCR_VL_MODEL:-paddleocr-vl-1.6}

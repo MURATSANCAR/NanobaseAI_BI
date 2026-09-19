@@ -17,7 +17,7 @@ pair=source['record']['data'];images=pair['crop_image_base64']
 assert len(images)==len(pair['crop_sha256'])==2
 for image,digest in zip(images,pair['crop_sha256']):
     assert hashlib.sha256(base64.b64decode(image,validate=True)).hexdigest()==digest
-payload={'model':'qwen3.8-flash-next','temperature':0,'max_tokens':550,
+payload={'model':'nanobaseAI','temperature':0,'max_tokens':550,
     'chat_template_kwargs':{'enable_thinking':False},'response_format':{'type':'json_object'},
     'messages':[{'role':'user','content':[{'type':'text','text':'İki gerçek figür kırpımındaki görünür biçimleri karşılaştır. İsim, yazı, konuşmacı veya öykü tahmin etme. JSON {"matching_features":["..."],"conflicting_features":["..."],"uncertainties":["..."]}.'}]+
         [{'type':'image_url','image_url':{'url':'data:image/png;base64,'+image}} for image in images]}]}

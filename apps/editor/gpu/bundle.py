@@ -13,7 +13,7 @@ from runner_environment import capture_environment
 p=argparse.ArgumentParser()
 p.add_argument('destination')
 p.add_argument('--cache',default='/data/hf-cache')
-p.add_argument('--main-container',default='qwen38-flash-next')
+p.add_argument('--main-container',default='qwen38-27b')
 p.add_argument('--ocr-container',default='paddleocr-vl')
 p.add_argument('--gateway-container',default='paddleocr-gateway')
 args=p.parse_args()

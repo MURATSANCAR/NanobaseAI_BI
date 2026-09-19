@@ -1,6 +1,6 @@
 # NanobaseAI BI — tek paket müşteri kurulumu
 #
-#   ./install.sh                 → tüm servisleri kurar (LLM: yerel GPU Flash-Next, .env'de adres+anahtar)
+#   ./install.sh                 → tüm servisleri kurar (LLM: yerel GPU Qwen3.8-27B, .env'de adres+anahtar)
 #   ./add-datasource.sh ...      → müşteri veritabanını (uzak Postgres, salt-okunur) bağlar
 #
 # Profiller:
@@ -34,10 +34,10 @@ x-backend-env: &backend-env
   BI_SOURCES_FILE: /data/connection.json
   SCHEMA_INDEXER_ROOT: /app/tools/schema-indexer
   NANOBASE_PYTHON: python
-  # LLM (OpenAI uyumlu, yerel GPU Flash-Next).
-  OPENAI_API_BASE: ${LLM_API_BASE:?Set the private Flash-Next endpoint reachable from containers}
+  # LLM (OpenAI uyumlu, yerel GPU Qwen3.8-27B).
+  OPENAI_API_BASE: ${LLM_API_BASE:?Set the private GPU model endpoint reachable from containers}
   OPENAI_API_KEY: ${LLM_API_KEY}
-  LLM_MODEL_NAME: ${LLM_MODEL_NAME:-qwen3.8-flash-next}
+  LLM_MODEL_NAME: ${LLM_MODEL_NAME:-nanobaseAI}
   LLM_EXTRA_BODY_JSON: ${LLM_EXTRA_BODY_JSON:-}
   LLM_TIMEOUT_SEC: ${LLM_TIMEOUT_SEC:-300}
   LLM_HEALTH_CACHE_SEC: "30"

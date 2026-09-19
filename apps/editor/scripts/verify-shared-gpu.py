@@ -16,7 +16,7 @@ p.add_argument('visual_artifact');p.add_argument('fragment_artifact');p.add_argu
 p.add_argument('--pair-artifact',required=True)
 p.add_argument('--qwen-base',default='http://127.0.0.1:8001')
 p.add_argument('--ocr-base',default='http://127.0.0.1:8010')
-p.add_argument('--qwen-container',default='qwen38-flash-next')
+p.add_argument('--qwen-container',default='qwen38-27b')
 p.add_argument('--ocr-container',default='paddleocr-vl')
 args=p.parse_args();target=Path(args.output)
 if target.exists():raise RuntimeError('EVIDENCE_ALREADY_EXISTS')
@@ -52,7 +52,7 @@ def qwen(use_pair=False):
     prompt=('İki gerçek figür kırpımındaki görünür biçimlerin eşleşen ve farklı ayrıntılarını kaydet. İsim, yazı veya konuşmacı tahmin etme. JSON {"visible_details":["..."],"uncertainties":["..."]}.' if use_pair else
         'Bu gerçek figür kırpımında görünen biçim ve duruşu kaydet. Yazı okuma, isim veya konuşmacı tahmin etme. JSON {"visible_details":["..."],"uncertainties":["..."]}.')
     images=pair_data['crop_image_base64'] if use_pair else [v['crop_image_base64']]
-    return call(args.qwen_base.rstrip('/'),{'model':'qwen3.8-flash-next','temperature':0,'max_tokens':500,
+    return call(args.qwen_base.rstrip('/'),{'model':'nanobaseAI','temperature':0,'max_tokens':500,
         'chat_template_kwargs':{'enable_thinking':False},'response_format':{'type':'json_object'},
         'messages':[{'role':'user','content':[{'type':'text','text':prompt}]+
             [{'type':'image_url','image_url':{'url':'data:image/png;base64,'+png}} for png in images]}]})
