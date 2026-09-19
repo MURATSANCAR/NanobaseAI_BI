@@ -11,7 +11,8 @@ from collections import Counter
 from pathlib import Path
 
 from . import db, ledger, prompts, schemas
-from .document import page_text_numbered, render_page
+from .config import settings
+from .document import page_text_numbered, region_ink_ratio, render_page
 from .llm import Llm, image_part
 
 _NAME = re.compile(r"\b([A-ZÇĞİÖŞÜ][a-zçğıöşü]{2,})\b")
@@ -19,6 +20,11 @@ _STOP = {"Bir", "Bu", "Şu", "Ama", "Ve", "Ben", "Sen", "Biz", "Siz", "Onlar", "
          "Belki", "Hem", "Sonra", "Şimdi", "Neden", "Nasıl", "Ne", "Tamam", "Hadi", "Çünkü",
          "Aa", "Oh", "Of", "Peki", "Eğer", "Bugün", "Yarın", "Dün", "Hey", "Merhaba", "Haydi",
          "Ancak", "Oysa", "Bütün", "Her", "Hiç", "Kim", "Sanki", "Yine", "Artık", "Birden"}
+
+
+EMPTY_SCAN = {"scene": {"setting": "", "time_of_day": "", "mood": "", "description": ""},
+              "characters": [], "objects": [], "text_in_image": [], "text_visual_checks": [],
+              "important_event": False, "uncertain": False, "uncertainty_reasons": []}
 
 
 def known_names(generation_id: str) -> list[str]:
@@ -39,6 +45,19 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
                               reasons: list[str] | None = None) -> dict:
     """One vision pass over a page; stored in page_scan (FAST or DEEP)."""
     gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
+    pg = db.one("SELECT nontext_ink FROM page WHERE book_version_id=%s AND page_no=%s",
+                gen["book_version_id"], page_no)
+    if pg and pg["nontext_ink"] is not None and pg["nontext_ink"] < settings().min_illustration_ink:
+        # Nothing but text on the page: asking a vision model what it "sees" only
+        # invites figures invented from the text. Record an empty scan instead.
+        out = dict(EMPTY_SCAN)
+        with db.tx() as c:
+            c.execute("INSERT INTO page_scan(generation_id, page_no, pass, alias, result, uncertain,"
+                      " uncertainty_reasons) VALUES (%s,%s,'FAST','no-illustration',%s,false,'{}')"
+                      " ON CONFLICT (generation_id, page_no, pass) DO NOTHING",
+                      (generation_id, page_no, db.J(out)))
+        return {"page_no": page_no, "pass": "FAST", "uncertain": False, "reasons": [],
+                "characters": 0, "skipped": "no illustration"}
     png = Path(render_page(str(gen["book_version_id"]), page_no)["path"]).read_bytes()
     text = page_text_numbered(generation_id, page_no)
     if depth == "fast":
@@ -127,8 +146,23 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
             return {"page_no": page_no, "skipped": "already persisted"}
         idx = ledger.PageIndex.load(c, generation_id)
         created_by = f"vision:{pass_.lower()}"
-        mentions = mismatches = 0
+        mentions = mismatches = unseen = 0
+        png_path = render_page(str(c.execute("SELECT book_version_id FROM generation WHERE id=%s",
+                                             (generation_id,)).fetchone()["book_version_id"]), page_no)["path"]
+        front = c.execute("SELECT 1 FROM page_role WHERE generation_id=%s AND page_no=%s AND"
+                          " role='FRONT_MATTER'", (generation_id, page_no)).fetchone() is not None
+        near_text = " ".join(idx.text.get(p, "") for p in (page_no - 1, page_no, page_no + 1))
         for ch in res["characters"]:
+            # A figure is a visual claim: its box must actually contain ink.
+            if region_ink_ratio(png_path, ch["bbox"]) < settings().min_figure_ink:
+                unseen += 1
+                continue
+            # A name needs a basis in the story text on or next to this page. Cover and
+            # other front-matter art has no narrative text, so its figures stay unnamed
+            # candidates; so do names the fast pass gives (it guesses from the hint list).
+            named_here = bool(ch["name"]) and ledger.norm(ch["name"]) in near_text
+            if front or pass_ == "FAST" or not named_here:
+                ch = {**ch, "identity_uncertain": True, "confidence": min(ch["confidence"], 0.6)}
             desc = ", ".join(v for v in (ch["appearance"] or {}).values() if v)
             label = ch["name"] or ch["label"]
             reg = c.execute(
@@ -190,7 +224,7 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
                  [claim_id] if claim_id else [], chk["confidence"])).fetchone()
             mismatches += 1
     return {"page_no": page_no, "pass": pass_, "visual_mentions": mentions,
-            "text_visual_candidates": mismatches}
+            "text_visual_candidates": mismatches, "figures_dropped_unseen": unseen}
 
 
 async def check_text_visual_consistency(generation_id: str, page_no: int) -> dict:

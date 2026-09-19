@@ -115,6 +115,7 @@ class Llm:
         last_err = None
         for attempt in range(retries + 1):
             t0 = time.time()
+            resp = None
             try:
                 r = await client().post("/v1/chat/completions", json=req)
                 if r.status_code >= 400:
@@ -122,22 +123,29 @@ class Llm:
                 data = r.json()
                 msg = data["choices"][0]["message"]
                 text = msg.get("content") or ""
-                out: Any = text
-                if schema is not None:
-                    out = json.loads(text)
-                resp = {"content": text[:200000],
-                        "reasoning": (msg.get("reasoning_content") or msg.get("reasoning") or "")[:20000],
-                        "finish_reason": data["choices"][0].get("finish_reason")}
+                finish = data["choices"][0].get("finish_reason")
+                resp = {"content": text[:200000], "finish_reason": finish,
+                        "reasoning": (msg.get("reasoning_content") or msg.get("reasoning") or "")[:20000]}
+                if finish == "length":
+                    # ran into max_tokens: a runaway string or thinking that never ended
+                    raise ModelError(f"finish_reason=length after {len(text)} chars; tail: {text[-200:]!r}")
+                out: Any = json.loads(text) if schema is not None else text
                 cid = await self._record(alias, prompt, pages or [], req, resp,
                                          data.get("usage"), t0, True, None)
                 return out, cid
             except (ModelError, json.JSONDecodeError, httpx.HTTPError, KeyError) as e:
                 last_err = e
-                await self._record(alias, prompt, pages or [], req, None, None, t0, False,
+                await self._record(alias, prompt, pages or [], req, resp, None, t0, False,
                                    str(e)[:2000])
                 if isinstance(e, ModelError) and "gpu_busy" in str(e):
                     raise
-                req["temperature"] = 0.0
+                # A deterministic retry repeats a degenerate loop token for token:
+                # move away from it instead (measured 2026-09-19, page 8 x3 identical).
+                if "finish_reason=length" in str(e) and (req.get("chat_template_kwargs") or {}).get("enable_thinking"):
+                    # thinking used the whole budget and left no answer: answer directly
+                    req["chat_template_kwargs"] = {"enable_thinking": False}
+                req["temperature"] = min(0.7, temperature + 0.3 * (attempt + 1))
+                req["repetition_penalty"] = 1.1
                 await asyncio.sleep(2 * (attempt + 1))
         raise ModelError(f"{alias} failed after {retries + 1} attempts: {last_err}")
 

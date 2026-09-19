@@ -16,7 +16,7 @@ def arr(items: dict, min_items: int = 0) -> dict:
     return s
 
 
-STR = {"type": "string"}
+STR = {"type": "string", "maxLength": 1200}   # a runaway string cannot eat the token budget
 INT = {"type": "integer"}
 NUM = {"type": "number", "minimum": 0, "maximum": 1}
 BOOL = {"type": "boolean"}
@@ -26,7 +26,7 @@ MODALITY = {"type": "string", "enum": ["REALIZED", "PLAN", "DREAM", "IMAGINATION
 EVIDENCE = arr(obj({"page": INT, "paragraph": INT, "quote": STR}), 1)
 
 OCR = obj({"blocks": arr(obj({
-    "text": STR,
+    "text": {"type": "string", "maxLength": 8000},   # a full page of body text can be one block
     "kind": {"type": "string", "enum": ["body", "heading", "speech_bubble", "sign",
                                         "caption", "screen", "other"]}}))})
 
@@ -59,6 +59,9 @@ KNOWLEDGE = obj({
         "character": STR, "page": INT, "emotion": STR, "intensity": NUM, "trigger": STR,
         "confidence": NUM, "evidence": EVIDENCE})),
     "themes": arr(obj({"theme": STR, "confidence": NUM, "evidence": EVIDENCE})),
+    # pages in this chunk that are not story (reader activities, information pages,
+    # imprint, biographies, advertisements): nothing is extracted from them
+    "non_story_pages": arr(INT),
 })
 
 IDENTITY = obj({

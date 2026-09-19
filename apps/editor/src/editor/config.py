@@ -23,6 +23,8 @@ class Settings:
     models_yaml: Path
     page_concurrency: int
     deep_concurrency: int
+    min_illustration_ink: float
+    min_figure_ink: float
 
     @property
     def storage(self) -> Path:
@@ -50,4 +52,8 @@ def settings() -> Settings:
         models_yaml=Path(env("EDITOR_MODELS_YAML", "/app/deploy/models.yaml")),
         page_concurrency=int(env("EDITOR_PAGE_CONCURRENCY", "16")),
         deep_concurrency=int(env("EDITOR_DEEP_CONCURRENCY", "4")),
+        # below this share of non-text ink a page has nothing to look at (no vision call)
+        min_illustration_ink=float(env("EDITOR_MIN_ILLUSTRATION_INK", "0.02")),
+        # a figure's bbox must contain at least this share of ink to count as seen
+        min_figure_ink=float(env("EDITOR_MIN_FIGURE_INK", "0.05")),
     )

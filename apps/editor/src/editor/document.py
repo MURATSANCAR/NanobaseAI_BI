@@ -93,6 +93,37 @@ def _spaced_ratio(text: str) -> float:
     return sum(1 for w in words if len(w) == 1) / len(words)
 
 
+def nontext_ink_ratio(page: pymupdf.Page) -> float:
+    """Share of the page body (inside an 8% margin, so printer marks do not count)
+    that has ink outside the visible text lines. Text-only pages measure ~0."""
+    z = 100 / 72
+    pm = page.get_pixmap(matrix=pymupdf.Matrix(z, z), colorspace=pymupdf.csGRAY, alpha=False)
+    w, h, buf = pm.width, pm.height, bytearray(pm.samples)
+    for b in page.get_text("dict")["blocks"]:
+        for ln in b.get("lines", []):
+            if not any(sp["text"].strip() and sp.get("alpha", 255) != 0 for sp in ln["spans"]):
+                continue
+            x0, y0, x1, y1 = (int(v * z) for v in ln["bbox"])
+            xa, xb = max(0, x0 - 2), min(w, x1 + 2)
+            for y in range(max(0, y0 - 2), min(h, y1 + 2)):
+                buf[y * w + xa: y * w + xb] = b"\xff" * (xb - xa)
+    mx, my = int(w * .08), int(h * .08)
+    ink = sum(1 for y in range(my, h - my) for v in buf[y * w + mx: y * w + w - mx] if v < 235)
+    return ink / max(1, (w - 2 * mx) * (h - 2 * my))
+
+
+def region_ink_ratio(png_path: str, bbox: list[int]) -> float:
+    """Ink share inside a model-given bbox (0..1000 normalised) of a rendered page."""
+    if not bbox or len(bbox) != 4 or bbox[2] <= bbox[0] or bbox[3] <= bbox[1]:
+        return 0.0
+    pm = pymupdf.Pixmap(pymupdf.csGRAY, pymupdf.Pixmap(png_path))
+    w, h, buf = pm.width, pm.height, pm.samples
+    x0, x1 = int(bbox[0] / 1000 * w), max(int(bbox[2] / 1000 * w), int(bbox[0] / 1000 * w) + 1)
+    y0, y1 = int(bbox[1] / 1000 * h), max(int(bbox[3] / 1000 * h), int(bbox[1] / 1000 * h) + 1)
+    ink = sum(1 for y in range(y0, min(h, y1)) for v in buf[y * w + x0: y * w + min(w, x1)] if v < 235)
+    return ink / max(1, (min(w, x1) - x0) * (min(h, y1) - y0))
+
+
 def render_page(book_version_id: str, page_no: int, long_side_px: int = TARGET_LONG_SIDE_PX) -> dict:
     doc, bv = _open_version(book_version_id)
     page = doc[page_no - 1]
@@ -123,15 +154,16 @@ def create_page_manifest(book_version_id: str) -> dict:
                      or _garbled_ratio(text) > 0.02)
         r = render_page(book_version_id, i)
         rows.append((bv["id"], i, page.rect.width, page.rect.height, n_chars, n_img, needs_ocr,
-                     r["path"], r["dpi"]))
+                     r["path"], r["dpi"], nontext_ink_ratio(page)))
     with db.tx() as c:
         for row in rows:
             c.execute(
                 "INSERT INTO page(book_version_id, page_no, width_pt, height_pt, text_layer_chars,"
-                " image_count, needs_ocr, render_path, render_dpi) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                " image_count, needs_ocr, render_path, render_dpi, nontext_ink) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                 " ON CONFLICT (book_version_id, page_no) DO UPDATE SET text_layer_chars=EXCLUDED."
                 "text_layer_chars, image_count=EXCLUDED.image_count, needs_ocr=EXCLUDED.needs_ocr,"
-                " render_path=EXCLUDED.render_path, render_dpi=EXCLUDED.render_dpi", row)
+                " render_path=EXCLUDED.render_path, render_dpi=EXCLUDED.render_dpi,"
+                " nontext_ink=EXCLUDED.nontext_ink", row)
     return {"book_version_id": book_version_id, "page_count": len(rows),
             "needs_ocr": [r[1] for r in rows if r[6]],
             "no_text_layer": [r[1] for r in rows if r[4] < 30]}

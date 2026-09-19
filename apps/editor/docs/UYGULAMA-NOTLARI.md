@@ -3,6 +3,11 @@
 Kaynak karar metni: [NIHAI-KARAR.md](NIHAI-KARAR.md). Bu dosya, o metnin açık bıraktığı ya da sunucunun
 fiziksel sınırları yüzünden yorumlanması gereken noktaları ve gerekçelerini yazar. Kararın kendisi değişmedi.
 
+## Ana kurallar (kullanıcı, 2026-09-19)
+
+1. **Kitaba özel geliştirme yok.** Bir kusur tek bir kitapta görülmüş olabilir; çözümü her kitapta aynı çalışan genel bir mekanizmadır. Kitap adı, sayfa numarası, karakter adı, kelime listesi ya da tek kitabın verisine oturtulmuş eşik koda ve prompt'lara girmez. Eşik gerekiyorsa fiziksel anlamı olur, ayardan okunur ve ikinci bir kitapta doğrulanana kadar "tek kitapta ölçüldü" diye not edilir.
+2. **Veriye elle müdahale yok.** Hatayı uygulama kendisi tespit eder ve kendisi düzeltir: kayıt yazılmadan önce kanıt/piksel/tutarlılık denetimi, geçmeyeni reddetme ya da daha güçlü modele/editör kuyruğuna gönderme, her koşunun sonunda regresyon değişmezleri. Geliştirici (ve Claude) defteri yalnız teşhis için okur; düzeltme kaydı, kanon ve altın dosya yazmak editörün işidir. Bir düzeltmenin işe yaradığı, kitabın yeni nesil olarak yeniden koşturulmasıyla kanıtlanır.
+
 ## Bileşenler ve sürümler (2026-09-19, hepsi en güncel sürüm)
 
 | Parça | Sürüm | Nerede |

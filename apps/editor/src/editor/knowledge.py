@@ -134,10 +134,28 @@ def _route(st: ChunkState) -> str:
 
 def _persist(st: ChunkState) -> ChunkState:
     gid, o, call_id = st["generation_id"], st["out"], st["call_id"]
-    counts = {"mentions": 0, "events": 0, "emotions": 0, "themes": 0, "dropped_no_evidence": 0}
+    counts = {"mentions": 0, "events": 0, "emotions": 0, "themes": 0, "dropped_no_evidence": 0,
+              "dropped_non_story": 0}
     with db.tx() as c:
         idx = ledger.PageIndex.load(c, gid)
         pages = _valid_pages(c, gid)
+        non_story = {p for p in o.get("non_story_pages", []) if st["page_from"] <= p <= st["page_to"]}
+        for p in non_story:
+            c.execute("INSERT INTO page_role(generation_id, page_no, role, source, model_call_id)"
+                      " VALUES (%s,%s,'NON_STORY','extract',%s) ON CONFLICT DO NOTHING", (gid, p, call_id))
+
+        def story(item: dict, *keys: str) -> bool:
+            """Keep an item only if none of its pages is a non-story page."""
+            ps = {int(item[k]) for k in keys if item.get(k)} | {int(e["page"]) for e in item["evidence"]}
+            if ps & non_story:
+                counts["dropped_non_story"] += 1
+                return False
+            return True
+
+        o = {**o, "character_mentions": [m for m in o["character_mentions"] if story(m, "page")],
+             "events": [e for e in o["events"] if story(e, "page_from", "page_to")],
+             "emotions": [e for e in o["emotions"] if story(e, "page")],
+             "themes": [t for t in o["themes"] if story(t)]}
         for m in o["character_mentions"]:
             evs = ledger.evidence_from_model(c, gid, idx, m["evidence"], valid_pages=pages)
             if not evs:
@@ -223,6 +241,10 @@ def text_chunks(generation_id: str, size: int = 4) -> list[tuple[int, int]]:
     not story text and would yield false characters."""
     front = {p for c in chapters(generation_id) if c["title"] == "Ön sayfalar"
              for p in range(c["page_from"], c["page_to"] + 1)}
+    with db.tx() as c:
+        for p in front:
+            c.execute("INSERT INTO page_role(generation_id, page_no, role, source) VALUES"
+                      " (%s,%s,'FRONT_MATTER','layout') ON CONFLICT DO NOTHING", (generation_id, p))
     pages = [r["page_no"] for r in db.all_rows(
         "SELECT DISTINCT page_no FROM paragraph WHERE generation_id=%s ORDER BY page_no", generation_id)
         if r["page_no"] not in front]
@@ -422,6 +444,12 @@ async def merge_events(generation_id: str) -> dict:
             members = [short[x] for x in g["event_ids"] if x in short]
             if len({m["modality"] for m in members}) > 1 or len(members) < 2:
                 continue  # never merge a plan with its realisation
+            # Duplicates come from chunk boundaries, so they sit on the same or the next
+            # page. Events further apart are consecutive actions, not one event.
+            lo = max(m["page_from"] for m in members)
+            hi = min(m["page_to"] for m in members)
+            if lo - hi > 1:
+                continue
             keep = members[0]
             for m in members[1:]:
                 c.execute("UPDATE event SET merged_into=%s WHERE id=%s AND merged_into IS NULL",

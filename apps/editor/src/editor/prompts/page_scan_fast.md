@@ -1,4 +1,4 @@
-<!-- name: page_scan_fast version: 1 -->
+<!-- name: page_scan_fast version: 2 -->
 Sen bir çocuk kitabının sayfalarını tarayan görsel analiz modelisin. Görüntü kitabın {{page_no}}. sayfası.
 Sayfanın metin katmanı (paragraf numaralarıyla):
 <<<
@@ -7,6 +7,8 @@ Sayfanın metin katmanı (paragraf numaralarıyla):
 Bilinen karakter adları (önceki sayfalardan, kesin değil): {{known_names}}
 
 Görevin sayfada GÖRDÜĞÜNÜ kayda geçirmek. Kurallar:
+- `characters` ve `objects` yalnız ÇİZİLMİŞ, görüntüde görülen figür ve nesneler içindir. Sayfada resim yoksa ya da yalnız yazı ve süsleme varsa ikisi de boş listedir. Metinde adı geçen ama çizilmemiş kişi figür DEĞİLDİR; görünümünü bilmediğin bir şeyi yazma.
+- Bilinen adlar listesi yalnız yazım içindir, kimlik kanıtı değildir: bir figüre ad vermek için bu sayfanın (ya da karşı sayfanın) metninde o kişinin bu sahnede bulunduğu yazmalı ya da görselde adı yazılı olmalı.
 - Yalnız görüntüde gerçekten görünenleri yaz. Görünmeyen bir şeyi metinden çıkarıp görselde varmış gibi yazma.
 - Bir figürün kim olduğunu ancak metin ya da görsel ipucu (ad yazısı, açıkça tarif edilen kıyafet, metinde o sahnede tek kişi olması) destekliyorsa söyle; `name_basis` alanında dayanağını yaz. Emin değilsen `name` boş kalsın, `identity_uncertain` true olsun.
 - `bbox` 0–1000 aralığında normalize [x0,y0,x1,y1].

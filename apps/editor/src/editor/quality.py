@@ -11,6 +11,7 @@ from typing import Any
 import yaml
 
 from . import db, ledger, prompts, schemas
+from .config import settings
 from .knowledge import DIRECTOR, _valid_pages, build_timeline, chapters
 from .llm import Llm
 
@@ -231,6 +232,31 @@ def run_regression_suite(generation_id: str) -> dict:
             "SELECT count(*) n FROM model_call WHERE generation_id=%s AND ok AND (revision IN ('?',"
             "'unknown') OR real_model='?')", generation_id) == 0),
         _check("prompt manifesti kayıtlı", bool(gen["prompt_manifest"])),
+        # Self-checks for defects first seen in a real run; each one is a general
+        # invariant, none names a book, a page or a character.
+        _check("resimsiz sayfada görsel figür yok", one(
+            "SELECT count(*) n FROM character_mention cm JOIN page p ON p.book_version_id=%s AND"
+            " p.page_no=cm.page_no WHERE cm.generation_id=%s AND cm.via<>'TEXT' AND"
+            " p.nontext_ink IS NOT NULL AND p.nontext_ink < %s",
+            gen["book_version_id"], generation_id, settings().min_illustration_ink) == 0),
+        _check("hikâye dışı sayfadan olay/duygu çıkarılmadı", one(
+            "SELECT (SELECT count(*) FROM event e JOIN page_role r ON r.generation_id=e.generation_id AND"
+            " r.page_no BETWEEN e.page_from AND e.page_to AND r.role<>'STORY' WHERE e.generation_id=%s)"
+            " + (SELECT count(*) FROM emotion m JOIN page_role r ON r.generation_id=m.generation_id AND"
+            " r.page_no=m.page_no AND r.role<>'STORY' WHERE m.generation_id=%s) AS n",
+            generation_id, generation_id) == 0),
+        _check("ön sayfa figürleri kesin kimlik almadı", one(
+            "SELECT count(*) n FROM character_mention cm JOIN page_role r ON r.generation_id=cm.generation_id"
+            " AND r.page_no=cm.page_no AND r.role='FRONT_MATTER' WHERE cm.generation_id=%s AND"
+            " cm.via<>'TEXT' AND cm.resolution='RESOLVED'", generation_id) == 0),
+        _check("hızlı taramanın verdiği ad tek başına kesin kimlik değil", one(
+            "SELECT count(*) n FROM character_mention cm WHERE cm.generation_id=%s AND cm.via<>'TEXT' AND"
+            " cm.resolution='RESOLVED' AND NOT EXISTS (SELECT 1 FROM page_scan d WHERE"
+            " d.generation_id=cm.generation_id AND d.page_no=cm.page_no AND d.pass='DEEP')",
+            generation_id) == 0),
+        _check("sınırına takılan model çağrısı kalmadı (her biri sonradan başarıldı)", one(
+            "SELECT count(*) n FROM (SELECT prompt_name, pages, bool_or(ok) AS any_ok FROM model_call"
+            " WHERE generation_id=%s GROUP BY 1,2) x WHERE NOT any_ok", generation_id) == 0),
     ]
     tv = db.one("SELECT count(*) FILTER (WHERE quote_verified) AS ok, count(*) AS n FROM evidence"
                 " WHERE generation_id=%s AND kind='TEXT'", generation_id)

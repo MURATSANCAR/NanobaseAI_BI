@@ -85,6 +85,7 @@ async def scan_page_deep(generation_id: str, page_no: int) -> dict:
 
 @activity.defn
 async def persist_visual(generation_id: str) -> dict:
+    await _t(knowledge.text_chunks, generation_id)   # records FRONT_MATTER page roles first
     pages = await _t(db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s",
                      generation_id)
     out = [await _t(vision.persist_page_visual, generation_id, r["page_no"]) for r in pages]
