@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 05:30 UTC — Editör: yükleme sınırının üçüncü kopyası (DB kısıtı)
+
+Üç yeni kitabın yüklemesi bu kez 500 verdi: `uploads_expected_bytes_check` kısıtı 52.428.800 baytı tabloya sabitlemiş (0003). Aynı sınır şema, ayrıştırıcı ve DB'de üç ayrı yerde yazılıydı; yalnız ayrıştırıcı ayarı okuyordu. Migration `0007_upload_limit_setting` DB kısıtını `expected_bytes>0`'a indirir; asıl sınırı API ve ayrıştırıcı `EDITOR_MAX_SOURCE_BYTES` ile uygular. Kabul kurulumunda API imajı `nanobase-editor:upload-limit-overlay-20260919` (çalışan V9 imajı + tek dosya bindirme, kullanıcı çalıştırdı); DB kısıtı henüz değiştirilmedi, üç yükleme bekliyor.
+
 ## 2026-09-19 00:45 UTC — Editör: yükleme sınırı hatası, devam satırı ölçümü, üç yeni kitap
 
 Genel hata: `book_api.py` yükleme şeması 52.428.800 baytı sabit yazıyordu; belgelenen `EDITOR_MAX_SOURCE_BYTES` yalnız ayrıştırıcıda okunuyordu, nginx `client_max_body_size 50m` idi. Şema artık ortamdan okur, değişken ortak `x-app` bloğuna eklendi, nginx 512m (asıl sınırı API uygular). Bulunma nedeni: kullanıcının verdiği üç yeni kitap (54/58/360 MB) kabul kurulumunda 422 ile reddedildi; kurulum `.env`'i kullanıcı tarafından 400 MiB/200 sayfaya çıkarıldı, kod yaması henüz kurulmadı. PDF'ler `/data/nanobaseai/editor-qualifications/incoming-books/` altında.
