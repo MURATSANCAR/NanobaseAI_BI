@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 10:00 UTC — BI: tablo seçimi için tek token + olasılık sondası (NanoJev fikri, eğitimsiz)
+
+Soru: NanoJev (0.6B karar modeli, iki günlük depo, 25 indirme) Logo/CRM SQL doğruluğuna yarar mı? Model SQL yazmaz, yayınlanan ağırlıklar yalnız labirent/Snake bilir; aynı çıktı (kapalı küme + aday olasılığı) canlı Qwen'den `structured_outputs.choice` + `logprobs` ile eğitimsiz alınır. Ölçüm betiği `tests/text2sql/probe-table-choice-logprob.py` (salt okuma, canlı köprüye dokunmaz): derleyicinin sunacağı her aday tablo için "gerekli mi?" E/H tek token, çağrılar eşzamanlı.
+
+- **Hız:** 55 karar sıralı 30,9 sn, 8 eşzamanlı 4,7 sn, 55 eşzamanlı 2,9 sn (vLLM toplu işler). Tünel yükte tek bağlantı düşürebiliyor → betik 4 kez yeniden dener, her soruyu hemen diske yazar.
+- **Golden 48 × 3 biçim, 9.171 karar, cevapsız 0.** Hedef tablosu adaylarda olan 38 soru, ort. 63,7 aday. `bare` (yalnız tablo notu): 0,5'te ort. 11,2 tablo kalır, 30/38 soru tam korunur, doğru tablonun medyan en kötü sırası 19. `context` (soruyla eşleşen kolonlar + bütün aday listesi): 0,5'te 6,5 tablo/30/38, 0,1'de 11,7 tablo/36/38, 0,05'te 13,5/37/38; medyan sıra 5. Soru başına 11,9 sn (bare 5,2).
+- **Kaçanlar tek aile:** kanal soruları (e-ticaret, Trendyol, Amazon, pazaryeri, kitapçı) — kanal cari kartında (CLCARD) tutuluyor, model soruda cari kelimesi görmediği için CLCARD/INVOICE'ı düşük puanlıyor. Bu model değil sözlük/kural boşluğu.
+- **Sonuç:** mevcut seçiciyi (pinli, 6,4 tablo, 17/17) geçtiği kanıtlanmadı; üretime bağlanmadı. Değeri: sıralama + olasılık (inceleme eşiği için) ve NanoJev biçiminde etiketli karar kaydı. Kayıtlar sunucuda `/data/nanobaseai/bi/decision-records/2026-09-19-table-choice-golden48.jsonl` (6,9 MB; family_id, state, candidate, p_needed, target=golden.expected_tables).
+- Yan bulgu: "brüt kâr marjı" sorusunda STLINE için kolon indeksi `OUTCOST`'u yakalamıyor (yalnız `CANCELLED`); SQL yazıcısı da o kolonu görmeyebilir — ayrı bakılacak.
+
 ## 2026-09-19 — Kesin bulgu: iki kaynaklı ÜRETİME HAZIR DEĞİL (kaynak kaçırma test sunucusunda da var)
 
 VM "0" cevabının SQL'i (federated açıkken): model "fatura kesildi"yi Logo INVOICE yerine `Timas_MSCRM_dbo_NEW_REKLAMPLANIBASE.new_faturasigirildi = 1`'e bağlamış. **Aynı soru test sunucusunda da (aynı kod + aynı katalog) CRM reklam planına kaçıyor** — kanıtlandı. Yani sorun sürüm/parmak izi ya da VM'e özgü değil; tam CRM sözlüğü yüklenince "fatura kesildi" gibi temel Logo soruları CRM'e kaçıyor. Bu, gün boyu uğraşılan kaynak-yönlendirme/kapı kusurunun ta kendisi (tam kapı 44/69, 18 bozuk — henüz bitmedi).
