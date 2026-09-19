@@ -50,3 +50,22 @@ Etiket: `SADIK`, `SADIK_DEGIL`, `KARARSIZ`. Hata sınıfı: `OZNE_KAYMASI`, `KON
 Gerçek ölçüm (`evidence/utterance-profile-probe-20260918T211611107556Z.json`, modül SHA-256 `085842f5…`): iki kitaptaki 123 konuşma parçasının yalnız **15**'i kesinleşti, 1 anlatıcı ara cümlesi bulundu; ikinci örnek satır sonunda bölündüğü için ("…, dedi ‖ Kirpicik.") kaçtı. R5/R7 sonucu değişmedi (1 / 0).
 
 Sonuç: sayfa metni düzeyinde kural kazancı küçüktür. Alt satıra sarılan devamın konuşma mı yeni anlatıcı paragrafı mı olduğu ancak satır geometrisinden (girinti, satır aralığı; `source_spans` kutuları) çıkar. Sıradaki genel iş paragraf sınırını geometriyle belirlemek ve kuralı birleştirilmiş paragraf metninde çalıştırmaktır; yapılmadı. Kapı bu arada belirsiz yerde `NOT_APPLICABLE` döner.
+
+## 5. Devam satırı: kural önce, model yalnız kalan yerde
+
+Soru: konuşma çizgili satırın altına sarılan satır konuşmanın devamı mı, anlatıcı mı? Etiket tırnaklı kitaplardan türetilir, soru tırnaklar silinip çizgili biçimde sorulur. Alt satırı yeni tırnakla başlayan örnekler çıkarıldı: tırnak silinince aynı konuşmacı mı yeni konuşmacı mı olduğu belirlenemez (ilk ölçümde bunlar yanlış etiketlenmişti).
+
+Genel kural: çizgili satırda konuşma noktalamasından (`, ! ? … ...`) sonra küçük harfle başlayan, en az bir okuması üçüncü kişi çekimli fiil olan aktarma yüklemi varsa ve bu anlatıcı cümlesi o satırda kapanmıyorsa alt satır anlatıcıdır. Cümle aynı satırda kapanıyorsa kural karar vermez: alt satır sürdürülen konuşma da yeni paragraf da olabilir, bunu ancak satır geometrisi söyler. Kalan örneklerde yalnız 0,8 üstü emin model kararı kullanılır, gerisi çekimser.
+
+Gerçek ölçüm, yeni model çağrısı yok (kayıtlı olasılıklar; `scripts/probe-continuation-combined.py`, kanıt `evidence/continuation-combined-20260918T213430Z.json`):
+
+| Kitap | Örnek | Kural karar / doğru | Birleşik karar / doğru | Çekimser |
+|---|---:|---:|---:|---:|
+| Ekrana Sığmayan Macera | 60 | 13 / 13 | 45 / 45 | 15 |
+| Kahramanını Yutan Kitap | 20 | 0 / 0 | 7 / 6 | 13 |
+| Dünyanın En Korkak Hayvanı | 7 | 0 / 0 | 4 / 4 | 3 |
+| Toplam | 87 | 13 / 13 | 56 / 55 | 31 |
+
+Tek yanlış, tırnak içinde verilmiş iki satırlık bir başlık. Yalnız model (0,8 eşiği) aynı örneklerde 48 kararın 42'sini doğru veriyordu; yanlışların hepsi alt satıra taşan anlatıcı cümlesiydi ve kural onları kapattı.
+
+Sınırlar: kural bu 67 örnekte hatalarına bakılarak iki kez düzeltildi (sözlükte ad okuması olan aktarma fiilleri; kapanan cümleden sonra çekimserlik); görülmemiş veride ölçülmedi. Etiket yalnız tırnaklı kitaplardan gelir; gerçekten konuşma çizgili kitapta doğruluk ölçülmedi. %36 çekimserlik satır geometrisi gerektiriyor. Üretime bağlı değil.
