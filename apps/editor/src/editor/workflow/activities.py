@@ -84,10 +84,22 @@ async def scan_page_deep(generation_id: str, page_no: int) -> dict:
 
 
 @activity.defn
-async def persist_visual(generation_id: str) -> dict:
+async def scan_page_deep_key(generation_id: str, page_no: int) -> dict:
+    return await vision.analyze_page_visual(generation_id, page_no, "deep", ["IMPORTANT_EVENT"])
+
+
+@activity.defn
+async def narrative_roles(generation_id: str) -> dict:
+    return await knowledge.assign_narrative_roles(generation_id)
+
+
+@activity.defn
+async def persist_visual(generation_id: str, phase: str = "all") -> dict:
+    """A page's visual records are written once, when its best scan is final:
+    phase "deep" = pages that already have their deep scan; "all" = the rest."""
     await _t(knowledge.text_chunks, generation_id)   # records FRONT_MATTER page roles first
-    pages = await _t(db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s",
-                     generation_id)
+    pages = await _t(db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s"
+                     " AND (%s <> 'deep' OR pass='DEEP')", generation_id, phase)
     out = [await _t(vision.persist_page_visual, generation_id, r["page_no"]) for r in pages]
     return {"pages": len(out), "visual_mentions": sum(o.get("visual_mentions", 0) for o in out),
             "text_visual_candidates": sum(o.get("text_visual_candidates", 0) for o in out)}
@@ -212,7 +224,7 @@ async def release_models(aliases_: list[str]) -> dict:
     return r.json()
 
 
-ALL = [set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+ALL = [scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

@@ -14,6 +14,7 @@ from typing import Any, TypedDict
 from langgraph.graph import END, START, StateGraph
 
 from . import db, ledger, prompts, schemas
+from .config import settings
 from .document import page_text_numbered
 from .llm import Llm
 
@@ -341,7 +342,10 @@ async def resolve_character_identity(generation_id: str) -> dict:
             mids = [back[x] for x in ch["mention_ids"] if x in back and back[x] in by_id]
             if not mids:
                 continue
-            pages = sorted({by_id[m]["page_no"] for m in mids})
+            # pages that count as evidence of this character: mentions whose own identity
+            # is not uncertain (an unnamed cover figure does not set the first page)
+            sure = sorted({by_id[m]["page_no"] for m in mids if by_id[m]["resolution"] != "UNCERTAIN"})
+            pages = sure or sorted({by_id[m]["page_no"] for m in mids})
             conf = float(ch["identity_confidence"])
             if len(pages) < 2:
                 conf = min(conf, 0.7)
@@ -468,8 +472,38 @@ async def merge_events(generation_id: str) -> dict:
 def build_timeline(generation_id: str) -> list[dict]:
     """Realized (and remembered) events only, in story order."""
     return db.all_rows("SELECT id, story_order, page_from, page_to, modality, summary, participants,"
-                       " confidence FROM timeline WHERE generation_id=%s ORDER BY story_order NULLS LAST,"
+                       " confidence, narrative_role FROM timeline WHERE generation_id=%s ORDER BY story_order NULLS LAST,"
                        " page_from", generation_id)
+
+
+async def assign_narrative_roles(generation_id: str) -> dict:
+    """Importance is relative to the whole book: the director labels each realized
+    event's role in the narrative. Returns illustrated pages of key events that have
+    no deep scan yet ("Önemli olaylarda" -> book-vision-deep)."""
+    tl = build_timeline(generation_id)
+    if not tl:
+        return {"key_events": 0, "pages": []}
+    short = {f"e{i}": e for i, e in enumerate(tl)}
+    ref, body = prompts.render("narrative_roles", events="\n".join(
+        f"{k} | s{e['page_from']}-{e['page_to']} | {e['summary']}" for k, e in short.items()))
+    out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}], prompt=ref,
+                                           schema=schemas.NARRATIVE_ROLES, max_tokens=8000,
+                                           temperature=0.0, thinking=False)
+    key = []
+    with db.tx() as c:
+        for v in out["events"]:
+            e = short.get(v["event_id"])
+            if e:
+                c.execute("UPDATE event SET narrative_role=%s WHERE id=%s", (v["role"], e["id"]))
+                if v["role"] != "ORDINARY":
+                    key.append(e)
+        pages = sorted({p for e in key for p in range(e["page_from"], e["page_to"] + 1)})
+        rows = c.execute(
+            "SELECT p.page_no FROM page p JOIN generation g ON g.book_version_id=p.book_version_id"
+            " WHERE g.id=%s AND p.page_no = ANY(%s) AND coalesce(p.nontext_ink, 1) >= %s AND NOT EXISTS"
+            " (SELECT 1 FROM page_scan d WHERE d.generation_id=g.id AND d.page_no=p.page_no AND"
+            " d.pass='DEEP')", (generation_id, pages, settings().min_illustration_ink)).fetchall()
+    return {"key_events": len(key), "pages": [r["page_no"] for r in rows]}
 
 
 # ----------------------------------------------------- emotions/themes

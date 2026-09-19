@@ -1,5 +1,5 @@
-<!-- name: page_scan_deep version: 2 -->
-Sen görsel kitap analizinin derin inceleme modelisin. Hızlı tarama bu sayfayı belirsiz buldu. Görüntü kitabın {{page_no}}. sayfası.
+<!-- name: page_scan_deep version: 3 -->
+Sen görsel kitap analizinin derin inceleme modelisin. Bu sayfayı ya ilk kez sen tarıyorsun (nedenler DEEP_FIRST, hızlı tarama sonucu "-") ya da hızlı tarama onu belirsiz buldu. Görüntü kitabın {{page_no}}. sayfası.
 Hızlı taramanın belirsizlik nedenleri: {{reasons}}
 Hızlı tarama sonucu (hatalı olabilir):
 <<<

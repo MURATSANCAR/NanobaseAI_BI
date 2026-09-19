@@ -220,7 +220,7 @@ def run_regression_suite(generation_id: str) -> dict:
         _check("görsel-metinsel uyuşmazlık aday, hata değil", one(
             "SELECT count(*) n FROM contradiction WHERE generation_id=%s AND status NOT IN"
             " ('CANDIDATE','NEEDS_REVIEW','EDITOR_CONFIRMED','EDITOR_DISMISSED')", generation_id) == 0),
-        _check("her sayfa hızlı tarandı", one(
+        _check("her sayfa görsel taramadan geçti ya da resimsiz kaydedildi", one(
             "SELECT count(*) n FROM page p WHERE p.book_version_id=%s AND NOT EXISTS (SELECT 1 FROM"
             " page_scan s WHERE s.generation_id=%s AND s.page_no=p.page_no AND s.pass='FAST')",
             gen["book_version_id"], generation_id) == 0),
@@ -368,7 +368,9 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS",
     content["characters"] = chars
     tl = build_timeline(generation_id)
     md += ["## Zaman çizelgesi (yalnız gerçekleşmiş olaylar)",
-           *[f"{e['story_order'] or '-'}. {e['summary']} [s.{e['page_from']}]" for e in tl], ""]
+           *[f"{e['story_order'] or '-'}. {e['summary']} [s.{e['page_from']}]"
+             + (f" — **{e['narrative_role']}**" if e.get("narrative_role") not in (None, "ORDINARY") else "")
+             for e in tl], ""]
     content["timeline"] = tl
     other = q("SELECT modality, summary, page_from FROM event WHERE generation_id=%s AND merged_into IS NULL"
               " AND modality NOT IN ('REALIZED','MEMORY') ORDER BY page_from")

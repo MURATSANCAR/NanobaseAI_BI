@@ -25,6 +25,7 @@ class Settings:
     deep_concurrency: int
     min_illustration_ink: float
     min_figure_ink: float
+    vision_screen: str
 
     @property
     def storage(self) -> Path:
@@ -56,4 +57,7 @@ def settings() -> Settings:
         min_illustration_ink=float(env("EDITOR_MIN_ILLUSTRATION_INK", "0.02")),
         # a figure's bbox must contain at least this share of ink to count as seen
         min_figure_ink=float(env("EDITOR_MIN_FIGURE_INK", "0.05")),
+        # "deep": illustrated pages go straight to book-vision-deep (default, user decision
+        # 2026-09-19); "fast": book-vision-fast screens first, deep only where evidence asks.
+        vision_screen=env("EDITOR_VISION_SCREEN", "deep"),
     )

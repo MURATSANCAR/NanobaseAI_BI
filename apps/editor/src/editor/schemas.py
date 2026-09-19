@@ -107,6 +107,12 @@ MODALITY_CHECK = obj({"events": arr(obj({
 THEMES = obj({"themes": arr(obj({
     "theme": STR, "text": STR, "source_ids": arr(STR, 1), "confidence": NUM}))})
 
+NARRATIVE_ROLES = obj({"events": arr(obj({
+    "event_id": STR,
+    "role": {"type": "string", "enum": ["SETUP", "INCITING", "TURNING_POINT", "CLIMAX",
+                                        "RESOLUTION", "ORDINARY"]},
+    "reason": STR}))})
+
 CONTRADICTIONS = obj({"candidates": arr(obj({
     "kind": {"type": "string", "enum": ["TIMELINE", "CHARACTER", "TEXT_VISUAL",
                                         "CONTINUITY", "IDENTITY"]},

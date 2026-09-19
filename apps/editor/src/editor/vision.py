@@ -58,6 +58,16 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
                       (generation_id, page_no, db.J(out)))
         return {"page_no": page_no, "pass": "FAST", "uncertain": False, "reasons": [],
                 "characters": 0, "skipped": "no illustration"}
+    if depth == "fast" and settings().vision_screen == "deep":
+        # No fast screening: the pixel measure already separated text-only pages, and the
+        # deep model reads every illustrated page first-hand.
+        with db.tx() as c:
+            c.execute("INSERT INTO page_scan(generation_id, page_no, pass, alias, result, uncertain,"
+                      " uncertainty_reasons) VALUES (%s,%s,'FAST','deferred-to-deep',%s,true,%s)"
+                      " ON CONFLICT (generation_id, page_no, pass) DO NOTHING",
+                      (generation_id, page_no, db.J(dict(EMPTY_SCAN)), ["DEEP_FIRST"]))
+        return {"page_no": page_no, "pass": "FAST", "uncertain": True, "reasons": ["DEEP_FIRST"],
+                "characters": 0, "skipped": "deferred to deep"}
     png = Path(render_page(str(gen["book_version_id"]), page_no)["path"]).read_bytes()
     text = page_text_numbered(generation_id, page_no)
     if depth == "fast":
@@ -72,7 +82,8 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
         ref, body = prompts.render(
             "page_scan_deep", page_no=str(page_no),
             reasons=", ".join(reasons or (fast or {}).get("uncertainty_reasons") or []) or "-",
-            fast_result=json.dumps((fast or {}).get("result") or {}, ensure_ascii=False),
+            fast_result="-" if (fast or {}).get("uncertainty_reasons") == ["DEEP_FIRST"] else
+            json.dumps((fast or {}).get("result") or {}, ensure_ascii=False),
             page_text=text, context_text=ctx or "-",
             known_characters=known_characters_text(generation_id))
         alias, pass_, max_tokens, thinking = "book-vision-deep", "DEEP", 16384, None
@@ -80,6 +91,22 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
         alias, [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
         prompt=ref, schema=schemas.PAGE_SCAN, pages=[page_no], max_tokens=max_tokens,
         temperature=0.1, thinking=thinking)
+    if depth == "fast":
+        # Which pages need the deep model is decided by evidence, not by the fast model's
+        # own word (measured: it misnames figures on ~1 in 4 illustrated pages, sometimes
+        # with high confidence and no flag; and every single page looks "important" to a
+        # model that sees one page). A drawn figure's identity is never settled by the
+        # fast pass; importance is decided later, over the whole timeline.
+        png_path = render_page(str(gen["book_version_id"]), page_no)["path"]
+        need = set()
+        if any(region_ink_ratio(png_path, ch["bbox"]) >= settings().min_figure_ink
+               for ch in out["characters"]):
+            need.add("IDENTITY")
+        if any(not chk["consistent"] for chk in out["text_visual_checks"]):
+            need.add("TEXT_VISUAL")
+        if "SCENE" in out["uncertainty_reasons"]:
+            need.add("SCENE")
+        out = {**out, "uncertain": bool(need), "uncertainty_reasons": sorted(need)}
     with db.tx() as c:
         c.execute(
             "INSERT INTO page_scan(generation_id, page_no, pass, alias, result, uncertain,"
@@ -95,7 +122,8 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
 
 def best_scan(generation_id: str, page_no: int) -> dict | None:
     return db.one("SELECT pass, result, model_call_id FROM page_scan WHERE generation_id=%s AND "
-                  "page_no=%s ORDER BY (pass='DEEP') DESC LIMIT 1", generation_id, page_no)
+                  "page_no=%s AND alias<>'deferred-to-deep' ORDER BY (pass='DEEP') DESC LIMIT 1",
+                  generation_id, page_no)
 
 
 def known_characters_text(generation_id: str) -> str:

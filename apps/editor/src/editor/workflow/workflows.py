@@ -73,7 +73,7 @@ class BookFullAnalysis:
             await self.step(6, "Derin görsel inceleme", {"uncertain_pages": uncertain})
             await self.act("release_models", ["book-vision-fast"], timeout=SHORT)
             _, failures["deep_scan"] = await self.fan_out("scan_page_deep", uncertain, gid)
-            await self.act("persist_visual", gid)
+            await self.act("persist_visual", gid, "deep")
             # 7. Karakter ve olay adayları
             await self.step(7, "Karakter ve olay adayları")
             chunks = await self.act("text_chunks", gid, timeout=SHORT)
@@ -88,6 +88,13 @@ class BookFullAnalysis:
             await self.step(9, "Olay kipleri")
             mod = await self.act("verify_modality", gid)
             mrg = await self.act("merge_events", gid)
+            # "Önemli olaylarda" -> deep model: importance comes from the whole timeline
+            await self.step(9, "Önemli olay sayfaları")
+            roles = await self.act("narrative_roles", gid)
+            if roles["pages"]:
+                _, failures["key_event_scan"] = await self.fan_out("scan_page_deep_key", roles["pages"], gid)
+                await self.act("release_models", ["book-vision-deep"], timeout=SHORT)
+            await self.act("persist_visual", gid, "all")
             # 10. Duygu ve tema
             await self.step(10, "Duygu ve tema")
             emo = await self.act("emotions_themes", gid)
@@ -111,7 +118,7 @@ class BookFullAnalysis:
             rep = await self.act("report", gid)
             summary = {"generation_id": gid, "pages": len(pages), "ocr_pages": len(man["needs_ocr"]),
                        "uncertain_pages": uncertain, "extract": ext, "identity": ident,
-                       "continuity": cont, "modality": mod, "merge": mrg, "emotions_themes": emo,
+                       "continuity": cont, "modality": mod, "merge": mrg, "narrative_roles": roles, "emotions_themes": emo,
                        "index": idx, "book_summary": book, "critic": crit, "contradictions": con,
                        "regression_passed": reg["passed"], "report_id": rep["report_id"],
                        "failures": {k: v for k, v in failures.items() if v}}
