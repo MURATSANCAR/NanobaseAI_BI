@@ -10,6 +10,12 @@ A proposed term is added to the resolver *in memory only* and then questioned:
    after; the term may only add meaning to words that had none.
 3. **It means one thing.** A term proposed or approved for more than one field, or already the name
    of a certified concept somewhere else, is never decided by a machine.
+4. **It is a machine's to decide at all** (`not_for_a_machine`). One word, a term its generator
+   flagged as confusable, a name for a table's own key, and a name on a table with no rows are a
+   person's decision however well they measure. Measured on 1,100 labelled questions (2026-09-19):
+   335 one-word approvals out of 7,751 carried 41 of the 62 ERP questions that were read against the
+   CRM — "tahsil edilmemiş alacak" went to a contact's education column, "ödeme" to one CRM table —
+   because the examples a term is measured on are written for the term, and ordinary speech is not.
 
 A term that passes is approved through `vocabulary.decide`, the same path a person's yes takes, with
 the measurement as the note. Everything else stays PROPOSED for a person, with the reason written on
@@ -23,6 +29,7 @@ import json
 import logging
 from collections import defaultdict
 from datetime import date
+from functools import lru_cache
 from typing import Any, Iterable, Optional
 
 import sqlalchemy as sa
@@ -86,8 +93,38 @@ def _leads_to_field(sq, entity: str, column: Optional[str]) -> bool:
     return False
 
 
+@lru_cache(maxsize=None)
+def _padded(text: str) -> str:
+    # every pending row is looked for in every question ever asked: normalise each question once
+    return f" {normalize_term(text)} "
+
+
 def _contains(text: str, norm: str) -> bool:
-    return f" {norm} " in f" {normalize_term(text)} "
+    return f" {norm} " in _padded(text)
+
+
+def not_for_a_machine(row: dict[str, Any], profiles) -> Optional[str]:
+    """Why this row is a person's decision whatever the measurement says, or None. Row and profile
+    only — no resolver — so the same rule re-judges approvals a machine has already made."""
+    if len((row.get("normalized") or "").split()) < 2:
+        return "tek kelime: gündelik dilde başka anlamlara da gelir; kararı bir kişi verir"
+    note = row.get("generator_note")
+    if note:
+        return f"üretici karışabileceğini yazdı ({note}); kararı bir kişi verir"
+    prof = next((p for p in profiles if p.entity == row["entity"]), None)
+    if prof is not None:
+        column = (row.get("column_name") or "").upper()
+        if column and column in {k.upper() for k in (prof.primary_key or [])}:
+            return "tablonun kendi anahtarı: sorulan bir iş alanı değil; kararı bir kişi verir"
+        if prof.row_count == 0:
+            return "tabloda satır yok: kullanılmayan alanın adı ölçülemez; kararı bir kişi verir"
+    return None
+
+
+def _generator_note(row: dict[str, Any]) -> Optional[str]:
+    """What the generator wrote beside a pending row. A probe's own reason (PREFIX) is not one."""
+    reason = str(row.get("reason") or "").strip()
+    return None if not reason or reason.startswith(PREFIX) or reason.startswith("{") else reason
 
 
 def ambiguous_terms(store, settings) -> dict[str, int]:
@@ -115,9 +152,9 @@ def probe(store, settings, profiles, row: dict[str, Any], *, resolver_factory, q
     entity, column, norm = row["entity"], row["column_name"], row["normalized"]
     if row["source"] != V.GENERATED or row["status"] != V.PROPOSED:
         return {"ok": False, "reason": "yalnız bekleyen üretilmiş öneriler ölçülür", "evidence": {}}
-    # A generator's "this could also mean …" note stays on the row for whoever reads it; it is not a
-    # veto. The collisions it worries about are measured below: another field, a certified concept
-    # elsewhere, or a question already asked whose meaning would change.
+    unfit = not_for_a_machine({**row, "generator_note": _generator_note(row)}, profiles)
+    if unfit:
+        return {"ok": False, "reason": unfit, "evidence": {}}
     if fields_per_term.get(norm, 0) > 1:
         return {"ok": False, "reason": f"aynı terim {fields_per_term[norm]} farklı alana önerildi; seçimi bir kişi yapar", "evidence": {}}
     why = V.refute(row["term"], entity, column, index=store.certified_index(settings.tenant_id, settings.datasource_id), profiles=profiles)
@@ -197,4 +234,28 @@ def auto_decide(store, settings, profiles, engine, *, resolver_factory, entities
     return summary
 
 
-__all__ = ["probe", "auto_decide", "ambiguous_terms", "AUTO"]
+def recheck(store, settings, profiles, *, apply: bool = True) -> dict[str, Any]:
+    """Approvals a machine made, judged again by `not_for_a_machine`; the ones it may not make are taken
+    back to PROPOSED with the reason, for a person. A person's approvals are never read here."""
+    V.ensure_table(store.engine)
+    stmt = sa.select(S.sl_vocabulary).where(
+        S.sl_vocabulary.c.tenant_id == settings.tenant_id, S.sl_vocabulary.c.datasource_id == settings.datasource_id,
+        S.sl_vocabulary.c.status == V.APPROVED, S.sl_vocabulary.c.decided_by == AUTO)
+    with store.engine.connect() as conn:
+        rows = [dict(r._mapping) for r in conn.execute(stmt)]
+    summary: dict[str, Any] = {"checked": len(rows), "withdrawn": 0, "reasons": defaultdict(int), "concepts": defaultdict(int)}
+    for row in rows:
+        # the generator's note was overwritten by the measurement when the row was approved
+        why = not_for_a_machine({**row, "generator_note": None}, profiles)
+        if not why:
+            continue
+        summary["withdrawn"] += 1
+        summary["reasons"][why.split(":")[0]] += 1
+        if apply:
+            out = V.withdraw(store, settings, row["id"], PREFIX + why)
+            summary["concepts"][out["concept"]] += 1
+    summary["reasons"], summary["concepts"] = dict(summary["reasons"]), dict(summary["concepts"])
+    return summary
+
+
+__all__ = ["probe", "auto_decide", "recheck", "not_for_a_machine", "ambiguous_terms", "AUTO"]

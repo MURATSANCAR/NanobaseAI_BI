@@ -4,6 +4,7 @@
     auto_approve_vocabulary.py                  # report only
     auto_approve_vocabulary.py --source crm     # only fields whose table lives in the CRM schema
     auto_approve_vocabulary.py --apply
+    auto_approve_vocabulary.py --recheck [--apply]   # take back machine approvals a machine may not make
 
 See `semantic_layer/vocabulary_probe.py` for what "measured to work" means.
 """
@@ -28,10 +29,16 @@ def main() -> int:
     ap.add_argument("--apply", action="store_true", help="write approvals and reasons (default: report only)")
     ap.add_argument("--source", choices=("crm", "logo"), help="limit to one source, decided by the table's schema")
     ap.add_argument("--shard", default="0/1", help="i/n — measure only this slice of the pending rows, for running n processes")
+    ap.add_argument("--recheck", action="store_true", help="judge the machine's past approvals by today's rules instead of probing pending rows")
     args = ap.parse_args()
     s = SemanticSettings.from_env()
     store = open_store(s.store_dsn, create=False)
     profiles = one_entity_per_pattern(store.list_profiles(s.datasource_id), store.concept_entities(s.tenant_id, s.datasource_id))
+    if args.recheck:
+        out = P.recheck(store, s, profiles, apply=args.apply)
+        out["applied"] = args.apply
+        print(json.dumps(out, ensure_ascii=False, indent=1), flush=True)
+        return 0
     entities = None
     if args.source:
         crm = {p.entity for p in profiles if "MSCRM" in (p.schema_name or "").upper()}
