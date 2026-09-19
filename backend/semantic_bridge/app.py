@@ -10,7 +10,9 @@ status, certify), /api/v1/schema/* (inventory + annotations for the portal layer
 from __future__ import annotations
 
 import asyncio
+import csv
 import hashlib
+import io
 import json
 from collections import OrderedDict
 import logging
@@ -21,11 +23,12 @@ import time
 import uuid
 from collections import OrderedDict
 from contextlib import asynccontextmanager
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 from pydantic import BaseModel, Field
 
@@ -34,27 +37,61 @@ from semantic_layer.candidates.generator import CandidateGenerator
 from semantic_layer.conventions import Conventions
 from semantic_layer.candidates.llm_client import LlmClient
 from semantic_layer.config import SemanticSettings
+from semantic_layer.data_source import CRM, LOGO, data_source, source_by_entity
 from semantic_layer.evidence.engine import EvidenceEngine
 from semantic_layer.history.sources import _pid as pair_id, load_project_pairs, load_query_log
 from semantic_layer.catalog import one_entity_per_pattern
 from semantic_layer.models import Annotation, ConceptStatus, Evidence, EvidenceType, SchemaProfile, SemanticQuery, TemporalSlot
 from semantic_layer.models import Mapping as SLMapping, SemanticType
-from semantic_layer.naming import label_context
+from semantic_layer.naming import label_context, logicalize_sql
 from semantic_layer.normalize import normalize_term, tokenize
 from semantic_layer.profiler.connectors import Connector, connector_from_file
-from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, fast_summary, is_empty_result
+from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompiler, Dialect, ExistingCompiler, default_filters_provider, empty_result_note, fast_summary, is_empty_result
 # The fragment shown to a reviewer must be the fragment the compiler will emit; rendering a
 # second, prettier version of it would let the screen and the engine disagree.
 from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
-from semantic_layer.runtime.audit import audit_sql, unmet_obligations
+from semantic_layer.runtime.audit import audit_sql, repair_qualifiers_sql, unmet_obligations
 from semantic_layer.runtime import critic
-from semantic_layer.runtime.guardrails import allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
-from semantic_layer.runtime.llm_queue import LlmQueue, QueuedLlm
+from semantic_layer.runtime.guardrails import is_query_timeout, allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
+from semantic_layer.runtime.llm_jobs import LlmJobs
+from semantic_layer.runtime.llm_queue import NORMAL, LlmQueue, QueuedLlm
 from semantic_layer.runtime.resolver import SemanticResolver
 from semantic_layer.store.catalog_store import CatalogStore, open_store, result_fingerprint
 
 log = logging.getLogger("semantic_bridge")
 logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"), format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+
+
+def _timed(batches, box: list):
+    """Veritabanı süresi (dbMs) için: yalnız kaynaktan satır beklenen an sayılır.
+
+    Parti parti okunan sonuçta araya dosyaya yazma girer; o süre veritabanının değildir.
+    box[0] saniye cinsinden birikir. Arayüz bunu "Veritabanında … sürede geldi" diye gösterir.
+    """
+    it = iter(batches)
+    while True:
+        t0 = time.monotonic()
+        try:
+            item = next(it)
+        except StopIteration:
+            box[0] += time.monotonic() - t0
+            return
+        box[0] += time.monotonic() - t0
+        yield item
+
+
+def db_timing(result: Optional[dict]) -> dict:
+    """Bir sonucun veritabanı süresi bilgisi, her uçta aynı biçimde.
+
+    dbMs: satırları üreten yürütmenin veritabanında geçen süresi (ms). Önbellekten gelen
+    sonuçta o ilk yürütmenin süresidir; `cached` true olur, `computedAt` (epoch sn) ne zaman
+    hesaplandığını söyler. Süre ölçülmediyse dbMs None'dır — uydurulmaz.
+    """
+    r = result or {}
+    out = {"dbMs": r.get("dbMs"), "cached": bool(r.get("cached")), "computedAt": r.get("computedAt")}
+    if r.get("dbParts"):
+        out["dbParts"] = r["dbParts"]
+    return out
 
 
 class Runtime:
@@ -64,9 +101,20 @@ class Runtime:
         self.settings = settings
         self.store = store or open_store(settings.store_dsn)
         self.connector = connector
+        self.crm_connector = None
+        _crm_file = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
+        if _crm_file and Path(_crm_file).exists():
+            try:
+                self.crm_connector = connector_from_file(_crm_file)
+            except Exception as _e:  # noqa: BLE001
+                log.warning("CRM connector kurulamadi: %s", str(_e)[:200])
         # One model serves everyone: requests that need it are admitted in arrival order, never rejected.
         self.queue = queue or LlmQueue.from_env(self.store.engine)
         self.llm = QueuedLlm(llm, self.queue, tenant_id=settings.tenant_id, datasource_id=settings.datasource_id) if llm is not None else None
+        # Prompts other modules leave at the door (202 + id). Reads `self.llm` at run time: the admin
+        # screen swaps the client without a restart.
+        self.jobs = LlmJobs.from_env(self.store.engine, lambda: self.llm, slots=self.queue.slots,
+                                     tenant_id=settings.tenant_id, datasource_id=settings.datasource_id)
         self._engine_lock = threading.Lock()
         # Executed results, kept whole so the table, the chart and the export read the same rows.
         self._results: "OrderedDict[str, dict[str, Any]]" = OrderedDict()
@@ -123,7 +171,10 @@ class Runtime:
         pd = self.settings.project_dir
         if not pd or not (pd / "knowledge").exists():
             return ""
-        parts = [f.read_text(encoding="utf-8") for f in sorted((pd / "knowledge").rglob("*.md"))
+        # Each document keeps its boundary: the compiler leaves out, per question, a document that
+        # declares itself to be about a source the question does not read (see `rules_for`).
+        parts = [f"<!-- belge: {f.relative_to(pd / 'knowledge').as_posix()} -->\n" + f.read_text(encoding="utf-8")
+                 for f in sorted((pd / "knowledge").rglob("*.md"))
                  if f.parent.name not in self._NOT_IN_PROMPT]
         return "\n\n".join(parts)
 
@@ -141,9 +192,44 @@ class Runtime:
             log.debug("catalog version check failed: %s", e)
             return
         from semantic_layer.runtime.language_pool import file_stamp
-        if version != self._catalog_version or file_stamp(os.environ.get("SEMANTIC_LANGUAGE_POOL")) != getattr(self, "_language_pool_stamp", None):
+        if version != self._catalog_version:
             log.info("catalog changed (%s → %s) — reloading profiles", self._catalog_version, version)
             self.rebuild()
+        elif file_stamp(os.environ.get("SEMANTIC_LANGUAGE_POOL")) != getattr(self, "_language_pool_stamp", None):
+            self._reload_language_pool_in_background()
+
+    def _reload_language_pool_in_background(self) -> None:
+        """A published pool of ~180k phrases takes the better part of a minute to validate and index.
+        Doing that inside the request that noticed the new file made one person wait for it, so the new
+        pool is built on a thread while the old one keeps answering, then swapped in whole."""
+        if getattr(self, "_pool_loading", False):
+            return
+        self._pool_loading = True
+        from semantic_layer.runtime.language_pool import LanguagePool, file_stamp
+        pool_path = os.environ.get("SEMANTIC_LANGUAGE_POOL")
+        stamp = file_stamp(pool_path)
+        profiles, existing = self.profiles, self.existing
+
+        def load() -> None:
+            try:
+                started = time.perf_counter()
+                pool = LanguagePool.load(pool_path, profiles, self.settings.datasource_id,
+                                         existing.annotations if existing is not None else {})
+                if self.profiles is not profiles:
+                    return          # a catalog rebuild ran meanwhile and loaded its own pool
+                self.language_pool = pool
+                if existing is not None:
+                    existing.language_pool = pool
+                self._language_pool_stamp = stamp
+                log.info("language pool reloaded in background: %d candidates, %d stale/invalid rejected, hash %s, %.1fs",
+                         len(pool.entries), pool.rejected, pool.content_hash[:12], time.perf_counter() - started)
+            except (OSError, ValueError, TypeError, KeyError, AttributeError) as e:
+                self._language_pool_stamp = stamp   # do not retry a broken file every 30 seconds
+                log.warning("language pool reload failed, keeping the previous pool: %s", e)
+            finally:
+                self._pool_loading = False
+
+        threading.Thread(target=load, name="language-pool-reload", daemon=True).start()
 
     def rebuild(self) -> None:
         s = self.settings
@@ -155,6 +241,10 @@ class Runtime:
         self.conventions = Conventions.from_profiles(self.profiles)
         if s.project_dir:
             self.conventions.load_equivalences(s.project_dir / "equivalences.yml")
+        # Declared period coverage the nightly measurement did not refute: the period chooser and the
+        # gate read it off the profile; a table without it keeps needing its date filter.
+        from semantic_layer import coverage as coverage_mod
+        coverage_mod.apply(self.profiles, self.store, s)
         if not s.dialect:
             s.dialect = getattr(self.connector, "dialect", "") or "generic"
         default_temporal = _default_period()
@@ -219,7 +309,7 @@ class Runtime:
                 log.warning("column index unavailable, routing from the catalog alone: %s", e)
 
         # Narrows the retrieved shortlist before it becomes a prompt — the step every schema-linking
-        # result says matters most. Measured on this deployment's golden set with the A40 model:
+        # result says matters most. Measured on this deployment's golden set:
         #
         #     no selector   12.0 tables   precision 0.17   recall 17/17
         #     selector       5.1 tables   precision 0.31   recall 17/17   ~4.2s
@@ -239,8 +329,11 @@ class Runtime:
                 # A reasoning model asked to name tables spends most of its time explaining the
                 # choice to itself. It is not wanted here and the person asking pays for it.
                 client = LlmClient(base, model, s.llm_key, timeout,
-                                   extra={"chat_template_kwargs": {"enable_thinking": False}})
-                existing.selector = TableSelector(client)
+                                   extra={"chat_template_kwargs": {"enable_thinking": False}} | s.llm_extra)
+                # Through the same line as every other call: it used to go straight to the provider,
+                # one more concurrent request than the slot count says there is.
+                existing.selector = TableSelector(QueuedLlm(client, self.queue, purpose="nl2sql:selector",
+                                                            tenant_id=s.tenant_id, datasource_id=s.datasource_id))
                 log.info("table selector enabled (%s, model %s, mode %s)", base, model, existing.selector_mode)
             except Exception as e:  # noqa: BLE001
                 log.warning("table selector unavailable, sending every retrieved table: %s", e)
@@ -304,7 +397,7 @@ class Runtime:
             return []
         rows = [{"nl": p.nl, "sql": p.sql} for p in self.pairs if p.source != "seed"]
         for r in self.store.list_validated_queries(self.settings.tenant_id, self.settings.datasource_id, limit=500):
-            rows.append({"nl": r["question"], "sql": r["sql_text"]})
+            rows.append({"nl": r["question"], "sql": logicalize_sql(r["sql_text"])})
         ex = normalize_term(exclude_nl) if exclude_nl else None
         scored = []
         for r in rows:
@@ -340,11 +433,19 @@ class Runtime:
         end = max((t.end for t in getattr(q, "temporal", []) if t.end), default=None)
         return (start, end) if start and end else None
 
+    def _conn_for(self, sql: str):
+        if self.crm_connector is None or "timas_mscrm" not in (sql or "").lower():
+            return self.connector
+        residual = re.sub(r"\[?timas_mscrm\]?\.\[?dbo\]?\.", " ", sql, flags=re.I)
+        if re.search(r"(?<![\w.])\[?dbo\]?\.", residual, re.I) or re.search(r"(?<![\w.])\[?LG_\w", residual):
+            raise ValueError("Logo ve CRM artik ayri sunucularda; tek soruda birlestirilemez.")
+        return self.crm_connector
+
     def dry_run(self, sql: str) -> None:
         if self.connector is None:
             raise RuntimeError("no database connector")
         with self._engine_lock:
-            self.connector.dry_run(sql)
+            self._conn_for(sql).dry_run(sql)
 
     def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None) -> dict[str, Any]:
         sql = strip_comments(sql or "")
@@ -392,13 +493,14 @@ class Runtime:
         try:
             with self._engine_lock:
                 t0 = time.monotonic()
-                cols, rows, truncated = self.connector.execute(phys, limit)
+                cols, rows, truncated = self._conn_for(phys).execute(phys, limit)
                 duration = time.monotonic() - t0
         finally:
             if interactive:
                 with self._wait_lock:
                     self._waiting -= 1
-        return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys}, duration
+        return {"columns": cols, "records": rows, "totalRows": len(rows), "truncated": truncated, "physicalSql": phys,
+                "dbMs": int(round(duration * 1000))}, duration
 
     def run_complete(self, sql: str, period=None, *, scope=None) -> dict[str, Any]:
         ok, why = validate_sql(sql)
@@ -427,8 +529,9 @@ class Runtime:
                     reserve = min(self.result_files.max_bytes, self.result_files.disk_budget)
                     while self._results and sum(p.stat().st_size for p in Path(self.result_files.directory.name).glob('*.jsonl')) + reserve > self.result_files.disk_budget:
                         self._discard_result(next(iter(self._results)))
-                out = self.result_files.write(self.connector.batches(phys), self.settings.max_rows)
-                out.update(physicalSql=phys, cached=False)
+                db = [0.0]
+                out = self.result_files.write(_timed(self._conn_for(phys).batches(phys), db), self.settings.max_rows)
+                out.update(physicalSql=phys, cached=False, dbMs=int(round(db[0] * 1000)))
                 computed_at = time.time()
                 self._complete_cache[key] = (computed_at, out)
                 self._complete_cache.move_to_end(key)
@@ -572,6 +675,11 @@ class Runtime:
     def stop_refresher(self) -> None:
         self._stop.set()
 
+    def llm_for(self, module: str, priority: Optional[int] = None):
+        """The shared model, asked on behalf of `module`: the queue shares slots between modules, so
+        it has to know which one is asking. None when no model is configured."""
+        return self.llm.for_module(module, priority=priority) if isinstance(self.llm, QueuedLlm) else self.llm
+
     def _refresh_loop(self) -> None:
         while not self._stop.wait(self._refresh_sec):
             try:
@@ -630,23 +738,39 @@ class Runtime:
                 note = " " + note
         if result.get('truncated'):
             note += " Sonuç sınırda kesildi; toplam satır sayısı bilinmiyor."
+        if not (result.get("records") or []) and not int(result.get("totalRows") or 0):
+            note += empty_result_note(sql, self.rules_text)
         if self.settings.summary_mode == "llm" and self.llm is not None:
             sample = result["records"][:20]
             prompt = ("Aşağıdaki soru ve sorgu sonucunu 1-3 cümlede Türkçe özetle. Sayıları Türkçe biçimle, yorum katma, sadece veride olanı söyle.\n"
                       f"Soru: {question}\nSatır sayısı: {result['totalRows']}\nİlk satırlar (JSON): {json.dumps(sample, ensure_ascii=False)[:4000]}")
             try:
-                return self.llm.chat([{"role": "user", "content": prompt}], max_tokens=300).strip() + note
+                return self.llm_for("summary").chat([{"role": "user", "content": prompt}], max_tokens=300).strip() + note
             except Exception as e:  # noqa: BLE001
                 log.warning("llm summary failed: %s", e)
         return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0)) + note
 
     # ------------------------------------------------------------------ ask
-    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None) -> dict[str, Any]:
+    def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
         report = progress or (lambda stage: None)
         report("understanding")
         t0 = time.perf_counter()
         timings: dict[str, int] = {}
         thread_id = thread_id or uuid.uuid4().hex
+
+        def _log(*, sql, compiler, catalog_version, executed, resolved=None, answer_type=None,
+                 answer_summary=None, error=None, row_count=None, latency_ms=None,
+                 result_fingerprint=None, result_json=None, gate=None) -> str:
+            """Promt izleyici kaydı: her dal buradan geçer, böylece kim sordu / ne cevap döndü / kapı
+            ne dedi tek yerde ve eksiksiz yazılır (bkz. sl_query_log, /api/v1/admin/prompts)."""
+            return self.store.log_query(
+                self.settings.tenant_id, self.settings.datasource_id, question,
+                sql=sql, compiler=compiler, catalog_version=catalog_version,
+                resolved=(resolved if resolved is not None else {}), executed=executed,
+                row_count=row_count, latency_ms=latency_ms, error=error,
+                result_fingerprint=result_fingerprint, username=username, thread_id=thread_id,
+                answer_type=answer_type, answer_summary=answer_summary,
+                result_json=result_json, gate_json=gate)
         thread = self.threads.setdefault(thread_id, [])
         # a long-lived process must not accumulate every conversation it ever served
         if len(self.threads) > 200:
@@ -655,15 +779,19 @@ class Runtime:
                 self.thread_plans.pop(stale, None)
         from semantic_bridge.chat_scope import BI_INTRO, is_intro
         if is_intro(question):
+            qid = _log(sql=None, compiler="intro", catalog_version=None, executed=False,
+                       answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings}
+                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
         self.ensure_fresh()
         t = time.perf_counter()
         from semantic_layer.runtime.conversation import compose_followup, bind_followup_value
         effective_question, context_error = compose_followup(question, self.thread_plans.get(thread_id))
         if context_error:
+            qid = _log(sql=None, compiler="clarification", catalog_version=None, executed=False,
+                       answer_type="CLARIFICATION", answer_summary=context_error)
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "explanation": context_error,
-                    "threadId": thread_id, "timings": timings}
+                    "threadId": thread_id, "timings": timings, "queryId": qid}
         sq = self.resolver.resolve(effective_question)
         sq.language_candidates = self.language_pool.search(effective_question)
         sq.language_pool_hash = self.language_pool.content_hash
@@ -674,9 +802,11 @@ class Runtime:
         # Certified data concepts are positive evidence of a BI request. Only unplaced
         # questions need the conversational classifier; unknown terms remain eligible.
         if not any(slot.mapping is not None for slot in sq.slots) and is_intro(
-                question, self.llm, has_context=bool(self.thread_plans.get(thread_id))):
+                question, self.llm_for("chat"), has_context=bool(self.thread_plans.get(thread_id))):
+            qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
+                       resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings}
+                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
         if self.thread_plans.get(thread_id) is not None and getattr(self, "existing", None) is not None:
             bind_followup_value(question, sq, self.thread_plans[thread_id], self.existing.probe,
                                 self.existing.columns, self.conventions)
@@ -685,8 +815,10 @@ class Runtime:
         timings["resolve_ms"] = int((time.perf_counter() - t) * 1000)
         if any(c["status"] == "OUTSIDE_OBSERVED" for c in sq.data_coverage):
             reason = " ".join(e for e in sq.explanation if "gözlenen veri kapsamı dışında" in e)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None, compiler="coverage", catalog_version=sq.catalog_version,
-                                      resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=None, compiler="coverage", catalog_version=sq.catalog_version,
+                       resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="DATA_UNAVAILABLE", answer_summary=reason,
+                       gate={"dataCoverage": list(sq.data_coverage)})
             return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": {"query": sq.to_dict()}, "queryId": qid}
         t = time.perf_counter()
@@ -703,38 +835,56 @@ class Runtime:
             semantic["queue"] = queued
         if compiled.compiler == "incomplete":
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(compiled.explain)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None,
-                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                                      resolved=sq.to_dict(), executed=False, error=reason)
+            if sq.unresolved:
+                # The gate's objection is the symptom; a word the catalog cannot place is the cause.
+                # Lead with what the person can act on: which word, and where the data may sit.
+                hints = [c for c in (sq.candidates or []) if c.get("term") in sq.unresolved]
+                where = "; ".join(f"'{c['term']}' → " + ", ".join(f"{e}.{c['column']}" for e in (c.get("entities") or [])[:2]) for c in hints[:3])
+                reason = (f"'{', '.join(sq.unresolved[:3])}' katalogda tanımlı bir kavram değil; bu yüzden üretilen sorgu doğrulanamadı. "
+                          + (f"Şemada karşılığı olabilecek kolonlar: {where}. " if where else "")
+                          + "Terimi Veri Sözlüğü'nden tanımlarsanız soru cevaplanır. Kapı gerekçesi: " + "; ".join(compiled.explain))
+            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                       resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason,
+                       gate={"explain": list(compiled.explain)})
             return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if compiled.compiler == "clarification":
             reason = " ".join(compiled.explain)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None,
-                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                                      resolved=sq.to_dict(), executed=False)
+            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                       resolved=sq.to_dict(), executed=False,
+                       answer_type="CLARIFICATION", answer_summary=reason,
+                       gate={"explain": list(compiled.explain)})
             thread.extend([{"role": "user", "content": question}, {"role": "assistant", "content": reason}])
             return {"id": uuid.uuid4().hex, "type": "CLARIFICATION", "needs_clarification": True,
                     "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
+        if compiled.plan is not None:
+            return self._answer_plan(question, sq, compiled, semantic, thread, thread_id, timings, t0,
+                                     sample_size, scope_args, report, execute)
         if not compiled.sql:
             reason = "; ".join(compiled.explain)[:500]
             if sq.out_of_scope:
                 reason = next((e for e in sq.explanation if "kapsamı dışında" in e), reason)
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=None, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="NON_SQL_QUERY", answer_summary=reason, gate={"explain": list(compiled.explain)})
             return {"id": uuid.uuid4().hex, "type": "NON_SQL_QUERY", "explanation": reason or "Model bu soru için SQL üretmedi.", "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
-        sql = strip_trailing_semicolon(compiled.sql)
+        sql = repair_qualifiers_sql(strip_trailing_semicolon(compiled.sql))
         ok, why = validate_sql(sql)
         if not ok:
-            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": f"Guardrail: {why}", "threadId": thread_id, "timings": timings, "semantic": semantic}
+            reason = f"Guardrail: {why}"
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="SQL_INVALID", answer_summary=reason, gate={"guardrail": why})
+            return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         # What the question asked for and the statement does not deliver. Checked for every query,
         # certified or not: a comparison is built by the deterministic compiler too, and a single
         # period returned for "geçen yıla göre" is a complete-looking answer to a different question.
-        unmet = unmet_obligations(sq, sql)
+        unmet = unmet_obligations(sq, sql, sources=self.router.gate_sources())
         if unmet:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(unmet)
-            log.warning("obligation unmet q=%r %s", question[:80], unmet)
+            log.warning("obligation unmet q=%r %s sql=%s", question[:80], unmet, " ".join(sql.split())[:1500])
             semantic["unmetObligations"] = unmet
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason, gate={"unmetObligations": list(unmet)})
             return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "sql": sql, "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
 
@@ -746,13 +896,14 @@ class Runtime:
                 semantic["catalogAudit"] = contradictions
                 reason = "Üretilen SQL sertifikalı katalogla çelişiyor: " + "; ".join(contradictions)
                 log.warning("catalog audit refused q=%r %s", question[:80], contradictions)
-                qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason)
+                qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=reason,
+                           answer_type="SQL_INVALID", answer_summary=reason, gate={"catalogAudit": list(contradictions)})
                 return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": reason, "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         repairs = 0
         error: Optional[str] = None
         critic_notes: list[dict] = []
         if self.connector is not None:
-            for attempt in range(2):
+            for attempt in range(3):
                 try:
                     self.dry_run(self._physical(sql, self._asked_period(sq), **scope_args))
                     error = None
@@ -761,13 +912,14 @@ class Runtime:
                     # join that repeats rows under a SUM returns a total larger than the truth by a
                     # factor nobody sees, and the database is perfectly happy with it. Reviewed after
                     # dry_run so the reviewer works on a query already known to parse and resolve.
-                    found = critic.review(sql, self.profiles, self.settings.dialect or "tsql")
+                    found = critic.review(sql, self.profiles, self.settings.dialect or "tsql",
+                                          names=self.store.entity_terms(self.settings.tenant_id, self.settings.datasource_id))
                     critic_notes = [f.to_dict() for f in found]
                     blocking = [f for f in found if f.severity == "block"]
                     if not blocking:
                         break
                     log.warning("critic refused q=%r %s", question[:80], [f.kind for f in blocking])
-                    if attempt == 1 or self.existing is None or compiled.compiler == "deterministic":
+                    if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
                         # Out of attempts, or the SQL came from the deterministic compiler — which
                         # builds from the catalog rather than guessing, so a finding against it is
                         # this system's own bug and rewriting it with a model would hide that.
@@ -786,12 +938,14 @@ class Runtime:
                         # The database went away. No rewrite of this SQL can help, and telling the user
                         # their question was invalid would send them looking in the wrong place.
                         log.error("data source unreachable q=%r err=%s", question[:80], error[:300])
-                        qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=f"data source unreachable: {error}")
+                        _ds_msg = "Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
+                        qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=f"data source unreachable: {error}",
+                                   answer_type="DATA_SOURCE_UNAVAILABLE", answer_summary=_ds_msg)
                         return {"id": uuid.uuid4().hex, "type": "DATA_SOURCE_UNAVAILABLE", "sql": sql,
-                                "explanation": "Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak.",
+                                "explanation": _ds_msg,
                                 "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
                     log.warning("dry_run failed (attempt %d) q=%r err=%s", attempt + 1, question[:80], error[:300])
-                    if attempt == 1 or self.existing is None or compiled.compiler == "deterministic":
+                    if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
                         break
                     repairs += 1
                     fixed = self.existing.repair(sq, sql, error, thread)
@@ -801,27 +955,31 @@ class Runtime:
         if critic_notes:
             semantic["critic"] = critic_notes
         if error:
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=error)
             # A query the reviewer stopped is a different thing from one the database rejected, and
             # the person is owed the difference: the first has an explanation they can act on, the
             # second is a fault. Both refuse — neither returns a number nobody can trust.
             blocked = any(n.get("severity") == "block" for n in critic_notes)
             explanation = error if blocked else f"Üretilen SQL doğrulanamadı: {error}"
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=error,
+                       answer_type="SQL_INVALID", answer_summary=explanation, gate={"critic": critic_notes} if critic_notes else None)
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": explanation, "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}
         # Repairs can remove filters or period predicates. Validate the exact final
         # statement, including previews; never trust the pre-repair verdict.
-        final_problems = unmet_obligations(sq, sql) + audit_sql(sq, sql, conventions=self.conventions)
+        final_problems = unmet_obligations(sq, sql, sources=self.router.gate_sources()) + audit_sql(sq, sql, conventions=self.conventions)
         semantic["query"] = sq.to_dict()
         if final_problems:
             reason = "Sorudaki koşulların tamamı doğrulanamadı: " + "; ".join(final_problems)
+            # The refused statement is the evidence a refusal is judged by.
+            log.warning("obligation unmet after repair q=%r %s sql=%s", question[:80], final_problems, " ".join(sql.split())[:1500])
             semantic["unmetObligations"] = final_problems
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql,
-                                      compiler=compiled.compiler, catalog_version=compiled.catalog_version,
-                                      resolved=sq.to_dict(), executed=False, error=reason)
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                       resolved=sq.to_dict(), executed=False, error=reason,
+                       answer_type="INCOMPLETE_ANSWER", answer_summary=reason, gate={"unmetObligations": list(final_problems)})
             return {"id": uuid.uuid4().hex, "type": "INCOMPLETE_ANSWER", "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         if not execute or self.connector is None:
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False)
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False,
+                       answer_type="TEXT_TO_SQL", answer_summary="(sorgu üretildi, çalıştırılmadı)")
             return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": sql, "physicalSql": self._physical(sql, self._asked_period(sq), **scope_args), "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
         t = time.perf_counter()
         try:
@@ -832,13 +990,23 @@ class Runtime:
         except Exception as e:  # noqa: BLE001
             err = str(e)[:800]
             down = is_connection_error(e)
+            slow = is_query_timeout(e)
+            limit = getattr(self.connector, "query_timeout", "?")
             if down:
                 log.error("data source unreachable during execution q=%r err=%s", question[:80], err[:300])
-            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=(f"data source unreachable: {err}" if down else err))
+            elif slow:
+                log.warning("query timeout (%ss) q=%r", limit, question[:80])
+            _exec_msg = ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
+                         if down else
+                         (f"Sorgu veritabanında {limit} saniyede bitmedi; soru doğru, veri büyük. Dönemi ya da kapsamı daraltın ya da yeniden deneyin."
+                          if slow else f"Sorgu çalıştırılamadı: {err}"))
+            _type = "DATA_SOURCE_UNAVAILABLE" if down else ("QUERY_TIMEOUT" if slow else "SQL_INVALID")
+            qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False,
+                       error=(f"data source unreachable: {err}" if down else (f"query timeout: {err}" if slow else err)),
+                       answer_type=_type, answer_summary=_exec_msg)
             return {"id": uuid.uuid4().hex,
-                    "type": "DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID", "sql": sql,
-                    "explanation": ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
-                                    if down else f"Sorgu çalıştırılamadı: {err}"),
+                    "type": _type, "sql": sql,
+                    "explanation": _exec_msg,
                     "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
         timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
         report("presenting")
@@ -853,7 +1021,16 @@ class Runtime:
         summary = self.summarize(question, sql, result, sq)
         timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
         fp = result.get("resultFingerprint") or result_fingerprint([c["name"] for c in result["columns"]], result["records"])
-        qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000), result_fingerprint=fp)
+        # Kullanıcı kararı: tam sonuç (tüm satırlar) kaydın içinde durur, böylece incelerken neyin
+        # döndüğünü birebir görürüz. Motorun satır tavanı zaten kesiyor; devasa kaçaklar _cap_result'la
+        # düşürülür. Kapı kararları (eleştiri) da promtla birlikte saklanır.
+        stored_result = {"columns": result["columns"], "records": list(result["records"]),
+                         "totalRows": result["totalRows"], "truncated": result.get("truncated")}
+        gate = {k: semantic[k] for k in ("critic", "unmetObligations", "catalogAudit") if k in semantic} or None
+        qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(),
+                   executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000),
+                   result_fingerprint=fp, answer_type="TEXT_TO_SQL", answer_summary=summary,
+                   result_json=stored_result, gate=gate)
         self.thread_plans[thread_id] = sq
         thread.append({"role": "user", "content": question})
         thread.append({"role": "assistant", "content": f"```sql\n{sql}\n```"})
@@ -882,6 +1059,7 @@ class Runtime:
             "cached": result.get("cached"),
             "ageSec": result.get("ageSec"),
             "computedAt": result.get("computedAt"),
+            "dbMs": result.get("dbMs"),
             "widget": result.get("widget"),
             "threadId": thread_id,
             "rowCount": result["totalRows"],
@@ -893,6 +1071,105 @@ class Runtime:
             "semantic": semantic,
             "queryId": qid,
         }
+
+    def _plan_rows(self, part, period, scope_args, timing=None):
+        """One part of a two-server plan, read whole from the server its tables live on.
+
+        `timing` verilirse parçanın veritabanında geçen süresi {name, source, ms} olarak eklenir."""
+        from semantic_layer.runtime.federated import source_of_schema  # noqa: F401 (same rule as the plan)
+        connector = self.crm_connector if (part.source and self.crm_connector is not None) else self.connector
+        if connector is None:
+            raise RuntimeError("no database connector")
+        phys = self._physical(part.sql, period, **scope_args)
+        if self._conn_for(phys) is not connector:
+            raise ValueError(f"'{part.name}' parçası bildirdiği kaynağın dışında bir tablo okuyor")
+        box = [0.0]
+        try:
+            with self._engine_lock:
+                if hasattr(connector, "batches"):
+                    yield from _timed(connector.batches(phys), box)
+                else:
+                    t0 = time.monotonic()
+                    cols, rows, truncated = connector.execute(phys, self.result_files.max_rows)
+                    box[0] += time.monotonic() - t0
+                    if truncated:
+                        raise ValueError(f"'{part.name}' parçası okunabilecek satır sınırını aştı; dönemi daraltın")
+                    yield cols, rows
+        finally:
+            if timing is not None:
+                timing.append({"name": part.name, "source": "crm" if connector is self.crm_connector else "logo",
+                               "ms": int(round(box[0] * 1000))})
+
+    def _answer_plan(self, question, sq, compiled, semantic, thread, thread_id, timings, t0,
+                     sample_size, scope_args, report, execute):
+        """A question that needs both databases: each part on its own server, combined in memory."""
+        from semantic_layer.runtime import federated
+        plan = compiled.plan
+        text = compiled.sql
+        semantic["plan"] = plan.to_dict()
+        if not execute or self.connector is None:
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
+                                       compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                       resolved=sq.to_dict(), executed=False)
+            return {"id": uuid.uuid4().hex, "type": "TEXT_TO_SQL", "sql": text, "threadId": thread_id,
+                    "timings": timings, "semantic": semantic, "queryId": qid, "executed": False}
+        t = time.perf_counter()
+        period = self._asked_period(sq)
+        try:
+            report("querying")
+            parts_ms: list = []
+            columns, rows = federated.execute(plan, lambda part: self._plan_rows(part, period, scope_args, parts_ms))
+            out = self.result_files.write(iter([(columns, rows)]), self.settings.max_rows)
+        except Exception as e:  # noqa: BLE001
+            err = str(e)[:800]
+            down = is_connection_error(e)
+            qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
+                                       compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                       resolved=sq.to_dict(), executed=False,
+                                       error=(f"data source unreachable: {err}" if down else err))
+            return {"id": uuid.uuid4().hex, "type": "DATA_SOURCE_UNAVAILABLE" if down else "SQL_INVALID",
+                    "sql": text,
+                    "explanation": ("Veri kaynağına şu an ulaşılamıyor; soruda bir sorun yok. Bağlantı geri geldiğinde aynı soru çalışacak."
+                                    if down else f"İki sunuculu plan çalıştırılamadı: {err}"),
+                    "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
+        timings["run_sql_ms"] = int((time.perf_counter() - t) * 1000)
+        out.update(physicalSql=text, cached=False, dbMs=sum(p["ms"] for p in parts_ms), dbParts=parts_ms)
+        result = self._served(out, time.time())
+        report("presenting")
+        from semantic_bridge.presentation import presentation_spec
+        try:
+            result["presentation"] = presentation_spec(plan.final, result, sq, compiled.compiler)
+        except Exception:  # noqa: BLE001
+            result["presentation"] = None
+        result["dataCoverage"] = list(sq.data_coverage)
+        result["comparison"] = sq.comparison
+        self.attach_widget(result, question)
+        self.remember_result(result, question=question, sql=text)
+        shown = list(result["records"])[: max(1, int(sample_size or 50))]
+        t = time.perf_counter()
+        summary = self.summarize(question, text, result, sq)
+        timings["summary_ms"] = int((time.perf_counter() - t) * 1000)
+        fp = result.get("resultFingerprint") or result_fingerprint([c["name"] for c in result["columns"]], result["records"])
+        qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
+                                   compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                   resolved=sq.to_dict(), executed=True, row_count=result["totalRows"],
+                                   latency_ms=int((time.perf_counter() - t0) * 1000), result_fingerprint=fp)
+        self.thread_plans[thread_id] = sq
+        thread.append({"role": "user", "content": question})
+        thread.append({"role": "assistant", "content": f"```json\n{json.dumps(plan.to_dict(), ensure_ascii=False)}\n```"})
+        del thread[:-12]
+        log.info("ask ok compiler=%s plan parts=%d rows=%d timings=%s q=%r", compiled.compiler, len(plan.parts),
+                 result["totalRows"], timings, question[:80])
+        return {"id": result["id"], "type": "TEXT_TO_SQL", "sql": text, "physicalSql": text, "summary": summary,
+                "resultId": result["id"], "presentation": result.get("presentation"),
+                "comparison": result.get("comparison"), "dataCoverage": result.get("dataCoverage", []),
+                "columns": result["columns"], "records": shown, "shownRows": len(shown),
+                "truncated": False, "cached": False, "ageSec": result.get("ageSec"),
+                "computedAt": result.get("computedAt"), "widget": result.get("widget"),
+                "dbMs": result.get("dbMs"), "dbParts": result.get("dbParts"),
+                "threadId": thread_id, "rowCount": result["totalRows"], "totalRows": result["totalRows"],
+                "latency_ms": int((time.perf_counter() - t0) * 1000), "repairs": 0, "timings": timings,
+                "semantic": semantic, "queryId": qid, "federated": True}
 
     # ------------------------------------------------------------------ portal layer
     def inventory(self, *, search: str = "", entity: str = "", scope: str = "", limit: int = 0, offset: int = 0, with_columns: bool = True) -> dict[str, Any]:
@@ -995,13 +1272,130 @@ class Runtime:
         self._inventory_cache[key] = out
         return out
 
+    def gaps(self) -> dict[str, Any]:
+        """Açıklaması eksik tablo ve kolonlar, tablo kalıbına göre gruplu.
+
+        Logo her yıl ve firma için aynı tabloyu yeniden açar (LG_211_01_STLINE, LG_411_01_STLINE…); açıklama da
+        kalıba yazılır. Tablo tablo listelemek aynı eksiği yirmi kez gösterirdi. Kalıp başına bir satır: toplam
+        satır, kaç kopya, kaç kolon eksik. Kolonlar ayrı uçtan, seçilince gelir.
+        """
+        inv = self.inventory(with_columns=True)
+        cached = getattr(self, "_gaps_cache", None)
+        if cached is not None and cached[0] is inv:
+            return cached[1]
+        groups: dict[str, list[dict[str, Any]]] = {}
+        for t in inv["tables"]:
+            groups.setdefault(t.get("tablePattern") or t["tableName"], []).append(t)
+        items = []
+        total_cols = undefined_cols = 0
+        for pattern, tables in groups.items():
+            tables.sort(key=lambda t: -(t.get("rowCount") or 0))
+            rep = tables[0]
+            cols = self._merged_columns(tables)
+            missing = [c for c in cols if c["status"] == "UNDEFINED"]
+            table_desc = rep.get("description") or ((rep.get("annotations") or [{}])[-1].get("text") if rep.get("annotations") else None)
+            rows = sum(t.get("rowCount") or 0 for t in tables)
+            total_cols += len(cols)
+            undefined_cols += len(missing)
+            items.append({
+                "tablePattern": pattern, "example": rep["tableName"], "copies": len(tables),
+                "source": data_source(rep.get("schema")),
+                "description": table_desc, "tableMissing": not table_desc, "rows": rows,
+                "columns": len(cols), "missing": len(missing),
+                "suggestions": sum(1 for c in missing if c.get("suggestion")),
+            })
+        items.sort(key=lambda x: (x["rows"] == 0, -(x["missing"] + (1 if x["tableMissing"] else 0) > 0), -x["rows"], x["example"]))
+        with_gaps = [x for x in items if x["missing"] or x["tableMissing"]]
+        out = {
+            "summary": {"patterns": len(items), "patternsWithGaps": len(with_gaps),
+                        "tablesWithoutDescription": sum(1 for x in items if x["tableMissing"]),
+                        "columns": total_cols, "missingColumns": undefined_cols,
+                        "suggestions": sum(x["suggestions"] for x in items),
+                        "bySource": {src: sum(1 for x in items if x["source"] == src) for src in (LOGO, CRM)}},
+            "items": items,
+        }
+        self._gaps_cache = (inv, out)
+        return out
+
+    @staticmethod
+    def _merged_columns(tables: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Kalıbın kolonları: bir kopyada tanımlıysa tanımlı sayılır; örnek değerler en dolu kopyadan."""
+        rank = {"CERTIFIED": 3, "CANDIDATE": 2, "DESCRIBED": 1, "UNDEFINED": 0}
+        out: dict[str, dict[str, Any]] = {}
+        for t in tables:
+            for c in t.get("columns") or []:
+                k = c["name"].upper()
+                cur = out.get(k)
+                if cur is None or rank.get(c["status"], 0) > rank.get(cur["status"], 0):
+                    out[k] = c
+                elif not cur.get("topValues") and c.get("topValues"):
+                    out[k] = {**cur, "topValues": c["topValues"]}
+        return list(out.values())
+
+    def gap_detail(self, table_pattern: str) -> Optional[dict[str, Any]]:
+        inv = self.inventory(with_columns=True)
+        tables = [t for t in inv["tables"] if (t.get("tablePattern") or t["tableName"]) == table_pattern]
+        if not tables:
+            return None
+        tables.sort(key=lambda t: -(t.get("rowCount") or 0))
+        rep = tables[0]
+        cols = self._merged_columns(tables)
+        def view(c: dict[str, Any]) -> dict[str, Any]:
+            said = (c.get("annotations") or [])
+            return {"name": c["name"], "type": c.get("type"), "status": c["status"], "isPrimaryKey": c.get("isPrimaryKey"),
+                    "ref": c.get("ref"), "sensitive": c.get("sensitive"), "distinct": c.get("distinct"),
+                    "topValues": c.get("topValues") or [], "unit": c.get("unit"), "derived": c.get("derived") or [],
+                    "description": said[-1]["text"] if said else c.get("description"),
+                    "annotationId": said[-1]["id"] if said else None,
+                    "suggestion": c.get("suggestion")}
+        table_ann = rep.get("annotations") or []
+        return {
+            "tablePattern": table_pattern, "example": rep["tableName"], "source": data_source(rep.get("schema")),
+            "tables": [{"name": t["tableName"], "rows": t.get("rowCount") or 0, "context": t.get("context")} for t in tables],
+            "description": table_ann[-1]["text"] if table_ann else rep.get("description"),
+            "tableAnnotationId": table_ann[-1]["id"] if table_ann else None,
+            "rows": sum(t.get("rowCount") or 0 for t in tables),
+            # Satır sayısı ve örnek değerler canlı sorgu değil, şema taramasında okundu; süresi ölçülmedi.
+            "scannedAt": max((t.get("scannedAt") or "" for t in tables), default="") or None,
+            "primaryKey": rep.get("primaryKey"),
+            "missing": [view(c) for c in cols if c["status"] == "UNDEFINED"],
+            "described": [view(c) for c in cols if c["status"] != "UNDEFINED"],
+        }
+
     def add_annotation(self, table_pattern: str, column: Optional[str], text: str, author: str) -> dict[str, Any]:
         s = self.settings
         ann = self.store.add_annotation(Annotation(datasource_id=s.datasource_id, table_pattern=table_pattern, column=(column or None), text=text.strip(), author=author))
         gen = CandidateGenerator(self.store, s.tenant_id, s.datasource_id, self.profiles, self.conventions)
         ingested = gen.ingest_annotation(table_pattern, column, text, f"annotation:{ann.id}")
         self._inventory_cache.clear()      # what someone just wrote has to show on the very next read
+        # The sentence they just wrote is the best description this field will ever have: the
+        # everyday names come from it right away, not at the next timer tick.
+        entity = next((p.entity for p in self.profiles if p.table_pattern == table_pattern), None)
+        if entity:
+            self.generate_vocabulary(entity, column)
         return {"annotation": {"id": ann.id, "tablePattern": table_pattern, "column": column, "text": ann.text, "author": author}, "candidates": ingested}
+
+    def generate_vocabulary(self, entity: str, column: Optional[str] = None) -> bool:
+        """Everyday names for one field, in the background; the request that asked for it returns
+        at once. False when there is no model to ask."""
+        if self.llm is None:
+            return False
+        from semantic_layer import vocabulary
+
+        def run():
+            try:
+                only = [(entity, column)] if column is not None else [(entity, c.name) for p in self.profiles if p.entity == entity for c in p.columns] + [(entity, None)]
+                out = vocabulary.maintain(self.store, self.settings, self.llm_for("vocabulary", NORMAL), self.profiles, max_targets=len(only) or 1, only=only)
+                log.info("vocabulary generated for %s.%s: %s", entity, column or "*", out)
+            except Exception as e:  # noqa: BLE001
+                log.warning("vocabulary generation failed for %s.%s: %s", entity, column, e)
+        # SQLite keeps one connection for the whole process; a second thread on it interleaves
+        # its commits with the request's. Only Postgres gets the background thread.
+        if self.store.engine.dialect.name == "sqlite":
+            run()
+        else:
+            threading.Thread(target=run, name=f"vocab:{entity}.{column or '*'}", daemon=True).start()
+        return True
 
     def certify(self, note: str = "") -> dict[str, Any]:
         s = self.settings
@@ -1102,7 +1496,8 @@ def build_runtime(settings: Optional[SemanticSettings] = None, *, store: Optiona
     if connector is None and settings.connection_file and Path(settings.connection_file).exists():
         connector = connector_from_file(settings.connection_file)
     if llm is None and settings.llm_base and os.environ.get("SEMANTIC_LLM", "1") not in ("0", "false"):
-        llm = LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout)
+        llm = LlmClient(settings.llm_base, settings.llm_model, settings.llm_key, settings.llm_timeout,
+                        extra=settings.llm_extra)
     return Runtime(settings, store=store, connector=connector, llm=llm)
 
 
@@ -1255,14 +1650,37 @@ def _fragment(m: dict[str, Any], d: Dialect) -> str | None:
 
 
 def _require_admin(request: Any) -> None:
-    """Reading and asking sit behind the site's own authentication; changing the catalog needs a token.
-    Without this, anything that can reach the cockpit's API path could recertify the semantics."""
+    """Reading and asking sit behind the site's own authentication; changing the catalog needs proof.
+
+    Two callers, two proofs. A server or CLI job (nightly scan, deploy, certify) presents the shared
+    `x-semantic-admin` token. A person in the browser presents nothing extra — the browser carries no
+    admin key — so they are known from the login service's AD session cookie, and pass when that
+    account is one of the configured admins. Either proof is enough; without a token configured, the
+    loopback binding is the only control and both pass. Before this, the approve/reject/add buttons on
+    the Eş anlamlılar screen (all session-only) failed with 403 wherever the token was set."""
     token = os.environ.get("SEMANTIC_ADMIN_TOKEN", "")
     if not token:
         return                      # not configured: the loopback binding is the only control
     supplied = request.headers.get("x-semantic-admin", "") or request.query_params.get("admin_token", "")
-    if not secrets_compare(supplied, token):
-        raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "admin token required"})
+    if secrets_compare(supplied, token):
+        return                      # server/CLI: shared token
+    if _session_is_admin(request):
+        return                      # browser: AD-logged-in admin, identity from the session cookie
+    raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "admin token required"})
+
+
+def _session_is_admin(request: Any) -> bool:
+    """True when the request carries a login-service session whose account is a configured admin.
+    Any failure (no cookie, login service down, not an admin) is a plain False — never an exception,
+    so a token caller is unaffected and a missing session falls through to the 403 above."""
+    from semantic_bridge import admin as admin_mod
+    from semantic_bridge import board as board_mod
+
+    try:
+        user = board_mod.user_of(request.headers.get("cookie", ""))
+    except Exception:  # noqa: BLE001
+        return False
+    return admin_mod.is_admin(user)
 
 
 def _require_caller(request: Any) -> None:
@@ -1288,8 +1706,50 @@ def secrets_compare(a: str, b: str) -> bool:
     return hmac.compare_digest(str(a or ""), str(b or ""))
 
 
+def _review_vocabulary(r: "Runtime", said: dict) -> Any:
+    """Kuyruktaki kök terimleri okunur yazmak için dağıtımın kendi kelimeleri. Katalog sürümü başına bir kez."""
+    from semantic_bridge.labels import Vocabulary
+
+    key = (getattr(r, "_catalog_version", None), id(r.profiles), len(r.profiles), hash(r.rules_text or ""),
+           hash(tuple(sorted((str(k), str(v)) for k, v in said.items()))))
+    cached = getattr(r, "_review_vocab", None)
+    if cached and cached[0] == key:
+        return cached[1]
+    texts: list[Any] = [r.rules_text]
+    for p in r.profiles:
+        texts.append(p.description)
+        for col in p.columns:
+            texts.append(col.description)
+            texts.append(said.get((p.entity, col.name.upper())))
+    texts.extend(v for v in said.values() if isinstance(v, str))
+    vocab = Vocabulary.from_texts(t for t in texts if isinstance(t, str))
+    r._review_vocab = (key, vocab)
+    return vocab
+
+
+def _actor(request: Any) -> str:
+    """Değişiklik kaydı için kişi: giriş servisinin oturumu, yoksa "portal"."""
+    from semantic_bridge import board as board_mod
+
+    try:
+        return board_mod.user_of(request.headers.get("cookie", ""))
+    except Exception:  # noqa: BLE001
+        return "portal"
+
+
+def _ask_user(request: Any) -> Optional[str]:
+    """Promt izleyici için soruyu soran AD hesabı; oturum yoksa (sunucu/jeton çağrısı) None."""
+    from semantic_bridge import board as board_mod
+
+    try:
+        return board_mod.user_of(request.headers.get("cookie", "")) or None
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
+    from semantic_bridge import admin as admin_mod
 
     @asynccontextmanager
     async def lifespan(_: FastAPI):
@@ -1298,9 +1758,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         rt = state["rt"]
         log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(rt.profiles), rt.store.status_counts(rt.settings.tenant_id, rt.settings.datasource_id).get("CERTIFIED"), bool(rt.llm), bool(rt.connector))
         rt.start_refresher()
+        # Every request waiting for the model holds one of these threads while it waits. Forty (the
+        # default) is forty waiting prompts and then /health queues behind them too.
+        try:
+            import anyio.to_thread
+
+            anyio.to_thread.current_default_thread_limiter().total_tokens = int(os.environ.get("SEMANTIC_THREADPOOL", "200"))
+        except Exception as e:  # noqa: BLE001
+            log.warning("thread pool size left at its default: %s", e)
+        if os.environ.get("SEMANTIC_LLM_JOBS", "1").strip() not in ("0", "false", "no", "off"):
+            rt.jobs.start()
         try:
             yield
         finally:
+            rt.jobs.stop()
             rt.stop_refresher()
 
     app = FastAPI(title="NanobaseAI Semantic Bridge", version=SEMANTIC_LAYER_VERSION, lifespan=lifespan)
@@ -1416,7 +1887,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if not q:
             raise HTTPException(status_code=422, detail={"code": "EMPTY_QUESTION", "message": "Soru boş."})
         try:
-            return rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True))
+            return rt().ask(q, thread_id=body.threadId, sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl, execute=bool(body.execute if body.execute is not None else True), username=_ask_user(request))
         except HTTPException:
             raise
         except Exception as e:  # noqa: BLE001
@@ -1435,11 +1906,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             loop = asyncio.get_running_loop()
             def progress(stage):
                 loop.call_soon_threadsafe(queue.put_nowait, {"event": "stage", "stage": stage})
+            asker = _ask_user(request)
             async def work():
                 try:
                     answer = await run_in_threadpool(rt().ask, q, thread_id=body.threadId,
                         sample_size=int(body.sampleSize or 50), exclude_nl=body.excludeNl,
-                        execute=bool(body.execute if body.execute is not None else True), progress=progress)
+                        execute=bool(body.execute if body.execute is not None else True), progress=progress,
+                        username=asker)
                     await queue.put({"event": "result", "result": answer})
                 except Exception:
                     log.exception("stream ask failed")
@@ -1518,7 +1991,89 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def llm_queue() -> dict[str, Any]:
         """Who is using the model and who is waiting — the cockpit shows this instead of a spinner."""
         r = rt()
-        return r.queue.status()
+        return r.queue.status() | {"jobs": r.jobs.stats()}
+
+    # ---------------------------------------------------------------- prompts left at the door
+    def _job_for(job_id: str, request: Request) -> dict[str, Any]:
+        """The job, if this caller may see it: whoever left it, an admin, or a service caller."""
+        r = rt()
+        found, owner = r.jobs.owner(job_id)
+        user = _ask_user(request)
+        if found and owner and user and owner != user and not admin_mod.is_admin(user):
+            found = False
+        view = r.jobs.get(job_id) if found else None
+        if view is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "İş bulunamadı."})
+        return view
+
+    @app.post("/api/v1/llm/jobs", status_code=202)
+    def llm_job_submit(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Leave a prompt, get an id. The connection closes now; the answer is asked for later
+        (GET …/{id}, …/{id}?wait=25 or …/{id}/events). Nothing here waits for the model."""
+        _require_caller(request)
+        r = rt()
+        if r.llm is None:
+            raise HTTPException(status_code=503, detail={"code": "NO_MODEL", "message": "Model bağlı değil."})
+        module = str(body.get("module") or "").strip()
+        if not module:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "module: hangi modülün sorduğu gerekli."})
+        try:
+            return r.jobs.submit(body.get("messages"), module=module, priority=body.get("priority"), user_id=_ask_user(request),
+                                 max_tokens=int(body.get("maxTokens") or 4096), temperature=float(body.get("temperature") or 0.0),
+                                 dedup=bool(body.get("dedup", True)), cache_ttl_sec=int(body.get("cacheTtlSec") or 0))
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)}) from e
+
+    @app.get("/api/v1/llm/jobs/{job_id}")
+    async def llm_job_get(job_id: str, request: Request, wait: float = 0.0) -> dict[str, Any]:
+        """`wait` (seconds, at most 300) holds the answer back until the job closes — one request
+        instead of a polling loop, without holding a server thread while it waits."""
+        _require_caller(request)
+        view = await run_in_threadpool(_job_for, job_id, request)
+        deadline = time.monotonic() + max(0.0, min(float(wait or 0.0), 300.0))
+        pause = 0.25
+        while view["status"] in ("QUEUED", "RUNNING") and time.monotonic() < deadline:
+            await asyncio.sleep(min(pause, max(0.0, deadline - time.monotonic())))
+            pause = min(pause * 1.5, 2.0)
+            view = await run_in_threadpool(_job_for, job_id, request)
+        return view
+
+    @app.get("/api/v1/llm/jobs/{job_id}/events")
+    async def llm_job_events(job_id: str, request: Request):
+        """The job's life as it happens, one JSON object per line: every change of status or place in
+        line, a heartbeat every 15 seconds, and the closed job last."""
+        _require_caller(request)
+        first = await run_in_threadpool(_job_for, job_id, request)
+
+        async def events():
+            view, seen, quiet, pause = first, None, 0.0, 0.5
+            while True:
+                mark = (view["status"], view["phase"], view["position"])
+                if mark != seen:
+                    seen, quiet, pause = mark, 0.0, 0.5
+                    yield json.dumps({"event": "status", "job": view}, ensure_ascii=False, default=str) + "\n"
+                    if view["status"] not in ("QUEUED", "RUNNING"):
+                        return
+                elif quiet >= 15:
+                    quiet = 0.0
+                    yield json.dumps({"event": "heartbeat"}) + "\n"
+                await asyncio.sleep(pause)
+                quiet += pause
+                pause = min(pause * 1.5, 2.0)
+                try:
+                    view = await run_in_threadpool(_job_for, job_id, request)
+                except HTTPException:
+                    yield json.dumps({"event": "error", "message": "İş bulunamadı."}, ensure_ascii=False) + "\n"
+                    return
+
+        return StreamingResponse(events(), media_type="application/x-ndjson",
+                                 headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store"})
+
+    @app.delete("/api/v1/llm/jobs/{job_id}")
+    def llm_job_cancel(job_id: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        _job_for(job_id, request)
+        return rt().jobs.cancel(job_id) or {}
 
     @app.get("/api/v1/semantic/ab")
     def ab_status() -> dict[str, Any]:
@@ -1546,11 +2101,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return {"ok": True, "profiles": len(r.profiles)}
 
     @app.get("/api/v1/semantic/concepts")
-    def concepts(status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
+    def concepts(request: Request, status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
+        _admin_gate(request)
         r = rt()
         s = r.settings
         rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
-        return {"items": [{"concept": c.to_dict(), "mappings": [m.to_dict() for m in r.store.list_mappings(c.id)]} for c in rows]}
+        src = source_by_entity(r.profiles)
+        return {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in r.store.list_mappings(c.id)]} for c in rows]}
 
     @app.post("/api/v1/semantic/concepts/{concept_id}/review")
     def review_concept(concept_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -1567,6 +2124,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         stops being proposed rather than coming back every night.
         """
         _require_admin(request)
+        _admin_gate(request)
         r = rt()
         s = r.settings
         decision = str((body or {}).get("decision") or "").strip().upper()
@@ -1576,8 +2134,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         bundle = r.store.concept_bundle(concept_id)
         if not bundle:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
-        who = str((body or {}).get("by") or request.headers.get("X-User") or "portal")
+        who = str((body or {}).get("by") or request.headers.get("X-User") or _actor(request))
         note = str((body or {}).get("note") or "")
+        if decision != "CORRECT" or note.strip():
+            admin_mod.audit(r.store.engine, who, {"APPROVE": "approve", "REJECT": "reject", "CORRECT": "correct"}[decision],
+                            "term", concept_id, bundle["concept"].get("term"),
+                            {k: v for k, v in {"note": note, "column": (body or {}).get("column")}.items() if v})
         eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
         if decision == "APPROVE":
             # Two writes, and both matter. The evidence row is the audit trail — who said so, when,
@@ -1638,14 +2200,88 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # the rest for anyone who wants to mine it.
     _USED = ("EXECUTION", "VALIDATED_SQL", "HUMAN_ANNOTATION", "ALIAS_BINDING", "EXPLICIT_BINDING")
 
+    @app.get("/api/v1/semantic/vocabulary")
+    def vocabulary_list(status: str = "PROPOSED", entity: str | None = None, limit: int = 5000) -> dict[str, Any]:
+        """Everyday names waiting for a person: grouped by field, with the phrasings each would
+        unlock and, for a dropped one, why the system did not dare propose it."""
+        from semantic_layer import vocabulary
+        r = rt()
+        items = vocabulary.listing(r.store, r.settings, status=status.upper(), entity=entity, limit=limit)
+        groups: dict[tuple, dict[str, Any]] = {}
+        src = source_by_entity(r.profiles)
+        for it in items:
+            key = (it["entity"], it["column"])
+            g = groups.setdefault(key, {"entity": it["entity"], "column": it["column"], "source": src.get(it["entity"]), "items": []})
+            g["items"].append(it)
+        return {"groups": list(groups.values()), "counts": vocabulary.counts(r.store, r.settings)}
+
+    @app.get("/api/v1/semantic/vocabulary/gaps")
+    def vocabulary_gaps(entity: str | None = None) -> dict[str, Any]:
+        """Fields nothing can be generated for — no comment, no annotation — so a person can write
+        the one sentence that unblocks them."""
+        from semantic_layer import vocabulary
+        r = rt()
+        entities = [entity] if entity else None
+        if entities is None:
+            # by default the entities the certified catalog already reaches: those are the fields a
+            # question can land on today, and a gap there costs an answer
+            entities = sorted({m.entity for c in r.store.find_concepts(r.settings.tenant_id, r.settings.datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
+                               for m in r.store.list_mappings(c.id)})
+        src = source_by_entity(r.profiles)
+        return {"items": [{**g, "source": src.get(g["entity"])} for g in vocabulary.gaps(r.store, r.settings, r.profiles, entities=entities)]}
+
+    @app.post("/api/v1/semantic/vocabulary/{row_id}/decide")
+    def vocabulary_decide(row_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        from semantic_layer import vocabulary
+        _require_admin(request)
+        r = rt()
+        who = str((body or {}).get("by") or request.headers.get("X-User") or _actor(request))
+        decision = str((body or {}).get("decision") or "").strip().upper()
+        try:
+            eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
+            out = vocabulary.decide(r.store, r.settings, r.profiles, eng, row_id, decision, who, str((body or {}).get("note") or ""))
+        except KeyError:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND"})
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail={"code": "BAD_DECISION", "message": str(e)})
+        admin_mod.audit(r.store.engine, who, "approve" if decision == "APPROVE" else "reject", "synonym", row_id, None, body)
+        return out
+
+    @app.post("/api/v1/semantic/vocabulary")
+    def vocabulary_add(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """A person's own word for a field. Theirs from the first moment: approved, attached, and
+        never touched by generation afterwards."""
+        from semantic_layer import vocabulary
+        _require_admin(request)
+        r = rt()
+        who = str(body.get("by") or request.headers.get("X-User") or _actor(request))
+        entity, term = str(body.get("entity") or ""), str(body.get("term") or "")
+        if not entity or not term.strip():
+            raise HTTPException(status_code=422, detail={"code": "EMPTY", "message": "entity ve term gerekli"})
+        eng = EvidenceEngine(r.store, min_support=r.settings.min_support, threshold=r.settings.certify_threshold)
+        out = vocabulary.add_human(r.store, r.settings, r.profiles, eng, entity, body.get("column"), term, who, body.get("examples"))
+        admin_mod.audit(r.store.engine, who, "create", "synonym", out["id"], term, {"entity": entity, "column": body.get("column")})
+        return out
+
+    @app.post("/api/v1/semantic/vocabulary/generate")
+    def vocabulary_generate(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Ask now for one field (or a whole table) instead of waiting for the timer."""
+        _require_admin(request)
+        entity = str(body.get("entity") or "")
+        if not entity:
+            raise HTTPException(status_code=422, detail={"code": "EMPTY", "message": "entity gerekli"})
+        started = rt().generate_vocabulary(entity, body.get("column"))
+        return {"started": started}
+
     @app.get("/api/v1/semantic/review")
-    def review_queue(limit: int = 100, source: str = "used") -> dict[str, Any]:
+    def review_queue(request: Request, limit: int = 100, source: str = "used") -> dict[str, Any]:
         """What is waiting for a person to decide, the most supported first.
 
         Each row carries what the term would mean, where it points, and what stands behind it — the
         queries it was seen in, the documents that describe it, what the data shows. Without those a
         reviewer is being asked to approve a word, which nobody can do responsibly.
         """
+        _admin_gate(request)
         r = rt()
         s = r.settings
         rows = r.store.review_rows(s.tenant_id, s.datasource_id, ConceptStatus.CANDIDATE, limit=2000)
@@ -1701,6 +2337,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             deduped.append(x)
         pool = deduped
         said = getattr(r.existing, "annotations", None) or {}
+        vocab = _review_vocabulary(r, said)
+
+        # Aynı yere işaret eden, biri ötekinin kısaltması olan iki terim ("kanal payi yuz" ile
+        # "kanal payi yuzd") iki karar değildir; uzun olan kalır, kısa olan ayrıca sorulmaz.
+        def target_key(x) -> tuple:
+            m = x["mapping"]
+            return (x["concept"].semantic_type, m.entity if m else None, (m.column or "").upper() if m else None,
+                    tuple(sorted(m.values or [])) if m else (), (m.formula or "") if m else "")
+        by_target: dict[tuple, list] = {}
+        for x in pool:
+            by_target.setdefault(target_key(x), []).append(x)
+        shadowed = set()
+        for group in by_target.values():
+            for a in group:
+                for b in group:
+                    ta, tb = a["concept"].term, b["concept"].term
+                    if a is not b and len(ta) < len(tb) and tb.startswith(ta):
+                        shadowed.add(id(a))
+        pool = [x for x in pool if id(x) not in shadowed]
         out = []
         for x in pool[:limit]:
             c, m = x["concept"], x["mapping"]
@@ -1708,13 +2363,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             col = prof.column(m.column) if prof and m and m.column else None
             meaning = col.meaning(said.get((m.entity, (m.column or "").upper()))) if col and m else None
             out.append({
-                "id": c.id, "term": c.term, "type": c.semantic_type, "confidence": c.confidence,
+                "id": c.id, "term": c.term, "label": vocab.readable(c.term), "type": c.semantic_type, "confidence": c.confidence,
+                "source": data_source(prof.schema_name) if prof else None,
                 "mapping": m.to_dict() if m else None,
                 "evidence": x["evidence"], "evidenceCount": x["evidenceCount"],
                 # what the data itself shows about the column this term claims
                 "observed": [{"value": v, "rows": n, "label": _decode(meaning, v)}
                              for v, n in (col.top_values or [])[:6]] if col else [],
                 "columnMeaning": meaning,
+                "scannedAt": prof.scanned_at.isoformat() if prof is not None and getattr(prof, "scanned_at", None) else None,
                 "plain": _plain(c.term, c.semantic_type, m.to_dict() if m else None, meaning,
                                 said.get((m.entity, None)) if m else None,
                                 readable=_formula_reader(prof, said)),
@@ -1874,7 +2531,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_admin(request)
         if not body.text.strip():
             raise HTTPException(status_code=422, detail={"code": "EMPTY_TEXT"})
-        return rt().add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
+        out = rt().add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
+        admin_mod.audit(rt().store.engine, _actor(request), "create", "annotation", out.get("id"),
+                        f"{body.tablePattern}.{body.column or ''}".rstrip("."), {"text": body.text})
+        return out
 
     @app.put("/api/v1/schema/annotations/{annotation_id}")
     def update_annotation(request: Request, annotation_id: str, body: AnnotationIn) -> dict[str, Any]:
@@ -1891,6 +2551,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r.store.retire_annotation(annotation_id)
         out = r.add_annotation(body.tablePattern, body.column, body.text, body.author or "cockpit")
         out["replaced"] = annotation_id
+        admin_mod.audit(r.store.engine, _actor(request), "update", "annotation", annotation_id,
+                        f"{body.tablePattern}.{body.column or ''}".rstrip("."), {"text": body.text})
         return out
 
     @app.post("/api/v1/schema/suggestions/{suggestion_id}/accept")
@@ -1923,7 +2585,1048 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.delete("/api/v1/schema/annotations/{annotation_id}")
     def retire_annotation(request: Request, annotation_id: str) -> dict[str, Any]:
         _require_admin(request)
-        return {"ok": rt().store.retire_annotation(annotation_id)}
+        ok = rt().store.retire_annotation(annotation_id)
+        if ok:
+            admin_mod.audit(rt().store.engine, _actor(request), "delete", "annotation", annotation_id, None)
+        return {"ok": ok}
+
+    # ------------------------------------------------------------------ eksik açıklamalar (veri sözlüğü)
+    # Okumak herkese açık; yazmak AD oturumlu yöneticiye. Tarayıcı yönetici anahtarı taşımaz, kişi oturumdan bilinir.
+
+    def _describer(request: Request) -> str:
+        _require_caller(request)
+        user = _board_user(request)
+        admin_mod.ensure(rt().store.engine)
+        if not admin_mod.is_admin(user):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Açıklama yazmak yöneticilere açık."})
+        return user
+
+    @app.get("/api/v1/schema/gaps")
+    def schema_gaps(request: Request) -> dict[str, Any]:
+        _admin_gate(request)
+        return rt().gaps()
+
+    @app.get("/api/v1/schema/gaps/detail")
+    def schema_gap_detail(request: Request, tablePattern: str) -> dict[str, Any]:
+        _admin_gate(request)
+        out = rt().gap_detail(tablePattern)
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Tablo bulunamadı."})
+        return out
+
+    @app.post("/api/v1/schema/gaps/describe")
+    def schema_gap_describe(request: Request, body: AnnotationIn) -> dict[str, Any]:
+        user = _describer(request)
+        text = body.text.strip()
+        if not text:
+            raise HTTPException(status_code=422, detail={"code": "EMPTY_TEXT", "message": "Açıklama boş olamaz."})
+        r = rt()
+        existing = [a for a in r.store.list_annotations(r.settings.datasource_id, body.tablePattern)
+                    if (a.column or "").upper() == (body.column or "").upper()]
+        for a in existing:
+            r.store.retire_annotation(a.id)
+        out = r.add_annotation(body.tablePattern, body.column, text, user)
+        admin_mod.audit(r.store.engine, user, "update" if existing else "create", "annotation", out["annotation"]["id"],
+                        f"{body.tablePattern}.{body.column or ''}".rstrip("."), {"text": text})
+        return out
+
+    @app.post("/api/v1/schema/gaps/suggestions/{suggestion_id}/accept")
+    def schema_gap_accept(request: Request, suggestion_id: str) -> dict[str, Any]:
+        user = _describer(request)
+        r = rt()
+        sug = r.store.close_suggestion(suggestion_id, "ACCEPTED")
+        if sug is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Öneri bulunamadı."})
+        out = r.add_annotation(sug["tablePattern"], sug["column"], sug["text"], user)
+        admin_mod.audit(r.store.engine, user, "create", "annotation", out["annotation"]["id"],
+                        f"{sug['tablePattern']}.{sug['column'] or ''}".rstrip("."), {"text": sug["text"], "suggestion": suggestion_id})
+        return out
+
+    @app.post("/api/v1/schema/gaps/suggestions/{suggestion_id}/dismiss")
+    def schema_gap_dismiss(request: Request, suggestion_id: str) -> dict[str, Any]:
+        user = _describer(request)
+        r = rt()
+        sug = r.store.close_suggestion(suggestion_id, "DISMISSED")
+        if sug is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Öneri bulunamadı."})
+        r._inventory_cache.clear()
+        admin_mod.audit(r.store.engine, user, "delete", "annotation", suggestion_id,
+                        f"{sug['tablePattern']}.{sug['column'] or ''}".rstrip("."), {"dismissed": sug["text"]})
+        return {"ok": True}
+
+    # ------------------------------------------------------------------ uyarılar
+    # Kural bir sorudur; kontrol burada yapılır, zamanlayıcı yalnız /check'i çağırır.
+    from semantic_bridge import alerts as alerts_mod
+
+    def _alerts() -> tuple[Runtime, Any, str, str]:
+        r = rt()
+        alerts_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
+
+    def _alert_runner(r: Runtime):
+        def run(rule: dict[str, Any]) -> dict[str, Any]:
+            if (rule.get("question") or "").strip():
+                return r.ask(rule["question"], thread_id=None, sample_size=5, execute=True)
+            return r.run_sql(rule["sql"], 5)
+        return run
+
+    def _alert_check(r: Runtime, engine: Any, tenant: str, ds: str, only: Optional[str] = None) -> dict[str, Any]:
+        return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
+                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=only)
+
+    def _alert_fail(e: Exception) -> HTTPException:
+        return HTTPException(status_code=422, detail={"code": "INVALID_ALERT", "message": str(e)})
+
+    def _alert_owner(request: Request) -> str:
+        # Uyarı kişiye aittir; oturum yoksa (giriş servisi çerezi çözemedi) 401.
+        return _board_user(request)
+
+    @app.get("/api/v1/alerts")
+    def alerts_list(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _alert_owner(request)
+        _, engine, tenant, ds = _alerts()
+        return {"user": user, "alerts": alerts_mod.list_rules(engine, tenant, ds, user), "email": alerts_mod.email_status()}
+
+    @app.post("/api/v1/alerts")
+    def alerts_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _alert_owner(request)
+        r, engine, tenant, ds = _alerts()
+        try:
+            rule = alerts_mod.create_rule(engine, tenant, ds, body, by=user)
+        except alerts_mod.AlertError as e:
+            raise _alert_fail(e) from None
+        admin_mod.audit(engine, user, "create", "alert", rule["id"], rule["title"],
+                        {"question": rule["question"], "condition": rule["condition"], "threshold": rule["threshold"],
+                         "recipients": rule["recipients"]})
+        # Kurulur kurulmaz ölçülür ama istek beklemez: yavaş bir cevap tarayıcıyı zaman aşımına düşürüp
+        # kişiye aynı kuralı ikinci kez kaydettirmesin. Ekran listeyi birkaç saniye sonra yeniden okur.
+        if os.environ.get("ALERT_MEASURE_ON_CREATE", "background") == "sync":
+            _alert_check(r, engine, tenant, ds, only=rule["id"])
+            return alerts_mod.get_rule(engine, tenant, ds, rule["id"]) or rule
+        threading.Thread(target=_alert_check, args=(r, engine, tenant, ds, rule["id"]), daemon=True).start()
+        return rule
+
+    def _alert_patch(request: Request, rule_id: str, body: dict[str, Any], owner: Optional[str], actor: str) -> dict[str, Any]:
+        _, engine, tenant, ds = _alerts()
+        before = alerts_mod.get_rule(engine, tenant, ds, rule_id, owner)
+        if before is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        try:
+            rule = alerts_mod.update_rule(engine, tenant, ds, rule_id, body, owner)
+        except alerts_mod.AlertError as e:
+            raise _alert_fail(e) from None
+        if rule is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        diff = admin_mod.changes(before, rule, ["title", "question", "condition", "threshold", "recipients", "status"])
+        if diff:
+            admin_mod.audit(engine, actor, "update", "alert", rule_id, rule["title"], diff)
+        return rule
+
+    def _alert_remove(rule_id: str, owner: Optional[str], actor: str) -> dict[str, Any]:
+        _, engine, tenant, ds = _alerts()
+        before = alerts_mod.get_rule(engine, tenant, ds, rule_id, owner)
+        if before is None or not alerts_mod.delete_rule(engine, tenant, ds, rule_id, owner):
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        admin_mod.audit(engine, actor, "delete", "alert", rule_id, before.get("title"),
+                        {"question": before.get("question"), "owner": before.get("created_by")})
+        return {"ok": True}
+
+    @app.patch("/api/v1/alerts/{rule_id}")
+    def alerts_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _alert_owner(request)
+        return _alert_patch(request, rule_id, body, user, user)
+
+    @app.delete("/api/v1/alerts/{rule_id}")
+    def alerts_delete(rule_id: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _alert_owner(request)
+        return _alert_remove(rule_id, user, user)
+
+    @app.post("/api/v1/alerts/check")
+    def alerts_check(request: Request, id: Optional[str] = None) -> dict[str, Any]:
+        """Ekrandan: yalnız kişinin kuralları. Zamanlayıcıdan (çerez yok, yalnız çağıran jetonu): hepsi."""
+        _require_caller(request)
+        owner: Optional[str] = None
+        if request.headers.get("cookie"):
+            owner = _alert_owner(request)
+        r, engine, tenant, ds = _alerts()
+        if id and owner is not None and alerts_mod.get_rule(engine, tenant, ds, id, owner) is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        return alerts_mod.check(engine, tenant, ds, _alert_runner(r),
+                                alerts_mod.email_notifier(admin_mod.conf("ALERT_LINK")), only=id, owner=owner)
+
+    @app.get("/api/v1/alerts/{rule_id}/events")
+    def alerts_events(rule_id: str, request: Request, limit: int = 50) -> dict[str, Any]:
+        _require_caller(request)
+        user = _alert_owner(request)
+        _, engine, tenant, ds = _alerts()
+        ev = alerts_mod.events(engine, tenant, ds, rule_id, limit, owner=user)
+        if ev is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kural bulunamadı."})
+        return {"events": ev}
+
+    # ------------------------------------------------------------------ pano
+    # Kartlar ve son sonuçları burada durur; kimlik giriş servisinden çerezle çözülür.
+    from semantic_bridge import board as board_mod
+
+    def _board() -> tuple[Runtime, Any, str, str]:
+        r = rt()
+        board_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
+
+    def _board_user(request: Request) -> str:
+        try:
+            return board_mod.user_of(request.headers.get("cookie", ""))
+        except board_mod.NoUser:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+
+    def _admin_gate(request: Request) -> str:
+        """Yönetim, Veri Sözlüğü ve Onaylar ekranları yalnız yöneticilere açık: portal oturumundaki
+        AD hesabı yönetici listesinde ya da yönetici AD grubunda olmalı. Diğer roller 403 alır."""
+        _require_caller(request)
+        user = _board_user(request)
+        admin_mod.ensure(rt().store.engine)
+        if not admin_mod.is_admin(user):
+            raise HTTPException(status_code=403,
+                                detail={"code": "FORBIDDEN", "message": "Bu ekran yalnız yöneticiler içindir."})
+        return user
+
+    def _board_runner(r: Runtime):
+        return lambda sql: r.run_sql(sql, r.settings.max_rows)
+
+    @app.get("/api/v1/board")
+    def board_get(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _board()
+        return {"user": user, "cards": board_mod.list_cards(engine, tenant, ds, user)}
+
+    @app.put("/api/v1/board")
+    def board_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _board()
+        before = {c["id"]: c for c in board_mod.list_cards(engine, tenant, ds, user)}
+        try:
+            cards = board_mod.save_cards(engine, tenant, ds, user, list(body.get("cards") or []))
+        except board_mod.BoardError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_BOARD", "message": str(e)}) from e
+        # Konum/boyut her sürüklemede kaydedilir; kayda yalnız ekleme, silme ve anlamlı değişiklik girer.
+        after = {c["id"]: c for c in cards}
+        for cid, c in after.items():
+            if cid not in before:
+                admin_mod.audit(engine, user, "create", "board", cid, c["title"], {"question": c["question"], "chart": c["chart"]})
+            else:
+                diff = admin_mod.changes(before[cid], c, ["title", "note", "question", "chart", "refresh", "refreshAt"])
+                if diff:
+                    admin_mod.audit(engine, user, "update", "board", cid, c["title"], diff)
+        for cid, c in before.items():
+            if cid not in after:
+                admin_mod.audit(engine, user, "delete", "board", cid, c["title"], {"question": c["question"]})
+        return {"user": user, "cards": cards}
+
+    @app.post("/api/v1/board/cards/{card_id}/run")
+    def board_run(card_id: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        r, engine, tenant, ds = _board()
+        try:
+            out = board_mod.run_card(engine, tenant, ds, user, card_id, _board_runner(r))
+        except Exception as e:  # noqa: BLE001
+            raise _sql_failure(e) from e
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
+        return out
+
+    @app.get("/api/v1/board/export.xlsx")
+    def board_export(request: Request, ids: str = ""):
+        """Kartlar tek Excel kitabında: özet + kart başına sayfa. SQL burada tam koşar, tavan yok."""
+        from datetime import datetime
+        from fastapi.responses import Response as FileBytes
+        from semantic_bridge import board_excel
+
+        _require_caller(request)
+        user = _board_user(request)
+        r, engine, tenant, ds = _board()
+        cards = board_mod.list_cards(engine, tenant, ds, user)
+        wanted = [i for i in ids.split(",") if i]
+        if wanted:
+            order = {cid: k for k, cid in enumerate(wanted)}
+            cards = sorted((c for c in cards if c["id"] in order), key=lambda c: order[c["id"]])
+        if not cards:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Aktarılacak kart yok."})
+
+        def fetch(sql: str):
+            out = r.run_complete(sql)
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            return list(out.get("columns") or []), rows
+
+        data = board_excel.build(cards, fetch, user=user, now=datetime.now(board_mod._LOCAL).replace(tzinfo=None))
+        name = "pano" if len(cards) > 1 else re.sub(r"[^A-Za-z0-9]+", "-", cards[0]["title"].translate(str.maketrans("çğıöşüÇĞİÖŞÜ", "cgiosuCGIOSU"))).strip("-").lower()[:60] or "kart"
+        admin_mod.audit(engine, user, "export", "board", ",".join(c["id"] for c in cards)[:200], name, {"cards": len(cards), "format": "xlsx"})
+        return FileBytes(
+            content=data,
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            headers={"Content-Disposition": f'attachment; filename="{name}-{datetime.now().strftime("%Y-%m-%d")}.xlsx"'},
+        )
+
+    @app.post("/api/v1/board/run-due")
+    def board_run_due(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        r, engine, tenant, ds = _board()
+        return board_mod.run_due(engine, tenant, ds, _board_runner(r))
+
+    # ------------------------------------------------------------------ planlı raporlar
+    # Plan bir sorudur; dosya sunucuda üretilir, SMTP varsa gönderilir, yoksa ekrandan indirilir.
+    from fastapi.responses import FileResponse
+    from semantic_bridge import reports as reports_mod
+
+    def _reports() -> tuple[Runtime, Any, str, str]:
+        r = rt()
+        reports_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id
+
+    def _report_asker(r: Runtime):
+        # Soru her çalışmada yeniden çözülür ("bu ay" o günü anlatsın); veri ayrıca tam çekilir.
+        return lambda q: r.ask(q, thread_id=None, sample_size=1, execute=False)
+
+    def _report_fetcher(r: Runtime):
+        def fetch(sql: str) -> tuple[list[dict[str, Any]], list[dict[str, Any]], dict[str, Any]]:
+            out = r.run_complete(sql)
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            return list(out.get("columns") or []), rows, db_timing(out)
+        return fetch
+
+    _REPORT_FIELDS = ["title", "question", "when", "recipients", "fmt", "status", "columns"]
+
+    def _report_fail(e: Exception) -> HTTPException:
+        return HTTPException(status_code=422, detail={"code": "INVALID_REPORT", "message": str(e)})
+
+    @app.get("/api/v1/reports")
+    def reports_list(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        return {"user": user, "reports": reports_mod.list_reports(engine, tenant, ds, user), "email": alerts_mod.email_status()}
+
+    @app.post("/api/v1/reports/parse")
+    def reports_parse(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Cümleyi plana çevirir ve veri sorusunu motora sorup önizleme döndürür; kaydetmez."""
+        _require_caller(request)
+        _board_user(request)
+        r, _, _, _ = _reports()
+        draft = reports_mod.parse_prompt(str(body.get("text") or ""))
+        draft.update(_report_preview(r, draft["question"], []))
+        return draft
+
+    def _report_preview(r: Runtime, question: str, spec: list[dict[str, Any]]) -> dict[str, Any]:
+        """Soruyu motora sorar; ilk PREVIEW_ROWS satırı ve kolon düzenini döndürür. Dosyaya tamamı yazılır."""
+        try:
+            a = r.ask(question, thread_id=None, sample_size=reports_mod.PREVIEW_ROWS, execute=True)
+        except Exception as e:  # noqa: BLE001
+            raise _sql_failure(e) from e
+        source = list(a.get("columns") or [])
+        layout, added, dropped = reports_mod.merge_columns(spec, source)
+        return {"question": question, "sql": a.get("sql") or "", "columns": source,
+                "records": list(a.get("records") or [])[: reports_mod.PREVIEW_ROWS],
+                "rowCount": a.get("rowCount"), "summary": a.get("summary") or a.get("explanation") or "",
+                "layout": layout, "added": added, "dropped": dropped, **db_timing(a)}
+
+    @app.post("/api/v1/reports/preview")
+    def reports_preview(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Elle değiştirilen soru için önizlemeyi yeniler; kişinin kolon düzeni kaynak adı aynı kalan kolonlarda korunur."""
+        _require_caller(request)
+        _board_user(request)
+        r, _, _, _ = _reports()
+        question = " ".join(str(body.get("question") or "").split())
+        if not question:
+            raise _report_fail(reports_mod.ReportError("Raporun neyi listeleyeceği yazılmalı."))
+        try:
+            spec = reports_mod.clean_columns(body.get("columns") or [])
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        return _report_preview(r, question, spec)
+
+    @app.post("/api/v1/reports/refine")
+    def reports_refine(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        """Önizlemede düzeltme: cümle kolon düzenini ya da veri sorusunu değiştirir; kaydetmez.
+
+        Yalnız kolon değiştiyse veri yeniden çekilmez. Soru değiştiyse motora yeniden sorulur ve kişinin
+        kurduğu adlar/gizlemeler kaynak adı aynı kalan kolonlarda korunur.
+        """
+        _require_caller(request)
+        _board_user(request)
+        r, _, _, _ = _reports()
+        question = " ".join(str(body.get("question") or "").split())
+        if not question:
+            raise _report_fail(reports_mod.ReportError("Önce bir veri sorusu gerekiyor."))
+        try:
+            plan = reports_mod.refine_plan(r.llm_for("reports"), question, body.get("columns") or [], str(body.get("instruction") or ""))
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        except Exception as e:  # noqa: BLE001
+            log.warning("reports refine: model hatası: %s", e)
+            raise HTTPException(status_code=503, detail={"code": "MODEL_UNAVAILABLE", "retryable": True,
+                                "message": "Model şu an yanıt vermedi. Kolonları tablodan düzenleyebilir ya da birazdan yeniden deneyebilirsiniz."}) from e
+        out: dict[str, Any] = {"changes": plan["changes"], "via": plan["via"], "requery": plan["requery"]}
+        if plan["requery"]:
+            out.update(_report_preview(r, plan["question"], plan["columns"]))
+        else:
+            out.update(question=question, layout=plan["columns"], added=[], dropped=[])
+        return out
+
+    @app.post("/api/v1/reports")
+    def reports_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        try:
+            rep = reports_mod.create_report(engine, tenant, ds, user, body)
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        admin_mod.audit(engine, user, "create", "report", rep["id"], rep["title"],
+                        {"question": rep["question"], "when": rep["when"], "recipients": rep["recipients"], "fmt": rep["fmt"],
+                         "columns": rep["columns"]})
+        return rep
+
+    @app.patch("/api/v1/reports/{rid}")
+    def reports_update(rid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        before = reports_mod.get_report(engine, tenant, ds, user, rid) or {}
+        try:
+            out = reports_mod.update_report(engine, tenant, ds, user, rid, body)
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        if out is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        diff = admin_mod.changes(before, out, _REPORT_FIELDS)
+        if diff:
+            admin_mod.audit(engine, user, "update", "report", rid, out["title"], diff)
+        return out
+
+    @app.delete("/api/v1/reports/{rid}")
+    def reports_delete(rid: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        before = reports_mod.get_report(engine, tenant, ds, user, rid)
+        if not reports_mod.delete_report(engine, tenant, ds, user, rid):
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        admin_mod.audit(engine, user, "delete", "report", rid, (before or {}).get("title"),
+                        {"question": (before or {}).get("question"), "when": (before or {}).get("when")})
+        return {"ok": True}
+
+    @app.post("/api/v1/reports/{rid}/run")
+    def reports_run(rid: str, request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        r, engine, tenant, ds = _reports()
+        if reports_mod.get_report(engine, tenant, ds, user, rid) is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        out = reports_mod.run_report(engine, rid, _report_asker(r), _report_fetcher(r), manual=True,
+                                     link=admin_mod.conf("ALERT_LINK"))
+        admin_mod.audit(engine, user, "run", "report", rid, out.get("title"),
+                        {"status": out.get("lastStatus"), "rows": out.get("lastRows"), "error": out.get("lastError")})
+        return out
+
+    @app.get("/api/v1/reports/{rid}/file")
+    def reports_file(rid: str, request: Request):
+        _require_caller(request)
+        user = _board_user(request)
+        _, engine, tenant, ds = _reports()
+        found = reports_mod.file_of(engine, tenant, ds, user, rid)
+        if not found:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Henüz üretilmiş dosya yok."})
+        path, ctype = found
+        return FileResponse(str(path), media_type=ctype, filename=path.name)
+
+    @app.post("/api/v1/reports/run-due")
+    def reports_run_due(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        r, engine, tenant, ds = _reports()
+        return reports_mod.run_due(engine, tenant, ds, _report_asker(r), _report_fetcher(r),
+                                   link=admin_mod.conf("ALERT_LINK"))
+
+    # ------------------------------------------------------------------ kişi tercihleri
+    # Kişinin ekran düzeni gibi kendi alanları: AD hesabına bağlı, sunucuda. Tarayıcı yalnız önbellek tutar.
+    from semantic_bridge import prefs as prefs_mod
+
+    def _prefs(request: Request) -> tuple[Any, str, str, str]:
+        _require_caller(request)
+        user = _board_user(request)
+        r = rt()
+        prefs_mod.ensure(r.store.engine)
+        return r.store.engine, r.settings.tenant_id, r.settings.datasource_id, user
+
+    @app.get("/api/v1/me/prefs/{key}")
+    def prefs_get(key: str, request: Request) -> dict[str, Any]:
+        engine, tenant, ds, user = _prefs(request)
+        try:
+            return {"user": user, "key": key, **prefs_mod.get(engine, tenant, ds, user, key)}
+        except prefs_mod.PrefError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_PREF", "message": str(e)}) from e
+
+    @app.put("/api/v1/me/prefs/{key}")
+    def prefs_put(key: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, ds, user = _prefs(request)
+        try:
+            return {"user": user, "key": key, **prefs_mod.put(engine, tenant, ds, user, key, body.get("value"))}
+        except prefs_mod.PrefError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_PREF", "message": str(e)}) from e
+
+    @app.delete("/api/v1/me/prefs/{key}")
+    def prefs_delete(key: str, request: Request) -> dict[str, Any]:
+        engine, tenant, ds, user = _prefs(request)
+        try:
+            return {"ok": prefs_mod.delete(engine, tenant, ds, user, key)}
+        except prefs_mod.PrefError as e:
+            raise HTTPException(status_code=422, detail={"code": "INVALID_PREF", "message": str(e)}) from e
+
+    # ------------------------------------------------------------------ toplantı odaları
+    # Ortak kaynak: rezervasyonu herkes görür, kimin yaptığı oturumdan gelir. Odaları yönetici tanımlar.
+    from semantic_bridge import rooms as rooms_mod
+
+    def _rooms(request: Request) -> tuple[Any, str, str, str, bool]:
+        _require_caller(request)
+        try:
+            user, display = board_mod.session_of(request.headers.get("cookie", ""))
+        except board_mod.NoUser:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+        r = rt()
+        rooms_mod.ensure(r.store.engine)
+        admin_mod.ensure(r.store.engine)
+        return r.store.engine, r.settings.tenant_id, user, display, admin_mod.is_admin(user)
+
+    def _room_error(e: "rooms_mod.RoomError") -> HTTPException:
+        detail: dict[str, Any] = {"code": type(e).__name__.upper(), "message": str(e)}
+        if isinstance(e, rooms_mod.Conflict):
+            detail["booking"] = e.booking
+        return HTTPException(status_code=e.status, detail=detail)
+
+    @app.get("/api/v1/rooms")
+    def rooms_day(request: Request, date: str = "") -> dict[str, Any]:
+        engine, tenant, user, display, is_admin = _rooms(request)
+        day = date or rooms_mod.today()
+        try:
+            view = rooms_mod.day_view(engine, tenant, day, user, is_admin)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        return {**view, "me": {"username": user, "displayName": display, "admin": is_admin}}
+
+    @app.get("/api/v1/rooms/now")
+    def rooms_now(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display, is_admin = _rooms(request)
+        return {**rooms_mod.now_view(engine, tenant, user), "me": {"username": user, "displayName": display, "admin": is_admin}}
+
+    @app.post("/api/v1/rooms/{room_id}/bookings", status_code=201)
+    def rooms_book(room_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display, _ = _rooms(request)
+        try:
+            b = rooms_mod.book(engine, tenant, room_id, user, display, body)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "create", "booking", b["id"],
+                        f"{b['roomName']} · {b['date']} {b['startLocal']}–{b['endLocal']}", {"title": b["title"]})
+        return b
+
+    @app.delete("/api/v1/rooms/bookings/{booking_id}")
+    def rooms_cancel(booking_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _rooms(request)
+        try:
+            b = rooms_mod.cancel(engine, tenant, booking_id, user, is_admin)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "delete", "booking", b["id"],
+                        f"{b['date']} {b['startLocal']}–{b['endLocal']} · {b['displayName']}", {"roomId": b["roomId"]})
+        return {"ok": True, "booking": b}
+
+    @app.post("/api/v1/admin/rooms", status_code=201)
+    def rooms_add(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _rooms(request)
+        if not is_admin:
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Oda eklemek yönetici yetkisi ister."})
+        try:
+            room = rooms_mod.add_room(engine, tenant, user, body)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "create", "room", room["id"], room["name"], room)
+        return room
+
+    @app.delete("/api/v1/admin/rooms/{room_id}")
+    def rooms_remove(room_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _rooms(request)
+        if not is_admin:
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Oda kaldırmak yönetici yetkisi ister."})
+        try:
+            room = rooms_mod.remove_room(engine, tenant, user, room_id)
+        except rooms_mod.RoomError as e:
+            raise _room_error(e) from e
+        admin_mod.audit(engine, user, "delete", "room", room["id"], room["name"], {"cancelledBookings": room["cancelledBookings"]})
+        return room
+
+    # ------------------------------------------------------------------ kampüs kutlamaları
+    # "Kutla" kutlanan kişinin ekranına bildirim düşer. Kutlayan ve alan oturumdan gelir.
+    from semantic_bridge import greetings as greetings_mod
+
+    def _greetings(request: Request) -> tuple[Any, str, str, str]:
+        _require_caller(request)
+        try:
+            user, display = board_mod.session_of(request.headers.get("cookie", ""))
+        except board_mod.NoUser:
+            raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
+        r = rt()
+        greetings_mod.ensure(r.store.engine)
+        return r.store.engine, r.settings.tenant_id, user, display
+
+    @app.get("/api/v1/greetings")
+    def greetings_state(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _greetings(request)
+        return {"sent": greetings_mod.sent_today(engine, tenant, user),
+                "inbox": greetings_mod.inbox(engine, tenant, user, display),
+                # Kampüs zili ve alkış duvarı: görülmüş olsa da son 30 günün kayıtları.
+                "received": greetings_mod.received(engine, tenant, user, display),
+                "wall": greetings_mod.wall(engine, tenant)}
+
+    @app.post("/api/v1/greetings", status_code=201)
+    def greetings_send(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _greetings(request)
+        try:
+            return greetings_mod.send(engine, tenant, user, display, body)
+        except greetings_mod.GreetingError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "INVALID_GREETING", "message": str(e)}) from e
+
+    @app.post("/api/v1/greetings/seen")
+    def greetings_seen(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _greetings(request)
+        ids = body.get("ids") if isinstance(body.get("ids"), list) else []
+        return {"marked": greetings_mod.mark_seen(engine, tenant, user, display, ids)}
+
+    # ------------------------------------------------------------------ kişi rehberi ve profil
+    # Rehber CRM'den gelir (yalnız gerçek, etkin kullanıcılar). Kişinin eklediği dahili/kat/fotoğraf sunucuda.
+    from semantic_bridge import people as people_mod
+
+    people_dir = people_mod.Directory()
+
+    def _people(request: Request) -> tuple[Any, str, str, str]:
+        engine, tenant, user, display = _greetings(request)
+        people_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        return engine, tenant, user, display
+
+    def _crm_people(fresh: bool = False) -> tuple[list[dict[str, Any]], float, bool]:
+        r = rt()
+        truncated = False
+
+        def run(sql: str) -> dict[str, Any]:
+            nonlocal truncated
+            out = r.run_sql(sql, r.settings.max_rows)
+            truncated = bool(out.get("truncated"))
+            return out
+
+        try:
+            rows, at = people_dir.rows(
+                admin_mod.conf("CRM_SCHEMA"), run, fresh=fresh,
+                ad=lambda: people_mod.ad_people({k: admin_mod.conf(k) for k in admin_mod.store_keys("ad")}),
+                max_idle_days=_int_conf("PEOPLE_MAX_IDLE_DAYS", 365))
+        except people_mod.ProfileError as e:
+            raise HTTPException(status_code=503, detail={"code": "CRM_NOT_CONFIGURED", "message": str(e)}) from e
+        except Exception as e:  # noqa: BLE001
+            log.warning("people: CRM okunamadı: %s", e)
+            raise HTTPException(status_code=503, detail={"code": "CRM_UNAVAILABLE",
+                                                         "message": "CRM'e şu an ulaşılamıyor; rehber okunamadı."}) from e
+        return rows, at, truncated
+
+    def _int_conf(key: str, default: int) -> int:
+        try:
+            return max(0, int(admin_mod.conf(key) or default))
+        except ValueError:
+            return default
+
+    def _profile_error(e: "people_mod.ProfileError") -> HTTPException:
+        return HTTPException(status_code=e.status, detail={"code": "INVALID_PROFILE", "message": str(e)})
+
+    @app.get("/api/v1/people")
+    def people_list(request: Request, fresh: bool = False) -> dict[str, Any]:
+        engine, tenant, _, _ = _people(request)
+        asked = time.time()
+        rows, at, truncated = _crm_people(fresh)
+        items = people_mod.people(engine, tenant, rows)
+        return {"items": items, "total": len(items), "truncated": truncated, "source": "crm",
+                "adChecked": people_dir.ad_checked, "db": people_dir.timing(from_memory=at < asked),
+                "at": datetime.fromtimestamp(at, timezone.utc).isoformat()}
+
+    @app.get("/api/v1/me/profile")
+    def profile_get(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        asked = time.time()
+        db = None
+        try:
+            rows, at, _ = _crm_people()
+            db = people_dir.timing(from_memory=at < asked)
+        except HTTPException:
+            rows = []          # CRM kapalıyken kişi kendi alanlarını yine görür ve düzenler
+        out = people_mod.me(engine, tenant, user, display, rows)
+        out["db"] = db
+        return out
+
+    @app.put("/api/v1/me/profile")
+    def profile_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        before = people_mod.me(engine, tenant, user, display, [])["fields"]
+        try:
+            fields = people_mod.save_fields(engine, tenant, user, body)
+        except people_mod.ProfileError as e:
+            raise _profile_error(e) from e
+        admin_mod.audit(engine, user, "update", "profile", user, display,
+                        {k: {"önce": before.get(k, ""), "sonra": v} for k, v in fields.items() if before.get(k, "") != v})
+        return profile_get(request)
+
+    @app.put("/api/v1/me/profile/photo")
+    def profile_photo_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        try:
+            version = people_mod.save_photo(engine, tenant, user, str(body.get("dataUrl") or ""))
+        except people_mod.ProfileError as e:
+            raise _profile_error(e) from e
+        admin_mod.audit(engine, user, "update", "profile", user, f"{display} · fotoğraf", {"photoVersion": version})
+        return {"photoVersion": version}
+
+    @app.delete("/api/v1/me/profile/photo")
+    def profile_photo_delete(request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _people(request)
+        people_mod.delete_photo(engine, tenant, user)
+        admin_mod.audit(engine, user, "delete", "profile", user, f"{display} · fotoğraf", {})
+        return {"ok": True}
+
+    @app.get("/api/v1/people/{username}/photo")
+    def people_photo(username: str, request: Request) -> Response:
+        engine, tenant, _, _ = _people(request)
+        found = people_mod.photo(engine, tenant, username)
+        if not found:
+            raise HTTPException(status_code=404, detail={"code": "NO_PHOTO", "message": "Fotoğraf yok."})
+        blob, mime = found
+        # Adres sürüm numarasını (?v=) taşır; sürüm değişince yeni adres, bu yüzden uzun önbellek güvenli.
+        return Response(content=blob, media_type=mime,
+                        headers={"Cache-Control": "private, max-age=31536000, immutable"})
+
+    # ------------------------------------------------------------------ yönetim
+    # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
+
+    def _admin(request: Request) -> tuple[Runtime, Any, str, str, str]:
+        _require_caller(request)
+        user = _board_user(request)
+        r = rt()
+        admin_mod.ensure(r.store.engine)
+        if not admin_mod.is_admin(user):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Bu ekran yalnız yöneticiler içindir."})
+        return r, r.store.engine, r.settings.tenant_id, r.settings.datasource_id, user
+
+    def _admin_fail(e: Exception) -> HTTPException:
+        return HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)})
+
+    def _apply_settings(r: Runtime, changed: list[str]) -> dict[str, Any]:
+        """Kaydedilen bağlantı ayarını çalışan servise uygular: yönetici ayarı değiştirip
+        birinin servisi yeniden başlatmasını beklemesin. Yeni bağlantı denenmeden takılmaz —
+        kurulamazsa eski bağlantı yerinde kalır ve neden kurulamadığı geri döner."""
+        keys = set(changed)
+        s, applied, error = r.settings, [], None
+        if keys & set(admin_mod.LLM_KEYS):
+            s.llm_base = admin_mod.conf("OPENAI_API_BASE").rstrip("/")
+            s.llm_model = admin_mod.conf("LLM_MODEL_NAME")
+            s.llm_key = admin_mod.conf("OPENAI_API_KEY")
+            try:
+                s.llm_timeout = float(admin_mod.conf("LLM_TIMEOUT_SEC") or 240)
+            except ValueError:
+                pass
+            client = LlmClient(s.llm_base, s.llm_model, s.llm_key, s.llm_timeout, extra=s.llm_extra)
+            r.llm = QueuedLlm(client, r.queue, tenant_id=s.tenant_id, datasource_id=s.datasource_id)
+            applied.append("model")
+        if keys & set(admin_mod.store_keys("db")):
+            path = s.connection_file or admin_mod.DB_FILE
+            old = r.connector
+            try:
+                fresh = connector_from_file(path)
+                fresh.execute("SELECT 1", 1)                       # kurulmadan takas edilmez
+                r.connector = fresh
+                s.dialect = getattr(fresh, "dialect", "") or s.dialect
+                applied.append("veritabanı")
+                if old is not None:
+                    threading.Thread(target=lambda: _close_quietly(old), name="old-connector-close", daemon=True).start()
+            except Exception as e:  # noqa: BLE001
+                error = f"Yeni veritabanı ayarı kaydedildi ama bağlantı kurulamadı, eski bağlantı sürüyor: {type(e).__name__}: {e}"[:400]
+                log.warning("admin: yeni bağlantı kurulamadı: %s", e)
+        if applied:
+            r.rebuild()
+            log.info("admin: ayar uygulandı (%s)", ", ".join(applied))
+        return {"applied": applied, "applyError": error}
+
+    def _close_quietly(c: Any) -> None:
+        try:
+            c.close()
+        except Exception as e:  # noqa: BLE001
+            log.debug("eski bağlantı kapatılamadı: %s", e)
+
+    @app.get("/api/v1/admin/me")
+    def admin_me(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        user = _board_user(request)
+        admin_mod.ensure(rt().store.engine)
+        return {"user": user, "isAdmin": admin_mod.is_admin(user)}
+
+    @app.get("/api/v1/admin/group")
+    def admin_group(request: Request) -> dict[str, Any]:
+        """Yönetici AD grubunun kayıtlı anlık görüntüsü: üyeler ve son tazeleme zamanı (canlı okumaz)."""
+        _admin(request)
+        return admin_mod.group_snapshot()
+
+    @app.post("/api/v1/admin/group/refresh")
+    def admin_group_refresh(request: Request) -> dict[str, Any]:
+        """Yönetici AD grubunu canlı okuyup DB anlık görüntüsünü tazeler.
+        15 dk'lık `timas-admin-group.timer` çağırır (caller token ile); yönetici ekrandan da tetikler."""
+        _require_caller(request)
+        return admin_mod.refresh_admin_group(rt().store.engine)
+
+    @app.get("/api/v1/admin/overview")
+    def admin_overview(request: Request) -> dict[str, Any]:
+        r, engine, tenant, ds, _ = _admin(request)
+        reports = admin_mod.all_reports(engine, tenant, ds)
+        alerts_mod.ensure(engine)
+        alerts = alerts_mod.list_rules(engine, tenant, ds)
+        cards = admin_mod.all_cards(engine, tenant, ds)
+        people = admin_mod.users(engine, tenant, ds)
+        return {
+            "counts": {
+                "reports": len(reports), "reportsActive": sum(1 for x in reports if x["status"] == "active"),
+                "reportsFailed": sum(1 for x in reports if x["lastStatus"] == "failed"),
+                "alerts": len(alerts), "alertsActive": sum(1 for x in alerts if x["status"] == "active"),
+                "alertsTriggered": sum(1 for x in alerts if x["state"] == "triggered"),
+                "cards": len(cards), "cardsFailed": sum(1 for x in cards if x["lastError"]),
+                "users": len(people), "admins": len(admin_mod.admins()),
+            },
+            "email": alerts_mod.email_status(),
+            "engine": {"model": admin_mod.LLM_DISPLAY, "llm": bool(r.llm), "db": bool(r.connector),
+                       "catalog": r.store.status_counts(tenant, ds), "profiles": len(r.profiles)},
+            **admin_mod.system_status(),
+            "recent": admin_mod.audit_list(engine, limit=8)["items"],
+        }
+
+    @app.get("/api/v1/admin/settings")
+    def admin_settings(request: Request) -> dict[str, Any]:
+        _admin(request)
+        return admin_mod.settings_view()
+
+    @app.put("/api/v1/admin/settings")
+    def admin_settings_save(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        r, engine, _, _, user = _admin(request)
+        try:
+            out = admin_mod.save_settings(engine, user, dict(body.get("values") or {}))
+        except admin_mod.AdminError as e:
+            raise _admin_fail(e) from e
+        return {**out, **_apply_settings(r, out["changed"])}
+
+    @app.delete("/api/v1/admin/settings/{key}")
+    def admin_settings_reset(key: str, request: Request) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        try:
+            return admin_mod.reset_setting(engine, user, key)
+        except admin_mod.AdminError as e:
+            raise _admin_fail(e) from e
+
+    @app.post("/api/v1/admin/email/test")
+    def admin_email_test(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        to = str(body.get("to") or "").strip()
+        if "@" not in to:
+            raise _admin_fail(ValueError("Deneme için geçerli bir e-posta adresi yazın."))
+        ok, message = admin_mod.smtp_test(to)
+        admin_mod.audit(engine, user, "test", "setting", "email", "SMTP denemesi", {"to": to, "ok": ok, "message": message})
+        return {"ok": ok, "message": message}
+
+    @app.post("/api/v1/admin/directory/test")
+    def admin_directory_test(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        username = str(body.get("username") or "").strip()
+        ok, message = admin_mod.directory_test(username)
+        admin_mod.audit(engine, user, "test", "setting", "directory", "Active Directory denemesi",
+                        {"username": username or None, "ok": ok, "message": message})
+        return {"ok": ok, "message": message}
+
+    # Bağlantı denemeleri: hepsi kaydedilmiş ayarla gerçek bağlantıyı kurar, sonucu değişiklik
+    # kaydına yazar. Ayrı uçlar, çünkü her biri kendi süresini alır ve ekranda ayrı beklenir.
+    _CHECK_TITLE = {"database": "Logo veritabanı denemesi", "crm": "CRM denemesi", "llm": "Model denemesi",
+                    "directory": "Active Directory denemesi", "email": "E-posta ayarı denemesi",
+                    "store": "Meta veritabanı denemesi"}
+
+    @app.post("/api/v1/admin/tests/{check_id}")
+    def admin_test_run(check_id: str, request: Request) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        try:
+            out = admin_mod.run_check(check_id)
+        except admin_mod.AdminError as e:
+            raise _admin_fail(e) from e
+        admin_mod.audit(engine, user, "test", "setting", check_id, _CHECK_TITLE.get(check_id, f"{check_id} denemesi"),
+                        {"ok": out["ok"], "message": out["message"]})
+        return out
+
+    @app.post("/api/v1/admin/tests")
+    def admin_tests_all(request: Request) -> dict[str, Any]:
+        _, engine, _, _, user = _admin(request)
+        out = admin_mod.run_checks()
+        admin_mod.audit(engine, user, "test", "setting", "all", "Tüm bağlantı denemeleri",
+                        {i["id"]: ("başarılı" if i["ok"] else i["message"]) for i in out["items"]})
+        return out
+
+    @app.get("/api/v1/admin/system")
+    def admin_system(request: Request) -> dict[str, Any]:
+        _admin(request)
+        return {**admin_mod.system_info(), "checks": [{"id": c["id"], "group": c["group"], "label": c["label"]} for c in admin_mod.CHECKS]}
+
+    @app.get("/api/v1/admin/reports")
+    def admin_reports(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        return {"items": admin_mod.all_reports(engine, tenant, ds)}
+
+    @app.patch("/api/v1/admin/reports/{rid}")
+    def admin_report_update(rid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        before = reports_mod.get_report(engine, tenant, ds, None, rid)
+        if before is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        try:
+            out = reports_mod.update_report(engine, tenant, ds, None, rid, body)  # type: ignore[arg-type]
+        except reports_mod.ReportError as e:
+            raise _report_fail(e) from e
+        diff = admin_mod.changes(before, out or {}, _REPORT_FIELDS)
+        if diff:
+            admin_mod.audit(engine, user, "update", "report", rid, (out or before)["title"], diff)
+        return out or before
+
+    @app.delete("/api/v1/admin/reports/{rid}")
+    def admin_report_delete(rid: str, request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        before = reports_mod.get_report(engine, tenant, ds, None, rid)
+        if before is None or not reports_mod.delete_report(engine, tenant, ds, None, rid):  # type: ignore[arg-type]
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rapor bulunamadı."})
+        admin_mod.audit(engine, user, "delete", "report", rid, before["title"], {"question": before["question"], "when": before["when"]})
+        return {"ok": True}
+
+    @app.get("/api/v1/admin/alerts")
+    def admin_alerts(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        alerts_mod.ensure(engine)
+        return {"items": alerts_mod.list_rules(engine, tenant, ds)}
+
+    @app.patch("/api/v1/admin/alerts/{rule_id}")
+    def admin_alert_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, _, _, _, user = _admin(request)
+        return _alert_patch(request, rule_id, body, None, user)
+
+    @app.delete("/api/v1/admin/alerts/{rule_id}")
+    def admin_alert_delete(rule_id: str, request: Request) -> dict[str, Any]:
+        _, _, _, _, user = _admin(request)
+        return _alert_remove(rule_id, None, user)
+
+    @app.get("/api/v1/admin/cards")
+    def admin_cards(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        return {"items": admin_mod.all_cards(engine, tenant, ds)}
+
+    @app.delete("/api/v1/admin/cards/{card_id}")
+    def admin_card_delete(card_id: str, request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        row = admin_mod.delete_card(engine, tenant, ds, card_id)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
+        admin_mod.audit(engine, user, "delete", "board", card_id, row["title"], {"owner": row["username"]})
+        return {"ok": True}
+
+    @app.get("/api/v1/admin/users")
+    def admin_users(request: Request) -> dict[str, Any]:
+        _, engine, tenant, ds, _ = _admin(request)
+        return {"items": admin_mod.users(engine, tenant, ds)}
+
+    @app.get("/api/v1/admin/audit")
+    def admin_audit(request: Request, kind: Optional[str] = None, actor: Optional[str] = None,
+                    action: Optional[str] = None, q: Optional[str] = None, before: Optional[int] = None,
+                    limit: int = 100) -> dict[str, Any]:
+        _, engine, _, _, _ = _admin(request)
+        return admin_mod.audit_list(engine, kind=kind, actor=actor, action=action, q=q, before=before, limit=limit)
+
+    # ------------------------------------------------------------------ promt izleyici
+    # Her promt (soru + üretilen SQL + sonuç + kapı kararları) sl_query_log'a yazılır (bkz.
+    # Runtime.ask._log). Bu uçlar yalnız yöneticiye, incelemek ve nereyi düzelteceğimizi görmek için.
+
+    @app.get("/api/v1/admin/prompts")
+    def admin_prompts(request: Request, limit: int = 60, offset: int = 0, only: Optional[str] = None,
+                      q: Optional[str] = None, user: Optional[str] = None, days: Optional[int] = None) -> dict[str, Any]:
+        _, _, tenant, ds, _ = _admin(request)
+        return rt().store.list_query_log(tenant, ds, limit=limit, offset=offset, only=only,
+                                         search=q, username=user, since_days=days)
+
+    @app.get("/api/v1/admin/prompts/overview")
+    def admin_prompts_overview(request: Request, days: int = 30) -> dict[str, Any]:
+        _, _, tenant, ds, _ = _admin(request)
+        return rt().store.query_log_overview(tenant, ds, since_days=max(1, min(int(days), 365)))
+
+    @app.get("/api/v1/admin/prompts/export.csv")
+    def admin_prompts_export(request: Request, only: Optional[str] = None, q: Optional[str] = None,
+                             user: Optional[str] = None, days: Optional[int] = None) -> Response:
+        _, _, tenant, ds, actor = _admin(request)
+        # Çevrimdışı incelemek için ("biz alıp inceleyeceğiz"): süzgece uyan promtlar tek CSV.
+        # Sonuç satırları değil, kaydın çekirdeği — soru, SQL, cevap, süre, hata, inceleme notu.
+        cols = ["createdAt", "username", "answerType", "compiler", "executed", "rowCount",
+                "latencyMs", "reviewFlag", "reviewNote", "question", "sql", "answerSummary", "error", "id"]
+        buf = io.StringIO()
+        w = csv.writer(buf)
+        w.writerow(cols)
+        offset = 0
+        while True:
+            page = rt().store.list_query_log(tenant, ds, limit=200, offset=offset, only=only,
+                                             search=q, username=user, since_days=days)
+            for it in page["items"]:
+                w.writerow([it.get(c) if it.get(c) is not None else "" for c in cols])
+            if not page.get("hasMore"):
+                break
+            offset = page["nextOffset"]
+        admin_mod.audit(rt().store.engine, actor, "run", "setting", "prompts-export", "Promt dışa aktarma",
+                        {"only": only or "all", "q": q or "", "user": user or "", "days": days or "all"})
+        return Response(content=buf.getvalue().encode("utf-8-sig"), media_type="text/csv",
+                        headers={"Content-Disposition": 'attachment; filename="promtlar.csv"'})
+
+    @app.get("/api/v1/admin/prompts/{qid}")
+    def admin_prompt_detail(qid: str, request: Request) -> dict[str, Any]:
+        _, _, tenant, ds, _ = _admin(request)
+        row = rt().store.get_query_log(tenant, ds, qid)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Promt bulunamadı."})
+        return row
+
+    @app.patch("/api/v1/admin/prompts/{qid}")
+    def admin_prompt_mark(qid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        _, engine, tenant, ds, user = _admin(request)
+        flag = body.get("flag")
+        if flag is not None:
+            flag = str(flag).strip().lower()
+            if flag not in ("", "todo", "fixed", "ignored"):
+                raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Geçersiz işaret."})
+        note = body.get("note")
+        row = rt().store.mark_query_log(tenant, ds, qid, flag=flag,
+                                        note=(str(note) if note is not None else None), reviewed_by=user)
+        if row is None:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Promt bulunamadı."})
+        admin_mod.audit(engine, user, "update", "prompt", qid, (row.get("question") or "")[:80],
+                        {"flag": row.get("reviewFlag") or "", "note": (row.get("reviewNote") or "")[:120]})
+        return row
 
     return app
 

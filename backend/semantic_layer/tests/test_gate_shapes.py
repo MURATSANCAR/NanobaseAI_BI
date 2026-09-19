@@ -1,0 +1,368 @@
+"""The same correct answer in every SQL shape the gate must accept, and the shapes it must refuse.
+
+Measured 2026-09-15: 13 of 17 correct shapes were refused, 1 of 11 wrong shapes accepted. Each refusal
+was a real answer thrown away — the CTE-first shape is the one the critic asks the model to write.
+Every case is a hard assertion; a case the gate gets wrong goes into WRONG_TODAY as a strict xfail
+until it is fixed, never silently. Design: docs/architecture/semantic-gate-design.md.
+"""
+from datetime import date
+
+import pytest
+
+from semantic_layer.models import Mapping, ResolvedSlot, SemanticQuery, TemporalSlot
+from semantic_layer.runtime.audit import unmet_obligations
+
+T = "LG_411_01_INVOICE"
+F = '"CANCELLED" = 0'
+P = "\"DATE_\" >= '2026-01-01' AND \"DATE_\" < '2027-01-01'"
+P_PREV = "\"DATE_\" >= '2025-01-01' AND \"DATE_\" < '2026-01-01'"
+
+
+def plan(*, comparison=False):
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d",
+                       slots=[ResolvedSlot("iptal edilmemiş", "DEFAULT_FILTER", "CERTIFIED",
+                                           mapping=Mapping("", "INVOICE", "LG_{n0}_{n1}_INVOICE", column="CANCELLED", operator="=", values=["0"]))],
+                       temporal=[TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))],
+                       temporal_binding={"entity": "INVOICE", "column": "DATE_"})
+    if comparison:
+        sq.temporal.append(TemporalSlot("2025", "YEAR", date(2025, 1, 1), date(2026, 1, 1)))
+        sq.comparison = {"current": {"start": "2026-01-01", "end": "2027-01-01"},
+                         "reference": {"start": "2025-01-01", "end": "2026-01-01"}, "entity": "INVOICE", "dateColumn": "DATE_"}
+    return sq
+
+
+CTE_A = f'a AS (SELECT MONTH("DATE_") ay, SUM(NETTOTAL) t FROM {T} WHERE {F} AND {P} GROUP BY MONTH("DATE_"))'
+CTE_B = f'b AS (SELECT MONTH("DATE_") ay, COUNT(*) n FROM {T} WHERE {F} AND {P} GROUP BY MONTH("DATE_"))'
+CTE_B_UNFILTERED = f'b AS (SELECT MONTH("DATE_") ay, COUNT(*) n FROM {T} WHERE {P} GROUP BY MONTH("DATE_"))'
+
+ACCEPT = {
+    # 2026-09-16: an outer join's ON restricts the *joined* table's own rows — cancelled invoices are
+    # never paired, and the WHERE on i.DATE_ drops the unpaired rows; the sum is right.
+    "filter_in_left_join_on": f"SELECT SUM(i.NETTOTAL) FROM LG_411_CLCARD c LEFT JOIN {T} i ON c.LOGICALREF = i.CLIENTREF AND i.{F} WHERE i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01'",
+    "flat": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F} AND {P}",
+    "flat_alias": f"SELECT SUM(i.NETTOTAL) FROM {T} i WHERE i.{F} AND i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01'",
+    "filter_in_list": f"SELECT SUM(NETTOTAL) FROM {T} WHERE \"CANCELLED\" IN (0) AND {P}",
+    "cte_unfiltered_outer_where": f"WITH f AS (SELECT * FROM {T}) SELECT SUM(NETTOTAL) FROM f WHERE {F} AND {P}",
+    "cte_filtered": f"WITH f AS (SELECT * FROM {T} WHERE {F} AND {P}) SELECT SUM(NETTOTAL) FROM f",
+    "cte_grouped": f"WITH m AS (SELECT MONTH(\"DATE_\") ay, SUM(NETTOTAL) t FROM {T} WHERE {F} AND {P} GROUP BY MONTH(\"DATE_\")) SELECT ay, t FROM m ORDER BY ay",
+    "cte_two_used_both_filtered": f"WITH {CTE_A}, {CTE_B} SELECT a.ay, a.t, b.n FROM a JOIN b ON a.ay = b.ay",
+    "derived_table": f"SELECT SUM(x.NETTOTAL) FROM (SELECT NETTOTAL FROM {T} WHERE {F} AND {P}) x",
+    "join_on_filter": f"SELECT SUM(i.NETTOTAL) FROM {T} i JOIN LG_411_CLCARD c ON c.LOGICALREF = i.CLIENTREF AND i.{F} WHERE i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01'",
+    "union_both_filtered": f"SELECT SUM(NETTOTAL) FROM (SELECT NETTOTAL FROM {T} WHERE {F} AND {P} UNION ALL SELECT NETTOTAL FROM LG_411_02_INVOICE WHERE {F} AND {P}) u",
+    "period_year_fn": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F} AND YEAR(\"DATE_\") = 2026",
+    "period_between": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F} AND \"DATE_\" BETWEEN '2026-01-01' AND '2026-12-31'",
+    "period_lte_form": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F} AND \"DATE_\" >= '2026-01-01' AND \"DATE_\" <= '2026-12-31'",
+    "filter_isnull": f"SELECT SUM(NETTOTAL) FROM {T} WHERE ISNULL(\"CANCELLED\",0) = 0 AND {P}",
+    # The table is declared to hold exactly 2026: the date filter is implied by the source.
+    "declared_window_no_date_filter": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F}",
+}
+# What the gate is told about the tables. DATE_ is a DATE column, so `<= '2026-12-31'` reaches the end
+# of the year; the 2026 table's coverage is declared, the 2025 table's is only measured.
+SOURCES = {
+    # declared ranges are half-open: [2026-01-01, 2027-01-01)
+    T: {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2027-01-01"), "declared": True},
+    "LG_411_02_INVOICE": {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2027-01-01"), "declared": True},
+    "LG_211_01_INVOICE": {"types": {"DATE_": "datetime"}, "window": ("2026-01-01", "2027-01-01"), "declared": False},
+}
+ACCEPT_COMPARISON = {
+    "cmp_case_pivot": f"SELECT SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) bu_yil, SUM(CASE WHEN {P_PREV} THEN NETTOTAL ELSE 0 END) gecen_yil FROM {T} WHERE {F}",
+    "cmp_cte_per_period": f"WITH cur AS (SELECT SUM(NETTOTAL) t FROM {T} WHERE {F} AND {P}), prev AS (SELECT SUM(NETTOTAL) t FROM {T} WHERE {F} AND {P_PREV}) SELECT cur.t AS bu_yil, prev.t AS gecen_yil FROM cur CROSS JOIN prev",
+    "cmp_group_by_year": f"SELECT YEAR(\"DATE_\") yil, SUM(NETTOTAL) t FROM {T} WHERE {F} AND \"DATE_\" >= '2025-01-01' AND \"DATE_\" < '2027-01-01' GROUP BY YEAR(\"DATE_\")",
+}
+REFUSE = {
+    "missing_filter": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {P}",
+    "cte_one_of_two_unfiltered": f"WITH {CTE_A}, {CTE_B_UNFILTERED} SELECT a.ay, a.t, b.n FROM a JOIN b ON a.ay = b.ay",
+    "unused_cte": f"WITH f AS (SELECT * FROM {T} WHERE {F} AND {P}) SELECT SUM(NETTOTAL) FROM {T}",
+    "or_widening": f"SELECT SUM(NETTOTAL) FROM {T} WHERE ({F} AND {P}) OR TRCODE = 9",
+    "union_one_unfiltered": f"SELECT SUM(NETTOTAL) FROM (SELECT NETTOTAL FROM {T} WHERE {F} AND {P} UNION ALL SELECT NETTOTAL FROM LG_411_02_INVOICE WHERE {P}) u",
+    "wrong_period": f"SELECT SUM(NETTOTAL) FROM {T} WHERE {F} AND {P_PREV}",
+    "filter_in_exists_only": f"SELECT SUM(i.NETTOTAL) FROM {T} i WHERE i.\"DATE_\" >= '2026-01-01' AND i.\"DATE_\" < '2027-01-01' AND EXISTS (SELECT 1 FROM {T} j WHERE j.{F})",
+    # CASE ... ELSE 0 excludes rows from a SUM, not from a COUNT: the cancelled invoices are counted.
+    "filter_in_case_under_count": f"SELECT COUNT(CASE WHEN {F} THEN 1 ELSE 0 END) FROM {T} WHERE {P}",
+    # On a datetime column `<= '2026-12-31'` stops at midnight: the last day is outside the period.
+    "period_lte_on_datetime": f"SELECT SUM(NETTOTAL) FROM LG_211_01_INVOICE WHERE {F} AND \"DATE_\" >= '2026-01-01' AND \"DATE_\" <= '2026-12-31'",
+    # A measured min/max is not a declaration: an incomplete load would pass unfiltered.
+    "measured_window_only": f"SELECT SUM(NETTOTAL) FROM LG_211_01_INVOICE WHERE {F}",
+    # The restriction sits on a computed column: the gate cannot carry it down and says so.
+    "filter_through_computed_column": f"WITH m AS (SELECT MONTH(\"DATE_\") ay, CANCELLED * 1 AS iptal, NETTOTAL FROM {T} WHERE {P}) SELECT SUM(NETTOTAL) FROM m WHERE iptal = 0",
+}
+REFUSE_COMPARISON = {
+    "cmp_same_period_twice": f"SELECT SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) a, SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) b FROM {T} WHERE {F}",
+}
+# A comparison reads two years, so it cannot be answered from a table declared to hold one: the
+# comparison shapes are checked against undeclared sources, and reading 2025 out of the 2026 table
+# is one more wrong answer the declaration lets the gate catch.
+SOURCES_UNDECLARED = {k: {**v, "declared": False} for k, v in SOURCES.items()}
+REFUSE_COMPARISON_DECLARED = {
+    "cmp_reference_year_from_a_table_declared_for_current": ACCEPT_COMPARISON["cmp_cte_per_period"],
+}
+
+# What the gate gets wrong today (measured 2026-09-15). Strict: an unexpected pass means the case moves up.
+WRONG_TODAY: set[str] = set()
+
+
+def _case(name):
+    marks = pytest.mark.xfail(strict=True, reason="gate design gap, see semantic-gate-design.md") if name in WRONG_TODAY else ()
+    return pytest.param(name, marks=marks)
+
+
+@pytest.mark.parametrize("name", [_case(n) for n in ACCEPT])
+def test_correct_answer_is_accepted_in_every_shape(name):
+    assert unmet_obligations(plan(), ACCEPT[name], sources=SOURCES) == []
+
+
+@pytest.mark.parametrize("name", [_case(n) for n in ACCEPT_COMPARISON])
+def test_comparison_is_accepted_in_every_shape(name):
+    assert unmet_obligations(plan(comparison=True), ACCEPT_COMPARISON[name], sources=SOURCES_UNDECLARED) == []
+
+
+@pytest.mark.parametrize("name", [_case(n) for n in REFUSE])
+def test_wrong_answer_is_refused(name):
+    assert unmet_obligations(plan(), REFUSE[name], sources=SOURCES)
+
+
+@pytest.mark.parametrize("name", [_case(n) for n in REFUSE_COMPARISON])
+def test_wrong_comparison_is_refused(name):
+    assert unmet_obligations(plan(comparison=True), REFUSE_COMPARISON[name], sources=SOURCES_UNDECLARED)
+
+
+def test_opaque_restriction_is_named_not_blamed():
+    text = "; ".join(unmet_obligations(plan(), REFUSE["filter_through_computed_column"], sources=SOURCES))
+    assert "anlaşılmayan yapı" in text
+
+
+def test_two_measured_entities_are_both_bounded():
+    from semantic_layer.models import Mapping, ResolvedSlot
+    sq = plan()
+    sq.slots = []
+    sq.temporal_binding = {"entity": "INVOICE", "column": "DATE_", "alternatives": [],
+                           "also": [{"entity": "STLINE", "column": "DATE_", "alternatives": []}]}
+    both = f"WITH a AS (SELECT SUM(NETTOTAL) t FROM {T} WHERE {P}), b AS (SELECT SUM(TOTAL) u FROM LG_411_01_STLINE WHERE {P}) SELECT a.t, b.u FROM a CROSS JOIN b"
+    one = f"WITH a AS (SELECT SUM(NETTOTAL) t FROM {T} WHERE {P}), b AS (SELECT SUM(TOTAL) u FROM LG_411_01_STLINE) SELECT a.t, b.u FROM a CROSS JOIN b"
+    assert unmet_obligations(sq, both) == []
+    assert unmet_obligations(sq, one)
+
+
+@pytest.mark.parametrize("name", list(REFUSE_COMPARISON_DECLARED))
+def test_declared_coverage_refuses_a_period_the_table_cannot_hold(name):
+    assert unmet_obligations(plan(comparison=True), REFUSE_COMPARISON_DECLARED[name], sources=SOURCES)
+
+
+# --- a span over several year-partitions: each table holds a slice, together they must be the period
+T21 = "LG_211_01_INVOICE"
+SOURCES_SPAN = {
+    T: {"types": {"DATE_": "date"}, "window": ("2026-01-01", "2027-01-01"), "declared": True},
+    T21: {"types": {"DATE_": "date"}, "window": ("2021-01-01", "2026-01-01"), "declared": True},
+}
+SPAN = "\"DATE_\" >= '2024-01-01' AND \"DATE_\" < '2027-01-01'"
+
+
+def span_plan():
+    sq = plan()
+    sq.temporal = [TemporalSlot("2024-2026", "RANGE", date(2024, 1, 1), date(2027, 1, 1))]
+    return sq
+
+
+def union(a, b):
+    return f"SELECT SUM(NETTOTAL) FROM (SELECT NETTOTAL FROM {a} UNION ALL SELECT NETTOTAL FROM {b}) u"
+
+
+def test_a_span_is_proven_by_its_partitions_together():
+    sql = union(f"{T21} WHERE {F} AND {SPAN}", f"{T} WHERE {F} AND {SPAN}")
+    assert unmet_obligations(span_plan(), sql, sources=SOURCES_SPAN) == []
+
+
+def test_a_span_with_a_missing_partition_is_refused():
+    sql = f"SELECT SUM(NETTOTAL) FROM {T21} WHERE {F} AND {SPAN}"
+    assert unmet_obligations(span_plan(), sql, sources=SOURCES_SPAN)
+
+
+def test_a_span_that_reads_one_year_twice_is_refused():
+    # the double-counting shape: the 2026 partition read twice under the same filter
+    sql = union(f"{T} WHERE {F} AND {SPAN}", f"{T} WHERE {F} AND {SPAN}")
+    sq = span_plan()
+    sq.temporal = [TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))]
+    assert unmet_obligations(span_plan(), sql, sources=SOURCES_SPAN)
+
+
+def test_a_measure_with_its_scope_inside_the_period_case_or_in_the_where():
+    """What a model writes for "this year vs last": one CASE carrying both the measure's own
+    condition and the period, or the condition pushed into WHERE. Both are the certified measure."""
+    from semantic_layer.models import Mapping, ResolvedSlot
+    sq = plan(comparison=True)
+    sq.slots.append(ResolvedSlot("ciro", "METRIC", "CERTIFIED", mapping=Mapping("", "INVOICE", "LG_{n0}_{n1}_INVOICE",
+                                 formula="SUM(CASE WHEN INVOICE.TRCODE IN (7, 8, 9) THEN INVOICE.NETTOTAL ELSE 0 END)")))
+    merged = (f"SELECT SUM(CASE WHEN TRCODE IN (7, 8, 9) AND {P} THEN NETTOTAL ELSE 0 END) a, "
+              f"SUM(CASE WHEN TRCODE IN (7, 8, 9) AND {P_PREV} THEN NETTOTAL ELSE 0 END) b FROM {T} WHERE {F}")
+    pushed = (f"SELECT SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) a, SUM(CASE WHEN {P_PREV} THEN NETTOTAL ELSE 0 END) b "
+              f"FROM {T} WHERE {F} AND TRCODE IN (7, 8, 9)")
+    wrong = (f"SELECT SUM(CASE WHEN {P} THEN NETTOTAL ELSE 0 END) a, SUM(CASE WHEN {P_PREV} THEN NETTOTAL ELSE 0 END) b "
+             f"FROM {T} WHERE {F}")
+    assert unmet_obligations(sq, merged, sources=SOURCES_UNDECLARED) == []
+    assert unmet_obligations(sq, pushed, sources=SOURCES_UNDECLARED) == []
+    assert unmet_obligations(sq, wrong, sources=SOURCES_UNDECLARED)
+
+
+
+def _lines_plan():
+    return SemanticQuery(question="x", tenant_id="t", datasource_id="d",
+                         slots=[ResolvedSlot("stline default cancelled", "DEFAULT_FILTER", "CERTIFIED",
+                                             mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", column="CANCELLED", operator="=", values=["0"]))],
+                         temporal=[TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))],
+                         temporal_binding={"entity": "INVOICE", "column": "DATE_"})
+
+
+def test_a_left_joins_on_restricts_the_joined_tables_own_rows():
+    """2026-09-16, soru 5: `LEFT JOIN STLINE sl ON … AND sl.CANCELLED = 0` was refused as unproven —
+    the ON of an outer join was read as never dropping rows. It drops none of the invoices; it is the
+    only place the cancelled *lines* can be kept out without dropping invoices that have no lines."""
+    base = (f'SELECT i."CLIENTREF", SUM(sl."AMOUNT" * sl."OUTCOST") AS maliyet FROM {T} i '
+            'LEFT JOIN LG_411_01_STLINE sl ON sl."INVOICEREF" = i."LOGICALREF" AND sl."DATE_" >= \'2026-01-01\' AND sl."DATE_" < \'2027-01-01\'{on} '
+            'WHERE i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\' GROUP BY i."CLIENTREF"')
+    assert unmet_obligations(_lines_plan(), base.format(on=' AND sl."CANCELLED" = 0')) == []
+    assert unmet_obligations(_lines_plan(), base.format(on="")), "without the filter the lines are unrestricted"
+    # A restriction on the preserved side written in the ON keeps proving nothing: those rows stay.
+    inv = SemanticQuery(question="x", tenant_id="t", datasource_id="d",
+                        slots=[ResolvedSlot("iptal edilmemiş", "DEFAULT_FILTER", "CERTIFIED",
+                                            mapping=Mapping("", "INVOICE", "LG_{n0}_{n1}_INVOICE", column="CANCELLED", operator="=", values=["0"]))],
+                        temporal=[TemporalSlot("2026", "YEAR", date(2026, 1, 1), date(2027, 1, 1))],
+                        temporal_binding={"entity": "INVOICE", "column": "DATE_"})
+    assert unmet_obligations(inv, base.format(on=' AND i."CANCELLED" = 0')), "an ON condition on the left side drops nothing"
+
+
+def test_a_reading_that_names_a_table_the_query_never_reads_is_refused():
+    """2026-09-16, soru 7: '-- yorum: tanımlı → PRCLIST fiyat listesi ile karşılaştırma' above a
+    statement reading only a CRM shipment table. The reading is shown to the person as the answer's
+    reading; it must be the reading of this query."""
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", model_qualifiers=[{"token": "tanimli", "position": 0}])
+    lying = ("-- yorum: 'tanimli' → PRCLIST fiyat listesi, INVOICE.NETTOTAL ile karşılaştırma\n"
+             f"SELECT i.FICHENO FROM {T} i WHERE i.NETTOTAL IS NOT NULL")
+    out = unmet_obligations(sq, lying, sources={**SOURCES, "LG_411_PRCLIST": {"types": {}, "window": None, "declared": False}})
+    assert any("PRCLIST" in u and "okunmuyor" in u for u in out), out
+    honest = ("-- yorum: 'tanimli' → PRCLIST fiyat listesi, satır fiyatı ile karşılaştırma\n"
+              f"SELECT i.FICHENO FROM {T} i JOIN LG_411_PRCLIST p ON p.CARDREF = i.LOGICALREF WHERE i.NETTOTAL < p.PRICE")
+    out = unmet_obligations(sq, honest, sources={**SOURCES, "LG_411_PRCLIST": {"types": {}, "window": None, "declared": False}})
+    assert not any("okunmuyor" in u for u in out), out
+
+
+def test_a_state_measure_computed_under_a_period_or_type_filter_is_refused():
+    """2026-09-17, soru 12: stock on hand summed inside the sales-only SELECT (TRCODE 7,8 and the year)
+    came out as minus the sales. A state measure must be read somewhere unrestricted."""
+    stock = ResolvedSlot("stok bakiyesi", "METRIC", "CERTIFIED",
+                         mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", formula="SUM(CASE WHEN STLINE.IOCODE IN (1, 2) THEN STLINE.AMOUNT ELSE -STLINE.AMOUNT END)",
+                                         extra={"state_measure": True, "conditions": ["STLINE.LINETYPE = (0)", "STLINE.CANCELLED = (0)", "STLINE.IOCODE IN (1,2,3,4)"]}))
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[stock])
+    bad = ("SELECT s.STOCKREF, SUM(CASE WHEN s.IOCODE IN (1,2) THEN s.AMOUNT ELSE -s.AMOUNT END) AS stok FROM LG_411_01_STLINE s "
+           "WHERE s.CANCELLED = 0 AND s.LINETYPE = 0 AND s.IOCODE IN (1,2,3,4) AND s.TRCODE IN (7, 8) AND s.\"DATE_\" >= '2026-01-01' AND s.\"DATE_\" < '2027-01-01' GROUP BY s.STOCKREF")
+    out = unmet_obligations(sq, bad)
+    assert any("durum ölçüsüdür" in u for u in out), out
+    good = ("SELECT st.STOCKREF, st.stok, sa.satis FROM (SELECT s.STOCKREF, SUM(CASE WHEN s.IOCODE IN (1,2) THEN s.AMOUNT ELSE -s.AMOUNT END) AS stok "
+            "FROM LG_411_01_STLINE s WHERE s.CANCELLED = 0 AND s.LINETYPE = 0 AND s.IOCODE IN (1,2,3,4) GROUP BY s.STOCKREF) st "
+            "JOIN (SELECT s2.STOCKREF, SUM(s2.AMOUNT) AS satis FROM LG_411_01_STLINE s2 WHERE s2.TRCODE IN (7,8) AND s2.\"DATE_\" >= '2026-01-01' AND s2.\"DATE_\" < '2027-01-01' GROUP BY s2.STOCKREF) sa ON sa.STOCKREF = st.STOCKREF")
+    assert not any("durum ölçüsüdür" in u for u in unmet_obligations(sq, good)), unmet_obligations(sq, good)
+
+
+def test_the_balance_reading_of_a_state_measure_is_not_asked_for_the_period():
+    """2026-09-17, soru 12 (devam): the period rule asked every STLINE reading for 2026 — the stock
+    balance reading too — while the state rule forbade exactly that. Both together made a question
+    with a flow and a state measure unanswerable. The balance reading is the state rule's alone."""
+    stock = ResolvedSlot("stok", "METRIC", "CERTIFIED",
+                         mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", formula="SUM(CASE WHEN STLINE.IOCODE IN (1, 2) THEN STLINE.AMOUNT ELSE -STLINE.AMOUNT END)",
+                                         extra={"state_measure": True, "conditions": ["STLINE.LINETYPE = (0)", "STLINE.CANCELLED = (0)", "STLINE.IOCODE IN (1,2,3,4)"]}))
+    sales = ResolvedSlot("satan", "METRIC", "CERTIFIED", mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", column="AMOUNT", extra={"conditions": ["STLINE.TRCODE IN (7,8,9)"]}))
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[sales, stock],
+                       temporal=[TemporalSlot(text="varsayılan", primitive="YEAR", start=date(2026, 1, 1), end=date(2027, 1, 1))],
+                       temporal_binding={"entity": "STLINE", "column": "DATE_", "source": "resolved_metric", "alternatives": []})
+    sql = ("SELECT st.STOCKREF, st.stok, sa.satis FROM (SELECT s.STOCKREF, SUM(CASE WHEN s.IOCODE IN (1,2) THEN s.AMOUNT ELSE -s.AMOUNT END) AS stok "
+           "FROM STLINE s WHERE s.CANCELLED = 0 AND s.LINETYPE = 0 AND s.IOCODE IN (1,2,3,4) GROUP BY s.STOCKREF) st "
+           "JOIN (SELECT s2.STOCKREF, SUM(s2.AMOUNT) AS satis FROM STLINE s2 WHERE s2.TRCODE IN (7,8,9) AND s2.DATE_ >= '2026-01-01' AND s2.DATE_ < '2027-01-01' GROUP BY s2.STOCKREF) sa ON sa.STOCKREF = st.STOCKREF")
+    out = unmet_obligations(sq, sql)
+    assert not any("dönemi" in u for u in out), out
+    assert not any("durum ölçüsüdür" in u for u in out), out
+    undated_sales = sql.replace(" AND s2.DATE_ >= '2026-01-01' AND s2.DATE_ < '2027-01-01'", "")
+    assert any("dönemi" in u for u in unmet_obligations(sq, undated_sales))
+
+
+def test_an_opening_balance_reading_is_not_the_sales_reading_and_needs_no_period():
+    """2026-09-17, soru 12 (devam): the opening stock is the TRCODE 14 transfer rows; the model read them
+    undated and the period rule asked 2026 of them as if they were the sales. Rows the sales measure's
+    own condition excludes are not the measure — the period belongs to the sales reading alone."""
+    sales = ResolvedSlot("satan", "METRIC", "CERTIFIED", mapping=Mapping("", "STLINE", "LG_{n0}_{n1}_STLINE", column="AMOUNT", extra={"conditions": ["STLINE.TRCODE IN (7,8,9)"]}))
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[sales],
+                       temporal=[TemporalSlot(text="varsayılan", primitive="YEAR", start=date(2026, 1, 1), end=date(2027, 1, 1))],
+                       temporal_binding={"entity": "STLINE", "column": "DATE_", "source": "resolved_metric", "alternatives": []})
+    sql = ("SELECT sa.STOCKREF, sa.satis, op.acilis FROM (SELECT s.STOCKREF, SUM(s.AMOUNT) AS satis FROM STLINE s WHERE s.TRCODE IN (7,8,9) "
+           "AND s.DATE_ >= '2026-01-01' AND s.DATE_ < '2027-01-01' GROUP BY s.STOCKREF) sa "
+           "LEFT JOIN (SELECT s2.STOCKREF, SUM(s2.AMOUNT) AS acilis FROM STLINE s2 WHERE s2.TRCODE = 14 GROUP BY s2.STOCKREF) op ON op.STOCKREF = sa.STOCKREF")
+    out = unmet_obligations(sq, sql)
+    assert not any("dönemi" in u for u in out), out
+    same_rows = sql.replace("s2.TRCODE = 14", "s2.TRCODE IN (7,8)")       # sales rows read undated: still refused
+    assert any("dönemi" in u for u in unmet_obligations(sq, same_rows))
+
+
+def test_a_question_word_written_as_a_column_value_is_refused():
+    """2026-09-17, soru 13: "Bir kitabın son üç baskısında …" — 'kitabın' resolved to ITEMS.NAME and the
+    model wrote `i.NAME = 'kitabin'`: a filter on the question's own word, matching nothing."""
+    book = ResolvedSlot("kitabin", "COLUMN", "CERTIFIED", mapping=Mapping("", "ITEMS", "LG_{n0}_ITEMS", column="NAME", operator="COLUMN"))
+    sq = SemanticQuery(question="Bir kitabın son üç baskısında çekilen malzeme miktarları arasında fark var mı?", tenant_id="t", datasource_id="d", slots=[book])
+    bad = "SELECT i.NAME, SUM(s.AMNT) FROM ITEMS i LEFT JOIN STCOMPLN s ON s.MAINCREF = i.LOGICALREF WHERE i.NAME = 'kitabin' GROUP BY i.NAME"
+    out = unmet_obligations(sq, bad)
+    assert any("sorunun kelimesidir" in u for u in out), out
+    good = "SELECT i.CODE, i.NAME, p.LOGICALREF, SUM(s.AMOUNT) FROM ITEMS i JOIN PRODORD p ON p.ITEMREF = i.LOGICALREF JOIN STLINE s ON s.PRODORDERREF = p.LOGICALREF WHERE s.TRCODE = 12 GROUP BY i.CODE, i.NAME, p.LOGICALREF"
+    assert not any("sorunun kelimesidir" in u for u in unmet_obligations(sq, good))
+    real_value = "SELECT i.NAME FROM ITEMS i WHERE i.NAME = 'İYİLİK TİMİ'"      # a value the question could carry: not the slot word
+    assert not any("sorunun kelimesidir" in u for u in unmet_obligations(sq, real_value))
+
+
+def test_the_sources_lg_prefix_does_not_decide_which_entity_was_read():
+    """2026-09-17, soru 14: the deterministic compiler read `[dbo].[LG_411_01_ORFLINE]`, which reads back
+    as ORFLINE, while the certified filter and the period binding name LG_ORFLINE — the gate saw an entity
+    it never found and refused a correct statement on both counts."""
+    pending = ResolvedSlot("bekleyen siparis", "DIMENSION_VALUE", "CERTIFIED",
+                           mapping=Mapping("", "LG_ORFLINE", "LG_{n0}_{n1}_ORFLINE", column="CLOSED", operator="IN", values=["0"],
+                                           extra={"conditions": ["LG_ORFLINE.TRCODE IN (1)", "LG_ORFLINE.CANCELLED IN (0)"]}))
+    count = ResolvedSlot("kayıt sayısı", "METRIC", "COMPOSED", mapping=Mapping("", "LG_ORFLINE", "LG_{n0}_{n1}_ORFLINE", formula="COUNT(DISTINCT LG_ORFLINE.LOGICALREF)"),
+                         explain={"source": "count_cue"})
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[pending, count],
+                       temporal=[TemporalSlot(text="gecen ceyrekte", primitive="LAST_QUARTER", start=date(2026, 4, 1), end=date(2026, 7, 1))],
+                       temporal_binding={"entity": "LG_ORFLINE", "column": "DATE_", "alternatives": []})
+    sql = ("SELECT DATEFROMPARTS(YEAR(LG_ORFLINE.[DATE_]), MONTH(LG_ORFLINE.[DATE_]), 1) AS ay, COUNT(DISTINCT LG_ORFLINE.[LOGICALREF]) AS kayit_sayisi "
+           "FROM [dbo].[LG_411_01_ORFLINE] AS LG_ORFLINE WHERE LG_ORFLINE.[CLOSED] IN (0) AND LG_ORFLINE.[TRCODE] IN (1) AND LG_ORFLINE.[CANCELLED] IN (0) "
+           "AND LG_ORFLINE.[DATE_] >= '2026-04-01' AND LG_ORFLINE.[DATE_] < '2026-07-01' GROUP BY DATEFROMPARTS(YEAR(LG_ORFLINE.[DATE_]), MONTH(LG_ORFLINE.[DATE_]), 1)")
+    out = unmet_obligations(sq, sql)
+    assert out == [], out
+    undated = sql.replace(" AND LG_ORFLINE.[DATE_] >= '2026-04-01' AND LG_ORFLINE.[DATE_] < '2026-07-01'", "")
+    assert any("dönemi" in u for u in unmet_obligations(sq, undated))
+
+
+def test_a_comparison_told_apart_inside_each_union_branch_is_proven():
+    """2026-09-18, soru 27: cash and bank are two tables; each UNION branch carried both months as CASE columns
+    and the gate, looking only at the outer SELECT, refused the statement."""
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[],
+                       temporal=[TemporalSlot(text="bu ay", primitive="THIS_MONTH", start=date(2026, 9, 1), end=date(2026, 10, 1)),
+                                 TemporalSlot(text="gecen aya", primitive="LAST_MONTH", start=date(2026, 8, 1), end=date(2026, 9, 1))])
+    sq.comparison = {"kind": "PERIOD", "current": {"start": "2026-09-01", "end": "2026-10-01"}, "reference": {"start": "2026-08-01", "end": "2026-09-01"},
+                     "entity": None, "dateColumn": None}
+    branch = ("SELECT '{n}' AS kaynak, SUM(CASE WHEN DATE_ >= '2026-08-01' AND DATE_ < '2026-09-01' THEN AMOUNT ELSE 0 END) AS gecen_ay, "
+              "SUM(CASE WHEN DATE_ >= '2026-09-01' AND DATE_ < '2026-10-01' THEN AMOUNT ELSE 0 END) AS bu_ay FROM {t} WHERE CANCELLED = 0")
+    sql = branch.format(n="Kasa", t="LG_KSLINES") + " UNION ALL " + branch.format(n="Banka", t="LG_BNFLINE")
+    out = unmet_obligations(sq, sql)
+    assert not any("karşılaştırma" in u for u in out), out
+    one_month = sql.replace("SUM(CASE WHEN DATE_ >= '2026-09-01' AND DATE_ < '2026-10-01' THEN AMOUNT ELSE 0 END) AS bu_ay", "0 AS bu_ay")
+    assert any("karşılaştırma" in u for u in unmet_obligations(sq, one_month))
+
+
+def test_a_comparison_as_month_rows_over_exactly_the_two_periods_is_proven():
+    """2026-09-18, soru 27: the model summed cash and bank per month (GROUP BY the month of DATE_) over exactly
+    August–September and picked the months apart outside; with no certified measure that is a proof."""
+    sq = SemanticQuery(question="x", tenant_id="t", datasource_id="d", slots=[])
+    sq.comparison = {"kind": "PERIOD", "current": {"start": "2026-09-01", "end": "2026-10-01"}, "reference": {"start": "2026-08-01", "end": "2026-09-01"},
+                     "entity": None, "dateColumn": None}
+    sq.temporal = [TemporalSlot(text="bu ay", primitive="THIS_MONTH", start=date(2026, 9, 1), end=date(2026, 10, 1)),
+                   TemporalSlot(text="gecen aya", primitive="LAST_MONTH", start=date(2026, 8, 1), end=date(2026, 9, 1))]
+    sql = ("WITH k AS (SELECT DATEFROMPARTS(YEAR(DATE_), MONTH(DATE_), 1) AS ay, SUM(AMOUNT) AS giris FROM LG_KSLINES "
+           "WHERE CANCELLED = 0 AND DATE_ >= '2026-08-01' AND DATE_ < '2026-10-01' GROUP BY DATEFROMPARTS(YEAR(DATE_), MONTH(DATE_), 1)) "
+           "SELECT MAX(CASE WHEN ay = '2026-09-01' THEN giris END) AS bu_ay, MAX(CASE WHEN ay = '2026-08-01' THEN giris END) AS gecen_ay FROM k")
+    assert not any("karşılaştırma" in u for u in unmet_obligations(sq, sql)), unmet_obligations(sq, sql)
+    wider = sql.replace("DATE_ >= '2026-08-01'", "DATE_ >= '2026-01-01'")
+    assert any("karşılaştırma" in u for u in unmet_obligations(sq, wider))

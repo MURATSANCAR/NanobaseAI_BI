@@ -299,10 +299,30 @@ class EvidenceEngine:
         return report
 
     # ------------------------------------------------------------------ drift
+    @staticmethod
+    def _pattern_key(pattern: str) -> str:
+        """Tablo kalıbının şemadan bağımsız biçimi: `DBO_X_{n0}_SATIR` ile `X_{n0}_SATIR` aynı tablodur."""
+        key = (pattern or "").strip().upper()
+        return key[4:] if key.startswith("DBO_") else key
+
+    def _profile_for(self, m: Mapping, profiles: dict[str, SchemaProfile]) -> Optional[SchemaProfile]:
+        """Eşlemenin gösterdiği tablonun profili. Önce varlık adıyla, bulunamazsa tablo kalıbıyla aranır.
+
+        Varlık adı tarama kapsamına bağlıdır: aynı tablo bir taramada `SATIR`, sonrakinde `X_SATIR` diye
+        kaydedilebilir. Yalnız ada bakmak, yerinde duran tabloyu "yok" saydırıp sağlıklı kavrama uyarı yazdırıyordu.
+        """
+        prof = profiles.get(m.entity)
+        if prof is not None:
+            return prof
+        key = self._pattern_key(m.table_pattern)
+        if not key:
+            return None
+        return next((p for p in profiles.values() if self._pattern_key(p.table_pattern) == key), None)
+
     def _drift_free(self, m: Mapping, profiles: dict[str, SchemaProfile]) -> bool:
         """Does this mapping still point at something that exists? Read-only: the same three questions
         detect_drift asks, asked in order to withdraw a stale answer rather than to record a new one."""
-        prof = profiles.get(m.entity)
+        prof = self._profile_for(m, profiles)
         if prof is None:
             return False
         if m.column and prof.column(m.column) is None:
@@ -329,8 +349,11 @@ class EvidenceEngine:
                                                   ConceptStatus.CANDIDATE, ConceptStatus.DEPRECATED],
                                           limit=100000):
             maps = self.store.list_mappings(c.id)
-            if maps and all(self._drift_free(m, profiles) for m in maps) and \
-                    any(x.conflict_type == "DRIFT" for x in self.store.list_counter_evidence(c.id)):
+            # Not tek başına da geri çekilir: karşı kanıtı başka bir yol (insan onayı, elle işaretleme)
+            # silmiş olabilir, ama ekranda "tablo yok" yazmaya devam eden not yine yanlıştır.
+            stale = any(x.conflict_type == "DRIFT" for x in self.store.list_counter_evidence(c.id)) or \
+                bool(c.explain.get("schema_drift"))
+            if maps and stale and all(self._drift_free(m, profiles) for m in maps):
                 self.store.clear_counter_evidence(c.id, "DRIFT")
                 # The note the detector left behind blocks the gate on its own — clearing only the
                 # counter-evidence would leave the concept failing for a reason nothing supports.
@@ -340,7 +363,7 @@ class EvidenceEngine:
         for c in self.store.find_concepts(tenant_id, datasource_id, status=ConceptStatus.CERTIFIED, limit=100000):
             human = self.decided_by_a_person(c)
             for m in self.store.list_mappings(c.id):
-                prof = profiles.get(m.entity)
+                prof = self._profile_for(m, profiles)
                 if prof is None:
                     if scoped:
                         continue      # out of scope this run — say nothing rather than decertify

@@ -31,7 +31,7 @@ npm run dev            # http://127.0.0.1:5174/bi/
 | Gömme servisi | 8083 |
 | Meta DB (Postgres) | 5434 |
 
-LLM model takma adı: `nanobaseai-bi-llm` (bkz. `deploy/llm-server/`).
+LLM: yerel GPU Flash-Next `qwen3.8-flash-next` (OpenAI uyumlu; `OPENAI_API_BASE=http://127.0.0.1:18881/v1`).
 
 ## Yapı
 

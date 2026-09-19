@@ -42,6 +42,12 @@ def _dt(v: Any) -> datetime:
     return utcnow()
 
 
+def _iso(v: Any) -> Optional[str]:
+    if v is None:
+        return None
+    return _dt(v).isoformat()
+
+
 def _json(v: Any) -> Any:
     """SQLite returns JSON columns as str under some drivers; normalise."""
     if isinstance(v, str):
@@ -50,6 +56,26 @@ def _json(v: Any) -> Any:
         except Exception:  # noqa: BLE001
             return v
     return v
+
+
+#: Tam sonuç kaydın içinde durur (kullanıcı kararı: her promtun tüm satırları). Motorun satır tavanı
+#: (500) zaten kesiyor; bu yalnız kaçak bir devasa satırın meta veritabanını şişirmesini önler. Aşınca
+#: satırlar düşürülür ama başlık ve sayaç kalır (`_truncated_store` işareti inceleme ekranında görünür).
+_MAX_RESULT_CHARS = 4_000_000
+
+
+def _cap_result(result: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
+    if not result:
+        return None
+    try:
+        if len(json.dumps(result, ensure_ascii=False, default=str)) <= _MAX_RESULT_CHARS:
+            return result
+    except Exception:  # noqa: BLE001
+        return None
+    trimmed = dict(result)
+    trimmed["records"] = []
+    trimmed["_truncated_store"] = True
+    return trimmed
 
 
 def open_store(dsn: str, *, create: bool = True) -> "CatalogStore":
@@ -80,6 +106,30 @@ class CatalogStore:
     # ------------------------------------------------------------------ infra
     def create_all(self) -> None:
         S.create_all(self.engine)
+        self._add_missing_columns()
+
+    def _add_missing_columns(self) -> None:
+        """Add columns that the table definition has gained but an existing table lacks.
+
+        `metadata.create_all` creates missing tables; it never alters one that already exists. A
+        deployment upgraded in place keeps its old `sl_query_log`, so a new column (the prompt
+        tracker's `username`, `result_json`, `review_flag`, …) would be absent and every insert
+        would fail. This walks each table's declared columns, compares against what the database
+        reports, and issues `ALTER TABLE ADD COLUMN` for the difference — dialect-agnostic, so it
+        is a no-op on a freshly created schema (SQLite tests included).
+        """
+        insp = sa.inspect(self.engine)
+        existing_tables = set(insp.get_table_names())
+        for table in S.metadata.sorted_tables:
+            if table.name not in existing_tables:
+                continue
+            have = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in have:
+                    continue
+                ddl_type = col.type.compile(dialect=self.engine.dialect)
+                with self.engine.begin() as conn:
+                    conn.execute(sa.text(f'ALTER TABLE {table.name} ADD COLUMN {col.name} {ddl_type}'))
 
     def _rows(self, stmt) -> list[dict[str, Any]]:
         with self.engine.connect() as conn:
@@ -273,6 +323,30 @@ class CatalogStore:
             syns.add(key)
             self.update_concept(concept_id, synonyms=sorted(syns))
 
+    def rename_concept(self, concept_id: str, term: str) -> Optional[Concept]:
+        """Give the concept another of its own names. The new name leaves the synonyms; the old one does
+        not join them — it is being taken away, which is why the concept is renamed."""
+        c = self.get_concept(concept_id)
+        norm = normalize_term(term)
+        if c is None or not norm or norm == c.normalized_term:
+            return c
+        with self._lock:
+            taken = {x.sense_id for x in self.find_concepts(c.tenant_id, c.datasource_id, normalized_term=norm, semantic_type=c.semantic_type)}
+            sense = next(n for n in range(1, len(taken) + 2) if n not in taken)
+            with self.engine.begin() as conn:
+                conn.execute(S.sl_concept.update().where(S.sl_concept.c.id == concept_id).values(
+                    term=term, normalized_term=norm, sense_id=sense, version=c.version + 1, updated_at=utcnow(),
+                    synonyms_json=sorted(x for x in set(c.synonyms) if x != norm and normalize_term(x) != norm)))
+        self._invalidate(c.tenant_id, c.datasource_id)
+        return self.get_concept(concept_id)
+
+    def remove_evidence(self, concept_id: str, source_id: str) -> None:
+        c = self.get_concept(concept_id)
+        with self.engine.begin() as conn:
+            conn.execute(S.sl_evidence.delete().where(S.sl_evidence.c.concept_id == concept_id, S.sl_evidence.c.source_id == source_id))
+        if c:
+            self._invalidate(c.tenant_id, c.datasource_id)
+
     def delete_concept(self, concept_id: str) -> None:
         c = self.get_concept(concept_id)
         with self.engine.begin() as conn:
@@ -457,7 +531,24 @@ class CatalogStore:
 
     # ------------------------------------------------------------------ versions
     def publish_runtime_snapshot(self, tenant_id, datasource_id, index):
-        """Persist the exact certified index supplied to a resolver, not just its count."""
+        """Persist the exact certified index supplied to a resolver, not just its count.
+
+        The index is built once per catalog version and handed to every question as the same object.
+        Hashing and comparing all of it on every question cost two seconds a question once the
+        catalog held three thousand certified concepts; the same object has the same answer, so it
+        is kept with the index it was computed for (a reference, so the identity cannot be reused).
+        """
+        cache = getattr(self, "_snapshot_cache", None)
+        if cache is None:
+            cache = self._snapshot_cache = {}
+        held = cache.get((tenant_id, datasource_id))
+        if held is not None and held[0] is index:
+            return held[1], held[2]
+        version, digest = self._publish_runtime_snapshot(tenant_id, datasource_id, index)
+        cache[(tenant_id, datasource_id)] = (index, version, digest)
+        return version, digest
+
+    def _publish_runtime_snapshot(self, tenant_id, datasource_id, index):
         from dataclasses import asdict
         import hashlib
         concepts = {}
@@ -539,8 +630,12 @@ class CatalogStore:
         last_seen: dict[tuple[str, str], Any] = {}
         for r in self._rows(stmt):
             resolved = _json(r["resolved_json"]) or {}
-            for kind, key in (("undefined", "unresolved"), ("qualifier", "unhandled")):
-                for term in resolved.get(key) or []:
+            # A word the model was left to interpret is still a word nobody defined: it stays on the
+            # work queue beside the ones that were refused, so defining it remains somebody's job.
+            left_to_model = [m.get("token") for m in (resolved.get("modelQualifiers") or []) if isinstance(m, dict)]
+            for kind, terms in (("undefined", resolved.get("unresolved") or []),
+                                ("qualifier", list(resolved.get("unhandled") or []) + left_to_model)):
+                for term in terms:
                     k = (kind, str(term))
                     counts[k] = counts.get(k, 0) + 1
                     if len(examples.setdefault(k, [])) < 3:
@@ -570,6 +665,12 @@ class CatalogStore:
         latency_ms: Optional[int] = None,
         error: Optional[str] = None,
         result_fingerprint: Optional[str] = None,
+        username: Optional[str] = None,
+        thread_id: Optional[str] = None,
+        answer_type: Optional[str] = None,
+        answer_summary: Optional[str] = None,
+        result_json: Optional[dict[str, Any]] = None,
+        gate_json: Optional[dict[str, Any]] = None,
     ) -> str:
         qid = new_id("q")
         with self.engine.begin() as conn:
@@ -589,6 +690,12 @@ class CatalogStore:
                     latency_ms=latency_ms,
                     error=error,
                     result_fingerprint=result_fingerprint,
+                    username=(username or None),
+                    thread_id=thread_id,
+                    answer_type=answer_type,
+                    answer_summary=answer_summary,
+                    result_json=_cap_result(result_json),
+                    gate_json=(gate_json or None),
                     created_at=utcnow(),
                 )
             )
@@ -633,6 +740,132 @@ class CatalogStore:
             det = conn.execute(base.where(S.sl_query_log.c.compiler == "deterministic")).scalar() or 0
         return {"total": int(total), "validated": int(validated), "deterministic": int(det)}
 
+    # ------------------------------------------------------------- promt izleyici
+    #: İnceleme ekranı "başarısız" sayarken bunları ayrı tutar: kullanıcı SQL'siz/verisiz bir cevap
+    #: aldı demektir (soru anlaşılmadı, kapı reddetti ya da kaynak düştü).
+    _NON_ANSWER_TYPES = (
+        "CLARIFICATION", "INCOMPLETE_ANSWER", "DATA_UNAVAILABLE", "NON_SQL_QUERY",
+        "SQL_INVALID", "DATA_SOURCE_UNAVAILABLE",
+    )
+
+    def _query_log_filter(self, tenant_id: str, datasource_id: str, *, only: Optional[str],
+                          search: Optional[str], username: Optional[str], since_days: Optional[int]):
+        conds = [S.sl_query_log.c.tenant_id == tenant_id, S.sl_query_log.c.datasource_id == datasource_id]
+        if since_days:
+            conds.append(S.sl_query_log.c.created_at >= utcnow() - timedelta(days=int(since_days)))
+        if username:
+            conds.append(sa.func.lower(S.sl_query_log.c.username) == username.strip().lower())
+        if search:
+            like = f"%{search.strip().lower()}%"
+            conds.append(sa.or_(
+                sa.func.lower(S.sl_query_log.c.question).like(like),
+                sa.func.lower(sa.func.coalesce(S.sl_query_log.c.sql_text, "")).like(like),
+            ))
+        if only == "failed":
+            conds.append(sa.or_(S.sl_query_log.c.error.isnot(None),
+                                S.sl_query_log.c.answer_type.in_(self._NON_ANSWER_TYPES)))
+        elif only == "answered":
+            conds.append(sa.and_(S.sl_query_log.c.executed.is_(True), S.sl_query_log.c.error.is_(None)))
+        elif only == "clarification":
+            conds.append(S.sl_query_log.c.answer_type == "CLARIFICATION")
+        elif only == "todo":
+            conds.append(S.sl_query_log.c.review_flag == "todo")
+        elif only == "reviewed":
+            conds.append(S.sl_query_log.c.review_flag.isnot(None))
+        elif only == "validated":
+            conds.append(S.sl_query_log.c.validated.is_(True))
+        return conds
+
+    def list_query_log(self, tenant_id: str, datasource_id: str, *, limit: int = 60, offset: int = 0,
+                       only: Optional[str] = None, search: Optional[str] = None,
+                       username: Optional[str] = None, since_days: Optional[int] = None) -> dict[str, Any]:
+        """Prompt tracker list view — light rows (no result/resolved payload), newest first."""
+        conds = self._query_log_filter(tenant_id, datasource_id, only=only, search=search,
+                                       username=username, since_days=since_days)
+        cols = [c for c in S.sl_query_log.c if c.name not in ("result_json", "resolved_json", "gate_json")]
+        limit = max(1, min(int(limit), 200))
+        stmt = (sa.select(*cols).where(*conds)
+                .order_by(S.sl_query_log.c.created_at.desc())
+                .limit(limit + 1).offset(max(0, int(offset))))
+        rows = self._rows(stmt)
+        more = len(rows) > limit
+        return {"items": [self._query_log_light(r) for r in rows[:limit]], "hasMore": more,
+                "nextOffset": max(0, int(offset)) + limit if more else None}
+
+    def get_query_log(self, tenant_id: str, datasource_id: str, qid: str) -> Optional[dict[str, Any]]:
+        """One prompt, everything: SQL, full result rows, semantic resolution, gate decisions."""
+        rows = self._rows(sa.select(S.sl_query_log).where(
+            S.sl_query_log.c.id == qid,
+            S.sl_query_log.c.tenant_id == tenant_id,
+            S.sl_query_log.c.datasource_id == datasource_id))
+        if not rows:
+            return None
+        r = rows[0]
+        out = self._query_log_light(r)
+        out["resolved"] = _json(r.get("resolved_json")) or {}
+        out["result"] = _json(r.get("result_json"))
+        out["gate"] = _json(r.get("gate_json"))
+        return out
+
+    def mark_query_log(self, tenant_id: str, datasource_id: str, qid: str, *, flag: Optional[str],
+                       note: Optional[str], reviewed_by: str) -> Optional[dict[str, Any]]:
+        values: dict[str, Any] = {"reviewed_by": reviewed_by, "reviewed_at": utcnow()}
+        if flag is not None:
+            values["review_flag"] = (flag or None)
+        if note is not None:
+            values["review_note"] = (note.strip() or None)
+        with self.engine.begin() as conn:
+            res = conn.execute(S.sl_query_log.update().where(
+                S.sl_query_log.c.id == qid,
+                S.sl_query_log.c.tenant_id == tenant_id,
+                S.sl_query_log.c.datasource_id == datasource_id).values(**values))
+        if not res.rowcount:
+            return None
+        return self.get_query_log(tenant_id, datasource_id, qid)
+
+    def query_log_overview(self, tenant_id: str, datasource_id: str, *, since_days: int = 30) -> dict[str, Any]:
+        """The numbers the review starts from: how many prompts, how many failed, what fell over."""
+        base_conds = [S.sl_query_log.c.tenant_id == tenant_id,
+                      S.sl_query_log.c.datasource_id == datasource_id,
+                      S.sl_query_log.c.created_at >= utcnow() - timedelta(days=int(since_days))]
+        with self.engine.connect() as conn:
+            total = conn.execute(sa.select(sa.func.count()).select_from(S.sl_query_log).where(*base_conds)).scalar() or 0
+            answered = conn.execute(sa.select(sa.func.count()).select_from(S.sl_query_log).where(
+                *base_conds, S.sl_query_log.c.executed.is_(True), S.sl_query_log.c.error.is_(None))).scalar() or 0
+            todo = conn.execute(sa.select(sa.func.count()).select_from(S.sl_query_log).where(
+                *base_conds, S.sl_query_log.c.review_flag == "todo")).scalar() or 0
+            by_type = {str(k or "—"): int(v) for k, v in conn.execute(
+                sa.select(S.sl_query_log.c.answer_type, sa.func.count()).where(*base_conds)
+                .group_by(S.sl_query_log.c.answer_type)).all()}
+            by_compiler = {str(k or "—"): int(v) for k, v in conn.execute(
+                sa.select(S.sl_query_log.c.compiler, sa.func.count()).where(*base_conds)
+                .group_by(S.sl_query_log.c.compiler)).all()}
+            top_fail = [{"question": q, "count": int(n)} for q, n in conn.execute(
+                sa.select(S.sl_query_log.c.question, sa.func.count().label("n")).where(
+                    *base_conds, sa.or_(S.sl_query_log.c.error.isnot(None),
+                                        S.sl_query_log.c.answer_type.in_(self._NON_ANSWER_TYPES)))
+                .group_by(S.sl_query_log.c.question).order_by(sa.desc("n")).limit(15)).all()]
+        return {"sinceDays": int(since_days), "total": int(total), "answered": int(answered),
+                "failed": int(total) - int(answered), "todo": int(todo),
+                "byType": by_type, "byCompiler": by_compiler,
+                "unresolvedTerms": list(self.list_unresolved_terms(tenant_id, datasource_id).items())[:20],
+                "topFailing": top_fail}
+
+    @staticmethod
+    def _query_log_light(r: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": r["id"], "question": r["question"], "username": r.get("username"),
+            "threadId": r.get("thread_id"), "sql": r.get("sql_text"),
+            "compiler": r.get("compiler"), "answerType": r.get("answer_type"),
+            "answerSummary": r.get("answer_summary"), "executed": bool(r.get("executed")),
+            "rowCount": r.get("row_count"), "latencyMs": r.get("latency_ms"),
+            "error": r.get("error"), "validated": r.get("validated"),
+            "catalogVersion": r.get("catalog_version"),
+            "reviewFlag": r.get("review_flag"), "reviewNote": r.get("review_note"),
+            "reviewedBy": r.get("reviewed_by"),
+            "reviewedAt": _iso(r.get("reviewed_at")), "createdAt": _iso(r.get("created_at")),
+        }
+
     # ------------------------------------------------------------------ profiles
     def upsert_profile(self, p: SchemaProfile) -> None:
         values = {
@@ -653,12 +886,21 @@ class CatalogStore:
         }
         with self._lock, self.engine.begin() as conn:
             row = conn.execute(
-                sa.select(S.sl_schema_profile.c.id).where(
+                sa.select(S.sl_schema_profile.c.id, S.sl_schema_profile.c.relationships_json).where(
                     S.sl_schema_profile.c.datasource_id == p.datasource_id,
                     S.sl_schema_profile.c.table_name == p.table_name,
                 )
             ).first()
             if row:
+                # A table scan sees one database and rewrites the relationships it can see. The links to
+                # the other database were measured by a different job and carry their own evidence; a
+                # nightly rescan of a CRM table must not erase them.
+                kept = [r for r in (_json(row[1]) or []) if isinstance(r, dict) and r.get("cross_source")]
+                mine = {(str(r.get("column", "")).upper(), str(r.get("ref_entity", "")).upper(), str(r.get("ref_column", "")).upper())
+                        for r in values["relationships_json"] if isinstance(r, dict)}
+                values["relationships_json"] = values["relationships_json"] + [
+                    r for r in kept
+                    if (str(r.get("column", "")).upper(), str(r.get("ref_entity", "")).upper(), str(r.get("ref_column", "")).upper()) not in mine]
                 conn.execute(S.sl_schema_profile.update().where(S.sl_schema_profile.c.id == row[0]).values(**values))
             else:
                 conn.execute(S.sl_schema_profile.insert().values(id=new_id("prof"), **values))
@@ -874,6 +1116,31 @@ class CatalogStore:
             return {}
         return out
 
+    def entity_terms(self, tenant_id: str, datasource_id: str) -> dict[str, set[str]]:
+        """entity → the certified words the business calls it by ("müşteri" → CLCARD).
+
+        Logo's table descriptions are Logo's ("Cari hesap kartları"); what people say is in the
+        vocabulary. The critic needs the latter to tell a count *of* customers from a count *per*
+        customer, so it is handed this rather than reading descriptions alone."""
+        out: dict[str, set[str]] = {}
+        try:
+            for term, pairs in self.certified_index(tenant_id, datasource_id).items():
+                for _, maps in pairs:
+                    for m in maps:
+                        if m.entity and not m.column and not m.formula:
+                            out.setdefault(m.entity.upper(), set()).add(term)
+            # The everyday names the table itself goes by ("potansiyel müşteri" → ACCOUNTBASE):
+            # approved, table-level vocabulary rows.
+            t = S.sl_vocabulary
+            for r in self._rows(sa.select(t.c.entity, t.c.term).where(
+                    t.c.tenant_id == tenant_id, t.c.datasource_id == datasource_id,
+                    t.c.status == "APPROVED", t.c.role == "ENTITY")):
+                if r["entity"] and r["term"]:
+                    out.setdefault(str(r["entity"]).upper(), set()).add(str(r["term"]))
+        except Exception:  # noqa: BLE001 — a catalog that cannot be read must not stop the runtime
+            return out
+        return out
+
     def certified_index(self, tenant_id: str, datasource_id: str) -> dict[str, list[tuple[Concept, list[Mapping]]]]:
         """normalized term (and synonyms) → [(concept, mappings)] for CERTIFIED concepts only.
         Cached per catalog version; the resolver never sees CANDIDATE rows."""
@@ -894,9 +1161,11 @@ class CatalogStore:
                     by_concept.setdefault(str(r["concept_id"]), []).append(self._row_to_mapping(r))
         for c in concepts:
             maps = by_concept.get(c.id, [])
-            for k in [c.normalized_term, *c.synonyms]:
-                if k:
-                    index.setdefault(k, []).append((c, maps))
+            # Synonyms are looked up the way terms are: normalised. One written by a person ("çek",
+            # "müşteri grubu") was stored as typed and never matched the normalised word of a question.
+            keys = [c.normalized_term, *c.synonyms, *(normalize_term(x) for x in c.synonyms if x)]
+            for k in dict.fromkeys(k for k in keys if k):
+                index.setdefault(k, []).append((c, maps))
         self._index_cache[key] = (ver, index)
         return index
 

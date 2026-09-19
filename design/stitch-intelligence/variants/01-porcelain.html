@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NanobaseAI BI · Genel Bakış (Porselen / Kobalt)</title>
+<!-- Google Fonts: Manrope & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&amp;family=Manrope:wght@300;400;500;600;700;800&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Manrope', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            porcelain: '#F7F9FD',
+            ink: '#0F172A',
+            cobalt: {
+              50: '#EEF3FD',
+              100: '#E0EBFC',
+              200: '#C2D7FA',
+              300: '#94BCF6',
+              400: '#5E97F1',
+              500: '#2855E8',
+              600: '#1D42C7',
+              700: '#1733A3',
+            },
+            slate: {
+              border: '#E2E8F0',
+              subtle: '#F1F5F9',
+              muted: '#64748B',
+            }
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    body {
+      background-color: #F7F9FD;
+      color: #0F172A;
+      font-family: 'Manrope', sans-serif;
+      overflow-x: hidden;
+    }
+    /* Crisp light scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #F7F9FD;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+    .text-balance {
+      text-wrap: balance;
+    }
+  </style>
+<style>input{min-width:0}input[type="text"]{border:0;box-shadow:none;background:transparent}input:focus-visible{outline:2px solid #8aa4d9;outline-offset:2px}#brand-motion-slot img{max-width:100%}@media(max-width:640px){#brand-motion-slot{width:240px!important}}</style></head>
+<body class="min-h-screen bg-[#F7F9FD] text-slate-900 antialiased selection:bg-cobalt-100 selection:text-cobalt-600">
+<div class="flex min-h-screen w-full">
+<!-- ================================================================= -->
+<!-- LEFT NAVIGATION (Clean White Porcelain Sidebar, 220px Fixed) -->
+<!-- ================================================================= -->
+<aside class="w-[220px] flex-shrink-0 bg-white border-r border-slate-200 flex flex-col justify-between py-5 px-3 select-none shadow-[1px_0_4px_rgba(15,23,42,0.02)]">
+<!-- Top Brand & Workspace Switcher -->
+<div class="space-y-6">
+<!-- NanobaseAI Brandmark -->
+<div class="px-2.5 flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-cobalt-50 border border-cobalt-200/80 flex items-center justify-center relative shadow-[0_2px_8px_rgba(40,85,232,0.12)]">
+<!-- Geometric Nano Diamond Core in Cobalt -->
+<svg class="w-4 h-4 text-cobalt-500" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.3" viewbox="0 0 24 24">
+<polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+<polyline points="2 17 12 22 22 17"></polyline>
+<polyline points="2 12 12 17 22 12"></polyline>
+</svg>
+</div>
+<div class="flex flex-col">
+<div class="flex items-center gap-1">
+<span class="font-extrabold text-sm tracking-tight text-slate-900">Nanobase<span class="text-cobalt-500 font-extrabold">AI</span></span>
+</div>
+<span class="text-[10px] uppercase font-mono tracking-widest text-slate-400 font-medium">BI Intelligence</span>
+</div>
+</div>
+<!-- Workspace Switcher -->
+<div class="px-1">
+<button class="w-full flex items-center justify-between p-2 rounded-lg bg-[#F8FAFC] hover:bg-cobalt-50/60 border border-slate-200 transition-colors group text-left">
+<div class="flex items-center gap-2 overflow-hidden">
+<div class="w-5 h-5 rounded bg-cobalt-500 text-white flex items-center justify-center text-[10px] font-mono font-bold shadow-sm">
+                TR
+              </div>
+<div class="truncate">
+<p class="text-[9px] text-slate-400 uppercase tracking-wider font-semibold leading-none">Çalışma Alanı</p>
+<p class="text-xs text-slate-800 font-semibold truncate mt-0.5">Holding Strateji</p>
+</div>
+</div>
+<svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 transition-colors flex-shrink-0" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M8 9l4-4 4 4m0 6l-4 4-4-4" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</button>
+</div>
+<!-- Primary Navigation Menu -->
+<div class="space-y-1">
+<p class="px-2.5 text-[10px] font-mono uppercase tracking-widest text-slate-400 font-semibold mb-2">Genel</p>
+<!-- Genel Bakış (Active Cobalt Pill) -->
+<a class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-semibold bg-cobalt-500 text-white shadow-[0_2px_10px_rgba(40,85,232,0.25)]" href="#">
+<svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<rect height="7" rx="1.5" width="7" x="3" y="3"></rect>
+<rect height="7" rx="1.5" width="7" x="14" y="3"></rect>
+<rect height="7" rx="1.5" width="7" x="14" y="14"></rect>
+<rect height="7" rx="1.5" width="7" x="3" y="14"></rect>
+</svg>
+<span>Genel Bakış</span>
+</a>
+<!-- Verine Sor -->
+<a class="flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors group" href="#">
+<div class="flex items-center gap-2.5">
+<svg class="w-4 h-4 text-slate-400 group-hover:text-cobalt-500 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+<circle cx="9" cy="10" fill="currentColor" r="1"></circle>
+<circle cx="12" cy="10" fill="currentColor" r="1"></circle>
+<circle cx="15" cy="10" fill="currentColor" r="1"></circle>
+</svg>
+<span>Verine Sor</span>
+</div>
+<span class="text-[9px] font-mono px-1.5 py-0.5 rounded bg-cobalt-50 text-cobalt-600 border border-cobalt-200/80 font-bold">AI</span>
+</a>
+<!-- Panolarım -->
+<a class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors group" href="#">
+<svg class="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<rect height="18" rx="2" width="18" x="3" y="3"></rect>
+<path d="M3 9h18"></path>
+<path d="M9 21V9"></path>
+</svg>
+<span>Panolarım</span>
+</a>
+<!-- Bütçe -->
+<a class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors group" href="#">
+<svg class="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
+</svg>
+<span>Bütçe</span>
+</a>
+</div>
+<!-- Secondary Navigation -->
+<div class="space-y-1 pt-2">
+<p class="px-2.5 text-[10px] font-mono uppercase tracking-widest text-slate-400 font-semibold mb-2">Analiz &amp; Otomasyon</p>
+<a class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors group" href="#">
+<svg class="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<polyline points="4 7 4 4 20 4 20 7"></polyline>
+<line x1="9" x2="15" y1="20" y2="20"></line>
+<line x1="12" x2="12" y1="4" y2="20"></line>
+</svg>
+<span>Kayıtlı Sorgular</span>
+</a>
+<a class="flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors group" href="#">
+<svg class="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<rect height="18" rx="2" ry="2" width="18" x="3" y="4"></rect>
+<line x1="16" x2="16" y1="2" y2="6"></line>
+<line x1="8" x2="8" y1="2" y2="6"></line>
+<line x1="3" x2="21" y1="10" y2="10"></line>
+</svg>
+<span>Rapor Takvimi</span>
+</a>
+<a class="flex items-center justify-between px-2.5 py-2 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors group" href="#">
+<div class="flex items-center gap-2.5">
+<svg class="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+<path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+</svg>
+<span>Uyarılar</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white"></span>
+</a>
+</div>
+</div>
+<!-- Bottom Profile & Status -->
+<div class="space-y-3 pt-4 border-t border-slate-200">
+<a class="flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors group" href="#">
+<div class="flex items-center gap-2.5">
+<svg class="w-4 h-4 text-slate-400 group-hover:text-slate-700 transition-colors" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<ellipse cx="12" cy="5" rx="9" ry="3"></ellipse>
+<path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path>
+<path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path>
+</svg>
+<span>Veri Kaynakları</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-emerald-500" title="3 kaynak aktif"></span>
+</a>
+<!-- User Profile Minimal Badge -->
+<div class="pt-1">
+<div class="p-2 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-full bg-cobalt-500 text-white flex items-center justify-center text-xs font-bold shadow-sm flex-shrink-0">
+              EB
+            </div>
+<div class="overflow-hidden leading-tight">
+<p class="text-xs font-bold text-slate-900 truncate">Emre Berk</p>
+<p class="text-[10px] text-slate-500 font-mono truncate">CFO · Yönetici</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- ================================================================= -->
+<!-- MAIN WORKSPACE CONTENT AREA (Porcelain background) -->
+<!-- ================================================================= -->
+<main class="flex-1 flex flex-col min-w-0 bg-[#F7F9FD] overflow-y-auto">
+<!-- Top Sticky Utility Header -->
+<header class="h-14 border-b border-slate-200 px-8 flex items-center justify-between bg-white/90 backdrop-blur-md sticky top-0 z-30 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
+<!-- Breadcrumbs & Status Indicator -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 text-xs text-slate-500">
+<span class="hover:text-slate-700 cursor-pointer transition-colors">Çalışma Alanı</span>
+<span class="text-slate-400">/</span>
+<span class="text-slate-900 font-bold">Genel Bakış</span>
+</div>
+<div class="h-3.5 w-[1px] bg-slate-200"></div>
+<!-- Discrete preview badge with blue dot -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-cobalt-50 border border-cobalt-100 text-[11px] font-mono text-cobalt-700 font-medium">
+<span class="w-1.5 h-1.5 rounded-full bg-cobalt-500"></span>
+<span>Tasarım Önizlemesi · Örnek Veriler</span>
+</div>
+</div>
+<!-- Right Header Utilities: Search, Notifications, Sync Status -->
+<div class="flex items-center gap-3">
+<!-- Quick Search Bar -->
+<div class="relative w-64">
+<input class="w-full bg-[#F8FAFC] border border-slate-200 rounded-lg py-1.5 pl-8 pr-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-cobalt-500 focus:ring-2 focus:ring-cobalt-100 transition-all font-sans" placeholder="Rapor veya metrik ara (⌘K)..." type="text"/>
+<svg class="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-2.5" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+</div>
+<!-- Notification Bell -->
+<button class="w-8 h-8 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-cobalt-600 hover:border-cobalt-200 flex items-center justify-center transition-colors relative shadow-sm" title="Bildirimler">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" viewbox="0 0 24 24">
+<path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path>
+</svg>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-cobalt-500 rounded-full"></span>
+</button>
+<!-- Refresh timestamp -->
+<div class="hidden lg:flex items-center gap-1.5 text-[11px] font-mono text-slate-400 pl-2">
+<span>Önizleme</span>
+</div>
+</div>
+</header>
+<!-- Scrollable Main View Container -->
+<div class="p-8 max-w-[1360px] w-full mx-auto space-y-7">
+<!-- ============================================================= -->
+<!-- HERO GREETING & AI COMPOSER HERO SECTION (Crisp White Card) -->
+<!-- ============================================================= -->
+<section class="relative rounded-2xl bg-white border border-slate-200 p-8 overflow-hidden shadow-[0_4px_24px_rgba(15,23,42,0.04)]">
+<div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+<!-- Left Hero Content -->
+<div class="flex-1 z-10">
+<div class="flex items-center gap-2 mb-2">
+<span class="inline-block w-2 h-2 rounded-full bg-cobalt-500 shadow-[0_0_8px_rgba(40,85,232,0.4)]"></span>
+<span class="text-xs font-mono tracking-wider uppercase text-cobalt-700 font-semibold">Yönetim Bilgi Sistemi · Q2 Raporu</span>
+</div>
+<h1 class="text-3xl lg:text-[34px] font-extrabold tracking-tight text-slate-900 leading-tight">
+                Veriniz, net bir bakışta.
+              </h1>
+<p class="text-slate-600 text-sm mt-1.5 font-normal tracking-wide max-w-2xl">
+                Verinizi anlayın, anomalileri keşfedin ve bir sonraki stratejik adımı güvenle atın.
+              </p>
+<!-- Prominent AI Natural Language Question Composer -->
+<div class="mt-6 max-w-3xl">
+<div class="relative flex items-center rounded-xl bg-[#F8FAFC] border border-slate-200 p-1.5 shadow-sm focus-within:border-cobalt-500 focus-within:ring-2 focus-within:ring-cobalt-100 transition-all">
+<!-- AI Sparkle Icon -->
+<div class="w-10 h-10 rounded-lg bg-cobalt-50 text-cobalt-500 flex items-center justify-center flex-shrink-0 ml-1 border border-cobalt-100">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 3c0 4.5 3.5 8 8 8-4.5 0-8 3.5-8 8 0-4.5-3.5-8-8-8 4.5 0 8-3.5 8-8z"></path>
+</svg>
+</div>
+<!-- Input text in Turkish -->
+<input class="flex-1 bg-transparent px-3.5 py-2 text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none" type="text" value="Bu ay işimiz nasıl gidiyor?"/>
+<!-- Send Action Button in Cobalt -->
+<button class="px-4 py-2.5 rounded-lg bg-cobalt-500 hover:bg-cobalt-600 text-white font-semibold text-xs flex items-center gap-2 transition-all shadow-[0_2px_10px_rgba(40,85,232,0.25)] hover:shadow-[0_4px_14px_rgba(40,85,232,0.35)] flex-shrink-0">
+<span>Soruyu Yanıtla</span>
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewbox="0 0 24 24">
+<line x1="5" x2="19" y1="12" y2="12"></line>
+<polyline points="12 5 19 12 12 19"></polyline>
+</svg>
+</button>
+</div>
+<!-- Example Question Chips -->
+<div class="flex flex-wrap items-center gap-2 mt-3 pl-1">
+<span class="text-[11px] font-mono text-slate-400 font-medium">Örnek sorular:</span>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white hover:bg-cobalt-50 border border-slate-200 hover:border-cobalt-200 text-xs text-slate-700 font-medium transition-colors shadow-sm">
+<span class="text-cobalt-500 text-[11px]">✦</span>
+<span>Satışları karşılaştır</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white hover:bg-cobalt-50 border border-slate-200 hover:border-cobalt-200 text-xs text-slate-700 font-medium transition-colors shadow-sm">
+<span class="text-cobalt-500 text-[11px]">✦</span>
+<span>Bütçe sapmalarını göster</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white hover:bg-cobalt-50 border border-slate-200 hover:border-cobalt-200 text-xs text-slate-700 font-medium transition-colors shadow-sm">
+<span class="text-cobalt-500 text-[11px]">✦</span>
+<span>En iyi müşteriler</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Adjacent 160x140 Brand Motion Slot -->
+<figure id="brand-motion-slot" aria-label="ZEKİ AI" style="width:280px;max-width:100%;height:auto;flex-shrink:0;margin:0;overflow:hidden;border-radius:18px;background:#f7efe4;border:1px solid #e8dfd3;box-shadow:0 8px 24px #6b594d0a"><img src="assets/zeki-ai.gif" alt="ZEKİ AI — Timaş Yayın Grubu" width="960" height="600" style="display:block;width:100%;height:auto;object-fit:contain"></figure>
+</div>
+</section>
+<!-- ============================================================= -->
+<!-- FOUR UNDERSTATED HORIZONTAL KPI CARDS (Crisp White + Pale Blue) -->
+<!-- ============================================================= -->
+<section class="rounded-xl bg-white border border-slate-200 px-6 py-5 shadow-sm">
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 divide-y md:divide-y-0 md:divide-x divide-slate-100">
+<!-- KPI 1: Net Satış -->
+<div class="py-3 md:py-0 md:px-5 first:pl-0">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-xs font-semibold text-slate-500 tracking-wide">Net Satış</span>
+<span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
+<svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+                  +%18,4
+                </span>
+</div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-2xl lg:text-[28px] font-extrabold tracking-tight text-slate-900 font-sans">₺12,8</span>
+<span class="text-sm font-bold text-slate-500">Mn</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-1">
+<span>Geçen yıl: ₺10,8 Mn</span>
+<span class="text-slate-400">· Örnek veri</span>
+</div>
+</div>
+<!-- KPI 2: Brüt Kâr -->
+<div class="py-3 md:py-0 md:px-5">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-xs font-semibold text-slate-500 tracking-wide">Brüt Kâr</span>
+<span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
+<svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+                  +%12,1
+                </span>
+</div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-2xl lg:text-[28px] font-extrabold tracking-tight text-slate-900 font-sans">₺4,2</span>
+<span class="text-sm font-bold text-slate-500">Mn</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-1">
+<span>Marj: %32,8</span>
+<span class="text-slate-400">· Örnek veri</span>
+</div>
+</div>
+<!-- KPI 3: Sipariş -->
+<div class="py-3 md:py-0 md:px-5">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-xs font-semibold text-slate-500 tracking-wide">Sipariş Adedi</span>
+<span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-emerald-700 bg-emerald-50 border border-emerald-200/60 px-1.5 py-0.5 rounded">
+<svg class="w-3 h-3 text-emerald-600" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M5 10l7-7m0 0l7 7m-7-7v18" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"></path></svg>
+                  +%8,2
+                </span>
+</div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-2xl lg:text-[28px] font-extrabold tracking-tight text-slate-900 font-sans">1.284</span>
+<span class="text-xs text-slate-500 font-medium font-mono">adet</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-1">
+<span>Ort. sepet: ₺9.968</span>
+<span class="text-slate-400">· Örnek veri</span>
+</div>
+</div>
+<!-- KPI 4: Bütçe Gerçekleşme -->
+<div class="py-3 md:py-0 md:px-5 last:pr-0">
+<div class="flex items-center justify-between mb-1.5">
+<span class="text-xs font-semibold text-slate-500 tracking-wide">Bütçe Gerçekleşme</span>
+<span class="inline-flex items-center gap-1 text-[11px] font-mono font-bold text-amber-800 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                  Hedef: %95
+                </span>
+</div>
+<div class="flex items-baseline gap-1.5">
+<span class="text-2xl lg:text-[28px] font-extrabold tracking-tight text-slate-900 font-sans">%94,2</span>
+<span class="text-xs text-emerald-600 font-bold font-mono">Olağan</span>
+</div>
+<div class="flex items-center justify-between text-[11px] text-slate-400 font-mono mt-1">
+<span>Yıl sonu proj: %98,5</span>
+<span class="text-slate-400">· Örnek veri</span>
+</div>
+</div>
+</div>
+</section>
+<!-- ============================================================= -->
+<!-- MAIN ANALYTICS SECTION: SALES PERFORMANCE & INSIGHT PANEL -->
+<!-- ============================================================= -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Large Cobalt Area Chart Card (8 Columns) -->
+<div class="lg:col-span-8 rounded-2xl bg-white border border-slate-200 p-6 flex flex-col justify-between shadow-sm">
+<!-- Chart Header Controls -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-5 border-b border-slate-100">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-base font-bold text-slate-900 tracking-tight">Satış Performansı</h3>
+<span class="text-[10px] font-mono text-cobalt-700 uppercase px-2 py-0.5 rounded bg-cobalt-50 border border-cobalt-200/80 font-semibold">Kümülatif ₺</span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">Cari dönem ile önceki yıl gerçekleşen gelir karşılaştırması</p>
+</div>
+<!-- Month Tabs & Filter Controls -->
+<div class="flex items-center gap-3">
+<!-- Legend -->
+<div class="hidden sm:flex items-center gap-3 text-[11px] font-mono mr-1">
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-1.5 bg-cobalt-500 rounded-full inline-block"></span>
+<span class="text-slate-700 font-medium">2025 (Cari)</span>
+</div>
+<div class="flex items-center gap-1.5">
+<span class="w-3 h-[1px] border-t-2 border-dashed border-slate-400 inline-block"></span>
+<span class="text-slate-400 font-medium">2024 (Önceki)</span>
+</div>
+</div>
+<!-- Range Selector -->
+<div class="flex items-center bg-slate-100 border border-slate-200 rounded-lg p-0.5 text-xs font-medium">
+<button class="px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition-colors">Aylık</button>
+<button class="px-2.5 py-1 rounded bg-white text-cobalt-600 font-bold shadow-sm">Çeyreklik</button>
+<button class="px-2.5 py-1 rounded text-slate-600 hover:text-slate-900 transition-colors">Yıllık</button>
+</div>
+</div>
+</div>
+<!-- SVG Vector Chart in Cobalt / Sky palette -->
+<div class="pt-5 pb-2 relative">
+<svg class="w-full h-64 overflow-visible" fill="none" viewbox="0 0 700 280">
+<defs>
+<!-- Gradient for Cobalt Area -->
+<lineargradient id="cobaltAreaGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#2855E8" stop-opacity="0.22"></stop>
+<stop offset="65%" stop-color="#2855E8" stop-opacity="0.05"></stop>
+<stop offset="100%" stop-color="#2855E8" stop-opacity="0"></stop>
+</lineargradient>
+<!-- Filter glow for data points -->
+<filter height="140%" id="cobaltGlow" width="140%" x="-20%" y="-20%">
+<fegaussianblur result="blur" stddeviation="3"></fegaussianblur>
+<fecomposite in="SourceGraphic" in2="blur" operator="over"></fecomposite>
+</filter>
+</defs>
+<!-- Horizontal Gridlines & Y-Axis Labels -->
+<g class="text-[10px] font-mono fill-slate-400">
+<!-- ₺15 Mn -->
+<line stroke="#F1F5F9" stroke-dasharray="3 3" stroke-width="1.2" x1="45" x2="690" y1="20" y2="20"></line>
+<text text-anchor="end" x="35" y="24">₺15M</text>
+<!-- ₺10 Mn -->
+<line stroke="#F1F5F9" stroke-dasharray="3 3" stroke-width="1.2" x1="45" x2="690" y1="85" y2="85"></line>
+<text text-anchor="end" x="35" y="89">₺10M</text>
+<!-- ₺5 Mn -->
+<line stroke="#F1F5F9" stroke-dasharray="3 3" stroke-width="1.2" x1="45" x2="690" y1="150" y2="150"></line>
+<text text-anchor="end" x="35" y="154">₺5M</text>
+<!-- ₺0 -->
+<line stroke="#E2E8F0" stroke-width="1.5" x1="45" x2="690" y1="215" y2="215"></line>
+<text text-anchor="end" x="35" y="219">₺0</text>
+</g>
+<!-- Comparison Prior Period Line (Dashed Gray) -->
+<path d="M45,170 C90,165 130,155 175,145 C220,135 260,152 305,130 C350,110 390,122 435,115 C480,108 520,102 565,95 C610,88 650,85 690,80" fill="none" opacity="0.8" stroke="#94A3B8" stroke-dasharray="4 4" stroke-width="1.8"></path>
+<!-- Current Period Area Fill -->
+<path d="M45,150 C95,140 135,120 175,110 C220,98 260,118 305,95 C350,72 390,82 435,60 C480,42 525,48 565,34 C610,22 650,30 690,22 L690,215 L45,215 Z" fill="url(#cobaltAreaGrad)"></path>
+<!-- Current Period Line (Cobalt Blue Curve) -->
+<path d="M45,150 C95,140 135,120 175,110 C220,98 260,118 305,95 C350,72 390,82 435,60 C480,42 525,48 565,34 C610,22 650,30 690,22" fill="none" stroke="#2855E8" stroke-linecap="round" stroke-width="2.8"></path>
+<!-- Active Indicator on latest data point (Eylül/Sep 565, 34) -->
+<line opacity="0.4" stroke="#2855E8" stroke-dasharray="2 2" stroke-width="1.2" x1="565" x2="565" y1="20" y2="215"></line>
+<circle cx="565" cy="34" fill="#2855E8" filter="url(#cobaltGlow)" r="5"></circle>
+<circle cx="565" cy="34" fill="#FFFFFF" r="2.5"></circle>
+<!-- Interactive Floating Data Tag at September -->
+<g transform="translate(505, -2)">
+<rect fill="#FFFFFF" filter="drop-shadow(0 2px 6px rgba(40,85,232,0.15))" height="28" rx="6" stroke="#2855E8" stroke-width="1.2" width="124"></rect>
+<text fill="#2855E8" font-family="'Manrope', sans-serif" font-size="11" font-weight="700" text-anchor="middle" x="62" y="18">
+                    ₺12,84 Mn <tspan fill="#16A34A" font-family="'JetBrains Mono'" font-size="9" font-weight="600">(+18%)</tspan>
+</text>
+</g>
+<!-- X-Axis Labels (Turkish Months) -->
+<g class="text-[10px] font-mono fill-slate-500">
+<text text-anchor="middle" x="45" y="235">Oca</text>
+<text text-anchor="middle" x="110" y="235">Şub</text>
+<text text-anchor="middle" x="175" y="235">Mar</text>
+<text text-anchor="middle" x="240" y="235">Nis</text>
+<text text-anchor="middle" x="305" y="235">May</text>
+<text text-anchor="middle" x="370" y="235">Haz</text>
+<text text-anchor="middle" x="435" y="235">Tem</text>
+<text text-anchor="middle" x="500" y="235">Ağu</text>
+<text fill="#2855E8" font-weight="700" text-anchor="middle" x="565" y="235">Eyl (Son)</text>
+<text text-anchor="middle" x="630" y="235">Eki</text>
+<text text-anchor="middle" x="690" y="235">Kas</text>
+</g>
+</svg>
+</div>
+<!-- Footer summary note -->
+<div class="pt-3 flex items-center justify-between border-t border-slate-100 text-xs text-slate-500">
+<span class="flex items-center gap-1.5 font-medium">
+<svg class="w-3.5 h-3.5 text-cobalt-500" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+                Yıllık satış büyüme trendi Q3 sonu itibarıyla hedeflenen bandın %3 üstündedir.
+              </span>
+<span class="font-mono text-[11px] text-slate-400">Simülasyon bazlı örnek değerler</span>
+</div>
+</div>
+<!-- Narrower Insight Panel "Verinin Anlattıkları" (4 Columns) -->
+<div class="lg:col-span-4 rounded-2xl bg-white border border-slate-200 p-6 flex flex-col justify-between shadow-sm">
+<div>
+<!-- Panel Heading -->
+<div class="flex items-center justify-between pb-4 border-b border-slate-100">
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-lg bg-cobalt-50 border border-cobalt-100 flex items-center justify-center text-cobalt-500">
+<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon>
+</svg>
+</div>
+<h3 class="text-sm font-bold text-slate-900 tracking-tight">Verinin Anlattıkları</h3>
+</div>
+<span class="text-[10px] font-mono text-cobalt-700 bg-cobalt-50 border border-cobalt-200/80 px-2 py-0.5 rounded-full font-bold">3 Yeni İçgörü</span>
+</div>
+<!-- 3 Clean Insight Cards -->
+<div class="space-y-3 mt-4">
+<!-- Insight 1: Hacim & Gelir -->
+<div class="p-3.5 rounded-xl bg-[#F8FAFC] border border-slate-200 hover:border-cobalt-200 transition-colors">
+<div class="flex items-start justify-between gap-2">
+<span class="text-[10px] font-mono font-bold text-cobalt-600 uppercase tracking-wider">Hacim &amp; Gelir</span>
+<span class="text-[10px] font-mono text-slate-400">Bugün</span>
+</div>
+<p class="text-xs text-slate-700 mt-1.5 font-medium leading-relaxed">
+                    Net satışta görülen <span class="text-cobalt-600 font-bold font-mono">+%18,4</span> artışın %62'si büyük ölçekli kurumsal abonelik yenilemelerinden kaynaklandı.
+                  </p>
+</div>
+<!-- Insight 2: Bütçe Sapması (Warning Badge) -->
+<div class="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 shadow-sm">
+<div class="flex items-start justify-between gap-2">
+<div class="flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-amber-500"></span>
+<span class="text-[10px] font-mono font-bold text-amber-800 uppercase tracking-wider">Dikkat: Bütçe Sapması</span>
+</div>
+<span class="text-[9px] font-mono font-bold bg-amber-200/70 text-amber-900 px-1.5 py-0.2 rounded">Kritik</span>
+</div>
+<p class="text-xs text-slate-800 mt-1.5 font-medium leading-relaxed">
+                    Pazarlama harcamalarında Q2 bütçesine kıyasla <span class="text-amber-900 font-bold font-mono">₺340.000</span> tutarında geçici aşım tespit edildi.
+                  </p>
+</div>
+<!-- Insight 3: Müşteri Sadakati -->
+<div class="p-3.5 rounded-xl bg-[#F8FAFC] border border-slate-200 hover:border-cobalt-200 transition-colors">
+<div class="flex items-start justify-between gap-2">
+<span class="text-[10px] font-mono font-bold text-slate-600 uppercase tracking-wider">Müşteri Sadakati</span>
+<span class="text-[10px] font-mono text-slate-400">Dün</span>
+</div>
+<p class="text-xs text-slate-700 mt-1.5 font-medium leading-relaxed">
+                    Ortalama sepet büyüklüğü <span class="text-slate-900 font-bold font-mono">₺9.968</span> seviyesine çıkarak son 4 çeyreğin en yüksek değerine ulaştı.
+                  </p>
+</div>
+</div>
+</div>
+<!-- Action Button "Birlikte inceleyelim →" -->
+<div class="pt-4 border-t border-slate-100 mt-4">
+<button class="w-full flex items-center justify-between px-4 py-2.5 rounded-xl bg-cobalt-50 hover:bg-cobalt-100/80 border border-cobalt-200 text-xs font-bold text-cobalt-600 transition-colors group shadow-sm">
+<span class="flex items-center gap-2">
+<svg class="w-4 h-4 text-cobalt-500" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<circle cx="11" cy="11" r="8"></circle>
+<line x1="21" x2="16.65" y1="21" y2="16.65"></line>
+</svg>
+<span>Birlikte inceleyelim</span>
+</span>
+<span class="text-cobalt-500 group-hover:translate-x-0.5 transition-transform font-bold">→</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ============================================================= -->
+<!-- BOTTOM RECENT DASHBOARDS (Satış Özeti, Finansal Görünüm, Müşteri Analizi) -->
+<!-- ============================================================= -->
+<section class="space-y-3.5 pt-1">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<h3 class="text-sm font-bold text-slate-900 tracking-tight">Son erişilen panolar</h3>
+<span class="text-[10px] font-mono text-slate-400">· Hızlı çalışma alanları</span>
+</div>
+<a class="text-xs font-semibold text-cobalt-600 hover:text-cobalt-700 transition-colors flex items-center gap-1" href="#">
+<span>Tüm panolar</span>
+<svg class="w-3 h-3" fill="none" stroke="currentColor" viewbox="0 0 24 24"><path d="M9 5l7 7-7 7" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"></path></svg>
+</a>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+<!-- Dashboard Card 1: Satış Özeti -->
+<div class="rounded-xl bg-white border border-slate-200 p-4 hover:border-cobalt-300 hover:shadow-md transition-all group cursor-pointer">
+<div class="flex items-start justify-between mb-3">
+<div>
+<h4 class="text-xs font-bold text-slate-800 group-hover:text-cobalt-600 transition-colors">Satış Özeti</h4>
+<p class="text-[10px] text-slate-400 font-mono mt-0.5">Son güncelleme: 23 dk önce</p>
+</div>
+<div class="w-6 h-6 rounded bg-slate-100 group-hover:bg-cobalt-50 flex items-center justify-center text-slate-400 group-hover:text-cobalt-600 transition-colors">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<line x1="7" x2="17" y1="17" y2="7"></line>
+<polyline points="7 7 17 7 17 17"></polyline>
+</svg>
+</div>
+</div>
+<!-- Sparkline vector preview -->
+<div class="h-12 w-full bg-[#F8FAFC] rounded-lg p-2 flex items-center justify-between border border-slate-200">
+<svg class="w-28 h-8" fill="none" viewbox="0 0 160 36">
+<path d="M2,28 L25,22 L50,26 L75,14 L105,18 L130,8 L158,4" fill="none" stroke="#2855E8" stroke-linecap="round" stroke-width="2"></path>
+<circle cx="158" cy="4" fill="#2855E8" r="2.5"></circle>
+</svg>
+<div class="text-right font-mono text-[11px]">
+<span class="text-slate-900 font-bold block leading-none">₺12,8M</span>
+<span class="text-emerald-600 text-[9px] font-bold">+18.4%</span>
+</div>
+</div>
+</div>
+<!-- Dashboard Card 2: Finansal Görünüm -->
+<div class="rounded-xl bg-white border border-slate-200 p-4 hover:border-cobalt-300 hover:shadow-md transition-all group cursor-pointer">
+<div class="flex items-start justify-between mb-3">
+<div>
+<h4 class="text-xs font-bold text-slate-800 group-hover:text-cobalt-600 transition-colors">Finansal Görünüm</h4>
+<p class="text-[10px] text-slate-400 font-mono mt-0.5">Son güncelleme: 2 saat önce</p>
+</div>
+<div class="w-6 h-6 rounded bg-slate-100 group-hover:bg-cobalt-50 flex items-center justify-center text-slate-400 group-hover:text-cobalt-600 transition-colors">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<line x1="7" x2="17" y1="17" y2="7"></line>
+<polyline points="7 7 17 7 17 17"></polyline>
+</svg>
+</div>
+</div>
+<!-- Mini bar chart preview -->
+<div class="h-12 w-full bg-[#F8FAFC] rounded-lg p-2 flex items-center justify-between border border-slate-200">
+<div class="flex items-end gap-1.5 h-7 pl-1">
+<div class="w-2 bg-slate-200 rounded-t-sm h-3"></div>
+<div class="w-2 bg-slate-200 rounded-t-sm h-4"></div>
+<div class="w-2 bg-slate-300 rounded-t-sm h-5"></div>
+<div class="w-2 bg-cobalt-300 rounded-t-sm h-6"></div>
+<div class="w-2 bg-cobalt-500 rounded-t-sm h-7"></div>
+</div>
+<div class="text-right font-mono text-[11px]">
+<span class="text-slate-900 font-bold block leading-none">₺4,2M</span>
+<span class="text-slate-500 text-[9px] font-medium">Brüt Marj %33</span>
+</div>
+</div>
+</div>
+<!-- Dashboard Card 3: Müşteri Analizi -->
+<div class="rounded-xl bg-white border border-slate-200 p-4 hover:border-cobalt-300 hover:shadow-md transition-all group cursor-pointer">
+<div class="flex items-start justify-between mb-3">
+<div>
+<h4 class="text-xs font-bold text-slate-800 group-hover:text-cobalt-600 transition-colors">Müşteri Analizi</h4>
+<p class="text-[10px] text-slate-400 font-mono mt-0.5">Son güncelleme: Dün 18:40</p>
+</div>
+<div class="w-6 h-6 rounded bg-slate-100 group-hover:bg-cobalt-50 flex items-center justify-center text-slate-400 group-hover:text-cobalt-600 transition-colors">
+<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2" viewbox="0 0 24 24">
+<line x1="7" x2="17" y1="17" y2="7"></line>
+<polyline points="7 7 17 7 17 17"></polyline>
+</svg>
+</div>
+</div>
+<!-- Mini pulse indicator preview -->
+<div class="h-12 w-full bg-[#F8FAFC] rounded-lg p-2 flex items-center justify-between border border-slate-200">
+<div class="flex items-center gap-2 pl-1">
+<div class="w-2.5 h-2.5 rounded-full bg-cobalt-500"></div>
+<span class="text-[10px] font-mono text-slate-600 font-medium">Net Retention</span>
+</div>
+<div class="text-right font-mono text-[11px]">
+<span class="text-slate-900 font-bold block leading-none">%118</span>
+<span class="text-emerald-600 text-[9px] font-bold">+4.2% YoY</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Discreet system disclaimer -->
+<footer class="pt-2 pb-6 text-center">
+<p class="text-[11px] font-mono text-slate-400">
+            NanobaseAI BI Kurumsal Platform · Tasarım &amp; Veri Görselleştirme Önizlemesi · Tüm göstergeler örnek amaçlıdır.
+          </p>
+</footer>
+</div>
+</main>
+</div>
+</body></html>

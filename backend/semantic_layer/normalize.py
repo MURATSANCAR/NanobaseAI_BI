@@ -28,8 +28,12 @@ STOPWORDS: frozenset[str] = frozenset(
     kiyasla kiyaslar grafik grafigi tablo tablosu liste listesi rapor raporu gorsel cizelge
     yoksa taraf tarafi tarafini yani sekilde bakimindan acisindan
     tum tumu butun toplamda genel olarak degil ile birlikte beraber
+    gercekte gercekten fiilen aslinda hakikaten hala halen henuz tamamen tumuyle
+    arttikca azaldikca yukseldikce dustukce buyudukce kuculdukce halde ragmen sistemde sistemdeki isleri islerin karsilastirip karsilastir karsilastirarak
     milyon milyar bin tl usd eur uzer uzeri uzerindeki ustu altinda alti fazla dusuk yuksek
     sahip ait
+    olan oldugu olup olsun olacak bulunsun bulunan gorunsun yazilsin eklensin ekleyin ekle ekleyelim
+    sutun sutuna sutunda sutunu sutunlar sutunlara kolonda kolona yan yanina yaninda ayni dahil
     """.split()
 )
 
@@ -371,7 +375,65 @@ def cardinal(token: str) -> Optional[int]:
     t = fold(token)
     if t.isdigit():
         return int(t)
-    return _CARDINALS.get(t)
+    if t in _CARDINALS:
+        return _CARDINALS[t]
+    # "yirminin üstünde", "beşten fazla": the cardinal wears a case ending. Only roots of three or more
+    # letters are read through a suffix — "onun" is a pronoun, not "on" + genitive.
+    for suf in _SHORT_CASES:
+        root = t[: -len(suf)] if t.endswith(suf) else ""
+        if len(root) >= 3 and root in _CARDINALS:
+            return _CARDINALS[root]
+    return None
+
+
+# What a number is doing in the sentence. Turkish marks it: a numeral that counts rows is a bare
+# determiner in front of its noun ("en yüksek beş kanal", "ilk on müşteri") — the case ending, if any,
+# goes on the noun. A numeral that itself wears a case ending is a noun phrase, the argument of a
+# comparison ("yüzü aşan", "yirminin üstünde", "beşten fazla", "bine ulaşan"): a value, never a row
+# count. The one pronominal count is the accusative/possessive right after an ordinal cue ("ilk beşi").
+_NUM_ACCUSATIVE = frozenset(("i", "u"))
+_PRONOMINAL_BEFORE = frozenset("ilk top bastaki".split())
+#: "100'ü" reaches the tokens as "100", "u": the apostrophe is folded away, the ending is its own token.
+_DIGIT_CASE_TOKENS = frozenset("i u e a in un nin nun den dan ten tan si su ini unu".split())
+#: a bare number in front of one of these is a threshold or a multiplier ("yüz üzeri", "on katı").
+_BOUND_AFTER = frozenset("ustu ustunde ustundeki uzeri uzerinde uzerindeki altinda altindaki kat kati katina".split())
+
+
+def cardinal_ending(token: str) -> Optional[str]:
+    """Case ending a numeral wears: "" when bare ("beş", "100"), "u" for "yüzü"; None when not a numeral."""
+    t = fold(token)
+    if t.isdigit() or t in _CARDINALS:
+        return ""
+    for suf in _SHORT_CASES:
+        root = t[: -len(suf)] if t.endswith(suf) else ""
+        if len(root) >= 3 and root in _CARDINALS:
+            return suf
+    return None
+
+
+def number_role(tokens: list[str], k: int) -> Optional[str]:
+    """"count" — the number may bound how many rows are asked for; "value" — it is something a column
+    is compared with (a threshold, a percentage, a floor); None — tokens[k] is not a number.
+
+    Decided by grammar alone, never by which noun or column stands beside it. When in doubt the answer
+    is "value": a value mistaken for a count silently cuts rows, the opposite mistake only returns more.
+    """
+    ending = cardinal_ending(tokens[k])
+    if ending is None:
+        return None
+    prev = fold(tokens[k - 1]) if k > 0 else ""
+    after = [fold(t) for t in tokens[k + 1 : k + 3]]
+    if ending == "" and fold(tokens[k]).isdigit() and after and after[0] in _DIGIT_CASE_TOKENS:
+        ending, after = after[0], [fold(t) for t in tokens[k + 2 : k + 4]]
+    if prev == "yuzde":
+        return "value"                      # "yüzde yirmi": a percentage
+    if ending:
+        return "count" if ending in _NUM_ACCUSATIVE and prev in _PRONOMINAL_BEFORE else "value"
+    if after and (after[0] in _BOUND_AFTER or (after[0] == "ve" and len(after) > 1 and after[1] in _BOUND_AFTER)):
+        return "value"                      # "yüz üzeri", "50 ve üzeri", "on katı"
+    if prev == "az" and k > 1 and fold(tokens[k - 2]) == "en":
+        return "value"                      # "en az 50 adet satan": a floor, not the bottom fifty
+    return "count"
 
 
 # A participle turns a verb into a noun's modifier ("bekleyen siparişler"), a converb chains clauses

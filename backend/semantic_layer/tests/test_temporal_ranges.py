@@ -36,7 +36,7 @@ def test_what_already_worked_still_works():
     assert _slots("2026 Ocak-Agustos ciro") == [("MONTH_RANGE", date(2026, 1, 1), date(2026, 9, 1))]
     assert _slots("2026 toplam net ciro") == [("YEAR", date(2026, 1, 1), date(2027, 1, 1))]
     assert _slots("Temmuz 2026 da en cok satan kitaplar") == [("MONTH", date(2026, 7, 1), date(2026, 8, 1))]
-    assert _slots("son 3 ayin cirosu") == [("LAST_N_MONTHS", date(2026, 6, 1), date(2026, 10, 1))]
+    assert _slots("son 3 ayin cirosu") == [("LAST_N_MONTHS", date(2026, 7, 1), date(2026, 10, 1))]   # July, August, September
 
 
 def test_a_single_period_is_never_joined_to_nothing():

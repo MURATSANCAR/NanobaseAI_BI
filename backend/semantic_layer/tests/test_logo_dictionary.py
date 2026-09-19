@@ -192,7 +192,8 @@ def test_the_generated_reference_does_not_ride_along_in_every_prompt():
 
     assert "reference" in Runtime._NOT_IN_PROMPT
     carried = sum(f.stat().st_size for f in pack.rglob("*.md") if f.parent.name not in Runtime._NOT_IN_PROMPT)
-    assert carried < 20_000, f"the prompt would carry {carried} characters of documentation"
+    from semantic_layer.runtime.compiler import RULES_BUDGET
+    assert carried < RULES_BUDGET, f"the prompt would carry {carried} characters of documentation (budget {RULES_BUDGET})"
 
 
 def test_operator_documentation_cannot_outgrow_the_prompt():

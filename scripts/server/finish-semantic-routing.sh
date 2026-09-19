@@ -38,8 +38,6 @@ log "1/3 belgesiz tabloları adlandır"
 "$VENV" scripts/describe_undocumented_tables.py --apply
 
 log "2/3 vektör indeksini yeniden kur"
-# The embedder is on the GPU host, reached through a tunnel that is not always up.
-sudo systemctl start a40-embed-tunnel.service || true
 sleep 3
 "$VENV" scripts/index_catalog_qdrant.py --dictionary
 

@@ -1,0 +1,49 @@
+{
+  "outputComponents": [
+    {
+      "design": {
+        "screens": [
+          {
+            "deviceType": "DESKTOP",
+            "generatedBy": "create_datastore_entry",
+            "height": "2738",
+            "htmlCode": {
+              "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ7Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpaCiVodG1sXzkzMzhiYjJiMGJjNzRjMjE4Y2Y3ODU0OWNlMTU1ZWU0EgsSBxDVsMz74wUYAZIBIwoKcHJvamVjdF9pZBIVQhM5MjI4MTIwMDM1MDgzOTY4MTc1&filename=&opi=96797242",
+              "mimeType": "text/html",
+              "name": "projects/9228120035083968175/files/164a2af09d724b58863b55fd2f901b10"
+            },
+            "id": "a2b51a7db08e4ad088e59c00830ed11d",
+            "name": "projects/9228120035083968175/screens/a2b51a7db08e4ad088e59c00830ed11d",
+            "screenMetadata": {
+              "agentType": "PRO_AGENT",
+              "status": "COMPLETE"
+            },
+            "screenType": "DESIGN",
+            "screenshot": {
+              "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1UaizsNv40zHo1zEcIRnh9NovG5nCcepAweqfaCc7gYgOkkMWe9MJQtem7e8MaagdLGhClBh1zJ51yb5RM5khNHSP48yMzE2CeLS5YVXc-14GUo7Qw80VtCzfuBk1aUqiXkcML9htv5T1FW-4EUMdvSviLekwY0v3Tm0vz62W3Gi2C11a543yCPNT0isZGLyVVfawCUbiai_VvBWFYBVErkc5XkgYJMkRpSf-Sm0Bw4WP1jV8yaaxZTClU",
+              "name": "projects/9228120035083968175/files/7b067dc9f7fe43f1b0f2d42fc335586a"
+            },
+            "theme": {},
+            "title": "NanobaseAI BI · Genel Bakış",
+            "width": "2560"
+          }
+        ],
+        "theme": {}
+      }
+    },
+    {
+      "text": "**NanobaseAI BI** için kurumsal seviyede, 1440px optimize edilmiş **\"Genel Bakış\"** masaüstü komuta merkezi ekranını tamamladım.\n\n### Tasarım ve Mimari Kararları:\n1. **Lüks Gece Grafitisi Paleti & Tipografi:**\n   - Arka plan için derin `#090D12` gece grafitisi, kartlar ve çalışma yüzeyleri için `#0E151E` ve `#111820` katmanları kullanıldı.\n   - Tipografide **Manrope** (geometrik net sans-serif) ve sayısal verilerde **JetBrains Mono** ile Türkçe karakterlerin (ğ, ü, ş, ı, ö, ç) kusursuz işlenmesi sağlandı.\n   - Mor renk kesinlikle elenerek; canlı ama ölçülü nane/turkuaz (`#63E6CE`) ve bütçe aşımı için dikkat çekici sıcak kehribar (`#F59E0B`) vurgularına odaklanıldı.\n\n2. **220px Sol Gezinme Menüsü:**\n   - Geometrik elmas çekirdekli NanobaseAI logosu ve *\"Holding Strateji\"* çalışma alanı seçicisi.\n   - *\"Genel Bakış\"* (aktif), *\"Verine Sor\"* (AI etiketli), *\"Panolarım\"*, *\"Bütçe\"*; alt kısımda *\"Kayıtlı Sorgular\"*, *\"Rapor Takvimi\"*, *\"Uyarılar\"*, veri kaynakları ve Emre Berk (CFO) kullanıcı profili.\n\n3. **Hero & Doğal Dil Yapay Zekâ Bestesi:**\n   - *\"Büyük resmi görün. Verinizi anlayın. Bir sonraki adımı güvenle atın.\"* editoryal başlığı.\n   - Sağ üst köşede zarif, hafif saydam turkuaz orbital veri yörüngesi çizimi.\n   - *\"Bu ay işimiz nasıl gidiyor?\"* ön tanımlı giriş alanı, *\"Soruyu Yanıtla\"* butonu ve tek tıkla sorgulama yapılabilen örnek çip butonları (*\"Satışları karşılaştır\"*, *\"Bütçe sapmalarını göster\"*, vb.).\n\n4. **Yatay ve Yalın KPI Şeridi:**\n   - Hantal kutular yerine ince dikey bölücülerle ayrılmış 4 temel metrik: **Net Satış (₺12,8 Mn +%18,4)**, **Brüt Kâr (₺4,2 Mn +%12,1)**, **Sipariş Adedi (1.284 +%8,2)**, **Bütçe Gerçekleşme (%94,2)**. Tüm alanlar örnek veri olarak etiketlendi.\n\n5. **Satış Performansı Grafiği & \"Verinin Anlattıkları\" Paneli:**\n   - Çift eğrili (2025 cari nane gradyanı ve 2024 gri kesikli karşılaştırma), Türkçe ay etiketli ve dinamik veri etiketli (Eylül ₺12,84 Mn) vektör grafik.\n   - Yanında kurumsal içgörüleri özetleyen 3 maddelik içgörü paneli ve *\"Birlikte inceleyelim\"* eylemi.\n\n6. **Son Erişilen Panolar:**\n   - *\"Satış Özeti\"*, *\"Finansal Görünüm\"* ve *\"Müşteri Analizi\"* için mikro sparkline ve çubuk grafik önizlemeleri."
+    },
+    {
+      "suggestion": "\"Verine Sor\" AI sohbet ve anlık grafik üretim modalını tasarla"
+    },
+    {
+      "suggestion": "\"Bütçe Sapmaları\" detaylı analiz ekranını oluştur"
+    },
+    {
+      "suggestion": "Grafik etkileşimleri ve hover durumları için CSS/JS animasyonları ekle"
+    }
+  ],
+  "projectId": "9228120035083968175",
+  "sessionId": "9971346932420379918"
+}

@@ -27,6 +27,8 @@ def _certify(store, term, stype, mapping, pairs=("a", "b", "c"), synonyms=None):
 @pytest.fixture
 def catalog(store, profiles):
     for p in profiles:
+        if p.entity == "CLCARD" and not p.description:
+            p.description = "Cari hesap kartı (müşteri / tedarikçi)"   # what the scan of the live Logo carries
         store.upsert_profile(p)
     inv = next(p for p in profiles if p.entity == "INVOICE")
     stl = next(p for p in profiles if p.entity == "STLINE")
@@ -94,9 +96,10 @@ def test_deterministic_compile_executes_correctly(catalog, profiles, logo_db):
     _, out, cols, rows = _run(comp, catalog, r, logo_db, "Kanal bazında 2026 net ciro")
     assert cols == ["kanal", "net_ciro"] and dict(rows)["DAGITICI"] == pytest.approx(1500 - 80)
     _, out, cols, rows = _run(comp, catalog, r, logo_db, "Perakende ile toptan satışları 2026 ay bazında karşılaştır")
-    assert cols[0] == "ay" and "perakende_satis" in cols and "toptan_satis" in cols
+    per = next(c for c in cols if c.startswith("perakende_satis")); top = next(c for c in cols if c.startswith("toptan_satis"))
+    assert cols[0] == "ay" and per and top
     jan = next(rw for rw in rows if rw[0] == "2026-01-01")
-    assert jan[cols.index("perakende_satis")] == 100 and jan[cols.index("toptan_satis")] == 1000
+    assert jan[cols.index(per)] == 100 and jan[cols.index(top)] == 1000
     _, out, cols, rows = _run(comp, catalog, r, logo_db, "Temmuz 2026 satılan adet")
     assert rows[0][0] == 5
     sq = r.resolve("Günlük satış (son günler)")
@@ -124,7 +127,7 @@ def test_guardrails_and_physicalize(profiles):
 def test_bridge_ask_deterministic_then_llm_fallback(catalog, profiles, logo_connector, settings):
     from semantic_bridge.app import Runtime, create_app
 
-    llm = FakeLlm(by_keyword={"ölgesel": "```sql\nSELECT c.\"CITY\" AS bolge, SUM(i.\"NETTOTAL\") AS tutar FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (7,8,9) AND i.DATE_ >= '2026-01-01' AND i.DATE_ < '2027-01-01' GROUP BY c.\"CITY\"\n```"})
+    llm = FakeLlm(by_keyword={"ölgesel": "```sql\n-- yorum: 'bolgesel' → CLCARD.CITY bazında kırılım\nSELECT c.\"CITY\" AS bolge, SUM(i.\"NETTOTAL\") AS tutar FROM dbo_LG_411_01_INVOICE i JOIN dbo_LG_411_CLCARD c ON c.\"LOGICALREF\" = i.\"CLIENTREF\" WHERE i.\"CANCELLED\" = 0 AND i.\"TRCODE\" IN (7,8,9) AND i.DATE_ >= '2026-01-01' AND i.DATE_ < '2027-01-01' GROUP BY c.\"CITY\"\n```"})
     rt = Runtime(settings, store=catalog, connector=logo_connector, llm=llm)
     client = TestClient(create_app(rt))
     assert client.get("/health").json()["status"] == "ok"
@@ -190,18 +193,21 @@ def test_negation_never_bridges_to_the_measure_it_negates(catalog, profiles):
     assert c.compile(known, catalog) is None
     # a negated verb the catalog has never seen stays a qualifier nothing covers
     unknown = r.resolve("Hiç kiralamayan müşterilerimiz var mı?", today=date(2026, 7, 20))
-    assert "kiralamayan" in unknown.unhandled and not unknown.fully_resolved
+    left = [m for m in unknown.model_qualifiers if m["token"] == "kiralamayan"]
+    assert left and left[0]["negative"], "left to the model as a negation, never read as a measure"
+    assert c.compile(unknown, catalog) is None
 
 
 def test_qualifier_without_meaning_blocks_instead_of_widening(catalog, profiles):
     """"bekleyen siparişler" narrows the subject; dropping the qualifier would answer a wider question."""
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     sq = r.resolve("Bekleyen toptan satış tutarı ne kadar?", today=date(2026, 7, 20))
-    assert "bekleyen" in sq.unhandled and not sq.fully_resolved
+    assert "bekleyen" in [m["token"] for m in sq.model_qualifiers], "never dropped: the model must apply it"
     c = DeterministicCompiler(profiles, {}, "tsql")
     assert c.compile(sq, catalog) is None and "bekleyen" in c.plan(sq)[1]
     # the same word as a predicate carries no restriction, so it is only grammar
-    assert "artiyor" not in r.resolve("İadeler artıyor mu?", today=date(2026, 7, 20)).unhandled
+    later = r.resolve("İadeler artıyor mu?", today=date(2026, 7, 20))
+    assert "artiyor" not in later.unhandled and "artiyor" not in [m["token"] for m in later.model_qualifiers]
 
 
 def test_filter_contradicting_the_measure_scope_is_refused(catalog, profiles):
@@ -243,6 +249,14 @@ def test_written_number_after_a_ranking_cue_is_a_top_n(catalog, profiles):
     r = SemanticResolver(catalog, TENANT, DS, profiles)
     assert r.resolve("En yüksek beş kanalı ver", today=date(2026, 7, 20)).limit == 5
     assert r.resolve("Zararına sattığımız bir şey var mı?", today=date(2026, 7, 20)).limit is None
+
+
+def test_trailing_count_with_tane_is_a_top_n():
+    """Panoda "… kanalları göster 5 tane" 7 satır getirdi: sayı fiilden sonra geldi, sınır sanılmadı."""
+    from semantic_layer.history.question_facts import extract_question_facts
+    assert extract_question_facts("bana en çok satıl yapılan kanalları göster 5 tane").limit == 5
+    assert extract_question_facts("en çok satan kitapları listele beş adet").limit == 5
+    assert extract_question_facts("3 tane fatura kesildi mi?").limit is None
 
 
 def test_header_measure_is_not_multiplied_by_a_line_level_breakdown(catalog, profiles):
@@ -513,7 +527,7 @@ def test_an_empty_answer_says_whether_the_data_is_missing_or_the_business_is(cat
     from semantic_layer.runtime.compiler import fast_summary, is_empty_result
 
     assert is_empty_result(["satis"], [{"satis": None}], 1) and not is_empty_result(["satis"], [{"satis": 0}], 1)
-    assert fast_summary("x", ["satis"], [{"satis": None}], 1) == "Sorgu sonuç döndürmedi."
+    assert fast_summary("x", ["satis"], [{"satis": None}], 1) == "Bu koşullara uyan kayıt yok (sonuç boş)."
 
     client = TestClient(create_app(Runtime(settings, store=catalog, connector=logo_connector, llm=FakeLlm(["NO_SQL"]))))
     inv = next(p for p in profiles if p.entity == "INVOICE")

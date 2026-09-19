@@ -44,8 +44,10 @@ def queue_store(tmp_path):
     return store
 
 
-def _ask(llm, text, results, idx):
+def _ask(llm, text, results, idx, waits=None):
     results[idx] = llm.chat([{"role": "user", "content": text}])
+    if waits is not None:
+        waits[idx] = llm.last_wait_ms          # what a call waited is known to the thread that made it
 
 
 def test_requests_are_serialised_and_ordered(queue_store):
@@ -80,8 +82,9 @@ def test_nobody_is_rejected_when_the_model_is_busy(queue_store):
     queue = LlmQueue(queue_store.engine, slots=1, poll_seconds=0.02)
     client = QueuedLlm(llm, queue)
     results: dict[int, str] = {}
+    waits: dict[int, int] = {}
     a = threading.Thread(target=_ask, args=(client, "uzun", results, 0))
-    b = threading.Thread(target=_ask, args=(client, "beklesin", results, 1))
+    b = threading.Thread(target=_ask, args=(client, "beklesin", results, 1, waits))
     a.start()
     try:
         assert started.wait(timeout=5), "first request never reached the model"
@@ -99,7 +102,7 @@ def test_nobody_is_rejected_when_the_model_is_busy(queue_store):
         if b.ident is not None:
             b.join(timeout=20)
     assert results[1] == "ok:beklesin"
-    assert client.last_wait_ms > 0
+    assert waits[1] > 0
 
 
 def test_a_dead_worker_does_not_block_the_line(queue_store):
@@ -161,3 +164,31 @@ def test_background_work_yields_to_anyone_waiting(store):
         t.join(timeout=10)
     assert order[0] == "bg-1"
     assert order.index("insan") < order.index("bg-2"), order
+
+
+def test_tickets_left_by_a_killed_process_do_not_hold_the_line(tmp_path):
+    """A deployment restart leaves WAITING rows nobody is polling. They must not outrank live work.
+
+    Measured in production on 2026-09-16: twenty such rows, eight free slots, and every live question
+    waiting seventeen minutes behind the dead ones.
+    """
+    import sqlalchemy as sa
+    from datetime import timedelta
+    from semantic_layer.runtime.llm_queue import LlmQueue, _now
+    from semantic_layer.store import schema as S
+
+    engine = sa.create_engine(f"sqlite:///{tmp_path}/q.db")
+    S.sl_llm_queue.create(engine, checkfirst=True)
+    dead = _now() - timedelta(minutes=17)
+    with engine.begin() as conn:
+        for i in range(3):
+            conn.execute(S.sl_llm_queue.insert().values(
+                id=f"dead{i}", tenant_id="t", datasource_id="d", purpose="nl2sql", question="",
+                status="WAITING", enqueued_at=dead, heartbeat_at=dead, worker="olu:1"))
+    q = LlmQueue(engine, slots=1, lease_seconds=900)
+    with q.lease(purpose="nl2sql", tenant_id="t", datasource_id="d") as ticket:
+        assert ticket is not None
+    with engine.connect() as conn:
+        left = dict(conn.execute(sa.select(S.sl_llm_queue.c.status, sa.func.count())
+                                 .group_by(S.sl_llm_queue.c.status)).fetchall())
+    assert left.get("WAITING", 0) == 0 and left.get("ABANDONED", 0) == 3, left

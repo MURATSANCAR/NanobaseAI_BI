@@ -1,0 +1,2556 @@
+{
+ "at": "2026-09-18T15:59:52Z",
+ "repeat": 3,
+ "tally": {
+  "SAĞLAM": 44,
+  "KARARSIZ": 7,
+  "BOZUK": 18
+ },
+ "counters": {
+  "answer": 157,
+  "deny": 45,
+  "clarify": 3,
+  "error": 2
+ },
+ "cases": [
+  {
+   "n": 1,
+   "id": "A032",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 193.1,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 3.8,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 3.0,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 2,
+   "id": "A060",
+   "verdict": "KARARSIZ",
+   "passed": "1/3",
+   "distinctSql": 3,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 12.4,
+     "problems": [
+      "['vade_gun_2026', 'vade_gun_bu_yil', 'bu_yil_vade_gun', '*'] = 2025, referans 30.292237831701435",
+      "['vade_gun_2025', 'vade_gun_gecen_yil', 'gecen_yil_vade_gun'] = None, referans 40.16292672644716"
+     ],
+     "federated": false,
+     "rows": 2
+    },
+    {
+     "kind": "answer",
+     "sec": 18.5,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 12.4,
+     "problems": [
+      "['vade_gun_2026', 'vade_gun_bu_yil', 'bu_yil_vade_gun', '*'] = 2025, referans 30.292237831701435",
+      "['vade_gun_2025', 'vade_gun_gecen_yil', 'gecen_yil_vade_gun'] = None, referans 40.16292672644716"
+     ],
+     "federated": false,
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "n": 3,
+   "id": "B007",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 11.4,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 9.7,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 11.3,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 4,
+   "id": "B019",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 3,
+   "holdout": true,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 18.9,
+     "problems": [
+      "satır sayısı 14, referans 15",
+      "'Grup kodu boş' cevapta yok",
+      "'KITAPCI': 0.0, referans 93.87227155012948",
+      "'E-TICARET': 0.0, referans 57.36255924170616",
+      "'ZINCIR' cevapta yok",
+      "'DAGITICI': 0.0, referans 118.33906633906633"
+     ],
+     "federated": false,
+     "rows": 14
+    },
+    {
+     "kind": "answer",
+     "sec": 11.5,
+     "problems": [
+      "'Grup kodu boş' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 15
+    },
+    {
+     "kind": "answer",
+     "sec": 10.6,
+     "problems": [
+      "'Grup kodu boş' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 15
+    }
+   ]
+  },
+  {
+   "n": 5,
+   "id": "B029",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 0,
+   "holdout": true,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 13.2,
+     "problems": [
+      "beklenen answer, gelen deny: 'dustukten' katalogda tanımlı bir kavram değil; bu yüzden üretilen sorgu doğrulanamadı. Terimi Veri Sözlüğü'nden tanımlarsanız soru cevaplanır. Kapı gerekçesi: "
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 12.1,
+     "problems": [
+      "beklenen answer, gelen deny: 'dustukten' katalogda tanımlı bir kavram değil; bu yüzden üretilen sorgu doğrulanamadı. Terimi Veri Sözlüğü'nden tanımlarsanız soru cevaplanır. Kapı gerekçesi: "
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 10.6,
+     "problems": [
+      "beklenen answer, gelen deny: 'dustukten' katalogda tanımlı bir kavram değil; bu yüzden üretilen sorgu doğrulanamadı. Terimi Veri Sözlüğü'nden tanımlarsanız soru cevaplanır. Kapı gerekçesi: "
+     ],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 6,
+   "id": "B030",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 6.8,
+     "problems": [
+      "satır sayısı 1874, referans 745"
+     ],
+     "federated": false,
+     "rows": 1874
+    },
+    {
+     "kind": "answer",
+     "sec": 3.5,
+     "problems": [
+      "satır sayısı 1874, referans 745"
+     ],
+     "federated": false,
+     "rows": 1874
+    },
+    {
+     "kind": "answer",
+     "sec": 3.1,
+     "problems": [
+      "satır sayısı 1874, referans 745"
+     ],
+     "federated": false,
+     "rows": 1874
+    }
+   ]
+  },
+  {
+   "n": 8,
+   "id": "C004",
+   "verdict": "KARARSIZ",
+   "passed": "2/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.5,
+     "problems": [],
+     "federated": false,
+     "rows": 52
+    },
+    {
+     "kind": "answer",
+     "sec": 14.7,
+     "problems": [
+      "satır sayısı 46, referans 52"
+     ],
+     "federated": false,
+     "rows": 46
+    },
+    {
+     "kind": "answer",
+     "sec": 16.1,
+     "problems": [],
+     "federated": false,
+     "rows": 52
+    }
+   ]
+  },
+  {
+   "n": 9,
+   "id": "C010",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 9.0,
+     "problems": [],
+     "federated": false,
+     "rows": 20
+    },
+    {
+     "kind": "answer",
+     "sec": 11.0,
+     "problems": [],
+     "federated": false,
+     "rows": 20
+    },
+    {
+     "kind": "answer",
+     "sec": 9.4,
+     "problems": [],
+     "federated": false,
+     "rows": 20
+    }
+   ]
+  },
+  {
+   "n": 10,
+   "id": "C011",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 0,
+   "holdout": true,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 13.1,
+     "problems": [
+      "beklenen answer, gelen deny: Bu soruyu cevaplayamıyorum: 'istasyonlarinin, planlanandan' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 11.1,
+     "problems": [
+      "beklenen answer, gelen deny: Bu soruyu cevaplayamıyorum: 'istasyonlarinin, planlanandan' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 10.4,
+     "problems": [
+      "beklenen answer, gelen deny: Bu soruyu cevaplayamıyorum: 'istasyonlarinin, planlanandan' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+     ],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 11,
+   "id": "C015",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 24.6,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki koşulların tamamı doğrulanamadı: 'musteriler' ilişki önceliği doğrulanamadı: STLINE.INVOICEREF = INVOICE.LOGICALREF; 'musteriler' atanmamış değerleri k"
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 21.7,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki koşulların tamamı doğrulanamadı: 'stline default cancelled' koşulu sonuç kapsamında doğrulanamadı: STLINE.CANCELLED = ['0']; 'musteriler' atanmamış değ"
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 17.9,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki koşulların tamamı doğrulanamadı: 'musteriler' atanmamış değerleri koruyan ilişki doğrulanamadı"
+     ],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 12,
+   "id": "C021",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 17.2,
+     "problems": [
+      "'15201.01.6181': 0.6958756371908834, referans 1.093480835288666",
+      "'15201.01.6622': 0.7183359610544077, referans 1.4366719221088153",
+      "'15201.01.6476': 0.8211622279725511, referans 1.0384678501443148",
+      "'15201.01.5270': 0.88346897041025, referans 1.2195343960456502",
+      "'15201.01.6334': 2.205161483552139, referans 1.6626270229582236",
+      "'15201.01.6189': 1.5040642792927779, referans 1.2901956058962927",
+      "'15201.01.6781': 0.586178158660272, referans 1.172356317320544",
+      "'15201.01.6533': 0.7149941747172418, referans 0.8902753706913152",
+      "'15201.01.6709': 0.5069575533288069, referans 1.0139151066576138",
+      "'15201.01.6271': 1.0646342670493913, referans 1.044356339509669",
+      "'15201.01.5800': 2.8000094113218204, referans 1.2027611578266495",
+      "'15701.08.1520': 0.9135130029595113, referans 1.3641599473424386",
+      "'15201.01.6388': 3.0194801785245473, referans 1.2454599599328604",
+      "'15201.01.6783': 0.39600038643609314, referans 0.7920007728721863",
+      "'15201.01.5896': 3.0286843102235212, referans 1.2529470372899572",
+      "'15201.01.6147': 1.1445907077323592, referans 0.743780568497309",
+      "'15201.01.3985': 0.3862299183278667, referans 0.6392580287929125",
+      "'15201.01.6673': 0.3254794590164976, referans 0.6509589180329952",
+      "'15201.01.5598': 1.3620147199280859, referans 0.830421676429281",
+      "'15201.01.6700': 0.4132972925840345, referans 0.826594585168069"
+     ],
+     "federated": false,
+     "rows": 20
+    },
+    {
+     "kind": "answer",
+     "sec": 17.0,
+     "problems": [
+      "'15201.01.6181': 0.6958756371908834, referans 1.093480835288666",
+      "'15201.01.6622': 0.7183359610544077, referans 1.4366719221088153",
+      "'15201.01.6476': 0.8211622279725511, referans 1.0384678501443148",
+      "'15201.01.5270': 0.88346897041025, referans 1.2195343960456502",
+      "'15201.01.6334': 2.205161483552139, referans 1.6626270229582236",
+      "'15201.01.6189': 1.5040642792927779, referans 1.2901956058962927",
+      "'15201.01.6781': 0.586178158660272, referans 1.172356317320544",
+      "'15201.01.6533': 0.7149941747172418, referans 0.8902753706913152",
+      "'15201.01.6709': 0.5069575533288069, referans 1.0139151066576138",
+      "'15201.01.6271': 1.0646342670493913, referans 1.044356339509669",
+      "'15201.01.5800': 2.8000094113218204, referans 1.2027611578266495",
+      "'15701.08.1520': 0.9135130029595113, referans 1.3641599473424386",
+      "'15201.01.6388': 3.0194801785245473, referans 1.2454599599328604",
+      "'15201.01.6783': 0.39600038643609314, referans 0.7920007728721863",
+      "'15201.01.5896': 3.0286843102235212, referans 1.2529470372899572",
+      "'15201.01.6147': 1.1445907077323592, referans 0.743780568497309",
+      "'15201.01.3985': 0.3862299183278667, referans 0.6392580287929125",
+      "'15201.01.6673': 0.3254794590164976, referans 0.6509589180329952",
+      "'15201.01.5598': 1.3620147199280859, referans 0.830421676429281",
+      "'15201.01.6700': 0.4132972925840345, referans 0.826594585168069"
+     ],
+     "federated": false,
+     "rows": 20
+    },
+    {
+     "kind": "answer",
+     "sec": 15.1,
+     "problems": [
+      "'15201.01.6181': 0.6958756371908834, referans 1.093480835288666",
+      "'15201.01.6622': 0.7183359610544077, referans 1.4366719221088153",
+      "'15201.01.6476': 0.8211622279725511, referans 1.0384678501443148",
+      "'15201.01.5270': 0.88346897041025, referans 1.2195343960456502",
+      "'15201.01.6334': 2.205161483552139, referans 1.6626270229582236",
+      "'15201.01.6189': 1.5040642792927779, referans 1.2901956058962927",
+      "'15201.01.6781': 0.586178158660272, referans 1.172356317320544",
+      "'15201.01.6533': 0.7149941747172418, referans 0.8902753706913152",
+      "'15201.01.6709': 0.5069575533288069, referans 1.0139151066576138",
+      "'15201.01.6271': 1.0646342670493913, referans 1.044356339509669",
+      "'15201.01.5800': 2.8000094113218204, referans 1.2027611578266495",
+      "'15701.08.1520': 0.9135130029595113, referans 1.3641599473424386",
+      "'15201.01.6388': 3.0194801785245473, referans 1.2454599599328604",
+      "'15201.01.6783': 0.39600038643609314, referans 0.7920007728721863",
+      "'15201.01.5896': 3.0286843102235212, referans 1.2529470372899572",
+      "'15201.01.6147': 1.1445907077323592, referans 0.743780568497309",
+      "'15201.01.3985': 0.3862299183278667, referans 0.6392580287929125",
+      "'15201.01.6673': 0.3254794590164976, referans 0.6509589180329952",
+      "'15201.01.5598': 1.3620147199280859, referans 0.830421676429281",
+      "'15201.01.6700': 0.4132972925840345, referans 0.826594585168069"
+     ],
+     "federated": false,
+     "rows": 20
+    }
+   ]
+  },
+  {
+   "n": 13,
+   "id": "C026",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 28.2,
+     "problems": [
+      "satır sayısı 94, referans 1704",
+      "'15201.01.6492' cevapta yok",
+      "'15201.01.5441' cevapta yok",
+      "'15201.01.6533' cevapta yok",
+      "'15201.01.6430' cevapta yok",
+      "'15201.01.6387' cevapta yok",
+      "'15201.01.6334' cevapta yok",
+      "'15201.01.6388' cevapta yok",
+      "'15201.01.4506' cevapta yok",
+      "'15201.01.6486' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 94
+    },
+    {
+     "kind": "answer",
+     "sec": 26.9,
+     "problems": [
+      "satır sayısı 10, referans 1704",
+      "'15201.01.6492' cevapta yok",
+      "'15201.01.5441' cevapta yok",
+      "'15201.01.6533' cevapta yok",
+      "'15201.01.6430' cevapta yok",
+      "'15201.01.6387' cevapta yok",
+      "'15201.01.6334' cevapta yok",
+      "'15201.01.6388' cevapta yok",
+      "'15201.01.4231' cevapta yok",
+      "'15201.01.4506' cevapta yok",
+      "'15201.01.6486' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 10
+    },
+    {
+     "kind": "answer",
+     "sec": 28.2,
+     "problems": [
+      "satır sayısı 10, referans 1704",
+      "'15201.01.6492' cevapta yok",
+      "'15201.01.5441' cevapta yok",
+      "'15201.01.6533' cevapta yok",
+      "'15201.01.6430' cevapta yok",
+      "'15201.01.6387' cevapta yok",
+      "'15201.01.6334' cevapta yok",
+      "'15201.01.6388' cevapta yok",
+      "'15201.01.4231' cevapta yok",
+      "'15201.01.4506' cevapta yok",
+      "'15201.01.6486' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 10
+    }
+   ]
+  },
+  {
+   "n": 14,
+   "id": "C038",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.6,
+     "problems": [],
+     "federated": false,
+     "rows": 3
+    },
+    {
+     "kind": "answer",
+     "sec": 3.4,
+     "problems": [],
+     "federated": false,
+     "rows": 3
+    },
+    {
+     "kind": "answer",
+     "sec": 3.4,
+     "problems": [],
+     "federated": false,
+     "rows": 3
+    }
+   ]
+  },
+  {
+   "n": 15,
+   "id": "C040",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.7,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 3.0,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 3.0,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 16,
+   "id": "D015",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 5.6,
+     "problems": [],
+     "federated": false,
+     "rows": 2
+    },
+    {
+     "kind": "answer",
+     "sec": 2.9,
+     "problems": [],
+     "federated": false,
+     "rows": 2
+    },
+    {
+     "kind": "answer",
+     "sec": 3.5,
+     "problems": [],
+     "federated": false,
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "n": 17,
+   "id": "D037",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 9.3,
+     "problems": [],
+     "federated": false,
+     "rows": 4
+    },
+    {
+     "kind": "answer",
+     "sec": 11.7,
+     "problems": [],
+     "federated": false,
+     "rows": 4
+    },
+    {
+     "kind": "answer",
+     "sec": 7.7,
+     "problems": [],
+     "federated": false,
+     "rows": 4
+    }
+   ]
+  },
+  {
+   "n": 18,
+   "id": "D039",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 11.2,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki koşulların tamamı doğrulanamadı: 'alip' koşulu sonuç kapsamında doğrulanamadı: ITEMS.CARDTYPE IN ['1']"
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 9.7,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki koşulların tamamı doğrulanamadı: 'alip' koşulu sonuç kapsamında doğrulanamadı: ITEMS.CARDTYPE IN ['1']"
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 9.1,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki koşulların tamamı doğrulanamadı: 'alip' koşulu sonuç kapsamında doğrulanamadı: ITEMS.CARDTYPE IN ['1']"
+     ],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 19,
+   "id": "A002",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "clarify",
+     "sec": 1.4,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "clarify",
+     "sec": 1.1,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "clarify",
+     "sec": 1.1,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 20,
+   "id": "A004",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.9,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 2.5,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 2.6,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 21,
+   "id": "A006",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 2,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 13.5,
+     "problems": [],
+     "federated": false,
+     "rows": 227383
+    },
+    {
+     "kind": "answer",
+     "sec": 8.3,
+     "problems": [],
+     "federated": false,
+     "rows": 227383
+    },
+    {
+     "kind": "answer",
+     "sec": 12.1,
+     "problems": [],
+     "federated": false,
+     "rows": 227383
+    }
+   ]
+  },
+  {
+   "n": 22,
+   "id": "A008",
+   "verdict": "KARARSIZ",
+   "passed": "2/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "error",
+     "sec": 31.4,
+     "problems": [
+      "beklenen deny, gelen error: ('42S22', \"[42S22] [FreeTDS][SQL Server]Invalid column name 'AMOUNT'. (207) (SQLExecDirectW)\")"
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 8.9,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 9.5,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 23,
+   "id": "A010",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 8.5,
+     "problems": [
+      "['toplam_tutar', 'toplam', 'tutar', '*'] = None, referans 6326658.0"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 7.8,
+     "problems": [
+      "['toplam_tutar', 'toplam', 'tutar', '*'] = None, referans 6326658.0"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 7.4,
+     "problems": [
+      "['toplam_tutar', 'toplam', 'tutar', '*'] = None, referans 6326658.0"
+     ],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 24,
+   "id": "A026",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 10.7,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    },
+    {
+     "kind": "answer",
+     "sec": 9.0,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    },
+    {
+     "kind": "answer",
+     "sec": 8.3,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    }
+   ]
+  },
+  {
+   "n": 25,
+   "id": "A027",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 5.9,
+     "problems": [],
+     "federated": false,
+     "rows": 20
+    },
+    {
+     "kind": "answer",
+     "sec": 2.8,
+     "problems": [],
+     "federated": false,
+     "rows": 20
+    },
+    {
+     "kind": "answer",
+     "sec": 2.8,
+     "problems": [],
+     "federated": false,
+     "rows": 20
+    }
+   ]
+  },
+  {
+   "n": 26,
+   "id": "A028",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 20.7,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 20.6,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 19.0,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 27,
+   "id": "A029",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "error",
+     "sec": 41.1,
+     "problems": [
+      "beklenen answer, gelen error: LEFT JOIN ozet AS o2 ON o2.ay = DATEADD(MONTH, -1, o1.ay): iki tabloyu bağlayan kolon eşitliği yok (çapraz birleştirme); her satır diğer tablonun her satırıyla "
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "answer",
+     "sec": 16.2,
+     "problems": [
+      "cevapta '['kasa_giris', 'kasa_giris_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']",
+      "cevapta '['kasa_cikis', 'kasa_cikis_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']",
+      "cevapta '['banka_giris', 'banka_giris_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']",
+      "cevapta '['banka_cikis', 'banka_cikis_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 14.1,
+     "problems": [
+      "cevapta '['kasa_giris', 'kasa_giris_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']",
+      "cevapta '['kasa_cikis', 'kasa_cikis_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']",
+      "cevapta '['banka_giris', 'banka_giris_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']",
+      "cevapta '['banka_cikis', 'banka_cikis_toplam']' kolonu yok: ['ay', 'net_fark', 'toplam_cikis', 'toplam_giris']"
+     ],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 28,
+   "id": "A030",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.7,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 3.2,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 3.2,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 29,
+   "id": "A031",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.3,
+     "problems": [],
+     "federated": false,
+     "rows": 31
+    },
+    {
+     "kind": "answer",
+     "sec": 12.6,
+     "problems": [],
+     "federated": false,
+     "rows": 31
+    },
+    {
+     "kind": "answer",
+     "sec": 13.0,
+     "problems": [],
+     "federated": false,
+     "rows": 31
+    }
+   ]
+  },
+  {
+   "n": 30,
+   "id": "A051",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 2,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 18.8,
+     "problems": [],
+     "federated": false,
+     "rows": 27386
+    },
+    {
+     "kind": "answer",
+     "sec": 16.4,
+     "problems": [],
+     "federated": false,
+     "rows": 27386
+    },
+    {
+     "kind": "answer",
+     "sec": 17.6,
+     "problems": [],
+     "federated": false,
+     "rows": 27386
+    }
+   ]
+  },
+  {
+   "n": 31,
+   "id": "A053",
+   "verdict": "KARARSIZ",
+   "passed": "2/3",
+   "distinctSql": 3,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 9.1,
+     "problems": [],
+     "federated": false,
+     "rows": 1851
+    },
+    {
+     "kind": "answer",
+     "sec": 9.2,
+     "problems": [
+      "satır sayısı 1628, referans 1851",
+      "'B01-GMD-01' cevapta yok",
+      "'B03-LOJ-01' cevapta yok",
+      "'B05-İDA-01' cevapta yok",
+      "'B04-PAZ-01' cevapta yok",
+      "'B05-BİL-01' cevapta yok",
+      "'B15-ETC-01' cevapta yok",
+      "'Y02-ÇOC-01' cevapta yok",
+      "'B09-SAT-01' cevapta yok",
+      "'76001.01.6622-0' cevapta yok",
+      "'76001.01.6334-0' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 1628
+    },
+    {
+     "kind": "answer",
+     "sec": 7.5,
+     "problems": [],
+     "federated": false,
+     "rows": 1851
+    }
+   ]
+  },
+  {
+   "n": 32,
+   "id": "A055",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 18.2,
+     "problems": [],
+     "federated": false,
+     "rows": 21
+    },
+    {
+     "kind": "answer",
+     "sec": 16.1,
+     "problems": [],
+     "federated": false,
+     "rows": 21
+    },
+    {
+     "kind": "answer",
+     "sec": 14.2,
+     "problems": [],
+     "federated": false,
+     "rows": 21
+    }
+   ]
+  },
+  {
+   "n": 33,
+   "id": "A056",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.8,
+     "problems": [],
+     "federated": false,
+     "rows": 8069
+    },
+    {
+     "kind": "answer",
+     "sec": 22.9,
+     "problems": [],
+     "federated": false,
+     "rows": 8069
+    },
+    {
+     "kind": "answer",
+     "sec": 13.9,
+     "problems": [],
+     "federated": false,
+     "rows": 8069
+    }
+   ]
+  },
+  {
+   "n": 34,
+   "id": "A041",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.9,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 11.6,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 10.2,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 35,
+   "id": "B055",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 2,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 12.1,
+     "problems": [
+      "satır sayısı 100, referans 132",
+      "['odeme_yuzdeleri_toplami', 'odeme_yuzdesi_toplami', 'toplam_yuzde', 'toplam'] toplamı 19,690.04, referans 26,060.04"
+     ],
+     "federated": false,
+     "rows": 100
+    },
+    {
+     "kind": "answer",
+     "sec": 10.9,
+     "problems": [
+      "satır sayısı 100, referans 132",
+      "['odeme_yuzdeleri_toplami', 'odeme_yuzdesi_toplami', 'toplam_yuzde', 'toplam'] toplamı 19,690.04, referans 26,060.04"
+     ],
+     "federated": false,
+     "rows": 100
+    },
+    {
+     "kind": "answer",
+     "sec": 9.2,
+     "problems": [
+      "satır sayısı 100, referans 132",
+      "['odeme_yuzdeleri_toplami', 'odeme_yuzdesi_toplami', 'toplam_yuzde', 'toplam'] toplamı 19,690.04, referans 26,060.04"
+     ],
+     "federated": false,
+     "rows": 100
+    }
+   ]
+  },
+  {
+   "n": 36,
+   "id": "B073",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 17.2,
+     "problems": [
+      "['dengesizlik_orani', 'dengesizlik', 'degisim_katsayisi', 'cv'] = 6.639528095680697, referans 3.4641016151377544"
+     ],
+     "federated": false,
+     "rows": 42820
+    },
+    {
+     "kind": "answer",
+     "sec": 17.3,
+     "problems": [
+      "['dengesizlik_orani', 'dengesizlik', 'degisim_katsayisi', 'cv'] = 6.639528095680697, referans 3.4641016151377544"
+     ],
+     "federated": false,
+     "rows": 42820
+    },
+    {
+     "kind": "answer",
+     "sec": 20.1,
+     "problems": [
+      "['dengesizlik_orani', 'dengesizlik', 'degisim_katsayisi', 'cv'] = 6.639528095680697, referans 3.4641016151377544"
+     ],
+     "federated": false,
+     "rows": 42820
+    }
+   ]
+  },
+  {
+   "n": 37,
+   "id": "C045",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 2,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 16.4,
+     "problems": [
+      "boş beklenirdi, 1060 satır geldi"
+     ],
+     "federated": false,
+     "rows": 1060
+    },
+    {
+     "kind": "answer",
+     "sec": 12.2,
+     "problems": [
+      "boş beklenirdi, 1061 satır geldi"
+     ],
+     "federated": false,
+     "rows": 1061
+    },
+    {
+     "kind": "answer",
+     "sec": 12.1,
+     "problems": [
+      "boş beklenirdi, 1061 satır geldi"
+     ],
+     "federated": false,
+     "rows": 1061
+    }
+   ]
+  },
+  {
+   "n": 38,
+   "id": "C063",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 15.2,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "deny",
+     "sec": 38.9,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "answer",
+     "sec": 15.2,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 39,
+   "id": "D050",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 2,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.3,
+     "problems": [],
+     "federated": false,
+     "rows": 2920
+    },
+    {
+     "kind": "answer",
+     "sec": 10.7,
+     "problems": [],
+     "federated": false,
+     "rows": 2920
+    },
+    {
+     "kind": "answer",
+     "sec": 11.0,
+     "problems": [],
+     "federated": false,
+     "rows": 2920
+    }
+   ]
+  },
+  {
+   "n": 40,
+   "id": "D053",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 8.1,
+     "problems": [
+      "beklenen answer, gelen deny: Bu soruyu cevaplayamıyorum: 'telif' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 6.9,
+     "problems": [
+      "beklenen answer, gelen deny: Bu soruyu cevaplayamıyorum: 'telif' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 5.9,
+     "problems": [
+      "beklenen answer, gelen deny: Bu soruyu cevaplayamıyorum: 'telif' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+     ],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 41,
+   "id": "D069",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 2,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 13.8,
+     "problems": [],
+     "federated": false,
+     "rows": 33
+    },
+    {
+     "kind": "answer",
+     "sec": 11.2,
+     "problems": [],
+     "federated": false,
+     "rows": 33
+    },
+    {
+     "kind": "answer",
+     "sec": 11.0,
+     "problems": [],
+     "federated": false,
+     "rows": 33
+    }
+   ]
+  },
+  {
+   "n": 42,
+   "id": "A012",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 13.6,
+     "problems": [],
+     "federated": false,
+     "rows": 1061
+    },
+    {
+     "kind": "answer",
+     "sec": 12.5,
+     "problems": [],
+     "federated": false,
+     "rows": 1061
+    },
+    {
+     "kind": "answer",
+     "sec": 12.7,
+     "problems": [],
+     "federated": false,
+     "rows": 1061
+    }
+   ]
+  },
+  {
+   "n": 43,
+   "id": "A016",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.3,
+     "problems": [],
+     "federated": false,
+     "rows": 10
+    },
+    {
+     "kind": "answer",
+     "sec": 2.8,
+     "problems": [],
+     "federated": false,
+     "rows": 10
+    },
+    {
+     "kind": "answer",
+     "sec": 2.8,
+     "problems": [],
+     "federated": false,
+     "rows": 10
+    }
+   ]
+  },
+  {
+   "n": 44,
+   "id": "A019",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 2,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 12.0,
+     "problems": [],
+     "federated": false,
+     "rows": 501
+    },
+    {
+     "kind": "answer",
+     "sec": 9.1,
+     "problems": [],
+     "federated": false,
+     "rows": 501
+    },
+    {
+     "kind": "answer",
+     "sec": 15.1,
+     "problems": [],
+     "federated": false,
+     "rows": 501
+    }
+   ]
+  },
+  {
+   "n": 45,
+   "id": "A020",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 9.2,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 6.6,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 7.0,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 46,
+   "id": "A036",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.3,
+     "problems": [
+      "['oran', 'pay', 'pay_oran'] = 0.18781908391457539, referans 0.176141344662"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 3.1,
+     "problems": [
+      "['oran', 'pay', 'pay_oran'] = 0.18781908391457539, referans 0.176141344662"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 2.5,
+     "problems": [
+      "['oran', 'pay', 'pay_oran'] = 0.18781908391457539, referans 0.176141344662"
+     ],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 47,
+   "id": "A037",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 2,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 12.0,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 9.5,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 9.6,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 48,
+   "id": "A038",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 12.0,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 10.0,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 8.9,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 49,
+   "id": "A044",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 1,
+   "holdout": true,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.0,
+     "problems": [
+      "satır sayısı 1, referans 5",
+      "'Mustafa Armağan' cevapta yok",
+      "'Bahadır Yenişehirlioğlu' cevapta yok",
+      "'Ahmed Günbay Yıldız' cevapta yok",
+      "'Ahmet Şimşirgil' cevapta yok",
+      "'Metin Özdamarlar' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 2.7,
+     "problems": [
+      "satır sayısı 1, referans 5",
+      "'Mustafa Armağan' cevapta yok",
+      "'Bahadır Yenişehirlioğlu' cevapta yok",
+      "'Ahmed Günbay Yıldız' cevapta yok",
+      "'Ahmet Şimşirgil' cevapta yok",
+      "'Metin Özdamarlar' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 2.4,
+     "problems": [
+      "satır sayısı 1, referans 5",
+      "'Mustafa Armağan' cevapta yok",
+      "'Bahadır Yenişehirlioğlu' cevapta yok",
+      "'Ahmed Günbay Yıldız' cevapta yok",
+      "'Ahmet Şimşirgil' cevapta yok",
+      "'Metin Özdamarlar' cevapta yok"
+     ],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 50,
+   "id": "A066",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 13.2,
+     "problems": [],
+     "federated": false,
+     "rows": 186
+    },
+    {
+     "kind": "answer",
+     "sec": 12.3,
+     "problems": [],
+     "federated": false,
+     "rows": 186
+    },
+    {
+     "kind": "answer",
+     "sec": 11.4,
+     "problems": [],
+     "federated": false,
+     "rows": 186
+    }
+   ]
+  },
+  {
+   "n": 51,
+   "id": "A067",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 12.8,
+     "problems": [
+      "['ortalama_telif_orani', 'ortalama_onerilen_telif_orani', 'onerilen_telif_orani', '*'] = 5.9636363636, referans 5.64"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 10.5,
+     "problems": [
+      "['ortalama_telif_orani', 'ortalama_onerilen_telif_orani', 'onerilen_telif_orani', '*'] = 5.9636363636, referans 5.64"
+     ],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 12.0,
+     "problems": [
+      "['ortalama_telif_orani', 'ortalama_onerilen_telif_orani', 'onerilen_telif_orani', '*'] = 5.9636363636, referans 5.64"
+     ],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 52,
+   "id": "A069",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.2,
+     "problems": [],
+     "federated": false,
+     "rows": 8
+    },
+    {
+     "kind": "answer",
+     "sec": 3.0,
+     "problems": [],
+     "federated": false,
+     "rows": 8
+    },
+    {
+     "kind": "answer",
+     "sec": 2.7,
+     "problems": [],
+     "federated": false,
+     "rows": 8
+    }
+   ]
+  },
+  {
+   "n": 53,
+   "id": "A093",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 12.7,
+     "problems": [],
+     "federated": false,
+     "rows": 16
+    },
+    {
+     "kind": "answer",
+     "sec": 9.7,
+     "problems": [],
+     "federated": false,
+     "rows": 16
+    },
+    {
+     "kind": "answer",
+     "sec": 11.1,
+     "problems": [],
+     "federated": false,
+     "rows": 16
+    }
+   ]
+  },
+  {
+   "n": 54,
+   "id": "A094",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.2,
+     "problems": [],
+     "federated": false,
+     "rows": 9
+    },
+    {
+     "kind": "answer",
+     "sec": 10.7,
+     "problems": [],
+     "federated": false,
+     "rows": 9
+    },
+    {
+     "kind": "answer",
+     "sec": 10.9,
+     "problems": [],
+     "federated": false,
+     "rows": 9
+    }
+   ]
+  },
+  {
+   "n": 55,
+   "id": "A095",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 15.8,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    },
+    {
+     "kind": "answer",
+     "sec": 11.4,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    },
+    {
+     "kind": "answer",
+     "sec": 10.4,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    }
+   ]
+  },
+  {
+   "n": 56,
+   "id": "B047",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 15.0,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 14.7,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 12.6,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 57,
+   "id": "B049",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.2,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 10.8,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 10.8,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 58,
+   "id": "B050",
+   "verdict": "KARARSIZ",
+   "passed": "2/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 14.6,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "deny",
+     "sec": 10.2,
+     "problems": [
+      "beklenen answer, gelen deny: Bu soruyu cevaplayamıyorum: 'yolda' burada tanımlı bir kavram değil. İş terimiyse portalden tanımlayabilirsiniz."
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "answer",
+     "sec": 12.3,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 59,
+   "id": "B057",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": true,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.6,
+     "problems": [],
+     "federated": false,
+     "rows": 2
+    },
+    {
+     "kind": "answer",
+     "sec": 2.8,
+     "problems": [],
+     "federated": false,
+     "rows": 2
+    },
+    {
+     "kind": "answer",
+     "sec": 2.9,
+     "problems": [],
+     "federated": false,
+     "rows": 2
+    }
+   ]
+  },
+  {
+   "n": 60,
+   "id": "B060",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 14.8,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 17.0,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 16.2,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 61,
+   "id": "B061",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 10.5,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 7.3,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 7.6,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 62,
+   "id": "B062",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 18.5,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    },
+    {
+     "kind": "answer",
+     "sec": 14.7,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    },
+    {
+     "kind": "answer",
+     "sec": 14.7,
+     "problems": [],
+     "federated": false,
+     "rows": 0
+    }
+   ]
+  },
+  {
+   "n": 63,
+   "id": "B064",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 5.4,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 4.3,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 3.9,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 64,
+   "id": "B066",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 12.5,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 10.2,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    },
+    {
+     "kind": "answer",
+     "sec": 10.0,
+     "problems": [],
+     "federated": false,
+     "rows": 1
+    }
+   ]
+  },
+  {
+   "n": 65,
+   "id": "B072",
+   "verdict": "KARARSIZ",
+   "passed": "2/3",
+   "distinctSql": 3,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 36.8,
+     "problems": [],
+     "federated": false,
+     "rows": 189649
+    },
+    {
+     "kind": "answer",
+     "sec": 92.7,
+     "problems": [
+      "satır sayısı 1000000, referans 189649"
+     ],
+     "federated": false,
+     "rows": 1000000
+    },
+    {
+     "kind": "answer",
+     "sec": 27.0,
+     "problems": [],
+     "federated": false,
+     "rows": 189649
+    }
+   ]
+  },
+  {
+   "n": 66,
+   "id": "B074",
+   "verdict": "BOZUK",
+   "passed": "0/3",
+   "distinctSql": 1,
+   "holdout": true,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 4.7,
+     "problems": [
+      "'İKİTELLİ KURUMSAL': 66.67139097744379, referans 95.1612146341466",
+      "'KARAMAN': 21.492, referans 53.730000000000004",
+      "'ERCİYES': 14.855, referans 29.71",
+      "'ERYAMAN': 44.255, referans 88.51"
+     ],
+     "federated": false,
+     "rows": 69
+    },
+    {
+     "kind": "answer",
+     "sec": 3.0,
+     "problems": [
+      "'İKİTELLİ KURUMSAL': 66.67139097744379, referans 95.1612146341466",
+      "'KARAMAN': 21.492, referans 53.730000000000004",
+      "'ERCİYES': 14.855, referans 29.71",
+      "'ERYAMAN': 44.255, referans 88.51"
+     ],
+     "federated": false,
+     "rows": 69
+    },
+    {
+     "kind": "answer",
+     "sec": 2.8,
+     "problems": [
+      "'İKİTELLİ KURUMSAL': 66.67139097744379, referans 95.1612146341466",
+      "'KARAMAN': 21.492, referans 53.730000000000004",
+      "'ERCİYES': 14.855, referans 29.71",
+      "'ERYAMAN': 44.255, referans 88.51"
+     ],
+     "federated": false,
+     "rows": 69
+    }
+   ]
+  },
+  {
+   "n": 67,
+   "id": "A021",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 7.1,
+     "problems": [],
+     "federated": false,
+     "rows": 297
+    },
+    {
+     "kind": "answer",
+     "sec": 3.8,
+     "problems": [],
+     "federated": false,
+     "rows": 297
+    },
+    {
+     "kind": "answer",
+     "sec": 3.9,
+     "problems": [],
+     "federated": false,
+     "rows": 297
+    }
+   ]
+  },
+  {
+   "n": 68,
+   "id": "A022",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 1,
+   "holdout": true,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 3.8,
+     "problems": [],
+     "federated": false,
+     "rows": 532
+    },
+    {
+     "kind": "answer",
+     "sec": 3.3,
+     "problems": [],
+     "federated": false,
+     "rows": 532
+    },
+    {
+     "kind": "answer",
+     "sec": 3.4,
+     "problems": [],
+     "federated": false,
+     "rows": 532
+    }
+   ]
+  },
+  {
+   "n": 69,
+   "id": "A023",
+   "verdict": "KARARSIZ",
+   "passed": "1/3",
+   "distinctSql": 1,
+   "holdout": false,
+   "verified": false,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "answer",
+     "sec": 97.6,
+     "problems": [],
+     "federated": true,
+     "rows": 9502
+    },
+    {
+     "kind": "deny",
+     "sec": 14.5,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki kavramlar tanımlı (satis hedefi, ciroyu, kitap, stline default cancelled), ama bunları tek bir hesapta birleştiren bir tanım veya ilişki yok; bu yüzden"
+     ],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 29.7,
+     "problems": [
+      "beklenen answer, gelen deny: Sorudaki koşulların tamamı doğrulanamadı: 'ciro' parçası: SUM(s.[LINENET]) şişirilmiş: STLINE satırları aynı anahtara bağlı ikinci bir çoklu ilişkinin (UNITBARC"
+     ],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  },
+  {
+   "n": 71,
+   "id": "A046",
+   "verdict": "SAĞLAM",
+   "passed": "3/3",
+   "distinctSql": 0,
+   "holdout": false,
+   "verified": true,
+   "dataNote": "",
+   "attempts": [
+    {
+     "kind": "deny",
+     "sec": 10.2,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 6.6,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    },
+    {
+     "kind": "deny",
+     "sec": 6.7,
+     "problems": [],
+     "federated": false,
+     "rows": null
+    }
+   ]
+  }
+ ]
+}

@@ -1619,7 +1619,6 @@ columns:
   - name: "WEBADDR"
     type: "VARCHAR"
     properties:
-      "description": "[pii] adres — kişisel veri, asla seçme/maskele"
       "displayName": "WEBADDR"
   - name: "WFLOWCRDREF"
     type: "INTEGER"

@@ -11,7 +11,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from semantic_layer.models import TemporalSlot
-from semantic_layer.normalize import fold
+from semantic_layer.normalize import cardinal, fold
 
 MONTHS = {
     "ocak": 1, "subat": 2, "mart": 3, "nisan": 4, "mayis": 5, "haziran": 6,
@@ -50,15 +50,17 @@ def _quarter_start(d: date) -> date:
 
 
 def _grain_hint(text: str) -> Optional[str]:
-    if re.search(r"\b(ay bazinda|aylik|ay ay|aya gore|ay kiriliminda|her ay)\b", text):
+    # Tekil "yıla/haftaya/çeyreğe göre" karşılaştırmadır ("geçen yıla göre"); kırılım değil.
+    # Kırılımı yalnız çoğul biçim anlatır: "yıllara göre".
+    if re.search(r"\b(ay bazinda|aylar bazinda|aylik|ay ay|aya gore|aylara gore|aylara bol\w*|ay kiriliminda|her ay)\b", text):
         return "MONTH"
-    if re.search(r"\b(gunluk|gun bazinda|gun gun|gune gore)\b", text):
+    if re.search(r"\b(gunluk|gun bazinda|gun gun|gune gore|gunlere gore)\b", text):
         return "DAY"
-    if re.search(r"\b(haftalik|hafta bazinda)\b", text):
+    if re.search(r"\b(haftalik|hafta bazinda|hafta hafta|haftalara gore)\b", text):
         return "WEEK"
-    if re.search(r"\b(ceyrek bazinda|ceyreklik)\b", text):
+    if re.search(r"\b(ceyrek bazinda|ceyreklik|ceyreklere gore)\b", text):
         return "QUARTER"
-    if re.search(r"\b(yillik|yil bazinda)\b", text):
+    if re.search(r"\b(yillik|yil bazinda|yil yil|yillara gore)\b", text):
         return "YEAR"
     return None
 
@@ -117,6 +119,32 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
             taken.append((m.start(), m.end()))
             found.append((m.start(), m.end(), slot))
 
+    # "yılbaşından 31 ağustosa kadar", "31 ağustosa kadar", "ağustos sonuna kadar": a range that ends
+    # on a named day. The end is inclusive of that day; the start is the start of the year unless the
+    # phrase says otherwise. Read before the bare year and YTD forms, which would otherwise take the
+    # year and leave "31 ağustos" as unread words.
+    for m in re.finditer(rf"\b(?:{_YEAR}\s+)?(?:yil\s*basindan\s+)?(\d{{1,2}})\s+({_MONTH_RE})\w*\s+kadar\b", text):
+        year = int(m.group(1)) if m.group(1) else today.year
+        day, mo = int(m.group(2)), MONTHS[m.group(3)]
+        try:
+            last = date(year, mo, day)
+        except ValueError:
+            continue
+        add(m, TemporalSlot(m.group(0).strip(), "YEAR_TO_DAY", date(year, 1, 1), last + timedelta(days=1), "DAY",
+                            params={"year": year, "through": last.isoformat()}))
+    for m in re.finditer(rf"\b(?:{_YEAR}\s+)?(?:yil\s*basindan\s+)?({_MONTH_RE})\s+sonuna\s+kadar\b", text):
+        year = int(m.group(1)) if m.group(1) else today.year
+        mo = MONTHS[m.group(2)]
+        add(m, TemporalSlot(m.group(0).strip(), "YEAR_TO_MONTH_END", date(year, 1, 1), _next_month(year, mo), "DAY",
+                            params={"year": year, "through_month": mo}))
+    # "2025 yılını da aynı şekilde 8 aylık": the first N months of that year — the mirror of a
+    # partial current year, said the way people say it.
+    for m in re.finditer(rf"\b{_YEAR}\s*(?:yilini|yilinin|yilinda|yili|yil)?\s*(?:da\s+|de\s+)?(?:ayni\s+sekilde\s+)?(?:ilk\s+)?(\d{{1,2}})\s+ay(?:lik|lik\s+olarak|i|ini|inda|lari)?\b", text):
+        year, n = int(m.group(1)), int(m.group(2))
+        if not 1 <= n <= 12:
+            continue
+        add(m, TemporalSlot(m.group(0).strip(), "FIRST_N_MONTHS", date(year, 1, 1), _next_month(year, n), "MONTH",
+                            params={"year": year, "n": n}))
     # A compound date phrase owns its entire span. Otherwise the year,
     # year-to-date and "today" become three competing periods.
     for m in re.finditer(rf"\b(?:{_YEAR}\s+)?yil\s*basindan\s+(?:bugune(?:\s+kadar)?|bu\s+yana|beri|itibaren)\b", text):
@@ -155,21 +183,50 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         y = int(y_all[0]) if y_all else today.year
         add(m, TemporalSlot(m.group(0).strip(), "MONTH", _month_start(y, mo), _next_month(y, mo), "MONTH", params={"year": y, "month": mo, "year_assumed": not y_all}))
     # --- relative
-    for m in re.finditer(r"\bson\s+(\d{1,3})\s+gun\w*", text):
-        n = int(m.group(1))
+    # "son üç ay", "son on beş gün": people write the count out as often as they type it.
+    _N = r"(\d{1,3}|[a-z]+(?:\s+[a-z]+)?)"
+
+    def _count(raw: str) -> Optional[int]:
+        raw = raw.strip()
+        if raw.isdigit():
+            return int(raw)
+        words = raw.split()
+        total = 0
+        for w in words:
+            v = cardinal(w)
+            if v is None:
+                return None
+            total += v
+        return total or None
+
+    for m in re.finditer(rf"\bson\s+{_N}\s+gun\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_DAYS", today - timedelta(days=n), today + timedelta(days=1), "DAY", params={"n": n}))
-    for m in re.finditer(r"\bson\s+(\d{1,2})\s+yil\w*", text):
-        n = max(1, min(20, int(m.group(1))))
+    for m in re.finditer(rf"\bson\s+{_N}\s+yil\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
+        n = max(1, min(20, n))
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_YEARS", date(today.year - n + 1, 1, 1), date(today.year + 1, 1, 1), "YEAR", params={"n": n}))
-    for m in re.finditer(r"\bson\s+(\d{1,2})\s+ay\w*", text):
-        n = int(m.group(1))
+    for m in re.finditer(rf"\bson\s+{_N}\s+ay\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
+        # The N months ending with the current one: "son üç ay" on 17 September is July, August and
+        # September. Counted from one month earlier it read four months, and a sold-to-produced ratio
+        # over "the same period" silently carried an extra month.
         y, mo = today.year, today.month
-        start_m = mo - n
+        start_m = mo - n + 1
         while start_m <= 0:
             start_m += 12
             y -= 1
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_MONTHS", _month_start(y, start_m), _next_month(today.year, today.month), "MONTH", params={"n": n}))
     for m in re.finditer(r"\bson\s+(gunler|gunlerde|donem|donemde|zamanlar|zamanlarda|haftalar)\b", text):
+        add(m, TemporalSlot(m.group(0).strip(), "AMBIGUOUS_RECENT", None, None, None, ambiguous=True))
+    # "bu ara", "bu sıralar", "yakın zamanda", "geçenlerde": a recent stretch nobody put a number on.
+    for m in re.finditer(r"\b(bu ara|bu aralar|bu siralar|bu gunlerde|yakin zamanda|yakinlarda|gecenlerde)\b", text):
         add(m, TemporalSlot(m.group(0).strip(), "AMBIGUOUS_RECENT", None, None, None, ambiguous=True))
     simple = {
         rf"\bbugun{_CASE}\b": ("TODAY", today, today + timedelta(days=1), "DAY"),

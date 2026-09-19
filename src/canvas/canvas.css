@@ -1,0 +1,579 @@
+/* Kanvas tasarım dili — design/stitch-wow/03-canvas.html'den birebir alındı.
+   Renk ve gölge jetonları tailwind.config.js içindeki `canvas` ad alanında;
+   burada yalnız Tailwind ile ifade edilemeyen yüzeyler var. */
+
+.cv-mesh {
+  background-color: #f7fafc;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 232, 214, 0.95) 0%, rgba(255, 232, 214, 0.3) 38%, transparent 60%),
+    radial-gradient(circle at 50% 45%, rgba(221, 235, 255, 0.9) 0%, rgba(221, 235, 255, 0.35) 45%, transparent 70%),
+    radial-gradient(circle at 88% 82%, rgba(227, 255, 241, 0.95) 0%, rgba(227, 255, 241, 0.3) 40%, transparent 65%);
+}
+
+.cv-dots {
+  background-image: radial-gradient(rgba(30, 41, 59, 0.14) 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+}
+
+.cv-glass {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+
+.cv-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.cv-dock {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+/* Bant etiketi (washi tape) */
+.cv-tape {
+  background: rgba(255, 243, 205, 0.85);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-left: 2px dashed rgba(217, 119, 6, 0.3);
+  border-right: 2px dashed rgba(217, 119, 6, 0.3);
+}
+
+@keyframes cvFlowDash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+.cv-flow {
+  stroke-dasharray: 6 6;
+  animation: cvFlowDash 2.4s linear infinite;
+}
+
+@keyframes cvFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+.cv-float {
+  animation: cvFloat 6s ease-in-out infinite;
+}
+
+/* Kartın kendi eğimi var; hover'da eğimi bozmadan yükselt. */
+.cv-card-hover:hover {
+  box-shadow: 0 28px 70px -12px rgba(20, 30, 60, 0.18);
+}
+
+.cv-scroll {
+  scrollbar-width: thin;
+}
+.cv-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.cv-scroll::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.2);
+  border-radius: 9999px;
+}
+
+/* Giriş ekranı (SessionGate): kahraman ve kart yumuşakça belirir. Güçlü
+   ease-out; girişte bir kez görülür, o yüzden standart süre uygundur. */
+.lg-rise {
+  opacity: 0;
+  transform: translateY(16px) scale(0.985);
+  transition: opacity 0.42s cubic-bezier(0.23, 1, 0.32, 1),
+    transform 0.42s cubic-bezier(0.23, 1, 0.32, 1);
+  will-change: transform, opacity;
+}
+.lg-rise.lg-in {
+  opacity: 1;
+  transform: none;
+}
+.lg-rise.lg-delay {
+  transition-delay: 0.08s;
+}
+
+/* Kart içindeki alanlar sırayla iner (30–80 ms aralık). */
+.lg-stagger > * {
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity 0.4s cubic-bezier(0.23, 1, 0.32, 1),
+    transform 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.lg-stagger.lg-in > * {
+  opacity: 1;
+  transform: none;
+}
+.lg-stagger.lg-in > *:nth-child(1) { transition-delay: 0.1s; }
+.lg-stagger.lg-in > *:nth-child(2) { transition-delay: 0.15s; }
+.lg-stagger.lg-in > *:nth-child(3) { transition-delay: 0.2s; }
+.lg-stagger.lg-in > *:nth-child(4) { transition-delay: 0.25s; }
+.lg-stagger.lg-in > *:nth-child(5) { transition-delay: 0.3s; }
+.lg-stagger.lg-in > *:nth-child(6) { transition-delay: 0.35s; }
+.lg-stagger.lg-in > *:nth-child(7) { transition-delay: 0.4s; }
+
+/* Arka plandaki yumuşak ışık lekeleri; her biri farklı fazda yüzer. */
+.lg-orb {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(52px);
+  pointer-events: none;
+}
+@keyframes lgDrift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(0, -22px, 0) scale(1.06);
+  }
+}
+.lg-drift {
+  animation: lgDrift 11s ease-in-out infinite;
+}
+.lg-drift-2 {
+  animation: lgDrift 14s ease-in-out infinite;
+  animation-delay: -4s;
+}
+.lg-drift-3 {
+  animation: lgDrift 17s ease-in-out infinite;
+  animation-delay: -8s;
+}
+
+/* Hareketi azalt tercihini dinle: yüzen kartlar ve akan çizgiler dursun. */
+@media (prefers-reduced-motion: reduce) {
+  .cv-flow,
+  .cv-float,
+  .lg-drift,
+  .lg-drift-2,
+  .lg-drift-3 {
+    animation: none;
+  }
+  .lg-rise {
+    transform: none;
+    transition: opacity 0.3s ease;
+  }
+  .lg-stagger > * {
+    transform: none;
+    transition: opacity 0.3s ease;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Stitch ekranının kendi sınıf adları. HTML birebir JSX'e çevrildiği   */
+/* için sınıf adları da aynen korunur (design/stitch-wow/03-canvas.html)*/
+/* ------------------------------------------------------------------ */
+
+.bg-mesh-canvas {
+  background-color: #f7fafc;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 232, 214, 0.95) 0%, rgba(255, 232, 214, 0.3) 38%, transparent 60%),
+    radial-gradient(circle at 50% 45%, rgba(221, 235, 255, 0.9) 0%, rgba(221, 235, 255, 0.35) 45%, transparent 70%),
+    radial-gradient(circle at 88% 82%, rgba(227, 255, 241, 0.95) 0%, rgba(227, 255, 241, 0.3) 40%, transparent 65%);
+  background-attachment: fixed;
+}
+
+.dot-grid {
+  background-image: radial-gradient(rgba(30, 41, 59, 0.14) 1.25px, transparent 1.25px);
+  background-size: 24px 24px;
+}
+
+.glass-panel {
+  background: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.glass-card:hover {
+  transform: translateY(-4px) scale(1.01);
+  box-shadow: 0 28px 70px -12px rgba(20, 30, 60, 0.18);
+}
+
+.glass-dock {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.9);
+}
+
+.washi-tape {
+  background: rgba(255, 243, 205, 0.85);
+  backdrop-filter: blur(2px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  border-left: 2px dashed rgba(217, 119, 6, 0.3);
+  border-right: 2px dashed rgba(217, 119, 6, 0.3);
+}
+
+@keyframes flowDash {
+  to {
+    stroke-dashoffset: -32;
+  }
+}
+.flowing-line {
+  stroke-dasharray: 6 6;
+  animation: flowDash 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flowing-line {
+    animation: none;
+  }
+  .glass-card:hover {
+    transform: none;
+  }
+}
+
+/* iOS Safari 16px altındaki alana dokununca sayfayı yakınlaştırır; telefonda
+   bütün yazı alanları 16px. Masaüstünde tasarımdaki boyut kalır. */
+@media (max-width: 639px) {
+  input:not([type='checkbox']):not([type='radio']),
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Panolar: sürüklenebilir kartlar, SQL paneli, "Panoya ekle" çağrısı   */
+/* ------------------------------------------------------------------ */
+
+/* Kart sürüklenirken kalkar; hover'da kalkmaz (tutma hissiyle çakışır).
+   Gölge boyanmaz, hazır duran ::after katmanının opaklığı açılır (GPU). */
+.glass-card.pano-card {
+  position: relative;
+  isolation: isolate;
+  transition:
+    transform 0.16s cubic-bezier(0.23, 1, 0.32, 1),
+    border-color 0.16s ease;
+}
+.glass-card.pano-card:hover {
+  transform: none;
+  box-shadow: 0 20px 60px -15px rgba(20, 30, 60, 0.12), 0 4px 16px -2px rgba(20, 30, 60, 0.05);
+}
+.glass-card.pano-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  box-shadow: 0 36px 90px -18px rgba(124, 92, 255, 0.35), 0 8px 24px -4px rgba(20, 30, 60, 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.pano-frame[data-drag='move'] .pano-card {
+  transform: scale(1.015);
+  border-color: rgba(124, 92, 255, 0.45);
+}
+.pano-frame[data-drag='move'] .pano-card::after {
+  opacity: 1;
+}
+.pano-frame[data-drag='size'] .pano-card {
+  border-color: rgba(124, 92, 255, 0.45);
+}
+.pano-frame[data-drag] {
+  cursor: grabbing;
+}
+.pano-frame[data-drag] * {
+  user-select: none;
+}
+/* Tutamaç: parmakla sürüklerken sayfa kaymasın. */
+.pano-handle {
+  touch-action: none;
+}
+
+/* Bastığını hisset: her basılabilir öğe. */
+.pano-press {
+  transition: transform 0.16s cubic-bezier(0.23, 1, 0.32, 1);
+}
+.pano-press:active {
+  transform: scale(0.97);
+}
+
+/* Sorgu sonucu önizlemesi girişte alttan yükselir (soru başına bir kez görülür). */
+@keyframes panoRise {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.pano-rise {
+  animation: panoRise 0.24s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+
+/* "Panoya ekle" çağrısı: üç kez nabız atan halka, sonra durur. */
+.pano-cta {
+  position: relative;
+  isolation: isolate;
+}
+.pano-cta::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: inherit;
+  border: 2px solid rgba(124, 92, 255, 0.55);
+  opacity: 0;
+  pointer-events: none;
+  animation: panoPulse 1.6s cubic-bezier(0.23, 1, 0.32, 1) 0.4s 3;
+}
+@keyframes panoPulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+/* SQL paneli açılırken belirir; kapanış anlıktır. */
+.pano-sql {
+  animation: panoSqlIn 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes panoSqlIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pano-frame[data-drag='move'] .pano-card {
+    transform: none;
+  }
+  .pano-press:active {
+    transform: none;
+  }
+  .pano-rise,
+  .pano-sql {
+    animation: panoFade 0.2s ease both;
+  }
+  .pano-cta::after {
+    animation: none;
+  }
+}
+@keyframes panoFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Panolar → PDF: tarayıcının "PDF olarak kaydet"i. Düğme önce kartları 700 px genişlikte alt alta
+   ve animasyonsuz dizer (BoardScreen `printing`); burada kâğıtta kaydırma çubuğu ve kesik içerik
+   kalmaması sağlanır: her kap tam boyuna açılır, tablo bütün satırlarıyla basılır. */
+@media print {
+  /* Kâğıtta ekran yakınlaştırması geçerli değil; pano 700 px yazı alanına göre çizilir. */
+  .shell-zoom-stage { zoom: 1 !important; }
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .pano-noprint {
+    display: none !important;
+  }
+  .pano-print-main {
+    position: static !important;
+    inset: auto !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+  .pano-print-main > div {
+    height: auto !important;
+    width: 100% !important;
+    display: block !important;
+  }
+  .pano-frame {
+    position: static !important;
+    display: block;
+    width: 100% !important;
+    height: auto !important;
+    transform: none !important;
+    margin: 0 0 14px !important;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+  .pano-frame .pano-card {
+    height: auto !important;
+    box-shadow: none !important;
+    border: 1px solid #e1dfdd !important;
+    border-radius: 8px !important;
+    background: #fff !important;
+    backdrop-filter: none !important;
+  }
+  /* Tablo kartı sayfalar boyunca akabilir; başlık her sayfada tekrar eder. */
+  .pano-frame:has(.pano-plot-table) {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+  .pano-plot-table,
+  .pano-table {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .pano-table thead {
+    display: table-header-group;
+    position: static !important;
+  }
+  .pano-table tfoot {
+    display: table-row-group;
+    position: static !important;
+  }
+  .pano-table tr {
+    break-inside: avoid;
+  }
+  .pano-print-main *,
+  .pano-print-main *::before,
+  .pano-print-main *::after {
+    scrollbar-width: none !important;
+  }
+  .pano-print-main ::-webkit-scrollbar {
+    display: none !important;
+  }
+  .pano-print-head {
+    display: block !important;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Excel önizlemesi (Planlı raporlar)                                  */
+/* Değişen kolon: düzeltme başına bir kez görülür, durum göstergesi.   */
+/* Renk/gölge geçişi; hareket yok, azaltılmış harekette de kalır.       */
+/* ------------------------------------------------------------------ */
+.xd-head {
+  background-color: #7c5cff;
+  box-shadow: inset 0 -3px 0 transparent;
+  transition:
+    background-color 600ms ease,
+    box-shadow 600ms ease;
+}
+.xd-head[data-flash] {
+  background-color: #5b3df0;
+  box-shadow: inset 0 -3px 0 #fbbf24;
+  transition-duration: 120ms;
+}
+.xd-col {
+  transition:
+    background-color 600ms ease,
+    box-shadow 600ms ease;
+}
+.xd-col[data-flash] {
+  background-color: #f5f3ff;
+  box-shadow: 0 0 0 2px rgba(124, 92, 255, 0.35);
+  transition-duration: 120ms;
+}
+/* Veri yeniden gelirken eski satırlar solar; yenisi gelince geri döner. */
+.xd-body {
+  transition: opacity 150ms ease;
+}
+.xd-sheet[aria-busy='true'] .xd-body {
+  opacity: 0.45;
+}
+/* Sol ray: genişlik geçişi ve menü adlarının belirmesi. Adlar ray açılınca sağdan kayarak gelir, kapanınca hemen söner. */
+.rail {
+  transition: width 200ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.rail .rail-label {
+  opacity: 0;
+  transform: translateX(-6px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  pointer-events: none;
+}
+.rail[data-open='1'] .rail-label {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1) 60ms, transform 180ms cubic-bezier(0.23, 1, 0.32, 1) 60ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rail,
+  .rail .rail-label {
+    transition-duration: 0ms;
+    transform: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Zeki AI "düşünüyor" göstergesi — yanıt beklenirken karar kartında.  */
+/* Amaç: durum bildirimi. Yalnız opacity/transform; ana thread dışı.    */
+/* ------------------------------------------------------------------ */
+.zeki-thinking {
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(3px);
+  animation: zekiFadeIn 0.2s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+.zeki-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: linear-gradient(to top right, #ff6b4a, #7c5cff);
+  opacity: 0.35;
+  transform: translateY(0) scale(0.85);
+  animation: zekiPulse 1s cubic-bezier(0.23, 1, 0.32, 1) infinite;
+}
+.zeki-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.zeki-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes zekiFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes zekiPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0) scale(0.85);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px) scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zeki-thinking {
+    animation: zekiFadeIn 0.2s ease both;
+  }
+  .zeki-dot {
+    animation: none;
+    opacity: 0.7;
+    transform: none;
+  }
+}

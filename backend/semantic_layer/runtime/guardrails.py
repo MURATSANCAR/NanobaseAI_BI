@@ -47,6 +47,10 @@ def strip_comments(sql: str) -> str:
     return "".join(out)
 
 
+#: the copy a row came from, carried through a union so joined rows only meet their own copy
+_FIRM_COL = "__nb_firm"
+
+
 def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: Optional[str] = "tsql") -> tuple[bool, str]:
     """Every table the statement reads must be one the catalog profiled. Without this the endpoint is a
     read-anything console over whatever the database login can reach."""
@@ -58,6 +62,7 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
         if p.schema_name:
             qual = p.schema_name.upper()
             schemas.add(qual)
+            schemas.add(qual.replace(".", "_"))     # the prompt's single-identifier label
             # "Timas_MSCRM.dbo" is one qualifier and also two: a reference may spell either.
             for part in qual.split("."):
                 if part:
@@ -95,6 +100,53 @@ def validate_sql(sql: str) -> tuple[bool, str]:
     return True, "ok"
 
 
+def _carry_tag_through_derived(out: exp.Expression, tagged: dict[str, str]) -> None:
+    """A derived table over a tagged relation carries the tag out with it.
+
+    A subquery that lists its columns (`SELECT DISTINCT id, tarih, cari FROM fatura`) does not carry
+    the copy tag the union added to the relation it reads; the join outside it then met this year's
+    documents with the earlier copy's payment plan on an identifier that merely coincided, and the
+    answer was a payment term of minus 750 days. The tag is added to the projection (and the GROUP BY)
+    of every subquery and CTE that reads a tagged relation, and the derived table — under the
+    alias it is later read by — joins the tagged set, so the JOIN pass below binds it too. A
+    derived table that aggregates without grouping is one row over all copies and stays untagged.
+    """
+    changed = True
+    while changed:
+        changed = False
+        for node in list(out.find_all(exp.Subquery)) + list(out.find_all(exp.CTE)):
+            alias = node.alias
+            sel = node.this
+            if not alias or alias.upper() in tagged or not isinstance(sel, exp.Select):
+                continue
+            sources: list[str] = []
+            from_ = sel.args.get("from_") or sel.args.get("from")    # sqlglot 30 names the arg `from_`
+            for src in ([from_.this] if from_ is not None else []) + [j.this for j in sel.args.get("joins") or []]:
+                name = src.alias or (src.name if isinstance(src, exp.Table) else "")
+                if name and name.upper() in tagged:
+                    sources.append(tagged[name.upper()])
+            if not sources:
+                continue
+            grouped = sel.args.get("group") is not None
+            if not grouped and any(e.find(exp.AggFunc) is not None for e in sel.expressions):
+                continue
+            if any(isinstance(e, exp.Star) or (isinstance(e, exp.Column) and isinstance(e.this, exp.Star)) for e in sel.expressions):
+                pass                                   # `*` already carries the tag column
+            elif any((e.alias_or_name or "").lower() == _FIRM_COL for e in sel.expressions):
+                pass
+            else:
+                sel.select(exp.alias_(exp.column(_FIRM_COL, table=sources[0]), _FIRM_COL), copy=False)
+                if grouped:
+                    sel.group_by(exp.column(_FIRM_COL, table=sources[0]), copy=False)
+            tagged[alias.upper()] = alias
+            changed = True
+    # A CTE is read under the alias the model gave the reference (`FROM kapanan k`): the reference's
+    # alias joins the tagged set so a JOIN on `k` finds its tag.
+    for node in out.find_all(exp.Table):
+        if node.name and node.name.upper() in tagged and node.alias and node.alias.upper() not in tagged:
+            tagged[node.alias.upper()] = node.alias
+
+
 def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, str], dialect: str = "tsql",
                     *, period: Optional[tuple] = None) -> str:
     """Rewrite model / logical table spellings to physical ones and transpile to the target dialect.
@@ -122,12 +174,24 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     # asked in logical terms would then be answered from it. Rank decides: a base table before a
     # view, a view before something whose name says it is a backup, and rows break the tie.
     by_entity: dict[str, SchemaProfile] = {}
+
+    def foreign(x: SchemaProfile) -> int:
+        # A table of another firm or period is not the one the deployment reads. Picked by rows, the
+        # biggest copy of an entity won, and a question in logical terms was answered from firm 021.
+        own = x.context or {}
+        return int(any(k in own and str(own[k]) != str(v) for k, v in (context or {}).items()))
+
     for entity, group in tables_of.items():
-        by_entity[entity] = min(group, key=lambda x: (source_rank(x.table_name, is_view=x.row_count is None),
+        by_entity[entity] = min(group, key=lambda x: (foreign(x), source_rank(x.table_name, is_view=x.row_count is None),
                                                       -(x.row_count or 0), x.table_name))
     for p in profiles:
-        by_table[f"{p.schema_name}_{p.table_name}".upper()] = p
-        by_table[f"{p.schema_name}.{p.table_name}".upper()] = p
+        # Every way a qualified name can reach this point: the prompt's label, a two- or three-part
+        # reference, and a schema that carries a database ("Timas_MSCRM.dbo") read by the parser as
+        # a database plus an underscored name.
+        for name in {p.table_name, _spelling(p, {})}:
+            by_table[_norm_key(p.schema_name, name)] = p
+            by_table[f"{p.schema_name}_{name}".upper()] = p
+            by_table[f"{p.schema_name}.{name}".upper()] = p
 
     def spread(prof: SchemaProfile) -> list[SchemaProfile]:
         """The tables of `prof`'s entity this period needs — one, unless the years span more.
@@ -138,11 +202,24 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         with nothing about it looking wrong. Naming one table is the case this is for — the model
         picked a year and the question needs more than that one.
         """
-        if period is None or already_spread.get(prof.table_pattern, 0) > 1:
+        if already_spread.get(prof.table_pattern, 0) > 1:
             return [prof]
         same = [x for x in tables_of.get(prof.entity, []) if x.table_pattern == prof.table_pattern]
         if len(same) < 2:
             return [prof]
+        if period is None:
+            # No period from the question — but the statement itself may date its rows. Read the
+            # years those literals ask for; failing that, the most recent table. The representative
+            # (the biggest copy) is never the answer: a 2026 query was silently run against 2021–2025.
+            start, end = _literal_period(tree)
+            if start is not None and end is None and _covers_all(same, start):
+                # `DATE_ >= '2015-01-01'` with no ceiling, in a question that named no period, is the
+                # model reaching for "everything there is" — which the convention for an unasked
+                # period already answers with the current copy. Eight firm copies, 700k rows and a
+                # truncated answer came from honouring it; the current copy is what was meant.
+                start, end = None, None
+            picked = periods.tables_for(same, start, end)
+            return picked or [prof]
         picked = periods.tables_for(same, period[0], period[1])
         return picked or [prof]
     try:
@@ -158,8 +235,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
     for node in tree.find_all(exp.Table):
         if not node.name or node.name.upper() in cte_names:
             continue
-        key = ((node.db + "_") if node.db else "") + node.name
-        found = by_table.get(key.upper()) or by_table.get(node.name.upper())
+        found = by_table.get(_norm_key(node.catalog, node.db, node.name)) or by_table.get(node.name.upper())
         if found is not None:
             seen_tables.setdefault(found.table_pattern, set()).add(found.table_name)
     already_spread = {pattern: len(names) for pattern, names in seen_tables.items()}
@@ -179,39 +255,272 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             if c.table:
                 dated_aliases.add(c.table.upper())
 
+    def resolve_prof(node: exp.Table):
+        raw = node.name
+        prof = by_table.get(_norm_key(node.catalog, node.db, raw)) or by_table.get(raw.upper())
+        if prof is None:
+            lt = logical_table(raw)
+            prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
+        return prof
+
+    def wrote_physical(node: exp.Table) -> bool:
+        """The model named an actual table (LG_411_01_INVOICE), not the entity. What it named, it meant."""
+        return (by_table.get(_norm_key(node.catalog, node.db, node.name)) or by_table.get(node.name.upper())) is not None
+
+    def is_dated(node: exp.Table, prof: SchemaProfile) -> bool:
+        name_here = (node.alias or node.name or "").upper()
+        return not dated_aliases or name_here in dated_aliases or prof.entity.upper() in dated_aliases
+
+    # Which copies of the schema this statement reads. In this source every year is a separate
+    # copy (firm 211 = 2021–2025, firm 411 = 2026) and an identifier is unique only inside one, so
+    # the copies the dated relation spreads over decide the copies of *every* partitioned relation
+    # beside it: the invoices of 2026 joined to the payment plan of 2021–2025 matched nothing, and
+    # matched the wrong rows where a LOGICALREF happened to coincide.
+    firms: list[str] = []
+    for node in tree.find_all(exp.Table):
+        if not node.name or node.name.upper() in cte_names:
+            continue
+        prof = resolve_prof(node)
+        if prof is None or not is_dated(node, prof) or "{n0}" not in (prof.table_pattern or ""):
+            continue
+        if already_spread.get(prof.table_pattern, 0) > 1:
+            continue                     # the model spread the years itself; its copies are its own
+        for x in spread(prof):
+            firm = str((x.context or {}).get("n0") or "")
+            if firm and firm not in firms:
+                firms.append(firm)
+    tagged: dict[str, str] = {}       # upper-cased alias → alias as written, for relations carrying the tag
+
+    def in_step(prof: SchemaProfile) -> list[SchemaProfile]:
+        """A partitioned relation read from the same copies as the dated one, in the same order."""
+        if not firms or "{n0}" not in (prof.table_pattern or ""):
+            return []
+        same = [x for x in tables_of.get(prof.entity, []) if x.table_pattern == prof.table_pattern]
+        picked = [next((x for x in same if str((x.context or {}).get("n0") or "") == firm), None) for firm in firms]
+        picked = [x for x in picked if x is not None]
+        return picked
+
+    def _beside_a_period_table(node: exp.Table) -> bool:
+        """Is this table joined, in its own SELECT's FROM/JOIN list, to something that carries a period —
+        a period table, or a derived table / CTE (which may hold one)? Alone, or beside other card tables
+        only, it is not."""
+        sel = node.find_ancestor(exp.Select)
+        if sel is None:
+            return False
+        direct = []
+        frm = sel.args.get("from_") or sel.args.get("from")
+        if frm is not None:
+            direct.append(frm.this)
+        for j in sel.args.get("joins") or []:
+            direct.append(j.this)
+        for t in direct:
+            if t is node:
+                continue
+            if not isinstance(t, exp.Table):
+                return True                          # a derived table: what it holds is its own business
+            if not t.name or t.name.upper() in cte_names:
+                return True
+            p2 = resolve_prof(t)
+            if p2 is not None and "{n1}" in (p2.table_pattern or ""):
+                return True
+        return False
+
+    # Decided on the statement as written: once the rewrite starts, the dated table beside a card is
+    # already a UNION subquery and no longer looks like a table.
+    lone_cards = set()
+    for t in tree.find_all(exp.Table):
+        if not t.name or t.name.upper() in cte_names:
+            continue
+        p0 = resolve_prof(t)
+        if p0 is not None and "{n0}" in (p0.table_pattern or "") and "{n1}" not in (p0.table_pattern or "") and not _beside_a_period_table(t):
+            lone_cards.add((t.alias_or_name or "").upper())
+
     def tx(node: exp.Expression) -> exp.Expression:
         if isinstance(node, exp.Table) and node.name:
             raw = node.name
-            key = ((node.db + "_") if node.db else "") + raw
             if raw.upper() in cte_names:
                 return node
-            prof = by_table.get(key.upper()) or by_table.get(raw.upper())
-            if prof is None:
-                lt = logical_table(raw)
-                prof = by_entity.get(lt.entity) if lt.table_pattern != lt.entity or lt.entity in by_entity else None
+            prof = resolve_prof(node)
             if prof is None:
                 return node
-            # Where the query says which relation carries the period, only that one is spread.
-            name_here = (node.alias or node.name or "").upper()
-            wanted = spread(prof) if (not dated_aliases or name_here in dated_aliases
-                                      or prof.entity.upper() in dated_aliases) else [prof]
+            lockstep = [] if wrote_physical(node) else in_step(prof)
+            if len(lockstep) > 1 and "{n1}" not in (prof.table_pattern or "") and (node.alias_or_name or "").upper() in lone_cards:
+                # A card table (customers, items: one copy per firm, no period of its own) standing
+                # alone in its SELECT, with the dated tables only inside correlated subqueries — "bought
+                # last year, nothing this year". Read from every firm in step it returned each customer
+                # once per copy (67.308 rows for 33.573 customers); cards keep their reference across
+                # copies, so the newest copy is the one list of them.
+                lockstep = [lockstep[-1]] if firms == sorted(firms) else [max(lockstep, key=lambda x: str((x.context or {}).get("n0") or ""))]
+            if lockstep:
+                wanted = lockstep
+            else:
+                # Where the query says which relation carries the period, only that one is spread.
+                wanted = spread(prof) if is_dated(node, prof) else [prof]
             if len(wanted) > 1:
-                # One entity, several years: read them as one relation so everything the model wrote
-                # around it — the joins, the filters, the aggregate — is untouched.
-                parts = [exp.select(exp.Star()).from_(_physical_table(x, context)) for x in wanted]
+                # One entity, several copies: read them as one relation so everything the model wrote
+                # around it — the joins, the filters, the aggregate — is untouched. Each row carries the
+                # copy it came from, so a join below only ever meets rows of its own copy.
+                alias = node.alias or prof.entity
+                parts = []
+                # The copies are the same table in name, not always in shape: a firm created years
+                # apart carries the columns in another order, with a few added or dropped. UNION ALL
+                # matches by position, so `SELECT *` put a date under STATUS. Columns are listed by
+                # name — the ones every copy has, in the representative's order.
+                shared = _common_columns(wanted, prof)
+                for x in wanted:
+                    firm = str((x.context or {}).get("n0") or "")
+                    body = [exp.column(c) for c in shared] if shared else [exp.Star()]
+                    cols = [exp.alias_(exp.Literal.string(firm), _FIRM_COL)] + body if lockstep else body
+                    parts.append(exp.select(*cols).from_(_physical_table(x, context)))
                 union: exp.Expression = parts[0]
                 for nxt in parts[1:]:
                     union = exp.union(union, nxt, distinct=False)
-                alias = node.alias or prof.entity
+                if lockstep:
+                    tagged[alias.upper()] = alias
                 return exp.Subquery(this=union, alias=exp.TableAlias(this=exp.to_identifier(alias)))
             new = _physical_table(wanted[0], context)
-            if node.alias:
-                new.set("alias", exp.TableAlias(this=exp.to_identifier(node.alias)))
+            # Without an alias the model qualifies columns by the name it wrote ("INVOICE.CLIENTREF").
+            # Renaming the table and leaving that qualifier behind is a column the server cannot bind,
+            # so the written name stays on as the alias.
+            alias = node.alias or raw
+            # Compared exactly, not case-folded: the CRM database matches identifiers case-sensitively,
+            # so a statement written as NEW_KITAPBASE.new_kitapId over a table renamed to
+            # [new_kitapBase] could not be bound. The name the model wrote stays on as the alias
+            # whenever it differs at all from the database's spelling.
+            if alias != _spelling(wanted[0], context).split(".")[-1]:
+                new.set("alias", exp.TableAlias(this=exp.to_identifier(alias)))
             return new
         return node
 
     out = tree.transform(tx)
+    _carry_tag_through_derived(out, tagged)
+    if len(tagged) > 1:
+        # Two tagged relations meeting in a JOIN meet only within one copy.
+        for join in out.find_all(exp.Join):
+            on = join.args.get("on")
+            if on is None:
+                continue
+            right = join.this.alias if isinstance(join.this, (exp.Subquery, exp.Table)) else None
+            right = (right or "").upper()
+            others = {c.table.upper() for c in on.find_all(exp.Column) if c.table and c.table.upper() in tagged and c.table.upper() != right}
+            if right in tagged and others:
+                left = sorted(others)[0]
+                # aliases as the model wrote them: under a Turkish collation `I` is not the upper
+                # case of `i`, so an upper-cased alias would name a relation that is not there
+                join.set("on", exp.and_(on, exp.EQ(this=exp.column(_FIRM_COL, table=tagged[right]),
+                                                    expression=exp.column(_FIRM_COL, table=tagged[left]))))
+    # A column the model qualified by a name the rewrite no longer shows — the entity
+    # ("NEW_PLANSORUMLULARIBASE.CreatedOn") while the table was written under its label, or the other
+    # way round — cannot be bound by the server. When a relation of that entity appears exactly once,
+    # the qualifier is pointed at the name it now carries.
+    names_in_query: dict[str, list[str]] = {}
+    prof_of_alias: dict[str, SchemaProfile] = {}
+    for node in out.find_all(exp.Table, exp.Subquery):
+        alias = node.alias_or_name if isinstance(node, exp.Table) else node.alias
+        if not alias:
+            continue
+        prof = None
+        if isinstance(node, exp.Table):
+            prof = by_table.get(_norm_key(node.catalog, node.db, node.name)) or by_table.get(node.name.upper())
+        else:
+            prof = by_entity.get(alias.upper()) or by_table.get(alias.upper())
+        if prof is None:
+            continue
+        prof_of_alias[alias.upper()] = prof
+        for spelled in {prof.entity, prof.table_name, _spelling(prof, context),
+                        f"{(prof.schema_name or '').replace('.', '_')}_{prof.table_name}"}:
+            names_in_query.setdefault(spelled.upper(), []).append(alias)
+    visible = {a.upper() for aliases in names_in_query.values() for a in aliases}
+    for col in out.find_all(exp.Column):
+        qual = (col.table or "").upper()
+        if not qual or qual in visible:
+            continue
+        aliases = set(names_in_query.get(qual, []))
+        if len(aliases) == 1:
+            col.set("table", exp.to_identifier(next(iter(aliases))))
+    # The column as the source spells it. The catalog and the compiler write names in upper case;
+    # a server that compares identifiers case-sensitively (the CRM database) knows `statecode`, not
+    # `STATECODE`. Where the qualifier names a profiled relation, the profile's spelling is used.
+    for col in out.find_all(exp.Column):
+        prof = prof_of_alias.get((col.table or "").upper())
+        if prof is None or not col.name:
+            continue
+        real = next((c.name for c in prof.columns if c.name.upper() == col.name.upper()), None)
+        if real and real != col.name:
+            col.set("this", exp.to_identifier(real, quoted=col.this.quoted if isinstance(col.this, exp.Identifier) else False))
+    # A CTE or table alias the model chose is a word, and a word can be a keyword: `WITH plan AS` is
+    # a syntax error on SQL Server. Aliases are quoted; columns and real names stay as written.
+    for cte in out.find_all(exp.CTE):
+        if cte.alias:
+            cte.args["alias"].set("this", exp.to_identifier(cte.alias, quoted=True))
+    cte_upper = {c.alias.upper() for c in out.find_all(exp.CTE) if c.alias}
+    for node in out.find_all(exp.Table):
+        if node.name and node.name.upper() in cte_upper:
+            node.set("this", exp.to_identifier(node.name, quoted=True))
+        if node.alias:
+            node.args["alias"].set("this", exp.to_identifier(node.alias, quoted=True))
+    for sub in out.find_all(exp.Subquery):
+        if sub.alias:
+            sub.args["alias"].set("this", exp.to_identifier(sub.alias, quoted=True))
     return out.sql(dialect=dialect if dialect != "generic" else None)
+
+
+def _norm_key(*parts: Optional[str]) -> str:
+    """One spelling for a qualified table name, whatever separator put it together.
+
+    "Timas_MSCRM.dbo_NEW_X", "[Timas_MSCRM].[dbo].[NEW_X]" and "Timas_MSCRM_dbo_NEW_X" are the same
+    table; a lookup that only knew one of them sent the other to the server unchanged.
+    """
+    joined = "_".join(str(x) for x in parts if x)
+    return joined.replace(".", "_").upper()
+
+
+def _common_columns(copies: list[SchemaProfile], representative: SchemaProfile) -> list[str]:
+    """The column names every copy has, in the representative's order; empty when any copy's columns
+    are unknown (then `*` is all there is)."""
+    if any(not c.columns for c in copies):
+        return []
+    names = [c.name for c in representative.columns] if representative.columns else [c.name for c in copies[0].columns]
+    have = [{c.name.upper() for c in x.columns} for x in copies]
+    return [n for n in names if all(n.upper() in h for h in have)]
+
+
+def _covers_all(copies: list[SchemaProfile], start) -> bool:
+    """Does a lower bound alone reach back to (or before) the oldest measured copy — i.e. ask for all
+    of the data rather than a period of it?"""
+    starts = []
+    for c in copies:
+        w = c.time_window
+        if w and w[0]:
+            try:
+                starts.append(str(w[0])[:10])
+            except Exception:  # noqa: BLE001
+                pass
+    return bool(starts) and start.isoformat() <= min(starts)
+
+
+def _literal_period(tree) -> tuple:
+    """[start, end) as the statement's own date literals bound it: the smallest lower bound and the
+    largest upper bound written against a column. None, None when it writes none."""
+    from datetime import date as _date
+    lows, highs = [], []
+    for node in tree.find_all(exp.GTE, exp.GT, exp.LT, exp.LTE):
+        lit = node.right if isinstance(node.right, exp.Literal) else None
+        if lit is None or not lit.is_string or not isinstance(node.left, exp.Column):
+            continue
+        text = lit.this[:10]
+        try:
+            d = _date.fromisoformat(text)
+        except ValueError:
+            continue
+        if d.year < 1950:
+            continue                 # '1899-12-30' / '1900-01-01': Logo's empty date, a null check, not a period
+        (lows if isinstance(node, (exp.GTE, exp.GT)) else highs).append(d)
+    if not lows and not highs:
+        return None, None
+    start = min(lows) if lows else None
+    end = max(highs) if highs else None
+    return start, end
 
 
 def _spelling(prof: SchemaProfile, context: dict[str, str]) -> str:
@@ -225,6 +534,11 @@ def _spelling(prof: SchemaProfile, context: dict[str, str]) -> str:
     """
     if "{" not in (prof.table_pattern or ""):
         return prof.table_name or prof.table_pattern
+    # A view or a copy can carry the pattern of a real firm table. If the pattern, filled with the
+    # profile's own context, does not give back the name the profile was read from, the pattern
+    # describes some other table and the stored name is the truth.
+    if prof.table_name and physical_name(prof.table_pattern, prof.context or {}).upper() != prof.table_name.upper():
+        return prof.table_name
     return physical_name(prof.table_pattern, {**prof.context, **context})
 
 
@@ -288,7 +602,16 @@ def referenced_tables(sql: str, dialect: Optional[str] = "tsql") -> list[str]:
 
 # SQLSTATE class 08 is the standard "connection exception" class, and HYT00 is a connection timeout.
 # Every ODBC/JDBC driver reports them the same way, so this is a protocol fact, not a driver quirk.
-_CONNECTION_STATES = ("08S01", "08001", "08003", "08004", "08006", "08007", "HYT00", "HY000")
+# HYT00 is the *query* timeout: the server was reached and worked until the driver gave up. Listed
+# here it turned a slow question into "veri kaynağına ulaşılamıyor" — a correct query, a reachable
+# database, and a message that sent people to check the network. It is a timeout, reported as one.
+_CONNECTION_STATES = ("08S01", "08001", "08003", "08004", "08006", "08007", "HY000")
+_TIMEOUT_STATES = ("HYT00", "HYT01")
+
+
+def is_query_timeout(error: object) -> bool:
+    text = str(error or "")
+    return any(f"'{state}'" in text or f"[{state}]" in text for state in _TIMEOUT_STATES) or "timeout expired" in text.lower()
 _CONNECTION_WORDS = (
     "communication link failure", "server is not found", "login timeout", "connection is closed",
     "connection refused", "broken pipe", "connection reset", "unable to connect", "not accessible",

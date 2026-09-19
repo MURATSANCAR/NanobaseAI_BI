@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -26,10 +27,13 @@ class SemanticSettings:
     datasource_id: str = "default"
     project_dir: Optional[Path] = None            # knowledge pack: knowledge/**.md docs + validated pairs (+ optional models/*.yml for offline profiling)
     connection_file: str = ""                     # JSON: {datasource, host, port, database, user, password, driver…}
-    llm_base: str = "http://172.17.0.1:8020/v1"
+    llm_base: str = "http://127.0.0.1:18881/v1"
     llm_key: str = ""
-    llm_model: str = "nanobaseai-bi-llm"
+    llm_model: str = "nanobaseAI"
     llm_timeout: float = 240.0
+    # Extra JSON merged into every chat request, e.g. {"chat_template_kwargs": {"enable_thinking": false}} for
+    # a local reasoning model; runtime-specific options must match the serving engine.
+    llm_extra: dict = field(default_factory=dict)
     min_support: int = 3                          # hard gate: validated_query_support >= 3
     certify_threshold: float = 0.6
     strict_miss: bool = False                     # refuse SQL when a value term is unresolved
@@ -64,10 +68,11 @@ class SemanticSettings:
             datasource_id=_env("SEMANTIC_DATASOURCE_ID", "logo"),
             project_dir=Path(project).resolve() if project else None,
             connection_file=_env("SEMANTIC_CONNECTION_FILE"),
-            llm_base=_env("OPENAI_API_BASE", "http://172.17.0.1:8020/v1").rstrip("/"),
+            llm_base=_env("OPENAI_API_BASE", "http://127.0.0.1:18881/v1").rstrip("/"),
             llm_key=_env("OPENAI_API_KEY", ""),
-            llm_model=_env("LLM_MODEL_NAME", "nanobaseai-bi-llm"),
+            llm_model=_env("LLM_MODEL_NAME", "nanobaseAI"),
             llm_timeout=float(_env("LLM_TIMEOUT_SEC", "240")),
+            llm_extra=json.loads(_env("LLM_EXTRA_BODY_JSON") or "{}"),
             min_support=int(_env("SEMANTIC_MIN_SUPPORT", "3")),
             certify_threshold=float(_env("SEMANTIC_CERTIFY_THRESHOLD", "0.6")),
             strict_miss=_bool("SEMANTIC_STRICT_MISS", False),

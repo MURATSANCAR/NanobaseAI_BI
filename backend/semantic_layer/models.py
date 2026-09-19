@@ -383,12 +383,33 @@ class SemanticQuery:
     # "satmayan ürünler"). Dropping it would answer a wider question than the one that was asked,
     # so it blocks the deterministic path and is handed to the model spelled out.
     unhandled: list[str] = field(default_factory=list)
+    # A qualifier whose meaning the source states on one column but does not spell out as a value
+    # ("iptal edilmemiş" → INVOICE.CANCELLED, "İptal Edilmiş"). The word is not unresolved — the
+    # column is known — but which value means what is the source's business, so the query is written
+    # by the model and the gate holds it to restricting exactly this column.
+    qualifier_columns: list[dict[str, Any]] = field(default_factory=list)
+    # A qualifier nothing in the catalog explains ("tahsil edilmemiş", "limitini aşmış"). Asking the
+    # person about every one of them turned away almost half of the questions people really write
+    # (2026-09-16, 500-question test), so — by the owner's decision — the word goes to the model as an
+    # explicit obligation: the model says in one line how it read the word, that line is shown above
+    # the answer, the answer is never certified, and the gate refuses SQL that restricts nothing the
+    # word could account for. Never silently dropped.
+    model_qualifiers: list[dict[str, Any]] = field(default_factory=list)
+    # Which databases the question's evidence points at (schema database prefix; "" is the connection's
+    # own). Set by the compiler when it chooses tables; two entries mean the answer needs a plan.
+    sources: list[str] = field(default_factory=list)
+    # The resolver's own reading of which database the question is about, from the tables the
+    # question's words name ("fatura" → INVOICE, "fiyat" → PRCLIST); used when nothing certified pins it.
+    source_hint: Optional[str] = None            # "" is the connection's own database; None is no reading
     modifiers: list[dict[str, Any]] = field(default_factory=list)
     clarification: list[str] = field(default_factory=list)
     # A shape the question asks for that the deterministic compiler cannot express but the model can
     # ("payı yüzde kaç" needs a denominator). Unlike `unhandled`, this is a request to write different
     # SQL, not a meaning nobody has defined — so it routes to the model instead of refusing.
     shape: Optional[str] = None
+    # "X, Y'nin ne kadarı": a ratio of two resolved measures — numerator and denominator by term. Set
+    # beside shape "RATIO"; with it the deterministic compiler writes the ratio column itself.
+    ratio: Optional[dict[str, str]] = None
     # Çıktının biçimi soruda tarif edildiyse istenen kolonlar, sorulduğu sırayla ("1. kolon kanal
     # adı 2. kolon yıl"). Anlamı değil sunumu belirler: neyin hangi sırayla görüneceğini söyler.
     projection: list[str] = field(default_factory=list)
@@ -469,10 +490,13 @@ class SemanticQuery:
             "ignored": list(self.ignored),
             "outOfScope": list(self.out_of_scope),
             "unhandled": list(self.unhandled),
+            "qualifierColumns": [dict(q) for q in self.qualifier_columns],
+            "modelQualifiers": [dict(q) for q in self.model_qualifiers],
             "modifiers": list(self.modifiers),
             "clarification": list(self.clarification),
             "modifierTelemetry": self.modifier_telemetry,
             "shape": self.shape,
+            "ratio": dict(self.ratio) if self.ratio else None,
             "projection": list(self.projection),
             "candidates": [dict(c) for c in self.candidates],
             "languageCandidates": [dict(c) for c in self.language_candidates],
@@ -522,3 +546,7 @@ class CompiledQuery:
     # first-class result — for a question whose data this deployment does not hold, it is the *correct*
     # result, and measuring it as a failure is how a system gets pushed into answering anyway.
     refusal: Optional[str] = None
+    # A question that needs both databases is answered by a plan (runtime/federated.py): one statement
+    # per server and an in-memory combination of their rows. `sql` then carries the plan's text for
+    # the person to read; it is never executed as a statement.
+    plan: Optional[Any] = None

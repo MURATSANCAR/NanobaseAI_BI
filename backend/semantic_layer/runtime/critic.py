@@ -13,6 +13,8 @@ a refusal, because a reviewer who cannot read the page has nothing to say about 
 """
 from __future__ import annotations
 
+import re
+
 from dataclasses import dataclass
 from typing import Optional
 
@@ -78,6 +80,65 @@ def _keys_of(prof: SchemaProfile) -> frozenset[str]:
     ks = {k.upper() for k in prof.primary_key}
     ks |= {c.name.upper() for c in prof.columns if c.is_primary_key}
     return frozenset(ks)
+
+
+_ALIAS_WORD = re.compile(r"[a-zçğıöşü]+", re.IGNORECASE)
+
+
+def _names_side(agg: exp.Expression, sides: list["_Rel"], names: Optional[dict[str, set[str]]] = None) -> bool:
+    """COUNT(*) AS musteri_sayisi: takma ad bu tarafın adını (entity, tablo adı, açıklaması, sözlükteki
+    adları) taşıyor mu? Takma ad yoksa bilinmez → False."""
+    parent = agg.parent
+    alias = parent.alias if isinstance(parent, exp.Alias) else ""
+    if not alias:
+        return False
+    words = {_fold(w) for w in _ALIAS_WORD.findall(alias) if len(w) >= 4}
+    words -= {"sayisi", "sayi", "adet", "adedi", "toplam", "count"}
+    for rel in sides:
+        text = " ".join(filter(None, [rel.entity, rel.grain,
+                                      rel.profile.table_name if rel.profile else "",
+                                      rel.profile.description if rel.profile else ""]))
+        vocab = {_fold(w) for w in _ALIAS_WORD.findall(text) if len(w) >= 4}
+        for term in (names or {}).get((rel.entity or "").upper(), ()):
+            vocab |= {_fold(w) for w in _ALIAS_WORD.findall(term) if len(w) >= 4}
+        if any(a == v or a[:5] == v[:5] for a in words for v in vocab):
+            return True
+    return False
+
+
+def _fold(w: str) -> str:
+    return w.lower().translate(str.maketrans("çğıöşüâîû", "cgiosuaiu"))
+
+
+def _under_function(col: exp.Column, top: exp.Expression) -> bool:
+    """AVG(DATEDIFF(day, fatura.DATE_, odeme.DATE_)): the dates are arguments of a function whose
+    result is the number averaged — not columns being summed. Arithmetic (+ − × ÷) and parentheses
+    still count as summing the column itself."""
+    p = col.parent
+    while p is not None and p is not top:
+        if isinstance(p, (exp.Func, exp.Cast)) and not isinstance(p, exp.AggFunc):
+            return True
+        p = p.parent
+    return False
+
+
+def _used_outside_joins(select: exp.Select) -> set[str]:
+    """Aliases whose columns this SELECT reads anywhere but a JOIN … ON: selected, filtered,
+    grouped, ordered. A table joined and never read is there to be counted."""
+    used: set[str] = set()
+    for col in select.find_all(exp.Column):
+        if not _in_scope(col, select):
+            continue
+        p = col.parent
+        in_on = False
+        while p is not None and p is not select:
+            if isinstance(p, exp.Join):
+                in_on = True
+                break
+            p = p.parent
+        if not in_on and col.table:
+            used.add(col.table.upper())
+    return used
 
 
 def _in_scope(node: exp.Expression, select: exp.Select) -> bool:
@@ -163,8 +224,59 @@ def _is_numeric(prof: SchemaProfile, column: str) -> Optional[bool]:
     return any(col.data_type.lower().startswith(t) for t in _NUMERIC)
 
 
-def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> list[Finding]:
-    """Findings about `sql`, most serious first. Empty when there is nothing to say or nothing to read."""
+def _bare_entity(name: str) -> str:
+    return re.sub(r"^(?:DBO_)?(?:LG_)?", "", (name or "").upper())
+
+
+def _mismatched_keys(tree: exp.Expression, by_table: dict, by_entity: dict, dialect: str) -> list[Finding]:
+    """`PRCLIST.CARDREF = INVOICE.CLIENTREF`: two foreign keys that the catalog measured to point at
+    different tables (items, customers) set equal — a join that matches rows by coincidence of
+    numbers. Found wherever it is written, in a JOIN or a correlated WHERE, and refused with the
+    relationships the catalog does know, so the repair goes through the right table."""
+    alias_prof: dict[str, SchemaProfile] = {}
+    for node in tree.find_all(exp.Table):
+        if not node.name:
+            continue
+        prof = by_table.get(node.name.upper()) or by_entity.get(node.name.upper()) or by_entity.get(_bare_entity(node.name)) \
+            or by_entity.get("LG_" + _bare_entity(node.name))
+        if prof is not None:
+            alias_prof[(node.alias or node.name).upper()] = prof
+            alias_prof.setdefault(node.name.upper(), prof)
+
+    def targets(prof: SchemaProfile, column: str) -> set[str]:
+        return {_bare_entity(r.get("ref_entity") or "") for r in (prof.relationships or [])
+                if str(r.get("column") or "").upper() == column.upper() and r.get("ref_entity")}
+
+    out: list[Finding] = []
+    seen: set[str] = set()
+    for eq in tree.find_all(exp.EQ):
+        l, r = eq.left, eq.right
+        if not (isinstance(l, exp.Column) and isinstance(r, exp.Column)) or not l.table or not r.table:
+            continue
+        pl, pr = alias_prof.get(l.table.upper()), alias_prof.get(r.table.upper())
+        if pl is None or pr is None or pl is pr:
+            continue
+        tl, tr = targets(pl, l.name), targets(pr, r.name)
+        if not tl or not tr:
+            continue                                   # a key against a non-key: the join checks above judge it
+        if tl & tr or _bare_entity(pr.entity) in tl or _bare_entity(pl.entity) in tr:
+            continue                                   # the same target, or one side is the other's target
+        key = f"{pl.entity}.{l.name}={pr.entity}.{r.name}"
+        if key in seen:
+            continue
+        seen.add(key)
+        known = "; ".join(f"{pl.entity}.{l.name} → {', '.join(sorted(tl))}" for _ in [0]) + "; " + \
+                "; ".join(f"{pr.entity}.{r.name} → {', '.join(sorted(tr))}" for _ in [0])
+        out.append(Finding("UNKNOWN_JOIN", "block",
+            f"{eq.sql(dialect=dialect)}: iki kolon katalogda farklı tablolara giden anahtarlar ({known}); "
+            f"eşitlenmeleri satırları rastlantıyla eşler. Bağlantıyı bu anahtarların gerçek hedefi üzerinden kur."))
+    return out
+
+
+def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
+           names: Optional[dict[str, set[str]]] = None) -> list[Finding]:
+    """Findings about `sql`, most serious first. Empty when there is nothing to say or nothing to read.
+    `names`: entity → the words the business calls it by (catalog vocabulary), for reading aliases."""
     try:
         tree = sqlglot.parse_one(sql, read=dialect)
     except Exception:  # noqa: BLE001
@@ -201,9 +313,18 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
         # other side's rows are preserved and *this* side's rows are repeated once per match.
         repeated: set[str] = set()           # aliases whose rows are multiplied by a join
         uncertain: set[str] = set()          # neither side keyed: could go either way
+        many_of: dict[str, set[str]] = {}    # keyed alias → the many-sided aliases joined to it
+        chasm: set[str] = set()              # many-sided aliases multiplied by a sibling many-side
         for join in select.args.get("joins") or []:
             on = join.args.get("on")
             if on is None or not _in_scope(join, select):
+                continue
+            # `JOIN x ON 1 = 1`: every row of one side against every row of the other. Nothing keyed,
+            # nothing meant — a cross product wearing a JOIN. Refused before any aggregate is looked at.
+            if not any(isinstance(eq.left, exp.Column) and isinstance(eq.right, exp.Column) for eq in on.find_all(exp.EQ)):
+                findings.append(Finding("FANOUT", "block",
+                    f"{join.sql(dialect=dialect)[:80]}: iki tabloyu bağlayan kolon eşitliği yok (çapraz birleştirme); "
+                    f"her satır diğer tablonun her satırıyla çoğalıyor. JOIN'i ilişki kolonları üzerinden yaz."))
                 continue
             # Columns each side is joined on, gathered across the whole ON clause: a composite key
             # is only covered when every one of its columns is in the join, and a join that covers
@@ -237,8 +358,18 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                 # The keyed side matches at most one row per row of the other side, so *its* rows are
                 # the ones repeated — once per matching row on the other side.
                 repeated.update(keyed)
+                for k in keyed:
+                    many_of.setdefault(k, set()).update(sides - keyed)
             elif sides and not keyed:
                 uncertain.update(sides)
+        # Two many-sided relations hung off the same key (items ← order lines, items ← stock lines):
+        # every order line meets every stock line of its item, and a sum on either side is multiplied
+        # by the other's row count. Neither side is keyed, so the rule above sees nothing — this is
+        # the join shape that returned 2.000 pending postcards for an order of 100.
+        for k, manys in many_of.items():
+            if len(manys) > 1:
+                repeated.update(manys)
+                chasm.update(manys)
 
         for agg in select.find_all(exp.AggFunc):
             if not _in_scope(agg, select):
@@ -255,6 +386,20 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                 if hit:
                     aliases = ({(c.table or "").upper() for c in cols if c is not None} & repeated) or repeated
                     who = ", ".join(sorted(rels[a].entity for a in aliases if a in rels))
+                    idle = {a for a in aliases if a not in _used_outside_joins(select)}
+                    if not cols and not idle and not _names_side(agg, [rels[a] for a in aliases if a in rels], names):
+                        # COUNT(*) over a join made on the other side's key counts the rows of the
+                        # fine-grained side — one per match, nothing repeated — and that is the figure
+                        # asked for ("kapanan kalem" per customer group, grouped by a CLCARD column).
+                        # It is inflated only when the count is meant to be *of* the keyed entity, and
+                        # two things say so: the alias names it ("musteri_sayisi" over CLCARD), or the
+                        # keyed table is joined and then used nowhere — a join that contributes no
+                        # column exists only to be counted. Both still block. Logo declares no keys, so
+                        # blocking every lookup join here sent correct queries back for repair.
+                        findings.append(Finding("FANOUT", "warn",
+                            f"{agg.sql(dialect=dialect)} ince tarafın satırlarını sayıyor; {who} sayısı isteniyorsa "
+                            f"COUNT(DISTINCT {who}.<anahtar>) kullan."))
+                        continue
                     # Summing a column a CTE already aggregated is the same fault one level up, and
                     # worth naming as such: the figure was correct at its own grain and is being
                     # re-added once per row of the finer table it was joined to.
@@ -268,6 +413,19 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                             f"toplanmış bir tutar ve join onu daha ince taneli tarafın her satırında bir daha sayıyor. "
                             f"Toplamı tek bir taneciklikte al: ya kendi seviyesinde topla, ya da ince tarafta tutulan "
                             f"satır tutarını kullan."))
+                    elif isinstance(agg, (exp.Avg, exp.Min, exp.Max)):
+                        # An average is not multiplied by repetition, it is weighted by it: the mean
+                        # payment term over plan lines repeats each invoice's date once per line, and
+                        # that per-line mean is the figure asked for. Said, not refused.
+                        findings.append(Finding("FANOUT", "warn",
+                            f"{agg.sql(dialect=dialect)}: {who} satırları join'de tekrarlanıyor; ortalama ince "
+                            f"tarafın satır sayısıyla ağırlıklı. {who} başına ortalama isteniyorsa önce o seviyede topla."))
+                    elif aliases & chasm:
+                        others = ", ".join(sorted(rels[a].entity for a in (chasm - aliases) if a in rels)) or "diğer ilişki"
+                        findings.append(Finding("FANOUT", "block",
+                            f"{agg.sql(dialect=dialect)} şişirilmiş: {who} satırları aynı anahtara bağlı ikinci bir "
+                            f"çoklu ilişkinin ({others}) satır sayısıyla çarpılıyor. Her çoklu ilişkiyi kendi alt "
+                            f"sorgusunda (anahtar bazında) topla, sonra anahtar üzerinden birleştir."))
                     else:
                         findings.append(Finding("FANOUT", "block",
                             f"{agg.sql(dialect=dialect)} şişirilmiş: {who} tablosunun satırları join yüzünden "
@@ -283,7 +441,7 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                 # over a non-numeric column — and a period comparison is written exactly this way.
                 tested = {id(col) for pred in (inner.find_all(exp.Predicate) if isinstance(inner, exp.Expression) else [])
                           for col in pred.find_all(exp.Column)}
-                for c in [x for x in cols if id(x) not in tested]:
+                for c in [x for x in cols if id(x) not in tested and not _under_function(x, inner)]:
                     prof = tables.get((c.table or "").upper()) if c.table else (next(iter(tables.values())) if len(tables) == 1 else None)
                     if prof is None:
                         continue
@@ -351,6 +509,7 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql") -> li
                 findings.append(Finding("UNKNOWN_COLUMN", "block",
                     f"{prof.entity} tablosunda {c.name} adında kolon yok."))
 
+    findings += _mismatched_keys(tree, by_table, by_entity, dialect)
     order = {"block": 0, "warn": 1}
     seen: set[tuple] = set()
     out = []

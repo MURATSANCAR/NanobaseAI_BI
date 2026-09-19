@@ -1,0 +1,9 @@
+[Unit]
+Description=ZEKİ uyarı kurallarını kontrol et
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/alerts/check); bu birim yalnız çağırır. $$ ile anahtar kabuktan okunur, günlüğe düşmez.
+ExecStart=/bin/sh -c 'curl -fsS -m 590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/alerts/check'

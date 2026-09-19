@@ -13,11 +13,17 @@ RUN printf '[FreeTDS]\nDescription=FreeTDS\nDriver=/usr/lib/x86_64-linux-gnu/odb
 WORKDIR /app
 # Bağımlılıklar önce: kaynak değişince katman yeniden kurulmaz.
 COPY backend/requirements-semantic.txt /app/backend/requirements-semantic.txt
+COPY backend/semantic_bridge/requirements.txt /app/backend/semantic_bridge/requirements.txt
+# semantic_bridge/requirements.txt: openpyxl (Excel raporları), ldap3 + pycryptodome (yönetim ekranındaki AD denemesi)
 RUN pip install --no-cache-dir -r /app/backend/requirements-semantic.txt \
+        -r /app/backend/semantic_bridge/requirements.txt \
         pyodbc psycopg2-binary "uvicorn[standard]"
 
 COPY backend /app/backend
 COPY configs /app/configs
+# Arka plan işleri (jobs servisi aynı imajı kullanır): ana ekran özeti + uyarı kontrolü
+COPY scripts/server/timas-metrics-build.py /app/jobs/metrics_build.py
+COPY infra/docker/bi/jobs.py /app/jobs/jobs.py
 
 ENV PYTHONPATH=/app/backend
 EXPOSE 8795

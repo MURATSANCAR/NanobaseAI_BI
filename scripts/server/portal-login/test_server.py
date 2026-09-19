@@ -2,6 +2,7 @@ import http.client
 import importlib.util
 import json
 import pathlib
+import sqlite3
 import tempfile
 import threading
 import time
@@ -17,7 +18,6 @@ class Sessions(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         login.DB = self.tmp.name + '/sessions.db'
-        login.INVITE = self.tmp.name + '/invite.json'
         self.server = login.ThreadingHTTPServer(('127.0.0.1', 0), login.Handler)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
@@ -35,59 +35,75 @@ class Sessions(unittest.TestCase):
         conn.close()
         return result
 
+    def login(self, found=('muratsancar', 'Murat Sancar'), username='TIMAS\\muratsancar'):
+        with patch.object(login, 'ad_verify', return_value=found):
+            return self.request('/login', 'POST', {'username': username, 'password': 'secret'}, {'Origin': login.ORIGIN})
+
     def test_login_logout_and_cookie_protection(self):
-        with patch.object(login, 'verify', return_value='tester'):
-            status, headers, _ = self.request('/login', 'POST', {'username': 'tester', 'password': 'secret'}, {'Origin': login.ORIGIN})
-        self.assertEqual(status, 200)
+        status, headers, data = self.login()
+        self.assertEqual((status, data['username'], data['displayName']), (200, 'muratsancar', 'Murat Sancar'))
         cookie = headers['Set-Cookie']
         for flag in ('Secure', 'HttpOnly', 'SameSite=Strict', 'Path=/timas/'):
             self.assertIn(flag, cookie)
         headers = {'Cookie': cookie.split(';')[0], 'Origin': login.ORIGIN}
-        self.assertEqual(self.request('/session', headers=headers)[0], 200)
+        status, _, data = self.request('/session', headers=headers)
+        self.assertEqual((status, data['username'], data['displayName']), (200, 'muratsancar', 'Murat Sancar'))
+        self.assertEqual(self.request('/check', headers=headers)[0], 200)
         self.assertEqual(self.request('/check', headers={**headers, 'Origin': 'https://evil.invalid', 'X-Original-Method': 'POST'})[0], 403)
         self.assertEqual(self.request('/logout', 'POST', headers=headers)[0], 200)
         self.assertEqual(self.request('/session', headers=headers)[0], 401)
 
     def test_invalid_credentials_no_session(self):
-        with patch.object(login, 'verify', return_value=None):
-            status, headers, _ = self.request('/login', 'POST', {'username': 'bad', 'password': 'bad'}, {'Origin': login.ORIGIN})
+        status, headers, _ = self.login(found=None, username='bad')
         self.assertEqual(status, 401)
         self.assertNotIn('Set-Cookie', headers)
         self.assertEqual(self.request('/check')[0], 401)
 
+    def test_basic_header_is_not_a_session(self):
+        # The demo account is gone: a Basic header, however well formed, opens nothing.
+        self.assertEqual(self.request('/check', headers={'Authorization': 'Basic VGltYXM6cGFzcw=='})[0], 401)
+
+    def test_demo_prefill_is_gone(self):
+        self.assertEqual(self.request('/prefill')[0], 404)
+
     def test_cross_site_login_denied(self):
         self.assertEqual(self.request('/login', 'POST', {}, {'Origin': 'https://evil.invalid'})[0], 403)
 
-    def test_invitation_requires_secret_and_expiration(self):
-        config = {'token': 'only-the-invited-know', 'username': 'test', 'password': 'test-only', 'expires': time.time() + 100}
-        pathlib.Path(login.INVITE).write_text(json.dumps(config))
-        self.assertEqual(self.request('/prefill')[0], 403)
-        self.assertEqual(self.request('/prefill', headers={'X-Test-Invite': 'wrong'})[0], 403)
-        headers = {'X-Test-Invite': config['token']}
-        status, response_headers, _ = self.request('/prefill', headers=headers)
-        self.assertEqual(status, 200)
-        remembered = {'Cookie': response_headers['Set-Cookie'].split(';')[0]}
-        self.assertEqual(self.request('/prefill', headers=remembered)[0], 200)
-        config['expires'] = time.time() - 1
-        pathlib.Path(login.INVITE).write_text(json.dumps(config))
-        self.assertEqual(self.request('/prefill', headers=headers)[0], 403)
-        self.assertEqual(self.request('/prefill', headers=remembered)[0], 403)
+    def test_unreachable_directory_is_not_a_wrong_password(self):
+        with patch.object(login, 'ad_verify', side_effect=login.DirectoryUnavailable('LDAPSocketOpenError')):
+            status, headers, data = self.request('/login', 'POST', {'username': 'ali', 'password': 'secret'}, {'Origin': login.ORIGIN})
+        self.assertEqual(status, 503)
+        self.assertNotIn('Set-Cookie', headers)
+        self.assertIn('Active Directory', data['error'])
 
-    def test_public_demo_requires_opt_in_and_expires(self):
-        config = {'public_demo': True, 'username': 'Demo', 'password': 'test-only', 'expires': time.time() + 100}
-        pathlib.Path(login.INVITE).write_text(json.dumps(config))
-        status, headers, data = self.request('/prefill')
-        self.assertEqual(status, 200)
-        self.assertEqual(data['username'], 'Demo')
-        self.assertEqual(headers['Cache-Control'], 'no-store')
-        config['expires'] = time.time() - 1
-        pathlib.Path(login.INVITE).write_text(json.dumps(config))
-        self.assertEqual(self.request('/prefill')[0], 403)
+    def test_missing_directory_configuration_is_unavailable(self):
+        with patch.object(login, 'ad_config', return_value=None):
+            with self.assertRaises(login.DirectoryUnavailable):
+                login.ad_verify('ali', 'secret')
+
+    def test_account_name_accepts_only_this_domain_and_plain_names(self):
+        config = {'netbios': 'TIMAS', 'dns_domain': 'timas.local'}
+        for given, expected in (('TIMAS\\ali', 'ali'), ('timas\\ali', 'ali'), ('ali@timas.local', 'ali'), (' ali ', 'ali'),
+                                ('OTHER\\ali', None), ('ali@evil.invalid', None), ('a*)(uid=*', None), ('', None)):
+            self.assertEqual(login.account_name(given, config), expected, given)
+
+    def test_empty_password_never_reaches_directory(self):
+        with patch.object(login, 'ad_config', return_value={'netbios': 'TIMAS', 'dns_domain': 'timas.local'}):
+            self.assertIsNone(login.ad_verify('ali', ''))
 
     def test_expired_session_denied(self):
         with login.connection() as db:
-            db.execute('INSERT INTO sessions VALUES (?, ?, ?)', (login.digest('expired'), 'test', time.time() - 1))
+            db.execute('INSERT INTO sessions (token, username, expires) VALUES (?, ?, ?)', (login.digest('expired'), 'test', time.time() - 1))
         self.assertEqual(self.request('/session', headers={'Cookie': login.COOKIE + '=expired'})[0], 401)
+
+    def test_sessions_from_before_display_names_still_work(self):
+        db = sqlite3.connect(login.DB)
+        db.execute('CREATE TABLE sessions (token TEXT PRIMARY KEY, username TEXT, expires REAL)')
+        db.execute('INSERT INTO sessions VALUES (?, ?, ?)', (login.digest('old'), 'ali', time.time() + 100))
+        db.commit()
+        db.close()
+        status, _, data = self.request('/session', headers={'Cookie': login.COOKIE + '=old'})
+        self.assertEqual((status, data['displayName']), (200, 'ali'))
 
 
 if __name__ == '__main__':

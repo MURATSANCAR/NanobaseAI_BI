@@ -1,0 +1,585 @@
+{
+  "outputComponents": [
+    {
+      "designSystem": {
+        "designSystem": {
+          "displayName": "Editorial Intelligence Console",
+          "styleGuidelines": "## Brand & Style\n\nThis design system establishes an atmospheric, high-density AI command architecture engineered for modern publishing operations. Merging the data rigor of a financial terminal with the refined tactility of a modern cinematic SaaS, it positions artificial intelligence not as a novelty, but as an authoritative instrument for catalog strategy, acquisitions, translation analysis, and print logistics.\n\nThe aesthetic philosophy balances **technical brutalism** with **high-end dark glassmorphism**:\n- **Atmospheric Void:** Deep, calibrated near-black surfaces provide infinite canvas depth, stripping away visual noise and directing absolute focus to core data structures.\n- **Prismatic Optics:** Radiant, controlled auroral transitions (cyan through lime to amber) are deployed surgically for status states, vector confidence thresholds, and ambient computational horizons. Purple is strictly absent to prevent generic consumer-tech tropes.\n- **Editorial Rigor:** High-density Bento module layouts, inspired by developer tools and command terminals, balance heavy density with breathability via subtle structural glass borders and meticulous typographic stratification.\n\n## Layout & Spacing\n\nThe layout is constructed around a structured **Bento-grid engine** optimized for simultaneous analytical views.\n\n### Grid Construction\n- **Desktop (1440px+):** 12-column adaptive fluid grid with `gutter-desktop` (1.5rem / 24px) and `margin-desktop` (2rem / 32px). Elements snap to multi-span Bento units (e.g., 8-col analysis canvas paired with a 4-col real-time log column).\n- **Tablet / Small Desktop (768px – 1439px):** 6-column reflow grid. Secondary terminal inspectors collapse into docked sheets or lower horizontal strata.\n- **Mobile (< 768px):** Single-column stacked stream. Complex multi-variate charts pivot to prioritized KPI summary cards with expandable bottom drawers.\n\n### Spacing Architecture\nA disciplined 4px base rhythm dictates internal module paddings:\n- Module internal breathing space standardizes at `space-lg` (24px).\n- Tight inline groupings (chips, micro-actions, metadata rows) leverage `space-xs` (4px) and `space-sm` (8px).\n- Section separation inside Bento cells adheres to `space-md` (16px).\n\n## Elevation & Depth\n\nVisual plane differentiation is established through translucent atmospheric tiers and luminous optical barriers rather than traditional drop shadows.\n\n### Atmospheric Planes\n- **Ground Floor (`#07080B`):** Pure background viewport with optional localized radial gradients of deep cyan (`rgba(34, 211, 238, 0.03)`) diffusing softly in corners.\n- **Base Bento Surface:** `background: rgba(255, 255, 255, 0.035)`, backed by `backdrop-filter: blur(24px)` and framed with `1px solid rgba(255, 255, 255, 0.08)`.\n- **Raised Interactive Deck (Flyouts, Context Menus, Tooltips):** `background: rgba(14, 17, 23, 0.85)`, backed by `backdrop-filter: blur(32px)`, framed with `1px solid rgba(255, 255, 255, 0.14)`. Box shadow is subtle, tinted, and deep: `0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05)`.\n- **Active State / Selected Module:** Retains glass background but the perimeter border transitions to a glowing gradient hairline or solid `rgba(34, 211, 238, 0.35)` with a faint interior cyan specular bleed (`box-shadow: inset 0 1px 0 0 rgba(34, 211, 238, 0.2)`).\n\n## Components\n\n### Buttons\n- **Primary Command:** Solid `#22D3EE` background with near-black `#07080B` text in `Inter 600`. Hover state triggers a subtle luminosity lift and an ambient outer glow (`box-shadow: 0 0 16px rgba(34, 211, 238, 0.4)`).\n- **Secondary Glass:** `rgba(255, 255, 255, 0.05)` fill, `1px solid rgba(255, 255, 255, 0.1)` border, `#F5F7FA` text. Hover introduces `rgba(255, 255, 255, 0.1)` fill and border brightens to `rgba(255, 255, 255, 0.25)`.\n- **Tertiary Minimal:** Transparent fill, `#8B93A1` text, hovering to `#F5F7FA` with no shift in geometry.\n\n### Data Cards & Bento Cells\n- Enclosed in `20px` radius containers with `1px solid rgba(255, 255, 255, 0.08)`.\n- Header areas feature `label-caps` in `#8B93A1` accompanying an optional monospace pulse indicator (e.g., green live beacon).\n- Content zones maintain high scannability using tabular `JetBrains Mono` for KPIs and `Space Grotesk` for record titles.\n\n### Chips & Confidence Indicators\n- **High Confidence / Optimal Throughput:** Background `rgba(163, 230, 53, 0.1)`, text `#A3E635`, hairline `rgba(163, 230, 53, 0.25)`.\n- **Active Thread / Inference Processing:** Background `rgba(34, 211, 238, 0.1)`, text `#22D3EE`, hairline `rgba(34, 211, 238, 0.25)`.\n- **Flagged Discrepancy / Backorder Alert:** Background `rgba(251, 191, 36, 0.1)`, text `#FBBF24`, hairline `rgba(251, 191, 36, 0.25)`.\n\n### Form Fields & Terminal Inputs\n- **Base Input:** Background `rgba(0, 0, 0, 0.45)`, border `1px solid rgba(255, 255, 255, 0.08)`, border radius `8px`, text `#F5F7FA`. \n- **Focus State:** Border sharply transitions to `#22D3EE` with an outer focus field `0 0 0 1px #22D3EE`.\n- **Monospace Prompt Variant:** Prefixed with a cyan chevron (`>`), utilizing `JetBrains Mono` for metadata queries, query parsing, and ISBN lookups.\n\n### Selection Controls (Checkboxes & Radios)\n- Square (checkbox, `4px` radius) or Circular (radio). \n- Unchecked: `1px solid rgba(255, 255, 255, 0.2)` over `rgba(255, 255, 255, 0.02)`.\n- Checked: `#22D3EE` solid fill with `#07080B` checkmark or center pip.\n\n### Command-Specific Additions\n- **Manuscript Vector Matrix:** Split-pane comparison component showing machine translation or edit recommendations on dark frosted glass with word-level confidence overlays in lime and amber.\n- **Publishing Velocity Gauges:** Horizontal segmented telemetry meters utilizing the aurora palette to communicate print queue progression and quarterly imprint milestones.",
+          "theme": {
+            "bodyFont": "INTER",
+            "bodyFontFamily": "Inter",
+            "colorMode": "DARK",
+            "colorVariant": "FIDELITY",
+            "customColor": "#22d3ee",
+            "designMd": "---\nname: Editorial Intelligence Console\ncolors:\n  surface: '#121317'\n  surface-dim: '#121317'\n  surface-bright: '#38393d'\n  surface-container-lowest: '#0d0e11'\n  surface-container-low: '#1a1b1f'\n  surface-container: '#1e1f23'\n  surface-container-high: '#292a2d'\n  surface-container-highest: '#343538'\n  on-surface: '#e3e2e6'\n  on-surface-variant: '#bbc9cd'\n  inverse-surface: '#e3e2e6'\n  inverse-on-surface: '#2f3034'\n  outline: '#859397'\n  outline-variant: '#3c494c'\n  surface-tint: '#2fd9f4'\n  primary: '#8aebff'\n  on-primary: '#00363e'\n  primary-container: '#22d3ee'\n  on-primary-container: '#005763'\n  inverse-primary: '#006877'\n  secondary: '#9ddf2e'\n  on-secondary: '#213600'\n  secondary-container: '#83c300'\n  on-secondary-container: '#304b00'\n  tertiary: '#ffd785'\n  on-tertiary: '#402d00'\n  tertiary-container: '#f2b719'\n  on-tertiary-container: '#654a00'\n  error: '#ffb4ab'\n  on-error: '#690005'\n  error-container: '#93000a'\n  on-error-container: '#ffdad6'\n  primary-fixed: '#a2eeff'\n  primary-fixed-dim: '#2fd9f4'\n  on-primary-fixed: '#001f25'\n  on-primary-fixed-variant: '#004e5a'\n  secondary-fixed: '#b2f746'\n  secondary-fixed-dim: '#98da27'\n  on-secondary-fixed: '#121f00'\n  on-secondary-fixed-variant: '#334f00'\n  tertiary-fixed: '#ffdf9f'\n  tertiary-fixed-dim: '#f9bd22'\n  on-tertiary-fixed: '#261a00'\n  on-tertiary-fixed-variant: '#5c4300'\n  background: '#121317'\n  on-background: '#e3e2e6'\n  surface-variant: '#343538'\ntypography:\n  headline-xl:\n    fontFamily: Space Grotesk\n    fontSize: 40px\n    fontWeight: '600'\n    lineHeight: 48px\n    letterSpacing: -0.03em\n  headline-xl-mobile:\n    fontFamily: Space Grotesk\n    fontSize: 30px\n    fontWeight: '600'\n    lineHeight: 38px\n    letterSpacing: -0.02em\n  headline-lg:\n    fontFamily: Space Grotesk\n    fontSize: 32px\n    fontWeight: '600'\n    lineHeight: 40px\n    letterSpacing: -0.025em\n  headline-lg-mobile:\n    fontFamily: Space Grotesk\n    fontSize: 24px\n    fontWeight: '600'\n    lineHeight: 32px\n    letterSpacing: -0.015em\n  headline-md:\n    fontFamily: Space Grotesk\n    fontSize: 22px\n    fontWeight: '500'\n    lineHeight: 28px\n    letterSpacing: -0.015em\n  headline-sm:\n    fontFamily: Space Grotesk\n    fontSize: 18px\n    fontWeight: '500'\n    lineHeight: 24px\n    letterSpacing: -0.01em\n  body-lg:\n    fontFamily: Inter\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n    letterSpacing: -0.005em\n  body-md:\n    fontFamily: Inter\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n    letterSpacing: 0em\n  body-sm:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n    letterSpacing: 0.005em\n  metric-lg:\n    fontFamily: JetBrains Mono\n    fontSize: 28px\n    fontWeight: '500'\n    lineHeight: 34px\n    letterSpacing: -0.02em\n  metric-md:\n    fontFamily: JetBrains Mono\n    fontSize: 18px\n    fontWeight: '500'\n    lineHeight: 24px\n    letterSpacing: -0.01em\n  code-sm:\n    fontFamily: JetBrains Mono\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n    letterSpacing: 0.02em\n  label-caps:\n    fontFamily: JetBrains Mono\n    fontSize: 11px\n    fontWeight: '600'\n    lineHeight: 14px\n    letterSpacing: 0.08em\nrounded:\n  sm: 0.25rem\n  DEFAULT: 0.5rem\n  md: 0.75rem\n  lg: 1rem\n  xl: 1.5rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  gutter-desktop: 1.5rem\n  margin: 1rem\n  margin-desktop: 2rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2rem\n  space-2xl: 3rem\n---\n\n## Brand & Style\n\nThis design system establishes an atmospheric, high-density AI command architecture engineered for modern publishing operations. Merging the data rigor of a financial terminal with the refined tactility of a modern cinematic SaaS, it positions artificial intelligence not as a novelty, but as an authoritative instrument for catalog strategy, acquisitions, translation analysis, and print logistics.\n\nThe aesthetic philosophy balances **technical brutalism** with **high-end dark glassmorphism**:\n- **Atmospheric Void:** Deep, calibrated near-black surfaces provide infinite canvas depth, stripping away visual noise and directing absolute focus to core data structures.\n- **Prismatic Optics:** Radiant, controlled auroral transitions (cyan through lime to amber) are deployed surgically for status states, vector confidence thresholds, and ambient computational horizons. Purple is strictly absent to prevent generic consumer-tech tropes.\n- **Editorial Rigor:** High-density Bento module layouts, inspired by developer tools and command terminals, balance heavy density with breathability via subtle structural glass borders and meticulous typographic stratification.\n\n## Colors\n\nThe palette is tuned specifically for sustained low-light command environments, maximizing contrast while preventing retina fatigue.\n\n### Core Canvas & Structure\n- **Base Canvas (`#07080B`):** The foundational substrate. Deep, neutral near-black devoid of blue or red tint creep.\n- **Glass Surfaces (`rgba(255, 255, 255, 0.03)` to `rgba(255, 255, 255, 0.05)`): Layered structural planes utilizing backdrop blur rather than opaque fills.\n- **Subtle Perimeter Hairlines (`rgba(255, 255, 255, 0.08)`): Crisp structural dividers maintaining clean modular boundaries across varying dark surfaces.\n\n### Monochromatic Hierarchy\n- **Text Primary (`#F5F7FA`):** High-clarity cold white for key editorial insights, headings, and active readouts.\n- **Text Muted / Data Subtext (`#8B93A1`):** Neutralized gunmetal slate for metadata, labels, secondary timestamps, and structural labels.\n- **Text Dim (`#4B5263`):** Receded state for inactive flags, empty indicators, and subtle grid coordinates.\n\n### Chromatic Spectrum\n- **Action Accent / AI Vector (`#22D3EE`):** Electric Cyan. Represents active inference, primary interactions, positive delta, and system focus.\n- **Cadence / Operational Health (`#A3E635`):** Hyper Lime. Expresses throughput efficiency, completed batch jobs, catalog velocity, and optimal print yields.\n- **Warning / System Alert (`#FBBF24`):** Warm Amber. Denotes inventory depletion, translation anomalies, contract timeline risks, and model drift.\n- **Aurora Gradients:** Restricted strictly to non-interactive decorative backdrops, active processing rings, and visual highlights spanning `linear-gradient(135deg, #22D3EE 0%, #A3E635 50%, #FBBF24 100%)`.\n\n## Typography\n\nThe typography strategy leverages three dedicated type engines, each fulfilling a discrete operational tier:\n\n1. **Space Grotesk (Display & Section Headers):** Delivers a modernist, engineered edge with geometric idiosyncrasies that reinforce the algorithmic character of the command center.\n2. **Inter (System & UI Body):** Guarantees frictionless reading clarity for editorial synopsis, complex logs, and configuration inputs across dense screen estates.\n3. **JetBrains Mono (Metrics, Telemetry, and Finance):** Applied to royalty percentages, ISBNs, warehouse SKU matrices, token consumption rates, and timestamp logs. Native tabular figures ensure columnar stability in real-time streaming dashboards.\n\n### Type Rules\n- All uppercase metadata labels must use `label-caps` in JetBrains Mono with expanded letter spacing (`0.08em`).\n- Numerical analytics must always enforce OpenType `tnum` (tabular numbers) to eliminate layout jitter during live updates.\n\n## Layout & Spacing\n\nThe layout is constructed around a structured **Bento-grid engine** optimized for simultaneous analytical views.\n\n### Grid Construction\n- **Desktop (1440px+):** 12-column adaptive fluid grid with `gutter-desktop` (1.5rem / 24px) and `margin-desktop` (2rem / 32px). Elements snap to multi-span Bento units (e.g., 8-col analysis canvas paired with a 4-col real-time log column).\n- **Tablet / Small Desktop (768px – 1439px):** 6-column reflow grid. Secondary terminal inspectors collapse into docked sheets or lower horizontal strata.\n- **Mobile (< 768px):** Single-column stacked stream. Complex multi-variate charts pivot to prioritized KPI summary cards with expandable bottom drawers.\n\n### Spacing Architecture\nA disciplined 4px base rhythm dictates internal module paddings:\n- Module internal breathing space standardizes at `space-lg` (24px).\n- Tight inline groupings (chips, micro-actions, metadata rows) leverage `space-xs` (4px) and `space-sm` (8px).\n- Section separation inside Bento cells adheres to `space-md` (16px).\n\n## Elevation & Depth\n\nVisual plane differentiation is established through translucent atmospheric tiers and luminous optical barriers rather than traditional drop shadows.\n\n### Atmospheric Planes\n- **Ground Floor (`#07080B`):** Pure background viewport with optional localized radial gradients of deep cyan (`rgba(34, 211, 238, 0.03)`) diffusing softly in corners.\n- **Base Bento Surface:** `background: rgba(255, 255, 255, 0.035)`, backed by `backdrop-filter: blur(24px)` and framed with `1px solid rgba(255, 255, 255, 0.08)`.\n- **Raised Interactive Deck (Flyouts, Context Menus, Tooltips):** `background: rgba(14, 17, 23, 0.85)`, backed by `backdrop-filter: blur(32px)`, framed with `1px solid rgba(255, 255, 255, 0.14)`. Box shadow is subtle, tinted, and deep: `0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05)`.\n- **Active State / Selected Module:** Retains glass background but the perimeter border transitions to a glowing gradient hairline or solid `rgba(34, 211, 238, 0.35)` with a faint interior cyan specular bleed (`box-shadow: inset 0 1px 0 0 rgba(34, 211, 238, 0.2)`).\n\n## Shapes\n\nThe design system adopts a specialized curvature hierarchy tailored to high-tech editorial dashboards:\n\n- **Bento Modules & Primary Cards:** Uniform corner radius of `20px` (`1.25rem`), providing a smooth, high-end, tablet-like hardware frame for content clusters.\n- **Inner Interactive Controls (Inputs, Selectors, Buttons):** Styled with `8px` (`0.5rem`) to maintain precision and crisp spatial economy within the larger 20px enclosures.\n- **Micro Badges, Confidence Tags, & Pill Tabs:** Fully rounded (`9999px`) to immediately signal categorical, atomic, or status-based data.\n\n## Components\n\n### Buttons\n- **Primary Command:** Solid `#22D3EE` background with near-black `#07080B` text in `Inter 600`. Hover state triggers a subtle luminosity lift and an ambient outer glow (`box-shadow: 0 0 16px rgba(34, 211, 238, 0.4)`).\n- **Secondary Glass:** `rgba(255, 255, 255, 0.05)` fill, `1px solid rgba(255, 255, 255, 0.1)` border, `#F5F7FA` text. Hover introduces `rgba(255, 255, 255, 0.1)` fill and border brightens to `rgba(255, 255, 255, 0.25)`.\n- **Tertiary Minimal:** Transparent fill, `#8B93A1` text, hovering to `#F5F7FA` with no shift in geometry.\n\n### Data Cards & Bento Cells\n- Enclosed in `20px` radius containers with `1px solid rgba(255, 255, 255, 0.08)`.\n- Header areas feature `label-caps` in `#8B93A1` accompanying an optional monospace pulse indicator (e.g., green live beacon).\n- Content zones maintain high scannability using tabular `JetBrains Mono` for KPIs and `Space Grotesk` for record titles.\n\n### Chips & Confidence Indicators\n- **High Confidence / Optimal Throughput:** Background `rgba(163, 230, 53, 0.1)`, text `#A3E635`, hairline `rgba(163, 230, 53, 0.25)`.\n- **Active Thread / Inference Processing:** Background `rgba(34, 211, 238, 0.1)`, text `#22D3EE`, hairline `rgba(34, 211, 238, 0.25)`.\n- **Flagged Discrepancy / Backorder Alert:** Background `rgba(251, 191, 36, 0.1)`, text `#FBBF24`, hairline `rgba(251, 191, 36, 0.25)`.\n\n### Form Fields & Terminal Inputs\n- **Base Input:** Background `rgba(0, 0, 0, 0.45)`, border `1px solid rgba(255, 255, 255, 0.08)`, border radius `8px`, text `#F5F7FA`. \n- **Focus State:** Border sharply transitions to `#22D3EE` with an outer focus field `0 0 0 1px #22D3EE`.\n- **Monospace Prompt Variant:** Prefixed with a cyan chevron (`>`), utilizing `JetBrains Mono` for metadata queries, query parsing, and ISBN lookups.\n\n### Selection Controls (Checkboxes & Radios)\n- Square (checkbox, `4px` radius) or Circular (radio). \n- Unchecked: `1px solid rgba(255, 255, 255, 0.2)` over `rgba(255, 255, 255, 0.02)`.\n- Checked: `#22D3EE` solid fill with `#07080B` checkmark or center pip.\n\n### Command-Specific Additions\n- **Manuscript Vector Matrix:** Split-pane comparison component showing machine translation or edit recommendations on dark frosted glass with word-level confidence overlays in lime and amber.\n- **Publishing Velocity Gauges:** Horizontal segmented telemetry meters utilizing the aurora palette to communicate print queue progression and quarterly imprint milestones.",
+            "font": "SPACE_GROTESK",
+            "headlineFont": "SPACE_GROTESK",
+            "headlineFontFamily": "Space Grotesk",
+            "labelFont": "JETBRAINS_MONO",
+            "labelFontFamily": "JetBrains Mono",
+            "namedColors": {
+              "background": "#121317",
+              "error": "#ffb4ab",
+              "error_container": "#93000a",
+              "inverse_on_surface": "#2f3034",
+              "inverse_primary": "#006877",
+              "inverse_surface": "#e3e2e6",
+              "on_background": "#e3e2e6",
+              "on_error": "#690005",
+              "on_error_container": "#ffdad6",
+              "on_primary": "#00363e",
+              "on_primary_container": "#005763",
+              "on_primary_fixed": "#001f25",
+              "on_primary_fixed_variant": "#004e5a",
+              "on_secondary": "#213600",
+              "on_secondary_container": "#304b00",
+              "on_secondary_fixed": "#121f00",
+              "on_secondary_fixed_variant": "#334f00",
+              "on_surface": "#e3e2e6",
+              "on_surface_variant": "#bbc9cd",
+              "on_tertiary": "#402d00",
+              "on_tertiary_container": "#654a00",
+              "on_tertiary_fixed": "#261a00",
+              "on_tertiary_fixed_variant": "#5c4300",
+              "outline": "#859397",
+              "outline_variant": "#3c494c",
+              "primary": "#8aebff",
+              "primary_container": "#22d3ee",
+              "primary_fixed": "#a2eeff",
+              "primary_fixed_dim": "#2fd9f4",
+              "secondary": "#9ddf2e",
+              "secondary_container": "#83c300",
+              "secondary_fixed": "#b2f746",
+              "secondary_fixed_dim": "#98da27",
+              "surface": "#121317",
+              "surface_bright": "#38393d",
+              "surface_container": "#1e1f23",
+              "surface_container_high": "#292a2d",
+              "surface_container_highest": "#343538",
+              "surface_container_low": "#1a1b1f",
+              "surface_container_lowest": "#0d0e11",
+              "surface_dim": "#121317",
+              "surface_tint": "#2fd9f4",
+              "surface_variant": "#343538",
+              "tertiary": "#ffd785",
+              "tertiary_container": "#f2b719",
+              "tertiary_fixed": "#ffdf9f",
+              "tertiary_fixed_dim": "#f9bd22"
+            },
+            "overrideNeutralColor": "#07080b",
+            "overridePrimaryColor": "#22d3ee",
+            "overrideSecondaryColor": "#a3e635",
+            "overrideTertiaryColor": "#fbbf24",
+            "roundness": "ROUND_EIGHT",
+            "spacing": {
+              "gutter": "1rem",
+              "gutter-desktop": "1.5rem",
+              "margin": "1rem",
+              "margin-desktop": "2rem",
+              "space-2xl": "3rem",
+              "space-lg": "1.5rem",
+              "space-md": "1rem",
+              "space-sm": "0.5rem",
+              "space-xl": "2rem",
+              "space-xs": "0.25rem"
+            },
+            "spacingScale": 2,
+            "typography": {
+              "body-lg": {
+                "fontFamily": "Inter",
+                "fontSize": "16px",
+                "fontWeight": "400",
+                "letterSpacing": "-0.005em",
+                "lineHeight": "24px"
+              },
+              "body-md": {
+                "fontFamily": "Inter",
+                "fontSize": "14px",
+                "fontWeight": "400",
+                "letterSpacing": "0em",
+                "lineHeight": "20px"
+              },
+              "body-sm": {
+                "fontFamily": "Inter",
+                "fontSize": "12px",
+                "fontWeight": "400",
+                "letterSpacing": "0.005em",
+                "lineHeight": "16px"
+              },
+              "code-sm": {
+                "fontFamily": "JetBrains Mono",
+                "fontSize": "12px",
+                "fontWeight": "400",
+                "letterSpacing": "0.02em",
+                "lineHeight": "16px"
+              },
+              "headline-lg": {
+                "fontFamily": "Space Grotesk",
+                "fontSize": "32px",
+                "fontWeight": "600",
+                "letterSpacing": "-0.025em",
+                "lineHeight": "40px"
+              },
+              "headline-lg-mobile": {
+                "fontFamily": "Space Grotesk",
+                "fontSize": "24px",
+                "fontWeight": "600",
+                "letterSpacing": "-0.015em",
+                "lineHeight": "32px"
+              },
+              "headline-md": {
+                "fontFamily": "Space Grotesk",
+                "fontSize": "22px",
+                "fontWeight": "500",
+                "letterSpacing": "-0.015em",
+                "lineHeight": "28px"
+              },
+              "headline-sm": {
+                "fontFamily": "Space Grotesk",
+                "fontSize": "18px",
+                "fontWeight": "500",
+                "letterSpacing": "-0.01em",
+                "lineHeight": "24px"
+              },
+              "headline-xl": {
+                "fontFamily": "Space Grotesk",
+                "fontSize": "40px",
+                "fontWeight": "600",
+                "letterSpacing": "-0.03em",
+                "lineHeight": "48px"
+              },
+              "headline-xl-mobile": {
+                "fontFamily": "Space Grotesk",
+                "fontSize": "30px",
+                "fontWeight": "600",
+                "letterSpacing": "-0.02em",
+                "lineHeight": "38px"
+              },
+              "label-caps": {
+                "fontFamily": "JetBrains Mono",
+                "fontSize": "11px",
+                "fontWeight": "600",
+                "letterSpacing": "0.08em",
+                "lineHeight": "14px"
+              },
+              "metric-lg": {
+                "fontFamily": "JetBrains Mono",
+                "fontSize": "28px",
+                "fontWeight": "500",
+                "letterSpacing": "-0.02em",
+                "lineHeight": "34px"
+              },
+              "metric-md": {
+                "fontFamily": "JetBrains Mono",
+                "fontSize": "18px",
+                "fontWeight": "500",
+                "letterSpacing": "-0.01em",
+                "lineHeight": "24px"
+              }
+            }
+          }
+        },
+        "name": "assets/4b6cd8d68cc847d4a818c69e1dfcfd2b",
+        "version": "1"
+      }
+    },
+    {
+      "design": {
+        "screens": [
+          {
+            "designSystem": {
+              "designSystem": {
+                "displayName": "Editorial Intelligence Console",
+                "styleGuidelines": "## Brand & Style\n\nThis design system establishes an atmospheric, high-density AI command architecture engineered for modern publishing operations. Merging the data rigor of a financial terminal with the refined tactility of a modern cinematic SaaS, it positions artificial intelligence not as a novelty, but as an authoritative instrument for catalog strategy, acquisitions, translation analysis, and print logistics.\n\nThe aesthetic philosophy balances **technical brutalism** with **high-end dark glassmorphism**:\n- **Atmospheric Void:** Deep, calibrated near-black surfaces provide infinite canvas depth, stripping away visual noise and directing absolute focus to core data structures.\n- **Prismatic Optics:** Radiant, controlled auroral transitions (cyan through lime to amber) are deployed surgically for status states, vector confidence thresholds, and ambient computational horizons. Purple is strictly absent to prevent generic consumer-tech tropes.\n- **Editorial Rigor:** High-density Bento module layouts, inspired by developer tools and command terminals, balance heavy density with breathability via subtle structural glass borders and meticulous typographic stratification.\n\n## Layout & Spacing\n\nThe layout is constructed around a structured **Bento-grid engine** optimized for simultaneous analytical views.\n\n### Grid Construction\n- **Desktop (1440px+):** 12-column adaptive fluid grid with `gutter-desktop` (1.5rem / 24px) and `margin-desktop` (2rem / 32px). Elements snap to multi-span Bento units (e.g., 8-col analysis canvas paired with a 4-col real-time log column).\n- **Tablet / Small Desktop (768px – 1439px):** 6-column reflow grid. Secondary terminal inspectors collapse into docked sheets or lower horizontal strata.\n- **Mobile (< 768px):** Single-column stacked stream. Complex multi-variate charts pivot to prioritized KPI summary cards with expandable bottom drawers.\n\n### Spacing Architecture\nA disciplined 4px base rhythm dictates internal module paddings:\n- Module internal breathing space standardizes at `space-lg` (24px).\n- Tight inline groupings (chips, micro-actions, metadata rows) leverage `space-xs` (4px) and `space-sm` (8px).\n- Section separation inside Bento cells adheres to `space-md` (16px).\n\n## Elevation & Depth\n\nVisual plane differentiation is established through translucent atmospheric tiers and luminous optical barriers rather than traditional drop shadows.\n\n### Atmospheric Planes\n- **Ground Floor (`#07080B`):** Pure background viewport with optional localized radial gradients of deep cyan (`rgba(34, 211, 238, 0.03)`) diffusing softly in corners.\n- **Base Bento Surface:** `background: rgba(255, 255, 255, 0.035)`, backed by `backdrop-filter: blur(24px)` and framed with `1px solid rgba(255, 255, 255, 0.08)`.\n- **Raised Interactive Deck (Flyouts, Context Menus, Tooltips):** `background: rgba(14, 17, 23, 0.85)`, backed by `backdrop-filter: blur(32px)`, framed with `1px solid rgba(255, 255, 255, 0.14)`. Box shadow is subtle, tinted, and deep: `0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05)`.\n- **Active State / Selected Module:** Retains glass background but the perimeter border transitions to a glowing gradient hairline or solid `rgba(34, 211, 238, 0.35)` with a faint interior cyan specular bleed (`box-shadow: inset 0 1px 0 0 rgba(34, 211, 238, 0.2)`).\n\n## Components\n\n### Buttons\n- **Primary Command:** Solid `#22D3EE` background with near-black `#07080B` text in `Inter 600`. Hover state triggers a subtle luminosity lift and an ambient outer glow (`box-shadow: 0 0 16px rgba(34, 211, 238, 0.4)`).\n- **Secondary Glass:** `rgba(255, 255, 255, 0.05)` fill, `1px solid rgba(255, 255, 255, 0.1)` border, `#F5F7FA` text. Hover introduces `rgba(255, 255, 255, 0.1)` fill and border brightens to `rgba(255, 255, 255, 0.25)`.\n- **Tertiary Minimal:** Transparent fill, `#8B93A1` text, hovering to `#F5F7FA` with no shift in geometry.\n\n### Data Cards & Bento Cells\n- Enclosed in `20px` radius containers with `1px solid rgba(255, 255, 255, 0.08)`.\n- Header areas feature `label-caps` in `#8B93A1` accompanying an optional monospace pulse indicator (e.g., green live beacon).\n- Content zones maintain high scannability using tabular `JetBrains Mono` for KPIs and `Space Grotesk` for record titles.\n\n### Chips & Confidence Indicators\n- **High Confidence / Optimal Throughput:** Background `rgba(163, 230, 53, 0.1)`, text `#A3E635`, hairline `rgba(163, 230, 53, 0.25)`.\n- **Active Thread / Inference Processing:** Background `rgba(34, 211, 238, 0.1)`, text `#22D3EE`, hairline `rgba(34, 211, 238, 0.25)`.\n- **Flagged Discrepancy / Backorder Alert:** Background `rgba(251, 191, 36, 0.1)`, text `#FBBF24`, hairline `rgba(251, 191, 36, 0.25)`.\n\n### Form Fields & Terminal Inputs\n- **Base Input:** Background `rgba(0, 0, 0, 0.45)`, border `1px solid rgba(255, 255, 255, 0.08)`, border radius `8px`, text `#F5F7FA`. \n- **Focus State:** Border sharply transitions to `#22D3EE` with an outer focus field `0 0 0 1px #22D3EE`.\n- **Monospace Prompt Variant:** Prefixed with a cyan chevron (`>`), utilizing `JetBrains Mono` for metadata queries, query parsing, and ISBN lookups.\n\n### Selection Controls (Checkboxes & Radios)\n- Square (checkbox, `4px` radius) or Circular (radio). \n- Unchecked: `1px solid rgba(255, 255, 255, 0.2)` over `rgba(255, 255, 255, 0.02)`.\n- Checked: `#22D3EE` solid fill with `#07080B` checkmark or center pip.\n\n### Command-Specific Additions\n- **Manuscript Vector Matrix:** Split-pane comparison component showing machine translation or edit recommendations on dark frosted glass with word-level confidence overlays in lime and amber.\n- **Publishing Velocity Gauges:** Horizontal segmented telemetry meters utilizing the aurora palette to communicate print queue progression and quarterly imprint milestones.",
+                "theme": {
+                  "bodyFont": "INTER",
+                  "bodyFontFamily": "Inter",
+                  "colorMode": "DARK",
+                  "colorVariant": "FIDELITY",
+                  "customColor": "#22d3ee",
+                  "designMd": "---\nname: Editorial Intelligence Console\ncolors:\n  surface: '#121317'\n  surface-dim: '#121317'\n  surface-bright: '#38393d'\n  surface-container-lowest: '#0d0e11'\n  surface-container-low: '#1a1b1f'\n  surface-container: '#1e1f23'\n  surface-container-high: '#292a2d'\n  surface-container-highest: '#343538'\n  on-surface: '#e3e2e6'\n  on-surface-variant: '#bbc9cd'\n  inverse-surface: '#e3e2e6'\n  inverse-on-surface: '#2f3034'\n  outline: '#859397'\n  outline-variant: '#3c494c'\n  surface-tint: '#2fd9f4'\n  primary: '#8aebff'\n  on-primary: '#00363e'\n  primary-container: '#22d3ee'\n  on-primary-container: '#005763'\n  inverse-primary: '#006877'\n  secondary: '#9ddf2e'\n  on-secondary: '#213600'\n  secondary-container: '#83c300'\n  on-secondary-container: '#304b00'\n  tertiary: '#ffd785'\n  on-tertiary: '#402d00'\n  tertiary-container: '#f2b719'\n  on-tertiary-container: '#654a00'\n  error: '#ffb4ab'\n  on-error: '#690005'\n  error-container: '#93000a'\n  on-error-container: '#ffdad6'\n  primary-fixed: '#a2eeff'\n  primary-fixed-dim: '#2fd9f4'\n  on-primary-fixed: '#001f25'\n  on-primary-fixed-variant: '#004e5a'\n  secondary-fixed: '#b2f746'\n  secondary-fixed-dim: '#98da27'\n  on-secondary-fixed: '#121f00'\n  on-secondary-fixed-variant: '#334f00'\n  tertiary-fixed: '#ffdf9f'\n  tertiary-fixed-dim: '#f9bd22'\n  on-tertiary-fixed: '#261a00'\n  on-tertiary-fixed-variant: '#5c4300'\n  background: '#121317'\n  on-background: '#e3e2e6'\n  surface-variant: '#343538'\ntypography:\n  headline-xl:\n    fontFamily: Space Grotesk\n    fontSize: 40px\n    fontWeight: '600'\n    lineHeight: 48px\n    letterSpacing: -0.03em\n  headline-xl-mobile:\n    fontFamily: Space Grotesk\n    fontSize: 30px\n    fontWeight: '600'\n    lineHeight: 38px\n    letterSpacing: -0.02em\n  headline-lg:\n    fontFamily: Space Grotesk\n    fontSize: 32px\n    fontWeight: '600'\n    lineHeight: 40px\n    letterSpacing: -0.025em\n  headline-lg-mobile:\n    fontFamily: Space Grotesk\n    fontSize: 24px\n    fontWeight: '600'\n    lineHeight: 32px\n    letterSpacing: -0.015em\n  headline-md:\n    fontFamily: Space Grotesk\n    fontSize: 22px\n    fontWeight: '500'\n    lineHeight: 28px\n    letterSpacing: -0.015em\n  headline-sm:\n    fontFamily: Space Grotesk\n    fontSize: 18px\n    fontWeight: '500'\n    lineHeight: 24px\n    letterSpacing: -0.01em\n  body-lg:\n    fontFamily: Inter\n    fontSize: 16px\n    fontWeight: '400'\n    lineHeight: 24px\n    letterSpacing: -0.005em\n  body-md:\n    fontFamily: Inter\n    fontSize: 14px\n    fontWeight: '400'\n    lineHeight: 20px\n    letterSpacing: 0em\n  body-sm:\n    fontFamily: Inter\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n    letterSpacing: 0.005em\n  metric-lg:\n    fontFamily: JetBrains Mono\n    fontSize: 28px\n    fontWeight: '500'\n    lineHeight: 34px\n    letterSpacing: -0.02em\n  metric-md:\n    fontFamily: JetBrains Mono\n    fontSize: 18px\n    fontWeight: '500'\n    lineHeight: 24px\n    letterSpacing: -0.01em\n  code-sm:\n    fontFamily: JetBrains Mono\n    fontSize: 12px\n    fontWeight: '400'\n    lineHeight: 16px\n    letterSpacing: 0.02em\n  label-caps:\n    fontFamily: JetBrains Mono\n    fontSize: 11px\n    fontWeight: '600'\n    lineHeight: 14px\n    letterSpacing: 0.08em\nrounded:\n  sm: 0.25rem\n  DEFAULT: 0.5rem\n  md: 0.75rem\n  lg: 1rem\n  xl: 1.5rem\n  full: 9999px\nspacing:\n  gutter: 1rem\n  gutter-desktop: 1.5rem\n  margin: 1rem\n  margin-desktop: 2rem\n  space-xs: 0.25rem\n  space-sm: 0.5rem\n  space-md: 1rem\n  space-lg: 1.5rem\n  space-xl: 2rem\n  space-2xl: 3rem\n---\n\n## Brand & Style\n\nThis design system establishes an atmospheric, high-density AI command architecture engineered for modern publishing operations. Merging the data rigor of a financial terminal with the refined tactility of a modern cinematic SaaS, it positions artificial intelligence not as a novelty, but as an authoritative instrument for catalog strategy, acquisitions, translation analysis, and print logistics.\n\nThe aesthetic philosophy balances **technical brutalism** with **high-end dark glassmorphism**:\n- **Atmospheric Void:** Deep, calibrated near-black surfaces provide infinite canvas depth, stripping away visual noise and directing absolute focus to core data structures.\n- **Prismatic Optics:** Radiant, controlled auroral transitions (cyan through lime to amber) are deployed surgically for status states, vector confidence thresholds, and ambient computational horizons. Purple is strictly absent to prevent generic consumer-tech tropes.\n- **Editorial Rigor:** High-density Bento module layouts, inspired by developer tools and command terminals, balance heavy density with breathability via subtle structural glass borders and meticulous typographic stratification.\n\n## Colors\n\nThe palette is tuned specifically for sustained low-light command environments, maximizing contrast while preventing retina fatigue.\n\n### Core Canvas & Structure\n- **Base Canvas (`#07080B`):** The foundational substrate. Deep, neutral near-black devoid of blue or red tint creep.\n- **Glass Surfaces (`rgba(255, 255, 255, 0.03)` to `rgba(255, 255, 255, 0.05)`): Layered structural planes utilizing backdrop blur rather than opaque fills.\n- **Subtle Perimeter Hairlines (`rgba(255, 255, 255, 0.08)`): Crisp structural dividers maintaining clean modular boundaries across varying dark surfaces.\n\n### Monochromatic Hierarchy\n- **Text Primary (`#F5F7FA`):** High-clarity cold white for key editorial insights, headings, and active readouts.\n- **Text Muted / Data Subtext (`#8B93A1`):** Neutralized gunmetal slate for metadata, labels, secondary timestamps, and structural labels.\n- **Text Dim (`#4B5263`):** Receded state for inactive flags, empty indicators, and subtle grid coordinates.\n\n### Chromatic Spectrum\n- **Action Accent / AI Vector (`#22D3EE`):** Electric Cyan. Represents active inference, primary interactions, positive delta, and system focus.\n- **Cadence / Operational Health (`#A3E635`):** Hyper Lime. Expresses throughput efficiency, completed batch jobs, catalog velocity, and optimal print yields.\n- **Warning / System Alert (`#FBBF24`):** Warm Amber. Denotes inventory depletion, translation anomalies, contract timeline risks, and model drift.\n- **Aurora Gradients:** Restricted strictly to non-interactive decorative backdrops, active processing rings, and visual highlights spanning `linear-gradient(135deg, #22D3EE 0%, #A3E635 50%, #FBBF24 100%)`.\n\n## Typography\n\nThe typography strategy leverages three dedicated type engines, each fulfilling a discrete operational tier:\n\n1. **Space Grotesk (Display & Section Headers):** Delivers a modernist, engineered edge with geometric idiosyncrasies that reinforce the algorithmic character of the command center.\n2. **Inter (System & UI Body):** Guarantees frictionless reading clarity for editorial synopsis, complex logs, and configuration inputs across dense screen estates.\n3. **JetBrains Mono (Metrics, Telemetry, and Finance):** Applied to royalty percentages, ISBNs, warehouse SKU matrices, token consumption rates, and timestamp logs. Native tabular figures ensure columnar stability in real-time streaming dashboards.\n\n### Type Rules\n- All uppercase metadata labels must use `label-caps` in JetBrains Mono with expanded letter spacing (`0.08em`).\n- Numerical analytics must always enforce OpenType `tnum` (tabular numbers) to eliminate layout jitter during live updates.\n\n## Layout & Spacing\n\nThe layout is constructed around a structured **Bento-grid engine** optimized for simultaneous analytical views.\n\n### Grid Construction\n- **Desktop (1440px+):** 12-column adaptive fluid grid with `gutter-desktop` (1.5rem / 24px) and `margin-desktop` (2rem / 32px). Elements snap to multi-span Bento units (e.g., 8-col analysis canvas paired with a 4-col real-time log column).\n- **Tablet / Small Desktop (768px – 1439px):** 6-column reflow grid. Secondary terminal inspectors collapse into docked sheets or lower horizontal strata.\n- **Mobile (< 768px):** Single-column stacked stream. Complex multi-variate charts pivot to prioritized KPI summary cards with expandable bottom drawers.\n\n### Spacing Architecture\nA disciplined 4px base rhythm dictates internal module paddings:\n- Module internal breathing space standardizes at `space-lg` (24px).\n- Tight inline groupings (chips, micro-actions, metadata rows) leverage `space-xs` (4px) and `space-sm` (8px).\n- Section separation inside Bento cells adheres to `space-md` (16px).\n\n## Elevation & Depth\n\nVisual plane differentiation is established through translucent atmospheric tiers and luminous optical barriers rather than traditional drop shadows.\n\n### Atmospheric Planes\n- **Ground Floor (`#07080B`):** Pure background viewport with optional localized radial gradients of deep cyan (`rgba(34, 211, 238, 0.03)`) diffusing softly in corners.\n- **Base Bento Surface:** `background: rgba(255, 255, 255, 0.035)`, backed by `backdrop-filter: blur(24px)` and framed with `1px solid rgba(255, 255, 255, 0.08)`.\n- **Raised Interactive Deck (Flyouts, Context Menus, Tooltips):** `background: rgba(14, 17, 23, 0.85)`, backed by `backdrop-filter: blur(32px)`, framed with `1px solid rgba(255, 255, 255, 0.14)`. Box shadow is subtle, tinted, and deep: `0 20px 40px -15px rgba(0, 0, 0, 0.7), 0 0 1px 1px rgba(255, 255, 255, 0.05)`.\n- **Active State / Selected Module:** Retains glass background but the perimeter border transitions to a glowing gradient hairline or solid `rgba(34, 211, 238, 0.35)` with a faint interior cyan specular bleed (`box-shadow: inset 0 1px 0 0 rgba(34, 211, 238, 0.2)`).\n\n## Shapes\n\nThe design system adopts a specialized curvature hierarchy tailored to high-tech editorial dashboards:\n\n- **Bento Modules & Primary Cards:** Uniform corner radius of `20px` (`1.25rem`), providing a smooth, high-end, tablet-like hardware frame for content clusters.\n- **Inner Interactive Controls (Inputs, Selectors, Buttons):** Styled with `8px` (`0.5rem`) to maintain precision and crisp spatial economy within the larger 20px enclosures.\n- **Micro Badges, Confidence Tags, & Pill Tabs:** Fully rounded (`9999px`) to immediately signal categorical, atomic, or status-based data.\n\n## Components\n\n### Buttons\n- **Primary Command:** Solid `#22D3EE` background with near-black `#07080B` text in `Inter 600`. Hover state triggers a subtle luminosity lift and an ambient outer glow (`box-shadow: 0 0 16px rgba(34, 211, 238, 0.4)`).\n- **Secondary Glass:** `rgba(255, 255, 255, 0.05)` fill, `1px solid rgba(255, 255, 255, 0.1)` border, `#F5F7FA` text. Hover introduces `rgba(255, 255, 255, 0.1)` fill and border brightens to `rgba(255, 255, 255, 0.25)`.\n- **Tertiary Minimal:** Transparent fill, `#8B93A1` text, hovering to `#F5F7FA` with no shift in geometry.\n\n### Data Cards & Bento Cells\n- Enclosed in `20px` radius containers with `1px solid rgba(255, 255, 255, 0.08)`.\n- Header areas feature `label-caps` in `#8B93A1` accompanying an optional monospace pulse indicator (e.g., green live beacon).\n- Content zones maintain high scannability using tabular `JetBrains Mono` for KPIs and `Space Grotesk` for record titles.\n\n### Chips & Confidence Indicators\n- **High Confidence / Optimal Throughput:** Background `rgba(163, 230, 53, 0.1)`, text `#A3E635`, hairline `rgba(163, 230, 53, 0.25)`.\n- **Active Thread / Inference Processing:** Background `rgba(34, 211, 238, 0.1)`, text `#22D3EE`, hairline `rgba(34, 211, 238, 0.25)`.\n- **Flagged Discrepancy / Backorder Alert:** Background `rgba(251, 191, 36, 0.1)`, text `#FBBF24`, hairline `rgba(251, 191, 36, 0.25)`.\n\n### Form Fields & Terminal Inputs\n- **Base Input:** Background `rgba(0, 0, 0, 0.45)`, border `1px solid rgba(255, 255, 255, 0.08)`, border radius `8px`, text `#F5F7FA`. \n- **Focus State:** Border sharply transitions to `#22D3EE` with an outer focus field `0 0 0 1px #22D3EE`.\n- **Monospace Prompt Variant:** Prefixed with a cyan chevron (`>`), utilizing `JetBrains Mono` for metadata queries, query parsing, and ISBN lookups.\n\n### Selection Controls (Checkboxes & Radios)\n- Square (checkbox, `4px` radius) or Circular (radio). \n- Unchecked: `1px solid rgba(255, 255, 255, 0.2)` over `rgba(255, 255, 255, 0.02)`.\n- Checked: `#22D3EE` solid fill with `#07080B` checkmark or center pip.\n\n### Command-Specific Additions\n- **Manuscript Vector Matrix:** Split-pane comparison component showing machine translation or edit recommendations on dark frosted glass with word-level confidence overlays in lime and amber.\n- **Publishing Velocity Gauges:** Horizontal segmented telemetry meters utilizing the aurora palette to communicate print queue progression and quarterly imprint milestones.",
+                  "font": "SPACE_GROTESK",
+                  "headlineFont": "SPACE_GROTESK",
+                  "headlineFontFamily": "Space Grotesk",
+                  "labelFont": "JETBRAINS_MONO",
+                  "labelFontFamily": "JetBrains Mono",
+                  "namedColors": {
+                    "background": "#121317",
+                    "error": "#ffb4ab",
+                    "error_container": "#93000a",
+                    "inverse_on_surface": "#2f3034",
+                    "inverse_primary": "#006877",
+                    "inverse_surface": "#e3e2e6",
+                    "on_background": "#e3e2e6",
+                    "on_error": "#690005",
+                    "on_error_container": "#ffdad6",
+                    "on_primary": "#00363e",
+                    "on_primary_container": "#005763",
+                    "on_primary_fixed": "#001f25",
+                    "on_primary_fixed_variant": "#004e5a",
+                    "on_secondary": "#213600",
+                    "on_secondary_container": "#304b00",
+                    "on_secondary_fixed": "#121f00",
+                    "on_secondary_fixed_variant": "#334f00",
+                    "on_surface": "#e3e2e6",
+                    "on_surface_variant": "#bbc9cd",
+                    "on_tertiary": "#402d00",
+                    "on_tertiary_container": "#654a00",
+                    "on_tertiary_fixed": "#261a00",
+                    "on_tertiary_fixed_variant": "#5c4300",
+                    "outline": "#859397",
+                    "outline_variant": "#3c494c",
+                    "primary": "#8aebff",
+                    "primary_container": "#22d3ee",
+                    "primary_fixed": "#a2eeff",
+                    "primary_fixed_dim": "#2fd9f4",
+                    "secondary": "#9ddf2e",
+                    "secondary_container": "#83c300",
+                    "secondary_fixed": "#b2f746",
+                    "secondary_fixed_dim": "#98da27",
+                    "surface": "#121317",
+                    "surface_bright": "#38393d",
+                    "surface_container": "#1e1f23",
+                    "surface_container_high": "#292a2d",
+                    "surface_container_highest": "#343538",
+                    "surface_container_low": "#1a1b1f",
+                    "surface_container_lowest": "#0d0e11",
+                    "surface_dim": "#121317",
+                    "surface_tint": "#2fd9f4",
+                    "surface_variant": "#343538",
+                    "tertiary": "#ffd785",
+                    "tertiary_container": "#f2b719",
+                    "tertiary_fixed": "#ffdf9f",
+                    "tertiary_fixed_dim": "#f9bd22"
+                  },
+                  "overrideNeutralColor": "#07080b",
+                  "overridePrimaryColor": "#22d3ee",
+                  "overrideSecondaryColor": "#a3e635",
+                  "overrideTertiaryColor": "#fbbf24",
+                  "roundness": "ROUND_EIGHT",
+                  "spacing": {
+                    "gutter": "1rem",
+                    "gutter-desktop": "1.5rem",
+                    "margin": "1rem",
+                    "margin-desktop": "2rem",
+                    "space-2xl": "3rem",
+                    "space-lg": "1.5rem",
+                    "space-md": "1rem",
+                    "space-sm": "0.5rem",
+                    "space-xl": "2rem",
+                    "space-xs": "0.25rem"
+                  },
+                  "spacingScale": 2,
+                  "typography": {
+                    "body-lg": {
+                      "fontFamily": "Inter",
+                      "fontSize": "16px",
+                      "fontWeight": "400",
+                      "letterSpacing": "-0.005em",
+                      "lineHeight": "24px"
+                    },
+                    "body-md": {
+                      "fontFamily": "Inter",
+                      "fontSize": "14px",
+                      "fontWeight": "400",
+                      "letterSpacing": "0em",
+                      "lineHeight": "20px"
+                    },
+                    "body-sm": {
+                      "fontFamily": "Inter",
+                      "fontSize": "12px",
+                      "fontWeight": "400",
+                      "letterSpacing": "0.005em",
+                      "lineHeight": "16px"
+                    },
+                    "code-sm": {
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": "12px",
+                      "fontWeight": "400",
+                      "letterSpacing": "0.02em",
+                      "lineHeight": "16px"
+                    },
+                    "headline-lg": {
+                      "fontFamily": "Space Grotesk",
+                      "fontSize": "32px",
+                      "fontWeight": "600",
+                      "letterSpacing": "-0.025em",
+                      "lineHeight": "40px"
+                    },
+                    "headline-lg-mobile": {
+                      "fontFamily": "Space Grotesk",
+                      "fontSize": "24px",
+                      "fontWeight": "600",
+                      "letterSpacing": "-0.015em",
+                      "lineHeight": "32px"
+                    },
+                    "headline-md": {
+                      "fontFamily": "Space Grotesk",
+                      "fontSize": "22px",
+                      "fontWeight": "500",
+                      "letterSpacing": "-0.015em",
+                      "lineHeight": "28px"
+                    },
+                    "headline-sm": {
+                      "fontFamily": "Space Grotesk",
+                      "fontSize": "18px",
+                      "fontWeight": "500",
+                      "letterSpacing": "-0.01em",
+                      "lineHeight": "24px"
+                    },
+                    "headline-xl": {
+                      "fontFamily": "Space Grotesk",
+                      "fontSize": "40px",
+                      "fontWeight": "600",
+                      "letterSpacing": "-0.03em",
+                      "lineHeight": "48px"
+                    },
+                    "headline-xl-mobile": {
+                      "fontFamily": "Space Grotesk",
+                      "fontSize": "30px",
+                      "fontWeight": "600",
+                      "letterSpacing": "-0.02em",
+                      "lineHeight": "38px"
+                    },
+                    "label-caps": {
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": "11px",
+                      "fontWeight": "600",
+                      "letterSpacing": "0.08em",
+                      "lineHeight": "14px"
+                    },
+                    "metric-lg": {
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": "28px",
+                      "fontWeight": "500",
+                      "letterSpacing": "-0.02em",
+                      "lineHeight": "34px"
+                    },
+                    "metric-md": {
+                      "fontFamily": "JetBrains Mono",
+                      "fontSize": "18px",
+                      "fontWeight": "500",
+                      "letterSpacing": "-0.01em",
+                      "lineHeight": "24px"
+                    }
+                  }
+                }
+              },
+              "name": "assets/4b6cd8d68cc847d4a818c69e1dfcfd2b",
+              "version": "1"
+            },
+            "deviceType": "DESKTOP",
+            "generatedBy": "figaro_agent",
+            "height": "3400",
+            "htmlCode": {
+              "downloadUrl": "https://contribution.usercontent.google.com/download?c=CgthaWRhX2NvZGVmeBJ8Eh1hcHBfY29tcGFuaW9uX2dlbmVyYXRlZF9maWxlcxpbCiVodG1sXzc1NmU1ODU2ODUyZjRmMjliMTdkNmE0Zjk3MGI0MmUyEgsSBxDVsMz74wUYAZIBJAoKcHJvamVjdF9pZBIWQhQxMzQyNjgzOTg2MTYwNzI2NTU1Mw&filename=&opi=96797242",
+              "mimeType": "text/html",
+              "name": "projects/13426839861607265553/files/a74e0d781be741d291a8871232496ebb"
+            },
+            "id": "3831ba2a89b548638f2244656f57a6fc",
+            "name": "projects/13426839861607265553/screens/3831ba2a89b548638f2244656f57a6fc",
+            "prompt": "Create a DARK, cinematic, luxurious 'AI command center' home screen — Bento grid style — for book publishing house Timaş Yayınları on NanobaseAI platform with ZEKİ AI assistant.\n\nPALETTE & BACKGROUND:\n- Near-black base #07080B with subtle SVG noise/grain and faint dot grid background (radial pattern or 24px subtle dot grid).\n- Glass panels: background rgba(255, 255, 255, 0.035), border 1px solid rgba(255, 255, 255, 0.08), rounded-[20px] (20px border-radius), backdrop-blur-xl.\n- A single soft AURORA glow gradient (cyan #22D3EE -> lime #A3E635 -> amber #FBBF24 with blur-[100px] opacity-25) situated strictly behind the hero tile.\n- Text colors: crisp white #F5F7FA, muted #8B93A1, subtle borders rgba(255, 255, 255, 0.07).\n- Action accent: cyan #22D3EE. Warning: amber #FBBF24. NO purple anywhere.\n- Typography: Space Grotesk / Geist for headings, Inter for body, JetBrains Mono (font-mono tabular-nums) for numbers and data metrics.\n\nLAYOUT & STRUCTURE:\n- NO sidebar. Full desktop 1440px container (max-w-[1400px] mx-auto px-6 py-6).\n- ULTRA-THIN TOP BAR (56px h-14):\n  - Left: NanobaseAI wordmark with diamond glyph (◆ NanobaseAI), workspace pill \"Timaş Yayınları\" with emerald status dot (\"Canlı\").\n  - Center: Command palette search input \"ZEKİ'ye sor… ⌘K\" with subtle cyan/glass glowing border (bg-white/[0.04] border border-cyan-400/30 px-4 py-1.5 rounded-full text-sm text-[#F5F7FA] w-80 shadow-[0_0_15px_rgba(34,211,238,0.15)] flex items-center justify-between).\n  - Module navigation quick links: \"Verine Sor\", \"Satış & Dağıtım\", \"Stok & Baskı\", \"Telif & Yazarlar\", \"Editoryal\", \"Talep Tahmini\", \"Katalog\".\n  - Right: Quick button \"Ekim baskı planı\" (border border-cyan-400/40 text-cyan-300 text-xs px-3 py-1.5 rounded-lg hover:bg-cyan-500/10), notification bell with amber dot, user avatar pill \"Emre Berk\" (Genel Yayın Yönetmeni).\n\n12-COLUMN BENTO GRID (gap-4 / 16px):\nROW 1:\n- HERO TILE (col-span-8, min-h-[320px] relative overflow-hidden p-6 rounded-[20px] bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between):\n  - Behind it: the gorgeous aurora glow element (cyan-lime-amber blur gradient).\n  - Eyebrow: \"ZEKİ AI · Günün içgörüsü · 07:40\" in font-mono text-xs text-cyan-300 tracking-wider flex items-center gap-2 with pulsing cyan dot.\n  - Big metric: Net satış \"₺12,8 Mn\" in massive font-extrabold text-[92px] leading-none tracking-tight bg-gradient-to-r from-white via-slate-100 to-cyan-200 bg-clip-text text-transparent font-mono.\n  - Label: \"Net satış · Eylül\" with badge \"+%18,4 YoY\" in text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 inline-flex items-center gap-1. Alongside: \"Satılan adet: 184.320\" & \"Aktif başlık: 2.146 ISBN\".\n  - Mini area sparkline: smooth SVG gradient sparkline glowing cyan.\n  - AI verbatim insight box:\n    \"Kayıp Atlas'ın stoğu 9 günde tükenecek; talep tahmini Ekim'de +%31. 6.000 adet yeniden baskı öneriyorum.\"\n  - Two ghost buttons: \"Baskı emri oluştur\" (bg-cyan-500 text-black font-semibold text-xs px-4 py-2 rounded-lg hover:bg-cyan-400 transition) and \"Detayı göster\" (border border-white/20 text-white/90 text-xs px-4 py-2 rounded-lg hover:bg-white/10).\n\n- ZEKİ AI TILE (col-span-4, min-h-[320px] p-5 rounded-[20px] bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between):\n  - Top: ID id=\"brand-motion-slot\" MUST be exactly present: `<div id=\"brand-motion-slot\" class=\"w-[160px] h-[140px] mx-auto mb-2 flex items-center justify-center relative\">...</div>` with an ultra-sleek abstract vector neural publishing prism / glowing concentric rings in cyan and lime.\n  - 3-turn mini conversation widget:\n    - User chip: \"Bu ay iade neden arttı?\"\n    - ZEKİ answer verbatim: \"Online pazaryeri iadeleri %14,2 ile hedefin üstünde; 3 başlık iadenin %61'ini oluşturuyor.\"\n    - 3 small abstract mini book-cover chips underneath: \"Kayıp Atlas\", \"Denizin Altındaki Şehir\", \"Sessiz Harfler\".\n\nROW 2 (4 TILES, col-span-3 each, min-h-[220px] p-5 rounded-[20px] bg-white/[0.03] border border-white/[0.08]):\n1. \"Stok & Baskı\":\n   - \"14 başlık yeniden baskı bekliyor\".\n   - Vertical stacked bar / list of days-of-stock per title: \"Kayıp Atlas\" (9 gün, glowing amber bar with warning tag), \"Sessiz Harfler\" (18 gün), \"Bir Fincan Sabah\" (26 gün), \"Zihin Haritaları\" (44 gün).\n2. \"Telif & Yazarlar\":\n   - \"₺1,9 Mn tahakkuk\".\n   - Ranked list:\n     - Elif Aydın: ₺212.400 (progress bar 85%, tag \"15.000 eşiği aşıldı\")\n     - Kerem Yalçın: ₺148.900 (progress bar 60%)\n     - Selin Kara: ₺97.300 (progress bar 40%)\n   - Tiny subnote: \"Elif Aydın'ın Eylül telif hakedişi ₺212.400; sözleşmedeki kademe eşiği 15.000 adette aşıldı.\"\n3. \"Editoryal Dosyalar\":\n   - \"37 dosya kuyrukta\".\n   - Circular ring gauge: 22/37 (%59) \"AI ön okuması tamam\".\n   - Active queue row: \"Sessiz Harfler · 2. taslak · Okuma özeti hazır\" with badge \"Edebiyat\".\n4. \"İade & Sevkiyat\":\n   - \"%11,3 iade oranı\" (Amber warning badge: \"Hedef %10\").\n   - Small donut SVG breakdown by channel: Online pazaryeri %48 (amber), Kitabevi zinciri %28, Bağımsız %14, Okul/Kurum %10.\n\nROW 3:\n- WIDE TILE (col-span-8, min-h-[300px] p-6 rounded-[20px] bg-white/[0.03] border border-white/[0.08]):\n  - Header: \"Satış & Talep Tahmini\" + channel toggles as pills (\"Tümü\", \"Kitabevi zinciri\", \"Online pazaryeri\", \"Bağımsız\", \"Okul/Kurum\").\n  - Legend: Cyan line for \"Gerçekleşen Satışlar (12 Ay)\", Dashed Lime line for \"ZEKİ AI Tahmini (+3 Ay)\", vertical dashed line \"Bugün\".\n  - Rich SVG chart displaying the monthly curve with glowing gradient fill, data points, and tooltip highlight for \"Kayıp Atlas: Ekim 6.400 adet (+%31)\".\n- TILE (col-span-4, min-h-[300px] p-6 rounded-[20px] bg-white/[0.03] border border-white/[0.08] flex flex-col justify-between):\n  - Header: \"Kapak & Pazarlama Stüdyosu\" + subtext \"Denizin Altındaki Şehir (Çocuk)\".\n  - 3 abstract AI-generated cover concept cards in a row with distinct gradients, minimalist typography, and score tags (v1: %94 CTR tahmini, v2: %88, v3: %91).\n  - Bottom action bar: Ghost button \"Varyant üret\" with spark icon + \"Seçilen konsepti uygula\".\n\nROW 4:\n- KATALOG STRIP & UYARILAR (col-span-12 rounded-[20px] bg-white/[0.03] border border-white/[0.08] p-6):\n  - Header with title \"Katalog & Canlı Hareketler\" and right-aligned \"2.146 ISBN Aktif\".\n  - Horizontal scrolling row of 8 abstract book covers:\n    1. \"Kayıp Atlas\" (Çocuk) - Amber alert \"Kritik Stok: 9 gün\"\n    2. \"Sessiz Harfler\" (Edebiyat) - Sparkline +%14\n    3. \"Zihin Haritaları\" (Kişisel Gelişim) - Sparkline +%8\n    4. \"Denizin Altındaki Şehir\" (Çocuk) - \"Yeni Baskı\"\n    5. \"Bir Fincan Sabah\" (Deneme) - Sparkline +%22\n    6. \"Osmanlı'da Gündelik Hayat\" (Tarih) - Sparkline +%5\n    7. \"Yıldızların Ötesi\" (Gençlik) - Sparkline +%19\n    8. \"Kelime Bahçesi\" (Çocuk) - Sparkline +%11\n    Each card has rich abstract gradient aesthetic, typographic title, imprint chip, price ₺, and tiny mini sparkline.\n  - Compact \"Uyarılar\" bar at the bottom:\n    - Dot amber: \"Online pazaryeri iadeleri %14,2 ile hedefin üstünde (3 başlık)\"\n    - Dot cyan: \"Kayıp Atlas için 6.000 adet baskı emri onayı bekleniyor\"\n    - Dot amber: \"Elif Aydın telif kademe eşiği 15.000 adette aşıldı\"\n\nFOOTER:\n- \"NanobaseAI · Timaş Yayınları · Örnek veri\" centered at bottom, subtle text-xs text-white/30 tracking-widest py-6.\n\nStrictly adhere to:\n- Turkish language with all correct diacritics.\n- All numbers formatted in Turkish conventions (₺12,8 Mn, 184.320, %18,4).\n- NO stock photos of human faces.\n- Preserve id=\"brand-motion-slot\" exactly.",
+            "screenMetadata": {
+              "agentType": "PRO_AGENT",
+              "status": "COMPLETE"
+            },
+            "screenType": "DESIGN",
+            "screenshot": {
+              "downloadUrl": "https://lh3.googleusercontent.com/aida/AEtjO1WVHB81orSZ771Os9TOhQT28RTCAyzBgiwvz79Xr2yQ7nTpejeir4YhnVhBAUqeRxxRvdhP9yyyNHax_REzto9afyDYb0De55CNDvLETJftLYqiNPn6PJw8JsfNAkK8drHI8MIGdpF0knZI99zudpunH2a9PROgWRUiVarDY0esWnFMuwuFe3tA4-6Afg1zIo2EaG_oo4XBR9VsN7QNvAuwMcL1qZoa6Bi-PYX3qeyq1ygR9xmHD526d6fG",
+              "name": "projects/13426839861607265553/files/f391ef2dc4b54ad7ad21646aa8fab8d5"
+            },
+            "theme": {
+              "bodyFont": "INTER",
+              "bodyFontFamily": "Inter",
+              "colorMode": "DARK",
+              "colorVariant": "FIDELITY",
+              "customColor": "#22d3ee",
+              "font": "SPACE_GROTESK",
+              "headlineFont": "SPACE_GROTESK",
+              "headlineFontFamily": "Space Grotesk",
+              "labelFont": "JETBRAINS_MONO",
+              "labelFontFamily": "JetBrains Mono",
+              "namedColors": {
+                "background": "#121317",
+                "error": "#ffb4ab",
+                "error_container": "#93000a",
+                "inverse_on_surface": "#2f3034",
+                "inverse_primary": "#006877",
+                "inverse_surface": "#e3e2e6",
+                "on_background": "#e3e2e6",
+                "on_error": "#690005",
+                "on_error_container": "#ffdad6",
+                "on_primary": "#00363e",
+                "on_primary_container": "#005763",
+                "on_primary_fixed": "#001f25",
+                "on_primary_fixed_variant": "#004e5a",
+                "on_secondary": "#213600",
+                "on_secondary_container": "#304b00",
+                "on_secondary_fixed": "#121f00",
+                "on_secondary_fixed_variant": "#334f00",
+                "on_surface": "#e3e2e6",
+                "on_surface_variant": "#bbc9cd",
+                "on_tertiary": "#402d00",
+                "on_tertiary_container": "#654a00",
+                "on_tertiary_fixed": "#261a00",
+                "on_tertiary_fixed_variant": "#5c4300",
+                "outline": "#859397",
+                "outline_variant": "#3c494c",
+                "primary": "#8aebff",
+                "primary_container": "#22d3ee",
+                "primary_fixed": "#a2eeff",
+                "primary_fixed_dim": "#2fd9f4",
+                "secondary": "#9ddf2e",
+                "secondary_container": "#83c300",
+                "secondary_fixed": "#b2f746",
+                "secondary_fixed_dim": "#98da27",
+                "surface": "#121317",
+                "surface_bright": "#38393d",
+                "surface_container": "#1e1f23",
+                "surface_container_high": "#292a2d",
+                "surface_container_highest": "#343538",
+                "surface_container_low": "#1a1b1f",
+                "surface_container_lowest": "#0d0e11",
+                "surface_dim": "#121317",
+                "surface_tint": "#2fd9f4",
+                "surface_variant": "#343538",
+                "tertiary": "#ffd785",
+                "tertiary_container": "#f2b719",
+                "tertiary_fixed": "#ffdf9f",
+                "tertiary_fixed_dim": "#f9bd22"
+              },
+              "overrideNeutralColor": "#07080b",
+              "overridePrimaryColor": "#22d3ee",
+              "overrideSecondaryColor": "#a3e635",
+              "overrideTertiaryColor": "#fbbf24",
+              "roundness": "ROUND_EIGHT",
+              "spacing": {
+                "gutter": "1rem",
+                "gutter-desktop": "1.5rem",
+                "margin": "1rem",
+                "margin-desktop": "2rem",
+                "space-2xl": "3rem",
+                "space-lg": "1.5rem",
+                "space-md": "1rem",
+                "space-sm": "0.5rem",
+                "space-xl": "2rem",
+                "space-xs": "0.25rem"
+              },
+              "spacingScale": 2,
+              "typography": {
+                "body-lg": {
+                  "fontFamily": "Inter",
+                  "fontSize": "16px",
+                  "fontWeight": "400",
+                  "letterSpacing": "-0.005em",
+                  "lineHeight": "24px"
+                },
+                "body-md": {
+                  "fontFamily": "Inter",
+                  "fontSize": "14px",
+                  "fontWeight": "400",
+                  "letterSpacing": "0em",
+                  "lineHeight": "20px"
+                },
+                "body-sm": {
+                  "fontFamily": "Inter",
+                  "fontSize": "12px",
+                  "fontWeight": "400",
+                  "letterSpacing": "0.005em",
+                  "lineHeight": "16px"
+                },
+                "code-sm": {
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": "12px",
+                  "fontWeight": "400",
+                  "letterSpacing": "0.02em",
+                  "lineHeight": "16px"
+                },
+                "headline-lg": {
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": "32px",
+                  "fontWeight": "600",
+                  "letterSpacing": "-0.025em",
+                  "lineHeight": "40px"
+                },
+                "headline-lg-mobile": {
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": "24px",
+                  "fontWeight": "600",
+                  "letterSpacing": "-0.015em",
+                  "lineHeight": "32px"
+                },
+                "headline-md": {
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": "22px",
+                  "fontWeight": "500",
+                  "letterSpacing": "-0.015em",
+                  "lineHeight": "28px"
+                },
+                "headline-sm": {
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": "18px",
+                  "fontWeight": "500",
+                  "letterSpacing": "-0.01em",
+                  "lineHeight": "24px"
+                },
+                "headline-xl": {
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": "40px",
+                  "fontWeight": "600",
+                  "letterSpacing": "-0.03em",
+                  "lineHeight": "48px"
+                },
+                "headline-xl-mobile": {
+                  "fontFamily": "Space Grotesk",
+                  "fontSize": "30px",
+                  "fontWeight": "600",
+                  "letterSpacing": "-0.02em",
+                  "lineHeight": "38px"
+                },
+                "label-caps": {
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": "11px",
+                  "fontWeight": "600",
+                  "letterSpacing": "0.08em",
+                  "lineHeight": "14px"
+                },
+                "metric-lg": {
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": "28px",
+                  "fontWeight": "500",
+                  "letterSpacing": "-0.02em",
+                  "lineHeight": "34px"
+                },
+                "metric-md": {
+                  "fontFamily": "JetBrains Mono",
+                  "fontSize": "18px",
+                  "fontWeight": "500",
+                  "letterSpacing": "-0.01em",
+                  "lineHeight": "24px"
+                }
+              }
+            },
+            "title": "Timaş Yayınları · ZEKİ AI Komut Merkezi",
+            "width": "2560"
+          }
+        ],
+        "theme": {}
+      }
+    },
+    {
+      "text": "Timaş Yayınları için **ZEKİ AI Komut Merkezi** (Bento Grid) arayüzü hazırlandı.\n\n### Tasarım ve Mimari Kararları:\n1. **Atmosfer & Palet:**\n   - Koyu zemin (`#07080B`) üzerinde hafif noktalı ızgara dokusu.\n   - Yalnızca Hero kartının arkasında yumuşak **Aurora parıltısı** (`#22D3EE` cyan → `#A3E635` lime → `#FBBF24` amber). Mor renk tamamen dışlandı.\n   - Kartlar `rgba(255,255,255,0.04)` cam yüzey, 1px `rgba(255,255,255,0.08)` kenarlık ve `20px` köşe yuvarlatma ile Bloomberg Terminali ve Linear/Vercel estetiğinde kurgulandı.\n\n2. **Tipografi & Veri Hiyerarşisi:**\n   - Başlık ve metriklerde Space Grotesk ve JetBrains Mono tabular sayılar kullanılarak devasa `₺12,8 Mn` net satış göstergesi, `+%18,4 YoY` rozeti ve parıldayan mini alan grafiği (sparkline) yerleştirildi.\n   - Türkçe noktalama ve para birimi sembolleri (`₺`, `%18,4`, `184.320`) titizlikle uygulandı.\n\n3. **12 Sütunlu Bento Düzeni:**\n   - **Üst Bar (56px):** Elmas ikonlu NanobaseAI logosu, canlı durumlu \"Timaş Yayınları\" çalışma alanı seçicisi, hafif ışıltılı `ZEKİ'ye sor… ⌘K` komut çubuğu ve Emre Berk profil alanı.\n   - **Satır 1:** Hero içgörü kartı (Kayıp Atlas yeniden baskı uyarısı ve hızlı eylem butonları) + ZEKİ AI asistan kartı (ayrılan `id=\"brand-motion-slot\"` soyut vektörel prizması ve 3 adımlı diyalog kutusu).\n   - **Satır 2 (4 x span-3):** Stok & Baskı (gün bazlı kritik eşik çubukları), Telif & Yazarlar (Elif Aydın kademe eşiği ve hakediş ilerlemesi), Editoryal Dosyalar (22/37 halka göstergesi), İade & Sevkiyat (%11,3 uyarı rozeti ve kanal dağılımı).\n   - **Satır 3:** Satış & Talep Tahmini (12 aylık gerçekleşen ve 3 aylık ZEKİ yapay zeka projeksiyon eğrisi + \"Bugün\" ekseni) + Kapak & Pazarlama Stüdyosu (A/B varyant tahmin kartları).\n   - **Satır 4 & Alt Bilgi:** Katalog ve Canlı Hareketler yatay vitrini, amber ve cyan renkli kritik uyarı akışı ile \"NanobaseAI · Timaş Yayınları · Örnek veri\" altlığı."
+    },
+    {
+      "suggestion": "ZEKİ AI sohbet paneline detaylı bir modal/drawer ekleyelim mi?"
+    },
+    {
+      "suggestion": "Kapak & Pazarlama Stüdyosu için tam ekran bir A/B test detay ekranı oluşturalım mı?"
+    },
+    {
+      "suggestion": "Stok & Baskı kartındaki 'Baskı emri oluştur' akışı için onay penceresi tasarlayalım mı?"
+    }
+  ],
+  "projectId": "13426839861607265553",
+  "sessionId": "10857487903377340131"
+}

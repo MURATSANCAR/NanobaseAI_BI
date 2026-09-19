@@ -12,7 +12,13 @@ def test_full_snapshot_is_not_preview_and_partial_failure_is_removed():
     assert out['totalRows'] == 1200 and not out['truncated']
     assert len(store.read(out['_result_file'])) == 1200
     store.remove(out['_result_file'])
+    # 2026-09-17: a result over the row cap is kept up to the cap and *said* to be a part — an
+    # answer with a note, not an error in place of an answer. Only a full disk still refuses.
     store.max_rows = 5
+    part = store.write(iter([(columns, [{'n': i} for i in range(6)])]))
+    assert part['truncated'] and part['totalRows'] == 5 and len(store.read(part['_result_file'])) == 5
+    store.remove(part['_result_file'])
+    store.disk_budget = 1
     with pytest.raises(ValueError):
         store.write(iter([(columns, [{'n': i} for i in range(6)])]))
     assert not list(Path(store.directory.name).iterdir())

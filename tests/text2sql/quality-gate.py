@@ -24,6 +24,7 @@ import math
 import os
 import subprocess
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -33,6 +34,8 @@ BASELINE = HERE / "quality-baseline-golden.json"
 #: an answer built from the wrong table is not a worse answer, it is a wrong one.
 CHECKS = [
     ("table_recall", "doğru tabloya ulaşma", 0.0, "yüksek"),
+    ("gate_recall", "kapıdan geçen doğru SQL", 0.0, "yüksek"),
+    ("gate_false_accepts", "kapının kabul ettiği yanlış SQL", 0, "düşük"),
     ("fully_recalled", "hiç tablo kaçırmayan soru", 0, "yüksek"),
     ("refused", "cevaplanamayacağını söyleyen", 0, "düşük"),
 ]
@@ -42,7 +45,7 @@ WATCH = [("table_precision", "tablo isabeti", "yüksek"),
          ("mean_tokens", "istem büyüklüğü", "düşük")]
 
 
-def measure(out: Path) -> dict:
+def measure(out: Path, jobs: int) -> dict:
     # One run at a time. Two of these compete for the same selector model and each makes the other
     # look slow; worse, a second run started while the first is going measures a machine under a load
     # the first one caused. A lock is cheaper than explaining the numbers afterwards.
@@ -54,25 +57,60 @@ def measure(out: Path) -> dict:
         handle.close()
         raise SystemExit("başka bir kalite ölçümü çalışıyor")
     try:
-        r = subprocess.run([sys.executable, str(HERE / "golden-eval.py"), "--kind", "all", "--out", str(out)],
-                           cwd=HERE.parent.parent, capture_output=True, text=True)
+        # Vakalar birbirinden bağımsız: parçalara bölünüp aynı anda koşar, şekil matrisi de onlarla
+        # birlikte. Sırayla 48 vaka ~29 dk sürüyordu. Her parçanın çıktısı ayrı dosyada; birleştirme
+        # özeti bütün üzerinden yeniden hesaplar, parça ortalamalarının ortalaması alınmaz.
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            shapes = pool.submit(false_accepts)
+            parts = [out.with_name(f"{out.stem}.part{i}.json") for i in range(jobs)]
+            procs = [subprocess.Popen([sys.executable, str(HERE / "golden-eval.py"), "--kind", "all", "--shard", f"{i}/{jobs}", "--out", str(p)],
+                                      cwd=HERE.parent.parent, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+                     for i, p in enumerate(parts)]
+            logs = [p.communicate()[0] for p in procs]
+            broken = [i for i, p in enumerate(procs) if p.returncode != 0]
+            if broken:
+                for i in broken:
+                    print(f"--- parça {i}/{jobs}", logs[i][-3000:], sep="\n")
+                raise SystemExit("ölçüm çalışmadı")
+            r = subprocess.run([sys.executable, str(HERE / "golden-eval.py"), "--kind", "all", "--merge", *map(str, parts), "--out", str(out)],
+                               cwd=HERE.parent.parent, capture_output=True, text=True)
+            if r.returncode != 0:
+                print(r.stdout[-3000:], r.stderr[-3000:], sep="\n")
+                raise SystemExit("parçalar birleştirilemedi")
+            for p in parts:
+                p.unlink(missing_ok=True)
+            accepts = shapes.result()
     finally:
         handle.close()
-    if r.returncode != 0:
-        print(r.stdout[-3000:], r.stderr[-3000:], sep="\n")
-        raise SystemExit("ölçüm çalışmadı")
-    return json.loads(out.read_text(encoding="utf-8"))
+    result = json.loads(out.read_text(encoding="utf-8"))
+    result["summary"]["gate_false_accepts"] = accepts
+    return result
+
+
+def false_accepts() -> int:
+    """Wrong statements the gate lets through, from the shape matrix and the mutation set. One is
+    already too many: a number from the wrong rows is worse than no number."""
+    r = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider", "--no-header",
+                        "semantic_layer/tests/test_gate_shapes.py", "-k", "refused"],
+                       cwd=HERE.parent.parent / "backend", capture_output=True, text=True)
+    failed = sum(1 for line in r.stdout.splitlines() if line.startswith("FAILED"))
+    if r.returncode not in (0, 1):
+        print(r.stdout[-2000:], r.stderr[-2000:], sep="\n")
+        raise SystemExit("şekil matrisi çalışmadı")
+    return failed
 
 
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--record", action="store_true", help="bu ölçümü yeni taban olarak kaydet")
     ap.add_argument("--out", default="/tmp/quality-now.json")
+    ap.add_argument("--jobs", type=int, default=int(os.environ.get("QUALITY_GATE_JOBS", "12")),
+                    help="aynı anda koşan golden parçası (1 = sırayla)")
     args = ap.parse_args(argv)
 
     if not args.record and not BASELINE.is_file():
         raise SystemExit("kalite tabanı yok; gece işi otomatik taban oluşturamaz")
-    now = measure(Path(args.out))
+    now = measure(Path(args.out), max(1, args.jobs))
     s = now["summary"]
 
     if args.record:
@@ -99,6 +137,12 @@ def main(argv: list[str]) -> int:
             failed.append("soru geriledi: " + str(row["id"]))
     for key, label, tolerance, better in CHECKS + [(k, l, None, b) for k, l, b in WATCH]:
         b, n = base.get(key), s.get(key)
+        if b is None and n is None:
+            continue                     # neither run measured it (old baseline replayed): nothing to compare
+        if b is None and n is not None and not isinstance(n, bool) and isinstance(n, (int, float)) and math.isfinite(n):
+            # A measure the baseline predates: reported, recorded on the next --record, not a failure.
+            print("%-30s %10s %10s   (yeni ölçüt)" % (label, "-", n))
+            continue
         if any(isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v) for v in (b, n)):
             if tolerance is not None:
                 failed.append(label + " ölçülmedi")

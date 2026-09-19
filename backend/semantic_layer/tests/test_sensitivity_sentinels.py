@@ -109,3 +109,41 @@ def test_everything_the_profile_knows_survives_the_store(store, profiles):
     # and nothing the dataclass carries is quietly left behind
     for f in dataclasses.fields(ColumnProfile):
         assert hasattr(c, f.name), f.name
+
+
+def test_a_two_valued_flag_is_never_read_as_personal_data():
+    """CANCELLED is an iptal flag holding 0/1, and `CANCELLED = 0` is the default filter on nearly every
+    query against a Logo source. A name fragment that merely turns up inside the word — the exported
+    catalogs carried "[pii] telefon/faks" on it — costs the engine that filter, because a column marked
+    personal is dropped from prompts and never value-read. Neither the name nor the values may do it."""
+    assert sensitivity.classify("CANCELLED", ["0", "1", "0", "0", "1"], data_type="SMALLINT") is None
+    assert sensitivity.name_is_sensitive("CANCELLED") is None
+    for name in ("CANCELLEDACC", "CANCELLEDREFLACC", "CANCELLEDINVREF1"):
+        assert sensitivity.name_is_sensitive(name) is None, name
+    # the flag stays a flag whatever type the source declares it as, and even unnamed-but-flag-shaped
+    for data_type in ("BIT", "TINYINT", "SMALLINT", "Byte", "INTEGER", ""):
+        assert sensitivity.classify("CANCELLED", ["0", "1"] * 6, data_type=data_type) is None, data_type
+
+
+def test_a_personal_fragment_inside_another_word_is_not_a_match():
+    """The fragments are short, the columns are run-together capitals: "tel" sits inside DUEDATELIMIT and
+    "ssn" inside ADRESSNO. A fragment counts only where the personal-data word actually continues."""
+    assert sensitivity.name_is_sensitive("DUEDATELIMIT") is None
+    assert sensitivity.name_is_sensitive("BANKACCREF") is None          # a reference, not an account number
+    assert "TC kimlik" not in (sensitivity.name_is_sensitive("ADRESSNO") or "")
+    # …and everything that is a phone, a fax or one of their parts still is
+    for name in ("TELNRS1", "INCHTELNRS3", "TELCODES1", "TELEXTNUMS2", "FAXNR", "ORDSENDFAXNR",
+                 "FAXCODE", "FAXEXTNUM", "CELLPHONE", "TELEFON", "GSMNO"):
+        assert "telefon" in (sensitivity.name_is_sensitive(name) or ""), name
+    for name, label in (("EMAILADDR", "e-posta"), ("BANKIBANS1", "IBAN"), ("TCKNO", "TC kimlik"),
+                        ("PASSPORTNO", "pasaport"), ("ADDRESS1", "adres")):
+        assert label in (sensitivity.name_is_sensitive(name) or ""), name
+
+
+def test_a_flag_type_does_not_hide_a_column_that_really_holds_personal_data():
+    """The guard reads the type and the values, not the name: a text column keeps its sentinel."""
+    assert sensitivity.classify("TELNRS1", [], data_type="VARCHAR")
+    assert sensitivity.classify("EMAILADDR", ["a@b.com", "c@d.com", "e@f.com"], data_type="VARCHAR")
+    # an 11-digit identity number is neither short nor few-valued, so the code-set read leaves it alone
+    ids = [str(10000000000 + i) for i in range(12)]
+    assert sensitivity.classify("kimlik", ids, data_type="BIGINT")

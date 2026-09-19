@@ -1,0 +1,84 @@
+/* Kampüs sayfası. Zemin, yazı ve renk kanvas diliyle aynıdır (Shell: bg-mesh-canvas + dot-grid +
+   Plus Jakarta Sans, jetonlar ink/muted/coral/violet/mint). Burada yalnız sayfaya özgü gölge ve
+   hareket sınıfları durur; ayrı bir palet ya da yazı ailesi tanımlanmaz. */
+
+.kp-root {
+  --kp-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Başlıklar kanvastaki gibi Plus Jakarta Sans; eski Space Grotesk kaldırıldı. */
+.kp-display {
+  font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Etiket ve sayılar: ayrı eş aralıklı yazı yok, rakamlar hizalı. */
+.kp-mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Kart gölgesi kanvas kartınınkiyle aynı (tailwind shadow-canvas-card). */
+.kp-card {
+  box-shadow: 0 20px 60px -15px rgba(20, 30, 60, 0.12), 0 4px 16px -2px rgba(20, 30, 60, 0.05);
+}
+
+.kp-glow {
+  box-shadow: 0 8px 24px -4px rgba(124, 92, 255, 0.3);
+}
+
+/* Basma geri bildirimi: dokunulan her düğme hafifçe içeri çöker. */
+.kp-press {
+  transition: transform 160ms var(--kp-ease-out), background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+.kp-press:active {
+  transform: scale(0.97);
+}
+
+/* Modül kutucukları: fareyle üstüne gelince 2px kalkar. Dokunmatikte kapalı. */
+.kp-lift {
+  transition: transform 200ms var(--kp-ease-out), box-shadow 200ms var(--kp-ease-out), border-color 150ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .kp-lift:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 28px -6px rgba(124, 92, 255, 0.18);
+  }
+  .kp-cover:hover img {
+    transform: scale(1.05);
+  }
+}
+.kp-lift:active {
+  transform: scale(0.98);
+}
+.kp-cover img {
+  transition: transform 200ms var(--kp-ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kp-press,
+  .kp-lift,
+  .kp-cover img {
+    transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+  }
+  .kp-press:active,
+  .kp-lift:active,
+  .kp-lift:hover,
+  .kp-cover:hover img {
+    transform: none;
+  }
+  .kp-root .animate-pulse {
+    animation: none;
+  }
+}
+
+.kp-scroll::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+.kp-scroll::-webkit-scrollbar-track {
+  background: rgba(241, 245, 249, 0.8);
+}
+.kp-scroll::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border-radius: 9999px;
+}

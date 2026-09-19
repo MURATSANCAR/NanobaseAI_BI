@@ -1,0 +1,477 @@
+"""Uyarı kuralları: bir soru, bir koşul, bir eşik, alıcılar. Kontrol bu serviste yapılır.
+
+Kural bir SQL değil bir sorudur. "Bu ayın iade tutarı" her kontrolde yeniden sorulur; böylece "bu ay"
+kontrolün yapıldığı ayı anlatır, kuralın kurulduğu günün tarihlerine donmaz. SQL yalnız gösterilir.
+
+Bildirim kenarda gider: kural eşiği ilk aştığında. Hâlâ aşıyorsa `ALERT_REMIND_HOURS` sonra bir kez
+daha hatırlatır. Gönderim olmadıysa (e-posta ayarı yok, sunucu hata verdi) bir sonraki kontrolde yeniden
+denenir — e-posta ayarı sonradan eklense de bekleyen uyarı kaybolmaz.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import math
+import os
+import re
+import smtplib
+import ssl
+import threading
+import uuid
+from datetime import datetime, timedelta, timezone
+from email.message import EmailMessage
+from typing import Any, Callable, Optional
+
+import sqlalchemy as sa
+
+log = logging.getLogger(__name__)
+
+_md = sa.MetaData()
+
+RULES = sa.Table(
+    "semantic_alert_rules", _md,
+    sa.Column("id", sa.String(40), primary_key=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
+    sa.Column("datasource_id", sa.String(80), nullable=False),
+    sa.Column("title", sa.String(300), nullable=False),
+    sa.Column("question", sa.Text, nullable=False),
+    sa.Column("sql", sa.Text, nullable=False),
+    sa.Column("column_name", sa.String(200)),
+    sa.Column("condition", sa.String(8), nullable=False),
+    sa.Column("threshold", sa.Float, nullable=False),
+    sa.Column("recipients", sa.Text, nullable=False),
+    sa.Column("status", sa.String(16), nullable=False),
+    sa.Column("created_by", sa.String(120)),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("last_value", sa.Float),
+    sa.Column("last_checked_at", sa.DateTime(timezone=True)),
+    sa.Column("last_triggered_at", sa.DateTime(timezone=True)),
+    sa.Column("state", sa.String(16), nullable=False),
+    sa.Column("last_error", sa.Text),
+    sa.Column("last_notified_at", sa.DateTime(timezone=True)),
+    sa.Column("last_notify", sa.String(16)),
+    # Son ölçümde değerin veritabanından gelme süresi: {"dbMs", "cached", "computedAt"}.
+    sa.Column("last_db_json", sa.Text),
+)
+
+EVENTS = sa.Table(
+    "semantic_alert_events", _md,
+    sa.Column("id", sa.Integer, primary_key=True, autoincrement=True),
+    sa.Column("rule_id", sa.String(40), nullable=False, index=True),
+    sa.Column("at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("value", sa.Float),
+    sa.Column("triggered", sa.Boolean, nullable=False),
+    sa.Column("notify", sa.String(16)),
+    sa.Column("error", sa.Text),
+)
+
+CONDITIONS = {"gt": ">", "gte": "≥", "lt": "<", "lte": "≤"}
+_EMAIL = re.compile(r"^[^@\s,;]+@[^@\s,;]+\.[^@\s,;]+$")
+
+_ready: set[int] = set()
+_ready_lock = threading.Lock()
+#: Kontroller tek sıradan geçer: zamanlayıcı ile "şimdi kontrol et" aynı anda koşup aynı aşımı iki kez bildirmesin.
+_check_lock = threading.Lock()
+_LOCAL = timezone(timedelta(hours=float(os.environ.get("ALERT_TZ_OFFSET_HOURS", "3"))))
+
+
+def _conf(key: str, default: str = "") -> str:
+    from semantic_bridge.admin import conf
+
+    return conf(key, default)
+
+
+class AlertError(ValueError):
+    """Kullanıcıya olduğu gibi gösterilecek, düz Türkçe bir hata."""
+
+
+def ensure(engine: sa.engine.Engine) -> None:
+    """Tablolar yoksa kurar. Motor başına bir kez; var olan tabloya dokunmaz."""
+    with _ready_lock:
+        if id(engine) in _ready:
+            return
+        _md.create_all(engine, checkfirst=True)
+        # create_all var olan tabloya kolon eklemez; ölçüm süresi sonradan geldi.
+        have = {c["name"] for c in sa.inspect(engine).get_columns(RULES.name)}
+        if "last_db_json" not in have:
+            with engine.begin() as c:
+                c.execute(sa.text(f"ALTER TABLE {RULES.name} ADD COLUMN last_db_json TEXT"))
+        _ready.add(id(engine))
+
+
+def _now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _aware(v: Optional[datetime]) -> Optional[datetime]:
+    """SQLite saat dilimini saklamaz; okunan naif değer UTC'dir."""
+    if v is None:
+        return None
+    return v if v.tzinfo else v.replace(tzinfo=timezone.utc)
+
+
+def _iso(v: Optional[datetime]) -> Optional[str]:
+    v = _aware(v)
+    return v.isoformat() if v else None
+
+
+def to_dict(row: Any) -> dict[str, Any]:
+    return {
+        "id": row["id"],
+        "title": row["title"],
+        "question": row["question"],
+        "sql": row["sql"],
+        "column": row["column_name"],
+        "condition": row["condition"],
+        "threshold": row["threshold"],
+        "recipients": json.loads(row["recipients"] or "[]"),
+        "status": row["status"],
+        "created_by": row["created_by"],
+        "created_at": _iso(row["created_at"]),
+        "updated_at": _iso(row["updated_at"]),
+        "last_value": row["last_value"],
+        "last_checked_at": _iso(row["last_checked_at"]),
+        "last_triggered_at": _iso(row["last_triggered_at"]),
+        "state": row["state"],
+        "last_error": row["last_error"],
+        "last_notified_at": _iso(row["last_notified_at"]),
+        "last_notify": row["last_notify"],
+        "last_db": _db_of(row),
+    }
+
+
+def _db_of(row: Any) -> Optional[dict[str, Any]]:
+    try:
+        raw = row["last_db_json"]
+    except (KeyError, IndexError):
+        return None
+    if not raw:
+        return None
+    try:
+        return json.loads(raw)
+    except ValueError:
+        return None
+
+
+def _recipients(raw: Any) -> list[str]:
+    items = raw if isinstance(raw, list) else re.split(r"[,;\s]+", str(raw or ""))
+    out: list[str] = []
+    for x in items:
+        x = str(x).strip()
+        if not x:
+            continue
+        if not _EMAIL.match(x):
+            raise AlertError(f"«{x}» geçerli bir e-posta adresi değil.")
+        allowed = [d.strip().lower() for d in _conf("ALERT_RECIPIENT_DOMAINS").split(",") if d.strip()]
+        if allowed and x.rsplit("@", 1)[1].lower() not in allowed:
+            raise AlertError(f"«{x}» izinli bir alan adında değil ({', '.join(allowed)}).")
+        if x.lower() not in {o.lower() for o in out}:
+            out.append(x)
+    return out
+
+
+def _threshold(raw: Any) -> float:
+    try:
+        if isinstance(raw, (int, float)) and not isinstance(raw, bool):
+            v = float(raw)
+        else:
+            t = str(raw).strip().replace(" ", "")
+            if "," in t:                                  # Türkçe: nokta binlik, virgül ondalık
+                t = t.replace(".", "").replace(",", ".")
+            elif re.fullmatch(r"-?\d{1,3}(\.\d{3})+", t):  # "5.000.000" binlik gruplu tam sayı
+                t = t.replace(".", "")
+            v = float(t)
+    except (TypeError, ValueError):
+        raise AlertError("Eşik bir sayı olmalı.") from None
+    if not math.isfinite(v):
+        raise AlertError("Eşik bir sayı olmalı.")
+    return v
+
+
+def _clean(body: dict[str, Any], *, partial: bool) -> dict[str, Any]:
+    out: dict[str, Any] = {}
+    if not partial or "question" in body or "sql" in body:
+        q = " ".join(str(body.get("question") or "").split())
+        sql = str(body.get("sql") or "").strip()
+        if not q and not sql:
+            raise AlertError("Kuralın neyi ölçeceği yazılmalı.")
+        out["question"], out["sql"] = q[:2000], sql[:20000]
+    if not partial or "title" in body:
+        title = " ".join(str(body.get("title") or body.get("question") or "").split())
+        if not title:
+            raise AlertError("Kurala bir ad verin.")
+        out["title"] = title[:300]
+    if not partial or "condition" in body:
+        c = str(body.get("condition") or "").strip().lower()
+        if c not in CONDITIONS:
+            raise AlertError("Koşul büyüktür, büyük eşittir, küçüktür ya da küçük eşittir olmalı.")
+        out["condition"] = c
+    if not partial or "threshold" in body:
+        out["threshold"] = _threshold(body.get("threshold"))
+    if not partial or "recipients" in body:
+        out["recipients"] = json.dumps(_recipients(body.get("recipients")), ensure_ascii=False)
+    if "column" in body:
+        out["column_name"] = (str(body.get("column") or "").strip() or None)
+    if "status" in body:
+        s = str(body.get("status") or "").strip().lower()
+        if s not in ("active", "paused"):
+            raise AlertError("Durum etkin ya da duraklatılmış olmalı.")
+        out["status"] = s
+    return out
+
+
+def _scope(tenant: str, ds: str, owner: Optional[str]) -> list[Any]:
+    """Kurallar kişiye aittir (`created_by` = AD hesabı). owner None: herkes (zamanlayıcı, yönetici)."""
+    conds = [RULES.c.tenant_id == tenant, RULES.c.datasource_id == ds]
+    if owner is not None:
+        conds.append(sa.func.lower(RULES.c.created_by) == owner.lower())
+    return conds
+
+
+def list_rules(engine: sa.engine.Engine, tenant: str, ds: str, owner: Optional[str] = None) -> list[dict[str, Any]]:
+    with engine.connect() as c:
+        rows = c.execute(sa.select(RULES).where(*_scope(tenant, ds, owner))
+                         .order_by(RULES.c.created_at.desc())).mappings().all()
+    return [to_dict(r) for r in rows]
+
+
+def get_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, owner: Optional[str] = None) -> Optional[dict[str, Any]]:
+    with engine.connect() as c:
+        row = c.execute(sa.select(RULES).where(RULES.c.id == rule_id, *_scope(tenant, ds, owner))).mappings().first()
+    return to_dict(row) if row else None
+
+
+def create_rule(engine: sa.engine.Engine, tenant: str, ds: str, body: dict[str, Any], *, by: Optional[str] = None) -> dict[str, Any]:
+    vals = _clean(body, partial=False)
+    now = _now()
+    rid = f"alr-{uuid.uuid4().hex[:12]}"
+    vals.update(id=rid, tenant_id=tenant, datasource_id=ds, status=vals.get("status", "active"),
+                column_name=vals.get("column_name") or (str(body.get("column") or "").strip() or None),
+                created_by=(str(by or "").strip()[:120] or None),
+                created_at=now, updated_at=now, state="unknown")
+    with engine.begin() as c:
+        c.execute(RULES.insert().values(**vals))
+    return get_rule(engine, tenant, ds, rid)  # type: ignore[return-value]
+
+
+def update_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, body: dict[str, Any],
+                owner: Optional[str] = None) -> Optional[dict[str, Any]]:
+    vals = _clean(body, partial=True)
+    if not vals:
+        return get_rule(engine, tenant, ds, rule_id, owner)
+    vals["updated_at"] = _now()
+    # Eşik ya da koşul değiştiyse eski "tetiklendi" hâli yeni kuralı anlatmaz; bir sonraki kontrol karar verir.
+    if {"threshold", "condition", "question", "sql"} & vals.keys():
+        vals.update(state="unknown", last_notify=None)
+    with engine.begin() as c:
+        n = c.execute(RULES.update().where(RULES.c.id == rule_id, *_scope(tenant, ds, owner)).values(**vals)).rowcount
+    return get_rule(engine, tenant, ds, rule_id, owner) if n else None
+
+
+def delete_rule(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, owner: Optional[str] = None) -> bool:
+    with engine.begin() as c:
+        n = c.execute(RULES.delete().where(RULES.c.id == rule_id, *_scope(tenant, ds, owner))).rowcount
+        if n:
+            c.execute(EVENTS.delete().where(EVENTS.c.rule_id == rule_id))
+    return bool(n)
+
+
+def events(engine: sa.engine.Engine, tenant: str, ds: str, rule_id: str, limit: int = 50,
+           owner: Optional[str] = None) -> Optional[list[dict[str, Any]]]:
+    if get_rule(engine, tenant, ds, rule_id, owner) is None:
+        return None
+    with engine.connect() as c:
+        rows = c.execute(sa.select(EVENTS).where(EVENTS.c.rule_id == rule_id)
+                         .order_by(EVENTS.c.at.desc(), EVENTS.c.id.desc()).limit(max(1, limit))).mappings().all()
+    return [{"at": _iso(r["at"]), "value": r["value"], "triggered": bool(r["triggered"]),
+             "notify": r["notify"], "error": r["error"]} for r in rows]
+
+
+# ------------------------------------------------------------------ ölçüm
+
+
+def _number(v: Any) -> Optional[float]:
+    if isinstance(v, bool) or v is None:
+        return None
+    try:
+        f = float(v)
+    except (TypeError, ValueError):
+        return None
+    return f if math.isfinite(f) else None
+
+
+def value_of(answer: dict[str, Any], column: Optional[str]) -> float:
+    """Cevaptan kuralın tek sayısını çıkarır. Birden çok satır bir değer değildir; tahmin edilmez."""
+    recs = answer.get("records")
+    if recs is None:
+        raise AlertError(str(answer.get("summary") or answer.get("explanation") or "Motor bu soruya bir değer döndürmedi."))
+    if not recs:
+        raise AlertError("Sorgu satır döndürmedi.")
+    if len(recs) > 1:
+        raise AlertError(f"Sorgu {len(recs)} satır döndürdü; uyarı tek bir değer ister. Soruyu tek sayıya indirin.")
+    row = recs[0]
+    if column and column in row:
+        v = _number(row[column])
+        if v is None:
+            raise AlertError(f"«{column}» sayısal bir değer değil.")
+        return v
+    nums = [v for v in (_number(x) for x in row.values()) if v is not None]
+    if len(nums) != 1:
+        raise AlertError("Cevapta tek bir sayı yok; hangi kolonun izleneceğini belirtin.")
+    return nums[0]
+
+
+def breached(value: float, condition: str, threshold: float) -> bool:
+    return {"gt": value > threshold, "gte": value >= threshold,
+            "lt": value < threshold, "lte": value <= threshold}[condition]
+
+
+Runner = Callable[[dict[str, Any]], dict[str, Any]]
+Notifier = Callable[[dict[str, Any], float], str]
+
+
+def check(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, notifier: Notifier, *,
+          only: Optional[str] = None, now: Optional[datetime] = None,
+          remind: Optional[timedelta] = None, owner: Optional[str] = None) -> dict[str, Any]:
+    """Etkin kuralları ölçer, durumlarını yazar, gerekiyorsa bildirir. Aynı anda tek kontrol koşar.
+    owner verilirse yalnız o kişinin kuralları; zamanlayıcı owner'sız çağırır."""
+    with _check_lock:
+        return _check(engine, tenant, ds, runner, notifier, only=only, now=now, remind=remind, owner=owner)
+
+
+def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=None) -> dict[str, Any]:
+    now = now or _now()
+    remind = remind if remind is not None else timedelta(hours=float(_conf("ALERT_REMIND_HOURS", "24") or 24))
+    q = sa.select(RULES).where(*_scope(tenant, ds, owner))
+    q = q.where(RULES.c.id == only) if only else q.where(RULES.c.status == "active")
+    with engine.connect() as c:
+        raws = c.execute(q).mappings().all()
+    summary: dict[str, Any] = {"checked": 0, "triggered": 0, "notified": 0, "errors": []}
+    for raw in raws:
+        rule = to_dict(raw)
+        seen = raw["updated_at"]
+        summary["checked"] += 1
+        upd: dict[str, Any] = {"last_checked_at": now}
+        ev: dict[str, Any] = {"rule_id": rule["id"], "at": now, "triggered": False}
+        # Son geçerli karar "aşıldı" mıydı? Bir ölçüm hatası o kararı silmez: aşım sürerken araya giren
+        # zaman aşımı, ikinci bir "eşik aşıldı" e-postası doğurmamalı. Aşım bildirimi atıldığında
+        # last_notify dolar, değer eşiğin berisine dönünce boşalır.
+        was = rule["state"] == "triggered" or (rule["state"] == "error" and rule["last_notify"] is not None)
+        try:
+            answer = runner(rule)
+            if "dbMs" in answer or "cached" in answer:
+                upd["last_db_json"] = json.dumps({"dbMs": answer.get("dbMs"), "cached": bool(answer.get("cached")),
+                                                  "computedAt": answer.get("computedAt")})
+            value = value_of(answer, rule["column"])
+            trig = breached(value, rule["condition"], float(rule["threshold"]))
+            upd.update(last_value=value, state="triggered" if trig else "ok", last_error=None)
+            ev.update(value=value, triggered=trig)
+            if answer.get("sql") and rule["question"]:
+                upd["sql"] = str(answer["sql"])[:20000]
+            if trig:
+                summary["triggered"] += 1
+                if not was:
+                    upd["last_triggered_at"] = now
+                last_sent = _aware(datetime.fromisoformat(rule["last_notified_at"])) if rule["last_notified_at"] else None
+                due = (not was) or rule["last_notify"] != "sent" or (last_sent is not None and now - last_sent >= remind)
+                if due:
+                    result = notifier(rule, value)
+                    upd["last_notify"] = result
+                    ev["notify"] = result
+                    if result == "sent":
+                        upd["last_notified_at"] = now
+                        summary["notified"] += 1
+            else:
+                upd["last_notify"] = None
+        except Exception as e:  # noqa: BLE001 — bir kuralın hatası ötekileri durdurmaz
+            msg = str(e) if isinstance(e, AlertError) else f"Kontrol başarısız: {str(e)[:300]}"
+            upd.update(state="error", last_error=msg[:500])
+            ev["error"] = msg[:500]
+            summary["errors"].append({"id": rule["id"], "error": msg[:300]})
+        with engine.begin() as c:
+            # Ölçüm sürerken kural değiştirildiyse ya da silindiyse eski kurala göre verilmiş karar yazılmaz.
+            n = c.execute(RULES.update().where(RULES.c.id == rule["id"], RULES.c.updated_at == seen).values(**upd)).rowcount
+            if n:
+                c.execute(EVENTS.insert().values(**ev))
+    return summary
+
+
+# ------------------------------------------------------------------ e-posta
+
+
+def smtp_settings() -> Optional[dict[str, Any]]:
+    # Yönetim ekranında kaydedilen değer ortam dosyasını ezer (admin.conf).
+    from semantic_bridge.admin import conf
+
+    host = conf("ALERT_SMTP_HOST").strip()
+    sender = (conf("ALERT_SMTP_FROM") or conf("ALERT_SMTP_USER") or "").strip()
+    if not host or not sender:
+        return None
+    return {
+        "host": host,
+        "port": int(conf("ALERT_SMTP_PORT", "587") or 587),
+        "user": conf("ALERT_SMTP_USER").strip(),
+        "password": conf("ALERT_SMTP_PASSWORD"),
+        "sender": sender,
+        "ssl": conf("ALERT_SMTP_SSL", "0") == "1",
+        "starttls": conf("ALERT_SMTP_STARTTLS", "1") != "0",
+    }
+
+
+def email_status() -> dict[str, Any]:
+    cfg = smtp_settings()
+    return {"configured": bool(cfg), "sender": cfg["sender"] if cfg else None}
+
+
+def _tr(v: float) -> str:
+    s = f"{v:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+    return s[:-3] if s.endswith(",00") else s
+
+
+def render(rule: dict[str, Any], value: float, link: str = "", now: Optional[datetime] = None) -> tuple[str, str]:
+    title = " ".join(str(rule["title"]).split())
+    subject = f"ZEKİ uyarı: {title}"
+    verb = "eşiği aştı" if rule["condition"] in ("gt", "gte") else "eşiğin altına indi"
+    lines = [
+        f"«{title}» kuralı {verb}.",
+        "",
+        f"Şu anki değer: {_tr(value)}",
+        f"Koşul: değer {CONDITIONS[rule['condition']]} {_tr(float(rule['threshold']))}",
+    ]
+    if rule.get("question"):
+        lines.append(f"Ölçülen: {rule['question']}")
+    lines += ["", f"Kontrol zamanı: {(now or _now()).astimezone(_LOCAL).strftime('%d.%m.%Y %H:%M')}"]
+    if link:
+        lines += ["", f"Ayrıntı: {link}"]
+    return subject, "\n".join(lines)
+
+
+def email_notifier(link: str = "") -> Notifier:
+    def send(rule: dict[str, Any], value: float) -> str:
+        to = rule.get("recipients") or []
+        if not to:
+            return "no_recipient"
+        cfg = smtp_settings()
+        if not cfg:
+            return "no_smtp"
+        try:
+            subject, text = render(rule, value, link)
+            msg = EmailMessage()
+            msg["Subject"], msg["From"], msg["To"] = subject, cfg["sender"], ", ".join(to)
+            msg.set_content(text)
+            ctx = ssl.create_default_context()
+            server = (smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=20, context=ctx) if cfg["ssl"]
+                      else smtplib.SMTP(cfg["host"], cfg["port"], timeout=20))
+            with server as s:
+                if not cfg["ssl"] and cfg["starttls"]:
+                    s.starttls(context=ctx)
+                if cfg["user"]:
+                    s.login(cfg["user"], cfg["password"])
+                s.send_message(msg)
+            return "sent"
+        except Exception as e:  # noqa: BLE001
+            log.warning("alert e-posta gönderilemedi (%s): %s", rule.get("id"), e)
+            return "failed"
+    return send

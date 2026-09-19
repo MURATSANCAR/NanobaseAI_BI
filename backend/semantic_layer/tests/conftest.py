@@ -121,17 +121,54 @@ def conventions_for(profiles) -> Conventions:
     return Conventions.from_profiles(profiles)
 
 
-def _mk_profile(entity: str, pattern: str, columns: list[tuple[str, str, list[tuple[str, int]] | None]], rels=None, pk=("LOGICALREF",)) -> SchemaProfile:
+def _mk_profile(entity: str, pattern: str, columns: list[tuple[str, str, list[tuple[str, int]] | None]], rels=None, pk=("LOGICALREF",), description="") -> SchemaProfile:
     cols = []
     for name, typ, top in columns:
         cols.append(ColumnProfile(name=name, data_type=typ, top_values=top or [], distinct_count=len(top) if top else None, is_primary_key=name in pk))
-    return SchemaProfile(datasource_id=DS, table_name=pattern.replace("{n0}", "411").replace("{n1}", "01"), table_pattern=pattern, entity=entity, schema_name="dbo", columns=cols, primary_key=list(pk), relationships=rels or [], context={"n0": "411", "n1": "01"})
+    return SchemaProfile(datasource_id=DS, table_name=pattern.replace("{n0}", "411").replace("{n1}", "01"), table_pattern=pattern, entity=entity, schema_name="dbo", description=description, columns=cols, primary_key=list(pk), relationships=rels or [], context={"n0": "411", "n1": "01"})
 
 
 @pytest.fixture
 def synthetic_profiles():
     inv = _mk_profile("INVOICE", "LG_{n0}_{n1}_INVOICE", [("LOGICALREF", "int", None), ("TRCODE", "smallint", [("7", 100), ("8", 50), ("9", 5), ("2", 3), ("3", 4), ("1", 10), ("4", 2)]), ("CANCELLED", "smallint", [("0", 170), ("1", 4)]), ("CLIENTREF", "int", None), ("DATE_", "datetime", None), ("NETTOTAL", "float", None)], rels=[{"column": "CLIENTREF", "ref_entity": "CLCARD", "ref_column": "LOGICALREF"}])
     stl = _mk_profile("STLINE", "LG_{n0}_{n1}_STLINE", [("LOGICALREF", "int", None), ("TRCODE", "smallint", [("8", 100), ("7", 50), ("3", 5), ("2", 3)]), ("LINETYPE", "smallint", [("0", 100), ("2", 50)]), ("CANCELLED", "smallint", [("0", 150), ("1", 1)]), ("STOCKREF", "int", None), ("DATE_", "datetime", None), ("AMOUNT", "float", None), ("TOTAL", "float", None), ("OUTCOST", "float", None)], rels=[{"column": "STOCKREF", "ref_entity": "ITEMS", "ref_column": "LOGICALREF"}])
-    clc = _mk_profile("CLCARD", "LG_{n0}_CLCARD", [("LOGICALREF", "int", None), ("CODE", "varchar(17)", None), ("DEFINITION_", "varchar(51)", None), ("SPECODE2", "varchar(11)", [("KITAPCI", 10), ("E-TICARET", 5), ("DAGITICI", 3)])])
+    clc = _mk_profile("CLCARD", "LG_{n0}_CLCARD", [("LOGICALREF", "int", None), ("CODE", "varchar(17)", None), ("DEFINITION_", "varchar(51)", None), ("SPECODE2", "varchar(11)", [("KITAPCI", 10), ("E-TICARET", 5), ("DAGITICI", 3)])], description="Cari hesap kartı (müşteri / tedarikçi)")
     itm = _mk_profile("ITEMS", "LG_{n0}_ITEMS", [("LOGICALREF", "int", None), ("CODE", "varchar(25)", None), ("NAME", "varchar(51)", None), ("SPECODE", "varchar(11)", None)])
     return [inv, stl, clc, itm]
+
+
+@pytest.fixture
+def gate_engine(tmp_path):
+    """The database behind the model queue and the job table.
+
+    SQLite by default. With LLM_GATE_TEST_DSN set (PostgreSQL) the same tests run where the
+    PostgreSQL-only paths live — the advisory lock around admission, SKIP LOCKED in the job claim —
+    inside a schema of their own, so a live `sl_llm_queue` in the same database is never touched."""
+    import os
+    import uuid
+
+    import sqlalchemy as sa
+
+    from semantic_layer.store import schema as S
+
+    tables = [S.sl_llm_queue, S.sl_llm_gate, S.sl_llm_job]
+    dsn = os.environ.get("LLM_GATE_TEST_DSN", "").strip()
+    if not dsn:
+        engine = sa.create_engine(f"sqlite:///{tmp_path}/gate.db", connect_args={"timeout": 30})
+        S.metadata.create_all(engine, tables=tables)
+        yield engine
+        engine.dispose()
+        return
+    schema = f"llm_gate_test_{uuid.uuid4().hex[:8]}"
+    admin = sa.create_engine(dsn)
+    with admin.begin() as conn:
+        conn.execute(sa.text(f'CREATE SCHEMA "{schema}"'))
+    engine = sa.create_engine(dsn, connect_args={"options": f"-csearch_path={schema}"}, pool_size=20, max_overflow=40)
+    try:
+        S.metadata.create_all(engine, tables=tables)
+        yield engine
+    finally:
+        engine.dispose()
+        with admin.begin() as conn:
+            conn.execute(sa.text(f'DROP SCHEMA "{schema}" CASCADE'))
+        admin.dispose()

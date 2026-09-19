@@ -1,0 +1,266 @@
+{
+ "cases": [
+  {
+   "n": 48,
+   "id": "A038",
+   "soru": "Baskı sayısı aralığına göre tanımlı telif yüzdeleri hangi kitaplarda en yüksek?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT k.new_name AS kitap, t.new_BaskSaysAralBalang AS baski_sayisi_baslangic, t.new_BaskSaysAralBiti AS baski_sayisi_bitis, t.new_TelifYuzdesi AS telif_yuzdesi FROM Timas_MSCRM.dbo.new_teliftanimBase t JOIN Timas_MSCRM.dbo.new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesme AND s.statecode = 0 JOIN Timas_MSCRM.dbo.new_new_sozlesme_new_kitapBase sk ON sk.new_sozlesmeid = s.new_sozlesmeId JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId = sk.new_kitapid AND k.statecode = 0 WHERE t.statecode = 0 AND t.new_TelifYuzdesi IS NOT NULL ORDER BY t.new_TelifYuzdesi DESC",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: referans 0 satır. Telif tanımı (new_teliftanimBase) 89 aktif satır, 65'inde telif yüzdesi dolu (en yüksek %15), ama kitaba giden tek yol olan Sözleşme bağı (new_sozlesme) 89 satırın HİÇBİRİNDE dolu değil; 'Baskı Sayısı Aralığı' (new_BaskSaysAralBalang/Biti) yalnız 5/4 satırda dolu (0–5 → %9, 5–10 → %12), çoğu kademe adet aralığıyla (new_BalangicAdeti/new_BitisAdeti) tanımlı; kayıtlar 2014–2017. Yani 'hangi kitaplarda' sorusu veriyle cevaplanamaz: dürüst sonuç ret ya da boş cevap; kitap uyduran dolu cevap bozulmadır. Köprü bugün reddetti ama gerekçesi veri durumu değil sözlük boşluğu ('araligina' tanımlı değil; ilgisiz ACCOUNTBASE.NEW_ARALIK / NEW_SATISHEDEFLERIBASE.NEW_ARALIK önerdi) — sonuç türü uyuşuyor, gerekçe uyuşmuyor; bu yüzden verified:false. Kural C6 'sözleşmeye new_sozlesme ile bağlanır' diyor ama bağın boş olduğunu söylemiyor."
+  },
+  {
+   "n": 49,
+   "id": "A044",
+   "soru": "Etkinlik giderleri yazar bazında nasıl dağılıyor, en pahalı beş yazar kim?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT TOP 5 c.FullName AS yazar, COUNT(DISTINCT e.new_etkinlikId) AS etkinlik_adedi, SUM(e.new_ToplamEtkinlikGideri) AS toplam_gider, SUM(e.new_ToplamEtkinlikGideri) * 100.0 / (SELECT SUM(new_ToplamEtkinlikGideri) FROM Timas_MSCRM.dbo.new_etkinlikBase WHERE statecode = 0) AS pay_yuzde FROM Timas_MSCRM.dbo.new_etkinlikBase e JOIN Timas_MSCRM.dbo.new_new_etkinlik_contactBase x ON x.new_etkinlikid = e.new_etkinlikId JOIN Timas_MSCRM.dbo.ContactBase c ON c.ContactId = x.contactid AND c.new_yazarmi = 1 WHERE e.statecode = 0 AND e.new_ToplamEtkinlikGideri > 0 GROUP BY c.ContactId, c.FullName ORDER BY toplam_gider DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "reference_key": "yazar",
+     "reference_value": "toplam_gider",
+     "answer_key": [
+      "yazar",
+      "yazar_adi",
+      "FullName",
+      "fullname",
+      "ad_soyad"
+     ],
+     "answer_value": [
+      "toplam_gider",
+      "etkinlik_gideri",
+      "toplam_etkinlik_gideri",
+      "gider"
+     ],
+     "top": 5,
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: ilk beş — Mustafa Armağan 1.330 (3 etkinlik), Bahadır Yenişehirlioğlu 1.276 (4), Ahmed Günbay Yıldız 1.180 (2), Ahmet Şimşirgil 1.127 (2), Metin Özdamarlar 951 (4); toplam etkinlik gideri 9.275 ₺, gideri dolu 28 aktif etkinlik (57.363 aktif etkinlikten). BULGU: Kural C10 'yazar kırılımı hesaplanamaz' diyor (new_lgiliYazar 0 dolu, new_new_etkinlik_new_yazarBase 0 satır — ikisi de doğru), ama etkinliğin yazarı etkinlik↔kişi N:N tablosunda duruyor: new_new_etkinlik_contactBase 9.012 bağ / 8.979 etkinlik / 340 kişi; bağlı kişilerin ~%97'si ContactBase.new_yazarmi = 1. Gideri dolu 28 etkinliğin 28'i de tam bir yazara bağlı (çift sayım yok), 14 yazar. Referans bu yolu kullanır (new_yazarmi = 1). Köprü bugün hiç dolu olmayan new_lgiliYazar üzerinden ContactBase'e bağlanıp Description IN ('Yazar ') süzdü, GROUP BY yok → tek NULL satır, 'sonuç boş' dedi: yanlış (gider verisi var; C10'un istediği 9.275 / 28 toplam satırı da değil). İş teyidi önerilir: etkinlik↔kişi bağının 'etkinliğe katılan yazar' anlamı veriden çıkarıldı (ilişki adı new_new_etkinlik_contact), kural dosyasında yazılı değil. Holdout: kural yazılmaz; eksik olan genel yetenek N:N ilişki tablolarının taranması."
+  },
+  {
+   "n": 50,
+   "id": "A066",
+   "soru": "Metin teslim tarihi geçtiği hâlde hâlâ tamamlanmamış projeler var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT p.new_name AS proje, p.new_tahminimetinteslimtarihi AS metin_teslim_tarihi, p.statuscode, DATEDIFF(day, p.new_tahminimetinteslimtarihi, GETDATE()) AS gecikme_gunu FROM Timas_MSCRM.dbo.new_projeBase p WHERE p.statecode = 0 AND p.new_tahminimetinteslimtarihi < GETDATE() AND p.statuscode NOT IN (100000017, 100000009, 100000012, 100000021) ORDER BY gecikme_gunu DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 186 proje; köprü de 186 (aynı tanım, örnek satırlar tutuyor: gecikme 2.817 / 2.970 gün). Tanım Kural C11: statecode = 0, new_tahminimetinteslimtarihi < GETDATE(), statuscode NOT IN (100000017 Tamamlandı, 100000009 İptal Edildi, 100000012 Red Edildi, 100000021 Proje İptal Edildi) — etiketler StringMap'ten doğrulandı. Durum kırılımı: Yeni Proje 68, Basılmayacak 37, Beklemede 7, Yayın Kuruluna Hazır 23, İş Planı Çalışıyor 44, Yayın Kurulu Onaylı 7. Toplam gecikme günü 360.852; en eski teslim tarihi 2016-05-31 (3.762 gün). Not: 'Basılmayacak' (100000013) 37 proje tanım gereği listede; iş tarafı bunları da kapalı sayarsa sonuç 149 olur. Aktif kayıtlarda Tamamlandı statüsü yok (tamamlananlar statecode = 1)."
+  },
+  {
+   "n": 51,
+   "id": "A067",
+   "soru": "Yayın kurulunda onaylanan projelerde ortalama önerilen telif oranı yüzde kaç?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT AVG(t.new_onerilenteliforani) AS ortalama_telif_orani, COUNT(*) AS onayli_toplanti_adedi, COUNT(t.new_onerilenteliforani) AS telif_orani_dolu_adet, AVG(t.new_avansbedeli) AS ortalama_avans_bedeli, COUNT(t.new_avansbedeli) AS avans_dolu_adet FROM Timas_MSCRM.dbo.new_yayinkurulutoplantilariBase t WHERE t.statecode = 0 AND t.statuscode = 1",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "ortalama_telif_orani",
+      "ortalama_onerilen_telif_orani",
+      "onerilen_telif_orani",
+      "*"
+     ],
+     "reference": "ortalama_telif_orani",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: referans %5,64 — Yayın Kurulu Toplantıları (new_yayinkurulutoplantilariBase) statecode = 0 ve statuscode = 1 'Kabul' olan 341 toplantı (333 proje); 'Önerilen Telif Oranı' (new_onerilenteliforani) 25'inde dolu, ortalama 5,64 (2–12); 'Avans Bedeli' 3'ünde dolu, ortalama 635,67. Köprü %5,96 verdi: NEW_PROJEBASE statuscode = 100000020 (699 proje) üzerinde AVG(new_olasitelif) — 11 dolu değer (0,6–8). FARKIN NEDENİ: Kural C11 'önerilen telif oranı'nı projedeki new_olasitelif'e bağlıyor ve 'avans bedeli sütunu projede yok' diyor; oysa CRM'de adı birebir 'Önerilen Telif Oranı' olan alan ve avans bedeli, kurul kararı (Kabul/Red/Bekleme/Yeniden Değerlendirme) ile birlikte toplantı varlığındadır; projedeki alanın etiketi 'Olası Telif Oranı / Tahakkuk Tipi'dir. Soru setinin gerekçesi de toplantı tablosunu işaret ediyor ('onaylı toplantı adedi, ortalama telif oranı ve ortalama avans bedeli'). Referans köprüye uydurulmadı; C11'in bu maddesi düzeltilmeli. İki sonuç da küçük örneklem (25 ve 11 dolu değer)."
+  },
+  {
+   "n": 52,
+   "id": "A069",
+   "soru": "İş planlarında tamamlanma oranı en düşük sorumlular kimler?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT u.FullName AS sorumlu, COUNT(*) AS is_adedi, AVG(p.new_tamamlanma) AS tamamlanma_orani FROM Timas_MSCRM.dbo.new_isplaniBase p JOIN Timas_MSCRM.dbo.SystemUserBase u ON u.SystemUserId = p.OwnerId WHERE p.statecode = 0 GROUP BY u.SystemUserId, u.FullName ORDER BY CASE WHEN AVG(p.new_tamamlanma) IS NULL THEN 0 ELSE 1 END, AVG(p.new_tamamlanma)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "reference_key": "sorumlu",
+     "reference_value": "tamamlanma_orani",
+     "answer_key": [
+      "is_plani_sorumlusu",
+      "sorumlu",
+      "plan_sorumlusu",
+      "FullName",
+      "fullname"
+     ],
+     "answer_value": [
+      "tamamlanma_orani",
+      "ortalama_tamamlanma",
+      "tamamlanma_yuzdesi",
+      "tamamlanma"
+     ],
+     "top": 8,
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: 8 sorumlu; köprü de 8 satır, ilk üç aynı (Esra Sadıkoglu boş, Ahmet Turgut 0,00, Kamil Kılıç 0,00). Tanım Kural C12: aktif iş planı (statecode = 0, 375 satır), sorumlu = OwnerId ('Plan Sorumlusu') → SystemUserBase.FullName, oran = AVG(new_tamamlanma) ('Tamamlanma %'), boşlar ortalamaya girmez. Değerler: Esra Sadıkoglu NULL (1 iş), Ahmet Turgut 0 (4), Kamil Kılıç 0 (10), Savaş Özdemir 0 (23), İhsan Sönmez 10,08 (3), Ahmet Karaca 12,5 (20), Seval Akbıyık 16,56 (246), Timas CRM 20,17 (68). UYARI: new_tamamlanma 375 satırın yalnız 26'sında dolu; adım sayısından hesap (SUM(new_TamamlananAdmSays)/SUM(new_toplamadimsayisi)) farklı bir sıra verir (ör. Timas CRM 17/5.710 = %0,3, İhsan Sönmez 308/357 = %86). Soru 'tamamlanma oranı' dediği için alan esas alındı; köprü iş adedini cevaba koymadı (beklenen alanlardan biri eksik, değerler doğru)."
+  },
+  {
+   "n": 53,
+   "id": "A093",
+   "soru": "Fiziki arşivde emanete verilmiş ve hâlâ geri dönmemiş kayıtlar hangileri?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT f.new_kayitno AS kayit_no, k.new_name AS urun, u.FullName AS emanet_alan_kisi, f.new_baslangictarihi AS baslangic, f.new_bitistarihi AS bitis, DATEDIFF(day, f.new_baslangictarihi, GETDATE()) AS bekleme_gunu FROM Timas_MSCRM.dbo.new_fizikiarsivBase f LEFT JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId = f.new_arsivurun LEFT JOIN Timas_MSCRM.dbo.SystemUserBase u ON u.SystemUserId = f.new_emanetalankisi WHERE f.statecode = 0 AND f.new_arsivdurumu = 2 ORDER BY bekleme_gunu DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18 18:00: 16 kayıt (statecode = 0, new_arsivdurumu = 2 'Emanette' — StringMap: 1 Arşivde, 2 Emanette). Köprü 15:50'deki koşuda 15 satır verdi; fark veri hareketi: 000000000021066 'Babası Kılıklı' (Enes Uzun) bugün 17:15'te emanete verildi (ModifiedOn 14:15 UTC), köprü koşusundan sonra. Aynı tanım, örnek satırlar tutuyor (839 ve 641 gün). Emanette olan 16 kaydın hepsinde emanet alan kişi, başlangıç ve bitiş dolu; 15'inin bitiş tarihi geçmiş (yalnız bugün verilen kaydın bitişi 2026-09-25). En uzun bekleme 839 gün (000000000014056 Duygu Bankası, Enes Uzun). Köprünün eksiği: ürün adını (new_arsivurun → new_kitapBase.new_name) getirmedi, new_name döndürdü (hepsi boş) — satır sayısı doğru, 'ürün' kolonu boş. Kural C16."
+  },
+  {
+   "n": 54,
+   "id": "A094",
+   "soru": "Destek taleplerinde ortalama sonuçlandırma süresi kaç gün, departmana göre nasıl?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT ISNULL(m.Value, 'Belirtilmemiş') AS departman, COUNT(*) AS talep_adedi, AVG(CAST(DATEDIFF(day, t.CreatedOn, t.new_tamamlanmatarihi) AS float)) AS ortalama_gun FROM Timas_MSCRM.dbo.new_talepyonetimiBase t LEFT JOIN Timas_MSCRM.dbo.StringMap m ON m.AttributeName = 'new_ilgilidepartman' AND m.AttributeValue = t.new_ilgilidepartman AND m.LangId = 1055 AND m.ObjectTypeCode = (SELECT ObjectTypeCode FROM Timas_MSCRM.dbo.EntityView WHERE Name = 'new_talepyonetimi') WHERE t.statecode = 0 AND t.statuscode = 100000003 AND t.new_tamamlanmatarihi IS NOT NULL GROUP BY ISNULL(m.Value, 'Belirtilmemiş') ORDER BY ortalama_gun DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "reference_key": "departman",
+     "reference_value": "ortalama_gun",
+     "answer_key": [
+      "departman",
+      "ilgili_departman",
+      "departman_adi"
+     ],
+     "answer_value": [
+      "ortalama_sonuclandirma_gun",
+      "ortalama_gun",
+      "ortalama_sure_gun",
+      "ortalama_sonuclandirma_suresi"
+     ],
+     "top": 9,
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: 9 departman, 112 tamamlanmış talep; köprü ile birebir (Üretim 2 talep / 19,00 gün, Kültür & Çocuk Editorya 7 / 16,71, Depo 2 / 15,5, Çocuk Editorya 37 / 10,49, Kültür Editorya 26 / 5,31, Pazarlama 17 / 2,24, Satış 14 / 1,71, Muhasebe 3 / 1,67, Grafik 4 / 0,5). Tanım Kural C15: statecode = 0, statuscode = 100000003 'Tamamlandı', new_tamamlanmatarihi dolu, AVG(DATEDIFF(day, CreatedOn, new_tamamlanmatarihi)); açık talepler dışarıda. Departman adı referansta StringMap'ten (new_ilgilidepartman, LangId 1055) gelir, köprünün CASE listesiyle aynı. Veri notu: Tamamlandı 177 talebin 65'inde tamamlanma tarihi boş (ortalamaya girmez); bazı kayıtlarda tamamlanma tarihi açılıştan önce (en düşük −10 gün), ortalamayı aşağı çeker."
+  },
+  {
+   "n": 55,
+   "id": "A095",
+   "soru": "ISBN listesinde stok kartıyla eşleşmemiş yayın numaraları var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT i.new_yayinno AS yayin_no, i.new_isbn AS isbn, i.new_StokKodu AS stok_kodu FROM Timas_MSCRM.dbo.new_isbnlistesiBase i LEFT JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId = i.new_stokkarti AND k.statecode = 0 WHERE i.statecode = 0 AND k.new_kitapId IS NULL",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: 0 satır — eşleşmemiş yayın numarası yok; köprü de boş döndü. ISBN listesi (new_isbnlistesiBase) 613 aktif kayıt; 'Stok Kartı' (new_stokkarti → new_kitap) 613'ünde dolu, hepsi var olan ve aktif bir new_kitapBase kaydını gösteriyor (yetim/pasif 0). Referans köprüden sıkı: yalnız boş bağı değil, karşılığı olmayan ya da pasif stok kartını da eşleşmemiş sayar. Yan bilgi: 7 kayıtta new_StokKodu, 8 kayıtta new_isbn metni boş — bağ dolu olduğu için eşleşmemiş sayılmaz."
+  },
+  {
+   "n": 56,
+   "id": "B047",
+   "soru": "Sevkiyatlarda liste fiyatı üzerinden ortalama kaç puan indirim yapmışız?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT SUM(new_indirimtutari * new_adet) / NULLIF(SUM(new_listebirimfiyati * new_adet), 0) * 100 AS agirlikli_indirim_puani, AVG(new_indirimyuzdesi) AS basit_ortalama, (SUM(new_toplamtutar) - SUM(new_indirimlitoplamtutar)) / NULLIF(SUM(new_toplamtutar), 0) * 100 AS ozel_indirim_dahil_puan, COUNT(*) AS satir FROM Timas_MSCRM.dbo.new_sevkiyatsatiriBase WHERE statecode = 0 AND new_listebirimfiyati > 0 AND new_adet > 0",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "ortalama_indirim_puani",
+      "agirlikli_indirim_puani",
+      "indirim_puani",
+      "ortalama_indirim",
+      "*"
+     ],
+     "reference": "agirlikli_indirim_puani",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: %43,95 (43,9548; 6.421.511 aktif satır; indirim 3.104,4 Mn ₺ / liste 7.062,7 Mn ₺) — köprü 43,95, gece doğrulanan değerle aynı. Tanım Kural C14: tutarla ağırlıklı = SUM(new_indirimtutari × new_adet) / SUM(new_listebirimfiyati × new_adet) × 100, statecode = 0, liste fiyatı > 0, adet > 0. Basit AVG(new_indirimyuzdesi) = 46,20 (ana cevap değil). DİKKAT: C14'teki '≈ SUM(toplam − indirimli toplam)/SUM(toplam)' eşitliği tutmuyor: o hesap %46,16 verir; aradaki 156,2 Mn ₺ özel indirimdir (new_ozelindirimtutari; kampanya indirimi 0). Yani 43,95 yalnız genel iskonto, 46,16 özel indirim dahil toplam indirimdir; soru 'indirim yüzdesi' alanını kastettiği için 43,95 esas alındı, referans üç değeri de döndürür. Tablo canlı (gün içinde satır artıyor), tolerans %0,2."
+  },
+  {
+   "n": 57,
+   "id": "B049",
+   "soru": "Termini geçtiği halde hâlâ bekleyen sipariş satırlarımız kaç kalem?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT COUNT(*) AS n FROM Timas_MSCRM.dbo.new_siparissatiriBase l WHERE l.statecode = 0 AND l.new_bekleyenadet > 0 AND l.new_termintarihi < GETDATE() AND l.statuscode NOT IN (2, 100000000, 100000001)",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "bekleyen_siparis_kalemi",
+      "bekleyen_kalem",
+      "kalem_sayisi",
+      "n",
+      "*"
+     ],
+     "reference": "n",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 0 kalem; köprü de 0. Referans satır seviyesinde: new_siparissatiriBase statecode = 0, new_bekleyenadet > 0, new_termintarihi ('Termin Tarihi') < GETDATE(), satır durumu Etkin değil / Sevk Edildi / İptal dışı. Veri durumu: bekleyen adedi > 0 olan 19.759 aktif satırın hiçbirinde termin tarihi dolu değil; termin tarihi yalnız 2015 Ekim–Aralık kayıtlarında var (52.313 satır, hiçbirinde bekleyen/kalan adet yok). Sipariş başlığı üzerinden Kural C13 tanımı (new_bekleyenadet > 0 AND new_istenensevktarihi < GETDATE(), açık durumlar) da 0 verir. Köprünün yolu farklı ve kırılgan: başlıktaki new_bekleyenadet ile satırdaki termin tarihini karıştırıp COUNT(DISTINCT sipariş) saydı (kalem değil sipariş) — bugün ikisi de 0 olduğu için uyuşuyor; termin tarihi dolmaya başlarsa ayrışabilir. 0 doğru cevaptır (veri yok değil, koşula uyan satır yok)."
+  }
+ ]
+}

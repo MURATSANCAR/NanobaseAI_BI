@@ -19,7 +19,7 @@ from pathlib import Path
 
 import pyodbc
 
-SECRETS = Path("/data/nanobaseai/bi/secrets/logo-mssql-connection.json")
+SECRETS = Path("/data/nanobaseai/bi/secrets/crm-mssql-connection.json")  # CRM prod = .28 (CRMDATBASE); Logo ayri sunucu (.155)
 DATABASE = "Timas_MSCRM"
 
 ENTITIES = """

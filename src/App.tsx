@@ -1,27 +1,17 @@
 import { Suspense, lazy, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import Layout from '@/components/Layout';
-import { RequirePortalSession } from '@/components/RequireAuth';
+import RequireTimasSession from '@/canvas/TimasSession';
 import { t } from '@/i18n';
 
-const BiSupersetPage = lazy(() => import('@/pages/BiSupersetPage'));
-const BiSettingsPage = lazy(() => import('@/pages/BiSettingsPage'));
-const BiChatPage = lazy(() => import('@/pages/BiChatPage'));
-const BiSharesPage = lazy(() => import('@/pages/BiSharesPage'));
-const BiSchedulesPage = lazy(() => import('@/pages/BiSchedulesPage'));
-const BiAlertsPage = lazy(() => import('@/pages/BiAlertsPage'));
-const BiBudgetPage = lazy(() => import('@/pages/BiBudgetPage'));
-const BiAuditPage = lazy(() => import('@/pages/BiAuditPage'));
-const BiGlossaryPage = lazy(() => import('@/pages/BiGlossaryPage'));
-const BiSemanticCatalogPage = lazy(() => import('@/pages/BiSemanticCatalogPage'));
-const BiSemanticLayerPage = lazy(() => import('@/pages/BiSemanticLayerPage'));
-const BiScenarioReviewsPage = lazy(() => import('@/pages/BiScenarioReviewsPage'));
-const BiTemplatesPage = lazy(() => import('@/pages/BiTemplatesPage'));
-const BiQueriesPage = lazy(() => import('@/pages/BiQueriesPage'));
-const BiConnectionPage = lazy(() => import('@/pages/BiConnectionPage'));
-const BiSchemaPage = lazy(() => import('@/pages/BiSchemaPage'));
-const BiPublicPage = lazy(() => import('@/pages/BiPublicPage'));
+const KampusPage = lazy(() => import('@/canvas/kampus/KampusPage'));
+const BiCanvasPage = lazy(() => import('@/pages/BiCanvasPage'));
+const BoardScreen = lazy(() => import('@/canvas/board/BoardScreen'));
+const ReportsScreen = lazy(() => import('@/canvas/reports/ReportsScreen'));
+const AdminScreen = lazy(() => import('@/canvas/admin/AdminScreen'));
+const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
+const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
+const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
 
 function RouteFallback() {
   return (
@@ -38,43 +28,32 @@ function RoutedErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  // Uygulama hem /bi/ hem /timas/ altından sunuluyor. Yönlendirici tabanı
+  // derleme tabanından okunur; yoksa /timas/ açıldığında hiçbir rota eşleşmez.
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Suspense fallback={<RouteFallback />}>
         <RoutedErrorBoundary>
         <Routes>
-          <Route path="/" element={<Navigate to="/bi" replace />} />
-          <Route path="login" element={<Navigate to="/bi" replace />} />
-          <Route path="bi/public/:token" element={<BiPublicPage />} />
+          {/* Kök doğrudan kanvas: /timas/ ve /bi/ adreslerinde araya ikinci bir
+              yol parçası girmiyor. Kanvas ekranları kısa slug taşır. */}
 
-          <Route element={<RequirePortalSession />}>
-            <Route element={<Layout />}>
-              <Route path="bi" element={<BiSupersetPage />} />
-              <Route path="bi/projects" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/sources" element={<BiConnectionPage />} />
-              <Route path="bi/settings" element={<BiSettingsPage />} />
-              <Route path="bi/chat" element={<BiChatPage />} />
-              <Route path="bi/analytics" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/superset" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/dashboard" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/reports" element={<Navigate to="/bi" replace />} />
-              <Route path="bi/schema" element={<BiSchemaPage />} />
-              <Route path="bi/schedules" element={<BiSchedulesPage />} />
-              <Route path="bi/queries" element={<BiQueriesPage />} />
-              <Route path="bi/templates" element={<BiTemplatesPage />} />
-              <Route path="bi/glossary" element={<BiGlossaryPage />} />
-              <Route path="bi/semantic-catalog" element={<BiSemanticCatalogPage />} />
-              <Route path="bi/semantic-layer" element={<BiSemanticLayerPage />} />
-              <Route path="bi/scenario-reviews" element={<BiScenarioReviewsPage />} />
-              <Route path="bi/alerts" element={<BiAlertsPage />} />
-              <Route path="bi/budget" element={<BiBudgetPage />} />
-              <Route path="bi/shares" element={<BiSharesPage />} />
-              <Route path="bi/audit" element={<BiAuditPage />} />
-              <Route path="bi/connection" element={<BiConnectionPage />} />
-            </Route>
+          <Route element={<RequireTimasSession />}>
+            {/* Kanvas kendi rayını ve dock'unu taşır; uygulama kabuğu (Layout)
+                sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
+            {/* Girişten sonra ilk ekran Kampüs; modüllere oradan geçilir. */}
+            <Route index element={<KampusPage />} />
+            <Route path="genel-bakis" element={<BiCanvasPage />} />
+            <Route path="panolar" element={<BoardScreen />} />
+            <Route path="veri-sozlugu" element={<GlossaryScreen />} />
+            <Route path="onaylar" element={<ApprovalsScreen />} />
+            <Route path="es-anlamlilar" element={<VocabularyScreen />} />
+            <Route path="planli-raporlar" element={<ReportsScreen />} />
+            <Route path="yonetim" element={<AdminScreen />} />
+            <Route path="uyarilar" element={<BiCanvasPage />} />
           </Route>
 
-          <Route path="*" element={<Navigate to="/bi" replace />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </RoutedErrorBoundary>
       </Suspense>

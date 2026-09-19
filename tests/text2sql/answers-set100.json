@@ -1,0 +1,1900 @@
+{
+ "about": "Tam kapının altın cevapları. Her giriş bağımsız yazılmış referans SQL taşır; köprünün ürettiği SQL buraya kopyalanmaz. Yanlış nesneye bakan kontrol altın sayılmaz.",
+ "cases": [
+  {
+   "n": 1,
+   "id": "A032",
+   "soru": "Toptan satışta ortalama iskonto oranımız geçen yıla göre arttı mı?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT (SELECT SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) FROM LG_411_01_STLINE S WHERE S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) AND S.TRCODE=8 AND S.CANCELLED=0 AND S.LINETYPE IN (0,2) AND EXISTS (SELECT 1 FROM LG_411_01_INVOICE I WHERE I.LOGICALREF=S.INVOICEREF AND I.CANCELLED=0 AND I.TRCODE=8)) AS bu_yil_oran, (SELECT SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) FROM LG_211_01_STLINE S WITH (INDEX(I211_01_STLINE_I19)) WHERE S.DATE_>=DATEFROMPARTS(YEAR(GETDATE())-1,1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.TRCODE=8 AND S.CANCELLED=0 AND S.LINETYPE IN (0,2) AND EXISTS (SELECT 1 FROM LG_211_01_INVOICE I WHERE I.LOGICALREF=S.INVOICEREF AND I.CANCELLED=0 AND I.TRCODE=8)) AS gecen_yil_oran",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "bu_yil_iskonto_orani",
+      "bu_yil_oran",
+      "iskonto_orani_bu_yil",
+      "*"
+     ],
+     "reference": "bu_yil_oran",
+     "tolerance": 0.002
+    },
+    {
+     "kind": "value",
+     "answer": [
+      "gecen_yila_iskonto_orani",
+      "gecen_yil_iskonto_orani",
+      "gecen_yil_oran",
+      "iskonto_orani_gecen_yil"
+     ],
+     "reference": "gecen_yil_oran",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: toptan (TRCODE 8) iskonto oranı bu yıl 0,4612 (743,14 M / 1.611,23 M), geçen yıl 0,4535 (992,98 M / 2.189,53 M) → arttı (+0,77 puan). Tanım: iş tanımı 04 — satır düzeyi, Σ TOTAL (LINETYPE 2) / Σ TOTAL (LINETYPE 0), iptal hariç, faturası iptal edilmemiş toptan satış. Yıllar GETDATE() ile hesaplanır; 2026 = LG_411, 2025 = LG_211 (tarih indeksi ipucu ile ~60 sn; ipucusuz 150 sn+ ve 120 sn'lik bağlayıcı zaman aşımına düşer). Köprü cevabı 0,46 / 0,45 (özet iki ondalık) referansla uyuşuyor; ayırt edici: tüm satışların (7,8,9) 2026 oranı 0,4512, perakende 0,1033. Köprü SQL'i koşu dosyasında 1.200 karakterde kesik, TRCODE filtresi görülemedi; uyuşma değer üzerinden. Cevap yüzde (46,1) dönerse oranla uyuşmaz — birim netleştirilir."
+  },
+  {
+   "n": 2,
+   "id": "A060",
+   "soru": "Ortalama tahsilat vademiz kaç gün, geçen yıla göre uzadı mı?",
+   "kaynak": "logo",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT (SELECT AVG(CAST(DATEDIFF(day, I.DATE_, P.DATE_) AS float)) FROM LG_411_01_PAYTRANS P JOIN LG_411_01_INVOICE I ON I.LOGICALREF=P.FICHEREF WHERE P.MODULENR=4 AND P.SIGN=0 AND P.CANCELLED=0 AND I.CANCELLED=0 AND I.TRCODE IN (7,8,9) AND I.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND I.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1)) AS vade_gun_bu_yil, (SELECT AVG(CAST(DATEDIFF(day, I.DATE_, P.DATE_) AS float)) FROM LG_211_01_INVOICE I JOIN LG_211_01_PAYTRANS P ON P.FICHEREF=I.LOGICALREF AND P.MODULENR=4 WHERE P.SIGN=0 AND P.CANCELLED=0 AND I.CANCELLED=0 AND I.TRCODE IN (7,8,9) AND I.DATE_>=DATEFROMPARTS(YEAR(GETDATE())-1,1,1) AND I.DATE_<DATEFROMPARTS(YEAR(GETDATE()),1,1)) AS vade_gun_gecen_yil",
+   "checks": [
+    {
+     "kind": "values_present",
+     "reference": [
+      "vade_gun_bu_yil",
+      "vade_gun_gecen_yil"
+     ],
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: planlanan vade bu yıl 30,29 gün (70.470 plan kalemi), geçen yıl 40,16 gün (113.861 kalem) → uzamadı, kısaldı. Tanım: iş tanımı 06 — PAYTRANS MODULENR 4, SIGN 0, iptal hariç; vade = plan tarihi − fatura tarihi, kalem başına ortalama; fatura TRCODE 7,8,9. Köprü cevabı 30,29 / 40,16 birebir. Dikkat: bu PLANLANAN vadedir; gerçekleşen tahsilat süresi 2026'da ölçülemez (70.470 kalemin 0'ı kapalı; 2025'te 84.664 kalem kapalı) — cevap hangisini verdiğini yazmalı. Tutar ağırlıklı 2026 ortalaması 97,45 gün (ayrı ölçü, istenirse)."
+  },
+  {
+   "n": 3,
+   "id": "B007",
+   "soru": "Alacaklarımızı otuz, altmış, doksan gün diye yaşlandırıp gösterebilir misin?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "deny",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT P.LOGICALREF FROM LG_411_01_PAYTRANS P WHERE P.MODULENR=4 AND P.CANCELLED=0 AND (P.PAID>0 OR P.CROSSREF>0)",
+   "checks": [],
+   "note": "2026-09-18: dürüst ret doğrulandı. Referans, 2026 kopyasında kapatılmış (PAID > 0 ya da CROSSREF > 0) ödeme planı satırlarını arar: 0 satır — borç kapama işlenmemiş, yaşlandırma kovası üretilemez (iş tanımı 08, caveat 2026-09-16). Köprü NON_SQL_QUERY ile aynı gerekçeyi (70.521 satırın 0'ı kapalı) yazıyor. Fatura tarihine göre kesilen faturayı 'alacak' diye yaşlandıran bir cevap YANLIŞ sayılır. Referans satır döndürmeye başlarsa (borç kapama çalıştırılırsa) beklenti yeniden yazılır."
+  },
+  {
+   "n": 4,
+   "id": "B019",
+   "soru": "Ortalama tahsilat vademiz kaç gün, müşteri grubuna göre ayırır mısın?",
+   "kaynak": "logo",
+   "holdout": true,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT CASE WHEN ISNULL(C.SPECODE2,'')='' THEN 'Grup kodu boş' ELSE C.SPECODE2 END AS musteri_grubu, AVG(CAST(DATEDIFF(day, I.DATE_, P.DATE_) AS float)) AS ortalama_vade_gun, COUNT(*) AS kalem FROM LG_411_01_PAYTRANS P JOIN LG_411_01_INVOICE I ON I.LOGICALREF=P.FICHEREF JOIN LG_411_CLCARD C ON C.LOGICALREF=I.CLIENTREF WHERE P.MODULENR=4 AND P.SIGN=0 AND P.CANCELLED=0 AND I.CANCELLED=0 AND I.TRCODE IN (7,8,9) AND I.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND I.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY CASE WHEN ISNULL(C.SPECODE2,'')='' THEN 'Grup kodu boş' ELSE C.SPECODE2 END ORDER BY kalem DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 5,
+     "answer_key": [
+      "musteri_grubu",
+      "kanal",
+      "grup",
+      "SPECODE2",
+      "cari_grubu"
+     ],
+     "answer_value": [
+      "ortalama_vade_gun",
+      "ortalama_tahsilat_gun",
+      "vade_gun",
+      "ortalama_gun"
+     ],
+     "reference_key": "musteri_grubu",
+     "reference_value": "ortalama_vade_gun",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: köprü cevabı YANLIŞ. Köprü danışman görünümü AA_TAHSILAT_RAPORU'ndan 'Nakit Tahsilat' kayıtlarının (işlem tarihi − vade tarihi) ortalamasını verdi: 14 kanal, hepsi 0,00 gün. Görünümdeki bu kayıtlar yalnız 2015 yılına ait (808 satır) ve nakit tahsilatta vade = işlem günü olduğu için ölçü anlamsız. Referans (iş tanımı 05 + 06): planlanan vade, müşteri grubu = CLCARD.SPECODE2 (boş → 'Grup kodu boş'), bu yıl: 15 grup; KITAPCI 93,87 · E-TICARET 57,36 · ZINCIR 126,02 · DAGITICI 118,34 · Grup kodu boş 0,04 gün (46.042 kalem, perakende/peşin). Gerçekleşen (kapanmış alacak) süresi 2026'da ölçülemez (kapama kaydı yok); soru dönem söylemiyor, varsayılan bu yıl. 'beklenen' tutar ağırlıklı diyor; iş tanımı 06 kalem başına ortalamayı esas alır — ağırlıklı değerler farklıdır (E-TICARET 97,5)."
+  },
+  {
+   "n": 5,
+   "id": "B029",
+   "soru": "En çok kâr bıraktığımız on müşteriyi maliyet düştükten sonra sıralar mısın?",
+   "kaynak": "logo",
+   "holdout": true,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT TOP 10 C.CODE, C.DEFINITION_ AS musteri, SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET - S.AMOUNT*S.OUTCOST ELSE -(S.LINENET - S.AMOUNT*S.OUTCOST) END) AS kar FROM LG_411_01_STLINE S JOIN LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE IN (2,3,7,8,9) AND S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY C.CODE, C.DEFINITION_ ORDER BY kar DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "musteri",
+      "DEFINITION_",
+      "cari",
+      "musteri_adi",
+      "unvan"
+     ],
+     "answer_value": [
+      "musteri",
+      "DEFINITION_",
+      "cari",
+      "musteri_adi",
+      "unvan"
+     ],
+     "reference_key": "musteri",
+     "reference_value": "musteri"
+    }
+   ],
+   "note": "2026-09-18: köprü bugün REDDETTİ (INCOMPLETE_ANSWER: \"'dustukten' katalogda tanımlı bir kavram değil\"; ilişki doğrulanamadı) — veri var, ret haksız; 09-17 gecesi aynı soru doğru cevaplanmıştı (gerileme). Referans (iş tanımı 03): cari bazında Σ (LINENET − AMOUNT × OUTCOST), satış 7,8,9 artı, iade 2,3 eksi, LINETYPE 0, iptal hariç, bu yıl (soru dönem söylemiyor). İlk on: TURKUVAZ 64,78 M · KİTAPYURDU 58,74 M · POİNT 42,25 M · D-MARKET 39,16 M · BAŞARI 23,07 M · KALITIM 17,75 M · ÜNİTE 16,02 M · TEKROM 14,24 M · İBRAHİMOĞULLARI 12,19 M · OFEL 11,70 M. Yalnız satış satırlarıyla (iade düşülmeden) TURKUVAZ 69.143.347 (09-17 günlüğündeki değer); üç okumada (iade hariç / iade kârı düşülür / yalnız iade cirosu düşülür) ilk on ve SIRASI aynıdır, bu yüzden kontrol tutarı değil müşteri kümesini sınar. 2026 satış satırlarının ~%20'sinde OUTCOST = 0 (maliyetlendirme 30.06.2026'ya kadar) — kâr bu satırlarda ciroya eşit görünür, cevap bunu yazmalı."
+  },
+  {
+   "n": 6,
+   "id": "B030",
+   "soru": "Maliyetin altında satılmış satırlar var mı, hangi müşterilere?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE, C.DEFINITION_ AS musteri, COUNT(*) AS satir, SUM(S.AMOUNT*S.OUTCOST - S.LINENET) AS maliyet_alti_fark FROM LG_411_01_STLINE S JOIN LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE IN (7,8,9) AND S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) AND S.OUTCOST>0 AND S.LINENET < S.AMOUNT*S.OUTCOST GROUP BY C.CODE, C.DEFINITION_ ORDER BY maliyet_alti_fark DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: köprü cevabı YANLIŞ. Köprü 1.874 satır döndürdü: müşteri başına TOPLAM maliyet (Σ AMOUNT × OUTCOST; TURKUVAZ 12.120.837,66 = tüm satışlarının maliyeti) — 'maliyetin altında' koşulu uygulanmamış, liste bu yıl faturası olan hemen bütün müşteriler (1.877). Referans: satış satırı (7,8,9; LINETYPE 0; iptal hariç; bu yıl) LINENET < AMOUNT × OUTCOST ve OUTCOST > 0 (maliyeti girilmemiş satır 'maliyetin altında' sayılamaz): 42.956 satır, 745 müşteri, 5.212 fatura, fark toplamı 7,62 M ₺. Bunun 35.097 satırı bedelsiz (LINENET = 0; çoğu faturalanmamış irsaliye); bedelsizler dışlanırsa 7.859 satır / 253 müşteri (09-17 günlüğündeki '238 müşteri' bu okumaya yakın). Tanım bedelsizi ayırmıyor; iş tarafı ayırmak isterse referansa 'AND S.LINENET > 0' eklenir ve beklenen 253 olur. Kontrol müşteri kırılımındaki satır sayısıdır; cevap satır/kalem kırılımında dönerse 42.956 beklenir."
+  },
+  {
+   "n": 8,
+   "id": "C004",
+   "soru": "Elimizde hiç kalmamış ama hâlâ bekleyen siparişi olan kitaplar hangileri?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT I.CODE, I.NAME FROM LG_411_ITEMS I WHERE EXISTS (SELECT 1 FROM LG_411_01_ORFLINE L WHERE L.STOCKREF=I.LOGICALREF AND L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.CLOSED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT) AND ISNULL((SELECT SUM(CASE WHEN S.IOCODE IN (1,2) THEN S.AMOUNT WHEN S.IOCODE IN (3,4) THEN -S.AMOUNT ELSE 0 END) FROM LG_411_01_STLINE S WHERE S.STOCKREF=I.LOGICALREF AND S.CANCELLED=0 AND S.LINETYPE=0),0) <= 0",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "NAME",
+      "urun",
+      "kitap",
+      "kitap_adi",
+      "malzeme"
+     ],
+     "answer_value": [
+      "NAME",
+      "urun",
+      "kitap",
+      "kitap_adi",
+      "malzeme"
+     ],
+     "reference_key": "NAME",
+     "reference_value": "NAME"
+    }
+   ],
+   "note": "2026-09-18: 52 kitap. Stok bakiyesi tarihsiz ve yalnız cari kopyadan (giriş 1,2 − çıkış 3,4) ≤ 0; bekleyen sipariş = TRCODE 1, CLOSED 0, AMOUNT > SHIPPEDAMOUNT."
+  },
+  {
+   "n": 9,
+   "id": "C010",
+   "soru": "Hangi üretim emirleri planlanan bitiş tarihini geçti ve hâlâ tamamlanmadı?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT LOGICALREF FROM LG_411_PRODORD WHERE CANCELLED=0 AND STATUS<>3 AND PLNENDDATE < CAST(GETDATE() AS DATE)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 20 üretim emri (STATUS 1: 21 emrin 20'sinin planlanan bitişi geçmiş; STATUS 3 = tamamlandı). Referans 'bugün'ü kendisi hesaplar."
+  },
+  {
+   "n": 10,
+   "id": "C011",
+   "soru": "İş istasyonlarının geçen ay gerçekleşen süresi planlanandan ne kadar saptı?",
+   "kaynak": "logo",
+   "holdout": true,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT W.CODE, W.NAME AS istasyon, COUNT(*) AS operasyon, SUM(D.PLNDURATION)/60.0 AS planlanan_saat, SUM(D.ACTDURATION)/60.0 AS gerceklesen_saat, (SUM(D.ACTDURATION)-SUM(D.PLNDURATION))/60.0 AS sapma_saat FROM LG_411_DISPLINE D JOIN LG_411_WORKSTAT W ON W.LOGICALREF=D.WSREF WHERE D.ACTDURATION>0 AND D.ACTDUEDATE>=DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AND D.ACTDUEDATE<DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE()), 0) GROUP BY W.CODE, W.NAME ORDER BY sapma_saat DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: köprü bugün REDDETTİ (NON_SQL_QUERY: \"'istasyonlarinin, planlanandan' tanımlı bir kavram değil\") — veri var, ret haksız; 09-17 gecesi 10 istasyonla doğru cevaplanmıştı (gerileme). Referans: üretim operasyon satırları LG_411_DISPLINE (WSREF → WORKSTAT), planlanan PLNDURATION, gerçekleşen ACTDURATION; geçen ay (GETDATE() ile; bugün Ağustos 2026) gerçekleşen bitişi (ACTDUEDATE) olan ve gerçekleşen süresi dolu operasyonlar: 10 istasyon, 77 operasyon, planlanan 11.545 sa, gerçekleşen 11.757 sa, sapma +212,5 sa (ÇINAR +50,7 · WPC +43,3 · SİSTEM +36,7). Süre birimi dakika kabul edildi (RUNTIME 65536 = Logo kodlamasında 1 dk; PLNDURATION = adet × 1 dk) → /60 saat; iş teyidi yok. 'Geçen ay' hangi tarihe göre belirsiz: planlanan başlangıç (OPBEGDATE) 98 operasyon/10 istasyon, planlanan bitiş 107/10, gerçekleşen başlangıç 43/6 istasyon; bu yüzden kontrol yalnız istasyon sayısıdır (dört okumanın üçünde 10), saat değerleri sınanmaz. Veri 17.08.2026'da bitiyor: referans Ekim'de koşarsa boş döner."
+  },
+  {
+   "n": 11,
+   "id": "C015",
+   "soru": "İade oranı en yüksek müşteriler hangileri, sevk ettiğimiz adede göre?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE, C.DEFINITION_ AS musteri, SUM(CASE WHEN S.TRCODE IN (7,8) AND S.IOCODE=4 THEN S.AMOUNT ELSE 0 END) AS sevk_adet, SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) AS iade_adet, SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) / NULLIF(SUM(CASE WHEN S.TRCODE IN (7,8) AND S.IOCODE=4 THEN S.AMOUNT ELSE 0 END),0) AS iade_orani FROM LG_411_01_STLINE S JOIN LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.TRCODE IN (2,3,7,8) AND S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY C.CODE, C.DEFINITION_ HAVING SUM(CASE WHEN S.TRCODE IN (7,8) AND S.IOCODE=4 THEN S.AMOUNT ELSE 0 END) > 0 ORDER BY iade_orani DESC, C.CODE",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 5,
+     "answer_key": [
+      "musteri",
+      "DEFINITION_",
+      "cari",
+      "musteri_adi"
+     ],
+     "answer_value": [
+      "iade_orani",
+      "iade_adet_orani",
+      "oran"
+     ],
+     "reference_key": "musteri",
+     "reference_value": "iade_orani",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: köprü bugün REDDETTİ (INCOMPLETE_ANSWER: \"'stline default cancelled' koşulu sonuç kapsamında doğrulanamadı … 'musteriler' atanmamış değerleri koruyan ilişki doğrulanamadı\") — kapı kendi varsayılan filtresini doğrulayamamış; veri var, 09-17 gecesi 2.130 cariyle doğru cevaplanmıştı (gerileme). Referans: cari bazında iade adedi (STLINE TRCODE 2,3 AMOUNT) / sevk adedi (iş tanımı 16: TRCODE 7,8, IOCODE 4 AMOUNT), LINETYPE 0, iptal hariç, bu yıl, sevki olan cariler: 2.130 satır (299'unun iadesi var). En yüksekler: ALBATROS 631,67 (3 sevk / 1.895 iade) · İKİ A 87,2 · ALTAY 69,89 · ÇAĞAN EGE 9,68 · DEĞİŞİM 7,53. İş notu: oran 1'in üstüne çıkıyor çünkü iadeler önceki yılların sevkine ait; asgari sevk tabanı tanımlı değil. Cevap yalnız iadesi olanları listelerse 299 satır döner — o zaman kapsam farkı not edilir."
+  },
+  {
+   "n": 12,
+   "id": "C021",
+   "soru": "En çok satan yirmi kitabın stok devir hızı nedir?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "WITH satis AS (SELECT STOCKREF, SUM(AMOUNT) AS satis_adedi FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (7,8,9) AND DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY STOCKREF), top20 AS (SELECT TOP 20 STOCKREF, satis_adedi FROM satis ORDER BY satis_adedi DESC), stok AS (SELECT STOCKREF, SUM(CASE WHEN TRCODE=14 THEN AMOUNT ELSE 0 END) AS acilis, SUM(CASE WHEN IOCODE IN (1,2) THEN AMOUNT WHEN IOCODE IN (3,4) THEN -AMOUNT ELSE 0 END) AS guncel FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND STOCKREF IN (SELECT STOCKREF FROM top20) GROUP BY STOCKREF) SELECT I.CODE, I.NAME, T.satis_adedi, K.acilis AS acilis_stok, K.guncel AS guncel_stok, T.satis_adedi / NULLIF((K.acilis + K.guncel)/2.0, 0) AS stok_devir_hizi FROM top20 T JOIN LG_411_ITEMS I ON I.LOGICALREF=T.STOCKREF LEFT JOIN stok K ON K.STOCKREF=T.STOCKREF ORDER BY T.satis_adedi DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 20,
+     "answer_key": [
+      "stok_kodu",
+      "CODE",
+      "kod",
+      "urun_kodu"
+     ],
+     "answer_value": [
+      "stok_devir_hizi",
+      "devir_hizi"
+     ],
+     "reference_key": "CODE",
+     "reference_value": "stok_devir_hizi",
+     "tolerance": 0.005
+    }
+   ],
+   "note": "2026-09-18: köprü cevabı YANLIŞ (tanım). Köprü devir hızını satış adedi / GÜNCEL stok bakiyesi olarak hesapladı: İYİLİK TİMİ 148.662 / 213.633 = 0,70; ŞİFAYI KAPTIK HASTANESİ 0,72. İş tanımı 11: satış adedi / ((açılış devri TRCODE 14 + güncel stok) / 2) → İYİLİK TİMİ 148.662 / ((58.273 + 213.633)/2) = 1,09 (09-17 gecesi doğrulanan değer); ŞİFAYI 1,44 (açılış 0); ANNE TERLİĞİ 1,66 (köprü yöntemiyle 2,21). Yirmi kitap, satış adetleri ve güncel stoklar köprüyle aynı; fark yalnız paydada (ortalama stok yerine dönem sonu stok). Satış: TRCODE 7,8,9, LINETYPE 0, iptal hariç, bu yıl; stok yalnız güncel kopyadan, tarihsiz."
+  },
+  {
+   "n": 13,
+   "id": "C026",
+   "soru": "Bir kitabın son üç baskısında çekilen malzeme miktarları arasında fark var mı?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "WITH P AS ( SELECT '411' AS f, p.LOGICALREF, i.CODE, i.NAME, p.DATE_ FROM LG_411_PRODORD p JOIN LG_411_ITEMS i ON i.LOGICALREF=p.ITEMREF WHERE p.STATUS=3 AND p.CANCELLED=0 UNION ALL SELECT '211', p.LOGICALREF, i.CODE, i.NAME, p.DATE_ FROM LG_211_PRODORD p JOIN LG_211_ITEMS i ON i.LOGICALREF=p.ITEMREF WHERE p.STATUS=3 AND p.CANCELLED=0), R AS (SELECT *, ROW_NUMBER() OVER (PARTITION BY CODE ORDER BY DATE_ DESC, f DESC, LOGICALREF DESC) AS rn FROM P), S AS ( SELECT R.CODE, R.rn, R.DATE_, ISNULL(CASE WHEN R.f='411' THEN (SELECT SUM(s.AMOUNT) FROM LG_411_01_STLINE s WHERE s.PRODORDERREF=R.LOGICALREF AND s.TRCODE=12 AND s.IOCODE=4 AND s.LINETYPE=0 AND s.CANCELLED=0) ELSE (SELECT SUM(s.AMOUNT) FROM LG_211_01_STLINE s WHERE s.PRODORDERREF=R.LOGICALREF AND s.TRCODE=12 AND s.IOCODE=4 AND s.LINETYPE=0 AND s.CANCELLED=0) END,0) AS cekilen FROM R WHERE R.rn<=3) SELECT S.CODE AS stok_kodu, MAX(P2.NAME) AS kitap, COUNT(*) AS baski_sayisi, MAX(CASE WHEN rn=1 THEN cekilen END) AS son_baski, MAX(CASE WHEN rn=2 THEN cekilen END) AS onceki_baski, MAX(CASE WHEN rn=3 THEN cekilen END) AS ucuncu_baski, MAX(cekilen)-MIN(cekilen) AS miktar_farki FROM S JOIN (SELECT CODE, MAX(NAME) NAME FROM P GROUP BY CODE) P2 ON P2.CODE=S.CODE GROUP BY S.CODE HAVING COUNT(*)>=2 AND MAX(cekilen)-MIN(cekilen)<>0 ORDER BY miktar_farki DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0.01
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "StokKodu",
+      "stok_kodu",
+      "CODE",
+      "kod",
+      "kitap_kodu"
+     ],
+     "answer_value": [
+      "MiktarFarki",
+      "miktar_farki",
+      "fark"
+     ],
+     "reference_key": "stok_kodu",
+     "reference_value": "miktar_farki",
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: referans 1.705 kitap (son üç tamamlanmış baskının 1.030'unda üç, 675'inde iki emir var; fark ≠ 0). Tanım: Kural 9 / iş tanımı 12–13 — baskı = tamamlanmış üretim emri (PRODORD STATUS 3, CANCELLED 0), 'son üç' = kitabın DATE_'e göre en yeni üç emri; çekilen malzeme = sarf satırları STLINE TRCODE 12, IOCODE 4, LINETYPE 0, PRODORDERREF ile emre bağlı, emir başına SUM(AMOUNT). 'Son üç baskı' dönemsiz bir sıralama kavramıdır: emirler iki yıl kopyasından (LG_211 2021–25 + LG_411 2026) birlikte sıralanır, kitap eşlemesi stok koduyla (ITEMS LOGICALREF 71 kartta kopyalar arasında farklı), sarf her emrin kendi kopyasından okunur. KÖPRÜ UYUŞMUYOR: köprü yalnız 2026 kopyasını okudu (STLINE'a 2026 tarih filtresi) → 94 kitap; bağımsız 'yalnız LG_411' sorgusu da tam 94 veriyor (17 HAZİRAN 39.370,20; ALİ NAZİK 44.832,33 aynı). 2026'da 1.088 kitabın yalnız 10'unun üç, 87'sinin iki emri var; yani köprünün 'son üç baskı'sı fiilen 'bu yılki baskılar'. Örn. 17 HAZİRAN'ın referanstaki farkı önceki yıl baskılarını da içerir. Veri notu: SUM(AMOUNT) farklı birimli malzemeleri (kâğıt kg, kapak adet) toplar — tanım böyle, iş teyidi bekliyor. Aynı tarihli emirlerde sıra beraberliği olduğundan satır toleransı %1."
+  },
+  {
+   "n": 14,
+   "id": "C038",
+   "soru": "Geçen çeyrekte bekleyen sipariş adedi ay ay nasıl değişti?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT DATEFROMPARTS(YEAR(L.DATE_),MONTH(L.DATE_),1) AS ay, COUNT(DISTINCT L.ORDFICHEREF) AS bekleyen_siparis FROM LG_411_01_ORFLINE L WHERE L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.CLOSED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT AND L.DATE_>=DATEADD(QUARTER,DATEDIFF(QUARTER,0,GETDATE())-1,0) AND L.DATE_<DATEADD(QUARTER,DATEDIFF(QUARTER,0,GETDATE()),0) GROUP BY DATEFROMPARTS(YEAR(L.DATE_),MONTH(L.DATE_),1) ORDER BY 1",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "kayit_sayisi",
+      "bekleyen_siparis",
+      "bekleyen_siparis_adedi",
+      "siparis_adedi",
+      "adet"
+     ],
+     "reference": "bekleyen_siparis",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: Nisan 12 · Mayıs 9 · Haziran 60 (toplam 81 fiş; 2.613 satır, bekleyen miktar 70.308). Köprü birebir aynı (12/9/60). Tanım: iş tanımı 10 — satış sipariş satırı TRCODE 1, CLOSED 0, AMOUNT > SHIPPEDAMOUNT, iptal hariç; adet = fiş sayısı (ORDFICHEREF). 'Geçen çeyrek' = tamamlanmış son çeyrek, referans GETDATE() ile hesaplar. Açık nokta: beklenen cevap 'ay sonu itibarıyla' kümülatif açık sipariş serisi diyor; satır kapanış tarihi tutulmadığı için kurulamıyor, seri 'o ay açılan ve bugün hâlâ bekleyen' siparişlerdir (günlük 09-17, soru 14). Ay kolonu metin/tarih olabileceği için pairs yerine satır + toplam kontrolü."
+  },
+  {
+   "n": 15,
+   "id": "C040",
+   "soru": "Son üç ayda satılan adet, aynı dönemde üretilen adedin ne kadarı?",
+   "kaynak": "logo",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) THEN AMOUNT ELSE 0 END) AS satilan_adet, SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END) AS uretilen_adet, CAST(SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) THEN AMOUNT ELSE 0 END) AS FLOAT)/NULLIF(SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END),0) AS oran FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (7,8,9,13) AND DATE_>=DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())-2,0) AND DATE_<DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())+1,0)",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "oran",
+      "satis_uretim_orani",
+      "yuzde"
+     ],
+     "reference": "oran",
+     "tolerance": 0.002
+    },
+    {
+     "kind": "value",
+     "answer": [
+      "uretilen_adet",
+      "uretilen",
+      "uretim_adedi"
+     ],
+     "reference": "uretilen_adet",
+     "tolerance": 0
+    },
+    {
+     "kind": "value",
+     "answer": [
+      "adet",
+      "satilan_adet",
+      "satilan",
+      "satis_adedi"
+     ],
+     "reference": "satilan_adet",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: satılan 1.620.882 / üretilen 3.375.200 = 0,4802. Köprü birebir aynı. Tanım: satılan adet = satış faturası satırları TRCODE 7,8,9 (IOCODE 3,4), üretilen adet = üretimden giriş TRCODE 13 IOCODE 1 (Kural 9, 20); LINETYPE 0, CANCELLED 0. 'Son üç ay' = içinde bulunulan ayla biten üç takvim ayı (Temmuz–Eylül; temporal.py kuralı, günlük soru 15); kayan 90 gün okunursa 1.850.079 / 4.028.065 = 0,459 — dönem kuralı değişirse referans da değişmeli. İade (109.670 adet) düşülmez. Veri notu: 2026 kopyasında satış 17.08.2026'da bitiyor, üretim girişi sürüyor; oran bu yüzden düşük. Cevap yüzde (48,02) dönerse oran kontrolü birim yüzünden düşer. 2026 kopyası yeter: dönem tümüyle 2026."
+  },
+  {
+   "n": 16,
+   "id": "D015",
+   "soru": "Kartında indirim yüzdesi tanımlı müşteriler gerçekte ortalama ne kadar iskonto alıyor?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS cari_kodu, C.DEFINITION_ AS musteri, C.DISCRATE AS kart_iskonto_yuzdesi, SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) AS fiili_iskonto_orani FROM LG_411_CLCARD C JOIN LG_411_01_STLINE S ON S.CLIENTREF=C.LOGICALREF WHERE C.DISCRATE<>0 AND S.CANCELLED=0 AND S.TRCODE IN (7,8) AND S.LINETYPE IN (0,2) AND S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY C.CODE, C.DEFINITION_, C.DISCRATE ORDER BY 4 DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "musteri",
+      "unvan",
+      "cari",
+      "musteri_unvani",
+      "DEFINITION_"
+     ],
+     "answer_value": [
+      "iskonto_orani",
+      "fiili_iskonto_orani",
+      "ortalama_iskonto",
+      "oran"
+     ],
+     "reference_key": "musteri",
+     "reference_value": "fiili_iskonto_orani",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: 2 müşteri — ÖMER SEFA OKÇU kart %100 → fiili 0,9139 (4.930,42 / 5.395,00); HASAN ŞEVKİ BİLGİN kart %100 → 0,8643 (2.152,00 / 2.490,00). Köprü birebir (0,91 / 0,86). Tanım: kartında tanımlı iskonto = CLCARD.DISCRATE <> 0; iskonto oranı satır düzeyinde Σ TOTAL (LINETYPE 2) / Σ TOTAL (LINETYPE 0), TRCODE 7,8, CANCELLED 0 (iş tanımı 04, metrik iskonto_yuku). Referans faturadan değil doğrudan STLINE.CLIENTREF'ten gider (bağımsız yol). Soru dönem söylemiyor; ürünün varsayılanı 'bu yıl' — referans da 2026. Kartında iskonto tanımlı 5 cari var (hepsi 12001.01.TAR00x, aktif); 2026'da yalnız 2'sinin satışı var. 2021–25 kopyası eklenirse 4 müşteri (AHMET BOZKURT kart %50 → 0,5236; MÜCAHİT ARLI %100 → 0,9099) — varsayılan dönem kalkarsa referans yeniden yazılır. Birim uyarısı: kart yüzdesi 0–100, fiili oran 0–1 ölçeğinde dönüyor."
+  },
+  {
+   "n": 17,
+   "id": "D037",
+   "soru": "Sipariş verip de hiç sevkiyat almamış müşterilerimiz var mı?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS cari_kodu, C.DEFINITION_ AS unvan, (SELECT SUM((L.AMOUNT-L.SHIPPEDAMOUNT)*L.PRICE) FROM LG_411_01_ORFLINE L JOIN LG_411_01_ORFICHE O ON O.LOGICALREF=L.ORDFICHEREF WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0 AND L.CANCELLED=0 AND L.LINETYPE=0 AND L.CLOSED=0) AS bekleyen_tutar FROM LG_411_CLCARD C WHERE EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0) AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE S WHERE S.CLIENTREF=C.LOGICALREF AND S.TRCODE IN (7,8) AND S.IOCODE=4 AND S.LINETYPE=0 AND S.CANCELLED=0)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "cari_kodu",
+      "CODE",
+      "kod",
+      "musteri_kodu"
+     ],
+     "answer_value": [
+      "cari_kodu",
+      "CODE",
+      "kod",
+      "musteri_kodu"
+     ],
+     "reference_key": "cari_kodu",
+     "reference_value": "cari_kodu"
+    }
+   ],
+   "note": "2026-09-18: 4 cari (KADRİYE KENAR 583,75; FURKAN NUR 591,50; TÜYAP DİYARBAKIR KİTAP FUARI 152.540,00; KÜÇÜK ORMAN UZMAN REHBERLİK 1.895,50; bekleyen toplam 155.610,75 ₺). Köprü aynı 4 cariyi veriyor. Tanım: Kural 10 / iş tanımı 15–16 — sipariş = ORFICHE TRCODE 1 iptal hariç; sevkiyat = STLINE TRCODE 7,8 IOCODE 4; müşteri düzeyinde yokluk (NOT EXISTS), güncel kopya. İki açık nokta: (1) köprü cevabında beklenen 'bekleyen tutar' kolonu yok (yalnız kod + unvan) — tutar kontrolü bu yüzden konmadı; (2) 'hiç' iki yıl kopyası birlikte okunursa (2021–25 + 2026, cari koduyla) siparişi olup hiçbir kopyada sevkiyatı olmayan 1.826 cari çıkıyor — güncel kopya okuması iş teyidi bekliyor."
+  },
+  {
+   "n": 18,
+   "id": "D039",
+   "soru": "Geçen yıl alıp bu yıl hiç sipariş vermemiş müşterileri çıkarır mısın?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS cari_kodu, C.DEFINITION_ AS musteri, G.satis_ciro AS gecen_yil_ciro, G.net_ciro AS gecen_yil_net_ciro FROM (SELECT I.CLIENTREF, SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN I.NETTOTAL ELSE 0 END) AS satis_ciro, SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN I.NETTOTAL ELSE -I.NETTOTAL END) AS net_ciro FROM LG_211_01_INVOICE I WHERE I.CANCELLED=0 AND I.TRCODE IN (2,3,7,8,9) AND I.DATE_>=DATEFROMPARTS(YEAR(GETDATE())-1,1,1) AND I.DATE_<DATEFROMPARTS(YEAR(GETDATE()),1,1) GROUP BY I.CLIENTREF HAVING SUM(CASE WHEN I.TRCODE IN (7,8,9) THEN 1 ELSE 0 END)>0) G JOIN LG_211_CLCARD C ON C.LOGICALREF=G.CLIENTREF WHERE NOT EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O JOIN LG_411_CLCARD C2 ON C2.LOGICALREF=O.CLIENTREF WHERE C2.CODE=C.CODE AND O.TRCODE=1 AND O.CANCELLED=0 AND O.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND O.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1)) ORDER BY G.satis_ciro DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: referans 34.531 cari (2025'te alan 34.588 carinin 57'si 2026'da sipariş vermiş); 2025 net ciroları 733.178.030,47 ₺ (iade düşülmüş). Günlükteki 09-17 ölçümüyle aynı sayı (34.531). Tanım (günlük soru 18): 'alıp' = adına satış faturası kesilmiş (INVOICE TRCODE 7,8,9, CANCELLED 0), geçen yıl = 2025 → LG_211 kopyası; 'bu yıl hiç sipariş vermemiş' = 2026'da ORFICHE TRCODE 1 fişi yok (LG_411) — yokluk, NOT EXISTS; iki kopya cari koduyla eşlenir (LOGICALREF 14 kartta farklı). KÖPRÜ UYUŞMUYOR: bugünkü koşuda cevap yerine INCOMPLETE_ANSWER döndü — \"'alip' koşulu sonuç kapsamında doğrulanamadı: ITEMS.CARDTYPE IN ['1']\"; 'alıp' kelimesi müşteri alımı yerine malzeme kartı türüne (ITEMS.CARDTYPE = 1, 'alım') bağlanmış. 09-17 karnesinde aynı soru 34.531 ile doğruydu → gerileme. İş notu: sipariş modülü tüm satışları kapsamıyor (e-ticaret kanalı); 2026'da faturası da olmayan 33.573 cari ayrı bir okumadır. Ciro toplamı kontrolü konmadı (brüt satış mı net mi belirsiz)."
+  },
+  {
+   "n": 19,
+   "id": "A002",
+   "soru": "İptal edilmemiş satış faturalarında iade hariç toplam ciro ne kadar oldu bu ara?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "clarify",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT SUM(NETTOTAL) AS ciro FROM LG_411_01_INVOICE WHERE CANCELLED=0 AND TRCODE IN (7,8,9) AND DATE_>='2026-01-01' AND DATE_<'2027-01-01'",
+   "checks": [],
+   "note": "'bu ara' bir dönem söylemiyor; köprü 3/3 netleştirme soruyor ve beklenen davranış budur (çakışma/belirsizlikte netleştirme ilkesi). Gece 'bu yıl' diye yorumlanıp 922.418.666,06 ₺ verilmişti; referans SQL o okumayı belgeler. Kullanıcı 'bu yıl' okumasını isterse beklenti geri alınır."
+  },
+  {
+   "n": 20,
+   "id": "A004",
+   "soru": "Son çeyrekte iade faturalarının satış cirosuna oranı yüzde kaç?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT SUM(CASE WHEN TRCODE IN (2,3) THEN NETTOTAL ELSE 0 END) / NULLIF(SUM(CASE WHEN TRCODE IN (7,8,9) THEN NETTOTAL ELSE 0 END),0) AS oran FROM LG_411_01_INVOICE WHERE CANCELLED=0 AND DATE_ >= DATEADD(QUARTER, DATEDIFF(QUARTER,0,GETDATE())-1, 0) AND DATE_ < DATEADD(QUARTER, DATEDIFF(QUARTER,0,GETDATE()), 0)",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "iade_orani",
+      "oran",
+      "*"
+     ],
+     "reference": "oran",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "'son çeyrek' = tamamlanmış son çeyrek; referans dönemi GETDATE() ile kendisi hesaplar (as_of). 2026-09-18: Nisan–Haziran, 42.793.188,38 / 344.781.634,12 = %12,41. Cevap yüzde (12,41) dönerse oran (0,1241) ile uyuşmaz — o zaman kontrol birimi netleştirilir."
+  },
+  {
+   "n": 21,
+   "id": "A006",
+   "soru": "Bu yıl hiç fatura kesilmemiş ama kartı aktif duran müşteriler kimler?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE, C.DEFINITION_ FROM LG_411_CLCARD C WHERE C.ACTIVE=0 AND NOT EXISTS (SELECT 1 FROM LG_411_01_INVOICE I WHERE I.CLIENTREF=C.LOGICALREF AND I.CANCELLED=0 AND I.TRCODE IN (2,3,7,8,9) AND I.DATE_>='2026-01-01' AND I.DATE_<'2027-01-01')",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0.0001
+    }
+   ],
+   "note": "2026-09-18: 227.385 aktif cari. Model bazı koşularda CARDTYPE IN (1,3) ekliyor (227.383); tolerans bunu geçirir, fark not edilir."
+  },
+  {
+   "n": 22,
+   "id": "A008",
+   "soru": "Vadesi geçmiş ama hâlâ tahsil edilmemiş müşteri alacaklarımız toplam ne kadar?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "deny",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT COUNT(*) AS fatura_plan_satiri, SUM(CASE WHEN PAID=1 OR CROSSREF>0 THEN 1 ELSE 0 END) AS kapatilan_satir, SUM(TOTAL) AS plan_tutari, SUM(CASE WHEN DATE_<CAST(GETDATE() AS DATE) THEN TOTAL ELSE 0 END) AS vadesi_gecmis_gorunen_plan FROM LG_411_01_PAYTRANS WHERE MODULENR=4 AND SIGN=0 AND CANCELLED=0 AND TRCODE IN (7,8,9)",
+   "checks": [],
+   "note": "Dürüst ret beklenir. 2026-09-18: 2026 kopyasında satış faturası ödeme planı 70.470 satır / 917.158.478,81 ₺; kapatılan (PAID = 1 ya da CROSSREF > 0) 0 satır — PAYTRANS'ın tüm modüllerinde de kapama 0. Borç kapama çalıştırılmadığı için 'vadesi geçmiş ve tahsil edilmemiş' tutar ölçülemiyor: vadesi geçmiş görünen plan 662.534.419,26 ₺ ama bu kesilen faturadır, alacak değil (tahsilatlar düşülmemiş). Köprü NON_SQL_QUERY ile tam bu gerekçeyi söylüyor (caveat 2026-09-16; köprü 70.521 satır diyor, fark ölçüm tarihi/TRCODE kapsamı). Referans SQL reddin dayandığı veri durumunu gösterir: kapatilan_satir > 0 olursa beklenti 'answer' olarak yeniden yazılır. Dolu bir 'vadesi geçmiş alacak' rakamı bozulmadır; cari net bakiye (CLFLINE) verilirse bunun yaşlandırma olmadığı açıkça yazılmalı."
+  },
+  {
+   "n": 23,
+   "id": "A010",
+   "soru": "Karşılıksız çıkan veya protesto olan çeklerin bu yılki toplam tutarı ne kadar?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "logo",
+   "reference_sql": "SELECT COUNT(DISTINCT CASE WHEN T.STATUS=11 THEN T.CSREF END) AS karsiliksiz_adet, ISNULL(SUM(CASE WHEN T.STATUS=11 THEN C.AMOUNT END),0) AS karsiliksiz_tutar, COUNT(DISTINCT CASE WHEN T.STATUS IN (5,7) THEN T.CSREF END) AS protestolu_adet, ISNULL(SUM(CASE WHEN T.STATUS IN (5,7) THEN C.AMOUNT END),0) AS protestolu_tutar, ISNULL(SUM(C.AMOUNT),0) AS toplam_tutar FROM (SELECT DISTINCT CSREF, STATUS FROM LG_411_01_CSTRANS WHERE CANCELLED=0 AND TRCODE<>0 AND STATUS IN (5,7,11) AND DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1)) T JOIN LG_411_01_CSCARD C ON C.LOGICALREF=T.CSREF WHERE C.CANCELLED=0 AND C.DOC=1",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "toplam_tutar",
+      "toplam",
+      "tutar",
+      "*"
+     ],
+     "reference": "toplam_tutar",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18 — KÖPRÜ UYUŞMUYOR, bulgu: köprü ve caveat 'güncel durum' okuyor (CSCARD.CURRSTAT IN (11,5,7) + DUEDATE 2026) → boş; bu okuma veriyle doğru (CURRSTAT 11 olan 20 müşteri çeki 2.517.753 ₺ 2018–2019 vadeli; CURRSTAT 7 olan 83 kayıt müşteri SENEDİ, 877.714 ₺, 2017–2022 vadeli; 2026 vadeli çeklerde 5/7/11 yok). Ama soru bir OLAY soruyor ('karşılıksız ÇIKAN'): çek hareketlerinde (CSTRANS) 2026'da karşılıksız işlemi (STATUS 11, TRCODE 9 işlem bordrosu) görmüş 6 müşteri çeki var, toplam 6.326.658,00 ₺ (portföy 21105322 476.658 · 21105247 350.000 · 21105375 1.000.000 · 21105376/77/78 3×1.500.000; vadeleri 31.01–05.05.2026; işlem tarihleri 09.02, 01.04, 04.05, 04.06.2026). Hepsi karşılıksız çıktıktan sonra müşteriye iade edildiği için güncel durumları 6 (iade edildi) — CURRSTAT okuması bu yüzden kaçırıyor. Protestolu çek olayı 2026'da yok (0). Referans olay okumasıdır; TRCODE 0 devir hareketleri (01.01.2026 açılış: 20 eski karşılıksız çek + 83 protestolu senet) dışlanır. Kural 12 ('karşılıksız = CURRSTAT 11') ve caveat ('kayıt yok') iş teyidiyle gözden geçirilmeli; iş tarafı güncel-durum okumasını seçerse beklenti [\"deny\",\"answer\"] + empty olur."
+  },
+  {
+   "n": 24,
+   "id": "A026",
+   "soru": "Risk limitini aşmış cari hesaplar hangileri, ne kadar aşmışlar?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT CLCARDREF FROM LG_411_01_CLRNUMS WHERE ACCRISKLIMIT>0 AND ACCRISKTOTAL>ACCRISKLIMIT",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: 0 satır; güncel kopyada risk limiti tanımlı cari yok. Sabah redde düşmüştü: tek kelimelik 'risk'/'limit' eşlemeleri soruyu CRM'e çekiyordu."
+  },
+  {
+   "n": 25,
+   "id": "A027",
+   "soru": "Ambar bazında elde kalan stok adedi en yüksek yirmi kitap hangileri?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT TOP 20 S.SOURCEINDEX AS ambar, W.NAME AS ambar_adi, I.CODE AS stok_kodu, I.NAME AS kitap, SUM(CASE WHEN S.IOCODE IN (1,2) THEN S.AMOUNT ELSE -S.AMOUNT END) AS kalan_adet FROM LG_411_01_STLINE S JOIN LG_411_ITEMS I ON I.LOGICALREF=S.STOCKREF LEFT JOIN L_CAPIWHOUSE W ON W.NR=S.SOURCEINDEX AND W.FIRMNR=411 WHERE S.CANCELLED=0 AND S.LINETYPE=0 AND S.IOCODE IN (1,2,3,4) GROUP BY S.SOURCEINDEX, W.NAME, I.CODE, I.NAME ORDER BY kalan_adet DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "stok_bakiyesi",
+      "kalan_adet",
+      "kalan_stok",
+      "kalan",
+      "stok"
+     ],
+     "reference": "kalan_adet",
+     "tolerance": 0.0005
+    }
+   ],
+   "note": "2026-09-18: ilk 20 (ambar, malzeme) toplamı referansla; ilk üç: ambar 4 (Timaş Satış Deposu 2) ÇOCUK ÖZEL AÇIK AYRAÇ 981.000 · ambar 24 (Tarçın Kafe) BREZİLYA KAHVE ÇEKİRDEĞİ 326.376,284 · ambar 4 İYİLİK TİMİ 213.467. Köprünün ilk üç satırı birebir aynı. Tanım: iş tanımı 09 + Kural 14 — stok = giriş (IOCODE 1,2) − çıkış (3,4), LINETYPE 0, CANCELLED 0, tarihsiz, yalnız güncel kopya (açılış devri içinde); ambar = STLINE.SOURCEINDEX. BULGU (tanım açığı): listede kitap olmayan malzemeler var — ayraç (15701), kahve çekirdeği (15312, Tarçın Kafe), BANDROL (15001, üç matbaa ambarında: 196.386 / 167.188 / 86.508). Katalogda 'kitap' = ITEMS'in tamamı; kitap kartı tanımı (ör. CARDTYPE 12 ve kod 15201*) yok. İlk 20'nin 5'i kitap değil (ayraç, kahve, 3×bandrol); yalnız kitap kartları alınırsa bunlar düşer ve sıradaki 5 kitap girer. Referans bugünkü belgelenmiş tanımı izler; 'kitap' tanımı iş tarafınca verilince yeniden yazılmalı. Köprü cevabında ambar adı yok (yalnız numara) ve kırılım kitap adıyla (kod değil) — BANDROL üç ambarda ayrı satır olduğu için pairs kontrolü konmadı."
+  },
+  {
+   "n": 26,
+   "id": "A028",
+   "soru": "Asgari stok seviyesinin altına düşmüş malzemeler hangi ambarlarda var?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT ITEMREF, INVENNO AS ambar, MINLEVEL FROM LG_411_INVDEF WHERE MINLEVEL>0",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "Dürüst ret ya da boş sonuç + aynı gerekçe. 2026-09-18: LG_411_INVDEF 3.980.876 malzeme–ambar satırı; MINLEVEL > 0 olan 0 (MAXLEVEL > 0: 0, SAFELEVEL > 0: 0, MINLEVELCTRL <> 0: 0). Asgari seviye hiç girilmediği için 'asgari seviyenin altına düşen' kümesi tanımsız; köprü NON_SQL_QUERY ile bunu söylüyor (caveat 2026-09-18). Küçük fark: caveat 'seviye kontrolü açık 125.682 satır' diyor, bugünkü ölçümde MINLEVELCTRL <> 0 satır 0 — sonucu değiştirmez ama caveat'teki sayı doğrulanmalı. Referans MINLEVEL > 0 satırlarını listeler; satır belirirse beklenti 'answer' olarak yeniden yazılır. Dolu bir liste (ör. stok < 0 olanları 'asgari altı' diye sunmak) bozulmadır."
+  },
+  {
+   "n": 27,
+   "id": "A029",
+   "soru": "Geçen aya göre kasa ve banka giriş çıkış farkımız nasıl değişti?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT m.ay, ISNULL(k.giris,0) AS kasa_giris, ISNULL(k.cikis,0) AS kasa_cikis, ISNULL(k.giris,0)-ISNULL(k.cikis,0) AS kasa_fark, ISNULL(b.giris,0) AS banka_giris, ISNULL(b.cikis,0) AS banka_cikis, ISNULL(b.giris,0)-ISNULL(b.cikis,0) AS banka_fark, ISNULL(k.giris,0)-ISNULL(k.cikis,0)+ISNULL(b.giris,0)-ISNULL(b.cikis,0) AS toplam_fark FROM (SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AS ay UNION ALL SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE()), 0)) m LEFT JOIN (SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0) AS ay, SUM(CASE WHEN SIGN=0 THEN AMOUNT ELSE 0 END) AS giris, SUM(CASE WHEN SIGN=1 THEN AMOUNT ELSE 0 END) AS cikis FROM LG_411_01_KSLINES WHERE CANCELLED=0 AND DATE_>=DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AND DATE_<DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())+1, 0) GROUP BY DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0)) k ON k.ay=m.ay LEFT JOIN (SELECT DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0) AS ay, SUM(CASE WHEN SIGN=0 THEN AMOUNT ELSE 0 END) AS giris, SUM(CASE WHEN SIGN=1 THEN AMOUNT ELSE 0 END) AS cikis FROM LG_411_01_BNFLINE WHERE CANCELLED=0 AND DATE_>=DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AND DATE_<DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())+1, 0) GROUP BY DATEADD(MONTH, DATEDIFF(MONTH,0,DATE_), 0)) b ON b.ay=m.ay ORDER BY m.ay",
+   "checks": [
+    {
+     "kind": "sum",
+     "answer": [
+      "kasa_giris",
+      "kasa_giris_toplam"
+     ],
+     "reference": "kasa_giris"
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "kasa_cikis",
+      "kasa_cikis_toplam"
+     ],
+     "reference": "kasa_cikis"
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "banka_giris",
+      "banka_giris_toplam"
+     ],
+     "reference": "banka_giris"
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "banka_cikis",
+      "banka_cikis_toplam"
+     ],
+     "reference": "banka_cikis"
+    }
+   ],
+   "note": "2026-09-18: 'geçen aya göre' = bu ay (Eylül 2026) ile geçen ay (Ağustos 2026); referans iki ayı GETDATE() ile kendisi hesaplar, ay başına bir satır. Ağustos: kasa giriş 2.010.740,30 / çıkış 4.936,30 / net 2.005.804,00; banka giriş 128.207.044,76 / çıkış 121.907.968,00 / net 6.299.076,76; toplam net 8.304.880,76. Eylül'de kasa ve banka hareketi yok (veri 2026-08'de bitiyor) → 0. Dayanak: Kural 15 (KSLINES/BNFLINE, SIGN 0 giriş, 1 çıkış, CANCELLED=0, ayrı alt sorgular). Köprünün Ağustos rakamları referansla birebir aynı; ancak köprü iki ayı INNER JOIN ile birleştirdiği için boş Eylül satırı düştü, tek satır döndü ve 'değişim' gösterilmedi (sunum eksiği, rakam hatası değil). Kontroller ay satırlarının toplamı üzerinden (boş ay satırı olsa da olmasa da aynı); cevap ayları sütuna çevirirse kolon adayları genişletilmelidir. Bilgi: Temmuz 2026 kasa 152.328,60 / 38.179,65; banka 354.758.968,95 / 302.631.790,06."
+  },
+  {
+   "n": 28,
+   "id": "A030",
+   "soru": "Bu yıl açılan ama hâlâ tamamen sevk edilmemiş müşteri siparişleri kaç kalem?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT COUNT(*) AS n FROM LG_411_01_ORFLINE L WHERE L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT AND L.DATE_>='2026-01-01' AND L.DATE_<'2027-01-01'",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": "*",
+     "reference": "n",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 6.181. 'tamamen sevk edilmemiş' = AMOUNT > SHIPPEDAMOUNT (kısmen sevk edilen de dahil). Gece 6.179 'doğru' sayılmıştı: model 'hiç sevk edilmemiş' (SHIPPEDAMOUNT = 0) okumuş, kısmen sevk edilmiş 2 satırı atmıştı — elle tek seferlik doğrulamanın kaçırdığı hata."
+  },
+  {
+   "n": 29,
+   "id": "A031",
+   "soru": "Kapanmamış siparişlerde bekleyen toplam tutar ve en çok bekleyen müşteri kim?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS musteri_kodu, C.DEFINITION_ AS musteri, SUM((L.AMOUNT-L.SHIPPEDAMOUNT)*L.PRICE) AS bekleyen_tutar, SUM(L.AMOUNT-L.SHIPPEDAMOUNT) AS bekleyen_adet FROM LG_411_01_ORFLINE L LEFT JOIN LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.CLOSED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT GROUP BY C.CODE, C.DEFINITION_ ORDER BY 3 DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "musteri_bekleyen_tutar",
+      "bekleyen_tutar",
+      "bekleyen_toplam_tutar",
+      "tutar"
+     ],
+     "reference": "bekleyen_tutar",
+     "tolerance": 0.0001
+    },
+    {
+     "kind": "pairs",
+     "top": 5,
+     "answer_key": [
+      "en_cok_bekleyen_musteri_kodu",
+      "musteri_kodu",
+      "cari_kodu",
+      "CODE"
+     ],
+     "answer_value": [
+      "musteri_bekleyen_tutar",
+      "bekleyen_tutar",
+      "bekleyen_toplam_tutar",
+      "tutar"
+     ],
+     "reference_key": "musteri_kodu",
+     "reference_value": "bekleyen_tutar"
+    }
+   ],
+   "note": "2026-09-18: 31 müşteri, toplam bekleyen tutar 18.062.204,75 ₺ (6.181 satır, 298 fiş, 85.688 adet); en çok bekleyen KİTAPYURDU (12001.01.Kİ027) 13.795.025,00, sonra TURKUVAZ 1.223.885,00, D-MARKET 625.000,00. Dayanak: iş tanımı 10 + Kural 10 (TRCODE 1, LINETYPE 0, CANCELLED 0, CLOSED 0, AMOUNT>SHIPPEDAMOUNT; tutar = Σ(AMOUNT−SHIPPEDAMOUNT)×PRICE). Köprü ORFICHE'ye INNER JOIN yaptığı için başlığı olmayan 1 yetim satırı (ORFLINE 108767, 375 ₺) atıyor: toplamı 18.061.829,75 (fark 2e-5, tolerans içinde), müşteri sayısı ve sıralama aynı. Sunum eksiği: köprü genel toplamı tek rakam olarak vermiyor; 'bekleyen_toplam_tutar' kolonu aslında müşteri tutarının kopyası."
+  },
+  {
+   "n": 30,
+   "id": "A051",
+   "soru": "Geçen ay hiç hareket görmemiş, yani ne giriş ne çıkış olan stoklar hangileri?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT I.CODE, I.NAME, ISNULL(B.eldeki,0) AS eldeki_miktar FROM LG_411_ITEMS I LEFT JOIN (SELECT S.STOCKREF, SUM(CASE WHEN S.IOCODE IN (1,2) THEN S.AMOUNT WHEN S.IOCODE IN (3,4) THEN -S.AMOUNT ELSE 0 END) AS eldeki FROM LG_411_01_STLINE S WHERE S.CANCELLED=0 AND S.LINETYPE=0 GROUP BY S.STOCKREF) B ON B.STOCKREF=I.LOGICALREF WHERE I.ACTIVE=0 AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE S WHERE S.STOCKREF=I.LOGICALREF AND S.CANCELLED=0 AND S.LINETYPE=0 AND S.DATE_>=DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE())-1, 0) AND S.DATE_<DATEADD(MONTH, DATEDIFF(MONTH,0,GETDATE()), 0))",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 27.386 aktif stok kartı geçen ay (Ağustos 2026; referans ayı GETDATE() ile hesaplar) hiç hareket görmemiş. Dayanak: Kural 17 (ITEMS.ACTIVE=0; dönemde CANCELLED=0, LINETYPE=0 STLINE satırı yok; eldeki miktar tarih filtresiz ayrı alt sorgudan). IOCODE 1–4 koşulu eklemek sayıyı değiştirmiyor; LINETYPE filtresi kaldırılırsa 27.336. Köprü sayısı birebir aynı; ancak beklenen 'eldeki miktar' kolonu köprü cevabında yok (yalnız ref, kod, ad, özel kod) — sunum eksiği olarak not edildi. Referansta eldeki miktar toplamı 3.798.574,19."
+  },
+  {
+   "n": 31,
+   "id": "A053",
+   "soru": "Masraf merkezi bazında bu yılki gider toplamları nasıl dağılıyor?",
+   "kaynak": "logo",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.CODE AS masraf_merkezi_kodu, C.DEFINITION_ AS masraf_merkezi, SUM(L.DEBIT-L.CREDIT) AS gider FROM LG_411_01_EMFLINE L JOIN LG_411_EMCENTER C ON C.LOGICALREF=L.CENTERREF WHERE L.CANCELLED=0 AND L.ACCOUNTCODE LIKE '7%' AND L.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND L.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY C.CODE, C.DEFINITION_ ORDER BY 3 DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "gider_toplami",
+      "gider",
+      "gider_tutari",
+      "toplam_gider"
+     ],
+     "reference": "gider"
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "masraf_merkezi_kodu",
+      "kod",
+      "CODE"
+     ],
+     "answer_value": [
+      "gider_toplami",
+      "gider",
+      "gider_tutari",
+      "toplam_gider"
+     ],
+     "reference_key": "masraf_merkezi_kodu",
+     "reference_value": "gider"
+    }
+   ],
+   "note": "2026-09-18: 1.851 masraf merkezi, toplam 225.855.172,01 ₺; ilk üç: B01-GMD-01 Genel Müdürlük 48.410.142,55, B03-LOJ-01 Lojistik Depo 34.135.742,66, B05-İDA-01 İdari İşler 11.908.861,48. Dayanak: Kural 16 (EMFLINE ⨝ EMCENTER, ACCOUNTCODE LIKE '7%', CANCELLED=0, SUM(DEBIT−CREDIT), bu yıl). Köprü satır sayısı ve ilk üç tutar referansla aynı. Uyarılar: masraf merkezi olmayan 3.083 satır (net −160.519.545,03; ağırlıkla 711/731/761/771/781 yansıtma hesapları) INNER JOIN ile dışarıda kalır — merkez bazlı dağılım için doğru, ama '7'li hesapların tamamı yansıtma ile netleşir. Köprü cevabında beklenen 'pay yüzdesi' kolonu yok (sunum eksiği)."
+  },
+  {
+   "n": 32,
+   "id": "A055",
+   "soru": "Bu yıl üretim emri açılmış ama üretimi tamamlanmamış işler hangileri?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT P.FICHENO, I.CODE, I.NAME, P.PLNAMOUNT, P.ACTAMOUNT, P.STATUS FROM LG_411_PRODORD P LEFT JOIN LG_411_ITEMS I ON I.LOGICALREF=P.ITEMREF WHERE P.CANCELLED=0 AND P.STATUS<>3 AND P.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND P.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 21 üretim emri (hepsi STATUS 1, emir tarihi 2026-08-07…08-17); bu yıl açılan 1.221 emrin 1.200'ü STATUS 3 (tamamlandı); iptal (CANCELLED<>0) emir yok. Dayanak: Kural 9 (PRODORD, STATUS 3 = tamamlandı, CANCELLED=0). Köprü 21 satır — aynı. Not: köprü ürün adını değil ITEMREF'i gösteriyor; bir emirde gerçekleşen 5.011 ≥ planlanan 5.000 olduğu hâlde STATUS 1 (tanım durum koduna dayanır)."
+  },
+  {
+   "n": 33,
+   "id": "A056",
+   "soru": "Satış fiyatı tanımlı olmayan aktif stok kartları hangileri?",
+   "kaynak": "logo",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT I.CODE, I.NAME FROM LG_411_ITEMS I WHERE I.ACTIVE=0 AND NOT EXISTS (SELECT 1 FROM LG_411_PRCLIST P WHERE P.CARDREF=I.LOGICALREF AND P.PTYPE=2 AND P.ACTIVE=0)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0.003
+    }
+   ],
+   "note": "2026-09-18: 8.069 aktif stok kartının aktif satış fiyatı kaydı yok (PRCLIST PTYPE=2, ACTIVE=0, CARDREF=ITEMS.LOGICALREF; ITEMS.ACTIVE=0). Kart tipine göre: 12→3.184, 11→3.018, 1 (ticari mal)→1.445, 10→403, diğer 19. İki dürüst okuma: 'kayıt var' (8.069, referans) ve 'bugün geçerli kayıt var' (BEGDATE<=bugün<=ENDDATE → 8.092; süresi geçmiş fiyat tanımsız sayılır); pasif fiyat kayıtları da sayılırsa 8.052. Tolerans 0,003 ilk iki okumayı geçirir; cevap hangi okumayı aldığını söylemelidir. Köprü 8.069 — referansla aynı, ama süresi geçmiş fiyatların nasıl sayıldığını belirtmiyor. Dayanak: Kural 8 fiyat listesi tanımı + Kural 17."
+  },
+  {
+   "n": 34,
+   "id": "A041",
+   "soru": "Forma sayısı yirminin üstünde olan kitapların baskı maliyeti ortalama ne kadar?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT new_satissenaryosuId, new_Forma, new_ToplamMaliyet FROM Timas_MSCRM.dbo.new_satissenaryosuBase WHERE statecode=0 AND new_Forma>20 UNION ALL SELECT new_baskiislemId, new_formasayisi, new_toplamtutar FROM Timas_MSCRM.dbo.new_baskiislemBase WHERE statecode=0 AND new_formasayisi>20",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: veri yok — dürüst ret ya da boş sonuç doğru. Satış senaryosu (Kural C3) 4 satır, hepsi 2014: forma 18, 18, boş, boş → new_Forma>20 yok. Baskı işlem kayıtları (Kural C17) 23 satır (2015–2017): forma sayısı yalnız 2 satırda dolu (5 ve 2), toplam tutar 1 satırda (35,00). new_baskiBase'te 41 aktif kaydın hiçbirinde forma>20 yok. Referans her iki kaynağı da tarar ve 0 satır döner. Köprü senaryo tablosundan AVG ile tek NULL satır döndürüp 'kayıt yok' dedi — referansla uyumlu (kapı all-NULL satırı boş sayar). Dolu bir cevap bozulmadır."
+  },
+  {
+   "n": 35,
+   "id": "B055",
+   "soru": "Birden fazla tarafı olan sözleşmelerde ödeme yüzdeleri toplamı yüzü aşan var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT s.new_name AS sozlesme, COUNT(*) AS taraf_sayisi, SUM(t.new_Odeme) AS odeme_yuzdesi_toplami FROM Timas_MSCRM.dbo.new_sozlesmetarafiBase t JOIN Timas_MSCRM.dbo.new_sozlesmeBase s ON s.new_sozlesmeId=t.new_sozlesmeid WHERE t.statecode=0 AND s.statecode=0 GROUP BY t.new_sozlesmeid, s.new_name HAVING COUNT(*)>1 AND SUM(t.new_Odeme)>100 ORDER BY 3 DESC, 1",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "odeme_yuzdeleri_toplami",
+      "odeme_yuzdesi_toplami",
+      "toplam_yuzde",
+      "toplam"
+     ],
+     "reference": "odeme_yuzdesi_toplami"
+    }
+   ],
+   "note": "2026-09-18: 132 sözleşme (birden fazla aktif tarafı olan ve ödeme yüzdeleri toplamı >100). Dağılım: 200→116, 300→4, 100,01→4, 150→3, 190→2, 180/140/110→1'er; yüzdelerin toplamı ≈ 26.060,04. Dayanak: Kural C4/C5 (iki tabloda statecode=0, HAVING COUNT(*)>1 AND SUM(new_Odeme)>100); sözleşme kimliğiyle ve adıyla gruplama aynı sayıyı veriyor. KÖPRÜ UYUŞMUYOR: koşulları doğru ama SQL'e kendiliğinden 'TOP 100' koymuş ve sıralama yok → 100 satır döndü, 32 sözleşme sessizce kesildi (en yüksek 300'lük kayıtlar ilk satırlarda değil). Sessiz sınır kuralının ihlali."
+  },
+  {
+   "n": 36,
+   "id": "B073",
+   "soru": "Yıllık hedefin aylara dağılımı en dengesiz olan ürün hangisi?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "WITH p AS (SELECT h.new_stokkarti, MAX(h.new_StokKodu) AS stok_kodu, SUM(CAST(h.new_ToplamHedef AS float)) AS yillik_hedef, SUM(ISNULL(CAST(h.new_ocak AS float),0)) AS new_ocak, SUM(ISNULL(CAST(h.new_subat AS float),0)) AS new_subat, SUM(ISNULL(CAST(h.new_Mart AS float),0)) AS new_Mart, SUM(ISNULL(CAST(h.new_Nisan AS float),0)) AS new_Nisan, SUM(ISNULL(CAST(h.new_mayis AS float),0)) AS new_mayis, SUM(ISNULL(CAST(h.new_Haziran AS float),0)) AS new_Haziran, SUM(ISNULL(CAST(h.new_Temmuz AS float),0)) AS new_Temmuz, SUM(ISNULL(CAST(h.new_agustos AS float),0)) AS new_agustos, SUM(ISNULL(CAST(h.new_eylul AS float),0)) AS new_eylul, SUM(ISNULL(CAST(h.new_Ekim AS float),0)) AS new_Ekim, SUM(ISNULL(CAST(h.new_kasim AS float),0)) AS new_kasim, SUM(ISNULL(CAST(h.new_aralik AS float),0)) AS new_aralik FROM Timas_MSCRM.dbo.new_satishedefleriBase h WHERE h.statecode=0 AND h.new_yil=100000000 AND h.new_stokkarti IS NOT NULL GROUP BY h.new_stokkarti) SELECT TOP 1 WITH TIES p.stok_kodu, k.new_name AS urun, p.yillik_hedef, x.cv AS dengesizlik FROM p CROSS APPLY (SELECT STDEV(v.a)/NULLIF(AVG(v.a),0) AS cv FROM (VALUES (p.new_ocak), (p.new_subat), (p.new_Mart), (p.new_Nisan), (p.new_mayis), (p.new_Haziran), (p.new_Temmuz), (p.new_agustos), (p.new_eylul), (p.new_Ekim), (p.new_kasim), (p.new_aralik)) v(a)) x LEFT JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId=p.new_stokkarti WHERE x.cv IS NOT NULL ORDER BY ROUND(x.cv,6) DESC",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "dengesizlik_orani",
+      "dengesizlik",
+      "degisim_katsayisi",
+      "cv"
+     ],
+     "reference": "dengesizlik",
+     "tolerance": 0.05
+    }
+   ],
+   "note": "2026-09-18: ürün bazında (new_stokkarti) 2026 hedef satırları (new_yil=100000000; ürün başına ~17 bölge/BMT satırı, 4.020 ürün, 3.429'unun hedefi >0) ay ay toplanır, dengesizlik = 12 aylık değerin değişim katsayısı (STDEV/ortalama). En dengesiz: 44 ürün eşit (tüm yıllık hedef tek ayda → CV = √12 = 3,4641; STDEVP ile 3,3166 — tolerans 0,05 ikisini de geçirir). Tek bir 'en dengesiz ürün' yok; dürüst cevap eşitliği söyler (ör. 15201.01.5582 yıllık hedef 257, 15201.01.5498 hedef 215, 15201.01.5500 'Hazreti Muhammed - Peygamber Hikayeleri 10' hedef 17). Aylık toplam = new_ToplamHedef tutarlı (0 tutarsız ürün). Dayanak: Kural C2. KÖPRÜ UYUŞMUYOR: ürün yerine (kitap adı, new_ToplamHedef) çiftine göre gruplayıp farklı satırların aylarını tek STDEV'e sokmuş → 42.812 satır, en üstte CV 6,64 — 12 aylık bir dağılım için matematiksel üst sınır 3,46 olduğundan bu değer imkânsız (birden çok hedef satırı karışmış). Ürün düzeyinde toplama yapılmamış. Ölçü seçimi (CV) modelin de seçimi; başka ölçü (en yüksek ay payı) kullanılırsa kontrol yeniden yazılır."
+  },
+  {
+   "n": 37,
+   "id": "C045",
+   "soru": "Termin tarihi geçtiği hâlde hâlâ sevk edilmemiş sipariş satırları var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT l.new_siparissatiriId, l.new_termintarihi, DATEDIFF(DAY, l.new_termintarihi, GETDATE()) AS gecikme_gunu, ISNULL(l.new_bekleyenadet, l.new_siparisadedi-ISNULL(l.new_sevkedilenadet,0)) AS bekleyen_adet FROM Timas_MSCRM.dbo.new_siparissatiriBase l JOIN Timas_MSCRM.dbo.new_siparisBase s ON s.new_siparisId=l.new_siparisid WHERE l.statecode=0 AND s.statecode=0 AND l.new_termintarihi<GETDATE() AND s.statuscode NOT IN (2,100000000,100000001,100000003,100000015) AND l.statuscode NOT IN (2,100000000,100000001) AND ISNULL(l.new_sevkedilenadet,0)<l.new_siparisadedi AND NOT EXISTS (SELECT 1 FROM Timas_MSCRM.dbo.new_sevkiyatsatiriBase v WHERE v.new_siparissatiriid=l.new_siparissatiriId AND v.statecode=0)",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: CRM'de 0 satır — doğru cevap 'yok'. Sipariş satırı new_siparissatiriBase (9,8 Mn satır): new_termintarihi yalnız 52.313 satırda dolu ve hepsi 2015-10…2015-12; bu satırların siparişleri Birleştirildi (17.771), İptal (17.052), Sevk Edildi (17.481), Tamamlandı (8), Etkin değil (1) — açık olan yok. Başlık düzeyi (Kural C13: new_siparisBase, new_bekleyenadet>0 AND new_istenensevktarihi<GETDATE(), kapalı durumlar dışı) de 0; istenen sevk tarihi yalnız 2015–2018 kayıtlarında dolu. Referans: terminli, açık durumlu, eksik sevkli ve sevkiyat satırı (new_sevkiyatsatiriBase) olmayan sipariş satırları. KÖPRÜ UYUŞMUYOR: soru CRM'e ait (sourceOk=false), köprü Logo'ya gidip LG_ORFLINE.DUEDATE<bugün ile 1.061 satır döndü (bu Logo okuması bağımsız koşuda da 1.061; Logo tarafında rakam doğru ama kaynak yanlış). Kaynak Logo kabul edilirse beklenti 1.061 satır olarak yeniden yazılır. Not: Kural C13 'sipariş satırı' diye başlık tablosunu (NEW_SIPARISBASE) anlatıyor; gerçek satır tablosu new_siparissatiriBase."
+  },
+  {
+   "n": 38,
+   "id": "C063",
+   "soru": "Önerilen baskı adedi ile gerçekleşen üretim adedi arasında ne kadar fark var?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT k.new_name AS kitap, o.onerilen, g.gerceklesen, g.gerceklesen - o.onerilen AS fark, (g.gerceklesen - o.onerilen) * 100.0 / NULLIF(o.onerilen, 0) AS sapma_yuzdesi FROM (SELECT new_BaskionerileriId AS kitapid, SUM(CAST(new_OnerilenBaskiAdeti AS BIGINT)) AS onerilen FROM Timas_MSCRM.dbo.new_baskioneriBase WHERE statecode = 0 GROUP BY new_BaskionerileriId) o JOIN (SELECT u.new_kitapid AS kitapid, SUM(CAST(b.new_uretimadedi AS BIGINT)) AS gerceklesen FROM Timas_MSCRM.dbo.new_baskiBase b JOIN Timas_MSCRM.dbo.new_UretimBase u ON u.new_UretimId = b.new_uretimid AND u.statecode = 0 WHERE b.statecode = 0 GROUP BY u.new_kitapid) g ON g.kitapid = o.kitapid JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId = o.kitapid AND k.statecode = 0",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: Kural C7 ile kitap bazında kuruldu; sonuç 0 satır. Dayanak: öneri tarafı dolu (533 aktif öneri, 401 kitap, 528'i kitaba bağlanıyor) ama gerçekleşen üretim adedi yalnız new_baskiBase'te (41 kayıt, 39'unda new_uretimadedi dolu, 2016-01…2018-02) ve bu kayıtların HİÇBİRİNDE new_uretimid dolu değil (0/41); new_UretimBase.new_UretimAdedi de 0/16.259 dolu. Baskı kaydı kitaba bağlanamadığı için kitap bazında fark hesaplanamaz — dürüst sonuç boş/ret. Köprü bugün 'sonuç boş' dedi (uyuşuyor), ancak SQL'i yanlış bağ kullanıyor (new_BaskionerileriId = new_uretimid: kitap kimliği ile üretim kimliği) ve ikinci tablodaki statecode koşulu LEFT JOIN'i INNER'a çeviriyor; boşluk doğru nedenle değil tesadüfen tutuyor. Bağ dolarsa beklenti yeniden yazılır."
+  },
+  {
+   "n": 39,
+   "id": "D050",
+   "soru": "Taraf ödeme yüzdeleri toplamı yüzde yüzü tutmayan sözleşmeler var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT s.new_name AS sozlesme, SUM(t.new_Odeme) AS odeme_toplami, SUM(t.new_Odeme) - 100 AS sapma FROM Timas_MSCRM.dbo.new_sozlesmetarafiBase t JOIN Timas_MSCRM.dbo.new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid AND s.statecode = 0 WHERE t.statecode = 0 GROUP BY s.new_sozlesmeId, s.new_name HAVING SUM(t.new_Odeme) <> 100 ORDER BY ABS(SUM(t.new_Odeme) - 100) DESC, s.new_name",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "sapma",
+      "sapma_miktari",
+      "fark"
+     ],
+     "reference": "sapma"
+    }
+   ],
+   "note": "2026-09-18: 2.920 sözleşme (Kural C4/C5: aktif taraf ödeme yüzdeleri toplamı <> 100, iki tabloda statecode = 0). Köprü 2.920 satır — birebir. Köprü sözleşme adına göre grupluyor, referans sözleşme kimliğine göre; aktif 14.829 sözleşmenin adı tekil olduğundan sonuç aynı. Veri notu: tüm taraflarında new_Odeme boş olan 88 sözleşme SUM = NULL verdiği için listeye girmez (yüzde hiç girilmemiş; 'tutmayan' sayılmadı). Tarafı hiç olmayan 922 aktif sözleşme de kapsam dışı."
+  },
+  {
+   "n": 40,
+   "id": "D053",
+   "soru": "Baskı adedi arttıkça telif yüzdemiz ortalama ne kadar yükseliyor?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT new_BalangicAdeti AS baslangic_adeti, COUNT(*) AS kademe_sayisi, AVG(CAST(new_TelifYuzdesi AS FLOAT)) AS ortalama_telif_yuzdesi FROM Timas_MSCRM.dbo.new_teliftanimBase WHERE statecode = 0 AND new_TelifYuzdesi IS NOT NULL AND new_BalangicAdeti IS NOT NULL GROUP BY new_BalangicAdeti ORDER BY new_BalangicAdeti",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "answer_key": [
+      "baslangic_adeti",
+      "baski_adedi_baslangic",
+      "new_BalangicAdeti",
+      "baslangic"
+     ],
+     "answer_value": [
+      "ortalama_telif_yuzdesi",
+      "ort_telif_yuzdesi",
+      "ortalama_telif",
+      "telif_yuzdesi"
+     ],
+     "reference_key": "baslangic_adeti",
+     "reference_value": "ortalama_telif_yuzdesi",
+     "top": 11
+    }
+   ],
+   "note": "2026-09-18: Kural C6 — 11 kademe başlangıcı, 42 kademe: 0→%4,75 (24) · 1→%6,75 (4) · 100→%10,5 (2) · 500→%10 · 2001→%5 · 3000→%8,5 (2) · 5001→%3 · 10000→%8,33 (3) · 20000→%10 (2) · 20001→%5 · 50001→%7. Veri az ve eğilim tekdüze değil; bu da cevabın parçasıdır. KÖPRÜ UYUŞMUYOR: bugün reddetti ('telif burada tanımlı bir kavram değil'); oysa tanım Kural C6'da var ve veri dolu — yanlış ret. Pairs anahtarı sayısal başlangıç adedidir; cevap aralık etiketi ('0-1000') üretirse kontrol uyarlanmalı."
+  },
+  {
+   "n": 41,
+   "id": "D069",
+   "soru": "Rakip kitapları eşlenmiş kitaplarımızın liste fiyatları rakiplere göre nerede duruyor?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT k.new_name AS kitap, MAX(k.new_kdvdahilfiyat) AS kendi_liste_fiyati, AVG(r.new_ListeFiyat) AS rakip_ortalama_liste_fiyati, MAX(k.new_kdvdahilfiyat) - AVG(r.new_ListeFiyat) AS fiyat_farki, (MAX(k.new_kdvdahilfiyat) - AVG(r.new_ListeFiyat)) / NULLIF(AVG(r.new_ListeFiyat), 0) * 100 AS fiyat_farki_yuzdesi, COUNT(*) AS rakip_sayisi FROM Timas_MSCRM.dbo.new_kitapBase k JOIN Timas_MSCRM.dbo.new_new_kitap_new_rakipkitapBase nk ON nk.new_kitapid = k.new_kitapId JOIN Timas_MSCRM.dbo.new_rakipkitapBase r ON r.new_rakipkitapId = nk.new_rakipkitapid AND r.statecode = 0 WHERE k.statecode = 0 AND r.new_ListeFiyat IS NOT NULL AND r.new_ListeFiyat <> 0 GROUP BY k.new_kitapId, k.new_name ORDER BY 5 DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "answer_key": [
+      "kitap_adi",
+      "kitap",
+      "kitap_adı"
+     ],
+     "answer_value": [
+      "rakip_ortalama_liste_fiyati",
+      "rakip_ortalama_fiyat",
+      "rakip_ortalama"
+     ],
+     "reference_key": "kitap",
+     "reference_value": "rakip_ortalama_liste_fiyati",
+     "top": 10
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "kendi_liste_fiyati",
+      "liste_fiyati",
+      "kendi_fiyat"
+     ],
+     "reference": "kendi_liste_fiyati"
+    }
+   ],
+   "note": "2026-09-18: Kural C8 — 33 kitap, 51 eşleşmiş rakip (fiyatı dolu ve sıfırdan farklı); ilk satır 'Demokratlar ve Halkçılar (1950-1954)' 750 ₺ / rakip ort. 19 ₺. Köprü 33 satır, aynı ilk satırlar — birebir. 33 kitabın adı tekil (ad ile kimlik gruplaması aynı). Veri uyarısı: rakip fiyatları eski (6–19 ₺), kendi fiyatlar güncel; yüzde farklar (%3.847) bu yüzden anlamsız büyük — cevap doğru ama yorumda belirtilmeli."
+  },
+  {
+   "n": 42,
+   "id": "A012",
+   "soru": "Termin tarihi geçmiş ama hâlâ sevk edilmemiş sipariş satırları hangileri?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT L.LOGICALREF AS satir_ref, C.DEFINITION_ AS musteri, I.NAME AS kitap, L.DUEDATE AS termin_tarihi, DATEDIFF(day, L.DUEDATE, GETDATE()) AS gecikme_gunu, L.AMOUNT - L.SHIPPEDAMOUNT AS bekleyen_adet FROM LG_411_01_ORFLINE L LEFT JOIN LG_411_CLCARD C ON C.LOGICALREF = L.CLIENTREF LEFT JOIN LG_411_ITEMS I ON I.LOGICALREF = L.STOCKREF WHERE L.TRCODE = 1 AND L.LINETYPE = 0 AND L.CANCELLED = 0 AND L.CLOSED = 0 AND L.AMOUNT > L.SHIPPEDAMOUNT AND L.DUEDATE >= '1901-01-01' AND L.DUEDATE < GETDATE()",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: Logo 2026 kopyası 1.061 satır (termin 2026-01-15…2026-08-17, bekleyen toplam 1.210 adet); köprü 1.061 — birebir. KAYNAK SEÇİMİ İŞ TEYİDİ İSTER: set bu soruyu 'crm' etiketliyor ve Kural C13 CRM tanımı veriyor; ancak CRM'de termin bekleyen hiçbir kayıtta dolu değil — new_siparisBase: bekleyen adedi > 0 olan 4.043 başlığın 0'ında new_istenensevktarihi dolu (alan en son 2018-06'da kullanılmış); new_siparissatiriBase (9,8 Mn satır): bekleyen > 0 olan 19.759 satırın 0'ında new_termintarihi dolu. CRM'den cevap her iki tabloda da 0 satırdır (Kural C13: '0 doğru cevaptır'). Kullanılan tek dolu termin Logo ORFLINE.DUEDATE (İş tanımı #10 'bekleyen sipariş' + Logo Kural 19), referans bu yüzden Logo. Köprü müşteri/kitap adı yerine ref numarası ve gecikme günü olmadan dönüyor (beklenen kolonlar eksik — sunum açığı). Dönem: köprü yalnız 2026 kopyasını okudu; 2021–2025 kopyasında aynı koşulda 7.062 eski satır daha var (CLOSED bayrağı tutulmadığı için büyük olasılıkla bayat) — kapsam dışı bırakıldı, iş teyidi gerekir. Canlı veri: sayı gün içinde değişir, referans her koşuda yeniden hesaplanır."
+  },
+  {
+   "n": 43,
+   "id": "A016",
+   "soru": "Müşteri bazında ortalama sepet tutarı en yüksek ilk on firma hangisi?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT TOP 10 C.DEFINITION_ AS musteri, COUNT(*) AS fatura_adedi, SUM(I.NETTOTAL) AS toplam_tutar, AVG(I.NETTOTAL) AS ortalama_sepet_tutari FROM LG_411_01_INVOICE I LEFT JOIN LG_411_CLCARD C ON C.LOGICALREF = I.CLIENTREF WHERE I.CANCELLED = 0 AND I.TRCODE IN (7, 8, 9) AND I.DATE_ >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1) AND I.DATE_ < DATEFROMPARTS(YEAR(GETDATE()) + 1, 1, 1) GROUP BY C.DEFINITION_ ORDER BY AVG(I.NETTOTAL) DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "answer_key": [
+      "musteri",
+      "firma",
+      "musteri_unvani"
+     ],
+     "answer_value": [
+      "ortalama_sepet_tutari",
+      "ortalama_sepet",
+      "ortalama"
+     ],
+     "reference_key": "musteri",
+     "reference_value": "ortalama_sepet_tutari",
+     "top": 10
+    }
+   ],
+   "note": "2026-09-18: Katalogdaki operatör tanımı 'ortalama sepet tutarı' = AVG(INVOICE.NETTOTAL), TRCODE 7,8,9, CANCELLED 0 (iş teyidi bekliyor); dönem verilmediği için varsayılan yıl 2026. İlk on: İstanbul Valiliği YİKOB 4.036.725 · Adana Çukurova Fuarı 3.919.125 · Tüyap Eskişehir 1.856.323,05 · Akademiler 1.086.282,14 (7 fatura) · PC Kitap 986.195 · Ofel Turizm 761.779,38 (17) · Bulut Yılmaz 700.000 · Danış Kırtasiye 579.763,50 · Egev 570.049,15 · Çamlıca 504.456,46 (14). Köprü ilk üç satırda birebir, 10 satır. Cari kimliğiyle gruplama aynı ilk onu verir. AÇIK: (1) set soruyu 'crm' etiketliyor; CRM sipariş başlığından (new_siparisBase.new_toplamsatistutari, new_firmaid, 2026, iptal/birleştirilmiş/taslak hariç) ilk on FARKLI çıkar (DN Deniz Lojistik 2.856.250 · Akademiler 2.086.777 · D-Market 2.072.019 …) — sepet = sipariş mi fatura mı, iş teyidi ister; (2) ilk onun 6'sı tek faturalı müşteri — asgari fatura adedi eşiği tanımlı değil; (3) köprü fatura adedi ve toplam tutarı vermiyor (beklenen kolonlar eksik)."
+  },
+  {
+   "n": 44,
+   "id": "A019",
+   "soru": "Süresi bu yıl içinde dolacak telif sözleşmeleri hangileri?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT s.new_name AS sozlesme, a.Name AS sozlesme_sahibi, COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) AS bitis_tarihi FROM Timas_MSCRM.dbo.new_sozlesmeBase s LEFT JOIN Timas_MSCRM.dbo.AccountBase a ON a.AccountId = s.new_SozlemeninSahibi WHERE s.statecode = 0 AND COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1) AND COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) < DATEFROMPARTS(YEAR(GETDATE()) + 1, 1, 1) ORDER BY 3",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 501 sözleşme (holdout). Bitiş = revize bitiş varsa o, yoksa sözleşme bitiş; new_revizebitistarihi aktif 14.829 sözleşmenin 0'ında dolu, bu yüzden ham bitiş tarihiyle aynı sonuç. Köprü 501 — birebir. Notlar: (1) CRM tarihleri UTC saklar; +3 saat yerel saatle 500 çıkar (1 kayıt yıl sınırında) — köprü ve referans ham değeri kullanıyor; (2) 'telif sözleşmesi' için tip süzgeci tanımlı değil (new_SozlesmeTipi: 5 Telif Alış, 1 Telif Satış, 2 Taahhüt, 100000000 Hizmet), tüm aktif sözleşmeler alındı; (3) new_yenilemebitistarihi 380 kayıtta dolu ama kuralda yok, kullanılmadı; (4) köprü taraf/kitap adı vermiyor (beklenen kolonlar eksik)."
+  },
+  {
+   "n": 45,
+   "id": "A020",
+   "soru": "Sözleşmelerde ortalama telif tutarı yazarlara göre nasıl değişiyor?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT a.Name AS yazar, COUNT(*) AS sozlesme_adedi, AVG(s.new_teliftutari) AS ortalama_telif_tutari FROM Timas_MSCRM.dbo.new_sozlesmeBase s JOIN Timas_MSCRM.dbo.AccountBase a ON a.AccountId = s.new_SozlemeninSahibi WHERE s.statecode = 0 AND s.new_teliftutari IS NOT NULL GROUP BY a.AccountId, a.Name ORDER BY 3 DESC",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: Kural C9 — telif tutarı = new_sozlesmeBase.new_teliftutari, yazar = new_SozlemeninSahibi → AccountBase. new_teliftutari aktif 14.829 sözleşmenin 0'ında dolu (new_TelifOdemeleriToplami, new_tekodemetutari, new_AvansTutari da 0) → referans 0 satır; dürüst sonuç ret/boş. Köprü reddetti — sonuç uyuşuyor, ancak gerekçesi veri yokluğu değil ('kavramları birleştiren tanım/ilişki yok'); oysa sahip bağı Kural C9'da tanımlı. Doğru gerekçe: 'telif tutarı hiçbir sözleşmede kayıtlı değil'. Açık: new_TekdemeTutari (decimal, 6.964 kayıtta dolu) ve new_sozlesmeavanstutari (1.773) dolu ama 'telif tutarı' olarak tanımlı değil — iş teyidiyle tanım değişirse beklenti yeniden yazılır."
+  },
+  {
+   "n": 46,
+   "id": "A036",
+   "soru": "Aracı firma üzerinden yürüyen sözleşmelerin payı yüzde kaç?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT x.aracili_sozlesme, x.aktif_sozlesme, x.aracili_sozlesme * 100.0 / NULLIF(x.aktif_sozlesme, 0) AS pay_yuzde, x.aracili_sozlesme * 1.0 / NULLIF(x.aktif_sozlesme, 0) AS pay_oran, x.araci_alacak_tutari FROM (SELECT (SELECT COUNT(DISTINCT t.new_sozlesmeid) FROM Timas_MSCRM.dbo.new_sozlesmetarafiBase t JOIN Timas_MSCRM.dbo.new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid AND s.statecode = 0 WHERE t.statecode = 0 AND t.new_aracivarmi = 1) AS aracili_sozlesme, (SELECT COUNT(*) FROM Timas_MSCRM.dbo.new_sozlesmeBase WHERE statecode = 0) AS aktif_sozlesme, (SELECT SUM(CAST(t.new_aracialacaktutari AS BIGINT)) FROM Timas_MSCRM.dbo.new_sozlesmetarafiBase t WHERE t.statecode = 0 AND t.new_aracivarmi = 1) AS araci_alacak_tutari) x",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "araci_firma_uzerinden_yuruyen_sozlesmelerin_sayisi",
+      "aracili_sozlesme",
+      "aracili_sozlesme_sayisi",
+      "*"
+     ],
+     "reference": "aracili_sozlesme",
+     "tolerance": 0
+    },
+    {
+     "kind": "value",
+     "answer": [
+      "oran",
+      "pay",
+      "pay_oran"
+     ],
+     "reference": "pay_oran",
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: Kural C9 — aracılı sözleşme (en az bir aktif tarafında new_aracivarmi = 1) 2.612; payda 'aktif TÜM sözleşme' 14.829 → %17,61 (oran 0,1761). Aracı alacak tutarı toplamı 670 (2.765 aracılı taraf satırının yalnız 66'sında dolu, int). KÖPRÜ UYUŞMUYOR: pay 2.612 doğru, ama paydayı 'tarafı olan sözleşme' (13.907) almış → 0,1878 (%18,78); tarafı hiç girilmemiş 922 aktif sözleşme paydadan düşmüş. Ayrıca köprü sözleşme tablosuna bağlanmıyor (taraf satırından sayıyor; bugün fark yaratmıyor: 2.612 = 2.612) ve oranı yüzde değil 0–1 ölçeğinde veriyor, aracı alacak tutarını vermiyor. İkinci kontrol 0–1 ölçeğine göre yazıldı (kolon 'oran'); cevap yüzde ölçeğine geçerse reference 'pay_yuzde' yapılmalı."
+  },
+  {
+   "n": 47,
+   "id": "A037",
+   "soru": "Yurtdışı hak alınmış sözleşmelerde ajans servis ücreti toplamı ne kadar?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT COUNT(*) AS sozlesme_adedi, COUNT(s.new_ajansservisucreti) AS ucreti_dolu_sozlesme, SUM(s.new_ajansservisucreti) AS ajans_servis_ucreti_toplami, SUM(s.new_teliftutari) AS telif_tutari_toplami FROM Timas_MSCRM.dbo.new_sozlesmeBase s WHERE s.statecode = 0 AND EXISTS (SELECT 1 FROM Timas_MSCRM.dbo.new_sozlesmetarafiBase t WHERE t.new_sozlesmeid = s.new_sozlesmeId AND t.statecode = 0 AND t.new_yurticiyurtdisi = 3)",
+   "checks": [
+    {
+     "kind": "sum",
+     "answer": [
+      "ajans_servis_ucreti_toplami",
+      "ajans_servis_ucreti",
+      "toplam_ajans_servis_ucreti",
+      "ajans_servis_ucreti_toplam"
+     ],
+     "reference": "ajans_servis_ucreti_toplami",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: Kural C9 — yurtdışı hak alınmış = tarafı new_yurticiyurtdisi = 3 (Yurtdışı Alış): 1.277 aktif sözleşme (2.235 taraf satırı). new_ajansservisucreti ve new_teliftutari bu 1.277 sözleşmenin 0'ında (ve tüm 14.829 aktif sözleşmenin 0'ında) dolu → toplam NULL. Dürüst cevap: 'adet 1.277, ücret kayıtlı değil' ya da ret. Köprü toplamı NULL buldu ve 'sonuç boş' dedi — değer uyuşuyor; eksik: Kural C9'un istediği adedi (1.277) vermedi ve tutarın kayıtlı olmadığını söylemedi. Köprü SQL'i başlığı taraf satırlarıyla JOIN'liyor (EXISTS değil): sütun dolsaydı çok taraflı sözleşmelerde ücreti çoğaltırdı (2.235 satır / 1.277 sözleşme) — bugün NULL olduğu için görünmüyor, not edilmeli. Kontrol: ücret kolonu toplamı 0/NULL; kolon adı aday listesinde yoksa kontrol uyarlanır. Sütun dolmaya başlarsa beklenti 'answer' + value olur."
+  },
+  {
+   "n": 48,
+   "id": "A038",
+   "soru": "Baskı sayısı aralığına göre tanımlı telif yüzdeleri hangi kitaplarda en yüksek?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT k.new_name AS kitap, t.new_BaskSaysAralBalang AS baski_sayisi_baslangic, t.new_BaskSaysAralBiti AS baski_sayisi_bitis, t.new_TelifYuzdesi AS telif_yuzdesi FROM Timas_MSCRM.dbo.new_teliftanimBase t JOIN Timas_MSCRM.dbo.new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesme AND s.statecode = 0 JOIN Timas_MSCRM.dbo.new_new_sozlesme_new_kitapBase sk ON sk.new_sozlesmeid = s.new_sozlesmeId JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId = sk.new_kitapid AND k.statecode = 0 WHERE t.statecode = 0 AND t.new_TelifYuzdesi IS NOT NULL ORDER BY t.new_TelifYuzdesi DESC",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: referans 0 satır. Telif tanımı (new_teliftanimBase) 89 aktif satır, 65'inde telif yüzdesi dolu (en yüksek %15), ama kitaba giden tek yol olan Sözleşme bağı (new_sozlesme) 89 satırın HİÇBİRİNDE dolu değil; 'Baskı Sayısı Aralığı' (new_BaskSaysAralBalang/Biti) yalnız 5/4 satırda dolu (0–5 → %9, 5–10 → %12), çoğu kademe adet aralığıyla (new_BalangicAdeti/new_BitisAdeti) tanımlı; kayıtlar 2014–2017. Yani 'hangi kitaplarda' sorusu veriyle cevaplanamaz: dürüst sonuç ret ya da boş cevap; kitap uyduran dolu cevap bozulmadır. Köprü bugün reddetti ama gerekçesi veri durumu değil sözlük boşluğu ('araligina' tanımlı değil; ilgisiz ACCOUNTBASE.NEW_ARALIK / NEW_SATISHEDEFLERIBASE.NEW_ARALIK önerdi) — sonuç türü uyuşuyor, gerekçe uyuşmuyor; bu yüzden verified:false. Kural C6 'sözleşmeye new_sozlesme ile bağlanır' diyor ama bağın boş olduğunu söylemiyor."
+  },
+  {
+   "n": 49,
+   "id": "A044",
+   "soru": "Etkinlik giderleri yazar bazında nasıl dağılıyor, en pahalı beş yazar kim?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT TOP 5 c.FullName AS yazar, COUNT(DISTINCT e.new_etkinlikId) AS etkinlik_adedi, SUM(e.new_ToplamEtkinlikGideri) AS toplam_gider, SUM(e.new_ToplamEtkinlikGideri) * 100.0 / (SELECT SUM(new_ToplamEtkinlikGideri) FROM Timas_MSCRM.dbo.new_etkinlikBase WHERE statecode = 0) AS pay_yuzde FROM Timas_MSCRM.dbo.new_etkinlikBase e JOIN Timas_MSCRM.dbo.new_new_etkinlik_contactBase x ON x.new_etkinlikid = e.new_etkinlikId JOIN Timas_MSCRM.dbo.ContactBase c ON c.ContactId = x.contactid AND c.new_yazarmi = 1 WHERE e.statecode = 0 AND e.new_ToplamEtkinlikGideri > 0 GROUP BY c.ContactId, c.FullName ORDER BY toplam_gider DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "reference_key": "yazar",
+     "reference_value": "toplam_gider",
+     "answer_key": [
+      "yazar",
+      "yazar_adi",
+      "FullName",
+      "fullname",
+      "ad_soyad"
+     ],
+     "answer_value": [
+      "toplam_gider",
+      "etkinlik_gideri",
+      "toplam_etkinlik_gideri",
+      "gider"
+     ],
+     "top": 5,
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: ilk beş — Mustafa Armağan 1.330 (3 etkinlik), Bahadır Yenişehirlioğlu 1.276 (4), Ahmed Günbay Yıldız 1.180 (2), Ahmet Şimşirgil 1.127 (2), Metin Özdamarlar 951 (4); toplam etkinlik gideri 9.275 ₺, gideri dolu 28 aktif etkinlik (57.363 aktif etkinlikten). BULGU: Kural C10 'yazar kırılımı hesaplanamaz' diyor (new_lgiliYazar 0 dolu, new_new_etkinlik_new_yazarBase 0 satır — ikisi de doğru), ama etkinliğin yazarı etkinlik↔kişi N:N tablosunda duruyor: new_new_etkinlik_contactBase 9.012 bağ / 8.979 etkinlik / 340 kişi; bağlı kişilerin ~%97'si ContactBase.new_yazarmi = 1. Gideri dolu 28 etkinliğin 28'i de tam bir yazara bağlı (çift sayım yok), 14 yazar. Referans bu yolu kullanır (new_yazarmi = 1). Köprü bugün hiç dolu olmayan new_lgiliYazar üzerinden ContactBase'e bağlanıp Description IN ('Yazar ') süzdü, GROUP BY yok → tek NULL satır, 'sonuç boş' dedi: yanlış (gider verisi var; C10'un istediği 9.275 / 28 toplam satırı da değil). İş teyidi önerilir: etkinlik↔kişi bağının 'etkinliğe katılan yazar' anlamı veriden çıkarıldı (ilişki adı new_new_etkinlik_contact), kural dosyasında yazılı değil. Holdout: kural yazılmaz; eksik olan genel yetenek N:N ilişki tablolarının taranması."
+  },
+  {
+   "n": 50,
+   "id": "A066",
+   "soru": "Metin teslim tarihi geçtiği hâlde hâlâ tamamlanmamış projeler var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT p.new_name AS proje, p.new_tahminimetinteslimtarihi AS metin_teslim_tarihi, p.statuscode, DATEDIFF(day, p.new_tahminimetinteslimtarihi, GETDATE()) AS gecikme_gunu FROM Timas_MSCRM.dbo.new_projeBase p WHERE p.statecode = 0 AND p.new_tahminimetinteslimtarihi < GETDATE() AND p.statuscode NOT IN (100000017, 100000009, 100000012, 100000021) ORDER BY gecikme_gunu DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 186 proje; köprü de 186 (aynı tanım, örnek satırlar tutuyor: gecikme 2.817 / 2.970 gün). Tanım Kural C11: statecode = 0, new_tahminimetinteslimtarihi < GETDATE(), statuscode NOT IN (100000017 Tamamlandı, 100000009 İptal Edildi, 100000012 Red Edildi, 100000021 Proje İptal Edildi) — etiketler StringMap'ten doğrulandı. Durum kırılımı: Yeni Proje 68, Basılmayacak 37, Beklemede 7, Yayın Kuruluna Hazır 23, İş Planı Çalışıyor 44, Yayın Kurulu Onaylı 7. Toplam gecikme günü 360.852; en eski teslim tarihi 2016-05-31 (3.762 gün). Not: 'Basılmayacak' (100000013) 37 proje tanım gereği listede; iş tarafı bunları da kapalı sayarsa sonuç 149 olur. Aktif kayıtlarda Tamamlandı statüsü yok (tamamlananlar statecode = 1)."
+  },
+  {
+   "n": 51,
+   "id": "A067",
+   "soru": "Yayın kurulunda onaylanan projelerde ortalama önerilen telif oranı yüzde kaç?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT AVG(t.new_onerilenteliforani) AS ortalama_telif_orani, COUNT(*) AS onayli_toplanti_adedi, COUNT(t.new_onerilenteliforani) AS telif_orani_dolu_adet, AVG(t.new_avansbedeli) AS ortalama_avans_bedeli, COUNT(t.new_avansbedeli) AS avans_dolu_adet FROM Timas_MSCRM.dbo.new_yayinkurulutoplantilariBase t WHERE t.statecode = 0 AND t.statuscode = 1",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "ortalama_telif_orani",
+      "ortalama_onerilen_telif_orani",
+      "onerilen_telif_orani",
+      "*"
+     ],
+     "reference": "ortalama_telif_orani",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: referans %5,64 — Yayın Kurulu Toplantıları (new_yayinkurulutoplantilariBase) statecode = 0 ve statuscode = 1 'Kabul' olan 341 toplantı (333 proje); 'Önerilen Telif Oranı' (new_onerilenteliforani) 25'inde dolu, ortalama 5,64 (2–12); 'Avans Bedeli' 3'ünde dolu, ortalama 635,67. Köprü %5,96 verdi: NEW_PROJEBASE statuscode = 100000020 (699 proje) üzerinde AVG(new_olasitelif) — 11 dolu değer (0,6–8). FARKIN NEDENİ: Kural C11 'önerilen telif oranı'nı projedeki new_olasitelif'e bağlıyor ve 'avans bedeli sütunu projede yok' diyor; oysa CRM'de adı birebir 'Önerilen Telif Oranı' olan alan ve avans bedeli, kurul kararı (Kabul/Red/Bekleme/Yeniden Değerlendirme) ile birlikte toplantı varlığındadır; projedeki alanın etiketi 'Olası Telif Oranı / Tahakkuk Tipi'dir. Soru setinin gerekçesi de toplantı tablosunu işaret ediyor ('onaylı toplantı adedi, ortalama telif oranı ve ortalama avans bedeli'). Referans köprüye uydurulmadı; C11'in bu maddesi düzeltilmeli. İki sonuç da küçük örneklem (25 ve 11 dolu değer)."
+  },
+  {
+   "n": 52,
+   "id": "A069",
+   "soru": "İş planlarında tamamlanma oranı en düşük sorumlular kimler?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT u.FullName AS sorumlu, COUNT(*) AS is_adedi, AVG(p.new_tamamlanma) AS tamamlanma_orani FROM Timas_MSCRM.dbo.new_isplaniBase p JOIN Timas_MSCRM.dbo.SystemUserBase u ON u.SystemUserId = p.OwnerId WHERE p.statecode = 0 GROUP BY u.SystemUserId, u.FullName ORDER BY CASE WHEN AVG(p.new_tamamlanma) IS NULL THEN 0 ELSE 1 END, AVG(p.new_tamamlanma)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "reference_key": "sorumlu",
+     "reference_value": "tamamlanma_orani",
+     "answer_key": [
+      "is_plani_sorumlusu",
+      "sorumlu",
+      "plan_sorumlusu",
+      "FullName",
+      "fullname"
+     ],
+     "answer_value": [
+      "tamamlanma_orani",
+      "ortalama_tamamlanma",
+      "tamamlanma_yuzdesi",
+      "tamamlanma"
+     ],
+     "top": 8,
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: 8 sorumlu; köprü de 8 satır, ilk üç aynı (Esra Sadıkoglu boş, Ahmet Turgut 0,00, Kamil Kılıç 0,00). Tanım Kural C12: aktif iş planı (statecode = 0, 375 satır), sorumlu = OwnerId ('Plan Sorumlusu') → SystemUserBase.FullName, oran = AVG(new_tamamlanma) ('Tamamlanma %'), boşlar ortalamaya girmez. Değerler: Esra Sadıkoglu NULL (1 iş), Ahmet Turgut 0 (4), Kamil Kılıç 0 (10), Savaş Özdemir 0 (23), İhsan Sönmez 10,08 (3), Ahmet Karaca 12,5 (20), Seval Akbıyık 16,56 (246), Timas CRM 20,17 (68). UYARI: new_tamamlanma 375 satırın yalnız 26'sında dolu; adım sayısından hesap (SUM(new_TamamlananAdmSays)/SUM(new_toplamadimsayisi)) farklı bir sıra verir (ör. Timas CRM 17/5.710 = %0,3, İhsan Sönmez 308/357 = %86). Soru 'tamamlanma oranı' dediği için alan esas alındı; köprü iş adedini cevaba koymadı (beklenen alanlardan biri eksik, değerler doğru)."
+  },
+  {
+   "n": 53,
+   "id": "A093",
+   "soru": "Fiziki arşivde emanete verilmiş ve hâlâ geri dönmemiş kayıtlar hangileri?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT f.new_kayitno AS kayit_no, k.new_name AS urun, u.FullName AS emanet_alan_kisi, f.new_baslangictarihi AS baslangic, f.new_bitistarihi AS bitis, DATEDIFF(day, f.new_baslangictarihi, GETDATE()) AS bekleme_gunu FROM Timas_MSCRM.dbo.new_fizikiarsivBase f LEFT JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId = f.new_arsivurun LEFT JOIN Timas_MSCRM.dbo.SystemUserBase u ON u.SystemUserId = f.new_emanetalankisi WHERE f.statecode = 0 AND f.new_arsivdurumu = 2 ORDER BY bekleme_gunu DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18 18:00: 16 kayıt (statecode = 0, new_arsivdurumu = 2 'Emanette' — StringMap: 1 Arşivde, 2 Emanette). Köprü 15:50'deki koşuda 15 satır verdi; fark veri hareketi: 000000000021066 'Babası Kılıklı' (Enes Uzun) bugün 17:15'te emanete verildi (ModifiedOn 14:15 UTC), köprü koşusundan sonra. Aynı tanım, örnek satırlar tutuyor (839 ve 641 gün). Emanette olan 16 kaydın hepsinde emanet alan kişi, başlangıç ve bitiş dolu; 15'inin bitiş tarihi geçmiş (yalnız bugün verilen kaydın bitişi 2026-09-25). En uzun bekleme 839 gün (000000000014056 Duygu Bankası, Enes Uzun). Köprünün eksiği: ürün adını (new_arsivurun → new_kitapBase.new_name) getirmedi, new_name döndürdü (hepsi boş) — satır sayısı doğru, 'ürün' kolonu boş. Kural C16."
+  },
+  {
+   "n": 54,
+   "id": "A094",
+   "soru": "Destek taleplerinde ortalama sonuçlandırma süresi kaç gün, departmana göre nasıl?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT ISNULL(m.Value, 'Belirtilmemiş') AS departman, COUNT(*) AS talep_adedi, AVG(CAST(DATEDIFF(day, t.CreatedOn, t.new_tamamlanmatarihi) AS float)) AS ortalama_gun FROM Timas_MSCRM.dbo.new_talepyonetimiBase t LEFT JOIN Timas_MSCRM.dbo.StringMap m ON m.AttributeName = 'new_ilgilidepartman' AND m.AttributeValue = t.new_ilgilidepartman AND m.LangId = 1055 AND m.ObjectTypeCode = (SELECT ObjectTypeCode FROM Timas_MSCRM.dbo.EntityView WHERE Name = 'new_talepyonetimi') WHERE t.statecode = 0 AND t.statuscode = 100000003 AND t.new_tamamlanmatarihi IS NOT NULL GROUP BY ISNULL(m.Value, 'Belirtilmemiş') ORDER BY ortalama_gun DESC",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "reference_key": "departman",
+     "reference_value": "ortalama_gun",
+     "answer_key": [
+      "departman",
+      "ilgili_departman",
+      "departman_adi"
+     ],
+     "answer_value": [
+      "ortalama_sonuclandirma_gun",
+      "ortalama_gun",
+      "ortalama_sure_gun",
+      "ortalama_sonuclandirma_suresi"
+     ],
+     "top": 9,
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: 9 departman, 112 tamamlanmış talep; köprü ile birebir (Üretim 2 talep / 19,00 gün, Kültür & Çocuk Editorya 7 / 16,71, Depo 2 / 15,5, Çocuk Editorya 37 / 10,49, Kültür Editorya 26 / 5,31, Pazarlama 17 / 2,24, Satış 14 / 1,71, Muhasebe 3 / 1,67, Grafik 4 / 0,5). Tanım Kural C15: statecode = 0, statuscode = 100000003 'Tamamlandı', new_tamamlanmatarihi dolu, AVG(DATEDIFF(day, CreatedOn, new_tamamlanmatarihi)); açık talepler dışarıda. Departman adı referansta StringMap'ten (new_ilgilidepartman, LangId 1055) gelir, köprünün CASE listesiyle aynı. Veri notu: Tamamlandı 177 talebin 65'inde tamamlanma tarihi boş (ortalamaya girmez); bazı kayıtlarda tamamlanma tarihi açılıştan önce (en düşük −10 gün), ortalamayı aşağı çeker."
+  },
+  {
+   "n": 55,
+   "id": "A095",
+   "soru": "ISBN listesinde stok kartıyla eşleşmemiş yayın numaraları var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT i.new_yayinno AS yayin_no, i.new_isbn AS isbn, i.new_StokKodu AS stok_kodu FROM Timas_MSCRM.dbo.new_isbnlistesiBase i LEFT JOIN Timas_MSCRM.dbo.new_kitapBase k ON k.new_kitapId = i.new_stokkarti AND k.statecode = 0 WHERE i.statecode = 0 AND k.new_kitapId IS NULL",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: 0 satır — eşleşmemiş yayın numarası yok; köprü de boş döndü. ISBN listesi (new_isbnlistesiBase) 613 aktif kayıt; 'Stok Kartı' (new_stokkarti → new_kitap) 613'ünde dolu, hepsi var olan ve aktif bir new_kitapBase kaydını gösteriyor (yetim/pasif 0). Referans köprüden sıkı: yalnız boş bağı değil, karşılığı olmayan ya da pasif stok kartını da eşleşmemiş sayar. Yan bilgi: 7 kayıtta new_StokKodu, 8 kayıtta new_isbn metni boş — bağ dolu olduğu için eşleşmemiş sayılmaz."
+  },
+  {
+   "n": 56,
+   "id": "B047",
+   "soru": "Sevkiyatlarda liste fiyatı üzerinden ortalama kaç puan indirim yapmışız?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT SUM(new_indirimtutari * new_adet) / NULLIF(SUM(new_listebirimfiyati * new_adet), 0) * 100 AS agirlikli_indirim_puani, AVG(new_indirimyuzdesi) AS basit_ortalama, (SUM(new_toplamtutar) - SUM(new_indirimlitoplamtutar)) / NULLIF(SUM(new_toplamtutar), 0) * 100 AS ozel_indirim_dahil_puan, COUNT(*) AS satir FROM Timas_MSCRM.dbo.new_sevkiyatsatiriBase WHERE statecode = 0 AND new_listebirimfiyati > 0 AND new_adet > 0",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "ortalama_indirim_puani",
+      "agirlikli_indirim_puani",
+      "indirim_puani",
+      "ortalama_indirim",
+      "*"
+     ],
+     "reference": "agirlikli_indirim_puani",
+     "tolerance": 0.002
+    }
+   ],
+   "note": "2026-09-18: %43,95 (43,9548; 6.421.511 aktif satır; indirim 3.104,4 Mn ₺ / liste 7.062,7 Mn ₺) — köprü 43,95, gece doğrulanan değerle aynı. Tanım Kural C14: tutarla ağırlıklı = SUM(new_indirimtutari × new_adet) / SUM(new_listebirimfiyati × new_adet) × 100, statecode = 0, liste fiyatı > 0, adet > 0. Basit AVG(new_indirimyuzdesi) = 46,20 (ana cevap değil). DİKKAT: C14'teki '≈ SUM(toplam − indirimli toplam)/SUM(toplam)' eşitliği tutmuyor: o hesap %46,16 verir; aradaki 156,2 Mn ₺ özel indirimdir (new_ozelindirimtutari; kampanya indirimi 0). Yani 43,95 yalnız genel iskonto, 46,16 özel indirim dahil toplam indirimdir; soru 'indirim yüzdesi' alanını kastettiği için 43,95 esas alındı, referans üç değeri de döndürür. Tablo canlı (gün içinde satır artıyor), tolerans %0,2."
+  },
+  {
+   "n": 57,
+   "id": "B049",
+   "soru": "Termini geçtiği halde hâlâ bekleyen sipariş satırlarımız kaç kalem?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT COUNT(*) AS n FROM Timas_MSCRM.dbo.new_siparissatiriBase l WHERE l.statecode = 0 AND l.new_bekleyenadet > 0 AND l.new_termintarihi < GETDATE() AND l.statuscode NOT IN (2, 100000000, 100000001)",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "bekleyen_siparis_kalemi",
+      "bekleyen_kalem",
+      "kalem_sayisi",
+      "n",
+      "*"
+     ],
+     "reference": "n",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 0 kalem; köprü de 0. Referans satır seviyesinde: new_siparissatiriBase statecode = 0, new_bekleyenadet > 0, new_termintarihi ('Termin Tarihi') < GETDATE(), satır durumu Etkin değil / Sevk Edildi / İptal dışı. Veri durumu: bekleyen adedi > 0 olan 19.759 aktif satırın hiçbirinde termin tarihi dolu değil; termin tarihi yalnız 2015 Ekim–Aralık kayıtlarında var (52.313 satır, hiçbirinde bekleyen/kalan adet yok). Sipariş başlığı üzerinden Kural C13 tanımı (new_bekleyenadet > 0 AND new_istenensevktarihi < GETDATE(), açık durumlar) da 0 verir. Köprünün yolu farklı ve kırılgan: başlıktaki new_bekleyenadet ile satırdaki termin tarihini karıştırıp COUNT(DISTINCT sipariş) saydı (kalem değil sipariş) — bugün ikisi de 0 olduğu için uyuşuyor; termin tarihi dolmaya başlarsa ayrışabilir. 0 doğru cevaptır (veri yok değil, koşula uyan satır yok)."
+  },
+  {
+   "n": 58,
+   "id": "B050",
+   "soru": "Yolda görünen ama henüz sevk edilmemiş sipariş tutarımız ne kadar?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT SUM((L.AMOUNT-L.SHIPPEDAMOUNT)*L.PRICE) AS sevk_edilmemis_tutar, COUNT(*) AS satir FROM LG_411_01_ORFLINE L JOIN LG_411_01_ORFICHE F ON F.LOGICALREF=L.ORDFICHEREF WHERE F.TRCODE=1 AND F.CANCELLED=0 AND L.TRCODE=1 AND L.LINETYPE=0 AND L.CANCELLED=0 AND L.CLOSED=0 AND L.AMOUNT>L.SHIPPEDAMOUNT",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "sevk_edilmemis_siparis_tutari",
+      "sevk_edilmemis_tutar",
+      "acik_siparis_tutari",
+      "tutar",
+      "*"
+     ],
+     "reference": "sevk_edilmemis_tutar",
+     "tolerance": 0.001
+    }
+   ],
+   "note": "2026-09-18: referans 18.061.829,75 ₺ (6.180 satır, 298 sipariş); köprü 18.062.204,75 ₺ (6.181 satır). Fark 375 ₺ = fişi olmayan tek yetim satır (ORFLINE 108767, ORDFICHEREF 31210 ORFICHE'de yok); tolerans binde 1 ile uyuşuyor. Tanım 'beklenen'den: sevk edilmemiş kalan adet (AMOUNT−SHIPPEDAMOUNT) × birim fiyat (PRICE), TRCODE 1, iptal/kapalı değil, cari kopya (LG_411; Q8 ile aynı uzlaşı). Soru 'crm' etiketli ama bu formül CRM'de hesaplanamıyor: açık durumdaki 157 CRM siparişinin 5.688 satırının 5.663'ünde new_kalanadet/new_sevkedilenadet boş. CRM'de durum temelli okuma (Sipariş/Depoda Bekliyor/Pusula/Kutulanıyor/Risk onayı; canlı, dakikalık değişir): 157 sipariş, brüt 17.604.785 ₺, indirimli 9.532.355 ₺. UYARI: PRICE liste fiyatıdır; aynı Logo satırlarının iskonto sonrası karşılığı (LINENET oranıyla) 10.045.293,91 ₺ — köprü cevabı brüt olduğunu söylemiyor. LG_211'de 2025+ tarihli 18.688 kapanmamış satır (34,9 Mn ₺) devreden ölü kayıt sayılıp dışarıda bırakıldı."
+  },
+  {
+   "n": 59,
+   "id": "B057",
+   "soru": "Yurtdışı hakla yapılan sözleşmelerin oranı son iki yılda nasıl değişti?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT y AS yil, COUNT(*) AS toplam_sozlesme, SUM(yd) AS yurtdisi_hak_sozlesme, CAST(SUM(yd) AS FLOAT)/NULLIF(COUNT(*),0) AS oran FROM (SELECT YEAR(s.CreatedOn) AS y, CASE WHEN EXISTS (SELECT 1 FROM Timas_MSCRM.dbo.new_sozlesmetarafiBase t WHERE t.new_sozlesmeid=s.new_sozlesmeId AND t.statecode=0 AND t.new_yurticiyurtdisi=3) THEN 1 ELSE 0 END AS yd FROM Timas_MSCRM.dbo.new_sozlesmeBase s WHERE s.statecode=0 AND YEAR(s.CreatedOn) IN (YEAR(GETDATE())-1, YEAR(GETDATE()))) x GROUP BY y ORDER BY y",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 2,
+     "answer_key": [
+      "year",
+      "yil",
+      "YIL"
+     ],
+     "answer_value": [
+      "oran",
+      "yurtdisi_orani",
+      "yurtdisi_hak_orani"
+     ],
+     "reference_key": "yil",
+     "reference_value": "oran",
+     "tolerance": 0.005
+    }
+   ],
+   "note": "2026-09-18: referans (sözleşme bazlı; yıl = sözleşmenin CreatedOn yılı; yurtdışı hak = aktif tarafı new_yurticiyurtdisi=3 'Yurtdışı Alış' olan sözleşme, Kural C9): 2025 303/1.530 = %19,80; 2026 143/1.582 = %9,04. Köprü: 2025 308/1.624 = %18,97; 2026 152/1.704 = %8,92. FARK: köprü yılı sözleşmeden değil TARAF kaydının CreatedOn'undan alıyor ve paydayı 'o yıl taraf eklenen sözleşme' sayıyor; böylece 2018–2024 sözleşmeleri (2025'te 220, 2026'da 172 adet) sonraki yıla yazılıyor, tarafı olmayan sözleşmeler (2025: 38, 2026: 50) paydadan düşüyor. Yön aynı (oran yarıya inmiş), değerler farklı. Belirsizlik notu: 'yurtdışı hak' 2+3 (satış+alış) okunursa %40,5 → %23,1; yıl sözleşme başlangıç tarihinden alınırsa %12,8 → %12,5 (düşüş görünmüyor; başlangıç tarihinde 2105/2925 gibi hatalı yıllar var, o yüzden kayıt tarihi seçildi). 'Son iki yıl' = geçen yıl + bu yıl (GETDATE'e göre)."
+  },
+  {
+   "n": 60,
+   "id": "B060",
+   "soru": "Ödeme dönemi kapandığı halde hâlâ ödenmemiş hakediş var mı?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT h.new_odemehakedisId, h.new_TelifTutari, h.new_odenenTutar, d.new_DonemBitisTarihi FROM Timas_MSCRM.dbo.new_odemehakedisBase h JOIN Timas_MSCRM.dbo.new_OdemedonemiBase d ON d.new_OdemedonemiId=h.new_Donem WHERE h.statecode=0 AND d.new_DonemBitisTarihi<GETDATE() AND ISNULL(h.new_odenenTutar,0)<ISNULL(h.new_TelifTutari,0)",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: hakediş tablosu new_odemehakedisBase 0 kayıt; 7 ödeme dönemi var (6'sı kapanmış, hepsi 2014–2015, ikisi 'deneme'). Referans (Kural C18: dönem bitişi < bugün ve ödenen < telif tutarı) boş döner → köprünün reddi veriyle doğrulanıyor (ret gerekçesi 'veri yok' değil 'odeme, hakedis tanımlı kavram değil' diyor; gerekçe cümlesi zayıf). Alternatif okuma: sorunun 'neden' alanı ödeme kaydını (new_odemeBase) işaret ediyor; orada kapanmış '1.Dönem'e (bitiş 2014-09-29) bağlı, durumu 'Etkin' (Tamamlandı değil) 6 kayıt var, tahakkuk toplamı 100 ₺ — 2014 pilot/deneme verisi; tablonun tamamı 50 kayıt, son kayıt 2014-09-06. Köprü bu 6 kaydı döndürürse 'empty' kontrolü düşer; o durumda karar elle verilmeli."
+  },
+  {
+   "n": 61,
+   "id": "B061",
+   "soru": "Kitap başına ortalama baskı maliyetimiz son bir yılda ne kadar yükseldi?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT b.new_baskiislemId, b.new_toplamtutar, b.CreatedOn FROM Timas_MSCRM.dbo.new_baskiislemBase b WHERE b.statecode=0 AND b.CreatedOn>=DATEADD(YEAR,-2,GETDATE())",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: baskı işlem kayıtları (new_baskiislemBase) yalnız 2015–2017: 23 satır, toplam tutarı dolu tek yıl 2015 (35 ₺); baskı (new_baskiBase) 2016–2018, 41 kayıt; satış senaryosu (birim maliyet) yalnız 2014, 4 kayıt. Son bir yıl ve bir önceki yıl için kayıt yok → karşılaştırma yapılamaz; referans (son 2 yılın baskı işlemleri) boş. Köprü reddetti (gerekçe 'kitap, basina tanımlı kavram değil' — dürüst ama asıl neden veri yokluğu)."
+  },
+  {
+   "n": 62,
+   "id": "B062",
+   "soru": "Baskı işlemlerinde birim fiyatı en çok artan işlem tipi hangisi?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": [
+    "answer",
+    "deny"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT b.new_islemtipiid, COUNT(DISTINCT YEAR(b.CreatedOn)) AS yil_sayisi FROM Timas_MSCRM.dbo.new_baskiislemBase b WHERE b.statecode=0 AND b.new_birimfiyat IS NOT NULL GROUP BY b.new_islemtipiid HAVING COUNT(DISTINCT YEAR(b.CreatedOn))>=2",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: birim fiyatı dolu tek baskı işlem satırı var (2015); iki ayrı yılda birim fiyatı olan işlem tipi yok → dönemsel artış hesaplanamaz, referans boş. Köprü 0 satır döndürdü ve verinin 2015–2017 ile sınırlı olduğunu söyledi; uyuşuyor."
+  },
+  {
+   "n": 63,
+   "id": "B064",
+   "soru": "Etkinliklere harcadığımız toplam gider bütçenin neresinde duruyor?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT SUM(e.new_ToplamEtkinlikGideri) AS toplam_etkinlik_gideri, SUM(CASE WHEN e.new_ToplamEtkinlikGideri>0 THEN 1 ELSE 0 END) AS giderli_etkinlik, MAX(CASE WHEN e.new_ToplamEtkinlikGideri>0 THEN e.new_BalangTarihi END) AS son_giderli_etkinlik, (SELECT COUNT(*) FROM Timas_MSCRM.dbo.new_projeBase p WHERE p.new_toplampazarlamabutcesi>0) AS pazarlama_butcesi_dolu_proje, (SELECT COUNT(*) FROM Timas_MSCRM.dbo.new_kitapBase k WHERE k.new_toplampazarlamabutcesi>0) AS pazarlama_butcesi_dolu_kitap FROM Timas_MSCRM.dbo.new_etkinlikBase e WHERE e.statecode=0",
+   "checks": [
+    {
+     "kind": "value",
+     "answer": [
+      "toplam_etkinlik_gideri",
+      "etkinlik_gideri",
+      "toplam_gider",
+      "gider",
+      "*"
+     ],
+     "reference": "toplam_etkinlik_gideri",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: etkinlik bütçesi verisi yok — new_etkinlikBase'te bütçe sütunu yok; pazarlama bütçesi sütunları (new_projeBase / new_kitapBase.new_toplampazarlamabutcesi) hiçbir kayıtta dolu değil; new_butcekalemiBase 2013–2014 (iş planı kalemleri), new_promosyonbutcesiBase 2 kayıt (2017, 2020), etkinlikle bağı yok. Etkinlik gideri de yalnız 2015–2016'da 28 etkinlikte dolu: toplam 9.275 ₺ (yaklaşık 57 bin aktif etkinliğin gerisi boş). Köprü reddetti → veriyle doğrulanıyor. Kural C21'e göre köprü toplam gideri verip bütçe olmadığını söylerse de dürüsttür; o durumda değer 9.275 ile karşılaştırılır (kontrol yalnız cevap gelirse çalışır)."
+  },
+  {
+   "n": 64,
+   "id": "B066",
+   "soru": "Reklam planlarında onaylanmış ama teslim edilmemiş işlerin tutarı ne kadar?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": [
+    "answer",
+    "deny"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT r.new_reklamplaniId, r.new_Tutar FROM Timas_MSCRM.dbo.new_reklamplaniBase r WHERE r.statecode=0 AND (r.new_OnayTarihi IS NOT NULL OR r.new_editortalonay=1 OR r.new_pazarlamayoneticisionayi=1 OR r.new_genelmuduronayi=1) AND ISNULL(r.new_reklamteslimedildimi,0)=0",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "2026-09-18: 71 reklam planı (68 aktif; 2015-06 – 2016-07), toplam tutar 99.182,44 ₺; onay tarihi dolu kayıt 0, onay bitleri (editör/pazarlama yöneticisi/genel müdür) işaretli kayıt 0, teslim edildi işaretli 0. 'Onaylanmış ama teslim edilmemiş' kümesi boş → referans boş. Köprü tek satır NULL toplam döndürüp 'kayıt yok' dedi; uyuşuyor."
+  },
+  {
+   "n": 65,
+   "id": "B072",
+   "soru": "Hedefi olan ürünlerde hiç hedef girilmemiş aylar hangileri?",
+   "kaynak": "crm",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT h.new_satishedefleriId, h.new_StokKodu, h.new_yil, v.ay FROM Timas_MSCRM.dbo.new_satishedefleriBase h CROSS APPLY (VALUES (N'Ocak',h.new_ocak),(N'Şubat',h.new_subat),(N'Mart',h.new_Mart),(N'Nisan',h.new_Nisan),(N'Mayıs',h.new_mayis),(N'Haziran',h.new_Haziran),(N'Temmuz',h.new_Temmuz),(N'Ağustos',h.new_agustos),(N'Eylül',h.new_eylul),(N'Ekim',h.new_Ekim),(N'Kasım',h.new_kasim),(N'Aralık',h.new_aralik)) v(ay,hedef) WHERE h.statecode=0 AND (ISNULL(h.new_ocak,0)>0 OR ISNULL(h.new_subat,0)>0 OR ISNULL(h.new_Mart,0)>0 OR ISNULL(h.new_Nisan,0)>0 OR ISNULL(h.new_mayis,0)>0 OR ISNULL(h.new_Haziran,0)>0 OR ISNULL(h.new_Temmuz,0)>0 OR ISNULL(h.new_agustos,0)>0 OR ISNULL(h.new_eylul,0)>0 OR ISNULL(h.new_Ekim,0)>0 OR ISNULL(h.new_kasim,0)>0 OR ISNULL(h.new_aralik,0)>0) AND ISNULL(v.hedef,0)=0",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    }
+   ],
+   "note": "2026-09-18: 189.649 (hedef satırı × ay) — köprüyle birebir. Referans bağımsız 'hedefi olan' tanımıyla kuruldu (12 aydan en az biri > 0; köprü new_ToplamHedef > 0 kullanıyor, iki tanım aynı kümeyi veriyor), boş ay = NULL ya da 0, statecode = 0, dönem sorulmadığı için tüm yıllar. Yıl koduna göre dağılım: 2023: 40.993, 2024: 27.984, 2025: 24.721, 2026: 74.535, '2000' kodu: 19.581, '1991' kodu: 1.835. Not: soru ay listesi de isteyebilir ('hangi aylar'); cevap satır dökümü, 189 bin satır son kullanıcı için kullanışsız ama sayısal olarak doğru. new_yil boş 9.427 satırın ürünü ve hedefi yok, kapsam dışı."
+  },
+  {
+   "n": 66,
+   "id": "B074",
+   "soru": "Kargolarda sevk adedi başına maliyet çıkış şubelerine göre nasıl?",
+   "kaynak": "crm",
+   "holdout": true,
+   "expect": "answer",
+   "verified": false,
+   "source": "crm",
+   "reference_sql": "SELECT ISNULL(new_sevkiyatcikissubesi,'') AS cikis_subesi, COUNT(*) AS kargo, SUM(TRY_CAST(REPLACE(new_Tutar,',','.') AS FLOAT)) AS tutar, SUM(CASE WHEN TRY_CAST(REPLACE(new_Tutar,',','.') AS FLOAT) IS NOT NULL THEN TRY_CAST(REPLACE(new_sevkadeti,',','.') AS FLOAT) END) AS sevk_adedi, SUM(TRY_CAST(REPLACE(new_Tutar,',','.') AS FLOAT))/NULLIF(SUM(CASE WHEN TRY_CAST(REPLACE(new_Tutar,',','.') AS FLOAT) IS NOT NULL THEN TRY_CAST(REPLACE(new_sevkadeti,',','.') AS FLOAT) END),0) AS adet_basina_maliyet FROM Timas_MSCRM.dbo.new_kargobilgisiBase WHERE statecode=0 GROUP BY ISNULL(new_sevkiyatcikissubesi,'') ORDER BY COUNT(*) DESC, 1",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "pairs",
+     "top": 10,
+     "answer_key": [
+      "cikis_subesi",
+      "sube",
+      "cikis_sube",
+      "new_sevkiyatcikissubesi"
+     ],
+     "answer_value": [
+      "sevk_adedi_basina_maliyet",
+      "adet_basina_maliyet",
+      "birim_maliyet",
+      "maliyet"
+     ],
+     "reference_key": "cikis_subesi",
+     "reference_value": "adet_basina_maliyet"
+    }
+   ],
+   "note": "2026-09-18: satır sayısı uyuşuyor (69 = 68 şube + şubesi boş 2 kayıt) ama ORAN YANLI. 13.242 kargo kaydının 3.617'sinde new_Tutar sayı değil saat biçiminde metin ('09:50', '21:21' …; aktarımda bozulmuş), 2'sinde boş. Köprü payda tutarı okunamayan kayıtların sevk adedini de sayıyor: İKİTELLİ KURUMSAL (13.163 kargo, kayıtların %99'u) 1.170.482,94 ₺ / 17.556 adet = 66,67 ₺. Tutarı okunabilen 9.569 kargonun adedi 12.300 → doğru oran 95,16 ₺/adet. Aynı sapma KARAMAN (21,49 → 53,73), ERCİYES (14,86 → 29,71), ERYAMAN (44,26 → 88,51). Referans pay ve paydayı aynı kayıt kümesinden (tutarı sayıya çevrilebilenler) alır; şubesi boş kayıt '' anahtarıyla tek satırdır. Köprü ayrıca tutarın %27'sinin okunamadığını söylemiyor."
+  },
+  {
+   "n": 67,
+   "id": "A021",
+   "soru": "Sistemde girilen siparişlerin kaçının faturası hâlâ kesilmemiş, tutarı ne kadar?",
+   "kaynak": "ikisi",
+   "holdout": false,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT O.LOGICALREF, O.FICHENO, O.NETTOTAL FROM LG_411_01_ORFICHE O WHERE O.TRCODE=1 AND O.CANCELLED=0 AND NOT EXISTS (SELECT 1 FROM LG_411_01_ORFLINE L JOIN LG_411_01_STLINE S ON S.ORDTRANSREF=L.LOGICALREF AND S.CANCELLED=0 AND S.INVOICEREF>0 JOIN LG_411_01_INVOICE I ON I.LOGICALREF=S.INVOICEREF AND I.CANCELLED=0 WHERE L.ORDFICHEREF=O.LOGICALREF)",
+   "checks": [
+    {
+     "kind": "rows",
+     "tolerance": 0
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "NETTOTAL",
+      "nettotal",
+      "tutar",
+      "siparis_tutari"
+     ],
+     "reference": "NETTOTAL",
+     "tolerance": 0
+    },
+    {
+     "kind": "lookup",
+     "top": 3,
+     "source": "logo",
+     "answer_key": [
+      "LOGICALREF",
+      "logicalref"
+     ],
+     "answer_value": [
+      "NETTOTAL",
+      "nettotal",
+      "tutar",
+      "siparis_tutari"
+     ],
+     "reference": "NETTOTAL",
+     "sql": "SELECT O.NETTOTAL FROM LG_411_01_ORFICHE O WHERE O.LOGICALREF={key} AND O.TRCODE=1 AND O.CANCELLED=0 AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE S WHERE S.ORDFICHEREF=O.LOGICALREF AND S.CANCELLED=0 AND S.INVOICEREF>0)"
+    }
+   ],
+   "note": "2026-09-18: 297 sipariş / 10.296.472,39 ₺ — köprüyle birebir; gece değeri yeniden ölçüldü. İki bağımsız yoldan aynı sonuç: (a) sipariş satırı → STLINE.ORDTRANSREF → INVOICEREF > 0 ve fatura iptal değil (referans); (b) STLINE.ORDFICHEREF → INVOICE. Kapsam 2026 kopyası: 48.687 satış siparişi (TRCODE 1, iptal değil), 48.390'ı faturalı (TRCODE 7: 48.337, 8: 53). Faturasızların dökümü: 152 onaylı + hiç sevk yok (9.987.524,52 ₺), 134 öneri durumunda (STATUS 2; 55.885,77 ₺), 11 sevk edilmiş ama faturasız (253.062,10 ₺). En büyük müşteri Kitapyurdu: 7 sipariş / 7.587.302,50 ₺. Logo verisi 17.08.2026'da bitiyor. İki kaynak notu: soru 'ikisi' etiketli; köprü yalnız Logo'dan cevaplıyor ve eşleştirme anahtarını açıklamıyor. CRM siparişleri Logo'ya ORFICHE olarak düşüyor (FICHENO 'CRM…'/'KTS…'), fatura yalnız Logo'da; CRM tarafında güvenilir fatura izi yok (2026 sevkiyatlarının 24.221/29.873'ünde new_faturanumarasi dolu, new_logoyaaktarildi yalnız 41 siparişte işaretli) — CRM'den kaba sayım 5.585 sipariş / 88,8 Mn ₺ çıkıyor ama 17.08 sonrası canlı siparişleri de içerdiği için karşılaştırılamaz. Müşteri kırılımı 'beklenen'de var, köprü cevabında yok (CLIENTREF dönüyor, ad yok)."
+  },
+  {
+   "n": 68,
+   "id": "A022",
+   "soru": "Sevkiyatı yapılmış ama faturalaşmamış işleri müşteri bazında listeler misin?",
+   "kaynak": "ikisi",
+   "holdout": true,
+   "expect": "answer",
+   "verified": true,
+   "source": "logo",
+   "reference_sql": "SELECT C.DEFINITION_ AS musteri, SUM(S.AMOUNT) AS adet FROM LG_411_01_STLINE S LEFT JOIN LG_411_CLCARD C ON C.LOGICALREF=S.CLIENTREF WHERE S.TRCODE=8 AND S.LINETYPE=0 AND S.CANCELLED=0 AND S.BILLED=0 AND S.INVOICEREF=0 AND S.DATE_>='2026-01-01' AND S.DATE_<'2027-01-01' GROUP BY C.DEFINITION_ ORDER BY 2 DESC",
+   "checks": [
+    {
+     "kind": "rows"
+    },
+    {
+     "kind": "sum",
+     "answer": [
+      "sevkiyat",
+      "sevk_edilen_adet",
+      "adet"
+     ],
+     "reference": "adet"
+    },
+    {
+     "kind": "pairs",
+     "answer_key": [
+      "musteri",
+      "musteri_unvani"
+     ],
+     "answer_value": [
+      "sevkiyat",
+      "sevk_edilen_adet",
+      "adet"
+     ],
+     "reference_key": "musteri",
+     "reference_value": "adet",
+     "top": 10
+    }
+   ],
+   "note": "2026-09-18: 532 müşteri, 466.118 adet, 13.004.505,45 ₺. Cevap adet veriyor; sevk tutarı kolonu beklenen cevapta var, üründe yok (açık)."
+  },
+  {
+   "n": 69,
+   "id": "A023",
+   "soru": "Bu yıl satış hedefi ile gerçekleşen ciroyu kitap bazında karşılaştır.",
+   "kaynak": "ikisi",
+   "holdout": false,
+   "expect": "answer",
+   "verified": false,
+   "checks": [
+    {
+     "kind": "lookup",
+     "top": 3,
+     "source": "crm",
+     "answer_key": [
+      "barkod",
+      "barcode_key",
+      "barcode"
+     ],
+     "answer_value": [
+      "satis_hedefi",
+      "hedef_adet",
+      "hedef_tutar",
+      "hedef"
+     ],
+     "reference": "h",
+     "sql": "SELECT SUM(new_ToplamHedef) AS h FROM Timas_MSCRM.dbo.new_satishedefleriBase WHERE statecode=0 AND new_yil=100000000 AND LTRIM(RTRIM(new_Barkod))='{key}'"
+    },
+    {
+     "kind": "lookup",
+     "top": 3,
+     "source": "logo",
+     "answer_key": [
+      "barkod",
+      "barcode_key",
+      "barcode"
+     ],
+     "answer_value": [
+      "gerceklesen_ciro",
+      "ciro_tutar",
+      "ciro"
+     ],
+     "reference": "t",
+     "sql": "SELECT SUM(S.LINENET) AS t FROM LG_411_01_STLINE S WHERE S.TRCODE IN (7,8,9) AND S.LINETYPE=0 AND S.CANCELLED=0 AND S.DATE_>='2026-01-01' AND S.DATE_<'2027-01-01' AND S.STOCKREF IN (SELECT ITEMREF FROM LG_411_UNITBARCODE WHERE LTRIM(RTRIM(BARCODE))='{key}')"
+    }
+   ],
+   "note": "İki kaynaklı. 5 denemede 5 farklı sonuç görüldü; bir kez üç barkodda iki veritabanıyla eşleşti. Hedef adet, ciro ₺ — fark kolonu birim karıştırıyor; kitap adı yerine barkod dönüyor. verified=false: sağlam olana kadar kapıyı kırmaz ama raporlanır."
+  },
+  {
+   "n": 71,
+   "id": "A046",
+   "soru": "Telif yüzdesine göre bu yıl hangi yazara ne kadar telif tahakkuk etti?",
+   "kaynak": "ikisi",
+   "holdout": false,
+   "expect": [
+    "deny",
+    "answer"
+   ],
+   "verified": true,
+   "source": "crm",
+   "reference_sql": "SELECT YEAR(CreatedOn) AS yil, COUNT(*) AS kayit FROM Timas_MSCRM.dbo.NEW_ODEMEBASE GROUP BY YEAR(CreatedOn)",
+   "checks": [
+    {
+     "kind": "empty"
+    }
+   ],
+   "note": "Dürüst ret: tahakkuk kayıtları yalnız 2014 (50 kayıt). Referans, reddin dayandığı veri durumunu gösterir; bu yıl kaydı belirirse beklenti yeniden yazılır. Telifin yüzde × satıştan hesaplanması ayrı, açık bir iş. Dürüst ret ile 'boş sonuç + aynı gerekçe' eşdeğer sayılır; dolu bir cevap bozulmadır."
+  }
+ ]
+}

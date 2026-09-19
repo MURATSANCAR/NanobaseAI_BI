@@ -35,6 +35,10 @@ class Conventions:
     sentinels: dict[tuple[str, str], set[str]] = field(default_factory=dict)
     key_columns: dict[str, list[str]] = field(default_factory=dict)
     ref_columns: dict[str, dict[str, tuple[str, str]]] = field(default_factory=dict)
+    # How a measured link must be compared in SQL, keyed by the join tuple: a cast for an integer
+    # stored as text, a collation where the two sides live in databases that collate differently,
+    # and whether the target's period tables hold disjoint keys (so all of them are joined at once).
+    join_hints: dict[tuple[str, str, str, str], dict] = field(default_factory=dict)
     row_counts: dict[str, int] = field(default_factory=dict)
     patterns: dict[str, str] = field(default_factory=dict)
     time_hint: dict[str, str] = field(default_factory=dict)             # evidence-preferred time column
@@ -79,6 +83,11 @@ class Conventions:
             c.time_columns[p.entity] = times
             c.numeric_columns[p.entity] = numerics
             c.ref_columns[p.entity] = {r["column"].upper(): (r["ref_entity"], r["ref_column"]) for r in p.relationships}
+            for r in p.relationships:
+                if r.get("join_cast") or r.get("join_collate") or r.get("period_semantics"):
+                    c.join_hints[(p.entity, r["column"].upper(), r["ref_entity"], r["ref_column"])] = {
+                        "join_cast": r.get("join_cast"), "join_collate": bool(r.get("join_collate")),
+                        "period_semantics": r.get("period_semantics")}
         return c
 
     # ------------------------------------------------------------------ queries
@@ -133,6 +142,12 @@ class Conventions:
             if all(self.join_path(j[0], j[2]) == tuple(j) for j in rule["joins"]) and all(
                     self.has(e, c) for e, cols in rule["columns"].items() for c in cols):
                 self.absence_rules.append(rule)
+            else:
+                import logging
+                logging.getLogger(__name__).info(
+                    "absence rule %s/%s not loaded: joins=%s missing_columns=%s", rule.get("subject"), rule.get("verb_root"),
+                    [(j, self.join_path(j[0], j[2])) for j in rule["joins"] if self.join_path(j[0], j[2]) != tuple(j)],
+                    [(e, c) for e, cols in rule["columns"].items() for c in cols if not self.has(e, c)])
         for rule in declarations.get("equivalent_dates", []):
             left, right = rule["left"], rule["right"]
             join = tuple(rule["join"])
@@ -180,10 +195,17 @@ class Conventions:
                                                 "reason": rule["reason"]})
         return out
 
+    # Audit columns every CRM row carries: who created or last edited a record is not the record's
+    # owner, customer or author. When a table points at the same target through several columns,
+    # the business reference wins over the bookkeeping one.
+    _AUDIT_REFS = frozenset({"CREATEDBY", "MODIFIEDBY", "CREATEDONBEHALFBY", "MODIFIEDONBEHALFBY", "OWNINGUSER", "OWNINGBUSINESSUNIT", "OWNINGTEAM"})
+
     def join_path(self, entity: str, other: str) -> Optional[tuple[str, str, str, str]]:
-        for col, (ref_entity, ref_col) in self.ref_columns.get(entity, {}).items():
-            if ref_entity == other:
-                return (entity, col, other, ref_col)
+        candidates = [(col, ref_col) for col, (ref_entity, ref_col) in self.ref_columns.get(entity, {}).items() if ref_entity == other]
+        if candidates:
+            business = [c for c in candidates if c[0].upper() not in self._AUDIT_REFS]
+            col, ref_col = (business or candidates)[0]
+            return (entity, col, other, ref_col)
         for col, (ref_entity, ref_col) in self.ref_columns.get(other, {}).items():
             if ref_entity == entity:
                 return (other, col, entity, ref_col)

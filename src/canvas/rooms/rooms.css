@@ -1,0 +1,86 @@
+/* Oda takvimi penceresi. Yalnız açılış ve kapanış hareket eder; hücre seçimi anındadır. */
+
+.rb-dialog {
+  --rb-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  margin: auto;
+  max-height: calc(100dvh - 24px);
+  overflow: hidden;
+  transform-origin: center; /* pencere bir düğmeye bağlı açılmaz, ortada kalır */
+  transition:
+    opacity 200ms var(--rb-ease-out),
+    transform 200ms var(--rb-ease-out);
+}
+
+.rb-dialog[open] {
+  opacity: 1;
+  transform: scale(1);
+}
+
+@starting-style {
+  .rb-dialog[open] {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+}
+
+/* Kapanış açılıştan hızlı: sistem yanıt veriyor, kişi karar vermiyor. */
+.rb-dialog[data-closing] {
+  opacity: 0;
+  transform: scale(0.96);
+  transition-duration: 150ms;
+}
+
+.rb-dialog::backdrop {
+  background: rgba(20, 30, 60, 0.38);
+  opacity: 1;
+  transition: opacity 200ms var(--rb-ease-out);
+}
+
+@starting-style {
+  .rb-dialog[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+.rb-dialog[data-closing]::backdrop {
+  opacity: 0;
+  transition-duration: 150ms;
+}
+
+/* Geçmiş saatler taralı: seçilemeyeceği renkten önce biçimden anlaşılır. */
+.rb-past {
+  background-image: repeating-linear-gradient(135deg, rgba(148, 163, 184, 0.14) 0 6px, transparent 6px 12px);
+}
+
+/* Boş hücre: fareyle üstüne gelince hafifçe belirir. Dokunmatikte yanlış hover olmasın. */
+@media (hover: hover) and (pointer: fine) {
+  .rb-slot[aria-disabled='false']:hover {
+    background-color: rgba(124, 92, 255, 0.07);
+  }
+}
+
+.rb-slot:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: -2px;
+  z-index: 5;
+}
+
+.rb-strip {
+  scrollbar-width: none;
+}
+.rb-strip::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rb-dialog,
+  .rb-dialog[data-closing] {
+    transform: none;
+    transition: opacity 150ms ease;
+  }
+  @starting-style {
+    .rb-dialog[open] {
+      transform: none;
+    }
+  }
+}

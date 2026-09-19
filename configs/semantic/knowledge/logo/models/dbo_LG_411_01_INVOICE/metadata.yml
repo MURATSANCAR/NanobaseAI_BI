@@ -16,7 +16,7 @@ columns:
   - name: "CANCELLED"
     type: "SMALLINT"
     properties:
-      "description": "İptal bayrağı; daima CANCELLED = 0 [enum] 0=geçerli belge, 1=iptal · 2 farklı değer [pii] telefon/faks — kişisel veri, asla seçme/maskele"
+      "description": "İptal bayrağı; daima CANCELLED = 0 [enum] 0=geçerli belge, 1=iptal · 2 farklı değer"
       "displayName": "CANCELLED"
   - name: "CLIENTREF"
     type: "INTEGER"
@@ -186,12 +186,10 @@ columns:
   - name: "CANCELLEDACC"
     type: "SMALLINT"
     properties:
-      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDACC"
   - name: "CANCELLEDREFLACC"
     type: "SMALLINT"
     properties:
-      "description": "[pii] telefon/faks — kişisel veri, asla seçme/maskele"
       "displayName": "CANCELLEDREFLACC"
   - name: "CANTCREDEDUCT"
     type: "SMALLINT"

@@ -1,0 +1,477 @@
+[
+ {
+  "title": "Genel Bakış",
+  "modules": [
+   {
+    "id": "home",
+    "title": "ZEKİ AI",
+    "sections": 0
+   }
+  ]
+ },
+ {
+  "title": "İlişki Haritası",
+  "modules": [
+   {
+    "id": "map",
+    "title": "İlişki Haritası",
+    "sections": 0
+   }
+  ]
+ },
+ {
+  "title": "Hazırlıklar",
+  "modules": [
+   {
+    "id": "categories",
+    "title": "Kategori Ağacı Modülü",
+    "sections": 5
+   },
+   {
+    "id": "readers",
+    "title": "Okuyucu Veri Tabanı Entegrasyonu",
+    "sections": 5
+   },
+   {
+    "id": "commerce-integration",
+    "title": "E-Ticaret Müşteri Yönetimi Entegrasyonu",
+    "sections": 5
+   },
+   {
+    "id": "email",
+    "title": "Kurumsal E-posta Yönetimi",
+    "sections": 5
+   }
+  ]
+ },
+ {
+  "title": "Editoryal Süreç",
+  "modules": [
+   {
+    "id": "M1",
+    "title": "Yeni Kitap Başvuru, Editoryal Değerlendirme ve Yayın Kurulu",
+    "sections": 5
+   },
+   {
+    "id": "M2",
+    "title": "Editör Atama ve İş Planlaması",
+    "sections": 5
+   },
+   {
+    "id": "M3",
+    "title": "Metin İşleme, Üsluplandırma ve Redaksiyon",
+    "sections": 5
+   },
+   {
+    "id": "M4",
+    "title": "Çeviri Yönetimi",
+    "sections": 5
+   },
+   {
+    "id": "M5",
+    "title": "Son Okuma ve Yayın Onayı",
+    "sections": 5
+   },
+   {
+    "id": "M6",
+    "title": "Telif Hakkı ve Sözleşme Yönetimi",
+    "sections": 5
+   },
+   {
+    "id": "M7",
+    "title": "Yazarla İlişki ve Gelişim Takibi",
+    "sections": 5
+   },
+   {
+    "id": "M8",
+    "title": "Çizer ve Freelancer (Dış Kaynak) Yönetimi",
+    "sections": 5
+   }
+  ]
+ },
+ {
+  "title": "Fiyatlama & Üretim",
+  "modules": [
+   {
+    "id": "M9",
+    "title": "Fiyatlama ve Maliyet Analizi",
+    "sections": 5
+   },
+   {
+    "id": "M10",
+    "title": "Üretim ve Satış Tahmini (İlk Baskı)",
+    "sections": 5
+   },
+   {
+    "id": "M11",
+    "title": "Baskı Tekrarı Öneri Motoru (Backlist)",
+    "sections": 5
+   },
+   {
+    "id": "M12",
+    "title": "Üretim Yönetimi",
+    "sections": 5
+   }
+  ]
+ },
+ {
+  "title": "Grafik Tasarım",
+  "modules": [
+   {
+    "id": "M13",
+    "title": "Kapak Tasarımı ve Brief Yönetimi",
+    "sections": 5
+   },
+   {
+    "id": "M14",
+    "title": "Mizanpaj (Sayfa Düzeni) Yönetimi",
+    "sections": 5
+   }
+  ]
+ },
+ {
+  "title": "Pazarlama",
+  "modules": [
+   {
+    "id": "M15",
+    "title": "Yeni Kitap Pazarlama Planı",
+    "sections": 3
+   },
+   {
+    "id": "M16",
+    "title": "Lansman/Yayın Ayı Pazarlama",
+    "sections": 3
+   },
+   {
+    "id": "M17",
+    "title": "Backlist Kitaplar Pazarlama",
+    "sections": 3
+   },
+   {
+    "id": "M18",
+    "title": "Aylık Pazarlama Planları",
+    "sections": 3
+   },
+   {
+    "id": "M19",
+    "title": "Pazarlama Görsel Üretim ve Yaratıcı İçerik",
+    "sections": 3
+   },
+   {
+    "id": "M20",
+    "title": "Basın, Medya ve Halkla İlişkiler",
+    "sections": 3
+   },
+   {
+    "id": "M21",
+    "title": "Dijital Pazarlama ve Reklam Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M22",
+    "title": "Sosyal Medya Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M23",
+    "title": "İnfluencer ve İşbirliği Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M24",
+    "title": "Katalog ve Bülten Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M25",
+    "title": "İçerik Pazarlaması ve SEO",
+    "sections": 3
+   },
+   {
+    "id": "M26",
+    "title": "Yapay Zekâ Görünürlüğü — GEO",
+    "sections": 3
+   },
+   {
+    "id": "M27",
+    "title": "Fuar, Etkinlik ve Ödül Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M28",
+    "title": "Kanaat Önderleri, Kurumsal İlişkiler ve Kamu Projeleri",
+    "sections": 3
+   },
+   {
+    "id": "M53",
+    "title": "Hediye, Set ve Promosyon Ürün Yönetimi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Saha Satış & Okul",
+  "modules": [
+   {
+    "id": "M29",
+    "title": "İlk Dağılım Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M30",
+    "title": "Saha Satış Yönetimi ve Tahsilat (BMT)",
+    "sections": 3
+   },
+   {
+    "id": "M31",
+    "title": "Okul Tanıtım ve Ziyaret Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M32",
+    "title": "B2B Web Sitesi ve Kurumsal Satış Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M33",
+    "title": "Okul, Kütüphane ve Kamu İhale Takibi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Dijital & Topluluk",
+  "modules": [
+   {
+    "id": "M34",
+    "title": "E-Ticaret ve Platform Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M35",
+    "title": "E-Ticaret Kampanya ve Promosyon Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M36",
+    "title": "Dijital Yayın ve e-Kitap Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M37",
+    "title": "Okuyucu Topluluğu ve Topluluk Yönetimi (CRM Katmanı)",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Müşteri & Pazar",
+  "modules": [
+   {
+    "id": "M38",
+    "title": "Müşteri İlişkileri ve CRM Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M39",
+    "title": "Pazar Araştırması ve Rekabet Analizi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Platform Yönetimi",
+  "modules": [
+   {
+    "id": "M40",
+    "title": "Trendyol Mağaza Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M41",
+    "title": "Amazon ve Uluslararası Platform Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M42",
+    "title": "Diğer Pazar Yerleri ve D2C Yönetimi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Lojistik",
+  "modules": [
+   {
+    "id": "M43",
+    "title": "Depo ve Stok Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M44",
+    "title": "Lojistik ve Kargo Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M52",
+    "title": "Tedarik Zinciri ve Baskı Yönetimi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Finans & Risk",
+  "modules": [
+   {
+    "id": "M45",
+    "title": "Finansal Raporlama ve Analiz",
+    "sections": 3
+   },
+   {
+    "id": "M46",
+    "title": "Bütçe Planlama ve Kontrolü",
+    "sections": 4
+   },
+   {
+    "id": "M47",
+    "title": "Risk Yönetimi ve Uyum",
+    "sections": 3
+   },
+   {
+    "id": "M54",
+    "title": "Yazar Telif ve Sözleşme Yönetimi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Altyapı & Destek",
+  "modules": [
+   {
+    "id": "M48",
+    "title": "IT Altyapı ve Sistem Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M49",
+    "title": "Veri Yönetimi ve Güvenlik",
+    "sections": 3
+   },
+   {
+    "id": "M50",
+    "title": "ZEKİ Model Eğitim ve Geliştirme",
+    "sections": 3
+   },
+   {
+    "id": "M51",
+    "title": "Müşteri Hizmetleri ve Destek Yönetimi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "İnsan Kaynakları",
+  "modules": [
+   {
+    "id": "M55",
+    "title": "İşe Alım ve Yetkin Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M56",
+    "title": "Performans Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M57",
+    "title": "Eğitim ve Gelişim Yönetimi",
+    "sections": 3
+   },
+   {
+    "id": "M58",
+    "title": "Çalışan Deneyimi ve Bağlılık",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "Bayi & Kitapçı Risk Yönetimi",
+  "modules": [
+   {
+    "id": "M59",
+    "title": "Kitapçı/Bayi Risk ve Performans Yönetimi",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "DYK — Danışma & Yönetim Kurulu",
+  "modules": [
+   {
+    "id": "DYK",
+    "title": "DYK — Danışma ve Yönetim Kurulu",
+    "sections": 3
+   }
+  ]
+ },
+ {
+  "title": "ZEKİ Proje Planı",
+  "modules": [
+   {
+    "id": "roadmap",
+    "title": "ZEKİ Proje Planı",
+    "sections": 0
+   }
+  ]
+ },
+ {
+  "title": "Eski Sistemden Gelenler",
+  "modules": [
+   {
+    "id": "desk",
+    "title": "Finans & Bütçe Masası",
+    "sections": 0
+   },
+   {
+    "id": "catalog",
+    "title": "Veri Sözlüğü",
+    "sections": 0
+   },
+   {
+    "id": "review",
+    "title": "Terim İnceleme ve Onay",
+    "sections": 0
+   },
+   {
+    "id": "board",
+    "title": "Pano (sürüklenebilir kartlar)",
+    "sections": 0
+   },
+   {
+    "id": "copilot",
+    "title": "ZEKİ Sohbet Paneli",
+    "sections": 0
+   },
+   {
+    "id": "catalog-explorer",
+    "title": "Katalog Gezgini",
+    "sections": 0
+   },
+   {
+    "id": "imprint",
+    "title": "Yayın/İmprint Tablosu",
+    "sections": 0
+   },
+   {
+    "id": "channel-mix",
+    "title": "Kanal Kırılımı",
+    "sections": 0
+   },
+   {
+    "id": "cashflow",
+    "title": "Nakit Akışı Grafiği",
+    "sections": 0
+   }
+  ]
+ }
+]

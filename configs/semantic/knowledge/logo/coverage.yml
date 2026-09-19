@@ -1,0 +1,55 @@
+# Hangi kaynak kopyası hangi işlem dönemini taşır — insan beyanı, ölçüm değil.
+# Kural: [from, to) yarı açık. Gece işi her beyanlı tabloda dönem dışı satırı sayar;
+# 0 → "declared" (tarih filtresi olmadan da dönem kanıtlı), >0 → "contested" (filtre şart, sayı ekranda).
+# 2026-09-15 ölçümü: 411/STLINE'da 2027 tarihli 2 satır, 211/STLINE'da ≥2026 tarihli 70 satır (2030'a kadar) var;
+# bu iki tablo temizlenene kadar "contested" kalır. INVOICE tabloları temiz.
+schema_version: 1
+coverage:
+  - context: {n0: "411"}
+    from: 2026-01-01
+    to: 2027-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2026 canlı firma (yedek 17.08.2026); INVOICE min/max 2026 içinde, dönem dışı satır 0"
+  - context: {n0: "211"}
+    from: 2021-01-01
+    to: 2026-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2021–2025 tek firma yedeği; INVOICE min/max 2021-01-02–2025-12-31"
+  - context: {n0: "201"}
+    from: 2020-01-01
+    to: 2021-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2020 yedeği; INVOICE min/max 2020 içinde"
+  - context: {n0: "191"}
+    from: 2019-01-01
+    to: 2020-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2019 yedeği"
+  - context: {n0: "181"}
+    from: 2018-01-01
+    to: 2019-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2018 yedeği"
+  - context: {n0: "171"}
+    from: 2017-01-01
+    to: 2018-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2017 yedeği"
+  - context: {n0: "115"}
+    from: 2016-01-01
+    to: 2017-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2016 yedeği"
+  - context: {n0: "105"}
+    from: 2015-01-01
+    to: 2016-01-01
+    verified_by: "murat.sancar"
+    verified_on: 2026-09-15
+    reason: "2015 yedeği"

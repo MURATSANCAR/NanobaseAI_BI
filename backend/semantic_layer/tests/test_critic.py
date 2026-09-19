@@ -8,8 +8,8 @@ from semantic_layer.runtime.critic import review
 from semantic_layer.tests.test_runtime import catalog  # noqa: F401  — the certified fixture lives there
 
 
-def _t(entity, name, cols, pk="LOGICALREF", rels=()):
-    return SchemaProfile(datasource_id="d", table_name=name, table_pattern=name, entity=entity, schema_name="dbo",
+def _t(entity, name, cols, pk="LOGICALREF", rels=(), description=""):
+    return SchemaProfile(datasource_id="d", table_name=name, table_pattern=name, entity=entity, schema_name="dbo", description=description,
                          columns=[ColumnProfile(name=n, data_type=dt, is_primary_key=(n == pk)) for n, dt in cols],
                          primary_key=[pk], relationships=list(rels))
 
@@ -158,9 +158,10 @@ def _client(catalog, logo_connector, settings, replies):
 #: "How many customers bought something" written as a count over the invoice join. Every customer is
 #: counted once per invoice they have, so the answer is the number of invoices wearing the name of
 #: the number of customers. The database returns it without complaint.
-_INFLATED = ('```sql\nSELECT COUNT(*) AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
+_READING = "-- yorum: 'bolgesel' → müşteri kartındaki şehir bazında kırılım\n"
+_INFLATED = ('```sql\n' + _READING + 'SELECT COUNT(*) AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
              'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."CANCELLED" = 0 AND i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
-_CORRECT = ('```sql\nSELECT COUNT(DISTINCT c."LOGICALREF") AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
+_CORRECT = ('```sql\n' + _READING + 'SELECT COUNT(DISTINCT c."LOGICALREF") AS musteri_sayisi FROM dbo_LG_411_01_INVOICE i '
             'JOIN dbo_LG_411_CLCARD c ON c."LOGICALREF" = i."CLIENTREF" WHERE i."CANCELLED" = 0 AND i."DATE_" >= \'2026-01-01\' AND i."DATE_" < \'2027-01-01\'\n```')
 
 
@@ -384,3 +385,88 @@ def test_a_table_with_no_rows_at_all_is_said_out_loud():
     p = _with([dict(name="LOGICALREF", data_type="int", is_primary_key=True)], row_count=0)
     f = review("SELECT COUNT(*) FROM dbo.LG_411_01_INVOICE i", [p])
     assert any(x.kind == "EMPTY_TABLE" and x.severity == "warn" for x in f)
+
+
+def test_count_star_over_a_keyed_join_counts_the_fine_side_unless_named_after_the_keyed_one():
+    """'Kapanan kalem' per customer group: CLCARD is joined on its own key, so the rows counted are
+    the payment lines — one each — and the critic only warns. A count named after the keyed side
+    ("ürün sayısı", or "müşteri sayısı" through the catalog vocabulary) is the inflated one and blocks."""
+    lines = _t("STLINE", "LG_411_01_STLINE", [("LOGICALREF", "int"), ("STOCKREF", "int"), ("TOTAL", "decimal(18,2)")],
+               rels=[{"column": "STOCKREF", "ref_entity": "ITEMS", "ref_column": "LOGICALREF"}])
+    items = _t("ITEMS", "LG_411_ITEMS", [("LOGICALREF", "int"), ("CODE", "nvarchar(25)")], description="Malzeme (ürün) kartı")
+    base = "FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON s.STOCKREF = i.LOGICALREF GROUP BY i.CODE"
+    for alias in ("kapanan_kalem", "adet", "satir_sayisi"):
+        f = review(f"SELECT i.CODE, COUNT(*) AS {alias} {base}", [lines, items])
+        assert [x.severity for x in f if x.kind == "FANOUT"] == ["warn"], (alias, f)
+    # ITEMS joined and read nowhere: the join exists only to be counted → that is a count of items.
+    f = review("SELECT COUNT(*) AS adet FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON s.STOCKREF = i.LOGICALREF", [lines, items])
+    assert [x.severity for x in f if x.kind == "FANOUT"] == ["block"], f
+    f = review(f"SELECT i.CODE, COUNT(*) AS urun_sayisi {base}", [lines, items])
+    assert [x.severity for x in f if x.kind == "FANOUT"] == ["block"], f
+    # Logo calls the table "Malzeme kartı"; the business says "kitap". The vocabulary carries that.
+    f = review(f"SELECT i.CODE, COUNT(*) AS kitap_sayisi {base}", [lines, items], names={"ITEMS": {"kitap", "eser"}})
+    assert [x.severity for x in f if x.kind == "FANOUT"] == ["block"], f
+
+
+def test_a_date_inside_datediff_is_an_argument_not_a_summed_column():
+    pay = _t("PAYTRANS", "LG_411_01_PAYTRANS", [("LOGICALREF", "int"), ("FICHEREF", "int"), ("DATE_", "datetime")],
+             rels=[{"column": "FICHEREF", "ref_entity": "INVOICE", "ref_column": "LOGICALREF"}])
+    inv = _t("INVOICE", "LG_411_01_INVOICE", [("LOGICALREF", "int"), ("DATE_", "datetime"), ("FICHENO", "varchar(16)")])
+    sql = ("SELECT AVG(CAST(DATEDIFF(day, i.DATE_, p.DATE_) AS float)) AS gun "
+           "FROM dbo.LG_411_01_PAYTRANS p JOIN dbo.LG_411_01_INVOICE i ON i.LOGICALREF = p.FICHEREF")
+    assert not [f for f in review(sql, [pay, inv]) if f.kind == "NON_NUMERIC"]
+    assert [f.kind for f in review("SELECT SUM(i.FICHENO) FROM dbo.LG_411_01_INVOICE i", [inv])] == ["NON_NUMERIC"]
+
+
+def test_an_average_over_the_keyed_side_is_weighted_not_inflated_so_it_warns():
+    """AVG(DATEDIFF(invoice date, closing date)) per plan line repeats each invoice's date once per
+    line — the mean per line is what was asked. SUM of the same column would still be inflated."""
+    pay = _t("PAYTRANS", "LG_411_01_PAYTRANS", [("LOGICALREF", "int"), ("FICHEREF", "int"), ("CROSSREF", "int"), ("DATE_", "datetime")],
+             rels=[{"column": "FICHEREF", "ref_entity": "INVOICE", "ref_column": "LOGICALREF"}])
+    inv = _t("INVOICE", "LG_411_01_INVOICE", [("LOGICALREF", "int"), ("DATE_", "datetime"), ("NETTOTAL", "float")])
+    base = "FROM dbo.LG_411_01_PAYTRANS p JOIN dbo.LG_411_01_INVOICE i ON i.LOGICALREF = p.FICHEREF JOIN dbo.LG_411_01_PAYTRANS o ON o.LOGICALREF = p.CROSSREF"
+    avg = review(f"SELECT AVG(CAST(DATEDIFF(day, i.DATE_, o.DATE_) AS float)) AS gun {base}", [pay, inv])
+    assert [f.severity for f in avg if f.kind == "FANOUT"] == ["warn"], avg
+    total = review(f"SELECT SUM(i.NETTOTAL) AS tutar {base}", [pay, inv])
+    assert [f.severity for f in total if f.kind == "FANOUT"] == ["block"], total
+
+
+def test_a_join_without_a_column_equality_is_a_cross_product_and_blocks():
+    """2026-09-16, soru 7: `JOIN fiyat ON 1=1` produced shipments × price-list items, 243k rows of noise."""
+    sql = "SELECT s.CODE, i.PRICE FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON 1 = 1 WHERE i.PRICE < 10"
+    f = review(sql, P)
+    assert any(x.kind == "FANOUT" and x.severity == "block" and "çapraz" in x.message for x in f), f
+    keyed = review("SELECT s.CODE, i.PRICE FROM dbo.LG_411_01_STLINE s JOIN dbo.LG_411_ITEMS i ON s.STOCKREF = i.LOGICALREF", P)
+    assert not [x for x in keyed if "çapraz" in x.message]
+
+
+def test_two_keys_to_different_tables_set_equal_are_refused_wherever_written():
+    """2026-09-16, soru 7: PRCLIST.CARDREF (an item key) = INVOICE.CLIENTREF (a customer key) in a
+    correlated WHERE — rows matched by coincidence of numbers. Two keys to the *same* table are fine."""
+    lines = _t("STLINE", "LG_411_01_STLINE", [("LOGICALREF", "int"), ("STOCKREF", "int"), ("CLIENTREF", "int"), ("PRICE", "float")],
+               rels=[{"column": "STOCKREF", "ref_entity": "LG_ITEMS", "ref_column": "LOGICALREF"},
+                     {"column": "CLIENTREF", "ref_entity": "LG_CLCARD", "ref_column": "LOGICALREF"}])
+    prices = _t("PRCLIST", "LG_411_PRCLIST", [("LOGICALREF", "int"), ("CARDREF", "int"), ("PRICE", "float")],
+                rels=[{"column": "CARDREF", "ref_entity": "LG_ITEMS", "ref_column": "LOGICALREF"}])
+    bad = ("SELECT s.LOGICALREF FROM dbo.LG_411_01_STLINE s WHERE s.PRICE < "
+           "(SELECT MIN(p.PRICE) FROM dbo.LG_411_PRCLIST p WHERE p.CARDREF = s.CLIENTREF)")
+    f = review(bad, [lines, prices])
+    assert any(x.kind == "UNKNOWN_JOIN" and x.severity == "block" and "ITEMS" in x.message and "CLCARD" in x.message for x in f), f
+    good = bad.replace("s.CLIENTREF", "s.STOCKREF")
+    assert not [x for x in review(good, [lines, prices]) if x.kind == "UNKNOWN_JOIN"]
+
+
+def test_two_many_sided_relations_on_one_key_multiply_each_other_and_are_refused():
+    """2026-09-17, soru 8: items ← order lines and items ← stock lines in one SELECT; the pending
+    quantity came back multiplied by the number of stock lines. Each many-side is summed on its own."""
+    items = _t("ITEMS", "LG_411_ITEMS", [("LOGICALREF", "int"), ("CODE", "nvarchar(25)")])
+    orders = _t("ORFLINE", "LG_411_01_ORFLINE", [("LOGICALREF", "int"), ("STOCKREF", "int"), ("AMOUNT", "float")],
+                rels=[{"column": "STOCKREF", "ref_entity": "ITEMS", "ref_column": "LOGICALREF"}])
+    lines = _t("STLINE", "LG_411_01_STLINE", [("LOGICALREF", "int"), ("STOCKREF", "int"), ("AMOUNT", "float")],
+               rels=[{"column": "STOCKREF", "ref_entity": "ITEMS", "ref_column": "LOGICALREF"}])
+    sql = ("SELECT i.CODE, SUM(o.AMOUNT) AS bekleyen, SUM(s.AMOUNT) AS stok FROM dbo.LG_411_ITEMS i "
+           "JOIN dbo.LG_411_01_ORFLINE o ON o.STOCKREF = i.LOGICALREF JOIN dbo.LG_411_01_STLINE s ON s.STOCKREF = i.LOGICALREF GROUP BY i.CODE")
+    f = review(sql, [items, orders, lines])
+    assert any(x.kind == "FANOUT" and x.severity == "block" and "ikinci bir" in x.message for x in f), f
+    one = "SELECT i.CODE, SUM(o.AMOUNT) FROM dbo.LG_411_ITEMS i JOIN dbo.LG_411_01_ORFLINE o ON o.STOCKREF = i.LOGICALREF GROUP BY i.CODE"
+    assert not [x for x in review(one, [items, orders, lines]) if x.severity == "block"]

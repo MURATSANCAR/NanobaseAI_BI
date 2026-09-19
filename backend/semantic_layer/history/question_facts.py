@@ -9,11 +9,13 @@ from typing import Optional
 
 from semantic_layer.normalize import (
     METRIC_VOCAB_S,
+    cardinal,
     MODIFIERS_S,
     STOPWORDS_S,
     clauses,
     fold,
     ngrams,
+    number_role,
     stem,
     tokenize,
 )
@@ -28,6 +30,8 @@ _EXPLICIT = re.compile(r"((?:[a-z]+\s+){0,3}[a-z]+)\s*\(\s*([a-z][a-z0-9_]{2,})\
 # A ranking cue followed by a number is a top-N. The noun after the number is deliberately not
 # enumerated: which nouns a customer ranks by is their data's business, not this parser's.
 _LIMIT = re.compile(r"\b(?:ilk|en cok satan|en cok|en fazla|en az|top|en yuksek|en dusuk|bastaki|basta)\s+(?:\w+\s+)?(\d{1,3})\b|\b(\d{1,3})\s+(?:\w+)\s+(?:listele|goster|ver|getir|sirala)\b")
+
+_RANK_OR_LIST = re.compile(r"\b(?:ilk|top|en cok|en fazla|en az|en yuksek|en dusuk|listele|goster|getir|sirala)\b")
 
 GENERIC_S = frozenset(
     stem(w)
@@ -120,7 +124,21 @@ def extract_question_facts(question: str, n_max: int = 3) -> QuestionFacts:
     limit = None
     m = _LIMIT.search(folded)
     if m:
-        limit = int(m.group(1) or m.group(2))
+        # The pattern sees a cue and a number; whether the number counts rows is grammar's to say.
+        # "en az 50 adet satan", "en yüksek 100'ü aşan": a floor and a threshold — no row is cut.
+        group = 1 if m.group(1) else 2
+        flat = tokenize(folded)
+        at = len(tokenize(folded[: m.start(group)]))
+        if not (at < len(flat) and flat[at] == m.group(group) and number_role(flat, at) == "value"):
+            limit = int(m.group(group))
+    elif _RANK_OR_LIST.search(folded):
+        # "en çok satılan kanalları göster 5 tane": the count can come last, after the verb.
+        # "tane/adet" makes it a count of rows, but only in a ranking or listing request.
+        for k, tok in enumerate(tokens[1:], start=1):
+            n = cardinal(tokens[k - 1])
+            if tok in ("tane", "adet") and n is not None and 1 <= n <= 1000 and number_role(tokens, k - 1) != "value":
+                limit = n
+                break
     order_desc = not bool(re.search(r"\b(artan|kucukten buyuge|en az|en dusuk)\b", folded))
     numbers = [t for t in tokens if t.isdigit() and not re.match(r"^20\d\d$", t)]
     return QuestionFacts(tokens, terms, surface, explicit_codes, explicit_bindings, metric_words, temporal, grain, limit, order_desc, numbers)

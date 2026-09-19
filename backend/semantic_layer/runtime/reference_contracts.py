@@ -3,8 +3,42 @@ from __future__ import annotations
 import re
 
 
-def reference_rule(mapping, fact):
-    return ((mapping.extra or {}).get('reference_resolution') or {}).get(fact)
+def reference_rule(mapping, fact, filters=()):
+    rule = ((mapping.extra or {}).get('reference_resolution') or {}).get(fact)
+    if rule and _via_declared_absent(rule, fact, filters):
+        return None
+    return rule
+
+
+def _bare(name):
+    return re.sub(r'^LG_', '', str(name or '').upper())
+
+
+def _via_declared_absent(rule, fact, filters):
+    """The question itself says the intermediate record does not exist.
+
+    A rule reads a reference through another record (the customer of a line is its invoice's
+    customer). When a filter of the same question pins that link to its empty value — lines with
+    no invoice — there is no intermediate record to read through: the inner join returns nothing
+    and the answer is an empty table that looks like "no such rows". The rule does not apply to
+    such a question; the fact's own reference is used instead.
+    """
+    column, empty = str(rule.get('via_column') or '').upper(), str(rule.get('empty_value', 0))
+    if not column:
+        return False
+    pinned = re.compile(r'(?i)\b%s\.\[?%s\]?\s*(?:=\s*%s\b|IN\s*\(\s*%s\s*\)|IS\s+NULL)'
+                        % (re.escape(_bare(fact)), re.escape(column), re.escape(empty), re.escape(empty)))
+    for m in filters or ():
+        if m is None or _bare(getattr(m, 'entity', '')) != _bare(fact):
+            continue
+        values = [str(v).strip() for v in (getattr(m, 'values', None) or [])]
+        if (str(getattr(m, 'column', '') or '').upper() == column and values
+                and getattr(m, 'operator', '=') in ('=', 'IN') and all(v == empty for v in values)):
+            return True
+        for condition in (getattr(m, 'extra', None) or {}).get('conditions') or []:
+            if pinned.search(re.sub(r'(?i)\bLG_', '', str(condition))):
+                return True
+    return False
 
 
 def reference_predicate(mapping, fact, rule, quote=lambda name:name):
