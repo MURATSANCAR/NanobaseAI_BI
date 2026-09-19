@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 12:30 UTC — Editör: V16-r6 yayını hazırlandı, dağıtılmadı
+
+`main` `21e2abb`'den hazırlık dizini, canlı imajlar üzerine ağsız derleme, kanıtlar ve sözleşme üretildi; dağıtım aracının bütün ön denetimleri geçti. Varsayılan davranış R5 ile aynı (sınırlar, anlam V7); fark büyük kitap altyapısı ve varsayılan kapalı ayarlar. Yedekten dönüş kabulü R5 gibi v15-r7 kanıtıyla bağlandı. [Yayın kaydı](editor/2026-09-19-v16-r6-release.md).
+
 ## 2026-09-19 09:50 UTC — Editör: main canlıyla aynı davranışa getirildi
 
 `main`'deki semantik V8 kapısı (üç çağrılı rol grafı) ve yeniden işleme planı ucu doğrulanmadan üretim akışına girmişti. İkisi de varsayılanı kapalı ayarların arkasına alındı (`EDITOR_ROLE_BINDING_GATE`, `EDITOR_REPROCESSING_PLAN`); kod silinmedi. Kapalıyken anlam incelemesi V7'dir ve canlı kaynak `1200bdd` ile aynı davranır (fark yalnız ayar kontrolü); retrieval bağımlılık listesi de V7'de değişmez. **Neden:** tek trunk kuralı gereği canlıya çıkacak olan `main`'dir; 14 gerçek pasajda V8 5 geçti/9 inceleme verdi. Canlıya giden fark: büyük kitap düzeltmeleri (sınırlar ayardan, 0007, gateway akışı, ayrıştırıcı belleği) ve `editor_eval` aracı; varsayılan sınırlar değişmedi.
