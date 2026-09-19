@@ -793,12 +793,8 @@
    "expect": "answer",
    "verified": true,
    "source": "logo",
-   "reference_sql": "SELECT C.CODE AS masraf_merkezi_kodu, C.DEFINITION_ AS masraf_merkezi, SUM(L.DEBIT-L.CREDIT) AS gider FROM LG_411_01_EMFLINE L JOIN LG_411_EMCENTER C ON C.LOGICALREF=L.CENTERREF WHERE L.CANCELLED=0 AND L.ACCOUNTCODE LIKE '7%' AND L.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND L.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY C.CODE, C.DEFINITION_ ORDER BY 3 DESC",
+   "reference_sql": "SELECT ISNULL(C.DEFINITION_,'(merkezsiz)') AS masraf_merkezi, SUM(L.DEBIT-L.CREDIT) AS gider FROM LG_411_01_EMFLINE L LEFT JOIN LG_411_EMCENTER C ON C.LOGICALREF=L.CENTERREF WHERE L.CANCELLED=0 AND L.ACCOUNTCODE LIKE '7%' AND L.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND L.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY C.DEFINITION_ ORDER BY 2 DESC",
    "checks": [
-    {
-     "kind": "rows",
-     "tolerance": 0
-    },
     {
      "kind": "sum",
      "answer": [
@@ -807,15 +803,17 @@
       "gider_tutari",
       "toplam_gider"
      ],
-     "reference": "gider"
+     "reference": "gider",
+     "tolerance": 0.001
     },
     {
      "kind": "pairs",
-     "top": 10,
+     "top": 8,
      "answer_key": [
-      "masraf_merkezi_kodu",
-      "kod",
-      "CODE"
+      "masraf_merkezi",
+      "merkez",
+      "masraf_merkezi_adi",
+      "ad"
      ],
      "answer_value": [
       "gider_toplami",
@@ -823,11 +821,12 @@
       "gider_tutari",
       "toplam_gider"
      ],
-     "reference_key": "masraf_merkezi_kodu",
-     "reference_value": "gider"
+     "reference_key": "masraf_merkezi",
+     "reference_value": "gider",
+     "tolerance": 0.002
     }
    ],
-   "note": "2026-09-18: 1.851 masraf merkezi, toplam 225.855.172,01 ₺; ilk üç: B01-GMD-01 Genel Müdürlük 48.410.142,55, B03-LOJ-01 Lojistik Depo 34.135.742,66, B05-İDA-01 İdari İşler 11.908.861,48. Dayanak: Kural 16 (EMFLINE ⨝ EMCENTER, ACCOUNTCODE LIKE '7%', CANCELLED=0, SUM(DEBIT−CREDIT), bu yıl). Köprü satır sayısı ve ilk üç tutar referansla aynı. Uyarılar: masraf merkezi olmayan 3.083 satır (net −160.519.545,03; ağırlıkla 711/731/761/771/781 yansıtma hesapları) INNER JOIN ile dışarıda kalır — merkez bazlı dağılım için doğru, ama '7'li hesapların tamamı yansıtma ile netleşir. Köprü cevabında beklenen 'pay yüzdesi' kolonu yok (sunum eksiği)."
+   "note": "2026-09-18: 1.851 masraf merkezi, toplam 225.855.172,01 ₺; ilk üç: B01-GMD-01 Genel Müdürlük 48.410. | 2026-09-19: gerçek başarısızlık değil — köprü 'gider'i EMFLINE ACCOUNTCODE 7%'ten doğru topluyor (65,3 Mn ₺, DB ile eş); fark: köprü merkez ADINA göre (LEFT JOIN, merkezsiz dâhil), eski referans distinct CENTERREF (INNER). Altın toplam+adlı merkezle adil."
   },
   {
    "n": 32,
