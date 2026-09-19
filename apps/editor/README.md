@@ -8,6 +8,8 @@ Bu durum kaydında arka planda devam eden test bulunmuyor. Yeni tam kitap koşus
 
 ## Bağlayıcı kural — bütün kitaplar için genel yapı
 
+> **Varsayılanı kapalı ayarlar (19 Eylül):** `EDITOR_ROLE_BINDING_GATE=1` üç çağrılı rol grafını (semantik V8) kabul kapısına ekler; kapalıyken inceleme V7'dir ve canlı davranışla aynıdır. 14 gerçek pasajda 5 geçti/9 inceleme verdiği için üretimde kapalıdır. `EDITOR_REPROCESSING_PLAN=1` gerçek kabulü olmayan yeniden işleme planı ucunu açar. Büyük kitap sınırları `EDITOR_MAX_SOURCE_BYTES`, `EDITOR_MAX_PAGES`, `EDITOR_PARSER_MEMORY` ile ayarlanır; sınır artık şemada, DB kısıtında ve ayrıştırıcıda sabit değildir.
+
 Kullanıcının 18 Eylül 2026 talebi: Editörde hiçbir üretim geliştirmesi bu kitaba özel olmayacak. OCR, kaynak seçimi, kimlik/konuşmacı, analiz, arama/cevap, prompt, UI, veri modeli ve kurulum aynı genel sözleşmeyle bütün kitaplara uygulanır. Kitap/sayfa/karakter/hash/beklenen cevapla özel durum veya config/veritabanına gizlenmiş istisna yasaktır. Kitap örnekleri yalnız ayrı gerçek doğrulama girdisi ve kanıtıdır; beklenen cevap modele verilmez. Genel kod düzeltilir, kitap verisi elle değiştirilmez; tek kitap başarısı bütün kitapların kabulü sayılmaz.
 
 Ayrıntı: [AGENTS.md](AGENTS.md).
