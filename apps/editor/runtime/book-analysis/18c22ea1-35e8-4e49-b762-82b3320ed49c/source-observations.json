@@ -1,0 +1,167 @@
+[
+  {
+    "pdf_page": 1,
+    "description": "Beyaz sayfada iyi ki kitaplarım var ifadesi ve altta Timaş Çocuk yayınevi işareti bulunur. Çizilmiş öykü kişisi veya konuşma balonu yoktur.",
+    "reason": "Logonun küçük biçiminden kalem/kitap nesnesi çıkarılmamalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 3,
+    "description": "Antenli başlık panosunda Ekrana Sığmayan Macera yazıyor. Solda gri gövdeli mavi yüzlü robot; sağda kutu içinde turuncu robot bulunuyor. Altta Samet Can ve çizer Kerem Çufalar adları yazılı.",
+    "reason": "Başlık yanlış okunmuştu; özgün sayfa görüntüsüne göre düzeltildi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 4,
+    "description": "Beyaz zeminde Samet Can ve Kerem Çufalar başlıklı iki biyografi metni var; çizilmiş kişi veya konuşma balonu yok.",
+    "reason": "Görsel betimlemeden meslek unvanı türetilmedi; ayrıntılar okunabilir kaynak metninden alınmalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 6,
+    "description": "Kırmızı saçlı ve sarı saç bantlı çocuk, yeşil yastıklı yatakta mavi örtünün altında yatıyor. Üstte asılı yıldız ve gezegen süsleri var. Konuşma balonu görünmüyor.",
+    "reason": "Desteksiz mavi göz rengi ve belirsiz küçük eşya adları kaldırıldı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 7,
+    "description": "Metin ağırlıklı sayfada renkli doğrudan konuşma vurguları, sol kenarda komşu çizimin şeridi ve altta 7 etiketi var. Çerçeveli konuşma balonu yok.",
+    "reason": "Görsel modelin bozuk söz ve kişi adı okumaları yerine özgün metin katmanı kullanılmalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 8,
+    "description": "Sol üstte sarı saç bantlı, çizgili üst ve yıldızlı pijama altı giyen kızın hareket çizgileriyle betimlendiği küçük çizim var. Sağda ve altta anlatı metni; alt etiket 8.",
+    "reason": "Saç bandı kulaklık değil; yıldızlar ayakkabıda değil pijamada. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 9,
+    "description": "Sarı saç bantlı kız dolabın üzerinde oturuyor; bir eli dolaba dayanıyor, başı öne eğik ve gözleri kapalı. Yanında saksı, üstte küçük tablo; solda ve altta anlatı metni var.",
+    "reason": "Elin alında olduğu gözlemi kaynakta yok. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 10,
+    "description": "Beyaz zemin üzerindeki anlatı ve konuşma metinleri, renkli vurgular ve 10 etiketi görülüyor; çizilmiş öykü kişisi veya konuşma balonu yok.",
+    "reason": "Hediye getirme yorumu görsel betimlemeden çıkarıldı; olaylar metinden okunmalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 11,
+    "description": "Metin sayfasında sarı büyük harflerle vurgulanan konuşma bölümü ve altta 11 etiketi var. Robot resmi veya konuşma balonu çizimi yok.",
+    "reason": "Sözün konuşmacısı görsel model tarafından yanlış atanmıştı; metindeki konuşmacı ayrımı korunmalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 13,
+    "description": "Metin ağırlıklı sayfada doğrudan konuşmalar ve altta 13 etiketi var. Yeni kişi veya ikinci bir robot çizimi görünmüyor.",
+    "reason": "Bile adlı kişi ve başka robotun çarpması yorumları desteklenmiyor; kaynak metni korunuyor. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 15,
+    "description": "Metin sayfasında yeşil ve mavi konuşma vurguları, sol kenarda renkli şerit ve altta 15 etiketi görülür.",
+    "reason": "Siyah ekran ifadesi robotun gözüne bağlanmamalı; görsel modelin sayfa etiketi de yanlıştı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 16,
+    "description": "Sarı etkinlik panelinde kırmızı/mor Denge Kutusu başlığı ve beyaz gövde yazısı var. Yanlarda anten benzeri mavi süsler; altta 16 etiketi görülür.",
+    "reason": "Siyah gövde metni ve 18 etiketi gözlemleri düzeltildi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 18,
+    "description": "Sol üstte tabakta poğaçalar ve mavi kâğıtlı kekler çizilmiş. Yanında ve altında anlatı metni, renkli konuşma vurguları ve 18 etiketi var; konuşma balonu çerçevesi yok.",
+    "reason": "Yiyecek ve sayfa ayrıntıları yanlış aktarılmış; doğrudan konuşma ile balon ayrıldı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 19,
+    "description": "Beyaz sayfada anlatı metni ve mavi Tabii vurgusu yer alır. Altta 19 etiketi vardır; çizilmiş konuşma balonu yoktur.",
+    "reason": "Balon ve bozuk kedi adı yorumu kaldırıldı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 20,
+    "description": "Beyaz zeminde siyah anlatı metni, sarı konuşma vurgusu ve altta 20 etiketi bulunur; ayrı kişi resmi yoktur.",
+    "reason": "Modelin 29 diye okuduğu basılı etiket 20 olarak düzeltildi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 23,
+    "description": "Kutular ve örtülü eşyalar arasında beyaz önlüklü yaşlı kişi turuncu robot başını tutuyor. İki çocuk robot parçaları tutuyor; gri-mavi robot sağda, gri kedi solda minder üzerinde yatıyor. Üstte metin var.",
+    "reason": "Kediyle oynama eylemi ve sakal ayrıntısı desteklenmiyor; görünen bıyık ve tutulan parçalar esas alındı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 24,
+    "description": "Sarı etkinlik panelinde Hayal Et, Çiz, Tasarla başlığı ve beyaz yönergeler var. İki yanda mavi anten benzeri süsler, altta 24 etiketi bulunur.",
+    "reason": "Dekoratif şekiller ayrı öykü robotları olarak sayılmamalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 25,
+    "description": "Üstte antenli mor başlık panosunda Operasyon: Tamir Başlasın yazısı; altta anlatı metni ve 25 etiketi var.",
+    "reason": "Portakal nesnesi ve 218 sayısı çıkarımları kaynakta yok. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 26,
+    "description": "Sol üstte yeşil zemin üzerinde gri-mavi robot ile turuncu robot parçaları birlikte görünür; çevrede aletler ve hareket çizgileri var. Sağda ve altta anlatı metni; alt etiket 26.",
+    "reason": "İki robotun parçaları tek gövde diye birleştirilmedi; yanlış sayfa numarası düzeltildi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 27,
+    "description": "Metin sayfasında mavi ve yeşil konuşma vurguları var. Sağ altta renkli dişli çizimleri, alt ortada 27 etiketi bulunur.",
+    "reason": "Küçük çizimler çiçek değil dişlidir. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 28,
+    "description": "Metin ağırlıklı sayfada mavi konuşma vurgusu ve alt ortada 28 etiketi yer alır. Sağ kenarda komşu çizimin renkli şeridi görünür.",
+    "reason": "Nihayet sözcüğü kişi adı değildir; bu görsel model hatası kaynak metnine taşınmamalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 29,
+    "description": "Yeşil üstlü, kırmızı saçlı kız kırmızı koltukta; mavi üstlü çocuk yerde dizüstü bilgisayarın başında. Gri robotun göğüs çevresinden gezegen görüntüsüne ışık çizgileri uzanıyor. DUR! BU GÖRÜNTÜYÜ NASIL YAPIYOR? balonunun kuyruğu kıza yöneliyor; balon robota ait değil.",
+    "reason": "Balon metni korunurken konuşmacının yanlış robota bağlanması özgün görüntüden düzeltildi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 30,
+    "description": "Mavi zemin üzerine beyaz anlatı metni ve sarı büyük harfli vurgu yazısı bulunur. Alt etiket 30; ayrı illüstrasyon veya konuşma balonu yoktur.",
+    "reason": "Siyah yazı ve 39 etiketi gözlemleri kaynakla uyuşmuyor. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 32,
+    "description": "Beyaz zemin üzerine siyah anlatı metni, kırmızı ve turuncu konuşma vurguları bulunur. Alt etiket 32; ayrı karakter resmi yoktur.",
+    "reason": "Modelin siyah zemin/beyaz yazı tanımı ters; özgün sayfaya göre düzeltildi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 33,
+    "description": "Üstte anlatı metni; altta gri-mavi robot, mavi üstlü kırmızı saçlı çocuk ve sarı saç bantlı yeşil üstlü kız var. Ortadaki çocuk dikdörtgen cihaz tutuyor. Sarı BU... BU GERÇEK ROBOT MU? balonu ortadaki çocuğa yöneliyor.",
+    "reason": "Yeşil tişört ve beyaz kâğıt diye yapılan yanlış ayrıntı okumaları düzeltildi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 34,
+    "description": "Beyaz zeminde anlatı metni, kırmızı büyük harfli konuşma vurgusu ve 34 etiketi var. Ayrı karakter çizimi yok.",
+    "reason": "Canlı ve Robopi adlı yeni kişiler yok; bozuk isimler yerine kaynak metni kullanılmalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 35,
+    "description": "Sarı etkinlik panelinde Hazine Avı başlığı ve beyaz yönergeler görülüyor. Yanlarda mavi anten benzeri süsler ve altta 35 etiketi var.",
+    "reason": "Elma simgesi ve 218 sayısı gözlemleri kaynakta yok. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 36,
+    "description": "Üstte antenli mor panoda Doğadaki Kodlar başlığı; altta siyah metin ve turuncu konuşma vurgusu bulunuyor. Alt etiket 36.",
+    "reason": "Tımar edecekti sözü, domates simgesi ve 38 etiketi yanlış okumalar; özgün metin korunuyor. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 37,
+    "description": "Yaşlı, gözlüklü ve beyaz önlüklü kişi domates tutuyor. Üç çocuk yerde turuncu robotun ayrılmış parçaları ve aletlerle ilgileniyor; gri-mavi robot ön tarafta ayrı duruyor. Arkada kitap rafları ve saksı, yerde alet kutuları var.",
+    "reason": "Turuncu robot parçaları ile gri robotun ayrı varlıklar olduğu korundu; görüntü tamamlanmış onarım sonucu olarak yorumlanmadı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 38,
+    "description": "Beyaz metin sayfasında mavi doğrudan konuşma vurgusu ve 38 etiketi var. Kelebek çizimi veya hayal balonu yok.",
+    "reason": "Görsel model hem alıntıyı ters anlamda okumuş hem metni hayal/etkinlik diye yorumlamış; kaynak metni esas alınmalı. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 39,
+    "description": "Üstte metin, altta açık kapı önünde yağmur damlalarıyla betimlenmiş yaşlı kişi ve üç çocuk var. Yaşlı kişi domates tutuyor; sarı saç bantlı kızın saçı kırmızı.",
+    "reason": "Sarı saç ve sakal gibi yanlış ayrıntılar çıkarıldı; kaynakta bıyık ve saç bandı görünür. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 40,
+    "description": "Beyaz zeminde siyah metin, mavi Ben de konuşma vurgusu ve alt ortada 40 etiketi var. Ayrı karakter çizimi bulunmuyor.",
+    "reason": "45 diye okunan basılı etiket 40; mavi vurgu kişi adı değil konuşma ifadesi. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  },
+  {
+    "pdf_page": 41,
+    "description": "Üstte gri-mavi robot yüzüstü uzanmış, yanındaki gri kedi oturuyor. İkisinin de MİYAV! balonu var. Altta renkli konuşma vurguları içeren metin ve 41 etiketi görülür.",
+    "reason": "İkisinin de yatıyor olduğu iddiası düzeltildi; kedi oturuyor. Codex destekli özgün kaynak gözlemi; insan editör onayı değildir."
+  }
+]

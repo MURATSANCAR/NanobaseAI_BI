@@ -1,0 +1,182 @@
+{
+  "environment": "remote Chrome / real Editor HTTP API and PostgreSQL",
+  "results": [
+    {
+      "width": 320,
+      "generation": "6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b",
+      "checks": [
+        {
+          "tab": "Kaynak & görsel",
+          "width": 320,
+          "scroll": 320,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Sahneler",
+          "width": 320,
+          "scroll": 320,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Karakter & varlık",
+          "width": 320,
+          "scroll": 320,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Olaylar",
+          "width": 320,
+          "scroll": 320,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Kitap yorumu",
+          "width": 320,
+          "scroll": 320,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Soru & cevap",
+          "width": 320,
+          "scroll": 320,
+          "smallButtons": 0
+        }
+      ],
+      "scene_candidates_compared_to_real_api": true,
+      "logout_clears_credential": true
+    },
+    {
+      "width": 390,
+      "generation": "6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b",
+      "checks": [
+        {
+          "tab": "Kaynak & görsel",
+          "width": 390,
+          "scroll": 390,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Sahneler",
+          "width": 390,
+          "scroll": 390,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Karakter & varlık",
+          "width": 390,
+          "scroll": 390,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Olaylar",
+          "width": 390,
+          "scroll": 390,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Kitap yorumu",
+          "width": 390,
+          "scroll": 390,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Soru & cevap",
+          "width": 390,
+          "scroll": 390,
+          "smallButtons": 0
+        }
+      ],
+      "scene_candidates_compared_to_real_api": true,
+      "logout_clears_credential": true
+    },
+    {
+      "width": 768,
+      "generation": "6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b",
+      "checks": [
+        {
+          "tab": "Kaynak & görsel",
+          "width": 768,
+          "scroll": 768,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Sahneler",
+          "width": 768,
+          "scroll": 768,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Karakter & varlık",
+          "width": 768,
+          "scroll": 768,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Olaylar",
+          "width": 768,
+          "scroll": 768,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Kitap yorumu",
+          "width": 768,
+          "scroll": 768,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Soru & cevap",
+          "width": 768,
+          "scroll": 768,
+          "smallButtons": 0
+        }
+      ],
+      "scene_candidates_compared_to_real_api": true,
+      "logout_clears_credential": true
+    },
+    {
+      "width": 1440,
+      "generation": "6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b",
+      "checks": [
+        {
+          "tab": "Kaynak & görsel",
+          "width": 1440,
+          "scroll": 1440,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Sahneler",
+          "width": 1440,
+          "scroll": 1440,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Karakter & varlık",
+          "width": 1440,
+          "scroll": 1440,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Olaylar",
+          "width": 1440,
+          "scroll": 1440,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Kitap yorumu",
+          "width": 1440,
+          "scroll": 1440,
+          "smallButtons": 0
+        },
+        {
+          "tab": "Soru & cevap",
+          "width": 1440,
+          "scroll": 1440,
+          "smallButtons": 0
+        }
+      ],
+      "scene_candidates_compared_to_real_api": true,
+      "logout_clears_credential": true
+    }
+  ],
+  "semantic_acceptance": false
+}

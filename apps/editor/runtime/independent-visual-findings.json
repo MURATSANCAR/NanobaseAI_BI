@@ -1,0 +1,203 @@
+{
+  "generation_id": "6fffd7ed-f0c6-4de5-af1b-1ebea8898c8b",
+  "method": "Independent comparison of original PDF render with unchanged local model output; not fed to application",
+  "human_editor_acceptance": false,
+  "application_review_writes": 0,
+  "findings": [
+    {
+      "pdf_page": 2,
+      "record_id": "ee58aa07-e011-58e4-9a6f-6c1689ab1752",
+      "render_sha256": "f20bfea53ecf02805c6c683c967770eb5c64afe2161b05e5bc1734a28fb7985e",
+      "severity": "CRITICAL",
+      "finding": "Yayınevi TİMAŞ ÇOCUK yazar olarak atanıyor; logo sağ altta değil sayfa ortasında."
+    },
+    {
+      "pdf_page": 3,
+      "record_id": "cc852121-f41a-5e70-b506-8f969cb2ba05",
+      "render_sha256": "08f9c9560024b09e77350152db24a22a8cf92743de23e824cad494956bb41876",
+      "severity": "MAJOR",
+      "finding": "Kapak başlığı EKRANA SIĞMAYAN yerine EKRANIN SİGMAYAN diye aktarılıyor."
+    },
+    {
+      "pdf_page": 6,
+      "record_id": "492b6553-5bd4-55fd-8aec-cfdd06862e05",
+      "render_sha256": "b6632e761fb779a1765d890edd088fff0425bb1a013c169d858147d53bfeb1d4",
+      "severity": "MAJOR",
+      "finding": "Açık gözlü çizim uyuyan ve mavi gözlü diye betimleniyor."
+    },
+    {
+      "pdf_page": 8,
+      "record_id": "46d8b09c-22ca-57b1-ba84-c5ad97642ebd",
+      "render_sha256": "9ca079be35886fbd65b4cc96161e730ba22441cb199247a9ed6c76218ed7a8d1",
+      "severity": "MAJOR",
+      "finding": "Basılı 8 etiketi 5 okunuyor; sarı şapka ve konuşma balonu ekleniyor. Sahne belirsizliğine taşınmış."
+    },
+    {
+      "pdf_page": 9,
+      "record_id": "90b328f5-01f8-581f-822c-7c2613772706",
+      "render_sha256": "290d835284d38e495ae698c86994b26bba58d4df23932ea6f8816ca870474747",
+      "severity": "MINOR",
+      "finding": "Basılı 9 etiketi 5 okunuyor; eller dizde değil mobilya kenarında."
+    },
+    {
+      "pdf_page": 10,
+      "record_id": "cbab8cc9-96fe-5c84-881a-668228a5a900",
+      "render_sha256": "e23f93e81f2a41a13d66814ce4cb5f19a80db5e047c4e18ab752ed77a4a8d874",
+      "severity": "MAJOR",
+      "finding": "Kodlamasını sözcüğü kollarını diye aktarılıyor; robotun yazılımı ile fiziksel yapımı karışıyor."
+    },
+    {
+      "pdf_page": 29,
+      "record_id": "db27ee86-d4ac-54bd-bd4f-cacd30e7f9cf",
+      "render_sha256": "27e900ff76c22e9b36a5fcbad3704f10a25df61fd374d66cecf1d4620d063b84",
+      "severity": "CRITICAL",
+      "finding": "Balonun kuyruğu Defne’ye giderken konuşma robota atanıyor; ışık kaynağı göğüs yerine el diye betimleniyor."
+    },
+    {
+      "pdf_page": 30,
+      "record_id": "f02ac61f-166c-55f6-a171-eeee9ca246d2",
+      "render_sha256": "9fa5482d68fc5f4ba773cd761ae49080391d2b9326c42b53db43ecfa0751ed30",
+      "severity": "MINOR",
+      "finding": "Beyaz gövde metni siyah diye betimleniyor; basılı 30 etiketi 39 okunuyor."
+    },
+    {
+      "pdf_page": 31,
+      "record_id": "4c0c5f13-90b1-5cf2-a59c-f3a9154ce898",
+      "render_sha256": "319860805327b421ea50c55d424b4276b11ac3a2af2d90262ba40b3a39c126b6",
+      "severity": "MINOR",
+      "finding": "Sayfa işareti turuncu robot simgesiyken kırmızı daire diye betimleniyor; ana metin rengi ve alıntı uyumlu."
+    },
+    {
+      "pdf_page": 32,
+      "record_id": "11d0b17c-c26d-57ad-887f-6a4fcb9a97e0",
+      "render_sha256": "2e11ee90be2362f8f346d3c253a9a5c2fd8f7c954eee584e26a3136794610efe",
+      "severity": "MAJOR",
+      "finding": "Beyaz zemin/siyah gövde metni tersine çevrilerek siyah zemin/beyaz yazı deniyor."
+    },
+    {
+      "pdf_page": 33,
+      "record_id": "2515fce1-6084-5dc7-b6ed-199a7a4aa881",
+      "render_sha256": "9abc771fc05ffe473520d46fb192c1eb5e6b644c9335ae77f0e786ba23468ba2",
+      "severity": "MAJOR",
+      "finding": "Çocuğun elindeki tablet beyaz kağıt diye niteleniyor. Balon metni ve robotun omuzdaki eli uyumlu."
+    },
+    {
+      "pdf_page": 34,
+      "record_id": "68d187ef-2f3f-5cbc-86b4-400dd42d5b42",
+      "render_sha256": "cb0dc64ef6e78d394c37d48c4916e829378066d76761380e9586ae7c1442bdd7",
+      "severity": "MAJOR",
+      "finding": "Can ve Robobi adları Canlı/Robopi diye bozuluyor."
+    },
+    {
+      "pdf_page": 35,
+      "record_id": "e698facd-a64e-521a-8529-97b8fe8317b7",
+      "render_sha256": "b4ae6164e8d337f65b06191dc67335647294f741dfabd44c8e87bda36a43f7cd",
+      "severity": "MINOR",
+      "finding": "Basılı 35 etiketi 218, robot simgesi elma diye okunuyor; etkinlik başlığı uyumlu."
+    },
+    {
+      "pdf_page": 36,
+      "record_id": "027b24a3-916a-5163-b357-faa7fc8a9668",
+      "render_sha256": "97bff50819e3c61b833225fbd0ec665c75057a5092665901fbe3d7cedeec4371",
+      "severity": "MAJOR",
+      "finding": "Tamir sözcüğü tımar, basılı 36 etiketi 38 ve robot simgesi domates diye okunuyor."
+    },
+    {
+      "pdf_page": 37,
+      "record_id": "22543e84-90df-5990-8d2f-8f898ab65ad3",
+      "render_sha256": "15e2c4d775d2c7def2bf1f7942d166527f1ac34e386de62781b8ebb7a8489e90",
+      "severity": "MAJOR",
+      "finding": "Parçalanmış turuncu robot ile yerdeki ayrı gri robot ayırt edilmiyor; robot parçası bağlamı eksik/karışık."
+    },
+    {
+      "pdf_page": 38,
+      "record_id": "ea724c30-c501-5b21-ab6d-bfec5b4a805d",
+      "render_sha256": "12b68f3296bf74702b34c45e7ebbc01b847cfaf59aae008cce55a90e7f89fd2f",
+      "severity": "CRITICAL",
+      "finding": "Hatırlamıyorum ifadesi hatırlıyorum diye olumluya çevriliyor; konuşma hayal/etkinlik işareti sayılıyor; 38 etiketi 39 okunuyor."
+    },
+    {
+      "pdf_page": 39,
+      "record_id": "215b94c2-9336-5a32-b83e-4c53fdd740ec",
+      "render_sha256": "a61b347779436c7bec3707759f9d5d9b53290d57542db0cf9b368dae3ec9e992",
+      "severity": "MAJOR",
+      "finding": "Sarı saçlı kız deniyor; saç kızıl, sarı olan bant. Bıyık sakal diye betimleniyor."
+    },
+    {
+      "pdf_page": 40,
+      "record_id": "854fe932-de01-5a29-9093-68dfd1fb36a3",
+      "render_sha256": "e24a32c86e8826c5592e00f7bfa378e80cfa51b0f5e911639e024241ea19477a",
+      "severity": "MINOR",
+      "finding": "Basılı 40 etiketi 45 okunuyor; mavi olan Defne adı değil konuşması."
+    },
+    {
+      "pdf_page": 41,
+      "record_id": "ccb7ee21-1409-53d5-bf98-5368717358bd",
+      "render_sha256": "6412335115a898f8ac96578947a54a230dead1b7ae4581963922c695844b515e",
+      "severity": "MINOR",
+      "finding": "Kedi otururken iki figür de yatıyor deniyor; iki miyav balonu doğru okunmuş."
+    },
+    {
+      "pdf_page": 42,
+      "record_id": "ebf28998-ea90-5c06-af46-f0ec9e2c4b26",
+      "render_sha256": "753efc59281a8d1910f8ebceddc36319983c25c5cdbf06639347af099b118ae7",
+      "severity": "MAJOR",
+      "finding": "Robobi adı Robotti oluyor; Masalın kuşları izlemesi masadaki kuşlara dönüşüyor."
+    },
+    {
+      "pdf_page": 43,
+      "record_id": "ff8391aa-4914-5de0-af8d-83077a8c292b",
+      "render_sha256": "c85c9c7026c9baf5016ccccdf9f34786c83fa5b97469437eb15914f32c71f1da",
+      "severity": "MINOR",
+      "finding": "Turuncu robot sayfa simgesi kırmızı elma diye betimleniyor; etkinlik ana içeriği uyumlu."
+    },
+    {
+      "pdf_page": 44,
+      "record_id": "38241b4b-fe29-572d-8c68-b9f488840cf3",
+      "render_sha256": "9c6b4bca5d4d5519e037bfcf664ce5277d6d29596268d892a6b853c972d6680f",
+      "severity": "MINOR",
+      "finding": "Turuncu robot sayfa simgesi elma diye betimleniyor; ana başlık/ek sayfa bağlamı uyumlu."
+    },
+    {
+      "pdf_page": 45,
+      "record_id": "ab286577-b7df-5491-b903-04df9673057e",
+      "render_sha256": "b46b6df0456e7518f3af8f1c94f7b8369a661498d090106fbd7fcf881feaf3b9",
+      "severity": "MINOR",
+      "finding": "Basılı 45 etiketi 413 ve robot simgesi oyun kumandası diye okunuyor."
+    },
+    {
+      "pdf_page": 46,
+      "record_id": "040e2f52-ecfd-5347-9a6e-5cedc1228428",
+      "render_sha256": "227ea9bf8f388b961312ed78589717e5c8e7c95de5878921170f5e46ec6a82c7",
+      "severity": "MINOR",
+      "finding": "Robot sayfa simgesi fener diye betimleniyor; iki etkinlik başlığı uyumlu."
+    },
+    {
+      "pdf_page": 47,
+      "record_id": "a0cfe7c9-cc89-5ac6-ad7d-79ca72fcef19",
+      "render_sha256": "855b92a4ea119eee76dcb41971f601fcf4146026659ea5d165cc3fc8e57d2ac6",
+      "severity": "MAJOR",
+      "finding": "Sayfada olmayan kum saati çizimi ekleniyor; 47 etiketi 43 okunuyor."
+    },
+    {
+      "pdf_page": 48,
+      "record_id": "6923d880-5bd4-5419-adb1-d7ba0514700a",
+      "render_sha256": "09af01b90e31c5d57da42e598b6142b22c133d96d5c4a340ea879c94f71622be",
+      "severity": "MAJOR",
+      "finding": "Çiçekleri koklamak ifadesi şiirler koklamak diye aktarılıyor; 48 etiketi 13 okunuyor."
+    }
+  ],
+  "no_major_discrepancy_observed_pages": [
+    1,
+    4,
+    5,
+    7,
+    12,
+    14,
+    17,
+    21,
+    22
+  ],
+  "not_blind_or_human_accepted": true,
+  "additional_scope_note": "13 further unchanged outputs have prior source-comparison findings in unassisted-reused-visual-findings.json. No-major-discrepancy is not a correctness guarantee; minor wording and coverage are not fully scored."
+}

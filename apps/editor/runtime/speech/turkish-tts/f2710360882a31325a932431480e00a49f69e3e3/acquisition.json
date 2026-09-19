@@ -1,0 +1,24 @@
+{
+  "dataset": "Anilosan15/Turkish_TTS_Data",
+  "revision": "f2710360882a31325a932431480e00a49f69e3e3",
+  "expected_rows": {
+    "train": 30606
+  },
+  "text_column": "text",
+  "license_status": "NOT_SPECIFIED",
+  "speaker_identity_status": "DATASET_LABEL_ONLY",
+  "counts": {
+    "train": 747
+  },
+  "duration_hours": 1.4022269444444444,
+  "files": [
+    {
+      "path": "train-00000-of-00041.parquet",
+      "sha256": "bb5abfb15c22070a59832ea51c3fa5dd06929a326727670352408e48e10d0acf",
+      "bytes": 450754380
+    }
+  ],
+  "manifest_sha256": "dd21e247130e829b05f068467fd6e28bdb6717eb319bbfc861b769c521ffde8a",
+  "status": "SUBSET_ACQUIRED",
+  "synthesis_validated": false
+}
