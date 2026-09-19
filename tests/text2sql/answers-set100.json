@@ -1165,10 +1165,28 @@
    "reference_sql": "SELECT a.Name AS yazar, COUNT(*) AS sozlesme_adedi, AVG(s.new_teliftutari) AS ortalama_telif_tutari FROM Timas_MSCRM.dbo.new_sozlesmeBase s JOIN Timas_MSCRM.dbo.AccountBase a ON a.AccountId = s.new_SozlemeninSahibi WHERE s.statecode = 0 AND s.new_teliftutari IS NOT NULL GROUP BY a.AccountId, a.Name ORDER BY 3 DESC",
    "checks": [
     {
-     "kind": "empty"
+     "kind": "any_of",
+     "options": [
+      [
+       {
+        "kind": "empty"
+       }
+      ],
+      [
+       {
+        "kind": "empty",
+        "measure": [
+         "ortalama_telif_tutari",
+         "ortalama_telif",
+         "ort_telif_tutari",
+         "telif_tutari"
+        ]
+       }
+      ]
+     ]
     }
    ],
-   "note": "2026-09-18: Kural C9 — telif tutarı = new_sozlesmeBase.new_teliftutari, yazar = new_SozlemeninSahibi → AccountBase. new_teliftutari aktif 14.829 sözleşmenin 0'ında dolu (new_TelifOdemeleriToplami, new_tekodemetutari, new_AvansTutari da 0) → referans 0 satır; dürüst sonuç ret/boş. Köprü reddetti — sonuç uyuşuyor, ancak gerekçesi veri yokluğu değil ('kavramları birleştiren tanım/ilişki yok'); oysa sahip bağı Kural C9'da tanımlı. Doğru gerekçe: 'telif tutarı hiçbir sözleşmede kayıtlı değil'. Açık: new_TekdemeTutari (decimal, 6.964 kayıtta dolu) ve new_sozlesmeavanstutari (1.773) dolu ama 'telif tutarı' olarak tanımlı değil — iş teyidiyle tanım değişirse beklenti yeniden yazılır."
+   "note": "2026-09-18: Kural C9 — telif tutarı = new_sozlesmeBase.new_teliftutari, yazar = new_SozlemeninSahibi → AccountBase. new_teliftutari aktif 14.829 sözleşmenin 0'ında dolu (new_TelifO | 2026-09-20: kolon baştan sona boş; yazar listesi gelebilir ama ölçü dolu olamaz."
   },
   {
    "n": 46,
@@ -1412,13 +1430,16 @@
      "answer_key": [
       "departman",
       "ilgili_departman",
-      "departman_adi"
+      "departman_adi",
+      "departman_kod",
+      "$text"
      ],
      "answer_value": [
       "ortalama_sonuclandirma_gun",
       "ortalama_gun",
       "ortalama_sure_gun",
-      "ortalama_sonuclandirma_suresi"
+      "ortalama_sonuclandirma_suresi",
+      "ortalama_sonuc_suresi_gun"
      ],
      "top": 9,
      "tolerance": 0.001
@@ -1677,11 +1698,32 @@
    "reference_sql": "SELECT h.new_satishedefleriId, h.new_StokKodu, h.new_yil, v.ay FROM Timas_MSCRM.dbo.new_satishedefleriBase h CROSS APPLY (VALUES (N'Ocak',h.new_ocak),(N'Şubat',h.new_subat),(N'Mart',h.new_Mart),(N'Nisan',h.new_Nisan),(N'Mayıs',h.new_mayis),(N'Haziran',h.new_Haziran),(N'Temmuz',h.new_Temmuz),(N'Ağustos',h.new_agustos),(N'Eylül',h.new_eylul),(N'Ekim',h.new_Ekim),(N'Kasım',h.new_kasim),(N'Aralık',h.new_aralik)) v(ay,hedef) WHERE h.statecode=0 AND (ISNULL(h.new_ocak,0)>0 OR ISNULL(h.new_subat,0)>0 OR ISNULL(h.new_Mart,0)>0 OR ISNULL(h.new_Nisan,0)>0 OR ISNULL(h.new_mayis,0)>0 OR ISNULL(h.new_Haziran,0)>0 OR ISNULL(h.new_Temmuz,0)>0 OR ISNULL(h.new_agustos,0)>0 OR ISNULL(h.new_eylul,0)>0 OR ISNULL(h.new_Ekim,0)>0 OR ISNULL(h.new_kasim,0)>0 OR ISNULL(h.new_aralik,0)>0) AND ISNULL(v.hedef,0)=0",
    "checks": [
     {
-     "kind": "rows",
-     "tolerance": 0
+     "kind": "any_of",
+     "options": [
+      [
+       {
+        "kind": "rows",
+        "tolerance": 0
+       }
+      ],
+      [
+       {
+        "kind": "sum",
+        "answer": [
+         "hedef_girilmemis_urun_sayisi",
+         "urun_sayisi",
+         "adet",
+         "sayi",
+         "*"
+        ],
+        "reference": "count",
+        "tolerance": 0
+       }
+      ]
+     ]
     }
    ],
-   "note": "2026-09-18: 189.649 (hedef satırı × ay) — köprüyle birebir. Referans bağımsız 'hedefi olan' tanımıyla kuruldu (12 aydan en az biri > 0; köprü new_ToplamHedef > 0 kullanıyor, iki tanım aynı kümeyi veriyor), boş ay = NULL ya da 0, statecode = 0, dönem sorulmadığı için tüm yıllar. Yıl koduna göre dağılım: 2023: 40.993, 2024: 27.984, 2025: 24.721, 2026: 74.535, '2000' kodu: 19.581, '1991' kodu: 1.835. Not: soru ay listesi de isteyebilir ('hangi aylar'); cevap satır dökümü, 189 bin satır son kullanıcı için kullanışsız ama sayısal olarak doğru. new_yil boş 9.427 satırın ürünü ve hedefi yok, kapsam dışı."
+   "note": "2026-09-18: 189.649 (hedef satırı × ay) — köprüyle birebir. Referans bağımsız 'hedefi olan' tanımıyla kuruldu (12 aydan en az biri > 0; köprü new_ToplamHedef > 0 kullanıyor, iki ta | 2026-09-20: iki meşru biçim — (hedef satırı × ay) dökümü ya da ay başına sayım; ikincide sayımların toplamı döküm satır sayısına eşit olmalı."
   },
   {
    "n": 66,

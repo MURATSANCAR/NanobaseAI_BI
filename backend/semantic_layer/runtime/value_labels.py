@@ -74,7 +74,13 @@ def label_map(sql: str, profiles: Iterable[SchemaProfile], dialect: str = "tsql"
         return {}
     if not isinstance(tree, exp.Select):
         return {}
-    names = _profiles_by_name(list(profiles))
+    profiles = list(profiles)
+    by_table, by_entity = _profiles_by_name(profiles)
+    # Mantıksal SQL şemayı alt çizgiyle yazar (Timas_MSCRM_dbo_X); katalogda şema noktalıdır.
+    for p in profiles:
+        if p.schema_name:
+            by_table.setdefault(f"{p.schema_name}_{p.table_name}".replace(".", "_").upper(), p)
+    names = (by_table, by_entity)
     out: dict[str, dict[str, str]] = {}
     for proj in tree.expressions:
         inner = proj.this if isinstance(proj, exp.Alias) else proj

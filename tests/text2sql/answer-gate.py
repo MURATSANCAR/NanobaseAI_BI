@@ -90,13 +90,15 @@ def _pick(row: dict, names):
     for name in ([names] if isinstance(names, str) else list(names or [])):
         if name == "*":                       # tek değerli cevap: ilk sayısal kolon, adı ne olursa olsun
             return next((v for v in row.values() if _num(v) is not None and not isinstance(v, bool)), None)
+        if name == "$text":                   # anahtar kolonu: ilk metin değeri, adı ne olursa olsun
+            return next((v for v in row.values() if isinstance(v, str) and _num(v) is None), None)
         if name in row:
             return row[name]
     return None
 
 
 def _has(row: dict, names) -> bool:
-    return any(n == "*" or n in row for n in ([names] if isinstance(names, str) else list(names or [])))
+    return any(n in ("*", "$text") or n in row for n in ([names] if isinstance(names, str) else list(names or [])))
 
 
 def kind_of(answer: dict) -> str:
@@ -114,22 +116,36 @@ def kind_of(answer: dict) -> str:
 def check(case: dict, answer: dict, reference: list[dict], lookups, tolerance: float) -> list[str]:
     """Bu denemenin referansa uymayan yanları; boşsa geçti."""
     problems: list[str] = []
-    records = answer.get("records") or []
     if answer.get("_partial"):
         problems.append(f"cevabın tamamı alınamadı: {answer['_partial']}")
-    for spec in case.get("checks") or []:
+    return problems + _check_specs(case.get("checks") or [], answer, reference, lookups, tolerance)
+
+
+def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tolerance: float) -> list[str]:
+    problems: list[str] = []
+    records = answer.get("records") or []
+    for spec in specs:
         kind = spec["kind"]
-        if kind == "rows":
+        if kind == "any_of":
+            # Aynı soru iki meşru biçimde cevaplanabilir (döküm / özet): seçeneklerden biri tutarsa geçer.
+            tried = [_check_specs(option, answer, reference, lookups, tolerance) for option in spec["options"]]
+            if all(tried):
+                problems.extend(min(tried, key=len))
+        elif kind == "rows":
             want = len(reference) if spec.get("reference", "count") == "count" else _num(reference[0][spec["reference"]])
             got = answer.get("rowCount") if answer.get("rowCount") is not None else len(records)
             if not _close(got, want, spec.get("tolerance", tolerance)):
                 problems.append(f"satır sayısı {got}, referans {want}")
         elif kind == "empty":
-            if (answer.get("rowCount") or 0) != 0 and any(any(v not in (None, 0, "") for v in r.values()) for r in records):
+            # "measure" verilmişse: satır gelebilir ama ölçü kolonu baştan sona boş olmalı (veri yok).
+            if spec.get("measure"):
+                if any(_pick(r, spec["measure"]) not in (None, 0, "") for r in records):
+                    problems.append(f"ölçü boş beklenirdi, dolu değer geldi ({spec['measure']})")
+            elif (answer.get("rowCount") or 0) != 0 and any(any(v not in (None, 0, "") for v in r.values()) for r in records):
                 problems.append(f"boş beklenirdi, {answer.get('rowCount')} satır geldi")
         elif kind == "sum":
             got = sum(_num(_pick(r, spec["answer"])) or 0 for r in records)
-            want = sum(_num(r.get(spec["reference"])) or 0 for r in reference)
+            want = len(reference) if spec["reference"] == "count" else sum(_num(r.get(spec["reference"])) or 0 for r in reference)
             if records and not _has(records[0], spec["answer"]):
                 problems.append(f"cevapta '{spec['answer']}' kolonu yok: {sorted((records[0] if records else {}).keys())}")
             elif not _close(got, want, spec.get("tolerance", tolerance)):
