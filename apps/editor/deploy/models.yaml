@@ -34,7 +34,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.48
     args:
-      - '--structured-outputs-config={"disable_any_whitespace":true}'
+      - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
       - --max-model-len=131072
       - --max-num-seqs=32
       - --max-num-batched-tokens=8192
@@ -81,7 +81,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.40
     args:
-      - '--structured-outputs-config={"disable_any_whitespace":true}'
+      - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
       - --max-model-len=32768
       - --max-num-seqs=32
       - --enable-prefix-caching
@@ -97,7 +97,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.90
     args:
-      - '--structured-outputs-config={"disable_any_whitespace":true}'
+      - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
       - --max-model-len=40960
       - --max-num-seqs=8
       - --enable-prefix-caching
@@ -115,7 +115,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.80
     args:
-      - '--structured-outputs-config={"disable_any_whitespace":true}'
+      - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
       - --max-model-len=32768
       - --max-num-seqs=8
       - '--limit-mm-per-prompt={"audio":1,"image":0,"video":0}'
