@@ -51,7 +51,7 @@ from semantic_layer.runtime.compiler import CompilerRouter, DeterministicCompile
 # second, prettier version of it would let the screen and the engine disagree.
 from semantic_layer.runtime.compiler import _pred_sql as compiled_predicate
 from semantic_layer.runtime.audit import audit_sql, repair_qualifiers_sql, unmet_obligations
-from semantic_layer.runtime import critic
+from semantic_layer.runtime import critic, value_labels
 from semantic_layer.runtime.guardrails import is_query_timeout, allowed_tables, is_connection_error, physicalize_sql, referenced_tables, strip_comments, strip_trailing_semicolon, validate_sql
 from semantic_layer.runtime.llm_jobs import LlmJobs
 from semantic_layer.runtime.llm_queue import NORMAL, LlmQueue, QueuedLlm
@@ -473,13 +473,23 @@ class Runtime:
                 if age < self._cache_ttl or (self._refresher_alive() and age < self._stale_max):
                     out = self._served(hit[1], hit[0])
                     out["cached"] = True
-                    return out
+                    return self._labelled(sql, out)
         out, duration = self._execute(phys, limit, interactive=True)
         computed_at = time.time()
         self._remember(key, out, duration, computed_at=computed_at)
         served = self._served(out, computed_at)
         served["cached"] = False
-        return served
+        return self._labelled(sql, served)
+
+    def _labelled(self, sql: str, out: dict[str, Any]) -> dict[str, Any]:
+        """Seçim listesi kodları etiketiyle: insan "4" değil "Satış" görür (value_labels katalogdan)."""
+        try:
+            mapping = value_labels.label_map(sql, self.profiles, self.settings.dialect or "tsql")
+            if mapping and out.get("records"):
+                out = dict(out, records=value_labels.apply(out["records"], mapping))
+        except Exception:  # noqa: BLE001 — etiket bir kolaylıktır, cevabı düşürmez
+            log.exception("value label decoding failed")
+        return out
 
     # ------------------------------------------------------------------ önbellek iç işleyişi
 
@@ -530,7 +540,14 @@ class Runtime:
                     while self._results and sum(p.stat().st_size for p in Path(self.result_files.directory.name).glob('*.jsonl')) + reserve > self.result_files.disk_budget:
                         self._discard_result(next(iter(self._results)))
                 db = [0.0]
-                out = self.result_files.write(_timed(self._conn_for(phys).batches(phys), db), self.settings.max_rows)
+                try:
+                    mapping = value_labels.label_map(sql, self.profiles, self.settings.dialect or "tsql")
+                except Exception:  # noqa: BLE001
+                    mapping = {}
+                source = self._conn_for(phys).batches(phys)
+                if mapping:
+                    source = ((cols, value_labels.apply(rows, mapping)) for cols, rows in source)
+                out = self.result_files.write(_timed(source, db), self.settings.max_rows)
                 out.update(physicalSql=phys, cached=False, dbMs=int(round(db[0] * 1000)))
                 computed_at = time.time()
                 self._complete_cache[key] = (computed_at, out)
