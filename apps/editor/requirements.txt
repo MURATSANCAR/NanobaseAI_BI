@@ -1,0 +1,15 @@
+# Editor Python image (python:3.14-slim). Versions current on 2026-09-19.
+temporalio==1.33.0
+langgraph==1.2.11
+mcp==2.2.0
+qdrant-client==1.19.1
+psycopg[binary]==3.3.6
+psycopg-pool
+pymupdf==1.28.2
+httpx==0.28.1
+fastapi==0.141.1
+uvicorn==0.53.0
+pydantic==2.13.5
+docker==7.2.0
+nvidia-ml-py==13.610.43
+pyyaml

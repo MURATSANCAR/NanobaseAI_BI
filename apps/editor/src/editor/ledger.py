@@ -1,0 +1,168 @@
+"""Evidence ledger writes. Every claim goes through `save_claim`, which refuses
+a claim without evidence (the database refuses it too, at commit)."""
+
+from __future__ import annotations
+
+import re
+import unicodedata
+from dataclasses import dataclass
+from typing import Any, Iterable
+
+import psycopg
+
+from . import db
+
+_WS = re.compile(r"\s+")
+_HYPH = re.compile(r"(\w)[-­]\s+(\w)")
+
+
+def norm(s: str) -> str:
+    s = unicodedata.normalize("NFKC", s or "")
+    s = s.replace("’", "'").replace("‘", "'").replace("“", '"').replace("”", '"')
+    s = _HYPH.sub(r"\1\2", s)
+    s = re.sub(r"[\"'«»….,;:!?()\-–—]", " ", s)
+    return _WS.sub(" ", s).strip().casefold()
+
+
+def quote_found(quote: str, haystack_norm: str) -> bool:
+    """Verbatim (after normalisation) or >= 85% of the quote's words in order."""
+    q = norm(quote)
+    if not q:
+        return False
+    if q in haystack_norm:
+        return True
+    words = q.split()
+    if len(words) < 4:
+        return False
+    hay = haystack_norm.split()
+    best = 0
+    for i in range(len(hay)):
+        j, k = i, 0
+        while j < len(hay) and k < len(words):
+            if hay[j] == words[k]:
+                k += 1
+            j += 1
+            if j - i > len(words) * 2:
+                break
+        best = max(best, k)
+    return best / len(words) >= 0.85
+
+
+@dataclass
+class PageIndex:
+    """Normalised page text (text layer + OCR) and visual scan text, per page."""
+    text: dict[int, str]
+    visual: dict[int, str]
+    raw: dict[int, str]
+
+    @classmethod
+    def load(cls, conn: psycopg.Connection, generation_id: str) -> "PageIndex":
+        text: dict[int, list[str]] = {}
+        for r in conn.execute("SELECT page_no, text FROM page_text WHERE generation_id=%s "
+                              "ORDER BY page_no, source", (generation_id,)):
+            text.setdefault(r["page_no"], []).append(r["text"])
+        visual: dict[int, list[str]] = {}
+        for r in conn.execute("SELECT page_no, result::text AS t FROM page_scan "
+                              "WHERE generation_id=%s", (generation_id,)):
+            visual.setdefault(r["page_no"], []).append(r["t"])
+        raw = {p: "\n".join(v) for p, v in text.items()}
+        return cls({p: norm(t) for p, t in raw.items()},
+                   {p: norm(" ".join(v)) for p, v in visual.items()}, raw)
+
+    def verify(self, page: int, quote: str, kind: str) -> bool:
+        hay = self.text.get(page, "")
+        if kind == "VISUAL":
+            hay = hay + " " + self.visual.get(page, "")
+        return quote_found(quote, hay)
+
+
+def save_evidence(conn: psycopg.Connection, generation_id: str, idx: PageIndex, *,
+                  page: int, quote: str, kind: str = "TEXT",
+                  paragraph_idx: int | None = None, region_id: str | None = None,
+                  event_id: str | None = None) -> tuple[str, bool]:
+    quote = (quote or "").strip()
+    if not quote:
+        raise ValueError("empty evidence quote")
+    ok = idx.verify(page, quote, kind)
+    row = conn.execute(
+        "INSERT INTO evidence(generation_id, page_no, paragraph_idx, region_id, event_id, kind,"
+        " quote, quote_verified) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        (generation_id, page, paragraph_idx or None, region_id, event_id, kind, quote[:2000], ok),
+    ).fetchone()
+    return str(row["id"]), ok
+
+
+def evidence_from_model(conn: psycopg.Connection, generation_id: str, idx: PageIndex,
+                        items: Iterable[dict], *, valid_pages: set[int],
+                        default_kind: str = "TEXT") -> list[tuple[str, bool, int]]:
+    """Model evidence [{page, paragraph, quote}] -> ledger rows. Items pointing
+    at pages outside the book are dropped (they are not evidence)."""
+    out = []
+    for e in items or []:
+        page = int(e.get("page") or 0)
+        quote = (e.get("quote") or "").strip()
+        if page not in valid_pages or not quote:
+            continue
+        kind = "VISUAL" if int(e.get("paragraph") or 0) == 0 and default_kind == "TEXT" \
+            and not idx.verify(page, quote, "TEXT") else default_kind
+        eid, ok = save_evidence(conn, generation_id, idx, page=page, quote=quote, kind=kind,
+                                paragraph_idx=int(e.get("paragraph") or 0) or None)
+        out.append((eid, ok, page))
+    return out
+
+
+def save_claim(conn: psycopg.Connection, generation_id: str, *, kind: str, claim: str,
+               evidence: list[tuple[str, bool, int]], confidence: float, created_by: str,
+               subject: str | None = None, payload: dict | None = None,
+               model_call_id: int | None = None, status: str = "CANDIDATE",
+               needs_review: bool = False) -> str | None:
+    """Insert a claim with its evidence links. Returns None (and writes
+    nothing) when there is no evidence: "Kaynaksız iddia üretilemez"."""
+    if not evidence or not claim.strip():
+        return None
+    pages = sorted({p for _, _, p in evidence})
+    verified = sum(1 for _, ok, _ in evidence if ok)
+    payload = dict(payload or {})
+    payload.setdefault("evidence_verified", f"{verified}/{len(evidence)}")
+    row = conn.execute(
+        "INSERT INTO claim(generation_id, kind, subject, claim, source_pages, payload, confidence,"
+        " status, needs_editor_review, created_by, model_call_id)"
+        " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        (generation_id, kind, subject, claim.strip(), pages, db.J(payload),
+         max(0.0, min(1.0, float(confidence))), status, needs_review, created_by, model_call_id),
+    ).fetchone()
+    cid = str(row["id"])
+    for eid, _, _ in evidence:
+        conn.execute("INSERT INTO claim_evidence(claim_id, evidence_id) VALUES (%s,%s) "
+                     "ON CONFLICT DO NOTHING", (cid, eid))
+    return cid
+
+
+def queue_review(conn: psycopg.Connection, generation_id: str, *, reason: str,
+                 claim_id: str | None = None, contradiction_id: str | None = None,
+                 priority: int = 2) -> str:
+    if claim_id:
+        conn.execute("UPDATE claim SET status='NEEDS_REVIEW', needs_editor_review=true "
+                     "WHERE id=%s AND status IN ('CANDIDATE','VERIFIED','NEEDS_REVIEW')",
+                     (claim_id,))
+    if contradiction_id:
+        conn.execute("UPDATE contradiction SET status='NEEDS_REVIEW' WHERE id=%s "
+                     "AND status='CANDIDATE'", (contradiction_id,))
+    existing = conn.execute(
+        "SELECT id FROM review_item WHERE generation_id=%s AND status='OPEN' AND "
+        "claim_id IS NOT DISTINCT FROM %s AND contradiction_id IS NOT DISTINCT FROM %s",
+        (generation_id, claim_id, contradiction_id)).fetchone()
+    if existing:
+        return str(existing["id"])
+    row = conn.execute(
+        "INSERT INTO review_item(generation_id, claim_id, contradiction_id, reason, priority)"
+        " VALUES (%s,%s,%s,%s,%s) RETURNING id",
+        (generation_id, claim_id, contradiction_id, reason[:2000], priority)).fetchone()
+    return str(row["id"])
+
+
+def corrections_for_book(conn: psycopg.Connection, book_id: str) -> list[dict[str, Any]]:
+    """Editor corrections carried into every later run of the same book."""
+    return conn.execute(
+        "SELECT target_kind, target_key, correction, editor, created_at FROM editor_correction "
+        "WHERE book_id=%s ORDER BY created_at", (book_id,)).fetchall()

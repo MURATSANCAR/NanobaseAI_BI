@@ -1,0 +1,110 @@
+# Model Gateway alias table (NIHAI-KARAR.md §2, §6).
+# Hermes and the analysis workers only ever see the alias. The real model,
+# revision and GPU live here and in the ledger's model_call provenance rows.
+#
+# Every model runs in its own vLLM container that is CREATED but not started
+# (`editorctl install`). The gateway starts a container on the first request
+# for its alias and stops it after `idle_stop_sec` with no traffic, so an idle
+# editor holds no GPU memory.
+#
+# mem_fraction is vLLM's --gpu-memory-utilization for that one container: the
+# share of the card this model may take. Models on the same GPU whose fractions
+# add up to <= 0.92 can run together; otherwise the gateway stops the idle
+# editor model(s) on that card first. It never touches a container that is not
+# an editor model.
+
+defaults:
+  image: vllm/vllm-openai:v0.29.0
+  idle_stop_sec: 600
+  start_timeout_sec: 1800
+
+aliases:
+  book-director:
+    container: editor-model-director
+    model_dir: Qwen3.8-27B-FP8
+    real_model: Qwen/Qwen3.8-27B-FP8
+    role: Planlama, sentez, özet, karar
+    kind: chat
+    gpu: 0
+    mem_fraction: 0.50
+    args:
+      - --max-model-len=131072
+      - --max-num-seqs=32
+      - --max-num-batched-tokens=8192
+      - --enable-chunked-prefill
+      - --enable-prefix-caching
+      - --enable-auto-tool-choice
+      - --tool-call-parser=qwen3_coder
+      - --reasoning-parser=qwen3
+      - '--speculative-config={"method":"mtp","num_speculative_tokens":3}'
+
+  book-embedding:
+    container: editor-model-embedding
+    model_dir: Qwen3-Embedding-8B
+    real_model: Qwen/Qwen3-Embedding-8B
+    role: Kitap/karakter/olay semantik araması
+    kind: embedding
+    gpu: 0
+    mem_fraction: 0.20
+    args:
+      - --runner=pooling
+      - --convert=embed
+      - --max-model-len=32768
+
+  book-reranker:
+    container: editor-model-reranker
+    model_dir: Qwen3-Reranker-8B
+    real_model: Qwen/Qwen3-Reranker-8B
+    role: Kanıt ve sayfa sıralaması
+    kind: rerank
+    gpu: 0
+    mem_fraction: 0.22
+    args:
+      - --runner=pooling
+      - --convert=classify
+      - --max-model-len=32768
+      - '--hf-overrides={"architectures":["Qwen3ForSequenceClassification"],"classifier_from_token":["no","yes"],"is_original_qwen3_reranker":true}'
+
+  book-vision-fast:
+    container: editor-model-vision-fast
+    model_dir: Qwen3-VL-8B-Instruct
+    real_model: Qwen/Qwen3-VL-8B-Instruct
+    role: Tüm sayfaların hızlı taranması
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.40
+    args:
+      - --max-model-len=32768
+      - --max-num-seqs=32
+      - --enable-prefix-caching
+      - '--limit-mm-per-prompt={"image":4,"video":0}'
+      - '--mm-processor-kwargs={"max_pixels":2408448}'
+
+  book-vision-deep:
+    container: editor-model-vision-deep
+    model_dir: Qwen3-VL-32B-Thinking
+    real_model: Qwen/Qwen3-VL-32B-Thinking
+    role: Zor görsel, karakter ve sahne analizi
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.85
+    args:
+      - --max-model-len=40960
+      - --max-num-seqs=8
+      - --enable-prefix-caching
+      - --reasoning-parser=qwen3
+      - '--limit-mm-per-prompt={"image":6,"video":0}'
+      - '--mm-processor-kwargs={"max_pixels":2408448}'
+
+  book-audio:
+    container: editor-model-audio
+    model_dir: Qwen3-Omni-30B-A3B-Captioner
+    real_model: Qwen/Qwen3-Omni-30B-A3B-Captioner
+    role: İleride sesli kitap/ses analizi
+    kind: chat
+    gpu: 0
+    mem_fraction: 0.80
+    args:
+      - --max-model-len=32768
+      - --max-num-seqs=8
+      - '--limit-mm-per-prompt={"audio":1,"image":0,"video":0}'

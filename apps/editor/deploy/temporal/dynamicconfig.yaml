@@ -1,0 +1,7 @@
+# Editor Temporal dynamic config. Long book runs: allow big histories.
+limit.maxIDLength:
+  - value: 255
+    constraints: {}
+limit.blobSize.error:
+  - value: 8388608
+    constraints: {}

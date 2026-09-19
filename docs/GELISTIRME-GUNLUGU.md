@@ -1,5 +1,19 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 18:40 — Editör modülü (Hermes Book Director): hazırlık ve kurulum
+
+Kullanıcının "Nihai karar" analizine birebir uyan, BI'dan tamamen ayrı yeni modül: `apps/editor`. Karar metni kelimesi kelimesine `apps/editor/docs/NIHAI-KARAR.md`'de; metnin açık bıraktığı yerler ve gerekçeler `docs/UYGULAMA-NOTLARI.md`'de. Kod yalnız depoda; veritabanı, vektör deposu, model kopyaları, konteynerler ve ağ TT GPU sunucusunda `/data/editor` altında ve editöre ait (BI'ın Qdrant'ı, modeli, HF önbelleği kullanılmaz).
+
+- **Kurulan (hepsi en güncel sürüm, hepsi Docker):** Hermes Agent v2026.9.14, vLLM 0.29.0, Temporal 1.32.0 (+UI 2.54.1, Python SDK 1.33.0), PostgreSQL 18.6, Qdrant 1.19.1, LangGraph 1.2.11, MCP SDK 2.2.0, Python 3.14. `editorctl` (install/up/down/status/analyze/cli/hermes).
+- **Model gateway** (`src/editor/gateway.py`): Hermes ve işçiler yalnız takma ad görür (book-director, book-vision-fast, book-vision-deep, book-embedding, book-reranker, book-audio). Her takma ad bir vLLM konteyneri; ilk istekte açılır, 600 sn boşta kapanır, iş akışı bitince hepsi kapanır. Kartta yer yoksa yalnız boştaki editör modellerini kapatır; editör dışı konteynere dokunmaz, `gpu_busy` ile kartı kimin tuttuğunu söyler.
+- **Modeller** `/data/editor/models`, revizyonlar `MANIFEST.json`'da: Qwen3.8-27B-FP8 (book-director, BI ile aynı revizyon ama ayrı kopya), Qwen3-VL-8B-Instruct, Qwen3-VL-32B-Thinking, Qwen3-Embedding-8B, Qwen3-Reranker-8B, Qwen3-Omni-30B-A3B-Captioner. Sunucunun internetinde bağlantı başına ~0,2 MB/s sınır var (toplam ~12 MB/s); aria2 ile dosya başına 16 bağlantı. `deploy/verify_models.py` boyut + sha256 doğrular.
+- **Kanıt defteri** (`db/migrations/001`): kanıtsız iddia commit'te reddedilir, iddia içeriği/kanıt/rapor değişmez (yeni generation), CONFIRMED kimlik ≥0,85, zaman çizelgesinde yalnız REALIZED/MEMORY, çelişkiler aday doğar, kanon onaysız yazılamaz.
+- **MCP**: metindeki beş sunucunun bütün araçları + `book_jobs_mcp` (job_id, Temporal). Hermes'te terminal/dosya/web/kod araçları kapalı; 15 kitap skill'i, Book Director SOUL.md.
+- **İş akışı**: 15 adımın her biri Temporal etkinliği; sayfa/parça adımları paralel, başarısızlar toplanır, bir adımda her şey düşerse iş açık hatayla durur. Kitap başına editör düzeltmeleri sonraki analizlere taşınır; her analizin sonunda regresyon.
+- **Gerçek kitapla bulunan ve düzeltilen**: InDesign PDF'inde her satır ayrı blok (paragraflar satır geometrisinden yeniden kuruldu, tireleme ve büyük ilk harf birleştirildi, sayfa numarası atıldı); görünmez (alpha 0) metin parçaları; ek kitapçıkta (s.44–48) özel kodlamalı yazı tipi → metin katmanı çöp, bu sayfalar OCR'a; künye ve yazar biyografileri bölüm/karakter sanılıyordu.
+- **Doğrulanan**: çekirdek servisler ayakta; Hermes altı MCP sunucusuna bağlı; işçi Temporal'ı dinliyor; "Ekrana Sığmayan Macera" (48 sayfa) iş olarak başlatıldı, adım 1–3 gerçek kitapta geçti, adım 4 `gpu_busy` ile açık hatayla durdu.
+- **Açık (kullanıcı kararı)**: BI'ın `qwen38-27b` konteyneri iki kartın ~78 GB'ını tutuyor (0,80, TP2) ve aktif kullanımda; kalan ~18 GB'a editörün ana modeli (31 GB) ve 32B görsel modeli (67 GB) sığmıyor. Editör BI'a dokunmaz; kitabın uçtan uca koşusu BI modeli koşu süresince durdurulursa ya da payı düşürülürse yapılabilir.
+
 ## 2026-09-19 — GPU model kurulumu ve tünel dosyaları `deploy/tt-gpu/` altında
 
 TT GPU'daki `qwen38-27b` kurulum dosyası ve BI semantik köprüsünün modele bağlandığı GPU→CPU ters tünelinin (`127.0.0.1:18885`) sshd/systemd dosyaları `deploy/tt-gpu/` altına alındı. Tünel sunucularda `editor-gpu-tunnel` adıyla kurulu; ad tarihsel, BI'ın model yolu olduğu için temizlikte silinmez.
