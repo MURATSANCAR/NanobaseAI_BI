@@ -1,11 +1,11 @@
 {
- "recordedAt": "2026-09-18T13:20:50Z",
+ "recordedAt": "2026-09-19T18:59:57Z",
  "state": {
-  "catalogHash": "200e0cf6f90c5b827f968534361b2c3b41297ef15cef5d666df2464d2b35559b",
+  "catalogHash": "e71b44468e3362089e1f07e4c09c98d28794f6d6bb36b89226f0f5e12f919929",
   "languagePoolHash": "",
-  "catalogVersion": 61083,
+  "catalogVersion": 70548,
   "rulesHash": "c4954b528fa040ca",
-  "promptHash": "49144219d99f91a6"
+  "promptHash": "107e4c76c370f683"
  },
  "cases": {
   "A032": {
@@ -561,21 +561,9 @@
    "kaynak": "logo",
    "read": {
     "sources": [
-     "ANA",
-     "TIMAS_MSCRM"
+     "ANA"
     ],
     "slots": [
-     {
-      "term": "adede",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_95aa570a33f1",
-      "entity": "ACCOUNTBASE",
-      "what": "NEW_ADI",
-      "values": [],
-      "role": "group_by",
-      "source": "TIMAS_MSCRM"
-     },
      {
       "term": "musteriler",
       "type": "COLUMN",
@@ -637,10 +625,11 @@
      }
     ],
     "groupBy": [
-     "ACCOUNTBASE.NEW_ADI",
      "CLCARD.DEFINITION_"
     ],
-    "unresolved": [],
+    "unresolved": [
+     "adede"
+    ],
     "unhandled": [],
     "leftToModel": [
      "ettigimiz"
@@ -662,7 +651,7 @@
     ],
     "clarification": false,
     "outOfScope": false,
-    "state": "RESOLVED"
+    "state": "PARTIAL"
    }
   },
   "C021": {
@@ -1419,8 +1408,7 @@
    "kaynak": "logo",
    "read": {
     "sources": [
-     "ANA",
-     "TIMAS_MSCRM"
+     "ANA"
     ],
     "slots": [
      {
@@ -1433,22 +1421,12 @@
       "values": [],
       "role": "",
       "source": "ANA"
-     },
-     {
-      "term": "tahsil",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_576bfee4672c",
-      "entity": "CONTACTBASE",
-      "what": "EDUCATIONCODE",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      }
     ],
     "groupBy": [],
     "unresolved": [
      "alacaklarimiz",
+     "tahsil",
      "vadesi"
     ],
     "unhandled": [],
@@ -1546,12 +1524,8 @@
     "qualifierColumns": [],
     "drops": [
      {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "limitini"
-     },
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "risk"
+      "code": "DEFAULT_PERIOD_APPLIED",
+      "term": ""
      }
     ],
     "shape": null,
@@ -1559,7 +1533,9 @@
     "limit": null,
     "ratio": false,
     "comparison": false,
-    "temporal": [],
+    "temporal": [
+     "YEAR"
+    ],
     "clarification": false,
     "outOfScope": false,
     "state": "UNRESOLVED"
@@ -2202,13 +2178,13 @@
     "qualifierColumns": [],
     "drops": [
      {
-      "code": "WORD_READ_AS_ROW_LIMIT",
-      "term": "yuzu"
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "asan"
      }
     ],
     "shape": null,
     "grain": null,
-    "limit": 100,
+    "limit": null,
     "ratio": false,
     "comparison": false,
     "temporal": [],
@@ -2223,19 +2199,20 @@
    "kaynak": "crm",
    "read": {
     "sources": [
+     "ANA",
      "TIMAS_MSCRM"
     ],
     "slots": [
      {
-      "term": "aylara",
+      "term": "urun",
       "type": "COLUMN",
       "status": "CERTIFIED",
-      "concept": "sem_2215b225c6b1",
-      "entity": "NEW_PROJEBASE",
-      "what": "NEW_PROJENINAYI",
+      "concept": "sem_92ac0bd37a50",
+      "entity": "ITEMS",
+      "what": "NAME",
       "values": [],
-      "role": "group_by",
-      "source": "TIMAS_MSCRM"
+      "role": "",
+      "source": "ANA"
      },
      {
       "term": "yillik hedefin",
@@ -2245,27 +2222,18 @@
       "entity": "NEW_SATISHEDEFLERIBASE",
       "what": "NEW_TOPLAMHEDEF",
       "values": [],
-      "role": "group_by",
+      "role": "",
       "source": "TIMAS_MSCRM"
      }
     ],
-    "groupBy": [
-     "NEW_PROJEBASE.NEW_PROJENINAYI",
-     "NEW_SATISHEDEFLERIBASE.NEW_TOPLAMHEDEF"
-    ],
+    "groupBy": [],
     "unresolved": [
-     "dengesiz",
-     "urun"
+     "dengesiz"
     ],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
-    "drops": [
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "urun"
-     }
-    ],
+    "drops": [],
     "shape": null,
     "grain": "YEAR",
     "limit": null,
@@ -2731,17 +2699,6 @@
     ],
     "slots": [
      {
-      "term": "suresi",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_3ba7b0b6b98f",
-      "entity": "NEW_SOZLESMEBASE",
-      "what": "NEW_SOZLESMESURESIYIL",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
-     },
-     {
       "term": "telif sozlesmeleri",
       "type": "ENTITY",
       "status": "CERTIFIED",
@@ -2754,7 +2711,9 @@
      }
     ],
     "groupBy": [],
-    "unresolved": [],
+    "unresolved": [
+     "suresi"
+    ],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
@@ -2769,7 +2728,7 @@
     ],
     "clarification": false,
     "outOfScope": false,
-    "state": "RESOLVED"
+    "state": "PARTIAL"
    }
   },
   "A020": {
@@ -2964,7 +2923,7 @@
       "entity": "ITEMS",
       "what": "NAME",
       "values": [],
-      "role": "subject_group_by",
+      "role": "",
       "source": "ANA"
      },
      {
@@ -2977,22 +2936,9 @@
       "values": [],
       "role": "",
       "source": "ANA"
-     },
-     {
-      "term": "kayıt sayısı",
-      "type": "METRIC",
-      "status": "COMPOSED",
-      "concept": "",
-      "entity": "CLCARD",
-      "what": "f:8eccfbdecd21aca2",
-      "values": [],
-      "role": "",
-      "source": "ANA"
      }
     ],
-    "groupBy": [
-     "ITEMS.NAME"
-    ],
+    "groupBy": [],
     "unresolved": [
      "araligina",
      "tanimli",
@@ -3356,17 +3302,6 @@
     ],
     "slots": [
      {
-      "term": "suresi",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_3ba7b0b6b98f",
-      "entity": "NEW_SOZLESMEBASE",
-      "what": "NEW_SOZLESMESURESIYIL",
-      "values": [],
-      "role": "subject_group_by",
-      "source": "TIMAS_MSCRM"
-     },
-     {
       "term": "departmana",
       "type": "COLUMN",
       "status": "CERTIFIED",
@@ -3375,19 +3310,6 @@
       "what": "new_ilgilidepartman",
       "values": [],
       "role": "group_by",
-      "source": "TIMAS_MSCRM"
-     },
-     {
-      "term": "new_sozlesmebase default statecode",
-      "type": "DEFAULT_FILTER",
-      "status": "CERTIFIED",
-      "concept": "",
-      "entity": "NEW_SOZLESMEBASE",
-      "what": "statecode",
-      "values": [
-       "0"
-      ],
-      "role": "",
       "source": "TIMAS_MSCRM"
      },
      {
@@ -3400,25 +3322,14 @@
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
-     },
-     {
-      "term": "kayıt sayısı",
-      "type": "METRIC",
-      "status": "COMPOSED",
-      "concept": "",
-      "entity": "NEW_SOZLESMEBASE",
-      "what": "f:0222e82d62a4042d",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      }
     ],
     "groupBy": [
-     "NEW_SOZLESMEBASE.NEW_SOZLESMESURESIYIL",
      "NEW_TALEPYONETIMIBASE.new_ilgilidepartman"
     ],
     "unresolved": [
-     "sonuclandirma"
+     "sonuclandirma",
+     "suresi"
     ],
     "unhandled": [],
     "leftToModel": [],
@@ -3441,38 +3352,33 @@
    "kaynak": "crm",
    "read": {
     "sources": [
-     "TIMAS_MSCRM"
+     "ANA"
     ],
     "slots": [
      {
-      "term": "numaralari",
-      "type": "COLUMN",
+      "term": "stok kartiyla",
+      "type": "ENTITY",
       "status": "CERTIFIED",
-      "concept": "sem_696b3e7f0395",
-      "entity": "NEW_AUTONUMBERINGWIZARDBASE",
-      "what": "NEW_NUMBER",
+      "concept": "sem_8a98cd377db9",
+      "entity": "LG_ITEMS",
+      "what": "",
       "values": [],
       "role": "",
-      "source": "TIMAS_MSCRM"
+      "source": "ANA"
      }
     ],
     "groupBy": [],
     "unresolved": [
      "isbn",
-     "stok",
+     "numaralari",
      "yayin"
     ],
     "unhandled": [],
-    "leftToModel": [],
-    "qualifierColumns": [
-     "eslesmemis→NEW_ISBNLISTESIBASE.NEW_STOKKARTI"
+    "leftToModel": [
+     "eslesmemis"
     ],
-    "drops": [
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "stok kartiyla"
-     }
-    ],
+    "qualifierColumns": [],
+    "drops": [],
     "shape": null,
     "grain": null,
     "limit": null,
@@ -3782,15 +3688,11 @@
      "odeme"
     ],
     "unhandled": [],
-    "leftToModel": [],
-    "qualifierColumns": [
-     "odenmemis→NEW_URETIMBASE.NEW_ODEMEHAKEDISIID"
+    "leftToModel": [
+     "odenmemis"
     ],
+    "qualifierColumns": [],
     "drops": [
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "hakedis"
-     },
      {
       "code": "OTHER_SOURCE_LEFT_TO_MODEL",
       "term": "odeme donemi"
@@ -4061,17 +3963,6 @@
      "TIMAS_MSCRM"
     ],
     "slots": [
-     {
-      "term": "aylar",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_2215b225c6b1",
-      "entity": "NEW_PROJEBASE",
-      "what": "NEW_PROJENINAYI",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
-     },
      {
       "term": "hedefi",
       "type": "ENTITY",
@@ -4660,8 +4551,7 @@
    "kaynak": "ikisi",
    "read": {
     "sources": [
-     "ANA",
-     "TIMAS_MSCRM"
+     "ANA"
     ],
     "slots": [
      {
@@ -4672,32 +4562,8 @@
       "entity": "LG_ORFLINE",
       "what": "DUEDATE",
       "values": [],
-      "role": "subject_group_by",
-      "source": "ANA"
-     },
-     {
-      "term": "gecikme",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_b2e79669e0e3",
-      "entity": "NEW_ISPLANIBASE",
-      "what": "NEW_GECIKMESURESIGUN",
-      "values": [],
-      "role": "subject_group_by",
-      "source": "TIMAS_MSCRM"
-     },
-     {
-      "term": "new_isplanibase default statecode",
-      "type": "DEFAULT_FILTER",
-      "status": "CERTIFIED",
-      "concept": "",
-      "entity": "NEW_ISPLANIBASE",
-      "what": "statecode",
-      "values": [
-       "0"
-      ],
       "role": "",
-      "source": "TIMAS_MSCRM"
+      "source": "ANA"
      },
      {
       "term": "irsaliye tarihi",
@@ -4711,24 +4577,12 @@
       ],
       "role": "",
       "source": "ANA"
-     },
-     {
-      "term": "kayıt sayısı",
-      "type": "METRIC",
-      "status": "COMPOSED",
-      "concept": "",
-      "entity": "NEW_ISPLANIBASE",
-      "what": "f:5ab00a3f034d344e",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      }
     ],
-    "groupBy": [
-     "LG_ORFLINE.DUEDATE",
-     "NEW_ISPLANIBASE.NEW_GECIKMESURESIGUN"
+    "groupBy": [],
+    "unresolved": [
+     "gecikme"
     ],
-    "unresolved": [],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
@@ -4741,7 +4595,7 @@
     "temporal": [],
     "clarification": false,
     "outOfScope": false,
-    "state": "RESOLVED"
+    "state": "PARTIAL"
    }
   },
   "A049": {
@@ -5253,23 +5107,13 @@
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
-     },
-     {
-      "term": "odeme",
-      "type": "ENTITY",
-      "status": "CERTIFIED",
-      "concept": "sem_b4ad7d9b040c",
-      "entity": "NEW_ODEMEBASE",
-      "what": "",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      }
     ],
     "groupBy": [
      "CLCARD.DEFINITION_"
     ],
     "unresolved": [
+     "odeme",
      "sapma",
      "tanimiyla",
      "vadesi"
@@ -5701,34 +5545,39 @@
    "soru": "Kredi kartıyla alınan tahsilatların ne kadarı cari hesaba işlenmemiş?",
    "kaynak": "ikisi",
    "read": {
-    "sources": [],
-    "slots": [],
+    "sources": [
+     "ANA"
+    ],
+    "slots": [
+     {
+      "term": "hesaba islenmemis",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8639aa7fd64f",
+      "entity": "COSTDISTFC",
+      "what": "ACCOUNTED",
+      "values": [],
+      "role": "",
+      "source": "ANA"
+     }
+    ],
     "groupBy": [],
     "unresolved": [
      "tahsilatlarin"
     ],
     "unhandled": [],
-    "leftToModel": [
-     "islenmemis"
-    ],
+    "leftToModel": [],
     "qualifierColumns": [],
-    "drops": [
-     {
-      "code": "DEFAULT_PERIOD_APPLIED",
-      "term": ""
-     }
-    ],
+    "drops": [],
     "shape": null,
     "grain": null,
     "limit": null,
     "ratio": false,
     "comparison": false,
-    "temporal": [
-     "YEAR"
-    ],
+    "temporal": [],
     "clarification": false,
     "outOfScope": false,
-    "state": "UNRESOLVED"
+    "state": "PARTIAL"
    }
   },
   "B084": {
@@ -6011,21 +5860,11 @@
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
-     },
-     {
-      "term": "odeme",
-      "type": "ENTITY",
-      "status": "CERTIFIED",
-      "concept": "sem_b4ad7d9b040c",
-      "entity": "NEW_ODEMEBASE",
-      "what": "",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      }
     ],
     "groupBy": [],
     "unresolved": [
+     "odeme",
      "sapma",
      "tanimiyla",
      "vadesi"
@@ -6264,17 +6103,6 @@
     ],
     "slots": [
      {
-      "term": "digerlerine",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_f5de7f56ff9e",
-      "entity": "NEW_ETKINLIKBASE",
-      "what": "NEW_DIGER",
-      "values": [],
-      "role": "group_by",
-      "source": "TIMAS_MSCRM"
-     },
-     {
       "term": "new_sevkiyatsatiribase default statecode",
       "type": "DEFAULT_FILTER",
       "status": "CERTIFIED",
@@ -6310,16 +6138,19 @@
       "source": "TIMAS_MSCRM"
      }
     ],
-    "groupBy": [
-     "NEW_ETKINLIKBASE.NEW_DIGER"
-    ],
+    "groupBy": [],
     "unresolved": [
+     "digerlerine",
      "verilen"
     ],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
     "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "DİĞER"
+     },
      {
       "code": "OTHER_SOURCE_LEFT_TO_MODEL",
       "term": "verilen siparislerin"
@@ -6347,17 +6178,6 @@
     ],
     "slots": [
      {
-      "term": "limiti",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_6842a1fe6f2a",
-      "entity": "ACCOUNTBASE",
-      "what": "CREDITLIMIT",
-      "values": [],
-      "role": "group_by",
-      "source": "TIMAS_MSCRM"
-     },
-     {
       "term": "musteriler",
       "type": "COLUMN",
       "status": "CERTIFIED",
@@ -6369,17 +6189,6 @@
       "source": "ANA"
      },
      {
-      "term": "risk",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_9cdcf713e9cc",
-      "entity": "NEW_SIPARISBASE",
-      "what": "NEW_ANLIKRISK",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
-     },
-     {
       "term": "yeni siparis",
       "type": "COLUMN",
       "status": "CERTIFIED",
@@ -6389,25 +6198,13 @@
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
-     },
-     {
-      "term": "limiti dolu",
-      "type": "DIMENSION_VALUE",
-      "status": "INFERRED",
-      "concept": "",
-      "entity": "ACCOUNTBASE",
-      "what": "CreditLimit",
-      "values": [
-       "0"
-      ],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      }
     ],
-    "groupBy": [
-     "ACCOUNTBASE.CREDITLIMIT"
+    "groupBy": [],
+    "unresolved": [
+     "dolu",
+     "risk"
     ],
-    "unresolved": [],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
@@ -6420,7 +6217,7 @@
     "temporal": [],
     "clarification": false,
     "outOfScope": false,
-    "state": "RESOLVED"
+    "state": "PARTIAL"
    }
   },
   "B094": {
@@ -6480,10 +6277,6 @@
      {
       "code": "OTHER_SOURCE_LEFT_TO_MODEL",
       "term": "etkinlik"
-     },
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "illerde"
      }
     ],
     "shape": null,
