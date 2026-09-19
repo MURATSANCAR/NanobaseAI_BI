@@ -1,7 +1,0 @@
-# Apply over the GPU host's existing OCR compose file; does not recreate the model.
-services:
-  gateway:
-    image: nanobase-editor-ocr-gateway:v2-20260918
-    command: [python, /app/gateway.py]
-    volumes: !override
-      - /var/run/docker.sock:/var/run/docker.sock

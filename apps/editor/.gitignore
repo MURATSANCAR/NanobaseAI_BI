@@ -1,6 +1,0 @@
-.env
-secrets/
-runtime/
-dist/
-__pycache__/
-*.pyc

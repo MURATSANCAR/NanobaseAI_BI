@@ -1,8 +1,0 @@
-# Customer-managed private endpoints; no Mac, SSH relay or fixed subnet required.
-# Combine after compose.gpu.yaml. Ingress permits outbound model requests;
-# application ports remain published only through the existing gateway.
-services:
-  api:
-    networks: [private, ingress]
-  worker:
-    networks: [private, ingress]

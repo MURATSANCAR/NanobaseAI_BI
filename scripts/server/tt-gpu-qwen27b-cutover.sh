@@ -92,7 +92,7 @@ curl -fsS -m 120 "http://127.0.0.1:$PORT/v1/chat/completions" -H 'Content-Type: 
 
 cat <<EOF
 
-27B ayakta: port $PORT, model adı $NAME. Tüketicilerde model adı değişmeli (LLM_MODEL_NAME / EDITOR_MODEL_NAME).
+27B ayakta: port $PORT, model adı $NAME. Tüketicilerde model adı değişmeli (LLM_MODEL_NAME).
 Flash-Next DURDURULDU, SİLİNMEDİ. Geri dönüş: bash $0 --rollback
 
 27B kabul edildikten sonra Flash-Next'i silmek için (elle, geri dönüşü yok — önce ne silineceğine bakın):

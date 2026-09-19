@@ -1,11 +1,5 @@
 # NanobaseAI BI
 
-## Editör modülü
-
-BI’dan bağımsız uygulama `apps/editor/` altında geliştirilir. 48/48 sayfa işlendi; 1.149 kaynak bölgesinin 778’inde okuyucular anlaştı, 371 bölge incelemede. İş `COMPLETED`, nesil `NEEDS_REVIEW`; anlamsal kabul verilmedi. Gerçek API/PG eşliği, offline paket, ayrı kuruluma yedekten dönüş ve restore sonrası dört genişlikte mobil kontrol geçti.
-
-[Kurulum](apps/editor/README.md) · [Yapılan işler ve kanıtlar](docs/editor/2026-09-17-status-and-handoff.md).
-
 Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ürünü: React arayüz,
 FastAPI backend, Query Gateway, semantic katman, senaryo motoru ve LLM servisi.
 

@@ -1,4 +1,0 @@
-# Install CPU torch wheels first using https://download.pytorch.org/whl/cpu.
-torch==2.6.0
-torchaudio==2.6.0
-chatterbox-tts==0.1.7

@@ -56,9 +56,9 @@ Sanal makinede GPU, Docker konteyneri, Ollama yok; işletim sistemine kurulu bir
 
 ## 4.0 Güncel durum (2026-09-19): ana model Qwen3.8-27B-FP8, sunulan ad `nanobaseAI`
 
-Kullanıcı kararıyla Flash-Next bırakıldı ve **kalıcı silindi** (konteynerler, `vllm/vllm-openai:qwen38-flash-next` etiketi, 173 GB model, `/data/qwen38`; komutu kullanıcı çalıştırdı: `scripts/server/tt-gpu-flash-next-sil.sh`). Neden: 186 GB model 2 × 94 GB karta ancak n-gram tablosu RAM'e atılarak sığıyordu (resmî tarif 4 kart); OCR ile bellek taşması ve soğuk açılışta 64 → 88 GiB sıçraması bundan geliyordu. Editörün Flash-Next içeren çevrimdışı paketi (`/data/editor-gpu-releases/source-analysis-v13-gateway-v2-20260918`, 192 GB) ve 9 durmuş `editor-gpu-cold-*` konteyneri silinmedi.
+Kullanıcı kararıyla Flash-Next bırakıldı ve **kalıcı silindi** (konteynerler, `vllm/vllm-openai:qwen38-flash-next` etiketi, 173 GB model, `/data/qwen38`; komutu kullanıcı çalıştırdı: `scripts/server/tt-gpu-flash-next-sil.sh`). Neden: 186 GB model 2 × 94 GB karta ancak n-gram tablosu RAM'e atılarak sığıyordu (resmî tarif 4 kart); Soğuk açılışta 64 → 88 GiB sıçraması bundan geliyordu.
 
-- **Kurulum:** `/data/qwen27/docker-compose.yml` (depoda `apps/editor/gpu/compose.qwen27b.yaml`), konteyner `qwen38-27b`, imaj `vllm/vllm-openai:v0.27.1` (mimari `Qwen3_5ForConditionalGeneration` ve `Qwen3_5MTP` bu imajda kayıtlı; özel imaj gerekmez). Tek sunucu, port 8001, model **iki karta bölünmüş** (`--tensor-parallel-size 2`, `--numa-bind`, `NCCL_P2P_LEVEL=SYS`), `--gpu-memory-utilization 0.80` (OCR'ın GPU 1 payı korunur), 131K bağlam, 32 eşzamanlı istek, önek önbelleği, MTP 3 token, `qwen3_coder` araç ve `qwen3` düşünme ayrıştırıcıları. Geçiş betiği: `scripts/server/tt-gpu-qwen27b-cutover.sh`.
+- **Kurulum:** `/data/qwen27/docker-compose.yml` (depoda `deploy/tt-gpu/compose.qwen27b.yaml`), konteyner `qwen38-27b`, imaj `vllm/vllm-openai:v0.27.1` (mimari `Qwen3_5ForConditionalGeneration` ve `Qwen3_5MTP` bu imajda kayıtlı; özel imaj gerekmez). Tek sunucu, port 8001, model **iki karta bölünmüş** (`--tensor-parallel-size 2`, `--numa-bind`, `NCCL_P2P_LEVEL=SYS`), `--gpu-memory-utilization 0.80`, 131K bağlam, 32 eşzamanlı istek, önek önbelleği, MTP 3 token, `qwen3_coder` araç ve `qwen3` düşünme ayrıştırıcıları. Geçiş betiği: `scripts/server/tt-gpu-qwen27b-cutover.sh`.
 - **Sunulan ad `nanobaseAI`** (kullanıcı kararı): tüketiciler arkadaki modeli bilmez; gerçek model `/v1/models` → `root` alanında (`Qwen/Qwen3.8-27B-FP8`). Model değişirse tüketici ayarı değişmez. Ad değiştirme betiği: `scripts/server/model-name-switch.sh` (köprü, Editör api/worker, TİMAŞ VM bridge).
 - **Açılış:** indirme 81 dosya / 30 GB, boyutlar Hugging Face listesiyle eş; ilk açılış ≈ 7 dk (derleme 9,7 sn + Triton ısınması). Kart başına ≈ 77–81 GB dolu; KV önbelleği 1.602.153 token (131K bağlamda 12,2 eşzamanlı tam istek; Flash-Next'te 950.590 / 7,25).
 - **Ölçüm (düşünme kapalı, aynı makinede):**
@@ -72,7 +72,7 @@ Kullanıcı kararıyla Flash-Next bırakıldı ve **kalıcı silindi** (konteyne
 | 32 eşzamanlı | 1.500 tok/sn | **2.256 tok/sn** |
 
 - **Doğrulanan yollar:** düşünme kapalı bayrağı (`reasoning` boş), `structured_outputs.choice` + `logprobs` (tek token, aday olasılıkları), görsel girdi (Türkçe harfli yazı 1,0 sn'de harfi harfine: `GICIRTIYLA AÇILDI! Işık, şüphe, düğüm`), CPU sunucusundan `127.0.0.1:18885` tüneli.
-- **Henüz yapılmadı:** Editörün 91 iddialık logprobs sondası ve gerçek kitap koşusu, OCR ile eşzamanlı yük, set100'ün tamamı, uzun süreli yük. Kalite kabulü bu ölçümlere bağlıdır; hız ölçümü kalite kanıtı değildir.
+- **Henüz yapılmadı:** set100'ün tamamı, uzun süreli yük. Kalite kabulü bu ölçümlere bağlıdır; hız ölçümü kalite kanıtı değildir.
 
 ## 4. Qwen3.8-Flash-Next-FP8 denemesi (geçmiş kayıt — model 2026-09-19'da silindi)
 
@@ -122,40 +122,17 @@ Bellek yetmezse sıra: bağlam 32K → eşzamanlı istek 16 → `--enforce-eager
 - BI sorusu: satış `TRCODE` kümesi, iptal hariç, aylık kırılımlı doğru T-SQL üretti (tek örnek; golden set koşturulmadı).
 - Kitap sayfası okuma (3 sayfa, 1400 görsel token, 0,3–2,8 sn): s.29 balonu harfi harfine doğru ve konuşmacı "kız"; s.6 yazısız → "YOK"; s.22 metni hatasız okudu **ama** tırnaklar arasındaki anlatı cümlesini (`dedi Profesör Bulut gururla.`) atladı, düz yazıdaki diyaloğu "balon" diye etiketledi ve satır sonu tirelerini kendiliğinden birleştirdi. Sonuç: güçlü ikinci okuyucu, tek kaynak değil — bölüm 5'teki karar geçerli.
 
-**Henüz yapılmadı:** BI golden set'inin bu modelle koşturulması, köprü/LLM kapısına bağlanması, 1.149 bölgelik OCR karşılaştırması, uzun bağlam ve düşünme açıkken ölçüm.
+**Henüz yapılmadı:** BI golden set'inin bu modelle koşturulması, köprü/LLM kapısına bağlanması, uzun bağlam ve düşünme açıkken ölçüm.
 
 ### 4.5 Geri dönüş
 
-- `Qwen/Qwen3.8-27B-FP8` tek karta sığar, görsel girişli, editörün tanıdığı model; ikinci kart OCR'a kalır.
+- `Qwen/Qwen3.8-27B-FP8` tek karta sığar, görsel girişli.
 - Gemma 4 31B: `docker start mlops-pipeline-vllm-gpu0-1 mlops-pipeline-vllm-gpu1-1`.
 
-## 5. Editör için OCR önerisi (karar, henüz denenmedi)
-
-İncelenen kitap: «Ekrana Sığmayan Macera» (48 sayfa). Düz yazı sayfalarında metin PDF'te gömülü (s.13: 863 karakter) — OCR gerekmez. Balon ve süsleme yazıları eğriye çevrilmiş (s.29'da PDF 5 karakter veriyor); elle çizilmiş görünümlü, tamamı büyük harf, renkli çizim üstünde, Türkçe harfli. Editörün bugünkü okuyucuları (CPU'da PP-OCRv5 mobile + Tesseract) belge için yapılmıştır.
-
-Seçim, iki katman:
-
-1. **Ana okuyucu `PaddlePaddle/PaddleOCR-VL-1.6`** (0,96B, Apache-2.0): kartında serbest metin bulma ("text spotting") var, kutu koordinatı verir (editörün "ham metin + kutu + köken" sözleşmesi), vLLM ile GPU'da çalışır, yaklaşık 4–6 GB.
-2. **İkinci bağımsız okuyucu + konuşmacı ataması: Qwen3.8-Flash-Next** (görsel girişli). Tek başına OCR motoru olarak önerilmez: kartında hiç OCR ölçümü yok, genel VLM'ler bulanık yazıyı "düzeltme" eğilimindedir, kutu ve tekrarlanabilirlik güvencesi yoktur. Bu, editör kaydındaki «betimlemenin metin sanılması» hatasının aynısını üretir.
-
-Elenenler: `chandra-ocr-2` (OpenRAIL lisansı belirsiz), `baidu/Unlimited-OCR` ve `GLM-OCR` (belge/tablo ağırlıklı), `manga-ocr` (yalnız Japonca).
-
-Bilinmeyen: PaddleOCR-VL-1.6'nın Türkçe büyük harf balon yazısındaki başarısı. Kanıt yolu: bu kitabın kayıtlı 1.149 bölgesi (821 anlaşma / 328 inceleme) iki yeni okuyucuyla koşturulur; 328'in kaçı çözülüyor, 821'in kaçı bozuluyor, İ/Ş/Ğ hataları sayılır. Kitaba özel ayar yapılmaz.
-
-### 5.1 PaddleOCR-VL-1.6 kuruldu: istek gelince açılan, boşta kapanan Docker servisi (2026-09-18)
-
-- Model (1,93 GB, 20 dosya) `/data/hf-cache` altına indi. Dosyalar `/data/paddleocr-vl/`: `docker-compose.yml`, `gateway.py`.
-- İki konteyner: `paddleocr-vl` (vLLM 0.27.1, GPU 1, `restart: "no"`, dışarıya port açmaz) ve `paddleocr-gateway` (python:3.12-slim, yalnız standart kütüphane, port **8010**, `unless-stopped`, birkaç MB bellek). Kapı Docker soketi üzerinden hedef konteyneri başlatır/durdurur; soket bağlandığı için kapı konteyneri makinede root eşdeğeridir.
-- Davranış: `GET /gateway/status` konteyneri başlatmadan durumu verir. Diğer her istek konteyneri açar, `/health` 200 olana kadar bekler, isteği iletir (soğuk açılışta yanıta `X-Cold-Start-Seconds` eklenir). `IDLE_SECONDS` (varsayılan 600, `OCR_IDLE_SECONDS` ile değişir) boyunca istek yoksa konteyner durdurulur.
-- Doğrulandı: soğuk açılış 68,6 sn; Flash-Next kartı %90 kullanırken kalan payda açıldı (`--gpu-memory-utilization 0.05`, 2,15 GiB ağırlık + 2,21 GiB KV = 128.912 token, `--enforce-eager`); geçici 60 sn sınırıyla 66. saniyede kendiliğinden kapandı (çıkış 0), GPU 1 belleği 94,9 → 89,6 GiB'e döndü, Flash-Next sağlıklı kaldı. Açıkken GPU 1'de yaklaşık 1 GiB boş kalıyor — dar.
-- İlk okuma denemesi (2 sayfa, 1400 px JPEG, sayfa başına 0,6–2,2 sn): kutu koordinatı veriyor (`Spotting:`) ve metni eksiksiz aktarıyor (Flash-Next'in atladığı `dedi Profesör Bulut gururla.` cümlesi var). **Ama Türkçe harflerde zayıf:** "DUR!" → "DURI", "Gıcırtıyla" → "Gıcirtıyla", "biriktirdiği" → "biriktirdigi", "Işık" → "İsik", "karışmıştı" → "karışmıştır"; `Spotting:` kipinde ş/ç/ğ/ı büyük ölçüde düşüyor. Flash-Next aynı sayfalarda harfleri doğru okumuştu.
-- Bu, bölüm 5'teki iş bölümünü değiştirir (kanıtlanmış değil, iki sayfalık gözlem): **kutu ve eksiksizlik PaddleOCR-VL'den, harf doğruluğu Flash-Next'ten** gelmeli — örneğin PaddleOCR-VL kutuları bulur, her kutunun kırpımını Flash-Next okur, iki metin karşılaştırılır. Daha yüksek çözünürlükte PaddleOCR-VL'nin Türkçe başarısı ölçülmedi. Karar 1.149 bölgelik karşılaştırmaya bağlı; kullanıcı bu adım için beklememi istedi.
-
-## 6. Açık işler
+## 5. Açık işler
 
 1. Modeli BI köprüsüne / LLM kapısına bağlama kararı ve golden set koşusu (model çalışıyor: `tt-gpu:8001`, ad `qwen3.8-flash-next`).
 2. `mssql-logo` ve Logo yedeği hakkında kullanıcı kararı.
 3. TT'den `38.247.162.28` için VPN izni ve internet çıkış sınırının yükseltilmesi talebi.
-4. OCR karşılaştırması (bölüm 5).
-5. Sunucudan SSH gerekiyorsa anahtar ekleme için açık onay.
-6. İki makinenin parolaları kullanıcı adıyla aynı ve sohbette düz metin geçti; değiştirilmesi TT'nin kararıdır.
+4. Sunucudan SSH gerekiyorsa anahtar ekleme için açık onay.
+5. İki makinenin parolaları kullanıcı adıyla aynı ve sohbette düz metin geçti; değiştirilmesi TT'nin kararıdır.

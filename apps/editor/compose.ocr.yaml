@@ -1,2 +1,0 @@
-# Compatibility overlay. OCR is now a core service in compose.yaml.
-services: {}
