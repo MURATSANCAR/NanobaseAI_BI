@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 — GPU model kurulumu ve tünel dosyaları `deploy/tt-gpu/` altında
+
+TT GPU'daki `qwen38-27b` kurulum dosyası ve BI semantik köprüsünün modele bağlandığı GPU→CPU ters tünelinin (`127.0.0.1:18885`) sshd/systemd dosyaları `deploy/tt-gpu/` altına alındı. Tünel sunucularda `editor-gpu-tunnel` adıyla kurulu; ad tarihsel, BI'ın model yolu olduğu için temizlikte silinmez.
+
 ## 2026-09-19 16:00 — Logo soruları CRM'e neden kaçıyordu: makine onaylı sözlük; kural, geri çekme, Logo onayı
 
 **Teşhis (tek vaka → ölçek):** "Bu yıl kaç fatura kesildi?" çözücüde CRM `NEW_REKLAMPLANIBASE.NEW_FATURASIGIRILDI`'e gidiyordu ("kesilen fatura sayısı" ise Logo INVOICE'a). İz: kelime `otomatik-yoklama` ile 16.09'da **tek örnek cümleyle** onaylanmış; üreticinin kardeş kelimelere düştüğü "Logo ile karışabilir" notu kodda bilerek yok sayılıyordu; onay `human_certified_by` + HUMAN_ANNOTATION yazdığı için kavram "insan 3" görünüyordu. Katalogda 7.751 CRM makine onayı vardı, **Logo'da onaylı sözlük kelimesi 0** (8.807 bekliyordu).
