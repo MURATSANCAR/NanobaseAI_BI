@@ -119,6 +119,11 @@ CLAIM_REPAIR = obj({
     "evidence": arr(obj({"page": INT, "paragraph": INT, "quote": STR})),
 })
 
+BOOK_METADATA = obj({"fields": arr(obj({
+    "field": {"type": "string", "enum": ["TITLE", "AUTHOR", "ILLUSTRATOR", "PUBLISHER", "SERIES",
+                                         "ISBN", "AGE_RANGE", "GENRE", "EDITION"]},
+    "value": STR, "page": INT, "quote": STR}))})
+
 CONTRADICTIONS = obj({"candidates": arr(obj({
     "kind": {"type": "string", "enum": ["TIMELINE", "CHARACTER", "TEXT_VISUAL",
                                         "CONTINUITY", "IDENTITY"]},

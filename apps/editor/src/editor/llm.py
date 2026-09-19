@@ -20,6 +20,7 @@ import httpx
 from . import db
 from .config import settings
 
+MAX_RETRY_TOKENS = 32768     # fits every chat model's context next to its prompt
 _client: httpx.AsyncClient | None = None
 _aliases: dict[str, dict] | None = None
 
@@ -141,6 +142,10 @@ class Llm:
                     raise
                 # A deterministic retry repeats a degenerate loop token for token:
                 # move away from it instead (measured 2026-09-19, page 8 x3 identical).
+                if "finish_reason=length" in str(e):
+                    # The first budget is sized for speed; it must never be the reason a page
+                    # is lost. A retry gets twice the room (bounded by the model's context).
+                    req["max_tokens"] = min(req["max_tokens"] * 2, MAX_RETRY_TOKENS)
                 if "finish_reason=length" in str(e) and (req.get("chat_template_kwargs") or {}).get("enable_thinking"):
                     # thinking used the whole budget and left no answer: answer directly
                     req["chat_template_kwargs"] = {"enable_thinking": False}

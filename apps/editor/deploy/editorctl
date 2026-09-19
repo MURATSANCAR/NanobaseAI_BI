@@ -10,6 +10,7 @@
 #   editorctl stop-models    stop every editor model now
 #   editorctl analyze <pdf>  copy into the inbox and start a full analysis job
 #   editorctl wait <job_id>  follow a job until it ends
+#   editorctl cover <book_id> <image> <who>   set a book's cover (replaces the PDF stand-in)
 #   editorctl cli ...        python -m editor.cli ... (review, report, canon)
 #   editorctl hermes ...     hermes CLI inside the Hermes container
 set -euo pipefail
@@ -130,6 +131,10 @@ case "${1:-}" in
     install -m 644 "$f" "$ROOT/storage/inbox/$(basename "$f")"
     docker exec editor-mcp python -m editor.cli analyze "$(basename "$f")" "$@" ;;
   wait) docker exec editor-mcp python -m editor.cli wait "$2" ;;
+  cover)  # editorctl cover <book_id> <image file> <who>
+    mkdir -p "$ROOT/storage/covers-inbox"
+    install -m 644 "$3" "$ROOT/storage/covers-inbox/$(basename "$3")"
+    docker exec editor-mcp python -m editor.cli cover "$2" "$(basename "$3")" --by "${4:?kim ekliyor}" ;;
   cli) shift; docker exec -i editor-mcp python -m editor.cli "$@" ;;
   hermes) shift; docker exec -it editor-hermes hermes "$@" ;;
   gw) shift; gw "$@" ;;

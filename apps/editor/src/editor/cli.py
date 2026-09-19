@@ -19,7 +19,7 @@ import json
 import sys
 import time
 
-from . import db, jobs
+from . import catalog, db, jobs
 
 
 def _print(x) -> None:
@@ -97,6 +97,17 @@ def main() -> None:
     ca.add_argument("--editor", required=True)
     ca.add_argument("--claim")
     sp.add_parser("migrate")
+    cat = sp.add_parser("catalog")
+    cats = cat.add_subparsers(dest="catcmd", required=True)
+    cats.add_parser("rebuild")
+    cq = cats.add_parser("search")
+    cq.add_argument("query")
+    cq.add_argument("--age", type=int)
+    cats.add_parser("card").add_argument("book_id")
+    cv = sp.add_parser("cover")
+    cv.add_argument("book_id")
+    cv.add_argument("file_name")
+    cv.add_argument("--by", required=True)
     args = p.parse_args()
 
     if args.cmd == "analyze":
@@ -124,6 +135,14 @@ def main() -> None:
         _print(decide(args.item_id, args.decision, args.editor, json.loads(args.json) if args.json else None))
     elif args.cmd == "canon":
         _print(canon_add(args.universe, args.kind, args.key, json.loads(args.value), args.editor, args.claim))
+    elif args.cmd == "catalog" and args.catcmd == "rebuild":
+        _print(asyncio.run(catalog.rebuild_all()))
+    elif args.cmd == "catalog" and args.catcmd == "search":
+        _print(asyncio.run(catalog.search_books(args.query, 5, args.age)))
+    elif args.cmd == "catalog" and args.catcmd == "card":
+        _print(catalog.get_book_card(args.book_id))
+    elif args.cmd == "cover":
+        _print(catalog.set_uploaded_cover(args.book_id, args.file_name, args.by))
     elif args.cmd == "migrate":
         _print(db.migrate())
 

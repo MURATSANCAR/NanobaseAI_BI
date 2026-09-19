@@ -8,7 +8,7 @@ import subprocess
 
 from temporalio import activity
 
-from .. import __version__, db, document, knowledge, ledger, prompts, quality, retrieval, summary, vision
+from .. import __version__, catalog, db, document, knowledge, ledger, prompts, quality, retrieval, summary, vision
 from ..config import settings
 from ..llm import aliases, client
 
@@ -201,6 +201,11 @@ async def report(generation_id: str) -> dict:
 
 
 @activity.defn
+async def build_card(generation_id: str) -> dict:
+    return await catalog.build_card(generation_id)
+
+
+@activity.defn
 async def finish_job(job_id: str, status: str, result: dict) -> None:
     await _t(db.one, "UPDATE analysis_job SET status=%s, finished_at=now(), progress=progress || %s,"
              " error=%s WHERE id=%s RETURNING id", status, db.J({"result": result}),
@@ -224,7 +229,7 @@ async def release_models(aliases_: list[str]) -> dict:
     return r.json()
 
 
-ALL = [scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+ALL = [build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

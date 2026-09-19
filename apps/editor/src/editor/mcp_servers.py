@@ -27,10 +27,10 @@ from pydantic import Field
 from starlette.applications import Starlette
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
-from starlette.responses import JSONResponse, Response
+from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.routing import Mount, Route
 
-from . import db, document, jobs, knowledge, quality, retrieval, vision
+from . import catalog, db, document, jobs, knowledge, quality, retrieval, vision
 
 KEY = os.environ.get("EDITOR_MCP_KEY", "")
 Gen = Annotated[str, Field(description="generation_id (get_job_status ya da latest_generation verir)")]
@@ -238,6 +238,20 @@ async def search_universe_canon(universe: str, query: str = "",
     return await retrieval.search_universe_canon(universe, query, k)
 
 
+@retrieval_mcp.tool()
+async def search_books(query: str, k: Annotated[int, Field(ge=1, le=20)] = 5,
+                       age: Annotated[int | None, Field(ge=0, le=18)] = None) -> list[dict]:
+    """Katalogda isteğe uyan kitaplar: doğrulanmış tema/özet/kilit olaylara göre, her gerekçe
+    sayfa atıflı; kapak adresiyle. Kitap önerisi için."""
+    return await catalog.search_books(query, k, age)
+
+
+@retrieval_mcp.tool()
+async def get_book_card(book_id: str) -> dict | None:
+    """Bir kitabın güncel kartı: künye, yaş, özet, temalar, karakterler, kilit olaylar, kapak."""
+    return await _t(catalog.get_book_card, book_id)
+
+
 # ------------------------------------------------------------- quality
 quality_mcp = MCPServer("book_quality_mcp", instructions=(
     "Kanıt ve güven kontrolü, editör kuyruğu, regresyon, rapor. Rapor bölümlerindeki her iddia "
@@ -350,7 +364,16 @@ class BearerAuth(BaseHTTPMiddleware):
 
 security = TransportSecuritySettings(
     allowed_hosts=["editor-mcp", "editor-mcp:*", "127.0.0.1:*", "localhost:*"], allowed_origins=[])
-routes = [Route("/health", lambda _r: JSONResponse({"ok": True, "servers": list(SERVERS)}))]
+async def cover_image(request: Request) -> Response:
+    """Current cover of a book (uploaded, else the stand-in PDF page) for the UI."""
+    cov = await asyncio.to_thread(catalog.current_cover, request.path_params["book_id"])
+    if cov is None:
+        return Response("no cover", status_code=404)
+    return FileResponse(cov["file_path"], headers={"x-cover-source": cov["source"]})
+
+
+routes = [Route("/health", lambda _r: JSONResponse({"ok": True, "servers": list(SERVERS)})),
+          Route("/covers/{book_id}", cover_image)]
 routes += [Mount(f"/{name}", app=srv.streamable_http_app(transport_security=security))
            for name, srv in SERVERS.items()]
 

@@ -116,11 +116,18 @@ class BookFullAnalysis:
             await self.step(15, "Regresyon ve rapor")
             reg = await self.act("regression", gid)
             rep = await self.act("report", gid)
+            # catalog card + cover from the sealed generation; a card failure is reported,
+            # it does not undo a finished analysis
+            await self.step(15, "Katalog kartı")
+            try:
+                card = await self.act("build_card", gid)
+            except ActivityError as e:
+                card, failures["catalog_card"] = None, [str(e.cause or e)[:500]]
             summary = {"generation_id": gid, "pages": len(pages), "ocr_pages": len(man["needs_ocr"]),
                        "uncertain_pages": uncertain, "extract": ext, "identity": ident,
                        "continuity": cont, "modality": mod, "merge": mrg, "narrative_roles": roles, "emotions_themes": emo,
                        "index": idx, "book_summary": book, "critic": crit, "contradictions": con,
-                       "regression_passed": reg["passed"], "report_id": rep["report_id"],
+                       "regression_passed": reg["passed"], "report_id": rep["report_id"], "catalog_card": card,
                        "failures": {k: v for k, v in failures.items() if v}}
             await self.act("finish_job", job_id, "SUCCEEDED", summary, timeout=SHORT)
             return summary

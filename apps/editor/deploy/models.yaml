@@ -17,6 +17,8 @@
 # editor model(s) on that card first. It never touches a container that is not
 # an editor model.
 
+# Every chat model forbids free whitespace in JSON output: a schema-guided decode
+# may otherwise spin on tabs/newlines until max_tokens (seen on a real page).
 defaults:
   image: vllm/vllm-openai:v0.29.0
   idle_stop_sec: 600
@@ -32,6 +34,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.48
     args:
+      - '--structured-outputs-config={"disable_any_whitespace":true}'
       - --max-model-len=131072
       - --max-num-seqs=32
       - --max-num-batched-tokens=8192
@@ -78,6 +81,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.40
     args:
+      - '--structured-outputs-config={"disable_any_whitespace":true}'
       - --max-model-len=32768
       - --max-num-seqs=32
       - --enable-prefix-caching
@@ -93,6 +97,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.90
     args:
+      - '--structured-outputs-config={"disable_any_whitespace":true}'
       - --max-model-len=40960
       - --max-num-seqs=8
       - --enable-prefix-caching
@@ -110,6 +115,7 @@ aliases:
     gpu: 1
     mem_fraction: 0.80
     args:
+      - '--structured-outputs-config={"disable_any_whitespace":true}'
       - --max-model-len=32768
       - --max-num-seqs=8
       - '--limit-mm-per-prompt={"audio":1,"image":0,"video":0}'
