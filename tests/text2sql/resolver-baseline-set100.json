@@ -1,9 +1,9 @@
 {
- "recordedAt": "2026-09-19T19:49:40Z",
+ "recordedAt": "2026-09-19T21:32:34Z",
  "state": {
-  "catalogHash": "e71b44468e3362089e1f07e4c09c98d28794f6d6bb36b89226f0f5e12f919929",
+  "catalogHash": "b19b0ded1be8043ee83c383c169b30ec587fde1a6fb909242fcf043277c54448",
   "languagePoolHash": "",
-  "catalogVersion": 70548,
+  "catalogVersion": 70549,
   "rulesHash": "c4954b528fa040ca",
   "promptHash": "7f47127ec1deca67"
  },
@@ -3978,28 +3978,44 @@
     "slots": [
      {
       "term": "hedefi",
-      "type": "ENTITY",
+      "type": "COLUMN",
       "status": "CERTIFIED",
-      "concept": "sem_d6f188afd5f5",
+      "concept": "sem_8424f510c61f",
       "entity": "NEW_SATISHEDEFLERIBASE",
-      "what": "",
+      "what": "NEW_TOPLAMHEDEF",
       "values": [],
-      "role": "",
+      "role": "group_by",
       "source": "TIMAS_MSCRM"
      },
      {
       "term": "hedefi",
-      "type": "ENTITY",
+      "type": "COLUMN",
       "status": "CERTIFIED",
-      "concept": "sem_d6f188afd5f5",
+      "concept": "sem_8424f510c61f",
       "entity": "NEW_SATISHEDEFLERIBASE",
-      "what": "",
+      "what": "NEW_TOPLAMHEDEF",
       "values": [],
+      "role": "group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "hedefi olan",
+      "type": "DIMENSION_VALUE",
+      "status": "INFERRED",
+      "concept": "",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "new_ToplamHedef",
+      "values": [
+       "0"
+      ],
       "role": "",
       "source": "TIMAS_MSCRM"
      }
     ],
-    "groupBy": [],
+    "groupBy": [
+     "NEW_SATISHEDEFLERIBASE.NEW_TOPLAMHEDEF",
+     "NEW_SATISHEDEFLERIBASE.NEW_TOPLAMHEDEF"
+    ],
     "unresolved": [
      "urunlerde"
     ],
@@ -4263,6 +4279,17 @@
       "source": "ANA"
      },
      {
+      "term": "satis hedefi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8424f510c61f",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "NEW_TOPLAMHEDEF",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
       "term": "stline default cancelled",
       "type": "DEFAULT_FILTER",
       "status": "CERTIFIED",
@@ -4274,17 +4301,6 @@
       ],
       "role": "",
       "source": "ANA"
-     },
-     {
-      "term": "satis hedefi",
-      "type": "ENTITY",
-      "status": "CERTIFIED",
-      "concept": "sem_d6f188afd5f5",
-      "entity": "NEW_SATISHEDEFLERIBASE",
-      "what": "",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      },
      {
       "term": "ciroyu",
@@ -4299,7 +4315,8 @@
      }
     ],
     "groupBy": [
-     "ITEMS.NAME"
+     "ITEMS.NAME",
+     "NEW_SATISHEDEFLERIBASE.NEW_TOPLAMHEDEF"
     ],
     "unresolved": [],
     "unhandled": [],
@@ -5490,6 +5507,17 @@
       "source": "ANA"
      },
      {
+      "term": "satis hedefinin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_8424f510c61f",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "NEW_TOPLAMHEDEF",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
       "term": "stline default cancelled",
       "type": "DEFAULT_FILTER",
       "status": "CERTIFIED",
@@ -5501,17 +5529,6 @@
       ],
       "role": "",
       "source": "ANA"
-     },
-     {
-      "term": "satis hedefinin",
-      "type": "ENTITY",
-      "status": "CERTIFIED",
-      "concept": "sem_d6f188afd5f5",
-      "entity": "NEW_SATISHEDEFLERIBASE",
-      "what": "",
-      "values": [],
-      "role": "",
-      "source": "TIMAS_MSCRM"
      },
      {
       "term": "kalan",
@@ -5537,7 +5554,8 @@
      }
     ],
     "groupBy": [
-     "ITEMS.NAME"
+     "ITEMS.NAME",
+     "NEW_SATISHEDEFLERIBASE.NEW_TOPLAMHEDEF"
     ],
     "unresolved": [],
     "unhandled": [],
