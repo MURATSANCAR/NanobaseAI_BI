@@ -1,11 +1,11 @@
 {
- "recordedAt": "2026-09-19T18:59:57Z",
+ "recordedAt": "2026-09-19T19:49:40Z",
  "state": {
   "catalogHash": "e71b44468e3362089e1f07e4c09c98d28794f6d6bb36b89226f0f5e12f919929",
   "languagePoolHash": "",
   "catalogVersion": 70548,
   "rulesHash": "c4954b528fa040ca",
-  "promptHash": "107e4c76c370f683"
+  "promptHash": "7f47127ec1deca67"
  },
  "cases": {
   "A032": {
@@ -242,9 +242,7 @@
     "groupBy": [
      "CLCARD.DEFINITION_"
     ],
-    "unresolved": [
-     "dustukten"
-    ],
+    "unresolved": [],
     "unhandled": [],
     "leftToModel": [
      "biraktigimiz"
@@ -270,7 +268,7 @@
     ],
     "clarification": false,
     "outOfScope": false,
-    "state": "PARTIAL"
+    "state": "RESOLVED"
    }
   },
   "B030": {
@@ -660,7 +658,8 @@
    "kaynak": "logo",
    "read": {
     "sources": [
-     "ANA"
+     "ANA",
+     "TIMAS_MSCRM"
     ],
     "slots": [
      {
@@ -673,6 +672,17 @@
       "values": [],
       "role": "rank_group_by",
       "source": "ANA"
+     },
+     {
+      "term": "devir hizi",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_6e3242310e38",
+      "entity": "PRODUCTBASE",
+      "what": "NEW_SATISHIZI",
+      "values": [],
+      "role": "rank_group_by",
+      "source": "TIMAS_MSCRM"
      },
      {
       "term": "stline default cancelled",
@@ -711,19 +721,14 @@
      }
     ],
     "groupBy": [
-     "ITEMS.NAME"
+     "ITEMS.NAME",
+     "PRODUCTBASE.NEW_SATISHIZI"
     ],
-    "unresolved": [
-     "devir"
-    ],
+    "unresolved": [],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
     "drops": [
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "devir hizi"
-     },
      {
       "code": "WORD_READ_AS_ROW_LIMIT",
       "term": "yirmi"
@@ -737,7 +742,7 @@
     "temporal": [],
     "clarification": false,
     "outOfScope": false,
-    "state": "PARTIAL"
+    "state": "RESOLVED"
    }
   },
   "C026": {
@@ -1136,19 +1141,6 @@
       "entity": "CLCARD",
       "what": "DEFINITION_",
       "values": [],
-      "role": "",
-      "source": "ANA"
-     },
-     {
-      "term": "alip",
-      "type": "DIMENSION_VALUE",
-      "status": "INFERRED",
-      "concept": "sem_86721eb4dbd1",
-      "entity": "ITEMS",
-      "what": "CARDTYPE",
-      "values": [
-       "1"
-      ],
       "role": "",
       "source": "ANA"
      },
@@ -1632,9 +1624,21 @@
    "kaynak": "logo",
    "read": {
     "sources": [
-     "ANA"
+     "ANA",
+     "TIMAS_MSCRM"
     ],
     "slots": [
+     {
+      "term": "asgari stok",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_18cd9b943d57",
+      "entity": "PRODUCTBASE",
+      "what": "NEW_MINIMUMSTOK",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
      {
       "term": "ambarlarda",
       "type": "COLUMN",
@@ -1663,7 +1667,6 @@
     "groupBy": [],
     "unresolved": [
      "altina",
-     "asgari",
      "dusmus",
      "seviyesinin"
     ],
@@ -1671,10 +1674,6 @@
     "leftToModel": [],
     "qualifierColumns": [],
     "drops": [
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "asgari stok"
-     },
      {
       "code": "OTHER_SOURCE_LEFT_TO_MODEL",
       "term": "dusmus"
@@ -2421,9 +2420,21 @@
    "kaynak": "crm",
    "read": {
     "sources": [
-     "ANA"
+     "ANA",
+     "TIMAS_MSCRM"
     ],
     "slots": [
+     {
+      "term": "telif yuzdemiz",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f70a1e73644c",
+      "entity": "NEW_TELIFTANIMBASE",
+      "what": "new_TelifYuzdesi",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
      {
       "term": "stline default cancelled",
       "type": "DEFAULT_FILTER",
@@ -2449,10 +2460,10 @@
       "source": "ANA"
      }
     ],
-    "groupBy": [],
-    "unresolved": [
-     "telif"
+    "groupBy": [
+     "NEW_TELIFTANIMBASE.new_TelifYuzdesi"
     ],
+    "unresolved": [],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
@@ -2460,10 +2471,6 @@
      {
       "code": "DEFAULT_PERIOD_APPLIED",
       "term": ""
-     },
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "telif yuzdemiz"
      }
     ],
     "shape": null,
@@ -2476,7 +2483,7 @@
     ],
     "clarification": false,
     "outOfScope": false,
-    "state": "PARTIAL"
+    "state": "RESOLVED"
    }
   },
   "D069": {
@@ -2912,7 +2919,8 @@
    "kaynak": "crm",
    "read": {
     "sources": [
-     "ANA"
+     "ANA",
+     "TIMAS_MSCRM"
     ],
     "slots": [
      {
@@ -2925,6 +2933,17 @@
       "values": [],
       "role": "",
       "source": "ANA"
+     },
+     {
+      "term": "telif yuzdeleri",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f70a1e73644c",
+      "entity": "NEW_TELIFTANIMBASE",
+      "what": "new_TelifYuzdesi",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
      },
      {
       "term": "baski sayisi",
@@ -2941,18 +2960,12 @@
     "groupBy": [],
     "unresolved": [
      "araligina",
-     "tanimli",
-     "telif"
+     "tanimli"
     ],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
-    "drops": [
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "telif yuzdeleri"
-     }
-    ],
+    "drops": [],
     "shape": null,
     "grain": null,
     "limit": null,
@@ -4471,9 +4484,21 @@
    "kaynak": "ikisi",
    "read": {
     "sources": [
-     "ANA"
+     "ANA",
+     "TIMAS_MSCRM"
     ],
     "slots": [
+     {
+      "term": "planlanan ciro",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_379f7c1b7e21",
+      "entity": "NEW_KAMPANYABASE",
+      "what": "new_planlananciro",
+      "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
      {
       "term": "stline default cancelled",
       "type": "DEFAULT_FILTER",
@@ -4510,10 +4535,11 @@
       "source": "ANA"
      }
     ],
-    "groupBy": [],
+    "groupBy": [
+     "NEW_KAMPANYABASE.new_planlananciro"
+    ],
     "unresolved": [
-     "kampanyada",
-     "planlanan"
+     "kampanyada"
     ],
     "unhandled": [],
     "leftToModel": [],
@@ -4526,10 +4552,6 @@
      {
       "code": "OTHER_SOURCE_LEFT_TO_MODEL",
       "term": "kampanyada"
-     },
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "planlanan ciro"
      }
     ],
     "shape": null,
@@ -5941,7 +5963,8 @@
    "kaynak": "ikisi",
    "read": {
     "sources": [
-     "ANA"
+     "ANA",
+     "TIMAS_MSCRM"
     ],
     "slots": [
      {
@@ -5956,6 +5979,19 @@
       "source": "ANA"
      },
      {
+      "term": "new_satissenaryosubase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
       "term": "stline default cancelled",
       "type": "DEFAULT_FILTER",
       "status": "CERTIFIED",
@@ -5967,6 +6003,17 @@
       ],
       "role": "",
       "source": "ANA"
+     },
+     {
+      "term": "baski maliyetiyle",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_6cc1f9cca2c7",
+      "entity": "NEW_SATISSENARYOSUBASE",
+      "what": "f:23fd59fe68f44c5c",
+      "values": [],
+      "role": "",
+      "source": "TIMAS_MSCRM"
      },
      {
       "term": "satis",
@@ -5984,7 +6031,6 @@
      "ITEMS.NAME"
     ],
     "unresolved": [
-     "baski",
      "edenleri"
     ],
     "unhandled": [],
@@ -5994,10 +6040,6 @@
      {
       "code": "DEFAULT_PERIOD_APPLIED",
       "term": ""
-     },
-     {
-      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
-      "term": "baski maliyetiyle"
      },
      {
       "code": "SOURCE_CHOSEN_BY_TALLY",
