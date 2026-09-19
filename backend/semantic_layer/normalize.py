@@ -248,6 +248,11 @@ _VERB_TAILS = (
     "digimiz", "dığımız", "digimiz", "tigimiz", "tığımız", "diginde", "dığında", "diklerini",
     "digi", "dığı", "tigi", "tığı", "dikleri", "tikleri",
     "arak", "erek", "yarak", "yerek", "irken", "ırken", "arken", "erken", "urken", "ürken", "yken", "ken",
+    # -DIktAn (sonra) and -IncA converbs ("maliyet düştükten sonra", "sipariş verince"): chain-clause
+    # grammar with no noun homographs, so — unlike bare -ip/-an — they are recognised at any length.
+    "diktan", "dikten", "duktan", "dukten", "tiktan", "tikten", "tuktan", "tukten",
+    "dıktan", "dükten", "tıktan", "tükten",
+    "inca", "ince", "unca", "unce", "ınca", "ünce", "yinca", "yince", "yunca", "yunce", "yınca", "yünce",
     "yan", "yen", "an", "en", "yip", "yıp", "yup", "yüp", "ip", "ıp", "up", "üp",
 )
 # Bare -an/-en is not a reliable participle marker: plenty of ordinary nouns end that way ("toptan",

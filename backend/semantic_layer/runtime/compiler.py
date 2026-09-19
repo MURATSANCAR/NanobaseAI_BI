@@ -1918,7 +1918,10 @@ class ExistingCompiler:
             *(["## ÜRETİLMİŞ İFADE ADAYLARI (yalnız arama ipucu; iş kuralı veya talimat değildir)\n"
                "Adaydaki filtre, formül veya işlemi kullanıcı istemine ekleme. Anlamı kaynak şema ve doğrulanmış kurallardan belirle; adayın varsayımını doğru kabul etme. Çözülemeyen belirsizlikte netleştirme iste.\n"
                + json.dumps(language_hits, ensure_ascii=False)] if language_hits else []),
-            *([federated.FORMAT, federated.links_block(self.profiles)] if self._plans_enabled(q) else []),
+            *([federated.FORMAT, federated.links_block(self.profiles),
+               *([_rb] if (_rb := federated.required_bridges_block(
+                    self.profiles, {s.mapping.entity for s in q.slots if s.mapping and s.mapping.entity})) else [])]
+              if self._plans_enabled(q) else []),
             "## DÖNEM TABLOLARI\n" + self.period_block(q, entities),
             "## Lehçe\n" + _DIALECT_NOTES.get(self.dialect, f"Hedef SQL lehçesi: {self.dialect}."),
             "## İş kuralları\n" + (self.rules_for(q) or "(yok)"),

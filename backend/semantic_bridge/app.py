@@ -905,33 +905,37 @@ class Runtime:
         if self.connector is not None:
             for attempt in range(3):
                 try:
-                    self.dry_run(self._physical(sql, self._asked_period(sq), **scope_args))
-                    error = None
-                    # The database has now agreed the query is valid. Whether it returns the number
-                    # that was asked for is a different question and the one that costs the most: a
-                    # join that repeats rows under a SUM returns a total larger than the truth by a
-                    # factor nobody sees, and the database is perfectly happy with it. Reviewed after
-                    # dry_run so the reviewer works on a query already known to parse and resolve.
+                    # Read the query against what the catalog already knows *before* asking the
+                    # database. A column the model invented or a join it mis-keyed is the catalog's
+                    # to catch, with a message the model can repair against — not a raw driver error
+                    # ("Invalid column name 'AMOUNT'") that the person should never be shown. The
+                    # reviewer never executes and fails open on anything it cannot read, so running it
+                    # first only moves *where* a catalog-visible fault is caught, from the database to
+                    # here; the dry_run below still catches everything the catalog cannot see.
                     found = critic.review(sql, self.profiles, self.settings.dialect or "tsql",
                                           names=self.store.entity_terms(self.settings.tenant_id, self.settings.datasource_id))
                     critic_notes = [f.to_dict() for f in found]
                     blocking = [f for f in found if f.severity == "block"]
-                    if not blocking:
-                        break
-                    log.warning("critic refused q=%r %s", question[:80], [f.kind for f in blocking])
-                    if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
-                        # Out of attempts, or the SQL came from the deterministic compiler — which
-                        # builds from the catalog rather than guessing, so a finding against it is
-                        # this system's own bug and rewriting it with a model would hide that.
-                        error = "; ".join(f.message for f in blocking)
-                        break
-                    repairs += 1
-                    fixed = self.existing.repair(sq, sql, "; ".join(f.message for f in blocking), thread)
-                    if not fixed:
-                        error = "; ".join(f.message for f in blocking)
-                        break
-                    sql = strip_trailing_semicolon(fixed)
-                    continue
+                    if blocking:
+                        log.warning("critic refused q=%r %s", question[:80], [f.kind for f in blocking])
+                        if attempt == 2 or self.existing is None or compiled.compiler == "deterministic":
+                            # Out of attempts, or the SQL came from the deterministic compiler — which
+                            # builds from the catalog rather than guessing, so a finding against it is
+                            # this system's own bug and rewriting it with a model would hide that.
+                            error = "; ".join(f.message for f in blocking)
+                            break
+                        repairs += 1
+                        fixed = self.existing.repair(sq, sql, "; ".join(f.message for f in blocking), thread)
+                        if not fixed:
+                            error = "; ".join(f.message for f in blocking)
+                            break
+                        sql = strip_trailing_semicolon(fixed)
+                        continue
+                    # The catalog is satisfied; now the database confirms the query parses and runs.
+                    # The fan-out that inflates a SUM was judged above, before anything ran.
+                    self.dry_run(self._physical(sql, self._asked_period(sq), **scope_args))
+                    error = None
+                    break
                 except Exception as e:  # noqa: BLE001
                     error = str(e)[:1500]
                     if is_connection_error(e):
@@ -959,7 +963,15 @@ class Runtime:
             # the person is owed the difference: the first has an explanation they can act on, the
             # second is a fault. Both refuse — neither returns a number nobody can trust.
             blocked = any(n.get("severity") == "block" for n in critic_notes)
-            explanation = error if blocked else f"Üretilen SQL doğrulanamadı: {error}"
+            # A reviewer's finding is written to be read by a person and points at something they can
+            # act on, so it is shown as-is. A raw database error is a fault in the generated SQL, not
+            # a fact about the question, and its provider text ("Invalid column name 'AMOUNT'", driver
+            # codes, fragments of the statement) must never surface as the answer: the person is told,
+            # honestly, that no trustworthy answer could be produced. The raw error stays in the log
+            # and the gate for whoever operates the deployment.
+            explanation = error if blocked else (
+                "Bu soruya güvenilir bir cevap üretilemedi: üretilen sorgu veritabanında çalışmadı. "
+                "Soru bir sorun içermiyorsa biraz daha belirginleştirmeyi ya da az sonra tekrar denemeyi deneyin.")
             qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(), executed=False, error=error,
                        answer_type="SQL_INVALID", answer_summary=explanation, gate={"critic": critic_notes} if critic_notes else None)
             return {"id": uuid.uuid4().hex, "type": "SQL_INVALID", "sql": sql, "explanation": explanation, "threadId": thread_id, "repairs": repairs, "timings": timings, "semantic": semantic, "queryId": qid}

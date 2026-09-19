@@ -674,12 +674,17 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
                 findings.append(Finding("EMPTY_TABLE", "warn",
                     f"{prof.entity} tablosu bu kurulumda boş — hiç kayıt yok; sonuç boş dönecek."))
 
-        # A column the catalog says the table does not have.
+        # A column the catalog says the table does not have. A column written bare (no alias) is the
+        # same fault — SUM(AMOUNT) FROM PAYTRANS invents a column exactly as PAYTRANS.AMOUNT does — but
+        # only when the SELECT reads a single known table can the reviewer say which table it had to be
+        # in. With several tables an unqualified name could belong to any of them, so it is left to the
+        # database (fail open, as everywhere here).
+        single = next(iter(tables.values())) if len(tables) == 1 else None
         for c in select.find_all(exp.Column):
-            if not c.table or not _in_scope(c, select):
+            if not _in_scope(c, select) or c.name == "*":
                 continue
-            prof = tables.get(c.table.upper())
-            if prof is None or not prof.columns or c.name == "*":
+            prof = tables.get(c.table.upper()) if c.table else single
+            if prof is None or not prof.columns:
                 continue
             if prof.column(c.name) is None:
                 findings.append(Finding("UNKNOWN_COLUMN", "block",

@@ -61,7 +61,26 @@ _AUXILIARY_ROOTS = ("edil", "edile", "edilm", "ediliyor", "olun", "olus", "yapil
 _RECORD_VERBS = frozenset("""acilan acilmis kesilen kesilmis duzenlenen duzenlenmis olusturulan olusan olusmus
     yapilan yapilmis gerceklesen gerceklestirilen verilen gelen alan alinan giren girilen cikan islenen
     kaydedilen kayitli tutulan""".split())
+# Converb (-Ip) forms of the same record verbs ("geçen yıl alıp satmış", "sipariş verip vazgeçmiş").
+# A verb in converb form is as grammatical as in participle form ("alan"), but the short -Ip suffix
+# cannot be told from an ordinary noun by morphology alone (the catalog carries "grup", "tip", "slip",
+# "takip", "sahip"), so the converbs of the everyday record verbs are listed rather than derived. Kept
+# out of the phrase-fragment backoff, they no longer bind "alıp" to the trade-goods value label
+# "alıp sattık" (ITEMS.CARDTYPE=1) and turn a customer's purchase into a material-card-type filter.
+_RECORD_CONVERBS = frozenset("""alip alinip verip gelip girip cikip satip gonderip acilip kesilip
+    duzenlenip olusturulup olusup yapilip islenip kaydedilip tutulup gerceklesip""".split())
 _DEGREE_ADVERBS = frozenset("tamamen tumuyle butunuyle hala halen henuz gercekten gercekte fiilen aslinda hakikaten".split())
+# "maliyetin altında", "hedeften düşük", "limitin üzerinde", "eşiği aşan": a postposition or adjective
+# that compares the measure beside it with something else (another column or a threshold). Every one is
+# grammar to `is_domain_candidate`, so — placed directly after a resolved measure — it was dropped into
+# `ignored` and the comparison it makes was never recorded. The gate then had no obligation to check and
+# the deterministic answer served "the total cost per customer" for "sold below cost": a confident number
+# for a wider question. Left to the model as an obligation instead (a `-- yorum:` and a real restriction),
+# not resolved to any specific column here — the catalog names no value for the threshold.
+# "geçen/aşağı/yukarı" alone are left out: "geçen ay/yıl" is a period, not a comparison, and would
+# collide with the temporal reader; "aşan" is unambiguous.
+_COMPARATORS = frozenset("altinda altindaki alti ustunde ustundeki ustu uzerinde uzerindeki uzeri "
+                         "asagisinda dusuk asan asani".split())
 _BREAKDOWN_CUES = frozenset("bazinda bazli basina gore kiriliminda kirilimli ozelinde".split())
 _ENTITY_WORDS = frozenset(stem(w) for w in "fatura musteri cari tedarikci kitap urun malzeme stok siparis satir hareket belge kayit firma sirket sube depo kart karti".split())
 _TIME_WORDS = frozenset(stem(w) for w in "gun gunde gunler gunluk ay ayda aylar aylik ayin ayindaki yil yilda yillik hafta haftada haftalik ceyrek ceyreklik donem donemde donemsel tarih bugun dun son gecen onceki sonraki ilk itibaren beri bu yana".split())
@@ -166,6 +185,10 @@ _SHARE_CUE = re.compile(r"\b(pay|payi|payin|paylari|paylarini|yuzde|yuzdesi|yuzd
 _EXCLUDE_CUE = frozenset("haric harici haricinde disinda disindaki olmadan olmaksizin".split())
 #: "indirim yüzdesi tanımlı", "vadesi girilmiş", "grup kodu dolu": the column right before carries a value.
 _DEFINED_CUE = frozenset("tanimli tanimlanmis tanimlanan dolu girilmis girili belirlenmis atanmis".split())
+#: "cirosu olan müşteri", "hedefi olan ürün", "borcu bulunan cari": a possessive-marked measure/column
+#: named and then said to *exist*. Reads like the copula (_COPULA) but here it is an existence condition
+#: on that column — the same "has a value" reading as _DEFINED_CUE, spoken with "olan/bulunan/olup".
+_EXISTENCE_COPULA = frozenset("olan bulunan olup".split())
 #: "X, Y'nin ne kadarı?", "X Y'nin yüzde kaçı?", "X'in Y'ye oranı": two measures, one divided by the other.
 _RATIO_CUE = re.compile(r"\b(ne kadari|ne kadarini|kacta kaci|yuzde kaci|yuzde kacini|orani|oranini|oran)\b")
 
@@ -534,6 +557,38 @@ class SemanticResolver:
             consumed.add(k)
             sq.explanation.append(f"'{col_slot.term} {tok}' → {m.entity}.{m.column} <> {m.values[0]!r} (değeri girilmiş kayıtlar)")
 
+        # 2e-bis) "cirosu olan müşteriler", "hedefi bulunan ürünler", "borcu olup kapanmamış cariler": a
+        #     possessive-marked measure or column named and then said to *exist* ("olan/bulunan/olup") is a
+        #     condition that its value is present — non-zero for a number, non-empty otherwise — on the rows
+        #     kept. It looks like the grammatical copula (_COPULA, which the modifier pass consumes and
+        #     discards) and so was dropped, leaving "X olan" unread and the answer computed over every row.
+        #     Read here it becomes the same "has a value" filter a _DEFINED_CUE builds. Guarded tightly so
+        #     the plain copula is untouched: the word right before must be a resolved measure/column that
+        #     carries a third-person possessive suffix ("cirosu", "hedefi"; a bare noun keeps its copular
+        #     reading, as in "… ile olan bakiye"), and "olan" must lead into a following noun.
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed or fold(tok) not in _EXISTENCE_COPULA or k + 1 >= len(qf.tokens):
+                continue
+            src = next((h for h in hits if h.mapping and h.mapping.column and h.span and h.span[1] == k
+                        and h.semantic_type in (SemanticType.COLUMN, SemanticType.METRIC)), None)
+            if src is None:
+                continue
+            head = (src.term or "").split()[-1] if (src.term or "").split() else ""
+            if not head or head[-1] not in "ıiuüIİUÜ":     # 3rd-person possessive vowel (-ı/-i/-u/-ü, incl. -sı/-si/…)
+                continue
+            prof = self.by_entity.get(src.mapping.entity)
+            column = prof.column(src.mapping.column) if prof else None
+            if column is None:
+                continue
+            numeric = any(t in (column.data_type or "").lower() for t in ("int", "float", "decimal", "numeric", "money", "real", "double", "bit"))
+            m = Mapping(concept_id="", entity=src.mapping.entity, table_pattern=src.mapping.table_pattern,
+                        column=column.name, operator="<>", values=["0" if numeric else ""])
+            hits.append(ResolvedSlot(term=f"{src.term} {tok}", semantic_type=SemanticType.DIMENSION_VALUE, status="INFERRED", mapping=m,
+                                     confidence=0.75, span=(k, k + 1),
+                                     explain={"source": "existence_copula", "why": f"'{src.term} {tok}': {m.entity}.{m.column} değeri olan kayıtlar ({m.column} <> {m.values[0]!r})"}))
+            consumed.add(k)
+            sq.explanation.append(f"'{src.term} {tok}' → {m.entity}.{m.column} <> {m.values[0]!r} (değeri olan kayıtlar)")
+
         # 2g) one measure named twice ("elde kalan stok") is one measure: the second name is dropped, or
         #     the answer carries the same column twice.
         seen_metric: set[str] = set()
@@ -638,6 +693,11 @@ class SemanticResolver:
         #     occurs only inside "mal alım"). Both are INFERRED, never certified by this step.
         for k, tok in enumerate(qf.tokens):
             if k in consumed or not is_domain_candidate(tok) or self._modifier_candidate(qf.tokens, k, consumed) or cardinal(tok) is not None:
+                continue
+            if fold(tok) in _RECORD_CONVERBS:
+                # A record verb in converb form ("alıp") is grammar; the second-chance backoff would
+                # otherwise bind it to the first word of a verb-phrase label ("alıp sattık"). Left for
+                # step 6, where its record-verb reading drops it as a word that does not narrow rows.
                 continue
             slot = self._backoff(tok, k, index)
             if slot is not None:
@@ -853,10 +913,11 @@ class SemanticResolver:
                 if tok not in sq.ignored:
                     sq.ignored.append(tok)
                 continue
-            if fold(tok) in _RECORD_VERBS and not is_negative(tok):
-                # "bu yıl açılan ama hâlâ …": the participle stands beside the period, not a noun, and
-                # says only that the record came to exist then — which the period already restricts.
-                # Left as an undefined word it sent a fully defined question to the model.
+            if fold(tok) in (_RECORD_VERBS | _RECORD_CONVERBS) and not is_negative(tok):
+                # "bu yıl açılan ama hâlâ …", "geçen yıl alıp …": the participle or converb stands beside
+                # the period, not a noun, and says only that the record came to exist then — which the
+                # period already restricts. Left as an undefined word it sent a fully defined question to
+                # the model (or, for "alıp", bound it to a wrong value label).
                 if tok not in sq.ignored:
                     sq.ignored.append(tok)
                 sq.explanation.append(f"'{tok}' kaydın oluşumunu anlatan fiil; kayıtları daraltmaz")
@@ -1172,6 +1233,32 @@ class SemanticResolver:
                 # fully shipped".
                 consumed.add(k)
                 continue
+            if fold(tok) in _COMPARATORS:
+                # A magnitude comparison ("maliyetin altında", "limitin üzerinde", "eşiği aşan"): a
+                # condition on the rows, not grammar. It counts as one only next to a resolved measure —
+                # "en yüksek" is a ranking (handled above by the price/superlative reader) and "yüz
+                # liranın altında" carries its own number, which the value reader already took. With a
+                # measure beside it and no threshold number of its own, the catalog names no value for
+                # it, so it is handed to the model as an obligation: a `-- yorum:` saying how it compared
+                # and a real restriction the gate then demands (see SemanticQuery.model_qualifiers).
+                # Dropped as before (is_domain_candidate → ignored), the measure was served with the
+                # comparison missing and the answer looked complete.
+                ranking = k > 0 and fold(qf.tokens[k - 1]) == "en"
+                near_number = any(0 <= j < len(qf.tokens) and cardinal(qf.tokens[j]) is not None
+                                  for j in (k - 1, k - 2))
+                near_measure = any(s.semantic_type == SemanticType.METRIC and s.mapping and s.span
+                                   and abs(s.span[1] - k) <= 2 for s in sq.slots)
+                if near_measure and not ranking and not near_number \
+                        and not any(mq.get("position") == k for mq in sq.model_qualifiers):
+                    lo, hi = max(0, k - 2), min(len(qf.tokens), k + 2)
+                    sq.model_qualifiers.append({"token": tok, "position": k, "negative": is_negative(tok),
+                                                "phrase": " ".join(qf.tokens[lo:hi])})
+                    sq.explanation.append(
+                        f"'{tok}' bir büyüklük karşılaştırması (ölçü ↔ eşik/kolon); katalogda değeri yok → "
+                        "model bunu yorumlayıp gerçek bir kısıtla (WHERE/HAVING) uygulamalı, kapı hem "
+                        "yorumu hem kısıtı arar")
+                    consumed.add(k)
+                    continue
             if not self._modifier_candidate(qf.tokens, k, consumed):
                 continue
             if cardinal(tok) is not None:
@@ -1619,6 +1706,15 @@ class SemanticResolver:
                 continue
             if not span or span[1] - span[0] > 2:
                 continue                                  # a certified phrase of three or more words is meant
+            if span[1] - span[0] >= 2 and lone.status == "CERTIFIED" \
+                    and lone.semantic_type in (SemanticType.METRIC, SemanticType.COLUMN):
+                # A deliberate two-word certified measure or column names its own subject: "telif
+                # yüzdemiz" is exactly what "baskı adedi arttıkça … ne kadar yükseliyor" asks about,
+                # certified on the CRM royalty table. Handing it to the other side dropped the word
+                # and then refused the question as "telif tanımlı değil" — for a question plainly about
+                # that database. A lone word or a two-word value *filter* is still passed over below;
+                # only a certified analytical axis of two or more words is kept here.
+                continue
             if lone in sq.group_by and (lone.explain or {}).get("role") != "rank_group_by":
                 continue                                  # "kanal bazında": the grouping is the question's structure
             if self._linked_across(lone.mapping.entity, homes_entities):

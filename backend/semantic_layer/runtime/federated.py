@@ -286,5 +286,47 @@ def links_block(profiles: Iterable[Any]) -> str:
     return "## ÖLÇÜLMÜŞ BAĞLAR (kaynaklar arası)\n" + ("\n".join(f"- {r}" for r in rows) if rows else "(yok)")
 
 
+def required_bridges_block(profiles: list[Any], placed: set[str]) -> str:
+    """Stage 1 of moving two-source join *construction* off the model: of all measured cross-source
+    links, the ones that touch a table the question actually placed are the join the plan MUST use.
+    Spelled out here as a mandatory recipe — which key each part exposes and how `final` joins on it —
+    the model is kept from matching parts by book/product *name* (the barcode↔barcode bridge is the
+    only measured way to tie a CRM sales target to a Logo item). Empty when no measured bridge reaches
+    the placed tables; then the ordinary links list stands. This does not yet *assemble* the plan (that
+    is stage 2 — the compiler emitting the parts and `final` itself); it dictates the one decision the
+    gate most often refuses the model for."""
+    def bare(n: str) -> str:
+        return re.sub(r"^LG_", "", str(n or "").upper())
+    src_of: dict[str, str] = {}
+    known: dict[str, str] = {}
+    for p in profiles:
+        src_of[bare(p.entity)] = source_of_schema(getattr(p, "schema_name", ""))
+        known.setdefault(bare(p.entity), str(p.entity))
+    placed_bare = {bare(e) for e in placed}
+    lines: list[str] = []
+    seen: set[frozenset] = set()
+    for a, col, b, ref in sorted(cross_links(profiles)):
+        ba, bb = bare(a), bare(b)
+        if src_of.get(ba, "") == src_of.get(bb, ""):
+            continue                                   # not a cross-source link
+        if ba not in placed_bare and bb not in placed_bare:
+            continue                                   # the question never named either end
+        key = frozenset(((ba, col.upper()), (bb, ref.upper())))
+        if key in seen:
+            continue
+        seen.add(key)
+        na, nb = known.get(ba, a), known.get(bb, b)
+        sa, sb = src_of.get(ba, "") or "LOGO", src_of.get(bb, "") or "LOGO"
+        lines.append(f"- {na} (kaynak {sa}) .{col}  ↔  {nb} (kaynak {sb}) .{ref}")
+    if not lines:
+        return ""
+    return ("## ZORUNLU KAYNAK BAĞI (bu soru için ölçülmüş — parçaları AD ile değil bu anahtarla birleştir)\n"
+            + "\n".join(lines)
+            + "\nHer iki parça bağ kolonunu LTRIM(RTRIM(CAST(<kolon> AS NVARCHAR(100)))) AS <ortak_ad> olarak yansıtsın; "
+              "links.via bu satırı birebir yazsın; final ON a.<ortak_ad> = b.<ortak_ad> ile birleşsin. Kırılım "
+              "kolonlarını (ör. kitap/ürün adı) bağın kaynağındaki tabloya kendi ilişki zinciri üzerinden o parçanın "
+              "İÇİNDE bağla; kırılımı parçalar arası bağ anahtarı yapma.")
+
+
 __all__ = ["Part", "Plan", "parse_plan", "check_plan", "execute", "cross_links", "source_of_schema",
-           "FORMAT", "links_block"]
+           "FORMAT", "links_block", "required_bridges_block"]
