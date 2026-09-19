@@ -1,4 +1,4 @@
-<!-- name: extract_knowledge version: 3 -->
+<!-- name: extract_knowledge version: 4 -->
 Sen bir kitap analiz yönetmeninin çıkarım ajanısın. Aşağıda kitabın {{page_from}}–{{page_to}}. sayfalarının metni (sayfa ve paragraf numarasıyla) ve bu sayfaların görsel tarama özetleri var.
 
 METİN:
@@ -16,15 +16,10 @@ EDİTÖRÜN ÖNCEKİ DÜZELTMELERİ (bunlara uy):
 
 Çıkar:
 1. `character_mentions`: bu sayfalarda adı geçen ya da görünen her karakter. `surface_name`: adın metinde geçen hâli, ama hâl ve iyelik eki olmadan yalın biçimde (”Dedesini” değil ”Dedesi”, ”Max'i” değil ”Max”); ad iki kelimeyse ikisi birlikte (”Profesör Bulut”). Birden çok kişiyi birlikte anan ifadeyi (”çocuklar”, ”hepsi”) karakter olarak yazma.
-2. `events`: olaylar. Her olayın `modality` alanı zorunlu:
-   - REALIZED: hikâyede gerçekten oldu.
-   - PLAN: biri yapmayı planlıyor/niyet ediyor, henüz olmadı.
-   - DREAM: rüya. IMAGINATION: hayal, düşünce, kurgu içinde kurgu.
-   - JOKE: şaka, takılma. LIE: yalan/kandırma. HYPOTHETICAL: "ya ... olsaydı".
-   - MEMORY: geçmişte olmuş, şimdi hatırlanıyor.
-   - UNCERTAIN: metinden karar verilemiyor.
-   Plan, hayal ya da şaka ASLA REALIZED yazılmaz. Sonradan gerçekleşen plan için ayrıca bir REALIZED olay yaz.
-   Söz eylemi ile içeriğini ayır: bir karakterin bir şeyi teklif etmesi, istemesi, önermesi ya da söz vermesi hikâyede GERÇEKLEŞMİŞ bir eylemdir (REALIZED: "X, Y'ye ... teklif eder"); teklif edilen işin kendisi henüz olmadıysa ayrı bir PLAN olayıdır. Metnin başladığını ya da yapıldığını söylediği eylem (geçmiş zamanla anlatılan) REALIZED'dır; yalnız niyet, öneri ya da gelecek zaman PLAN'dır.
+2. `events`: olaylar. Her olayın `modality` alanı zorunlu ve şu tanıma göre verilir:
+
+{{modality_rules}}
+
 3. `emotions`: karakterin yaşadığı duygu; tetikleyicisiyle.
 4. `themes`: bu bölümde işlenen temalar (ör. teknoloji bağımlılığı, aile, merak).
 

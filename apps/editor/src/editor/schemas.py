@@ -44,7 +44,11 @@ PAGE_SCAN = obj({
     "text_in_image": arr(STR, 0, 60),
     "text_visual_checks": arr(obj({
         "paragraph": INT, "text_quote": STR, "visual_observation": STR,
-        "consistent": BOOL, "note": STR, "confidence": NUM}), 0, 40),
+        # CONTRADICTS: the picture SHOWS something that conflicts with the text.
+        # ABSENT_IN_IMAGE: the text mentions something the picture simply does not show
+        # (pictures never show everything; this is not a finding). CONSISTENT: they agree.
+        "relation": {"type": "string", "enum": ["CONSISTENT", "ABSENT_IN_IMAGE", "CONTRADICTS"]},
+        "note": STR, "confidence": NUM}), 0, 40),
     "important_event": BOOL,
     "uncertain": BOOL,
     "uncertainty_reasons": arr({"type": "string",
@@ -130,8 +134,9 @@ BOOK_METADATA = obj({"fields": arr(obj({
 MATCH_FIGURES = obj({"matches": arr(obj({
     "figure": STR, "reference": STR, "confidence": NUM, "reason": STR}))})
 
+MODALITY_REFEREE = obj({"modality": MODALITY, "confidence": NUM, "reason": STR})
+
 CONTRADICTIONS = obj({"candidates": arr(obj({
-    "kind": {"type": "string", "enum": ["TIMELINE", "CHARACTER", "TEXT_VISUAL",
-                                        "CONTINUITY", "IDENTITY"]},
+    "kind": {"type": "string", "enum": ["TIMELINE", "CHARACTER"]},
     "pages": arr(INT, 1), "description": STR, "confidence": NUM,
     "evidence": EVIDENCE}))})

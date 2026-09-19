@@ -44,8 +44,14 @@ def register_all() -> dict[str, dict]:
     return manifest
 
 
+SHARED = ("modality_rules",)      # one definition, included wherever {{name}} appears
+
+
 def render(name: str, **kw: str) -> tuple[PromptRef, str]:
     ref, body = load(name)
+    for shared in SHARED:
+        if "{{" + shared + "}}" in body:
+            body = body.replace("{{" + shared + "}}", load(shared)[1])
     for k, v in kw.items():
         body = body.replace("{{" + k + "}}", v)
     return ref, body

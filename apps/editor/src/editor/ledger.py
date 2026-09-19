@@ -170,6 +170,26 @@ def save_claim(conn: psycopg.Connection, generation_id: str, *, kind: str, claim
     return cid
 
 
+def supersede_claim(conn: psycopg.Connection, generation_id: str, old_claim_id: str, *,
+                    payload_update: dict, created_by: str, note: str, claim: str | None = None,
+                    model_call_id: int | None = None) -> str | None:
+    """Claims are immutable: a correction the application makes itself is a new claim with
+    the same evidence, and the old one is kept, marked SUPERSEDED."""
+    old = conn.execute("SELECT * FROM claim WHERE id=%s", (old_claim_id,)).fetchone()
+    if old is None:
+        return None
+    evs = [(str(r["evidence_id"]), r["quote_verified"], r["page_no"]) for r in conn.execute(
+        "SELECT ce.evidence_id, e.quote_verified, e.page_no FROM claim_evidence ce JOIN evidence e ON"
+        " e.id=ce.evidence_id WHERE ce.claim_id=%s", (old_claim_id,)).fetchall()]
+    new_id = save_claim(conn, generation_id, kind=old["kind"], subject=old["subject"],
+                        claim=claim or old["claim"], evidence=evs, confidence=float(old["confidence"]),
+                        created_by=created_by, model_call_id=model_call_id,
+                        payload={**(old["payload"] or {}), **payload_update, "supersedes": old_claim_id})
+    conn.execute("UPDATE claim SET status='SUPERSEDED', critic_note=%s WHERE id=%s",
+                 (f"{note} → yerine {new_id}", old_claim_id))
+    return new_id
+
+
 def queue_review(conn: psycopg.Connection, generation_id: str, *, reason: str,
                  claim_id: str | None = None, contradiction_id: str | None = None,
                  priority: int = 2) -> str:

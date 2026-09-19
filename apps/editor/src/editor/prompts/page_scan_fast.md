@@ -1,4 +1,4 @@
-<!-- name: page_scan_fast version: 3 -->
+<!-- name: page_scan_fast version: 4 -->
 Sen bir çocuk kitabının sayfalarını tarayan görsel analiz modelisin. Görüntü kitabın {{page_no}}. sayfası.
 Sayfanın metin katmanı (paragraf numaralarıyla):
 <<<
@@ -17,3 +17,4 @@ Görevin sayfada GÖRDÜĞÜNÜ kayda geçirmek. Kurallar:
 - `uncertain` true yap eğer sahneyi anlayamıyorsan (neden SCENE), bir figürün kim olduğundan emin değilsen (IDENTITY) ya da metin-görsel çelişkisi gördüysen (TEXT_VISUAL). Hangi sayfanın derin incelemeye gideceğine sistem karar verir; `important_event` yalnız bu sayfada gözle görülür bir eylem anı (düşme, karşılaşma, şaşkınlık) varsa true olur.
 - Güven değerleri 0–1 arası, dürüst olsun.
 - Türkçe yaz.
+- `text_visual_checks[].relation`: CONTRADICTS yalnız resim metinle ÇELİŞEN bir şey GÖSTERİYORSA (farklı renk, sayı, nesne, eylem, kişi). Metnin söylediği bir şeyin resimde hiç görünmemesi çelişki değildir (resim her şeyi göstermez): ABSENT_IN_IMAGE. Uyumluysa CONSISTENT. Sayfada resim yoksa kontrol yazma.

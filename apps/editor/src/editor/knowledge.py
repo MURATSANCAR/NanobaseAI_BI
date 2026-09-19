@@ -90,7 +90,10 @@ def _visual_summary(generation_id: str, a: int, b: int) -> str:
                          "generation_id=%s AND page_no BETWEEN %s AND %s ORDER BY page_no,"
                          " (pass='DEEP') DESC", generation_id, a, b):
         res = r["result"]
-        chars = "; ".join(f"{c['name'] or c['label']}{' (kimlik belirsiz)' if c['identity_uncertain'] else ''}"
+        # In a picture with several figures the scan's names are guesses (they are settled
+        # later by reference images), so the extractor only gets names it can rely on.
+        solo = len(res["characters"]) == 1
+        chars = "; ".join(f"{(c['name'] if solo and not c['identity_uncertain'] else '') or c['label']}"
                           f": {c['action']}" for c in res["characters"])
         lines.append(f"[s{r['page_no']}] Sahne: {res['scene']['description']} | Karakterler: {chars}")
     return "\n".join(lines) or "-"
@@ -393,13 +396,15 @@ async def resolve_character_identity(generation_id: str) -> dict:
 
 # ---------------------------------------------------------- modality
 async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
-    """Step 9: second, independent pass over every event's modality. A
-    disagreement makes the event UNCERTAIN and sends it to the editor."""
+    """Step 9. Every event's modality is read a second time, independently, under the same
+    single definition (prompts/modality_rules). Where the two readings differ a referee
+    with the full page text decides; its verdict stands only if it sides with one of the
+    two readings with confidence >= 0.8. A changed modality supersedes the claim (claims
+    are immutable). Only what the referee cannot settle goes to the editor."""
     evs = db.all_rows("SELECT e.id, e.summary, e.modality, e.page_from, e.page_to, e.claim_id,"
                       " (SELECT string_agg(ev.quote, ' | ') FROM claim_evidence ce JOIN evidence ev"
                       "  ON ev.id=ce.evidence_id WHERE ce.claim_id=e.claim_id) AS quotes"
                       " FROM event e WHERE e.generation_id=%s AND e.merged_into IS NULL", generation_id)
-    changed = reviewed = 0
 
     async def run(chunk: list[dict]) -> dict:
         short = {f"e{i}": e for i, e in enumerate(chunk)}
@@ -409,26 +414,56 @@ async def verify_event_modality(generation_id: str, batch: int = 25) -> dict:
             lines.append(f"{k} | s{e['page_from']}-{e['page_to']} | {e['summary']} | kanıt: "
                          f"{e['quotes']} | sayfa: {ctx}")
         ref, body = prompts.render("modality_check", events="\n".join(lines))
-        out, cid = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
-                                                 prompt=ref, schema=schemas.MODALITY_CHECK,
-                                                 max_tokens=8000, temperature=0.0, thinking=False)
+        out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
+                                               prompt=ref, schema=schemas.MODALITY_CHECK,
+                                               max_tokens=8000, temperature=0.0, thinking=False)
         return {"short": short, "out": out}
 
     results = await asyncio.gather(*(run(evs[i:i + batch]) for i in range(0, len(evs), batch)))
+    disputed = [(r["short"][v["event_id"]], v) for r in results for v in r["out"]["events"]
+                if v["event_id"] in r["short"] and v["modality"] != r["short"][v["event_id"]]["modality"]]
+
+    async def referee(e: dict, v: dict) -> tuple[dict, dict, dict | None, int | None]:
+        pages = [p for p in range(e["page_from"] - 1, e["page_to"] + 2) if p > 0]
+        ref, body = prompts.render(
+            "modality_referee", summary=e["summary"], quotes=e["quotes"] or "-", first=e["modality"],
+            second=v["modality"], second_reason=v["reason"],
+            pages_text="\n".join(page_text_numbered(generation_id, p) for p in pages))
+        try:
+            out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
+                                                         prompt=ref, schema=schemas.MODALITY_REFEREE,
+                                                         pages=pages, max_tokens=6000, temperature=0.0,
+                                                         thinking=True)
+            return e, v, out, call_id
+        except Exception:  # noqa: BLE001 - no verdict: the dispute goes to the editor
+            return e, v, None, None
+
+    verdicts = await asyncio.gather(*(referee(e, v) for e, v in disputed))
+    stats = {"events": len(evs), "modality_disagreements": len(disputed), "settled_first": 0,
+             "settled_second": 0, "sent_to_review": 0}
     with db.tx() as c:
-        for r in results:
-            for v in r["out"]["events"]:
-                e = r["short"].get(v["event_id"])
-                if not e or v["modality"] == e["modality"]:
-                    continue
-                changed += 1
+        for e, v, out, call_id in verdicts:
+            final = out["modality"] if out and out["confidence"] >= 0.8 and \
+                out["modality"] in (e["modality"], v["modality"]) else None
+            if final == e["modality"]:
+                stats["settled_first"] += 1                 # first reading stands, nothing changes
+            elif final is not None:
+                stats["settled_second"] += 1
+                new_claim = ledger.supersede_claim(
+                    c, generation_id, str(e["claim_id"]), payload_update={"modality": final},
+                    created_by="knowledge:modality-referee", model_call_id=call_id,
+                    note=f"kip {e['modality']} → {final}: {out['reason'][:300]}") if e["claim_id"] else None
+                c.execute("UPDATE event SET modality=%s, story_order=NULL, claim_id=coalesce(%s, claim_id)"
+                          " WHERE id=%s", (final, new_claim, e["id"]))
+            else:
+                stats["sent_to_review"] += 1
                 c.execute("UPDATE event SET modality='UNCERTAIN', story_order=NULL WHERE id=%s", (e["id"],))
                 if e["claim_id"]:
+                    third = f"; hakem {out['modality']} ({out['confidence']:.2f}): {out['reason'][:200]}" if out else ""
                     ledger.queue_review(c, generation_id, claim_id=str(e["claim_id"]), priority=1,
-                                        reason=f"Olay kipi çelişkili: çıkarım {e['modality']}, kontrol "
-                                               f"{v['modality']} — {v['reason']}")
-                    reviewed += 1
-    return {"events": len(evs), "modality_disagreements": changed, "sent_to_review": reviewed}
+                                        reason=f"Olay kipi çözülemedi: çıkarım {e['modality']}, kontrol "
+                                               f"{v['modality']} ({v['reason'][:200]}){third}")
+    return stats
 
 
 # ------------------------------------------------------ events / timeline
@@ -556,26 +591,20 @@ async def link_emotions_and_themes(generation_id: str) -> dict:
 
 # ---------------------------------------------------- contradictions
 async def detect_contradictions(generation_id: str) -> dict:
+    """Contradictions between FACTS THE TEXT STATES (timeline, character facts). Drawn
+    appearance is not judged here: comparing two scans' wording ("beyaz" vs "pembe" skin)
+    produced false findings; continuity of drawings is decided only by looking at the
+    pictures side by side (vision.compare_character_appearances)."""
     chars = db.all_rows("SELECT canonical_name, aliases, description, identity_status FROM character "
                         "WHERE generation_id=%s", generation_id)
     tl = build_timeline(generation_id)
-    tv = db.all_rows("SELECT kind, description, pages FROM contradiction WHERE generation_id=%s",
-                     generation_id)
-    if not chars and not tl and not tv:
+    if not chars and not tl:
         return {"candidates": 0, "skipped": "nothing to compare"}
-    looks = db.all_rows("SELECT ch.canonical_name, cm.page_no, cm.appearance FROM character_mention cm"
-                        " JOIN character ch ON ch.id=cm.character_id WHERE cm.generation_id=%s AND"
-                        " cm.via<>'TEXT' ORDER BY ch.canonical_name, cm.page_no", generation_id)
     material = (
-        "KARAKTERLER:\n" + "\n".join(f"- {c['canonical_name']} ({', '.join(c['aliases'])}) "
-                                     f"[{c['identity_status']}]: {c['description']}" for c in chars)
-        + "\nGÖRÜNÜMLER:\n" + "\n".join(f"- {l['canonical_name']} s{l['page_no']}: "
-                                        f"{json.dumps(l['appearance'], ensure_ascii=False)[:160]}"
-                                        for l in looks[:300])
+        "KARAKTERLER (metne göre):\n" + "\n".join(f"- {c['canonical_name']} ({', '.join(c['aliases'])}) "
+                                                   f"[{c['identity_status']}]: {c['description']}" for c in chars)
         + "\nGERÇEKLEŞMİŞ OLAYLAR (sırayla):\n" + "\n".join(
-            f"{e['story_order']}. s{e['page_from']}-{e['page_to']}: {e['summary']}" for e in tl)
-        + "\nMEVCUT ADAY BULGULAR:\n" + "\n".join(f"- {t['kind']} s{t['pages']}: {t['description']}"
-                                                  for t in tv))
+            f"{e['story_order']}. s{e['page_from']}-{e['page_to']}: {e['summary']}" for e in tl))
     ref, body = prompts.render("contradictions", material=material)
     out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
                                                  prompt=ref, schema=schemas.CONTRADICTIONS,
@@ -585,12 +614,11 @@ async def detect_contradictions(generation_id: str) -> dict:
         idx = ledger.PageIndex.load(c, generation_id)
         pages = _valid_pages(c, generation_id)
         for x in out["candidates"]:
-            evs = ledger.evidence_from_model(c, generation_id, idx, x["evidence"], valid_pages=pages)
-            if not evs:
-                continue
-            cid = ledger.save_claim(c, generation_id, kind="TEXT_VISUAL_MISMATCH" if x["kind"] ==
-                                    "TEXT_VISUAL" else "VISUAL_CONTINUITY" if x["kind"] == "CONTINUITY"
-                                    else "EVENT" if x["kind"] == "TIMELINE" else "CHARACTER",
+            evs = [e for e in ledger.evidence_from_model(c, generation_id, idx, x["evidence"],
+                                                         valid_pages=pages) if e[1]]
+            if len({e[0] for e in evs}) < 2:
+                continue        # a contradiction needs the two statements that conflict, verbatim
+            cid = ledger.save_claim(c, generation_id, kind="EVENT" if x["kind"] == "TIMELINE" else "CHARACTER",
                                     subject=x["kind"], claim=x["description"], evidence=evs,
                                     confidence=x["confidence"], created_by="knowledge:contradictions",
                                     model_call_id=call_id, payload={"contradiction_kind": x["kind"]})

@@ -22,6 +22,12 @@ _STOP = {"Bir", "Bu", "Şu", "Ama", "Ve", "Ben", "Sen", "Biz", "Siz", "Onlar", "
          "Ancak", "Oysa", "Bütün", "Her", "Hiç", "Kim", "Sanki", "Yine", "Artık", "Birden"}
 
 
+def contradicts(chk: dict) -> bool:
+    """A text-visual check is a finding only when the picture shows something that
+    conflicts with the text (older scans stored a plain `consistent` flag)."""
+    return chk.get("relation") == "CONTRADICTS" if "relation" in chk else not chk.get("consistent", True)
+
+
 EMPTY_SCAN = {"scene": {"setting": "", "time_of_day": "", "mood": "", "description": ""},
               "characters": [], "objects": [], "text_in_image": [], "text_visual_checks": [],
               "important_event": False, "uncertain": False, "uncertainty_reasons": []}
@@ -102,7 +108,7 @@ async def analyze_page_visual(generation_id: str, page_no: int, depth: str = "fa
         if any(region_ink_ratio(png_path, ch["bbox"]) >= settings().min_figure_ink
                for ch in out["characters"]):
             need.add("IDENTITY")
-        if any(not chk["consistent"] for chk in out["text_visual_checks"]):
+        if any(contradicts(chk) for chk in out["text_visual_checks"]):
             need.add("TEXT_VISUAL")
         if "SCENE" in out["uncertainty_reasons"]:
             need.add("SCENE")
@@ -228,7 +234,7 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
                               model_call_id=call_id)
         # "Görsel-metinsel uyuşmazlık doğrudan hata değil, aday bulgu olur."
         for chk in res["text_visual_checks"]:
-            if chk["consistent"]:
+            if not contradicts(chk):
                 continue
             evs = []
             if chk["text_quote"].strip():
@@ -260,8 +266,8 @@ async def check_text_visual_consistency(generation_id: str, page_no: int) -> dic
     persist_page_visual(generation_id, page_no)
     checks = s["result"]["text_visual_checks"]
     return {"page_no": page_no, "pass": s["pass"],
-            "candidates": [c for c in checks if not c["consistent"]],
-            "consistent": sum(1 for c in checks if c["consistent"])}
+            "candidates": [c for c in checks if contradicts(c)],
+            "consistent": sum(1 for c in checks if not contradicts(c))}
 
 
 async def compare_character_appearances(generation_id: str, character: str,
@@ -275,11 +281,10 @@ async def compare_character_appearances(generation_id: str, character: str,
         png = Path(render_page(str(gen["book_version_id"]), p, 1200)["path"]).read_bytes()
         parts += [{"type": "text", "text": f"Sayfa {p}:"}, image_part(png)]
     known = []
-    for r in db.all_rows("SELECT page_no, appearance FROM character_mention cm WHERE generation_id=%s"
-                         " AND (surface_name ILIKE %s OR character_id IN (SELECT id FROM character"
-                         " WHERE generation_id=%s AND (canonical_name ILIKE %s OR %s = ANY(aliases))))"
-                         " ORDER BY page_no LIMIT 30", generation_id, character, generation_id,
-                         character, character):
+    for r in db.all_rows("SELECT cm.page_no, cm.appearance FROM character_mention cm JOIN character ch ON"
+                         " ch.id=cm.character_id WHERE cm.generation_id=%s AND cm.via='VISUAL' AND"
+                         " cm.resolution='RESOLVED' AND (ch.canonical_name ILIKE %s OR %s = ANY(ch.aliases))"
+                         " ORDER BY cm.page_no", generation_id, character, character):
         known.append(f"s{r['page_no']}: {json.dumps(r['appearance'], ensure_ascii=False)}")
     ref, body = prompts.render("compare_appearance", pages=", ".join(map(str, pages)),
                                character=character, known="\n".join(known) or "-")
@@ -353,6 +358,7 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     for f in figs:
         by_page.setdefault(f["page_no"], []).append(f)
     gallery: dict[str, Path] = {}
+    best_area: dict[str, float] = {}
     gdir = Path(render_page(bv, figs[0]["page_no"])["path"]).parent / "gallery" / generation_id
     stats = {"figures": len(figs), "anchors": 0, "matched": 0, "scan_name_corrected": 0,
              "left_uncertain": 0, "characters_with_reference": 0}
@@ -369,7 +375,9 @@ async def resolve_visual_identity(generation_id: str) -> dict:
                 c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED',"
                           " appearance = appearance || %s WHERE id=%s",
                           (cid, db.J({"identified_by": "anchor"}), f["id"]))
-                if cid not in gallery:
+                area = (f["bbox"][2] - f["bbox"][0]) * (f["bbox"][3] - f["bbox"][1])
+                if area > best_area.get(cid, 0):            # the largest drawing is the clearest reference
+                    best_area[cid] = area
                     gallery[cid] = _crop(render_page(bv, page)["path"], f["bbox"], gdir / f"{cid}-p{page}.png")
     stats["characters_with_reference"] = len(gallery)
     if not gallery:
@@ -384,38 +392,47 @@ async def resolve_visual_identity(generation_id: str) -> dict:
 
     async def match(page: int, fs: list[dict]) -> tuple[list[dict], dict]:
         near = " ".join(idx.text.get(p, "") for p in (page - 1, page, page + 1))
-        refs = sorted(gallery, key=lambda cid: -sum(1 for n, x in unique.items() if x == cid and n in near))[:5]
-        ref_ids = {f"R{i + 1}": cid for i, cid in enumerate(refs)}
-        parts: list[dict] = []
-        for rid, cid in ref_ids.items():
-            parts += [{"type": "text", "text": f"Referans {rid}: {cname[cid]}"},
-                      image_part(gallery[cid].read_bytes())]
+        order = sorted(gallery, key=lambda cid: -sum(1 for n, x in unique.items() if x == cid and n in near))
         fig_ids = {f"F{i + 1}": f for i, f in enumerate(fs)}
-        ref, body = prompts.render(
-            "match_figures", page_no=str(page),
-            references=", ".join(f"{r} = {cname[cid]}" for r, cid in ref_ids.items()),
-            figures="\n".join(f"{k}: kutu {f['bbox']}" for k, f in fig_ids.items()))
-        parts += [{"type": "text", "text": f"Sayfa {page}:"},
-                  image_part(Path(render_page(bv, page, 1200)["path"]).read_bytes()),
-                  {"type": "text", "text": body}]
-        async with sem:
-            out, _ = await Llm(generation_id).chat(
-                "book-vision-deep", [{"role": "user", "content": parts}], prompt=ref,
-                schema=schemas.MATCH_FIGURES, pages=[page], max_tokens=8192, temperature=0.0)
-        return [{"fig": fig_ids.get(m["figure"]), "cid": ref_ids.get(m["reference"]),
-                 "conf": float(m["confidence"]), "reason": m["reason"]} for m in out["matches"]], fig_ids
+        page_png = image_part(Path(render_page(bv, page, 1200)["path"]).read_bytes())
+        found: list[dict] = []
+        # a request holds the page plus five reference images; every reference is tried
+        for k in range(0, len(order), 5):
+            ref_ids = {f"R{i + 1}": cid for i, cid in enumerate(order[k:k + 5])}
+            parts: list[dict] = []
+            for rid, cid in ref_ids.items():
+                parts += [{"type": "text", "text": f"Referans {rid}: {cname[cid]}"},
+                          image_part(gallery[cid].read_bytes())]
+            ref, body = prompts.render(
+                "match_figures", page_no=str(page),
+                references=", ".join(f"{r} = {cname[cid]}" for r, cid in ref_ids.items()),
+                figures="\n".join(f"{fk}: kutu {f['bbox']}" for fk, f in fig_ids.items()))
+            parts += [{"type": "text", "text": f"Sayfa {page}:"}, page_png, {"type": "text", "text": body}]
+            async with sem:
+                out, _ = await Llm(generation_id).chat(
+                    "book-vision-deep", [{"role": "user", "content": parts}], prompt=ref,
+                    schema=schemas.MATCH_FIGURES, pages=[page], max_tokens=8192, temperature=0.0)
+            found += [{"fig": fig_ids.get(m["figure"]), "cid": ref_ids.get(m["reference"]),
+                       "conf": float(m["confidence"]), "reason": m["reason"]} for m in out["matches"]]
+        return found, fig_ids
 
     todo = [(p, fs) for p, fs in by_page.items() if p not in anchored_pages]
     results = await asyncio.gather(*(match(p, fs) for p, fs in todo), return_exceptions=True)
     with db.tx() as c:
         for (page, fs), res in zip(todo, results):
-            chosen: dict[str, dict] = {}
-            if not isinstance(res, Exception):
-                for m in res[0]:
-                    if m["fig"] and m["cid"] and m["conf"] >= 0.75 and \
-                            m["conf"] > chosen.get(m["cid"], {"conf": 0})["conf"]:
-                        chosen[m["cid"]] = m            # one figure per reference: the surest
-            hit = {str(m["fig"]["id"]): (cid, m) for cid, m in chosen.items()}
+            if isinstance(res, Exception):
+                stats["pages_failed"] = stats.get("pages_failed", 0) + 1
+                stats.setdefault("errors", []).append(f"s{page}: {str(res)[:160]}")
+            # surest match first; a figure gets one character and a character one figure per page
+            ranked = sorted((m for m in ([] if isinstance(res, Exception) else res[0])
+                             if m["fig"] and m["cid"] and m["conf"] >= 0.75), key=lambda m: -m["conf"])
+            hit: dict[str, tuple] = {}
+            used: set[str] = set()
+            for m in ranked:
+                fid = str(m["fig"]["id"])
+                if fid not in hit and m["cid"] not in used:
+                    hit[fid] = (m["cid"], m)
+                    used.add(m["cid"])
             for f in fs:
                 got = hit.get(str(f["id"]))
                 if got:
