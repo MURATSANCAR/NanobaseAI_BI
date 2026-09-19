@@ -779,6 +779,100 @@ def _condition_holds(cond: str, own: list[_Occurrence]) -> bool:
     return True                                     # a shape this proof does not read is not a refusal
 
 
+def _stand_in_note(cond: str, own: list[_Occurrence], occ: list[_Occurrence]) -> str:
+    """The repair hint for a condition the statement wrote on *another* table's same-named column
+    (`f.TRCODE = 1` on the order header for `LG_ORFLINE.TRCODE IN (1)`). Told only "add TRCODE IN (1)",
+    the model sees TRCODE = 1 already there and returns the same statement. Whether the two columns
+    always agree is not something the catalog declares, so the header's column proves nothing about
+    the line's rows; the hint names the alias the condition is owed on and the predicate that does
+    not count."""
+    mm = _COND.match(cond)
+    if not mm:
+        return ""
+    col = mm.group(1).upper()
+    want = {v.strip().strip("'\"").upper() for v in mm.group(2).split(",") if v.strip()}
+    def carries(o: _Occurrence) -> bool:
+        return any(p.column.upper() == col and p.operator.upper() in ("=", "IN") and _values(p) == want for p in o.preds)
+    notes = []
+    for o in own:
+        if carries(o):
+            continue
+        elsewhere = [x for x in occ if x is not o and x.select is o.select and not _same_entity(x.entity, o.entity) and carries(x)]
+        target = f"{o.alias}.{col}"
+        if elsewhere:
+            x = elsewhere[0]
+            notes.append(f" Koşul şu an {x.alias}.{col} ({x.table}) üzerinde yazılı; o başka tablonun kolonudur ve "
+                         f"{o.table} satırlarını kanıtlamaz. Aynı koşulu {target} üzerinde de yaz: {target} IN ({', '.join(sorted(want))}).")
+        else:
+            notes.append(f" Koşul {o.table} tablosunun kendi takma adıyla yazılmalı: {target} IN ({', '.join(sorted(want))}).")
+    return "".join(dict.fromkeys(notes))
+
+
+def _zero_admitted(having: exp.Expression) -> bool:
+    """Every AND-part of this HAVING compares an aggregate to a number and a total of zero passes
+    it (`<= 0`, `= 0`, `< 5`). Anything this cannot read is not a claim."""
+    parts = _split_and(having)
+    if not parts:
+        return False
+    for part in parts:
+        if not isinstance(part, (exp.LTE, exp.LT, exp.EQ, exp.GTE, exp.GT, exp.NEQ)):
+            return False
+        left, right, kind = part.left, part.right, type(part)
+        if _literal(left) is not None and right.find(exp.AggFunc) is not None:
+            left, right = right, left
+            kind = {exp.LTE: exp.GTE, exp.LT: exp.GT, exp.GTE: exp.LTE, exp.GT: exp.LT}.get(kind, kind)
+        if left.find(exp.AggFunc) is None:
+            return False
+        try:
+            n = float(_literal(right))
+        except (TypeError, ValueError):
+            return False
+        ok = {exp.LTE: 0 <= n, exp.LT: 0 < n, exp.EQ: n == 0, exp.GTE: 0 >= n, exp.GT: 0 > n, exp.NEQ: n != 0}[kind]
+        if not ok:
+            return False
+    return True
+
+
+def _rowless_dropped(tree: exp.Expression, entity: str) -> Optional[str]:
+    """A state measure (a balance) is zero for a record with no movement rows at all. A statement
+    that keeps the records whose balance passes a test zero also passes — "none left": balance <= 0 —
+    by *membership* in an aggregated reading of the movements (`key IN (SELECT … GROUP BY … HAVING
+    SUM(…) <= 0)`, `EXISTS (…)`, an inner join to that derived table) silently drops every record
+    that never moved: they have no group to be a member of. The same question written as
+    `NOT EXISTS (… HAVING SUM(…) > 0)` keeps them, and the two answers differ by exactly those
+    records. Returns the offending construct, or None."""
+    def reads(sel: exp.Expression) -> bool:
+        return any(_same_entity(logical_table((t.db + "." if t.db else "") + t.name).entity, entity) for t in sel.find_all(exp.Table))
+    def offending(sel: Optional[exp.Expression]) -> bool:
+        if not isinstance(sel, exp.Select):
+            return False
+        having = sel.args.get("having")
+        return having is not None and reads(sel) and _zero_admitted(having.this)
+    for node in tree.find_all(exp.In):
+        q = node.args.get("query")
+        if q is not None and not isinstance(node.parent, exp.Not) and offending(q.this if isinstance(q, exp.Subquery) else q):
+            return "IN (… HAVING …)"
+    for node in tree.find_all(exp.Exists):
+        if not isinstance(node.parent, exp.Not) and offending(node.this):
+            return "EXISTS (… HAVING …)"
+    for sel in tree.find_all(exp.Select):
+        for join in sel.args.get("joins") or []:
+            if (join.side or "").strip() or (join.kind or "").upper() == "CROSS":
+                continue
+            if isinstance(join.this, exp.Subquery) and offending(join.this.this):
+                return "INNER JOIN (… HAVING …)"
+    # The same membership through a CTE: `WITH b AS (… HAVING SUM(…) <= 0) SELECT … FROM x JOIN b …`.
+    named = {c.alias_or_name.upper() for c in tree.find_all(exp.CTE) if offending(c.this)}
+    if named:
+        for sel in tree.find_all(exp.Select):
+            frm = sel.args.get("from_") or sel.args.get("from")      # sqlglot 30 names the arg `from_`
+            sources = [frm.this] if frm is not None else []
+            sources += [j.this for j in sel.args.get("joins") or [] if not (j.side or "").strip() and (j.kind or "").upper() != "CROSS"]
+            if any(isinstance(t, exp.Table) and not t.db and t.name.upper() in named for t in sources):
+                return "JOIN <CTE … HAVING …>"
+    return None
+
+
 def _other_rows(sq: SemanticQuery, o: _Occurrence) -> bool:
     """This occurrence reads rows a dated measure of the question certifiably excludes: on a column
     the measure's own conditions restrict, it keeps a disjoint set of values (the opening-balance
@@ -1170,6 +1264,12 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         # A reading that only tests existence ("geçen ay hiç hareket görmemiş") computes no balance:
         # the rule is about the measure being *calculated* under a filter, so only aggregating SELECTs count.
         readings = [o for o in readings if o.select is None or o.select.find(exp.AggFunc) is not None]
+        dropped = _rowless_dropped(tree, m.entity)
+        if dropped:
+            out.append(Unmet("state", f"'{metric.term}' durum ölçüsüdür: hiç hareketi olmayan kaydın bakiyesi 0'dır ve bu koşulu sağlar, "
+                             f"ama {dropped} yalnız hareketi olan kayıtları tutar; hareketsiz kayıtlar sonuçtan düşer.",
+                             f"Bakiyeyi üyelikle sınama: ya NOT EXISTS (SELECT 1 FROM {m.entity} … GROUP BY anahtar HAVING <bakiye> > 0) yaz, "
+                             f"ya da bakiye alt sorgusunu LEFT JOIN ile bağlayıp ISNULL(bakiye, 0) üzerinde karşılaştır.", m.entity, None))
         if readings and not any(_unrestricted_reading(o, own_cols) for o in readings):
             out.append(Unmet("state", f"'{metric.term}' durum ölçüsüdür: tarih ya da işlem türü filtresi altında hesaplanamaz; "
                              f"okunan her {m.entity} filtreli.",
@@ -1204,7 +1304,8 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
         for cond in (m.extra or {}).get("conditions") or []:
             if not _condition_holds(str(cond), own):
                 out.append(Unmet("filter", f"'{slot.term}' kavramının koşulu sonuç kapsamında doğrulanamadı: {cond}",
-                                 f"{m.entity} kaynağını okuyan her SELECT/CTE'nin WHERE'ine {cond} ekle.", m.entity, None))
+                                 f"{m.entity} kaynağını okuyan her SELECT/CTE'nin WHERE'ine {cond} ekle."
+                                 + _stand_in_note(str(cond), own, occ), m.entity, None))
 
     # A certified dimension can define which reference wins when header and line
     # values differ. Merely mentioning the target table cannot establish this.
@@ -1246,10 +1347,18 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                     out.append(Unmet("reference", f"'{slot.term}' ilişki önceliği doğrulanamadı: {expression}", f"JOIN koşulu olarak {expression} kullan."))
                 elif (expression == reference_predicate(slot.mapping, fact, rule)
                       and (slot.mapping.extra or {}).get("join_kind") == "LEFT"
+                      # Looked for where the equality itself is looked for: in every SELECT. A rule
+                      # honoured inside a CTE or a derived table keeps the unassigned rows just as well,
+                      # and the outer SELECT's join list does not contain it.
                       and not any(str(join.args.get("side", "")).upper() == "LEFT"
                                   and any(equality(part, scope) == expected for part in _split_and(join.args["on"]))
-                                  for join in tree.args.get("joins") or [] if join.args.get("on") is not None)):
-                    out.append(Unmet("reference", f"'{slot.term}' atanmamış değerleri koruyan ilişki doğrulanamadı", "Bu ilişkiyi LEFT JOIN olarak yaz."))
+                                  for sel in tree.find_all(exp.Select)
+                                  for join in sel.args.get("joins") or [] if join.args.get("on") is not None)):
+                    # "Bu ilişkiyi" named nothing: the model made the *other* join of the statement LEFT
+                    # and was refused again for the same reason.
+                    out.append(Unmet("reference", f"'{slot.term}' atanmamış değerleri koruyan ilişki doğrulanamadı: {expression} LEFT JOIN değil",
+                                     f"{slot.mapping.entity} tablosunu LEFT JOIN ile bağla: LEFT JOIN {slot.mapping.entity} ON {expression} "
+                                     f"(INNER JOIN, {slot.mapping.entity} kaydı olmayan satırları düşürür)."))
 
     if not strict:
         return out + _closing(sq, tree, occ)

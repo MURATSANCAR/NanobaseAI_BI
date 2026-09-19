@@ -1959,8 +1959,13 @@ class ExistingCompiler:
                 rule = reference_rule(slot.mapping, fact, [f.mapping for f in q.filters if f.mapping])
                 if rule:
                     predicate = via_predicate(fact, rule) + " AND " + reference_predicate(slot.mapping, fact, rule)
+                    # The gate demands what the catalog declares — the join kind too. Left unsaid here, the
+                    # model wrote a correct INNER JOIN and learnt about LEFT only from the refusal.
+                    left = (slot.mapping.extra or {}).get("join_kind") == "LEFT"
                     ctx.append("## ZORUNLU İLİŞKİ\n" + (predicate or f"{fact} → {rule['via']} → {slot.mapping.entity}") +
-                               "; kayıt olmayan referans değeri 0'dır; bu ilişkiyi doğrudan başka alanla değiştirme.")
+                               "; kayıt olmayan referans değeri 0'dır; bu ilişkiyi doğrudan başka alanla değiştirme."
+                               + (f" {slot.mapping.entity} tablosu LEFT JOIN ile bağlanır (eşleşmeyen satırlar NULL olarak kalır); "
+                                  f"{fact} tablosunu okuyan her SELECT bu ilişkiyi kullanır." if left else ""))
         msgs = [{"role": "system", "content": SYSTEM_PROMPT + "\n\n" + "\n\n".join(ctx)}]
         msgs.extend(thread[-6:])
         tail = q.question
