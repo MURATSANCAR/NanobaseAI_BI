@@ -69,3 +69,20 @@ Gerçek ölçüm, yeni model çağrısı yok (kayıtlı olasılıklar; `scripts/
 Tek yanlış, tırnak içinde verilmiş iki satırlık bir başlık. Yalnız model (0,8 eşiği) aynı örneklerde 48 kararın 42'sini doğru veriyordu; yanlışların hepsi alt satıra taşan anlatıcı cümlesiydi ve kural onları kapattı.
 
 Sınırlar: kural bu 67 örnekte hatalarına bakılarak iki kez düzeltildi (sözlükte ad okuması olan aktarma fiilleri; kapanan cümleden sonra çekimserlik); görülmemiş veride ölçülmedi. Etiket yalnız tırnaklı kitaplardan gelir; gerçekten konuşma çizgili kitapta doğruluk ölçülmedi. %36 çekimserlik satır geometrisi gerektiriyor. Üretime bağlı değil.
+
+## 6. Altı gerçek kitapta konuşma işaretlemesi (19 Eylül)
+
+Üç yeni kitap kabul kurulumunda kaynak hazırlığından geçti (API/PG + Poppler PASS): Dedem Tekrar Çocuk Oldu (128 s.), Anne Terliği (128 s.), Levent Dünya Harikalarının Peşinde (144 s., 360 MB; ayrıştırıcı tepe bellek 9,74 GiB, 6 GiB sınırında OOM ile ölmüştü). Profil kanıtı `evidence/utterance-profile-probe-20260919T084342180923Z.json` (yalnız sayı; kişi eki kapısı v4).
+
+| Kitap | Sayfa | Tırnaklı aralık | Konuşma çizgili satır | Birinci kişi yüklem | Kapı uygulanabilir | İşaretli konuşma dışında |
+|---|---:|---:|---:|---:|---:|---:|
+| Ekrana Sığmayan Macera | 48 | 159 | 0 | 38 | 38 | 0 |
+| Kahramanını Yutan Kitap | 64 | 58 | 86 | 183 | 41 | 135 |
+| Dünyanın En Korkak Hayvanı | 32 | 19 | 36 | 9 | 2 | 5 |
+| Dedem Tekrar Çocuk Oldu | 128 | ≈600 | 7 | 337 | 103 | 234 |
+| Anne Terliği | 128 | ≈690 | 0 | 121 | 120 | 1 |
+| Levent Dünya Harikalarının Peşinde | 144 | ≈60 | 304 | 229 | 32 | 168 |
+
+Tırnaklı aralık sütunu v4'ün konuşma çizgili parçaları da saydığı ham sayıdan çizgili parçalar düşülerek yaklaşık verilmiştir.
+
+Bulgu: ölçüm protokolündeki "birinci kişi anlatıcı" dilimi için ilk gerçek veri. Dedem birinci kişi anlatıcılı ve diyaloğu tırnakla veriyor ("… dedim."); Levent birinci kişi anlatıcılı ve diyaloğu konuşma çizgisiyle (–) veriyor, dekoratif başlıkları OCR'da bozuk. Bu iki kitapta birinci kişi yüklemlerin çoğu anlatıcıya aittir; kapı bunlarda doğru biçimde `NOT_APPLICABLE` döner, yani PDF27 sınıfı hatayı anlatıcı metninde yakalayamaz. Anlatıcı kimliği kitap düzeyinde kurulmadan (Sorun 1b) bu açık kapanmaz. Yeni kitaplarda analiz nesli ve iddia yok; kapının doğru/yanlış işaret oranı ölçülmedi.

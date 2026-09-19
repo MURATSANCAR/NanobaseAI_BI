@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 08:45 UTC — Editör: altı gerçek kitap, birinci kişi anlatıcılı ilk veri
+
+Üç yeni kitap kabul kurulumunda kaynak hazırlığından geçti (128, 128, 144 sayfa; API/PG + Poppler PASS). Büyük kitap yolunda altı engel kapandı: şema, DB kısıtı ve ayrıştırıcıda sabit 50 MB; iki yerde sabit 100 sayfa; gateway tamponu; 6 GiB ayrıştırıcı belleği (tepe 9,74 GiB ölçüldü). Altı kitabın konuşma profili çıkarıldı: Dedem (tırnaklı diyalog) ve Levent (konuşma çizgili diyalog) birinci kişi anlatıcılı; ölçüm protokolünün 3. dilimi için ilk gerçek veri. Kişi eki kapısı anlatıcı metninde uygulanamaz ve bunu açıkça raporluyor; anlatıcı kimliği kurulmadan bu açık kapanmaz. [Ölçüm](editor/2026-09-18-generality-measurements.md).
+
 ## 2026-09-19 07:00 UTC — Editör: devam satırında kural + model birleşimi
 
 Konuşma çizgili satırın altındaki satırın konuşma mı anlatıcı mı olduğu: alt satıra taşan aktarma cümlesi kuralı (13/13) önce, kalan yerde yalnız 0,8 üstü emin model. 87 etiketli örnekte 56 karar/55 doğru, 31 çekimser; yalnız model 48/42 idi ve yanlışların hepsi kuralın kapattığı sınıftı. İlk ölçümde alt satırı yeni tırnakla açılan 9 örnek yanlış etiketlenmişti, çıkarıldı. Yeni model çağrısı yok; kural bu örneklerin hatalarına bakılarak düzeltildi, görülmemiş veri yok. [Ölçüm](editor/2026-09-18-generality-measurements.md).
