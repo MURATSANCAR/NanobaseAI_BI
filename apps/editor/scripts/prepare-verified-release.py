@@ -112,8 +112,11 @@ for role, prefix, container in (('api', 'nanobase-editor', 'nanobase-editor-api-
     base_files = image_files(base_id)
     assert base_files == live_backend, 'LIVE_BASE_IMAGE_NOT_EQUAL_TO_LIVE_BACKEND:' + role
     assert not set(base_files) - set(backend), 'FILES_REMOVED_SINCE_LIVE_WOULD_REMAIN:' + role
+    # BuildKit resolves a bare image ID in FROM as a registry name; pin it with a local tag.
+    base_tag = prefix + ':' + tag + '-exact-base'
+    run('docker', 'tag', base_id, base_tag)
     dockerfile = stage.parent / ('Dockerfile.' + tag + '.' + role)
-    dockerfile.write_text('FROM ' + base_id + '\nCOPY backend/ /app/\n')
+    dockerfile.write_text('FROM ' + base_tag + '\nCOPY backend/ /app/\n')
     image = prefix + ':' + tag
     log = evidence / (tag + '-build-' + role + '.log')
     with log.open('x') as out:
@@ -123,7 +126,7 @@ for role, prefix, container in (('api', 'nanobase-editor', 'nanobase-editor-api-
     built = image_files(image_id)
     assert built == backend, json.dumps({'role': role, 'extra': sorted(set(built) - set(backend)),
                                          'missing': sorted(set(backend) - set(built))})
-    images.append({'role': role, 'image': image, 'image_id': image_id, 'base_image_id': base_id,
+    images.append({'role': role, 'image': image, 'image_id': image_id, 'base_image_id': base_id, 'base_tag': base_tag,
                    'image_source_manifest': built, 'exact_source_path_set': True, 'extra_python_files': [], 'log': str(log)})
 
 # 4. proofs and contract
