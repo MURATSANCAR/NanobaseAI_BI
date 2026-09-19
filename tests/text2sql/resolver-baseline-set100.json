@@ -1,9 +1,9 @@
 {
- "recordedAt": "2026-09-19T22:15:40Z",
+ "recordedAt": "2026-09-19T22:27:33Z",
  "state": {
-  "catalogHash": "b19b0ded1be8043ee83c383c169b30ec587fde1a6fb909242fcf043277c54448",
+  "catalogHash": "69b0d7d1d0e581f52d2c0986fb8b351081bdffb8c1ee250180cfd95ea03e1ae4",
   "languagePoolHash": "",
-  "catalogVersion": 70549,
+  "catalogVersion": 70550,
   "rulesHash": "c4954b528fa040ca",
   "promptHash": "32b69bad0be35c98"
  },
@@ -518,6 +518,7 @@
    "kaynak": "logo",
    "read": {
     "sources": [
+     "ANA",
      "TIMAS_MSCRM"
     ],
     "slots": [
@@ -531,11 +532,21 @@
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "is istasyonlarinin",
+      "type": "COLUMN",
+      "status": "CERTIFIED",
+      "concept": "sem_f4a22476930b",
+      "entity": "WORKSTAT",
+      "what": "NAME",
+      "values": [],
+      "role": "",
+      "source": "ANA"
      }
     ],
     "groupBy": [],
     "unresolved": [
-     "istasyonlarinin",
      "planlanandan"
     ],
     "unhandled": [],
@@ -2200,21 +2211,9 @@
    "kaynak": "crm",
    "read": {
     "sources": [
-     "ANA",
      "TIMAS_MSCRM"
     ],
     "slots": [
-     {
-      "term": "urun",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_92ac0bd37a50",
-      "entity": "ITEMS",
-      "what": "NAME",
-      "values": [],
-      "role": "",
-      "source": "ANA"
-     },
      {
       "term": "yillik hedefin",
       "type": "COLUMN",
@@ -2223,18 +2222,49 @@
       "entity": "NEW_SATISHEDEFLERIBASE",
       "what": "NEW_TOPLAMHEDEF",
       "values": [],
+      "role": "subject_group_by",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "new_satishedefleribase default statecode",
+      "type": "DEFAULT_FILTER",
+      "status": "CERTIFIED",
+      "concept": "",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "statecode",
+      "values": [
+       "0"
+      ],
+      "role": "",
+      "source": "TIMAS_MSCRM"
+     },
+     {
+      "term": "dengesiz",
+      "type": "METRIC",
+      "status": "CERTIFIED",
+      "concept": "sem_5b7d97f9a3d9",
+      "entity": "NEW_SATISHEDEFLERIBASE",
+      "what": "f:5ef2bff2c2cb56a0",
+      "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
      }
     ],
-    "groupBy": [],
+    "groupBy": [
+     "NEW_SATISHEDEFLERIBASE.NEW_TOPLAMHEDEF"
+    ],
     "unresolved": [
-     "dengesiz"
+     "urun"
     ],
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
-    "drops": [],
+    "drops": [
+     {
+      "code": "OTHER_SOURCE_LEFT_TO_MODEL",
+      "term": "urun"
+     }
+    ],
     "shape": null,
     "grain": "YEAR",
     "limit": null,
