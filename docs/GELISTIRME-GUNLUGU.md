@@ -4,6 +4,17 @@
 
 Yükleme yolu açıldıktan sonra üç yeni kitap ayrıştırmada düştü. "Dedem Tekrar Çocuk Oldu" ve "Anne Terliği" (128'er sayfa) tam ayrıştırıldı, 128/128 sayfa muhasebeli; `parse_contract.validate_source` sayfa sınırını 100 olarak sabit yazdığı için `SOURCE_ACCOUNTING_INCOMPLETE` verdi. Artık `EDITOR_MAX_PAGES` okur; değişken ortak `x-app` ortamına da eklendi (worker da aynı doğrulamayı çağırıyor). "Levent Dünya Harikalarının Peşinde" (144 sayfa, 360 MB) render'dan sonra Docling'de bellek sınırında öldü: ayrıştırıcı 6 GiB, tepe 6,00 GiB, `oom_kill 1`. Ayrıştırıcı belleği `EDITOR_PARSER_MEMORY` ile ayarlanabilir oldu (varsayılan 6g). Bu, büyük kitap yolunda beşinci ve altıncı engel; hepsi aynı kökten: yol 50 MB/100 sayfa üstünde hiç sınanmamıştı. Başarısız yükleme kalıcıdır; yeniden deneme yeni yükleme kaydıyla yapılır.
 
+## 2026-09-19 — VM iki kaynaklı deneme: katalog sürüm tutarsızlığı, geri alındı (Logo kurtarıldı)
+
+Model geçişi (VM → GPU) sağlam ve canlı. İki kaynaklı (CRM × Logo) açma denendi, **geri alındı**; üretim güvende (Logo yine 81.760).
+
+- **Aşama 1 (kod yayını) başarılı:** VM `main`e geldi (deploy-customer-vm.sh), model GPU'da kaldı, Logo çalıştı. Doğrulandı.
+- **Aşama 2 (`timas-vm-crm-federated.sh`) mekanik olarak tamamlandı ama sonuç KÖTÜ:** VM katalog yedeği alındı, CRM secret kondu (host .28), test sunucusunun tanım tabloları (sl_concept/mapping/schema_profile/evidence/candidate/counter_evidence/coverage/vocabulary/annotation) VM'e taşındı — CRM sertifikalı kavram 3 → 4.379, kaynak-arası bağ 0 → 45. Ama doğrulama: LOGO "Fatura sayısı: 0" (öncesi 81.760 — **gerileme**), CRM SQL_INVALID, IKISI INCOMPLETE (federated'a hiç girmedi).
+- **Kök neden (hipotez, güçlü):** `sl_catalog_version` TAŞINMADI. Tanım tabloları test'in sürümüyle (≈61083) geldi, VM'in sürüm tablosu eski kaldı → çözücü/derleyici kavramları güncel sürüme göre çözerken tutarsızlık → model sertifikalı fatura ölçüsünü görmedi → naif SQL → 0. Kısmi katalog taşıma sürüm-farkındalığını bozuyor.
+- **Geri alma:** `--rollback` katalog yedeğini geri yükledi, `.env`/override eski hâline döndü, bridge+jobs yeniden yaratıldı. Doğrulandı: federated/CRM env yok, CRM kavram 3, Logo 81.760. Betiğe uyarı başlığı eklendi; olduğu gibi TEKRAR KOŞULMAMALI.
+- **Doğru yol (bir sonraki, aceleye getirmeden, tercihen bakım penceresinde):** ya `sl_catalog_version` dâhil TAM katalog taşınmalı (14 GB anlık görüntü — önce eski sürümler budanır), ya da VM'de gerçek tarama + kural madenciliği koşturulup VM kendi tutarlı kataloğunu kendi sürümünde kurmalı. İki kaynaklı planın kendisi test sunucusunda çalışıyor; sorun VM'e katalog aktarımı.
+- Rsync/ssh sırasında Mac tarafında iki kez ağ kopması yaşandı; betikler nohup ile sunucuda detached koşturuldu, kopma etkilemedi. VM'e hiç yarım/bozuk durum bırakılmadı.
+
 ## 2026-09-19 05:35 UTC — Editör: yükleme gövdesi gateway'de tamponlanmıyor
 
 DB kısıtı kaldırıldıktan sonra üç yükleme gateway'de düştü: nginx gövdeyi 32 MiB'lik `/tmp` tmpfs'e yazmaya çalıştı (`No space left on device`). API gövdeyi zaten parça parça diske akıtıyor. `deploy/nginx.conf` yükleme içeriği yolunda (`/v1/uploads/{id}/content`) `proxy_request_buffering off` ve 600 sn gönderme/okuma süresi kullanır. Aynı genel sorun sınırın üç kopyası ile birlikte bulundu: büyük kitap yükleme yolu hiç sınanmamıştı.
