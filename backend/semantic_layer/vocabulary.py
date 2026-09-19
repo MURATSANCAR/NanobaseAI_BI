@@ -431,6 +431,63 @@ def decide(store, settings, profiles, engine, row_id: str, decision: str, who: s
     return {"id": row_id, "status": status, "conceptId": concept_id}
 
 
+def withdraw(store, settings, row_id: str, reason: str) -> dict[str, Any]:
+    """Take back an approval nobody made: the row returns to PROPOSED with the reason, for a person, and
+    the word stops resolving. Where the word was one name among several it leaves the concept; where
+    it was the concept's own name, the concept takes another approved name of the same field; where
+    it was the only thing the concept ever had, the concept goes with it (a person's yes remakes it).
+    A row a person decided is refused."""
+    ensure_table(store.engine)
+    with store.engine.connect() as conn:
+        r = conn.execute(sa.select(S.sl_vocabulary).where(S.sl_vocabulary.c.id == row_id)).first()
+    if r is None:
+        raise KeyError(row_id)
+    row = dict(r._mapping)
+    if row["source"] == HUMAN:
+        raise ValueError("bir kişinin yazdığı kelime geri çekilmez")
+    norm, concept_id, what = row["normalized"], row.get("concept_id"), "yok"
+    c = store.get_concept(concept_id) if concept_id else None
+    if c is not None:
+        evidence_id = f"vocabulary:{row_id}"
+        explain = dict(c.explain or {})
+        sources = {k: v for k, v in (explain.get("synonym_sources") or {}).items() if k != norm}
+        declared = [k for k in (explain.get("declared_synonyms") or []) if k != norm]
+        if c.normalized_term != norm:
+            store.update_concept(c.id, synonyms=[x for x in c.synonyms if x != norm and normalize_term(x) != norm],
+                                 explain={"synonym_sources": sources, "declared_synonyms": declared}, bump_version=True)
+            store.remove_evidence(c.id, evidence_id)
+            what = "eş anlamlı çıkarıldı"
+        else:
+            with store.engine.connect() as conn:
+                siblings = [dict(x._mapping) for x in conn.execute(
+                    sa.select(S.sl_vocabulary).where(S.sl_vocabulary.c.concept_id == c.id, S.sl_vocabulary.c.status == APPROVED,
+                                                     S.sl_vocabulary.c.id != row_id).order_by(S.sl_vocabulary.c.decided_at))]
+            # a name a person chose first; among a machine's, the longest says the most
+            siblings.sort(key=lambda x: (x["source"] != HUMAN, -len(x["normalized"].split())))
+            foreign = [e for e in store.list_evidence(c.id) if not str(e.source_id).startswith("vocabulary:")]
+            if siblings:
+                heir = siblings[0]
+                store.rename_concept(c.id, heir["term"])
+                store.update_concept(c.id, explain={"synonym_sources": {k: v for k, v in sources.items() if k != heir["normalized"]},
+                                                    "declared_synonyms": [k for k in declared if k != heir["normalized"]]})
+                store.remove_evidence(c.id, evidence_id)
+                what = "kavram başka adını aldı"
+            elif not foreign and explain.get("human_certified_by") == row.get("decided_by"):
+                store.delete_concept(c.id)
+                what = "kavram silindi"
+            else:
+                # something other than the vocabulary stands behind this concept: it is not ours to remove
+                what = "dokunulmadı: kavramın başka kanıtı var"
+    if what.startswith("dokunulmadı"):
+        return {"id": row_id, "status": row["status"], "concept": what}
+    now = _now()
+    with store.engine.begin() as conn:
+        conn.execute(S.sl_vocabulary.update().where(S.sl_vocabulary.c.id == row_id)
+                     .values(status=PROPOSED, decided_by=None, decided_at=None, updated_at=now, reason=reason[:500],
+                             concept_id=None))
+    return {"id": row_id, "status": PROPOSED, "concept": what}
+
+
 def add_human(store, settings, profiles, engine, entity: str, column: Optional[str], term: str, who: str, examples: Optional[list[str]] = None) -> dict[str, Any]:
     """A word a person typed: recorded as theirs, approved at once, attached to the field's concept.
     If generation had proposed the same word, the person's row replaces the proposal."""

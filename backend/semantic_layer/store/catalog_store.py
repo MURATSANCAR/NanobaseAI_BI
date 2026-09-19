@@ -323,6 +323,30 @@ class CatalogStore:
             syns.add(key)
             self.update_concept(concept_id, synonyms=sorted(syns))
 
+    def rename_concept(self, concept_id: str, term: str) -> Optional[Concept]:
+        """Give the concept another of its own names. The new name leaves the synonyms; the old one does
+        not join them — it is being taken away, which is why the concept is renamed."""
+        c = self.get_concept(concept_id)
+        norm = normalize_term(term)
+        if c is None or not norm or norm == c.normalized_term:
+            return c
+        with self._lock:
+            taken = {x.sense_id for x in self.find_concepts(c.tenant_id, c.datasource_id, normalized_term=norm, semantic_type=c.semantic_type)}
+            sense = next(n for n in range(1, len(taken) + 2) if n not in taken)
+            with self.engine.begin() as conn:
+                conn.execute(S.sl_concept.update().where(S.sl_concept.c.id == concept_id).values(
+                    term=term, normalized_term=norm, sense_id=sense, version=c.version + 1, updated_at=utcnow(),
+                    synonyms_json=sorted(x for x in set(c.synonyms) if x != norm and normalize_term(x) != norm)))
+        self._invalidate(c.tenant_id, c.datasource_id)
+        return self.get_concept(concept_id)
+
+    def remove_evidence(self, concept_id: str, source_id: str) -> None:
+        c = self.get_concept(concept_id)
+        with self.engine.begin() as conn:
+            conn.execute(S.sl_evidence.delete().where(S.sl_evidence.c.concept_id == concept_id, S.sl_evidence.c.source_id == source_id))
+        if c:
+            self._invalidate(c.tenant_id, c.datasource_id)
+
     def delete_concept(self, concept_id: str) -> None:
         c = self.get_concept(concept_id)
         with self.engine.begin() as conn:
