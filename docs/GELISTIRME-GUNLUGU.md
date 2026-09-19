@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 05:35 UTC — Editör: yükleme gövdesi gateway'de tamponlanmıyor
+
+DB kısıtı kaldırıldıktan sonra üç yükleme gateway'de düştü: nginx gövdeyi 32 MiB'lik `/tmp` tmpfs'e yazmaya çalıştı (`No space left on device`). API gövdeyi zaten parça parça diske akıtıyor. `deploy/nginx.conf` yükleme içeriği yolunda (`/v1/uploads/{id}/content`) `proxy_request_buffering off` ve 600 sn gönderme/okuma süresi kullanır. Aynı genel sorun sınırın üç kopyası ile birlikte bulundu: büyük kitap yükleme yolu hiç sınanmamıştı.
+
 ## 2026-09-19 05:30 UTC — Editör: yükleme sınırının üçüncü kopyası (DB kısıtı)
 
 Üç yeni kitabın yüklemesi bu kez 500 verdi: `uploads_expected_bytes_check` kısıtı 52.428.800 baytı tabloya sabitlemiş (0003). Aynı sınır şema, ayrıştırıcı ve DB'de üç ayrı yerde yazılıydı; yalnız ayrıştırıcı ayarı okuyordu. Migration `0007_upload_limit_setting` DB kısıtını `expected_bytes>0`'a indirir; asıl sınırı API ve ayrıştırıcı `EDITOR_MAX_SOURCE_BYTES` ile uygular. Kabul kurulumunda API imajı `nanobase-editor:upload-limit-overlay-20260919` (çalışan V9 imajı + tek dosya bindirme, kullanıcı çalıştırdı); DB kısıtı henüz değiştirilmedi, üç yükleme bekliyor.
