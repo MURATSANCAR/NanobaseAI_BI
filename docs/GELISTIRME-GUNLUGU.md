@@ -1,5 +1,8 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 07:00 UTC — Editör: devam satırında kural + model birleşimi
+
+Konuşma çizgili satırın altındaki satırın konuşma mı anlatıcı mı olduğu: alt satıra taşan aktarma cümlesi kuralı (13/13) önce, kalan yerde yalnız 0,8 üstü emin model. 87 etiketli örnekte 56 karar/55 doğru, 31 çekimser; yalnız model 48/42 idi ve yanlışların hepsi kuralın kapattığı sınıftı. İlk ölçümde alt satırı yeni tırnakla açılan 9 örnek yanlış etiketlenmişti, çıkarıldı. Yeni model çağrısı yok; kural bu örneklerin hatalarına bakılarak düzeltildi, görülmemiş veri yok. [Ölçüm](editor/2026-09-18-generality-measurements.md).
 ## 2026-09-19 10:00 UTC — BI: tablo seçimi için tek token + olasılık sondası (NanoJev fikri, eğitimsiz)
 
 Soru: NanoJev (0.6B karar modeli, iki günlük depo, 25 indirme) Logo/CRM SQL doğruluğuna yarar mı? Model SQL yazmaz, yayınlanan ağırlıklar yalnız labirent/Snake bilir; aynı çıktı (kapalı küme + aday olasılığı) canlı Qwen'den `structured_outputs.choice` + `logprobs` ile eğitimsiz alınır. Ölçüm betiği `tests/text2sql/probe-table-choice-logprob.py` (salt okuma, canlı köprüye dokunmaz): derleyicinin sunacağı her aday tablo için "gerekli mi?" E/H tek token, çağrılar eşzamanlı.
