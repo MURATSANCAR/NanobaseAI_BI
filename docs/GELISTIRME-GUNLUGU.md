@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 09:30 UTC — Editör: ortak etiket ve regresyon altyapısı (editor_eval)
+
+Dört ayrı kural yaması yerine tek doğrulama hattı: etiket → aday → skor → otomatik kabul ya da editör kuyruğu → regresyon. `apps/editor/scripts/eval.py`: PostgreSQL'de `editor_eval` şeması (sahibi `editor_owner`; `editor_app`'e yetki yok, yani üretim kodu etiketleri okuyamaz — ayrım veritabanı yetkisiyle zorlanır). Görevler: konuşma sınırı (CONTINUES/ENDS/UNCERTAIN), OCR bölgesi (gold_text + hata sınıfı), iddia sadakati (FAITHFUL/NOT_FAITHUL/AMBIGUOUS + hata sınıfı + özne/yüklem aralığı), anlatıcı kimliği. Kanıt dosyalarından öğe yükler, aday çıktılarını ham saklar, etiketleme dosyası verir/alır; ölçüt: sınır F1, yanlış bölme/birleştirme, CER/WER, diakritik doğruluğu, kapsama, sessiz geçiş, iki editör arası kappa. Eşik sabit hash bölmesinin kalibrasyon kısmında seçilir, test kısmında raporlanır. Henüz sunucuda çalıştırılmadı.
+
+Prod kapsamı notu: `main` canlı kaynaktan (`1200bdd`) sonra başka bir oturumun eklediği semantik V8 kapısını (üç çağrılı rol grafı üretim kabulüne AND) ve doğrulanmamış yeniden işleme planı ucunu da içeriyor. 14 gerçek pasajda bu kapı 5 geçti/9 inceleme verdi. `main`'i olduğu gibi canlıya çıkarmak bunları da canlıya alır.
+
 ## 2026-09-19 08:45 UTC — Editör: altı gerçek kitap, birinci kişi anlatıcılı ilk veri
 
 Üç yeni kitap kabul kurulumunda kaynak hazırlığından geçti (128, 128, 144 sayfa; API/PG + Poppler PASS). Büyük kitap yolunda altı engel kapandı: şema, DB kısıtı ve ayrıştırıcıda sabit 50 MB; iki yerde sabit 100 sayfa; gateway tamponu; 6 GiB ayrıştırıcı belleği (tepe 9,74 GiB ölçüldü). Altı kitabın konuşma profili çıkarıldı: Dedem (tırnaklı diyalog) ve Levent (konuşma çizgili diyalog) birinci kişi anlatıcılı; ölçüm protokolünün 3. dilimi için ilk gerçek veri. Kişi eki kapısı anlatıcı metninde uygulanamaz ve bunu açıkça raporluyor; anlatıcı kimliği kurulmadan bu açık kapanmaz. [Ölçüm](editor/2026-09-18-generality-measurements.md).
