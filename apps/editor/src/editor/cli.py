@@ -104,6 +104,7 @@ def main() -> None:
     cq.add_argument("query")
     cq.add_argument("--age", type=int)
     cats.add_parser("card").add_argument("book_id")
+    cats.add_parser("web-cover").add_argument("book_id")
     cv = sp.add_parser("cover")
     cv.add_argument("book_id")
     cv.add_argument("file_name")
@@ -141,6 +142,9 @@ def main() -> None:
         _print(asyncio.run(catalog.search_books(args.query, 5, args.age)))
     elif args.cmd == "catalog" and args.catcmd == "card":
         _print(catalog.get_book_card(args.book_id))
+    elif args.cmd == "catalog" and args.catcmd == "web-cover":
+        from . import web_cover
+        _print(asyncio.run(web_cover.sync_book(args.book_id)))
     elif args.cmd == "cover":
         _print(catalog.set_uploaded_cover(args.book_id, args.file_name, args.by))
     elif args.cmd == "migrate":

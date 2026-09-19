@@ -76,6 +76,9 @@ EOF
     umask 022
     echo "secrets created in $ROOT/secrets"
   fi
+  # deployment settings that may be added after the first install (values are set on the host)
+  #   EDITOR_COVER_WEB_SEARCH: publisher web site search URL with {isbn}, for cover lookup
+  grep -q '^EDITOR_COVER_WEB_SEARCH=' "$ROOT/secrets/editor.env" || echo 'EDITOR_COVER_WEB_SEARCH=' >> "$ROOT/secrets/editor.env"
   render "$APP/deploy/temporal/server.yaml.tpl" "$ROOT/temporal/server.yaml"
   chmod 644 "$ROOT/temporal/server.yaml"
   # Hermes home (uid 10000 in the image): config, persona, skills.

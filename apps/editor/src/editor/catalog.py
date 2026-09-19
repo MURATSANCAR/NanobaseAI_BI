@@ -120,7 +120,7 @@ def set_uploaded_cover(book_id: str, file_name: str, added_by: str) -> dict:
     return _store_cover(book_id, "UPLOADED", dest, None, added_by)
 
 
-PRIORITY = {"UPLOADED": 3, "CRM": 2, "PDF_PAGE": 1}
+PRIORITY = {"UPLOADED": 4, "CRM": 3, "WEB": 2, "PDF_PAGE": 1}
 
 
 def cover_requests() -> list[dict]:
@@ -136,43 +136,49 @@ def cover_requests() -> list[dict]:
             for r in rows]
 
 
-def store_crm_lookup(rep: dict) -> dict:
-    """Result of one CRM lookup. A fetched image becomes the book's cover unless an editor
-    uploaded one, or the CRM image we already hold is the same or newer."""
+def store_lookup(rep: dict, source: str, data: bytes | None = None) -> dict:
+    """Result of one cover lookup (CRM connector or publisher web site). A fetched image
+    becomes the book's cover when its source outranks the current one (UPLOADED > CRM >
+    WEB > PDF_PAGE), or has the same rank and is a different, newer image."""
     import base64
     from datetime import datetime
     book_id = rep["book_id"]
     outcome, stored = rep["outcome"], None
     if outcome == "STORED":
-        data = base64.b64decode(rep["image_b64"])
+        data = data if data is not None else base64.b64decode(rep["image_b64"])
         chosen = rep["chosen"]
-        cur = current_cover(book_id)
-        cur_full = db.one("SELECT source, source_date, sha256 FROM book_cover WHERE book_id=%s AND is_current",
-                          book_id) if cur else None
+        cur = db.one("SELECT source, source_date, sha256 FROM book_cover WHERE book_id=%s AND is_current",
+                     book_id)
         sha = hashlib.sha256(data).hexdigest()
         when = datetime.fromisoformat(chosen["date"])
-        if cur_full and cur_full["source"] == "UPLOADED":
-            outcome = "KEPT_UPLOADED"
-        elif cur_full and cur_full["source"] == "CRM" and (cur_full["sha256"] == sha or (
-                cur_full["source_date"] and cur_full["source_date"].replace(tzinfo=None) >= when.replace(tzinfo=None))):
+        rank, cur_rank = PRIORITY[source], PRIORITY[(cur or {}).get("source") or "PDF_PAGE"] if cur else 0
+        newer = not cur or not cur["source_date"] or \
+            when.replace(tzinfo=None) > cur["source_date"].replace(tzinfo=None)
+        if cur and cur_rank > rank:
+            outcome = "KEPT_" + cur["source"]
+        elif cur and cur_rank == rank and (cur["sha256"] == sha or not newer):
             outcome = "KEPT_CURRENT"
         else:
             bv = db.one("SELECT id FROM book_version WHERE book_id=%s ORDER BY created_at DESC LIMIT 1", book_id)
             ext = Path(rep.get("file_name") or "cover.jpg").suffix.lower()
-            if ext not in COVER_EXT:
-                ext = ".jpg"
-            dest = _book_dir(str(bv["id"])) / f"cover-crm-{sha[:12]}{ext}"
+            ext = ext if ext in COVER_EXT else ".jpg"
+            dest = _book_dir(str(bv["id"])) / f"cover-{source.lower()}-{sha[:12]}{ext}"
             dest.write_bytes(data)
-            stored = _store_cover(book_id, "CRM", dest, None, "crm-connector")
+            stored = _store_cover(book_id, source, dest, None, f"{source.lower()}-sync")
             db.one("UPDATE book_cover SET source_date=%s, source_ref=%s WHERE id=%s RETURNING id", when,
                    db.J({"crm_book_id": rep.get("crm_book_id"), "matched_by": rep.get("matched_by"),
                          "kind": chosen["kind"], "path": chosen["path"], "name": chosen.get("name")}),
                    stored["cover_id"])
-    db.one("INSERT INTO cover_lookup(book_id, matched_by, crm_book_id, crm_title, candidates, chosen, outcome,"
-           " detail) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id", book_id, rep.get("matched_by"),
-           rep.get("crm_book_id"), rep.get("crm_title"), db.J(rep.get("candidates") or []),
-           db.J(rep["chosen"]) if rep.get("chosen") else None, outcome, rep.get("detail"))
-    return {"book_id": book_id, "outcome": outcome, "cover": stored}
+    db.one("INSERT INTO cover_lookup(book_id, source, matched_by, crm_book_id, crm_title, candidates, chosen,"
+           " outcome, detail) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id", book_id, source,
+           rep.get("matched_by"), rep.get("crm_book_id"), rep.get("crm_title"),
+           db.J(rep.get("candidates") or []), db.J(rep["chosen"]) if rep.get("chosen") else None,
+           outcome, rep.get("detail"))
+    return {"book_id": book_id, "source": source, "outcome": outcome, "cover": stored}
+
+
+def store_crm_lookup(rep: dict) -> dict:
+    return store_lookup(rep, "CRM")
 
 
 def ensure_cover(book_id: str, generation_id: str) -> dict | None:
@@ -239,11 +245,17 @@ async def build_card(generation_id: str) -> dict:
             (gen["book_id"], gen["book_version_id"], generation_id, title, db.J(meta), age_min, age_max,
              db.J(summary), db.J(themes), db.J(chars), db.J(events), card_text)).fetchone()
     cover = ensure_cover(str(gen["book_id"]), generation_id)
+    try:                                   # publisher web site, by ISBN; never blocks the card
+        from . import web_cover
+        web = await web_cover.sync_book(str(gen["book_id"]))
+        cover = current_cover(str(gen["book_id"])) or cover
+    except Exception as e:  # noqa: BLE001
+        web = {"outcome": "ERROR", "detail": str(e)[:300]}
     n = await _index(str(gen["book_id"]), str(card["id"]), title, summary, themes, events, card_text)
     return {"card_id": str(card["id"]), "book_id": str(gen["book_id"]), "title": title,
             "metadata_fields": sorted(meta), "summary": len(summary), "themes": len(themes),
             "characters": len(chars), "key_events": len(events), "indexed_facets": n,
-            "cover": (cover or {}).get("source")}
+            "cover": (cover or {}).get("source"), "web_cover": web.get("outcome")}
 
 
 async def _index(book_id: str, card_id: str, title: str, summary, themes, events, card_text) -> int:
