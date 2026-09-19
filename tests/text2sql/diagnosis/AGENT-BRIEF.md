@@ -45,3 +45,9 @@ BOZUK/KARARSIZ buldu. Sana bir kök neden grubu veriliyor. İşin: nedeni KODDA 
 `/private/tmp/claude-501/diag-<grup>/REPORT.md` (Türkçe) ve varsa `patch.diff`. Raporda, her soru için: (1) gözlenen davranış ve kanıt (log satırı / resolve çıktısı),
 (2) kök neden — dosya:satır, (3) önerilen genel düzeltme ve kapattığı hata sınıfı, (4) risk: hangi başka okumaları değiştirebilir, hızlı kapıda (`tests/text2sql/resolver-gate.py`)
 ne görmeyi beklersin, (5) düzeltme kod değil de veri/kural/iş kararı gerektiriyorsa açıkça öyle yaz. Son mesajında 10–15 satırlık özet ver: soru → kök neden → yama var/yok → güven düzeyi.
+
+## Güncelleme 2026-09-19
+- Katalog başka oturumca yenilendi (sürüm 70548). g1 (Q35 satır sınırı), g2 (kapı: Q8), g3 (eleştirmen: Q66, Q27) UYGULANDI ve main'de. Bunları tekrar çözme.
+- Köprü ŞU AN güncel main + bu yamalarla çalışıyor. Model yolu 18885 (GPU), tünel açık.
+- Yalnız kendi grubunun sorularına odaklan. Yaman `/private/tmp/claude-501/diag-<grup>/patch.diff` olarak `diff -ru backend <kopya>/backend` biçiminde bırak (yollar `backend/...` ile başlasın, `-p0` uygulanabilsin). Kod/servis/katalog DEĞİŞTİRME, commit YOK.
+- Hızlı kapı temel çizgisi güncel: `~/testset/resolver-baseline-set100.json` (sunucuda). Bir çözücü değişikliğinin etkisini `resolver-gate.py` ile tahmin et.
