@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 — Kesin bulgu: iki kaynaklı ÜRETİME HAZIR DEĞİL (kaynak kaçırma test sunucusunda da var)
+
+VM "0" cevabının SQL'i (federated açıkken): model "fatura kesildi"yi Logo INVOICE yerine `Timas_MSCRM_dbo_NEW_REKLAMPLANIBASE.new_faturasigirildi = 1`'e bağlamış. **Aynı soru test sunucusunda da (aynı kod + aynı katalog) CRM reklam planına kaçıyor** — kanıtlandı. Yani sorun sürüm/parmak izi ya da VM'e özgü değil; tam CRM sözlüğü yüklenince "fatura kesildi" gibi temel Logo soruları CRM'e kaçıyor. Bu, gün boyu uğraşılan kaynak-yönlendirme/kapı kusurunun ta kendisi (tam kapı 44/69, 18 bozuk — henüz bitmedi).
+
+**Karar:** İki kaynaklı, iki kaynaklı sistemin kendisi bu kaçırmayı çözene (answer-gate'i geçene) kadar üretime alınmaz. Müşteri VM'i çalışan yapılandırmada bırakıldı: **Logo kataloğu (kendi tutarlı sürümü) + GPU modeli.** Bu hâl Logo sorularını doğru cevaplıyor (bu yıl fatura 81.760). Tam CRM kataloğunu + federated'ı zorlamak sistemi kötüleştiriyor (temel Logo sorusu bozuluyor), o yüzden yapılmadı.
+
+- Bugün kalıcı kazanım: VM modeli harici sağlayıcıdan (NVIDIA/deepseek) kendi GPU'muza (qwen3.8-flash-next) geçti — canlı, doğrulandı. VM kodu main'e getirildi (deploy). İkisi de sağlam.
+- `timas-vm-crm-federated.sh` "olduğu gibi koşma" uyarısıyla depoda kalıyor; iki kaynaklı hazır olunca (kaynak sahipliği/kaçırma çözülünce) tam katalog senkronuyla ve bakım penceresinde kullanılacak.
+- Not: TİMAŞ tüneli gün içinde birkaç kez düştü (bu kayıt sırasında da düşük); her düşüşte hem test hem VM müşteri DB'lerine erişimi kaybediyor, telefon onaylı yeniden bağlanma gerekiyor — kalıcı çözüm MFA muafiyetli servis hesabı.
+
 ## 2026-09-19 06:20 UTC — Editör: sayfa sınırının sabit kopyası ve ayrıştırıcı belleği
 
 Yükleme yolu açıldıktan sonra üç yeni kitap ayrıştırmada düştü. "Dedem Tekrar Çocuk Oldu" ve "Anne Terliği" (128'er sayfa) tam ayrıştırıldı, 128/128 sayfa muhasebeli; `parse_contract.validate_source` sayfa sınırını 100 olarak sabit yazdığı için `SOURCE_ACCOUNTING_INCOMPLETE` verdi. Artık `EDITOR_MAX_PAGES` okur; değişken ortak `x-app` ortamına da eklendi (worker da aynı doğrulamayı çağırıyor). "Levent Dünya Harikalarının Peşinde" (144 sayfa, 360 MB) render'dan sonra Docling'de bellek sınırında öldü: ayrıştırıcı 6 GiB, tepe 6,00 GiB, `oom_kill 1`. Ayrıştırıcı belleği `EDITOR_PARSER_MEMORY` ile ayarlanabilir oldu (varsayılan 6g). Bu, büyük kitap yolunda beşinci ve altıncı engel; hepsi aynı kökten: yol 50 MB/100 sayfa üstünde hiç sınanmamıştı. Başarısız yükleme kalıcıdır; yeniden deneme yeni yükleme kaydıyla yapılır.
