@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 13:40 UTC — Editör: prod geliştirme planı v1.1 depoya alındı
+
+Kullanıcının `Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani.docx` belgesi (v1.1, 16 Eylül, SHA-256 `7e36c213…`, belgelerin ilk günden referans verdiği sürüm) `docs/editor/plan/` altına özgün haliyle ve tabloları korunmuş Markdown metin kopyasıyla kaydedildi. Kalite planı v1.1'e bağlandı: pilot kapsamı yalnız resimli çocuk kitabı olduğu için roman/yetişkin genişlemesi (B3, C3) planın yeni sürümünü gerektiriyor; v1.1 §16 gereği bir kitap yalnız son doğrulama için ayrılmalı (şimdiye kadarki ayarların hepsi aynı kitapta yapıldı).
+
 ## 2026-09-19 13:10 UTC — Editör: kalite planı tek belgede
 
 Anlaşılan doğrulama hattı ve adımları `docs/editor/2026-09-19-quality-plan.md`'de toplandı; sonradan çıkan dört açık plana eklendi: kitap düzeyinde anlatıcı kimliği (C3), beş yeni kitapta analiz (B2), roman dilimleri için kitap (B3), canlıda büyük kitap desteği (O1). Roadmap ve proje belleği plana bağlandı.

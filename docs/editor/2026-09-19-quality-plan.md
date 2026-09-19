@@ -1,6 +1,6 @@
 # Editör kalite planı — ortak doğrulama hattı (19 Eylül 2026)
 
-Canlı sürüm `source-analysis-v16-r6-20260919` ([yayın kaydı](2026-09-19-v16-r6-release.md)). Bu plan dört ayrı kural yaması yerine tek bir doğrulama hattını izler:
+Canlı sürüm `source-analysis-v16-r6-20260919` ([yayın kaydı](2026-09-19-v16-r6-release.md)). Üst belge: kullanıcının [prod geliştirme planı v1.1](plan/prod-gelistirme-plani-v1.1.md) (16 Eylül 2026, [özgün .docx](plan/Kitap_Analiz_Sistemi_Prod_Gelistirme_Plani-v1.1.docx), SHA-256 `7e36c213…`). Bu plan dört ayrı kural yaması yerine tek bir doğrulama hattını izler:
 
 **etiket → aday üretimi → güven skoru → otomatik kabul ya da editör kuyruğu → regresyon testi**
 
@@ -75,6 +75,28 @@ B01–B18 ve V01–V08 yeniden koşulur; otomatik kabul ve editör kuyruğu yük
 ## O1 — canlıda büyük kitap desteği (yeni)
 
 Kod canlıda (V16-r6), özellik kapalı: varsayılan 50 MiB/100 sayfa, şema 0006, gateway eski nginx ayarında. Açmak için sırasıyla: `.env` sınırları (`EDITOR_MAX_SOURCE_BYTES`, `EDITOR_MAX_PAGES`, `EDITOR_PARSER_MEMORY`), `migrate` ile 0007, api/worker/parser yeniden başlatma, gateway'i yeniden oluşturma (`--force-recreate`; dosya bağlantısı yenilenir). Kabul: canlıda gerçek bir büyük kitabın yükleme → ayrıştırma → API/PG + Poppler denetimi; ayrıştırıcı tepe belleği ölçülür (kabul kurulumunda 144 sayfa için 9,74 GiB). Kabul kurulumunda altı engel bulunup kapatıldı; canlı imajlarla büyük kitap henüz denenmedi.
+
+## Prod geliştirme planı v1.1 ile ilişki
+
+| v1.1 bölümü / paketi | Bu plandaki karşılığı |
+|---|---|
+| §2 ve P0 Doğrulama (editör emeği, uçtan uca süre) | A1, B1 (etiket emeği ölçülür), B2 |
+| §6 ve P1 Kaynak hattı (OCR, görsel kapsam) | C1 |
+| §9–10 ve P2 Karakter/olay (kimlik, konuşmacı, olay modu) | C2, C3, C4, D |
+| §16 Kalite ölçümü ve editör bütçesi | B1, bütün C/D kabul ölçütleri |
+| §17 B01–B18, §7 V01–V08 | E |
+| P3 Sınırlı edebî örnekler | bu planın dışında; roadmap'te açık |
+| P5 Editör akışı (kabul/ret, düzeltme, bağımlılık yenileme) | editör kuyruğu bu hattın çıkışıdır; akışın kendisi roadmap'te açık |
+| P6 İşletim, P7 Pilot | O1 ve roadmap; bu planın dışında |
+
+v1.1'den bu plana geçen bağlayıcı noktalar:
+
+- **Kapsam.** v1.1 §1 pilotu tek yayınevi, Türkçe resimli çocuk kitabı ve iç baskı PDF ile sınırlar. Kullanıcının 18 Eylül'de roman ve yetişkin kitaplarını da istemesi bu kapsamı genişletir; B3 ve C3 v1.1'in pilot kapsamında değildir. Kapsam değişikliği v1.1'in "aynı karar kaydında sürümlenir" kuralı gereği planın yeni sürümüne yazılmalıdır — **kullanıcı kararı bekliyor**.
+- **Ayrılmış kitap.** v1.1 §16: en az bir kitap son doğrulama için ayrılır; sonuçlarına bakarak ayar yapılırsa bağımsız kabul seti sayılmaz. Şimdiye kadarki bütün kural ayarları Ekrana Sığmayan Macera'da yapıldı. B2'de bir kitap (öneri: Anne Terliği) yalnız son ölçüm için ayrılır, hiçbir eşik ya da kural onunla ayarlanmaz.
+- **Editör bütçesi.** v1.1 §16 örneği: 400 örnek, 8–12 dakika, iki değerlendirme ≈ 107–160 saat; gerçek bütçe ilk etiketleme oturumlarının süresinden hesaplanır. B1'deki "birkaç insan-günü" tahmini daha basit etiket türleri içindir; ilk oturumda dakika/örnek ölçülür.
+- **Eşikler.** v1.1 §16: önceki %95 benzeri eşikler otomatik pilot kapısı değildir; ölçümden sonra yayıneviyle görev bazında kabul hedefleri yazılır. C adımlarının kalibre eşikleri bu hedeflere bağlanır.
+- **OCR çözünürlüğü.** v1.1 §6: sabit 600 DPI bütün arşiv için zorunlu değildir; gerektiğinde yalnız sorunlu bölgede daha yüksek çözünürlük denenir. C1 bu kuralı izler.
+- **Eğitim.** v1.1 §1 ve §20: kitap başına model ağırlığı eğitimi yapılmaz; eğitim pilotta yoktur. Etiketler yalnız ölçüm içindir.
 
 ## Güncelleme kuralı
 
