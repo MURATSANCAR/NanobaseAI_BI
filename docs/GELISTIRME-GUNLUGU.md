@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-19 09:50 UTC — Editör: main canlıyla aynı davranışa getirildi
+
+`main`'deki semantik V8 kapısı (üç çağrılı rol grafı) ve yeniden işleme planı ucu doğrulanmadan üretim akışına girmişti. İkisi de varsayılanı kapalı ayarların arkasına alındı (`EDITOR_ROLE_BINDING_GATE`, `EDITOR_REPROCESSING_PLAN`); kod silinmedi. Kapalıyken anlam incelemesi V7'dir ve canlı kaynak `1200bdd` ile aynı davranır (fark yalnız ayar kontrolü); retrieval bağımlılık listesi de V7'de değişmez. **Neden:** tek trunk kuralı gereği canlıya çıkacak olan `main`'dir; 14 gerçek pasajda V8 5 geçti/9 inceleme verdi. Canlıya giden fark: büyük kitap düzeltmeleri (sınırlar ayardan, 0007, gateway akışı, ayrıştırıcı belleği) ve `editor_eval` aracı; varsayılan sınırlar değişmedi.
+
 ## 2026-09-19 09:30 UTC — Editör: ortak etiket ve regresyon altyapısı (editor_eval)
 
 Dört ayrı kural yaması yerine tek doğrulama hattı: etiket → aday → skor → otomatik kabul ya da editör kuyruğu → regresyon. `apps/editor/scripts/eval.py`: PostgreSQL'de `editor_eval` şeması (sahibi `editor_owner`; `editor_app`'e yetki yok, yani üretim kodu etiketleri okuyamaz — ayrım veritabanı yetkisiyle zorlanır). Görevler: konuşma sınırı (CONTINUES/ENDS/UNCERTAIN), OCR bölgesi (gold_text + hata sınıfı), iddia sadakati (FAITHFUL/NOT_FAITHUL/AMBIGUOUS + hata sınıfı + özne/yüklem aralığı), anlatıcı kimliği. Kanıt dosyalarından öğe yükler, aday çıktılarını ham saklar, etiketleme dosyası verir/alır; ölçüt: sınır F1, yanlış bölme/birleştirme, CER/WER, diakritik doğruluğu, kapsama, sessiz geçiş, iki editör arası kappa. Eşik sabit hash bölmesinin kalibrasyon kısmında seçilir, test kısmında raporlanır. Henüz sunucuda çalıştırılmadı.
