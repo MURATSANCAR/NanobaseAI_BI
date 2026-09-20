@@ -286,7 +286,7 @@ def _check(name: str, ok: bool, detail: Any = None) -> dict:
 def _aliases_in_text(generation_id: str) -> bool:
     with db.tx() as c:
         text = " ".join(ledger.PageIndex.load(c, generation_id).text.values())
-    return all(ledger.norm(n) in text for r in db.all_rows(
+    return all(ledger.has_name(text, n, allow_suffix=True) for r in db.all_rows(
         "SELECT canonical_name, aliases FROM character WHERE generation_id=%s", generation_id)
         for n in [r["canonical_name"], *r["aliases"]])
 
@@ -348,10 +348,10 @@ def run_regression_suite(generation_id: str) -> dict:
             " d.generation_id=cm.generation_id AND d.page_no=cm.page_no AND d.pass='DEEP')",
             generation_id) == 0),
         _check("her eş ad kitabın metninde geçiyor", _aliases_in_text(generation_id)),
-        _check("kesin görsel kimlik yalnız çapa ya da referans eşleşmesiyle", one(
+        _check("kesin görsel kimlik yalnız çapa, referans eşleşmesi ya da elemeyle", one(
             "SELECT count(*) n FROM character_mention WHERE generation_id=%s AND via='VISUAL' AND"
             " resolution='RESOLVED' AND coalesce(appearance->>'identified_by','') NOT IN"
-            " ('anchor','reference')", generation_id) == 0),
+            " ('anchor','reference','elimination')", generation_id) == 0),
         _check("sınırına takılan model çağrısı kalmadı (her biri sonradan başarıldı)", one(
             "SELECT count(*) n FROM (SELECT prompt_name, pages, bool_or(ok) AS any_ok FROM model_call"
             " WHERE generation_id=%s GROUP BY 1,2) x WHERE NOT any_ok", generation_id) == 0),

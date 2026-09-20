@@ -24,6 +24,16 @@ def norm(s: str) -> str:
     return _WS.sub(" ", s).strip().casefold()
 
 
+def has_name(text_norm: str, name: str, allow_suffix: bool = False) -> bool:
+    """Is `name` in the (normalised) text as whole words? Suffixes after an apostrophe
+    ("Can'a") are already split off by `norm`; "can" inside "heyecan" is not the name.
+    `allow_suffix` also accepts an inflected common noun ("dedesi" in "dedesini"); use it
+    only to confirm that a word occurs in the book, never to decide who is on a page."""
+    n = norm(name)
+    tail = r"\w*" if allow_suffix else r"(?!\w)"
+    return bool(n) and re.search(r"(?<!\w)" + re.escape(n) + tail, text_norm) is not None
+
+
 def quote_found(quote: str, haystack_norm: str) -> bool:
     """Verbatim (after normalisation) or >= 85% of the quote's words in order."""
     q = norm(quote)

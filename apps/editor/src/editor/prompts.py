@@ -47,11 +47,16 @@ def register_all() -> dict[str, dict]:
 SHARED = ("modality_rules",)      # one definition, included wherever {{name}} appears
 
 
-def render(name: str, **kw: str) -> tuple[PromptRef, str]:
-    ref, body = load(name)
+def render(prompt_name: str, /, **kw: str) -> tuple[PromptRef, str]:
+    """`prompt_name` is positional-only, so a placeholder may be called anything
+    (a placeholder named `name` once collided with this parameter and failed a run)."""
+    ref, body = load(prompt_name)
     for shared in SHARED:
         if "{{" + shared + "}}" in body:
             body = body.replace("{{" + shared + "}}", load(shared)[1])
     for k, v in kw.items():
         body = body.replace("{{" + k + "}}", v)
+    left = set(re.findall(r"\{\{(\w+)\}\}", body))
+    if left:
+        raise KeyError(f"prompt {prompt_name}: unfilled placeholders {sorted(left)}")
     return ref, body

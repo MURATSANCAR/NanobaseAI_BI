@@ -194,7 +194,7 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
             # A name needs a basis in the story text on or next to this page. Cover and
             # other front-matter art has no narrative text, so its figures stay unnamed
             # candidates; so do names the fast pass gives (it guesses from the hint list).
-            named_here = bool(ch["name"]) and ledger.norm(ch["name"]) in near_text
+            named_here = bool(ch["name"]) and ledger.has_name(near_text, ch["name"])
             if front or pass_ == "FAST" or not named_here:
                 ch = {**ch, "identity_uncertain": True, "confidence": min(ch["confidence"], 0.6)}
             desc = ", ".join(v for v in (ch["appearance"] or {}).values() if v)
@@ -211,7 +211,7 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
             c.execute(
                 "INSERT INTO character_mention(generation_id, page_no, surface_name, via, appearance,"
                 " resolution, confidence, evidence_id) VALUES (%s,%s,%s,'VISUAL',%s,%s,%s,%s)",
-                (generation_id, page_no, ch["name"] or None, db.J({**ch["appearance"], "kind": ch.get("kind")}),
+                (generation_id, page_no, ch["name"] or None, db.J(ch["appearance"]),
                  "UNCERTAIN" if uncertain else "UNRESOLVED", ch["confidence"], eid))
             mentions += 1
         for ob in res["objects"]:
@@ -337,47 +337,78 @@ def _compatible(kind_a: str | None, kind_b: str | None) -> bool:
 
 
 async def resolve_visual_identity(generation_id: str) -> dict:
-    """Who a drawn figure is, decided by comparing CROPS, never by the scan's own guess
-    (measured: scans swap children in group scenes) and never by box numbers on a full
-    page (measured: the model mixes them up).
+    """Who a drawn figure is, decided by comparing CROPS: never by the scan's own guess
+    (measured: scans swap children in group scenes), never by box numbers on a full page
+    (measured: the model mixes them up), never by the scan's idea of a figure's kind
+    (measured: robot -> ANIMAL, cat -> HUMAN_CHILD). Idempotent: it reads scans and text,
+    not its own earlier output.
 
-    1. Reference candidates: a figure whose name is grounded in the text on/next to its
-       page, maps to exactly one text character of a compatible kind, and is the only
-       figure of its kind on that page. Each candidate crop is CHECKED by the deep model
-       (one whole figure? what kind?); fragments and wrong kinds are refused (seen: a red
-       part of a robot became the robot's reference and children were matched to it).
-       The largest accepted crop per character is its reference.
-    2. Every other figure's crop is compared with the references of compatible kind.
-       A match needs same kind, no conflicting distinctive feature and confidence >= 0.8;
-       on a page a character is at most one figure.
-    Only references and matches become RESOLVED; everything else stays uncertain and
-    unattached, so continuity checks and appearance profiles never mix characters."""
+    1. Reference candidates. A deep-scanned, non-front-matter figure whose name is in the
+       text on/next to its page and maps to exactly one text character C; no other figure
+       on the page is unnamed or named as a character of C's kind group; the near text names
+       no other character of C's exact kind (a rival). The crop must cover >= 2% of the page.
+       Each candidate crop is CHECKED (one whole figure? of C's kind group?). The largest
+       accepted crop per character is its reference.
+    2. Every other figure's crop is compared with all references: same kind, no conflicting
+       distinctive feature, confidence >= 0.8. On a page a character is at most one figure.
+    3. Elimination: if a page shows N figures of one kind, the near text names exactly N
+       characters of that kind, and N-1 are already identified, the last figure is the last
+       character (confidence 0.8; never used as a reference).
+    Everything else stays uncertain and unattached."""
     chars = db.all_rows("SELECT id, canonical_name, aliases, kind FROM character WHERE generation_id=%s",
                         generation_id)
     figs = db.all_rows(
-        "SELECT cm.id, cm.page_no, cm.surface_name, cm.resolution, cm.confidence, cm.appearance, vr.bbox"
-        " FROM character_mention cm JOIN evidence e ON e.id=cm.evidence_id JOIN visual_region vr ON"
-        " vr.id=e.region_id WHERE cm.generation_id=%s AND cm.via='VISUAL' ORDER BY cm.page_no, vr.id",
-        generation_id)
+        "SELECT cm.id, cm.page_no, cm.surface_name, vr.bbox, (SELECT bool_or(s.pass='DEEP') FROM page_scan s"
+        " WHERE s.generation_id=cm.generation_id AND s.page_no=cm.page_no) AS deep, EXISTS (SELECT 1 FROM"
+        " page_role r WHERE r.generation_id=cm.generation_id AND r.page_no=cm.page_no AND"
+        " r.role='FRONT_MATTER') AS front FROM character_mention cm JOIN evidence e ON e.id=cm.evidence_id"
+        " JOIN visual_region vr ON vr.id=e.region_id WHERE cm.generation_id=%s AND cm.via='VISUAL'"
+        " ORDER BY cm.page_no, vr.id", generation_id)
     stats = {"figures": len(figs), "reference_candidates": 0, "references_refused": 0,
-             "characters_with_reference": 0, "matched": 0, "scan_name_corrected": 0,
-             "left_uncertain": 0, "calls_failed": 0}
+             "characters_with_reference": 0, "matched": 0, "by_elimination": 0,
+             "scan_name_corrected": 0, "left_uncertain": 0, "calls_failed": 0}
     if not chars or not figs:
         return stats
     gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
     bv = str(gen["book_version_id"])
     ckind = {str(ch["id"]): ch["kind"] for ch in chars}
     cname = {str(ch["id"]): ch["canonical_name"] for ch in chars}
+    cnames = {str(ch["id"]): [ch["canonical_name"], *ch["aliases"]] for ch in chars}
     name_to: dict[str, set] = {}
-    for ch in chars:
-        for n in [ch["canonical_name"], *ch["aliases"]]:
-            name_to.setdefault(ledger.norm(n), set()).add(str(ch["id"]))
+    for cid, names in cnames.items():
+        for n in names:
+            name_to.setdefault(ledger.norm(n), set()).add(cid)
     unique = {n: next(iter(v)) for n, v in name_to.items() if len(v) == 1}
+    with db.tx() as c:
+        idx = ledger.PageIndex.load(c, generation_id)
+
+    def near(page: int) -> str:
+        return " ".join(idx.text.get(p, "") for p in (page - 1, page, page + 1))
+
+    def named_near(page: int, cid: str) -> bool:
+        t = near(page)
+        return any(ledger.has_name(t, n) for n in cnames[cid])
+
     by_page: dict[int, list] = {}
     for f in figs:
-        f["kind"] = (f["appearance"] or {}).get("kind")
+        f["cid"] = unique.get(ledger.norm(f["surface_name"] or ""))          # the scan's claim
         f["area"] = max(0, f["bbox"][2] - f["bbox"][0]) * max(0, f["bbox"][3] - f["bbox"][1]) / 1e6
         by_page.setdefault(f["page_no"], []).append(f)
+
+    def holds(a: list[int], b: list[int]) -> bool:
+        """Is at least half of box b inside box a?"""
+        w = min(a[2], b[2]) - max(a[0], b[0])
+        h = min(a[3], b[3]) - max(a[1], b[1])
+        area_b = max(1, (b[2] - b[0]) * (b[3] - b[1]))
+        return w > 0 and h > 0 and w * h / area_b >= 0.5
+
+    # A crop that also holds another figure is a group picture, not a figure: the model
+    # "recognises" whoever is visible in it (seen: the professor's box, with a child in
+    # front of him, was matched to the child). Such a box is neither reference nor matched.
+    for fs in by_page.values():
+        for f in fs:
+            f["group"] = any(g is not f and holds(f["bbox"], g["bbox"]) for g in fs)
+    stats["group_crops"] = sum(1 for f in figs if f["group"])
     gdir = Path(render_page(bv, figs[0]["page_no"])["path"]).parent / "gallery" / generation_id
     sem = asyncio.Semaphore(settings().deep_concurrency * 2)
     crops: dict[str, Path] = {}
@@ -388,27 +419,27 @@ async def resolve_visual_identity(generation_id: str) -> dict:
             crops[k] = _crop(render_page(bv, f["page_no"])["path"], f["bbox"], gdir / f"fig-{k}.png")
         return crops[k]
 
-    # ---- 1. reference candidates, each checked
-    with db.tx() as c:
-        idx = ledger.PageIndex.load(c, generation_id)
-
-    def rivals(page: int, cid: str) -> int:
-        """Other text characters of a compatible kind that the text on/next to this page
-        also names: with a rival around, the scan's name is not proof of who is drawn."""
-        near = " ".join(idx.text.get(p, "") for p in (page - 1, page, page + 1))
-        return sum(1 for ch in chars if str(ch["id"]) != cid and _compatible(ch["kind"], ckind[cid])
-                   and any(ledger.norm(n) in near for n in [ch["canonical_name"], *ch["aliases"]]))
-
+    # ---- 1. reference candidates, each checked on its crop
     cands = []
     for page, fs in by_page.items():
         for f in fs:
-            cid = unique.get(ledger.norm(f["surface_name"] or ""))
-            same_kind_here = [x for x in fs if GATE.get(x["kind"] or "") == GATE.get(f["kind"] or "")]
-            if (cid and rivals(page, cid) == 0
-                    and f["resolution"] != "UNCERTAIN" and float(f["confidence"]) >= 0.75
-                    and f["area"] >= settings().min_reference_area and _compatible(f["kind"], ckind[cid])
-                    and (len(fs) == 1 or (GATE.get(f["kind"] or "") and len(same_kind_here) == 1))):
-                cands.append((f, cid))
+            cid = f["cid"]
+            if not (cid and not f["group"] and f["deep"] and not f["front"]
+                    and f["area"] >= settings().min_reference_area
+                    and named_near(page, cid)):
+                continue
+            others_here = [x for x in fs if x is not f]
+            if any(x["cid"] is None or _compatible(ckind[x["cid"]], ckind[cid]) for x in others_here):
+                continue                       # an unnamed figure, or one of the same kind group, is a rival in the picture
+            # A rival is another character of the same kind named in the text. For a lone figure
+            # only the page's own text counts (a name in someone's speech next door is not a
+            # second person in this picture); in a group scene the facing pages count too.
+            here = idx.text.get(page, "")
+            if any(o != cid and ckind[o] == ckind[cid] and (
+                    any(ledger.has_name(here, n) for n in cnames[o]) if not others_here else named_near(page, o))
+                   for o in cname):
+                continue
+            cands.append((f, cid))
     stats["reference_candidates"] = len(cands)
 
     async def check(f: dict, cid: str):
@@ -428,7 +459,8 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     gallery: dict[str, dict] = {}
     accepted: list[tuple[dict, str]] = []
     for f, cid, out in await asyncio.gather(*(check(f, cid) for f, cid in cands)):
-        if out and out["whole_figure"] and _compatible(out["kind"], ckind[cid]) and _compatible(out["kind"], f["kind"]):
+        if out and out["whole_figure"] and _compatible(out["kind"], ckind[cid]):
+            f["kind"] = out["kind"]
             accepted.append((f, cid))
             if cid not in gallery or f["area"] > gallery[cid]["area"]:
                 gallery[cid] = {"fig": f, "area": f["area"], "kind": out["kind"], "features": out["features"]}
@@ -437,16 +469,15 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     stats["characters_with_reference"] = len(gallery)
     anchored = {str(f["id"]): cid for f, cid in accepted}
 
-    # ---- 2. crop-to-crop matching for every other figure
-    async def match(f: dict):
-        refs = [cid for cid, g in gallery.items() if _compatible(f["kind"], g["kind"])]
-        best = None
+    # ---- 2. crop-to-crop matching against references
+    async def match(f: dict, refmap: dict[str, dict]):
+        refs, best = list(refmap), None
         for k in range(0, len(refs), 5):                     # five references + the figure per request
             ids = {f"R{i + 1}": cid for i, cid in enumerate(refs[k:k + 5])}
             parts: list[dict] = []
             for rid, cid in ids.items():
                 parts += [{"type": "text", "text": f"Referans {rid}: {cname[cid]}"},
-                          image_part(crop_of(gallery[cid]["fig"]).read_bytes())]
+                          image_part(crop_of(refmap[cid]["fig"]).read_bytes())]
             ref, body = prompts.render("match_figures", page_no=str(f["page_no"]),
                                        references=", ".join(f"{r} = {cname[c]}" for r, c in ids.items()))
             parts += [{"type": "text", "text": "FİGÜR:"}, image_part(crop_of(f).read_bytes()),
@@ -460,56 +491,120 @@ async def resolve_visual_identity(generation_id: str) -> dict:
                 stats["calls_failed"] += 1
                 continue
             cid = ids.get(out["reference"])
-            if cid and out["same_kind"] and not out["conflicting_features"] and out["confidence"] >= 0.8 \
+            # the verdict is the model's: it answers NONE when a distinctive feature conflicts
+            if cid and out["figure_is_whole"] and out["same_kind"] and out["confidence"] >= 0.8 \
                     and (best is None or out["confidence"] > best[1]["confidence"]):
                 best = (cid, out)
         return f, best
 
-    others = [f for f in figs if str(f["id"]) not in anchored and f["area"] > 0]
-    results = await asyncio.gather(*(match(f) for f in others)) if gallery else [(f, None) for f in others]
-    per_page: dict[tuple[int, str], tuple] = {}
-    for f, best in results:                                  # a character is one figure per page
-        if best:
-            key = (f["page_no"], best[0])
-            if key not in per_page or best[1]["confidence"] > per_page[key][1][1]["confidence"]:
-                per_page[key] = (f, best)
-    winners = {str(f["id"]): best for f, best in per_page.values()}
-    # a reference page already shows that character: no second figure of it there
+    resolved: dict[str, tuple[str, str, dict | None]] = {str(f["id"]): (cid, "anchor", None) for f, cid in accepted}
     ref_pages = {(f["page_no"], cid) for f, cid in accepted}
+
+    async def match_round(refmap: dict[str, dict]) -> None:
+        todo = [f for f in figs if str(f["id"]) not in resolved and f["area"] > 0 and not f["group"]]
+        per_page: dict[tuple[int, str], tuple] = {}
+        for f, best in await asyncio.gather(*(match(f, refmap) for f in todo)):
+            taken_here = {(g["page_no"], resolved[str(g["id"])][0]) for g in figs if str(g["id"]) in resolved}
+            if best and (f["page_no"], best[0]) not in ref_pages | taken_here:
+                key = (f["page_no"], best[0])                # a character is one figure per page
+                if key not in per_page or best[1]["confidence"] > per_page[key][1][1]["confidence"]:
+                    per_page[key] = (f, best)
+        for f, best in per_page.values():
+            resolved[str(f["id"])] = (best[0], "reference", best[1])
+
+    def eliminate() -> int:
+        """The scan's SET of names on a page is usually right even when it swaps who is who.
+        If every figure of a kind group is named, the names are distinct, and all but one
+        figure are identified as members of that set, the last figure is the last name."""
+        n = 0
+        for page, fs in by_page.items():
+            groups: dict[str, list] = {}
+            for f in fs:
+                if f["cid"]:
+                    groups.setdefault(GATE.get(ckind[f["cid"]], ckind[f["cid"]]), []).append(f)
+            if any(f["cid"] is None for f in fs):
+                continue                                     # an unnamed figure: the set is incomplete
+            for same in groups.values():
+                names = {f["cid"] for f in same}
+                if len(same) < 2 or len(names) != len(same):
+                    continue
+                done = [resolved[str(f["id"])][0] for f in same if str(f["id"]) in resolved]
+                open_figs = [f for f in same if str(f["id"]) not in resolved]
+                left = names - set(done)
+                if len(open_figs) == 1 and len(left) == 1 and set(done) <= names:
+                    resolved[str(open_figs[0]["id"])] = (next(iter(left)), "elimination", None)
+                    n += 1
+        return n
+
+    if gallery:
+        await match_round(gallery)
+    stats["by_elimination"] = eliminate()
+    # ---- 3. a character found by elimination on two pages, whose two crops match each other,
+    #         earns a reference; then one more round for the figures still open
+    promoted: dict[str, dict] = {}
+    by_char: dict[str, list] = {}
+    for f in figs:
+        got = resolved.get(str(f["id"]))
+        if got and got[1] == "elimination" and got[0] not in gallery and not f["group"] \
+                and f["area"] >= settings().min_reference_area:
+            by_char.setdefault(got[0], []).append(f)
+    for cid, fs in by_char.items():
+        fs.sort(key=lambda f: -f["area"])
+        if len(fs) >= 2:
+            _, best = await match(fs[1], {cid: {"fig": fs[0]}})
+            if best and best[1]["confidence"] >= 0.9:
+                promoted[cid] = {"fig": fs[0], "area": fs[0]["area"], "features": best[1]["matching_features"]}
+    stats["references_promoted"] = [cname[c_] for c_ in promoted]
+    if promoted:
+        await match_round(promoted)
+        stats["by_elimination"] += eliminate()
+    gallery.update(promoted)
+
     with db.tx() as c:
-        c.execute("UPDATE character_mention SET character_id=NULL WHERE generation_id=%s AND via='VISUAL'",
-                  (generation_id,))
-        for f, cid in accepted:
-            c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED', appearance ="
-                      " appearance || %s WHERE id=%s",
-                      (cid, db.J({"identified_by": "anchor", "is_reference": gallery[cid]["fig"]["id"] == f["id"]}),
-                       f["id"]))
-        for f in others:
-            best = winners.get(str(f["id"]))
-            if best and (f["page_no"], best[0]) not in ref_pages:
-                cid, out = best
-                scan = unique.get(ledger.norm(f["surface_name"] or ""))
-                stats["scan_name_corrected"] += bool(scan and scan != cid)
-                stats["matched"] += 1
-                c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED', confidence=%s,"
-                          " appearance = appearance || %s WHERE id=%s",
-                          (cid, min(float(out["confidence"]), 0.95),
-                           db.J({"identified_by": "reference", "scan_name": f["surface_name"],
-                                 "matching_features": out["matching_features"][:8],
-                                 "match_reason": out["reason"][:400]}), f["id"]))
-            else:
+        # start clean (idempotent): a RESOLVED row may not lose its character alone
+        c.execute("UPDATE character_mention SET character_id=NULL, resolution='UNCERTAIN' WHERE"
+                  " generation_id=%s AND via='VISUAL'", (generation_id,))
+        for f in figs:
+            got = resolved.get(str(f["id"]))
+            if not got:
                 stats["left_uncertain"] += 1
                 c.execute("UPDATE character_mention SET character_id=NULL, resolution='UNCERTAIN',"
                           " confidence=LEAST(confidence, 0.6) WHERE id=%s", (f["id"],))
-        for ch in chars:     # appearance profile: only figures that are surely this character
+                continue
+            cid, how, out = got
+            if how == "reference":
+                stats["matched"] += 1
+            stats["scan_name_corrected"] += bool(f["cid"] and f["cid"] != cid)
+            conf = 0.95 if how == "anchor" else 0.8 if how == "elimination" else min(float(out["confidence"]), 0.95)
+            extra = {"identified_by": how, "scan_name": f["surface_name"]}
+            if how == "anchor":
+                extra["is_reference"] = gallery[cid]["fig"]["id"] == f["id"]
+            elif cid in gallery and gallery[cid]["fig"]["id"] == f["id"]:
+                extra["is_reference"] = True             # promoted after elimination
+            if out:
+                extra.update(matching_features=out["matching_features"][:8], match_reason=out["reason"][:400])
+            c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED', confidence=%s,"
+                      " appearance = appearance || %s WHERE id=%s", (cid, conf, db.J(extra), f["id"]))
+        for ch in chars:
+            # Appearance profile from figures that are surely this character. The scan's text for
+            # a box is kept only where the scan's own name agreed (its box/label pairing slips:
+            # a box labelled as the professor held the girl); otherwise what the matcher saw.
             obs = c.execute("SELECT page_no, appearance FROM character_mention WHERE character_id=%s AND"
                             " via='VISUAL' AND resolution='RESOLVED' ORDER BY page_no", (ch["id"],)).fetchall()
+            rows = []
+            for o in obs:
+                a = o["appearance"]
+                agreed = unique.get(ledger.norm(a.get("scan_name") or "")) == str(ch["id"])
+                if a.get("identified_by") == "anchor" or agreed:
+                    rows.append({"page": o["page_no"], "by": a.get("identified_by"),
+                                 **{k: v for k, v in a.items() if k in ("hair", "skin", "age_look", "clothes",
+                                                                        "colors", "distinctive")}})
+                else:
+                    rows.append({"page": o["page_no"], "by": a.get("identified_by"),
+                                 "seen": a.get("matching_features") or []})
             c.execute("UPDATE character SET appearance=%s WHERE id=%s",
                       (db.J({"reference_features": (gallery.get(str(ch["id"])) or {}).get("features", []),
-                             "observations": [{"page": o["page_no"], **{k: v for k, v in o["appearance"].items()
-                                                                       if k in ("hair", "skin", "age_look", "clothes",
-                                                                                "colors", "distinctive")}}
-                                              for o in obs]}), ch["id"]))
+                             "observations": rows}), ch["id"]))
     stats["characters_without_reference"] = [cname[c_] for c_ in cname if c_ not in gallery]
     return stats
 

@@ -38,7 +38,7 @@ OCR = obj({"blocks": arr(obj({
 PAGE_SCAN = obj({
     "scene": obj({"setting": STR, "time_of_day": STR, "mood": STR, "description": STR}),
     "characters": arr(obj({
-        "label": STR, "kind": KIND, "name": STR, "name_basis": STR, "identity_uncertain": BOOL,
+        "label": STR, "name": STR, "name_basis": STR, "identity_uncertain": BOOL,
         "appearance": obj({"hair": STR, "skin": STR, "age_look": STR, "clothes": STR,
                            "colors": STR, "distinctive": STR}),
         "action": STR, "visible_emotion": STR, "bbox": BBOX, "confidence": NUM}), 0, 40),
@@ -134,11 +134,14 @@ BOOK_METADATA = obj({"fields": arr(obj({
     "value": STR, "page": INT, "quote": STR}))})
 
 MATCH_FIGURE = obj({
+    "figure_is_whole": BOOL,               # one whole figure, not an ornament, a part or a group
     "reference": STR,                      # R1..Rn or NONE
     "same_kind": BOOL,
     "matching_features": arr(STR, 0, 12),
     "conflicting_features": arr(STR, 0, 12),
     "confidence": NUM, "reason": STR})
+# (a `figure_kind` enum was tried first and last in this object: the deep model wrote ANIMAL
+#  for robots both times while its own reasoning said robot; its booleans are reliable)
 
 CHECK_REFERENCE = obj({"whole_figure": BOOL, "kind": KIND, "features": arr(STR, 0, 12)})
 
