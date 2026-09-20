@@ -1282,7 +1282,7 @@ class ExistingCompiler:
         # Logo question was shown two hundred CRM tables and a CRM question was answered from Logo.
         # The source is read from the question's own evidence: what the resolver placed counts most,
         # then what the searches found, ranked. Where the evidence points at both, both stay.
-        deciding = [e for e in resolved if e not in self._respelled] or resolved
+        deciding = [e for e in resolved if e not in self._respelled]
         sources = self._question_sources(deciding, evidence)
         if not {self.source_of(e) for e in deciding if e in self.by_entity} and getattr(q, "source_hint", None) is not None:
             # Nothing certified pins a database; the resolver read one from the tables the question's
@@ -1290,6 +1290,9 @@ class ExistingCompiler:
             # sheer number ("fatura numarası" on a CRM shipment table outranked the ERP invoice).
             sources = {q.source_hint}
         q.sources = sorted(sources)
+        if len(sources) != 1 and self._respelled:
+            # Not one database: the respelled table goes back to being ranked like any other.
+            ordered[:] = [e for e in ordered if e not in self._respelled]
 
         def in_scope(entity: str) -> bool:
             return not sources or self.source_of(entity) in sources
@@ -1588,9 +1591,16 @@ class ExistingCompiler:
         # By the profiled name, not the catalog's spelling of it: a slot certified under the other
         # label of the same pattern (LG_ORFICHE for ORFICHE) was not "in entities", so it was not
         # pinned and the selector was free to drop the table the question's own word names.
+        # …but only while the question is about one database. Where two are in play and nothing
+        # measured ties them, showing the other server's table invites a two-server plan that cannot
+        # be written (an ISBN-list question that mentions "stok kartı"); there the older reading
+        # stands and the respelled table is left to the ranking.
+        one_source = len(getattr(q, "sources", None) or []) <= 1
         pinned = []
         for s in q.slots:
             name = self.profiled_name(s.mapping) if s.mapping else None
+            if name and name != s.mapping.entity and not one_source:
+                continue
             if name and name in entities and name not in pinned:
                 pinned.append(name)
         # The certified catalog is pinned only where it is the *only* thing that knows which table
