@@ -71,9 +71,11 @@ CRM kaynağı Dynamics CRM'dir; tablolar `*Base` ile biter (`NEW_SOZLESMEBASE`, 
 
 ## Kural C13 — CRM siparişleri (NEW_SIPARISBASE)
 
-- CRM sipariş satırı `NEW_SIPARISBASE`: sipariş adedi `new_siparisadeti`, **bekleyen adet** `new_bekleyenadet`, **termin** = istenen sevk tarihi `new_istenensevktarihi`, sevk tarihi `new_sevktarihi`.
+- CRM sipariş **başlığı** `NEW_SIPARISBASE` (sipariş başına bir kayıt; satır değildir): sipariş adedi `new_siparisadeti`, **bekleyen adet** `new_bekleyenadet`, **termin** = istenen sevk tarihi `new_istenensevktarihi`, sevk tarihi `new_sevktarihi`.
 - Durum `statuscode`: 1 Taslak, 2 Etkin değil, 100000000 Sevk Edildi, 100000001 İptal, 100000002 Sipariş, 100000003 **Birleştirildi** (başka siparişe katıldı, bekleyen sayılmaz), 100000004 Risk Limit Onayı Bekliyor, 100000005 Pazarlama Bütçesi Onayı Bekliyor, 100000011 Depoda Bekliyor, 100000012 Pusula Alındı, 100000013/14 Kutulanıyor/Kutulandı, 100000015 Tamamlandı, 100000016 Risk Bilgisi Bekleniyor.
-- "Termini geçtiği hâlde bekleyen sipariş satırı" = `new_bekleyenadet > 0 AND new_istenensevktarihi < GETDATE()` ve durum Tamamlandı/Sevk Edildi/İptal/Birleştirildi/Etkin değil dışı. Durum listesi tek başına "bekleyen" demek değildir; bekleyen adet şarttır. Sonuç 0 olabilir; 0 doğru cevaptır.
+- CRM sipariş **satırı** (kalem) `NEW_SIPARISSATIRIBASE`: başlığa `new_siparisid` ile bağlanır; bekleyen adet `new_bekleyenadet`, satır termin alanı `new_termintarihi`. "Sipariş satırı / kalem" sayılırken bu tablo sayılır, başlık değil.
+- "Bekleyen" = `new_bekleyenadet > 0` ve durum Tamamlandı/Sevk Edildi/İptal/Birleştirildi/Etkin değil dışı. Durum listesi tek başına "bekleyen" demek değildir; bekleyen adet şarttır.
+- Veride yok: termin tarihi TİMAŞ'ta hiçbir sistemde tutulmuyor (iş kararı 2026-09-20). CRM'de `new_termintarihi` yalnız 2015 Ekim–Aralık kayıtlarında, `new_istenensevktarihi` yalnız 2015–2018 kayıtlarında dolu; bekleyen hiçbir başlıkta ve satırda dolu değil. Logo `ORFLINE.DUEDATE` sipariş tarihinin (`DATE_`) kopyasıdır, termin değildir. "Termini geçmiş / geciken sipariş" sorusu mevcut veriyle ölçülemez; 0 satır "geciken yok" anlamına gelmez. Ölçülebilir en yakın bilgi: sipariş tarihinden bu yana bekleyen gün sayısı.
 
 ## Kural C14 — Sevkiyat satırları ve indirim (NEW_SEVKIYATSATIRIBASE)
 

@@ -965,16 +965,26 @@
    "soru": "Termin tarihi geçtiği hâlde hâlâ sevk edilmemiş sipariş satırları var mı?",
    "kaynak": "crm",
    "holdout": false,
-   "expect": "answer",
+   "expect": [
+    "answer",
+    "deny"
+   ],
    "verified": false,
    "source": "crm",
    "reference_sql": "SELECT l.new_siparissatiriId, l.new_termintarihi, DATEDIFF(DAY, l.new_termintarihi, GETDATE()) AS gecikme_gunu, ISNULL(l.new_bekleyenadet, l.new_siparisadedi-ISNULL(l.new_sevkedilenadet,0)) AS bekleyen_adet FROM Timas_MSCRM.dbo.new_siparissatiriBase l JOIN Timas_MSCRM.dbo.new_siparisBase s ON s.new_siparisId=l.new_siparisid WHERE l.statecode=0 AND s.statecode=0 AND l.new_termintarihi<GETDATE() AND s.statuscode NOT IN (2,100000000,100000001,100000003,100000015) AND l.statuscode NOT IN (2,100000000,100000001) AND ISNULL(l.new_sevkedilenadet,0)<l.new_siparisadedi AND NOT EXISTS (SELECT 1 FROM Timas_MSCRM.dbo.new_sevkiyatsatiriBase v WHERE v.new_siparissatiriid=l.new_siparissatiriId AND v.statecode=0)",
    "checks": [
     {
-     "kind": "empty"
+     "kind": "data_note",
+     "column": [
+      "DUEDATE",
+      "new_termintarihi",
+      "new_istenensevktarihi",
+      "NEW_TERMINTARIHI",
+      "NEW_ISTENENSEVKTARIHI"
+     ]
     }
    ],
-   "note": "2026-09-18: CRM'de 0 satır — doğru cevap 'yok'. Sipariş satırı new_siparissatiriBase (9,8 Mn satır): new_termintarihi yalnız 52.313 satırda dolu ve hepsi 2015-10…2015-12; bu satırların siparişleri Birleştirildi (17.771), İptal (17.052), Sevk Edildi (17.481), Tamamlandı (8), Etkin değil (1) — açık olan yok. Başlık düzeyi (Kural C13: new_siparisBase, new_bekleyenadet>0 AND new_istenensevktarihi<GETDATE(), kapalı durumlar dışı) de 0; istenen sevk tarihi yalnız 2015–2018 kayıtlarında dolu. Referans: terminli, açık durumlu, eksik sevkli ve sevkiyat satırı (new_sevkiyatsatiriBase) olmayan sipariş satırları. KÖPRÜ UYUŞMUYOR: soru CRM'e ait (sourceOk=false), köprü Logo'ya gidip LG_ORFLINE.DUEDATE<bugün ile 1.061 satır döndü (bu Logo okuması bağımsız koşuda da 1.061; Logo tarafında rakam doğru ama kaynak yanlış). Kaynak Logo kabul edilirse beklenti 1.061 satır olarak yeniden yazılır. Not: Kural C13 'sipariş satırı' diye başlık tablosunu (NEW_SIPARISBASE) anlatıyor; gerçek satır tablosu new_siparissatiriBase."
+   "note": "2026-09-18: CRM'de 0 satır — doğru cevap 'yok'. Sipariş satırı new_siparissatiriBase (9,8 Mn satır): new_termintarihi yalnız 52.313 satırda dolu ve hepsi 2015-10…2015-12; bu satırların siparişleri Birleştirildi (17.771), İptal (17.052), Sevk Edildi (17.481), T | 2026-09-20 iş kararı K1: termin hiçbir sistemde tutulmuyor (Logo DUEDATE 2026'da 162.422 satırın 0'ında sipariş tarihinden farklı; CRM termin alanları yalnız 2015'te dolu). Doğru cevap sayı değil, bunu AÇIKÇA söyleyen cevaptır (dataNotes)."
   },
   {
    "n": 38,
@@ -1108,17 +1118,26 @@
    "soru": "Termin tarihi geçmiş ama hâlâ sevk edilmemiş sipariş satırları hangileri?",
    "kaynak": "crm",
    "holdout": false,
-   "expect": "answer",
+   "expect": [
+    "answer",
+    "deny"
+   ],
    "verified": true,
    "source": "logo",
    "reference_sql": "SELECT L.LOGICALREF AS satir_ref, C.DEFINITION_ AS musteri, I.NAME AS kitap, L.DUEDATE AS termin_tarihi, DATEDIFF(day, L.DUEDATE, GETDATE()) AS gecikme_gunu, L.AMOUNT - L.SHIPPEDAMOUNT AS bekleyen_adet FROM LG_411_01_ORFLINE L LEFT JOIN LG_411_CLCARD C ON C.LOGICALREF = L.CLIENTREF LEFT JOIN LG_411_ITEMS I ON I.LOGICALREF = L.STOCKREF WHERE L.TRCODE = 1 AND L.LINETYPE = 0 AND L.CANCELLED = 0 AND L.CLOSED = 0 AND L.AMOUNT > L.SHIPPEDAMOUNT AND L.DUEDATE >= '1901-01-01' AND L.DUEDATE < GETDATE()",
    "checks": [
     {
-     "kind": "rows",
-     "tolerance": 0
+     "kind": "data_note",
+     "column": [
+      "DUEDATE",
+      "new_termintarihi",
+      "new_istenensevktarihi",
+      "NEW_TERMINTARIHI",
+      "NEW_ISTENENSEVKTARIHI"
+     ]
     }
    ],
-   "note": "2026-09-18: Logo 2026 kopyası 1.061 satır (termin 2026-01-15…2026-08-17, bekleyen toplam 1.210 adet); köprü 1.061 — birebir. KAYNAK SEÇİMİ İŞ TEYİDİ İSTER: set bu soruyu 'crm' etiketliyor ve Kural C13 CRM tanımı veriyor; ancak CRM'de termin bekleyen hiçbir kayıtta dolu değil — new_siparisBase: bekleyen adedi > 0 olan 4.043 başlığın 0'ında new_istenensevktarihi dolu (alan en son 2018-06'da kullanılmış); new_siparissatiriBase (9,8 Mn satır): bekleyen > 0 olan 19.759 satırın 0'ında new_termintarihi dolu. CRM'den cevap her iki tabloda da 0 satırdır (Kural C13: '0 doğru cevaptır'). Kullanılan tek dolu termin Logo ORFLINE.DUEDATE (İş tanımı #10 'bekleyen sipariş' + Logo Kural 19), referans bu yüzden Logo. Köprü müşteri/kitap adı yerine ref numarası ve gecikme günü olmadan dönüyor (beklenen kolonlar eksik — sunum açığı). Dönem: köprü yalnız 2026 kopyasını okudu; 2021–2025 kopyasında aynı koşulda 7.062 eski satır daha var (CLOSED bayrağı tutulmadığı için büyük olasılıkla bayat) — kapsam dışı bırakıldı, iş teyidi gerekir. Canlı veri: sayı gün içinde değişir, referans her koşuda yeniden hesaplanır."
+   "note": "2026-09-18: Logo 2026 kopyası 1.061 satır (termin 2026-01-15…2026-08-17, bekleyen toplam 1.210 adet); köprü 1.061 — birebir. KAYNAK SEÇİMİ İŞ TEYİDİ İSTER: set bu soruyu 'crm' etiketliyor ve Kural C13 CRM tanımı veriyor; ancak CRM'de termin bekleyen hiçbir kay | 2026-09-20 iş kararı K1: termin hiçbir sistemde tutulmuyor (Logo DUEDATE 2026'da 162.422 satırın 0'ında sipariş tarihinden farklı; CRM termin alanları yalnız 2015'te dolu). Doğru cevap sayı değil, bunu AÇIKÇA söyleyen cevaptır (dataNotes)."
   },
   {
    "n": 43,
@@ -1518,25 +1537,26 @@
    "soru": "Termini geçtiği halde hâlâ bekleyen sipariş satırlarımız kaç kalem?",
    "kaynak": "crm",
    "holdout": true,
-   "expect": "answer",
+   "expect": [
+    "answer",
+    "deny"
+   ],
    "verified": true,
    "source": "crm",
    "reference_sql": "SELECT COUNT(*) AS n FROM Timas_MSCRM.dbo.new_siparissatiriBase l WHERE l.statecode = 0 AND l.new_bekleyenadet > 0 AND l.new_termintarihi < GETDATE() AND l.statuscode NOT IN (2, 100000000, 100000001)",
    "checks": [
     {
-     "kind": "value",
-     "answer": [
-      "bekleyen_siparis_kalemi",
-      "bekleyen_kalem",
-      "kalem_sayisi",
-      "n",
-      "*"
-     ],
-     "reference": "n",
-     "tolerance": 0
+     "kind": "data_note",
+     "column": [
+      "DUEDATE",
+      "new_termintarihi",
+      "new_istenensevktarihi",
+      "NEW_TERMINTARIHI",
+      "NEW_ISTENENSEVKTARIHI"
+     ]
     }
    ],
-   "note": "2026-09-18: 0 kalem; köprü de 0. Referans satır seviyesinde: new_siparissatiriBase statecode = 0, new_bekleyenadet > 0, new_termintarihi ('Termin Tarihi') < GETDATE(), satır durumu Etkin değil / Sevk Edildi / İptal dışı. Veri durumu: bekleyen adedi > 0 olan 19.759 aktif satırın hiçbirinde termin tarihi dolu değil; termin tarihi yalnız 2015 Ekim–Aralık kayıtlarında var (52.313 satır, hiçbirinde bekleyen/kalan adet yok). Sipariş başlığı üzerinden Kural C13 tanımı (new_bekleyenadet > 0 AND new_istenensevktarihi < GETDATE(), açık durumlar) da 0 verir. Köprünün yolu farklı ve kırılgan: başlıktaki new_bekleyenadet ile satırdaki termin tarihini karıştırıp COUNT(DISTINCT sipariş) saydı (kalem değil sipariş) — bugün ikisi de 0 olduğu için uyuşuyor; termin tarihi dolmaya başlarsa ayrışabilir. 0 doğru cevaptır (veri yok değil, koşula uyan satır yok)."
+   "note": "2026-09-18: 0 kalem; köprü de 0. Referans satır seviyesinde: new_siparissatiriBase statecode = 0, new_bekleyenadet > 0, new_termintarihi ('Termin Tarihi') < GETDATE(), satır durumu Etkin değil / Sevk Edildi / İptal dışı. Veri durumu: bekleyen adedi > 0 olan 19 | 2026-09-20 iş kararı K1: termin hiçbir sistemde tutulmuyor (Logo DUEDATE 2026'da 162.422 satırın 0'ında sipariş tarihinden farklı; CRM termin alanları yalnız 2015'te dolu). Doğru cevap sayı değil, bunu AÇIKÇA söyleyen cevaptır (dataNotes)."
   },
   {
    "n": 58,

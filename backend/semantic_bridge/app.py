@@ -590,7 +590,7 @@ class Runtime:
                 "_result_file": result.get("_result_file"),
                 "totalRows": result.get("totalRows") or 0,
                 "truncated": bool(result.get("truncated")),
-                "dataCoverage": result.get("dataCoverage", []),
+                "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
                 "comparison": result.get("comparison"),
             }
             for old_id, old in list(self._results.items()):
@@ -757,6 +757,19 @@ class Runtime:
             note += " Sonuç sınırda kesildi; toplam satır sayısı bilinmiyor."
         if not (result.get("records") or []) and not int(result.get("totalRows") or 0):
             note += empty_result_note(sql, self.rules_text)
+        # A condition on a column that carries no information (never filled, or declared by a person
+        # to hold something other than its name says) is said with the answer: "0 satır" or "1.061
+        # satır" otherwise reads as a fact about the business when it is a fact about the data entry.
+        try:
+            from semantic_layer.runtime.column_facts import notes_text, nothing_came_back, predicate_column_notes
+            data_notes = predicate_column_notes(sql, self.profiles, getattr(self.existing, "annotations", None) or {},
+                                                sources=self.router.gate_sources(),
+                                                result_is_empty=nothing_came_back(result.get("records") or [], int(result.get("totalRows") or 0)))
+        except Exception as e:  # noqa: BLE001
+            log.debug("column data notes unavailable: %s", e)
+            data_notes = []
+        result["dataNotes"] = data_notes
+        note += notes_text(data_notes)
         if self.settings.summary_mode == "llm" and self.llm is not None:
             sample = result["records"][:20]
             prompt = ("Aşağıdaki soru ve sorgu sonucunu 1-3 cümlede Türkçe özetle. Sayıları Türkçe biçimle, yorum katma, sadece veride olanı söyle.\n"
@@ -1061,6 +1074,8 @@ class Runtime:
         stored_result = {"columns": result["columns"], "records": list(result["records"]),
                          "totalRows": result["totalRows"], "truncated": result.get("truncated")}
         gate = {k: semantic[k] for k in ("critic", "unmetObligations", "catalogAudit") if k in semantic} or None
+        if result.get("dataNotes"):
+            gate = {**(gate or {}), "dataNotes": result["dataNotes"]}
         qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(),
                    executed=True, row_count=result["totalRows"], latency_ms=int((time.perf_counter() - t0) * 1000),
                    result_fingerprint=fp, answer_type="TEXT_TO_SQL", answer_summary=summary,
@@ -1085,7 +1100,7 @@ class Runtime:
             "resultId": result["id"],
             "presentation": result.get("presentation"),
             "comparison": result.get("comparison"),
-            "dataCoverage": result.get("dataCoverage", []),
+            "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
             "columns": result["columns"],
             "records": shown,
             "shownRows": len(shown),
@@ -1196,7 +1211,7 @@ class Runtime:
                  result["totalRows"], timings, question[:80])
         return {"id": result["id"], "type": "TEXT_TO_SQL", "sql": text, "physicalSql": text, "summary": summary,
                 "resultId": result["id"], "presentation": result.get("presentation"),
-                "comparison": result.get("comparison"), "dataCoverage": result.get("dataCoverage", []),
+                "comparison": result.get("comparison"), "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
                 "columns": result["columns"], "records": shown, "shownRows": len(shown),
                 "truncated": False, "cached": False, "ageSec": result.get("ageSec"),
                 "computedAt": result.get("computedAt"), "widget": result.get("widget"),

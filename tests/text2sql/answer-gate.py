@@ -190,6 +190,12 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
                 want = found[0].get(spec["reference"]) if found else None
                 if not _close(_pick(row, spec["answer_value"]), want, spec.get("tolerance", tolerance)):
                     problems.append(f"{key}: {spec['answer_value']} = {_pick(row, spec['answer_value'])}, referans {want}")
+        elif kind == "data_note":
+            # Soru veride tutulmayan bir alana dayanıyor: cevap bunu açıkça söylemeli (dataNotes / özet).
+            text = " ".join(str(n) for n in (answer.get("dataNotes") or [])) + " " + str(answer.get("summary") or "") + " " + str(answer.get("explanation") or "")
+            wanted = [spec["column"]] if isinstance(spec["column"], str) else list(spec["column"])
+            if not any(w.upper() in text.upper() for w in wanted):
+                problems.append(f"veri notu yok: cevap {wanted} alanının bilgi taşımadığını söylemiyor")
         else:
             problems.append(f"bilinmeyen kontrol türü: {kind}")
     return problems
