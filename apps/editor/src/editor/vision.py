@@ -276,18 +276,25 @@ async def compare_character_appearances(generation_id: str, character: str,
     VISUAL_CONTINUITY claims and CONTINUITY contradiction candidates."""
     pages = sorted(set(pages))[:6]
     gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
+    # The character's own verified crops, not whole pages: on a full page the model may
+    # compare a different figure. (A page without a verified crop falls back to the page.)
+    bv = str(gen["book_version_id"])
+    crops = {r["page_no"]: r for r in db.all_rows(
+        "SELECT cm.page_no, cm.id, vr.bbox FROM character_mention cm JOIN character ch ON ch.id=cm.character_id"
+        " JOIN evidence e ON e.id=cm.evidence_id JOIN visual_region vr ON vr.id=e.region_id WHERE"
+        " cm.generation_id=%s AND cm.via='VISUAL' AND cm.resolution='RESOLVED' AND cm.page_no = ANY(%s) AND"
+        " (ch.canonical_name ILIKE %s OR %s = ANY(ch.aliases))", generation_id, pages, character, character)}
+    gdir = Path(render_page(bv, pages[0])["path"]).parent / "gallery" / generation_id
     parts = []
     for p in pages:
-        png = Path(render_page(str(gen["book_version_id"]), p, 1200)["path"]).read_bytes()
+        if p in crops:
+            png = _crop(render_page(bv, p)["path"], crops[p]["bbox"], gdir / f"fig-{crops[p]['id']}.png").read_bytes()
+        else:
+            png = Path(render_page(bv, p, 1200)["path"]).read_bytes()
         parts += [{"type": "text", "text": f"Sayfa {p}:"}, image_part(png)]
-    known = []
-    for r in db.all_rows("SELECT cm.page_no, cm.appearance FROM character_mention cm JOIN character ch ON"
-                         " ch.id=cm.character_id WHERE cm.generation_id=%s AND cm.via='VISUAL' AND"
-                         " cm.resolution='RESOLVED' AND (ch.canonical_name ILIKE %s OR %s = ANY(ch.aliases))"
-                         " ORDER BY cm.page_no", generation_id, character, character):
-        known.append(f"s{r['page_no']}: {json.dumps(r['appearance'], ensure_ascii=False)}")
-    ref, body = prompts.render("compare_appearance", pages=", ".join(map(str, pages)),
-                               character=character, known="\n".join(known) or "-")
+    # Only the pictures: feeding the scans' descriptions made the model compare wordings
+    # ("kırmızımsı kahverengi" vs "kırmızı") instead of drawings.
+    ref, body = prompts.render("compare_appearance", pages=", ".join(map(str, pages)), character=character)
     out, call_id = await Llm(generation_id).chat(
         "book-vision-deep", [{"role": "user", "content": parts + [{"type": "text", "text": body}]}],
         prompt=ref, schema=schemas.APPEARANCE, pages=pages, max_tokens=16384, temperature=0.1)

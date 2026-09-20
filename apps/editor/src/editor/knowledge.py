@@ -169,7 +169,8 @@ def _persist(st: ChunkState) -> ChunkState:
                       " appearance, resolution, confidence, evidence_id) VALUES"
                       " (%s,%s,%s,%s,%s,'UNRESOLVED',%s,%s)",
                       (gid, m["page"] if m["page"] in pages else evs[0][2], m["surface_name"],
-                       m["via"], db.J({"description": m["description"]}), m["confidence"], evs[0][0]))
+                       # the extractor works from text; only a page scan can see a figure
+                       "TEXT", db.J({"description": m["description"]}), m["confidence"], evs[0][0]))
             counts["mentions"] += 1
         for ev in o["events"]:
             evs = ledger.evidence_from_model(c, gid, idx, ev["evidence"], valid_pages=pages)

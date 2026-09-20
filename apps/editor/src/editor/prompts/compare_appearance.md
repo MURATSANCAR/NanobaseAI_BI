@@ -1,6 +1,4 @@
-<!-- name: compare_appearance version: 1 -->
-Görüntüler aynı kitabın farklı sayfaları: {{pages}}. Hepsinde "{{character}}" olduğu düşünülen karakter var.
-Metnin ve önceki taramaların bu karakter hakkında söyledikleri:
-{{known}}
+<!-- name: compare_appearance version: 2 -->
+Görüntüler aynı kitabın farklı sayfaları: {{pages}}. Her birinde "{{character}}" adlı karakterin, kimliği referans çizimle doğrulanmış bir figürü var.
 
-Karakterin görünümünü sayfalar arasında karşılaştır: saç, ten, yaş görünümü, kıyafet, aksesuar, renkler, boy/oran. Her fark için hangi sayfalar arasında olduğunu, farkın hikâyeyle açıklanıp açıklanamadığını (kıyafet değiştirme, zaman geçmesi) ve bunun bir süreklilik hatası adayı olup olmadığını yaz. Bu figürün her sayfada gerçekten aynı karakter olup olmadığından emin değilsen söyle. Farklar hata değil ADAY bulgudur. Türkçe yaz.
+YALNIZ bu resimlere bakarak karakterin çizimini sayfalar arasında karşılaştır: saç rengi ve biçimi, ten, yaş görünümü, kıyafet, aksesuar, beden oranları. Bir farkı ancak resimlerde GÖZLE görülüyorsa yaz; renk tonunun ışık ya da gölgeyle değişmesi, pozun değişmesi, aynı şeyin farklı kelimeyle anlatılabilmesi fark değildir. Her gerçek fark için hangi sayfalar arasında olduğunu, hikâyeyle açıklanıp açıklanamayacağını (kıyafet değiştirme, zaman geçmesi, ıslanma) ve süreklilik hatası ADAYI olup olmadığını yaz. Fark yoksa boş liste döndür; bulmak zorunda değilsin. Türkçe yaz.

@@ -220,7 +220,10 @@ async def critic_pass(generation_id: str) -> dict:
     finds PARTIAL the application first tries to repair itself (missing evidence added
     from the page, or the claim narrowed) and judges again; only what is still weak
     after that goes to the editor."""
-    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status='CANDIDATE'", generation_id)
+    # Text-visual and continuity findings are candidates by definition and reach the editor
+    # once, through the contradiction queue; judging them here queued the same finding twice.
+    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status='CANDIDATE' AND c.kind NOT IN"
+                         " ('TEXT_VISUAL_MISMATCH','VISUAL_CONTINUITY')", generation_id)
     stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
              "repair_tried": 0, "repaired": 0, "no_verdict": 0}
     first = await _judge(generation_id, claims)
@@ -338,10 +341,11 @@ def run_regression_suite(generation_id: str) -> dict:
             " + (SELECT count(*) FROM emotion m JOIN page_role r ON r.generation_id=m.generation_id AND"
             " r.page_no=m.page_no AND r.role<>'STORY' WHERE m.generation_id=%s) AS n",
             generation_id, generation_id) == 0),
-        _check("ön sayfa figürleri kesin kimlik almadı", one(
+        _check("ön sayfa figürü yalnız referans eşleşmesiyle kesin kimlik alır", one(
             "SELECT count(*) n FROM character_mention cm JOIN page_role r ON r.generation_id=cm.generation_id"
             " AND r.page_no=cm.page_no AND r.role='FRONT_MATTER' WHERE cm.generation_id=%s AND"
-            " cm.via<>'TEXT' AND cm.resolution='RESOLVED'", generation_id) == 0),
+            " cm.via<>'TEXT' AND cm.resolution='RESOLVED' AND"
+            " coalesce(cm.appearance->>'identified_by','') <> 'reference'", generation_id) == 0),
         _check("hızlı taramanın verdiği ad tek başına kesin kimlik değil", one(
             "SELECT count(*) n FROM character_mention cm WHERE cm.generation_id=%s AND cm.via<>'TEXT' AND"
             " cm.resolution='RESOLVED' AND NOT EXISTS (SELECT 1 FROM page_scan d WHERE"
