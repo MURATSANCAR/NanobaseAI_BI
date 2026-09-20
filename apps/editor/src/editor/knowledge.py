@@ -392,10 +392,11 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status})
             row = c.execute(
                 "INSERT INTO character(generation_id, canonical_name, aliases, description,"
-                " identity_status, identity_confidence, first_page, claim_id, kind) VALUES"
-                " (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+                " identity_status, identity_confidence, first_page, claim_id, kind, traits) VALUES"
+                " (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                 (generation_id, canonical, aliases, ch["description"], status, conf, pages[0], cid,
-                 ch.get("kind") or "UNKNOWN")).fetchone()
+                 ch.get("kind") or "UNKNOWN",
+                 db.J({k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band")}))).fetchone()
             for m in mids:
                 sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted
                 c.execute("UPDATE character_mention SET character_id=%s, resolution=%s WHERE id=%s",

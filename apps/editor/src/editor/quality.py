@@ -122,7 +122,8 @@ _CLAIM_SQL = ("SELECT c.id, c.kind, c.subject, c.claim, c.confidence, c.payload,
               " ON e.id=ce.evidence_id WHERE ce.claim_id=c.id) AS ev FROM claim c WHERE ")
 
 
-async def _judge(generation_id: str, claims: list[dict], batch: int = 30) -> list[tuple[dict, dict]]:
+async def _judge(generation_id: str, claims: list[dict], batch: int = 30,
+                 _round: int = 0) -> list[tuple[dict, dict]]:
     """Critic verdict per claim, from the claim's own evidence only."""
     async def run(chunk: list[dict]) -> list[tuple[dict, dict]]:
         short = {f"c{i}": x for i, x in enumerate(chunk)}
@@ -141,8 +142,18 @@ async def _judge(generation_id: str, claims: list[dict], batch: int = 30) -> lis
                 res.append((short[v["claim_id"]], v))
         return res
 
-    parts = await asyncio.gather(*(run(claims[i:i + batch]) for i in range(0, len(claims), batch)))
-    return [x for p in parts for x in p]
+    parts = await asyncio.gather(*(run(claims[i:i + batch]) for i in range(0, len(claims), batch)),
+                                 return_exceptions=True)
+    got = [x for p in parts if not isinstance(p, BaseException) for x in p]
+    # The critic sometimes answers about fewer claims than it was asked about (measured: 12 of
+    # 16 repaired claims came back without a verdict and went to the editor as "could not be
+    # re-judged"). A missing verdict is an unasked question, not a finding: ask again, in
+    # smaller batches, before anyone is bothered with it.
+    done = {str(x["id"]) for x, _ in got}
+    missing = [x for x in claims if str(x["id"]) not in done]
+    if missing and _round < 2:
+        got += await _judge(generation_id, missing, max(1, batch // 5), _round + 1)
+    return got
 
 
 def _apply_verdict(c, generation_id: str, x: dict, v: dict, stats: dict) -> None:

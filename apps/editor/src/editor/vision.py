@@ -480,15 +480,16 @@ async def resolve_visual_identity(generation_id: str) -> dict:
        text on/next to its page and maps to exactly one text character C; no other figure
        on the page is unnamed or named as a character of C's kind group; the near text names
        no other character of C's exact kind (a rival). The crop must cover >= 2% of the page.
-       Each candidate crop is CHECKED (one whole figure? of C's kind group?). The largest
-       accepted crop per character is its reference.
+       A rival the text puts in another class (sex, age band) is no rival, provided the crop
+       itself shows the figure in C's class. Each candidate crop is CHECKED (one whole figure?
+       of C's kind group? of C's declared sex/age?). The largest accepted crop is C's reference.
     2. Every other figure's crop is compared with all references: same kind, no conflicting
        distinctive feature, confidence >= 0.8. On a page a character is at most one figure.
     3. Elimination: if a page shows N figures of one kind, the near text names exactly N
        characters of that kind, and N-1 are already identified, the last figure is the last
        character (confidence 0.8; never used as a reference).
     Everything else stays uncertain and unattached."""
-    chars = db.all_rows("SELECT id, canonical_name, aliases, kind FROM character WHERE generation_id=%s",
+    chars = db.all_rows("SELECT id, canonical_name, aliases, kind, traits FROM character WHERE generation_id=%s",
                         generation_id)
     figs = db.all_rows(
         "SELECT cm.id, cm.page_no, cm.surface_name, vr.bbox, (SELECT bool_or(s.pass='DEEP') FROM page_scan s"
@@ -499,12 +500,21 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         " ORDER BY cm.page_no, vr.id", generation_id)
     stats = {"figures": len(figs), "reference_candidates": 0, "references_refused": 0,
              "characters_with_reference": 0, "matched": 0, "by_elimination": 0,
-             "scan_name_corrected": 0, "left_uncertain": 0, "calls_failed": 0}
+             "scan_name_corrected": 0, "left_uncertain": 0, "calls_failed": 0,
+             "references_refused_by_traits": 0}
     if not chars or not figs:
         return stats
     gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
     bv = str(gen["book_version_id"])
     ckind = {str(ch["id"]): ch["kind"] for ch in chars}
+    # what the TEXT declares about a character; "UNKNOWN" is not a value, it is silence
+    ctrait = {str(ch["id"]): {a: v for a, v in (ch["traits"] or {}).items() if v and v != "UNKNOWN"}
+              for ch in chars}
+
+    def separating(cid: str, rival: str) -> dict[str, str]:
+        """Traits on which the text puts these two in different classes (empty: it does not)."""
+        return {a: v for a, v in ctrait[cid].items() if ctrait[rival].get(a, v) != v}
+
     cname = {str(ch["id"]): ch["canonical_name"] for ch in chars}
     cnames = {str(ch["id"]): [ch["canonical_name"], *ch["aliases"]] for ch in chars}
     name_to: dict[str, set] = {}
@@ -584,20 +594,29 @@ async def resolve_visual_identity(generation_id: str) -> dict:
                     and named_near(page, cid)):
                 continue
             others_here = [x for x in fs if x is not f]
-            if any(x["cid"] is None or _kinds_clash(ckind[x["cid"]], ckind[cid]) for x in others_here):
-                continue                       # an unnamed figure, or one of the same kind, is a rival in the picture
-            # A rival is another character of the same kind named in the text. For a lone figure
-            # only the page's own text counts (a name in someone's speech next door is not a
-            # second person in this picture); in a group scene the facing pages count too.
+            if any(x["cid"] is None for x in others_here):
+                continue                       # a figure nobody could name might be anyone
+            # A rival is another character of the same kind that could be this figure: one drawn
+            # on the page, or one named in the text. For a lone figure only the page's own text
+            # counts (a name in someone's speech next door is not a second person in this
+            # picture); in a group scene the facing pages count too.
             here = idx.text.get(page, "")
-            if any(o != cid and _kinds_clash(ckind[o], ckind[cid]) and (
-                    any(ledger.has_name(here, n) for n in cnames[o]) if not others_here else named_near(page, o))
-                   for o in cname):
-                continue
-            cands.append((f, cid))
+            rivals = {x["cid"] for x in others_here if _kinds_clash(ckind[x["cid"]], ckind[cid])}
+            rivals |= {o for o in cname if o != cid and _kinds_clash(ckind[o], ckind[cid]) and (
+                any(ledger.has_name(here, n) for n in cnames[o]) if not others_here else named_near(page, o))}
+            # A rival the text puts in another class (the mother is not the grandfather) is no
+            # rival, as long as the drawing itself shows this figure in THIS character's class.
+            need: dict[str, str] = {}
+            for o in rivals - {cid}:
+                sep = separating(cid, o)
+                if not sep:
+                    break
+                need.update(sep)
+            else:
+                cands.append((f, cid, need))
     stats["reference_candidates"] = len(cands)
 
-    async def check(f: dict, cid: str):
+    async def check(f: dict, cid: str, need: dict[str, str] | None = None):
         ref, body = prompts.render("check_reference", name=cname[cid])
         try:
             async with sem:
@@ -606,6 +625,9 @@ async def resolve_visual_identity(generation_id: str) -> dict:
                         image_part(crop_of(f).read_bytes()), {"type": "text", "text": body}]}],
                     prompt=ref, schema=schemas.CHECK_REFERENCE, pages=[f["page_no"]], max_tokens=4096,
                     temperature=0.0)
+            if out and need and any(out.get(a) != v for a, v in need.items()):
+                out = None          # the drawing does not show the class the text declared
+                stats["references_refused_by_traits"] = stats.get("references_refused_by_traits", 0) + 1
             return f, cid, out
         except Exception:  # noqa: BLE001
             stats["calls_failed"] += 1
@@ -613,7 +635,7 @@ async def resolve_visual_identity(generation_id: str) -> dict:
 
     gallery: dict[str, dict] = {}
     accepted: list[tuple[dict, str]] = []
-    for f, cid, out in await asyncio.gather(*(check(f, cid) for f, cid in cands)):
+    for f, cid, out in await asyncio.gather(*(check(f, cid, need) for f, cid, need in cands)):
         if out and out["whole_figure"] and _compatible(out["kind"], ckind[cid]):
             f["kind"] = out["kind"]
             accepted.append((f, cid))

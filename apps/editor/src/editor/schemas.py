@@ -26,6 +26,8 @@ BOOL = {"type": "boolean"}
 BBOX = arr({"type": "integer", "minimum": 0, "maximum": 1000}, 4, 4)
 KIND = {"type": "string", "enum": ["HUMAN_CHILD", "HUMAN_ADULT", "ANIMAL", "ROBOT_OR_MACHINE",
                                    "FANTASY_CREATURE", "OTHER"]}
+SEX = {"type": "string", "enum": ["MALE", "FEMALE", "UNKNOWN"]}
+AGE_BAND = {"type": "string", "enum": ["CHILD", "TEEN", "ADULT", "ELDERLY", "UNKNOWN"]}
 MODALITY = {"type": "string", "enum": ["REALIZED", "PLAN", "DREAM", "IMAGINATION", "JOKE",
                                        "LIE", "HYPOTHETICAL", "MEMORY", "UNCERTAIN"]}
 EVIDENCE = arr(obj({"page": INT, "paragraph": INT, "quote": STR}), 1, 8)
@@ -78,7 +80,8 @@ KNOWLEDGE = obj({
 
 IDENTITY = obj({
     "characters": arr(obj({
-        "canonical_name": STR, "kind": KIND, "aliases": arr(STR), "description": STR,
+        "canonical_name": STR, "kind": KIND, "sex": SEX, "age_band": AGE_BAND,
+        "aliases": arr(STR), "description": STR,
         "mention_ids": arr(STR, 1), "merge_basis": STR, "identity_confidence": NUM})),
     "unresolved_mention_ids": arr(STR),
     "conflicts": arr(obj({"mention_id": STR, "candidates": arr(STR), "note": STR})),
@@ -149,7 +152,8 @@ MATCH_FIGURE = obj({
 # (a `figure_kind` enum was tried first and last in this object: the deep model wrote ANIMAL
 #  for robots both times while its own reasoning said robot; its booleans are reliable)
 
-CHECK_REFERENCE = obj({"whole_figure": BOOL, "kind": KIND, "features": arr(STR, 0, 12)})
+CHECK_REFERENCE = obj({"whole_figure": BOOL, "kind": KIND, "sex": SEX, "age_band": AGE_BAND,
+                       "features": arr(STR, 0, 12)})
 
 MODALITY_REFEREE = obj({"modality": MODALITY, "confidence": NUM, "reason": STR})
 
