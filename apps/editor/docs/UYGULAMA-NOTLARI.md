@@ -70,7 +70,7 @@ Aynı model aynı sayfayı iki kez okuyunca figür adları 26 sayfanın 18'inde 
 
 Çıkarımın `event.participants` alanı tek okumadır: serbest metin adlar, olasılık yok, çözülmüş karakterlere bağlı değil; Türkçede özne çoğu zaman yazılmadığı için en kırılgan alan budur. `knowledge.attribute_event_actors` (iş akışında Critic'ten hemen sonra, `event_actors` activity'si) her (olay, karakter) çiftini ayrı ayrı, kapalı kümeli tek token olarak sorar: **A** eylemi yapan, **B** olayda yer alan ama yapan değil, **C** olayda yok. Olasılıklar tokenın logprobs'undan okunur (`Llm.choose`: vLLM `structured_outputs.choice` + `logprobs`, sıcaklık 0, seed sabit, düşünme kapalı). Çift başına ayrı soru: birden çok yapan olabilir ve seçenek sırası yanlılığı yoktur. İstemin ortak kısmı (sayfa metni + olay) önde, karakter sonda: önek önbelleği çalışır.
 
-- Sonuç `event_actor` tablosunda (göç 009; çift başına tek satır, yeniden denemede çift yazılmaz). Çıkarımın yazdığı hiçbir şey değiştirilmez.
+- Sonuç `event_actor` tablosunda (göç 010; çift başına tek satır, yeniden denemede çift yazılmaz). Çıkarımın yazdığı hiçbir şey değiştirilmez.
 - Hiçbir okuma `EDITOR_ACTOR_MIN_PROBABILITY` (varsayılan 0,7) eşiğine ulaşmazsa çift `UNCERTAIN`'dir ve hiçbir yerde kesin bilgi diye gösterilmez.
 - Editör kuyruğuna gidenler (`EDITOR_ACTOR_REVIEW=0` ile kapatılır, yalnız kayıt tutulur): belirsiz çifti olan olay; çıkarımın katılımcı saydığı ama bu okumanın olayda görmediği karakter; çıkarımın listesinde olmayıp eylemi yapan okunan karakter; çıkarımın adlandırdığı karakterlerden hiçbirinin yapan okunmadığı olay.
 - Reddedilmiş ve yerine yenisi geçmiş iddiaların olayları okunmaz. Regresyon değişmezi: kesin rol yalnız eşiği geçen okumayla.
