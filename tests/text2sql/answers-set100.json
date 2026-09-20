@@ -1199,14 +1199,14 @@
    "expect": "answer",
    "verified": true,
    "source": "crm",
-   "reference_sql": "SELECT s.new_name AS sozlesme, a.Name AS sozlesme_sahibi, COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) AS bitis_tarihi FROM Timas_MSCRM.dbo.new_sozlesmeBase s LEFT JOIN Timas_MSCRM.dbo.AccountBase a ON a.AccountId = s.new_SozlemeninSahibi WHERE s.statecode = 0 AND COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1) AND COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) < DATEFROMPARTS(YEAR(GETDATE()) + 1, 1, 1) ORDER BY 3",
+   "reference_sql": "SELECT s.new_name AS sozlesme, a.Name AS imzalayan_sirket, COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) AS bitis_tarihi FROM Timas_MSCRM.dbo.new_sozlesmeBase s LEFT JOIN Timas_MSCRM.dbo.AccountBase a ON a.AccountId = s.new_SozlemeninSahibi WHERE s.statecode = 0 AND COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1) AND COALESCE(s.new_revizebitistarihi, s.new_SozlesmeBitisTarihi) < DATEFROMPARTS(YEAR(GETDATE()) + 1, 1, 1) ORDER BY 3",
    "checks": [
     {
      "kind": "rows",
      "tolerance": 0
     }
    ],
-   "note": "2026-09-18: 501 sözleşme (holdout). Bitiş = revize bitiş varsa o, yoksa sözleşme bitiş; new_revizebitistarihi aktif 14.829 sözleşmenin 0'ında dolu, bu yüzden ham bitiş tarihiyle aynı sonuç. Köprü 501 — birebir. Notlar: (1) CRM tarihleri UTC saklar; +3 saat yerel saatle 500 çıkar (1 kayıt yıl sınırında) — köprü ve referans ham değeri kullanıyor; (2) 'telif sözleşmesi' için tip süzgeci tanımlı değil (new_SozlesmeTipi: 5 Telif Alış, 1 Telif Satış, 2 Taahhüt, 100000000 Hizmet), tüm aktif sözleşmeler alındı; (3) new_yenilemebitistarihi 380 kayıtta dolu ama kuralda yok, kullanılmadı; (4) köprü taraf/kitap adı vermiyor (beklenen kolonlar eksik)."
+   "note": "2026-09-18: 501 sözleşme (holdout). Bitiş = revize bitiş varsa o, yoksa sözleşme bitiş; new_revizebitistarihi aktif 14.829 sözleşmenin 0'ında dolu, bu yüzden ham bitiş tarihiyle aynı sonuç. Köprü 501 — birebir. Notlar: (1) CRM tarihleri UTC saklar; +3 saat yerel saatle 500 çıkar (1 kayıt yıl sınırında) — köprü ve referans ham değeri kullanıyor; (2) 'telif sözleşmesi' için tip süzgeci tanımlı değil (new_SozlesmeTipi: 5 Telif Alış, 1 Telif Satış, 2 Taahhüt, 100000000 Hizmet), tüm aktif sözleşmeler alındı; (3) new_yenilemebitistarihi 380 kayıtta dolu ama kuralda yok, kullanılmadı; (4) köprü taraf/kitap adı vermiyor (beklenen kolonlar eksik). | 2026-09-20: referanstaki new_SozlemeninSahibi → AccountBase kolonu yazar değil, sözleşmeyi imzalayan grup şirketimiz (Kural C9 düzeltmesi); takma adı imzalayan_sirket oldu, satır denetimi aynı (501)."
   },
   {
    "n": 45,
@@ -1220,7 +1220,7 @@
    ],
    "verified": true,
    "source": "crm",
-   "reference_sql": "SELECT a.Name AS yazar, COUNT(*) AS sozlesme_adedi, AVG(s.new_teliftutari) AS ortalama_telif_tutari FROM Timas_MSCRM.dbo.new_sozlesmeBase s JOIN Timas_MSCRM.dbo.AccountBase a ON a.AccountId = s.new_SozlemeninSahibi WHERE s.statecode = 0 AND s.new_teliftutari IS NOT NULL GROUP BY a.AccountId, a.Name ORDER BY 3 DESC",
+   "reference_sql": "SELECT COALESCE(k.FullName, f.Name) AS yazar, COUNT(DISTINCT s.new_sozlesmeId) AS sozlesme_adedi, AVG(s.new_teliftutari) AS ortalama_telif_tutari FROM Timas_MSCRM.dbo.new_sozlesmeBase s JOIN Timas_MSCRM.dbo.new_sozlesmetarafiBase t ON t.new_sozlesmeid = s.new_sozlesmeId AND t.statecode = 0 LEFT JOIN Timas_MSCRM.dbo.ContactBase k ON k.ContactId = t.new_kisi LEFT JOIN Timas_MSCRM.dbo.AccountBase f ON f.AccountId = t.new_Firma WHERE s.statecode = 0 AND s.new_teliftutari IS NOT NULL AND (t.new_kisi IS NOT NULL OR t.new_Firma IS NOT NULL) GROUP BY COALESCE(k.FullName, f.Name) ORDER BY 3 DESC",
    "checks": [
     {
      "kind": "any_of",
@@ -1244,7 +1244,7 @@
      ]
     }
    ],
-   "note": "2026-09-18: Kural C9 — telif tutarı = new_sozlesmeBase.new_teliftutari, yazar = new_SozlemeninSahibi → AccountBase. new_teliftutari aktif 14.829 sözleşmenin 0'ında dolu (new_TelifO | 2026-09-20: kolon baştan sona boş; yazar listesi gelebilir ama ölçü dolu olamaz."
+   "note": "2026-09-18: Kural C9 — telif tutarı = new_sozlesmeBase.new_teliftutari, yazar = new_SozlemeninSahibi → AccountBase. new_teliftutari aktif 14.829 sözleşmenin 0'ında dolu (new_TelifO | 2026-09-20: kolon baştan sona boş; yazar listesi gelebilir ama ölçü dolu olamaz. | 2026-09-20: Kural C9 düzeltildi — yazar = taraf kaydındaki kişi/firma (new_sozlesmetarafiBase.new_kisi → ContactBase.FullName, new_Firma → AccountBase.Name); new_SozlemeninSahibi imzalayan grup şirketimiz. Referans buna göre yeniden yazıldı, canlı CRM'de koşturuldu: 0 satır (new_teliftutari 0 kayıtta dolu)."
   },
   {
    "n": 46,

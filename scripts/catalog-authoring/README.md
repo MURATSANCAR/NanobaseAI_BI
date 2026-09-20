@@ -18,3 +18,4 @@ Koşu (köprünün ortamıyla, sunucuda):
 |---|---|---|
 | 2026-09-20-hedef-es-anlamlilari.py | `hedef / satış hedefi / toplam hedef` → `yıllık hedef` (NEW_TOPLAMHEDEF) | Q65, Q69 SAĞLAM; yalnız 3 hedef sorusu etkilendi |
 | 2026-09-20-uretim-suresi-ve-dengesizlik.py | iş istasyonu (WORKSTAT), operasyon süreleri (DISPLINE), dengesizlik katsayısı (CV) | Q36 SAĞLAM; Q10 yanlış CRM cevabından dürüst redde; yalnız 2 soru etkilendi |
+| 2026-09-20-sozlesme-hak-sahibi.py | `sözleşme sahibi` (→ ACCOUNTBASE.Name, eş anlamlı 'hak sahibi / yazarlara göre') REDDEDİLİR: kolon yazar değil, imzalayan grup şirketimiz (Kural C9 düzeltmesi) | hızlı kapıda bu kavrama bağlı okuma yok; 'en çok sözleşmesi olan yazar' ve 'hak sahiplerine göre' canlı CRM referansıyla eş |
