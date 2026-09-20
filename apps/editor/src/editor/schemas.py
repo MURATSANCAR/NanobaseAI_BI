@@ -24,6 +24,8 @@ INT = {"type": "integer"}
 NUM = {"type": "number", "minimum": 0, "maximum": 1}
 BOOL = {"type": "boolean"}
 BBOX = arr({"type": "integer", "minimum": 0, "maximum": 1000}, 4, 4)
+KIND = {"type": "string", "enum": ["HUMAN_CHILD", "HUMAN_ADULT", "ANIMAL", "ROBOT_OR_MACHINE",
+                                   "FANTASY_CREATURE", "OTHER"]}
 MODALITY = {"type": "string", "enum": ["REALIZED", "PLAN", "DREAM", "IMAGINATION", "JOKE",
                                        "LIE", "HYPOTHETICAL", "MEMORY", "UNCERTAIN"]}
 EVIDENCE = arr(obj({"page": INT, "paragraph": INT, "quote": STR}), 1, 8)
@@ -36,7 +38,7 @@ OCR = obj({"blocks": arr(obj({
 PAGE_SCAN = obj({
     "scene": obj({"setting": STR, "time_of_day": STR, "mood": STR, "description": STR}),
     "characters": arr(obj({
-        "label": STR, "name": STR, "name_basis": STR, "identity_uncertain": BOOL,
+        "label": STR, "kind": KIND, "name": STR, "name_basis": STR, "identity_uncertain": BOOL,
         "appearance": obj({"hair": STR, "skin": STR, "age_look": STR, "clothes": STR,
                            "colors": STR, "distinctive": STR}),
         "action": STR, "visible_emotion": STR, "bbox": BBOX, "confidence": NUM}), 0, 40),
@@ -73,7 +75,7 @@ KNOWLEDGE = obj({
 
 IDENTITY = obj({
     "characters": arr(obj({
-        "canonical_name": STR, "aliases": arr(STR), "description": STR,
+        "canonical_name": STR, "kind": KIND, "aliases": arr(STR), "description": STR,
         "mention_ids": arr(STR, 1), "merge_basis": STR, "identity_confidence": NUM})),
     "unresolved_mention_ids": arr(STR),
     "conflicts": arr(obj({"mention_id": STR, "candidates": arr(STR), "note": STR})),
@@ -131,8 +133,14 @@ BOOK_METADATA = obj({"fields": arr(obj({
                                          "ISBN", "AGE_RANGE", "GENRE", "EDITION"]},
     "value": STR, "page": INT, "quote": STR}))})
 
-MATCH_FIGURES = obj({"matches": arr(obj({
-    "figure": STR, "reference": STR, "confidence": NUM, "reason": STR}))})
+MATCH_FIGURE = obj({
+    "reference": STR,                      # R1..Rn or NONE
+    "same_kind": BOOL,
+    "matching_features": arr(STR, 0, 12),
+    "conflicting_features": arr(STR, 0, 12),
+    "confidence": NUM, "reason": STR})
+
+CHECK_REFERENCE = obj({"whole_figure": BOOL, "kind": KIND, "features": arr(STR, 0, 12)})
 
 MODALITY_REFEREE = obj({"modality": MODALITY, "confidence": NUM, "reason": STR})
 

@@ -115,6 +115,11 @@ class BookFullAnalysis:
             await self.step(14, "Çelişkiler ve editör kuyruğu")
             con = await self.act("contradictions", gid)
             # 15. Regresyon, rapor, nesli mühürle
+            await self.step(15, "Künye")
+            try:
+                await self.act("book_metadata", gid)
+            except ActivityError as e:
+                failures["book_metadata"] = [str(e.cause or e)[:500]]
             await self.step(15, "Regresyon ve rapor")
             reg = await self.act("regression", gid)
             rep = await self.act("report", gid)

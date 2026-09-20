@@ -26,6 +26,7 @@ class Settings:
     min_illustration_ink: float
     min_figure_ink: float
     vision_screen: str
+    min_reference_area: float
 
     @property
     def storage(self) -> Path:
@@ -60,4 +61,6 @@ def settings() -> Settings:
         # "deep": illustrated pages go straight to book-vision-deep (default, user decision
         # 2026-09-19); "fast": book-vision-fast screens first, deep only where evidence asks.
         vision_screen=env("EDITOR_VISION_SCREEN", "deep"),
+        # a reference drawing must cover at least this share of its page (not a fragment)
+        min_reference_area=float(env("EDITOR_MIN_REFERENCE_AREA", "0.02")),
     )

@@ -254,17 +254,28 @@ async def critic_pass(generation_id: str) -> dict:
 
 
 def contradictions_to_queue(generation_id: str, min_conf: float = 0.4) -> dict:
-    """Step 14: contradiction candidates -> NEEDS_REVIEW in the editor queue."""
-    n = 0
+    """Step 14: contradiction candidates -> NEEDS_REVIEW in the editor queue. Several
+    candidates of the same kind on the same pages are ONE question for the editor (seen:
+    three wordings of one text-visual finding became three queue items)."""
+    n = grouped = 0
     with db.tx() as c:
-        for x in c.execute("SELECT id, kind, description, pages, confidence FROM contradiction WHERE"
-                           " generation_id=%s AND status='CANDIDATE' AND confidence >= %s",
-                           (generation_id, min_conf)).fetchall():
-            ledger.queue_review(c, generation_id, contradiction_id=str(x["id"]),
-                                priority=1 if x["confidence"] >= 0.75 else 2,
-                                reason=f"{x['kind']} aday çelişki (s{x['pages']}): {x['description']}")
+        rows = c.execute("SELECT id, kind, description, pages, confidence FROM contradiction WHERE"
+                         " generation_id=%s AND status='CANDIDATE' AND confidence >= %s ORDER BY"
+                         " confidence DESC", (generation_id, min_conf)).fetchall()
+        groups: dict[tuple, list] = {}
+        for x in rows:
+            groups.setdefault((x["kind"], tuple(sorted(x["pages"]))), []).append(x)
+        for (kind, pages), xs in groups.items():
+            lead = xs[0]                                    # the surest wording leads
+            more = f" (+{len(xs) - 1} benzer kayıt)" if len(xs) > 1 else ""
+            ledger.queue_review(c, generation_id, contradiction_id=str(lead["id"]),
+                                priority=1 if lead["confidence"] >= 0.75 else 2,
+                                reason=f"{kind} aday çelişki (s{list(pages)}){more}: {lead['description']}")
+            for x in xs[1:]:
+                c.execute("UPDATE contradiction SET status='NEEDS_REVIEW' WHERE id=%s", (x["id"],))
+                grouped += 1
             n += 1
-    return {"queued": n}
+    return {"queued": n, "grouped_duplicates": grouped}
 
 
 # ----------------------------------------------------------- regression

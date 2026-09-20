@@ -206,6 +206,13 @@ async def report(generation_id: str) -> dict:
 
 
 @activity.defn
+async def book_metadata(generation_id: str) -> dict:
+    """Bibliographic claims (ISBN, author, age range...) while the generation is still open."""
+    meta = await catalog.extract_metadata(generation_id)
+    return {"fields": sorted(meta)}
+
+
+@activity.defn
 async def build_card(generation_id: str) -> dict:
     return await catalog.build_card(generation_id)
 
@@ -234,7 +241,7 @@ async def release_models(aliases_: list[str]) -> dict:
     return r.json()
 
 
-ALL = [visual_identity, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+ALL = [book_metadata, visual_identity, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

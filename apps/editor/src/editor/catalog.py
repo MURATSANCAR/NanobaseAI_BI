@@ -41,6 +41,12 @@ async def extract_metadata(generation_id: str) -> dict:
                        " kind='METADATA' AND status = ANY(%s)", generation_id, list(OK))
     if have:
         return _metadata_dict(have)
+    sealed = db.one("SELECT sealed_at FROM generation WHERE id=%s", generation_id)
+    if sealed is None or sealed["sealed_at"] is not None:
+        # The regression suite caught this: building a card once wrote METADATA claims into
+        # an already sealed generation. A sealed generation is read-only; its card simply
+        # has no bibliographic block until the book is analysed again.
+        return {}
     pages = [r["page_no"] for r in db.all_rows(
         "SELECT page_no FROM page_role WHERE generation_id=%s AND role='FRONT_MATTER' ORDER BY 1",
         generation_id)]

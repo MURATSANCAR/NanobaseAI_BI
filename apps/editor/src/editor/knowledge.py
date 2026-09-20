@@ -339,11 +339,28 @@ async def resolve_character_identity(generation_id: str) -> dict:
                                                  max_tokens=16000, temperature=0.0, thinking=True)
     by_id = {str(m["id"]): m for m in ms}
     conflicted = {back[x["mention_id"]] for x in out["conflicts"] if x["mention_id"] in back}
+    # A name belongs to ONE character. If the grouping puts mentions of the same name into
+    # different characters, the name goes where most of its mentions are and the stray
+    # mentions follow it (seen: one "Robobi" mention grouped with the professor made
+    # "Robobi" his alias).
+    votes: dict[str, dict[int, int]] = {}
+    for gi, ch in enumerate(out["characters"]):
+        for x in ch["mention_ids"]:
+            if x in back:
+                n = ledger.norm(by_id[back[x]]["surface_name"])
+                votes.setdefault(n, {}).setdefault(gi, 0)
+                votes[n][gi] += 1
+    owner = {n: max(v, key=lambda gi: (v[gi], -gi)) for n, v in votes.items()}
+    groups: dict[int, list[str]] = {gi: [] for gi in range(len(out["characters"]))}
+    for gi, ch in enumerate(out["characters"]):
+        for x in ch["mention_ids"]:
+            if x in back:
+                groups[owner[ledger.norm(by_id[back[x]]["surface_name"])]].append(back[x])
     claimed: set[str] = set()
     made = []
     with db.tx() as c:
-        for ch in out["characters"]:
-            mids = [back[x] for x in ch["mention_ids"] if x in back and back[x] not in claimed]
+        for gi, ch in enumerate(out["characters"]):
+            mids = [m for m in dict.fromkeys(groups[gi]) if m not in claimed]
             if not mids:
                 continue
             claimed.update(mids)
@@ -374,9 +391,10 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status})
             row = c.execute(
                 "INSERT INTO character(generation_id, canonical_name, aliases, description,"
-                " identity_status, identity_confidence, first_page, claim_id) VALUES"
-                " (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-                (generation_id, canonical, aliases, ch["description"], status, conf, pages[0], cid)).fetchone()
+                " identity_status, identity_confidence, first_page, claim_id, kind) VALUES"
+                " (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+                (generation_id, canonical, aliases, ch["description"], status, conf, pages[0], cid,
+                 ch.get("kind") or "UNKNOWN")).fetchone()
             for m in mids:
                 sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted
                 c.execute("UPDATE character_mention SET character_id=%s, resolution=%s WHERE id=%s",
