@@ -237,7 +237,53 @@ def _negated_light_verb(tok: str) -> bool:
     return bool(base) and (is_light_verb(base) or base in {"et", "ed", "edil", "ol", "olun", "yap", "yapil", "ver", "veril", "al", "alin", "kil", "kilin", "bulun", "gel", "gecir"})
 
 
+#: "ilk kez", "bugüne kadar": a first occurrence or a running total has no year of its own.
+_EVER_CUE = re.compile(r"\b(ilk\s+(?:kez|defa|kere|sefer)|(?:bugune|simdiye|bu\s*gune)\s+(?:kadar\w*|dek|degin))\b")
+
+
+def _last_n_records(tokens: list[str]) -> Optional[str]:
+    """"son üç baskı", "son 5 fatura": the newest N *records* of something — an ordering over its whole
+    history, not a span of time. "son üç ay" is a span and is the temporal parser's; "son çeyrek" has no
+    count. Returns the phrase, or None."""
+    folded = [fold(t) for t in tokens]
+    for k, tok in enumerate(folded):
+        if tok != "son":
+            continue
+        j = k + 1
+        while j < len(folded) and cardinal(folded[j]) is not None and not re.fullmatch(r"(19|20)\d\d", folded[j]):
+            j += 1
+        if j == k + 1 or j >= len(folded):
+            continue
+        noun = folded[j]
+        if stem(noun) in _TIME_WORDS or short_root(noun) in _TIME_WORDS:
+            continue
+        return " ".join(tokens[k:j + 1])
+    return None
+
+
 class SemanticResolver:
+    def _whole_scope(self, sq: SemanticQuery, cue: str, text: str, today: Optional[date] = None) -> bool:
+        """A question that named no period and cannot be answered from one year's copy reads every copy.
+
+        The scope is not a date condition — nothing is added to `temporal`, so the gate does not look
+        for a filter nobody asked for; it only tells the copy chooser which years to put together, and
+        the existing union (columns by name, one copy per window, copy tag on joins) does the rest.
+        Said in the answer, because "everything" is a reading the person did not spell out."""
+        from semantic_layer.runtime import periods
+
+        entities = {s.mapping.entity for s in sq.slots if s.mapping and s.mapping.entity}
+        groups = [self.tables_of.get(e, []) for e in sorted(entities)]
+        span = periods.full_scope(groups, today) or periods.full_scope(list(self.tables_of.values()), today)
+        if span is None:
+            return False
+        last_day = span[1] - timedelta(days=1)
+        note = (f"Dönem söylenmedi; soru yılları aşan bir okuma istediği için ({cue}: '{text}') "
+                f"{span[0].year}–{last_day.year} arasındaki tüm kayıtlar okundu.")
+        sq.period_scope = {"mode": "ALL_COPIES", "start": span[0].isoformat(), "end": span[1].isoformat(),
+                           "cue": cue, "text": text, "note": note}
+        sq.explanation.append(f"dönem söylenmedi, {cue} ('{text}') → tüm kapsam {span[0].isoformat()} – {span[1].isoformat()}, bütün yıl kopyaları okunur")
+        return True
+
     def _all_years(self, sq: SemanticQuery, today: date) -> "Optional[TemporalSlot]":
         """"Yıllara göre ciro" bir yılı değil, yılları sorar.
 
@@ -797,7 +843,23 @@ class SemanticResolver:
                                            and not (s_.mapping.extra or {}).get("undated")   # a cost on a card, not an event
                                            for s_ in placed)
         default_applied = False
-        if not sq.temporal and self.default_temporal is not None and not undated:
+        # "son üç baskı", "ilk kez", "bugüne kadar": with no period said, these order or accumulate over
+        # the whole history. This year's default turned "the last three printings" into "this year's
+        # printings" — a different question, answered without saying so.
+        ever = _EVER_CUE.search(fold(question))
+        if ever and sq.temporal and all(t.text and fold(t.text) in ever.group(1) for t in sq.temporal):
+            # "bugüne kadar" is not "bugün": the word inside the cue was read as a one-day period.
+            sq.explanation.append(f"'{ever.group(1)}' bir gün değil, bugüne kadarki bütün kayıtlar: '{sq.temporal[0].text}' dönem olarak okunmadı")
+            sq.temporal = []
+        if not sq.temporal:
+            last_n = _last_n_records(list(qf.tokens))
+            if last_n:
+                self._whole_scope(sq, "son N kayıt sıralaması", last_n, today)
+            elif ever:
+                self._whole_scope(sq, "ilk/bugüne kadar", ever.group(1), today)
+        if sq.period_scope:
+            pass
+        elif not sq.temporal and self.default_temporal is not None and not undated:
             fallback = self.default_temporal() if callable(self.default_temporal) else self.default_temporal
             if fallback is not None:
                 sq.temporal = [fallback]
@@ -1327,6 +1389,10 @@ class SemanticResolver:
                 if len(sq.temporal) == 1 and (sq.temporal[0].params or {}).get("default"):
                     sq.temporal = []             # "never" is not "not this year"
                     sq.explanation.append("yokluk sorusu: varsayılan dönem uygulanmadı, tüm kayıtlara bakılır")
+                if not sq.temporal and not sq.period_scope and "hic" in {fold(t_) for t_ in qf.tokens}:
+                    # "hiç … vermemiş": absolute. Said to look at every record, it still read the newest
+                    # copy alone — four customers instead of the 1.8 thousand the whole history holds.
+                    self._whole_scope(sq, "mutlak yokluk", f"hiç … {tok}")
                 sq.explanation.append(f"'{absent.term} {tok}': {absent.mapping.entity} kaydı hiç olmayan kayıtlar isteniyor (NOT EXISTS)")
             elif is_negative(tok) and (root := verb_root(tok)) and (named := self._metric_keys_for_root(root, index)):
                 sq.shape = "ABSENCE"

@@ -429,9 +429,12 @@ class Runtime:
         """The span a question asked for, or None when it named no period at all."""
         if q is None:
             return None
-        start = min((t.start for t in getattr(q, "temporal", []) if t.start), default=None)
-        end = max((t.end for t in getattr(q, "temporal", []) if t.end), default=None)
-        return (start, end) if start and end else None
+        from semantic_layer.runtime import periods
+        start, end = periods.asked_bounds(q)
+        if not (start and end):
+            return None
+        # the third element tells the physical rewrite this is the whole scope, not a dated period
+        return (start, end, "whole") if periods.whole_scope(q) else (start, end)
 
     def _conn_for(self, sql: str):
         if self.crm_connector is None or "timas_mscrm" not in (sql or "").lower():
@@ -751,6 +754,8 @@ class Runtime:
             note = " ".join(e for e in sq.explanation if "kısmen gözleniyor" in e or "gözlenen veri kapsamı dışında" in e or "Karşılaştırmada" in e)
             if sq.absence_contract:
                 note += " " + sq.absence_contract.get("scope_note", "")
+            if sq.period_scope and not sq.temporal:
+                note += " " + str(sq.period_scope.get("note") or "")
             if note:
                 note = " " + note
         if result.get('truncated'):

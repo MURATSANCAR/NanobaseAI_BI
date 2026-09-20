@@ -41,7 +41,89 @@ def spans(profiles: list[SchemaProfile]) -> Optional[tuple[date, date]]:
     return (min(w[0] for w in ws), max(w[1] for w in ws)) if ws else None
 
 
-def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end: Optional[date] = None) -> list[SchemaProfile]:
+def scope_floor() -> Optional[date]:
+    """The first day this deployment answers for, when it says so (SEMANTIC_FULL_SCOPE_FROM=2021-01-01).
+
+    A catalog may hold older copies than the business reads ("everything" is 2021–2026 here while the
+    scan also found 2015–2020). That is a statement about the deployment, not about a question."""
+    import os
+    raw = os.environ.get("SEMANTIC_FULL_SCOPE_FROM", "").strip()
+    try:
+        return date.fromisoformat(raw[:10]) if raw else None
+    except ValueError:
+        return None
+
+
+def full_scope(groups: list[list[SchemaProfile]], today: Optional[date] = None) -> Optional[tuple[date, date]]:
+    """[start, end) of everything the partitioned entities in `groups` hold — for a question that named
+    no period and cannot be answered from one copy. Only entities kept in more than one copy count: a
+    single table is read whole whatever the period. The end is clipped to the end of the current year
+    so a forward-dated row does not stretch the claim; the start to the deployment's floor."""
+    found = [s for g in groups if len(g) > 1 and (s := spans(g))]
+    if not found:
+        return None
+    today = today or date.today()
+    start = min(s[0] for s in found)
+    end = min(max(s[1] for s in found) + timedelta(days=1), date(today.year + 1, 1, 1))
+    floor = scope_floor()
+    if floor and floor > start:
+        start = floor
+    return (start, end) if start < end else None
+
+
+def whole_scope(q) -> bool:
+    """Did this question get the whole scope instead of a period of its own?"""
+    return bool(q is not None and getattr(q, "period_scope", None) and not (getattr(q, "temporal", None) or []))
+
+
+def asked_bounds(q) -> tuple[Optional[date], Optional[date]]:
+    """(first, last) the copies of an entity are chosen by: the question's own period, else the whole
+    scope a period-less, year-crossing question was given (`period_scope`). One place, so the prompt,
+    the deterministic compiler and the physical rewrite cannot disagree about which copies are read."""
+    if q is None:
+        return None, None
+    temporal = getattr(q, "temporal", None) or []
+    if whole_scope(q):
+        scope = q.period_scope
+        try:
+            return date.fromisoformat(str(scope["start"])[:10]), date.fromisoformat(str(scope["end"])[:10])
+        except (KeyError, ValueError):
+            return None, None
+    first = min((t.start for t in temporal if t.start), default=None)
+    last = max((t.end for t in temporal if t.end), default=None)
+    return first, last
+
+
+def declared_firms(profiles, start: date, end: date) -> set[str]:
+    """The source copies (placeholder n0) a person declared to hold some of [start, end). A measured
+    window cannot say this for a card table — customers begin on the same old day in every copy and
+    overlap everything — while the declaration is exact: the 2020 copy ends where 2021 begins."""
+    out: set[str] = set()
+    for p in profiles:
+        d = getattr(p, "declared_window", None)
+        firm = str((p.context or {}).get("n0") or "")
+        if not d or not firm:
+            continue
+        try:
+            a, b = date.fromisoformat(str(d[0])[:10]), date.fromisoformat(str(d[1])[:10])
+        except ValueError:
+            continue
+        if a < end and start < b:
+            out.add(firm)
+    return out
+
+
+def tables_for_question(available: list[SchemaProfile], q, groups) -> list[SchemaProfile]:
+    """`tables_for` under the question's own period, or under its whole scope (see `asked_bounds`)."""
+    first, last = asked_bounds(q)
+    if whole_scope(q) and first and last:
+        return tables_for(available, first, last, whole=True,
+                          firms=declared_firms((p for g in groups for p in g), first, last))
+    return tables_for(available, first, last)
+
+
+def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end: Optional[date] = None,
+               *, whole: bool = False, firms: Optional[set[str]] = None) -> list[SchemaProfile]:
     """The tables a question about [start, end) has to read.
 
     With no period asked, the most recent table is used rather than all of them: "how are sales doing"
@@ -84,6 +166,17 @@ def tables_for(profiles: list[SchemaProfile], start: Optional[date] = None, end:
         best = max(rank(p, w) for p, w in known)
         return [p for p, w in known if rank(p, w) == best]
     hit = [p for p, w in dated if w and w[0] < end and start <= w[1]]
+    if whole:
+        # The whole scope is read with no date filter behind it, so a copy that merely spills into
+        # the span (the 2020 firm with a handful of rows dated January 2021) would bring its whole
+        # year along. A copy belongs to the scope when it begins inside it; if none does — a card
+        # table that begins on the same old day in every copy — the overlap rule stands.
+        inside = [p for p, w in dated if w and start <= w[0] < end]
+        if inside:
+            hit = inside
+        declared = [p for p in hit if str((p.context or {}).get("n0") or "") in (firms or set())]
+        if declared:
+            hit = declared
     # A table whose period was never measured cannot be ruled out — but it can be set aside once a
     # measured table covers what was asked. Carried along regardless, an unmeasured 2026 table joined
     # every question about 2015, and the total came back as three years added together with nothing
@@ -178,4 +271,4 @@ def describe(chosen: list[SchemaProfile], available: list[SchemaProfile]) -> str
     return "; ".join(parts)
 
 
-__all__ = ["tables_for", "spans", "describe", "duplicates_of"]
+__all__ = ["tables_for", "spans", "describe", "duplicates_of", "full_scope", "asked_bounds", "whole_scope", "scope_floor", "declared_firms", "tables_for_question"]

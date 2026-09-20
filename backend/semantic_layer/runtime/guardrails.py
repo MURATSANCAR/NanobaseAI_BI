@@ -231,7 +231,11 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 start, end = None, None
             picked = periods.tables_for(same, start, end)
             return picked or [prof]
-        picked = periods.tables_for(same, period[0], period[1])
+        # A third element marks the whole scope of a period-less, year-crossing question (see
+        # `periods.whole_scope`): no date filter stands behind it, so copies are chosen strictly.
+        whole = len(period) > 2
+        picked = periods.tables_for(same, period[0], period[1], whole=whole,
+                                    firms=periods.declared_firms(profiles, period[0], period[1]) if whole else None)
         return picked or [prof]
     try:
         tree = sqlglot.parse_one(sql, read=dialect)
@@ -319,6 +323,17 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         picked = [x for x in picked if x is not None]
         return picked
 
+    def carries_period(p: SchemaProfile) -> bool:
+        """Does each copy of this table hold its own period? A pattern with a period placeholder does.
+        So does one without it whose copies each begin in a different year (production orders: 2021 in
+        one firm, 2026 in the next) — read as a card, "the last three printings" were the newest
+        copy's alone. A card copied whole into every firm begins on the same old day in all of them."""
+        if "{n1}" in (p.table_pattern or ""):
+            return True
+        same = [x for x in tables_of.get(p.entity, []) if x.table_pattern == p.table_pattern and x.time_window and x.time_window[0]]
+        years = [str(x.time_window[0])[:4] for x in same]
+        return len(same) > 1 and len(set(years)) == len(years)
+
     def _beside_a_period_table(node: exp.Table) -> bool:
         """Is this table joined, in its own SELECT's FROM/JOIN list, to something that carries a period —
         a period table, or a derived table / CTE (which may hold one)? Alone, or beside other card tables
@@ -340,7 +355,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             if not t.name or t.name.upper() in cte_names:
                 return True
             p2 = resolve_prof(t)
-            if p2 is not None and "{n1}" in (p2.table_pattern or ""):
+            if p2 is not None and carries_period(p2):
                 return True
         return False
 
@@ -351,7 +366,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
         if not t.name or t.name.upper() in cte_names:
             continue
         p0 = resolve_prof(t)
-        if p0 is not None and "{n0}" in (p0.table_pattern or "") and "{n1}" not in (p0.table_pattern or "") and not _beside_a_period_table(t):
+        if p0 is not None and "{n0}" in (p0.table_pattern or "") and not carries_period(p0) and not _beside_a_period_table(t):
             lone_cards.add((t.alias_or_name or "").upper())
 
     def tx(node: exp.Expression) -> exp.Expression:
@@ -363,7 +378,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
             if prof is None:
                 return node
             lockstep = [] if wrote_physical(node) else in_step(prof)
-            if len(lockstep) > 1 and "{n1}" not in (prof.table_pattern or "") and (node.alias_or_name or "").upper() in lone_cards:
+            if len(lockstep) > 1 and not carries_period(prof) and (node.alias_or_name or "").upper() in lone_cards:
                 # A card table (customers, items: one copy per firm, no period of its own) standing
                 # alone in its SELECT, with the dated tables only inside correlated subqueries — "bought
                 # last year, nothing this year". Read from every firm in step it returned each customer

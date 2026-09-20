@@ -427,6 +427,10 @@ class SemanticQuery:
     data_coverage: list[dict[str, Any]] = field(default_factory=list)
     temporal_binding: Optional[dict[str, Any]] = None
     absence_contract: Optional[dict[str, Any]] = None
+    # Soru dönem söylemedi ama doğası gereği yıl aşıyor ("son üç baskı", "hiç sipariş vermemiş",
+    # "ilk kez", "bugüne kadar"): okunacak aralık bir tarih koşulu DEĞİL, hangi yıl kopyalarının
+    # okunacağıdır. `temporal` boş kalır (kapı tarih filtresi aramaz); kopya seçimi bunu okur.
+    period_scope: Optional[dict[str, Any]] = None
     measure_expressions: list[dict[str, Any]] = field(default_factory=list)
 
     @property
@@ -507,6 +511,7 @@ class SemanticQuery:
             "comparison": dict(self.comparison) if self.comparison else None,
             "dataCoverage": [dict(c) for c in self.data_coverage],
             "temporalBinding": dict(self.temporal_binding) if self.temporal_binding else None,
+            "periodScope": dict(self.period_scope) if self.period_scope else None,
             "absenceContract": {k: v for k, v in self.absence_contract.items() if k != "sql"} if self.absence_contract else None,
             "fullyResolved": self.fully_resolved,
             "state": self.state,

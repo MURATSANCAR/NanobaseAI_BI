@@ -460,9 +460,7 @@ class DeterministicCompiler:
                 return []
             return [min(cands, key=lambda x: (source_rank(x.table_name, is_view=x.row_count is None),
                                               -(x.row_count or 0), x.table_name))]
-        first = min((t.start for t in q.temporal if t.start), default=None)
-        last = max((t.end for t in q.temporal if t.end), default=None)
-        return periods.tables_for(available, first, last) or available[:1]
+        return periods.tables_for_question(available, q, self.tables_of.values()) or available[:1]
 
     def _source(self, entity: str, q: SemanticQuery, needed: set[str], alias: str, *, spread: bool = True,
                 anchor: Optional[dict[str, str]] = None, chosen: Optional[list[SchemaProfile]] = None,
@@ -1497,8 +1495,6 @@ class ExistingCompiler:
 
         A list of entities keeps its order — it is a ranking, and the caller spends its budget down
         that ranking. A set has none, and the profiles' own order stands in."""
-        first = min((t.start for t in q.temporal if t.start), default=None) if q else None
-        last = max((t.end for t in q.temporal if t.end), default=None) if q else None
         out: dict[str, SchemaProfile] = {}
         for entity, available in self.tables_of.items():
             from semantic_layer.runtime.context_scope import select_profiles
@@ -1507,7 +1503,7 @@ class ExistingCompiler:
                 continue
             if entities is not None and entity not in entities:
                 continue
-            wanted = periods.tables_for(available, first, last) or available
+            wanted = periods.tables_for_question(available, q, self.tables_of.values()) or available
             out[entity] = max(wanted, key=lambda p: (p.row_count or 0))
         if isinstance(entities, list):
             return [out[e] for e in entities if e in out]
@@ -1872,8 +1868,6 @@ class ExistingCompiler:
         """
         from semantic_layer.runtime.context_scope import select_profiles
         tables_of = {e: select_profiles(group, q.context_scope) for e, group in self.tables_of.items()}
-        first = min((t.start for t in q.temporal if t.start), default=None)
-        last = max((t.end for t in q.temporal if t.end), default=None)
         if self.period_in_sql:
             # The compiler resolves this now (see physicalize_sql). Handing the model the
             # year-to-table map and asking it to write the UNION was a step where it could pick the
@@ -1893,7 +1887,15 @@ class ExistingCompiler:
                 span = periods.spans(tables_of.get(entity) or [])
                 lines.append(f"- {entity}: {span[0].isoformat()} – {span[1].isoformat()}" if span
                              else f"- {entity}: dönemi ölçülmemiş")
-            return ("Şu tablolar yıllara bölünmüştür; her birinin kapsadığı dönem:\n"
+            whole = ""
+            if periods.whole_scope(q):
+                # The question named no period and cannot be answered from one year's copy. A date
+                # filter written here would undo the whole-scope reading the compiler is about to do.
+                whole = (f"Bu soru dönem söylemiyor ve yılları aşan bir okuma istiyor ({q.period_scope.get('cue')}): "
+                         f"{q.period_scope.get('start')} – {q.period_scope.get('end')} arasındaki bütün yıl kopyaları "
+                         "derleyici tarafından birlikte okunacak. Yıl ya da tarih filtresi YAZMA. Kayıtları yıllar "
+                         "arasında eşlerken kart kodunu/adını kullan (iç referans numarası yıl kopyasına özeldir).\n")
+            return (whole + "Şu tablolar yıllara bölünmüştür; her birinin kapsadığı dönem:\n"
                     + "\n".join(lines) + "\n"
                     "Bu aralıktaki her yıl okunabilir. Listedeki tabloyu olduğu gibi kullan — "
                     "sorunun kapsadığı yılların tabloları derleyici tarafından birleştirilir. "
@@ -1904,7 +1906,7 @@ class ExistingCompiler:
             available = tables_of.get(entity) or []
             if len(available) < 2:
                 continue
-            picked = periods.tables_for(available, first, last)
+            picked = periods.tables_for_question(available, q, tables_of.values())
             chosen = {p.table_name for p in picked}
             # A period this source keeps twice: one copy is read and the other must be named, or the
             # model sees a table it was not allowed to use and no reason for it.
