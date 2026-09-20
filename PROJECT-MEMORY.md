@@ -95,7 +95,7 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 | `scripts/server/deploy-customer-vm.sh` | Müşteri VM'ine (192.168.0.55, `/home/ai/bi-docker`) paket yayını; `systemd-run` ile koşulur, `docker-compose.override.yml/.env/secrets` dışlanır. Küçük değişiklikte yalnız değişen dosya kopyalanır (md5 karşılaştır) |
 | `docs/TIMAS-IS-TANIMLARI.md` | 16 TİMAŞ iş tanımının kararı ve nerede uygulandığı (katalog / bilgi paketi); iş teyidi bekliyor |
 | `configs/semantic/knowledge/logo/knowledge/` | Bilgi paketi: `rules/logo-erp.md` (Kural 9–11: üretim, sevkiyat, tanım), `glossary/logo-timas.md`, metrikler |
-| `docs/analiz` | CRM ayrıntı, Kampüs kişisel ekran ve oda rezervasyon analizleri (2026-09-15) |
+| `docs/analiz` | CRM ayrıntı, Kampüs kişisel ekran ve oda rezervasyon analizleri (2026-09-15); Editoryal Süreç M1–M8 Stitch ekranları → proje eksik listesi (`editoryal-m1-m8-eksikler-2026-09-20.md`; M1–M8 `modules.json`'da kayıtlı, ekranları henüz yok) |
 | `docs/architecture` | Kilitli mimari, tasarım ve plan belgeleri |
 | `docs/audits` | Denetim/inceleme kayıtları |
 | `docs/product` | Ürün belgeleri |

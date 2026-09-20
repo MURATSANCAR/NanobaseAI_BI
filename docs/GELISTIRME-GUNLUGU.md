@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-20 — Editoryal Süreç (M1–M8): Stitch ekranları incelendi, eksik listesi çıkarıldı
+
+Kullanıcı Stitch projesindeki (13426839861607265553) M1–M8 ekranlarının projede çalışır hâle gelmesini ve eksiklerin listesini istedi. Sekiz ekran indirildi ve alan alan döküldü; bizim tema, kabuk, köprü, `apps/editor` ve CRM araştırmasıyla karşılaştırıldı. Kod yazılmadı, sunucuda sorgu koşulmadı.
+
+- **Belge:** `docs/analiz/editoryal-m1-m8-eksikler-2026-09-20.md` (tema eşlemesi, eksik ekranlar, eksik altyapı, hazır olanlar, sıra).
+- **Tema:** Stitch ekranları Space/Hanken Grotesk, yanık turuncu `#a33900`, düz krem yüzey, 2–12 px köşe, Material Symbols ve kendi yan menüsüyle gelmiş; bizde Plus Jakarta Sans, coral/violet, cam paneller, 24 px köşe, lucide, `Shell`. Ekranlar yalnız masaüstü; sahte model rozetleri ve birbirini tutmayan örnek veri taşınmayacak.
+- **Bulgu:** `modules.json`'da M1–M8 zaten kayıtlı, `ModulesMenu.LIVE`'da yok. Köprüde dosya yükleme, CRM'e yazma yolu ve rol modeli yok. CRM'de çevirmen/çizer/freelancer varlığı yok; hakediş 0 satır, telif ödemesi yalnız 2014; iş planı modülü ölü. En hazır modül M6 (sözleşme 14.766 satır, kurallar C4–C22), sonra M1 (kurul toplantısı 499) ve M7.
+- **Açık karar:** editoryal tabloların ve uçların nerede duracağı (BI köprüsü mü, `apps/editor` mü) ve model işlerinde hangi modelin kullanılacağı; "editör BI'dan hiçbir şey kullanmaz" kuralı ile tek frontend + CRM verisinin köprüde olması çakışıyor.
 ## 2026-09-20 18:10 — Editör: nesil 9 (kimlik 29/29 doğru), süreklilik bulguları da oylanır
 
 **Nesil 9 (maske düzeltmesi + tutarlılık kuralı, tam koşu, regresyon geçti):** 35 figür kırpımı gözle denetlendi: 29 ad → 29 doğru, 0 yanlış; 6 belirsizin 3'ü zaten figür değil (bölüm başlığı süsü, örtülü nesne, kırpım parçası), gerçek eksik 3 (s.3 Robobi — 2 sayfada çizili, referansı yok; s.39 Bilge ve Can). Tarama 7 figürde yanlış ad vermişti (Defne↔Bilge), kırpım eşleştirme hepsini düzeltti; s.23 profesör hatası kapandı, referanslı karakter 3 → 4. Nesil 7→8→9: ad 21→24→29, yanlış ?→1→0, belirsiz 12→9→6.
