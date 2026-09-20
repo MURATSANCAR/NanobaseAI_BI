@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
@@ -43,7 +44,14 @@ export function ModuleFrame({
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
             <header className="px-1">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">{code} · Editoryal Süreç</div>
+              {route !== '/editoryal' ? (
+                <Link to="/editoryal" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
+                  <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
+                  {code} · Editoryal masa
+                </Link>
+              ) : (
+                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">{code} · Editoryal Süreç</div>
+              )}
               <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
               <p className="mt-1 max-w-[70ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>
             </header>

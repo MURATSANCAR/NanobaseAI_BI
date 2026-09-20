@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 01:30 — Editoryal masa ana ekranı (`/editoryal`)
+
+Kullanıcı isteği: girişten sonraki Kampüs ekranına benzeyen ama editöre özel bir ana ekran — bilgiler orada olsun, modüllere oradan geçilsin.
+
+- **Ekran** `src/canvas/editorial/EditorialHome.tsx`, rota `/editoryal`, rayda "Editoryal masa" girişi. Her modül ekranının başlığı artık buraya dönen bir bağlantı (`kit.tsx` → `ModuleFrame`).
+- **İçerik (hepsi modüllerin kendi uçlarından, uydurma kart yok):** dört gösterge (yürürlükteki sözleşme ve yaklaşan bitiş, bu yılki kurul kararı ve kabul oranı, editör sayısı, masadaki eser dosyası); sekiz modül kartı, her biri kendi canlı rakamıyla; süresi yaklaşan ilk beş sözleşme; kişinin masasındaki eserler (bölüm ve imza durumu); en altta **"Bu masada olmayanlar"** — başvuru kuyruğu, redaksiyon takvimi, telif hakedişi ve yazma işlemlerinin neden olmadığı tek tek yazılı.
+- **Doğrulama:** sayfa 200; ekranın okuduğu altı ucun hepsi 200 (0,2–4,1 sn, en yavaşı sözleşme özeti). Canlı rakamlar: 9.014 yürürlükte sözleşme (80'i 60 günde bitiyor), 2026'da 99 kurul kararı / 12 oturum, 33 editör, 2.231 yazar · 478 çevirmen · 515 çizer, masada 0 eser dosyası (doğrulama kayıtları silinmişti).
+
 ## 2026-09-21 00:40 — Editoryal Süreç tamamlandı: M3 Redaksiyon ve M5 Son Okuma (kendi kayıtlarımız)
 
 Sekiz modülün kalan ikisi. CRM'de metin, öneri, prova ya da kontrol kaydı olmadığı için bu ikisi **kendi tablolarımızla** çalışır: `backend/semantic_bridge/editorial_desk.py`, `semantic_editorial_*` (eser, dosya sürümleri, bölüm, öneri, kontrol, imza). Dosyalar diskte `EDITORIAL_DIR` (vars. `/data/nanobaseai/bi/var/editorial`).

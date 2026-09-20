@@ -13,6 +13,7 @@ const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
 const EditorialBoardScreen = lazy(() => import('@/canvas/editorial/BoardScreen'));
+const EditorialHome = lazy(() => import('@/canvas/editorial/EditorialHome'));
 const RedactionScreen = lazy(() => import('@/canvas/editorial/RedactionScreen'));
 const ProofScreen = lazy(() => import('@/canvas/editorial/ProofScreen'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="cevirmenler" element={<TranslatorsScreen />} />
             <Route path="yazarlar" element={<AuthorsScreen />} />
             <Route path="cizer-freelancer" element={<FreelancersScreen />} />
+            <Route path="editoryal" element={<EditorialHome />} />
             <Route path="redaksiyon" element={<RedactionScreen />} />
             <Route path="son-okuma" element={<ProofScreen />} />
             <Route path="telif-sozlesme" element={<ContractsScreen />} />
