@@ -277,3 +277,132 @@ def _facet(res: dict[str, Any], column: str) -> list[dict[str, Any]]:
 
 def _timing(res: dict[str, Any]) -> dict[str, Any]:
     return {"dbMs": res.get("dbMs"), "cached": bool(res.get("cached")), "computedAt": res.get("computedAt")}
+
+
+# ============================================================================== M1 Yayın Kurulu
+# Kurul kararı CRM'de `new_yayinkurulutoplantilariBase` satırıdır: bir toplantı tarihinde bir proje için
+# verilen karar, notu ve önerileri. Proje `new_YaynKuruluToplantlarId` ile bağlanır (adı yanıltıcı; 499
+# kaydın 491'i `new_projeBase` ile eşleşir). Kurul üyelerinin görüşü `new_projegrBase`
+# (`new_kitapprojesiid` → proje, yazan `OwnerId`). 2026-09-20'de ölçüldü: başvuru tablosu
+# (`new_dosyabasvuruBase`, 19 satır, son kayıt 2024) kullanılmıyor; projedeki kurul tarihi alanları boş.
+
+def _board_where(p: str, *, q: str = "", year: Optional[int] = None, decision: Optional[int] = None) -> str:
+    parts = ["t.statecode = 0"]
+    if year is not None:
+        parts.append(f"YEAR(t.new_toplantitarihi) = {int(year)}")
+    if decision is not None:
+        parts.append(f"t.statuscode = {int(decision)}")
+    if q.strip():
+        k = _like(q)
+        parts.append(f"(p.new_name LIKE N'%{k}%' OR t.new_toplantikararnotu LIKE N'%{k}%' OR u.FullName LIKE N'%{k}%')")
+    return " AND ".join(parts)
+
+
+def _board_from(p: str) -> str:
+    return (
+        f" FROM {p}new_yayinkurulutoplantilariBase t"
+        f" LEFT JOIN {p}new_projeBase p ON p.new_projeId = t.new_YaynKuruluToplantlarId"
+        f" LEFT JOIN {p}SystemUserBase u ON u.SystemUserId = t.new_Editoru"
+    )
+
+
+def board_decisions_sql(schema: str) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT YEAR(t.new_toplantitarihi) AS yil, t.statuscode, CAST(t.statuscode AS int) AS kod, COUNT(*) AS n"
+        f" FROM {p}new_yayinkurulutoplantilariBase t WHERE t.statecode = 0 AND t.new_toplantitarihi IS NOT NULL"
+        " GROUP BY YEAR(t.new_toplantitarihi), t.statuscode ORDER BY YEAR(t.new_toplantitarihi) DESC"
+    )
+
+
+def board_sessions_sql(schema: str) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT YEAR(t.new_toplantitarihi) AS yil, COUNT(DISTINCT CAST(t.new_toplantitarihi AS date)) AS oturum,"
+        " MAX(t.new_toplantitarihi) AS son"
+        f" FROM {p}new_yayinkurulutoplantilariBase t WHERE t.statecode = 0 AND t.new_toplantitarihi IS NOT NULL"
+        " GROUP BY YEAR(t.new_toplantitarihi) ORDER BY YEAR(t.new_toplantitarihi) DESC"
+    )
+
+
+def board_count_sql(schema: str, **flt: Any) -> str:
+    p = _prefix(schema)
+    return f"SELECT COUNT(*) AS n{_board_from(p)} WHERE {_board_where(p, **flt)}"
+
+
+def board_list_sql(schema: str, page: int, **flt: Any) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT t.new_yayinkurulutoplantilariId, t.new_toplantitarihi, t.statuscode, t.new_toplantikararnotu,"
+        " t.new_onerilenteliforani, t.new_avansbedeli, t.new_Yaynkurulubaskiadedi, t.new_onerilenyayintarihi,"
+        " p.new_projeId, p.new_name AS proje, u.FullName AS editor"
+        f"{_board_from(p)} WHERE {_board_where(p, **flt)}"
+        " ORDER BY t.new_toplantitarihi DESC, p.new_name, t.new_yayinkurulutoplantilariId"
+        f" OFFSET {max(0, int(page)) * PAGE_SIZE} ROWS FETCH NEXT {PAGE_SIZE} ROWS ONLY"
+    )
+
+
+def opinions_sql(schema: str, project_ids: list[str]) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT g.new_kitapprojesiid, g.new_GenelKanaat, g.new_SatTahmini, g.new_lkBaskAdedinerisi, g.new_Fiyatnerisi,"
+        " g.new_BaskAynerisi, g.new_ProjeHakkndaDierGrler, g.new_simnerisi, g.CreatedOn, w.FullName AS yazan"
+        f" FROM {p}new_projegrBase g LEFT JOIN {p}SystemUserBase w ON w.SystemUserId = g.OwnerId"
+        f" WHERE g.statecode = 0 AND g.new_kitapprojesiid IN ({_in(project_ids)}) ORDER BY g.CreatedOn"
+    )
+
+
+def board_summary(schema: str, run: Callable[[str], dict[str, Any]]) -> dict[str, Any]:
+    res = run(board_decisions_sql(schema))
+    years: dict[int, dict[str, Any]] = {}
+    for r in res.get("records") or []:
+        y = int(_n(r.get("yil")) or 0)
+        row = years.setdefault(y, {"year": y, "total": 0, "sessions": 0, "last": None, "decisions": []})
+        n = int(_n(r.get("n")) or 0)
+        row["total"] += n
+        row["decisions"].append({"code": int(_n(r.get("kod")) or 0), "label": _s(r.get("statuscode")), "count": n})
+    for r in run(board_sessions_sql(schema)).get("records") or []:
+        row = years.get(int(_n(r.get("yil")) or 0))
+        if row is not None:
+            row["sessions"] = int(_n(r.get("oturum")) or 0)
+            row["last"] = _date(r.get("son"))
+    for row in years.values():
+        row["decisions"].sort(key=lambda d: -d["count"])
+    return {"years": sorted(years.values(), key=lambda y: -y["year"]), "db": _timing(res)}
+
+
+def board_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, *, with_opinions: bool,
+               **flt: Any) -> dict[str, Any]:
+    total = int(_n((run(board_count_sql(schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
+    res = run(board_list_sql(schema, page_no, **flt))
+    items = [{
+        "id": _s(r.get("new_yayinkurulutoplantilariId")),
+        "date": _date(r.get("new_toplantitarihi")),
+        "decision": _s(r.get("statuscode")),
+        "note": _s(r.get("new_toplantikararnotu")),
+        "royalty": _n(r.get("new_onerilenteliforani")) or None,
+        "advance": _n(r.get("new_avansbedeli")) or None,
+        "printRun": _s(r.get("new_Yaynkurulubaskiadedi")),
+        "publishOn": _date(r.get("new_onerilenyayintarihi")),
+        "projectId": _s(r.get("new_projeId")),
+        "project": _s(r.get("proje")),
+        "editor": _s(r.get("editor")),
+        "opinions": [],
+    } for r in res.get("records") or []]
+    by_project: dict[str, list[dict[str, Any]]] = {}
+    for it in items:
+        if it["projectId"]:
+            by_project.setdefault(it["projectId"].lower(), []).append(it)
+    if by_project and with_opinions:
+        ids = sorted({it["projectId"] for it in items if it["projectId"]})
+        for g in run(opinions_sql(schema, ids)).get("records") or []:
+            opinion = {
+                "by": _s(g.get("yazan")), "verdict": _s(g.get("new_GenelKanaat")), "sales": _s(g.get("new_SatTahmini")),
+                "printRun": _s(g.get("new_lkBaskAdedinerisi")), "price": _n(g.get("new_Fiyatnerisi")) or None,
+                "month": _s(g.get("new_BaskAynerisi")), "text": _s(g.get("new_ProjeHakkndaDierGrler")),
+                "titleIdea": _s(g.get("new_simnerisi")), "on": _date(g.get("CreatedOn")),
+            }
+            for it in by_project.get(str(g.get("new_kitapprojesiid") or "").lower(), []):
+                it["opinions"].append(opinion)
+    return {"items": items, "total": total, "page": max(0, int(page_no)), "pageSize": PAGE_SIZE,
+            "opinionsVisible": with_opinions, "db": _timing(res)}

@@ -17,6 +17,7 @@ export const LIVE: Record<string, string> = {
   'catalog-explorer': '/veri-sozlugu',
   review: '/onaylar',
   board: '/panolar',
+  M1: '/yayin-kurulu',
   M6: '/telif-sozlesme',
 };
 

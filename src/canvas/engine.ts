@@ -945,3 +945,38 @@ export const contractsApi = {
       60_000,
     ),
 };
+
+export type BoardOpinion = {
+  by: string | null;
+  verdict: string | null;
+  sales: string | null;
+  printRun: string | null;
+  price: number | null;
+  month: string | null;
+  text: string | null;
+  titleIdea: string | null;
+  on: string | null;
+};
+export type BoardDecision = {
+  id: string;
+  date: string | null;
+  decision: string | null;
+  note: string | null;
+  royalty: number | null;
+  advance: number | null;
+  printRun: string | null;
+  publishOn: string | null;
+  projectId: string | null;
+  project: string | null;
+  editor: string | null;
+  opinions: BoardOpinion[];
+};
+export type BoardYear = { year: number; total: number; sessions: number; last: string | null; decisions: ContractFacet[] };
+export type BoardPage = { items: BoardDecision[]; total: number; page: number; pageSize: number; opinionsVisible: boolean; db?: DbTiming | null };
+
+/** M1 Yayın Kurulu: CRM'deki kurul kararları ve üye görüşleri (salt okunur). */
+export const boardDecisionsApi = {
+  summary: () => send<{ years: BoardYear[]; db?: DbTiming | null }>('GET', '/api/v1/editorial/board/summary', undefined, 60_000),
+  list: (p: { q?: string; year?: number; decision?: number; page?: number }) =>
+    send<BoardPage>('GET', `/api/v1/editorial/board${qs({ q: p.q, year: p.year, decision: p.decision, page: p.page })}`, undefined, 60_000),
+};

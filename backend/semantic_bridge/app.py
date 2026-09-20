@@ -3411,6 +3411,27 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
 
+    @app.get("/api/v1/editorial/board/summary")
+    def editorial_board_summary(request: Request) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        try:
+            return editorial_mod.board_summary(schema, run)
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
+    @app.get("/api/v1/editorial/board")
+    def editorial_board(request: Request, q: str = "", year: Optional[int] = None, decision: Optional[int] = None,
+                        page: int = 0) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        # Kurul üyelerinin adlı görüşleri rol modeli gelene kadar yalnız yöneticilere açılır.
+        _, _, user, _ = _greetings(request)
+        admin_mod.ensure(rt().store.engine)
+        try:
+            return editorial_mod.board_page(schema, run, page, with_opinions=admin_mod.is_admin(user),
+                                            q=q, year=year, decision=decision)
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 

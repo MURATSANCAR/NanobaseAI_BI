@@ -1,26 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { ChevronLeft, ChevronRight, Loader2, Search } from 'lucide-react';
-import Shell, { ZoomStage } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
-import DbTimingBadge from '../DbTiming';
+import { Search } from 'lucide-react';
 import { ENGINE_ENABLED, contractsApi, type Contract, type ContractSummary } from '../engine';
-import { Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
+import { Note, Pill, errText, field, nf } from '../admin/ui';
 import { dateTime, pct } from '../format';
+import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 
 /** M6 Telif & Sözleşme. Sözleşme portföyü CRM'den okunur; CRM'de kaydı olmayan şey (hakediş,
  *  ödeme takvimi, telif kademesi) ekranda yer almaz. */
 
 const money = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
-
-function useDebounced<T>(value: T, ms: number): T {
-  const [v, setV] = useState(value);
-  useEffect(() => {
-    const id = window.setTimeout(() => setV(value), ms);
-    return () => window.clearTimeout(id);
-  }, [value, ms]);
-  return v;
-}
 
 const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
   const t = (s || '').toLocaleLowerCase('tr');
@@ -91,26 +80,9 @@ function Period({ c }: { c: Contract }) {
   );
 }
 
-function Kpi({ label, value, help, active, onClick }: { label: string; value: string; help: string; active?: boolean; onClick?: () => void }) {
-  const body = (
-    <>
-      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
-      <div className="mt-1 font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight sm:text-[30px]">{value}</div>
-      <div className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">{help}</div>
-    </>
-  );
-  const cls = `glass-panel rounded-2xl p-3.5 text-left shadow-glass-float sm:rounded-3xl sm:p-4 ${active ? 'ring-2 ring-canvas-violet' : ''}`;
-  if (!onClick) return <div className={cls}>{body}</div>;
-  return (
-    <button type="button" onClick={onClick} aria-pressed={active} className={`${cls} transition-transform duration-150 ease-out active:scale-[0.98]`}>
-      {body}
-    </button>
-  );
-}
-
 function Kpis({ s, expiring, onExpiring }: { s: ContractSummary; expiring: boolean; onExpiring: () => void }) {
   return (
-    <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
+    <KpiRow>
       <Kpi label="Yürürlükte" value={nf.format(s.active)} help={`${nf.format(s.total)} etkin kayıt içinde`} />
       <Kpi label="Yenilemede" value={nf.format(s.renewal)} help="Durumu “Aktif - Yenileme”" />
       <Kpi
@@ -121,7 +93,7 @@ function Kpis({ s, expiring, onExpiring }: { s: ContractSummary; expiring: boole
         onClick={onExpiring}
       />
       <Kpi label="Ortalama telif" value={pct(s.avgRoyalty, 1)} help={`Karton kapak oranı dolu ${nf.format(s.avgRoyaltyOver)} yürürlükteki sözleşme`} />
-    </div>
+    </KpiRow>
   );
 }
 
@@ -149,41 +121,22 @@ export default function ContractsScreen() {
   const data = list.data;
   const items = data?.items ?? [];
   const warnDays = s?.warnDays ?? 60;
-  const range = useMemo(() => {
-    if (!data || !data.total) return '';
-    const from = data.page * data.pageSize + 1;
-    return `${nf.format(from)}–${nf.format(from + items.length - 1)} / ${nf.format(data.total)}`;
-  }, [data, items.length]);
-  const lastPage = data ? (data.page + 1) * data.pageSize >= data.total : true;
   const err = errText(summary.error || list.error, 'Sözleşmeler okunamadı.');
 
   return (
-    <Shell
-      head={{
-        tenant: 'Timaş Yayınları',
-        section: 'Editoryal Süreç',
-        crumb: 'M6 Telif & Sözleşme',
-        source: s ? `${nf.format(s.active)} yürürlükte sözleşme` : 'CRM sözleşmeleri',
-        presence: 'Kaynak: CRM',
-      }}
-      rail={railFor('/telif-sozlesme')}
+    <ModuleFrame
+      route="/telif-sozlesme"
+      code="M6"
+      crumb="Telif & Sözleşme"
+      title="Telif ve lisans sözleşmeleri"
+      lead="CRM'deki sözleşme kayıtları: kitap, hak sahibi, telif oranları, süre ve durum. Hakediş ve ödeme takvimi CRM'de tutulmadığı için burada yok."
+      source={s ? `${nf.format(s.active)} yürürlükte sözleşme` : 'CRM sözleşmeleri'}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
-        <ZoomStage>
-          <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
-            <header className="px-1">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">M6 · Editoryal Süreç</div>
-              <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">Telif ve lisans sözleşmeleri</h1>
-              <p className="mt-1 max-w-[70ch] text-[12.5px] leading-snug text-canvas-muted">
-                CRM'deki sözleşme kayıtları: kitap, hak sahibi, telif oranları, süre ve durum. Hakediş ve ödeme takvimi CRM'de tutulmadığı için burada yok.
-              </p>
-            </header>
-
             {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
             {err && <Note tone="err">{err}</Note>}
             {s && <Kpis s={s} expiring={expiring} onExpiring={() => setExpiring((v) => !v)} />}
 
-            <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
+            <Panel>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_200px_180px_170px]">
                 <label className="relative block">
                   <span className="sr-only">Sözleşmelerde ara</span>
@@ -219,23 +172,16 @@ export default function ContractsScreen() {
                 </select>
               </div>
 
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                <div className="flex min-w-0 items-center gap-2 text-[12px] font-semibold text-canvas-muted">
-                  {list.isFetching && <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" />}
-                  <span className="font-mono tabular-nums">{range || (list.isLoading ? 'Okunuyor…' : 'Kayıt yok')}</span>
-                  <DbTimingBadge timing={data?.db ?? null} />
-                </div>
-                <div className="flex gap-1.5">
-                  <button type="button" className={btnGhost} disabled={page === 0 || list.isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))}>
-                    <ChevronLeft aria-hidden className="h-4 w-4" />
-                    Önceki
-                  </button>
-                  <button type="button" className={btnGhost} disabled={lastPage || list.isFetching} onClick={() => setPage((p) => p + 1)}>
-                    Sonraki
-                    <ChevronRight aria-hidden className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+              <Pager
+                page={page}
+                pageSize={data?.pageSize ?? 50}
+                total={data?.total ?? 0}
+                shown={items.length}
+                loading={list.isLoading}
+                fetching={list.isFetching}
+                db={data?.db}
+                onPage={setPage}
+              />
 
               {!list.isLoading && !items.length && !err && (
                 <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan sözleşme yok.</p>
@@ -310,10 +256,7 @@ export default function ContractsScreen() {
                   </table>
                 </div>
               )}
-            </section>
-          </div>
-        </ZoomStage>
-      </main>
-    </Shell>
+            </Panel>
+    </ModuleFrame>
   );
 }
