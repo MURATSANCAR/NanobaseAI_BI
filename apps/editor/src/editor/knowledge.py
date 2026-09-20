@@ -574,8 +574,24 @@ ACTOR_ROLES = {"A": "ACTOR", "B": "INVOLVED", "C": "ABSENT"}
 
 
 def _actor_role(probs: dict[str, float], min_p: float) -> str:
-    best = max(probs, key=probs.get)
-    return ACTOR_ROLES[best] if probs[best] >= min_p else "UNCERTAIN"
+    """Presence first, then who acts — with the mass of "absent" left out of that second
+    question. Measured on a real book (2026-09-20, 693 pairs): the model tells "in this
+    event" from "not in it" almost perfectly, but keeps a fifth to a third of its mass on
+    C even where the character plainly acts ("Bilge, yanında kocaman bir kutu ile kapıya
+    gelir": A 0,60 / B 0,12 / C 0,28). One threshold over the three raw probabilities
+    calls those UNCERTAIN (128 of 693 pairs, 57 of the 146 the extractor itself listed);
+    asking the second question only among A and B leaves 44, and the readings it opens up
+    are right by eye. A character the reading is not sure is even in the event stays
+    UNCERTAIN rather than being sorted by a ratio of two small numbers."""
+    if probs["C"] >= min_p:
+        return "ABSENT"
+    if probs["C"] > 0.5:
+        return "UNCERTAIN"
+    ab = probs["A"] + probs["B"]
+    if ab <= 0:
+        return "UNCERTAIN"
+    acts = probs["A"] / ab
+    return "ACTOR" if acts >= min_p else "INVOLVED" if acts <= 1 - min_p else "UNCERTAIN"
 
 
 async def attribute_event_actors(generation_id: str, write: bool = True) -> dict:

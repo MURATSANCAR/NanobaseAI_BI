@@ -367,9 +367,13 @@ def run_regression_suite(generation_id: str) -> dict:
             "SELECT count(*) n FROM character_mention WHERE generation_id=%s AND via='VISUAL' AND"
             " resolution='RESOLVED' AND coalesce(appearance->>'identified_by','') NOT IN"
             " ('anchor','reference','elimination','consistency')", generation_id) == 0),
+        # presence decides first, then the doer among A and B (see knowledge._actor_role)
         _check("eylemi yapan yalnız eşiği geçen okumayla kesin", one(
-            "SELECT count(*) n FROM event_actor WHERE generation_id=%s AND ((role='ACTOR' AND p_actor < %s)"
-            " OR (role='INVOLVED' AND p_involved < %s) OR (role='ABSENT' AND p_absent < %s))",
+            "SELECT count(*) n FROM event_actor WHERE generation_id=%s AND ("
+            " (role='ABSENT' AND p_absent < %s)"
+            " OR (role<>'ABSENT' AND role<>'UNCERTAIN' AND p_absent > 0.5)"
+            " OR (role='ACTOR' AND p_actor < %s * (p_actor + p_involved))"
+            " OR (role='INVOLVED' AND p_involved < %s * (p_actor + p_involved)))",
             generation_id, *[settings().actor_min_probability - 1e-4] * 3) == 0),   # columns are float4
         _check("sınırına takılan model çağrısı kalmadı (her biri sonradan başarıldı)", one(
             "SELECT count(*) n FROM (SELECT prompt_name, pages, bool_or(ok) AS any_ok FROM model_call"

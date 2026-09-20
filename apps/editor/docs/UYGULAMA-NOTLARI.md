@@ -75,7 +75,13 @@ Aynı model aynı sayfayı iki kez okuyunca figür adları 26 sayfanın 18'inde 
 - Editör kuyruğuna gidenler (`EDITOR_ACTOR_REVIEW=0` ile kapatılır, yalnız kayıt tutulur): belirsiz çifti olan olay; çıkarımın katılımcı saydığı ama bu okumanın olayda görmediği karakter; çıkarımın listesinde olmayıp eylemi yapan okunan karakter; çıkarımın adlandırdığı karakterlerden hiçbirinin yapan okunmadığı olay.
 - Reddedilmiş ve yerine yenisi geçmiş iddiaların olayları okunmaz. Regresyon değişmezi: kesin rol yalnız eşiği geçen okumayla.
 - Hermes aracı: `get_event_actors`.
-- **Eşik ölçülmedi.** 0,7 geçicidir. Güvenmeden önce `python -m editor.measure_actors <nesil>` var olan bir nesilde koşturulur: deftere yazmaz, çiftlerin olasılık dağılımını ve çıkarımla ayrıştığı yerleri JSON'a döker; okumalar kitaba karşı gözle denetlenir. Düşünmesiz tek tokenın, düşünerek verilen oylardan kötü olup olmadığı da bu ölçümle görülür.
+- **Ölçüldü (2026-09-20, nesil `37527916`, "Ekrana Sığmayan Macera", 77 olay × 9 karakter = 693 çift, 668 sn, düşen çağrı 0):**
+  - Varlık ayrımı çok güvenilir: 450 çift ABSENT okundu, 447'si çıkarımın zaten listelemediği karakterler. `p_actor` ortalaması çıkarımın listelediği çiftlerde 0,346, listelemediklerinde 0,011 — 31 kat fark, yani sinyal güçlü ve çıkarımdan bağımsız üretiliyor.
+  - Üç ayrışma çıktı, üçü de haklı: s8 Profesör Bulut (metinde anılıyor, sahnede yok, yok 0,98), s21 Bilge ("Grup, tavan arasına çıkar" — çıkarım Bilge'yi katılımcı yazmış, yok 0,97), s34 Robobi (proje adı olarak geçiyor, yok 0,79). Çıkarımın listelemediği hiçbir karakter "yapan" okunmadı.
+  - Kusur: model, karakter açıkça eylemi yaparken bile kütlesinin beşte biri ile üçte biri arasını C'de bırakıyor ("Bilge, yanında kocaman bir kutu ile kapıya gelir": A 0,60 / B 0,12 / C 0,28). Üç ham olasılık üzerinde tek eşik bunları belirsiz sayıyordu: 693 çiftin 128'i, çıkarımın listelediği 146 çiftin 57'si.
+  - Bu yüzden karar **iki aşamalı**: önce varlık (C eşiği geçerse ABSENT, C > 0,5 ise UNCERTAIN), sonra yapan/yer alan yalnız A ile B arasında. Belirsiz 128 → 44'e, çıkarımın listelediklerinde 57 → 14'e düştü; açılan kararlar gözle doğru (ortak eylemde iki özne de ACTOR: "Defne ve Bilge... gülerler" → 0,69 ve 0,51 ham, oranla 0,86 ve 0,73).
+  - Kalan zayıflık: çoğul özne ("Çocuklar ve Profesör Bulut bahçede domates toplar") üyeleri ACTOR değil INVOLVED okunuyor. Belirsiz değil, yani olayda oldukları doğru; yapan ayrımı bu kalıpta zayıf. İkinci kitapta bakılacak.
+- **Eşik 0,7 tek kitapta ölçüldü.** Güvenmeden önce `python -m editor.measure_actors <nesil>` var olan bir nesilde koşturulur: deftere yazmaz, çiftlerin olasılık dağılımını ve çıkarımla ayrıştığı yerleri JSON'a döker; okumalar kitaba karşı gözle denetlenir. Düşünmesiz tek tokenın, düşünerek verilen oylardan kötü olup olmadığı da bu ölçümle görülür.
 
 ## Ana model koşu başına bir kez açılır (2026-09-20, kod hazır, ölçülmedi)
 

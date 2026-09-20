@@ -36,6 +36,11 @@ async def run(generation_id: str) -> dict:
     t0 = time.time()
     res = await knowledge.attribute_event_actors(generation_id, write=False)
     detail = res.pop("detail")
+    # in measure mode the pairs are not written, so the run itself cannot count these
+    res["extractor_disagreements"] = sum(
+        1 for d in detail if (d["listed_by_extractor"] and d["role"] == "ABSENT")
+        or (not d["listed_by_extractor"] and d["role"] == "ACTOR"))
+    res.pop("sent_to_review", None)
     return {"generation_id": generation_id, "seconds": round(time.time() - t0, 1),
             "min_probability": settings().actor_min_probability, "stats": res,
             "best_probability_bands": _spread(detail),
