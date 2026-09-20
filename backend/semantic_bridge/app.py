@@ -3466,6 +3466,129 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return _editorial_call(editorial_mod.projects_page, schema, run, page, q=q, editor=editor or None,
                                status=status, since_year=since)
 
+    # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
+    # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,
+    # öneriler, kontrol listesi, imzalar. Dosya ham gövde olarak yüklenir (multipart bağımlılığı yok).
+    from starlette.concurrency import run_in_threadpool
+    from semantic_bridge import editorial_desk as desk_mod
+
+    def _desk(request: Request) -> tuple[Any, str, str, bool]:
+        engine, tenant, user, _ = _greetings(request)
+        first = id(engine) not in desk_mod._ready
+        desk_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        if first:
+            desk_mod.reset_stale_reviews(engine)
+        return engine, tenant, user, admin_mod.is_admin(user)
+
+    def _desk_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except desk_mod.DeskError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "EDITORIAL_DESK", "message": str(e)}) from e
+
+    @app.get("/api/v1/editorial/works")
+    def desk_works(request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        return {"items": _desk_call(desk_mod.list_works, engine, tenant, user, is_admin), "user": user}
+
+    @app.post("/api/v1/editorial/works")
+    def desk_work_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _desk(request)
+        out = _desk_call(desk_mod.create_work, engine, tenant, user, body)
+        admin_mod.audit(engine, user, "create", "editorial_work", out["id"], out["title"], None)
+        return out
+
+    @app.patch("/api/v1/editorial/works/{work_id}")
+    def desk_work_update(work_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        _desk_call(desk_mod.update_work, engine, tenant, user, is_admin, work_id, body)
+        admin_mod.audit(engine, user, "update", "editorial_work", work_id, None, {k: body[k] for k in body if k in ("isbn", "members", "title", "author")})
+        return {"ok": True}
+
+    async def _desk_upload(request: Request, work_id: str, filename: str, fn, kind: str) -> dict[str, Any]:
+        engine, tenant, user, is_admin = await run_in_threadpool(_desk, request)
+        length = int(request.headers.get("content-length") or 0)
+        if length > desk_mod.MAX_BYTES:
+            raise HTTPException(status_code=413, detail={"code": "EDITORIAL_DESK", "message": "Dosya 120 MB sınırını aşıyor."})
+        data = await request.body()
+        out = await run_in_threadpool(_desk_call, fn, engine, tenant, user, is_admin, work_id, filename, data)
+        admin_mod.audit(engine, user, "upload", f"editorial_{kind}", work_id, filename, {"version": out.get("version"), "bytes": len(data)})
+        return out
+
+    @app.put("/api/v1/editorial/works/{work_id}/manuscript")
+    async def desk_manuscript(work_id: str, request: Request, filename: str = "") -> dict[str, Any]:
+        return await _desk_upload(request, work_id, filename, desk_mod.upload_manuscript, "manuscript")
+
+    @app.put("/api/v1/editorial/works/{work_id}/proof")
+    async def desk_proof(work_id: str, request: Request, filename: str = "") -> dict[str, Any]:
+        return await _desk_upload(request, work_id, filename, desk_mod.upload_proof, "proof")
+
+    @app.get("/api/v1/editorial/works/{work_id}/chapters")
+    def desk_chapters(work_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        return _desk_call(desk_mod.chapters, engine, tenant, user, is_admin, work_id)
+
+    @app.get("/api/v1/editorial/chapters/{chapter_id}")
+    def desk_chapter(chapter_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        return _desk_call(desk_mod.chapter, engine, tenant, user, is_admin, chapter_id)
+
+    @app.post("/api/v1/editorial/chapters/{chapter_id}/review")
+    def desk_chapter_review(chapter_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        llm = rt().llm_for("editorial", priority=1)
+        chat = (lambda messages: llm.chat(messages, max_tokens=4096, temperature=0.0)) if llm is not None else None
+        _desk_call(desk_mod.start_review, engine, tenant, user, is_admin, chapter_id, chat)
+        admin_mod.audit(engine, user, "run", "editorial_review", chapter_id, None, None)
+        return {"ok": True}
+
+    @app.post("/api/v1/editorial/chapters/{chapter_id}/approval")
+    def desk_chapter_approval(chapter_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        approve = bool(body.get("approve"))
+        _desk_call(desk_mod.set_approval, engine, tenant, user, is_admin, chapter_id, approve)
+        admin_mod.audit(engine, user, "update", "editorial_chapter", chapter_id, None, {"approved": approve})
+        return {"ok": True}
+
+    @app.post("/api/v1/editorial/suggestions/{suggestion_id}/decision")
+    def desk_suggestion_decide(suggestion_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        _desk_call(desk_mod.decide, engine, tenant, user, is_admin, suggestion_id, body)
+        return {"ok": True}
+
+    @app.get("/api/v1/editorial/works/{work_id}/proof")
+    def desk_proof_state(work_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        return _desk_call(desk_mod.proof_state, engine, tenant, user, is_admin, work_id)
+
+    @app.post("/api/v1/editorial/checks/{check_id}")
+    def desk_check(check_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        _desk_call(desk_mod.set_check, engine, tenant, user, is_admin, check_id, body)
+        return {"ok": True}
+
+    @app.put("/api/v1/editorial/works/{work_id}/signers")
+    def desk_signers(work_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        _desk_call(desk_mod.set_signers, engine, tenant, user, is_admin, work_id, list(body.get("signers") or []))
+        admin_mod.audit(engine, user, "update", "editorial_signers", work_id, None, body.get("signers"))
+        return {"ok": True}
+
+    @app.post("/api/v1/editorial/works/{work_id}/sign")
+    def desk_sign(work_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _desk(request)
+        out = _desk_call(desk_mod.sign, engine, tenant, user, is_admin, work_id)
+        admin_mod.audit(engine, user, "sign", "editorial_proof", work_id, None, out)
+        return out
+
+    @app.get("/api/v1/editorial/files/{file_id}")
+    def desk_file(file_id: str, request: Request):
+        from fastapi.responses import FileResponse
+        engine, tenant, user, is_admin = _desk(request)
+        path, name = _desk_call(desk_mod.file_path, engine, tenant, user, is_admin, file_id)
+        return FileResponse(path, filename=name)
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 

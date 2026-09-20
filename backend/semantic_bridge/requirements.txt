@@ -8,6 +8,8 @@ pyyaml>=6.0
 pyodbc>=5.0 ; platform_system == "Linux"
 psycopg2-binary>=2.9.9
 openpyxl>=3.1
+# M5 son okuma: prova PDF'inin baskı öncesi kontrolü (sayfa, ebat, gömülü yazı tipi, renk uzayı).
+pypdf>=5.0
 # Yönetim ekranındaki Active Directory bağlantı denemesi (giriş servisiyle aynı: NTLM).
 ldap3>=2.9
 pycryptodome>=3.19

@@ -166,4 +166,5 @@ Ayrıca hazır: `Shell` + cam tema, oturum (AD), `semantic_audit`, `admin.conf`,
 - Karar: tablolar ve uçlar BI köprüsünde (A seçeneği).
 - M6 okuma ekranı canlıda (test sunucusu): `/telif-sozlesme`. Doğrudan CRM ölçümüyle düzeltilen varsayımlar: telif kademesi tablosu (89 satır, 2018) hiçbir sözleşmeye bağlı değil, yani §4'teki "kademe kurulabilir" geçersiz; taraf tipi 16.442 tarafın 7'sinde dolu; `new_SozlemeninSahibi` yazar değil grup şirketi.
 - M1, M2, M4, M7, M8 okuma ekranları da canlıda (test sunucusu). Düzeltme: §3.1'deki "çevirmen, çizer, freelancer CRM'de yok" tespiti eksikti; `new_eserkatilimBase` kişiyi `new_Katilimsaglayan` → ContactBase ile, rolü `new_katilimcitipiBase` ile tutuyor (36.323 kayıt, canlı).
-- Kalan: M3 ve M5 (CRM'de veri yok; dosya yükleme ve kendi tablolarımız gerekir), yazma tarafı ve roller.
+- **M3 ve M5 de tamamlandı (2026-09-21):** kendi tablolarımızla (`editorial_desk.py`), dosya yükleme + bölümleme + ölçüm + model önerisi + prova ön kontrolü + imza. Böylece §2'deki eksik ekranların büyük bölümü kapandı; §3.2 (dosya) ve §3.3'ün metin/PDF hesaplamaları artık var.
+- Kalan: yazma tarafı (kurul oyu, atama, randevu, freelancer kaydı, hakediş), rol modeli, CRM'e yazma, dış bağlantılar (§3.5).

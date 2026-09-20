@@ -1038,3 +1038,148 @@ export const editorsApi = {
       60_000,
     ),
 };
+
+// -------------------------------------------------------- editoryal masa (M3 redaksiyon, M5 son okuma)
+
+export type DeskFile = {
+  id: string;
+  version: number;
+  filename: string;
+  bytes: number;
+  sha256: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  report: {
+    chapters?: number;
+    words?: number;
+    atesman?: number | null;
+    pages?: number;
+    sizes?: Record<string, number>;
+    fonts?: string[];
+    unembeddedFonts?: string[];
+    images?: number;
+    rgbImages?: number;
+    isbnsInText?: string[];
+    signatures16?: number;
+    fullSignatures?: boolean;
+    trimBoxMissing?: number;
+    versus?: { version: number; pageDelta: number; changedPages: number[] };
+  };
+};
+export type Work = {
+  id: string;
+  title: string;
+  author: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  isbn: string | null;
+  createdBy: string;
+  createdAt: string;
+  members: string[];
+  manuscript: DeskFile | null;
+  proof: DeskFile | null;
+  chapters: { total: number; approved: number; inProgress: number };
+  signatures: { total: number; signed: number };
+};
+export type ChapterRow = {
+  id: string;
+  no: number;
+  title: string;
+  status: 'bekliyor' | 'islemde' | 'onaylandi';
+  reviewState: 'yok' | 'calisiyor' | 'bitti' | 'hata';
+  reviewNote: string | null;
+  words: number;
+  atesman: number | null;
+  pending: number;
+  accepted: number;
+  rejected: number;
+  changed: boolean;
+};
+export type Suggestion = {
+  id: string;
+  kind: 'yazim' | 'uslup';
+  original: string;
+  suggestion: string;
+  reason: string | null;
+  status: 'bekliyor' | 'kabul' | 'red';
+  appliedText: string | null;
+  decidedBy: string | null;
+  decidedAt: string | null;
+};
+export type TextMetrics = {
+  words: number;
+  sentences: number;
+  paragraphs: number;
+  atesman: number | null;
+  band?: string | null;
+  syllablesPerWord: number | null;
+  wordsPerSentence: number | null;
+  longLimit?: number;
+  longSentences: Array<{ words: number; text: string }>;
+};
+export type ChapterDetail = {
+  id: string;
+  workId: string;
+  no: number;
+  title: string;
+  status: ChapterRow['status'];
+  text: string;
+  reviewState: ChapterRow['reviewState'];
+  reviewNote: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  metrics: TextMetrics;
+  originalMetrics: TextMetrics;
+  diff: Array<{ op: 'eq' | 'del' | 'ins'; text: string }>;
+  suggestions: Suggestion[];
+};
+export type DeskCheck = { id: string; key: string; label: string; auto: boolean; passed: boolean | null; evidence: string | null; checkedBy: string | null; checkedAt: string | null };
+export type DeskSignature = { id: string; role: string; username: string; display: string | null; signedAt: string | null; sha256: string | null; mine: boolean };
+export type ProofState = {
+  work: Work;
+  versions: DeskFile[];
+  checks: DeskCheck[];
+  signatures: DeskSignature[];
+  approved: boolean;
+  blocking: { failed: number; open: number; unsigned: number };
+};
+
+const upload = async (path: string, file: File) => {
+  const res = await fetch(`${ENGINE_BASE}${path}${path.includes('?') ? '&' : '?'}filename=${encodeURIComponent(file.name)}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: file,
+    signal: AbortSignal.timeout(600_000),
+  });
+  if (res.status === 401 || res.status === 403) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as { detail?: { message?: string } } | null;
+    throw new Error(j?.detail?.message || `Zeki AI ${res.status}`);
+  }
+  return (await res.json()) as { fileId: string; version: number };
+};
+
+/** M3 ve M5: eser dosyaları, metin/prova sürümleri, öneriler, kontroller, imzalar. */
+export const deskApi = {
+  works: () => send<{ items: Work[]; user: string }>('GET', '/api/v1/editorial/works', undefined, 60_000),
+  createWork: (b: { title: string; author?: string }) => send<{ id: string; title: string }>('POST', '/api/v1/editorial/works', b, 30_000),
+  updateWork: (id: string, b: Record<string, unknown>) => send<{ ok: boolean }>('PATCH', `/api/v1/editorial/works/${encodeURIComponent(id)}`, b, 30_000),
+  uploadManuscript: (id: string, file: File) => upload(`/api/v1/editorial/works/${encodeURIComponent(id)}/manuscript`, file),
+  uploadProof: (id: string, file: File) => upload(`/api/v1/editorial/works/${encodeURIComponent(id)}/proof`, file),
+  chapters: (id: string) => send<{ work: Work; chapters: ChapterRow[]; versions: DeskFile[] }>('GET', `/api/v1/editorial/works/${encodeURIComponent(id)}/chapters`, undefined, 60_000),
+  chapter: (id: string) => send<ChapterDetail>('GET', `/api/v1/editorial/chapters/${encodeURIComponent(id)}`, undefined, 60_000),
+  review: (id: string) => send<{ ok: boolean }>('POST', `/api/v1/editorial/chapters/${encodeURIComponent(id)}/review`, {}, 60_000),
+  approve: (id: string, approve: boolean) => send<{ ok: boolean }>('POST', `/api/v1/editorial/chapters/${encodeURIComponent(id)}/approval`, { approve }, 30_000),
+  decide: (id: string, decision: 'kabul' | 'red', text?: string) =>
+    send<{ ok: boolean }>('POST', `/api/v1/editorial/suggestions/${encodeURIComponent(id)}/decision`, { decision, text }, 30_000),
+  proof: (id: string) => send<ProofState>('GET', `/api/v1/editorial/works/${encodeURIComponent(id)}/proof`, undefined, 60_000),
+  setCheck: (id: string, passed: boolean | null, note?: string) => send<{ ok: boolean }>('POST', `/api/v1/editorial/checks/${encodeURIComponent(id)}`, { passed, note }, 30_000),
+  setSigners: (id: string, signers: Array<{ role: string; username: string; display?: string }>) =>
+    send<{ ok: boolean }>('PUT', `/api/v1/editorial/works/${encodeURIComponent(id)}/signers`, { signers }, 30_000),
+  sign: (id: string) => send<{ sha256: string; version: number }>('POST', `/api/v1/editorial/works/${encodeURIComponent(id)}/sign`, {}, 30_000),
+  fileUrl: (id: string) => `${ENGINE_BASE}/api/v1/editorial/files/${encodeURIComponent(id)}`,
+};
