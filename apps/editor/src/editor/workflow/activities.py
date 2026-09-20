@@ -101,8 +101,12 @@ async def persist_visual(generation_id: str, phase: str = "all") -> dict:
     pages = await _t(db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s"
                      " AND (%s <> 'deep' OR pass='DEEP')", generation_id, phase)
     out = [await _t(vision.persist_page_visual, generation_id, r["page_no"]) for r in pages]
-    return {"pages": len(out), "visual_mentions": sum(o.get("visual_mentions", 0) for o in out),
-            "text_visual_candidates": sum(o.get("text_visual_candidates", 0) for o in out)}
+    return {"pages": len(out), "visual_mentions": sum(o.get("visual_mentions", 0) for o in out)}
+
+
+@activity.defn
+async def confirm_text_visual(generation_id: str) -> dict:
+    return await vision.confirm_text_visual(generation_id)
 
 
 @activity.defn
@@ -241,7 +245,7 @@ async def release_models(aliases_: list[str]) -> dict:
     return r.json()
 
 
-ALL = [book_metadata, visual_identity, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+ALL = [book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

@@ -35,6 +35,15 @@ OCR = obj({"blocks": arr(obj({
     "kind": {"type": "string", "enum": ["body", "heading", "speech_bubble", "sign",
                                         "caption", "screen", "other"]}}), 0, 200)})
 
+RELATION = {"type": "string", "enum": ["CONSISTENT", "ABSENT_IN_IMAGE", "CONTRADICTS"]}
+# CONTRADICTS: the picture SHOWS something that conflicts with the text.
+# ABSENT_IN_IMAGE: the text mentions something the picture simply does not show
+# (pictures never show everything; this is not a finding). CONSISTENT: they agree.
+TEXT_VISUAL_CHECK = obj({"paragraph": INT, "text_quote": STR, "visual_observation": STR,
+                         "relation": RELATION, "note": STR, "confidence": NUM})
+TEXT_VISUAL_RECHECK = obj({"checks": arr(TEXT_VISUAL_CHECK, 0, 40)})
+TEXT_VISUAL_VOTE = obj({"visual_observation": STR, "relation": RELATION, "confidence": NUM})
+
 PAGE_SCAN = obj({
     "scene": obj({"setting": STR, "time_of_day": STR, "mood": STR, "description": STR}),
     "characters": arr(obj({
@@ -44,13 +53,7 @@ PAGE_SCAN = obj({
         "action": STR, "visible_emotion": STR, "bbox": BBOX, "confidence": NUM}), 0, 40),
     "objects": arr(obj({"label": STR, "bbox": BBOX, "note": STR}), 0, 60),
     "text_in_image": arr(STR, 0, 60),
-    "text_visual_checks": arr(obj({
-        "paragraph": INT, "text_quote": STR, "visual_observation": STR,
-        # CONTRADICTS: the picture SHOWS something that conflicts with the text.
-        # ABSENT_IN_IMAGE: the text mentions something the picture simply does not show
-        # (pictures never show everything; this is not a finding). CONSISTENT: they agree.
-        "relation": {"type": "string", "enum": ["CONSISTENT", "ABSENT_IN_IMAGE", "CONTRADICTS"]},
-        "note": STR, "confidence": NUM}), 0, 40),
+    "text_visual_checks": arr(TEXT_VISUAL_CHECK, 0, 40),
     "important_event": BOOL,
     "uncertain": BOOL,
     "uncertainty_reasons": arr({"type": "string",

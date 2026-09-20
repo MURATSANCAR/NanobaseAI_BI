@@ -105,6 +105,26 @@ aliases:
       - '--limit-mm-per-prompt={"image":6,"video":0}'
       - '--mm-processor-kwargs={"max_pixels":2408448}'
 
+  # Same model in FP8 (35 GB instead of 67 GB): a candidate, not used by the workflow.
+  # `python -m editor.compare_models` reads the same pages with both and reports the
+  # differences; switching is a one-line change of book-vision-deep's model_dir.
+  book-vision-deep-fp8:
+    container: editor-model-vision-deep-fp8
+    model_dir: Qwen3-VL-32B-Thinking-FP8
+    real_model: Qwen/Qwen3-VL-32B-Thinking-FP8
+    role: Aday — derin görsel modelin FP8 sürümü (kalite karşılaştırması)
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.50
+    args:
+      - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
+      - --max-model-len=40960
+      - --max-num-seqs=16
+      - --enable-prefix-caching
+      - --reasoning-parser=qwen3
+      - '--limit-mm-per-prompt={"image":6,"video":0}'
+      - '--mm-processor-kwargs={"max_pixels":2408448}'
+
   book-audio:
     container: editor-model-audio
     model_dir: Qwen3-Omni-30B-A3B-Captioner

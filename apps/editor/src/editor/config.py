@@ -23,10 +23,12 @@ class Settings:
     models_yaml: Path
     page_concurrency: int
     deep_concurrency: int
+    text_visual_votes: int
     min_illustration_ink: float
     min_figure_ink: float
+    min_figure_side: float
     vision_screen: str
-    min_reference_area: float
+    min_reference_px: int
 
     @property
     def storage(self) -> Path:
@@ -54,13 +56,17 @@ def settings() -> Settings:
         models_yaml=Path(env("EDITOR_MODELS_YAML", "/app/deploy/models.yaml")),
         page_concurrency=int(env("EDITOR_PAGE_CONCURRENCY", "16")),
         deep_concurrency=int(env("EDITOR_DEEP_CONCURRENCY", "4")),
+        text_visual_votes=int(env("EDITOR_TEXT_VISUAL_VOTES", "3")),
         # below this share of non-text ink a page has nothing to look at (no vision call)
         min_illustration_ink=float(env("EDITOR_MIN_ILLUSTRATION_INK", "0.02")),
         # a figure's bbox must contain at least this share of ink to count as seen
         min_figure_ink=float(env("EDITOR_MIN_FIGURE_INK", "0.05")),
+        # a box whose short side is under this share of the page is page furniture (a folio
+        # ornament, a bullet), not a drawn character
+        min_figure_side=float(env("EDITOR_MIN_FIGURE_SIDE", "0.05")),
         # "deep": illustrated pages go straight to book-vision-deep (default, user decision
         # 2026-09-19); "fast": book-vision-fast screens first, deep only where evidence asks.
         vision_screen=env("EDITOR_VISION_SCREEN", "deep"),
-        # a reference drawing must cover at least this share of its page (not a fragment)
-        min_reference_area=float(env("EDITOR_MIN_REFERENCE_AREA", "0.02")),
+        # a reference crop's shorter side, in pixels of the rendered page (1600 px long side)
+        min_reference_px=int(env("EDITOR_MIN_REFERENCE_PX", "100")),
     )

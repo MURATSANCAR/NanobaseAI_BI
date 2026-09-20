@@ -294,10 +294,28 @@ def get_book_card(book_id: str) -> dict | None:
     return card
 
 
+SOURCE_TR = {"UPLOADED": "editörün yüklediği kapak", "CRM": "CRM'deki kapak",
+             "WEB": "yayıncının sitesindeki kapak", "PDF_PAGE": "kitabın içinden (kapak bulunamadı)"}
+OUTCOME_TR = {"STORED": "alındı", "NO_MATCH": "kitap eşleşmedi", "NO_IMAGE": "görsel yok",
+              "FETCH_FAILED": "eşleşti, dosya okunamadı", "AMBIGUOUS": "birden çok kayıt eşleşti",
+              "KEPT_CURRENT": "eldeki kapak güncel", "KEPT_UPLOADED": "editörün kapağı korundu",
+              "KEPT_CRM": "CRM kapağı korundu", "KEPT_WEB": "site kapağı korundu"}
+
+
 def _cover_ref(book_id: str) -> dict | None:
+    """The cover the screens show, where it came from, and what each source answered the
+    last time it was asked (so the UI can say WHY this is the cover)."""
     cov = current_cover(book_id)
-    return None if cov is None else {"url": f"/covers/{book_id}", "source": cov["source"],
-                                     "page_no": cov["page_no"]}
+    if cov is None:
+        return None
+    looks = db.all_rows("SELECT DISTINCT ON (source) source, outcome, matched_by, detail, created_at FROM"
+                        " cover_lookup WHERE book_id=%s ORDER BY source, created_at DESC", book_id)
+    return {"url": f"/covers/{book_id}", "source": cov["source"], "source_label": SOURCE_TR[cov["source"]],
+            "page_no": cov["page_no"],
+            "lookups": [{"source": l["source"], "outcome": l["outcome"],
+                         "outcome_label": OUTCOME_TR.get(l["outcome"], l["outcome"]),
+                         "matched_by": l["matched_by"], "detail": l["detail"],
+                         "at": str(l["created_at"])} for l in looks]}
 
 
 async def search_books(query: str, k: int = 5, age: int | None = None) -> list[dict]:

@@ -17,7 +17,7 @@ metadata:
 ```json
 {"page": 0, "pass": "FAST|DEEP", "scene": {"setting": "str", "time_of_day": "str", "mood": "str", "description": "str"},
  "characters": [{"name": "str", "identity_uncertain": true, "action": "str"}], "objects": ["str"],
- "text_visual_candidates": [{"text_quote": "str", "visual_observation": "str", "note": "str"}]}
+ "text_visual_findings": [{"text_quote": "str", "visual_observation": "str", "votes": "2/3"}]}
 ```
 
 **Güven eşiği:** figür güveni < 0.6 ise ad verme.

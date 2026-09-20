@@ -168,8 +168,8 @@ async def detect_scene(generation_id: str, page_no: int) -> dict:
 
 
 def persist_page_visual(generation_id: str, page_no: int) -> dict:
-    """Best scan -> visual regions, visual character mentions, scene claim,
-    text-visual candidate findings. Idempotent per page."""
+    """Best scan -> visual regions, visual character mentions, scene claim. Idempotent
+    per page. Text-visual findings are written by `confirm_text_visual`."""
     s = best_scan(generation_id, page_no)
     if s is None:
         return {"page_no": page_no, "skipped": "no scan"}
@@ -180,7 +180,7 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
             return {"page_no": page_no, "skipped": "already persisted"}
         idx = ledger.PageIndex.load(c, generation_id)
         created_by = f"vision:{pass_.lower()}"
-        mentions = mismatches = unseen = 0
+        mentions = unseen = 0
         png_path = render_page(str(c.execute("SELECT book_version_id FROM generation WHERE id=%s",
                                              (generation_id,)).fetchone()["book_version_id"]), page_no)["path"]
         front = c.execute("SELECT 1 FROM page_role WHERE generation_id=%s AND page_no=%s AND"
@@ -188,7 +188,8 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
         near_text = " ".join(idx.text.get(p, "") for p in (page_no - 1, page_no, page_no + 1))
         for ch in res["characters"]:
             # A figure is a visual claim: its box must actually contain ink.
-            if region_ink_ratio(png_path, ch["bbox"]) < settings().min_figure_ink:
+            if region_ink_ratio(png_path, ch["bbox"]) < settings().min_figure_ink or \
+                    min(ch["bbox"][2] - ch["bbox"][0], ch["bbox"][3] - ch["bbox"][1]) < settings().min_figure_side * 1000:
                 unseen += 1
                 continue
             # A name needs a basis in the story text on or next to this page. Cover and
@@ -232,41 +233,118 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
                               payload={"setting": sc["setting"], "time_of_day": sc["time_of_day"],
                                        "mood": sc["mood"], "important_event": res["important_event"]},
                               model_call_id=call_id)
-        # "Görsel-metinsel uyuşmazlık doğrudan hata değil, aday bulgu olur."
-        for chk in res["text_visual_checks"]:
-            if not contradicts(chk):
-                continue
-            evs = []
-            if chk["text_quote"].strip():
-                ev_t = ledger.save_evidence(c, generation_id, idx, page=page_no, kind="TEXT",
-                                            paragraph_idx=chk["paragraph"] or None,
-                                            quote=chk["text_quote"])
-                evs.append((ev_t[0], ev_t[1], page_no))
-            obs = (chk["visual_observation"] or chk["note"]).strip()
-            if obs:
-                ev_v = ledger.save_evidence(c, generation_id, idx, page=page_no, kind="VISUAL", quote=obs)
-                evs.append((ev_v[0], ev_v[1], page_no))
-            claim_id = ledger.save_claim(
-                c, generation_id, kind="TEXT_VISUAL_MISMATCH", subject=f"sayfa {page_no}",
-                claim=f"Metin: “{chk['text_quote']}” — Görsel: {chk['visual_observation']}. {chk['note']}",
-                evidence=evs,
-                confidence=chk["confidence"], created_by=created_by, model_call_id=call_id)
-            c.execute(
-                "INSERT INTO contradiction(generation_id, kind, description, pages, claim_ids,"
-                " confidence) VALUES (%s,'TEXT_VISUAL',%s,%s,%s,%s) RETURNING id",
-                (generation_id, chk["note"] or chk["visual_observation"], [page_no],
-                 [claim_id] if claim_id else [], chk["confidence"])).fetchone()
-            mismatches += 1
     return {"page_no": page_no, "pass": pass_, "visual_mentions": mentions,
-            "text_visual_candidates": mismatches, "figures_dropped_unseen": unseen}
+            "figures_dropped_unseen": unseen}
+
+
+async def confirm_text_visual(generation_id: str) -> dict:
+    """"Görsel-metinsel uyuşmazlık doğrudan hata değil, aday bulgu olur" — and one reading of
+    one page is not even a stable candidate (measured: the same model and prompt gave 5 on
+    one run and 0 on the next). So a page's candidates are the union of its scan and one
+    focused second reading, and each candidate is then put to independent votes that see
+    only the picture and the sentence. It is written to the ledger when a majority of the
+    votes see a contradiction; the votes are kept either way."""
+    gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
+    n_votes = settings().text_visual_votes
+    todo = db.all_rows(
+        "SELECT s.page_no FROM page_scan s WHERE s.generation_id=%s AND s.pass='DEEP' AND NOT EXISTS"
+        " (SELECT 1 FROM text_visual_check t WHERE t.generation_id=s.generation_id AND t.page_no=s.page_no)"
+        " AND NOT EXISTS (SELECT 1 FROM page_role r WHERE r.generation_id=s.generation_id AND"
+        " r.page_no=s.page_no AND r.role='FRONT_MATTER') ORDER BY s.page_no", generation_id)
+    sem = asyncio.Semaphore(settings().deep_concurrency * 2)
+    llm = Llm(generation_id)
+
+    async def ask(prompt_name: str, schema: dict, page_no: int, png: bytes, temperature: float, **kw):
+        ref, body = prompts.render(prompt_name, page_no=str(page_no), **kw)
+        async with sem:
+            return await llm.chat("book-vision-deep", [{"role": "user", "content": [
+                image_part(png), {"type": "text", "text": body}]}], prompt=ref, schema=schema,
+                pages=[page_no], max_tokens=8192, temperature=temperature)
+
+    async def one_page(page_no: int) -> dict:
+        with db.tx() as c:
+            idx = ledger.PageIndex.load(c, generation_id)
+        text = page_text_numbered(generation_id, page_no)
+        scan = best_scan(generation_id, page_no)
+        if not idx.text.get(page_no, "").strip():
+            proposals = []
+        else:
+            png = Path(render_page(str(gen["book_version_id"]), page_no)["path"]).read_bytes()
+            second, _ = await ask("text_visual_recheck", schemas.TEXT_VISUAL_RECHECK, page_no, png, 0.1,
+                                  page_text=text)
+            proposals = []
+            for src, checks in (("scan", scan["result"]["text_visual_checks"]), ("recheck", second["checks"])):
+                for chk in checks:
+                    quote = chk["text_quote"].strip()
+                    if not contradicts(chk) or not quote:
+                        continue
+                    if not idx.verify(page_no, quote, "TEXT"):
+                        quote = ledger.snap_quote(quote, idx.raw.get(page_no, "")) or ""
+                    # a contradiction is between the picture and a sentence that is on the page
+                    if not quote:
+                        continue
+                    same = next((p for p in proposals if ledger.norm(p["text_quote"]) in ledger.norm(quote)
+                                 or ledger.norm(quote) in ledger.norm(p["text_quote"])), None)
+                    if same:
+                        same["proposed_by"].append(src)
+                    else:
+                        proposals.append({**chk, "text_quote": quote, "proposed_by": [src]})
+        confirmed = 0
+        for p in proposals:
+            votes = await asyncio.gather(*(ask("text_visual_vote", schemas.TEXT_VISUAL_VOTE, page_no, png, 0.6,
+                                               text_quote=p["text_quote"]) for _ in range(n_votes)),
+                                         return_exceptions=True)
+            got = [v[0] for v in votes if not isinstance(v, BaseException)]
+            yes = [v for v in got if v["relation"] == "CONTRADICTS"]
+            p["votes"] = [{"relation": v["relation"], "confidence": v["confidence"],
+                           "visual_observation": v["visual_observation"]} for v in got]
+            p["confirmed"] = len(got) == n_votes and len(yes) * 2 > n_votes
+            if not p["confirmed"]:
+                continue
+            confirmed += 1
+            conf = min(sum(v["confidence"] for v in yes) / len(yes), len(yes) / n_votes)
+            obs = max(yes, key=lambda v: v["confidence"])["visual_observation"].strip() or p["visual_observation"]
+            with db.tx() as c:
+                idx = ledger.PageIndex.load(c, generation_id)
+                ev_t = ledger.save_evidence(c, generation_id, idx, page=page_no, kind="TEXT",
+                                            paragraph_idx=p["paragraph"] or None, quote=p["text_quote"])
+                ev_v = ledger.save_evidence(c, generation_id, idx, page=page_no, kind="VISUAL", quote=obs)
+                claim_id = ledger.save_claim(
+                    c, generation_id, kind="TEXT_VISUAL_MISMATCH", subject=f"sayfa {page_no}",
+                    claim=f"Metin: “{p['text_quote']}” — Görsel: {obs}",
+                    evidence=[(ev_t[0], ev_t[1], page_no), (ev_v[0], ev_v[1], page_no)], confidence=conf,
+                    created_by="vision:text-visual-votes",
+                    payload={"votes": f"{len(yes)}/{n_votes}", "proposed_by": p["proposed_by"]})
+                c.execute("INSERT INTO contradiction(generation_id, kind, description, pages, claim_ids,"
+                          " confidence) VALUES (%s,'TEXT_VISUAL',%s,%s,%s,%s)",
+                          (generation_id, obs, [page_no], [claim_id] if claim_id else [], conf))
+        with db.tx() as c:
+            c.execute("INSERT INTO text_visual_check(generation_id, page_no, proposed, confirmed, detail)"
+                      " VALUES (%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING",
+                      (generation_id, page_no, len(proposals), confirmed, db.J(proposals)))
+        return {"page_no": page_no, "proposed": len(proposals), "confirmed": confirmed}
+
+    res = await asyncio.gather(*(one_page(r["page_no"]) for r in todo), return_exceptions=True)
+    ok = [r for r in res if not isinstance(r, BaseException)]
+    failed = [str(r)[:200] for r in res if isinstance(r, BaseException)]
+    if todo and not ok:
+        raise RuntimeError(f"text-visual confirmation failed on every page: {failed[:3]}")
+    return {"pages": len(ok), "proposed": sum(r["proposed"] for r in ok),
+            "confirmed": sum(r["confirmed"] for r in ok),
+            "confirmed_pages": [r["page_no"] for r in ok if r["confirmed"]], "pages_failed": failed}
 
 
 async def check_text_visual_consistency(generation_id: str, page_no: int) -> dict:
+    """Findings are the voted ones; a scan's own unvoted candidates are reported as such."""
     s = await _ensure_scan(generation_id, page_no)
     persist_page_visual(generation_id, page_no)
+    voted = db.one("SELECT proposed, confirmed, detail FROM text_visual_check WHERE generation_id=%s AND"
+                   " page_no=%s", generation_id, page_no)
     checks = s["result"]["text_visual_checks"]
-    return {"page_no": page_no, "pass": s["pass"],
-            "candidates": [c for c in checks if contradicts(c)],
+    return {"page_no": page_no, "pass": s["pass"], "voted": voted is not None,
+            "findings": [p for p in (voted or {}).get("detail", []) if p.get("confirmed")],
+            "not_confirmed": [p for p in (voted or {}).get("detail", []) if not p.get("confirmed")],
+            "unvoted_candidates": [] if voted else [c for c in checks if contradicts(c)],
             "consistent": sum(1 for c in checks if not contradicts(c))}
 
 
@@ -319,19 +397,36 @@ async def compare_character_appearances(generation_id: str, character: str,
     return {"character": character, "pages": pages, **out}
 
 
-def _crop(png_path: str, bbox: list[int], out: Path) -> Path:
-    """Figure crop (with a small margin) used as a reference image."""
+def _crop(png_path: str, bbox: list[int], out: Path, blank: list[list[int]] | None = None) -> Path:
+    """Figure crop (with a small margin). `blank`: boxes of OTHER figures inside this box,
+    painted white, so a crop of a tall figure with someone standing in front of him shows
+    him alone (the model otherwise "recognises" whoever is visible in the crop)."""
     import pymupdf
     pm = pymupdf.Pixmap(png_path)
+    if pm.alpha:
+        pm = pymupdf.Pixmap(pm, 0)
     mx, my = (bbox[2] - bbox[0]) * 0.08, (bbox[3] - bbox[1]) * 0.08
     rect = pymupdf.IRect(max(0, int((bbox[0] - mx) / 1000 * pm.width)), max(0, int((bbox[1] - my) / 1000 * pm.height)),
                          min(pm.width, int((bbox[2] + mx) / 1000 * pm.width)),
                          min(pm.height, int((bbox[3] + my) / 1000 * pm.height)))
-    sub = pymupdf.Pixmap(pm.colorspace, rect, pm.alpha)
+    for b in blank or []:
+        r = pymupdf.IRect(int(b[0] / 1000 * pm.width), int(b[1] / 1000 * pm.height),
+                          int(b[2] / 1000 * pm.width), int(b[3] / 1000 * pm.height)) & rect
+        if not r.is_empty:
+            pm.set_rect(r, (255,) * pm.n)
+    sub = pymupdf.Pixmap(pm.colorspace, rect, 0)
     sub.copy(pm, rect)
     out.parent.mkdir(parents=True, exist_ok=True)
     sub.save(str(out))
     return out
+
+
+def _kinds_clash(a: str | None, b: str | None) -> bool:
+    """Two characters can be mistaken for each other in a picture only if they are the same
+    kind of being. A child and an old man are both human but not rivals; an unknown kind
+    may clash with anything."""
+    known = set(GATE) | {"HUMAN_CHILD", "HUMAN_ADULT"}
+    return a not in known or b not in known or a == b
 
 
 GATE = {"HUMAN_CHILD": "H", "HUMAN_ADULT": "H", "ANIMAL": "A", "ROBOT_OR_MACHINE": "R",
@@ -396,10 +491,19 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         t = near(page)
         return any(ledger.has_name(t, n) for n in cnames[cid])
 
+    import pymupdf
+    page_px: dict[int, tuple[int, int]] = {}
+    for p in {f["page_no"] for f in figs}:
+        pm_ = pymupdf.Pixmap(render_page(bv, p)["path"])
+        page_px[p] = (pm_.width, pm_.height)
     by_page: dict[int, list] = {}
     for f in figs:
         f["cid"] = unique.get(ledger.norm(f["surface_name"] or ""))          # the scan's claim
         f["area"] = max(0, f["bbox"][2] - f["bbox"][0]) * max(0, f["bbox"][3] - f["bbox"][1]) / 1e6
+        # what makes a reference usable is how many pixels show the figure (a cat is small on
+        # the page and still perfectly drawn), measured on the rendered page
+        f["short_px"] = min((f["bbox"][2] - f["bbox"][0]) / 1000 * page_px[f["page_no"]][0],
+                            (f["bbox"][3] - f["bbox"][1]) / 1000 * page_px[f["page_no"]][1])
         by_page.setdefault(f["page_no"], []).append(f)
 
     def holds(a: list[int], b: list[int]) -> bool:
@@ -409,12 +513,19 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         area_b = max(1, (b[2] - b[0]) * (b[3] - b[1]))
         return w > 0 and h > 0 and w * h / area_b >= 0.5
 
-    # A crop that also holds another figure is a group picture, not a figure: the model
-    # "recognises" whoever is visible in it (seen: the professor's box, with a child in
-    # front of him, was matched to the child). Such a box is neither reference nor matched.
+    # A box that also holds another figure: that figure is blanked out of the crop. If the
+    # blanked area leaves less than half of the box, the crop cannot show this figure alone
+    # (a "group" crop: neither reference nor matched).
     for fs in by_page.values():
         for f in fs:
-            f["group"] = any(g is not f and holds(f["bbox"], g["bbox"]) for g in fs)
+            inside = [g["bbox"] for g in fs if g is not f and holds(f["bbox"], g["bbox"])
+                      and not holds(g["bbox"], f["bbox"])]           # same-size boxes: a true group
+            same = any(g is not f and holds(f["bbox"], g["bbox"]) and holds(g["bbox"], f["bbox"]) for g in fs)
+            own = max(1, (f["bbox"][2] - f["bbox"][0]) * (f["bbox"][3] - f["bbox"][1]))
+            hidden = sum(max(0, min(f["bbox"][2], b[2]) - max(f["bbox"][0], b[0]))
+                         * max(0, min(f["bbox"][3], b[3]) - max(f["bbox"][1], b[1])) for b in inside)
+            f["blank"] = inside
+            f["group"] = same or hidden / own > 0.5
     stats["group_crops"] = sum(1 for f in figs if f["group"])
     gdir = Path(render_page(bv, figs[0]["page_no"])["path"]).parent / "gallery" / generation_id
     sem = asyncio.Semaphore(settings().deep_concurrency * 2)
@@ -423,7 +534,7 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     def crop_of(f: dict) -> Path:
         k = str(f["id"])
         if k not in crops:
-            crops[k] = _crop(render_page(bv, f["page_no"])["path"], f["bbox"], gdir / f"fig-{k}.png")
+            crops[k] = _crop(render_page(bv, f["page_no"])["path"], f["bbox"], gdir / f"fig-{k}.png", f.get("blank"))
         return crops[k]
 
     # ---- 1. reference candidates, each checked on its crop
@@ -432,17 +543,17 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         for f in fs:
             cid = f["cid"]
             if not (cid and not f["group"] and f["deep"] and not f["front"]
-                    and f["area"] >= settings().min_reference_area
+                    and f["short_px"] >= settings().min_reference_px
                     and named_near(page, cid)):
                 continue
             others_here = [x for x in fs if x is not f]
-            if any(x["cid"] is None or _compatible(ckind[x["cid"]], ckind[cid]) for x in others_here):
-                continue                       # an unnamed figure, or one of the same kind group, is a rival in the picture
+            if any(x["cid"] is None or _kinds_clash(ckind[x["cid"]], ckind[cid]) for x in others_here):
+                continue                       # an unnamed figure, or one of the same kind, is a rival in the picture
             # A rival is another character of the same kind named in the text. For a lone figure
             # only the page's own text counts (a name in someone's speech next door is not a
             # second person in this picture); in a group scene the facing pages count too.
             here = idx.text.get(page, "")
-            if any(o != cid and ckind[o] == ckind[cid] and (
+            if any(o != cid and _kinds_clash(ckind[o], ckind[cid]) and (
                     any(ledger.has_name(here, n) for n in cnames[o]) if not others_here else named_near(page, o))
                    for o in cname):
                 continue
@@ -525,20 +636,22 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         figure are identified as members of that set, the last figure is the last name."""
         n = 0
         for page, fs in by_page.items():
+            def who(f: dict) -> str | None:                  # identified beats the scan's guess
+                return resolved[str(f["id"])][0] if str(f["id"]) in resolved else f["cid"]
             groups: dict[str, list] = {}
             for f in fs:
-                if f["cid"]:
-                    groups.setdefault(GATE.get(ckind[f["cid"]], ckind[f["cid"]]), []).append(f)
-            if any(f["cid"] is None for f in fs):
-                continue                                     # an unnamed figure: the set is incomplete
-            for same in groups.values():
-                names = {f["cid"] for f in same}
+                if who(f):
+                    groups.setdefault(ckind[who(f)], []).append(f)
+            for kind, same in groups.items():
+                # a figure nobody could name or identify might be of this kind too
+                if kind not in GATE or any(who(f) is None and not f["group"] for f in fs):
+                    continue
+                names = {who(f) for f in same}
                 if len(same) < 2 or len(names) != len(same):
                     continue
-                done = [resolved[str(f["id"])][0] for f in same if str(f["id"]) in resolved]
                 open_figs = [f for f in same if str(f["id"]) not in resolved]
-                left = names - set(done)
-                if len(open_figs) == 1 and len(left) == 1 and set(done) <= names:
+                left = {f["cid"] for f in open_figs}
+                if len(open_figs) == 1 and len(left) == 1 and not open_figs[0]["group"]:
                     resolved[str(open_figs[0]["id"])] = (next(iter(left)), "elimination", None)
                     n += 1
         return n
@@ -553,7 +666,7 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     for f in figs:
         got = resolved.get(str(f["id"]))
         if got and got[1] == "elimination" and got[0] not in gallery and not f["group"] \
-                and f["area"] >= settings().min_reference_area:
+                and f["short_px"] >= settings().min_reference_px:
             by_char.setdefault(got[0], []).append(f)
     for cid, fs in by_char.items():
         fs.sort(key=lambda f: -f["area"])
