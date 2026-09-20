@@ -13,6 +13,10 @@ const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
 const EditorialBoardScreen = lazy(() => import('@/canvas/editorial/BoardScreen'));
+const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
+const AuthorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.AuthorsScreen })));
+const TranslatorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.TranslatorsScreen })));
+const FreelancersScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.FreelancersScreen })));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 
 function RouteFallback() {
@@ -55,6 +59,10 @@ export default function App() {
             <Route path="uyarilar" element={<BiCanvasPage />} />
             {/* Editoryal Süreç (M1–M8); ekranı hazır olan modül buraya girer. */}
             <Route path="yayin-kurulu" element={<EditorialBoardScreen />} />
+            <Route path="editor-atama" element={<EditorsScreen />} />
+            <Route path="cevirmenler" element={<TranslatorsScreen />} />
+            <Route path="yazarlar" element={<AuthorsScreen />} />
+            <Route path="cizer-freelancer" element={<FreelancersScreen />} />
             <Route path="telif-sozlesme" element={<ContractsScreen />} />
           </Route>
 

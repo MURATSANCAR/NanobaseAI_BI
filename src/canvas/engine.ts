@@ -980,3 +980,61 @@ export const boardDecisionsApi = {
   list: (p: { q?: string; year?: number; decision?: number; page?: number }) =>
     send<BoardPage>('GET', `/api/v1/editorial/board${qs({ q: p.q, year: p.year, decision: p.decision, page: p.page })}`, undefined, 60_000),
 };
+
+export type Contributor = { id: string; name: string | null; works: number; recentWorks: number; last: string | null; roles: Array<{ role: string; works: number }> };
+export type ContributorPage = {
+  items: Contributor[];
+  total: number;
+  activePeople: number;
+  contributions: number;
+  page: number;
+  pageSize: number;
+  db?: DbTiming | null;
+};
+export type RoleFacet = { role: string; records: number; people: number };
+export type PersonDetail = {
+  id: string;
+  name: string | null;
+  bio: string | null;
+  works: Array<{ bookId: string | null; title: string | null; role: string | null; on: string | null }>;
+  contracts: Array<{ id: string; no: string | null; status: string | null; start: string | null; end: string | null; royalty: number | null; share: number | null }>;
+  projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; on: string | null; editor: string | null }>;
+  truncated: boolean;
+  db?: DbTiming | null;
+};
+
+/** M7 / M8 / M4: esere katkı verenler (yazar, çizer, çevirmen…), CRM eser katılım kayıtlarından. */
+export const contributorsApi = {
+  roles: () => send<{ items: RoleFacet[]; db?: DbTiming | null }>('GET', '/api/v1/editorial/contributors/roles', undefined, 60_000),
+  list: (p: { roles: string[]; q?: string; order?: string; page?: number }) =>
+    send<ContributorPage>('GET', `/api/v1/editorial/contributors${qs({ roles: p.roles.join('|'), q: p.q, order: p.order, page: p.page })}`, undefined, 60_000),
+  person: (id: string) => send<PersonDetail>('GET', `/api/v1/editorial/contributors/${encodeURIComponent(id)}`, undefined, 60_000),
+};
+
+export type EditorLoad = { id: string; name: string | null; total: number; last: string | null; disabled: boolean; byStatus: ContractFacet[] };
+export type EditorsOverview = { items: EditorLoad[]; sinceYear: number; statuses: ContractFacet[]; unassigned: ContractFacet[]; truncated: boolean; db?: DbTiming | null };
+export type EditorialProject = {
+  id: string;
+  name: string | null;
+  status: string | null;
+  text: string | null;
+  stage: string | null;
+  textDue: string | null;
+  createdOn: string | null;
+  modifiedOn: string | null;
+  author: string | null;
+  editor: string | null;
+  projectEditor: string | null;
+};
+
+/** M2: editörler ve projeleri (CRM proje kartındaki "Editörü" alanı). */
+export const editorsApi = {
+  overview: (since?: number) => send<EditorsOverview>('GET', `/api/v1/editorial/editors${qs({ since })}`, undefined, 60_000),
+  projects: (p: { q?: string; editor?: string; status?: number; since?: number; page?: number }) =>
+    send<{ items: EditorialProject[]; total: number; page: number; pageSize: number; db?: DbTiming | null }>(
+      'GET',
+      `/api/v1/editorial/projects${qs({ q: p.q, editor: p.editor, status: p.status, since: p.since, page: p.page })}`,
+      undefined,
+      60_000,
+    ),
+};

@@ -3432,6 +3432,40 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
 
+    def _editorial_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
+    @app.get("/api/v1/editorial/contributors/roles")
+    def editorial_contributor_roles(request: Request) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        return _editorial_call(editorial_mod.role_facets, schema, run)
+
+    @app.get("/api/v1/editorial/contributors")
+    def editorial_contributors(request: Request, roles: str = "", q: str = "", order: str = "son", page: int = 0) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        return _editorial_call(editorial_mod.contributors_page, schema, run, roles.split("|"), page, q=q, order=order)
+
+    @app.get("/api/v1/editorial/contributors/{contact_id}")
+    def editorial_contributor(contact_id: str, request: Request) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        return _editorial_call(editorial_mod.person, schema, run, contact_id)
+
+    @app.get("/api/v1/editorial/editors")
+    def editorial_editors(request: Request, since: Optional[int] = None) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        year = since or (datetime.now(timezone.utc).year - 2)
+        return _editorial_call(editorial_mod.editors, schema, run, year)
+
+    @app.get("/api/v1/editorial/projects")
+    def editorial_projects(request: Request, q: str = "", editor: str = "", status: Optional[int] = None,
+                           since: Optional[int] = None, page: int = 0) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        return _editorial_call(editorial_mod.projects_page, schema, run, page, q=q, editor=editor or None,
+                               status=status, since_year=since)
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 

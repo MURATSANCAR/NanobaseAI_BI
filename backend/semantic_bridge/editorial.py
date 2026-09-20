@@ -406,3 +406,257 @@ def board_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, 
                 it["opinions"].append(opinion)
     return {"items": items, "total": total, "page": max(0, int(page_no)), "pageSize": PAGE_SIZE,
             "opinionsVisible": with_opinions, "db": _timing(res)}
+
+
+# ==================================================== M7 / M8 / M4: esere katkı verenler (rol bazlı)
+# `new_eserkatilimBase` bir kitaba bir kişinin bir rolle katkısıdır: kişi `new_Katilimsaglayan` →
+# ContactBase (2026-09-20: 36.323 kaydın tamamı eşleşiyor), rol `new_katilimciTipi` →
+# `new_katilimcitipiBase.new_name` (Yazar, Çizer, Tercüme, Kapak Tasarım, Redaktör…), kitap `new_Kitap`.
+# Yazarlar (M7), çevirmenler (M4) ve çizer/serbest çalışanlar (M8) aynı kayıttan, rol süzgeciyle okunur.
+# Kapasite, puan, hız, müsaitlik CRM'de yok; üretilmez.
+
+def _roles(names: list[str]) -> str:
+    clean = [n.strip()[:60].replace("'", "''") for n in names if n and n.strip()]
+    if not clean:
+        raise EditorialError("En az bir rol gerekli.")
+    return ", ".join(f"N'{n}'" for n in clean)
+
+
+def _contrib_from(p: str, roles: list[str], q: str) -> str:
+    sql = (
+        f" FROM {p}new_eserkatilimBase e"
+        f" JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
+        f" JOIN {p}ContactBase k ON k.ContactId = e.new_Katilimsaglayan"
+        f" WHERE e.statecode = 0 AND t.new_name IN ({_roles(roles)})"
+    )
+    if q.strip():
+        sql += f" AND k.FullName LIKE N'%{_like(q)}%'"
+    return sql
+
+
+def contributors_count_sql(schema: str, roles: list[str], q: str = "") -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT COUNT(*) AS n, SUM(x.son12) AS son12_kisi, SUM(x.eser) AS katki FROM ("
+        "SELECT k.ContactId, COUNT(DISTINCT e.new_Kitap) AS eser,"
+        " MAX(CASE WHEN e.CreatedOn >= DATEADD(month, -12, GETDATE()) THEN 1 ELSE 0 END) AS son12"
+        f"{_contrib_from(p, roles, q)} GROUP BY k.ContactId) x"
+    )
+
+
+def contributors_list_sql(schema: str, roles: list[str], page: int, q: str = "", order: str = "son") -> str:
+    p = _prefix(schema)
+    by = {"son": "MAX(e.CreatedOn) DESC", "eser": "COUNT(DISTINCT e.new_Kitap) DESC", "ad": "k.FullName"}.get(order, "MAX(e.CreatedOn) DESC")
+    return (
+        "SELECT k.ContactId, k.FullName, COUNT(DISTINCT e.new_Kitap) AS eser, MAX(e.CreatedOn) AS son,"
+        " COUNT(DISTINCT CASE WHEN e.CreatedOn >= DATEADD(month, -12, GETDATE()) THEN e.new_Kitap END) AS son12"
+        f"{_contrib_from(p, roles, q)} GROUP BY k.ContactId, k.FullName"
+        f" ORDER BY {by}, k.ContactId OFFSET {max(0, int(page)) * PAGE_SIZE} ROWS FETCH NEXT {PAGE_SIZE} ROWS ONLY"
+    )
+
+
+def contributor_roles_sql(schema: str, ids: list[str]) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT e.new_Katilimsaglayan, t.new_name AS rol, COUNT(DISTINCT e.new_Kitap) AS eser"
+        f" FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
+        f" WHERE e.statecode = 0 AND e.new_Katilimsaglayan IN ({_in(ids)})"
+        " GROUP BY e.new_Katilimsaglayan, t.new_name ORDER BY COUNT(DISTINCT e.new_Kitap) DESC"
+    )
+
+
+def role_facet_sql(schema: str) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT t.new_name AS rol, COUNT(*) AS kayit, COUNT(DISTINCT e.new_Katilimsaglayan) AS kisi"
+        f" FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
+        " WHERE e.statecode = 0 AND e.new_Katilimsaglayan IS NOT NULL GROUP BY t.new_name ORDER BY COUNT(*) DESC"
+    )
+
+
+def person_sql(schema: str, contact_id: str) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT k.ContactId, k.FullName, k.new_kisaozgecmis, k.new_ozgecmis, k.new_yazarmi"
+        f" FROM {p}ContactBase k WHERE k.ContactId = '{_guid(contact_id)}'"
+    )
+
+
+def person_works_sql(schema: str, contact_id: str) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT b.new_kitapId, b.new_name AS kitap, t.new_name AS rol, e.CreatedOn"
+        f" FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
+        f" LEFT JOIN {p}new_kitapBase b ON b.new_kitapId = e.new_Kitap"
+        f" WHERE e.statecode = 0 AND e.new_Katilimsaglayan = '{_guid(contact_id)}' ORDER BY e.CreatedOn DESC"
+    )
+
+
+def person_contracts_sql(schema: str, contact_id: str) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT s.new_sozlesmeId, s.new_name, s.statuscode, s.new_SozlesmeBaslangicTarihi, s.new_SozlesmeBitisTarihi,"
+        " s.new_Telif, t.new_Odeme"
+        f" FROM {p}new_sozlesmetarafiBase t JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid"
+        f" WHERE t.statecode = 0 AND s.statecode = 0 AND t.new_kisi = '{_guid(contact_id)}'"
+        " ORDER BY s.new_SozlesmeBitisTarihi DESC"
+    )
+
+
+def person_projects_sql(schema: str, contact_id: str) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT j.new_projeId, j.new_name, j.statuscode, j.new_icerikdurumu, j.CreatedOn, u.FullName AS editor"
+        f" FROM {p}new_projeBase j LEFT JOIN {p}SystemUserBase u ON u.SystemUserId = j.new_editoru"
+        f" WHERE j.statecode = 0 AND j.new_OlasYazarYazar = '{_guid(contact_id)}' ORDER BY j.CreatedOn DESC"
+    )
+
+
+def contributors_page(schema: str, run: Callable[[str], dict[str, Any]], roles: list[str], page_no: int, *,
+                      q: str = "", order: str = "son") -> dict[str, Any]:
+    head = (run(contributors_count_sql(schema, roles, q)).get("records") or [{}])[0]
+    res = run(contributors_list_sql(schema, roles, page_no, q, order))
+    items = [{
+        "id": _s(r.get("ContactId")), "name": _s(r.get("FullName")), "works": int(_n(r.get("eser")) or 0),
+        "recentWorks": int(_n(r.get("son12")) or 0), "last": _date(r.get("son")), "roles": [],
+    } for r in res.get("records") or []]
+    by_id = {c["id"].lower(): c for c in items if c["id"]}
+    if by_id:
+        for r in run(contributor_roles_sql(schema, [c["id"] for c in items if c["id"]])).get("records") or []:
+            c = by_id.get(str(r.get("new_Katilimsaglayan") or "").lower())
+            if c is not None and _s(r.get("rol")):
+                c["roles"].append({"role": _s(r.get("rol")), "works": int(_n(r.get("eser")) or 0)})
+    return {"items": items, "total": int(_n(head.get("n")) or 0), "activePeople": int(_n(head.get("son12_kisi")) or 0),
+            "contributions": int(_n(head.get("katki")) or 0), "page": max(0, int(page_no)), "pageSize": PAGE_SIZE,
+            "db": _timing(res)}
+
+
+def role_facets(schema: str, run: Callable[[str], dict[str, Any]]) -> dict[str, Any]:
+    res = run(role_facet_sql(schema))
+    return {"items": [{"role": _s(r.get("rol")), "records": int(_n(r.get("kayit")) or 0), "people": int(_n(r.get("kisi")) or 0)}
+                      for r in res.get("records") or []], "db": _timing(res)}
+
+
+def person(schema: str, run: Callable[[str], dict[str, Any]], contact_id: str) -> dict[str, Any]:
+    head = (run(person_sql(schema, contact_id)).get("records") or [None])[0]
+    if head is None:
+        raise EditorialError("Kişi bulunamadı.", 404)
+    works = run(person_works_sql(schema, contact_id))
+    return {
+        "id": _s(head.get("ContactId")), "name": _s(head.get("FullName")),
+        "bio": _s(head.get("new_kisaozgecmis")) or _s(head.get("new_ozgecmis")),
+        "works": [{"bookId": _s(r.get("new_kitapId")), "title": _s(r.get("kitap")), "role": _s(r.get("rol")),
+                   "on": _date(r.get("CreatedOn"))} for r in works.get("records") or []],
+        "contracts": [{"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
+                       "start": _date(r.get("new_SozlesmeBaslangicTarihi")), "end": _date(r.get("new_SozlesmeBitisTarihi")),
+                       "royalty": _n(r.get("new_Telif")) or None, "share": _n(r.get("new_Odeme"))}
+                      for r in run(person_contracts_sql(schema, contact_id)).get("records") or []],
+        "projects": [{"id": _s(r.get("new_projeId")), "name": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
+                      "text": _s(r.get("new_icerikdurumu")), "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor"))}
+                     for r in run(person_projects_sql(schema, contact_id)).get("records") or []],
+        "truncated": bool(works.get("truncated")),
+        "db": _timing(works),
+    }
+
+
+# ============================================================================ M2 editör ve projeler
+# Projenin editörü `new_projeBase.new_editoru` → SystemUserBase (2024'ten beri 2.710 projenin 1.797'sinde
+# dolu), proje editörü `new_uretimeditoru`. Aşama `statuscode` (Proje Durumu). İş planı aşaması, metin
+# teslim ve yayın tarihi alanları neredeyse boş; takvim ve iş yükü yüzdesi CRM'den çıkarılamaz.
+
+def _project_where(p: str, *, q: str = "", editor: Optional[str] = None, status: Optional[int] = None,
+                   since_year: Optional[int] = None) -> str:
+    parts = ["j.statecode = 0"]
+    if editor:
+        parts.append(f"j.new_editoru = '{_guid(editor)}'")
+    if status is not None:
+        parts.append(f"j.statuscode = {int(status)}")
+    if since_year is not None:
+        parts.append(f"j.CreatedOn >= '{int(since_year):04d}-01-01'")
+    if q.strip():
+        k = _like(q)
+        parts.append(f"(j.new_name LIKE N'%{k}%' OR j.new_olasiyazartext LIKE N'%{k}%' OR a.FullName LIKE N'%{k}%')")
+    return " AND ".join(parts)
+
+
+def _project_from(p: str) -> str:
+    return (
+        f" FROM {p}new_projeBase j"
+        f" LEFT JOIN {p}SystemUserBase u ON u.SystemUserId = j.new_editoru"
+        f" LEFT JOIN {p}SystemUserBase w ON w.SystemUserId = j.new_uretimeditoru"
+        f" LEFT JOIN {p}ContactBase a ON a.ContactId = j.new_OlasYazarYazar"
+    )
+
+
+def editors_sql(schema: str, since_year: int) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT u.SystemUserId, u.FullName, u.IsDisabled, j.statuscode, CAST(j.statuscode AS int) AS kod, COUNT(*) AS n,"
+        " MAX(j.ModifiedOn) AS son"
+        f" FROM {p}new_projeBase j JOIN {p}SystemUserBase u ON u.SystemUserId = j.new_editoru"
+        f" WHERE j.statecode = 0 AND j.CreatedOn >= '{int(since_year):04d}-01-01'"
+        " GROUP BY u.SystemUserId, u.FullName, u.IsDisabled, j.statuscode ORDER BY u.FullName"
+    )
+
+
+def unassigned_sql(schema: str, since_year: int) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT j.statuscode, CAST(j.statuscode AS int) AS kod, COUNT(*) AS n"
+        f" FROM {p}new_projeBase j WHERE j.statecode = 0 AND j.new_editoru IS NULL"
+        f" AND j.CreatedOn >= '{int(since_year):04d}-01-01' GROUP BY j.statuscode ORDER BY COUNT(*) DESC"
+    )
+
+
+def projects_count_sql(schema: str, **flt: Any) -> str:
+    p = _prefix(schema)
+    return f"SELECT COUNT(*) AS n{_project_from(p)} WHERE {_project_where(p, **flt)}"
+
+
+def projects_list_sql(schema: str, page: int, **flt: Any) -> str:
+    p = _prefix(schema)
+    return (
+        "SELECT j.new_projeId, j.new_name, j.statuscode, j.new_icerikdurumu, j.new_isPlaniAsamasi,"
+        " j.new_tahminimetinteslimtarihi, j.CreatedOn, j.ModifiedOn, j.new_olasiyazartext,"
+        " u.FullName AS editor, w.FullName AS proje_editoru, a.FullName AS yazar"
+        f"{_project_from(p)} WHERE {_project_where(p, **flt)}"
+        f" ORDER BY j.ModifiedOn DESC, j.new_projeId OFFSET {max(0, int(page)) * PAGE_SIZE} ROWS FETCH NEXT {PAGE_SIZE} ROWS ONLY"
+    )
+
+
+def editors(schema: str, run: Callable[[str], dict[str, Any]], since_year: int) -> dict[str, Any]:
+    res = run(editors_sql(schema, since_year))
+    people: dict[str, dict[str, Any]] = {}
+    statuses: dict[int, dict[str, Any]] = {}
+    for r in res.get("records") or []:
+        uid = _s(r.get("SystemUserId")) or ""
+        code, n = int(_n(r.get("kod")) or 0), int(_n(r.get("n")) or 0)
+        row = people.setdefault(uid, {"id": uid, "name": _s(r.get("FullName")), "total": 0, "last": None, "byStatus": [],
+                                      "disabled": str(r.get("IsDisabled")).strip().lower() in ("1", "true", "evet")})
+        row["total"] += n
+        row["byStatus"].append({"code": code, "label": _s(r.get("statuscode")), "count": n})
+        last = _date(r.get("son"))
+        if last and (row["last"] is None or last > row["last"]):
+            row["last"] = last
+        st = statuses.setdefault(code, {"code": code, "label": _s(r.get("statuscode")), "count": 0})
+        st["count"] += n
+    for row in people.values():
+        row["byStatus"].sort(key=lambda s: -s["count"])
+    unassigned = [{"code": int(_n(r.get("kod")) or 0), "label": _s(r.get("statuscode")), "count": int(_n(r.get("n")) or 0)}
+                  for r in run(unassigned_sql(schema, since_year)).get("records") or []]
+    return {"items": sorted(people.values(), key=lambda e: -e["total"]), "sinceYear": since_year,
+            "statuses": sorted(statuses.values(), key=lambda s: -s["count"]), "unassigned": unassigned,
+            "truncated": bool(res.get("truncated")), "db": _timing(res)}
+
+
+def projects_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: int, **flt: Any) -> dict[str, Any]:
+    total = int(_n((run(projects_count_sql(schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
+    res = run(projects_list_sql(schema, page_no, **flt))
+    items = [{
+        "id": _s(r.get("new_projeId")), "name": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
+        "text": _s(r.get("new_icerikdurumu")), "stage": _s(r.get("new_isPlaniAsamasi")),
+        "textDue": _date(r.get("new_tahminimetinteslimtarihi")), "createdOn": _date(r.get("CreatedOn")),
+        "modifiedOn": _date(r.get("ModifiedOn")), "author": _s(r.get("yazar")) or _s(r.get("new_olasiyazartext")),
+        "editor": _s(r.get("editor")), "projectEditor": _s(r.get("proje_editoru")),
+    } for r in res.get("records") or []]
+    return {"items": items, "total": total, "page": max(0, int(page_no)), "pageSize": PAGE_SIZE, "db": _timing(res)}

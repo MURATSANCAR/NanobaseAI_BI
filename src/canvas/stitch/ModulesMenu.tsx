@@ -18,7 +18,11 @@ export const LIVE: Record<string, string> = {
   review: '/onaylar',
   board: '/panolar',
   M1: '/yayin-kurulu',
+  M2: '/editor-atama',
+  M4: '/cevirmenler',
   M6: '/telif-sozlesme',
+  M7: '/yazarlar',
+  M8: '/cizer-freelancer',
 };
 
 /** Yalnız yöneticilere açık ekranlar; bu ekranlara götüren modüller yetkisiz kişide hiç listelenmez. */
