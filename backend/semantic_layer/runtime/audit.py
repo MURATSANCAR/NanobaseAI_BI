@@ -1345,7 +1345,21 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                 if where is not None:
                     actual.update(equality(part, scope) for part in _split_and(where.this)
                                   if isinstance(part, exp.EQ) and isinstance(part.left, exp.Column) and isinstance(part.right, exp.Column))
-            for expression in (via_predicate(fact, rule), reference_predicate(slot.mapping, fact, rule)):
+            # A rule that declares the fact's own column reads the reference through the intermediate
+            # record only where one exists. A statement joining on the fact's own column keeps every
+            # row and names the same record, so it honours the rule as well as the two-step join does.
+            from semantic_layer.runtime.reference_contracts import own_predicate
+            direct = own_predicate(slot.mapping, fact, rule)
+            expressions = (via_predicate(fact, rule), reference_predicate(slot.mapping, fact, rule))
+            if direct:
+                direct_tree = parse_sql(direct)
+                direct_scope = _Scope(direct_tree, None)
+                if "{" not in slot.mapping.table_pattern:
+                    direct_scope.alias_to_entity[slot.mapping.entity.upper()] = logical_table(slot.mapping.table_pattern).entity
+                if equality(direct_tree, direct_scope) in actual:
+                    expressions = (direct,)
+            final = expressions[-1]
+            for expression in expressions:
                 expected_tree = parse_sql(expression)
                 expected_scope = _Scope(expected_tree, None)
                 if "{" not in slot.mapping.table_pattern:
@@ -1353,7 +1367,7 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
                 expected = equality(expected_tree, expected_scope)
                 if expected not in actual:
                     out.append(Unmet("reference", f"'{slot.term}' ilişki önceliği doğrulanamadı: {expression}", f"JOIN koşulu olarak {expression} kullan."))
-                elif (expression == reference_predicate(slot.mapping, fact, rule)
+                elif (expression == final
                       and (slot.mapping.extra or {}).get("join_kind") == "LEFT"
                       # Looked for where the equality itself is looked for: in every SELECT. A rule
                       # honoured inside a CTE or a derived table keeps the unassigned rows just as well,

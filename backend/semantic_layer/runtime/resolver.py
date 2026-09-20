@@ -261,6 +261,16 @@ def _last_n_records(tokens: list[str]) -> Optional[str]:
     return None
 
 
+def _inflects(token: str, root: str) -> bool:
+    """`token` is `root` inflected, also when the suffix softened the root's last consonant
+    ("adet" → "adede", "kitap" → "kitaba"), which suffix stripping alone reads as another word."""
+    from semantic_layer.normalize import is_inflection_of
+    soft = {"p": "b", "t": "d", "k": "g"}
+    if is_inflection_of(token, root):
+        return True
+    return bool(root) and root[-1] in soft and is_inflection_of(token, root[:-1] + soft[root[-1]])
+
+
 class SemanticResolver:
     def _whole_scope(self, sq: SemanticQuery, cue: str, text: str, today: Optional[date] = None) -> bool:
         """A question that named no period and cannot be answered from one year's copy reads every copy.
@@ -1050,6 +1060,15 @@ class SemanticResolver:
             elif len(sets) > 1:
                 sq.explanation.append(f"karşılaştırma istendi: {entity}.{column} üzerinde " + " / ".join(", ".join(sorted(x)) for x in sets) + " ayrı sütunlara açılacak")
 
+        # 7b) "iade oranı en yüksek müşteriler, sevk ettiğimiz adede göre": a certified ratio, and —
+        #     named as what it is taken over ("<ölçü> … göre") — another certified measure. When the
+        #     ratio placed is not a ratio over that measure and the catalog certifies exactly one
+        #     sibling of the same name that is (both legs in the base's own column, so the units
+        #     agree), that sibling is the ratio asked. Left alone, the amount ratio was answered with
+        #     the base measure shown beside it: a different question with the right columns on screen.
+        #     Placed before the period is bound: the measure that remains decides which date the period is read on.
+        self._ratio_over_named_base(sq, qf, hits, index)
+
         # 8) does this deployment even hold the period being asked about? The window is measured, so the
         #    answer is "there is no data for 2019 here", not an empty result set that looks like zero sales.
         # A grouping/filter entity is not the owner of the requested measure.
@@ -1164,14 +1183,31 @@ class SemanticResolver:
                 own = f"{m.entity}.{m.column} {(m.operator or 'IN').upper()} ({', '.join(str(v) for v in m.values)})"
                 kind = list((m.extra or {}).get("conditions") or [])
                 formula = f"COUNT(DISTINCT {m.entity}.{key})"
+                base_entity, base_pattern, through, base_why = m.entity, m.table_pattern, None, f"payda: aynı türden bütün kayıtlar ({key})"
+                # The label lives on a child row (a contract's party) and is counted by the key of the
+                # record it belongs to (the contract). "X olanların payı" is then a share of *those
+                # records*: the denominator is the same set with the X condition taken away — every
+                # such record, also the ones that have no child row at all. Counted on the child table
+                # the records with no row silently left the denominator (13.907 of 14.829 contracts),
+                # and a period was read from the child's date instead of the record's own.
+                parent = self._counted_parent(m.entity, key)
+                if parent is not None and not kind:
+                    p_prof, p_key = parent
+                    base_entity, base_pattern = p_prof.entity, p_prof.table_pattern
+                    formula = f"COUNT(DISTINCT {p_prof.entity}.{p_key})"
+                    through = {"entity": m.entity, "column": key, "ref_entity": p_prof.entity, "ref_column": p_key}
+                    base_why = f"payda: bütün {p_prof.entity} kayıtları ({m.entity} satırı olmayanlar dahil)"
+                num_extra = {"func": "COUNT", "conditions": [own] + kind, "undated": True}
+                if through:
+                    num_extra["through"] = through
                 num = ResolvedSlot(term=f"{lab.term} sayısı", semantic_type=SemanticType.METRIC, status="COMPOSED",
-                                   mapping=Mapping(concept_id="", entity=m.entity, table_pattern=m.table_pattern, formula=formula,
-                                                   extra={"func": "COUNT", "conditions": [own] + kind, "undated": True}),
+                                   mapping=Mapping(concept_id="", entity=base_entity, table_pattern=base_pattern, formula=formula,
+                                                   extra=num_extra),
                                    confidence=0.75, explain={"why": f"pay istendi → '{lab.term}' kayıtları {key} üzerinden sayıldı", "source": "share_of_label"})
                 den = ResolvedSlot(term="toplam kayıt sayısı", semantic_type=SemanticType.METRIC, status="COMPOSED",
-                                   mapping=Mapping(concept_id="", entity=m.entity, table_pattern=m.table_pattern, formula=formula,
+                                   mapping=Mapping(concept_id="", entity=base_entity, table_pattern=base_pattern, formula=formula,
                                                    extra={"func": "COUNT", "conditions": kind, "undated": True}),
-                                   confidence=0.75, explain={"why": f"payda: aynı türden bütün kayıtlar ({key})", "source": "share_of_label"})
+                                   confidence=0.75, explain={"why": base_why, "source": "share_of_label"})
                 hits.remove(lab)
                 hits.extend([num, den])
                 sq.slots = hits
@@ -1260,6 +1296,94 @@ class SemanticResolver:
                             status="CERTIFIED", mapping=mapping, confidence=1.0,
                             explain={"source": "catalog_default", "why": "ölçünün varsayılan satır kapsamı"}))
         return sq
+
+    def _ratio_over_named_base(self, sq, qf, hits, index) -> None:
+        def refs(text: str) -> set[tuple[str, str]]:
+            return {(a.upper(), b.upper()) for a, b in re.findall(r"\b(\w+)\.\[?(\w+)\]?", text or "")}
+        def legs(formula: str) -> Optional[tuple[str, str]]:
+            head, sep, tail = (formula or "").partition("/")
+            return (head, tail) if sep else None
+        metrics = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.mapping.formula and h.span]
+        ratios = [h for h in metrics if legs(h.mapping.formula) and h.status == "CERTIFIED"]
+        bases = [h for h in metrics if not legs(h.mapping.formula) and h.status == "CERTIFIED"]
+        if len(ratios) != 1 or not bases or len(metrics) != len(ratios) + len(bases):
+            return
+        ratio = ratios[0]
+        folded = [fold(t) for t in qf.tokens]
+        last = max(b.span[1] for b in bases)
+        cue = next((k for k in range(last, min(last + 3, len(folded))) if folded[k] == "gore"), None)
+        if cue is None or any(g.span and g.span[1] > min(b.span[0] for b in bases) and g.span[1] <= cue + 1 and g not in bases
+                              for g in sq.group_by):
+            return                                     # "… müşteri grubuna göre": a breakdown, not a base
+        measured = [refs(b.mapping.formula) for b in bases]
+        if not measured[0] or any(m != measured[0] for m in measured):
+            return
+        base_cols = measured[0]
+        if base_cols <= refs(legs(ratio.mapping.formula)[1]):
+            return                                     # already a ratio over the named measure
+        want = set(normalize_term(str((ratio.explain or {}).get("canonical") or ratio.term)).split())
+        found = []
+        for key, senses in index.items():
+            if not want < set(key.split()):
+                continue
+            for concept, mappings in senses:
+                if concept.semantic_type != SemanticType.METRIC or concept.id == ratio.concept_id:
+                    continue
+                if normalize_term(concept.term) != key:
+                    continue                           # the concept's own name, not one of its synonyms
+                for m in mappings:
+                    parts = legs(m.formula or "")
+                    if parts and base_cols <= refs(parts[0]) and base_cols <= refs(parts[1]):
+                        found.append((key, concept, mappings))
+                        break
+        if len({c.id for _, c, _ in found}) != 1:
+            return
+        key, concept, mappings = found[0]
+        named = self._slot_from_senses(key, concept.term, [(concept, mappings)], ratio.span)
+        if named is None or not named.mapping:
+            return
+        for old_slot in [ratio] + bases:
+            hits.remove(old_slot)
+        hits.append(named)
+        sq.slots = hits
+        # The word between the base and "göre" is the base's unit ("sevk ettiğimiz *adede* göre") when
+        # the catalog knows that word on the very column the base measures; it asks for nothing more.
+        unit_terms = {fold(c.term) for senses in index.values() for c, maps in senses
+                      if any(m.column and (m.entity.upper(), m.column.upper()) in base_cols for m in maps)
+                      and len(c.term.split()) == 1}
+        for k in range(min(b.span[0] for b in bases), cue):
+            tok = qf.tokens[k]
+            if tok in sq.unresolved and any(_inflects(folded[k], t) for t in unit_terms):
+                sq.unresolved.remove(tok)
+                sq.explanation.append(f"'{tok}' '{bases[0].term}' ölçüsünün birimi olarak okundu")
+        # "sevk *ettiğimiz* adede göre": the verb inside the base phrase describes the base measure, whose
+        # certified definition the ratio's denominator already carries — it restricts nothing further.
+        start = min(b.span[0] for b in bases)
+        for mq in [m for m in sq.model_qualifiers if start <= m.get("position", -1) < cue and not m.get("negative")]:
+            sq.model_qualifiers.remove(mq)
+            sq.explanation.append(f"'{mq['token']}' taban ölçünün ('{bases[0].term}') kendi fiili; ayrı bir koşul değil")
+        sq.explanation.append(f"'{ratio.term}' + '{bases[0].term} … göre' → tabanı bu ölçü olan sertifikalı '{concept.term}'")
+
+    def _counted_parent(self, entity: str, key: str):
+        """The record a child row's count key points at: (profile, its single-column primary key), or
+        None when the key is the row's own key, points nowhere profiled, or points at several things."""
+        prof = self.by_entity.get(entity)
+        if prof is None:
+            return None
+        if [c.upper() for c in (prof.primary_key or [])] == [str(key).upper()]:
+            return None
+        targets = {(str(r.get("ref_entity") or "").upper(), str(r.get("ref_column") or "").upper())
+                   for r in (prof.relationships or [])
+                   if str(r.get("column") or "").upper() == str(key).upper() and r.get("ref_entity")}
+        found = []
+        for ref_entity, ref_column in targets:
+            parent = next((p for e, p in self.by_entity.items() if e.upper() == ref_entity), None)
+            if parent is None or parent.entity == entity:
+                continue
+            pk = [c for c in (parent.primary_key or [])]
+            if len(pk) == 1 and pk[0].upper() == ref_column:
+                found.append((parent, pk[0]))
+        return found[0] if len(found) == 1 else None
 
     def _modifier_candidate(self, tokens, k, consumed):
         tok = tokens[k]

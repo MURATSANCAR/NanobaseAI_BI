@@ -287,6 +287,8 @@ class _Plan:
     join_overrides: dict = field(default_factory=dict)
     extra_columns: dict = field(default_factory=dict)
     join_kinds: dict = field(default_factory=dict)
+    optional_via: dict = field(default_factory=dict)  # edge reached through an optional record → the fact whose rows it must keep
+    through: dict = field(default_factory=dict)      # child entity → its join; read beside the measure's entity, never narrowing it
 
 
 def _rank_alias(q: SemanticQuery, metrics: list, aliases: list[str]) -> str:
@@ -377,7 +379,13 @@ class DeterministicCompiler:
                     s.mapping.extra = dict(s.mapping.extra)
                     s.mapping.extra["conditions"] = [str(c).replace(f"{old_entity}.", f"{entity}.") for c in s.mapping.extra["conditions"]]
         joins: list[tuple[str, str, str, str]] = []
-        overrides, extra_columns, join_kinds = {}, {}, {}
+        overrides, extra_columns, join_kinds, optional_via = {}, {}, {}, {}
+        from semantic_layer.runtime.reference_contracts import via_is_optional
+        def keep_fact_rows(bound, path):
+            rule = reference_rule(bound, entity, asked)
+            if rule and path and len(path) == 2 and via_is_optional(rule):
+                join_kinds[path[0]] = "LEFT"          # a fact row with no intermediate record stays
+                optional_via[path[1]] = entity
         # One joined entity, one way to reach it. A mapping certified with a reference rule (the
         # customer of a line is the invoice's customer, read through the invoice) decides the path for
         # every other mapping on that entity in the same question: the card's discount rate is read
@@ -397,6 +405,7 @@ class DeterministicCompiler:
                 path, custom_on, required = self._mapping_joins(entity, bound, asked)
                 if path is None:
                     return None, f"filter on {s.mapping.entity} cannot be joined to {entity}"
+                keep_fact_rows(bound, path)
                 for j in path:
                     if j not in joins:
                         if any(old[2] == j[2] for old in joins):
@@ -413,6 +422,7 @@ class DeterministicCompiler:
                 path, custom_on, required = self._mapping_joins(entity, bound, asked)
                 if path is None:
                     return None, f"group column on {s.mapping.entity} cannot be joined to {entity}"
+                keep_fact_rows(bound, path)
                 for j in path:
                     if j not in joins:
                         if any(old[2] == j[2] for old in joins):
@@ -423,6 +433,25 @@ class DeterministicCompiler:
                 overrides.update(custom_on)
                 for owner, cols in required.items():
                     extra_columns.setdefault(owner, set()).update(cols)
+        # A share counted on a record through its child rows ("aracılı sözleşmelerin payı": the label is
+        # on the party row, the thing counted is the contract). The child is read beside the record with
+        # a LEFT JOIN and its own default scope inside the ON, so a record with no child row stays in
+        # the denominator; only COUNT(DISTINCT record key) is allowed across it — nothing can multiply.
+        through: dict = {}
+        for s in metrics:
+            t = (s.mapping.extra or {}).get("through")
+            if not t:
+                continue
+            edge = self._join(t["entity"], entity)
+            if (not edge or edge[0] != t["entity"] or edge[2] != entity or edge[1].upper() != str(t["column"]).upper()
+                    or t["entity"] not in self.by_entity or any(_is_additive(x.mapping.formula) for x in metrics)):
+                return None, f"share through {t['entity']} cannot be joined to {entity}"
+            if any(old[2] == edge[2] and old != edge for old in joins if old[0] == edge[0]):
+                return None, "conflicting relationship bindings"
+            if edge not in joins:
+                joins.append(edge)
+            join_kinds[edge] = "LEFT"
+            through[t["entity"]] = edge
         # A measure kept on the "one" side of a join is repeated once per row on the "many" side, so a
         # header total broken down by a line-level column silently multiplies. Refuse and say so; the
         # honest answer needs a pre-aggregate, not a bigger number.
@@ -437,7 +466,7 @@ class DeterministicCompiler:
         date_col = self.conventions.time_column(entity)
         if (q.temporal or q.grain) and not date_col:
             return None, f"no date column on {entity}"
-        return _Plan(entity, metrics, filters, group_cols, joins, date_col, overrides, extra_columns, join_kinds), "ok"
+        return _Plan(entity, metrics, filters, group_cols, joins, date_col, overrides, extra_columns, join_kinds, optional_via, through), "ok"
 
     @staticmethod
     def _firm_of(p: SchemaProfile) -> str:
@@ -570,6 +599,8 @@ class DeterministicCompiler:
             predicates = []
             for key in (metric.mapping.extra or {}).get("conditions") or []:
                 predicate = _pred_key_sql(plan.entity, key, d)
+                if not predicate:
+                    predicate = next((x for x in (_pred_key_sql(child, key, d) for child in plan.through) if x), None)
                 if not predicate:
                     return None  # a catalog restriction must never disappear
                 predicates.append(predicate)
@@ -737,8 +768,17 @@ class DeterministicCompiler:
             if by_firm and ent in shared_entities and ref_ent not in shared_entities:
                 return None  # a shared lookup cannot determine a firm-specific target
             if by_firm and ent not in shared_entities and ref_ent not in shared_entities:
-                on += f" AND {ent}.{d.q(_FIRM_COL)} = {ref_ent}.{d.q(_FIRM_COL)}"
+                # Reached through an optional record, the copy is the fact's: the intermediate row may
+                # be missing, and its NULL copy tag would lose the reference the fact itself carries.
+                firm_side = plan.optional_via.get((ent, col, ref_ent, ref_col), ent)
+                on += f" AND {firm_side}.{d.q(_FIRM_COL)} = {ref_ent}.{d.q(_FIRM_COL)}"
                 explain.append(f"join dönem içinde kapalı: {ent} ↔ {ref_ent}, her dönem kendi kaydıyla")
+            if plan.through.get(joined) == (ent, col, ref_ent, ref_col):
+                # The child's own default scope belongs to the join, not to WHERE: in WHERE it would turn
+                # the LEFT JOIN back into an inner one and drop the records that have no child row.
+                for m in self._default_filters(joined):
+                    on += f" AND {_pred_sql(joined, m, d)}"
+                    explain.append(f"varsayılan filtre (birleştirme içinde): {m.entity}.{m.column} {m.operator} {m.values}")
             kind = "LEFT " if plan.join_kinds.get((ent,col,ref_ent,ref_col)) == "LEFT" else ""
             sql += f"\n{kind}JOIN {j_source} AS {joined} ON {on}"
         if where:
@@ -785,6 +825,14 @@ class DeterministicCompiler:
                 return None, {}, {}
             custom_on[last] = reference_predicate(mapping, entity, rule, self.d.q)
             required[entity] = {primary}
+        elif rule.get("own_column"):
+            own = rule["own_column"]
+            declared = self.conventions.ref_columns.get(entity, {}).get(own.upper())
+            if (not declared or declared[0] != mapping.entity or declared[1].upper() != last[3].upper()
+                    or not self.by_entity[entity].column(own)):
+                return None, {}, {}
+            custom_on[last] = reference_predicate(mapping, entity, rule, self.d.q)
+            required[entity] = {own}
         return [first,last], custom_on, required
 
     def _join_chain(self, entity: str, other: str) -> Optional[list[tuple[str, str, str, str]]]:
@@ -2065,7 +2113,9 @@ class ExistingCompiler:
                     continue
                 rule = reference_rule(slot.mapping, fact, [f.mapping for f in q.filters if f.mapping])
                 if rule:
-                    predicate = via_predicate(fact, rule) + " AND " + reference_predicate(slot.mapping, fact, rule)
+                    from semantic_layer.runtime.reference_contracts import own_predicate
+                    predicate = (own_predicate(slot.mapping, fact, rule)
+                                 or via_predicate(fact, rule) + " AND " + reference_predicate(slot.mapping, fact, rule))
                     # The gate demands what the catalog declares — the join kind too. Left unsaid here, the
                     # model wrote a correct INNER JOIN and learnt about LEFT only from the refusal.
                     left = (slot.mapping.extra or {}).get("join_kind") == "LEFT"
