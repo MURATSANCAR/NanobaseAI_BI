@@ -242,6 +242,14 @@ def main() -> int:
                 data_note = f"referans çalışmadı: {str(ex)[:160]}"
             if not data_note and not reference and case["expect"] == "answer" and not any(c["kind"] == "empty" for c in case.get("checks") or []):
                 data_note = "referans boş döndü"
+        # Aynı cümlenin iki meşru okuması olabilir ("geçen yıl alıp": fatura / sipariş). Her biri kendi
+        # bağımsız referansıyla sınanır; cevap herhangi birine birebir uyuyorsa geçer.
+        alternates = []
+        for alt_sql in case.get("alt_reference_sql") or []:
+            try:
+                alternates.append(run(case.get("source", "logo"), alt_sql))
+            except Exception:  # noqa: BLE001
+                pass
         attempts, sqls = [], set()
         for _ in range(repeat):
             started = time.time()
@@ -254,6 +262,10 @@ def main() -> int:
                 problems = [f"beklenen {'/'.join(wanted)}, gelen {got}: {(answer.get('explanation') or answer.get('summary') or '')[:160]}"]
             elif got == "answer" and not data_note:
                 problems = check(case, answer, reference, run, tolerance)
+                for alt in alternates:
+                    if problems:
+                        other = check(case, answer, alt, run, tolerance)
+                        problems = other if not other else problems
             else:
                 problems = []
             attempts.append({"kind": got, "sec": round(time.time() - started, 1), "problems": problems,

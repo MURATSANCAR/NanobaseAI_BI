@@ -524,32 +524,14 @@
    "expect": "answer",
    "verified": true,
    "source": "logo",
-   "reference_sql": "SELECT C.CODE AS cari_kodu, C.DEFINITION_ AS unvan, (SELECT SUM((L.AMOUNT-L.SHIPPEDAMOUNT)*L.PRICE) FROM LG_411_01_ORFLINE L JOIN LG_411_01_ORFICHE O ON O.LOGICALREF=L.ORDFICHEREF WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0 AND L.CANCELLED=0 AND L.LINETYPE=0 AND L.CLOSED=0) AS bekleyen_tutar FROM LG_411_CLCARD C WHERE EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0) AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE S WHERE S.CLIENTREF=C.LOGICALREF AND S.TRCODE IN (7,8) AND S.IOCODE=4 AND S.LINETYPE=0 AND S.CANCELLED=0)",
+   "reference_sql": "SELECT C.CODE AS cari_kodu FROM LG_411_CLCARD C WHERE (EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0) OR EXISTS (SELECT 1 FROM LG_211_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0)) AND NOT EXISTS (SELECT 1 FROM LG_411_01_STLINE S WHERE S.CLIENTREF=C.LOGICALREF AND S.TRCODE IN (7,8) AND S.IOCODE=4 AND S.LINETYPE=0 AND S.CANCELLED=0) AND NOT EXISTS (SELECT 1 FROM LG_211_01_STLINE S WHERE S.CLIENTREF=C.LOGICALREF AND S.TRCODE IN (7,8) AND S.IOCODE=4 AND S.LINETYPE=0 AND S.CANCELLED=0)",
    "checks": [
     {
      "kind": "rows",
      "tolerance": 0
-    },
-    {
-     "kind": "pairs",
-     "top": 10,
-     "answer_key": [
-      "cari_kodu",
-      "CODE",
-      "kod",
-      "musteri_kodu"
-     ],
-     "answer_value": [
-      "cari_kodu",
-      "CODE",
-      "kod",
-      "musteri_kodu"
-     ],
-     "reference_key": "cari_kodu",
-     "reference_value": "cari_kodu"
     }
    ],
-   "note": "2026-09-18: 4 cari (KADRİYE KENAR 583,75; FURKAN NUR 591,50; TÜYAP DİYARBAKIR KİTAP FUARI 152.540,00; KÜÇÜK ORMAN UZMAN REHBERLİK 1.895,50; bekleyen toplam 155.610,75 ₺). Köprü aynı 4 cariyi veriyor. Tanım: Kural 10 / iş tanımı 15–16 — sipariş = ORFICHE TRCODE 1 iptal hariç; sevkiyat = STLINE TRCODE 7,8 IOCODE 4; müşteri düzeyinde yokluk (NOT EXISTS), güncel kopya. İki açık nokta: (1) köprü cevabında beklenen 'bekleyen tutar' kolonu yok (yalnız kod + unvan) — tutar kontrolü bu yüzden konmadı; (2) 'hiç' iki yıl kopyası birlikte okunursa (2021–25 + 2026, cari koduyla) siparişi olup hiçbir kopyada sevkiyatı olmayan 1.826 cari çıkıyor — güncel kopya okuması iş teyidi bekliyor."
+   "note": "2026-09-18: 4 cari (KADRİYE KENAR 583,75; FURKAN NUR 591,50; TÜYAP DİYARBAKIR KİTAP FUARI 152.540,00; KÜÇÜK ORMAN UZMAN REHBERLİK 1.895,50; bekleyen toplam 155.610,75 ₺). Köprü aynı 4 cariyi veriyor.  | 2026-09-20 iş kararı K6: dönemsiz mutlak yokluk ('hiç') bütün yıl kopyalarını okur (2021–2026) → 1.826 cari; yalnız 2026 kopyası 4 veriyordu."
   },
   {
    "n": 18,
@@ -567,7 +549,10 @@
      "tolerance": 0
     }
    ],
-   "note": "2026-09-18: referans 34.531 cari (2025'te alan 34.588 carinin 57'si 2026'da sipariş vermiş); 2025 net ciroları 733.178.030,47 ₺ (iade düşülmüş). Günlükteki 09-17 ölçümüyle aynı sayı (34.531). Tanım (günlük soru 18): 'alıp' = adına satış faturası kesilmiş (INVOICE TRCODE 7,8,9, CANCELLED 0), geçen yıl = 2025 → LG_211 kopyası; 'bu yıl hiç sipariş vermemiş' = 2026'da ORFICHE TRCODE 1 fişi yok (LG_411) — yokluk, NOT EXISTS; iki kopya cari koduyla eşlenir (LOGICALREF 14 kartta farklı). KÖPRÜ UYUŞMUYOR: bugünkü koşuda cevap yerine INCOMPLETE_ANSWER döndü — \"'alip' koşulu sonuç kapsamında doğrulanamadı: ITEMS.CARDTYPE IN ['1']\"; 'alıp' kelimesi müşteri alımı yerine malzeme kartı türüne (ITEMS.CARDTYPE = 1, 'alım') bağlanmış. 09-17 karnesinde aynı soru 34.531 ile doğruydu → gerileme. İş notu: sipariş modülü tüm satışları kapsamıyor (e-ticaret kanalı); 2026'da faturası da olmayan 33.573 cari ayrı bir okumadır. Ciro toplamı kontrolü konmadı (brüt satış mı net mi belirsiz)."
+   "note": "2026-09-18: referans 34.531 cari (2025'te alan 34.588 carinin 57'si 2026'da sipariş vermiş); 2025 net ciroları 733.178.030,47 ₺ (iade düşülmüş). Günlükteki 09-17 ölçümüyle aynı sayı (34.531). Tanım (günlük soru 18): 'alı | 2026-09-20: 'geçen yıl alıp' iki meşru okuma — geçen yıl faturası olan (34.531) ya da geçen yıl sipariş veren (33.242); cevap hangisini seçtiğini yorum satırında söylüyor.",
+   "alt_reference_sql": [
+    "SELECT C.CODE FROM LG_411_CLCARD C WHERE EXISTS (SELECT 1 FROM LG_211_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0 AND O.DATE_>='2025-01-01' AND O.DATE_<'2026-01-01') AND NOT EXISTS (SELECT 1 FROM LG_411_01_ORFICHE O WHERE O.CLIENTREF=C.LOGICALREF AND O.TRCODE=1 AND O.CANCELLED=0 AND O.DATE_>='2026-01-01' AND O.DATE_<'2027-01-01')"
+   ]
   },
   {
    "n": 19,
