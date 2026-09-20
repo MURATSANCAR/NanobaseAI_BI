@@ -1227,9 +1227,17 @@ class ExistingCompiler:
             if entity and entity in self.by_entity and entity not in ordered:
                 ordered.append(entity)
 
+        # Placed only through the runtime spelling of a doubly-named table (ORFICHE / LG_ORFICHE):
+        # such a table is *shown*, but it does not get to decide which database the question is
+        # about. When it did, a CRM question that mentions "stok kartı" became a two-server plan with
+        # no measured bridge to write it over, and was refused.
+        self._respelled: set[str] = set()
         for slot in q.slots:
             if slot.mapping:
-                add(self.profiled_name(slot.mapping))
+                name = self.profiled_name(slot.mapping)
+                if name and name != slot.mapping.entity:
+                    self._respelled.add(name)
+                add(name)
         # A table that carries the only column matching a word the vocabulary does not define. It is
         # the answer to that word, so it is pinned beside what the question resolved: shortlisted by
         # a general ranking it loses to tables the question never mentioned, and the model is then
@@ -1274,8 +1282,9 @@ class ExistingCompiler:
         # Logo question was shown two hundred CRM tables and a CRM question was answered from Logo.
         # The source is read from the question's own evidence: what the resolver placed counts most,
         # then what the searches found, ranked. Where the evidence points at both, both stay.
-        sources = self._question_sources(resolved, evidence)
-        if not {self.source_of(e) for e in resolved if e in self.by_entity} and getattr(q, "source_hint", None) is not None:
+        deciding = [e for e in resolved if e not in self._respelled] or resolved
+        sources = self._question_sources(deciding, evidence)
+        if not {self.source_of(e) for e in deciding if e in self.by_entity} and getattr(q, "source_hint", None) is not None:
             # Nothing certified pins a database; the resolver read one from the tables the question's
             # words name. That beats the search vote, which the other database's tables can win by
             # sheer number ("fatura numarası" on a CRM shipment table outranked the ERP invoice).
