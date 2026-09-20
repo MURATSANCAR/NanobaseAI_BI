@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-20 23:30 — Editör: "kim ne yaptı" tek token + olasılıkla; ana model koşu başına bir kez açılır (kod main'de, sunucuda ÖLÇÜLMEDİ)
+
+**Neden:** `NandhaKishorM/laya` (0,4B kodlayıcı karar modeli; 19 Eylül'de `convaiinnovations/laya` adıyla bakılıp alınmamıştı) yeniden, bu kez kodu okunarak incelendi. Yine alınmadı: görsel girişi yok, Türkçede 20 seçenekli görevde 0,37 (İngilizce 0,78), eğitimsiz hâli çoğunluk sınıfının altında, ~20 seçenek ve ~768 token durum sınırı, fayda ancak müşteriye özel ince ayarla. Ama övülen fikir — metin üretmeden, tek geçişte, olasılığıyla tipli karar — kendi modelimizle eğitimsiz alınabiliyor ve editör bunu hiçbir yerde kullanmıyordu (`logprobs` sıfır eşleşme).
+
+**Kim ne yaptı (`knowledge.attribute_event_actors`, göç 009 `event_actor`, istem `event_actor` v1, `Llm.choose`):** çıkarımın `participants` alanı tek okumaydı (serbest metin ad, olasılık yok, karaktere bağlı değil; Türkçede özne çoğu zaman yazılmaz). Artık her (olay, karakter) çifti ayrı, kapalı kümeli tek token sorudur — A eylemi yapan / B yer alan ama yapan değil / C olayda yok — ve olasılıklar tokenın logprobs'undan okunur (sıcaklık 0, düşünme kapalı, önek önbelleğine uygun istem). Çıkarımın yazdığına dokunulmaz; eşik altı çift `UNCERTAIN` kalır; belirsiz çift, çıkarımla ayrışma ya da "adlandırılanlardan hiçbiri yapan değil" durumunda olay editör kuyruğuna gider. Critic'ten sonra koşar (reddedilen olay okunmaz). Eşik ve kuyruk ayardan (`EDITOR_ACTOR_MIN_PROBABILITY=0.7`, `EDITOR_ACTOR_REVIEW`), regresyona bir değişmez, Hermes'e `get_event_actors`. **Eşik ölçülmedi:** önce `python -m editor.measure_actors <nesil>` (deftere yazmaz) nesil 9'da koşturulacak, okumalar kitaba karşı gözle denetlenecek.
+
+**Ana model açılışı (`BookFullAnalysis._run_single_phase`):** kod okumasıyla director koşu başına kesin 2, önemli olay taraması olursa 3 kez açılıyordu (derin model 0,90 istediği için her geçişte director itiliyor, ~6 dk/açılış). Geçişi zorlayan yalnız iki bağımlılık: çıkarım derin taramayı, görsel kimlik karakter listesini okur; director'ın sonraki hiçbir adımı görsel kimlik/süreklilik/metin–görsel teyidin yazdığını okumaz. Yeni sıra: derin tarama + metin–görsel teyit → director'ın bütün işi → görsel kimlik + süreklilik → kuyruk, indeks, regresyon, rapor, kart. Önemli olay sayfası taranacaksa görsel iş araya girer, director 2 kez açılır. Model çağrılarının girdisi değişmedi (varsayılan `deep` kipinde). `contradictions` activity'si `detect_contradictions` + `queue_contradictions` olarak bölündü; çalışan işler için eski sıra `workflow.patched("director-single-phase-v1")` arkasında `_run_v1` olarak duruyor.
+
+**DOĞRULANAMADI:** TT VPN kapalı, sunucuya kurulmadı, hiçbir koşu yapılmadı; yerelde yalnız sözdizimi derlendi. Sıradaki: VPN açılınca kur (göç 009 işçi açılışında uygulanır) → `measure_actors` nesil 9 → tam koşu (nesil 10): regresyon, gateway logunda `start book-director` sayısı (hedef 1), toplam süre, kuyruk büyüklüğü.
+
+
 ## 2026-09-20 22:30 — Editoryal Süreç: M6 Telif & Sözleşme ekranı (gerçek CRM verisi)
 
 Karar (kullanıcı, A seçeneği): M1–M8 tabloları ve uçları BI köprüsünde durur; `apps/editor` yalnız kitap analizi yapar, M3/M5 ona ileride bir uç üzerinden sorar. İlk ekran M6.

@@ -65,3 +65,23 @@ Sunucunun internet çıkışında bağlantı başına ~0,2 MB/s sınır var; top
 
 Aynı model aynı sayfayı iki kez okuyunca figür adları 26 sayfanın 18'inde aynı çıkıyor; metin–görsel çelişki adayı bir koşuda 5, sonrakinde 0. Bu yüzden: figür adı taramadan değil kırpım eşleştirmesinden gelir; metin–görsel bulgu ancak 3 bağımsız oyun çoğunluğuyla deftere girer (`text_visual_check` oyları saklar); model değişikliği (`compare_models`) iki BF16 koşusu arasındaki farkla kıyaslanır, tek koşuyla değil. FP8 derin model bu ölçüyle BF16'dan ayırt edilemedi, bu ayarda daha yavaş; varsayılan BF16.
 
+
+## Kim ne yaptı: tek token + olasılık (2026-09-20, kod hazır, ölçülmedi)
+
+Çıkarımın `event.participants` alanı tek okumadır: serbest metin adlar, olasılık yok, çözülmüş karakterlere bağlı değil; Türkçede özne çoğu zaman yazılmadığı için en kırılgan alan budur. `knowledge.attribute_event_actors` (iş akışında Critic'ten hemen sonra, `event_actors` activity'si) her (olay, karakter) çiftini ayrı ayrı, kapalı kümeli tek token olarak sorar: **A** eylemi yapan, **B** olayda yer alan ama yapan değil, **C** olayda yok. Olasılıklar tokenın logprobs'undan okunur (`Llm.choose`: vLLM `structured_outputs.choice` + `logprobs`, sıcaklık 0, seed sabit, düşünme kapalı). Çift başına ayrı soru: birden çok yapan olabilir ve seçenek sırası yanlılığı yoktur. İstemin ortak kısmı (sayfa metni + olay) önde, karakter sonda: önek önbelleği çalışır.
+
+- Sonuç `event_actor` tablosunda (göç 009; çift başına tek satır, yeniden denemede çift yazılmaz). Çıkarımın yazdığı hiçbir şey değiştirilmez.
+- Hiçbir okuma `EDITOR_ACTOR_MIN_PROBABILITY` (varsayılan 0,7) eşiğine ulaşmazsa çift `UNCERTAIN`'dir ve hiçbir yerde kesin bilgi diye gösterilmez.
+- Editör kuyruğuna gidenler (`EDITOR_ACTOR_REVIEW=0` ile kapatılır, yalnız kayıt tutulur): belirsiz çifti olan olay; çıkarımın katılımcı saydığı ama bu okumanın olayda görmediği karakter; çıkarımın listesinde olmayıp eylemi yapan okunan karakter; çıkarımın adlandırdığı karakterlerden hiçbirinin yapan okunmadığı olay.
+- Reddedilmiş ve yerine yenisi geçmiş iddiaların olayları okunmaz. Regresyon değişmezi: kesin rol yalnız eşiği geçen okumayla.
+- Hermes aracı: `get_event_actors`.
+- **Eşik ölçülmedi.** 0,7 geçicidir. Güvenmeden önce `python -m editor.measure_actors <nesil>` var olan bir nesilde koşturulur: deftere yazmaz, çiftlerin olasılık dağılımını ve çıkarımla ayrıştığı yerleri JSON'a döker; okumalar kitaba karşı gözle denetlenir. Düşünmesiz tek tokenın, düşünerek verilen oylardan kötü olup olmadığı da bu ölçümle görülür.
+
+## Ana model koşu başına bir kez açılır (2026-09-20, kod hazır, ölçülmedi)
+
+Director (kartın 0,48'i) ile derin görsel model (0,90) birlikte sığmaz; aralarındaki her geçiş ~6 dk soğuk açılıştır. Eski sıra derin → director → derin → director idi (önemli olay sayfası taranacaksa bir tur daha). Geçişi zorlayan iki bağımlılık var: çıkarım derin taramaları okur; görsel kimlik director'ın çözdüğü karakterleri okur. Director'ın sonraki hiçbir adımı görsel kimliğin, sürekliliğin ya da metin–görsel teyidin yazdığını okumaz (Critic bu iddia türlerini zaten atlar). Yeni sıra (`BookFullAnalysis._run_single_phase`): derin tarama + metin–görsel teyit → director'ın bütün işi (çıkarım, kimlik, kip, birleştirme, anlatı rolü, duygu/tema, özetler, Critic, kim ne yaptı, çelişki adayları, künye) → görsel kimlik + süreklilik → kuyruk, arama indeksi, regresyon, rapor, kart. Yalnız anlatı rolleri yeni derin tarama isterse (Critic o sayfaların sahne iddialarını görmelidir) görsel iş director fazının ortasına girer ve director ikinci kez açılır.
+
+- Her model çağrısının girdisi eski sıradakiyle aynıdır (varsayılan `EDITOR_VISION_SCREEN=deep` kipinde). `fast` kipinde fark: yalnız hızlı taranmış sayfaların figürleri artık görsel kimlikten önce deftere yazılmış olur.
+- `contradictions` activity'si ikiye bölündü: `detect_contradictions` (director) ve `queue_contradictions` (en sonda; süreklilik ve metin–görsel adayları da oluşmuşken).
+- Çalışan işler bozulmaz: sıra `workflow.patched("director-single-phase-v1")` ile dallanır, eski sıra `_run_v1` olarak durur.
+- Ölçüm: gateway logunda koşu aralığındaki `start book-director` satırları sayılır (hedef 1; önemli olay taraması varsa 2).

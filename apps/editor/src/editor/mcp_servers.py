@@ -194,6 +194,13 @@ async def build_timeline(generation_id: Gen) -> list[dict]:
 
 
 @knowledge_mcp.tool()
+async def get_event_actors(generation_id: Gen) -> list[dict]:
+    """Kim ne yaptı: olay başına eylemi YAPAN ve olayda YER ALAN karakterler, olasılıklarıyla.
+    UNCERTAIN okumalar kesin bilgi değildir; çıkarımın kendi katılımcı listesi ayrıca verilir."""
+    return await _t(knowledge.event_actors, generation_id)
+
+
+@knowledge_mcp.tool()
 async def detect_contradictions(generation_id: Gen) -> dict:
     """Zaman çizelgesi, karakter, metin-görsel ve süreklilik çelişki ADAYLARI."""
     return await knowledge.detect_contradictions(generation_id)

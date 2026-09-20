@@ -25,6 +25,8 @@ class Settings:
     deep_concurrency: int
     text_visual_votes: int
     continuity_votes: int
+    actor_min_probability: float
+    actor_review: bool
     min_illustration_ink: float
     min_figure_ink: float
     min_figure_side: float
@@ -59,6 +61,12 @@ def settings() -> Settings:
         deep_concurrency=int(env("EDITOR_DEEP_CONCURRENCY", "4")),
         text_visual_votes=int(env("EDITOR_TEXT_VISUAL_VOTES", "3")),
         continuity_votes=int(env("EDITOR_CONTINUITY_VOTES", "3")),
+        # who-did-what: a reading of (event, character) counts only from this probability up;
+        # below it the pair is UNCERTAIN. Provisional: not yet measured on a book.
+        actor_min_probability=float(env("EDITOR_ACTOR_MIN_PROBABILITY", "0.7")),
+        # send events whose doer is unsettled, or where this reading and the extractor's
+        # participant list disagree, to the editor queue ("0": record only)
+        actor_review=env("EDITOR_ACTOR_REVIEW", "1") != "0",
         # below this share of non-text ink a page has nothing to look at (no vision call)
         min_illustration_ink=float(env("EDITOR_MIN_ILLUSTRATION_INK", "0.02")),
         # a figure's bbox must contain at least this share of ink to count as seen

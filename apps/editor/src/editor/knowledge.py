@@ -568,6 +568,156 @@ async def assign_narrative_roles(generation_id: str) -> dict:
     return {"key_events": len(key), "pages": [r["page_no"] for r in rows]}
 
 
+# ------------------------------------------------------- who did what
+ACTOR_ROLES = {"A": "ACTOR", "B": "INVOLVED", "C": "ABSENT"}
+
+
+def _actor_role(probs: dict[str, float], min_p: float) -> str:
+    best = max(probs, key=probs.get)
+    return ACTOR_ROLES[best] if probs[best] >= min_p else "UNCERTAIN"
+
+
+async def attribute_event_actors(generation_id: str, write: bool = True) -> dict:
+    """Who did what. `event.participants` is one free-text reading by the extractor: names
+    without a probability, not tied to the resolved characters, and in Turkish the subject
+    is usually not written at all. Here every (event, character) pair is read on its own
+    as a closed-set decision (does the action / takes part / absent) whose probabilities
+    come from the model's token distribution (Llm.choose): one deterministic call per
+    pair, no option order to be biased by, and several doers are possible.
+
+    Nothing the extractor wrote is changed. Pairs land in `event_actor`; an event goes to
+    the editor when a pair stays under the configured probability, when this reading and
+    the extractor's list contradict each other, or when the extractor named characters
+    and none of them turns out to do the action.
+
+    `write=False` is for measuring on a generation that is already sealed: nothing is
+    written to it (the calls are logged without a generation) and every pair's reading
+    comes back under `detail`."""
+    s = settings()
+    chars = db.all_rows("SELECT id, canonical_name, aliases, kind, description FROM character"
+                        " WHERE generation_id=%s ORDER BY first_page NULLS LAST, canonical_name",
+                        generation_id)
+    evs = db.all_rows(
+        "SELECT e.id, e.summary, e.page_from, e.page_to, e.participants, e.claim_id,"
+        " (SELECT string_agg(ev.quote, ' | ') FROM claim_evidence ce JOIN evidence ev"
+        "  ON ev.id=ce.evidence_id WHERE ce.claim_id=e.claim_id) AS quotes"
+        " FROM event e LEFT JOIN claim c ON c.id=e.claim_id WHERE e.generation_id=%s AND"
+        " e.merged_into IS NULL AND coalesce(c.status,'CANDIDATE') NOT IN ('REJECTED','SUPERSEDED')"
+        " ORDER BY e.page_from, e.page_to", generation_id)
+    stats = {"events": len(evs), "characters": len(chars), "pairs": 0, "pairs_failed": 0,
+             "actor": 0, "involved": 0, "absent": 0, "uncertain": 0,
+             "extractor_disagreements": 0, "sent_to_review": 0}
+    if not evs or not chars:
+        return stats
+    done = {(str(r["event_id"]), str(r["character_id"])) for r in db.all_rows(
+        "SELECT event_id, character_id FROM event_actor WHERE generation_id=%s", generation_id)} \
+        if write else set()
+    detail: list[dict] = []
+    names = {str(ch["id"]): {ledger.norm(n) for n in [ch["canonical_name"], *ch["aliases"]]}
+             for ch in chars}
+    sem = asyncio.Semaphore(s.page_concurrency)
+
+    def card(ch: dict) -> str:
+        also = f" (diğer adları: {', '.join(ch['aliases'])})" if ch["aliases"] else ""
+        what = f" — {ch['description']}" if ch["description"] else ""
+        return f"{ch['canonical_name']}{also}{what}"[:600]
+
+    async def pair(e: dict, ch: dict, pages: list[int], text: str):
+        ref, body = prompts.render("event_actor", pages_text=text, summary=e["summary"],
+                                   quotes=e["quotes"] or "-", character=card(ch))
+        async with sem:
+            try:
+                probs, call_id = await Llm(generation_id if write else None).choose(
+                    DIRECTOR, [{"role": "user", "content": body}], list(ACTOR_ROLES),
+                    prompt=ref, pages=pages)
+            except Exception:  # noqa: BLE001 - no reading for this pair; it is not written
+                return ch, None, None
+        return ch, probs, call_id
+
+    async def one(e: dict) -> None:
+        todo = [ch for ch in chars if (str(e["id"]), str(ch["id"])) not in done]
+        if not todo:
+            return
+        pages = [p for p in range(e["page_from"] - 1, e["page_to"] + 1) if p > 0]
+        text = "\n".join(page_text_numbered(generation_id, p) for p in pages)
+        listed = {ledger.norm(p) for p in e["participants"]}
+        res = await asyncio.gather(*(pair(e, ch, pages, text) for ch in todo))
+        if not write:
+            for ch, probs, _ in res:
+                stats["pairs"] += 1
+                if probs is None:
+                    stats["pairs_failed"] += 1
+                    continue
+                role = _actor_role(probs, s.actor_min_probability)
+                stats[role.lower()] += 1
+                detail.append({"pages": [e["page_from"], e["page_to"]], "event": e["summary"],
+                               "extractor_participants": e["participants"],
+                               "character": ch["canonical_name"], "role": role,
+                               "listed_by_extractor": bool(names[str(ch["id"])] & listed),
+                               "p_actor": round(probs["A"], 4), "p_involved": round(probs["B"], 4),
+                               "p_absent": round(probs["C"], 4)})
+            return
+        with db.tx() as c:
+            for ch, probs, call_id in res:
+                stats["pairs"] += 1
+                if probs is None:
+                    stats["pairs_failed"] += 1
+                    continue
+                c.execute(
+                    "INSERT INTO event_actor(event_id, character_id, generation_id, p_actor,"
+                    " p_involved, p_absent, role, listed_by_extractor, model_call_id) VALUES"
+                    " (%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING",
+                    (e["id"], ch["id"], generation_id, probs["A"], probs["B"], probs["C"],
+                     _actor_role(probs, s.actor_min_probability),
+                     bool(names[str(ch["id"])] & listed), call_id))
+            # judged on every pair of the event, also those a previous attempt wrote
+            rows = c.execute(
+                "SELECT ea.*, ch.canonical_name FROM event_actor ea JOIN character ch ON"
+                " ch.id=ea.character_id WHERE ea.event_id=%s", (e["id"],)).fetchall()
+            for r in rows:
+                stats[r["role"].lower()] += 1
+            unsure = [r for r in rows if r["role"] == "UNCERTAIN"]
+            dropped = [r for r in rows if r["listed_by_extractor"] and r["role"] == "ABSENT"]
+            added = [r for r in rows if not r["listed_by_extractor"] and r["role"] == "ACTOR"]
+            no_doer = any(r["listed_by_extractor"] for r in rows) and \
+                not any(r["role"] == "ACTOR" for r in rows)
+            stats["extractor_disagreements"] += len(dropped) + len(added)
+            why = []
+            if unsure:
+                why.append("eylemdeki yeri belirsiz: " + ", ".join(
+                    f"{r['canonical_name']} (yapan {r['p_actor']:.2f} / yer alan {r['p_involved']:.2f}"
+                    f" / yok {r['p_absent']:.2f})" for r in unsure))
+            if dropped:
+                why.append("çıkarım katılımcı saymış, ikinci okuma olayda görmüyor: " + ", ".join(
+                    f"{r['canonical_name']} (yok {r['p_absent']:.2f})" for r in dropped))
+            if added:
+                why.append("çıkarımın listesinde yok, ikinci okumaya göre eylemi yapan: " + ", ".join(
+                    f"{r['canonical_name']} ({r['p_actor']:.2f})" for r in added))
+            if no_doer and not unsure:
+                why.append("adı geçen karakterlerden hiçbiri eylemi yapan olarak okunmadı")
+            if why and s.actor_review and e["claim_id"]:
+                ledger.queue_review(c, generation_id, claim_id=str(e["claim_id"]), priority=2,
+                                    reason="Kim yaptı: " + "; ".join(why))
+                stats["sent_to_review"] += 1
+
+    await asyncio.gather(*(one(e) for e in evs))
+    return stats if write else {**stats, "detail": detail}
+
+
+def event_actors(generation_id: str) -> list[dict]:
+    """Per event: who does the action and who takes part, with probabilities. Pairs read
+    as ABSENT are left out; UNCERTAIN ones are listed as such, never as a doer."""
+    return db.all_rows(
+        "SELECT e.id AS event_id, e.page_from, e.page_to, e.modality, e.summary, e.participants"
+        " AS extractor_participants, coalesce(json_agg(json_build_object('character',"
+        " ch.canonical_name, 'role', ea.role, 'p_actor', round(ea.p_actor::numeric, 3),"
+        " 'p_involved', round(ea.p_involved::numeric, 3)) ORDER BY ea.p_actor DESC)"
+        " FILTER (WHERE ea.role <> 'ABSENT'), '[]') AS characters"
+        " FROM event e LEFT JOIN event_actor ea ON ea.event_id=e.id LEFT JOIN character ch ON"
+        " ch.id=ea.character_id WHERE e.generation_id=%s AND e.merged_into IS NULL"
+        " GROUP BY e.id ORDER BY e.page_from, e.page_to", generation_id)
+
+
 # ----------------------------------------------------- emotions/themes
 async def link_emotions_and_themes(generation_id: str) -> dict:
     """Step 10: attach emotions to resolved characters, consolidate themes."""

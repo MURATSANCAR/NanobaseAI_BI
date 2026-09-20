@@ -190,10 +190,27 @@ async def critic(generation_id: str) -> dict:
 
 
 @activity.defn
+async def event_actors(generation_id: str) -> dict:
+    return await knowledge.attribute_event_actors(generation_id)
+
+
+@activity.defn
 async def contradictions(generation_id: str) -> dict:
     found = await knowledge.detect_contradictions(generation_id)
     queued = await _t(quality.contradictions_to_queue, generation_id)
     return {**found, **queued}
+
+
+@activity.defn
+async def detect_contradictions(generation_id: str) -> dict:
+    """The director's half of `contradictions`, so it can run while the director is loaded."""
+    return await knowledge.detect_contradictions(generation_id)
+
+
+@activity.defn
+async def queue_contradictions(generation_id: str) -> dict:
+    """The queueing half: runs last, when text-visual and continuity candidates exist too."""
+    return await _t(quality.contradictions_to_queue, generation_id)
 
 
 @activity.defn
@@ -246,7 +263,7 @@ async def release_models(aliases_: list[str]) -> dict:
     return r.json()
 
 
-ALL = [book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+ALL = [event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

@@ -11,6 +11,7 @@ import asyncio
 import base64
 import hashlib
 import json
+import math
 import time
 from dataclasses import dataclass
 from typing import Any
@@ -166,6 +167,48 @@ class Llm:
                 req["repetition_penalty"] = 1.1
                 await asyncio.sleep(2 * (attempt + 1))
         raise ModelError(f"{alias} failed after {retries + 1} attempts: {last_err}")
+
+    async def choose(self, alias: str, messages: list[dict], choices: list[str], *,
+                     prompt: PromptRef | None = None, pages: list[int] | None = None,
+                     retries: int = 2) -> tuple[dict[str, float], int]:
+        """A closed-set decision read as a distribution: the answer is ONE token out of
+        `choices` (vLLM structured_outputs.choice) and the probability of every choice comes
+        from that token's logprobs, so one call gives what repeated sampled votes only
+        estimate. Every choice must be a single token (single letters are).
+        Returns ({choice: probability, summing to 1}, model_call id)."""
+        req: dict[str, Any] = {"model": alias, "messages": messages, "max_tokens": 1,
+                               "temperature": 0, "seed": 17, "logprobs": True, "top_logprobs": 20,
+                               "structured_outputs": {"choice": choices},
+                               "chat_template_kwargs": {"enable_thinking": False}}
+        last_err = None
+        for attempt in range(retries + 1):
+            t0 = time.time()
+            resp = None
+            try:
+                r = await client().post("/v1/chat/completions", json=req)
+                if r.status_code >= 400:
+                    raise ModelError(f"{r.status_code} {r.text[:1500]}")
+                data = r.json()
+                top = data["choices"][0]["logprobs"]["content"][0]["top_logprobs"]
+                mass = {c: sum(math.exp(t["logprob"]) for t in top if t["token"].strip() == c)
+                        for c in choices}
+                total = sum(mass.values())
+                resp = {"content": data["choices"][0]["message"].get("content"), "mass": mass}
+                if total <= 0:
+                    # none of the choices is among the reported tokens: there is no reading
+                    raise ModelError(f"no choice among top tokens: {[t['token'] for t in top]}")
+                probs = {c: m / total for c, m in mass.items()}
+                cid = await self._record(alias, prompt, pages or [], req, {**resp, "probs": probs},
+                                         data.get("usage"), t0, True, None)
+                return probs, cid
+            except (ModelError, httpx.HTTPError, KeyError, IndexError, TypeError) as e:
+                last_err = e
+                await self._record(alias, prompt, pages or [], req, resp, None, t0, False,
+                                   str(e)[:2000])
+                if isinstance(e, ModelError) and "gpu_busy" in str(e):
+                    raise
+                await asyncio.sleep(2 * (attempt + 1))
+        raise ModelError(f"{alias} choose failed after {retries + 1} attempts: {last_err}")
 
     async def embed(self, texts: list[str], *, instruction: str | None = None) -> list[list[float]]:
         """Qwen3-Embedding: queries carry an instruction, documents do not."""
