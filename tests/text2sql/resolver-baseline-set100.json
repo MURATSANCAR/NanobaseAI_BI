@@ -1,11 +1,11 @@
 {
- "recordedAt": "2026-09-19T22:27:33Z",
+ "recordedAt": "2026-09-20T05:15:19Z",
  "state": {
-  "catalogHash": "69b0d7d1d0e581f52d2c0986fb8b351081bdffb8c1ee250180cfd95ea03e1ae4",
+  "catalogHash": "2adb69289911582a4dfe8f3ec82e10c8e002da5c6e1d23226f26b6797db356ab",
   "languagePoolHash": "",
-  "catalogVersion": 70550,
-  "rulesHash": "c4954b528fa040ca",
-  "promptHash": "32b69bad0be35c98"
+  "catalogVersion": 70552,
+  "rulesHash": "b17c20a6e8a2afd6",
+  "promptHash": "57a0513c4eec0709"
  },
  "cases": {
   "A032": {
@@ -671,8 +671,7 @@
    "kaynak": "logo",
    "read": {
     "sources": [
-     "ANA",
-     "TIMAS_MSCRM"
+     "ANA"
     ],
     "slots": [
      {
@@ -685,17 +684,6 @@
       "values": [],
       "role": "rank_group_by",
       "source": "ANA"
-     },
-     {
-      "term": "devir hizi",
-      "type": "COLUMN",
-      "status": "CERTIFIED",
-      "concept": "sem_6e3242310e38",
-      "entity": "PRODUCTBASE",
-      "what": "NEW_SATISHIZI",
-      "values": [],
-      "role": "rank_group_by",
-      "source": "TIMAS_MSCRM"
      },
      {
       "term": "stline default cancelled",
@@ -711,12 +699,12 @@
       "source": "ANA"
      },
      {
-      "term": "stok",
+      "term": "stok devir hizi",
       "type": "METRIC",
       "status": "CERTIFIED",
-      "concept": "sem_c2af44f4d5ac",
+      "concept": "sem_53d6af2c9b61",
       "entity": "STLINE",
-      "what": "f:0738668ef58f2271",
+      "what": "f:2e95b8146bb43480",
       "values": [],
       "role": "",
       "source": "ANA"
@@ -734,8 +722,7 @@
      }
     ],
     "groupBy": [
-     "ITEMS.NAME",
-     "PRODUCTBASE.NEW_SATISHIZI"
+     "ITEMS.NAME"
     ],
     "unresolved": [],
     "unhandled": [],
@@ -1465,9 +1452,9 @@
       "term": "karsiliksiz cikan veya protesto",
       "type": "DIMENSION_VALUE",
       "status": "CERTIFIED",
-      "concept": "sem_1056b5aeebca",
-      "entity": "LG_CSCARD",
-      "what": "CURRSTAT",
+      "concept": "sem_3d8986061e00",
+      "entity": "CSTRANS",
+      "what": "STATUS",
       "values": [
        "11",
        "5",
