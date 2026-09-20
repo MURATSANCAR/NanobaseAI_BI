@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-20 18:10 — Editör: nesil 9 (kimlik 29/29 doğru), süreklilik bulguları da oylanır
+
+**Nesil 9 (maske düzeltmesi + tutarlılık kuralı, tam koşu, regresyon geçti):** 35 figür kırpımı gözle denetlendi: 29 ad → 29 doğru, 0 yanlış; 6 belirsizin 3'ü zaten figür değil (bölüm başlığı süsü, örtülü nesne, kırpım parçası), gerçek eksik 3 (s.3 Robobi — 2 sayfada çizili, referansı yok; s.39 Bilge ve Can). Tarama 7 figürde yanlış ad vermişti (Defne↔Bilge), kırpım eşleştirme hepsini düzeltti; s.23 profesör hatası kapandı, referanslı karakter 3 → 4. Nesil 7→8→9: ad 21→24→29, yanlış ?→1→0, belirsiz 12→9→6.
+
+**Süreklilik oylaması (`compare_character_appearances`, istem `continuity_vote`):** nesil 9 kuyruğundaki 3 süreklilik adayı zayıftı (pozla aynalanan saç ayrımı, yağmurda ıslanan saç) ve tek okumaya dayanıyordu. Artık karşılaştırmanın bulduğu her fark yalnız bir öneridir: o farkın sayfalarındaki kırpımları ve özelliğin ADINI (önerinin açıklamasını değil) gören 3 bağımsız oy (SAME / EXPLAINED / DIFFERENT, sıcaklık 0,6); çoğunluk DIFFERENT derse `VISUAL_CONTINUITY` iddiası + `CONTINUITY` adayı yazılır, güven = min(ort. güven, oy payı); reddedilenler adım sonucunda `not_confirmed` olarak kalır. Sunucuya kurulum VPN düştüğü için bekliyor (kod main'de).
+
 ## 2026-09-20 17:00 — Editör: FP8 ölçümü, tek okumanın kararsızlığı, oylamalı metin–görsel teyit, kimlik v7/v8, Hermes uçtan uca
 
 **Ölçüm — tek görsel okuma gerçek değildir:** aynı 32B model, aynı istem, aynı 26 sayfa iki kez okutuldu: figür adları yalnız 18/26 sayfada aynı; metin–görsel çelişki adayı bir koşuda 5, sonrakinde 0. Resimsiz sayfada model metinden figür uyduruyor (s.5, s.30), sayfa numarası süsünü figür sanıyor. Sonuç: doğruluk modelden değil çevresindeki denetimden geliyor; model eklemek bunu çözmez.

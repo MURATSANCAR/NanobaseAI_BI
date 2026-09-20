@@ -363,37 +363,68 @@ async def compare_character_appearances(generation_id: str, character: str,
         " cm.generation_id=%s AND cm.via='VISUAL' AND cm.resolution='RESOLVED' AND cm.page_no = ANY(%s) AND"
         " (ch.canonical_name ILIKE %s OR %s = ANY(ch.aliases))", generation_id, pages, character, character)}
     gdir = Path(render_page(bv, pages[0])["path"]).parent / "gallery" / generation_id
-    parts = []
+    images: dict[int, dict] = {}
     for p in pages:
         if p in crops:
             png = _crop(render_page(bv, p)["path"], crops[p]["bbox"], gdir / f"fig-{crops[p]['id']}.png").read_bytes()
         else:
             png = Path(render_page(bv, p, 1200)["path"]).read_bytes()
-        parts += [{"type": "text", "text": f"Sayfa {p}:"}, image_part(png)]
+        images[p] = image_part(png)
+    parts = [x for p in pages for x in ({"type": "text", "text": f"Sayfa {p}:"}, images[p])]
     # Only the pictures: feeding the scans' descriptions made the model compare wordings
     # ("kırmızımsı kahverengi" vs "kırmızı") instead of drawings.
     ref, body = prompts.render("compare_appearance", pages=", ".join(map(str, pages)), character=character)
-    out, call_id = await Llm(generation_id).chat(
+    llm = Llm(generation_id)
+    out, call_id = await llm.chat(
         "book-vision-deep", [{"role": "user", "content": parts + [{"type": "text", "text": body}]}],
         prompt=ref, schema=schemas.APPEARANCE, pages=pages, max_tokens=16384, temperature=0.1)
+
+    # One comparison is a proposal (measured: hair parting mirrored by the pose, hair wet in the
+    # rain were reported as continuity errors in one run and not in the next). Each proposed
+    # difference goes to independent votes that see only the crops of its pages and the NAME of
+    # the attribute, not the proposal's description. It is a finding when a majority says DIFFERENT.
+    n_votes = settings().continuity_votes
+
+    async def vote(d: dict) -> list[dict]:
+        ps = [p for p in d["pages"] if p in images]
+        vref, vbody = prompts.render("continuity_vote", pages=", ".join(map(str, ps)), character=character,
+                                     attribute=d["attribute"])
+        content = [x for p in ps for x in ({"type": "text", "text": f"Sayfa {p}:"}, images[p])]
+        res = await asyncio.gather(*(llm.chat(
+            "book-vision-deep", [{"role": "user", "content": content + [{"type": "text", "text": vbody}]}],
+            prompt=vref, schema=schemas.CONTINUITY_VOTE, pages=ps, max_tokens=8192, temperature=0.6)
+            for _ in range(n_votes)), return_exceptions=True)
+        return [r[0] for r in res if not isinstance(r, BaseException)]
+
+    proposals = [d for d in out["differences"] if d["continuity_candidate"] and not d["explained_by_story"]
+                 and len([p for p in d["pages"] if p in images]) >= 2]
+    ballots = await asyncio.gather(*(vote(d) for d in proposals))
+    confirmed, rejected = [], []
     with db.tx() as c:
         idx = ledger.PageIndex.load(c, generation_id)
-        for d in out["differences"]:
-            evs = [(*ledger.save_evidence(c, generation_id, idx, page=p, kind="VISUAL",
-                                          quote=f"{character} — {d['attribute']}: {d['description']}"), p)
-                   for p in d["pages"] if p in pages]
-            if not evs:
+        for d, votes in zip(proposals, ballots):
+            yes = [v for v in votes if v["verdict"] == "DIFFERENT"]
+            tally = {"attribute": d["attribute"], "pages": d["pages"], "description": d["description"],
+                     "votes": [v["verdict"] for v in votes]}
+            if len(votes) < n_votes or len(yes) * 2 <= n_votes:
+                rejected.append(tally)
                 continue
+            confirmed.append(tally)
+            conf = min(sum(v["confidence"] for v in yes) / len(yes), len(yes) / n_votes)
+            seen = max(yes, key=lambda v: v["confidence"])["seen"].strip() or d["description"]
+            evs = [(*ledger.save_evidence(c, generation_id, idx, page=p, kind="VISUAL",
+                                          quote=f"{character} — {d['attribute']}: {seen}"), p)
+                   for p in d["pages"] if p in images]
             cid = ledger.save_claim(
                 c, generation_id, kind="VISUAL_CONTINUITY", subject=character,
-                claim=f"{character}: {d['attribute']} sayfalar arasında farklı — {d['description']}",
-                evidence=evs, confidence=d["confidence"], created_by="vision:deep",
-                payload={"explained_by_story": d["explained_by_story"]}, model_call_id=call_id)
-            if d["continuity_candidate"] and not d["explained_by_story"]:
-                c.execute("INSERT INTO contradiction(generation_id, kind, description, pages,"
-                          " claim_ids, confidence) VALUES (%s,'CONTINUITY',%s,%s,%s,%s)",
-                          (generation_id, f"{character}: {d['description']}", d["pages"],
-                           [cid] if cid else [], d["confidence"]))
+                claim=f"{character}: {d['attribute']} sayfalar arasında farklı — {seen}",
+                evidence=evs, confidence=conf, created_by="vision:continuity-votes",
+                payload={"votes": f"{len(yes)}/{n_votes}", "proposal": d["description"]}, model_call_id=call_id)
+            c.execute("INSERT INTO contradiction(generation_id, kind, description, pages,"
+                      " claim_ids, confidence) VALUES (%s,'CONTINUITY',%s,%s,%s,%s)",
+                      (generation_id, f"{character}: {d['attribute']} — {seen}", d["pages"],
+                       [cid] if cid else [], conf))
+    out = {**out, "differences": confirmed, "proposed": len(proposals), "not_confirmed": rejected}
     return {"character": character, "pages": pages, **out}
 
 

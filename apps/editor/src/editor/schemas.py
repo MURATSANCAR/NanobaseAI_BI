@@ -113,6 +113,9 @@ APPEARANCE = obj({
     "summary": STR,
 })
 
+CONTINUITY_VOTE = obj({"seen": STR, "verdict": {"type": "string", "enum": ["SAME", "EXPLAINED", "DIFFERENT"]},
+                       "confidence": NUM})
+
 MODALITY_CHECK = obj({"events": arr(obj({
     "event_id": STR, "modality": MODALITY, "confidence": NUM, "reason": STR}))})
 

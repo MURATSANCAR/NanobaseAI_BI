@@ -143,7 +143,8 @@ async def continuity_checks(generation_id: str) -> dict:
         pick = sorted({ps[round(i * (len(ps) - 1) / 5)] for i in range(6)}) if len(ps) > 6 else ps
         res = await vision.compare_character_appearances(generation_id, r["canonical_name"], pick)
         return {"character": r["canonical_name"], "pages": pick,
-                "differences": len(res["differences"]), "same_everywhere": res["same_character_everywhere"]}
+                "proposed": res["proposed"], "differences": len(res["differences"]),
+                "not_confirmed": res["not_confirmed"], "same_everywhere": res["same_character_everywhere"]}
 
     return {"checked": await asyncio.gather(*(one(r) for r in rows))}
 

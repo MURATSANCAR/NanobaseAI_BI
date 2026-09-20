@@ -24,6 +24,7 @@ class Settings:
     page_concurrency: int
     deep_concurrency: int
     text_visual_votes: int
+    continuity_votes: int
     min_illustration_ink: float
     min_figure_ink: float
     min_figure_side: float
@@ -57,6 +58,7 @@ def settings() -> Settings:
         page_concurrency=int(env("EDITOR_PAGE_CONCURRENCY", "16")),
         deep_concurrency=int(env("EDITOR_DEEP_CONCURRENCY", "4")),
         text_visual_votes=int(env("EDITOR_TEXT_VISUAL_VOTES", "3")),
+        continuity_votes=int(env("EDITOR_CONTINUITY_VOTES", "3")),
         # below this share of non-text ink a page has nothing to look at (no vision call)
         min_illustration_ink=float(env("EDITOR_MIN_ILLUSTRATION_INK", "0.02")),
         # a figure's bbox must contain at least this share of ink to count as seen
