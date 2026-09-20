@@ -355,7 +355,7 @@ def run_regression_suite(generation_id: str) -> dict:
         _check("kesin görsel kimlik yalnız çapa, referans eşleşmesi ya da elemeyle", one(
             "SELECT count(*) n FROM character_mention WHERE generation_id=%s AND via='VISUAL' AND"
             " resolution='RESOLVED' AND coalesce(appearance->>'identified_by','') NOT IN"
-            " ('anchor','reference','elimination')", generation_id) == 0),
+            " ('anchor','reference','elimination','consistency')", generation_id) == 0),
         _check("sınırına takılan model çağrısı kalmadı (her biri sonradan başarıldı)", one(
             "SELECT count(*) n FROM (SELECT prompt_name, pages, bool_or(ok) AS any_ok FROM model_call"
             " WHERE generation_id=%s GROUP BY 1,2) x WHERE NOT any_ok", generation_id) == 0),

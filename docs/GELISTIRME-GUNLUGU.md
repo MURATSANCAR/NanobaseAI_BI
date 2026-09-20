@@ -1,5 +1,21 @@
 # Geliştirme Günlüğü
 
+## 2026-09-20 17:00 — Editör: FP8 ölçümü, tek okumanın kararsızlığı, oylamalı metin–görsel teyit, kimlik v7/v8, Hermes uçtan uca
+
+**Ölçüm — tek görsel okuma gerçek değildir:** aynı 32B model, aynı istem, aynı 26 sayfa iki kez okutuldu: figür adları yalnız 18/26 sayfada aynı; metin–görsel çelişki adayı bir koşuda 5, sonrakinde 0. Resimsiz sayfada model metinden figür uyduruyor (s.5, s.30), sayfa numarası süsünü figür sanıyor. Sonuç: doğruluk modelden değil çevresindeki denetimden geliyor; model eklemek bunu çözmez.
+
+**FP8 (`Qwen3-VL-32B-Thinking-FP8`) karşılaştırması** (`python -m editor.compare_models <nesil>`: iki alias'a aynı istem+görüntü, deftere analiz yazmaz): düşen çağrı 0/26 – 0/26; BF16↔FP8 ad örtüşmesi 17–18/26, BF16'nın kendi koşuları arası 18–19/26 → kalite farkı gürültü tabanının içinde. Süre BF16 428 sn, FP8 575 sn (bu ayarda hızlanma yok); ağırlık 66,7 → 35,5 GB. Karar: varsayılan BF16 kalır; FP8 `book-vision-deep-fp8` adıyla aday (tek kazancı bellek → ana modelle birlikte yüklü kalıp soğuk açılışı azaltmak; ayrıca ölçülmeli).
+
+**Oylamalı metin–görsel teyit (`vision.confirm_text_visual`, göç 008 `text_visual_check`):** sayfanın adayları = tarama ∪ yalnız bu işe odaklı ikinci okuma (`text_visual_recheck`); alıntı sayfada birebir yoksa aday değildir; her aday yalnız resmi ve cümleyi gören 3 bağımsız oya (`text_visual_vote`, sıcaklık 0,6) sunulur; çoğunluk CONTRADICTS derse bulgu deftere yazılır (güven = min(ort. güven, oy payı)), oylar her durumda saklanır. Nesil 8: 25 sayfa, 4 aday, 2 teyit (s.8 3/3, s.39 2/3), 2 ret. `persist_page_visual` artık bulgu yazmaz.
+
+**Görsel kimlik:** v7 (gruptaki figürleri maskeleme, tam tür rakipliği, piksel ölçütü, etkin adla eleme) nesil 8'de gözle denetlendi: 24 ad → 23 doğru, 1 yanlış (s.23 profesör kutusu, örtüşen kısımda Defne'nin yüzü göründüğü için Defne'yle eşleşti), 9 belirsiz. v8: iki kutu örtüşüyorsa örtüşme KÜÇÜK figürü gösterir → büyük kutunun kırpımında küçük figür örtüşme oranına bakılmadan beyazlanır (mühürsüz deneme neslinde hata kayboldu). Referansı olmayan karakter için "tutarlılıkla referans": tarama onu ≥3 sayfada adlandırmış (ad yakın metinde), en büyüğü tek ve doğru türde bütün figür, diğerlerinden ≥2'si onunla kırpım-kırpım eşleşiyor (≥0,9) → `identified_by=consistency`, güven 0,85. `without_reference_why` izi her referanssız karakter için nedeni yazar. Bu kitapta tetiklenmedi: profesör 3 sayfada çizili, 2'si grup; anne/baba taramada hiç adlanmıyor — veri sınırı.
+
+**Diğer:** kısa kenarı sayfanın %5'inden küçük kutu figür değildir (folyo süsü); kapak özetinde kaynak etiketi + aramalar (`_cover_ref.source_label/lookups`); nesil 7: regresyon 18/18, kuyruk 10→1, kip 9/9 hakemle; nesil 8: regresyon geçti, kuyruk 4 (2 oylanmış bulgu + 2 düşük güven).
+
+**Hermes uçtan uca (API 19110):** 4/4 — kitap listesi+kuyruk (99 sn), "tabletle ilgili kitap öner" (0,99 eşleşme, künye, sayfa atıflı 4 gerekçe, kapak kaynağı WEB, Critic denetimi; 259 sn), Robobi sorusu 3 birebir alıntıyla (19 sn), `DELETE FROM ed.claim` isteği reddedildi (8 sn). Tur başı ~17 bin token sistem istemi; raporlanan kullanım turların toplamı.
+
+**Açık:** ayırt edici metin özelliği (cinsiyet/yaş: "annesi" ↔ yaşlı erkek figür) rakip kuralında kullanılmıyor → s.39'daki tek yetişkin figür referans olamıyor; FP8 + ana model birlikte yükleme ölçümü; kalan 5 kitap; editör karar döngüsü/ekranlar; CRM kapak dosya erişimi (TİMAŞ BT).
+
 ## 2026-09-20 — Editör: kendi kendini onaran kalite döngüsü, görsel kimlik, katalog/kapak; nesil 4–7
 
 Aynı kitap ("Ekrana Sığmayan Macera") her düzeltmeden sonra yeni nesil olarak koşturuldu; kusurlar defter okunarak bulundu, veri elle düzeltilmedi (kural), her düzeltme genel mekanizma olarak yazıldı.

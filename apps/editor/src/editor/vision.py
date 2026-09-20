@@ -513,19 +513,25 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         area_b = max(1, (b[2] - b[0]) * (b[3] - b[1]))
         return w > 0 and h > 0 and w * h / area_b >= 0.5
 
-    # A box that also holds another figure: that figure is blanked out of the crop. If the
-    # blanked area leaves less than half of the box, the crop cannot show this figure alone
-    # (a "group" crop: neither reference nor matched).
+    # Where two boxes overlap, the overlap shows the SMALLER figure (a child in front of a tall
+    # adult; measured: a professor's box whose overlap showed a girl's face was matched to the
+    # girl). So in the larger box's crop the smaller figure's part is blanked, whatever the size
+    # of the overlap. If blanking leaves less than half of the box, or two boxes cover each
+    # other, the crop cannot show this figure alone (a "group": neither reference nor matched).
+    def area(b: list[int]) -> int:
+        return max(1, (b[2] - b[0]) * (b[3] - b[1]))
+
+    def overlap(a: list[int], b: list[int]) -> int:
+        return max(0, min(a[2], b[2]) - max(a[0], b[0])) * max(0, min(a[3], b[3]) - max(a[1], b[1]))
+
     for fs in by_page.values():
         for f in fs:
-            inside = [g["bbox"] for g in fs if g is not f and holds(f["bbox"], g["bbox"])
-                      and not holds(g["bbox"], f["bbox"])]           # same-size boxes: a true group
             same = any(g is not f and holds(f["bbox"], g["bbox"]) and holds(g["bbox"], f["bbox"]) for g in fs)
-            own = max(1, (f["bbox"][2] - f["bbox"][0]) * (f["bbox"][3] - f["bbox"][1]))
-            hidden = sum(max(0, min(f["bbox"][2], b[2]) - max(f["bbox"][0], b[0]))
-                         * max(0, min(f["bbox"][3], b[3]) - max(f["bbox"][1], b[1])) for b in inside)
-            f["blank"] = inside
-            f["group"] = same or hidden / own > 0.5
+            smaller = [g["bbox"] for g in fs if g is not f and area(g["bbox"]) < area(f["bbox"])
+                       and overlap(f["bbox"], g["bbox"]) > 0]
+            f["blank"] = smaller
+            # (overlaps of the blanked boxes with each other are counted twice: errs towards "group")
+            f["group"] = same or sum(overlap(f["bbox"], b) for b in smaller) / area(f["bbox"]) > 0.5
     stats["group_crops"] = sum(1 for f in figs if f["group"])
     gdir = Path(render_page(bv, figs[0]["page_no"])["path"]).parent / "gallery" / generation_id
     sem = asyncio.Semaphore(settings().deep_concurrency * 2)
@@ -679,11 +685,60 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         await match_round(promoted)
         stats["by_elimination"] += eliminate()
     gallery.update(promoted)
+    # ---- 4. a character who is never drawn without a rival nearby has no reference by rule 1.
+    #         Independent agreement replaces it: the scan named figures as this character on
+    #         three or more pages (each time with the name in the near text), the largest of
+    #         them is one whole figure of the right kind, and at least two of the others match
+    #         it crop to crop. Those figures are the character; the largest becomes the reference.
+    consistent: dict[str, dict] = {}
+    trace: dict[str, dict] = {}
+    for cid in cname:
+        if cid in gallery:
+            continue
+        taken = {(g["page_no"], resolved[str(g["id"])][0]) for g in figs if str(g["id"]) in resolved}
+        own = sorted((f for f in figs if f["cid"] == cid and str(f["id"]) not in resolved and not f["group"]
+                      and f["deep"] and not f["front"] and f["short_px"] >= settings().min_reference_px
+                      and named_near(f["page_no"], cid) and (f["page_no"], cid) not in taken),
+                     key=lambda f: -f["area"])
+        own = list({f["page_no"]: f for f in reversed(own)}.values())[::-1]      # largest per page
+        named = [f for f in figs if f["cid"] == cid]
+        why = trace[cname[cid]] = {"scan_named_pages": sorted({f["page_no"] for f in named}),
+                                   "group_crops": sorted({f["page_no"] for f in named if f["group"]}),
+                                   "too_small": sorted({f["page_no"] for f in named
+                                                        if f["short_px"] < settings().min_reference_px}),
+                                   "eligible_pages": [f["page_no"] for f in own]}
+        if len(own) < 3:
+            why["outcome"] = "fewer than 3 eligible pages"
+            continue
+        _, _, chk = await check(own[0], cid)
+        if not (chk and chk["whole_figure"] and _compatible(chk["kind"], ckind[cid])):
+            stats["references_refused"] += 1
+            why["outcome"] = f"largest crop refused: {chk}"
+            continue
+        agree = [(f, best) for f, best in await asyncio.gather(
+            *(match(f, {cid: {"fig": own[0]}}) for f in own[1:])) if best and best[1]["confidence"] >= 0.9]
+        why["agreeing_pages"] = [f["page_no"] for f, _ in agree]
+        if len(agree) < 2:
+            why["outcome"] = "fewer than 2 other pages match the largest crop"
+            continue
+        why["outcome"] = "reference by consistency"
+        own[0]["kind"] = chk["kind"]
+        consistent[cid] = {"fig": own[0], "area": own[0]["area"], "kind": chk["kind"], "features": chk["features"]}
+        resolved[str(own[0]["id"])] = (cid, "consistency", None)
+        for f, best in agree:
+            resolved[str(f["id"])] = (cid, "consistency", best[1])
+    stats["references_by_consistency"] = [cname[c_] for c_ in consistent]
+    stats["without_reference_why"] = trace
+    if consistent:
+        await match_round(consistent)
+        stats["by_elimination"] += eliminate()
+    gallery.update(consistent)
 
     with db.tx() as c:
         # start clean (idempotent): a RESOLVED row may not lose its character alone
-        c.execute("UPDATE character_mention SET character_id=NULL, resolution='UNCERTAIN' WHERE"
-                  " generation_id=%s AND via='VISUAL'", (generation_id,))
+        c.execute("UPDATE character_mention SET character_id=NULL, resolution='UNCERTAIN', appearance ="
+                  " appearance - 'identified_by' - 'is_reference' - 'matching_features' - 'match_reason'"
+                  " WHERE generation_id=%s AND via='VISUAL'", (generation_id,))
         for f in figs:
             got = resolved.get(str(f["id"]))
             if not got:
@@ -695,12 +750,13 @@ async def resolve_visual_identity(generation_id: str) -> dict:
             if how == "reference":
                 stats["matched"] += 1
             stats["scan_name_corrected"] += bool(f["cid"] and f["cid"] != cid)
-            conf = 0.95 if how == "anchor" else 0.8 if how == "elimination" else min(float(out["confidence"]), 0.95)
+            conf = 0.95 if how == "anchor" else 0.8 if how == "elimination" else 0.85 if how == "consistency" \
+                else min(float(out["confidence"]), 0.95)
             extra = {"identified_by": how, "scan_name": f["surface_name"]}
             if how == "anchor":
                 extra["is_reference"] = gallery[cid]["fig"]["id"] == f["id"]
             elif cid in gallery and gallery[cid]["fig"]["id"] == f["id"]:
-                extra["is_reference"] = True             # promoted after elimination
+                extra["is_reference"] = True             # promoted after elimination or by consistency
             if out:
                 extra.update(matching_features=out["matching_features"][:8], match_reason=out["reason"][:400])
             c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED', confidence=%s,"

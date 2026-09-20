@@ -60,3 +60,8 @@ Model konteynerleri gateway tarafından `models.yaml`'dan oluşturulur ve durdur
 ## İndirme
 
 Sunucunun internet çıkışında bağlantı başına ~0,2 MB/s sınır var; toplamda ~12 MB/s. Modeller `aria2c` ile dosya başına 16 bağlantıyla, `resolve/<revizyon>` adresinden indirildi; revizyonlar `/data/editor/models/MANIFEST.json`'da.
+
+## Tek görsel okuma gerçek değildir (ölçüm, 2026-09-20)
+
+Aynı model aynı sayfayı iki kez okuyunca figür adları 26 sayfanın 18'inde aynı çıkıyor; metin–görsel çelişki adayı bir koşuda 5, sonrakinde 0. Bu yüzden: figür adı taramadan değil kırpım eşleştirmesinden gelir; metin–görsel bulgu ancak 3 bağımsız oyun çoğunluğuyla deftere girer (`text_visual_check` oyları saklar); model değişikliği (`compare_models`) iki BF16 koşusu arasındaki farkla kıyaslanır, tek koşuyla değil. FP8 derin model bu ölçüyle BF16'dan ayırt edilemedi, bu ayarda daha yavaş; varsayılan BF16.
+
