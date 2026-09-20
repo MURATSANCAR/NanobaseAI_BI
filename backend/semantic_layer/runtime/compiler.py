@@ -289,6 +289,20 @@ class _Plan:
     join_kinds: dict = field(default_factory=dict)
 
 
+def _rank_alias(q: SemanticQuery, metrics: list, aliases: list[str]) -> str:
+    """The measure a top-N is ranked by. With one measure there is nothing to choose. With several, the
+    ranking clause names it, and Turkish puts that clause before the counted noun — "en çok SATAN yirmi
+    kitabın STOK DEVİR HIZI" ranks by sales and reports the turnover of those twenty; ranked by the first
+    *certified* measure instead, the answer was the twenty highest turnovers, a different set of books.
+    So: the measure placed first in the question. Aliases rebuilt per pivot or per period do not line up
+    one-to-one with the measures; there, and wherever a measure has no place in the text, the first stays."""
+    if q.limit and len(metrics) > 1 and len(aliases) == len(metrics):
+        placed = [(tuple(m.span)[0], i) for i, m in enumerate(metrics) if m.span and tuple(m.span) != (0, 0)]
+        if len(placed) == len(metrics):
+            return aliases[min(placed)[1]]
+    return aliases[0]
+
+
 class DeterministicCompiler:
     name = "deterministic"
 
@@ -734,7 +748,7 @@ class DeterministicCompiler:
         if group:
             sql += "\nGROUP BY " + ", ".join(group)
         if plan.group_cols and not q.grain:
-            order = [f"{metric_aliases[0]} {'DESC' if q.order_desc else 'ASC'}"]
+            order = [f"{_rank_alias(q, plan.metrics, metric_aliases)} {'DESC' if q.order_desc else 'ASC'}"]
         if order:
             sql += "\nORDER BY " + ", ".join(order)
         if q.limit:

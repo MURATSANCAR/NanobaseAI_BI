@@ -305,33 +305,65 @@
    "kaynak": "logo",
    "holdout": false,
    "expect": "answer",
-   "verified": false,
+   "verified": true,
    "source": "logo",
    "reference_sql": "WITH satis AS (SELECT STOCKREF, SUM(AMOUNT) AS satis_adedi FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (7,8,9) AND DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) GROUP BY STOCKREF), top20 AS (SELECT TOP 20 STOCKREF, satis_adedi FROM satis ORDER BY satis_adedi DESC), stok AS (SELECT STOCKREF, SUM(CASE WHEN TRCODE=14 THEN AMOUNT ELSE 0 END) AS acilis, SUM(CASE WHEN IOCODE IN (1,2) THEN AMOUNT WHEN IOCODE IN (3,4) THEN -AMOUNT ELSE 0 END) AS guncel FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND STOCKREF IN (SELECT STOCKREF FROM top20) GROUP BY STOCKREF) SELECT I.CODE, I.NAME, T.satis_adedi, K.acilis AS acilis_stok, K.guncel AS guncel_stok, T.satis_adedi / NULLIF((K.acilis + K.guncel)/2.0, 0) AS stok_devir_hizi FROM top20 T JOIN LG_411_ITEMS I ON I.LOGICALREF=T.STOCKREF LEFT JOIN stok K ON K.STOCKREF=T.STOCKREF ORDER BY T.satis_adedi DESC",
    "checks": [
     {
-     "kind": "rows",
-     "tolerance": 0
-    },
-    {
-     "kind": "pairs",
-     "top": 20,
-     "answer_key": [
-      "stok_kodu",
-      "CODE",
-      "kod",
-      "urun_kodu"
-     ],
-     "answer_value": [
-      "stok_devir_hizi",
-      "devir_hizi"
-     ],
-     "reference_key": "CODE",
-     "reference_value": "stok_devir_hizi",
-     "tolerance": 0.005
+     "kind": "any_of",
+     "options": [
+      [
+       {
+        "kind": "rows",
+        "tolerance": 0
+       },
+       {
+        "kind": "pairs",
+        "top": 20,
+        "answer_key": [
+         "stok_kodu",
+         "CODE",
+         "kod",
+         "urun_kodu"
+        ],
+        "answer_value": [
+         "stok_devir_hizi",
+         "devir_hizi"
+        ],
+        "reference_key": "CODE",
+        "reference_value": "stok_devir_hizi",
+        "tolerance": 0.005
+       }
+      ],
+      [
+       {
+        "kind": "rows",
+        "tolerance": 0
+       },
+       {
+        "kind": "pairs",
+        "common_min": 10,
+        "answer_key": [
+         "urun",
+         "kitap",
+         "kitap_adi",
+         "urun_adi",
+         "NAME",
+         "$text"
+        ],
+        "answer_value": [
+         "stok_devir_hizi",
+         "devir_hizi"
+        ],
+        "reference_key": "NAME",
+        "reference_value": "stok_devir_hizi",
+        "tolerance": 0.005
+       }
+      ]
+     ]
     }
    ],
-   "note": "2026-09-18: köprü cevabı YANLIŞ (tanım). Köprü devir hızını satış adedi / GÜNCEL stok bakiyesi olarak hesapladı: İYİLİK TİMİ 148.662 / 213.633 = 0,70; ŞİFAYI KAPTIK HASTANESİ 0,72. İş tanımı 11: satış adedi / ((açılış devri TRCODE 14 + güncel stok) / 2) → İYİLİK TİMİ 148.662 / ((58.273 + 213.633)/2) = 1,09 (09-17 gecesi doğrulanan değer); ŞİFAYI 1,44 (açılış 0); ANNE TERLİĞİ 1,66 (köprü yöntemiyle 2,21). Yirmi kitap, satış adetleri ve güncel stoklar köprüyle aynı; fark yalnız paydada (ortalama stok yerine dönem sonu stok). Satış: TRCODE 7,8,9, LINETYPE 0, iptal hariç, bu yıl; stok yalnız güncel kopyadan, tarihsiz."
+   "note": "2026-09-18: köprü cevabı YANLIŞ (tanım). Köprü devir hızını satış adedi / GÜNCEL stok bakiyesi olarak hesapladı: İYİLİK TİMİ 148.662 / 213.633 = 0,70; ŞİFAYI KAPTIK HASTANESİ 0,72. İş tanımı 11: satış adedi / ((açılış devri TRCODE 14 + günc | 2026-09-20 iş kararı K12: stok devir hızı = satış adedi / ((açılış devri + güncel stok)/2), sertifikalı ölçü. 'En çok satan' adet ya da tutarla sıralanabilir (ilk 20'nin 13'ü ortak); devir hızı değeri ortak kitaplarda birebir sınanır."
   },
   {
    "n": 13,

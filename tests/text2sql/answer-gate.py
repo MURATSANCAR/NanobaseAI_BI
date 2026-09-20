@@ -175,7 +175,14 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
         elif kind == "pairs":
             want = {str(r.get(spec["reference_key"]) or "").strip(): r.get(spec["reference_value"]) for r in reference}
             got = {str(_pick(r, spec["answer_key"]) or "").strip(): _pick(r, spec["answer_value"]) for r in records}
-            for key in list(want)[: int(spec.get("top", 10))]:
+            keys = list(want)[: int(spec.get("top", 10))]
+            if spec.get("common_min"):
+                # Sıralama ölçütü meşru biçimde farklı olabilir (en çok satan: adet / tutar): değer,
+                # iki listede de bulunan anahtarlarda sınanır; ortak küme çok küçükse bu da bir kusurdur.
+                keys = [k for k in want if k in got]
+                if len(keys) < int(spec["common_min"]):
+                    problems.append(f"ortak anahtar {len(keys)} < {spec['common_min']}")
+            for key in keys:
                 if key not in got:
                     problems.append(f"'{key[:40]}' cevapta yok")
                 elif not _close(got[key], want[key], spec.get("tolerance", tolerance)):

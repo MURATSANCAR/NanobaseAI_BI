@@ -44,6 +44,8 @@ AVG(DATEDIFF(gün, fatura tarihi, PAYTRANS.DATE_)); PAYTRANS MODULENR 4, SIGN 0,
 - Satış siparişi satırı `LG_ORFLINE` (`TRCODE = 1`), kapanmamış `CLOSED = 0`, `CANCELLED = 0`, `LINETYPE = 0`; bekleyen miktar `AMOUNT − SHIPPEDAMOUNT`. Kitap/ürün bağı `ORFLINE.STOCKREF = ITEMS.LOGICALREF`.
 - "Bekleyen siparişi olan kitaplar" = bu satırları olan malzemeler; CRM'deki "bekleyen ürün" (müşteri talebi kaydı) ayrı bir kavramdır, soru Logo stok/sipariş dediğinde kullanılmaz.
 
-### Stok devir hızı — iş teyidi bekliyor
+### Stok devir hızı — iş kararı 2026-09-20 (katalogda sertifikalı ölçü: «stok devir hızı»)
 - Tanım: dönem satış adedi / ortalama stok. Günlük stok bakiyesi tutulmadığı için ortalama stok = (dönem başı stok + dönem sonu stok) / 2; dönem başı = devir satırları (TRCODE 14), dönem sonu = güncel stok bakiyesi. Satış adedi satış faturası satırlarından (TRCODE 7/8/9).
 - Stok bakiyesi ile satış adedi aynı WHERE'de hesaplanmaz: stok filtresiz (tüm IOCODE, tarih yok), satış dönemli — iki ayrı alt sorgu, STOCKREF üzerinden birleştirme. Aksi halde stok = −satış çıkar.
+- Tek ifadeyle de yazılır (katalogdaki formül): WHERE yalnız `LINETYPE = 0`, `CANCELLED = 0` taşır; satış, açılış ve bakiye aynı okumada **koşullu toplam**dır — `SUM(CASE WHEN TRCODE IN (7,8,9) THEN AMOUNT END) / NULLIF((SUM(CASE WHEN TRCODE = 14 THEN AMOUNT END) + SUM(CASE WHEN IOCODE IN (1,2) THEN AMOUNT WHEN IOCODE IN (3,4) THEN -AMOUNT END)) / 2.0, 0)`. Payda dönem sonu stok DEĞİL ortalama stoktur (açılış + güncel) / 2; yalnız güncel kopyadan okunur (kopya = yıl). Canlıda üç alt sorgulu referansla 20/20 birebir (İYİLİK TİMİ 1,09).
+- CRM `PRODUCTBASE.NEW_SATISHIZI` **satış hızı**dır; devir hızı sorusu onunla cevaplanmaz.

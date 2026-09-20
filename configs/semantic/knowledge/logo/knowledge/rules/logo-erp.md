@@ -69,10 +69,12 @@ Yayınevinde bir kitabın **baskısı** bir **üretim emridir**: `PRODORD` (bir 
 - **Müşteri grubu / kanal** = `CLCARD.SPECODE2`; boş kod "Grup kodu boş".
 - **Stok bakiyesi** yalnız cari kopyadan (açılış devri içinde); **bekleyen sipariş** `CLOSED = 0 AND AMOUNT > SHIPPEDAMOUNT`, adet fiş sayısı; **sipariş** = LG_ORFICHE TRCODE 1; **sevkiyat** = STLINE TRCODE 7,8 IOCODE 4.
 
-## Kural 12 — Çek / senet (LG_CSCARD) — durum kodları veriyle doğrulandı (2026-09-18)
+## Kural 12 — Çek / senet (LG_CSCARD, CSTRANS) — durum kodları veriyle doğrulandı (2026-09-18); olay okuması iş kararı (2026-09-20)
 `LG_CSCARD`: bir satır = bir çek/senet. `DOC`: 1 müşteri çeki, 2 müşteri senedi, 3 kendi çekimiz, 4 borç senedimiz. Tutar `AMOUNT`, vade `DUEDATE`, düzenleme `SETDATE`, iptal `CANCELLED = 0`.
 `CURRSTAT` (güncel durum; son `CSTRANS.STATUS` ile aynı kod): 1 portföyde · 2 ciro edildi · 3 teminata verildi · 4 tahsile verildi · 5 protestolu tahsile verildi · 6 iade edildi · 7 protesto edildi · 8 **tahsil edildi** · 11 **karşılığı yok (karşılıksız)** · 12 tahsil edilemiyor.
-- "Karşılıksız çıkan" = `CURRSTAT = 11`; "protesto olan / protestolu" = `CURRSTAT IN (5, 7)`. İkisi ayrı ayrı tutar ve adet olarak verilir (koşullu toplam), toplam ayrıca yazılır. "Bu yıl" için vade tarihi `DUEDATE` kullanılır ve hangi tarihin alındığı yazılır.
+- **Olay okuması (iş kararı 2026-09-20).** "Karşılıksız **çıkan**", "protesto **olan / edilen**" bir dönemde o duruma **düşen** çeki sorar; çek sonradan iade ya da tahsil edilmiş olabilir, bu yüzden `CURRSTAT` ile cevaplanmaz. Kaynak çek hareketleri `CSTRANS` (`CSTRANS.CSREF = CSCARD.LOGICALREF`; `STATUS` = hareketle düşülen durum, kodlar yukarıdakiyle aynı): karşılıksız çıkma `CSTRANS.STATUS = 11`, protesto `CSTRANS.STATUS IN (5, 7)`; `CSTRANS.DEVIR = 0` (yıl başı devir satırları olay değildir: `DEVIR = 1`, `TRCODE = 0`, tarihi 1 Ocak) ve `CSTRANS.CANCELLED = 0`. Dönem **hareket tarihi** `CSTRANS.DATE_` üzerindedir (vade `DUEDATE` değil) ve cevapta böyle yazılır.
+- Olay sorusunda tutar `CSCARD.AMOUNT`'tur ve **çek başına bir kez** sayılır: `CSCARD` okunur, olay `EXISTS (SELECT 1 FROM CSTRANS T WHERE T.CSREF = CSCARD.LOGICALREF AND …)` ile sınanır; `CSTRANS` kartla JOIN edilip hareket satırları üzerinden toplanmaz (aynı çekin birden çok hareketi tutarı çoğaltır). Çek / senet ayrımı (`DOC`) ve `CSCARD.CANCELLED = 0` kart üzerinde kalır. İkisi birlikte sorulursa karşılıksız ve protesto ayrı ayrı tutar ve adet olarak verilir (koşullu toplam), toplam ayrıca yazılır.
+- **Güncel durum okuması.** "Karşılıksız çekler", "protestolu senetler", "portföydeki çekler" bugünkü durumu sorar: `CURRSTAT = 11`, `CURRSTAT IN (5, 7)`; dönem istenirse vade tarihi `DUEDATE` kullanılır ve hangi tarihin alındığı yazılır.
 - Danışman görünümü `ABCekSenetView` bu kodları farklı adlandırır (8 = "karşılıksız iade" der); veride 8'in son hareketi tahsil bordrosudur — görünümün adları kullanılmaz.
 
 ## Kural 13 — Cari risk limiti (CLRNUMS)
