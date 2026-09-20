@@ -48,10 +48,27 @@ export const railFor = (active: string): StitchRailItem[] => [
   { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined, adminOnly: true },
   { to: '/es-anlamlilar', label: 'Eş anlamlılar', badge: active === '/es-anlamlilar' ? 'Aktif' : undefined },
   { to: '/yonetim', label: 'Yönetim', badge: active === '/yonetim' ? 'Aktif' : undefined, adminOnly: true },
+  // Editoryal Süreç'e kapı; oradan ray kendi modüllerine döner.
   { to: '/editoryal', label: 'Editoryal masa', badge: active === '/editoryal' ? 'Aktif' : undefined },
   // Girişten sonraki ana sayfaya dönüş.
   { to: '/', label: 'Kampüs', badge: active === '/' ? 'Aktif' : undefined },
 ];
+
+/** Editoryal Süreç ekranlarının kendi rayı: BI ekranları yerine sekiz modül ve masa.
+ *  Son satır BI tarafına dönüşü açık tutar (ikon eşlemesi konuma bağlı, sıra değişmez). */
+export const editorialRail = (active: string): StitchRailItem[] =>
+  [
+    { to: '/editoryal', label: 'Editoryal masa' },
+    { to: '/yayin-kurulu', label: 'M1 Yayın kurulu' },
+    { to: '/editor-atama', label: 'M2 Editör atama' },
+    { to: '/redaksiyon', label: 'M3 Redaksiyon' },
+    { to: '/cevirmenler', label: 'M4 Çeviri' },
+    { to: '/son-okuma', label: 'M5 Son okuma' },
+    { to: '/telif-sozlesme', label: 'M6 Telif & sözleşme' },
+    { to: '/yazarlar', label: 'M7 Yazarlar' },
+    { to: '/cizer-freelancer', label: 'M8 Çizer & freelancer' },
+    { to: '/', label: 'Kampüs' },
+  ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
 
 const DOCK = [
   { to: '/genel-bakis', label: 'Genel bakış' },

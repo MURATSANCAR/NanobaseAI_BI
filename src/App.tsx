@@ -13,6 +13,7 @@ const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
 const EditorialBoardScreen = lazy(() => import('@/canvas/editorial/BoardScreen'));
+const BookScreen = lazy(() => import('@/canvas/editorial/BookScreen'));
 const EditorialHome = lazy(() => import('@/canvas/editorial/EditorialHome'));
 const RedactionScreen = lazy(() => import('@/canvas/editorial/RedactionScreen'));
 const ProofScreen = lazy(() => import('@/canvas/editorial/ProofScreen'));
@@ -66,6 +67,7 @@ export default function App() {
             <Route path="cevirmenler" element={<TranslatorsScreen />} />
             <Route path="yazarlar" element={<AuthorsScreen />} />
             <Route path="cizer-freelancer" element={<FreelancersScreen />} />
+            <Route path="kitap/:id" element={<BookScreen />} />
             <Route path="editoryal" element={<EditorialHome />} />
             <Route path="redaksiyon" element={<RedactionScreen />} />
             <Route path="son-okuma" element={<ProofScreen />} />

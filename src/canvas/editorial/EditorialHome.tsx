@@ -13,6 +13,7 @@ import {
 import { Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime, pct } from '../format';
 import { ModuleFrame, Panel } from './kit';
+import SearchBox from './SearchBox';
 
 /** Editoryal Süreç ana ekranı: sekiz modülün özeti tek yerde ve kişinin masasında bekleyen iş.
  *  Her rakam modülün kendi ucundan gelir; kaynağı olmayan kart yoktur. */
@@ -261,6 +262,8 @@ export default function EditorialHome() {
           busy={works.isLoading}
         />
       </div>
+
+      <SearchBox />
 
       <section>
         <h2 className="px-1 text-[13px] font-extrabold">Modüller</h2>

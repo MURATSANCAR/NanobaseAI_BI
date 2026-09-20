@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 02:40 — Editoryal ana ekrana arama, kitap 360 sayfası ve Modüller menüsünde ana kategoriler
+
+Üç kullanıcı isteği.
+
+- **Ana ekranın ortasında arama alanı** (`SearchBox.tsx`): yazılan metin kitap adında, proje adında ve esere katkı veren kişilerin adında aranır (`GET /api/v1/editorial/search`). Kitaba tıklayınca kitap sayfası açılır; kişiye tıklayınca o kişinin kitapları listelenir (`/api/v1/editorial/people/{id}/books`); projeye tıklayınca M2'ye gider. Arama CRM'de yapılır, uydurma sonuç yok. İlk aramada ~3,8 sn (üç tabloda `LIKE '%…%'`), sonraki aynı arama köprü önbelleğinden.
+- **Kitap 360 sayfası** (`/kitap/:id`, `BookScreen.tsx`, `GET /api/v1/editorial/books/{id}`): bir kitabın bütün süreçleri tek ekranda — künye (ISBN, sayfa, ebat, fiyat, baskı, tür, telif/baskı durumu, editör görüşü), emeği geçenler (rol bazlı, eser katılımından), sözleşmeler (M6'ya bağlı), proje ve kurul kararı (M2/M1), üretim kayıtları, masadaki metin ve prova (M3/M5). Kaydı olmayan bölüm hiç çizilmez.
+- **Modüller menüsü** (`ModulesMenu.tsx`): en üstte "Çalışan modüller" bölümü — ana kategori olarak Editoryal Süreç ve Genel Bakış; tıklayınca modülün kendi ana sayfası açılır, sonrası modülün kendi rayından yürür. Ayrıca ana sayfası olan grubun başlığı da tıklanabilir.
+- **Ölçüm ve düzeltme (doğrudan CRM):** üretim kaydında proje bağı **yok** (`new_UretimBase.new_projeid` diye bir kolon yok; ilk yazdığım sorgu bu yüzden 42S22 verdi). Proje kitaba `new_projeBase.new_kitapid` ile bağlanıyor ama 5.962 projenin yalnız **88**'inde dolu; kurul kararına da ancak bu yoldan ulaşılıyor. Üretim kitaba `new_UretimBase.new_kitapid` ile bağlı ve 16.223 kaydın 16.193'ünde dolu. Yani çoğu kitapta proje ve kurul bölümü boş, üretim ve sözleşme dolu olur — ekran bunu olduğu gibi gösterir.
+- **Doğrulama (canlı, `portal.nanobase.ai/timas`):** "atlas" araması 12 kitap / 17 proje / 1 kişi; "Boğaziçi'nin Tarih Atlası" sayfasında ISBN 978-605-08-2873-3, 280 sayfa, 13,5x21, 5. baskı, durum "Aktif", telif "Telifli", 1 rol, 2 sözleşme, 3 üretim kaydı. Sayfalar 200; geçersiz kitap kimliği 400, boş arama 400.
+
 ## 2026-09-21 01:30 — Editoryal masa ana ekranı (`/editoryal`)
 
 Kullanıcı isteği: girişten sonraki Kampüs ekranına benzeyen ama editöre özel bir ana ekran — bilgiler orada olsun, modüllere oradan geçilsin.

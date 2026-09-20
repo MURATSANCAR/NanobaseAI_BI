@@ -3453,6 +3453,35 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         schema, run = _editorial(request)
         return _editorial_call(editorial_mod.person, schema, run, contact_id)
 
+    @app.get("/api/v1/editorial/search")
+    def editorial_search(request: Request, q: str = "") -> dict[str, Any]:
+        schema, run = _editorial(request)
+        return _editorial_call(editorial_mod.search, schema, run, q)
+
+    @app.get("/api/v1/editorial/books/{book_id}")
+    def editorial_book(book_id: str, request: Request) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        out = _editorial_call(editorial_mod.book, schema, run, book_id)
+        # Masadaki metin/prova bu kitabın adıyla açılmış eser dosyasından gelir (CRM'de karşılığı yok).
+        try:
+            from semantic_bridge import editorial_desk as desk
+            engine, tenant, user, _ = _greetings(request)
+            desk.ensure(engine)
+            admin_mod.ensure(engine)
+            title = (out.get("title") or "").strip().lower()
+            works = [w for w in desk.list_works(engine, tenant, user, admin_mod.is_admin(user))
+                     if title and w["title"].strip().lower() == title]
+            out["desk"] = works
+        except Exception:  # noqa: BLE001 — masa kaydı bir ektir, kitap sayfasını düşürmez
+            log.exception("editorial book desk lookup failed")
+            out["desk"] = []
+        return out
+
+    @app.get("/api/v1/editorial/people/{contact_id}/books")
+    def editorial_person_books(contact_id: str, request: Request) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        return _editorial_call(editorial_mod.person_books, schema, run, contact_id)
+
     @app.get("/api/v1/editorial/editors")
     def editorial_editors(request: Request, since: Optional[int] = None) -> dict[str, Any]:
         schema, run = _editorial(request)

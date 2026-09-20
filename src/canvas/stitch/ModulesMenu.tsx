@@ -27,6 +27,13 @@ export const LIVE: Record<string, string> = {
   M8: '/cizer-freelancer',
 };
 
+/** Çalışan modül grupları: ana kategori olarak en üstte durur, tıklanınca modülün kendi ana
+ *  sayfası açılır; oradan modülün kendi rayıyla devam edilir. Grup adı `modules.json`'daki başlıktır. */
+export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
+  'Editoryal Süreç': { to: '/editoryal', hint: 'Başvurudan baskı onayına sekiz modül' },
+  'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
+};
+
 /** Yalnız yöneticilere açık ekranlar; bu ekranlara götüren modüller yetkisiz kişide hiç listelenmez. */
 const ADMIN_ROUTES = new Set(['/veri-sozlugu', '/onaylar', '/yonetim']);
 
@@ -86,9 +93,44 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
         </div>
 
         <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
+          {!q.trim() && (
+            <div>
+              <div className="px-1 pb-1 text-[11px] font-bold uppercase tracking-[.12em] text-muted/80">Çalışan modüller</div>
+              <div className="space-y-1">
+                {Object.entries(GROUP_HOME).map(([title, g]) => {
+                  const count = data.find((x) => x.title === title)?.modules.filter((m) => LIVE[m.id]).length ?? 0;
+                  return (
+                    <Link
+                      key={title}
+                      to={g.to}
+                      onClick={onClose}
+                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-coral/10 to-violet/10 px-2.5 py-2 text-[12.5px] font-bold text-ink shadow-sm transition active:scale-[0.99] hover:from-coral/15 hover:to-violet/15"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate">{title}</span>
+                        <span className="block truncate text-[11px] font-semibold text-muted">{g.hint}</span>
+                      </span>
+                      {count > 0 && <span className="shrink-0 rounded bg-violet/15 px-1.5 text-[11px] font-bold text-violet">{count} ekran</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {filtered.map((g) => (
             <div key={g.title}>
-              <div className="px-1 pb-1 text-[11px] font-bold uppercase tracking-[.12em] text-muted/80">{g.title}</div>
+              {GROUP_HOME[g.title] ? (
+                <Link
+                  to={GROUP_HOME[g.title].to}
+                  onClick={onClose}
+                  className="flex items-center gap-1 px-1 pb-1 text-[11px] font-bold uppercase tracking-[.12em] text-violet hover:underline"
+                >
+                  {g.title}
+                  <span aria-hidden>→</span>
+                </Link>
+              ) : (
+                <div className="px-1 pb-1 text-[11px] font-bold uppercase tracking-[.12em] text-muted/80">{g.title}</div>
+              )}
               <div className="space-y-0.5">
                 {g.modules.map((m) => {
                   const to = LIVE[m.id];

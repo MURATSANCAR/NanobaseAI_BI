@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
+import { editorialRail } from '../stitch/screens';
 import DbTimingBadge, { type DbTiming } from '../DbTiming';
 import { btnGhost, nf } from '../admin/ui';
 
@@ -38,7 +38,7 @@ export function ModuleFrame({
   return (
     <Shell
       head={{ tenant: 'Timaş Yayınları', section: 'Editoryal Süreç', crumb: `${code} ${crumb}`, source, presence: 'Kaynak: CRM' }}
-      rail={railFor(route)}
+      rail={editorialRail(route)}
     >
       <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
         <ZoomStage>
