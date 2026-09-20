@@ -12,6 +12,7 @@ const AdminScreen = lazy(() => import('@/canvas/admin/AdminScreen'));
 const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
+const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 
 function RouteFallback() {
   return (
@@ -51,6 +52,8 @@ export default function App() {
             <Route path="planli-raporlar" element={<ReportsScreen />} />
             <Route path="yonetim" element={<AdminScreen />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />
+            {/* Editoryal Süreç (M1–M8); ekranı hazır olan modül buraya girer. */}
+            <Route path="telif-sozlesme" element={<ContractsScreen />} />
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />

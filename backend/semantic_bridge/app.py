@@ -3373,6 +3373,44 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return Response(content=blob, media_type=mime,
                         headers={"Cache-Control": "private, max-age=31536000, immutable"})
 
+    # ------------------------------------------------------------------ editoryal süreç (M1–M8)
+    # M6 Telif & Sözleşme: sözleşme portföyü CRM'den okunur; burada yazma yok.
+    from semantic_bridge import editorial as editorial_mod
+
+    def _editorial(request: Request) -> tuple[str, Any]:
+        _greetings(request)
+        r = rt()
+
+        def run(sql: str) -> dict[str, Any]:
+            try:
+                return r.run_sql(sql, r.settings.max_rows)
+            except Exception as e:  # noqa: BLE001
+                raise _sql_failure(e) from e
+
+        return admin_mod.conf("CRM_SCHEMA"), run
+
+    def _editorial_error(e: "editorial_mod.EditorialError") -> HTTPException:
+        return HTTPException(status_code=e.status, detail={"code": "INVALID_EDITORIAL", "message": str(e)})
+
+    @app.get("/api/v1/editorial/contracts/summary")
+    def editorial_contracts_summary(request: Request) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        try:
+            return editorial_mod.summary(schema, run, _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60))
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
+    @app.get("/api/v1/editorial/contracts")
+    def editorial_contracts(request: Request, q: str = "", status: Optional[int] = None, kind: Optional[int] = None,
+                            expiring: bool = False, order: str = "bitis", page: int = 0) -> dict[str, Any]:
+        schema, run = _editorial(request)
+        try:
+            return editorial_mod.page(
+                schema, run, page, order=order, q=q, status=status, kind=kind,
+                expiring_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60) if expiring else None)
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 

@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-20 22:30 — Editoryal Süreç: M6 Telif & Sözleşme ekranı (gerçek CRM verisi)
+
+Karar (kullanıcı, A seçeneği): M1–M8 tabloları ve uçları BI köprüsünde durur; `apps/editor` yalnız kitap analizi yapar, M3/M5 ona ileride bir uç üzerinden sorar. İlk ekran M6.
+
+- **Köprü:** `backend/semantic_bridge/editorial.py` + `app.py` uçları `GET /api/v1/editorial/contracts/summary` (yürürlükte / yenilemede / N günde biten / ortalama telif + süzgeç seçenekleri) ve `GET /api/v1/editorial/contracts` (arama, durum, tip, süresi yaklaşan, sıralama, 50'lik sayfa; her sayfanın kitapları ve tarafları ayrı sorguyla). Salt okunur, `run_sql` yolundan (yalnız SELECT, yalnız katalog tabloları, seçim listesi etiketleri katalogdan). Uyarı eşiği `EDITORIAL_CONTRACT_WARN_DAYS` (vars. 60).
+- **Ekran:** `src/canvas/editorial/ContractsScreen.tsx`, rota `/telif-sozlesme`, `ModulesMenu.LIVE.M6`. Stitch tasarımındaki düzen bizim temayla (cam panel, Plus Jakarta Sans, coral/violet, lucide); telefonda kart listesi, masaüstünde tablo. Tasarımdaki hakediş havuzu, kademe ilerlemesi, zeyilname motoru ve hukuk kütüphanesi kartları yok: arkalarında veri yok.
+- **CRM'de doğrudan ölçülenler (VPN açık, `connector_from_file` ile):** etkin 14.829 sözleşme, 9.014 yürürlükte, 310 yenilemede, 60 günde biten 80, ortalama karton kapak telifi %6,25 (3.313 kayıt). `new_teliftanimBase` (89 satır, son değişiklik 2018) hiçbir sözleşmeye bağlı değil → kademe gösterilemez. Taraf tipi 16.442 tarafın 7'sinde dolu, `new_teliftanimtipi` hiç dolu değil. **`new_SozlemeninSahibi` yazar değil, sözleşmenin Timaş tarafındaki grup şirketi** (11.173 kayıt "TİMAŞ BASIM…"); hak sahibi taraf kaydındaki kişi/firma. Bilgi paketindeki Kural C9 bu yüzden yanlış; ayrı iş olarak işaretlendi, bu turda dokunulmadı.
+- **Doğrulama:** aynı sorgular önce doğrudan CRM'de, sonra yan portta (8798) köprüden, en son `https://portal.nanobase.ai/timas` üzerinden kısa ömürlü `timasai` oturumuyla: sayılar üçünde de aynı (14.829 / 9.014 / 310 / 80; "saatleri" araması 3; yenilemede 310, 2. sayfa 50 kayıt), oturumsuz istek 401, LIKE kaçışı (`o'neil %_[`) hata vermiyor. Ekranın görsel denetimi yapılamadı (HttpOnly oturum çerezi tarayıcı panesine konamıyor); sunucuda derleme hatasız.
+- **Yayın:** test sunucusuna yalnız değişen 6 dosya kopyalandı (öncesinde sunucu kaynağı `main` ile md5 eşti), derleme `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas`, köprü yeniden başlatıldı. Müşteri VM'ine (192.168.0.55) yayınlanmadı.
+
 ## 2026-09-20 — Editoryal Süreç (M1–M8): Stitch ekranları incelendi, eksik listesi çıkarıldı
 
 Kullanıcı Stitch projesindeki (13426839861607265553) M1–M8 ekranlarının projede çalışır hâle gelmesini ve eksiklerin listesini istedi. Sekiz ekran indirildi ve alan alan döküldü; bizim tema, kabuk, köprü, `apps/editor` ve CRM araştırmasıyla karşılaştırıldı. Kod yazılmadı, sunucuda sorgu koşulmadı.

@@ -17,6 +17,7 @@ export const LIVE: Record<string, string> = {
   'catalog-explorer': '/veri-sozlugu',
   review: '/onaylar',
   board: '/panolar',
+  M6: '/telif-sozlesme',
 };
 
 /** Yalnız yöneticilere açık ekranlar; bu ekranlara götüren modüller yetkisiz kişide hiç listelenmez. */

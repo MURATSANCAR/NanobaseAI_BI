@@ -160,3 +160,9 @@ Ayrıca hazır: `Shell` + cam tema, oturum (AD), `semantic_audit`, `admin.conf`,
 4. Editoryal tablolar + yazma uçları + roller; M2 atama, M1 kurul oyu, M7 not/randevu, M8 freelancer ve hakediş.
 5. Dosya yükleme + sürüm + diff; M3, M5, M4.
 6. Model işleri, her biri kendi kaynağı hazır olunca.
+
+## 6. Durum (2026-09-20 akşam)
+
+- Karar: tablolar ve uçlar BI köprüsünde (A seçeneği).
+- M6 okuma ekranı canlıda (test sunucusu): `/telif-sozlesme`. Doğrudan CRM ölçümüyle düzeltilen varsayımlar: telif kademesi tablosu (89 satır, 2018) hiçbir sözleşmeye bağlı değil, yani §4'teki "kademe kurulabilir" geçersiz; taraf tipi 16.442 tarafın 7'sinde dolu; `new_SozlemeninSahibi` yazar değil grup şirketi.
+- Sıradaki: M1 okuma ekranı (kurul toplantıları, proje kartı), sonra M7 ve M2.

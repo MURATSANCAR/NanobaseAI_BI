@@ -892,3 +892,56 @@ export const roomsApi = {
   removeRoom: (id: string) =>
     roomsSend<Room & { cancelledBookings: number }>('DELETE', `/api/v1/admin/rooms/${encodeURIComponent(id)}`),
 };
+
+// ---------------------------------------------------------------------------- editoryal süreç (M1–M8)
+
+export type ContractRate = { format: string; percent: number };
+export type ContractParty = { name: string; share: number | null; scope: string | null; viaAgent: boolean };
+export type Contract = {
+  id: string;
+  no: string | null;
+  code: string | null;
+  kind: string | null;
+  payment: string | null;
+  basis: string | null;
+  rates: ContractRate[];
+  currency: string | null;
+  advance: number | null;
+  start: string | null;
+  end: string | null;
+  years: number | null;
+  openEnded: boolean;
+  status: string | null;
+  stage: string | null;
+  daysLeft: number | null;
+  modifiedOn: string | null;
+  books: Array<{ id: string | null; title: string }>;
+  parties: ContractParty[];
+};
+export type ContractPage = { items: Contract[]; total: number; page: number; pageSize: number; db?: DbTiming | null };
+export type ContractFacet = { code: number; label: string | null; count: number };
+export type ContractSummary = {
+  total: number;
+  active: number;
+  renewal: number;
+  expiring: number;
+  warnDays: number;
+  avgRoyalty: number | null;
+  avgRoyaltyOver: number;
+  statuses: ContractFacet[];
+  kinds: ContractFacet[];
+  db?: DbTiming | null;
+};
+export type ContractQuery = { q?: string; status?: number; kind?: number; expiring?: boolean; order?: string; page?: number };
+
+/** M6 Telif & Sözleşme: CRM'deki sözleşme portföyü (salt okunur). */
+export const contractsApi = {
+  summary: () => send<ContractSummary>('GET', '/api/v1/editorial/contracts/summary', undefined, 60_000),
+  list: (p: ContractQuery) =>
+    send<ContractPage>(
+      'GET',
+      `/api/v1/editorial/contracts${qs({ q: p.q, status: p.status, kind: p.kind, expiring: p.expiring ? 'true' : undefined, order: p.order, page: p.page })}`,
+      undefined,
+      60_000,
+    ),
+};
