@@ -1,5 +1,25 @@
 # Geliştirme Günlüğü
 
+## 2026-09-20 07:30 — BI soru hattı: "En zor 100" kalan hatalar — karne 44 → 54 / 69, kararsız 7 → 0
+
+Ölçü: `tests/text2sql/answer-gate.py --repeat 3` (69 altın soru, bağımsız referans SQL canlı DB'de). Başlangıç (09-18): 44 SAĞLAM / 7 KARARSIZ / 18 BOZUK. Son tam koşu (09-20 05:14): **54 SAĞLAM / 0 KARARSIZ / 15 BOZUK**, ham hata 12 → 3. Her değişiklik hızlı kapı (`resolver-gate.py`, yalnız hedeflenen soruların okuması değişmeli) → hedefli tam kapı döngüsünden geçti; bozan geri alındı.
+
+**Kod (genel mekanizmalar):**
+- `app.py`: eleştirmen dry_run'dan ÖNCE; SQL veritabanında patlarsa kullanıcıya ham sürücü hatası yerine dürüst ret (Q22).
+- `critic.py`: çıplak kolon UNKNOWN_COLUMN denetimi; SELECT/CTE **takma adları hariç** (ilk sürüm `… AS sevk_adedi_basina_maliyet`'i uydurma kolon sanıp Q66/Q71'i bozdu — düzeltildi). RATIO_BASE (pay/payda tabanı), işlev sarmallı join anahtarı.
+- `resolver.py` + `normalize.py`: ulaçlar (`-DIktAn`, `-Ip`) kavram değildir; `_backoff` bunları öbeğe bağlamaz (Q5, Q18). Ölçüye komşu karşılaştırma edatı (`altında/üstünde/aşan`) `model_qualifiers`'a `kind=comparison` ile girer — dal stopword atlamasının ÖNÜNDE olmalı ("altında" stopword'dür; ilk yama bu yüzden hiç tetiklenmedi). İyelikli ölçü + "olan" varlık koşuludur (2e-bis). 2+ kelimelik sertifikalı METRIC/COLUMN öbür kaynakta diye düşürülmez.
+- `audit.py`: `kind=comparison` niteleyicide sorguda gerçek bir büyüklük eşitsizliği aranır (dönem sınırı sayılmaz) — `-- yorum` yazıp eşitsizlik yazmayan SQL geçmez (Q6: 1.874 yanlış → 19.593 faturalı maliyet-altı satır, DB ile eş). Durum ölçüsü üyelik testiyle hareketsiz kayıtları düşüremez (Q8).
+- `compiler.py` / `guardrails.py`: katalogda iki adla kayıtlı tablolar (`ORFICHE` / `LG_ORFICHE`; 6 kalıp) tek adaylıysa çalışma zamanı adına çözülür; tablo seçici sorunun yerleştirdiği tabloyu atmaz (Q18: 34.531). İki kaynaklı planda ölçülmüş bağ reçetesi isteme zorunlu girer (`federated.required_bridges_block`).
+- **Yeni: `runtime/value_labels.py`** — en dış SELECT'te yalın seçilen ve kataloğun etiketini bildiği kolon (1.280 CRM seçim listesi kolonu) sonuçta etiketiyle döner ("4" değil "Satış"); türetilmiş tablo/CTE içinden izlenir, hesaplanan ifadeler ve Logo dokunulmaz; `run_sql` + `run_complete` (Q54). Not: mantıksal SQL şemayı alt çizgiyle yazar (`Timas_MSCRM_dbo_X`), katalogda şema noktalıdır — eleştirmenin `_resolve`'u bu yüzden CRM tablolarını bugün çözemiyor (eleştirmen CRM'de kör; açmak ayrı ölçüm ister).
+
+**Katalog (ürünün store API'si + `human_certify`; `scripts/catalog-authoring/`, varsayılan kuru koşu):** `hedef / satış hedefi / toplam hedef` → `yıllık hedef` (NEW_TOPLAMHEDEF) eş anlamlıları (Q65, iki kaynaklı Q69); iş istasyonu (WORKSTAT), operasyon gerçekleşen/planlanan süre ve süre farkı (DISPLINE, dakika), dengesizlik katsayısı (CV; 3.429 üründe referansla birebir) (Q36). Her birinde hızlı kapı yalnız hedef soruların okumasının değiştiğini gösterdi.
+
+**Kapı / altın:** `any_of` (aynı soru döküm ya da özet biçiminde cevaplanabilir), `rows` için `distinct:` / `sum:` referansı, `empty` + `measure`, `$text` anahtar. Ürünün doğru olup altının yanlış olduğu sorular düzeltildi: Q31 (gider 65,3 Mn ₺ DB ile eş; altın distinct CENTERREF sayıyordu), Q27, Q45, Q6, Q65.
+
+**Denendi, geri alındı:** bağı ölçülmemiş çapraz-kaynak öbeğini tek kaynağa indirme (h1) — Q48'i dürüst retten "hangi kitaplarda"yı sessizce düşüren eksik cevaba çevirdi, Q12/Q40'a doğru değer kazandırmadı.
+
+**Açık:** son tam koşuda Q8, Q55, Q69 üç tekrarda da reddedildi; hedefli koşularda sağlamdılar. Sunucu dosyaları depo ile md5 eş, katalogda yalnız bu oturumun 6 kavramı değişti — neden henüz bilinmiyor; TİMAŞ VPN 05:43'te düştüğü için yeniden sınanamadı. **İş kararları** (ürün sahibi kararı Claude'a bıraktı, 09-20): çek = olay okuması; aracılı sözleşme paydası = tüm aktif sözleşmeler; yurtdışı hak yılı = sözleşmenin kayıt yılı; dönemsiz "son N / hiç" = tüm yıl kopyaları; tahsilat vadesi = planlanan; Q10 dönem alanı = ACTDUEDATE; "devir hızı" CRM eş anlamlısı geri çekilir + Logo stok devir hızı ölçüsü; termin = "veri tutulmuyor" dürüst cevabı; iade oranı = iade adedi / sevk adedi. Uygulamaları sırada (beş teşhis ajanı oturum limitine takıldı, yeniden başlatılacak). Müşteri VM'ine çıkış bunlardan sonra.
+
 ## 2026-09-19 23:50 — Editör: ilk gerçek kitap üç nesil koştu; GPU paylaşımı, kendi kendini denetleyen düzeltmeler
 
 **GPU yerleşimi (kullanıcı kararı):** BI'ın `qwen38-27b` konteyneri iki karttan tek karta alındı (GPU 0, TP1; `deploy/tt-gpu/compose.qwen27b.yaml`, 6 dk'da açıldı, doğrudan ve 18885 tünelinden doğrulandı). GPU 1 tamamen editörün; altı modelin altısı orada gerçek çağrıyla denendi (`python -m editor.smoke`). Tek kartta paylar: ana model %48 + embedding %21 + reranker %23 birlikte; 32B derin %90 ve ses %80 tek başına. Embedding/reranker 8K bağlam (32K'de KV yetmiyordu). Ses modeli için `vllm[audio]` ekli imaj (`images/vllm-audio`).
