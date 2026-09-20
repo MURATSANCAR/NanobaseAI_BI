@@ -2,6 +2,8 @@
 
 ## 2026-09-20 20:00 — Editör: metinden gelen ayırt edici özellikler (cinsiyet/yaş), nesil 10 (31/31 doğru), Critic'in atladığı iddialar
 
+**Kitap kuyruğu (`editorctl queue` → `editor.cli queue`):** gelen kutusundaki her PDF sırayla analiz edilir (modeller ortak: iki analiz aynı anda GPU'yu birbirinden alır). Mühürlü nesli olan kitap atlanır (`--force` yine koşturur, `--code-version` yalnız eski koddan mühürlenmişleri). Sunucuda `systemd-run --unit=editor-queue` ile ssh oturumundan bağımsız koşar; ilerleme `journalctl -u editor-queue -f`.
+
 **Ayırt edici özellikler (göç 009 `character.traits`):** metin bir karakterin cinsiyetini ya da yaş kuşağını söylüyorsa (akrabalık/unvan adları, zamirler, "adam/kadın/çocuk"; adın kendisi kanıt değil) `sex` ve `age_band` olarak yazılır (`resolve_identity` v4). Referans seçiminde: metnin başka bir sınıfa koyduğu karakter artık rakip sayılmaz (anne, dedenin rakibi değildir) — ama yalnız kırpımın kendisi o sınıfı gösteriyorsa (`check_reference` v2 figürün çiziminde görünen cinsiyet/yaşı da söyler; tutmazsa referans reddedilir). Nesil 10'da profesör hem s.37 hem s.39'da kendi referansı oldu, özellik yüzünden reddedilen referans 0.
 
 **Nesil 10 (tam koşu, regresyon geçti):** 37 figür, 31'ine ad verildi, gözle 31/31 doğru, 0 yanlış, 6 belirsiz. Robobi ilk kez adlandı (s.23, elemeyle). Tarama 5 figürde yanlış ad vermişti, hepsi düzeltildi. Nesil 7→8→9→10: ad 21→24→29→31, yanlış ?→1→0→0. Süreklilik oylaması gerçek koşuda çalıştı: Can için 2 öneri, ikisi de oylamada elendi (kuyrukta 0 süreklilik kalemi; nesil 9'da 3 tanesi editöre gidiyordu). Metin–görsel: 5 öneri, 2 teyit (s.8, s.33).

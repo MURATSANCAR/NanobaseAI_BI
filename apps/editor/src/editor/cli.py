@@ -1,6 +1,7 @@
 """Operator/editor CLI (runs inside editor-mcp via `editorctl`).
 
   python -m editor.cli analyze <file.pdf> [--title T] [--universe U] [--age A]
+  python -m editor.cli queue [--force] [--code-version]
   python -m editor.cli status <job_id>
   python -m editor.cli wait <job_id>
   python -m editor.cli report <generation_id>
@@ -19,11 +20,45 @@ import json
 import sys
 import time
 
-from . import catalog, db, jobs
+from . import catalog, db, document, jobs
 
 
 def _print(x) -> None:
     print(json.dumps(x, ensure_ascii=False, indent=1, default=str))
+
+
+def queue_all(force: bool, code_version: bool) -> dict:
+    """Analyse every book in the inbox, one after another. The models are shared, so two
+    analyses at once would take the GPU from each other; a book already analysed is skipped
+    (--force runs it again, --code-version only when the sealed run is from older code)."""
+    from .workflow.activities import _code_version
+    version = _code_version()
+    out = []
+    for item in document.list_inbox():
+        info = document.inspect_book(item["file_name"])
+        sealed = db.one("SELECT id, code_version FROM generation WHERE book_version_id=%s AND"
+                        " sealed_at IS NOT NULL ORDER BY created_at DESC LIMIT 1",
+                        info["book_version_id"])
+        if sealed and not force and not (code_version and sealed["code_version"] != version):
+            out.append({"file": item["file_name"], "skipped": f"mühürlü nesil var: {sealed['id']}"})
+            print(f"{time.strftime('%H:%M:%S')} ATLA {item['file_name']} ({out[-1]['skipped']})", flush=True)
+            continue
+        job = asyncio.run(jobs.start_analysis_job(item["file_name"], requested_by="editorctl queue"))
+        print(f"{time.strftime('%H:%M:%S')} BAŞLADI {item['file_name']} → {job['job_id']}", flush=True)
+        last = None
+        while True:
+            st = jobs.get_job_status(job["job_id"])
+            if st["step"] != last:
+                print(f"  {time.strftime('%H:%M:%S')} {st['status']} {st['step']}", flush=True)
+                last = st["step"]
+            if st["status"] in ("SUCCEEDED", "FAILED", "CANCELLED"):
+                break
+            time.sleep(20)
+        out.append({"file": item["file_name"], "job_id": job["job_id"], "status": st["status"],
+                    "error": st.get("error")})
+        print(f"{time.strftime('%H:%M:%S')} BİTTİ {item['file_name']}: {st['status']} {st.get('error') or ''}",
+              flush=True)
+    return {"books": out}
 
 
 def decide(item_id: str, decision: str, editor: str, data: dict | None) -> dict:
@@ -78,6 +113,9 @@ def main() -> None:
     a.add_argument("--title")
     a.add_argument("--universe")
     a.add_argument("--age")
+    q = sp.add_parser("queue")
+    q.add_argument("--force", action="store_true")
+    q.add_argument("--code-version", action="store_true")
     sp.add_parser("status").add_argument("job_id")
     sp.add_parser("wait").add_argument("job_id")
     sp.add_parser("report").add_argument("generation_id")
@@ -114,6 +152,8 @@ def main() -> None:
     if args.cmd == "analyze":
         _print(asyncio.run(jobs.start_analysis_job(args.file, args.title, args.universe, args.age,
                                                    requested_by="editorctl")))
+    elif args.cmd == "queue":
+        _print(queue_all(args.force, args.code_version))
     elif args.cmd == "status":
         _print(jobs.get_job_status(args.job_id))
     elif args.cmd == "wait":
