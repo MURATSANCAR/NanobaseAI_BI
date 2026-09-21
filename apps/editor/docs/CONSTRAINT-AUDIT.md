@@ -7,24 +7,38 @@ Kullanıcının paralel denetim isteğiyle iki bağımsız statik tarama yapıld
 | Sayfa başına bir karakter çizimi | P21 deney/TV figüründen biri eleniyor | Figür başına bağımsız eşleşme |
 | Süreklilikte page_no→tek crop | Aynı sayfanın diğer çizimleri kayboluyor | Mention/region kimlikleri, tüm figürler |
 | Aynı ad→aynı süreklilik kişisi | Aynı adlı farklı kişiler birleşiyor | Character ID gruplaması; belirsiz ad hata |
-| En az3sayfa/en çok6sayfa süreklilik | Eksik kapsam olumlu sonuç gibi görünüyor | En az2figür, en çok6görüntülü partiler, açık kapsam |
+| En az 3 sayfa/en çok 6 sayfa süreklilik | Eksik kapsam olumlu sonuç gibi görünüyor | En az 2 figür, en çok 6 görüntülü partiler, açık kapsam |
 | Son figür kalan isimdir | Görsel doğrulamasız RESOLVED ve referans yayılması | İsimden eleme/referans yükseltme kaldırıldı |
-| Tek sayfa kimliği kesin olamaz | confidence0.7tavanı açık kimliği engelliyor | Bağımsız kimlik denetçisi/conflict kontrolü korunarak sayfa tavanı kaldırıldı |
+| Tek sayfa kimliği kesin olamaz | confidence 0.7 tavanı açık kimliği engelliyor | Bağımsız kimlik denetçisi/conflict kontrolü korunarak sayfa tavanı kaldırıldı |
 | Duygu adı/alias LIMIT1 | Ortak adda keyfi kişi; dolu bağ tekrar incelenmiyor | Aynı sayfa+ortak kaynak span+tek çözülmüş birey; eksikte NULL, eski bağ yeniden okunur |
 | NON_STORY hiçbir bilgi içermez | Karma/yanlış sınıflanan sayfada veri kaybı | Sayfa önerisi çıkarımı engellemez |
 | Topluluk karakter değildir→atma | Grup eylemi öznesi kayboluyor | Kolektif anılma korunur; bireye dönüştürülmez |
 | Bilinmeyen tema ID’sini atla | /t0 sessiz boş sonuç | Tam ve kesin ID kapsamı, açık hata; tüm kanıtlar |
-| Tam araç cevabı=tam olay örgüsü | Son7sayfanın14olayı NEEDS_REVIEW; özet25te duruyor | Taşıma bütünlüğü ile olay kapsamı ayrıldı; eksik sayfalar açık |
+| Tam araç cevabı=tam olay örgüsü | Son 7 sayfanın 14 olayı NEEDS_REVIEW; özet 25. sayfada duruyor | Taşıma bütünlüğü ile olay kapsamı ayrıldı; eksik sayfalar açık |
 | HTTP200=başarılı model cevabı | Bakım hatası portalda yanıt sayılıyor | finish_reason=stop zorunlu; gerçek hata yanıtı/null cevap doğrulandı |
+
+## Beş madde için canlı kabul matrisi
+
+Kod düzeltmeleri `0439924a` gerçek yeni nesil koşusuna dahil edildi. İş 13/15'te FAILED olduğundan aşağıdaki beş satırın hiçbirine toplu PASS verilmedi. 32/32 hızlı ve 29/29 derin tarama, kimlik doğruluğunu kanıtlamaz; 37 görsel figür belirsiz kaldı. `f1cc4614` hedefli onarımından sonra bağımsız sonuçlar bu matrise eklenmelidir.
+
+| Madde | Gerekli bağımsız gerçek kanıt | Güncel kabul |
+|---|---|---|
+| Aynı sayfada çoklu çizim | 21. sayfadaki deney ve TV figürlerinin ayrı mention/region olarak korunması, doğru kişi ve iki figürün süreklilik kapsamına girmesi | DOĞRULANAMADI |
+| Duygu kimliği | Her dolu bağda aynı nesil/sayfa, ortak doğrulanmış kaynak span ve tek çözülmüş birey; belirsiz ortak adda keyfi seçim olmaması | DOĞRULANAMADI |
+| Son figürü eleme | RESOLVED kararlarının bağımsız görsel kanıtı; kalan isimden referans veya kesin kimlik türememesi | DOĞRULANAMADI |
+| Süreklilik kapsamı | İki figürle başlayan kontrol, aynı sayfa figürleri, altı görüntü sonrası partiler ve checked/missing kimlikleri | DOĞRULANAMADI |
+| Hikâye dışı/toplu anılma | 1–4. sayfa çıkarımının geri alma sonrası kurtarılması, sayfa rolü review hedefi ve kaynaklı topluluk bilgisinin korunması | DOĞRULANAMADI |
+
+Son madde yalnız prompt değişikliğiyle kapanmadı: gerçek koşuda sayfa rolü için hedefsiz review kaydı DB constraint'ine takılıp çıkarım parçasını geri aldı. `017_page_role_reviews.sql` gerçek sayfa rolü bağlantısını ekledi; canlı onarım sonucu bekleniyor. Ayrıntı [kurtarma kaydı](RECOVERY-2026-09-21.md).
 
 ## Açık tasarım konuları
 
 - `schemas.py`: sayfa başına tek scene. Panel/sahne/zaman ilişkisi ayrı modellenmeli; bu turda şema geçişi yapılmadı.
 - `knowledge.py` olay birleştirme: aynı model_call veya bir sayfadan uzak tekrarlar koşulsuz dışlanıyor. Bunların kanıt sinyali olması değerlendirilmeli; PLAN/REALIZED ayrımı korunmalı.
-- Kitap geneli olay sırası/anlatı rolleri listeleri varsayılan120 öğe sınırına bağlı; büyük kitaplar için tam kapsam doğrulaması ve bölütleme gerekli.
+- Kitap geneli olay sırası/anlatı rolleri listeleri varsayılan 120 öğe sınırına bağlı; büyük kitaplar için tam kapsam doğrulaması ve bölütleme gerekli.
 - Referans oluştururken üç bağımsız sayfa şartı; üst üste kutuları alanlarından hareketle maskeleme. Otomatik kaldırılmadı: figür karışmasını önleyen kanıt korumaları da var. Gerçek zor örneklerde ölçülmeli.
 - Süreklilik partileri bütün seçili figürleri ortak referansla kapsar; bütün olası çiftlerin ayrı karşılaştırıldığı anlamına gelmez. `same_everywhere` genel kabulü verilmez.
 
 ## Ayrım
 
-24cümle özet sınırı, altı görüntü çağrı bütçesi ve 80.000karakter aşımında açık hata teknik sınırlardır. Sessiz veri kaybı veya eksik kapsamı tam kabul saymadıkları sürece kaldırılmaları gerekmez. REJECTED/NEEDS_REVIEW süzgeci de gevşetilmedi: kitabın sonunu özete almak için onaylanmamış olaylar doğrulanmış yapılmadı.
+24 cümle özet sınırı, altı görüntü çağrı bütçesi ve 80.000 karakter aşımında açık hata teknik sınırlardır. Sessiz veri kaybı veya eksik kapsamı tam kabul saymadıkları sürece kaldırılmaları gerekmez. REJECTED/NEEDS_REVIEW süzgeci de gevşetilmedi: kitabın sonunu özete almak için onaylanmamış olaylar doğrulanmış yapılmadı.

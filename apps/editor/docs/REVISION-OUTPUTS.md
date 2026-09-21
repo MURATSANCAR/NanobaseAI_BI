@@ -1,5 +1,9 @@
 # Doğrulama ve revizyona bağlı çıktı üretimi — canlı kabul
 
+> **Güncel durum — 21 Eylül 2026:** Aşağıdaki 0.12 yaşam döngüsü sonucu tarihsel ve kendi sürümüne aittir. Yeni `0439924a` neslinde worker otomatik yeniden başladı ve 9 OCR görevi yaklaşık 59 saniyede devam etti; tam iş daha sonra çıkarım/özet sorunlarıyla **FAILED** oldu. `f1cc4614` / `validated-outputs-v8` ve sayfa rolü review hedefi düzeltmesi GPU'da kurulu; hedefli onarım henüz kabul edilmedi. Güncel operasyon ve kalanlar: [RECOVERY-2026-09-21.md](RECOVERY-2026-09-21.md), [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md). Aşağıdaki bakım/servis kapalı ölçümleri bugünün önceki aşamasına aittir, güncel runtime beyanı değildir.
+
+## Tarihsel 0.12 gerçek yaşam döngüsü kabulü
+
 > Sonraki okuma entegrasyonu: `0.13.0-reads-7eda4ec1` ile rapor, kart, timeline, aktör, karakter geçmişi ve Hermes MCP okumaları ortak güncel sürüme geçirildi. Bu belgedeki 0.12 kabul kapsamı tarihsel olarak korunur; yeni kanıt ve kalan sınırlar [CURRENT-READS.md](CURRENT-READS.md).
 
 21 Eylül 2026. **Tek gerçek kitapta teknik yaşam döngüsü kabulü geçti.**
@@ -11,7 +15,7 @@ Editor modelleri kapalı, GPU 1 boş. Genel taramalar açılmadı.
 Kanıt: [gerçek yaşam döngüsü](evidence/2026-09-21-output-lifecycle.json).
 Tam kayıtlar `/data/editor/backups/20260921-live-outputs/` altında; özette hashleri var.
 
-## Son sürüm ve gerçek kitap
+## Bu tarihsel koşunun sürümü ve gerçek kitabı
 
 - Kitap: **Dünyanın En Korkak Hayvanı**, 32 fiziksel sayfa.
 - Nesil: `3a987c80-95ba-48ce-a08e-820425cf438d`.

@@ -1,6 +1,8 @@
 # Kaynak ve karakter kimliği kabulü — 21 Eylül 2026
 
-Üretime hazır değil. Bakım açık; genel worker/rebuild, Hermes/MCP/gateway ve Editor modelleri kapalı. Aktif Temporal işi ve bekleyen rebuild yok; GPU 1 belleği 0 MiB. BI GPU 0'a dokunulmadı.
+**Üretime hazır değil.** Bu belgedeki 37/37, 36/59 kimlik ve rev3009 sonuçları önceki `1600e738-621b-434f-8d9c-0c0645b42fb2` nesline aittir. Yeni `0439924a` nesli `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`, 32/32 hızlı ve 29/29 derin taramayı tamamladı; 37 görsel figür belirsiz kaldı ve iş 13/15'te FAILED oldu. `f1cc4614` hedefli onarımı henüz kabul edilmedi. [Güncel kurtarma kaydı](RECOVERY-2026-09-21.md).
+
+Önceki kabulün kapanışında bakım açık, genel worker/rebuild, Hermes/MCP/gateway ve Editor modelleri kapalıydı; GPU 1 0 MiB ölçüldü. Bu tarihsel ölçüm güncel çalışma durumu değildir. Genel taramalar kapalı kalır; BI GPU 0'a dokunulmadı.
 
 ## Düzeltilenler
 
@@ -9,7 +11,7 @@
 - Kimlik kapsamı API'si fiziksel sayfa, gerçek model taraması, ön eleme ve bağlı/çözülmüş anmaları ayrı sayar. Tarama tamamlanması kimlik doğruluğu değildir.
 - Gerçek koşuda kitap özeti iki kez uzunluk sınırına takıldı, sonrasında geçersiz claim referanslarıyla reddedildi. `validated-outputs-v6`: en çok 24 cümle, snapshot'a özel kısa model referansları; kalıcı çıktı gerçek claim UUID ve evidence bağlantısını korur. Bilinmeyen referanslar hata olarak reddedilir.
 
-## Gerçek kabul
+## Önceki nesilde gerçek kabul
 
 Ortam: tt-gpu, gerçek Editor PostgreSQL + kontrol API'si + Qdrant ve orijinal PDF. Yerel/sentetik test çalıştırılmadı.
 
@@ -23,12 +25,14 @@ Ortam: tt-gpu, gerçek Editor PostgreSQL + kontrol API'si + Qdrant ve orijinal P
 - Son yayında gerçek API/DB/Qdrant çıktı tutarlılığı **371/371** geçti. Bu sayılar kaynak/kimlik semantiğinin tam kabulü değildir. Analitik durum **NEEDS_REVIEW**, `accepted=false`.
 - İlk üretim 13:45 UTC'de başladı; bakım 14:55 UTC'de geri açıldı. Bu yaklaşık 70 dakika; model geçişi, denetim, Hermes çakışması ve kod düzeltmesi/yeniden üretimi içerir, temiz performans benchmarkı değildir. İlk aktör geçişi 62 olay × 16 karakter için 992 kısa çağrı yaptı; maliyet ayrıca ele alınmalı.
 
-## Kalanlar
+## Önceki nesil kabulünde kalanlar
 
 1. Kaynak: 32 sayfa kapsamda, 30'u metin okunabilir. 2/3/18/24/26. sayfalarda metin/OCR uyuşmazlığı; 4/10 görsel-only değerlendirmesi ve 32 sayfanın rol onayı açık. Ham kaynaklar korunuyor, editör onayı uydurulmadı.
 2. Kimlik: 23 görsel anma belirsiz; tüm karakterlerin bağımsız doğruluğu kabul edilmedi. İki TEXT anmasında doğrulanmış metin kanıtı yok; bunlar metinsel kimlik çözümüne alınmadı.
 3. Hermes: gerçek pending sohbet son neslin hazır olmadığını, çalışan işi doğru bildirdi; eski özet sunmadı/yeni iş önermedi. Ancak servis günlüklerinde spillover dosyasına erişemeyen tekrarlı araç çağrıları ve başka bekleyen oturumlar var. Döngünün tek pending isteğe aidiyeti kanıtlanmadı. Servis durduruldu. Hazır çıktı üzerinden tam sohbet ve oturum yaşam döngüsü **DOĞRULANAMADI**; önce araç erişimi/oturum izolasyonu çözülmeli.
 4. Tam yeni analiz neslinin baştan sona tek sürümle SUCCEEDED olması henüz yok: bu kabul, başarısız üretim sonrasında gerçek çıktının kurtarılmasını kanıtlar.
+
+Hermes için yukarıdaki durdurulmuş oturum gözlemi tarihseldir. Sonraki yedi araçlı MCP kontrolleri, portal yaşam döngüsü ve sohbet yeniden koşuları [PRODUCTION-READINESS.md](PRODUCTION-READINESS.md) içinde kayıtlıdır; bunlar tam kitap kabulü değildir.
 
 ## Kanıt
 

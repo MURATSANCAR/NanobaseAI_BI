@@ -2,45 +2,37 @@
 
 **Karar: ÜRETİME HAZIR DEĞİL.** Teknik çalışabilirlik ile kitap doğruluğu ayrı kabul edilir. Kullanıcı onaysız hazırlık/yayın/doğrulama yetkisi verdi; bu belge tamamlanmamış maddeleri onaylanmış saymaz.
 
-## Kurulu ve hazırlanmış sürümler
+## Güncel durum ve sürümler
 
-- GPU: `d596f3c5`, `/data/editor/releases/d596f3c5`, `editor-py:d596f3c5`, sürüm `0.15.0-production-d596f3c5`. Altı salt okunur sohbet aracı; 16 araç turu sınırı. Genel analiz ve yeniden üretim işçileri son kontrolde kapalı.
-- CPU portal: `474cb2d9` konuşma bağlamı düzeltmesi; gerçek sunucuda derlendi, semantic bridge ve portal yayımlandı. Aynı kullanıcı/tenant/kitabın son sekiz tamamlanmış turu, istek başına ayrı Hermes kilidi. Bağlı gerçek portal API + bağımsız PostgreSQL okumasında 8/8 kontrol geçti; [kanıt](evidence/2026-09-21-portal-context-api.json). İlk yanıt 119,3 sn, bağlamsal takip 2,8 sn.
-- Sonraki GPU düzeltmeleri **henüz kurulu değil**: tam özet aracı, eski iş/güncel çıktı durumlarının ayrımı, metin aracının görsel kapsamını açık bildirmesi, PDF aynı koordinatlı baskı tekrarı ve künye satır sırası düzeltmesi.
-- Kalıcı yönetim tüneli taslağı **henüz kurulu değil**: CPU loopback `18891` → GPU SSH. Mevcut anahtar/host doğrulaması korunur. İlk kurulum için GPU yönetim bağlantısı gerekir.
+- **Son tam analiz FAILED:** `0439924a`, nesil `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`, iş `2cc4bd08-67cf-424a-af67-4f686ea6b8a3`, adım 13/15. Hızlı tarama 32/32, derin tarama 29/29 tamamlandı. 37 görsel figür belirsiz. Tarama tamamlanması kimlik/kitap kabulü değildir.
+- **GPU düzeltme sürümü `f1cc4614` kurulu:** `017_page_role_reviews.sql` sayfa rolü incelemesine gerçek hedef bağlantısı ekler; `validated-outputs-v8` az kanıtta az cümle ve son denemede bire bir doğrulanmış iddia sınırı uygular. Migration gerçek GPU PostgreSQL üzerinde uygulandı; `editor-repair-f1cc4614` ile 1–4. sayfa çıkarımı ve ardından yeniden üretim başlatıldı, kabul sonucu henüz yok; ayrıntı [kurtarma kaydı](RECOVERY-2026-09-21.md).
+- Genel analiz ve yeniden üretim işçileri kapalı. Kontrollü kabul için servislerin açılması genel taramaların açılması anlamına gelmez. Bakım anahtarının önceki ölçümleri güncel durum yerine kullanılamaz.
+- CPU portalın konuşma bağlamı `474cb2d9`; bakım hatasını cevap saymayı engelleyen düzeltme `40b19439`. `finish_reason=stop` dışındaki Hermes sonuçları kitap cevabı olarak yayımlanmaz.
+- GPU yönetim tüneli **kurulu ve doğrulandı**: CPU loopback `18891` → GPU SSH. Normal VPN yolu kopuk olsa da bu yönetim yolu çalışıyor; mevcut anahtar ve host doğrulaması korunur.
 
-## Gerçek kanıtlar
+## Gerçek kanıtlar ve sınırları
 
-1. Önceki nesilde düzeltme/çıktı kurtarma: [IDENTITY-COVERAGE.md](IDENTITY-COVERAGE.md), rev3009, beş güncel READY çıktı; 371 gerçek API/DB/Qdrant kontrolü. Tarihsel tam iş FAILED kalır; analitik durum NEEDS_REVIEW.
-2. Yeni sınırlı sohbet MCP: sunucuda gerçek DB/snapshot ile **317 kontrol geçti**. GPU kanıtı `/data/editor/backups/20260921-production/chat-reads.json`; bağlantı kesilmeden sonuç gözlendi, dosya henüz yerel depoya alınamadı. Bu sayı sonradan hazırlanan yedi araçlı sürümün kabulü değildir.
-3. Gerçek Hermes üzerinden 10 soru: [ham yanıtlar](evidence/2026-09-21-production-chat-ten.jsonl). On yanıtın HTTP ile dönmesi semantik kabul değildir. Çalıştırma CPU, Hermes/model/kitap DB GPU.
-4. Portal gerçek oturumlu tarayıcı: 320/390/768/1440 genişliklerinde soru alanı ve gönderme düğmesi erişilebilir, sayfa yatay taşmaz. [Boyut kanıtı](evidence/2026-09-21-portal-context-browser.json). Gerçek tarayıcıdan iki soru gönderildi: beklerken ikinci gönderim kapalı, parentId ilk soruya bağlı, takipte iki isim doğru. [Yaşam döngüsü kanıtı](evidence/2026-09-21-portal-context-lifecycle.json). Yanıtlar 11,8 sn / 1,7 sn; bu senaryo bütün kitap doğruluğu kabulü değildir.
-
-## On soruda bulunan engeller
-
-| Soru | Gözlem | Karar |
+| Kontrol | Sonuç | Kabul sınırı |
 |---|---|---|
-| Kısa özet | 25. sayfada evden ayrılmayı son sanıyor; 31–32. sayfadaki kurtarma yok | FAIL: tam özet aracı hazırlanıyor |
-| Baba/yavru | İki ayrı karakter; 6. sayfa kaynağı | Bu senaryo doğru; tüm kimlikler kabul edilmiş değil |
-| Hayvan türü | Hayvan kimliği doğru, gereksiz teknik alanlar görünür | Sunum eksik |
-| Kütüphaneci | Salyangoz ve 8. sayfa atfı | Bağımsız sayfa kontrolü tamamlanmadı |
-| Sayfa 23 | Metin doğru; metin aracından görsel yokluğu çıkarıyor | FAIL: kapsam açık bildirilmeli |
-| Sayfa 4 | Metin yokluğunu bildiriyor; kapak olabileceğini tahmin ediyor | Desteksiz tahmin; resimli hikâye sayfası |
-| Analiz durumu | Analitik kabul yok doğru; eski FAILED nedeniyle hazır çıktı yok diyor | FAIL: güncel çıktı durumu ayrı okunmalı |
-| Silme isteği | Salt okunur araçlarla silme yapılmadı | Yazma izolasyonu geçti |
-| Olmayan kitap | Bulunamadığını söylüyor; kapanışta yanlış kitap adı üretiyor | FAIL: ad doğruluğu |
-| Takip sorusu | Önceki baba/yavru bağlamını koruyor | Doğrudan Hermes bağlamı doğru; portal ayrıca test ediliyor |
+| Orijinal PDF geometri/künye kontrolü | [45/45 geçti](evidence/2026-09-21-pdf-layout.json) | Bütün kaynak/rol/kimlik doğruluğu değildir |
+| Yedi sohbet aracı, gerçek MCP/API–DB karşılaştırması | [329/329 geçti](evidence/2026-09-21-resumed-chat-tools.json) | Araç/veri sözleşmesi; bütün kitap semantiği değildir |
+| Gerçek Hermes sohbeti | [10 cevap tamamlandı](evidence/2026-09-21-resumed-chat-ten.jsonl) | Hepsi içerik açısından kabul edilmiş değil; özet kapsamı eksik |
+| Portal bakım hatası | [Hata durumu, cevap null](evidence/2026-09-21-portal-maintenance-rejection.json) | Hata ayırımı; kitap doğruluğu değildir |
+| Worker SIGKILL → kendiliğinden devam | [9 OCR activity attempt 2](evidence/2026-09-21-new-generation-crash.json), yaklaşık 59 sn | Aynı iş/nesilde otomatik devam geçti; tam koşu sonradan FAILED |
+| Önceki neslin çıktı kurtarması | Rev3009, 5 READY; 371 API/DB/Qdrant kontrolü | Tarihsel, farklı nesil/sürüm; yeni nesle aktarılmaz |
+| Portal bağlamsal API | [8/8 geçti](evidence/2026-09-21-portal-context-api.json) | İki gerçek soru bağlamı; tüm sohbet kabulü değildir |
+| Portal mobil yaşam döngüsü | [320/390/768/1440 genişlikleri](evidence/2026-09-21-portal-context-browser.json), [iki soru](evidence/2026-09-21-portal-context-lifecycle.json) | Ölçülen portal sürümü ve akışla sınırlı |
 
-Yanıtlarda kullanıcıya gereksiz `semantic_acceptance`, adım kodları ve `FAILED` gösteriliyor. Kaynak doğruluğu yalnız ifadeleri sadeleştiren ikinci bir modelle garanti edilemez.
+Önceki altı araçlı 317 kontrol ve ilk on sohbet kaydı tarihsel aşamalardır. İlk sohbetlerde metinden görsel yokluğu çıkarma, eski FAILED işi güncel çıktı yokluğu sanma ve yanlış kitap adı üretme görüldü. Sonraki araç/kapsam düzeltmeleri ve yeniden koşu bu sorunları ele aldı. Tam özet aracı tek başına sonu tamamlamadı: önceki nesilde 26–32. sayfalardaki 14 olay NEEDS_REVIEW olduğu için doğrulanmış özete girmiyordu. Özet taşıma bütünlüğü ile olay örgüsü kapsamı ayrı bildiriliyor; filtre gevşetilmedi.
 
-## Kaynak ve kimlik kabulünde kalanlar
+## Açık üretim engelleri
 
-- PDF sayfa 2 künye rol/isim sırası; sayfa 3 aynı koordinatlı çift metin. Kaynak resimle bağımsız karşılaştırıldı; parser düzeltmesi yeni nesilde doğrulanmalı. Orijinal dosya/önceki nesil değiştirilmez.
-- Sayfa 18/24/26 PDF–OCR uyuşmazlıkları çözülmeli; OCR otomatik doğru kaynak sayılmamalı.
-- Sayfa 4/10 gerçek görsel hikâye sayfaları; metin boşluğu veri kaybı sayılmaz, görsel kapsam gerekir.
-- 32 sayfanın rolü UNKNOWN; bölüm başlığı ile hikâye başlangıcı ayrı belirlenmeli.
-- 59 görsel anmanın 23'ü belirsiz. Belirsizliği isme bakarak zorla kapatmak kabul değildir.
-- Son kodla yeni nesilde baştan sona analiz, kritik kaynak/kimlik kontrolleri, düzeltme → otomatik yeniden üretim → işçi çökmesi sonrası devam yeniden kabul edilmeli. Önceki farklı sürümün kanıtı yeni sürüme taşınmaz.
+1. Yeni neslin 1–4. sayfa çıkarım parçası, hedefsiz sayfa rolü review kaydının `review_item_check` ihlali nedeniyle geri alındı. `017` ile gerçek sayfa rolü FK hedefi kuruldu; başarısız parçanın yeniden çıkarımı ve bağımsız DB/API doğrulaması bekleniyor.
+2. Yeni özet, tema etiketlerinden kanıtsız neden–sonuç üretti; Critic üç taslağı reddetti, rapor yayımlanmadı. V8 düzeltmesinin gerçek üretim/kaynak karşılaştırması bekleniyor.
+3. Beş kısıt kodda giderildi, ayrı gerçek kitap kabulü bekliyor: aynı sayfadaki bütün figürlerin sürekliliğe katılması, kaynaklı tekil duygu bağı, görsel doğrulamasız elemenin kaldırılması, iki figürden başlayan tüm partilerin açık kapsamı, NON_STORY/topluluk bilgisinin korunması. [Denetim ve kabul matrisi](CONSTRAINT-AUDIT.md).
+4. 37 görsel figür belirsiz; kritik kişi/figür doğruluğu bağımsız kanıtla ölçülmeli. Önceki neslin 23 belirsiz figürü bu neslin sayısı değildir.
+5. Kaynak kapsamı, sayfa rolleri, ham PDF–OCR uyuşmazlıkları ve görsel-only sayfalar için tam analitik kabul yok. Eski nesillerin kaynak baytları korunur.
+6. Son düzeltme sürümünde aynı revizyon/snapshot'taki beş çıktı, Qdrant ve gerçek portal sohbeti yeniden doğrulanmalı. Başarısız iş geçmişi başarılıya çevrilmemeli.
 
 ## Teknolojik değerlendirme
 
@@ -48,21 +40,12 @@ Mevcut depo yapılandırmasında yönetici model Qwen3.8-27B-FP8; hızlı görse
 
 Gözlenen temel hatalar model yükseltmesiyle açıklanamaz: eksik araç sayfalaması, eski/güncel durum karışması, kaybolan sohbet geçmişi ve kaynak geometri sırası. Bunlar önce düzeltilir. Alternatif modelin daha iyi olduğu veya güncel sürümlerin araştırıldığı iddia edilmiyor; bu turda model değişikliği yapılmadı.
 
-## Erişim engeli ve güvenli devam
+## Yayın ve sonraki kabul
 
-Yerel TT VPN/SOCKS `127.0.0.1:11080` kapandı; `tt-gpu` SSH bu bağlantıyı kullanıyor. VPN yeniden girişinde kullanıcı OTP gerekir ve oturumda saklı değildir. GPU→CPU Hermes/kart API tünelleri çalışıyor; GPU yönetim kabuğuna eşdeğer değiller. Salt okunur sohbet aracından yönetim komutu çalıştırmaya girişilmez.
+GitHub origin yayını son denemede HTTPS kimliği bulunamadığından başarısız. Yerel main ve kurulu release hashleri ayrı kaydedilir; origin yayımlandı denmez. Genel taramalar kapalı kalır.
 
-**Son bilinen GPU bakım durumu false** (kontrollü kabul için açılmıştı); genel işçiler kapalı. Yönetim kaybından sonra bakım kilidinin yeniden açıldığı iddia edilmez. Bağlantı gelir gelmez önce aktif iş/lease/kuyruk kontrolü, ardından bakım kilidi ve tek kontrollü kabul koşusu yapılır. CPU portalı kullanılabilir olması kitap analizini üretime hazır yapmaz.
-
-GitHub origin yayını HTTPS kimliği bulunamadığından engelli; yerel main commitleri sunucuyla birlikte kayda alınır. Yönetim erişimi, origin push ve analitik kabul tamamlanmadan genel taramalar açılmaz.
-
-## Sonraki kabul sırası
-
-1. GPU yönetim erişimini geri getir; yalnız localhost SSH ters tünelini mevcut anahtarlarla kur ve host doğrulamalı erişimi sına.
-2. Yeni kodu main commit/hash ile ayrı release'e kur; genel işçiler kapalı kalsın.
-3. `verify_chat_reads.py` ile yedi gerçek MCP aracı + DB snapshot; üç başarısız sohbet sorusunu yeniden çalıştır.
-4. `verify_pdf_layout.py` ile gerçek orijinal PDF geometri/künye/biyografi kontrolleri; kapsam/kimlik düzeltmelerini yeni nesilde değerlendir.
-5. Yeni tam nesil, kaynak/kimlik yeterliliği, beş çıktı ve Qdrant tutarlılığı, düzeltme/çökme kurtarma ve gerçek portal sohbeti kabulü.
-6. Kabul sürümü main/origin/sunucuda aynı; başarısız veya değerlendirilmemiş alanlar açıkça raporlanır. Ancak bundan sonra üretim kararı.
-
-Son hazırlık commit’i `91a860f8`; GPU bu commit’e geçirilmedi. CPU’nun dört portal kaynak dosyası `474cb2d9` ile eş; son commit bu dosyaları değiştirmedi. 46 yerel/remote ref içinde main dışında kalmış commit sayısı sıfır; origin push kimlik hatası nedeniyle başarısız.
+1. `f1cc4614` ile yalnız başarısız çıkarım ve çıktı aşamalarını gerçek kitap/veritabanında onar; kaynakları yeniden taramak veya ikinci ağır koşu açmak yerine mevcut kanıtı koru.
+2. Sayfa rolü review hedefi, korunmuş çıkarım kayıtları, özet cümleleri ve kanıt referanslarını bağımsız kontrol et. Kanıtsız neden–sonuç veya zayıf kanıttan uzatılmış anlatı kabul edilmez.
+3. Beş kısıtın her birini gerçek figür/kişi/kaynak kayıtlarıyla ayrı sonuçlandır; görülmeyen senaryoya PASS verme.
+4. Beş güncel çıktı + Qdrant + gerçek portal sohbetini son kurulu hash üzerinde doğrula; düzeltme sonrası eski revizyonun reddini kontrol et.
+5. Kaynak/kimlik/analitik kabul ve main/origin/sunucu eşliği sağlanmadan üretim kararı verme. Yerel veya sentetik ürün testi kabul yerine kullanılamaz.
