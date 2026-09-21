@@ -2213,6 +2213,15 @@ class ExistingCompiler:
                                          explain=["LLM iki sunuculu plan yazdı (tek SQL denemesinden sonra); parçalar ayrı çalışır, bellekte birleşir"],
                                          llm_ms=ms, certified=False, plan=plan)
         sql = self._requested_row_limit(extract_sql(text), q)
+        if not sql and (again := self._reconsider_owed(q, messages, text)):
+            # Asked a second time with the prompt's own contradiction removed, and it wrote the reading.
+            sql = self._requested_row_limit(extract_sql(again), q)
+            ms = int((time.perf_counter() - t0) * 1000)
+            if sql:
+                return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version,
+                                     explain=["LLM önce reddetti; yorumu kendisine bırakılan kelime(ler) hatırlatılınca yazdı"],
+                                     llm_ms=ms, certified=False)
+            text = again
         if not sql:
             # The model's own words never reach the person asking. Its job here is to write SQL; when it
             # cannot, what the user is told is decided by what the resolver established, not by whatever
@@ -2234,6 +2243,45 @@ class ExistingCompiler:
         certified = (not q.unresolved and not q.model_qualifiers
                      and all(s.status in ("CERTIFIED", "EXPLICIT") for s in q.slots))
         return CompiledQuery(sql=sql, compiler=self.name, catalog_version=q.catalog_version, explain=["LLM derledi; katalog gerçekleri istemde sert kısıt olarak verildi"], llm_ms=ms, certified=certified)
+
+    #: Said once, after a refusal, with nothing else in the prompt changed. It states which of the two
+    #: standing instructions wins when they meet on the same word — and nothing about any question.
+    _OWED_NUDGE = (
+        "Bu kelimelerin katalogda karşılığı olmaması soruyu reddetme sebebi DEĞİL: onların okuması sana "
+        "bırakıldı ve soran kişiye borçlu olduğumuz şey bu okumadır, bir ret değil. Sorunun ölçüsü "
+        "SERTİFİKALI KATALOG bloğunda zaten verili. Kelimeyi nasıl okuduğunu ```sql bloğunun EN BAŞINDA "
+        "`-- yorum: '<kelime>' → <hangi tablo/kolon, hangi hesap>` satırıyla yaz ve bu okumayı sorguda "
+        "gerçek bir kısıtla (WHERE / HAVING / CASE / NOT EXISTS) uygula. Şemadaki hiçbir kolonla bu "
+        "kelimeye bir okuma veremiyorsan, yalnız o zaman yine NO_SQL yaz.")
+
+    def _reconsider_owed(self, q: SemanticQuery, messages: list[dict[str, str]], text: str) -> Optional[str]:
+        """A NO_SQL that names nothing but words whose reading was the model's to give — asked once more.
+
+        A word nobody defined is not a reason to refuse a question whose measure the catalog *does*
+        define. The resolver hands such a word over as an obligation (`unresolved`, `model_qualifiers`)
+        and the prompt says so; the same prompt also says to refuse a term that cannot be placed. Both
+        sentences are true of the same word and which one the model follows is a coin flip — one
+        question here was answered nine times and then refused six, with nothing but a catalog version
+        between them. The contradiction belongs to this system, so this system resolves it, once,
+        instead of passing a refusal to the person as if it were an answer about their data.
+
+        Narrow on purpose: the question must have placed a mapping of its own, the refusal must quote
+        at least one term and quote nothing but owed ones, and there is exactly one retry. A refusal
+        about a period, a caveat, a missing table or the question as a whole stands as it did.
+        """
+        owed = [str(m.get("token") or "") for m in (q.model_qualifiers or [])] + [str(w) for w in (q.unresolved or [])]
+        owed = [w for w in owed if w]
+        reason = no_sql_reason(text)
+        if not owed or not reason or not any(s.mapping for s in q.slots):
+            return None
+        quoted = re.findall(r"['\"«]\s*([^'\"»]{2,40}?)\s*['\"»]", reason)
+        folded = {fold(w) for w in owed}
+        if not quoted or not all(fold(x) in folded for x in quoted):
+            return None
+        log.info("NO_SQL names only words the model was asked to read (%s) — asking once more q=%r",
+                 ", ".join(dict.fromkeys(owed)), q.question[:60])
+        return self.llm.chat(list(messages) + [{"role": "assistant", "content": text},
+                                               {"role": "user", "content": self._OWED_NUDGE}])
 
     def repair_plan(self, q: SemanticQuery, plan: "federated.Plan", error: str, thread: Optional[list[dict[str, str]]] = None) -> Optional["federated.Plan"]:
         messages = self.build_messages(q, thread or [])

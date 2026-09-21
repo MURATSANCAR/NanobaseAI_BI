@@ -170,6 +170,10 @@ def _check_specs(specs: list, answer: dict, reference: list[dict], lookups, tole
             for ref_row in reference:
                 for column in spec["reference"]:
                     want = ref_row.get(column)
+                    # Sıfır bir değer değil, yokluktur: referansın 0'ı cevapta satır olarak hiç
+                    # görünmeyebilir (o ayın hareketi yok) — bunu eksiklik saymak kırılganlıktır.
+                    if _num(want) == 0:
+                        continue
                     if want is not None and not any(_close(v, want, spec.get("tolerance", tolerance)) for v in cells):
                         problems.append(f"referans {column} = {want} cevapta yok")
         elif kind == "pairs":
