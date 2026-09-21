@@ -15,9 +15,11 @@ import re
 import uuid
 
 from fastapi import HTTPException, Query, Request
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from .financial_audit_rules import extend_ratios, evaluate, pair_sql, pair_results
 from .financial_audit_evidence import read_evidence, document_sql
+from .financial_audit_deep import read_deep, exception_sql, DEFINITIONS
 
 log = logging.getLogger(__name__)
 REVISION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -229,12 +231,15 @@ def register(app, runtime, authorize):
                         'partialMonth':month==last_month})
                 extend_ratios(out, profile['records'])
                 out['supportingEvidence'] = read_evidence(query, year)
+                out['deepAudit'] = read_deep(query, year, out['lastDate'])
                 out['coverage'] = evaluate(out, profile['records'])
                 out['sql'].append(profile.get('physicalSql'))
                 out['sql'].extend([pair_read.get('physicalSql'),vat.get('physicalSql')])
                 out['dbMs'] += profile.get('dbMs', 0)+pair_read.get('dbMs',0)+vat.get('dbMs',0)
                 out['sql'].extend(out['supportingEvidence']['sql'])
                 out['dbMs'] += out['supportingEvidence']['dbMs']
+                out['sql'].extend(out['deepAudit']['sql'])
+                out['dbMs'] += out['deepAudit']['dbMs']
                 out['runId'] = uuid.uuid4().hex
                 out['readConsistency'] = 'Aynı yedek üzerinde ardışık sorgular; veritabanı snapshot transaction değildir.'
                 out = json.loads(json.dumps(out, ensure_ascii=False, default=str))
@@ -278,6 +283,38 @@ def register(app, runtime, authorize):
     def saved_run(request: Request, run_id: str):
         authorize(request)
         return load_run(run_id)
+
+    @app.get('/api/v1/financial-audit/runs/{run_id}/export')
+    def export_run(request: Request, run_id: str):
+        authorize(request)
+        run = load_run(run_id)
+        # Download the pinned, immutable computation. Do not recompute on export
+        # or substitute the current catalog for the version used by this run.
+        payload = (archive_root() / (run_id+'.json')).read_bytes()
+        return Response(content=payload, media_type='application/json', headers={
+            'Content-Disposition':f'attachment; filename="finansal-denetim-{run["year"]}-{run_id}.json"',
+            'X-Content-SHA256':hashlib.sha256(payload).hexdigest(),
+            'Cache-Control':'private, no-store',
+            'X-Content-Type-Options':'nosniff',
+        })
+
+    @app.get('/api/v1/financial-audit/runs/{run_id}/exceptions/{check_id}')
+    def exception_rows(request: Request, run_id: str, check_id: str, page: int = Query(0,ge=0,le=10000)):
+        authorize(request)
+        run=load_run(run_id)
+        if check_id not in DEFINITIONS or not any(c['id']==check_id for c in run.get('deepAudit',{}).get('checks',[])):
+            raise HTTPException(404,'Bu raporda istenen karşılaştırma bulunamadı.')
+        result=query(exception_sql(check_id,run['year'],run['lastDate'],page),run['year'])
+        records=result['records']
+        total=int(records[0]['totalRows']) if records else 0
+        if page and not records:
+            from .financial_audit_deep import source_sql
+            definition=DEFINITIONS[check_id]
+            count=query(f"SELECT COUNT(*) AS totalRows FROM ({source_sql(definition[1],run['year'],run['lastDate'])}) S WHERE {definition[2]}",run['year'])
+            total=int(count['records'][0]['totalRows'])
+        return {'items':records,'total':total,'page':page,'checkId':check_id,'runId':run_id,
+                'asOf':str(run['lastDate'])[:10],'separateRead':True,'readAt':datetime.now(timezone.utc).isoformat(),
+                'truncated':False,'sql':result.get('physicalSql')}
 
     def review_path(run_id, control_id):
         run = load_run(run_id)

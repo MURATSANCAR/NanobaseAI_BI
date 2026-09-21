@@ -114,7 +114,7 @@ export default function FinancialAudit() {
       <ZoomStage><div className="audit-page">
         <header className="audit-heading">
           <div><div className="audit-eyebrow">FİNANS & RİSK / DENETİM MASASI</div><h1>Rakamların arkasını görün<span>.</span></h1><p>Finansal Denetim · Genel görünümden hesaplamaya, hesaplamadan Logo kaydına.</p></div>
-          <button className="audit-button" disabled={!data} onClick={() => download('finansal-denetim-2026.json', { ...data, sourceHash: source.sha256, sourceCoverage: data?.coverage?.coverageReason, exportedAt: new Date().toISOString() })}><ArrowDownToLine size={16} /> Raporu indir</button>
+          <a className="audit-button" aria-disabled={!data} href={data ? `${ENGINE_BASE}/api/v1/financial-audit/runs/${data.runId}/export` : undefined} onClick={e => { if (!data) e.preventDefault(); }} download><ArrowDownToLine size={16} /> Raporu indir</a>
         </header>
 
         <section className="audit-hero">

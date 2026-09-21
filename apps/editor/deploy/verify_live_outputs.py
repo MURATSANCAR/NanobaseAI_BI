@@ -12,7 +12,7 @@ from datetime import datetime, timezone
 
 import httpx
 
-from editor import db
+from editor import db, jobs
 from editor.config import settings
 
 gid, stage = sys.argv[1:3]
@@ -49,6 +49,38 @@ with db.tx() as c:
 
 checks = []
 api = {}
+
+
+async def workflow_history():
+    handle = (await jobs.temporal()).get_workflow_handle(job['workflow_id'])
+    history = await handle.fetch_history()
+    scheduled, steps, markers = {}, [], []
+    for event in history.events:
+        if event.HasField('activity_task_scheduled_event_attributes'):
+            scheduled[event.event_id] = event.activity_task_scheduled_event_attributes.activity_type.name
+            steps.append({'event': event.event_id, 'state': 'scheduled',
+                          'activity': scheduled[event.event_id], 'time': str(event.event_time)})
+        elif event.HasField('activity_task_completed_event_attributes'):
+            sid = event.activity_task_completed_event_attributes.scheduled_event_id
+            steps.append({'event': event.event_id, 'state': 'completed',
+                          'activity': scheduled.get(sid), 'time': str(event.event_time)})
+        elif event.HasField('marker_recorded_event_attributes'):
+            for value in event.marker_recorded_event_attributes.details.values():
+                markers.extend(p.data.decode(errors='replace') for p in value.payloads)
+    return {'steps': steps, 'markers': markers}
+
+
+workflow = asyncio.run(workflow_history())
+checks.append({'check': 'temporal:verified_order_branch',
+    'passed': any('verified-revision-outputs-v1' in m for m in workflow['markers'])})
+for step in workflow['steps']:
+    if step['activity'] == 'rebuild_outputs' and step['state'] == 'scheduled':
+        completed = {s['activity'] for s in workflow['steps']
+                     if s['state'] == 'completed' and s['event'] < step['event']}
+        checks.append({'check': 'temporal:producers_before_outputs',
+            'passed': {'resolve_identity', 'visual_identity', 'continuity_checks',
+                       'emotions_themes', 'confirm_text_visual'} <= completed})
+
 with httpx.Client(base_url='http://127.0.0.1:8000', timeout=60,
                   headers={'Authorization': 'Bearer ' + settings().gateway_internal_key}) as client:
     for pointer in pointers:
@@ -121,7 +153,7 @@ result = {'environment': 'tt-gpu/editor-control; real ed PostgreSQL; loopback co
     'code_version': gen['code_version'], 'job': job, 'state': state, 'queue': queue,
     'pointers': pointers, 'versions': versions, 'snapshots': snapshots,
     'knowledge_changes': history, 'api': api, 'legacy_hashes': old, 'model_calls': model_calls,
-    'qdrant_reference': qdrant_reference,
+    'qdrant_reference': qdrant_reference, 'workflow': workflow,
     'checks': checks, 'passed': sum(x['passed'] for x in checks),
     'failed': sum(not x['passed'] for x in checks), 'semantic_acceptance': False}
 print(json.dumps(plain(result), ensure_ascii=False, indent=2))
