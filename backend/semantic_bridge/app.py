@@ -751,7 +751,8 @@ class Runtime:
         # notes even when a partial period has a nonempty aggregate.
         note = ""
         if sq is not None:
-            note = " ".join(e for e in sq.explanation if "kısmen gözleniyor" in e or "gözlenen veri kapsamı dışında" in e or "Karşılaştırmada" in e)
+            note = " ".join(e for e in sq.explanation if "kısmen gözleniyor" in e or "gözlenen veri kapsamı dışında" in e or "Karşılaştırmada" in e
+                            or e.startswith("Veri kapsamı:"))
             if sq.absence_contract:
                 note += " " + sq.absence_contract.get("scope_note", "")
             if sq.period_scope and not sq.temporal:
@@ -786,6 +787,31 @@ class Runtime:
         return fast_summary(question, cols, result.get("records") or [], int(result.get("totalRows") or 0)) + note
 
     # ------------------------------------------------------------------ ask
+    def _align_same_period(self, sq: SemanticQuery, scope_args: dict) -> None:
+        """Eş süreli dönem (bkz. `semantic_layer.runtime.same_period`): verinin bittiği gün ölçünün kendi
+        tablosundan okunur; karşılaştırmada iki dönem aynı göreli günde biter, tek dönemde kapsam söylenir.
+        Ölçülemezse hiçbir şey değişmez — takvim dönemi ve "eşit kapsam doğrulanmadı" notu kalır."""
+        if self.connector is None:
+            return
+        from datetime import date as _date
+        from semantic_layer.runtime import same_period
+        try:
+            plan = same_period.probe_plan(sq, _date.today(), Dialect(self.settings.dialect or "tsql"))
+        except Exception:  # noqa: BLE001 — hizalama bir iyileştirmedir, cevabı düşürmez
+            log.exception("same-period plan failed")
+            return
+        if plan is None:
+            return
+        try:
+            got = self.run_sql(plan["sql"], 1, plan["period"], **scope_args)
+        except Exception as e:  # noqa: BLE001
+            log.warning("same-period probe failed q=%r err=%s", sq.question[:80], str(e)[:300])
+            return
+        ok, last = same_period.last_day_of(got)
+        if ok:
+            changed = same_period.apply(sq, plan, last)
+            log.info("same-period %s entity=%s last=%s changed=%s", plan["kind"], plan["entity"], last, changed)
+
     def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
         report = progress or (lambda stage: None)
         report("understanding")
@@ -856,6 +882,12 @@ class Runtime:
                        gate={"dataCoverage": list(sq.data_coverage)})
             return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
                     "threadId": thread_id, "timings": timings, "semantic": {"query": sq.to_dict()}, "queryId": qid}
+        # Before anything is compiled: a comparison whose current period is still open is cut where the
+        # measure's own data ends, and the earlier period at the same relative day. Both compilers and
+        # the gate then read the aligned periods; nothing has to be rewritten afterwards.
+        t = time.perf_counter()
+        self._align_same_period(sq, scope_args)
+        timings["same_period_ms"] = int((time.perf_counter() - t) * 1000)
         t = time.perf_counter()
         compiled = self.router.compile(sq, self.store, thread, recall=(lambda q: self.recall(q, exclude_nl)) if (exclude_nl and self.settings.recall_enabled) else None)
         timings["compile_ms"] = int((time.perf_counter() - t) * 1000)

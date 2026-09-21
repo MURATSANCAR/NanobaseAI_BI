@@ -21,7 +21,10 @@ _MONTH_RE = "|".join(MONTHS)
 # Turkish attaches the whole case paradigm to a time word — "ay" becomes aya, ayda, aydan, ayın, ayki —
 # so the ending is written once as grammar instead of being spelled out on every phrase. Without it
 # "geçen aya göre" carries no period at all, and the question loses the thing it is comparing.
-_CASE = r"(?:ki|ku|nin|nun|nde|nda|ndan|nden|in|un|da|de|ta|te|dan|den|tan|ten|ya|ye|i|u|a|e)?"
+# The locative + "ki" pair ("bu çeyrekteki", "bu yıldaki", "geçen haftadaki") is one more ending of the
+# same kind; without it "bu çeyrekteki ciro geçen çeyreğe göre" lost its current period and the
+# comparison came back as the previous quarter alone.
+_CASE = r"(?:ndaki|ndeki|daki|deki|taki|teki|ki|ku|nin|nun|nde|nda|ndan|nden|in|un|da|de|ta|te|dan|den|tan|ten|ya|ye|i|u|a|e)?"
 # ...and softens a final k before a vowel ("çeyrek" → "çeyreği"), which folds to g.
 _QUARTER = r"ceyre[kg]"
 # "geçen ay", "son ay" and "önceki ay" are the same period said three ways. Listing the words that mean

@@ -10,7 +10,7 @@
    "expect": "answer",
    "verified": true,
    "source": "logo",
-   "reference_sql": "SELECT (SELECT SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) FROM LG_411_01_STLINE S WHERE S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) AND S.TRCODE=8 AND S.CANCELLED=0 AND S.LINETYPE IN (0,2) AND EXISTS (SELECT 1 FROM LG_411_01_INVOICE I WHERE I.LOGICALREF=S.INVOICEREF AND I.CANCELLED=0 AND I.TRCODE=8)) AS bu_yil_oran, (SELECT SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) FROM LG_211_01_STLINE S WITH (INDEX(I211_01_STLINE_I19)) WHERE S.DATE_>=DATEFROMPARTS(YEAR(GETDATE())-1,1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.TRCODE=8 AND S.CANCELLED=0 AND S.LINETYPE IN (0,2) AND EXISTS (SELECT 1 FROM LG_211_01_INVOICE I WHERE I.LOGICALREF=S.INVOICEREF AND I.CANCELLED=0 AND I.TRCODE=8)) AS gecen_yil_oran",
+   "reference_sql": "SELECT (SELECT SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) FROM LG_411_01_STLINE S WHERE S.DATE_>=DATEFROMPARTS(YEAR(GETDATE()),1,1) AND S.DATE_<DATEFROMPARTS(YEAR(GETDATE())+1,1,1) AND S.TRCODE=8 AND S.CANCELLED=0 AND S.LINETYPE IN (0,2) AND EXISTS (SELECT 1 FROM LG_411_01_INVOICE I WHERE I.LOGICALREF=S.INVOICEREF AND I.CANCELLED=0 AND I.TRCODE=8)) AS bu_yil_oran, (SELECT SUM(CASE WHEN S.LINETYPE=2 THEN S.TOTAL ELSE 0 END)/NULLIF(SUM(CASE WHEN S.LINETYPE=0 THEN S.TOTAL ELSE 0 END),0) FROM LG_211_01_STLINE S WITH (INDEX(I211_01_STLINE_I19)) WHERE S.DATE_>=DATEFROMPARTS(YEAR(GETDATE())-1,1,1) AND S.DATE_<DATEADD(year,-1,(SELECT DATEADD(day,1,MAX(CAST(X.DATE_ AS date))) FROM LG_411_01_STLINE X WHERE X.TRCODE=8 AND X.CANCELLED=0 AND X.LINETYPE=0 AND X.DATE_<=GETDATE())) AND S.TRCODE=8 AND S.CANCELLED=0 AND S.LINETYPE IN (0,2) AND EXISTS (SELECT 1 FROM LG_211_01_INVOICE I WHERE I.LOGICALREF=S.INVOICEREF AND I.CANCELLED=0 AND I.TRCODE=8)) AS gecen_yil_oran",
    "checks": [
     {
      "kind": "value",
@@ -35,7 +35,7 @@
      "tolerance": 0.002
     }
    ],
-   "note": "2026-09-18: toptan (TRCODE 8) iskonto oranı bu yıl 0,4612 (743,14 M / 1.611,23 M), geçen yıl 0,4535 (992,98 M / 2.189,53 M) → arttı (+0,77 puan). Tanım: iş tanımı 04 — satır düzeyi, Σ TOTAL (LINETYPE 2) / Σ TOTAL (LINETYPE 0), iptal hariç, faturası iptal edilmemiş toptan satış. Yıllar GETDATE() ile hesaplanır; 2026 = LG_411, 2025 = LG_211 (tarih indeksi ipucu ile ~60 sn; ipucusuz 150 sn+ ve 120 sn'lik bağlayıcı zaman aşımına düşer). Köprü cevabı 0,46 / 0,45 (özet iki ondalık) referansla uyuşuyor; ayırt edici: tüm satışların (7,8,9) 2026 oranı 0,4512, perakende 0,1033. Köprü SQL'i koşu dosyasında 1.200 karakterde kesik, TRCODE filtresi görülemedi; uyuşma değer üzerinden. Cevap yüzde (46,1) dönerse oranla uyuşmaz — birim netleştirilir."
+   "note": "2026-09-18: toptan (TRCODE 8) iskonto oranı bu yıl 0,4612 (743,14 M / 1.611,23 M), geçen yıl 0,4535 (992,98 M / 2.189,53 M) → arttı (+0,77 puan). Tanım: iş tanımı 04 — satır düzeyi, Σ TOTAL (LINETYPE  | 2026-09-21 ürün kuralı: karşılaştırma EŞ DÖNEMLİ — geçen yıl, bu yılın verisinin bittiği güne kadar alınır (bu yıl 01.01–17.08 ise geçen yıl da 01.01–17.08). Tam takvim yılıyla kıyas yönü tersine çeviriyordu (net ciroda −%25,8 yerine +%49,9)."
   },
   {
    "n": 2,
