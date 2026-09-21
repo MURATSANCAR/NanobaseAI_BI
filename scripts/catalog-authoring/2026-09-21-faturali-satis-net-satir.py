@@ -75,3 +75,5 @@ print("YAZILDI; yeni kavram", c.id, st.get_concept(c.id).status, "| payı eş:",
 # CANCELLED = (0), TRCODE IN (7,8), INVOICEREF NOT IN (0); definition_source korundu.
 # Üçüncü geçiş: 'satış tutarı' (sem_b62a0c853395) koşulu TRCODE IN (2,3,7,8,9) → (7,8,9). Formül iadeyi zaten 0 sayıyor;
 # iade satırları yalnız sıfır tutarlı gruplar üretiyordu (arşiv P100'de toplam doğru, grup sayısı fazla).
+# Üçüncü geçiş GERİ ALINDI: daraltma set100 Q19'u ("iade hariç ... ciro", beklenen netleştirme) retle bozdu; koşul
+# yeniden TRCODE IN (2,3,7,8,9). Sıfır tutarlı iade grupları görünüm sorunu olarak açık kaldı.
