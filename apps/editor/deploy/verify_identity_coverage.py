@@ -18,7 +18,7 @@ with db.tx() as c:
     c.execute('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY')
     gen=c.execute('SELECT g.*,v.file_path,v.sha256 FROM ed.generation g JOIN ed.book_version v ON v.id=g.book_version_id WHERE g.id=%s',(GID,)).fetchone()
     mentions=c.execute('SELECT m.*,e.kind AS evidence_kind,e.quote_verified FROM ed.character_mention m JOIN ed.evidence e ON e.id=m.evidence_id AND e.generation_id=m.generation_id WHERE m.generation_id=%s ORDER BY m.id',(GID,)).fetchall()
-    scans=c.execute('SELECT DISTINCT page_no FROM ed.page_scan WHERE generation_id=%s ORDER BY page_no',(GID,)).fetchall()
+    scans=c.execute('SELECT DISTINCT s.page_no FROM ed.page_scan s JOIN ed.model_call m ON m.id=s.model_call_id AND m.generation_id=s.generation_id WHERE s.generation_id=%s AND m.error IS NULL ORDER BY s.page_no',(GID,)).fetchall()
     chars=c.execute('SELECT * FROM ed.character WHERE generation_id=%s',(GID,)).fetchall()
     ocr=c.execute("SELECT page_no,text,model_call_id FROM ed.page_text WHERE generation_id=%s AND source='OCR' ORDER BY page_no",(GID,)).fetchall()
 with open(gen['file_path'],'rb') as f: check('original PDF hash',hashlib.file_digest(f,'sha256').hexdigest(),gen['sha256'])

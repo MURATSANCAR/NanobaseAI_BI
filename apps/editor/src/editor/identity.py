@@ -81,9 +81,13 @@ def coverage(gid: str) -> dict:
             'JOIN ed.evidence e ON e.id=cm.evidence_id AND e.generation_id=cm.generation_id '
             'LEFT JOIN ed.character ch ON ch.id=cm.character_id AND ch.generation_id=cm.generation_id '
             'WHERE cm.generation_id=%s ORDER BY cm.page_no,cm.id',(gid,)).fetchall()
-        pages=c.execute('SELECT p.page_no,EXISTS(SELECT 1 FROM ed.page_scan s WHERE s.generation_id=g.id '
-            'AND s.page_no=p.page_no) AS scanned FROM ed.generation g JOIN ed.page p '
-            'ON p.book_version_id=g.book_version_id WHERE g.id=%s ORDER BY p.page_no',(gid,)).fetchall()
+        pages=c.execute("SELECT p.page_no,EXISTS(SELECT 1 FROM ed.page_scan s JOIN ed.model_call m "
+            "ON m.id=s.model_call_id AND m.generation_id=s.generation_id WHERE s.generation_id=g.id "
+            "AND s.page_no=p.page_no AND m.error IS NULL) AS scanned, "
+            "EXISTS(SELECT 1 FROM ed.page_scan s WHERE s.generation_id=g.id AND s.page_no=p.page_no) AS screened, "
+            "EXISTS(SELECT 1 FROM ed.page_scan s WHERE s.generation_id=g.id AND s.page_no=p.page_no "
+            "AND s.alias='no-illustration') AS no_illustration FROM ed.generation g JOIN ed.page p "
+            "ON p.book_version_id=g.book_version_id WHERE g.id=%s ORDER BY p.page_no",(gid,)).fetchall()
         groups={}
         for via in ('TEXT','BOTH','VISUAL'):
             rows=[m for m in mentions if m['via']==via]
@@ -95,6 +99,9 @@ def coverage(gid: str) -> dict:
                       (m['evidence_kind']!='TEXT' or not m['quote_verified'])]
         return {'generation_id':gid,'knowledge_revision':state['knowledge_revision'],'policy':POLICY,
                 'physical_pages':len(pages),'scanned_pages':sum(p['scanned'] for p in pages),
+                'screened_pages':sum(p['screened'] for p in pages),
+                'screened_no_illustration_pages':[p['page_no'] for p in pages if p['no_illustration'] and not p['scanned']],
+                'pending_visual_pages':[p['page_no'] for p in pages if not p['scanned'] and not p['no_illustration']],
                 'unscanned_pages':[p['page_no'] for p in pages if not p['scanned']],
                 'mentions':groups,'text_mentions_without_verified_text_evidence':contaminated,
                 'identity_accuracy':'NOT_INDEPENDENTLY_ACCEPTED','complete_book':False,'semantic_acceptance':False}
