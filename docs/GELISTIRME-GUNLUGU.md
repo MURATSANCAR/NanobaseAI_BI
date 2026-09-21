@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor kimlik ve kaynak kapsamı düzeltmesi (sürüyor)
+
+- Aynı anmanın iki kimliğe yazılması, yanlış tür ve ad çoğunluğu kök nedenleri gerçek model kayıtlarında bulundu. Referans bütünlüğü/ikinci kimlik kontrolü ve boş OCR tamamlanma kaydı eklendi. Gerçek kabul sürüyor, genel taramalar kapalı.
+
+
 ## 2026-09-21 — Finansal Denetim ana menü bağlantısı
 
 - Kullanıcının tespit ettiği eksik giderildi: yalnız Modüller listesindeki bağlantı yeterli değildi; sol ana menüye Finansal Denetim ve Kampüs modül kartlarına doğrudan giriş eklendi. Kalkan simgesi, aktif sayfa durumu ve mevcut menü kapanma davranışı kullanılır.

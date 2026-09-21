@@ -274,10 +274,10 @@ async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dic
     blocks = [b for b in out["blocks"] if b["text"].strip()]
     text = "\n\n".join(b["text"].strip() for b in blocks)
     with db.tx() as c:
-        if text:
-            c.execute("INSERT INTO page_text(generation_id, book_version_id, page_no, source, text,"
-                      " model_call_id) VALUES (%s,%s,%s,'OCR',%s,%s) ON CONFLICT DO NOTHING",
-                      (generation_id, book_version_id, page_no, text, call_id))
+        # Empty OCR is a completed observation, not a missing execution.
+        c.execute("INSERT INTO page_text(generation_id, book_version_id, page_no, source, text,"
+                  " model_call_id) VALUES (%s,%s,%s,'OCR',%s,%s) ON CONFLICT DO NOTHING",
+                  (generation_id, book_version_id, page_no, text, call_id))
         has_layer = c.execute("SELECT 1 FROM paragraph WHERE generation_id=%s AND page_no=%s "
                               "AND source='TEXT_LAYER' LIMIT 1", (generation_id, page_no)).fetchone()
         if not has_layer:

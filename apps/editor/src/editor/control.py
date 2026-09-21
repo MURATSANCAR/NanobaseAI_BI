@@ -170,3 +170,12 @@ def book_card(book_id: UUID):
     if result is None:
         raise HTTPException(404, 'book not found')
     return result
+
+
+@app.get('/v1/generations/{generation_id}/identity/coverage')
+def identity_coverage(generation_id: UUID):
+    from . import identity
+    try:
+        return identity.coverage(str(generation_id))
+    except KeyError:
+        raise HTTPException(404, 'generation not found') from None

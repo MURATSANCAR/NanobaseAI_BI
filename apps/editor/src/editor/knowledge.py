@@ -332,37 +332,19 @@ async def resolve_character_identity(generation_id: str) -> dict:
     ms = db.all_rows(
         "SELECT cm.id, cm.page_no, cm.surface_name, cm.confidence, e.quote FROM character_mention cm"
         " JOIN evidence e ON e.id=cm.evidence_id WHERE cm.generation_id=%s AND cm.character_id IS NULL"
-        " AND cm.via IN ('TEXT','BOTH') AND cm.surface_name IS NOT NULL ORDER BY cm.page_no",
+        " AND cm.via IN ('TEXT','BOTH') AND e.kind='TEXT' AND e.quote_verified "
+        "AND e.generation_id=cm.generation_id AND cm.surface_name IS NOT NULL ORDER BY cm.page_no,cm.id",
         generation_id)
     if not ms:
         return {"characters": 0}
     short = {str(m["id"]): f"m{i}" for i, m in enumerate(ms)}
     back = {v: k for k, v in short.items()}
-    lines = [f"{short[str(m['id'])]} | s{m['page_no']} | {m['surface_name']} | “{m['quote'][:200]}”" for m in ms]
-    ref, body = prompts.render("resolve_identity", mentions="\n".join(lines),
-                               corrections=corrections_text(generation_id))
-    out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
-                                                 prompt=ref, schema=schemas.IDENTITY,
-                                                 max_tokens=16000, temperature=0.0, thinking=True)
-    by_id = {str(m["id"]): m for m in ms}
-    conflicted = {back[x["mention_id"]] for x in out["conflicts"] if x["mention_id"] in back}
-    # A name belongs to ONE character. If the grouping puts mentions of the same name into
-    # different characters, the name goes where most of its mentions are and the stray
-    # mentions follow it (seen: one "Robobi" mention grouped with the professor made
-    # "Robobi" his alias).
-    votes: dict[str, dict[int, int]] = {}
-    for gi, ch in enumerate(out["characters"]):
-        for x in ch["mention_ids"]:
-            if x in back:
-                n = ledger.norm(by_id[back[x]]["surface_name"])
-                votes.setdefault(n, {}).setdefault(gi, 0)
-                votes[n][gi] += 1
-    owner = {n: max(v, key=lambda gi: (v[gi], -gi)) for n, v in votes.items()}
-    groups: dict[int, list[str]] = {gi: [] for gi in range(len(out["characters"]))}
-    for gi, ch in enumerate(out["characters"]):
-        for x in ch["mention_ids"]:
-            if x in back:
-                groups[owner[ledger.norm(by_id[back[x]]["surface_name"])]].append(back[x])
+    from . import identity
+    out, call_id, audit = await identity.propose(generation_id, ms, corrections_text(generation_id))
+    by_id = {str(m['id']): m for m in ms}
+    conflicted = {back[x['mention_id']] for x in out['conflicts']}
+    # Proposal is an exact partition. Same surface names never override identity evidence.
+    groups = {gi: [back[x] for x in ch['mention_ids']] for gi,ch in enumerate(out['characters'])}
     claimed: set[str] = set()
     made = []
     with db.tx() as c:
@@ -395,7 +377,7 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 claim=canonical + (f" (diğer adlar: {', '.join(aliases)})" if aliases else "")
                 + f": {ch['description']}",
                 evidence=evs, confidence=conf, created_by="knowledge:identity", model_call_id=call_id,
-                payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status})
+                payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status, "identity_audit": audit})
             row = c.execute(
                 "INSERT INTO character(generation_id, canonical_name, aliases, description,"
                 " identity_status, identity_confidence, first_page, claim_id, kind, traits) VALUES"
@@ -417,7 +399,7 @@ async def resolve_character_identity(generation_id: str) -> dict:
             c.execute("UPDATE character_mention SET resolution='UNCERTAIN' WHERE id=%s", (m,))
     return {"characters": len(made), "confirmed": sum(1 for m in made if m["status"] == "CONFIRMED"),
             "unresolved_mentions": len(ms) - len(claimed), "conflicts": len(out["conflicts"]),
-            "list": made}
+            "list": made, "identity_audit": audit}
 
 
 # ---------------------------------------------------------- modality

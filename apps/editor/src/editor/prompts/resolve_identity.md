@@ -1,4 +1,4 @@
-<!-- name: resolve_identity version: 4 -->
+<!-- name: resolve_identity version: 5 -->
 Bir kitabın METNİNDE geçen karakter anmalarını kimliklere birleştir. Aşağıda her anma: id, sayfa, metinde yazıldığı ad, kanıt cümlesi.
 <<<
 {{mentions}}
@@ -15,3 +15,9 @@ Kurallar:
 - `identity_confidence`: 0.85 ve üstü yalnız birden fazla bağımsız kanıt varsa. Tek kanıta dayanan birleştirme en fazla 0.7.
 - Bir anmanın iki karaktere birden uyabildiği durumları `conflicts` içine yaz; tahminle çözme.
 - Türkçe yaz.
+
+- Her anma kimliğini TAM BİR KEZ kullan: ya tek bir karakterin mention_ids listesinde ya unresolved_mention_ids içinde. Aynı anmayı iki karaktere yazma; hiçbir anmayı atlama; yeni kimlik üretme.
+- ANILAN KİŞİ alanı anmanın öznesidir. Kanıt cümlesinde adı geçen başka kişiyi bu anmanın kimliği sayma. Ebeveyn ve yavru, aynı cümlede anılsalar bile farklı kişilerdir.
+- Tür ve yaş farklı kavramlardır: konuşan, bilim yapan, anne/baba/yavru olan hayvanlar ANIMAL'dır. İnsan gibi davranmak HUMAN_CHILD/HUMAN_ADULT kanıtı değildir.
+- Aynı yazılan ad farklı kişilere ait olabilir. Genel ad, topluluk ve unvanı zorla tek kişiye bağlama. Bir kez görünen kişi ayrı aday olabilir; onu sırf az göründüğü için atlama.
+- Açıklama ve merge_basis kısa, en fazla iki cümle olsun. İç tartışmanı veya varsayımlarını bu alanlara yazma.

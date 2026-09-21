@@ -1,5 +1,8 @@
 # NanobaseAI BI — Proje Belleği
 
+**Editor kimlik/kaynak kapsamı (2026-09-21, sürüyor):** gerçek nesilde m1 anmasının iki gruba yazılması ve ad çoğunluğu, Baba Vombat'ı yavruyla birleştirmiş; yanlış HUMAN türleri görsel kapsamı engelliyor. Tekil/tam referans sözleşmesi, kaynaklı ikinci kimlik denetçisi ve boş OCR kaydı düzeltmesi hazırlanıyor. Kabul henüz yok; `apps/editor/docs/IDENTITY-COVERAGE.md`.
+
+
 **Editor ortak okuma katmanı (2026-09-21, sunucuda doğrulandı):** `0.13.0-reads-7eda4ec1`, `current-usable-v1`; rapor/kart, timeline, aktör, karakter geçmişi ve kayıtlar aynı güncel doğrulanmış sürüme bağlı. Eski rapor/kart geri dönüşü ve ad benzerliğiyle olay/duygu birleştirme yok. Gerçek DB/API 120/120, MCP/arama 22/22, kart/kapak 7/7; çıktı regresyonu 522/522, 16 tablo hash'i değişmedi. Bakım true, genel üretim kapalı, GPU 1 boş. Hermes araç katmanı geçti; doğal dil sohbeti/mobil tarayıcı, tam yeni nesil analitik kabulü ve kimlik/kaynak kapsamı açık. Ayrıntı `apps/editor/docs/CURRENT-READS.md`; push HTTPS kimliği bekliyor.
 
 

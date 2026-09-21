@@ -44,6 +44,7 @@ def _span(gid: str, page: int, source: dict, start: int, end: int, role="body") 
 
 
 def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | None = None) -> dict:
+    ocr_attempted = any(s["source"] == "OCR" for s in sources)
     by_source = {s["source"]: s for s in sources if s["text"].strip()}
     layer, ocr = by_source.get("TEXT_LAYER"), by_source.get("OCR")
     base = layer or ocr
@@ -96,7 +97,7 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
         span["idx"] = idx
     if not spans:
         issues.append("NO_READABLE_TEXT")
-    if page["needs_ocr"] and not ocr:
+    if page["needs_ocr"] and not ocr_attempted:
         issues.append("OCR_REQUIRED_MISSING")
     legacy_role = legacy_role or {}
     # No model or heading heuristic can silently exclude a physical page.
@@ -108,6 +109,7 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
     return {"generation_id":gid,"page_no":page["page_no"],"policy":POLICY,"reading_sha256":digest,
         "page_role":role,"legacy_role":legacy_role or None,"included_in_extraction":True,
         "text_status":"READABLE" if spans else "MISSING_OR_VISUAL_ONLY",
+        "ocr_status":"TEXT_FOUND" if ocr else "COMPLETED_NO_TEXT" if ocr_attempted else "NOT_RUN",
         "reconciliation_status":"NEEDS_REVIEW" if issues else "AVAILABLE",
         "semantic_acceptance":False,"issues":sorted(set(issues)),"sources":inputs,
         "spans":spans,"alternatives":alternatives}

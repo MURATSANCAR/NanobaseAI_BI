@@ -10,7 +10,7 @@
 name: editor
 
 x-py: &py
-  image: ${EDITOR_PY_IMAGE:-editor-py:0.13.0-reads}
+  image: ${EDITOR_PY_IMAGE:-editor-py:0.14.0-identity}
   restart: unless-stopped
   env_file: ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
   environment:
@@ -102,7 +102,7 @@ services:
 
   cards:
     <<: *py
-    image: ${EDITOR_CARDS_IMAGE:-editor-py:0.13.0-reads}
+    image: ${EDITOR_CARDS_IMAGE:-editor-py:0.14.0-identity}
     env_file:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
