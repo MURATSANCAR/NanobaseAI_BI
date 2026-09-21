@@ -4,6 +4,7 @@ import { ArrowDownToLine, ArrowRight, BookOpen, Check, ChevronLeft, ChevronRight
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
+import DeepAuditPanel, { type DeepAudit } from './DeepAuditPanel';
 import './audit.css';
 
 type Source = { title: string; sha256: string; pageCount: number; items: Array<{ id: string; kind: string; title: string; section: string; note: number | null; page: number; endPage: number; text: string }>; pages: Array<{ page: number; text: string }> };
@@ -14,7 +15,7 @@ type CheckResult = { id: string; title: string; affected: number; amount: string
 type Ratio = { note: number; title: string; value: string | null; numerator: string; denominator: string; formula: string; status: string; reason?: string; correction?: string; days?: string | null; daysFormula?: string };
 type Control = { id: string; title: string; status: string; reason: string; correction?: string; accountPrefixes: string[]; accountRefs: number[]; requiredEvidence: string[]; components: Array<{ id?: string; title: string; status: string; affected?: number; amount?: string; debit?: string; credit?: string; balance?: string; lineCount?: number; rows?: number; accounts?: Record<string, string>; formula?: string; value?: string | null; numerator?: string; denominator?: string }> };
 type SupportingEvidence = { status: string; limitations: string[]; unavailableDatasets: string[]; documentProfiles: Array<{documentType: number; paymentType: string; undocumented: number; noPayment: number; rows: number; missingNumber: number; missingDate: number}>; assetProfiles: Array<{bookType: number; method: number; month: number; rows: number; assetCount: number; missingAssetCard: number; periodDepreciation: string}> };
-type Overview = { runId: string; supportingEvidence: SupportingEvidence; coverage: { items: Control[]; counts: Record<string, number>; kindCounts: Record<string, number>; coverageReason: string; references: Array<{title: string; url: string}> }; source: string; year: number; lastDate: string; computedAt: string; lineCount: number; debit: string; credit: string; accounts: Account[]; checks: CheckResult[]; ratios: Ratio[]; limitations: string[]; revision: string; sql: string[]; dbMs: number; truncated: boolean };
+type Overview = { deepAudit?: DeepAudit; runId: string; supportingEvidence: SupportingEvidence; coverage: { items: Control[]; counts: Record<string, number>; kindCounts: Record<string, number>; coverageReason: string; references: Array<{title: string; url: string}> }; source: string; year: number; lastDate: string; computedAt: string; lineCount: number; debit: string; credit: string; accounts: Account[]; checks: CheckResult[]; ratios: Ratio[]; limitations: string[]; revision: string; sql: string[]; dbMs: number; truncated: boolean };
 type DocumentPage = { total: number; items: Array<{documentRef: number; slipRef: number; lineRef: number; slipNo: string; documentType: number; documentNo: string; documentDate: string; paymentType: string; description: string; undocumented: number; noPayment: number}> };
 type Detail = { items: Array<{ lineRef: number; slipRef: number; slipNo: string; date: string; debit: number; credit: number; description: string; documentNo: string }>; total: number; page: number; readAt: string; separateRead: boolean };
 const number = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
@@ -107,7 +108,7 @@ export default function FinancialAudit() {
   const findings = data?.checks.filter(c => c.status === 'finding') ?? [];
   const accounts = data?.accounts.filter(a => (!onlyFindings || a.unexpectedSign) && norm(`${a.code} ${a.name}`).includes(norm(search))) ?? [];
   const openAccount = (a: Account) => { setAccount(a); setPage(0); };
-  const tabs = [['overview', 'Denetim özeti'], ['catalog', 'Kontrol kütüphanesi'], ['ledger', 'Logo kayıtları'], ['evidence', 'Dayanak veriler'], ['source', 'Kaynak belge']];
+  const tabs = [['overview', 'Denetim özeti'], ['discovery', 'Logo’da ne var?'], ['catalog', 'Kontrol kütüphanesi'], ['ledger', 'Logo kayıtları'], ['evidence', 'Dayanak veriler'], ['source', 'Kaynak belge']];
 
   return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal Denetim', source: 'Logo · muhasebe', presence: data ? `Veri: ${day(data.lastDate)}` : 'Veri bekleniyor' }} rail={railFor('/finansal-denetim')}>
     <main className="audit-main">
@@ -119,7 +120,7 @@ export default function FinancialAudit() {
 
         <section className="audit-hero">
           <div className="audit-hero-copy"><div className="audit-chip"><ShieldCheck size={14} /> KAYNAĞINA KADAR İZLENEBİLİR</div><h2>Her bulgunun<br /><em>bir dayanağı var.</em></h2><p>Ne kontrol edildi, nasıl hesaplandı, hangi kayıt etkili? Finans ekibiniz için tek bir çalışma alanı.</p><div className="audit-hero-meta"><span>2026 işlem dönemi</span><span>TRY / Türk lirası</span><span>Salt okunur</span></div></div>
-          <div className="audit-orbit" aria-label="Denetim kapsamı"><div className="audit-orbit-core"><ShieldCheck size={30} /><strong>{data ? data.checks.length : '—'}</strong><span>otomatik kontrol</span></div><span className="audit-orbit-label">LOGO → HESAPLAMA → BULGU</span></div>
+          <div className="audit-orbit" aria-label="Denetim kapsamı"><div className="audit-orbit-core"><ShieldCheck size={30} /><strong>{data ? data.checks.length : '—'}</strong><span>temel kontrol</span></div><span className="audit-orbit-label">LOGO → HESAPLAMA → BULGU</span></div>
           <div className="audit-hero-side"><span className="audit-eyebrow">VERİNİN ZAMANI</span><strong>{day(data?.lastDate)}</strong><p>{data ? `${number.format(data.lineCount)} hareket · ${number.format(data.accounts.length)} hesap` : overview.isFetching ? 'Logo muhasebe kayıtları okunuyor…' : 'Logo verisi henüz okunamadı.'}</p><span className="audit-source-pill">2026 yedeği · canlı dönem değildir</span></div>
         </section>
 
@@ -132,7 +133,10 @@ export default function FinancialAudit() {
 
         <nav className="audit-tabs" aria-label="Denetim bölümleri">{tabs.map(([id, title]) => <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); }}>{title}{id === 'catalog' && <span>{source.items.length}</span>}</button>)}</nav>
 
+        {tab === 'discovery' && <DeepAuditPanel key={data?.runId} data={data?.deepAudit} runId={data?.runId} load={get} />}
+
         {tab === 'overview' && <>
+          <section className="audit-discovery-link"><div><span className="audit-eyebrow">LOGO’DA NE VAR, NE EKSİK?</span><h2>Kaynakları birbirleriyle karşılaştırın.</h2><p>{data?.deepAudit ? `${data.deepAudit.checks.length} ek veri kontrolü · ${data.deepAudit.sources.length} kaynak alanı. Bulunan kayıtlar, farklar ve eksik dayanaklar birlikte.` : 'Fatura, banka, kredi ve belge kaynaklarının kapsamını inceleyin.'}</p></div><button className="audit-button" onClick={() => setTab('discovery')}>Veri kapsamını aç <ArrowRight size={16}/></button></section>
           <div className="audit-stats">
             <article><span>İnceleme gerektiren</span><strong className="audit-coral">{data ? findings.length : '—'}</strong><small>Bulgu üreten kontrol türü</small></article>
             <article><span>Kontrol geçti</span><strong className="audit-green">{data ? data.checks.filter(c => c.status === 'passed').length : '—'}</strong><small>Yalnız çalıştırılan kurallar içinde</small></article>

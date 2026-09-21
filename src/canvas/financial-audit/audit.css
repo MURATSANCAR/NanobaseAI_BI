@@ -32,3 +32,30 @@
 .audit-run-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; min-width: 0; max-width: 100%; }
 .audit-run-picker select { min-width: 0; max-width: 100%; }
 .audit-review textarea:focus-visible { outline: 3px solid #aa87e8; outline-offset: 3px; }
+
+.audit-button { text-decoration:none; color:inherit; white-space:normal; }
+.audit-button[aria-disabled="true"] { opacity:.45; cursor:default; }
+.audit-button:focus-visible { outline:3px solid #aa87e8; outline-offset:3px; }
+.audit-discovery-link,.audit-discovery-hero { display:flex; justify-content:space-between; align-items:center; gap:24px; padding:26px; border:1px solid #e6dfef; border-radius:22px; background:linear-gradient(120deg,#f4effc,#fff9f1); min-width:0; }
+.audit-discovery-link h2,.audit-discovery-hero h2 { font-weight:750; font-size:clamp(21px,2.3vw,32px); line-height:1.3; margin:9px 0; letter-spacing:-.7px; }
+.audit-discovery-link p,.audit-discovery-hero p { color:#746a80; font-size:13px; line-height:1.7; max-width:650px; }
+.audit-discovery-hero em { color:#9170bb; font-style:normal; }
+.audit-discovery-counts { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:8px 14px; flex-shrink:0; }
+.audit-discovery-counts strong { color:#77569d; font-size:36px; }.audit-discovery-counts span { font-size:12px; color:#786981; }
+.audit-deep-checks { display:flex; flex-direction:column; gap:12px; }
+.audit-deep-check { display:grid; grid-template-columns:32px minmax(0,1fr) auto; align-items:start; gap:13px; padding:17px; border:1px solid #ece7f0; border-radius:16px; background:#fdfbff; }
+.audit-deep-check h3 { font-size:14px; font-weight:750; margin:2px 0; }.audit-deep-check p { margin:5px 0; }
+.audit-deep-check.finding { background:#fffcf8; border-color:#eee0d0; }
+.audit-deep-check details summary,.audit-source-card summary,.audit-dataset summary { min-height:44px; display:flex; align-items:center; cursor:pointer; font-size:12px; font-weight:650; color:#7d668e; }
+.audit-status-icon { display:grid; place-items:center; width:30px; height:30px; border-radius:10px; background:#f9ead8; color:#967049; }.audit-status-icon.passed { background:#eaf4ef; color:#49846b; }
+.audit-source-cards { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.audit-source-card { min-width:0; padding:23px; border:1px solid #e9e2ef; border-radius:22px; background:#ffffffd9; overflow-wrap:anywhere; }
+.audit-source-card-head { display:flex; align-items:center; gap:9px; color:#698d7c; font-size:11px; }.audit-source-card.missing .audit-source-card-head,.audit-source-card.unavailable .audit-source-card-head { color:#ab7540; }
+.audit-source-card h3 { font-size:18px; font-weight:750; margin:17px 0 9px; }.audit-source-count { font-size:30px; font-weight:750; color:#635273; }.audit-source-count small { font-size:11px; font-weight:400; }
+.audit-source-card p { font-size:12px; line-height:1.75; color:#77717e; }.audit-source-card b { font-size:12px; color:#665276; }
+.audit-evidence-gap { display:flex; gap:9px; align-items:flex-start; padding:13px; background:#fff6e9; border-radius:13px; margin-top:18px; }.audit-evidence-gap svg { flex-shrink:0; color:#b58a56; }.audit-evidence-gap p { margin:5px 0 0; }
+.audit-source-next { border-top:1px solid #eee7f2; padding-top:13px; }.audit-source-next p { margin:5px 0 0; }
+.audit-dataset { min-width:0; border-bottom:1px solid #eee7f2; padding:5px 0; }.audit-dataset>.audit-table-scroll { max-width:100%; margin:10px 0; }
+.audit-exceptions { scroll-margin-top:16px; }
+@media(max-width:1100px){.audit-source-cards { grid-template-columns:repeat(2,minmax(0,1fr)); }.audit-deep-check { grid-template-columns:30px minmax(0,1fr); }.audit-deep-check>.audit-button { grid-column:2; justify-self:start; }}
+@media(max-width:767px){.audit-source-cards { grid-template-columns:minmax(0,1fr); }.audit-discovery-link,.audit-discovery-hero { flex-direction:column; align-items:stretch; padding:19px; }.audit-discovery-counts { grid-template-columns:auto 1fr auto 1fr; gap:8px; }.audit-discovery-counts strong { font-size:28px; }.audit-deep-check { padding:12px; gap:9px; }.audit-deep-check>.audit-button { grid-column:1/-1; justify-self:stretch; }.audit-source-card { padding:19px; }}

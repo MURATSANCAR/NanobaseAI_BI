@@ -77,6 +77,51 @@ def bank_base(year, as_of):
       WHERE B.CANCELLED=0 AND B.DATE_>={start} AND B.DATE_<{end}"""
 
 
+def vat_match_base(year,as_of):
+    start,end=bounds(year,as_of)
+    return f"""SELECT V.slipRef,V.invoiceCount,V.expected,L.actual,V.expected-COALESCE(L.actual,0) AS difference,
+      F.FICHENO AS documentNo,F.DATE_ AS date
+      FROM (SELECT I.ACCFICHEREF AS slipRef,COUNT(*) AS invoiceCount,
+      SUM(CASE WHEN I.TRCODE IN (1,4,2,3) THEN CAST(I.TOTALVAT AS decimal(28,4))
+          ELSE -CAST(I.TOTALVAT AS decimal(28,4)) END) AS expected
+      FROM dbo.LG_411_01_INVOICE I WHERE I.CANCELLED=0 AND I.ACCOUNTED=1
+      AND I.TRCODE IN (1,2,3,4,6,7,8,9) AND I.ACCFICHEREF>0 AND I.DATE_>={start} AND I.DATE_<{end}
+      GROUP BY I.ACCFICHEREF) V JOIN dbo.LG_411_01_EMFICHE F ON F.LOGICALREF=V.slipRef AND F.CANCELLED=0
+      LEFT JOIN (SELECT M.ACCFICHEREF,
+      SUM(CAST(M.DEBIT AS decimal(28,4))-CAST(M.CREDIT AS decimal(28,4))) AS actual
+      FROM dbo.LG_411_01_EMFLINE M JOIN dbo.LG_411_EMUHACC A ON A.LOGICALREF=M.ACCOUNTREF
+      WHERE M.CANCELLED=0 AND M.DATE_>={start} AND M.DATE_<{end} AND LEFT(A.CODE,3) IN ('191','391')
+      GROUP BY M.ACCFICHEREF) L ON L.ACCFICHEREF=V.slipRef"""
+
+
+def invoice_line_base(year,as_of):
+    start,end=bounds(year,as_of)
+    return f"""SELECT I.LOGICALREF AS sourceRef,I.FICHENO AS documentNo,I.DATE_ AS date,I.ACCFICHEREF AS slipRef,
+      CAST(I.TOTALVAT AS decimal(28,4)) AS expected,V.actual,V.lineCount,
+      CAST(I.TOTALVAT AS decimal(28,4))-COALESCE(V.actual,0) AS difference
+      FROM dbo.LG_411_01_INVOICE I LEFT JOIN (SELECT S.INVOICEREF,COUNT(*) AS lineCount,
+      SUM(CAST(S.VATAMNT AS decimal(28,4))) AS actual FROM dbo.LG_411_01_STLINE S
+      WHERE S.CANCELLED=0 AND S.INVOICEREF>0 GROUP BY S.INVOICEREF) V ON V.INVOICEREF=I.LOGICALREF
+      WHERE I.CANCELLED=0 AND I.DATE_>={start} AND I.DATE_<{end}"""
+
+
+def bank_match_base(year,as_of):
+    start,end=bounds(year,as_of)
+    return f"""SELECT B.slipRef,B.accountRef,A.CODE AS accountCode,B.sourceCount,B.expected,L.actual,
+      B.expected-COALESCE(L.actual,0) AS difference,F.DATE_ AS date,F.FICHENO AS documentNo
+      FROM (SELECT S.slipRef,S.accountRef,COUNT(*) AS sourceCount,
+      SUM(CASE WHEN S.direction=0 THEN S.amount ELSE -S.amount END) AS expected
+      FROM ({bank_base(year,as_of)}) S WHERE S.posted=1 AND S.foundSlip IS NOT NULL AND S.cancelledSlip=0
+      AND S.foundAccount IS NOT NULL AND S.direction IN (0,1)
+      GROUP BY S.slipRef,S.accountRef) B
+      JOIN dbo.LG_411_01_EMFICHE F ON F.LOGICALREF=B.slipRef
+      JOIN dbo.LG_411_EMUHACC A ON A.LOGICALREF=B.accountRef
+      LEFT JOIN (SELECT M.ACCFICHEREF,M.ACCOUNTREF,
+      SUM(CAST(M.DEBIT AS decimal(28,4))-CAST(M.CREDIT AS decimal(28,4))) AS actual
+      FROM dbo.LG_411_01_EMFLINE M WHERE M.CANCELLED=0 AND M.DATE_>={start} AND M.DATE_<{end}
+      GROUP BY M.ACCFICHEREF,M.ACCOUNTREF) L ON L.ACCFICHEREF=B.slipRef AND L.ACCOUNTREF=B.accountRef"""
+
+
 def daily_cash_base(year, as_of):
     start,end=bounds(year,as_of)
     return f"""SELECT X.accountRef,A.CODE AS accountCode,X.date,X.balance
@@ -101,6 +146,10 @@ DEFINITIONS = {
      'Aktarıldı işaretli faturada müşteri/satıcı muhasebe hesap referansı eksik.'),
  'invoice-ledger-amount':('Fatura tutarı ↔ bağlı muhasebe hesabı','invoice-match','ABS(difference)>0.01 OR actual IS NULL',
      'Aynı fiş ve aynı hesap için faturalar önce toplanır, muhasebe net borç−alacak ile karşılaştırılır. Alış/satış iadeleri ters işaretlidir; fark tahmini zarar değildir.'),
+ 'invoice-vat-ledger':('Fatura KDV’si ↔ muhasebe KDV’si','vat-match','ABS(difference)>0.01',
+     'Fiş bazında fatura KDV toplamı, 191+391 net borç−alacak ile karşılaştırılır. İadelerin yönü ters alınır; tevkifat/istisna ve özel hesap kullanımı ayrıca incelenir.'),
+ 'invoice-vat-lines':('Fatura başlığı ↔ satır KDV toplamı','invoice-lines','ABS(difference)>0.01 OR lineCount IS NULL',
+     'Fatura başlığındaki TOTALVAT ile bağlı, iptal edilmemiş stok/hizmet satırlarının VATAMNT toplamı. Satır veya tutar farkı inceleme adayıdır.'),
  'bank-unposted':('Muhasebeye aktarılmamış banka hareketleri','bank','posted=0',
      'Logo banka alt modülünde ACCOUNTED=0. Başka modülden gelen yansıma/aktarılma durumu ayrıca incelenir.'),
  'bank-broken-link':('Banka hareketinin muhasebe bağlantısı','bank',
@@ -108,13 +157,16 @@ DEFINITIONS = {
      'Fiş referansı veya doğrudan muhasebe satırı üzerinden bağlantı kontrol edilir; doğrudan satıra bağlanan hareketler dışlanmaz.'),
  'bank-account':('Banka hareketinin muhasebe hesap kartı','bank','posted=1 AND foundAccount IS NULL',
      'Aktarıldı işaretli banka hareketinin banka muhasebe hesabı kartında karşılığı aranır.'),
+ 'bank-ledger-amount':('Banka alt modülü ↔ muhasebe tutarı','bank-match','ABS(difference)>0.01 OR actual IS NULL',
+     'Aktarılmış banka hareketlerinin net tutarı aynı fiş ve banka muhasebe hesabında toplanarak karşılaştırılır. Bağımsız banka ekstresi mutabakatı değildir.'),
  'cash-negative-day':('Gün sonu negatif kasa bakiyesi','cash','balance < -0.01',
      'Açılış dahil, hesap ve işlem günü bazında birikimli net borç−alacak. Negatif günler ayrı gösterilir; günler üzerindeki bakiyeler risk tutarı olarak toplanmaz.'),
 }
 
 
 def source_sql(kind,year,as_of):
-    return {'invoice':invoice_base,'invoice-match':invoice_match_base,'bank':bank_base,'cash':daily_cash_base}[kind](year,as_of)
+    return {'invoice':invoice_base,'invoice-match':invoice_match_base,'bank':bank_base,'cash':daily_cash_base,
+            'vat-match':vat_match_base,'invoice-lines':invoice_line_base,'bank-match':bank_match_base}[kind](year,as_of)
 
 
 def read_deep(query, year, as_of):
@@ -130,7 +182,7 @@ def read_deep(query, year, as_of):
             errors[key]='Kaynak sorgusu tamamlanamadı; boş veri veya olumlu sonuç sayılmaz.'
             results[key]=[]
         return results[key]
-    for kind in ['invoice','invoice-match','bank','cash']:
+    for kind in dict.fromkeys(d[1] for d in DEFINITIONS.values()):
         selected=[(key,d) for key,d in DEFINITIONS.items() if d[1]==kind]
         expressions=['COUNT(*) AS rows']
         for i,(_,d) in enumerate(selected):
@@ -174,10 +226,13 @@ def read_deep(query, year, as_of):
       FROM dbo.LG_411_01_INVEXIMINFO X JOIN dbo.LG_411_01_INVOICE I ON I.LOGICALREF=X.INVOICEREF
       WHERE I.CANCELLED=0 AND I.DATE_>={start} AND I.DATE_<{end}""")
     read('attachments',"""SELECT CAST(P.INFOTYP AS int) AS type,CAST(P.DOCTYP AS int) AS documentType,
-      COUNT(*) AS rows,SUM(CASE WHEN DATALENGTH(P.LDATA)>0 THEN 1 ELSE 0 END) AS withPayload
+      COUNT(*) AS rows,SUM(CASE WHEN DATALENGTH(P.LDATA)>0 THEN 1 ELSE 0 END) AS withPayload,
+      SUM(CASE WHEN SUBSTRING(P.LDATA,2,14)=0x466174757261204164726573693A THEN 1 ELSE 0 END) AS addressNotes,
+      SUM(CASE WHEN SUBSTRING(P.LDATA,1,4)=0x25504446 THEN 1 ELSE 0 END) AS pdfSignatures,
+      SUM(CASE WHEN SUBSTRING(P.LDATA,1,5)=0x3C3F786D6C THEN 1 ELSE 0 END) AS xmlSignatures
       FROM dbo.LG_411_01_PERDOC P GROUP BY P.INFOTYP,P.DOCTYP ORDER BY P.INFOTYP,P.DOCTYP""")
     checks=[]
-    for kind in ['invoice','invoice-match','bank','cash']:
+    for kind in dict.fromkeys(d[1] for d in DEFINITIONS.values()):
         row=results[kind][0] if results[kind] else {}
         for i,(key,d) in enumerate((k,v) for k,v in DEFINITIONS.items() if v[1]==kind):
             count=int(row.get(f'affected{i}') or 0)
@@ -233,8 +288,8 @@ def read_deep(query, year, as_of):
            'Onaylı gümrük çıkışı, döviz getirme/ödeme teyidi ve işlem bazında istisna koşulları.',
            'Belge numarası alanının dolu olması gümrükçe onaylandığını göstermez.',
            'Fatura, gümrük tarihi ve banka transferini onaylı belgelerle eşleştirin.','exportDocuments'),
-      card('attachments','Logo içindeki belge ekleri',rows('attachments'),
-           'Belge deposunda içerik taşıyan kayıtlar bulundu; içerik ve dönem sınıflaması ayrıca gerekir.',
+      card('attachments','Belge notları ve ek kayıtlar',rows('attachments'),
+           'İçerik taşıyan depo kayıtları bulundu; adres notları ve tanınan PDF/XML başlangıçları ayrı sayılır.',
            'Dosya türü, ilgili işlem, imza/onay ve denetim kanıtı olarak uygunluk.',
            'Ek sayısını bağımsız banka ekstresi, beyanname veya sayım tutanağı sayısı kabul etmiyoruz.',
            'Kaynak türleri çözülüp dosya–işlem bağı doğrulandıktan sonra belge kontrollerine dahil edilir.','attachments'),
@@ -248,5 +303,5 @@ def read_deep(query, year, as_of):
 
 def exception_sql(check_id,year,as_of,page):
     d=DEFINITIONS[check_id]
-    order='accountRef,date' if d[1]=='cash' else 'slipRef,accountRef' if d[1]=='invoice-match' else 'date,sourceRef'
+    order='accountRef,date' if d[1]=='cash' else 'slipRef,accountRef' if d[1] in {'invoice-match','bank-match'} else 'slipRef' if d[1]=='vat-match' else 'date,sourceRef'
     return f"SELECT S.*,COUNT(*) OVER() AS totalRows FROM ({source_sql(d[1],year,as_of)}) S WHERE {d[2]} ORDER BY {order} OFFSET {page*50} ROWS FETCH NEXT 50 ROWS ONLY"
