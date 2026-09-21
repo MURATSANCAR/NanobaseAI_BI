@@ -9,6 +9,7 @@ from typing import Any, Iterator
 
 import psycopg
 from psycopg.rows import dict_row
+from psycopg import sql
 from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
@@ -42,7 +43,7 @@ def tx() -> Iterator[psycopg.Connection]:
         with conn.transaction():
             token = validation_token.get()
             if token:
-                conn.execute("SELECT set_config('editor.validation_token',%s,true)",(token,))
+                conn.execute(sql.SQL("SET LOCAL editor.validation_token = {}").format(sql.Literal(token)))
             yield conn
 
 
