@@ -64,6 +64,9 @@ def _split_codes(raw: str) -> tuple[str, ...]:
     return tuple(sorted({v for v in vals if v}, key=lambda x: (0, float(x)) if x.replace(".", "").isdigit() else (1, x)))
 
 
+_NAME_CONJ = frozenset({"ve", "ile", "veya"})
+
+
 def is_content_word(w: str) -> bool:
     return w not in STOPWORDS_S and w not in MODIFIERS_S and not w.isdigit()
 
@@ -87,7 +90,12 @@ def extract_question_facts(question: str, n_max: int = 3) -> QuestionFacts:
         for i, j, _ in ngrams(ctoks, n_max):
             window = ctoks[i:j]
             wst = stems[i:j]
-            if any(w in time_words or w in STOPWORDS_S or w.isdigit() for w in window):
+            # "ödenecek vergi ve fonlar": a name may carry a conjunction inside it. Only between two
+            # content words — at an edge "ve" joins two things, it is not part of either.
+            inner = [w for w in window[1:-1] if w in _NAME_CONJ]
+            if any(w in time_words or (w in STOPWORDS_S and w not in inner) or w.isdigit() for w in window):
+                continue
+            if inner and any(w in STOPWORDS_S for w in (window[0], window[-1])):
                 continue
             if all(w in MODIFIERS_S for w in wst):
                 continue

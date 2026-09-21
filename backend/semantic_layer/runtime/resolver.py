@@ -995,8 +995,17 @@ class SemanticResolver:
                 f"{named or 'ana veri tabanı'} tarafı tercih edilecek")
 
         # 6) unresolved content words
+        balance_bound = any(s_.mapping and s_.semantic_type == SemanticType.METRIC
+                            and (s_.mapping.extra or {}).get("state_measure") for s_ in hits)
         for k, tok in enumerate(qf.tokens):
             if k in consumed:
+                continue
+            if balance_bound and self._balance_word(qf.tokens, k):
+                # "bankalar hesabının bugünkü bakiyesi", "alıcılar hesabının borç bakiyesi": a balance
+                # measure is already bound, and "bakiye" (with the "borç"/"alacak" side right before it)
+                # names what that measure is. Left over, it sent a defined balance to the model.
+                if tok not in sq.ignored:
+                    sq.ignored.append(tok)
                 continue
             st = folded_tokens[k]
             if st in STOPWORDS_S or st in MODIFIERS_S or st in METRIC_VOCAB_S or st in _ENTITY_WORDS or tok.isdigit():
@@ -2160,6 +2169,16 @@ class SemanticResolver:
         found = {src: frozenset(w for w in words if seen[w] == 1) for src, words in raw.items()}
         self._source_name_cache = found
         return found
+
+    @staticmethod
+    def _balance_word(tokens: list[str], k: int) -> bool:
+        """'bakiye' itself, or the 'borç'/'alacak' side that directly precedes it."""
+        def is_balance(t: str) -> bool:
+            return stem(t) == stem("bakiye") or fold(t).startswith("bakiye")
+        if is_balance(tokens[k]):
+            return True
+        return (stem(tokens[k]) in (stem("borç"), stem("alacak")) and k + 1 < len(tokens)
+                and is_balance(tokens[k + 1]))
 
     def _source_named(self, token: str) -> Optional[str]:
         """The database this word names, or nothing. Exact match on the word as written — a source

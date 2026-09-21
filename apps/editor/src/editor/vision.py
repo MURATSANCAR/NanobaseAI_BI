@@ -349,83 +349,127 @@ async def check_text_visual_consistency(generation_id: str, page_no: int) -> dic
 
 
 async def compare_character_appearances(generation_id: str, character: str,
-                                        pages: list[int]) -> dict:
-    """Deep model looks at up to 6 pages of one character; differences become
-    VISUAL_CONTINUITY claims and CONTINUITY contradiction candidates."""
-    pages = sorted(set(pages))[:6]
-    gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
-    # The character's own verified crops, not whole pages: on a full page the model may
-    # compare a different figure. (A page without a verified crop falls back to the page.)
-    bv = str(gen["book_version_id"])
-    crops = {r["page_no"]: r for r in db.all_rows(
-        "SELECT cm.page_no, cm.id, vr.bbox FROM character_mention cm JOIN character ch ON ch.id=cm.character_id"
+                                        pages: list[int], *, character_id: str | None = None) -> dict:
+    """Compare verified figure crops in bounded batches, preserving repeated panels.
+
+    A shared anchor connects batches; this covers every selected figure, not every
+    possible pair, and cannot establish complete-book continuity.
+    """
+    if character_id:
+        candidates = db.all_rows("SELECT id, canonical_name FROM character WHERE generation_id=%s AND id=%s",
+                                 generation_id, character_id)
+    else:
+        candidates = db.all_rows(
+            "SELECT id, canonical_name FROM character WHERE generation_id=%s AND"
+            " (lower(canonical_name)=lower(%s) OR lower(%s)=ANY(SELECT lower(a) FROM unnest(aliases) a))",
+            generation_id, character, character)
+    if len(candidates) != 1:
+        raise ValueError("Character name must resolve to exactly one identity; provide character_id")
+    ch = candidates[0]
+    character_id, character = str(ch["id"]), ch["canonical_name"]
+    requested_pages = sorted(set(pages))
+    all_crops = db.all_rows(
+        "SELECT cm.page_no, cm.id, vr.id AS region_id, vr.bbox FROM character_mention cm"
         " JOIN evidence e ON e.id=cm.evidence_id JOIN visual_region vr ON vr.id=e.region_id WHERE"
-        " cm.generation_id=%s AND cm.via='VISUAL' AND cm.resolution='RESOLVED' AND cm.page_no = ANY(%s) AND"
-        " (ch.canonical_name ILIKE %s OR %s = ANY(ch.aliases))", generation_id, pages, character, character)}
-    gdir = Path(render_page(bv, pages[0])["path"]).parent / "gallery" / generation_id
-    images: dict[int, dict] = {}
-    for p in pages:
-        if p in crops:
-            png = _crop(render_page(bv, p)["path"], crops[p]["bbox"], gdir / f"fig-{crops[p]['id']}.png").read_bytes()
-        else:
-            png = Path(render_page(bv, p, 1200)["path"]).read_bytes()
-        images[p] = image_part(png)
-    parts = [x for p in pages for x in ({"type": "text", "text": f"Sayfa {p}:"}, images[p])]
-    # Only the pictures: feeding the scans' descriptions made the model compare wordings
-    # ("kırmızımsı kahverengi" vs "kırmızı") instead of drawings.
-    ref, body = prompts.render("compare_appearance", pages=", ".join(map(str, pages)), character=character)
+        " cm.generation_id=%s AND cm.character_id=%s AND cm.via='VISUAL' AND cm.resolution='RESOLVED'"
+        " AND e.generation_id=cm.generation_id AND vr.generation_id=cm.generation_id"
+        " ORDER BY cm.page_no, cm.id", generation_id, character_id)
+    crops = [r for r in all_crops if r["page_no"] in requested_pages]
+    coverage = {"resolved_figures_total": len(all_crops), "selected_figures": len(crops),
+                "checked_figures": 0, "checked_figure_ids": [], "requested_pages": requested_pages,
+                "pages_without_verified_figures": sorted(set(requested_pages) - {r["page_no"] for r in crops}),
+                "all_selected_figures_checked": False, "all_pairs_checked": False,
+                "complete_book": False, "method": "shared_anchor_batches", "max_images_per_call": 6}
+    if len(crops) < 2:
+        return {"character": character, "character_id": character_id, "pages": requested_pages,
+                "differences": [], "proposed": 0, "not_confirmed": [], "coverage": coverage,
+                "same_character_everywhere": None, "same_character_in_checked_batches": None,
+                "summary": "Karşılaştırma için en az iki doğrulanmış figür gerekli."}
+    gen = db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)
+    bv = str(gen["book_version_id"])
+    gdir = Path(render_page(bv, crops[0]["page_no"])["path"]).parent / "gallery" / generation_id
+    # Figure ids, rather than physical pages, identify model output references.
+    schema = schemas.obj({"same_character_everywhere": schemas.BOOL,
+        "differences": schemas.arr(schemas.obj({"attribute": schemas.STR,
+            "figure_ids": schemas.arr(schemas.STR), "description": schemas.STR,
+            "explained_by_story": schemas.BOOL, "continuity_candidate": schemas.BOOL,
+            "confidence": schemas.NUM})), "summary": schemas.STR})
+    batches = [crops[:6]] + [[crops[0], *crops[i:i + 5]] for i in range(6, len(crops), 5)]
     llm = Llm(generation_id)
-    out, call_id = await llm.chat(
-        "book-vision-deep", [{"role": "user", "content": parts + [{"type": "text", "text": body}]}],
-        prompt=ref, schema=schemas.APPEARANCE, pages=pages, max_tokens=16384, temperature=0.1)
-
-    # One comparison is a proposal (measured: hair parting mirrored by the pose, hair wet in the
-    # rain were reported as continuity errors in one run and not in the next). Each proposed
-    # difference goes to independent votes that see only the crops of its pages and the NAME of
-    # the attribute, not the proposal's description. It is a finding when a majority says DIFFERENT.
     n_votes = settings().continuity_votes
-
-    async def vote(d: dict) -> list[dict]:
-        ps = [p for p in d["pages"] if p in images]
-        vref, vbody = prompts.render("continuity_vote", pages=", ".join(map(str, ps)), character=character,
-                                     attribute=d["attribute"])
-        content = [x for p in ps for x in ({"type": "text", "text": f"Sayfa {p}:"}, images[p])]
-        res = await asyncio.gather(*(llm.chat(
-            "book-vision-deep", [{"role": "user", "content": content + [{"type": "text", "text": vbody}]}],
-            prompt=vref, schema=schemas.CONTINUITY_VOTE, pages=ps, max_tokens=8192, temperature=0.6)
-            for _ in range(n_votes)), return_exceptions=True)
-        return [r[0] for r in res if not isinstance(r, BaseException)]
-
-    proposals = [d for d in out["differences"] if d["continuity_candidate"] and not d["explained_by_story"]
-                 and len([p for p in d["pages"] if p in images]) >= 2]
-    ballots = await asyncio.gather(*(vote(d) for d in proposals))
-    confirmed, rejected = [], []
-    with db.tx() as c:
-        idx = ledger.PageIndex.load(c, generation_id)
-        for d, votes in zip(proposals, ballots):
-            yes = [v for v in votes if v["verdict"] == "DIFFERENT"]
-            tally = {"attribute": d["attribute"], "pages": d["pages"], "description": d["description"],
-                     "votes": [v["verdict"] for v in votes]}
-            if len(votes) < n_votes or len(yes) * 2 <= n_votes:
-                rejected.append(tally)
-                continue
-            confirmed.append(tally)
-            conf = min(sum(v["confidence"] for v in yes) / len(yes), len(yes) / n_votes)
-            seen = max(yes, key=lambda v: v["confidence"])["seen"].strip() or d["description"]
-            evs = [(*ledger.save_evidence(c, generation_id, idx, page=p, kind="VISUAL",
-                                          quote=f"{character} — {d['attribute']}: {seen}"), p)
-                   for p in d["pages"] if p in images]
-            cid = ledger.save_claim(
-                c, generation_id, kind="VISUAL_CONTINUITY", subject=character,
-                claim=f"{character}: {d['attribute']} sayfalar arasında farklı — {seen}",
-                evidence=evs, confidence=conf, created_by="vision:continuity-votes",
-                payload={"votes": f"{len(yes)}/{n_votes}", "proposal": d["description"]}, model_call_id=call_id)
-            c.execute("INSERT INTO contradiction(generation_id, kind, description, pages,"
-                      " claim_ids, confidence) VALUES (%s,'CONTINUITY',%s,%s,%s,%s)",
-                      (generation_id, f"{character}: {d['attribute']} — {seen}", d["pages"],
-                       [cid] if cid else [], conf))
-    out = {**out, "differences": confirmed, "proposed": len(proposals), "not_confirmed": rejected}
-    return {"character": character, "pages": pages, **out}
+    confirmed, rejected, summaries, batch_verdicts = [], [], [], []
+    checked, proposed = set(), 0
+    for batch in batches:
+        figures = {f"F{i + 1}": r for i, r in enumerate(batch)}
+        images = {key: image_part(_crop(render_page(bv, r["page_no"])["path"], r["bbox"],
+                    gdir / f"fig-{r['id']}.png").read_bytes()) for key, r in figures.items()}
+        labels = ", ".join(f"{key}: sayfa {r['page_no']}" for key, r in figures.items())
+        parts = [part for key, r in figures.items() for part in
+                 ({"type": "text", "text": f"Figür {key}, sayfa {r['page_no']}"}, images[key])]
+        ref, body = prompts.render("compare_appearance", pages=labels, character=character)
+        out, call_id = await llm.chat(
+            "book-vision-deep", [{"role": "user", "content": parts + [{"type": "text", "text": body}]}],
+            prompt=ref, schema=schema, pages=sorted({r["page_no"] for r in batch}),
+            max_tokens=16384, temperature=0.1)
+        proposals = []
+        for d in out["differences"]:
+            ids = d["figure_ids"]
+            if len(ids) != len(set(ids)) or any(key not in figures for key in ids) or len(ids) < 2:
+                raise ValueError("Continuity proposal contains invalid or insufficient figure references")
+            if d["continuity_candidate"] and not d["explained_by_story"]:
+                proposals.append(d)
+        proposed += len(proposals)
+        async def vote(d: dict) -> list[dict]:
+            keys = d["figure_ids"]
+            labels_ = ", ".join(f"{key}: sayfa {figures[key]['page_no']}" for key in keys)
+            vref, vbody = prompts.render("continuity_vote", pages=labels_, character=character,
+                                        attribute=d["attribute"])
+            content = [part for key in keys for part in
+                       ({"type": "text", "text": f"Figür {key}, sayfa {figures[key]['page_no']}"}, images[key])]
+            res = await asyncio.gather(*(llm.chat(
+                "book-vision-deep", [{"role": "user", "content": content + [{"type": "text", "text": vbody}]}],
+                prompt=vref, schema=schemas.CONTINUITY_VOTE,
+                pages=sorted({figures[key]["page_no"] for key in keys}),
+                max_tokens=8192, temperature=0.6) for _ in range(n_votes)), return_exceptions=True)
+            return [r[0] for r in res if not isinstance(r, BaseException)]
+        ballots = await asyncio.gather(*(vote(d) for d in proposals))
+        with db.tx() as c:
+            idx = ledger.PageIndex.load(c, generation_id)
+            for d, votes in zip(proposals, ballots):
+                involved = [figures[key] for key in d["figure_ids"]]
+                actual_pages = sorted({r["page_no"] for r in involved})
+                yes = [v for v in votes if v["verdict"] == "DIFFERENT"]
+                tally = {"attribute": d["attribute"], "pages": actual_pages,
+                         "figure_ids": [str(r["id"]) for r in involved], "description": d["description"],
+                         "votes": [v["verdict"] for v in votes]}
+                if len(votes) < n_votes or len(yes) * 2 <= n_votes:
+                    rejected.append(tally)
+                    continue
+                confirmed.append(tally)
+                conf = min(sum(v["confidence"] for v in yes) / len(yes), len(yes) / n_votes)
+                seen = max(yes, key=lambda v: v["confidence"])["seen"].strip() or d["description"]
+                evs = [(*ledger.save_evidence(c, generation_id, idx, page=r["page_no"], kind="VISUAL",
+                            region_id=str(r["region_id"]), quote=f"{character} — {d['attribute']}: {seen}"), r["page_no"])
+                       for r in involved]
+                cid = ledger.save_claim(c, generation_id, kind="VISUAL_CONTINUITY", subject=character,
+                    claim=f"{character}: {d['attribute']} çizimler arasında farklı — {seen}",
+                    evidence=evs, confidence=conf, created_by="vision:continuity-votes",
+                    payload={"votes": f"{len(yes)}/{n_votes}", "proposal": d["description"],
+                             "character_id": character_id, "figure_ids": tally["figure_ids"]}, model_call_id=call_id)
+                c.execute("INSERT INTO contradiction(generation_id, kind, description, pages,"
+                          " claim_ids, confidence) VALUES (%s,'CONTINUITY',%s,%s,%s,%s)",
+                          (generation_id, f"{character}: {d['attribute']} — {seen}", actual_pages,
+                           [cid] if cid else [], conf))
+        checked.update(str(r["id"]) for r in batch)
+        summaries.append(out["summary"])
+        batch_verdicts.append(out["same_character_everywhere"])
+    coverage.update(checked_figures=len(checked), checked_figure_ids=sorted(checked),
+                    all_selected_figures_checked=len(checked) == len(crops), all_pairs_checked=len(batches) == 1,
+                    batches=len(batches), all_resolved_figures_selected=len(crops) == len(all_crops))
+    return {"character": character, "character_id": character_id, "pages": requested_pages,
+            "differences": confirmed, "proposed": proposed, "not_confirmed": rejected,
+            "coverage": coverage, "same_character_everywhere": None,
+            "same_character_in_checked_batches": all(batch_verdicts), "summary": "\n".join(summaries)}
 
 
 def _crop(png_path: str, bbox: list[int], out: Path, blank: list[list[int]] | None = None) -> Path:
@@ -486,9 +530,7 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     2. Every other figure's crop is compared with all references: same kind, no conflicting
        distinctive feature, confidence >= 0.8. A page may contain several panels showing
        the same character; each figure is evaluated independently.
-    3. Elimination: if a page shows N figures of one kind, the near text names exactly N
-       characters of that kind, and N-1 are already identified, the last figure is the last
-       character (confidence 0.8; never used as a reference).
+    3. Unmatched figures stay uncertain; a remaining scan name is not identity evidence.
     Everything else stays uncertain and unattached."""
     chars = db.all_rows("SELECT id, canonical_name, aliases, kind, traits FROM character WHERE generation_id=%s "
                         "AND COALESCE(traits->>'entity_scope','INDIVIDUAL')='INDIVIDUAL'",
@@ -688,56 +730,13 @@ async def resolve_visual_identity(generation_id: str) -> dict:
             if best:
                 resolved[str(f["id"])] = (best[0], "reference", best[1])
 
-    def eliminate() -> int:
-        """The scan's SET of names on a page is usually right even when it swaps who is who.
-        If every figure of a kind group is named, the names are distinct, and all but one
-        figure are identified as members of that set, the last figure is the last name."""
-        n = 0
-        for page, fs in by_page.items():
-            def who(f: dict) -> str | None:                  # identified beats the scan's guess
-                return resolved[str(f["id"])][0] if str(f["id"]) in resolved else f["cid"]
-            groups: dict[str, list] = {}
-            for f in fs:
-                if who(f):
-                    groups.setdefault(ckind[who(f)], []).append(f)
-            for kind, same in groups.items():
-                # a figure nobody could name or identify might be of this kind too
-                if kind not in GATE or any(who(f) is None and not f["group"] for f in fs):
-                    continue
-                names = {who(f) for f in same}
-                if len(same) < 2 or len(names) != len(same):
-                    continue
-                open_figs = [f for f in same if str(f["id"]) not in resolved]
-                left = {f["cid"] for f in open_figs}
-                if len(open_figs) == 1 and len(left) == 1 and not open_figs[0]["group"]:
-                    resolved[str(open_figs[0]["id"])] = (next(iter(left)), "elimination", None)
-                    n += 1
-        return n
-
+    # A scan's remaining name is not evidence for the remaining figure: the
+    # same character may occur in several panels. Only crop-verified matches
+    # can resolve identity or seed a reference, never elimination by name.
     if gallery:
         await match_round(gallery)
-    stats["by_elimination"] = eliminate()
-    # ---- 3. a character found by elimination on two pages, whose two crops match each other,
-    #         earns a reference; then one more round for the figures still open
-    promoted: dict[str, dict] = {}
-    by_char: dict[str, list] = {}
-    for f in figs:
-        got = resolved.get(str(f["id"]))
-        if got and got[1] == "elimination" and got[0] not in gallery and not f["group"] \
-                and f["short_px"] >= settings().min_reference_px:
-            by_char.setdefault(got[0], []).append(f)
-    for cid, fs in by_char.items():
-        fs.sort(key=lambda f: -f["area"])
-        if len(fs) >= 2:
-            _, best = await match(fs[1], {cid: {"fig": fs[0]}})
-            if best and best[1]["confidence"] >= 0.9:
-                promoted[cid] = {"fig": fs[0], "area": fs[0]["area"], "features": best[1]["matching_features"]}
-    stats["references_promoted"] = [cname[c_] for c_ in promoted]
-    if promoted:
-        await match_round(promoted)
-        stats["by_elimination"] += eliminate()
-    gallery.update(promoted)
-    # ---- 4. a character who is never drawn without a rival nearby has no reference by rule 1.
+    stats["references_promoted"] = []
+    # ---- 3. a character who is never drawn without a rival nearby has no reference by rule 1.
     #         Independent agreement replaces it: the scan named figures as this character on
     #         three or more pages (each time with the name in the near text), the largest of
     #         them is one whole figure of the right kind, and at least two of the others match
@@ -747,10 +746,9 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     for cid in cname:
         if cid in gallery:
             continue
-        taken = {(g["page_no"], resolved[str(g["id"])][0]) for g in figs if str(g["id"]) in resolved}
         own = sorted((f for f in figs if f["cid"] == cid and str(f["id"]) not in resolved and not f["group"]
                       and f["deep"] and not f["front"] and f["short_px"] >= settings().min_reference_px
-                      and named_near(f["page_no"], cid) and (f["page_no"], cid) not in taken),
+                      and named_near(f["page_no"], cid)),
                      key=lambda f: -f["area"])
         own = list({f["page_no"]: f for f in reversed(own)}.values())[::-1]      # largest per page
         named = [f for f in figs if f["cid"] == cid]
@@ -783,7 +781,6 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     stats["without_reference_why"] = trace
     if consistent:
         await match_round(consistent)
-        stats["by_elimination"] += eliminate()
     gallery.update(consistent)
 
     with db.tx() as c:
@@ -802,13 +799,13 @@ async def resolve_visual_identity(generation_id: str) -> dict:
             if how == "reference":
                 stats["matched"] += 1
             stats["scan_name_corrected"] += bool(f["cid"] and f["cid"] != cid)
-            conf = 0.95 if how == "anchor" else 0.8 if how == "elimination" else 0.85 if how == "consistency" \
+            conf = 0.95 if how == "anchor" else 0.85 if how == "consistency" \
                 else min(float(out["confidence"]), 0.95)
             extra = {"identified_by": how, "scan_name": f["surface_name"]}
             if how == "anchor":
                 extra["is_reference"] = gallery[cid]["fig"]["id"] == f["id"]
             elif cid in gallery and gallery[cid]["fig"]["id"] == f["id"]:
-                extra["is_reference"] = True             # promoted after elimination or by consistency
+                extra["is_reference"] = True             # established by crop consistency
             if out:
                 extra.update(matching_features=out["matching_features"][:8], match_reason=out["reason"][:400])
             c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED', confidence=%s,"

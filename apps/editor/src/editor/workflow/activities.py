@@ -137,22 +137,23 @@ async def visual_identity(generation_id: str) -> dict:
 
 @activity.defn
 async def continuity_checks(generation_id: str) -> dict:
-    """Deep model on characters seen on >= 3 pages (analysis §6: süreklilik)."""
+    """Compare every resolved figure, grouped by identity rather than name/page."""
     rows = await _t(db.all_rows,
-                    "SELECT ch.canonical_name, array_agg(DISTINCT cm.page_no ORDER BY cm.page_no) AS pages"
-                    " FROM character ch JOIN character_mention cm ON cm.character_id=ch.id AND cm.via<>'TEXT'"
-                    " WHERE ch.generation_id=%s GROUP BY ch.canonical_name HAVING count(DISTINCT cm.page_no)>=3",
-                    generation_id)
+        "SELECT ch.id, ch.canonical_name, array_agg(DISTINCT cm.page_no ORDER BY cm.page_no) AS pages"
+        " FROM character ch JOIN character_mention cm ON cm.character_id=ch.id AND cm.via='VISUAL'"
+        " AND cm.resolution='RESOLVED' WHERE ch.generation_id=%s AND cm.generation_id=ch.generation_id"
+        " GROUP BY ch.id, ch.canonical_name HAVING count(cm.id)>=2", generation_id)
 
     async def one(r):
-        ps = r["pages"]
-        pick = sorted({ps[round(i * (len(ps) - 1) / 5)] for i in range(6)}) if len(ps) > 6 else ps
-        res = await vision.compare_character_appearances(generation_id, r["canonical_name"], pick)
-        return {"character": r["canonical_name"], "pages": pick,
+        res = await vision.compare_character_appearances(
+            generation_id, r["canonical_name"], r["pages"], character_id=str(r["id"]))
+        return {"character": r["canonical_name"], "character_id": str(r["id"]), "pages": r["pages"],
                 "proposed": res["proposed"], "differences": len(res["differences"]),
-                "not_confirmed": res["not_confirmed"], "same_everywhere": res["same_character_everywhere"]}
+                "not_confirmed": res["not_confirmed"], "same_everywhere": None,
+                "same_character_in_checked_batches": res["same_character_in_checked_batches"],
+                "coverage": res["coverage"]}
 
-    return {"checked": await asyncio.gather(*(one(r) for r in rows))}
+    return {"checked": await asyncio.gather(*(one(r) for r in rows)), "complete_book": False}
 
 
 @activity.defn

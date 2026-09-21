@@ -304,6 +304,48 @@ def save_event(generation_id: str, summary: str, modality: str, page_from: int, 
     return {"event_id": str(row["id"]), "claim_id": cid, "modality": modality}
 
 
+def _emotion_character(c, generation_id: str, name: str, page: int, claim_id: str):
+    """A name narrows candidates; a shared verified source span establishes locality.
+
+    Never bind a person from aliases alone or choose an arbitrary first match.
+    Missing/ambiguous provenance remains unlinked, including historical evidence.
+    """
+    evidence = c.execute(
+        "SELECT e.source_refs FROM claim_evidence ce JOIN evidence e ON e.id=ce.evidence_id "
+        "JOIN claim cl ON cl.id=ce.claim_id AND cl.generation_id=e.generation_id "
+        "WHERE ce.claim_id=%s AND e.generation_id=%s AND e.page_no=%s "
+        "AND e.kind='TEXT' AND e.quote_verified "
+        "AND cl.status NOT IN ('REJECTED','EDITOR_REJECTED','SUPERSEDED')",
+        (claim_id, generation_id, page)).fetchall()
+
+    def spans(refs):
+        refs = refs or {}
+        if str(refs.get('generation_id')) != str(generation_id) or refs.get('page_no') != page:
+            return set()
+        return {(r['span_id'], r['source_sha256']) for r in refs.get('spans', [])
+                if r.get('span_id') and r.get('source_sha256')}
+
+    supporting = set().union(*(spans(e['source_refs']) for e in evidence))
+    if not supporting:
+        return None
+    mentions = c.execute(
+        "SELECT ch.id,ch.canonical_name,ch.aliases,cm.surface_name,e.source_refs "
+        "FROM character_mention cm JOIN character ch ON ch.id=cm.character_id "
+        "AND ch.generation_id=cm.generation_id JOIN evidence e ON e.id=cm.evidence_id "
+        "AND e.generation_id=cm.generation_id JOIN claim cl ON cl.id=ch.claim_id "
+        "AND cl.generation_id=ch.generation_id WHERE cm.generation_id=%s AND cm.page_no=%s "
+        "AND e.page_no=cm.page_no AND cm.resolution='RESOLVED' "
+        "AND ch.identity_status='CONFIRMED' AND ch.traits->>'entity_scope'='INDIVIDUAL' "
+        "AND e.kind='TEXT' AND e.quote_verified "
+        "AND cl.status NOT IN ('REJECTED','EDITOR_REJECTED','SUPERSEDED')",
+        (generation_id, page)).fetchall()
+    target = ledger.norm(name)
+    candidates = {m['id'] for m in mentions if target and target in
+        {ledger.norm(n) for n in [m['canonical_name'], *(m['aliases'] or []), m['surface_name']] if n}
+        and supporting & spans(m['source_refs'])}
+    return next(iter(candidates)) if len(candidates) == 1 else None
+
+
 def save_emotion(generation_id: str, character: str, page: int, emotion: str, intensity: float,
                  trigger: str, evidence: list[dict], confidence: float) -> dict:
     with db.tx() as c:
@@ -312,11 +354,10 @@ def save_emotion(generation_id: str, character: str, page: int, emotion: str, in
                                 claim=f"{character} {emotion} hissediyor ({trigger})", evidence=evs,
                                 confidence=confidence, created_by="hermes",
                                 payload={"emotion": emotion, "intensity": intensity, "trigger": trigger})
-        ch = c.execute("SELECT id FROM character WHERE generation_id=%s AND (canonical_name ILIKE %s"
-                       " OR %s = ANY(aliases)) LIMIT 1", (generation_id, character, character)).fetchone()
+        character_id = _emotion_character(c, generation_id, character, page, cid)
         c.execute("INSERT INTO emotion(generation_id, character_id, character_name, page_no, emotion,"
                   " intensity, trigger, confidence, claim_id) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-                  (generation_id, ch["id"] if ch else None, character, page, emotion, intensity,
+                  (generation_id, character_id, character, page, emotion, intensity,
                    trigger, confidence, cid))
     return {"claim_id": cid}
 
@@ -730,36 +771,56 @@ def event_actors(generation_id: str) -> list[dict]:
 async def link_emotions_and_themes(generation_id: str) -> dict:
     """Step 10: attach emotions to resolved characters, consolidate themes."""
     with db.tx() as c:
-        n = c.execute(
-            "UPDATE emotion em SET character_id=ch.id FROM character ch WHERE em.generation_id=%s"
-            " AND ch.generation_id=em.generation_id AND em.character_id IS NULL AND"
-            " (lower(ch.canonical_name)=lower(em.character_name) OR"
-            "  lower(em.character_name) = ANY(SELECT lower(a) FROM unnest(ch.aliases) a))",
-            (generation_id,)).rowcount
+        emotions = c.execute("SELECT id,character_name,page_no,claim_id FROM emotion "
+                             "WHERE generation_id=%s", (generation_id,)).fetchall()
+        n = 0
+        for em in emotions:
+            character_id = _emotion_character(c, generation_id, em['character_name'],
+                                              em['page_no'], em['claim_id'])
+            # Re-evaluate old links too: identity corrections can remove support.
+            c.execute("UPDATE emotion SET character_id=%s WHERE id=%s "
+                      "AND character_id IS DISTINCT FROM %s", (character_id, em['id'], character_id))
+            n += character_id is not None
     th = db.all_rows("SELECT c.id, c.claim, c.source_pages, (SELECT string_agg(e.quote, ' | ') FROM"
                      " claim_evidence ce JOIN evidence e ON e.id=ce.evidence_id WHERE ce.claim_id=c.id)"
                      " AS quotes FROM claim c WHERE c.generation_id=%s AND c.kind='THEME' AND"
-                     " c.payload->>'level'='chunk'", generation_id)
+                     " c.payload->>'level'='chunk' AND c.status NOT IN "
+                     " ('REJECTED','EDITOR_REJECTED','SUPERSEDED') ORDER BY c.id", generation_id)
     if not th:
         return {"emotions_linked": n, "themes": 0}
     short = {f"t{i}": t for i, t in enumerate(th)}
     ref, body = prompts.render("themes", themes="\n".join(
         f"{k} | s{t['source_pages']} | {t['claim']} | {t['quotes']}" for k, t in short.items()))
+    body += ("\nHer girdi kimliğini en az bir tema grubunun source_ids listesinde aynen kullan. "
+             "Yeni kimlik üretme; önek ekleme; hiçbir girdiyi sessizce atlama. "
+             "Birleştirilemeyen temayı kendi kaynak kimliğiyle ayrı koru.")
     out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
                                                  prompt=ref, schema=schemas.THEMES, max_tokens=6000,
                                                  temperature=0.1, thinking=False)
+    covered = set()
+    for t in out["themes"]:
+        ids = t["source_ids"]
+        if not ids or len(ids) != len(set(ids)) or any(s not in short for s in ids):
+            raise ValueError("Theme source_ids must be nonempty, unique, exact input IDs")
+        covered.update(ids)
+    if covered != set(short):
+        raise ValueError("Theme consolidation omitted source IDs: " + ", ".join(sorted(set(short) - covered)))
     made = 0
     with db.tx() as c:
         for t in out["themes"]:
-            srcs = [short[s] for s in t["source_ids"] if s in short]
+            srcs = [short[s] for s in t["source_ids"]]
             evs = []
             for s in srcs:
-                for r in c.execute("SELECT ce.evidence_id, e.page_no, e.quote_verified FROM claim_evidence"
-                                   " ce JOIN evidence e ON e.id=ce.evidence_id WHERE ce.claim_id=%s",
-                                   (s["id"],)):
+                source_evidence = c.execute(
+                    "SELECT ce.evidence_id,e.page_no,e.quote_verified FROM claim_evidence ce "
+                    "JOIN evidence e ON e.id=ce.evidence_id WHERE ce.claim_id=%s AND e.generation_id=%s",
+                    (s["id"], generation_id)).fetchall()
+                if not source_evidence:
+                    raise ValueError("Theme source has no evidence in this generation: " + str(s['id']))
+                for r in source_evidence:
                     evs.append((str(r["evidence_id"]), r["quote_verified"], r["page_no"]))
             if ledger.save_claim(c, generation_id, kind="THEME", subject=t["theme"], claim=t["text"],
-                                 evidence=evs[:10], confidence=t["confidence"],
+                                 evidence=list(dict.fromkeys(evs)), confidence=t["confidence"],
                                  created_by="knowledge:themes", model_call_id=call_id,
                                  payload={"level": "book", "theme": t["theme"]}):
                 made += 1

@@ -1,4 +1,4 @@
-<!-- name: extract_knowledge version: 4 -->
+<!-- name: extract_knowledge version: 5 -->
 Sen bir kitap analiz yönetmeninin çıkarım ajanısın. Aşağıda kitabın {{page_from}}–{{page_to}}. sayfalarının metni (sayfa ve paragraf numarasıyla) ve bu sayfaların görsel tarama özetleri var.
 
 METİN:
@@ -12,10 +12,10 @@ GÖRSEL TARAMA ÖZETİ:
 EDİTÖRÜN ÖNCEKİ DÜZELTMELERİ (bunlara uy):
 {{corrections}}
 
-Önce sayfaların türüne bak. Hikâye anlatmayan sayfalar (okuyucuya hitap eden etkinlik ve alıştırmalar, bilgilendirme yazıları, künye, yazar/çizer tanıtımı, reklam, içindekiler) `non_story_pages` listesine yazılır ve bu sayfalardan HİÇBİR karakter, olay, duygu ya da tema çıkarılmaz.
+Önce sayfaların türünü öner: hikâye anlatmayan sayfaları (etkinlik, bilgilendirme, künye, tanıtım, reklam, içindekiler) `non_story_pages` listesine yazabilirsin. Bu liste yalnız inceleme önerisidir, içerik dışlama kararı değildir. Karma sayfalarda anlatı bölümlerini ve bütün sayfalardaki kaynaklı karakter anılışlarını, olayları, duyguları ve temaları koru. Künye kişisini hikâye kişisi sayma; anılışın bağlamını description alanında açıkla. Yalnız sayfa türü tahmini nedeniyle kaynaklı öğeleri atlama.
 
 Çıkar:
-1. `character_mentions`: bu sayfalarda adı geçen ya da görünen her karakter. `surface_name`: adın metinde geçen hâli, ama hâl ve iyelik eki olmadan yalın biçimde (”Dedesini” değil ”Dedesi”, ”Max'i” değil ”Max”); ad iki kelimeyse ikisi birlikte (”Profesör Bulut”). Birden çok kişiyi birlikte anan ifadeyi (”çocuklar”, ”hepsi”) karakter olarak yazma.
+1. `character_mentions`: bu sayfalarda adı geçen ya da görünen her karakter. `surface_name`: adın metinde geçen hâli, ama hâl ve iyelik eki olmadan yalın biçimde (”Dedesini” değil ”Dedesi”, ”Max'i” değil ”Max”); ad iki kelimeyse ikisi birlikte (”Profesör Bulut”). Birden çok kişiyi birlikte anan ifadeyi (”çocuklar”, ”hepsi”) topluluk anılışı olarak koru; description alanında topluluk olduğunu ve kaynak bağlamını belirt. Topluluğu tek bireye dönüştürme veya üyelerini kanıtsız üretme.
 2. `events`: olaylar. Her olayın `modality` alanı zorunlu ve şu tanıma göre verilir:
 
 {{modality_rules}}
