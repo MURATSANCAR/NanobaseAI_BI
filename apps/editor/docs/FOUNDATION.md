@@ -41,10 +41,11 @@ içinde çalıştırılmamalıdır. Girdi hash'i kaynak/istem/model/ayar/kod sü
 ## Bu yayının sınırı ve sonraki maddeler
 
 1. Kaynak kapsamı ilk düzeltmesi `0.11.0-source-066a3cfb` ile kuruldu: 544/544 gerçek sayfa kaynak kontrolü. Ayrıntı ve anlamsal açıklar: [SOURCE-INTEGRITY.md](SOURCE-INTEGRITY.md).
-2. Yeni workflow: temel olgu Critic'i ve aktör/kimlik uzlaştırması → özetler → çıktı Critic'i;
-   bütün yazımların tekrar makbuzuna, çıktı üreticilerinin revizyon kayıtlarına bağlanması.
+2. Yeni workflow ve revizyona bağlı çıktılar `0.12.0-outputs-b5bfc0d7` ile kuruldu.
+   Salt okunur kabul geçti; gerçek üretim/çökme kabulü bekliyor: [REVISION-OUTPUTS.md](REVISION-OUTPUTS.md).
+   Bütün eski kanonik aktivitelerin tekrar makbuzuna taşınması hâlâ ayrı bir açık.
 3. Yeniden üretim tüketicisi: eski revizyonun sonucunu yayınlamayan, sınırlı denemeli işçi.
-   Kuyruk bu yayında kurulur; tüketici ve otomatik yeniden tarama **açılmaz**.
+   Tüketici kodu kuruldu, bakımda ve **açılmadı**; otomatik kaynak yeniden taraması kapsamında değil.
 4. Eski rapor/timeline/arama/katalog yollarının ortak sözleşmeye taşınması ve indeks yayın işaretçisi.
 5. Kimlik/sahne, tema/duygu, görsel kapsam ve bağımsız kabul; sonra model profili/alternatifleri.
 

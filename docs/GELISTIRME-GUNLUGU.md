@@ -8,7 +8,7 @@
 
 ## 2026-09-21 — Editor: doğrulama sonrası sürümlü çıktılar
 
-Yeni workflow özetleri görsel kimlik, olgu Critic, aktör ve çelişki kontrollerinin arkasına aldı. Kanonik snapshot ve değişmez çıktı sürümleri, revizyon kontrollü yayın pointer'ı, bağımlı çıktı geçersizliği, idempotent sonuç tekrar kullanımı ve üç denemeli tüketici eklendi. Eski nesillerin içerikleri korunuyor; taramalar kapalı. Salt okunur canlı kabul sonucu yayın sonrası eklenecek. Model üretimi/düzeltme/yarış kabulü DOĞRULANAMADI. Ayrıntı: `apps/editor/docs/REVISION-OUTPUTS.md`.
+Yeni workflow özetleri görsel kimlik, olgu Critic, aktör ve çelişki kontrollerinin arkasına aldı. Kanonik snapshot ve değişmez çıktı sürümleri, revizyon kontrollü yayın pointer'ı, bağımlı çıktı geçersizliği, idempotent sonuç tekrar kullanımı ve üç denemeli tüketici eklendi. Eski nesillerin içerikleri korunuyor; taramalar kapalı. Son sunucu yayını `0.12.0-outputs-b5bfc0d7`: 54/54 çıktı okuma, 18/18 ortak okuma, 544/544 kaynak kontrolü geçti. 17 tablo salt okunur koşuda aynı; model çağrısı yok. Doğrulama sırasında gelen başka yazımları yakalamak için transaction-local writer kimliği ve snapshot kontrolü eklendi. Bakım açık, GPU 1 boş. Model üretimi/düzeltme/yarış/çökme kabulü DOĞRULANAMADI; yalnız okuma kabulü. Kanıtlar `apps/editor/docs/evidence/2026-09-21-output-*.json`. Ayrıntı: `apps/editor/docs/REVISION-OUTPUTS.md`.
 
 
 ## 2026-09-21 — Kitaba sor: görünür yazı alanı ve yenilemede boş sohbet (kabul bekliyor)

@@ -1,0 +1,182 @@
+{
+  "code_version": "0.12.0-outputs-b5bfc0d7",
+  "api": "tt-gpu/editor-control:8000",
+  "database": "tt-gpu/editor-postgres/editor/ed",
+  "real_books": 6,
+  "pages_checked": 544,
+  "results": [
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "title": "kahramanini-yutan-kitap",
+      "status": "PASSED",
+      "physical_pages": 64,
+      "reading_sha256": "5e33e3393550e43c3c9cd102fe3aae722a977ee128826d76bb9d2c5a7a87294c",
+      "source_passages": 784,
+      "source_issue_pages": 35,
+      "unclassified_pages": 64,
+      "targets": [],
+      "semantic_acceptance": false
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "title": "levent-dunya-harikalarinin-pesinde",
+      "status": "PASSED",
+      "physical_pages": 144,
+      "reading_sha256": "619fe895e18e60b5fd76a6fd190539583ae8ffe3ca20926624ca44f394aae874",
+      "source_passages": 1985,
+      "source_issue_pages": 67,
+      "unclassified_pages": 144,
+      "targets": [
+        {
+          "page": 6,
+          "pdf_match": true,
+          "quote_verified": true,
+          "wrong_real_paragraph_rejected": true,
+          "span_id": "1f37e371a5046adeca3b1cdc6465339592898bf6810b84ff55f15053a20f3716"
+        },
+        {
+          "page": 10,
+          "pdf_match": true,
+          "quote_verified": true,
+          "wrong_real_paragraph_rejected": true,
+          "span_id": "d84dca1022446e5382829b04d493137cbb51eb4925c80a222130210a3992e4f6"
+        }
+      ],
+      "semantic_acceptance": false
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "title": "anne-terligi",
+      "status": "PASSED",
+      "physical_pages": 128,
+      "reading_sha256": "a222c5995b90f8d08b66ff0c43984da79ca06daeadb7f0cfce382ede5cff2639",
+      "source_passages": 1219,
+      "source_issue_pages": 20,
+      "unclassified_pages": 128,
+      "targets": [
+        {
+          "page": 20,
+          "pdf_match": true,
+          "quote_verified": true,
+          "wrong_real_paragraph_rejected": true,
+          "span_id": "c6831f0732741867360eebb61e34f9c8ecce8a0db887d44648da265dc88de8ff"
+        },
+        {
+          "page": 49,
+          "pdf_match": true,
+          "quote_verified": true,
+          "wrong_real_paragraph_rejected": true,
+          "span_id": "3a555d056d0b2c30432e8591c5b8e22b847ae1e8548b3ea03a6e27d948e7b7c4"
+        }
+      ],
+      "semantic_acceptance": false
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "title": "dedem-tekrar-cocuk-oldu",
+      "status": "PASSED",
+      "physical_pages": 128,
+      "reading_sha256": "1619d1968b4e734b607823e3acd9039849821209eb034b57612dc40857610a52",
+      "source_passages": 900,
+      "source_issue_pages": 22,
+      "unclassified_pages": 128,
+      "targets": [],
+      "semantic_acceptance": false
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "title": "dunyanin-en-korkak-hayvani",
+      "status": "PASSED",
+      "physical_pages": 32,
+      "reading_sha256": "ef1ea84d6b618c028644c0197911d0f5ed255befac9cb8172b61aea9f256f2ea",
+      "source_passages": 150,
+      "source_issue_pages": 7,
+      "unclassified_pages": 32,
+      "targets": [
+        {
+          "page": 5,
+          "pdf_match": true,
+          "quote_verified": true,
+          "wrong_real_paragraph_rejected": true,
+          "span_id": "6faba7cca76d974d1ffec2bf8c86f22b88d946caa28eb2e1ae17155f7c4608d3"
+        },
+        {
+          "page": 6,
+          "pdf_match": true,
+          "quote_verified": true,
+          "wrong_real_paragraph_rejected": true,
+          "span_id": "fa0746bcd23c06455be7260d52ee35c5dca9158e97d80ce306015b602bc3a6cf"
+        }
+      ],
+      "semantic_acceptance": false
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "title": "Ekrana Sığmayan Macera",
+      "status": "PASSED",
+      "physical_pages": 48,
+      "reading_sha256": "2edd75ca9839cbbd1ff891287771ce4b9e97e9d6aacc024c5ac1430c75202431",
+      "source_passages": 264,
+      "source_issue_pages": 11,
+      "unclassified_pages": 48,
+      "targets": [],
+      "semantic_acceptance": false
+    }
+  ],
+  "table_state": {
+    "claim": {
+      "count": 5788,
+      "md5": "b4e47742f3f635fd7e9d8f51a6adf480"
+    },
+    "event": {
+      "count": 1734,
+      "md5": "df008b25b68f9ae608333f0210f5c73d"
+    },
+    "emotion": {
+      "count": 875,
+      "md5": "380789bdb60cbe10e8d910f1d26967c0"
+    },
+    "report": {
+      "count": 15,
+      "md5": "a215211bbb8beac38bf03530252b8129"
+    },
+    "generation": {
+      "count": 20,
+      "md5": "75b3a1cc70275b69e60a56b4500d4119"
+    },
+    "evidence": {
+      "count": 10071,
+      "md5": "cfbfb3d8b4b0e8fb89e2d7a28730386d"
+    },
+    "page_text": {
+      "count": 1450,
+      "md5": "e4df170300746e00386a687e33c87f5f"
+    },
+    "paragraph": {
+      "count": 7529,
+      "md5": "a98664fca0f807b153efb709e33f4afa"
+    },
+    "page_role": {
+      "count": 216,
+      "md5": "2f91386299db3fca5d2602e5e39c86bf"
+    },
+    "model_call": {
+      "count": 26333,
+      "md5": "d371fb138b74f626cf4c371092bd7f9c"
+    },
+    "analysis_job": {
+      "count": 20,
+      "md5": "65b326abf3338131f08635bca8d7c042"
+    }
+  },
+  "original_tables_unchanged": true,
+  "maintenance": true,
+  "scope": "source retention, physical coverage, real quote references, original PDF targets",
+  "not_verified": [
+    "semantic page classification",
+    "OCR conflict resolution and reading order",
+    "new-generation evidence persistence",
+    "Qdrant rebuild and search",
+    "full-book semantic acceptance"
+  ]
+}

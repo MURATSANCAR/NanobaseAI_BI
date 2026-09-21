@@ -75,3 +75,35 @@ eder. Trigger kurulum kontrolü davranış testi değildir.
 Düzeltme yazımı, model üretimi, çökme/yarış, otomatik tüketim ve Qdrant yayın kabulü,
 bakım kilidi açıkken salt okunur testle doğrulanamaz: **DOĞRULANAMADI**. Bunları
 gerçek bir kitabın yeni neslinde kontrollü yazma/üretim koşusu doğrulamalıdır.
+
+
+## Sunucu sonucu
+
+Aktif release `/data/editor/releases/b5bfc0d7`, sürüm
+`0.12.0-outputs-b5bfc0d7`; image
+`sha256:def78cd8126a7f624ccab9fde86a11000f2f6997b653db201523e230e83b14d2`.
+`014_revision_outputs.sql` ve `015_validation_fence.sql` uygulandı. Yedek:
+`/data/editor/backups/20260921-outputs/`. Kontrol API güncellendi; worker/gateway/
+rebuild/model üreticileri başlatılmadı. GPU 1: 0 MiB, BI modeli çalışıyor.
+
+Son yayın üzerinde gerçek DB/API sonuçları:
+
+- 6 gerçek kitapta 54/54 çıktı girdisi, rapor önizlemesi ve güncel olmayan çıktı
+  engeli kontrolü geçti. 17 tablo salt okunur koşu öncesi/sonrası aynı.
+- Önceki ortak okuma regresyonu 18/18; kaynak kontrolü 544/544 sayfa, hedef özgün
+  PDF ve alıntı karşılaştırmaları 6/6 geçti. Model çağrısı sayısı 26.333'te sabit.
+- Transaction-local doğrulama kimliği gerçek DB'de salt okunur snapshot ve thread
+  geçişiyle kontrol edildi; bağlam çıkınca kimlik temizlendi. Bakımda `pending=[]`.
+- Yeni `rebuild_outputs` activity kayıtlı; sunucuda Python derleme/import kontrolü
+  geçti. Bunlar Temporal replay veya gerçek düzeltme/üretim davranışı kabulü değildir.
+- `knowledge_snapshot` ve `artifact_version` satır sayısı 0: eski analizleri yeni
+  iş akışından geçmiş gibi işaretleyen bir backfill yapılmadı.
+
+Kanıtlar: [çıktı okuma](evidence/2026-09-21-output-verification.json),
+[ortak okuma](evidence/2026-09-21-output-foundation-regression.json),
+[kaynak regresyonu](evidence/2026-09-21-output-source-regression.json).
+
+Kod kurulu fakat otomatik üretim **bakımda ve kabul edilmemiş** durumdadır. Bir
+sonraki kabul, gerçek kitabın yeni neslinde düzeltme → geçersiz kılma → yeni çıktı
+üretimi → eski revizyonun reddi → tekrar/çökme kontrolüdür. Mevcut salt okunur
+kabul kuralını aşan yazma koşusu bu turda yapılmadı.

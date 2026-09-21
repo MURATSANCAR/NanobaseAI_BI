@@ -1,5 +1,5 @@
 {
-  "code_version": "0.12.0-outputs-385c233e",
+  "code_version": "0.12.0-outputs-b5bfc0d7",
   "api": "tt-gpu/editor-control:8000",
   "database": "tt-gpu/editor-postgres/editor/ed",
   "books": 6,
@@ -28,7 +28,7 @@
       "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
       "check": "report_snapshot_and_digest",
       "status": "PASSED",
-      "sha256": "cae4981ced4583aea25de3933cfb3e74cef9fd9b31cf5b4b1d8aae386fcc8f1a"
+      "sha256": "adaf694c3b8451c4e6c205e11eb2250c8249dd62826d1448dbbeefb7458a2ffa"
     },
     {
       "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
@@ -77,7 +77,7 @@
       "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
       "check": "report_snapshot_and_digest",
       "status": "PASSED",
-      "sha256": "56ddceb4be01ed653a0c510514d1cbee447518f75a26a5c0009d7a4ed11536c6"
+      "sha256": "0692594ffaa84b8929cbf3c7852f0066ee3edd074ab8f759f8a7ccd80836c1ac"
     },
     {
       "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
@@ -126,7 +126,7 @@
       "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
       "check": "report_snapshot_and_digest",
       "status": "PASSED",
-      "sha256": "2025e385b05163b482d295085581f9ae7d524809b58a73c1ab171be7c5178a02"
+      "sha256": "de24332b92507ad8ee8b4fccd1ed22d3fca75225f1499fe947fe47047c1f05a0"
     },
     {
       "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
@@ -175,7 +175,7 @@
       "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
       "check": "report_snapshot_and_digest",
       "status": "PASSED",
-      "sha256": "91545f13dd2fd0a7b32fdd3c08507d361b71ac863fd1c29a02aaf96178c004f1"
+      "sha256": "6a1dc6850b46b6c404d501c05190e5fd57a41c19289b1b0ae01d2f0b217704ce"
     },
     {
       "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
@@ -224,7 +224,7 @@
       "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
       "check": "report_snapshot_and_digest",
       "status": "PASSED",
-      "sha256": "7d7220f64850a5955610a107008e388baf4bf11ec401908275b81aa29ff1637f"
+      "sha256": "a3c6a41b6b3f073547f28b42f43d1cb7dda8ce7c82065b5d825599a8c2f1590c"
     },
     {
       "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
@@ -273,7 +273,7 @@
       "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
       "check": "report_snapshot_and_digest",
       "status": "PASSED",
-      "sha256": "e223cafa72df335b2d808ea9bc1cccbb80fb61787340bb24c6936b5ae4b939ef"
+      "sha256": "5f95273357af784afa5e45b20af59bbf85654c4c2ca892a4049df408768ee1cb"
     },
     {
       "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
