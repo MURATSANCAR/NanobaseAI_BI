@@ -5,6 +5,7 @@ import Node, { LayoutProvider, useLayout, type BoxMap } from './layout';
 import zekiGif from '@/assets/zeki-ai.gif';
 import type { StitchCanvasData } from './data';
 import DbTimingBadge from '../DbTiming';
+import { questionParticle } from '../interpret';
 
 /**
  * Stitch ekranının (projects/13426839861607265553/screens/c35e1503…) birebir
@@ -116,6 +117,55 @@ function BoardButton({ b }: { b: NonNullable<StitchCanvasData['main']['board']> 
       </button>
       {b.state === 'error' && b.message && <span role="alert" className="text-[11px] font-bold text-red-600">{b.message}</span>}
     </span>
+  );
+}
+
+/**
+ * Belirsiz kelime çipi, cevap metninin hemen üstünde: "Cari bakiyesi olarak yorumladım · Banka bakiyesi mi?".
+ * Cevabın kendisinden küçük ve sakin; okunan şey cevap kalsın, düzeltme de gözden kaçmasın.
+ * `context`: sistem bağlamdan emin, alternatifler yalnız noktalı altı çizili metin.
+ * `default`: tahmin; alternatifler dolgulu küçük hap, bir bakışta tıklanabilir olduğu görünsün.
+ * Giriş animasyonu yok: çip cevapla aynı anda gelir ve günde onlarca kez görülür. Yalnız basma geri bildirimi var.
+ */
+function InterpretChips({ it }: { it: NonNullable<StitchCanvasData['main']['interpret']> }) {
+  const base =
+    'inline-flex max-w-full items-center rounded-full text-left text-xs font-bold leading-snug ' +
+    'transition-[background-color,color,transform] duration-150 ease-out active:scale-[0.97] ' +
+    'motion-reduce:transition-none motion-reduce:active:scale-100 ' +
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet/60 focus-visible:ring-offset-1 ' +
+    'disabled:cursor-default disabled:opacity-50 disabled:active:scale-100 cv-interp';
+  const calm =
+    'px-1 py-0.5 text-muted underline decoration-slate-300 decoration-dotted underline-offset-2 cv-interp-calm';
+  const guess = 'px-2 py-0.5 bg-violet/10 text-violet ring-1 ring-violet/25 cv-interp-guess';
+  return (
+    <div className="mb-2 flex flex-col gap-1">
+      {it.items.map((c) => (
+        <div
+          key={c.term}
+          role="group"
+          aria-label={`“${c.term}” kelimesinin yorumu`}
+          className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 text-xs leading-snug text-muted"
+        >
+          <span className="min-w-0 break-words">
+            <strong className="font-bold text-ink">{c.chosen}</strong> olarak yorumladım
+          </span>
+          <span aria-hidden className="text-slate-300">·</span>
+          {c.alternatives.map((a) => (
+            <button
+              key={a.label}
+              type="button"
+              disabled={it.busy}
+              onClick={() => it.onPick(a.question)}
+              title={`Şöyle sorulacak: ${a.question}`}
+              aria-label={`${a.label} olarak yeniden sor: ${a.question}`}
+              className={`${base} ${c.basis === 'context' ? calm : guess}`}
+            >
+              {a.label} {questionParticle(a.label)}?
+            </button>
+          ))}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -591,6 +641,7 @@ function CanvasBody({
             {/* Decision Content & Recommended Actions */}
             <div className="w-full min-w-0 flex-1 flex flex-col justify-between sm:min-h-[140px]">
               <div>
+                {d.main.interpret && d.main.interpret.items.length > 0 && <InterpretChips it={d.main.interpret} />}
                 <p className="text-base font-bold text-ink leading-snug">
                   {d.main.text}
                 </p>

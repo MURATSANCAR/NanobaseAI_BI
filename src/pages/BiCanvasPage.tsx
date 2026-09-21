@@ -9,6 +9,7 @@ import { useCfoData } from '@/canvas/cfo';
 import { ENGINE_ENABLED, EngineAuthError, ask as askEngine, boardApi, type AskAnswer } from '@/canvas/engine';
 import { fromDto, newId, nextSlot, topZ, type BoardCard } from '@/canvas/board/store';
 import type { BoardAction } from '@/canvas/stitch/data';
+import { toChips } from '@/canvas/interpret';
 import { useQueryClient } from '@tanstack/react-query';
 import { summarizeAlerts, useCanvasQueries } from '@/canvas/data';
 import AlertsPanel from '@/canvas/alerts/AlertsPanel';
@@ -62,6 +63,8 @@ export default function BiCanvasPage() {
   const runningRef = useRef(false);
   const [queued, setQueued] = useState(0);
   const [current, setCurrent] = useState<string | null>(null);
+  /** Ekranda soru balonunda duran son soru; hata olsa da kalır ki kullanıcı neyin sorulduğunu görsün. */
+  const [shownQ, setShownQ] = useState('');
   const runNext = () => {
     const q = queueRef.current.shift();
     setQueued(queueRef.current.length);
@@ -74,6 +77,7 @@ export default function BiCanvasPage() {
     runningRef.current = true;
     setAsking(true);
     setCurrent(q);
+    setShownQ(q);
     setAskErr(null);
     setAnswer(null);
     setBoard({ state: 'idle' });
@@ -120,6 +124,15 @@ export default function BiCanvasPage() {
 
   const onAsk = (q: string) => ask(q);
 
+  // Yorum çipi: alternatife tıklamak soruyu, belirsiz kelimenin yerine alternatifin ifadesi konmuş hâliyle
+  // yeniden sormaktır; yeni uç yok. Bir soru çalışırken gelen ikinci tık (çift tık dahil) yok sayılır:
+  // runningRef ilk tıkta eşzamanlı açılır, ekran henüz yenilenmemiş olsa da.
+  const interpretChips = useMemo(() => toChips(answer?.interpretations, answeredQ), [answer, answeredQ]);
+  const rephrase = (q: string) => {
+    if (runningRef.current || !q.trim()) return;
+    ask(q);
+  };
+
   // Sohbet cevabı → pano kartı. Doğrusu sunucudaki pano: önce güncel liste okunur (başka sekmede eklenen
   // kart ezilmesin), kart boş yere eklenir, sonra sonucu sunucuda hesaplanır ki pano açılınca hazır olsun.
   const addToBoard = async () => {
@@ -158,6 +171,8 @@ export default function BiCanvasPage() {
     const rows = answer?.records?.length ?? 0;
     return {
       ...d,
+      // Balon sabit örnek soruyu değil sorulan soruyu gösterir; çipten yeniden sorulan metin de burada görünür.
+      q: shownQ ? { ...d.q, text: `“${shownQ}”` } : d.q,
       main: {
         ...d.main,
         subject: 'Verine sor',
@@ -174,6 +189,7 @@ export default function BiCanvasPage() {
         note: queued > 0 ? `${queued} soru sırada` : d.main.note,
         board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: () => void addToBoard() } : undefined,
         timing: !asking && answer?.records ? answer : null,
+        interpret: !asking && !askErr && interpretChips.length > 0 ? { items: interpretChips, busy: asking, onPick: rephrase } : undefined,
       },
       c5: {
         ...d.c5,
@@ -186,7 +202,7 @@ export default function BiCanvasPage() {
       },
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [d, answer, asking, askErr, phase, queued, board, answeredQ]);
+  }, [d, answer, asking, askErr, phase, queued, board, answeredQ, shownQ, interpretChips]);
 
   if (splash) return <Splash onDone={closeSplash} />;
 

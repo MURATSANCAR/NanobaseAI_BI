@@ -715,3 +715,16 @@
     opacity: 0.3;
   }
 }
+
+/* Yorum çipi (ZEKİ AI cevabının üstündeki "…olarak yorumladım · …mi?").
+   Tailwind'in [@media(...)]: keyfi varyantı bu kurulumda @media sarmalayıcısı üretmedi —
+   sınıf seçici olarak çıkıyor ama koşulsuz ya da hiç uygulanmıyordu. Projenin kendi deseni
+   (düz CSS) kullanılır. Hover yalnız fareli cihazlarda; dokunmatikte hedef en az 36px. */
+@media (hover: hover) and (pointer: fine) {
+  .cv-interp-calm:hover { color: #7C5CFF; text-decoration-color: rgb(124 92 255 / 0.5); }
+  .cv-interp-guess:hover { background-color: rgb(124 92 255 / 0.15); }
+}
+@media (pointer: coarse) {
+  .cv-interp { min-height: 2.25rem; }
+  .cv-interp-guess { padding-left: 0.75rem; padding-right: 0.75rem; }
+}

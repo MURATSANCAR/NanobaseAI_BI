@@ -89,6 +89,21 @@ export type AskAnswer = DbTiming & {
   records?: Array<Record<string, unknown>>;
   rowCount?: number;
   latency_ms?: number;
+  /** Belirsiz kelimelerin nasıl yorumlandığı ("bakiye" → Cari bakiyesi). Yoksa ya da boşsa hiçbir şey gösterilmez. */
+  interpretations?: AnswerInterpretation[];
+};
+
+/** Belirsiz bir kelimenin seçilen anlamı. */
+export type InterpretationChoice = { label: string; conceptId?: string };
+/** Seçilmeyen anlam; `rephrase` sorudaki kelimenin yerine konup soru yeniden sorulur. */
+export type InterpretationAlternative = InterpretationChoice & { rephrase: string };
+export type AnswerInterpretation = {
+  term: string;
+  chosen: InterpretationChoice;
+  /** En fazla 3. */
+  alternatives: InterpretationAlternative[];
+  /** context: bağlamdan çıkarıldı; default: bağlam yoktu, en olası anlam alındı. */
+  basis: 'context' | 'default';
 };
 
 /** Doğal dil sorusu. Motor SQL üretir, çalıştırır ve özetler. */

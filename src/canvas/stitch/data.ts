@@ -15,6 +15,16 @@ export type BoardAction = {
   message?: string;
 };
 
+/** Cevabın üstündeki düzeltme çipi: "Cari bakiyesi olarak yorumladım · Banka bakiyesi mi?". */
+export type InterpretChip = {
+  term: string;
+  /** Seçilen anlamın etiketi. */
+  chosen: string;
+  basis: 'context' | 'default';
+  /** Her alternatif, tıklanınca sorulacak tam soruyu taşır; kullanıcı ne sorulacağını ipucunda görür. */
+  alternatives: Array<{ label: string; question: string }>;
+};
+
 export type StitchCanvasData = {
   tenant: string;
   section: string;
@@ -107,6 +117,13 @@ export type StitchCanvasData = {
     note: string;
     /** Sohbet cevabını kişinin panosuna kart olarak ekler; yalnız satır dönen cevapta var. */
     board?: BoardAction;
+    /** Belirsiz kelimelerin yorumu; yalnız motor `interpretations` döndürünce dolar. */
+    interpret?: {
+      items: InterpretChip[];
+      /** Soru çalışırken açık; çipler tıklanmaz. */
+      busy: boolean;
+      onPick: (question: string) => void;
+    };
     /** Özetin dayandığı verinin veritabanından gelme süresi. */
     timing?: DbTiming | null;
   };
