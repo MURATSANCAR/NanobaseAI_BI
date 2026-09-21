@@ -141,9 +141,17 @@ def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str
     user = question if not book_title else f"Kitap: «{book_title}». Soru: {question}"
     payload = {"model": model, "stream": False,
                "messages": [{"role": "system", "content": system or SYSTEM}, {"role": "user", "content": user}]}
-    with httpx.Client(timeout=httpx.Timeout(TIMEOUT_SEC, connect=15.0)) as client:
-        r = client.post(f"{base}/chat/completions", json=payload,
-                        headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
+    headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    # Motora internet üzerinden gidiliyorsa nginx ikinci bir gizli başlık ister; ad:değer olarak verilir.
+    extra = (os.environ.get("EDITOR_EXTRA_HEADER") or "").strip()
+    if ":" in extra:
+        name, _, value = extra.partition(":")
+        headers[name.strip()] = value.strip()
+    # Kendi imzalı sertifika: dosya verilmişse ona göre doğrulanır (doğrulama kapatılmaz).
+    ca = (os.environ.get("EDITOR_CA_FILE") or "").strip()
+    verify: Any = ca if ca and os.path.isfile(ca) else True
+    with httpx.Client(timeout=httpx.Timeout(TIMEOUT_SEC, connect=15.0), verify=verify) as client:
+        r = client.post(f"{base}/chat/completions", json=payload, headers=headers)
     if r.status_code >= 400:
         detail = r.text[:300]
         raise BookAskError(f"Editör motoru {r.status_code}: {detail}", 502)
