@@ -75,6 +75,8 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
                 spans.append(_span(gid,page["page_no"],base,start,end,ocr_kinds.get(text,"body") if not layer else "body"))
     if layer and ocr:
         layer_key = key(layer["text"])
+        from .document import _garbled_ratio, _spaced_ratio, GARBLED_MAX, SPACED_MAX
+        layer_healthy = _garbled_ratio(layer["text"]) <= GARBLED_MAX and _spaced_ratio(layer["text"]) <= SPACED_MAX
         for start,end in blocks(ocr["text"]):
             candidate = _span(gid,page["page_no"],ocr,start,end,ocr_kinds.get(ocr["text"][start:end],"body"))
             candidate_key = key(candidate["text"])
@@ -85,7 +87,16 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
             # Similarity only flags a disagreement; it never rewrites either source.
             similar = any(SequenceMatcher(None,candidate_key,key(s["text"]),autojunk=False).ratio() >= .6
                 for s in spans if s["source"]=="TEXT_LAYER")
-            if similar:
+            if similar and layer_healthy:
+                # The publisher's own digital text against an 8B model's reading of pixels is
+                # not two sources in conflict. Measured on six books (171 OCR'd pages): every
+                # disagreement with a healthy layer was the OCR's slip ("alındaki" for
+                # "alnındaki", "bağirdik", a looped phrase) — and pages are OCR'd mostly because
+                # a picture covers them, not because their text is suspect. The reading is
+                # kept as a variant; it is a conflict only where the layer itself is broken.
+                candidate["disposition"] = "OCR_VARIANT_OF_HEALTHY_TEXT_LAYER"
+                alternatives.append(candidate)
+            elif similar:
                 candidate["disposition"] = "CONFLICT_REQUIRES_REVIEW"
                 alternatives.append(candidate)
                 issues.append("SOURCE_TEXT_CONFLICT")

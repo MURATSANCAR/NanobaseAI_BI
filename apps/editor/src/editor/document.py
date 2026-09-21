@@ -77,6 +77,22 @@ def _pages_dir(bv: dict) -> Path:
     return d
 
 
+# Above these the text layer itself is suspect (a custom font mapped to wrong code points,
+# letter-spaced headings): the same two numbers decide that a page needs OCR and whether a
+# disagreeing OCR reading is a real source conflict (source.py).
+GARBLED_MAX = 0.02
+SPACED_MAX = 0.3
+
+
+def _collapse_repeats(text: str) -> tuple[str, int]:
+    """A vision model that falls into a loop writes one phrase over and over until its budget
+    ends (measured: 7 of 171 OCR'd pages, one page 8.552 characters for 873 of real text). A
+    phrase repeated six or more times in a row is kept once; fewer is left alone, because a
+    children's book does say "tık tık tık tık". Returns (text, characters cut)."""
+    out = re.sub(r"(?s)(\S.{1,120}?)(?:\s*\1){5,}", r"\1", text)
+    return out, len(text) - len(out)
+
+
 def _garbled_ratio(text: str) -> float:
     """Share of Private Use Area glyphs: a font with a custom encoding exports
     its text layer as unreadable symbols, so the page needs OCR instead."""
@@ -150,8 +166,8 @@ def create_page_manifest(book_version_id: str) -> dict:
         # OCR when there is no usable text layer on a page that has pictures, or
         # the layer is letter-spaced / broken, or a picture covers most of the page
         # (text drawn inside illustrations is not in the text layer).
-        needs_ocr = ((n_chars < 30 and n_img > 0) or _spaced_ratio(text) > 0.3 or coverage > 0.6
-                     or _garbled_ratio(text) > 0.02)
+        needs_ocr = ((n_chars < 30 and n_img > 0) or _spaced_ratio(text) > SPACED_MAX or coverage > 0.6
+                     or _garbled_ratio(text) > GARBLED_MAX)
         r = render_page(book_version_id, i)
         rows.append((bv["id"], i, page.rect.width, page.rect.height, n_chars, n_img, needs_ocr,
                      r["path"], r["dpi"], nontext_ink_ratio(page)))
@@ -305,6 +321,10 @@ async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dic
         [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
         prompt=ref, schema=schemas.OCR, pages=[page_no], max_tokens=4096, temperature=0.0)
     blocks = [b for b in out["blocks"] if b["text"].strip()]
+    cut = 0
+    for b in blocks:
+        b["text"], n = _collapse_repeats(b["text"].strip())
+        cut += n
     text = "\n\n".join(b["text"].strip() for b in blocks)
     with db.tx() as c:
         # Empty OCR is a completed observation, not a missing execution.
@@ -318,7 +338,7 @@ async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dic
                 c.execute("INSERT INTO paragraph(generation_id, page_no, idx, text, source)"
                           " VALUES (%s,%s,%s,%s,'OCR') ON CONFLICT DO NOTHING",
                           (generation_id, page_no, k, b["text"].strip()))
-    return {"page_no": page_no, "blocks": len(blocks), "chars": len(text),
+    return {"page_no": page_no, "blocks": len(blocks), "chars": len(text), "loop_chars_removed": cut,
             "in_image_text": [b["text"] for b in blocks if b["kind"] not in ("body", "heading")]}
 
 
