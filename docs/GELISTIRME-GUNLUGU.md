@@ -14,8 +14,23 @@ job başına tek generation; transaction ile tekrar makbuzu; yalnız okuyan kont
 Analiz servisleri opt-in `analysis` profilinde. Önceki mühürlü içerikler korunur,
 yeni altyapıda `LEGACY_UNASSESSED/UNTRACKED/BLOCKED` olarak gösterilir.
 
-Bu commit kurulum adayıdır; yerel test çalıştırılmadı. Sunucuda imaj hazırlığı/migration
-ve gerçek API + gerçek DB salt okunur kabul sonuçları kurulumdan sonra eklenecek.
+**Canlı kurulum:** `0.10.0-foundation-681f7ec`, imaj
+`sha256:99f744654dec02a7b53ad80d1d4cd4310f9e53377689c2e9ceaa35958446ddbc`.
+`/data/editor/app` → `/data/editor/releases/681f7ec`; yalnız `012_foundation.sql` uygulandı.
+Kontrol API localhost `19140` üzerinde açık, üretici/model servisleri kapalı.
+20 eski nesil ve 100 çıktı ayrı altyapı kayıtlarında değerlendirilmemiş olarak izleniyor.
+
+**Gerçek API + gerçek DB doğrulaması:** tt-gpu/editor-control API'sinde 6 gerçek kitabın
+claim/event/emotion tam değerleri bağımsız taban tablo hesabıyla karşılaştırıldı: 18/18 geçti.
+İlk 10 kontrol de 10 geçti/0 kaldı/0 doğrulanamadı. Sayfalama/kesilme, anahtarsız erişim,
+geçersiz/olmayan nesil ve eski nesillerin hazır gösterilmemesi denetlendi. Yerel test yok.
+5.788 claim, 1.734 event, 875 emotion, 15 report ve 20 generation kaydının kurulum öncesi/sonrası
+içerik hashleri aynı. Aktif iş 0, GPU 1 kullanımı 0 MiB. Kanıt:
+`apps/editor/docs/evidence/2026-09-21-foundation-verification.json`.
+
+**Sınır:** mutasyon/çökme sonrası yeniden deneme ve otomatik yeniden üretim için bu salt
+okunur doğrulama yeterli değildir; yeni nesil aşamasında DOĞRULANAMADI olarak açık kalır.
+GitHub push HTTPS kimlik bilgisi olmadığı için başarısız; yerel main commitleri hazır.
 Otomatik yeniden üretim tüketicisi, eski akışın tüm yazım/okuma yollarına entegrasyon
 ve yeni nesil semantik kabulü bu hazırlığın tamamlanma iddiasına dahil değildir.
 

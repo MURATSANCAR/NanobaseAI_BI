@@ -59,4 +59,10 @@ Sayfalama, tam kayıt değerleri, kesilme, reddedilmiş kayıt filtresi ve eski 
 hazır gösterilmemesi denetlenir. Mutasyon/çökme sonrası tekrar/otomatik yeniden üretim
 bu salt okunur koşunun kabul kapsamına girmez; yeni nesil aşamasında doğrulanmalıdır.
 
-Kurulum ve canlı doğrulama sonucu geliştirme günlüğüne kaydedilir.
+Kurulum: `0.10.0-foundation-681f7ec`; kontrol imajı
+`sha256:99f744654dec02a7b53ad80d1d4cd4310f9e53377689c2e9ceaa35958446ddbc`.
+6 gerçek kitap × 3 kayıt türü = **18/18 tam API–DB karşılaştırması geçti**.
+Yetki, sayfalama ve eski nesil kabul engelleri de doğrulandı. Claim/event/emotion/report/generation
+tablo içerik hashleri kurulumdan önce ve sonra aynı. Aktif iş 0; GPU 1 kullanımı 0 MiB.
+Kanıt: [canlı doğrulama](evidence/2026-09-21-foundation-verification.json).
+Otomatik yeniden üretim, çökme sonrası tekrar ve yeni nesil semantik kabulü **DOĞRULANAMADI**.

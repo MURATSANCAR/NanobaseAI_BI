@@ -1,0 +1,178 @@
+{
+  "code_version": "0.10.0-foundation-681f7ec",
+  "api": "editor-control:8000",
+  "database": "tt-gpu/editor-postgres/editor/ed",
+  "real_books": 6,
+  "results": [
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "kind": "claims",
+      "count": 195,
+      "status": "PASSED",
+      "sha256": "8a1fbb158d42297d46986e2ff13f2a0f86b88c01725304d0d000c6ab53017658"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "kind": "events",
+      "count": 14,
+      "status": "PASSED",
+      "sha256": "083a1486ee8cec5e9162d48606e616219a338564a30cba4fc591269223aef788"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "kind": "emotions",
+      "count": 28,
+      "status": "PASSED",
+      "sha256": "af2cd87cf65320c03131a68343ad959ae9deb80a1fb1313e9f1f43cc78124367"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "kind": "claims",
+      "count": 417,
+      "status": "PASSED",
+      "sha256": "249f343e155703a61e77acb7785985ac3450e586dbb85bd574ce969997a20cbe"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "kind": "events",
+      "count": 25,
+      "status": "PASSED",
+      "sha256": "443c7e565087d1f961037d0ef0e58d74d6d36dd59b671edcae0a1a545fae698e"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "kind": "emotions",
+      "count": 77,
+      "status": "PASSED",
+      "sha256": "68996ac324990152206913ff5bccec7b65ad1b5b40b4fd52c41816647e677776"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "kind": "claims",
+      "count": 338,
+      "status": "PASSED",
+      "sha256": "f5aaae45f0a4bc72aa2be6da8636d0e6a5710689e1c074272327d6f5bc45ad91"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "kind": "events",
+      "count": 16,
+      "status": "PASSED",
+      "sha256": "31eb8d4474828caedc1af6b8941ed14a37dcf405f9e12878897789ff0e09b49f"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "kind": "emotions",
+      "count": 73,
+      "status": "PASSED",
+      "sha256": "bbc0a466f4510334346794d57e24bd6c47c476e29c3921f0ce204d27021afcae"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "kind": "claims",
+      "count": 466,
+      "status": "PASSED",
+      "sha256": "57ecd8f8ebe2edc455617c7a086df60919c9380bf1902111a620290c7419f39f"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "kind": "events",
+      "count": 32,
+      "status": "PASSED",
+      "sha256": "fcddddd0b413c5f007f026b7151a0c00fb34947f1e32f6fa519bf1744d3aa77b"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "kind": "emotions",
+      "count": 81,
+      "status": "PASSED",
+      "sha256": "a945abf3f534632ed6024dd5561d2aa3e7826ef79e04bbf26e03dac53149d26b"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "kind": "claims",
+      "count": 176,
+      "status": "PASSED",
+      "sha256": "6fc9c8a331b8005de8980c1ad2e5ec5f409f6ff6fb678df031eac7c982fa2af3"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "kind": "events",
+      "count": 11,
+      "status": "PASSED",
+      "sha256": "840e971c75dd050220bef1db8016789ea7da21adde4e453bce9e02eaa148d5dc"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "kind": "emotions",
+      "count": 21,
+      "status": "PASSED",
+      "sha256": "e995ec3234f39c491564d3e6de57a97fb7fec2655b85877faff67393c6ce1955"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "kind": "claims",
+      "count": 267,
+      "status": "PASSED",
+      "sha256": "e38e62d85989c4894c0a98ade5a31a0365a5710a4541a59adf694e3bf1f9a820"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "kind": "events",
+      "count": 69,
+      "status": "PASSED",
+      "sha256": "8197383a5e70aae78c93ead404439a9dfb7c4a00e297ee92e356d6a14e0fb4fc"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "kind": "emotions",
+      "count": 38,
+      "status": "PASSED",
+      "sha256": "bbe80ddbeae2c46ad9e3151aeae9432fdb03a9c83f234f5dc44c34a1f9fc0109"
+    }
+  ],
+  "maintenance": true,
+  "auth_validation": "PASSED",
+  "scope": "read-only foundation API",
+  "not_verified": [
+    "automatic rebuild",
+    "crash-retry persistence",
+    "new-generation semantic acceptance"
+  ],
+  "progress_updates": [
+    {
+      "progress": 10,
+      "passed": 10,
+      "failed": 0,
+      "unverified": 0
+    }
+  ],
+  "image_id": "sha256:99f744654dec02a7b53ad80d1d4cd4310f9e53377689c2e9ceaa35958446ddbc",
+  "deployed_commit": "681f7ec",
+  "gpu_1_memory_mib": 0,
+  "active_analysis_jobs": 0,
+  "legacy_generations": 20,
+  "untracked_artifacts": 100,
+  "preserved_tables": {
+    "claim": {
+      "rows": 5788,
+      "before_and_after_md5": "047d97ae8ba3e388045d51c23ddf758c"
+    },
+    "event": {
+      "rows": 1734,
+      "before_and_after_md5": "f61cbf692509ae4a369feba5794abefe"
+    },
+    "emotion": {
+      "rows": 875,
+      "before_and_after_md5": "461696975adfce73a5abf44187fa1403"
+    },
+    "report": {
+      "rows": 15,
+      "before_and_after_md5": "e3b562809720562f8b21eaa5e7ea7420"
+    },
+    "generation": {
+      "rows": 20,
+      "before_and_after_md5": "ed8621686e30dfeb681723837ca67a3a"
+    }
+  }
+}
