@@ -24,7 +24,7 @@ for t in sl_concept sl_mapping sl_evidence; do
 done
 
 echo "== hedef (VM) bugün"
-ssh -o BatchMode=yes timas-vm "$VMC -F, -tA -c \"select status||'='||count(*) from sl_concept group by 1\"" || true
+ssh -o BatchMode=yes timas-vm "$VMC -F, -tA -c \"select status, count(*) from sl_concept group by status order by 2 desc\"" || true
 
 echo "== geçici tablolara aktarılıyor"
 for t in sl_concept sl_mapping sl_evidence; do
@@ -40,18 +40,13 @@ ssh -o BatchMode=yes timas-vm "$VMC -F'|' -tA -c \"
   select 'yeni kavram='||count(*) from stage_sl_concept s where not exists (select 1 from sl_concept c where c.id = s.d->>'id')
   union all select 'guncellenen='||count(*) from stage_sl_concept s join sl_concept c on c.id = s.d->>'id'
   union all select 'VMe ozel (dokunulmaz)='||count(*) from sl_concept c where not exists (select 1 from stage_sl_concept s where s.d->>'id' = c.id)
-  union all select 'ad cakismasi='||count(*) from sl_concept c join stage_sl_concept s on s.d->>'normalized_term'=c.normalized_term and s.d->>'semantic_type'=c.semantic_type and s.d->>'id' <> c.id\""
+  union all select 'kaynak kavram toplam='||count(*) from stage_sl_concept\""
 
 if [ "$APPLY" != "--apply" ]; then echo "== KURU KOŞU — hiçbir şey yazılmadı. Uygulamak için: bash ~/catalog-sync.sh --apply"; exit 0; fi
 
 echo "== yazılıyor"
 ssh -o BatchMode=yes timas-vm "$VMC -v ON_ERROR_STOP=1 -q -c \"
 BEGIN;
-UPDATE sl_concept c SET status='DEPRECATED', updated_at=now()
- FROM stage_sl_concept s
- WHERE s.d->>'normalized_term'=c.normalized_term AND s.d->>'semantic_type'=c.semantic_type
-   AND s.d->>'id' <> c.id AND c.status <> 'DEPRECATED';
-
 INSERT INTO sl_concept (id,tenant_id,datasource_id,term,normalized_term,semantic_type,domain,sense_id,status,confidence,version,synonyms_json,explain_json,created_at,updated_at)
 SELECT d->>'id', d->>'tenant_id', d->>'datasource_id', d->>'term', d->>'normalized_term', d->>'semantic_type',
        d->>'domain', d->>'sense_id', d->>'status', (d->>'confidence')::float, (d->>'version')::int,
@@ -80,4 +75,4 @@ echo "== VM köprüsü yenileniyor (katalog yeniden okunsun)"
 ssh -o BatchMode=yes timas-vm "cd /home/ai/bi-docker/infra/docker/bi && docker compose restart bridge && sleep 25 && docker compose ps --format '{{.Service}} {{.State}}'"
 
 echo "== sonuç (VM)"
-ssh -o BatchMode=yes timas-vm "$VMC -F, -tA -c \"select status||'='||count(*) from sl_concept group by 1\""
+ssh -o BatchMode=yes timas-vm "$VMC -F, -tA -c \"select status, count(*) from sl_concept group by status order by 2 desc\""
