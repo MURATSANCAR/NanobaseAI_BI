@@ -22,7 +22,10 @@ for index,(name,q) in enumerate(questions,1):
  start=time.time()
  try:
   with urllib.request.urlopen(req,timeout=480) as f:res=json.load(f)
-  answer=res['choices'][0]['message'];history.append(answer)
+  choice=res['choices'][0]
+  if choice.get('finish_reason') != 'stop':
+   raise RuntimeError('Hermes completion failed: '+str(choice.get('finish_reason'))+' '+str(choice.get('message',{}).get('content',''))[:500])
+  answer=choice['message'];history.append(answer)
   out={'index':index,'name':name,'question':message,'elapsed':time.time()-start,'response':res,'transport_passed':True}
  except Exception as exc:
   out={'index':index,'name':name,'elapsed':time.time()-start,'error':str(exc),'transport_passed':False}

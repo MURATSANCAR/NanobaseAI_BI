@@ -294,8 +294,13 @@ def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str
         log.warning("editorial engine %s: %s", r.status_code, r.text[:300])
         raise BookAskError(UNAVAILABLE, 502)
     try:
-        text = (r.json()["choices"][0]["message"]["content"] or "").strip()
-    except (ValueError, KeyError, IndexError) as e:
+        choice = r.json()["choices"][0]
+        # Hermes may return HTTP 200 for a failed gateway call. A diagnostic
+        # message is not a book answer, nor is a token-truncated completion.
+        if choice.get("finish_reason") != "stop":
+            raise BookAskError(UNAVAILABLE, 502)
+        text = (choice["message"]["content"] or "").strip()
+    except (ValueError, KeyError, IndexError, TypeError, AttributeError) as e:
         log.warning("editorial engine: beklenmeyen cevap biçimi")
         raise BookAskError(UNAVAILABLE, 502) from e
     if not text:

@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — VPN dönüşü, yönetim tüneli ve hata yanıtı sözleşmesi
+
+- VPN geri geldi; GPU SSH yönetimi CPU localhost18891 ters tüneli üzerinden mevcut anahtar/host doğrulamasıyla çalışıyor. Bakım kilidi geri açıldı, aktif analiz/bekleyen rebuild sıfır.
+- GPU1c27c8ce kuruldu; gerçek PDF45/45 ve yedi MCP aracı329/329 kontrol geçti.
+- Bakımda Hermes HTTP200 içinde finish_reason=error döndürüyor. Portalın bunu kitap cevabı sayması engelleniyor; gerçek hata/iyileşme kabulü sırada. Koşucu da hata bitişini başarı saymaz. Genel üretim kabulü yok.
+
 ## 2026-09-21 — Editor portal gerçek tarayıcı konuşma kabulü
 
 - 474cb2d9 portalında gerçek kullanıcı oturumuyla iki soru gönderildi: bekleyen yanıt sırasında ikinci gönderim engellendi, parentId ilk soruya bağlandı, takipte Baba/Yavru Vombat adları doğru. 11,8 ve 1,7 saniye. Dört genişlikte taşma yok; 8 API/DB kontrolü geçti. Kanıtlar apps/editor/docs/evidence/2026-09-21-portal-context-*.json.
