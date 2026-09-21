@@ -2,10 +2,18 @@
 
 **Karar: ÜRETİME HAZIR DEĞİL.** Teknik çalışabilirlik ile kitap doğruluğu ayrı kabul edilir. Kullanıcı onaysız hazırlık/yayın/doğrulama yetkisi verdi; bu belge tamamlanmamış maddeleri onaylanmış saymaz.
 
-## Güncel durum ve sürümler
+## Güncel genel kabul — 50152949
+
+Kullanıcının kitaba özel çözüm yasağı [PRODUCTION-CONTRACT.md](PRODUCTION-CONTRACT.md) ve kök AGENTS.md içindedir. Sunucuda `0.17.1-contract-50152949` kuruldu: tam Critic ID kapsamı, değişmez ilk model güveni, kısmi zorunlu görev hatasında durma ve kaynak adı/betimleyici etiket ayrımı bütün kitaplara uygulanır.
+
+Altı gerçek katalog PDF'si hash ile eşleştirildi (32, 48, 64, 128, 128, 144 sayfa). Gerçek jobs MCP üzerinden özel `editor-corpus-50152949` kuyruğunda tek ağır iş sıralı çalışır, ilk teknik hatada durur. Başlangıç iş kimliği `7dfa0e8f-a054-417f-ba2a-f4f3a1526adc`; canlı durum GPU `/data/editor/storage/corpus-50152949/state.json`. Koşunun başlaması kabul değildir; teknik ve bağımsız semantik sonuçlar henüz açık. Genel taramalar kapalı.
+
+Salt okunur ön denetimde altı kitabın dördünde kaynakta bulunmayan ad/etiketler görüldü: [korpus başlangıç kanıtı](evidence/2026-09-21-corpus-alias-baseline.json). Eski puanları ilk model puanı diye geri doldurma veya eski kimlikleri varsayımla dönüştürme yapılmadı; yeni nesiller kullanılır.
+
+## Önceki hedefli kabul ve sürümler
 
 - **Son tam analiz FAILED:** `0439924a`, nesil `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`, iş `2cc4bd08-67cf-424a-af67-4f686ea6b8a3`, adım 13/15. Hızlı tarama 32/32, derin tarama 29/29 tamamlandı. 37 görsel figür belirsiz. Tarama tamamlanması kimlik/kitap kabulü değildir.
-- **Son GPU sürümü `f935b9d9` / v9:** rev3477, beş READY çıktı, teknik SUCCEEDED; analitik NEEDS_REVIEW, `accepted=false`. Gerçek API/PG/Qdrant 313/313 ve hedefli 5/5 kontrol geçti. Aynı sürümde yeniden çağrı `ALREADY_CURRENT`, ek model üretimi yok. Önceki `f1cc4614` sayfa rolü yazım/okuma düzeltmesi 2/2 geçti. [Kurtarma kaydı](RECOVERY-2026-09-21.md).
+- **Önceki GPU sürümü `f935b9d9` / v9:** rev3477, beş READY çıktı, teknik SUCCEEDED; analitik NEEDS_REVIEW, `accepted=false`. Gerçek API/PG/Qdrant 313/313 ve hedefli 5/5 kontrol geçti. Aynı sürümde yeniden çağrı `ALREADY_CURRENT`, ek model üretimi yok. Önceki `f1cc4614` sayfa rolü yazım/okuma düzeltmesi 2/2 geçti. [Kurtarma kaydı](RECOVERY-2026-09-21.md).
 - Genel analiz ve yeniden üretim işçileri kapalı. Kontrollü kabul için servislerin açılması genel taramaların açılması anlamına gelmez. Bakım anahtarının önceki ölçümleri güncel durum yerine kullanılamaz.
 - CPU portalın konuşma bağlamı `474cb2d9`; bakım hatasını cevap saymayı engelleyen düzeltme `40b19439`. `finish_reason=stop` dışındaki Hermes sonuçları kitap cevabı olarak yayımlanmaz.
 - GPU yönetim tüneli **kurulu ve doğrulandı**: CPU loopback `18891` → GPU SSH. Normal VPN yolu kopuk olsa da bu yönetim yolu çalışıyor; mevcut anahtar ve host doğrulaması korunur.

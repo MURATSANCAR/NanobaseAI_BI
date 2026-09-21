@@ -1,0 +1,111 @@
+[
+  {
+    "book_id": "a4abe9b9-40d3-4841-8bef-6633b215e57d",
+    "pages": 144,
+    "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+    "characters": 22,
+    "unbacked": [
+      {
+        "name": "Levent",
+        "status": "CONFIRMED",
+        "unbacked_names": [
+          "Anlatıcı"
+        ]
+      },
+      {
+        "name": "Sürücü",
+        "status": "CANDIDATE",
+        "unbacked_names": [
+          "Sürücü"
+        ]
+      },
+      {
+        "name": "Beyaz Kedi",
+        "status": "CANDIDATE",
+        "unbacked_names": [
+          "Beyaz Kedi"
+        ]
+      }
+    ]
+  },
+  {
+    "book_id": "d2d4a6f1-e5b3-4415-9d68-48f8fe768c03",
+    "pages": 32,
+    "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a",
+    "characters": 15,
+    "unbacked": [
+      {
+        "name": "Anne ve Baba Vombat",
+        "status": "CANDIDATE",
+        "unbacked_names": [
+          "Anne ve Baba Vombat"
+        ]
+      }
+    ]
+  },
+  {
+    "book_id": "66c82a90-f6f7-493c-aeae-61e2531f373b",
+    "pages": 128,
+    "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+    "characters": 34,
+    "unbacked": [
+      {
+        "name": "Apartman sakinleri",
+        "status": "CANDIDATE",
+        "unbacked_names": [
+          "Apartman sakinleri"
+        ]
+      },
+      {
+        "name": "Dükkan Sahibi",
+        "status": "CANDIDATE",
+        "unbacked_names": [
+          "Dükkan Sahibi"
+        ]
+      },
+      {
+        "name": "Televizyon kadını",
+        "status": "CANDIDATE",
+        "unbacked_names": [
+          "Televizyon kadını"
+        ]
+      },
+      {
+        "name": "Sakallı Adam",
+        "status": "CANDIDATE",
+        "unbacked_names": [
+          "Sakallı Adam"
+        ]
+      }
+    ]
+  },
+  {
+    "book_id": "62415920-1488-4c90-9f6f-30863ad8e767",
+    "pages": 128,
+    "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+    "characters": 11,
+    "unbacked": []
+  },
+  {
+    "book_id": "f37a0dc1-faf7-4c36-8043-04fabc361728",
+    "pages": 64,
+    "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+    "characters": 9,
+    "unbacked": [
+      {
+        "name": "Vahti",
+        "status": "CONFIRMED",
+        "unbacked_names": [
+          "Oğlan"
+        ]
+      }
+    ]
+  },
+  {
+    "book_id": "b121bd76-92b8-496b-8cc7-ce8818b8a0e1",
+    "pages": 48,
+    "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+    "characters": 9,
+    "unbacked": []
+  }
+]
