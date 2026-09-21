@@ -14,7 +14,7 @@
 1. Önceki nesilde düzeltme/çıktı kurtarma: [IDENTITY-COVERAGE.md](IDENTITY-COVERAGE.md), rev3009, beş güncel READY çıktı; 371 gerçek API/DB/Qdrant kontrolü. Tarihsel tam iş FAILED kalır; analitik durum NEEDS_REVIEW.
 2. Yeni sınırlı sohbet MCP: sunucuda gerçek DB/snapshot ile **317 kontrol geçti**. GPU kanıtı `/data/editor/backups/20260921-production/chat-reads.json`; bağlantı kesilmeden sonuç gözlendi, dosya henüz yerel depoya alınamadı. Bu sayı sonradan hazırlanan yedi araçlı sürümün kabulü değildir.
 3. Gerçek Hermes üzerinden 10 soru: [ham yanıtlar](evidence/2026-09-21-production-chat-ten.jsonl). On yanıtın HTTP ile dönmesi semantik kabul değildir. Çalıştırma CPU, Hermes/model/kitap DB GPU.
-4. Portal gerçek oturumlu tarayıcı: 320/390/768/1440 genişliklerinde soru alanı ve gönderme düğmesi erişilebilir, sayfa yatay taşmaz. Konuşma yaşam döngüsü ayrıca kabul edilmelidir.
+4. Portal gerçek oturumlu tarayıcı: 320/390/768/1440 genişliklerinde soru alanı ve gönderme düğmesi erişilebilir, sayfa yatay taşmaz. [Boyut kanıtı](evidence/2026-09-21-portal-context-browser.json). Gerçek tarayıcıdan iki soru gönderildi: beklerken ikinci gönderim kapalı, parentId ilk soruya bağlı, takipte iki isim doğru. [Yaşam döngüsü kanıtı](evidence/2026-09-21-portal-context-lifecycle.json). Yanıtlar 11,8 sn / 1,7 sn; bu senaryo bütün kitap doğruluğu kabulü değildir.
 
 ## On soruda bulunan engeller
 
@@ -64,3 +64,5 @@ GitHub origin yayını HTTPS kimliği bulunamadığından engelli; yerel main co
 4. `verify_pdf_layout.py` ile gerçek orijinal PDF geometri/künye/biyografi kontrolleri; kapsam/kimlik düzeltmelerini yeni nesilde değerlendir.
 5. Yeni tam nesil, kaynak/kimlik yeterliliği, beş çıktı ve Qdrant tutarlılığı, düzeltme/çökme kurtarma ve gerçek portal sohbeti kabulü.
 6. Kabul sürümü main/origin/sunucuda aynı; başarısız veya değerlendirilmemiş alanlar açıkça raporlanır. Ancak bundan sonra üretim kararı.
+
+Son hazırlık commit’i `91a860f8`; GPU bu commit’e geçirilmedi. CPU’nun dört portal kaynak dosyası `474cb2d9` ile eş; son commit bu dosyaları değiştirmedi. 46 yerel/remote ref içinde main dışında kalmış commit sayısı sıfır; origin push kimlik hatası nedeniyle başarısız.

@@ -1,0 +1,54 @@
+{
+  "blockedWhileWaiting": true,
+  "sent": [
+    {
+      "question": "Dünyanın En Korkak Hayvanı kitabında Baba Vombat ve Yavru Vombat aynı kişi mi? Kısaca söyle."
+    },
+    {
+      "question": "Az önce hangi iki karakteri sordum? Yalnız adlarını yaz.",
+      "parentId": "5a44e224e1d240e5a51fea973be081b3"
+    }
+  ],
+  "answerIds": [
+    "5a44e224e1d240e5a51fea973be081b3",
+    "08790a7def474ed589d6d143e0256d07"
+  ],
+  "parentLinked": true,
+  "followupCorrect": true,
+  "answers": [
+    {
+      "id": "5a44e224e1d240e5a51fea973be081b3",
+      "bookKey": "",
+      "bookTitle": null,
+      "question": "Dünyanın En Korkak Hayvanı kitabında Baba Vombat ve Yavru Vombat aynı kişi mi? Kısaca söyle.",
+      "status": "bitti",
+      "answer": "Hayır, aynı kişi değiller: Baba Vombat, Yavru Vombat'ın babası. Kitap, Baba Vombat'ı \"Yavru Vombat'ın babası, oğlunun meraklı hâllerini seven\" bir karakter olarak tanımlıyor [s. 6, 12, 20]. Yavru Vombat ise hikâyenin ana karakteri, meraklı bir vombat yavrusu [s. 5].\n\nKüçük not: Bu kitabın analitik incelemesi tam olarak tamamlanmadı, cevaplar kaynağına dayalı taslaktan geldi.",
+      "notFound": false,
+      "cards": [],
+      "cardError": null,
+      "cardMatch": null,
+      "error": null,
+      "elapsedMs": 11836,
+      "username": "timasai",
+      "createdAt": "2026-09-21T15:23:21.756028+00:00",
+      "finishedAt": "2026-09-21T15:23:34.956682+00:00"
+    },
+    {
+      "id": "08790a7def474ed589d6d143e0256d07",
+      "bookKey": "",
+      "bookTitle": null,
+      "question": "Az önce hangi iki karakteri sordum? Yalnız adlarını yaz.",
+      "status": "bitti",
+      "answer": "Baba Vombat, Yavru Vombat",
+      "notFound": false,
+      "cards": [],
+      "cardError": null,
+      "cardMatch": null,
+      "error": null,
+      "elapsedMs": 1707,
+      "username": "timasai",
+      "createdAt": "2026-09-21T15:23:36.918203+00:00",
+      "finishedAt": "2026-09-21T15:23:38.629853+00:00"
+    }
+  ]
+}

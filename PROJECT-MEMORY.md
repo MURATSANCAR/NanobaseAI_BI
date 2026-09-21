@@ -173,3 +173,5 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 **Editor konuşma bağlamı (2026-09-21):** Portal parentId zinciri aynı tenant/kullanıcı/kitap için son sekiz tamamlanmış yanıtı taşır; Hermes kilidi istek bazında ayrıdır. Gerçek sunucu kabulü bekliyor; genel üretim kabulü yok.
 
 **Editor üretim hazırlığı devamı (2026-09-21):** GPU d596f3c5 altı sınırlı sohbet aracı 317 gerçek MCP/DB kontrolü geçti. On gerçek sohbet yanıtında özet sonu/durum/görsel kapsam hataları bulundu; yedi araçlı düzeltme ve PDF geometri düzeltmesi henüz GPU’ya kurulmadı. TT VPN/SOCKS11080 düştü, yönetim engelli; son bakım false, genel işçiler kapalı. CPU 474cb2d9 portal bağlamı yayımlandı: 8/8 gerçek API/DB kontrolü, mobil genişlikler geçti. Ayrıntı apps/editor/docs/PRODUCTION-READINESS.md; üretim kabulü YOK.
+
+**Editor portal canlı kabul (2026-09-21):** 474cb2d9 üzerinde gerçek 390px tarayıcıdan iki soru, bekleyen gönderim kilidi ve parentId bağı geçti; 11,8/1,7 sn. Kanıtlar apps/editor/docs/evidence/2026-09-21-portal-context-{api,browser,lifecycle}.json. Hazır GPU düzeltmesi91a860f8 kurulu değil; VPN/OTP erişimi ve origin kimliği engelleri açık.

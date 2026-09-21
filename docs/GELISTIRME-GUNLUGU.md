@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor portal gerçek tarayıcı konuşma kabulü
+
+- 474cb2d9 portalında gerçek kullanıcı oturumuyla iki soru gönderildi: bekleyen yanıt sırasında ikinci gönderim engellendi, parentId ilk soruya bağlandı, takipte Baba/Yavru Vombat adları doğru. 11,8 ve 1,7 saniye. Dört genişlikte taşma yok; 8 API/DB kontrolü geçti. Kanıtlar apps/editor/docs/evidence/2026-09-21-portal-context-*.json.
+- GPU düzeltmeleri91a860f8 henüz kurulu değil. VPN yönetim/OTP erişimi ve GitHub origin kimliği engelleri sürüyor; 46 ref main dışında commit taşımıyor. Üretim kabulü verilmedi; genel taramalar açılmadı.
+
 ## 2026-09-21 — Editor gerçek sohbet kabulü, portal bağlamı ve erişim engeli
 
 - GPU d596f3c5 altı salt okunur MCP aracı 317 gerçek DB/snapshot kontrolü geçti. On gerçek Hermes yanıtı alındı; özetin sonu, güncel çıktı durumu, görsel kapsam ve yanlış kitap adı sorunları nedeniyle semantik kabul verilmedi. Tam özet/durum/kapsam düzeltmeleri ve PDF geometri onarımı hazır; henüz GPU’da sınanmadı.
