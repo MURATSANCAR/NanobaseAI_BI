@@ -93,6 +93,61 @@ def _collapse_repeats(text: str) -> tuple[str, int]:
     return out, len(text) - len(out)
 
 
+# A scrambled layer is made of valid letters, so it has to be caught by what it does to
+# WORDS. Measured on 476 pages of six books — healthy pages: fragments <= 0.19, glued
+# <= 0.03, and a page's stems recur elsewhere in its own book about as often as the book's
+# average (0.67-0.89); scrambled pages: fragments 0.28-0.38, glued 0.05-0.32, recurring
+# stems 0.40-0.53 against a book average of 0.86. The third test is relative to the book
+# itself, so a book with an unusual vocabulary is not judged by another book's numbers.
+FRAGMENT_MAX = 0.30        # share of words of one or two letters (healthy max measured 0.24)
+GLUED_MAX = 0.04           # share of words >= 20 letters or with ".X" / ",x" inside
+STEM_DROP_MAX = 0.30       # how far below the book's mean a page's recurring-stem share may fall
+
+
+def _words(text: str) -> list[str]:
+    return [w for w in re.findall(r"\S+", text) if re.search(r"[^\W\d_]", w)]
+
+
+def _stem(word: str) -> str:
+    return re.sub(r"\W", "", word).casefold()[:5]      # Turkish is agglutinative: compare stems
+
+
+def layer_health(text: str, stem_pages: dict[str, int] | None = None, book_mean: float | None = None) -> dict:
+    """Word-level health of a page's digital text. `stem_pages`: on how many pages of the
+    book each stem occurs; `book_mean`: the book's mean recurring-stem share."""
+    w = _words(text)
+    if len(w) < 25:
+        return {"words": len(w), "suspect": False}
+    # A word cut by line-end hyphenation ("po-" + "lislere") is typesetting, not scrambling,
+    # and a contents line's dot leaders ("Yasaktır.........32") are not a glued word: both
+    # were measured as false alarms on healthy pages.
+    letters = [re.sub(r"[\W\d_]", "", x) for x in w if not x.endswith(("-", "\u00ad"))]
+    frag = sum(1 for x in letters if len(x) <= 2) / max(1, len(letters))
+    glued = sum(1 for x in w if len(re.sub(r"[\W\d_]", "", x)) >= 20
+                or re.search(r"[a-zçğıöşü][.,;:!?][^\W\d_]", x)) / len(w)
+    out = {"words": len(w), "fragments": round(frag, 3), "glued": round(glued, 3)}
+    reasons = [n for n, bad in (("FRAGMENTS", frag > FRAGMENT_MAX), ("GLUED", glued > GLUED_MAX)) if bad]
+    if stem_pages is not None and book_mean is not None:
+        known = sum(1 for x in w if stem_pages.get(_stem(x), 0) >= 2) / len(w)
+        out.update(recurring_stems=round(known, 3), book_mean=round(book_mean, 3))
+        # Unusual vocabulary alone is a reason to read the page a second time, not a verdict
+        # on the layer: every book's imprint page (addresses, ISBN) trips it while being
+        # perfectly good text — and an OCR'd ISBN is worse than a digital one.
+        out["unusual_vocabulary"] = known < book_mean - STEM_DROP_MAX
+    return {**out, "suspect": bool(reasons), "reasons": reasons}
+
+
+def book_stems(texts: list[str]) -> tuple[dict[str, int], float]:
+    """(stem -> number of pages it occurs on, mean recurring-stem share over the pages)."""
+    pages = [[_stem(x) for x in _words(t)] for t in texts]
+    df: dict[str, int] = {}
+    for stems in pages:
+        for st in set(stems):
+            df[st] = df.get(st, 0) + 1
+    shares = [sum(1 for st in stems if df[st] >= 2) / len(stems) for stems in pages if len(stems) >= 25]
+    return df, (sum(shares) / len(shares) if shares else 0.0)
+
+
 def _garbled_ratio(text: str) -> float:
     """Share of Private Use Area glyphs: a font with a custom encoding exports
     its text layer as unreadable symbols, so the page needs OCR instead."""
@@ -154,8 +209,11 @@ def create_page_manifest(book_version_id: str) -> dict:
     """One row per page: size, text-layer size, images, OCR need, rendered PNG."""
     doc, bv = _open_version(book_version_id)
     rows = []
+    texts = [page.get_text("text") or "" for page in doc]
+    stem_pages, book_mean = book_stems(texts)
     for i, page in enumerate(doc, start=1):
-        text = page.get_text("text") or ""
+        text = texts[i - 1]
+        health = layer_health(text, stem_pages, book_mean)
         n_chars = len(text.strip())
         n_img = len(page.get_images(full=True))
         img_area = 0.0
@@ -166,22 +224,32 @@ def create_page_manifest(book_version_id: str) -> dict:
         # OCR when there is no usable text layer on a page that has pictures, or
         # the layer is letter-spaced / broken, or a picture covers most of the page
         # (text drawn inside illustrations is not in the text layer).
-        needs_ocr = ((n_chars < 30 and n_img > 0) or _spaced_ratio(text) > SPACED_MAX or coverage > 0.6
-                     or _garbled_ratio(text) > GARBLED_MAX)
+        why = [n for n, hit in (("NO_LAYER_WITH_IMAGES", n_chars < 30 and n_img > 0),
+                                ("LETTER_SPACED", _spaced_ratio(text) > SPACED_MAX),
+                                ("PICTURE_COVERS_PAGE", coverage > 0.6),
+                                ("GARBLED_CHARACTERS", _garbled_ratio(text) > GARBLED_MAX),
+                                ("SCRAMBLED_WORDS", health["suspect"]),
+                                ("UNUSUAL_VOCABULARY", health.get("unusual_vocabulary", False))) if hit]
+        needs_ocr = bool(why)
+        # the layer itself cannot be trusted (as opposed to: a picture may hold more text)
+        health["layer_unreliable"] = bool(set(why) & {"LETTER_SPACED", "GARBLED_CHARACTERS", "SCRAMBLED_WORDS"})
+        health["ocr_reasons"] = why
         r = render_page(book_version_id, i)
         rows.append((bv["id"], i, page.rect.width, page.rect.height, n_chars, n_img, needs_ocr,
-                     r["path"], r["dpi"], nontext_ink_ratio(page)))
+                     r["path"], r["dpi"], nontext_ink_ratio(page), db.J(health)))
     with db.tx() as c:
         for row in rows:
             c.execute(
                 "INSERT INTO page(book_version_id, page_no, width_pt, height_pt, text_layer_chars,"
-                " image_count, needs_ocr, render_path, render_dpi, nontext_ink) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+                " image_count, needs_ocr, render_path, render_dpi, nontext_ink, layer_health)"
+                " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
                 " ON CONFLICT (book_version_id, page_no) DO UPDATE SET text_layer_chars=EXCLUDED."
                 "text_layer_chars, image_count=EXCLUDED.image_count, needs_ocr=EXCLUDED.needs_ocr,"
                 " render_path=EXCLUDED.render_path, render_dpi=EXCLUDED.render_dpi,"
-                " nontext_ink=EXCLUDED.nontext_ink", row)
+                " nontext_ink=EXCLUDED.nontext_ink, layer_health=EXCLUDED.layer_health", row)
     return {"book_version_id": book_version_id, "page_count": len(rows),
             "needs_ocr": [r[1] for r in rows if r[6]],
+            "layer_unreliable": [r[1] for r in rows if r[10].obj.get("layer_unreliable")],
             "no_text_layer": [r[1] for r in rows if r[4] < 30]}
 
 

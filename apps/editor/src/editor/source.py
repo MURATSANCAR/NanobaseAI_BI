@@ -47,8 +47,21 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
     ocr_attempted = any(s["source"] == "OCR" for s in sources)
     by_source = {s["source"]: s for s in sources if s["text"].strip()}
     layer, ocr = by_source.get("TEXT_LAYER"), by_source.get("OCR")
-    base = layer or ocr
     spans, alternatives, issues = [], [], []
+    # A digital text layer is the publisher's own text and normally the base. Where the
+    # manifest measured it as unreliable (scrambled words, garbled characters, letter-spaced)
+    # and the page was read from its pixels, that reading is the base instead and the layer
+    # is kept only as an alternative. Without an OCR reading the unreliable layer stays —
+    # it is all there is — and the page says so.
+    unreliable = bool((page.get("layer_health") or {}).get("layer_unreliable"))
+    if layer and ocr and unreliable:
+        alternatives.append({**_span(gid, page["page_no"], layer, 0, len(layer["text"])),
+                             "disposition": "TEXT_LAYER_UNRELIABLE",
+                             "reasons": (page.get("layer_health") or {}).get("ocr_reasons", [])})
+        layer = None
+    elif layer and unreliable:
+        issues.append("TEXT_LAYER_UNRELIABLE_NO_OCR")
+    base = layer or ocr
     ocr_kinds = {}
     if ocr and ocr.get("ocr_content"):
         try:
@@ -75,8 +88,6 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
                 spans.append(_span(gid,page["page_no"],base,start,end,ocr_kinds.get(text,"body") if not layer else "body"))
     if layer and ocr:
         layer_key = key(layer["text"])
-        from .document import _garbled_ratio, _spaced_ratio, GARBLED_MAX, SPACED_MAX
-        layer_healthy = _garbled_ratio(layer["text"]) <= GARBLED_MAX and _spaced_ratio(layer["text"]) <= SPACED_MAX
         for start,end in blocks(ocr["text"]):
             candidate = _span(gid,page["page_no"],ocr,start,end,ocr_kinds.get(ocr["text"][start:end],"body"))
             candidate_key = key(candidate["text"])
@@ -87,19 +98,14 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
             # Similarity only flags a disagreement; it never rewrites either source.
             similar = any(SequenceMatcher(None,candidate_key,key(s["text"]),autojunk=False).ratio() >= .6
                 for s in spans if s["source"]=="TEXT_LAYER")
-            if similar and layer_healthy:
+            if similar:
                 # The publisher's own digital text against an 8B model's reading of pixels is
-                # not two sources in conflict. Measured on six books (171 OCR'd pages): every
+                # not two sources in conflict (an unreliable layer never reaches this branch:
+                # there the OCR reading is already the base). Measured on six books, every
                 # disagreement with a healthy layer was the OCR's slip ("alındaki" for
-                # "alnındaki", "bağirdik", a looped phrase) — and pages are OCR'd mostly because
-                # a picture covers them, not because their text is suspect. The reading is
-                # kept as a variant; it is a conflict only where the layer itself is broken.
+                # "alnındaki", "bağirdik", a looped phrase). The reading is kept as a variant.
                 candidate["disposition"] = "OCR_VARIANT_OF_HEALTHY_TEXT_LAYER"
                 alternatives.append(candidate)
-            elif similar:
-                candidate["disposition"] = "CONFLICT_REQUIRES_REVIEW"
-                alternatives.append(candidate)
-                issues.append("SOURCE_TEXT_CONFLICT")
             else:
                 candidate["reading_order"] = "UNRESOLVED_SUPPLEMENT"
                 spans.append(candidate)
@@ -130,7 +136,7 @@ def load(conn, generation_id: str, page_no: int | None = None) -> list[dict]:
     gen = conn.execute("SELECT book_version_id FROM ed.generation WHERE id=%s",(generation_id,)).fetchone()
     if not gen:
         raise KeyError(generation_id)
-    pages = conn.execute("SELECT page_no,needs_ocr,image_count FROM ed.page WHERE book_version_id=%s "
+    pages = conn.execute("SELECT page_no,needs_ocr,image_count,layer_health FROM ed.page WHERE book_version_id=%s "
         "AND (%s::int IS NULL OR page_no=%s) ORDER BY page_no",(gen["book_version_id"],page_no,page_no)).fetchall()
     if page_no is not None and not pages:
         raise KeyError(f"page {page_no}")
