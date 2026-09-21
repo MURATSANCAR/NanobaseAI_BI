@@ -190,3 +190,6 @@ JSON indirme düğmesi çağrıldı, ancak tarayıcı indirme olayı zaman aşı
 indirme yöneticisi sayfası tarayıcı URL politikasıyla engellendi. İndirilen dosyanın
 istemcide tamamlanması **DOĞRULANAMADI**; arşiv/API cevap eşliği bunun yerine geçmez.
 Müşteri VM'inde kurulumu ve gerçek kullanıcı kabulü ayrıca doğrulanmadan üretime hazır denmez.
+
+Kod yerel `main` üzerindedir (`1cb6cc70`); test sunucusuyla kaynak dosya hashleri eş.
+GitHub HTTPS kimliği bulunamadığından push tamamlanamadı. Kalan işlem: `git push origin main`.

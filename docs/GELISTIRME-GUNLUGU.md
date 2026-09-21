@@ -10,6 +10,7 @@
 - Yerel test yok. Test sunucusunda derleme; son gerçek bridge API cevabı bağımsız gerçek Logo sorgularıyla **144/144 teknik karşılaştırmada** eşleşti. 246.404 hareket/379 hesabın tam sonucu, 41 oran, belge/varlık grupları, sayfalama, arşiv/not geçmişi ve yetkisiz erişim dahil. Eski 38 ve 107 kontrol kanıtları son sürüm kabulü yerine kullanılmaz.
 - Mevcut oturumlu Chrome → gerçek portal üzerinden özet, kontrol, Logo detayları, dayanak tabloları ve kaynak sayfa 320/390/768/1440 genişliklerinde taşmasız. Belge/hareket sayfalama, kasa belge filtresi ve gerçek inceleme kaydı çalıştı. İndirme olayı zaman aşımına uğradı, indirme yöneticisi tarayıcı politikasıyla engellendi; istemci dosya kabulü DOĞRULANAMADI.
 - Kanıtlar `docs/audits/financial-audit-2026-09-21/`; kapsam ve açık işler `docs/analiz/finansal-denetim-2026-09-21.md`. 597 kaynak paketi kanıt bekliyor; bunlar bağımsız başarısız kontroller değildir. Müşteri VM'ine kurulmadı; tüm denetim veya üretim kabulü iddiası yok.
+- `1cb6cc70` yerel main üzerinde; test sunucusu dosya hashleri eş. GitHub push HTTPS kimliği bulunamadığı için başarısız (`could not read Username`). Kalan işlem `git push origin main`; main dışında taşınmamış commit sayısı tüm görülen reflerde 0.
 
 ## 2026-09-21 — Sohbet açılışı kesilmesin, hazır soruların kitap kapsamı belli olsun
 
