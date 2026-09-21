@@ -1,0 +1,77 @@
+{
+  "environment": "Authenticated real portal with actual Logo report",
+  "measurements": [
+    {
+      "documentWidth": 320,
+      "main": [
+        {
+          "scroll": 248,
+          "width": 248
+        },
+        {
+          "scroll": 248,
+          "width": 248
+        }
+      ],
+      "ruleTitle": "159 Nolu Hesaba Virmanlanması Gereken Hesaplar",
+      "sourcePreviewPresent": false,
+      "sourceUiPresent": false,
+      "sqlPanels": 2,
+      "width": 320
+    },
+    {
+      "documentWidth": 390,
+      "main": [
+        {
+          "scroll": 318,
+          "width": 318
+        },
+        {
+          "scroll": 318,
+          "width": 318
+        }
+      ],
+      "ruleTitle": "159 Nolu Hesaba Virmanlanması Gereken Hesaplar",
+      "sourcePreviewPresent": false,
+      "sourceUiPresent": false,
+      "sqlPanels": 2,
+      "width": 390
+    },
+    {
+      "documentWidth": 768,
+      "main": [
+        {
+          "scroll": 644,
+          "width": 644
+        },
+        {
+          "scroll": 644,
+          "width": 644
+        }
+      ],
+      "ruleTitle": "159 Nolu Hesaba Virmanlanması Gereken Hesaplar",
+      "sourcePreviewPresent": false,
+      "sourceUiPresent": false,
+      "sqlPanels": 2,
+      "width": 768
+    },
+    {
+      "documentWidth": 1440,
+      "main": [
+        {
+          "scroll": 1316,
+          "width": 1316
+        },
+        {
+          "scroll": 1316,
+          "width": 1316
+        }
+      ],
+      "ruleTitle": "159 Nolu Hesaba Virmanlanması Gereken Hesaplar",
+      "sourcePreviewPresent": false,
+      "sourceUiPresent": false,
+      "sqlPanels": 2,
+      "width": 1440
+    }
+  ]
+}

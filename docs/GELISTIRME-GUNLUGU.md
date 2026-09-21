@@ -4,6 +4,7 @@
 
 - Kullanıcı, kaynak PDF’nin geliştirme analizi olduğunu ve ekranda gösterilmemesini istedi. Kaynak belge sekmesi, sayfa açma, kaynak metni, sayfa/not etiketleri ve katalog indirme kaldırıldı.
 - Frontend artık tam kaynak katalog API’sini çağırmaz; inceleme listesi gerçek raporun `coverage.items` sonuçlarından oluşturulur. Hesaplamalar, Logo dayanak belgeleri ve bulguların SQL bölümleri korunur.
+- Sunucuda TypeScript/Vite derlemesi geçti. Gerçek oturumlu portalda 649 başlık, arama, seçili kontrol ve SQL bölümleri kontrol edildi; 320/390/768/1440 taşmasız. Belge sekmesi/önizleme/indirme yok. Kanıt `private-source-browser.json`; yerel test çalıştırılmadı.
 
 ## 2026-09-21 — Finansal Denetim: muhasebe dili ve bulgu yanında SQL
 
