@@ -152,7 +152,7 @@ def _persist(st: ChunkState) -> ChunkState:
         for p in suggested_non_story:
             c.execute("INSERT INTO page_role(generation_id, page_no, role, source, model_call_id)"
                       " VALUES (%s,%s,'NON_STORY','extract',%s) ON CONFLICT DO NOTHING", (gid, p, call_id))
-            ledger.queue_review(c,gid,reason=f"Sayfa türü incelemesi: s{p}; çıkarıcının NON_STORY önerisi, kapsamdan çıkarılmadı",priority=2)
+            ledger.queue_review(c,gid,reason=f"Sayfa türü incelemesi: s{p}; çıkarıcının NON_STORY önerisi, kapsamdan çıkarılmadı",priority=2,page_role_page_no=p)
         non_story = {r["page_no"] for r in c.execute("SELECT page_no FROM page_role WHERE generation_id=%s "
             "AND source='editor' AND role IN ('FRONT_MATTER','NON_STORY')",(gid,))}
 

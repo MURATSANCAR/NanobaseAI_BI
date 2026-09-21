@@ -216,7 +216,9 @@ def supersede_claim(conn: psycopg.Connection, generation_id: str, old_claim_id: 
 
 def queue_review(conn: psycopg.Connection, generation_id: str, *, reason: str,
                  claim_id: str | None = None, contradiction_id: str | None = None,
-                 priority: int = 2) -> str:
+                 priority: int = 2, page_role_page_no: int | None = None) -> str:
+    if not claim_id and not contradiction_id and page_role_page_no is None:
+        raise ValueError("Review requires a claim, contradiction, or page-role target")
     if claim_id:
         conn.execute("UPDATE claim SET status='NEEDS_REVIEW', needs_editor_review=true "
                      "WHERE id=%s AND status IN ('CANDIDATE','VERIFIED','NEEDS_REVIEW')",
@@ -226,14 +228,15 @@ def queue_review(conn: psycopg.Connection, generation_id: str, *, reason: str,
                      "AND status='CANDIDATE'", (contradiction_id,))
     existing = conn.execute(
         "SELECT id FROM review_item WHERE generation_id=%s AND status='OPEN' AND "
-        "claim_id IS NOT DISTINCT FROM %s AND contradiction_id IS NOT DISTINCT FROM %s",
-        (generation_id, claim_id, contradiction_id)).fetchone()
+        "claim_id IS NOT DISTINCT FROM %s AND contradiction_id IS NOT DISTINCT FROM %s "
+        "AND page_role_page_no IS NOT DISTINCT FROM %s",
+        (generation_id, claim_id, contradiction_id, page_role_page_no)).fetchone()
     if existing:
         return str(existing["id"])
     row = conn.execute(
-        "INSERT INTO review_item(generation_id, claim_id, contradiction_id, reason, priority)"
-        " VALUES (%s,%s,%s,%s,%s) RETURNING id",
-        (generation_id, claim_id, contradiction_id, reason[:2000], priority)).fetchone()
+        "INSERT INTO review_item(generation_id, claim_id, contradiction_id, reason, priority, page_role_page_no)"
+        " VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
+        (generation_id, claim_id, contradiction_id, reason[:2000], priority, page_role_page_no)).fetchone()
     return str(row["id"])
 
 

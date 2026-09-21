@@ -85,7 +85,7 @@ def latest_generation(book_version_id: str) -> dict | None:
 
 def list_review_queue(generation_id: str, status: str = "OPEN", limit: int = 50) -> list[dict]:
     return db.all_rows(
-        "SELECT r.id, r.priority, r.reason, r.status, r.created_at, c.kind AS claim_kind, c.claim,"
+        "SELECT r.id, r.priority, r.reason, r.status, r.created_at, r.page_role_page_no, c.kind AS claim_kind, c.claim,"
         " c.source_pages, c.confidence, x.kind AS contradiction_kind, x.description, x.pages"
         " FROM review_item r LEFT JOIN claim c ON c.id=r.claim_id LEFT JOIN contradiction x ON"
         " x.id=r.contradiction_id WHERE r.generation_id=%s AND r.status=%s ORDER BY r.priority,"

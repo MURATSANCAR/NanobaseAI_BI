@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Sayfa türü inceleme hedefi ve kaynakla sınırlı özet onarımı
+
+- Gerçek nesil iki engel gösterdi: NON_STORY önerisi review_item hedef kısıtına takıldı; özet tema etiketinden kanıtsız nedensellik üretti.
+- Sayfa rolü incelemesi ayrı FK hedefiyle tutulur ve okuma API’sine taşınır. Hedefsiz kayıt kabul edilmez. Özet v8 zorunlu cümle sayısını kaldırır, yapılandırılmış payload bilgilerini korur; son deneme seçilen doğrulanmış iddia metnini birebir korumalıdır. Critic gevşetilmedi.
+- Sunucuda gerçek başarısız aşamaların tekrar kabulü sırada; yerel ürün testi yok.
+
 ## 2026-09-21 — Muhasebe: bakiye söylenişleri, "ve"li hesap adları, vade/yaşlandırma yaklaşık hesabı
 
 - Bakiye: "bugünkü/bu ayki bakiye" dönemi, bakiye ölçüsünde filtre değil bugün itibarıyla okunur (M003 102 bankalar 252.437.313,15 ✓); "borç/alacak bakiyesi" kelimeleri bağlı bakiye ölçüsünün parçası sayılır, model yoluna düşmez (M004 136.057.227,70, M005 55.348.004,80 ✓). Katalog: müşteri/tedarikçi/banka bakiye öbekleri (`2026-09-21-bakiye-ifadeleri.py`).
