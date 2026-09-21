@@ -19,3 +19,5 @@ Bir kitabın geçmesi ürün kabulü değildir. Gerçek katalogdan farklı uzunl
 ## Güncel çalışma
 
 İlk sistemik düzeltmeler: kısmi görev başarısızlığını durdurma, tam Critic ID sözleşmesi ve tekrar doğrulamada güven puanı kaymasını engelleme. Canlı çok kitap kabulü henüz tamamlanmadı. Eski tek kitap kanıtları kendi sürümleriyle sınırlı regresyon verisidir.
+
+Altı gerçek kitabın mevcut kayıtlarında ad/etiket karışımı dört kitapta gözlendi. Yeni kimlik üretimi kaynakta geçen canonical/alias adlarını SOURCE_TEXT olarak, betimleyici topluluk/görsel etiketleri DESCRIPTIVE_LABEL ve descriptive_labels olarak ayrı saklar. Metinde geçmeyen ifadeler eş ad yapılmaz; özgün anılmalar ve betimlemeler korunur. Bu ayrım eski nesillere geriye varsayımla uygulanmaz.

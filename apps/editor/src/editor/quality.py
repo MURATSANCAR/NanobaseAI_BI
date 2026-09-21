@@ -327,8 +327,9 @@ def _aliases_in_text(generation_id: str) -> bool:
     with db.tx() as c:
         text = " ".join(ledger.PageIndex.load(c, generation_id).text.values())
     return all(ledger.has_name(text, n, allow_suffix=True) for r in db.all_rows(
-        "SELECT canonical_name, aliases FROM character WHERE generation_id=%s", generation_id)
-        for n in [r["canonical_name"], *r["aliases"]])
+        "SELECT canonical_name, aliases, traits FROM character WHERE generation_id=%s", generation_id)
+        for n in ([r["canonical_name"]] if (r["traits"] or {}).get("name_origin") != "DESCRIPTIVE_LABEL" else [])
+        + list(r["aliases"]))
 
 
 def run_regression_suite(generation_id: str) -> dict:
@@ -388,11 +389,11 @@ def run_regression_suite(generation_id: str) -> dict:
             " cm.resolution='RESOLVED' AND NOT EXISTS (SELECT 1 FROM page_scan d WHERE"
             " d.generation_id=cm.generation_id AND d.page_no=cm.page_no AND d.pass='DEEP')",
             generation_id) == 0),
-        _check("her eş ad kitabın metninde geçiyor", _aliases_in_text(generation_id)),
-        _check("kesin görsel kimlik yalnız çapa, referans eşleşmesi ya da elemeyle", one(
+        _check("kaynak adı ve eş adlar metinde geçiyor; betimleyici etiket ad değildir", _aliases_in_text(generation_id)),
+        _check("kesin görsel kimlik bağımsız görsel doğrulama taşır", one(
             "SELECT count(*) n FROM character_mention WHERE generation_id=%s AND via='VISUAL' AND"
             " resolution='RESOLVED' AND coalesce(appearance->>'identified_by','') NOT IN"
-            " ('anchor','reference','elimination','consistency')", generation_id) == 0),
+            " ('anchor','reference','consistency')", generation_id) == 0),
         # presence decides first, then the doer among A and B (see knowledge._actor_role)
         _check("eylemi yapan yalnız eşiği geçen okumayla kesin", one(
             "SELECT count(*) n FROM event_actor WHERE generation_id=%s AND ("

@@ -3,6 +3,7 @@
 ## 2026-09-21 — Kitaptan bağımsız üretim kapsamı
 
 - Kullanıcı tek kitaba özel çözümü yasakladı; AGENTS.md ve PRODUCTION-CONTRACT.md güncellendi. Kitaplar kabul verisidir, üretim kuralı değildir.
+- Altı gerçek kitap ön denetiminde dördünde ad/etiket karışımı görüldü. Genel SOURCE_TEXT/DESCRIPTIVE_LABEL ayrımı eklendi; metinde geçmeyen betimlemeler eş ad yapılmaz, anılmalar korunur. Kitap sabiti olmayan sıralı katalog kabul koşucusu eklendi.
 - Critic tam/tekil ID listesi ister; sınırlı tekrar sonrası eksik karar başarısızdır. İlk model güveni immutable payload içinde tutulur; yeniden denetim hesaplanmış puanı tekrar girdi yapmaz. Geçmiş kayıtta ilk puan bilinmiyorsa yeni nesil gerekir.
 - complete-stage-coverage-v1 Temporal patch yeni işlerde kısmi sayfa/parça hatasının başarıya ilerlemesini engeller; eski replay korunur. Altı gerçek kitapla genel kabul hazırlanıyor. Yerel ürün testi yok; üretim kabulü henüz verilmedi.
 

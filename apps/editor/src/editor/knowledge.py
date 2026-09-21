@@ -389,6 +389,7 @@ async def resolve_character_identity(generation_id: str) -> dict:
     claimed: set[str] = set()
     made = []
     with db.tx() as c:
+        source_text = " ".join(ledger.PageIndex.load(c, generation_id).text.values())
         for gi, ch in enumerate(out["characters"]):
             mids = [m for m in dict.fromkeys(groups[gi]) if m not in claimed]
             if not mids:
@@ -403,7 +404,12 @@ async def resolve_character_identity(generation_id: str) -> dict:
             canonical = ch["canonical_name"].strip()
             if ledger.norm(canonical) not in counts:        # the model may not invent a name
                 canonical = names[0]
-            aliases = [n for n in names if ledger.norm(n) != ledger.norm(canonical)]
+            attested = [n for n in names if ledger.has_name(source_text, n, allow_suffix=True)]
+            labels = [n for n in names if n not in attested]
+            if canonical not in attested and attested:
+                canonical = attested[0]
+            aliases = [n for n in attested if ledger.norm(n) != ledger.norm(canonical)]
+            name_origin = "SOURCE_TEXT" if canonical in attested else "DESCRIPTIVE_LABEL"
             pages = sorted({by_id[m]["page_no"] for m in mids})
             conf = float(ch["identity_confidence"])
             # One page can explicitly identify a person; keep the independent
@@ -425,7 +431,8 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 " (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                 (generation_id, canonical, aliases, ch["description"], status, conf, pages[0], cid,
                  ch.get("kind") or "UNKNOWN",
-                 db.J({k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band", "entity_scope")}))).fetchone()
+                 db.J({**{k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band", "entity_scope")},
+                       "name_origin": name_origin, "descriptive_labels": labels}))).fetchone()
             for m in mids:
                 sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted
                 c.execute("UPDATE character_mention SET character_id=%s, resolution=%s WHERE id=%s",
