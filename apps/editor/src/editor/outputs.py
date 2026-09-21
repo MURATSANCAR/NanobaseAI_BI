@@ -268,7 +268,31 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
              'iddialarına göre düzelt ve tam taslağı yeniden ver. Aynı desteklenmeyen birleştirmeyi '
              'tekrarlama; kişileri ve belirsizliği ayrı cümlelerle koru. Her cümle yeniden denetlenecek. '
              +feedback_text}]
-    raise ValueError('Output Critic rejected summary after 3 bounded attempts: '+json.dumps(rejected[-1],ensure_ascii=False)[:1500])
+    # The third attempt asks the model to do something the application can do itself:
+    # copy verified claims word for word. When the model will not, the application does —
+    # an extractive summary of verified claims in page order, first and last included, evenly
+    # spread over the book. It reads less well than a written one and says so (`status`), but
+    # it cannot say anything the ledger has not verified, and a book whose summary the critic
+    # refused three times still has its analysis instead of "FAILED".
+    limit = SUMMARY_SCHEMA['properties']['sentences'].get('maxItems', 24)
+    proven = {e['claim_id'] for e in snap['evidence'] if e['quote_verified']}
+    usable = [c for c in claims if c['id'] in proven]
+    if not usable:
+        return {'sentences': [], 'status': 'NO_VERIFIED_FACTS', 'model_calls': calls, 'attempts': 3,
+                'rejected_attempts': rejected, 'critic_disagreements': disagreements}
+    picked = usable if len(usable) <= limit else \
+        [usable[round(i * (len(usable) - 1) / (limit - 1))] for i in range(limit)]
+    seen, unique = set(), []
+    for c in picked:
+        if c['claim'].strip() not in seen:
+            seen.add(c['claim'].strip())
+            unique.append(c)
+    rows = bind_sentences({'sentences': [{'text': c['claim'].strip(), 'claim_ids': [c['id']]} for c in unique]},
+                          claims, snap['evidence'])
+    for row in rows:
+        row['support_check'] = 'EXACT_VERIFIED_CLAIM'
+    return {'sentences': rows, 'status': 'EXTRACTIVE_FALLBACK', 'model_calls': calls, 'attempts': 3,
+            'rejected_attempts': rejected, 'critic_disagreements': disagreements}
 
 
 def guard_legacy_producer(gid: str):
