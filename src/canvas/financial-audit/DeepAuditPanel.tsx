@@ -80,14 +80,14 @@ export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit
     <section><div className="audit-section-head"><div><span className="audit-eyebrow">NE VAR, NE EKSİK?</span><h2>Kontrolü tamamlamak için gerekenler</h2></div></div>
       <div className="audit-source-cards">{data.sources.map(s => <article key={s.id} className={`audit-source-card ${s.status}`}>
         <div className="audit-source-card-head"><Database size={20}/><span>{s.status==='unavailable' ? 'Kaynak okunamadı' : s.status==='missing' ? 'Bu dönem için bulunamadı' : 'Logo kaydı bulundu'}</span></div>
-        <h3>{s.title}</h3><div className="audit-source-count">{s.records == null ? '—' : number.format(s.records)}<small> kayıt</small></div><p>{s.found}</p>
-        <div className="audit-evidence-gap"><CircleHelp size={17}/><div><b>Eksik dayanak</b><p>{s.missing}</p></div></div>
-        <details><summary>Neden önemli?</summary><p>{s.why}</p></details><div className="audit-source-next"><b>Tamamlamak için</b><p>{s.nextStep}</p></div>
+        <h3>{s.title}</h3><div className="audit-source-count">{s.records == null ? '—' : number.format(s.records)}<small> kayıt</small></div><p>{accountingText(s.found)}</p>
+        <div className="audit-evidence-gap"><CircleHelp size={17}/><div><b>Eksik dayanak</b><p>{accountingText(s.missing)}</p></div></div>
+        <details><summary>Neden önemli?</summary><p>{accountingText(s.why)}</p></details><div className="audit-source-next"><b>Tamamlamak için</b><p>{accountingText(s.nextStep)}</p></div>
       </article>)}</div>
     </section>
     <section className="audit-panel"><h2>Bulunan kayıtların kapsamı</h2><p>Kodlar kaynakta saklanan değerlerdir; doğrulanmamış kodlar iş durumuna çevrilmez. Plan/ödeme, para birimi ve dönemler birbirine eklenmez.</p>
       {Object.entries(datasetTitles).map(([key,title]) => <details className="audit-dataset" key={key}><summary>{title}</summary>{data.datasets[key]?.length ? <Rows rows={data.datasets[key]}/> : <p>{data.errors[key] ?? 'Bu kapsamda kayıt bulunmadı.'}</p>}</details>)}
-      {data.limitations.map(l => <p key={l}>{l}</p>)}
+      {data.limitations.map(l => <p key={l}>{accountingText(l)}</p>)}
     </section>
   </>;
 }

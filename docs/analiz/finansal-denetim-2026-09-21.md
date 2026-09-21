@@ -258,3 +258,26 @@ Ham kanıt sunucuda özel dizinde; kişisel içerik içermeyen kanıt
 toplam DB süresi yaklaşık 10,6 saniye, bütün raporun DB süresi 26,6 saniyedir.
 
 Son sürümde temel kabul yeniden çalıştı: **144/144 PASS**; toplam **253 teknik kontrol**. Yeni kaynak/aday görünümü 320/390/768/1440 genişliklerinde taşmasız; tablo yalnız kendi kapsayıcısında kayar. Gerçek ikinci sayfa 50 satır, ilk sayfayla ortak kayıt yok. Kanıt `deep-browser.json`.
+
+## Muhasebe dili ve bulgu yanında SQL
+
+Ekran sunumu `presentation.ts` üzerinden sadeleştirilir. Kaynak belgedeki yazılımcı
+yönlendirmeleri muhasebe inceleme diline çevrilir; 18 temel/ek kontrol için açık
+hesaplama açıklamaları vardır. Kaynak görünümü sadeleştirilmiş olarak etiketlenir;
+asıl katalog, kaynak hash'i ve önceki arşivler değiştirilmez.
+
+`SqlEvidence.tsx` temel kontrol, hesap yönü/karşı hesap gözlemi, derin karşılaştırma
+ve aday kayıt detayı yanında açılır SQL ve kopyalama düğmesi sağlar. Rapor sorgusu
+hesaplama anına; sayfalı aday sorgusu ayrı kayıt okumasına aittir. SQL metni gerçekten
+çalıştırılmış `physicalSql` değeridir. Ortak sorguda ilgili bulgu sayısının hangi
+sonuç kolonunda olduğu belirtilir; tüm hesapları getiren okuma, yalnız hatalı
+kayıtları süzen sorgu gibi sunulmaz. Arşivinde SQL bilgisi olmayan eski raporda
+açık eksik bilgi mesajı verilir.
+
+Sunucuda gerçek API kataloğunun 649 maddesi ve 241 sayfasında yazılımcı/grid/ekrana
+yazma yönlendirmeleri tarandı: PASS. Gerçek kabul raporuna bağlı 36 SQL kökeni ve
+sonuç-kolon eşleştirmesi PASS; bağımsız Logo referanslı 109 derin kontrol yeniden PASS.
+Kanıtlar: `accounting-language.json`, `sql-provenance.json`; denetim scriptleri
+`scripts/server/financial-audit-{sql-acceptance.py,language-acceptance.cjs}`.
+
+Temel kabul son sürümde tekrar 144/144 PASS; toplam 289 teknik kontrol. SQL açık 320/390/768/1440 görünümleri taşmasız. Kopyalama başarı bildirimi görüldü; tarayıcı sanal panosu gerçek sistem panosunu doğrulamadığından byte düzeyinde pano kabulü yapılmadı.

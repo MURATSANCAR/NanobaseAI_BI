@@ -1,6 +1,6 @@
 {
   "environment": "nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .155 / LOGO_DB",
-  "revision": "4a03f5025475c26b0a2584592f397b05e3b6cf6cbfc5a73e75ba3ffe40447409",
+  "revision": "2e7448040749215ba9c9106b72a36cab00d4d23b2249262afa990d1e3432ddff",
   "source": "Logo · 2026 işlem dönemi · 17.08.2026 yedeği",
   "sourceLastDate": "2026-08-17T00:00:00",
   "checks": [
@@ -705,12 +705,12 @@
       "detail": 401
     },
     {
-      "name": "private-runs/16ca12a5981548a48bb91e3d8e5ed896",
+      "name": "private-runs/1b1fe26c491749d1b70c3d85eae487c7",
       "status": "PASS",
       "detail": 401
     },
     {
-      "name": "private-runs/16ca12a5981548a48bb91e3d8e5ed896/reviews/note-51-1",
+      "name": "private-runs/1b1fe26c491749d1b70c3d85eae487c7/reviews/note-51-1",
       "status": "PASS",
       "detail": 401
     },
@@ -725,9 +725,9 @@
       "detail": null
     }
   ],
-  "runId": "16ca12a5981548a48bb91e3d8e5ed896",
+  "runId": "1b1fe26c491749d1b70c3d85eae487c7",
   "rulesRevision": "1ddc788e9f3cb2655f931a1be1ccad340df28049645099d50dc27794a8248c71",
-  "deepRevision": "1c8ff7761c6651318836c3024ab3909998a647fb81a4c964b0183ab612a33a82",
+  "deepRevision": "5c6b062d1fd58efc7ebce7dbb1175d5ff6bd0ae7a2c2c33fefd4fd84230d9e3e",
   "coverageCounts": {
     "calculated": 17,
     "unverified": 25,

@@ -1,8 +1,8 @@
 {
   "environment": "nanobase-direct → actual HTTP :8795 → real Logo .155/LOGO_DB",
-  "runId": "299509aceca94d719b281053f0daca52",
-  "revision": "4a03f5025475c26b0a2584592f397b05e3b6cf6cbfc5a73e75ba3ffe40447409",
-  "deepRevision": "1c8ff7761c6651318836c3024ab3909998a647fb81a4c964b0183ab612a33a82",
+  "runId": "d5e87d8b0d1f4c0fa23890391902f0bd",
+  "revision": "2e7448040749215ba9c9106b72a36cab00d4d23b2249262afa990d1e3432ddff",
+  "deepRevision": "5c6b062d1fd58efc7ebce7dbb1175d5ff6bd0ae7a2c2c33fefd4fd84230d9e3e",
   "checks": [
     {
       "name": "deep-all-sources-read",
@@ -590,17 +590,17 @@
       "detail": null
     },
     {
-      "name": "private-runs/299509aceca94d719b281053f0daca52/export",
+      "name": "private-runs/d5e87d8b0d1f4c0fa23890391902f0bd/export",
       "status": "PASS",
       "detail": null
     },
     {
-      "name": "private-runs/299509aceca94d719b281053f0daca52/exceptions/invoice-unposted",
+      "name": "private-runs/d5e87d8b0d1f4c0fa23890391902f0bd/exceptions/invoice-unposted",
       "status": "PASS",
       "detail": null
     }
   ],
-  "exportSha256": "14bc45bbe28210119776b2faefc2706b0b33b03c8043106328895dda21e0441b",
+  "exportSha256": "e499528804764ee118176f14945ec03e97570070ee1766e7e0a5d2e6c2b2bf71",
   "exceptionCoverage": "Complete result counts; all columns and values in first, second and final/empty pages for every check. References from separate raw DB reads.",
   "sourceLastDate": "2026-08-17T00:00:00",
   "deepChecks": [
@@ -612,6 +612,11 @@
       "tested": 81760,
       "formula": "İptal edilmemiş faturada ACCOUNTED=0. Muhasebeye aktarım gecikmesi veya kapsam farkı incelenir; kayıt dışı satış hükmü değildir.",
       "detailKind": "invoice",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN posted = 0 THEN 1 ELSE 0 END) AS affected0, SUM(CASE WHEN posted = 1 AND (foundSlip IS NULL OR cancelledSlip <> 0) THEN 1 ELSE 0 END) AS affected1, SUM(CASE WHEN NOT foundSlip IS NULL AND date <> ledgerDate THEN 1 ELSE 0 END) AS affected2, SUM(CASE WHEN posted = 1 AND (accountRef IS NULL OR accountRef = 0) THEN 1 ELSE 0 END) AS affected3 FROM (SELECT I.LOGICALREF AS sourceRef, I.FICHENO AS documentNo, I.DATE_ AS date, I.CLIENTREF AS clientRef, CAST(I.TRCODE AS INTEGER) AS transactionType, I.ACCOUNTREF AS accountRef, I.ACCFICHEREF AS slipRef, CAST(I.ACCOUNTED AS INTEGER) AS posted, CAST(I.NETTOTAL AS NUMERIC(28, 4)) AS amount, CAST(I.TOTALVAT AS NUMERIC(28, 4)) AS vat, F.LOGICALREF AS foundSlip, CAST(F.CANCELLED AS INTEGER) AS cancelledSlip, F.DATE_ AS ledgerDate FROM [dbo].[LG_411_01_INVOICE] AS [I] LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = I.ACCFICHEREF WHERE I.CANCELLED = 0 AND I.DATE_ >= '20260101' AND I.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected0"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -622,6 +627,11 @@
       "tested": 81760,
       "formula": "Aktarıldı işaretli faturanın bağlı muhasebe fişi bulunmalı ve iptal edilmemiş olmalı.",
       "detailKind": "invoice",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN posted = 0 THEN 1 ELSE 0 END) AS affected0, SUM(CASE WHEN posted = 1 AND (foundSlip IS NULL OR cancelledSlip <> 0) THEN 1 ELSE 0 END) AS affected1, SUM(CASE WHEN NOT foundSlip IS NULL AND date <> ledgerDate THEN 1 ELSE 0 END) AS affected2, SUM(CASE WHEN posted = 1 AND (accountRef IS NULL OR accountRef = 0) THEN 1 ELSE 0 END) AS affected3 FROM (SELECT I.LOGICALREF AS sourceRef, I.FICHENO AS documentNo, I.DATE_ AS date, I.CLIENTREF AS clientRef, CAST(I.TRCODE AS INTEGER) AS transactionType, I.ACCOUNTREF AS accountRef, I.ACCFICHEREF AS slipRef, CAST(I.ACCOUNTED AS INTEGER) AS posted, CAST(I.NETTOTAL AS NUMERIC(28, 4)) AS amount, CAST(I.TOTALVAT AS NUMERIC(28, 4)) AS vat, F.LOGICALREF AS foundSlip, CAST(F.CANCELLED AS INTEGER) AS cancelledSlip, F.DATE_ AS ledgerDate FROM [dbo].[LG_411_01_INVOICE] AS [I] LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = I.ACCFICHEREF WHERE I.CANCELLED = 0 AND I.DATE_ >= '20260101' AND I.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected1"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -632,6 +642,11 @@
       "tested": 81760,
       "formula": "Fatura tarihi ile bağlı muhasebe fişi tarihi farklı. Dönemleme ve aktarım açıklaması gerekir.",
       "detailKind": "invoice",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN posted = 0 THEN 1 ELSE 0 END) AS affected0, SUM(CASE WHEN posted = 1 AND (foundSlip IS NULL OR cancelledSlip <> 0) THEN 1 ELSE 0 END) AS affected1, SUM(CASE WHEN NOT foundSlip IS NULL AND date <> ledgerDate THEN 1 ELSE 0 END) AS affected2, SUM(CASE WHEN posted = 1 AND (accountRef IS NULL OR accountRef = 0) THEN 1 ELSE 0 END) AS affected3 FROM (SELECT I.LOGICALREF AS sourceRef, I.FICHENO AS documentNo, I.DATE_ AS date, I.CLIENTREF AS clientRef, CAST(I.TRCODE AS INTEGER) AS transactionType, I.ACCOUNTREF AS accountRef, I.ACCFICHEREF AS slipRef, CAST(I.ACCOUNTED AS INTEGER) AS posted, CAST(I.NETTOTAL AS NUMERIC(28, 4)) AS amount, CAST(I.TOTALVAT AS NUMERIC(28, 4)) AS vat, F.LOGICALREF AS foundSlip, CAST(F.CANCELLED AS INTEGER) AS cancelledSlip, F.DATE_ AS ledgerDate FROM [dbo].[LG_411_01_INVOICE] AS [I] LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = I.ACCFICHEREF WHERE I.CANCELLED = 0 AND I.DATE_ >= '20260101' AND I.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected2"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -642,6 +657,11 @@
       "tested": 81760,
       "formula": "Aktarıldı işaretli faturada müşteri/satıcı muhasebe hesap referansı eksik.",
       "detailKind": "invoice",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN posted = 0 THEN 1 ELSE 0 END) AS affected0, SUM(CASE WHEN posted = 1 AND (foundSlip IS NULL OR cancelledSlip <> 0) THEN 1 ELSE 0 END) AS affected1, SUM(CASE WHEN NOT foundSlip IS NULL AND date <> ledgerDate THEN 1 ELSE 0 END) AS affected2, SUM(CASE WHEN posted = 1 AND (accountRef IS NULL OR accountRef = 0) THEN 1 ELSE 0 END) AS affected3 FROM (SELECT I.LOGICALREF AS sourceRef, I.FICHENO AS documentNo, I.DATE_ AS date, I.CLIENTREF AS clientRef, CAST(I.TRCODE AS INTEGER) AS transactionType, I.ACCOUNTREF AS accountRef, I.ACCFICHEREF AS slipRef, CAST(I.ACCOUNTED AS INTEGER) AS posted, CAST(I.NETTOTAL AS NUMERIC(28, 4)) AS amount, CAST(I.TOTALVAT AS NUMERIC(28, 4)) AS vat, F.LOGICALREF AS foundSlip, CAST(F.CANCELLED AS INTEGER) AS cancelledSlip, F.DATE_ AS ledgerDate FROM [dbo].[LG_411_01_INVOICE] AS [I] LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = I.ACCFICHEREF WHERE I.CANCELLED = 0 AND I.DATE_ >= '20260101' AND I.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected3"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -652,6 +672,11 @@
       "tested": 81241,
       "formula": "Aynı fiş ve aynı hesap için faturalar önce toplanır, muhasebe net borç−alacak ile karşılaştırılır. Alış/satış iadeleri ters işaretlidir; fark tahmini zarar değildir.",
       "detailKind": "invoice-match",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN ABS(difference) > 0.01 OR actual IS NULL THEN 1 ELSE 0 END) AS affected0 FROM (SELECT V.slipRef AS slipRef, V.accountRef AS accountRef, A.CODE AS accountCode, V.invoiceCount AS invoiceCount, V.expected AS expected, L.actual AS actual, V.expected - COALESCE(L.actual, 0) AS difference, L.lineCount AS lineCount, V.firstDate AS firstDate, V.lastDate AS lastDate, F.FICHENO AS slipNo, F.DATE_ AS ledgerDate FROM (SELECT I.ACCFICHEREF AS slipRef, I.ACCOUNTREF AS accountRef, COUNT(*) AS invoiceCount, MIN(I.DATE_) AS firstDate, MAX(I.DATE_) AS lastDate, SUM(CASE WHEN I.TRCODE IN (2, 3, 1, 4) THEN -CAST(I.NETTOTAL AS NUMERIC(28, 4)) ELSE CAST(I.NETTOTAL AS NUMERIC(28, 4)) END) AS expected FROM [dbo].[LG_411_01_INVOICE] AS [I] WHERE I.CANCELLED = 0 AND I.ACCOUNTED = 1 AND I.TRCODE IN (1, 2, 3, 4, 6, 7, 8, 9) AND I.ACCFICHEREF > 0 AND I.ACCOUNTREF > 0 AND I.DATE_ >= '20260101' AND I.DATE_ < '20260818' GROUP BY I.ACCFICHEREF, I.ACCOUNTREF) AS [V] JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = V.slipRef AND F.CANCELLED = 0 LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = V.accountRef LEFT JOIN (SELECT M.ACCFICHEREF AS ACCFICHEREF, M.ACCOUNTREF AS ACCOUNTREF, COUNT(*) AS lineCount, SUM(CAST(M.DEBIT AS NUMERIC(28, 4)) - CAST(M.CREDIT AS NUMERIC(28, 4))) AS actual FROM [dbo].[LG_411_01_EMFLINE] AS [M] WHERE M.CANCELLED = 0 AND M.DATE_ >= '20260101' AND M.DATE_ < '20260818' GROUP BY M.ACCFICHEREF, M.ACCOUNTREF) AS [L] ON L.ACCFICHEREF = V.slipRef AND L.ACCOUNTREF = V.accountRef) AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected0"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -662,6 +687,11 @@
       "tested": 81408,
       "formula": "Fiş bazında fatura KDV toplamı, 191+391 net borç−alacak ile karşılaştırılır. İadelerin yönü ters alınır; tevkifat/istisna ve özel hesap kullanımı ayrıca incelenir.",
       "detailKind": "vat-match",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN ABS(difference) > 0.01 THEN 1 ELSE 0 END) AS affected0 FROM (SELECT V.slipRef AS slipRef, V.invoiceCount AS invoiceCount, V.expected AS expected, L.actual AS actual, V.expected - COALESCE(L.actual, 0) AS difference, F.FICHENO AS documentNo, F.DATE_ AS date FROM (SELECT I.ACCFICHEREF AS slipRef, COUNT(*) AS invoiceCount, SUM(CASE WHEN I.TRCODE IN (1, 4, 2, 3) THEN CAST(I.TOTALVAT AS NUMERIC(28, 4)) ELSE -CAST(I.TOTALVAT AS NUMERIC(28, 4)) END) AS expected FROM [dbo].[LG_411_01_INVOICE] AS [I] WHERE I.CANCELLED = 0 AND I.ACCOUNTED = 1 AND I.TRCODE IN (1, 2, 3, 4, 6, 7, 8, 9) AND I.ACCFICHEREF > 0 AND I.DATE_ >= '20260101' AND I.DATE_ < '20260818' GROUP BY I.ACCFICHEREF) AS [V] JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = V.slipRef AND F.CANCELLED = 0 LEFT JOIN (SELECT M.ACCFICHEREF AS ACCFICHEREF, SUM(CAST(M.DEBIT AS NUMERIC(28, 4)) - CAST(M.CREDIT AS NUMERIC(28, 4))) AS actual FROM [dbo].[LG_411_01_EMFLINE] AS [M] JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = M.ACCOUNTREF WHERE M.CANCELLED = 0 AND M.DATE_ >= '20260101' AND M.DATE_ < '20260818' AND LEFT(A.CODE, 3) IN ('191', '391') GROUP BY M.ACCFICHEREF) AS [L] ON L.ACCFICHEREF = V.slipRef) AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected0"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -672,6 +702,11 @@
       "tested": 81760,
       "formula": "Fatura başlığındaki TOTALVAT ile bağlı, iptal edilmemiş stok/hizmet satırlarının VATAMNT toplamı. Satır veya tutar farkı inceleme adayıdır.",
       "detailKind": "invoice-lines",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN ABS(difference) > 0.01 OR lineCount IS NULL THEN 1 ELSE 0 END) AS affected0 FROM (SELECT I.LOGICALREF AS sourceRef, I.FICHENO AS documentNo, I.DATE_ AS date, I.ACCFICHEREF AS slipRef, CAST(I.TOTALVAT AS NUMERIC(28, 4)) AS expected, V.actual AS actual, V.lineCount AS lineCount, CAST(I.TOTALVAT AS NUMERIC(28, 4)) - COALESCE(V.actual, 0) AS difference FROM [dbo].[LG_411_01_INVOICE] AS [I] LEFT JOIN (SELECT S.INVOICEREF AS INVOICEREF, COUNT(*) AS lineCount, SUM(CAST(S.VATAMNT AS NUMERIC(28, 4))) AS actual FROM [dbo].[LG_411_01_STLINE] AS [S] WHERE S.CANCELLED = 0 AND S.INVOICEREF > 0 GROUP BY S.INVOICEREF) AS [V] ON V.INVOICEREF = I.LOGICALREF WHERE I.CANCELLED = 0 AND I.DATE_ >= '20260101' AND I.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected0"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -682,6 +717,11 @@
       "tested": 17405,
       "formula": "Logo banka alt modülünde ACCOUNTED=0. Başka modülden gelen yansıma/aktarılma durumu ayrıca incelenir.",
       "detailKind": "bank",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN posted = 0 THEN 1 ELSE 0 END) AS affected0, SUM(CASE WHEN posted = 1 AND (foundSlip IS NULL OR cancelledSlip <> 0 OR (directLineRef > 0 AND (foundLine IS NULL OR cancelledLine <> 0))) THEN 1 ELSE 0 END) AS affected1, SUM(CASE WHEN posted = 1 AND foundAccount IS NULL THEN 1 ELSE 0 END) AS affected2 FROM (SELECT B.LOGICALREF AS sourceRef, B.DATE_ AS date, B.TRANNO AS documentNo, CAST(B.ACCOUNTED AS INTEGER) AS posted, CAST(B.SIGN AS INTEGER) AS direction, CAST(B.MODULENR AS INTEGER) AS sourceModule, B.BNACCREF AS bankAccountRef, B.BNACCOUNTREF AS accountRef, B.EMFLINEREF AS directLineRef, COALESCE(NULLIF(B.ACCFICHEREF, 0), E.ACCFICHEREF) AS slipRef, F.LOGICALREF AS foundSlip, CAST(F.CANCELLED AS INTEGER) AS cancelledSlip, E.LOGICALREF AS foundLine, CAST(E.CANCELLED AS INTEGER) AS cancelledLine, A.LOGICALREF AS foundAccount, A.CODE AS accountCode, CAST(B.AMOUNT AS NUMERIC(28, 4)) AS amount, CAST(B.TRCURR AS INTEGER) AS currency, F.DATE_ AS ledgerDate FROM [dbo].[LG_411_01_BNFLINE] AS [B] LEFT JOIN [dbo].[LG_411_01_EMFLINE] AS [E] ON E.LOGICALREF = B.EMFLINEREF LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = COALESCE(NULLIF(B.ACCFICHEREF, 0), E.ACCFICHEREF) LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = B.BNACCOUNTREF WHERE B.CANCELLED = 0 AND B.DATE_ >= '20260101' AND B.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected0"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -692,6 +732,11 @@
       "tested": 17405,
       "formula": "Fiş referansı veya doğrudan muhasebe satırı üzerinden bağlantı kontrol edilir; doğrudan satıra bağlanan hareketler dışlanmaz.",
       "detailKind": "bank",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN posted = 0 THEN 1 ELSE 0 END) AS affected0, SUM(CASE WHEN posted = 1 AND (foundSlip IS NULL OR cancelledSlip <> 0 OR (directLineRef > 0 AND (foundLine IS NULL OR cancelledLine <> 0))) THEN 1 ELSE 0 END) AS affected1, SUM(CASE WHEN posted = 1 AND foundAccount IS NULL THEN 1 ELSE 0 END) AS affected2 FROM (SELECT B.LOGICALREF AS sourceRef, B.DATE_ AS date, B.TRANNO AS documentNo, CAST(B.ACCOUNTED AS INTEGER) AS posted, CAST(B.SIGN AS INTEGER) AS direction, CAST(B.MODULENR AS INTEGER) AS sourceModule, B.BNACCREF AS bankAccountRef, B.BNACCOUNTREF AS accountRef, B.EMFLINEREF AS directLineRef, COALESCE(NULLIF(B.ACCFICHEREF, 0), E.ACCFICHEREF) AS slipRef, F.LOGICALREF AS foundSlip, CAST(F.CANCELLED AS INTEGER) AS cancelledSlip, E.LOGICALREF AS foundLine, CAST(E.CANCELLED AS INTEGER) AS cancelledLine, A.LOGICALREF AS foundAccount, A.CODE AS accountCode, CAST(B.AMOUNT AS NUMERIC(28, 4)) AS amount, CAST(B.TRCURR AS INTEGER) AS currency, F.DATE_ AS ledgerDate FROM [dbo].[LG_411_01_BNFLINE] AS [B] LEFT JOIN [dbo].[LG_411_01_EMFLINE] AS [E] ON E.LOGICALREF = B.EMFLINEREF LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = COALESCE(NULLIF(B.ACCFICHEREF, 0), E.ACCFICHEREF) LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = B.BNACCOUNTREF WHERE B.CANCELLED = 0 AND B.DATE_ >= '20260101' AND B.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected1"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -702,6 +747,11 @@
       "tested": 17405,
       "formula": "Aktarıldı işaretli banka hareketinin banka muhasebe hesabı kartında karşılığı aranır.",
       "detailKind": "bank",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN posted = 0 THEN 1 ELSE 0 END) AS affected0, SUM(CASE WHEN posted = 1 AND (foundSlip IS NULL OR cancelledSlip <> 0 OR (directLineRef > 0 AND (foundLine IS NULL OR cancelledLine <> 0))) THEN 1 ELSE 0 END) AS affected1, SUM(CASE WHEN posted = 1 AND foundAccount IS NULL THEN 1 ELSE 0 END) AS affected2 FROM (SELECT B.LOGICALREF AS sourceRef, B.DATE_ AS date, B.TRANNO AS documentNo, CAST(B.ACCOUNTED AS INTEGER) AS posted, CAST(B.SIGN AS INTEGER) AS direction, CAST(B.MODULENR AS INTEGER) AS sourceModule, B.BNACCREF AS bankAccountRef, B.BNACCOUNTREF AS accountRef, B.EMFLINEREF AS directLineRef, COALESCE(NULLIF(B.ACCFICHEREF, 0), E.ACCFICHEREF) AS slipRef, F.LOGICALREF AS foundSlip, CAST(F.CANCELLED AS INTEGER) AS cancelledSlip, E.LOGICALREF AS foundLine, CAST(E.CANCELLED AS INTEGER) AS cancelledLine, A.LOGICALREF AS foundAccount, A.CODE AS accountCode, CAST(B.AMOUNT AS NUMERIC(28, 4)) AS amount, CAST(B.TRCURR AS INTEGER) AS currency, F.DATE_ AS ledgerDate FROM [dbo].[LG_411_01_BNFLINE] AS [B] LEFT JOIN [dbo].[LG_411_01_EMFLINE] AS [E] ON E.LOGICALREF = B.EMFLINEREF LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = COALESCE(NULLIF(B.ACCFICHEREF, 0), E.ACCFICHEREF) LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = B.BNACCOUNTREF WHERE B.CANCELLED = 0 AND B.DATE_ >= '20260101' AND B.DATE_ < '20260818') AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected2"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -712,6 +762,11 @@
       "tested": 3216,
       "formula": "Aktarılmış banka hareketlerinin net tutarı aynı fiş ve banka muhasebe hesabında toplanarak karşılaştırılır. Bağımsız banka ekstresi mutabakatı değildir.",
       "detailKind": "bank-match",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN ABS(difference) > 0.01 OR actual IS NULL THEN 1 ELSE 0 END) AS affected0 FROM (SELECT B.slipRef AS slipRef, B.accountRef AS accountRef, A.CODE AS accountCode, B.sourceCount AS sourceCount, B.expected AS expected, L.actual AS actual, B.expected - COALESCE(L.actual, 0) AS difference, F.DATE_ AS date, F.FICHENO AS documentNo FROM (SELECT COALESCE(NULLIF(N.ACCFICHEREF, 0), E.ACCFICHEREF) AS slipRef, N.BNACCOUNTREF AS accountRef, COUNT(*) AS sourceCount, SUM(CASE WHEN N.SIGN = 0 THEN CAST(N.AMOUNT AS NUMERIC(28, 4)) ELSE -CAST(N.AMOUNT AS NUMERIC(28, 4)) END) AS expected FROM [dbo].[LG_411_01_BNFLINE] AS [N] LEFT JOIN [dbo].[LG_411_01_EMFLINE] AS [E] ON E.LOGICALREF = N.EMFLINEREF AND (N.ACCFICHEREF = 0 OR N.ACCFICHEREF IS NULL) WHERE N.CANCELLED = 0 AND N.ACCOUNTED = 1 AND N.SIGN IN (0, 1) AND N.DATE_ >= '20260101' AND N.DATE_ < '20260818' GROUP BY COALESCE(NULLIF(N.ACCFICHEREF, 0), E.ACCFICHEREF), N.BNACCOUNTREF) AS [B] JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = B.slipRef AND F.CANCELLED = 0 JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = B.accountRef LEFT JOIN (SELECT M.ACCFICHEREF AS ACCFICHEREF, M.ACCOUNTREF AS ACCOUNTREF, SUM(CAST(M.DEBIT AS NUMERIC(28, 4)) - CAST(M.CREDIT AS NUMERIC(28, 4))) AS actual FROM [dbo].[LG_411_01_EMFLINE] AS [M] WHERE M.CANCELLED = 0 AND M.DATE_ >= '20260101' AND M.DATE_ < '20260818' GROUP BY M.ACCFICHEREF, M.ACCOUNTREF) AS [L] ON L.ACCFICHEREF = B.slipRef AND L.ACCOUNTREF = B.accountRef) AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected0"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     },
     {
@@ -722,6 +777,11 @@
       "tested": 222,
       "formula": "Açılış dahil, hesap ve işlem günü bazında birikimli net borç−alacak. Negatif günler ayrı gösterilir; günler üzerindeki bakiyeler risk tutarı olarak toplanmaz.",
       "detailKind": "cash",
+      "sql": "SELECT COUNT(*) AS rows, SUM(CASE WHEN balance < -0.01 THEN 1 ELSE 0 END) AS affected0 FROM (SELECT X.accountRef AS accountRef, A.CODE AS accountCode, X.date AS date, X.balance AS balance FROM (SELECT M.ACCOUNTREF AS accountRef, CAST(M.DATE_ AS DATE) AS date, SUM(SUM(CAST(M.DEBIT AS NUMERIC(28, 4)) - CAST(M.CREDIT AS NUMERIC(28, 4)))) OVER (PARTITION BY M.ACCOUNTREF ORDER BY CAST(M.DATE_ AS DATE) ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS balance FROM [dbo].[LG_411_01_EMFLINE] AS [M] JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = M.ACCFICHEREF JOIN [dbo].[LG_411_EMUHACC] AS [C] ON C.LOGICALREF = M.ACCOUNTREF WHERE M.CANCELLED = 0 AND F.CANCELLED = 0 AND M.DATE_ >= '20260101' AND M.DATE_ < '20260818' AND C.CODE LIKE '100%' GROUP BY M.ACCOUNTREF, CAST(M.DATE_ AS DATE)) AS [X] JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = X.accountRef) AS [S]",
+      "sqlResultColumns": {
+        "tested": "rows",
+        "affected": "affected0"
+      },
       "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
     }
   ],
@@ -1384,15 +1444,15 @@
     "finding": 3,
     "observed": 2
   },
-  "dbMs": 26613,
-  "deepDbMs": 10568,
+  "dbMs": 25150,
+  "deepDbMs": 10566,
   "rulesRevision": "1ddc788e9f3cb2655f931a1be1ccad340df28049645099d50dc27794a8248c71",
   "hashes": {
-    "backend/semantic_bridge/financial_audit.py": "4a03f5025475c26b0a2584592f397b05e3b6cf6cbfc5a73e75ba3ffe40447409",
-    "backend/semantic_bridge/financial_audit_deep.py": "1c8ff7761c6651318836c3024ab3909998a647fb81a4c964b0183ab612a33a82",
+    "backend/semantic_bridge/financial_audit.py": "2e7448040749215ba9c9106b72a36cab00d4d23b2249262afa990d1e3432ddff",
+    "backend/semantic_bridge/financial_audit_deep.py": "5c6b062d1fd58efc7ebce7dbb1175d5ff6bd0ae7a2c2c33fefd4fd84230d9e3e",
     "backend/semantic_bridge/financial_audit_rules.py": "2c9bbc8fbb0f23bbc655d261471292fc2d3727be6ba149cae2c7da683cbeb463",
-    "src/canvas/financial-audit/FinancialAudit.tsx": "8ef6d306b5186c13ff38f07847dee4f4c9460a5176df5a303714085f6791018f",
-    "src/canvas/financial-audit/DeepAuditPanel.tsx": "78510c1e16d2d73d423f263c0fee53e84a653ed096cd6e0ed08f1cbc8d271f80",
-    "src/canvas/financial-audit/audit.css": "325fab6cdc058f5d40ffa5bb757f0dd4818b9156411f7651ea5a63d3e6ffb303"
+    "src/canvas/financial-audit/FinancialAudit.tsx": "393c0ff9bc28c6693550928b92e991d6881d09e42eaa87c1aa4a0ce6b5f23842",
+    "src/canvas/financial-audit/DeepAuditPanel.tsx": "3760931fc6edc5da2998cbfa58d614ea8b463f0bcd39bb91ed29a80ca2868ce7",
+    "src/canvas/financial-audit/audit.css": "2afd93aeb68fe30bdaaebb8bb804fb6beaaf71f5e96c4f659749050103cd3c6a"
   }
 }

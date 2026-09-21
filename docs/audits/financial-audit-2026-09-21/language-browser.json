@@ -1,0 +1,114 @@
+{
+  "environment": "Authenticated Chrome → real portal → actual Logo API",
+  "measurements": [
+    {
+      "documentWidth": 320,
+      "main": [
+        {
+          "scroll": 248,
+          "width": 248
+        },
+        {
+          "scroll": 248,
+          "width": 248
+        }
+      ],
+      "sql": [
+        {
+          "hasFindingFilter": true,
+          "hasPageLimit": true,
+          "scroll": 172,
+          "width": 172,
+          "wrap": "pre-wrap"
+        }
+      ],
+      "view": "finding-sql",
+      "width": 320
+    },
+    {
+      "documentWidth": 390,
+      "main": [
+        {
+          "scroll": 318,
+          "width": 318
+        },
+        {
+          "scroll": 318,
+          "width": 318
+        }
+      ],
+      "sql": [
+        {
+          "hasFindingFilter": true,
+          "hasPageLimit": true,
+          "scroll": 242,
+          "width": 242,
+          "wrap": "pre-wrap"
+        }
+      ],
+      "view": "finding-sql",
+      "width": 390
+    },
+    {
+      "documentWidth": 768,
+      "main": [
+        {
+          "scroll": 644,
+          "width": 644
+        },
+        {
+          "scroll": 644,
+          "width": 644
+        }
+      ],
+      "sql": [
+        {
+          "hasFindingFilter": true,
+          "hasPageLimit": true,
+          "scroll": 562,
+          "width": 562,
+          "wrap": "pre-wrap"
+        }
+      ],
+      "view": "finding-sql",
+      "width": 768
+    },
+    {
+      "documentWidth": 1440,
+      "main": [
+        {
+          "scroll": 1316,
+          "width": 1316
+        },
+        {
+          "scroll": 1316,
+          "width": 1316
+        }
+      ],
+      "sql": [
+        {
+          "hasFindingFilter": true,
+          "hasPageLimit": true,
+          "scroll": 1234,
+          "width": 1234,
+          "wrap": "pre-wrap"
+        }
+      ],
+      "view": "finding-sql",
+      "width": 1440
+    },
+    {
+      "description": "Kontrolün açıklaması\n\nKaynak belgenin muhasebe incelemesi için sadeleştirilmiş anlatımıdır. Dönemine ait mevzuat ayrıca değerlendirilmelidir.\n\n129 hesabı için açıklanan değerlendirme esas alınır; bu hesabın niteliği ve vadesi ayrıca incelenir.",
+      "forbidden": false,
+      "sqlPresent": true,
+      "view": "rule"
+    },
+    {
+      "forbidden": false,
+      "hasAccount": true,
+      "hasAdaptedLabel": true,
+      "view": "source-page-103"
+    }
+  ],
+  "copy": "Success notification observed; virtual browser clipboard returned empty, OS clipboard equality unverified"
+}

@@ -1,0 +1,154 @@
+{
+  "environment": "nanobase-direct, real HTTP API and Logo DB",
+  "runId": "d5e87d8b0d1f4c0fa23890391902f0bd",
+  "revision": "2e7448040749215ba9c9106b72a36cab00d4d23b2249262afa990d1e3432ddff",
+  "deepRevision": "5c6b062d1fd58efc7ebce7dbb1175d5ff6bd0ae7a2c2c33fefd4fd84230d9e3e",
+  "checks": [
+    {
+      "name": "current-backend",
+      "status": "PASS"
+    },
+    {
+      "name": "core-query-origin-trial-balance",
+      "status": "PASS"
+    },
+    {
+      "name": "core-query-origin-slip-balance",
+      "status": "PASS"
+    },
+    {
+      "name": "core-query-origin-account-sign",
+      "status": "PASS"
+    },
+    {
+      "name": "core-query-origin-account-link",
+      "status": "PASS"
+    },
+    {
+      "name": "core-query-origin-null-amount",
+      "status": "PASS"
+    },
+    {
+      "name": "core-query-origin-slip-link",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-invoice-unposted",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-invoice-unposted",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-invoice-broken-link",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-invoice-broken-link",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-invoice-date",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-invoice-date",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-invoice-account",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-invoice-account",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-invoice-ledger-amount",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-invoice-ledger-amount",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-invoice-vat-ledger",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-invoice-vat-ledger",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-invoice-vat-lines",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-invoice-vat-lines",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-bank-unposted",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-bank-unposted",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-bank-broken-link",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-bank-broken-link",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-bank-account",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-bank-account",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-bank-ledger-amount",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-bank-ledger-amount",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-origin-cash-negative-day",
+      "status": "PASS"
+    },
+    {
+      "name": "deep-query-result-column-cash-negative-day",
+      "status": "PASS"
+    },
+    {
+      "name": "rule-observation-query-account-scope",
+      "status": "PASS"
+    },
+    {
+      "name": "rule-observation-query-balance-sign",
+      "status": "PASS"
+    },
+    {
+      "name": "rule-observation-query-voucher-counterpart",
+      "status": "PASS"
+    },
+    {
+      "name": "rule-observation-query-fx-profile",
+      "status": "PASS"
+    },
+    {
+      "name": "source-original-unchanged",
+      "status": "PASS"
+    }
+  ],
+  "independentReferenceAcceptance": "financial-audit-deep-acceptance.json",
+  "sqlQueryCount": 7
+}

@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim: muhasebe dili ve bulgu yanında SQL
+
+- Kullanıcının isteğiyle “yazılımcı için not”, “grid”, “ekrana yazdıralım” gibi yönlendirmeler ekran sunumundan çıkarıldı; 18 temel/ek kontrolün açıklaması muhasebe diliyle yazıldı. Kaynak görünümü sadeleştirilmiş olarak etiketli; özgün katalog/PDF hash'i ve arşiv değiştirilmez.
+- Temel kontrol, hesap/karşı hesap gözlemi ve derin kontrollerde gerçekten çalıştırılmış SQL açılır bölümde gösterilir. Aday detayında o sayfayı getiren filtreli SQL vardır. Ortak sorgudaki ilgili bulgu sonuç kolonu açıklanır; tüm hesapları getiren kaynak okuması yalnız bulgu filtresi gibi sunulmaz. Kopyalama düğmesi, eski arşivde sorgu bulunmama mesajı ve mobilde satır kaydırma eklendi.
+- Yerel test yok. Gerçek uygulama/API + bağımsız Logo DB: 109/109 derin ve 144/144 temel kabul tekrar geçti; SQL kökeni/kolon-sonuç için 36/36 ek kontrol PASS. Gerçek API kataloğunda 649 madde/241 sayfa dil taraması PASS. SQL açıkken 320/390/768/1440 sayfa taşması yok; kaynak-kural açıklaması ve gerçek bulgu SQL'i tarayıcıda kontrol edildi.
+- Kanıtlar `docs/audits/financial-audit-2026-09-21/{accounting-language,sql-provenance,language-browser}.json`. Kopyala düğmesi başarı bildirimi verdi; tarayıcı aracının sanal panosu boş döndüğünden işletim sistemi panosunun byte düzeyinde eşitliği doğrulanmış sayılmadı. Hesaplamalar ve eksik kanıt statüleri korunur; tam denetim/mevzuat kabulü iddiası yok.
+
 ## 2026-09-21 — Finansal Denetim: Logo derin kaynak taraması ve eksik dayanak ekranı
 
 - Kod/kabul kaydı `7d094c8` ile main üzerinde. Test edilen altı uygulama dosyasının yerel/sunucu hashleri eş. `git fetch origin` başarılı; `git push origin main` HTTPS kimliği bulunamadığı için başarısız. Kalan yayın komutu: `git push origin main`.
