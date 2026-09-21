@@ -320,3 +320,13 @@ def test_the_catalogs_other_label_for_a_profiled_entity_resolves_to_the_same_tab
     assert "LG_411_01_STLINE" in out, out
     # never a guess: a name nothing answers to stays as written and is still refused
     assert not allowed_tables("SELECT 1 FROM LG_NOPE", [Y2021, Y2026], {}, "tsql")[0]
+
+
+def test_an_undated_table_beside_a_date_test_elsewhere_reads_the_current_copy():
+    """A FIFO aging: the date test sits in the outer SELECT over a CTE, the balance and the payment plan
+    carry none. Left on the biggest copy they read 2021–2025 and every open amount was 90+ days old."""
+    old = _p("LG_211_01_STLINE", "LG_{n0}_{n1}_STLINE", ("2021-01-01", "2025-12-31"), rows=9000, ctx={"n0": "211", "n1": "01"})
+    sql = physicalize_sql("WITH A AS (SELECT DATE_, TOTAL FROM STLINE) "
+                          "SELECT SUM(A.TOTAL) FROM A WHERE DATEDIFF(day, A.DATE_, CAST(GETDATE() AS date)) <= 30",
+                          [old, Y2026], {})
+    assert "LG_411_01_STLINE" in sql and "LG_211_01_STLINE" not in sql

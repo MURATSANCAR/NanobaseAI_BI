@@ -24,8 +24,14 @@ Görünüm v_channel_net; cari kartı SPECODE2 üzerinden.
 ## yayinevi_performans
 Görünüm v_imprint_perf: net_ciro (satır bazlı), satilan_adet, iade_adet, maliyetli_ciro, maliyet.
 
-## ortalama_tahsilat_suresi_gerceklesen
-AVG(DATEDIFF(gün, fatura tarihi, kapatan ödemenin tarihi)); kaynak PAYTRANS (MODULENR 4, SIGN 0, CANCELLED 0) ödeme planı satırı, kapatan ödeme CROSSREF ile bağlı ikinci PAYTRANS satırı, fatura INVOICE (TRCODE 7,8,9; CANCELLED 0). Yalnız kapanmış kalemler. Eş anlamlı: ortalama tahsilat vadesi (gerçekleşen), tahsilat süresi, alacak devir günü, DSO. İş teyidi bekliyor (2026-09-16).
+## ortalama_tahsilat_suresi
+DSO yaklaşımı (kapama verisi yok): müşteri (CLCARD.CODE 120%) CLFLINE net bakiyesi (SIGN 0 borç − SIGN 1 alacak, CANCELLED 0) ÷ yıl başından bu yana müşteri satış faturaları (CLFLINE TRCODE 37,38,39 − 32,33) × dönem gün sayısı. Eş anlamlı: tahsilat süresi, alacak devir günü, DSO. Cevap yaklaşık olduğunu söyler.
+
+## ortalama_odeme_suresi
+DPO yaklaşımı: tedarikçi (320%) net alacak bakiyesi (SIGN 1 − SIGN 0) ÷ yıl başından bu yana alış faturaları (CLFLINE TRCODE 31,34 − 36) × dönem gün sayısı. Eş anlamlı: ödeme süresi, borç devir günü, DPO.
+
+## vadesi_gecmis_alacak_fifo
+Cari başına max(0, net bakiye − vadesi gelmemiş PAYTRANS plan satırları (DATE_ ≥ bugün)); müşteri SIGN 0 / 120%, tedarikçi SIGN 1 / 320%. Yaşlandırma: bakiye en yeni plan satırlarından geriye dağıtılır (pencere: SUM(TOTAL) OVER (PARTITION BY CARDREF ORDER BY DATE_ DESC)), gün kovaları vadeden bugüne.
 
 ## planlanan_odeme_vadesi
 AVG(DATEDIFF(gün, fatura tarihi, PAYTRANS.DATE_)); PAYTRANS MODULENR 4, SIGN 0, CANCELLED 0; INVOICE TRCODE 7,8,9. Eş anlamlı: ödeme vadesi, vade günü, anlaşılan vade. İş teyidi bekliyor (2026-09-16).

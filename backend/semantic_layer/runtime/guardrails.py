@@ -359,6 +359,19 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 return True
         return False
 
+    def current_copy(prof: SchemaProfile) -> list[SchemaProfile]:
+        """An undated relation in a statement whose date test sits elsewhere (a CTE's aging buckets).
+        With no period asked it is read from the current copy, as `spread` would read it: left on the
+        representative — the biggest copy — a FIFO aging put a 2026 balance on 2021–2025's payment
+        plan and every open amount came out more than ninety days old."""
+        if period is not None:
+            return [prof]
+        same = [x for x in tables_of.get(prof.entity, []) if x.table_pattern == prof.table_pattern]
+        if len(same) < 2:
+            return [prof]
+        picked = periods.tables_for(same, None, None)
+        return picked if len(picked) == 1 else [prof]
+
     # Decided on the statement as written: once the rewrite starts, the dated table beside a card is
     # already a UNION subquery and no longer looks like a table.
     lone_cards = set()
@@ -389,7 +402,7 @@ def physicalize_sql(sql: str, profiles: list[SchemaProfile], context: dict[str, 
                 wanted = lockstep
             else:
                 # Where the query says which relation carries the period, only that one is spread.
-                wanted = spread(prof) if is_dated(node, prof) else [prof]
+                wanted = spread(prof) if is_dated(node, prof) else current_copy(prof)
             if len(wanted) > 1:
                 # One entity, several copies: read them as one relation so everything the model wrote
                 # around it — the joins, the filters, the aggregate — is untouched. Each row carries the
