@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 12:40 — Editoryal ana ekran: ZEKI AI sohbeti, sağ üstte kitap arama, iç adlar gizlendi
+
+Kullanıcı isteği: "Kitap ara" sağ üste büyük ve dikkat çekici; "Kitaba sor" → ZEKI AI sohbeti, Enter ile gönder; "Motor çalışıyor" yerine "ZEKI AI düşünüyor"; ekranda/mesajda/hatada Hermes, OCR, model adı hiçbir yerde yok; kimlik ve konu dışı sorulara nazik kapsam cevabı.
+
+- **Kitap arama sağ üstte** (`SearchBox.tsx`, `ModuleFrame` yeni `aside` yuvası): renk akışlı çerçeveli büyük alan, sonuçlar sağ üst köşeden açılan panelde; dışarı tıklayınca / Esc ile kapanır.
+- **ZEKI AI sohbeti** (`AskBox.tsx`, ana ekran ve kitap sayfası): kullanıcı balonu sağda (gradyan), ZEKI AI balonu solda (dönen küre avatar), boşken karşılama + öneri soruları, okunmuş kitaplar çip olarak giriş alanının üstünde, büyüyen giriş alanı, Enter gönderir (harf birleştirme sırasında göndermez), hata balonunda "Tekrar sor". Bekleme: zıplayan noktalar + değişen cümle ("ZEKI AI düşünüyor", "Sayfaları tarıyor"…). Sayfa atıfları («s. 14», «[s.2]») rozet. Hareketler yalnız transform/opacity, `prefers-reduced-motion`'da kapalı/sade.
+- **İç adlar gizlendi** (`editorial_books.py`): `scrub()` cevap ve hata metnindeki Hermes/OCR/model adlarını ZEKI AI yapar; motor hatası ayrıntısı loga, kullanıcıya «ZEKI AI şu an bu soruyu cevaplayamadı. Birazdan tekrar sorun.»; istem kimliği ZEKI AI olarak kurar.
+- **Kapsam cevabı** (`scope_reply`): selam/kimlik → «Merhaba, ben ZEKI AI…», kitap dışı → «Bu konuda bilgi veremiyorum. Ben ZEKI AI olarak … destek olmak için buradayım.» Hızlı modelle ayrılır, kitap motorunu (dakikalar) beklemez; belirsiz/başarısız sınıflandırma soruyu geri çevirmez.
+- **Doğrulama (canlı, test sunucusu, timasai oturumu):** arayüz derlendi ve yayında (`AskBox-*.js` içinde "ZEKI AI düşünüyor", "Motor çalışıyor" yok), `/timas/editoryal` 200. "Sen hangi modelsin? OCR ile mi okuyorsun? Max kimdir?" → 431 sn, cevapta model/OCR adı yok, "Ben ZEKI AI'yım" dedi (talimatı yansıttığı için istem düzeltildi). İkinci test başka oturumun köprü yeniden başlatmasıyla yarıda kaldı.
+- **Kurulmadı:** kapsam cevabı (`app.py` + son `editorial_books.py`). Sunucudaki `app.py` başka oturumun henüz main'de olmayan işini (eş süreli dönem) taşıyor; parçam yerinde uygulandı ama gönderim izin kontrolüne takıldı, kullanıcı onayı bekleniyor.
+
 ## 2026-09-21 12:10 — Müşteri sunucusundan editör motoruna doğrudan yol (GPU nginx)
 
 Kullanıcı isteği: müşteri VM'inden GPU'ya, bizim ortamlardan bağımsız erişim.
