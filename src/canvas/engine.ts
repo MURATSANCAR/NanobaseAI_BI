@@ -1226,3 +1226,26 @@ export const editorialSearchApi = {
   book: (id: string) => send<BookDetail>('GET', `/api/v1/editorial/books/${encodeURIComponent(id)}`, undefined, 60_000),
   personBooks: (id: string) => send<{ items: SearchHit[]; db?: DbTiming | null }>('GET', `/api/v1/editorial/people/${encodeURIComponent(id)}/books`, undefined, 60_000),
 };
+
+// ------------------------------------------------ kitabın içeriğine soru (editör motoru, Hermes)
+
+export type BookQuestion = {
+  id: string;
+  bookKey: string;
+  bookTitle: string | null;
+  question: string;
+  status: 'bekliyor' | 'calisiyor' | 'bitti' | 'hata';
+  answer: string | null;
+  error: string | null;
+  elapsedMs: number | null;
+  username: string;
+  createdAt: string;
+  finishedAt: string | null;
+};
+
+/** Soru bir iştir: motor modeli istendiğinde açar ve GPU kitap analiziyle paylaşılır. */
+export const bookAskApi = {
+  list: (bookKey?: string) => send<{ items: BookQuestion[]; running: number; configured: boolean }>('GET', `/api/v1/editorial/ask${qs({ book: bookKey })}`, undefined, 30_000),
+  ask: (b: { question: string; bookKey?: string; bookTitle?: string }) => send<{ id: string; status: string }>('POST', '/api/v1/editorial/ask', b, 30_000),
+  one: (id: string) => send<BookQuestion>('GET', `/api/v1/editorial/ask/${encodeURIComponent(id)}`, undefined, 30_000),
+};

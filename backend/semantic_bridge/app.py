@@ -3618,6 +3618,44 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         path, name = _desk_call(desk_mod.file_path, engine, tenant, user, is_admin, file_id)
         return FileResponse(path, filename=name)
 
+    # ------------------------------------------------------------------ kitaba soru (editör motoru)
+    # Köprü editörün veritabanına dokunmaz; yalnız Hermes'in OpenAI uyumlu API'sinden sorar (ters tünel).
+    from semantic_bridge import editorial_books as books_mod
+
+    def _books(request: Request) -> tuple[Any, str, str, bool]:
+        engine, tenant, user, _ = _greetings(request)
+        first = id(engine) not in books_mod._ready
+        books_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        if first:
+            books_mod.reset_stale(engine)
+        return engine, tenant, user, admin_mod.is_admin(user)
+
+    def _books_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except books_mod.BookAskError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "EDITOR_ASK", "message": str(e)}) from e
+
+    @app.get("/api/v1/editorial/ask")
+    def editorial_ask_list(request: Request, book: str = "", limit: int = 20) -> dict[str, Any]:
+        engine, tenant, user, _ = _books(request)
+        return _books_call(books_mod.recent, engine, tenant, user, book_key=book, limit=limit)
+
+    @app.post("/api/v1/editorial/ask")
+    def editorial_ask(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _books(request)
+        out = _books_call(books_mod.ask, engine, tenant, user, str(body.get("question") or ""),
+                          book_key=str(body.get("bookKey") or ""), book_title=(str(body.get("bookTitle") or "") or None))
+        admin_mod.audit(engine, user, "run", "editorial_ask", out["id"], str(body.get("bookTitle") or "") or None,
+                        {"question": str(body.get("question") or "")[:300]})
+        return out
+
+    @app.get("/api/v1/editorial/ask/{qid}")
+    def editorial_ask_one(qid: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, is_admin = _books(request)
+        return _books_call(books_mod.one, engine, tenant, user, is_admin, qid)
+
     # ------------------------------------------------------------------ yönetim
     # Ayarlar, herkesin tanımları ve değişiklik kaydı. Yetki: oturumdaki AD hesabı yönetici listesinde olmalı.
 

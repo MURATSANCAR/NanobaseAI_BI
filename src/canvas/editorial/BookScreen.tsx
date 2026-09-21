@@ -4,6 +4,7 @@ import { ENGINE_ENABLED, editorialSearchApi, type BookDetail } from '../engine';
 import { Loading, Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime, num, pct } from '../format';
 import { ModuleFrame, Panel } from './kit';
+import AskBox from './AskBox';
 
 /** Bir kitabın bütün süreçleri tek ekranda: künye, roller, sözleşmeler, proje ve kurul kararı, üretim,
  *  masadaki metin ve prova. Her bölüm kendi modülüne bağlanır. CRM'de kaydı olmayan bölüm hiç çizilmez. */
@@ -254,6 +255,15 @@ export default function BookScreen() {
             {b.firstPublished && <span className="text-[12px] text-canvas-muted">İlk yayın {dateTime(b.firstPublished)}</span>}
           </div>
           <Facts b={b} />
+          <Panel>
+            <h2 className="px-1 text-[13px] font-extrabold">Bu kitabın içeriğine sor</h2>
+            <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
+              Cevap editör motorunun kanıt defterinden gelir; kitap analiz edilmemişse motor bunu söyler.
+            </p>
+            <div className="mt-2">
+              <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
+            </div>
+          </Panel>
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <div className="space-y-3 lg:space-y-4">
               <Roles b={b} />

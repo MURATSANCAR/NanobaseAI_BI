@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 09:30 — Kitabın içeriğine soru: tünel, köprü ucu ve ekran
+
+"Kalan 1" tamamlandı. Portaldan analiz edilmiş bir kitabın **içeriğine** soru sorulup kanıtlı cevap alınıyor.
+
+- **Tünel:** GPU'daki ters tünelde boşta duran yönlendirme (`127.0.0.1:18887`, eski hedefi kaldırılmış GPU `8010`) Hermes'in API'sine (`19110`) çevrildi. `PermitListen` zaten 18887'yi içerdiği için sshd'ye dokunulmadı. Depo kopyası (`deploy/tt-gpu/tunnel/`) sunucuyla eşitlendi. Anahtar/model adı `/etc/nanobase/semantic-bridge.env`'e yazıldı (`EDITOR_API_BASE`, `EDITOR_API_KEY`, `EDITOR_MODEL`); repoya girmedi.
+- **Köprü ucu** `backend/semantic_bridge/editorial_books.py` + `/api/v1/editorial/ask` (POST/GET/GET {id}). Köprü editörün veritabanına dokunmaz, yalnız Hermes'in OpenAI uyumlu API'sinden sorar. **Soru bir iştir:** motor modeli istendiğinde açar ve GPU'yu kitap analiziyle paylaşır, bu yüzden kayıt açılır (`semantic_editorial_questions`), arka planda sorulur, ekran durumu izler. Aynı anda tek soru gider (motor tek modelle çalışır). Servis yeniden başlarsa bekleyen soru "hata" olur ve bu söylenir; cevap uydurulmaz.
+- **Ekran:** ana ekranın ortasındaki kutu iki sekmeli oldu — "Kitap ara" (ad araması) ve "Kitaba sor" (içerik). Kitap sayfasına da o kitaba özel soru paneli eklendi. Bekleyen soru varken liste kendi kendine tazelenir; sayfadan ayrılınca soru kayıtlı kalır.
+- **Doğrulama (canlı, portal üzerinden):** "Bu kitapta hangi karakterler var?" → 39 sn, sayfa numaralı gerçek cevap (Defne s.5, Bilge s.9, Can s.32, Profesör Bulut s.8, Max s.11, Robobi s.22…). Uydurma testi: "yazarın telefon numarası nedir?" → 13 sn, "kanıt defterinde yok" dedi ve yalnız yayınevi telefonunu [s.2] verdi. Başkasının sorusuna erişim 403, oturumsuz 401, boş soru 400, sayfalar 200.
+- **Bilinmesi gereken yan etki:** soru sorulunca gateway yönetici modelini açar; GPU 1'de yer yoksa koşan analiz modelini kapatır (testte görsel model kapandı, 86,6 → 44,2 GB). Yani analiz sürerken soru sormak analizi aksatabilir.
+
 ## 2026-09-21 02:40 — Editoryal ana ekrana arama, kitap 360 sayfası ve Modüller menüsünde ana kategoriler
 
 Üç kullanıcı isteği.

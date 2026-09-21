@@ -6,6 +6,7 @@ import { ENGINE_ENABLED, editorialSearchApi, type SearchHit } from '../engine';
 import { Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { useDebounced } from './kit';
+import AskBox from './AskBox';
 
 /** Editoryal ana ekranın arama alanı: yazılan metin kitap adında, proje adında ve esere katkı veren
  *  kişilerin adında aranır. Kitaba tıklayınca o kitabın bütün süreçleri açılır. Kişiye tıklayınca
@@ -75,6 +76,7 @@ function PersonBooks({ person, onClose }: { person: SearchHit; onClose: () => vo
 export default function SearchBox() {
   const [text, setText] = useState('');
   const [person, setPerson] = useState<SearchHit | null>(null);
+  const [tab, setTab] = useState<'ara' | 'sor'>('ara');
   const navigate = useNavigate();
   const q = useDebounced(text.trim(), 400);
   const res = useQuery({ queryKey: ['editorial', 'search', q], queryFn: () => editorialSearchApi.search(q), enabled: ENGINE_ENABLED && q.length >= 2 });
@@ -82,13 +84,39 @@ export default function SearchBox() {
   const total = (d?.books.length ?? 0) + (d?.projects.length ?? 0) + (d?.people.length ?? 0);
   const err = errText(res.error, 'Arama yapılamadı.');
 
+  const TABS = [
+    { id: 'ara' as const, label: 'Kitap ara', help: 'Kitap adı, proje adı ya da kişi yazın. Kitaba tıklayınca o kitabın bütün süreçleri tek ekranda açılır.' },
+    { id: 'sor' as const, label: 'Kitaba sor', help: 'Analiz edilmiş bir kitabın içeriğine sorun. Cevap kanıt defterinden, sayfa numarasıyla gelir.' },
+  ];
+
   return (
     <section className="glass-panel rounded-2xl p-4 shadow-glass-float sm:rounded-3xl sm:p-6">
       <div className="mx-auto max-w-[760px]">
-        <h2 className="text-center text-[15px] font-extrabold tracking-tight sm:text-[17px]">Hangi kitabı arıyorsunuz?</h2>
-        <p className="mt-1 text-center text-[12px] leading-snug text-canvas-muted">
-          Kitap adı, proje adı ya da kişi yazın. Kitaba tıklayınca o kitabın bütün süreçleri tek ekranda açılır.
+        <div className="mx-auto flex w-fit gap-1 rounded-xl bg-slate-100/80 p-1">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setTab(t.id)}
+              aria-pressed={tab === t.id}
+              className={`min-h-9 rounded-lg px-3.5 text-[12.5px] font-bold transition-colors duration-150 ${
+                tab === t.id ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:text-canvas-ink'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <p className="mx-auto mt-2.5 max-w-[60ch] text-center text-[12px] leading-snug text-canvas-muted">
+          {TABS.find((t) => t.id === tab)?.help}
         </p>
+
+        {tab === 'sor' ? (
+          <div className="mt-3">
+            <AskBox />
+          </div>
+        ) : (
+          <>
         <form
           className="relative mt-3"
           onSubmit={(e) => {
@@ -155,6 +183,8 @@ export default function SearchBox() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </div>
     </section>
