@@ -28,7 +28,7 @@ function friendlyError(e: string): string {
 const THINKING = ['Sorunuz işleniyor'];
 const QUEUED = ['ZEKİ AI sıradaki soruyu bitiriyor', 'Birazdan sizin sorunuza geçecek'];
 
-const SUGGEST = ['Bu kitapta hangi karakterler var?', 'Hikâye nasıl başlıyor?', 'Kitabın ana teması ne?', 'En önemli olay hangi sayfada?'];
+const SUGGEST = ['hangi karakterler var?', 'hikâye nasıl başlıyor?', 'ana temalar neler?', 'önemli olaylar hangi sayfalarda?'];
 
 /** Sayfa atıflarını («s. 14», «[s.2]») küçük rozetlere çevirir. */
 function withPages(text: string): ReactNode[] {
@@ -204,7 +204,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
   const tick = `${turns.length}-${last?.id}-${last?.status}-${pending ?? ''}`;
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollTo({ top: el.scrollHeight });
+    if (el) el.scrollTo({ top: turns.length || pending ? el.scrollHeight : 0 });
   }, [tick]);
 
   // İçeriğe göre büyüyen giriş alanı (en fazla ~6 satır).
@@ -219,7 +219,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
 
   return (
     <section className="zk-frame relative overflow-hidden rounded-[28px] p-[1.5px] shadow-[0_30px_80px_-30px_rgba(124,92,255,.45)]">
-      <div className="relative flex h-[min(680px,75dvh)] min-h-[280px] flex-col overflow-hidden rounded-[26.5px] bg-[#fbfaff]">
+      <div className={`relative flex flex-col rounded-[26.5px] bg-[#fbfaff] ${empty ? '' : 'h-[min(680px,80dvh)] min-h-[280px]'}`}>
         <div aria-hidden className="zk-aurora pointer-events-none absolute inset-x-0 top-0 h-56" />
 
         <header className="relative flex shrink-0 items-center gap-3 border-b border-white/70 px-4 py-3.5 sm:px-6">
@@ -237,32 +237,33 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
           </span>
         </header>
 
-        <div ref={scroller} className="relative min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+        <div ref={scroller} className={`zk-scroll relative min-h-0 space-y-5 px-3 py-4 sm:px-6 ${empty ? '' : 'flex-1 overflow-y-auto overscroll-contain'}`}>
           {off && <Note tone="warn">{PRODUCT} bu kurulumda tanımlı değil; kitap içeriğine soru sorulamaz.</Note>}
           {empty && !off && (
-            <div className="zk-msg flex flex-col items-center px-2 py-6 text-center">
-              <Orb size="lg" />
-              <h3 className="mt-4 text-[22px] font-extrabold tracking-tight text-canvas-ink sm:text-[26px]">
+            <div className="zk-msg flex flex-col items-center py-2 text-center">
+              <h3 className="text-[20px] font-extrabold tracking-tight text-canvas-ink sm:text-[26px]">
                 Merhaba, ben{' '}
                 <span className="bg-gradient-to-r from-canvas-coral via-[#c55cf0] to-canvas-violet bg-clip-text text-transparent">ZEKİ AI</span>
               </h3>
               <p className="mt-1.5 max-w-[46ch] text-[13px] leading-relaxed text-canvas-muted">
-                Okunmuş bir kitaba ne sormak istersiniz? Cevabı kitabın kendi metninden, sayfa numarasıyla veririm; kitapta olmayan bir şeyi uydurmam.
+                Okuduğumuz kitaplara soru sorun. Cevapta kitap adını ve kaynak sayfasını görün; tek bir kitabı seçerek de devam edebilirsiniz.
               </p>
               <div className="mt-4 flex max-w-[620px] flex-wrap justify-center gap-2">
-                {SUGGEST.map((s) => (
+                {SUGGEST.map((s) => {
+                  const question = target ? `«${target}» kitabında ${s}` : `Okuduğumuz kitaplarda ${s}`;
+                  return (
                   <button
                     key={s}
                     type="button"
                     onClick={() => {
-                      setText(s);
+                      setText(question);
                       input.current?.focus();
                     }}
                     className="zk-press rounded-full border border-canvas-violet/15 bg-white/90 px-3.5 py-2 text-[12.5px] font-semibold text-canvas-ink shadow-sm hover:border-canvas-violet/40 hover:text-canvas-violet"
                   >
-                    {s}
+                    {question}
                   </button>
-                ))}
+                ); })}
               </div>
             </div>
           )}
@@ -282,7 +283,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
 
         <div className="sticky bottom-0 z-10 shrink-0 border-t border-white/70 bg-white/95 px-3 pb-3 pt-2.5 backdrop-blur sm:px-5 sm:pb-4">
           {!bookTitle && readable.length > 0 && (
-            <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+            <div className="zk-scroll mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
               <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
               {readable.map((t) => (
                 <button
@@ -330,7 +331,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
               disabled={off}
               placeholder={target ? `«${target}» kitabına sorun…` : "ZEKİ AI'ya sorun: kim ne yaptı, hangi olay hangi sayfada…"}
               aria-label="ZEKİ AI'ya soru"
-              className="max-h-[168px] min-h-[44px] min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base font-medium leading-snug text-canvas-ink outline-none placeholder:text-canvas-muted/70 disabled:opacity-60 sm:text-[14.5px]"
+              className="zk-scroll max-h-[168px] min-h-[44px] min-w-0 flex-1 resize-none bg-transparent py-2.5 text-base font-medium leading-snug text-canvas-ink outline-none placeholder:text-canvas-muted/70 disabled:opacity-60 sm:text-[14.5px]"
             />
             <button
               type="submit"

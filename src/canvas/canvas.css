@@ -728,3 +728,7 @@
   .cv-interp { min-height: 2.25rem; }
   .cv-interp-guess { padding-left: 0.75rem; padding-right: 0.75rem; }
 }
+
+/* Hide only chat scrollbars; long replies remain touch/keyboard scrollable. */
+.zk-scroll { scrollbar-width: none; }
+.zk-scroll::-webkit-scrollbar { display: none; }
