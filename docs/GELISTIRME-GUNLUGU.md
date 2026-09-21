@@ -6,7 +6,7 @@
 - Kullanıcının ekranında yazı alanı aşağıda kalıyor, önceki sorular her açılışta geliyordu. `AskBox.tsx` yalnız mevcut açılışta oluşturulan soru kimliklerini `/editorial/ask/{id}` üzerinden izler; geçmiş liste isteği kaldırıldı. Kalıcı soru kayıtları silinmez.
 - Sohbet yüksekliği görüntü alanına göre sınırlandı; yalnız mesajlar kayar, yazı alanı ayrı alt bölümde kalır. Dar ekran için textarea `min-width:0`, kitap seçimleri dokunulabilir; giriş 2000 karakterle sınırlı. API'nin bildirmediği tarama/yazma aşamalarını sırayla gösteren metinler kaldırıldı.
 - Kitap önerisi için kapak, yazar, kısa özet ve kaynaklı eşleşme gerekçesi isteniyor. Editör katalog kodunda `search_books/get_book_card` ve kapak kayıtları mevcut; portal entegrasyonu henüz yapılmadı. Canlıda bakım gereği Hermes/MCP/gateway servisleri durmuş; bakım kaldırılmadı ve eski doğrulanmamış kitap kayıtları kabul edilmiş sayılmadı.
-- Bu aşama kod değişikliğidir. Uzak derleme ve 320/390/768/masaüstü gerçek portal kontrollerinin sonucu ayrıca kaydedilecek; canlı kabul henüz **DOĞRULANAMADI**.
+- Doğrulama: `nanobase-direct:/tmp/editorial-chat-0cdcfd7` üzerinde `0cdcfd7e` kaynak ağacından Vite üretim derlemesi ve TypeScript `--noEmit` kontrolü geçti. Yerel test çalıştırılmadı. `https://portal.nanobase.ai/timas/auth/session` oturumsuz 401; 320/390/768/masaüstü gerçek oturum akışı ve yenileme kabulü **DOĞRULANAMADI**. Yayın yapılmadı. GitHub push bu oturumun HTTPS kimliği olmadığı için başarısız (`could not read Username`); değişiklik yerel `main` üzerindedir.
 
 ## 2026-09-21 — Editor kaynak bütünlüğü
 
