@@ -18,6 +18,7 @@ import hashlib
 import json
 import logging
 import os
+import socket
 import time
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -46,6 +47,16 @@ MEM_MARGIN = int(float(os.environ.get("EDITOR_GPU_MARGIN_GIB", "1.5")) * GIB)
 PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score",
                "pooling", "classify", "tokenize", "detokenize"}
 HOP = {"content-length", "transfer-encoding", "connection", "keep-alive", "content-encoding"}
+
+# Taşma (kullanıcı kararı 2026-09-21): aynı model (Qwen3.8-27B-FP8) GPU 0'da BI için de açık. Etkileşimli
+# soru, yönetici model GPU 1'de kapalıyken ve kart analizle doluyken beklemek yerine o eşe gider; iki kopya
+# aynı ağırlık ve aynı sunum ayarıyla çalışır (bağlam 131072, qwen3 akıl yürütme ayrıştırıcısı, MTP).
+# Yalnız EDITOR_OVERFLOW_CLIENTS'taki konteynerlerden gelen istekler taşar; analiz işçisi taşmaz.
+# Boş bırakılırsa taşma kapalıdır.
+OVERFLOW_ALIAS = os.environ.get("EDITOR_OVERFLOW_ALIAS", "book-director")
+OVERFLOW_URL = os.environ.get("EDITOR_OVERFLOW_URL", "").rstrip("/")
+OVERFLOW_MODEL = os.environ.get("EDITOR_OVERFLOW_MODEL", "")
+OVERFLOW_CLIENTS = {c.strip() for c in os.environ.get("EDITOR_OVERFLOW_CLIENTS", "").split(",") if c.strip()}
 
 
 @dataclass
@@ -223,6 +234,52 @@ async def _make_room(a: Alias) -> None:
         await asyncio.sleep(5)  # busy editor models on this card: wait
 
 
+def _would_wait(a: Alias) -> bool:
+    """`a`yı şimdi başlatmak kartta meşgul bir modelin bitmesini beklemeyi gerektirir mi?
+    Boş bellek + boşta duran editör modellerinin bırakacağı bellek yetiyorsa beklemez."""
+    free, total = gpu_mem(a.gpu)
+    need = int(a.mem_fraction * total) + MEM_MARGIN
+    if free >= need:
+        return False
+    others = [o for o in ALIASES.values() if o.name != a.name and o.gpu == a.gpu and _is_running(o)]
+    reclaimable = sum(int(o.mem_fraction * total) for o in others if o.inflight == 0)
+    return free + reclaimable < need
+
+
+def _client_name(req: Request) -> str:
+    """İsteği atan konteynerin adı (editor-net üzerinde ters DNS); çözülemezse boş."""
+    host = req.client.host if req.client else ""
+    if not host:
+        return ""
+    for name in OVERFLOW_CLIENTS:
+        try:
+            if host in {ai[4][0] for ai in socket.getaddrinfo(name, None)}:
+                return name
+        except OSError:
+            continue
+    return ""
+
+
+async def _overflow_ok() -> bool:
+    try:
+        r = await http.get(f"{OVERFLOW_URL}/v1/models", timeout=5.0)
+        return r.status_code == 200
+    except httpx.HTTPError:
+        return False
+
+
+async def _should_overflow(a: Alias, req: Request) -> bool:
+    if not (OVERFLOW_URL and OVERFLOW_MODEL and a.name == OVERFLOW_ALIAS):
+        return False
+    if not _client_name(req):
+        return False                      # analiz işçisi ve diğerleri: hiçbir koşulda taşmaz
+    if _is_running(a) and await _healthy(a):
+        return False                      # yönetici model GPU 1'de açık: orada cevaplanır
+    if not _would_wait(a):
+        return False                      # kartta yer var: normal yol, GPU 1'de açılır
+    return await _overflow_ok()           # kart meşgul ve eş ayakta: eşe git
+
+
 async def ensure_running(a: Alias) -> None:
     if _is_running(a) and await _healthy(a):
         return
@@ -307,8 +364,15 @@ async def proxy(path: str, req: Request):
             a.last_used = time.time()
 
     try:
-        await ensure_running(a)
-        url = f"{a.upstream}/v1/{path}"
+        if await _should_overflow(a, req):
+            # Aynı modelin GPU 0'daki eşi; yalnız sunulan ad farklı, gövdedeki model adı ona çevrilir.
+            log.info("overflow %s → %s (gpu %s busy, client %s)", a.name, OVERFLOW_URL, a.gpu, _client_name(req))
+            payload["model"] = OVERFLOW_MODEL
+            body = json.dumps(payload).encode()
+            url = f"{OVERFLOW_URL}/v1/{path}"
+        else:
+            await ensure_running(a)
+            url = f"{a.upstream}/v1/{path}"
         headers = {"content-type": "application/json"}
         if payload.get("stream"):
             upstream = await http.send(http.build_request("POST", url, content=body,
