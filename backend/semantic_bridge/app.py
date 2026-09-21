@@ -450,7 +450,7 @@ class Runtime:
         with self._engine_lock:
             self._conn_for(sql).dry_run(sql)
 
-    def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None) -> dict[str, Any]:
+    def run_sql(self, sql: str, limit: int, period: Optional[tuple] = None, *, scope=None, use_cache: bool = True) -> dict[str, Any]:
         sql = strip_comments(sql or "")
         ok, why = validate_sql(sql)
         if not ok:
@@ -466,7 +466,7 @@ class Runtime:
         # also part of the cache key by construction: it changes `phys`, and `phys` is what is hashed.
         phys = self._physical(sql, period, **({"scope": scope} if scope else {}))
         key = hashlib.sha256(f"{limit}\n{phys}".encode()).hexdigest()
-        if self._cache_ttl > 0:
+        if use_cache and self._cache_ttl > 0:
             self._touch_hot(key, phys, limit)
             hit = self._cache.get(key)
             if hit:
@@ -1844,6 +1844,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         rt = state["rt"]
         log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(rt.profiles), rt.store.status_counts(rt.settings.tenant_id, rt.settings.datasource_id).get("CERTIFIED"), bool(rt.llm), bool(rt.connector))
         rt.start_refresher()
+        app.state.financial_audit.start()
         # Every request waiting for the model holds one of these threads while it waits. Forty (the
         # default) is forty waiting prompts and then /health queues behind them too.
         try:
@@ -1857,6 +1858,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         try:
             yield
         finally:
+            app.state.financial_audit.stop()
             rt.jobs.stop()
             rt.stop_refresher()
 
@@ -4018,7 +4020,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return row
 
     from semantic_bridge import financial_audit
-    financial_audit.register(app, rt, _require_caller)
+    app.state.financial_audit = financial_audit.register(app, rt, _require_caller)
     return app
 
 
