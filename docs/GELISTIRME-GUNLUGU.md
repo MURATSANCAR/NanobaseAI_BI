@@ -12,6 +12,8 @@
 
 ## 2026-09-21 — Editor: gerçek yeni nesilde çıktı kabulü ve Critic geri bildirimi
 
+- Gerçek model tanısı (`model_call` 27144–27145): yalnız boolean isteyen denetçinin yanlış reddettiği 12 bire bir cümle, karar öncesi kısa gerekçe üreten sözleşmede 12/12 doğru kabul edildi. İlk gerçek yanlış özne ve belirsizlik kaybı örnekleri de yeniden reddedildi (`true,false,false` bağımsız beklentisi eşleşti). `validated-outputs-v5` bu gerekçeli şemayı ve düzeltmeye gerekçe aktarımını kullanır; genel model kalite kabulü iddiası değildir.
+
 - Devamında gerçek çağrılar iki sınırı daha gösterdi: cümle denetçisi iddianın tür/sayfa bilgisini kaybediyordu; ayrıca bire bir aynı metne toplu yanlış ret verebiliyordu. `validated-outputs-v4` tür/sayfa/metni birlikte aktarır, tek doğrulanmış iddiayla bire bir eşleşmeyi deterministik kanıt olarak kaydeder; yeniden yazılmış cümlede model kapısı korunur. Model anlaşmazlıkları saklanır. `016_rebuild_code_budget.sql` deneme bütçesini revizyon + kod sürümüne bağlar; aynı kodun yeniden başlaması bütçeyi sıfırlamaz.
 
 - Kullanıcı VPN'i açtıktan sonra tek gerçek kitap için ayrı `editor-output-acceptance-20260921` kuyruğu açıldı. Genel worker/MCP/Hermes kapalı; yedek `/data/editor/backups/20260921-live-outputs/before.dump`.
