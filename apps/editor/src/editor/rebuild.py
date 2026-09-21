@@ -226,10 +226,12 @@ async def run(gid: str) -> dict:
             raise
         finally:
             # Operational lease only; never touches book facts or model results.
-            db.one("UPDATE ed.rebuild_request SET consumer_backend_pid=NULL,consumer_backend_start=NULL "
-                "WHERE generation_id=%s AND consumer_backend_pid=%s RETURNING generation_id",gid,owner['pid'])
-            lock.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))",('outputs:'+gid,))
-            lock.commit()
+            try:
+                db.one("UPDATE ed.rebuild_request SET consumer_backend_pid=NULL,consumer_backend_start=NULL "
+                    "WHERE generation_id=%s AND consumer_backend_pid=%s RETURNING generation_id",gid,owner['pid'])
+            finally:
+                lock.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))",('outputs:'+gid,))
+                lock.commit()
 
 
 def pending():
