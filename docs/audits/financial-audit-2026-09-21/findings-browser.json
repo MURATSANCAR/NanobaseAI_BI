@@ -1,0 +1,128 @@
+{
+  "url": "https://portal.nanobase.ai/timas/finansal-denetim",
+  "flows": [
+    {
+      "explainedRows": 10,
+      "first": "Sorun ne?\nBanka hareketlerinin net toplamı ile aynı fiş ve hesaptaki muhasebe tutarı uyuşmuyor.\n\nNeden işaretlendi?\nFiş: 411010133; hesap: 300.01.001. Banka hareketlerinin net toplamı: -2.465.437,67 TL; aynı fiş ve hesaptaki muhasebe net tutarı: -1.579.061,00 TL. Birinci tutar eksi ikinci tutar: -886.376,67 TL. Farkın mutlak değeri 0,01 TL sınırını aştığı için listelendi. İşaretli net tutarlar karşılaştırılır; eksi tutar tek başına hata değildir.\n\nNe kontrol edilmeli?\nBanka hareketlerini aynı fiş ve hesapta karşılaştırın; borç/alacak yönünü ve eksik veya fazla satırları inceleyin. Bu kontrol banka ekstresi mutabakatı değildir.\n\n\t10248\t665\t300.01.001\t1\t-2.465.437,67\t-1.579.061\t-886.376,67\t20.01.2026\t411010133",
+      "name": "bank-ledger-amount",
+      "report": "/timas/api/v1/financial-audit/runs/af77189a9e4e4023aee5618e1cb28524/export",
+      "rows": 10
+    },
+    {
+      "explainedRows": 50,
+      "first": "Sorun ne?\nFaturaların KDV toplamı ile fişteki 191/391 hesaplarının net KDV tutarı farklı.\n\nNeden işaretlendi?\nFiş: 411000907. Faturaların yönleri dikkate alınmış KDV toplamı: 2.688,00 TL; 191/391 hesaplarının net tutarı: 26.880,00 TL. Birinci tutar eksi ikinci tutar: -24.192,00 TL. Farkın mutlak değeri 0,01 TL sınırını aştığı için listelendi. İşaretli net tutarlar karşılaştırılır; eksi tutar tek başına hata değildir.\n\nNe kontrol edilmeli?\nKDV satırlarını, iade yönlerini, tevkifat/istisna uygulamasını ve farklı KDV hesabı kullanımını belgelerle kontrol edin. Fark, tek başına vergi hatası veya ceza değildir.\n\n\t916\t1\t2.688\t26.880\t-24.192\t411000907\t02.01.2026",
+      "missingCounterparts": 0,
+      "name": "invoice-vat-ledger",
+      "rows": 50
+    },
+    {
+      "explainedRows": 50,
+      "first": "Sorun ne?\nFaturaların KDV toplamı ile fişteki 191/391 hesaplarının net KDV tutarı farklı.\n\nNeden işaretlendi?\nFiş: 411048401. Faturaların yönleri dikkate alınmış KDV toplamı: 17.220,00 TL; 191/391 hesaplarının net tutarı: 24.600,00 TL. Birinci tutar eksi ikinci tutar: -7.380,00 TL. Farkın mutlak değeri 0,01 TL sınırını aştığı için listelendi. İşaretli net tutarlar karşılaştırılır; eksi tutar tek başına hata değildir.\n\nNe kontrol edilmeli?\nKDV satırlarını, iade yönlerini, tevkifat/istisna uygulamasını ve farklı KDV hesabı kullanımını belgelerle kontrol edin. Fark, tek başına vergi hatası veya ceza değildir.\n\n\t48932\t1\t17.220\t24.600\t-7.380\t411048401\t16.03.2026",
+      "name": "invoice-vat-ledger-page-2",
+      "pagination": "125 kayıt · Sayfa 2",
+      "rows": 50
+    },
+    {
+      "explainedRows": 50,
+      "first": "Sorun ne?\nFaturada muhasebeye aktarılmadığını belirten işaret var.\n\nNeden işaretlendi?\nFiş: Gastropos-122811; kaynak kaydı: 53885. Muhasebeye aktarım işareti: 0. Bu listede aktarım işareti 0 olan kayıtlar gösterilir; bu işaret tek başına başka bir muhasebe kaydı bulunmadığını kanıtlamaz.\n\nNe kontrol edilmeli?\nFaturanın işlem durumunu ve muhasebeleştirme kaydını kontrol edin. Gecikme veya farklı aktarım yöntemi olabilir; tek başına kayıt dışı işlem kanıtı değildir.\n\n\t53885\tGastropos-122811\t01.01.2026\t264395\t7\t385\t0\t0\t930\t84,55\t—\t—\t—",
+      "name": "invoice-unposted",
+      "rows": 50
+    },
+    {
+      "explainedRows": 50,
+      "first": "Sorun ne?\nAktarıldı işaretli faturanın muhasebe hesap bağlantısı boş.\n\nNeden işaretlendi?\nFiş: 4110000009; kaynak kaydı: 2498. Faturadaki hesap bağlantısı: 0; boş veya 0 bağlantı nedeniyle listelendi.\n\nNe kontrol edilmeli?\nCari kartın muhasebe hesabını ve faturanın muhasebeleştirme fişini inceleyin; farklı eşleştirme kullanılmış olabilir.\n\n\t2498\t4110000009\t02.01.2026\t0\t4\t0\t2158\t1\t37,29\t0\t2158\t0\t02.01.2026",
+      "name": "invoice-account",
+      "rows": 50
+    },
+    {
+      "explainedRows": 50,
+      "first": "Sorun ne?\nBanka hareketinde muhasebeye aktarılmadığını belirten işaret var.\n\nNeden işaretlendi?\nFiş: 0000000000000001; kaynak kaydı: 137. Muhasebeye aktarım işareti: 0. Bu listede aktarım işareti 0 olan kayıtlar gösterilir; bu işaret tek başına başka bir muhasebe kaydı bulunmadığını kanıtlamaz.\n\nNe kontrol edilmeli?\nHareketin kaynağını ve muhasebeleştirme durumunu inceleyin. Başka modülden gelen yansıma kaydı olabilir; yeniden kayıt yapmadan önce mevcut fişi kontrol edin.\n\n\t137\t01.01.2026\t0000000000000001\t0\t0\t145\t0\t0\t—\t—\t—\t—\t—\t—\t—\t175.000\t0\t—",
+      "name": "bank-unposted",
+      "rows": 50
+    },
+    {
+      "explainedRows": 2,
+      "first": "101.04.001 · Karşılıksız Çekler Avans Hesabı\nHesap karakterine ters bakiye\n\nSorun ne?\n101.04.001 hesabında borç yerine alacak bakiyesi var.\n\nNeden işaretlendi?\nBorç toplamı 0,00 TL, alacak toplamı 224.730,64 TL. Borç eksi alacak -224.730,64 TL olduğu için hesap, 100 Kasa / 101 Alınan Çekler kontrolünde işaretlendi. Bu hesabın tüm hareketlerinin hatalı olduğu anlamına gelmez.\n\nNe kontrol edilmeli?\nAçılış bakiyesini, tahsilat ve ödeme sırasını, ters yönlü kayıtları ve dayanak belgeleri inceleyin.\n\n\t0 ₺\t224.730,64 ₺\t-224.730,64 ₺\t1 satır →",
+      "name": "core-account-rows",
+      "rows": 2
+    },
+    {
+      "name": "account-detail-context",
+      "reason": "Sorun ne?\n101.04.001 hesabında borç yerine alacak bakiyesi var.\n\nNeden işaretlendi?\nBorç toplamı 0,00 TL, alacak toplamı 224.730,64 TL. Borç eksi alacak -224.730,64 TL olduğu için hesap, 100 Kasa / 101 Alınan Çekler kontrolünde işaretlendi. Bu hesabın tüm hareketlerinin hatalı olduğu anlamına gelmez.\n\nNe kontrol edilmeli?\nAçılış bakiyesini, tahsilat ve ödeme sırasını, ters yönlü kayıtları ve dayanak belgeleri inceleyin."
+    },
+    {
+      "name": "catalog-credit-normal-account",
+      "reasons": [
+        "Sorun ne?\n320.90.GBP hesabında beklenen alacak yönü yerine borç bakiyesi var.\n\nNeden işaretlendi?\nBorç toplamı 1.589.212,71 TL, alacak toplamı 1.555.420,49 TL; borç eksi alacak 33.792,22 TL. Beklenen yönün tersindeki bakiye 0,01 TL sınırını aştığı için bu alt hesap işaretlendi.\n\nNe kontrol edilmeli?\nAçılış bakiyesini, mahsup ve avans niteliğini, borç/alacak yönünü ve doğru hesapta sınıflandırmayı dayanak belgelerle kontrol edin. Bu hesabın tüm hareketleri hatalı sayılmaz."
+      ]
+    }
+  ],
+  "viewports": [
+    {
+      "documentWidth": 320,
+      "mainScrollWidth": 248,
+      "mainWidth": 248,
+      "reasonWidth": 196,
+      "tableScrollWidth": 1244,
+      "tableWidth": 206,
+      "width": 320
+    },
+    {
+      "documentWidth": 390,
+      "mainScrollWidth": 318,
+      "mainWidth": 318,
+      "reasonWidth": 196,
+      "tableScrollWidth": 1244,
+      "tableWidth": 276,
+      "width": 390
+    },
+    {
+      "documentWidth": 768,
+      "mainScrollWidth": 644,
+      "mainWidth": 644,
+      "reasonWidth": 206,
+      "tableScrollWidth": 1254,
+      "tableWidth": 588,
+      "width": 768
+    },
+    {
+      "documentWidth": 1440,
+      "mainScrollWidth": 1316,
+      "mainWidth": 1316,
+      "reasonWidth": 211.890625,
+      "tableScrollWidth": 1260,
+      "tableWidth": 1260,
+      "width": 1440
+    },
+    {
+      "documentWidth": 320,
+      "mainScrollWidth": 248,
+      "mainWidth": 248,
+      "view": "catalog",
+      "width": 320
+    },
+    {
+      "documentWidth": 390,
+      "mainScrollWidth": 318,
+      "mainWidth": 318,
+      "view": "catalog",
+      "width": 390
+    },
+    {
+      "documentWidth": 768,
+      "mainScrollWidth": 644,
+      "mainWidth": 644,
+      "view": "catalog",
+      "width": 768
+    },
+    {
+      "documentWidth": 1440,
+      "mainScrollWidth": 1316,
+      "mainWidth": 1316,
+      "view": "catalog",
+      "width": 1440
+    }
+  ],
+  "checkedAt": "2026-09-21T14:30:39.045Z",
+  "status": "PASS"
+}

@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim bulgularında kayda özgü neden ve inceleme adımı
+
+- Bulgu kartlarına ve istisna tablosunun her satırına “Sorun ne?”, “Neden işaretlendi?”, “Ne kontrol edilmeli?” eklendi. Aktarım işareti, eksik bağlantı, tarih farkı, fiş/hesap bazında beklenen–gerçekleşen tutar ve ters bakiye kendi verileriyle açıklanır. Temel kontrol özeti, Logo hesap satırı/detayı ve katalogdaki ters yönlü alt hesaplar aynı muhasebe diliyle gösterilir. SQL sorguları bulgu yanında korunur; kaynak analiz belgesi gösterilmez.
+- Kaynak okumasında bulunamayan karşılık gerçek sıfır diye sunulmaz. Net borç/alacak işareti korunur; 0,01 TL ölçütü ve dört ondalığa kadar değerler görünür. Eksik aktarım, tevkifat, avans/mahsup veya dönemleme ihtimali kesin neden/zarar/ceza sayılmaz. Ters bakiye bulgusu hesabın bütün hareketlerinin hatalı olduğu iddiasına dönüştürülmez.
+- Test sunucusunda derlenip portalda yayınlandı; 7 finansal denetim kaynak dosyasının yerel/sunucu hashleri eş. Gerçek API `:8795` + bağımsız salt okunur Logo 2026 sorguları: 5 bulgu türünden 210 satır ve 11 hesap karşılaştırıldı, 79 veri kontrolü geçti. Aynı gerçek sonuçlarla 229 açıklamanın React sunucu gösterimi de geçti; toplam 80/80. İlk gösterim filtresi büyük/küçük harfsiz NaN ararken Türkçe “Alınan” sözcüğünü yakaladı; yalnız bu filtre düzeltildi ve başarısız kontrol yeniden çalıştırıldı. Ürün kodu/veri sorguları bu düzeltmede değişmedi.
+- Gerçek oturumlu portalda beş türün satır açıklamaları, KDV ikinci sayfa, ters bakiye hesabı/detayı ve 320 Satıcılar kontrolü görüldü. Bulgu tablosu ve katalog 320/390/768/1440 genişliklerinde sayfa taşırmadı; tablo kendi alanında kayar. Kaynakta bulgusu bulunmayan 7 derin kontrolün satır senaryoları ve örneklenmeyen alt durumlar gerçek veriyle DOĞRULANAMADI; sentetik/yerel test koşulmadı. Kapsam tüm 649 maddenin mevzuat/atomik kural kabulü değildir.
+- Kanıt: `docs/audits/financial-audit-2026-09-21/findings-acceptance.json`, `findings-browser.json`; tekrar koşucuları `scripts/server/financial-audit-findings-acceptance.py` ve `.cjs`. Hesaplama SQL’i ve hazır rapor akışı değişmedi.
+
 
 ## 2026-09-21 — Editoryal ana sayfa ön yükleme ve beş dakikada veri yenileme
 

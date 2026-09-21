@@ -1,0 +1,387 @@
+{
+  "environment": "nanobase-direct actual API :8795; independent read-only Logo 2026 backup; no local/synthetic tests",
+  "runId": "af77189a9e4e4023aee5618e1cb28524",
+  "checks": [
+    {
+      "name": "invoice-unposted-api-page",
+      "status": "PASS"
+    },
+    {
+      "name": "invoice-account-api-page",
+      "status": "PASS"
+    },
+    {
+      "name": "invoice-vat-ledger-api-page",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-unposted-api-page",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-ledger-amount-api-page",
+      "status": "PASS"
+    },
+    {
+      "name": "invoice-unposted-independent-reason",
+      "status": "PASS"
+    },
+    {
+      "name": "invoice-account-independent-reason",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-unposted-independent-reason",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-916",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-3119",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-3120",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-6035",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-11418",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-11420",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-11426",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-15902",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-17906",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-17922",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-20367",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-21425",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-21449",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-21466",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-21473",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-21484",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-22364",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-24420",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-25148",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-25220",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-26075",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-26086",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-29255",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-29261",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-29331",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-29335",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-29436",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-29698",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-30411",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-31250",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-32138",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-32155",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-32166",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-32184",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-32986",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-33008",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-40368",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-40435",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-41645",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-41651",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-41652",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-41653",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-42078",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-42082",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-44706",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-44710",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-44757",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-44760",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-44776",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-46099",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(10248, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(10249, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(64044, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(64045, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(89386, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(89388, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(89533, 1545)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(89534, 1545)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(93346, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "bank-(93348, 665)",
+      "status": "PASS"
+    },
+    {
+      "name": "account-101.04.001",
+      "status": "PASS"
+    },
+    {
+      "name": "account-101.06.001",
+      "status": "PASS"
+    },
+    {
+      "name": "account-108.01.003",
+      "status": "PASS"
+    },
+    {
+      "name": "account-108.01.005",
+      "status": "PASS"
+    },
+    {
+      "name": "account-120.90.001",
+      "status": "PASS"
+    },
+    {
+      "name": "account-121.04.001",
+      "status": "PASS"
+    },
+    {
+      "name": "account-121.06.001",
+      "status": "PASS"
+    },
+    {
+      "name": "account-131.01.001",
+      "status": "PASS"
+    },
+    {
+      "name": "account-136.03.002",
+      "status": "PASS"
+    },
+    {
+      "name": "account-309.01.004",
+      "status": "PASS"
+    },
+    {
+      "name": "account-320.90.GBP",
+      "status": "PASS"
+    },
+    {
+      "name": "actual-explanation-rendering",
+      "status": "PASS"
+    }
+  ],
+  "sampleRows": {
+    "invoice-unposted": 50,
+    "invoice-account": 50,
+    "invoice-vat-ledger": 50,
+    "bank-unposted": 50,
+    "bank-ledger-amount": 10
+  },
+  "accountRows": 11,
+  "render": {
+    "runId": "af77189a9e4e4023aee5618e1cb28524",
+    "rendered": 229,
+    "failures": [],
+    "status": "PASS"
+  },
+  "unverifiedRowScenarios": [
+    "invoice-broken-link",
+    "invoice-date",
+    "invoice-ledger-amount",
+    "invoice-vat-lines",
+    "bank-broken-link",
+    "bank-account",
+    "cash-negative-day"
+  ],
+  "sourceHashes": {
+    "src/canvas/financial-audit/SqlEvidence.tsx": "05dbc40c50d7496daf9d5f654c0ffe65acfb8aadb546f922aa9c8f1709ce82bb",
+    "src/canvas/financial-audit/FinancialAudit.tsx": "91c3358cadd188025c0173994a2cd79c720d826e1954252fbf7dbc7ff32117b7",
+    "src/canvas/financial-audit/presentation.ts": "3035d076d1c58adfe32a621dd20ddc7c77048534a4b35a009ee8cc702f2eecae",
+    "src/canvas/financial-audit/findings.ts": "9281cf8b1076f11d384004e52e2beb07c3841f756d898a07409baca4b988283b",
+    "src/canvas/financial-audit/DeepAuditPanel.tsx": "e934038e940ea7b1e97ebf22f0f479bceeac0de57d8c2eccc1554536795ff5d1",
+    "src/canvas/financial-audit/FindingReason.tsx": "e456a8cb9a78741fc940a48053a5e5f5f18f17a63565ae9c115a16075dd48a44",
+    "src/canvas/financial-audit/audit.css": "ed29022d7ce423c85d56586263b53cb3e4b16e7b3d1acf49be5bdc0e8f6804ad"
+  },
+  "initialRendererResult": {
+    "runId": "af77189a9e4e4023aee5618e1cb28524",
+    "rendered": 229,
+    "failures": [
+      {
+        "id": "101.04.001-core",
+        "reason": "unsupported or invalid explanation"
+      },
+      {
+        "id": "101.06.001-core",
+        "reason": "unsupported or invalid explanation"
+      },
+      {
+        "id": "account-sign-summary",
+        "reason": "unsupported or invalid explanation"
+      }
+    ],
+    "status": "FAIL"
+  },
+  "harnessCorrection": "Case-insensitive NaN check matched Turkish Alınan, including ASCII word boundaries. Corrected to case-sensitive NaN. Re-ran only failed renderer check over unchanged real API rows and unchanged product hashes.",
+  "localDeploymentHashMatch": {
+    "src/canvas/financial-audit/SqlEvidence.tsx": true,
+    "src/canvas/financial-audit/FinancialAudit.tsx": true,
+    "src/canvas/financial-audit/presentation.ts": true,
+    "src/canvas/financial-audit/findings.ts": true,
+    "src/canvas/financial-audit/DeepAuditPanel.tsx": true,
+    "src/canvas/financial-audit/FindingReason.tsx": true,
+    "src/canvas/financial-audit/audit.css": true
+  }
+}

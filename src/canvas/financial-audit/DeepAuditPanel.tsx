@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Database, FileSearch, CircleHelp } from 'lucide-react';
 
 import SqlEvidence from './SqlEvidence';
+import FindingReason from './FindingReason';
+import { findingSummary, rowExplanation } from './findings';
 import { accountingText, checkExplanations } from './presentation';
 
 export type DeepCheck = { sqlResultColumns?: {tested: string; affected: string}; sql?: string; id: string; title: string; status: string; affected: number | null; tested: number | null; formula: string; limitation: string };
@@ -39,9 +41,9 @@ function value(key: string, v: string | number | null) {
   if (numericAmounts.has(key)) return number.format(Number(v));
   return String(v);
 }
-function Rows({ rows }: { rows: Array<Record<string, string | number | null>> }) {
+function Rows({ rows, checkId }: { rows: Array<Record<string, string | number | null>>; checkId?: string }) {
   const columns = rows.length ? Object.keys(rows[0]).filter(k => k !== 'totalRows' && k !== 'sourceModule') : [];
-  return <div className="audit-table-scroll"><table><thead><tr>{columns.map(k => <th key={k}>{labels[k] ?? k}</th>)}</tr></thead><tbody>{rows.map((r,i) => <tr key={i}>{columns.map(k => <td key={k}>{value(k,r[k])}</td>)}</tr>)}</tbody></table></div>;
+  return <div className="audit-table-scroll"><table><thead><tr>{checkId && <th>Bulgu açıklaması</th>}{columns.map(k => <th key={k}>{labels[k] ?? k}</th>)}</tr></thead><tbody>{rows.map((r,i) => <tr key={i}>{checkId && <td className="audit-reason-cell"><FindingReason explanation={rowExplanation(checkId,r)} /></td>}{columns.map(k => <td key={k}>{value(k,r[k])}</td>)}</tr>)}</tbody></table></div>;
 }
 
 export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit; runId?: string; load: <T>(path: string) => Promise<T> }) {
@@ -52,7 +54,7 @@ export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit
     enabled: !!runId && !!selected, retry: false });
   useEffect(() => { if (selected) document.getElementById('audit-exceptions')?.scrollIntoView({ block: 'start', behavior: 'smooth' }); }, [selected]);
   const check=data?.checks.find(c => c.id===selected);
-  if (!data) return <section className="audit-panel"><h2>Bu raporda derin kaynak taraması yok</h2><p>Eski raporlar sonradan değiştirilmez. Yeni karşılaştırmaları görmek için çalışma raporundan “Son kaynak okuması”nı seçin.</p></section>;
+  if (!data) return <section className="audit-panel"><h2>Bu raporda derin kaynak taraması yok</h2><p>Eski raporlar sonradan değiştirilmez. Yeni karşılaştırmaları görmek için çalışma raporundan “Son tamamlanan rapor”u seçin.</p></section>;
   return <>
     <section className="audit-discovery-hero">
       <div><span className="audit-eyebrow">VERİNİN GÜCÜ, KANITIN SINIRI</span><h2>Logo’da bulunanları çalıştırıyoruz.<br /><em>Eksik dayanağı görünür kılıyoruz.</em></h2>
@@ -64,7 +66,7 @@ export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit
       <div className="audit-deep-checks">{data.checks.map(c => <article key={c.id} className={`audit-deep-check ${c.status}`}>
         <span className={`audit-status-icon ${c.status}`}>{c.status==='passed' ? <Check size={17}/> : <FileSearch size={17}/>}</span>
         <div><h3>{c.title}</h3><p>{c.tested == null ? 'Kaynak okunamadı' : `${number.format(c.tested)} kayıt / grup değerlendirildi`}</p>
-          <details><summary>Nasıl kontrol ediliyor?</summary><p>{checkExplanations[c.id] ?? accountingText(c.formula)}</p><p>{accountingText(c.limitation)}</p></details><SqlEvidence sql={c.sql} description={`Rapor hazırlanırken çalıştırılan sorgudur. İncelenen kayıt sayısı: ${c.sqlResultColumns?.tested ?? 'rows'}; bu kontrolün bulgu sayısı: ${c.sqlResultColumns?.affected ?? 'eski raporda belirtilmemiş'}. Aynı sorgu birden fazla kontrolü hesaplayabilir.`} title="Kontrolün SQL sorgusu" /></div>
+          {c.status === 'finding' && <FindingReason explanation={findingSummary(c)} />}<details><summary>Nasıl kontrol ediliyor?</summary><p>{checkExplanations[c.id] ?? accountingText(c.formula)}</p><p>{accountingText(c.limitation)}</p></details><SqlEvidence sql={c.sql} description={`Rapor hazırlanırken çalıştırılan sorgudur. İncelenen kayıt sayısı: ${c.sqlResultColumns?.tested ?? 'rows'}; bu kontrolün bulgu sayısı: ${c.sqlResultColumns?.affected ?? 'eski raporda belirtilmemiş'}. Aynı sorgu birden fazla kontrolü hesaplayabilir.`} title="Kontrolün SQL sorgusu" /></div>
         <button className="audit-button" disabled={c.affected == null || c.status==='unverified'} onClick={() => {setSelected(c.id);setPage(0);}}>
           {c.affected == null || c.status==='unverified' ? 'Doğrulanamadı' : c.affected ? `${number.format(c.affected)} inceleme adayı` : 'Fark bulunmadı'} <ArrowRight size={14}/>
         </button>
@@ -74,7 +76,7 @@ export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit
       <p>{checkExplanations[check.id] ?? accountingText(check.formula)}</p><p>Detay aynı dönem sınırıyla ayrı bir kaynak okumasıdır. Tutarlar aksi belirtilmedikçe TL’dir; farklar toplanmış zarar veya ceza değildir.</p>
       {details.isFetching && <p role="status">Kaynak kayıtları okunuyor…</p>}{details.error && <p role="alert">{details.error instanceof Error ? details.error.message : 'Kayıtlar okunamadı.'}</p>}
       {details.data && <SqlEvidence sql={details.data.sql} description={`Aşağıdaki ${details.data.items.length} kaydı getiren, çalıştırılmış sorgudur. Sayfa ${page+1}; toplam ${details.data.total} bulgu. Raporun hesaplama anından ayrı bir okumadır.`} />}
-      {details.data && (details.data.items.length ? <Rows rows={details.data.items}/> : <p>Bu sayfada inceleme adayı bulunmadı.</p>)}
+      {details.data && (details.data.items.length ? <Rows rows={details.data.items} checkId={check.id}/> : <p>Bu sayfada inceleme adayı bulunmadı.</p>)}
       <div className="audit-pagination"><button aria-label="Önceki bulgular" disabled={!page || details.isFetching} onClick={() => setPage(p => p-1)}><ChevronLeft size={18}/></button><span>{details.data?.total ?? '—'} kayıt · Sayfa {page+1}</span><button aria-label="Sonraki bulgular" disabled={!details.data || details.isFetching || (page+1)*50>=details.data.total} onClick={() => setPage(p=>p+1)}><ChevronRight size={18}/></button></div>
     </section>}
     <section><div className="audit-section-head"><div><span className="audit-eyebrow">NE VAR, NE EKSİK?</span><h2>Kontrolü tamamlamak için gerekenler</h2></div></div>
