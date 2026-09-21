@@ -263,7 +263,7 @@ def extract_text_layer(generation_id: str, book_version_id: str) -> dict:
 
 async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dict:
     """OCR one page with book-vision-fast (Qwen3-VL OCR). Stored as source OCR;
-    becomes the page's paragraphs only if the text layer had none."""
+    legacy paragraph cache is retained; source.py reads both original sources."""
     r = render_page(book_version_id, page_no)
     png = Path(r["path"]).read_bytes()
     ref, body = prompts.render("ocr_page", page_no=str(page_no))

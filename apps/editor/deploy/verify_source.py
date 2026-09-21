@@ -30,7 +30,7 @@ def sha(value):
 
 
 def compact(value):
-    return re.sub(r"\s+", "", value)
+    return re.sub(r"\s+", "", re.sub(r"(?<=\w)[-\u00ad]\s*\n\s*(?=[a-zçğıöşü])", "", value))
 
 
 def table_state(c):
