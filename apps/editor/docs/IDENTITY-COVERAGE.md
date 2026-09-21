@@ -1,6 +1,6 @@
 # Kaynak ve karakter kimliği kabulü — 21 Eylül 2026
 
-**Üretime hazır değil.** Bu belgedeki 37/37, 36/59 kimlik ve rev3009 sonuçları önceki `1600e738-621b-434f-8d9c-0c0645b42fb2` nesline aittir. Yeni `0439924a` nesli `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`, 32/32 hızlı ve 29/29 derin taramayı tamamladı; 37 görsel figür belirsiz kaldı ve iş 13/15'te FAILED oldu. `f1cc4614` hedefli onarımı henüz kabul edilmedi. [Güncel kurtarma kaydı](RECOVERY-2026-09-21.md).
+**Üretime hazır değil.** Bu belgedeki 37/37, 36/59 kimlik ve rev3009 sonuçları önceki `1600e738-621b-434f-8d9c-0c0645b42fb2` nesline aittir. Yeni `0439924a` nesli `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`, 32/32 hızlı ve 29/29 derin taramayı tamamladı; 37 görsel figür belirsiz kaldı ve iş 13/15'te FAILED oldu. `f1cc4614` sayfa rolü yazım/okuma onarımı 2/2 geçti; V8 teknik READY özetlerinin olay örgüsü kapsamı FAIL. Son kurulu v9 `f935b9d9`, rev3477 için 5 READY ve 313/313 + 5/5 teknik kabul aldı. Kimliklerin tam kabulü açık; alias regresyonu 18/19, ilk 5–7/son 28–32 anlatı eksikleri ve 37 görsel belirsizlik sürüyor. Analitik NEEDS_REVIEW, accepted=false. [Güncel kurtarma kaydı](RECOVERY-2026-09-21.md).
 
 Önceki kabulün kapanışında bakım açık, genel worker/rebuild, Hermes/MCP/gateway ve Editor modelleri kapalıydı; GPU 1 0 MiB ölçüldü. Bu tarihsel ölçüm güncel çalışma durumu değildir. Genel taramalar kapalı kalır; BI GPU 0'a dokunulmadı.
 

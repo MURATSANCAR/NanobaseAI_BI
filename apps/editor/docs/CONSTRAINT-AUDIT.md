@@ -19,7 +19,7 @@ Kullanıcının paralel denetim isteğiyle iki bağımsız statik tarama yapıld
 
 ## Beş madde için canlı kabul matrisi
 
-Kod düzeltmeleri `0439924a` gerçek yeni nesil koşusuna dahil edildi. İş 13/15'te FAILED olduğundan aşağıdaki beş satırın hiçbirine toplu PASS verilmedi. 32/32 hızlı ve 29/29 derin tarama, kimlik doğruluğunu kanıtlamaz; 37 görsel figür belirsiz kaldı. `f1cc4614` hedefli onarımından sonra bağımsız sonuçlar bu matrise eklenmelidir.
+Kod düzeltmeleri `0439924a` gerçek yeni nesil koşusuna dahil edildi. İş 13/15'te FAILED olduğundan aşağıdaki beş satırın hiçbirine toplu PASS verilmedi. 32/32 hızlı ve 29/29 derin tarama, kimlik doğruluğunu kanıtlamaz; 37 görsel figür belirsiz kaldı. V9 `f935b9d9` çıktı onarımı teknik kabul aldı (rev3477, 5 READY, 313/313 + 5/5); bu koşu tüm kimlik/süreklilik adımlarını yeniden doğrulamadı. Bağımsız sonuçlar bu matrise ayrıca eklenmelidir.
 
 | Madde | Gerekli bağımsız gerçek kanıt | Güncel kabul |
 |---|---|---|
@@ -29,7 +29,11 @@ Kod düzeltmeleri `0439924a` gerçek yeni nesil koşusuna dahil edildi. İş 13/
 | Süreklilik kapsamı | İki figürle başlayan kontrol, aynı sayfa figürleri, altı görüntü sonrası partiler ve checked/missing kimlikleri | DOĞRULANAMADI |
 | Hikâye dışı/toplu anılma | 1–4. sayfa çıkarımının geri alma sonrası kurtarılması, sayfa rolü review hedefi ve kaynaklı topluluk bilgisinin korunması | DOĞRULANAMADI |
 
-Son madde yalnız prompt değişikliğiyle kapanmadı: gerçek koşuda sayfa rolü için hedefsiz review kaydı DB constraint'ine takılıp çıkarım parçasını geri aldı. `017_page_role_reviews.sql` gerçek sayfa rolü bağlantısını ekledi; canlı onarım sonucu bekleniyor. Ayrıntı [kurtarma kaydı](RECOVERY-2026-09-21.md).
+Son madde yalnız prompt değişikliğiyle kapanmadı: gerçek koşuda sayfa rolü için hedefsiz review kaydı DB constraint'ine takılıp çıkarım parçasını geri aldı. `017_page_role_reviews.sql` gerçek sayfa rolü bağlantısını ekledi. Gerçek 1–4. sayfa yeniden çıkarımı ilk denemede 4 anılma ve 2 olay kaydetti; hikâye dışı olduğu için atılan kayıt sayısı 0, sayfa 1/2/3 rol önerileri ayrı review FK hedefleriyle kayıtlı. [Gerçek jobs MCP–bağımsız PG kontrolü 2/2 geçti](evidence/2026-09-21-page-role-review-repair.json): sayfa hedefi yazımı/okuması doğru. Topluluk bilgisinin semantik kabulü henüz tamamlanmadı. Ayrıntı [kurtarma kaydı](RECOVERY-2026-09-21.md).
+
+## Özetin ek kapsam kısıtı
+
+V8 bölüm/kitap özetleri teknik READY olsa da bağımsız okumada kitap özeti 24 cümleyi ön sayfa/görsel ayrıntılara ayırıp 13. sayfada bitti: **olay örgüsü kapsamı FAIL**. Bölüm özetinin seçtiği claim altkümesini kitap özetine tek girdi yapmak doğru olayları kaybettirebiliyor. V9 `f935b9d9`, aynı snapshot içindeki tüm VERIFIED EVENT kümesini ve ilk/son desteklenen olay sayfası kontrolünü kullanır; gerçek hedefli 5/5 kontrol geçti. Rev3477 özetinin 21 cümlesi kullanılabilir EVENT sayfalarının tamamını (8, 9, 11, 12, 13, 15, 16, 19, 20, 22, 24, 25, 27) kapsıyor. İlk 5–7 ve son 28–32 anlatı eksikleri açık; tam kitap semantik kabulü yok. Uç sayfa kapsamı bütün ara olayların doğruluğuna eşit değildir.
 
 ## Açık tasarım konuları
 

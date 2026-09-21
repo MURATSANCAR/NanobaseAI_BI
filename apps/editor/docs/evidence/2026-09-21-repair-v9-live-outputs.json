@@ -1,0 +1,1295 @@
+{
+  "environment": "tt-gpu/editor-control; real ed PostgreSQL; loopback control API",
+  "timestamp": "2026-09-21T18:28:41.976187+00:00",
+  "stage": "repair-v9",
+  "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a",
+  "code_version": "0.16.3-plot-f935b9d9",
+  "generation_code_version": "0.16.1-heartbeat-0439924a",
+  "semantic_acceptance": false,
+  "passed": 313,
+  "failed": 0,
+  "checks": [
+    {
+      "check": "temporal:verified_order_branch",
+      "passed": true
+    },
+    {
+      "check": "temporal:producers_before_outputs",
+      "passed": true
+    },
+    {
+      "check": "book_summary:availability",
+      "passed": true
+    },
+    {
+      "check": "book_summary:full_content",
+      "passed": true
+    },
+    {
+      "check": "book_summary:build_key",
+      "passed": true
+    },
+    {
+      "check": "catalog:availability",
+      "passed": true
+    },
+    {
+      "check": "catalog:full_content",
+      "passed": true
+    },
+    {
+      "check": "catalog:build_key",
+      "passed": true
+    },
+    {
+      "check": "chapter_summaries:availability",
+      "passed": true
+    },
+    {
+      "check": "chapter_summaries:full_content",
+      "passed": true
+    },
+    {
+      "check": "chapter_summaries:build_key",
+      "passed": true
+    },
+    {
+      "check": "report:availability",
+      "passed": true
+    },
+    {
+      "check": "report:full_content",
+      "passed": true
+    },
+    {
+      "check": "report:build_key",
+      "passed": true
+    },
+    {
+      "check": "search_index:availability",
+      "passed": true
+    },
+    {
+      "check": "search_index:full_content",
+      "passed": true
+    },
+    {
+      "check": "search_index:build_key",
+      "passed": true
+    },
+    {
+      "check": "chapter_summaries:validation_before_output:b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:0:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:1:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:2:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:3:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:4:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:5:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:6:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:7:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:8:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:9:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:10:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:11:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:12:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:13:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:14:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:15:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:16:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:17:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:18:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:19:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:20:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:20:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:21:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:22:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:23:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:24:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:25:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:26:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:26:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:27:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:27:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:28:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:29:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:30:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:31:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:32:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:33:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:34:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:35:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:36:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:37:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:38:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:39:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:40:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:41:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:42:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:43:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:44:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:45:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:46:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:47:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:48:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:49:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:50:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:50:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:51:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:51:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:52:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:53:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:53:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:54:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:55:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:56:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:57:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:58:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:58:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:59:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:60:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:61:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:61:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:62:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:63:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:64:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:65:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:66:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:67:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:68:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:69:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:70:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:71:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:71:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:72:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:73:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:74:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:75:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:75:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:76:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:77:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:78:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:79:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:80:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:81:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:82:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:83:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:84:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:85:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:86:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:87:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:88:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:89:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:89:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:90:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:91:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:92:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:93:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:94:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:95:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:96:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:97:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:98:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:99:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:100:references",
+      "passed": true
+    },
+    {
+      "check": "b4ccfc0479c1ba826146fd5528a09809dac524f95009ad2b19e0ee7fdcc24196:sentence:101:references",
+      "passed": true
+    },
+    {
+      "check": "book_summary:validation_before_output:5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:0:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:1:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:2:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:3:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:4:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:5:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:6:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:7:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:8:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:9:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:10:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:11:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:12:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:13:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:13:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:14:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:15:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:16:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:16:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:17:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:18:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:19:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:20:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:21:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:21:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:22:references",
+      "passed": true
+    },
+    {
+      "check": "5962119eef1520f7f33b861bda5bc9dc87d5791b11a281c82066085473fd879d:sentence:23:references",
+      "passed": true
+    },
+    {
+      "check": "search_index:validation_before_output:655ed76f7fd732975daaa24f2b31c89fe34ddd40dee99ec255d8939317d0c03c",
+      "passed": true
+    },
+    {
+      "check": "report:validation_before_output:c8afda113e89e2e035d2eb85a12a9961124cf34958d2f7e4b78a16c69f7218da",
+      "passed": true
+    },
+    {
+      "check": "report:canonical_events_emotions:c8afda113e89e2e035d2eb85a12a9961124cf34958d2f7e4b78a16c69f7218da",
+      "passed": true
+    },
+    {
+      "check": "catalog:validation_before_output:5242656fd96356258976de098cee037a28558572d85526650f910dbd7be8051c",
+      "passed": true
+    },
+    {
+      "check": "chapter_summaries:validation_before_output:4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:0:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:0:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:1:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:1:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:2:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:2:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:3:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:3:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:4:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:4:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:5:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:5:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:6:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:6:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:7:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:7:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:8:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:8:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:9:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:9:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:10:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:10:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:11:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:12:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:13:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:14:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:15:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:16:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:16:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:17:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:18:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:19:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:19:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:20:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:20:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:21:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:22:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:23:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:24:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:25:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:26:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:27:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:28:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:29:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:30:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:31:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:32:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:33:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:34:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:35:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:36:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:37:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:38:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:39:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:40:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:41:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:42:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:43:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:43:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:44:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:45:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:45:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:46:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:46:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:47:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:48:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:49:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:50:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:51:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:52:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:52:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:53:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:54:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:55:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:55:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:56:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:57:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:58:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:59:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:60:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:61:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:62:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:63:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:64:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:65:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:66:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:66:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:67:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:67:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:68:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:69:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:69:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:70:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:70:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:71:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:72:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:73:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:74:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:75:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:76:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:76:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:77:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:78:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:79:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:80:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:81:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:82:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:83:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:84:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:85:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:86:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:87:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:88:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:89:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:90:references",
+      "passed": true
+    },
+    {
+      "check": "4f7bb7be4f57de9966571d20bd93af029593b8a65c04c14e00cbaee6d28d1838:sentence:91:references",
+      "passed": true
+    },
+    {
+      "check": "book_summary:validation_before_output:21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:0:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:0:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:1:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:2:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:3:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:4:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:5:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:6:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:7:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:8:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:9:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:10:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:11:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:12:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:13:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:14:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:15:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:15:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:16:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:16:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:17:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:17:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:18:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:19:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:19:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:20:references",
+      "passed": true
+    },
+    {
+      "check": "21b98f127549a65e029bb93fcaca3dc4c38a7702f0e2d333a63cdc7262155474:sentence:20:exact_proof",
+      "passed": true
+    },
+    {
+      "check": "search_index:validation_before_output:836d3259ff6ffb1665dace9d3bc815fdaf583c8d2d9ed045ea991af1c7258a0e",
+      "passed": true
+    },
+    {
+      "check": "report:validation_before_output:172080cd83b64b213c8b3ddebd71bb7d254cf4aa8d6c99659631590b5cca3eb8",
+      "passed": true
+    },
+    {
+      "check": "report:canonical_events_emotions:172080cd83b64b213c8b3ddebd71bb7d254cf4aa8d6c99659631590b5cca3eb8",
+      "passed": true
+    },
+    {
+      "check": "catalog:validation_before_output:bcafb1c4a99388229f23741e66fdc4829f2e6ea531a55ca6ce34c4dc6a26a93d",
+      "passed": true
+    },
+    {
+      "check": "qdrant:full_payloads",
+      "passed": true
+    }
+  ],
+  "state": {
+    "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a",
+    "knowledge_revision": 3477,
+    "origin": "TRACKED",
+    "coverage_status": "PARTIAL",
+    "semantic_status": "NEEDS_REVIEW",
+    "publication_status": "BLOCKED",
+    "updated_at": "2026-09-21 18:27:41.218718+00:00",
+    "producer_completed": true,
+    "validated_revision": 3477
+  },
+  "queue": {
+    "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a",
+    "requested_revision": 3477,
+    "completed_revision": 3477,
+    "reason": "book_summary",
+    "updated_at": "2026-09-21 18:27:43.178431+00:00",
+    "attempts": 0,
+    "attempted_revision": 3477,
+    "retry_after": null,
+    "last_error": null,
+    "consumer_backend_pid": null,
+    "consumer_backend_start": null,
+    "attempted_code_version": "0.16.3-plot-f935b9d9"
+  },
+  "full_evidence_on_gpu": "/data/editor/storage/repair-f1cc4614/v9-live-outputs.json",
+  "same_code_repeat": {
+    "technical_status": "ALREADY_CURRENT",
+    "accepted": false
+  }
+}

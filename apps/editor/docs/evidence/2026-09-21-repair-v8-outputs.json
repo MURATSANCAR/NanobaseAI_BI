@@ -1,0 +1,22 @@
+{
+  "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a",
+  "revision": 3244,
+  "technical_status": "SUCCEEDED",
+  "analytical_status": "NEEDS_REVIEW",
+  "accepted": false,
+  "blockers": [
+    "SOURCE_EVIDENCE_OUTDATED",
+    "SOURCE_ISSUES",
+    "PAGE_ROLES_UNASSESSED",
+    "OPEN_EDITOR_REVIEW",
+    "REGRESSION_NOT_PASSED",
+    "INDEPENDENT_SEMANTIC_ACCEPTANCE_NOT_RECORDED"
+  ],
+  "artifacts": [
+    "chapter_summaries",
+    "book_summary",
+    "search_index",
+    "report",
+    "catalog"
+  ]
+}

@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Hedefli onarım canlı kabulü ve Markdown eşitlemesi
+
+- GPU f935b9d9/v9, aynı gerçek nesilde rev3477 ve beş READY çıktı. API/PG/Qdrant 313/313, olay referansları/kapsam/policy/API eşliği 5/5 geçti; aynı sürüm tekrar ALREADY_CURRENT. Kanıtlar apps/editor/docs/evidence/2026-09-21-repair-v9-*.json.
+- Sayfa rolü hedefi gerçek MCP–PG 2/2 geçti. V8 teknik çıktısı 13. sayfada kesildiği için kabul edilmedi; v9 bütün doğrulanmış olay girdisini kullandı. 21 cümle mevcut kullanılabilir 8–27 sayfa aralığını kapsıyor; tam kitabın başı/sonu hâlâ eksik, semantik kabul yok.
+- Genel hazırlık, revizyon çıktıları, kimlik kapsamı, kısıt denetimi ve yeni kurtarma MD kaydı güncellendi. Tarihsel FAILED job korunur. Eş ad kontrolü nedeniyle regresyon 18/19; kaynak/kimlik açıkları kapatılmadı. Yerel ürün testi yok.
+
 ## 2026-09-21 — Özetin olay kapsamı ve sürüm yeniden üretimi
 
 - v8 gerçek çıktısında 24 cümle ön sayfa/görsel ayrıntılarla doldu, özet 13. sayfada kesildi. Teknik READY içerik kabulü sayılmadı.

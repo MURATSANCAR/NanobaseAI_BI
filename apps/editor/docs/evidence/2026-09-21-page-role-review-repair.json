@@ -1,0 +1,39 @@
+{
+  "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a",
+  "code": "f1cc4614",
+  "checks": [
+    {
+      "name": "three source page role reviews",
+      "passed": true
+    },
+    {
+      "name": "MCP target IDs match DB foreign keys",
+      "passed": true
+    }
+  ],
+  "reference": [
+    {
+      "id": "029a6e58-db2e-40dc-9175-4d38acae3520",
+      "page_role_page_no": 1,
+      "role": "NON_STORY",
+      "source": "extract"
+    },
+    {
+      "id": "4ff24ce7-a689-429f-a483-6b767849393c",
+      "page_role_page_no": 2,
+      "role": "NON_STORY",
+      "source": "extract"
+    },
+    {
+      "id": "73682c38-eb76-468a-9eb0-70f55e15155a",
+      "page_role_page_no": 3,
+      "role": "NON_STORY",
+      "source": "extract"
+    }
+  ],
+  "actual": {
+    "029a6e58-db2e-40dc-9175-4d38acae3520": 1,
+    "73682c38-eb76-468a-9eb0-70f55e15155a": 3,
+    "4ff24ce7-a689-429f-a483-6b767849393c": 2
+  }
+}
