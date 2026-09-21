@@ -28,6 +28,11 @@ def chapters(generation_id: str) -> list[dict]:
     body text on the same page (title pages and imprint lines are not chapters).
     Consecutive heading paragraphs are one title ("TABLET PEŞİNDE" + "BİR GÜN")."""
     pages = source.read(generation_id)
+    return chapters_from_pages(pages)
+
+
+def chapters_from_pages(pages: list[dict]) -> list[dict]:
+    """Pure chapter proposal over an already captured source snapshot."""
     rows = [{"page_no":p["page_no"],**span} for p in pages for span in p["spans"]]
     last_page = max((p["page_no"] for p in pages), default=0)
     by_page: dict[int, list[str]] = {}

@@ -51,9 +51,94 @@ class BookFullAnalysis:
         self.job_id = job_id
         # Jobs that started under the old step order replay it; new jobs take the order
         # that loads the director once.
+        if workflow.patched("verified-revision-outputs-v1"):
+            return await self._run_verified(job_id)
         if workflow.patched("director-single-phase-v1"):
             return await self._run_single_phase(job_id)
         return await self._run_v1(job_id)
+
+    async def _run_verified(self, job_id: str) -> dict:
+        """Canonical producers and verification precede every derived output.
+
+        Old histories retain their original patched branch. New jobs use only
+        revision-bound producers and keep analytical acceptance separate.
+        """
+        failures: dict[str, list] = {}
+        try:
+            await self.step(1, "Kitap ve içerik sürümü")
+            ctx = await self.act("prepare_generation", job_id, timeout=SHORT)
+            gid, bv = ctx["generation_id"], ctx["book_version_id"]
+            await self.step(2, "Sayfa manifesti", {"generation_id": gid})
+            man = await self.act("page_manifest", bv)
+            pages = list(range(1, man["page_count"] + 1))
+            await self.step(3, "PDF metin katmanı")
+            await self.act("text_layer", gid, bv)
+            await self.step(4, "OCR", {"pages": man["needs_ocr"]})
+            _, failures["ocr"] = await self.fan_out("ocr_page", man["needs_ocr"], gid, bv)
+            await self.step(5, "Hızlı görsel tarama", {"pages": len(pages)})
+            fast, failures["fast_scan"] = await self.fan_out("scan_page_fast", pages, gid)
+            uncertain = [r["page_no"] for r in fast if r.get("uncertain")]
+            # ---- deep vision, first visit: everything that needs only the pages themselves
+            await self.step(6, "Derin görsel inceleme", {"uncertain_pages": uncertain})
+            await self.act("release_models", ["book-vision-fast"], timeout=SHORT)
+            _, failures["deep_scan"] = await self.fan_out("scan_page_deep", uncertain, gid)
+            await self.act("persist_visual", gid, "deep")
+            await self.step(6, "Metin–görsel bulguların teyidi")
+            tv = await self.act("confirm_text_visual", gid)     # reads scans and page text only
+            await self.act("release_models", ["book-vision-deep"], timeout=SHORT)
+            # ---- director phase
+            await self.step(7, "Karakter ve olay adayları")
+            chunks = await self.act("text_chunks", gid, timeout=SHORT)
+            ext, failures["extract"] = await self.fan_out("extract_chunk", chunks, gid)
+            await self.step(8, "Karakter kimlikleri")
+            ident = await self.act("resolve_identity", gid)
+            await self.step(9, "Olay kipleri")
+            mod = await self.act("verify_modality", gid)
+            mrg = await self.act("merge_events", gid)
+            await self.step(9, "Önemli olay sayfaları")
+            roles = await self.act("narrative_roles", gid)
+            vis = cont = None
+            if roles["pages"]:
+                # more deep scans are needed and the Critic must see their scene claims:
+                # the visual work goes here and the director loads a second time
+                vis, cont, tv = await self._visual_phase(gid, ident, tv, roles["pages"], failures)
+            await self.act("persist_visual", gid, "all")
+            await self.step(10, "Duygu ve tema")
+            emo = await self.act("emotions_themes", gid)
+            await self.step(15, "Künye")
+            try:
+                await self.act("book_metadata", gid)
+            except ActivityError as e:
+                failures["book_metadata"] = [str(e.cause or e)[:500]]
+            # ---- deep vision, second visit (unless it already happened above)
+            if vis is None:
+                vis, cont, tv = await self._visual_phase(gid, ident, tv, [], failures)
+            # All visual identity/continuity writes have completed here. The
+            # rebuild activity verifies facts and actors before freezing inputs.
+            await self.step(13, "Doğrulama → sürümlü özet, rapor ve indeks")
+            produced = None
+            for attempt in range(3):
+                produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
+                if produced["technical_status"] in ("SUCCEEDED", "ALREADY_CURRENT"):
+                    break
+                if produced["technical_status"] == "BUSY":
+                    await workflow.sleep(timedelta(seconds=30))
+            if produced["technical_status"] not in ("SUCCEEDED", "ALREADY_CURRENT"):
+                raise ApplicationError("Output revision did not stabilize", non_retryable=True)
+            summary = {"generation_id":gid,"pages":len(pages),"outputs":produced,
+                "step_order":"verified-revision-outputs-v1","accepted":False,
+                "analytical_status":"NEEDS_REVIEW",
+                "failures":{k:v for k,v in failures.items() if v}}
+            await self.act("finish_job", job_id, "SUCCEEDED", summary, timeout=SHORT)
+            return summary
+        except BaseException as e:
+            status = "CANCELLED" if isinstance(e, asyncio.CancelledError) else "FAILED"
+            await workflow.execute_activity("finish_job", args=[job_id, status, {"error": str(e)[:2000]}],
+                                            start_to_close_timeout=SHORT, retry_policy=RETRY)
+            raise
+        finally:
+            await workflow.execute_activity("release_models", args=[[]], start_to_close_timeout=SHORT,
+                                            retry_policy=RETRY)
 
     async def _run_single_phase(self, job_id: str) -> dict:
         """Same activities, same inputs per model call, other order. The director (0.48 of

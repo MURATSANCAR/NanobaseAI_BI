@@ -12,12 +12,18 @@ import sys
 from collections import Counter
 from pathlib import Path
 
-from pypdf import PdfReader
-
 logging.getLogger("pypdf").setLevel(logging.ERROR)
 source = Path(sys.argv[1])
 root = Path(__file__).resolve().parents[1]
-pages = [p.extract_text(extraction_mode="layout") for p in PdfReader(source).pages]
+if source.suffix == '.json':
+    # Re-index already preserved page text without another lossy PDF conversion.
+    original = json.loads(source.read_text())
+    pages = [p['text'] for p in original['pages']]
+    source_hash = original['sha256']
+else:
+    from pypdf import PdfReader
+    pages = [p.extract_text(extraction_mode="layout") for p in PdfReader(source).pages]
+    source_hash = hashlib.sha256(source.read_bytes()).hexdigest()
 lines = []
 for page, text in enumerate(pages, 1):
     for line in text.splitlines():
@@ -26,8 +32,8 @@ for page, text in enumerate(pages, 1):
             lines.append((page, line))
 
 note_re = re.compile(r"^YAZILIMCI İÇİN NOT\s+(\d+)")
-heading_re = re.compile(r"^\d+(?:\.\d+)+[. ]\s*\D|^\d+(?:\.\d+)+[. ]\s*\d{3}(?:\D|$)")
-item_re = re.compile(r"^(\d+)[.)]\s+(.+)")
+heading_re = re.compile(r"^(?:4|5|15)\.(?:\d{1,2}\.)*\d{1,2}[. ]\s*[^\d.]|^(?:4|5|15)\.(?:\d{1,2}\.)*\d{1,2}[. ]\s*\d{3}(?:\D|$)")
+item_re = re.compile(r"^(\d{1,2})[.)]\s*([^\d.].+)")
 items = []
 section = "Mali analiz"
 occurrences = Counter()
@@ -61,9 +67,9 @@ for i, (page, line) in enumerate(lines):
     if heading_re.match(line):
         section = line
     note = note_re.match(line)
-    numbered = item_re.match(line) if page >= 61 else None
+    numbered = item_re.match(line) if page >= 61 and not heading_re.match(line) else None
     # Section headings use the same punctuation as checklist items.
-    if numbered and ("Hesabının Denetimi" in line or "Faz)" in line or "Sonuç" in line):
+    if numbered and ("Hesabının Denetimi" in line or "Faz)" in line or "Sonuç" in line or numbered[2].startswith('maddesine')):
         numbered = None
     if not note and not numbered:
         continue
@@ -100,8 +106,21 @@ for i, (page, line) in enumerate(lines):
 # The entire source is retained so unnumbered prose is never silently discarded.
 source_notes = [int(m[1]) for _, line in lines if (m := note_re.match(line))]
 counts = Counter(source_notes)
+sections = []
+for index, (page, line) in enumerate(lines):
+    if 61 <= page <= 239 and heading_re.match(line):
+        sections.append((index, page, line))
+for position, (start, page, title) in enumerate(sections):
+    stop = sections[position + 1][0] if position + 1 < len(sections) else len(lines)
+    body = [(p, t) for p, t in lines[start + 1:stop] if p <= 239]
+    # Sections preserve unnumbered controls and legal explanations together.
+    # They are review work packages, never counted as atomic automated checks.
+    items.append({'id': f'section-{page}-{position+1}', 'kind': 'section', 'note': None,
+                  'title': title, 'section': title, 'page': page,
+                  'endPage': body[-1][0] if body else page,
+                  'text': '\n'.join(t for _, t in body), 'review': 'evidence_required'})
 payload = {"title": "Elektronik Defter Denetimi Analiz Dokümanı — ERPDENET", "sourceDate": "2020-06-12",
-           "sha256": hashlib.sha256(source.read_bytes()).hexdigest(), "pageCount": len(pages),
+           "sha256": source_hash, "pageCount": len(pages),
            "extractionStatus": "DRAFT_REQUIRES_REVIEW", "completeControlCoverage": False,
            "noteOccurrences": len(source_notes), "missingNoteNumbers": [n for n in range(1, max(counts) + 1) if n not in counts],
            "duplicateNoteNumbers": {str(n): c for n, c in counts.items() if c > 1},

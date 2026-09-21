@@ -221,20 +221,28 @@ async def _repair(generation_id: str, x: dict, v: dict) -> str | None:
             payload={**(x["payload"] or {}), "supersedes": str(x["id"]), "repair": out["action"]})
         c.execute("UPDATE claim SET status='SUPERSEDED', critic_note=%s WHERE id=%s",
                   (f"PARTIAL: {v['note']} → {out['action']}, yerine {new_id}", x["id"]))
-        for table in ("event", "emotion", "character"):
+        # Keep the canonical event text in step with its corrected claim. Actor
+        # readings are invalidated transactionally by the event trigger. A narrowed
+        # claim cannot preserve the extractor's old participant guesses.
+        c.execute("UPDATE event SET claim_id=%s,summary=%s,participants=CASE WHEN summary<>%s "
+                  "THEN '{}'::text[] ELSE participants END WHERE claim_id=%s",
+                  (new_id,text,text,x["id"]))
+        for table in ("emotion", "character"):
             c.execute(f"UPDATE {table} SET claim_id=%s WHERE claim_id=%s", (new_id, x["id"]))
     return new_id
 
 
-async def critic_pass(generation_id: str) -> dict:
+async def critic_pass(generation_id: str, recheck: bool = False) -> dict:
     """Step 13. The Critic Agent re-reads every claim against its evidence only. What it
     finds PARTIAL the application first tries to repair itself (missing evidence added
     from the page, or the claim narrowed) and judges again; only what is still weak
     after that goes to the editor."""
     # Text-visual and continuity findings are candidates by definition and reach the editor
     # once, through the contradiction queue; judging them here queued the same finding twice.
-    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status='CANDIDATE' AND c.kind NOT IN"
-                         " ('TEXT_VISUAL_MISMATCH','VISUAL_CONTINUITY')", generation_id)
+    statuses = ("CANDIDATE", "VERIFIED") if recheck else ("CANDIDATE",)
+    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status=ANY(%s) AND c.kind NOT IN"
+                         " ('TEXT_VISUAL_MISMATCH','VISUAL_CONTINUITY','SUMMARY','ANSWER','AGE_GROUP','PUBLISHER_DECISION')",
+                         generation_id, list(statuses))
     stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
              "repair_tried": 0, "repaired": 0, "no_verdict": 0}
     first = await _judge(generation_id, claims)

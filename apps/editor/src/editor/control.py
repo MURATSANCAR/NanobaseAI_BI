@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Path
 
-from . import foundation, source, knowledge, ledger
+from . import foundation, source, knowledge, ledger, outputs
 from .config import settings
 
 
@@ -105,5 +105,22 @@ def source_quote(generation_id: UUID, page_no: int = Query(ge=1),
         spans = idx.matching_spans(page_no, quote, paragraph)
         return {"verified": bool(spans), "policy": source.POLICY,
                 "span_ids": [s["span_id"] for s in spans], "semantic_acceptance": False}
+    except KeyError:
+        raise HTTPException(404, "generation not found") from None
+
+
+@app.get("/v1/generations/{generation_id}/output-plan")
+def output_plan(generation_id: UUID):
+    try:
+        return outputs.preview(str(generation_id))
+    except KeyError:
+        raise HTTPException(404, "generation not found") from None
+
+
+@app.get("/v1/generations/{generation_id}/artifacts/{kind}")
+def current_output(generation_id: UUID,
+                   kind: Literal["chapter_summaries","book_summary","search_index","report","catalog"]):
+    try:
+        return outputs.current(str(generation_id), kind)
     except KeyError:
         raise HTTPException(404, "generation not found") from None

@@ -10,11 +10,28 @@ import json
 import logging
 from pathlib import Path
 import threading
+import os
+import re
+import uuid
 
 from fastapi import HTTPException, Query, Request
+from pydantic import BaseModel, Field
+from .financial_audit_rules import extend_ratios, evaluate, pair_sql, pair_results
 
 log = logging.getLogger(__name__)
 REVISION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+
+
+class ReviewNote(BaseModel):
+    version: int = Field(ge=0)
+    state: str = Field(pattern='^(open|in_review|evidence_supplied)$')
+    owner: str = Field(default='', max_length=100)
+    note: str = Field(min_length=3, max_length=4000)
+    evidence: list[str] = Field(default_factory=list, max_length=20)
+
+
+def archive_root():
+    return Path(os.getenv('FINANCIAL_AUDIT_DATA_DIR', '/data/nanobaseai/bi/var/financial-audit/workpapers'))
 
 
 def dec(value):
@@ -23,6 +40,7 @@ def dec(value):
 
 def register(app, runtime, authorize):
     lock = threading.Lock()
+    review_lock = threading.Lock()
     cache = {}
 
     @app.get("/api/v1/financial-audit/catalog")
@@ -174,6 +192,46 @@ def register(app, runtime, authorize):
                                         "Fiş kontrolü ve mizan ayrı sorgulardır. Kaynak yedek değişirse yeniden çalıştırılmalıdır.",
                                         "Eksik/iptal fiş başlıklarına ait hareketler bu mali kapsama dahil değildir.",
                                         "Belge, beyanname, mutabakat ve mevzuat gerektiren kontroller otomatik geçmez."]}
+                profile = query(f"""SELECT A.CODE AS code,A.LOGICALREF AS accountRef,
+                    SUM(CASE WHEN F.TRCODE=1 THEN CAST(L.DEBIT AS decimal(28,4)) ELSE 0 END) AS openingDebit,
+                    SUM(CASE WHEN F.TRCODE=1 THEN CAST(L.CREDIT AS decimal(28,4)) ELSE 0 END) AS openingCredit,
+                    SUM(CASE WHEN F.TRCODE<>1 THEN CAST(L.DEBIT AS decimal(28,4)) ELSE 0 END) AS periodDebit,
+                    SUM(CASE WHEN F.TRCODE<>1 THEN CAST(L.CREDIT AS decimal(28,4)) ELSE 0 END) AS periodCredit,
+                    SUM(CASE WHEN L.TRCURR IS NOT NULL AND L.TRCURR NOT IN (0,160) THEN 1 ELSE 0 END) AS foreignRows,
+                    SUM(CASE WHEN NULLIF(LTRIM(RTRIM(L.INVOICENO)),'') IS NULL THEN 1 ELSE 0 END) AS missingInvoiceNumber,
+                    SUM(CASE WHEN L.DOCDATE IS NULL OR L.DOCDATE<'19010101' THEN 1 ELSE 0 END) AS missingDocumentDate
+                    {joins} WHERE {where(year)} GROUP BY A.CODE,A.LOGICALREF ORDER BY A.CODE""", year)
+                out['profiles'] = profile['records']
+                pair_read = query(pair_sql(joins, where(year)), year)
+                out['pairChecks'] = pair_results(pair_read['records'][0])
+                vat = query(f"""SELECT MONTH(L.DATE_) AS month,LEFT(A.CODE,3) AS code,
+                    SUM(CAST(L.DEBIT AS decimal(28,4))-CAST(L.CREDIT AS decimal(28,4))) AS movement
+                    {joins} WHERE {where(year)} AND LEFT(A.CODE,3) IN ('190','191','391')
+                    GROUP BY MONTH(L.DATE_),LEFT(A.CODE,3) ORDER BY month,code""", year)
+                balances = {k:Decimal(0) for k in ['190','191','391']}
+                out['vatMonths'] = []
+                last_month = int(str(out['lastDate'])[5:7]) if out['lastDate'] else 0
+                for month in range(1,last_month+1):
+                    for row in vat['records']:
+                        if row['month']==month:
+                            balances[row['code']] += dec(row['movement'])
+                    out['vatMonths'].append({'month':month,'balance':str(balances['191']+balances['391']),
+                        'accounts':{k:str(v) for k,v in balances.items()},'status':'needs_evidence',
+                        'partialMonth':month==last_month})
+                extend_ratios(out, profile['records'])
+                out['coverage'] = evaluate(out, profile['records'])
+                out['sql'].append(profile.get('physicalSql'))
+                out['sql'].extend([pair_read.get('physicalSql'),vat.get('physicalSql')])
+                out['dbMs'] += profile.get('dbMs', 0)+pair_read.get('dbMs',0)+vat.get('dbMs',0)
+                out['runId'] = uuid.uuid4().hex
+                out['readConsistency'] = 'Aynı yedek üzerinde ardışık sorgular; veritabanı snapshot transaction değildir.'
+                # Private immutable workpaper. UI and exports can pin this exact run.
+                root = archive_root()
+                root.mkdir(parents=True, exist_ok=True, mode=0o700)
+                path = root / (out['runId'] + '.json')
+                with path.open('x') as f:
+                    os.chmod(path, 0o600)
+                    json.dump(out, f, ensure_ascii=False, default=str)
                 cache[year] = (time.time(), out)
                 return out
             except HTTPException:
@@ -181,6 +239,63 @@ def register(app, runtime, authorize):
             except Exception:
                 log.exception("Financial audit could not read the source")
                 raise HTTPException(503, "Logo verisi okunamadı. Denetim DOĞRULANAMADI; tekrar deneyin.")
+
+    def load_run(run_id):
+        if not re.fullmatch('[0-9a-f]{32}', run_id):
+            raise HTTPException(422, 'Geçersiz rapor kimliği.')
+        path = archive_root() / (run_id+'.json')
+        if not path.exists():
+            raise HTTPException(404, 'Rapor bulunamadı.')
+        return json.loads(path.read_text())
+
+    @app.get('/api/v1/financial-audit/runs/{run_id}')
+    def saved_run(request: Request, run_id: str):
+        authorize(request)
+        return load_run(run_id)
+
+    def review_path(run_id, control_id):
+        run = load_run(run_id)
+        if not any(x['id']==control_id for x in run['coverage']['items']):
+            raise HTTPException(404, 'Bu raporda kontrol bulunamadı.')
+        return archive_root() / (run_id+'-'+control_id+'.reviews.json')
+
+    @app.get('/api/v1/financial-audit/runs/{run_id}/reviews/{control_id}')
+    def read_review(request: Request, run_id: str, control_id: str):
+        authorize(request)
+        path = review_path(run_id, control_id)
+        with review_lock:
+            history = json.loads(path.read_text()) if path.exists() else []
+        return {'version':len(history), 'history':history}
+
+    @app.post('/api/v1/financial-audit/runs/{run_id}/reviews/{control_id}')
+    def write_review(request: Request, run_id: str, control_id: str, body: ReviewNote):
+        authorize(request)
+        if body.state=='evidence_supplied' and not body.evidence:
+            raise HTTPException(422, 'Kanıt sunuldu durumu için belge referansı gerekiyor.')
+        if any(len(x)>1000 or not x.strip() for x in body.evidence):
+            raise HTTPException(422, 'Belge referansı boş olamaz ve 1000 karakteri aşamaz.')
+        path = review_path(run_id, control_id)
+        with review_lock:
+            # Cross-worker optimistic concurrency and atomic replacement.
+            import fcntl
+            with (archive_root()/'.reviews.lock').open('a') as lf:
+                fcntl.flock(lf, fcntl.LOCK_EX)
+                history = json.loads(path.read_text()) if path.exists() else []
+                if body.version != len(history):
+                    raise HTTPException(409, 'İnceleme başka bir kullanıcı tarafından değiştirildi; yeniden yükleyin.')
+                event = body.model_dump()
+                from . import board
+                actor = board.user_of(request.headers.get('cookie', '')) or 'authenticated-service'
+                event.update({'at':datetime.now(timezone.utc).isoformat(), 'version':len(history)+1,
+                              'actor':actor})
+                history.append(event)
+                temp = path.with_suffix('.'+uuid.uuid4().hex+'.tmp')
+                with temp.open('x') as f:
+                    os.chmod(temp,0o600)
+                    json.dump(history,f,ensure_ascii=False)
+                temp.replace(path)
+        return {'version':len(history),'history':history,
+                'message':'İnceleme notu kaydedildi. Otomatik kontrol sonucu değiştirilmedi; kanıt kabulü ayrıca gerekir.'}
 
     @app.get("/api/v1/financial-audit/lines")
     def lines(request: Request, year: int = 2026, account: int = Query(..., ge=1), page: int = Query(0, ge=0, le=100000)):

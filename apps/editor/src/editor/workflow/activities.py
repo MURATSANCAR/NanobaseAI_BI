@@ -269,7 +269,14 @@ async def release_models(aliases_: list[str]) -> dict:
     return r.json()
 
 
-ALL = [event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
+@activity.defn
+async def rebuild_outputs(generation_id: str) -> dict:
+    from .. import rebuild
+    await _t(rebuild.activate, generation_id)
+    return await rebuild.run(generation_id)
+
+
+ALL = [rebuild_outputs, event_actors, detect_contradictions, queue_contradictions, book_metadata, visual_identity, confirm_text_visual, build_card, scan_page_deep_key, narrative_roles, set_step, prepare_generation, page_manifest, text_layer, ocr_page, scan_page_fast, scan_page_deep,
        persist_visual, text_chunks, extract_chunk, resolve_identity, continuity_checks, verify_modality,
        merge_events, emotions_themes, embed_index, list_chapters, chapter_summary, book_summary, critic,
        contradictions, regression, report, finish_job, release_models]

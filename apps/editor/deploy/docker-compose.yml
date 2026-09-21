@@ -10,7 +10,7 @@
 name: editor
 
 x-py: &py
-  image: ${EDITOR_PY_IMAGE:-editor-py:0.11.0-source}
+  image: ${EDITOR_PY_IMAGE:-editor-py:0.12.0-outputs}
   restart: unless-stopped
   env_file: ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
   environment:
@@ -136,6 +136,15 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
       temporal: {condition: service_healthy}
+
+  rebuild:
+    <<: *py
+    profiles: [analysis]
+    container_name: editor-rebuild
+    command: ["python", "-m", "editor.rebuild", "consume"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      gateway: {condition: service_started}
 
   hermes:
     profiles: [analysis]

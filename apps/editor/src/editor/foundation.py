@@ -43,7 +43,7 @@ def runtime_status() -> dict:
                 "WHERE completed_revision<requested_revision").fetchone()["n"],
             "dependencies": c.execute("SELECT * FROM ed.artifact_definition ORDER BY kind").fetchall(),
             "analysis_worker_required": False,
-            "automatic_rebuild_consumer": "NOT_ENABLED",
+            "automatic_rebuild_consumer": "PAUSED" if control["maintenance"] else "AVAILABLE_OPT_IN",
         }
 
 

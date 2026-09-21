@@ -77,9 +77,15 @@ async def rerank_evidence(query: str, candidates: list[str], generation_id: str 
 async def search_book_evidence(generation_id: str, query: str, k: int = 8,
                                kinds: list[str] | None = None) -> list[dict]:
     """Embedding recall (top 40) -> reranker -> top k, each with page reference."""
+    from .outputs import current
+    selected = current(generation_id, "search_index")
+    if not selected["available"]:
+        raise ValueError("Current revision search index is unavailable; rebuild required")
+    build_key = selected["artifact"]["build_key"]
     await _ensure(PASSAGES)
     vec = (await Llm(generation_id).embed([query], instruction=QUERY_INSTRUCTION))[0]
     must = [models.FieldCondition(key="generation_id", match=models.MatchValue(value=generation_id))]
+    must.append(models.FieldCondition(key="build_key", match=models.MatchValue(value=build_key)))
     if kinds:
         must.append(models.FieldCondition(key="kind", match=models.MatchAny(any=kinds)))
     hits = (await qdrant().query_points(PASSAGES, query=vec, limit=40, with_payload=True,
@@ -93,6 +99,9 @@ async def search_book_evidence(generation_id: str, query: str, k: int = 8,
         out.append({"page": p["page_no"], "paragraph": p.get("paragraph_idx"), "kind": p["kind"],
                     "ref": p["ref"], "text": p["text"], "rerank_score": round(r["score"], 4),
                     "embedding_score": round(hits[r["index"]].score, 4)})
+    latest = current(generation_id, "search_index")
+    if not latest["available"] or latest["artifact"]["build_key"] != build_key:
+        raise ValueError("Search inputs changed while the query was running; retry")
     return out
 
 
@@ -128,3 +137,25 @@ async def search_universe_canon(universe: str, query: str, k: int = 8) -> list[d
     texts = [f"{r['kind']} {r['key']}: {r['value']}" for r in rows]
     ranked = await rerank_evidence(query, texts)
     return [{**rows[r["index"]], "rerank_score": round(r["score"], 4)} for r in ranked[:k]]
+
+
+async def embed_snapshot(snapshot: dict, build_key: str) -> dict:
+    """Write an immutable index namespace; readers use the DB's current pointer."""
+    from .outputs import snapshot_passages
+    await _ensure(PASSAGES)
+    passages=snapshot_passages(snapshot)
+    llm=Llm(snapshot['generation_id'])
+    for start in range(0,len(passages),64):
+        chunk=passages[start:start+64]
+        vecs=await llm.embed([p['text'] for p in chunk])
+        if len(vecs)!=len(chunk) or any(len(v)!=DIM for v in vecs):
+            raise ValueError('Embedding output count/dimension mismatch')
+        await qdrant().upsert(PASSAGES,wait=True,points=[models.PointStruct(
+            id=str(uuid.uuid5(NS,f"{snapshot['generation_id']}:{build_key}:{p['ref']}")),vector=v,
+            payload={**p,'generation_id':snapshot['generation_id'],'build_key':build_key,
+                     'knowledge_revision':snapshot['revision']}) for p,v in zip(chunk,vecs)])
+    count=(await qdrant().count(PASSAGES,exact=True,count_filter=models.Filter(must=[
+        models.FieldCondition(key='generation_id',match=models.MatchValue(value=snapshot['generation_id'])),
+        models.FieldCondition(key='build_key',match=models.MatchValue(value=build_key))]))).count
+    if count!=len(passages): raise ValueError('Index staging count mismatch')
+    return {'collection':PASSAGES,'build_key':build_key,'revision':snapshot['revision'],'indexed':count}
