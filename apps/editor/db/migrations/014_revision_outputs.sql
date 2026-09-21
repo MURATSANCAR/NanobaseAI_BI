@@ -6,6 +6,8 @@ ALTER TABLE rebuild_request ADD COLUMN attempts integer NOT NULL DEFAULT 0;
 ALTER TABLE rebuild_request ADD COLUMN attempted_revision bigint;
 ALTER TABLE rebuild_request ADD COLUMN retry_after timestamptz;
 ALTER TABLE rebuild_request ADD COLUMN last_error text;
+ALTER TABLE rebuild_request ADD COLUMN consumer_backend_pid integer;
+ALTER TABLE rebuild_request ADD COLUMN consumer_backend_start timestamptz;
 
 -- Immutable input and output versions. Public reads follow only a current pointer.
 CREATE TABLE knowledge_snapshot (

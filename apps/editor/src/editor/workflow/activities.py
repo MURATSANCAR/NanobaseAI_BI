@@ -262,7 +262,9 @@ async def release_models(aliases_: list[str]) -> dict:
         for a in aliases_:
             await client().post(f"/internal/stop/{a}", headers=h)
         return {"stopped": aliases_}
-    busy = await _t(db.one, "SELECT count(*) n FROM analysis_job WHERE status='RUNNING'")
+    busy = await _t(db.one, "SELECT (SELECT count(*) FROM analysis_job WHERE status='RUNNING') + "
+        "(SELECT count(*) FROM rebuild_request r JOIN pg_stat_activity a ON a.pid=r.consumer_backend_pid "
+        "AND a.backend_start=r.consumer_backend_start) AS n")
     if (busy or {}).get("n", 0) > 0:
         return {"stopped": [], "reason": "another job is running"}
     r = await client().post("/internal/stop-all", headers=h)

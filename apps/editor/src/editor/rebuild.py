@@ -172,6 +172,7 @@ async def run(gid: str) -> dict:
     # releases it. Duplicate Temporal/daemon deliveries therefore cannot overlap.
     with db.pool().connection() as lock:
         acquired=lock.execute("SELECT pg_try_advisory_lock(hashtextextended(%s,0)) AS ok",('outputs:'+gid,)).fetchone()['ok']
+        owner=lock.execute("SELECT pid,backend_start FROM pg_stat_activity WHERE pid=pg_backend_pid()").fetchone()
         lock.commit()
         if not acquired: return {'generation_id':gid,'technical_status':'BUSY'}
         try:
@@ -184,6 +185,8 @@ async def run(gid: str) -> dict:
                     return {'generation_id':gid,'technical_status':'ALREADY_CURRENT','accepted':False}
                 if request['attempted_revision']==state['knowledge_revision'] and request['attempts']>=MAX_ATTEMPTS:
                     raise ValueError('Rebuild retry budget exhausted')
+                c.execute("UPDATE ed.rebuild_request SET consumer_backend_pid=%s,consumer_backend_start=%s WHERE generation_id=%s",
+                    (owner['pid'],owner['backend_start'],gid))
                 c.execute("UPDATE ed.rebuild_request SET attempts=CASE WHEN attempted_revision=%s THEN attempts+1 ELSE 1 END,"
                     "attempted_revision=%s WHERE generation_id=%s",(state['knowledge_revision'],state['knowledge_revision'],gid))
             # Model upgrades require an explicit new analysis generation. Never
@@ -222,6 +225,9 @@ async def run(gid: str) -> dict:
             await asyncio.to_thread(failed,gid,exc)
             raise
         finally:
+            # Operational lease only; never touches book facts or model results.
+            db.one("UPDATE ed.rebuild_request SET consumer_backend_pid=NULL,consumer_backend_start=NULL "
+                "WHERE generation_id=%s AND consumer_backend_pid=%s RETURNING generation_id",gid,owner['pid'])
             lock.execute("SELECT pg_advisory_unlock(hashtextextended(%s,0))",('outputs:'+gid,))
             lock.commit()
 
