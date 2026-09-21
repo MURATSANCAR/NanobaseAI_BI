@@ -1,0 +1,100 @@
+{"n": 1, "id": "M001", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "Bu yılın mizanını ana hesap gruplarına göre çıkarır mısın?", "kaynak": "logo"}
+{"n": 2, "id": "M002", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "1 ile 7 arasındaki hesap gruplarında toplam borç ve alacak ne kadar?", "kaynak": "logo"}
+{"n": 3, "id": "M003", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "102 Bankalar hesabının bugünkü bakiyesi ne?", "kaynak": "logo"}
+{"n": 4, "id": "M004", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "120 Alıcılar hesabının borç bakiyesi ne kadar?", "kaynak": "logo"}
+{"n": 5, "id": "M005", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "320 Satıcılar hesabında ne kadar alacak bakiyesi var?", "kaynak": "logo"}
+{"n": 6, "id": "M006", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "En çok hareket gören on muhasebe hesabı hangileri?", "kaynak": "logo"}
+{"n": 7, "id": "M007", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "Borç ve alacak toplamları birbirini tutuyor mu, mizan dengede mi?", "kaynak": "logo"}
+{"n": 8, "id": "M008", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "Hesap planında kaç tane muhasebe hesabı var?", "kaynak": "logo"}
+{"n": 9, "id": "M009", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "600 Yurtiçi Satışlar hesabının bu yılki alacak toplamı ne?", "kaynak": "logo"}
+{"n": 10, "id": "M010", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "Bu yıl hiç hareket görmeyen muhasebe hesapları hangileri?", "kaynak": "logo"}
+{"n": 11, "id": "M011", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "101 Alınan Çekler hesabının bakiyesi ne kadar?", "kaynak": "logo"}
+{"n": 12, "id": "M012", "kategori": "A — Mizan ve hesap bakiyeleri", "soru": "108 Diğer Hazır Değerler hesabında ne kadar tutar var?", "kaynak": "logo"}
+{"n": 13, "id": "M013", "kategori": "B — Alıcılar ve tahsilat", "soru": "En çok borcu olan on müşteri kim?", "kaynak": "logo"}
+{"n": 14, "id": "M014", "kategori": "B — Alıcılar ve tahsilat", "soru": "Bu yıl müşterilerden toplam ne kadar tahsilat yaptık?", "kaynak": "logo"}
+{"n": 15, "id": "M015", "kategori": "B — Alıcılar ve tahsilat", "soru": "Vadesi geçmiş müşteri alacaklarımız toplam ne kadar?", "kaynak": "logo"}
+{"n": 16, "id": "M016", "kategori": "B — Alıcılar ve tahsilat", "soru": "Alacaklarımızı 30, 60, 90 gün diye yaşlandırır mısın?", "kaynak": "logo"}
+{"n": 17, "id": "M017", "kategori": "B — Alıcılar ve tahsilat", "soru": "Hangi müşterilerin bakiyesi bir milyon lirayı aşıyor?", "kaynak": "logo"}
+{"n": 18, "id": "M018", "kategori": "B — Alıcılar ve tahsilat", "soru": "Aylara göre tahsilat tutarlarımız nasıl dağılıyor?", "kaynak": "logo"}
+{"n": 19, "id": "M019", "kategori": "B — Alıcılar ve tahsilat", "soru": "Ortalama tahsilat süremiz kaç gün?", "kaynak": "logo"}
+{"n": 20, "id": "M020", "kategori": "B — Alıcılar ve tahsilat", "soru": "Risk limitini aşmış müşteriler hangileri?", "kaynak": "logo"}
+{"n": 21, "id": "M021", "kategori": "B — Alıcılar ve tahsilat", "soru": "Bu yıl hiç ödeme yapmamış ama borcu olan müşteriler var mı?", "kaynak": "logo"}
+{"n": 22, "id": "M022", "kategori": "B — Alıcılar ve tahsilat", "soru": "Müşteri cari hareketlerinde en çok hangi işlem türü var?", "kaynak": "logo"}
+{"n": 23, "id": "M023", "kategori": "B — Alıcılar ve tahsilat", "soru": "Tahsilatlarımız geçen yıla göre arttı mı?", "kaynak": "logo"}
+{"n": 24, "id": "M024", "kategori": "B — Alıcılar ve tahsilat", "soru": "En büyük beş müşterinin toplam alacak içindeki payı yüzde kaç?", "kaynak": "logo"}
+{"n": 25, "id": "M025", "kategori": "C — Satıcılar ve borçlar", "soru": "En çok borcumuz olan on tedarikçi hangisi?", "kaynak": "logo"}
+{"n": 26, "id": "M026", "kategori": "C — Satıcılar ve borçlar", "soru": "Bu yıl tedarikçilere toplam ne kadar ödeme yaptık?", "kaynak": "logo"}
+{"n": 27, "id": "M027", "kategori": "C — Satıcılar ve borçlar", "soru": "Vadesi gelmiş ama henüz ödenmemiş satıcı borçlarımız ne kadar?", "kaynak": "logo"}
+{"n": 28, "id": "M028", "kategori": "C — Satıcılar ve borçlar", "soru": "Satıcı borçlarımızı vadesine göre yaşlandırır mısın?", "kaynak": "logo"}
+{"n": 29, "id": "M029", "kategori": "C — Satıcılar ve borçlar", "soru": "Aylara göre tedarikçi ödemelerimiz nasıl?", "kaynak": "logo"}
+{"n": 30, "id": "M030", "kategori": "C — Satıcılar ve borçlar", "soru": "Bu yıl alış faturası kestiğimiz kaç farklı tedarikçi var?", "kaynak": "logo"}
+{"n": 31, "id": "M031", "kategori": "C — Satıcılar ve borçlar", "soru": "Alış faturalarımızın toplam tutarı ne kadar?", "kaynak": "logo"}
+{"n": 32, "id": "M032", "kategori": "C — Satıcılar ve borçlar", "soru": "Ortalama ödeme süremiz kaç gün?", "kaynak": "logo"}
+{"n": 33, "id": "M033", "kategori": "C — Satıcılar ve borçlar", "soru": "En büyük alış faturası hangi tedarikçiden?", "kaynak": "logo"}
+{"n": 34, "id": "M034", "kategori": "C — Satıcılar ve borçlar", "soru": "Satıcılara olan borcumuz geçen aya göre arttı mı?", "kaynak": "logo"}
+{"n": 35, "id": "M035", "kategori": "D — Banka", "soru": "Banka hesaplarımızın bakiyeleri ne?", "kaynak": "logo"}
+{"n": 36, "id": "M036", "kategori": "D — Banka", "soru": "Bu yıl bankalara toplam ne kadar para girdi ve çıktı?", "kaynak": "logo"}
+{"n": 37, "id": "M037", "kategori": "D — Banka", "soru": "Hangi bankada en çok hareket var?", "kaynak": "logo"}
+{"n": 38, "id": "M038", "kategori": "D — Banka", "soru": "Aylara göre banka giriş ve çıkışlarımız nasıl?", "kaynak": "logo"}
+{"n": 39, "id": "M039", "kategori": "D — Banka", "soru": "Kaç tane banka hesabımız var?", "kaynak": "logo"}
+{"n": 40, "id": "M040", "kategori": "D — Banka", "soru": "Geçen ay banka hareketlerimizin net tutarı ne oldu?", "kaynak": "logo"}
+{"n": 41, "id": "M041", "kategori": "D — Banka", "soru": "En büyük on banka çıkışı hangileri?", "kaynak": "logo"}
+{"n": 42, "id": "M042", "kategori": "D — Banka", "soru": "Banka bazında net nakit akışı nasıl?", "kaynak": "logo"}
+{"n": 43, "id": "M043", "kategori": "D — Banka", "soru": "Banka girişlerimiz geçen yılın aynı dönemine göre nasıl değişti?", "kaynak": "logo"}
+{"n": 44, "id": "M044", "kategori": "D — Banka", "soru": "Havale ve EFT ile yapılan ödemelerin toplamı ne kadar?", "kaynak": "logo"}
+{"n": 45, "id": "M045", "kategori": "E — Kasa", "soru": "Kasaların bakiyeleri ne kadar?", "kaynak": "logo"}
+{"n": 46, "id": "M046", "kategori": "E — Kasa", "soru": "Bu yıl kasaya ne kadar para girdi, ne kadar çıktı?", "kaynak": "logo"}
+{"n": 47, "id": "M047", "kategori": "E — Kasa", "soru": "Hangi kasada en çok işlem yapılmış?", "kaynak": "logo"}
+{"n": 48, "id": "M048", "kategori": "E — Kasa", "soru": "Aylara göre kasa hareketlerimiz nasıl?", "kaynak": "logo"}
+{"n": 49, "id": "M049", "kategori": "E — Kasa", "soru": "Kaç kasamız var?", "kaynak": "logo"}
+{"n": 50, "id": "M050", "kategori": "F — Çek ve senet", "soru": "Portföydeki müşteri çeklerimiz toplam ne kadar?", "kaynak": "logo"}
+{"n": 51, "id": "M051", "kategori": "F — Çek ve senet", "soru": "Bankaya tahsile verdiğimiz çeklerin tutarı ne kadar?", "kaynak": "logo"}
+{"n": 52, "id": "M052", "kategori": "F — Çek ve senet", "soru": "Bu yıl karşılıksız çıkan çeklerin toplam tutarı ne?", "kaynak": "logo"}
+{"n": 53, "id": "M053", "kategori": "F — Çek ve senet", "soru": "Protesto olan senetler var mı, tutarları ne?", "kaynak": "logo"}
+{"n": 54, "id": "M054", "kategori": "F — Çek ve senet", "soru": "Vadesi gelecek ay dolan çekler hangileri?", "kaynak": "logo"}
+{"n": 55, "id": "M055", "kategori": "F — Çek ve senet", "soru": "Çeklerimizi durumlarına göre dağılım olarak gösterir misin?", "kaynak": "logo"}
+{"n": 56, "id": "M056", "kategori": "F — Çek ve senet", "soru": "Senetlerin toplam tutarı çeklere göre ne kadar?", "kaynak": "logo"}
+{"n": 57, "id": "M057", "kategori": "F — Çek ve senet", "soru": "En büyük tutarlı on çek hangi müşteriden?", "kaynak": "logo"}
+{"n": 58, "id": "M058", "kategori": "F — Çek ve senet", "soru": "Tahsil edilmiş çeklerin toplamı ne kadar?", "kaynak": "logo"}
+{"n": 59, "id": "M059", "kategori": "F — Çek ve senet", "soru": "Ciro edilen çekler toplam ne kadar?", "kaynak": "logo"}
+{"n": 60, "id": "M060", "kategori": "G — KDV ve vergi", "soru": "Bu yılki hesaplanan KDV toplamımız ne?", "kaynak": "logo"}
+{"n": 61, "id": "M061", "kategori": "G — KDV ve vergi", "soru": "İndirilecek KDV toplamı ne kadar?", "kaynak": "logo"}
+{"n": 62, "id": "M062", "kategori": "G — KDV ve vergi", "soru": "Hesaplanan ile indirilecek KDV arasındaki fark ne?", "kaynak": "logo"}
+{"n": 63, "id": "M063", "kategori": "G — KDV ve vergi", "soru": "Aylara göre hesaplanan KDV nasıl dağılıyor?", "kaynak": "logo"}
+{"n": 64, "id": "M064", "kategori": "G — KDV ve vergi", "soru": "Satış faturalarındaki toplam KDV tutarı ne kadar?", "kaynak": "logo"}
+{"n": 65, "id": "M065", "kategori": "G — KDV ve vergi", "soru": "Alış faturalarındaki toplam KDV ne kadar?", "kaynak": "logo"}
+{"n": 66, "id": "M066", "kategori": "G — KDV ve vergi", "soru": "Ödenecek vergi ve fonlar hesabında ne kadar tutar var?", "kaynak": "logo"}
+{"n": 67, "id": "M067", "kategori": "G — KDV ve vergi", "soru": "Geçen ay ne kadar KDV ödememiz çıkıyor?", "kaynak": "logo"}
+{"n": 68, "id": "M068", "kategori": "G — KDV ve vergi", "soru": "KDV'si sıfır olan faturalar var mı, kaç tane?", "kaynak": "logo"}
+{"n": 69, "id": "M069", "kategori": "G — KDV ve vergi", "soru": "Hangi fatura türünde en çok KDV var?", "kaynak": "logo"}
+{"n": 70, "id": "M070", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Bu yılki net satışlarımız ne kadar?", "kaynak": "logo"}
+{"n": 71, "id": "M071", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Satış iadelerimiz toplam ne kadar?", "kaynak": "logo"}
+{"n": 72, "id": "M072", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Satış iskontolarımız ne kadar tuttu?", "kaynak": "logo"}
+{"n": 73, "id": "M073", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Aylara göre net satış tutarlarımız nasıl?", "kaynak": "logo"}
+{"n": 74, "id": "M074", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Bu yılki satışlarımız geçen yılın aynı dönemine göre nasıl?", "kaynak": "logo"}
+{"n": 75, "id": "M075", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Brüt satış, iade ve iskonto ile net satışı ayrı ayrı gösterir misin?", "kaynak": "logo"}
+{"n": 76, "id": "M076", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Bu yıl kaç satış faturası kestik?", "kaynak": "logo"}
+{"n": 77, "id": "M077", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Toptan ve perakende satışlarımızın payı ne?", "kaynak": "logo"}
+{"n": 78, "id": "M078", "kategori": "H — Satışlar ve gelir tablosu", "soru": "İade oranımız yüzde kaç?", "kaynak": "logo"}
+{"n": 79, "id": "M079", "kategori": "H — Satışlar ve gelir tablosu", "soru": "Dövizli faturalarımızın toplam tutarı ne kadar?", "kaynak": "logo"}
+{"n": 80, "id": "M080", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Bu yılki pazarlama giderlerimiz ne kadar?", "kaynak": "logo"}
+{"n": 81, "id": "M081", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Genel yönetim giderlerimiz toplam ne?", "kaynak": "logo"}
+{"n": 82, "id": "M082", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Masraf merkezlerine göre giderlerimiz nasıl dağılıyor?", "kaynak": "logo"}
+{"n": 83, "id": "M083", "kategori": "I — Giderler ve masraf merkezleri", "soru": "En çok gider yazılan on masraf merkezi hangisi?", "kaynak": "logo"}
+{"n": 84, "id": "M084", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Aylara göre giderlerimiz nasıl değişiyor?", "kaynak": "logo"}
+{"n": 85, "id": "M085", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Pazarlama ile genel yönetim giderlerini karşılaştırır mısın?", "kaynak": "logo"}
+{"n": 86, "id": "M086", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Giderlerimiz geçen aya göre arttı mı?", "kaynak": "logo"}
+{"n": 87, "id": "M087", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Hizmet alımlarımızın toplam tutarı ne kadar?", "kaynak": "logo"}
+{"n": 88, "id": "M088", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Giderlerin satışlara oranı yüzde kaç?", "kaynak": "logo"}
+{"n": 89, "id": "M089", "kategori": "I — Giderler ve masraf merkezleri", "soru": "Kaç tane masraf merkezimiz var?", "kaynak": "logo"}
+{"n": 90, "id": "M090", "kategori": "J — Sabit kıymet ve amortisman", "soru": "Sabit kıymetlerimizin toplam giriş maliyeti ne kadar?", "kaynak": "logo"}
+{"n": 91, "id": "M091", "kategori": "J — Sabit kıymet ve amortisman", "soru": "Birikmiş amortisman toplamımız ne?", "kaynak": "logo"}
+{"n": 92, "id": "M092", "kategori": "J — Sabit kıymet ve amortisman", "soru": "Sabit kıymet gruplarına göre maliyetler nasıl dağılıyor?", "kaynak": "logo"}
+{"n": 93, "id": "M093", "kategori": "J — Sabit kıymet ve amortisman", "soru": "Bu yıl kaç yeni sabit kıymet aldık?", "kaynak": "logo"}
+{"n": 94, "id": "M094", "kategori": "J — Sabit kıymet ve amortisman", "soru": "Amortismanı tamamen bitmiş kıymetler hangileri?", "kaynak": "logo"}
+{"n": 95, "id": "M095", "kategori": "K — Yevmiye ve fiş kontrolü", "soru": "Bu yıl kaç muhasebe fişi kesildi?", "kaynak": "logo"}
+{"n": 96, "id": "M096", "kategori": "K — Yevmiye ve fiş kontrolü", "soru": "Fiş türlerine göre dağılım nasıl?", "kaynak": "logo"}
+{"n": 97, "id": "M097", "kategori": "K — Yevmiye ve fiş kontrolü", "soru": "Borç ve alacağı tutmayan fiş var mı?", "kaynak": "logo"}
+{"n": 98, "id": "M098", "kategori": "K — Yevmiye ve fiş kontrolü", "soru": "Aylara göre muhasebe fişi sayısı nasıl?", "kaynak": "logo"}
+{"n": 99, "id": "M099", "kategori": "K — Yevmiye ve fiş kontrolü", "soru": "En çok satırlı on muhasebe fişi hangileri?", "kaynak": "logo"}
+{"n": 100, "id": "M100", "kategori": "K — Yevmiye ve fiş kontrolü", "soru": "Bu ay hiç muhasebe kaydı girildi mi?", "kaynak": "logo"}
