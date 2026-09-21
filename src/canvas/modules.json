@@ -323,6 +323,11 @@
   "title": "Finans & Risk",
   "modules": [
    {
+    "id": "financial-audit",
+    "title": "Finansal Denetim",
+    "sections": 4
+   },
+   {
     "id": "M45",
     "title": "Finansal Raporlama ve Analiz",
     "sections": 3

@@ -4007,6 +4007,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         {"flag": row.get("reviewFlag") or "", "note": (row.get("reviewNote") or "")[:120]})
         return row
 
+    from semantic_bridge import financial_audit
+    financial_audit.register(app, rt, _require_caller)
     return app
 
 

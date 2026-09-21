@@ -22,6 +22,7 @@ const AuthorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) =
 const TranslatorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.TranslatorsScreen })));
 const FreelancersScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.FreelancersScreen })));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
+const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
 
 function RouteFallback() {
   return (
@@ -54,6 +55,7 @@ export default function App() {
             {/* Girişten sonra ilk ekran Kampüs; modüllere oradan geçilir. */}
             <Route index element={<KampusPage />} />
             <Route path="genel-bakis" element={<BiCanvasPage />} />
+            <Route path="finansal-denetim" element={<FinancialAudit />} />
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />
