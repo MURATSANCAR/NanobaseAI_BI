@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ArrowDownToLine, ArrowRight, Check, ChevronLeft, ChevronRight, CircleHelp, FileSearch, Loader2, Search, ShieldCheck } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowDownToLine, ArrowRight, Check, ChevronLeft, ChevronRight, CircleHelp, FileSearch, Loader2, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { railFor } from '../stitch/screens';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
@@ -17,6 +17,7 @@ type SupportingEvidence = { status: string; limitations: string[]; unavailableDa
 type Overview = { deepAudit?: DeepAudit; runId: string; supportingEvidence: SupportingEvidence; coverage: { items: Control[]; counts: Record<string, number>; kindCounts: Record<string, number>; coverageReason: string; references: Array<{title: string; url: string}> }; source: string; year: number; lastDate: string; computedAt: string; lineCount: number; debit: string; credit: string; accounts: Account[]; checks: CheckResult[]; ratios: Ratio[]; limitations: string[]; revision: string; sql: string[]; dbMs: number; truncated: boolean };
 type DocumentPage = { total: number; items: Array<{documentRef: number; slipRef: number; lineRef: number; slipNo: string; documentType: number; documentNo: string; documentDate: string; paymentType: string; description: string; undocumented: number; noPayment: number}> };
 type Detail = { items: Array<{ lineRef: number; slipRef: number; slipNo: string; date: string; debit: number; credit: number; description: string; documentNo: string }>; total: number; page: number; readAt: string; separateRead: boolean };
+type RefreshStatus = { state: 'idle' | 'refreshing' | 'ready' | 'error'; runId?: string; computedAt?: string; startedAt?: string; message?: string; calculationUpdated: boolean };
 const number = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 const money = (n: number | string) => `${number.format(Number(n))} ₺`;
 const day = (s?: string) => s ? new Date(s).toLocaleDateString('tr-TR') : '—';
@@ -55,9 +56,9 @@ function ReviewPanel({ runId, controlId }: { runId: string; controlId: string })
   </section>;
 }
 
-async function get<T>(path: string): Promise<T> {
+async function get<T>(path: string, method = 'GET'): Promise<T> {
   if (!ENGINE_ENABLED) throw new Error('Bu kurulumda Logo bağlantısı tanımlı değil.');
-  const response = await fetch(`${ENGINE_BASE}/api/v1/financial-audit/${path}`, { credentials: 'include', signal: AbortSignal.timeout(120000) });
+  const response = await fetch(`${ENGINE_BASE}/api/v1/financial-audit/${path}`, { method, credentials: 'include', signal: AbortSignal.timeout(120000) });
   if (!response.ok) {
     if ([401, 403].includes(response.status)) throw new Error('Verileri görmek için oturum açmanız gerekiyor.');
     const body = await response.json().catch(() => null);
@@ -67,6 +68,7 @@ async function get<T>(path: string): Promise<T> {
 }
 
 export default function FinancialAudit() {
+  const queryClient = useQueryClient();
   const [tab, setTab] = useState('overview');
   const [search, setSearch] = useState('');
   const [kind, setKind] = useState('all');
@@ -86,9 +88,19 @@ export default function FinancialAudit() {
     if (selected && tab === 'catalog' && window.innerWidth < 768) document.getElementById('audit-source-detail')?.scrollIntoView({ block: 'start' });
   }, [selected, tab]);
   const overview = useQuery({ queryKey: ['financial-audit', 2026, runChoice], queryFn: () => get<Overview>(runChoice ? `runs/${runChoice}` : 'overview?year=2026'), enabled: ENGINE_ENABLED, retry: false, staleTime: 120000, refetchOnWindowFocus: false });
+  const refreshStatus = useQuery({ queryKey: ['audit-refresh-status'], queryFn: () => get<RefreshStatus>('refresh-status'), enabled: ENGINE_ENABLED, retry: false, refetchInterval: q => q.state.data?.state === 'refreshing' ? 2000 : 15000 });
+  const refresh = useMutation({ mutationFn: () => get<RefreshStatus>('refresh', 'POST'), onSuccess: status => {
+    queryClient.setQueryData(['audit-refresh-status'], status);
+    setRunChoice('');
+  }});
+  useEffect(() => {
+    if (!runChoice && refreshStatus.data?.runId && refreshStatus.data.runId !== overview.data?.runId) {
+      void queryClient.invalidateQueries({ queryKey: ['financial-audit', 2026, ''], exact: true });
+    }
+  }, [runChoice, refreshStatus.data?.runId, overview.data?.runId, queryClient]);
   const runs = useQuery({ queryKey: ['financial-audit-runs', overview.data?.runId], queryFn: () => get<{ items: Array<{runId: string; computedAt: string}> }>('runs'), enabled: !!overview.data?.runId, retry: false });
-  const detail = useQuery({ queryKey: ['financial-audit-lines', account?.accountRef, page], queryFn: () => get<Detail>(`lines?year=2026&account=${account!.accountRef}&page=${page}`), enabled: !!account, retry: false });
-  const documents = useQuery({ queryKey: ['financial-audit-documents', documentAccount, documentPage], queryFn: () => get<DocumentPage>(`documents?year=2026&page=${documentPage}${documentAccount ? `&main_account=${documentAccount}` : ''}`), enabled: tab === 'evidence', retry: false });
+  const detail = useQuery({ queryKey: ['financial-audit-lines', overview.data?.runId, account?.accountRef, page], queryFn: () => get<Detail>(`lines?year=2026&account=${account!.accountRef}&page=${page}`), enabled: !!account, retry: false });
+  const documents = useQuery({ queryKey: ['financial-audit-documents', overview.data?.runId, documentAccount, documentPage], queryFn: () => get<DocumentPage>(`documents?year=2026&page=${documentPage}${documentAccount ? `&main_account=${documentAccount}` : ''}`), enabled: tab === 'evidence', retry: false });
   const data = overview.data;
   // The internal analysis document is never requested by this screen.
   const source = useMemo(() => ({items: (data?.coverage.items ?? []).map(control => {
@@ -104,29 +116,33 @@ export default function FinancialAudit() {
   const accounts = data?.accounts.filter(a => (!onlyFindings || a.unexpectedSign) && norm(`${a.code} ${a.name}`).includes(norm(search))) ?? [];
   const openAccount = (a: Account) => { setAccount(a); setPage(0); };
   const tabs = [['overview', 'Denetim özeti'], ['discovery', 'Logo’da ne var?'], ['catalog', 'Kontrol kütüphanesi'], ['ledger', 'Logo kayıtları'], ['evidence', 'Dayanak veriler']];
+  const refreshing = refresh.isPending || refreshStatus.data?.state === 'refreshing';
+  const refreshButton = <button className="audit-button" disabled={refreshing || !ENGINE_ENABLED} onClick={() => refresh.mutate()}><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />{refreshing ? 'Veriler yenileniyor' : 'Verileri yenile'}</button>;
 
-  return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal Denetim', source: 'Logo · muhasebe', presence: data ? `Veri: ${day(data.lastDate)}` : 'Veri bekleniyor' }} rail={railFor('/finansal-denetim')}>
+  if (!data) return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal Denetim', source: 'Logo · muhasebe', presence: 'Kayıtlı denetim raporu' }} rail={railFor('/finansal-denetim')}><main className="audit-main"><div className="audit-page"><h1>Finansal Denetim</h1><section className="audit-panel" aria-busy={overview.isFetching}><h2>{overview.isFetching ? 'Kayıtlı rapor açılıyor' : 'Rapor şu anda açılamadı'}</h2><p>{overview.isFetching ? 'Son tamamlanan hesaplama sunucudaki kayıttan getiriliyor.' : refreshStatus.data?.message || (overview.error instanceof Error ? overview.error.message : 'İlk rapor hazırlandığında burada otomatik gösterilecek.')}</p>{!overview.isFetching && <div className="audit-heading-actions"><button className="audit-button" onClick={() => overview.refetch()}>Raporu tekrar aç</button>{refreshButton}</div>}</section></div></main></Shell>;
+
+  return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal Denetim', source: 'Logo · muhasebe', presence: `Veri: ${day(data.lastDate)}` }} rail={railFor('/finansal-denetim')}>
     <main className="audit-main">
       <ZoomStage><div className="audit-page">
         <header className="audit-heading">
           <div><div className="audit-eyebrow">FİNANS & RİSK / DENETİM MASASI</div><h1>Rakamların arkasını görün<span>.</span></h1><p>Finansal Denetim · Genel görünümden hesaplamaya, hesaplamadan Logo kaydına.</p></div>
-          <a className="audit-button" aria-disabled={!data} href={data ? `${ENGINE_BASE}/api/v1/financial-audit/runs/${data.runId}/export` : undefined} onClick={e => { if (!data) e.preventDefault(); }} download><ArrowDownToLine size={16} /> Raporu indir</a>
+          <div className="audit-heading-actions">{refreshButton}<a className="audit-button" href={`${ENGINE_BASE}/api/v1/financial-audit/runs/${data.runId}/export`} download><ArrowDownToLine size={16} /> Raporu indir</a></div>
         </header>
 
         <section className="audit-hero">
           <div className="audit-hero-copy"><div className="audit-chip"><ShieldCheck size={14} /> KAYNAĞINA KADAR İZLENEBİLİR</div><h2>Her bulgunun<br /><em>bir dayanağı var.</em></h2><p>Ne kontrol edildi, nasıl hesaplandı, hangi kayıt etkili? Finans ekibiniz için tek bir çalışma alanı.</p><div className="audit-hero-meta"><span>2026 işlem dönemi</span><span>TRY / Türk lirası</span><span>Salt okunur</span></div></div>
           <div className="audit-orbit" aria-label="Denetim kapsamı"><div className="audit-orbit-core"><ShieldCheck size={30} /><strong>{data ? data.checks.length : '—'}</strong><span>temel kontrol</span></div><span className="audit-orbit-label">LOGO → HESAPLAMA → BULGU</span></div>
-          <div className="audit-hero-side"><span className="audit-eyebrow">VERİNİN ZAMANI</span><strong>{day(data?.lastDate)}</strong><p>{data ? `${number.format(data.lineCount)} hareket · ${number.format(data.accounts.length)} hesap` : overview.isFetching ? 'Logo muhasebe kayıtları okunuyor…' : 'Logo verisi henüz okunamadı.'}</p><span className="audit-source-pill">2026 yedeği · canlı dönem değildir</span></div>
+          <div className="audit-hero-side"><span className="audit-eyebrow">VERİNİN ZAMANI</span><strong>{day(data?.lastDate)}</strong><p>{`${number.format(data.lineCount)} hareket · ${number.format(data.accounts.length)} hesap`}</p><span className="audit-source-pill">2026 yedeği · canlı dönem değildir</span></div>
         </section>
 
-        {overview.isFetching && <div className="audit-message" role="status"><Loader2 size={16} className="animate-spin" /> Gerçek Logo kaynağı okunuyor; sonuç hazır olunca burada görünecek.</div>}
-        {(overview.error || !ENGINE_ENABLED) && <div className="audit-message audit-warning" role="alert">{overview.error instanceof Error ? overview.error.message : 'Logo bağlantısı tanımlı değil.'} <strong>DOĞRULANAMADI</strong><button className="audit-button" onClick={() => overview.refetch()}>Tekrar dene</button></div>}
+        <div className="audit-message" role="status">{refreshing && <Loader2 size={16} className="animate-spin" />}<span><b>Son güncelleme: {new Date(data.computedAt).toLocaleString('tr-TR')}</b> · {refreshing ? 'Yeni hesaplama arka planda hazırlanıyor; mevcut raporu incelemeye devam edebilirsiniz.' : runChoice ? 'Arşivden seçtiğiniz rapor gösteriliyor.' : 'Son tamamlanan rapor gösteriliyor. Veriler saatlik olarak ve isteğiniz üzerine yenilenir.'}</span></div>
+        {(overview.error || refresh.error || refreshStatus.error || refreshStatus.data?.state === 'error') && <div className="audit-message audit-warning" role="alert"><span>{refreshStatus.data?.state === 'error' ? refreshStatus.data.message : 'Güncel rapor kontrolü tamamlanamadı. Görüntülediğiniz son başarılı rapor korunuyor.'}</span><button className="audit-button" disabled={refreshing} onClick={() => refresh.mutate()}>Yenilemeyi tekrar dene</button></div>}
 
-        <div className="audit-toolbar"><label className="audit-run-picker">Çalışma raporu <select aria-label="Kaydedilmiş denetim raporu" value={runChoice} onChange={e => { setRunChoice(e.target.value); setSelected(null); setAccount(null); }}><option value="">Son kaynak okuması</option>{runs.data?.items.map(r => <option key={r.runId} value={r.runId}>{new Date(r.computedAt).toLocaleString('tr-TR')}</option>)}</select></label><span className="audit-badge">{runChoice ? 'Kaydedilmiş hesaplama · Logo hareket detayı ayrı okumadır' : 'Rapor ve inceleme notları arşivlenir'}</span></div>
+        <div className="audit-toolbar"><label className="audit-run-picker">Çalışma raporu <select aria-label="Kaydedilmiş denetim raporu" value={runChoice} onChange={e => { setRunChoice(e.target.value); setSelected(null); setAccount(null); }}><option value="">Son tamamlanan rapor</option>{runs.data?.items.map(r => <option key={r.runId} value={r.runId}>{new Date(r.computedAt).toLocaleString('tr-TR')}</option>)}</select></label><span className="audit-badge">{runChoice ? 'Kaydedilmiş hesaplama · Logo hareket detayı ayrı okumadır' : 'Rapor ve inceleme notları arşivlenir'}</span></div>
 
         <nav className="audit-tabs" aria-label="Denetim bölümleri">{tabs.map(([id, title]) => <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); }}>{title}{id === 'catalog' && <span>{source.items.length}</span>}</button>)}</nav>
 
-        {tab === 'discovery' && (data ? <DeepAuditPanel key={data.runId} data={data.deepAudit} runId={data.runId} load={get} /> : <section className="audit-panel"><h2>{overview.isFetching ? 'Logo kaynakları okunuyor…' : 'Kaynak taraması doğrulanamadı'}</h2><p>Sonuç gelmeden bir kaynağı eksik veya bir kontrolü başarılı saymıyoruz.</p></section>)}
+        {tab === 'discovery' && <DeepAuditPanel key={data.runId} data={data.deepAudit} runId={data.runId} load={get} />}
 
         {tab === 'overview' && <>
           <section className="audit-discovery-link"><div><span className="audit-eyebrow">LOGO’DA NE VAR, NE EKSİK?</span><h2>Kaynakları birbirleriyle karşılaştırın.</h2><p>{data?.deepAudit ? `${data.deepAudit.checks.length} ek veri kontrolü · ${data.deepAudit.sources.length} kaynak alanı. Bulunan kayıtlar, farklar ve eksik dayanaklar birlikte.` : 'Fatura, banka, kredi ve belge kaynaklarının kapsamını inceleyin.'}</p></div><button className="audit-button" onClick={() => setTab('discovery')}>Veri kapsamını aç <ArrowRight size={16}/></button></section>

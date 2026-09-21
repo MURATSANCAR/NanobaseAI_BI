@@ -106,6 +106,7 @@ def register(app, runtime, authorize):
     def build_report(year):
         # Only the background snapshot publisher invokes this expensive calculation.
         with lock:
+            started_at = datetime.now(timezone.utc).isoformat()
             try:
                 sql = f"""SELECT A.LOGICALREF AS accountRef,A.CODE AS code,A.DEFINITION_ AS name,
                   A.ACCTYPE AS accountType, COUNT(*) AS lineCount,
@@ -272,6 +273,8 @@ def register(app, runtime, authorize):
                 out['sql'].extend(out['deepAudit']['sql'])
                 out['dbMs'] += out['deepAudit']['dbMs']
                 out['runId'] = uuid.uuid4().hex
+                out['sourceReadStartedAt'] = started_at
+                out['computedAt'] = datetime.now(timezone.utc).isoformat()
                 out['readConsistency'] = 'Aynı yedek üzerinde ardışık sorgular; veritabanı snapshot transaction değildir.'
                 out = json.loads(json.dumps(out, ensure_ascii=False, default=str))
                 # Private immutable workpaper. UI and exports can pin this exact run.

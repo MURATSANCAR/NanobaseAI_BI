@@ -98,7 +98,7 @@ class AuditSnapshots:
         if only_if_due:
             last = previous.get('finishedAt') or previous.get('startedAt')
             age = (datetime.now(timezone.utc) - datetime.fromisoformat(last)).total_seconds() if last else self.interval
-            if age < self.interval and previous.get('snapshotRevision') == self.revision:
+            if age < self.interval and previous.get('state') != 'refreshing' and self.load() and previous.get('snapshotRevision') == self.revision:
                 lock.close()
                 return dict(self.status(), accepted=False)
         job = dict(state='refreshing', jobId=uuid.uuid4().hex, startedAt=now(),

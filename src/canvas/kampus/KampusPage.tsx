@@ -9,7 +9,6 @@ import {
   BookOpen,
   Bot,
   Calendar,
-  ChevronDown,
   Contact,
   Flag,
   HeartHandshake,
@@ -26,10 +25,8 @@ import {
   Sparkle,
   Sparkles,
 } from 'lucide-react';
-import groups from '../modules.json';
-import { LIVE } from '../stitch/ModulesMenu';
+import { GROUP_HOME } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
-import { useIsAdmin } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
@@ -67,17 +64,13 @@ const PROMPTS = [
   { label: '🧾 İade oranı', q: 'Bu yıl iade oranı yüzde kaç?' },
 ];
 
-/** Modül kutucukları: kanvasta açılan ekranlar. Yeni ekran geldikçe satır eklenir. */
-const MODULE_TILES = [
-  { to: '/genel-bakis', title: 'ZEKİ AI · Genel Bakış', note: 'Satış, ciro ve verine sor', tone: 'bg-violet/10 text-violet' },
-  { to: '/finansal-denetim', title: 'Finansal Denetim', note: 'Finans · kontroller, bulgular ve Logo kayıtları', tone: 'bg-emerald-100 text-emerald-700' },
-  { to: '/panolar', title: 'Panolar', note: 'Kişisel pano ve grafikler', tone: 'bg-amber-100 text-amber-800' },
-  { to: '/uyarilar', title: 'Uyarılar', note: 'Kural ve bildirimler', tone: 'bg-rose-100 text-rose-700' },
-  { to: '/planli-raporlar', title: 'Planlı Raporlar', note: 'Zamanlanmış gönderimler', tone: 'bg-sky-100 text-sky-700' },
-  { to: '/veri-sozlugu', title: 'Veri Sözlüğü', note: 'Kavramlar ve katalog', tone: 'bg-emerald-100 text-emerald-700', adminOnly: true },
-  { to: '/onaylar', title: 'Onaylar', note: 'Bekleyen incelemeler', tone: 'bg-purple-100 text-purple-700', adminOnly: true },
-  { to: '/yonetim', title: 'Yönetim', note: 'Ayarlar ve değişiklik kaydı', tone: 'bg-slate-200 text-slate-700', adminOnly: true },
-];
+/** Ana modüller ortak menüdeki giriş sayfalarını kullanır; alt ekranlar modül içinde kalır. */
+const MODULE_TILES = ['Genel Bakış', 'Editoryal Süreç', 'Finans & Risk'].map((title, index) => ({
+  title,
+  to: GROUP_HOME[title].to,
+  note: GROUP_HOME[title].hint,
+  tone: ['bg-violet/10 text-violet', 'bg-amber-100 text-amber-800', 'bg-emerald-100 text-emerald-700'][index],
+}));
 
 const trNorm = (s: string) => s.toLocaleLowerCase('tr');
 
@@ -145,13 +138,6 @@ export default function KampusPage() {
       askZeki(v);
     }
   };
-
-  const [allModules, setAllModules] = useState(false);
-  const moduleGroups = groups as Array<{ title: string; modules: Array<{ id: string; title: string }> }>;
-  const moduleTotal = moduleGroups.reduce((a, g) => a + g.modules.length, 0);
-  // Yönetim, Veri Sözlüğü ve Onaylar kutucukları yalnız yöneticide çıkar.
-  const isAdmin = useIsAdmin();
-  const moduleTiles = MODULE_TILES.filter((m) => !m.adminOnly || isAdmin);
 
   const qc = useQueryClient();
 
@@ -499,7 +485,7 @@ export default function KampusPage() {
             </div>
           </section>
 
-          {/* MODÜLLER — kanvas ekranlarına geçiş */}
+          {/* MODÜLLER — ana modül sayfalarına geçiş */}
           <Card id="moduller" className="p-5">
             <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
               <div className="flex items-center gap-3">
@@ -507,30 +493,21 @@ export default function KampusPage() {
                   <LayoutGrid className="h-5 w-5" />
                 </div>
                 <div>
-                  <div className="flex items-center gap-2">
-                    <h2 className="kp-display text-base font-bold text-ink">Modüller</h2>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="kp-display text-base font-bold text-ink">Ana Modüller</h2>
                     <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">
-                      {moduleTiles.length} açık · {moduleTotal} toplam
+                      {MODULE_TILES.length} modül
                     </span>
                   </div>
-                  <p className="text-xs text-muted">ZEKİ AI iş ekranlarına buradan geçin</p>
+                  <p className="text-xs text-muted">Modülünüzü seçin, kendi ana sayfasından devam edin</p>
                 </div>
               </div>
-              <button
-                type="button"
-                aria-expanded={allModules}
-                onClick={() => setAllModules((v) => !v)}
-                className="kp-press min-h-11 sm:min-h-0 flex w-fit items-center gap-1 rounded-lg border border-slate-200/70 bg-slate-50/80 px-3 py-1.5 text-xs font-medium text-ink/80 hover:border-violet/30 hover:text-violet"
-              >
-                Tüm modüller
-                <ChevronDown className={`h-3.5 w-3.5 ${allModules ? 'rotate-180' : ''}`} />
-              </button>
             </div>
 
             {/* Modül adı kesilmez: ad iki satıra kadar sarar, kutular min-h ile aynı yükseklikte kalır.
                 Üçüncü sütun yalnız 2xl'de açılır; altında iki sütun ada yetecek genişliği verir. */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-              {moduleTiles.map((m) => (
+              {MODULE_TILES.map((m) => (
                 <Link
                   key={m.to}
                   to={m.to}
@@ -551,36 +528,6 @@ export default function KampusPage() {
               ))}
             </div>
 
-            {allModules && (
-              <div className="kp-scroll mt-4 max-h-[420px] space-y-3 overflow-y-auto border-t border-slate-200/70 pr-1 pt-4">
-                {moduleGroups.map((g) => (
-                  <div key={g.title}>
-                    <div className="kp-mono pb-1 text-[11px] font-bold uppercase tracking-wider text-muted">{g.title}</div>
-                    <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
-                      {g.modules.map((m) => {
-                        const to = LIVE[m.id];
-                        return to ? (
-                          <Link
-                            key={m.id}
-                            to={to}
-                            title={m.title}
-                            className="kp-press min-h-11 sm:min-h-0 flex items-center gap-2 rounded-lg border border-slate-200/70 bg-white px-2 py-1.5 text-[12px] font-semibold text-ink hover:border-violet/30"
-                          >
-                            <span className="min-w-0 flex-1 truncate">{m.title}</span>
-                            <span className="shrink-0 rounded bg-violet/10 px-1.5 text-[11px] font-bold text-violet">açık</span>
-                          </Link>
-                        ) : (
-                          <div key={m.id} title={m.title} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12px] text-muted">
-                            <span className="min-w-0 flex-1 truncate">{m.title}</span>
-                            <span className="shrink-0 text-[11px] text-muted/70">yakında</span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </Card>
 
           {/* REHBER */}
