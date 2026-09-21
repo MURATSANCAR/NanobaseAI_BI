@@ -41,6 +41,9 @@ from .llm import Llm, image_part
 from .vision import _crop
 
 MODEL_KEY = "ccip"
+# The ledger's own rule (character_mention_check): a mention is RESOLVED only at >= 0.75.
+# The adjudicator is held to the same bar, so there is one threshold, not two.
+RESOLVED_MIN = 0.75
 
 
 def _client() -> httpx.Client:
@@ -330,8 +333,13 @@ async def name_clusters(generation_id: str, clusters: dict) -> dict:
         new_ids = [cid for cid in clusters["members"] if cid not in verdicts]
         verdicts.update(await adjudicate(generation_id, clusters, chars, scores, new_ids))
 
-    order = sorted(clusters["members"], key=lambda cid: (-max(scores[cid]["total"]),
-                                                         -len(clusters["members"][cid])))
+    # The cluster with the most drawings claims its name first. Measured: the adjudicator
+    # gives the protagonist's name to her parents too (a pink dress, a checked shirt — both
+    # "Yavru Vombat" at 0.95+); named first, those two-figure clusters occupied the pages and
+    # the protagonist's own twenty-figure cluster was left without a name. With the large
+    # cluster first, the same page constraint rejects the small wrong ones instead.
+    order = sorted(clusters["members"], key=lambda cid: (-len(clusters["members"][cid]),
+                                                         -max(scores[cid]["total"])))
     taken: dict[int, set[int]] = {}
     out = []
     for cid in order:
@@ -349,12 +357,12 @@ async def name_clusters(generation_id: str, clusters: dict) -> dict:
         # best name the evidence supports and the page constraint still allows.
         best, ok = None, False
         if not refused:
-            picks = ([v["k"]] if v.get("k") is not None and v.get("confidence", 0) >= 0.7 else []) + ranked
+            picks = ([v["k"]] if v.get("k") is not None and v.get("confidence", 0) >= RESOLVED_MIN else []) + ranked
             for k in picks:
                 if not free(k):
                     continue
                 rest = max((tot[j] for j in ranked if j != k and free(j)), default=0.0)
-                if k == v.get("k") and v.get("confidence", 0) >= 0.7:
+                if k == v.get("k") and v.get("confidence", 0) >= RESOLVED_MIN:
                     best, ok = k, True
                     break
                 if tot[k] >= floor and tot[k] - rest >= margin:
@@ -369,6 +377,8 @@ async def name_clusters(generation_id: str, clusters: dict) -> dict:
                     "by": ("adjudicator" if ok and best == v.get("k") else "evidence") if ok else None,
                     "refused": ("not a character" if v.get("is_character") is False else
                                 "several characters" if v.get("same_character") is False else None),
+                    "confidence": (round(min(0.95, float(v.get("confidence", 0))), 3)
+                                   if ok and best == v.get("k") else round(min(0.95, tot[best]), 3)) if ok else 0.0,
                     "support": round(tot[best], 3) if best is not None else 0.0,
                     "runner_up": round(second, 3), "reason": v.get("reason", "")})
         if ok:
@@ -399,18 +409,28 @@ async def resolve(generation_id: str, write: bool = True) -> dict:
             continue
         for mid in clusters["members"][a["cluster"]]:
             by_fig[mid] = a
-    stats["by_figure"] = {mid: a["name"] for mid, a in by_fig.items()}
+    # only what would be written as an identity counts as named, in a measurement too
+    stats["by_figure"] = {mid: a["name"] for mid, a in by_fig.items() if a["confidence"] >= RESOLVED_MIN}
+    stats["resolved_figures"] = len(stats["by_figure"])
+    stats["candidate_figures"] = len(by_fig) - len(stats["by_figure"])
     if not write:
         return stats
     with db.tx() as c:
         c.execute("UPDATE character_mention SET character_id=NULL, resolution='UNCERTAIN', appearance ="
-                  " appearance - 'identified_by' - 'cluster' - 'cluster_support' WHERE generation_id=%s"
+                  " appearance - 'identified_by' - 'cluster' - 'cluster_by' - 'cluster_support' - 'cluster_candidate'"
+                  " WHERE generation_id=%s"
                   " AND via='VISUAL'", (generation_id,))
         for mid, a in by_fig.items():
-            conf = min(0.95, max(0.6, a["support"]))
-            c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED',"
-                      " confidence=%s, appearance = appearance || %s WHERE id=%s",
-                      (a["character_id"], conf,
-                       db.J({"identified_by": "cluster", "cluster": a["cluster"],
-                             "cluster_support": a["support"]}), mid))
+            # Evidence that names a cluster without reaching the ledger's bar is kept as a
+            # candidate on the figure; it is not an identity.
+            if a["confidence"] >= RESOLVED_MIN:
+                c.execute("UPDATE character_mention SET character_id=%s, resolution='RESOLVED',"
+                          " confidence=%s, appearance = appearance || %s WHERE id=%s",
+                          (a["character_id"], a["confidence"],
+                           db.J({"identified_by": "cluster", "cluster": a["cluster"], "cluster_by": a["by"],
+                                 "cluster_support": a["support"]}), mid))
+            else:
+                c.execute("UPDATE character_mention SET appearance = appearance || %s WHERE id=%s",
+                          (db.J({"cluster": a["cluster"], "cluster_candidate": a["name"],
+                                 "cluster_support": a["support"]}), mid))
     return stats

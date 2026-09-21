@@ -1,7 +1,9 @@
 -- The adjudicator's answer for one cluster: same figures, same prompt version -> same
 -- question, asked once. A re-run (new threshold, new rule elsewhere) reuses it.
+-- (IF NOT EXISTS: a test host carried this table under an earlier number before the
+-- numbering was aligned with main.)
 SET search_path = ed, public;
-CREATE TABLE cluster_verdict (
+CREATE TABLE IF NOT EXISTS cluster_verdict (
   generation_id uuid NOT NULL REFERENCES generation(id) ON DELETE CASCADE,
   members_key   text NOT NULL,
   prompt        text NOT NULL,
