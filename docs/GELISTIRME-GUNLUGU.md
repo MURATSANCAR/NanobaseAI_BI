@@ -1,5 +1,21 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Karne 44 → 62/69; müşteri VM'i test sunucusuyla eşitlendi; kayıt sistemi ilkesi
+
+**Kalite kapısı (`answer-gate.py --repeat 3`, 69 altın soru):** son tam koşu **60 SAĞLAM / 9 BOZUK / 0 KARARSIZ, ham hata 0** (09-18: 44/18/7, hata 12). Sonrasında Q58 ve Q27 de düzeldi → 62. Kalan bozuk: Q4, Q10, Q13, Q29, Q40, Q49, Q51.
+
+**Üç gerileme bulundu ve kapatıldı (ikiye bölerek):** Q8/Q55/Q69 — çift adlı tablo düzeltmesi (ORFICHE/LG_ORFICHE) o tabloyu HER soruda kısa listenin başına alıyordu; iki kaynağın oyda kaldığı sorularda model yazılamayacak iki sunuculu plan kuruyordu. Artık çift adlı tablo yalnız tek kaynaklı soruda sabitlenir ve kaynak kararına katılmaz. Q58 — istem aynı kelime için hem "NO_SQL yaz" hem "yorum satırı yaz" diyordu, model yazı-tura atıyordu (`_reconsider_owed`). Q27 — altın kırılgandı: referansın 0 değeri yokluktur, cevapta satır olarak aranmaz.
+
+**İş kararları uygulandı (ürün sahibi kararı Claude'a bıraktı):** çek = olay okuması (CSTRANS.STATUS, 2026'da 6 çek / 6.326.658 ₺ — güncel durum okuması bunları gizliyordu); stok devir hızı = satış adedi / ((açılış devri + güncel stok)/2), 20/20 kitapta referansla eş; dönemsiz "son N / hiç" bütün yıl kopyalarını okur (Q17: 4 → 1.826); oran paydası üst varlıktan sayılır (Q46 %17,61), yıl sözleşmenin kendi tarihinden (Q59 %19,8 → %9,04); iade oranı adet tabanlı (Q11); termin hiçbir sistemde tutulmuyor → cevap bunu açıkça söyler (`column_facts`).
+
+**Kayıt sistemi ilkesi (ürün sahibi):** "Finansal bir süreç tamamlanmışsa onu Logo bilir." "Bu yıl kaç fatura kesildi" CRM reklam planındaki onay kutusuna gidip 0 diyordu → **73.660** (DB teyidi). Kök neden: METRIC hiç yarışmıyordu, çünkü "kaç fatura" sözü "fatura sayısı" terimiyle sözlüksel eşleşmiyor. `resolver._certified_count`: "kaç X" sorusunda X için sertifikalı, KENDİ birincil anahtarını sayan COUNT ölçüsü varsa o okunur. Katalogda makine üretimi iki fazla genel eş anlamlı geri çekildi; "kesilen fatura" → "sevkiyattaki fatura numarası" diye daraltıldı (numara kopyası, olayın kendisi değil). set100'de 0 değişiklik; 25 soruluk sondajda 7 soru düzeldi.
+
+**Müşteri VM'i (192.168.0.55) kuruldu ve doğrulandı.** Asıl engel kod değil KATALOG'du: sertifikalı kavram 110 → **4.979**, tablo ilişkisi 5.085 → **6.388**. Aktarım `scripts/server/sync-catalog-to-customer-vm.sh` (profil + kavram + eşleme + kanıt; kuru koşu varsayılan, idempotent, VM'e özel kayıt silinmez). Kod `deploy-customer-vm.sh` ile kuruldu, `.env`'e `SEMANTIC_FULL_SCOPE_FROM=2021-01-01` eklendi. Kabul testi: net ciro iki tarafta kuruşu kuruşuna aynı (839.586.083,31); ham SQL hatası sızması bitti.
+
+**Kokpit:** "SQL'i göster" düğmesi hep tıklanamazdı ve "Veritabanı süresi ölçülmedi" yazıyordu — ikisi de dağıtım eksiğiydi; sunucudaki metrik üreticisi 89 satırlık eski sürümdü, repodaki 111 satırlık sürüm süreyi zaten yazıyordu. Kuruldu: `dbMs` geliyor, çalışan SQL (8 sorgu, 30.132 krk) kartlara taşınıyor. Modüller kartında adlar artık kesilmiyor (`line-clamp-2`), yedi rotanın hepsi doğrulandı.
+
+**Katalog kapsamı ölçüldü (sözlük genişletme planı, adım 1).** Logo'da 4.121 tablodan yalnız **60'ı** sertifikalı kavramla bağlı (CRM'de 285/753). Açıklaması olan 1.061 tablo aslında **254 farklı şekil** (gerisi yıl kopyası): A yüksek değer 53, B destek 62, C teknik gürültü 9 (SYSLOG+LOGREP+PERDOC = 24,1 M satır), **D boş/ölü 130 — satır sayısı sıfır** (MRP, bütçe, kalite kontrol modülleri hiç kullanılmamış; 2.639 açıklamalı kolon ölü yatıyor). Aylık toplam tabloları (CSHTOTS, CLTOTFIL…) hareket tablolarının önceden toplanmış hâli → kavramlaştırılırsa çift sayma üretir. Adım 2 (ilk parti: LG_SHIPINFO, OCCUPATION, EMUHACC, POLINE, SRVCARD, FAREGIST, INVDEF) ve 1000 soruluk modelsiz sınıf taraması sürüyor.
+
 ## 2026-09-21 10:40 — Editoryal modüller müşteri VM'ine (192.168.0.55) yayınlandı
 
 Kullanıcı isteğiyle test sunucusundaki editoryal iş müşteri VM'ine taşındı.
