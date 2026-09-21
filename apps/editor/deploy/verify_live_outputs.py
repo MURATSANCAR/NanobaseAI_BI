@@ -7,6 +7,7 @@ Usage inside editor-control: python verify_live_outputs.py GENERATION STAGE
 import asyncio
 import hashlib
 import json
+import os
 import sys
 from datetime import datetime, timezone
 
@@ -162,7 +163,8 @@ if index.get('available'):
 
 result = {'environment': 'tt-gpu/editor-control; real ed PostgreSQL; loopback control API',
     'timestamp': datetime.now(timezone.utc).isoformat(), 'stage': stage, 'generation_id': gid,
-    'code_version': gen['code_version'], 'job': job, 'state': state, 'queue': queue,
+    'code_version': os.environ.get('EDITOR_CODE_VERSION', 'unknown'),
+    'generation_code_version': gen['code_version'], 'job': job, 'state': state, 'queue': queue,
     'pointers': pointers, 'versions': versions, 'snapshots': snapshots,
     'knowledge_changes': history, 'api': api, 'legacy_hashes': old, 'model_calls': model_calls,
     'qdrant_reference': qdrant_reference, 'workflow': workflow,
