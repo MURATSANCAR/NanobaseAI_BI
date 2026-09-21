@@ -1,0 +1,112 @@
+{
+  "url": "https://portal.nanobase.ai/timas/",
+  "sourceSha256": "efcd90d92791c34ee56cc386ee390f5586b8e4750b2b00b1d44147ddc250e6b9",
+  "buildEnvironment": "nanobase-direct",
+  "verification": "Authenticated Chrome against deployed portal; navigation and responsive layout only",
+  "viewports": [
+    {
+      "links": [
+        {
+          "height": 72,
+          "href": "/timas/genel-bakis",
+          "text": "Genel Bakış\n\nFinansal göstergeler ve soru sorma"
+        },
+        {
+          "height": 72,
+          "href": "/timas/editoryal",
+          "text": "Editoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül"
+        },
+        {
+          "height": 72,
+          "href": "/timas/finansal-denetim",
+          "text": "Finans & Risk\n\nFinansal denetim ve Logo kayıtları"
+        }
+      ],
+      "modules": "Ana Modüller\n3 modül\n\nModülünüzü seçin, kendi ana sayfasından devam edin\n\nGenel Bakış\n\nFinansal göstergeler ve soru sorma\n\nEditoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül\n\nFinans & Risk\n\nFinansal denetim ve Logo kayıtları",
+      "scrollWidth": 320,
+      "width": 320
+    },
+    {
+      "links": [
+        {
+          "height": 72,
+          "href": "/timas/genel-bakis",
+          "text": "Genel Bakış\n\nFinansal göstergeler ve soru sorma"
+        },
+        {
+          "height": 72,
+          "href": "/timas/editoryal",
+          "text": "Editoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül"
+        },
+        {
+          "height": 72,
+          "href": "/timas/finansal-denetim",
+          "text": "Finans & Risk\n\nFinansal denetim ve Logo kayıtları"
+        }
+      ],
+      "modules": "Ana Modüller\n3 modül\n\nModülünüzü seçin, kendi ana sayfasından devam edin\n\nGenel Bakış\n\nFinansal göstergeler ve soru sorma\n\nEditoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül\n\nFinans & Risk\n\nFinansal denetim ve Logo kayıtları",
+      "scrollWidth": 390,
+      "width": 390
+    },
+    {
+      "links": [
+        {
+          "height": 72,
+          "href": "/timas/genel-bakis",
+          "text": "Genel Bakış\n\nFinansal göstergeler ve soru sorma"
+        },
+        {
+          "height": 72,
+          "href": "/timas/editoryal",
+          "text": "Editoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül"
+        },
+        {
+          "height": 72,
+          "href": "/timas/finansal-denetim",
+          "text": "Finans & Risk\n\nFinansal denetim ve Logo kayıtları"
+        }
+      ],
+      "modules": "Ana Modüller\n3 modül\n\nModülünüzü seçin, kendi ana sayfasından devam edin\n\nGenel Bakış\n\nFinansal göstergeler ve soru sorma\n\nEditoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül\n\nFinans & Risk\n\nFinansal denetim ve Logo kayıtları",
+      "scrollWidth": 768,
+      "width": 768
+    },
+    {
+      "links": [
+        {
+          "height": 72,
+          "href": "/timas/genel-bakis",
+          "text": "Genel Bakış\n\nFinansal göstergeler ve soru sorma"
+        },
+        {
+          "height": 72,
+          "href": "/timas/editoryal",
+          "text": "Editoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül"
+        },
+        {
+          "height": 72,
+          "href": "/timas/finansal-denetim",
+          "text": "Finans & Risk\n\nFinansal denetim ve Logo kayıtları"
+        }
+      ],
+      "modules": "Ana Modüller\n3 modül\n\nModülünüzü seçin, kendi ana sayfasından devam edin\n\nGenel Bakış\n\nFinansal göstergeler ve soru sorma\n\nEditoryal Süreç\n\nBaşvurudan baskı onayına sekiz modül\n\nFinans & Risk\n\nFinansal denetim ve Logo kayıtları",
+      "scrollWidth": 1440,
+      "width": 1440
+    }
+  ],
+  "navigation": [
+    {
+      "module": "Editoryal Süreç",
+      "url": "https://portal.nanobase.ai/timas/editoryal",
+      "heading": "Editoryal masa"
+    },
+    {
+      "module": "Finans & Risk",
+      "url": "https://portal.nanobase.ai/timas/finansal-denetim",
+      "heading": "Finansal Denetim"
+    },
+    {
+      "module": "Genel Bakış",
+      "url": "https://portal.nanobase.ai/timas/genel-bakis"
+    }
+  ]
+}

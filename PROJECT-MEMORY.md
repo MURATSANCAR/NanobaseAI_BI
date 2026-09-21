@@ -1,5 +1,7 @@
 # NanobaseAI BI — Proje Belleği
 
+**Kampüs ana modülleri (2026-09-21):** `/timas` üzerindeki kartlar ortak `GROUP_HOME` girişlerine bağlı: Genel Bakış, Editoryal Süreç, Finans & Risk. Alt ekran kartları, 77 toplam sayacı ve genişleyen tüm-modüller listesi bu alandan kaldırıldı; alt menüler kendi modüllerinde.
+
 **Editor kimlik/kaynak kapsamı (2026-09-21, sürüyor):** gerçek nesilde m1 anmasının iki gruba yazılması ve ad çoğunluğu, Baba Vombat'ı yavruyla birleştirmiş; yanlış HUMAN türleri görsel kapsamı engelliyor. Tekil/tam referans sözleşmesi, ikinci kimlik denetçisi, birey/topluluk ayrımı ve boş OCR kaydı sunucuda. Yeni tek gerçek nesil `1600e738-621b-434f-8d9c-0c0645b42fb2`, job `8dd7f9a1-f9f7-41d0-b16d-f544e3c92205`, `editor-identity-20260921` kuyruğunda sürüyor; yalnız bu kabul için bakım geçici kaldırıldı, genel worker/rebuild kapalı. Üretici d045a96f, okuyucu 251543a2. Tam kabul henüz yok; `apps/editor/docs/IDENTITY-COVERAGE.md`.
 
 

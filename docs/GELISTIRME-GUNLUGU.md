@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+
+## 2026-09-21 — Kampüs kartları yalnız ana modüllere gider
+
+- Kullanıcının isteğiyle ana sayfa kartları Genel Bakış, Editoryal Süreç ve Finans & Risk girişlerine bağlandı; adresler `ModulesMenu.GROUP_HOME` ile ortak. Alt ekran kısayolları ve genişleyen tüm-modüller listesi kaldırıldı; alt menüler modül içinde kalır.
+- Yalnız `KampusPage.tsx` değişti; finansal denetimde eşzamanlı çalışma dosyaları bu commit kapsamına alınmaz. Derleme test sunucusunda, `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas` ile; yayın `cockpit/dist`.
+- Son yayın oturumlu gerçek portalda kontrol edildi: üç kartın tıklanması doğru ana sayfayı açtı, 320/390/768/1440 genişliklerinde scrollWidth viewport ile eşit, kartlar 72 px yüksekliğinde. Kanıt `docs/audits/kampus-main-modules-2026-09-21/browser.json`. Yerel test çalıştırılmadı; hesaplama/veri davranışı değişmedi, bu kontrol veri doğruluğu kabulü değildir. İlk derlemedeki eksik ENGINE_BASE ayarı son yayından önce düzeltildi.
+
 ## 2026-09-21 — Editor kimlik ve kaynak kapsamı düzeltmesi (sürüyor)
 
 - Aynı anmanın iki kimliğe yazılması, yanlış tür ve ad çoğunluğu kök nedenleri gerçek model kayıtlarında bulundu. Referans bütünlüğü/ikinci kimlik kontrolü ve boş OCR tamamlanma kaydı eklendi. Gerçek kabul sürüyor, genel taramalar kapalı.
