@@ -401,6 +401,11 @@ class SemanticQuery:
     # The resolver's own reading of which database the question is about, from the tables the
     # question's words name ("fatura" → INVOICE, "fiyat" → PRCLIST); used when nothing certified pins it.
     source_hint: Optional[str] = None            # "" is the connection's own database; None is no reading
+    # The databases the question names *by name* ("CRM'de kayıtlı…", "Logo'da kesilen…"). A source
+    # name is not a business term the catalog is missing — it is the question saying where to look,
+    # so it never counts as an undefined concept. Read from the catalog's own spelling of its
+    # sources (schema database prefix, datasource id), so a third database needs no code change.
+    named_sources: list[str] = field(default_factory=list)
     modifiers: list[dict[str, Any]] = field(default_factory=list)
     clarification: list[str] = field(default_factory=list)
     # A shape the question asks for that the deterministic compiler cannot express but the model can

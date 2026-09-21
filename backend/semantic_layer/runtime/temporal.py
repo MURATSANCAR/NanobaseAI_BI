@@ -223,6 +223,53 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
             start_m += 12
             y -= 1
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_MONTHS", _month_start(y, start_m), _next_month(today.year, today.month), "MONTH", params={"n": n}))
+    for m in re.finditer(rf"\bson\s+{_N}\s+hafta\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
+        add(m, TemporalSlot(m.group(0).strip(), "LAST_N_WEEKS", today - timedelta(days=7 * n), today + timedelta(days=1), "WEEK", params={"n": n}))
+    # Forward-looking windows. Everything above this line looks backwards, and a question that looks
+    # forward — "önümüzdeki otuz gün içinde vadesi dolacak alacaklar", "önümüzdeki üç ayda vadesi
+    # gelecek çekler" — therefore read as having no period at all, whereupon the default year put a
+    # *past* window on a question about what is coming. A due date is a date like any other: the
+    # window simply starts today and runs forward.
+    # Only the words anchored to *now*. "sonraki ay", "izleyen ay" are relative to whatever date the
+    # sentence was just talking about ("irsaliye tarihi bir ayda, fatura tarihi sonraki ayda"), and
+    # read as next calendar month they put a filter on a question that asked for a relationship
+    # between two dates. A relative-to-a-date window is a different reading and is not guessed here.
+    _AHEAD = r"(?:onumuzdeki|gelecek)"
+    for unit, prim, days in ((r"gun\w*", "NEXT_N_DAYS", 1), (r"hafta\w*", "NEXT_N_WEEKS", 7)):
+        for m in re.finditer(rf"\b{_AHEAD}\s+{_N}\s+{unit}", text):
+            n = _count(m.group(1))
+            if n is None:
+                continue
+            add(m, TemporalSlot(m.group(0).strip(), prim, today, today + timedelta(days=days * n + 1),
+                                "DAY" if days == 1 else "WEEK", params={"n": n}))
+    for m in re.finditer(rf"\b{_AHEAD}\s+{_N}\s+ay\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
+        y, mo = today.year, today.month + n
+        while mo > 12:
+            mo -= 12
+            y += 1
+        add(m, TemporalSlot(m.group(0).strip(), "NEXT_N_MONTHS", today, _next_month(y, mo), "MONTH", params={"n": n}))
+    for m in re.finditer(rf"\b{_AHEAD}\s+{_N}\s+yil\w*", text):
+        n = _count(m.group(1))
+        if n is None:
+            continue
+        n = max(1, min(20, n))
+        add(m, TemporalSlot(m.group(0).strip(), "NEXT_N_YEARS", today, date(today.year + n + 1, 1, 1), "YEAR", params={"n": n}))
+    _next_m = _next_month(today.year, today.month)
+    _monday = today - timedelta(days=today.weekday())
+    _ahead_simple = {
+        rf"\b{_AHEAD}\s+hafta\w*\b": ("NEXT_WEEK", _monday + timedelta(days=7), _monday + timedelta(days=14), "WEEK"),
+        rf"\b{_AHEAD}\s+ay\w*\b": ("NEXT_MONTH", _next_m, _next_month(_next_m.year, _next_m.month), "MONTH"),
+        rf"\b{_AHEAD}\s+yil\w*\b": ("NEXT_YEAR", date(today.year + 1, 1, 1), date(today.year + 2, 1, 1), "YEAR"),
+    }
+    for pat, (prim, start, end, grain) in _ahead_simple.items():
+        for m in re.finditer(pat, text):
+            add(m, TemporalSlot(m.group(0).strip(), prim, start, end, grain))
     for m in re.finditer(r"\bson\s+(gunler|gunlerde|donem|donemde|zamanlar|zamanlarda|haftalar)\b", text):
         add(m, TemporalSlot(m.group(0).strip(), "AMBIGUOUS_RECENT", None, None, None, ambiguous=True))
     # "bu ara", "bu sıralar", "yakın zamanda", "geçenlerde": a recent stretch nobody put a number on.

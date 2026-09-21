@@ -846,12 +846,31 @@ class SemanticResolver:
         # and a default year put on it made the gate refuse the statement — or, worse, a model date it.
         # Nor is a measure the resolver composed over a card's column ("liste fiyatları", "önerilen
         # baskı adedi"): an attribute of a record, not something that happened on a date.
-        undated = bool(placed) and not any(s_.semantic_type == SemanticType.METRIC
-                                           and s_.status in ("CERTIFIED", "INFERRED")
-                                           and (s_.explain or {}).get("source") != "count_cue"
-                                           and not (s_.mapping.extra or {}).get("state_measure")
-                                           and not (s_.mapping.extra or {}).get("undated")   # a cost on a card, not an event
-                                           for s_ in placed)
+        dated_measure = any(s_.semantic_type == SemanticType.METRIC
+                            and s_.status in ("CERTIFIED", "INFERRED")
+                            and (s_.explain or {}).get("source") != "count_cue"
+                            and not (s_.mapping.extra or {}).get("state_measure")
+                            and not (s_.mapping.extra or {}).get("undated")   # a cost on a card, not an event
+                            and self.conventions.time_column(s_.mapping.entity)
+                            for s_ in placed)
+        # Whether a default period may be applied is a property of the *question*, not of whichever
+        # measure happened to land. Read only off the measure, it inverted twice:
+        #   · nothing placed at all → `bool(placed)` was False, the question counted as dated, and a
+        #     year was stamped on a question the resolver had not understood a word of ("Bakiyesi bir
+        #     milyon liranın üstünde olan cariler" came back restricted to 2026 — a stock quantity,
+        #     true as of a moment, silently narrowed to this year's records);
+        #   · a measure whose table carries no business date (a balance, a limit, a price on a card)
+        #     counted as dated, and the gate was then asked to find a period on a table that has none.
+        # Both are the same rule: a period can only restrict a date column, so unless something the
+        # question placed *has* one, there is nothing here to date. The catalog decides which those
+        # are — `conventions.time_column` is read from the scanned profile, not from a list of words
+        # — so a stock concept certified tomorrow on a card table is undated without any code change.
+        datable = any(s_.mapping is not None and s_.mapping.entity
+                      and self.conventions.time_column(s_.mapping.entity) for s_ in placed)
+        undated = not (placed and datable and dated_measure)
+        undated_why = ("soruda katalogla eşleşen hiçbir şey yok" if not placed
+                       else "sorunun dokunduğu tabloların iş tarihi kolonu yok" if not datable
+                       else "soru tarihli bir ölçü sormuyor")
         default_applied = False
         # "son üç baskı", "ilk kez", "bugüne kadar": with no period said, these order or accumulate over
         # the whole history. This year's default turned "the last three printings" into "this year's
@@ -876,7 +895,7 @@ class SemanticResolver:
                 default_applied = True
                 sq.explanation.append(f"dönem belirtilmedi → varsayılan {fallback.primitive} uygulandı")
         elif not sq.temporal and undated:
-            sq.explanation.append("dönem belirtilmedi ve soru tarihli bir ölçü sormuyor → tüm kayıtlar üzerinden")
+            sq.explanation.append(f"dönem belirtilmedi ve {undated_why} → tüm kayıtlar üzerinden")
         self._read_comparison(sq, qf, question, today or date.today())
         if sq.comparison:
             metric_entity = next((s.mapping.entity for s in sq.metrics if s.mapping), None)
@@ -942,6 +961,26 @@ class SemanticResolver:
                 )
                 if token not in sq.unhandled:
                     sq.unhandled.append(token)
+
+        # 5b) the database the question names. "CRM'de kayıtlı aktif müşteri", "Logo'da kesilen
+        #     fatura": that word is not a business term the catalog is missing — it is the question
+        #     telling us which database to read. Counted as an undefined concept it refused ninety-
+        #     seven questions in a thousand that had said exactly where to look, and the same word
+        #     that could have routed the question was the reason it was turned away. The names come
+        #     from the catalog (each source's schema, the datasource the scan ran under), never from
+        #     a list of systems written here.
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed:
+                continue
+            named = self._source_named(tok)
+            if named is None:
+                continue
+            consumed.add(k)
+            if named not in sq.named_sources:
+                sq.named_sources.append(named)
+            sq.explanation.append(
+                f"'{tok}' bir iş terimi değil, verinin geldiği kaynağın adı → "
+                f"{named or 'ana veri tabanı'} tarafı tercih edilecek")
 
         # 6) unresolved content words
         for k, tok in enumerate(qf.tokens):
@@ -1881,6 +1920,16 @@ class SemanticResolver:
                     homes = ratio_homes
                     sq.source_hint = next(iter(homes))
                     sq.explanation.append(f"oran soruldu; sertifikalı oran ölçüsü {next(iter(homes)) or 'ana veri tabanı'} tarafında → o kaynak seçildi")
+        named = list(getattr(sq, "named_sources", None) or [])
+        if len(named) == 1 and len(homes) != 1:
+            # The question said which database it is about and nothing else settled it. Naming a
+            # source is the plainest evidence there is — plainer than a vote counted over table
+            # names — so it decides here, where otherwise nothing would. It does not overrule a
+            # certified measure: where the measure already pins a database, that stays.
+            homes = {named[0]}
+            sq.source_hint = named[0]
+            sq.explanation.append(
+                f"soru kaynağı kendi adıyla söylüyor → {named[0] or 'ana veri tabanı'} verisi okunacak")
         if len(homes) != 1:
             return
         home = next(iter(homes))
@@ -1901,6 +1950,8 @@ class SemanticResolver:
                            if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
                            and self._source_of(s.mapping.entity) == home}
         for lone in {id(s): s for s in others}.values():
+            if self._source_of(lone.mapping.entity) in named:
+                continue          # the question named this database by name: it is meant to be read
             span = getattr(lone, "span", None)
             if lone.semantic_type == SemanticType.METRIC and (lone.explain or {}).get("source") == "count_cue":
                 sq.slots.remove(lone)                     # a count composed on the other source's table
@@ -2010,6 +2061,53 @@ class SemanticResolver:
         prof = self.by_entity.get(entity)
         schema = (prof.schema_name or "") if prof is not None else ""
         return schema.split(".")[0].upper() if "." in schema else ""
+
+    def _source_name_words(self) -> dict[str, frozenset[str]]:
+        """What each database is *called*, read from the catalog's own spelling of it.
+
+        A source has two written names: the schema its tables live in ("Timas_MSCRM.dbo" →
+        TIMAS_MSCRM) and — for the connection's own database, whose schema is just "dbo" — the
+        datasource the scan ran under ("logo"). Both are cut into words, and each word also gives
+        its tail after a one- or two-letter abbreviation prefix, because that is how people say it:
+        nobody asks about "MSCRM", they ask about the CRM. A word more than one source answers to
+        names none of them. Nothing here is a list of systems: a third database added tomorrow is
+        named by its own schema and answers to its own words with no code change.
+        """
+        found = getattr(self, "_source_name_cache", None)
+        if found is not None:
+            return found                       # the sources are fixed for a resolver: a new catalog builds a new one
+        raw: dict[str, set[str]] = {src: set() for src in (self._source_of(e) for e in self.by_entity)}
+        for src in list(raw):
+            for part in re.split(r"[^0-9A-Za-z]+", src or (self.datasource_id or "")):
+                word = fold(part)
+                if len(word) < 3:
+                    continue
+                raw[src].add(word)
+                for cut in (1, 2):                      # "mscrm" → "crm": the vendor prefix people drop
+                    tail = word[cut:]
+                    # Only an acronym is dropped down to — a tail with a vowel in it is an ordinary
+                    # Turkish word ("timas" → "mas") and would claim a database on any sentence that
+                    # happened to use it.
+                    if len(tail) >= 3 and not set(tail) & set("aeiouöüıAEIOU"):
+                        raw[src].add(tail)
+        seen: dict[str, int] = {}
+        for words in raw.values():
+            for word in words:
+                seen[word] = seen.get(word, 0) + 1
+        found = {src: frozenset(w for w in words if seen[w] == 1) for src, words in raw.items()}
+        self._source_name_cache = found
+        return found
+
+    def _source_named(self, token: str) -> Optional[str]:
+        """The database this word names, or nothing. Exact match on the word as written — a source
+        name is a proper noun, not a stem to be matched loosely against business vocabulary."""
+        forms = {f for f in (fold(token), stem(token), short_root(token)) if f and len(f) >= 3}
+        if not forms:
+            return None
+        for src, words in self._source_name_words().items():
+            if forms & words:
+                return src
+        return None
 
     _NAME_CACHE: dict[tuple[str, str], frozenset[str]] = {}
 
