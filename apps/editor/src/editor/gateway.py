@@ -281,6 +281,11 @@ async def _should_overflow(a: Alias, req: Request) -> bool:
 
 
 async def ensure_running(a: Alias) -> None:
+    from .foundation import assert_enabled
+    try:
+        await asyncio.to_thread(assert_enabled)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from None
     if _is_running(a) and await _healthy(a):
         return
     async with a.lock:
@@ -343,6 +348,11 @@ async def models(req: Request) -> dict:
 @app.api_route("/v1/{path:path}", methods=["POST"])
 async def proxy(path: str, req: Request):
     _auth(req)
+    from .foundation import assert_enabled
+    try:
+        await asyncio.to_thread(assert_enabled)
+    except RuntimeError as exc:
+        raise HTTPException(503, str(exc)) from None
     if path not in PASSTHROUGH:
         raise HTTPException(404, f"unsupported endpoint /v1/{path}")
     body = await req.body()

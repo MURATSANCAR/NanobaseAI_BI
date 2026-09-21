@@ -10,7 +10,7 @@
 name: editor
 
 x-py: &py
-  image: ${EDITOR_PY_IMAGE:-editor-py:latest}
+  image: ${EDITOR_PY_IMAGE:-editor-py:0.10.0-foundation}
   restart: unless-stopped
   env_file: ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
   environment:
@@ -89,8 +89,20 @@ services:
       temporal: {condition: service_healthy}
     networks: [editor-net]
 
+  control:
+    <<: *py
+    container_name: editor-control
+    command: ["uvicorn", "editor.control:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    volumes:
+      - ${EDITOR_ROOT:-/data/editor}/storage:/data/editor/storage:ro
+    ports:
+      - "127.0.0.1:19140:8000"
+    depends_on:
+      postgres: {condition: service_healthy}
+
   gateway:
     <<: *py
+    profiles: [analysis]
     container_name: editor-gateway
     command: ["uvicorn", "editor.gateway:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
     environment:
@@ -110,6 +122,7 @@ services:
 
   mcp:
     <<: *py
+    profiles: [analysis]
     container_name: editor-mcp
     command: ["python", "-m", "editor.mcp_servers"]
     depends_on:
@@ -117,6 +130,7 @@ services:
 
   worker:
     <<: *py
+    profiles: [analysis]
     container_name: editor-worker
     command: ["python", "-m", "editor.workflow.worker"]
     depends_on:
@@ -124,6 +138,7 @@ services:
       temporal: {condition: service_healthy}
 
   hermes:
+    profiles: [analysis]
     image: nousresearch/hermes-agent:v2026.9.14
     container_name: editor-hermes
     restart: unless-stopped

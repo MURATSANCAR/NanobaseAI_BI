@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from temporalio.client import Client
 
-from . import db, document
+from . import db, document, foundation
 from .config import settings
 
 WORKFLOW = "BookFullAnalysis"
@@ -23,6 +23,7 @@ async def temporal() -> Client:
 async def start_analysis_job(file_name: str, title: str | None = None, universe: str | None = None,
                              age_group: str | None = None, profile: str = "full",
                              requested_by: str = "hermes") -> dict:
+    foundation.assert_enabled()
     info = document.inspect_book(file_name, title=title, universe=universe, age_group=age_group)
     running = db.one("SELECT id FROM analysis_job WHERE book_version_id=%s AND status IN "
                      "('QUEUED','RUNNING') ORDER BY created_at DESC LIMIT 1", info["book_version_id"])

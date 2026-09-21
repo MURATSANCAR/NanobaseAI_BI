@@ -1,5 +1,24 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor durdurma ve sürümlü teknik temel hazırlığı
+
+Kullanıcı önce mevcut tarama/analizleri durdurmayı, sonra altyapıyı sunucuda hazırlamayı
+istedi. Açık Temporal workflow ve aktif DB işi yoktu; Hermes, MCP, worker, gateway ve
+deneysel embed servisi durduruldu. GPU 1: 0 MiB; BI GPU 0 servisi çalışmaya devam etti.
+Önceki uygulama ve gerçek Editor PostgreSQL yedeği
+`/data/editor/backups/20260921-foundation/` altına alındı.
+
+Hazırlanan temel: kalıcı bakım kilidi; bilgi revizyonu/değişiklik kaydı; bağımlı çıktı
+durumları ve yeniden üretim kuyruğu; ortak uygun claim/event/emotion görünümleri;
+job başına tek generation; transaction ile tekrar makbuzu; yalnız okuyan kontrol API'si.
+Analiz servisleri opt-in `analysis` profilinde. Önceki mühürlü içerikler korunur,
+yeni altyapıda `LEGACY_UNASSESSED/UNTRACKED/BLOCKED` olarak gösterilir.
+
+Bu commit kurulum adayıdır; yerel test çalıştırılmadı. Sunucuda imaj hazırlığı/migration
+ve gerçek API + gerçek DB salt okunur kabul sonuçları kurulumdan sonra eklenecek.
+Otomatik yeniden üretim tüketicisi, eski akışın tüm yazım/okuma yollarına entegrasyon
+ve yeni nesil semantik kabulü bu hazırlığın tamamlanma iddiasına dahil değildir.
+
 ## 2026-09-21 (öğleden sonra) — Hata SINIFLARI sayıldı; ciro karşılaştırmasının yönü düzeldi
 
 **1000 soruluk modelsiz sınıf taraması** (`/api/v1/semantic/resolve`, model yok; çıktı `/private/tmp/claude-501/tarama-1000/`). Başlangıç: RESOLVED 218 / PARTIAL 651 / UNRESOLVED 131; deterministik derlenen 67. Sınıflar (soru sayısıyla): cevap sertifikasız 827 · dönem okunmadı 351 · dönemsiz soruya varsayılan yıl 296 · "öbür kaynakta tanımlı" diye düşen kelime 203 · hiçbir şey yerleşmedi 131 · ölçü yerine kolon 114 · eşik okunmadı 102 · kaynak kaçırma 98 · kaynak adı ret sebebi 97. Ders: set100 bu sınıfları göstermiyor (son yamalarda 0/100 değişti) — sınıf ölçümü set1000'de yapılır, set100 yalnız gerileme kontrolüdür.
@@ -735,4 +754,3 @@ Kullanıcı isteğiyle 2026-09-17'de kaldırılan tasarım kartlarından üçü 
 - portal.nanobase.ai/timas/ veri getirmiyor → teşhis: sunucudaki `openvpn-client@timas` 2026-09-12 06:29'dan beri WatchGuard `AUTH_FAILED` ile kapalı, `tun0` yok; socat `:14330` TCP kabul ettiği için port açık görünüyor ama köprü (:8795) FreeTDS `08001 Unable to connect` alıyor. `muratsancar` hesabı MFA (push/OTP) istediği için servis kendi kendine bağlanamıyor; 12 Eylül 22:08/22:14'te başlatılmış iki interaktif openvpn işlemi kod bekleyerek asılı. Düzeltme kullanıcı/TİMAŞ BT tarafında (servis hesabı şifresi + MFA muafiyeti). Erişim bilgileri kullanıcı isteğiyle yerel proje belleğine (`timas-access-credentials`) kaydedildi; güvenlik nedeniyle repo'ya yazılmadı. Doğrulama: DOĞRULANAMADI — VPN açılana kadar canlı veri kontrolü yapılamaz.
 - Tüm dallar `main`e merge edildi (`perf/full-overhaul-2026-08`, `claude/interesting-dhawan-1fa99d`, `claude/timesfm-repo-review-a60864`, `claude/vpn-crm-database-connection-91863b`, `claude/whatlaunched-dashboard-submit-1b30a9`, `claude/zeki-timas-planning-b75b7f`, `claude/project-memory-dev-log-5c3fa0`) ve kaynak dallar silindi (worktree'de checkout'lu olanlar hariç — onlar ilgili oturumlar kapanınca silinecek). Karar: bundan sonra tek trunk `main`, kalıcı ikinci dal açılmayacak. Kural: [AGENTS.md](../AGENTS.md#tek-branch-kuralı-yalnız-main). Sınır: remote'a push/silme, bu ortamda GitHub kimlik doğrulaması (gh CLI) olmadığı için henüz yapılamadı — yalnız local main güncel.
 - CLAUDE.md + PROJECT-MEMORY.md + bu günlük kuruldu. Amaç: her oturumun proje mimarisini/geçmişini otomatik okuyup güncel tutması. Sınır: bu bir talimat, hook değil — oturumdaki Claude talimatı okuyup uygularsa çalışır, zorlayıcı bir mekanizma değil. Gerçek zorlama (`.claude/settings.json` hook, örn. commit sonrası günlük kontrolü) istenirse ayrı bir iş olarak yapılabilir.
-

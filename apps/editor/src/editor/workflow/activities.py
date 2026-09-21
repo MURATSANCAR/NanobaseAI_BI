@@ -40,6 +40,9 @@ async def prepare_generation(job_id: str) -> dict:
     prompt manifests and the editor corrections that apply to this book."""
     job = await _t(db.one, "SELECT j.book_version_id, bv.book_id FROM analysis_job j JOIN book_version"
                    " bv ON bv.id=j.book_version_id WHERE j.id=%s", job_id)
+    existing = await _t(db.one, "SELECT id,book_version_id FROM generation WHERE job_id=%s", job_id)
+    if existing:
+        return {"generation_id": str(existing["id"]), "book_version_id": str(existing["book_version_id"])}
     manifest = await aliases()
     pm = await _t(prompts.register_all)
 
@@ -48,10 +51,13 @@ async def prepare_generation(job_id: str) -> dict:
             corr = ledger.corrections_for_book(c, job["book_id"])
             row = c.execute(
                 "INSERT INTO generation(job_id, book_version_id, code_version, model_manifest,"
-                " prompt_manifest, corrections_applied) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
+                " prompt_manifest, corrections_applied) VALUES (%s,%s,%s,%s,%s,%s) "
+                "ON CONFLICT (job_id) DO NOTHING RETURNING id",
                 (job_id, job["book_version_id"], _code_version(),
                  db.J({a: {"real_model": m["real_model"], "revision": m["revision"]} for a, m in manifest.items()}),
                  db.J(pm), db.J([{**x, "created_at": str(x["created_at"])} for x in corr]))).fetchone()
+            if row is None:
+                row = c.execute("SELECT id FROM generation WHERE job_id=%s", (job_id,)).fetchone()
         return str(row["id"])
 
     gid = await _t(mk)

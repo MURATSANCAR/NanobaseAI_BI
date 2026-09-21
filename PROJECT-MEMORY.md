@@ -6,6 +6,15 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 
 ## Mimari (üstten alta)
 
+**Editor teknik temel (2026-09-21):** Kullanıcı talebiyle mevcut analiz/model üreticileri
+durduruldu; GPU 1 boşaltıldı. `apps/editor` içinde `012_foundation.sql` ve ayrı salt okunur
+`editor-control` API'si (`127.0.0.1:19140`) hazırlanıyor: bakım kilidi, kanonik bilgi revizyonu,
+bağımlı çıktı durumları/yeniden üretim kuyruğu, ortak uygun-kayıt görünümleri ve tekrar makbuzu.
+Analiz servisleri Compose `analysis` profilinde; varsayılan başlatma taramayı açmaz.
+Eski nesiller `LEGACY_UNASSESSED`, yayın `BLOCKED`; otomatik yeniden üretim işçisi ve yeni
+semantik akış sonraki adımlar. Bu altyapı kitabın tamamının analitik kabulü değildir.
+Ayrıntı: `apps/editor/docs/FOUNDATION.md`. Canlı kurulum/doğrulama sonucu günlükte tutulur.
+
 
 ```
 React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Katalog + Evidence Engine + Resolver/Compiler)

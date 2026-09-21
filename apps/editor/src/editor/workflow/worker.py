@@ -11,7 +11,7 @@ from temporalio.api.workflowservice.v1 import DescribeNamespaceRequest, Register
 from temporalio.client import Client
 from temporalio.worker import Worker
 
-from .. import db
+from .. import db, foundation
 from ..config import settings
 from .activities import ALL
 from .workflows import BookFullAnalysis
@@ -34,6 +34,8 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     s = settings()
     log.info("migrations: %s", await asyncio.to_thread(db.migrate) or "up to date")
+    # A restart must not resume the old workflow while foundation work is paused.
+    await asyncio.to_thread(foundation.assert_enabled)
     await ensure_namespace(s.temporal_address, s.temporal_namespace)
     client = await Client.connect(s.temporal_address, namespace=s.temporal_namespace)
     worker = Worker(client, task_queue=s.task_queue, workflows=[BookFullAnalysis], activities=ALL,

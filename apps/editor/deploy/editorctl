@@ -98,7 +98,9 @@ EOF
 }
 
 cmd_up() {
-  "${COMPOSE[@]}" up -d --remove-orphans
+  # Analysis services are opt-in and the DB maintenance gate still applies.
+  # Preserve stopped legacy/experimental containers for rollback.
+  "${COMPOSE[@]}" up -d
 }
 
 cmd_stop_models() {
@@ -129,6 +131,11 @@ case "${1:-}" in
   down) cmd_down ;;
   status) cmd_status ;;
   models) docker ps -a --filter label=editor.model --format 'table {{.Names}}\t{{.Status}}' ;;
+  foundation-status) docker exec editor-control python -m editor.foundation status ;;
+  pause)
+    docker exec editor-control python -m editor.foundation pause
+    docker stop -t 30 editor-hermes editor-mcp editor-worker editor-gateway
+    cmd_stop_models ;;
   stop-models) cmd_stop_models ;;
   analyze)
     shift; f=$1; shift
