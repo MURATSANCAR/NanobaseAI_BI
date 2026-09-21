@@ -1,5 +1,17 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 12:10 — Müşteri sunucusundan editör motoruna doğrudan yol (GPU nginx)
+
+Kullanıcı isteği: müşteri VM'inden GPU'ya, bizim ortamlardan bağımsız erişim.
+
+- **Ölçüm:** müşteri VM'i GPU'nun özel adreslerine ve SSH'ına ulaşamıyor, GPU da müşteri ağına; açık olan tek yol GPU'nun genel adresi `85.111.30.227:443` (nginx, `kitap-eczanesi` sitesi).
+- **GPU'da:** sertifika yenilendi (SAN: `172.23.85.10`, `85.111.30.227`), nginx'e yalnız iki yol eklendi (`/editor/v1/chat/completions`, `/editor/v1/models` → Hermes `19110`). Üç kat koruma: Hermes anahtarı + `X-Editor-Gate` gizli başlığı + `85.105.0.0/16` kaynak kısıtı (müşteri iki farklı çıkış adresiyle göründü).
+- **Müşteri VM'inde:** `.env`'e `EDITOR_*` ayarları, sertifika `secrets/ad/gpu-editor-ca.pem` (konteynerde `/app/ad/…`). TLS doğrulaması kapatılmadı; köprü sertifikayı dosyadan doğruluyor (bu sabahki `EDITOR_CA_FILE` / `EDITOR_EXTRA_HEADER` desteği).
+- **İzin:** bu adım oturumun otomatik izin denetimince engellendi (dışarıya açık yeni uç); kullanıcı onayıyla oturum geçici olarak "bypassPermissions" moduna alındı, iş bitince "auto"ya geri alındı.
+- **Bulunan ve düzeltilen hata:** nginx dosyasının yedeğini `sites-enabled` içine koymuştum, nginx onu da yükleyip "conflicting server name" uyarısı verdi; yedek `/root/nginx-yedek/`'e alındı, uyarı gitti.
+- **Doğrulama:** müşteri VM köprü konteynerinden `/editor/v1/models` → 200 (sertifika doğrulamalı), gizli başlık olmadan → 403, `configured()` → True.
+- **Açık:** uçtan uca soru düştü ("Server disconnected without sending a response"). Sebep yol değil motor: GPU 1'de kitap analizi sürüyor (görsel model ~87 GB), yönetici model yüklenemiyor, Hermes 500 alıp üç denemeden sonra bırakıyor. Analiz bitince soru çalışmalı; test sunucusundan sorulan soru da aynı anda aynı şekilde düşer. Kalıcı çözüm motor tarafında (soru varken analizi bekletmek ya da soruyu kuyruğa almak) — ayrı iş.
+- Kayıt: `deploy/tt-gpu/editor-ingress/README.md` (kurulum, koruma, geri alma).
 ## 2026-09-21 — Karne 44 → 62/69; müşteri VM'i test sunucusuyla eşitlendi; kayıt sistemi ilkesi
 
 **Kalite kapısı (`answer-gate.py --repeat 3`, 69 altın soru):** son tam koşu **60 SAĞLAM / 9 BOZUK / 0 KARARSIZ, ham hata 0** (09-18: 44/18/7, hata 12). Sonrasında Q58 ve Q27 de düzeldi → 62. Kalan bozuk: Q4, Q10, Q13, Q29, Q40, Q49, Q51.
