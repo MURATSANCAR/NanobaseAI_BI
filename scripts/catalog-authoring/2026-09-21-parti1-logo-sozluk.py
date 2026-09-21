@@ -166,16 +166,17 @@ def definitions(entity_of, column_of) -> list[dict]:
         synonyms=["hizmet kodu"],
         reason="tanım: hizmet kartı kodu = SRVCARD.CODE (muhasebe hesabıyla aynı düzen, ör. 730.38.381). "
                "Canlı LG_411: 232/232 dolu. İş teyidi bekliyor.")
-    add(key="alinan-hizmet-karti", term="alınan hizmet kartı", type="DIMENSION_VALUE", entity=sv,
+    add(key="alinan-hizmet-karti", term="alış hizmet kartı", type="DIMENSION_VALUE", entity=sv,
         pattern="LG_{n0}_SRVCARD", column="CARDTYPE", operator="IN", values=["1"], skip=skip_sv,
-        synonyms=["satın alınan hizmet kartı"],
-        reason="tanım: alınan hizmet kartı = SRVCARD.CARDTYPE = 1 (gider tarafı). Canlı LG_411: 204 kart; "
+        synonyms=["gider hizmet kartı"],
+        reason="tanım: alış hizmet kartı = SRVCARD.CARDTYPE = 1 (alınan hizmet, gider tarafı). Canlı LG_411: 204 kart; "
                "2026 hizmet satırlarının 15.296'sı / 293.622.955 ₺ bu tarafta. 'alinan hizmet' anahtarı "
-               "INVOICE.TRCODE'a bağlı olduğu için terim bilerek '… kartı' ile bitiriliyor. İş teyidi bekliyor.")
-    add(key="verilen-hizmet-karti", term="verilen hizmet kartı", type="DIMENSION_VALUE", entity=sv,
+               "INVOICE.TRCODE'a bağlı; ayrıca 'alınan hizmet kartı' yazımı set1000/K0832'de «onayı alınmadan» "
+               "olumsuzluk etiketini düşürüyordu (ölçüldü) → terim 'alış …' köküne çekildi. İş teyidi bekliyor.")
+    add(key="verilen-hizmet-karti", term="satış hizmet kartı", type="DIMENSION_VALUE", entity=sv,
         pattern="LG_{n0}_SRVCARD", column="CARDTYPE", operator="IN", values=["2"], skip=skip_sv,
-        synonyms=["satılan hizmet kartı"],
-        reason="tanım: verilen hizmet kartı = SRVCARD.CARDTYPE = 2 (gelir tarafı). Canlı LG_411: 26 kart; "
+        synonyms=["gelir hizmet kartı"],
+        reason="tanım: satış hizmet kartı = SRVCARD.CARDTYPE = 2 (verilen hizmet, gelir tarafı). Canlı LG_411: 26 kart; "
                "2026 hizmet satırlarının 4.609'u / 11.391.492 ₺ bu tarafta. İş teyidi bekliyor.")
 
     # ---------------------------------------------------------------- FAREGIST
@@ -198,14 +199,18 @@ def definitions(entity_of, column_of) -> list[dict]:
                "Canlı LG_411: 99.504.558,83 ₺ (iptal dâhil), 1.055/1.079 kayıtta dolu; en büyük kalemler "
                "ARSALAR 39.471.576 ₺, TİCARİ TAŞITLAR 17.478.619 ₺. 'sabit kıymet' TEK BAŞINA eş anlamlı "
                "olarak VERİLMEDİ: o anahtar bugün STLINE.LINETYPE IN (8) üstünde. İş teyidi bekliyor.")
-    add(key="birikmis-amortisman", term="birikmiş amortisman", type="METRIC", entity=fa,
+    # ÇÜRÜTME (set1000/K0807): terim 'birikmiş amortisman' iken 'birikmis' kelimesi katalogda YENİ
+    # olduğu için çözücünün fiil-kökü geri düşüşü «… talebi birikmiş?» sorusunu bu ölçüye bağladı.
+    # Terim 'sabit kıymet amortismanı'na çekildi, 'birikmis' anahtarı hiç yaratılmıyor.
+    add(key="birikmis-amortisman", term="sabit kıymet amortismanı", type="METRIC", entity=fa,
         pattern="LG_{n0}_FAREGIST", column="ACCUMDEPR", skip=skip_fa,
         formula=(f"SUM({fa}.ACCUMDEPR)" if fa else ""),
         extra={"func": "SUM", "grain": fa, "aliases": ["birikmis_amortisman"], "conditions": cancelled},
-        synonyms=["toplam amortisman", "sabit kıymet amortismanı", "demirbaş amortismanı"],
-        reason="tanım: birikmiş amortisman = Σ FAREGIST.ACCUMDEPR, iptaller hariç. Canlı LG_411: "
+        synonyms=["toplam amortisman", "demirbaş amortismanı", "sabit kıymet amortisman tutarı"],
+        reason="tanım: sabit kıymet amortismanı (birikmiş amortisman) = Σ FAREGIST.ACCUMDEPR, iptaller hariç. Canlı LG_411: "
                "32.553.265,68 ₺, 1.016/1.079 kayıtta dolu. Tek kelimelik 'amortisman' eş anlamlı olarak "
-               "VERİLMEDİ (tek kelime kuralı). İş teyidi bekliyor.")
+               "VERİLMEDİ (tek kelime kuralı); 'birikmiş amortisman' öbeği de VERİLMEDİ (set1000/K0807 "
+               "ölçümü: 'birikmis' kökü fiil köprüsüne yem oluyordu). İş teyidi bekliyor.")
     add(key="amortisman-orani", term="amortisman oranı", type="COLUMN", entity=fa,
         pattern="LG_{n0}_FAREGIST", column="DEPRRATE", operator="COLUMN", skip=skip_fa,
         synonyms=["amortisman oranları", "demirbaş amortisman oranı"],

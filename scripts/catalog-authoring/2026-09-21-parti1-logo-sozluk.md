@@ -22,8 +22,11 @@ edilmedi), katalog `certified_index` (çakışma denetimi), `set100.jsonl` (risk
 | **Toplam** | **36** | **20** | **16** |
 
 **set100 risk ölçümü: 100 soruda okuması değişen 0.** (`--narrow-sabit-kiymet` açıkken de 0.)
-Pozitif kontrol olarak 14 elle soru ölçüldü, 11'inin okuması hedeflenen yönde değişti — yani
-adaylar ölü değil, yalnız set100'ün kapsamadığı alanı dolduruyorlar.
+**set1000 ek denetimi: ilk turda 1000 soruda 4 değişiklik** — 2 iyileşme, 2 gerileme adayı.
+Her iki gerileme adayı tek tek teşhis edildi (sorumlu aday çıkarılarak ölçüldü) ve o adayların
+terimi değiştirilerek elendi; düzeltme sonrası ikisi de değişmiyor. Ayrıntı: «set100/set1000 risk
+ölçümü» bölümü. Pozitif kontrol olarak 19 elle soru ölçüldü, 14'ünün okuması hedeflenen yönde
+değişti — yani adaylar ölü değil, yalnız set100'ün kapsamadığı alanı dolduruyorlar.
 
 ---
 
@@ -146,8 +149,8 @@ edilen malzeme» eş anlamlıları bilerek verilmedi — onlar `sem_761633159662
 | hizmet kartı (+ hizmet kartları, hizmet tanımı) | ENTITY | SRVCARD | 232 kart; 108'i 2026'da kullanılmış; 19.905 hizmet satırı / 305.014.447 ₺ net |
 | hizmet kartı adı (+ hizmet kartı açıklaması, hizmet adı) | COLUMN | SRVCARD.DEFINITION_ | 230/232 dolu |
 | hizmet kartı kodu (+ hizmet kodu) | COLUMN | SRVCARD.CODE | 232/232 dolu (hesap planı düzeninde, ör. 730.38.381) |
-| alınan hizmet kartı (+ satın alınan hizmet kartı) | DIMENSION_VALUE | SRVCARD.CARDTYPE IN (1) | 204 kart; 15.296 satır / 293.622.955 ₺ |
-| verilen hizmet kartı (+ satılan hizmet kartı) | DIMENSION_VALUE | SRVCARD.CARDTYPE IN (2) | 26 kart; 4.609 satır / 11.391.492 ₺ |
+| alış hizmet kartı (+ gider hizmet kartı) | DIMENSION_VALUE | SRVCARD.CARDTYPE IN (1) | 204 kart; 15.296 satır / 293.622.955 ₺ |
+| satış hizmet kartı (+ gelir hizmet kartı) | DIMENSION_VALUE | SRVCARD.CARDTYPE IN (2) | 26 kart; 4.609 satır / 11.391.492 ₺ |
 
 Bağ doğrulandı: `STLINE.STOCKREF = SRVCARD.LOGICALREF`, `STLINE.LINETYPE = 4`. En büyük kalemler:
 «Komple Baskı Giderleri» 64.150.247 ₺, «Yazarların Telif Ücreti» 51.528.186 ₺, «Yabancı Yayın
@@ -165,7 +168,10 @@ hizmet kartının kendisi değil; kart tablosu SRVCARD'dır. Çürütülemedi am
 olarak daraltılsın — ayrı, küçük bir iş kararı.
 
 **«alinan hizmet» / «verilen hizmet» öbekleri** `INVOICE.TRCODE` üstünde (fatura türü). Terimler
-bu yüzden «… kartı» ile bitiriliyor; öbeksiz kullanılmadı.
+bu yüzden «… kartı» ile bitiriliyor; öbeksiz kullanılmadı. Ayrıca ilk yazım «alınan hizmet kartı»
+idi; set1000/K0832 ölçümünde «Ek iskonto onayı **alınmadan** …» sorusundaki olumsuzluk etiketini
+(`alinmadan → INVOICE.TRCODE [negated_label]`) düşürdüğü görüldü → terimler «alış / satış hizmet
+kartı» köküne çekildi, gerileme kayboldu.
 
 ---
 
@@ -177,7 +183,7 @@ bu yüzden «… kartı» ile bitiriliyor; öbeksiz kullanılmadı.
 |---|---|---|---|
 | sabit kıymet kaydı (+ sabit kıymet kayıtları, demirbaş kaydı, demirbaş kayıtları) | ENTITY | FAREGIST | 1.079 kayıt (4 iptal), DATEIN 1991-01-01 – 2026-08-12; 15 sabit kıymet kartına (ITEMS.CARDTYPE=4) CRDREF ile bağlı |
 | sabit kıymet giriş maliyeti (+ demirbaş alım bedeli, sabit kıymet alım bedeli, demirbaş giriş maliyeti) | METRIC | SUM(FAREGIST.INVALUE), CANCELLED IN (0) | 99.504.558,83 ₺; 1.055/1.079 dolu |
-| birikmiş amortisman (+ toplam amortisman, sabit kıymet amortismanı, demirbaş amortismanı) | METRIC | SUM(FAREGIST.ACCUMDEPR), CANCELLED IN (0) | 32.553.265,68 ₺; 1.016/1.079 dolu |
+| sabit kıymet amortismanı (+ toplam amortisman, demirbaş amortismanı, sabit kıymet amortisman tutarı) | METRIC | SUM(FAREGIST.ACCUMDEPR), CANCELLED IN (0) | 32.553.265,68 ₺; 1.016/1.079 dolu |
 | amortisman oranı (+ amortisman oranları, demirbaş amortisman oranı) | COLUMN | FAREGIST.DEPRRATE | 1.059/1.079 sıfırdan farklı; taşıt %20/5 yıl, bina %2/50 yıl, arsa 0 |
 | sabit kıymet kayıt açıklaması (+ demirbaş açıklaması, sabit kıymet açıklaması) | COLUMN | FAREGIST.REGDEFINITION | 1.061/1.079 dolu |
 | sabit kıymet alım tarihi (+ demirbaş alım tarihi, sabit kıymet giriş tarihi) | COLUMN | FAREGIST.DATEIN | 1.079/1.079 dolu; 2026'da 58 kayıt / 2.748.461 ₺ |
@@ -190,11 +196,17 @@ Kırılım doğrulandı (`CRDREF → ITEMS`): ARSALAR 19 kayıt / 39.471.576 ₺
 
 - **«sabit kıymet» (öbeksiz) eş anlamlısı** — *elendi (çakışma)*: aşağıdaki bölüme bakınız.
 
+**Terim düzeltmesi (set1000/K0807)**: ölçü önce «birikmiş amortisman» adıyla yazılmıştı.
+`birikmis` kelimesi katalogda yeni olduğu için çözücünün fiil-kökü geri düşüşü («İLK kelimeye
+tutunur» — h4 turunda kayda geçen davranış) «… kaç günlük talebi **birikmiş**?» sorusunu bu ölçüye
+bağladı. Terim «sabit kıymet amortismanı»na çekildi ve `birikmis` anahtarı hiç yaratılmıyor;
+gerileme kayboldu.
+
 **Kalan risk (kayıt altına alındı)**: `amortisman` kelimesi katalogda bugün **hiç geçmiyor**
-(kuru koşu «katalogda yeni kelimeler» satırı bunu basıyor). İki yeni kavram (birikmiş amortisman,
-amortisman oranı) bu kelimeyi paylaşıyor; soruda tek başına «amortisman» geçerse çözücünün
-tek-kelime geri düşüşü ikisinden birini seçer. Tek kelimelik eş anlamlı **verilmedi**; bu yalnız
-geri düşüşün kendi davranışı ve iki aday aynı tabloda olduğu için yanlış tabloya gitmez.
+(kuru koşu «katalogda yeni kelimeler» satırı bunu basıyor). İki yeni kavram (sabit kıymet
+amortismanı, amortisman oranı) bu kelimeyi paylaşıyor; soruda tek başına «amortisman» geçerse
+çözücünün tek-kelime geri düşüşü ikisinden birini seçer. Tek kelimelik eş anlamlı **verilmedi**;
+bu yalnız geri düşüşün kendi davranışı ve iki aday aynı tabloda olduğu için yanlış tabloya gitmez.
 
 ---
 
@@ -260,7 +272,7 @@ olarak kayda geçirilmeli.
 
 ---
 
-## set100 risk ölçümü
+## set100 / set1000 risk ölçümü
 
 Ölçüm yöntemi h4 ajanınınkiyle aynı: adaylar yalnız **bellekteki** `certified_index`'e eklenir
 (`_WithProposal`), `publish_runtime_snapshot` kapatılır, köprüyle aynı kurulan iki çözücü
@@ -275,25 +287,46 @@ sudo systemd-run … python - --simulate ~/testset/set100.jsonl < apply.py
 → {"soru": 100, "okuması_değişen": 0}
 ```
 
-**Hedef tutturuldu: sıfır değişiklik.** Gerileme adayı yok, dolayısıyla elenen aday da yok.
+**Hedef tutturuldu: set100'de sıfır değişiklik.**
+
+### set1000 ek denetimi
+
+Parti set100'ün kapsamadığı tabloları eklediği için aynı ölçüm 1000 soruluk sette de koşuldu.
+**İlk tur: 4 değişiklik.**
+
+| soru | değişim | karar |
+|---|---|---|
+| K0185 «Bu yıl hiç hareket görmemiş muhasebe hesapları hangileri?» | UNRESOLVED ⇒ RESOLVED (ENTITY EMUHACC) | **iyileşme**, bırakıldı |
+| K0939 «Amortismanı tamamen bitmiş sabit kıymetler hangileri?» | UNRESOLVED ⇒ PARTIAL (FAREGIST.ACCUMDEPR) | **iyileşme**, bırakıldı |
+| K0807 «… kaç günlük talebi **birikmiş**?» | `birikmis → FAREGIST.ACCUMDEPR [verb_root]` slotu eklendi | **gerileme** → sorumlu aday teşhis edildi («birikmiş amortisman», çıkarılınca değişim kayboldu), terim «sabit kıymet amortismanı» yapıldı, **elendi** |
+| K0832 «Ek iskonto onayı **alınmadan** …» | `alinmadan → INVOICE.TRCODE [negated_label]` slotu düştü | **gerileme** → sorumlu aday teşhis edildi («alınan/verilen hizmet kartı»), terimler «alış / satış hizmet kartı» yapıldı, **elendi** |
+
+Teşhis yöntemi: her gerileme için o adayı çıkaran bir betik kopyası ile aynı iki soru yeniden
+ölçüldü; değişim kaybolunca sorumlu aday kesinleşti (tahmin değil, ölçüm).
+
+**Düzeltme sonrası:** iki soru da değişmiyor, iki iyileşme duruyor, set100 yine 0, kuru koşudaki
+«katalogda yeni kelimeler» mıknatısı `birikmis` listeden düştü.
 
 Pozitif kontrol (elle sorular, beklenen yönde değişim):
 
 | soru | önce | sonra |
 |---|---|---|
-| Birikmiş amortismanımız toplam ne kadar? | UNRESOLVED (`amortismanimiz`) | METRIC FAREGIST.ACCUMDEPR |
+| Sabit kıymet amortismanımız toplam ne kadar? | UNRESOLVED | METRIC FAREGIST.ACCUMDEPR |
 | Sabit kıymet giriş maliyetimiz toplam ne kadar? | PARTIAL — STLINE.AMOUNT*OUTCOST + STLINE.LINETYPE | METRIC FAREGIST.INVALUE |
 | Teslimat ilçesine göre fatura sayısı? | PARTIAL — `ilcesine` → **CLCARD.TOWN** (yanlış taraf) | COLUMN SHIPINFO.TOWN |
 | Teslimat ülkesine göre ciro? | PARTIAL (`teslimat`, `ulkesine` çözülmemiş) | COLUMN SHIPINFO.COUNTRY |
 | Muhasebe hesabı kırılımında gider toplamı? | PARTIAL (`muhasebe` çözülmemiş) | ENTITY EMUHACC |
 | Hizmet kartı adına göre gider tutarları? | COLUMN COSTDISTLN.SRVREF | COLUMN SRVCARD.DEFINITION_ |
-| Verilen hizmet kartı sayısı kaç? | INVOICE.TRCODE sayımı (yanlış tablo) | SRVCARD.CARDTYPE sayımı |
+| Alış hizmet kartı bazında gider tutarları? | PARTIAL, `hizmet karti` → COSTDISTLN.SRVREF | DIMENSION_VALUE SRVCARD.CARDTYPE |
+| Amortismanı tamamen bitmiş sabit kıymetler? (set1000/K0939) | UNRESOLVED | METRIC FAREGIST.ACCUMDEPR |
+| Bu yıl hiç hareket görmemiş muhasebe hesapları? (set1000/K0185) | UNRESOLVED | ENTITY EMUHACC |
 | Üretim emri satırlarında planlanan malzeme miktarı? | ENTITY PRODORD | ENTITY POLINE |
 | Üretimde kaynak kullanımı kayıtları kaç tane? | PARTIAL — CLCARD sayımı (yanlış tablo) | ENTITY OCCUPATION |
 | Teslimat kartı sayısı kaç? | UNRESOLVED, hint TIMAS_MSCRM | ENTITY SHIPINFO + sayım |
 | Amortisman oranı en yüksek demirbaşlar? | UNRESOLVED, hint TIMAS_MSCRM | METRIC FAREGIST.DEPRRATE (PARTIAL: `demirbaslar` hâlâ açık — tek kelime kuralı gereği) |
 
-`set1000.jsonl` üzerindeki aynı ölçüm arka planda başlatıldı; uygulamadan önce sonucuna bakılmalı.
+`set1000.jsonl` ölçümü yukarıda; düzeltme sonrası turu uygulamadan hemen önce bir kez daha
+koşulmalı (betik değiştiyse ölçüm de yenilenmeli).
 
 ---
 
