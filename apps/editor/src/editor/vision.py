@@ -398,7 +398,7 @@ async def compare_character_appearances(generation_id: str, character: str,
     llm = Llm(generation_id)
     n_votes = settings().continuity_votes
     confirmed, rejected, summaries, batch_verdicts = [], [], [], []
-    checked, proposed = set(), 0
+    checked, proposed, malformed = set(), 0, 0
     for batch in batches:
         figures = {f"F{i + 1}": r for i, r in enumerate(batch)}
         images = {key: image_part(_crop(render_page(bv, r["page_no"])["path"], r["bbox"],
@@ -415,7 +415,10 @@ async def compare_character_appearances(generation_id: str, character: str,
         for d in out["differences"]:
             ids = d["figure_ids"]
             if len(ids) != len(set(ids)) or any(key not in figures for key in ids) or len(ids) < 2:
-                raise ValueError("Continuity proposal contains invalid or insufficient figure references")
+                # a proposal that does not say which drawings it is about cannot be voted on;
+                # it is dropped and counted, the other proposals and the book go on
+                malformed += 1
+                continue
             if d["continuity_candidate"] and not d["explained_by_story"]:
                 proposals.append(d)
         proposed += len(proposals)
@@ -468,7 +471,7 @@ async def compare_character_appearances(generation_id: str, character: str,
                     batches=len(batches), all_resolved_figures_selected=len(crops) == len(all_crops))
     return {"character": character, "character_id": character_id, "pages": requested_pages,
             "differences": confirmed, "proposed": proposed, "not_confirmed": rejected,
-            "coverage": coverage, "same_character_everywhere": None,
+            "malformed_proposals": malformed, "coverage": coverage, "same_character_everywhere": None,
             "same_character_in_checked_batches": all(batch_verdicts), "summary": "\n".join(summaries)}
 
 

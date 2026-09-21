@@ -828,14 +828,18 @@ async def link_emotions_and_themes(generation_id: str) -> dict:
     out, call_id = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
                                                  prompt=ref, schema=schemas.THEMES, max_tokens=6000,
                                                  temperature=0.1, thinking=False)
-    covered = set()
+    # The contract is "every input in some group, with its exact id". A group that breaks it
+    # is not used; an input no valid group covers is NOT lost and does not stop the book: its
+    # chapter-level theme claim simply stays as it is, unconsolidated, and is counted.
+    valid, covered = [], set()
     for t in out["themes"]:
         ids = t["source_ids"]
-        if not ids or len(ids) != len(set(ids)) or any(s not in short for s in ids):
-            raise ValueError("Theme source_ids must be nonempty, unique, exact input IDs")
-        covered.update(ids)
-    if covered != set(short):
-        raise ValueError("Theme consolidation omitted source IDs: " + ", ".join(sorted(set(short) - covered)))
+        if ids and len(ids) == len(set(ids)) and all(s in short for s in ids):
+            valid.append(t)
+            covered.update(ids)
+    dropped_groups = len(out["themes"]) - len(valid)
+    unconsolidated = sorted(set(short) - covered)
+    out = {**out, "themes": valid}
     made = 0
     with db.tx() as c:
         for t in out["themes"]:
@@ -855,7 +859,8 @@ async def link_emotions_and_themes(generation_id: str) -> dict:
                                  created_by="knowledge:themes", model_call_id=call_id,
                                  payload={"level": "book", "theme": t["theme"]}):
                 made += 1
-    return {"emotions_linked": n, "themes": made}
+    return {"emotions_linked": n, "themes": made, "theme_groups_dropped": dropped_groups,
+            "themes_left_unconsolidated": len(unconsolidated)}
 
 
 # ---------------------------------------------------- contradictions
