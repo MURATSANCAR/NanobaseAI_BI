@@ -22,6 +22,7 @@ class Settings:
     task_queue: str
     models_yaml: Path
     page_concurrency: int
+    gpu_wait_seconds: int
     deep_concurrency: int
     text_visual_votes: int
     continuity_votes: int
@@ -62,6 +63,11 @@ def settings() -> Settings:
         task_queue=env("EDITOR_TASK_QUEUE", "editor-book-analysis"),
         models_yaml=Path(env("EDITOR_MODELS_YAML", "/app/deploy/models.yaml")),
         page_concurrency=int(env("EDITOR_PAGE_CONCURRENCY", "16")),
+        # The GPU is shared with processes the editor does not own and will not stop. "Busy"
+        # is a condition of the machine, not of the book: wait this long for room before an
+        # analysis that has already cost an hour is given up (measured: a foreign 40 GiB
+        # container failed a job that retried for 70 seconds).
+        gpu_wait_seconds=int(env("EDITOR_GPU_WAIT_SECONDS", "1800")),
         deep_concurrency=int(env("EDITOR_DEEP_CONCURRENCY", "4")),
         text_visual_votes=int(env("EDITOR_TEXT_VISUAL_VOTES", "3")),
         continuity_votes=int(env("EDITOR_CONTINUITY_VOTES", "3")),

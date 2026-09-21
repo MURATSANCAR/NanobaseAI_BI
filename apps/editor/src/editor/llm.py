@@ -86,6 +86,19 @@ def _looping(text: str) -> bool:
     return False
 
 
+async def _post(path: str, req: dict) -> httpx.Response:
+    """POST to the gateway; while it answers gpu_busy, wait for room instead of failing.
+    Holders of the GPU that are not the editor's are never stopped, so waiting is the only
+    honest move; the window is a setting and ends in the same error it would have raised."""
+    deadline = time.time() + settings().gpu_wait_seconds
+    while True:
+        r = await client().post(path, json=req)
+        if r.status_code == 503 and "gpu_busy" in r.text and time.time() < deadline:
+            await asyncio.sleep(30)
+            continue
+        return r
+
+
 class ModelError(RuntimeError):
     pass
 
@@ -131,7 +144,7 @@ class Llm:
             t0 = time.time()
             resp = None
             try:
-                r = await client().post("/v1/chat/completions", json=req)
+                r = await _post("/v1/chat/completions", req)
                 if r.status_code >= 400:
                     raise ModelError(f"{r.status_code} {r.text[:1500]}")
                 data = r.json()
@@ -185,7 +198,7 @@ class Llm:
             t0 = time.time()
             resp = None
             try:
-                r = await client().post("/v1/chat/completions", json=req)
+                r = await _post("/v1/chat/completions", req)
                 if r.status_code >= 400:
                     raise ModelError(f"{r.status_code} {r.text[:1500]}")
                 data = r.json()
@@ -215,7 +228,7 @@ class Llm:
         inputs = [f"Instruct: {instruction}\nQuery:{t}" if instruction else t for t in texts]
         t0 = time.time()
         req = {"model": "book-embedding", "input": inputs}
-        r = await client().post("/v1/embeddings", json=req)
+        r = await _post("/v1/embeddings", req)
         if r.status_code >= 400:
             await self._record("book-embedding", None, [], {"n": len(texts)}, None, None, t0,
                                False, r.text[:2000])
