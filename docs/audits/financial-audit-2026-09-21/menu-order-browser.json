@@ -1,0 +1,110 @@
+{
+  "url": "https://portal.nanobase.ai/timas/finansal-denetim",
+  "viewports": [
+    {
+      "auditLink": {
+        "active": "page",
+        "bottom": 213,
+        "left": 7,
+        "right": 169.1953125,
+        "top": 173
+      },
+      "links": [
+        "Genel bakış",
+        "Finansal Denetim",
+        "Uyarılar",
+        "Planlı raporlar",
+        "Panolar",
+        "Veri Sözlüğü",
+        "Onaylar",
+        "Eş anlamlılar",
+        "Yönetim",
+        "Editoryal masa",
+        "Kampüs"
+      ],
+      "pageWidth": 320,
+      "width": 320
+    },
+    {
+      "auditLink": {
+        "active": "page",
+        "bottom": 213,
+        "left": 7,
+        "right": 108.75,
+        "top": 173
+      },
+      "links": [
+        "Genel bakış",
+        "Finansal Denetim",
+        "Uyarılar",
+        "Planlı raporlar",
+        "Panolar",
+        "Veri Sözlüğü",
+        "Onaylar",
+        "Eş anlamlılar",
+        "Yönetim",
+        "Editoryal masa",
+        "Kampüs"
+      ],
+      "pageWidth": 390,
+      "width": 390
+    },
+    {
+      "auditLink": {
+        "active": "page",
+        "bottom": 245,
+        "left": 33,
+        "right": 168.3046875,
+        "top": 205
+      },
+      "links": [
+        "Genel bakış",
+        "Finansal Denetim",
+        "Uyarılar",
+        "Planlı raporlar",
+        "Panolar",
+        "Veri Sözlüğü",
+        "Onaylar",
+        "Eş anlamlılar",
+        "Yönetim",
+        "Editoryal masa",
+        "Kampüs"
+      ],
+      "pageWidth": 768,
+      "width": 768
+    },
+    {
+      "auditLink": {
+        "active": "page",
+        "bottom": 245,
+        "left": 33,
+        "right": 125.3515625,
+        "top": 205
+      },
+      "links": [
+        "Genel bakış",
+        "Finansal Denetim",
+        "Uyarılar",
+        "Planlı raporlar",
+        "Panolar",
+        "Veri Sözlüğü",
+        "Onaylar",
+        "Eş anlamlılar",
+        "Yönetim",
+        "Editoryal masa",
+        "Kampüs"
+      ],
+      "pageWidth": 1440,
+      "width": 1440
+    }
+  ],
+  "returned": {
+    "active": "page",
+    "heading": "Rakamların arkasını görün."
+  },
+  "status": "PASS",
+  "sourceHashes": {
+    "screens.ts": "9c00d4dcf00a6f834f2925f62362f3bd5ec74047c54dc37df276387a928a94c2",
+    "Shell.tsx": "6cfcaf7176c18c054e4e59a62db487ee9e479d22975c0fc6aa28f21b2e99ff37"
+  }
+}

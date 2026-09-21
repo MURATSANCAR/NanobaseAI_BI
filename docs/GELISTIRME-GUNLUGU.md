@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim menüde ikinci sıraya taşındı
+
+- Kullanıcı isteğiyle sol ana menüde Finansal Denetim, Genel bakış’ın hemen altına alındı. Kalkan simgesi ayrı tutuldu; konum değişimi diğer bağlantıların simgelerini kaydırmaz.
+- Test sunucusunda derleme ve portal yayını tamamlandı; iki kaynak dosyasının SHA-256 değerleri eş. Gerçek oturumlu portalda 320/390/768/1440 genişliklerinde ikinci sıra, görünür bağlantı, aktif durum ve taşmasız sayfa kontrol edildi. Menüden Genel bakış → Finansal Denetim geçişi doğrulandı. Kanıt: `docs/audits/financial-audit-2026-09-21/menu-order-browser.json`.
+- Yalnız menü sırası/simge eşlemesi değişti; veri alma/hesaplama davranışı değişmediğinden yeni DB hesap testi yapılmadı. Yerel test koşulmadı.
+
 ## 2026-09-21 — Finansal Denetim bulgularında kayda özgü neden ve inceleme adımı
 
 - Bulgu kartlarına ve istisna tablosunun her satırına “Sorun ne?”, “Neden işaretlendi?”, “Ne kontrol edilmeli?” eklendi. Aktarım işareti, eksik bağlantı, tarih farkı, fiş/hesap bazında beklenen–gerçekleşen tutar ve ters bakiye kendi verileriyle açıklanır. Temel kontrol özeti, Logo hesap satırı/detayı ve katalogdaki ters yönlü alt hesaplar aynı muhasebe diliyle gösterilir. SQL sorguları bulgu yanında korunur; kaynak analiz belgesi gösterilmez.

@@ -250,6 +250,8 @@ export default function Shell({
           // adminOnly öğeler yetkisiz kişide render edilmez; i sabit kalsın diye diziyi filtrelemiyoruz (ikon eşlemesi konuma bağlı).
           if (item.adminOnly && !isAdmin) return null;
           const active = item.badge === 'Aktif';
+          // The audit shield has its own icon; moving it must not shift other icons.
+          const iconIndex = rail.slice(0, i).filter(entry => entry.to !== '/finansal-denetim').length;
           return (
             <div key={item.to} className="relative group flex items-center shrink-0">
               <Link
@@ -265,7 +267,7 @@ export default function Shell({
                     : 'hover:bg-white/80 text-muted hover:text-ink')
                 }
               >
-                <span className="w-10 h-10 shrink-0 flex items-center justify-center">{item.to === '/finansal-denetim' ? <ShieldCheck className="w-5 h-5" /> : RAIL_ICONS[i % RAIL_ICONS.length]}</span>
+                <span className="w-10 h-10 shrink-0 flex items-center justify-center">{item.to === '/finansal-denetim' ? <ShieldCheck className="w-5 h-5" /> : RAIL_ICONS[iconIndex % RAIL_ICONS.length]}</span>
                 <span className="rail-label min-w-0 truncate text-[13px] font-semibold tracking-tight" aria-hidden={!railOpen}>
                   {item.label}
                 </span>
