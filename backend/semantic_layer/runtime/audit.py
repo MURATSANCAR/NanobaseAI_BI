@@ -1333,7 +1333,10 @@ def gate_report(sq: SemanticQuery, sql: str, *, sources: Optional[dict] = None, 
             def equality(node, context):
                 if not isinstance(node, exp.EQ):
                     return None
-                return frozenset((_normalise_formula(node.left, context), _normalise_formula(node.right, context)))
+                # Compared as `_ent` compares entities: the rule names the target "LG_SHIPINFO", the
+                # physical table reads back "SHIPINFO" — the same join, refused over the source's prefix.
+                side = lambda n: re.sub(r"\bLG_(?=[A-Z])", "", _normalise_formula(n, context).upper())
+                return frozenset((side(node.left), side(node.right)))
             # The rule may be honoured in a derived table or a correlated subquery, as a JOIN … ON or
             # as a WHERE equality between two columns: every SELECT of the statement is looked at.
             actual = set()
