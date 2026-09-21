@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Kitaptan bağımsız üretim kapsamı
+
+- Kullanıcı tek kitaba özel çözümü yasakladı; AGENTS.md ve PRODUCTION-CONTRACT.md güncellendi. Kitaplar kabul verisidir, üretim kuralı değildir.
+- Critic tam/tekil ID listesi ister; sınırlı tekrar sonrası eksik karar başarısızdır. İlk model güveni immutable payload içinde tutulur; yeniden denetim hesaplanmış puanı tekrar girdi yapmaz. Geçmiş kayıtta ilk puan bilinmiyorsa yeni nesil gerekir.
+- complete-stage-coverage-v1 Temporal patch yeni işlerde kısmi sayfa/parça hatasının başarıya ilerlemesini engeller; eski replay korunur. Altı gerçek kitapla genel kabul hazırlanıyor. Yerel ürün testi yok; üretim kabulü henüz verilmedi.
+
 ## 2026-09-21 — Hedefli onarım canlı kabulü ve Markdown eşitlemesi
 
 - GPU f935b9d9/v9, aynı gerçek nesilde rev3477 ve beş READY çıktı. API/PG/Qdrant 313/313, olay referansları/kapsam/policy/API eşliği 5/5 geçti; aynı sürüm tekrar ALREADY_CURRENT. Kanıtlar apps/editor/docs/evidence/2026-09-21-repair-v9-*.json.

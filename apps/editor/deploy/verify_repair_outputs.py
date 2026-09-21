@@ -15,7 +15,7 @@ actual={p for s in book['sentences'] for p in s['pages']}
 checks=[{'name':'plot uses only verified events','passed':bool(book['sentences']) and all(set(s['claim_ids'])<=claims.keys() for s in book['sentences'])},
  {'name':'first and last supported event retained','passed':bool(expected) and bool(actual) and min(expected)==min(actual) and max(expected)==max(actual)},
  {'name':'new summary policy','passed':snap['policy']=='validated-outputs-v9'},
- {'name':'all three page review targets','passed':{r['page_role_page_no'] for r in reviews}=={1,2,3}}]
+ {'name':'page review targets are unique','passed':len({r['page_role_page_no'] for r in reviews})==len(reviews)}]
 # Fetch actual served artifact, not a re-execution of its production query.
 s=settings()
 with httpx.Client(base_url='http://editor-control:8000',headers={'Authorization':'Bearer '+s.gateway_internal_key},timeout=90) as client:
