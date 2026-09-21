@@ -47,20 +47,16 @@ if [ "$APPLY" != "--apply" ]; then echo "== KURU KOŞU — hiçbir şey yazılma
 echo "== yazılıyor"
 ssh -o BatchMode=yes timas-vm "$VMC -v ON_ERROR_STOP=1 -q -c \"
 BEGIN;
-INSERT INTO sl_concept (id,tenant_id,datasource_id,term,normalized_term,semantic_type,domain,sense_id,status,confidence,version,synonyms_json,explain_json,created_at,updated_at)
-SELECT d->>'id', d->>'tenant_id', d->>'datasource_id', d->>'term', d->>'normalized_term', d->>'semantic_type',
-       d->>'domain', d->>'sense_id', d->>'status', (d->>'confidence')::float, (d->>'version')::int,
-       d->'synonyms_json', d->'explain_json', (d->>'created_at')::timestamptz, (d->>'updated_at')::timestamptz
-FROM stage_sl_concept
+INSERT INTO sl_concept
+SELECT (jsonb_populate_record(null::sl_concept, d)).* FROM stage_sl_concept
 ON CONFLICT (id) DO UPDATE SET term=EXCLUDED.term, normalized_term=EXCLUDED.normalized_term,
   semantic_type=EXCLUDED.semantic_type, domain=EXCLUDED.domain, sense_id=EXCLUDED.sense_id,
   status=EXCLUDED.status, confidence=EXCLUDED.confidence, version=EXCLUDED.version,
   synonyms_json=EXCLUDED.synonyms_json, explain_json=EXCLUDED.explain_json, updated_at=EXCLUDED.updated_at;
 
 DELETE FROM sl_mapping m WHERE EXISTS (SELECT 1 FROM stage_sl_mapping s WHERE s.d->>'concept_id' = m.concept_id);
-INSERT INTO sl_mapping (id,concept_id,entity,table_pattern,column_name,operator,values_json,formula,time_primitive,extra_json)
-SELECT d->>'id', d->>'concept_id', d->>'entity', d->>'table_pattern', d->>'column_name', d->>'operator',
-       d->'values_json', d->>'formula', d->>'time_primitive', d->'extra_json' FROM stage_sl_mapping
+INSERT INTO sl_mapping
+SELECT (jsonb_populate_record(null::sl_mapping, d)).* FROM stage_sl_mapping
 ON CONFLICT (id) DO NOTHING;
 
 DELETE FROM sl_evidence e WHERE EXISTS (SELECT 1 FROM stage_sl_evidence s WHERE s.d->>'concept_id' = e.concept_id);
