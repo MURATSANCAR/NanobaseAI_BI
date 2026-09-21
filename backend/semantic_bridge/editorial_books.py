@@ -54,8 +54,30 @@ TIMEOUT_SEC = float(os.environ.get("EDITOR_ASK_TIMEOUT_SEC", "1800"))
 #: Bulunamayan bilgi bu cümleyle başlar; ekran bunu tanıyıp sakin bir bilgi kartı olarak gösterir.
 NOT_FOUND = "Kitapta bulunamadı."
 
+#: Kullanıcıya görünen hiçbir metinde iç bileşen adı geçmez; ürünün tek adı ZEKI AI.
+PRODUCT = "ZEKI AI"
+_INTERNAL = re.compile(
+    r"\b(?:hermes(?:\s+agent)?|book[-_ ]?director|qwen[\w.\-]*|vllm|llama[\w.\-]*|gpt[\w.\-]*|"
+    r"claude|openai|ocr|editör motoru|editor motoru|dil modeli|language model|llm)\b",
+    re.I,
+)
+
+
+def scrub(text: Optional[str]) -> Optional[str]:
+    """İç bileşen/model adlarını ZEKI AI ile değiştirir; art arda tekrarları teke indirir."""
+    if not text:
+        return text
+    out = _INTERNAL.sub(PRODUCT, text)
+    return re.sub(rf"(?:{PRODUCT}(?:[\s,/]+|\s+(?:ve|and)\s+))+{PRODUCT}", PRODUCT, out)
+
+
+#: Motor hatasının ayrıntısı loga yazılır; kullanıcı yalnız bunu görür.
+UNAVAILABLE = f"{PRODUCT} şu an bu soruyu cevaplayamadı. Birazdan tekrar sorun."
+
 SYSTEM = (
-    "Sen Timaş'ın editör asistanısın. Yalnız analiz edilmiş kitapların metninden ve o metinden çıkarılmış "
+    f"Senin adın {PRODUCT}; Timaş'ın kitap asistanısın. Hangi model, yazılım ya da araçla çalıştığını, "
+    "metnin nasıl okunduğunu (OCR vb.) asla yazma; sorulursa yalnız «Ben ZEKI AI'yım» de."
+    " Yalnız analiz edilmiş kitapların metninden ve o metinden çıkarılmış "
     "kayıtlardan cevap verirsin. Önce ilgili kitabı ve nesli bul, sonra kanıt arama araçlarını kullan. "
     "Her iddiayı hangi sayfaya dayandığını yazarak ver (örnek: «s. 14»). Cevabı Türkçe, kısa ve sıcak bir "
     "dille yaz; «kanıt defteri», «generation», «claim» gibi iç terimleri kullanma.\n"
@@ -120,7 +142,8 @@ def _iso(v: Optional[datetime]) -> Optional[str]:
 
 def _row(r: Any) -> dict[str, Any]:
     return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "question": r.question,
-            "status": r.status, "answer": r.answer, "notFound": bool(r.not_found), "error": r.error, "elapsedMs": r.elapsed_ms,
+            "status": r.status, "answer": scrub(r.answer), "notFound": bool(r.not_found),
+            "error": (r.error if r.error and not _INTERNAL.search(r.error) and not re.search(r"\b\d{3}:", r.error) else (UNAVAILABLE if r.error else None)), "elapsedMs": r.elapsed_ms,
             "username": r.username, "createdAt": _iso(r.created_at), "finishedAt": _iso(r.finished_at)}
 
 
@@ -137,7 +160,7 @@ def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str
     key = os.environ.get("EDITOR_API_KEY") or ""
     model = os.environ.get("EDITOR_MODEL") or "book-director"
     if not base or not key:
-        raise BookAskError("Editör motoru bu kurulumda tanımlı değil.", 503)
+        raise BookAskError(f"{PRODUCT} bu kurulumda tanımlı değil.", 503)
     user = question if not book_title else f"Kitap: «{book_title}». Soru: {question}"
     payload = {"model": model, "stream": False,
                "messages": [{"role": "system", "content": system or SYSTEM}, {"role": "user", "content": user}]}
@@ -153,15 +176,16 @@ def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str
     with httpx.Client(timeout=httpx.Timeout(TIMEOUT_SEC, connect=15.0), verify=verify) as client:
         r = client.post(f"{base}/chat/completions", json=payload, headers=headers)
     if r.status_code >= 400:
-        detail = r.text[:300]
-        raise BookAskError(f"Editör motoru {r.status_code}: {detail}", 502)
+        log.warning("editorial engine %s: %s", r.status_code, r.text[:300])
+        raise BookAskError(UNAVAILABLE, 502)
     try:
         text = (r.json()["choices"][0]["message"]["content"] or "").strip()
     except (ValueError, KeyError, IndexError) as e:
-        raise BookAskError("Editör motorundan beklenen biçimde cevap gelmedi.", 502) from e
+        log.warning("editorial engine: beklenmeyen cevap biçimi")
+        raise BookAskError(UNAVAILABLE, 502) from e
     if not text:
-        raise BookAskError("Editör motoru boş cevap döndü.", 502)
-    return text
+        raise BookAskError(UNAVAILABLE, 502)
+    return scrub(text) or text
 
 
 def readable_books(*, fresh: bool = False) -> dict[str, Any]:
@@ -206,7 +230,7 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
     if len(q) > MAX_QUESTION:
         raise BookAskError(f"Soru {MAX_QUESTION} karakteri aşamaz.")
     if not configured():
-        raise BookAskError("Editör motoru bu kurulumda tanımlı değil.", 503)
+        raise BookAskError(f"{PRODUCT} bu kurulumda tanımlı değil.", 503)
     qid = uuid.uuid4().hex
     row = {"id": qid, "tenant_id": tenant, "username": user, "book_key": (book_key or "")[:200],
            "book_title": (book_title or None), "question": q, "status": "bekliyor", "created_at": _now()}
@@ -224,7 +248,7 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                 answer, err = ask_engine(q, book_title), None
             except Exception as e:  # noqa: BLE001
                 log.warning("editorial book ask failed: %s", e)
-                answer, err = None, str(e)[:580]
+                answer, err = None, (str(e) if isinstance(e, BookAskError) else UNAVAILABLE)[:580]
             done = _now()
             with engine.begin() as conn:
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(

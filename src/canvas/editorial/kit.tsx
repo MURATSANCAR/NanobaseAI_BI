@@ -25,6 +25,7 @@ export function ModuleFrame({
   title,
   lead,
   source,
+  aside,
   children,
 }: {
   route: string;
@@ -33,6 +34,8 @@ export function ModuleFrame({
   title: string;
   lead: string;
   source: string;
+  /** Başlığın sağ üstüne yerleşen öge (ör. kitap arama). */
+  aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -43,7 +46,8 @@ export function ModuleFrame({
       <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
-            <header className="px-1">
+            <header className="relative z-20 flex flex-col gap-3 px-1 lg:flex-row lg:items-start lg:justify-between lg:gap-6">
+              <div className="min-w-0">
               {route !== '/editoryal' ? (
                 <Link to="/editoryal" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
                   <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
@@ -54,6 +58,8 @@ export function ModuleFrame({
               )}
               <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
               <p className="mt-1 max-w-[70ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>
+              </div>
+              {aside && <div className="w-full shrink-0 lg:w-[460px]">{aside}</div>}
             </header>
             {children}
           </div>

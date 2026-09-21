@@ -1,58 +1,164 @@
-import { useState } from 'react';
+import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Search, Send, Sparkles } from 'lucide-react';
+import { ArrowUp, BookOpen, Loader2, RotateCcw, Search } from 'lucide-react';
 import { ENGINE_ENABLED, bookAskApi, readableBooksApi, type BookQuestion } from '../engine';
-import { Note, Pill, btn, errText, nf } from '../admin/ui';
+import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 
-/** Kitabın içeriğine soru. Cevap kitabın kendi metninden gelir, sayfa numarasıyla; köprü uydurmaz.
- *  Motor modeli istendiğinde açtığı ve GPU'yu analizle paylaştığı için soru bir iştir: dakikalar sürebilir. */
+/** ZEKI AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
+ *  köprü uydurmaz. Soru bir iştir (dakikalar sürebilir); sayfadan ayrılınca da kayıtlı kalır.
+ *  Ekranda iç bileşen/model adı hiçbir yerde geçmez: kullanıcı yalnız ZEKI AI'yı görür. */
 
-const STATUS: Record<BookQuestion['status'], { label: string; tone: 'ok' | 'warn' | 'err' | 'muted' }> = {
-  bekliyor: { label: 'Sırada', tone: 'muted' },
-  calisiyor: { label: 'Motor çalışıyor', tone: 'warn' },
-  bitti: { label: 'Cevaplandı', tone: 'ok' },
-  hata: { label: 'Cevaplanamadı', tone: 'err' },
-};
+const PRODUCT = 'ZEKI AI';
+const UNAVAILABLE = `${PRODUCT} şu an bu soruyu cevaplayamadı. Birazdan tekrar sorun.`;
+const INTERNAL = /\b(?:hermes(?:\s+agent)?|book[-_ ]?director|qwen[\w.-]*|vllm|llama[\w.-]*|gpt[\w.-]*|claude|openai|ocr|editör motoru|editor motoru|dil modeli|llm)\b/gi;
 
-function Answer({ q }: { q: BookQuestion }) {
-  const live = q.status === 'bekliyor' || q.status === 'calisiyor';
+/** Eski kayıtlar ve beklenmedik metinler için ikinci kat: iç adlar ZEKI AI olur. */
+function scrub(s: string): string {
+  return s.replace(INTERNAL, PRODUCT).replace(new RegExp(`(?:${PRODUCT}(?:[\\s,/]+|\\s+ve\\s+))+${PRODUCT}`, 'g'), PRODUCT);
+}
+
+/** Hata metni teknik ayrıntı taşıyorsa (durum kodu, iç ad) yerine sade cümle gösterilir. */
+function friendlyError(e: string): string {
+  INTERNAL.lastIndex = 0;
+  return INTERNAL.test(e) || /\b\d{3}:|motor/i.test(e) ? UNAVAILABLE : e;
+}
+
+const THINKING = ['ZEKI AI düşünüyor', 'Sayfaları tarıyor', 'İlgili bölümleri buluyor', 'Cevabı yazıyor'];
+const QUEUED = ['ZEKI AI sıradaki soruyu bitiriyor', 'Birazdan sizin sorunuza geçecek'];
+
+const SUGGEST = ['Bu kitapta hangi karakterler var?', 'Hikâye nasıl başlıyor?', 'Kitabın ana teması ne?', 'En önemli olay hangi sayfada?'];
+
+/** Sayfa atıflarını («s. 14», «[s.2]») küçük rozetlere çevirir. */
+function withPages(text: string): ReactNode[] {
+  return text.split(/(\[?s\.\s?\d+(?:\s?[-–]\s?\d+)?\]?)/g).map((part, i) =>
+    /^\[?s\.\s?\d/.test(part) ? (
+      <span key={i} className="mx-0.5 inline-flex items-center rounded-md bg-canvas-violet/10 px-1.5 py-px align-[1px] font-mono text-[11px] font-bold text-canvas-violet">
+        {part.replace(/[[\]]/g, '')}
+      </span>
+    ) : (
+      <Fragment key={i}>{part}</Fragment>
+    ),
+  );
+}
+
+function Orb({ size = 'sm' }: { size?: 'sm' | 'lg' }) {
+  const box = size === 'lg' ? 'h-16 w-16' : 'h-8 w-8';
+  const inner = size === 'lg' ? 'inset-[3px] text-[15px]' : 'inset-[2px] text-[9px]';
   return (
-    <li className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="min-w-0 break-words font-semibold leading-snug">{q.question}</span>
-        <span className="flex shrink-0 items-center gap-1.5">
-          {live && <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin text-canvas-muted" />}
-          <Pill tone={STATUS[q.status].tone}>{STATUS[q.status].label}</Pill>
-        </span>
-      </div>
-      <div className="mt-0.5 text-[11px] text-canvas-muted">
-        {[q.bookTitle, dateTime(q.createdAt), q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn` : null].filter(Boolean).join(' · ')}
-      </div>
-      {q.answer && q.notFound && (
-        <div className="mt-2 flex gap-2 rounded-xl bg-amber-50/80 px-3 py-2.5">
-          <Search aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-          <p className="whitespace-pre-line leading-relaxed text-amber-900">{q.answer}</p>
+    <span aria-hidden className={`relative inline-block shrink-0 overflow-hidden rounded-full ${box}`}>
+      <span className="zk-orb absolute inset-0" />
+      <span className={`absolute ${inner} flex items-center justify-center rounded-full bg-[#15112b] font-extrabold tracking-tight text-white`}>
+        Z
+      </span>
+    </span>
+  );
+}
+
+function Rotating({ lines }: { lines: string[] }) {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const t = window.setInterval(() => setI((n) => (n + 1) % lines.length), 2600);
+    return () => window.clearInterval(t);
+  }, [lines.length]);
+  return (
+    <span key={i} className="zk-fade">
+      {lines[i % lines.length]}
+    </span>
+  );
+}
+
+function Thinking({ queued }: { queued: boolean }) {
+  return (
+    <div className="flex items-center gap-2.5 text-[13px] font-semibold text-canvas-ink">
+      <span className="flex items-center gap-1" aria-hidden>
+        <span className="zk-dot h-1.5 w-1.5 rounded-full bg-canvas-violet" />
+        <span className="zk-dot h-1.5 w-1.5 rounded-full bg-canvas-violet [animation-delay:160ms]" />
+        <span className="zk-dot h-1.5 w-1.5 rounded-full bg-canvas-violet [animation-delay:320ms]" />
+      </span>
+      <span className="zk-shimmer" role="status">
+        <Rotating lines={queued ? QUEUED : THINKING} />…
+      </span>
+    </div>
+  );
+}
+
+function UserBubble({ text, meta }: { text: string; meta?: string }) {
+  return (
+    <div className="zk-msg flex justify-end">
+      <div className="max-w-[85%] sm:max-w-[75%]">
+        <div className="whitespace-pre-line break-words rounded-[20px] rounded-br-md bg-gradient-to-br from-canvas-coral via-[#c55cf0] to-canvas-violet px-4 py-2.5 text-[14px] font-medium leading-relaxed text-white shadow-[0_10px_28px_-12px_rgba(124,92,255,.6)]">
+          {text}
         </div>
-      )}
-      {q.answer && !q.notFound && <p className="mt-2 whitespace-pre-line leading-relaxed">{q.answer}</p>}
-      {q.error && (
-        <div className="mt-2">
-          <Note tone="err">{q.error}</Note>
+        {meta && <div className="mt-1 pr-1 text-right text-[10.5px] text-canvas-muted">{meta}</div>}
+      </div>
+    </div>
+  );
+}
+
+function AiBubble({ children, meta }: { children: ReactNode; meta?: string }) {
+  return (
+    <div className="zk-msg flex items-end gap-2.5">
+      <Orb />
+      <div className="min-w-0 max-w-[88%] sm:max-w-[80%]">
+        <div className="rounded-[20px] rounded-bl-md border border-white/80 bg-white/90 px-4 py-3 text-[14px] leading-relaxed text-canvas-ink shadow-[0_8px_30px_-14px_rgba(20,30,60,.25)] backdrop-blur">
+          {children}
         </div>
+        {meta && <div className="mt-1 pl-1 text-[10.5px] text-canvas-muted">{meta}</div>}
+      </div>
+    </div>
+  );
+}
+
+function Turn({ q, onRetry }: { q: BookQuestion; onRetry: (text: string) => void }) {
+  const live = q.status === 'bekliyor' || q.status === 'calisiyor';
+  const answer = q.answer ? scrub(q.answer) : null;
+  return (
+    <div className="space-y-3">
+      <UserBubble text={q.question} meta={[q.bookTitle && `«${q.bookTitle}»`, dateTime(q.createdAt)].filter(Boolean).join(' · ')} />
+      {live && (
+        <AiBubble>
+          <Thinking queued={q.status === 'bekliyor'} />
+          <p className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">Cevap birkaç dakika sürebilir. Sayfadan ayrılabilirsiniz; soru kayıtlı kalır.</p>
+        </AiBubble>
       )}
-      {live && !q.answer && (
-        <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-          Soru motora iletildi. Motor başka bir kitabı okuyorsa sıraya girer; cevap birkaç dakika sürebilir. Sayfadan ayrılabilirsiniz, soru kayıtlı kalır.
-        </p>
+      {answer && q.notFound && (
+        <AiBubble meta={q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn'de cevapladı` : undefined}>
+          <div className="flex gap-2.5">
+            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
+              <Search aria-hidden className="h-3.5 w-3.5" />
+            </span>
+            <p className="whitespace-pre-line text-amber-950">{withPages(answer)}</p>
+          </div>
+        </AiBubble>
       )}
-    </li>
+      {answer && !q.notFound && (
+        <AiBubble meta={q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn'de cevapladı` : undefined}>
+          <p className="whitespace-pre-line break-words">{withPages(answer)}</p>
+        </AiBubble>
+      )}
+      {!live && !answer && (
+        <AiBubble>
+          <p className="text-red-700">{friendlyError(q.error ? scrub(q.error) : UNAVAILABLE)}</p>
+          <button
+            type="button"
+            onClick={() => onRetry(q.question)}
+            className="zk-press mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-slate-100 px-3 text-[12px] font-bold text-canvas-ink hover:bg-slate-200"
+          >
+            <RotateCcw aria-hidden className="h-3.5 w-3.5" />
+            Tekrar sor
+          </button>
+        </AiBubble>
+      )}
+    </div>
   );
 }
 
 export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookTitle?: string }) {
   const [text, setText] = useState('');
   const [picked, setPicked] = useState<string | null>(null);
+  const input = useRef<HTMLTextAreaElement>(null);
+  const scroller = useRef<HTMLDivElement>(null);
   const qc = useQueryClient();
   const list = useQuery({
     queryKey: ['editorial', 'ask', bookKey ?? ''],
@@ -62,9 +168,8 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
     refetchInterval: (query) => (query.state.data?.items.some((i) => i.status === 'bekliyor' || i.status === 'calisiyor') ? 5000 : false),
   });
   const ask = useMutation({
-    mutationFn: () => bookAskApi.ask({ question: text.trim(), bookKey, bookTitle: bookTitle ?? picked ?? undefined }),
+    mutationFn: (question: string) => bookAskApi.ask({ question, bookKey, bookTitle: bookTitle ?? picked ?? undefined }),
     onSuccess: async () => {
-      setText('');
       await qc.invalidateQueries({ queryKey: ['editorial', 'ask', bookKey ?? ''] });
     },
   });
@@ -73,88 +178,170 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
     queryKey: ['editorial', 'readableBooks'],
     queryFn: readableBooksApi.list,
     enabled: ENGINE_ENABLED && !bookTitle,
-    // Liste arka planda tazelenir; hazır olana kadar birkaç saniyede bir bakılır.
-    // Motor bir kitabı okuyorsa liste sıraya girer; seyrek bakılır, sayfa beklemez.
     refetchInterval: (query) => (query.state.data?.loading ? 15000 : false),
   });
   const readable = books.data?.items ?? [];
-  const items = list.data?.items ?? [];
-  const err = errText(list.error || ask.error, 'Soru gönderilemedi.');
+  // Sohbet sırası: eski üstte, yeni altta.
+  const turns = [...(list.data?.items ?? [])].reverse();
+  const err = ask.error ? friendlyError(scrub(errText(ask.error, 'Soru gönderilemedi.') ?? '')) : list.error ? 'Sohbet geçmişi okunamadı.' : null;
   const off = list.data && !list.data.configured;
+  const pending = ask.isPending ? ask.variables : null;
+  const target = bookTitle ?? picked;
+
+  const send = (value = text) => {
+    const v = value.trim();
+    if (!v || ask.isPending || off) return;
+    setText('');
+    ask.mutate(v, { onError: () => setText(v) });
+  };
+
+  // Yeni mesaj gelince ya da durum değişince sohbet en alta kayar.
+  const last = turns[turns.length - 1];
+  const tick = `${turns.length}-${last?.id}-${last?.status}-${pending ?? ''}`;
+  useEffect(() => {
+    const el = scroller.current;
+    if (el) el.scrollTo({ top: el.scrollHeight });
+  }, [tick]);
+
+  // İçeriğe göre büyüyen giriş alanı (en fazla ~6 satır).
+  useEffect(() => {
+    const el = input.current;
+    if (!el) return;
+    el.style.height = 'auto';
+    el.style.height = `${Math.min(el.scrollHeight, 168)}px`;
+  }, [text]);
+
+  const empty = !turns.length && !pending;
 
   return (
-    <div>
-      {off && <Note tone="warn">Editör motoru bu kurulumda tanımlı değil; kitap içeriğine soru sorulamaz.</Note>}
-      <form
-        className="relative"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (text.trim() && !ask.isPending && !off) ask.mutate();
-        }}
-      >
-        <Sparkles aria-hidden className="pointer-events-none absolute left-4 top-4 h-5 w-5 text-canvas-violet" />
-        <textarea
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={(e) => {
-            if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') e.currentTarget.form?.requestSubmit();
-          }}
-          rows={2}
-          disabled={off}
-          placeholder={bookTitle ? `«${bookTitle}» kitabına sorun: kim ne yaptı, hangi olay hangi sayfada…` : picked ? `«${picked}» kitabına sorun: kim ne yaptı, hangi olay hangi sayfada…` : 'Okunmuş bir kitaba sorun: kim ne yaptı, hangi olay hangi sayfada…'}
-          aria-label="Kitabın içeriğine soru"
-          className="min-h-[76px] w-full resize-y rounded-2xl border border-slate-200 bg-white/95 py-3.5 pl-12 pr-28 text-[14px] font-medium leading-snug outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-canvas-muted/70 focus:border-canvas-violet focus:shadow-[0_0_0_3px_rgba(124,92,255,.12)] disabled:opacity-60"
-        />
-        <button
-          type="submit"
-          disabled={!text.trim() || ask.isPending || off}
-          className={`${btn} absolute bottom-3 right-3 bg-gradient-to-r from-canvas-coral to-canvas-violet text-white shadow-md`}
-        >
-          {ask.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Send aria-hidden className="h-4 w-4" />}
-          Sor
-        </button>
-      </form>
-      {!bookTitle && books.data?.loading && !readable.length && (
-        <p className="mt-2 px-1 text-[11px] leading-snug text-canvas-muted">
-          Okunmuş kitapların listesi hazırlanıyor. Motor şu an bir kitabı okuyorsa liste ve sorular sıraya girer; kitap adını kendiniz de yazabilirsiniz.
-        </p>
-      )}
-      {!bookTitle && readable.length > 0 && (
-        <div className="mt-2 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Okunmuş kitaplar</span>
-          {readable.map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setPicked(picked === t ? null : t)}
-              aria-pressed={picked === t}
-              className={`min-h-7 rounded-lg px-2 text-[11.5px] font-semibold transition-colors duration-150 ${
-                picked === t ? 'bg-canvas-violet text-white' : 'bg-slate-100 text-canvas-ink hover:bg-slate-200'
-              }`}
-            >
-              {t}
-            </button>
-          ))}
-          {picked && <span className="text-[11px] text-canvas-muted">soru «{picked}» kitabına gidecek</span>}
-        </div>
-      )}
-      <p className="mt-1.5 px-1 text-[11px] leading-snug text-canvas-muted">
-        Cevap kitabın kendi metninden gelir ve sayfa numarasıyla verilir. Kitapta olmayan bir şey uydurulmaz.
-        {list.data?.running ? ` Şu an ${nf.format(list.data.running)} soru sırada.` : ''}
-      </p>
+    <section className="zk-frame relative overflow-hidden rounded-[28px] p-[1.5px] shadow-[0_30px_80px_-30px_rgba(124,92,255,.45)]">
+      <div className="relative overflow-hidden rounded-[26.5px] bg-[#fbfaff]">
+        <div aria-hidden className="zk-aurora pointer-events-none absolute inset-x-0 top-0 h-56" />
 
-      {err && (
-        <div className="mt-2">
-          <Note tone="err">{err}</Note>
-        </div>
-      )}
-      {items.length > 0 && (
-        <ul className="mt-3 space-y-2">
-          {items.map((q) => (
-            <Answer key={q.id} q={q} />
+        <header className="relative flex items-center gap-3 border-b border-white/70 px-4 py-3.5 sm:px-6">
+          <Orb />
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <h2 className="bg-gradient-to-r from-canvas-coral to-canvas-violet bg-clip-text text-[17px] font-extrabold tracking-tight text-transparent">ZEKI AI</h2>
+              <span className="rounded-full bg-white/80 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-canvas-violet">Kitaba sor</span>
+            </div>
+            <p className="truncate text-[11.5px] text-canvas-muted">{target ? `«${target}» kitabıyla konuşuyorsunuz` : 'Okunmuş kitapların içini bilen asistanınız'}</p>
+          </div>
+          <span className={`hidden items-center gap-1.5 text-[11px] font-semibold sm:flex ${off ? 'text-amber-700' : 'text-emerald-700'}`}>
+            <span className={`h-2 w-2 rounded-full ${off ? 'bg-amber-500' : 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,.18)]'}`} />
+            {off ? 'Kapalı' : 'Hazır'}
+          </span>
+        </header>
+
+        <div ref={scroller} className="relative max-h-[560px] min-h-[300px] space-y-5 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6">
+          {off && <Note tone="warn">{PRODUCT} bu kurulumda tanımlı değil; kitap içeriğine soru sorulamaz.</Note>}
+          {empty && !off && (
+            <div className="zk-msg flex flex-col items-center px-2 py-6 text-center">
+              <Orb size="lg" />
+              <h3 className="mt-4 text-[22px] font-extrabold tracking-tight text-canvas-ink sm:text-[26px]">
+                Merhaba, ben{' '}
+                <span className="bg-gradient-to-r from-canvas-coral via-[#c55cf0] to-canvas-violet bg-clip-text text-transparent">ZEKI AI</span>
+              </h3>
+              <p className="mt-1.5 max-w-[46ch] text-[13px] leading-relaxed text-canvas-muted">
+                Okunmuş bir kitaba ne sormak istersiniz? Cevabı kitabın kendi metninden, sayfa numarasıyla veririm; kitapta olmayan bir şeyi uydurmam.
+              </p>
+              <div className="mt-4 flex max-w-[620px] flex-wrap justify-center gap-2">
+                {SUGGEST.map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => {
+                      setText(s);
+                      input.current?.focus();
+                    }}
+                    className="zk-press rounded-full border border-canvas-violet/15 bg-white/90 px-3.5 py-2 text-[12.5px] font-semibold text-canvas-ink shadow-sm hover:border-canvas-violet/40 hover:text-canvas-violet"
+                  >
+                    {s}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {turns.map((q) => (
+            <Turn key={q.id} q={q} onRetry={(t) => send(t)} />
           ))}
-        </ul>
-      )}
-    </div>
+          {pending && (
+            <div className="space-y-3">
+              <UserBubble text={pending} />
+              <AiBubble>
+                <Thinking queued={false} />
+              </AiBubble>
+            </div>
+          )}
+        </div>
+
+        <div className="relative border-t border-white/70 bg-white/60 px-3 pb-3 pt-2.5 backdrop-blur sm:px-5 sm:pb-4">
+          {!bookTitle && readable.length > 0 && (
+            <div className="mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
+              <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
+              {readable.map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => setPicked(picked === t ? null : t)}
+                  aria-pressed={picked === t}
+                  className={`zk-press shrink-0 rounded-full px-3 py-1 text-[11.5px] font-semibold ${
+                    picked === t ? 'bg-canvas-violet text-white shadow-sm' : 'bg-white text-canvas-ink ring-1 ring-slate-200 hover:ring-canvas-violet/40'
+                  }`}
+                >
+                  {t}
+                </button>
+              ))}
+            </div>
+          )}
+          {!bookTitle && books.data?.loading && !readable.length && (
+            <p className="mb-2 px-1 text-[11px] text-canvas-muted">Okunmuş kitaplar getiriliyor; beklemeden kitap adını sorunuza yazabilirsiniz.</p>
+          )}
+          {err && (
+            <div className="mb-2">
+              <Note tone="err">{err}</Note>
+            </div>
+          )}
+          <form
+            className="zk-composer flex items-end gap-2 rounded-[22px] border border-slate-200 bg-white p-1.5 pl-4 shadow-[0_6px_24px_-12px_rgba(20,30,60,.25)] transition-[border-color,box-shadow] duration-150"
+            onSubmit={(e) => {
+              e.preventDefault();
+              send();
+            }}
+          >
+            <textarea
+              ref={input}
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              onKeyDown={(e) => {
+                // Enter gönderir; Shift+Enter yeni satır. Türkçe klavyede harf birleştirme sürerken gönderilmez.
+                if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                  e.preventDefault();
+                  send();
+                }
+              }}
+              rows={1}
+              disabled={off}
+              placeholder={target ? `«${target}» kitabına sorun…` : "ZEKI AI'ya sorun: kim ne yaptı, hangi olay hangi sayfada…"}
+              aria-label="ZEKI AI'ya soru"
+              className="max-h-[168px] min-h-[44px] flex-1 resize-none bg-transparent py-2.5 text-base font-medium leading-snug text-canvas-ink outline-none placeholder:text-canvas-muted/70 disabled:opacity-60 sm:text-[14.5px]"
+            />
+            <button
+              type="submit"
+              disabled={!text.trim() || ask.isPending || off}
+              aria-label="Gönder"
+              className="zk-press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-canvas-coral to-canvas-violet text-white shadow-[0_8px_20px_-8px_rgba(124,92,255,.8)] disabled:opacity-40"
+            >
+              {ask.isPending ? <Loader2 aria-hidden className="h-5 w-5 animate-spin" /> : <ArrowUp aria-hidden className="h-5 w-5" strokeWidth={2.5} />}
+            </button>
+          </form>
+          <p className="mt-1.5 px-2 text-[10.5px] text-canvas-muted">
+            <span className="hidden sm:inline">Enter ile gönderin, Shift+Enter ile alt satıra geçin. </span>
+            Cevaplar kitabın metninden, sayfa numarasıyla gelir.
+            {list.data?.running ? ` Şu an ${nf.format(list.data.running)} soru sırada.` : ''}
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }

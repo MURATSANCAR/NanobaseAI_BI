@@ -255,15 +255,7 @@ export default function BookScreen() {
             {b.firstPublished && <span className="text-[12px] text-canvas-muted">İlk yayın {dateTime(b.firstPublished)}</span>}
           </div>
           <Facts b={b} />
-          <Panel>
-            <h2 className="px-1 text-[13px] font-extrabold">Bu kitabın içeriğine sor</h2>
-            <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-              Cevap kitabın kendi metninden, sayfa numarasıyla gelir. Kitap henüz okunmamışsa bu da söylenir.
-            </p>
-            <div className="mt-2">
-              <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
-            </div>
-          </Panel>
+          <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <div className="space-y-3 lg:space-y-4">
               <Roles b={b} />

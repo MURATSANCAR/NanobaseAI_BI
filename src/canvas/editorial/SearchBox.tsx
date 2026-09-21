@@ -1,16 +1,16 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { BookOpen, FolderOpen, Loader2, Search, User } from 'lucide-react';
+import { BookOpen, FolderOpen, Loader2, Search, User, X } from 'lucide-react';
 import { ENGINE_ENABLED, editorialSearchApi, type SearchHit } from '../engine';
 import { Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { useDebounced } from './kit';
-import AskBox from './AskBox';
 
-/** Editoryal ana ekranın arama alanı: yazılan metin kitap adında, proje adında ve esere katkı veren
- *  kişilerin adında aranır. Kitaba tıklayınca o kitabın bütün süreçleri açılır. Kişiye tıklayınca
- *  kişinin kitapları listelenir. Arama CRM'de yapılır; uydurma sonuç yoktur. */
+/** Editoryal ana ekranın sağ üstündeki kitap arama: yazılan metin kitap adında, proje adında ve esere
+ *  katkı veren kişilerin adında aranır. Sonuçlar alanın altında açılan bir panelde listelenir. Kitaba
+ *  tıklayınca o kitabın bütün süreçleri açılır; kişiye tıklayınca kişinin kitapları listelenir.
+ *  Arama CRM'de yapılır; uydurma sonuç yoktur. */
 
 const ICON = { kitap: BookOpen, proje: FolderOpen, kisi: User } as const;
 
@@ -18,11 +18,11 @@ function Hit({ h, onPick }: { h: SearchHit; onPick: () => void }) {
   const Icon = ICON[h.kind];
   const body = (
     <>
-      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-canvas-violet/10 text-canvas-violet">
-        <Icon aria-hidden className="h-3.5 w-3.5" />
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-canvas-violet/10 text-canvas-violet">
+        <Icon aria-hidden className="h-4 w-4" />
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block break-words text-[12.5px] font-semibold leading-snug">{h.title}</span>
+        <span className="block break-words text-[13px] font-semibold leading-snug">{h.title}</span>
         <span className="block truncate text-[11px] text-canvas-muted">
           {[h.note, h.extra, h.date && dateTime(h.date)].filter(Boolean).join(' · ') || (h.kind === 'kisi' ? 'Esere katkı vermiş' : '')}
         </span>
@@ -30,7 +30,7 @@ function Hit({ h, onPick }: { h: SearchHit; onPick: () => void }) {
       {h.status && h.kind !== 'kisi' && <Pill tone="muted">{h.status}</Pill>}
     </>
   );
-  const cls = 'flex w-full items-center gap-2 rounded-xl border border-slate-100 bg-white/85 px-2.5 py-2 text-left transition-colors duration-150 hover:bg-white active:scale-[0.99]';
+  const cls = 'zk-press flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left hover:bg-canvas-violet/5';
   return h.kind === 'kitap' ? (
     <li>
       <Link to={`/kitap/${h.id}`} className={cls}>
@@ -50,19 +50,19 @@ function PersonBooks({ person, onClose }: { person: SearchHit; onClose: () => vo
   const q = useQuery({ queryKey: ['editorial', 'personBooks', person.id], queryFn: () => editorialSearchApi.personBooks(person.id), enabled: ENGINE_ENABLED });
   const items = q.data?.items ?? [];
   return (
-    <div className="mt-3 rounded-2xl border border-slate-100 bg-white/85 p-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
+    <div className="mt-2 rounded-xl bg-slate-50/80 p-2.5">
+      <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h3 className="text-[12.5px] font-extrabold">{person.title} · eserleri</h3>
         <button type="button" onClick={onClose} className="text-[11.5px] font-bold text-canvas-violet underline">
           Kapat
         </button>
       </div>
-      {q.isLoading && <p className="mt-2 text-[12px] text-canvas-muted">Okunuyor…</p>}
-      {!q.isLoading && !items.length && <p className="mt-2 text-[12px] text-canvas-muted">Bu kişiye bağlı kitap bulunamadı.</p>}
-      <ul className="mt-2 space-y-1">
+      {q.isLoading && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Okunuyor…</p>}
+      {!q.isLoading && !items.length && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Bu kişiye bağlı kitap bulunamadı.</p>}
+      <ul className="mt-1.5 space-y-0.5">
         {items.map((h) => (
           <li key={`${h.id}-${h.extra}`}>
-            <Link to={`/kitap/${h.id}`} className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 text-[12.5px] transition-colors duration-150 hover:bg-slate-50">
+            <Link to={`/kitap/${h.id}`} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-[12.5px] transition-colors duration-150 hover:bg-white">
               <span className="min-w-0 break-words font-semibold leading-snug">{h.title}</span>
               <span className="shrink-0 text-[11px] text-canvas-muted">{h.extra}</span>
             </Link>
@@ -75,118 +75,120 @@ function PersonBooks({ person, onClose }: { person: SearchHit; onClose: () => vo
 
 export default function SearchBox() {
   const [text, setText] = useState('');
+  const [open, setOpen] = useState(false);
   const [person, setPerson] = useState<SearchHit | null>(null);
-  const [tab, setTab] = useState<'ara' | 'sor'>('ara');
+  const wrap = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const q = useDebounced(text.trim(), 400);
   const res = useQuery({ queryKey: ['editorial', 'search', q], queryFn: () => editorialSearchApi.search(q), enabled: ENGINE_ENABLED && q.length >= 2 });
   const d = res.data;
   const total = (d?.books.length ?? 0) + (d?.projects.length ?? 0) + (d?.people.length ?? 0);
   const err = errText(res.error, 'Arama yapılamadı.');
+  const show = open && q.length >= 2 && (!!d || !!err || res.isFetching);
 
-  const TABS = [
-    { id: 'ara' as const, label: 'Kitap ara', help: 'Kitap adı, proje adı ya da kişi yazın. Kitaba tıklayınca o kitabın bütün süreçleri tek ekranda açılır.' },
-    { id: 'sor' as const, label: 'Kitaba sor', help: 'Okunmuş bir kitabın içeriğine sorun. Cevap kitabın metninden, sayfa numarasıyla gelir.' },
-  ];
+  // Panel dışına tıklanınca kapanır.
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: PointerEvent) => {
+      if (wrap.current && !wrap.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('pointerdown', onDown);
+    return () => document.removeEventListener('pointerdown', onDown);
+  }, [open]);
 
   return (
-    <section className="glass-panel rounded-2xl p-4 shadow-glass-float sm:rounded-3xl sm:p-6">
-      <div className="mx-auto max-w-[760px]">
-        <div className="mx-auto flex w-fit gap-1 rounded-xl bg-slate-100/80 p-1">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setTab(t.id)}
-              aria-pressed={tab === t.id}
-              className={`min-h-9 rounded-lg px-3.5 text-[12.5px] font-bold transition-colors duration-150 ${
-                tab === t.id ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:text-canvas-ink'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-        <p className="mx-auto mt-2.5 max-w-[60ch] text-center text-[12px] leading-snug text-canvas-muted">
-          {TABS.find((t) => t.id === tab)?.help}
-        </p>
-
-        {tab === 'sor' ? (
-          <div className="mt-3">
-            <AskBox />
-          </div>
-        ) : (
-          <>
-        <form
-          className="relative mt-3"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const first = d?.books[0];
-            if (first) navigate(`/kitap/${first.id}`);
-          }}
-        >
-          <Search aria-hidden className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-canvas-muted" />
+    <div ref={wrap} className="relative">
+      <form
+        className="zk-search-ring group relative rounded-2xl p-[2px] shadow-[0_14px_40px_-14px_rgba(124,92,255,.45)]"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const first = d?.books[0];
+          if (first) navigate(`/kitap/${first.id}`);
+        }}
+      >
+        <div className="relative rounded-[14px] bg-white">
+          <span className="pointer-events-none absolute left-2.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl bg-gradient-to-br from-canvas-coral to-canvas-violet text-white shadow-md">
+            <Search aria-hidden className="h-[18px] w-[18px]" strokeWidth={2.5} />
+          </span>
           <input
             type="search"
             value={text}
             onChange={(e) => {
               setText(e.target.value);
               setPerson(null);
+              setOpen(true);
             }}
-            placeholder="Örnek: Kayıp Atlas, Ahmet Şimşirgil, kapak yenileme…"
+            onFocus={() => setOpen(true)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setOpen(false);
+            }}
+            placeholder="Kitap, yazar ya da proje ara…"
             aria-label="Kitap, proje ya da kişi ara"
-            className="min-h-[52px] w-full rounded-2xl border border-slate-200 bg-white/95 pl-12 pr-11 text-[15px] font-semibold outline-none transition-[border-color,box-shadow] duration-150 placeholder:font-medium placeholder:text-canvas-muted/70 focus:border-canvas-violet focus:shadow-[0_0_0_3px_rgba(124,92,255,.12)]"
+            aria-expanded={show}
+            className="min-h-[58px] w-full rounded-[14px] bg-transparent pl-[58px] pr-11 text-[16px] font-bold text-canvas-ink outline-none placeholder:font-semibold placeholder:text-canvas-muted/75 [&::-webkit-search-cancel-button]:hidden"
           />
-          {res.isFetching && <Loader2 aria-hidden className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-canvas-muted" />}
-        </form>
+          {res.isFetching ? (
+            <Loader2 aria-hidden className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-canvas-violet" />
+          ) : (
+            text && (
+              <button
+                type="button"
+                aria-label="Aramayı temizle"
+                onClick={() => {
+                  setText('');
+                  setPerson(null);
+                }}
+                className="absolute right-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-canvas-muted transition-colors duration-150 hover:bg-slate-100 hover:text-canvas-ink"
+              >
+                <X aria-hidden className="h-4 w-4" />
+              </button>
+            )
+          )}
+        </div>
+      </form>
 
-        {err && (
-          <div className="mt-3">
-            <Note tone="err">{err}</Note>
-          </div>
-        )}
-        {q.length >= 2 && d && !total && !res.isFetching && (
-          <p className="mt-3 text-center text-[12.5px] text-canvas-muted">“{q}” için kitap, proje ya da kişi bulunamadı.</p>
-        )}
-
-        {d && total > 0 && (
-          <div className="mt-3 space-y-3">
-            {d.books.length > 0 && (
-              <div>
-                <h3 className="px-1 pb-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kitaplar ({nf.format(d.books.length)})</h3>
-                <ul className="space-y-1">
-                  {d.books.map((h) => (
-                    <Hit key={h.id} h={h} onPick={() => undefined} />
-                  ))}
-                </ul>
-              </div>
-            )}
-            {d.people.length > 0 && (
-              <div>
-                <h3 className="px-1 pb-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kişiler ({nf.format(d.people.length)})</h3>
-                <ul className="space-y-1">
-                  {d.people.map((h) => (
-                    <Hit key={h.id} h={h} onPick={() => setPerson(h)} />
-                  ))}
-                </ul>
-                {person && <PersonBooks person={person} onClose={() => setPerson(null)} />}
-              </div>
-            )}
-            {d.projects.length > 0 && (
-              <div>
-                <h3 className="px-1 pb-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Projeler ({nf.format(d.projects.length)})</h3>
-                <ul className="space-y-1">
-                  {d.projects.map((h) => (
-                    <Hit key={h.id} h={h} onPick={() => navigate('/editor-atama')} />
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-          </>
-        )}
-      </div>
-    </section>
+      {show && (
+        <div className="zk-pop absolute right-0 top-full z-30 mt-2 max-h-[70vh] w-full overflow-y-auto overscroll-contain rounded-2xl border border-white/70 bg-white/95 p-2 shadow-dock-shadow backdrop-blur-xl lg:w-[560px]">
+          {err && <Note tone="err">{err}</Note>}
+          {d && !total && !res.isFetching && <p className="px-2 py-3 text-center text-[12.5px] text-canvas-muted">“{q}” için kitap, proje ya da kişi bulunamadı.</p>}
+          {!d && res.isFetching && <p className="px-2 py-3 text-center text-[12.5px] text-canvas-muted">Aranıyor…</p>}
+          {d && total > 0 && (
+            <div className="space-y-2">
+              {d.books.length > 0 && (
+                <div>
+                  <h3 className="px-2.5 pb-0.5 pt-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">Kitaplar ({nf.format(d.books.length)})</h3>
+                  <ul>
+                    {d.books.map((h) => (
+                      <Hit key={h.id} h={h} onPick={() => undefined} />
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {d.people.length > 0 && (
+                <div>
+                  <h3 className="px-2.5 pb-0.5 pt-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">Kişiler ({nf.format(d.people.length)})</h3>
+                  <ul>
+                    {d.people.map((h) => (
+                      <Hit key={h.id} h={h} onPick={() => setPerson(h)} />
+                    ))}
+                  </ul>
+                  {person && <PersonBooks person={person} onClose={() => setPerson(null)} />}
+                </div>
+              )}
+              {d.projects.length > 0 && (
+                <div>
+                  <h3 className="px-2.5 pb-0.5 pt-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">Projeler ({nf.format(d.projects.length)})</h3>
+                  <ul>
+                    {d.projects.map((h) => (
+                      <Hit key={h.id} h={h} onPick={() => navigate('/editor-atama')} />
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

@@ -577,3 +577,141 @@
     transform: none;
   }
 }
+
+/* ---------------------------------------------------------------- ZEKI AI (kitaba sor + kitap ara) */
+.zk-press {
+  transition-property: transform, background-color, color, box-shadow, opacity;
+  transition-duration: 0.16s;
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+.zk-press:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Kitap ara: sağ üstte dikkat çeken, yavaşça akan renkli çerçeve. */
+.zk-search-ring {
+  background: linear-gradient(115deg, #ff6b4a, #c55cf0, #7c5cff, #38bdf8, #ff6b4a);
+  background-size: 300% 100%;
+  animation: zkShift 9s linear infinite;
+}
+.zk-search-ring:focus-within {
+  box-shadow: 0 0 0 5px rgba(124, 92, 255, 0.14), 0 18px 44px -14px rgba(124, 92, 255, 0.55);
+}
+@keyframes zkShift {
+  to {
+    background-position: 300% 0;
+  }
+}
+
+/* Arama sonuçları paneli: tetikleyicisinin (sağ üst) köşesinden açılır. */
+.zk-pop {
+  transform-origin: top right;
+  animation: zkPop 0.18s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes zkPop {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.97);
+  }
+}
+
+/* Sohbet çerçevesi: ince renkli kenar + üstte yumuşak aurora. */
+.zk-frame {
+  background: linear-gradient(135deg, rgba(255, 107, 74, 0.55), rgba(197, 92, 240, 0.45) 40%, rgba(124, 92, 255, 0.6) 70%, rgba(56, 189, 248, 0.45));
+}
+.zk-aurora {
+  background:
+    radial-gradient(40% 90% at 12% 0%, rgba(255, 107, 74, 0.16), transparent 70%),
+    radial-gradient(45% 100% at 55% 0%, rgba(197, 92, 240, 0.14), transparent 70%),
+    radial-gradient(40% 90% at 92% 0%, rgba(56, 189, 248, 0.14), transparent 70%);
+}
+.zk-composer:focus-within {
+  border-color: rgba(124, 92, 255, 0.55);
+  box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12), 0 10px 30px -14px rgba(124, 92, 255, 0.45);
+}
+
+/* ZEKI AI küresi: dönen renk halkası. */
+.zk-orb {
+  background: conic-gradient(from 0deg, #ff6b4a, #c55cf0, #7c5cff, #38bdf8, #10b981, #ff6b4a);
+  animation: zkSpin 6s linear infinite;
+}
+@keyframes zkSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Yeni mesaj alttan yükselir (her mesaj bir kez). */
+.zk-msg {
+  animation: zkRise 0.24s cubic-bezier(0.23, 1, 0.32, 1) both;
+}
+@keyframes zkRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+/* "Düşünüyor" noktaları ve değişen durum cümlesi. */
+.zk-dot {
+  animation: zkDot 1.2s ease-in-out infinite;
+}
+@keyframes zkDot {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+.zk-fade {
+  animation: zkFade 0.2s ease-out both;
+}
+@keyframes zkFade {
+  from {
+    opacity: 0;
+  }
+}
+.zk-shimmer {
+  background: linear-gradient(90deg, #1b1f2a 0%, #1b1f2a 35%, #7c5cff 50%, #1b1f2a 65%, #1b1f2a 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: zkShimmer 2.2s linear infinite;
+}
+@keyframes zkShimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: -150% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zk-search-ring,
+  .zk-orb,
+  .zk-shimmer {
+    animation: none;
+  }
+  .zk-pop,
+  .zk-msg {
+    animation: zkFade 0.2s ease-out both;
+  }
+  .zk-dot {
+    animation: zkBlink 1.2s ease-in-out infinite;
+  }
+  .zk-press:active:not(:disabled) {
+    transform: none;
+  }
+}
+@keyframes zkBlink {
+  50% {
+    opacity: 0.3;
+  }
+}
