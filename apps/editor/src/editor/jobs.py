@@ -78,7 +78,7 @@ def list_books() -> list[dict]:
 
 
 def latest_generation(book_version_id: str) -> dict | None:
-    return db.one("SELECT id AS generation_id, created_at, sealed_at FROM generation WHERE"
+    return db.one("SELECT id AS generation_id, job_id, created_at, sealed_at FROM generation WHERE"
                   " book_version_id=%s ORDER BY created_at DESC, id DESC LIMIT 1",
                   book_version_id)
 

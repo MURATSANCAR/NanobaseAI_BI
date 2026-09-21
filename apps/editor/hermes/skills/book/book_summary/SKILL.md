@@ -1,27 +1,14 @@
 ---
 name: book_summary
-description: Kitabın ya da bir bölümün özetini defterdeki doğrulanmış SUMMARY iddialarından verir.
-version: 1.0.0
+description: En yeni neslin güncel, kaynaklı özet taslağını gösterir; hazır değilse gerçek iş durumunu bildirir.
+version: 2.0.0
 metadata:
   hermes: {category: book, tags: [book, summary]}
 ---
 # book_summary
 
-**Girdi şartları:** mühürlenmiş nesil (iş akışı adım 12'de özetleri üretmiştir).
+`list_books` → `latest_generation` → `get_report` okuma araçlarını kullan. Rapor `available=true` ise `content.book_summary` ve `content.chapters` içindeki cümleleri sayfa atıflarıyla göster. Her cümlenin `pages` alanını koru. Bu okuma yeni üretim veya yazma başlatmaz.
 
-**Çağrılacak MCP araçları:** `mcp__book_jobs_mcp__get_report` (Kitap özeti ve Bölümler kısmı). Bölüme özel ek soru için `mcp__book_retrieval_mcp__search_book_evidence`.
+`available=false` ise eski nesle dönme. `latest_generation.job_id` ile `get_job_status` oku ve güncel çıktının hazır olmadığını söyle. Çalışan/bekleyen işi yeniden başlatmayı önerme.
 
-**Kullanılacak model:** book-director (iş akışında üretildi); burada yeniden üretim yok.
-
-**Çıktı JSON şeması:**
-```json
-{"level": "book|chapter", "title": "str", "sentences": [{"text": "str", "source_pages": [0], "status": "VERIFIED|CANDIDATE"}]}
-```
-
-**Güven eşiği:** VERIFIED olmayan cümleleri "doğrulanmadı" etiketiyle ver ya da çıkar.
-
-**Hata durumları:** özet yoksa (nesil yarım) iş durumunu `get_job_status` ile göster.
-
-**Editöre gönderme koşulları:** yok (özetler Critic'ten geçmiştir).
-
-**Kanıt zorunluluğu:** özetteki her cümle kendi sayfa atıfını korur.
+`semantic_acceptance=false` veya `complete_book=false` sonucu tam kitap analitik kabulü değildir; kaynaklı taslak olduğunu belirt. Mühürlenme ve teknik başarı kabul yerine geçmez. Desteklenmeyen cümle veya belirsiz kimlikten kesin sonuç üretme. Kullanıcıya iç kimlik/alan adları yerine anlaşılır Türkçe ile durumu anlat.
