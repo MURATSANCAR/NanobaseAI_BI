@@ -83,13 +83,15 @@ export default function FinancialAudit() {
   const [page, setPage] = useState(0);
   const [onlyFindings, setOnlyFindings] = useState(false);
   const [sourcePage, setSourcePage] = useState(41);
+  const [runChoice, setRunChoice] = useState('');
   useEffect(() => {
     if (account) document.getElementById('audit-logo-detail')?.scrollIntoView({ block: 'start' });
   }, [account]);
   useEffect(() => {
     if (selected && tab === 'catalog' && window.innerWidth < 768) document.getElementById('audit-source-detail')?.scrollIntoView({ block: 'start' });
   }, [selected, tab]);
-  const overview = useQuery({ queryKey: ['financial-audit', 2026], queryFn: () => get<Overview>('overview?year=2026'), enabled: ENGINE_ENABLED, retry: false, staleTime: 120000, refetchOnWindowFocus: false });
+  const overview = useQuery({ queryKey: ['financial-audit', 2026, runChoice], queryFn: () => get<Overview>(runChoice ? `runs/${runChoice}` : 'overview?year=2026'), enabled: ENGINE_ENABLED, retry: false, staleTime: 120000, refetchOnWindowFocus: false });
+  const runs = useQuery({ queryKey: ['financial-audit-runs', overview.data?.runId], queryFn: () => get<{ items: Array<{runId: string; computedAt: string}> }>('runs'), enabled: !!overview.data?.runId, retry: false });
   const detail = useQuery({ queryKey: ['financial-audit-lines', account?.accountRef, page], queryFn: () => get<Detail>(`lines?year=2026&account=${account!.accountRef}&page=${page}`), enabled: !!account, retry: false });
   const data = overview.data;
   const controls = useMemo(() => new Map(data?.coverage?.items.map(c => [c.id, c]) ?? []), [data]);
@@ -120,6 +122,8 @@ export default function FinancialAudit() {
         {(overview.error || !ENGINE_ENABLED) && <div className="audit-message audit-warning" role="alert">{overview.error instanceof Error ? overview.error.message : 'Logo bağlantısı tanımlı değil.'} <strong>DOĞRULANAMADI</strong><button className="audit-button" onClick={() => overview.refetch()}>Tekrar dene</button></div>}
         {catalog.isFetching && <div className="audit-message" role="status">Kaynak belge ve kontrol kütüphanesi yükleniyor…</div>}
         {catalog.error && <div className="audit-message audit-warning" role="alert">Kaynak belge okunamadı. <button className="audit-button" onClick={() => catalog.refetch()}>Kaynağı tekrar yükle</button></div>}
+
+        <div className="audit-toolbar"><label className="audit-run-picker">Çalışma raporu <select aria-label="Kaydedilmiş denetim raporu" value={runChoice} onChange={e => { setRunChoice(e.target.value); setSelected(null); setAccount(null); }}><option value="">Son kaynak okuması</option>{runs.data?.items.map(r => <option key={r.runId} value={r.runId}>{new Date(r.computedAt).toLocaleString('tr-TR')}</option>)}</select></label><span className="audit-badge">{runChoice ? 'Kaydedilmiş hesaplama · Logo hareket detayı ayrı okumadır' : 'Rapor ve inceleme notları arşivlenir'}</span></div>
 
         <nav className="audit-tabs" aria-label="Denetim bölümleri">{tabs.map(([id, title]) => <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); }}>{title}{id === 'catalog' && <span>{source.items.length}</span>}</button>)}</nav>
 

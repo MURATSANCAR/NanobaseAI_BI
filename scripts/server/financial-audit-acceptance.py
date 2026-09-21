@@ -39,7 +39,6 @@ for field in ['code', 'name', 'lineCount', 'accountType', 'debit', 'credit']:
 check('line-count',sum(r['lineCount'] for r in rows)==out['lineCount'],out['lineCount'])
 check('all-balances',all(abs(Decimal(str(r['debit']))-Decimal(str(r['credit']))-Decimal(actual[r['accountRef']]['balance']))<Decimal('.005') for r in rows))
 check('account-sign-flags',all(actual[r['accountRef']]['unexpectedSign']==(r['code'][:3] in {'100','101'} and Decimal(str(r['debit']))-Decimal(str(r['credit']))<Decimal('-.01')) for r in rows))
-print(json.dumps({'completed':10,'pass':sum(c['status']=='PASS' for c in checks),'fail':sum(c['status']=='FAIL' for c in checks),'unverified':0}))
 def balance(prefix):
     return sum((Decimal(str(r['debit']))-Decimal(str(r['credit'])) for r in rows if r['code'].startswith(prefix)), Decimal(0))
 d,s,k,u,e=balance('1'),balance('15'),-balance('3'),-balance('4'),-balance('5')
@@ -50,8 +49,6 @@ for ratio in out['ratios']:
         continue
     numerator,denominator=ratio_refs[ratio['note']]
     check('ratio-'+str(ratio['note']),Decimal(ratio['numerator'])==numerator and Decimal(ratio['denominator'])==denominator and (ratio['value'] is None if denominator<=0 or (ratio['note'] in {11,12,13,14,15,20} and abs(a-k-u-e)>Decimal('.01')) else abs(Decimal(ratio['value'])-numerator/denominator)<Decimal('1e-12')))
-    if len(checks)%10==0:
-        print(json.dumps({'completed':len(checks),'pass':sum(c['status']=='PASS' for c in checks),'fail':sum(c['status']=='FAIL' for c in checks),'unverified':0}),flush=True)
 _, fi, cut=reference.execute("SELECT ACCFICHEREF,SUM(CAST(DEBIT AS decimal(28,4))) AS debit,SUM(CAST(CREDIT AS decimal(28,4))) AS credit FROM dbo.LG_411_01_EMFLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0 AND ACCFICHEREF IN (SELECT LOGICALREF FROM dbo.LG_411_01_EMFICHE WHERE CANCELLED=0) GROUP BY ACCFICHEREF",150000)
 bad=[abs(Decimal(str(x['debit']))-Decimal(str(x['credit']))) for x in fi if abs(Decimal(str(x['debit']))-Decimal(str(x['credit'])))>Decimal('.01')]
 slip_check=next(c for c in out['checks'] if c['id']=='slip-balance')
@@ -160,6 +157,34 @@ for m in out['vatMonths']:
     GROUP BY LEFT(A.CODE,3)""",100)
     ref={r['code']:Decimal(str(r['d']))-Decimal(str(r['c'])) for r in rr}
     check('vat-month-'+str(m['month']),not cut and all(abs(Decimal(v)-ref.get(code,Decimal(0)))<Decimal('.005') for code,v in m['accounts'].items()))
+# Persist an actual source-review conclusion, not a synthetic financial event.
+run_path='runs/'+out['runId']
+review_path=run_path+'/reviews/note-51-1'
+current_review=api(review_path)
+body={'version':current_review['version'],'state':'evidence_supplied','owner':'Kaynak doğrulama',
+      'note':'Kaynak belgedeki 2020 tarihli 7.000 TL sabiti güncel kural olarak kullanılmamalı. GİB Nisan 2026 tevsik bilgilendirmesi 30.000 TL eşiğini belirtiyor. Bu dayanak yalnız eşik incelemesidir; taraf, işlem bütünlüğü, ödeme kanalı ve istisnalar belgelenmeden işlem bazında uygunluk sonucu verilemez.',
+      'evidence':['https://cdn.gib.gov.tr/api/gibportal-file/file/getFileResources?objectKey=arsiv%2Fyardim-kaynaklar%2Finfografikler%2Fpdfs%2Fmal-hizmet-tevik.pdf','https://gib.gov.tr/mevzuat/kanun/434/teblig/7953']}
+def post_review(payload):
+    req=urllib.request.Request('http://127.0.0.1:8795/api/v1/financial-audit/'+review_path,headers={**headers,'Content-Type':'application/json'},data=json.dumps(payload).encode(),method='POST')
+    return json.load(urllib.request.urlopen(req,timeout=30))
+written=post_review(body)
+reloaded=api(review_path)
+check('source-review-persisted',reloaded['history'][-1]['note']==body['note'] and reloaded['history'][-1]['evidence']==body['evidence'])
+check('source-review-version-increment',written['version']==current_review['version']+1==reloaded['version'])
+check('review-does-not-auto-pass',next(c for c in api(run_path)['coverage']['items'] if c['id']=='note-51-1')['status']=='needs_evidence')
+for name,payload,expected in [('stale-review-write-rejected',body,409),('manual-passed-state-rejected',{**body,'version':reloaded['version'],'state':'passed'},422),('empty-evidence-rejected',{**body,'version':reloaded['version'],'evidence':[]},422)]:
+    try:post_review(payload);status=200
+    except urllib.error.HTTPError as exc:status=exc.code
+    check(name,status==expected,status)
+check('rejected-review-did-not-mutate',api(review_path)['version']==reloaded['version'])
+check('saved-run-listed',any(r['runId']==out['runId'] for r in api('runs')['items']))
+for path in ['runs',run_path,review_path]:
+    try:
+        urllib.request.urlopen('http://127.0.0.1:8795/api/v1/financial-audit/'+path,timeout=30);status=200
+    except urllib.error.HTTPError as exc:status=exc.code
+    check('private-'+path,status==401,status)
+check('served-backend-hash-current',out['revision']==__import__('hashlib').sha256(Path('backend/semantic_bridge/financial_audit.py').read_bytes()).hexdigest())
+check('served-rules-hash-current',out['coverage']['revision']==__import__('hashlib').sha256(Path('backend/semantic_bridge/financial_audit_rules.py').read_bytes()+Path('configs/financial-audit/source.json').read_bytes()).hexdigest())
 report={'environment':'nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .155 / LOGO_DB','revision':out['revision'],'source':out['source'],'sourceLastDate':out['lastDate'],'checks':checks,'referenceSql':sql,'overview':out,'detail':detail,'nextPage':next_page}
 Path('/tmp/financial-audit-acceptance.json').write_text(json.dumps(report,ensure_ascii=False,indent=2,default=str))
 print(json.dumps({'completed':len(checks),'pass':sum(c['status']=='PASS' for c in checks),'fail':sum(c['status']=='FAIL' for c in checks),'unverified':0,'lines':out['lineCount'],'accounts':len(out['accounts']),'checks':out['checks'],'ratios':out['ratios']},ensure_ascii=False))

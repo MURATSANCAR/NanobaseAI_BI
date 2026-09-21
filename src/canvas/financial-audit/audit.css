@@ -29,3 +29,6 @@
 .audit-badge.finding { background: #ffebe4; color: #984c32; }
 .audit-badge.needs_evidence,.audit-badge.unverified { background: #fff5de; color: #896622; }
 @media (max-width: 390px) { .audit-coverage-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+.audit-run-picker { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; font-size: 12px; min-width: 0; max-width: 100%; }
+.audit-run-picker select { min-width: 0; max-width: 100%; }
+.audit-review textarea:focus-visible { outline: 3px solid #aa87e8; outline-offset: 3px; }

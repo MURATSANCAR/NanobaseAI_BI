@@ -1,0 +1,392 @@
+{
+  "code_version": "0.12.0-outputs-385c233e",
+  "api": "tt-gpu/editor-control:8000",
+  "database": "tt-gpu/editor-postgres/editor/ed",
+  "books": 6,
+  "passed": 54,
+  "failed": 0,
+  "results": [
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "claims",
+      "count": 165,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "events",
+      "count": 14,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "emotions",
+      "count": 28,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "report_snapshot_and_digest",
+      "status": "PASSED",
+      "sha256": "cae4981ced4583aea25de3933cfb3e74cef9fd9b31cf5b4b1d8aae386fcc8f1a"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "no_current_chapter_summaries",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "no_current_book_summary",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "no_current_search_index",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "no_current_report",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "864eaf37-54fd-4711-9251-4ad323445f23",
+      "check": "no_current_catalog",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "claims",
+      "count": 393,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "events",
+      "count": 25,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "emotions",
+      "count": 77,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "report_snapshot_and_digest",
+      "status": "PASSED",
+      "sha256": "56ddceb4be01ed653a0c510514d1cbee447518f75a26a5c0009d7a4ed11536c6"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "no_current_chapter_summaries",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "no_current_book_summary",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "no_current_search_index",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "no_current_report",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "30e1467a-2157-4281-916f-cc97355beb96",
+      "check": "no_current_catalog",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "claims",
+      "count": 218,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "events",
+      "count": 16,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "emotions",
+      "count": 73,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "report_snapshot_and_digest",
+      "status": "PASSED",
+      "sha256": "2025e385b05163b482d295085581f9ae7d524809b58a73c1ab171be7c5178a02"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "no_current_chapter_summaries",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "no_current_book_summary",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "no_current_search_index",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "no_current_report",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "1d8962e9-176d-406c-a5e0-67f686f502ef",
+      "check": "no_current_catalog",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "claims",
+      "count": 330,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "events",
+      "count": 32,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "emotions",
+      "count": 81,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "report_snapshot_and_digest",
+      "status": "PASSED",
+      "sha256": "91545f13dd2fd0a7b32fdd3c08507d361b71ac863fd1c29a02aaf96178c004f1"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "no_current_chapter_summaries",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "no_current_book_summary",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "no_current_search_index",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "no_current_report",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "d7582423-e247-4711-b080-128e9504ed2e",
+      "check": "no_current_catalog",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "claims",
+      "count": 116,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "events",
+      "count": 11,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "emotions",
+      "count": 21,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "report_snapshot_and_digest",
+      "status": "PASSED",
+      "sha256": "7d7220f64850a5955610a107008e388baf4bf11ec401908275b81aa29ff1637f"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "no_current_chapter_summaries",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "no_current_book_summary",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "no_current_search_index",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "no_current_report",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+      "check": "no_current_catalog",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "claims",
+      "count": 183,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "events",
+      "count": 69,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "emotions",
+      "count": 38,
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "report_snapshot_and_digest",
+      "status": "PASSED",
+      "sha256": "e223cafa72df335b2d808ea9bc1cccbb80fb61787340bb24c6936b5ae4b939ef"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "no_current_chapter_summaries",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "no_current_book_summary",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "no_current_search_index",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "no_current_report",
+      "status": "PASSED"
+    },
+    {
+      "generation_id": "37527916-eda2-40f2-b5f7-384bbb16f026",
+      "check": "no_current_catalog",
+      "status": "PASSED"
+    }
+  ],
+  "tables_unchanged": true,
+  "table_state": {
+    "claim": {
+      "count": 5788,
+      "md5": "b4e47742f3f635fd7e9d8f51a6adf480"
+    },
+    "event": {
+      "count": 1734,
+      "md5": "df008b25b68f9ae608333f0210f5c73d"
+    },
+    "emotion": {
+      "count": 875,
+      "md5": "380789bdb60cbe10e8d910f1d26967c0"
+    },
+    "report": {
+      "count": 15,
+      "md5": "a215211bbb8beac38bf03530252b8129"
+    },
+    "generation": {
+      "count": 20,
+      "md5": "75b3a1cc70275b69e60a56b4500d4119"
+    },
+    "evidence": {
+      "count": 10071,
+      "md5": "cfbfb3d8b4b0e8fb89e2d7a28730386d"
+    },
+    "model_call": {
+      "count": 26333,
+      "md5": "d371fb138b74f626cf4c371092bd7f9c"
+    },
+    "review_item": {
+      "count": 1022,
+      "md5": "707808e75228ff3605dd6189637b2777"
+    },
+    "contradiction": {
+      "count": 100,
+      "md5": "aa19029baa8388d6518f65ab46579f14"
+    },
+    "regression_run": {
+      "count": 15,
+      "md5": "81f05acce2f67f8391f14e489b3256b8"
+    },
+    "analysis_job": {
+      "count": 20,
+      "md5": "65b326abf3338131f08635bca8d7c042"
+    },
+    "page_text": {
+      "count": 1450,
+      "md5": "e4df170300746e00386a687e33c87f5f"
+    },
+    "generation_state": {
+      "count": 20,
+      "md5": "55e7d36730bed22971e8ea479d3c0b41"
+    },
+    "rebuild_request": {
+      "count": 0,
+      "md5": null
+    },
+    "derived_artifact": {
+      "count": 100,
+      "md5": "4f429e8c53db8dc67e50181ada6d0732"
+    },
+    "knowledge_snapshot": {
+      "count": 0,
+      "md5": null
+    },
+    "artifact_version": {
+      "count": 0,
+      "md5": null
+    }
+  },
+  "maintenance": true,
+  "installed_trigger_definitions": [
+    "foundation_track_knowledge",
+    "guard_output_version",
+    "immutable_artifact",
+    "immutable_snapshot",
+    "output_validation_reset",
+    "reset_changed_character_actors",
+    "reset_changed_event_actors"
+  ],
+  "not_verified": [
+    "new workflow model execution",
+    "correction and automatic rebuild",
+    "crash retry and concurrent correction fencing",
+    "Qdrant staged index publication",
+    "full-book analytical acceptance"
+  ]
+}

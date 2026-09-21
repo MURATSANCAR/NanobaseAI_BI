@@ -233,6 +233,12 @@ def register(app, runtime, authorize):
                 with path.open('x') as f:
                     os.chmod(path, 0o600)
                     json.dump(out, f, ensure_ascii=False, default=str)
+                meta = {k:out[k] for k in ['runId','computedAt','year','source','lastDate','lineCount','revision']}
+                meta_temp = root/(out['runId']+'.meta.tmp')
+                with meta_temp.open('x') as f:
+                    os.chmod(f.name,0o600)
+                    json.dump(meta,f,ensure_ascii=False)
+                meta_temp.replace(root/(out['runId']+'.meta.json'))
                 cache[year] = (time.time(), out)
                 return out
             except HTTPException:
@@ -248,6 +254,13 @@ def register(app, runtime, authorize):
         if not path.exists():
             raise HTTPException(404, 'Rapor bulunamadı.')
         return json.loads(path.read_text())
+
+    @app.get('/api/v1/financial-audit/runs')
+    def list_runs(request: Request):
+        authorize(request)
+        root = archive_root()
+        files = sorted(root.glob('*.meta.json'), key=lambda p:p.stat().st_mtime, reverse=True)[:30] if root.exists() else []
+        return {'items':[json.loads(p.read_text()) for p in files], 'limit':30}
 
     @app.get('/api/v1/financial-audit/runs/{run_id}')
     def saved_run(request: Request, run_id: str):

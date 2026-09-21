@@ -67,7 +67,8 @@ CORRECTIONS = {
 }
 REFERENCES = [
  {'title':'GİB — Tevsik zorunluluğu, 459 Sıra No.lu VUK Genel Tebliği', 'url':'https://gib.gov.tr/mevzuat/kanun/434/teblig/7953'},
- {'title':'MEB — Tekdüzen muhasebe sistemi öğretim materyali', 'url':'https://meslek.meb.gov.tr/upload/dersmateryali/pdf/MF2024TDMS1005.pdf'},
+ {'title':'GİB — Nisan 2026 tevsik bilgilendirmesi', 'url':'https://cdn.gib.gov.tr/api/gibportal-file/file/getFileResources?objectKey=arsiv%2Fyardim-kaynaklar%2Finfografikler%2Fpdfs%2Fmal-hizmet-tevik.pdf'},
+ {'title':'GİB — Örtülü sermaye, dönem başı özsermaye ve ilişkili kişi borçları', 'url':'https://gib.gov.tr/mevzuat/kanun/435/ozelge/28381'},
 ]
 
 # Same-voucher observations, not an assertion that every transaction legally
@@ -124,6 +125,8 @@ def scope(item):
         if n == 44: return ['191','391']
         if n in {53,98,148}: return ['197','397']
         if n in {165,166}: return [PRIMARY[n], '692']
+        if n == 90: return [str(c) for c in range(170,178)]
+        if n == 84: return ['151','152']
         return [PRIMARY[n]]
     match = re.match(r'^(?:4|5|15)\.[\d.]+\s+(\d{3})(?:\D|$)', item['section'])
     if match: return [match[1]]
@@ -169,7 +172,8 @@ def extend_ratios(out, extra):
     net = pretax-flow('691')
     costs_open = abs(flow('7')) > EPS
     equity_open = abs(D(out['closingGap'])) > EPS
-    missing = not out['lineCount'] or any(c['status']=='finding' for c in out['checks'] if c['id'] in {'account-link','slip-link','null-amount'})
+    missing = (not out['lineCount'] or any(c['status']=='unverified' for c in out['checks'])
+               or any(c['status']=='finding' for c in out['checks'] if c['id'] in {'account-link','slip-link','null-amount'}))
     title = {i['note']:i['title'] for i in source()['items'] if i['kind']=='analysis'}
     specs = [
       (16,b('25'),equity,'Net maddi duran varlıklar (25) / özkaynaklar', 'equity'),
@@ -267,9 +271,14 @@ def evaluate(out, extra):
                 status = 'finding' if signs else 'observed'
                 reason = 'Ters bakiyeler inceleme adayıdır; doğru hesaba sınıflama işlem belgesine bağlıdır.'
             if n in YEAR_END_NOTES:
-                status = 'not_due'
-                reason = '2026 kaynağı yıl sonundan önce bitiyor; kapanış kontrolünün zamanı gelmedi. Mevcut bakiyeler yalnız gözlemdir.'
+                if str(out['lastDate'])[:10] < f"{out['year']}-12-31":
+                    status = 'not_due'
+                    reason = 'Kaynak yıl sonundan önce bitiyor; kapanış kontrolünün zamanı gelmedi. Mevcut bakiyeler yalnız gözlemdir.'
+                else:
+                    status = 'needs_evidence'
+                    reason = 'Yıl sonu kayıtları var; kapanış onayı ve devir fişlerinin belge bazında mutabakatı gerekiyor.'
             if n in FX_NOTES:
+                evidence = list(dict.fromkeys(evidence+['Döviz türü, döviz bakiyesi, değerleme tarihi, resmî kur ve muhasebe kur farkı mutabakatı']))
                 fx = [r for r in extra if any(str(r['code'] or '').startswith(p) for p in prefixes)]
                 components.append({'id':'fx-profile','title':'Döviz hareketi alan profili','status':'observed',
                     'rows':sum(int(r.get('foreignRows') or 0) for r in fx),
@@ -280,6 +289,18 @@ def evaluate(out, extra):
                 evidence = ['Varlık bazında maliyet, edinim ve kullanıma başlama tarihi, faydalı ömür, yöntem, istisnalar','Varlık kartı ↔ amortisman cetveli ↔ 257/268 muhasebe fişi mutabakatı']
             if n in REESKONT:
                 evidence = ['Senet bazında nominal tutar, vade, değerleme tarihi ve uygulanabilir faiz oranı','647/657 ile reeskont ayırma ve ters kayıt fişlerinin eşlemesi']
+            if n in {57,61,62,63,69,131,149}:
+                evidence = ['Mevduat/kredi/menkul kıymet/finansal kiralama sözleşmesi, ana para, oran ve vadeler','Gün esaslı faiz hesabı, tahsilat/ödeme ve dönem tahakkuku mutabakatı']
+            if n in {70,89,103,120,124,125,135,142,153,159} or item['id'] in {'note-143-1','note-160-1'}:
+                evidence = ['Cari taraf, sözleşme, avans/depozito niteliği, vade ve teslim/mahsup belgeleri','Karşı taraf mutabakatı ve hesap sınıflaması; salt bakiye ihlal kanıtı değildir']
+            if n in {92,93,126,127,144,145,161} or item['id']=='note-160-2':
+                evidence = ['Sözleşme, fatura ve hizmet/teslim başlangıç-bitiş tarihleri','Aylık itfa/tahakkuk cetveli, cari/gelecek dönem ve kısa/uzun vade ayrımı']
+            if n in {74,75,76,77,78,105,107,108,137,138,139,140,155,156,157}:
+                evidence = ['Borçlu/alacaklı ve ilişkili kişi eşlemesi, günlük bakiye ve sözleşme','Dönem başı özsermaye, emsal faiz analizi, istisnalar ve işlem döneminin mevzuatı']
+            if n in {72,80}:
+                evidence = ['Borçlu ve alacak kaynağı, teminatlar, dava/icra dosyası, tarihler ve hukukçu teyidi','Tahsilat, karşılık ayırma/iptal ve değerleme kayıtlarının borçlu bazında mutabakatı']
+            if n in {94,95,96,97,106,112,128,129,146,163,164} or item['id']=='note-143-2':
+                evidence = list(dict.fromkeys(evidence+['İlgili dönemin mevzuatı, mükellef/işlem kapsamı, karar ve onaylı beyannameler']))
             if n in range(43,50):
                 evidence = ['Üretilmiş e-defter satırları, belge türü ve ödeme yöntemi sözlüğü','Belge zorunluluğu/istisnası ile belge numarası ve tarihi']
                 reason = 'Logo muhasebe belge alanları tek başına e-defter XML belge/ödeme türü anlamını doğrulamıyor.'
