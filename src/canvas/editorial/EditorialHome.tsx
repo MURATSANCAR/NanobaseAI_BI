@@ -1,16 +1,10 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, BookOpenCheck, CalendarClock, FileSignature, Loader2, PenLine, Users } from 'lucide-react';
-import {
-  ENGINE_ENABLED,
-  boardDecisionsApi,
-  contractsApi,
-  contributorsApi,
-  deskApi,
-  editorsApi,
-  type Work,
-} from '../engine';
-import { Note, Pill, errText, nf } from '../admin/ui';
+import { ENGINE_ENABLED, type Work, type ContractPage } from '../engine';
+import { useTimasSession } from '../TimasSession';
+import { editorialHomeOptions } from './homeQuery';
+import { Note, Pill, errText, nf, fmtDate } from '../admin/ui';
 import { dateTime, pct } from '../format';
 import { ModuleFrame, Panel } from './kit';
 import SearchBox from './SearchBox';
@@ -111,20 +105,15 @@ function Desk({ works, user }: { works: Work[]; user: string }) {
   );
 }
 
-function Expiring() {
-  const q = useQuery({
-    queryKey: ['editorial', 'home', 'expiring'],
-    queryFn: () => contractsApi.list({ expiring: true, order: 'bitis', page: 0 }),
-    enabled: ENGINE_ENABLED,
-  });
-  const items = (q.data?.items ?? []).slice(0, 5);
+function Expiring({ data }: { data?: ContractPage }) {
+  const items = (data?.items ?? []).slice(0, 5);
   if (!items.length) return null;
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="text-[13px] font-extrabold">Süresi yaklaşan sözleşmeler</h2>
         <Link to="/telif-sozlesme" className="text-[11.5px] font-bold text-canvas-violet underline">
-          Hepsi ({nf.format(q.data?.total ?? 0)})
+          Hepsi ({nf.format(data?.total ?? 0)})
         </Link>
       </div>
       <ul className="mt-2 space-y-1.5">
@@ -145,11 +134,17 @@ function Expiring() {
 }
 
 export default function EditorialHome() {
-  const works = useQuery({ queryKey: ['editorial', 'works'], queryFn: deskApi.works, enabled: ENGINE_ENABLED });
-  const contracts = useQuery({ queryKey: ['editorial', 'contracts', 'summary'], queryFn: contractsApi.summary, enabled: ENGINE_ENABLED });
-  const board = useQuery({ queryKey: ['editorial', 'board', 'summary'], queryFn: boardDecisionsApi.summary, enabled: ENGINE_ENABLED });
-  const editors = useQuery({ queryKey: ['editorial', 'editors'], queryFn: () => editorsApi.overview(), enabled: ENGINE_ENABLED });
-  const roles = useQuery({ queryKey: ['editorial', 'roles'], queryFn: contributorsApi.roles, enabled: ENGINE_ENABLED });
+  const session = useTimasSession();
+  const home = useQuery(editorialHomeOptions(session.data?.username ?? ''));
+  const parts = home.data?.parts;
+  const works = { data: home.data?.works, isLoading: !home.data?.works };
+  const contracts = { data: parts?.contracts.data, isLoading: !parts?.contracts.data };
+  const board = { data: parts?.board.data, isLoading: !parts?.board.data };
+  const editors = { data: parts?.editors.data, isLoading: !parts?.editors.data };
+  const roles = { data: parts?.roles.data };
+  const updated = Object.values(parts ?? {}).flatMap((part) => part.updatedAt ? [part.updatedAt] : []);
+  const lastUpdated = updated.length ? Math.min(...updated) : null;
+  const refreshFailed = Object.values(parts ?? {}).some((part) => part.error);
 
   const c = contracts.data;
   const year = board.data?.years?.[0];
@@ -183,8 +178,8 @@ export default function EditorialHome() {
       to: '/redaksiyon',
       title: 'Redaksiyon',
       icon: PenLine,
-      line: desk.length ? `${nf.format(desk.filter((w) => w.manuscript).length)} eserde metin var` : 'Henüz metin yüklenmedi',
-      extra: desk.length ? `${nf.format(desk.reduce((a, w) => a + w.chapters.total, 0))} bölüm` : 'DOCX, PDF ya da TXT yükleyin',
+      line: !works.data ? 'Okunuyor…' : desk.length ? `${nf.format(desk.filter((w) => w.manuscript).length)} eserde metin var` : 'Henüz metin yüklenmedi',
+      extra: !works.data ? undefined : desk.length ? `${nf.format(desk.reduce((a, w) => a + w.chapters.total, 0))} bölüm` : 'DOCX, PDF ya da TXT yükleyin',
     },
     {
       code: 'M4',
@@ -199,8 +194,8 @@ export default function EditorialHome() {
       to: '/son-okuma',
       title: 'Son Okuma',
       icon: FileSignature,
-      line: desk.length ? `${nf.format(desk.filter((w) => w.proof).length)} eserde prova var` : 'Henüz prova yüklenmedi',
-      extra: desk.some((w) => w.proof) ? `${nf.format(desk.reduce((a, w) => a + w.signatures.signed, 0))}/${nf.format(desk.reduce((a, w) => a + w.signatures.total, 0))} imza` : 'Baskıya giden PDF’i yükleyin',
+      line: !works.data ? 'Okunuyor…' : desk.length ? `${nf.format(desk.filter((w) => w.proof).length)} eserde prova var` : 'Henüz prova yüklenmedi',
+      extra: !works.data ? undefined : desk.some((w) => w.proof) ? `${nf.format(desk.reduce((a, w) => a + w.signatures.signed, 0))}/${nf.format(desk.reduce((a, w) => a + w.signatures.total, 0))} imza` : 'Baskıya giden PDF’i yükleyin',
     },
     {
       code: 'M6',
@@ -228,7 +223,7 @@ export default function EditorialHome() {
     },
   ];
 
-  const err = errText(works.error || contracts.error || board.error || editors.error || roles.error, 'Özet okunamadı.');
+  const err = errText(home.error, 'Özet okunamadı.');
 
   return (
     <ModuleFrame
@@ -241,7 +236,13 @@ export default function EditorialHome() {
       aside={<SearchBox />}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
-      {err && <Note tone="err">{err}</Note>}
+      {err && <Note tone="err">{home.data ? 'Veriler yenilenemedi; son alınan bilgiler gösteriliyor.' : err}</Note>}
+      <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-canvas-muted" role="status">
+        <span>{lastUpdated ? `Son güncelleme: ${fmtDate(new Date(lastUpdated * 1000).toISOString())}` : 'Kaydedilmiş veriler alınıyor…'}</span>
+        <span>Veriler 5 dakikada bir otomatik yenilenir.</span>
+        {home.isFetching && home.data && <span>Güncelleniyor…</span>}
+      </div>
+      {(refreshFailed || home.data?.stale) && <Note tone="warn">Bazı veriler henüz yenilenemedi. Son başarılı bilgiler korunuyor; güncelleme yeniden denenecek.</Note>}
 
       <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
         <Stat
@@ -259,8 +260,8 @@ export default function EditorialHome() {
         <Stat label="Editör" value={o ? nf.format(o.items.length) : '—'} help={o ? `${o.sinceYear} ve sonrası projeler` : 'Okunuyor…'} busy={editors.isLoading} />
         <Stat
           label="Masadaki eser"
-          value={nf.format(desk.length)}
-          help={desk.length ? `${nf.format(desk.filter((w) => w.manuscript).length)} metin, ${nf.format(desk.filter((w) => w.proof).length)} prova` : 'Henüz eser dosyası yok'}
+          value={works.data ? nf.format(desk.length) : '—'}
+          help={!works.data ? 'Okunuyor…' : desk.length ? `${nf.format(desk.filter((w) => w.manuscript).length)} metin, ${nf.format(desk.filter((w) => w.proof).length)} prova` : 'Henüz eser dosyası yok'}
           busy={works.isLoading}
         />
       </div>
@@ -277,7 +278,7 @@ export default function EditorialHome() {
       </section>
 
       <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-        <Expiring />
+        <Expiring data={parts?.expiring.data} />
         {works.data && <Desk works={desk} user={works.data.user} />}
       </div>
 

@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { editorialHomeOptions } from './editorial/homeQuery';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import SessionGate from './stitch/SessionGate';
@@ -30,6 +32,12 @@ export function useTimasSession() {
 export default function RequireTimasSession() {
   const qc = useQueryClient();
   const q = useTimasSession();
+  useEffect(() => {
+    if (q.data?.username && !q.error) {
+      void qc.prefetchQuery(editorialHomeOptions(q.data.username));
+      void import('./editorial/EditorialHome').catch(() => undefined);
+    }
+  }, [qc, q.data?.username, q.error]);
   if (!ENGINE_ENABLED) return <Outlet />;
   if (q.isLoading) {
     return <div className="flex min-h-[40vh] items-center justify-center text-slate-500">Yükleniyor…</div>;

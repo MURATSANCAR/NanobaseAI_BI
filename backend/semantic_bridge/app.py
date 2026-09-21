@@ -1845,6 +1845,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         log.info("semantic bridge ready: profiles=%d certified=%s llm=%s db=%s", len(rt.profiles), rt.store.status_counts(rt.settings.tenant_id, rt.settings.datasource_id).get("CERTIFIED"), bool(rt.llm), bool(rt.connector))
         rt.start_refresher()
         app.state.financial_audit.start()
+        app.state.editorial_home.start()
         # Every request waiting for the model holds one of these threads while it waits. Forty (the
         # default) is forty waiting prompts and then /health queues behind them too.
         try:
@@ -1858,6 +1859,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         try:
             yield
         finally:
+            app.state.editorial_home.stop()
             app.state.financial_audit.stop()
             rt.jobs.stop()
             rt.stop_refresher()
@@ -3426,6 +3428,52 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def _editorial_error(e: "editorial_mod.EditorialError") -> HTTPException:
         return HTTPException(status_code=e.status, detail={"code": "INVALID_EDITORIAL", "message": str(e)})
 
+    from semantic_bridge.editorial_home import EditorialHomeSnapshots
+
+    def _home_scope():
+        r = rt()
+        return [r.settings.tenant_id, r.settings.datasource_id, admin_mod.conf("CRM_SCHEMA"),
+                _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60), datetime.now(timezone.utc).year]
+
+    def _home_builders():
+        schema = admin_mod.conf("CRM_SCHEMA")
+        warn = _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60)
+        year = datetime.now(timezone.utc).year - 2
+
+        def run(sql):
+            r = rt()
+            result = r.run_sql(sql, r.settings.max_rows, use_cache=False)
+            if result.get("truncated"):
+                raise ValueError("Incomplete editorial source result")
+            return result
+
+        def readable_books():
+            # Read the existing verified catalogue, never start an LLM to populate a dropdown.
+            from semantic_bridge import editorial_cards, editorial_books
+            if not editorial_books.configured():
+                return {"items": [], "configured": False, "loading": False, "at": time.time()}
+            cards = editorial_cards.catalogue()
+            titles = list(dict.fromkeys(c["title"] for c in cards if c.get("contentAvailable") and c.get("title")))
+            return {"items": titles, "configured": True, "loading": False, "at": time.time()}
+
+        return {
+            "readableBooks": readable_books,
+            "contracts": lambda: editorial_mod.summary(schema, run, warn),
+            "board": lambda: editorial_mod.board_summary(schema, run),
+            "editors": lambda: editorial_mod.editors(schema, run, year),
+            "roles": lambda: editorial_mod.role_facets(schema, run),
+            "expiring": lambda: editorial_mod.page(schema, run, 0, order="bitis", expiring_days=warn),
+        }
+
+    app.state.editorial_home = EditorialHomeSnapshots(_home_scope, _home_builders)
+
+    @app.get("/api/v1/editorial/home")
+    def editorial_home(request: Request, response: Response) -> dict[str, Any]:
+        # Authenticate and filter desk records on every read; never persist them in shared snapshots.
+        works = desk_works(request)
+        response.headers["Cache-Control"] = "private, no-store"
+        return dict(app.state.editorial_home.read(), works=works)
+
     @app.get("/api/v1/editorial/contracts/summary")
     def editorial_contracts_summary(request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)
@@ -3693,7 +3741,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def editorial_ask_books(request: Request, fresh: bool = False) -> dict[str, Any]:
         """Soru sorulabilen kitaplar. {qid} ucundan önce tanımlı, yoksa "books" bir soru kimliği sanılır."""
         _books(request)
-        return _books_call(books_mod.readable_books, fresh=fresh)
+        part = app.state.editorial_home.read()["parts"].get("readableBooks", {})
+        return part.get("data") or {"items": [], "at": None, "configured": books_mod.configured(),
+                                    "loading": not bool(part.get("error")), "error": part.get("error")}
 
     @app.get("/api/v1/editorial/ask/covers/{book_id}")
     def editorial_book_cover(book_id: str, request: Request):

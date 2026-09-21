@@ -1286,3 +1286,24 @@ export const bookAskApi = {
 export const readableBooksApi = {
   list: () => send<{ items: string[]; at: number | null; configured: boolean; loading: boolean }>('GET', '/api/v1/editorial/ask/books', undefined, 30_000),
 };
+
+
+export type EditorialHomeSnapshot = {
+  parts: {
+    readableBooks: EditorialSnapshotPart<{ items: string[]; at: number | null; configured: boolean; loading: boolean }>;
+    contracts: EditorialSnapshotPart<ContractSummary>;
+    board: EditorialSnapshotPart<{ years: BoardYear[] }>;
+    editors: EditorialSnapshotPart<EditorsOverview>;
+    roles: EditorialSnapshotPart<{ items: RoleFacet[] }>;
+    expiring: EditorialSnapshotPart<ContractPage>;
+  };
+  works: { items: Work[]; user: string };
+  refreshIntervalSeconds: number;
+  loading: boolean;
+  stale: boolean;
+  revision: string;
+};
+export type EditorialSnapshotPart<T> = { data?: T; updatedAt?: number; error?: string | null };
+export const editorialHomeApi = {
+  get: () => send<EditorialHomeSnapshot>('GET', '/api/v1/editorial/home', undefined, 30_000),
+};

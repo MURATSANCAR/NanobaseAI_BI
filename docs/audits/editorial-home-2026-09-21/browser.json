@@ -1,0 +1,47 @@
+{
+  "url": "https://portal.nanobase.ai/timas/editoryal",
+  "before": {
+    "at": 1790000185878,
+    "draft": "Yenileme sırasında korunacak taslak",
+    "main": "EDİTORYAL · EDİTORYAL SÜREÇ\nEditoryal masa\n\nBaşvurudan baskı onayına kadar sekiz modül. Rakamlar CRM'den ve editoryal masanın kendi kayıtlarından gelir; kaynağı olmayan bir sayı gösterilmez.\n\nSon güncelleme: 21 Eyl 17:12\nVeriler 5 dakikada bir otomatik yenilenir.\nYÜRÜRLÜKTE SÖZLEŞME\n9.016\n80 tanesi 60 günde bitiyor\n2026 KURUL KARARI\n99\n%80 kabul\nEDİTÖR\n33\n2024 ve sonrası projeler\nMASADAKİ ESER\n0\nHenüz eser dosyası yok\nZ\nZEKİ AI\nKİTABA SOR\n\nOkunmuş kitapların içini bilen asistanınız\n\nSohbet\nMerhaba, ben ZEKİ AI\n\nOkuduğumuz kitaplara soru sorun. Cevapta kitap adını ve kaynak sayfasını görün; tek bir kitabı seçerek de devam edebilirsiniz.\n\nOkuduğumuz kitaplarda hangi karakterler var?\nOkuduğumuz",
+    "status": "Son güncelleme: 21 Eyl 17:12\nVeriler 5 dakikada bir otomatik yenilenir."
+  },
+  "after": {
+    "at": 1790000477739,
+    "draft": "Yenileme sırasında korunacak taslak",
+    "editorCard": "M2\nEditör Atama\n33 editör\n1.797 projede editör var, 917 projede yok",
+    "status": "Son güncelleme: 21 Eyl 17:20\nVeriler 5 dakikada bir otomatik yenilenir."
+  },
+  "mobile": [
+    {
+      "draft": "Yenileme sırasında korunacak taslak",
+      "scrollWidth": 320,
+      "status": "Son güncelleme: 21 Eyl 17:12\nVeriler 5 dakikada bir otomatik yenilenir.",
+      "width": 320
+    },
+    {
+      "draft": "Yenileme sırasında korunacak taslak",
+      "scrollWidth": 390,
+      "status": "Son güncelleme: 21 Eyl 17:12\nVeriler 5 dakikada bir otomatik yenilenir.",
+      "width": 390
+    },
+    {
+      "draft": "Yenileme sırasında korunacak taslak",
+      "scrollWidth": 768,
+      "status": "Son güncelleme: 21 Eyl 17:12\nVeriler 5 dakikada bir otomatik yenilenir.",
+      "width": 768
+    },
+    {
+      "draft": "Yenileme sırasında korunacak taslak",
+      "scrollWidth": 1440,
+      "status": "Son güncelleme: 21 Eyl 17:12\nVeriler 5 dakikada bir otomatik yenilenir.",
+      "width": 1440
+    }
+  ],
+  "prefetchedEntry": {
+    "loading": false,
+    "main": "EDİTORYAL · EDİTORYAL SÜREÇ\nEditoryal masa\n\nBaşvurudan baskı onayına kadar sekiz modül. Rakamlar CRM'den ve editoryal masanın kendi kayıtlarından gelir; kaynağı olmayan bir sayı gösterilmez.\n\nSon güncelleme: 21 Eyl 17:20\nVeriler 5 dakikada bir otomatik yenilenir.\nYÜRÜRLÜKTE SÖZLEŞME\n9.016\n80 tanesi 60 günde bitiyor\n2026 KURUL KARARI\n99\n%80 kabul\nEDİTÖR\n33\n2024 ve sonrası projeler\nMASADAKİ ESER\n0\nHenüz eser dosyası yok\nZ\nZEKİ AI\nKİTABA SOR\n\nOkunmuş kitapların içini bilen asistanınız\n\nSohbet\nMerhaba, ben ZEKİ AI\n\nOku",
+    "status": "Son güncelleme: 21 Eyl 17:20\nVeriler 5 dakikada bir otomatik yenilenir."
+  },
+  "observation": "No navigation/reload between before and after; real CRM unassigned project count changed from 916 to 917; unsent draft unchanged. Server logs show browser data requests at 17:15:51 and 17:20:52, followed by cold-generation readiness poll at 17:21:02."
+}

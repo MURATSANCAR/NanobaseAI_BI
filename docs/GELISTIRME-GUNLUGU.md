@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+
+## 2026-09-21 — Editoryal ana sayfa ön yükleme ve beş dakikada veri yenileme
+
+- Kullanıcı ilk açılışın boş olmamasını ve sayfa yerine yalnız verilerin 5 dakikada yenilenmesini istedi. Altı paylaşılan bölüm sunucuda atomik/özel dosyalarda saklanır; servis zamanlayıcısı tek kilitle gerçek kaynağı okur. Hata veya kesilme son başarılı veriyi silmez. Kişisel eserler ortak dosyaya yazılmaz, her istekte mevcut yetki süzgeci kullanılır.
+- Oturum sonrası ekran kodu ve özet önceden yüklenir. Kullanıcıya göre ayrılmış sorgu, 300 saniyede arka planda yenilenir; sohbet taslağı/ekran yeniden bağlanmaz. Son güncelleme İstanbul saatiyle görünür. Henüz okunmamış veri sıfır sayılmaz. Eser değişiklikleri ana sayfayı da geçersiz kılar.
+- Kitap listesinin model yanıtını beklemesi kaldırıldı; ayrı güncel katalogdaki içerik kullanılabilirliği esas alınır. Kapak kaydı okuma kanıtı değildir; mevcut uygun kitap sayısı sıfır olduğunda gerçek boş liste döner, anlamsal kitap kabulü iddiası yok.
+- Sunucuda derlendi, test portalına kuruldu. İki gerçek servis yeniden başlatması sırasında kesilmiş yenilemenin beş dakika bekletmesi bulundu; tamamlanma işaretiyle yarım işi hemen tekrar alma düzeltildi. CRM'deki canlı artış (916→917 atanmamış proje) eski kopyayı güncel saymayan karşılaştırmada yakalandı.
+- Son yayında 32/32 gerçek API/CRM kontrolü PASS; hazır özet sunucuda 14,5 ms. Yeni sekmede ön yüklemeli giriş dolu; gerçek 301 saniyelik veri yoklamasında 916→917 değişimi ekrana geldi ve gönderilmemiş taslak korundu.
+- Yerel test/sentetik veri yok. Gerçek API + bağımsız CRM, oturumlu tarayıcı ve 320/390/768/1440 kontrollerinin kanıtları `docs/audits/editorial-home-2026-09-21/`; ayrıntılı kapsam `docs/analiz/editoryal-home-cache-2026-09-21.md`.
+
 ## 2026-09-21 — Finansal Denetim kalıcı hazır rapor ve arka planda yenileme
 
 - İki dakikalık bellek önbelleği yerine disk üzerinde son tamamlanan rapor işaretçisi eklendi. `/overview` hesaplama yapmaz; servis yeniden başlasa da kayıtlı sonucu verir. Başlangıç/saatlik yenileme ve kullanıcı düğmesi aynı dosya kilidiyle tek hesaplama çalıştırır. Başarılı tamamlanmada işaretçi atomik değiştirilir; önceki rapor ve notları arşivde kalır, hatada son başarılı rapor korunur.

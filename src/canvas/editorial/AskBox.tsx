@@ -182,7 +182,8 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
     queryKey: ['editorial', 'readableBooks'],
     queryFn: readableBooksApi.list,
     enabled: ENGINE_ENABLED,
-    refetchInterval: (query) => (query.state.data?.loading ? 15000 : false),
+    staleTime: 5 * 60_000,
+    refetchInterval: (query) => (query.state.data?.loading ? 15000 : 5 * 60_000),
   });
   const readable = books.data?.items ?? [];
   // Sohbet sırası: eski üstte, yeni altta.

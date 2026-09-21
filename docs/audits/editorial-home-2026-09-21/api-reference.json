@@ -1,0 +1,156 @@
+{
+  "environment": "nanobase-direct",
+  "api": "http://127.0.0.1:8795/api/v1/editorial/home",
+  "reference": "Independent read-only CRM SQL on 192.168.0.28 / Timas_MSCRM plus full original API payload equivalence",
+  "latencyMs": 14.5,
+  "revision": "c29e4e8f41c814cca9f463d1c173d1d05e4f43ced2fe62a7d0878c72f8435477",
+  "checks": [
+    {
+      "name": "all-six-persisted-parts-ready",
+      "status": "PASS"
+    },
+    {
+      "name": "five-minute-refresh-contract",
+      "status": "PASS"
+    },
+    {
+      "name": "warm-api-under-two-seconds",
+      "status": "PASS"
+    },
+    {
+      "name": "snapshot-revision",
+      "status": "PASS"
+    },
+    {
+      "name": "complete-api-payload-contracts",
+      "status": "PASS"
+    },
+    {
+      "name": "complete-api-payload-board",
+      "status": "PASS"
+    },
+    {
+      "name": "complete-api-payload-editors",
+      "status": "PASS"
+    },
+    {
+      "name": "complete-api-payload-roles",
+      "status": "PASS"
+    },
+    {
+      "name": "complete-api-payload-expiring",
+      "status": "PASS"
+    },
+    {
+      "name": "scoped-desk-equals-existing-api",
+      "status": "PASS"
+    },
+    {
+      "name": "no-credentials-rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "caller-without-user-rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-contract-total",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-contract-active",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-contract-renewal",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-contract-expiring",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-contract-royalty",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-contract-statuses",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-contract-kinds",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-board-full-years",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-board-full-values",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-roles-all-values",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-editor-all-identities",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-editor-all-values",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-unassigned",
+      "status": "PASS"
+    },
+    {
+      "name": "editor-results-not-truncated",
+      "status": "PASS"
+    },
+    {
+      "name": "expiring-total-and-page",
+      "status": "PASS"
+    },
+    {
+      "name": "independent-expiring-ordered-values",
+      "status": "PASS"
+    },
+    {
+      "name": "readable-books-match-authoritative-catalogue",
+      "status": "PASS"
+    },
+    {
+      "name": "readable-books-route-matches-snapshot",
+      "status": "PASS"
+    },
+    {
+      "name": "repeat-read-retains-data",
+      "status": "PASS"
+    },
+    {
+      "name": "no-user-desk-in-shared-cache",
+      "status": "PASS"
+    }
+  ],
+  "passed": 32,
+  "failed": 0,
+  "updatedAt": {
+    "readableBooks": 1790000452.566147,
+    "contracts": 1790000457.3562918,
+    "board": 1790000458.18143,
+    "editors": 1790000459.1724858,
+    "roles": 1790000459.8561163,
+    "expiring": 1790000462.1005723
+  },
+  "sourceHashes": {
+    "backend/semantic_bridge/app.py": "4d0ac1bbd47fb8a9b68139709afbdf69a7b82b673c07d773b0dde1b116c06872",
+    "backend/semantic_bridge/editorial_home.py": "97c60158dc2b0fa1d2b5ba233318e477360379d41b47abd4b21be7b9f411ba93",
+    "src/canvas/editorial/EditorialHome.tsx": "70303fb7e60ed22e69b04b7fe2925074ed03fc8e7540e4d102ce163b421d2dc7",
+    "src/canvas/editorial/homeQuery.ts": "0bedeeb76ec8c9471137366de94edac097f54226c81494546a5c35a67d5ce076",
+    "src/canvas/TimasSession.tsx": "8dd479af606d580e86ae559f057dbdd7e453acdd99f1a1094715b9acff72eae5",
+    "src/canvas/engine.ts": "f6b1dac78605660a7a20fffda10c742c13b09c36fcb7c55c6ac5406048dfe2d8",
+    "src/canvas/editorial/AskBox.tsx": "d0dd3e59392c598ebd41909c885371970bf18847db55d06a295c2d97e62fa768"
+  }
+}
