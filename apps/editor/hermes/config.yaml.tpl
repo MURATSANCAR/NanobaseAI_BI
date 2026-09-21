@@ -18,62 +18,24 @@ auxiliary:
   background_review: {provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
   memory_query_rewrite: {provider: custom, model: book-director, base_url: http://editor-gateway:8000/v1, api_key: "${EDITOR_GATEWAY_KEY}"}
 
-# Sub-agents (Critic Agent, Editor Review Agent, parallel sub-analyses).
-delegation:
-  model: book-director
-  base_url: http://editor-gateway:8000/v1
-  api_key: "${EDITOR_GATEWAY_KEY}"
-  max_concurrent_children: 6
-  max_spawn_depth: 2
-  inherit_mcp_toolsets: true
-  subagent_auto_approve: false
-
+# Conversational clients receive only bounded current-revision read tools.
+# Analysis producers remain in Temporal and the operator MCP endpoints.
 mcp_servers:
-  book_document_mcp:
-    url: http://editor-mcp:8000/document/mcp
+  book_chat_mcp:
+    url: http://editor-mcp:8000/chat/mcp
     headers: {Authorization: "Bearer ${EDITOR_MCP_KEY}"}
-    timeout: 1800
-    connect_timeout: 60
-    trust: full
-  book_vision_mcp:
-    url: http://editor-mcp:8000/vision/mcp
-    headers: {Authorization: "Bearer ${EDITOR_MCP_KEY}"}
-    timeout: 3600
-    connect_timeout: 60
-    trust: full
-  book_knowledge_mcp:
-    url: http://editor-mcp:8000/knowledge/mcp
-    headers: {Authorization: "Bearer ${EDITOR_MCP_KEY}"}
-    timeout: 3600
-    connect_timeout: 60
-    trust: full
-  book_retrieval_mcp:
-    url: http://editor-mcp:8000/retrieval/mcp
-    headers: {Authorization: "Bearer ${EDITOR_MCP_KEY}"}
-    timeout: 1800
-    connect_timeout: 60
-    trust: full
-  book_quality_mcp:
-    url: http://editor-mcp:8000/quality/mcp
-    headers: {Authorization: "Bearer ${EDITOR_MCP_KEY}"}
-    timeout: 1800
-    connect_timeout: 60
-    trust: full
-  book_jobs_mcp:
-    url: http://editor-mcp:8000/jobs/mcp
-    headers: {Authorization: "Bearer ${EDITOR_MCP_KEY}"}
-    timeout: 600
-    connect_timeout: 60
+    timeout: 300
+    connect_timeout: 30
     trust: full
 
-# No terminal, no file system, no code execution, no web: only MCP tools
-# + memory + skills + delegation + cron + todo/clarify (NIHAI-KARAR.md §4).
+# API has no producer, delegation, cron, memory or filesystem tools.
 platform_toolsets:
-  cli: [memory, skills, delegation, cronjob, todo, clarify]
-  api_server: [memory, skills, delegation, cronjob, todo]
-  cron: [memory, skills, delegation, todo]
+  cli: [skills, todo, clarify]
+  api_server: [skills, todo]
+  cron: []
 agent:
-  disabled_toolsets: [terminal, file, code_execution, web, search, browser, vision, image_gen,
+  max_turns: 16
+  disabled_toolsets: [delegation, cronjob, memory, terminal, file, code_execution, web, search, browser, vision, image_gen,
                       video_gen, video, tts, computer_use, homeassistant, connections, kanban,
                       x_search, session_search, spotify, discord, discord_admin, yuanbao]
 
@@ -81,8 +43,8 @@ agent:
 # profiles, project settings, approved way of working. Book facts: never
 # (SOUL.md).
 memory:
-  memory_enabled: true
-  user_profile_enabled: true
+  memory_enabled: false
+  user_profile_enabled: false
   write_approval: false
 
 approvals:
@@ -99,7 +61,7 @@ curator:
 
 # Only the book skills (hermes/skills/book). The image seeds one builtin skill; keep it off.
 skills:
-  disabled: [hermes-agent]
+  disabled: [hermes-agent, evidence_quality_check, publisher_decision_support, universe_canon_analysis, book_recommendation, book_question_answering, book_summary, event_timeline, report_generation, visual_character_continuity, character_analysis, age_group_assessment, visual_scene_analysis, book_intake, book_full_analysis, editor_review_queue, emotion_analysis]
 
 telemetry:
   shared_metrics: {enabled: false, send: false}

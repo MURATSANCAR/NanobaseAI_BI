@@ -30,7 +30,7 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.routing import Mount, Route
 
-from . import catalog, db, document, jobs, knowledge, quality, retrieval, vision
+from . import catalog, chat_reads, db, document, jobs, knowledge, quality, retrieval, vision
 
 KEY = os.environ.get("EDITOR_MCP_KEY", "")
 Gen = Annotated[str, Field(description="generation_id (get_job_status ya da latest_generation verir)")]
@@ -355,8 +355,65 @@ async def get_report(generation_id: Gen, kind: str = "ANALYSIS") -> dict | None:
     return await _t(jobs.get_report, generation_id, kind)
 
 
+chat_mcp = MCPServer("book_chat_mcp", instructions=(
+    "Salt okunur kitap sohbeti. Önce list_books/get_book_status. Sonra güncel neslin "
+    "sayfalı bölümlerini ve gerçek kaynak sayfalarını oku. next_offset varsa kapsam eksiktir. "
+    "Taslak analitik kabul değildir. Bu araçlar analiz veya model işi başlatmaz."))
+Offset = Annotated[int, Field(ge=0)]
+Limit = Annotated[int, Field(ge=1, le=20)]
+
+
+@chat_mcp.tool(name="list_books")
+async def chat_books(offset: Offset = 0, limit: Limit = 8) -> dict:
+    """Kitaplar, içerik sürümleri ve en yeni analiz kimliği; sayfalı."""
+    return await _t(chat_reads.books, offset, limit)
+
+
+@chat_mcp.tool()
+async def get_book_status(book_id: str) -> dict:
+    """En yeni nesil ve güncel çıktı/iş durumu. FAILED işten kurtarılmış çıktı bulunabilir."""
+    return await _t(chat_reads.status, book_id)
+
+
+@chat_mcp.tool()
+async def read_book_section(generation_id: Gen, section: str = "summary",
+                            offset: Offset = 0, limit: Limit = 8) -> dict:
+    """Güncel taslak bölümü: summary, characters, events, emotions, claims, reviews,
+    contradictions, blockers. next_offset ile devam et; sayfa atıflarını koru."""
+    return await _t(chat_reads.section, generation_id, section, offset, limit)
+
+
+@chat_mcp.tool()
+async def read_source_page(generation_id: Gen, page_no: Page,
+                           offset: Offset = 0, limit: Limit = 8) -> dict:
+    """Orijinal kaynak alıntıları; değiştirilmemiş metin, sayfa/paragraf ve hash. Sayfalı."""
+    return await _t(chat_reads.source_page, generation_id, page_no, offset, limit)
+
+
+@chat_mcp.tool()
+async def find_book_claims(generation_id: Gen, query: str,
+                            offset: Offset = 0, limit: Limit = 8) -> dict:
+    """Doğrulanmış iddialarda sözcük/isim ara. Tam normalize eşleşme; semantik arama değildir.
+    Boş sonuç yokluk kanıtı sayılmaz; başka sözcük veya kaynak sayfası ile kontrol et."""
+    return await _t(chat_reads.find, generation_id, query, offset, limit)
+
+
+@chat_mcp.tool(name="search_book_evidence")
+async def chat_search(generation_id: Gen, query: str,
+                       k: Annotated[int, Field(ge=1, le=8)] = 5) -> dict:
+    """Güncel indekste anlamsal kanıt araması. Sayfa atfını koru; düşük puanı kesin bilgi sayma."""
+    from . import outputs
+    selected = await _t(outputs.current, generation_id, 'search_index')
+    if not selected['available']:
+        return {k:v for k,v in selected.items() if k != 'artifact'}
+    rows = await retrieval.search_book_evidence(generation_id, query, k)
+    return {**{k:v for k,v in selected.items() if k != 'artifact'},
+            'retrieval_mode': 'SEMANTIC_RERANKED', **chat_reads.page(rows, 0, k)}
+
+
 SERVERS = {"document": document_mcp, "vision": vision_mcp, "knowledge": knowledge_mcp,
-           "retrieval": retrieval_mcp, "quality": quality_mcp, "jobs": jobs_mcp}
+           "retrieval": retrieval_mcp, "quality": quality_mcp, "jobs": jobs_mcp,
+           "chat": chat_mcp}
 
 
 class BearerAuth(BaseHTTPMiddleware):

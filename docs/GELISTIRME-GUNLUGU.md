@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor üretim hazırlığı: sınırlı sohbet okuma katmanı
+
+- Kullanıcının onay beklemeden üretim hazırlığı talebiyle salt okunur `/chat/mcp` eklendi: sayfalı güncel bölüm/kaynak/iddia okumaları, anlamsal arama ve gerçek iş durumu. Eski büyük rapor/üretici araçları sohbet profilinden ayrıldı.
+- Hermes sohbeti 16 turla sınırlı; alt ajan/cron/bellek yazımı ve erişilemeyen dosya okuma talimatları kaldırıldı. Eski analiz skill dosyaları operatör kullanımı için korunuyor, sohbet profilinde kapalı.
+- Gerçek DB/MCP ve çok oturumlu sohbet kabulü sürüyor; henüz üretim kabulü değildir.
+
 ## 2026-09-21 — Editor kimlik kabulü ve başarısız özetten çıktı kurtarma
 
 - Yeni gerçek nesilde 37 PDF/API kimlik-kapsam kontrolü ve 23. sayfanın iki bağımsız görsel kimlik karşılaştırması geçti. 36/59 görsel anma çözüldü; 23 belirsiz. Baba/yavru ayrı hayvan kimliği.
