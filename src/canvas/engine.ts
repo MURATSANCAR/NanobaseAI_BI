@@ -1244,10 +1244,25 @@ export const editorialSearchApi = {
 
 // ------------------------------------------------ kitabın içeriğine soru (editör motoru, Hermes)
 
+export type BookCard = {
+  id: string;
+  title: string;
+  authors: string[];
+  summary: Array<{ text: string; pages: number[] }>;
+  cover: { source: string; page: number | null } | null;
+  contentAvailable: boolean;
+  generationId: string;
+  revision: number | null;
+  semanticAcceptance: boolean;
+};
+
 export type BookQuestion = {
   id: string;
   bookKey: string;
   bookTitle: string | null;
+  cards?: BookCard[];
+  cardError?: string | null;
+  cardMatch?: string | null;
   question: string;
   status: 'bekliyor' | 'calisiyor' | 'bitti' | 'hata';
   answer: string | null;

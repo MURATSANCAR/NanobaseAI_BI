@@ -36,6 +36,7 @@ QUESTIONS = sa.Table(
     sa.Column("status", sa.String(20), nullable=False, default="bekliyor"),  # bekliyor | calisiyor | bitti | hata
     sa.Column("answer", sa.Text),
     sa.Column("not_found", sa.Boolean),
+    sa.Column("card_selection", sa.JSON),
     sa.Column("error", sa.String(600)),
     sa.Column("elapsed_ms", sa.Integer),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -219,7 +220,7 @@ def _add_missing_columns(engine: sa.engine.Engine) -> None:
         have = {c["name"] for c in sa.inspect(engine).get_columns(QUESTIONS.name)}
     except Exception:  # noqa: BLE001 — tablo henüz yoksa create_all zaten kurdu
         return
-    for col, ddl in (("not_found", "BOOLEAN"),):
+    for col, ddl in (("not_found", "BOOLEAN"), ("card_selection", "JSON")):
         if col not in have:
             try:
                 with engine.begin() as conn:
@@ -241,8 +242,11 @@ def _iso(v: Optional[datetime]) -> Optional[str]:
 
 
 def _row(r: Any) -> dict[str, Any]:
+    from . import editorial_cards
+    cards, card_error = editorial_cards.resolve(r.card_selection)
     return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "question": r.question,
             "status": r.status, "answer": scrub(r.answer), "notFound": bool(r.not_found),
+            "cards": cards, "cardError": card_error, "cardMatch": (r.card_selection or {}).get("match"),
             "error": (r.error if r.error and not _INTERNAL.search(r.error) and not re.search(r"\b\d{3}:", r.error) else (UNAVAILABLE if r.error else None)), "elapsedMs": r.elapsed_ms,
             "username": r.username, "createdAt": _iso(r.created_at), "finishedAt": _iso(r.finished_at)}
 
@@ -348,6 +352,15 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
                     status="bitti", answer=reply, not_found=False, error=None,
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
+            return
+        from . import editorial_cards
+        selection = editorial_cards.card_answer(q, book_title, chat)
+        if selection is not None:
+            done = _now()
+            with engine.begin() as conn:
+                conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
+                    status="bitti", answer=selection['answer'], card_selection=selection, not_found=False,
+                    elapsed_ms=int((done-started).total_seconds()*1000), finished_at=done))
             return
         # Motor tek modelle çalışır; sıraya girilir. Bekleyen soru «bekliyor» kalır, koşan «çalışıyor».
         with _gate:

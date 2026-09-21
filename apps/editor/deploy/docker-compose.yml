@@ -100,6 +100,21 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
+  cards:
+    <<: *py
+    image: ${EDITOR_CARDS_IMAGE:-editor-cards:1}
+    env_file:
+      - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
+      - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
+    container_name: editor-cards
+    command: ["uvicorn", "editor.card_api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    volumes:
+      - ${EDITOR_ROOT:-/data/editor}/storage:/data/editor/storage:ro
+    ports:
+      - "127.0.0.1:19141:8000"
+    depends_on:
+      postgres: {condition: service_healthy}
+
   gateway:
     <<: *py
     profiles: [analysis]

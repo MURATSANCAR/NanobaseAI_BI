@@ -4,6 +4,7 @@ import { ArrowUp, BookOpen, Loader2, RotateCcw, Search } from 'lucide-react';
 import { ENGINE_ENABLED, bookAskApi, readableBooksApi, type BookQuestion } from '../engine';
 import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
+import BookCard from './BookCard';
 
 /** ZEKİ AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
  *  Soru sunucuda kayıtlı kalır; ekranda yalnız bu açılışta gönderilen sorular gösterilir.
@@ -110,7 +111,7 @@ function AiBubble({ children, meta }: { children: ReactNode; meta?: string }) {
   );
 }
 
-function Turn({ q, onRetry }: { q: BookQuestion; onRetry: (text: string) => void }) {
+function Turn({ q, onRetry, onPickBook }: { q: BookQuestion; onRetry: (text: string) => void; onPickBook: (title: string) => void }) {
   const live = q.status === 'bekliyor' || q.status === 'calisiyor';
   const answer = q.answer ? scrub(q.answer) : null;
   return (
@@ -135,6 +136,8 @@ function Turn({ q, onRetry }: { q: BookQuestion; onRetry: (text: string) => void
       {answer && !q.notFound && (
         <AiBubble meta={q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn'de cevapladı` : undefined}>
           <p className="whitespace-pre-line break-words">{withPages(answer)}</p>
+          {q.cards?.map((card) => <BookCard key={card.id} card={card} onAsk={() => onPickBook(card.title)} />)}
+          {q.cardError && <p role="status" className="mt-2 text-sm text-amber-800">{q.cardError}</p>}
         </AiBubble>
       )}
       {!live && !answer && (
@@ -264,7 +267,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
             </div>
           )}
           {turns.map((q) => (
-            <Turn key={q.id} q={q} onRetry={(t) => send(t)} />
+            <Turn key={q.id} q={q} onRetry={(t) => send(t)} onPickBook={(title) => { setPicked(title); setText(`«${title}» kitabı hakkında `); input.current?.focus(); }} />
           ))}
           {questions.some((query) => query.isPending) && <p role="status" className="text-sm text-canvas-muted">Soru kaydı alınıyor…</p>}
           {pending && (

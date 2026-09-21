@@ -3693,6 +3693,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _books(request)
         return _books_call(books_mod.readable_books, fresh=fresh)
 
+    @app.get("/api/v1/editorial/ask/covers/{book_id}")
+    def editorial_book_cover(book_id: str, request: Request):
+        _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            data, mime = editorial_cards.cover(book_id)
+            return Response(content=data, media_type=mime, headers={"Cache-Control":"private, no-cache"})
+        except Exception:
+            raise HTTPException(404, "Kapak görseli bulunamadı.") from None
+
     @app.get("/api/v1/editorial/ask/{qid}")
     def editorial_ask_one(qid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, is_admin = _books(request)

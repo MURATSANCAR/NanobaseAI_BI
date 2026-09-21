@@ -1,0 +1,19 @@
+[Unit]
+Description=Read-only Editor cards API tunnel to test host
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=gpuubuntu
+EnvironmentFile=/etc/editor-gpu-tunnel.env
+ExecStart=/usr/bin/ssh -N -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o UserKnownHostsFile=${TUNNEL_KNOWN_HOSTS} -i ${TUNNEL_KEY_FILE} -R 127.0.0.1:18889:127.0.0.1:19141 ${TUNNEL_DESTINATION}
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target
