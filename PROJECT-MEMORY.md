@@ -149,3 +149,5 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 
 
 - 18 Eylül03:49UTC R4 ana koşu başladı: iş28aad122-3c1d-49ee-a182-f00ac449312c, nesil08ca6877-6e30-4bb3-b1fa-767f048248e4. Monitor3629239/qualifier3629240; ayrı kabulAPI18828/metrik19108/subnet76–77. Yayımlanmış21/22/28 gerçekAPI/PG bileşen kontrolü geçti. YönetimVPN kapalı; doğrudan model tüneli çalıştığından kitap ilerliyor. GPUsoncoldboot DOĞRULANAMADI, tamkitap/kapsam/kimlik kabulü açık.
+
+**Finansal Denetim belge görünürlüğü (2026-09-21):** İç analiz PDF’si ürün ekranında gösterilmez. Kaynak sekmesi, sayfa/not referansları, metin önizlemesi ve katalog indirme kaldırıldı. Frontend `/catalog` çağırmaz; kontrol listesi hesaplama raporunun `coverage.items` alanından beslenir. Geliştirme kaynağı depoda korunur; Logo dayanakları, hesaplama açıklamaları ve bulgu SQL’i ürün ekranında kalır.

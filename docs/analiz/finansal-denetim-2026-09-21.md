@@ -281,3 +281,12 @@ Kanıtlar: `accounting-language.json`, `sql-provenance.json`; denetim scriptleri
 `scripts/server/financial-audit-{sql-acceptance.py,language-acceptance.cjs}`.
 
 Temel kabul son sürümde tekrar 144/144 PASS; toplam 289 teknik kontrol. SQL açık 320/390/768/1440 görünümleri taşmasız. Kopyalama başarı bildirimi görüldü; tarayıcı sanal panosu gerçek sistem panosunu doğrulamadığından byte düzeyinde pano kabulü yapılmadı.
+
+## İç geliştirme belgesinin ürün ekranından çıkarılması
+
+Kullanıcının son kararıyla analiz PDF’si yalnız geliştirme kaynağıdır. Kaynak sekmesi,
+sayfa/metin görünümü, kaynak notu/sayfa etiketleri, belge tartışmaları ve katalog
+indirme ürün ekranından kaldırıldı. Frontend tam `/catalog` cevabını istemez;
+649 inceleme başlığı raporun `coverage.items` sonuçlarından gelir. Kullanıcıya
+hesaplama gerekçesi, gerekli belge, gerçek Logo verisi ve bulgu SQL’i gösterilir.
+Bu değişiklik hesaplama kurallarını veya kaynak PDF dosyasını değiştirmez.

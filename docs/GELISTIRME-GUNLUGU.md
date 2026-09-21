@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — İç analiz belgesi ürün ekranından kaldırıldı
+
+- Kullanıcı, kaynak PDF’nin geliştirme analizi olduğunu ve ekranda gösterilmemesini istedi. Kaynak belge sekmesi, sayfa açma, kaynak metni, sayfa/not etiketleri ve katalog indirme kaldırıldı.
+- Frontend artık tam kaynak katalog API’sini çağırmaz; inceleme listesi gerçek raporun `coverage.items` sonuçlarından oluşturulur. Hesaplamalar, Logo dayanak belgeleri ve bulguların SQL bölümleri korunur.
+
 ## 2026-09-21 — Finansal Denetim: muhasebe dili ve bulgu yanında SQL
 
 - Kullanıcının isteğiyle “yazılımcı için not”, “grid”, “ekrana yazdıralım” gibi yönlendirmeler ekran sunumundan çıkarıldı; 18 temel/ek kontrolün açıklaması muhasebe diliyle yazıldı. Kaynak görünümü sadeleştirilmiş olarak etiketli; özgün katalog/PDF hash'i ve arşiv değiştirilmez.

@@ -2259,8 +2259,20 @@ class SemanticResolver:
             # Turkish forms a noun from a verb with -ış/-im/-ma ("sat" → "satış"): that nominalisation is
             # the term the catalog is keyed on, so it wins over an unrelated word sharing the prefix.
             nominal = [m for m in matches if m[0].split()[0] in {root + suf for suf in ("", "is", "im", "um", "ma", "me", "gi", "ki")}]
-            if nominal:
-                matches = nominal
+            if not nominal:
+                # A key that only *begins with the root's letters* is not the verb's noun. Bridged, it made a
+                # magnet of every measure whose first word happens to share a prefix with some verb: the
+                # plural noun "hesaplar" read as the aorist of "hesapla-" reached "hesaplanan KDV", "alınmış"
+                # reached "alıcılar hesabı", "ödediğimiz" reached "ödenecek vergi". Only the verb's own
+                # nominalisation (sat → satış, öde → ödeme) names its measure in the catalog.
+                continue
+            matches = nominal
+            bare = [m for m in matches if len(m[0].split()) == 1]
+            if bare:
+                # "sattık" is the sale itself ("satış"), not every measure whose name begins with the same
+                # noun ("satış iskontoları", "satış iadesi"): a compound names a narrower measure, and its
+                # presence must not turn the verb's own measure into an ambiguity.
+                matches = bare
             if len(matches) > 1:
                 # several keys may be names of the same measure ("satış" and "satış tutarı"); that is not
                 # ambiguity. Different measures are, and the catalog says which is which: a concept that
