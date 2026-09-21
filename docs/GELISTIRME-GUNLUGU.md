@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor: gerçek yeni nesilde çıktı kabulü ve Critic geri bildirimi
+
+- Kullanıcı VPN'i açtıktan sonra tek gerçek kitap için ayrı `editor-output-acceptance-20260921` kuyruğu açıldı. Genel worker/MCP/Hermes kapalı; yedek `/data/editor/backups/20260921-live-outputs/before.dump`.
+- Dünyanın En Korkak Hayvanı, nesil `3a987c80-95ba-48ce-a08e-820425cf438d`: 29 derin sayfa, görsel kimlik/süreklilik, Critic ve aktör kontrolü özetten önce çalıştı. 2215 revizyonu sabitlendi, regresyon geçti; analitik kabul eksikleri sürüyor.
+- Gerçek özet filin merakını Yavru Vombat'a aktardı; çıktı Critic'i reddetti, hiçbir hatalı çıktı yayımlanmadı. Ancak üretim ilk retle durdu. `validated-outputs-v2` reddedilen cümleleri/yanlış referansları geri bildirimle en fazla üç taslakta yeniden üretir; her taslak aynı Critic kapısından geçer. Üç başarısızlıkta yayın kapalı kalır.
+- `deploy/verify_live_outputs.py`: sunucuda gerçek DB/API tam çıktı karşılaştırması, Temporal sırası, tarihsel kayıt hashleri ve Qdrant tam payload denetimi. Yerel test yok. Düzeltilmiş kodun canlı kabulü ve düzeltme/çökme döngüsü henüz sürüyor; tamamlandı sayılmaz.
+
 ## 2026-09-21 — Finansal Denetim: kapsam, dayanaklar ve gerçek doğruluk kabulü
 
 - Kaynak PDF'nin bütün sayfaları korundu; ayrıştırma hataları düzeltildi. 649 çalışma kaydı: 41 analiz, 127 kontrol notu, 212 inceleme maddesi ve 269 bölüm paketi. Paket/alt madde örtüşmesi açık; tam atomik çıkarım ve bütün mevzuat kabulü tamamlanmış sayılmıyor.
