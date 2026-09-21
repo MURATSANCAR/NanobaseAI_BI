@@ -1884,6 +1884,13 @@ class SemanticResolver:
         if len(homes) != 1:
             return
         home = next(iter(homes))
+        # The word the home measure was read from cannot, in the same question, also name a column on
+        # the other database: those are two readings of the same word, and the question settled it by
+        # asking for the measure. Without this the certified count of invoices and a CRM phrase built
+        # on the word "fatura" both survived, the question read as spanning two databases, and the
+        # source it is about was no longer decided.
+        counted_at = {(s.explain or {}).get("counted_at") for s in sq.slots
+                      if s.semantic_type == SemanticType.METRIC and (s.explain or {}).get("counted_at") is not None}
         others = [s for s in list(sq.slots) + list(sq.group_by)
                   if s.mapping is not None and s.mapping.entity and s.semantic_type != SemanticType.DEFAULT_FILTER
                   and self._source_of(s.mapping.entity) != home]
@@ -1901,7 +1908,8 @@ class SemanticResolver:
             if not span or span[1] - span[0] > 2:
                 continue                                  # a certified phrase of three or more words is meant
             if span[1] - span[0] >= 2 and lone.status == "CERTIFIED" \
-                    and lone.semantic_type in (SemanticType.METRIC, SemanticType.COLUMN):
+                    and lone.semantic_type in (SemanticType.METRIC, SemanticType.COLUMN) \
+                    and not any(span[0] <= c < span[1] for c in counted_at):
                 # A deliberate two-word certified measure or column names its own subject: "telif
                 # yüzdemiz" is exactly what "baskı adedi arttıkça … ne kadar yükseliyor" asks about,
                 # certified on the CRM royalty table. Handing it to the other side dropped the word
@@ -1918,6 +1926,8 @@ class SemanticResolver:
             if lone in sq.group_by:
                 sq.group_by.remove(lone)
             word = fold(qf.tokens[span[0]]) if span[0] < len(qf.tokens) else fold(lone.term)
+            if span[0] in counted_at:
+                word = ""                                 # the measure already reads this word; it is not missing
             if word and word not in sq.unresolved:
                 sq.unresolved.append(word)
             where = f"{lone.mapping.entity}.{lone.mapping.column}" if lone.mapping.column else lone.mapping.entity
@@ -2259,8 +2269,69 @@ class SemanticResolver:
                     out.add(k)
         return out
 
+    #: how the catalog spells "how many of these" when somebody writes a count measure down. The
+    #: index keys are stems, and this suffix does not stem to one form ("sayısı" keeps its own
+    #: shape, "adedi" folds to "adet"), so every written form is tried.
+    _COUNT_NOUNS = ("sayi", "sayisi", "sayısı", "say", "adet", "adedi", "aded")
+
+    def _certified_count(self, qf: Any, index: dict) -> Optional[ResolvedSlot]:
+        """"kaç fatura kesildi" asks for the measure somebody already certified as "fatura sayısı".
+
+        The count word placed *before* the thing counted names no table of its own, so the count was
+        composed over whatever table the question's other words happened to reach. On a deployment
+        with two databases that is a real hazard: "fatura" occurs in CRM column names (a shipment's
+        invoice number, a plan's "invoice entered" checkbox), the phrase around it is certified
+        there, and a question about invoices was counted — and sourced — on the CRM, which holds no
+        invoices. Counting is the one case where the question names its measure without naming it:
+        "kaç X" is "X sayısı". Where the catalog certifies a COUNT measure for exactly that noun,
+        that measure is the reading, and it carries its own table and therefore its own database.
+
+        Two things are required of the measure, and both rule out a near-miss this catalog holds.
+        It must be a COUNT: a certified "<noun> adedi" is often a quantity ("basılan adet" is
+        SUM(AMOUNT)), and answering "how many" with a summed quantity is a different question. And
+        it must count that table's own key: "cari sayısı" is certified here as
+        COUNT(DISTINCT INVOICE.CLIENTREF) — how many customers we invoiced, which is not the answer
+        to "how many customer accounts do we have". A count over a reference column is a figure
+        derived from another table's rows, so "kaç X" is left as it was."""
+        for k, tok in enumerate(qf.tokens):
+            if not _COUNT_CUE.fullmatch(fold(tok)):
+                continue
+            for j in range(k + 1, min(k + 3, len(qf.tokens))):
+                nxt = qf.tokens[j]
+                if not is_domain_candidate(nxt) or _COUNT_CUE.fullmatch(fold(nxt)):
+                    continue
+                for word in self._COUNT_NOUNS:
+                    for concept, maps in index.get(f"{stem(nxt)} {word}", ()) or ():
+                        if concept.semantic_type != SemanticType.METRIC or concept.status != "CERTIFIED":
+                            continue
+                        m = next((m for m in maps if self._counts_own_key(m)), None)
+                        if m is None:
+                            continue
+                        return ResolvedSlot(
+                            term=concept.term, semantic_type=SemanticType.METRIC, status="CERTIFIED",
+                            concept_id=concept.id, mapping=m, confidence=0.9,
+                            explain={"why": f"'{tok} {nxt}' bir sayım soruyor; katalogda '{concept.term}' "
+                                            f"sertifikalı sayım ölçüsü olarak tanımlı → o ölçü okundu",
+                                     "source": "certified_count", "counted_at": j},
+                        )
+                break                                  # the first thing named after "kaç" is what is counted
+        return None
+
+    def _counts_own_key(self, m: Mapping) -> bool:
+        """Does this formula count the rows of its own table — COUNT of that table's key — rather
+        than the distinct values of a column pointing at another one?"""
+        hit = re.fullmatch(r"\s*COUNT\s*\(\s*(?:DISTINCT\s+)?([A-Za-z_][\w]*)\.([A-Za-z_][\w]*)\s*\)\s*",
+                           m.formula or "", re.I)
+        prof = self.by_entity.get(m.entity or "")
+        if hit is None or prof is None or hit.group(1).upper() != (m.entity or "").upper():
+            return False
+        return any(c.is_primary_key and c.name.upper() == hit.group(2).upper() for c in prof.columns)
+
     def _count_metric(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int]) -> Optional[ResolvedSlot]:
         index = self.store.certified_index(self.tenant_id, self.datasource_id)
+        certified = self._certified_count(qf, index)
+        if certified is not None:
+            return certified
         entity = None
         # "bekleyen sipariş adedi": the thing counted is the resolved term the count word follows.
         count_key = None

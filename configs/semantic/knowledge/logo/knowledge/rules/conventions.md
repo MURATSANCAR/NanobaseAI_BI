@@ -24,6 +24,12 @@ Kolon/enum/varsayılan filtre boşluklarını kapatmak için yazılmıştır; `l
 - Oran/pay sözleşmesi: `*_orani` 0–1 kesir; `*_yuzde` ya da soruda "yüzde" geçiyorsa 0–100. Soru "yüzde" demiyorsa kesir döndür ve kolonu `_orani` diye adlandır.
 - Ay kovası: `DATEFROMPARTS(YEAR("DATE_"), MONTH("DATE_"), 1)` ve kolon adı `ay`; ay adı gerekiyorsa uygulama tarafı çevirir.
 
+## System of record
+- Gerçekleşmiş finansal olayın kayıt sistemi Logo ERP'dir: kesilen fatura, satılan/sevk edilen mal, yapılan tahsilat/ödeme, çek-senet hareketi, cari borç-alacak. Bu olayların **sayısı, tutarı ve tarihi** Logo tablolarından okunur (`INVOICE`, `STLINE`, `ORFICHE`, `CLFLINE`, `PAYTRANS`).
+- CRM (TIMAS_MSCRM) plan, teklif, süreç ve ilişki tarafıdır: hedef, sözleşme, reklam planı, etkinlik, sevkiyat planı. CRM'de aynı adı taşıyan alanlar çoğunlukla **işaret**tir — bir onay kutusu (`new_faturasigirildi`: fatura girildi mi), başka sistemin belge numarasının kopyası (`NEW_SEVKIYATBASE.NEW_FATURANUMARASI`), ya da bir plan alanı. Bir bayrak ya da numara kopyası olayın kendisi değildir; onunla olay sayılmaz, toplanmaz, tarihlendirilmez.
+- Buradan çıkan seçim kuralı: soru gerçekleşmiş bir finansal olayı ölçüyorsa ("kaç fatura kesildi", "ne kadar tahsilat yapıldı", "ne kadar mal sevk edildi"), kaynak Logo'dur — CRM'de o kelimeyi içeren bir kolon bulunması kaynağı CRM'e çevirmez. Soru planı/süreci ölçüyorsa ("kaç sözleşme imzalandı diye plana girilmiş", "hedef ne", "kaç teklif açık") kaynak CRM'dir.
+- İkisi birlikte soruluyorsa (plana göre gerçekleşen) iki kaynak ayrı ayrı okunur ve ölçülmüş bir bağ üzerinden eşleştirilir; CRM'deki numara kopyası tek başına eşleştirme anahtarı değildir (bkz. External identifiers).
+
 ## External identifiers
 - `LOGICALREF` kaynak anlık görüntüsü içindeki dahili anahtardır. Başka yedekte aynı numaranın bulunması tek başına aynı kaydı kanıtlamaz. Kaynaklar arası varlık eşleştirmesinde doğrulanmış iş anahtarları ve ilişkiler kullanılmalıdır. Bu teknik ayrım ayrı şirketler olduğu anlamına gelmez.
 - `*REF` kolonlarında (SALESMANREF, PROJECTREF, CLIENTREF, STOCKREF…) boş değer `0`'dır, NULL değil; `LEFT JOIN … ON x.REF = y.LOGICALREF` 0 için eşleşmez, saymak için `REF <> 0` kullan.
