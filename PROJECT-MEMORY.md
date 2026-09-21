@@ -6,6 +6,8 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 
 ## Mimari (üstten alta)
 
+**Finansal Denetim (2026-09-21, ilk kapsam):** Finans & Risk → `/finansal-denetim`, `src/canvas/financial-audit/`, `backend/semantic_bridge/financial_audit.py` (`/api/v1/financial-audit/overview`, `/lines`). Test sunucusunda gerçek Logo 2026 yedeğiyle 6 kontrol, 18 oran tanımı; 12 oran hesaplanıyor, 6'sı kapanış uyumu eksikliğinde engelleniyor. Hesap → Logo fiş/satır detayı, JSON rapor/katalog, PDF'nin 241 sayfalık metni ve 369 taslak kaynak maddesi. Belgedeki bütün kontrollerin çıkarım/uygulama kabulü tamamlanmadı; kaynak 2020, güncel mevzuat değildir. Son gerçek API + bağımsız DB kabulü 38/38 teknik kontrol; mobil tarayıcı kabulü geçerli portal oturumu olmadığı için DOĞRULANAMADI, müşteri VM'ine kurulmadı. Ayrıntı: `docs/analiz/finansal-denetim-2026-09-21.md`, kanıt: `docs/audits/financial-audit-2026-09-21/acceptance.json`. Canlı keşif: 379 hesabın 374'ünde ACCTYPE=0; bu alandan genel ters-bakiye hükmü verilmez, ilk kapsam yalnız 100/101 hesaplarıdır.
+
 **Editor teknik temel (2026-09-21):** Kullanıcı talebiyle mevcut analiz/model üreticileri
 durduruldu; GPU 1 boşaltıldı. `apps/editor` içinde `012_foundation.sql` ve ayrı salt okunur
 `editor-control` API'si (`127.0.0.1:19140`) sunucuda kuruldu: bakım kilidi, kanonik bilgi revizyonu,

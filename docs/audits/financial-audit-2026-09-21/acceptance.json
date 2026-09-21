@@ -1,0 +1,455 @@
+{
+  "environment": "nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .155 / LOGO_DB",
+  "revision": "e0f2ab207617b263bd3e66410794238964ec19824ddc45d2788ba0c6c14d14b0",
+  "source": "Logo · 2026 işlem dönemi · 17.08.2026 yedeği",
+  "sourceLastDate": "2026-08-17T00:00:00",
+  "checks": [
+    {
+      "name": "full-account-coverage",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-code",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-name",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-lineCount",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-accountType",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-debit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-credit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "line-count",
+      "status": "PASS",
+      "detail": 246404
+    },
+    {
+      "name": "all-balances",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "account-sign-flags",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-2",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-3",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-4",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-5",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-6",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-7",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-8",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-9",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-10",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-11",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-12",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-13",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-14",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-15",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-18",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-19",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-20",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-21",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "slip-imbalance-count",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "slip-imbalance-amount",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "detail-pagination",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "detail-total",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "detail-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unauthenticated-rejected",
+      "status": "PASS",
+      "detail": 401
+    },
+    {
+      "name": "unauthenticated-source-rejected",
+      "status": "PASS",
+      "detail": 401
+    },
+    {
+      "name": "unverified-period-rejected",
+      "status": "PASS",
+      "detail": 422
+    },
+    {
+      "name": "invalid-account-rejected",
+      "status": "PASS",
+      "detail": 422
+    },
+    {
+      "name": "source-integrity",
+      "status": "PASS",
+      "detail": null
+    }
+  ],
+  "referenceSql": "SELECT A.LOGICALREF AS accountRef,A.CODE AS code,A.DEFINITION_ AS name,A.ACCTYPE AS accountType,\n Q.debit,Q.credit,Q.lineCount FROM dbo.LG_411_EMUHACC A INNER JOIN (\n SELECT ACCOUNTREF,SUM(CAST(DEBIT AS decimal(28,4))) debit,SUM(CAST(CREDIT AS decimal(28,4))) credit,COUNT(*) lineCount\n FROM dbo.LG_411_01_EMFLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0\n AND ACCFICHEREF IN (SELECT LOGICALREF FROM dbo.LG_411_01_EMFICHE WHERE CANCELLED=0)\n GROUP BY ACCOUNTREF) Q ON Q.ACCOUNTREF=A.LOGICALREF ORDER BY A.CODE",
+  "metrics": {
+    "lineCount": 246404,
+    "debit": "8589117368.97",
+    "credit": "8589117368.97",
+    "truncated": false,
+    "closingGap": "292642907.06",
+    "computedAt": "2026-09-21T10:42:38.798827+00:00"
+  },
+  "accountCount": 379,
+  "businessChecks": [
+    {
+      "id": "trial-balance",
+      "title": "Mizan borç–alacak eşitliği",
+      "affected": 0,
+      "amount": "0.00",
+      "formula": "Σ borç − Σ alacak; tolerans 0,01 TL",
+      "origin": "Ek kontrol",
+      "status": "passed"
+    },
+    {
+      "id": "slip-balance",
+      "title": "Fiş bazında borç–alacak eşitliği",
+      "affected": 0,
+      "amount": "0",
+      "formula": "Her fişte |Σ borç − Σ alacak| > 0,01 TL",
+      "origin": "Ek kontrol",
+      "status": "passed"
+    },
+    {
+      "id": "account-sign",
+      "title": "Kasa ve alınan çeklerde ters bakiye",
+      "affected": 2,
+      "amount": "277109.33",
+      "formula": "100 Kasa ve 101 Alınan Çekler alt hesaplarında net alacak bakiyesi > 0,01 TL. Diğer hesap karakterleri henüz doğrulanmadı.",
+      "origin": "Kaynak s. 61, 65",
+      "status": "finding"
+    },
+    {
+      "id": "account-link",
+      "title": "Muhasebe hesap kartı bağlantısı",
+      "affected": 0,
+      "amount": null,
+      "formula": "Hareketin ACCOUNTREF alanı hesap kartına bağlanıyor mu?",
+      "origin": "Ek veri kontrolü",
+      "status": "passed"
+    },
+    {
+      "id": "null-amount",
+      "title": "Eksik borç veya alacak tutarı",
+      "affected": 0,
+      "amount": null,
+      "formula": "Borç veya alacak alanı NULL olan hareket sayısı",
+      "origin": "Ek veri kontrolü",
+      "status": "passed"
+    },
+    {
+      "id": "slip-link",
+      "title": "Muhasebe fişi bağlantısı",
+      "affected": 0,
+      "amount": null,
+      "formula": "İptal edilmemiş hareketin bağlı olduğu fiş mevcut mu?",
+      "origin": "Ek veri kontrolü",
+      "status": "passed"
+    }
+  ],
+  "ratios": [
+    {
+      "note": 2,
+      "title": "Cari oran",
+      "numerator": "936125732.04",
+      "denominator": "114072585.25",
+      "value": "8.206404106546712984222473383",
+      "formula": "Dönen varlıklar / kısa vadeli yabancı kaynaklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 3,
+      "title": "Asit-test oranı",
+      "numerator": "817927625.94",
+      "denominator": "114072585.25",
+      "value": "7.170238354355171414860171235",
+      "formula": "(Dönen varlıklar − stoklar) / kısa vadeli yabancı kaynaklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 4,
+      "title": "Nakit oranı",
+      "numerator": "568627943.01",
+      "denominator": "114072585.25",
+      "value": "4.984790532833128720557334787",
+      "formula": "(Hazır değerler + menkul kıymetler) / kısa vadeli yabancı kaynaklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 5,
+      "title": "Stokların dönen varlıklardaki payı",
+      "numerator": "118198106.10",
+      "denominator": "936125732.04",
+      "value": "0.1262630670801275200036856793",
+      "formula": "Stoklar / dönen varlıklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 6,
+      "title": "Stokların varlıklardaki payı",
+      "numerator": "118198106.10",
+      "denominator": "1073743761.20",
+      "value": "0.1100803658853426640054129890",
+      "formula": "Stoklar / toplam varlıklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 7,
+      "title": "Stok bağımlılık oranı",
+      "numerator": "-454555357.76",
+      "denominator": "118198106.10",
+      "value": "-3.845707623905828386196113509",
+      "formula": "(Kısa vadeli borçlar − hazır değerler − menkul kıymetler) / stoklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 8,
+      "title": "Kısa vadeli alacakların dönen varlıklardaki payı",
+      "numerator": "172830927.43",
+      "denominator": "936125732.04",
+      "value": "0.1846236264154044800291675144",
+      "formula": "(Ticari + diğer kısa vadeli alacaklar) / dönen varlıklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 9,
+      "title": "Kısa vadeli alacakların varlıklardaki payı",
+      "numerator": "172830927.43",
+      "denominator": "1073743761.20",
+      "value": "0.1609610539081006955609960102",
+      "formula": "(Ticari + diğer kısa vadeli alacaklar) / toplam varlıklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 10,
+      "title": "Finansal kaldıraç",
+      "numerator": "196498818.36",
+      "denominator": "1073743761.20",
+      "value": "0.1830034552567698774723274266",
+      "formula": "Yabancı kaynaklar / toplam varlıklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 11,
+      "title": "Özkaynak oranı",
+      "numerator": "584602035.78",
+      "denominator": "1073743761.20",
+      "value": null,
+      "formula": "Özkaynaklar / toplam varlıklar",
+      "status": "unverified",
+      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
+    },
+    {
+      "note": 12,
+      "title": "Özkaynak / borç oranı",
+      "numerator": "584602035.78",
+      "denominator": "196498818.36",
+      "value": null,
+      "formula": "Özkaynaklar / yabancı kaynaklar",
+      "status": "unverified",
+      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
+    },
+    {
+      "note": 13,
+      "title": "Kısa vadeli kaynakların payı",
+      "numerator": "114072585.25",
+      "denominator": "781100854.14",
+      "value": null,
+      "formula": "Kısa vadeli yabancı kaynaklar / toplam kaynaklar",
+      "status": "unverified",
+      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
+    },
+    {
+      "note": 14,
+      "title": "Uzun vadeli kaynakların payı",
+      "numerator": "82426233.11",
+      "denominator": "781100854.14",
+      "value": null,
+      "formula": "Uzun vadeli yabancı kaynaklar / toplam kaynaklar",
+      "status": "unverified",
+      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
+    },
+    {
+      "note": 15,
+      "title": "Uzun vadeli borç / devamlı sermaye",
+      "numerator": "82426233.11",
+      "denominator": "667028268.89",
+      "value": null,
+      "formula": "Uzun vadeli yabancı kaynaklar / (uzun vadeli yabancı kaynaklar + özkaynaklar)",
+      "status": "unverified",
+      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
+    },
+    {
+      "note": 18,
+      "title": "Borçların vade yapısı",
+      "numerator": "114072585.25",
+      "denominator": "196498818.36",
+      "value": "0.5805255532937139642960242786",
+      "formula": "Kısa vadeli yabancı kaynaklar / yabancı kaynaklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 19,
+      "title": "Banka kredileri / varlıklar",
+      "numerator": "107434369.30",
+      "denominator": "1073743761.20",
+      "value": "0.1000558729020534214955865208",
+      "formula": "(300 + 303 + 400 net alacak bakiyesi) / varlıklar",
+      "status": "calculated",
+      "reason": null
+    },
+    {
+      "note": 20,
+      "title": "Banka kredileri / özkaynaklar",
+      "numerator": "107434369.30",
+      "denominator": "584602035.78",
+      "value": null,
+      "formula": "(300 + 303 + 400 net alacak bakiyesi) / özkaynaklar",
+      "status": "unverified",
+      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
+    },
+    {
+      "note": 21,
+      "title": "Dönen varlıkların payı",
+      "numerator": "936125732.04",
+      "denominator": "1073743761.20",
+      "value": "0.8718334540019118296880307871",
+      "formula": "Dönen varlıklar / toplam varlıklar",
+      "status": "calculated",
+      "reason": null
+    }
+  ],
+  "executedSql": [
+    "SELECT A.LOGICALREF AS accountRef, A.CODE AS code, A.DEFINITION_ AS name, A.ACCTYPE AS accountType, COUNT(*) AS lineCount, SUM(CAST(L.DEBIT AS NUMERIC(28, 4))) AS debit, SUM(CAST(L.CREDIT AS NUMERIC(28, 4))) AS credit, SUM(CASE WHEN L.DEBIT IS NULL OR L.CREDIT IS NULL THEN 1 ELSE 0 END) AS nullAmounts, SUM(CASE WHEN F.TRCODE = 1 THEN 1 ELSE 0 END) AS openingLines, MIN(L.DATE_) AS firstDate, MAX(L.DATE_) AS lastDate FROM [dbo].[LG_411_01_EMFLINE] AS [L] LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = L.ACCOUNTREF LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = L.ACCFICHEREF WHERE L.DATE_ >= '20260101' AND L.DATE_ < '20270101' AND L.CANCELLED = 0 AND F.CANCELLED = 0 GROUP BY A.LOGICALREF, A.CODE, A.DEFINITION_, A.ACCTYPE ORDER BY A.CODE",
+    "SELECT COUNT(*) AS affected, SUM(ABS(X.difference)) AS amount FROM (SELECT L.ACCFICHEREF AS ACCFICHEREF, SUM(CAST(L.DEBIT AS NUMERIC(28, 4)) - CAST(L.CREDIT AS NUMERIC(28, 4))) AS difference FROM [dbo].[LG_411_01_EMFLINE] AS [L] LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = L.ACCOUNTREF LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = L.ACCFICHEREF WHERE L.DATE_ >= '20260101' AND L.DATE_ < '20270101' AND L.CANCELLED = 0 AND F.CANCELLED = 0 GROUP BY L.ACCFICHEREF HAVING ABS(SUM(CAST(L.DEBIT AS NUMERIC(28, 4)) - CAST(L.CREDIT AS NUMERIC(28, 4)))) > 0.01) AS [X]",
+    "SELECT COUNT(*) AS sourceRows, SUM(CASE WHEN F.LOGICALREF IS NULL THEN 1 ELSE 0 END) AS missingSlip, SUM(CASE WHEN F.CANCELLED <> 0 THEN 1 ELSE 0 END) AS cancelledSlip FROM [dbo].[LG_411_01_EMFLINE] AS [L] LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = L.ACCFICHEREF WHERE L.DATE_ >= '20260101' AND L.DATE_ < '20270101' AND L.CANCELLED = 0"
+  ],
+  "fullEvidenceSha256": "d75e0f013cc49877605891a4764277ab5669307ed2b91a45eb7b91d0b999d056",
+  "fullEvidenceServerPath": "/data/nanobaseai/bi/var/financial-audit/acceptance-2026-09-21.json",
+  "uiAcceptance": "DOĞRULANAMADI: geçerli portal oturumu yok",
+  "completeControlCoverage": false
+}

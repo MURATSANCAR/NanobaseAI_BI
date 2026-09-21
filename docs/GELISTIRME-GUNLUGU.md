@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim: kaynak kütüphanesi, gerçek Logo hesabı ve ilk kontroller
+
+- Finans & Risk menüsüne Finansal Denetim eklendi. Mevcut kanvas temasıyla özet, kaynaklı kontrol kütüphanesi, Logo hesap/hareket detayları, kaynak metin ve JSON indirme hazır; test sunucusunda yayında.
+- Kullanıcı PDF'si: 241 sayfa, 2020 tarihli. 369 kaynak kaydı çıkarıldı (41 analiz notu + 127 denetim notu + 201 inceleme maddesi), tüm sayfa metinleri korundu. Tam kontrol kapsamı henüz doğrulanmadı; katalog açıkça taslak. Tekrarlanan not numaraları, eksik 88 ve formül/mevzuat sorunları belgelendi.
+- Gerçek Logo 2026 yedeği: 246.404 hareket, 379 hesap, son kayıt 17.08.2026. 6 kontrolün 5'i geçti; kasa/çek hesabında 2 ters-bakiye inceleme adayı (277.109,33 TL; ceza/zarar değildir). 18 oran tanımından 12'si hesaplandı, 6 özkaynak/kapanış bağımlı oran engellendi.
+- İş anlamı düzeltmesi: kartların 374/379'u ACCTYPE=0 olduğu için ilk genel ters-bakiye yaklaşımı yanlış aday üretiyordu; kaldırıldı. Yalnız kaynakta açık tanımlı 100/101 kontrolü çalışır. Ara dönem kapanışı teyit edilmeden özkaynak oranı verilmez.
+- Kabul: yerelde test yok. Sunucuda derleme; gerçek bridge HTTP cevabı ile bağımsız Logo sorgusunda **38/38 teknik kontrol** geçti. Son kod hash'i ve kanıt `docs/audits/financial-audit-2026-09-21/acceptance.json`. Tüm PDF kabulü anlamına gelmez.
+- Açık: portalın eski test giriş bilgisi 401 verdi, kullanıcıdan mevcut oturum/güvenli dosya yolu istendi. 320/390/768/masaüstü gerçek tarayıcı, indirme ve mobil detay akışı **DOĞRULANAMADI**. Müşteri VM'ine kurulmadı. Kalan kaynak maddeleri, güncel mevzuat, mutabakat/belgeler, bulgu atama/kapanış takibi sonraki kapsam.
+
 ## 2026-09-21 — Editor durdurma ve sürümlü teknik temel hazırlığı
 
 Kullanıcı önce mevcut tarama/analizleri durdurmayı, sonra altyapıyı sunucuda hazırlamayı
