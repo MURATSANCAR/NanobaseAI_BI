@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+from contextvars import ContextVar
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -12,6 +13,8 @@ from psycopg.types.json import Jsonb
 from psycopg_pool import ConnectionPool
 
 from .config import settings
+
+validation_token: ContextVar[str | None] = ContextVar("editor_validation_token", default=None)
 
 _pool: ConnectionPool | None = None
 MIGRATIONS = Path(__file__).resolve().parent.parent.parent / "db" / "migrations"
@@ -37,6 +40,9 @@ def tx() -> Iterator[psycopg.Connection]:
     """One transaction; commits on success (deferred evidence check runs here)."""
     with pool().connection() as conn:
         with conn.transaction():
+            token = validation_token.get()
+            if token:
+                conn.execute("SELECT set_config('editor.validation_token',%s,true)",(token,))
             yield conn
 
 

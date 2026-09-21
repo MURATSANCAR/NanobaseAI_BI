@@ -27,6 +27,9 @@ bağlıdır; model profili değişmişse yeni nesil gerekir.
   eski aktör okumaları transaction içinde silinir ve yeniden okunur.
 - `producer_completed` olmadan işçi çıktı üretmez. Aynı neslin iki tüketicisi
   session advisory lock sayesinde eşzamanlı üretim yapamaz. Çökmede kilit düşer.
+- Doğrulama yazımları transaction-local bir çalışma kimliğiyle işaretlenir.
+  Doğrulama sırasında başka bir düzeltme gelirse snapshot sabitlenmez; yeni
+  revizyon tekrar doğrulanır. Böylece kontrol edilmemiş revizyon damgalanmaz.
 - Girdi snapshot'ı ve `artifact_version` kayıtları değişmez. Üretimin başında ve
   yayınında revizyon kontrol edilir. Değişmiş bilgiyle biten sonuç güncel pointer'a
   alınmaz; yeni kuyruğu tamamlandı işaretleyemez.

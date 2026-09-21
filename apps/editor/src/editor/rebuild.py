@@ -10,6 +10,7 @@ import asyncio
 import json
 import logging
 import os
+import uuid
 
 from . import db, foundation, outputs
 
@@ -45,21 +46,32 @@ def activate(gid: str):
 
 async def validate(gid: str) -> dict:
     from . import knowledge, quality
-    # Identity and visual work is performed before activate in the full workflow.
-    # Repairs made by the fact Critic invalidate actor readings in the same tx.
-    critic=await quality.critic_pass(gid, recheck=True)
-    actors=await knowledge.attribute_event_actors(gid)
-    contradictions=await knowledge.detect_contradictions(gid)
-    queued=await asyncio.to_thread(quality.contradictions_to_queue,gid)
-    regression=await asyncio.to_thread(quality.run_regression_suite,gid)
-    return {'critic':critic,'actors':actors,'contradictions':contradictions,'queued':queued,
-            'regression_passed':regression['passed']}
+    token=str(uuid.uuid4())
+    context=db.validation_token.set(token)
+    try:
+        start=db.one("SELECT knowledge_revision FROM ed.generation_state WHERE generation_id=%s",gid)['knowledge_revision']
+        # Identity and visual work is performed before activate in the full workflow.
+        # Repairs invalidate actor readings in the same transaction.
+        critic=await quality.critic_pass(gid, recheck=True)
+        actors=await knowledge.attribute_event_actors(gid)
+        contradictions=await knowledge.detect_contradictions(gid)
+        queued=await asyncio.to_thread(quality.contradictions_to_queue,gid)
+        regression=await asyncio.to_thread(quality.run_regression_suite,gid)
+        return {'critic':critic,'actors':actors,'contradictions':contradictions,'queued':queued,
+                'regression_passed':regression['passed'],'writer_token':token,'start_revision':start}
+    finally:
+        db.validation_token.reset(context)
 
 
 def freeze(gid: str, validation: dict) -> tuple[dict,str]:
     with db.tx() as c:
         state=ensure_open(c,gid)
         if not state['producer_completed']: raise ValueError('Canonical producers have not completed')
+        external=c.execute("SELECT 1 FROM ed.knowledge_change WHERE generation_id=%s AND revision>%s "
+            "AND writer_token IS DISTINCT FROM %s LIMIT 1",
+            (gid,validation['start_revision'],validation['writer_token'])).fetchone()
+        if external:
+            raise Superseded('Concurrent correction during validation; validate the new revision again')
         snap=outputs.capture(c,gid)
         digest=foundation.digest_inputs(snap)
         c.execute("INSERT INTO ed.knowledge_snapshot(generation_id,revision,input_digest,content,validation) "
