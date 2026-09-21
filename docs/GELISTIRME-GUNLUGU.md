@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Aynı sayfadaki tekrar çizimleri ayrı kimlik sanmama
+
+- Özgün PDF p20/p21 incelendi: aynı yavru bir sayfada iki ayrı resimde var. Görsel eşleştirme sayfa başına tek karakter kaydına izin verdiğinden ikinci kare belirsiz kalıyordu. Her crop bağımsız eşleştirilir; tam figür/tür/güven ve örtüşme kontrolleri korunur.
+- Eski nesilde p21 TV figürü bağlı, deney figürü belirsiz: gerçek hata kaydı. Yeni nesilde kaynak/görsel karşılaştırmasıyla kabul edilecek; henüz başarılı ilan edilmedi.
+
 ## 2026-09-21 — VPN dönüşü, yönetim tüneli ve hata yanıtı sözleşmesi
 
 - VPN geri geldi; GPU SSH yönetimi CPU localhost18891 ters tüneli üzerinden mevcut anahtar/host doğrulamasıyla çalışıyor. Bakım kilidi geri açıldı, aktif analiz/bekleyen rebuild sıfır.

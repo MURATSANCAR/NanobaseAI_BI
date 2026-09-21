@@ -484,7 +484,8 @@ async def resolve_visual_identity(generation_id: str) -> dict:
        itself shows the figure in C's class. Each candidate crop is CHECKED (one whole figure?
        of C's kind group? of C's declared sex/age?). The largest accepted crop is C's reference.
     2. Every other figure's crop is compared with all references: same kind, no conflicting
-       distinctive feature, confidence >= 0.8. On a page a character is at most one figure.
+       distinctive feature, confidence >= 0.8. A page may contain several panels showing
+       the same character; each figure is evaluated independently.
     3. Elimination: if a page shows N figures of one kind, the near text names exactly N
        characters of that kind, and N-1 are already identified, the last figure is the last
        character (confidence 0.8; never used as a reference).
@@ -676,19 +677,16 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         return f, best
 
     resolved: dict[str, tuple[str, str, dict | None]] = {str(f["id"]): (cid, "anchor", None) for f, cid in accepted}
-    ref_pages = {(f["page_no"], cid) for f, cid in accepted}
 
     async def match_round(refmap: dict[str, dict]) -> None:
         todo = [f for f in figs if str(f["id"]) not in resolved and f["area"] > 0 and not f["group"]]
-        per_page: dict[tuple[int, str], tuple] = {}
         for f, best in await asyncio.gather(*(match(f, refmap) for f in todo)):
-            taken_here = {(g["page_no"], resolved[str(g["id"])][0]) for g in figs if str(g["id"]) in resolved}
-            if best and (f["page_no"], best[0]) not in ref_pages | taken_here:
-                key = (f["page_no"], best[0])                # a character is one figure per page
-                if key not in per_page or best[1]["confidence"] > per_page[key][1][1]["confidence"]:
-                    per_page[key] = (f, best)
-        for f, best in per_page.values():
-            resolved[str(f["id"])] = (best[0], "reference", best[1])
+            # Physical pages are not scenes. Repeated depictions in separate
+            # panels must not compete for a single page-level identity slot.
+            # The crop still needs the same whole-figure/kind/confidence checks;
+            # overlap/group exclusions above continue to apply.
+            if best:
+                resolved[str(f["id"])] = (best[0], "reference", best[1])
 
     def eliminate() -> int:
         """The scan's SET of names on a page is usually right even when it swaps who is who.
