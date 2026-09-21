@@ -9,13 +9,8 @@ first rendered page in storage as the test image.
 from __future__ import annotations
 
 import asyncio
-import base64
-import io
-import math
-import struct
 import sys
 import time
-import wave
 from pathlib import Path
 
 from . import schemas
@@ -23,23 +18,12 @@ from .config import settings
 from .llm import Llm, client, image_part
 
 ORDER = ["book-embedding", "book-reranker", "book-vision-fast", "book-director",
-         "book-vision-deep", "book-audio"]
+         "book-vision-deep"]
 
 
 def _page_png() -> bytes:
     pages = sorted(settings().storage.glob("books/*/pages/p0005.png"))
     return pages[0].read_bytes()
-
-
-def _tone_wav() -> str:
-    buf = io.BytesIO()
-    with wave.open(buf, "wb") as w:
-        w.setnchannels(1)
-        w.setsampwidth(2)
-        w.setframerate(16000)
-        w.writeframes(b"".join(struct.pack("<h", int(8000 * math.sin(2 * math.pi * 440 * i / 16000)))
-                               for i in range(16000 * 2)))
-    return "data:audio/wav;base64," + base64.b64encode(buf.getvalue()).decode()
 
 
 async def check(alias: str) -> str:
@@ -72,13 +56,6 @@ async def check(alias: str) -> str:
         calls = msg.get("tool_calls") or []
         return (f"araç çağrısı: {calls[0]['function']['name']}({calls[0]['function']['arguments']})"
                 if calls else f"ARAÇ ÇAĞRISI YOK: {(msg.get('content') or '')[:120]}")
-    if alias == "book-audio":
-        r = await client().post("/v1/chat/completions", json={
-            "model": alias, "max_tokens": 200, "messages": [{"role": "user", "content": [
-                {"type": "audio_url", "audio_url": {"url": _tone_wav()}}]}]})
-        if r.status_code >= 400:
-            raise RuntimeError(f"{r.status_code}: {r.text[:300]}")
-        return "açıklama: " + (r.json()["choices"][0]["message"]["content"] or "")[:160]
     raise ValueError(alias)
 
 

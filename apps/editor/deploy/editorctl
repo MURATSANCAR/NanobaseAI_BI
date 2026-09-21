@@ -93,7 +93,6 @@ EOF
   local ver; ver=$(cat "$APP/VERSION" 2>/dev/null || echo dev)
   docker build -q -t "editor-py:$ver" -t editor-py:latest --build-arg CODE_VERSION="$ver" \
     -f "$APP/images/py/Dockerfile" "$APP"
-  docker build -q -t editor-vllm-audio:0.29.0 "$APP/images/vllm-audio" >/dev/null
   echo "installed editor-py:$ver"
 }
 
