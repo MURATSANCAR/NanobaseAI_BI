@@ -11,8 +11,14 @@ def request(path: str):
     key=os.environ.get('EDITOR_CATALOG_KEY','')
     if not base or not key: raise ValueError('Kitap kartları bağlantısı henüz hazır değil.')
     ca=os.environ.get('EDITOR_CATALOG_CA_FILE','')
+    headers={'Authorization':'Bearer '+key}
+    # Kart servisine internet üzerinden gidiliyorsa nginx ikinci bir gizli başlık ister; ad:değer olarak verilir.
+    extra=os.environ.get('EDITOR_CATALOG_EXTRA_HEADER','').strip()
+    if ':' in extra:
+        name,_,value=extra.partition(':')
+        headers[name.strip()]=value.strip()
     with httpx.Client(timeout=20,verify=ca or True,follow_redirects=False) as client:
-        r=client.get(base+path,headers={'Authorization':'Bearer '+key})
+        r=client.get(base+path,headers=headers)
         r.raise_for_status()
         return r
 

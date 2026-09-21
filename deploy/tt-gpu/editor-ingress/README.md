@@ -50,6 +50,21 @@ Soru sorulunca motor yönetici modelini açmak ister. GPU 1'de kitap analizi sü
 yönetici model yüklenemez, Hermes 500 alır ve soru düşer. Bu yolun değil motorun sınırıdır; test
 sunucusundan sorulan soru da aynı anda aynı şekilde düşer.
 
+## Kitap kartları (2026-09-21 — GPU adımı bekliyor)
+
+Müşteri VM'inde okunabilir kitap listesi ve kapaklar boş: kart servisi (`editor-cards`, `127.0.0.1:19141`)
+dışarıya açık değil. `add-cards-routes.py` EDITOR bloğunun içine iki salt okunur yol ekler (yalnız GET, aynı IP
+kısıtı, aynı gizli başlık; başlık değeri mevcut bloktan okunur, `nginx -t` düşerse dosya eski hâline döner):
+
+- `GET /editor/cards/v1/books/cards` → `127.0.0.1:19141/v1/books/cards`
+- `GET /editor/cards/v1/books/<uuid>/cover` → `127.0.0.1:19141/v1/books/<uuid>/cover`
+
+GPU'da `sudo python3 add-cards-routes.py`. Sonra müşteri VM'inin `.env` dosyasına
+`EDITOR_CATALOG_BASE=https://85.111.30.227/editor/cards`, `EDITOR_CATALOG_KEY` (test sunucusundaki değer),
+`EDITOR_CATALOG_CA_FILE=/app/ad/gpu-editor-ca.pem`, `EDITOR_CATALOG_EXTRA_HEADER` (= `EDITOR_EXTRA_HEADER`) ve
+`docker compose up -d --force-recreate bridge`. İstemci hazır: `editorial_cards.py` gizli başlığı gönderir.
+Bu adım Claude oturumunda izin denetimine takıldı (genel adrese yeni yol); kullanıcı koşar.
+
 ## Geri alma
 
 1. GPU: `EDITOR-BASLA … EDITOR-BITTI` bloğunu sil, `sudo nginx -t && sudo systemctl reload nginx`.
