@@ -40,7 +40,7 @@ içinde çalıştırılmamalıdır. Girdi hash'i kaynak/istem/model/ayar/kod sü
 
 ## Bu yayının sınırı ve sonraki maddeler
 
-1. Kaynak kapsamı: bölüm/sayfa türü ayrımı; OCR ve metin katmanının kanonik span görünümü.
+1. Kaynak kapsamı ilk düzeltmesi `0.11.0-source-066a3cfb` ile kuruldu: 544/544 gerçek sayfa kaynak kontrolü. Ayrıntı ve anlamsal açıklar: [SOURCE-INTEGRITY.md](SOURCE-INTEGRITY.md).
 2. Yeni workflow: temel olgu Critic'i ve aktör/kimlik uzlaştırması → özetler → çıktı Critic'i;
    bütün yazımların tekrar makbuzuna, çıktı üreticilerinin revizyon kayıtlarına bağlanması.
 3. Yeniden üretim tüketicisi: eski revizyonun sonucunu yayınlamayan, sınırlı denemeli işçi.

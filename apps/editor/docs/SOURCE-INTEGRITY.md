@@ -42,3 +42,30 @@ Kabul sonucu yayın sonrası kanıt dosyasında kaydedilir. Yazma akışı, OCR 
 uzlaştırma, tam kitap kabulü ve Qdrant araması bu salt okunur doğrulamayla kabul edilmez.
 Sonraki adım: doğrulama/kimlik çözümü bittikten sonra türetilmiş çıktı üretimi;
 düzeltmede eski çıktının geçersizleşmesi ve güvenli yeniden üretim tüketicisi.
+
+## Yayın ve canlı kabul sonucu
+
+- Sunucu: `tt-gpu`, release `/data/editor/releases/066a3cfb`,
+  sürüm `0.11.0-source-066a3cfb`, image
+  `sha256:a9e9fa2e4f3f517bdfa55920cae71d8a2ee8285c9a78350c8cb7e5eb90ae5559`.
+- 6 gerçek kitap, 544/544 sayfa: fiziksel kapsam, özgün source karakterlerinin
+  tek ve kayıpsız temsili, tam API pasaj değerleri, hash/ofset bağları **GEÇTİ**.
+- Anne Terliği 20/49, Levent 6/10, Vombat 5/6 özgün PDF karşılaştırması ve alıntı
+  kontrolü 6/6 geçti. Her altısında yanlış gerçek paragraf referansı reddedildi.
+  Vombat 5'te MERAKLI VOMBAT başlığı ayrı span ve bölüm adayı olarak görüldü.
+- Ortak claim/event/emotion okuma regresyonu yeni yayında 18/18 geçti; yetkisiz
+  istek 401, yanlış UUID 422, olmayan nesil 404; eski nesiller kabul edilmedi.
+- 11 tablo doğrulama öncesi/sonrası aynı. Yayın öncesi/sonrası claim, event,
+  emotion, report, generation tam içerik hashleri aynı. 10.071 eski kanıtın
+  `source_refs` alanı NULL kaldı; eski kanıtlar yeniden numaralandırılmadı.
+- 162 sayfada metin/OCR/kapsam uyarısı, 544 sayfada editörce doğrulanmamış sayfa
+  türü bulunuyor. Kaynak kayıpsızlığı, bu sorunların anlamsal çözümü değildir.
+- Editor üreticileri kapalı, GPU 1: 0 MiB, bakım kilidi açık. BI modeli çalışıyor.
+- Yedek `/data/editor/backups/20260921-source/`. Geri dönüş: önceki release/image
+  dosyaları bu dizinde; eklenen NULL kolon eski image ile uyumludur. Veri geri
+  yükleme veya analiz başlatma gerekmeden kontrol image'ı geri alınabilir.
+
+Kanıtlar: [kaynak kabulü](evidence/2026-09-21-source-verification.json),
+[ortak okuma regresyonu](evidence/2026-09-21-source-foundation-regression.json).
+Yerel test çalıştırılmadı. Yeni kanıtın kalıcı yazma akışı ve model üretimi kapalı
+olduğu için **DOĞRULANAMADI**; yeni workflow kabulünde gerçek kitapla denenmeli.

@@ -2,7 +2,7 @@
 
 ## 2026-09-21 — Editor kaynak bütünlüğü
 
-Fiziksel sayfa kapsamı bölüm bulmadan ayrıldı; layout/extract tahminleri hikâye sayfasını sessizce dışlamıyor. PDF/OCR ortak okuyucusu, kaynak hash/ofsetleri, aynı paragrafta alıntı doğrulama ve salt okunur kaynak kontrol API'si eklendi. Eski kanıtlar ve mühürlü nesiller değiştirilmiyor; mevcut analizler kapalı. Gerçek DB/API ve özgün PDF kabulü yayın sonrası bu girişe eklenecek. Yerel test çalıştırılmadı. Ayrıntı: `apps/editor/docs/SOURCE-INTEGRITY.md`.
+Fiziksel sayfa kapsamı bölüm bulmadan ayrıldı; layout/extract tahminleri hikâye sayfasını sessizce dışlamıyor. PDF/OCR ortak okuyucusu, kaynak hash/ofsetleri, aynı paragrafta alıntı doğrulama ve salt okunur kaynak kontrol API'si eklendi. Eski kanıtlar ve mühürlü nesiller değiştirilmiyor; mevcut analizler kapalı. Sunucu yayını `0.11.0-source-066a3cfb`: 6 gerçek kitapta 544/544 sayfa kayıpsız kaynak/kapsam kontrolü, 6/6 özgün PDF/alıntı hedefi ve 18/18 ortak okuma regresyonu geçti. 11 tablo salt okunur koşu öncesi/sonrası aynı; 10.071 eski kanıt değiştirilmedi. 162 sayfada kaynak uyarısı ve 544 sayfada doğrulanmamış sayfa türü var. Tam kitap semantik kabulü, yeni kanıt yazımı ve Qdrant yeniden üretimi DOĞRULANAMADI. GPU 1 boş, üreticiler kapalı. Kanıtlar: `apps/editor/docs/evidence/2026-09-21-source-*.json`. Yerel test çalıştırılmadı. Ayrıntı: `apps/editor/docs/SOURCE-INTEGRITY.md`.
 
 ## 2026-09-21 — Finansal Denetim: kaynak kütüphanesi, gerçek Logo hesabı ve ilk kontroller
 

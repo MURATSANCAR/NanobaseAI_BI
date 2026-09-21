@@ -6,7 +6,7 @@ Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ü
 
 ## Mimari (üstten alta)
 
-**Editor kaynak bütünlüğü (2026-09-21, yayın hazırlığı):** `source-reading-v1` ortak PDF/OCR okuyucusu; tüm fiziksel sayfalar tarama planında, başlık öncesi otomatik dışlama kaldırıldı. Kaynak aralıkları/hashleri ve yeni kanıtlar için `013_source_references.sql`. Bakım kilidi açık. Canlı kabul sonucu yayın sonrası kaydedilecek; tam kitap semantik kabulü değildir. Ayrıntı: `apps/editor/docs/SOURCE-INTEGRITY.md`.
+**Editor kaynak bütünlüğü (2026-09-21, sunucuda):** `source-reading-v1` ortak PDF/OCR okuyucusu; tüm fiziksel sayfalar tarama planında, başlık öncesi otomatik dışlama kaldırıldı. Kaynak aralıkları/hashleri ve yeni kanıtlar için `013_source_references.sql`. `tt-gpu` yayını `0.11.0-source-066a3cfb`; bakım kilidi açık. Gerçek API/DB: 6 kitapta 544/544 sayfa, özgün PDF ile 6 hedef sayfa ve 18/18 ortak okuma regresyonu geçti. 162 sayfada kaynak uyarısı ve 544 sayfada doğrulanmamış sayfa türü var; tam kitap semantik kabulü değildir. Yeni kanıt yazımı, OCR çatışması çözümü ve Qdrant yeniden üretimi DOĞRULANAMADI. Ayrıntı: `apps/editor/docs/SOURCE-INTEGRITY.md`.
 
 **Finansal Denetim (2026-09-21, ilk kapsam):** Finans & Risk → `/finansal-denetim`, `src/canvas/financial-audit/`, `backend/semantic_bridge/financial_audit.py` (`/api/v1/financial-audit/overview`, `/lines`). Test sunucusunda gerçek Logo 2026 yedeğiyle 6 kontrol, 18 oran tanımı; 12 oran hesaplanıyor, 6'sı kapanış uyumu eksikliğinde engelleniyor. Hesap → Logo fiş/satır detayı, JSON rapor/katalog, PDF'nin 241 sayfalık metni ve 369 taslak kaynak maddesi. Belgedeki bütün kontrollerin çıkarım/uygulama kabulü tamamlanmadı; kaynak 2020, güncel mevzuat değildir. Son gerçek API + bağımsız DB kabulü 38/38 teknik kontrol; mobil tarayıcı kabulü geçerli portal oturumu olmadığı için DOĞRULANAMADI, müşteri VM'ine kurulmadı. Ayrıntı: `docs/analiz/finansal-denetim-2026-09-21.md`, kanıt: `docs/audits/financial-audit-2026-09-21/acceptance.json`. Canlı keşif: 379 hesabın 374'ünde ACCTYPE=0; bu alandan genel ters-bakiye hükmü verilmez, ilk kapsam yalnız 100/101 hesaplarıdır.
 
@@ -17,7 +17,7 @@ bağımlı çıktı durumları/yeniden üretim kuyruğu, ortak uygun-kayıt gör
 Analiz servisleri Compose `analysis` profilinde; varsayılan başlatma taramayı açmaz.
 Eski nesiller `LEGACY_UNASSESSED`, yayın `BLOCKED`; otomatik yeniden üretim işçisi ve yeni
 semantik akış sonraki adımlar. Bu altyapı kitabın tamamının analitik kabulü değildir.
-Ayrıntı: `apps/editor/docs/FOUNDATION.md`. Yayın `0.10.0-foundation-681f7ec`;
+Ayrıntı: `apps/editor/docs/FOUNDATION.md`. İlk temel yayını `0.10.0-foundation-681f7ec`;
 6 gerçek kitapta 18/18 ortak okuma API–DB karşılaştırması geçti. Otomatik yeniden
 üretim/çökme sonrası tekrar/yeni nesil semantik kabulü henüz DOĞRULANAMADI.
 
