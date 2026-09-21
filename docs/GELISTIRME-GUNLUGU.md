@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — TT GPU temizliği ve editör ses modelinin kaldırılması
+
+- Kullanıcı isteğiyle tt-gpu'da boşta duran yükler durduruldu: `mssql-logo` (124 GB RAM, bağlantı yoktu), boş `mlops-pipeline-qdrant`, `ollama`, `kitap-botu`, cups, masaüstü uygulamaları. RAM kullanımı 222 → 94 GB. Hiçbiri silinmedi.
+- Kullanıcı `nanojev-legal` imajını ve Docker prune'u (container/image -a/builder) koştu: kök disk boşu 222 → 283 GB. Prune durmuş editör ses modelinin imajını da sildi; önce yeniden derlendi.
+- Ardından kullanıcı kararıyla `book-audio` (Qwen3-Omni-30B-A3B-Captioner) editörden kaldırıldı: models.yaml takma adı, editorctl ses imajı derlemesi, `images/vllm-audio`, smoke kontrolü. Hiçbir iş akışı kullanmıyordu. Sunucudaki 60 GB model dosyası ve imaj ayrı komutla silinir.
+
 ## 2026-09-21 — Kitaptan bağımsız üretim kapsamı
 
 - Kullanıcı tek kitaba özel çözümü yasakladı; AGENTS.md ve PRODUCTION-CONTRACT.md güncellendi. Kitaplar kabul verisidir, üretim kuralı değildir.
