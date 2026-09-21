@@ -4,9 +4,32 @@
 
 Finans & Risk → Finansal Denetim, `/timas/finansal-denetim`.
 Mevcut kanvas kabuğu, açık renkli cam yüzeyler, mor/mercan vurgular.
-Altı görünüm: denetim özeti, Logo’da ne var, kontrol kütüphanesi, Logo kayıtları, dayanak veriler ve kaynak belge.
+Beş görünüm: denetim özeti, Logo’da ne var, kontrol kütüphanesi, Logo kayıtları ve dayanak veriler.
 Rapor JSON olarak mevcut hesaplama, kaynak hash'i, sürüm, kapsam ve sınırlamalarla indirilir.
-Kontrol kataloğu ayrıca indirilebilir. Hiçbir işlem Logo'ya yazmaz.
+Kaynak belge ve özgün katalog ürün ekranında gösterilmez veya indirilmez. Hiçbir işlem Logo'ya yazmaz.
+
+## Hazır rapor ve yenileme
+
+Ekranın açılması hesaplama başlatmaz. Son tamamlanan rapor sunucuda kalıcı saklanır;
+`GET /overview` bu kaydı okur. `workpapers/snapshots/latest.json` yalnız tamamlanmış
+raporu işaret eder. `POST /refresh` arka plan işini başlatır; `GET /refresh-status`
+durumu bildirir. Eşzamanlı istekler dosya kilidiyle aynı işe bağlanır. Yeni raporun
+tüm okumaları tamamlanınca işaretçi atomik değiştirilir; eski rapor ve inceleme
+notları arşivde kalır. Sorgu hatasıyla eksik kalan alt kaynaklar eski tam raporun
+üzerine yayınlanmaz; gerçekten boş bir veri kümesi ise geçerli sonuçtur.
+
+Servis açılışında mevcut arşiv devralınır ve gerektiğinde yeniden hesaplanır.
+Saatlik otomatik yenileme `FINANCIAL_AUDIT_REFRESH_SECONDS` (varsayılan 3600,
+alt sınır 300) ile ayarlanır. Manuel yenileme sorgu önbelleğini kullanmadan Logo'yu
+yeniden okur. Ekran bu sırada önceki raporu ve tarihini gösterir; yeni sonuç hazır
+olduğunda sayfa yenilemeden geçiş yapar. Servis kesintisinde son tamamlanan rapor
+diskte kalır. Kaynak verisinin son işlem tarihi ve raporun güncelleme zamanı ayrıdır.
+Logo hareket/belge sayfaları ayrı, açıkça etiketlenmiş kaynak okumalarıdır.
+
+Canlı kabul kayıtları: `docs/audits/financial-audit-2026-09-21/snapshot-*.json`.
+Yenileme hatasında koruma kodda incelendi; canlı bağlantı kasıtlı kesilerek hata
+enjeksiyonu yapılmadı. Tam saatlik çevrim beklenmedi; başlangıç ve manuel yenileme
+gerçek API/Logo üzerinden sınandı.
 
 ## Kaynak ve tamlık
 

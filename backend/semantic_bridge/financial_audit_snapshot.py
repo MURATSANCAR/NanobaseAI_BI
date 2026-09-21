@@ -116,6 +116,11 @@ class AuditSnapshots:
             report = self.build(self.year)
             if report.get('truncated') is not False or report.get('year') != self.year:
                 raise ValueError('Incomplete or wrong-period audit cannot replace the current report')
+            # Optional-source readers report SQL failures in their payload instead
+            # of raising. Do not replace a complete report with that partial run.
+            # A genuinely empty dataset (e.g. no tax return) is still a valid result.
+            if report.get('deepAudit', {}).get('errors') or report.get('supportingEvidence', {}).get('truncated') is not False:
+                raise ValueError('A source read failed; keeping the last complete audit')
             # Archive is already durable. This is the single publication point.
             atomic_json(self.path('latest.json'), {**{k:report[k] for k in ('runId', 'computedAt', 'year')},
                                                   'snapshotRevision':self.revision})
@@ -142,7 +147,10 @@ class AuditSnapshots:
                 if meta.get('year') != self.year or not re.fullmatch('[0-9a-f]{32}', run_id):
                     continue
                 report = self.read_json(self.root() / (run_id + '.json'))
-                if report and report.get('truncated') is False and all(k in report for k in ('accounts','coverage','deepAudit','computedAt')):
+                if (report and report.get('truncated') is False
+                        and all(k in report for k in ('accounts','coverage','deepAudit','computedAt'))
+                        and not report['deepAudit'].get('errors')
+                        and report.get('supportingEvidence', {}).get('truncated') is False):
                     atomic_json(self.path('latest.json'), {k:report[k] for k in ('runId','computedAt','year')})
                     return
 

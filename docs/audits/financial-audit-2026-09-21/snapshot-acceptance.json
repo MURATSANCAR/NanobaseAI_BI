@@ -1,0 +1,91 @@
+{
+  "environment": "nanobase-direct / actual API :8795 / real Logo 2026 backup",
+  "oldRun": "1fce1eef555e4852978d0c7ab81a015d",
+  "newRun": "af77189a9e4e4023aee5618e1cb28524",
+  "checks": [
+    {
+      "name": "initial-snapshot-fast",
+      "status": "PASS",
+      "detail": 0.27833367115817964
+    },
+    {
+      "name": "snapshot-from-complete-archive",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "current-backend",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "refresh-accepted-without-blocking",
+      "status": "PASS",
+      "detail": 0.36931491387076676
+    },
+    {
+      "name": "single-job-for-concurrent-refresh",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "old-report-visible-during-refresh",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "read-does-not-wait-for-refresh-lock",
+      "status": "PASS",
+      "detail": 0.5936229911167175
+    },
+    {
+      "name": "real-refresh-state-visible",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "new-report-atomically-published",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "new-snapshot-fast",
+      "status": "PASS",
+      "detail": 0.33523952402174473
+    },
+    {
+      "name": "new-timestamp",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "old-archive-preserved",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "entire-api-result-matches-published-archive",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "full-current-coverage-retained",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "latest-pointer-replaced",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "calculation-version-current",
+      "status": "PASS",
+      "detail": null
+    }
+  ],
+  "limitations": [
+    "Refresh failure retention inspected in code; no production connection deliberately broken.",
+    "Financial answer correctness checked separately by independent real DB acceptance."
+  ]
+}

@@ -1,5 +1,5 @@
 """Server-only actual API vs independent raw Logo records. No application SQL reuse."""
-import os, json, hashlib, urllib.request, urllib.error
+import os, json, hashlib, urllib.request, urllib.error, time
 from pathlib import Path
 from decimal import Decimal
 from collections import defaultdict
@@ -10,8 +10,19 @@ for line in Path('/etc/nanobase/semantic-bridge.env').read_text().splitlines():
         k,v=line.split('=',1);os.environ[k]=v.strip().strip('"').strip("'")
 base='http://127.0.0.1:8795/api/v1/financial-audit/'
 headers={'X-Semantic-Caller':os.environ['SEMANTIC_CALLER_TOKEN']}
+transport_retries=[]
 def http(path,auth=True):
-    return urllib.request.urlopen(urllib.request.Request(base+path,headers=headers if auth else {}),timeout=240)
+    deadline=time.monotonic()+120
+    while True:
+        try:
+            return urllib.request.urlopen(urllib.request.Request(base+path,headers=headers if auth else {}),timeout=240)
+        except urllib.error.HTTPError:
+            raise  # Real API/auth errors are never hidden by retrying.
+        except urllib.error.URLError as error:
+            if not isinstance(error.reason,ConnectionRefusedError) or time.monotonic()>=deadline:
+                raise
+            transport_retries.append({'path':path,'reason':'connection-refused-during-service-restart'})
+            time.sleep(2)
 def api(path):return json.load(http(path))
 out=api('overview?year=2026');deep=out['deepAudit'];checks=[]
 assert deep['revision']==hashlib.sha256(Path('backend/semantic_bridge/financial_audit_deep.py').read_bytes()).hexdigest(),'stale deep deployment'
@@ -159,7 +170,7 @@ for path,expected_status in [(f"runs/{out['runId']}/export",401),(f"runs/{out['r
     try:http(path,False);status=200
     except urllib.error.HTTPError as ex:status=ex.code
     check('private-'+path,status==expected_status)
-report={'environment':'nanobase-direct → actual HTTP :8795 → real Logo .155/LOGO_DB','runId':out['runId'],'revision':out['revision'],'deepRevision':deep['revision'],'checks':checks,'overview':out,'exportSha256':hashlib.sha256(blob).hexdigest(),'exceptionCoverage':'Complete result counts; all columns and values in first, second and final/empty pages for every check. References from separate raw DB reads.'}
+report={'environment':'nanobase-direct → actual HTTP :8795 → real Logo .155/LOGO_DB','runId':out['runId'],'revision':out['revision'],'deepRevision':deep['revision'],'checks':checks,'overview':out,'transportRetries':transport_retries,'exportSha256':hashlib.sha256(blob).hexdigest(),'exceptionCoverage':'Complete result counts; all columns and values in first, second and final/empty pages for every check. References from separate raw DB reads.'}
 p=Path('/tmp/financial-audit-deep-acceptance.json');p.touch(mode=0o600);p.chmod(0o600);p.write_text(json.dumps(report,ensure_ascii=False,indent=2,default=str))
 print(json.dumps({'completed':len(checks),'pass':sum(x['status']=='PASS' for x in checks),'fail':sum(x['status']=='FAIL' for x in checks),'unverified':0,'counts':{k:len(v) for k,v in expected.items()}},ensure_ascii=False),flush=True)
 raise SystemExit(any(x['status']!='PASS' for x in checks))

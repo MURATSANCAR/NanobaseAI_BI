@@ -1,0 +1,733 @@
+{
+  "environment": "nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .155 / LOGO_DB",
+  "revision": "4e6c53a60fcf172cf8b3e056f5964e15d837a3abd948ac1e4f0d4f8aa69dfc60",
+  "source": "Logo · 2026 işlem dönemi · 17.08.2026 yedeği",
+  "sourceLastDate": "2026-08-17T00:00:00",
+  "checks": [
+    {
+      "name": "full-account-coverage",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-code",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-name",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-lineCount",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-accountType",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-debit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-accounts-credit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "line-count",
+      "status": "PASS",
+      "detail": 246404
+    },
+    {
+      "name": "all-balances",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "account-sign-flags",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-2",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-3",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-4",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-5",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-6",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-7",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-8",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-9",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-10",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-11",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-12",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-13",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-14",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-15",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-18",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-19",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-20",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ratio-21",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "slip-imbalance-count",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "slip-imbalance-amount",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "detail-pagination",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "detail-total",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "detail-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "unauthenticated-rejected",
+      "status": "PASS",
+      "detail": 401
+    },
+    {
+      "name": "unauthenticated-source-rejected",
+      "status": "PASS",
+      "detail": 401
+    },
+    {
+      "name": "unverified-period-rejected",
+      "status": "PASS",
+      "detail": 422
+    },
+    {
+      "name": "invalid-account-rejected",
+      "status": "PASS",
+      "detail": 422
+    },
+    {
+      "name": "source-integrity",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "flow-reference-not-truncated",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-profile-openingDebit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-profile-openingCredit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-profile-periodDebit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-profile-periodCredit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-profile-foreignRows",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-16",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-17",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-22",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "period-days-22",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-23",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "period-days-23",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-24",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "period-days-24",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-25",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-26",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-27",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-28",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-29",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-30",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-31",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-32",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-33",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-34",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-35",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-36",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-37",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-38",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-39",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-40",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-41",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "extended-ratio-42",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-41-analysis-notes",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "every-source-occurrence-has-result",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-ratios-have-account-drilldown",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "current-ratio-account-drilldown-complete",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "no-document-check-auto-pass",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "distinct-duplicate-notes",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "source-corrections-retained",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "year-end-not-due",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "loan-not-deposit",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "snapshot-roundtrip",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-reference-complete",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-64",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-73",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-81",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-82",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-83",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-84",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-85",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-86",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-87",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-93",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-99",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-104",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-110",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-111",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-113",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-114",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-115",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-127",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-130",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "counterpart-note-162",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-1",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-2",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-3",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-4",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-5",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-6",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-7",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "vat-month-8",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-statements-use-declared-backup",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "support-sources-complete",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-reference-complete",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-profile-group-coverage",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-profile-rows",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-profile-missingNumber",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-profile-missingDate",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-profile-missingPayment",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-voucher-count",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "mixed-document-types",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "mixed-payment-types",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-pagination",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-total",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "document-detail-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "asset-reference-complete",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "asset-profile-coverage",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "asset-profile-rows",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "asset-profile-missingAssetCard",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "asset-profile-missingAmount",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "asset-profile-periodDepreciation",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "asset-distinct-counts",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "support-revision-current",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "source-review-persisted",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "source-review-version-increment",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "review-does-not-auto-pass",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "stale-review-write-rejected",
+      "status": "PASS",
+      "detail": 409
+    },
+    {
+      "name": "manual-passed-state-rejected",
+      "status": "PASS",
+      "detail": 422
+    },
+    {
+      "name": "empty-evidence-rejected",
+      "status": "PASS",
+      "detail": 422
+    },
+    {
+      "name": "rejected-review-did-not-mutate",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "saved-run-listed",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "private-runs",
+      "status": "PASS",
+      "detail": 401
+    },
+    {
+      "name": "private-runs/af77189a9e4e4023aee5618e1cb28524",
+      "status": "PASS",
+      "detail": 401
+    },
+    {
+      "name": "private-runs/af77189a9e4e4023aee5618e1cb28524/reviews/note-51-1",
+      "status": "PASS",
+      "detail": 401
+    },
+    {
+      "name": "served-backend-hash-current",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "served-rules-hash-current",
+      "status": "PASS",
+      "detail": null
+    }
+  ],
+  "runId": "af77189a9e4e4023aee5618e1cb28524",
+  "initialFailure": {
+    "check": "snapshot-roundtrip",
+    "resolution": "Exclude only transient cached/refresh fields; all persisted computation fields remain compared. Full rerun PASS."
+  }
+}

@@ -1,0 +1,687 @@
+{
+  "environment": "nanobase-direct → actual HTTP :8795 → real Logo .155/LOGO_DB",
+  "revision": "4e6c53a60fcf172cf8b3e056f5964e15d837a3abd948ac1e4f0d4f8aa69dfc60",
+  "deepRevision": "5c6b062d1fd58efc7ebce7dbb1175d5ff6bd0ae7a2c2c33fefd4fd84230d9e3e",
+  "checks": [
+    {
+      "name": "deep-all-sources-read",
+      "status": "PASS",
+      "detail": {}
+    },
+    {
+      "name": "invoice-unposted-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 349,
+        "reference": 349,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-unposted-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-unposted-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-unposted-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-unposted-page-6-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-broken-link-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-broken-link-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-broken-link-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-broken-link-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-date-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-date-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-date-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-date-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 167,
+        "reference": 167,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-account-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-page-3-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-ledger-amount-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81241
+      }
+    },
+    {
+      "name": "invoice-ledger-amount-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-ledger-amount-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-ledger-amount-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 125,
+        "reference": 125,
+        "tested": 81408
+      }
+    },
+    {
+      "name": "invoice-vat-ledger-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-page-2-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-lines-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-vat-lines-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-lines-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-lines-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 6455,
+        "reference": 6455,
+        "tested": 17405
+      }
+    },
+    {
+      "name": "bank-unposted-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-page-129-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-broken-link-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 17405
+      }
+    },
+    {
+      "name": "bank-broken-link-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-broken-link-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-broken-link-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-account-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 17405
+      }
+    },
+    {
+      "name": "bank-account-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-account-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-account-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-ledger-amount-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 10,
+        "reference": 10,
+        "tested": 3216
+      }
+    },
+    {
+      "name": "bank-ledger-amount-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-ledger-amount-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-ledger-amount-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cash-negative-day-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 222
+      }
+    },
+    {
+      "name": "cash-negative-day-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cash-negative-day-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cash-negative-day-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-direct-links-preserved",
+      "status": "PASS",
+      "detail": {
+        "directLinks": 98
+      }
+    },
+    {
+      "name": "invoice-type-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "tax-full-period-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "missing-current-declaration-explained",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "loan-currency-and-type-coverage",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "loan-profile-0-0",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "loan-profile-1-0",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "stock-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "future-stock-not-hidden",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ebook-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cheques-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "exports-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "attachments-full-signature-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-source-gaps-explained",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-1",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-2",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-3",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-4",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-5",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-6",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-7",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-8",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-9",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-10",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-11",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-12",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-13",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-14",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-15",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-16",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-17",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-18",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-19",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-20",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-21",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-22",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-23",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-24",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-25",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-26",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-27",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-28",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-29",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-30",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-31",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-32",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-33",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-34",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-35",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ambiguous-source-caption-not-guessed",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-exact-archive-bytes",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-integrity-header",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-complete-json",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-attachment",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "private-runs/af77189a9e4e4023aee5618e1cb28524/export",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "private-runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted",
+      "status": "PASS",
+      "detail": null
+    }
+  ],
+  "transportRetries": [
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    },
+    {
+      "path": "runs/af77189a9e4e4023aee5618e1cb28524/exceptions/invoice-unposted?page=0",
+      "reason": "connection-refused-during-service-restart"
+    }
+  ],
+  "exportSha256": "3b06448e9809d3833282e70a58e14bdba9bcc95ee10652b1b6f61f1db2f92c88",
+  "exceptionCoverage": "Complete result counts; all columns and values in first, second and final/empty pages for every check. References from separate raw DB reads.",
+  "runId": "af77189a9e4e4023aee5618e1cb28524"
+}

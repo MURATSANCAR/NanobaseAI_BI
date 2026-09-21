@@ -1,0 +1,82 @@
+{
+  "environment": "Actual authenticated test portal https://portal.nanobase.ai/timas/finansal-denetim",
+  "widths": [
+    {
+      "accountsShown": true,
+      "mainScrollWidth": 248,
+      "mainWidth": 248,
+      "pageWidth": 320,
+      "report": "/timas/api/v1/financial-audit/runs/034330095f624457a888ce10136837bc/export",
+      "status": "Son güncelleme: 21.09.2026 17:00:32 · Yeni hesaplama arka planda hazırlanıyor; mevcut raporu incelemeye devam edebilirsiniz.",
+      "waiting": false,
+      "width": 320
+    },
+    {
+      "accountsShown": true,
+      "mainScrollWidth": 318,
+      "mainWidth": 318,
+      "pageWidth": 390,
+      "report": "/timas/api/v1/financial-audit/runs/034330095f624457a888ce10136837bc/export",
+      "status": "Son güncelleme: 21.09.2026 17:00:32 · Yeni hesaplama arka planda hazırlanıyor; mevcut raporu incelemeye devam edebilirsiniz.",
+      "waiting": false,
+      "width": 390
+    },
+    {
+      "accountsShown": true,
+      "mainScrollWidth": 644,
+      "mainWidth": 644,
+      "pageWidth": 768,
+      "report": "/timas/api/v1/financial-audit/runs/034330095f624457a888ce10136837bc/export",
+      "status": "Son güncelleme: 21.09.2026 17:00:32 · Yeni hesaplama arka planda hazırlanıyor; mevcut raporu incelemeye devam edebilirsiniz.",
+      "waiting": false,
+      "width": 768
+    },
+    {
+      "accountsShown": true,
+      "mainScrollWidth": 1316,
+      "mainWidth": 1316,
+      "pageWidth": 1440,
+      "report": "/timas/api/v1/financial-audit/runs/034330095f624457a888ce10136837bc/export",
+      "status": "Son güncelleme: 21.09.2026 17:00:32 · Yeni hesaplama arka planda hazırlanıyor; mevcut raporu incelemeye devam edebilirsiniz.",
+      "waiting": false,
+      "width": 1440
+    }
+  ],
+  "before": {
+    "report": "/timas/api/v1/financial-audit/runs/e6181cc87b6c408f81063eada94a99f6/export",
+    "status": "Son güncelleme: 21.09.2026 17:05:41 · Son tamamlanan rapor gösteriliyor. Veriler saatlik olarak ve isteğiniz üzerine yenilenir."
+  },
+  "during": {
+    "accountsShown": true,
+    "disabled": true,
+    "report": "/timas/api/v1/financial-audit/runs/e6181cc87b6c408f81063eada94a99f6/export",
+    "status": "Son güncelleme: 21.09.2026 17:05:41 · Yeni hesaplama arka planda hazırlanıyor; mevcut raporu incelemeye devam edebilirsiniz."
+  },
+  "after": {
+    "accountsShown": true,
+    "report": "/timas/api/v1/financial-audit/runs/17b3e4a8e0564961afd0d5d102942b06/export",
+    "status": "Son güncelleme: 21.09.2026 17:06:23 · Son tamamlanan rapor gösteriliyor. Veriler saatlik olarak ve isteğiniz üzerine yenilenir.",
+    "waiting": false
+  },
+  "afterReload": {
+    "accountsShown": true,
+    "report": "/timas/api/v1/financial-audit/runs/17b3e4a8e0564961afd0d5d102942b06/export",
+    "status": "Son güncelleme: 21.09.2026 17:06:23 · Son tamamlanan rapor gösteriliyor. Veriler saatlik olarak ve isteğiniz üzerine yenilenir.",
+    "waiting": false
+  },
+  "oldReportRetained": true,
+  "newReportShown": true,
+  "reloadUsesSavedReport": true,
+  "duringServiceRestart": {
+    "accountsShown": true,
+    "alert": "Güncel rapor kontrolü tamamlanamadı. Görüntülediğiniz son başarılı rapor korunuyor.Yenilemeyi tekrar dene",
+    "report": "/timas/api/v1/financial-audit/runs/af77189a9e4e4023aee5618e1cb28524/export",
+    "waiting": false
+  },
+  "finalSavedView": {
+    "accountsShown": true,
+    "report": "/timas/api/v1/financial-audit/runs/af77189a9e4e4023aee5618e1cb28524/export",
+    "status": "Son güncelleme: 21.09.2026 17:13:02 · Son tamamlanan rapor gösteriliyor. Veriler saatlik olarak ve isteğiniz üzerine yenilenir.",
+    "waiting": false
+  }
+}

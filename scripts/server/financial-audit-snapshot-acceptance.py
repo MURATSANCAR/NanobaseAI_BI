@@ -2,6 +2,7 @@
 import hashlib
 import json
 import os
+import sys
 from pathlib import Path
 import time
 import urllib.request
@@ -32,9 +33,14 @@ def wait_ready():
     deadline = time.monotonic()+900
     polls = 0
     while time.monotonic() < deadline:
-        state, _ = api('refresh-status')
-        if state['state'] != 'refreshing':
-            assert state['state']=='ready', state
+        try:
+            state, _ = api('refresh-status')
+        except (urllib.error.URLError, TimeoutError):
+            time.sleep(2)
+            continue
+        if state['state'] == 'error':
+            raise RuntimeError(state)
+        if state['state'] == 'ready' and state['calculationUpdated']:
             return state
         polls += 1
         if polls % 15 == 0:
@@ -42,6 +48,26 @@ def wait_ready():
         time.sleep(2)
     raise RuntimeError('Actual Logo refresh did not complete in 15 minutes')
 
+
+if '--wait-only' in sys.argv:
+    print(json.dumps(wait_ready()), flush=True)
+    raise SystemExit(0)
+
+if '--restart-check' in sys.argv:
+    previous = json.loads((root.parent/'snapshot-acceptance.json').read_text())
+    for attempt in range(60):
+        try:
+            report, elapsed = api('overview?year=2026')
+            break
+        except (urllib.error.URLError, TimeoutError):
+            time.sleep(2)
+    else:
+        raise RuntimeError('API did not restart')
+    check('durable-report-after-restart', report['runId']==previous['newRun'])
+    check('restart-read-does-not-wait-for-logo', elapsed < 2, elapsed)
+    (root.parent/'snapshot-restart.json').write_text(json.dumps({'checks':checks,'runId':report['runId']},indent=2))
+    print(json.dumps(checks),flush=True)
+    raise SystemExit(any(c['status']!='PASS' for c in checks))
 
 initial = wait_ready()
 old, old_time = api('overview?year=2026')

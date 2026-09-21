@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim kalıcı hazır rapor ve arka planda yenileme
+
+- İki dakikalık bellek önbelleği yerine disk üzerinde son tamamlanan rapor işaretçisi eklendi. `/overview` hesaplama yapmaz; servis yeniden başlasa da kayıtlı sonucu verir. Başlangıç/saatlik yenileme ve kullanıcı düğmesi aynı dosya kilidiyle tek hesaplama çalıştırır. Başarılı tamamlanmada işaretçi atomik değiştirilir; önceki rapor ve notları arşivde kalır, hatada son başarılı rapor korunur.
+- Denetim sorguları `use_cache=False` ile gerçek kaynağı yeniden okur. Diğer SQL akışlarının önbellek varsayılanı değişmez. Tamamlanma zamanı kaynak okumalarının sonuna taşındı. UI son güncelleme/arka plan ilerlemesi, Verileri yenile ve otomatik rapor geçişi sunar; sıfır/boş kontrol kartlarıyla veri bekleme görünümü kaldırıldı. 320px kapsam etiketi taşması düzeltildi.
+- Test ortamında derleme/yayın yapıldı; uygulama dosyalarının sunucu/yerel SHA-256 değerleri eş. Gerçek API: 16/16 kalıcılık/tek iş/hız/tam arşiv karşılaştırması; son kodda restart 2/2 (aynı kayıtlı sonuç 0,86 sn), yeni iki uç yetkisizken HTTP 401. Oturumlu portalda düğmeyle gerçek yenileme sırasında eski rapor, sonrasında yeni rapor ve sayfa yenilemede kayıtlı rapor doğrulandı; 320/390/768/1440 taşmasız.
+- Temel gerçek DB bağımsız karşılaştırma 144/144 geçti. İlk koşu 143/144: hesaplar eşti, test arşive ait olmayan anlık `refresh` durumunu kalıcı raporla karşılaştırıyordu. Karşılaştırma yalnız `cached`/`refresh` taşıma alanlarını dışlayacak şekilde düzeltildi, tüm hesaplama alanları karşılaştırılmaya devam edildi. Son yayında yeniden 144/144 temel + 109/109 derin = 253/253 bağımsız gerçek DB kontrolü geçti; aynı rapor `af77189a9e4e4023aee5618e1cb28524`. Aradaki derin koşu servis yeniden başlatıldığı için 40 kontrolden sonra bağlantı hatasıyla kesildi; geçerli kabul yerine sayılmadı. Koşucu yalnız bağlantı reddini sınırlı tekrarlar, HTTP/veri hatalarını gizlemez. Alt kaynak SQL hatalarının eski tam raporu değiştirmemesi ayrıca korunur.
+- Kanıt `docs/audits/financial-audit-2026-09-21/snapshot-*.json`. Yerel test/sentetik veri yok. Yenileme hatasında eski sonucu koruma kodda incelendi; canlı bağlantı kasıtlı bozularak hata testi yapılmadı. Saatlik zamanlayıcı için tam bir saatlik döngü beklenmedi; servis başlangıcı ve düğme yenilemesi gerçek veride sınandı.
+
 
 ## 2026-09-21 — Kampüs kartları yalnız ana modüllere gider
 

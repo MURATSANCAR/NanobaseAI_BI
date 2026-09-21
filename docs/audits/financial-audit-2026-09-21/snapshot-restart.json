@@ -1,0 +1,15 @@
+{
+  "checks": [
+    {
+      "name": "durable-report-after-restart",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "restart-read-does-not-wait-for-logo",
+      "status": "PASS",
+      "detail": 0.8594232040923089
+    }
+  ],
+  "runId": "af77189a9e4e4023aee5618e1cb28524"
+}

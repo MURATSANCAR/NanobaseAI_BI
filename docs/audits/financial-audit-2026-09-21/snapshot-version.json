@@ -1,0 +1,18 @@
+{
+  "environment": "nanobase-direct / actual portal and Logo API",
+  "checkedAt": "2026-09-21T14:13:28.807933+00:00",
+  "files": {
+    "backend/semantic_bridge/app.py": "7024d768055695a5ceebbfa57d331be18356347040a1c3a0e98ab5a6546bc061",
+    "backend/semantic_bridge/financial_audit.py": "4e6c53a60fcf172cf8b3e056f5964e15d837a3abd948ac1e4f0d4f8aa69dfc60",
+    "backend/semantic_bridge/financial_audit_snapshot.py": "932f7102bdb15bfea3b6712b8a94972478565e59cc0682e7076aeb031ffb6bd3",
+    "backend/semantic_bridge/financial_audit_rules.py": "2c9bbc8fbb0f23bbc655d261471292fc2d3727be6ba149cae2c7da683cbeb463",
+    "backend/semantic_bridge/financial_audit_deep.py": "5c6b062d1fd58efc7ebce7dbb1175d5ff6bd0ae7a2c2c33fefd4fd84230d9e3e",
+    "backend/semantic_bridge/financial_audit_evidence.py": "7d25425845b9238503ad91b89ebb3ec5b41f3a0dcb4cd140ec597572fa095963",
+    "src/canvas/financial-audit/FinancialAudit.tsx": "60e89ba07624e49a3ab10bf27f58838b297b38926886c9305ec547531806d47f",
+    "src/canvas/financial-audit/audit.css": "bfa400d27aae01316e1ab1c1af7b6b5c5aa071c54dada2a486b68bfba84eb1dc"
+  },
+  "unauthenticatedEndpoints": {
+    "GET refresh-status": 401,
+    "POST refresh": 401
+  }
+}

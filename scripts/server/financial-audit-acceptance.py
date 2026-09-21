@@ -130,7 +130,7 @@ check('source-corrections-retained',all(controls['note-'+str(n)+'-1']['correctio
 check('year-end-not-due',all(controls['note-'+str(n)+'-1']['status']=='not_due' for n in [53,98,147,148,165,166]))
 check('loan-not-deposit',controls['note-131-1']['accountPrefixes']==['300'] and bool(controls['note-131-1']['correction']))
 saved=api('runs/'+out['runId'])
-check('snapshot-roundtrip',{k:v for k,v in saved.items() if k!='cached'}=={k:v for k,v in out.items() if k!='cached'})
+check('snapshot-roundtrip',{k:v for k,v in saved.items() if k not in {'cached','refresh'}}=={k:v for k,v in out.items() if k not in {'cached','refresh'}})
 # Independently derive same-voucher counterpart observations from per-main-account totals.
 pair_defs=[('64','119','c',['654'],'d'),('73','129','c',['654'],'d'),('81','139','c',['654'],'d'),('82','150','c',['710','790'],'d'),('83','151','d',['711','721','731','799'],'c'),('84','151','c',['152'],'d'),('85','153','c',['621'],'d'),('86','157','c',['623'],'d'),('87','158','c',['654'],'d'),('93','181','d',['6'],'c'),('99','199','c',['654'],'d'),('104','229','c',['654'],'d'),('110','239','c',['654'],'d'),('111','241','c',['654'],'d'),('113','244','c',['654'],'d'),('114','247','c',['654'],'d'),('115','249','c',['654'],'d'),('127','281','d',['6'],'c'),('130','298','c',['654'],'d'),('162','501','c',['102'],'d')]
 prefixes=sorted({x for _,p,_,others,_ in pair_defs for x in [p,*others]})
