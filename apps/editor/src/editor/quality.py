@@ -240,9 +240,11 @@ async def critic_pass(generation_id: str, recheck: bool = False) -> dict:
     # Text-visual and continuity findings are candidates by definition and reach the editor
     # once, through the contradiction queue; judging them here queued the same finding twice.
     statuses = ("CANDIDATE", "VERIFIED") if recheck else ("CANDIDATE",)
-    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status=ANY(%s) AND c.kind NOT IN"
-                         " ('TEXT_VISUAL_MISMATCH','VISUAL_CONTINUITY','SUMMARY','ANSWER','AGE_GROUP','PUBLISHER_DECISION')",
-                         generation_id, list(statuses))
+    excluded = ["TEXT_VISUAL_MISMATCH", "VISUAL_CONTINUITY"]
+    if recheck:
+        excluded += ["SUMMARY", "ANSWER", "AGE_GROUP", "PUBLISHER_DECISION"]
+    claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status=ANY(%s) AND NOT(c.kind=ANY(%s))",
+                         generation_id, list(statuses), excluded)
     stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
              "repair_tried": 0, "repaired": 0, "no_verdict": 0}
     first = await _judge(generation_id, claims)
@@ -443,6 +445,8 @@ def create_analysis_report(generation_id: str, kind: str = "ANALYSIS",
     """Builds the cited report from the ledger. `sections` (from a Hermes skill
     such as age_group_assessment) are validated claim by claim and saved as
     claims first; a section claim without verified evidence is refused."""
+    from .outputs import guard_legacy_producer
+    guard_legacy_producer(generation_id)
     saved = []
     if sections:
         with db.tx() as c:

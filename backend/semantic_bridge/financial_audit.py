@@ -225,6 +225,7 @@ def register(app, runtime, authorize):
                 out['dbMs'] += profile.get('dbMs', 0)+pair_read.get('dbMs',0)+vat.get('dbMs',0)
                 out['runId'] = uuid.uuid4().hex
                 out['readConsistency'] = 'Aynı yedek üzerinde ardışık sorgular; veritabanı snapshot transaction değildir.'
+                out = json.loads(json.dumps(out, ensure_ascii=False, default=str))
                 # Private immutable workpaper. UI and exports can pin this exact run.
                 root = archive_root()
                 root.mkdir(parents=True, exist_ok=True, mode=0o700)

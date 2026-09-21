@@ -81,3 +81,31 @@ CREATE VIEW current_artifact AS
  JOIN artifact_version v ON v.generation_id=a.generation_id AND v.kind=a.kind AND v.build_key=a.build_key
  WHERE a.state='READY' AND a.input_revision=s.knowledge_revision
    AND s.validated_revision=s.knowledge_revision AND v.input_revision=a.input_revision;
+
+CREATE TRIGGER foundation_track_knowledge BEFORE INSERT OR UPDATE OR DELETE ON text_visual_check
+ FOR EACH ROW EXECUTE FUNCTION foundation_track_knowledge();
+CREATE TRIGGER foundation_track_knowledge BEFORE INSERT OR UPDATE OR DELETE ON regression_run
+ FOR EACH ROW EXECUTE FUNCTION foundation_track_knowledge();
+
+CREATE FUNCTION guard_output_version() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE s ed.generation_state%ROWTYPE; rev bigint;
+BEGIN
+ IF (SELECT maintenance FROM ed.runtime_control WHERE singleton) THEN
+  RAISE EXCEPTION 'EDITOR_MAINTENANCE: output writes are disabled';
+ END IF;
+ SELECT * INTO s FROM ed.generation_state WHERE generation_id=NEW.generation_id FOR UPDATE;
+ IF s.origin<>'TRACKED' OR NOT s.producer_completed OR EXISTS
+   (SELECT 1 FROM ed.generation WHERE id=NEW.generation_id AND sealed_at IS NOT NULL) THEN
+  RAISE EXCEPTION 'Only completed producers in an open tracked generation may build outputs';
+ END IF;
+ rev := CASE WHEN TG_TABLE_NAME='knowledge_snapshot' THEN (to_jsonb(NEW)->>'revision')::bigint
+             ELSE (to_jsonb(NEW)->>'input_revision')::bigint END;
+ IF rev<>s.knowledge_revision OR (TG_TABLE_NAME='artifact_version' AND s.validated_revision IS DISTINCT FROM rev) THEN
+  RAISE EXCEPTION 'Output input revision is stale or unvalidated';
+ END IF;
+ RETURN NEW;
+END $$;
+CREATE TRIGGER guard_output_version BEFORE INSERT ON knowledge_snapshot
+ FOR EACH ROW EXECUTE FUNCTION guard_output_version();
+CREATE TRIGGER guard_output_version BEFORE INSERT ON artifact_version
+ FOR EACH ROW EXECUTE FUNCTION guard_output_version();

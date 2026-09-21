@@ -278,6 +278,7 @@ class CatalogStore:
                     mapping.concept_id = again[0].id
                     with self.engine.begin() as conn:
                         conn.execute(S.sl_mapping.insert().values(**self._mapping_values(mapping)))
+                        self._touch(conn, again[0].id)
                 return again[0], False
             self._invalidate(tenant_id, datasource_id)
             return concept, True
@@ -382,8 +383,20 @@ class CatalogStore:
             for m in mappings:
                 m.concept_id = concept_id
                 conn.execute(S.sl_mapping.insert().values(**self._mapping_values(m)))
+            self._touch(conn, concept_id)
         if c:
             self._invalidate(c.tenant_id, c.datasource_id)
+
+    @staticmethod
+    def _touch(conn, concept_id: str) -> None:
+        """A mapping IS what the concept means; when it changes, the concept has changed.
+
+        `catalog_fingerprint` watches the last concept write, not the mapping table (which carries no
+        timestamp). Without this, a mapping edit left every reader — the bridge above all — running on
+        the old meaning until someone restarted it: 'alım faturası' was re-scoped to TRCODE 1,4 and
+        'fatura toplam' to NETTOTAL, and the bridge kept answering from GRPCODE=1 and GROSSTOTAL.
+        Same transaction as the mapping write, so a reader never sees the new mapping with the old stamp."""
+        conn.execute(S.sl_concept.update().where(S.sl_concept.c.id == concept_id).values(updated_at=utcnow()))
 
     def mappings_for_column(self, tenant_id: str, datasource_id: str, entity: str, column: str) -> list[tuple[Concept, Mapping]]:
         result: list[tuple[Concept, Mapping]] = []

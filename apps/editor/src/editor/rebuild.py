@@ -84,11 +84,10 @@ def begin(snap: dict, digest: str, kind: str, key: str) -> dict | None:
             raise Superseded('Knowledge changed before output build')
         old=c.execute("SELECT content FROM ed.artifact_version WHERE generation_id=%s AND kind=%s AND build_key=%s",
             (gid,kind,key)).fetchone()
-        if old: return old['content']
         c.execute("UPDATE ed.derived_artifact SET state='BUILDING',input_revision=%s,build_key=%s,"
             "output_reference=NULL,updated_at=now() WHERE generation_id=%s AND kind=%s",
             (snap['revision'],key,gid,kind))
-        return None
+        return old['content'] if old else None
 
 
 def publish(snap: dict, digest: str, kind: str, key: str, content: dict):
@@ -108,9 +107,11 @@ def publish(snap: dict, digest: str, kind: str, key: str, content: dict):
         c.execute("INSERT INTO ed.artifact_version(generation_id,kind,build_key,input_revision,input_digest,content) "
             "VALUES(%s,%s,%s,%s,%s,%s) ON CONFLICT DO NOTHING",
             (gid,kind,key,snap['revision'],digest,db.J(outputs.plain(content))))
-        c.execute("UPDATE ed.derived_artifact SET state='READY',input_revision=%s,build_key=%s,"
+        updated=c.execute("UPDATE ed.derived_artifact SET state='READY',input_revision=%s,build_key=%s,"
             "output_reference=%s,updated_at=now() WHERE generation_id=%s AND kind=%s AND build_key=%s",
             (snap['revision'],key,db.J({'build_key':key,'input_digest':digest}),gid,kind,key))
+        if updated.rowcount != 1:
+            raise Superseded('Output build token no longer owns the pointer')
 
 
 def finish(snap,digest):
@@ -158,7 +159,11 @@ async def build(kind,snap,built,key):
         return outputs.render_report(snap,built['chapter_summaries'],built['book_summary'])
     if kind=='catalog':
         return {'title':snap['title'],'generation_id':snap['generation_id'],'revision':snap['revision'],
-            'summary':built['book_summary']['sentences'],'blockers':snap['blockers'],'semantic_acceptance':False}
+            'summary':built['book_summary']['sentences'],
+            'metadata':[c for c in snap['claims'] if c['kind']=='METADATA'],
+            'themes':[c for c in snap['claims'] if c['kind']=='THEME'],
+            'characters':snap['characters'],'events':snap['events'],
+            'blockers':snap['blockers'],'semantic_acceptance':False}
     raise KeyError(kind)
 
 
@@ -181,6 +186,14 @@ async def run(gid: str) -> dict:
                     raise ValueError('Rebuild retry budget exhausted')
                 c.execute("UPDATE ed.rebuild_request SET attempts=CASE WHEN attempted_revision=%s THEN attempts+1 ELSE 1 END,"
                     "attempted_revision=%s WHERE generation_id=%s",(state['knowledge_revision'],state['knowledge_revision'],gid))
+            # Model upgrades require an explicit new analysis generation. Never
+            # silently rebuild a recorded profile using a different model revision.
+            from .llm import aliases
+            actual=await aliases()
+            declared=db.one("SELECT model_manifest FROM ed.generation WHERE id=%s",gid)['model_manifest']
+            for alias in ('book-director','book-embedding'):
+                if any(actual.get(alias,{}).get(k)!=declared.get(alias,{}).get(k) for k in ('real_model','revision')):
+                    raise ValueError('Model profile changed; create a new generation: '+alias)
             # On an artifact-only retry the verified immutable input remains usable.
             existing=db.one("SELECT s.content,s.input_digest FROM ed.knowledge_snapshot s JOIN ed.generation_state g "
                 "ON g.generation_id=s.generation_id AND g.validated_revision=s.revision "

@@ -214,6 +214,8 @@ def _claims(generation_id: str, where: str, *args) -> list[dict]:
 
 
 async def build_card(generation_id: str) -> dict:
+    from .outputs import guard_legacy_producer
+    guard_legacy_producer(generation_id)
     gen = db.one("SELECT g.id, g.sealed_at, g.book_version_id, bv.book_id, b.title FROM generation g"
                  " JOIN book_version bv ON bv.id=g.book_version_id JOIN book b ON b.id=bv.book_id"
                  " WHERE g.id=%s", generation_id)

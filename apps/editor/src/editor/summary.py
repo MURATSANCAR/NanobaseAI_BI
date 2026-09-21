@@ -28,6 +28,8 @@ def _save_sentences(generation_id: str, sentences: list[dict], *, subject: str, 
 
 
 async def chapter_summary(generation_id: str, ch: dict) -> dict:
+    from .outputs import guard_legacy_producer
+    guard_legacy_producer(generation_id)
     a, b = ch["page_from"], ch["page_to"]
     text = "\n".join(page_text_numbered(generation_id, p) for p in range(a, b + 1))
     evs = db.all_rows("SELECT page_from, page_to, modality, summary FROM event WHERE generation_id=%s"
@@ -47,6 +49,8 @@ async def chapter_summary(generation_id: str, ch: dict) -> dict:
 
 
 async def book_summary(generation_id: str) -> dict:
+    from .outputs import guard_legacy_producer
+    guard_legacy_producer(generation_id)
     chs = db.all_rows("SELECT subject, claim, source_pages FROM claim WHERE generation_id=%s AND"
                       " kind='SUMMARY' AND payload->>'level'='chapter' AND status NOT IN ('REJECTED','SUPERSEDED')"
                       " ORDER BY (payload->'pages'->>0)::int, (payload->>'order')::int", generation_id)

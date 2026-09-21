@@ -10,6 +10,7 @@ import json
 import os
 
 from . import db, foundation, source
+from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
 POLICY = 'validated-outputs-v1'
@@ -53,6 +54,7 @@ def capture(c, gid: str) -> dict:
     return plain({'generation_id':gid,'revision':gen['knowledge_revision'],'policy':POLICY,
         'code_version':os.environ.get('EDITOR_CODE_VERSION','unknown'),
         'models':gen['model_manifest'],'prompts':gen['prompt_manifest'],'title':gen['title'],
+        'configuration':{'actor_min_probability':settings().actor_min_probability,'source_policy':source.POLICY},
         'origin':gen['origin'],'producer_completed':gen['producer_completed'],
         'chapters':chapters_from_pages(pages),'claims':claims,'evidence':evidence,
         'events':events,'emotions':emotions,'characters':characters,'reviews':reviews,
@@ -67,7 +69,9 @@ def preview(gid: str) -> dict:
         artifacts = c.execute("SELECT * FROM ed.derived_artifact WHERE generation_id=%s ORDER BY kind",(gid,)).fetchall()
         queue = c.execute("SELECT * FROM ed.rebuild_request WHERE generation_id=%s",(gid,)).fetchone()
     return {'snapshot':snapshot,'input_digest':foundation.digest_inputs(snapshot),'order':ORDER,
-        'state':state,'artifacts':artifacts,'queue':queue,'read_only':True,'model_calls':0}
+        'state':state,'artifacts':artifacts,'queue':queue,'read_only':True,'model_calls':0,
+        'report_preview':{**render_report(snapshot,{'chapters':[]},{'sentences':[]}),
+            'preview_only':True,'summary_status':'NOT_GENERATED'}}
 
 
 def current(gid: str, kind: str) -> dict:
@@ -130,7 +134,7 @@ def bind_sentences(out: dict, claims: list[dict], evidence: list[dict]) -> list[
         if not row['text'].strip() or not refs or len(refs)!=len(set(refs)) or not set(refs)<=allowed.keys():
             raise ValueError('Invalid or missing summary claim reference')
         pages = sorted({p for cid in refs for p in allowed[cid]['source_pages']})
-        evs = sorted({e['id'] for e in evidence if e['claim_id'] in refs})
+        evs = sorted({e['id'] for e in evidence if e['claim_id'] in refs and e['quote_verified']})
         if not evs: raise ValueError('Summary has no source evidence')
         sentences.append({'text':row['text'],'claim_ids':refs,'pages':pages,'evidence_ids':evs})
     if claims and not sentences: raise ValueError('Empty summary for nonempty verified inputs')
@@ -163,3 +167,14 @@ async def summarize(snap: dict, claims: list[dict], label: str) -> dict:
             raise ValueError('Output Critic rejected or omitted summary sentences')
         calls.append(cid)
     return {'sentences':rows,'status':'SOURCE_SUPPORTED_DRAFT','model_calls':calls}
+
+
+def guard_legacy_producer(gid: str):
+    """Tracked generations cannot bypass staged revision-bound output writes."""
+    with foundation.read_snapshot() as c:
+        foundation.assert_enabled(c)
+        row=c.execute("SELECT s.origin,g.sealed_at FROM ed.generation_state s JOIN ed.generation g "
+            "ON g.id=s.generation_id WHERE g.id=%s",(gid,)).fetchone()
+        if row is None: raise KeyError(gid)
+        if row['origin']=='TRACKED' or row['sealed_at'] is not None:
+            raise ValueError('Use revision-bound rebuild outputs; sealed generations are read-only')

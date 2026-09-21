@@ -55,6 +55,8 @@ def _passages(generation_id: str) -> list[dict]:
 
 
 async def embed_passages(generation_id: str, batch: int = 64) -> dict:
+    from .outputs import guard_legacy_producer
+    guard_legacy_producer(generation_id)
     await _ensure(PASSAGES)
     ps = _passages(generation_id)
     llm = Llm(generation_id)
