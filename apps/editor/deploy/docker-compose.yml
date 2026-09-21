@@ -10,7 +10,7 @@
 name: editor
 
 x-py: &py
-  image: ${EDITOR_PY_IMAGE:-editor-py:0.12.0-outputs}
+  image: ${EDITOR_PY_IMAGE:-editor-py:0.12.1-outputs}
   restart: unless-stopped
   env_file: ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
   environment:
