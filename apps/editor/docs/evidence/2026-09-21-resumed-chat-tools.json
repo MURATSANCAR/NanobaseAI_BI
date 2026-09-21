@@ -1,0 +1,1324 @@
+{
+  "generation_id": "1600e738-621b-434f-8d9c-0c0645b42fb2",
+  "code_version": "0.15.2-production-478d66c0",
+  "passed": 329,
+  "failed": 0,
+  "checks": [
+    {
+      "name": "only seven bounded read tools",
+      "passed": true
+    },
+    {
+      "name": "get_book_status transport",
+      "passed": true
+    },
+    {
+      "name": "get_book_status payload bounded",
+      "passed": true
+    },
+    {
+      "name": "status current ready kinds",
+      "passed": true
+    },
+    {
+      "name": "status current revision validation",
+      "passed": true
+    },
+    {
+      "name": "status analytical distinct from technical",
+      "passed": true
+    },
+    {
+      "name": "get_book_summary transport",
+      "passed": true
+    },
+    {
+      "name": "get_book_summary payload bounded",
+      "passed": true
+    },
+    {
+      "name": "whole summary present",
+      "passed": true
+    },
+    {
+      "name": "complete summary is not analytical acceptance",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "summary same revision",
+      "passed": true
+    },
+    {
+      "name": "summary not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "summary all rows exactly match independent snapshot",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "events same revision",
+      "passed": true
+    },
+    {
+      "name": "events not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "events advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "events same revision",
+      "passed": true
+    },
+    {
+      "name": "events not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "events advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "events same revision",
+      "passed": true
+    },
+    {
+      "name": "events not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "events advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "events same revision",
+      "passed": true
+    },
+    {
+      "name": "events not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "events advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "events same revision",
+      "passed": true
+    },
+    {
+      "name": "events not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "events advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "events same revision",
+      "passed": true
+    },
+    {
+      "name": "events not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "events advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "events same revision",
+      "passed": true
+    },
+    {
+      "name": "events not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "events all rows exactly match independent snapshot",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims advancing cursor",
+      "passed": true
+    },
+    {
+      "name": "read_book_section transport",
+      "passed": true
+    },
+    {
+      "name": "read_book_section payload bounded",
+      "passed": true
+    },
+    {
+      "name": "claims same revision",
+      "passed": true
+    },
+    {
+      "name": "claims not overstated acceptance",
+      "passed": true
+    },
+    {
+      "name": "claims all rows exactly match independent snapshot",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "text source does not deny visuals",
+      "passed": true
+    },
+    {
+      "name": "p6 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p6 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p6 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p6 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p6 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p6 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p6 exact source text",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "text source does not deny visuals",
+      "passed": true
+    },
+    {
+      "name": "p23 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p23 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p23 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p23 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p23 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p23 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p23 exact source text",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "read_source_page transport",
+      "passed": true
+    },
+    {
+      "name": "read_source_page payload bounded",
+      "passed": true
+    },
+    {
+      "name": "text source does not deny visuals",
+      "passed": true
+    },
+    {
+      "name": "p32 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p32 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p32 exact source text",
+      "passed": true
+    },
+    {
+      "name": "p32 exact source text",
+      "passed": true
+    },
+    {
+      "name": "find_book_claims transport",
+      "passed": true
+    },
+    {
+      "name": "find_book_claims payload bounded",
+      "passed": true
+    },
+    {
+      "name": "Baba Vombat real matches",
+      "passed": true
+    },
+    {
+      "name": "find_book_claims transport",
+      "passed": true
+    },
+    {
+      "name": "find_book_claims payload bounded",
+      "passed": true
+    },
+    {
+      "name": "Yavru Vombat real matches",
+      "passed": true
+    },
+    {
+      "name": "oversized request rejected",
+      "passed": true
+    }
+  ]
+}

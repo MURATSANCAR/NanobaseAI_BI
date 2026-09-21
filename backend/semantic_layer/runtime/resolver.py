@@ -892,6 +892,15 @@ class SemanticResolver:
             # "bugüne kadar" is not "bugün": the word inside the cue was read as a one-day period.
             sq.explanation.append(f"'{ever.group(1)}' bir gün değil, bugüne kadarki bütün kayıtlar: '{sq.temporal[0].text}' dönem olarak okunmadı")
             sq.temporal = []
+        # "bankaların bugünkü bakiyesi", "bu ayki satıcı bakiyesi": a balance asked at a period that is
+        # still running is the balance as of now — every movement up to today. Kept as a filter it
+        # computed the balance of today's rows only, and the gate refused the statement.
+        now = today or date.today()
+        state_only = (not dated_measure and any(s_.semantic_type == SemanticType.METRIC
+                      and (s_.mapping.extra or {}).get("state_measure") for s_ in placed))
+        if state_only and sq.temporal and all(t.start and t.end and t.start <= now < t.end for t in sq.temporal):
+            sq.explanation.append(f"'{sq.temporal[0].text}' bakiye için bugün itibarıyla okundu → bugüne kadarki bütün hareketler")
+            sq.temporal = []
         if not sq.temporal:
             last_n = _last_n_records(list(qf.tokens))
             if last_n:
@@ -2174,10 +2183,10 @@ class SemanticResolver:
     def _balance_word(tokens: list[str], k: int) -> bool:
         """'bakiye' itself, or the 'borç'/'alacak' side that directly precedes it."""
         def is_balance(t: str) -> bool:
-            return stem(t) == stem("bakiye") or fold(t).startswith("bakiye")
+            return fold(t).startswith("bakiye")
         if is_balance(tokens[k]):
             return True
-        return (stem(tokens[k]) in (stem("borç"), stem("alacak")) and k + 1 < len(tokens)
+        return (stem(fold(tokens[k])) in ("borc", "alacak") and k + 1 < len(tokens)
                 and is_balance(tokens[k + 1]))
 
     def _source_named(self, token: str) -> Optional[str]:

@@ -22,10 +22,12 @@ LONG = timedelta(hours=2)
 class BookFullAnalysis:
     def __init__(self) -> None:
         self.job_id = ""
+        self.activity_heartbeats = False
 
     async def act(self, name: str, *args, timeout: timedelta = LONG):
+        options = {"heartbeat_timeout": timedelta(seconds=60)} if self.activity_heartbeats else {}
         return await workflow.execute_activity(name, args=list(args), start_to_close_timeout=timeout,
-                                               retry_policy=RETRY)
+                                               retry_policy=RETRY, **options)
 
     async def step(self, n: int, label: str, extra: dict | None = None) -> None:
         await self.act("set_step", self.job_id, n, label, extra or {}, timeout=SHORT)
@@ -49,6 +51,9 @@ class BookFullAnalysis:
     @workflow.run
     async def run(self, job_id: str) -> dict:
         self.job_id = job_id
+        # Record the choice once at workflow entry. Histories without this marker
+        # retain their original activity options, including after replay resumes.
+        self.activity_heartbeats = workflow.patched("activity-heartbeats-v1")
         # Jobs that started under the old step order replay it; new jobs take the order
         # that loads the director once.
         if workflow.patched("verified-revision-outputs-v1"):
