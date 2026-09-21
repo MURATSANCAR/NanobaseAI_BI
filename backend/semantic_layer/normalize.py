@@ -480,3 +480,150 @@ def is_light_verb(token: str) -> bool:
     """Return a lexical hint, never proof that a token can be discarded."""
     root = verb_root(token)
     return bool(root) and root in _LIGHT_ROOTS
+
+
+# Endings that leave a noun in the same role before a verb: plural, possessive, accusative. What they
+# leave out is the case that changes the role — dative "stoğa düşmüş" (fell *into* stock) is not
+# ablative "stoktan düşen" (taken *out of* stock), though `stem` reduces both to "stok".
+_ROLE_KEEPING = ("larimizi", "lerimizi", "larimiz", "lerimiz", "larini", "lerini", "lari", "leri", "lar", "ler",
+                 "imizi", "umuzu", "imiz", "umuz", "iniz", "unuz", "sini", "suni", "sunu", "ini", "unu",
+                 "si", "su", "ni", "nu", "yi", "yu", "i", "u")
+
+
+def argument_core(token: str) -> str:
+    """The noun in front of a verb, with plural/possessive/accusative taken off and its case kept:
+    "limitini" → "limit", "faturası" → "fatura", "tahsile" → "tahsile", "stoğa" → "stoga"."""
+    t = fold(token)
+    for _ in range(3):
+        for suf in _ROLE_KEEPING:
+            if t.endswith(suf) and len(t) - len(suf) >= 3:
+                t = t[: -len(suf)]
+                break
+        else:
+            break
+    if t and t[-1] in _HARDEN:
+        t = t[:-1] + _HARDEN[t[-1]]
+    return t
+
+
+# ---------------------------------------------------------------------- one verb, several endings
+# Turkish says the same finished event with several endings: "tahsil edilen", "tahsil edildi", "tahsil
+# edilmiş", "tahsil ettiğimiz". A catalog stores one of them; the stemmer (`stem`) cuts each one somewhere
+# else ("edilen", "edilt", "edilmis", "ettik"), so an exact lookup misses all but the stored one.
+# `verb_aspect_keys` reads the ending as grammar — root + suffix, checked against vowel harmony and
+# consonant assimilation — and returns what the forms share: the verb root and whether the event is done
+# ("R") or still to come ("F"). Nothing here names a word of any customer's vocabulary; two different
+# words never meet, because the root must be identical letter for letter (no root reduction, no stem):
+# "çeviri" and "çevir" are not a root plus a verb ending and stay apart.
+_VOWELS = "aeiou"                       # folded: ı→i, ü→u, ö→o
+_VOICELESS = "fhkpst"                   # folded consonants that are always voiceless (ç folds to c: either)
+
+
+def _last_vowel(root: str) -> str:
+    for ch in reversed(root):
+        if ch in _VOWELS:
+            return ch
+    return ""
+
+
+def _high(root: str) -> set[str]:
+    """Folded high-vowel allomorph a suffix takes after `root` (I: i/ı → "i", u/ü → "u")."""
+    v = _last_vowel(root)
+    return {"u"} if v in "ou" else {"i"} if v in "aei" else set()
+
+
+def _low(root: str) -> set[str]:
+    """Folded low-vowel allomorph (A: a/e). Folding hides front/back of i and u, so both are allowed there."""
+    v = _last_vowel(root)
+    return {"a"} if v in "ao" else {"e"} if v == "e" else {"a", "e"} if v else set()
+
+
+def _dental(root: str) -> set[str]:
+    last = root[-1:]
+    return {"t"} if last in _VOICELESS else {"d", "t"} if last == "c" else {"d"}
+
+
+def _nominal_tail(tail: str) -> bool:
+    """A participle may be used as a noun and take plural/case/possessive ("edilenlerin", "verdiklerimizi")."""
+    while tail:
+        for suf in _SUFFIXES:
+            if tail.startswith(suf):
+                tail = tail[len(suf):]
+                break
+        else:
+            return False
+    return True
+
+
+# realised-event endings (after the dental / vowel is fixed by harmony) and what may follow them
+_POSSESSIVE_AFTER_DIK = ("imiz", "iniz", "im", "in", "i", "")       # -DIğI(mIz); "" + k is the bare -DIk
+_PERSON_AFTER_DI = ("", "ler", "lar")
+
+
+def verb_aspect_keys(token: str) -> set[tuple[str, str]]:
+    """(key, ending) pairs a verb form shares with the other endings of the same verb: ("edil|R", "An")
+    for "edilen", ("edil|R", "DI") for "edildi", ("edil|R", "mIs") for "edilmiş" / "edilmişlerin". The
+    -DIK relative of an active verb names what the passive -An names ("tahsile verdiğimiz" = "tahsile
+    verilen"), so "ettiğimiz" gives ("edil|R", "DIK") and ("etil|R", "DIK"). Future forms get "|F" and
+    never meet a finished event. A negated verb keeps its "-mA" inside the root, so "edilmemiş" only
+    meets "edilmeyen". The ending is returned so a caller can require the two forms to *differ* in it:
+    two words with the same ending and root are the same word, or a noun the parse misread ("oranı")."""
+    t = fold(token)
+    out: set[tuple[str, str]] = set()
+    if not t.isalpha() or len(t) < 4:
+        return out
+
+    def ok_root(root: str) -> bool:
+        return len(root) >= 2 and bool(_last_vowel(root))
+
+    def passive_of(root: str) -> set[str]:
+        # passive allomorph: vowel-final → -n ("öde" → "öden"), l-final → -In ("al" → "alın"),
+        # otherwise -Il ("ver" → "veril"); a few roots soften t → d before the vowel ("et" → "edil").
+        if root[-1] in _VOWELS:
+            return {root + "n"}
+        forms = set()
+        for base in {root, root[:-1] + "d"} if root.endswith("t") else {root}:
+            for h in _high(base):
+                forms.add(base + h + ("n" if base.endswith("l") else "l"))
+        return forms
+
+    for n in range(2, len(t) - 1):
+        root, tail = t[:n], t[n:]
+        if not ok_root(root):
+            continue
+        vowel_final = root[-1] in _VOWELS
+        # -(y)An: subject relative, same voice as the finite forms
+        for a in _low(root):
+            for pre in (("y",) if vowel_final else ("",)):
+                suf = pre + a + "n"
+                if tail.startswith(suf) and _nominal_tail(tail[len(suf):]):
+                    out.add((root + "|R", "An"))
+        # -mIş (+ -DIr, + nominal tail)
+        for h in _high(root):
+            suf = "m" + h + "s"
+            if tail.startswith(suf):
+                rest = tail[len(suf):]
+                if rest in ("tir", "tur") or _nominal_tail(rest):
+                    out.add((root + "|R", "mIs"))
+        # -DI (+ person)
+        for d in _dental(root):
+            for h in _high(root):
+                if tail.startswith(d + h) and tail[2:] in _PERSON_AFTER_DI:
+                    out.add((root + "|R", "DI"))
+        # -DIK (+ possessive, + nominal tail) and bare -DIk: object relative / first person → passive
+        for d in _dental(root):
+            for h in _high(root):
+                stem_ = d + h
+                if tail == stem_ + "k" or (tail.startswith(stem_ + "g") and any(
+                        tail[3:].startswith(p.replace("i", h)) and _nominal_tail(tail[3 + len(p):])
+                        for p in _POSSESSIVE_AFTER_DIK if p)) or (tail.startswith(stem_ + "kler") or tail.startswith(stem_ + "klar")) and _nominal_tail(tail[len(stem_) + 1:]):
+                    out.update((p + "|R", "DIK") for p in passive_of(root))
+        # -(y)AcAK: an event still to come — its own class
+        for a in _low(root):
+            for pre in (("y",) if vowel_final else ("",)):
+                fut = pre + a + "c" + a
+                if tail.startswith(fut + "k") and _nominal_tail(tail[len(fut) + 1:]):
+                    out.add((root + "|F", "AcAk"))
+                elif tail.startswith(fut + "g") and _nominal_tail(tail[len(fut) + 1:]):
+                    out.add((root + "|F", "AcAgI"))
+    return out

@@ -20,6 +20,7 @@ from pydantic import BaseModel, Field
 from .financial_audit_rules import extend_ratios, evaluate, pair_sql, pair_results
 from .financial_audit_evidence import read_evidence, document_sql
 from .financial_audit_deep import read_deep, exception_sql, DEFINITIONS
+from .financial_audit_snapshot import AuditSnapshots, atomic_json
 
 log = logging.getLogger(__name__)
 REVISION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -44,7 +45,6 @@ def dec(value):
 def register(app, runtime, authorize):
     lock = threading.Lock()
     review_lock = threading.Lock()
-    cache = {}
 
     @app.get("/api/v1/financial-audit/catalog")
     def catalog(request: Request):
@@ -69,7 +69,7 @@ def register(app, runtime, authorize):
         physical = r._physical(sql, context(year), scope=scope)
         if any(code != '411' for code in re.findall(r'\bLG_(\d+)_', physical, re.I)):
             raise HTTPException(409, 'Sorgu doğrulanmış 2026 kaynak kopyasından başka bir yedeğe yönlendi.')
-        result = r.run_sql(sql, 10000, context(year), scope=scope)
+        result = r.run_sql(sql, 10000, context(year), scope=scope, use_cache=False)
         if any(code != '411' for code in re.findall(r'\bLG_(\d+)_', result.get('physicalSql',''), re.I)):
             raise HTTPException(409, 'Yanıtın kaynak kopyası doğrulanamadı.')
         if result.get("truncated"):
@@ -88,11 +88,24 @@ def register(app, runtime, authorize):
     def overview(request: Request, year: int = 2026):
         authorize(request)
         context(year)
-        # A single bounded reader, shared by viewers. No duplicate heavy runs.
+        report = snapshots.load()
+        if report is None:
+            raise HTTPException(503, 'İlk denetim raporu arka planda hazırlanıyor. Hazır olduğunda otomatik gösterilecek.')
+        return dict(report, cached=True, refresh=snapshots.status())
+
+    @app.get('/api/v1/financial-audit/refresh-status')
+    def refresh_status(request: Request):
+        authorize(request)
+        return snapshots.status()
+
+    @app.post('/api/v1/financial-audit/refresh', status_code=202)
+    def refresh(request: Request):
+        authorize(request)
+        return snapshots.refresh()
+
+    def build_report(year):
+        # Only the background snapshot publisher invokes this expensive calculation.
         with lock:
-            import time
-            if year in cache and time.time() - cache[year][0] < 120:
-                return dict(cache[year][1], cached=True)
             try:
                 sql = f"""SELECT A.LOGICALREF AS accountRef,A.CODE AS code,A.DEFINITION_ AS name,
                   A.ACCTYPE AS accountType, COUNT(*) AS lineCount,
@@ -265,16 +278,13 @@ def register(app, runtime, authorize):
                 root = archive_root()
                 root.mkdir(parents=True, exist_ok=True, mode=0o700)
                 path = root / (out['runId'] + '.json')
-                with path.open('x') as f:
-                    os.chmod(path, 0o600)
-                    json.dump(out, f, ensure_ascii=False, default=str)
+                atomic_json(path, out)
                 meta = {k:out[k] for k in ['runId','computedAt','year','source','lastDate','lineCount','revision']}
                 meta_temp = root/(out['runId']+'.meta.tmp')
                 with meta_temp.open('x') as f:
                     os.chmod(f.name,0o600)
                     json.dump(meta,f,ensure_ascii=False)
                 meta_temp.replace(root/(out['runId']+'.meta.json'))
-                cache[year] = (time.time(), out)
                 return out
             except HTTPException:
                 raise
@@ -419,3 +429,6 @@ def register(app, runtime, authorize):
         except Exception:
             log.exception("Financial audit detail failed")
             raise HTTPException(503, "Logo hareketleri okunamadı.")
+
+    snapshots = AuditSnapshots(archive_root, build_report)
+    return snapshots

@@ -37,6 +37,8 @@ from semantic_layer.normalize import (
     short_root,
     stem,
     tokenize,
+    argument_core,
+    verb_aspect_keys,
     verb_root,
 )
 from semantic_layer.naming import is_shadow_copy, source_rank
@@ -332,6 +334,9 @@ class SemanticResolver:
         # The certified vocabulary keyed by the roots of its own terms, rebuilt when the catalog is.
         self._roots_for: Optional[int] = None
         self._roots: dict = {}
+        # ... and by the verb it contains, whatever ending it wears ("tahsil edilen" / "edilmiş").
+        self._aspects_for: Optional[int] = None
+        self._aspects: dict = {}
         self.tables_of: dict[str, list[SchemaProfile]] = {}
         for prof in profiles:
             self.tables_of.setdefault(prof.entity, []).append(prof)
@@ -454,11 +459,18 @@ class SemanticResolver:
             # does not land where stemming its root does — "kanal" stems to "kanal" and "kanala" to
             # "kana", so the two never meet. The root is taken from what the person actually wrote.
             senses = index.get(key) or self._by_root(index).get(_rooted(qf.surface.get(key, key)))
+            via_verb = None
+            if not senses:
+                via_verb = self._by_verb_ending(index, qf.tokens[i:j])
+                senses = index.get(via_verb) if via_verb else None
             if not senses:
                 continue
             slot = self._slot_from_senses(key, qf.surface.get(key, key), senses, (i, j))
             if slot is None:
                 continue
+            if via_verb:
+                slot.explain["verb_ending_of"] = via_verb
+                slot.explain["why"] = f"aynı fiilin başka bir çekimi: katalogda '{via_verb}'"
             hits.append(slot)
             consumed.update(range(i, j))
 
@@ -1699,6 +1711,57 @@ class SemanticResolver:
                     roots[root] = index[next(iter(keys))]
             self._roots = roots
         return self._roots
+
+    @staticmethod
+    def _verb_ending_forms(tokens: list[str]) -> list[tuple[str, tuple[int, str]]]:
+        """(shape, (position, ending)) for a phrase whose verb follows a noun: "tahsil edilmiş çek" →
+        ("tahsil edil|R cek", (1, "mIs")). The verb's ending is replaced by what every ending of that
+        verb shares (`verb_aspect_keys`); the other words keep the key the catalog is stored under. A
+        phrase that starts with the verb, or holds one word, has no shape: a bare "edilmiş" names nothing,
+        and a single word is left to the lookups that already handle it. The noun right before the verb
+        is compared with its case ending kept (`argument_core`), because the case says what the verb
+        does to it."""
+        if len(tokens) < 2:
+            return []
+        out = []
+        for p in range(1, len(tokens)):
+            for aspect, ending in sorted(verb_aspect_keys(tokens[p])):
+                words = [stem(t) for t in tokens]
+                words[p] = aspect
+                # the noun the verb governs keeps its case: "stoğa düşmüş" is not "stoktan düşen"
+                words[p - 1] = argument_core(tokens[p - 1])
+                out.append((" ".join(words), (p, ending)))
+        return out
+
+    def _by_verb_ending(self, index: dict, tokens: list[str]) -> Optional[str]:
+        """The certified key this phrase names with another ending of the same verb, or None.
+
+        People say a finished event several ways — "tahsil edilen", "tahsil edildi", "tahsil edilmiş",
+        "tahsil ettiğimiz" — and the catalog stores one. The stored normalized keys stay as they are;
+        the match is made here, at lookup time. Three things keep it from inventing a match:
+          • the root must be the same letters (no stem, no root reduction: "çeviri" ≠ "çevir");
+          • the ending must *differ* — same root and same ending is the same word, or a noun the parse
+            misread ("oranı" is not a verb), and that is the other lookups' business;
+          • one reading only: if the phrase's shape leads to keys of different concepts, nothing is
+            picked ("one of these, and I picked" is the silent decision this system avoids).
+        """
+        marker = id(index)
+        if self._aspects_for != marker:
+            shapes: dict[str, set[tuple[str, tuple[int, str]]]] = {}
+            for key, senses in index.items():
+                surfaces = {t for c, _ in senses for t in [c.term, *(c.synonyms or [])]
+                            if t and (t == key or normalize_term(t) == key)}
+                for surf in surfaces:
+                    for shape, ending in self._verb_ending_forms(tokenize(surf)):
+                        shapes.setdefault(shape, set()).add((key, ending))
+            self._aspects, self._aspects_for = shapes, marker
+        keys: set[str] = set()
+        for shape, (p, ending) in self._verb_ending_forms(tokens):
+            keys.update(k for k, (cp, cend) in self._aspects.get(shape, ()) if cp == p and cend != ending)
+        if not keys:
+            return None
+        readings = {frozenset(c.id for c, _ in index[k]) for k in keys}
+        return min(keys) if len(readings) == 1 else None
 
     def _refresh_column_caches(self, index: dict[str, list[tuple[Concept, list[Mapping]]]]) -> None:
         """Value literals and measure columns come only from CERTIFIED COLUMN concepts: a value is
