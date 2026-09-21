@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor: düzeltme/otomatik üretim/kesinti sonrası devam canlı kabulü geçti
+
+- Son sunucu yayını `0.12.1-outputs-226d05ac`, migrations 014–016, image `sha256:f8f702adbed39ec29f571fb4a63548334bc7507db146d696551765e18d40d5e3`. Yeni gerçek Vombat nesli `3a987c80-95ba-48ce-a08e-820425cf438d`, son revizyon 2874. Genel tarama açılmadı; yalnız ayrı kabul kuyruğu çalıştı.
+- Kaynaklı anne-öznesi açıklığı düzeltmesi beş çıktıyı anında kapattı, eski rapor yayını ve indeks araması reddedildi. Otomatik tüketici yeniden üretti. Son katılımcı kaynağı düzeltmesi sonrası iddia gerçek Critic/aktör kontrolüyle VERIFIED oldu; bölüm/kitap özeti referansları, rapor/katalog olayı ve gerçek arama sonucu yeni iddiayı kullanıyor.
+- Son kodda kitap özeti BUILDING iken SIGKILL/137; ölü DB bağlantısı, yeniden başlatmada 1→2 deneme, aynı bölüm özeti build/içerik/zamanı ve kalan dört çıktının tamamlanması doğrulandı. Servisi biz yeniden başlattık; otomatik OS restart veya Temporal activity replay kabulü değil. Tekrar çağrı ALREADY_CURRENT, sıfır ek model çağrısı.
+- Gerçek API/DB-referans-sürüm kontrolleri 522/522, yaşam döngüsü 11/11, Qdrant 160/160 tam payload; altı mühürlü kitap regresyonu 54/54. Tarihsel analizlerin 13 tablo hashleri değişmedi. Yerel test/sentetik veri yok. Tam kanıt sunucuda `/data/editor/backups/20260921-live-outputs/`; compact kanıt `apps/editor/docs/evidence/2026-09-21-output-lifecycle.json`.
+- Analitik kabul NEEDS_REVIEW/BLOCKED: kaynak uyarıları, sayfa türleri, açık incelemeler; görsel kimlik 7/60, metin anılışı 22/33 bağlı. İlk Temporal işi FAILED tarihçesi korundu; aynı neslin çıktıları kurtarıldı. Son kodla sıfırdan ikinci tam kitap koşusu ve UI/Hermes artifact entegrasyonu bu kabulün dışında.
+- Koşu sonunda bakım true, aktif Temporal/rebuild yok, gateway/worker/rebuild/MCP/Hermes ve Editor modelleri kapalı; GPU 1 0 MiB, BI modeli çalışıyor. Kod yerel main üzerinde; HTTPS kimliği olmadığından GitHub push başarısız, kalan komut `git push origin main`.
+
 ## 2026-09-21 — İç analiz belgesi ürün ekranından kaldırıldı
 
 - Kullanıcı, kaynak PDF’nin geliştirme analizi olduğunu ve ekranda gösterilmemesini istedi. Kaynak belge sekmesi, sayfa açma, kaynak metni, sayfa/not etiketleri ve katalog indirme kaldırıldı.

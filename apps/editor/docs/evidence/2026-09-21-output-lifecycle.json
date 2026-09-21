@@ -1,0 +1,310 @@
+{
+  "generation_id": "3a987c80-95ba-48ce-a08e-820425cf438d",
+  "runtime_version": "0.12.1-outputs-226d05ac",
+  "generation_producer_version": "0.12.0-outputs-b5bfc0d7",
+  "revision": 2874,
+  "api_db_checks": {
+    "passed": 522,
+    "failed": 0
+  },
+  "lifecycle_checks": [
+    {
+      "check": "legacy_13_tables_unchanged",
+      "passed": true
+    },
+    {
+      "check": "all_five_hidden_after_correction",
+      "passed": true
+    },
+    {
+      "check": "all_five_rebuilt_new_keys",
+      "passed": true
+    },
+    {
+      "check": "all_five_same_revision",
+      "passed": true
+    },
+    {
+      "check": "crash_reuse_chapter_summaries",
+      "passed": true
+    },
+    {
+      "check": "report_corrected_fact",
+      "passed": true
+    },
+    {
+      "check": "catalog_corrected_fact",
+      "passed": true
+    },
+    {
+      "check": "chapter_summaries_no_superseded_references",
+      "passed": true
+    },
+    {
+      "check": "book_summary_no_superseded_references",
+      "passed": true
+    },
+    {
+      "check": "queue_completed",
+      "passed": true
+    },
+    {
+      "check": "analytical_acceptance_remains_blocked",
+      "passed": true
+    }
+  ],
+  "corrected_claim_referenced_in_summaries": {
+    "chapter_summaries": true,
+    "book_summary": true
+  },
+  "qdrant": {
+    "count": 160,
+    "expected_count": 160,
+    "payload_sha256": "29504b3ba9dcbf9130715681353604f4602aed04df4100743ad30ded2c74dd98",
+    "build_key": "0cdaed50e50ac67bafa1bfe9c926fe878eb76f73c6d799d506fdd1912b65c6b4"
+  },
+  "legacy_hashes": {
+    "claim": {
+      "count": 5788,
+      "sha256": "98310c57e0bc375656a3eca12f5fa6ea577f10a8107f32a85f920cb0f24e18e1"
+    },
+    "event": {
+      "count": 1734,
+      "sha256": "949205e0244dab8b5fab4405e61cfcac5a3ee784b4e07b503d00dd6fc1ed7a91"
+    },
+    "emotion": {
+      "count": 875,
+      "sha256": "bd8dcb259cbf3aba24660fd427a9d6cb305af8ab891aeecb02763612269f807c"
+    },
+    "evidence": {
+      "count": 10071,
+      "sha256": "ca99b1fcad1d5b63b1f2642e131b60cb3e42ba7acd34bceb58bd4f67f435ae2d"
+    },
+    "page_text": {
+      "count": 1450,
+      "sha256": "d96a11ebf38c2f2f3166416ddb05ebb63576e0d9649ca28015b5f8a375cfdc91"
+    },
+    "paragraph": {
+      "count": 7529,
+      "sha256": "2f0084c51ddebd0484b7e1cedd76bb864fd74345a04a1504611692de7738ea3b"
+    },
+    "character": {
+      "count": 198,
+      "sha256": "2799c1857d3f9a6c7dfb773bfeb8dee3412eeee72bc260645d59d2147fc01daf"
+    },
+    "character_mention": {
+      "count": 2266,
+      "sha256": "8ae194972045ddbff13b5ed64bb38d2ae0b9df8c5aad26ce5dc2282a9b10d62f"
+    },
+    "event_actor": {
+      "count": 18573,
+      "sha256": "ea6bd3f0cb8f8010093f221a22351180ad0300d733d2c0a66496250b7768fab6"
+    },
+    "review_item": {
+      "count": 1022,
+      "sha256": "f6376e8382ee4039c6138960b50a83999e35e8a9dbe3393b232211b5a7a1004f"
+    },
+    "contradiction": {
+      "count": 100,
+      "sha256": "ca2fe732274cf2f24ec1feba3ba8924fbd1c3b947a01c7f92dd78322f906a04b"
+    },
+    "regression_run": {
+      "count": 15,
+      "sha256": "7bf0e74a97de61244b9312c1384d6cfb4076e790a32c18f965d08dce05f71523"
+    },
+    "report": {
+      "count": 15,
+      "sha256": "113c196fbc557e10e2b8a2c6dbd94ad69f337355a263015d88d0ebb52e50624c"
+    }
+  },
+  "historical_temporal_job_status": "FAILED",
+  "blockers": [
+    "SOURCE_ISSUES",
+    "PAGE_ROLES_UNASSESSED",
+    "OPEN_EDITOR_REVIEW",
+    "INDEPENDENT_SEMANTIC_ACCEPTANCE_NOT_RECORDED"
+  ],
+  "semantic_acceptance": false,
+  "book": "Dünyanın En Korkak Hayvanı",
+  "physical_pages": 32,
+  "source_sha256": "12cc83a4ccffe9394fa2695c76e460cf87e2ffe32e6ae69d6699fcaee43ceea2",
+  "server": "tt-gpu",
+  "database": "editor-postgres/editor/ed",
+  "api": "editor-control:8000",
+  "image": "sha256:f8f702adbed39ec29f571fb4a63548334bc7507db146d696551765e18d40d5e3",
+  "release": "/data/editor/releases/226d05ac",
+  "maintenance_restored": true,
+  "temporal_running": [],
+  "pending_rebuilds": [],
+  "editor_gpu_memory_mib": 0,
+  "legacy_regression": {
+    "books": 6,
+    "passed": 54,
+    "failed": 0,
+    "tables_unchanged": true
+  },
+  "correction": {
+    "generation_id": "3a987c80-95ba-48ce-a08e-820425cf438d",
+    "event_id": "edbb7da8-9435-467a-bf78-88a189936ddb",
+    "old_claim_id": "c685d4fd-e33e-456e-aab1-991d60dc2d84",
+    "new_claim_id": "57f9e572-7249-4cfd-9ee9-bdd4cd392087",
+    "old_text": "Annesi, merak eden ve merakının peşinden gidenlere 'Bilim Vombatı' denildiğini açıklar.",
+    "new_text": "Yavru Vombat'ın annesi, merak eden ve merakının peşinden gidenlere 'Bilim Vombatı' denildiğini açıklar.",
+    "source_note": "Gerçek kaynak s6 p3–p6: 'Annesi' öznesinin hangi karaktere ait olduğunu açıklaştırma.",
+    "before_revision": 2683,
+    "after_revision": 2696,
+    "actors_before": 7,
+    "actors_after": 0,
+    "old_publish_refused": "Knowledge changed during output build; discarded",
+    "all_current_outputs_invalidated": true
+  },
+  "participant_provenance_repair": {
+    "generation_id": "3a987c80-95ba-48ce-a08e-820425cf438d",
+    "event_id": "edbb7da8-9435-467a-bf78-88a189936ddb",
+    "old_claim_id": "57f9e572-7249-4cfd-9ee9-bdd4cd392087",
+    "new_claim_id": "67e81267-aa97-471c-927b-445563da4590",
+    "unchanged_fact_text": "Yavru Vombat'ın annesi, merak eden ve merakının peşinden gidenlere 'Bilim Vombatı' denildiğini açıklar.",
+    "before_revision": 2779,
+    "after_revision": 2793,
+    "false_review_id": "42f2554d-ede8-4aa0-9074-0a80b08bd607",
+    "new_claim_status": "CANDIDATE",
+    "automatic_approval": false
+  },
+  "crash": {
+    "termination": "exited 137 2026-09-21T13:10:02.384789195Z",
+    "stage": "book_summary BUILDING after chapter_summaries committed",
+    "revision": 2874,
+    "attempts_before": 1,
+    "attempts_after_restart": 2,
+    "restart_method": "operator docker start; not automatic OS/service restart",
+    "reused_kinds": [
+      "chapter_summaries"
+    ]
+  },
+  "repeat": {
+    "result": {
+      "generation_id": "3a987c80-95ba-48ce-a08e-820425cf438d",
+      "technical_status": "ALREADY_CURRENT",
+      "accepted": false
+    },
+    "additional_model_calls": 0
+  },
+  "corrected_event_search": true,
+  "identity_coverage": [
+    {
+      "via": "TEXT",
+      "n": 33,
+      "linked": 22
+    },
+    {
+      "via": "VISUAL",
+      "n": 60,
+      "linked": 7
+    }
+  ],
+  "final_target": {
+    "summary": "Yavru Vombat'ın annesi, merak eden ve merakının peşinden gidenlere 'Bilim Vombatı' denildiğini açıklar.",
+    "claim_id": "67e81267-aa97-471c-927b-445563da4590",
+    "status": "VERIFIED",
+    "needs_editor_review": false
+  },
+  "local_tests": false,
+  "synthetic_data": false,
+  "server_evidence": {
+    "initial.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/initial.json",
+      "bytes": 161421,
+      "sha256": "166e856273c6cd3c497267e7ce2103c170ebf52ba58be2b8e989c496feb588e5"
+    },
+    "before-validation.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/before-validation.json",
+      "bytes": 1491240,
+      "sha256": "71e37ba239cd4f06177ea9520c0f3016f89dd061ac0c5bec8ad4b67e843c48d9"
+    },
+    "rejected-summary.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/rejected-summary.json",
+      "bytes": 3016283,
+      "sha256": "339cf4d4ab972cde56bb8af90e0e65dfe598823bff5699b70de6ee9de738f596"
+    },
+    "rejected-v2.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/rejected-v2.json",
+      "bytes": 3780282,
+      "sha256": "de7ba46a610d3f74c01c05a9595f31a4e1456ebce2d71ffe3833ac1cb8941b6d"
+    },
+    "first-ready.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/first-ready.json",
+      "bytes": 6346457,
+      "sha256": "88994e85e8770396a9b69424c5b3961cd07945b416b3cadcbc89d7feca402c1f"
+    },
+    "correction.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/correction.json",
+      "bytes": 804,
+      "sha256": "cf7d2cc9506a22e0db1e75b489bda5c8a145da0da4dc24172ddaf00f8e34fbb4"
+    },
+    "invalidated.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/invalidated.json",
+      "bytes": 6096585,
+      "sha256": "d541231223339505a6340fafe2acca97de8cd5b8e54ae3f5e871340a60c6fb64"
+    },
+    "stale-search.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/stale-search.json",
+      "bytes": 103,
+      "sha256": "2871a2929d09eaa3e00fbaae6a228378d050a28c815ea711a2240515d74fd435"
+    },
+    "corrected-ready.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/corrected-ready.json",
+      "bytes": 7186865,
+      "sha256": "dd8fc39f4aed1ae150f0fc2617586b2b4f6618721c06b517f913506dc841aaab"
+    },
+    "provenance-correction.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/provenance-correction.json",
+      "bytes": 552,
+      "sha256": "8e7c2218c4bd5934e24b51f00feba6a69c60b0cd9f161cf5a90e5f8ae99edbd8"
+    },
+    "final-crash-before.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/final-crash-before.json",
+      "bytes": 57184,
+      "sha256": "c9475c816ce2687d48778ed28df9687ed2fe150a450a80cedfb73b843fa143c3"
+    },
+    "final-crash-after.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/final-crash-after.json",
+      "bytes": 1301,
+      "sha256": "79571b40669e76bf75020d817c6ff279c1f006147b02c91537db7450f48cd270"
+    },
+    "final-crash-resumed.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/final-crash-resumed.json",
+      "bytes": 452,
+      "sha256": "cb6c8829e2723a7194789ebfa127519c92114b7902fd29116b7e96f2aa61112c"
+    },
+    "final-crash-exit.txt": {
+      "path": "/data/editor/backups/20260921-live-outputs/final-crash-exit.txt",
+      "bytes": 42,
+      "sha256": "2423205130003d1876fa6945aea2013b22dd56f8bd037eaaf01f432b78479cce"
+    },
+    "final.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/final.json",
+      "bytes": 8161385,
+      "sha256": "38013ef49ae259cf9f77a1590061f847a7b1876c7d0dec739f0c37d06983ac22"
+    },
+    "final-repeat-search.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/final-repeat-search.json",
+      "bytes": 2656,
+      "sha256": "88d642f2ef65296d50f70a04ced1e4b30eb1443f8f449c1629d7ce93f4b86bad"
+    },
+    "final-runtime.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/final-runtime.json",
+      "bytes": 1909,
+      "sha256": "8e2c17673d223373fd450680fa8bcff8c9f89d83834b1d8eaddf310bf327c4ec"
+    },
+    "legacy-regression.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/legacy-regression.json",
+      "bytes": 10659,
+      "sha256": "6cc7285e226bfe698990a3ef9fb26cd096e577f0bbfa3f1b7a27bbb5df7d7809"
+    },
+    "model-audit.json": {
+      "path": "/data/editor/backups/20260921-live-outputs/model-audit.json",
+      "bytes": 5884694,
+      "sha256": "fb99a2bcd31ae42d7d726d14e0c666482960b638bbe7115639bd21a7f4d3430d"
+    }
+  }
+}

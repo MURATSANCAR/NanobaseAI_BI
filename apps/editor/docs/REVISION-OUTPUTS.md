@@ -1,4 +1,98 @@
-# Doğrulama ve revizyona bağlı çıktı üretimi
+# Doğrulama ve revizyona bağlı çıktı üretimi — canlı kabul
+
+21 Eylül 2026. **Tek gerçek kitapta teknik yaşam döngüsü kabulü geçti.**
+Düzeltme → eski çıktıları kapatma → otomatik yeniden üretim → süreç kesintisinden
+sonra devam, gerçek PostgreSQL, modeller, kontrol API'si ve Qdrant ile sınandı.
+Tam kitap analitik kabulü değildir. Koşu bitti; bakım kilidi açık, üreticiler ve
+Editor modelleri kapalı, GPU 1 boş. Genel taramalar açılmadı.
+
+Kanıt: [gerçek yaşam döngüsü](evidence/2026-09-21-output-lifecycle.json).
+Tam kayıtlar `/data/editor/backups/20260921-live-outputs/` altında; özette hashleri var.
+
+## Son sürüm ve gerçek kitap
+
+- Kitap: **Dünyanın En Korkak Hayvanı**, 32 fiziksel sayfa.
+- Nesil: `3a987c80-95ba-48ce-a08e-820425cf438d`.
+- PDF SHA-256: `12cc83a4ccffe9394fa2695c76e460cf87e2ffe32e6ae69d6699fcaee43ceea2`.
+- Ayrı kuyruk: `editor-output-acceptance-20260921`; genel worker/MCP/Hermes kapalı.
+- Kaynak üreticileri: `0.12.0-outputs-b5bfc0d7`. Son doğrulama/çıktı kodu:
+  **`0.12.1-outputs-226d05ac`**, release `/data/editor/releases/226d05ac`.
+- Image: `sha256:f8f702adbed39ec29f571fb4a63548334bc7507db146d696551765e18d40d5e3`.
+
+Temporal marker ve activity geçmişinde yeni doğrulama-önce dalı doğrulandı.
+İlk gerçek özette filin merakı Yavru Vombat'a aktarıldı; Critic bunu yakaladı ve
+ilk Temporal işi FAILED kaldı. Bu tarihsel durum değiştirilmedi. Tamamlanmış
+kaynak üreticilerinin aynı açık neslinde otomatik çıktı tüketicisiyle ilerledik.
+Son kodla sıfırdan ikinci bir tam kitap Temporal koşusu yapıldığı iddia edilmiyor.
+
+## Canlı koşuda giderilen ek sorunlar
+
+1. İlk ret sonrası üretim duruyordu. `validated-outputs-v5`, ret gerekçesiyle en
+   fazla üç taslak üretir; başarısız taslak yayımlanmaz.
+2. Cümle denetçisi iddianın tür/sayfa bağlamını kaybediyordu. Artık iddia metni,
+   türü, kimliği ve sayfaları birlikte aktarılır.
+3. Yalnız boolean isteyen denetçi bire bir aynı metni reddedebiliyordu. Karardan
+   önce kısa gerekçe üretilir; gerekçe düzeltme çağrısına taşınır. Tek doğrulanmış
+   iddianın bire bir metni ayrıca `EXACT_VERIFIED_CLAIM` kanıtıdır; yalnız sondaki
+   tek nokta eklenmesine izin verilir. Bulanık eşleşme, ad değiştirme veya
+   belirsizlik/noktalama silme yoktur. Yeniden yazılan cümlede Critic onayı gerekir.
+   Model anlaşmazlıkları saklanır. Gerçek tanı çağrıları 27144–27145: 12 doğru
+   cümle kabul edildi; bir doğru ve iki gerçek hatalı cümlede bağımsız beklenti
+   `true,false,false` eşleşti. Bu, genel model kalite kıyaslaması değildir.
+4. Yeni kod eski deneme bütçesine takılıyordu. `016_rebuild_code_budget.sql`, üç
+   denemeyi revizyon + kod sürümüne bağlar. Aynı kodun yeniden başlaması bütçeyi
+   sıfırlamaz; beş dakikalık hata geri çekilmesi sürer.
+5. Temizlenen katılımcı listesi yokluk sayılıyordu. Düzeltme yazımları artık
+   `participants_invalidated` kaynağını taşır. Aktör kontrolü geçersiz eski listeyle
+   karşılaştırma yapmaz; gerçek olasılık/belirsizlik kontrolü sürer. Gözlenen yanlış
+   review kayıtlı gerekçeyle kapatıldı; yeni iddia CANDIDATE olarak gerçek Critic ve
+   aktör kontrolüne tekrar girdi, elle onaylanmadı.
+
+## Ölçülen döngü
+
+İlk hazır çıktı revizyonu 2683. Kaynaklı açıklık düzeltmesi, 6. sayfadaki
+“Annesi” öznesini “Yavru Vombat'ın annesi” yaptı. 2696 revizyonunda beş API çıktısı
+anında kapandı, 7 aktör kaydı silindi; eski rapor yayını ve eski indeks araması
+reddedildi. Tüketici kendiliğinden 2779 revizyonunu üretti. Katılımcı-listesi
+düzeltmesinden sonra **2874** son revizyonu beş çıktıda tamamlandı.
+
+Son kodda bölüm özeti kaydedilmiş, kitap özeti BUILDING iken tüketici SIGKILL ile
+sonlandırıldı (exit 137). Ölü DB bağlantısı doğrulandı. Servis yeniden başlatılınca
+deneme 1→2 oldu; kaydedilmiş bölüm özeti aynı build anahtarı, içerik ve oluşturulma
+zamanıyla kullanıldı. Yarım kitap özeti yeniden üretildi. Servisi Docker üzerinden
+biz yeniden başlattık; kendiliğinden OS/service restart veya Temporal activity-worker
+crash replay kabulü olarak sunulmuyor. Model çağrısında exactly-once garantisi yok.
+
+- **522/522** gerçek API/DB, referans ve sürüm kontrolü; **11/11** yaşam döngüsü
+  karşılaştırması. Bunlar 522 ayrı kitap/soru veya anlamsal doğruluk puanı değildir.
+- Beş çıktı revizyon 2874 ve aynı snapshot'ta; düzeltilmiş iddia hem bölüm hem kitap
+  özetinde referanslı, rapor/katalog olay metni ve claim kimliği eş.
+- Qdrant **160/160 tam payload** bağımsız snapshot referansıyla eş; gerçek
+  embedding/reranker araması düzeltilmiş olayı getirdi. Eski iki iddia güncel
+  özet referanslarından çıkarıldı.
+- Tamamlanmış işi tekrar çağırma: `ALREADY_CURRENT`, **0 ek model çağrısı**.
+- Eski analizlerin 13 tablosunun içerik hashleri değişmedi. Son sunucu kodunda
+  altı mühürlü kitap için eski çıktı okuma regresyonu **54/54**; 17 tablo sabit.
+- Bakım true; aktif Temporal iş ve bekleyen rebuild yok. Gateway/worker/rebuild/
+  MCP/Hermes ve Editor modelleri kapalı; GPU 1 **0 MiB**. BI modeli çalışıyor.
+
+## Kabul sınırı
+
+Teknik çıktı döngüsü geçti; analitik durum **NEEDS_REVIEW**, yayın **BLOCKED**.
+Kaynak uyarıları, doğrulanmamış sayfa türleri ve açık incelemeler var. Görsel kimlikte
+60 anılışın 7'si, metinde 33 anılışın 22'si karaktere bağlandı. Bağımsız tam kitap
+semantik kabul kapısı henüz yok. Yeni artifact API'nin eski UI/Hermes okuma yollarına
+ürün entegrasyonu ve eski Qdrant noktalarının temizliği bu kabulün dışında.
+
+`deploy/verify_live_outputs.py` ve iki kaynaklı kabul yazım scripti yalnız sunucuda
+gerçek veriyle çalıştırıldı. Yerel birim/mock/fixture/SQLite/yapay veri testi yok.
+
+---
+
+## 0.12.0 ilk yayının tarihsel notları
+
+Aşağıdaki bölüm ilk salt okunur yayının kaydıdır. Buradaki DOĞRULANAMADI ve sürüm
+bilgileri o aşamaya aittir; güncel teknik yaşam döngüsü sonucu yukarıdadır.
 
 21 Eylül 2026. `verified-revision-outputs-v1` yeni Temporal işlerinin yoludur.
 Önceki geçmişler eski patch dalını korur. Bakım kilidi kaldırılmaz, üreticiler

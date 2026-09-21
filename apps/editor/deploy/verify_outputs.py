@@ -101,7 +101,10 @@ def main():
             "'ed.knowledge_snapshot'::regclass,'ed.artifact_version'::regclass)")}
         assert {'reset_changed_event_actors','reset_changed_character_actors','output_validation_reset',
                 'guard_output_version','immutable_snapshot','immutable_artifact'}<=names
-        assert c.execute("SELECT count(*) n FROM ed.current_artifact").fetchone()['n']==0
+        # Newly accepted tracked generations can have current outputs. This
+        # legacy regression must assert only the generations it actually read.
+        assert c.execute("SELECT count(*) n FROM ed.current_artifact WHERE generation_id=ANY(%s::uuid[])",
+            ([str(g['id']) for g in gens],)).fetchone()['n']==0
     with db.tx() as c:
         c.execute('SET TRANSACTION READ ONLY')
         after=state(c)
