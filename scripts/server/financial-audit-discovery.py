@@ -1,9 +1,22 @@
 """Read-only discovery of actual accounting/e-ledger fields and coverage. Server only."""
 import json
+import sys
 from pathlib import Path
 from semantic_layer.profiler.connectors import connector_from_file
 
 db = connector_from_file('/data/nanobaseai/bi/secrets/logo-mssql-connection.json')
+if '--capabilities' in sys.argv:
+    sql = """SELECT TABLE_NAME,COLUMN_NAME,DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS
+      WHERE TABLE_NAME LIKE 'LG[_]411%'
+      AND ((TABLE_NAME LIKE '%EMF%' AND (COLUMN_NAME LIKE '%DOC%' OR COLUMN_NAME LIKE '%PAY%'))
+           OR TABLE_NAME LIKE '%FAYEAR%' OR TABLE_NAME LIKE '%EBOOK%'
+           OR COLUMN_NAME IN ('PAYMENTTYPE','DOCUMENTTYPE'))
+      ORDER BY TABLE_NAME,ORDINAL_POSITION"""
+    _, rows, cut = db.execute(sql, 5000)
+    result = {'columns':rows,'truncated':cut,'sql':sql}
+    Path('/tmp/financial-audit-capabilities.json').write_text(json.dumps(result,ensure_ascii=False,indent=2))
+    print(json.dumps(result,ensure_ascii=False),flush=True)
+    raise SystemExit(1 if cut else 0)
 out = {}
 for table in ['LG_411_01_EMFLINE', 'LG_411_01_EMFICHE', 'LG_411_EMUHACC', 'LG_411_01_FAYEAR', 'LG_411_FAREGIST', 'LG_211_01_EMFLINE']:
     try:

@@ -17,6 +17,7 @@ import uuid
 from fastapi import HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from .financial_audit_rules import extend_ratios, evaluate, pair_sql, pair_results
+from .financial_audit_evidence import read_evidence, document_sql
 
 log = logging.getLogger(__name__)
 REVISION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -219,10 +220,13 @@ def register(app, runtime, authorize):
                         'accounts':{k:str(v) for k,v in balances.items()},'status':'needs_evidence',
                         'partialMonth':month==last_month})
                 extend_ratios(out, profile['records'])
+                out['supportingEvidence'] = read_evidence(query, year)
                 out['coverage'] = evaluate(out, profile['records'])
                 out['sql'].append(profile.get('physicalSql'))
                 out['sql'].extend([pair_read.get('physicalSql'),vat.get('physicalSql')])
                 out['dbMs'] += profile.get('dbMs', 0)+pair_read.get('dbMs',0)+vat.get('dbMs',0)
+                out['sql'].extend(out['supportingEvidence']['sql'])
+                out['dbMs'] += out['supportingEvidence']['dbMs']
                 out['runId'] = uuid.uuid4().hex
                 out['readConsistency'] = 'Aynı yedek üzerinde ardışık sorgular; veritabanı snapshot transaction değildir.'
                 out = json.loads(json.dumps(out, ensure_ascii=False, default=str))
@@ -299,7 +303,11 @@ def register(app, runtime, authorize):
                     raise HTTPException(409, 'İnceleme başka bir kullanıcı tarafından değiştirildi; yeniden yükleyin.')
                 event = body.model_dump()
                 from . import board
-                actor = board.user_of(request.headers.get('cookie', '')) or 'authenticated-service'
+                try:
+                    actor = board.user_of(request.headers.get('cookie', ''))
+                except board.NoUser:
+                    # Authorized loopback/caller requests have no portal cookie.
+                    actor = 'authenticated-service'
                 event.update({'at':datetime.now(timezone.utc).isoformat(), 'version':len(history)+1,
                               'actor':actor})
                 history.append(event)
@@ -310,6 +318,22 @@ def register(app, runtime, authorize):
                 temp.replace(path)
         return {'version':len(history),'history':history,
                 'message':'İnceleme notu kaydedildi. Otomatik kontrol sonucu değiştirilmedi; kanıt kabulü ayrıca gerekir.'}
+
+    @app.get('/api/v1/financial-audit/documents')
+    def documents(request: Request, year: int = 2026, page: int = Query(0,ge=0,le=100000),
+                  main_account: int | None = Query(None,ge=100,le=999)):
+        authorize(request)
+        context(year)
+        try:
+            result = query(document_sql(year,page,main_account),year)
+            return {'items':result['records'],'total':result['records'][0]['totalRows'] if result['records'] else 0,
+                    'page':page,'readAt':datetime.now(timezone.utc).isoformat(),'separateRead':True,
+                    'sql':result.get('physicalSql')}
+        except HTTPException:
+            raise
+        except Exception:
+            log.exception('Audit e-ledger details failed')
+            raise HTTPException(503,'Logo e-defter belge detayları okunamadı.')
 
     @app.get("/api/v1/financial-audit/lines")
     def lines(request: Request, year: int = 2026, account: int = Query(..., ge=1), page: int = Query(0, ge=0, le=100000)):
