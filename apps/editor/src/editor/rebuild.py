@@ -148,7 +148,10 @@ def finish(snap,digest):
 def failed(gid,error):
     with db.tx() as c:
         c.execute("UPDATE ed.derived_artifact SET state='FAILED',updated_at=now() WHERE generation_id=%s AND state='BUILDING'",(gid,))
-        c.execute("UPDATE ed.rebuild_request SET last_error=%s,attempted_revision=requested_revision,retry_after=now()+interval '5 minutes',updated_at=now() "
+        c.execute("UPDATE ed.rebuild_request r SET attempts=CASE WHEN EXISTS (SELECT 1 FROM ed.knowledge_change k "
+            "WHERE k.generation_id=r.generation_id AND k.revision>r.attempted_revision AND k.writer_token IS NULL) "
+            "THEN 0 ELSE r.attempts END,last_error=%s,attempted_revision=requested_revision,"
+            "retry_after=now()+interval '5 minutes',updated_at=now() "
             "WHERE generation_id=%s",(str(error)[:2000],gid))
 
 
