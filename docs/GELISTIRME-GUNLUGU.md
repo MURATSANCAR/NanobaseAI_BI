@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-22 — Dal temizliği: main dışındaki işler main'e taşındı
+
+- `editor-identity-on-main` dalının 7 commit'i (küme tabanlı figür kimliği → karışık dijital metin katmanı) main'e cherry-pick ile taşındı; dal etkin oturumda olduğu için yeniden yazılmadı (rebase'te git eşdeğer commit'leri atlar). Tek çakışma `apps/editor/deploy/editorctl`: main'de kaldırılan book-audio derleme satırı geri getirilmedi, yeni `editor-embed` satırı alındı.
+- `claude/editor-app-architecture-2f7fb1` (wip) silindi: aynı işin gelişmiş hâli yukarıdaki commit'lerde.
+- 13 eski worktree ve 26 yerel dal silindi; hepsinin commit'leri main'de. İki eski worktree'deki 359/349 staged dosyanın hepsi birebir içerikle main geçmişinde bulundu (kayıp yok).
+- Son 3 saatte değişen 3 worktree korundu (etkin oturum olabilir): `prompt-test-history` (`editor-identity-on-main`, commit'lenmemiş `measure_ocr.py`), `brainapi2-editor-module`, `bi-editor-fe-be-update`.
+- Uzak dal silme ve push kimlik doğrulaması olmadığından kullanıcıya bırakıldı.
+
 ## 2026-09-21 — Arşiv P100 satış kırılımları, faturalı satış kuralı, müşteri VM'ine kurulum
 
 - Arşiv P100 (6 kırılımlı aylık satış soruları, `tests/text2sql/arsiv-p100.jsonl`, koşucu `arsiv-p100-run.py`: köprünün SQL'i DB'de koşulur, arşiv şablonundan kurulan bağımsız referansla toplam + grup sayısı karşılaştırılır): 23 → **100/100 toplam doğru** (91 tam; 9 tutar sorusunda yalnız sıfır tutarlı iade grupları fazla).
