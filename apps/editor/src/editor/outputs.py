@@ -47,9 +47,10 @@ def capture(c, gid: str) -> dict:
         # A historical quote_verified flag is not proof after its source changes.
         # New text evidence must still identify the exact captured source span.
         spans={p['page_no']:{s['span_id']:s for s in p['spans']} for p in pages}
+        regions={r['id'] for r in c.execute("SELECT id FROM ed.visual_region WHERE generation_id=%s",(gid,))}
         supported=set()
         for e in evidence:
-            if e['kind']=='VISUAL' and e['region_id'] is not None:
+            if e['kind']=='VISUAL' and e['region_id'] in regions:
                 supported.add(e['claim_id'])
                 continue
             provenance=e.get('source_refs') or {}
