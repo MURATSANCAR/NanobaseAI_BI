@@ -2,6 +2,7 @@
 
 ## 2026-09-21 — Finansal Denetim: Logo derin kaynak taraması ve eksik dayanak ekranı
 
+- Kod/kabul kaydı `7d094c8` ile main üzerinde. Test edilen altı uygulama dosyasının yerel/sunucu hashleri eş. `git fetch origin` başarılı; `git push origin main` HTTPS kimliği bulunamadığı için başarısız. Kalan yayın komutu: `git push origin main`.
 - Kullanıcı, dış dosya yolu yerine Logo DB içinde derin arama ve bulunamayanların açıklanmasını istedi. 12 ek karşılaştırma, 9 kaynak kartı, bulunan/eksik/neden/sonraki işlem alanları ve gerçek aday satırlarına 50'li sayfalama eklendi.
 - 81.760 fatura, 17.405 banka hareketi; fatura aktarım/hesap/KDV adayları 349/167/125; banka aktarım/tutar adayları 6.455/10. 98 doğrudan muhasebe satırı bağlantısı korunur. Alt modül tutarları JOIN öncesi fiş/hesap bazında toplanır; yavaş banka sorgusu daraltıldı. Farklar hata/ceza veya toplam zarar sayılmaz.
 - 2026 beyannamesi yok; 25 eski başlık var. Kredi planı/ödeme ve para birimleri ayrı, ileri tarihli stoklar ayrı, çek/senet durumları ham kodlarla açıklanır. 72.007 depo kaydı belge kabul edilmez; 48.596 adres notu başlangıcı var. Dış mutabakat/fiili sayım/onaylı belge eksikleri ekranda kalır.
