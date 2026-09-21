@@ -1,10 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Özetin olay kapsamı ve sürüm yeniden üretimi
+
+- v8 gerçek çıktısında 24 cümle ön sayfa/görsel ayrıntılarla doldu, özet 13. sayfada kesildi. Teknik READY içerik kabulü sayılmadı.
+- v9 kitap özeti bölüm özetlerinin daralttığı altküme yerine aynı snapshot içindeki bütün doğrulanmış EVENT kayıtlarından üretilir. İlk/son desteklenen olay sayfası kapsamı zorunlu; tema/künye/görsel sahne olay yerine geçmez. ALREADY_CURRENT mevcut kod/policy sürümünü de karşılaştırır. Sunucu kabulü sırada.
+
 ## 2026-09-21 — Sayfa türü inceleme hedefi ve kaynakla sınırlı özet onarımı
 
 - Gerçek nesil iki engel gösterdi: NON_STORY önerisi review_item hedef kısıtına takıldı; özet tema etiketinden kanıtsız nedensellik üretti.
 - Sayfa rolü incelemesi ayrı FK hedefiyle tutulur ve okuma API’sine taşınır. Hedefsiz kayıt kabul edilmez. Özet v8 zorunlu cümle sayısını kaldırır, yapılandırılmış payload bilgilerini korur; son deneme seçilen doğrulanmış iddia metnini birebir korumalıdır. Critic gevşetilmedi.
-- Sunucuda gerçek başarısız aşamaların tekrar kabulü sırada; yerel ürün testi yok.
+- f1cc4614 sunucuda kuruldu; migration017 gerçekPG’ye uygulandı. Başarısız1–4sayfa çıkarımı4anılma/2olayla geçti. Üç sayfa rolü inceleme hedefi gerçek jobs MCP ile bağımsızPG FK sorgusunda2/2eşleşti; kanıt apps/editor/docs/evidence/2026-09-21-page-role-review-repair.json. Özet yeniden üretimi sürüyor; yerel ürün testi yok.
+- Beş teknik MD belgesi paralelde güncellendi; geçmiş sürümlerin kabulleri güncel FAILED işten ve hedefli onarımdan ayrıldı.
 
 ## 2026-09-21 — Muhasebe: bakiye söylenişleri, "ve"li hesap adları, vade/yaşlandırma yaklaşık hesabı
 

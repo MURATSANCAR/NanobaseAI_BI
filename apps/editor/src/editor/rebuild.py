@@ -168,9 +168,9 @@ async def build(kind,snap,built,key):
             chapters.append({**ch,**value})
         return {'chapters':chapters,'semantic_acceptance':False}
     if kind=='book_summary':
-        refs={cid for ch in built['chapter_summaries']['chapters'] for s in ch['sentences'] for cid in s['claim_ids']}
-        if not refs: raise ValueError('No verified chapter summary inputs')
-        return await outputs.summarize(snap,[c for c in snap['claims'] if c['id'] in refs],'Kitap özeti')
+        # Chapter selection may omit late events. The book plot consumes the
+        # complete verified event set of the same immutable revision.
+        return await outputs.summarize(snap,snap['claims'],'Kitabın olay örgüsü özeti',plot_only=True)
     if kind=='search_index':
         from . import retrieval
         return await retrieval.embed_snapshot(snap,key)
@@ -200,7 +200,7 @@ async def run(gid: str) -> dict:
                 if not state['producer_completed']: raise ValueError('Producers still running')
                 request=c.execute("SELECT * FROM ed.rebuild_request WHERE generation_id=%s FOR UPDATE",(gid,)).fetchone()
                 if request is None: raise ValueError('Missing rebuild request')
-                if request['completed_revision']==state['knowledge_revision'] and state['validated_revision']==state['knowledge_revision'] and c.execute("SELECT count(*) AS n FROM ed.current_artifact WHERE generation_id=%s",(gid,)).fetchone()['n']==len(outputs.ORDER):
+                if request['completed_revision']==state['knowledge_revision'] and state['validated_revision']==state['knowledge_revision'] and c.execute("SELECT count(*) AS n FROM ed.current_artifact a JOIN ed.knowledge_snapshot s ON s.generation_id=a.generation_id AND s.input_digest=a.input_digest WHERE a.generation_id=%s AND s.content->>'code_version'=%s AND s.content->>'policy'=%s",(gid,code_version(),outputs.POLICY)).fetchone()['n']==len(outputs.ORDER):
                     return {'generation_id':gid,'technical_status':'ALREADY_CURRENT','accepted':False}
                 if request['attempted_revision']==state['knowledge_revision'] and request['attempted_code_version']==code_version() and request['attempts']>=MAX_ATTEMPTS:
                     raise ValueError('Rebuild retry budget exhausted')

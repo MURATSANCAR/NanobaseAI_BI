@@ -13,7 +13,7 @@ from . import db, foundation, source
 from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
-POLICY = 'validated-outputs-v8'
+POLICY = 'validated-outputs-v9'
 
 
 def plain(value):
@@ -173,7 +173,9 @@ def bind_sentences(out: dict, claims: list[dict], evidence: list[dict]) -> list[
     return sentences
 
 
-async def summarize(snap: dict, claims: list[dict], label: str) -> dict:
+async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bool = False) -> dict:
+    if plot_only:
+        claims = [c for c in claims if c['kind'] == 'EVENT']
     if not claims: return {'sentences':[],'status':'NO_VERIFIED_FACTS','model_calls':[]}
     from .llm import Llm, PromptRef
     llm = Llm(snap['generation_id'])
@@ -203,6 +205,13 @@ async def summarize(snap: dict, claims: list[dict], label: str) -> dict:
             bound = {'sentences':[{'text':row['text'],
                 'claim_ids':[reference_ids[r] for r in row['claim_ids']]} for row in out['sentences']]}
             rows = bind_sentences(bound,claims,snap['evidence'])
+            if plot_only:
+                eligible_pages = [p for c in claims for p in c['source_pages']]
+                selected_pages = [p for row in rows for p in row['pages']]
+                if eligible_pages and (not selected_pages or min(selected_pages) != min(eligible_pages)
+                        or max(selected_pages) != max(eligible_pages)):
+                    raise ValueError('Plot summary must include the first and last supported event pages: '
+                                     + str([min(eligible_pages), max(eligible_pages)]))
             if attempt == 2 and any(len(s['claim_ids']) != 1 or s['text'].strip() !=
                     allowed[s['claim_ids'][0]]['claim'].strip() for s in rows):
                 raise ValueError('Final repair must preserve selected verified claim text exactly')
