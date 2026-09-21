@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Test sunucusunun anlam katalogunu (tablo profili + kavram + eşleme + kanıt) müşteri VM'ine taşır.
+# Test sunucusunun anlam katalogunu (tablo profili + kavram + eşleme + kanıt + kolon açıklaması/VERİ NOTU) müşteri VM'ine taşır.
 #
 # Neden: iki tarafın tablo profilleri zaten aynı (4.874), ama sertifikalı kavram sayısı
 # test sunucusunda ~4.980, VM'de 110. Kod ne kadar doğru olursa olsun, sözlük olmadan
@@ -18,7 +18,7 @@ VMC='cd /home/ai/bi-docker/infra/docker/bi && docker compose exec -T db psql -U 
 W=$(mktemp -d); trap 'rm -rf "$W"' EXIT
 
 echo "== kaynak (test sunucusu)"
-for t in sl_schema_profile sl_concept sl_mapping sl_evidence; do
+for t in sl_schema_profile sl_concept sl_mapping sl_evidence sl_schema_annotation; do
   psql "$DSN" -tA -c "COPY (SELECT row_to_json(t) FROM $t t) TO STDOUT" > "$W/$t.json"
   echo "  $t: $(wc -l < "$W/$t.json") satır"
 done
@@ -27,10 +27,10 @@ echo "== hedef (VM) bugün"
 ssh -o BatchMode=yes timas-vm "$VMC -F, -tA -c \"select status, count(*) from sl_concept group by status order by 2 desc\"" || true
 
 echo "== geçici tablolara aktarılıyor"
-for t in sl_schema_profile sl_concept sl_mapping sl_evidence; do
+for t in sl_schema_profile sl_concept sl_mapping sl_evidence sl_schema_annotation; do
   gzip -c "$W/$t.json" | ssh -o BatchMode=yes timas-vm "cat > /tmp/$t.json.gz"
 done
-ssh -o BatchMode=yes timas-vm "cd /home/ai/bi-docker/infra/docker/bi && for t in sl_schema_profile sl_concept sl_mapping sl_evidence; do
+ssh -o BatchMode=yes timas-vm "cd /home/ai/bi-docker/infra/docker/bi && for t in sl_schema_profile sl_concept sl_mapping sl_evidence sl_schema_annotation; do
   docker compose exec -T db psql -U bi_meta -d bi_meta -q -c \"drop table if exists stage_\$t; create table stage_\$t (d jsonb);\"
   gunzip -c /tmp/\$t.json.gz | docker compose exec -T db psql -U bi_meta -d bi_meta -q -c \"COPY stage_\$t (d) FROM STDIN\"
 done"
@@ -43,7 +43,8 @@ ssh -o BatchMode=yes timas-vm "$VMC -F'|' -tA -c \"
   union all select 'kaynak kavram toplam='||count(*) from stage_sl_concept
   union all select 'profil: yeni='||count(*) from stage_sl_schema_profile s where not exists (select 1 from sl_schema_profile p where p.id = s.d->>'id')
   union all select 'profil: guncellenen='||count(*) from stage_sl_schema_profile s join sl_schema_profile p on p.id = s.d->>'id'
-  union all select 'profil: VMe ozel='||count(*) from sl_schema_profile p where not exists (select 1 from stage_sl_schema_profile s where s.d->>'id' = p.id)\""
+  union all select 'profil: VMe ozel='||count(*) from sl_schema_profile p where not exists (select 1 from stage_sl_schema_profile s where s.d->>'id' = p.id)
+  union all select 'aciklama: yeni='||count(*) from stage_sl_schema_annotation s where not exists (select 1 from sl_schema_annotation a where a.id = s.d->>'id')\""
 
 if [ "$APPLY" != "--apply" ]; then echo "== KURU KOŞU — hiçbir şey yazılmadı. Uygulamak için: bash ~/catalog-sync.sh --apply"; exit 0; fi
 
@@ -76,12 +77,18 @@ DELETE FROM sl_evidence e WHERE EXISTS (SELECT 1 FROM stage_sl_evidence s WHERE 
 INSERT INTO sl_evidence SELECT * FROM jsonb_populate_recordset(null::sl_evidence, (SELECT jsonb_agg(d) FROM stage_sl_evidence))
 ON CONFLICT DO NOTHING;
 
+-- Kolon açıklamaları (VERİ NOTU dahil) ve emekliye ayrılanların durumu: id ile upsert, VM'e özel olan kalır.
+INSERT INTO sl_schema_annotation
+SELECT (jsonb_populate_record(null::sl_schema_annotation, d)).* FROM stage_sl_schema_annotation
+ON CONFLICT (id) DO UPDATE SET text=EXCLUDED.text, status=EXCLUDED.status, author=EXCLUDED.author,
+  table_pattern=EXCLUDED.table_pattern, column_name=EXCLUDED.column_name;
+
 INSERT INTO sl_catalog_version (id, tenant_id, datasource_id, version, certified_count, snapshot_json, note, created_at)
 VALUES ('cv_'||substr(md5(random()::text||clock_timestamp()::text),1,12), 'default', 'logo',
         (SELECT coalesce(max(version),0)+1 FROM sl_catalog_version),
         (SELECT count(*) FROM sl_concept WHERE status='CERTIFIED'),
         '{}'::jsonb, 'test sunucusundan sözlük aktarımı', now());
-DROP TABLE stage_sl_schema_profile; DROP TABLE stage_sl_concept; DROP TABLE stage_sl_mapping; DROP TABLE stage_sl_evidence;
+DROP TABLE stage_sl_schema_profile; DROP TABLE stage_sl_concept; DROP TABLE stage_sl_mapping; DROP TABLE stage_sl_evidence; DROP TABLE stage_sl_schema_annotation;
 COMMIT;\""
 
 echo "== VM köprüsü yenileniyor (katalog yeniden okunsun)"
