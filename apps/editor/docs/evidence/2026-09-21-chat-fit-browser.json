@@ -1,0 +1,55 @@
+{
+  "commit": "f80e2d50",
+  "url": "https://portal.nanobase.ai/timas/editoryal",
+  "htmlSha256": "0441ee09bc73dfde6a4f42923be02282ec757dbb1b99c4ad7a746721836b849d",
+  "measurements": [
+    {
+      "contentHeight": 431,
+      "contentScrollHeight": 431,
+      "documentWidth": 320,
+      "frameHeight": 659.5,
+      "headingWithin": true,
+      "scrollTop": 0,
+      "textareaScrollbar": "none",
+      "width": 320
+    },
+    {
+      "contentHeight": 391,
+      "contentScrollHeight": 391,
+      "documentWidth": 390,
+      "frameHeight": 603.875,
+      "headingWithin": true,
+      "scrollTop": 0,
+      "textareaScrollbar": "none",
+      "width": 390
+    },
+    {
+      "contentHeight": 322,
+      "contentScrollHeight": 322,
+      "documentWidth": 768,
+      "frameHeight": 539.5,
+      "headingWithin": true,
+      "scrollTop": 0,
+      "textareaScrollbar": "none",
+      "width": 768
+    },
+    {
+      "contentHeight": 278,
+      "contentScrollHeight": 278,
+      "documentWidth": 1440,
+      "frameHeight": 479,
+      "headingWithin": true,
+      "scrollTop": 0,
+      "textareaScrollbar": "none",
+      "width": 1440
+    }
+  ],
+  "starterDraft": "Okuduğumuz kitaplarda hangi karakterler var?",
+  "liveQuestion": {
+    "id": "5abf9fe38a42488ca7bc551b9fe3aec6",
+    "question": "Okuduğumuz kitaplarda hangi karakterler var?",
+    "status": "ERROR",
+    "answerAcceptance": "DOĞRULANAMADI",
+    "reason": "Kitap motoruna bağlantı başarısız"
+  }
+}

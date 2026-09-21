@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Sohbet açılışı kesilmesin, hazır soruların kitap kapsamı belli olsun
+
+- `f80e2d50`: boş sohbetin en alta kaydırılması düzeltildi, doğal yükseklik ve daha kısa karşılama düzeni. Mesaj/textarea scrollbar yalnız sohbet içinde gizli; sayfa taşması gizlenmiyor, uzun cevaplar kaydırılabiliyor.
+- Hazır sorular kitap seçilmemişse “Okuduğumuz kitaplarda…” ile, seçilmişse kitap adıyla dolduruluyor. Backend yalnız okunmuş kaynakları kullanıp kitap adını/sayfasını belirtme, kısmi kapsamı açıklama talimatı aldı.
+- Test sunucusunda TypeScript/Vite geçti; backend ve frontend yayımlandı. 320/390/768/1440 genişlikte başlık içeride, scrollTop=0, içerik scrollHeight=clientHeight, yatay taşma yok. Kanıt: `apps/editor/docs/evidence/2026-09-21-chat-fit-browser.json`.
+- Gerçek oturumdan “Okuduğumuz kitaplarda hangi karakterler var?” gönderildi (`5abf9fe38a42488ca7bc551b9fe3aec6`). Kitap motoru bağlantısı çalışmadığından hata döndü; içerik/çok kitaplı cevap kabulü DOĞRULANAMADI. Model ve işçi servisleri bu görevde başlatılmadı. Yerel test çalıştırılmadı.
+- Kod main üzerinde; HTTPS GitHub kimliği yok, push bekliyor.
+
 ## 2026-09-21 — Kitap kartları test portalında, oturumlu mobil kontrol
 
 - Sohbet cevaplarına gerçek kapak/başlık, güncel yazar/özet alanları ve “Bu kitabı sor” eklendi. Kart servisi salt okunur ayrı container ve kendi anahtarıyla GPU PostgreSQL/storage okur; CPU köprüsü oturum altında sunar. Bakım veya model yaşam döngüsünü değiştirmez.
