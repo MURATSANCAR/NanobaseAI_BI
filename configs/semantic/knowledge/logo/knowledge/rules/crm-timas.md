@@ -58,13 +58,15 @@ CRM kaynağı Dynamics CRM'dir; tablolar `*Base` ile biter (`NEW_SOZLESMEBASE`, 
 
 - **Etkinlik gideri** = `NEW_ETKINLIKBASE.new_ToplamEtkinlikGideri` (dolu olan sütun budur; `new_etkinlikgideri` ve `new_promosyontutari` hiç dolu değil). Yazar etkinlik telifi `new_YazarEtkinlikTelifi`.
 - Etkinliğin **yazarı** N:N tablosundadır: `NEW_NEW_ETKINLIK_NEW_YAZARBASE (new_etkinlikid, new_yazarid) → NEW_YAZARBASE.new_name`; `new_lgiliYazar` (Contact) sütunu hiç dolu değil. "Yazar bazında etkinlik gideri" = yazar adı, etkinlik adedi (`COUNT(DISTINCT new_etkinlikId)`), `SUM(new_ToplamEtkinlikGideri)`; "en pahalı N yazar" = gidere göre azalan ilk N.
-- Uyarı: yazar eşleşme tablosu (`new_new_etkinlik_new_yazar`) bu kurulumda boştur ve taranmış tablolar arasında değildir; `new_lgiliYazar` da hiç dolu değil. Yazar bazında gider **hesaplanamaz**: bu soruya tek satır — toplam etkinlik gideri ve gideri dolu etkinlik adedi — ver, yorum satırında yazar kırılımının veri yokluğundan yapılamadığını yaz. Taranmamış tabloyu sorguda kullanma.
+- **Etkinliğin yazarı `new_new_etkinlik_contact` üzerinden bağlanır** (2026-09-21 canlı ölçüm): 9.012 bağ var, bağlı kişilerin 8.939'u (%99,2) `ContactBase.new_yazarmi = 1`. Yazar bazında gider hesaplanabilir. Eski uyarı yanlış tabloya bakıyordu: `new_new_etkinlik_new_yazar` gerçekten boştur, ama kullanılan bağ o değildir.
+- **Veri notu:** `new_ToplamEtkinlikGideri` neredeyse hiç dolu değil — 57.486 aktif etkinliğin toplam gideri 9.275 ₺. Yazar bazında dağılım üretilebilir (en yüksek: Mustafa Armağan 1.330 ₺) ama cevap bu alanın ne kadar dolu olduğunu söylemelidir.
 
 ## Kural C11 — Projeler (NEW_PROJEBASE)
 
 - Proje durumu `statuscode` seçim kodudur: 100000011 Yeni Proje (toplantıya hazırlanıyor), 100000013 Basılmayacak, 100000014 Beklemede, 100000015 Yayın Kuruluna Hazır, 100000017 **Tamamlandı**, 100000019 İş Planı Çalışıyor, 100000020 **Yayın Kurulu Onaylı (basılacak)**, 100000009/100000021 İptal, 100000012 Red, 100000018 İleri Tarihli.
 - "Tamamlanmamış proje" = `statuscode NOT IN (100000017, 100000009, 100000012, 100000021)`; **metin teslim tarihi** `new_tahminimetinteslimtarihi`; "teslim tarihi geçtiği hâlde tamamlanmamış" = bu tarih `< GETDATE()` ve tamamlanmamış; gecikme günü `DATEDIFF(day, new_tahminimetinteslimtarihi, GETDATE())`. `new_tamamlanma` sütunu projede boştur.
 - "Yayın kurulunda onaylanan proje" = `statuscode = 100000020` (kurul sonucu sütunu `new_YaynKurulSonucu`: 1 Yayınlama, 2 Yeniden Değerlendirme, 100000000 Red — çoğunlukla boş). **Önerilen telif oranı** `new_olasitelif` (yüzde); avans bedeli sütunu projede yok.
+- **Önerilen telif oranı** `new_yayinkurulutoplantilariBase.new_onerilenteliforani`'dir (2026-09-21 canlı ölçüm: 31 kayıt, ortalama %5,645). `new_projeBase.new_olasitelif` **olası** telif oranıdır ve başka bir şeydir (202 kayıt, ortalama %6,06); 'önerilen' sorulduğunda o okunursa cevap yanlış çıkar.
 
 ## Kural C12 — İş planları (NEW_ISPLANIBASE)
 
