@@ -1,5 +1,8 @@
 # NanobaseAI BI — Proje Belleği
 
+**Editor ortak okuma katmanı (2026-09-21, kabul sürüyor):** `current-usable-v1` kullanıcı sonuçlarını aynı güncel doğrulanmış sürüme bağlar; eski rapor/kart geri dönüşü ve ad benzerliğiyle olay/duygu bağlama kaldırıldı. Sunucuda gerçek DB/API kabulü henüz tamamlanmadı. Ayrıntı `apps/editor/docs/CURRENT-READS.md`.
+
+
 ## Proje ne
 
 Doğal dilde soru → yönetilen SQL → doğru veri. Tek başına kurulan BI ürünü: React arayüz, FastAPI backend, Query Gateway, semantic katman, senaryo motoru ve LLM servisi. İlk/ana müşteri: TİMAŞ Logo (mağaza/satış verisi).

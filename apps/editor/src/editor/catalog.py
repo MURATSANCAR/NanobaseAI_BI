@@ -291,11 +291,11 @@ async def _index(book_id: str, card_id: str, title: str, summary, themes, events
 
 # ---------------------------------------------------------------- search
 def get_book_card(book_id: str) -> dict | None:
-    card = db.one("SELECT id AS card_id, book_id, generation_id, title, metadata, age_min, age_max,"
-                  " summary, themes, characters, key_events, created_at FROM book_card WHERE book_id=%s"
-                  " AND is_current", book_id)
+    from . import foundation, read_model
+    with foundation.read_snapshot() as c:
+        card = read_model.card(c, book_id)
     if card:
-        card["cover"] = _cover_ref(book_id)
+        card['cover'] = _cover_ref(book_id)
     return card
 
 
@@ -324,36 +324,38 @@ def _cover_ref(book_id: str) -> dict | None:
 
 
 async def search_books(query: str, k: int = 5, age: int | None = None) -> list[dict]:
-    """Books whose verified themes, summary or key events match the request. Every
-    reason returned carries its page citations."""
-    q = qdrant()
-    if not await q.collection_exists(CATALOG):
+    """Rank only current catalog facts; the legacy catalog vector index is not readable."""
+    from . import read_model
+    cards = [c for c in read_model.cards() if c['available']]
+    if age is not None:
+        # A missing/unparsed age is unknown, never permission to recommend for that age.
+        eligible = []
+        for card in cards:
+            lo, hi = _ages(_metadata_dict(card['metadata']))
+            if lo is not None and hi is not None and lo <= age <= hi:
+                eligible.append(card)
+        cards = eligible
+    if not cards:
         return []
-    vec = (await Llm(None).embed([query], instruction=QUERY_INSTRUCTION))[0]
-    hits = (await q.query_points(CATALOG, query=vec, limit=120, with_payload=True)).points
-    by_book: dict[str, list] = {}
-    for h in hits:
-        by_book.setdefault(h.payload["book_id"], []).append(h)
-    cards = {str(r["book_id"]): r for r in db.all_rows(
-        "SELECT book_id, title, metadata, age_min, age_max, card_text FROM book_card WHERE is_current"
-        " AND book_id = ANY(%s::uuid[])", list(by_book))}
-    books = [b for b in by_book if b in cards and (
-        age is None or cards[b]["age_min"] is None or cards[b]["age_min"] <= age <= (cards[b]["age_max"] or 99))]
-    if not books:
-        return []
-    ranked = await rerank_evidence(query, [cards[b]["card_text"][:6000] for b in books])
+    facets = [[{'facet': kind, 'text': x.get('text') or x.get('claim') or x.get('summary'),
+                'pages': x.get('pages') or x.get('source_pages') or
+                         list(range(x['page_from'], x['page_to'] + 1))}
+               for kind, key in [('summary', 'summary'), ('theme', 'themes'), ('event', 'key_events')]
+               for x in card[key]] for card in cards]
+    texts = ['\n'.join(f['text'] for f in fs) for fs in facets]
+    ranked = await rerank_evidence(query, texts)
+    # Reranking can overlap a correction/new generation. Recheck every returned pointer.
+    latest = {c['book_id']: c for c in read_model.cards()}
     out = []
-    for r in ranked[:k]:
-        b = books[r["index"]]
-        card, meta = cards[b], cards[b]["metadata"]
-        why = [{"facet": h.payload["facet"], "text": h.payload["text"], "pages": h.payload["pages"],
-                "score": round(h.score, 3)}
-               for h in sorted(by_book[b], key=lambda h: -h.score) if h.payload["facet"] != "card"][:4]
-        out.append({"book_id": b, "title": card["title"], "match_score": round(r["score"], 4),
-                    "authors": [x["value"] for x in meta.get("AUTHOR", [])],
-                    "age_range": [x["value"] for x in meta.get("AGE_RANGE", [])],
-                    "genre": [x["value"] for x in meta.get("GENRE", [])],
-                    "cover": _cover_ref(b), "why": why})
+    for rank in ranked[:k]:
+        i = rank['index']
+        card = cards[i]
+        now = latest.get(card['book_id'])
+        if not now or not now['available'] or now['card_id'] != card['card_id'] or now['generation_id'] != card['generation_id']:
+            raise ValueError('Catalog inputs changed while the query was running; retry')
+        out.append({**card, 'match_score': round(rank['score'], 4),
+                    'cover': _cover_ref(card['book_id']), 'why': facets[i],
+                    'ranking_method': 'current_catalog_reranker'})
     return out
 
 

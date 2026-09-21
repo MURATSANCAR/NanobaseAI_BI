@@ -538,8 +538,8 @@ async def merge_events(generation_id: str) -> dict:
     return {"events": len(evs), "merged": merged, "ordered": order}
 
 
-def build_timeline(generation_id: str) -> list[dict]:
-    """Realized (and remembered) events only, in story order."""
+def candidate_timeline(generation_id: str) -> list[dict]:
+    """Producer-only candidates; never expose this pre-validation view as a user result."""
     return db.all_rows("SELECT id, story_order, page_from, page_to, modality, summary, participants,"
                        " confidence, narrative_role FROM timeline WHERE generation_id=%s ORDER BY story_order NULLS LAST,"
                        " page_from", generation_id)
@@ -549,7 +549,7 @@ async def assign_narrative_roles(generation_id: str) -> dict:
     """Importance is relative to the whole book: the director labels each realized
     event's role in the narrative. Returns illustrated pages of key events that have
     no deep scan yet ("Önemli olaylarda" -> book-vision-deep)."""
-    tl = build_timeline(generation_id)
+    tl = candidate_timeline(generation_id)
     if not tl:
         return {"key_events": 0, "pages": []}
     short = {f"e{i}": e for i, e in enumerate(tl)}
@@ -734,18 +734,14 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
     return stats if write else {**stats, "detail": detail}
 
 
+def build_timeline(generation_id: str) -> list[dict]:
+    from . import read_model
+    return read_model.timeline(generation_id)
+
+
 def event_actors(generation_id: str) -> list[dict]:
-    """Per event: who does the action and who takes part, with probabilities. Pairs read
-    as ABSENT are left out; UNCERTAIN ones are listed as such, never as a doer."""
-    return db.all_rows(
-        "SELECT e.id AS event_id, e.page_from, e.page_to, e.modality, e.summary, e.participants"
-        " AS extractor_participants, coalesce(json_agg(json_build_object('character',"
-        " ch.canonical_name, 'role', ea.role, 'p_actor', round(ea.p_actor::numeric, 3),"
-        " 'p_involved', round(ea.p_involved::numeric, 3)) ORDER BY ea.p_actor DESC)"
-        " FILTER (WHERE ea.role <> 'ABSENT'), '[]') AS characters"
-        " FROM event e LEFT JOIN event_actor ea ON ea.event_id=e.id LEFT JOIN character ch ON"
-        " ch.id=ea.character_id WHERE e.generation_id=%s AND e.merged_into IS NULL"
-        " GROUP BY e.id ORDER BY e.page_from, e.page_to", generation_id)
+    from . import read_model
+    return read_model.actors(generation_id)
 
 
 # ----------------------------------------------------- emotions/themes
@@ -796,7 +792,7 @@ async def detect_contradictions(generation_id: str) -> dict:
     pictures side by side (vision.compare_character_appearances)."""
     chars = db.all_rows("SELECT canonical_name, aliases, description, identity_status FROM character "
                         "WHERE generation_id=%s", generation_id)
-    tl = build_timeline(generation_id)
+    tl = candidate_timeline(generation_id)
     if not chars and not tl:
         return {"candidates": 0, "skipped": "nothing to compare"}
     material = (

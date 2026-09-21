@@ -8,7 +8,7 @@ from uuid import UUID
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, Path
 
-from . import foundation, source, knowledge, ledger, outputs
+from . import foundation, source, knowledge, ledger, outputs, read_model, jobs, catalog
 from .config import settings
 
 
@@ -124,3 +124,49 @@ def current_output(generation_id: UUID,
         return outputs.current(str(generation_id), kind)
     except KeyError:
         raise HTTPException(404, "generation not found") from None
+
+
+@app.get('/v1/generations/{generation_id}/timeline')
+def timeline(generation_id: UUID):
+    try:
+        return knowledge.build_timeline(str(generation_id))
+    except read_model.Unavailable as exc:
+        raise HTTPException(409, str(exc)) from None
+    except KeyError:
+        raise HTTPException(404, 'generation not found') from None
+
+
+@app.get('/v1/generations/{generation_id}/actors')
+def actors(generation_id: UUID):
+    try:
+        return knowledge.event_actors(str(generation_id))
+    except read_model.Unavailable as exc:
+        raise HTTPException(409, str(exc)) from None
+    except KeyError:
+        raise HTTPException(404, 'generation not found') from None
+
+
+@app.get('/v1/generations/{generation_id}/characters/history')
+def character_history(generation_id: UUID, name: str = Query(min_length=1, max_length=300)):
+    try:
+        return read_model.character_history(str(generation_id), name)
+    except read_model.Unavailable as exc:
+        raise HTTPException(409, str(exc)) from None
+    except KeyError:
+        raise HTTPException(404, 'generation not found') from None
+
+
+@app.get('/v1/generations/{generation_id}/report')
+def report(generation_id: UUID, kind: str = 'ANALYSIS'):
+    try:
+        return jobs.get_report(str(generation_id), kind)
+    except KeyError:
+        raise HTTPException(404, 'generation not found') from None
+
+
+@app.get('/v1/books/{book_id}/card')
+def book_card(book_id: UUID):
+    result = catalog.get_book_card(str(book_id))
+    if result is None:
+        raise HTTPException(404, 'book not found')
+    return result

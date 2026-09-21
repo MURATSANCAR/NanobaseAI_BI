@@ -97,18 +97,8 @@ READ_VIEWS = {"claims": "usable_claim", "events": "usable_event", "emotions": "u
 
 
 def read_records(generation_id: str, kind: str, limit: int, offset: int) -> dict:
-    table = READ_VIEWS[kind]  # fixed allowlist, never a caller-provided SQL identifier
-    with read_snapshot() as c:
-        state = c.execute("SELECT * FROM ed.generation_state WHERE generation_id=%s", (generation_id,)).fetchone()
-        if state is None:
-            raise KeyError(generation_id)
-        total = c.execute(f"SELECT count(*) AS n FROM ed.{table} WHERE generation_id=%s", (generation_id,)).fetchone()["n"]
-        rows = c.execute(f"SELECT * FROM ed.{table} WHERE generation_id=%s ORDER BY id LIMIT %s OFFSET %s",
-            (generation_id,limit,offset)).fetchall()
-        return {"generation_id": generation_id, "knowledge_revision": state["knowledge_revision"],
-            "mode": "source_supported_preview", "semantic_status": state["semantic_status"],
-            "complete_book": False, "total": total, "offset": offset,
-            "truncated": offset + len(rows) < total, "records": rows}
+    from . import read_model
+    return read_model.records(generation_id, kind, limit, offset)
 
 
 def digest_inputs(inputs: dict) -> str:

@@ -53,9 +53,11 @@ def get_job_status(job_id: str) -> dict:
     if gen:
         out["open_review_items"] = (db.one("SELECT count(*) n FROM review_item WHERE generation_id=%s"
                                            " AND status='OPEN'", gen["id"]) or {}).get("n")
-        rep = db.one("SELECT id, created_at FROM report WHERE generation_id=%s AND kind='ANALYSIS'"
-                     " ORDER BY created_at DESC LIMIT 1", gen["id"])
-        out["report_id"] = str(rep["id"]) if rep else None
+        rep = get_report(str(gen['id']))
+        out['report_id'] = rep.get('id') if rep['available'] else None
+        out['report_available'] = rep['available']
+        out['knowledge_revision'] = rep['knowledge_revision']
+        out['semantic_acceptance'] = False
     return out
 
 
@@ -70,14 +72,14 @@ async def cancel_job(job_id: str) -> dict:
 def list_books() -> list[dict]:
     return db.all_rows(
         "SELECT b.id AS book_id, b.title, b.universe, b.age_group, bv.id AS book_version_id,"
-        " bv.page_count, bv.sha256, (SELECT g.id FROM generation g WHERE g.book_version_id=bv.id AND"
-        " g.sealed_at IS NOT NULL ORDER BY g.created_at DESC LIMIT 1) AS latest_generation_id"
+        " bv.page_count, bv.sha256, (SELECT g.id FROM generation g WHERE g.book_version_id=bv.id"
+        " ORDER BY g.created_at DESC,g.id DESC LIMIT 1) AS latest_generation_id"
         " FROM book b JOIN book_version bv ON bv.book_id=b.id ORDER BY bv.created_at DESC")
 
 
 def latest_generation(book_version_id: str) -> dict | None:
     return db.one("SELECT id AS generation_id, created_at, sealed_at FROM generation WHERE"
-                  " book_version_id=%s ORDER BY (sealed_at IS NOT NULL) DESC, created_at DESC LIMIT 1",
+                  " book_version_id=%s ORDER BY created_at DESC, id DESC LIMIT 1",
                   book_version_id)
 
 
@@ -91,5 +93,5 @@ def list_review_queue(generation_id: str, status: str = "OPEN", limit: int = 50)
 
 
 def get_report(generation_id: str, kind: str = "ANALYSIS") -> dict | None:
-    return db.one("SELECT id, kind, markdown, created_at FROM report WHERE generation_id=%s AND kind=%s"
-                  " ORDER BY created_at DESC LIMIT 1", generation_id, kind)
+    from . import read_model
+    return read_model.report(generation_id, kind)

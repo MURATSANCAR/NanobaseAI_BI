@@ -101,13 +101,9 @@ def preview(gid: str) -> dict:
 
 def current(gid: str, kind: str) -> dict:
     if kind not in ORDER: raise KeyError(kind)
+    from . import read_model
     with foundation.read_snapshot() as c:
-        state = c.execute("SELECT knowledge_revision FROM ed.generation_state WHERE generation_id=%s",(gid,)).fetchone()
-        if not state: raise KeyError(gid)
-        row = c.execute("SELECT * FROM ed.current_artifact WHERE generation_id=%s AND kind=%s",(gid,kind)).fetchone()
-        return {'generation_id':gid,'kind':kind,'knowledge_revision':state['knowledge_revision'],
-            'available':row is not None,'artifact':row,'semantic_acceptance':False,
-            'reason':None if row else 'MISSING_STALE_OR_UNVALIDATED'}
+        return read_model.artifact(c, gid, kind)
 
 
 def snapshot_passages(snap: dict) -> list[dict]:

@@ -5,23 +5,23 @@ from .config import settings
 
 
 def cards() -> list[dict]:
+    from . import read_model
     with foundation.read_snapshot() as c:
-        rows = c.execute("SELECT DISTINCT ON (b.id) b.id,b.title,g.id AS generation_id "
-            "FROM ed.book b JOIN ed.book_version v ON v.book_id=b.id "
-            "JOIN ed.generation g ON g.book_version_id=v.id ORDER BY b.id,g.created_at DESC,g.id DESC").fetchall()
-        has_outputs = c.execute("SELECT to_regclass('ed.current_artifact') AS name").fetchone()['name'] is not None
+        books = c.execute('SELECT id FROM ed.book ORDER BY id').fetchall()
         result = []
-        for row in rows:
-            artifact = c.execute("SELECT content,input_revision FROM ed.current_artifact "
-                "WHERE generation_id=%s AND kind='catalog'", (row['generation_id'],)).fetchone() if has_outputs else None
-            content = artifact['content'] if artifact else {}
-            cover = c.execute("SELECT source,page_no FROM ed.book_cover WHERE book_id=%s AND is_current", (row['id'],)).fetchone()
-            result.append({'id':str(row['id']), 'title':row['title'],
-                'generationId':str(row['generation_id']), 'revision':artifact['input_revision'] if artifact else None,
-                'authors':[x['claim'] for x in content.get('metadata',[]) if x.get('subject')=='AUTHOR'],
-                'summary':content.get('summary',[]), 'themes':content.get('themes',[]),
-                'cover': {'source':cover['source'], 'page':cover['page_no']} if cover else None,
-                'contentAvailable': artifact is not None, 'semanticAcceptance':False})
+        for book in books:
+            row = read_model.card(c, str(book['id']))
+            if row is None:
+                continue
+            cover = c.execute('SELECT source,page_no FROM ed.book_cover WHERE book_id=%s AND is_current',
+                              (book['id'],)).fetchone()
+            result.append({'id': row['book_id'], 'title': row['title'],
+                'generationId': row['generation_id'],
+                'revision': row['knowledge_revision'] if row['available'] else None,
+                'authors': [x['claim'] for x in row['metadata'] if x.get('subject') == 'AUTHOR'],
+                'summary': row['summary'], 'themes': row['themes'],
+                'cover': {'source': cover['source'], 'page': cover['page_no']} if cover else None,
+                'contentAvailable': row['available'], 'semanticAcceptance': False})
     return result
 
 

@@ -7,7 +7,7 @@ import asyncio
 
 from . import db, ledger, prompts, schemas
 from .document import page_text_numbered
-from .knowledge import DIRECTOR, _valid_pages, build_timeline, chapters
+from .knowledge import DIRECTOR, _valid_pages, candidate_timeline as build_timeline, chapters
 from .llm import Llm
 
 

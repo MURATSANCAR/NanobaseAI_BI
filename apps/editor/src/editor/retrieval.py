@@ -92,9 +92,7 @@ async def search_book_evidence(generation_id: str, query: str, k: int = 8,
         must.append(models.FieldCondition(key="kind", match=models.MatchAny(any=kinds)))
     hits = (await qdrant().query_points(PASSAGES, query=vec, limit=40, with_payload=True,
                                         query_filter=models.Filter(must=must))).points
-    if not hits:
-        return []
-    ranked = await rerank_evidence(query, [h.payload["text"] for h in hits], generation_id)
+    ranked = await rerank_evidence(query, [h.payload["text"] for h in hits], generation_id) if hits else []
     out = []
     for r in ranked[:k]:
         p = hits[r["index"]].payload
@@ -108,26 +106,8 @@ async def search_book_evidence(generation_id: str, query: str, k: int = 8,
 
 
 def search_character_history(generation_id: str, name: str) -> dict:
-    ch = db.all_rows("SELECT id, canonical_name, aliases, description, identity_status,"
-                     " identity_confidence, first_page FROM character WHERE generation_id=%s AND"
-                     " (canonical_name ILIKE %s OR %s ILIKE ANY(aliases))", generation_id, name, name)
-    ids = [c["id"] for c in ch]
-    return {
-        "characters": ch,
-        "mentions": db.all_rows(
-            "SELECT cm.page_no, cm.surface_name, cm.via, cm.resolution, cm.confidence, e.quote FROM"
-            " character_mention cm JOIN evidence e ON e.id=cm.evidence_id WHERE cm.generation_id=%s"
-            " AND (cm.character_id = ANY(%s) OR cm.surface_name ILIKE %s) ORDER BY cm.page_no",
-            generation_id, ids, name),
-        "emotions": db.all_rows(
-            "SELECT page_no, emotion, intensity, trigger, confidence FROM emotion WHERE generation_id=%s"
-            " AND (character_id = ANY(%s) OR character_name ILIKE %s) ORDER BY page_no",
-            generation_id, ids, name),
-        "events": db.all_rows(
-            "SELECT page_from, page_to, modality, summary FROM event WHERE generation_id=%s AND"
-            " merged_into IS NULL AND EXISTS (SELECT 1 FROM unnest(participants) p WHERE p ILIKE %s)"
-            " ORDER BY page_from", generation_id, f"%{name}%"),
-    }
+    from . import read_model
+    return read_model.character_history(generation_id, name)
 
 
 async def search_universe_canon(universe: str, query: str, k: int = 8) -> list[dict]:

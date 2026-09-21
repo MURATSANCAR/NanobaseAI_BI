@@ -332,7 +332,7 @@ async def cancel_job(job_id: str) -> dict:
 
 @jobs_mcp.tool()
 async def list_books() -> list[dict]:
-    """Defterdeki kitaplar ve son tamamlanmış nesilleri."""
+    """Defterdeki kitaplar ve son nesilleri; nesil varlığı analitik kabul değildir."""
     return await _t(jobs.list_books)
 
 
@@ -351,7 +351,7 @@ async def list_review_queue(generation_id: Gen, status: str = "OPEN",
 
 @jobs_mcp.tool()
 async def get_report(generation_id: Gen, kind: str = "ANALYSIS") -> dict | None:
-    """Son raporun markdown metni."""
+    """Güncel doğrulanmış revizyonun rapor taslağı; available=false ise eski rapor verilmez."""
     return await _t(jobs.get_report, generation_id, kind)
 
 

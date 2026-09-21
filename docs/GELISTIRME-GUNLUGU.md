@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor ortak güncel bilgi okuma sözleşmesi
+
+- Rapor/kart, timeline, aktör, karakter geçmişi ve kayıt listeleri güncel doğrulanmış sürüme bağlandı. Eski rapor/katalog geri dönüşü yok; en yeni nesil eski mühürlü neslin önüne geçer. Üretici aday okumaları ayrı tutuldu.
+- Kitap önerisi güncel kartları sıralar, eski katalog vektör metinlerini kullanmaz. Kaynaklı anılış ve kimlik bağı zorunlu; eksik yaş öneri izni sayılmaz.
+- Gerçek DB/API kabulü sürüyor; yerel test yok, genel analiz kapalı.
+
+
 ## 2026-09-21 — Editor: düzeltme/otomatik üretim/kesinti sonrası devam canlı kabulü geçti
 
 - Son sunucu yayını `0.12.1-outputs-226d05ac`, migrations 014–016, image `sha256:f8f702adbed39ec29f571fb4a63548334bc7507db146d696551765e18d40d5e3`. Yeni gerçek Vombat nesli `3a987c80-95ba-48ce-a08e-820425cf438d`, son revizyon 2874. Genel tarama açılmadı; yalnız ayrı kabul kuyruğu çalıştı.
