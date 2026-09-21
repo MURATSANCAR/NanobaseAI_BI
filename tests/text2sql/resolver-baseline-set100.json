@@ -1,11 +1,11 @@
 {
- "recordedAt": "2026-09-20T05:15:19Z",
+ "recordedAt": "2026-09-21T05:05:57Z",
  "state": {
-  "catalogHash": "2adb69289911582a4dfe8f3ec82e10c8e002da5c6e1d23226f26b6797db356ab",
+  "catalogHash": "ca66fe30e600c21090d03b1207f7af78f4956ff85f3ed50d4aa287fef7656aae",
   "languagePoolHash": "",
-  "catalogVersion": 70552,
-  "rulesHash": "b17c20a6e8a2afd6",
-  "promptHash": "57a0513c4eec0709"
+  "catalogVersion": 70554,
+  "rulesHash": "9a15acfec6edeeb6",
+  "promptHash": "2eed858025ae6dee"
  },
  "cases": {
   "A032": {
@@ -587,19 +587,6 @@
       "source": "ANA"
      },
      {
-      "term": "invoice default cancelled",
-      "type": "DEFAULT_FILTER",
-      "status": "CERTIFIED",
-      "concept": "",
-      "entity": "INVOICE",
-      "what": "CANCELLED",
-      "values": [
-       "0"
-      ],
-      "role": "",
-      "source": "ANA"
-     },
-     {
       "term": "stline default cancelled",
       "type": "DEFAULT_FILTER",
       "status": "CERTIFIED",
@@ -613,23 +600,12 @@
       "source": "ANA"
      },
      {
-      "term": "iade orani",
+      "term": "iade adet oranı",
       "type": "METRIC",
       "status": "CERTIFIED",
-      "concept": "sem_8cd325e7a37e",
-      "entity": "INVOICE",
-      "what": "f:060bc194381dd124",
-      "values": [],
-      "role": "",
-      "source": "ANA"
-     },
-     {
-      "term": "sevk",
-      "type": "METRIC",
-      "status": "CERTIFIED",
-      "concept": "sem_252d8a352fa7",
+      "concept": "sem_5fe3323579e9",
       "entity": "STLINE",
-      "what": "AMOUNT",
+      "what": "f:b4c878c015519588",
       "values": [],
       "role": "",
       "source": "ANA"
@@ -638,18 +614,18 @@
     "groupBy": [
      "CLCARD.DEFINITION_"
     ],
-    "unresolved": [
-     "adede"
-    ],
+    "unresolved": [],
     "unhandled": [],
-    "leftToModel": [
-     "ettigimiz"
-    ],
+    "leftToModel": [],
     "qualifierColumns": [],
     "drops": [
      {
       "code": "DEFAULT_PERIOD_APPLIED",
       "term": ""
+     },
+     {
+      "code": "MEASURE_READ_AS_UNIT",
+      "term": "adede"
      }
     ],
     "shape": null,
@@ -662,7 +638,7 @@
     ],
     "clarification": false,
     "outOfScope": false,
-    "state": "PARTIAL"
+    "state": "RESOLVED"
    }
   },
   "C021": {
@@ -810,20 +786,13 @@
     "unhandled": [],
     "leftToModel": [],
     "qualifierColumns": [],
-    "drops": [
-     {
-      "code": "DEFAULT_PERIOD_APPLIED",
-      "term": ""
-     }
-    ],
+    "drops": [],
     "shape": null,
     "grain": null,
     "limit": null,
     "ratio": false,
     "comparison": false,
-    "temporal": [
-     "YEAR"
-    ],
+    "temporal": [],
     "clarification": false,
     "outOfScope": false,
     "state": "PARTIAL"
@@ -2829,11 +2798,11 @@
     ],
     "slots": [
      {
-      "term": "new_sozlesmetarafibase default statecode",
+      "term": "new_sozlesmebase default statecode",
       "type": "DEFAULT_FILTER",
       "status": "CERTIFIED",
       "concept": "",
-      "entity": "NEW_SOZLESMETARAFIBASE",
+      "entity": "NEW_SOZLESMEBASE",
       "what": "statecode",
       "values": [
        "0"
@@ -2846,8 +2815,8 @@
       "type": "METRIC",
       "status": "COMPOSED",
       "concept": "",
-      "entity": "NEW_SOZLESMETARAFIBASE",
-      "what": "f:0c4f26aabea94718",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "f:0222e82d62a4042d",
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
@@ -2857,8 +2826,8 @@
       "type": "METRIC",
       "status": "COMPOSED",
       "concept": "",
-      "entity": "NEW_SOZLESMETARAFIBASE",
-      "what": "f:0c4f26aabea94718",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "f:0222e82d62a4042d",
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
@@ -3628,11 +3597,11 @@
     ],
     "slots": [
      {
-      "term": "new_sozlesmetarafibase default statecode",
+      "term": "new_sozlesmebase default statecode",
       "type": "DEFAULT_FILTER",
       "status": "CERTIFIED",
       "concept": "",
-      "entity": "NEW_SOZLESMETARAFIBASE",
+      "entity": "NEW_SOZLESMEBASE",
       "what": "statecode",
       "values": [
        "0"
@@ -3656,8 +3625,8 @@
       "type": "METRIC",
       "status": "COMPOSED",
       "concept": "",
-      "entity": "NEW_SOZLESMETARAFIBASE",
-      "what": "f:0c4f26aabea94718",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "f:0222e82d62a4042d",
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
@@ -3667,8 +3636,8 @@
       "type": "METRIC",
       "status": "COMPOSED",
       "concept": "",
-      "entity": "NEW_SOZLESMETARAFIBASE",
-      "what": "f:0c4f26aabea94718",
+      "entity": "NEW_SOZLESMEBASE",
+      "what": "f:0222e82d62a4042d",
       "values": [],
       "role": "",
       "source": "TIMAS_MSCRM"
