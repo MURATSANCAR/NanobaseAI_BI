@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor kimlik kabulü ve başarısız özetten çıktı kurtarma
+
+- Yeni gerçek nesilde 37 PDF/API kimlik-kapsam kontrolü ve 23. sayfanın iki bağımsız görsel kimlik karşılaştırması geçti. 36/59 görsel anma çözüldü; 23 belirsiz. Baba/yavru ayrı hayvan kimliği.
+- İlk job FAILED geçmişi korunarak a80be3ec/policy v6 ile yalnız doğrulama/çıktı yeniden üretimi tamamlandı: rev3009, beş READY, teknik SUCCEEDED/analitik NEEDS_REVIEW. Yeni yayında 371 gerçek API/DB/Qdrant kontrolü geçti; yerel test yok.
+- Hermes pending sohbet doğru; servis araç/spillover döngüsü ve bekleyen başka oturumlar nedeniyle tam sohbet kabul edilmedi. Kaynak uyuşmazlıkları ve sayfa rolleri açık.
+- Bakım geri açıldı; genel/kabul işçileri, Hermes/MCP/gateway ve Editor modelleri kapalı; aktif Temporal/pending rebuild 0; GPU1 0 MiB. Belgeler ve kanıt `apps/editor/docs/IDENTITY-COVERAGE.md`, `apps/editor/docs/evidence/2026-09-21-identity-coverage.json`. Origin push HTTPS kimliği nedeniyle yapılamadı.
+
 ## 2026-09-21 — Editor gerçek kimlik kabulü ve özet referans sınırı
 
 - Gerçek yeni nesilde baba/yavru ayrımı ve sayfa 23 ters görsel etiket düzeltmesi geçti; 37 PDF/API kontrolü başarılı. 23 görsel anma belirsiz.

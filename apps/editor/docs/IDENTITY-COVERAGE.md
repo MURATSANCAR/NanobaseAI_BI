@@ -1,28 +1,37 @@
-# Kaynak ve kimlik kapsamı — 2026-09-21
+# Kaynak ve karakter kimliği kabulü — 21 Eylül 2026
 
-Çalışma sürüyor; üretim/analitik kabul değildir.
+Üretime hazır değil. Bakım açık; genel worker/rebuild, Hermes/MCP/gateway ve Editor modelleri kapalı. Aktif Temporal işi ve bekleyen rebuild yok; GPU 1 belleği 0 MiB. BI GPU 0'a dokunulmadı.
 
-Gerçek Vombat neslinde kaynak 32/32 sayfayı kapsıyor, 30 sayfa okunabilir; 4/10 boş OCR sonucu yazılmadığı için eksik OCR gibi görünüyor. 7 sayfada kaynak sorunları, 32 sayfada editörce değerlendirilmemiş tür var. Metin kimliği çıktısı aynı m1 anmasını hem baba hem yavruya verdi; kod ad çoğunluğu üzerinden ilk grubu seçerek babayı yavrunun diğer adına çevirdi. Vombatlar HUMAN_CHILD/HUMAN_ADULT sınıflanınca görsel referanslar reddedildi. Görsel isim eşleşmeleri de analitik doğruluk kanıtı değildir.
+## Düzeltilenler
 
-Yeni kimlik sözleşmesi: anmalar tekil ve eksiksiz bölünür; aynı isim farklı kişileri zorla birleştirmez. Kaynak sayfalarıyla ikinci denetçi tür/kimlik/açıklamayı değerlendirir. Hatalı taslak gerekçeyle en çok üç kez üretilir, başarısızsa yazılmaz. Gerçek metin kanıtı olmayan görsel anmalar metinsel kimlik çözümüne giremez. Boş OCR tamamlanma kaydı saklanır; bu, sayfanın bağımsız kabul edildiği anlamına gelmez. Kimlik kapsamı API'si taranan sayfa, bağlı anma ve doğruluğu ayrı ölçer.
+- Metin kimliğinde anmalar tam ve tekil bölünür. Aynı anmayı baba/yavru gruplarına yazan öneri reddedilir; ad çoğunluğu üzerinden yanlış kimlik birleştirme kaldırıldı. İkinci kaynak denetçisi tür/kimlik/açıklamayı kontrol eder. Birey, topluluk ve kavram ayrılır; topluluklar kesin kişi sayılmaz.
+- Başarıyla tamamlanan boş OCR kaydı saklanır. Boş sonuç ile yapılmamış OCR ayrıdır. Kaynak baytları korunur; boş sayfa otomatik analitik kabul edilmez.
+- Kimlik kapsamı API'si fiziksel sayfa, gerçek model taraması, ön eleme ve bağlı/çözülmüş anmaları ayrı sayar. Tarama tamamlanması kimlik doğruluğu değildir.
+- Gerçek koşuda kitap özeti iki kez uzunluk sınırına takıldı, sonrasında geçersiz claim referanslarıyla reddedildi. `validated-outputs-v6`: en çok 24 cümle, snapshot'a özel kısa model referansları; kalıcı çıktı gerçek claim UUID ve evidence bağlantısını korur. Bilinmeyen referanslar hata olarak reddedilir.
 
+## Gerçek kabul
 
-## Canlı kabul koşusu (sürüyor)
+Ortam: tt-gpu, gerçek Editor PostgreSQL + kontrol API'si + Qdrant ve orijinal PDF. Yerel/sentetik test çalıştırılmadı.
 
-- Asıl üretici `0.14.0-identity-d045a96f`; güncel kontrol/kart/MCP okuma kodu `0.14.0-identity-251543a2` (sonraki farklar kapsam sayacı ve Hermes job_id okuması; üretim algoritması aynı).
-- Gerçek PDF SHA `12cc83a4ccffe9394fa2695c76e460cf87e2ffe32e6ae69d6699fcaee43ceea2`.
-- Yeni nesil `1600e738-621b-434f-8d9c-0c0645b42fb2`, job `8dd7f9a1-f9f7-41d0-b16d-f544e3c92205`, ayrı kuyruk `editor-identity-20260921`, worker `editor-identity-acceptance-worker`. Genel worker/rebuild kapalı; bu tek gerçek kitap için bakım geçici kaldırıldı.
-- Önceki gerçek model cevabı 26429 iki gruba yazdığı m1 nedeniyle reddedildi. İlk yeni tanı denemesi 27265 kaynakta olmayan adları nedeniyle reddedildi; 27266/27267'de baba/yavru ayrıldı, vombatlar ANIMAL oldu. Bu tanı deftere kimlik yazmadı; tam yeni nesil ayrı çalışıyor.
-- Yeni nesilde 9 OCR kaydı, 4 ve 10. sayfalarda iki gerçek boş sonuç saklandı. Gerçek PDF/API 12/12 hedef kontrol geçti. Görseller bağımsız incelendi; boş OCR kitabın/sayfanın semantik kabulü sayılmadı.
-- Eski nesillerin 16 tablo içeriği önceki kabul hashleriyle aynı.
-- Hermes'in ilk gerçek sohbeti yeni neslin hazır olmadığını doğru bildirdi; eski mühürlenme/yeni iş önerisi varsayımları bulundu. SOUL ve üç ürün skill'i güncellendi; yeniden sohbet kabulü henüz sürüyor.
-- 23. sayfa bağımsız görsel referansı, yeni kimlik çözümü bitmeden kaydedildi: sarı gözlüklü/kırmızı giysili kahverengi figür Yavru Vombat; mavi şapkalı beyaz yüzlü figür Kirpicik. Yeni deep taraması bu iki etiketi ters verdi; son kimlik katmanının bunu düzeltmesi ayrıca sınanacak.
-- Kanıtlar `/data/editor/backups/20260921-identity/`; `before-new-generation.dump` yedeği mevcut. Genel açılış/üretim kabulü yok.
+- Kitap: Dünyanın En Korkak Hayvanı. PDF SHA `12cc83a4ccffe9394fa2695c76e460cf87e2ffe32e6ae69d6699fcaee43ceea2`.
+- Nesil `1600e738-621b-434f-8d9c-0c0645b42fb2`; ilk job `8dd7f9a1-f9f7-41d0-b16d-f544e3c92205`. Üretici `d045a96f`; son okuyucu/çıktı imajı `a80be3ec` (`0.14.0-identity-a80be3ec`). Sonraki belge commitleri ürün kodunu değiştirmez.
+- İlk kimlik önerisi 27373, yinelenen m28 nedeniyle reddedildi. 27374/27375 ikinci öneri/denetçi geçti. Baba Vombat ve Yavru Vombat ayrı ANIMAL/INDIVIDUAL kimlikler.
+- Gerçek PDF + API + bağımsız defter karşılaştırması **37/37** geçti. 4 ve 10. sayfalar bağımsız görsel incelemede yazısız resim; API `COMPLETED_NO_TEXT` döndürüyor.
+- 23. sayfanın bağımsız görsel referansı kimlik çözümünden önce kaydedildi. Taramanın ters verdiği iki ad düzeltildi: sarı gözlük/kırmızı giysi → Yavru Vombat; mavi şapka → Kirpicik. Her iki son kimlik bağlantısı doğru.
+- Görsel anmalar **36/59 RESOLVED**, **23/59 UNCERTAIN**. Bu iki hedef figürün başarısı kitabın tüm kimliklerinin kabulü değildir.
+- İlk tam job özet referans hatasında **FAILED** kaldı. Tarama tekrarlanmadan yeni çıktı koduyla gerçek yeniden üretim **SUCCEEDED**, bilgi revizyonu **3009**, beş çıktı READY. Başarısız job geçmişi değiştirilmedi.
+- Son yayında gerçek API/DB/Qdrant çıktı tutarlılığı **371/371** geçti. Bu sayılar kaynak/kimlik semantiğinin tam kabulü değildir. Analitik durum **NEEDS_REVIEW**, `accepted=false`.
+- İlk üretim 13:45 UTC'de başladı; bakım 14:55 UTC'de geri açıldı. Bu yaklaşık 70 dakika; model geçişi, denetim, Hermes çakışması ve kod düzeltmesi/yeniden üretimi içerir, temiz performans benchmarkı değildir. İlk aktör geçişi 62 olay × 16 karakter için 992 kısa çağrı yaptı; maliyet ayrıca ele alınmalı.
 
-## Gerçek koşuda sonraki bulgular
+## Kalanlar
 
-Metin kimliği ilk öneride yinelenen m28 nedeniyle reddedildi; 27374/27375 ikinci öneri/denetçi kabul edildi. Baba/yavru ayrı ANIMAL; topluluklar CANDIDATE. Gerçek PDF+API kapsam kontrolü 37/37; 23. sayfadaki iki ters görsel ad doğru kimliklere bağlandı (visual-page23-final.json). Görsel 59 anmanın 36'sı RESOLVED, 23'ü UNCERTAIN.
+1. Kaynak: 32 sayfa kapsamda, 30'u metin okunabilir. 2/3/18/24/26. sayfalarda metin/OCR uyuşmazlığı; 4/10 görsel-only değerlendirmesi ve 32 sayfanın rol onayı açık. Ham kaynaklar korunuyor, editör onayı uydurulmadı.
+2. Kimlik: 23 görsel anma belirsiz; tüm karakterlerin bağımsız doğruluğu kabul edilmedi. İki TEXT anmasında doğrulanmış metin kanıtı yok; bunlar metinsel kimlik çözümüne alınmadı.
+3. Hermes: gerçek pending sohbet son neslin hazır olmadığını, çalışan işi doğru bildirdi; eski özet sunmadı/yeni iş önermedi. Ancak servis günlüklerinde spillover dosyasına erişemeyen tekrarlı araç çağrıları ve başka bekleyen oturumlar var. Döngünün tek pending isteğe aidiyeti kanıtlanmadı. Servis durduruldu. Hazır çıktı üzerinden tam sohbet ve oturum yaşam döngüsü **DOĞRULANAMADI**; önce araç erişimi/oturum izolasyonu çözülmeli.
+4. Tam yeni analiz neslinin baştan sona tek sürümle SUCCEEDED olması henüz yok: bu kabul, başarısız üretim sonrasında gerçek çıktının kurtarılmasını kanıtlar.
 
-Tam job kitap özetinde FAILED: iki length cevabı reddedildi, üçüncü sınırlı deneme geçersiz claim referansı verdi. Bölüm özeti READY; diğer çıktılar yayımlanmadı. Tarama tekrarlanmadan output policy v6 ile yeniden üretim hazırlanıyor: en çok 24 cümle ve modelde snapshot'a özel kısa claim kimlikleri; kalıcı çıktı gerçek UUID/evidence bağlantılarını korur.
+## Kanıt
 
-Hermes pending sohbeti son nesli ve çalışan işi doğru bildirdi. Ancak servis günlüklerinde başka bekleyen oturumlar ve spillover dosyasına erişemeyen tekrarlı araç çağrıları bulundu; tek isteğe aidiyet kanıtlanmadı. Hermes durduruldu; tam sohbet kabulü verilmedi. Kanıt hermes-background-loop.log.
+[Depodaki kabul kaydı](evidence/2026-09-21-identity-coverage.json). Sunucu kanıtları `/data/editor/backups/20260921-identity/`: `before-new-generation.dump`, `identity-final.json`, `visual-reference.json`, `visual-page23-final.json`, `outputs-final.json`, `source-final.json`, `runtime-final.json`, `hermes-pending-final.json`, `hermes-background-loop.log`. Yeniden çalıştırılabilir sunucu kontrol scriptleri `deploy/verify_identity_coverage.py`, `deploy/verify_live_outputs.py`, `deploy/verify_hermes_pending.py`.
+
+Kod yerel main'de. GitHub push bu oturumda HTTPS kimliği olmadığı için başarısız; origin yayını tamamlanmış sayılmıyor.
