@@ -568,6 +568,15 @@ class DeterministicCompiler:
         if plan is None:
             log.debug("deterministic compile refused: %s", reason)
             return None
+        if (q.grain or sum(1 for t in q.temporal if t.start and t.end) > 1) and any(
+                (m.mapping.extra or {}).get("state_measure") for m in plan.metrics if m.mapping):
+            # A balance "by month" or "this month against last" is the balance at each period's END — every
+            # movement up to that day. Bucketing or CASE-splitting the rows gives each period's MOVEMENT under
+            # the balance's name ("satıcılar bakiyesi geçen aya göre" came out −17,9 Mn: August's net flow,
+            # not the 55,3 Mn owed), and the gate cannot see it: no date filter restricts the reading.
+            # This compiler has no cumulative form, so it does not write one.
+            log.debug("deterministic compile refused: state measure asked per period")
+            return None
         d = self.d
         prof = self.by_entity[plan.entity]
         alias = plan.entity

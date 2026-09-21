@@ -60,7 +60,10 @@ def definitions(entity_of, column_of) -> list[dict]:
         codes = code if isinstance(code, (list, tuple)) else [code]
         expr = {"borç-alacak": f"{em}.DEBIT - {em}.CREDIT", "alacak-borç": f"{em}.CREDIT - {em}.DEBIT",
                 "borç": f"{em}.DEBIT", "alacak": f"{em}.CREDIT"}[side]
-        extra = {"func": "SUM", "aliases": [key.replace("-", "_")],
+        # verb_bridge: false — hesap adı sabit bir addır, bir fiilin adı değil ('alınan çekler', 'hesaplanan kdv',
+        # 'ödenecek vergiler' ortaçla başlar). Çözücü fiil köprüsünü (alınmış/hesaplar/ödediğimiz → bu ölçü) kurmaz;
+        # ölçü kendi kelimeleriyle bulunur. (backend/semantic_layer/runtime/resolver.py `_metric_keys_for_root`)
+        extra = {"func": "SUM", "aliases": [key.replace("-", "_")], "verb_bridge": False,
                  "conditions": [f"{em}.CANCELLED IN (0)", f"{em}.KEBIRCODE IN ({', '.join(str(c) for c in codes)})"]}
         if state:
             extra["state_measure"] = True
@@ -96,7 +99,7 @@ def definitions(entity_of, column_of) -> list[dict]:
         ref=("M005", 55348004.80),
         why="Pasif hesap: bakiye alacak − borç. Tedarikçi BAZINDA borç (cari) bu ölçü değildir. ")
     add("odenecek-vergi-ve-fonlar-bakiyesi", "ödenecek vergi ve fonlar bakiyesi", 360, "alacak-borç", state=True,
-        synonyms=["ödenecek vergiler", "ödenecek vergi hesabı"],
+        synonyms=["ödenecek vergiler", "ödenecek vergi hesabı", "ödenecek vergiler bakiyesi"],
         ref=("M066", 9049793.39),
         why="'ve' içeren öbek anahtarı hiç eşleşmez (soru n-gramı durak sözcükte kesilir), bu yüzden 'ödenecek vergi ve fonlar' "
             "yazımı eş anlamlı olarak verilmedi. ")
@@ -123,14 +126,15 @@ def definitions(entity_of, column_of) -> list[dict]:
         ref=("M061", 65211493.80),
         why="191 borç hareketleri; alacak tarafı aylık mahsuptur. 2026'da 191'e açılış kaydı yok (ölçüldü). ")
     add("pazarlama-gideri", "pazarlama satış dağıtım gideri", 760, "borç-alacak", state=False,
-        synonyms=["pazarlama gideri", "pazarlama giderleri", "pazarlama satış ve dağıtım giderleri"],
+        synonyms=["pazarlama gideri", "pazarlama giderleri", "pazarlama satış dağıtım giderleri"],
         ref=("M080", 242392016.63),
         why="761 yansıtma hesabı hariç (yansıtma dahil net 37,5 Mn olurdu). ")
     add("genel-yonetim-gideri", "genel yönetim gideri", 770, "borç-alacak", state=False,
-        synonyms=["genel yönetim giderleri toplamı"],
+        synonyms=["yönetim gideri", "yönetim giderleri"],
         ref=("M081", 54138183.67),
-        why="771 yansıtma hariç. Aynı kebir koduna bağlı rule-miner SÜZGECİ 'genel yönetim giderleri hesabı' adına "
-            "daraltılır (NARROW). ")
+        why="771 yansıtma hariç. 'genel' soru n-gramında durak sözcüktür (STOPWORDS): 'genel …' ile başlayan anahtar hiç "
+            "eşleşmez; bu yüzden soruda okunan öbek 'yönetim gideri/giderleri'dir. Aynı kebir koduna bağlı rule-miner "
+            "SÜZGECİ 'genel yönetim giderleri hesabı' adına daraltılır (NARROW; anahtarı zaten ölüydü, etkisi yok). ")
     return out
 
 
@@ -220,6 +224,15 @@ def narrow_rows(store) -> list[dict]:
     return out
 
 
+def _extra_drift(store, c, d) -> bool:
+    """Aynı formüllü eşleme var ama extra'sı (koşullar, state_measure, verb_bridge) istenenden farklı."""
+    want = _mapping(d)
+    for m in store.list_mappings(c.id):
+        if m.key() == want.key():
+            return dict(m.extra or {}) != dict(want.extra or {})
+    return False
+
+
 def plan(store, s, defs) -> list[dict]:
     from semantic_layer.normalize import normalize_term
     rows = []
@@ -230,13 +243,16 @@ def plan(store, s, defs) -> list[dict]:
             continue
         c = _existing(store, s, d)
         wanted = [normalize_term(x) for x in d["synonyms"]]
+        drift = False
         if c is None:
             todo, missing = "YARAT + sertifikala", wanted
         else:
             missing = [x for x in wanted if x not in (c.synonyms or []) and x != c.normalized_term]
+            drift = _extra_drift(store, c, d)
             certified = c.status == "CERTIFIED" and (c.explain or {}).get("human_certified_by")
-            todo = ("DEĞİŞİKLİK YOK" if certified and not missing
-                    else ("eş anlamlı ekle" if certified else "sertifikala" + (" + eş anlamlı ekle" if missing else "")))
+            parts = ([] if certified else ["sertifikala"]) + (["eş anlamlı ekle"] if missing else []) \
+                + (["eşleme extra güncelle"] if drift else [])
+            todo = " + ".join(parts) or "DEĞİŞİKLİK YOK"
         rows.append({"kavram": d["term"], "tür": d["type"], "anahtar": normalize_term(d["term"]), "işlem": todo,
                      "varolan": c.id if c else None, "entity": d["entity"], "kalıp": d["pattern"],
                      "formül": d.get("formula"), "extra": d.get("extra") or {}, "eklenecek_eş_anlamlılar": missing,
@@ -261,6 +277,8 @@ def apply(store, s, defs) -> list[dict]:
                                           mapping=_mapping(d), status=ConceptStatus.CANDIDATE)
         for syn in d["synonyms"]:
             store.add_synonym(c.id, syn)
+        if not created and _extra_drift(store, c, d):
+            store.replace_mappings(c.id, [_mapping(d)])
         c = store.get_concept(c.id)
         sources = dict((c.explain or {}).get("synonym_sources") or {})
         for syn in d["synonyms"]:
@@ -328,7 +346,7 @@ class _WithProposal:
         base = self._s.certified_index(t, d)
         if self._merged is None or self._base is not base:
             from semantic_layer.normalize import normalize_term
-            merged = {k: list(v) for k, v in base.items()}
+            merged = _baseline(base)
             if self._narrow:
                 for cid, new_term in NARROW:
                     moved = []
@@ -348,15 +366,48 @@ class _WithProposal:
         return self._merged
 
 
+#: NARROW'dan önceki terimler — kavram kataloğa yazılmışsa ölçümün 'önce' tarafı bunlarla kurulur.
+_ORIGINAL_TERMS = {"sem_05eccc74b5ac": "hesaplanan kdv", "sem_74e0e6368285": "genel yönetim giderleri"}
+
+
+def _baseline(index):
+    """Bu betiğin HENÜZ yazılmadığı katalog: bu betiğin yazdığı kavramlar (imza WHO) çıkarılır, daraltılan
+    terimler eski anahtarlarına geri konur. Kavramlar kataloğa yazılmış olsa bile önce/sonra ölçümü doğru kalır."""
+    from semantic_layer.normalize import normalize_term
+    merged, moved = {}, []
+    for k, senses in index.items():
+        keep = []
+        for c, maps in senses:
+            if (c.explain or {}).get("human_certified_by") == WHO and c.id not in _ORIGINAL_TERMS:
+                continue
+            if c.id in _ORIGINAL_TERMS and k != normalize_term(_ORIGINAL_TERMS[c.id]) and k == c.normalized_term:
+                moved.append((c, maps))
+                continue
+            keep.append((c, maps))
+        if keep:
+            merged[k] = keep
+    for c, maps in moved:
+        merged.setdefault(normalize_term(_ORIGINAL_TERMS[c.id]), []).append((c, maps))
+    return merged
+
+
 class _ReadOnly:
+    """'Önce' tarafı: bu betiğin kavramları olmadan (bkz. _baseline). Yayın kapalı."""
+
     def __init__(self, store):
-        self._s = store
+        self._s, self._base, self._merged = store, None, None
 
     def __getattr__(self, name):
         return getattr(self._s, name)
 
     def publish_runtime_snapshot(self, tenant_id, datasource_id, index):
         return 0, "bellekte-olcum"
+
+    def certified_index(self, t, d):
+        base = self._s.certified_index(t, d)
+        if self._merged is None or self._base is not base:
+            self._base, self._merged = base, _baseline(base)
+        return self._merged
 
 
 def _reading(res, question):
