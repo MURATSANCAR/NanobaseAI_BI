@@ -34,12 +34,23 @@ const SUGGEST = ['hangi karakterler var?', 'hikâye nasıl başlıyor?', 'ana te
 function withPages(text: string): ReactNode[] {
   return text.split(/(\[?s\.\s?\d+(?:\s?[-–]\s?\d+)?\]?)/g).map((part, i) =>
     /^\[?s\.\s?\d/.test(part) ? (
-      <span key={i} className="mx-0.5 inline-flex items-center rounded-md bg-canvas-violet/10 px-1.5 py-px align-[1px] font-mono text-[11px] font-bold text-canvas-violet">
+      <span key={i} className="zk-page-ref">
         {part.replace(/[[\]]/g, '')}
       </span>
     ) : (
       <Fragment key={i}>{part}</Fragment>
     ),
+  );
+}
+
+/** Preserve the answer wording and source references while separating its paragraphs. */
+function AnswerText({ text }: { text: string }) {
+  return (
+    <div className="zk-answer">
+      {text.split(/\r?\n[\t ]*\r?\n/).filter((paragraph) => paragraph.trim()).map((paragraph, i) => (
+        <p key={i}>{withPages(paragraph)}</p>
+      ))}
+    </div>
   );
 }
 
@@ -99,10 +110,10 @@ function UserBubble({ text, meta }: { text: string; meta?: string }) {
 
 function AiBubble({ children, meta }: { children: ReactNode; meta?: string }) {
   return (
-    <div className="zk-msg flex items-end gap-2.5">
+    <div className="zk-msg flex items-start gap-2.5">
       <span className="hidden sm:contents"><Orb /></span>
-      <div className="min-w-0 w-full sm:w-auto sm:max-w-[80%]">
-        <div className="rounded-[20px] rounded-bl-md border border-white/80 bg-white/90 px-2 py-3 text-[14px] leading-relaxed text-canvas-ink shadow-[0_8px_30px_-14px_rgba(20,30,60,.25)] backdrop-blur sm:px-4">
+      <div className="min-w-0 w-full sm:w-auto sm:max-w-[min(80%,72ch)]">
+        <div className="rounded-[20px] rounded-tl-md border border-slate-200/70 bg-white/95 px-3.5 py-4 text-[15px] leading-relaxed text-canvas-ink shadow-[0_8px_30px_-14px_rgba(20,30,60,.15)] sm:px-5 sm:py-5">
           {children}
         </div>
         {meta && <div className="mt-1 pl-1 text-[10.5px] text-canvas-muted">{meta}</div>}
@@ -129,13 +140,13 @@ function Turn({ q, onRetry, onPickBook }: { q: BookQuestion; onRetry: (text: str
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
               <Search aria-hidden className="h-3.5 w-3.5" />
             </span>
-            <p className="whitespace-pre-line text-amber-950">{withPages(answer)}</p>
+            <div className="min-w-0 text-amber-950"><AnswerText text={answer} /></div>
           </div>
         </AiBubble>
       )}
       {answer && !q.notFound && (
         <AiBubble meta={q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn'de cevapladı` : undefined}>
-          <p className="whitespace-pre-line break-words">{withPages(answer)}</p>
+          <AnswerText text={answer} />
           {q.cards?.map((card) => <BookCard key={card.id} card={card} onAsk={() => onPickBook(card.title)} />)}
           {q.cardError && <p role="status" className="mt-2 text-sm text-amber-800">{q.cardError}</p>}
         </AiBubble>

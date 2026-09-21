@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Kitaba sor yanıt okunaklılığı
+
+- Yanıtlar ayrı paragraflarla, sınırlı satır genişliği ve 15/16px yazıyla gösterilir. Kart iç boşlukları artırıldı, avatar yanıt başlangıcına hizalandı; kaynak sayfaları kontrastlı rozet olarak korunur.
+- Sunucuda TypeScript/Vite derlemesi tamamlandı ve test portalına yüklendi. Yerel test çalıştırılmadı. 320/390/768/1440px sayfa taşması yok; API 502 nedeniyle gerçek yanıt görünümü DOĞRULANAMADI. Doğrulama ve kapsam: `docs/analiz/chat-readability-2026-09-21.md`.
+
 ## 2026-09-21 — Paralel kısıt denetimi ve kapsamı koruyan düzeltmeler
 
 - Kullanıcı paralel denetim istedi; iki ajan statik incelemede sayfa/isim tekilliği, görsel doğrulamasız eleme, dar süreklilik örneklemi, duyguda aliasbağı, NON_STORY/kollektif dışlama ve sessiz tema ID kaybı buldu. Düzeltmeler main üzerinde; yeni gerçek nesil kabulü bekliyor.

@@ -730,5 +730,30 @@
 }
 
 /* Hide only chat scrollbars; long replies remain touch/keyboard scrollable. */
+.zk-answer {
+  max-width: 65ch;
+  font-size: 15px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.zk-answer p { margin: 0; white-space: pre-line; }
+.zk-answer p + p { margin-top: 1em; }
+.zk-page-ref {
+  display: inline-block;
+  margin-inline: 0.15em;
+  padding: 0.05em 0.5em;
+  border: 1px solid #e5defa;
+  border-radius: 6px;
+  background: #f3efff;
+  color: #6342b5;
+  font-size: 0.8em;
+  font-weight: 600;
+  line-height: 1.5;
+  white-space: nowrap;
+  vertical-align: baseline;
+}
+@media (min-width: 768px) {
+  .zk-answer { font-size: 16px; }
+}
 .zk-scroll { scrollbar-width: none; }
 .zk-scroll::-webkit-scrollbar { display: none; }
