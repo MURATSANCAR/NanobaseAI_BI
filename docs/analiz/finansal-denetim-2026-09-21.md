@@ -4,7 +4,7 @@
 
 Finans & Risk → Finansal Denetim, `/timas/finansal-denetim`.
 Mevcut kanvas kabuğu, açık renkli cam yüzeyler, mor/mercan vurgular.
-Dört görünüm: denetim özeti, kontrol kütüphanesi, Logo kayıtları, kaynak belge.
+Beş görünüm: denetim özeti, kontrol kütüphanesi, Logo kayıtları, dayanak veriler ve kaynak belge.
 Rapor JSON olarak mevcut hesaplama, kaynak hash'i, sürüm, kapsam ve sınırlamalarla indirilir.
 Kontrol kataloğu ayrıca indirilebilir. Hiçbir işlem Logo'ya yazmaz.
 
@@ -55,6 +55,14 @@ uçları. Mevcut çağıran/portal yetkilendirmesini kullanır. SQL kataloğa do
 dönem aktarılır, kesilmiş sonuçtan başarı üretilmez. Ortak kilit ve 120 saniyelik
 önbellek aynı ağır sorgunun paralel kopyalarını engeller. SQL, kod hash'i ve zaman rapordadır.
 
+Canlı kabulde FAYEAR sorgusunun ortak katmanda yanlışlıkla 211 yedeğine yönlenip
+2026 için boş döndüğü yakalandı. Denetim sorguları mevcut `scope={n0:411}` desteğiyle
+2026 fiziksel kopyasına bağlanır; yürütmeden önce ve yanıtta başka yedek kimliği
+bulunursa 409 ile reddedilir. Bu bir şirket seçimi değildir. Test referansı aynı
+sabit kaynakta bağımsız sorgudur. E-defter ödeme tipi grupları kaynak veritabanının
+`SQL_Latin1_General_CP1254_CI_AS` karşılaştırmasıyla büyük/küçük harf varyantlarını
+birleştirir; bağımsız satır referansı bu Türkçe karşılaştırmayı korur.
+
 | Kontrol | Kapsam |
 |---|---|
 | Mizan eşitliği | Net borç/alacak farkı; 0,01 TL tolerans |
@@ -88,6 +96,21 @@ açık hesap yönü tablosuyla alt hesap ters bakiye **gözlemi** çıkarılır;
 niteliğinin veya tüm notun doğrulandığı anlamına gelmez. Alıcı/satıcı ve reeskont
 hesapları birbirinden kopyalanmaz. Tarih, belge numarası ve döviz alanlarının ham profil
 sayıları raporda kalır; e-defter XML anlamı doğrulanmış gibi kullanılmaz.
+
+İkinci kaynak keşfinde `LG_411_01_EBOOKDETAILDOC` ile `LG_411_FAYEAR`/`FAREGIST`
+bulundu; e-defter alanlarının yalnız EMFLINE içinde arandığı ilk kapsam genişletildi.
+Belge yok/ödeme yok bayraklarıyla eksik alan gözlemi, fişte birden fazla tür ve
+belge–hesap ilişkileri çalışır. Başlık belgesi bütün fişe, satır belgesi yalnız kendi
+satırına bağlanır; ilişki tekilleştirilerek tutar/sayı çoğalması önlenir.
+`/documents` gerçek belge tarihi/numarası/tür kodu/ödeme şekli/fiş-satır kimliğini
+sayfalı döndürür. Tür kodları henüz sürüm sözlüğüyle kabul edilmediği için otomatik
+fatura/çek/senet uygunluk sonucu verilmez.
+
+Sabit kıymet cetveli yıl/grup/yöntem/ay bazında ayrı gösterilir; gruplar birbirine
+eklenmez, birikimli amortisman alanları aylardan toplanmaz. `LOCFIGS2_PERDDEPR`
+kaynak dönem tutarı olarak gösterilir; yöntem, varlık hesabı ve mevzuat kabulü değildir.
+Destek kaynağı okunamazsa `unavailableDatasets` ve `unverified` döner; ana mizanın
+sonuçları kaybolmaz, belgesel kontrol geçmiş sayılmaz.
 
 20 ayrı aynı-fiş karşı hesap gözlemi tek toplulaştırılmış sorguyla hesaplanır:
 karşılık/654, stok/üretim yansıtmaları, tahakkuk/gelir, sermaye/banka.
@@ -151,5 +174,7 @@ mevzuat kabulü yapılmış değildir.
 
 Tarayıcı için geçerli portal oturumu gerekiyor. Sunucuda bulunan eski parola ile
 tek giriş denemesi 401 döndü; kullanıcıdan geçerli test oturumu/güvenli dosya yolu istendi.
-320/390/768/masaüstü ve indirme/detay akışı bu oturum olmadan **DOĞRULANAMADI**.
+320/390/768/1440 genişliklerinde gerçek URL tarayıcıda açıldı; yalnız AD giriş kapısı
+görüldü ve bu kapıda yatay taşma yoktu. Bu gözlem finans ekranının mobil kabulü değildir.
+Kimlik doğrulanmış finans ekranı, indirme/detay ve inceleme formu akışı **DOĞRULANAMADI**.
 Müşteri VM'inde kurulumu ve gerçek kullanıcı kabulü ayrıca doğrulanmadan üretime hazır denmez.

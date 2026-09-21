@@ -16,6 +16,11 @@ def api(path):
     return json.load(urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:8795/api/v1/financial-audit/'+path, headers=headers), timeout=180))
 
 out = api('overview?year=2026')
+# Do not run expensive references against a stale in-memory deployment.
+import hashlib
+assert out['revision']==hashlib.sha256(Path('backend/semantic_bridge/financial_audit.py').read_bytes()).hexdigest(), 'stale backend deployment'
+assert out['supportingEvidence']['revision']==hashlib.sha256(Path('backend/semantic_bridge/financial_audit_evidence.py').read_bytes()).hexdigest(), 'stale evidence deployment'
+assert out['coverage']['revision']==hashlib.sha256(Path('backend/semantic_bridge/financial_audit_rules.py').read_bytes()+Path('configs/financial-audit/source.json').read_bytes()).hexdigest(), 'stale rules/source deployment'
 reference = connector_from_file('/data/nanobaseai/bi/secrets/logo-mssql-connection.json')
 # Independent reference: first aggregate the ledger by account ID, then join the account
 # plan. The implementation joins first. Verify every amount, account and row count.
@@ -116,6 +121,9 @@ for ratio in out['ratios']:
 check('all-41-analysis-notes',sorted(r['note'] for r in out['ratios'])==list(range(2,43)))
 coverage=out['coverage']; controls={c['id']:c for c in coverage['items']}
 check('every-source-occurrence-has-result',set(controls)==set(c['id'] for c in catalog['items']))
+check('all-ratios-have-account-drilldown', all(controls[f'note-{n}-1']['accountPrefixes'] and controls[f'note-{n}-1']['accountRefs'] for n in range(2,43)))
+current_ratio_refs={a['accountRef'] for a in rows if str(a['code']).startswith(('1','3'))}
+check('current-ratio-account-drilldown-complete', set(controls['note-2-1']['accountRefs'])==current_ratio_refs)
 check('no-document-check-auto-pass',all(c['status']!='passed' for c in controls.values() if c['kind']!='analysis'))
 check('distinct-duplicate-notes',all(k in controls for k in ['note-115-1','note-115-2','note-115-3','note-143-1','note-143-2','note-160-1','note-160-2']))
 check('source-corrections-retained',all(controls['note-'+str(n)+'-1']['correction'] for n in [16,17,25,30,31,34,36,39,41,42,49,51,65,83,87,111,131,132,134,137,141,145,162,163,165,166]))
@@ -157,6 +165,60 @@ for m in out['vatMonths']:
     GROUP BY LEFT(A.CODE,3)""",100)
     ref={r['code']:Decimal(str(r['d']))-Decimal(str(r['c'])) for r in rr}
     check('vat-month-'+str(m['month']),not cut and all(abs(Decimal(v)-ref.get(code,Decimal(0)))<Decimal('.005') for code,v in m['accounts'].items()))
+# Actual e-ledger evidence is independently grouped from individual source rows.
+support=out['supportingEvidence']
+check('all-statements-use-declared-backup',all(not __import__('re').search(r'LG_(?!411_)\d+_',q or '',__import__('re').I) for q in out['sql']))
+check('support-sources-complete',support['status']=='observed' and support['truncated'] is False and not support['unavailableDatasets'])
+_, document_rows, cut=reference.execute("""SELECT D.LOGICALREF id,D.EMFICHEREF voucher,D.DOCUMENTTYPE typ,D.PAYTYPE pay,
+ D.UNDOCUMENTED undocumented,D.NOPAYMENT nopay,D.DOCUMENTNR nr,D.DOCUMENTDATE dt
+ FROM dbo.LG_411_01_EBOOKDETAILDOC D WHERE D.EMFICHEREF IN
+ (SELECT LOGICALREF FROM dbo.LG_411_01_EMFICHE WHERE CANCELLED=0 AND DATE_ >= '20260101' AND DATE_ < '20270101')""",200000)
+check('document-reference-complete',not cut)
+# Actual database collation is SQL_Latin1_General_CP1254_CI_AS: group case variants with Turkish casing.
+def payment_key(value):
+    return str(value or '').rstrip().replace('I','ı').replace('İ','i').lower()
+doc_groups=defaultdict(lambda:{'rows':0,'missingNumber':0,'missingDate':0,'missingPayment':0})
+doc_vouchers=defaultdict(lambda:{'types':set(),'payments':set()})
+for r in document_rows:
+    key=(r['typ'],payment_key(r['pay']),r['undocumented'],r['nopay'])
+    g=doc_groups[key];g['rows']+=1
+    if r['undocumented']==0:
+        g['missingNumber']+=int(not str(r['nr'] or '').strip())
+        g['missingDate']+=int(not r['dt'] or str(r['dt'])[:10]<'1901-01-01')
+        if r['typ'] is not None:doc_vouchers[r['voucher']]['types'].add(r['typ'])
+    if r['nopay']==0:
+        pay=str(r['pay'] or '').strip()
+        g['missingPayment']+=int(not pay)
+        if pay:doc_vouchers[r['voucher']]['payments'].add(payment_key(pay))
+    doc_vouchers[r['voucher']]
+check('document-profile-group-coverage',len(doc_groups)==len(support['documentProfiles']))
+for field in ['rows','missingNumber','missingDate','missingPayment']:
+    check('document-profile-'+field,all((p['documentType'],payment_key(p['paymentType']),p['undocumented'],p['noPayment']) in doc_groups and p[field]==doc_groups[(p['documentType'],payment_key(p['paymentType']),p['undocumented'],p['noPayment'])][field] for p in support['documentProfiles']))
+vp=support['documentVoucherProfile']
+check('document-voucher-count',vp['vouchers']==len(doc_vouchers))
+check('mixed-document-types',vp['multipleDocumentTypes']==sum(len(v['types'])>1 for v in doc_vouchers.values()))
+check('mixed-payment-types',vp['multiplePaymentTypes']==sum(len(v['payments'])>1 for v in doc_vouchers.values()))
+doc_detail=api('documents?year=2026&page=0')
+doc_second=api('documents?year=2026&page=1')
+check('document-pagination',len(doc_detail['items'])==50 and len(doc_second['items'])==50 and not(set(d['documentRef'] for d in doc_detail['items']) & set(d['documentRef'] for d in doc_second['items'])))
+check('document-total',doc_detail['total']==len(document_rows))
+dr={d['id']:d for d in document_rows}
+check('document-detail-values',all(d['documentRef'] in dr and d['slipRef']==dr[d['documentRef']]['voucher'] and d['documentNo']==dr[d['documentRef']]['nr'] and d['documentType']==dr[d['documentRef']]['typ'] and d['paymentType']==dr[d['documentRef']]['pay'] for d in doc_detail['items']))
+_, raw_asset, cut=reference.execute("""SELECT Y.TABLETY bookType,Y.DTYPE method,Y.CALCMON month,Y.FREGREF asset,
+ Y.LOCFIGS2_PERDDEPR amount,R.LOGICALREF card FROM dbo.LG_411_FAYEAR Y
+ LEFT JOIN dbo.LG_411_FAREGIST R ON R.LOGICALREF=Y.FREGREF WHERE Y.YEAR_=2026""",100000)
+check('asset-reference-complete',not cut)
+asset_groups=defaultdict(lambda:{'rows':0,'assets':set(),'missingAssetCard':0,'missingAmount':0,'periodDepreciation':Decimal(0)})
+for r in raw_asset:
+    g=asset_groups[(r['bookType'],r['method'],r['month'])];g['rows']+=1
+    if r['asset'] is not None:g['assets'].add(r['asset'])
+    g['missingAssetCard']+=int(r['card'] is None);g['missingAmount']+=int(r['amount'] is None)
+    if r['amount'] is not None:g['periodDepreciation']+=Decimal(str(r['amount'])).quantize(Decimal('.0001'))
+check('asset-profile-coverage',len(asset_groups)==len(support['assetProfiles']))
+for field in ['rows','missingAssetCard','missingAmount','periodDepreciation']:
+    check('asset-profile-'+field,all(abs(Decimal(str(p[field] or 0))-asset_groups[(p['bookType'],p['method'],p['month'])][field])<Decimal('.005') for p in support['assetProfiles']))
+check('asset-distinct-counts',all(p['assetCount']==len(asset_groups[(p['bookType'],p['method'],p['month'])]['assets']) for p in support['assetProfiles']))
+check('support-revision-current',support['revision']==__import__('hashlib').sha256(Path('backend/semantic_bridge/financial_audit_evidence.py').read_bytes()).hexdigest())
 # Persist an actual source-review conclusion, not a synthetic financial event.
 run_path='runs/'+out['runId']
 review_path=run_path+'/reviews/note-51-1'
@@ -186,6 +248,9 @@ for path in ['runs',run_path,review_path]:
 check('served-backend-hash-current',out['revision']==__import__('hashlib').sha256(Path('backend/semantic_bridge/financial_audit.py').read_bytes()).hexdigest())
 check('served-rules-hash-current',out['coverage']['revision']==__import__('hashlib').sha256(Path('backend/semantic_bridge/financial_audit_rules.py').read_bytes()+Path('configs/financial-audit/source.json').read_bytes()).hexdigest())
 report={'environment':'nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .155 / LOGO_DB','revision':out['revision'],'source':out['source'],'sourceLastDate':out['lastDate'],'checks':checks,'referenceSql':sql,'overview':out,'detail':detail,'nextPage':next_page}
-Path('/tmp/financial-audit-acceptance.json').write_text(json.dumps(report,ensure_ascii=False,indent=2,default=str))
-print(json.dumps({'completed':len(checks),'pass':sum(c['status']=='PASS' for c in checks),'fail':sum(c['status']=='FAIL' for c in checks),'unverified':0,'lines':out['lineCount'],'accounts':len(out['accounts']),'checks':out['checks'],'ratios':out['ratios']},ensure_ascii=False))
+fd=os.open('/tmp/financial-audit-acceptance.json',os.O_WRONLY|os.O_CREAT|os.O_TRUNC,0o600)
+os.fchmod(fd,0o600)
+with os.fdopen(fd,'w') as artifact:
+    artifact.write(json.dumps(report,ensure_ascii=False,indent=2,default=str))
+print(json.dumps({'completed':len(checks),'pass':sum(c['status']=='PASS' for c in checks),'fail':sum(c['status']=='FAIL' for c in checks),'unverified':0,'lines':out['lineCount'],'accounts':len(out['accounts']),'coverage':out['coverage']['counts']},ensure_ascii=False))
 raise SystemExit(any(c['status']!='PASS' for c in checks))

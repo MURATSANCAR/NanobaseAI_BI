@@ -61,7 +61,15 @@ def register(app, runtime, authorize):
 
     def query(sql, year):
         r = runtime()
-        result = r.run_sql(sql, 10000, context(year))
+        # A physical backup identity, not a company selector. A dated predicate
+        # alone does not pin master tables such as FAYEAR to the declared copy.
+        scope = {'n0':'411'}
+        physical = r._physical(sql, context(year), scope=scope)
+        if any(code != '411' for code in re.findall(r'\bLG_(\d+)_', physical, re.I)):
+            raise HTTPException(409, 'Sorgu doğrulanmış 2026 kaynak kopyasından başka bir yedeğe yönlendi.')
+        result = r.run_sql(sql, 10000, context(year), scope=scope)
+        if any(code != '411' for code in re.findall(r'\bLG_(\d+)_', result.get('physicalSql',''), re.I)):
+            raise HTTPException(409, 'Yanıtın kaynak kopyası doğrulanamadı.')
         if result.get("truncated"):
             raise HTTPException(409, "Sonuç kesildi; denetim tamamlanamadı.")
         return result

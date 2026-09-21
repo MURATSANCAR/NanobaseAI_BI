@@ -1,0 +1,256 @@
+{
+  "url": "https://portal.nanobase.ai/timas/finansal-denetim",
+  "environment": "Authenticated Chrome → real portal → Logo 2026 backup",
+  "measuredAt": "2026-09-21T12:07:15.588Z",
+  "measurements": [
+    {
+      "contentWidth": 248,
+      "ratioCards": 41,
+      "realData": true,
+      "scrollWidth": 320,
+      "view": "overview",
+      "width": 320
+    },
+    {
+      "contentWidth": 318,
+      "ratioCards": 41,
+      "realData": true,
+      "scrollWidth": 390,
+      "view": "overview",
+      "width": 390
+    },
+    {
+      "contentWidth": 644,
+      "ratioCards": 41,
+      "realData": true,
+      "scrollWidth": 768,
+      "view": "overview",
+      "width": 768
+    },
+    {
+      "contentWidth": 1316,
+      "ratioCards": 41,
+      "realData": true,
+      "scrollWidth": 1440,
+      "view": "overview",
+      "width": 1440
+    },
+    {
+      "reviewForm": true,
+      "scrollWidth": 320,
+      "sourceText": false,
+      "view": "catalog-detail",
+      "width": 320
+    },
+    {
+      "reviewForm": true,
+      "scrollWidth": 390,
+      "sourceText": false,
+      "view": "catalog-detail",
+      "width": 390
+    },
+    {
+      "reviewForm": true,
+      "scrollWidth": 768,
+      "sourceText": false,
+      "view": "catalog-detail",
+      "width": 768
+    },
+    {
+      "reviewForm": true,
+      "scrollWidth": 1440,
+      "sourceText": false,
+      "view": "catalog-detail",
+      "width": 1440
+    },
+    {
+      "rows": 50,
+      "scrollWidth": 320,
+      "tableContainers": [
+        {
+          "client": 206,
+          "scroll": 680
+        },
+        {
+          "client": 206,
+          "scroll": 690
+        }
+      ],
+      "view": "ledger-detail",
+      "width": 320
+    },
+    {
+      "rows": 50,
+      "scrollWidth": 390,
+      "tableContainers": [
+        {
+          "client": 276,
+          "scroll": 680
+        },
+        {
+          "client": 276,
+          "scroll": 690
+        }
+      ],
+      "view": "ledger-detail",
+      "width": 390
+    },
+    {
+      "rows": 50,
+      "scrollWidth": 768,
+      "tableContainers": [
+        {
+          "client": 588,
+          "scroll": 680
+        },
+        {
+          "client": 588,
+          "scroll": 690
+        }
+      ],
+      "view": "ledger-detail",
+      "width": 768
+    },
+    {
+      "rows": 50,
+      "scrollWidth": 1440,
+      "tableContainers": [
+        {
+          "client": 1260,
+          "scroll": 1260
+        },
+        {
+          "client": 1260,
+          "scroll": 1260
+        }
+      ],
+      "view": "ledger-detail",
+      "width": 1440
+    },
+    {
+      "scrollWidth": 320,
+      "tableContainers": [
+        {
+          "client": 206,
+          "rows": 50,
+          "scroll": 660
+        },
+        {
+          "client": 206,
+          "rows": 13,
+          "scroll": 660
+        },
+        {
+          "client": 206,
+          "rows": 54,
+          "scroll": 660
+        }
+      ],
+      "view": "supporting-evidence",
+      "width": 320
+    },
+    {
+      "scrollWidth": 390,
+      "tableContainers": [
+        {
+          "client": 276,
+          "rows": 50,
+          "scroll": 660
+        },
+        {
+          "client": 276,
+          "rows": 13,
+          "scroll": 660
+        },
+        {
+          "client": 276,
+          "rows": 54,
+          "scroll": 660
+        }
+      ],
+      "view": "supporting-evidence",
+      "width": 390
+    },
+    {
+      "scrollWidth": 768,
+      "tableContainers": [
+        {
+          "client": 588,
+          "rows": 50,
+          "scroll": 660
+        },
+        {
+          "client": 588,
+          "rows": 13,
+          "scroll": 660
+        },
+        {
+          "client": 588,
+          "rows": 54,
+          "scroll": 660
+        }
+      ],
+      "view": "supporting-evidence",
+      "width": 768
+    },
+    {
+      "scrollWidth": 1440,
+      "tableContainers": [
+        {
+          "client": 1260,
+          "rows": 50,
+          "scroll": 1260
+        },
+        {
+          "client": 1260,
+          "rows": 13,
+          "scroll": 1260
+        },
+        {
+          "client": 1260,
+          "rows": 54,
+          "scroll": 1260
+        }
+      ],
+      "view": "supporting-evidence",
+      "width": 1440
+    },
+    {
+      "scrollWidth": 320,
+      "sourceClient": 206,
+      "sourceScroll": 206,
+      "view": "source-page",
+      "width": 320
+    },
+    {
+      "scrollWidth": 390,
+      "sourceClient": 276,
+      "sourceScroll": 276,
+      "view": "source-page",
+      "width": 390
+    },
+    {
+      "scrollWidth": 768,
+      "sourceClient": 588,
+      "sourceScroll": 588,
+      "view": "source-page",
+      "width": 768
+    },
+    {
+      "scrollWidth": 1440,
+      "sourceClient": 1260,
+      "sourceScroll": 1260,
+      "view": "source-page",
+      "width": 1440
+    }
+  ],
+  "flows": {
+    "ledgerPage1and2": "PASS: 50 actual rows per page, 1084 total for selected cash account",
+    "documentPage1and2": "PASS: 50 actual rows per page, 91664 total",
+    "documentCashFilter": "PASS: 1090 documents",
+    "sourcePages41and42": "PASS",
+    "reviewSave": "PENDING",
+    "reportDownload": "UNVERIFIED: click completed, download event timed out; browser downloads page blocked by URL policy"
+  },
+  "fullFinancialAcceptance": false
+}

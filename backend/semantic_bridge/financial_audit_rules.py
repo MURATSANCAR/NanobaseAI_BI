@@ -28,9 +28,27 @@ PRIMARY.update(dict(zip(range(144, 160), '''380 381 391 393 397 400 420 421 422 
 PRIMARY.update({161:'481',162:'501',163:'540',164:'549',165:'590',166:'591',44:'19',46:'102',47:'100',48:'101',49:'121'})
 OVERRIDES = {'note-115-1':'249','note-115-2':'250','note-115-3':'251',
              'note-143-1':'349','note-143-2':'371','note-160-1':'449','note-160-2':'480'}
+# Union of numerator and denominator accounts, for traceability only. Prefix
+# matching selects each account once; it never adds these groups to a ratio.
+RATIO_ACCOUNTS = {
+    2:['1','3'], 3:['1','3'], 4:['10','11','3'], 5:['1'],
+    6:['1','2'], 7:['3','10','11','15'], 8:['1'], 9:['1','2'],
+    10:['1','2','3','4'], 11:['1','2','5'], 12:['3','4','5'],
+    13:['3','4','5'], 14:['3','4','5'], 15:['4','5'], 16:['25','5'],
+    17:['25','4','5'], 18:['3','4'], 19:['300','303','400','1','2'],
+    20:['300','303','400','5'], 21:['1','2'],
+    22:['621','153','620','152'], 23:['60','61','12','22'],
+    24:['60','61','1','3'], 25:['60','61','25'], 26:['60','61','2'],
+    27:['60','61','5'], 28:['60','61','1','2'],
+    29:['6','5'], 30:['6','5'], 31:['6','3','4','5'], 32:['6','1','2'],
+    33:['60','61','62','63','1','2'], 34:['54','57','58','1','2'],
+    35:['60','61','62','63'], 36:['60','61','62'], 37:['6'],
+    38:['62','60','61'], 39:['63','60','61'], 40:['660','661','60','61'],
+    41:['6'], 42:['6'],
+}
 SECTION_ACCOUNTS = dict(zip(range(1,50), '''60 600 601 602 61 610 612 62 620 621 622 623 63 63 630 631 632 64 640 641 642 643 644 645 646 647 648 649 65 653 654 655 656 657 658 659 66 660 661 67 671 679 68 680 681 689 690 691 692'''.split()))
-DEBIT_NORMAL = set('100 101 108 110 111 112 118 120 121 126 127 128 131 132 133 135 136 138 150 151 152 153 157 159 179 180 181 190 191 193 195 196 197 198 220 221 226 231 232 233 235 236 240 242 243 245 246 248 250 251 252 253 254 255 256 258 259 260 261 262 263 264 267 269 271 272 277 279 280 281 291 292 293 294 295 297 302 308 322 337 371 402 408 422 437 501 503 580 591'.split())
-CREDIT_NORMAL = set('103 119 122 124 129 137 139 158 199 222 224 229 237 239 241 244 247 249 257 268 278 298 299 300 301 303 304 305 306 309 320 321 326 329 331 332 333 335 336 340 349 350 351 352 353 354 355 356 357 360 361 368 369 370 372 373 379 380 381 391 392 397 399 400 401 405 407 409 420 421 426 429 431 432 433 436 438 440 449 472 479 480 481 492 493 499 500 502 520 521 522 523 524 529 540 541 542 548 549 570 590'.split())
+DEBIT_NORMAL = set('100 101 108 110 111 112 118 120 121 126 127 128 131 132 133 135 136 138 150 151 152 153 157 159 179 180 181 190 191 193 195 196 197 198 220 221 226 231 232 233 235 236 240 242 245 248 250 251 252 253 254 255 256 258 259 260 261 262 263 264 267 269 271 272 277 279 280 281 291 292 293 294 295 297 302 308 322 337 371 402 408 422 437 501 503 580 591'.split())
+CREDIT_NORMAL = set('103 119 122 124 129 137 139 158 199 222 224 229 237 239 241 243 244 246 247 249 257 268 278 298 299 300 301 303 304 305 306 309 320 321 326 329 331 332 333 335 336 340 349 350 351 352 353 354 355 356 357 360 361 368 369 370 372 373 379 380 381 391 392 397 399 400 401 405 407 409 420 421 426 429 431 432 433 436 438 440 449 472 479 480 481 492 493 499 500 502 520 521 522 523 524 529 540 541 542 548 549 570 590'.split())
 FX_NOTES = {52,54,56,58,66,71,72,73,74,75,76,77,78,80,81,91,101,104,105,107,108,110,131,133,136,138,139,140,149,151,154,155,156,157}
 YEAR_END_NOTES = {53,98,147,148,165,166}
 PROVISION = {64,73,81,87,99,104,110,111,113,114,130}
@@ -119,6 +137,8 @@ def pair_results(record):
 
 def scope(item):
     n = item['note']
+    if item['kind'] == 'analysis':
+        return RATIO_ACCOUNTS.get(n, [])
     if item['id'] in OVERRIDES:
         return [OVERRIDES[item['id']]]
     if n in PRIMARY:
@@ -303,7 +323,29 @@ def evaluate(out, extra):
                 evidence = list(dict.fromkeys(evidence+['İlgili dönemin mevzuatı, mükellef/işlem kapsamı, karar ve onaylı beyannameler']))
             if n in range(43,50):
                 evidence = ['Üretilmiş e-defter satırları, belge türü ve ödeme yöntemi sözlüğü','Belge zorunluluğu/istisnası ile belge numarası ve tarihi']
-                reason = 'Logo muhasebe belge alanları tek başına e-defter XML belge/ödeme türü anlamını doğrulamıyor.'
+                supporting = out.get('supportingEvidence',{})
+                reason = 'Logo e-defter belge alanları okundu; sayısal türlerin sözlüğü ve üretilmiş XML ile mutabakatı ayrıca gerekir.'
+                if supporting.get('status')=='unverified':
+                    status,reason='unverified','E-defter destek sorgularından biri tamamlanamadı; belge kontrolü doğrulanamadı.'
+                elif n==43:
+                    p=supporting.get('documentVoucherProfile',{})
+                    for key,label in [('multipleDocumentTypes','Birden fazla belge türü olan fiş'),('multiplePaymentTypes','Birden fazla ödeme türü olan fiş')]:
+                        components.append({'id':key,'title':label,'status':'observed','affected':p.get(key) or 0,
+                            'formula':'EBOOKDETAILDOC kaynak beyanında belge/ödeme yok olmayan türlerin fiş bazında tekilleştirilmesi; toplulaştırma istisnaları ayrıca incelenir.'})
+                elif n==45:
+                    for key,label in [('missingNumber','Belge var işaretli, numarası boş kayıt'),('missingDate','Belge var işaretli, tarihi eksik kayıt'),('missingPayment','Ödeme var işaretli, ödeme yöntemi boş kayıt')]:
+                        count=sum(int(p.get(key) or 0) for p in supporting.get('documentProfiles',[]))
+                        components.append({'id':key,'title':label,'status':'observed','affected':count,
+                            'formula':'Logo e-defter kaynak bayraklarıyla alan doluluğu karşılaştırması. Kanuni belge zorunluluğu kararı değildir.'})
+                else:
+                    components.append({'id':'document-account','title':'Hesaba bağlı e-defter belge kayıtları','status':'observed',
+                        'lineCount':sum(int(p['rows']) for p in supporting.get('accountDocumentProfiles',[]) if p['code'] in prefixes),
+                        'formula':'Belge–ana hesap ilişkisi tekilleştirilir; fiş başlığı belgesi ile satır belgesi ayrı bağlantı koşuluyla okunur.'})
+            if n in DEPRECIATION or item['id'] in {'note-115-2','note-115-3'}:
+                profiles=out.get('supportingEvidence',{}).get('assetProfiles',[])
+                components.append({'id':'asset-source','title':'Sabit kıymet hesap cetveli kapsamı','status':'observed' if profiles else 'unverified',
+                    'lineCount':sum(p['rows'] for p in profiles),
+                    'formula':'2026 FAYEAR kayıtlarının tamamı; varlık–muhasebe hesabı bağlantısı doğrulanmadığından bu notun varlıkları olarak sunulmaz. Hesaplama grupları birbirine eklenmez.'})
             if n == 51:
                 reason = '30.000 TL eşiği tek kasa satırına uygulanıp ceza üretilmez; taraf, işlem bütünlüğü, taksitler, aracı kurum ve istisnalar birlikte gerekir.'
             if prefixes and not chosen and status != 'not_due':
