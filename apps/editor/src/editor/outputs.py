@@ -74,8 +74,11 @@ def capture(c, gid: str) -> dict:
     if reviews: blockers.append('OPEN_EDITOR_REVIEW')
     if not regression or not regression['passed']: blockers.append('REGRESSION_NOT_PASSED')
     if not events: blockers.append('NO_USABLE_EVENTS')
-    # Scope is explicit: a visual scan alone cannot certify identity/continuity.
-    blockers.append('INDEPENDENT_SEMANTIC_ACCEPTANCE_NOT_RECORDED')
+    # Scope is explicit: a visual scan alone cannot certify identity/continuity. Only an
+    # editor's recorded acceptance of this very revision lifts it (foundation.accept).
+    if not c.execute('SELECT 1 FROM ed.semantic_acceptance WHERE generation_id=%s AND revision=%s',
+                     (gid, gen['knowledge_revision'])).fetchone():
+        blockers.append('INDEPENDENT_SEMANTIC_ACCEPTANCE_NOT_RECORDED')
     return plain({'generation_id':gid,'revision':gen['knowledge_revision'],'policy':POLICY,
         'code_version':os.environ.get('EDITOR_CODE_VERSION','unknown'),
         'models':gen['model_manifest'],'prompts':gen['prompt_manifest'],'title':gen['title'],

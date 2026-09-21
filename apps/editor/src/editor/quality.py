@@ -142,15 +142,13 @@ async def _judge(generation_id: str, claims: list[dict], batch: int = 30,
         out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
                                                prompt=ref, schema=schemas.CRITIC, max_tokens=8000,
                                                temperature=0.0, thinking=False)
+        # One verdict per supplied claim is the contract. An answer that breaks it for some
+        # claims is still a valid answer for the others: a claim ID answered exactly once is
+        # kept, an ID answered twice (which one is meant?) or never is asked again below.
+        # Throwing the whole batch away lost 29 good verdicts to one bad one.
         ids = [v["claim_id"] for v in out["verdicts"]]
-        if len(ids) != len(set(ids)) or set(ids) != set(short):
-            raise ValueError("Critic must return exactly one verdict for every supplied claim ID")
-        seen, res = set(), []
-        for v in out["verdicts"]:
-            if v["claim_id"] in short and v["claim_id"] not in seen:
-                seen.add(v["claim_id"])
-                res.append((short[v["claim_id"]], v))
-        return res
+        return [(short[v["claim_id"]], v) for v in out["verdicts"]
+                if v["claim_id"] in short and ids.count(v["claim_id"]) == 1]
 
     parts = await asyncio.gather(*(run(claims[i:i + batch]) for i in range(0, len(claims), batch)),
                                  return_exceptions=True)
@@ -262,9 +260,17 @@ async def critic_pass(generation_id: str, recheck: bool = False) -> dict:
     stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
              "repair_tried": 0, "repaired": 0, "no_verdict": 0}
     first = await _judge(generation_id, claims)
-    stats["no_verdict"] = len(claims) - len(first)
-    if stats["no_verdict"]:
-        raise ValueError(f"Critic coverage incomplete after bounded retries: {stats['no_verdict']} missing verdicts")
+    # A claim the critic would not judge after every bounded retry is not verified and not
+    # rejected: it goes to the editor as exactly that. Failing the whole book over it turned
+    # a question about one sentence into "no analysis at all".
+    judged = {str(x["id"]) for x, _ in first}
+    unjudged = [x for x in claims if str(x["id"]) not in judged]
+    stats["no_verdict"] = len(unjudged)
+    if unjudged:
+        with db.tx() as c:
+            for x in unjudged:
+                ledger.queue_review(c, generation_id, claim_id=str(x["id"]), priority=3,
+                                    reason="Critic: sınırlı yeniden denemelerden sonra karar dönmedi")
     repairable = [(x, v) for x, v in first
                   if v["supported"] == "PARTIAL" and v["modality_ok"] and v["identity_ok"]]
     rep_ids = {str(x["id"]) for x, _ in repairable}
@@ -393,7 +399,7 @@ def run_regression_suite(generation_id: str) -> dict:
         _check("kesin görsel kimlik bağımsız görsel doğrulama taşır", one(
             "SELECT count(*) n FROM character_mention WHERE generation_id=%s AND via='VISUAL' AND"
             " resolution='RESOLVED' AND coalesce(appearance->>'identified_by','') NOT IN"
-            " ('anchor','reference','consistency')", generation_id) == 0),
+            " ('anchor','reference','consistency','cluster')", generation_id) == 0),
         # presence decides first, then the doer among A and B (see knowledge._actor_role)
         _check("eylemi yapan yalnız eşiği geçen okumayla kesin", one(
             "SELECT count(*) n FROM event_actor WHERE generation_id=%s AND ("

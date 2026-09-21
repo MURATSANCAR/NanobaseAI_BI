@@ -32,6 +32,10 @@ class Settings:
     min_figure_side: float
     vision_screen: str
     min_reference_px: int
+    embed_url: str
+    ccip_same_max: float
+    cluster_name_support: float
+    cluster_name_margin: float
 
     @property
     def storage(self) -> Path:
@@ -79,4 +83,14 @@ def settings() -> Settings:
         vision_screen=env("EDITOR_VISION_SCREEN", "deep"),
         # a reference crop's shorter side, in pixels of the rendered page (1600 px long side)
         min_reference_px=int(env("EDITOR_MIN_REFERENCE_PX", "100")),
+        embed_url=env("EDITOR_EMBED_URL", "http://editor-embed:8000"),
+        # CCIP's own threshold (0.2132) is calibrated on anime. Measured on this corpus
+        # (three books, 194 named figures): same character ~0.11, different ~0.23, cleanest
+        # split at 0.14-0.16; at 0.2132 nearly half the different-character pairs read as one.
+        ccip_same_max=float(env("EDITOR_CCIP_SAME_MAX", "0.15")),
+        # A cluster takes a name on evidence alone only if that evidence (story text on its
+        # pages + the scans' own votes) reaches this and beats the next name by the margin;
+        # otherwise the adjudicator decides, or the cluster stays unnamed.
+        cluster_name_support=float(env("EDITOR_CLUSTER_NAME_SUPPORT", "0.5")),
+        cluster_name_margin=float(env("EDITOR_CLUSTER_NAME_MARGIN", "0.2")),
     )

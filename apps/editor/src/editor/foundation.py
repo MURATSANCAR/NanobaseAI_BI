@@ -88,9 +88,51 @@ def readiness(generation_id: str) -> dict:
             blockers.append("OPEN_EDITOR_REVIEW")
         if state["publication_status"] not in ("READY", "PUBLISHED"):
             blockers.append("PUBLICATION_BLOCKED")
+        # An editor's acceptance of THIS revision may knowingly waive coverage blockers;
+        # they are reported as waived, never silently dropped.
+        acc = c.execute("SELECT accepted_by,note,waived,created_at FROM ed.semantic_acceptance WHERE "
+            "generation_id=%s AND revision=%s", (generation_id, state["knowledge_revision"])).fetchone()
+        waived = [b for b in blockers if acc and b.split(":")[0] in WAIVABLE and
+                  ACCEPT_WAIVES[b.split(":")[0]] & set(acc["waived"])]
+        blockers = [b for b in blockers if b not in waived]
         return {"generation": state, "counts": counts, "artifacts": artifacts,
+            "acceptance": acc, "waived": waived,
             "regression": latest_regression, "accepted": not blockers, "blockers": blockers,
             "mode": "source_supported_preview", "complete_book": not blockers}
+
+
+# What an editor may knowingly waive, and which readiness blocker each waiver lifts. Open
+# reviews, a failed regression, stale artifacts and legacy origin can never be waived.
+ACCEPT_WAIVES = {"COVERAGE_STATUS": {"SOURCE_ISSUES", "PAGE_ROLES_UNASSESSED"}}
+WAIVABLE = set(ACCEPT_WAIVES)
+
+
+def accept(generation_id: str, editor: str, note: str = "", waive: list[str] | None = None) -> dict:
+    """Record an editor's semantic acceptance of the current validated revision."""
+    waive = sorted(set(waive or []))
+    unknown = set(waive) - set().union(*ACCEPT_WAIVES.values())
+    if unknown:
+        raise ValueError(f"cannot be waived: {sorted(unknown)}")
+    before = readiness(generation_id)
+    state = before["generation"]
+    if state["validated_revision"] != state["knowledge_revision"]:
+        raise ValueError("current revision is not validated; outputs must be rebuilt first")
+    hard = [b for b in before["blockers"] if b.split(":")[0] not in
+            ("SEMANTIC_STATUS", "PUBLICATION_BLOCKED", "COVERAGE_STATUS")]
+    if hard:
+        raise ValueError(f"not acceptable yet: {hard}")
+    snap = db.one("SELECT content->'blockers' AS b FROM ed.knowledge_snapshot WHERE generation_id=%s AND"
+                  " revision=%s", generation_id, state["knowledge_revision"])
+    open_cov = sorted(set((snap or {}).get("b") or []) & ACCEPT_WAIVES["COVERAGE_STATUS"])
+    if state["coverage_status"] != "PASSED" and not set(open_cov) <= set(waive):
+        raise ValueError(f"coverage is {state['coverage_status']}; waive explicitly or resolve: {open_cov}")
+    with db.tx() as c:
+        c.execute("INSERT INTO ed.semantic_acceptance(generation_id,revision,accepted_by,note,waived)"
+                  " VALUES (%s,%s,%s,%s,%s)", (generation_id, state["knowledge_revision"], editor, note, waive))
+        c.execute("UPDATE ed.generation_state SET semantic_status='PASSED',publication_status='READY'"
+                  " WHERE generation_id=%s AND knowledge_revision=%s AND validated_revision=%s",
+                  (generation_id, state["knowledge_revision"], state["knowledge_revision"]))
+    return readiness(generation_id)
 
 
 def read_records(generation_id: str, kind: str, limit: int, offset: int) -> dict:
@@ -146,13 +188,17 @@ def invalidate_dependents(c, generation_id: str, changed_kind: str) -> list[str]
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("command", choices=["migrate", "status", "pause"])
+    parser.add_argument("command", choices=["migrate", "status", "pause", "resume"])
     parser.add_argument("--reason", default="User requested analysis stop")
     args = parser.parse_args()
     if args.command == "migrate":
         result = {"applied": db.migrate()}
     elif args.command == "pause":
         result = db.one("UPDATE ed.runtime_control SET maintenance=true,reason=%s,updated_at=now() "
+            "WHERE singleton RETURNING *", args.reason)
+    elif args.command == "resume":
+        # The switch had an "on" and no "off": leaving maintenance took hand-written SQL.
+        result = db.one("UPDATE ed.runtime_control SET maintenance=false,reason=%s,updated_at=now() "
             "WHERE singleton RETURNING *", args.reason)
     else:
         result = runtime_status()

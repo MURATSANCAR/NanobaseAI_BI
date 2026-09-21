@@ -55,7 +55,11 @@ class BookFullAnalysis:
         # Record the choice once at workflow entry. Histories without this marker
         # retain their original activity options, including after replay resumes.
         self.activity_heartbeats = workflow.patched("activity-heartbeats-v1")
-        self.strict_coverage = workflow.patched("complete-stage-coverage-v1")
+        # A page that cannot be read is reported as not analysed (`failures`, the coverage
+        # reads) and the book goes on; only a stage where EVERY item fails stops the job.
+        # Stopping on one page turned "page 17 is unreadable" into "no analysis at all".
+        self.strict_coverage = workflow.patched("complete-stage-coverage-v1") and \
+            not workflow.patched("partial-coverage-reported-v1")
         # Jobs that started under the old step order replay it; new jobs take the order
         # that loads the director once.
         if workflow.patched("verified-revision-outputs-v1"):
@@ -253,7 +257,7 @@ class BookFullAnalysis:
     async def _visual_phase(self, gid: str, ident: dict, tv: dict, key_pages: list,
                             failures: dict) -> tuple[dict, dict, dict]:
         """Everything the deep vision model does once the characters are known."""
-        await self.step(8, "Görsel kimlik (referans eşleştirme)", {"characters": ident.get("characters")})
+        await self.step(8, "Görsel kimlik (kümeleme ve hakem)", {"characters": ident.get("characters")})
         vis = await self.act("visual_identity", gid)
         await self.step(8, "Karakter sürekliliği", vis)
         cont = await self.act("continuity_checks", gid)
@@ -301,7 +305,7 @@ class BookFullAnalysis:
             # 8. Karakter kimliklerini birleştirme (+ süreklilik kontrolü, derin model)
             await self.step(8, "Karakter kimlikleri")
             ident = await self.act("resolve_identity", gid)
-            await self.step(8, "Görsel kimlik (referans eşleştirme)", {"characters": ident.get("characters")})
+            await self.step(8, "Görsel kimlik (kümeleme ve hakem)", {"characters": ident.get("characters")})
             vis = await self.act("visual_identity", gid)
             await self.step(8, "Karakter sürekliliği", vis)
             cont = await self.act("continuity_checks", gid)

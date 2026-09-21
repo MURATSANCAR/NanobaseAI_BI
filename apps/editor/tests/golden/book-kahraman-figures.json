@@ -1,0 +1,523 @@
+{
+ "generation": "864eaf37-54fd-4711-9251-4ad323445f23",
+ "book": "Kahramanını Yutan Kitap",
+ "checked_by": "kırpım föyü gözle denetlendi (2026-09-21); belirsizler 'unsure', metnin iki ada böldüğü karakterde 'accept' ikisini de kabul eder",
+ "figures": [
+  {
+   "page": 2,
+   "bbox": [
+    185,
+    745,
+    255,
+    815
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 3,
+   "bbox": [
+    200,
+    140,
+    780,
+    705
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 7,
+   "bbox": [
+    592,
+    604,
+    804,
+    869
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 8,
+   "bbox": [
+    500,
+    580,
+    740,
+    795
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 11,
+   "bbox": [
+    290,
+    492,
+    435,
+    650
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 13,
+   "bbox": [
+    216,
+    485,
+    495,
+    770
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 13,
+   "bbox": [
+    649,
+    750,
+    832,
+    863
+   ],
+   "name": null
+  },
+  {
+   "page": 18,
+   "bbox": [
+    150,
+    115,
+    345,
+    255
+   ],
+   "name": "Hadiye",
+   "accept": [
+    "Hadiye",
+    "Martı"
+   ]
+  },
+  {
+   "page": 19,
+   "bbox": [
+    667,
+    205,
+    855,
+    332
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 20,
+   "bbox": [
+    300,
+    150,
+    600,
+    400
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 20,
+   "bbox": [
+    150,
+    200,
+    250,
+    350
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 23,
+   "bbox": [
+    595,
+    598,
+    735,
+    680
+   ],
+   "name": "Hadiye",
+   "accept": [
+    "Hadiye",
+    "Martı"
+   ]
+  },
+  {
+   "page": 23,
+   "bbox": [
+    665,
+    255,
+    755,
+    305
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 23,
+   "bbox": [
+    292,
+    585,
+    430,
+    728
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 25,
+   "bbox": [
+    70,
+    25,
+    930,
+    390
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 27,
+   "bbox": [
+    178,
+    565,
+    963,
+    975
+   ],
+   "name": "Tırtıl"
+  },
+  {
+   "page": 31,
+   "bbox": [
+    334,
+    625,
+    900,
+    920
+   ],
+   "name": "Tırtıl"
+  },
+  {
+   "page": 35,
+   "bbox": [
+    407,
+    691,
+    528,
+    847
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 35,
+   "bbox": [
+    243,
+    263,
+    475,
+    446
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 35,
+   "bbox": [
+    475,
+    268,
+    644,
+    457
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 35,
+   "bbox": [
+    627,
+    258,
+    823,
+    457
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 36,
+   "bbox": [
+    395,
+    767,
+    575,
+    835
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 36,
+   "bbox": [
+    180,
+    625,
+    385,
+    795
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 36,
+   "bbox": [
+    495,
+    625,
+    785,
+    770
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 36,
+   "bbox": [
+    755,
+    680,
+    965,
+    840
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 37,
+   "bbox": [
+    35,
+    585,
+    575,
+    885
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 37,
+   "bbox": [
+    35,
+    585,
+    125,
+    800
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 39,
+   "bbox": [
+    545,
+    608,
+    670,
+    835
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 39,
+   "bbox": [
+    495,
+    645,
+    565,
+    785
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 39,
+   "bbox": [
+    380,
+    608,
+    505,
+    855
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 39,
+   "bbox": [
+    205,
+    735,
+    340,
+    835
+   ],
+   "name": "Hadiye",
+   "accept": [
+    "Hadiye",
+    "Martı"
+   ]
+  },
+  {
+   "page": 39,
+   "bbox": [
+    465,
+    580,
+    585,
+    845
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 41,
+   "bbox": [
+    145,
+    475,
+    370,
+    635
+   ],
+   "name": "Uzaylı"
+  },
+  {
+   "page": 42,
+   "bbox": [
+    460,
+    735,
+    585,
+    800
+   ],
+   "name": "Hadiye",
+   "accept": [
+    "Hadiye",
+    "Martı"
+   ]
+  },
+  {
+   "page": 42,
+   "bbox": [
+    575,
+    540,
+    845,
+    860
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 42,
+   "bbox": [
+    415,
+    675,
+    485,
+    800
+   ],
+   "name": "Vahti"
+  },
+  {
+   "page": 42,
+   "bbox": [
+    495,
+    555,
+    650,
+    755
+   ],
+   "name": "Uzaylı"
+  },
+  {
+   "page": 43,
+   "bbox": [
+    38,
+    518,
+    854,
+    877
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 50,
+   "bbox": [
+    374,
+    727,
+    447,
+    784
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 50,
+   "bbox": [
+    199,
+    527,
+    837,
+    868
+   ],
+   "name": "Korsanlar"
+  },
+  {
+   "page": 50,
+   "bbox": [
+    407,
+    577,
+    572,
+    633
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 52,
+   "bbox": [
+    100,
+    150,
+    300,
+    400
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 52,
+   "bbox": [
+    400,
+    150,
+    600,
+    400
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 55,
+   "bbox": [
+    590,
+    625,
+    655,
+    685
+   ],
+   "name": "Hadiye",
+   "accept": [
+    "Hadiye",
+    "Martı"
+   ]
+  },
+  {
+   "page": 55,
+   "bbox": [
+    425,
+    735,
+    570,
+    845
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 55,
+   "bbox": [
+    490,
+    565,
+    595,
+    645
+   ],
+   "name": "Anne"
+  },
+  {
+   "page": 61,
+   "bbox": [
+    445,
+    225,
+    685,
+    495
+   ],
+   "name": "Anne"
+  },
+  {
+   "page": 61,
+   "bbox": [
+    245,
+    550,
+    775,
+    715
+   ],
+   "name": null,
+   "unsure": true
+  }
+ ]
+}

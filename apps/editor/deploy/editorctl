@@ -4,6 +4,7 @@
 #
 #   editorctl install        dirs, secrets (once), rendered configs, Hermes home, image build
 #   editorctl up             core services (Postgres, Qdrant, Temporal, gateway, MCP, worker, Hermes)
+#   editorctl pause | resume "<neden>"   bakım kilidi + analiz servisleri (worker, mcp, gateway, embed, hermes)
 #   editorctl down           stop every editor model container, then the core services
 #   editorctl status         containers + gateway GPU/model status
 #   editorctl models         model containers only
@@ -93,6 +94,7 @@ EOF
   local ver; ver=$(cat "$APP/VERSION" 2>/dev/null || echo dev)
   docker build -q -t "editor-py:$ver" -t editor-py:latest --build-arg CODE_VERSION="$ver" \
     -f "$APP/images/py/Dockerfile" "$APP"
+  docker build -q -t editor-embed:latest -f "$APP/images/embed/Dockerfile" "$APP" >/dev/null
   echo "installed editor-py:$ver"
 }
 
@@ -135,6 +137,9 @@ case "${1:-}" in
     docker exec editor-control python -m editor.foundation pause
     docker stop -t 30 editor-hermes editor-mcp editor-worker editor-gateway
     cmd_stop_models ;;
+  resume)  # editorctl resume "<neden>": bakım kilidini kaldırır ve analiz servislerini açar
+    docker exec editor-control python -m editor.foundation resume --reason "${2:-Analysis resumed}"
+    "${COMPOSE[@]}" --profile analysis up -d ;;
   stop-models) cmd_stop_models ;;
   analyze)
     shift; f=$1; shift

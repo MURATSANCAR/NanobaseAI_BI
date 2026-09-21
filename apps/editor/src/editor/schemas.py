@@ -120,6 +120,9 @@ APPEARANCE = obj({
 CONTINUITY_VOTE = obj({"seen": STR, "verdict": {"type": "string", "enum": ["SAME", "EXPLAINED", "DIFFERENT"]},
                        "confidence": NUM})
 
+CLUSTER_NAME = obj({"is_character": BOOL, "same_character": BOOL, "name": STR,
+                    "confidence": NUM, "reason": STR})
+
 MODALITY_CHECK = obj({"events": arr(obj({
     "event_id": STR, "modality": MODALITY, "confidence": NUM, "reason": STR}))})
 

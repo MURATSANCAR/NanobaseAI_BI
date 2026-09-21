@@ -8,7 +8,7 @@ import subprocess
 
 from temporalio import activity
 
-from .. import __version__, catalog, db, document, knowledge, ledger, prompts, quality, retrieval, summary, vision
+from .. import __version__, catalog, db, document, figure_identity, knowledge, ledger, prompts, quality, retrieval, summary, vision
 from ..config import settings
 from ..llm import aliases, client
 
@@ -132,7 +132,11 @@ async def resolve_identity(generation_id: str) -> dict:
 
 @activity.defn
 async def visual_identity(generation_id: str) -> dict:
-    return await vision.resolve_visual_identity(generation_id)
+    """Who each drawn figure is: embeddings, constrained clustering, one adjudication per
+    cluster (figure_identity). The per-figure reference matching it replaces named 31% of a
+    six-book corpus at one 32B call per crop; this names more for a call per cluster."""
+    out = await figure_identity.resolve(generation_id)
+    return {k: v for k, v in out.items() if k not in ("assignments", "by_figure")}
 
 
 @activity.defn

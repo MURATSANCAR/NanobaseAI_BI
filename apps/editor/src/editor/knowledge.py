@@ -660,7 +660,8 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
         " ORDER BY e.page_from, e.page_to", generation_id)
     stats = {"events": len(evs), "characters": len(chars), "pairs": 0, "pairs_failed": 0,
              "actor": 0, "involved": 0, "absent": 0, "uncertain": 0,
-             "extractor_disagreements": 0, "sent_to_review": 0, "invalidated_participant_lists": 0}
+             "extractor_disagreements": 0, "sent_to_review": 0, "invalidated_participant_lists": 0,
+             "pairs_skipped": 0, "second_reading": 0, "second_reading_disagreed": 0, "no_doer": 0}
     if not evs or not chars:
         return stats
     done = {(str(r["event_id"]), str(r["character_id"])) for r in db.all_rows(
@@ -676,25 +677,33 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
         what = f" — {ch['description']}" if ch["description"] else ""
         return f"{ch['canonical_name']}{also}{what}"[:600]
 
-    async def pair(e: dict, ch: dict, pages: list[int], text: str):
+    async def pair(e: dict, ch: dict, pages: list[int], text: str, seed: int = 17):
         ref, body = prompts.render("event_actor", pages_text=text, summary=e["summary"],
                                    quotes=e["quotes"] or "-", character=card(ch))
         async with sem:
             try:
                 probs, call_id = await Llm(generation_id if write else None).choose(
                     DIRECTOR, [{"role": "user", "content": body}], list(ACTOR_ROLES),
-                    prompt=ref, pages=pages)
+                    prompt=ref, pages=pages, seed=seed)
             except Exception:  # noqa: BLE001 - no reading for this pair; it is not written
                 return ch, None, None
         return ch, probs, call_id
 
     async def one(e: dict) -> None:
-        todo = [ch for ch in chars if (str(e["id"]), str(ch["id"])) not in done]
-        if not todo:
-            return
         pages = [p for p in range(e["page_from"] - 1, e["page_to"] + 1) if p > 0]
         text = "\n".join(page_text_numbered(generation_id, p) for p in pages)
         listed = {ledger.norm(p) for p in e["participants"]}
+        # A character who is neither named in the event's own pages nor listed by the
+        # extractor is absent by evidence, not by a reading. Asking anyway costs a call per
+        # (event x character) — quadratic in book and cast (measured: 8.772 of one book's
+        # 9.254 calls) — and can only invent a role the text does not support.
+        here = ledger.norm(text + " " + (e["quotes"] or ""))
+        todo = [ch for ch in chars if (str(e["id"]), str(ch["id"])) not in done
+                and (names[str(ch["id"])] & listed
+                     or any(ledger.has_name(here, n) for n in [ch["canonical_name"], *ch["aliases"]]))]
+        stats["pairs_skipped"] += len(chars) - len(todo)
+        if not todo:
+            return
         res = await asyncio.gather(*(pair(e, ch, pages, text) for ch in todo))
         if not write:
             for ch, probs, _ in res:
@@ -742,23 +751,38 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
             no_doer = comparable and any(r["listed_by_extractor"] for r in rows) and \
                 not any(r["role"] == "ACTOR" for r in rows)
             stats["extractor_disagreements"] += len(dropped) + len(added)
+            stats["no_doer"] += bool(no_doer and not unsure)
+        # The editor is asked only when the reading CHANGES what a claim says — a listed
+        # participant read as absent, an unlisted character read as the doer — and only when
+        # a second, independent reading (another seed) agrees. A pair that stays uncertain
+        # changes nothing (`event_actors` never reports an uncertain pair as a doer): it is
+        # recorded, not queued, so the queue stays readable for a book of any length
+        # (measured: 749 of a six-book corpus' 853 queue items were this one kind).
+        confirmed = []
+        for r in dropped + added:
+            ch = next((x for x in chars if str(x["id"]) == str(r["character_id"])), None)
+            if ch is None:
+                continue
+            stats["second_reading"] += 1
+            _, probs, _ = await pair(e, ch, pages, text, seed=4241)
+            if probs and _actor_role(probs, s.actor_min_probability) == r["role"]:
+                confirmed.append(r)
+            else:
+                stats["second_reading_disagreed"] += 1
+        if confirmed and s.actor_review and e["claim_id"]:
             why = []
-            if unsure:
-                why.append("eylemdeki yeri belirsiz: " + ", ".join(
-                    f"{r['canonical_name']} (yapan {r['p_actor']:.2f} / yer alan {r['p_involved']:.2f}"
-                    f" / yok {r['p_absent']:.2f})" for r in unsure))
-            if dropped:
-                why.append("çıkarım katılımcı saymış, ikinci okuma olayda görmüyor: " + ", ".join(
-                    f"{r['canonical_name']} (yok {r['p_absent']:.2f})" for r in dropped))
-            if added:
-                why.append("çıkarımın listesinde yok, ikinci okumaya göre eylemi yapan: " + ", ".join(
-                    f"{r['canonical_name']} ({r['p_actor']:.2f})" for r in added))
-            if no_doer and not unsure:
-                why.append("adı geçen karakterlerden hiçbiri eylemi yapan olarak okunmadı")
-            if why and s.actor_review and e["claim_id"]:
+            drop = [r for r in confirmed if r["listed_by_extractor"]]
+            add = [r for r in confirmed if not r["listed_by_extractor"]]
+            if drop:
+                why.append("çıkarım katılımcı saymış, iki okuma da olayda görmüyor: " + ", ".join(
+                    f"{r['canonical_name']} (yok {r['p_absent']:.2f})" for r in drop))
+            if add:
+                why.append("çıkarımın listesinde yok, iki okuma da eylemi yapan diyor: " + ", ".join(
+                    f"{r['canonical_name']} ({r['p_actor']:.2f})" for r in add))
+            with db.tx() as c:
                 ledger.queue_review(c, generation_id, claim_id=str(e["claim_id"]), priority=2,
                                     reason="Kim yaptı: " + "; ".join(why))
-                stats["sent_to_review"] += 1
+            stats["sent_to_review"] += 1
 
     await asyncio.gather(*(one(e) for e in evs))
     return stats if write else {**stats, "detail": detail}

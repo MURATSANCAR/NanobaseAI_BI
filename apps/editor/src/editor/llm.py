@@ -170,14 +170,14 @@ class Llm:
 
     async def choose(self, alias: str, messages: list[dict], choices: list[str], *,
                      prompt: PromptRef | None = None, pages: list[int] | None = None,
-                     retries: int = 2) -> tuple[dict[str, float], int]:
+                     seed: int = 17, retries: int = 2) -> tuple[dict[str, float], int]:
         """A closed-set decision read as a distribution: the answer is ONE token out of
         `choices` (vLLM structured_outputs.choice) and the probability of every choice comes
         from that token's logprobs, so one call gives what repeated sampled votes only
         estimate. Every choice must be a single token (single letters are).
         Returns ({choice: probability, summing to 1}, model_call id)."""
         req: dict[str, Any] = {"model": alias, "messages": messages, "max_tokens": 1,
-                               "temperature": 0, "seed": 17, "logprobs": True, "top_logprobs": 20,
+                               "temperature": 0, "seed": seed, "logprobs": True, "top_logprobs": 20,
                                "structured_outputs": {"choice": choices},
                                "chat_template_kwargs": {"enable_thinking": False}}
         last_err = None

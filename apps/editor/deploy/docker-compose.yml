@@ -10,7 +10,7 @@
 name: editor
 
 x-py: &py
-  image: ${EDITOR_PY_IMAGE:-editor-py:0.14.0-identity}
+  image: ${EDITOR_PY_IMAGE:-editor-py:0.15.0-cluster-identity}
   restart: unless-stopped
   env_file: ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
   environment:
@@ -102,7 +102,7 @@ services:
 
   cards:
     <<: *py
-    image: ${EDITOR_CARDS_IMAGE:-editor-py:0.14.0-identity}
+    image: ${EDITOR_CARDS_IMAGE:-editor-py:0.15.0-cluster-identity}
     env_file:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
@@ -134,6 +134,24 @@ services:
       - ${EDITOR_ROOT:-/data/editor}/models/MANIFEST.json:/data/editor/models/MANIFEST.json:ro
     ports:
       - "127.0.0.1:19100:8000"
+
+  # Character identity embeddings (CCIP): a small ONNX model in its own image (onnxruntime
+  # has no wheels for the Python the rest runs on). Milliseconds per crop, so it stays up
+  # with the analysis services instead of being started on demand like the big models.
+  embed:
+    image: editor-embed:latest
+    profiles: [analysis]
+    container_name: editor-embed
+    restart: unless-stopped
+    environment:
+      HF_HOME: /models/hf
+      EDITOR_CCIP_MODEL: ${EDITOR_CCIP_MODEL:-ccip-caformer_b36-24}
+      NVIDIA_VISIBLE_DEVICES: "1"
+      NVIDIA_DRIVER_CAPABILITIES: compute,utility
+    runtime: nvidia
+    volumes:
+      - ${EDITOR_ROOT:-/data/editor}/models/hf:/models/hf
+    networks: [editor-net]
 
   mcp:
     <<: *py

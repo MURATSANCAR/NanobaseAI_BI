@@ -141,9 +141,11 @@ def finish(snap,digest):
         c.execute("UPDATE ed.rebuild_request SET completed_revision=%s,attempts=0,last_error=NULL,retry_after=NULL,"
             "updated_at=now() WHERE generation_id=%s AND requested_revision=%s",
             (snap['revision'],gid,snap['revision']))
-        # Technical completion is not independent semantic acceptance.
+        # Technical completion is not independent semantic acceptance — but a rebuild of a
+        # revision an editor already accepted must not take that acceptance back.
         c.execute("UPDATE ed.generation_state SET publication_status='BLOCKED',semantic_status='NEEDS_REVIEW' "
-            "WHERE generation_id=%s",(gid,))
+            "WHERE generation_id=%s AND NOT EXISTS (SELECT 1 FROM ed.semantic_acceptance a WHERE "
+            "a.generation_id=%s AND a.revision=%s)",(gid,gid,snap['revision']))
     return {'generation_id':gid,'revision':snap['revision'],'technical_status':'SUCCEEDED',
         'analytical_status':'NEEDS_REVIEW','accepted':False,'blockers':snap['blockers'],
         'artifacts':list(outputs.ORDER)}

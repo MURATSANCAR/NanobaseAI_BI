@@ -5,6 +5,8 @@
   python -m editor.cli status <job_id>
   python -m editor.cli wait <job_id>
   python -m editor.cli report <generation_id>
+  python -m editor.cli readiness <generation_id>
+  python -m editor.cli accept <generation_id> --editor NAME [--note N] [--waive BLOCKER ...]
   python -m editor.cli review list <generation_id>
   python -m editor.cli review decide <item_id> approve|reject|correct --editor NAME [--json '{...}']
   python -m editor.cli canon add <universe> <kind> <key> '<json>' --editor NAME [--claim ID]
@@ -135,6 +137,12 @@ def main() -> None:
     ca.add_argument("--editor", required=True)
     ca.add_argument("--claim")
     sp.add_parser("migrate")
+    ac = sp.add_parser("accept")
+    ac.add_argument("generation_id")
+    ac.add_argument("--editor", required=True)
+    ac.add_argument("--note", default="")
+    ac.add_argument("--waive", nargs="*", default=[])
+    sp.add_parser("readiness").add_argument("generation_id")
     cat = sp.add_parser("catalog")
     cats = cat.add_subparsers(dest="catcmd", required=True)
     cats.add_parser("rebuild")
@@ -187,6 +195,12 @@ def main() -> None:
         _print(asyncio.run(web_cover.sync_book(args.book_id)))
     elif args.cmd == "cover":
         _print(catalog.set_uploaded_cover(args.book_id, args.file_name, args.by))
+    elif args.cmd == "accept":
+        from . import foundation
+        _print(foundation.accept(args.generation_id, args.editor, args.note, args.waive))
+    elif args.cmd == "readiness":
+        from . import foundation
+        _print(foundation.readiness(args.generation_id))
     elif args.cmd == "migrate":
         _print(db.migrate())
 

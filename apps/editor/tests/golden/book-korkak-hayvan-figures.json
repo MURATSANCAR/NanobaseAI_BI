@@ -1,0 +1,685 @@
+{
+ "generation": "3c63c8ea-7f72-42ad-8c60-186d2462a171",
+ "book": "Dünyanın En Korkak Hayvanı",
+ "checked_by": "kırpım föyü gözle denetlendi (2026-09-21); belirsizler 'unsure', metnin iki ada böldüğü karakterde 'accept' ikisini de kabul eder",
+ "figures": [
+  {
+   "page": 1,
+   "bbox": [
+    335,
+    110,
+    635,
+    390
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 4,
+   "bbox": [
+    545,
+    579,
+    875,
+    822
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 4,
+   "bbox": [
+    185,
+    515,
+    515,
+    885
+   ],
+   "name": "Anne Vombat"
+  },
+  {
+   "page": 5,
+   "bbox": [
+    333,
+    517,
+    737,
+    922
+   ],
+   "name": "Baba Vombat"
+  },
+  {
+   "page": 6,
+   "bbox": [
+    270,
+    605,
+    530,
+    870
+   ],
+   "name": "Anne Vombat"
+  },
+  {
+   "page": 6,
+   "bbox": [
+    445,
+    675,
+    685,
+    840
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 7,
+   "bbox": [
+    595,
+    78,
+    765,
+    205
+   ],
+   "name": "Salyangoz"
+  },
+  {
+   "page": 7,
+   "bbox": [
+    475,
+    605,
+    675,
+    725
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 8,
+   "bbox": [
+    130,
+    605,
+    405,
+    815
+   ],
+   "name": "Salyangoz"
+  },
+  {
+   "page": 8,
+   "bbox": [
+    260,
+    570,
+    445,
+    705
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 9,
+   "bbox": [
+    205,
+    115,
+    675,
+    525
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 10,
+   "bbox": [
+    49,
+    405,
+    937,
+    825
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 11,
+   "bbox": [
+    350,
+    675,
+    650,
+    910
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 12,
+   "bbox": [
+    260,
+    58,
+    458,
+    204
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 12,
+   "bbox": [
+    120,
+    618,
+    400,
+    875
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 13,
+   "bbox": [
+    725,
+    590,
+    930,
+    840
+   ],
+   "name": "Baba Vombat"
+  },
+  {
+   "page": 13,
+   "bbox": [
+    75,
+    600,
+    395,
+    820
+   ],
+   "name": "Anne Vombat"
+  },
+  {
+   "page": 13,
+   "bbox": [
+    305,
+    605,
+    685,
+    845
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 14,
+   "bbox": [
+    410,
+    140,
+    905,
+    295
+   ],
+   "name": "Baba Vombat"
+  },
+  {
+   "page": 14,
+   "bbox": [
+    80,
+    125,
+    440,
+    305
+   ],
+   "name": "Anne Vombat"
+  },
+  {
+   "page": 14,
+   "bbox": [
+    200,
+    265,
+    710,
+    545
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 15,
+   "bbox": [
+    685,
+    660,
+    905,
+    870
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 15,
+   "bbox": [
+    500,
+    75,
+    700,
+    245
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 17,
+   "bbox": [
+    387,
+    35,
+    910,
+    482
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 17,
+   "bbox": [
+    62,
+    49,
+    455,
+    402
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 17,
+   "bbox": [
+    139,
+    342,
+    570,
+    502
+   ],
+   "name": null,
+   "not_a_figure": true
+  },
+  {
+   "page": 18,
+   "bbox": [
+    655,
+    625,
+    845,
+    850
+   ],
+   "name": "Yavru Aslan",
+   "accept": [
+    "Yavru Aslan",
+    "Sarı Aslan Yavrusu",
+    "Aslan"
+   ]
+  },
+  {
+   "page": 18,
+   "bbox": [
+    140,
+    415,
+    715,
+    945
+   ],
+   "name": "Ceylanlar"
+  },
+  {
+   "page": 19,
+   "bbox": [
+    545,
+    765,
+    625,
+    855
+   ],
+   "name": "Yavru Aslan",
+   "accept": [
+    "Yavru Aslan",
+    "Sarı Aslan Yavrusu"
+   ]
+  },
+  {
+   "page": 19,
+   "bbox": [
+    652,
+    715,
+    890,
+    919
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 20,
+   "bbox": [
+    139,
+    648,
+    305,
+    775
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 20,
+   "bbox": [
+    305,
+    670,
+    425,
+    885
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 20,
+   "bbox": [
+    139,
+    648,
+    425,
+    885
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 20,
+   "bbox": [
+    267,
+    58,
+    412,
+    208
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 21,
+   "bbox": [
+    325,
+    735,
+    475,
+    855
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 21,
+   "bbox": [
+    458,
+    395,
+    605,
+    515
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 22,
+   "bbox": [
+    250,
+    75,
+    405,
+    215
+   ],
+   "name": "Ceylanlar"
+  },
+  {
+   "page": 22,
+   "bbox": [
+    95,
+    765,
+    185,
+    855
+   ],
+   "name": "Kirpicik"
+  },
+  {
+   "page": 22,
+   "bbox": [
+    215,
+    690,
+    375,
+    865
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 23,
+   "bbox": [
+    530,
+    137,
+    710,
+    310
+   ],
+   "name": "Kirpicik"
+  },
+  {
+   "page": 23,
+   "bbox": [
+    270,
+    92,
+    585,
+    310
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 24,
+   "bbox": [
+    210,
+    655,
+    420,
+    872
+   ],
+   "name": "Kirpicik"
+  },
+  {
+   "page": 24,
+   "bbox": [
+    485,
+    565,
+    825,
+    879
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 25,
+   "bbox": [
+    265,
+    120,
+    585,
+    400
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 25,
+   "bbox": [
+    705,
+    69,
+    845,
+    195
+   ],
+   "name": "Kirpicik"
+  },
+  {
+   "page": 26,
+   "bbox": [
+    625,
+    480,
+    845,
+    595
+   ],
+   "name": "Yavru Aslan",
+   "accept": [
+    "Yavru Aslan",
+    "Sarı Aslan Yavrusu"
+   ]
+  },
+  {
+   "page": 26,
+   "bbox": [
+    102,
+    625,
+    390,
+    855
+   ],
+   "name": "Anne Aslan"
+  },
+  {
+   "page": 27,
+   "bbox": [
+    334,
+    138,
+    615,
+    386
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 27,
+   "bbox": [
+    62,
+    85,
+    240,
+    305
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 27,
+   "bbox": [
+    695,
+    85,
+    875,
+    315
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 28,
+   "bbox": [
+    225,
+    665,
+    665,
+    940
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 28,
+   "bbox": [
+    385,
+    628,
+    485,
+    730
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 28,
+   "bbox": [
+    315,
+    700,
+    365,
+    750
+   ],
+   "name": "Kirpicik"
+  },
+  {
+   "page": 31,
+   "bbox": [
+    400,
+    550,
+    755,
+    905
+   ],
+   "name": null,
+   "unsure": true
+  },
+  {
+   "page": 31,
+   "bbox": [
+    260,
+    685,
+    535,
+    965
+   ],
+   "name": "Yavru Aslan",
+   "accept": [
+    "Yavru Aslan",
+    "Sarı Aslan Yavrusu"
+   ]
+  },
+  {
+   "page": 32,
+   "bbox": [
+    115,
+    360,
+    515,
+    705
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 32,
+   "bbox": [
+    490,
+    555,
+    660,
+    685
+   ],
+   "name": "Kirpicik"
+  },
+  {
+   "page": 32,
+   "bbox": [
+    115,
+    675,
+    945,
+    932
+   ],
+   "name": "Yavru Vombat"
+  },
+  {
+   "page": 32,
+   "bbox": [
+    585,
+    335,
+    965,
+    815
+   ],
+   "name": "Fil",
+   "accept": [
+    "Fil",
+    "Mavi Fil",
+    "Gri Fil",
+    "Filler"
+   ]
+  },
+  {
+   "page": 32,
+   "bbox": [
+    35,
+    615,
+    250,
+    885
+   ],
+   "name": "Yavru Aslan",
+   "accept": [
+    "Yavru Aslan",
+    "Sarı Aslan Yavrusu"
+   ]
+  }
+ ]
+}
