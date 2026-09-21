@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor gerçek kimlik kabulü ve özet referans sınırı
+
+- Gerçek yeni nesilde baba/yavru ayrımı ve sayfa 23 ters görsel etiket düzeltmesi geçti; 37 PDF/API kontrolü başarılı. 23 görsel anma belirsiz.
+- Tam iş kitap özetinin geçersiz iddia referansları nedeniyle FAILED oldu; eksik çıktı yayımlanmadı. Policy v6 kısa girdi kimlikleri ve 24 cümle sınırıyla yalnız çıktı yeniden üretimi hazırlanıyor; henüz kabul değil.
+- Hermes pending yanıtı doğru, fakat servis araç döngüsü görüldü; servis durduruldu. Tam sohbet ve üretim kabulü yok. Ayrıntı `apps/editor/docs/IDENTITY-COVERAGE.md`.
+
 ## 2026-09-21 — Finansal Denetim menüde ikinci sıraya taşındı
 
 - Kullanıcı isteğiyle sol ana menüde Finansal Denetim, Genel bakış’ın hemen altına alındı. Kalkan simgesi ayrı tutuldu; konum değişimi diğer bağlantıların simgelerini kaydırmaz.

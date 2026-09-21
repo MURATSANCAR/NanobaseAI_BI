@@ -18,3 +18,11 @@ Yeni kimlik sözleşmesi: anmalar tekil ve eksiksiz bölünür; aynı isim farkl
 - Hermes'in ilk gerçek sohbeti yeni neslin hazır olmadığını doğru bildirdi; eski mühürlenme/yeni iş önerisi varsayımları bulundu. SOUL ve üç ürün skill'i güncellendi; yeniden sohbet kabulü henüz sürüyor.
 - 23. sayfa bağımsız görsel referansı, yeni kimlik çözümü bitmeden kaydedildi: sarı gözlüklü/kırmızı giysili kahverengi figür Yavru Vombat; mavi şapkalı beyaz yüzlü figür Kirpicik. Yeni deep taraması bu iki etiketi ters verdi; son kimlik katmanının bunu düzeltmesi ayrıca sınanacak.
 - Kanıtlar `/data/editor/backups/20260921-identity/`; `before-new-generation.dump` yedeği mevcut. Genel açılış/üretim kabulü yok.
+
+## Gerçek koşuda sonraki bulgular
+
+Metin kimliği ilk öneride yinelenen m28 nedeniyle reddedildi; 27374/27375 ikinci öneri/denetçi kabul edildi. Baba/yavru ayrı ANIMAL; topluluklar CANDIDATE. Gerçek PDF+API kapsam kontrolü 37/37; 23. sayfadaki iki ters görsel ad doğru kimliklere bağlandı (visual-page23-final.json). Görsel 59 anmanın 36'sı RESOLVED, 23'ü UNCERTAIN.
+
+Tam job kitap özetinde FAILED: iki length cevabı reddedildi, üçüncü sınırlı deneme geçersiz claim referansı verdi. Bölüm özeti READY; diğer çıktılar yayımlanmadı. Tarama tekrarlanmadan output policy v6 ile yeniden üretim hazırlanıyor: en çok 24 cümle ve modelde snapshot'a özel kısa claim kimlikleri; kalıcı çıktı gerçek UUID/evidence bağlantılarını korur.
+
+Hermes pending sohbeti son nesli ve çalışan işi doğru bildirdi. Ancak servis günlüklerinde başka bekleyen oturumlar ve spillover dosyasına erişemeyen tekrarlı araç çağrıları bulundu; tek isteğe aidiyet kanıtlanmadı. Hermes durduruldu; tam sohbet kabulü verilmedi. Kanıt hermes-background-loop.log.
