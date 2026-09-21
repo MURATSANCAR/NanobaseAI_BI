@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Sohbet düzeltmesi test portalına yayınlandı
+
+- Kullanıcının açık yayın talebiyle `0cdcfd7e` sohbet düzeltmesi `https://portal.nanobase.ai/timas/editoryal` ortamına kuruldu. Uzak kaynak ağacıyla karşılaştırmada tek uygulama dosyası farkı `AskBox.tsx`; derleme yapılandırmaları eş. Önceki uzak Vite/TypeScript kontrolleri bu pakete aittir.
+- Eski giriş dosyası ve kaynak dosyası `/data/nanobaseai/bi/backups/editorial-chat-*` altında korundu. Yeni varlıklar eski varlıklar silinmeden kopyalandı; giriş dosyası atomik değiştirildi. Müşteri VM'ine ve bakımda duran Editör servislerine dokunulmadı.
+- Dış HTTPS yolunda sayfa 200; HTML ve AskBox JS içeriği derleme çıktısıyla birebir karşılaştırıldı. Kanıt: test sunucusunda `/tmp/editorial-chat-0cdcfd7/deployment.json`. Bu paket eşliği, oturumlu mobil/soru-cevap kabulü değildir; bu kontroller **DOĞRULANAMADI**. Kapak/yazar/özet kartı entegrasyonu açık.
+
+## 2026-09-21 — Editor: doğrulama sonrası sürümlü çıktılar
+
+Yeni workflow özetleri görsel kimlik, olgu Critic, aktör ve çelişki kontrollerinin arkasına aldı. Kanonik snapshot ve değişmez çıktı sürümleri, revizyon kontrollü yayın pointer'ı, bağımlı çıktı geçersizliği, idempotent sonuç tekrar kullanımı ve üç denemeli tüketici eklendi. Eski nesillerin içerikleri korunuyor; taramalar kapalı. Salt okunur canlı kabul sonucu yayın sonrası eklenecek. Model üretimi/düzeltme/yarış kabulü DOĞRULANAMADI. Ayrıntı: `apps/editor/docs/REVISION-OUTPUTS.md`.
+
 
 ## 2026-09-21 — Kitaba sor: görünür yazı alanı ve yenilemede boş sohbet (kabul bekliyor)
 
