@@ -37,7 +37,7 @@ async def main():
     check('status analytical distinct from technical',status['current_outputs']['analytical_status']==state['semantic_status'] and status['semantic_acceptance'] is False)
     summary=await call('get_book_summary',{'generation_id':G})
     check('whole summary present',summary['sentences']==[{'text':x['text'],'pages':x['pages']} for x in ref['book_summary']])
-    check('complete summary is not analytical acceptance',summary['summary_complete'] and summary['semantic_acceptance'] is False)
+    check('complete summary is not analytical acceptance',summary['stored_summary_complete'] and summary['semantic_acceptance'] is False)
     for section,expected in [('summary',ref['book_summary']),('events',snap['events']),('claims',snap['claims'])]:
      rows=[];offset=0
      while True:

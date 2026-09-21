@@ -406,8 +406,8 @@ async def resolve_character_identity(generation_id: str) -> dict:
             aliases = [n for n in names if ledger.norm(n) != ledger.norm(canonical)]
             pages = sorted({by_id[m]["page_no"] for m in mids})
             conf = float(ch["identity_confidence"])
-            if len(pages) < 2:
-                conf = min(conf, 0.7)
+            # One page can explicitly identify a person; keep the independent
+            # identity audit and conflict checks, without a page-count veto.
             status = "CONFIRMED" if conf >= 0.85 and ch["entity_scope"] == "INDIVIDUAL" and not (set(mids) & conflicted) else "CANDIDATE"
             evs = []
             for m in mids[:8]:

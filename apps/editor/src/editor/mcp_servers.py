@@ -128,10 +128,11 @@ async def detect_scene(generation_id: Gen, page_no: Page) -> dict:
 
 @vision_mcp.tool()
 async def compare_character_appearances(generation_id: Gen, character: str,
-                                        pages: Annotated[list[int], Field(max_length=6)]) -> dict:
-    """Bir karakterin görünümünü en fazla 6 sayfada karşılaştırır (book-vision-deep).
-    Farklar süreklilik ADAYI olarak kaydedilir, hata olarak değil."""
-    return await vision.compare_character_appearances(generation_id, character, pages)
+                                        pages: Annotated[list[int], Field(min_length=1)],
+                                        character_id: str | None = None) -> dict:
+    """Seçilen sayfalardaki tüm doğrulanmış figürleri altışar görüntülü partilerde karşılaştırır.
+    Aynı adlı kişilerde character_id gerekir; kapsam ve aday farklar ayrı döner."""
+    return await vision.compare_character_appearances(generation_id, character, pages, character_id=character_id)
 
 
 @vision_mcp.tool()

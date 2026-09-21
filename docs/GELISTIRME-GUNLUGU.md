@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Paralel kısıt denetimi ve kapsamı koruyan düzeltmeler
+
+- Kullanıcı paralel denetim istedi; iki ajan statik incelemede sayfa/isim tekilliği, görsel doğrulamasız eleme, dar süreklilik örneklemi, duyguda aliasbağı, NON_STORY/kollektif dışlama ve sessiz tema ID kaybı buldu. Düzeltmeler main üzerinde; yeni gerçek nesil kabulü bekliyor.
+- On sohbet sorusu tamamlandı. Durum ve metin/görsel ayrımı düzeldi; tam özet başarısızlığının asıl nedeni son7sayfanın14olayının NEEDS_REVIEW olup özette bulunmaması. Araç taşıma bütünlüğü artık tam kitap kapsamı sayılmaz; eksik olay sayfaları açık. Kalite filtresi gevşetilmedi. Özet kaynak sırası/tekrar talimatı v7.
+- Ayrıntı apps/editor/docs/CONSTRAINT-AUDIT.md; tek scene,120olay kapsamı ve olay merge varsayımları ayrıca açık. Üretim kabulü verilmedi.
+
 ## 2026-09-21 — Aynı sayfadaki tekrar çizimleri ayrı kimlik sanmama
 
 - Özgün PDF p20/p21 incelendi: aynı yavru bir sayfada iki ayrı resimde var. Görsel eşleştirme sayfa başına tek karakter kaydına izin verdiğinden ikinci kare belirsiz kalıyordu. Her crop bağımsız eşleştirilir; tam figür/tür/güven ve örtüşme kontrolleri korunur.

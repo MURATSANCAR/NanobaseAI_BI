@@ -85,9 +85,21 @@ def summary(gid):
         if row is None: return read_model.metadata(selected)
         sentences = [{'text':s['text'], 'pages':s['pages']}
                      for s in row['content']['sentences']]
+        # Complete transport is not a complete plot: pending canonical events
+        # are intentionally excluded from verified summaries.
+        pending = c.execute("SELECT e.page_from,e.page_to FROM ed.event e JOIN ed.claim cl "
+            "ON cl.id=e.claim_id AND cl.generation_id=e.generation_id WHERE e.generation_id=%s "
+            "AND cl.status IN ('CANDIDATE','NEEDS_REVIEW') ORDER BY e.page_from,e.page_to",(gid,)).fetchall()
+        missing_pages = sorted({p for e in pending for p in range(e['page_from'],e['page_to']+1)})
         result = {**read_model.metadata(selected), 'sentences':sentences,
-                  'total':len(sentences), 'summary_complete':True,
-                  'instruction':'Özetlerken yalnız ilk olayları seçme; son gelişmeyi de koru.'}
+                  'total':len(sentences), 'stored_summary_complete':True,
+                  'summary_complete':not bool(pending),
+                  'unreviewed_event_pages':missing_pages,
+                  'plot_coverage':'PARTIAL' if pending else 'NOT_INDEPENDENTLY_ACCEPTED',
+                  'instruction':'Bu özet yalnız doğrulanmış bulguları içerir. İncelenmemiş olay '
+                    'sayfaları varsa bunu başta açıkla; bu özeti kitabın tamamı veya sonu diye sunma. '
+                    'Eksik sayfaları read_source_page ile ayrıca okuyabilirsin; doğrudan kaynak '
+                    'okumasını onaylanmış analizden ayır ve belirsizliği koru.'}
         if len(json.dumps(result,ensure_ascii=False,default=str)) > 32000:
             return {**read_model.metadata(selected), 'available':False,
                     'reason':'SUMMARY_EXCEEDS_CHAT_BUDGET', 'summary_complete':False}
