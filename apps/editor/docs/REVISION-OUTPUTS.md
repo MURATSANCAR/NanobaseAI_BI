@@ -1,5 +1,7 @@
 # Doğrulama ve revizyona bağlı çıktı üretimi — canlı kabul
 
+> Sonraki okuma entegrasyonu: `0.13.0-reads-7eda4ec1` ile rapor, kart, timeline, aktör, karakter geçmişi ve Hermes MCP okumaları ortak güncel sürüme geçirildi. Bu belgedeki 0.12 kabul kapsamı tarihsel olarak korunur; yeni kanıt ve kalan sınırlar [CURRENT-READS.md](CURRENT-READS.md).
+
 21 Eylül 2026. **Tek gerçek kitapta teknik yaşam döngüsü kabulü geçti.**
 Düzeltme → eski çıktıları kapatma → otomatik yeniden üretim → süreç kesintisinden
 sonra devam, gerçek PostgreSQL, modeller, kontrol API'si ve Qdrant ile sınandı.

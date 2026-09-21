@@ -4,7 +4,9 @@
 
 - Rapor/kart, timeline, aktör, karakter geçmişi ve kayıt listeleri güncel doğrulanmış sürüme bağlandı. Eski rapor/katalog geri dönüşü yok; en yeni nesil eski mühürlü neslin önüne geçer. Üretici aday okumaları ayrı tutuldu.
 - Kitap önerisi güncel kartları sıralar, eski katalog vektör metinlerini kullanmaz. Kaynaklı anılış ve kimlik bağı zorunlu; eksik yaş öneri izni sayılmaz.
-- Gerçek DB/API kabulü sürüyor; yerel test yok, genel analiz kapalı.
+- Son runtime `0.13.0-reads-7eda4ec1` sunucuda. Gerçek API–bağımsız DB 120/120, gerçek MCP/arama 22/22, kart/kapak 7/7, çıktı regresyonu 522/522. MCP tarih biçimi (`Z` / `+00:00`) aynı UTC anına normalize edilerek karşılaştırıldı; içerik eş. Düzeltilmiş anne olayı gerçek aramada güncel metniyle döndü.
+- 16 tablonun önce/sonra içerik hashleri aynı; yerel test veya sentetik veri yok. Bakım true, aktif Temporal/pending rebuild yok, genel worker/rebuild başlatılmadı. Geçici MCP/gateway ve arama modelleri kapatıldı; GPU 1 0 MiB. Worker/rebuild yeni image ile oluşturuldu, çalıştırılmadı.
+- Kanıt `apps/editor/docs/evidence/2026-09-21-current-reads.json`, tam özel kayıt `/data/editor/backups/20260921-current-reads/`. Hermes doğal dil/mobil tarayıcı, yeni tam analiz ve analitik kapsam kabulü açık. HTTPS kimliği bulunamadığından push bekliyor; kalan komut `git push origin main`.
 
 
 ## 2026-09-21 — Editor: düzeltme/otomatik üretim/kesinti sonrası devam canlı kabulü geçti
