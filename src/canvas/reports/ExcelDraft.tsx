@@ -387,7 +387,7 @@ export default function ExcelDraft({
             aria-busy={refine.isPending}
             className="xd-sheet relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
           >
-            {visible.length === 0 ? (
+            {layout.length > 0 && visible.length === 0 ? (
               <div className="px-4 py-10 text-center text-[12.5px] text-canvas-muted">Görünür kolon kalmadı. En az bir kolonu gösterin.</div>
             ) : rows.length === 0 ? (
               <div className="px-4 py-10 text-center text-[12.5px] text-canvas-muted">Soru satır döndürmedi. Aşağıdan soruyu değiştirmeyi deneyin.</div>

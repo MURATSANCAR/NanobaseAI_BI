@@ -6,6 +6,12 @@
 - Critic tam/tekil ID listesi ister; sınırlı tekrar sonrası eksik karar başarısızdır. İlk model güveni immutable payload içinde tutulur; yeniden denetim hesaplanmış puanı tekrar girdi yapmaz. Geçmiş kayıtta ilk puan bilinmiyorsa yeni nesil gerekir.
 - complete-stage-coverage-v1 Temporal patch yeni işlerde kısmi sayfa/parça hatasının başarıya ilerlemesini engeller; eski replay korunur. Altı gerçek kitapla genel kabul hazırlanıyor. Yerel ürün testi yok; üretim kabulü henüz verilmedi.
 
+## 2026-09-21 — Planlı raporlar: cevapsız soru boş önizleme göstermez
+
+- Kullanıcı "Ocak 2026 … ödeme planı satış temsilcisi teslimat şehri … satılan adet" cümlesinde 0 satır · 0 kolonluk boş önizleme gördü. Motor SQL_INVALID döndürmüştü (model ödeme planı için bozuk `dbo_TSOFT_KAMPANYA` görünümünü seçti; görünüm olmayan `LG_215_CMPGNLINE`'a bakıyor), `_report_preview` bunu 200 ve boş tablo olarak geçiriyordu; plan çalışmayan SQL ile kaydedilebilirdi.
+- `_report_preview` artık yalnız TEXT_TO_SQL cevabını önizler; diğer türlerde motorun açıklamasıyla 422 (kaynak/zaman aşımı 503) döner, ekran bu cümleyi gösterir. `ExcelDraft` hiç kolon yokken "Görünür kolon kalmadı" demez.
+- Sorunun veri tarafı (ödeme planı/teslimat/temsilci fatura üzerinden) aynı gün `a68a2417` ile ayrıca ele alındı.
+
 ## 2026-09-21 — Hedefli onarım canlı kabulü ve Markdown eşitlemesi
 
 - GPU f935b9d9/v9, aynı gerçek nesilde rev3477 ve beş READY çıktı. API/PG/Qdrant 313/313, olay referansları/kapsam/policy/API eşliği 5/5 geçti; aynı sürüm tekrar ALREADY_CURRENT. Kanıtlar apps/editor/docs/evidence/2026-09-21-repair-v9-*.json.

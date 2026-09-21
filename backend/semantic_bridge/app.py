@@ -3023,6 +3023,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             a = r.ask(question, thread_id=None, sample_size=reports_mod.PREVIEW_ROWS, execute=True)
         except Exception as e:  # noqa: BLE001
             raise _sql_failure(e) from e
+        if a.get("type") != "TEXT_TO_SQL":
+            # Motor cevap üretmediyse (çalışmayan SQL, netleştirme, eksik veri) boş bir tablo gösterilmez:
+            # kişi 0 satırı gerçek sonuç sanar ve plan çalışmayan SQL ile kaydedilirdi. Motorun cümlesi gösterilir.
+            retry = a.get("type") in ("DATA_SOURCE_UNAVAILABLE", "QUERY_TIMEOUT")
+            raise HTTPException(status_code=503 if retry else 422, detail={
+                "code": a.get("type") or "NO_ANSWER", "retryable": retry,
+                "message": a.get("explanation") or "Bu soruya cevap üretilemedi; soruyu biraz daha belirginleştirin."})
         source = list(a.get("columns") or [])
         layout, added, dropped = reports_mod.merge_columns(spec, source)
         return {"question": question, "sql": a.get("sql") or "", "columns": source,
