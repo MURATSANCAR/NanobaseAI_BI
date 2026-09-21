@@ -1,0 +1,59 @@
+{
+  "environment": "tt-gpu editor-cards real PostgreSQL + original storage files",
+  "results": [
+    {
+      "id": "62415920-1488-4c90-9f6f-30863ad8e767",
+      "title": "anne-terligi",
+      "titleMatch": true,
+      "coverMatch": true,
+      "coverSource": "WEB",
+      "sha256": "b16ecf0193005135e0cbdf1fa8ba1783dc71699097944a2fc39b625264951eb1",
+      "contentAvailable": false
+    },
+    {
+      "id": "66c82a90-f6f7-493c-aeae-61e2531f373b",
+      "title": "dedem-tekrar-cocuk-oldu",
+      "titleMatch": true,
+      "coverMatch": true,
+      "coverSource": "WEB",
+      "sha256": "3dab2e7ccb4ebfbd79e81fc00d739b5ff23e816600ceff90547a4af449b1b837",
+      "contentAvailable": false
+    },
+    {
+      "id": "a4abe9b9-40d3-4841-8bef-6633b215e57d",
+      "title": "levent-dunya-harikalarinin-pesinde",
+      "titleMatch": true,
+      "coverMatch": true,
+      "coverSource": "WEB",
+      "sha256": "fd20feb3f004f7c8d76e470f2892776588e3b7a6a15f97e26e88583c5c615d82",
+      "contentAvailable": false
+    },
+    {
+      "id": "b121bd76-92b8-496b-8cc7-ce8818b8a0e1",
+      "title": "Ekrana Sığmayan Macera",
+      "titleMatch": true,
+      "coverMatch": true,
+      "coverSource": "WEB",
+      "sha256": "e4703ce6326cb0919103b450f916bbe1b037b0229292bcc6cc151f16d4e00e29",
+      "contentAvailable": false
+    },
+    {
+      "id": "d2d4a6f1-e5b3-4415-9d68-48f8fe768c03",
+      "title": "dunyanin-en-korkak-hayvani",
+      "titleMatch": true,
+      "coverMatch": true,
+      "coverSource": "WEB",
+      "sha256": "34b84162b08ffe28225de4036d0f7ef772dab86978159ffd2c9c4746c37fa605",
+      "contentAvailable": false
+    },
+    {
+      "id": "f37a0dc1-faf7-4c36-8043-04fabc361728",
+      "title": "kahramanini-yutan-kitap",
+      "titleMatch": true,
+      "coverMatch": true,
+      "coverSource": "PDF_PAGE",
+      "sha256": "776b42bbe22e3e54b9978fa001dbdd4962b4dee895c99d79dfad243ddba811cd",
+      "contentAvailable": false
+    }
+  ]
+}

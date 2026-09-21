@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Kitap kartları test portalında, oturumlu mobil kontrol
+
+- Sohbet cevaplarına gerçek kapak/başlık, güncel yazar/özet alanları ve “Bu kitabı sor” eklendi. Kart servisi salt okunur ayrı container ve kendi anahtarıyla GPU PostgreSQL/storage okur; CPU köprüsü oturum altında sunar. Bakım veya model yaşam döngüsünü değiştirmez.
+- `b0a7b36`, `13b6dc1`, `97e38e6` main üzerinde; frontend/backend test sunucusuna, kart servisi tt-gpu'ya kuruldu. Mevcut finansal değişiklikler korundu. Uzak TypeScript/Vite geçti. Portal build değişkenleri düzeltilerek son HTML HTTPS hash eşliği doğrulandı.
+- Gerçek DB + özgün kapak dosyaları bağımsız referansı: 6/6 eşleşme. Oturumlu sohbetten isimle kart ve konu sorusuyla altı katalog kartı geldi. Son frontendde 320/390/768/1440 yatay taşma yok, görsel yüklendi; kart düğmesi kitap seçip yazı alanını dolduruyor, yenileme sohbeti temizliyor. İlk 320px dar başlık hatası düzeltilip yeniden sınandı. Yerel test yok.
+- Güncel yazar/özet çıktıları henüz yok; arayüz eksikliği açıkça gösteriyor. Konuya göre öneri kalitesi DOĞRULANAMADI. Kanıt: `apps/editor/docs/evidence/2026-09-21-portal-cards-{db,browser}.json`; ayrıntı `apps/editor/docs/PORTAL-CARDS.md`.
+- GitHub push HTTPS kimliği yok (`could not read Username`); kalan işlem `git push origin main`. Yerel/remote reflerde main dışında taşınmamış commit sayısı sıfır.
+
 ## 2026-09-21 — Sohbet düzeltmesi test portalına yayınlandı
 
 - Kullanıcının açık yayın talebiyle `0cdcfd7e` sohbet düzeltmesi `https://portal.nanobase.ai/timas/editoryal` ortamına kuruldu. Uzak kaynak ağacıyla karşılaştırmada tek uygulama dosyası farkı `AskBox.tsx`; derleme yapılandırmaları eş. Önceki uzak Vite/TypeScript kontrolleri bu pakete aittir.

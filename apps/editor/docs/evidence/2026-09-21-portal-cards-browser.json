@@ -1,0 +1,114 @@
+{
+  "url": "https://portal.nanobase.ai/timas/editoryal",
+  "frontendCommit": "97e38e6",
+  "htmlSha256": "981ce3047ad7414ab5685b5622e1e96423841a6325c8f676fdd1d8ce53b433d2",
+  "measurements": [
+    {
+      "card": {
+        "h": 359.5,
+        "w": 187,
+        "x": 82.5,
+        "y": 5.75
+      },
+      "composer": {
+        "h": 86,
+        "w": 145,
+        "x": 86.5,
+        "y": 408.25
+      },
+      "documentWidth": 320,
+      "imageLoaded": true,
+      "title": {
+        "h": 44,
+        "w": 161,
+        "x": 95.5,
+        "y": 150.75
+      },
+      "width": 320
+    },
+    {
+      "card": {
+        "h": 317.5,
+        "w": 257,
+        "x": 82.5,
+        "y": -17.25
+      },
+      "composer": {
+        "h": 86,
+        "w": 215,
+        "x": 86.5,
+        "y": 424
+      },
+      "documentWidth": 390,
+      "imageLoaded": true,
+      "title": {
+        "h": 22,
+        "w": 214.7890625,
+        "x": 95.5,
+        "y": 127.75
+      },
+      "width": 390
+    },
+    {
+      "card": {
+        "h": 292.75,
+        "w": 376.7890625,
+        "x": 176.5,
+        "y": -19
+      },
+      "composer": {
+        "h": 86,
+        "w": 525,
+        "x": 130.5,
+        "y": 381
+      },
+      "documentWidth": 768,
+      "imageLoaded": true,
+      "title": {
+        "h": 22,
+        "w": 214.7890625,
+        "x": 321.5,
+        "y": -2
+      },
+      "width": 768
+    },
+    {
+      "card": {
+        "h": 292.75,
+        "w": 376.7890625,
+        "x": 176.5,
+        "y": -18.8125
+      },
+      "composer": {
+        "h": 86,
+        "w": 1197,
+        "x": 130.5,
+        "y": 381.4375
+      },
+      "documentWidth": 1440,
+      "imageLoaded": true,
+      "title": {
+        "h": 22,
+        "w": 214.7890625,
+        "x": 321.5,
+        "y": -1.8125
+      },
+      "width": 1440
+    }
+  ],
+  "refresh": {
+    "cards": 0,
+    "draft": "",
+    "emptyGreeting": true
+  },
+  "keyboardPick": {
+    "draft": "«Ekrana Sığmayan Macera» kitabı hakkında ",
+    "selected": true
+  },
+  "topicQuestion": {
+    "question": "Çocukların tabletle ilişkisini anlatan bir kitap önerir misin?",
+    "cards": 6,
+    "match": "CATALOG_ONLY",
+    "semanticAcceptance": false
+  }
+}
