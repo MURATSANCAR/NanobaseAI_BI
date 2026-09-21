@@ -622,6 +622,7 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
                         generation_id)
     evs = db.all_rows(
         "SELECT e.id, e.summary, e.page_from, e.page_to, e.participants, e.claim_id,"
+        " coalesce(c.payload->>'participants_invalidated'='true',false) AS participants_invalidated,"
         " (SELECT string_agg(ev.quote, ' | ') FROM claim_evidence ce JOIN evidence ev"
         "  ON ev.id=ce.evidence_id WHERE ce.claim_id=e.claim_id) AS quotes"
         " FROM event e LEFT JOIN claim c ON c.id=e.claim_id WHERE e.generation_id=%s AND"
@@ -629,7 +630,7 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
         " ORDER BY e.page_from, e.page_to", generation_id)
     stats = {"events": len(evs), "characters": len(chars), "pairs": 0, "pairs_failed": 0,
              "actor": 0, "involved": 0, "absent": 0, "uncertain": 0,
-             "extractor_disagreements": 0, "sent_to_review": 0}
+             "extractor_disagreements": 0, "sent_to_review": 0, "invalidated_participant_lists": 0}
     if not evs or not chars:
         return stats
     done = {(str(r["event_id"]), str(r["character_id"])) for r in db.all_rows(
@@ -700,9 +701,15 @@ async def attribute_event_actors(generation_id: str, write: bool = True) -> dict
             for r in rows:
                 stats[r["role"].lower()] += 1
             unsure = [r for r in rows if r["role"] == "UNCERTAIN"]
-            dropped = [r for r in rows if r["listed_by_extractor"] and r["role"] == "ABSENT"]
-            added = [r for r in rows if not r["listed_by_extractor"] and r["role"] == "ACTOR"]
-            no_doer = any(r["listed_by_extractor"] for r in rows) and \
+            # A correction invalidates the previous extractor list. An unknown
+            # list is not a negative assertion that nobody participated. The
+            # fresh actor probabilities and genuine uncertainty still apply.
+            comparable = not e['participants_invalidated']
+            if not comparable:
+                stats['invalidated_participant_lists'] += 1
+            dropped = [r for r in rows if comparable and r["listed_by_extractor"] and r["role"] == "ABSENT"]
+            added = [r for r in rows if comparable and not r["listed_by_extractor"] and r["role"] == "ACTOR"]
+            no_doer = comparable and any(r["listed_by_extractor"] for r in rows) and \
                 not any(r["role"] == "ACTOR" for r in rows)
             stats["extractor_disagreements"] += len(dropped) + len(added)
             why = []

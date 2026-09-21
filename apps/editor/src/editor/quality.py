@@ -218,7 +218,9 @@ async def _repair(generation_id: str, x: dict, v: dict) -> str | None:
         new_id = ledger.save_claim(
             c, generation_id, kind=x["kind"], subject=x["subject"], claim=text, evidence=old + added,
             confidence=float(x["confidence"]), created_by="critic:repair", model_call_id=call_id,
-            payload={**(x["payload"] or {}), "supersedes": str(x["id"]), "repair": out["action"]})
+            payload={**(x["payload"] or {}), "supersedes": str(x["id"]), "repair": out["action"],
+                     "participants_invalidated": bool((x["payload"] or {}).get("participants_invalidated"))
+                         or (x['kind']=='EVENT' and text!=x['claim'])})
         c.execute("UPDATE claim SET status='SUPERSEDED', critic_note=%s WHERE id=%s",
                   (f"PARTIAL: {v['note']} → {out['action']}, yerine {new_id}", x["id"]))
         # Keep the canonical event text in step with its corrected claim. Actor

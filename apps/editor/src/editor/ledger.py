@@ -202,6 +202,9 @@ def supersede_claim(conn: psycopg.Connection, generation_id: str, old_claim_id: 
     evs = [(str(r["evidence_id"]), r["quote_verified"], r["page_no"]) for r in conn.execute(
         "SELECT ce.evidence_id, e.quote_verified, e.page_no FROM claim_evidence ce JOIN evidence e ON"
         " e.id=ce.evidence_id WHERE ce.claim_id=%s", (old_claim_id,)).fetchall()]
+    payload_update = dict(payload_update)
+    if old['kind'] == 'EVENT' and claim is not None and claim != old['claim']:
+        payload_update['participants_invalidated'] = True
     new_id = save_claim(conn, generation_id, kind=old["kind"], subject=old["subject"],
                         claim=claim or old["claim"], evidence=evs, confidence=float(old["confidence"]),
                         created_by=created_by, model_call_id=model_call_id,
