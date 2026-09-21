@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Arşiv P100 satış kırılımları, faturalı satış kuralı, müşteri VM'ine kurulum
+
+- Arşiv P100 (6 kırılımlı aylık satış soruları, `tests/text2sql/arsiv-p100.jsonl`, koşucu `arsiv-p100-run.py`: köprünün SQL'i DB'de koşulur, arşiv şablonundan kurulan bağımsız referansla toplam + grup sayısı karşılaştırılır): 23 → **100/100 toplam doğru** (91 tam; 9 tutar sorusunda yalnız sıfır tutarlı iade grupları fazla).
+- Nedenler: ödeme planı / satış temsilcisi / birim sertifikasızdı; teslimat kavramları boş `VW_211_SHIPINFO` görünümüne bağlıydı (→ `LG_SHIPINFO`); satır ölçüsünde fatura üzerinden okuma kuralı yalnız bir eş kavramdaydı; kapı ilişki eşitliğini `LG_` önekiyle karşılaştırıyordu (`audit.py`); 'perakende' tek kelimelik eşi 'perakende payı' ölçüsündeydi.
+- İş kararı: **satış = faturalı satır** (`STLINE.INVOICEREF NOT IN (0)`) — satılan adet, satış tutarı, net ciro (satır), satış satırı sayısı. Ölçüm: Ocak 2026 adet farkı 90.470 birebir faturasız irsaliye satırları; 2026 satır net ciro 839,59 → 837,90 Mn. Kanal = satış + aynı kanalın iadesi (perakende 7/2, toptan 8/3). kâr/maliyet ölçülerine dokunulmadı (ayrı karar).
+- set100: tam kapı (tek tekrar) 55/69 — bozulanların okuması sabahki temelle aynı (model dalgalanması); P100 değişiklikleri set100 okumasını değiştirmedi. Etkilenen Q12/Q15/Q19/Q69 3/3 sağlam; Q15 referansı faturalı satıra güncellendi; 'satış tutarı' koşulunu daraltma Q19'u bozduğu için geri alındı.
+- Müşteri VM'i: kod HEAD'den, katalog eşitlendi (eşitleme artık VERİ NOTU'ları da taşır); `.env` test sunucusuyla hizalandı (SEMANTIC_RECALL=1, LLM_CTX=32768, sorgu zaman aşımı 1800). VM'de 6 muhasebe sorusu ve 8 P100 sorusunun SQL'i test sunucusunda doğrulananla birebir.
+
 ## 2026-09-21 — BI: test sunucusu ve müşteri VM'i `main` ile eşitlendi, VM'den GPU erişimi sınandı
 
 - **Dal denetimi:** hiçbir yerel/origin dalında `main` dışında commit yoktu. Tek açık iş editörün figür kimliği denemesiydi; onu başka bir oturum aynı anda `main` üstüne taşıyordu (migration 018/019) ve GPU'ya kendi sürümünü kurmuştu — bu oturum editör koduna ve GPU'ya dokunmadı. `teshis-derek…` ve `vpn-deniz…` worktree'lerindeki sahnelenmiş `apps/editor/backend` 09-19'da kaldırılan eski modüldür, alınmadı.
