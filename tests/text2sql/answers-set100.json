@@ -615,12 +615,25 @@
    "soru": "Vadesi geçmiş ama hâlâ tahsil edilmemiş müşteri alacaklarımız toplam ne kadar?",
    "kaynak": "logo",
    "holdout": false,
-   "expect": "deny",
+   "expect": "answer",
    "verified": true,
    "source": "logo",
-   "reference_sql": "SELECT COUNT(*) AS fatura_plan_satiri, SUM(CASE WHEN PAID=1 OR CROSSREF>0 THEN 1 ELSE 0 END) AS kapatilan_satir, SUM(TOTAL) AS plan_tutari, SUM(CASE WHEN DATE_<CAST(GETDATE() AS DATE) THEN TOTAL ELSE 0 END) AS vadesi_gecmis_gorunen_plan FROM LG_411_01_PAYTRANS WHERE MODULENR=4 AND SIGN=0 AND CANCELLED=0 AND TRCODE IN (7,8,9)",
-   "checks": [],
-   "note": "Dürüst ret beklenir. 2026-09-18: 2026 kopyasında satış faturası ödeme planı 70.470 satır / 917.158.478,81 ₺; kapatılan (PAID = 1 ya da CROSSREF > 0) 0 satır — PAYTRANS'ın tüm modüllerinde de kapama 0. Borç kapama çalıştırılmadığı için 'vadesi geçmiş ve tahsil edilmemiş' tutar ölçülemiyor: vadesi geçmiş görünen plan 662.534.419,26 ₺ ama bu kesilen faturadır, alacak değil (tahsilatlar düşülmemiş). Köprü NON_SQL_QUERY ile tam bu gerekçeyi söylüyor (caveat 2026-09-16; köprü 70.521 satır diyor, fark ölçüm tarihi/TRCODE kapsamı). Referans SQL reddin dayandığı veri durumunu gösterir: kapatilan_satir > 0 olursa beklenti 'answer' olarak yeniden yazılır. Dolu bir 'vadesi geçmiş alacak' rakamı bozulmadır; cari net bakiye (CLFLINE) verilirse bunun yaşlandırma olmadığı açıkça yazılmalı."
+   "reference_sql": "WITH B AS (SELECT L.CLIENTREF, SUM(CASE WHEN L.SIGN=0 THEN L.AMOUNT ELSE -L.AMOUNT END) bakiye FROM LG_411_01_CLFLINE L JOIN LG_411_CLCARD C ON C.LOGICALREF=L.CLIENTREF WHERE L.CANCELLED=0 AND C.CODE LIKE '120%' GROUP BY L.CLIENTREF), N AS (SELECT CARDREF, SUM(TOTAL) nd FROM LG_411_01_PAYTRANS WHERE CANCELLED=0 AND SIGN=0 AND DATE_ >= CAST(GETDATE() AS date) GROUP BY CARDREF) SELECT SUM(CASE WHEN B.bakiye-ISNULL(N.nd,0) > 0 THEN B.bakiye-ISNULL(N.nd,0) ELSE 0 END) vadesi_gecmis FROM B LEFT JOIN N ON N.CARDREF=B.CLIENTREF WHERE B.bakiye>0",
+   "checks": [
+    {
+     "kind": "values_present",
+     "reference": [
+      "vadesi_gecmis"
+     ]
+    },
+    {
+     "kind": "data_note",
+     "column": [
+      "FIFO"
+     ]
+    }
+   ],
+   "note": "2026-09-21 politika değişti (iş kararı: yaklaşık hesapla, açıkça söyle). Logo'da ödeme kapama yok (PAYTRANS 116.514 satırın 14'ünde ödenen tutar dolu); yöntem FIFO: cari başına max(0, net bakiye − vadesi gelmemiş plan satırları). 21.09.2026 değeri 149.045.232,28 ₺ (880 cari). Cevap FIFO yaklaşımı olduğunu veri notunda söylemeli. Eski not (09-18): dürüst ret bekleniyordu; kapama verisi hâlâ yok, yalnız yaklaşım kabul edildi."
   },
   {
    "n": 23,

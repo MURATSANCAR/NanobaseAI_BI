@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Muhasebe: bakiye söylenişleri, "ve"li hesap adları, vade/yaşlandırma yaklaşık hesabı
+
+- Bakiye: "bugünkü/bu ayki bakiye" dönemi, bakiye ölçüsünde filtre değil bugün itibarıyla okunur (M003 102 bankalar 252.437.313,15 ✓); "borç/alacak bakiyesi" kelimeleri bağlı bakiye ölçüsünün parçası sayılır, model yoluna düşmez (M004 136.057.227,70, M005 55.348.004,80 ✓). Katalog: müşteri/tedarikçi/banka bakiye öbekleri (`2026-09-21-bakiye-ifadeleri.py`).
+- "ve"li adlar: soru n-gramı iç bağlaç (ve/ile/veya) taşıyabilir; "ödenecek vergi ve fonlar" tek anahtar (M066 9.049.793,39 ✓). Katalogdaki "ve"li eş anlamlılar önceden hiç eşleşemiyordu.
+- Vade/yaşlandırma (iş kararı: yaklaşık hesapla, söyle): NO_SQL kuralı FIFO/DSO/DPO yöntem kuralına çevrildi, 5 yöntem örneği, PAYTRANS.SIGN VERİ NOTU, "vadesi geçmiş/gelmiş" → vade tarihi. 6 soru × 3 tur: 17/18 referansla birebir (M015 149,05 Mn, M016 ve M028 kovalar, M019 37,4, M027 87,81 Mn, M032 28,8 gün); tek sapma "alacaklarımız" öbeğiyle kapandı. set100 altın A008 "ret" → FIFO değeri + veri notu (3/3 SAĞLAM).
+- Kök neden (genel): `physicalize_sql` tarih testi başka takma adda (CTE) olunca tarihsiz CLFLINE/PAYTRANS'ı en büyük kopyaya (2021–25) bağlıyordu; dönem sorulmadıysa artık güncel kopya. Test: `test_period_physicalization`, `test_name_with_conjunction`. Tam pytest önce/sonra aynı kopyada fark yok (llm_queue zamanlama testi dalgalı).
+- Açık: M007 mizan dengesi, "satıcılar bakiyesi geçen aya göre" model yolunda hareket veriyor (bakiye değil). Müşteri VM'ine henüz kurulmadı.
+
 ## 2026-09-21 — Kontrollü gerçek yeni nesil ve otomatik yeniden başlama
 
 - `0439924a` GPU üzerine kuruldu; gerçek jobs MCP ile tek 32 sayfalık kitap yeniden başlatıldı. Job `2cc4bd08-67cf-424a-af67-4f686ea6b8a3`, nesil `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`; özel kuyruk, genel taramalar kapalı.

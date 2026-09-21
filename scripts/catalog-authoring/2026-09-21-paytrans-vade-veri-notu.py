@@ -1,14 +1,16 @@
 """Muhasebe testi M015/M016/M027/M028 — 2026-09-21. Vade/yaşlandırma soruları yalnız yaklaşık cevaplanabilir:
 PAYTRANS'ta ödeme kapama yok. Kolon düzeyi VERİ NOTU, PAYTRANS.DATE_'e koşul/kırılım dayandıran her cevabın özetine
-ve dataNotes alanına taşınır (column_facts.predicate_column_notes). Kuru koşu varsayılan; --apply yazar."""
+ve dataNotes alanına taşınır (column_facts.predicate_column_notes). Not SIGN'da durur: not yalnız WHERE/GROUP BY
+kolonlarından okunur; FIFO sorgusunda DATE_ pencere sıralamasındadır, SIGN (borç/alacak yönü) her vade sorgusunun
+WHERE'indedir. İlk sürüm DATE_'e yazılmıştı (ann_08eb93e1d2a3); --apply onu emekliye ayırır. Kuru koşu varsayılan; --apply yazar."""
 import os, sys
 sys.path.insert(0, "/data/nanobaseai/bi/frontend/backend")
 from semantic_layer.store.catalog_store import open_store
 from semantic_layer.models import Annotation
 
 WHO = "operator:claude (muhasebe testi, 2026-09-21)"
-ENTITY, COLUMN = "PAYTRANS", "DATE_"
-TEXT = ("VERİ NOTU: Vade tarihi. Logo'da ödeme kapama kullanılmıyor — 116.514 ödeme planı satırının yalnız 14'ünde "
+ENTITY, COLUMN = "PAYTRANS", "SIGN"
+TEXT = ("VERİ NOTU: Logo'da ödeme kapama kullanılmıyor — 116.514 ödeme planı satırının yalnız 14'ünde "
         "ödenen tutar dolu, kapatan ödeme bağlantısı (CROSSREF) yok. Bu tablodan hesaplanan açık, vadesi geçmiş ve "
         "yaşlandırma tutarları FIFO yaklaşımıdır (bakiye en yeni vadelerden geriye dağıtılır), kesin değildir.")
 
@@ -29,6 +31,7 @@ print("YAZILACAK (", WHO, "):\n ", TEXT)
 if "--apply" not in sys.argv:
     print("KURU KOŞU — hiçbir şey yazılmadı. Yazmak için --apply. Sonrasında köprü açıklamaları yeniden yükler (yeniden başlatma / katalog yenileme).")
     sys.exit(0)
+st.retire_annotation("ann_08eb93e1d2a3")
 for pat in patterns:
     ann = st.add_annotation(Annotation(datasource_id=ds, table_pattern=pat, column=COLUMN, text=TEXT, author=WHO))
     print("yazıldı:", pat, ann.id)

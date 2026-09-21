@@ -1,14 +1,14 @@
 ---
-nl: Müşteri alacaklarını vadesine göre 30, 60, 90 gün yaşlandır (FIFO yaklaşımı)
+nl: Satıcı (tedarikçi) borçlarımızı vadesine göre yaşlandırır mısın (FIFO yaklaşımı)
 sql: |-
-  -- yorum: 'yaşlandırma' → FIFO yaklaşımı: Logo'da ödeme kapama yok; cari bakiyesi en yeni vade satırlarından geriye dağıtılır
-  WITH B AS (SELECT L."CLIENTREF", SUM(CASE WHEN L."SIGN" = 0 THEN L."AMOUNT" ELSE -L."AMOUNT" END) AS bakiye
+  -- yorum: 'yaşlandırma' (satıcı borcu) → FIFO yaklaşımı: Logo'da ödeme kapama yok; cari bakiyesi en yeni vade satırlarından geriye dağıtılır
+  WITH B AS (SELECT L."CLIENTREF", SUM(CASE WHEN L."SIGN" = 1 THEN L."AMOUNT" ELSE -L."AMOUNT" END) AS bakiye
     FROM LG_CLFLINE L JOIN CLCARD C ON C."LOGICALREF" = L."CLIENTREF"
-    WHERE L."CANCELLED" = 0 AND C."CODE" LIKE '120%' AND L."DATE_" >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1)
+    WHERE L."CANCELLED" = 0 AND C."CODE" LIKE '320%' AND L."DATE_" >= DATEFROMPARTS(YEAR(GETDATE()), 1, 1)
     GROUP BY L."CLIENTREF"),
   P AS (SELECT P."CARDREF", P."DATE_", P."TOTAL",
       SUM(P."TOTAL") OVER (PARTITION BY P."CARDREF" ORDER BY P."DATE_" DESC, P."LOGICALREF" DESC ROWS UNBOUNDED PRECEDING) AS kumulatif
-    FROM PAYTRANS P WHERE P."CANCELLED" = 0 AND P."SIGN" = 0 AND P."CARDREF" IN (SELECT "CLIENTREF" FROM B WHERE bakiye > 0)),
+    FROM PAYTRANS P WHERE P."CANCELLED" = 0 AND P."SIGN" = 1 AND P."CARDREF" IN (SELECT "CLIENTREF" FROM B WHERE bakiye > 0)),
   A AS (SELECT P."CARDREF", P."DATE_",
       CASE WHEN B.bakiye >= P.kumulatif THEN P."TOTAL" WHEN B.bakiye > P.kumulatif - P."TOTAL" THEN B.bakiye - (P.kumulatif - P."TOTAL") ELSE 0 END AS acik
     FROM P JOIN B ON B."CLIENTREF" = P."CARDREF")
@@ -24,8 +24,6 @@ tags:
 - yontem:fifo
 ---
 
-Yaşlandırma / vadesi geçmiş (FIFO): Logo'da ödeme kapama kullanılmıyor (116.514 plan satırının 14'ünde
-ödenen tutar dolu). Carinin bugünkü net bakiyesi, o carinin en yeni vade (PAYTRANS) satırlarından geriye
-doğru dağıtılır; daha eski satırlar ödenmiş sayılır. Vadesi geçmiş toplam = kovalardaki 1-30 … 90+ toplamı
-(ya da cari başına max(0, bakiye − vadesi gelmemiş plan satırları)). Tedarikçi aynası: 320%, CLFLINE
-bakiyesi alacak − borç, PAYTRANS SIGN 1. Sonuç yaklaşıktır ve cevapta öyle söylenir.
+Satıcı borcu yaşlandırması (FIFO, müşteri yaşlandırmasının aynası): tedarikçi carileri (CLCARD.CODE 320%),
+bakiye alacak − borç (SIGN 1 − SIGN 0), vade satırları PAYTRANS SIGN 1. 'Vadesine göre' ödeme planı
+satırının vade tarihidir (PAYTRANS.DATE_), stok/fiyat vade kodu değil. Kapama yok, sonuç yaklaşıktır.

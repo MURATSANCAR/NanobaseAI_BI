@@ -61,6 +61,8 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 
 - **semantic_layer**: NL→SQL çekirdeği. Katalog + kanıt motoru esas doğru kaynak (WrenAI kaldırıldı, bkz. proje belleği `wren-teardown-done`). Detay: `docs/architecture/semantic-layer-v1.md`.
 - **semantic_bridge (:8795)**: Timaş kokpitine özel köprü — `/api/v1/ask`, `/run_sql`, `/api/v1/semantic/*`, `/api/v1/schema/*`.
+  - **Vade / yaşlandırma (2026-09-21):** Logo'da ödeme kapama yok (PAYTRANS 116.514 satırın 14'ü). Vadesi geçmiş ve 30/60/90 yaşlandırma FIFO ile, tahsilat/ödeme süresi DSO/DPO ile yaklaşık hesaplanır; yöntem bilgi paketinde (`knowledge/caveats`, `metrics`, `sql/*fifo*.md`, `sql/ortalama-tahsilat-suresi-dso.md`), "yaklaşık" uyarısı PAYTRANS.SIGN VERİ NOTU'ndan cevaba taşınır. Mantıksal `CLFLINE` = LV_ görünümü (tutar kolonu yok); gerçek tablo varlığı `LG_CLFLINE`.
+  - **Fiziksel kopya:** model SQL'inde tarihsiz yıl-kopyalı tablo, dönem sorulmadıysa güncel kopyadan okunur (`guardrails.physicalize_sql` → `current_copy`); bakiye soruları "bugünkü/bu ayki" dönemi filtre değil "bugün itibarıyla" okur (resolver).
 - **query_gateway (:8792)**: Müşteri SQL'inin tek çalışma noktası, salt okunur, izin listeli.
 - **nanobase_api (:8790)**: API, chat gateway, semantic katalog, senaryo motoru.
 
