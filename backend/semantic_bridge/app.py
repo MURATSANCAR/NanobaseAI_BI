@@ -3651,7 +3651,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return FileResponse(path, filename=name)
 
     # ------------------------------------------------------------------ kitaba soru (editör motoru)
-    # Köprü editörün veritabanına dokunmaz; yalnız Hermes'in OpenAI uyumlu API'sinden sorar (ters tünel).
+    # Köprü editörün veritabanına dokunmaz; yalnız editör motorunun OpenAI uyumlu API'sinden sorar (ters tünel).
     from semantic_bridge import editorial_books as books_mod
 
     def _books(request: Request) -> tuple[Any, str, str, bool]:
@@ -3677,8 +3677,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/editorial/ask")
     def editorial_ask(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = _books(request)
+        # Kapsam (kimlik / kitap dışı) hızlı modelle ayrılır; kitap motoruna yalnız kitap sorusu gider.
+        llm = rt().llm_for("editorial", priority=1)
+        chat = (lambda messages: llm.chat(messages, max_tokens=40, temperature=0.0)) if llm is not None else None
         out = _books_call(books_mod.ask, engine, tenant, user, str(body.get("question") or ""),
-                          book_key=str(body.get("bookKey") or ""), book_title=(str(body.get("bookTitle") or "") or None))
+                          book_key=str(body.get("bookKey") or ""), book_title=(str(body.get("bookTitle") or "") or None),
+                          chat=chat)
         admin_mod.audit(engine, user, "run", "editorial_ask", out["id"], str(body.get("bookTitle") or "") or None,
                         {"question": str(body.get("question") or "")[:300]})
         return out
