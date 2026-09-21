@@ -1,0 +1,17 @@
+# Can be added to an existing Editor installation without upgrading its workers.
+services:
+  cards:
+    image: ${EDITOR_CARDS_IMAGE:-editor-cards:1}
+    container_name: editor-cards
+    restart: unless-stopped
+    command: ["uvicorn", "editor.card_api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    env_file:
+      - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
+      - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
+    environment:
+      EDITOR_ROOT: /data/editor
+    volumes:
+      - ${EDITOR_ROOT:-/data/editor}/storage:/data/editor/storage:ro
+    ports:
+      - "127.0.0.1:19141:8000"
+    networks: [editor-net]
