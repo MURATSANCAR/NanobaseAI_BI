@@ -4,7 +4,7 @@
 
 Finans & Risk → Finansal Denetim, `/timas/finansal-denetim`.
 Mevcut kanvas kabuğu, açık renkli cam yüzeyler, mor/mercan vurgular.
-Beş görünüm: denetim özeti, kontrol kütüphanesi, Logo kayıtları, dayanak veriler ve kaynak belge.
+Altı görünüm: denetim özeti, Logo’da ne var, kontrol kütüphanesi, Logo kayıtları, dayanak veriler ve kaynak belge.
 Rapor JSON olarak mevcut hesaplama, kaynak hash'i, sürüm, kapsam ve sınırlamalarla indirilir.
 Kontrol kataloğu ayrıca indirilebilir. Hiçbir işlem Logo'ya yazmaz.
 
@@ -193,3 +193,68 @@ Müşteri VM'inde kurulumu ve gerçek kullanıcı kabulü ayrıca doğrulanmadan
 
 Kod yerel `main` üzerindedir (`1cb6cc70`); test sunucusuyla kaynak dosya hashleri eş.
 GitHub HTTPS kimliği bulunamadığından push tamamlanamadı. Kalan işlem: `git push origin main`.
+
+
+## Logo derin taraması — 21 Eylül, ikinci genişletme
+
+Kullanıcının yönlendirmesi: Logo DB içinde bulunan dayanaklarla çalış; bulunmayanları
+neden ve tamamlamak için gerekenlerle ekranda göster. `financial_audit_deep.py` ve
+`DeepAuditPanel.tsx` bu kapsamı uygular. Dokuz kaynak kartında **bulunan / eksik / neden /
+sonraki işlem** ayrıdır. Okuma hatası, boş kaynak veya başarı olarak gösterilmez.
+
+Muhasebe kesimi **17.08.2026**; aynı şirketin eski yedekleri toplanmaz. Hareket
+karşılaştırmaları bu tarihe kadardır. Kredi planı bütün 2026 vadelerini, stok profili
+2026 içinde kesimden ileri kayıtları ayrıca gösterir. 98 banka hareketinin doğrudan
+muhasebe satırı bağlantısı da çözülür. Plan/ödeme veya para birimleri toplanmaz.
+
+| Ek veri kontrolü | İnceleme adayı |
+|---|---:|
+| Aktarılmamış fatura | 349 |
+| Aktarıldı işaretli faturada fiş bağlantısı | 0 |
+| Fatura / muhasebe tarih farkı | 0 |
+| Faturada eksik muhasebe hesap referansı | 167 |
+| Fatura tutarı / muhasebe neti | 0 |
+| Fatura KDV / muhasebe KDV neti | 125 |
+| Fatura başlık / satır KDV toplamı | 0 |
+| Aktarılmamış banka hareketi | 6.455 |
+| Banka fiş veya doğrudan satır bağlantısı | 0 |
+| Banka muhasebe hesabı kartı | 0 |
+| Banka hareketi / muhasebe tutarı | 10 |
+| Hesap ve gün bazında negatif kasa | 0 |
+
+81.760 iptalsiz fatura, 17.405 banka hareketi, 4.068 çek/senet kartı,
+140 kredi planı + 75 bankaya bağlı ödeme satırı, 101.693 stok fişi,
+8 e-defter dönem kaydı, 3 dış ticaret başlığı bulundu. Bunlar farklı kapsamların
+kayıt sayılarıdır; toplanıp denetim başarı oranı veya risk tutarı oluşturulmaz.
+Tutar karşılaştırmalarında kaynaklar önce fiş/hesap bazında gruplanır;
+çoklu kaynak satırlarının JOIN ile tutarları çoğaltması engellenir.
+
+**2026 beyannamesi bulunamadı.** 25 tarihsel başlık eski yıllara aittir.
+Bağımsız banka ekstresi/mutabakat, imzalı sayım, onaylı güncel beyanname,
+sözleşme ve resmî kabul kanıtları tamamlanmış sayılmaz. 72.007 depo kaydının
+48.596’sı adres notu başlangıcı taşır. Taranan başlangıçlarda PDF/XML imzası
+bulunmaması bütün veritabanında belge olmadığı anlamına gelmez. Kalan
+kayıtların içerik türü doğrulanmadan kanıt sayılmaz; kişisel içerik rapora alınmaz.
+
+Kaynak s.236–238’deki 35 gelir/gider maddesi 690 yerine kendi hesaplarına bağlandı.
+26. maddede giderler arasında gelir hesabı adı tekrar ediyor: tahminle 654 yapılmadı,
+hesap kapsamı boş ve durum `unverified`. Kapsam artık 17 hesaplanan, 25 doğrulanamayan,
+596 kanıt bekleyen, 6 dönemi gelmeyen, 3 bulgu ve 2 muhasebe gözlemidir.
+Bu sayılar örtüşen 649 çalışma kaydına aittir; 649 çalışan iş kuralı değildir.
+
+Rapor indirme artık oturum korumalı `/runs/{runId}/export` üzerinden değişmez arşivin
+aynı byte dizisini verir; SHA-256 ve attachment başlığı taşır. Gerçek HTTP ile tam
+JSON ve arşiv byte eşitliği doğrulandı. Tarayıcı indirme tamamlanma olayı alınamadı;
+**işletim sistemi üzerindeki indirme tamamlanması DOĞRULANAMADI**.
+
+Yeni kabul: `scripts/server/financial-audit-deep-acceptance.py` sunucuda gerçek API
+cevabını ayrı ham Logo okumaları/Python gruplarıyla karşılaştırdı: **109/109 PASS**.
+12 kontrolün tam sonuç sayıları; her kontrolün ilk, ikinci ve son/boş sayfalarının
+bütün kolon/değerleri; kaynak profilleri, 35 hesap eşlemesi, yetkilendirme ve export
+bütünlüğü dahil. Bu, bütün adayların belge/mevzuat açısından incelendiği anlamına gelmez.
+Ham kanıt sunucuda özel dizinde; kişisel içerik içermeyen kanıt
+`docs/audits/financial-audit-2026-09-21/deep-acceptance.json`.
+İlk banka sorgusunun gereksiz JOIN maliyeti düzeltildi; son koşuda derin sorguların
+toplam DB süresi yaklaşık 10,6 saniye, bütün raporun DB süresi 26,6 saniyedir.
+
+Son sürümde temel kabul yeniden çalıştı: **144/144 PASS**; toplam **253 teknik kontrol**. Yeni kaynak/aday görünümü 320/390/768/1440 genişliklerinde taşmasız; tablo yalnız kendi kapsayıcısında kayar. Gerçek ikinci sayfa 50 satır, ilk sayfayla ortak kayıt yok. Kanıt `deep-browser.json`.

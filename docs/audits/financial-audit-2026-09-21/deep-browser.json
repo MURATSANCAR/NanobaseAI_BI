@@ -1,0 +1,109 @@
+{
+  "url": "https://portal.nanobase.ai/timas/finansal-denetim",
+  "environment": "Authenticated Chrome, real portal and Logo API",
+  "measurements": [
+    {
+      "view": "pagination",
+      "page": "349 kayıt · Sayfa 2",
+      "rows": 50,
+      "overlap": 0
+    },
+    {
+      "cards": 9,
+      "checks": 12,
+      "documentWidth": 320,
+      "panels": [
+        {
+          "scroll": 248,
+          "width": 248
+        },
+        {
+          "scroll": 248,
+          "width": 248
+        }
+      ],
+      "rows": 50,
+      "table": [
+        {
+          "scroll": 1186,
+          "width": 206
+        }
+      ],
+      "view": "sources-and-exceptions",
+      "width": 320
+    },
+    {
+      "cards": 9,
+      "checks": 12,
+      "documentWidth": 390,
+      "panels": [
+        {
+          "scroll": 318,
+          "width": 318
+        },
+        {
+          "scroll": 318,
+          "width": 318
+        }
+      ],
+      "rows": 50,
+      "table": [
+        {
+          "scroll": 1186,
+          "width": 276
+        }
+      ],
+      "view": "sources-and-exceptions",
+      "width": 390
+    },
+    {
+      "cards": 9,
+      "checks": 12,
+      "documentWidth": 768,
+      "panels": [
+        {
+          "scroll": 644,
+          "width": 644
+        },
+        {
+          "scroll": 644,
+          "width": 644
+        }
+      ],
+      "rows": 50,
+      "table": [
+        {
+          "scroll": 1186,
+          "width": 588
+        }
+      ],
+      "view": "sources-and-exceptions",
+      "width": 768
+    },
+    {
+      "cards": 9,
+      "checks": 12,
+      "documentWidth": 1440,
+      "panels": [
+        {
+          "scroll": 1316,
+          "width": 1316
+        },
+        {
+          "scroll": 1316,
+          "width": 1316
+        }
+      ],
+      "rows": 50,
+      "table": [
+        {
+          "scroll": 1260,
+          "width": 1260
+        }
+      ],
+      "view": "sources-and-exceptions",
+      "width": 1440
+    }
+  ],
+  "download": "DOĞRULANAMADI: browser event timed out; exact HTTP archive bytes independently PASS"
+}

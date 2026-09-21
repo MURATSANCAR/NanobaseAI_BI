@@ -1,0 +1,1398 @@
+{
+  "environment": "nanobase-direct → actual HTTP :8795 → real Logo .155/LOGO_DB",
+  "runId": "299509aceca94d719b281053f0daca52",
+  "revision": "4a03f5025475c26b0a2584592f397b05e3b6cf6cbfc5a73e75ba3ffe40447409",
+  "deepRevision": "1c8ff7761c6651318836c3024ab3909998a647fb81a4c964b0183ab612a33a82",
+  "checks": [
+    {
+      "name": "deep-all-sources-read",
+      "status": "PASS",
+      "detail": {}
+    },
+    {
+      "name": "invoice-unposted-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 349,
+        "reference": 349,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-unposted-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-unposted-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-unposted-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-unposted-page-6-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-broken-link-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-broken-link-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-broken-link-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-broken-link-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-date-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-date-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-date-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-date-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 167,
+        "reference": 167,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-account-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-account-page-3-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-ledger-amount-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81241
+      }
+    },
+    {
+      "name": "invoice-ledger-amount-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-ledger-amount-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-ledger-amount-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 125,
+        "reference": 125,
+        "tested": 81408
+      }
+    },
+    {
+      "name": "invoice-vat-ledger-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-ledger-page-2-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-lines-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 81760
+      }
+    },
+    {
+      "name": "invoice-vat-lines-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-lines-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "invoice-vat-lines-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 6455,
+        "reference": 6455,
+        "tested": 17405
+      }
+    },
+    {
+      "name": "bank-unposted-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-unposted-page-129-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-broken-link-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 17405
+      }
+    },
+    {
+      "name": "bank-broken-link-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-broken-link-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-broken-link-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-account-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 17405
+      }
+    },
+    {
+      "name": "bank-account-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-account-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-account-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-ledger-amount-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 10,
+        "reference": 10,
+        "tested": 3216
+      }
+    },
+    {
+      "name": "bank-ledger-amount-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-ledger-amount-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-ledger-amount-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cash-negative-day-full-count",
+      "status": "PASS",
+      "detail": {
+        "actual": 0,
+        "reference": 0,
+        "tested": 222
+      }
+    },
+    {
+      "name": "cash-negative-day-status",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cash-negative-day-page-0-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cash-negative-day-page-1-full-values",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "bank-direct-links-preserved",
+      "status": "PASS",
+      "detail": {
+        "directLinks": 98
+      }
+    },
+    {
+      "name": "invoice-type-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "tax-full-period-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "missing-current-declaration-explained",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "loan-currency-and-type-coverage",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "loan-profile-0-0",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "loan-profile-1-0",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "stock-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "future-stock-not-hidden",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ebook-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "cheques-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "exports-full-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "attachments-full-signature-profile",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "all-source-gaps-explained",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-1",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-2",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-3",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-4",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-5",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-6",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-7",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-8",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-9",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-10",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-11",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-12",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-13",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-14",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-15",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-16",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-17",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-18",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-19",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-20",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-21",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-22",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-23",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-24",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-25",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-26",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-27",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-28",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-29",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-30",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-31",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-32",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-33",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-34",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "pnl-checklist-account-35",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "ambiguous-source-caption-not-guessed",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-exact-archive-bytes",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-integrity-header",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-complete-json",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "export-attachment",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "private-runs/299509aceca94d719b281053f0daca52/export",
+      "status": "PASS",
+      "detail": null
+    },
+    {
+      "name": "private-runs/299509aceca94d719b281053f0daca52/exceptions/invoice-unposted",
+      "status": "PASS",
+      "detail": null
+    }
+  ],
+  "exportSha256": "14bc45bbe28210119776b2faefc2706b0b33b03c8043106328895dda21e0441b",
+  "exceptionCoverage": "Complete result counts; all columns and values in first, second and final/empty pages for every check. References from separate raw DB reads.",
+  "sourceLastDate": "2026-08-17T00:00:00",
+  "deepChecks": [
+    {
+      "id": "invoice-unposted",
+      "title": "Muhasebeye aktarılmamış faturalar",
+      "status": "finding",
+      "affected": 349,
+      "tested": 81760,
+      "formula": "İptal edilmemiş faturada ACCOUNTED=0. Muhasebeye aktarım gecikmesi veya kapsam farkı incelenir; kayıt dışı satış hükmü değildir.",
+      "detailKind": "invoice",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "invoice-broken-link",
+      "title": "Aktarıldı işaretli faturanın fiş bağlantısı",
+      "status": "passed",
+      "affected": 0,
+      "tested": 81760,
+      "formula": "Aktarıldı işaretli faturanın bağlı muhasebe fişi bulunmalı ve iptal edilmemiş olmalı.",
+      "detailKind": "invoice",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "invoice-date",
+      "title": "Fatura ve muhasebe kayıt tarihleri",
+      "status": "passed",
+      "affected": 0,
+      "tested": 81760,
+      "formula": "Fatura tarihi ile bağlı muhasebe fişi tarihi farklı. Dönemleme ve aktarım açıklaması gerekir.",
+      "detailKind": "invoice",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "invoice-account",
+      "title": "Faturanın muhasebe hesap eşleşmesi",
+      "status": "finding",
+      "affected": 167,
+      "tested": 81760,
+      "formula": "Aktarıldı işaretli faturada müşteri/satıcı muhasebe hesap referansı eksik.",
+      "detailKind": "invoice",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "invoice-ledger-amount",
+      "title": "Fatura tutarı ↔ bağlı muhasebe hesabı",
+      "status": "passed",
+      "affected": 0,
+      "tested": 81241,
+      "formula": "Aynı fiş ve aynı hesap için faturalar önce toplanır, muhasebe net borç−alacak ile karşılaştırılır. Alış/satış iadeleri ters işaretlidir; fark tahmini zarar değildir.",
+      "detailKind": "invoice-match",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "invoice-vat-ledger",
+      "title": "Fatura KDV’si ↔ muhasebe KDV’si",
+      "status": "finding",
+      "affected": 125,
+      "tested": 81408,
+      "formula": "Fiş bazında fatura KDV toplamı, 191+391 net borç−alacak ile karşılaştırılır. İadelerin yönü ters alınır; tevkifat/istisna ve özel hesap kullanımı ayrıca incelenir.",
+      "detailKind": "vat-match",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "invoice-vat-lines",
+      "title": "Fatura başlığı ↔ satır KDV toplamı",
+      "status": "passed",
+      "affected": 0,
+      "tested": 81760,
+      "formula": "Fatura başlığındaki TOTALVAT ile bağlı, iptal edilmemiş stok/hizmet satırlarının VATAMNT toplamı. Satır veya tutar farkı inceleme adayıdır.",
+      "detailKind": "invoice-lines",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "bank-unposted",
+      "title": "Muhasebeye aktarılmamış banka hareketleri",
+      "status": "finding",
+      "affected": 6455,
+      "tested": 17405,
+      "formula": "Logo banka alt modülünde ACCOUNTED=0. Başka modülden gelen yansıma/aktarılma durumu ayrıca incelenir.",
+      "detailKind": "bank",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "bank-broken-link",
+      "title": "Banka hareketinin muhasebe bağlantısı",
+      "status": "passed",
+      "affected": 0,
+      "tested": 17405,
+      "formula": "Fiş referansı veya doğrudan muhasebe satırı üzerinden bağlantı kontrol edilir; doğrudan satıra bağlanan hareketler dışlanmaz.",
+      "detailKind": "bank",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "bank-account",
+      "title": "Banka hareketinin muhasebe hesap kartı",
+      "status": "passed",
+      "affected": 0,
+      "tested": 17405,
+      "formula": "Aktarıldı işaretli banka hareketinin banka muhasebe hesabı kartında karşılığı aranır.",
+      "detailKind": "bank",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "bank-ledger-amount",
+      "title": "Banka alt modülü ↔ muhasebe tutarı",
+      "status": "finding",
+      "affected": 10,
+      "tested": 3216,
+      "formula": "Aktarılmış banka hareketlerinin net tutarı aynı fiş ve banka muhasebe hesabında toplanarak karşılaştırılır. Bağımsız banka ekstresi mutabakatı değildir.",
+      "detailKind": "bank-match",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    },
+    {
+      "id": "cash-negative-day",
+      "title": "Gün sonu negatif kasa bakiyesi",
+      "status": "passed",
+      "affected": 0,
+      "tested": 222,
+      "formula": "Açılış dahil, hesap ve işlem günü bazında birikimli net borç−alacak. Negatif günler ayrı gösterilir; günler üzerindeki bakiyeler risk tutarı olarak toplanmaz.",
+      "detailKind": "cash",
+      "limitation": "Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir."
+    }
+  ],
+  "sourceCoverage": [
+    {
+      "id": "invoices",
+      "title": "Faturalar ve muhasebe bağlantısı",
+      "status": "partial",
+      "records": 81760,
+      "found": "Fatura, cari hesap, muhasebe fişi, aktarım işareti ve tutar bulundu.",
+      "missing": "Asıl belge doğruluğu ve işlem niteliği; açıklama gerektiren tutar farkları.",
+      "why": "Fatura kaydı, teslimin gerçekleştiğini veya vergisel uygunluğu tek başına kanıtlamaz.",
+      "nextStep": "Aktarılmayan faturaları ve tutar farklarını kaynak kayıtlarıyla inceleyin.",
+      "sourceDataset": "invoice"
+    },
+    {
+      "id": "banks",
+      "title": "Banka hareketleri",
+      "status": "partial",
+      "records": 17405,
+      "found": "Logo banka hareketleri ve fiş/doğrudan satır bağlantıları bulundu.",
+      "missing": "Bankanın bağımsız hesap ekstresi ve teyit edilmiş dış mutabakatı.",
+      "why": "Logo içindeki banka kaydı ile bankanın verdiği ekstre aynı kanıt değildir.",
+      "nextStep": "Önce iç muhasebe bağlantılarını inceleyin; dış mutabakat için banka ekstresi gerekir.",
+      "sourceDataset": "bank"
+    },
+    {
+      "id": "tax",
+      "title": "Beyannameler",
+      "status": "missing",
+      "records": 0,
+      "found": "Kaynakta 25 tarihsel beyanname başlığı bulundu; 2026 döneminde 0 kayıt.",
+      "missing": "2026 dönemine ait onaylı beyanname, tahakkuk ve beyanname satır sözlüğü.",
+      "why": "Başka yılın beyannamesiyle bu dönemin KDV veya kurumlar vergisi doğrulanamaz.",
+      "nextStep": "İlgili dönemin onaylı beyanname verisi geldikten sonra muhasebe satırlarıyla karşılaştırılabilir.",
+      "sourceDataset": "taxPeriods"
+    },
+    {
+      "id": "loans",
+      "title": "Krediler ve ödeme planı",
+      "status": "partial",
+      "records": 215,
+      "found": "Kredi kartı, vade, anapara/faiz planı ve bankaya bağlı ödeme satırları bulundu.",
+      "missing": "Sözleşme, faiz gün esası, masraf kapsamı ve bankanın bağımsız ödeme teyidi.",
+      "why": "Plan satırı ve gerçekleşen ödeme ayrı tutulur; ikisini toplamak borcu çift sayar.",
+      "nextStep": "Plan ve ödeme satırlarını para birimiyle ayrı inceleyin.",
+      "sourceDataset": "loanSchedule"
+    },
+    {
+      "id": "cheques",
+      "title": "Çek ve senetler",
+      "status": "partial",
+      "records": 4068,
+      "found": "Kart, vade ve rapor kesimine kadar son durum hareketi bulundu.",
+      "missing": "Özgün senet/çek, hukuki nitelik, teminat ve uygulanabilir reeskont oranı.",
+      "why": "Vadenin geçmiş olması tek başına tahsil edilemeyen alacak anlamına gelmez.",
+      "nextStep": "Durum kodu ve vade ayrı incelenmeli; reeskont için sözleşme ve dönem oranı tamamlanmalı.",
+      "sourceDataset": "chequeStates"
+    },
+    {
+      "id": "stock",
+      "title": "Stok ve sayım dayanakları",
+      "status": "partial",
+      "records": 101693,
+      "found": "Stok fişleri ve kaynak türleri bulundu; rapor kesiminden ileri tarihli kayıtlar ayrıca sayılıyor.",
+      "missing": "İmzalı fiili sayım tutanağı, sayılan miktar ve kabul edilmiş maliyet/fire politikası.",
+      "why": "Stok veya düzeltme fişi, fiziki sayımın yapıldığını ve gerçek miktarı tek başına kanıtlamaz.",
+      "nextStep": "Kaynak fişleriyle sayım tutanağını eşleştirin; ileri tarihli kayıtları ayrı değerlendirin.",
+      "sourceDataset": "stockSlips"
+    },
+    {
+      "id": "ebook",
+      "title": "Elektronik defter dönemleri",
+      "status": "partial",
+      "records": 8,
+      "found": "Defter dönem başlıkları, üretim tarih aralığı ve ham durum kodları bulundu.",
+      "missing": "İmzalı defter/berat dosyası ve GİB kabul kanıtıyla doğrulanmış durum sözlüğü.",
+      "why": "Yerel durum kodu tek başına resmî kabul veya eksiksiz teslim kanıtı değildir.",
+      "nextStep": "Kayıtlı aylarla muhasebe kapsamını karşılaştırın; dosya ve kabul kanıtını ayrıca doğrulayın.",
+      "sourceDataset": "ebookPeriods"
+    },
+    {
+      "id": "exports",
+      "title": "İhracat ve gümrük bilgileri",
+      "status": "partial",
+      "records": 3,
+      "found": "Faturaya bağlı dış ticaret başlıkları ve gümrük belge alanları bulundu.",
+      "missing": "Onaylı gümrük çıkışı, döviz getirme/ödeme teyidi ve işlem bazında istisna koşulları.",
+      "why": "Belge numarası alanının dolu olması gümrükçe onaylandığını göstermez.",
+      "nextStep": "Fatura, gümrük tarihi ve banka transferini onaylı belgelerle eşleştirin.",
+      "sourceDataset": "exportDocuments"
+    },
+    {
+      "id": "attachments",
+      "title": "Belge notları ve ek kayıtlar",
+      "status": "partial",
+      "records": 72007,
+      "found": "İçerik taşıyan depo kayıtları bulundu; adres notları ve tanınan PDF/XML başlangıçları ayrı sayılır.",
+      "missing": "Dosya türü, ilgili işlem, imza/onay ve denetim kanıtı olarak uygunluk.",
+      "why": "Ek sayısını bağımsız banka ekstresi, beyanname veya sayım tutanağı sayısı kabul etmiyoruz.",
+      "nextStep": "Kaynak türleri çözülüp dosya–işlem bağı doğrulandıktan sonra belge kontrollerine dahil edilir.",
+      "sourceDataset": "attachments"
+    }
+  ],
+  "datasets": {
+    "invoice": [
+      {
+        "rows": 81760,
+        "affected0": 349,
+        "affected1": 0,
+        "affected2": 0,
+        "affected3": 167
+      }
+    ],
+    "invoice-match": [
+      {
+        "rows": 81241,
+        "affected0": 0
+      }
+    ],
+    "vat-match": [
+      {
+        "rows": 81408,
+        "affected0": 125
+      }
+    ],
+    "invoice-lines": [
+      {
+        "rows": 81760,
+        "affected0": 0
+      }
+    ],
+    "bank": [
+      {
+        "rows": 17405,
+        "affected0": 6455,
+        "affected1": 0,
+        "affected2": 0
+      }
+    ],
+    "bank-match": [
+      {
+        "rows": 3216,
+        "affected0": 10
+      }
+    ],
+    "cash": [
+      {
+        "rows": 222,
+        "affected0": 0
+      }
+    ],
+    "invoiceTypes": [
+      {
+        "type": 1,
+        "rows": 1394,
+        "unposted": 1
+      },
+      {
+        "type": 2,
+        "rows": 643,
+        "unposted": 16
+      },
+      {
+        "type": 3,
+        "rows": 2353,
+        "unposted": 1
+      },
+      {
+        "type": 4,
+        "rows": 6655,
+        "unposted": 151
+      },
+      {
+        "type": 6,
+        "rows": 51,
+        "unposted": 0
+      },
+      {
+        "type": 7,
+        "rows": 49548,
+        "unposted": 175
+      },
+      {
+        "type": 8,
+        "rows": 21009,
+        "unposted": 5
+      },
+      {
+        "type": 9,
+        "rows": 107,
+        "unposted": 0
+      }
+    ],
+    "taxPeriods": [
+      {
+        "year": 2011,
+        "month": 10,
+        "type": 1,
+        "rows": 1
+      },
+      {
+        "year": 2015,
+        "month": 1,
+        "type": 2,
+        "rows": 1
+      },
+      {
+        "year": 2015,
+        "month": 1,
+        "type": 4,
+        "rows": 1
+      },
+      {
+        "year": 2015,
+        "month": 1,
+        "type": 22,
+        "rows": 2
+      },
+      {
+        "year": 2015,
+        "month": 2,
+        "type": 2,
+        "rows": 1
+      },
+      {
+        "year": 2015,
+        "month": 2,
+        "type": 3,
+        "rows": 1
+      },
+      {
+        "year": 2015,
+        "month": 3,
+        "type": 9,
+        "rows": 1
+      },
+      {
+        "year": 2015,
+        "month": 3,
+        "type": 10,
+        "rows": 2
+      },
+      {
+        "year": 2015,
+        "month": 4,
+        "type": 24,
+        "rows": 1
+      },
+      {
+        "year": 2017,
+        "month": 11,
+        "type": 22,
+        "rows": 1
+      },
+      {
+        "year": 2017,
+        "month": 11,
+        "type": 24,
+        "rows": 1
+      },
+      {
+        "year": 2020,
+        "month": 8,
+        "type": 4,
+        "rows": 1
+      },
+      {
+        "year": 2020,
+        "month": 8,
+        "type": 22,
+        "rows": 2
+      },
+      {
+        "year": 2020,
+        "month": 8,
+        "type": 24,
+        "rows": 2
+      },
+      {
+        "year": 2020,
+        "month": 11,
+        "type": 22,
+        "rows": 1
+      },
+      {
+        "year": 2020,
+        "month": 11,
+        "type": 24,
+        "rows": 1
+      },
+      {
+        "year": 2021,
+        "month": 1,
+        "type": 22,
+        "rows": 1
+      },
+      {
+        "year": 2021,
+        "month": 1,
+        "type": 24,
+        "rows": 1
+      },
+      {
+        "year": 2022,
+        "month": 6,
+        "type": 22,
+        "rows": 1
+      },
+      {
+        "year": 2023,
+        "month": 6,
+        "type": 9,
+        "rows": 1
+      },
+      {
+        "year": 2023,
+        "month": 6,
+        "type": 10,
+        "rows": 1
+      }
+    ],
+    "loanSchedule": [
+      {
+        "type": 0,
+        "currency": 0,
+        "rows": 140,
+        "bankLinked": 0,
+        "missingCredit": 0,
+        "firstDate": "2026-01-09T00:00:00",
+        "lastDate": "2026-12-30T00:00:00",
+        "principal": 71698951.1,
+        "interest": 0.0
+      },
+      {
+        "type": 1,
+        "currency": 0,
+        "rows": 75,
+        "bankLinked": 75,
+        "missingCredit": 0,
+        "firstDate": "2026-01-09T00:00:00",
+        "lastDate": "2026-08-14T00:00:00",
+        "principal": 32499964.52,
+        "interest": 0.0
+      }
+    ],
+    "chequeStates": [
+      {
+        "documentType": 1,
+        "state": 1,
+        "currency": 0,
+        "rows": 68,
+        "dueByCutoff": 0,
+        "amount": 30289524.0
+      },
+      {
+        "documentType": 1,
+        "state": 2,
+        "currency": 0,
+        "rows": 2616,
+        "dueByCutoff": 2411,
+        "amount": 539091801.38
+      },
+      {
+        "documentType": 1,
+        "state": 4,
+        "currency": 0,
+        "rows": 412,
+        "dueByCutoff": 6,
+        "amount": 270714013.0
+      },
+      {
+        "documentType": 1,
+        "state": 6,
+        "currency": 0,
+        "rows": 31,
+        "dueByCutoff": 30,
+        "amount": 23199658.0
+      },
+      {
+        "documentType": 1,
+        "state": 8,
+        "currency": 0,
+        "rows": 658,
+        "dueByCutoff": 658,
+        "amount": 261316993.36
+      },
+      {
+        "documentType": 1,
+        "state": 11,
+        "currency": 0,
+        "rows": 20,
+        "dueByCutoff": 20,
+        "amount": 2517753.0
+      },
+      {
+        "documentType": 2,
+        "state": 1,
+        "currency": 0,
+        "rows": 3,
+        "dueByCutoff": 0,
+        "amount": 500000.0
+      },
+      {
+        "documentType": 2,
+        "state": 2,
+        "currency": 0,
+        "rows": 75,
+        "dueByCutoff": 75,
+        "amount": 1257245.0
+      },
+      {
+        "documentType": 2,
+        "state": 4,
+        "currency": 0,
+        "rows": 29,
+        "dueByCutoff": 1,
+        "amount": 4135000.0
+      },
+      {
+        "documentType": 2,
+        "state": 6,
+        "currency": 0,
+        "rows": 8,
+        "dueByCutoff": 7,
+        "amount": 835000.0
+      },
+      {
+        "documentType": 2,
+        "state": 7,
+        "currency": 0,
+        "rows": 83,
+        "dueByCutoff": 83,
+        "amount": 877714.0
+      },
+      {
+        "documentType": 2,
+        "state": 8,
+        "currency": 0,
+        "rows": 47,
+        "dueByCutoff": 47,
+        "amount": 4735000.0
+      },
+      {
+        "documentType": 3,
+        "state": 8,
+        "currency": 0,
+        "rows": 18,
+        "dueByCutoff": 18,
+        "amount": 9899062.75
+      }
+    ],
+    "stockSlips": [
+      {
+        "type": 1,
+        "rows": 1107,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-08-14T00:00:00"
+      },
+      {
+        "type": 2,
+        "rows": 668,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-08T00:00:00",
+        "lastDate": "2026-08-17T00:00:00"
+      },
+      {
+        "type": 3,
+        "rows": 2332,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-02T00:00:00",
+        "lastDate": "2026-08-14T00:00:00"
+      },
+      {
+        "type": 5,
+        "rows": 3,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-07T00:00:00",
+        "lastDate": "2026-02-01T00:00:00"
+      },
+      {
+        "type": 6,
+        "rows": 23,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-22T00:00:00",
+        "lastDate": "2026-08-11T00:00:00"
+      },
+      {
+        "type": 7,
+        "rows": 64347,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-08-17T00:00:00"
+      },
+      {
+        "type": 8,
+        "rows": 23759,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-04T00:00:00",
+        "lastDate": "2026-08-17T00:00:00"
+      },
+      {
+        "type": 11,
+        "rows": 18,
+        "afterCutoff": 0,
+        "firstDate": "2026-03-19T00:00:00",
+        "lastDate": "2026-06-22T00:00:00"
+      },
+      {
+        "type": 12,
+        "rows": 2716,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-08-17T00:00:00"
+      },
+      {
+        "type": 13,
+        "rows": 3434,
+        "afterCutoff": 78,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-12-18T00:00:00"
+      },
+      {
+        "type": 14,
+        "rows": 60,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-01-01T00:00:00"
+      },
+      {
+        "type": 25,
+        "rows": 3211,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-02T00:00:00",
+        "lastDate": "2026-08-17T00:00:00"
+      },
+      {
+        "type": 50,
+        "rows": 13,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-08-06T00:00:00"
+      },
+      {
+        "type": 51,
+        "rows": 2,
+        "afterCutoff": 0,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-06-30T00:00:00"
+      }
+    ],
+    "ebookPeriods": [
+      {
+        "year": 2026,
+        "month": 1,
+        "type": 0,
+        "state": 6,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-01-31T00:00:00",
+        "journalCount": 11846
+      },
+      {
+        "year": 2026,
+        "month": 1,
+        "type": 1,
+        "state": 6,
+        "firstDate": "2026-01-01T00:00:00",
+        "lastDate": "2026-01-31T00:00:00",
+        "journalCount": 0
+      },
+      {
+        "year": 2026,
+        "month": 2,
+        "type": 0,
+        "state": 6,
+        "firstDate": "2026-02-01T00:00:00",
+        "lastDate": "2026-02-28T00:00:00",
+        "journalCount": 15290
+      },
+      {
+        "year": 2026,
+        "month": 2,
+        "type": 1,
+        "state": 6,
+        "firstDate": "2026-02-01T00:00:00",
+        "lastDate": "2026-02-28T00:00:00",
+        "journalCount": 0
+      },
+      {
+        "year": 2026,
+        "month": 3,
+        "type": 0,
+        "state": 6,
+        "firstDate": "2026-03-01T00:00:00",
+        "lastDate": "2026-03-31T00:00:00",
+        "journalCount": 11979
+      },
+      {
+        "year": 2026,
+        "month": 3,
+        "type": 1,
+        "state": 6,
+        "firstDate": "2026-03-01T00:00:00",
+        "lastDate": "2026-03-31T00:00:00",
+        "journalCount": 0
+      },
+      {
+        "year": 2026,
+        "month": 4,
+        "type": 0,
+        "state": 6,
+        "firstDate": "2026-04-01T00:00:00",
+        "lastDate": "2026-04-30T00:00:00",
+        "journalCount": 13057
+      },
+      {
+        "year": 2026,
+        "month": 4,
+        "type": 1,
+        "state": 6,
+        "firstDate": "2026-04-01T00:00:00",
+        "lastDate": "2026-04-30T00:00:00",
+        "journalCount": 0
+      }
+    ],
+    "exportDocuments": [
+      {
+        "rows": 3,
+        "missingCustomsNumber": 1,
+        "missingCustomsDate": 0
+      }
+    ],
+    "attachments": [
+      {
+        "type": 5,
+        "documentType": 3,
+        "rows": 48596,
+        "withPayload": 48596,
+        "addressNotes": 48596,
+        "pdfSignatures": 0,
+        "xmlSignatures": 0
+      },
+      {
+        "type": 6,
+        "documentType": 3,
+        "rows": 23411,
+        "withPayload": 23411,
+        "addressNotes": 0,
+        "pdfSignatures": 0,
+        "xmlSignatures": 0
+      }
+    ]
+  },
+  "coverageCounts": {
+    "calculated": 17,
+    "unverified": 25,
+    "needs_evidence": 596,
+    "not_due": 6,
+    "finding": 3,
+    "observed": 2
+  },
+  "dbMs": 26613,
+  "deepDbMs": 10568,
+  "rulesRevision": "1ddc788e9f3cb2655f931a1be1ccad340df28049645099d50dc27794a8248c71",
+  "hashes": {
+    "backend/semantic_bridge/financial_audit.py": "4a03f5025475c26b0a2584592f397b05e3b6cf6cbfc5a73e75ba3ffe40447409",
+    "backend/semantic_bridge/financial_audit_deep.py": "1c8ff7761c6651318836c3024ab3909998a647fb81a4c964b0183ab612a33a82",
+    "backend/semantic_bridge/financial_audit_rules.py": "2c9bbc8fbb0f23bbc655d261471292fc2d3727be6ba149cae2c7da683cbeb463",
+    "src/canvas/financial-audit/FinancialAudit.tsx": "8ef6d306b5186c13ff38f07847dee4f4c9460a5176df5a303714085f6791018f",
+    "src/canvas/financial-audit/DeepAuditPanel.tsx": "78510c1e16d2d73d423f263c0fee53e84a653ed096cd6e0ed08f1cbc8d271f80",
+    "src/canvas/financial-audit/audit.css": "325fab6cdc058f5d40ffa5bb757f0dd4818b9156411f7651ea5a63d3e6ffb303"
+  }
+}

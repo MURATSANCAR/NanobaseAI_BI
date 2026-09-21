@@ -140,8 +140,20 @@ def pair_results(record):
             for i,(key,(p,side,other,other_side)) in enumerate(PAIRS.items())}
 
 
+# Source p236–238 contains individual P&L accounts, not 35 checks of account 690.
+# Item 26 repeats a revenue caption inside expenses; do not silently guess 654.
+PNL_CHECKLIST_ACCOUNTS = dict(zip(range(1,36), [
+    '600','601','602','640','641','642','643','644','645','646','647','649','671','649',
+    '610','611','612','620','621','622','623','630','631','632','653',None,'655','656',
+    '657','659','660','661','680','681','689']))
+
+
 def scope(item):
     n = item['note']
+    if item['kind']=='checklist' and item['section'].startswith('15.13.47'):
+        number=int(item['id'].split('-')[2])
+        account=PNL_CHECKLIST_ACCOUNTS.get(number)
+        return [account] if account else []
     if item['kind'] == 'analysis':
         return RATIO_ACCOUNTS.get(n, [])
     if item['id'] in OVERRIDES:
@@ -371,6 +383,9 @@ def evaluate(out, extra):
                 components.extend({'id':f"vat-{m['month']}",'title':f"{m['month']}. ay KDV muhasebe bakiyesi",'status':'observed',
                     'balance':m['balance'],'formula':'Ay sonuna kadar birikimli 191+391 net bakiyesi; hesaplar ayrıca gösterilir. Beyanname kapanış onayı yerine geçmez.',
                     'accounts':m['accounts']} for m in out.get('vatMonths',[]))
+        if item['id']=='item-237-26-1':
+            reason='Kaynak, giderler arasında gelir hesabının adını tekrar ediyor. Hangi hesabın kastedildiği doğrulanamadığı için otomatik hesap eşlemesi yapılmadı.'
+            status='unverified'
         observations.append({'id':item['id'],'note':n,'kind':item['kind'],'title':item['title'],
             'page':item['page'],'endPage':item['endPage'],'status':status,'reason':reason,
             'accountPrefixes':prefixes,'accountRefs':[a['accountRef'] for a in chosen],

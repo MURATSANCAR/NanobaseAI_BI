@@ -109,12 +109,15 @@ def bank_match_base(year,as_of):
     start,end=bounds(year,as_of)
     return f"""SELECT B.slipRef,B.accountRef,A.CODE AS accountCode,B.sourceCount,B.expected,L.actual,
       B.expected-COALESCE(L.actual,0) AS difference,F.DATE_ AS date,F.FICHENO AS documentNo
-      FROM (SELECT S.slipRef,S.accountRef,COUNT(*) AS sourceCount,
-      SUM(CASE WHEN S.direction=0 THEN S.amount ELSE -S.amount END) AS expected
-      FROM ({bank_base(year,as_of)}) S WHERE S.posted=1 AND S.foundSlip IS NOT NULL AND S.cancelledSlip=0
-      AND S.foundAccount IS NOT NULL AND S.direction IN (0,1)
-      GROUP BY S.slipRef,S.accountRef) B
-      JOIN dbo.LG_411_01_EMFICHE F ON F.LOGICALREF=B.slipRef
+      FROM (SELECT COALESCE(NULLIF(N.ACCFICHEREF,0),E.ACCFICHEREF) AS slipRef,N.BNACCOUNTREF AS accountRef,
+      COUNT(*) AS sourceCount,SUM(CASE WHEN N.SIGN=0 THEN CAST(N.AMOUNT AS decimal(28,4))
+        ELSE -CAST(N.AMOUNT AS decimal(28,4)) END) AS expected
+      FROM dbo.LG_411_01_BNFLINE N LEFT JOIN dbo.LG_411_01_EMFLINE E
+        ON E.LOGICALREF=N.EMFLINEREF AND (N.ACCFICHEREF=0 OR N.ACCFICHEREF IS NULL)
+      WHERE N.CANCELLED=0 AND N.ACCOUNTED=1 AND N.SIGN IN (0,1)
+        AND N.DATE_>={start} AND N.DATE_<{end}
+      GROUP BY COALESCE(NULLIF(N.ACCFICHEREF,0),E.ACCFICHEREF),N.BNACCOUNTREF) B
+      JOIN dbo.LG_411_01_EMFICHE F ON F.LOGICALREF=B.slipRef AND F.CANCELLED=0
       JOIN dbo.LG_411_EMUHACC A ON A.LOGICALREF=B.accountRef
       LEFT JOIN (SELECT M.ACCFICHEREF,M.ACCOUNTREF,
       SUM(CAST(M.DEBIT AS decimal(28,4))-CAST(M.CREDIT AS decimal(28,4))) AS actual
@@ -244,7 +247,9 @@ def read_deep(query, year, as_of):
         return sum(int(r.get('rows') or 0) for r in results.get(key,[]))
     def card(key,title,found,usable,missing,why,next_step,source_key):
         return {'id':key,'title':title,'status':'unavailable' if source_key in errors else 'partial' if found else 'missing',
-            'records':found if source_key not in errors else None,'found':usable,'missing':missing,'why':why,
+            'records':found if source_key not in errors else None,
+            'found':('Kaynak sorgusu tamamlanamadı; kayıt varlığı doğrulanamadı.' if source_key in errors else usable if found or key=='tax' else 'Taranan tablolarda bu rapor kapsamına uyan kayıt bulunmadı.'),
+            'missing':missing,'why':why,
             'nextStep':next_step,'sourceDataset':source_key}
     current_tax=sum(int(r['rows']) for r in results['taxPeriods'] if r['year']==year)
     cards=[
@@ -298,7 +303,8 @@ def read_deep(query, year, as_of):
         'errors':errors,'status':'unverified' if errors else 'observed','sql':sqls,'dbMs':elapsed,
         'limitations':['Tarama tek şirketin doğrulanmış 2026 kopyasındadır; diğer yılların yedekleri birleştirilmez.',
             'Hareket kontrolleri muhasebenin son veri tarihine kadar çalışır; kredi planı 2026 vadelerini ayrıca gösterir.',
-            'Beyanname başlıkları ve belge ekleri bulunması, içeriklerinin bu döneme ait onaylı dış kanıt olduğunu göstermez.']}
+            'Beyanname başlıkları ve belge ekleri bulunması, içeriklerinin bu döneme ait onaylı dış kanıt olduğunu göstermez.',
+            'Aynı günün çek/senet hareketleri kaynak kayıt numarasına göre sıralanır; hukuki durum veya kesin işlem sırası kabulü değildir.']}
 
 
 def exception_sql(check_id,year,as_of,page):

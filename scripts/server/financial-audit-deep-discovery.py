@@ -83,7 +83,9 @@ for key,sql in queries.items():
     except Exception as exc:
         out[key]={'error':str(exc)}
         print(key,type(exc).__name__,str(exc),flush=True)
-Path('/tmp/financial-audit-deep-discovery.json').write_text(json.dumps(out,ensure_ascii=False,default=str,indent=2))
+artifact=Path('/tmp/financial-audit-deep-discovery.json')
+artifact.touch(mode=0o600);artifact.chmod(0o600)
+artifact.write_text(json.dumps(out,ensure_ascii=False,default=str,indent=2))
 for table in out.get('tables',{}).get('records',[]):
     if any(k in table['tableName'] for k in ['BN','BANK','RECON','DECLAR','BEYAN','MUTAB','STFICHE','COUNT','FAYEAR','CSCARD','CSTRANS','CLFLINE','EBOOK','INVOICE']):
         print(json.dumps(table),flush=True)

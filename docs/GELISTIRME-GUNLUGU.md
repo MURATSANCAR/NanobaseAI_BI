@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim: Logo derin kaynak taraması ve eksik dayanak ekranı
+
+- Kullanıcı, dış dosya yolu yerine Logo DB içinde derin arama ve bulunamayanların açıklanmasını istedi. 12 ek karşılaştırma, 9 kaynak kartı, bulunan/eksik/neden/sonraki işlem alanları ve gerçek aday satırlarına 50'li sayfalama eklendi.
+- 81.760 fatura, 17.405 banka hareketi; fatura aktarım/hesap/KDV adayları 349/167/125; banka aktarım/tutar adayları 6.455/10. 98 doğrudan muhasebe satırı bağlantısı korunur. Alt modül tutarları JOIN öncesi fiş/hesap bazında toplanır; yavaş banka sorgusu daraltıldı. Farklar hata/ceza veya toplam zarar sayılmaz.
+- 2026 beyannamesi yok; 25 eski başlık var. Kredi planı/ödeme ve para birimleri ayrı, ileri tarihli stoklar ayrı, çek/senet durumları ham kodlarla açıklanır. 72.007 depo kaydı belge kabul edilmez; 48.596 adres notu başlangıcı var. Dış mutabakat/fiili sayım/onaylı belge eksikleri ekranda kalır.
+- PDF s236–238 gelir/gider inceleme listesi maddeleri 690 yerine ilgili hesaplara bağlandı. Kaynağın 26. maddesindeki çelişki tahminle kapatılmadı; unverified ve hesap eşleşmesi boş. 649 çalışma kaydı 649 tamamlanmış kontrol değildir.
+- Yerel test yok. nanobase-direct → gerçek API → gerçek Logo DB bağımsız referans: **109/109 yeni + 144/144 temel = 253/253 teknik kontrol PASS**. Her 10'luk grup kayıtlı. 12 kontrolün tam sayıları, ilk/ikinci/son sayfaların tüm kolon/değerleri, kaynak profilleri, 35 hesap eşlemesi ve auth/export dahil. Kanıtlar `docs/audits/financial-audit-2026-09-21/`.
+- Yeni oturum korumalı export değişmez arşiv byte dizisini ve SHA-256 başlığını verir; gerçek HTTP bütünlüğü geçti. Tarayıcı indirme olayı teyit edilemedi: işletim sistemi dosya tamamlanması DOĞRULANAMADI. Oturumlu portalda 320/390/768/1440 yeni kaynak kartları ve detay tablosu taşmasız; gerçek sayfalama ayrıca doğrulandı. Müşteri VM'ine kurulmadı.
+
 ## 2026-09-21 — Editor: gerçek yeni nesilde çıktı kabulü ve Critic geri bildirimi
 
 - Kullanıcı VPN'i açtıktan sonra tek gerçek kitap için ayrı `editor-output-acceptance-20260921` kuyruğu açıldı. Genel worker/MCP/Hermes kapalı; yedek `/data/editor/backups/20260921-live-outputs/before.dump`.
