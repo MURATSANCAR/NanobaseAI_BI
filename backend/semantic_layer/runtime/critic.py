@@ -553,6 +553,18 @@ def review(sql: str, profiles: list[SchemaProfile], dialect: str = "tsql",
             if distinct:
                 continue                       # COUNT(DISTINCT x) / SUM(DISTINCT x) survive a fan-out
             cols = list(inner.find_all(exp.Column)) if isinstance(inner, exp.Expression) else []
+            # Only the columns whose values are summed can be inflated. A column tested in a CASE's WHEN
+            # is a condition: SUM(CASE WHEN CLCARD.CODE LIKE '120%' THEN CLFLINE.AMOUNT END) sums the
+            # movement's own amount and only *reads* the card to decide — the card side of a many-to-one
+            # join is repeated, but nothing of it is added. Counted as summed, every scoped measure over a
+            # lookup ('tahsilat' of customer accounts only) was refused as inflated. Same rule as the
+            # NON_NUMERIC check below.
+            tested_ids = {id(col) for pred in (inner.find_all(exp.Predicate) if isinstance(inner, exp.Expression) else [])
+                          for col in pred.find_all(exp.Column)}
+            valued = [c for c in cols if id(c) not in tested_ids]
+            if cols and not valued:
+                valued = cols      # nothing but conditions (COUNT(CASE WHEN … THEN 1 END)): judge as before
+            cols = valued
             if isinstance(agg, _INFLATABLE) or (isinstance(agg, exp.Count) and not cols):
                 # COUNT(*) has no column: inflated whenever any table in the SELECT is repeated.
                 hit = [c for c in cols if (c.table or "").upper() in repeated] if cols else \
