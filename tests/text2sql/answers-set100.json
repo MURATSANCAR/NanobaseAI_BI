@@ -441,7 +441,7 @@
    "expect": "answer",
    "verified": true,
    "source": "logo",
-   "reference_sql": "SELECT SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) THEN AMOUNT ELSE 0 END) AS satilan_adet, SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END) AS uretilen_adet, CAST(SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) THEN AMOUNT ELSE 0 END) AS FLOAT)/NULLIF(SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END),0) AS oran FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (7,8,9,13) AND DATE_>=DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())-2,0) AND DATE_<DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())+1,0)",
+   "reference_sql": "SELECT SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) AND INVOICEREF <> 0 THEN AMOUNT ELSE 0 END) AS satilan_adet, SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END) AS uretilen_adet, CAST(SUM(CASE WHEN TRCODE IN (7,8,9) AND IOCODE IN (3,4) AND INVOICEREF <> 0 THEN AMOUNT ELSE 0 END) AS FLOAT)/NULLIF(SUM(CASE WHEN TRCODE=13 AND IOCODE=1 THEN AMOUNT ELSE 0 END),0) AS oran FROM LG_411_01_STLINE WHERE CANCELLED=0 AND LINETYPE=0 AND TRCODE IN (7,8,9,13) AND DATE_>=DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())-2,0) AND DATE_<DATEADD(MONTH,DATEDIFF(MONTH,0,GETDATE())+1,0)",
    "checks": [
     {
      "kind": "value",
@@ -475,7 +475,7 @@
      "tolerance": 0
     }
    ],
-   "note": "2026-09-18: satılan 1.620.882 / üretilen 3.375.200 = 0,4802. Köprü birebir aynı. Tanım: satılan adet = satış faturası satırları TRCODE 7,8,9 (IOCODE 3,4), üretilen adet = üretimden giriş TRCODE 13 IOCODE 1 (Kural 9, 20); LINETYPE 0, CANCELLED 0. 'Son üç ay' = içinde bulunulan ayla biten üç takvim ayı (Temmuz–Eylül; temporal.py kuralı, günlük soru 15); kayan 90 gün okunursa 1.850.079 / 4.028.065 = 0,459 — dönem kuralı değişirse referans da değişmeli. İade (109.670 adet) düşülmez. Veri notu: 2026 kopyasında satış 17.08.2026'da bitiyor, üretim girişi sürüyor; oran bu yüzden düşük. Cevap yüzde (48,02) dönerse oran kontrolü birim yüzünden düşer. 2026 kopyası yeter: dönem tümüyle 2026."
+   "note": "2026-09-21: satış = faturalı satır (INVOICEREF ≠ 0) kararı referansa işlendi — tanım zaten 'satış faturası satırları' diyordu, SQL faturası kesilmemiş irsaliye satırlarını da sayıyordu. 2026-09-18: satılan 1.620.882 / üretilen 3.375.200 = 0,4802. Köprü birebir aynı. Tanım: satılan adet = satış faturası satırları TRCODE 7,8,9 (IOCODE 3,4), üretilen adet = üretimden giriş TRCODE 13 IOCODE 1 (Kural 9, 20); LINETYPE 0, CANCELLED 0. 'Son üç ay' = içinde bulunulan ayla biten üç takvim ayı (Temmuz–Eylül; temporal.py kuralı, günlük soru 15); kayan 90 gün okunursa 1.850.079 / 4.028.065 = 0,459 — dönem kuralı değişirse referans da değişmeli. İade (109.670 adet) düşülmez. Veri notu: 2026 kopyasında satış 17.08.2026'da bitiyor, üretim girişi sürüyor; oran bu yüzden düşük. Cevap yüzde (48,02) dönerse oran kontrolü birim yüzünden düşer. 2026 kopyası yeter: dönem tümüyle 2026."
   },
   {
    "n": 16,

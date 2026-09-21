@@ -69,3 +69,7 @@ for s in ["satış satırı", "satış kalemi sayısı", "fatura satırı sayıs
 note(c.id, "satış satırı sayısı = faturalı satış malzeme satırı adedi (arşiv P100 tanımı)")
 eng.human_certify(c.id, WHO, reason="arşiv P100 satır sayısı tanımı, bağımsız referansla ölçülecek")
 print("YAZILDI; yeni kavram", c.id, st.get_concept(c.id).status, "| payı eş:", st.get_concept(payi).synonyms)
+
+# Not (aynı gün, ikinci geçiş): 'satış satırı sayısı' kavramı (sem_c5f321293a34) önceden vardı; upsert_concept var olan
+# eşlemeyi korudu, yukarıdaki koşullar yazılmadı. Eşleme ayrıca replace_mappings ile değiştirildi: LINETYPE = (0),
+# CANCELLED = (0), TRCODE IN (7,8), INVOICEREF NOT IN (0); definition_source korundu.
