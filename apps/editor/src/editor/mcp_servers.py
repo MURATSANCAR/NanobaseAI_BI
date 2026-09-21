@@ -376,6 +376,13 @@ async def get_book_status(book_id: str) -> dict:
 
 
 @chat_mcp.tool()
+async def get_book_summary(generation_id: Gen) -> dict:
+    """Tam güncel özet ve sayfa atıfları. Özet sorularında bunu kullan; bölümün ilk sayfasını
+    kitabın tamamı sanma. summary_complete yalnız özet kapsamıdır, kitabın analitik kabulü değildir."""
+    return await _t(chat_reads.summary, generation_id)
+
+
+@chat_mcp.tool()
 async def read_book_section(generation_id: Gen, section: str = "summary",
                             offset: Offset = 0, limit: Limit = 8) -> dict:
     """Güncel taslak bölümü: summary, characters, events, emotions, claims, reviews,

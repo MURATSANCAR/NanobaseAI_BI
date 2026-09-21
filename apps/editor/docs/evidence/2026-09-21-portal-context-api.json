@@ -1,0 +1,103 @@
+{
+  "environment": "nanobase-cm real portal + Hermes GPU relay + PostgreSQL",
+  "revision": "474cb2d9",
+  "api": "https://portal.nanobase.ai/timas/api/v1/editorial/ask",
+  "checks": [
+    {
+      "name": "first-real-answer",
+      "passed": true
+    },
+    {
+      "name": "followup-real-answer",
+      "passed": true
+    },
+    {
+      "name": "followup-remembers-both-names",
+      "passed": true
+    },
+    {
+      "name": "persisted-parent-chain",
+      "passed": true
+    },
+    {
+      "name": "same-user-tenant-book",
+      "passed": true
+    },
+    {
+      "name": "wire-answers-equal-independent-db",
+      "passed": true
+    },
+    {
+      "name": "cross-book-parent-rejected",
+      "passed": true
+    },
+    {
+      "name": "unauthenticated-read-rejected",
+      "passed": true
+    }
+  ],
+  "answers": [
+    {
+      "id": "56ee347ea3cd4a13b1907a25611bf3a9",
+      "bookKey": "",
+      "bookTitle": "Dünyanın En Korkak Hayvanı",
+      "question": "Yavru Vombat ile Baba Vombat aynı karakter mi? Kaynaktan kısa açıklama yap.",
+      "status": "bitti",
+      "answer": "Hayır, aynı karakter değiller; Baba Vombat, Yavru Vombat'ın babası olarak kitapta ayrı bir karakter. Kayıtta \"Baba Vombat (diğer adlar: Baba, Babası): Yavru Vombat'ın babası. Oğlunun meraklı hâllerini sever\" diye tanımlanıyor (s. 6, 13). Kitap metninde de Baba Vombat'ın \"Yavru Vombat'ın bu meraklı hâllerini çok seviyordu\" diye anlatılması (s. 6) ikisinin ayrı bireyler olduğunu gösteriyor.\n\nNot: Bu bilgiler kaynaklı taslaktan geliyor; analitik inceleme henüz tamamlanmadı.",
+      "notFound": false,
+      "cards": [],
+      "cardError": null,
+      "cardMatch": null,
+      "error": null,
+      "elapsedMs": 119302,
+      "username": "timasai",
+      "createdAt": "2026-09-21T15:20:46.546982+00:00",
+      "finishedAt": "2026-09-21T15:22:47.201856+00:00"
+    },
+    {
+      "id": "3d9830f549b744eb95ea05e7e5c4e02a",
+      "bookKey": "",
+      "bookTitle": "Dünyanın En Korkak Hayvanı",
+      "question": "Az önce hangi iki karakteri karşılaştırmanı istedim? Yalnız adlarını söyle.",
+      "status": "bitti",
+      "answer": "Yavru Vombat ve Baba Vombat.",
+      "notFound": false,
+      "cards": [],
+      "cardError": null,
+      "cardMatch": null,
+      "error": null,
+      "elapsedMs": 2841,
+      "username": "timasai",
+      "createdAt": "2026-09-21T15:22:48.010275+00:00",
+      "finishedAt": "2026-09-21T15:22:50.896146+00:00"
+    }
+  ],
+  "reference": [
+    {
+      "id": "56ee347ea3cd4a13b1907a25611bf3a9",
+      "parent_id": null,
+      "username": "timasai",
+      "tenant_id": "default",
+      "book_title": "Dünyanın En Korkak Hayvanı",
+      "question": "Yavru Vombat ile Baba Vombat aynı karakter mi? Kaynaktan kısa açıklama yap.",
+      "answer": "Hayır, aynı karakter değiller; Baba Vombat, Yavru Vombat'ın babası olarak kitapta ayrı bir karakter. Kayıtta \"Baba Vombat (diğer adlar: Baba, Babası): Yavru Vombat'ın babası. Oğlunun meraklı hâllerini sever\" diye tanımlanıyor (s. 6, 13). Kitap metninde de Baba Vombat'ın \"Yavru Vombat'ın bu meraklı hâllerini çok seviyordu\" diye anlatılması (s. 6) ikisinin ayrı bireyler olduğunu gösteriyor.\n\nNot: Bu bilgiler kaynaklı taslaktan geliyor; analitik inceleme henüz tamamlanmadı.",
+      "status": "bitti"
+    },
+    {
+      "id": "3d9830f549b744eb95ea05e7e5c4e02a",
+      "parent_id": "56ee347ea3cd4a13b1907a25611bf3a9",
+      "username": "timasai",
+      "tenant_id": "default",
+      "book_title": "Dünyanın En Korkak Hayvanı",
+      "question": "Az önce hangi iki karakteri karşılaştırmanı istedim? Yalnız adlarını söyle.",
+      "answer": "Yavru Vombat ve Baba Vombat.",
+      "status": "bitti"
+    }
+  ],
+  "hashes": {
+    "backend/semantic_bridge/app.py": "91641748ca8c1b51a1fa2cd845762ac2c7b74f9f6b42bee00746848106828dba",
+    "backend/semantic_bridge/editorial_books.py": "2a919f11649a85366ccf43d7e09072f5ff73cdee643470ba0e955a89fc270d5f",
+    "src/canvas/editorial/AskBox.tsx": "7cd3530f89c96c1cfcbd77bbd36f9d26a35d4c59b50525118ae3ba6679692598",
+    "src/canvas/engine.ts": "89279a7925c75409446a1dc31ebae50c7d9a9c0757c57adec4832c13747ccc41"
+  }
+}

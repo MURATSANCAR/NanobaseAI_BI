@@ -171,6 +171,7 @@ def create_page_manifest(book_version_id: str) -> dict:
 
 def _page_lines(page: pymupdf.Page) -> list[dict]:
     lines = []
+    seen = set()
     for b in page.get_text("dict", sort=True)["blocks"]:
         for ln in b.get("lines", []):
             # alpha 0 = invisible text (overset frames behind artwork): not on the page
@@ -178,8 +179,40 @@ def _page_lines(page: pymupdf.Page) -> list[dict]:
             if not spans:
                 continue
             text = re.sub(r"\s+", " ", "".join(s["text"] for s in spans)).strip()
+            # Overprinted glyphs can produce two identical lines at exactly the
+            # same coordinates. Preserve repeated prose elsewhere on the page.
+            identity = (text, tuple(ln['bbox']))
+            if identity in seen:
+                continue
+            seen.add(identity)
             lines.append({"text": text, "x0": ln["bbox"][0], "y0": ln["bbox"][1], "x1": ln["bbox"][2],
                           "y1": ln["bbox"][3], "size": max(s["size"] for s in spans)})
+    # Label/value tables (credits, contact details): slightly different font
+    # baselines must not interleave the next row's name with the current role.
+    # Require a recurring pair of columns, not arbitrary multi-column prose.
+    pairs = []
+    for i, left in enumerate(lines):
+        if len(left['text']) > 35 or left['x1']-left['x0'] > page.rect.width*.3:
+            continue
+        for j, right in enumerate(lines):
+            if i == j or right['x0'] < left['x1'] or right['x0']-left['x1'] > page.rect.width*.15:
+                continue
+            overlap = min(left['y1'],right['y1'])-max(left['y0'],right['y0'])
+            if overlap >= .8*min(left['y1']-left['y0'],right['y1']-right['y0']):
+                pairs.append((i,j))
+    consumed, merged = set(), []
+    for i,j in pairs:
+        left,right = lines[i],lines[j]
+        peers = [(a,b) for a,b in pairs if abs(lines[a]['x0']-left['x0'])<1
+                 and abs(lines[b]['x0']-right['x0'])<1]
+        if len(peers)<3 or i in consumed or j in consumed:
+            continue
+        consumed.update((i,j))
+        merged.append({'text':left['text']+' '+right['text'], 'x0':left['x0'],
+            'x1':right['x1'],'y0':min(left['y0'],right['y0']),
+            'y1':max(left['y1'],right['y1']),'size':max(left['size'],right['size'])})
+    lines = [line for i,line in enumerate(lines) if i not in consumed]+merged
+    lines.sort(key=lambda line:(line['y0'],line['x0']))
     return lines
 
 

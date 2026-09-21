@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor gerçek sohbet kabulü, portal bağlamı ve erişim engeli
+
+- GPU d596f3c5 altı salt okunur MCP aracı 317 gerçek DB/snapshot kontrolü geçti. On gerçek Hermes yanıtı alındı; özetin sonu, güncel çıktı durumu, görsel kapsam ve yanlış kitap adı sorunları nedeniyle semantik kabul verilmedi. Tam özet/durum/kapsam düzeltmeleri ve PDF geometri onarımı hazır; henüz GPU’da sınanmadı.
+- CPU portal 474cb2d9 kuruldu; gerçek portal + bağımsız PostgreSQL ile 8/8 konuşma kontrolü geçti. 320/390/768/1440 gerçek oturumlu tarayıcıda taşma yok. Yerel test yok.
+- TT VPN düştü; GPU yönetimi için kullanıcı OTP oturumu gerekiyor. Hermes/kart ters API tünelleri çalışıyor. Son GPU bakım false, genel işçiler kapalı; erişim kaybından sonra bakım açıldı iddiası yok. Kalıcı localhost yönetim tüneli taslağı hazırlanıp kurulmadı.
+- Kaynak/kimlik ve son sürümle tam nesil kabulü açık. Kanıt ve devam sırası apps/editor/docs/PRODUCTION-READINESS.md. Üretim onayı yok.
+
 ## 2026-09-21 — Editor portal konuşma bağlamı
 
 - Takip soruları yalnız aynı kullanıcı, tenant ve kitaba ait tamamlanmış son sekiz turu taşır. Her Hermes isteği ayrı oturum kilidi kullanır; bağlamsal sorular tek-soru sınıflandırıcısına takılmaz. Bekleyen yanıt sırasında yeni gönderim engellenir.

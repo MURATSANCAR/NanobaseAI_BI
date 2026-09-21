@@ -44,8 +44,17 @@ def status(book_id):
         row = c.execute('SELECT job_id FROM ed.generation WHERE id=%s', (gid,)).fetchone()
         job = c.execute('SELECT status,step,error FROM ed.analysis_job WHERE id=%s',
                         (row['job_id'],)).fetchone()
+        state = c.execute('SELECT knowledge_revision,validated_revision,semantic_status,publication_status '
+                          'FROM ed.generation_state WHERE generation_id=%s',(gid,)).fetchone()
+        ready = [r['kind'] for r in c.execute('SELECT kind FROM ed.current_artifact WHERE generation_id=%s', (gid,))]
+        expected = {'chapter_summaries','book_summary','search_index','report','catalog'}
         return {**read_model.metadata(selected), 'book_id': book_id,
-                'job_id': str(row['job_id']), 'job': job,
+                'job_id': str(row['job_id']), 'historical_analysis_job': job,
+                'current_outputs': {'ready':ready, 'validation_complete':state['validated_revision']==state['knowledge_revision'],
+                    'technical_status':'READY' if expected.issubset(ready) else 'INCOMPLETE',
+                    'analytical_status':state['semantic_status'], 'publication_status':state['publication_status']},
+                'instruction':'Eski iş FAILED olsa bile güncel çıktılar yeniden üretilmiş ve doğrulanmış olabilir. '
+                    'Teknik doğrulamanın tamamlanması ile analitik/yayın onayını ayrı anlat.',
                 'maintenance': c.execute('SELECT maintenance FROM ed.runtime_control WHERE singleton').fetchone()['maintenance']}
 
 
@@ -64,6 +73,27 @@ def section(gid, section='summary', offset=0, limit=8):
         return {**read_model.metadata(selected), 'section': section, **page(rows, offset, limit)}
 
 
+def summary(gid):
+    """The entire verified summary, without heavy evidence-ID duplication.
+
+    A partial page of sentences must never masquerade as the whole plot.
+    The detailed section/source tools retain full provenance for drill-down.
+    """
+    with foundation.read_snapshot() as c:
+        selected = read_model.artifact(c, gid, 'book_summary')
+        row = selected['artifact']
+        if row is None: return read_model.metadata(selected)
+        sentences = [{'text':s['text'], 'pages':s['pages']}
+                     for s in row['content']['sentences']]
+        result = {**read_model.metadata(selected), 'sentences':sentences,
+                  'total':len(sentences), 'summary_complete':True,
+                  'instruction':'Özetlerken yalnız ilk olayları seçme; son gelişmeyi de koru.'}
+        if len(json.dumps(result,ensure_ascii=False,default=str)) > 32000:
+            return {**read_model.metadata(selected), 'available':False,
+                    'reason':'SUMMARY_EXCEEDS_CHAT_BUDGET', 'summary_complete':False}
+        return result
+
+
 def source_page(gid, page_no, offset=0, limit=8):
     with foundation.read_snapshot() as c:
         selected, snap = read_model.snapshot(c, gid)
@@ -78,7 +108,10 @@ def source_page(gid, page_no, offset=0, limit=8):
                     'end': s['start'] + min(start + 1600, len(s['text'])),
                     'text': s['text'][start:start+1600], 'source_sha256': s['source_sha256']})
         return {**read_model.metadata(selected), 'page_no': page_no,
-                'issues': p['issues'], 'page_role': p['page_role'], **page(rows, offset, limit)}
+                'issues': p['issues'], 'page_role': p['page_role'],
+                'scope':'TEXT_SOURCE_ONLY', 'visual_records_included':False,
+                'instruction':'Bu araç yalnız metin kaynaklarını gösterir; görsel kayıtlar hakkında yokluk sonucu çıkarma.',
+                **page(rows, offset, limit)}
 
 
 def find(gid, query, offset=0, limit=8):
