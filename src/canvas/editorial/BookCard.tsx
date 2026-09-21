@@ -6,7 +6,7 @@ export default function BookCard({ card, onAsk }: { card: Card; onAsk: () => voi
   const [failed, setFailed] = useState(false);
   return (
     <article aria-label={card.title} className="my-3 min-w-0 rounded-2xl border border-slate-200 bg-white p-3 sm:p-4">
-      <div className="flex items-start gap-3 sm:gap-4">
+      <div className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
         <div className="flex w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 sm:w-28">
           {card.cover && !failed ? (
             <img src={`${ENGINE_BASE}/api/v1/editorial/ask/covers/${encodeURIComponent(card.id)}`}

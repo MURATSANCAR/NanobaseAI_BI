@@ -100,9 +100,9 @@ function UserBubble({ text, meta }: { text: string; meta?: string }) {
 function AiBubble({ children, meta }: { children: ReactNode; meta?: string }) {
   return (
     <div className="zk-msg flex items-end gap-2.5">
-      <Orb />
-      <div className="min-w-0 max-w-[88%] sm:max-w-[80%]">
-        <div className="rounded-[20px] rounded-bl-md border border-white/80 bg-white/90 px-4 py-3 text-[14px] leading-relaxed text-canvas-ink shadow-[0_8px_30px_-14px_rgba(20,30,60,.25)] backdrop-blur">
+      <span className="hidden sm:contents"><Orb /></span>
+      <div className="min-w-0 w-full sm:w-auto sm:max-w-[80%]">
+        <div className="rounded-[20px] rounded-bl-md border border-white/80 bg-white/90 px-2 py-3 text-[14px] leading-relaxed text-canvas-ink shadow-[0_8px_30px_-14px_rgba(20,30,60,.25)] backdrop-blur sm:px-4">
           {children}
         </div>
         {meta && <div className="mt-1 pl-1 text-[10.5px] text-canvas-muted">{meta}</div>}
