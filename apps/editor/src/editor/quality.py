@@ -47,11 +47,18 @@ def confidence_from(model_conf: float, evidence: list[dict], critic: str | None)
                                                      "pages": pages, "critic": critic, "cross_modal": cross}}
 
 
+def original_model_confidence(claim: dict) -> float:
+    value = (claim.get("payload") or {}).get("model_confidence")
+    if value is None:
+        raise ValueError("Original model confidence unavailable; a new analysis generation is required")
+    return float(value)
+
+
 def calculate_confidence(claim_id: str) -> dict:
     with db.tx() as c:
         f = _claim_facts(c, claim_id)
     critic = (f["claim"]["payload"] or {}).get("critic")
-    return {"claim_id": claim_id, **confidence_from(float(f["claim"]["confidence"]), f["evidence"], critic)}
+    return {"claim_id": claim_id, **confidence_from(original_model_confidence(f["claim"]), f["evidence"], critic)}
 
 
 # ---------------------------------------------------------- validation
@@ -135,6 +142,9 @@ async def _judge(generation_id: str, claims: list[dict], batch: int = 30,
         out, _ = await Llm(generation_id).chat(DIRECTOR, [{"role": "user", "content": body}],
                                                prompt=ref, schema=schemas.CRITIC, max_tokens=8000,
                                                temperature=0.0, thinking=False)
+        ids = [v["claim_id"] for v in out["verdicts"]]
+        if len(ids) != len(set(ids)) or set(ids) != set(short):
+            raise ValueError("Critic must return exactly one verdict for every supplied claim ID")
         seen, res = set(), []
         for v in out["verdicts"]:
             if v["claim_id"] in short and v["claim_id"] not in seen:
@@ -158,7 +168,7 @@ async def _judge(generation_id: str, claims: list[dict], batch: int = 30,
 
 def _apply_verdict(c, generation_id: str, x: dict, v: dict, stats: dict) -> None:
     f = _claim_facts(c, str(x["id"]))
-    conf = confidence_from(float(x["confidence"]), f["evidence"], v["supported"])["confidence"]
+    conf = confidence_from(original_model_confidence(x), f["evidence"], v["supported"])["confidence"]
     note = f"{v['supported']}: {v['note']}"
     if v["supported"] == "UNSUPPORTED":
         status, review = "REJECTED", False
@@ -247,10 +257,14 @@ async def critic_pass(generation_id: str, recheck: bool = False) -> dict:
         excluded += ["SUMMARY", "ANSWER", "AGE_GROUP", "PUBLISHER_DECISION"]
     claims = db.all_rows(_CLAIM_SQL + "c.generation_id=%s AND c.status=ANY(%s) AND NOT(c.kind=ANY(%s))",
                          generation_id, list(statuses), excluded)
+    for claim in claims:
+        original_model_confidence(claim)
     stats = {"checked": 0, "verified": 0, "partial": 0, "rejected": 0, "to_review": 0,
              "repair_tried": 0, "repaired": 0, "no_verdict": 0}
     first = await _judge(generation_id, claims)
     stats["no_verdict"] = len(claims) - len(first)
+    if stats["no_verdict"]:
+        raise ValueError(f"Critic coverage incomplete after bounded retries: {stats['no_verdict']} missing verdicts")
     repairable = [(x, v) for x, v in first
                   if v["supported"] == "PARTIAL" and v["modality_ok"] and v["identity_ok"]]
     rep_ids = {str(x["id"]) for x, _ in repairable}

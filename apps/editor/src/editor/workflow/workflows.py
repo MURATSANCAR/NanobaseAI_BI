@@ -23,6 +23,7 @@ class BookFullAnalysis:
     def __init__(self) -> None:
         self.job_id = ""
         self.activity_heartbeats = False
+        self.strict_coverage = False
 
     async def act(self, name: str, *args, timeout: timedelta = LONG):
         options = {"heartbeat_timeout": timedelta(seconds=60)} if self.activity_heartbeats else {}
@@ -41,7 +42,7 @@ class BookFullAnalysis:
                 return {"failed": it, "error": str(e.cause or e)[:500]}
         res = await asyncio.gather(*(one(i) for i in items))
         failed = [r for r in res if isinstance(r, dict) and "failed" in r]
-        if items and len(failed) == len(items):
+        if failed and (self.strict_coverage or len(failed) == len(items)):
             # every page failed (e.g. gpu_busy): stop instead of sealing an empty generation
             raise ApplicationError(f"{name}: {len(items)}/{len(items)} failed: {failed[0]['error']}",
                                    non_retryable=True)
@@ -54,6 +55,7 @@ class BookFullAnalysis:
         # Record the choice once at workflow entry. Histories without this marker
         # retain their original activity options, including after replay resumes.
         self.activity_heartbeats = workflow.patched("activity-heartbeats-v1")
+        self.strict_coverage = workflow.patched("complete-stage-coverage-v1")
         # Jobs that started under the old step order replay it; new jobs take the order
         # that loads the director once.
         if workflow.patched("verified-revision-outputs-v1"):

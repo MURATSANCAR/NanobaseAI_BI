@@ -176,6 +176,8 @@ def save_claim(conn: psycopg.Connection, generation_id: str, *, kind: str, claim
     pages = sorted({p for _, _, p in evidence})
     verified = sum(1 for _, ok, _ in evidence if ok)
     payload = dict(payload or {})
+    # Immutable original score: repeated validation must not compound a derived score.
+    payload.setdefault("model_confidence", max(0.0, min(1.0, float(confidence))))
     payload.setdefault("evidence_verified", f"{verified}/{len(evidence)}")
     row = conn.execute(
         "INSERT INTO claim(generation_id, kind, subject, claim, source_pages, payload, confidence,"

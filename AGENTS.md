@@ -66,3 +66,7 @@ git branch -d <dal-adı>
 - Push kimliği bulunmayan bir oturumda (`could not read Username for 'https://github.com'`) merge yerelde tamamlanır, kalan iki komut kullanıcıya **açıkça** bırakılır; "merge edildi" denip origin'de bırakmak olmaz.
 - Merge, dağıtımın yerine geçmez: sunucuya kurulan sürüm neyse `main` de o olmalıdır. Sunucuya yama atılıp `main`e girmemiş kod bırakılmaz.
 - Bu kural bir talimattır, hook değil — CI/branch-protection ile zorlanmıyor; oturumdaki Claude'un ve kullanıcının uygulamasına bağlıdır.
+
+## Editor: kitaptan bağımsız üretim kabulü
+
+Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına, PDF hashine, sayfa numarasına veya karakter adına özel uygulama istisnası içeremez. Gerçek kitaplar bağımsız kaynaklı kabul verisidir; bir kitapta geçen kontrol tüm ürünün kabulü değildir. Aynı genel kod/prompt/model sözleşmesi farklı uzunluk ve görsel/metin yapısındaki gerçek kitaplarda doğrulanır. Kaynağa özel beklenen sonuçlar yalnız kabul kanıtında açıkça etiketlenir, üretim karar kurallarına taşınmaz. Teknik çıktı tutarlılığı, kaynak/kimlik/olay kapsamı ve üretim kabulü ayrı raporlanır. Eksik model yanıtları veya başarısız parçalar başarı sayılmaz; bilinmeyen kimlikler zorla bağlanmaz.
