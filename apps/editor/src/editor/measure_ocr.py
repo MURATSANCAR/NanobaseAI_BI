@@ -1,6 +1,6 @@
 """Benchmark OCR models on the pages where OCR has hurt most.
 
-  python -m editor.measure_ocr --alias book-vision-deep [--alias ...] [--per-book 8] [--out FILE]
+  python -m editor.measure_ocr --alias book-vision-deep [--alias 'book-ocr-paddle=OCR:'] [--per-book 8] [--out FILE]
 
 Ground truth is free wherever a page has a HEALTHY digital text layer: the publisher's
 own text. The hard set is chosen by measurement, not by hand, and the same way for every
@@ -74,16 +74,24 @@ def hard_pages(per_book: int) -> list[dict]:
     return out
 
 
-async def read(alias: str, page: dict, sem: asyncio.Semaphore) -> dict:
+async def read(alias: str, page: dict, sem: asyncio.Semaphore, native: str | None = None) -> dict:
+    """`native`: the model's own task prompt (an OCR specialist is trained on "OCR:", not on
+    our instructions or a JSON schema); its answer is plain text."""
     png = Path(render_page(page["bv"], page["page"])["path"]).read_bytes()
     ref, body = prompts.render("ocr_page", page_no=str(page["page"]))
     t0 = time.time()
     try:
         async with sem:
+            if native:
+                text, _ = await Llm(None).chat(
+                    alias, [{"role": "user", "content": [image_part(png), {"type": "text", "text": native}]}],
+                    pages=[page["page"]], max_tokens=4096, temperature=0.0)
+                return {"ok": True, "text": text, "sec": time.time() - t0}
             out, _ = await Llm(None).chat(
                 alias, [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
-                prompt=ref, schema=schemas.OCR, pages=[page["page"]], max_tokens=6144, temperature=0.0,
-                thinking=False)
+                prompt=ref, schema=schemas.OCR, pages=[page["page"]], max_tokens=16384, temperature=0.0)
+            # (no `thinking=False`: a Thinking-only model then answers with an empty content —
+            #  measured, 39 of 39 calls — so every alias runs the way production runs it)
         text = "\n\n".join(b["text"].strip() for b in out["blocks"] if b["text"].strip())
         return {"ok": True, "text": text, "sec": time.time() - t0}
     except Exception as e:  # noqa: BLE001
@@ -94,9 +102,10 @@ async def main(aliases: list[str], per_book: int, out: Path | None) -> None:
     pages = hard_pages(per_book)
     print(f"zor küme: {len(pages)} sayfa ({per_book}/kitap), döngülü {sum(p['stored_looped'] for p in pages)}")
     results = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
-    for alias in aliases:
+    for spec in aliases:
+        alias, _, native = spec.partition("=")          # alias  or  alias=NATIVE PROMPT
         sem = asyncio.Semaphore(4)
-        results[alias] = await asyncio.gather(*(read(alias, p, sem) for p in pages))
+        results[alias] = await asyncio.gather(*(read(alias, p, sem, native or None) for p in pages))
     report = {}
     for name, res in results.items():
         words = lost = changed = loops = failed = 0
