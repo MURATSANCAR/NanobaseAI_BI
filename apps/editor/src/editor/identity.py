@@ -35,14 +35,19 @@ async def propose(gid: str, mentions: list[dict], corrections: str = '') -> tupl
     body += '\nTAM SAYFA BAĞLAMI (alıntı içinde adı geçen diğer kişiyle anılan kişiyi karıştırma):\n'+context
     messages = [{'role':'user','content':body}]
     attempts=[]
+    salvage=None
     for attempt in range(3):
         out, call_id = await Llm(gid).chat('book-director', messages, prompt=ref,
             schema=schemas.IDENTITY, max_tokens=12000, temperature=0.0, thinking=False)
         errors = contract(out,set(short))
         for ch in out['characters']:
-            names = {short[m]['surface_name'].strip() for m in ch['mention_ids'] if m in short}
-            if ch['canonical_name'].strip() not in names:
-                errors.append('canonical_name must be an exact name in that group: '+ch['canonical_name'])
+            # The model may not invent a name — but a name it did invent is not a reason to
+            # throw the grouping away: the group's own most frequent surface name replaces it.
+            # (Measured: "Anne Vombat" for a group whose mentions all read "Annesi" cost a
+            # whole attempt, and three such attempts cost the whole book.)
+            names = Counter(short[m]['surface_name'].strip() for m in ch['mention_ids'] if m in short)
+            if names and ch['canonical_name'].strip() not in names:
+                ch['canonical_name'] = names.most_common(1)[0][0]
         judge_id = None
         if not errors and out['characters']:
             groups = [{'group_id':f'g{i}',**ch} for i,ch in enumerate(out['characters'])]
@@ -65,9 +70,25 @@ async def propose(gid: str, mentions: list[dict], corrections: str = '') -> tupl
         attempts.append({'proposal_call':call_id,'critic_call':judge_id,'errors':errors})
         if not errors:
             return out,call_id,{'policy':POLICY,'attempts':attempts}
+        if judge_id is not None and set(actual)==expected and len(actual)==len(expected):
+            # a complete partition the critic judged group by group: remember what it rejected
+            rejected = {v['group_id'] for v in judged['verdicts'] if not v['supported']}
+            salvage = (out, call_id, [g['group_id'] for g in groups], rejected)
         messages += [{'role':'assistant','content':json.dumps(out,ensure_ascii=False)},
                      {'role':'user','content':'Bu taslak reddedildi. Tüm anmaları yeniden kapsayan tam taslağı düzelt; '
                        'kanıtsız birleşimleri ayır, gerçekten belirsizleri unresolved listesine koy. Hatalar:\n'+json.dumps(errors,ensure_ascii=False)}]
+    # "Belirsiz kişi zorla bağlanmaz" — and an uncertain person is not a reason to have no
+    # book either. If a complete partition exists, the groups the critic supported stand and
+    # the mentions of the rejected groups stay explicitly unresolved. Only when no attempt
+    # produced a valid partition is there nothing to stand on.
+    if salvage:
+        out, call_id, order, rejected = salvage
+        kept = [ch for gid_, ch in zip(order, out['characters']) if gid_ not in rejected]
+        dropped = [m for gid_, ch in zip(order, out['characters']) if gid_ in rejected for m in ch['mention_ids']]
+        out = {**out, 'characters': kept,
+               'unresolved_mention_ids': sorted(set(out['unresolved_mention_ids']) | set(dropped))}
+        return out, call_id, {'policy': POLICY, 'attempts': attempts, 'degraded': True,
+                              'groups_rejected': len(rejected), 'mentions_left_unresolved': len(dropped)}
     raise ValueError('Identity proposal rejected after three attempts: '+json.dumps(attempts,ensure_ascii=False))
 
 
