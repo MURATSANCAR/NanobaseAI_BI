@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 10:40 — Editoryal modüller müşteri VM'ine (192.168.0.55) yayınlandı
+
+Kullanıcı isteğiyle test sunucusundaki editoryal iş müşteri VM'ine taşındı.
+
+- **Fark alınarak kuruldu, klasör silinmedi.** 22 dosya md5 ile karşılaştırıldı: 16'sı zaten `main` ile eşti, 2'si yoktu (`editorial_books.py`, `AskBox.tsx`), 4'ü eskiydi (`app.py`, `engine.ts`, `SearchBox.tsx`, `BookScreen.tsx`). Yalnız bu 6 dosya kopyalandı; `--delete`'li klasör rsync'i kullanılmadı (başka oturumun işini ezmemek için).
+- **Derleme VM'de:** `infra/docker/bi` altında `docker compose build bridge web && up -d`. `sudo systemd-run` VM'de parola istediği için `nohup` ile ayrı koşuldu.
+- **Doğrulama (VM içinden, Host başlığıyla):** `/timas/`, `/timas/editoryal`, `/timas/redaksiyon`, `/timas/son-okuma` → 200; `/timas/api/v1/editorial/ask/books` ve `…/contracts/summary` → 401 (oturumsuz, uçlar yerinde). Derlenen paket yeni ekranları içeriyor (`EditorialHome-*.js` içinde "Kitaba sor" ve "Okunmuş kitaplar"). `pypdf 6.19.0` var, `/data/nanobaseai/bi/var/editorial` yazılabilir.
+- **Kitaba soru VM'de kapalı:** `editorial_books.configured()` = False. İki sebep: `.55`'te `EDITOR_API_*` ayarı yok ve `.55`'in Hermes tüneline (nanobase-direct'teki `127.0.0.1:18887`) yolu yok. Ekran bu durumu zaten dürüstçe söylüyor ("Editör motoru bu kurulumda tanımlı değil"). Açmak için nanobase-direct'ten `.55`'e zincirleme bir `-R` tüneli gerekir; VPN + GPU tüneline bağlı olduğu için kırılgan, kullanıcı kararına bırakıldı.
+- **Dışarıdan doğrulanamadı:** VPN kuralı `.55:80`'e izin vermiyor (yalnız `:22`); kontrol VM'in kendi içinden yapıldı.
+
 ## 2026-09-21 10:10 — Kitaba soruda "bulunamadı" mesajı ve sade dil
 
 Kullanıcı isteği: bulunamayan bilgi için güzel bir mesaj.

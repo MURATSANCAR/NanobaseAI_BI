@@ -1251,3 +1251,8 @@ export const bookAskApi = {
   ask: (b: { question: string; bookKey?: string; bookTitle?: string }) => send<{ id: string; status: string }>('POST', '/api/v1/editorial/ask', b, 30_000),
   one: (id: string) => send<BookQuestion>('GET', `/api/v1/editorial/ask/${encodeURIComponent(id)}`, undefined, 30_000),
 };
+
+/** Soru sorulabilen (okunmuş) kitaplar; motordan gelir, köprüde kısa süre önbellekte tutulur. */
+export const readableBooksApi = {
+  list: () => send<{ items: string[]; at: number | null; configured: boolean; loading: boolean }>('GET', '/api/v1/editorial/ask/books', undefined, 30_000),
+};

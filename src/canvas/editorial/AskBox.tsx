@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Search, Send, Sparkles } from 'lucide-react';
-import { ENGINE_ENABLED, bookAskApi, type BookQuestion } from '../engine';
+import { ENGINE_ENABLED, bookAskApi, readableBooksApi, type BookQuestion } from '../engine';
 import { Note, Pill, btn, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 
@@ -43,7 +43,7 @@ function Answer({ q }: { q: BookQuestion }) {
       )}
       {live && !q.answer && (
         <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-          Kitap okunuyor; cevap birkaç dakika sürebilir. Sayfadan ayrılabilirsiniz, soru kayıtlı kalır.
+          Soru motora iletildi. Motor başka bir kitabı okuyorsa sıraya girer; cevap birkaç dakika sürebilir. Sayfadan ayrılabilirsiniz, soru kayıtlı kalır.
         </p>
       )}
     </li>
@@ -52,6 +52,7 @@ function Answer({ q }: { q: BookQuestion }) {
 
 export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookTitle?: string }) {
   const [text, setText] = useState('');
+  const [picked, setPicked] = useState<string | null>(null);
   const qc = useQueryClient();
   const list = useQuery({
     queryKey: ['editorial', 'ask', bookKey ?? ''],
@@ -61,12 +62,22 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
     refetchInterval: (query) => (query.state.data?.items.some((i) => i.status === 'bekliyor' || i.status === 'calisiyor') ? 5000 : false),
   });
   const ask = useMutation({
-    mutationFn: () => bookAskApi.ask({ question: text.trim(), bookKey, bookTitle }),
+    mutationFn: () => bookAskApi.ask({ question: text.trim(), bookKey, bookTitle: bookTitle ?? picked ?? undefined }),
     onSuccess: async () => {
       setText('');
       await qc.invalidateQueries({ queryKey: ['editorial', 'ask', bookKey ?? ''] });
     },
   });
+  // Sayfa bir kitaba bağlı değilse okunmuş kitaplar gösterilir; kişi birini seçerek soruyu ona yöneltir.
+  const books = useQuery({
+    queryKey: ['editorial', 'readableBooks'],
+    queryFn: readableBooksApi.list,
+    enabled: ENGINE_ENABLED && !bookTitle,
+    // Liste arka planda tazelenir; hazır olana kadar birkaç saniyede bir bakılır.
+    // Motor bir kitabı okuyorsa liste sıraya girer; seyrek bakılır, sayfa beklemez.
+    refetchInterval: (query) => (query.state.data?.loading ? 15000 : false),
+  });
+  const readable = books.data?.items ?? [];
   const items = list.data?.items ?? [];
   const err = errText(list.error || ask.error, 'Soru gönderilemedi.');
   const off = list.data && !list.data.configured;
@@ -90,7 +101,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
           }}
           rows={2}
           disabled={off}
-          placeholder={bookTitle ? `«${bookTitle}» kitabına sorun: kim ne yaptı, hangi olay hangi sayfada…` : 'Okunmuş bir kitaba sorun: kim ne yaptı, hangi olay hangi sayfada…'}
+          placeholder={bookTitle ? `«${bookTitle}» kitabına sorun: kim ne yaptı, hangi olay hangi sayfada…` : picked ? `«${picked}» kitabına sorun: kim ne yaptı, hangi olay hangi sayfada…` : 'Okunmuş bir kitaba sorun: kim ne yaptı, hangi olay hangi sayfada…'}
           aria-label="Kitabın içeriğine soru"
           className="min-h-[76px] w-full resize-y rounded-2xl border border-slate-200 bg-white/95 py-3.5 pl-12 pr-28 text-[14px] font-medium leading-snug outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-canvas-muted/70 focus:border-canvas-violet focus:shadow-[0_0_0_3px_rgba(124,92,255,.12)] disabled:opacity-60"
         />
@@ -103,6 +114,30 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
           Sor
         </button>
       </form>
+      {!bookTitle && books.data?.loading && !readable.length && (
+        <p className="mt-2 px-1 text-[11px] leading-snug text-canvas-muted">
+          Okunmuş kitapların listesi hazırlanıyor. Motor şu an bir kitabı okuyorsa liste ve sorular sıraya girer; kitap adını kendiniz de yazabilirsiniz.
+        </p>
+      )}
+      {!bookTitle && readable.length > 0 && (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Okunmuş kitaplar</span>
+          {readable.map((t) => (
+            <button
+              key={t}
+              type="button"
+              onClick={() => setPicked(picked === t ? null : t)}
+              aria-pressed={picked === t}
+              className={`min-h-7 rounded-lg px-2 text-[11.5px] font-semibold transition-colors duration-150 ${
+                picked === t ? 'bg-canvas-violet text-white' : 'bg-slate-100 text-canvas-ink hover:bg-slate-200'
+              }`}
+            >
+              {t}
+            </button>
+          ))}
+          {picked && <span className="text-[11px] text-canvas-muted">soru «{picked}» kitabına gidecek</span>}
+        </div>
+      )}
       <p className="mt-1.5 px-1 text-[11px] leading-snug text-canvas-muted">
         Cevap kitabın kendi metninden gelir ve sayfa numarasıyla verilir. Kitapta olmayan bir şey uydurulmaz.
         {list.data?.running ? ` Şu an ${nf.format(list.data.running)} soru sırada.` : ''}

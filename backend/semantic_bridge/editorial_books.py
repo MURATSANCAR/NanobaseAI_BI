@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import uuid
 from datetime import datetime, timezone
@@ -61,6 +62,17 @@ SYSTEM = (
     f"Sorulan şey kitapta yoksa cevabına birebir «{NOT_FOUND}» cümlesiyle başla, sonra tek cümleyle nereye "
     "baktığını ve varsa en yakın bilgiyi sayfasıyla söyle. Asla uydurma.\n"
     "Sorulan kitap hiç analiz edilmemişse bunu açıkça söyle ve hangi kitapların analiz edildiğini yaz."
+)
+
+
+#: Okunmuş kitapların listesi: motora sorulur, kısa süre bellekte tutulur (her açılışta model çağırmayalım).
+_BOOKS_TTL = 600.0
+_books_cache: dict[str, Any] = {"at": 0.0, "items": [], "busy": False}
+_books_lock = threading.Lock()
+
+BOOKS_SYSTEM = (
+    "Analiz edilmiş kitapların listesini ver. Yalnız bir JSON dizisi döndür, başka hiçbir şey yazma: "
+    '["Kitap Adı", "Kitap Adı"]. Kitap adlarını okunur biçimde yaz (kısa ad değil, gerçek adı).'
 )
 
 
@@ -119,7 +131,7 @@ def reset_stale(engine: sa.engine.Engine) -> None:
                      .values(status="hata", error="Servis yeniden başladı; soruyu tekrar sorun.", finished_at=_now()))
 
 
-def ask_engine(question: str, book_title: Optional[str]) -> str:
+def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str] = None) -> str:
     """Motora tek çağrı. Cevap boş gelirse hata; sessizce boş cevap dönmez."""
     base = (os.environ.get("EDITOR_API_BASE") or "").rstrip("/")
     key = os.environ.get("EDITOR_API_KEY") or ""
@@ -128,7 +140,7 @@ def ask_engine(question: str, book_title: Optional[str]) -> str:
         raise BookAskError("Editör motoru bu kurulumda tanımlı değil.", 503)
     user = question if not book_title else f"Kitap: «{book_title}». Soru: {question}"
     payload = {"model": model, "stream": False,
-               "messages": [{"role": "system", "content": SYSTEM}, {"role": "user", "content": user}]}
+               "messages": [{"role": "system", "content": system or SYSTEM}, {"role": "user", "content": user}]}
     with httpx.Client(timeout=httpx.Timeout(TIMEOUT_SEC, connect=15.0)) as client:
         r = client.post(f"{base}/chat/completions", json=payload,
                         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"})
@@ -142,6 +154,40 @@ def ask_engine(question: str, book_title: Optional[str]) -> str:
     if not text:
         raise BookAskError("Editör motoru boş cevap döndü.", 502)
     return text
+
+
+def readable_books(*, fresh: bool = False) -> dict[str, Any]:
+    """Soru sorulabilen kitaplar. **Beklemez:** elde ne varsa onu döner, gerekiyorsa arka planda tazeler.
+    Motor modeli kapalıysa liste ilk seferde boş gelir ve birkaç saniye sonra dolar; ekran sayfayı bekletmez."""
+    import time as _time
+    if not configured():
+        return {"items": [], "at": None, "configured": False, "loading": False}
+    with _books_lock:
+        age = _time.time() - float(_books_cache["at"])
+        items = list(_books_cache["items"])
+        busy = bool(_books_cache.get("busy"))
+        stale = fresh or age >= _BOOKS_TTL or not items
+        if stale and not busy:
+            _books_cache["busy"] = True
+            threading.Thread(target=_refresh_books, name="editorial-books", daemon=True).start()
+            busy = True
+    return {"items": items, "at": _books_cache["at"] or None, "configured": True, "loading": busy and not items}
+
+
+def _refresh_books() -> None:
+    import time as _time
+    items: list[str] = []
+    try:
+        raw = ask_engine("Hangi kitaplar okundu?", None, system=BOOKS_SYSTEM)
+        m = re.search(r"\[.*\]", raw, re.S)
+        if m:
+            items = [str(x).strip() for x in json.loads(m.group(0)) if str(x).strip()][:50]
+    except Exception as e:  # noqa: BLE001 — liste bir kolaylıktır, soru sormayı engellemez
+        log.warning("editorial readable books failed: %s", e)
+    with _books_lock:
+        if items:
+            _books_cache["items"], _books_cache["at"] = items, _time.time()
+        _books_cache["busy"] = False
 
 
 def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,

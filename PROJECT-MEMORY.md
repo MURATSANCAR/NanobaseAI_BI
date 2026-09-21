@@ -40,7 +40,7 @@ React (src/, Vite)  →  nanobase_api (FastAPI, :8790)  →  semantic_layer (Kat
 | Meta DB (Postgres) | 5434 |
 | Zeki AI sohbet | 127.0.0.1:4000 (ayrı Docker, `~/zeki-chat` deposu); portalda `/timas/sohbet/` altında AD oturumu arkasında sunulur |
 | Portal giriş servisi | 8796 (`timas-login`, AD + oturum çerezi + `/chat-sso`) |
-| BI uygulama VM (müşteri) | http://192.168.0.55/timas/ |
+| BI uygulama VM (müşteri) | http://192.168.0.55/timas/ — editoryal modüller 2026-09-21'de yayınlandı; "kitaba soru" orada kapalı (Hermes tüneli yok) |
 | Editör (tt-gpu, yalnız 127.0.0.1) | Model gateway 19100 · Hermes API 19110 · Temporal UI 19120 · Postgres 19130. Modeller (`editor-model-*`, vLLM 0.29.0) yalnız istendiğinde açılır, 600 sn boşta kapanır. GPU yerleşimi (kullanıcı kararı 2026-09-19): BI modeli `qwen38-27b` yalnız GPU 0, editörün bütün modelleri GPU 1; gateway editör dışı konteynere dokunmaz |
 
 Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`, `llm-tt-gpu`, `timas-logo-network-access`.

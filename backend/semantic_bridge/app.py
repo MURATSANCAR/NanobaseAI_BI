@@ -3651,6 +3651,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         {"question": str(body.get("question") or "")[:300]})
         return out
 
+    @app.get("/api/v1/editorial/ask/books")
+    def editorial_ask_books(request: Request, fresh: bool = False) -> dict[str, Any]:
+        """Soru sorulabilen kitaplar. {qid} ucundan önce tanımlı, yoksa "books" bir soru kimliği sanılır."""
+        _books(request)
+        return _books_call(books_mod.readable_books, fresh=fresh)
+
     @app.get("/api/v1/editorial/ask/{qid}")
     def editorial_ask_one(qid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, is_admin = _books(request)
