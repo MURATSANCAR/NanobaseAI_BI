@@ -78,7 +78,9 @@ Bu alanı muhasebe karakteri kabul eden ilk sürüm 98 yanlış/şüpheli aday �
 Bu sonuç geçersizdir; son sürüm yalnız 100/101 için kaynak tanımını kullanır.
 Diğer hesaplarda karakter kontrolü tamamlanmış sayılmaz.
 
-41 analiz notunun tamamına formül ve hesaplanabilirlik koşulu bağlandı. Açılış ve dönem
+41 analiz notunun tamamına formül, hesaplanabilirlik koşulu ve ilgili Logo hesaplarına
+doğrudan geçiş bağlandı. Gelir tablosu oranlarında mükerrer sonuç yaratacak 690/692
+devir hesapları hesaplamaya katılmaz. Açılış ve dönem
 hareketleri ayrıdır. Maddi duran varlıklarda 25; faaliyet giderlerinde 63; brüt kârda
 net satışlardan maliyet düşümü; finansman giderinde 660+661 kullanılır. Devir süresi
 2026-01-01–2026-08-17 arasındaki 229 takvim günüyle hesaplanır; 360 güne otomatik yıllıklaştırılmaz.
@@ -149,12 +151,15 @@ eksik fiş bağlantısı ayrıca raporlanır. Boş veya eksik kapsam olumlu kabu
 
 Yerel test çalıştırılmadı. Derleme `nanobase-direct` üzerinde yapıldı.
 Gerçek HTTP cevabı bağımsız gerçek DB sorgusuyla `scripts/server/financial-audit-acceptance.py`
-üzerinden karşılaştırılır. Son kapsam genişletmesinin ilk gerçek koşusunda 107/107 teknik
-karşılaştırma geçti. Nihai sürüm hashleri ve çalışma kâğıdı geçmişi dahil son kabul
+üzerinden karşılaştırıldı. Son sürümde **144/144 teknik karşılaştırma geçti**; başarısız
+karşılaştırma yok. Nihai sürüm hashleri ve çalışma kâğıdı geçmişi dahil son kabul
 `docs/audits/financial-audit-2026-09-21/acceptance.json` dosyasında tutulur.
 Bu sayı bütün PDF'nin ürün kabulü değildir. Test listesi tüm hesap kimlikleri/tutarları,
 41 oran tanımı ve hesap engelleri, açılış/dönem ayrımı, 20 karşı hesap gözlemi,
-8 aylık KDV bakiyeleri, gerçek detay/sayfalama, arşiv eşitliği ve yetkisiz erişimi kapsar.
+8 aylık KDV bakiyeleri, e-defter belge grupları ve ayrıntıları, sabit kıymet cetvelinin
+54 grubu, oranların Logo hesap bağlantıları, gerçek detay/sayfalama, arşiv eşitliği,
+inceleme geçmişi/çakışma kontrolü ve yetkisiz erişimi kapsar. Tam hesap ve belge satırları
+özel sunucu kanıtında tutulur; depodaki kanıt kimlik/hash, sayım ve kontrol statülerini içerir.
 
 Gerçek kaynakta temel 6 kontrolden 5'i geçti, kasa/çek kontrolünde 2 hesap inceleme adayı
 bulundu (277.109,33 TL; zarar/ceza değildir). Kaynak çalışma kayıtlarında 17 hesaplandı,
@@ -172,9 +177,16 @@ dönem başı özsermaye ve ilişkili kişi borçları ayrımını destekler; ö
 bağımsız uygunluk onayı değildir. PDF'deki bütün vergi oranları/istisnaları için güncel
 mevzuat kabulü yapılmış değildir.
 
-Tarayıcı için geçerli portal oturumu gerekiyor. Sunucuda bulunan eski parola ile
-tek giriş denemesi 401 döndü; kullanıcıdan geçerli test oturumu/güvenli dosya yolu istendi.
-320/390/768/1440 genişliklerinde gerçek URL tarayıcıda açıldı; yalnız AD giriş kapısı
-görüldü ve bu kapıda yatay taşma yoktu. Bu gözlem finans ekranının mobil kabulü değildir.
-Kimlik doğrulanmış finans ekranı, indirme/detay ve inceleme formu akışı **DOĞRULANAMADI**.
+Mevcut Chrome oturumu üzerinden gerçek portal ekranı doğrulandı; kullanıcıdan ek
+parola/oturum gerekmedi. Özet, kontrol ayrıntısı/inceleme formu, Logo hareketleri,
+e-defter/sabit kıymet tabloları ve kaynak metin 320/390/768/1440 genişliklerinde
+sayfa taşması göstermedi; geniş tablolar yalnız kendi kapsayıcılarında kayıyor.
+Logo kasa hesabında 50'şer hareketlik iki sayfa, e-defterde iki belge sayfası,
+kasa filtresi (1.090 belge), kaynak 41→42 sayfa geçişi çalıştı. Gerçek inceleme
+notu portal kullanıcısı ve zamanıyla saklandı; kontrol sonucu otomatik geçmedi.
+Tarayıcı kanıtı: `docs/audits/financial-audit-2026-09-21/browser.json`.
+
+JSON indirme düğmesi çağrıldı, ancak tarayıcı indirme olayı zaman aşımına uğradı;
+indirme yöneticisi sayfası tarayıcı URL politikasıyla engellendi. İndirilen dosyanın
+istemcide tamamlanması **DOĞRULANAMADI**; arşiv/API cevap eşliği bunun yerine geçmez.
 Müşteri VM'inde kurulumu ve gerçek kullanıcı kabulü ayrıca doğrulanmadan üretime hazır denmez.

@@ -242,6 +242,30 @@
       "sourceScroll": 1260,
       "view": "source-page",
       "width": 1440
+    },
+    {
+      "links": 159,
+      "scrollWidth": 320,
+      "view": "accepted-ratio-drilldown",
+      "width": 320
+    },
+    {
+      "links": 159,
+      "scrollWidth": 390,
+      "view": "accepted-ratio-drilldown",
+      "width": 390
+    },
+    {
+      "links": 159,
+      "scrollWidth": 768,
+      "view": "accepted-ratio-drilldown",
+      "width": 768
+    },
+    {
+      "links": 159,
+      "scrollWidth": 1440,
+      "view": "accepted-ratio-drilldown",
+      "width": 1440
     }
   ],
   "flows": {
@@ -249,8 +273,12 @@
     "documentPage1and2": "PASS: 50 actual rows per page, 91664 total",
     "documentCashFilter": "PASS: 1090 documents",
     "sourcePages41and42": "PASS",
-    "reviewSave": "PENDING",
-    "reportDownload": "UNVERIFIED: click completed, download event timed out; browser downloads page blocked by URL policy"
+    "reviewSave": "PASS: actual review stored, versioned and reopened after page reload from archived run",
+    "reportDownload": "UNVERIFIED: click completed, download event timed out; browser downloads page blocked by URL policy",
+    "archivedRun": "PASS: selected old and final accepted reports through UI",
+    "ratioToLogo": "PASS: current ratio 159 related accounts; cash account opens 50 actual ledger rows"
   },
-  "fullFinancialAcceptance": false
+  "fullFinancialAcceptance": false,
+  "finalRunId": "644be6bc67e446e1bdf37c416a19acf6",
+  "reviewCorrection": "One initially misselected cash-ratio review retained with explicit corrective history; current-ratio note stored under correct source note 2."
 }

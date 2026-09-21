@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim: kapsam, dayanaklar ve gerçek doğruluk kabulü
+
+- Kaynak PDF'nin bütün sayfaları korundu; ayrıştırma hataları düzeltildi. 649 çalışma kaydı: 41 analiz, 127 kontrol notu, 212 inceleme maddesi ve 269 bölüm paketi. Paket/alt madde örtüşmesi açık; tam atomik çıkarım ve bütün mevzuat kabulü tamamlanmış sayılmıyor.
+- 41 oran tanımı ve düzeltme gerekçeleri, hesaplara doğrudan geçiş, açılış/dönem ayrımı, 20 aynı-fiş karşı hesap gözlemi ve aylık KDV kapsamı eklendi. Sonuç 17 hesaplanabilir, 24 önkoşul eksik. 2020 parasal eşikleri doğrudan güncel kural yapılmadı; GİB kaynakları ve gereken kanıtlar ayrı.
+- Gerçek e-defter kayıtları ve sabit kıymet cetveli bulundu/bağlandı. 91.664 belge, 13 belge profili, 54 varlık hesap grubu; belge/fiş/satır detayları, ödeme şekli ve kaynak bayrakları görünür. Belge türü/yöntem kodlarının hukuki anlamı henüz onaylanmadı.
+- Bağımsız referans, ortak sorgu katmanının FAYEAR sorgusunu yanlış 211 yedeğine yönelttiğini yakaladı. Denetim 2026 fiziksel kaynağına sabitlendi, başka yedeğe geçiş reddediliyor. Ödeme adlarının Türkçe büyük/küçük harf gruplaması referansta DB kolasyonuyla eşleştirildi; 243/246 karşılık hesaplarının yönü düzeltildi.
+- Raporlar özel dizinde değişmez saklanır; son 30 rapor arayüzden açılır. Kontrol bazlı sorumlu, not, belge referansı ve aktör/zaman geçmişi; çakışma 409, manuel `passed` yasak. Logo'ya yazım yok. Sadece gerçek çalışma kâğıdı notları eklendi.
+- Yerel test yok. Test sunucusunda derleme; son gerçek bridge API cevabı bağımsız gerçek Logo sorgularıyla **144/144 teknik karşılaştırmada** eşleşti. 246.404 hareket/379 hesabın tam sonucu, 41 oran, belge/varlık grupları, sayfalama, arşiv/not geçmişi ve yetkisiz erişim dahil. Eski 38 ve 107 kontrol kanıtları son sürüm kabulü yerine kullanılmaz.
+- Mevcut oturumlu Chrome → gerçek portal üzerinden özet, kontrol, Logo detayları, dayanak tabloları ve kaynak sayfa 320/390/768/1440 genişliklerinde taşmasız. Belge/hareket sayfalama, kasa belge filtresi ve gerçek inceleme kaydı çalıştı. İndirme olayı zaman aşımına uğradı, indirme yöneticisi tarayıcı politikasıyla engellendi; istemci dosya kabulü DOĞRULANAMADI.
+- Kanıtlar `docs/audits/financial-audit-2026-09-21/`; kapsam ve açık işler `docs/analiz/finansal-denetim-2026-09-21.md`. 597 kaynak paketi kanıt bekliyor; bunlar bağımsız başarısız kontroller değildir. Müşteri VM'ine kurulmadı; tüm denetim veya üretim kabulü iddiası yok.
+
 ## 2026-09-21 — Sohbet açılışı kesilmesin, hazır soruların kitap kapsamı belli olsun
 
 - `f80e2d50`: boş sohbetin en alta kaydırılması düzeltildi, doğal yükseklik ve daha kısa karşılama düzeni. Mesaj/textarea scrollbar yalnız sohbet içinde gizli; sayfa taşması gizlenmiyor, uzun cevaplar kaydırılabiliyor.

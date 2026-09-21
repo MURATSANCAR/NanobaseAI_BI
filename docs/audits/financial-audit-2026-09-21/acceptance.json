@@ -1,455 +1,650 @@
 {
   "environment": "nanobase-direct → gerçek bridge HTTP :8795 → Logo SQL .155 / LOGO_DB",
-  "revision": "e0f2ab207617b263bd3e66410794238964ec19824ddc45d2788ba0c6c14d14b0",
+  "revision": "c7ec32e9091f5b36a5cb7fccf41bea7b9fb68c026d5b5d4eba11db64594c9300",
   "source": "Logo · 2026 işlem dönemi · 17.08.2026 yedeği",
   "sourceLastDate": "2026-08-17T00:00:00",
+  "computedAt": "2026-09-21T12:10:12.230294+00:00",
+  "runId": "644be6bc67e446e1bdf37c416a19acf6",
+  "rulesRevision": "f9aed9e8acf5ed101e036fcd3fba62bbe74e335d78ea6afb3e73acf31d432535",
+  "supportRevision": "7d25425845b9238503ad91b89ebb3ec5b41f3a0dcb4cd140ec597572fa095963",
   "checks": [
     {
       "name": "full-account-coverage",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "all-accounts-code",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "all-accounts-name",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "all-accounts-lineCount",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "all-accounts-accountType",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "all-accounts-debit",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "all-accounts-credit",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "line-count",
-      "status": "PASS",
-      "detail": 246404
+      "status": "PASS"
     },
     {
       "name": "all-balances",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "account-sign-flags",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-2",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-3",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-4",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-5",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-6",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-7",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-8",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-9",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-10",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-11",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-12",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-13",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-14",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-15",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-18",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-19",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-20",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "ratio-21",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "slip-imbalance-count",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "slip-imbalance-amount",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "detail-pagination",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "detail-total",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "detail-values",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
     },
     {
       "name": "unauthenticated-rejected",
-      "status": "PASS",
-      "detail": 401
+      "status": "PASS"
     },
     {
       "name": "unauthenticated-source-rejected",
-      "status": "PASS",
-      "detail": 401
+      "status": "PASS"
     },
     {
       "name": "unverified-period-rejected",
-      "status": "PASS",
-      "detail": 422
+      "status": "PASS"
     },
     {
       "name": "invalid-account-rejected",
-      "status": "PASS",
-      "detail": 422
+      "status": "PASS"
     },
     {
       "name": "source-integrity",
-      "status": "PASS",
-      "detail": null
+      "status": "PASS"
+    },
+    {
+      "name": "flow-reference-not-truncated",
+      "status": "PASS"
+    },
+    {
+      "name": "all-profile-openingDebit",
+      "status": "PASS"
+    },
+    {
+      "name": "all-profile-openingCredit",
+      "status": "PASS"
+    },
+    {
+      "name": "all-profile-periodDebit",
+      "status": "PASS"
+    },
+    {
+      "name": "all-profile-periodCredit",
+      "status": "PASS"
+    },
+    {
+      "name": "all-profile-foreignRows",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-16",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-17",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-22",
+      "status": "PASS"
+    },
+    {
+      "name": "period-days-22",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-23",
+      "status": "PASS"
+    },
+    {
+      "name": "period-days-23",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-24",
+      "status": "PASS"
+    },
+    {
+      "name": "period-days-24",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-25",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-26",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-27",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-28",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-29",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-30",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-31",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-32",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-33",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-34",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-35",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-36",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-37",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-38",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-39",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-40",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-41",
+      "status": "PASS"
+    },
+    {
+      "name": "extended-ratio-42",
+      "status": "PASS"
+    },
+    {
+      "name": "all-41-analysis-notes",
+      "status": "PASS"
+    },
+    {
+      "name": "every-source-occurrence-has-result",
+      "status": "PASS"
+    },
+    {
+      "name": "all-ratios-have-account-drilldown",
+      "status": "PASS"
+    },
+    {
+      "name": "current-ratio-account-drilldown-complete",
+      "status": "PASS"
+    },
+    {
+      "name": "no-document-check-auto-pass",
+      "status": "PASS"
+    },
+    {
+      "name": "distinct-duplicate-notes",
+      "status": "PASS"
+    },
+    {
+      "name": "source-corrections-retained",
+      "status": "PASS"
+    },
+    {
+      "name": "year-end-not-due",
+      "status": "PASS"
+    },
+    {
+      "name": "loan-not-deposit",
+      "status": "PASS"
+    },
+    {
+      "name": "snapshot-roundtrip",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-reference-complete",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-64",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-73",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-81",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-82",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-83",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-84",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-85",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-86",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-87",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-93",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-99",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-104",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-110",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-111",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-113",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-114",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-115",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-127",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-130",
+      "status": "PASS"
+    },
+    {
+      "name": "counterpart-note-162",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-1",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-2",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-3",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-4",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-5",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-6",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-7",
+      "status": "PASS"
+    },
+    {
+      "name": "vat-month-8",
+      "status": "PASS"
+    },
+    {
+      "name": "all-statements-use-declared-backup",
+      "status": "PASS"
+    },
+    {
+      "name": "support-sources-complete",
+      "status": "PASS"
+    },
+    {
+      "name": "document-reference-complete",
+      "status": "PASS"
+    },
+    {
+      "name": "document-profile-group-coverage",
+      "status": "PASS"
+    },
+    {
+      "name": "document-profile-rows",
+      "status": "PASS"
+    },
+    {
+      "name": "document-profile-missingNumber",
+      "status": "PASS"
+    },
+    {
+      "name": "document-profile-missingDate",
+      "status": "PASS"
+    },
+    {
+      "name": "document-profile-missingPayment",
+      "status": "PASS"
+    },
+    {
+      "name": "document-voucher-count",
+      "status": "PASS"
+    },
+    {
+      "name": "mixed-document-types",
+      "status": "PASS"
+    },
+    {
+      "name": "mixed-payment-types",
+      "status": "PASS"
+    },
+    {
+      "name": "document-pagination",
+      "status": "PASS"
+    },
+    {
+      "name": "document-total",
+      "status": "PASS"
+    },
+    {
+      "name": "document-detail-values",
+      "status": "PASS"
+    },
+    {
+      "name": "asset-reference-complete",
+      "status": "PASS"
+    },
+    {
+      "name": "asset-profile-coverage",
+      "status": "PASS"
+    },
+    {
+      "name": "asset-profile-rows",
+      "status": "PASS"
+    },
+    {
+      "name": "asset-profile-missingAssetCard",
+      "status": "PASS"
+    },
+    {
+      "name": "asset-profile-missingAmount",
+      "status": "PASS"
+    },
+    {
+      "name": "asset-profile-periodDepreciation",
+      "status": "PASS"
+    },
+    {
+      "name": "asset-distinct-counts",
+      "status": "PASS"
+    },
+    {
+      "name": "support-revision-current",
+      "status": "PASS"
+    },
+    {
+      "name": "source-review-persisted",
+      "status": "PASS"
+    },
+    {
+      "name": "source-review-version-increment",
+      "status": "PASS"
+    },
+    {
+      "name": "review-does-not-auto-pass",
+      "status": "PASS"
+    },
+    {
+      "name": "stale-review-write-rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "manual-passed-state-rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "empty-evidence-rejected",
+      "status": "PASS"
+    },
+    {
+      "name": "rejected-review-did-not-mutate",
+      "status": "PASS"
+    },
+    {
+      "name": "saved-run-listed",
+      "status": "PASS"
+    },
+    {
+      "name": "private-runs",
+      "status": "PASS"
+    },
+    {
+      "name": "private-runs/644be6bc67e446e1bdf37c416a19acf6",
+      "status": "PASS"
+    },
+    {
+      "name": "private-runs/644be6bc67e446e1bdf37c416a19acf6/reviews/note-51-1",
+      "status": "PASS"
+    },
+    {
+      "name": "served-backend-hash-current",
+      "status": "PASS"
+    },
+    {
+      "name": "served-rules-hash-current",
+      "status": "PASS"
     }
   ],
-  "referenceSql": "SELECT A.LOGICALREF AS accountRef,A.CODE AS code,A.DEFINITION_ AS name,A.ACCTYPE AS accountType,\n Q.debit,Q.credit,Q.lineCount FROM dbo.LG_411_EMUHACC A INNER JOIN (\n SELECT ACCOUNTREF,SUM(CAST(DEBIT AS decimal(28,4))) debit,SUM(CAST(CREDIT AS decimal(28,4))) credit,COUNT(*) lineCount\n FROM dbo.LG_411_01_EMFLINE WHERE DATE_ >= '20260101' AND DATE_ < '20270101' AND CANCELLED=0\n AND ACCFICHEREF IN (SELECT LOGICALREF FROM dbo.LG_411_01_EMFICHE WHERE CANCELLED=0)\n GROUP BY ACCOUNTREF) Q ON Q.ACCOUNTREF=A.LOGICALREF ORDER BY A.CODE",
-  "metrics": {
-    "lineCount": 246404,
-    "debit": "8589117368.97",
-    "credit": "8589117368.97",
-    "truncated": false,
-    "closingGap": "292642907.06",
-    "computedAt": "2026-09-21T10:42:38.798827+00:00"
-  },
+  "technicalPassed": 144,
+  "technicalFailed": 0,
+  "lineCount": 246404,
   "accountCount": 379,
+  "ratioCount": 41,
+  "coverageCounts": {
+    "calculated": 17,
+    "unverified": 24,
+    "needs_evidence": 597,
+    "not_due": 6,
+    "finding": 3,
+    "observed": 2
+  },
+  "completeControlCoverage": false,
   "businessChecks": [
     {
       "id": "trial-balance",
-      "title": "Mizan borç–alacak eşitliği",
-      "affected": 0,
-      "amount": "0.00",
-      "formula": "Σ borç − Σ alacak; tolerans 0,01 TL",
-      "origin": "Ek kontrol",
-      "status": "passed"
+      "status": "passed",
+      "affected": 0
     },
     {
       "id": "slip-balance",
-      "title": "Fiş bazında borç–alacak eşitliği",
-      "affected": 0,
-      "amount": "0",
-      "formula": "Her fişte |Σ borç − Σ alacak| > 0,01 TL",
-      "origin": "Ek kontrol",
-      "status": "passed"
+      "status": "passed",
+      "affected": 0
     },
     {
       "id": "account-sign",
-      "title": "Kasa ve alınan çeklerde ters bakiye",
-      "affected": 2,
-      "amount": "277109.33",
-      "formula": "100 Kasa ve 101 Alınan Çekler alt hesaplarında net alacak bakiyesi > 0,01 TL. Diğer hesap karakterleri henüz doğrulanmadı.",
-      "origin": "Kaynak s. 61, 65",
-      "status": "finding"
+      "status": "finding",
+      "affected": 2
     },
     {
       "id": "account-link",
-      "title": "Muhasebe hesap kartı bağlantısı",
-      "affected": 0,
-      "amount": null,
-      "formula": "Hareketin ACCOUNTREF alanı hesap kartına bağlanıyor mu?",
-      "origin": "Ek veri kontrolü",
-      "status": "passed"
+      "status": "passed",
+      "affected": 0
     },
     {
       "id": "null-amount",
-      "title": "Eksik borç veya alacak tutarı",
-      "affected": 0,
-      "amount": null,
-      "formula": "Borç veya alacak alanı NULL olan hareket sayısı",
-      "origin": "Ek veri kontrolü",
-      "status": "passed"
+      "status": "passed",
+      "affected": 0
     },
     {
       "id": "slip-link",
-      "title": "Muhasebe fişi bağlantısı",
-      "affected": 0,
-      "amount": null,
-      "formula": "İptal edilmemiş hareketin bağlı olduğu fiş mevcut mu?",
-      "origin": "Ek veri kontrolü",
-      "status": "passed"
+      "status": "passed",
+      "affected": 0
     }
   ],
-  "ratios": [
-    {
-      "note": 2,
-      "title": "Cari oran",
-      "numerator": "936125732.04",
-      "denominator": "114072585.25",
-      "value": "8.206404106546712984222473383",
-      "formula": "Dönen varlıklar / kısa vadeli yabancı kaynaklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 3,
-      "title": "Asit-test oranı",
-      "numerator": "817927625.94",
-      "denominator": "114072585.25",
-      "value": "7.170238354355171414860171235",
-      "formula": "(Dönen varlıklar − stoklar) / kısa vadeli yabancı kaynaklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 4,
-      "title": "Nakit oranı",
-      "numerator": "568627943.01",
-      "denominator": "114072585.25",
-      "value": "4.984790532833128720557334787",
-      "formula": "(Hazır değerler + menkul kıymetler) / kısa vadeli yabancı kaynaklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 5,
-      "title": "Stokların dönen varlıklardaki payı",
-      "numerator": "118198106.10",
-      "denominator": "936125732.04",
-      "value": "0.1262630670801275200036856793",
-      "formula": "Stoklar / dönen varlıklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 6,
-      "title": "Stokların varlıklardaki payı",
-      "numerator": "118198106.10",
-      "denominator": "1073743761.20",
-      "value": "0.1100803658853426640054129890",
-      "formula": "Stoklar / toplam varlıklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 7,
-      "title": "Stok bağımlılık oranı",
-      "numerator": "-454555357.76",
-      "denominator": "118198106.10",
-      "value": "-3.845707623905828386196113509",
-      "formula": "(Kısa vadeli borçlar − hazır değerler − menkul kıymetler) / stoklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 8,
-      "title": "Kısa vadeli alacakların dönen varlıklardaki payı",
-      "numerator": "172830927.43",
-      "denominator": "936125732.04",
-      "value": "0.1846236264154044800291675144",
-      "formula": "(Ticari + diğer kısa vadeli alacaklar) / dönen varlıklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 9,
-      "title": "Kısa vadeli alacakların varlıklardaki payı",
-      "numerator": "172830927.43",
-      "denominator": "1073743761.20",
-      "value": "0.1609610539081006955609960102",
-      "formula": "(Ticari + diğer kısa vadeli alacaklar) / toplam varlıklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 10,
-      "title": "Finansal kaldıraç",
-      "numerator": "196498818.36",
-      "denominator": "1073743761.20",
-      "value": "0.1830034552567698774723274266",
-      "formula": "Yabancı kaynaklar / toplam varlıklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 11,
-      "title": "Özkaynak oranı",
-      "numerator": "584602035.78",
-      "denominator": "1073743761.20",
-      "value": null,
-      "formula": "Özkaynaklar / toplam varlıklar",
-      "status": "unverified",
-      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
-    },
-    {
-      "note": 12,
-      "title": "Özkaynak / borç oranı",
-      "numerator": "584602035.78",
-      "denominator": "196498818.36",
-      "value": null,
-      "formula": "Özkaynaklar / yabancı kaynaklar",
-      "status": "unverified",
-      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
-    },
-    {
-      "note": 13,
-      "title": "Kısa vadeli kaynakların payı",
-      "numerator": "114072585.25",
-      "denominator": "781100854.14",
-      "value": null,
-      "formula": "Kısa vadeli yabancı kaynaklar / toplam kaynaklar",
-      "status": "unverified",
-      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
-    },
-    {
-      "note": 14,
-      "title": "Uzun vadeli kaynakların payı",
-      "numerator": "82426233.11",
-      "denominator": "781100854.14",
-      "value": null,
-      "formula": "Uzun vadeli yabancı kaynaklar / toplam kaynaklar",
-      "status": "unverified",
-      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
-    },
-    {
-      "note": 15,
-      "title": "Uzun vadeli borç / devamlı sermaye",
-      "numerator": "82426233.11",
-      "denominator": "667028268.89",
-      "value": null,
-      "formula": "Uzun vadeli yabancı kaynaklar / (uzun vadeli yabancı kaynaklar + özkaynaklar)",
-      "status": "unverified",
-      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
-    },
-    {
-      "note": 18,
-      "title": "Borçların vade yapısı",
-      "numerator": "114072585.25",
-      "denominator": "196498818.36",
-      "value": "0.5805255532937139642960242786",
-      "formula": "Kısa vadeli yabancı kaynaklar / yabancı kaynaklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 19,
-      "title": "Banka kredileri / varlıklar",
-      "numerator": "107434369.30",
-      "denominator": "1073743761.20",
-      "value": "0.1000558729020534214955865208",
-      "formula": "(300 + 303 + 400 net alacak bakiyesi) / varlıklar",
-      "status": "calculated",
-      "reason": null
-    },
-    {
-      "note": 20,
-      "title": "Banka kredileri / özkaynaklar",
-      "numerator": "107434369.30",
-      "denominator": "584602035.78",
-      "value": null,
-      "formula": "(300 + 303 + 400 net alacak bakiyesi) / özkaynaklar",
-      "status": "unverified",
-      "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı."
-    },
-    {
-      "note": 21,
-      "title": "Dönen varlıkların payı",
-      "numerator": "936125732.04",
-      "denominator": "1073743761.20",
-      "value": "0.8718334540019118296880307871",
-      "formula": "Dönen varlıklar / toplam varlıklar",
-      "status": "calculated",
-      "reason": null
-    }
-  ],
-  "executedSql": [
-    "SELECT A.LOGICALREF AS accountRef, A.CODE AS code, A.DEFINITION_ AS name, A.ACCTYPE AS accountType, COUNT(*) AS lineCount, SUM(CAST(L.DEBIT AS NUMERIC(28, 4))) AS debit, SUM(CAST(L.CREDIT AS NUMERIC(28, 4))) AS credit, SUM(CASE WHEN L.DEBIT IS NULL OR L.CREDIT IS NULL THEN 1 ELSE 0 END) AS nullAmounts, SUM(CASE WHEN F.TRCODE = 1 THEN 1 ELSE 0 END) AS openingLines, MIN(L.DATE_) AS firstDate, MAX(L.DATE_) AS lastDate FROM [dbo].[LG_411_01_EMFLINE] AS [L] LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = L.ACCOUNTREF LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = L.ACCFICHEREF WHERE L.DATE_ >= '20260101' AND L.DATE_ < '20270101' AND L.CANCELLED = 0 AND F.CANCELLED = 0 GROUP BY A.LOGICALREF, A.CODE, A.DEFINITION_, A.ACCTYPE ORDER BY A.CODE",
-    "SELECT COUNT(*) AS affected, SUM(ABS(X.difference)) AS amount FROM (SELECT L.ACCFICHEREF AS ACCFICHEREF, SUM(CAST(L.DEBIT AS NUMERIC(28, 4)) - CAST(L.CREDIT AS NUMERIC(28, 4))) AS difference FROM [dbo].[LG_411_01_EMFLINE] AS [L] LEFT JOIN [dbo].[LG_411_EMUHACC] AS [A] ON A.LOGICALREF = L.ACCOUNTREF LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = L.ACCFICHEREF WHERE L.DATE_ >= '20260101' AND L.DATE_ < '20270101' AND L.CANCELLED = 0 AND F.CANCELLED = 0 GROUP BY L.ACCFICHEREF HAVING ABS(SUM(CAST(L.DEBIT AS NUMERIC(28, 4)) - CAST(L.CREDIT AS NUMERIC(28, 4)))) > 0.01) AS [X]",
-    "SELECT COUNT(*) AS sourceRows, SUM(CASE WHEN F.LOGICALREF IS NULL THEN 1 ELSE 0 END) AS missingSlip, SUM(CASE WHEN F.CANCELLED <> 0 THEN 1 ELSE 0 END) AS cancelledSlip FROM [dbo].[LG_411_01_EMFLINE] AS [L] LEFT JOIN [dbo].[LG_411_01_EMFICHE] AS [F] ON F.LOGICALREF = L.ACCFICHEREF WHERE L.DATE_ >= '20260101' AND L.DATE_ < '20270101' AND L.CANCELLED = 0"
-  ],
-  "fullEvidenceSha256": "d75e0f013cc49877605891a4764277ab5669307ed2b91a45eb7b91d0b999d056",
+  "documentGroups": 13,
+  "assetGroups": 54,
+  "fullEvidenceSha256": "625821558e0eabe12dd99cb0642a0d94c27a9082e6fcc3d880bead2137d2749c",
   "fullEvidenceServerPath": "/data/nanobaseai/bi/var/financial-audit/acceptance-2026-09-21.json",
-  "uiAcceptance": "DOĞRULANAMADI: geçerli portal oturumu yok",
-  "completeControlCoverage": false
+  "note": "Technical comparison only; all-source legal and documentary acceptance remains incomplete.",
+  "verifiedServerSourceHashes": {
+    "backend/semantic_bridge/financial_audit.py": "c7ec32e9091f5b36a5cb7fccf41bea7b9fb68c026d5b5d4eba11db64594c9300",
+    "backend/semantic_bridge/financial_audit_rules.py": "17f4e8107ef293497ea3dd8417428e0d20bf90422a6025f4e7c7282abbdd9813",
+    "backend/semantic_bridge/financial_audit_evidence.py": "7d25425845b9238503ad91b89ebb3ec5b41f3a0dcb4cd140ec597572fa095963",
+    "configs/financial-audit/source.json": "e1c65e69863ba45e3a677cb2aab73e509f26f04b9164d6219dcfd7e2823c1f6e",
+    "src/canvas/financial-audit/FinancialAudit.tsx": "6c0f3a3704eae1cc6570f744f37b2e3995f4e5e1d08df228c05addbc5e709fb2",
+    "src/canvas/financial-audit/audit.css": "1b052e056f2afef8ac5d3c905b74a2586ffd1d94eaf43535627993b38759de71"
+  },
+  "verificationScriptHash": "fc4e93141a8ca923aadc5aadbc004dc2229c9710fbfca59ccab39acafbf00342",
+  "browserEvidence": "browser.json",
+  "clientDownload": "DOĞRULANAMADI"
 }
