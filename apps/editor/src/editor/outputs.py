@@ -43,6 +43,30 @@ def capture(c, gid: str) -> dict:
     regression = c.execute("SELECT id,passed,results FROM ed.regression_run WHERE generation_id=%s "
         "ORDER BY created_at DESC,id DESC LIMIT 1", (gid,)).fetchone()
     blockers = []
+    if gen['origin']=='TRACKED':
+        # A historical quote_verified flag is not proof after its source changes.
+        # New text evidence must still identify the exact captured source span.
+        spans={p['page_no']:{s['span_id']:s for s in p['spans']} for p in pages}
+        supported=set()
+        for e in evidence:
+            if e['kind']=='VISUAL' and e['region_id'] is not None:
+                supported.add(e['claim_id'])
+                continue
+            provenance=e.get('source_refs') or {}
+            if provenance.get('generation_id')!=gid or provenance.get('page_no')!=e['page_no']:
+                continue
+            for ref in provenance.get('spans',[]):
+                span=spans.get(e['page_no'],{}).get(ref.get('span_id'))
+                if span and span['source_sha256']==ref.get('source_sha256') and source.key(e['quote']) \
+                        and source.key(e['quote']) in source.key(span['text']):
+                    supported.add(e['claim_id'])
+        if any(cl['id'] not in supported for cl in claims):
+            blockers.append('SOURCE_EVIDENCE_OUTDATED')
+        claims=[cl for cl in claims if cl['id'] in supported]
+        eligible={cl['id'] for cl in claims}
+        events=[e for e in events if e['claim_id'] in eligible]
+        emotions=[e for e in emotions if e['claim_id'] in eligible]
+        evidence=[e for e in evidence if e['claim_id'] in eligible]
     if gen['origin'] != 'TRACKED': blockers.append('LEGACY_UNASSESSED')
     if any(p['issues'] for p in pages): blockers.append('SOURCE_ISSUES')
     if not pages or any(p['page_role']=='UNKNOWN' for p in pages): blockers.append('PAGE_ROLES_UNASSESSED')
