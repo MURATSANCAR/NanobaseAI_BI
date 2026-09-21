@@ -3677,9 +3677,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/editorial/ask")
     def editorial_ask(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = _books(request)
-        # Kapsam (kimlik / kitap dışı) hızlı modelle ayrılır; kitap motoruna yalnız kitap sorusu gider.
+        # Hızlı model: kapsam (kimlik / kitap dışı) ayrımı ve cevaptaki iç terimlerin sadeleştirilmesi.
         llm = rt().llm_for("editorial", priority=1)
-        chat = (lambda messages: llm.chat(messages, max_tokens=40, temperature=0.0)) if llm is not None else None
+        chat = (lambda messages, max_tokens=40: llm.chat(messages, max_tokens=max_tokens, temperature=0.0)) if llm is not None else None
         out = _books_call(books_mod.ask, engine, tenant, user, str(body.get("question") or ""),
                           book_key=str(body.get("bookKey") or ""), book_title=(str(body.get("bookTitle") or "") or None),
                           chat=chat)

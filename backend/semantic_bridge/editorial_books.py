@@ -63,12 +63,69 @@ _INTERNAL = re.compile(
 )
 
 
+#: Sistemin iç işleyişini anlatan terimler. Kullanıcı yalnız «okunmuş kitap», «kitabın metni» gibi sade dili görür.
+_JARGON = re.compile(
+    r"\b(?:kanıt\s+defter\w*|defter\w*|generation\w*|claim\w*|evidence|chunk\w*|embedding\w*|vektör\w*|"
+    r"pipeline\w*|analiz\s+hatt\w*|iş\s+akış\w*|mcp|skill\w*|araç\s+çağr\w*|tool\w*|token\w*|"
+    r"veritaban\w*|sistem\s+talimat\w*|analiz\s+ed\w*|analiz\s+et\w*|analiz\s+edil\w*)",
+    re.I,
+)
+
+#: Model yoksa ya da yeniden yazım tutmazsa kullanılan sade karşılıklar (uzun ifade önce).
+_PLAIN = (
+    (r"kanıt\s+defterinde", "kitabın metninde"), (r"kanıt\s+defterinden", "kitabın metninden"),
+    (r"kanıt\s+defterine", "kitabın metnine"), (r"kanıt\s+defteri", "kitabın metni"),
+    (r"deftere\s+alıp\s+analiz\s+etmemi", "okumamı"), (r"deftere\s+al\w*", "okunacaklara ekle"),
+    (r"okunup\s+analiz\s+edilmiş", "okunmuş"), (r"şu\s+an\s+defterde", "şu an hazır"),
+    (r"defterimde|defterde", "okunmuş kitaplarda"), (r"defterden", "okunmuş kitaplardan"),
+    (r"deftere", "okunmuş kitaplara"), (r"defter\w*", "okunmuş kitaplar"),
+    (r"analiz\s+edilmemiş", "okunmamış"), (r"analiz\s+edilmiş", "okunmuş"), (r"analiz\s+edilen", "okunan"),
+    (r"analiz\s+etmedim", "okumadım"), (r"analiz\s+ettim", "okudum"), (r"analiz\s+edildi", "okundu"),
+)
+
+
+def plain(text: Optional[str]) -> Optional[str]:
+    """Kalan iç terimleri sabit sade karşılıklarıyla değiştirir (yedek yol, model gerekmez)."""
+    if not text:
+        return text
+    for pat, rep in _PLAIN:
+        text = re.sub(rf"\b{pat}", lambda m, r=rep: r[0].upper() + r[1:] if m.group(0)[0].isupper() else r, text, flags=re.I)
+    return text
+
+
 def scrub(text: Optional[str]) -> Optional[str]:
-    """İç bileşen/model adlarını ZEKI AI ile değiştirir; art arda tekrarları teke indirir."""
+    """İç bileşen/model adlarını ZEKI AI ile değiştirir, art arda tekrarları teke indirir, iç terimleri sadeleştirir."""
     if not text:
         return text
     out = _INTERNAL.sub(PRODUCT, text)
-    return re.sub(rf"(?:{PRODUCT}(?:[\s,/]+|\s+(?:ve|and)\s+))+{PRODUCT}", PRODUCT, out)
+    out = re.sub(rf"(?:{PRODUCT}(?:[\s,/]+|\s+(?:ve|and)\s+))+{PRODUCT}", PRODUCT, out)
+    return plain(out)
+
+
+POLISH_SYSTEM = (
+    "Aşağıdaki cevap bir kitap asistanının kullanıcıya yazdığı metindir. İçinde sistemin iç işleyişini anlatan "
+    "terimler var (defter, kanıt defteri, analiz etmek, claim, generation, araç, veritabanı gibi). Metni yalnız bu "
+    "terimleri sade, sıcak Türkçeyle değiştirerek yeniden yaz: «kitabın metni», «okunmuş kitaplar», «okumak» gibi. "
+    "Anlamı, kişi/kitap adlarını, sayfa numaralarını («s. 14», «[s.2]») ve «Kitapta bulunamadı.» başlangıcını aynen koru; "
+    "yeni bilgi ekleme, kısaltma. Yalnız yeniden yazılmış metni döndür."
+)
+_PAGE = re.compile(r"s\.\s?\d+")
+
+
+def polish(text: str, chat: Optional[Any] = None) -> str:
+    """Cevapta iç terim kalmışsa hızlı model yalnız o terimleri sadeleştirir. Sayfa atıfları ya da
+    «bulunamadı» başlangıcı kaybolursa ya da terim hâlâ duruyorsa model çıktısı atılır, sabit karşılıklar kullanılır."""
+    if not _JARGON.search(text) or chat is None:
+        return plain(text) or text
+    try:
+        out = (chat([{"role": "system", "content": POLISH_SYSTEM}, {"role": "user", "content": text}],
+                    max_tokens=max(400, len(text))) or "").strip()
+    except Exception as e:  # noqa: BLE001 — sadeleştirme bir iyileştirmedir, cevabı düşürmez
+        log.info("editorial polish failed: %s", e)
+        out = ""
+    keeps = (out and set(_PAGE.findall(text.replace(" ", ""))) <= set(_PAGE.findall(out.replace(" ", "")))
+             and out.startswith(NOT_FOUND) == text.lstrip().startswith(NOT_FOUND) and len(out) >= len(text) * 0.4)
+    return plain(out if keeps else text) or text
 
 
 #: Motor hatasının ayrıntısı loga yazılır; kullanıcı yalnız bunu görür.
@@ -298,7 +355,7 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(status="calisiyor"))
             started = _now()
             try:
-                answer, err = ask_engine(q, book_title), None
+                answer, err = polish(ask_engine(q, book_title), chat), None
             except Exception as e:  # noqa: BLE001
                 log.warning("editorial book ask failed: %s", e)
                 answer, err = None, (str(e) if isinstance(e, BookAskError) else UNAVAILABLE)[:580]
