@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pymupdf
 
-from . import db, prompts, schemas
+from . import db, prompts, schemas, source
 from .config import settings
 from .llm import Llm, image_part
 
@@ -290,9 +290,11 @@ async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dic
 
 
 def page_text_numbered(generation_id: str, page_no: int) -> str:
-    rows = db.all_rows("SELECT idx, text FROM paragraph WHERE generation_id=%s AND page_no=%s "
-                       "ORDER BY idx", generation_id, page_no)
-    return "\n".join(f"[s{page_no} p{r['idx']}] {r['text']}" for r in rows) or "(metin yok)"
+    try:
+        return source.numbered(source.read(generation_id,page_no)[0])
+    except KeyError:
+        # Existing context callers ask for the neighbouring page past the book.
+        return "(sayfa yok)"
 
 
 def get_page_bundle(generation_id: str, page_no: int) -> dict:
@@ -303,9 +305,12 @@ def get_page_bundle(generation_id: str, page_no: int) -> dict:
     page = db.one("SELECT page_no, width_pt, height_pt, text_layer_chars, image_count, needs_ocr,"
                   " render_path FROM page WHERE book_version_id=%s AND page_no=%s",
                   gen["book_version_id"], page_no)
+    reading = source.read(generation_id,page_no)[0]
     return {
         "page": page,
-        "paragraphs": db.all_rows("SELECT idx, text, source FROM paragraph WHERE generation_id=%s"
+        "source_reading": reading,
+        "paragraphs": reading["spans"],
+        "legacy_paragraphs": db.all_rows("SELECT idx, text, source FROM paragraph WHERE generation_id=%s"
                                   " AND page_no=%s ORDER BY idx", generation_id, page_no),
         "ocr": db.one("SELECT text FROM page_text WHERE generation_id=%s AND page_no=%s AND "
                       "source='OCR'", generation_id, page_no),

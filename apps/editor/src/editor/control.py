@@ -6,9 +6,9 @@ import os
 from typing import Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, Header, HTTPException, Query
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Path
 
-from . import foundation
+from . import foundation, source, knowledge, ledger
 from .config import settings
 
 
@@ -54,5 +54,56 @@ def records(generation_id: UUID, kind: Literal["claims", "events", "emotions"],
             limit: int = Query(default=50, ge=1, le=100), offset: int = Query(default=0, ge=0)):
     try:
         return foundation.read_records(str(generation_id),kind,limit,offset)
+    except KeyError:
+        raise HTTPException(404, "generation not found") from None
+
+
+@app.get("/v1/generations/{generation_id}/source/coverage")
+def source_coverage(generation_id: UUID):
+    try:
+        return source.coverage(str(generation_id))
+    except KeyError:
+        raise HTTPException(404, "generation not found") from None
+
+
+@app.get("/v1/generations/{generation_id}/source/pages/{page_no}")
+def source_page(generation_id: UUID, page_no: int = Path(ge=1)):
+    try:
+        page = source.read(str(generation_id), page_no)[0]
+        return {**page, "numbered_text": source.numbered(page)}
+    except KeyError:
+        raise HTTPException(404, "generation or page not found") from None
+
+
+@app.get("/v1/generations/{generation_id}/source/plan")
+def source_plan(generation_id: UUID):
+    try:
+        gid = str(generation_id)
+        chapters = knowledge.chapters(gid)
+        return {"policy": source.POLICY, "chapters": chapters,
+                "text_chunks": knowledge.text_chunks(gid),
+                "complete_book": False, "semantic_acceptance": False}
+    except KeyError:
+        raise HTTPException(404, "generation not found") from None
+
+
+@app.get("/v1/generations/{generation_id}/source/passages")
+def source_passages(generation_id: UUID):
+    try:
+        return {"policy": source.POLICY, "passages": source.passages(str(generation_id)),
+                "indexed": False, "semantic_acceptance": False}
+    except KeyError:
+        raise HTTPException(404, "generation not found") from None
+
+
+@app.get("/v1/generations/{generation_id}/source/quote-check")
+def source_quote(generation_id: UUID, page_no: int = Query(ge=1),
+                 paragraph: int = Query(ge=1), quote: str = Query(min_length=1, max_length=2000)):
+    try:
+        with foundation.read_snapshot() as c:
+            idx = ledger.PageIndex.load(c, str(generation_id))
+        spans = idx.matching_spans(page_no, quote, paragraph)
+        return {"verified": bool(spans), "policy": source.POLICY,
+                "span_ids": [s["span_id"] for s in spans], "semantic_acceptance": False}
     except KeyError:
         raise HTTPException(404, "generation not found") from None

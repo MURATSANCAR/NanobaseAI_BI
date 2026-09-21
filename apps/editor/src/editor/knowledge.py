@@ -13,7 +13,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from . import db, ledger, prompts, schemas
+from . import db, ledger, prompts, schemas, source
 from .config import settings
 from .document import page_text_numbered
 from .llm import Llm
@@ -27,9 +27,9 @@ def chapters(generation_id: str) -> list[dict]:
     """Chapters from upper-case headings at the top of a page that is followed by
     body text on the same page (title pages and imprint lines are not chapters).
     Consecutive heading paragraphs are one title ("TABLET PEŞİNDE" + "BİR GÜN")."""
-    rows = db.all_rows("SELECT page_no, idx, text FROM paragraph WHERE generation_id=%s"
-                       " ORDER BY page_no, idx", generation_id)
-    last_page = max((r["page_no"] for r in rows), default=0)
+    pages = source.read(generation_id)
+    rows = [{"page_no":p["page_no"],**span} for p in pages for span in p["spans"]]
+    last_page = max((p["page_no"] for p in pages), default=0)
     by_page: dict[int, list[str]] = {}
     for r in rows:
         by_page.setdefault(r["page_no"], []).append(r["text"].strip())
@@ -53,7 +53,7 @@ def chapters(generation_id: str) -> list[dict]:
         end = starts[i + 1][0] - 1 if i + 1 < len(starts) else last_page
         out.append({"title": title, "page_from": p, "page_to": max(p, end)})
     if starts[0][0] > 1:
-        out.insert(0, {"title": "Ön sayfalar", "page_from": 1, "page_to": starts[0][0] - 1})
+        out.insert(0, {"title": "Başlıksız başlangıç", "page_from": 1, "page_to": starts[0][0] - 1})
     return out
 
 
@@ -127,7 +127,7 @@ def _verify(st: ChunkState) -> ChunkState:
     for item in o["character_mentions"] + o["events"] + o["emotions"] + o["themes"]:
         for e in item["evidence"]:
             total += 1
-            if int(e.get("paragraph") or 0) > 0 and not idx.verify(int(e["page"]), e["quote"], "TEXT"):
+            if int(e.get("paragraph") or 0) > 0 and not idx.verify(int(e["page"]), e["quote"], "TEXT", int(e["paragraph"])):
                 bad.append(f"s{e['page']}: “{e['quote']}”")
     return {**st, "unverified": bad if total and len(bad) / total > 0.2 else []}
 
@@ -143,10 +143,13 @@ def _persist(st: ChunkState) -> ChunkState:
     with db.tx() as c:
         idx = ledger.PageIndex.load(c, gid)
         pages = _valid_pages(c, gid)
-        non_story = {p for p in o.get("non_story_pages", []) if st["page_from"] <= p <= st["page_to"]}
-        for p in non_story:
+        suggested_non_story = {p for p in o.get("non_story_pages", []) if st["page_from"] <= p <= st["page_to"]}
+        for p in suggested_non_story:
             c.execute("INSERT INTO page_role(generation_id, page_no, role, source, model_call_id)"
                       " VALUES (%s,%s,'NON_STORY','extract',%s) ON CONFLICT DO NOTHING", (gid, p, call_id))
+            ledger.queue_review(c,gid,reason=f"Sayfa türü incelemesi: s{p}; çıkarıcının NON_STORY önerisi, kapsamdan çıkarılmadı",priority=2)
+        non_story = {r["page_no"] for r in c.execute("SELECT page_no FROM page_role WHERE generation_id=%s "
+            "AND source='editor' AND role IN ('FRONT_MATTER','NON_STORY')",(gid,))}
 
         def story(item: dict, *keys: str) -> bool:
             """Keep an item only if none of its pages is a non-story page."""
@@ -242,17 +245,15 @@ async def extract_chunk(generation_id: str, page_from: int, page_to: int) -> dic
 
 
 def text_chunks(generation_id: str, size: int = 4) -> list[tuple[int, int]]:
-    """Story pages in chunks of `size`; front matter (imprint, author bios) is
-    not story text and would yield false characters."""
-    front = {p for c in chapters(generation_id) if c["title"] == "Ön sayfalar"
-             for p in range(c["page_from"], c["page_to"] + 1)}
-    with db.tx() as c:
-        for p in front:
-            c.execute("INSERT INTO page_role(generation_id, page_no, role, source) VALUES"
-                      " (%s,%s,'FRONT_MATTER','layout') ON CONFLICT DO NOTHING", (generation_id, p))
-    pages = [r["page_no"] for r in db.all_rows(
-        "SELECT DISTINCT page_no FROM paragraph WHERE generation_id=%s ORDER BY page_no", generation_id)
-        if r["page_no"] not in front]
+    """All physical pages; chapter discovery never decides source coverage.
+
+    Missing text and visual-only pages remain scheduled and visible to coverage.
+    This function is read-only, including on legacy sealed generations.
+    """
+    if size < 1:
+        raise ValueError("chunk size must be positive")
+    pages = [r["page_no"] for r in db.all_rows("SELECT p.page_no FROM page p JOIN generation g "
+        "ON g.book_version_id=p.book_version_id WHERE g.id=%s ORDER BY p.page_no",generation_id)]
     return [(pages[i], pages[min(i + size, len(pages)) - 1]) for i in range(0, len(pages), size)]
 
 
@@ -263,7 +264,7 @@ def _agent_evidence(c, generation_id: str, evidence: list[dict]) -> list[tuple[s
     pages = _valid_pages(c, generation_id)
     for e in evidence or []:
         kind = "VISUAL" if int(e.get("paragraph") or 0) == 0 else "TEXT"
-        if int(e.get("page") or 0) not in pages or not idx.verify(int(e["page"]), e.get("quote", ""), kind):
+        if int(e.get("page") or 0) not in pages or not idx.verify(int(e["page"]), e.get("quote", ""), kind, int(e.get("paragraph") or 0) or None):
             raise ValueError(f"kanıt doğrulanamadı: sayfa {e.get('page')}: “{e.get('quote')}”")
     evs = ledger.evidence_from_model(c, generation_id, idx, evidence, valid_pages=pages)
     if not evs:

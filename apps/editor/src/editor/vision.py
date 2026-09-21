@@ -10,7 +10,7 @@ import re
 from collections import Counter
 from pathlib import Path
 
-from . import db, ledger, prompts, schemas
+from . import source, db, ledger, prompts, schemas
 from .config import settings
 from .document import page_text_numbered, region_ink_ratio, render_page
 from .llm import Llm, image_part
@@ -37,7 +37,7 @@ def known_names(generation_id: str) -> list[str]:
     """Capitalised words that recur mid-sentence in the book text: a hint list
     for the scanner, not a claim."""
     c: Counter = Counter()
-    for r in db.all_rows("SELECT text FROM paragraph WHERE generation_id=%s", generation_id):
+    for r in source.passages(generation_id):
         for m in _NAME.finditer(r["text"]):
             start = m.start()
             if start > 1 and r["text"][start - 2] not in ".!?\"“":
@@ -184,7 +184,7 @@ def persist_page_visual(generation_id: str, page_no: int) -> dict:
         png_path = render_page(str(c.execute("SELECT book_version_id FROM generation WHERE id=%s",
                                              (generation_id,)).fetchone()["book_version_id"]), page_no)["path"]
         front = c.execute("SELECT 1 FROM page_role WHERE generation_id=%s AND page_no=%s AND"
-                          " role='FRONT_MATTER'", (generation_id, page_no)).fetchone() is not None
+                          " role='FRONT_MATTER' AND source='editor'", (generation_id, page_no)).fetchone() is not None
         near_text = " ".join(idx.text.get(p, "") for p in (page_no - 1, page_no, page_no + 1))
         for ch in res["characters"]:
             # A figure is a visual claim: its box must actually contain ink.
@@ -250,7 +250,7 @@ async def confirm_text_visual(generation_id: str) -> dict:
         "SELECT s.page_no FROM page_scan s WHERE s.generation_id=%s AND s.pass='DEEP' AND NOT EXISTS"
         " (SELECT 1 FROM text_visual_check t WHERE t.generation_id=s.generation_id AND t.page_no=s.page_no)"
         " AND NOT EXISTS (SELECT 1 FROM page_role r WHERE r.generation_id=s.generation_id AND"
-        " r.page_no=s.page_no AND r.role='FRONT_MATTER') ORDER BY s.page_no", generation_id)
+        " r.page_no=s.page_no AND r.role='FRONT_MATTER' AND r.source='editor') ORDER BY s.page_no", generation_id)
     sem = asyncio.Semaphore(settings().deep_concurrency * 2)
     llm = Llm(generation_id)
 
@@ -495,7 +495,7 @@ async def resolve_visual_identity(generation_id: str) -> dict:
         "SELECT cm.id, cm.page_no, cm.surface_name, vr.bbox, (SELECT bool_or(s.pass='DEEP') FROM page_scan s"
         " WHERE s.generation_id=cm.generation_id AND s.page_no=cm.page_no) AS deep, EXISTS (SELECT 1 FROM"
         " page_role r WHERE r.generation_id=cm.generation_id AND r.page_no=cm.page_no AND"
-        " r.role='FRONT_MATTER') AS front FROM character_mention cm JOIN evidence e ON e.id=cm.evidence_id"
+        " r.role='FRONT_MATTER' AND r.source='editor') AS front FROM character_mention cm JOIN evidence e ON e.id=cm.evidence_id"
         " JOIN visual_region vr ON vr.id=e.region_id WHERE cm.generation_id=%s AND cm.via='VISUAL'"
         " ORDER BY cm.page_no, vr.id", generation_id)
     stats = {"figures": len(figs), "reference_candidates": 0, "references_refused": 0,

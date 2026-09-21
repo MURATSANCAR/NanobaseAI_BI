@@ -354,7 +354,7 @@ def run_regression_suite(generation_id: str) -> dict:
             generation_id, generation_id) == 0),
         _check("ön sayfa figürü yalnız referans eşleşmesiyle kesin kimlik alır", one(
             "SELECT count(*) n FROM character_mention cm JOIN page_role r ON r.generation_id=cm.generation_id"
-            " AND r.page_no=cm.page_no AND r.role='FRONT_MATTER' WHERE cm.generation_id=%s AND"
+            " AND r.page_no=cm.page_no AND r.role='FRONT_MATTER' AND r.source='editor' WHERE cm.generation_id=%s AND"
             " cm.via<>'TEXT' AND cm.resolution='RESOLVED' AND"
             " coalesce(cm.appearance->>'identified_by','') <> 'reference'", generation_id) == 0),
         _check("hızlı taramanın verdiği ad tek başına kesin kimlik değil", one(

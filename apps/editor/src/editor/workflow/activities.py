@@ -103,7 +103,7 @@ async def narrative_roles(generation_id: str) -> dict:
 async def persist_visual(generation_id: str, phase: str = "all") -> dict:
     """A page's visual records are written once, when its best scan is final:
     phase "deep" = pages that already have their deep scan; "all" = the rest."""
-    await _t(knowledge.text_chunks, generation_id)   # records FRONT_MATTER page roles first
+    # Chapter discovery does not assign page roles or remove source pages.
     pages = await _t(db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s"
                      " AND (%s <> 'deep' OR pass='DEEP')", generation_id, phase)
     out = [await _t(vision.persist_page_visual, generation_id, r["page_no"]) for r in pages]
@@ -177,7 +177,7 @@ async def embed_index(generation_id: str) -> dict:
 
 @activity.defn
 async def list_chapters(generation_id: str) -> list[dict]:
-    return [c for c in await _t(knowledge.chapters, generation_id) if c["title"] != "Ön sayfalar"]
+    return await _t(knowledge.chapters, generation_id)
 
 
 @activity.defn

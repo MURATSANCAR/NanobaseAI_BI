@@ -7,7 +7,7 @@ import uuid
 
 from qdrant_client import AsyncQdrantClient, models
 
-from . import db
+from . import db, source
 from .config import settings
 from .llm import Llm
 
@@ -38,13 +38,7 @@ async def _ensure(name: str) -> None:
 
 
 def _passages(generation_id: str) -> list[dict]:
-    out = [{"kind": "paragraph", "page_no": r["page_no"], "ref": f"s{r['page_no']}p{r['idx']}",
-            "paragraph_idx": r["idx"], "text": r["text"]}
-           for r in db.all_rows("SELECT page_no, idx, text FROM paragraph WHERE generation_id=%s "
-                                "ORDER BY page_no, idx", generation_id)]
-    out += [{"kind": "ocr", "page_no": r["page_no"], "ref": f"s{r['page_no']}ocr", "text": r["text"]}
-            for r in db.all_rows("SELECT page_no, text FROM page_text WHERE generation_id=%s AND "
-                                 "source='OCR'", generation_id)]
+    out = source.passages(generation_id)
     out += [{"kind": "event", "page_no": r["page_from"], "ref": f"event:{r['id']}",
              "text": f"[{r['modality']}] {r['summary']}"}
             for r in db.all_rows("SELECT id, page_from, modality, summary FROM event WHERE "

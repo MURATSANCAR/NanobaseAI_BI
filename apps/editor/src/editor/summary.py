@@ -83,7 +83,7 @@ async def book_summary(generation_id: str) -> dict:
 
 
 async def all_summaries(generation_id: str) -> dict:
-    chs = [c for c in chapters(generation_id) if c["title"] != "Ön sayfalar"]
+    chs = chapters(generation_id)
     res = await asyncio.gather(*(chapter_summary(generation_id, c) for c in chs))
     book = await book_summary(generation_id)
     return {"chapters": res, "book": book}

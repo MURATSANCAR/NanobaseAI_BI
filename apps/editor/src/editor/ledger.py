@@ -10,7 +10,7 @@ from typing import Any, Iterable
 
 import psycopg
 
-from . import db
+from . import db, source
 
 _WS = re.compile(r"\s+")
 _HYPH = re.compile(r"(\w)[-­]\s+(\w)")
@@ -88,30 +88,35 @@ def snap_quote(quote: str, raw_page_text: str) -> str | None:
 
 @dataclass
 class PageIndex:
-    """Normalised page text (text layer + OCR) and visual scan text, per page."""
+    """Current source spans; historical paragraph rows are never reinterpreted."""
     text: dict[int, str]
     visual: dict[int, str]
     raw: dict[int, str]
+    spans: dict[int, list[dict]]
 
     @classmethod
     def load(cls, conn: psycopg.Connection, generation_id: str) -> "PageIndex":
-        text: dict[int, list[str]] = {}
-        for r in conn.execute("SELECT page_no, text FROM page_text WHERE generation_id=%s "
-                              "ORDER BY page_no, source", (generation_id,)):
-            text.setdefault(r["page_no"], []).append(r["text"])
+        pages = source.load(conn, generation_id)
+        spans = {p["page_no"]: p["spans"] for p in pages}
         visual: dict[int, list[str]] = {}
         for r in conn.execute("SELECT page_no, result::text AS t FROM page_scan "
                               "WHERE generation_id=%s", (generation_id,)):
             visual.setdefault(r["page_no"], []).append(r["t"])
-        raw = {p: "\n".join(v) for p, v in text.items()}
+        raw = {p: "\n".join(s["text"] for s in ss) for p, ss in spans.items()}
         return cls({p: norm(t) for p, t in raw.items()},
-                   {p: norm(" ".join(v)) for p, v in visual.items()}, raw)
+                   {p: norm(" ".join(v)) for p, v in visual.items()}, raw, spans)
 
-    def verify(self, page: int, quote: str, kind: str) -> bool:
-        hay = self.text.get(page, "")
+    def matching_spans(self, page: int, quote: str, paragraph: int | None = None) -> list[dict]:
+        q = source.key(quote)
+        return [s for s in self.spans.get(page, []) if q and q in source.key(s["text"])
+                and (not paragraph or s["idx"] == paragraph)]
+
+    def verify(self, page: int, quote: str, kind: str, paragraph: int | None = None) -> bool:
+        if kind == "TEXT":
+            return bool(self.matching_spans(page, quote, paragraph))
         if kind == "VISUAL":
-            hay = hay + " " + self.visual.get(page, "")
-        return quote_found(quote, hay)
+            return quote_found(quote, self.text.get(page, "") + " " + self.visual.get(page, ""))
+        return False
 
 
 def save_evidence(conn: psycopg.Connection, generation_id: str, idx: PageIndex, *,
@@ -121,11 +126,15 @@ def save_evidence(conn: psycopg.Connection, generation_id: str, idx: PageIndex, 
     quote = (quote or "").strip()
     if not quote:
         raise ValueError("empty evidence quote")
-    ok = idx.verify(page, quote, kind)
+    ok = idx.verify(page, quote, kind, paragraph_idx)
+    refs = [{k: s[k] for k in ("span_id", "source", "source_sha256", "start", "end", "idx")}
+            for s in idx.matching_spans(page, quote, paragraph_idx)] if kind == "TEXT" else []
+    provenance = {"policy": source.POLICY, "generation_id": generation_id,
+                  "page_no": page, "spans": refs}
     row = conn.execute(
         "INSERT INTO evidence(generation_id, page_no, paragraph_idx, region_id, event_id, kind,"
-        " quote, quote_verified) VALUES (%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-        (generation_id, page, paragraph_idx or None, region_id, event_id, kind, quote[:2000], ok),
+        " quote, quote_verified, source_refs) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        (generation_id, page, paragraph_idx or None, region_id, event_id, kind, quote[:2000], ok, db.J(provenance)),
     ).fetchone()
     return str(row["id"]), ok
 
@@ -141,11 +150,10 @@ def evidence_from_model(conn: psycopg.Connection, generation_id: str, idx: PageI
         quote = (e.get("quote") or "").strip()
         if page not in valid_pages or not quote:
             continue
-        if default_kind == "TEXT" and not idx.verify(page, quote, "TEXT"):
-            snapped = snap_quote(quote, idx.raw.get(page, ""))
-            if snapped:
-                quote = snapped
-        kind = "VISUAL" if int(e.get("paragraph") or 0) == 0 and default_kind == "TEXT" \
+        paragraph = int(e.get("paragraph") or 0) or None
+        # Do not silently rewrite an attributed quote or resolve a bad paragraph
+        # against a different span. Unmatched evidence remains unverified.
+        kind = "VISUAL" if paragraph is None and default_kind == "TEXT" \
             and not idx.verify(page, quote, "TEXT") else default_kind
         eid, ok = save_evidence(conn, generation_id, idx, page=page, quote=quote, kind=kind,
                                 paragraph_idx=int(e.get("paragraph") or 0) or None)

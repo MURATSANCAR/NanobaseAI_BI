@@ -64,7 +64,7 @@ async def extract_metadata(generation_id: str) -> dict:
             if not f["value"].strip():
                 continue
             evs = [e for e in ledger.evidence_from_model(
-                c, generation_id, idx, [{"page": f["page"], "paragraph": 1, "quote": f["quote"]}],
+                c, generation_id, idx, [{"page": f["page"], "paragraph": next((s["idx"] for s in idx.matching_spans(f["page"], f["quote"])), 0), "quote": f["quote"]}],
                 valid_pages=valid) if e[1]]
             if evs:     # verbatim on the page, or it does not exist
                 ledger.save_claim(c, generation_id, kind="METADATA", subject=f["field"],
