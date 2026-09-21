@@ -115,13 +115,14 @@ DECLARE
   current_value jsonb;
   gid uuid;
   rev bigint;
+  linked_kind text;
 BEGIN
   IF TG_OP <> 'INSERT' THEN previous := to_jsonb(OLD); END IF;
   IF TG_OP <> 'DELETE' THEN current_value := to_jsonb(NEW); END IF;
   IF TG_OP = 'UPDATE' AND previous = current_value THEN RETURN NEW; END IF;
   gid := COALESCE(current_value->>'generation_id',previous->>'generation_id')::uuid;
   IF TG_TABLE_NAME = 'claim_evidence' THEN
-    SELECT generation_id INTO gid FROM ed.claim
+    SELECT generation_id,kind INTO gid,linked_kind FROM ed.claim
       WHERE id=COALESCE(current_value->>'claim_id',previous->>'claim_id')::uuid;
     IF TG_OP = 'UPDATE' AND previous->>'claim_id' IS DISTINCT FROM current_value->>'claim_id' THEN
       RAISE EXCEPTION 'claim_evidence claim_id is immutable';
@@ -142,9 +143,14 @@ BEGIN
   END IF;
   -- Summaries, reports and answers are derived outputs, not canonical inputs.
   -- Their own artifact builds/invalidation use foundation.invalidate_dependents.
-  IF TG_TABLE_NAME = 'claim' AND
-     COALESCE(current_value->>'kind',previous->>'kind') IN
-       ('SUMMARY','ANSWER','AGE_GROUP','PUBLISHER_DECISION') THEN
+  IF (TG_TABLE_NAME = 'claim' AND
+      COALESCE(current_value->>'kind',previous->>'kind') IN
+        ('SUMMARY','ANSWER','AGE_GROUP','PUBLISHER_DECISION')) OR
+     (TG_TABLE_NAME = 'claim_evidence' AND linked_kind IN
+        ('SUMMARY','ANSWER','AGE_GROUP','PUBLISHER_DECISION')) OR
+     (TG_TABLE_NAME = 'evidence' AND TG_OP='INSERT') THEN
+    -- New evidence is counted when linked to a canonical claim. Inserting
+    -- summary citations must not invalidate the summary's own input revision.
     IF TG_OP = 'DELETE' THEN RETURN OLD; END IF;
     RETURN NEW;
   END IF;
