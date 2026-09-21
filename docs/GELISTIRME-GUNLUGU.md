@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Kontrollü gerçek yeni nesil ve otomatik yeniden başlama
+
+- `0439924a` GPU üzerine kuruldu; gerçek jobs MCP ile tek 32 sayfalık kitap yeniden başlatıldı. Job `2cc4bd08-67cf-424a-af67-4f686ea6b8a3`, nesil `9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a`; özel kuyruk, genel taramalar kapalı.
+- Temporal 60 saniyelik heartbeat timeout ve 20 saniyelik canlılık bildirimi kaydetti. OCR sırasında worker host sürecine SIGKILL verildi; Docker elle start olmadan restart=1 ile geri geldi. Temporal geçmişinde dokuz OCR aktivitesi heartbeat timeout sonrası attempt=2 ile 17:18:31 UTC’de yeniden başladı (SIGKILL17:17:32); aynı nesil OCR/hızlı taramadan derin görsel aşamasına geçti. Beş kısıtın içerik kabulü ayrıca izleniyor; tam kabul iddiası yok.
+- Öncesi ve sinyal kanıtı `/data/editor/storage/acceptance-0439924a/`; yerel ürün testi çalıştırılmadı.
+
 ## 2026-09-21 — Kitaba sor yanıt okunaklılığı
 
 - Yanıtlar ayrı paragraflarla, sınırlı satır genişliği ve 15/16px yazıyla gösterilir. Kart iç boşlukları artırıldı, avatar yanıt başlangıcına hizalandı; kaynak sayfaları kontrastlı rozet olarak korunur.

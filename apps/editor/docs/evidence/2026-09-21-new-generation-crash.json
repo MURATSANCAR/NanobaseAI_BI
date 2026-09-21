@@ -1,0 +1,290 @@
+{
+  "code_version": "0439924a",
+  "crash": {
+    "utc": "2026-09-21T17:17:32.275823+00:00",
+    "container": "editor-acceptance-worker-0439924a",
+    "pid": 2311809,
+    "restart_before": 0,
+    "signal": "SIGKILL"
+  },
+  "job": {
+    "job_id": "2cc4bd08-67cf-424a-af67-4f686ea6b8a3",
+    "title": "dunyanin-en-korkak-hayvani",
+    "status": "RUNNING",
+    "step": "6/15 Derin görsel inceleme",
+    "progress": {
+      "step_01": {
+        "label": "Kitap ve içerik sürümü"
+      },
+      "step_02": {
+        "label": "Sayfa manifesti",
+        "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a"
+      },
+      "step_03": {
+        "label": "PDF metin katmanı"
+      },
+      "step_04": {
+        "label": "OCR",
+        "pages": [
+          2,
+          3,
+          4,
+          5,
+          10,
+          18,
+          24,
+          26,
+          32
+        ]
+      },
+      "step_05": {
+        "label": "Hızlı görsel tarama",
+        "pages": 32
+      },
+      "step_06": {
+        "label": "Derin görsel inceleme",
+        "uncertain_pages": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9,
+          10,
+          11,
+          12,
+          13,
+          14,
+          15,
+          17,
+          18,
+          19,
+          20,
+          21,
+          22,
+          23,
+          24,
+          25,
+          26,
+          27,
+          28,
+          31,
+          32
+        ]
+      }
+    },
+    "error": null,
+    "created_at": "2026-09-21 17:17:04.914115+00:00",
+    "finished_at": null,
+    "generation_id": "9e01aacf-7ab6-4e11-9b7a-b82b45e8a48a",
+    "open_review_items": 0,
+    "report_id": null,
+    "report_available": false,
+    "knowledge_revision": 209,
+    "semantic_acceptance": false
+  },
+  "retried_activity_events": [
+    {
+      "eventId": "60",
+      "eventTime": "2026-09-21T17:18:31.376997533Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112840",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "55",
+        "identity": "1@aa9355185cf3",
+        "requestId": "f38aa88c-8371-4d7f-af8d-ae3e560e53bc",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "65",
+      "eventTime": "2026-09-21T17:18:31.417071555Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112852",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "53",
+        "identity": "1@aa9355185cf3",
+        "requestId": "3b2e80e5-a101-4658-abe5-81bcaa5430d6",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "70",
+      "eventTime": "2026-09-21T17:18:31.382237581Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112860",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "56",
+        "identity": "1@aa9355185cf3",
+        "requestId": "88ef85ac-18ad-4be1-a307-e8a4bed38495",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "75",
+      "eventTime": "2026-09-21T17:18:31.410150770Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112872",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "58",
+        "identity": "1@aa9355185cf3",
+        "requestId": "ead66334-3ef7-4b9b-84b4-dd02f864479b",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "80",
+      "eventTime": "2026-09-21T17:18:31.389522850Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112884",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "54",
+        "identity": "1@aa9355185cf3",
+        "requestId": "57887d5e-da4c-4f1a-92d4-9bcc3e1f1c76",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "85",
+      "eventTime": "2026-09-21T17:18:31.423227869Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112892",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "59",
+        "identity": "1@aa9355185cf3",
+        "requestId": "8ce7477e-3c41-4a16-90c3-6eb29f0d9218",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "90",
+      "eventTime": "2026-09-21T17:18:31.369122942Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112904",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "57",
+        "identity": "1@aa9355185cf3",
+        "requestId": "50967da6-6c66-476e-bf11-a90d4eb6b863",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "95",
+      "eventTime": "2026-09-21T17:18:31.403324607Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112916",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "52",
+        "identity": "1@aa9355185cf3",
+        "requestId": "1e0f7624-d8e2-4492-9da0-ec965bdfffe5",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    },
+    {
+      "eventId": "100",
+      "eventTime": "2026-09-21T17:18:31.396500592Z",
+      "eventType": "EVENT_TYPE_ACTIVITY_TASK_STARTED",
+      "taskId": "2112928",
+      "activityTaskStartedEventAttributes": {
+        "scheduledEventId": "51",
+        "identity": "1@aa9355185cf3",
+        "requestId": "f061f7b5-d460-4758-bd79-f9fe7c0e2e40",
+        "attempt": 2,
+        "lastFailure": {
+          "message": "activity Heartbeat timeout",
+          "source": "Server",
+          "timeoutFailureInfo": {
+            "timeoutType": "TIMEOUT_TYPE_HEARTBEAT"
+          }
+        },
+        "workerVersion": {
+          "buildId": "2cf2869bc5b19a32f6c61d14668ca7bf"
+        }
+      }
+    }
+  ],
+  "scope": "Worker automatic restart and OCR redelivery observed. Full book semantic acceptance pending."
+}
