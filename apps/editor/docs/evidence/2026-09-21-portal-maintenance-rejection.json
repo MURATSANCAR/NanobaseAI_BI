@@ -1,0 +1,17 @@
+{
+  "id": "9b0221c20b934ec3a9b160ab34539ff4",
+  "bookKey": "",
+  "bookTitle": "Dünyanın En Korkak Hayvanı",
+  "question": "Dünyanın En Korkak Hayvanı kitabında Baba Vombat ile Yavru Vombat aynı kişi mi?",
+  "status": "hata",
+  "answer": null,
+  "notFound": false,
+  "cards": [],
+  "cardError": null,
+  "cardMatch": null,
+  "error": "ZEKI AI şu an bu soruyu cevaplayamadı. Birazdan tekrar sorun.",
+  "elapsedMs": 8633,
+  "username": "timasai",
+  "createdAt": "2026-09-21T16:46:02.982500+00:00",
+  "finishedAt": "2026-09-21T16:46:12.996139+00:00"
+}
