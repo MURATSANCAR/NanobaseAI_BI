@@ -1,0 +1,89 @@
+{
+  "date": "2026-09-21",
+  "environment": "https://portal.nanobase.ai/timas/",
+  "scope": "Authenticated navigation and responsive layout only; no calculation acceptance rerun",
+  "kampus": [
+    {
+      "links": [
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal Denetim"
+        },
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal DenetimFinans · kontroller, bulgular ve Logo kayıtları"
+        }
+      ],
+      "pageWidth": 320,
+      "width": 320
+    },
+    {
+      "links": [
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal Denetim"
+        },
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal DenetimFinans · kontroller, bulgular ve Logo kayıtları"
+        }
+      ],
+      "pageWidth": 390,
+      "width": 390
+    },
+    {
+      "links": [
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal Denetim"
+        },
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal DenetimFinans · kontroller, bulgular ve Logo kayıtları"
+        }
+      ],
+      "pageWidth": 768,
+      "width": 768
+    },
+    {
+      "links": [
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal Denetim"
+        },
+        {
+          "href": "/timas/finansal-denetim",
+          "label": "Finansal DenetimFinans · kontroller, bulgular ve Logo kayıtları"
+        }
+      ],
+      "pageWidth": 1440,
+      "width": 1440
+    }
+  ],
+  "audit": [
+    {
+      "activeLink": "/timas/finansal-denetim",
+      "pageWidth": 320,
+      "title": "Rakamların arkasını görün.",
+      "width": 320
+    },
+    {
+      "activeLink": "/timas/finansal-denetim",
+      "pageWidth": 390,
+      "title": "Rakamların arkasını görün.",
+      "width": 390
+    },
+    {
+      "activeLink": "/timas/finansal-denetim",
+      "pageWidth": 768,
+      "title": "Rakamların arkasını görün.",
+      "width": 768
+    },
+    {
+      "activeLink": "/timas/finansal-denetim",
+      "pageWidth": 1440,
+      "title": "Rakamların arkasını görün.",
+      "width": 1440
+    }
+  ]
+}

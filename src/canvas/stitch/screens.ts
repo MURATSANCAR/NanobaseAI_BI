@@ -52,6 +52,7 @@ export const railFor = (active: string): StitchRailItem[] => [
   { to: '/editoryal', label: 'Editoryal masa', badge: active === '/editoryal' ? 'Aktif' : undefined },
   // Girişten sonraki ana sayfaya dönüş.
   { to: '/', label: 'Kampüs', badge: active === '/' ? 'Aktif' : undefined },
+  { to: '/finansal-denetim', label: 'Finansal Denetim', badge: active === '/finansal-denetim' ? 'Aktif' : undefined },
 ];
 
 /** Editoryal Süreç ekranlarının kendi rayı: BI ekranları yerine sekiz modül ve masa.

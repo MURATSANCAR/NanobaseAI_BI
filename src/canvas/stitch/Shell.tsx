@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { ShieldCheck } from 'lucide-react';
 import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
 import { useIsAdmin } from '../useAdmin';
@@ -264,7 +265,7 @@ export default function Shell({
                     : 'hover:bg-white/80 text-muted hover:text-ink')
                 }
               >
-                <span className="w-10 h-10 shrink-0 flex items-center justify-center">{RAIL_ICONS[i % RAIL_ICONS.length]}</span>
+                <span className="w-10 h-10 shrink-0 flex items-center justify-center">{item.to === '/finansal-denetim' ? <ShieldCheck className="w-5 h-5" /> : RAIL_ICONS[i % RAIL_ICONS.length]}</span>
                 <span className="rail-label min-w-0 truncate text-[13px] font-semibold tracking-tight" aria-hidden={!railOpen}>
                   {item.label}
                 </span>

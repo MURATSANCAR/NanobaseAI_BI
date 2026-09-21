@@ -70,6 +70,7 @@ const PROMPTS = [
 /** Modül kutucukları: kanvasta açılan ekranlar. Yeni ekran geldikçe satır eklenir. */
 const MODULE_TILES = [
   { to: '/genel-bakis', title: 'ZEKİ AI · Genel Bakış', note: 'Satış, ciro ve verine sor', tone: 'bg-violet/10 text-violet' },
+  { to: '/finansal-denetim', title: 'Finansal Denetim', note: 'Finans · kontroller, bulgular ve Logo kayıtları', tone: 'bg-emerald-100 text-emerald-700' },
   { to: '/panolar', title: 'Panolar', note: 'Kişisel pano ve grafikler', tone: 'bg-amber-100 text-amber-800' },
   { to: '/uyarilar', title: 'Uyarılar', note: 'Kural ve bildirimler', tone: 'bg-rose-100 text-rose-700' },
   { to: '/planli-raporlar', title: 'Planlı Raporlar', note: 'Zamanlanmış gönderimler', tone: 'bg-sky-100 text-sky-700' },

@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Finansal Denetim ana menü bağlantısı
+
+- Kullanıcının tespit ettiği eksik giderildi: yalnız Modüller listesindeki bağlantı yeterli değildi; sol ana menüye Finansal Denetim ve Kampüs modül kartlarına doğrudan giriş eklendi. Kalkan simgesi, aktif sayfa durumu ve mevcut menü kapanma davranışı kullanılır.
+- Test sunucusunda derlendi ve yayınlandı; üç uygulama dosyasının yerel/sunucu SHA-256 değerleri eş. Oturumlu gerçek portalda bağlantılar, menüden açılış, 320/390/768/1440 genişliklerinde sayfa taşması kontrol edildi. Kanıt `menu-browser.json`; yerel test çalıştırılmadı, hesaplama kabulü tekrarlanmadı.
+
 ## 2026-09-21 — Editor ortak güncel bilgi okuma sözleşmesi
 
 - Rapor/kart, timeline, aktör, karakter geçmişi ve kayıt listeleri güncel doğrulanmış sürüme bağlandı. Eski rapor/katalog geri dönüşü yok; en yeni nesil eski mühürlü neslin önüne geçer. Üretici aday okumaları ayrı tutuldu.
