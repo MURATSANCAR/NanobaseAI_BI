@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — BI: test sunucusu ve müşteri VM'i `main` ile eşitlendi, VM'den GPU erişimi sınandı
+
+- **Dal denetimi:** hiçbir yerel/origin dalında `main` dışında commit yoktu. Tek açık iş editörün figür kimliği denemesiydi; onu başka bir oturum aynı anda `main` üstüne taşıyordu (migration 018/019) ve GPU'ya kendi sürümünü kurmuştu — bu oturum editör koduna ve GPU'ya dokunmadı. `teshis-derek…` ve `vpn-deniz…` worktree'lerindeki sahnelenmiş `apps/editor/backend` 09-19'da kaldırılan eski modüldür, alınmadı.
+- **Test sunucusu (nanobase-direct):** `backend src configs scripts infra deploy tests tools` + kök derleme dosyaları, 1.511 dosya md5 ile karşılaştırıldı: 11 farklı + 68 eksik; farklıların hepsi `main`in eski hâliydi (sunucuda `main`de olmayan değişiklik yok). Yalnız bu 79 dosya kopyalandı, sonra fark 0. LLM kuyruğu boşken köprü yeniden başlatıldı, arayüz sunucuda derlenip `cockpit/dist`e kondu (`index-D_l9R1L_.js` portalda). Gerçek API: "2026 net ciro" 839.586.083,31.
+- **Müşteri VM'i (.55):** canlı ağaçta git dışı env/bağlantı dosyaları olduğu için kaynak olarak `git archive main` (`8c19e25a`) kullanıldı. Fark 3 dosyaydı (`app.py`, `audit.py`, `ExcelDraft.tsx`); `deploy-customer-vm.sh` `systemd-run` ile koştu, beş servis ayakta, oturumsuz uçlar 401.
+- **VM kabulü (geçici timasai oturumu, dış kapı `http://192.168.0.55/timas`, oturum silindi):** konteynerdeki `audit.py` md5'i `main` ile eş; net ciro 839.586.083,31 (test sunucusuyla birebir, 4,9 sn); iade alan 5 müşteri sorusu 5 satır; rapor önizleme cevapsız soruda 422 + motorun cümlesi; finansal denetim özeti 200 (246.404 satır, borç = alacak 8.589.117.368,97); editoryal ana sayfanın CRM bölümleri tamam.
+- **VM → GPU:** model ucu `portal.nanobase.ai/gpu-llm/v1` köprü konteynerinden gerçek tamamlama 200 / 1,4 sn (`nanobaseAI`); tablo seçici de aynı uçtan 200. GPU özel adresleri (172.23.85.10:22/8001) VM'den hâlâ kapalı, genel adres 85.111.30.227:443 açık.
+- **Açık 1 — kitaba sor:** soru VM'den editör motoruna ulaştı (Hermes isteği aldı) ama `book-director` açılamadı: GPU 1 başka oturumun analiziyle dolu (`vision-deep` 87 GB, `model_failed_to_start`). 10 dk'da cevap gelmedi → DOĞRULANAMADI; yolun değil motorun bilinen sınırı.
+- **Açık 2 — kitap kartları VM'de yok:** `.env`'de `EDITOR_CATALOG_BASE/KEY` tanımsız, GPU'nun genel nginx'i yalnız Hermes'in iki yolunu açıyor (`editor-cards` :19141 dışarıda değil), `editorial_cards.py` de gizli başlık göndermiyor. Okunabilir kitap listesi ve kapaklar VM'de boş. Çözüm GPU'nun genel nginx'ine yeni yol açmayı gerektirdiği için kullanıcı kararına bırakıldı.
+- Planlı rapor önizleme ve `a68a2417` kapı değişikliği bu oturumda yazılmadı; yalnız kuruldu. Tam set regresyonu koşulmadı.
+
 ## 2026-09-21 — TT GPU temizliği ve editör ses modelinin kaldırılması
 
 - Kullanıcı isteğiyle tt-gpu'da boşta duran yükler durduruldu: `mssql-logo` (124 GB RAM, bağlantı yoktu), boş `mlops-pipeline-qdrant`, `ollama`, `kitap-botu`, cups, masaüstü uygulamaları. RAM kullanımı 222 → 94 GB. Hiçbiri silinmedi.
