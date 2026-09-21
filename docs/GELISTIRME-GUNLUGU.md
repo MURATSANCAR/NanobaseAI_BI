@@ -1,5 +1,28 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 (öğleden sonra) — Hata SINIFLARI sayıldı; ciro karşılaştırmasının yönü düzeldi
+
+**1000 soruluk modelsiz sınıf taraması** (`/api/v1/semantic/resolve`, model yok; çıktı `/private/tmp/claude-501/tarama-1000/`). Başlangıç: RESOLVED 218 / PARTIAL 651 / UNRESOLVED 131; deterministik derlenen 67. Sınıflar (soru sayısıyla): cevap sertifikasız 827 · dönem okunmadı 351 · dönemsiz soruya varsayılan yıl 296 · "öbür kaynakta tanımlı" diye düşen kelime 203 · hiçbir şey yerleşmedi 131 · ölçü yerine kolon 114 · eşik okunmadı 102 · kaynak kaçırma 98 · kaynak adı ret sebebi 97. Ders: set100 bu sınıfları göstermiyor (son yamalarda 0/100 değişti) — sınıf ölçümü set1000'de yapılır, set100 yalnız gerileme kontrolüdür.
+
+**Kapatılan sınıflar:**
+- **Kaynak adı (97 → 0):** soruda "CRM"/"Logo" geçince ret veriliyordu; artık yönlendirme bilgisi. Adlar katalogdan türetilir, sabit liste yok.
+- **Dönem varsayılanı (296 → 244):** dönemsizlik testi ölçüye bağlıydı, ölçü yerleşmezse bakiye/risk limiti gibi anlık büyüklüklere yıl filtresi basılıyordu. Yeni kural: dönem ancak gerçek bir tarih kolonunu daraltabilir. RESOLVED 218 → 249.
+- **Sayım sorusu:** "Bu yıl kaç fatura kesildi" CRM reklam planındaki onay kutusuna gidip 0 diyordu → **73.660**. Ürün sahibi ilkesi: gerçekleşmiş finansal olayı Logo bilir (conventions.md → System of record).
+
+**Eş dönem karşılaştırması — yönü tersine çeviren hata:** "Bu yılki net ciro geçen yıla göre" bu yılın 8,5 ayını (veri 17.08'de bitiyor) geçen yılın TAM 12 ayıyla kıyaslıyordu: **−%25,8**. Ürün sahibi kuralı ("geçen yılın AYNI gününe kadar") ile **+%49,9**. `runtime/same_period.py`: sınır ölçünün kendi tablosunun son tarihinden okunur. Kokpit de tam doğru değildi — AY düzeyinde kırpıyordu (1–17 Ağustos'u geçen Ağustos'un tamamıyla): +%42,7 → gün düzeyinde **+%51,5** (`prevSameDate`, `timas-metrics-build.py`).
+
+**Sözlük parti 1 (plan adım 2):** 36 aday → çürütmeden 20 geçti. Elenenlerin ikisi tam uyarılan çift sayma (OCCUPATION ve POLINE toplamları başka tablolarla BİREBİR). INVDEF tamamen elendi: asgari/azami/güvenlik stok tamamı sıfır → "asgari stok altına düşenler" sorusunun VERİ karşılığı yok. **"Sabit kıymet" 29 kat yanlış cevap veriyordu** (STLINE satırları 3,5 Mn vs FAREGIST 99,5 Mn), kapıdan sessizce geçiyordu; terim daraltıldı. Hizmet kartı (297,2 Mn ₺) ilk kez sorulabilir.
+
+**Denendi, uygulanmadı — baş sözcük bağlama:** tarama "tek mekanizma 430 soruyu kapatır" dedi; ölçünce 39 devreye girişin 30'u YANLIŞ okuma, tam çözülene çıkan 7 sorunun 6'sı yanlış. Kök: sözlük kolon adlarından madenlendiği için tamlamada anlamı niteleyici taşır ("cari bakiyesi"nde "cari"), baş sözcük değil. "bakiye" 13, "vade" 10, "ödeme" 19 kolona gidiyor.
+
+**Onun yerine — yorum çipi (ürün sahibi kararı: "tahmin et + düzeltme sun"):** belirsiz kelimede en olası anlamla cevap, üstünde "Cari bakiyesi olarak yorumladım · Banka bakiyesi mi?"; tıklayınca soru net terimle yeniden sorulur. Ön yüz kuruldu (tsc 0 hata). Yakalanan hata: Tailwind `[@media(...)]:` keyfi varyantı bu kurulumda `@media` sarmalayıcısı ÜRETMEDİ — derleme hata vermiyor, derlenmiş CSS'e bakınca görünüyor; `canvas.css`'e düz CSS olarak taşındı. Arka uç (belirsizliği iş anlamına gruplama) sürüyor.
+
+**Kurallar veriyle düzeltildi:** C10 yanlış tabloya bakıyordu (etkinlik-yazar bağı `new_etkinlik_contact` üzerinden VAR: 9.012 bağ, %99,2 yazar). C11 + katalog: "önerilen telif oranı" `new_olasitelif` (OLASI) alanına bağlıydı; doğrusu yayın kurulundaki `new_onerilenteliforani` (%5,645, referansla birebir).
+
+**Süreç notu:** parti 1 ilk seferde kataloğa YAZILMAMIŞTI (systemd-run'a iki argüman geçince `--apply` alınmadı; çıktıyı sayıp okumadığım için fark etmedim) — commit mesajı yanlış "yazıldı" dedi, katalog sorgusu boş çıkınca görüldü ve düzeltildi. Katalog yazımından sonra her zaman katalogu sorgula, çıktı satırı saymak doğrulama değildir.
+
+**Müşteri VM'i:** bugünkü düzeltmelerin hiçbiri henüz VM'de değil. Yorum çipinin arka ucu bitince tek kurulumla gidecek (kod `deploy-customer-vm.sh` + katalog `sync-catalog-to-customer-vm.sh`). Sunucudaki repo kopyasında kokpit üreticisi eskiydi (VM kurulumu oradan okur) — eşitlendi.
+
 ## 2026-09-21 12:40 — Editoryal ana ekran: ZEKI AI sohbeti, sağ üstte kitap arama, iç adlar gizlendi
 
 Kullanıcı isteği: "Kitap ara" sağ üste büyük ve dikkat çekici; "Kitaba sor" → ZEKI AI sohbeti, Enter ile gönder; "Motor çalışıyor" yerine "ZEKI AI düşünüyor"; ekranda/mesajda/hatada Hermes, OCR, model adı hiçbir yerde yok; kimlik ve konu dışı sorulara nazik kapsam cevabı.
