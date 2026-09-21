@@ -93,6 +93,7 @@ class PageIndex:
     visual: dict[int, str]
     raw: dict[int, str]
     spans: dict[int, list[dict]]
+    generation_id: str
 
     @classmethod
     def load(cls, conn: psycopg.Connection, generation_id: str) -> "PageIndex":
@@ -104,7 +105,7 @@ class PageIndex:
             visual.setdefault(r["page_no"], []).append(r["t"])
         raw = {p: "\n".join(s["text"] for s in ss) for p, ss in spans.items()}
         return cls({p: norm(t) for p, t in raw.items()},
-                   {p: norm(" ".join(v)) for p, v in visual.items()}, raw, spans)
+                   {p: norm(" ".join(v)) for p, v in visual.items()}, raw, spans, str(generation_id))
 
     def matching_spans(self, page: int, quote: str, paragraph: int | None = None) -> list[dict]:
         q = source.key(quote)
@@ -123,6 +124,8 @@ def save_evidence(conn: psycopg.Connection, generation_id: str, idx: PageIndex, 
                   page: int, quote: str, kind: str = "TEXT",
                   paragraph_idx: int | None = None, region_id: str | None = None,
                   event_id: str | None = None) -> tuple[str, bool]:
+    if idx.generation_id != str(generation_id):
+        raise ValueError("evidence generation mismatch")
     quote = (quote or "").strip()
     if not quote:
         raise ValueError("empty evidence quote")
@@ -134,7 +137,7 @@ def save_evidence(conn: psycopg.Connection, generation_id: str, idx: PageIndex, 
     row = conn.execute(
         "INSERT INTO evidence(generation_id, page_no, paragraph_idx, region_id, event_id, kind,"
         " quote, quote_verified, source_refs) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
-        (generation_id, page, paragraph_idx or None, region_id, event_id, kind, quote[:2000], ok, db.J(provenance)),
+        (generation_id, page, paragraph_idx or None, region_id, event_id, kind, quote, ok, db.J(provenance)),
     ).fetchone()
     return str(row["id"]), ok
 

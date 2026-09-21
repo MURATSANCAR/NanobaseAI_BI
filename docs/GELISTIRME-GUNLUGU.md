@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor kaynak bütünlüğü
+
+Fiziksel sayfa kapsamı bölüm bulmadan ayrıldı; layout/extract tahminleri hikâye sayfasını sessizce dışlamıyor. PDF/OCR ortak okuyucusu, kaynak hash/ofsetleri, aynı paragrafta alıntı doğrulama ve salt okunur kaynak kontrol API'si eklendi. Eski kanıtlar ve mühürlü nesiller değiştirilmiyor; mevcut analizler kapalı. Gerçek DB/API ve özgün PDF kabulü yayın sonrası bu girişe eklenecek. Yerel test çalıştırılmadı. Ayrıntı: `apps/editor/docs/SOURCE-INTEGRITY.md`.
+
 ## 2026-09-21 — Finansal Denetim: kaynak kütüphanesi, gerçek Logo hesabı ve ilk kontroller
 
 - Finans & Risk menüsüne Finansal Denetim eklendi. Mevcut kanvas temasıyla özet, kaynaklı kontrol kütüphanesi, Logo hesap/hareket detayları, kaynak metin ve JSON indirme hazır; test sunucusunda yayında.
