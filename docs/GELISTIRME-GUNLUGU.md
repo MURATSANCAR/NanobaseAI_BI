@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 — Editor portal konuşma bağlamı
+
+- Takip soruları yalnız aynı kullanıcı, tenant ve kitaba ait tamamlanmış son sekiz turu taşır. Her Hermes isteği ayrı oturum kilidi kullanır; bağlamsal sorular tek-soru sınıflandırıcısına takılmaz. Bekleyen yanıt sırasında yeni gönderim engellenir.
+- Sunucu yayını ve gerçek API/DB/tarayıcı kabulü hazırlanıyor; bu kayıt üretim kabulü değildir. GPU yönetim VPN kesintisi kaynak/kimlik kabulünü engelliyor.
+
 ## 2026-09-21 — Editor üretim hazırlığı: sınırlı sohbet okuma katmanı
 
 - Kullanıcının onay beklemeden üretim hazırlığı talebiyle salt okunur `/chat/mcp` eklendi: sayfalı güncel bölüm/kaynak/iddia okumaları, anlamsal arama ve gerçek iş durumu. Eski büyük rapor/üretici araçları sohbet profilinden ayrıldı.

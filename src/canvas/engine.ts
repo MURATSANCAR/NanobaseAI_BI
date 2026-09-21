@@ -1278,7 +1278,7 @@ export type BookQuestion = {
 /** Soru bir iştir: motor modeli istendiğinde açar ve GPU kitap analiziyle paylaşılır. */
 export const bookAskApi = {
   list: (bookKey?: string) => send<{ items: BookQuestion[]; running: number; configured: boolean }>('GET', `/api/v1/editorial/ask${qs({ book: bookKey })}`, undefined, 30_000),
-  ask: (b: { question: string; bookKey?: string; bookTitle?: string }) => send<{ id: string; status: string }>('POST', '/api/v1/editorial/ask', b, 30_000),
+  ask: (b: { question: string; bookKey?: string; bookTitle?: string; parentId?: string }) => send<{ id: string; status: string }>('POST', '/api/v1/editorial/ask', b, 30_000),
   one: (id: string) => send<BookQuestion>('GET', `/api/v1/editorial/ask/${encodeURIComponent(id)}`, undefined, 30_000),
 };
 

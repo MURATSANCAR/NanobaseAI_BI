@@ -11,6 +11,7 @@ geldiğinde kaydedilir; ekran durumu izler. Hiçbir cevap uydurulmaz: motor ceva
 from __future__ import annotations
 
 import json
+import hashlib
 import logging
 import os
 import re
@@ -37,6 +38,7 @@ QUESTIONS = sa.Table(
     sa.Column("answer", sa.Text),
     sa.Column("not_found", sa.Boolean),
     sa.Column("card_selection", sa.JSON),
+    sa.Column("parent_id", sa.String(32)),
     sa.Column("error", sa.String(600)),
     sa.Column("elapsed_ms", sa.Integer),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -224,7 +226,7 @@ def _add_missing_columns(engine: sa.engine.Engine) -> None:
         have = {c["name"] for c in sa.inspect(engine).get_columns(QUESTIONS.name)}
     except Exception:  # noqa: BLE001 — tablo henüz yoksa create_all zaten kurdu
         return
-    for col, ddl in (("not_found", "BOOLEAN"), ("card_selection", "JSON")):
+    for col, ddl in (("not_found", "BOOLEAN"), ("card_selection", "JSON"), ("parent_id", "VARCHAR(32)")):
         if col not in have:
             try:
                 with engine.begin() as conn:
@@ -262,7 +264,8 @@ def reset_stale(engine: sa.engine.Engine) -> None:
                      .values(status="hata", error="Servis yeniden başladı; soruyu tekrar sorun.", finished_at=_now()))
 
 
-def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str] = None) -> str:
+def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str] = None,
+               history: Optional[list[dict[str,str]]] = None, session_key: Optional[str] = None) -> str:
     """Motora tek çağrı. Cevap boş gelirse hata; sessizce boş cevap dönmez."""
     base = (os.environ.get("EDITOR_API_BASE") or "").rstrip("/")
     key = os.environ.get("EDITOR_API_KEY") or ""
@@ -271,8 +274,12 @@ def ask_engine(question: str, book_title: Optional[str], *, system: Optional[str
         raise BookAskError(f"{PRODUCT} bu kurulumda tanımlı değil.", 503)
     user = question if not book_title else f"Kitap: «{book_title}». Soru: {question}"
     payload = {"model": model, "stream": False,
-               "messages": [{"role": "system", "content": system or SYSTEM}, {"role": "user", "content": user}]}
+               "messages": [{"role": "system", "content": system or SYSTEM}, *(history or []),
+                            {"role": "user", "content": user}]}
     headers = {"Authorization": f"Bearer {key}", "Content-Type": "application/json"}
+    # Each request has a distinct lock key. History is supplied explicitly after
+    # authorization, so no shared/default Hermes session can mix users or tabs.
+    headers['X-Hermes-Session-Key'] = session_key or ('editor-read-'+uuid.uuid4().hex)
     # Motora internet üzerinden gidiliyorsa nginx ikinci bir gizli başlık ister; ad:değer olarak verilir.
     extra = (os.environ.get("EDITOR_EXTRA_HEADER") or "").strip()
     if ":" in extra:
@@ -330,8 +337,37 @@ def _refresh_books() -> None:
         _books_cache["busy"] = False
 
 
+def _history(engine, tenant, user, parent_id, book_key, book_title):
+    rows, seen = [], set()
+    with engine.connect() as conn:
+        while parent_id and len(rows)<8:
+            if parent_id in seen: raise BookAskError('Konuşma bağlantısı geçersiz.')
+            seen.add(parent_id)
+            r=conn.execute(sa.select(QUESTIONS).where(QUESTIONS.c.id==parent_id,
+                QUESTIONS.c.tenant_id==tenant, sa.func.lower(QUESTIONS.c.username)==user.lower())).first()
+            if r is None: raise BookAskError('Önceki soru bulunamadı.',404)
+            if r.book_key!=(book_key or '')[:200] or (r.book_title or '')!=(book_title or ''):
+                raise BookAskError('Kitap değişti; yeni konuşma başlatın.',409)
+            if r.status!='bitti' or not r.answer:
+                raise BookAskError('Önceki yanıtın tamamlanmasını bekleyin.',409)
+            rows.append(r);parent_id=r.parent_id
+    history=[]
+    if parent_id:
+        history.append({'role':'system','content':'Yalnız son sekiz tamamlanmış konuşma turu gösteriliyor; '
+                        'daha eski konuşmayı hatırladığını varsayma.'})
+    if rows:
+        history.append({'role':'system','content':'Önceki yanıtlar yalnız konuşma bağlamıdır. '
+                        'Kitap gerçeklerini ve güncel analiz durumunu yeniden araçlardan doğrula.'})
+    for r in reversed(rows):
+        history += [{'role':'user','content':r.question},{'role':'assistant','content':r.answer}]
+    if sum(len(m['content']) for m in history)>24000:
+        raise BookAskError('Konuşma çok uzun; yeni konuşmada devam edin.',409)
+    return history
+
+
 def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
-        book_key: str = "", book_title: Optional[str] = None, chat: Optional[Any] = None) -> dict[str, Any]:
+        book_key: str = "", book_title: Optional[str] = None, chat: Optional[Any] = None,
+        parent_id: Optional[str] = None) -> dict[str, Any]:
     """`chat`: hızlı model (kapsam sınıflandırması için); yoksa yalnız sabit selam/kimlik listesi kullanılır."""
     q = (question or "").strip()
     if not q:
@@ -340,16 +376,20 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
         raise BookAskError(f"Soru {MAX_QUESTION} karakteri aşamaz.")
     if not configured():
         raise BookAskError(f"{PRODUCT} bu kurulumda tanımlı değil.", 503)
+    history=_history(engine,tenant,user,parent_id,book_key,book_title) if parent_id else []
     qid = uuid.uuid4().hex
     row = {"id": qid, "tenant_id": tenant, "username": user, "book_key": (book_key or "")[:200],
-           "book_title": (book_title or None), "question": q, "status": "bekliyor", "created_at": _now()}
+           "book_title": (book_title or None), "question": q, "parent_id":parent_id,
+           "status": "bekliyor", "created_at": _now()}
     with engine.begin() as conn:
         conn.execute(sa.insert(QUESTIONS).values(**row))
 
     def run() -> None:
         started = _now()
         # Kimlik ya da kitap dışı soru kitap motorunu (dakikalar) beklemez; anında nazik cevap alır.
-        reply = scope_reply(q, chat)
+        # A follow-up like "Peki ya babası?" needs its book context; the standalone
+        # scope classifier must not reject it before the conversation is read.
+        reply = scope_reply(q, chat) if not history else None
         if reply:
             done = _now()
             with engine.begin() as conn:
@@ -358,7 +398,7 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
             return
         from . import editorial_cards
-        selection = editorial_cards.card_answer(q, book_title, chat)
+        selection = editorial_cards.card_answer(q, book_title, chat) if not history else None
         if selection is not None:
             done = _now()
             with engine.begin() as conn:
@@ -372,7 +412,8 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(status="calisiyor"))
             started = _now()
             try:
-                answer, err = polish(ask_engine(q, book_title), chat), None
+                scope=hashlib.sha256(f'{tenant}:{user.lower()}:{qid}'.encode()).hexdigest()
+                answer, err = polish(ask_engine(q, book_title, history=history, session_key='editor-'+scope), chat), None
             except Exception as e:  # noqa: BLE001
                 log.warning("editorial book ask failed: %s", e)
                 answer, err = None, (str(e) if isinstance(e, BookAskError) else UNAVAILABLE)[:580]

@@ -173,8 +173,14 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
         !query.state.data || ['bekliyor', 'calisiyor'].includes(query.state.data.status) ? 5000 : false,
     })),
   });
+  const waitingForAnswer = questions.some((query) => !query.data || ['bekliyor', 'calisiyor'].includes(query.data.status));
   const ask = useMutation({
-    mutationFn: (question: string) => bookAskApi.ask({ question, bookKey, bookTitle: bookTitle ?? picked ?? undefined }),
+    mutationFn: (question: string) => {
+      const selectedTitle = bookTitle ?? picked ?? undefined;
+      const previous = [...questions].reverse().find((query) => query.data?.status === 'bitti'
+        && (query.data.bookTitle ?? '') === (selectedTitle ?? '') && (query.data.bookKey ?? '') === (bookKey ?? ''))?.data;
+      return bookAskApi.ask({ question, bookKey, bookTitle: selectedTitle, parentId: previous?.id });
+    },
     onSuccess: (result) => setQuestionIds((ids) => [...ids, result.id]),
   });
   // Sayfa bir kitaba bağlı değilse okunmuş kitaplar gösterilir; kişi birini seçerek soruyu ona yöneltir.
@@ -195,7 +201,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
 
   const send = (value = text) => {
     const v = value.trim();
-    if (!v || ask.isPending || off) return;
+    if (!v || ask.isPending || waitingForAnswer || off) return;
     setText('');
     ask.mutate(v, { onError: () => setText(v) });
   };
@@ -336,7 +342,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
             />
             <button
               type="submit"
-              disabled={!text.trim() || ask.isPending || off}
+              disabled={!text.trim() || ask.isPending || waitingForAnswer || off}
               aria-label="Gönder"
               className="zk-press flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-canvas-coral to-canvas-violet text-white shadow-[0_8px_20px_-8px_rgba(124,92,255,.8)] disabled:opacity-40"
             >

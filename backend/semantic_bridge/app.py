@@ -3732,7 +3732,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         chat = (lambda messages, max_tokens=40: llm.chat(messages, max_tokens=max_tokens, temperature=0.0)) if llm is not None else None
         out = _books_call(books_mod.ask, engine, tenant, user, str(body.get("question") or ""),
                           book_key=str(body.get("bookKey") or ""), book_title=(str(body.get("bookTitle") or "") or None),
-                          chat=chat)
+                          chat=chat, parent_id=(str(body.get("parentId") or "") or None))
         admin_mod.audit(engine, user, "run", "editorial_ask", out["id"], str(body.get("bookTitle") or "") or None,
                         {"question": str(body.get("question") or "")[:300]})
         return out
