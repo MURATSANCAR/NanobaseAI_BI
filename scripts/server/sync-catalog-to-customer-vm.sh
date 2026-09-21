@@ -63,7 +63,11 @@ DELETE FROM sl_evidence e WHERE EXISTS (SELECT 1 FROM stage_sl_evidence s WHERE 
 INSERT INTO sl_evidence SELECT * FROM jsonb_populate_recordset(null::sl_evidence, (SELECT jsonb_agg(d) FROM stage_sl_evidence))
 ON CONFLICT DO NOTHING;
 
-INSERT INTO sl_catalog_version (version, created_at) VALUES ((SELECT coalesce(max(version),0)+1 FROM sl_catalog_version), now());
+INSERT INTO sl_catalog_version (id, tenant_id, datasource_id, version, certified_count, snapshot_json, note, created_at)
+VALUES ('cv_'||substr(md5(random()::text||clock_timestamp()::text),1,12), 'default', 'logo',
+        (SELECT coalesce(max(version),0)+1 FROM sl_catalog_version),
+        (SELECT count(*) FROM sl_concept WHERE status='CERTIFIED'),
+        '{}'::jsonb, 'test sunucusundan sözlük aktarımı', now());
 DROP TABLE stage_sl_concept; DROP TABLE stage_sl_mapping; DROP TABLE stage_sl_evidence;
 COMMIT;\""
 

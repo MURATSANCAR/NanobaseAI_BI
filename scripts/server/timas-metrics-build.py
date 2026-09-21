@@ -68,13 +68,18 @@ def main() -> int:
     errors = {}
     t0 = time.time()
     parts = []
+    texts = []
     for name, make in QUERIES.items():
         try:
-            got = run(make(YEAR), tok)
+            sql = make(YEAR)
+            got = run(sql, tok)
             out[name] = got.get("records", [])
             # Köprünün ölçtüğü veritabanı süresi; önbellekten geldiyse ilk yürütmenin süresi ve zamanı.
             parts.append({"name": name, "ms": got.get("dbMs"), "cached": bool(got.get("cached")),
                           "computedAt": got.get("computedAt")})
+            # Ekrandaki "SQL'i göster" bunu gösterir: kartın rakamını gerçekten üreten metin.
+            # Köprü dönem/yıl kopyalarını çözdüğü için varsa çalıştırılan fiziksel SQL yazılır.
+            texts.append(f"-- {name}\n{got.get('physicalSql') or sql}")
         except (urllib.error.URLError, OSError, ValueError) as exc:
             # Bir sorgu patlarsa öncekiler korunur; ekran eksik kartı boş gösterir.
             errors[name] = str(exc)[:200]
@@ -89,6 +94,8 @@ def main() -> int:
         "queries": len(parts),
         "dbParts": parts,
     }
+    # Kartın dayanağı: çalıştırılan sorguların tam metni. Kırpılmaz; ekran kendi kaydırır.
+    out["sql"] = "\n\n".join(texts) or None
     if errors:
         out["errors"] = errors
     OUT.parent.mkdir(parents=True, exist_ok=True)

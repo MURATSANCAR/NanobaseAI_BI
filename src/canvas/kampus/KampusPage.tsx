@@ -75,7 +75,7 @@ const MODULE_TILES = [
   { to: '/planli-raporlar', title: 'Planlı Raporlar', note: 'Zamanlanmış gönderimler', tone: 'bg-sky-100 text-sky-700' },
   { to: '/veri-sozlugu', title: 'Veri Sözlüğü', note: 'Kavramlar ve katalog', tone: 'bg-emerald-100 text-emerald-700', adminOnly: true },
   { to: '/onaylar', title: 'Onaylar', note: 'Bekleyen incelemeler', tone: 'bg-purple-100 text-purple-700', adminOnly: true },
-  { to: '/yonetim', title: 'Yönetim', note: 'Ayarlar, tanımlar, değişiklik kaydı', tone: 'bg-slate-200 text-slate-700', adminOnly: true },
+  { to: '/yonetim', title: 'Yönetim', note: 'Ayarlar ve değişiklik kaydı', tone: 'bg-slate-200 text-slate-700', adminOnly: true },
 ];
 
 const trNorm = (s: string) => s.toLocaleLowerCase('tr');
@@ -526,20 +526,23 @@ export default function KampusPage() {
               </button>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {/* Modül adı kesilmez: ad iki satıra kadar sarar, kutular min-h ile aynı yükseklikte kalır.
+                Üçüncü sütun yalnız 2xl'de açılır; altında iki sütun ada yetecek genişliği verir. */}
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
               {moduleTiles.map((m) => (
                 <Link
                   key={m.to}
                   to={m.to}
-                  className="kp-lift group flex items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 hover:border-violet/30 hover:bg-white"
+                  title={`${m.title} — ${m.note}`}
+                  className="kp-lift group flex min-h-[72px] items-center justify-between gap-2 rounded-xl border border-slate-200/70 bg-slate-50/80 p-3 hover:border-violet/30 hover:bg-white"
                 >
                   <div className="flex min-w-0 items-center gap-2.5">
                     <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${m.tone}`}>
                       <Sparkles className="h-4 w-4" />
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-xs font-bold text-ink group-hover:text-violet">{m.title}</p>
-                      <p className="truncate text-[11px] text-muted">{m.note}</p>
+                      <p className="line-clamp-2 break-words text-xs font-bold leading-snug text-ink group-hover:text-violet">{m.title}</p>
+                      <p className="truncate text-[11px] leading-snug text-muted">{m.note}</p>
                     </div>
                   </div>
                   <ArrowRight className="h-3.5 w-3.5 shrink-0 text-muted/70 group-hover:text-violet" />
@@ -559,6 +562,7 @@ export default function KampusPage() {
                           <Link
                             key={m.id}
                             to={to}
+                            title={m.title}
                             className="kp-press min-h-11 sm:min-h-0 flex items-center gap-2 rounded-lg border border-slate-200/70 bg-white px-2 py-1.5 text-[12px] font-semibold text-ink hover:border-violet/30"
                           >
                             <span className="min-w-0 flex-1 truncate">{m.title}</span>

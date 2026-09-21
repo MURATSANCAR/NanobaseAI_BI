@@ -76,6 +76,8 @@ export type CfoData = {
   returnPct: number | null;
   /** Özet ne zaman üretildi (arka plan dosyası). */
   generatedAt?: string;
+  /** Rakamları üreten sorguların tam metni ("SQL'i göster" bunu gösterir). */
+  sql?: string | null;
   /** Rakamların veritabanından gelme süresi (sorguların toplamı). */
   db?: DbTiming | null;
 };
@@ -107,6 +109,7 @@ type RawSets = {
   items: ItemRow[];
   returnItems: ReturnItemRow[];
   generatedAt?: string;
+  sql?: string | null;
   db?: DbTiming | null;
 };
 
@@ -130,6 +133,7 @@ function shape(r: RawSets): CfoData {
     items: r.items,
     returnItems: r.returnItems,
     generatedAt: r.generatedAt,
+    sql: r.sql ?? null,
     db: r.db ?? null,
     observedMonths,
     netYtd,
@@ -159,10 +163,26 @@ async function fetchSnapshot(): Promise<RawSets> {
     items: j.items ?? [],
     returnItems: j.returnItems ?? [],
     generatedAt: j.generatedAt,
+    // Üretici SQL yazmıyorsa (eski sürüm) ekranda düğme kapalı kalır; metin uydurulmaz.
+    sql: j.sql ?? null,
     // Eski üretici süre yazmıyordu: o durumda "ölçülmedi" denir, sayı uydurulmaz.
     db: j.db ?? { dbMs: null, computedAt: j.generatedAt ?? null },
   };
 }
+
+/** Canlı yolda koşan sekiz sorgunun tam metni; snapshot düşse de kaynak görünür kalır. */
+const LIVE_SQL = [
+  ['months', SQL.months(YEAR)],
+  ['prevMonths', SQL.months(PREV)],
+  ['totals', SQL.totals(YEAR)],
+  ['units', SQL.units(YEAR)],
+  ['channels', SQL.channels(YEAR)],
+  ['customers', SQL.customers(YEAR)],
+  ['items', SQL.topItem(YEAR)],
+  ['returnItems', SQL.returnItems(YEAR)],
+]
+  .map(([name, sql]) => `-- ${name}\n${sql}`)
+  .join('\n\n');
 
 /**
  * Önce arka plandaki özet okunur (tek istek, anlık). Ulaşılamazsa sekiz sorgu
@@ -220,6 +240,7 @@ export function useCfoData(): CfoData {
   };
   return shape({
     db,
+    sql: LIVE_SQL,
     months: rec<MonthRow>(months),
     prevMonths: rec<MonthRow>(prev),
     totals: rec<TotalsRow>(totals)[0] ?? null,

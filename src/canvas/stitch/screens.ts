@@ -328,6 +328,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
         { name: 'Satır', tag: yok(money(c.units?.satir ?? 0)) },
         { name: 'Cari', tag: yok(num(c.customers.length)) },
       ],
+      sql: durum ? undefined : (c.sql ?? undefined),
       latency: durum ? '—' : `${c.year} dönemi`,
       timing: durum ? null : c.db,
     },
