@@ -6,7 +6,7 @@ import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 
 /** ZEKİ AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
- *  köprü uydurmaz. Soru bir iştir (dakikalar sürebilir); sayfadan ayrılınca da kayıtlı kalır.
+ *  Soru sunucuda kayıtlı kalır; ekranda yalnız bu açılışta gönderilen sorular gösterilir.
  *  Ekranda iç bileşen/model adı hiçbir yerde geçmez: kullanıcı yalnız ZEKİ AI'yı görür. */
 
 const PRODUCT = 'ZEKİ AI';
@@ -216,7 +216,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
 
   return (
     <section className="zk-frame relative overflow-hidden rounded-[28px] p-[1.5px] shadow-[0_30px_80px_-30px_rgba(124,92,255,.45)]">
-      <div className="relative flex h-[min(680px,75dvh)] min-h-[360px] flex-col overflow-hidden rounded-[26.5px] bg-[#fbfaff]">
+      <div className="relative flex h-[min(680px,75dvh)] min-h-[280px] flex-col overflow-hidden rounded-[26.5px] bg-[#fbfaff]">
         <div aria-hidden className="zk-aurora pointer-events-none absolute inset-x-0 top-0 h-56" />
 
         <header className="relative flex shrink-0 items-center gap-3 border-b border-white/70 px-4 py-3.5 sm:px-6">
@@ -230,7 +230,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
           </div>
           <span className={`hidden items-center gap-1.5 text-[11px] font-semibold sm:flex ${off ? 'text-amber-700' : 'text-emerald-700'}`}>
             <span className={`h-2 w-2 rounded-full ${off ? 'bg-amber-500' : 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,.18)]'}`} />
-            {off ? 'Kapalı' : 'Hazır'}
+            {off ? 'Kapalı' : 'Sohbet'}
           </span>
         </header>
 
@@ -266,6 +266,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
           {turns.map((q) => (
             <Turn key={q.id} q={q} onRetry={(t) => send(t)} />
           ))}
+          {questions.some((query) => query.isPending) && <p role="status" className="text-sm text-canvas-muted">Soru kaydı alınıyor…</p>}
           {pending && (
             <div className="space-y-3">
               <UserBubble text={pending} />

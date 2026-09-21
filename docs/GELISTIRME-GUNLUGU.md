@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+
+## 2026-09-21 — Kitaba sor: görünür yazı alanı ve yenilemede boş sohbet (kabul bekliyor)
+
+- Kullanıcının ekranında yazı alanı aşağıda kalıyor, önceki sorular her açılışta geliyordu. `AskBox.tsx` yalnız mevcut açılışta oluşturulan soru kimliklerini `/editorial/ask/{id}` üzerinden izler; geçmiş liste isteği kaldırıldı. Kalıcı soru kayıtları silinmez.
+- Sohbet yüksekliği görüntü alanına göre sınırlandı; yalnız mesajlar kayar, yazı alanı ayrı alt bölümde kalır. Dar ekran için textarea `min-width:0`, kitap seçimleri dokunulabilir; giriş 2000 karakterle sınırlı. API'nin bildirmediği tarama/yazma aşamalarını sırayla gösteren metinler kaldırıldı.
+- Kitap önerisi için kapak, yazar, kısa özet ve kaynaklı eşleşme gerekçesi isteniyor. Editör katalog kodunda `search_books/get_book_card` ve kapak kayıtları mevcut; portal entegrasyonu henüz yapılmadı. Canlıda bakım gereği Hermes/MCP/gateway servisleri durmuş; bakım kaldırılmadı ve eski doğrulanmamış kitap kayıtları kabul edilmiş sayılmadı.
+- Bu aşama kod değişikliğidir. Uzak derleme ve 320/390/768/masaüstü gerçek portal kontrollerinin sonucu ayrıca kaydedilecek; canlı kabul henüz **DOĞRULANAMADI**.
+
 ## 2026-09-21 — Editor kaynak bütünlüğü
 
 Fiziksel sayfa kapsamı bölüm bulmadan ayrıldı; layout/extract tahminleri hikâye sayfasını sessizce dışlamıyor. PDF/OCR ortak okuyucusu, kaynak hash/ofsetleri, aynı paragrafta alıntı doğrulama ve salt okunur kaynak kontrol API'si eklendi. Eski kanıtlar ve mühürlü nesiller değiştirilmiyor; mevcut analizler kapalı. Sunucu yayını `0.11.0-source-066a3cfb`: 6 gerçek kitapta 544/544 sayfa kayıpsız kaynak/kapsam kontrolü, 6/6 özgün PDF/alıntı hedefi ve 18/18 ortak okuma regresyonu geçti. 11 tablo salt okunur koşu öncesi/sonrası aynı; 10.071 eski kanıt değiştirilmedi. 162 sayfada kaynak uyarısı ve 544 sayfada doğrulanmamış sayfa türü var. Tam kitap semantik kabulü, yeni kanıt yazımı ve Qdrant yeniden üretimi DOĞRULANAMADI. GPU 1 boş, üreticiler kapalı. Kanıtlar: `apps/editor/docs/evidence/2026-09-21-source-*.json`. Yerel test çalıştırılmadı. Ayrıntı: `apps/editor/docs/SOURCE-INTEGRITY.md`.
