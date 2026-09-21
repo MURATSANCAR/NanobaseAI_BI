@@ -174,12 +174,12 @@ def source_sql(kind,year,as_of):
 
 def read_deep(query, year, as_of):
     start,end=bounds(year,as_of)
-    results={}; errors={}; sqls=[]; elapsed=0
+    results={}; errors={}; sqls=[]; executed={}; elapsed=0
     def read(key, sql):
         nonlocal elapsed
         try:
             result=query(sql,year)
-            results[key]=result['records'];sqls.append(result.get('physicalSql'));elapsed+=result.get('dbMs',0)
+            results[key]=result['records'];sqls.append(result.get('physicalSql'));executed[key]=result.get('physicalSql');elapsed+=result.get('dbMs',0)
         except Exception:
             logging.getLogger(__name__).exception('Deep audit source unavailable: %s',key)
             errors[key]='Kaynak sorgusu tamamlanamadı; boş veri veya olumlu sonuç sayılmaz.'
@@ -241,7 +241,7 @@ def read_deep(query, year, as_of):
             count=int(row.get(f'affected{i}') or 0)
             status='unverified' if kind in errors or not row.get('rows') else 'finding' if count else 'passed'
             checks.append({'id':key,'title':d[0],'status':status,'affected':count if kind not in errors else None,
-                'tested':row.get('rows'),'formula':d[3],'detailKind':kind,
+                'tested':row.get('rows'),'formula':d[3],'detailKind':kind,'sql':executed.get(kind),'sqlResultColumns':{'tested':'rows','affected':f'affected{i}'},
                 'limitation':'Bu sonuç yalnız belirtilen veri kontrolüdür; belgenin hukuki geçerliliği veya dış mutabakatı değildir.'})
     def rows(key):
         return sum(int(r.get('rows') or 0) for r in results.get(key,[]))

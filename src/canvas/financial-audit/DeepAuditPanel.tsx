@@ -2,14 +2,17 @@ import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Check, ChevronLeft, ChevronRight, Database, FileSearch, CircleHelp } from 'lucide-react';
 
-export type DeepCheck = { id: string; title: string; status: string; affected: number | null; tested: number | null; formula: string; limitation: string };
+import SqlEvidence from './SqlEvidence';
+import { accountingText, checkExplanations } from './presentation';
+
+export type DeepCheck = { sqlResultColumns?: {tested: string; affected: string}; sql?: string; id: string; title: string; status: string; affected: number | null; tested: number | null; formula: string; limitation: string };
 export type DeepAudit = {
   asOf: string; revision: string; status: string; checks: DeepCheck[];
   sources: Array<{ id: string; title: string; status: string; records: number | null; found: string; missing: string; why: string; nextStep: string }>;
   datasets: Record<string, Array<Record<string, string | number | null>>>;
   errors: Record<string, string>; limitations: string[];
 };
-type Exceptions = { items: Array<Record<string, string | number | null>>; total: number; page: number; readAt: string; asOf: string; separateRead: boolean };
+type Exceptions = { sql?: string; items: Array<Record<string, string | number | null>>; total: number; page: number; readAt: string; asOf: string; separateRead: boolean };
 const number = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 const labels: Record<string, string> = {
   sourceRef: 'Kaynak kaydı', documentNo: 'Belge / fiş', date: 'İşlem tarihi', clientRef: 'Cari kartı', transactionType: 'İşlem türü',
@@ -21,7 +24,7 @@ const labels: Record<string, string> = {
   cancelledLine: 'Satır iptal işareti', foundAccount: 'Bulunan hesap', currency: 'Para birimi kodu', balance: 'Gün sonu bakiye',
   type: 'Kaynak türü kodu', rows: 'Kayıt sayısı', unposted: 'Aktarılmamış', year: 'Yıl', month: 'Ay', bankLinked: 'Bankaya bağlı',
   missingCredit: 'Kredi kartı eksik', principal: 'Kaynak plan tutarı', interest: 'Kaynak faiz tutarı', documentType: 'Belge türü kodu',
-  state: 'Ham durum kodu', dueByCutoff: 'Kesim tarihine kadar vadesi gelen', afterCutoff: 'Kesimden ileri tarihli', journalCount: 'Yevmiye sayısı',
+  state: 'Kayıtlı durum kodu', dueByCutoff: 'Kesim tarihine kadar vadesi gelen', afterCutoff: 'Kesimden ileri tarihli', journalCount: 'Yevmiye sayısı',
   missingCustomsNumber: 'Gümrük no eksik', missingCustomsDate: 'Gümrük tarihi eksik', withPayload: 'İçeriği olan',
   addressNotes: 'Adres notu başlangıcı', pdfSignatures: 'PDF başlangıcı', xmlSignatures: 'XML başlangıcı',
 };
@@ -61,15 +64,16 @@ export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit
       <div className="audit-deep-checks">{data.checks.map(c => <article key={c.id} className={`audit-deep-check ${c.status}`}>
         <span className={`audit-status-icon ${c.status}`}>{c.status==='passed' ? <Check size={17}/> : <FileSearch size={17}/>}</span>
         <div><h3>{c.title}</h3><p>{c.tested == null ? 'Kaynak okunamadı' : `${number.format(c.tested)} kayıt / grup değerlendirildi`}</p>
-          <details><summary>Nasıl kontrol ediliyor?</summary><p>{c.formula}</p><p>{c.limitation}</p></details></div>
+          <details><summary>Nasıl kontrol ediliyor?</summary><p>{checkExplanations[c.id] ?? accountingText(c.formula)}</p><p>{accountingText(c.limitation)}</p></details><SqlEvidence sql={c.sql} description={`Rapor hazırlanırken çalıştırılan sorgudur. İncelenen kayıt sayısı: ${c.sqlResultColumns?.tested ?? 'rows'}; bu kontrolün bulgu sayısı: ${c.sqlResultColumns?.affected ?? 'eski raporda belirtilmemiş'}. Aynı sorgu birden fazla kontrolü hesaplayabilir.`} title="Kontrolün SQL sorgusu" /></div>
         <button className="audit-button" disabled={c.affected == null || c.status==='unverified'} onClick={() => {setSelected(c.id);setPage(0);}}>
           {c.affected == null || c.status==='unverified' ? 'Doğrulanamadı' : c.affected ? `${number.format(c.affected)} inceleme adayı` : 'Fark bulunmadı'} <ArrowRight size={14}/>
         </button>
       </article>)}</div>
     </section>
     {check && <section id="audit-exceptions" className="audit-panel audit-exceptions" aria-live="polite"><div className="audit-section-head"><h2>{check.title}</h2><button className="audit-button" onClick={() => setSelected('')}>Detayı kapat</button></div>
-      <p>{check.formula}</p><p>Detay aynı dönem sınırıyla ayrı bir kaynak okumasıdır. Tutarlar aksi belirtilmedikçe TL’dir; farklar toplanmış zarar veya ceza değildir.</p>
+      <p>{checkExplanations[check.id] ?? accountingText(check.formula)}</p><p>Detay aynı dönem sınırıyla ayrı bir kaynak okumasıdır. Tutarlar aksi belirtilmedikçe TL’dir; farklar toplanmış zarar veya ceza değildir.</p>
       {details.isFetching && <p role="status">Kaynak kayıtları okunuyor…</p>}{details.error && <p role="alert">{details.error instanceof Error ? details.error.message : 'Kayıtlar okunamadı.'}</p>}
+      {details.data && <SqlEvidence sql={details.data.sql} description={`Aşağıdaki ${details.data.items.length} kaydı getiren, çalıştırılmış sorgudur. Sayfa ${page+1}; toplam ${details.data.total} bulgu. Raporun hesaplama anından ayrı bir okumadır.`} />}
       {details.data && (details.data.items.length ? <Rows rows={details.data.items}/> : <p>Bu sayfada inceleme adayı bulunmadı.</p>)}
       <div className="audit-pagination"><button aria-label="Önceki bulgular" disabled={!page || details.isFetching} onClick={() => setPage(p => p-1)}><ChevronLeft size={18}/></button><span>{details.data?.total ?? '—'} kayıt · Sayfa {page+1}</span><button aria-label="Sonraki bulgular" disabled={!details.data || details.isFetching || (page+1)*50>=details.data.total} onClick={() => setPage(p=>p+1)}><ChevronRight size={18}/></button></div>
     </section>}

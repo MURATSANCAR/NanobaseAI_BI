@@ -149,6 +149,11 @@ def register(app, runtime, authorize):
                     {"id": "slip-link", "title": "Muhasebe fişi bağlantısı", "affected": source_integrity['missingSlip'] or 0,
                      "amount": None, "formula": "İptal edilmemiş hareketin bağlı olduğu fiş mevcut mu?", "origin": "Ek veri kontrolü"},
                 ]
+                for check in checks:
+                    query_result = slips if check['id']=='slip-balance' else integrity if check['id']=='slip-link' else result
+                    check['sql'] = query_result.get('physicalSql')
+                    check['sqlPurpose'] = ('Bu sorgu bulgunun hesaplandığı gerçek veri okumasıdır. Hesap bazındaki sonuçlar yukarıdaki kontrol ölçütüne göre değerlendirilir.'
+                        if check['id'] not in {'slip-balance','slip-link'} else 'Bu sorgu rapor hazırlanırken çalıştırılmıştır; gösterilen bulgu sayısı bu sonuçtan hesaplanmıştır.')
                 incomplete = nulls or source_integrity['missingSlip'] or source_integrity['cancelledSlip'] or missing
                 for check in checks:
                     check["status"] = "finding" if check['affected'] else "unverified" if not total_lines or incomplete else "passed"
@@ -233,6 +238,19 @@ def register(app, runtime, authorize):
                 out['supportingEvidence'] = read_evidence(query, year)
                 out['deepAudit'] = read_deep(query, year, out['lastDate'])
                 out['coverage'] = evaluate(out, profile['records'])
+                # Preserve the exact executed SQL beside each supported observation.
+                # A source read is not falsely presented as an executable legal rule.
+                for control in out['coverage']['items']:
+                    for component in control['components']:
+                        kind = component.get('id')
+                        observation_query = (result if kind in {'account-scope','balance-sign'} else
+                            pair_read if kind=='voucher-counterpart' else
+                            profile if kind=='fx-profile' else
+                            vat if kind and kind.startswith('vat-') else None)
+                        if observation_query:
+                            component['sql'] = observation_query.get('physicalSql')
+                            component['sqlPurpose'] = 'Bu sorgu rapor hazırlanırken çalıştırılmıştır. Sonuçları, yukarıda açıklanan hesap ve kontrol ölçütlerine göre değerlendirilmiştir; sorgu birden fazla hesabı içerebilir.'
+
                 out['sql'].append(profile.get('physicalSql'))
                 out['sql'].extend([pair_read.get('physicalSql'),vat.get('physicalSql')])
                 out['dbMs'] += profile.get('dbMs', 0)+pair_read.get('dbMs',0)+vat.get('dbMs',0)
