@@ -111,6 +111,8 @@ type RawSets = {
   generatedAt?: string;
   sql?: string | null;
   db?: DbTiming | null;
+  /** Geçen yılın gün düzeyinde eş dönemi (tek satır); yoksa aylık kırpmaya düşülür. */
+  prevSameDate?: Array<{ net_ciro: number | null; fatura?: number; son_fatura?: string }>;
 };
 
 /** Ham sonuç kümelerinden ekranın beklediği özet. Hem arka plandaki dosya
@@ -118,7 +120,11 @@ type RawSets = {
 function shape(r: RawSets): CfoData {
   const observedMonths = r.months.length ? Math.max(...r.months.map((x) => x.ay)) : 0;
   const netYtd = r.months.reduce((a, x) => a + (x.net_ciro ?? 0), 0);
-  const netPrevSame = r.prevMonths.filter((x) => x.ay <= observedMonths).reduce((a, x) => a + (x.net_ciro ?? 0), 0);
+  // Gün düzeyinde eş dönem varsa o: aylık kırpma son ayın tamamını alıp artışı düşük gösterir.
+  const sameDay = r.prevSameDate?.[0]?.net_ciro;
+  const netPrevSame = typeof sameDay === 'number'
+    ? sameDay
+    : r.prevMonths.filter((x) => x.ay <= observedMonths).reduce((a, x) => a + (x.net_ciro ?? 0), 0);
   return {
     ready: true,
     authRequired: false,
@@ -167,6 +173,8 @@ async function fetchSnapshot(): Promise<RawSets> {
     sql: j.sql ?? null,
     // Eski üretici süre yazmıyordu: o durumda "ölçülmedi" denir, sayı uydurulmaz.
     db: j.db ?? { dbMs: null, computedAt: j.generatedAt ?? null },
+    // Eski üretici bu alanı yazmıyordu: yoksa aylık kırpmaya düşülür.
+    prevSameDate: j.prevSameDate,
   };
 }
 

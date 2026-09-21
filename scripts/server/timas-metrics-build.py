@@ -31,6 +31,15 @@ rng = lambda y: f"I.[DATE_]>='{y}-01-01' AND I.[DATE_]<'{y + 1}-01-01'"
 QUERIES = {
     "months": lambda y: f"SELECT MONTH(I.[DATE_]) AS ay, {NET} AS net_ciro, COUNT(*) AS fatura FROM [dbo].[{pfx(y)}_01_INVOICE] AS I WHERE {F} AND {rng(y)} GROUP BY MONTH(I.[DATE_]) ORDER BY ay",
     "prevMonths": lambda y: f"SELECT MONTH(I.[DATE_]) AS ay, {NET} AS net_ciro, COUNT(*) AS fatura FROM [dbo].[{pfx(PREV)}_01_INVOICE] AS I WHERE {F} AND {rng(PREV)} GROUP BY MONTH(I.[DATE_]) ORDER BY ay",
+    # Eş dönem (gün düzeyinde): geçen yıl, BU yılın son fatura gününün geçen yıldaki karşılığına kadar.
+    # Aylık kırpma 1–17 Ağustos'u geçen yılın Ağustos'unun TAMAMIYLA kıyaslıyordu (artış %51,5 yerine %42,7).
+    # Sınır veriden okunur; artık yıl DATEADD ile doğru kayar (29.02.2028 → 28.02.2027).
+    "prevSameDate": lambda y: (
+        f"SELECT {NET} AS net_ciro, COUNT(*) AS fatura, MAX(I.[DATE_]) AS son_fatura "
+        f"FROM [dbo].[{pfx(PREV)}_01_INVOICE] AS I WHERE {F} AND I.[DATE_]>='{PREV}-01-01' "
+        f"AND I.[DATE_]<DATEADD(day,1,DATEADD(year,-1,(SELECT MAX(CAST(X.[DATE_] AS date)) "
+        f"FROM [dbo].[{pfx(y)}_01_INVOICE] AS X WHERE X.[CANCELLED]=0 AND X.[TRCODE] IN (2,3,7,8,9) "
+        f"AND X.[DATE_]>='{y}-01-01' AND X.[DATE_]<'{y + 1}-01-01' AND X.[DATE_]<=GETDATE())))"),
     "totals": lambda y: f"SELECT SUM(CASE WHEN I.[TRCODE] IN (7,8,9) THEN I.[NETTOTAL] ELSE 0 END) AS brut_satis, SUM(CASE WHEN I.[TRCODE] IN (2,3) THEN I.[NETTOTAL] ELSE 0 END) AS iade_tutari, SUM(CASE WHEN I.[TRCODE] IN (2,3) THEN 1 ELSE 0 END) AS iade_fatura, COUNT(*) AS toplam_fatura, MAX(I.[DATE_]) AS son_fatura FROM [dbo].[{pfx(y)}_01_INVOICE] AS I WHERE {F} AND {rng(y)}",
     "units": lambda y: f"SELECT SUM(CASE WHEN L.[TRCODE] IN (7,8,9) THEN L.[AMOUNT] ELSE -L.[AMOUNT] END) AS satilan_adet, COUNT(DISTINCT L.[STOCKREF]) AS baslik_sayisi, COUNT(*) AS satir FROM [dbo].[{pfx(y)}_01_STLINE] AS L WHERE L.[CANCELLED]=0 AND L.[LINETYPE]=0 AND L.[TRCODE] IN (2,3,7,8,9) AND L.[DATE_]>='{y}-01-01' AND L.[DATE_]<'{y + 1}-01-01'",
     "channels": lambda y: f"SELECT I.[TRCODE] AS trcode, {NET} AS net_ciro, COUNT(*) AS fatura FROM [dbo].[{pfx(y)}_01_INVOICE] AS I WHERE {F} AND {rng(y)} GROUP BY I.[TRCODE] ORDER BY net_ciro DESC",
