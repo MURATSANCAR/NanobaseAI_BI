@@ -93,9 +93,6 @@ def readiness(generation_id: str) -> dict:
             "mode": "source_supported_preview", "complete_book": not blockers}
 
 
-READ_VIEWS = {"claims": "usable_claim", "events": "usable_event", "emotions": "usable_emotion"}
-
-
 def read_records(generation_id: str, kind: str, limit: int, offset: int) -> dict:
     from . import read_model
     return read_model.records(generation_id, kind, limit, offset)

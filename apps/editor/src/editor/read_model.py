@@ -96,6 +96,15 @@ def actors(gid: str) -> list[dict]:
                 for e in snap['events']]
 
 
+
+def characters(snap: dict, ids=None) -> list[dict]:
+    claims = {r['id']: r for r in snap['claims']}
+    return [{k: ch[k] for k in ('id', 'canonical_name', 'aliases', 'identity_status', 'identity_confidence', 'first_page')} | {
+        'description': claims[ch['claim_id']]['claim'] if ch.get('claim_id') in claims else None,
+        'description_available': ch.get('claim_id') in claims}
+        for ch in snap['characters'] if ids is None or ch['id'] in ids]
+
+
 def character_history(gid: str, name: str) -> dict:
     with foundation.read_snapshot() as c:
         selected, snap = snapshot(c, gid, required=True)
@@ -104,11 +113,7 @@ def character_history(gid: str, name: str) -> dict:
             '(lower(canonical_name)=lower(%s) OR EXISTS '
             '(SELECT 1 FROM unnest(aliases) a WHERE lower(a)=lower(%s)))', (gid, name, name)).fetchall()
         ids = {str(r['id']) for r in matches}
-        claims = {r['id'] for r in snap['claims']}
-        chars = [{k: ch[k] for k in ('id', 'canonical_name', 'aliases', 'identity_status', 'identity_confidence', 'first_page')} | {
-                  'description': next((r['claim'] for r in snap['claims'] if r['id'] == ch.get('claim_id')), None),
-                  'description_available': ch.get('claim_id') in claims}
-                 for ch in snap['characters'] if ch['id'] in ids]
+        chars = characters(snap, ids)
         confirmed = {ch['id'] for ch in chars if ch['identity_status'] == 'CONFIRMED'}
         mentions = c.execute('SELECT cm.id,cm.character_id,cm.page_no,cm.surface_name,cm.via,'
             'cm.resolution,cm.confidence,e.quote,e.kind,e.page_no AS evidence_page,e.source_refs,e.region_id FROM ed.character_mention cm JOIN ed.evidence e '
@@ -154,12 +159,17 @@ def card(c, book_id: str) -> dict | None:
     selected = artifact(c, str(gen['id']), 'catalog')
     row = selected.pop('artifact')
     content = row['content'] if row else {}
+    identity = []
+    if row:
+        snap = c.execute('SELECT content FROM ed.knowledge_snapshot WHERE generation_id=%s AND revision=%s '
+            'AND input_digest=%s', (gen['id'], row['input_revision'], row['input_digest'])).fetchone()['content']
+        identity = characters(snap)
     return {**selected, 'book_id': book_id, 'card_id': row['build_key'] if row else None,
             'title': c.execute('SELECT title FROM ed.book WHERE id=%s', (book_id,)).fetchone()['title'],
             'created_at': row['created_at'] if row else None,
             'summary': content.get('summary', []), 'metadata': content.get('metadata', []),
             'themes': content.get('themes', []), 'key_events': content.get('events', []),
-            'blockers': content.get('blockers', [])}
+            'characters': identity, 'blockers': content.get('blockers', [])}
 
 
 def cards() -> list[dict]:

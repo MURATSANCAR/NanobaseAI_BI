@@ -102,7 +102,7 @@ services:
 
   cards:
     <<: *py
-    image: ${EDITOR_CARDS_IMAGE:-editor-cards:1}
+    image: ${EDITOR_CARDS_IMAGE:-editor-py:0.13.0-reads}
     env_file:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
