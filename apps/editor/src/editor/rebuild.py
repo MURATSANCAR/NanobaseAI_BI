@@ -18,6 +18,10 @@ log = logging.getLogger(__name__)
 MAX_ATTEMPTS = 3
 
 
+def code_version():
+    return os.environ.get('EDITOR_CODE_VERSION','unknown')
+
+
 class Superseded(RuntimeError):
     pass
 
@@ -198,12 +202,13 @@ async def run(gid: str) -> dict:
                 if request is None: raise ValueError('Missing rebuild request')
                 if request['completed_revision']==state['knowledge_revision'] and state['validated_revision']==state['knowledge_revision'] and c.execute("SELECT count(*) AS n FROM ed.current_artifact WHERE generation_id=%s",(gid,)).fetchone()['n']==len(outputs.ORDER):
                     return {'generation_id':gid,'technical_status':'ALREADY_CURRENT','accepted':False}
-                if request['attempted_revision']==state['knowledge_revision'] and request['attempts']>=MAX_ATTEMPTS:
+                if request['attempted_revision']==state['knowledge_revision'] and request['attempted_code_version']==code_version() and request['attempts']>=MAX_ATTEMPTS:
                     raise ValueError('Rebuild retry budget exhausted')
                 c.execute("UPDATE ed.rebuild_request SET consumer_backend_pid=%s,consumer_backend_start=%s WHERE generation_id=%s",
                     (owner['pid'],owner['backend_start'],gid))
-                c.execute("UPDATE ed.rebuild_request SET attempts=CASE WHEN attempted_revision=%s THEN attempts+1 ELSE 1 END,"
-                    "attempted_revision=%s WHERE generation_id=%s",(state['knowledge_revision'],state['knowledge_revision'],gid))
+                c.execute("UPDATE ed.rebuild_request SET attempts=CASE WHEN attempted_revision=%s AND attempted_code_version=%s "
+                    "THEN attempts+1 ELSE 1 END,attempted_revision=%s,attempted_code_version=%s WHERE generation_id=%s",
+                    (state['knowledge_revision'],code_version(),state['knowledge_revision'],code_version(),gid))
             # Model upgrades require an explicit new analysis generation. Never
             # silently rebuild a recorded profile using a different model revision.
             from .llm import aliases
@@ -257,8 +262,9 @@ def pending():
             "JOIN ed.generation_state s USING(generation_id) JOIN ed.generation g ON g.id=r.generation_id "
             "JOIN ed.analysis_job j ON j.id=g.job_id WHERE r.completed_revision<r.requested_revision "
             "AND s.origin='TRACKED' AND s.producer_completed AND g.sealed_at IS NULL "
-            "AND j.status NOT IN ('QUEUED','RUNNING') AND (r.attempted_revision IS DISTINCT FROM r.requested_revision "
-            "OR (r.attempts<%s AND (r.retry_after IS NULL OR r.retry_after<=now()))) ORDER BY r.updated_at LIMIT 1",(MAX_ATTEMPTS,))]
+            "AND j.status NOT IN ('QUEUED','RUNNING') AND (r.attempted_code_version IS DISTINCT FROM %s "
+            "OR r.attempted_revision IS DISTINCT FROM r.requested_revision "
+            "OR (r.attempts<%s AND (r.retry_after IS NULL OR r.retry_after<=now()))) ORDER BY r.updated_at LIMIT 1",(code_version(),MAX_ATTEMPTS))]
 
 
 async def consume():

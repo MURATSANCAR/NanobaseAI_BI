@@ -12,6 +12,8 @@
 
 ## 2026-09-21 — Editor: gerçek yeni nesilde çıktı kabulü ve Critic geri bildirimi
 
+- Devamında gerçek çağrılar iki sınırı daha gösterdi: cümle denetçisi iddianın tür/sayfa bilgisini kaybediyordu; ayrıca bire bir aynı metne toplu yanlış ret verebiliyordu. `validated-outputs-v4` tür/sayfa/metni birlikte aktarır, tek doğrulanmış iddiayla bire bir eşleşmeyi deterministik kanıt olarak kaydeder; yeniden yazılmış cümlede model kapısı korunur. Model anlaşmazlıkları saklanır. `016_rebuild_code_budget.sql` deneme bütçesini revizyon + kod sürümüne bağlar; aynı kodun yeniden başlaması bütçeyi sıfırlamaz.
+
 - Kullanıcı VPN'i açtıktan sonra tek gerçek kitap için ayrı `editor-output-acceptance-20260921` kuyruğu açıldı. Genel worker/MCP/Hermes kapalı; yedek `/data/editor/backups/20260921-live-outputs/before.dump`.
 - Dünyanın En Korkak Hayvanı, nesil `3a987c80-95ba-48ce-a08e-820425cf438d`: 29 derin sayfa, görsel kimlik/süreklilik, Critic ve aktör kontrolü özetten önce çalıştı. 2215 revizyonu sabitlendi, regresyon geçti; analitik kabul eksikleri sürüyor.
 - Gerçek özet filin merakını Yavru Vombat'a aktardı; çıktı Critic'i reddetti, hiçbir hatalı çıktı yayımlanmadı. Ancak üretim ilk retle durdu. `validated-outputs-v2` reddedilen cümleleri/yanlış referansları geri bildirimle en fazla üç taslakta yeniden üretir; her taslak aynı Critic kapısından geçer. Üç başarısızlıkta yayın kapalı kalır.

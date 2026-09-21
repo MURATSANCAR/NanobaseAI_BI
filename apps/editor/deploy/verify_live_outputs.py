@@ -108,6 +108,18 @@ for version in versions:
     if snap and version['kind'] == 'report':
         checks.append({'check': 'report:canonical_events_emotions:' + version['build_key'],
             'passed': all(version['content'][k] == snap['content'][k] for k in ('events', 'emotions'))})
+    if snap and version['kind'] in ('chapter_summaries', 'book_summary'):
+        rows = (version['content']['sentences'] if version['kind'] == 'book_summary' else
+                [r for ch in version['content']['chapters'] for r in ch['sentences']])
+        claims = {c['id']: c for c in snap['content']['claims']}
+        for i, row in enumerate(rows):
+            refs = row['claim_ids']
+            valid = bool(refs) and len(refs) == len(set(refs)) and set(refs) <= claims.keys()
+            checks.append({'check': f"{version['build_key']}:sentence:{i}:references", 'passed': valid})
+            if row.get('support_check') == 'EXACT_VERIFIED_CLAIM':
+                exact = valid and len(refs) == 1 and row['text'].strip() in (
+                    claims[refs[0]]['claim'].strip(), claims[refs[0]]['claim'].strip() + '.')
+                checks.append({'check': f"{version['build_key']}:sentence:{i}:exact_proof", 'passed': exact})
 
 index = api.get('search_index', {})
 qdrant_reference = None

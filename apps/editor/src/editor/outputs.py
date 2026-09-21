@@ -13,7 +13,7 @@ from . import db, foundation, source
 from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
-POLICY = 'validated-outputs-v3'
+POLICY = 'validated-outputs-v4'
 
 
 def plain(value):
@@ -179,7 +179,7 @@ async def summarize(snap: dict, claims: list[dict], label: str) -> dict:
     raw = json.dumps(payload,ensure_ascii=False)
     if len(raw)>80000: raise ValueError('Summary input exceeds bounded context; no silent truncation')
     messages=[{'role':'user','content':SUMMARY_PROMPT+label+'\n'+raw}]
-    calls, rejected = [], []
+    calls, rejected, disagreements = [], [], []
     allowed={c['id']:c for c in claims}
     for attempt in range(3):
         out,call = await llm.chat('book-director',messages,
@@ -206,11 +206,27 @@ async def summarize(snap: dict, claims: list[dict], label: str) -> dict:
                 if len(verdicts)!=len(batch) or {v['index'] for v in verdicts}!=set(range(len(batch))):
                     feedback.append({'error':'Output Critic omitted or duplicated verdicts','sentences':checks})
                 else:
-                    feedback.extend({'error':'Unsupported subject, meaning, or modality',**checks[v['index']]}
-                                    for v in verdicts if v['supported'] is not True)
+                    for verdict in verdicts:
+                        i=verdict['index']
+                        sentence=batch[i]
+                        refs=sentence['claim_ids']
+                        # Identity is a proof of preservation, not a semantic
+                        # model vote. No fuzzy matching, name substitution,
+                        # lowercasing, or removal of qualifiers/punctuation.
+                        exact=len(refs)==1 and sentence['text'].strip() in (
+                            allowed[refs[0]]['claim'].strip(), allowed[refs[0]]['claim'].strip()+'.')
+                        if exact:
+                            sentence['support_check']='EXACT_VERIFIED_CLAIM'
+                            if verdict['supported'] is not True:
+                                disagreements.append({'attempt':attempt+1,'index':start+i,
+                                    'claim_id':refs[0],'critic_call':cid,'resolution':'EXACT_VERIFIED_CLAIM'})
+                        elif verdict['supported'] is True:
+                            sentence['support_check']='MODEL_CRITIC'
+                        else:
+                            feedback.append({'error':'Unsupported subject, meaning, or modality',**checks[i]})
         if not feedback:
             return {'sentences':rows,'status':'SOURCE_SUPPORTED_DRAFT','model_calls':calls,
-                    'attempts':attempt+1,'rejected_attempts':rejected}
+                    'attempts':attempt+1,'rejected_attempts':rejected,'critic_disagreements':disagreements}
         rejected.append({'attempt':attempt+1,'feedback':feedback})
         messages += [{'role':'assistant','content':json.dumps(out,ensure_ascii=False)},
             {'role':'user','content':'Önceki taslak kabul edilmedi. Aşağıdaki hataları yalnız kaynak '
