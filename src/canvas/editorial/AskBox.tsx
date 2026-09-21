@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Send, Sparkles } from 'lucide-react';
+import { Loader2, Search, Send, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED, bookAskApi, type BookQuestion } from '../engine';
 import { Note, Pill, btn, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 
-/** Kitabın içeriğine soru. Cevap editör motorundan (kanıt defteri) gelir; köprü uydurmaz.
+/** Kitabın içeriğine soru. Cevap kitabın kendi metninden gelir, sayfa numarasıyla; köprü uydurmaz.
  *  Motor modeli istendiğinde açtığı ve GPU'yu analizle paylaştığı için soru bir iştir: dakikalar sürebilir. */
 
 const STATUS: Record<BookQuestion['status'], { label: string; tone: 'ok' | 'warn' | 'err' | 'muted' }> = {
@@ -29,7 +29,13 @@ function Answer({ q }: { q: BookQuestion }) {
       <div className="mt-0.5 text-[11px] text-canvas-muted">
         {[q.bookTitle, dateTime(q.createdAt), q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn` : null].filter(Boolean).join(' · ')}
       </div>
-      {q.answer && <p className="mt-2 whitespace-pre-line leading-relaxed">{q.answer}</p>}
+      {q.answer && q.notFound && (
+        <div className="mt-2 flex gap-2 rounded-xl bg-amber-50/80 px-3 py-2.5">
+          <Search aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+          <p className="whitespace-pre-line leading-relaxed text-amber-900">{q.answer}</p>
+        </div>
+      )}
+      {q.answer && !q.notFound && <p className="mt-2 whitespace-pre-line leading-relaxed">{q.answer}</p>}
       {q.error && (
         <div className="mt-2">
           <Note tone="err">{q.error}</Note>
@@ -37,7 +43,7 @@ function Answer({ q }: { q: BookQuestion }) {
       )}
       {live && !q.answer && (
         <p className="mt-2 text-[11.5px] leading-snug text-canvas-muted">
-          Motor modeli istendiğinde açar ve kartı kitap analiziyle paylaşır; cevap dakikalar sürebilir. Sayfadan ayrılabilirsiniz, soru kayıtlı kalır.
+          Kitap okunuyor; cevap birkaç dakika sürebilir. Sayfadan ayrılabilirsiniz, soru kayıtlı kalır.
         </p>
       )}
     </li>
@@ -84,7 +90,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
           }}
           rows={2}
           disabled={off}
-          placeholder={bookTitle ? `«${bookTitle}» içeriğine sorun: kim ne yaptı, hangi sayfada…` : 'Analiz edilmiş bir kitabın içeriğine sorun: kim ne yaptı, hangi olay hangi sayfada…'}
+          placeholder={bookTitle ? `«${bookTitle}» kitabına sorun: kim ne yaptı, hangi olay hangi sayfada…` : 'Okunmuş bir kitaba sorun: kim ne yaptı, hangi olay hangi sayfada…'}
           aria-label="Kitabın içeriğine soru"
           className="min-h-[76px] w-full resize-y rounded-2xl border border-slate-200 bg-white/95 py-3.5 pl-12 pr-28 text-[14px] font-medium leading-snug outline-none transition-[border-color,box-shadow] duration-150 placeholder:text-canvas-muted/70 focus:border-canvas-violet focus:shadow-[0_0_0_3px_rgba(124,92,255,.12)] disabled:opacity-60"
         />
@@ -98,7 +104,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
         </button>
       </form>
       <p className="mt-1.5 px-1 text-[11px] leading-snug text-canvas-muted">
-        Cevap yalnız analiz edilmiş kitapların kanıt defterinden gelir ve sayfa numarasıyla verilir. Defterde olmayan bilgi uydurulmaz.
+        Cevap kitabın kendi metninden gelir ve sayfa numarasıyla verilir. Kitapta olmayan bir şey uydurulmaz.
         {list.data?.running ? ` Şu an ${nf.format(list.data.running)} soru sırada.` : ''}
       </p>
 

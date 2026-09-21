@@ -1236,6 +1236,8 @@ export type BookQuestion = {
   question: string;
   status: 'bekliyor' | 'calisiyor' | 'bitti' | 'hata';
   answer: string | null;
+  /** Cevap «Kitapta bulunamadı.» ile başlıyorsa true; ekran bunu sakin bir kart olarak gösterir. */
+  notFound: boolean;
   error: string | null;
   elapsedMs: number | null;
   username: string;

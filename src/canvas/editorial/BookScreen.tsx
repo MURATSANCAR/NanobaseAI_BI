@@ -258,7 +258,7 @@ export default function BookScreen() {
           <Panel>
             <h2 className="px-1 text-[13px] font-extrabold">Bu kitabın içeriğine sor</h2>
             <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-              Cevap editör motorunun kanıt defterinden gelir; kitap analiz edilmemişse motor bunu söyler.
+              Cevap kitabın kendi metninden, sayfa numarasıyla gelir. Kitap henüz okunmamışsa bu da söylenir.
             </p>
             <div className="mt-2">
               <AskBox bookKey={b.id} bookTitle={b.title || undefined} />

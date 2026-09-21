@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-21 10:10 — Kitaba soruda "bulunamadı" mesajı ve sade dil
+
+Kullanıcı isteği: bulunamayan bilgi için güzel bir mesaj.
+
+- **Motora verilen talimat**: sorulan şey kitapta yoksa cevap birebir «Kitapta bulunamadı.» ile başlar, sonra tek cümleyle nereye bakıldığı ve varsa en yakın bilgi sayfasıyla yazılır. Ayrıca iç terim yasağı eklendi (kanıt defteri, generation, claim) ve cevabın sıcak bir dille yazılması istendi. Kitap hiç okunmamışsa bu açıkça söylenir.
+- **Kayıt ve ekran**: cümle sabitlendiği için köprü `not_found` bayrağını güvenle yazıyor (`semantic_editorial_questions`, var olan tabloya `_add_missing_columns` ile eklendi). Ekran bu cevabı hata gibi değil, büyüteç ikonlu sakin bir bilgi kartı olarak gösteriyor.
+- **Ekran dili sadeleşti**: "kanıt defteri" ifadesi kullanıcıya görünen hiçbir yerde yok; yerine "kitabın kendi metninden, sayfa numarasıyla" ve "kitapta olmayan bir şey uydurulmaz". Bekleme metni de "Kitap okunuyor; cevap birkaç dakika sürebilir" oldu.
+- **Doğrulama (canlı):** "Kitapta geçen yemek tariflerini say" → 19 sn, bayrak `true`, cevap «Kitapta bulunamadı.» ile başladı ve nereye bakıldığını, adı geçen yemekleri sayfalarıyla yazdı (s. 18, s. 38, s. 41, s. 42). "Max kimdir?" → 9 sn, bayrak `false`, sayfa numaralı normal cevap (s.17, s.12, s.29).
+
 ## 2026-09-21 09:30 — Kitabın içeriğine soru: tünel, köprü ucu ve ekran
 
 "Kalan 1" tamamlandı. Portaldan analiz edilmiş bir kitabın **içeriğine** soru sorulup kanıtlı cevap alınıyor.

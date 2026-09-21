@@ -86,7 +86,7 @@ export default function SearchBox() {
 
   const TABS = [
     { id: 'ara' as const, label: 'Kitap ara', help: 'Kitap adı, proje adı ya da kişi yazın. Kitaba tıklayınca o kitabın bütün süreçleri tek ekranda açılır.' },
-    { id: 'sor' as const, label: 'Kitaba sor', help: 'Analiz edilmiş bir kitabın içeriğine sorun. Cevap kanıt defterinden, sayfa numarasıyla gelir.' },
+    { id: 'sor' as const, label: 'Kitaba sor', help: 'Okunmuş bir kitabın içeriğine sorun. Cevap kitabın metninden, sayfa numarasıyla gelir.' },
   ];
 
   return (

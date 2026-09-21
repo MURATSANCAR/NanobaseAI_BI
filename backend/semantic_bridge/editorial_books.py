@@ -34,6 +34,7 @@ QUESTIONS = sa.Table(
     sa.Column("question", sa.Text, nullable=False),
     sa.Column("status", sa.String(20), nullable=False, default="bekliyor"),  # bekliyor | calisiyor | bitti | hata
     sa.Column("answer", sa.Text),
+    sa.Column("not_found", sa.Boolean),
     sa.Column("error", sa.String(600)),
     sa.Column("elapsed_ms", sa.Integer),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
@@ -49,11 +50,17 @@ MAX_QUESTION = 2000
 #: Motor modeli açana ve araçlarını koşturana kadar geçen süre dakikalarla ölçülür.
 TIMEOUT_SEC = float(os.environ.get("EDITOR_ASK_TIMEOUT_SEC", "1800"))
 
+#: Bulunamayan bilgi bu cümleyle başlar; ekran bunu tanıyıp sakin bir bilgi kartı olarak gösterir.
+NOT_FOUND = "Kitapta bulunamadı."
+
 SYSTEM = (
-    "Sen Timaş'ın editör asistanısın. Yalnız analiz edilmiş kitapların kanıt defterinden cevap verirsin. "
-    "Önce ilgili kitabı ve nesli bul, sonra kanıt arama araçlarını kullan. Her iddiayı hangi sayfaya "
-    "dayandığını yazarak ver (örnek: «s. 14»). Kanıt defterinde olmayan bir şey sorulursa uydurma, "
-    "«bu kitabın kanıt defterinde bu bilgi yok» de. Cevabı Türkçe ve kısa yaz."
+    "Sen Timaş'ın editör asistanısın. Yalnız analiz edilmiş kitapların metninden ve o metinden çıkarılmış "
+    "kayıtlardan cevap verirsin. Önce ilgili kitabı ve nesli bul, sonra kanıt arama araçlarını kullan. "
+    "Her iddiayı hangi sayfaya dayandığını yazarak ver (örnek: «s. 14»). Cevabı Türkçe, kısa ve sıcak bir "
+    "dille yaz; «kanıt defteri», «generation», «claim» gibi iç terimleri kullanma.\n"
+    f"Sorulan şey kitapta yoksa cevabına birebir «{NOT_FOUND}» cümlesiyle başla, sonra tek cümleyle nereye "
+    "baktığını ve varsa en yakın bilgiyi sayfasıyla söyle. Asla uydurma.\n"
+    "Sorulan kitap hiç analiz edilmemişse bunu açıkça söyle ve hangi kitapların analiz edildiğini yaz."
 )
 
 
@@ -68,7 +75,23 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         _md.create_all(engine, checkfirst=True)
+        _add_missing_columns(engine)
         _ready.add(id(engine))
+
+
+def _add_missing_columns(engine: sa.engine.Engine) -> None:
+    """`create_all` var olan tabloya kolon eklemez; sonradan gelen kolonlar burada eklenir."""
+    try:
+        have = {c["name"] for c in sa.inspect(engine).get_columns(QUESTIONS.name)}
+    except Exception:  # noqa: BLE001 — tablo henüz yoksa create_all zaten kurdu
+        return
+    for col, ddl in (("not_found", "BOOLEAN"),):
+        if col not in have:
+            try:
+                with engine.begin() as conn:
+                    conn.execute(sa.text(f"ALTER TABLE {QUESTIONS.name} ADD COLUMN {col} {ddl}"))
+            except Exception as e:  # noqa: BLE001 — yarışta başkası eklemiş olabilir
+                log.warning("editorial questions: %s kolonu eklenemedi: %s", col, e)
 
 
 def configured() -> bool:
@@ -85,7 +108,7 @@ def _iso(v: Optional[datetime]) -> Optional[str]:
 
 def _row(r: Any) -> dict[str, Any]:
     return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "question": r.question,
-            "status": r.status, "answer": r.answer, "error": r.error, "elapsedMs": r.elapsed_ms,
+            "status": r.status, "answer": r.answer, "notFound": bool(r.not_found), "error": r.error, "elapsedMs": r.elapsed_ms,
             "username": r.username, "createdAt": _iso(r.created_at), "finishedAt": _iso(r.finished_at)}
 
 
@@ -152,6 +175,7 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
             with engine.begin() as conn:
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
                     status="bitti" if answer else "hata", answer=answer, error=err,
+                    not_found=bool(answer and answer.lstrip().startswith(NOT_FOUND)),
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
 
     threading.Thread(target=run, name=f"editorial-ask-{qid[:8]}", daemon=True).start()
