@@ -489,7 +489,8 @@ async def resolve_visual_identity(generation_id: str) -> dict:
        characters of that kind, and N-1 are already identified, the last figure is the last
        character (confidence 0.8; never used as a reference).
     Everything else stays uncertain and unattached."""
-    chars = db.all_rows("SELECT id, canonical_name, aliases, kind, traits FROM character WHERE generation_id=%s",
+    chars = db.all_rows("SELECT id, canonical_name, aliases, kind, traits FROM character WHERE generation_id=%s "
+                        "AND COALESCE(traits->>'entity_scope','INDIVIDUAL')='INDIVIDUAL'",
                         generation_id)
     figs = db.all_rows(
         "SELECT cm.id, cm.page_no, cm.surface_name, vr.bbox, (SELECT bool_or(s.pass='DEEP') FROM page_scan s"
@@ -508,7 +509,7 @@ async def resolve_visual_identity(generation_id: str) -> dict:
     bv = str(gen["book_version_id"])
     ckind = {str(ch["id"]): ch["kind"] for ch in chars}
     # what the TEXT declares about a character; "UNKNOWN" is not a value, it is silence
-    ctrait = {str(ch["id"]): {a: v for a, v in (ch["traits"] or {}).items() if v and v != "UNKNOWN"}
+    ctrait = {str(ch["id"]): {a: v for a, v in (ch["traits"] or {}).items() if a in ("sex", "age_band") and v and v != "UNKNOWN"}
               for ch in chars}
 
     def separating(cid: str, rival: str) -> dict[str, str]:

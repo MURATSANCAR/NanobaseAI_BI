@@ -81,6 +81,7 @@ KNOWLEDGE = obj({
 IDENTITY = obj({
     "characters": arr(obj({
         "canonical_name": STR, "kind": KIND, "sex": SEX, "age_band": AGE_BAND,
+        "entity_scope": {"type": "string", "enum": ["INDIVIDUAL", "COLLECTIVE", "CONCEPT", "UNKNOWN"]},
         "aliases": arr(STR), "description": STR,
         "mention_ids": arr(STR, 1), "merge_basis": STR, "identity_confidence": NUM})),
     "unresolved_mention_ids": arr(STR),

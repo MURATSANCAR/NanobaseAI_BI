@@ -21,3 +21,5 @@ Kurallar:
 - Tür ve yaş farklı kavramlardır: konuşan, bilim yapan, anne/baba/yavru olan hayvanlar ANIMAL'dır. İnsan gibi davranmak HUMAN_CHILD/HUMAN_ADULT kanıtı değildir.
 - Aynı yazılan ad farklı kişilere ait olabilir. Genel ad, topluluk ve unvanı zorla tek kişiye bağlama. Bir kez görünen kişi ayrı aday olabilir; onu sırf az göründüğü için atlama.
 - Açıklama ve merge_basis kısa, en fazla iki cümle olsun. İç tartışmanı veya varsayımlarını bu alanlara yazma.
+
+- entity_scope: tek birey INDIVIDUAL, aile/sürü/topluluk COLLECTIVE, soyut unvan/oda/kavram CONCEPT, çözülemeyen UNKNOWN. Bir topluluğu onun üyelerinden biriyle birleştirme. Kolektif özne metinde geçebilir ama tek bir görsel figürün kimliği değildir.

@@ -367,7 +367,7 @@ async def resolve_character_identity(generation_id: str) -> dict:
             conf = float(ch["identity_confidence"])
             if len(pages) < 2:
                 conf = min(conf, 0.7)
-            status = "CONFIRMED" if conf >= 0.85 and not (set(mids) & conflicted) else "CANDIDATE"
+            status = "CONFIRMED" if conf >= 0.85 and ch["entity_scope"] == "INDIVIDUAL" and not (set(mids) & conflicted) else "CANDIDATE"
             evs = []
             for m in mids[:8]:
                 e = c.execute("SELECT evidence_id FROM character_mention WHERE id=%s", (m,)).fetchone()
@@ -384,7 +384,7 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 " (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) RETURNING id",
                 (generation_id, canonical, aliases, ch["description"], status, conf, pages[0], cid,
                  ch.get("kind") or "UNKNOWN",
-                 db.J({k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band")}))).fetchone()
+                 db.J({k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band", "entity_scope")}))).fetchone()
             for m in mids:
                 sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted
                 c.execute("UPDATE character_mention SET character_id=%s, resolution=%s WHERE id=%s",
