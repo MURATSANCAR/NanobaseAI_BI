@@ -275,9 +275,10 @@ async def _should_overflow(a: Alias, req: Request) -> bool:
         return False                      # analiz işçisi ve diğerleri: hiçbir koşulda taşmaz
     if _is_running(a) and await _healthy(a):
         return False                      # yönetici model GPU 1'de açık: orada cevaplanır
-    if not _would_wait(a):
-        return False                      # kartta yer var: normal yol, GPU 1'de açılır
-    return await _overflow_ok()           # kart meşgul ve eş ayakta: eşe git
+    # Kapalı model de "meşgul"dür: soğuk açılış ~100 sn sürüyor (ölçüldü: "ana karakter kim"
+    # 111 sn'de cevaplandı, kullanıcı ekranda boş bekledi). Aynı model GPU 0'da zaten ayakta;
+    # etkileşimli soru oradan anında cevaplanır. GPU 1 bir sonraki analiz ihtiyacında açılır.
+    return await _overflow_ok()
 
 
 async def ensure_running(a: Alias) -> None:

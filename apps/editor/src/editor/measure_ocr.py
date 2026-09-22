@@ -74,7 +74,8 @@ def hard_pages(per_book: int) -> list[dict]:
     return out
 
 
-async def read(alias: str, page: dict, sem: asyncio.Semaphore, native: str | None = None) -> dict:
+async def read(alias: str, page: dict, sem: asyncio.Semaphore, native: str | None = None,
+               thinking: bool | None = None) -> dict:
     """`native`: the model's own task prompt (an OCR specialist is trained on "OCR:", not on
     our instructions or a JSON schema); its answer is plain text."""
     png = Path(render_page(page["bv"], page["page"])["path"]).read_bytes()
@@ -89,7 +90,8 @@ async def read(alias: str, page: dict, sem: asyncio.Semaphore, native: str | Non
                 return {"ok": True, "text": text, "sec": time.time() - t0}
             out, _ = await Llm(None).chat(
                 alias, [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
-                prompt=ref, schema=schemas.OCR, pages=[page["page"]], max_tokens=16384, temperature=0.0)
+                prompt=ref, schema=schemas.OCR, pages=[page["page"]], max_tokens=16384, temperature=0.0,
+                thinking=thinking)
             # (no `thinking=False`: a Thinking-only model then answers with an empty content —
             #  measured, 39 of 39 calls — so every alias runs the way production runs it)
         text = "\n\n".join(b["text"].strip() for b in out["blocks"] if b["text"].strip())
@@ -103,9 +105,11 @@ async def main(aliases: list[str], per_book: int, out: Path | None) -> None:
     print(f"zor küme: {len(pages)} sayfa ({per_book}/kitap), döngülü {sum(p['stored_looped'] for p in pages)}")
     results = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
     for spec in aliases:
-        alias, _, native = spec.partition("=")          # alias  or  alias=NATIVE PROMPT
+        alias, _, native = spec.partition("=")          # alias | alias=NATIVE PROMPT | alias:nothink
+        alias, _, mode = alias.partition(":")
+        thinking = False if mode == "nothink" else None
         sem = asyncio.Semaphore(4)
-        results[alias] = await asyncio.gather(*(read(alias, p, sem, native or None) for p in pages))
+        results[spec] = await asyncio.gather(*(read(alias, p, sem, native or None, thinking) for p in pages))
     report = {}
     for name, res in results.items():
         words = lost = changed = loops = failed = 0

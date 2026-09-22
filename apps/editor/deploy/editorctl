@@ -81,6 +81,14 @@ EOF
   # deployment settings that may be added after the first install (values are set on the host)
   #   EDITOR_COVER_WEB_SEARCH: publisher web site search URL with {isbn}, for cover lookup
   grep -q '^EDITOR_COVER_WEB_SEARCH=' "$ROOT/secrets/editor.env" || echo 'EDITOR_COVER_WEB_SEARCH=' >> "$ROOT/secrets/editor.env"
+  # Interactive questions (Hermes) are answered by the same model on GPU 0 (BI's copy) while
+  # the editor's own copy on GPU 1 is cold or the card is busy (user decision 2026-09-21).
+  # Only Hermes overflows; analysis workers never do. Values can be changed on the host.
+  grep -q '^EDITOR_OVERFLOW_URL=' "$ROOT/secrets/editor.env" || cat >> "$ROOT/secrets/editor.env" <<'EOV'
+EDITOR_OVERFLOW_URL=http://172.17.0.1:8001
+EDITOR_OVERFLOW_MODEL=nanobaseAI
+EDITOR_OVERFLOW_CLIENTS=editor-hermes
+EOV
   render "$APP/deploy/temporal/server.yaml.tpl" "$ROOT/temporal/server.yaml"
   chmod 644 "$ROOT/temporal/server.yaml"
   # Hermes home (uid 10000 in the image): config, persona, skills.
