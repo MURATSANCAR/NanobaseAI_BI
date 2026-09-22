@@ -1,4 +1,9 @@
-"""Read-only Editor catalogue client. No direct Editor database access."""
+"""Editor catalogue client. No direct Editor database access.
+
+Reading is the bulk of it; the one write is an editor's decision on a review item, and it
+carries the portal's signed-in AD user in `X-Editor` so the Editor records a person's name
+rather than "the portal".
+"""
 from __future__ import annotations
 import json
 import os
@@ -30,10 +35,12 @@ def request(path: str):
         return r
 
 
-def request_json(method: str, path: str, json=None):
-    """Kart servisine JSON gövdeli istek (aynı başlıklar/CA). Tek kullanım: editörün bulguya kararı;
-    kart servisi bunun dışında salt okumadır. Cevap JSON."""
+def request_json(method: str, path: str, json=None, editor: str=''):
+    """Kart servisine JSON gövdeli istek (aynı başlıklar/CA). İki kullanım: editörün bulguya kararı ve
+    inceleme kuyruğu kararı; kart servisi bunların dışında salt okumadır. Cevap JSON.
+    `editor`: kararı veren kişi — istekten değil oturumdan gelir, istemci kendi adını yazamaz."""
     base,headers,ca=_headers()
+    if editor: headers['X-Editor']=editor[:200]
     with httpx.Client(timeout=20,verify=ca or True,follow_redirects=False) as client:
         r=client.request(method,base+path,headers=headers,json=json)
         r.raise_for_status()
@@ -104,6 +111,64 @@ def book_id_for_title(book_title, text=''):
         return named[0]['id'] if len(named)==1 else None
     except (ValueError,KeyError,TypeError,httpx.HTTPError):
         return None
+
+
+def _image(r):
+    mime=r.headers.get('content-type','').split(';')[0]
+    if mime not in ('image/png','image/jpeg','image/webp'): raise ValueError('Görsel bulunamadı.')
+    if len(r.content)>15*1024*1024: raise ValueError('Görsel çok büyük.')
+    return r.content,mime
+
+
+def _digits(x):
+    return ''.join(ch for ch in str(x or '') if ch.isdigit())
+
+
+def find_by_crm(title: str, isbn: str=''):
+    """CRM kitabının editördeki karşılığı. Editördeki başlık dosya adından gelir
+    (`anne-terligi`), CRM başlığıyla birebir tutmaz; bağ kartın içindeki CRM kaydıdır:
+    önce ISBN, sonra o kaydın CRM başlığı. Eşleşme tek değilse yoktur — tahmin edilmez."""
+    wanted_isbn=_digits(isbn)
+    wanted_title=(title or '').strip().casefold()
+    if not wanted_isbn and not wanted_title: return None
+    cards=catalogue()
+    def crm(c): return c.get('publisher') or {}
+    if wanted_isbn:
+        hit=[c for c in cards if _digits(crm(c).get('isbn'))==wanted_isbn]
+        if len(hit)==1: return hit[0]
+    if wanted_title:
+        hit=[c for c in cards if (crm(c).get('crm_title') or crm(c).get('title') or '').strip().casefold()==wanted_title]
+        if len(hit)==1: return hit[0]
+        hit=[c for c in cards if (c.get('title') or '').strip().casefold()==wanted_title]
+        if len(hit)==1: return hit[0]
+    return None
+
+
+def review_queue(book_id: str, status: str='OPEN'):
+    identifier=str(uuid.UUID(book_id))
+    return request('/v1/books/'+identifier+'/review?status='+status).json()
+
+
+def review_decide(book_id: str, items: list[str], decision: str, editor: str, correction=None):
+    """Bir ya da çok kayıt için aynı karar. Karar veren kişi oturumdan gelir."""
+    identifier=str(uuid.UUID(book_id))
+    chosen=[str(uuid.UUID(x)) for x in items]
+    if not chosen: raise ValueError('Karar verilecek kayıt seçilmedi.')
+    if decision not in ('approve','reject','correct'): raise ValueError('Geçersiz karar.')
+    body={'items':chosen,'decision':decision}
+    if correction is not None: body['correction']=correction
+    return request_json('POST','/v1/books/'+identifier+'/review/decide-many',json=body,editor=editor)
+
+
+def page_context(book_id: str, page_no: int):
+    identifier=str(uuid.UUID(book_id))
+    return request('/v1/books/'+identifier+'/pages/'+str(int(page_no))+'/context').json()
+
+
+def figure_image(book_id: str, region_id: str):
+    identifier=str(uuid.UUID(book_id))
+    region=str(uuid.UUID(region_id))
+    return _image(request('/v1/books/'+identifier+'/figures/'+region))
 
 
 def public_card(card):

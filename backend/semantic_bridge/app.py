@@ -3566,6 +3566,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except Exception:  # noqa: BLE001 — masa kaydı bir ektir, kitap sayfasını düşürmez
             log.exception("editorial book desk lookup failed")
             out["desk"] = []
+        # Editöre yüklenmiş kitapların inceleme kuyruğu; her kitapta yok, sayfayı düşürmez.
+        try:
+            from semantic_bridge import editorial_cards
+            card = editorial_cards.find_by_crm(out.get("title") or "", out.get("isbn") or "")
+            if card:
+                queue = editorial_cards.review_queue(card["id"])
+                out["editorBook"] = {"id": card["id"], "title": card.get("title"),
+                                     "generationId": queue.get("generation_id"),
+                                     "codeVersion": queue.get("code_version"),
+                                     "open": queue.get("open", 0)}
+            else:
+                out["editorBook"] = None
+        except Exception:  # noqa: BLE001
+            log.exception("editorial book review lookup failed")
+            out["editorBook"] = None
         return out
 
     @app.get("/api/v1/editorial/people/{contact_id}/books")
@@ -3855,6 +3870,54 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
         except Exception:
             raise HTTPException(404, "Sayfa görseli bulunamadı.") from None
+
+    # --------------------------------------------------- kitap inceleme kuyruğu
+    # Analiz emin olamadığı yerde tahmin etmez, sorar: faili belli olmayan olay, çizimle
+    # çelişen cümle, hikâye dışı görünen sayfa. Bu kayıtlar karara bağlanmadan nesil kabul
+    # edilemez. Karar veren kişi oturumdaki AD hesabıdır; istemci kendi adını yazamaz.
+
+    @app.get("/api/v1/editorial/books/{book_id}/review")
+    def editorial_book_review(book_id: str, request: Request, status: str = "OPEN") -> dict[str, Any]:
+        _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            return editorial_cards.review_queue(book_id, status)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(502, f"İnceleme kuyruğu okunamadı: {e}") from None
+
+    @app.post("/api/v1/editorial/books/{book_id}/review/decide")
+    def editorial_book_review_decide(book_id: str, request: Request,
+                                     body: dict[str, Any] | None = None) -> dict[str, Any]:
+        _engine, _tenant, user, _is_admin = _books(request)
+        from semantic_bridge import editorial_cards
+        data = body or {}
+        try:
+            return editorial_cards.review_decide(book_id, [str(x) for x in (data.get("items") or [])],
+                                                 str(data.get("decision") or ""), user,
+                                                 data.get("correction"))
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(502, f"Karar kaydedilemedi: {e}") from None
+
+    @app.get("/api/v1/editorial/books/{book_id}/pages/{page_no}/context")
+    def editorial_book_page_context(book_id: str, page_no: int, request: Request) -> dict[str, Any]:
+        _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            return editorial_cards.page_context(book_id, page_no)
+        except Exception as e:  # noqa: BLE001
+            raise HTTPException(502, f"Sayfa okunamadı: {e}") from None
+
+    @app.get("/api/v1/editorial/books/{book_id}/figures/{region_id}")
+    def editorial_book_figure(book_id: str, region_id: str, request: Request):
+        _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            data, mime = editorial_cards.figure_image(book_id, region_id)
+            return Response(content=data, media_type=mime, headers={"Cache-Control": "private, no-cache"})
+        except Exception:
+            raise HTTPException(404, "Görsel bulunamadı.") from None
 
     @app.get("/api/v1/editorial/ask/{qid}")
     def editorial_ask_one(qid: str, request: Request) -> dict[str, Any]:

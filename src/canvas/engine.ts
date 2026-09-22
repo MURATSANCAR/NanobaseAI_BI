@@ -1247,7 +1247,57 @@ export type BookDetail = {
   board: Array<{ id: string; date: string | null; decision: string | null; note: string | null; royalty: number | null; printRun: string | null; project: string | null }>;
   production: Array<{ id: string; on: string | null; delivery: string | null; editorial: string | null; firstText: string | null; status: string | null; editor: string | null; designer: string | null }>;
   desk: Work[];
+  /** Kitap editöre yüklenmişse: editördeki kimliği ve bekleyen inceleme sayısı. */
+  editorBook?: { id: string; title: string | null; generationId: string | null; codeVersion: string | null; open: number } | null;
   db?: DbTiming | null;
+};
+
+export type BookReviewItem = {
+  id: string;
+  kind: string;
+  reason: string;
+  priority: number;
+  status: string;
+  created_at: string;
+  page_role_page_no: number | null;
+  claim_kind: string | null;
+  claim: string | null;
+  source_pages: number[] | null;
+  confidence: number | null;
+  contradiction_kind: string | null;
+  description: string | null;
+  pages: number[] | null;
+};
+
+export type BookReviewQueue = {
+  book_id: string;
+  title: string;
+  generation_id: string;
+  code_version: string;
+  items: BookReviewItem[];
+  open: number;
+};
+
+export type BookPageContext = {
+  page_no: number;
+  texts: Array<{ source: string; text: string }>;
+  regions: Array<{ id: string; label: string; kind: string; bbox: number[] | null; description: string | null }>;
+};
+
+/** Analizin emin olamayıp insana sorduğu kayıtlar. Karar veren kişi oturumdan gelir; istemci ad göndermez. */
+export const bookReviewApi = {
+  queue: (bookId: string) =>
+    send<BookReviewQueue>('GET', `/api/v1/editorial/books/${encodeURIComponent(bookId)}/review`, undefined, 60_000),
+  decide: (bookId: string, items: string[], decision: 'approve' | 'reject' | 'correct', correction?: unknown) =>
+    send<{ decided: number; failed: Array<{ item: string; error: string }> }>(
+      'POST', `/api/v1/editorial/books/${encodeURIComponent(bookId)}/review/decide`,
+      { items, decision, ...(correction === undefined ? {} : { correction }) }, 120_000),
+  pageContext: (bookId: string, page: number) =>
+    send<BookPageContext>('GET', `/api/v1/editorial/books/${encodeURIComponent(bookId)}/pages/${page}/context`, undefined, 60_000),
+  pageUrl: (bookId: string, page: number) =>
+    `${ENGINE_BASE}/api/v1/editorial/books/${encodeURIComponent(bookId)}/pages/${page}`,
+  figureUrl: (bookId: string, regionId: string) =>
+    `${ENGINE_BASE}/api/v1/editorial/books/${encodeURIComponent(bookId)}/figures/${encodeURIComponent(regionId)}`,
 };
 
 /** Editoryal ana ekranın arama kutusu ve kitabın bütün süreçlerini toplayan sayfa. */

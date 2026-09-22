@@ -1,4 +1,12 @@
-"""Authenticated catalogue read service; independent of model workers and maintenance."""
+"""Authenticated catalogue read service; independent of model workers and maintenance.
+
+It also serves the editor review queue and takes decisions on it. That is the one write
+this service does, and it is what makes review possible from a screen instead of a shell
+on the GPU host. The deciding editor is never taken from the request body: the caller
+(the portal bridge) puts its signed-in AD user in `X-Editor`, so a decision always carries
+the name of a person.
+"""
+from pathlib import Path as FsPath
 from uuid import UUID
 import hmac
 import os
@@ -9,6 +17,7 @@ from fastapi.responses import FileResponse, Response
 import psycopg
 from .presentation import cards, cover_path, page_path
 from . import db, foundation, graph, read_model
+from . import review as review_mod
 from .proofing._labels import label_of   # etiketler kaynak dosyadan; denetim modülleri yüklenmez
 from .proofing import _decision            # editör kararı: saf doğrulama + isabet formülü
 
@@ -157,3 +166,61 @@ def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(..
     except psycopg.errors.UndefinedTable:
         raise HTTPException(503,'proof_decision table missing (db migration 025_proof_decision not applied)') from None
     return {'book_id':str(book_id),'generation_id':gid,'finding_id':str(finding_id),'decision':_decision.public(row)}
+
+
+def _editor(x_editor: str = Header(default='')) -> str:
+    name=(x_editor or '').strip()
+    if not name:
+        raise HTTPException(400,'X-Editor header (the deciding person) is required')
+    return name[:200]
+
+
+def _png(path: FsPath) -> FileResponse:
+    return FileResponse(path,media_type='image/png',headers={'Cache-Control':'private, no-cache'})
+
+
+@app.get('/v1/books/{book_id}/review')
+def book_review(book_id: UUID, status: str='OPEN', limit: int=200):
+    try:
+        return review_mod.queue(str(book_id),status,min(limit,500))
+    except KeyError as e:
+        raise HTTPException(404,str(e)) from None
+
+
+@app.post('/v1/books/{book_id}/review/{item_id}/decide')
+def book_review_decide(book_id: UUID, item_id: UUID, body: dict=Body(default={}),
+                       editor: str=Depends(_editor)):
+    try:
+        # The book is in the path so a decision cannot be routed to another book's item.
+        return review_mod.decide_many(str(book_id),[str(item_id)],body.get('decision',''),editor,
+                                      body.get('correction'))
+    except (KeyError,ValueError) as e:
+        raise HTTPException(400,str(e)) from None
+
+
+@app.post('/v1/books/{book_id}/review/decide-many')
+def book_review_decide_many(book_id: UUID, body: dict=Body(default={}), editor: str=Depends(_editor)):
+    items=[str(x) for x in (body.get('items') or [])]
+    if not items:
+        raise HTTPException(400,'items is required')
+    try:
+        return review_mod.decide_many(str(book_id),items,body.get('decision',''),editor,
+                                      body.get('correction'))
+    except (KeyError,ValueError) as e:
+        raise HTTPException(400,str(e)) from None
+
+
+@app.get('/v1/books/{book_id}/pages/{page_no}/context')
+def book_page_context(book_id: UUID, page_no: int=Path(ge=1)):
+    try:
+        return review_mod.page_context(str(book_id),page_no)
+    except KeyError as e:
+        raise HTTPException(404,str(e)) from None
+
+
+@app.get('/v1/books/{book_id}/figures/{region_id}')
+def book_figure_image(book_id: UUID, region_id: UUID):
+    try:
+        return _png(review_mod.figure_image(str(book_id),str(region_id)))
+    except KeyError as e:
+        raise HTTPException(404,str(e)) from None

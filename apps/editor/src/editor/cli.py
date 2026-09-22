@@ -12,7 +12,10 @@
   python -m editor.cli canon add <universe> <kind> <key> '<json>' --editor NAME [--claim ID]
   python -m editor.cli gallery prune [--apply]
 
-Editor decisions (and canon writes) exist only here, not as Hermes tools.
+Editor decisions are never Hermes tools: a model does not close its own questions. They
+are made by a person — here, or through the portal's review screen, which reaches the same
+`review.decide` over the card service and signs the decision with the caller's AD user.
+Canon writes exist only here.
 """
 
 from __future__ import annotations
@@ -65,35 +68,12 @@ def queue_all(force: bool, code_version: bool) -> dict:
 
 
 def decide(item_id: str, decision: str, editor: str, data: dict | None) -> dict:
-    status = {"approve": "APPROVED", "reject": "REJECTED", "correct": "CORRECTED"}[decision]
-    claim_status = {"approve": "EDITOR_APPROVED", "reject": "EDITOR_REJECTED",
-                    "correct": "EDITOR_CORRECTED"}[decision]
-    with db.tx() as c:
-        it = c.execute("SELECT r.*, bv.book_id FROM review_item r JOIN generation g ON g.id=r.generation_id"
-                       " JOIN book_version bv ON bv.id=g.book_version_id WHERE r.id=%s", (item_id,)).fetchone()
-        if it is None:
-            raise SystemExit(f"review item {item_id} not found")
-        if it["status"] != "OPEN":
-            raise SystemExit(f"already decided: {it['status']}")
-        if decision == "correct" and not data:
-            raise SystemExit("--json correction is required for 'correct'")
-        c.execute("UPDATE review_item SET status=%s, decided_by=%s, decision=%s, decided_at=now() WHERE id=%s",
-                  (status, editor, db.J(data or {}), item_id))
-        if it["claim_id"]:
-            c.execute("UPDATE claim SET status=%s WHERE id=%s", (claim_status, it["claim_id"]))
-        if it["contradiction_id"]:
-            c.execute("UPDATE contradiction SET status=%s WHERE id=%s",
-                      ("EDITOR_DISMISSED" if decision == "reject" else "EDITOR_CONFIRMED",
-                       it["contradiction_id"]))
-        if decision == "correct":
-            cl = c.execute("SELECT kind, subject, claim FROM claim WHERE id=%s", (it["claim_id"],)).fetchone() \
-                if it["claim_id"] else None
-            c.execute("INSERT INTO editor_correction(book_id, review_item_id, target_kind, target_key,"
-                      " correction, editor) VALUES (%s,%s,%s,%s,%s,%s)",
-                      (it["book_id"], item_id, data.get("target_kind") or (cl or {}).get("kind", "CLAIM"),
-                       data.get("target_key") or (cl or {}).get("subject") or (cl or {}).get("claim", "")[:200],
-                       db.J(data), editor))
-    return {"item": item_id, "status": status}
+    """One implementation for the shell and the screen: `review.decide` (editor_review)."""
+    from . import review
+    try:
+        return review.decide(item_id, decision, editor, data)
+    except (KeyError, ValueError) as e:
+        raise SystemExit(str(e)) from None
 
 
 def canon_add(universe: str, kind: str, key: str, value: dict, editor: str, claim: str | None) -> dict:

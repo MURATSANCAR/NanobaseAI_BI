@@ -6,6 +6,7 @@ import { dateTime, num, pct } from '../format';
 import { ModuleFrame, Panel } from './kit';
 import AskBox from './AskBox';
 import Cover from './Cover';
+import ReviewPanel from './ReviewPanel';
 
 /** Bir kitabın bütün süreçleri tek ekranda: künye, roller, sözleşmeler, proje ve kurul kararı, üretim,
  *  masadaki metin ve prova. Her bölüm kendi modülüne bağlanır. CRM'de kaydı olmayan bölüm hiç çizilmez. */
@@ -288,6 +289,7 @@ export default function BookScreen() {
           <Facts b={b} />
           <About b={b} />
           <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
+          {b.editorBook && <ReviewPanel bookId={b.editorBook.id} title={b.title} />}
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <div className="space-y-3 lg:space-y-4">
               <Roles b={b} />
