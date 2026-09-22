@@ -87,65 +87,15 @@ SPACED_MAX = 0.3
 def _collapse_repeats(text: str) -> tuple[str, int]:
     """A vision model that falls into a loop writes one phrase over and over until its budget
     ends (measured: 7 of 171 OCR'd pages, one page 8.552 characters for 873 of real text). A
-    phrase repeated six or more times in a row is kept once; fewer is left alone, because a
-    children's book does say "tık tık tık tık". Returns (text, characters cut)."""
-    out = re.sub(r"(?s)(\S.{1,120}?)(?:\s*\1){5,}", r"\1", text)
+    phrase of at least three letters repeated ten or more times in a row is kept once.
+    Shorter units and fewer repeats are left alone: a book does print "AAAAAAAA!" and dot
+    leaders in a table of contents (measured on 90 random pages: every page the old rule cut
+    was one of these, read the same way by all four readers). Returns (text, characters cut)."""
+    def cut(m: re.Match) -> str:
+        unit = m.group(1)
+        return unit if len(re.findall(r"[^\W\d_]", unit)) >= 3 else m.group(0)
+    out = re.sub(r"(?s)(\S.{1,120}?)(?:\s*\1){9,}", cut, text)
     return out, len(text) - len(out)
-
-
-# A scrambled layer is made of valid letters, so it has to be caught by what it does to
-# WORDS. Measured on 476 pages of six books — healthy pages: fragments <= 0.19, glued
-# <= 0.03, and a page's stems recur elsewhere in its own book about as often as the book's
-# average (0.67-0.89); scrambled pages: fragments 0.28-0.38, glued 0.05-0.32, recurring
-# stems 0.40-0.53 against a book average of 0.86. The third test is relative to the book
-# itself, so a book with an unusual vocabulary is not judged by another book's numbers.
-FRAGMENT_MAX = 0.30        # share of words of one or two letters (healthy max measured 0.24)
-GLUED_MAX = 0.04           # share of words >= 20 letters or with ".X" / ",x" inside
-STEM_DROP_MAX = 0.30       # how far below the book's mean a page's recurring-stem share may fall
-
-
-def _words(text: str) -> list[str]:
-    return [w for w in re.findall(r"\S+", text) if re.search(r"[^\W\d_]", w)]
-
-
-def _stem(word: str) -> str:
-    return re.sub(r"\W", "", word).casefold()[:5]      # Turkish is agglutinative: compare stems
-
-
-def layer_health(text: str, stem_pages: dict[str, int] | None = None, book_mean: float | None = None) -> dict:
-    """Word-level health of a page's digital text. `stem_pages`: on how many pages of the
-    book each stem occurs; `book_mean`: the book's mean recurring-stem share."""
-    w = _words(text)
-    if len(w) < 25:
-        return {"words": len(w), "suspect": False}
-    # A word cut by line-end hyphenation ("po-" + "lislere") is typesetting, not scrambling,
-    # and a contents line's dot leaders ("Yasaktır.........32") are not a glued word: both
-    # were measured as false alarms on healthy pages.
-    letters = [re.sub(r"[\W\d_]", "", x) for x in w if not x.endswith(("-", "\u00ad"))]
-    frag = sum(1 for x in letters if len(x) <= 2) / max(1, len(letters))
-    glued = sum(1 for x in w if len(re.sub(r"[\W\d_]", "", x)) >= 20
-                or re.search(r"[a-zçğıöşü][.,;:!?][^\W\d_]", x)) / len(w)
-    out = {"words": len(w), "fragments": round(frag, 3), "glued": round(glued, 3)}
-    reasons = [n for n, bad in (("FRAGMENTS", frag > FRAGMENT_MAX), ("GLUED", glued > GLUED_MAX)) if bad]
-    if stem_pages is not None and book_mean is not None:
-        known = sum(1 for x in w if stem_pages.get(_stem(x), 0) >= 2) / len(w)
-        out.update(recurring_stems=round(known, 3), book_mean=round(book_mean, 3))
-        # Unusual vocabulary alone is a reason to read the page a second time, not a verdict
-        # on the layer: every book's imprint page (addresses, ISBN) trips it while being
-        # perfectly good text — and an OCR'd ISBN is worse than a digital one.
-        out["unusual_vocabulary"] = known < book_mean - STEM_DROP_MAX
-    return {**out, "suspect": bool(reasons), "reasons": reasons}
-
-
-def book_stems(texts: list[str]) -> tuple[dict[str, int], float]:
-    """(stem -> number of pages it occurs on, mean recurring-stem share over the pages)."""
-    pages = [[_stem(x) for x in _words(t)] for t in texts]
-    df: dict[str, int] = {}
-    for stems in pages:
-        for st in set(stems):
-            df[st] = df.get(st, 0) + 1
-    shares = [sum(1 for st in stems if df[st] >= 2) / len(stems) for stems in pages if len(stems) >= 25]
-    return df, (sum(shares) / len(shares) if shares else 0.0)
 
 
 def _garbled_ratio(text: str) -> float:
