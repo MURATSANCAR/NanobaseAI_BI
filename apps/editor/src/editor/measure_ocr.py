@@ -63,6 +63,33 @@ def score(truth: str, read: str, keep: set[str] | None = None) -> dict:
     return {"words": sum(a.values()), "lost": lost, "changed": changed, "pairs": pairs}
 
 
+def sample_pages(per_book: int, seed: int = 20260922) -> list[dict]:
+    """An UNBIASED set: pages drawn at random (fixed seed) from every book's healthy digital
+    layer, not chosen by any reader's errors. The hard set is picked where the old reader did
+    worst, which flatters every other reader; this one does not."""
+    import random
+    rng = random.Random(seed)
+    out = []
+    books = db.all_rows(
+        "SELECT b.title, bv.id AS bv, g.id AS gid FROM book b JOIN book_version bv ON bv.book_id=b.id"
+        " JOIN LATERAL (SELECT g.id FROM generation g WHERE g.book_version_id=bv.id AND EXISTS"
+        " (SELECT 1 FROM page_text pt WHERE pt.generation_id=g.id) ORDER BY g.created_at DESC LIMIT 1) g"
+        " ON true ORDER BY bv.page_count")
+    from collections import Counter
+    for bk in books:
+        rows = db.all_rows("SELECT page_no, text FROM page_text WHERE generation_id=%s AND source='TEXT_LAYER'"
+                           " ORDER BY page_no", bk["gid"])
+        layers = {r["page_no"]: r["text"] or "" for r in rows}
+        df, mean = book_stems(list(layers.values()))
+        freq = Counter(w for t in layers.values() for w in _w(t))
+        keep = {w for w, n in freq.items() if n >= 2}
+        ok = [p for p, t in layers.items() if len(_w(t)) >= 40 and not layer_health(t, df, mean)["suspect"]]
+        for p in sorted(rng.sample(ok, min(per_book, len(ok)))):
+            out.append({"book": bk["title"], "bv": str(bk["bv"]), "page": p, "truth": layers[p], "keep": keep,
+                        "stored_ocr": "", "stored_err": 0.0, "stored_looped": False})
+    return out
+
+
 def hard_pages(per_book: int) -> list[dict]:
     out = []
     books = db.all_rows(
@@ -144,21 +171,22 @@ def external(pages: list[dict], path: Path) -> list[dict]:
     return [{"ok": t is not None, "text": t or "", "sec": 0.0} for t in texts][:len(pages)]
 
 
-def rescore(files: list[Path], per_book: int, consensus: Path | None = None) -> None:
+def rescore(files: list[Path], per_book: int, consensus: Path | None = None, sample: bool = False) -> None:
     """Score readings saved by earlier runs (their `readings`) with the current metric.
 
     `consensus`: a second, independent extraction of the same digital text layer (one text
     per page). Truth is then only what BOTH extractors read — two parsers agreeing on the
     publisher's text is as close to a transcription as the corpus offers without a human,
     and their disagreements (extraction artefacts of either) stop being charged to OCR."""
-    pages = hard_pages(per_book)
+    pages = sample_pages(per_book) if sample else hard_pages(per_book)
     if consensus:
         from collections import Counter
         other = json.loads(consensus.read_text())
         for p, t in zip(pages, other):
             agreed = Counter(_w(p["truth"])) & Counter(_w(t or ""))
             p["truth"] = " ".join(agreed.elements())
-    runs: dict[str, list[dict]] = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
+    runs: dict[str, list[dict]] = {} if sample else \
+        {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
     for f in files:
         data = json.loads(f.read_text())
         if isinstance(data, list):                                  # an external tool's texts
@@ -198,14 +226,15 @@ def report(pages: list[dict], results: dict) -> dict:
 
 
 async def main(aliases: list[str], per_book: int, out: Path | None,
-               export_to: Path | None = None, externals: list[str] | None = None) -> None:
-    pages = hard_pages(per_book)
+               export_to: Path | None = None, externals: list[str] | None = None,
+               sample: bool = False) -> None:
+    pages = sample_pages(per_book) if sample else hard_pages(per_book)
     print(f"zor küme: {len(pages)} sayfa ({per_book}/kitap), döngülü {sum(p['stored_looped'] for p in pages)}")
     if export_to:
         export(pages, export_to)
         print("dışa aktarıldı:", export_to)
         return
-    results = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
+    results = {} if sample else {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
     for spec in externals or []:
         name, _, path = spec.partition("=")
         results[name] = external(pages, Path(path))
@@ -235,11 +264,12 @@ if __name__ == "__main__":
     ap.add_argument("--external", action="append", default=[], help="NAME=readings.json (one text per page)")
     ap.add_argument("--rescore", nargs="*", help="score saved readings (bench outputs / external JSON lists)")
     ap.add_argument("--consensus", help="second extraction of the text layer; truth = words both agree on")
+    ap.add_argument("--sample", action="store_true", help="random healthy pages per book instead of the hard set")
     ap.add_argument("--per-book", type=int, default=8)
     ap.add_argument("--out")
     a = ap.parse_args()
     if a.rescore is not None:
-        rescore([Path(x) for x in a.rescore], a.per_book, Path(a.consensus) if a.consensus else None)
+        rescore([Path(x) for x in a.rescore], a.per_book, Path(a.consensus) if a.consensus else None, a.sample)
         raise SystemExit(0)
     asyncio.run(main(a.alias, a.per_book, Path(a.out) if a.out else None,
-                     Path(a.export) if a.export else None, a.external))
+                     Path(a.export) if a.export else None, a.external, a.sample))

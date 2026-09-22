@@ -208,14 +208,40 @@ async def _stop(a: Alias, why: str) -> None:
     await asyncio.to_thread(c.stop, timeout=30)
 
 
+WAITING: set[str] = set()      # aliases waiting for room right now
+
+
+def _orphans() -> list:
+    """Running containers the gateway itself labelled as editor models whose alias no longer
+    exists (removed from models.yaml). Nobody else would ever stop them. Measured: a removed
+    benchmark model held 28 GB of GPU 1 for an hour and stalled an analysis."""
+    return [c for c in dk.containers.list(filters={"label": "editor.model"})
+            if c.labels.get("editor.model") not in ALIASES]
+
+
 async def _make_room(a: Alias) -> None:
     """Free enough memory on a's card by stopping idle editor models there."""
     need = int(a.mem_fraction * gpu_mem(a.gpu)[1]) + MEM_MARGIN
     deadline = time.time() + a.start_timeout_sec
+    WAITING.add(a.name)
+    try:
+        await _make_room_inner(a, need, deadline)
+    finally:
+        WAITING.discard(a.name)
+
+
+async def _make_room_inner(a: Alias, need: int, deadline: float) -> None:
     while True:
         free, total = gpu_mem(a.gpu)
         if free >= need:
             return
+        orphans = await asyncio.to_thread(_orphans)
+        if orphans:
+            for c in orphans:
+                log.info("stop %s (orphan: alias removed; make room for %s)", c.name, a.name)
+                await asyncio.to_thread(c.stop, timeout=30)
+            await asyncio.sleep(3)
+            continue
         others = sorted(
             (o for o in ALIASES.values()
              if o.name != a.name and o.gpu == a.gpu and _is_running(o)),
@@ -337,6 +363,10 @@ async def _keep(a: Alias) -> None:
     back as soon as there is room — never by pushing a working model out in turn — and while
     it is away interactive questions are answered by its copy on GPU 0 (overflow)."""
     if _is_running(a) or a.lock.locked():
+        return
+    # Another model is waiting for room on this card: coming back now would only be pushed
+    # out again (measured: a start/stop loop every 50 s that stalled an analysis for an hour).
+    if any(ALIASES[w].gpu == a.gpu for w in WAITING if w in ALIASES):
         return
     from .foundation import assert_enabled
     try:
