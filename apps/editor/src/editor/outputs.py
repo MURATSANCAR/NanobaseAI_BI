@@ -176,6 +176,50 @@ def bind_sentences(out: dict, claims: list[dict], evidence: list[dict]) -> list[
     return sentences
 
 
+# One summary call sees at most this much claim JSON (the director's context, with room for
+# the prompt, the answer and two repair rounds).
+SUMMARY_INPUT_MAX = 80000
+
+
+def _claim_size(c: dict) -> int:
+    return len(json.dumps({'claim': c['claim'], 'kind': c['kind'], 'pages': c['source_pages'],
+                           'payload': c.get('payload', {})}, ensure_ascii=False)) + 16
+
+
+async def _condense(snap: dict, claims: list[dict], label: str, *, plot_only: bool) -> dict:
+    """A long book's verified claims do not fit one call. Nothing is cut silently: the claims
+    are split in page order into parts that fit, each part is summarised on its own (the model
+    chooses that part's most important verified claims, under the same critic), and the final
+    summary is written from the claims those part summaries chose. The first and last claims
+    of the book always stay in, so the story keeps its beginning and end. Every sentence of the
+    result still cites original ledger claims."""
+    parts, cur, size = [], [], 0
+    for c in claims:                      # already in page order
+        n = _claim_size(c)
+        if n > SUMMARY_INPUT_MAX:
+            raise ValueError('A single claim exceeds the summary context')
+        if cur and size + n > SUMMARY_INPUT_MAX:
+            parts.append(cur); cur, size = [], 0
+        cur.append(c); size += n
+    if cur:
+        parts.append(cur)
+    calls, chosen, stages = [], {claims[0]['id'], claims[-1]['id']}, []
+    for k, part in enumerate(parts, 1):
+        pages = [p for c in part for p in c['source_pages']] or [0]
+        r = await summarize(snap, part, f"{label} — bölüm {k}/{len(parts)}, sayfa {min(pages)}–{max(pages)}")
+        calls += r.get('model_calls', [])
+        ids = {cid for row in r['sentences'] for cid in row['claim_ids']}
+        chosen |= ids
+        stages.append({'part': k, 'claims': len(part), 'chosen': len(ids), 'status': r['status']})
+    kept = [c for c in claims if c['id'] in chosen]
+    if len(kept) >= len(claims):
+        raise ValueError('Summary input could not be condensed below the bounded context')
+    out = await summarize(snap, kept, label, plot_only=plot_only)
+    out['model_calls'] = calls + out.get('model_calls', [])
+    out['condensed'] = {'claims': len(claims), 'parts': stages, 'final_input': len(kept)}
+    return out
+
+
 async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bool = False) -> dict:
     if plot_only:
         claims = [c for c in claims if c['kind'] == 'EVENT']
@@ -186,7 +230,8 @@ async def summarize(snap: dict, claims: list[dict], label: str, *, plot_only: bo
     reference_ids = {f'c{i}':c['id'] for i,c in enumerate(claims)}
     payload = [{'id':f'c{i}','claim':c['claim'],'kind':c['kind'],'pages':c['source_pages'],'payload':c.get('payload',{})} for i,c in enumerate(claims)]
     raw = json.dumps(payload,ensure_ascii=False)
-    if len(raw)>80000: raise ValueError('Summary input exceeds bounded context; no silent truncation')
+    if len(raw) > SUMMARY_INPUT_MAX:
+        return await _condense(snap, claims, label, plot_only=plot_only)
     messages=[{'role':'user','content':SUMMARY_PROMPT+label+'\n'+raw}]
     calls, rejected, disagreements = [], [], []
     allowed={c['id']:c for c in claims}
