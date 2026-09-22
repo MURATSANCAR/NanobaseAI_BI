@@ -25,6 +25,13 @@
 - Denetim sırasında TİMAŞ SQL sunucuları 12:5x–13:34 kapalıydı (CRM 13:34'te döndü, Logo .155 o sırada hâlâ kapalı); editoryal ana sayfanın üç bölümü bu arada son başarılı kaydı gösterdi, 13:37'de kendiliğinden tazelendi. CRM veri notları: 30 katkının kişisi yok, 8 kurul kararının projesi bulunamıyor.
 - Görsel kontrol yapılmadı: oturum çerezi HttpOnly, tarayıcı panesine konamıyor; ekranlar API ve derleme ile doğrulandı.
 
+## 2026-09-22 — Kimlik: birleştirme-uzlaştırma geçişi + 6 kitap doğrulaması
+
+- **Sorun (graf aracının açığa çıkardığı):** kitap dedeye "Dedem"/babaya "Babam" derken metin onları Cafer/Recai/Ayfer diye de adlandırıyor; `identity.propose` bunları ayrı karakter bırakıyordu (aynı kişi 2 varlık). Kök: kritik yalnız aşırı-birleştirmeyi reddediyor, aşırı-bölmeyi denetlemiyor; ayrıca akrabalık terimini konuşana göre değil sabit anlatıcı çerçevesinde okuyor (Naci "Recai abime" deyince Recai "anlatıcının abisi" sanılmış).
+- **Düzeltme:** `identity.py`'a birleştirme-only `reconcile()` geçişi (POLICY v2). Nihai gruplar üstünde tek model çağrısı; ilişkisel etiket ↔ özel ad, yalnız seslenme/anma alıntısıyla birleşir; akrabalık terimi konuşana göreli. Partition düzeyinde (satır cerrahisi yok). Kitaba özel değil.
+- **Doğrulama (6 kitap, mevcut varlıklara karşı izole koşu):** 4 alıntı-dayanaklı birleşme, sıfır yanlış. dedem-kitabı: Recai→Babam + Ayfer→Annem (hedef). Bonus: anne-terligi Uyanık←"namıdiğer Uyanık", kahramanini-yutan Hadiye←"Hadiye benim adım". levent/Ekrana/dunyanin-korkak: 0 (temiz kaldı, wombat adayı kanıtsız diye birleşmedi). Çerçeve tuzağı dağıldı: Recai "baba" olarak çözüldü.
+- **Açık:** izole koşu mantığı kanıtladı; veriyi kalıcı iyileştirmek için kimlik adımının tam yeniden-analizle (GPU) koşması gerek. Kod committed, boru hattına bağlı, henüz üretim nesli üretilmedi.
+
 ## 2026-09-22 — Yönetim Raporları modülü ve Yeni Baskı Öneri raporu
 
 - Diğer modüllerden ayrı **Yönetim Raporları** modülü: `/yonetim-raporlari` (grup sayfası) ve `/yonetim-raporlari/baski-oneri`. Kendi rayı (`managementRail`), modül menüsünde ayrı grup, Kampüs'te dördüncü modül kartı. `/yonetim` yönetici ekranıyla karışmasın diye ad "Yönetim Raporları".
