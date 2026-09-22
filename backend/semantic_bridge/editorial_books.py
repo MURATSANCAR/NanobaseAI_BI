@@ -252,7 +252,7 @@ def _row(r: Any) -> dict[str, Any]:
     from . import editorial_cards
     cards, card_error = editorial_cards.resolve(r.card_selection)
     # bookId: sayfa rozetlerinin önizlemesi için kart kimliği (kitap adı kataloğa tam eşleşir; yoksa None).
-    return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "bookId": editorial_cards.book_id_for_title(r.book_title),
+    return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "bookId": editorial_cards.book_id_for_title(r.book_title, f"{r.question}\n{r.answer or ''}"),
             "question": r.question,
             "status": r.status, "answer": scrub(r.answer), "notFound": bool(r.not_found),
             "cards": cards, "cardError": card_error, "graph": r.graph, "cardMatch": (r.card_selection or {}).get("match"),

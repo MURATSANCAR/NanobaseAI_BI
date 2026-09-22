@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, Loader2, PenLine, X } from 'lucide-react';
-import { ENGINE_ENABLED, deskApi, proofingApi, type DeskCheck, type DeskFile, type ProofState } from '../engine';
+import { BookOpen, Check, Loader2, PenLine, X } from 'lucide-react';
+import { ENGINE_ENABLED, deskApi, proofingApi, readableBooksApi, type DeskCheck, type DeskFile, type ProofState } from '../engine';
 import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '../admin/ui';
 import { dateTime, num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
@@ -150,12 +151,50 @@ function Signers({ s, onChanged }: { s: ProofState; onChanged: () => void }) {
   );
 }
 
+/** Eser dosyası yokken motorun okuduğu kitaplardan seçim: çipler sarar, yatay kaydırma yok. */
+function BookChips({ books, picked, onPick }: { books: string[]; picked: string | null; onPick: (title: string | null) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Motorun okuduğu kitaplar">
+      <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
+      {books.map((t) => {
+        const active = picked === t;
+        return (
+          <button
+            key={t}
+            type="button"
+            aria-pressed={active}
+            onClick={() => onPick(active ? null : t)}
+            className={`min-h-10 max-w-full whitespace-normal break-words rounded-full px-3 py-1 text-left text-[11.5px] font-semibold transition-[transform,background-color,box-shadow] duration-150 ease-out active:scale-[0.97] ${
+              active ? 'bg-canvas-violet text-white shadow-sm' : 'bg-white text-canvas-ink ring-1 ring-slate-200 hover:ring-canvas-violet/40'
+            }`}
+          >
+            {t}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 export default function ProofScreen() {
   const qc = useQueryClient();
   const works = useWorks();
   const [workId, setWorkId] = useState<string | null>(null);
   const [isbn, setIsbn] = useState('');
   const items = works.data?.items ?? [];
+  // Eser dosyası yokken seçilen kitap URL'de taşınır (?kitap=): sayfa yenilenince aynı kitap açılır.
+  const [params, setParams] = useSearchParams();
+  const picked = params.get('kitap');
+  const pick = (t: string | null) =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (t) next.set('kitap', t);
+        else next.delete('kitap');
+        return next;
+      },
+      { replace: true },
+    );
 
   useEffect(() => {
     if (!workId && items.length) setWorkId(items[0].id);
@@ -164,11 +203,25 @@ export default function ProofScreen() {
   const state = useQuery({ queryKey: ['editorial', 'proof', workId], queryFn: () => deskApi.proof(workId as string), enabled: ENGINE_ENABLED && !!workId });
   const s = state.data;
   useEffect(() => setIsbn(s?.work.isbn || ''), [s?.work.isbn, workId]);
+  // Motorun okuduğu kitaplar; yalnız eser dosyası yokken gerekir. Anahtar AskBox ile ortak, önbellek paylaşılır.
+  const noWork = !workId && !works.isLoading;
+  const books = useQuery({
+    queryKey: ['editorial', 'readableBooks'],
+    queryFn: readableBooksApi.list,
+    enabled: ENGINE_ENABLED && noWork,
+    staleTime: 5 * 60_000,
+    refetchInterval: (query) => (query.state.data?.loading ? 15000 : 5 * 60_000),
+  });
+  const readable = books.data?.items ?? [];
+  // URL'deki kitap listede yoksa (ad değişmiş, liste henüz gelmemiş) yine de seçilebilir kalsın.
+  const chips = picked && !readable.includes(picked) ? [picked, ...readable] : readable;
   // Motorun otomatik denetimleri; eşleşme köprüde kitap adıyla yapılır, prova PDF'inden bağımsızdır.
-  const title = s?.work.title ?? '';
+  // Eser dosyası seçiliyse eserin adı, yoksa URL'den seçilen kitap.
+  const title = s?.work.title ?? (noWork ? picked : null) ?? '';
   const proofing = useQuery({ queryKey: ['editorial', 'proofing', title], queryFn: () => proofingApi.get(title), enabled: ENGINE_ENABLED && !!title, staleTime: 60_000 });
   const pr = proofing.data;
   const hasProofing = !!pr && pr.configured && !!pr.bookId && pr.checks.length > 0;
+  const engineOff = !ENGINE_ENABLED || books.data?.configured === false;
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['editorial', 'proof', workId] });
@@ -187,17 +240,21 @@ export default function ProofScreen() {
       crumb="Son Okuma"
       title="Son okuma ve yayın onayı"
       lead="Prova PDF'inden sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve forma ölçülür; elle işaretlenen maddeler ve imzalar tamamlanınca onay oluşur. Matbaaya gönderim ve ERP tetikleme yoktur."
-      source={s ? s.work.title : 'Editoryal masa'}
+      source={s ? s.work.title : noWork && picked ? picked : 'Editoryal masa'}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
-      {s && (s.versions.length > 0 || hasProofing) && (
+      {((s?.versions.length ?? 0) > 0 || hasProofing) && (
         <KpiRow>
-          <Kpi label="Prova sürümü" value={s.versions[0] ? `v${s.versions[0].version}` : '—'} help={s.versions[0] ? dateTime(s.versions[0].uploadedAt) : 'Prova yüklenmedi'} />
-          <Kpi label="Dosyadan geçen" value={`${nf.format(auto.filter((c) => c.passed === true).length)}/${nf.format(auto.length)}`} help="Otomatik ölçülen madde" />
-          <Kpi label="Elle işaretlenen" value={`${nf.format(manual.filter((c) => c.passed !== null).length)}/${nf.format(manual.length)}`} help="Gözle kontrol maddesi" />
-          <Kpi label="İmza" value={`${nf.format(s.signatures.filter((x) => x.signedAt).length)}/${nf.format(s.signatures.length)}`} help={s.approved ? 'Yayın onayı tamam' : 'Onay bekliyor'} />
+          {s && (
+            <>
+              <Kpi label="Prova sürümü" value={s.versions[0] ? `v${s.versions[0].version}` : '—'} help={s.versions[0] ? dateTime(s.versions[0].uploadedAt) : 'Prova yüklenmedi'} />
+              <Kpi label="Dosyadan geçen" value={`${nf.format(auto.filter((c) => c.passed === true).length)}/${nf.format(auto.length)}`} help="Otomatik ölçülen madde" />
+              <Kpi label="Elle işaretlenen" value={`${nf.format(manual.filter((c) => c.passed !== null).length)}/${nf.format(manual.length)}`} help="Gözle kontrol maddesi" />
+              <Kpi label="İmza" value={`${nf.format(s.signatures.filter((x) => x.signedAt).length)}/${nf.format(s.signatures.length)}`} help={s.approved ? 'Yayın onayı tamam' : 'Onay bekliyor'} />
+            </>
+          )}
           {hasProofing && <Kpi label="ZEKİ AI bulgusu" value={nf.format(seriousCount(pr))} help={`Uyarı ve hata · ${nf.format(pr?.findings.length ?? 0)} bulgu toplam`} />}
         </KpiRow>
       )}
@@ -250,7 +307,38 @@ export default function ProofScreen() {
 
         <div className="space-y-3 lg:space-y-4">
           {!s ? (
-            <Panel>{err ? <Note tone="err">{err}</Note> : works.isLoading || state.isLoading ? <Loading /> : <p className="py-10 text-center text-[12.5px] text-canvas-muted">Soldan bir eser dosyası seçin ya da yeni bir tane açın.</p>}</Panel>
+            !noWork ? (
+              // Eser seçili ama durumu henüz gelmedi ya da okunamadı.
+              <Panel>{state.error ? <Note tone="err">{errText(state.error, 'Prova durumu okunamadı.')}</Note> : <Loading />}</Panel>
+            ) : (
+              // Eser dosyası yok: motorun okuduğu kitaplar arasından seçim; bulgular seçilen kitap adıyla gelir.
+              <ProofFindings
+                key={picked ?? ''}
+                report={picked ? pr : undefined}
+                loading={!!picked && proofing.isLoading}
+                error={picked ? errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.') : null}
+                picker={
+                  engineOff ? null : books.isLoading ? (
+                    <Loading />
+                  ) : books.error ? (
+                    <Note tone="err">{errText(books.error, 'Okunmuş kitap listesi alınamadı.')}</Note>
+                  ) : chips.length ? (
+                    <BookChips books={chips} picked={picked} onPick={pick} />
+                  ) : null
+                }
+                idle={
+                  engineOff
+                    ? 'Zeki AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.'
+                    : books.isLoading || books.error
+                      ? null
+                      : !chips.length
+                        ? books.data?.loading
+                          ? 'Okunmuş kitaplar getiriliyor; liste gelince burada seçilebilir.'
+                          : 'Motorun okuduğu kitap yok. Bir kitap okunup denetimleri koşunca burada listelenir.'
+                        : 'Bulgularını görmek için bir kitap seçin.'
+                }
+              />
+            )
           ) : !s.versions.length ? (
             <Panel>
               <p className="py-10 text-center text-[12.5px] leading-snug text-canvas-muted">Bu eserde henüz prova yok. Soldan baskıya giden PDF'i yükleyin.</p>

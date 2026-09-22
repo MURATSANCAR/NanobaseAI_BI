@@ -79,7 +79,21 @@ function FindingRow({ f }: { f: ProofingFinding }) {
   );
 }
 
-export function ProofFindings({ report, loading, error }: { report: ProofingReport | undefined; loading: boolean; error: string | null }) {
+export function ProofFindings({
+  report,
+  loading,
+  error,
+  picker,
+  idle,
+}: {
+  report: ProofingReport | undefined;
+  loading: boolean;
+  error: string | null;
+  /** Rapor bir esere değil doğrudan motordaki kitaba bağlıyken üstte gösterilen kitap seçici. */
+  picker?: ReactNode;
+  /** Sorgu çalışmıyorken (kitap seçilmemiş) gösterilen metin; verilmezse yükleniyor, null ise hiçbir şey gösterilir. */
+  idle?: string | null;
+}) {
   const [check, setCheck] = useState<string | null>(null);
   const [severity, setSeverity] = useState<ProofingSeverity | null>(null);
 
@@ -92,7 +106,8 @@ export function ProofFindings({ report, loading, error }: { report: ProofingRepo
 
   let body: ReactNode;
   if (error) body = <Note tone="err">{error}</Note>;
-  else if (loading || !report) body = <Loading />;
+  else if (loading) body = <Loading />;
+  else if (!report) body = idle === undefined ? <Loading /> : idle ? <Empty>{idle}</Empty> : null;
   else if (!report.configured) body = <Empty>Zeki AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.</Empty>;
   else if (!report.bookId) body = <Empty>Bu eser motorda henüz okunmamış. Kitap adı motordaki adla birebir eşleşmeli.</Empty>;
   else if (!report.checks.length) body = <Empty>Eser okunmuş, denetimler henüz koşmamış. Motor sırası gelince burada görünür.</Empty>;
@@ -157,6 +172,7 @@ export function ProofFindings({ report, loading, error }: { report: ProofingRepo
         Motor, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez.
         {report?.bookTitle ? ` Eşleşen kitap: ${report.bookTitle}.` : ''}
       </p>
+      {picker ? <div className="mt-2">{picker}</div> : null}
       <div className="mt-2">{body}</div>
     </Panel>
   );

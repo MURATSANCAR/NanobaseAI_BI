@@ -5,7 +5,7 @@ import { ENGINE_ENABLED, type Work, type ContractPage } from '../engine';
 import { useTimasSession } from '../TimasSession';
 import { editorialHomeOptions } from './homeQuery';
 import { Note, Pill, errText, nf, fmtDate } from '../admin/ui';
-import { dateTime, pct } from '../format';
+import { dateTime } from '../format';
 import { ModuleFrame, Panel } from './kit';
 import SearchBox from './SearchBox';
 import AskBox from './AskBox';
@@ -150,7 +150,6 @@ export default function EditorialHome() {
   const year = board.data?.years?.[0];
   const o = editors.data;
   const byRole = (name: string) => roles.data?.items.find((r) => r.role === name)?.people ?? 0;
-  const accepted = year?.decisions.find((d) => (d.label || '').toLocaleLowerCase('tr').startsWith('kabul'))?.count ?? 0;
   const assigned = (o?.items ?? []).reduce((a, b) => a + b.total, 0);
   const unassigned = (o?.unassigned ?? []).reduce((a, b) => a + b.count, 0);
   const desk = works.data?.items ?? [];
@@ -244,28 +243,7 @@ export default function EditorialHome() {
       </div>
       {(refreshFailed || home.data?.stale) && <Note tone="warn">Bazı veriler henüz yenilenemedi. Son başarılı bilgiler korunuyor; güncelleme yeniden denenecek.</Note>}
 
-      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
-        <Stat
-          label="Yürürlükte sözleşme"
-          value={c ? nf.format(c.active) : '—'}
-          help={c ? `${nf.format(c.expiring)} tanesi ${c.warnDays} günde bitiyor` : 'Okunuyor…'}
-          busy={contracts.isLoading}
-        />
-        <Stat
-          label={year ? `${year.year} kurul kararı` : 'Kurul kararı'}
-          value={year ? nf.format(year.total) : '—'}
-          help={year ? `${pct(year.total ? (accepted / year.total) * 100 : null, 0)} kabul` : 'Okunuyor…'}
-          busy={board.isLoading}
-        />
-        <Stat label="Editör" value={o ? nf.format(o.items.length) : '—'} help={o ? `${o.sinceYear} ve sonrası projeler` : 'Okunuyor…'} busy={editors.isLoading} />
-        <Stat
-          label="Masadaki eser"
-          value={works.data ? nf.format(desk.length) : '—'}
-          help={!works.data ? 'Okunuyor…' : desk.length ? `${nf.format(desk.filter((w) => w.manuscript).length)} metin, ${nf.format(desk.filter((w) => w.proof).length)} prova` : 'Henüz eser dosyası yok'}
-          busy={works.isLoading}
-        />
-      </div>
-
+      {/* Sohbet açılışta ilk sırada: sayılar modül kartlarında zaten var (kullanıcı kararı 09-22). */}
       <AskBox />
 
       <section>

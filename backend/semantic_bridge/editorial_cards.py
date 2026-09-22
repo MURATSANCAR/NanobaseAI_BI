@@ -68,16 +68,28 @@ def catalogue_cached():
     return items
 
 
-def book_id_for_title(book_title):
-    """Sorunun kitap adının kataloğdaki karşılığı (büyük/küçük harf farkı hariç tam ad eşleşmesi).
-    Tek eşleşme yoksa ya da katalog alınamazsa None; hiçbir hata satırı bozmaz."""
-    title=(book_title or '').strip()
-    if not title or not os.environ.get('EDITOR_CATALOG_BASE'): return None
+def _card_names(card):
+    """Kartın anıldığı adlar: motor adı (slug) ve yayınevi kaydındaki ad."""
+    names=[card.get('title') or '', ((card.get('publisher') or {}).get('title') or '')]
+    return [n.strip().casefold() for n in names if n and n.strip()]
+
+
+def book_id_for_title(book_title, text=''):
+    """Sorunun kitabı: seçili kitap adının kataloğdaki karşılığı (büyük/küçük harf farkı hariç tam ad);
+    kitap seçilmemişse soru+cevap metninde adı (motor adı ya da yayınevi adı) geçen TEK kitap.
+    Sayfa önizlemesi bu kimliğe bağlıdır. Belirsizse None; hiçbir hata satırı bozmaz."""
+    title=(book_title or '').strip().casefold()
+    if not os.environ.get('EDITOR_CATALOG_BASE') or not (title or text): return None
     try:
-        exact=[c for c in catalogue_cached() if c['title'].casefold()==title.casefold()]
+        cards=catalogue_cached()
+        if title:
+            exact=[c for c in cards if title in _card_names(c)]
+            return exact[0]['id'] if len(exact)==1 else None
+        body=(text or '').casefold()
+        named=[c for c in cards if any(n in body for n in _card_names(c))]
+        return named[0]['id'] if len(named)==1 else None
     except (ValueError,KeyError,TypeError,httpx.HTTPError):
         return None
-    return exact[0]['id'] if len(exact)==1 else None
 
 
 def public_card(card):
