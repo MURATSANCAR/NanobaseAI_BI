@@ -459,16 +459,24 @@ def _flow(pdf: Any, fam: str, T: Callable[[str], str], text: str, left: float, w
 def _page_badge(pdf: Any, fam: str, T: Callable[[str], str], label: str, left: float, width: float, size: float) -> None:
     """«s. 14» rozeti: mor, kalın, açık mor zeminli; satır sonuna sığmıyorsa alt satıra iner."""
     pdf.set_font(fam, "B", size - 1.5)
-    w = pdf.get_string_width(T(label)) + 2.4
-    if pdf.get_x() + w > left + width:
+    w = pdf.get_string_width(T(label)) + 2.0
+    # `write` kullanılabilir genişlikten 2·c_margin düşer; aynı payla ölçülmezse rozet iki satıra bölünür.
+    if pdf.get_x() + w + 2 * float(getattr(pdf, "c_margin", 1.0)) > left + width:
         pdf.ln(LINE_H)
+        pdf.set_x(left)
+    # Rozet bölünmez: satır sayfanın altına sığmıyorsa `write` kırmadan önce yeni sayfaya geçilir
+    # (yoksa kırılan yazı eski y'ye döner ve boş bir sayfa kalır).
+    if pdf.get_y() + LINE_H > float(pdf.page_break_trigger):
+        pdf.add_page()
         pdf.set_x(left)
     x, y = pdf.get_x(), pdf.get_y()
     _rounded(pdf, x, y + 0.9, w, LINE_H - 1.6, VIOLET_SOFT, r=1.2)
     pdf.set_text_color(*VIOLET)
-    pdf.set_xy(x + 1.2, y)
+    pdf.set_xy(x + 1.0, y)
     pdf.write(LINE_H, T(label))
-    pdf.set_xy(x + w + 0.6, y)
+    if pdf.get_y() == y:
+        pdf.set_xy(x + w + 0.3, y)
+    # (yine de sarıldıysa imleç `write`in bıraktığı yerde kalır; eski y'ye dönmek boş sayfa bırakır)
 
 
 def _paragraph(pdf: Any, fam: str, T: Callable[[str], str], text: str, left: float, width: float,

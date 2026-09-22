@@ -3,7 +3,7 @@
 FROM python:3.12-slim
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        unixodbc unixodbc-dev tdsodbc freetds-bin freetds-dev gcc g++ \
+        unixodbc unixodbc-dev tdsodbc freetds-bin freetds-dev gcc g++ fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # FreeTDS'i ODBC sürücüsü olarak kaydet (pyodbc bunu 'FreeTDS' adıyla bulur — connection.json'daki ad).
@@ -14,7 +14,8 @@ WORKDIR /app
 # Bağımlılıklar önce: kaynak değişince katman yeniden kurulmaz.
 COPY backend/requirements-semantic.txt /app/backend/requirements-semantic.txt
 COPY backend/semantic_bridge/requirements.txt /app/backend/semantic_bridge/requirements.txt
-# semantic_bridge/requirements.txt: openpyxl (Excel raporları), ldap3 + pycryptodome (yönetim ekranındaki AD denemesi)
+# semantic_bridge/requirements.txt: openpyxl (Excel raporları), ldap3 + pycryptodome (yönetim ekranındaki AD denemesi),
+# fpdf2 (ZEKİ AI sohbet PDF'i; Türkçe harfler için yukarıdaki fonts-dejavu-core)
 RUN pip install --no-cache-dir -r /app/backend/requirements-semantic.txt \
         -r /app/backend/semantic_bridge/requirements.txt \
         pyodbc psycopg2-binary "uvicorn[standard]"

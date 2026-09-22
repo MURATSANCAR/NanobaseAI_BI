@@ -3801,13 +3801,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise HTTPException(404, "Kapak görseli bulunamadı.") from None
 
     @app.get("/api/v1/editorial/ask/pages/{book_id}/{page_no}")
-    def editorial_book_page(book_id: str, page_no: int, request: Request):
+    def editorial_book_page(book_id: str, page_no: int, request: Request, w: int = 0):
         """Sohbetteki sayfa rozetinin önizlemesi: kitabın son neslinde o sayfanın render'ı (kart servisinden,
         oturumla). Tarayıcı bir saat önbellekler; ikinci hover anında açılır."""
         _books(request)
         from semantic_bridge import editorial_cards
         try:
-            data, mime = editorial_cards.page(book_id, page_no)
+            data, mime = editorial_cards.page(book_id, page_no, max(0, min(int(w), 2000)))
             return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
         except Exception:
             raise HTTPException(404, "Sayfa görseli bulunamadı.") from None

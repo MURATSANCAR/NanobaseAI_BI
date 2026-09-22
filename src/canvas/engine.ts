@@ -1319,7 +1319,10 @@ export const bookAskApi = {
   /** Sayfa rozeti önizlemesi: kitabın son neslinde o sayfanın render'ı. Oturum çerezi tarayıcıdan gider;
    *  köprü bir saat önbelleklettiği için aynı sayfa ikinci kez anında açılır. */
   pageImageUrl: (bookId: string, pageNo: number) =>
-    `${ENGINE_BASE}/api/v1/editorial/ask/pages/${encodeURIComponent(bookId)}/${Math.max(1, Math.floor(pageNo))}`,
+    `${ENGINE_BASE}/api/v1/editorial/ask/pages/${encodeURIComponent(bookId)}/${Math.max(1, Math.floor(pageNo))}?w=480`,
+  /** Ekrandaki sohbetin PDF'i (sunucuda üretilir): `ids` bu açılışta gösterilen soruların kimlikleri, ekran sırasıyla.
+   *  Oturum çerezi tarayıcıdan gider; başkasının sorusu 403 döner. `book` başlıktaki kitap adı (isteğe bağlı). */
+  exportUrl: (ids: string[], book?: string) => `${ENGINE_BASE}/api/v1/editorial/ask/export.pdf${qs({ ids: ids.join(','), book })}`,
 };
 
 // ------------------------------------------------------ M5: motorun otomatik son okuma denetimleri

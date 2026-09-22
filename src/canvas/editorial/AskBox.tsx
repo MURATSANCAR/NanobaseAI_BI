@@ -6,6 +6,7 @@ import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import BookCard from './BookCard';
 import CharacterGraph from './CharacterGraph';
+import ChatExport from './ChatExport';
 import PageRef from './PagePeek';
 
 /** ZEKİ AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
@@ -300,6 +301,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
             </div>
             <p className="truncate text-[11.5px] text-canvas-muted">{target ? `«${target}» kitabıyla konuşuyorsunuz` : 'Okunmuş kitapların içini bilen asistanınız'}</p>
           </div>
+          <ChatExport ids={turns.filter((q) => q.status === 'bitti' || q.status === 'hata').map((q) => q.id)} bookTitle={target ?? undefined} />
           <span className={`hidden items-center gap-1.5 text-[11px] font-semibold sm:flex ${off ? 'text-amber-700' : 'text-emerald-700'}`}>
             <span className={`h-2 w-2 rounded-full ${off ? 'bg-amber-500' : 'bg-emerald-500 shadow-[0_0_0_3px_rgba(16,185,129,.18)]'}`} />
             {off ? 'Kapalı' : 'Sohbet'}
