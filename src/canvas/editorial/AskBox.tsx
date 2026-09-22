@@ -5,6 +5,7 @@ import { ENGINE_ENABLED, bookAskApi, readableBooksApi, type BookQuestion } from 
 import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import BookCard from './BookCard';
+import CharacterGraph from './CharacterGraph';
 
 /** ZEKİ AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
  *  Soru sunucuda kayıtlı kalır; ekranda yalnız bu açılışta gönderilen sorular gösterilir.
@@ -189,6 +190,11 @@ function Turn({ q, onRetry, onPickBook }: { q: BookQuestion; onRetry: (text: str
       )}
       {answer && !q.notFound && (
         <AiBubble meta={q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn'de cevapladı` : undefined}>
+          {q.graph && q.graph.nodes.length >= 2 && (
+            <div className="zk-msg mb-3 rounded-2xl border border-canvas-violet/12 bg-white/70 p-2.5 sm:p-3">
+              <CharacterGraph nodes={q.graph.nodes} edges={q.graph.edges} />
+            </div>
+          )}
           <AnswerText text={answer} />
           {q.cards?.map((card) => <BookCard key={card.id} card={card} onAsk={() => onPickBook(card.title)} />)}
           {q.cardError && <p role="status" className="mt-2 text-sm text-amber-800">{q.cardError}</p>}

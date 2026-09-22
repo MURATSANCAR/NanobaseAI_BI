@@ -1295,6 +1295,10 @@ export type BookQuestion = {
   question: string;
   status: 'bekliyor' | 'calisiyor' | 'bitti' | 'hata';
   answer: string | null;
+  /** Karakter sorusunda köprünün eklediği ağ verisi (graf aracından): düğüm = karakter, kenar = ortak olay.
+   *  Yoksa ekranda yalnız metin gösterilir. */
+  graph?: { nodes: { name: string; count: number; role?: 'lead' | 'family' | 'other' }[];
+            edges: { a: string; b: string; weight: number }[] } | null;
   /** Cevap «Kitapta bulunamadı.» ile başlıyorsa true; ekran bunu sakin bir kart olarak gösterir. */
   notFound: boolean;
   error: string | null;
