@@ -135,14 +135,36 @@ class BookFullAnalysis:
             # rebuild activity verifies facts and actors before freezing inputs.
             await self.step(13, "Doğrulama → sürümlü özet, rapor ve indeks")
             produced = None
-            for attempt in range(3):
-                produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
-                if produced["technical_status"] in ("SUCCEEDED", "ALREADY_CURRENT"):
+            # When several books are read at once they take turns on the card, and a book
+            # that reaches this step while another holds it cannot start its models. That
+            # is a queue, not a defect: the book waits for its turn instead of failing.
+            # Without this it failed outright («kahramanini-yutan-kitap», 2026-09-23).
+            if workflow.patched("rebuild-capacity-wait-v1"):
+                waited = 0
+                for attempt in range(40):
+                    produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
+                    status = produced["technical_status"]
+                    if status in ("SUCCEEDED", "ALREADY_CURRENT"):
+                        break
+                    if status == "BUSY":
+                        await workflow.sleep(timedelta(seconds=30))
+                        continue
+                    if status == "CAPACITY_WAIT" and waited < 12:      # up to ~1 saat
+                        waited += 1
+                        await workflow.sleep(timedelta(minutes=5))
+                        continue
                     break
-                if produced["technical_status"] == "BUSY":
-                    await workflow.sleep(timedelta(seconds=30))
+            else:
+                for attempt in range(3):
+                    produced = await self.act("rebuild_outputs", gid, timeout=timedelta(hours=6))
+                    if produced["technical_status"] in ("SUCCEEDED", "ALREADY_CURRENT"):
+                        break
+                    if produced["technical_status"] == "BUSY":
+                        await workflow.sleep(timedelta(seconds=30))
             if produced["technical_status"] not in ("SUCCEEDED", "ALREADY_CURRENT"):
-                raise ApplicationError("Output revision did not stabilize", non_retryable=True)
+                raise ApplicationError(
+                    f"Output revision did not stabilize ({produced['technical_status']})",
+                    non_retryable=True)
             summary = {"generation_id":gid,"pages":len(pages),"outputs":produced,
                 "step_order":"verified-revision-outputs-v1","accepted":False,
                 "analytical_status":"NEEDS_REVIEW",

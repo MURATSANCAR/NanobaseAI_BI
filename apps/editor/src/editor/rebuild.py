@@ -17,6 +17,23 @@ from . import db, foundation, outputs
 log = logging.getLogger(__name__)
 MAX_ATTEMPTS = 3
 
+# The retry budget exists to stop a book whose CONTENT the builder cannot handle from
+# looping forever. A model that could not be started is not that: the card was full
+# because other books were being read at the same time, and the very same input will
+# build fine once it frees. Charging those attempts turned a traffic jam into a failed
+# book — «kahramanini-yutan-kitap», 2026-09-23: three `model_failed_to_start` in two
+# minutes ate the whole budget while three other books held GPU 1.
+CAPACITY_SIGNS = ('model_failed_to_start', 'gpu_busy', 'no free gpu', 'free memory on device',
+                  'engine core initialization failed', '503')
+CAPACITY_BACKOFF = "interval '10 minutes'"      # long enough for a card to change hands
+
+
+def is_capacity_error(error) -> bool:
+    """True when the build failed because a model could not be given the card, not
+    because of anything in the book."""
+    text = str(error).casefold()
+    return any(sign in text for sign in CAPACITY_SIGNS)
+
 
 def code_version():
     return os.environ.get('EDITOR_CODE_VERSION','unknown')
@@ -152,12 +169,17 @@ def finish(snap,digest):
 
 
 def failed(gid,error):
+    # A capacity failure gives the attempt back (run() charged it up front) and waits
+    # longer before the next one; only failures the input itself causes spend the budget.
+    capacity=is_capacity_error(error)
+    keep="GREATEST(r.attempts-1,0)" if capacity else "r.attempts"
+    wait=CAPACITY_BACKOFF if capacity else "interval '5 minutes'"
     with db.tx() as c:
         c.execute("UPDATE ed.derived_artifact SET state='FAILED',updated_at=now() WHERE generation_id=%s AND state='BUILDING'",(gid,))
         c.execute("UPDATE ed.rebuild_request r SET attempts=CASE WHEN EXISTS (SELECT 1 FROM ed.knowledge_change k "
             "WHERE k.generation_id=r.generation_id AND k.revision>r.attempted_revision AND k.writer_token IS NULL) "
-            "THEN 0 ELSE r.attempts END,last_error=%s,attempted_revision=requested_revision,"
-            "retry_after=now()+interval '5 minutes',updated_at=now() "
+            f"THEN 0 ELSE {keep} END,last_error=%s,attempted_revision=requested_revision,"
+            f"retry_after=now()+{wait},updated_at=now() "
             "WHERE generation_id=%s",(str(error)[:2000],gid))
 
 
@@ -245,6 +267,11 @@ async def run(gid: str) -> dict:
             return {'generation_id':gid,'technical_status':'SUPERSEDED','reason':str(exc),'accepted':False}
         except Exception as exc:
             await asyncio.to_thread(failed,gid,exc)
+            # The card being full is a wait, not a verdict on the book: the caller is told
+            # to come back rather than the whole analysis being failed.
+            if is_capacity_error(exc):
+                return {'generation_id':gid,'technical_status':'CAPACITY_WAIT','reason':str(exc)[:500],
+                        'accepted':False}
             raise
         finally:
             # Operational lease only; never touches book facts or model results.
