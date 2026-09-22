@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-22 — main'e toplama, test sunucusu ve müşteri VM'i yayını; VM canlı CRM'e bağlandı
+
+- **main'e toplanan:** bu dalın CRM işleri + `editor-identity-on-main`'in main'de olmayan 12 commit'i (özet yedeği, OCR dots.mocr, 0.15.1/0.15.2, gateway, kimlik ölçümü; cherry-pick -x, çakışmasız). `4583c35`'in karşılığı main'de zaten vardı (`5966e579`). Dalın içeriği artık tamamen main'de; dala dokunulmadı (başka oturum çalışıyor). GPU'da koşan editör de bu içerik.
+- **Test sunucusu:** `git archive main` ile 1.530 dosya karşılaştırıldı; yalnız 3 dosya eski/eksikti (belge, test referansı, katalog betiği), kopyalandı → fark 0. Arayüz ve köprü önceki adımda zaten main'le eşti.
+- **Müşteri VM'i:** `git archive main` (`b9750467`) → `deploy-customer-vm.sh` (`systemd-run`), kuru koşuda 16 arayüz + 17 arka uç dosyası (CRM ekranları, kitap kartı, Yönetim Raporları modülü), silme yok; `EXIT=0`, konteynerlerdeki dosyalar main ile md5 eş.
+- **Bulunan hata — VM CRM'i eski kopyadan okuyordu:** VM köprüsüne canlı CRM bağlantı dosyası hiç bağlanmamıştı (19 Eylül iki kaynaklı denemesiyle birlikte geri alınmış). `Timas_MSCRM` sorguları Logo bağlantısına düşüyor, .155'teki 8 Eylül'de donmuş CRM kopyasını okuyordu; bugün .155 kapanınca VM'in bütün CRM ekranları `DATA_SOURCE_UNAVAILABLE` verdi. Düzeltme: `infra/docker/bi/docker-compose.yml` köprüye `SEMANTIC_CRM_CONNECTION_FILE` + `secrets/crm-mssql-connection.json` bağlar (katalog değişmez, iki kaynaklı mod açılmaz; yalnız `Timas_MSCRM` geçen sorgular .28'e gider — test sunucusuyla aynı); `deploy-customer-vm.sh` dosya yoksa durur.
+- **VM kabulü** (VM içinden, geçici timasai oturumu, silindi; test sunucusu VM'in 80 portuna ulaşamıyor): «Kaybolan Balinaların Şarkısı» sayfasında proje + konu; arama "a" 12.379 / 5.309 / 3.023, ISBN bulunuyor; sözleşme 14.841 / 9.019 / 310, kurul 499, editör projeleri 2.715, kişi rehberi 130 (kaynak crm). Test sunucusundaki canlı rakamlarla eş (proje 5.308→5.309: bu arada CRM'e yeni proje girilmiş).
+- **Doğrulanamayan:** Logo SQL (.155:1433) 12:5x'ten beri kapalı (VM'in içinden de); Logo'ya dayanan BI soruları iki ortamda da şu an sınanamaz. Push kullanıcıda.
+
 ## 2026-09-22 — Yönetim Raporları: 5 dakikada bir canlı okuma ve ekranda durum
 
 - Kullanıcı isteği: veriler Logo ve CRM'den sürekli okunsun, ekranda dursun, 5 dakikada bir kendiliğinden yenilensin ve bu ekranda görünsün. `MANAGEMENT_REPORT_REFRESH_SECONDS` varsayılanı 3600 → **300**; zamanlayıcı son denemeden (başarılı ya da değil) 300 sn geçince yeniden okur, 10 sn'de bir bakar.
