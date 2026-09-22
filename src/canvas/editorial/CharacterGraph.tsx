@@ -42,7 +42,8 @@ export default function CharacterGraph({ nodes, edges }: { nodes: GraphNode[]; e
   });
 
   return (
-    <figure className="zk-graph my-1 w-full">
+    // Cevabın yanında destekleyici bir görsel: balonun tamamını kaplamasın.
+    <figure className="zk-graph my-1 w-full max-w-[460px]">
       <svg viewBox={`0 0 ${W} ${H}`} width="100%" role="img" aria-labelledby="zk-graph-title" className="overflow-visible">
         <title id="zk-graph-title">Kitap karakter ağı</title>
         <desc>Karakterler düğüm (boyut = olay sayısı), çizgiler ortak olayları gösterir.</desc>
@@ -59,7 +60,8 @@ export default function CharacterGraph({ nodes, edges }: { nodes: GraphNode[]; e
         </g>
         {top.map((n) => {
           const p = pos.get(n.name)!;
-          const below = p.y > CY + 20;
+          // Etiket düğümün üstünde durur; tepedeki düğümde üstte yer kalmadığı için altına iner.
+          const below = p.y > CY + 20 || p.y - p.r - 21 < 4;
           return (
             <g key={n.name}>
               <circle cx={p.x} cy={p.y} r={p.r} fill={FILL[p.role ?? 'other']} />
