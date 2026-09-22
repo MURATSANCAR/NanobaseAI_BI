@@ -116,6 +116,13 @@ class BookFullAnalysis:
             await self.act("persist_visual", gid, "all")
             await self.step(10, "Duygu ve tema")
             emo = await self.act("emotions_themes", gid)
+            if workflow.patched("proofreading-v1"):
+                await self.step(10, "Son okuma denetimleri")
+                try:
+                    failures["proofreading"] = []
+                    await self.act("proofreading", gid, timeout=LONG)
+                except ActivityError as e:
+                    failures["proofreading"] = [str(e.cause or e)[:500]]
             await self.step(15, "Künye")
             try:
                 await self.act("book_metadata", gid)

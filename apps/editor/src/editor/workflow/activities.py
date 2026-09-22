@@ -131,6 +131,13 @@ async def resolve_identity(generation_id: str) -> dict:
 
 
 @activity.defn
+async def proofreading(generation_id: str) -> dict:
+    """Final-read checks; each isolated, none can fail the book (editor.proofing)."""
+    from .. import proofing
+    return await proofing.run_all(generation_id)
+
+
+@activity.defn
 async def visual_identity(generation_id: str) -> dict:
     """Who each drawn figure is: embeddings, constrained clustering, one adjudication per
     cluster (figure_identity). The per-figure reference matching it replaces named 31% of a
