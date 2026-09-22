@@ -40,11 +40,11 @@ def cover(book_id: str):
     return r.content,mime
 
 
-def page(book_id: str, page_no: int):
+def page(book_id: str, page_no: int, width: int = 0):
     """Kitabın son neslinde bir sayfanın render'ı; sohbetteki sayfa rozetinin önizlemesi. Kapakla aynı kalıp."""
     identifier=str(uuid.UUID(book_id))
     if not isinstance(page_no,int) or page_no<1: raise ValueError('Sayfa numarası geçersiz.')
-    r=request('/v1/books/'+identifier+'/pages/'+str(page_no))
+    r=request('/v1/books/'+identifier+'/pages/'+str(page_no)+(f'?w={int(width)}' if width else ''))
     mime=r.headers.get('content-type','').split(';')[0]
     if mime not in ('image/png','image/jpeg','image/webp'): raise ValueError('Sayfa görseli bulunamadı.')
     if len(r.content)>15*1024*1024: raise ValueError('Sayfa görseli çok büyük.')

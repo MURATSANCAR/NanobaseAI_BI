@@ -17,3 +17,4 @@ pyyaml
 # hunspell tr_TR sözlüğü (sözlük dosyası imaja ayrıca konur: EDITOR_HUNSPELL_TR ya da /app/data/hunspell/tr_TR)
 zeyrek
 spylls
+pillow>=10

@@ -2,8 +2,10 @@
 from uuid import UUID
 import hmac
 import os
-from fastapi import Depends, FastAPI, Header, HTTPException, Path
-from fastapi.responses import FileResponse
+import functools
+import io
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, Path
+from fastapi.responses import FileResponse, Response
 import psycopg
 from .presentation import cards, cover_path, page_path
 from . import foundation, graph, read_model
@@ -28,14 +30,30 @@ def book_cover(book_id: UUID):
     except KeyError:
         raise HTTPException(404,'cover not found') from None
 
+@functools.lru_cache(maxsize=512)
+def _thumb(path: str, mtime_ns: int, width: int) -> bytes:
+    """Sayfa render'ının en fazla `width` piksel genişlikte WebP kopyası. Depolama salt okunur bağlı olduğu
+    için diske değil belleğe alınır (512 sayfa ≈ 25 MB); dosya değişirse mtime anahtarı yenisini üretir."""
+    from PIL import Image
+    with Image.open(path) as im:
+        im=im.convert('RGB')
+        if im.width>width:
+            im=im.resize((width, max(1, round(im.height*width/im.width))), Image.LANCZOS)
+        buf=io.BytesIO(); im.save(buf,'WEBP',quality=82,method=4)
+    return buf.getvalue()
+
 @app.get('/v1/books/{book_id}/pages/{page_no}')
-def book_page(book_id: UUID, page_no: int = Path(ge=1)):
+def book_page(book_id: UUID, page_no: int = Path(ge=1), w: int = Query(0, ge=0, le=2000)):
     """Kitabın son neslinde bir sayfanın render'ı (PNG/JPEG/WebP). Sohbetteki sayfa rozetinin önizlemesi.
+    `w` verilirse o genişliğe küçültülmüş WebP (önizleme; tam boy PNG ~1,4 MB, önizleme ~60 KB).
     Yalnız Editor storage altındaki dosya, en çok 15 MB; sayfa ya da render yoksa 404. Salt okuma."""
     try:
         path,mime=page_path(str(book_id),page_no)
     except KeyError:
         raise HTTPException(404,'page not found') from None
+    if w:
+        data=_thumb(str(path), path.stat().st_mtime_ns, w)
+        return Response(content=data, media_type='image/webp', headers={'Cache-Control':'private, max-age=3600'})
     return FileResponse(path,media_type=mime,headers={'Cache-Control':'private, max-age=3600'})
 
 @app.get('/v1/books/{book_id}/graph')
