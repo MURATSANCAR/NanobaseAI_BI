@@ -26,24 +26,41 @@ from .llm import Llm, image_part
 
 
 def _w(t: str) -> list[str]:
-    return ledger.norm(t).split()
+    # markdown emphasis/heading marks ("**baskı**", "# Başlık") are formatting, not letters
+    return ledger.norm(re.sub(r"[*#_`|>]+", " ", t)).split()
 
 
-def score(truth: str, read: str) -> dict:
-    """Words of the truth the reading lost or changed. Extra words are not errors: a reader
-    that also transcribes a sign inside the picture is doing its job."""
-    a, b = _w(truth), _w(read)
-    sm = difflib.SequenceMatcher(None, a, b, autojunk=False)
+def score(truth: str, read: str, keep: set[str] | None = None) -> dict:
+    """Words of the truth the reading does not contain, ORDER IGNORED. A page with speech
+    bubbles and captions has no single reading order: comparing sequences charged a reader
+    for reading a caption before the body (measured: a parser re-reading the very same
+    digital text scored 14% "wrong" on order alone). A missing word is `changed` when the
+    reading has a near-identical unmatched word (a misread letter, a "corrected" suffix) and
+    `lost` otherwise. Extra words are not errors: text inside pictures is legitimately read."""
+    from collections import Counter
+    # `keep`: the words the book itself uses more than once. A page whose body is healthy can
+    # still carry a scrambled caption or curved title in its digital layer ("icch", "mac" for
+    # "Machu Picchu"); those fragments are not truth, and a reader that gets them right was
+    # being charged for it. Only words the book confirms elsewhere are counted.
+    a, b = Counter(w for w in _w(truth) if keep is None or w in keep), Counter(_w(read))
+    missing = a - b
+    spare = list((b - a).elements())
     lost = changed = 0
     pairs = []
-    for tag, i1, i2, j1, j2 in sm.get_opcodes():
-        if tag == "delete":
-            lost += i2 - i1
-        elif tag == "replace":
-            changed += i2 - i1
-            if i2 - i1 == j2 - j1:
-                pairs += list(zip(a[i1:i2], b[j1:j2]))
-    return {"words": len(a), "lost": lost, "changed": changed, "pairs": pairs}
+    for word, n in missing.items():
+        for _ in range(n):
+            best, bi = 0.0, -1
+            for i, cand in enumerate(spare):
+                if abs(len(cand) - len(word)) <= 3:
+                    r = difflib.SequenceMatcher(None, word, cand, autojunk=False).ratio()
+                    if r > best:
+                        best, bi = r, i
+            if best >= 0.7:
+                changed += 1
+                pairs.append((word, spare.pop(bi)))
+            else:
+                lost += 1
+    return {"words": sum(a.values()), "lost": lost, "changed": changed, "pairs": pairs}
 
 
 def hard_pages(per_book: int) -> list[dict]:
@@ -60,6 +77,9 @@ def hard_pages(per_book: int) -> list[dict]:
             by.setdefault(r["page_no"], {})[r["source"]] = r["text"] or ""
         layers = [by.get(p, {}).get("TEXT_LAYER", "") for p in sorted(by)]
         df, mean = book_stems(layers)
+        from collections import Counter
+        freq = Counter(w for t in layers for w in _w(t))
+        keep = {w for w, n in freq.items() if n >= 2}
         cand = []
         for p, d in by.items():
             layer, ocr = d.get("TEXT_LAYER", ""), d.get("OCR")
@@ -67,7 +87,7 @@ def hard_pages(per_book: int) -> list[dict]:
                 continue
             s = score(layer, ocr)
             looped = _collapse_repeats(ocr)[1] > 0
-            cand.append({"book": bk["title"], "bv": str(bk["bv"]), "page": p, "truth": layer,
+            cand.append({"book": bk["title"], "bv": str(bk["bv"]), "page": p, "truth": layer, "keep": keep,
                          "stored_ocr": ocr, "stored_err": (s["lost"] + s["changed"]) / s["words"],
                          "stored_looped": looped})
         cand.sort(key=lambda x: (-x["stored_looped"], -x["stored_err"]))
@@ -104,19 +124,54 @@ async def read(alias: str, page: dict, sem: asyncio.Semaphore, native: str | Non
         return {"ok": False, "text": "", "sec": time.time() - t0, "error": str(e)[:200]}
 
 
-async def main(aliases: list[str], per_book: int, out: Path | None) -> None:
+def export(pages: list[dict], folder: Path) -> None:
+    """The hard pages as one PDF (for tools that take PDFs) and their order."""
+    import pymupdf
+    from .document import _open_version
+    folder.mkdir(parents=True, exist_ok=True)
+    out = pymupdf.open()
+    for p in pages:
+        doc, _ = _open_version(p["bv"])
+        out.insert_pdf(doc, from_page=p["page"] - 1, to_page=p["page"] - 1)
+    out.save(folder / "hard.pdf")
+    (folder / "hard.json").write_text(json.dumps([{"book": p["book"], "page": p["page"]} for p in pages],
+                                                 ensure_ascii=False))
+
+
+def external(pages: list[dict], path: Path) -> list[dict]:
+    """Readings made by a tool outside the gateway: a JSON list, one text per exported page."""
+    texts = json.loads(path.read_text())
+    return [{"ok": t is not None, "text": t or "", "sec": 0.0} for t in texts][:len(pages)]
+
+
+def rescore(files: list[Path], per_book: int, consensus: Path | None = None) -> None:
+    """Score readings saved by earlier runs (their `readings`) with the current metric.
+
+    `consensus`: a second, independent extraction of the same digital text layer (one text
+    per page). Truth is then only what BOTH extractors read — two parsers agreeing on the
+    publisher's text is as close to a transcription as the corpus offers without a human,
+    and their disagreements (extraction artefacts of either) stop being charged to OCR."""
     pages = hard_pages(per_book)
-    print(f"zor küme: {len(pages)} sayfa ({per_book}/kitap), döngülü {sum(p['stored_looped'] for p in pages)}")
-    results = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
-    for spec in aliases:
-        alias, _, native = spec.partition("=")          # alias | alias=NATIVE PROMPT | alias=@file | alias:nothink
-        if native.startswith("@"):
-            native = Path(native[1:]).read_text().strip()
-        alias, _, mode = alias.partition(":")
-        thinking = False if mode == "nothink" else None
-        sem = asyncio.Semaphore(4)
-        results[spec] = await asyncio.gather(*(read(alias, p, sem, native or None, thinking) for p in pages))
-    report = {}
+    if consensus:
+        from collections import Counter
+        other = json.loads(consensus.read_text())
+        for p, t in zip(pages, other):
+            agreed = Counter(_w(p["truth"])) & Counter(_w(t or ""))
+            p["truth"] = " ".join(agreed.elements())
+    runs: dict[str, list[dict]] = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
+    for f in files:
+        data = json.loads(f.read_text())
+        if isinstance(data, list):                                  # an external tool's texts
+            runs[f.stem] = [{"ok": True, "text": t or "", "sec": 0.0} for t in data[:len(pages)]]
+            continue
+        for name, texts in data.get("readings", {}).items():
+            if name != "stored":
+                runs[name] = [{"ok": bool(t), "text": t or "", "sec": 0.0} for t in texts]
+    report(pages, runs)
+
+
+def report(pages: list[dict], results: dict) -> dict:
+    rep = {}
     for name, res in results.items():
         words = lost = changed = loops = failed = 0
         pairs: dict[tuple, int] = {}
@@ -125,32 +180,66 @@ async def main(aliases: list[str], per_book: int, out: Path | None) -> None:
                 failed += 1
                 continue
             loops += _collapse_repeats(r["text"])[1] > 0
-            s = score(p["truth"], r["text"])
-            words += s["words"]; lost += s["lost"]; changed += s["changed"]
-            for pr in s["pairs"]:
+            sc = score(p["truth"], r["text"], p.get("keep"))
+            words += sc["words"]; lost += sc["lost"]; changed += sc["changed"]
+            for pr in sc["pairs"]:
                 pairs[pr] = pairs.get(pr, 0) + 1
-        top = sorted(pairs.items(), key=lambda kv: -kv[1])[:12]
-        report[name] = {"pages": len(res) - failed, "failed": failed, "words": words,
-                        "lost_pct": round(100 * lost / max(1, words), 2),
-                        "changed_pct": round(100 * changed / max(1, words), 2),
-                        "wer_pct": round(100 * (lost + changed) / max(1, words), 2), "loops": loops,
-                        "sec_per_page": round(sum(r["sec"] for r in res) / max(1, len(res)), 1),
-                        "top_changes": [f"{a}→{b} ×{n}" for (a, b), n in top]}
-        print(f"\n{name}: WER %{report[name]['wer_pct']} (kayıp %{report[name]['lost_pct']}, "
-              f"değiştirilen %{report[name]['changed_pct']}) | döngü {loops} | düşen {failed} | "
-              f"{report[name]['sec_per_page']} sn/sayfa")
-        print("   ", report[name]["top_changes"])
+        top = sorted(pairs.items(), key=lambda kv: -kv[1])[:10]
+        rep[name] = {"pages": len(res) - failed, "failed": failed,
+                     "wer_pct": round(100 * (lost + changed) / max(1, words), 2),
+                     "lost_pct": round(100 * lost / max(1, words), 2),
+                     "changed_pct": round(100 * changed / max(1, words), 2), "loops": loops,
+                     "top_changes": [f"{a}→{b} ×{n}" for (a, b), n in top]}
+    for name, r in sorted(rep.items(), key=lambda kv: kv[1]["wer_pct"]):
+        print(f"{name[:34]:35s} hata %{r['wer_pct']:5.2f} (yanlış okunan %{r['changed_pct']:5.2f}, eksik %{r['lost_pct']:5.2f})"
+              f" | döngü {r['loops']} | düşen {r['failed']}")
+        print("      ", r["top_changes"][:6])
+    return rep
+
+
+async def main(aliases: list[str], per_book: int, out: Path | None,
+               export_to: Path | None = None, externals: list[str] | None = None) -> None:
+    pages = hard_pages(per_book)
+    print(f"zor küme: {len(pages)} sayfa ({per_book}/kitap), döngülü {sum(p['stored_looped'] for p in pages)}")
+    if export_to:
+        export(pages, export_to)
+        print("dışa aktarıldı:", export_to)
+        return
+    results = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
+    for spec in externals or []:
+        name, _, path = spec.partition("=")
+        results[name] = external(pages, Path(path))
+    for spec in aliases:
+        alias, _, native = spec.partition("=")          # alias | alias=NATIVE PROMPT | alias=@file | alias:nothink
+        if native.startswith("@"):
+            native = Path(native[1:]).read_text().strip()
+        alias, _, mode = alias.partition(":")
+        thinking = False if mode == "nothink" else None
+        sem = asyncio.Semaphore(4)
+        results[spec] = await asyncio.gather(*(read(alias, p, sem, native or None, thinking) for p in pages))
+    rep = report(pages, results)
+    for name, res in results.items():
+        rep[name]["sec_per_page"] = round(sum(r["sec"] for r in res) / max(1, len(res)), 1)
+        print(f"   {name[:34]:35s} {rep[name]['sec_per_page']} sn/sayfa")
     if out:
         out.write_text(json.dumps({"pages": [{k: p[k] for k in ("book", "page", "stored_err", "stored_looped")}
-                                             for p in pages], "report": report,
+                                             for p in pages], "report": rep,
                                    "readings": {n: [r["text"] for r in res] for n, res in results.items()}},
                                   ensure_ascii=False, indent=1))
 
 
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("--alias", action="append", required=True)
+    ap.add_argument("--alias", action="append", default=[])
+    ap.add_argument("--export", help="write the hard pages as DIR/hard.pdf + hard.json and stop")
+    ap.add_argument("--external", action="append", default=[], help="NAME=readings.json (one text per page)")
+    ap.add_argument("--rescore", nargs="*", help="score saved readings (bench outputs / external JSON lists)")
+    ap.add_argument("--consensus", help="second extraction of the text layer; truth = words both agree on")
     ap.add_argument("--per-book", type=int, default=8)
     ap.add_argument("--out")
     a = ap.parse_args()
-    asyncio.run(main(a.alias, a.per_book, Path(a.out) if a.out else None))
+    if a.rescore is not None:
+        rescore([Path(x) for x in a.rescore], a.per_book, Path(a.consensus) if a.consensus else None)
+        raise SystemExit(0)
+    asyncio.run(main(a.alias, a.per_book, Path(a.out) if a.out else None,
+                     Path(a.export) if a.export else None, a.external))

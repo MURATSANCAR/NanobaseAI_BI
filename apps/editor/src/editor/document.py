@@ -383,12 +383,24 @@ async def run_ocr(generation_id: str, book_version_id: str, page_no: int) -> dic
     legacy paragraph cache is retained; source.py reads both original sources."""
     r = render_page(book_version_id, page_no)
     png = Path(r["path"]).read_bytes()
-    ref, body = prompts.render("ocr_page", page_no=str(page_no))
-    out, call_id = await Llm(generation_id).chat(
-        "book-vision-fast",
-        [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
-        prompt=ref, schema=schemas.OCR, pages=[page_no], max_tokens=4096, temperature=0.0)
-    blocks = [b for b in out["blocks"] if b["text"].strip()]
+    s = settings()
+    if s.ocr_alias == "book-vision-fast":
+        # the general VLM: our prompt and block schema
+        ref, body = prompts.render("ocr_page", page_no=str(page_no))
+        out, call_id = await Llm(generation_id).chat(
+            s.ocr_alias,
+            [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
+            prompt=ref, schema=schemas.OCR, pages=[page_no], max_tokens=4096, temperature=0.0)
+        blocks = [b for b in out["blocks"] if b["text"].strip()]
+    else:
+        # an OCR specialist: its own task prompt, plain text. No layout kinds come with it,
+        # so every paragraph is body text.
+        text, call_id = await Llm(generation_id).chat(
+            s.ocr_alias,
+            [{"role": "user", "content": [image_part(png), {"type": "text", "text": s.ocr_prompt}]}],
+            pages=[page_no], max_tokens=4096, temperature=0.0)
+        text = re.sub(r"<[^>]+>", " ", text)
+        blocks = [{"text": b.strip(), "kind": "body"} for b in re.split(r"\n\s*\n", text) if b.strip()]
     cut = 0
     for b in blocks:
         b["text"], n = _collapse_repeats(b["text"].strip())

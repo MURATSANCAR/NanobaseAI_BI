@@ -124,7 +124,7 @@ aliases:
     mem_fraction: 0.30
     args:
       - --max-model-len=32768
-      - --max-num-seqs=16
+      - --max-num-seqs=1       # batching >1 crashes the engine in vLLM 0.29 (tensor size 4 vs 3)
       - '--limit-mm-per-prompt={"image":1,"video":0}'
       - --trust-remote-code
 

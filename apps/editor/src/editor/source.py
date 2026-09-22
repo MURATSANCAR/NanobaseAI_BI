@@ -63,7 +63,9 @@ def project_page(gid: str, page: dict, sources: list[dict], legacy_role: dict | 
         issues.append("TEXT_LAYER_UNRELIABLE_NO_OCR")
     base = layer or ocr
     ocr_kinds = {}
-    if ocr and ocr.get("ocr_content"):
+    # Layout kinds come only from a reader that returns them (our block schema); an OCR
+    # specialist answers in plain text, which is not an invalid answer.
+    if ocr and (ocr.get("ocr_content") or "").lstrip().startswith("{"):
         try:
             response = json.loads(ocr["ocr_content"])
             ocr_kinds = {b["text"].strip(): b.get("kind", "body") for b in response["blocks"]}

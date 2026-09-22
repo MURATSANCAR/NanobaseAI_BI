@@ -22,6 +22,8 @@ class Settings:
     task_queue: str
     models_yaml: Path
     page_concurrency: int
+    ocr_alias: str
+    ocr_prompt: str
     gpu_wait_seconds: int
     deep_concurrency: int
     text_visual_votes: int
@@ -63,6 +65,12 @@ def settings() -> Settings:
         task_queue=env("EDITOR_TASK_QUEUE", "editor-book-analysis"),
         models_yaml=Path(env("EDITOR_MODELS_YAML", "/app/deploy/models.yaml")),
         page_concurrency=int(env("EDITOR_PAGE_CONCURRENCY", "16")),
+        # OCR reader. Measured 2026-09-22 on the 39 pages where OCR had hurt most (six books;
+        # truth = words two independent parsers of the digital layer agree on): dots.mocr 2.3%
+        # word error, 0.5% "corrected" words, no loops — the Qwen3-VL-8B it replaced 4.1%, 2.1%,
+        # 8 loops. Its own task prompt, plain text out.
+        ocr_alias=env("EDITOR_OCR_ALIAS", "book-ocr-dots"),
+        ocr_prompt=env("EDITOR_OCR_PROMPT", "Extract the text content from this image."),
         # The GPU is shared with processes the editor does not own and will not stop. "Busy"
         # is a condition of the machine, not of the book: wait this long for room before an
         # analysis that has already cost an hour is given up (measured: a foreign 40 GiB
