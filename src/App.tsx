@@ -23,6 +23,8 @@ const TranslatorsScreen = lazy(() => import('@/canvas/editorial/modules').then((
 const FreelancersScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.FreelancersScreen })));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
+const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
+const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 
 function RouteFallback() {
   return (
@@ -56,6 +58,9 @@ export default function App() {
             <Route index element={<KampusPage />} />
             <Route path="genel-bakis" element={<BiCanvasPage />} />
             <Route path="finansal-denetim" element={<FinancialAudit />} />
+            {/* Yönetim Raporları: diğer modüllerden ayrı, kendi rayı ve uçlarıyla (/api/v1/management). */}
+            <Route path="yonetim-raporlari" element={<ManagementHome />} />
+            <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />

@@ -1846,6 +1846,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         rt.start_refresher()
         app.state.financial_audit.start()
         app.state.editorial_home.start()
+        app.state.management_reports.start()
         # Every request waiting for the model holds one of these threads while it waits. Forty (the
         # default) is forty waiting prompts and then /health queues behind them too.
         try:
@@ -1860,6 +1861,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             yield
         finally:
             app.state.editorial_home.stop()
+            app.state.management_reports.stop()
             app.state.financial_audit.stop()
             rt.jobs.stop()
             rt.stop_refresher()
@@ -4078,6 +4080,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     from semantic_bridge import financial_audit
     app.state.financial_audit = financial_audit.register(app, rt, _require_caller)
+    from semantic_bridge import management
+    app.state.management_reports = management.register(app, rt, _require_caller, _board_user)
     return app
 
 

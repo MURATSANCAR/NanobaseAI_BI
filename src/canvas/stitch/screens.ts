@@ -71,6 +71,14 @@ export const editorialRail = (active: string): StitchRailItem[] =>
     { to: '/', label: 'Kampüs' },
   ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
 
+/** Yönetim Raporları modülünün kendi rayı: grup ana sayfası, raporlar, Kampüs'e dönüş. */
+export const managementRail = (active: string): StitchRailItem[] =>
+  [
+    { to: '/yonetim-raporlari', label: 'Yönetim raporları' },
+    { to: '/yonetim-raporlari/baski-oneri', label: 'Yeni baskı öneri' },
+    { to: '/', label: 'Kampüs' },
+  ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
+
 const DOCK = [
   { to: '/genel-bakis', label: 'Genel bakış' },
   { to: '/panolar', label: 'Panolar' },

@@ -350,6 +350,16 @@
   ]
  },
  {
+  "title": "Yönetim Raporları",
+  "modules": [
+   {
+    "id": "baski-oneri",
+    "title": "Yeni Baskı Öneri",
+    "sections": 2
+   }
+  ]
+ },
+ {
   "title": "Altyapı & Destek",
   "modules": [
    {

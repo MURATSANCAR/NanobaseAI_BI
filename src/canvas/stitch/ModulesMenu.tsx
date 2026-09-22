@@ -13,6 +13,7 @@ type Group = { title: string; modules: Array<{ id: string; title: string; sectio
 /** Kanvasta karşılığı olan modüller. Yeni ekran geldikçe buraya satır eklenir. */
 export const LIVE: Record<string, string> = {
   'financial-audit': '/finansal-denetim',
+  'baski-oneri': '/yonetim-raporlari/baski-oneri',
   home: '/genel-bakis',
   catalog: '/veri-sozlugu',
   'catalog-explorer': '/veri-sozlugu',
@@ -32,6 +33,7 @@ export const LIVE: Record<string, string> = {
  *  sayfası açılır; oradan modülün kendi rayıyla devam edilir. Grup adı `modules.json`'daki başlıktır. */
 export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Finans & Risk': { to: '/finansal-denetim', hint: 'Finansal denetim ve Logo kayıtları' },
+  'Yönetim Raporları': { to: '/yonetim-raporlari', hint: 'Baskı önerisi ve karar raporları' },
   'Editoryal Süreç': { to: '/editoryal', hint: 'Başvurudan baskı onayına sekiz modül' },
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
 };

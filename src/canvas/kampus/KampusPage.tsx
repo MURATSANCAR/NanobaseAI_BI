@@ -65,11 +65,11 @@ const PROMPTS = [
 ];
 
 /** Ana modüller ortak menüdeki giriş sayfalarını kullanır; alt ekranlar modül içinde kalır. */
-const MODULE_TILES = ['Genel Bakış', 'Editoryal Süreç', 'Finans & Risk'].map((title, index) => ({
+const MODULE_TILES = ['Genel Bakış', 'Editoryal Süreç', 'Finans & Risk', 'Yönetim Raporları'].map((title, index) => ({
   title,
   to: GROUP_HOME[title].to,
   note: GROUP_HOME[title].hint,
-  tone: ['bg-violet/10 text-violet', 'bg-amber-100 text-amber-800', 'bg-emerald-100 text-emerald-700'][index],
+  tone: ['bg-violet/10 text-violet', 'bg-amber-100 text-amber-800', 'bg-emerald-100 text-emerald-700', 'bg-sky-100 text-sky-700'][index],
 }));
 
 const trNorm = (s: string) => s.toLocaleLowerCase('tr');
