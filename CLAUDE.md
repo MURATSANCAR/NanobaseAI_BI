@@ -12,6 +12,10 @@ Her oturumda şu iki dosyayı oku:
 
 Sonra işi `main`e taşı — her geliştirmenin son adımıdır, ayrıca istenmesi gerekmez: dal/worktree'de çalışıldıysa `main` üstüne rebase, `main`e ileri sarma merge, dalı iki yerden sil. Adımlar ve "taşınmamış iş var mı" denetimi: [AGENTS.md](AGENTS.md) → «Her geliştirme bitiminde: main'e taşıma».
 
+Sonra dağıtım: **main'e merge → test sunucusunda eksiksiz kurulum ve doğrulama → müşteri VM'i**. Bu sıra
+zorunludur, adım atlanmaz; `main` dışında duran kod hiçbir sunucuya kurulmaz, test sunucusunda
+doğrulanamayan şey VM'e gitmez. Ayrıntı: [AGENTS.md](AGENTS.md) → «Dağıtım sırası».
+
 Çalışma kuralları (mobil uyumluluk, gerçek DB ile doğrulama zorunluluğu, tek branch, vb.) için: [AGENTS.md](AGENTS.md).
 
 Not: bu bir talimattır, hook değil — güncelleme oturumdaki Claude'un bu dosyayı okuyup uygulamasına bağlıdır, zorlayıcı bir mekanizma değildir. Gerçek zorlama isteniyorsa `.claude/settings.json`'a bir hook eklenebilir (örn. commit sonrası günlüğün değişip değişmediğini kontrol eden bir kontrol) — bu ayrı, henüz yapılmamış bir iş.

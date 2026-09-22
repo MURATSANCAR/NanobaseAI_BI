@@ -67,6 +67,25 @@ git branch -d <dal-adı>
 - Merge, dağıtımın yerine geçmez: sunucuya kurulan sürüm neyse `main` de o olmalıdır. Sunucuya yama atılıp `main`e girmemiş kod bırakılmaz.
 - Bu kural bir talimattır, hook değil — CI/branch-protection ile zorlanmıyor; oturumdaki Claude'un ve kullanıcının uygulamasına bağlıdır.
 
+## Dağıtım sırası: main → test sunucusu → müşteri VM'i (zorunlu)
+
+Kullanıcının 2026-09-23 kararı bağlayıcıdır. Bir değişiklik müşteri ortamına ancak şu üç adım bu sırayla
+tamamlandıktan sonra gider; adım atlanmaz, sıra değişmez:
+
+1. **main'e merge.** `main` dışındaki bir dalda ya da worktree'de duran kod kurulmaz — ne test sunucusuna
+   ne müşteri VM'ine. Önce «Her geliştirme bitiminde: main'e taşıma» turu koşulur. Sunucuya atılıp `main`e
+   girmemiş yama bırakılmaz; bir sonraki `git archive main` dağıtımı onu sessizce ezer ve hata geri gelir
+   (2026-09-22'de üç OCR düzeltmesi tam olarak böyle kaybolmuştu).
+2. **Test sunucusunda eksiksiz kurulum ve doğrulama.** Yapının tamamı (arka uç, köprü, arayüz derlemesi,
+   varsa göç ve ters vekil yolları) test sunucusuna kurulur ve gerçek veriyle, gerçek oturumla denenir.
+   Yarım kurulum — «arka ucu koydum, arayüzü sonra» — doğrulama sayılmaz.
+3. **Sonra müşteri VM'i.** Yalnız test sunucusunda çalıştığı görüldükten sonra, kaynak olarak `git archive
+   main` kullanılarak kurulur (VM'in canlı ağacında git dışı env/sır dosyaları vardır, o ağaç kaynak olamaz).
+
+Bir şey test sunucusunda doğrulanamıyorsa (ağ kapalı, VPN düşük, servis erişilemez) müşteri VM'ine
+kurulmaz; doğrulanamadığı günlüğe yazılır ve iş bekler. «Test sunucusunda deneyemedim ama VM'de çalışır»
+gerekçesiyle kurulum yapılmaz.
+
 ## Editor: kitaptan bağımsız üretim kabulü
 
 Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına, PDF hashine, sayfa numarasına veya karakter adına özel uygulama istisnası içeremez. Gerçek kitaplar bağımsız kaynaklı kabul verisidir; bir kitapta geçen kontrol tüm ürünün kabulü değildir. Aynı genel kod/prompt/model sözleşmesi farklı uzunluk ve görsel/metin yapısındaki gerçek kitaplarda doğrulanır. Kaynağa özel beklenen sonuçlar yalnız kabul kanıtında açıkça etiketlenir, üretim karar kurallarına taşınmaz. Teknik çıktı tutarlılığı, kaynak/kimlik/olay kapsamı ve üretim kabulü ayrı raporlanır. Eksik model yanıtları veya başarısız parçalar başarı sayılmaz; bilinmeyen kimlikler zorla bağlanmaz.

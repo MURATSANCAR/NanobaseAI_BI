@@ -171,6 +171,10 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 - **Mobil öncelik**: Her arayüz değişikliği 320/390/768/masaüstü genişliklerde tarayıcıda kontrol edilir; yatay taşma yok. Detay: `apps/cockpit/AGENTS.md`.
 - **Gerçek DB ile doğrulama zorunlu**: Veri alma/SQL/hesaplama/raporlama etkileyen her değişiklik bağlı gerçek veritabanı + gerçek API akışıyla doğrulanmadan tamamlanmış sayılmaz. Yerel mock/fixture/SQLite ile test **yasak** (kullanıcı ayrıca istemedikçe). Doğrulanamıyorsa **DOĞRULANAMADI** diye raporla, başarı iddia etme.
 - **Tek şirket, çok yıllık yedek**: TİMAŞ'ta tek şirket var; `211`/`411` gibi kodlar farklı şirket değil, yıl yedekleridir (bkz. proje belleği `logo-period-prefixes-are-years`, `timas-logo-database-shape`).
+- **Dağıtım sırası (2026-09-23)**: `main`e merge → **test sunucusunda eksiksiz kurulum ve gerçek doğrulama** → müşteri VM'i.
+  Sıra zorunlu, adım atlanmaz. `main` dışında duran kod hiçbir sunucuya kurulmaz (sunucuya atılıp `main`e girmeyen yama
+  bir sonraki `git archive main` dağıtımında sessizce ezilir). Yapının tamamı kurulmadan — arka uç + köprü + arayüz
+  derlemesi + göç + ters vekil yolları — doğrulama sayılmaz. Test sunucusunda doğrulanamayan şey VM'e gitmez.
 - Tam kural metni: [AGENTS.md](AGENTS.md).
 
 ## Notlar
