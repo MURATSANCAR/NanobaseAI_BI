@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-22 — "2025 Yeni Baskı Öneri Raporu" .pbit çözümlendi
+
+- Kullanıcının Power BI şablonu (`2025_Yeni_Baskı Öneri Raporu (5).pbit`) açıldı; 10 tablonun SQL'i (kaçışları çözülmüş), ham M ifadeleri, DAX ölçü/sütunları, ilişkiler ve 3 sayfanın ekran yapısı `docs/analiz/pbit-yeni-baski-oneri/` altına yazıldı. Amaç raporu BI tarafında yeniden kurmak.
+- Bulgular: Logo verisi 192.168.0.25/LOGO_DB'den (bizim bağlantımız .155) okunuyor, `V_SatisRaporu_All2` vb. görünümlerin .155 karşılığı denetlenmedi; "Set Kitaplar" sayfası modelde olmayan `Logo_Setler` tablosuna bağlı (kırık, gizli); `Ilk6Ay` en yeni 6 ay, `Son6Ay` eski 6 ay (adlar ters); `BuAyinToplami` aralığı bu ayı içermiyor; DAX'taki çeyrek ağırlık ölçüleri kullanılmıyor ve toplamı %115.
+
 ## 2026-09-22 — Dal temizliği: main dışındaki işler main'e taşındı
 
 - `editor-identity-on-main` dalının 7 commit'i (küme tabanlı figür kimliği → karışık dijital metin katmanı) main'e cherry-pick ile taşındı; dal etkin oturumda olduğu için yeniden yazılmadı (rebase'te git eşdeğer commit'leri atlar). Tek çakışma `apps/editor/deploy/editorctl`: main'de kaldırılan book-audio derleme satırı geri getirilmedi, yeni `editor-embed` satırı alındı.
