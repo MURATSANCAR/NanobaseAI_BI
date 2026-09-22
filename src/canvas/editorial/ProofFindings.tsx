@@ -79,6 +79,7 @@ function FindingRow({ f }: { f: ProofingFinding }) {
   );
 }
 
+<<<<<<< HEAD
 export function ProofFindings({
   report,
   loading,
@@ -94,6 +95,9 @@ export function ProofFindings({
   /** Sorgu çalışmıyorken (kitap seçilmemiş) gösterilen metin; verilmezse yükleniyor, null ise hiçbir şey gösterilir. */
   idle?: string | null;
 }) {
+=======
+export function ProofFindings({ report, loading, error }: { report: ProofingReport | undefined; loading: boolean; error: string | null }) {
+>>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
   const [check, setCheck] = useState<string | null>(null);
   const [severity, setSeverity] = useState<ProofingSeverity | null>(null);
 
@@ -106,8 +110,12 @@ export function ProofFindings({
 
   let body: ReactNode;
   if (error) body = <Note tone="err">{error}</Note>;
+<<<<<<< HEAD
   else if (loading) body = <Loading />;
   else if (!report) body = idle === undefined ? <Loading /> : idle ? <Empty>{idle}</Empty> : null;
+=======
+  else if (loading || !report) body = <Loading />;
+>>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
   else if (!report.configured) body = <Empty>Zeki AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.</Empty>;
   else if (!report.bookId) body = <Empty>Bu eser motorda henüz okunmamış. Kitap adı motordaki adla birebir eşleşmeli.</Empty>;
   else if (!report.checks.length) body = <Empty>Eser okunmuş, denetimler henüz koşmamış. Motor sırası gelince burada görünür.</Empty>;
@@ -172,7 +180,10 @@ export function ProofFindings({
         Motor, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez.
         {report?.bookTitle ? ` Eşleşen kitap: ${report.bookTitle}.` : ''}
       </p>
+<<<<<<< HEAD
       {picker ? <div className="mt-2">{picker}</div> : null}
+=======
+>>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
       <div className="mt-2">{body}</div>
     </Panel>
   );

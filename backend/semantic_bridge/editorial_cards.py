@@ -68,6 +68,7 @@ def catalogue_cached():
     return items
 
 
+<<<<<<< HEAD
 def _card_names(card):
     """Kartın anıldığı adlar: motor adı (slug) ve yayınevi kaydındaki ad."""
     names=[card.get('title') or '', ((card.get('publisher') or {}).get('title') or '')]
@@ -90,6 +91,18 @@ def book_id_for_title(book_title, text=''):
         return named[0]['id'] if len(named)==1 else None
     except (ValueError,KeyError,TypeError,httpx.HTTPError):
         return None
+=======
+def book_id_for_title(book_title):
+    """Sorunun kitap adının kataloğdaki karşılığı (büyük/küçük harf farkı hariç tam ad eşleşmesi).
+    Tek eşleşme yoksa ya da katalog alınamazsa None; hiçbir hata satırı bozmaz."""
+    title=(book_title or '').strip()
+    if not title or not os.environ.get('EDITOR_CATALOG_BASE'): return None
+    try:
+        exact=[c for c in catalogue_cached() if c['title'].casefold()==title.casefold()]
+    except (ValueError,KeyError,TypeError,httpx.HTTPError):
+        return None
+    return exact[0]['id'] if len(exact)==1 else None
+>>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
 
 
 def public_card(card):

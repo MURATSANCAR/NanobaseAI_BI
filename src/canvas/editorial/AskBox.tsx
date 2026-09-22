@@ -6,7 +6,10 @@ import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import BookCard from './BookCard';
 import CharacterGraph from './CharacterGraph';
+<<<<<<< HEAD
 import Cover from './Cover';
+=======
+>>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
 import ChatExport from './ChatExport';
 import PageRef from './PagePeek';
 

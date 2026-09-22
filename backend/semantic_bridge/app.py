@@ -3767,6 +3767,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return Response(content=data, media_type="application/pdf",
                         headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"})
 
+<<<<<<< HEAD
     @app.get("/api/v1/editorial/ask/catalog")
     def editorial_ask_catalog(request: Request) -> dict[str, Any]:
         """Kitap kartları (kimlik, ad, kapak var/yok, yayınevi kaydı): sohbet çipleri ve kitap detayı kapağı
@@ -3778,6 +3779,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except Exception as e:
             raise HTTPException(502, "Kitap kartları alınamadı.") from e
 
+=======
+>>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
     @app.get("/api/v1/editorial/ask/books")
     def editorial_ask_books(request: Request, fresh: bool = False) -> dict[str, Any]:
         """Soru sorulabilen kitaplar. {qid} ucundan önce tanımlı, yoksa "books" bir soru kimliği sanılır."""
