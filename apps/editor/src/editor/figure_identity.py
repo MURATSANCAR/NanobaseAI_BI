@@ -247,7 +247,9 @@ async def adjudicate(generation_id: str, clusters: dict, chars: list[dict], scor
 
     def card(k: int) -> str:
         ch = chars[k]
-        tr = ", ".join(v for v in (ch["traits"] or {}).values() if v and v != "UNKNOWN")
+        # only the declared classes; `traits` also carries other, non-text keys (lists, scopes)
+        tr = ", ".join(str(v) for k, v in (ch["traits"] or {}).items()
+                       if k in ("sex", "age_band") and isinstance(v, str) and v and v != "UNKNOWN")
         return f"- {ch['canonical_name']} ({ch['kind']}{', ' + tr if tr else ''}): {ch['description'][:200]}"
 
     async def one(cid: str) -> tuple[str, dict | None]:
