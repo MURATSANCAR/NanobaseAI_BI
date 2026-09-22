@@ -137,6 +137,11 @@ aliases:
     kind: chat
     gpu: 1
     mem_fraction: 0.90
+    # Kartın %90'ını tek başına tutar ve ana model (director) onunla sığmaz. Belge parse
+    # seyrek olduğundan, son sayfadan sonra kartı hızlı bıraksın (varsayılan 600 yerine 120):
+    # reaper deep-VL'i 2 dk boşta durdurur, warmer director'ı ~30 sn içinde geri ısıtır. Bir
+    # belgenin sayfaları peş peşe işlendiği için bu, analizi ortasında kesmez.
+    idle_stop_sec: 120
     args:
       - '--structured-outputs-config={"backend":"xgrammar","disable_any_whitespace":true}'
       - --max-model-len=40960
