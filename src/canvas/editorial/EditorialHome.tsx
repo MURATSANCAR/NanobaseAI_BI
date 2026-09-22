@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, BookOpenCheck, CalendarClock, FileSignature, Loader2, PenLine, Users } from 'lucide-react';
+import { ArrowRight, BookOpenCheck, CalendarClock, FileSignature, PenLine, Users } from 'lucide-react';
 import { ENGINE_ENABLED, type Work, type ContractPage } from '../engine';
 import { useTimasSession } from '../TimasSession';
 import { editorialHomeOptions } from './homeQuery';
@@ -22,19 +22,6 @@ type Card = {
   line?: string;
   extra?: string;
 };
-
-function Stat({ label, value, help, busy }: { label: string; value: string; help: string; busy?: boolean }) {
-  return (
-    <div className="glass-panel rounded-2xl p-3.5 shadow-glass-float sm:rounded-3xl sm:p-4">
-      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
-      <div className="mt-1 flex items-baseline gap-2">
-        <span className="font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight sm:text-[30px]">{value}</span>
-        {busy && <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin text-canvas-muted" />}
-      </div>
-      <div className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">{help}</div>
-    </div>
-  );
-}
 
 function ModuleCard({ c }: { c: Card }) {
   const Icon = c.icon;
