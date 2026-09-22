@@ -105,7 +105,8 @@ def book_ids_for(question, book_title, answer, cards=None):
         if len(exact)==1: return [exact[0]['id']]
     text=(question+' '+(answer or '')).casefold()
     named=[c['id'] for c in cards if c['title'].casefold() in text]
-    return named or [c['id'] for c in cards if c['contentAvailable']]
+    # Ağ kanıt defterinden gelir, kart özetinden değil: özeti hazır olmayan kitabın da ağı olabilir.
+    return named or [c['id'] for c in cards]
 
 
 GRAPH_INTENT = ('Soru bir kitabın karakterleriyle ilgiliyse (kimler var, bir karakter kimlerle birlikte, '
