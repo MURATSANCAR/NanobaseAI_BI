@@ -10,7 +10,7 @@ from typing import Any
 
 import yaml
 
-from . import db, ledger, prompts, schemas
+from . import db, ledger, naming, prompts, schemas
 from .config import settings
 from .knowledge import DIRECTOR, _valid_pages, build_timeline, chapters
 from .llm import Llm
@@ -338,6 +338,35 @@ def _aliases_in_text(generation_id: str) -> bool:
         + list(r["aliases"]))
 
 
+def _alias_defects(generation_id: str) -> list[dict]:
+    """Aliases of a stored generation that break the naming invariants (editor.naming).
+
+    The same two questions `knowledge.resolve_character_identity` answers before it writes
+    a character, asked again over what is in the table: a generation written before the
+    rule existed, or by a path that went around it, answers them here.
+    """
+    with db.tx() as c:
+        idx = ledger.PageIndex.load(c, generation_id)
+    text = "\n".join(idx.raw[p] for p in sorted(idx.raw))
+    rows = db.all_rows("SELECT id, canonical_name, aliases FROM character WHERE generation_id=%s",
+                       generation_id)
+    canonical = {naming.key(r["canonical_name"]): str(r["id"]) for r in rows}
+    st = settings()
+    out = []
+    for r in rows:
+        for a in r["aliases"] or []:
+            k = naming.key(a)
+            if canonical.get(k) not in (None, str(r["id"])):
+                out.append({"character": r["canonical_name"], "alias": a,
+                            "reason": naming.OTHER_CHARACTERS_NAME})
+            elif not naming.is_proper_name(a, text, min_share=st.proper_name_min_share,
+                                           min_uses=st.proper_name_min_uses):
+                out.append({"character": r["canonical_name"], "alias": a,
+                            "reason": naming.NOT_A_PROPER_NAME,
+                            "share": naming.proper_share(a, text)})
+    return out
+
+
 def run_regression_suite(generation_id: str) -> dict:
     """Invariants of the quality rules + per-book golden expectations
     (tests/regression/books/<sha16>.yaml) + drift against the previous
@@ -345,6 +374,7 @@ def run_regression_suite(generation_id: str) -> dict:
     one = lambda sql, *a: (db.one(sql, *a) or {}).get("n", 0)  # noqa: E731
     gen = db.one("SELECT g.*, bv.sha256, bv.book_id FROM generation g JOIN book_version bv ON"
                  " bv.id=g.book_version_id WHERE g.id=%s", generation_id)
+    alias_defects = _alias_defects(generation_id)
     res = [
         _check("her iddianın kanıtı var", one("SELECT count(*) n FROM claim c WHERE generation_id=%s AND"
                " NOT EXISTS (SELECT 1 FROM claim_evidence ce WHERE ce.claim_id=c.id)", generation_id) == 0),
@@ -396,6 +426,14 @@ def run_regression_suite(generation_id: str) -> dict:
             " d.generation_id=cm.generation_id AND d.page_no=cm.page_no AND d.pass='DEEP')",
             generation_id) == 0),
         _check("kaynak adı ve eş adlar metinde geçiyor; betimleyici etiket ad değildir", _aliases_in_text(generation_id)),
+        # An alias is a second name of THIS person: it has to be written the way the book
+        # writes a name, and it cannot be the main name of someone else in the same
+        # generation (editor.naming).
+        _check("eş ad metinde özel ad gibi kullanılıyor ve başkasının asıl adı değil",
+               not alias_defects, alias_defects[:12] or None),
+        _check("topluluk/kavram kişi kaydı üretmedi", one(
+            "SELECT count(*) n FROM character WHERE generation_id=%s AND"
+            " traits->>'entity_scope' = ANY(%s)", generation_id, sorted(naming.NON_PERSON_SCOPES)) == 0),
         _check("kesin görsel kimlik bağımsız görsel doğrulama taşır", one(
             "SELECT count(*) n FROM character_mention WHERE generation_id=%s AND via='VISUAL' AND"
             " resolution='RESOLVED' AND coalesce(appearance->>'identified_by','') NOT IN"

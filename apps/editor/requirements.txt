@@ -13,3 +13,7 @@ pydantic==2.13.5
 docker==7.2.0
 nvidia-ml-py==13.610.43
 pyyaml
+# son okuma yazım denetimleri (editor.proofing.spelling / name_spelling): Zemberek morfolojisi ve
+# hunspell tr_TR sözlüğü (sözlük dosyası imaja ayrıca konur: EDITOR_HUNSPELL_TR ya da /app/data/hunspell/tr_TR)
+zeyrek
+spylls

@@ -39,6 +39,8 @@ class Settings:
     ccip_same_max: float
     cluster_name_support: float
     cluster_name_margin: float
+    proper_name_min_share: float
+    proper_name_min_uses: int
 
     @property
     def storage(self) -> Path:
@@ -107,4 +109,13 @@ def settings() -> Settings:
         # otherwise the adjudicator decides, or the cluster stays unnamed.
         cluster_name_support=float(env("EDITOR_CLUSTER_NAME_SUPPORT", "0.5")),
         cluster_name_margin=float(env("EDITOR_CLUSTER_NAME_MARGIN", "0.2")),
+        # A name is a name when the book writes it with a capital in the middle of a
+        # sentence, where nothing forces the capital (editor.naming). The share of such
+        # uses that are capitalised separates the two classes cleanly: measured on the six
+        # books' 150 names and aliases for the same property (proofing/series_canon),
+        # common nouns and kinship words reach at most 0.67 and names 0.875 and above, so
+        # 0.8 sits in the empty gap. `min_uses` is how many mid-sentence uses the book
+        # must give before the share is read at all; at 1 a single use decides.
+        proper_name_min_share=float(env("EDITOR_PROPER_NAME_MIN_SHARE", "0.8")),
+        proper_name_min_uses=int(env("EDITOR_PROPER_NAME_MIN_USES", "1")),
     )
