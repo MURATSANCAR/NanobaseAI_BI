@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { BookOpen } from 'lucide-react';
-import { ENGINE_BASE, type BookCard as Card } from '../engine';
+import { bookCoverUrl, type BookCard as Card } from '../engine';
 
 export default function BookCard({ card, onAsk }: { card: Card; onAsk: () => void }) {
   const [failed, setFailed] = useState(false);
@@ -12,7 +12,7 @@ export default function BookCard({ card, onAsk }: { card: Card; onAsk: () => voi
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:gap-4">
         <div className="flex w-20 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-100 sm:w-28">
           {card.cover && !failed ? (
-            <img src={`${ENGINE_BASE}/api/v1/editorial/ask/covers/${encodeURIComponent(card.id)}`}
+            <img src={bookCoverUrl(card.id)}
               alt={`${title} — ${card.cover.source === 'PDF_PAGE' ? 'kitabın içinden görsel' : 'kapak'}`}
               loading="lazy" onError={() => setFailed(true)} className="aspect-[2/3] w-full object-contain" />
           ) : <div className="flex aspect-[2/3] flex-col items-center justify-center gap-2 px-2 text-center text-xs text-canvas-muted">

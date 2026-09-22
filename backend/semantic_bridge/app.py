@@ -3767,6 +3767,17 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return Response(content=data, media_type="application/pdf",
                         headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"})
 
+    @app.get("/api/v1/editorial/ask/catalog")
+    def editorial_ask_catalog(request: Request) -> dict[str, Any]:
+        """Kitap kartları (kimlik, ad, kapak var/yok, yayınevi kaydı): sohbet çipleri ve kitap detayı kapağı
+        buradan kimlik bulup `covers/{id}` ucunu çağırır. {qid} ucundan önce tanımlı."""
+        _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            return {"items": [editorial_cards.public_card(c) for c in editorial_cards.catalogue()]}
+        except Exception as e:
+            raise HTTPException(502, "Kitap kartları alınamadı.") from e
+
     @app.get("/api/v1/editorial/ask/books")
     def editorial_ask_books(request: Request, fresh: bool = False) -> dict[str, Any]:
         """Soru sorulabilen kitaplar. {qid} ucundan önce tanımlı, yoksa "books" bir soru kimliği sanılır."""

@@ -1311,6 +1311,22 @@ export type BookQuestion = {
   finishedAt: string | null;
 };
 
+/** Kapak görselinin adresi (oturum çerezi tarayıcıdan gider). Kart `cover` null ise 404 döner; ekran `onError` ile gizler. */
+export const bookCoverUrl = (bookId: string) => `${ENGINE_BASE}/api/v1/editorial/ask/covers/${encodeURIComponent(bookId)}`;
+
+/** Motorun kitap kataloğu (kart özeti): sohbet çipleri ve kitap detayı, kitap adını burada eşleyip kapağı bulur. */
+export const bookCatalogApi = {
+  list: () => send<{ items: BookCard[] }>('GET', '/api/v1/editorial/ask/catalog', undefined, 30_000),
+};
+
+/** Kitap adının katalogdaki kartı: motor adı (`title`) ya da yayınevinin CRM adı (`publisher.title`) ile
+ *  büyük/küçük harf farksız tam eşleşme. Eşleşme yoksa null (yer tutucu gösterilmez). */
+export function findCatalogCard(cards: BookCard[] | undefined, title: string | null | undefined): BookCard | null {
+  const key = (title ?? '').trim().toLocaleLowerCase('tr');
+  if (!key || !cards) return null;
+  return cards.find((c) => c.title.trim().toLocaleLowerCase('tr') === key || (c.publisher?.title ?? '').trim().toLocaleLowerCase('tr') === key) ?? null;
+}
+
 /** Soru bir iştir: motor modeli istendiğinde açar ve GPU kitap analiziyle paylaşılır. */
 export const bookAskApi = {
   list: (bookKey?: string) => send<{ items: BookQuestion[]; running: number; configured: boolean }>('GET', `/api/v1/editorial/ask${qs({ book: bookKey })}`, undefined, 30_000),

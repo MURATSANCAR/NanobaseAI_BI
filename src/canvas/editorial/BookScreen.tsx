@@ -1,10 +1,11 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ENGINE_ENABLED, editorialSearchApi, type BookDetail } from '../engine';
+import { ENGINE_ENABLED, bookCatalogApi, editorialSearchApi, findCatalogCard, type BookDetail } from '../engine';
 import { Loading, Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime, num, pct } from '../format';
 import { ModuleFrame, Panel } from './kit';
 import AskBox from './AskBox';
+import Cover from './Cover';
 
 /** Bir kitabın bütün süreçleri tek ekranda: künye, roller, sözleşmeler, proje ve kurul kararı, üretim,
  *  masadaki metin ve prova. Her bölüm kendi modülüne bağlanır. CRM'de kaydı olmayan bölüm hiç çizilmez. */
@@ -253,6 +254,10 @@ export default function BookScreen() {
   const { id = '' } = useParams();
   const q = useQuery({ queryKey: ['editorial', 'book', id], queryFn: () => editorialSearchApi.book(id), enabled: ENGINE_ENABLED && !!id });
   const b = q.data;
+  // Kapak motorun kataloğundan: CRM'deki ad kataloğa tam eşleşirse (motor adı ya da yayınevinin adı) kart kimliğiyle çekilir;
+  // eşleşmezse hiçbir yer tutucu çizilmez.
+  const catalog = useQuery({ queryKey: ['editorial', 'bookCatalog'], queryFn: bookCatalogApi.list, enabled: ENGINE_ENABLED && !!b, staleTime: 5 * 60_000 });
+  const cover = findCatalogCard(catalog.data?.items, b?.title);
   const err = errText(q.error, 'Kitap okunamadı.');
   const empty = b && !b.roles.length && !b.contracts.length && !b.projects.length && !b.board.length && !b.production.length && !b.desk.length;
 
@@ -271,11 +276,14 @@ export default function BookScreen() {
 
       {b && (
         <>
-          <div className="flex flex-wrap items-center gap-2 px-1">
-            {b.status && <Pill tone={tone(b.status)}>{b.status}</Pill>}
-            {b.printState && <Pill tone="muted">{b.printState}</Pill>}
-            {b.pages ? <span className="text-[12px] text-canvas-muted">{num(b.pages, 0)} sayfa</span> : null}
-            {b.firstPublished && <span className="text-[12px] text-canvas-muted">İlk yayın {dateTime(b.firstPublished)}</span>}
+          <div className="flex items-start gap-3 px-1">
+            {cover?.cover && <Cover id={cover.id} alt={`${b.title || 'Kitap'} kapağı`} className="h-[104px] w-[72px] sm:h-[140px] sm:w-24" />}
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              {b.status && <Pill tone={tone(b.status)}>{b.status}</Pill>}
+              {b.printState && <Pill tone="muted">{b.printState}</Pill>}
+              {b.pages ? <span className="text-[12px] text-canvas-muted">{num(b.pages, 0)} sayfa</span> : null}
+              {b.firstPublished && <span className="text-[12px] text-canvas-muted">İlk yayın {dateTime(b.firstPublished)}</span>}
+            </div>
           </div>
           <Facts b={b} />
           <About b={b} />

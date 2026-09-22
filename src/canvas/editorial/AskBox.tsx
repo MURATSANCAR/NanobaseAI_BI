@@ -1,11 +1,12 @@
 import { Fragment, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueries } from '@tanstack/react-query';
 import { ArrowUp, BookOpen, Loader2, RotateCcw, Search } from 'lucide-react';
-import { ENGINE_ENABLED, bookAskApi, readableBooksApi, type BookQuestion } from '../engine';
+import { ENGINE_ENABLED, bookAskApi, bookCatalogApi, findCatalogCard, readableBooksApi, type BookCard as Card, type BookQuestion } from '../engine';
 import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import BookCard from './BookCard';
 import CharacterGraph from './CharacterGraph';
+import Cover from './Cover';
 import ChatExport from './ChatExport';
 import PageRef from './PagePeek';
 
@@ -156,12 +157,26 @@ function UserBubble({ text, meta }: { text: string; meta?: string }) {
   );
 }
 
-function AiBubble({ children, meta }: { children: ReactNode; meta?: string }) {
+/** Cevap balonunun sağ üst köşesi: kitabın kapağı ve okunur adı. Mutlak konumlu; graf ve metni aşağı itmez,
+ *  yalnız ilk satırlar kapağın solunda kalır. */
+function BubbleBook({ id, card }: { id: string; card: Card | null }) {
+  if (card && !card.cover) return null;
+  const name = card?.publisher?.title || card?.title || null;
+  return (
+    <figure className="absolute right-3 top-3 flex w-16 flex-col items-center gap-1 sm:right-4 sm:top-4">
+      <Cover id={id} alt={name ? `${name} kapağı` : 'Kitap kapağı'} className="h-10 w-7" />
+      {name && <figcaption className="line-clamp-2 w-full text-center text-[9.5px] leading-tight text-canvas-muted">{name}</figcaption>}
+    </figure>
+  );
+}
+
+function AiBubble({ children, meta, corner }: { children: ReactNode; meta?: string; corner?: ReactNode }) {
   return (
     <div className="zk-msg flex items-start gap-2.5">
       <span className="hidden sm:contents"><Orb /></span>
       <div className="min-w-0 w-full sm:w-auto sm:max-w-[min(80%,72ch)]">
-        <div className="rounded-[20px] rounded-tl-md border border-slate-200/70 bg-white/95 px-3.5 py-4 text-[15px] leading-relaxed text-canvas-ink shadow-[0_8px_30px_-14px_rgba(20,30,60,.15)] sm:px-5 sm:py-5">
+        <div className={`relative rounded-[20px] rounded-tl-md border border-slate-200/70 bg-white/95 px-3.5 py-4 text-[15px] leading-relaxed text-canvas-ink shadow-[0_8px_30px_-14px_rgba(20,30,60,.15)] sm:px-5 sm:py-5 ${corner ? 'pr-[84px] sm:pr-[92px]' : ''}`}>
+          {corner}
           {children}
         </div>
         {meta && <div className="mt-1 pl-1 text-[10.5px] text-canvas-muted">{meta}</div>}
@@ -170,9 +185,10 @@ function AiBubble({ children, meta }: { children: ReactNode; meta?: string }) {
   );
 }
 
-function Turn({ q, onRetry, onPickBook }: { q: BookQuestion; onRetry: (text: string) => void; onPickBook: (title: string) => void }) {
+function Turn({ q, catalog, onRetry, onPickBook }: { q: BookQuestion; catalog?: Card[]; onRetry: (text: string) => void; onPickBook: (title: string) => void }) {
   const live = q.status === 'bekliyor' || q.status === 'calisiyor';
   const answer = q.answer ? scrub(q.answer) : null;
+  const corner = q.bookId ? <BubbleBook id={q.bookId} card={catalog?.find((c) => c.id === q.bookId) ?? null} /> : undefined;
   return (
     <div className="space-y-3">
       <UserBubble text={q.question} meta={[q.bookTitle && `«${q.bookTitle}»`, dateTime(q.createdAt)].filter(Boolean).join(' · ')} />
@@ -193,7 +209,7 @@ function Turn({ q, onRetry, onPickBook }: { q: BookQuestion; onRetry: (text: str
         </AiBubble>
       )}
       {answer && !q.notFound && (
-        <AiBubble meta={q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn'de cevapladı` : undefined}>
+        <AiBubble corner={corner} meta={q.elapsedMs ? `${nf.format(Math.round(q.elapsedMs / 1000))} sn'de cevapladı` : undefined}>
           {q.graph && q.graph.nodes.length >= 2 && (
             <div className="zk-msg mb-3 rounded-2xl border border-canvas-violet/12 bg-white/70 p-2.5 sm:p-3">
               <CharacterGraph nodes={q.graph.nodes} edges={q.graph.edges} />
@@ -256,12 +272,21 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
     refetchInterval: (query) => (query.state.data?.loading ? 15000 : 5 * 60_000),
   });
   const readable = books.data?.items ?? [];
+  // Kapaklar: kitap adı kataloğa tam eşleşince (motor adı ya da yayınevinin adı) kart kimliğiyle kapak çekilir.
+  const catalog = useQuery({
+    queryKey: ['editorial', 'bookCatalog'],
+    queryFn: bookCatalogApi.list,
+    enabled: ENGINE_ENABLED,
+    staleTime: 5 * 60_000,
+  });
+  const cards = catalog.data?.items;
   // Sohbet sırası: eski üstte, yeni altta.
   const turns = questions.flatMap((query) => query.data ? [query.data] : []);
   const err = ask.error ? friendlyError(scrub(errText(ask.error, 'Soru gönderilemedi.') ?? '')) : questions.some((query) => query.error) ? 'Yanıt alınamadı; bağlantı yeniden denenecek.' : null;
   const off = !ENGINE_ENABLED || books.data?.configured === false;
   const pending = ask.isPending ? ask.variables : null;
   const target = bookTitle ?? picked;
+  const targetCard = findCatalogCard(cards, target);
 
   const send = (value = text) => {
     const v = value.trim();
@@ -295,6 +320,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
 
         <header className="relative flex shrink-0 items-center gap-3 border-b border-white/70 px-4 py-3.5 sm:px-6">
           <Orb />
+          {targetCard?.cover && <Cover id={targetCard.id} alt={`${target} kapağı`} className="h-[52px] w-9" />}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <h2 className="bg-gradient-to-r from-canvas-coral to-canvas-violet bg-clip-text text-[17px] font-extrabold tracking-tight text-transparent">ZEKİ AI</h2>
@@ -340,7 +366,7 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
             </div>
           )}
           {turns.map((q) => (
-            <Turn key={q.id} q={q} onRetry={(t) => send(t)} onPickBook={(title) => { setPicked(title); setText(`«${title}» kitabı hakkında `); input.current?.focus(); }} />
+            <Turn key={q.id} q={q} catalog={cards} onRetry={(t) => send(t)} onPickBook={(title) => { setPicked(title); setText(`«${title}» kitabı hakkında `); input.current?.focus(); }} />
           ))}
           {questions.some((query) => query.isPending) && <p role="status" className="text-sm text-canvas-muted">Soru kaydı alınıyor…</p>}
           {pending && (
@@ -357,19 +383,22 @@ export default function AskBox({ bookKey, bookTitle }: { bookKey?: string; bookT
           {!bookTitle && readable.length > 0 && (
             <div className="zk-scroll mb-2 flex items-center gap-1.5 overflow-x-auto pb-0.5">
               <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
-              {readable.map((t) => (
+              {readable.map((t) => {
+                const card = findCatalogCard(cards, t);
+                return (
                 <button
                   key={t}
                   type="button"
                   onClick={() => setPicked(picked === t ? null : t)}
                   aria-pressed={picked === t}
-                  className={`zk-press shrink-0 min-h-11 max-w-full whitespace-normal rounded-full px-3 py-1 text-[11.5px] font-semibold ${
+                  className={`zk-press flex shrink-0 min-h-11 max-w-full items-center gap-2 whitespace-normal rounded-full py-1 pr-3 text-[11.5px] font-semibold ${card?.cover ? 'pl-1.5' : 'pl-3'} ${
                     picked === t ? 'bg-canvas-violet text-white shadow-sm' : 'bg-white text-canvas-ink ring-1 ring-slate-200 hover:ring-canvas-violet/40'
                   }`}
                 >
+                  {card?.cover && <Cover id={card.id} alt="" className="h-8 w-[22px]" />}
                   {t}
                 </button>
-              ))}
+              ); })}
             </div>
           )}
           {!bookTitle && books.data?.loading && !readable.length && (
