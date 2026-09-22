@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-23 — Son okuma: editör kararı + isabet; kapaklar; süreklilik denetimleri; temizlik
+
+- **Editör kararı (yapının 3. ayağı):** `ed.proof_decision` (025, salt-ekleme; geçerli karar = en yeni). M5'te her bulguya «Doğru» / «Yanlış alarm» + kapalı küme gerekçe (7 kod) + not; denetim özetinde isabet rozeti (kural = ad+sürüm, bütün kitaplar); karar süzgeci. Kart servisinde tek yazma ucu (editörün kaydı, kitap verisi değil), köprüde oturum kullanıcısıyla + audit. Canlıda uçtan uca: REJECT → %0 (0/1), ACCEPT → %100 (1/1). İsabet ölçüm sorgusu `docs/son-okuma/README.md`.
+- **Kapaklar:** köprü `GET /api/v1/editorial/ask/catalog`; sohbet çipleri (22×32), seçili kitap başlığı (36×52), cevap balonu (28×40), kitap detayı (96×140). Kapak yoksa yer tutucu yok. Canlıda doğrulandı.
+- **Sohbet:** dört KPI kartı kaldırıldı, sohbet açılışta ilk sırada. Sayfa rozeti hover'ı canlıda doğrulandı (kitap seçilmeden sorulan soruda kitap kimliği artık cevap metnindeki addan çözülüyor). M5'te eser dosyası olmadan kitap seçimi (`?kitap=`), 130 bulgu listelendi.
+- **Süreklilik denetimleri (yeni 4 modül):** props (eşya), timeline (zaman), setting (mekân), dialogue (diyalog atfı/hitap); ortak `_continuity` (iki sıralı kapalı yargı, sahne sınırı, gerçek-dışı kip sayfaları); 23 sentetik test. **İlk gerçek ölçüm (Levent, --dry):** dialogue — 344 replik, 297 konuşan çözüldü, 7 atıf + 4 hitap adayı, yargı hiçbirini onaylamadı → 0 bulgu (yanlış alarm yok, geri çağırma ölçülmedi). props/timeline/setting koşuyor. appearance defteri doluyor (GPU paylaşımlı, yavaş).
+- **Belgeler:** 7 eksik ölçüm belgesi (age_fit, hyphenation, imprint_crm, layout, name_spelling, spelling, text_contradictions) koddan yazıldı; belgesiz eşikler listelendi (layout'un hiçbir eşiği bu külliyatta ölçülmemiş; text_contradictions `facts` yolu yalnız KARAKTER/SAYI üretir).
+- **Depo:** commit'lenmiş çakışma işaretleri (AskBox.tsx, editorial_books.py, günlük — `709ef8f8` birleştirmesinden) temizlendi, canlı kopyalarla birebir. Graf niyet ölçüm betiği `tests/editorial/`. Dallar: 14 dalın içeriği main'de; silme komutu kullanıcıya verildi. Levent yeniden analizi ölçümler bitince otomatik başlayacak (`levent-reanalyze` birimi) — takma ad/kişi kuralının kanıtı.
+- **Engel:** müşteri ağı hâlâ cevapsız (VM kurulumu bekliyor).
+
 ## 2026-09-22 (gece) — Sohbet: ilişki grafı daraltıldı, sayfa önizleme, PDF; son okuma üretime; takma ad/kişi kuralı; görünüş sürekliliği
 
 - **Graf yalnız ilişki sorusunda (kullanıcı: «her soruda gelmesin, yer kaplıyor»):** niyet kararı ölçüldü — 36 soru × 5 tekrar, %100 kararlı; ilk istem karakterle ilgili ama «kim» kalıbında olmayan soruları kaçırıyordu, geniş istem denendi, kullanıcı tersini istedi. Son istem yalnız karakterler ARASI bağ sorularında true (12/36; «Aytek kimdir», «Ana karakter kim» graf almaz). Ölçüm betiği `LLM_EXTRA_BODY_JSON` olmadan koşunca model boş cevap veriyor (düşünme açık) — env `systemd-run -p EnvironmentFile=` ile yüklenmeli. Merkez: asıl adla anılan karakter takma addan üstün (Levent'in takma adlarında «Ben», «Mert» vardı). Aday kitaplar özet şartsız.
