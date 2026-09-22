@@ -105,9 +105,17 @@ class Reports:
             codes = params["stok_kodlari"]
             chunks = [codes[i:i + 400] for i in range(0, len(codes), 400)] or [[]]
         records, columns, started = [], [], time.monotonic()
+        title = next(t for s, _, t, *_ in report.SOURCES if s == source_id)
         for chunk in chunks:
             sql = text if chunk is None else text.replace("{stok_kodlari}", _quoted_list(chunk))
-            cols, rows, truncated = conn.execute(sql, MAX_ROWS)
+            try:
+                cols, rows, truncated = conn.execute(sql, MAX_ROWS)
+            except Exception as exc:  # noqa: BLE001 — sürücü metni ekrana değil loga
+                log.warning("management source %s failed: %s", source_id, str(exc)[:300])
+                state = str(getattr(exc, "args", [""])[0])
+                if state in ("08S01", "08001", "HYT00", "HYT01"):
+                    raise RuntimeError(f"{self.database_label(connection)} veritabanına şu an ulaşılamıyor.") from None
+                raise RuntimeError(f"“{title}” sorgusu hata verdi: {str(exc)[:200]}") from None
             if truncated:
                 raise RuntimeError(f"{source_id}: sonuç {MAX_ROWS} satırı aştı; rapor eksik kalırdı.")
             columns, records = cols, records + rows
@@ -137,8 +145,9 @@ class Reports:
                 _save(path, {"data": data, "updatedAt": time.time(), "durationMs": int((time.time() - started) * 1000),
                              "error": None})
             except Exception as exc:  # noqa: BLE001 — son başarılı sonuç korunur
-                log.exception("management report %s refresh failed", report_id)
-                _save(path, {**previous, "error": f"Veriler yenilenemedi: {str(exc)[:300]}", "failedAt": time.time()})
+                log.warning("management report %s refresh failed: %s", report_id, exc)
+                _save(path, {**previous, "error": f"Veriler yenilenemedi: {str(exc)[:300]} Beş dakikada bir yeniden denenir.",
+                             "failedAt": time.time()})
 
     def start_refresh(self, report_id: str) -> bool:
         with self._guard:
