@@ -91,43 +91,12 @@ aliases:
       - '--limit-mm-per-prompt={"image":4,"video":0}'
       - '--mm-processor-kwargs={"max_pixels":2408448}'
 
-  # OCR candidate: a 0.9B OCR specialist (Apache-2.0). Not used by the workflow; it is
-  # measured against the current reader with `python -m editor.measure_ocr` on the pages
-  # where OCR has hurt most. General VLMs "correct" what they read (measured on our pages:
-  # "oynayabiliyoruz" -> "oynayabiliriz"); OCR specialists are reported to do that far less.
-  book-ocr-paddle:
-    container: editor-model-ocr-paddle
-    model_dir: PaddleOCR-VL-1.6
-    real_model: PaddlePaddle/PaddleOCR-VL-1.6
-    role: Aday — OCR uzmanı (kıyaslama)
-    kind: chat
-    gpu: 1
-    mem_fraction: 0.10
-    args:
-      - --trust-remote-code
-      - --max-model-len=16384
-      - --max-num-seqs=32
-      - --no-enable-prefix-caching
-      - '--limit-mm-per-prompt={"image":1,"video":0}'
-
-  # OCR candidates found on Hugging Face (2026-09-22): the most used OCR models that list
-  # Turkish or are multilingual and allow commercial use (Chandra: OpenRAIL, paid above $2M
-  # revenue — measured only). Each runs alone for `editor.measure_ocr`; none is used by the
-  # workflow until it wins on our hardest pages. Losers are removed with their weights.
-  book-ocr-unlimited:
-    container: editor-model-ocr-unlimited
-    model_dir: Unlimited-OCR
-    real_model: baidu/Unlimited-OCR
-    role: Aday — OCR (kıyaslama)
-    kind: chat
-    gpu: 1
-    mem_fraction: 0.30
-    args:
-      - --max-model-len=32768
-      - --max-num-seqs=1       # batching >1 crashes the engine in vLLM 0.29 (tensor size 4 vs 3)
-      - '--limit-mm-per-prompt={"image":1,"video":0}'
-      - --trust-remote-code
-
+  # OCR. Chosen 2026-09-22 by `editor.measure_ocr` on the 39 pages where OCR had hurt most
+  # (six books; truth = words two independent parsers of the digital layer agree on):
+  #   dots.mocr 2.3% word error / 0.5% "corrected" / 0 loops  <- the reader (MIT)
+  #   DeepSeek-OCR-2 3.1% (runner-up, kept), Tesseract 3.4% (CPU), Qwen3-VL-8B 4.1% / 8 loops,
+  #   Qianfan 4.3%, Unlimited-OCR 7.1% (crashes when batched), PaddleOCR-VL 8.3% (drops ı ğ ş ç),
+  #   HunyuanOCR does not start in vLLM 0.29, Chandra 2 3.0% but paid above $2M revenue.
   book-ocr-dots:
     container: editor-model-ocr-dots
     model_dir: dots.mocr
@@ -159,48 +128,6 @@ aliases:
       - --no-enable-prefix-caching
       - --mm-processor-cache-gb=0
       - --logits-processors=vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor
-
-  book-ocr-hunyuan:
-    container: editor-model-ocr-hunyuan
-    model_dir: HunyuanOCR
-    real_model: tencent/HunyuanOCR
-    role: Aday — OCR (kıyaslama)
-    kind: chat
-    gpu: 1
-    mem_fraction: 0.30
-    args:
-      - --max-model-len=32768
-      - --max-num-seqs=16
-      - '--limit-mm-per-prompt={"image":1,"video":0}'
-      - --no-enable-prefix-caching
-      - --mm-processor-cache-gb=0
-
-  book-ocr-qianfan:
-    container: editor-model-ocr-qianfan
-    model_dir: Qianfan-OCR
-    real_model: baidu/Qianfan-OCR
-    role: Aday — OCR (kıyaslama)
-    kind: chat
-    gpu: 1
-    mem_fraction: 0.30
-    args:
-      - --max-model-len=32768
-      - --max-num-seqs=16
-      - '--limit-mm-per-prompt={"image":1,"video":0}'
-      - --trust-remote-code
-
-  book-ocr-chandra:
-    container: editor-model-ocr-chandra
-    model_dir: chandra-ocr-2
-    real_model: datalab-to/chandra-ocr-2
-    role: Aday — OCR (kıyaslama)
-    kind: chat
-    gpu: 1
-    mem_fraction: 0.30
-    args:
-      - --max-model-len=32768
-      - --max-num-seqs=16
-      - '--limit-mm-per-prompt={"image":1,"video":0}'
 
   book-vision-deep:
     container: editor-model-vision-deep
