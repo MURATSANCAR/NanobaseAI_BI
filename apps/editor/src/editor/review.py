@@ -95,6 +95,14 @@ def decide_many(book_id: str, item_ids: list[str], decision: str, editor: str,
     questions are one judgement, not thirteen. Every item is still decided on its own row
     with its own reason, so nothing is closed in bulk without a trace; an item that cannot
     be decided (already closed, not this book's) is reported, not silently skipped."""
+    # A bad decision or a nameless caller is one error about the request, not N errors
+    # about the items: it is refused before anything is written.
+    if decision not in DECISIONS:
+        raise ValueError(f"unknown decision: {decision}")
+    if not (editor or "").strip():
+        raise ValueError("the deciding editor must be named")
+    if decision == "correct" and not data:
+        raise ValueError("a correction is required for 'correct'")
     gen = _newest_generation(book_id)
     mine = {str(r["id"]) for r in db.all_rows(
         "SELECT id FROM review_item WHERE generation_id=%s AND status='OPEN'", gen["id"])}
@@ -111,31 +119,51 @@ def decide_many(book_id: str, item_ids: list[str], decision: str, editor: str,
             "failed": failed, "items": done}
 
 
-def page_image(book_id: str, page_no: int) -> Path:
-    """The page as the analysis saw it."""
+# Where a re-cut crop goes when the storage is mounted read-only. The card service reads
+# the analysis's files; it does not write into them, so a crop it has to produce itself is
+# scratch, not a record — the gallery under `storage` stays the analysis's own.
+SCRATCH = Path("/tmp/editor-review-crops")
+
+
+def _rendered_page(gen: dict, page_no: int) -> Path:
     from .document import render_page
-    gen = _newest_generation(book_id)
-    row = db.one("SELECT page_no FROM page WHERE book_version_id=%s AND page_no=%s",
+    row = db.one("SELECT render_path FROM page WHERE book_version_id=%s AND page_no=%s",
                  gen["book_version_id"], page_no)
     if row is None:
         raise KeyError(f"page {page_no} not found")
-    return Path(render_page(gen["book_version_id"], page_no)["path"])
+    existing = Path(row["render_path"]) if row["render_path"] else None
+    if existing and existing.exists():
+        return existing
+    try:
+        return Path(render_page(gen["book_version_id"], page_no)["path"])
+    except OSError as e:      # read-only storage and the render was never made
+        raise KeyError(f"page {page_no} has no render: {e}") from None
+
+
+def page_image(book_id: str, page_no: int) -> Path:
+    """The page as the analysis saw it."""
+    return _rendered_page(_newest_generation(book_id), page_no)
 
 
 def figure_image(book_id: str, region_id: str) -> Path:
-    """One figure, cut out of its page render. The crop is a cache: it is re-cut when the
-    gallery of an older generation has been pruned away (see `gallery.py`)."""
-    from .document import render_page
+    """One figure, cut out of its page render. The crop is a cache: the analysis writes it
+    into the book's gallery, and it is re-cut here when that generation's gallery has been
+    pruned away (see `gallery.py`) — into scratch, so a read-only storage mount still works."""
     from .vision import _crop
     gen = _newest_generation(book_id)
     row = db.one("SELECT page_no, bbox FROM visual_region WHERE id=%s AND generation_id=%s",
                  region_id, gen["id"])
     if row is None or not row["bbox"]:
         raise KeyError(f"figure {region_id} not found")
-    page = render_page(gen["book_version_id"], row["page_no"])["path"]
-    out = Path(page).parent / "gallery" / gen["id"] / f"fig-{region_id}.png"
+    page = _rendered_page(gen, row["page_no"])
+    kept = page.parent / "gallery" / gen["id"] / f"fig-{region_id}.png"
+    if kept.exists():
+        return kept
+    out = SCRATCH / gen["id"] / f"fig-{region_id}.png"
+    if out.exists():
+        return out
     out.parent.mkdir(parents=True, exist_ok=True)
-    return _crop(page, row["bbox"], out)
+    return _crop(str(page), row["bbox"], out)
 
 
 def page_context(book_id: str, page_no: int) -> dict[str, Any]:
