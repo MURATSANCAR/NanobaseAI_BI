@@ -193,3 +193,12 @@ pre.mg-sql-code { padding: 12px 14px; white-space: pre }
   .mg-sheet[data-starting-style], .mg-sheet[data-ending-style] { transform: none; opacity: 0 }
   .mg-button, .mg-level, .mg-card, .mg-card-arrow { transition: none }
 }
+
+/* Canlılık satırı: renk durumu anlatır; sayaç sabit genişlikli rakamla titremez. */
+.mg-live { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; align-self: flex-start; max-width: 100%; min-height: 34px; padding: 6px 12px; border-radius: 999px; background: #eefaf6; color: #0b6b5f; font-size: 12px; font-weight: 650 }
+.mg-live.is-busy { background: #f1edfb; color: #5b45a8 }
+.mg-live.is-warn { background: #fff5e7; color: #8a5a2b }
+.mg-live-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; box-shadow: 0 0 0 3px color-mix(in srgb, currentColor 18%, transparent) }
+.mg-live-side { font-variant-numeric: tabular-nums; opacity: .8 }
+.mg-live-every { padding-left: 10px; border-left: 1px solid color-mix(in srgb, currentColor 25%, transparent); font-weight: 600; opacity: .7 }
+@media (max-width: 767px) { .mg-live { border-radius: 14px } .mg-live-every { display: none } }

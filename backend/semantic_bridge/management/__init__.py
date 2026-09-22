@@ -28,7 +28,8 @@ log = logging.getLogger(__name__)
 REPORTS = {m.REPORT_ID: m for m in (baski_oneri,)}
 SQL_DIR = Path(__file__).with_name("sql")
 MAX_ROWS = 500_000
-REFRESH_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_REFRESH_SECONDS", "3600"))
+# Ekrandaki rapor beş dakikada bir kaynaktan yeniden okunur (kullanıcı kararı 2026-09-22).
+REFRESH_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_REFRESH_SECONDS", "300"))
 QUERY_TIMEOUT = int(os.environ.get("MANAGEMENT_REPORT_QUERY_TIMEOUT_SEC", "900"))
 CONNECTION_LABELS = {"logo": "Logo", "crm": "CRM"}
 
@@ -73,6 +74,7 @@ class Reports:
         self._connectors: dict[str, Any] = {}
         self._threads: dict[str, threading.Thread] = {}
         self._guard = threading.Lock()
+        self._started: dict[str, float] = {}
         self.stopping = threading.Event()
         self.scheduler = None
 
@@ -125,10 +127,18 @@ class Reports:
     def path(self, report_id: str) -> Path:
         return _cache_dir() / f"{report_id}.json"
 
-    def read(self, report_id: str) -> dict:
+    def read(self, report_id: str, *, with_data: bool = True) -> dict:
         snap = _load(self.path(report_id))
         running = self._threads.get(report_id)
-        return {**snap, "refreshing": bool(running and running.is_alive())}
+        refreshing = bool(running and running.is_alive())
+        last = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
+        meta = {k: v for k, v in snap.items() if k != "data"}
+        out = {**meta, "refreshing": refreshing, "hasData": "data" in snap,
+               "refreshStartedAt": self._started.get(report_id) if refreshing else None,
+               "nextRefreshAt": (last + REFRESH_SECONDS) if last else None}
+        if with_data and "data" in snap:
+            out["data"] = snap["data"]
+        return out
 
     def refresh(self, report_id: str) -> None:
         report = REPORTS[report_id]
@@ -156,6 +166,7 @@ class Reports:
                 return False
             t = threading.Thread(target=self.refresh, args=(report_id,), daemon=True, name=f"management-{report_id}")
             self._threads[report_id] = t
+            self._started[report_id] = time.time()
             t.start()
             return True
 
@@ -164,10 +175,11 @@ class Reports:
             while not self.stopping.is_set():
                 for rid in REPORTS:
                     snap = _load(self.path(rid))
-                    if time.time() - snap.get("updatedAt", 0) >= REFRESH_SECONDS and \
-                            time.time() - snap.get("failedAt", 0) >= 300:
+                    # Başarılı ya da başarısız, son denemeden bu yana aralık dolduysa yeniden oku.
+                    last = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
+                    if time.time() - last >= REFRESH_SECONDS:
                         self.start_refresh(rid)
-                self.stopping.wait(60)
+                self.stopping.wait(10)
         self.scheduler = threading.Thread(target=schedule, daemon=True, name="management-reports")
         self.scheduler.start()
 
@@ -200,19 +212,23 @@ def register(app, runtime, authorize, session_user):
             snap = _load(reports.path(rid))
             out.append({"id": rid, "title": m.TITLE, "description": m.DESCRIPTION,
                         "updatedAt": snap.get("updatedAt"), "sources": len(m.SOURCES),
+                        "refreshIntervalSeconds": REFRESH_SECONDS,
                         "views": [{"id": v["id"], "title": v["title"], "rows": len(v["rows"])}
                                   for v in (snap.get("data") or {}).get("views", [])]})
         return {"reports": out}
 
     @app.get("/api/v1/management/reports/{report_id}")
-    def management_report(report_id: str, request: Request) -> dict[str, Any]:
+    def management_report(report_id: str, request: Request, since: float | None = None) -> dict[str, Any]:
+        """`since` ekrandaki verinin zamanıdır: değişmediyse yalnız durum döner, binlerce satır tekrar gitmez."""
         gate(request)
         report_of(report_id)
-        snap = reports.read(report_id)
-        if "data" not in snap and not snap.get("refreshing") and not snap.get("error"):
+        snap = reports.read(report_id, with_data=False)
+        if not snap["hasData"] and not snap.get("refreshing") and not snap.get("error"):
             reports.start_refresh(report_id)
-            snap = reports.read(report_id)
-        return {"id": report_id, "refreshIntervalSeconds": REFRESH_SECONDS, **snap}
+        unchanged = since is not None and snap.get("updatedAt") is not None and abs(float(since) - snap["updatedAt"]) < 1e-3
+        snap = reports.read(report_id, with_data=not unchanged)
+        return {"id": report_id, "refreshIntervalSeconds": REFRESH_SECONDS, "serverTime": time.time(),
+                "unchanged": unchanged, **snap}
 
     @app.get("/api/v1/management/reports/{report_id}/sources")
     def management_report_sources(report_id: str, request: Request) -> dict[str, Any]:
@@ -238,6 +254,7 @@ def register(app, runtime, authorize, session_user):
                             {"started": started})
         except Exception:  # noqa: BLE001 — kayıt düşmesi yenilemeyi durdurmaz
             log.exception("management report audit failed")
-        return {"started": started, **reports.read(report_id)}
+        return {"id": report_id, "refreshIntervalSeconds": REFRESH_SECONDS, "serverTime": time.time(),
+                "started": started, **reports.read(report_id, with_data=False)}
 
     return reports

@@ -26,6 +26,14 @@ export type ReportSnapshot = {
   id: string;
   refreshing: boolean;
   refreshIntervalSeconds: number;
+  /** Sunucu saati (epoch sn): geri sayım istemci saatinden bağımsız olsun diye */
+  serverTime: number;
+  /** `since` ile sorulduysa ve veri değişmediyse true; `data` gelmez */
+  unchanged?: boolean;
+  hasData?: boolean;
+  refreshStartedAt?: number | null;
+  nextRefreshAt?: number | null;
+  failedAt?: number;
   updatedAt?: number;
   durationMs?: number;
   error?: string | null;
@@ -57,6 +65,7 @@ export type ReportSummary = {
   id: string;
   title: string;
   description: string;
+  refreshIntervalSeconds: number;
   updatedAt?: number;
   sources: number;
   views: Array<{ id: string; title: string; rows: number }>;
@@ -80,10 +89,19 @@ async function call<T>(path: string, method: 'GET' | 'POST' = 'GET'): Promise<T>
 
 export const managementApi = {
   list: () => call<{ reports: ReportSummary[] }>('reports'),
-  report: (id: string) => call<ReportSnapshot>(`reports/${id}`),
+  report: (id: string, since?: number) => call<ReportSnapshot>(`reports/${id}${since ? `?since=${since}` : ''}`),
   sources: (id: string) => call<ReportSources>(`reports/${id}/sources`),
   refresh: (id: string) => call<ReportSnapshot & { started: boolean }>(`reports/${id}/refresh`, 'POST'),
 };
+
+/** Ekrandaki veriyi koruyarak durumu tazeler: değişmeyen veri yeniden indirilmez. */
+export function mergeSnapshot(prev: ReportSnapshot | undefined, next: ReportSnapshot): ReportSnapshot {
+  if (next.data || !prev?.data) return next;
+  return { ...next, data: prev.data };
+}
+
+export const clockOffset = (snap?: ReportSnapshot, receivedAt?: number) =>
+  snap?.serverTime && receivedAt ? snap.serverTime - receivedAt / 1000 : 0;
 
 export const ONERI_TONE: Record<string, string> = {
   'Risk/Acil': 'mg-tone-risk',

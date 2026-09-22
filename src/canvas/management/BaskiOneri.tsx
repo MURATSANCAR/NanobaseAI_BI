@@ -5,7 +5,8 @@ import { ArrowDown, ArrowDownToLine, ArrowUp, Code2, Info, Loader2, RefreshCw, S
 import Shell from '../stitch/Shell';
 import { managementRail } from '../stitch/screens';
 import { ENGINE_ENABLED } from '../engine';
-import { formatCell, managementApi, ONERI_TONE, sinceText, type ReportColumn, type ReportView } from './api';
+import { clockOffset, formatCell, managementApi, mergeSnapshot, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
+import LiveStatus from './LiveStatus';
 import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
 import './management.css';
 
@@ -41,19 +42,26 @@ function csvOf(view: ReportView, rows: Row[]) {
 
 export default function BaskiOneri() {
   const queryClient = useQueryClient();
+  const key = ['management-report', REPORT_ID];
+  // Sunucu Logo ve CRM'i beş dakikada bir okur. Ekran yalnız durumu sorar (`since`); veri değiştiyse
+  // yenisi gelir, değişmediyse ekrandaki veri olduğu gibi kalır.
   const report = useQuery({
-    queryKey: ['management-report', REPORT_ID],
-    queryFn: () => managementApi.report(REPORT_ID),
+    queryKey: key,
+    queryFn: async () => {
+      const prev = queryClient.getQueryData<ReportSnapshot>(key);
+      return mergeSnapshot(prev, await managementApi.report(REPORT_ID, prev?.data ? prev.updatedAt : undefined));
+    },
     enabled: ENGINE_ENABLED,
     retry: false,
-    refetchOnWindowFocus: false,
-    // Hazırlanırken sık, hazırken seyrek sor.
-    refetchInterval: (q) => (q.state.data?.refreshing || (!q.state.data?.data && !q.state.data?.error) ? 4000 : 5 * 60_000),
+    refetchOnWindowFocus: true,
+    refetchIntervalInBackground: false,
+    refetchInterval: (q) => (q.state.data?.refreshing || !q.state.data?.data ? 3000 : 15_000),
   });
   const refresh = useMutation({
     mutationFn: () => managementApi.refresh(REPORT_ID),
-    onSuccess: (snap) => queryClient.setQueryData(['management-report', REPORT_ID], snap),
+    onSuccess: (snap) => queryClient.setQueryData<ReportSnapshot>(key, (prev) => mergeSnapshot(prev, snap)),
   });
+  const offset = clockOffset(report.data, report.dataUpdatedAt);
 
   const snap = report.data;
   const views = snap?.data?.views ?? [];
@@ -143,7 +151,7 @@ export default function BaskiOneri() {
     section: 'Yönetim Raporları',
     crumb: 'Yeni Baskı Öneri',
     source: 'Logo + CRM',
-    presence: snap?.updatedAt ? `Veri: ${sinceText(snap.updatedAt)}` : 'Hazırlanıyor',
+    presence: snap?.updatedAt ? `Veri: ${new Date(snap.updatedAt * 1000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : 'Hazırlanıyor',
   };
 
   return (
@@ -172,7 +180,10 @@ export default function BaskiOneri() {
             </div>
           </header>
 
-          {snap?.error && <p className="mg-banner" role="status">{snap.error}{snap.data ? ' Aşağıdaki son başarılı sonuçtur.' : ''}</p>}
+          {snap && <LiveStatus snap={snap} offset={offset} />}
+          {snap?.error && (snap.failedAt ?? 0) >= (snap.updatedAt ?? 0) && (
+            <p className="mg-banner" role="status">{snap.error}{snap.data ? ' Ekrandaki veri son başarılı okumadır.' : ''}</p>
+          )}
           {refresh.error && <p className="mg-banner" role="status">{(refresh.error as Error).message}</p>}
 
           {!view ? (
@@ -192,7 +203,7 @@ export default function BaskiOneri() {
                 <>
                   <Loader2 className="animate-spin" size={22} />
                   <h2>Rapor hazırlanıyor</h2>
-                  <p>Logo ve CRM’den dokuz sorgu okunuyor. İlk hazırlık birkaç dakika sürebilir; sonrası saatlik yenilenir.</p>
+                  <p>Logo ve CRM’den dokuz sorgu okunuyor. İlk okuma birkaç dakika sürebilir; sonra veriler beş dakikada bir kendiliğinden yenilenir.</p>
                 </>
               )}
             </section>

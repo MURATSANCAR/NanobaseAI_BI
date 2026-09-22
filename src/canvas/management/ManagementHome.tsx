@@ -29,7 +29,7 @@ export default function ManagementHome() {
               <h1>
                 Karar raporları<span>.</span>
               </h1>
-              <p>Sabit tanımlı, kaynağı ve SQL’i açık raporlar. Her rapor saatlik yenilenir; istenince elle de yenilenebilir.</p>
+              <p>Sabit tanımlı, kaynağı ve SQL’i açık raporlar. Veriler Logo ve CRM’den beş dakikada bir kendiliğinden okunur; istenince elle de yenilenebilir.</p>
             </div>
           </header>
 
@@ -70,7 +70,7 @@ export default function ManagementHome() {
                     <span>
                       <Database size={12} aria-hidden /> {r.sources} sorgu
                     </span>
-                    <span>Güncelleme: {sinceText(r.updatedAt)}</span>
+                    <span>Güncelleme: {sinceText(r.updatedAt)} · {Math.round(r.refreshIntervalSeconds / 60)} dk’da bir</span>
                   </div>
                 </Link>
               );

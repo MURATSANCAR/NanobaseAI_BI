@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-22 — Yönetim Raporları: 5 dakikada bir canlı okuma ve ekranda durum
+
+- Kullanıcı isteği: veriler Logo ve CRM'den sürekli okunsun, ekranda dursun, 5 dakikada bir kendiliğinden yenilensin ve bu ekranda görünsün. `MANAGEMENT_REPORT_REFRESH_SECONDS` varsayılanı 3600 → **300**; zamanlayıcı son denemeden (başarılı ya da değil) 300 sn geçince yeniden okur, 10 sn'de bir bakar.
+- Ekran 15 sn'de bir yalnız durumu sorar (`?since=<updatedAt>`): veri değişmediyse satırlar yeniden inmez, ekrandaki veri olduğu gibi kalır; değiştiyse yenisi gelir. Okuma başarısızsa son başarılı veri ekranda kalır.
+- `LiveStatus`: "Canlı · 13:25:10 verisi · sonraki okuma 3:12 · 5 dk'da bir otomatik"; okurken "Logo ve CRM'den okunuyor 0:42"; başarısızsa "Son okuma başarısız · … verisi gösteriliyor · tekrar 4:10". Süreler sunucu saatine göre; saniyelik sayaç ekran okuyucuya duyurulmaz.
+- Test sunucusunda (`index-DcpMwJV0.js`, köprü yeniden başlatıldı) gerçek oturumla: aralık 300, okuma sürerken `refreshing` + başlangıç zamanı, `nextRefreshAt` dönüyor. Logo .155:1433 hâlâ kapalı olduğundan dolu veriyle ekran görünümü DOĞRULANAMADI.
+
 ## 2026-09-22 — CRM ekranları denetimi: kitap sayfası proje/kurul bağı, konu metni, sınırsız arama
 
 - **Denetim (gerçek timasai oturumu, API ↔ CRM .28'e bağımsız sorgu):** Sözleşmeler (14.841 / 9.019 yürürlükte / 310 yenilemede), Yayın Kurulu (2020–2026 yıl yıl, 499), Katkıcılar (13 rol, 2.232 yazar), Editörler (2024'ten 2.714 proje, 917 editörsüz), Projeler (5.966), arama, kişi rehberi (130) birebir tuttu.
