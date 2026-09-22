@@ -43,13 +43,56 @@ function withPages(text: string): ReactNode[] {
   );
 }
 
-/** Preserve the answer wording and source references while separating its paragraphs. */
+/** Satır içi vurgu: **kalın** modele başlık/isim ayırt ettirir; kalan metin ve sayfa rozetleri korunur. */
+function inline(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*\n]+\*\*)/g).map((part, i) =>
+    /^\*\*[^*\n]+\*\*$/.test(part) ? (
+      <strong key={i} className="font-semibold text-canvas-ink">{withPages(part.slice(2, -2))}</strong>
+    ) : (
+      <Fragment key={i}>{withPages(part)}</Fragment>
+    ),
+  );
+}
+
+const BULLET = /^\s*(?:[-*•]|•)\s+/;
+const NUMBERED = /^\s*\d+[.)]\s+/;
+
+/** Cevabı bloklara ayırır: madde listesi, numaralı liste ve paragraf. Modelin sözü ve sayfa
+ *  atıfları korunur; yalnız görünüm yapılandırılır (düz metin duvarı yerine okunur ritim). */
 function AnswerText({ text }: { text: string }) {
+  const blocks = text.split(/\r?\n[\t ]*\r?\n/).map((b) => b.trim()).filter(Boolean);
   return (
-    <div className="zk-answer">
-      {text.split(/\r?\n[\t ]*\r?\n/).filter((paragraph) => paragraph.trim()).map((paragraph, i) => (
-        <p key={i}>{withPages(paragraph)}</p>
-      ))}
+    <div className="zk-answer space-y-3">
+      {blocks.map((block, bi) => {
+        const lines = block.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+        const bulleted = lines.length > 0 && lines.every((l) => BULLET.test(l));
+        const numbered = lines.length > 0 && lines.every((l) => NUMBERED.test(l));
+        if (bulleted) {
+          return (
+            <ul key={bi} className="space-y-1.5">
+              {lines.map((l, i) => (
+                <li key={i} className="flex gap-2.5">
+                  <span aria-hidden className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-canvas-violet/60" />
+                  <span className="min-w-0">{inline(l.replace(BULLET, ''))}</span>
+                </li>
+              ))}
+            </ul>
+          );
+        }
+        if (numbered) {
+          return (
+            <ol key={bi} className="space-y-1.5">
+              {lines.map((l, i) => (
+                <li key={i} className="flex gap-2.5">
+                  <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-canvas-violet/10 text-[11px] font-bold text-canvas-violet">{i + 1}</span>
+                  <span className="min-w-0">{inline(l.replace(NUMBERED, ''))}</span>
+                </li>
+              ))}
+            </ol>
+          );
+        }
+        return <p key={bi}>{inline(block)}</p>;
+      })}
     </div>
   );
 }
