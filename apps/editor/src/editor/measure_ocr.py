@@ -16,6 +16,7 @@ import argparse
 import asyncio
 import difflib
 import json
+import re
 import time
 from pathlib import Path
 
@@ -87,6 +88,9 @@ async def read(alias: str, page: dict, sem: asyncio.Semaphore, native: str | Non
                 text, _ = await Llm(None).chat(
                     alias, [{"role": "user", "content": [image_part(png), {"type": "text", "text": native}]}],
                     pages=[page["page"]], max_tokens=4096, temperature=0.0)
+                # markup (HTML/markdown/layout JSON) is not text of the page
+                text = re.sub(r"<[^>]+>", " ", text)
+                text = re.sub(r'"(bbox|category)"\s*:\s*("[^"]*"|\[[^\]]*\])', " ", text)
                 return {"ok": True, "text": text, "sec": time.time() - t0}
             out, _ = await Llm(None).chat(
                 alias, [{"role": "user", "content": [image_part(png), {"type": "text", "text": body}]}],
@@ -105,7 +109,9 @@ async def main(aliases: list[str], per_book: int, out: Path | None) -> None:
     print(f"zor küme: {len(pages)} sayfa ({per_book}/kitap), döngülü {sum(p['stored_looped'] for p in pages)}")
     results = {"stored": [{"ok": True, "text": p["stored_ocr"], "sec": 0.0} for p in pages]}
     for spec in aliases:
-        alias, _, native = spec.partition("=")          # alias | alias=NATIVE PROMPT | alias:nothink
+        alias, _, native = spec.partition("=")          # alias | alias=NATIVE PROMPT | alias=@file | alias:nothink
+        if native.startswith("@"):
+            native = Path(native[1:]).read_text().strip()
         alias, _, mode = alias.partition(":")
         thinking = False if mode == "nothink" else None
         sem = asyncio.Semaphore(4)

@@ -107,6 +107,98 @@ aliases:
       - --no-enable-prefix-caching
       - '--limit-mm-per-prompt={"image":1,"video":0}'
 
+  # OCR candidates found on Hugging Face (2026-09-22): the most used OCR models that list
+  # Turkish or are multilingual and allow commercial use (Chandra: OpenRAIL, paid above $2M
+  # revenue — measured only). Each runs alone for `editor.measure_ocr`; none is used by the
+  # workflow until it wins on our hardest pages. Losers are removed with their weights.
+  book-ocr-unlimited:
+    container: editor-model-ocr-unlimited
+    model_dir: Unlimited-OCR
+    real_model: baidu/Unlimited-OCR
+    role: Aday — OCR (kıyaslama)
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.30
+    args:
+      - --max-model-len=32768
+      - --max-num-seqs=16
+      - '--limit-mm-per-prompt={"image":1,"video":0}'
+      - --trust-remote-code
+
+  book-ocr-dots:
+    container: editor-model-ocr-dots
+    model_dir: dots.mocr
+    real_model: dots-studio/dots.mocr
+    role: Aday — OCR (kıyaslama)
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.30
+    args:
+      - --max-model-len=32768
+      - --max-num-seqs=16
+      - '--limit-mm-per-prompt={"image":1,"video":0}'
+      - --trust-remote-code
+      - --chat-template-content-format=string
+
+  book-ocr-deepseek2:
+    container: editor-model-ocr-deepseek2
+    model_dir: DeepSeek-OCR-2
+    real_model: deepseek-ai/DeepSeek-OCR-2
+    role: Aday — OCR (kıyaslama)
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.30
+    args:
+      - --max-model-len=8192
+      - --max-num-seqs=16
+      - '--limit-mm-per-prompt={"image":1,"video":0}'
+      - --trust-remote-code
+      - --no-enable-prefix-caching
+      - --mm-processor-cache-gb=0
+      - --logits-processors=vllm.model_executor.models.deepseek_ocr:NGramPerReqLogitsProcessor
+
+  book-ocr-hunyuan:
+    container: editor-model-ocr-hunyuan
+    model_dir: HunyuanOCR
+    real_model: tencent/HunyuanOCR
+    role: Aday — OCR (kıyaslama)
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.30
+    args:
+      - --max-model-len=32768
+      - --max-num-seqs=16
+      - '--limit-mm-per-prompt={"image":1,"video":0}'
+      - --no-enable-prefix-caching
+      - --mm-processor-cache-gb=0
+
+  book-ocr-qianfan:
+    container: editor-model-ocr-qianfan
+    model_dir: Qianfan-OCR
+    real_model: baidu/Qianfan-OCR
+    role: Aday — OCR (kıyaslama)
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.30
+    args:
+      - --max-model-len=32768
+      - --max-num-seqs=16
+      - '--limit-mm-per-prompt={"image":1,"video":0}'
+      - --trust-remote-code
+
+  book-ocr-chandra:
+    container: editor-model-ocr-chandra
+    model_dir: chandra-ocr-2
+    real_model: datalab-to/chandra-ocr-2
+    role: Aday — OCR (kıyaslama)
+    kind: chat
+    gpu: 1
+    mem_fraction: 0.30
+    args:
+      - --max-model-len=32768
+      - --max-num-seqs=16
+      - '--limit-mm-per-prompt={"image":1,"video":0}'
+
   book-vision-deep:
     container: editor-model-vision-deep
     model_dir: Qwen3-VL-32B-Thinking
