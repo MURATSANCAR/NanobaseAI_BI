@@ -412,8 +412,6 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                     status="bitti", answer=selection['answer'], card_selection=selection, not_found=False,
                     elapsed_ms=int((done-started).total_seconds()*1000), finished_at=done))
             return
-        # Karakter sorusunun ağı yalnız soruya ve kitaba bağlı: GPU kuyruğuna girmeden hazırlanır, cevabı geciktirmez.
-        graph = editorial_cards.character_graph(q, book_title, chat)
         # Motor tek modelle çalışır; sıraya girilir. Bekleyen soru «bekliyor» kalır, koşan «çalışıyor».
         with _gate:
             with engine.begin() as conn:
@@ -430,7 +428,8 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
             with engine.begin() as conn:
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
                     status="bitti" if answer else "hata", answer=answer, error=err, not_found=not_found,
-                    graph=graph if answer and not not_found else None,
+                    graph=(editorial_cards.character_graph(q, book_title, answer, chat)
+                           if answer and not not_found else None),
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
 
     threading.Thread(target=run, name=f"editorial-ask-{qid[:8]}", daemon=True).start()

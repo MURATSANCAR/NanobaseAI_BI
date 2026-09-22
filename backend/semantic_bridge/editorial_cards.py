@@ -96,14 +96,16 @@ def resolve(selection):
         return [],'Kitap kartları şu anda alınamadı.'
 
 
-def book_id_for(question, book_title, cards=None):
-    """Seçili kitap ya da soruda adı geçen tek kitap; bulunamazsa None."""
+def book_ids_for(question, book_title, answer, cards=None):
+    """Grafı hangi kitaptan alacağımızın adayları, sırayla: seçili kitap; adı soruda ya da cevapta
+    geçen kitap; hiçbiri yoksa içeriği hazır bütün kitaplar (doğru kitabı karakterler belirler)."""
     cards=cards if cards is not None else catalogue()
     if book_title:
         exact=[c for c in cards if c['title'].casefold()==book_title.casefold()]
-        if len(exact)==1: return exact[0]['id']
-    named=[c for c in cards if c['title'].casefold() in question.casefold()]
-    return named[0]['id'] if len(named)==1 else None
+        if len(exact)==1: return [exact[0]['id']]
+    text=(question+' '+(answer or '')).casefold()
+    named=[c['id'] for c in cards if c['title'].casefold() in text]
+    return named or [c['id'] for c in cards if c['contentAvailable']]
 
 
 GRAPH_INTENT = ('Soru bir kitabın karakterleriyle ilgiliyse (kimler var, bir karakter kimlerle birlikte, '
@@ -112,33 +114,36 @@ GRAPH_INTENT = ('Soru bir kitabın karakterleriyle ilgiliyse (kimler var, bir ka
 
 
 def _mentions(text, node):
-    """Ad ya da takma ad metinde kelime başında geçiyor mu (Türkçe ekler serbest: «Aytek'in»)."""
+    """Ad ya da takma ad metinde kelime başında geçiyor mu (Türkçe ekler serbest: «Aytek'in»).
+    Harf duyarlı: takma adlar arasında «Ben», «Anne» gibi gündelik kelimeler olabiliyor; metinde
+    kişi adı büyük harfle yazılır, aynı kelimenin gündelik kullanımı yazılmaz."""
     for name in [node['name'], *node.get('aliases', [])]:
-        name=(name or '').strip().casefold()
+        name=(name or '').strip()
         if len(name)>=2 and re.search(r'(?<!\w)'+re.escape(name), text):
             return True
     return False
 
 
-def shape_graph(raw, question):
-    """Editörün ham ağından ekranın ağı: soruda adı geçen karakter varsa onun çevresi (kendisi + ortak
-    olayı olanlar), yoksa bütün kitap. Merkez = soruda geçen ya da en çok olaylı karakter; «yakın» = merkezle
-    ortak olayı en güçlü bağının en az yarısı kadar olanlar. İki karakterden azsa None."""
+def shape_graph(raw, question, answer=''):
+    """Editörün ham ağından ekranın ağı. **Yalnız konuşulan karakterler:** soruda ya da cevapta adı
+    geçenler çizilir, kitabın tamamı değil. Merkez = soruda adı geçen (yoksa cevapta en çok olaylı)
+    karakter; «yakın» = merkezle ortak olayı, merkezin en güçlü bağının en az yarısı kadar olanlar.
+    İkiden az karakter konuşulduysa çizilecek bir ilişki yoktur: None."""
     nodes={n['id']:n for n in raw.get('nodes',[])}
-    edges=[e for e in raw.get('edges',[]) if e['a'] in nodes and e['b'] in nodes]
     if len(nodes)<2: return None
-    text=question.casefold()
-    named=sorted((n for n in nodes.values() if _mentions(text,n)), key=lambda n:-n['count'])
-    lead=named[0] if named else max(nodes.values(), key=lambda n:n['count'])
+    q=question
+    a=answer or ''
+    named=sorted((n for n in nodes.values() if _mentions(q,n)), key=lambda n:-n['count'])
+    spoken=[n for n in nodes.values() if _mentions(q,n) or _mentions(a,n)]
+    if len(spoken)<2: return None
+    lead=(named or sorted(spoken, key=lambda n:-n['count']))[0]
+    keep={n['id'] for n in spoken}
+    nodes={k:v for k,v in nodes.items() if k in keep}
+    edges=[e for e in raw.get('edges',[]) if e['a'] in nodes and e['b'] in nodes]
     near={}
     for e in edges:
         if lead['id'] in (e['a'],e['b']):
             near[e['b'] if e['a']==lead['id'] else e['a']]=e['weight']
-    if named:
-        keep={lead['id'],*near}
-        nodes={k:v for k,v in nodes.items() if k in keep}
-        edges=[e for e in edges if e['a'] in keep and e['b'] in keep]
-    if len(nodes)<2: return None
     strongest=max(near.values(),default=0)
     label={}
     for n in sorted(nodes.values(), key=lambda n:-n['count']):
@@ -149,14 +154,19 @@ def shape_graph(raw, question):
             'edges':[{'a':label[e['a']],'b':label[e['b']],'weight':e['weight']} for e in edges]}
 
 
-def character_graph(question, book_title, chat):
-    """Karakter sorusuna eklenecek ağ ya da None. Görsel bir eklentidir: hiçbir hata cevabı etkilemez."""
+def character_graph(question, book_title, answer, chat):
+    """Karakter sorusuna eklenecek ağ ya da None. Kitap seçilmemişse doğru kitabı karakterler belirler:
+    aday kitapların ağları alınır, soruda/cevapta en çok karakteri geçen kitabın ağı kullanılır.
+    Görsel bir eklentidir: hiçbir hata cevabı etkilemez."""
     if not chat or not os.environ.get('EDITOR_CATALOG_BASE'): return None
     try:
         raw=chat([{'role':'system','content':GRAPH_INTENT},{'role':'user','content':question}],max_tokens=20)
         if not json.loads(raw.strip().removeprefix('```json').removesuffix('```').strip()).get('graph'): return None
-        book_id=book_id_for(question,book_title)
-        if not book_id: return None
-        return shape_graph(request('/v1/books/'+str(uuid.UUID(book_id))+'/graph').json(),question)
+        best=None
+        for book_id in book_ids_for(question,book_title,answer):
+            net=request('/v1/books/'+str(uuid.UUID(book_id))+'/graph').json()
+            g=shape_graph(net,question,answer)
+            if g and (best is None or len(g['nodes'])>len(best['nodes'])): best=g
+        return best
     except (ValueError,KeyError,TypeError,AttributeError,httpx.HTTPError):
         return None
