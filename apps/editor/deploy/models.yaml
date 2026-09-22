@@ -101,7 +101,7 @@ aliases:
     container: editor-model-ocr-dots
     model_dir: dots.mocr
     real_model: dots-studio/dots.mocr
-    role: Aday — OCR (kıyaslama)
+    role: Sayfa OCR okuyucusu (resimli ve dijital metni bozuk sayfalar)
     kind: chat
     gpu: 1
     mem_fraction: 0.30
@@ -116,7 +116,7 @@ aliases:
     container: editor-model-ocr-deepseek2
     model_dir: DeepSeek-OCR-2
     real_model: deepseek-ai/DeepSeek-OCR-2
-    role: Aday — OCR (kıyaslama)
+    role: Yedek OCR okuyucusu (kıyaslamada ikinci)
     kind: chat
     gpu: 1
     mem_fraction: 0.30
