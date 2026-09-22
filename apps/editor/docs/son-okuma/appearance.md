@@ -162,3 +162,10 @@ Sonuçlar bu dosyaya ve modül docstring'ine yazılır; o zamana kadar başlık 
 - `ESYA` sahne değişkeni: kalsın mı, yoksa yalnız INFO mu — ölçümde yanlış alarm oranına göre.
 - Kimliği `RESOLVED` olmayan (aday) figürler defterde yok; kimlik kapsamı düşük kitaplarda
   denetim az şey görür. Kapsam INFO satırında görünür.
+
+## İlk gerçek ölçüm — 2026-09-23, «Levent Dünya Harikalarının Peşinde» (nesil 60e5d717, `--dry`)
+
+- Defter: 9 karakter, **0 metin** ve 1 792 resim kaydı (155 çözülmüş figür, 39 figür kırpımı okunamadı, 359 görsel çağrı); 290 değer BELİRSİZ.
+- Tür dağılımı (230 figür × 8 tür): göz rengi 193/230 belirsiz (küçük kırpımda göz okunmuyor), alt giysi 77 belirsiz, saç 17; gözlük/şapka/üst giysi hiç belirsiz değil.
+- 207 aday çift iki sıralı yargıya girdi, **0 bulgu**. İnsan doğrulaması yok: bu «yanlış alarm yok» demektir, «kaçırılan yok» demez.
+- **Gözlem (genel):** metin okuyucu 9 parçada 0 özellik çıkardı — çocuk kitabında görünüş metinde nadiren yazılıyor ya da istem çok dar; ikinci kitapta ölçülmeden karar verilmez. Göz rengi türü bu çözünürlükte ölçülemiyor; ya kırpım büyütülmeli ya tür INFO'ya düşmeli.

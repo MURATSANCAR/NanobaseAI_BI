@@ -112,3 +112,9 @@ ssh tt-gpu 'docker exec -i editor-mcp python -m editor.proofing <generation_id> 
   o dosyaya dokunmayı gerektirir — bu görevde yapılmadı).
 - «günler sonra» gibi sayısız geçişler sahne sınırıdır; gün sayısı burada kullanılmaz.
 - Kapak/ön kapak figürleri defterde varsa sahne 0'a düşer; kapak sahnesi ölçümde ayrı sayılır.
+
+## İlk gerçek ölçüm — 2026-09-23, «Levent Dünya Harikalarının Peşinde» (nesil 60e5d717, `--dry`)
+
+- 242 gözlem (225 defter ESYA + 17 metin durum kaydı), 27 sahne; 81 aday yargılandı, **0 bulgu**.
+- Metin okuyucu 141/144 sayfayı daha önce (appearance koşusunda) okumuştu — defter paylaşımı çalışıyor, yeniden okuma yok.
+- İnsan doğrulaması yok; geri çağırma ölçülmedi (kitapta bilinen bir eşya süreksizliği yok).

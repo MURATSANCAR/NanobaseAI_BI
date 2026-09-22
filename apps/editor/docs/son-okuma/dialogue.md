@@ -115,3 +115,8 @@ ssh tt-gpu 'docker exec -i editor-mcp python -m editor.proofing <generation_id> 
 - Pencere 1 sayfa: resimli kitapta olay sayfa aralığı ±1 kayabilir; ölçümde 0/1/2 karşılaştırılır.
 - Rüya/hayal kipli olayların katılımcıları kümeye giriyor; ölçümde ayrı sayılır.
 - Konuşma tarzı (hitap dışı) — tanım kurulamadı, yazılmadı (§4).
+
+## İlk gerçek ölçüm — 2026-09-23, «Levent Dünya Harikalarının Peşinde» (nesil 60e5d717, `--dry`)
+
+- 344 replik okundu, 297'sinin konuşanı çözüldü; 135 sayfada katılımcı bilgisi. Atıf adayı 7, hitap adayı 4; iki farklı kapalı soru hiçbirini onaylamadı → **0 bulgu**.
+- Adayların çoğu sahneye yeni giren kişinin ilk repliği (ör. s.17 «Hoş geldiniz!» — Mine Abla) ve anlatıcının kendi repliği (s.23 «Öğretmenim nereye gidiyoruz» — Levent); yargı ikisini de «sahnede var/ona ait olabilir» diye eledi. Geri çağırma ölçülmedi.

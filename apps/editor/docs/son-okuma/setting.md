@@ -98,3 +98,11 @@ ssh tt-gpu 'docker exec -i editor-mcp python -m editor.proofing <generation_id> 
   gömme ile kümeleme) düşünülebilir; bu görevde yok, uydurulmadı.
 - «Sahne o an» şartı (§6.2) — önce ölçüm.
 - Tüm bulgular WARN; ERROR eşiği ölçümden sonra.
+
+## İlk gerçek ölçüm — 2026-09-23, «Levent Dünya Harikalarının Peşinde» (nesil 60e5d717, `--dry`)
+
+- 61 mekân bilgisi; 21 metin–metin adayı yargılandı → 0 bulgu; 21 bilgi resimle karşılaştırıldı → **3 WARN** (editör kararı bekliyor):
+  - s.45 «Uzun süre uçakla uçtuktan sonra hepimiz perişan olmuştuk.» → metin İÇERİDE sayılmış, resim dışarıda (0,87).
+  - s.102 «İçerisi epey karanlık geldi gözüme.» → metin GECE sayılmış, resim gündüz (0,76).
+  - s.123 «…giriş kapısından içeri girip Tac Mahal'i görünce…» → metin İÇERİDE sayılmış, resim dışarıda.
+- **Gözlem (genel, kitaba özel değil):** üçünde de kusur resimde değil, metin okuyucunun çıkarımında: (a) «uçmak» fiilinden İÇERİDE çıkarımı — hareket fiili mekân bilgisi değildir; (b) «içerisi karanlık» ışık bilgisi ISIK=GECE'ye eşlenmiş — karanlık ≠ gece; (c) «kapıdan içeri girip X'i görmek» avlu/açık alan olabilir. Okuyucu istemine «yalnız açıkça yazılan mekân/ışık durumu; çıkarım yapma» kuralı ve ISIK için KARANLIK/AYDINLIK ile GECE/GÜNDÜZ ayrımı önerilir; editör kararları isabet ölçüsüne düşünce karar verilecek.

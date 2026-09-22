@@ -102,3 +102,8 @@ ssh tt-gpu 'docker exec -i editor-mcp python -m editor.proofing <generation_id> 
   ihtiyaç görülürse kural eklenir.
 - Anı/rüya sayfaları `usable_event` üzerinden geliyor; olay çıkarımı koşmamış nesilde dışlama yok
   (INFO satırında 0 görünür).
+
+## İlk gerçek ölçüm — 2026-09-23, «Levent Dünya Harikalarının Peşinde» (nesil 60e5d717, `--dry`)
+
+- 60 zaman ifadesi: gün vakti 23, gün geçişi 2, mevsim 35, yaş/doğum 0; s.124 ve s.131 anı/rüya olduğu için sıraya girmedi.
+- 14 aday yargılandı, **0 bulgu**. Mevsim ifadelerinin çoğu gezi anlatımındaki iklim cümleleri — sıra çelişkisi değil; yargı doğru elemiş görünüyor (insan doğrulaması yok).
