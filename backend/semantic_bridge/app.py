@@ -3746,6 +3746,27 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         {"question": str(body.get("question") or "")[:300]})
         return out
 
+    @app.get("/api/v1/editorial/ask/export.pdf")
+    def editorial_ask_export(request: Request, ids: str = "", book: str = ""):
+        """Ekrandaki sohbetin PDF'i (sunucuda üretilir; fpdf2, budget_export ile aynı yol). `ids` ekranda gösterilen
+        soru kimlikleri, ekran sırasıyla; her kayıt `editorial_books.one` ile oturum sahibine göre okunur (başkasının
+        sorusu 403). `{qid}` ucundan önce tanımlı, yoksa «export.pdf» bir soru kimliği sanılır."""
+        from semantic_bridge import editorial_cards, editorial_export
+        engine, tenant, user, is_admin = _books(request)
+        wanted = list(dict.fromkeys(i.strip() for i in ids.split(",") if i.strip()))
+        if not wanted:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Aktarılacak soru yok."})
+        turns = [_books_call(books_mod.one, engine, tenant, user, is_admin, qid) for qid in wanted]
+        try:
+            data = editorial_export.build(turns, user=user, book_title=(book or None), cover=editorial_cards.cover)
+        except RuntimeError as e:
+            raise HTTPException(status_code=503, detail={"code": "PDF_UNAVAILABLE", "message": str(e)}) from e
+        name = editorial_export.file_name()
+        admin_mod.audit(engine, user, "export", "editorial_ask", ",".join(wanted)[:200], name,
+                        {"turns": len(turns), "format": "pdf"})
+        return Response(content=data, media_type="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"})
+
     @app.get("/api/v1/editorial/ask/books")
     def editorial_ask_books(request: Request, fresh: bool = False) -> dict[str, Any]:
         """Soru sorulabilen kitaplar. {qid} ucundan önce tanımlı, yoksa "books" bir soru kimliği sanılır."""
@@ -3753,6 +3774,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         part = app.state.editorial_home.read()["parts"].get("readableBooks", {})
         return part.get("data") or {"items": [], "at": None, "configured": books_mod.configured(),
                                     "loading": not bool(part.get("error")), "error": part.get("error")}
+
+    @app.get("/api/v1/editorial/proofing")
+    def editorial_proofing(request: Request, book: str = "") -> dict[str, Any]:
+        """M5 Son Okuma: motorun (ZEKİ AI) eser üstünde koşturduğu son okuma denetimleri ve bulguları.
+        Salt okuma; denetim başlatmaz. Motor ulaşılamazsa 502 (ekran hatayı gösterir, uydurma yok)."""
+        _books(request)
+        import httpx
+        from semantic_bridge import editorial_cards
+        try:
+            return editorial_cards.proofing_report(book)
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code
+            raise HTTPException(503 if code == 503 else 502, "Son okuma raporu motordan alınamadı.") from e
+        except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
+            raise HTTPException(502, "Son okuma raporu motordan alınamadı.") from e
 
     @app.get("/api/v1/editorial/ask/covers/{book_id}")
     def editorial_book_cover(book_id: str, request: Request):
@@ -3763,6 +3799,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return Response(content=data, media_type=mime, headers={"Cache-Control":"private, no-cache"})
         except Exception:
             raise HTTPException(404, "Kapak görseli bulunamadı.") from None
+
+    @app.get("/api/v1/editorial/ask/pages/{book_id}/{page_no}")
+    def editorial_book_page(book_id: str, page_no: int, request: Request):
+        """Sohbetteki sayfa rozetinin önizlemesi: kitabın son neslinde o sayfanın render'ı (kart servisinden,
+        oturumla). Tarayıcı bir saat önbellekler; ikinci hover anında açılır."""
+        _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            data, mime = editorial_cards.page(book_id, page_no)
+            return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
+        except Exception:
+            raise HTTPException(404, "Sayfa görseli bulunamadı.") from None
 
     @app.get("/api/v1/editorial/ask/{qid}")
     def editorial_ask_one(qid: str, request: Request) -> dict[str, Any]:

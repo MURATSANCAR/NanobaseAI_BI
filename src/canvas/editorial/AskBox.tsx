@@ -6,6 +6,7 @@ import { Note, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import BookCard from './BookCard';
 import CharacterGraph from './CharacterGraph';
+import PageRef from './PagePeek';
 
 /** ZEKİ AI'ya kitap sorusu: sohbet görünümü. Cevap kitabın kendi metninden gelir, sayfa numarasıyla;
  *  Soru sunucuda kayıtlı kalır; ekranda yalnız bu açılışta gönderilen sorular gösterilir.
@@ -31,13 +32,14 @@ const QUEUED = ['ZEKİ AI sıradaki soruyu bitiriyor', 'Birazdan sizin sorunuza 
 
 const SUGGEST = ['hangi karakterler var?', 'hikâye nasıl başlıyor?', 'ana temalar neler?', 'önemli olaylar hangi sayfalarda?'];
 
+/** Cevabın ait olduğu kitap: kimlik varsa sayfa rozetleri görsel önizleme açar, yoksa düz rozet kalır. */
+type Book = { bookId?: string | null; bookTitle?: string | null };
+
 /** Sayfa atıflarını («s. 14», «[s.2]») küçük rozetlere çevirir. */
-function withPages(text: string): ReactNode[] {
+function withPages(text: string, book: Book): ReactNode[] {
   return text.split(/(\[?s\.\s?\d+(?:\s?[-–]\s?\d+)?\]?)/g).map((part, i) =>
     /^\[?s\.\s?\d/.test(part) ? (
-      <span key={i} className="zk-page-ref">
-        {part.replace(/[[\]]/g, '')}
-      </span>
+      <PageRef key={i} label={part.replace(/[[\]]/g, '')} bookId={book.bookId} bookTitle={book.bookTitle} />
     ) : (
       <Fragment key={i}>{part}</Fragment>
     ),
@@ -45,12 +47,12 @@ function withPages(text: string): ReactNode[] {
 }
 
 /** Satır içi vurgu: **kalın** modele başlık/isim ayırt ettirir; kalan metin ve sayfa rozetleri korunur. */
-function inline(text: string): ReactNode[] {
+function inline(text: string, book: Book): ReactNode[] {
   return text.split(/(\*\*[^*\n]+\*\*)/g).map((part, i) =>
     /^\*\*[^*\n]+\*\*$/.test(part) ? (
-      <strong key={i} className="font-semibold text-canvas-ink">{withPages(part.slice(2, -2))}</strong>
+      <strong key={i} className="font-semibold text-canvas-ink">{withPages(part.slice(2, -2), book)}</strong>
     ) : (
-      <Fragment key={i}>{withPages(part)}</Fragment>
+      <Fragment key={i}>{withPages(part, book)}</Fragment>
     ),
   );
 }
@@ -60,7 +62,7 @@ const NUMBERED = /^\s*\d+[.)]\s+/;
 
 /** Cevabı bloklara ayırır: madde listesi, numaralı liste ve paragraf. Modelin sözü ve sayfa
  *  atıfları korunur; yalnız görünüm yapılandırılır (düz metin duvarı yerine okunur ritim). */
-function AnswerText({ text }: { text: string }) {
+function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
   const blocks = text.split(/\r?\n[\t ]*\r?\n/).map((b) => b.trim()).filter(Boolean);
   return (
     <div className="zk-answer space-y-3">
@@ -74,7 +76,7 @@ function AnswerText({ text }: { text: string }) {
               {lines.map((l, i) => (
                 <li key={i} className="flex gap-2.5">
                   <span aria-hidden className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-canvas-violet/60" />
-                  <span className="min-w-0">{inline(l.replace(BULLET, ''))}</span>
+                  <span className="min-w-0">{inline(l.replace(BULLET, ''), book)}</span>
                 </li>
               ))}
             </ul>
@@ -86,13 +88,13 @@ function AnswerText({ text }: { text: string }) {
               {lines.map((l, i) => (
                 <li key={i} className="flex gap-2.5">
                   <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-canvas-violet/10 text-[11px] font-bold text-canvas-violet">{i + 1}</span>
-                  <span className="min-w-0">{inline(l.replace(NUMBERED, ''))}</span>
+                  <span className="min-w-0">{inline(l.replace(NUMBERED, ''), book)}</span>
                 </li>
               ))}
             </ol>
           );
         }
-        return <p key={bi}>{inline(block)}</p>;
+        return <p key={bi}>{inline(block, book)}</p>;
       })}
     </div>
   );
@@ -184,7 +186,7 @@ function Turn({ q, onRetry, onPickBook }: { q: BookQuestion; onRetry: (text: str
             <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-amber-100 text-amber-700">
               <Search aria-hidden className="h-3.5 w-3.5" />
             </span>
-            <div className="min-w-0 text-amber-950"><AnswerText text={answer} /></div>
+            <div className="min-w-0 text-amber-950"><AnswerText text={answer} book={q} /></div>
           </div>
         </AiBubble>
       )}
@@ -195,7 +197,7 @@ function Turn({ q, onRetry, onPickBook }: { q: BookQuestion; onRetry: (text: str
               <CharacterGraph nodes={q.graph.nodes} edges={q.graph.edges} />
             </div>
           )}
-          <AnswerText text={answer} />
+          <AnswerText text={answer} book={q} />
           {q.cards?.map((card) => <BookCard key={card.id} card={card} onAsk={() => onPickBook(card.title)} />)}
           {q.cardError && <p role="status" className="mt-2 text-sm text-amber-800">{q.cardError}</p>}
         </AiBubble>
