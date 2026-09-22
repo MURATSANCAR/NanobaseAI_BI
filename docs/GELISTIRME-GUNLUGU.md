@@ -1,5 +1,16 @@
 # Geliştirme Günlüğü
 
+## 2026-09-22 — Sohbette karakter ağı: veri hattı tamam, canlıya alındı
+
+- **Ne yapıldı:** 20 Eylül'de yalnız çizim (frontend) hazırdı, veri yoktu; graf hiç görünmüyordu. Bu dilimde veri hattı yazıldı ve uçtan uca yayınlandı.
+- **Editör (GPU):** `graph.network` — kitabın tamamında düğüm = karakterin katıldığı gerçek olay sayısı, kenar = iki karakterin ortak olay sayısı; kaynak `triples` ile aynı (kabul edilmiş iddia + doğrulanmış alıntı, yalnız REALIZED/MEMORY). Kart servisine salt-okuma `GET /v1/books/{id}/graph`. Şema/veri değişikliği yok. `images/cards.Dockerfile` artık `graph.py`'yi de kopyalar.
+- **Köprü:** hızlı model soruyu karakter sorusu sayarsa cevap geldikten sonra graf kurulur, `semantic_editorial_questions.graph` (yeni JSON kolon) içine yazılır ve `/editorial/ask` cevaplarında döner. «Kitapta bulunamadı» cevabına graf eklenmez.
+- **Soruya bağlılık (kullanıcı kuralı):** graf kitabın tamamını değil, yalnız soruda ya da cevapta adı geçen karakterleri çizer; konuşulan karakter ikiden azsa graf yok. Merkez soruda adı geçen karakter, «yakın» = merkezin en güçlü bağının en az yarısı kadar ortak olayı olanlar.
+- **İki kusur canlı testte bulundu ve düzeltildi:** (1) ad eşleşmesi küçük harfe indiriliyordu, takma adlar arasındaki «Ben», «Anne» gibi gündelik kelimeler her soruda eşleşiyordu → harf duyarlı eşleşme; (2) portalda kitap seçilmeden sorulduğunda kitap adı ne soruda ne cevapta geçtiğinden graf hiç gelmiyordu → aday kitapların ağları alınıp en çok karakteri konuşulan kitap seçiliyor.
+- **Doğrulama (gerçek DB, canlı portal, timasai oturumu):** kart ucu 3 kitapta çalıştı (Levent 15 düğüm/52 kenar, Vombat 11/28, Dedem 12/19). Portalda kitap seçmeden sorulan «Levent kimlerle birlikte vakit geçiriyor?» sorusunda cevapta geçen 5 karakter (Levent, Mert, Osman, Kâmil, Hayri) grafa girdi — kitabın 15 karakterinin tamamı değil. Şekillendirme mantığı 4 sentetik + gerçek kitap verisiyle ayrıca ölçüldü.
+- **Kurulum:** GPU'da `editor-py:0.15.3-condense` yeniden derlendi, `editor-cards` ve `editor-mcp` yeniden yaratıldı — bu, 20 Eylül günlüğünde açık kalan «graf MCP aracının Hermes'e görünmesi için editor-mcp yeniden başlatılmalı» maddesini de kapattı. Test sunucusunda köprünün iki dosyası (md5 karşılaştırmasıyla), frontend'in üç dosyası; sunucuda derleme (`VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas`) ve `cockpit/dist`e kopya (yedek: `dist.bak-20260922-204418`).
+- **Not:** editörün uygulama katmanı (kanıt defteri Postgres, kart servisi, Hermes) hâlâ GPU makinesinde; köprü ona ters tünelle (`:18887`, `:18889`) gidiyor. «Uygulama test ortamında, GPU'da yalnız model» ilkesine geçiş ayrı bir iş olarak konuşuldu, yapılmadı.
+
 ## 2026-09-22 — main'e toplama, test sunucusu ve müşteri VM'i yayını; VM canlı CRM'e bağlandı
 
 - **main'e toplanan:** bu dalın CRM işleri + `editor-identity-on-main`'in main'de olmayan 12 commit'i (özet yedeği, OCR dots.mocr, 0.15.1/0.15.2, gateway, kimlik ölçümü; cherry-pick -x, çakışmasız). `4583c35`'in karşılığı main'de zaten vardı (`5966e579`). Dalın içeriği artık tamamen main'de; dala dokunulmadı (başka oturum çalışıyor). GPU'da koşan editör de bu içerik.
