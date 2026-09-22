@@ -88,7 +88,8 @@ function AnswerText({ text, book = {} }: { text: string; book?: Book }) {
             <ol key={bi} className="space-y-1.5">
               {lines.map((l, i) => (
                 <li key={i} className="flex gap-2.5">
-                  <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-canvas-violet/10 text-[11px] font-bold text-canvas-violet">{i + 1}</span>
+                  {/* Numara metinden: boş satırla ayrılmış «1) … 2) …» maddeleri ayrı bloklara düşer, sıra 1'den başlasaydı hepsi «1» olurdu. */}
+                  <span aria-hidden className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-canvas-violet/10 text-[11px] font-bold text-canvas-violet">{l.match(/\d+/)?.[0] ?? i + 1}</span>
                   <span className="min-w-0">{inline(l.replace(NUMBERED, ''), book)}</span>
                 </li>
               ))}

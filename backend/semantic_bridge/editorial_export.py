@@ -112,7 +112,9 @@ def blocks(text: str) -> list[tuple[str, list[str]]]:
         if lines and all(_BULLET.match(l) for l in lines):
             out.append(("ul", [_BULLET.sub("", l, count=1) for l in lines]))
         elif lines and all(_NUMBERED.match(l) for l in lines):
-            out.append(("ol", [_NUMBERED.sub("", l, count=1) for l in lines]))
+            # Numara metinden okunur: modelin «1) … 2) …» maddeleri boş satırla ayrılınca her biri ayrı
+            # blok olur; sıra numarası yeniden 1'den başlasaydı hepsi «1» görünürdü.
+            out.append(("ol", [(int(re.match(r"\s*(\d+)", l).group(1)), _NUMBERED.sub("", l, count=1)) for l in lines]))
         else:
             out.append(("p", [block]))
     return out
@@ -427,8 +429,9 @@ def _answer_content(pdf: Any, fam: str, T: Callable[[str], str], t: dict[str, An
         if kind == "p":
             _paragraph(pdf, fam, T, lines[0], inner_x, inner_w, ink)
         else:
-            for i, line in enumerate(lines):
-                _list_item(pdf, fam, T, line, inner_x, inner_w, ink, None if kind == "ul" else i + 1)
+            for item in lines:
+                num, line = (None, item) if kind == "ul" else item
+                _list_item(pdf, fam, T, line, inner_x, inner_w, ink, num)
             pdf.ln(1.5)
     for card in t.get("cards") or []:
         _card(pdf, fam, T, card, inner_x, inner_w, covers.get(str(card.get("id") or "")))
