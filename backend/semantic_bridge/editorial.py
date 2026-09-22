@@ -14,6 +14,7 @@ metin (arama) `_like` ile kaçışlanır; kimlikler GUID biçimine, kodlar tamsa
 """
 from __future__ import annotations
 
+import html
 import re
 from typing import Any, Callable, Optional
 
@@ -190,6 +191,13 @@ def _n(v: Any) -> Optional[float]:
 def _date(v: Any) -> Optional[str]:
     t = _s(v)
     return t[:10] if t else None
+
+
+def _plain(v: Any) -> Optional[str]:
+    """CRM zengin metin alanları HTML tutar (<p>, &uuml;); ekranda düz paragraflar gösterilir."""
+    t = re.sub(r"(?i)<br\s*/?>|</(p|div|li)>", "\n", str(v or ""))
+    t = html.unescape(re.sub(r"<[^>]+>", "", t)).replace("\xa0", " ")
+    return "\n".join(x for x in (re.sub(r"[ \t]+", " ", ln).strip() for ln in t.splitlines()) if x) or None
 
 
 def _rates(r: dict[str, Any]) -> list[dict[str, Any]]:
@@ -667,29 +675,55 @@ def projects_page(schema: str, run: Callable[[str], dict[str, Any]], page_no: in
 # Kitap seçilince o kitabın bütün süreçleri tek ekranda toplanır: künye, roller, sözleşmeler, proje ve
 # kurul kararı, üretim. Masadaki metin/prova kayıtları köprünün kendi tablolarından, ayrı okunur.
 
-def search_sql(schema: str, q: str) -> str:
+SEARCH_KINDS = ("kitap", "proje", "kisi")
+
+
+def _digits(q: str) -> str:
+    return re.sub(r"[^0-9Xx]", "", q or "").upper()
+
+
+def search_sql(schema: str, q: str, kind: str, page: int = 0) -> str:
+    """Bir türün bir sayfası; `toplam` o türde eşleşen bütün kayıtların sayısıdır (sessiz tavan yok).
+    Kitap adı üç alanda (kayıt adı, kitap adı, ürün adı) aranır; en az 5 rakamlı metin ISBN'de de aranır."""
     p = _prefix(schema)
     k = _like(q)
     if not k.strip():
         raise EditorialError("Arama metni gerekli.")
+    if kind not in SEARCH_KINDS:
+        raise EditorialError("Bilinmeyen arama türü.")
+    off = f" OFFSET {max(0, int(page)) * PAGE_SIZE} ROWS FETCH NEXT {PAGE_SIZE} ROWS ONLY"
+    if kind == "kitap":
+        match = [f"b.new_name LIKE N'%{k}%'", f"b.new_KitabnAd LIKE N'%{k}%'", f"b.new_urunadi LIKE N'%{k}%'"]
+        d = _digits(q)
+        if len(d) >= 5:
+            for col in ("new_isbn13", "new_isbn", "new_ekitapisbn"):
+                match.append(f"REPLACE(REPLACE(ISNULL(b.{col}, ''), '-', ''), ' ', '') LIKE '%{d}%'")
+        return (
+            "SELECT 'kitap' AS tur, b.new_kitapId AS id, b.new_name AS ad, b.new_isbn13 AS ek1, b.new_turlertext AS ek2,"
+            " b.statuscode AS durum, b.new_ilkyayintarihi AS tarih, COUNT(*) OVER () AS toplam"
+            f" FROM {p}new_kitapBase b WHERE b.statecode = 0 AND ({' OR '.join(match)})"
+            f" ORDER BY b.new_name, b.new_kitapId{off}"
+        )
+    if kind == "proje":
+        return (
+            "SELECT 'proje' AS tur, j.new_projeId AS id, j.new_name AS ad, j.new_olasiyazartext AS ek1, NULL AS ek2,"
+            " j.statuscode AS durum, j.CreatedOn AS tarih, COUNT(*) OVER () AS toplam"
+            f" FROM {p}new_projeBase j WHERE j.statecode = 0 AND j.new_name LIKE N'%{k}%'"
+            f" ORDER BY j.CreatedOn DESC, j.new_projeId{off}"
+        )
     return (
-        "SELECT TOP 40 'kitap' AS tur, b.new_kitapId AS id, b.new_name AS ad,"
-        " b.new_isbn13 AS ek1, b.new_turlertext AS ek2, b.statuscode AS durum, b.new_ilkyayintarihi AS tarih"
-        f" FROM {p}new_kitapBase b WHERE b.statecode = 0 AND b.new_name LIKE N'%{k}%'"
-        " UNION ALL"
-        " SELECT TOP 20 'proje', j.new_projeId, j.new_name, j.new_olasiyazartext, NULL, j.statuscode, j.CreatedOn"
-        f" FROM {p}new_projeBase j WHERE j.statecode = 0 AND j.new_name LIKE N'%{k}%'"
-        " UNION ALL"
-        " SELECT TOP 20 'kisi', c.ContactId, c.FullName, NULL, NULL, NULL, NULL"
+        "SELECT 'kisi' AS tur, c.ContactId AS id, c.FullName AS ad, NULL AS ek1, NULL AS ek2, NULL AS durum, NULL AS tarih,"
+        " COUNT(*) OVER () AS toplam"
         f" FROM {p}ContactBase c WHERE c.statecode = 0 AND c.FullName LIKE N'%{k}%'"
         f" AND EXISTS (SELECT 1 FROM {p}new_eserkatilimBase e WHERE e.new_Katilimsaglayan = c.ContactId AND e.statecode = 0)"
+        f" ORDER BY c.FullName, c.ContactId{off}"
     )
 
 
 def books_by_person_sql(schema: str, contact_id: str) -> str:
     p = _prefix(schema)
     return (
-        "SELECT DISTINCT TOP 40 b.new_kitapId AS id, b.new_name AS ad, b.new_isbn13 AS ek1, t.new_name AS ek2,"
+        "SELECT DISTINCT b.new_kitapId AS id, b.new_name AS ad, b.new_isbn13 AS ek1, t.new_name AS ek2,"
         " b.statuscode AS durum, b.new_ilkyayintarihi AS tarih"
         f" FROM {p}new_eserkatilimBase e JOIN {p}new_kitapBase b ON b.new_kitapId = e.new_Kitap"
         f" JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
@@ -705,7 +739,9 @@ def book_sql(schema: str, book_id: str) -> str:
         " b.new_kdvdahilfiyat, b.new_PerakendeBirimFiyat, b.new_baskisayisi, b.new_baskitoplamadedi, b.new_nihaibaskiadeti,"
         " b.new_ilkyayintarihi, b.new_sonyayintarihi, b.new_baskitarihi, b.new_turlertext, b.new_rafturu, b.new_orijinaldil,"
         " b.new_telifdurum, b.new_BaskiDurumu, b.statuscode, b.new_cizerlertext, b.new_tercumelertext,"
-        " b.new_projeeditor, b.new_editorunkitabaveyazaradairgorusleri"
+        " b.new_projeeditor, b.new_editorunkitabaveyazaradairgorusleri, b.new_yazartext,"
+        " CAST(b.new_kitaptanitimwebmetni AS nvarchar(max)) AS new_kitaptanitimwebmetni,"
+        " CAST(b.new_ozet AS nvarchar(max)) AS new_ozet, CAST(b.new_kitabineskiozeti AS nvarchar(max)) AS new_kitabineskiozeti"
         f" FROM {p}new_kitapBase b WHERE b.new_kitapId = '{_guid(book_id)}'"
     )
 
@@ -731,15 +767,23 @@ def book_contracts_sql(schema: str, book_id: str) -> str:
     )
 
 
+def _book_project(p: str, book_id: str) -> str:
+    """Kitabın projesi: kitaptaki `new_projekarti` (proje kartı), projedeki karşılığı `new_stakkarti` (stok
+    kartı) ya da eski `new_kitapid`. 2026-09-22'de ölçüldü: yalnız `new_kitapid` 83 kitabı projesine bağlıyordu,
+    üç bağ 3.271 kitabı (kitaba ulaşan kurul kararı 1 → 230). `new_new_proje_new_kitapBase` ara tablosu kitabın
+    kendi projesi değildir (bir kitabı aynı dönemin başka kitap projelerine bağlar); kullanılmaz."""
+    b = _guid(book_id)
+    return (f"(j.new_kitapid = '{b}' OR j.new_stakkarti = '{b}'"
+            f" OR j.new_projeId = (SELECT k.new_projekarti FROM {p}new_kitapBase k WHERE k.new_kitapId = '{b}'))")
+
+
 def book_projects_sql(schema: str, book_id: str) -> str:
-    """Kitabın projesi `new_projeBase.new_kitapid` ile bağlanır. 2026-09-21'de ölçüldü: 5.962 projenin
-    yalnız 88'inde dolu, üretim kaydında proje bağı hiç yok — çoğu kitapta bu liste boş döner."""
     p = _prefix(schema)
     return (
         "SELECT j.new_projeId, j.new_name, j.statuscode, j.new_icerikdurumu, j.new_isPlaniAsamasi,"
-        " j.CreatedOn, u.FullName AS editor"
+        " j.CreatedOn, u.FullName AS editor, CAST(j.new_ProjeFikriTekcmleile AS nvarchar(max)) AS fikir"
         f" FROM {p}new_projeBase j LEFT JOIN {p}SystemUserBase u ON u.SystemUserId = j.new_editoru"
-        f" WHERE j.statecode = 0 AND j.new_kitapid = '{_guid(book_id)}' ORDER BY j.CreatedOn DESC"
+        f" WHERE j.statecode = 0 AND {_book_project(p, book_id)} ORDER BY j.CreatedOn DESC"
     )
 
 
@@ -751,7 +795,7 @@ def book_board_sql(schema: str, book_id: str) -> str:
         " t.new_onerilenteliforani, t.new_Yaynkurulubaskiadedi, j.new_name AS proje"
         f" FROM {p}new_projeBase j"
         f" JOIN {p}new_yayinkurulutoplantilariBase t ON t.new_YaynKuruluToplantlarId = j.new_projeId"
-        f" WHERE j.statecode = 0 AND t.statecode = 0 AND j.new_kitapid = '{_guid(book_id)}'"
+        f" WHERE j.statecode = 0 AND t.statecode = 0 AND {_book_project(p, book_id)}"
         " ORDER BY t.new_toplantitarihi DESC"
     )
 
@@ -773,18 +817,26 @@ def _hit(r: dict[str, Any], kind: Optional[str] = None) -> dict[str, Any]:
             "note": _s(r.get("ek1")), "extra": _s(r.get("ek2")), "status": _s(r.get("durum")), "date": _date(r.get("tarih"))}
 
 
-def search(schema: str, run: Callable[[str], dict[str, Any]], q: str) -> dict[str, Any]:
-    res = run(search_sql(schema, q))
-    rows = [_hit(r) for r in res.get("records") or []]
-    return {"books": [r for r in rows if r["kind"] == "kitap"],
-            "projects": [r for r in rows if r["kind"] == "proje"],
-            "people": [r for r in rows if r["kind"] == "kisi"],
-            "query": q, "db": _timing(res)}
+def search(schema: str, run: Callable[[str], dict[str, Any]], q: str, kind: Optional[str] = None,
+           page_no: int = 0) -> dict[str, Any]:
+    """Her tür için ilk sayfa ve eşleşen toplam; `kind` verilirse yalnız o türün istenen sayfası."""
+    keys = {"kitap": "books", "proje": "projects", "kisi": "people"}
+    out: dict[str, Any] = {"books": [], "projects": [], "people": [], "totals": {}, "query": q,
+                           "page": max(0, int(page_no)), "pageSize": PAGE_SIZE}
+    res: dict[str, Any] = {}
+    for k in ([kind] if kind else SEARCH_KINDS):
+        res = run(search_sql(schema, q, k, page_no if kind else 0))
+        rows = res.get("records") or []
+        out[keys[k]] = [_hit(r) for r in rows]
+        out["totals"][keys[k]] = int(_n(rows[0].get("toplam")) or 0) if rows else 0
+    out["db"] = _timing(res)
+    return out
 
 
 def person_books(schema: str, run: Callable[[str], dict[str, Any]], contact_id: str) -> dict[str, Any]:
     res = run(books_by_person_sql(schema, contact_id))
-    return {"items": [_hit(r, "kitap") for r in res.get("records") or []], "db": _timing(res)}
+    return {"items": [_hit(r, "kitap") for r in res.get("records") or []], "truncated": bool(res.get("truncated")),
+            "db": _timing(res)}
 
 
 def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dict[str, Any]:
@@ -792,6 +844,12 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dic
     head = (res.get("records") or [None])[0]
     if head is None:
         raise EditorialError("Kitap bulunamadı.", 404)
+    projects = run(book_projects_sql(schema, book_id)).get("records") or []
+    # Kitabın konusu: web tanıtım metni > özet > eski özet > projenin tek cümlelik fikri.
+    summary, summary_from = next(((_plain(head.get(f)), f) for f in ("new_kitaptanitimwebmetni", "new_ozet", "new_kitabineskiozeti")
+                                  if _plain(head.get(f))), (None, None))
+    if summary is None:
+        summary, summary_from = next(((_plain(r.get("fikir")), "proje") for r in projects if _plain(r.get("fikir"))), (None, None))
     roles: dict[str, list[dict[str, Any]]] = {}
     for r in run(book_roles_sql(schema, book_id)).get("records") or []:
         role = _s(r.get("rol")) or "Diğer"
@@ -807,8 +865,10 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dic
         "lastPrint": _date(head.get("new_baskitarihi")), "genres": _s(head.get("new_turlertext")),
         "shelf": _s(head.get("new_rafturu")), "originalLanguage": _s(head.get("new_orijinaldil")),
         "royaltyState": _s(head.get("new_telifdurum")), "printState": _s(head.get("new_BaskiDurumu")),
+        "summary": summary, "summaryFrom": summary_from,
         "status": _s(head.get("statuscode")), "editorNote": _s(head.get("new_editorunkitabaveyazaradairgorusleri")),
         "illustratorsText": _s(head.get("new_cizerlertext")), "translatorsText": _s(head.get("new_tercumelertext")),
+        "authorsText": _s(head.get("new_yazartext")),
         "roles": [{"role": k, "people": v} for k, v in sorted(roles.items())],
         "contracts": [{"id": _s(r.get("new_sozlesmeId")), "no": _s(r.get("new_name")), "kind": _s(r.get("new_SozlesmeTipi")),
                        "status": _s(r.get("statuscode")), "stage": _s(r.get("new_sozlesmestatusu")),
@@ -818,8 +878,8 @@ def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dic
                       for r in run(book_contracts_sql(schema, book_id)).get("records") or []],
         "projects": [{"id": _s(r.get("new_projeId")), "name": _s(r.get("new_name")), "status": _s(r.get("statuscode")),
                       "text": _s(r.get("new_icerikdurumu")), "stage": _s(r.get("new_isPlaniAsamasi")),
-                      "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor"))}
-                     for r in run(book_projects_sql(schema, book_id)).get("records") or []],
+                      "on": _date(r.get("CreatedOn")), "editor": _s(r.get("editor")), "idea": _plain(r.get("fikir"))}
+                     for r in projects],
         "board": [{"id": _s(r.get("new_yayinkurulutoplantilariId")), "date": _date(r.get("new_toplantitarihi")),
                    "decision": _s(r.get("statuscode")), "note": _s(r.get("new_toplantikararnotu")),
                    "royalty": _n(r.get("new_onerilenteliforani")), "printRun": _s(r.get("new_Yaynkurulubaskiadedi")),

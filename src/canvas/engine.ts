@@ -1202,7 +1202,18 @@ export const deskApi = {
 // ------------------------------------------------------ editoryal arama ve kitap 360 (ana ekran)
 
 export type SearchHit = { kind: 'kitap' | 'proje' | 'kisi'; id: string; title: string | null; note: string | null; extra: string | null; status: string | null; date: string | null };
-export type EditorialSearch = { books: SearchHit[]; projects: SearchHit[]; people: SearchHit[]; query: string; db?: DbTiming | null };
+export type SearchKind = 'kitap' | 'proje' | 'kisi';
+/** Her türün ilk sayfası (ya da `kind` ile istenen sayfası) ve o türde eşleşen bütün kayıtların sayısı. */
+export type EditorialSearch = {
+  books: SearchHit[];
+  projects: SearchHit[];
+  people: SearchHit[];
+  totals: Partial<Record<'books' | 'projects' | 'people', number>>;
+  query: string;
+  page: number;
+  pageSize: number;
+  db?: DbTiming | null;
+};
 export type BookDetail = {
   id: string;
   title: string | null;
@@ -1226,9 +1237,13 @@ export type BookDetail = {
   editorNote: string | null;
   illustratorsText: string | null;
   translatorsText: string | null;
+  authorsText: string | null;
+  /** Kitabın konusu (CRM tanıtım metni, yoksa projenin fikri); HTML'den düz metne çevrilmiş. */
+  summary: string | null;
+  summaryFrom: string | null;
   roles: Array<{ role: string; people: Array<{ id: string | null; name: string | null }> }>;
   contracts: Array<{ id: string; no: string | null; kind: string | null; status: string | null; stage: string | null; start: string | null; end: string | null; royalty: number | null; daysLeft: number | null }>;
-  projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; stage: string | null; on: string | null; editor: string | null }>;
+  projects: Array<{ id: string; name: string | null; status: string | null; text: string | null; stage: string | null; on: string | null; editor: string | null; idea: string | null }>;
   board: Array<{ id: string; date: string | null; decision: string | null; note: string | null; royalty: number | null; printRun: string | null; project: string | null }>;
   production: Array<{ id: string; on: string | null; delivery: string | null; editorial: string | null; firstText: string | null; status: string | null; editor: string | null; designer: string | null }>;
   desk: Work[];
@@ -1237,9 +1252,9 @@ export type BookDetail = {
 
 /** Editoryal ana ekranın arama kutusu ve kitabın bütün süreçlerini toplayan sayfa. */
 export const editorialSearchApi = {
-  search: (q: string) => send<EditorialSearch>('GET', `/api/v1/editorial/search${qs({ q })}`, undefined, 60_000),
+  search: (q: string, kind?: SearchKind, page?: number) => send<EditorialSearch>('GET', `/api/v1/editorial/search${qs({ q, kind, page })}`, undefined, 60_000),
   book: (id: string) => send<BookDetail>('GET', `/api/v1/editorial/books/${encodeURIComponent(id)}`, undefined, 60_000),
-  personBooks: (id: string) => send<{ items: SearchHit[]; db?: DbTiming | null }>('GET', `/api/v1/editorial/people/${encodeURIComponent(id)}/books`, undefined, 60_000),
+  personBooks: (id: string) => send<{ items: SearchHit[]; truncated?: boolean; db?: DbTiming | null }>('GET', `/api/v1/editorial/people/${encodeURIComponent(id)}/books`, undefined, 60_000),
 };
 
 // ------------------------------------------------ kitabın içeriğine soru (editör motoru, Hermes)

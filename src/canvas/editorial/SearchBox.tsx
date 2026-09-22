@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BookOpen, FolderOpen, Loader2, Search, User, X } from 'lucide-react';
-import { ENGINE_ENABLED, editorialSearchApi, type SearchHit } from '../engine';
+import { ENGINE_ENABLED, editorialSearchApi, type SearchHit, type SearchKind } from '../engine';
 import { Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { useDebounced } from './kit';
 
-/** Editoryal ana ekranın sağ üstündeki kitap arama: yazılan metin kitap adında, proje adında ve esere
- *  katkı veren kişilerin adında aranır. Sonuçlar alanın altında açılan bir panelde listelenir. Kitaba
+/** Editoryal ana ekranın sağ üstündeki kitap arama: yazılan metin kitap adında (5+ rakamsa ISBN'de de),
+ *  proje adında ve esere katkı veren kişilerin adında aranır. Her türün gerçek toplamı başlıkta yazar;
+ *  ilk sayfadan fazlası «Daha fazla göster» ile sayfa sayfa gelir, hiçbir sonuç sessizce kesilmez. Sonuçlar alanın altında açılan bir panelde listelenir. Kitaba
  *  tıklayınca o kitabın bütün süreçleri açılır; kişiye tıklayınca kişinin kitapları listelenir.
  *  Arama CRM'de yapılır; uydurma sonuç yoktur. */
 
@@ -46,6 +47,50 @@ function Hit({ h, onPick }: { h: SearchHit; onPick: () => void }) {
   );
 }
 
+const KEY = { kitap: 'books', proje: 'projects', kisi: 'people' } as const;
+
+/** Bir türün sonuçları: ilk sayfa aramadan gelir, sonrakiler istendikçe aynı sorguyla sayfa sayfa eklenir. */
+function Group({ q, kind, title, first, total, pageSize, onPick, children }: {
+  q: string; kind: SearchKind; title: string; first: SearchHit[]; total: number; pageSize: number;
+  onPick: (h: SearchHit) => void; children?: ReactNode;
+}) {
+  const [more, setMore] = useState<SearchHit[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const items = [...first, ...more];
+  const load = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await editorialSearchApi.search(q, kind, Math.ceil(items.length / pageSize));
+      setMore((m) => [...m, ...r[KEY[kind]]]);
+    } catch (e) {
+      setErr(errText(e, 'Sonraki sonuçlar alınamadı.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+  if (!items.length) return null;
+  return (
+    <div>
+      <h3 className="px-2.5 pb-0.5 pt-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{title} ({nf.format(total)})</h3>
+      <ul>
+        {items.map((h) => (
+          <Hit key={h.id} h={h} onPick={() => onPick(h)} />
+        ))}
+      </ul>
+      {children}
+      {err && <Note tone="err">{err}</Note>}
+      {items.length < total && (
+        <button type="button" onClick={load} disabled={busy}
+          className="zk-press mx-2.5 mt-1 min-h-9 rounded-lg px-2 text-[12px] font-bold text-canvas-violet underline disabled:opacity-60">
+          {busy ? 'Yükleniyor…' : `Daha fazla göster (${nf.format(items.length)} / ${nf.format(total)})`}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function PersonBooks({ person, onClose }: { person: SearchHit; onClose: () => void }) {
   const q = useQuery({ queryKey: ['editorial', 'personBooks', person.id], queryFn: () => editorialSearchApi.personBooks(person.id), enabled: ENGINE_ENABLED });
   const items = q.data?.items ?? [];
@@ -59,6 +104,7 @@ function PersonBooks({ person, onClose }: { person: SearchHit; onClose: () => vo
       </div>
       {q.isLoading && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Okunuyor…</p>}
       {!q.isLoading && !items.length && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Bu kişiye bağlı kitap bulunamadı.</p>}
+      {q.data?.truncated && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Liste satır sınırına takıldı; kişinin bütün kitapları görünmüyor olabilir.</p>}
       <ul className="mt-1.5 space-y-0.5">
         {items.map((h) => (
           <li key={`${h.id}-${h.extra}`}>
@@ -82,7 +128,8 @@ export default function SearchBox() {
   const q = useDebounced(text.trim(), 400);
   const res = useQuery({ queryKey: ['editorial', 'search', q], queryFn: () => editorialSearchApi.search(q), enabled: ENGINE_ENABLED && q.length >= 2 });
   const d = res.data;
-  const total = (d?.books.length ?? 0) + (d?.projects.length ?? 0) + (d?.people.length ?? 0);
+  const count = (k: 'books' | 'projects' | 'people') => d?.totals?.[k] ?? d?.[k].length ?? 0;
+  const total = count('books') + count('projects') + count('people');
   const err = errText(res.error, 'Arama yapılamadı.');
   const show = open && q.length >= 2 && (!!d || !!err || res.isFetching);
 
@@ -154,37 +201,11 @@ export default function SearchBox() {
           {!d && res.isFetching && <p className="px-2 py-3 text-center text-[12.5px] text-canvas-muted">Aranıyor…</p>}
           {d && total > 0 && (
             <div className="space-y-2">
-              {d.books.length > 0 && (
-                <div>
-                  <h3 className="px-2.5 pb-0.5 pt-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">Kitaplar ({nf.format(d.books.length)})</h3>
-                  <ul>
-                    {d.books.map((h) => (
-                      <Hit key={h.id} h={h} onPick={() => undefined} />
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {d.people.length > 0 && (
-                <div>
-                  <h3 className="px-2.5 pb-0.5 pt-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">Kişiler ({nf.format(d.people.length)})</h3>
-                  <ul>
-                    {d.people.map((h) => (
-                      <Hit key={h.id} h={h} onPick={() => setPerson(h)} />
-                    ))}
-                  </ul>
-                  {person && <PersonBooks person={person} onClose={() => setPerson(null)} />}
-                </div>
-              )}
-              {d.projects.length > 0 && (
-                <div>
-                  <h3 className="px-2.5 pb-0.5 pt-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">Projeler ({nf.format(d.projects.length)})</h3>
-                  <ul>
-                    {d.projects.map((h) => (
-                      <Hit key={h.id} h={h} onPick={() => navigate('/editor-atama')} />
-                    ))}
-                  </ul>
-                </div>
-              )}
+              <Group key={`k-${q}`} q={q} kind="kitap" title="Kitaplar" first={d.books} total={count('books')} pageSize={d.pageSize} onPick={() => undefined} />
+              <Group key={`p-${q}`} q={q} kind="kisi" title="Kişiler" first={d.people} total={count('people')} pageSize={d.pageSize} onPick={setPerson}>
+                {person && <PersonBooks person={person} onClose={() => setPerson(null)} />}
+              </Group>
+              <Group key={`j-${q}`} q={q} kind="proje" title="Projeler" first={d.projects} total={count('projects')} pageSize={d.pageSize} onPick={() => navigate('/editor-atama')} />
             </div>
           )}
         </div>

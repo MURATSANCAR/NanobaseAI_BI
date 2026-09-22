@@ -3545,9 +3545,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return _editorial_call(editorial_mod.person, schema, run, contact_id)
 
     @app.get("/api/v1/editorial/search")
-    def editorial_search(request: Request, q: str = "") -> dict[str, Any]:
+    def editorial_search(request: Request, q: str = "", kind: Optional[str] = None, page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
-        return _editorial_call(editorial_mod.search, schema, run, q)
+        return _editorial_call(editorial_mod.search, schema, run, q, kind or None, page)
 
     @app.get("/api/v1/editorial/books/{book_id}")
     def editorial_book(book_id: str, request: Request) -> dict[str, Any]:

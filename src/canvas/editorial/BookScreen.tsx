@@ -57,6 +57,28 @@ function Facts({ b }: { b: BookDetail }) {
   );
 }
 
+const SUMMARY_FROM: Record<string, string> = {
+  new_kitaptanitimwebmetni: 'CRM · web tanıtım metni',
+  new_ozet: 'CRM · kitap özeti',
+  new_kitabineskiozeti: 'CRM · eski özet',
+  proje: 'CRM · projenin fikri',
+};
+
+function About({ b }: { b: BookDetail }) {
+  if (!b.summary) return null;
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+        <h2 className="text-[13px] font-extrabold">Kitabın konusu</h2>
+        <span className="text-[11px] text-canvas-muted">{SUMMARY_FROM[b.summaryFrom ?? ''] ?? 'CRM'}</span>
+      </div>
+      <div className="mt-2 space-y-1.5 px-1 text-[12.5px] leading-relaxed">
+        {b.summary.split('\n').map((line, i) => <p key={i} className="break-words">{line}</p>)}
+      </div>
+    </Panel>
+  );
+}
+
 function Roles({ b }: { b: BookDetail }) {
   if (!b.roles.length && !b.illustratorsText && !b.translatorsText) return null;
   return (
@@ -136,6 +158,7 @@ function Journey({ b }: { b: BookDetail }) {
                 <div className="mt-0.5 text-[11px] text-canvas-muted">
                   {[p.editor ? `Editör: ${p.editor}` : 'Editör atanmamış', p.text && `Metin: ${p.text}`, p.stage, p.on && dateTime(p.on)].filter(Boolean).join(' · ')}
                 </div>
+                {p.idea && p.idea !== b.summary && <p className="mt-1 whitespace-pre-line text-[12px] leading-snug">{p.idea}</p>}
               </li>
             ))}
           </ul>
@@ -255,6 +278,7 @@ export default function BookScreen() {
             {b.firstPublished && <span className="text-[12px] text-canvas-muted">İlk yayın {dateTime(b.firstPublished)}</span>}
           </div>
           <Facts b={b} />
+          <About b={b} />
           <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <div className="space-y-3 lg:space-y-4">
