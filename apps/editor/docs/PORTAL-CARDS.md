@@ -2,6 +2,12 @@
 
 2026-09-21: portal cevapları kapak, başlık, yazar, sayfa kaynaklı kısa özet ve kitap seçme düğmesi içerir.
 `editor.card_api` salt okunur ayrı servistir (:19141); modelleri/işçileri başlatmaz ve bakım kilidini kaldırmaz. Uçlar: `/v1/books/cards`, `/v1/books/{id}/cover`, `/v1/books/{id}/graph`, `/v1/books/{id}/proofing` (son okuma: son neslin her denetim için en yeni koşusu + bulguları; koşu yoksa boş listeler).
+
+**Tek yazma ucu (2026-09-23):** `POST /v1/books/{id}/proofing/findings/{finding_id}/decision` — editörün son okuma
+bulgusuna kararı («Doğru» / «Yanlış alarm» + gerekçe [+ not]), `ed.proof_decision` tablosuna salt ekleme. Yazılan
+şey kitap verisi değil, editörün (insanın) kaydıdır; kitap içeriğine, kataloğa, denetimlere dokunmaz. Bunun dışında
+servis salt okumadır. `GET .../proofing` cevabında her bulguya `id` + geçerli `decision`, her denetime kuralın
+`precision`ı (ad+sürüm, bütün kitaplar) eklenir; ölçü tarifi `docs/son-okuma/README.md`.
 `presentation.cards` kitap ve kapak kaydını okur. Yazar/özet yalnız güncel revizyonun `current_artifact`
 katalog çıktısından gelir. Eski `book_card.summary` kullanılmaz; migration henüz yoksa alanlar eksik döner.
 PDF sayfası kapak diye sunulmaz. Kaynak dosyası yalnız Editor storage altında okunur.

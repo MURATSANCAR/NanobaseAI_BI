@@ -1356,8 +1356,19 @@ export type ProofingCheck = {
   /** WARN + ERROR sayısı. */
   serious: number;
   error: string | null;
+  /** Kuralın (ad+sürüm) isabeti: bütün kitaplardaki geçerli editör kararlarından; hiç karar yoksa null. */
+  precision: ProofingPrecision | null;
 };
+export type ProofingPrecision = { accepted: number; rejected: number; rate: number };
+export type ProofVerdict = 'ACCEPT' | 'REJECT';
+/** Yanlış alarm gerekçesi (kapalı küme; kart servisiyle aynı). */
+export type ProofReasonCode = 'TEXT_CORRECT' | 'INTENDED_STYLE' | 'DICTIONARY_GAP' | 'WRONG_PAGE' | 'EXPLAINED_IN_TEXT' | 'NOT_AN_ISSUE' | 'OTHER';
+/** Editörün bulguya geçerli (en yeni) kararı; salt eklemedir, yeni karar eskisini geçersiz kılar. */
+export type ProofDecision = { verdict: ProofVerdict; reasonCode: ProofReasonCode | null; note: string | null; decidedBy: string; at: string | null };
 export type ProofingFinding = {
+  /** proof_finding kimliği; karar bu kimliğe iliştirilir. Eski kart servisi göndermezse null. */
+  id: string | null;
+  decision: ProofDecision | null;
   check: string;
   label: string;
   page: number | null;
@@ -1379,6 +1390,9 @@ export type ProofingReport = {
 
 export const proofingApi = {
   get: (bookTitle: string) => send<ProofingReport>('GET', `/api/v1/editorial/proofing${qs({ book: bookTitle })}`, undefined, 30_000),
+  /** Editörün bulguya kararı; kararı veren oturumdaki kullanıcıdır, gövdede gönderilmez. */
+  decide: (b: { bookId: string; findingId: string; verdict: ProofVerdict; reasonCode?: ProofReasonCode; note?: string }) =>
+    send<{ finding_id: string; decision: ProofDecision }>('POST', '/api/v1/editorial/proofing/decision', b, 30_000),
 };
 
 /** Soru sorulabilen (okunmuş) kitaplar; motordan gelir, köprüde kısa süre önbellekte tutulur. */

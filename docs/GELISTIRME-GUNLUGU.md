@@ -30,7 +30,6 @@
 - **Doğrulama (gerçek DB, canlı portal, timasai oturumu):** kart ucu 3 kitapta çalıştı (Levent 15 düğüm/52 kenar, Vombat 11/28, Dedem 12/19). Portalda kitap seçmeden sorulan «Levent kimlerle birlikte vakit geçiriyor?» sorusunda cevapta geçen 5 karakter (Levent, Mert, Osman, Kâmil, Hayri) grafa girdi — kitabın 15 karakterinin tamamı değil. Şekillendirme mantığı 4 sentetik + gerçek kitap verisiyle ayrıca ölçüldü.
 - **Kurulum:** GPU'da `editor-py:0.15.3-condense` yeniden derlendi, `editor-cards` ve `editor-mcp` yeniden yaratıldı — bu, 20 Eylül günlüğünde açık kalan «graf MCP aracının Hermes'e görünmesi için editor-mcp yeniden başlatılmalı» maddesini de kapattı. Test sunucusunda köprünün iki dosyası (md5 karşılaştırmasıyla), frontend'in üç dosyası; sunucuda derleme (`VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas`) ve `cockpit/dist`e kopya (yedek: `dist.bak-20260922-204418`).
 - **Not:** editörün uygulama katmanı (kanıt defteri Postgres, kart servisi, Hermes) hâlâ GPU makinesinde; köprü ona ters tünelle (`:18887`, `:18889`) gidiyor. «Uygulama test ortamında, GPU'da yalnız model» ilkesine geçiş ayrı bir iş olarak konuşuldu, yapılmadı.
-<<<<<<< HEAD
 ## 2026-09-22 — Yeni OCR ile yeniden okuma: denetim, sunucuda kalmış üç düzeltme, 5 kitap kuyruğa
 
 - **Denetim sonucu: iş bitmemişti.** Altı kitaptan yalnız `levent-dunya-harikalarinin-pesinde` yeni okuyucuyla (`0.15.2-ocr-dots`) okunmuştu, o da üç denemede FAILED'dı; kalan beş kitabın en yeni nesli hâlâ `0.9.0` (eski okuyucu). Üç düşüş üç ayrı hataydı: 09:03 `figure_identity.py` traits birleştirme (`expected str instance, list found`), 13:09 `document.py` `name 'book_stems' is not defined`, 15:59 `outputs.py` `Summary input exceeds bounded context`.
@@ -40,8 +39,6 @@
 - **Figür kırpmalarında temizlik yoktu** (`bd3fad8b`): her okuma `pages/gallery/<nesil>/` altına yeniden yazıyor, eskiler duruyordu — altı kitapta 21 klasör, 450 MB. Kırpma kayıt değil önbellek (sayfa PNG'si diskte, bbox `visual_region`/`character_mention`'da, vektör `figure_embedding`'de). `editorctl gallery prune` eklendi: en yeni nesil + QUEUED/RUNNING + PUBLISHED tutulur, gerisi silinir; `current_artifact` satırı tutma sebebi değil (her nesilde var). Canlı DB'de kuru koşu: 19 klasör / 364 MB silinebilir, koşan 5 neslin hiçbiri listede değil. **--apply henüz koşulmadı** (işler bitince).
 - **Açık:** beş iş hâlâ koşuyor (22:15'te 6/15–9/15 arası); levent'in iş kaydı FAILED görünüyor ama çıktıları rebuild 16:46–16:47'de rev 10718'de tamamladı, yayın durumu BLOCKED / `semantic=NEEDS_REVIEW` / 105 açık inceleme. Figür kırpmaları ve sayfa görüntüleri için kart API'sinde uç yok (yalnız kapak servis ediliyor).
 - **TİMAŞ ağı:** Logo geçici olarak 192.168.0.155 → 192.168.1.155'e alınmış (gece geri alınacak). Bizim tarafta değişecek tek şey test sunucusundaki socat köprüsünün hedefi (`127.0.0.1:14330 → 192.168.0.155:1433`); `mssql-ro.datasources.json` zaten 14330'u gösteriyor, rota `192.168.0.0/23` her iki alt ağı kapsıyor. Şu an doğrulanamadı: tun0 ayakta olduğu hâlde .1.155, .0.155, .0.28 ve kendi VM'imiz .0.55:22 dahil LAN'ın tamamı kapalı — VPN oturumu ölü, telefon push'uyla yeniden açılması gerekiyor.
-=======
->>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
 
 ## 2026-09-22 — main'e toplama, test sunucusu ve müşteri VM'i yayını; VM canlı CRM'e bağlandı
 

@@ -4,12 +4,13 @@ import hmac
 import os
 import functools
 import io
-from fastapi import Depends, FastAPI, Header, HTTPException, Query, Path
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Path
 from fastapi.responses import FileResponse, Response
 import psycopg
 from .presentation import cards, cover_path, page_path
-from . import foundation, graph, read_model
+from . import db, foundation, graph, read_model
 from .proofing._labels import label_of   # etiketler kaynak dosyadan; denetim modülleri yüklenmez
+from .proofing import _decision            # editör kararı: saf doğrulama + isabet formülü
 
 def authorize(authorization: str = Header(default='')):
     expected=os.environ.get('EDITOR_CARDS_KEY','')
@@ -66,10 +67,32 @@ def book_graph(book_id: UUID):
         raise HTTPException(404,'book not found')
     return {'book_id':str(book_id),**graph.network(str(gen['id']))}
 
+def _decisions(c, gid: str, run_ids: list[str]):
+    """Her bulgunun GEÇERLİ (en yeni) kararı ve her kuralın (ad+sürüm) BÜTÜN kitaplardaki isabeti.
+    proof_decision tablosu yoksa (025 uygulanmadı) boş sözlükler: rapor yine gelir, karar alanı null."""
+    try:
+        cur=c.execute(
+            'SELECT DISTINCT ON (finding_id) finding_id, verdict, reason_code, note, decided_by, created_at'
+            ' FROM ed.proof_decision WHERE generation_id=%s ORDER BY finding_id, created_at DESC',(gid,)).fetchall()
+        rules=c.execute(
+            'SELECT check_name, check_version, verdict, count(*) AS n FROM ('
+            '  SELECT DISTINCT ON (finding_id) check_name, check_version, verdict FROM ed.proof_decision'
+            '  WHERE (check_name, check_version) IN (SELECT check_name, check_version FROM ed.proof_run WHERE id = ANY(%s))'
+            '  ORDER BY finding_id, created_at DESC) d GROUP BY check_name, check_version, verdict',(run_ids,)).fetchall()
+    except psycopg.errors.UndefinedTable:
+        return {},{}
+    counts={}
+    for r in rules:
+        k=counts.setdefault((r['check_name'],r['check_version']),[0,0])
+        k[0 if r['verdict']=='ACCEPT' else 1]+=r['n']
+    return {str(r['finding_id']):_decision.public(r) for r in cur},counts
+
 @app.get('/v1/books/{book_id}/proofing')
 def book_proofing(book_id: UUID):
     """Son okuma: kitabın son neslinde her denetimin EN YENİ koşusu ve o koşunun bulguları.
-    Hiç koşu yoksa boş listeler (404 değil). Salt okuma; hiçbir denetimi başlatmaz."""
+    Hiç koşu yoksa boş listeler (404 değil). Salt okuma; hiçbir denetimi başlatmaz.
+    Her bulguya `id` ve editörün geçerli kararı (`decision`|null), her denetime kuralın isabeti
+    (`precision`|null; aynı ad+sürüm için bütün kitaplardaki geçerli kararlardan) eklenir."""
     with foundation.read_snapshot() as c:
         gen=read_model.latest(c,str(book_id))
         if gen is None:
@@ -80,11 +103,12 @@ def book_proofing(book_id: UUID):
                 'SELECT DISTINCT ON (check_name) id, check_name, check_version, status, error, started_at, finished_at'
                 ' FROM ed.proof_run WHERE generation_id=%s ORDER BY check_name, started_at DESC',(gid,)).fetchall()
             rows=c.execute(
-                'SELECT check_name, page_no, severity, message, quote, suggestion, bbox FROM ed.proof_finding'
+                'SELECT id, check_name, page_no, severity, message, quote, suggestion, bbox FROM ed.proof_finding'
                 ' WHERE run_id = ANY(%s) ORDER BY page_no NULLS FIRST, severity DESC, created_at',
                 ([r['id'] for r in runs],)).fetchall() if runs else []
         except psycopg.errors.UndefinedTable:
             raise HTTPException(503,'proofing tables missing (db migration 023_proofing not applied)') from None
+        decisions,counts=_decisions(c,gid,[r['id'] for r in runs]) if runs else ({},{})
     by_check={}
     for r in rows:
         n=by_check.setdefault(r['check_name'],[0,0])
@@ -95,7 +119,41 @@ def book_proofing(book_id: UUID):
             'checks':[{'name':r['check_name'],'label':label_of(r['check_name']),'version':r['check_version'],
                        'status':r['status'],'started_at':iso(r['started_at']),'finished_at':iso(r['finished_at']),
                        'findings':by_check.get(r['check_name'],[0,0])[0],
-                       'serious':by_check.get(r['check_name'],[0,0])[1],'error':r['error']} for r in runs],
-            'findings':[{'check':r['check_name'],'label':label_of(r['check_name']),'page':r['page_no'],
+                       'serious':by_check.get(r['check_name'],[0,0])[1],'error':r['error'],
+                       'precision':_decision.precision(*counts.get((r['check_name'],r['check_version']),(0,0)))} for r in runs],
+            'findings':[{'id':str(r['id']),'check':r['check_name'],'label':label_of(r['check_name']),'page':r['page_no'],
                          'severity':r['severity'],'message':r['message'],'quote':r['quote'],
-                         'suggestion':r['suggestion'],'bbox':r['bbox']} for r in rows]}
+                         'suggestion':r['suggestion'],'bbox':r['bbox'],
+                         'decision':decisions.get(str(r['id']))} for r in rows]}
+
+@app.post('/v1/books/{book_id}/proofing/findings/{finding_id}/decision')
+def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(...)):
+    """Editörün bulguya kararı: «Doğru» (ACCEPT) ya da «Yanlış alarm» (REJECT + gerekçe [+ not]).
+    Servisin TEK yazma ucudur ve yazdığı şey kitap verisi değil, editörün (insanın) kaydıdır (docs/PORTAL-CARDS.md).
+    Bulgu o kitabın SON nesline ait olmalı (eski nesle karar 404). Salt ekleme: yeni karar eskisini geçersiz
+    kılar; geçerli karar döner. Kitabı düzeltmez, denetim koşturmaz."""
+    try:
+        v=_decision.validate(body)
+    except _decision.DecisionError as e:
+        raise HTTPException(422,str(e)) from None
+    with foundation.read_snapshot() as c:
+        gen=read_model.latest(c,str(book_id))
+    if gen is None:
+        raise HTTPException(404,'book not found')
+    gid=str(gen['id'])
+    try:
+        with db.tx() as c:
+            f=c.execute(
+                'SELECT f.id, f.check_name, r.check_version FROM ed.proof_finding f JOIN ed.proof_run r ON r.id=f.run_id'
+                ' WHERE f.id=%s AND f.generation_id=%s',(str(finding_id),gid)).fetchone()
+            if f is None:
+                raise HTTPException(404,'finding not found in the latest generation of this book')
+            row=c.execute(
+                'INSERT INTO ed.proof_decision(finding_id, generation_id, check_name, check_version, verdict, reason_code,'
+                ' note, decided_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
+                ' RETURNING verdict, reason_code, note, decided_by, created_at',
+                (str(finding_id),gid,f['check_name'],f['check_version'],v['verdict'],v['reason_code'],v['note'],
+                 v['decided_by'])).fetchone()
+    except psycopg.errors.UndefinedTable:
+        raise HTTPException(503,'proof_decision table missing (db migration 025_proof_decision not applied)') from None
+    return {'book_id':str(book_id),'generation_id':gid,'finding_id':str(finding_id),'decision':_decision.public(row)}

@@ -9,21 +9,35 @@ import uuid
 import httpx
 
 
-def request(path: str):
+def _headers():
     base=os.environ.get('EDITOR_CATALOG_BASE','').rstrip('/')
     key=os.environ.get('EDITOR_CATALOG_KEY','')
     if not base or not key: raise ValueError('Kitap kartları bağlantısı henüz hazır değil.')
-    ca=os.environ.get('EDITOR_CATALOG_CA_FILE','')
     headers={'Authorization':'Bearer '+key}
     # Kart servisine internet üzerinden gidiliyorsa nginx ikinci bir gizli başlık ister; ad:değer olarak verilir.
     extra=os.environ.get('EDITOR_CATALOG_EXTRA_HEADER','').strip()
     if ':' in extra:
         name,_,value=extra.partition(':')
         headers[name.strip()]=value.strip()
+    return base,headers,os.environ.get('EDITOR_CATALOG_CA_FILE','')
+
+
+def request(path: str):
+    base,headers,ca=_headers()
     with httpx.Client(timeout=20,verify=ca or True,follow_redirects=False) as client:
         r=client.get(base+path,headers=headers)
         r.raise_for_status()
         return r
+
+
+def request_json(method: str, path: str, json=None):
+    """Kart servisine JSON gövdeli istek (aynı başlıklar/CA). Tek kullanım: editörün bulguya kararı;
+    kart servisi bunun dışında salt okumadır. Cevap JSON."""
+    base,headers,ca=_headers()
+    with httpx.Client(timeout=20,verify=ca or True,follow_redirects=False) as client:
+        r=client.request(method,base+path,headers=headers,json=json)
+        r.raise_for_status()
+        return r.json()
 
 
 def catalogue():
@@ -68,7 +82,6 @@ def catalogue_cached():
     return items
 
 
-<<<<<<< HEAD
 def _card_names(card):
     """Kartın anıldığı adlar: motor adı (slug) ve yayınevi kaydındaki ad."""
     names=[card.get('title') or '', ((card.get('publisher') or {}).get('title') or '')]
@@ -91,18 +104,6 @@ def book_id_for_title(book_title, text=''):
         return named[0]['id'] if len(named)==1 else None
     except (ValueError,KeyError,TypeError,httpx.HTTPError):
         return None
-=======
-def book_id_for_title(book_title):
-    """Sorunun kitap adının kataloğdaki karşılığı (büyük/küçük harf farkı hariç tam ad eşleşmesi).
-    Tek eşleşme yoksa ya da katalog alınamazsa None; hiçbir hata satırı bozmaz."""
-    title=(book_title or '').strip()
-    if not title or not os.environ.get('EDITOR_CATALOG_BASE'): return None
-    try:
-        exact=[c for c in catalogue_cached() if c['title'].casefold()==title.casefold()]
-    except (ValueError,KeyError,TypeError,httpx.HTTPError):
-        return None
-    return exact[0]['id'] if len(exact)==1 else None
->>>>>>> 709ef8f883bac642f67d70bac686e69a19f8353e
 
 
 def public_card(card):
@@ -270,8 +271,19 @@ def proofing_report(book_title):
     out.update({'bookId':card['id'],'bookTitle':card['title'],'generationId':r.get('generation_id'),
         'checks':[{'name':c['name'],'label':c['label'],'version':c['version'],'status':c['status'],
                    'startedAt':c.get('started_at'),'finishedAt':c.get('finished_at'),
-                   'findings':c['findings'],'serious':c['serious'],'error':c.get('error')} for c in r.get('checks',[])],
-        'findings':[{'check':f['check'],'label':f['label'],'page':f.get('page'),'severity':f['severity'],
+                   'findings':c['findings'],'serious':c['serious'],'error':c.get('error'),
+                   # Kuralın (ad+sürüm) isabeti: bütün kitaplardaki geçerli editör kararlarından; karar yoksa None.
+                   'precision':c.get('precision')} for c in r.get('checks',[])],
+        'findings':[{'id':f.get('id'),'check':f['check'],'label':f['label'],'page':f.get('page'),'severity':f['severity'],
                      'message':f['message'],'quote':f.get('quote'),'suggestion':f.get('suggestion'),
-                     'bbox':f.get('bbox')} for f in r.get('findings',[])]})
+                     'bbox':f.get('bbox'),'decision':f.get('decision')} for f in r.get('findings',[])]})
     return out
+
+
+def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by):
+    """Editörün bulguya kararını kart servisine iletir; kart servisinin döndürdüğü geçerli kararı verir.
+    Köprü editör veritabanına dokunmaz; doğrulama (gerekçe, nesil, not uzunluğu) kart servisindedir."""
+    body={'verdict':verdict,'decidedBy':decided_by}
+    if reason_code: body['reasonCode']=reason_code
+    if note: body['note']=note
+    return request_json('POST','/v1/books/'+str(uuid.UUID(book_id))+'/proofing/findings/'+str(uuid.UUID(finding_id))+'/decision',json=body)
