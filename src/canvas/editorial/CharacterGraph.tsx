@@ -7,9 +7,9 @@ export type GraphNode = { name: string; count: number; role?: 'lead' | 'family' 
 export type GraphEdge = { a: string; b: string; weight: number };
 
 const W = 680;
-const H = 430;
+const H = 470;
 const CX = W / 2;
-const CY = 200;
+const CY = 215;  // etiketler üstte dışarı taşmasın diye halka aşağıda durur
 const RING = 150;
 const MAX_NODES = 9;
 
@@ -60,8 +60,8 @@ export default function CharacterGraph({ nodes, edges }: { nodes: GraphNode[]; e
         </g>
         {top.map((n) => {
           const p = pos.get(n.name)!;
-          // Etiket düğümün üstünde durur; tepedeki düğümde üstte yer kalmadığı için altına iner.
-          const below = p.y > CY + 20 || p.y - p.r - 21 < 4;
+          // Etiket düğümün dışına bakar: alt yarıdakiler altta, üst yarıdakiler üstte.
+          const below = p.y > CY + 20;
           return (
             <g key={n.name}>
               <circle cx={p.x} cy={p.y} r={p.r} fill={FILL[p.role ?? 'other']} />

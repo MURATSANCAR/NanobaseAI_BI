@@ -251,7 +251,9 @@ def _iso(v: Optional[datetime]) -> Optional[str]:
 def _row(r: Any) -> dict[str, Any]:
     from . import editorial_cards
     cards, card_error = editorial_cards.resolve(r.card_selection)
-    return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "question": r.question,
+    # bookId: sayfa rozetlerinin önizlemesi için kart kimliği (kitap adı kataloğa tam eşleşir; yoksa None).
+    return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "bookId": editorial_cards.book_id_for_title(r.book_title),
+            "question": r.question,
             "status": r.status, "answer": scrub(r.answer), "notFound": bool(r.not_found),
             "cards": cards, "cardError": card_error, "graph": r.graph, "cardMatch": (r.card_selection or {}).get("match"),
             "error": (r.error if r.error and not _INTERNAL.search(r.error) and not re.search(r"\b\d{3}:", r.error) else (UNAVAILABLE if r.error else None)), "elapsedMs": r.elapsed_ms,

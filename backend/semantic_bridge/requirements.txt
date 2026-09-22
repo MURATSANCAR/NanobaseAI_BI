@@ -13,3 +13,6 @@ pypdf>=5.0
 # Yönetim ekranındaki Active Directory bağlantı denemesi (giriş servisiyle aynı: NTLM).
 ldap3>=2.9
 pycryptodome>=3.19
+# ZEKİ AI sohbetinin PDF dışa aktarımı (editorial_export.py): nanobase_api/budget_export ile aynı üretici.
+# Türkçe harfler için imajda bir Unicode TTF gerekir (DejaVu: bridge.Dockerfile'da fonts-dejavu-core).
+fpdf2>=2.7.5

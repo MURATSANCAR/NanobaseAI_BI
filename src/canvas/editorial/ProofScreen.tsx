@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, PenLine, X } from 'lucide-react';
-import { ENGINE_ENABLED, deskApi, type DeskCheck, type DeskFile, type ProofState } from '../engine';
+import { ENGINE_ENABLED, deskApi, proofingApi, type DeskCheck, type DeskFile, type ProofState } from '../engine';
 import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '../admin/ui';
 import { dateTime, num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import { UploadButton, WorkList, fmtBytes, useWorks } from './WorkPicker';
+import { ProofFindings, seriousCount } from './ProofFindings';
 
 /** M5 Son Okuma ve Yayın Onayı. Prova PDF'i yüklenir; sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve
  *  forma dosyadan ölçülür. Elle işaretlenen maddeler ve adı yazılı imzacılar tamamlanınca onay oluşur.
@@ -163,6 +164,11 @@ export default function ProofScreen() {
   const state = useQuery({ queryKey: ['editorial', 'proof', workId], queryFn: () => deskApi.proof(workId as string), enabled: ENGINE_ENABLED && !!workId });
   const s = state.data;
   useEffect(() => setIsbn(s?.work.isbn || ''), [s?.work.isbn, workId]);
+  // Motorun otomatik denetimleri; eşleşme köprüde kitap adıyla yapılır, prova PDF'inden bağımsızdır.
+  const title = s?.work.title ?? '';
+  const proofing = useQuery({ queryKey: ['editorial', 'proofing', title], queryFn: () => proofingApi.get(title), enabled: ENGINE_ENABLED && !!title, staleTime: 60_000 });
+  const pr = proofing.data;
+  const hasProofing = !!pr && pr.configured && !!pr.bookId && pr.checks.length > 0;
 
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['editorial', 'proof', workId] });
@@ -186,12 +192,13 @@ export default function ProofScreen() {
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
-      {s && s.versions.length > 0 && (
+      {s && (s.versions.length > 0 || hasProofing) && (
         <KpiRow>
-          <Kpi label="Prova sürümü" value={`v${s.versions[0].version}`} help={dateTime(s.versions[0].uploadedAt)} />
+          <Kpi label="Prova sürümü" value={s.versions[0] ? `v${s.versions[0].version}` : '—'} help={s.versions[0] ? dateTime(s.versions[0].uploadedAt) : 'Prova yüklenmedi'} />
           <Kpi label="Dosyadan geçen" value={`${nf.format(auto.filter((c) => c.passed === true).length)}/${nf.format(auto.length)}`} help="Otomatik ölçülen madde" />
           <Kpi label="Elle işaretlenen" value={`${nf.format(manual.filter((c) => c.passed !== null).length)}/${nf.format(manual.length)}`} help="Gözle kontrol maddesi" />
           <Kpi label="İmza" value={`${nf.format(s.signatures.filter((x) => x.signedAt).length)}/${nf.format(s.signatures.length)}`} help={s.approved ? 'Yayın onayı tamam' : 'Onay bekliyor'} />
+          {hasProofing && <Kpi label="ZEKİ AI bulgusu" value={nf.format(seriousCount(pr))} help={`Uyarı ve hata · ${nf.format(pr?.findings.length ?? 0)} bulgu toplam`} />}
         </KpiRow>
       )}
 
@@ -271,6 +278,7 @@ export default function ProofScreen() {
               <Signers s={s} onChanged={refresh} />
             </>
           )}
+          {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.')} />}
         </div>
       </div>
     </ModuleFrame>

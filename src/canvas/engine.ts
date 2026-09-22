@@ -1289,6 +1289,9 @@ export type BookQuestion = {
   id: string;
   bookKey: string;
   bookTitle: string | null;
+  /** Kart kimliği: kitap adı kataloğa tam eşleşince köprü ekler; sayfa rozetlerinin görsel önizlemesi buna bağlıdır.
+   *  Yoksa rozet düz metin kalır (önizleme yok). */
+  bookId?: string | null;
   cards?: BookCard[];
   cardError?: string | null;
   cardMatch?: string | null;
@@ -1313,6 +1316,50 @@ export const bookAskApi = {
   list: (bookKey?: string) => send<{ items: BookQuestion[]; running: number; configured: boolean }>('GET', `/api/v1/editorial/ask${qs({ book: bookKey })}`, undefined, 30_000),
   ask: (b: { question: string; bookKey?: string; bookTitle?: string; parentId?: string }) => send<{ id: string; status: string }>('POST', '/api/v1/editorial/ask', b, 30_000),
   one: (id: string) => send<BookQuestion>('GET', `/api/v1/editorial/ask/${encodeURIComponent(id)}`, undefined, 30_000),
+  /** Sayfa rozeti önizlemesi: kitabın son neslinde o sayfanın render'ı. Oturum çerezi tarayıcıdan gider;
+   *  köprü bir saat önbelleklettiği için aynı sayfa ikinci kez anında açılır. */
+  pageImageUrl: (bookId: string, pageNo: number) =>
+    `${ENGINE_BASE}/api/v1/editorial/ask/pages/${encodeURIComponent(bookId)}/${Math.max(1, Math.floor(pageNo))}`,
+};
+
+// ------------------------------------------------------ M5: motorun otomatik son okuma denetimleri
+
+export type ProofingSeverity = 'INFO' | 'WARN' | 'ERROR';
+/** Motordaki tek bir denetimin (ör. yazım, tutarlılık) son koşusu. FAILED ise `error` dolu gelir. */
+export type ProofingCheck = {
+  name: string;
+  label: string;
+  version: string;
+  status: 'SUCCEEDED' | 'FAILED';
+  startedAt: string | null;
+  finishedAt: string | null;
+  findings: number;
+  /** WARN + ERROR sayısı. */
+  serious: number;
+  error: string | null;
+};
+export type ProofingFinding = {
+  check: string;
+  label: string;
+  page: number | null;
+  severity: ProofingSeverity;
+  message: string;
+  quote: string | null;
+  suggestion: string | null;
+  bbox: [number, number, number, number] | null;
+};
+/** Eşleşme köprüde kitap adıyla yapılır; `bookId` null ise eser motorda okunmamıştır. */
+export type ProofingReport = {
+  configured: boolean;
+  bookId: string | null;
+  bookTitle: string | null;
+  generationId: string | null;
+  checks: ProofingCheck[];
+  findings: ProofingFinding[];
+};
+
+export const proofingApi = {
+  get: (bookTitle: string) => send<ProofingReport>('GET', `/api/v1/editorial/proofing${qs({ book: bookTitle })}`, undefined, 30_000),
 };
 
 /** Soru sorulabilen (okunmuş) kitaplar; motordan gelir, köprüde kısa süre önbellekte tutulur. */

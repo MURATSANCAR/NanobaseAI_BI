@@ -752,6 +752,118 @@
   white-space: nowrap;
   vertical-align: baseline;
 }
+/* Önizlemeli rozet bir düğmedir: metinle aynı yazı, yalnız fareli cihazda hover vurgusu. */
+button.zk-page-ref--live {
+  appearance: none;
+  font-family: inherit;
+  cursor: default;
+  transition: border-color 0.16s ease, background-color 0.16s ease;
+}
+button.zk-page-ref--live:focus-visible {
+  outline: 2px solid #7c5cff;
+  outline-offset: 1px;
+}
+@media (hover: hover) and (pointer: fine) {
+  button.zk-page-ref--live:hover,
+  button.zk-page-ref--live[aria-expanded='true'] {
+    border-color: rgb(124 92 255 / 0.55);
+    background: #ebe5ff;
+  }
+}
+@media (pointer: coarse) {
+  button.zk-page-ref--live { padding-block: 0.2em; }
+}
+
+/* Sayfa önizlemesi: rozetin üstünde (yer yoksa altında) küçük bir kart. Tooltip ölçüsü: 150 ms giriş,
+   100 ms çıkış, ölçek 0.97→1 + opaklık; transform-origin rozetin bulunduğu noktadır (--zk-origin, JS'ten). */
+.zk-peek {
+  position: fixed;
+  z-index: 60;
+  box-sizing: border-box;
+  padding: 6px;
+  border: 1px solid rgb(124 92 255 / 0.18);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 44px -16px rgba(20, 30, 60, 0.35), 0 2px 8px -4px rgba(20, 30, 60, 0.12);
+  transform-origin: var(--zk-origin, 50% 100%);
+  transition:
+    transform 0.15s cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 0.15s cubic-bezier(0.23, 1, 0.32, 1);
+  pointer-events: auto;
+}
+.zk-peek[data-state='pre'],
+.zk-peek[data-state='closing'] {
+  opacity: 0;
+  transform: scale(0.97);
+}
+.zk-peek[data-state='closing'] {
+  transition-duration: 0.1s;
+  pointer-events: none;
+}
+.zk-peek[data-instant] {
+  transition-duration: 0s;
+}
+.zk-peek-label {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  padding: 2px 4px 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #6342b5;
+}
+.zk-peek-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+  color: #6b7280;
+}
+.zk-peek-frame {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9px;
+  background: #f3efff;
+}
+.zk-peek-frame img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: min(420px, 70dvh);
+  object-fit: contain;
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+.zk-peek-frame[data-loaded] img {
+  opacity: 1;
+}
+.zk-peek-skeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(100deg, #f3efff 30%, #faf8ff 50%, #f3efff 70%);
+  background-size: 200% 100%;
+  animation: zkShimmer 1.4s linear infinite;
+}
+.zk-peek-empty {
+  margin: 0;
+  padding: 10px 6px 8px;
+  font-size: 12px;
+  color: #6b7280;
+}
+@media (prefers-reduced-motion: reduce) {
+  .zk-peek {
+    transition: opacity 0.15s ease-out;
+  }
+  .zk-peek[data-state='pre'],
+  .zk-peek[data-state='closing'] {
+    transform: none;
+  }
+  .zk-peek-skeleton {
+    animation: none;
+  }
+}
 @media (min-width: 768px) {
   .zk-answer { font-size: 16px; }
 }
