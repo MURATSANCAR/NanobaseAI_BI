@@ -73,6 +73,7 @@ class Alias:
     idle_stop_sec: int
     start_timeout_sec: int
     role: str = ""
+    always_on: bool = False
     inflight: int = 0
     last_used: float = field(default_factory=time.time)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -99,6 +100,7 @@ def load_aliases() -> dict[str, Alias]:
             idle_stop_sec=int(a.get("idle_stop_sec", d.get("idle_stop_sec", 600))),
             start_timeout_sec=int(a.get("start_timeout_sec", d.get("start_timeout_sec", 1800))),
             role=a.get("role", ""),
+            always_on=bool(a.get("always_on", False)),
         )
     return out
 
@@ -218,7 +220,9 @@ async def _make_room(a: Alias) -> None:
             (o for o in ALIASES.values()
              if o.name != a.name and o.gpu == a.gpu and _is_running(o)),
             key=lambda o: o.last_used)
-        idle = [o for o in others if o.inflight == 0]
+        # An always-on model gives way only when nothing else can: it is stopped last and the
+        # keeper brings it back as soon as the card has room again.
+        idle = sorted((o for o in others if o.inflight == 0), key=lambda o: o.always_on)
         if idle:
             await _stop(idle[0], f"make room for {a.name}")
             await asyncio.sleep(3)
@@ -318,11 +322,32 @@ async def reaper() -> None:
         now = time.time()
         for a in ALIASES.values():
             try:
-                if (a.inflight == 0 and not a.lock.locked() and _is_running(a)
+                if a.always_on:
+                    await _keep(a)
+                elif (a.inflight == 0 and not a.lock.locked() and _is_running(a)
                         and now - a.last_used > a.idle_stop_sec):
                     await _stop(a, f"idle {int(now - a.last_used)}s")
             except Exception as e:  # noqa: BLE001
                 log.warning("reaper %s: %s", a.name, e)
+
+
+async def _keep(a: Alias) -> None:
+    """The main model is never stopped for being idle (user decision 2026-09-22: "bu bizim
+    ana modelimiz, hiç kapanmasın"). If a job needing the whole card pushed it out, it comes
+    back as soon as there is room — never by pushing a working model out in turn — and while
+    it is away interactive questions are answered by its copy on GPU 0 (overflow)."""
+    if _is_running(a) or a.lock.locked():
+        return
+    from .foundation import assert_enabled
+    try:
+        await asyncio.to_thread(assert_enabled)
+    except RuntimeError:
+        return                                # maintenance: nothing is started
+    need = int(a.mem_fraction * gpu_mem(a.gpu)[1]) + MEM_MARGIN
+    if gpu_mem(a.gpu)[0] < need:
+        return
+    log.info("keep %s up (always on)", a.name)
+    await ensure_running(a)
 
 
 # ---------------------------------------------------------------- auth/API

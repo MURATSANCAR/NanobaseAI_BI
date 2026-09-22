@@ -26,6 +26,9 @@ defaults:
 
 aliases:
   book-director:
+    # The main model: never stopped for being idle (user decision 2026-09-22). It gives way
+    # only to a model that needs the whole card, and comes back when the card is free.
+    always_on: true
     container: editor-model-director
     model_dir: Qwen3.8-27B-FP8
     real_model: Qwen/Qwen3.8-27B-FP8
