@@ -42,3 +42,23 @@ def cover_path(book_id: str) -> tuple[Path,str]:
     path=Path(row['file_path']).resolve()
     if not path.is_relative_to(settings().storage.resolve()) or not path.is_file(): raise KeyError(book_id)
     return path,row['source']
+
+
+PAGE_MEDIA={'.png':'image/png','.jpg':'image/jpeg','.jpeg':'image/jpeg','.webp':'image/webp'}
+PAGE_MAX_BYTES=15*1024*1024
+
+
+def page_path(book_id: str, page_no: int) -> tuple[Path,str]:
+    """Kitabın SON neslinin bir sayfasının render'ı (ed.page.render_path; storage/books/<id>/pages/pNNNN.png).
+    Yalnız Editor storage altındaki, 15 MB'ı aşmayan görsel dosya sunulur; yoksa KeyError."""
+    with foundation.read_snapshot() as c:
+        row=c.execute(
+            'SELECT p.render_path FROM ed.generation g JOIN ed.book_version v ON v.id=g.book_version_id'
+            ' JOIN ed.page p ON p.book_version_id=v.id AND p.page_no=%s'
+            ' WHERE v.book_id=%s ORDER BY g.created_at DESC, g.id DESC LIMIT 1',(page_no,book_id)).fetchone()
+    if not row or not row['render_path']: raise KeyError(book_id)
+    path=Path(row['render_path']).resolve()
+    mime=PAGE_MEDIA.get(path.suffix.lower())
+    if not mime or not path.is_relative_to(settings().storage.resolve()) or not path.is_file(): raise KeyError(book_id)
+    if path.stat().st_size>PAGE_MAX_BYTES: raise KeyError(book_id)
+    return path,mime

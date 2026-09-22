@@ -13,7 +13,7 @@ from typing import Any, TypedDict
 
 from langgraph.graph import END, START, StateGraph
 
-from . import db, ledger, prompts, schemas, source
+from . import db, ledger, naming, prompts, schemas, source
 from .config import settings
 from .document import page_text_numbered
 from .llm import Llm
@@ -369,7 +369,18 @@ async def resolve_character_identity(generation_id: str) -> dict:
     which the merged mentions occur in the book, so a figure label or a note can
     never become an alias. Appearance is not part of identity here; drawn figures are
     attached afterwards by reference images (vision.resolve_visual_identity).
-    CONFIRMED needs >= 0.85 and evidence on at least two pages."""
+    CONFIRMED needs >= 0.85 and evidence on at least two pages.
+
+    Three invariants are enforced here, where the record is accepted, not later on a
+    screen (editor.naming measures them over the book's own text):
+      * a collective or a concept does not become a person: no character row, its
+        mentions stay unresolved;
+      * an alias must be written the way the book writes a name (capitalised in the
+        middle of a sentence), so a pronoun or a common noun cannot become a second name;
+      * an alias cannot be another character's canonical name in this generation.
+    A refused name does not just disappear from the list: the mentions that carried it
+    are exactly the ones that pointed at the wrong person, so they go back to unresolved
+    instead of staying attached to this character."""
     ms = db.all_rows(
         "SELECT cm.id, cm.page_no, cm.surface_name, cm.confidence, e.quote FROM character_mention cm"
         " JOIN evidence e ON e.id=cm.evidence_id WHERE cm.generation_id=%s AND cm.character_id IS NULL"
@@ -388,8 +399,16 @@ async def resolve_character_identity(generation_id: str) -> dict:
     groups = {gi: [back[x] for x in ch['mention_ids']] for gi,ch in enumerate(out['characters'])}
     claimed: set[str] = set()
     made = []
+    refused: list[dict] = []
+    loosened: set[str] = set()      # mentions a refused name or a refused entity gave back
     with db.tx() as c:
-        source_text = " ".join(ledger.PageIndex.load(c, generation_id).text.values())
+        idx = ledger.PageIndex.load(c, generation_id)
+        source_text = " ".join(idx.text.values())
+        # the book as it is written: capitalisation is the measurement, so the raw spans
+        # are read here and not the normalised index
+        written_text = "\n".join(idx.raw[p] for p in sorted(idx.raw))
+        # ---- first pass: what the book calls each proposed character
+        plans: list[dict] = []
         for gi, ch in enumerate(out["characters"]):
             mids = [m for m in dict.fromkeys(groups[gi]) if m not in claimed]
             if not mids:
@@ -410,6 +429,42 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 canonical = attested[0]
             aliases = [n for n in attested if ledger.norm(n) != ledger.norm(canonical)]
             name_origin = "SOURCE_TEXT" if canonical in attested else "DESCRIPTIVE_LABEL"
+            plans.append({"ch": ch, "mids": mids, "canonical": canonical, "aliases": aliases,
+                          "labels": labels, "name_origin": name_origin,
+                          "entity_scope": ch.get("entity_scope") or "UNKNOWN"})
+        # ---- name invariants, over the whole proposal at once
+        st = settings()
+        verdicts = naming.screen_group_names(
+            [{k: p[k] for k in ("canonical", "aliases", "entity_scope")} for p in plans],
+            written_text, min_share=st.proper_name_min_share, min_uses=st.proper_name_min_uses)
+        # ---- second pass: write the characters that survived, with the names that survived
+        for plan, verdict in zip(plans, verdicts):
+            ch, mids = plan["ch"], plan["mids"]
+            if not verdict["person"]:
+                # Not a person: no character row at all, so nothing — a drawing, an event
+                # actor, a graph edge — can be attached to it later. The mentions and their
+                # evidence stay, unresolved, and `coverage` reports them.
+                for m in mids:
+                    c.execute("UPDATE character_mention SET character_id=NULL,"
+                              " resolution='UNRESOLVED' WHERE id=%s", (m,))
+                loosened.update(mids)
+                refused.append({"name": plan["canonical"], "reason": verdict["reject_reason"],
+                                "entity_scope": plan["entity_scope"], "mentions": len(mids)})
+                continue
+            aliases = verdict["aliases"]
+            dropped_keys = {naming.key(d["name"]) for d in verdict["dropped"]}
+            # a mention that called this character by a refused name never belonged to it
+            loose = [m for m in mids if ledger.norm(by_id[m]["surface_name"]) in dropped_keys]
+            mids = [m for m in mids if m not in set(loose)]
+            for m in loose:
+                c.execute("UPDATE character_mention SET character_id=NULL,"
+                          " resolution='UNRESOLVED' WHERE id=%s", (m,))
+            loosened.update(loose)
+            if not mids:                    # nothing left that this character was called by
+                refused.append({"name": plan["canonical"], "reason": "NO_MENTION_LEFT",
+                                "entity_scope": plan["entity_scope"], "mentions": len(loose)})
+                continue
+            canonical, labels, name_origin = plan["canonical"], plan["labels"], plan["name_origin"]
             pages = sorted({by_id[m]["page_no"] for m in mids})
             conf = float(ch["identity_confidence"])
             # One page can explicitly identify a person; keep the independent
@@ -424,7 +479,8 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 claim=canonical + (f" (diğer adlar: {', '.join(aliases)})" if aliases else "")
                 + f": {ch['description']}",
                 evidence=evs, confidence=conf, created_by="knowledge:identity", model_call_id=call_id,
-                payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status, "identity_audit": audit})
+                payload={"merge_basis": ch["merge_basis"], "aliases": aliases, "identity_status": status,
+                         "identity_audit": audit, "names_refused": verdict["dropped"]})
             row = c.execute(
                 "INSERT INTO character(generation_id, canonical_name, aliases, description,"
                 " identity_status, identity_confidence, first_page, claim_id, kind, traits) VALUES"
@@ -432,21 +488,25 @@ async def resolve_character_identity(generation_id: str) -> dict:
                 (generation_id, canonical, aliases, ch["description"], status, conf, pages[0], cid,
                  ch.get("kind") or "UNKNOWN",
                  db.J({**{k: ch.get(k) or "UNKNOWN" for k in ("sex", "age_band", "entity_scope")},
-                       "name_origin": name_origin, "descriptive_labels": labels}))).fetchone()
+                       "name_origin": name_origin, "descriptive_labels": labels,
+                       "names_refused": verdict["dropped"]}))).fetchone()
             for m in mids:
                 sure = float(by_id[m]["confidence"]) >= 0.75 and conf >= 0.75 and m not in conflicted
                 c.execute("UPDATE character_mention SET character_id=%s, resolution=%s WHERE id=%s",
                           (row["id"], "RESOLVED" if sure else "UNCERTAIN", m))
             made.append({"name": canonical, "aliases": aliases, "status": status, "confidence": conf,
-                         "pages": pages[:12]})
+                         "pages": pages[:12], "names_refused": verdict["dropped"]})
             if status != "CONFIRMED" and len(pages) >= 3 and cid:
                 ledger.queue_review(c, generation_id, claim_id=cid, priority=2,
                                     reason=f"Karakter kimliği kesinleşmedi ({conf:.2f}): "
                                            f"{canonical} — {ch['merge_basis']}")
-        for m in conflicted:
+        for m in conflicted - loosened:      # a name given back is not merely uncertain
             c.execute("UPDATE character_mention SET resolution='UNCERTAIN' WHERE id=%s", (m,))
     return {"characters": len(made), "confirmed": sum(1 for m in made if m["status"] == "CONFIRMED"),
-            "unresolved_mentions": len(ms) - len(claimed), "conflicts": len(out["conflicts"]),
+            "unresolved_mentions": len(ms) - len(claimed) + len(loosened),
+            "conflicts": len(out["conflicts"]),
+            "names_refused": sum(len(m["names_refused"]) for m in made),
+            "entities_refused": refused,
             "list": made, "identity_audit": audit}
 
 
