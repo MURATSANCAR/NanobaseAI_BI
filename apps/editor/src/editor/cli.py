@@ -10,6 +10,7 @@
   python -m editor.cli review list <generation_id>
   python -m editor.cli review decide <item_id> approve|reject|correct --editor NAME [--json '{...}']
   python -m editor.cli canon add <universe> <kind> <key> '<json>' --editor NAME [--claim ID]
+  python -m editor.cli gallery prune [--apply]
 
 Editor decisions (and canon writes) exist only here, not as Hermes tools.
 """
@@ -151,6 +152,10 @@ def main() -> None:
     cq.add_argument("--age", type=int)
     cats.add_parser("card").add_argument("book_id")
     cats.add_parser("web-cover").add_argument("book_id")
+    gal = sp.add_parser("gallery")
+    gals = gal.add_subparsers(dest="galcmd", required=True)
+    gp = gals.add_parser("prune")
+    gp.add_argument("--apply", action="store_true")
     cv = sp.add_parser("cover")
     cv.add_argument("book_id")
     cv.add_argument("file_name")
@@ -193,6 +198,9 @@ def main() -> None:
     elif args.cmd == "catalog" and args.catcmd == "web-cover":
         from . import web_cover
         _print(asyncio.run(web_cover.sync_book(args.book_id)))
+    elif args.cmd == "gallery" and args.galcmd == "prune":
+        from . import gallery
+        _print(gallery.prune(args.apply))
     elif args.cmd == "cover":
         _print(catalog.set_uploaded_cover(args.book_id, args.file_name, args.by))
     elif args.cmd == "accept":
