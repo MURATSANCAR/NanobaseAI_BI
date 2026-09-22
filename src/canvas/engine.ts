@@ -1254,7 +1254,8 @@ export type BookDetail = {
 export const editorialSearchApi = {
   search: (q: string, kind?: SearchKind, page?: number) => send<EditorialSearch>('GET', `/api/v1/editorial/search${qs({ q, kind, page })}`, undefined, 60_000),
   book: (id: string) => send<BookDetail>('GET', `/api/v1/editorial/books/${encodeURIComponent(id)}`, undefined, 60_000),
-  personBooks: (id: string) => send<{ items: SearchHit[]; truncated?: boolean; db?: DbTiming | null }>('GET', `/api/v1/editorial/people/${encodeURIComponent(id)}/books`, undefined, 60_000),
+  personBooks: (id: string, page?: number) =>
+    send<{ items: SearchHit[]; total: number; page: number; pageSize: number; db?: DbTiming | null }>('GET', `/api/v1/editorial/people/${encodeURIComponent(id)}/books${qs({ page })}`, undefined, 60_000),
 };
 
 // ------------------------------------------------ kitabın içeriğine soru (editör motoru, Hermes)

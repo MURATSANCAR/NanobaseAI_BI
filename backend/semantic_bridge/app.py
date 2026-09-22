@@ -3569,9 +3569,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return out
 
     @app.get("/api/v1/editorial/people/{contact_id}/books")
-    def editorial_person_books(contact_id: str, request: Request) -> dict[str, Any]:
+    def editorial_person_books(contact_id: str, request: Request, page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
-        return _editorial_call(editorial_mod.person_books, schema, run, contact_id)
+        return _editorial_call(editorial_mod.person_books, schema, run, contact_id, page)
 
     @app.get("/api/v1/editorial/editors")
     def editorial_editors(request: Request, since: Optional[int] = None) -> dict[str, Any]:

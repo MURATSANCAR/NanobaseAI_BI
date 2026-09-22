@@ -720,15 +720,17 @@ def search_sql(schema: str, q: str, kind: str, page: int = 0) -> str:
     )
 
 
-def books_by_person_sql(schema: str, contact_id: str) -> str:
+def books_by_person_sql(schema: str, contact_id: str, page: int = 0) -> str:
+    """Kişinin katkı verdiği kitaplar (kitap × rol), bir sayfa; `toplam` bütün satırların sayısıdır."""
     p = _prefix(schema)
     return (
+        "SELECT x.*, COUNT(*) OVER () AS toplam FROM ("
         "SELECT DISTINCT b.new_kitapId AS id, b.new_name AS ad, b.new_isbn13 AS ek1, t.new_name AS ek2,"
         " b.statuscode AS durum, b.new_ilkyayintarihi AS tarih"
         f" FROM {p}new_eserkatilimBase e JOIN {p}new_kitapBase b ON b.new_kitapId = e.new_Kitap"
         f" JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
-        f" WHERE e.statecode = 0 AND b.statecode = 0 AND e.new_Katilimsaglayan = '{_guid(contact_id)}'"
-        " ORDER BY b.new_ilkyayintarihi DESC"
+        f" WHERE e.statecode = 0 AND b.statecode = 0 AND e.new_Katilimsaglayan = '{_guid(contact_id)}') x"
+        f" ORDER BY x.tarih DESC, x.id, x.ek2 OFFSET {max(0, int(page)) * PAGE_SIZE} ROWS FETCH NEXT {PAGE_SIZE} ROWS ONLY"
     )
 
 
@@ -833,10 +835,11 @@ def search(schema: str, run: Callable[[str], dict[str, Any]], q: str, kind: Opti
     return out
 
 
-def person_books(schema: str, run: Callable[[str], dict[str, Any]], contact_id: str) -> dict[str, Any]:
-    res = run(books_by_person_sql(schema, contact_id))
-    return {"items": [_hit(r, "kitap") for r in res.get("records") or []], "truncated": bool(res.get("truncated")),
-            "db": _timing(res)}
+def person_books(schema: str, run: Callable[[str], dict[str, Any]], contact_id: str, page_no: int = 0) -> dict[str, Any]:
+    res = run(books_by_person_sql(schema, contact_id, page_no))
+    rows = res.get("records") or []
+    return {"items": [_hit(r, "kitap") for r in rows], "total": int(_n(rows[0].get("toplam")) or 0) if rows else 0,
+            "page": max(0, int(page_no)), "pageSize": PAGE_SIZE, "db": _timing(res)}
 
 
 def book(schema: str, run: Callable[[str], dict[str, Any]], book_id: str) -> dict[str, Any]:

@@ -93,18 +93,34 @@ function Group({ q, kind, title, first, total, pageSize, onPick, children }: {
 
 function PersonBooks({ person, onClose }: { person: SearchHit; onClose: () => void }) {
   const q = useQuery({ queryKey: ['editorial', 'personBooks', person.id], queryFn: () => editorialSearchApi.personBooks(person.id), enabled: ENGINE_ENABLED });
-  const items = q.data?.items ?? [];
+  const [more, setMore] = useState<SearchHit[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const items = [...(q.data?.items ?? []), ...more];
+  const total = q.data?.total ?? items.length;
+  const load = async () => {
+    if (!q.data) return;
+    setBusy(true);
+    setErr(null);
+    try {
+      const r = await editorialSearchApi.personBooks(person.id, Math.ceil(items.length / q.data.pageSize));
+      setMore((m) => [...m, ...r.items]);
+    } catch (e) {
+      setErr(errText(e, 'Sonraki kitaplar alınamadı.'));
+    } finally {
+      setBusy(false);
+    }
+  };
   return (
     <div className="mt-2 rounded-xl bg-slate-50/80 p-2.5">
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
-        <h3 className="text-[12.5px] font-extrabold">{person.title} · eserleri</h3>
+        <h3 className="text-[12.5px] font-extrabold">{person.title} · eserleri{q.data ? ` (${nf.format(total)})` : ''}</h3>
         <button type="button" onClick={onClose} className="text-[11.5px] font-bold text-canvas-violet underline">
           Kapat
         </button>
       </div>
       {q.isLoading && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Okunuyor…</p>}
       {!q.isLoading && !items.length && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Bu kişiye bağlı kitap bulunamadı.</p>}
-      {q.data?.truncated && <p className="mt-2 px-1 text-[12px] text-canvas-muted">Liste satır sınırına takıldı; kişinin bütün kitapları görünmüyor olabilir.</p>}
       <ul className="mt-1.5 space-y-0.5">
         {items.map((h) => (
           <li key={`${h.id}-${h.extra}`}>
@@ -115,6 +131,13 @@ function PersonBooks({ person, onClose }: { person: SearchHit; onClose: () => vo
           </li>
         ))}
       </ul>
+      {err && <Note tone="err">{err}</Note>}
+      {items.length < total && (
+        <button type="button" onClick={load} disabled={busy}
+          className="zk-press mt-1 min-h-9 rounded-lg px-2 text-[12px] font-bold text-canvas-violet underline disabled:opacity-60">
+          {busy ? 'Yükleniyor…' : `Daha fazla göster (${nf.format(items.length)} / ${nf.format(total)})`}
+        </button>
+      )}
     </div>
   );
 }

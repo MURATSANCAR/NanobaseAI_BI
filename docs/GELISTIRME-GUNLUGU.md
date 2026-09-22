@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-22 — CRM ekranları denetimi: kitap sayfası proje/kurul bağı, konu metni, sınırsız arama
+
+- **Denetim (gerçek timasai oturumu, API ↔ CRM .28'e bağımsız sorgu):** Sözleşmeler (14.841 / 9.019 yürürlükte / 310 yenilemede), Yayın Kurulu (2020–2026 yıl yıl, 499), Katkıcılar (13 rol, 2.232 yazar), Editörler (2024'ten 2.714 proje, 917 editörsüz), Projeler (5.966), arama, kişi rehberi (130) birebir tuttu.
+- **Bulunan eksik — kitap sayfası:** proje ve kurul kararı yalnız `new_projeBase.new_kitapid` ile aranıyordu (83 kitap). Gerçek bağ kitaptaki `new_projekarti` ve projedeki karşılığı `new_stakkarti`: 3.271 kitap, kitaba ulaşan kurul kararı 1 → 230. `new_new_proje_new_kitapBase` ara tablosu kitabın kendi projesi DEĞİL («Anne Terliği»ni aynı dönemin 13 başka kitap projesine bağlıyor) — kullanılmadı. Kitap sayfasına «Kitabın konusu» eklendi: web tanıtım metni > `new_ozet` (9.493 kitapta dolu) > eski özet > proje fikri, HTML düz metne; proje satırında proje fikri.
+- **Sessiz tavanlar kaldırıldı:** arama 40 kitap / 20 proje / 20 kişide, kişinin kitapları 40'ta (sonra köprünün 500 satırında) kesiliyordu. Artık her tür sayfalı (50) ve gerçek toplamlı (`COUNT(*) OVER ()`), arayüzde «Daha fazla göster (n / toplam)». Kitap araması kitap adı + kitap adı alanı + ürün adında; 5+ rakam ISBN13/ISBN/e-kitap ISBN'de (tire/boşluk yok sayılır).
+- Doğrulama: modül fonksiyonları doğrudan CRM'e karşı + yayından sonra oturumlu API: 4 kitapta proje/kurul referansla eş, kurullu örnek kitapta karar görünüyor; "a" → 12.379 kitap / 5.308 proje / 3.023 kişi, 2. sayfa çakışmasız; ISBN tireli/tiresiz bulunuyor; en çok kitaplı kişi 2.163 satır = referans, son sayfa 13. Test sunucusunda yayında (`index-Dj4EkV1c.js`), köprü LLM kuyruğu boşken yeniden başlatıldı. Başka oturumun aynı gün kurduğu Yönetim Raporları `app.py`'si ezilmedi (dal `main` üstüne alındı, sunucu `src/` ağacı tabanla fark 0). Müşteri VM'ine kurulmadı.
+- Denetim sırasında TİMAŞ SQL sunucuları 12:5x–13:34 kapalıydı (CRM 13:34'te döndü, Logo .155 o sırada hâlâ kapalı); editoryal ana sayfanın üç bölümü bu arada son başarılı kaydı gösterdi, 13:37'de kendiliğinden tazelendi. CRM veri notları: 30 katkının kişisi yok, 8 kurul kararının projesi bulunamıyor.
+- Görsel kontrol yapılmadı: oturum çerezi HttpOnly, tarayıcı panesine konamıyor; ekranlar API ve derleme ile doğrulandı.
+
 ## 2026-09-22 — Yönetim Raporları modülü ve Yeni Baskı Öneri raporu
 
 - Diğer modüllerden ayrı **Yönetim Raporları** modülü: `/yonetim-raporlari` (grup sayfası) ve `/yonetim-raporlari/baski-oneri`. Kendi rayı (`managementRail`), modül menüsünde ayrı grup, Kampüs'te dördüncü modül kartı. `/yonetim` yönetici ekranıyla karışmasın diye ad "Yönetim Raporları".
