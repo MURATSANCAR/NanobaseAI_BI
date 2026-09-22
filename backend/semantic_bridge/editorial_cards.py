@@ -38,7 +38,11 @@ def cover(book_id: str):
 
 
 def public_card(card):
-    return {k:card[k] for k in ('id','title','generationId','revision','authors','summary','cover','contentAvailable','semanticAcceptance')}
+    out={k:card[k] for k in ('id','title','generationId','revision','authors','summary','cover','contentAvailable','semanticAcceptance')}
+    # Yayınevinin CRM kaydı: kitaptan doğrulanmış değil, kartta etiketli gösterilir (eski kart servisi göndermez).
+    out['authorsSource']=card.get('authorsSource')
+    out['publisher']=card.get('publisher')
+    return out
 
 
 INTENT = ('Kullanıcı kitap arıyor/öneri istiyor veya kitap kapağı, yazarı, kısa özeti, kitap kartı '

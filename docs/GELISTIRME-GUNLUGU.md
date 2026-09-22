@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-22 — Editör CRM bağlayıcısı: bulunamayan kitap kalmasın, yazar ve özet de CRM'den
+
+- Tetikleyen: «Kaybolan Balinalar» kitabının verisi CRM'den gelmemişti. Canlı CRM'de (.28) kayıt «Kaybolan Balinaların Şarkısı» adıyla var: ISBN, kapak yolu ve proje kapak alternatifi boş (basılmamış, ilk yayın 01.12.2026); yazar ve proje fikri dolu. Eski bağlayıcı yalnız kapak alıyordu, ISBN'siz kitapta birebir başlık arıyordu.
+- Asıl sınıf: editördeki başlıklar dosya adından geliyor (`anne-terligi`); eski eşleşme `LIKE '%anne-terligi%'` + Türkçe harfli karşılaştırma yüzünden 7 gerçek başlığın 1'ini buluyordu. Ayrıca kapak istekleri eski `book_card` tablosundan geliyordu; kartı olmayan kitap hiç sorulmuyordu.
+- `connectors/crm_covers.py`: CRM kitap listesi bir kez okunur; ISBN > katlanmış birebir başlık (Türkçe harf→ASCII, noktalama/tire→boşluk; kitap adı/ürün adı alanları dahil) > kelime öneki (en az iki kelime). Kalan çokluk doğrulanmış yazarla daraltılır; aynı ad (sondaki «(Önceki Ebat)» gibi not hariç) + aynı yazar (boş yazar hariç) = baskılar (`+EDITIONS`), kapak adayları hepsinden toplanır; farklı kitaplar `AMBIGUOUS`, tahmin yok. Kayıt: yazar (`new_yazartext` > «Yazar - …» katılımı > projenin olası yazarı), çizer, özet (web metni > `new_ozet` > eski özet > proje fikri; HTML düz metne), ISBN, stok kodu, ilk yayın tarihi. `--dry-run BAŞLIK…` editöre gitmeden sınar.
+- Ölçüm (canlı CRM, 13.574 etkin kitap, her başlık editör dosya adı biçimine çevrilip geri aratıldı): 13.364 doğru kayıt (%98,5), 210 gerçek ad çakışması (ör. «Burçlar Nedir»: iki ayrı yazar; «Bostan»: dört çeviri) — bunların 114'ü editörün doğruladığı yazarla ayrışıyor. 6 editör kitabı + «Kaybolan Balinalar» 7/7 (eski 1/7).
+- Editör: `022_book_crm_record.sql` (kitap başına güncel CRM kaydı; eşleşmeyen sonraki arama siler), `cover_requests` bütün `ed.book` kitaplarını doğrulanmış ISBN/yazarla verir, kart servisi `authorsSource` + `publisher` alanı döner. Kitap kartı: doğrulanmış yazar/özet yoksa CRM'dekini «yayınevi kaydı» / «Yayınevinin tanıtımı (CRM)» etiketiyle gösterir, başlık CRM yayın adı. CRM metni kanıt defterine girmez.
+- Doğrulama: eşleştirici canlı CRM'e karşı; göç + upsert/silme test sunucusu Postgres'inde geri alınan işlemde; Python derleme ve `tsc --noEmit` sunucuda temiz. **GPU'ya kurulmadı** (TT VPN kapalı), bağlayıcı editöre karşı uçtan uca koşmadı; kapak dosyaları için `CRM_IMAGE_ROOTS` hâlâ BT'den bekleniyor.
+
 ## 2026-09-22 — "2025 Yeni Baskı Öneri Raporu" .pbit çözümlendi
 
 - Kullanıcının Power BI şablonu (`2025_Yeni_Baskı Öneri Raporu (5).pbit`) açıldı; 10 tablonun SQL'i (kaçışları çözülmüş), ham M ifadeleri, DAX ölçü/sütunları, ilişkiler ve 3 sayfanın ekran yapısı `docs/analiz/pbit-yeni-baski-oneri/` altına yazıldı. Amaç raporu BI tarafında yeniden kurmak.

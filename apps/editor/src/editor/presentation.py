@@ -15,10 +15,20 @@ def cards() -> list[dict]:
                 continue
             cover = c.execute('SELECT source,page_no FROM ed.book_cover WHERE book_id=%s AND is_current',
                               (book['id'],)).fetchone()
+            crm = c.execute('SELECT crm_title,matched_by,authors,illustrators,summary,isbn,first_publish_date'
+                            ' FROM ed.book_crm_record WHERE book_id=%s', (book['id'],)).fetchone()
+            verified = [x['claim'] for x in row['metadata'] if x.get('subject') == 'AUTHOR']
             result.append({'id': row['book_id'], 'title': row['title'],
                 'generationId': row['generation_id'],
                 'revision': row['knowledge_revision'] if row['available'] else None,
-                'authors': [x['claim'] for x in row['metadata'] if x.get('subject') == 'AUTHOR'],
+                # Verified in the book first; the publisher's CRM record stands in, labelled.
+                'authors': verified or (crm['authors'] if crm else []),
+                'authorsSource': 'BOOK' if verified else ('CRM' if crm and crm['authors'] else None),
+                'publisher': {'source': 'CRM', 'title': crm['crm_title'], 'matchedBy': crm['matched_by'],
+                              'authors': crm['authors'], 'illustrators': crm['illustrators'],
+                              'summary': crm['summary'], 'isbn': crm['isbn'],
+                              'firstPublishDate': str(crm['first_publish_date']) if crm['first_publish_date'] else None}
+                             if crm else None,
                 'summary': row['summary'], 'themes': row['themes'],
                 'cover': {'source': cover['source'], 'page': cover['page_no']} if cover else None,
                 'contentAvailable': row['available'], 'semanticAcceptance': False})

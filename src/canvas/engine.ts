@@ -1254,6 +1254,19 @@ export type BookCard = {
   generationId: string;
   revision: number | null;
   semanticAcceptance: boolean;
+  /** Yazar kitaptan mı doğrulandı, yoksa yayınevinin CRM kaydından mı geliyor. */
+  authorsSource?: 'BOOK' | 'CRM' | null;
+  /** Yayınevinin CRM kaydı; kitabın metninden doğrulanmış değildir. */
+  publisher?: {
+    source: 'CRM';
+    title: string;
+    matchedBy: string;
+    authors: string[];
+    illustrators: string[];
+    summary: string | null;
+    isbn: string | null;
+    firstPublishDate: string | null;
+  } | null;
 };
 
 export type BookQuestion = {

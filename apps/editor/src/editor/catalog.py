@@ -133,16 +133,47 @@ PRIORITY = {"UPLOADED": 4, "CRM": 3, "WEB": 2, "PDF_PAGE": 1}
 
 
 def cover_requests() -> list[dict]:
-    """Books whose current cover is not an editor upload: the CRM connector looks these up
-    (again on every run, so a newer CRM image replaces an older one)."""
-    rows = db.all_rows(
-        "SELECT c.book_id, c.title, c.metadata, cv.source, cv.source_date FROM book_card c LEFT JOIN"
-        " book_cover cv ON cv.book_id=c.book_id AND cv.is_current WHERE c.is_current AND"
-        " coalesce(cv.source,'PDF_PAGE') <> 'UPLOADED'")
-    return [{"book_id": str(r["book_id"]), "title": r["title"],
-             "isbns": [x["value"] for x in (r["metadata"] or {}).get("ISBN", [])],
-             "current_source": r["source"], "current_date": str(r["source_date"]) if r["source_date"] else None}
-            for r in rows]
+    """Every book the editor knows, for the CRM connector: it looks up the publisher record
+    and the cover (again on every run, so a newer CRM image replaces an older one; an editor
+    upload is kept by store_lookup). Books without a current card are asked too: a book must
+    not stay unfound because its analysis has not finished."""
+    from . import foundation, read_model
+    legacy = {str(r["book_id"]): r["metadata"] or {} for r in db.all_rows(
+        "SELECT book_id, metadata FROM book_card WHERE is_current")}
+    out = []
+    with foundation.read_snapshot() as c:
+        for b in c.execute("SELECT b.id, b.title, cv.source, cv.source_date FROM ed.book b LEFT JOIN"
+                           " ed.book_cover cv ON cv.book_id=b.id AND cv.is_current ORDER BY b.id").fetchall():
+            book_id = str(b["id"])
+            meta = (read_model.card(c, book_id) or {}).get("metadata", [])
+            facts = lambda k: list(dict.fromkeys(  # noqa: E731
+                [x["claim"] for x in meta if x.get("subject") == k] +
+                [x["value"] for x in legacy.get(book_id, {}).get(k, [])]))
+            out.append({"book_id": book_id, "title": b["title"], "isbns": facts("ISBN"),
+                        "authors": facts("AUTHOR"), "current_source": b["source"],
+                        "current_date": str(b["source_date"]) if b["source_date"] else None})
+    return out
+
+
+def store_crm_record(book_id: str, rep: dict) -> None:
+    """The publisher record travels with every lookup; a lookup without a match removes the
+    old one so the card never shows another book's facts."""
+    rec = rep.get("crm")
+    if not rec:
+        db.one("DELETE FROM book_crm_record WHERE book_id=%s RETURNING book_id", book_id)
+        return
+    db.one("INSERT INTO book_crm_record(book_id, crm_book_id, crm_project_id, matched_by, crm_title, authors,"
+           " illustrators, summary, summary_field, isbn, stock_code, first_publish_date, crm_modified_on)"
+           " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (book_id) DO UPDATE SET"
+           " crm_book_id=EXCLUDED.crm_book_id, crm_project_id=EXCLUDED.crm_project_id,"
+           " matched_by=EXCLUDED.matched_by, crm_title=EXCLUDED.crm_title, authors=EXCLUDED.authors,"
+           " illustrators=EXCLUDED.illustrators, summary=EXCLUDED.summary, summary_field=EXCLUDED.summary_field,"
+           " isbn=EXCLUDED.isbn, stock_code=EXCLUDED.stock_code, first_publish_date=EXCLUDED.first_publish_date,"
+           " crm_modified_on=EXCLUDED.crm_modified_on, synced_at=now() RETURNING book_id",
+           book_id, rec["crm_book_id"], rec.get("crm_project_id"), rep["matched_by"], rec["title"],
+           db.J(rec.get("authors") or []), db.J(rec.get("illustrators") or []), rec.get("summary"),
+           rec.get("summary_field"), rec.get("isbn"), rec.get("stock_code"), rec.get("first_publish_date"),
+           rec.get("crm_modified_on"))
 
 
 def store_lookup(rep: dict, source: str, data: bytes | None = None) -> dict:
@@ -187,6 +218,7 @@ def store_lookup(rep: dict, source: str, data: bytes | None = None) -> dict:
 
 
 def store_crm_lookup(rep: dict) -> dict:
+    store_crm_record(rep["book_id"], rep)
     return store_lookup(rep, "CRM")
 
 
