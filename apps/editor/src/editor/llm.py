@@ -168,10 +168,15 @@ class Llm:
                     raise
                 # A deterministic retry repeats a degenerate loop token for token:
                 # move away from it instead (measured 2026-09-19, page 8 x3 identical).
-                if "finish_reason=length" in str(e) and not _looping((resp or {}).get("content") or ""):
+                _content = (resp or {}).get("content") or ""
+                if "finish_reason=length" in str(e) and not _looping(_content) and len(_content) > 200:
                     # The first budget is sized for speed; it must never be the reason a page
                     # is lost: thinking that did not fit gets twice the room (bounded by the
                     # model's context). A loop gets no extra room, only a push out of the loop.
+                    # A near-empty length stop (0 chars) is NOT truncation but a stalled decode:
+                    # doubling the budget only makes the next stall run twice as long (measured
+                    # 34→76s on modality_referee/merge_events), so it keeps the same budget and
+                    # relies on the temperature/repetition push below to break out.
                     req["max_tokens"] = min(req["max_tokens"] * 2, MAX_RETRY_TOKENS)
                 if "finish_reason=length" in str(e) and (req.get("chat_template_kwargs") or {}).get("enable_thinking"):
                     # thinking used the whole budget and left no answer: answer directly
