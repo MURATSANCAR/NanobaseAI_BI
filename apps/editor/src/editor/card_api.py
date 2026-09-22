@@ -5,6 +5,7 @@ import os
 from fastapi import Depends, FastAPI, Header, HTTPException
 from fastapi.responses import FileResponse
 from .presentation import cards, cover_path
+from . import foundation, graph, read_model
 
 def authorize(authorization: str = Header(default='')):
     expected=os.environ.get('EDITOR_CARDS_KEY','')
@@ -24,3 +25,13 @@ def book_cover(book_id: UUID):
         return FileResponse(path,headers={'Cache-Control':'private, no-cache','X-Cover-Source':source})
     except KeyError:
         raise HTTPException(404,'cover not found') from None
+
+@app.get('/v1/books/{book_id}/graph')
+def book_graph(book_id: UUID):
+    """Character network of the book's latest generation (fact events only). Edges point
+    at node ids; each node counts the usable events the character takes part in."""
+    with foundation.read_snapshot() as c:
+        gen=read_model.latest(c,str(book_id))
+    if gen is None:
+        raise HTTPException(404,'book not found')
+    return {'book_id':str(book_id),**graph.network(str(gen['id']))}

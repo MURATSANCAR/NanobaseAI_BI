@@ -38,6 +38,7 @@ QUESTIONS = sa.Table(
     sa.Column("answer", sa.Text),
     sa.Column("not_found", sa.Boolean),
     sa.Column("card_selection", sa.JSON),
+    sa.Column("graph", sa.JSON),  # karakter sorusunda ekrandaki ağ (editörün doğrulanmış olaylarından)
     sa.Column("parent_id", sa.String(32)),
     sa.Column("error", sa.String(600)),
     sa.Column("elapsed_ms", sa.Integer),
@@ -226,7 +227,7 @@ def _add_missing_columns(engine: sa.engine.Engine) -> None:
         have = {c["name"] for c in sa.inspect(engine).get_columns(QUESTIONS.name)}
     except Exception:  # noqa: BLE001 — tablo henüz yoksa create_all zaten kurdu
         return
-    for col, ddl in (("not_found", "BOOLEAN"), ("card_selection", "JSON"), ("parent_id", "VARCHAR(32)")):
+    for col, ddl in (("not_found", "BOOLEAN"), ("card_selection", "JSON"), ("parent_id", "VARCHAR(32)"), ("graph", "JSON")):
         if col not in have:
             try:
                 with engine.begin() as conn:
@@ -252,7 +253,7 @@ def _row(r: Any) -> dict[str, Any]:
     cards, card_error = editorial_cards.resolve(r.card_selection)
     return {"id": r.id, "bookKey": r.book_key, "bookTitle": r.book_title, "question": r.question,
             "status": r.status, "answer": scrub(r.answer), "notFound": bool(r.not_found),
-            "cards": cards, "cardError": card_error, "cardMatch": (r.card_selection or {}).get("match"),
+            "cards": cards, "cardError": card_error, "graph": r.graph, "cardMatch": (r.card_selection or {}).get("match"),
             "error": (r.error if r.error and not _INTERNAL.search(r.error) and not re.search(r"\b\d{3}:", r.error) else (UNAVAILABLE if r.error else None)), "elapsedMs": r.elapsed_ms,
             "username": r.username, "createdAt": _iso(r.created_at), "finishedAt": _iso(r.finished_at)}
 
@@ -411,6 +412,8 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                     status="bitti", answer=selection['answer'], card_selection=selection, not_found=False,
                     elapsed_ms=int((done-started).total_seconds()*1000), finished_at=done))
             return
+        # Karakter sorusunun ağı yalnız soruya ve kitaba bağlı: GPU kuyruğuna girmeden hazırlanır, cevabı geciktirmez.
+        graph = editorial_cards.character_graph(q, book_title, chat)
         # Motor tek modelle çalışır; sıraya girilir. Bekleyen soru «bekliyor» kalır, koşan «çalışıyor».
         with _gate:
             with engine.begin() as conn:
@@ -423,10 +426,11 @@ def ask(engine: sa.engine.Engine, tenant: str, user: str, question: str, *,
                 log.warning("editorial book ask failed: %s", e)
                 answer, err = None, (str(e) if isinstance(e, BookAskError) else UNAVAILABLE)[:580]
             done = _now()
+            not_found = bool(answer and answer.lstrip().startswith(NOT_FOUND))
             with engine.begin() as conn:
                 conn.execute(sa.update(QUESTIONS).where(QUESTIONS.c.id == qid).values(
-                    status="bitti" if answer else "hata", answer=answer, error=err,
-                    not_found=bool(answer and answer.lstrip().startswith(NOT_FOUND)),
+                    status="bitti" if answer else "hata", answer=answer, error=err, not_found=not_found,
+                    graph=graph if answer and not not_found else None,
                     elapsed_ms=int((done - started).total_seconds() * 1000), finished_at=done))
 
     threading.Thread(target=run, name=f"editorial-ask-{qid[:8]}", daemon=True).start()

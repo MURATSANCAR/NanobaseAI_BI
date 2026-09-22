@@ -20,9 +20,12 @@ const FILL: Record<NonNullable<GraphNode['role']>, string> = {
 };
 
 export default function CharacterGraph({ nodes, edges }: { nodes: GraphNode[]; edges: GraphEdge[] }) {
-  const top = [...nodes].sort((a, b) => b.count - a.count).slice(0, MAX_NODES);
+  // Merkez: köprünün «lead» dediği karakter (soruda adı geçen); yoksa en çok olaylı.
+  const top = [...nodes]
+    .sort((a, b) => Number(b.role === 'lead') - Number(a.role === 'lead') || b.count - a.count)
+    .slice(0, MAX_NODES);
   if (top.length < 2) return null;
-  const maxCount = top[0].count || 1;
+  const maxCount = Math.max(...top.map((n) => n.count), 1);
   const shown = new Set(top.map((n) => n.name));
   const links = edges.filter((e) => shown.has(e.a) && shown.has(e.b) && e.a !== e.b);
   const maxW = links.reduce((m, e) => Math.max(m, e.weight), 1);

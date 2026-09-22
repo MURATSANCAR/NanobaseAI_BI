@@ -176,3 +176,32 @@ def recommend(generation_id: str, character: str, k: int = 5,
                     "reason": f"{len(p['shared'])} ortak olayda birlikte; en önemlisi "
                               f"s.{top['page']}: {top['event']}"})
     return {"character": c["canonical_name"], "resolved": True, "recommendations": out}
+
+
+# ------------------------------------------------------------ book network
+def network(generation_id: str, include_all_modalities: bool = False) -> dict:
+    """Whole-book character network for a picture, from the same usable events as
+    triples: node = character with the number of fact events it takes part in
+    (actor or involved), edge = the number of fact events two characters share.
+    Aliases ride along so a caller can find a named character in free text."""
+    mods = _modalities(include_all_modalities)
+    counts: dict[str, int] = {}
+    pairs: dict[tuple[str, str], int] = {}
+    for ev in _event_roles(generation_id, mods).values():
+        members = sorted({m["character_id"] for m in ev["actors"] + ev["involved"]})
+        for cid in members:
+            counts[cid] = counts.get(cid, 0) + 1
+        for i, a in enumerate(members):
+            for b in members[i + 1:]:
+                pairs[(a, b)] = pairs.get((a, b), 0) + 1
+    chars = {str(r["id"]): r for r in db.all_rows(
+        "SELECT id, canonical_name, aliases FROM character WHERE generation_id=%s AND id = ANY(%s)",
+        generation_id, list(counts))} if counts else {}
+    nodes = sorted(({"id": cid, "name": chars[cid]["canonical_name"],
+                     "aliases": list(chars[cid]["aliases"] or []), "count": n}
+                    for cid, n in counts.items() if cid in chars),
+                   key=lambda n: (-n["count"], n["name"]))
+    edges = sorted(({"a": a, "b": b, "weight": w} for (a, b), w in pairs.items()
+                    if a in chars and b in chars), key=lambda e: -e["weight"])
+    return {"generation_id": generation_id, "modalities": list(mods),
+            "nodes": nodes, "edges": edges}
