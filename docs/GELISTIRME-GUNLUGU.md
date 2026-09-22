@@ -30,6 +30,13 @@
 - Son 3 saatte değişen 3 worktree korundu (etkin oturum olabilir): `prompt-test-history` (`editor-identity-on-main`, commit'lenmemiş `measure_ocr.py`), `brainapi2-editor-module`, `bi-editor-fe-be-update`.
 - Uzak dal silme ve push kimlik doğrulaması olmadığından kullanıcıya bırakıldı.
 
+## 2026-09-22 — Editör: ilişki grafiği (yapan→olay→nesne) MCP aracı
+
+- **Neden:** brainapi2 (Lumen-Labs) incelendi. Sonuç: almaya değmez — `knowledge.py`'nin genel/İngilizce kopyası, BSL lisans kapısı, doküman-seviye provenance editörün sayfa+quote kanıt kuralının altında kalır, ayrıca Neo4j/Milvus/Mongo altyapısı. Eksik olan tek şey **graf sorgusuydu** (actor→event→target üçgeni + synergies/recommend). Fikir alındı, kod değil.
+- **Yapılan:** `src/editor/graph.py` + `book_graph_mcp` (`/graph/mcp`, 3 araç: `event_triples`, `character_synergies`, `recommend_related`). Salt-okuma; var olan `usable_event`/`event_actor`/`character`/`evidence` üstüne. Şema değişikliği yok, veriye dokunma yok. Her kenar kabul edilmiş iddia + doğrulanmış alıntı; sayfa+quote taşır. Varsayılan yalnız REALIZED/MEMORY — plan/hayal/şaka olgu sayılmaz (`include_all_modalities` ile açılır). Synergies affinity = Σ(importance·p_focus·p_other) ortak olaylar üzerinden.
+- **Canlı test (tt-gpu, editor-mcp konteynerinde, gerçek DB):** generation `d7582423` ("Uyandırma Vakti"), 34 karakter/31 gerçek olay. 37 üçgen kenar, hepsi verified alıntıyla; Aytek synergies 11 karakter (Dedem ilk, 13 ortak olay); recommend sıralı+gerekçeli; modality kapısı OK. Kod `/data/editor/app/src/editor/`'a kondu.
+- **Açık:** MCP aracının Hermes'e HTTP'den görünmesi için `editor-mcp` yeniden başlatılmalı (`editorctl install && up` ya da restart) — graf mantığı doğrudan doğrulandı, wrapper ince `_t()`.
+
 ## 2026-09-21 — Arşiv P100 satış kırılımları, faturalı satış kuralı, müşteri VM'ine kurulum
 
 - Arşiv P100 (6 kırılımlı aylık satış soruları, `tests/text2sql/arsiv-p100.jsonl`, koşucu `arsiv-p100-run.py`: köprünün SQL'i DB'de koşulur, arşiv şablonundan kurulan bağımsız referansla toplam + grup sayısı karşılaştırılır): 23 → **100/100 toplam doğru** (91 tam; 9 tutar sorusunda yalnız sıfır tutarlı iade grupları fazla).

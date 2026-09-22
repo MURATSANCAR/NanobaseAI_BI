@@ -30,7 +30,7 @@ from starlette.requests import Request
 from starlette.responses import FileResponse, JSONResponse, Response
 from starlette.routing import Mount, Route
 
-from . import catalog, chat_reads, db, document, jobs, knowledge, quality, retrieval, vision
+from . import catalog, chat_reads, db, document, graph, jobs, knowledge, quality, retrieval, vision
 
 KEY = os.environ.get("EDITOR_MCP_KEY", "")
 Gen = Annotated[str, Field(description="generation_id (get_job_status ya da latest_generation verir)")]
@@ -233,6 +233,38 @@ async def rerank_evidence(query: str, candidates: list[str]) -> list[dict]:
     return await retrieval.rerank_evidence(query, candidates)
 
 
+# --------------------------------------------------------------- graph
+graph_mcp = MCPServer("book_graph_mcp", instructions=(
+    "İlişki grafiği: yapan -> olay -> nesne üçgeni. Her kenar zaten kullanılabilir bir "
+    "olaydır (kabul edilmiş iddia, doğrulanmış alıntı) ve sayfa+alıntı kanıtı taşır. "
+    "Varsayılan yalnız gerçekleşmiş olaylar; plan/hayal/şaka olgu sayılmaz. Boş sonuç "
+    "yokluk kanıtı değildir."))
+
+
+@graph_mcp.tool()
+async def event_triples(generation_id: Gen, character: str | None = None,
+                        include_all_modalities: bool = False) -> dict:
+    """Yapan -> olay -> nesne kenarları; her biri modality, önem ve sayfa+alıntı kanıtıyla.
+    character verilirse (ad ya da takma ad) yalnız o karakterin geçtiği kenarlar döner."""
+    return await _t(graph.triples, generation_id, character, include_all_modalities)
+
+
+@graph_mcp.tool()
+async def character_synergies(generation_id: Gen, character: str,
+                              include_all_modalities: bool = False) -> dict:
+    """Bir karakterle aynı olayda geçen tüm karakterler ve paylaşılan olaylar (sıralanmamış küme)."""
+    return await _t(graph.synergies, generation_id, character, include_all_modalities)
+
+
+@graph_mcp.tool()
+async def recommend_related(generation_id: Gen, character: str,
+                            k: Annotated[int, Field(ge=1, le=20)] = 5,
+                            include_all_modalities: bool = False) -> dict:
+    """Bir karaktere graf yakınlığıyla en ilişkili k karakter; her biri gerekçesi ve en önemli
+    ortak olayıyla. "X kiminle ilişkili" sorusunun kanıt-bağlı cevabı."""
+    return await _t(graph.recommend, generation_id, character, k, include_all_modalities)
+
+
 @retrieval_mcp.tool()
 async def search_character_history(generation_id: Gen, name: str) -> dict:
     """Bir karakterin anmaları, duyguları ve katıldığı olaylar, sayfa sırasıyla."""
@@ -420,8 +452,8 @@ async def chat_search(generation_id: Gen, query: str,
 
 
 SERVERS = {"document": document_mcp, "vision": vision_mcp, "knowledge": knowledge_mcp,
-           "retrieval": retrieval_mcp, "quality": quality_mcp, "jobs": jobs_mcp,
-           "chat": chat_mcp}
+           "retrieval": retrieval_mcp, "graph": graph_mcp, "quality": quality_mcp,
+           "jobs": jobs_mcp, "chat": chat_mcp}
 
 
 class BearerAuth(BaseHTTPMiddleware):
