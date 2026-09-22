@@ -66,6 +66,27 @@ GPU'da `sudo python3 add-cards-routes.py`. Sonra müşteri VM'inin `.env` dosyas
 GPU adımını kullanıcı koşturdu (Claude oturumunda izin denetimine takılır). VM'den doğrulandı: gizli başlıksız 403,
 anahtarsız 401, POST 405, tam istek 200; kapak dış kapıdan 200 `image/jpeg`.
 
+## İnceleme kuyruğu (2026-09-22 — hazır, GPU'da koşulmadı)
+
+Analizin insana sorduğu kayıtlar artık portalın kitap sayfasından karara bağlanıyor. `add-review-routes.py`
+aynı EDITOR bloğuna beş yol daha ekler — dördü salt okunur, biri yazar:
+
+- `GET  /editor/cards/v1/books/<uuid>/review`
+- `POST /editor/cards/v1/books/<uuid>/review/decide-many`
+- `GET  /editor/cards/v1/books/<uuid>/pages/<n>`
+- `GET  /editor/cards/v1/books/<uuid>/pages/<n>/context`
+- `GET  /editor/cards/v1/books/<uuid>/figures/<uuid>`
+
+Koruma aynı üç kat; fark, POST'un yalnız `decide-many` yolunda kabul edilmesi (diğer dördü GET dışını 405
+ile keser) ve yol parçalarının desende UUID/rakamla sınırlanması. Kararı veren kişi köprünün `X-Editor`
+başlığından gelir: nginx başlığı geçirir, üretmez; kart servisi başlık yoksa 400 döner, yani "portal"
+adına karar yazılamaz.
+
+GPU'da `sudo python3 add-review-routes.py`. Tek başına yetmez: kart servisinin yeni sürümü de kurulu
+olmalı (`review.py` + `card_api.py` → `editor-cards`, ardından restart).
+
+Geri alma: blok içindeki `# EDITOR-INCELEME` bölümünü sil, `sudo nginx -t && sudo systemctl reload nginx`.
+
 ## Geri alma
 
 1. GPU: `EDITOR-BASLA … EDITOR-BITTI` bloğunu sil, `sudo nginx -t && sudo systemctl reload nginx`.
