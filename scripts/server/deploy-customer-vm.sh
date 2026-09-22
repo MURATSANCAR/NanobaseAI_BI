@@ -5,8 +5,8 @@
 # Önkoşullar (bir kez, müşteri tarafında):
 #   1) Bizim sunucunun ~/.ssh/zeki_customer_vm.pub anahtarı ai@192.168.0.55:~/.ssh/authorized_keys içinde olmalı.
 #   2) ai kullanıcısı docker grubunda olmalı:  sudo usermod -aG docker ai   (sonra yeniden giriş)
-#   3) VM'de /home/ai/bi-docker/infra/docker/bi/.env (PORTAL_ORIGIN dahil), secrets/logo-mssql-connection.json
-#      ve secrets/ad/timas-ad.json hazır olmalı (bu betik onlara dokunmaz).
+#   3) VM'de /home/ai/bi-docker/infra/docker/bi/.env (PORTAL_ORIGIN dahil), secrets/logo-mssql-connection.json,
+#      secrets/crm-mssql-connection.json (canlı CRM) ve secrets/ad/timas-ad.json hazır olmalı (bu betik onlara dokunmaz).
 #   4) Dış kapı: npm-custom-http.conf (NPM özel ayarı, HTTP).
 #
 # Kullanım (bizim sunucuda, repo kopyasının kökünde):  bash scripts/server/deploy-customer-vm.sh
@@ -36,6 +36,7 @@ echo "== derle ve kaldır"
 $SSH "$VM" "cd $DST/infra/docker/bi && grep -q '^SEMANTIC_ADMIN_TOKEN=.' .env || echo 'UYARI: .env içinde SEMANTIC_ADMIN_TOKEN boş; onay kararları 403 döner'
   grep -q '^PORTAL_ORIGIN=http' .env || { echo 'HATA: .env içinde PORTAL_ORIGIN yok; giriş 403 döner'; exit 1; }
   test -s secrets/ad/timas-ad.json || { echo 'HATA: secrets/ad/timas-ad.json yok; giriş 503 döner'; exit 1; }
+  test -s secrets/crm-mssql-connection.json || { echo 'HATA: secrets/crm-mssql-connection.json yok; CRM ekranları Logo sunucusuna düşer'; exit 1; }
   docker compose build bridge web login && docker compose up -d && sleep 60 && docker compose ps --format '{{.Service}} {{.State}} {{.Status}}'
   docker compose exec -T web nginx -t
   # Oturumsuz: sayfa 200, veri yolları 401, giriş servisi oturum sorusuna 401.

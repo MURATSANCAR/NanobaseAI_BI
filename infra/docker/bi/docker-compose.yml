@@ -28,6 +28,10 @@ services:
       # Katalog artık db konteynerinde; SQL doğrudan müşteri sunucusunda (connection.json).
       SEMANTIC_STORE_DSN: postgresql+psycopg2://bi_meta:${PG_PASSWORD}@db:5432/bi_meta
       SEMANTIC_CONNECTION_FILE: /app/secrets/logo-mssql-connection.json
+      # Canlı CRM (Timas_MSCRM, .28) ayrı sunucuda: içinde Timas_MSCRM geçen sorgular (editoryal ekranlar, kişi
+      # rehberi, yönetim raporları) buraya gider. Dosya yoksa bu sorgular Logo bağlantısına düşer — 2026-09-22'ye
+      # kadar VM'de böyleydi ve CRM ekranları Logo sunucusundaki 8 Eylül'de donmuş kopyayı okuyordu.
+      SEMANTIC_CRM_CONNECTION_FILE: /app/secrets/crm-mssql-connection.json
       SEMANTIC_KNOWLEDGE_DIR: /app/configs/semantic/knowledge/logo
       # Kişiye bağlı ekranlar (pano, uyarı, rapor, yönetim) kullanıcıyı giriş servisinden çerezle çözer.
       TIMAS_LOGIN_URL: http://login:8796
@@ -36,6 +40,7 @@ services:
       REPORT_DIR: /data/reports
     volumes:
       - ./secrets/logo-mssql-connection.json:/app/secrets/logo-mssql-connection.json:ro
+      - ./secrets/crm-mssql-connection.json:/app/secrets/crm-mssql-connection.json:ro
       - ./secrets/ad:/app/ad
       - bi_reports:/data/reports
     depends_on:
