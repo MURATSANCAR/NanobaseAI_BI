@@ -3930,8 +3930,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         from semantic_bridge import editorial_cards
         try:
             return editorial_cards.review_queue(book_id, status)
-        except Exception as e:  # noqa: BLE001
-            raise HTTPException(502, f"İnceleme kuyruğu okunamadı: {e}") from None
+        except Exception:  # noqa: BLE001 — ayrıntı günlükte; editöre teknik hata metni gösterilmez
+            log.exception("review queue failed")
+            raise HTTPException(502, "İnceleme kayıtları şu an okunamıyor.") from None
 
     @app.post("/api/v1/editorial/books/{book_id}/review/decide")
     def editorial_book_review_decide(book_id: str, request: Request,
@@ -3941,12 +3942,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         data = body or {}
         try:
             return editorial_cards.review_decide(book_id, [str(x) for x in (data.get("items") or [])],
-                                                 str(data.get("decision") or ""), user,
-                                                 data.get("correction"))
+                                                 str(data.get("choice") or ""), user, data.get("note"))
         except ValueError as e:
             raise HTTPException(400, str(e)) from None
-        except Exception as e:  # noqa: BLE001
-            raise HTTPException(502, f"Karar kaydedilemedi: {e}") from None
+        except Exception:  # noqa: BLE001 — ayrıntı günlükte; editöre teknik hata metni gösterilmez
+            log.exception("review decide failed")
+            raise HTTPException(502, "Karar kaydedilemedi, lütfen tekrar deneyin.") from None
 
     @app.get("/api/v1/editorial/books/{book_id}/pages/{page_no}/context")
     def editorial_book_page_context(book_id: str, page_no: int, request: Request) -> dict[str, Any]:
@@ -3954,8 +3955,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         from semantic_bridge import editorial_cards
         try:
             return editorial_cards.page_context(book_id, page_no)
-        except Exception as e:  # noqa: BLE001
-            raise HTTPException(502, f"Sayfa okunamadı: {e}") from None
+        except Exception:  # noqa: BLE001
+            log.exception("page context failed")
+            raise HTTPException(502, "Sayfa şu an okunamıyor.") from None
 
     @app.get("/api/v1/editorial/books/{book_id}/figures/{region_id}")
     def editorial_book_figure(book_id: str, region_id: str, request: Request):

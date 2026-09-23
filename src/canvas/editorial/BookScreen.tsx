@@ -289,7 +289,7 @@ export default function BookScreen() {
           <Facts b={b} />
           <About b={b} />
           <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
-          {b.editorBook && <ReviewPanel bookId={b.editorBook.id} title={b.title} />}
+          {b.editorBook && <ReviewPanel bookId={b.editorBook.id} />}
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <div className="space-y-3 lg:space-y-4">
               <Roles b={b} />

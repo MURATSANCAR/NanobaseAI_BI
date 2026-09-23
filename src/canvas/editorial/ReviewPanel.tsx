@@ -1,239 +1,252 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronDown, Loader2, PenLine, X } from 'lucide-react';
-import { bookReviewApi, type BookReviewItem } from '../engine';
-import { Loading, Note, Pill, btn, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
+import { ArrowRight, Loader2, PenLine } from 'lucide-react';
+import { bookReviewApi, type BookReviewAction, type BookReviewGroup, type BookReviewItem } from '../engine';
+import { Loading, Note, btn, btnGhost, errText, field, label } from '../admin/ui';
 import { Panel } from './kit';
 
-/** Analizin karara bağlayamadığı yerler: faili belli olmayan olay, çizimle çelişen cümle,
- *  hikâye dışı görünen sayfa. Bunlar kapanmadan nesil kabul edilemez. Karar veren kişi
- *  oturumdaki AD hesabıdır — ekran ad sormaz, gönderemez de. */
+/** Analizin kitapta emin olamayıp editöre sorduğu yerler. Her kayıt tek bakışta okunur: soru, kitabın o
+ *  sayfadaki kendi cümlesi, sayfanın resmi ve ne yapacağını söyleyen düğmeler. Motorun iç notları, güven
+ *  puanları ve İngilizce etiketler sunucuda kalır. Karar veren kişi oturumdaki AD hesabıdır. */
 
-const TONE: Record<number, 'err' | 'warn' | 'muted'> = { 1: 'err', 2: 'warn', 3: 'muted' };
-const PRIORITY = { 1: 'Önce bakılmalı', 2: 'Normal', 3: 'Sonra' } as const;
+const yes = `${btn} h-9 min-h-0 bg-emerald-600 text-white`;
+const no = `${btnGhost} h-9 min-h-0`;
 
-function pagesOf(it: BookReviewItem): number[] {
-  const all = [...(it.source_pages || []), ...(it.pages || [])];
-  if (it.page_role_page_no) all.push(it.page_role_page_no);
-  return [...new Set(all)].sort((a, b) => a - b);
+type Decide = (items: string[], choice: BookReviewAction['key'], note?: string) => void;
+
+function Thumb({ bookId, page, open, onToggle }: { bookId: string; page: number; open: boolean; onToggle: () => void }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-expanded={open}
+      aria-label={`${page}. sayfayı ${open ? 'küçült' : 'büyüt'}`}
+      className="relative block w-16 shrink-0 self-start overflow-hidden rounded-lg border border-slate-200 bg-white sm:w-24"
+    >
+      {failed ? (
+        <span className="flex aspect-[2/3] items-center justify-center text-[11px] text-canvas-muted">s.{page}</span>
+      ) : (
+        <img
+          src={bookReviewApi.pageUrl(bookId, page, 240)}
+          alt={`${page}. sayfa`}
+          loading="lazy"
+          onError={() => setFailed(true)}
+          className="block aspect-[2/3] w-full object-cover object-top"
+        />
+      )}
+      <span className="absolute inset-x-0 bottom-0 bg-white/90 py-0.5 text-center text-[10.5px] font-bold text-canvas-ink">
+        s.{page}
+      </span>
+    </button>
+  );
 }
 
-/** Sayfa görüntüsü ancak istenince indirilir: bir kuyrukta yüzlerce sayfa olabilir. */
-function PageLook({ bookId, page }: { bookId: string; page: number }) {
-  const [open, setOpen] = useState(false);
-  const ctx = useQuery({
-    queryKey: ['review-page', bookId, page],
-    queryFn: () => bookReviewApi.pageContext(bookId, page),
-    enabled: open,
-  });
+function PageLarge({ bookId, page, figures }: { bookId: string; page: number; figures: string[] }) {
   return (
-    <div className="mt-2">
-      <button type="button" onClick={() => setOpen((v) => !v)} className={`${btnGhost} h-8 min-h-0 px-2.5 text-[11.5px]`}>
-        <ChevronDown aria-hidden className={`h-3.5 w-3.5 transition-transform duration-200 ease-out ${open ? 'rotate-180' : ''}`} />
-        s.{page} sayfasını göster
-      </button>
-      {open && (
-        <div className="mt-2 grid gap-3 sm:grid-cols-[minmax(0,220px)_minmax(0,1fr)]">
-          <img
-            src={bookReviewApi.pageUrl(bookId, page)}
-            alt={`${page}. sayfanın görüntüsü`}
-            loading="lazy"
-            className="w-full rounded-xl border border-slate-200 bg-white"
-          />
-          <div className="min-w-0 space-y-2">
-            {ctx.isLoading && <p className="text-[12px] text-canvas-muted">Sayfa okunuyor…</p>}
-            {ctx.data?.texts.map((t) => (
-              <div key={t.source} className="rounded-xl bg-slate-50 p-2.5">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-                  {t.source === 'OCR' ? 'OCR okuması' : 'PDF metin katmanı'}
-                </span>
-                <p className="mt-1 whitespace-pre-wrap text-[12px] leading-snug">{t.text.slice(0, 1200) || '—'}</p>
-              </div>
-            ))}
-            {!!ctx.data?.regions.length && (
-              <div className="flex flex-wrap gap-2">
-                {ctx.data.regions.map((r) => (
-                  <figure key={r.id} className="w-24">
-                    <img
-                      src={bookReviewApi.figureUrl(bookId, r.id)}
-                      alt={r.description || r.label}
-                      loading="lazy"
-                      className="h-24 w-24 rounded-lg border border-slate-200 object-contain bg-white"
-                    />
-                    <figcaption className="mt-1 truncate text-[11px] text-canvas-muted" title={r.description || r.label}>
-                      {r.label}
-                    </figcaption>
-                  </figure>
-                ))}
-              </div>
-            )}
-          </div>
+    <div className="mt-3 grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
+      <img
+        src={bookReviewApi.pageUrl(bookId, page, 900)}
+        alt={`${page}. sayfanın tamamı`}
+        className="w-full rounded-xl border border-slate-200 bg-white"
+      />
+      {figures.length > 0 && (
+        <div className="flex flex-wrap content-start gap-2 sm:w-28 sm:flex-col">
+          {figures.map((id) => (
+            <img
+              key={id}
+              src={bookReviewApi.figureUrl(bookId, id)}
+              alt="Tespitin dayandığı çizim"
+              loading="lazy"
+              className="h-24 w-24 rounded-lg border border-slate-200 bg-white object-contain sm:h-28 sm:w-28"
+            />
+          ))}
         </div>
       )}
     </div>
   );
 }
 
-export default function ReviewPanel({ bookId, title }: { bookId: string; title?: string | null }) {
-  const qc = useQueryClient();
-  const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [correcting, setCorrecting] = useState<string | null>(null);
-  const [correction, setCorrection] = useState('');
+function Item({ bookId, title, it, picked, onPick, decide, busy }: {
+  bookId: string; title: string; it: BookReviewItem; picked: boolean; onPick: (() => void) | null;
+  decide: Decide; busy: boolean;
+}) {
+  const [large, setLarge] = useState(false);
+  const [fixing, setFixing] = useState(false);
+  const [note, setNote] = useState('');
+  const page = it.quote?.page ?? it.pages[0];
 
+  return (
+    <article className="rounded-2xl border border-slate-100 bg-white/90 p-3">
+      <div className="flex gap-3">
+        {page ? <Thumb bookId={bookId} page={page} open={large} onToggle={() => setLarge((v) => !v)} /> : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-2">
+            {onPick && (
+              <input
+                type="checkbox"
+                checked={picked}
+                onChange={onPick}
+                aria-label="Toplu karar için seç"
+                className="mt-0.5 h-4 w-4 shrink-0 accent-canvas-violet"
+              />
+            )}
+            <p className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+              {it.subject}
+              {it.pages.length > 0 && ` · s.${it.pages.join(', ')}`}
+              {it.priority === 1 && <span className="ml-2 normal-case tracking-normal text-red-700">Önce bakılmalı</span>}
+            </p>
+          </div>
+          <h4 className="mt-1 text-[14px] font-extrabold leading-snug">{it.question}</h4>
+          <p className="mt-1 text-[13px] leading-snug">{it.statement}</p>
+          {it.quote && (
+            <blockquote className="mt-2 rounded-lg border-l-2 border-canvas-violet/40 bg-slate-50 px-2.5 py-1.5 text-[12.5px] italic leading-snug">
+              «{it.quote.text}»
+              <span className="ml-1 not-italic text-canvas-muted">— kitapta, s.{it.quote.page}</span>
+            </blockquote>
+          )}
+
+          {it.link === 'proofing' ? (
+            <Link to={`/son-okuma?kitap=${encodeURIComponent(title)}`} className={`${no} mt-2`}>
+              Son Okuma ekranında aç <ArrowRight aria-hidden className="h-4 w-4" />
+            </Link>
+          ) : (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {it.actions.filter((a) => a.key !== 'fix').map((a) => (
+                <button key={a.key} type="button" disabled={busy} onClick={() => decide([it.id], a.key)}
+                  className={a.tone === 'primary' ? yes : no}>
+                  {a.label}
+                </button>
+              ))}
+              {it.actions.some((a) => a.key === 'fix') && (
+                <button type="button" disabled={busy} onClick={() => setFixing((v) => !v)} className={no} aria-expanded={fixing}>
+                  <PenLine aria-hidden className="h-4 w-4" />Düzelt
+                </button>
+              )}
+            </div>
+          )}
+
+          {fixing && (
+            <div className="mt-2 space-y-2">
+              <label className={label} htmlFor={`d-${it.id}`}>Doğrusu ne?</label>
+              <textarea id={`d-${it.id}`} value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={field}
+                placeholder="Kitapta doğrusu nasıl, kısaca yazın. Bu kitabın sonraki okumalarına da taşınır." />
+              <button type="button" disabled={busy || !note.trim()} onClick={() => decide([it.id], 'fix', note.trim())} className={yes}>
+                {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <PenLine aria-hidden className="h-4 w-4" />}
+                Düzeltmeyi kaydet
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+      {large && page ? <PageLarge bookId={bookId} page={page} figures={it.figures} /> : null}
+    </article>
+  );
+}
+
+function Group({ bookId, title, g, decide, busy }: { bookId: string; title: string; g: BookReviewGroup; decide: Decide; busy: boolean }) {
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [confirm, setConfirm] = useState<BookReviewAction | null>(null);
+  // Toplu cevap yalnız aynı soruyu soran kayıtlarda anlamlı: düğme adları gruptaki ilk kayıttan.
+  const choices = (g.items[0]?.actions ?? []).filter((a) => a.key !== 'fix');
+  const all = g.items.every((i) => picked.has(i.id));
+  const toggle = (id: string) => setPicked((s) => {
+    const n = new Set(s);
+    if (!n.delete(id)) n.add(id);
+    return n;
+  });
+
+  return (
+    <section className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="text-[13.5px] font-extrabold">
+          {g.title} <span className="font-bold text-canvas-muted">· {g.items.length}</span>
+        </h3>
+        {g.bulk && g.items.length > 1 && (
+          <button type="button" onClick={() => setPicked(all ? new Set() : new Set(g.items.map((i) => i.id)))}
+            className={`${no} h-8 px-2.5 text-[11.5px]`}>
+            {all ? 'Seçimi kaldır' : 'Hepsini seç'}
+          </button>
+        )}
+      </div>
+
+      {g.bulk && picked.size > 0 && (
+        <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-canvas-violet/20 bg-white/95 p-2 shadow-md">
+          {confirm ? (
+            <>
+              <span className="text-[12.5px] font-bold">{picked.size} kayıt «{confirm.label}» olarak kapanacak.</span>
+              <button type="button" disabled={busy} className={yes}
+                onClick={() => { decide([...picked], confirm.key); setPicked(new Set()); setConfirm(null); }}>
+                {busy && <Loader2 aria-hidden className="h-4 w-4 animate-spin" />}Evet, kapat
+              </button>
+              <button type="button" className={no} onClick={() => setConfirm(null)}>Vazgeç</button>
+            </>
+          ) : (
+            <>
+              <span className="text-[12.5px] font-bold">{picked.size} kayıt seçildi</span>
+              {choices.map((a) => (
+                <button key={a.key} type="button" disabled={busy} onClick={() => setConfirm(a)}
+                  className={a.tone === 'primary' ? yes : no}>
+                  Hepsine: {a.label}
+                </button>
+              ))}
+            </>
+          )}
+        </div>
+      )}
+
+      {g.items.map((it) => (
+        <Item key={it.id} bookId={bookId} title={title} it={it} busy={busy} decide={decide}
+          picked={picked.has(it.id)} onPick={g.bulk ? () => toggle(it.id) : null} />
+      ))}
+    </section>
+  );
+}
+
+export default function ReviewPanel({ bookId }: { bookId: string }) {
+  const qc = useQueryClient();
   const q = useQuery({ queryKey: ['review-queue', bookId], queryFn: () => bookReviewApi.queue(bookId) });
-  const decide = useMutation({
-    mutationFn: (v: { items: string[]; decision: 'approve' | 'reject' | 'correct'; note?: string }) =>
-      bookReviewApi.decide(bookId, v.items, v.decision, v.note === undefined ? undefined : { note: v.note }),
-    onSuccess: () => {
-      setPicked(new Set());
-      setCorrecting(null);
-      setCorrection('');
+  const [saved, setSaved] = useState<string | null>(null);
+  const run = useMutation({
+    mutationFn: (v: { items: string[]; choice: BookReviewAction['key']; note?: string }) =>
+      bookReviewApi.decide(bookId, v.items, v.choice, v.note),
+    onSuccess: (r) => {
+      setSaved(r.failed.length
+        ? `${r.decided} kayıt kaydedildi, ${r.failed.length} kayıt kaydedilemedi: ${r.failed[0].error}`
+        : `${r.decided} kayıt kaydedildi.`);
       qc.invalidateQueries({ queryKey: ['review-queue', bookId] });
     },
   });
-
-  const groups = useMemo(() => {
-    const by = new Map<string, BookReviewItem[]>();
-    for (const it of q.data?.items || []) by.set(it.kind, [...(by.get(it.kind) || []), it]);
-    return [...by.entries()].sort((a, b) => a[1][0].priority - b[1][0].priority);
-  }, [q.data]);
-
-  const err = errText(q.error || decide.error, 'İnceleme kuyruğu okunamadı.');
-  const busy = decide.isPending;
-  const toggle = (id: string) =>
-    setPicked((s) => {
-      const next = new Set(s);
-      if (!next.delete(id)) next.add(id);
-      return next;
-    });
+  const decide: Decide = (items, choice, note) => { setSaved(null); run.mutate({ items, choice, note }); };
+  const err = errText(q.error || run.error, 'İnceleme kayıtları okunamadı.');
 
   if (q.isLoading) return <Panel><Loading /></Panel>;
   if (!q.data && !err) return null;
+  const d = q.data;
 
   return (
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-[13px] font-extrabold">
-          İnceleme{q.data?.open ? ` (${q.data.open})` : ''}
-        </h2>
-        {q.data && (
-          <span className="text-[11.5px] text-canvas-muted">
-            {q.data.code_version} · {title || q.data.title}
+        <h2 className="text-[15px] font-extrabold">İnceleme</h2>
+        {d && (
+          <span className="text-[12px] font-bold text-canvas-muted">
+            {d.open} soru bekliyor{d.decided ? ` · ${d.decided} karara bağlandı` : ''}
           </span>
         )}
       </div>
-      <p className="mt-1 text-[12px] leading-snug text-canvas-muted">
-        Analiz emin olamadığı yerde tahmin etmedi, sordu. Bu kayıtlar karara bağlanmadan kitabın okuması
-        yayına kabul edilmez. «Düzelt» dediğiniz şey bu kitabın sonraki okumalarına da taşınır.
+      <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
+        Okuma bu yerlerde emin olamadı ve size soruyor. Sayfanın küçük resmine dokunursanız sayfa büyür.
+        Bunlar cevaplanmadan kitabın okuması yayına kabul edilmez.
       </p>
 
       {err && <div className="mt-3"><Note tone="err">{err}</Note></div>}
+      {saved && <div className="mt-3" role="status"><Note tone={saved.includes('kaydedilemedi') ? 'warn' : 'ok'}>{saved}</Note></div>}
+      {d && d.open === 0 && <div className="mt-3"><Note tone="ok">Bu kitapta bekleyen soru yok.</Note></div>}
 
-      {q.data && !q.data.items.length && (
-        <div className="mt-3"><Note tone="ok">Bekleyen inceleme kaydı yok.</Note></div>
-      )}
-
-      {picked.size > 0 && (
-        <div className="sticky bottom-2 z-10 mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-canvas-violet/20 bg-white/95 p-2 shadow-md">
-          <span className="text-[12px] font-bold">{picked.size} kayıt seçildi</span>
-          <button type="button" disabled={busy} onClick={() => decide.mutate({ items: [...picked], decision: 'approve' })} className={`${btnPrimary} h-9 min-h-0`}>
-            {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Check aria-hidden className="h-4 w-4" />}
-            Hepsini onayla
-          </button>
-          <button type="button" disabled={busy} onClick={() => decide.mutate({ items: [...picked], decision: 'reject' })} className={`${btnGhost} h-9 min-h-0`}>
-            <X aria-hidden className="h-4 w-4" />
-            Hepsini reddet
-          </button>
-          <button type="button" disabled={busy} onClick={() => setPicked(new Set())} className={`${btnGhost} h-9 min-h-0`}>
-            Seçimi bırak
-          </button>
-        </div>
-      )}
-
-      <div className="mt-3 space-y-4">
-        {groups.map(([kind, items]) => (
-          <section key={kind} className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h3 className="text-[12.5px] font-extrabold">{kind} <span className="text-canvas-muted">· {items.length}</span></h3>
-              <button
-                type="button"
-                onClick={() => setPicked((s) => {
-                  const next = new Set(s);
-                  const all = items.every((i) => next.has(i.id));
-                  for (const i of items) (all ? next.delete(i.id) : next.add(i.id));
-                  return next;
-                })}
-                className={`${btnGhost} h-8 min-h-0 px-2.5 text-[11.5px]`}
-              >
-                {items.every((i) => picked.has(i.id)) ? 'Seçimi kaldır' : 'Bu türün hepsini seç'}
-              </button>
-            </div>
-
-            {items.map((it) => (
-              <article key={it.id} className="rounded-2xl border border-slate-100 bg-white/85 p-3">
-                <div className="flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={picked.has(it.id)}
-                    onChange={() => toggle(it.id)}
-                    aria-label="Bu kaydı seç"
-                    className="mt-1 h-4 w-4 shrink-0 accent-canvas-violet"
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Pill tone={TONE[it.priority] || 'muted'}>{PRIORITY[it.priority as 1 | 2 | 3] || 'Normal'}</Pill>
-                      {pagesOf(it).map((p) => <Pill key={p} tone="violet">s.{p}</Pill>)}
-                    </div>
-                    <p className="mt-1.5 text-[12.5px] font-semibold leading-snug">{it.reason}</p>
-                    {it.claim && (
-                      <p className="mt-1 rounded-lg bg-slate-50 px-2.5 py-1.5 text-[12px] leading-snug">
-                        <span className="font-bold">{it.claim_kind}: </span>{it.claim}
-                      </p>
-                    )}
-                    {it.description && (
-                      <p className="mt-1 text-[12px] leading-snug text-canvas-muted">{it.description}</p>
-                    )}
-                    {pagesOf(it).slice(0, 1).map((p) => <PageLook key={p} bookId={bookId} page={p} />)}
-
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      <button type="button" disabled={busy} onClick={() => decide.mutate({ items: [it.id], decision: 'approve' })} className={`${btn} h-9 min-h-0 bg-emerald-600 text-white`}>
-                        <Check aria-hidden className="h-4 w-4" />Onayla
-                      </button>
-                      <button type="button" disabled={busy} onClick={() => decide.mutate({ items: [it.id], decision: 'reject' })} className={`${btnGhost} h-9 min-h-0`}>
-                        <X aria-hidden className="h-4 w-4" />Reddet
-                      </button>
-                      <button type="button" disabled={busy} onClick={() => { setCorrecting(correcting === it.id ? null : it.id); setCorrection(''); }} className={`${btnGhost} h-9 min-h-0`}>
-                        <PenLine aria-hidden className="h-4 w-4" />Düzelt
-                      </button>
-                    </div>
-
-                    {correcting === it.id && (
-                      <div className="mt-2 space-y-2">
-                        <label className={label} htmlFor={`d-${it.id}`}>Doğrusu ne olmalı</label>
-                        <textarea
-                          id={`d-${it.id}`}
-                          value={correction}
-                          onChange={(e) => setCorrection(e.target.value)}
-                          rows={3}
-                          className={field}
-                          placeholder="Örn: bu sayfa künye sayfasıdır, hikâyeye dahil değildir."
-                        />
-                        <button
-                          type="button"
-                          disabled={busy || !correction.trim()}
-                          onClick={() => decide.mutate({ items: [it.id], decision: 'correct', note: correction.trim() })}
-                          className={`${btnPrimary} h-9 min-h-0`}
-                        >
-                          {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <PenLine aria-hidden className="h-4 w-4" />}
-                          Düzeltmeyi kaydet
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </article>
-            ))}
-          </section>
+      <div className="mt-4 space-y-6">
+        {d?.groups.map((g) => (
+          <Group key={g.type} bookId={bookId} title={d.title} g={g} decide={decide} busy={run.isPending} />
         ))}
       </div>
     </Panel>

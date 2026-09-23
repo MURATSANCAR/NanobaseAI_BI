@@ -149,15 +149,23 @@ def review_queue(book_id: str, status: str='OPEN'):
     return request('/v1/books/'+identifier+'/review?status='+status).json()
 
 
-def review_decide(book_id: str, items: list[str], decision: str, editor: str, correction=None):
-    """Bir ya da çok kayıt için aynı karar. Karar veren kişi oturumdan gelir."""
+def review_decide(book_id: str, items: list[str], choice: str, editor: str, note=None):
+    """Bir ya da çok kayıt için aynı cevap (evet / hayır / düzelt). Karar veren kişi oturumdan gelir.
+    Kart servisinin reddi (4xx) editöre kendi cümlesiyle döner, ham HTTP hatası olarak değil."""
     identifier=str(uuid.UUID(book_id))
     chosen=[str(uuid.UUID(x)) for x in items]
     if not chosen: raise ValueError('Karar verilecek kayıt seçilmedi.')
-    if decision not in ('approve','reject','correct'): raise ValueError('Geçersiz karar.')
-    body={'items':chosen,'decision':decision}
-    if correction is not None: body['correction']=correction
-    return request_json('POST','/v1/books/'+identifier+'/review/decide-many',json=body,editor=editor)
+    if choice not in ('yes','no','fix'): raise ValueError('Geçersiz seçim.')
+    body={'items':chosen,'choice':choice}
+    if note: body['note']=str(note)[:2000]
+    try:
+        return request_json('POST','/v1/books/'+identifier+'/review/decide-many',json=body,editor=editor)
+    except httpx.HTTPStatusError as e:
+        if 400<=e.response.status_code<500:
+            try: detail=e.response.json().get('detail')
+            except ValueError: detail=None
+            raise ValueError(detail if isinstance(detail,str) and detail else 'Karar kaydedilemedi.') from None
+        raise
 
 
 def page_context(book_id: str, page_no: int):

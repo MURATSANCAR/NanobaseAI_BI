@@ -1262,30 +1262,30 @@ export type BookDetail = {
   db?: DbTiming | null;
 };
 
+/** İnceleme kaydının ekranda gösterilen hâli. Motorun kendi notu, güven puanı ve İngilizce etiketler
+ *  sunucuda kalır; buraya yalnız editörün okuyacağı Türkçe gelir. */
+export type BookReviewAction = { key: 'yes' | 'no' | 'fix'; label: string; tone: 'primary' | 'ghost' };
 export type BookReviewItem = {
   id: string;
-  kind: string;
-  reason: string;
+  type: string;
   priority: number;
-  status: string;
-  created_at: string;
-  page_role_page_no: number | null;
-  claim_kind: string | null;
-  claim: string | null;
-  source_pages: number[] | null;
-  confidence: number | null;
-  contradiction_kind: string | null;
-  description: string | null;
-  pages: number[] | null;
+  pages: number[];
+  subject: string;
+  question: string;
+  statement: string;
+  quote: { text: string; page: number } | null;
+  figures: string[];
+  actions: BookReviewAction[];
+  link: 'proofing' | null;
 };
-
+export type BookReviewGroup = { type: string; title: string; bulk: boolean; items: BookReviewItem[] };
 export type BookReviewQueue = {
   book_id: string;
   title: string;
   generation_id: string;
-  code_version: string;
-  items: BookReviewItem[];
+  groups: BookReviewGroup[];
   open: number;
+  decided: number;
 };
 
 export type BookPageContext = {
@@ -1294,18 +1294,20 @@ export type BookPageContext = {
   regions: Array<{ id: string; label: string; kind: string; bbox: number[] | null; description: string | null }>;
 };
 
-/** Analizin emin olamayıp insana sorduğu kayıtlar. Karar veren kişi oturumdan gelir; istemci ad göndermez. */
+/** Analizin emin olamayıp insana sorduğu kayıtlar. Karar veren kişi oturumdan gelir; istemci ad göndermez.
+ *  `choice` kaydın kendi sorusunun cevabıdır: yes / no / fix (fix bir not ister). */
 export const bookReviewApi = {
   queue: (bookId: string) =>
     send<BookReviewQueue>('GET', `/api/v1/editorial/books/${encodeURIComponent(bookId)}/review`, undefined, 60_000),
-  decide: (bookId: string, items: string[], decision: 'approve' | 'reject' | 'correct', correction?: unknown) =>
+  decide: (bookId: string, items: string[], choice: BookReviewAction['key'], note?: string) =>
     send<{ decided: number; failed: Array<{ item: string; error: string }> }>(
       'POST', `/api/v1/editorial/books/${encodeURIComponent(bookId)}/review/decide`,
-      { items, decision, ...(correction === undefined ? {} : { correction }) }, 120_000),
+      { items, choice, ...(note ? { note } : {}) }, 120_000),
   pageContext: (bookId: string, page: number) =>
     send<BookPageContext>('GET', `/api/v1/editorial/books/${encodeURIComponent(bookId)}/pages/${page}/context`, undefined, 60_000),
-  pageUrl: (bookId: string, page: number) =>
-    `${ENGINE_BASE}/api/v1/editorial/books/${encodeURIComponent(bookId)}/pages/${page}`,
+  /** Sohbetteki sayfa rozetiyle aynı uç: küçültülmüş WebP, köprü bir saat önbellekler. */
+  pageUrl: (bookId: string, page: number, width = 480) =>
+    `${ENGINE_BASE}/api/v1/editorial/ask/pages/${encodeURIComponent(bookId)}/${Math.max(1, Math.floor(page))}?w=${Math.max(1, Math.floor(width))}`,
   figureUrl: (bookId: string, regionId: string) =>
     `${ENGINE_BASE}/api/v1/editorial/books/${encodeURIComponent(bookId)}/figures/${encodeURIComponent(regionId)}`,
 };
