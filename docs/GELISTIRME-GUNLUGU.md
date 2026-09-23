@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-23 (gece) — 19 yeni kitap editör okuma kuyruğunda
+
+- Kullanıcının verdiği 19 baskı PDF'i (138 MB) GPU gelen kutusuna (`/data/editor/storage/inbox`) ASCII adlarla kondu (ör. `agactan-dusen-hayal.pdf`, `golge-tilki.pdf`). İlk tek bağlantılı yükleme ~35 KB/s gitti ve TT VPN düşünce kesildi; kullanıcı VPN'i yeniden açtıktan sonra 4 paralel `rsync --partial` ile tamamlandı. `._*` artığı 0.
+- Yarım dosya analize girmesin diye kuyruk doğrudan başlatılmadı: sunucuda `/data/editor/wait-and-queue.sh` (`editor-queue` systemd birimi) her dakika `wait-manifest.sha256`'yı kontrol etti, 19 dosyanın sha256'sı Mac'teki kaynakla eşleşince 22:06'da `editor.cli queue`'yu başlattı. Kuyruk kitapları sırayla okur; mühürlü nesli olan eski 6 kitap atlanır.
+- İzleme: `ssh tt-gpu journalctl -u editor-queue -f`. Betik depoda değil, yalnız sunucuda.
 ## 2026-09-23 (22:15) — Baskı Öneri Power BI eşliği test sunucusunda veriyle doğrulandı ve müşteri VM'ine kuruldu
 
 - **Test sunucusu, gerçek veri:** tünel 22:0x'te açıldı (push onaylandı); köprü yeni kodla ilk okumayı 22:05'te hatasız bitirdi (176,7 sn). Geçici timasai oturumuyla portal ucundan: Baskı Tekrar 5.053 satır / 41 kolon, Yeni Kitap 331 / 35 kolon; başlıklar şablonla harfi harfine aynı; toplam satırı alanları geliyor (StokAdedi 5.982.986, Toplam Stok 6.232.832, Tükenme 8,46); Tükenme'de ∞ 77, NaN 585, eksi 270, boş 3 (en üstte). Sonraki okuma başlangıçtan 5 dk (22:02 → 22:07). Oturum silindi.
