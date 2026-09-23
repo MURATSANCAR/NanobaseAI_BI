@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-23 (22:15) — Baskı Öneri Power BI eşliği test sunucusunda veriyle doğrulandı ve müşteri VM'ine kuruldu
+
+- **Test sunucusu, gerçek veri:** tünel 22:0x'te açıldı (push onaylandı); köprü yeni kodla ilk okumayı 22:05'te hatasız bitirdi (176,7 sn). Geçici timasai oturumuyla portal ucundan: Baskı Tekrar 5.053 satır / 41 kolon, Yeni Kitap 331 / 35 kolon; başlıklar şablonla harfi harfine aynı; toplam satırı alanları geliyor (StokAdedi 5.982.986, Toplam Stok 6.232.832, Tükenme 8,46); Tükenme'de ∞ 77, NaN 585, eksi 270, boş 3 (en üstte). Sonraki okuma başlangıçtan 5 dk (22:02 → 22:07). Oturum silindi.
+- **Öneri dağılımı değişti:** Risk/Acil 1.582 → 998, çünkü stoku ve hızı 0 olan 585 kitap DAX'ta 0/0 = NaN ve NaN hiçbir eşikten küçük değil varsayımıyla "Yeterli Stok". Power BI dışa aktarımıyla doğrulanacak.
+- **Müşteri VM'i:** kaynak `git archive main` (`1a3cf83a`), kuru koşu farkı yalnız 7 dosya (silme yok); `deploy-customer-vm.sh` `systemd-run` ile koştu, beş servis ayakta, oturumsuz uçlar 401/sayfa 200, nginx testi geçti. Konteynerdeki `baski_oneri.py` ve `logo_satis_hizi.sql` md5'i main ile eş. VM köprüsü ilk okumayı 111,5 sn'de hatasız bitirdi. Dış kapıdan (`http://192.168.0.55/timas`, login konteynerinde geçici timasai oturumu, sonra silindi): oturumsuz 401, rapor 200, aynı başlıklar ve satır sayıları; öneride 1 kitap farklı (Risk/Acil 997 / Yeterli 3.901) — iki okuma arasında canlı CRM değişmiş olabilir, kitap bazında bakılmadı.
+- **Not:** VM'de rapor önbelleği konteyner içinde, kalıcı birimde değil; her kurulumdan sonra ilk ~2 dk rapor "hazırlanıyor" görünür.
+
 ## 2026-09-23 (21:50) — Baskı Öneri Power BI eşliği main'e alındı, test sunucusuna kuruldu; veri doğrulaması ve VM tünel bekliyor
 
 - `claude/baski-oneri-eksi-tukenme` main üstüne rebase edildi (çift commit ve birleştirme commit'i düştü), `10a16933` ile ileri sarıldı, dal iki yerden silindi; taşınmamış iş yok.
