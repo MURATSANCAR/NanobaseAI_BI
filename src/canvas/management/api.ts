@@ -42,7 +42,9 @@ export type ReportSnapshot = {
   data?: {
     views: ReportView[];
     oneriLevels: string[];
-    sourceStats: Record<string, { rows: number; dbMs: number | null; skipped?: string | null }>;
+    sourceStats: Record<string, { rows: number; dbMs: number | null; skipped?: string | null; warning?: string | null }>;
+    /** Okunamayan kaynak parçaları (ör. Logo'da henüz açılmamış yıl görünümü); ekranda uyarı olur. */
+    warnings?: string[];
     asOf: string;
   };
 };

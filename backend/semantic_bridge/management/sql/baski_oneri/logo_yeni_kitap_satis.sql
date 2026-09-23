@@ -1,10 +1,12 @@
 -- Yeni kitapların (ilk yayını son 12 ay içinde) gün bazında satışı.
--- {stok_kodlari} CRM'deki yeni kitap listesinden doldurulur; kodlar tırnak kaçışıyla eklenir.
+-- Kod listesi CRM'deki yeni kitaplardan doldurulur (tırnak kaçışıyla) ve bir VALUES tablosu olarak
+-- birleştirilir: aynı kodları IN listesiyle seçmek planı bozup süreyi 14 sn'den 194 sn'ye çıkarıyordu.
+-- Pencere (içinde bulunulan aydan 12 ay önceki ayın başı) görünümün Yıl/Ay kolonlarıyla seçilir.
 SELECT
     s.[Malzeme/Hizmet Kodu]           AS stok_kodu,
     CAST(s.[Fatura Tarihi] AS DATE)   AS gun,
     SUM(s.Miktar)                     AS miktar
-FROM dbo.V_SatisRaporu_All2 AS s
-WHERE s.[Fatura Tarihi] >= DATEADD(MONTH, DATEDIFF(MONTH, 0, GETDATE()) - 12, 0)
-  AND s.[Malzeme/Hizmet Kodu] IN ({stok_kodlari})
+FROM {satis:-1} AS s  -- geçen yıl ve bu yılın satış görünümleri
+JOIN (VALUES {stok_kodlari_satirlari}) AS kod(k) ON kod.k = s.[Malzeme/Hizmet Kodu]
+WHERE s.[Yıl] * 12 + s.[Ay] >= YEAR(GETDATE()) * 12 + MONTH(GETDATE()) - 12
 GROUP BY s.[Malzeme/Hizmet Kodu], CAST(s.[Fatura Tarihi] AS DATE)
