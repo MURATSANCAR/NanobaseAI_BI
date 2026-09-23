@@ -33,6 +33,18 @@ MAX_ROWS = 500_000
 CODE_CHUNK = 5000  # IN listesindeki kod sayısı; SQL Server bu boyutta sabit listeyi sorunsuz işler
 # Ekrandaki rapor beş dakikada bir kaynaktan yeniden okunur (kullanıcı kararı 2026-09-22).
 REFRESH_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_REFRESH_SECONDS", "300"))
+# Aralık okumanın BAŞLANGICINDAN sayılır: okuma 2 dk sürse de veri 5 dk'da bir tazelenir. Okuma aralıktan
+# uzun sürerse bir sonraki hemen değil, bitişten en az bu kadar sonra başlar (Logo'ya kesintisiz yük binmez).
+MIN_GAP_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_MIN_GAP_SECONDS", "60"))
+
+
+def _next_due(snap: dict) -> float | None:
+    """Bir sonraki okumanın zamanı; hiç okunmadıysa None (hemen okunur)."""
+    ended = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
+    started = snap.get("startedAt") or ended
+    if not ended:
+        return None
+    return max(started + REFRESH_SECONDS, ended + MIN_GAP_SECONDS)
 QUERY_TIMEOUT = int(os.environ.get("MANAGEMENT_REPORT_QUERY_TIMEOUT_SEC", "900"))
 CONNECTION_LABELS = {"logo": "Logo", "crm": "CRM"}
 
@@ -184,11 +196,10 @@ class Reports:
         snap = _load(self.path(report_id))
         running = self._threads.get(report_id)
         refreshing = bool(running and running.is_alive())
-        last = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
         meta = {k: v for k, v in snap.items() if k != "data"}
         out = {**meta, "refreshing": refreshing, "hasData": "data" in snap,
                "refreshStartedAt": self._started.get(report_id) if refreshing else None,
-               "nextRefreshAt": (last + REFRESH_SECONDS) if last else None}
+               "nextRefreshAt": _next_due(snap)}
         if with_data and "data" in snap:
             out["data"] = snap["data"]
         return out
@@ -206,12 +217,12 @@ class Reports:
             try:
                 ctx: dict = {}
                 data = report.build(lambda sid, params: self._run(report, sid, params, ctx))
-                _save(path, {"data": data, "updatedAt": time.time(), "durationMs": int((time.time() - started) * 1000),
-                             "error": None})
+                _save(path, {"data": data, "startedAt": started, "updatedAt": time.time(),
+                             "durationMs": int((time.time() - started) * 1000), "error": None})
             except Exception as exc:  # noqa: BLE001 — son başarılı sonuç korunur
                 log.warning("management report %s refresh failed: %s", report_id, exc)
                 _save(path, {**previous, "error": f"Veriler yenilenemedi: {str(exc)[:300]} Beş dakikada bir yeniden denenir.",
-                             "failedAt": time.time()})
+                             "startedAt": started, "failedAt": time.time()})
 
     def start_refresh(self, report_id: str) -> bool:
         with self._guard:
@@ -229,9 +240,9 @@ class Reports:
             while not self.stopping.is_set():
                 for rid in REPORTS:
                     snap = _load(self.path(rid))
-                    # Başarılı ya da başarısız, son denemeden bu yana aralık dolduysa yeniden oku.
-                    last = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
-                    if time.time() - last >= REFRESH_SECONDS:
+                    # Son okumanın başlangıcından 5 dk geçtiyse (ve bitişten en az 1 dk) yeniden oku.
+                    due = _next_due(snap)
+                    if due is None or time.time() >= due:
                         self.start_refresh(rid)
                 self.stopping.wait(10)
         self.scheduler = threading.Thread(target=schedule, daemon=True, name="management-reports")
