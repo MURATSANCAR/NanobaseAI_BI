@@ -78,6 +78,9 @@ NOTES = [
     "Power BI'da 'Ilk6Ay' en yeni 6 ayı, 'Son6Ay' eski 6 ayı tutuyordu; burada 'Son 6 ay' ve 'Önceki 6 ay' olarak doğru adlarıyla gösterilir.",
     "Yeni kitap ay kolonları son 12 ayın takvim aylarıdır; Power BI iki yılın aynı ayını topluyordu.",
     "Yeni kitaplarda ilk yayın tarihi CRM'den, satış Logo'dan okunur (Power BI bağlı sunucu üzerinden tek sorguda birleştiriyordu).",
+    "Power BI satış hızını satır satır kayan noktayla toplar; sıfır olması gereken hız −3·10⁻¹⁷, 0,5 olması "
+    "gereken hız 0,49999999999999994 çıkabilir ve öneri eşiği yanlış taraftan geçer. Burada önce toplanıp "
+    "sonra bölünür; 2026-09-23 karşılaştırmasında 5.053 kitabın 2'sinde öneri bu yüzden farklıdır.",
     "Kullanılmayan 'CRM_BekleyenSiparis' tablosu ve kırık 'Set Kitaplar' sayfası (modelde olmayan tabloya bağlı) alınmadı.",
     "Logo satışı Power BI'da 'V_SatisRaporu_ALL2' (2015'ten bu yana her yılın birleşimi) ve onun üstündeki "
     "'PBI_FiyatList' görünümlerinden okunuyordu. Burada aynı satırlar yalnız gereken yılların görünümlerinden "
@@ -284,7 +287,8 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             continue
         speed = sum(_num(h.get(c)) * w for c, w in WEIGHTS)
         stok = _num(b.get("stok_adedi"))
-        tuk = stok / speed if speed > 0 else None
+        # Power BI gibi: iadesi satışından fazla olan kitapta hız eksidir ve tükenme de eksi gösterilir.
+        tuk = stok / speed if speed else None
         marj, marj_oneri = _marj_oneri(stok, speed)
         f = fiyat.get(k) or {}
         row = {

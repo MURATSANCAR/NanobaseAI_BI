@@ -31,6 +31,7 @@ DATA = {
     "crm_kitap": [
         kitap("A", stok=300),                                  # canlı satış, stok 6 aylık
         kitap("H", stok=60),                                   # canlı satış, stok 1,2 aylık
+        kitap("I", stok=80),                                   # iadesi satışından fazla: hız eksi
         kitap("B", stok=500),                                  # son 12 ayda satış yok, stok var
         kitap("C", stok=0),                                    # satış yok, stok da yok
         kitap("D", stok=100, statu="YS02 Pasif"),              # açılış süzgeci dışı statü
@@ -41,7 +42,7 @@ DATA = {
         kitap("N2", stok=0, baski=ESKI),
     ],
     # B ve C: 2024'te satmış, son 12 ayda sıfır → yeni havuzda satır var, dönemleri 0
-    "logo_satis_hizi": [hiz("A", 100.0), hiz("H", 100.0), hiz("B"), hiz("C"), hiz("D"), hiz("E"), hiz("F"), hiz("G")],
+    "logo_satis_hizi": [hiz("A", 100.0), hiz("H", 100.0), hiz("I", -20.0), hiz("B"), hiz("C"), hiz("D"), hiz("E"), hiz("F"), hiz("G")],
     "logo_aylik_satis": [{"stok_kodu": "A", "ay": 9, "miktar": 120}],
     "logo_fiyat": [{"stok_kodu": "A", "son_fiyat_degisikligi": "2026-01-01"}],
     "logo_depo_stok": [{"stok_kodu": "A", "depo_stok": 280}],
@@ -79,6 +80,9 @@ hepsi.append(ok("A: ağırlıklı hız 50, tükenme 6 ay, marj 5, öneri Yeterli
 hepsi.append(ok("H: tükenme 1,2 ay, marj 0,2, öneri Kritik",
                 t["H"]["tukenme_suresi"] == 1.2 and t["H"]["marj"] == 0.2
                 and t["H"]["oneri"] == "Kritik", t["H"]["oneri"]))
+hepsi.append(ok("I: eksi hız → tükenme eksi (Power BI gibi), öneri Risk/Acil",
+                t["I"]["ort_satis_hizi"] == -10.0 and t["I"]["tukenme_suresi"] == -8.0
+                and t["I"]["oneri"] == "Risk/Acil", f"{t['I']['tukenme_suresi']} {t['I']['oneri']}"))
 hepsi.append(ok("B satışsız + stoklu: havuzda, hız 0, öneri Yeterli Stok",
                 "B" in t and t["B"]["ort_satis_hizi"] == 0 and t["B"]["tukenme_suresi"] is None
                 and t["B"]["oneri"] == "Yeterli Stok", t.get("B", {}).get("oneri")))
@@ -90,7 +94,7 @@ hepsi.append(ok("D pasif statü satırı havuzda (süzgeç ekranda)", "D" in t))
 hepsi.append(ok("E farklı baskı durumu havuzda (süzgeç ekranda)", "E" in t))
 sira = [r[0] for r in views["tekrar"]["rows"]]
 hepsi.append(ok("sıralama: en önce tükenen üstte, satışsızlar en sonda",
-                sira[:2] == ["H", "A"] and all(t[k]["tukenme_suresi"] is None for k in sira[2:]),
+                sira[:3] == ["I", "H", "A"] and all(t[k]["tukenme_suresi"] is None for k in sira[3:]),
                 " ".join(sira)))
 
 df = {d["key"]: d["values"] for d in views["tekrar"]["defaultFilters"]}
