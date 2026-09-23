@@ -66,12 +66,21 @@ def book_page(book_id: UUID, page_no: int = Path(ge=1), w: int = Query(0, ge=0, 
         return Response(content=data, media_type='image/webp', headers={'Cache-Control':'private, max-age=3600'})
     return FileResponse(path,media_type=mime,headers={'Cache-Control':'private, max-age=3600'})
 
+def _graphed_generation(c, book_id: str):
+    """Karakter ağının okunacağı nesil: karakter kimliği tamamlanmış EN YENİ nesil; yoksa en yeni nesil.
+    Yeniden analiz süren yeni nesilde henüz karakter yoktur; ağ o sırada boş görünmemeli."""
+    row = c.execute(
+        'SELECT g.id FROM ed.generation g JOIN ed.book_version v ON v.id=g.book_version_id '
+        'WHERE v.book_id=%s AND EXISTS (SELECT 1 FROM ed.character ch WHERE ch.generation_id=g.id) '
+        'ORDER BY g.created_at DESC, g.id DESC LIMIT 1', (book_id,)).fetchone()
+    return row or read_model.latest(c, book_id)
+
 @app.get('/v1/books/{book_id}/graph')
 def book_graph(book_id: UUID):
     """Character network of the book's latest generation (fact events only). Edges point
     at node ids; each node counts the usable events the character takes part in."""
     with foundation.read_snapshot() as c:
-        gen=read_model.latest(c,str(book_id))
+        gen=_graphed_generation(c,str(book_id))
     if gen is None:
         raise HTTPException(404,'book not found')
     return {'book_id':str(book_id),**graph.network(str(gen['id']))}
@@ -96,6 +105,17 @@ def _decisions(c, gid: str, run_ids: list[str]):
         k[0 if r['verdict']=='ACCEPT' else 1]+=r['n']
     return {str(r['finding_id']):_decision.public(r) for r in cur},counts
 
+def _proofed_generation(c, book_id: str):
+    """Son okumanın gösterileceği nesil: denetimi koşmuş EN YENİ nesil; hiçbiri koşmadıysa en yeni nesil.
+    Kitap yeniden analiz edilirken yeni nesil henüz denetlenmemiştir; en yeniyi körü körüne almak ekrandaki
+    bütün bulguları ve editör kararlarını analiz bitene kadar kaybettiriyordu."""
+    row = c.execute(
+        'SELECT g.id FROM ed.generation g JOIN ed.book_version v ON v.id=g.book_version_id '
+        'WHERE v.book_id=%s AND EXISTS (SELECT 1 FROM ed.proof_run r WHERE r.generation_id=g.id) '
+        'ORDER BY g.created_at DESC, g.id DESC LIMIT 1', (book_id,)).fetchone()
+    return row or read_model.latest(c, book_id)
+
+
 @app.get('/v1/books/{book_id}/proofing')
 def book_proofing(book_id: UUID):
     """Son okuma: kitabın son neslinde her denetimin EN YENİ koşusu ve o koşunun bulguları.
@@ -103,7 +123,7 @@ def book_proofing(book_id: UUID):
     Her bulguya `id` ve editörün geçerli kararı (`decision`|null), her denetime kuralın isabeti
     (`precision`|null; aynı ad+sürüm için bütün kitaplardaki geçerli kararlardan) eklenir."""
     with foundation.read_snapshot() as c:
-        gen=read_model.latest(c,str(book_id))
+        gen=_proofed_generation(c,str(book_id))
         if gen is None:
             raise HTTPException(404,'book not found')
         gid=str(gen['id'])
@@ -146,7 +166,7 @@ def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(..
     except _decision.DecisionError as e:
         raise HTTPException(422,str(e)) from None
     with foundation.read_snapshot() as c:
-        gen=read_model.latest(c,str(book_id))
+        gen=_proofed_generation(c,str(book_id))
     if gen is None:
         raise HTTPException(404,'book not found')
     gid=str(gen['id'])
@@ -156,7 +176,7 @@ def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(..
                 'SELECT f.id, f.check_name, r.check_version FROM ed.proof_finding f JOIN ed.proof_run r ON r.id=f.run_id'
                 ' WHERE f.id=%s AND f.generation_id=%s',(str(finding_id),gid)).fetchone()
             if f is None:
-                raise HTTPException(404,'finding not found in the latest generation of this book')
+                raise HTTPException(404,'finding not found in the proofed generation of this book')
             row=c.execute(
                 'INSERT INTO ed.proof_decision(finding_id, generation_id, check_name, check_version, verdict, reason_code,'
                 ' note, decided_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
