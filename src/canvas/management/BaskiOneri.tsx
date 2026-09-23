@@ -198,6 +198,9 @@ export default function BaskiOneri() {
             <p className="mg-banner" role="status">{snap.error}{snap.data ? ' Ekrandaki veri son başarılı okumadır.' : ''}</p>
           )}
           {refresh.error && <p className="mg-banner" role="status">{(refresh.error as Error).message}</p>}
+          {snap?.data?.warnings?.map((w) => (
+            <p key={w} className="mg-banner" role="status">{w}</p>
+          ))}
 
           {!view ? (
             <section className="mg-empty" aria-busy={report.isFetching || refreshing}>

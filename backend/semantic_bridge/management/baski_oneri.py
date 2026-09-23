@@ -79,8 +79,12 @@ NOTES = [
     "Yeni kitap ay kolonları son 12 ayın takvim aylarıdır; Power BI iki yılın aynı ayını topluyordu.",
     "Yeni kitaplarda ilk yayın tarihi CRM'den, satış Logo'dan okunur (Power BI bağlı sunucu üzerinden tek sorguda birleştiriyordu).",
     "Kullanılmayan 'CRM_BekleyenSiparis' tablosu ve kırık 'Set Kitaplar' sayfası (modelde olmayan tabloya bağlı) alınmadı.",
-    "Yeni kitap satışı Power BI'da 'V_SatisRaporu_2025_2026' görünümünden okunuyordu; burada tüm yılları tutan "
-    "'V_SatisRaporu_All2' son 12 aya sınırlanarak okunur. İlk yayın son 12 ayda olduğu için satır kümesi aynıdır.",
+    "Logo satışı Power BI'da 'V_SatisRaporu_ALL2' (2015'ten bu yana her yılın birleşimi) ve onun üstündeki "
+    "'PBI_FiyatList' görünümlerinden okunuyordu. Burada aynı satırlar yalnız gereken yılların görünümlerinden "
+    "okunur: satış hızı 2024'ten, fiyat 2025'ten, aylık ve yeni kitap satışı geçen yıldan bu yana. ALL2 üzerinden "
+    "fiyat sorgusu 15 dakikada bitmiyordu; yıllık görünümlerle üç yıl 25 saniyede okunuyor.",
+    "Yeni kitap satışı Power BI'da 'V_SatisRaporu_2025_2026' görünümünden okunuyordu; burada geçen yıl ve bu yılın "
+    "görünümleri son 12 aya sınırlanarak okunur. İlk yayın son 12 ayda olduğu için satır kümesi aynıdır.",
 ]
 
 # Kolon → kaynak eşlemesi ekranda başlıktan sorguya gidişi sağlar.
@@ -373,7 +377,9 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
                  ["oneri", "baski_durum", "yayinevi"]),
         ],
         "oneriLevels": ONERI_LEVELS,
-        "sourceStats": {sid: {"rows": len(r.get("records") or []), "dbMs": r.get("dbMs"), "skipped": r.get("skipped")}
+        "sourceStats": {sid: {"rows": len(r.get("records") or []), "dbMs": r.get("dbMs"), "skipped": r.get("skipped"),
+                              "sql": r.get("sql"), "warning": r.get("warning")}
                         for sid, r in res.items()},
+        "warnings": sorted({r["warning"] for r in res.values() if r.get("warning")}),
         "asOf": today.isoformat(),
     }

@@ -13,9 +13,11 @@ import fcntl
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -68,6 +70,40 @@ def _quoted_list(values: list[str]) -> str:
     return ", ".join("N'" + str(v).replace("'", "''") + "'" for v in values)
 
 
+# Logo satış görünümü `V_SatisRaporu_ALL2`, 2015'ten bu yana her yılın `V_SatisRaporu_<yıl>` görünümünü
+# UNION ALL ile birleştirir; dışarıdaki yıl süzgeci birleşimin kollarını elemediği için her sorgu on iki
+# yılın tamamını tarar (ölçüm 2026-09-23: fiyat sorgusu 900 sn'de bitmedi, üç yıllık görünüm 25 sn).
+# `{satis:2024}` = 2024'ten bu yıla, `{satis:-1}` = geçen yıldan bu yıla yıllık görünümlerin birleşimi.
+# Her kol ALL2'nin kendi süzgecini taşır; kolonlar adla seçilir (SELECT * birleşimi kolon kaydırabilir).
+SALES_VIEW_FILTER = "[Malzeme/Hizmet Kodu] NOT LIKE '157%' AND [KDVli Tutar] <> 0"
+SALES_COLUMNS = ("[Malzeme/Hizmet Kodu], [Malzeme/Hizmet Adı], [Fatura Tarihi], [Yıl], [Ay], [Miktar], "
+                 "[Birim Fiyat], [Net Tutar], [Satır Türü], [Satis_Iade], [Satıcı Kodu], [Sipariş Numarası]")
+_SALES_PLACEHOLDER = re.compile(r"\{satis:(-?\d+)\}")
+
+
+def sales_years(spec: str, today: date) -> list[int]:
+    n = int(spec)
+    first = today.year + n if n <= 0 else n
+    return list(range(first, today.year + 1))
+
+
+def expand_sales(text: str, today: date, existing: set[int] | None = None) -> tuple[str, list[int]]:
+    """Yer tutucuları yıllık görünümlerin birleşimine açar. `existing` verilirse olmayan yıl atlanır
+    ve atlanan yıllar döner (ekranda uyarı olur; sessizce eksik okunmaz)."""
+    missing: list[int] = []
+
+    def union(match: re.Match) -> str:
+        years = sales_years(match.group(1), today)
+        use = [y for y in years if existing is None or y in existing]
+        missing.extend(y for y in years if y not in use)
+        if not use:
+            raise RuntimeError(f"Logo'da {years[0]}–{years[-1]} satış görünümlerinin hiçbiri yok.")
+        arms = [f"    SELECT {SALES_COLUMNS}\n    FROM dbo.V_SatisRaporu_{y}\n    WHERE {SALES_VIEW_FILTER}" for y in use]
+        return "(\n" + "\n    UNION ALL\n".join(arms) + "\n)"
+
+    return _SALES_PLACEHOLDER.sub(union, text), sorted(set(missing))
+
+
 class Reports:
     def __init__(self, connection_files):
         self._connection_files = connection_files  # çağrılabilir: çalışma zamanı ayarı açılışta hazır değil
@@ -98,9 +134,19 @@ class Reports:
         label = CONNECTION_LABELS.get(name, name)
         return f"{label} · {db}" if db else label
 
-    def _run(self, report, source_id: str, params: dict | None) -> dict:
+    def _sales_years_present(self) -> set[int]:
+        conn = self._connector("logo")
+        _, rows, _ = conn.execute("SELECT name FROM sys.views WHERE name LIKE 'V[_]SatisRaporu[_]20[0-9][0-9]'", 200)
+        return {int(r["name"][-4:]) for r in rows}
+
+    def _run(self, report, source_id: str, params: dict | None, ctx: dict) -> dict:
         connection = next(c for s, c, *_ in report.SOURCES if s == source_id)
         text = sql_text(report.REPORT_ID, source_id)
+        missing: list[int] = []
+        if _SALES_PLACEHOLDER.search(text):
+            if "sales_years" not in ctx:
+                ctx["sales_years"] = self._sales_years_present()
+            text, missing = expand_sales(text, date.today(), ctx["sales_years"])
         conn = self._connector(connection)
         chunks = [None]
         if params and "stok_kodlari" in params:
@@ -115,13 +161,18 @@ class Reports:
             except Exception as exc:  # noqa: BLE001 — sürücü metni ekrana değil loga
                 log.warning("management source %s failed: %s", source_id, str(exc)[:300])
                 state = str(getattr(exc, "args", [""])[0])
-                if state in ("08S01", "08001", "HYT00", "HYT01"):
+                if state in ("HYT00", "HYT01"):
+                    raise RuntimeError(f"“{title}” sorgusu {QUERY_TIMEOUT} saniyede bitmedi (zaman aşımı).") from None
+                if state in ("08S01", "08001"):
                     raise RuntimeError(f"{self.database_label(connection)} veritabanına şu an ulaşılamıyor.") from None
                 raise RuntimeError(f"“{title}” sorgusu hata verdi: {str(exc)[:200]}") from None
             if truncated:
                 raise RuntimeError(f"{source_id}: sonuç {MAX_ROWS} satırı aştı; rapor eksik kalırdı.")
             columns, records = cols, records + rows
-        return {"columns": columns, "records": records, "dbMs": int((time.monotonic() - started) * 1000)}
+        out = {"columns": columns, "records": records, "dbMs": int((time.monotonic() - started) * 1000), "sql": text}
+        if missing:
+            out["warning"] = f"Logo'da {', '.join(map(str, missing))} satış görünümü yok; bu yıllar okunmadı."
+        return out
 
     # ---- önbellek
     def path(self, report_id: str) -> Path:
@@ -151,7 +202,8 @@ class Reports:
             previous = _load(path)
             started = time.time()
             try:
-                data = report.build(lambda sid, params: self._run(report, sid, params))
+                ctx: dict = {}
+                data = report.build(lambda sid, params: self._run(report, sid, params, ctx))
                 _save(path, {"data": data, "updatedAt": time.time(), "durationMs": int((time.time() - started) * 1000),
                              "error": None})
             except Exception as exc:  # noqa: BLE001 — son başarılı sonuç korunur
@@ -237,7 +289,8 @@ def register(app, runtime, authorize, session_user):
         stats = (_load(reports.path(report_id)).get("data") or {}).get("sourceStats", {})
         return {
             "sources": [{"id": sid, "connection": conn, "database": reports.database_label(conn), "title": title,
-                         "description": desc, "sql": sql_text(report_id, sid), "stats": stats.get(sid)}
+                         "description": desc, "sql": (stats.get(sid) or {}).get("sql") or sql_text(report_id, sid),
+                         "stats": stats.get(sid)}
                         for sid, conn, title, desc in report.SOURCES],
             "formulas": [{"name": n, "text": t} for n, t in report.FORMULAS],
             "notes": list(report.NOTES),
