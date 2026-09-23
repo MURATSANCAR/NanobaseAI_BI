@@ -30,6 +30,7 @@ log = logging.getLogger(__name__)
 REPORTS = {m.REPORT_ID: m for m in (baski_oneri,)}
 SQL_DIR = Path(__file__).with_name("sql")
 MAX_ROWS = 500_000
+CODE_CHUNK = 5000  # IN listesindeki kod sayısı; SQL Server bu boyutta sabit listeyi sorunsuz işler
 # Ekrandaki rapor beş dakikada bir kaynaktan yeniden okunur (kullanıcı kararı 2026-09-22).
 REFRESH_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_REFRESH_SECONDS", "300"))
 QUERY_TIMEOUT = int(os.environ.get("MANAGEMENT_REPORT_QUERY_TIMEOUT_SEC", "900"))
@@ -151,7 +152,8 @@ class Reports:
         chunks = [None]
         if params and "stok_kodlari" in params:
             codes = params["stok_kodlari"]
-            chunks = [codes[i:i + 400] for i in range(0, len(codes), 400)] or [[]]
+            # Her parça satış görünümünü baştan tarar; parça büyük tutulur (1.433 kodda 4 tarama 230 sn'ydi).
+            chunks = [codes[i:i + CODE_CHUNK] for i in range(0, len(codes), CODE_CHUNK)] or [[]]
         records, columns, started = [], [], time.monotonic()
         title = next(t for s, _, t, *_ in report.SOURCES if s == source_id)
         for chunk in chunks:
