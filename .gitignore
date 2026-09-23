@@ -2,6 +2,8 @@ node_modules
 dist
 .env
 .DS_Store
+# macOS metadata next to each copied file (AppleDouble)
+._*
 *.tsbuildinfo
 
 # Local Neon credentials (never commit)

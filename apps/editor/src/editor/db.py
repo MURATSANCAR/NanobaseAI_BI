@@ -68,7 +68,9 @@ def migrate() -> list[str]:
         )
         done = {r[0] for r in conn.execute("SELECT name FROM ed.schema_migration")}
         for f in sorted(MIGRATIONS.glob("*.sql")):
-            if f.name in done:
+            # «._022_….sql» is macOS metadata a Mac `tar` carries along, not SQL: reading it as a
+            # migration crashed migrate() before anything was applied (2026-09-22).
+            if f.name in done or f.name.startswith("._"):
                 continue
             with conn.transaction():
                 conn.execute(f.read_text())

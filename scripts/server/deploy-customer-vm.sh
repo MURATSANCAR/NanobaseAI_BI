@@ -22,14 +22,14 @@ echo "== erişim"; $SSH "$VM" 'id -nG | tr " " "\n" | grep -qx docker || { echo 
 
 echo "== kod gönderiliyor ($SRC → $VM:$DST)"
 $SSH "$VM" "mkdir -p $DST/scripts/server/portal-login $DST/infra/docker/bi"
-rsync -rc -e "$SSH" "$SRC"/{package.json,package-lock.json,index.html,tsconfig.json,tsconfig.node.json,vite.config.ts,tailwind.config.js,postcss.config.js} "$VM:$DST/"
-rsync -rc --delete -e "$SSH" --exclude node_modules "$SRC/src/" "$VM:$DST/src/"
-rsync -rc --delete -e "$SSH" --exclude __pycache__ --exclude '*.pyc' --exclude .venv "$SRC/backend/" "$VM:$DST/backend/"
-rsync -rc --delete -e "$SSH" --exclude __pycache__ "$SRC/configs/" "$VM:$DST/configs/"
-rsync -c -e "$SSH" "$SRC/scripts/server/timas-metrics-build.py" "$VM:$DST/scripts/server/"
-rsync -c -e "$SSH" "$SRC"/scripts/server/portal-login/{server.py,requirements.txt} "$VM:$DST/scripts/server/portal-login/"
+rsync -rc --exclude "._*" -e "$SSH" "$SRC"/{package.json,package-lock.json,index.html,tsconfig.json,tsconfig.node.json,vite.config.ts,tailwind.config.js,postcss.config.js} "$VM:$DST/"
+rsync -rc --delete --exclude "._*" -e "$SSH" --exclude node_modules "$SRC/src/" "$VM:$DST/src/"
+rsync -rc --delete --exclude "._*" -e "$SSH" --exclude __pycache__ --exclude '*.pyc' --exclude .venv "$SRC/backend/" "$VM:$DST/backend/"
+rsync -rc --delete --exclude "._*" -e "$SSH" --exclude __pycache__ "$SRC/configs/" "$VM:$DST/configs/"
+rsync -c --exclude "._*" -e "$SSH" "$SRC/scripts/server/timas-metrics-build.py" "$VM:$DST/scripts/server/"
+rsync -c --exclude "._*" -e "$SSH" "$SRC"/scripts/server/portal-login/{server.py,requirements.txt} "$VM:$DST/scripts/server/portal-login/"
 # .env, secrets/ ve sunucuya özel override dosyası müşteride kalır, üzerine yazılmaz.
-rsync -rc -e "$SSH" --exclude .env --exclude 'secrets/' --exclude docker-compose.override.yml --exclude catalog.sql \
+rsync -rc --exclude "._*" -e "$SSH" --exclude .env --exclude 'secrets/' --exclude docker-compose.override.yml --exclude catalog.sql \
   "$SRC/infra/docker/bi/" "$VM:$DST/infra/docker/bi/"
 
 echo "== derle ve kaldır"

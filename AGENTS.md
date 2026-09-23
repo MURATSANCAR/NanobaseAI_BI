@@ -86,6 +86,27 @@ Bir şey test sunucusunda doğrulanamıyorsa (ağ kapalı, VPN düşük, servis 
 kurulmaz; doğrulanamadığı günlüğe yazılır ve iş bekler. «Test sunucusunda deneyemedim ama VM'de çalışır»
 gerekçesiyle kurulum yapılmaz.
 
+### Kurulumda dosya taşıma: Mac artığı ve yanlış imaj (zorunlu)
+
+Kullanıcının 2026-09-23 talimatı. İki hata sessizce yanlış şeyi sunucuya koydu; ikisi de kurulum
+bitmeden yakalanmalı:
+
+1. **Mac artığı (`._ad`) sunucuya gitmez.** macOS'un `tar`'ı her dosyanın yanına `._dosya` adlı bir meta
+   verisi (AppleDouble, imza `00 05 16 07`) koyar. Editörün `db.migrate()`'i `._022_….sql`'i SQL sanıp
+   çöktü (2026-09-22); test sunucusunun canlı kaynak ağacında 42 tane birikmişti.
+   - Kaynak `git archive main`dir (git bu dosyaları taşımaz). Tek dosya için `scp`. Mac'te `tar` şartsa
+     yalnız `COPYFILE_DISABLE=1 tar …`.
+   - Kurulumdan sonra hedefte sayı **0** olmalı: `find <kök> -name '._*' -type f -not -path '*/node_modules/*' | wc -l`.
+     Değilse her dosyanın imzası (`head -c4 | od -tx1` → `00051607`) doğrulanıp silinir; imzası tutmayana dokunulmaz.
+   - Mekanik korumalar: `.gitignore` ve iki `.dockerignore`'da `._*`; `deploy-customer-vm.sh` rsync'leri
+     `--exclude "._*"`; `db.migrate()` `._` ile başlayanı atlar. Bunlar kuralın yerine geçmez, ikinci hattır.
+2. **Konteyner doğru imajla kalkmalı.** Editör compose dosyasında her servisin kendi imaj değişkeni var:
+   `cards` → `EDITOR_CARDS_IMAGE`, diğer Python servisleri → `EDITOR_PY_IMAGE`. Değişkeni verilmeyen servis
+   dosyadaki eski varsayılana düşer (2026-09-23: `cards` `0.15.3-condense`'e indi, inceleme ve Son Okuma
+   ekranları bozuldu). Konteyner kalkınca imaj ve kod sürümü okunur, dosyalar `main` ile md5 karşılaştırılır:
+   `docker inspect <ad> --format '{{.Config.Image}}'` ve `docker exec <ad> printenv EDITOR_CODE_VERSION`.
+   Konteynere `docker cp` kurulum değildir — konteyner yeniden oluşunca silinir.
+
 ## Editor: kitaptan bağımsız üretim kabulü
 
 Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına, PDF hashine, sayfa numarasına veya karakter adına özel uygulama istisnası içeremez. Gerçek kitaplar bağımsız kaynaklı kabul verisidir; bir kitapta geçen kontrol tüm ürünün kabulü değildir. Aynı genel kod/prompt/model sözleşmesi farklı uzunluk ve görsel/metin yapısındaki gerçek kitaplarda doğrulanır. Kaynağa özel beklenen sonuçlar yalnız kabul kanıtında açıkça etiketlenir, üretim karar kurallarına taşınmaz. Teknik çıktı tutarlılığı, kaynak/kimlik/olay kapsamı ve üretim kabulü ayrı raporlanır. Eksik model yanıtları veya başarısız parçalar başarı sayılmaz; bilinmeyen kimlikler zorla bağlanmaz.

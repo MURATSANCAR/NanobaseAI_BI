@@ -3,3 +3,6 @@
 **/__pycache__
 **/*.pyc
 .git
+# macOS metadata («._name») a Mac copy leaves behind — never part of an image
+**/._*
+**/.DS_Store

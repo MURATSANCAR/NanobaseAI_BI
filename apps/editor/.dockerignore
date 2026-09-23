@@ -1,0 +1,6 @@
+# macOS metadata a Mac `tar`/Finder copy leaves next to every file («._name»):
+# never part of an image (db.migrate() once read «._022_….sql» as SQL and failed).
+**/._*
+**/.DS_Store
+**/__pycache__
+**/*.pyc

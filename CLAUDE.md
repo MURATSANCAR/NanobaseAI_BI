@@ -14,7 +14,7 @@ Sonra işi `main`e taşı — her geliştirmenin son adımıdır, ayrıca istenm
 
 Sonra dağıtım: **main'e merge → test sunucusunda eksiksiz kurulum ve doğrulama → müşteri VM'i**. Bu sıra
 zorunludur, adım atlanmaz; `main` dışında duran kod hiçbir sunucuya kurulmaz, test sunucusunda
-doğrulanamayan şey VM'e gitmez. Ayrıntı: [AGENTS.md](AGENTS.md) → «Dağıtım sırası».
+doğrulanamayan şey VM'e gitmez. Kurulumdan sonra iki kontrol şart: hedefte Mac artığı (`._*`) sayısı 0, kalkan konteynerin imajı ve kod sürümü doğru. Ayrıntı: [AGENTS.md](AGENTS.md) → «Dağıtım sırası».
 
 Çalışma kuralları (mobil uyumluluk, gerçek DB ile doğrulama zorunluluğu, tek branch, vb.) için: [AGENTS.md](AGENTS.md).
 
