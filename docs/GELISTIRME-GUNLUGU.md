@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-23 (21:50) — Baskı Öneri Power BI eşliği main'e alındı, test sunucusuna kuruldu; veri doğrulaması ve VM tünel bekliyor
+
+- `claude/baski-oneri-eksi-tukenme` main üstüne rebase edildi (çift commit ve birleştirme commit'i düştü), `10a16933` ile ileri sarıldı, dal iki yerden silindi; taşınmamış iş yok.
+- Test sunucusu: main'le değişen 8 dosya sunucuda eski main'le birebir olduğu için yalnız onlar kopyalandı (md5 8/8), köprü yeniden başlatıldı, arayüz `VITE_BASE=/timas/` ile derlendi, portal `index-DSuJ2XXo.js` sunuyor. Geçici timasai oturumuyla: liste 200 (oturumsuz 401), rapor 200, kaynak paneli 9 kaynak / 10 formül / 12 not (yeni kod yüklü); oturum silindi.
+- **DOĞRULANAMADI — veri:** tünel 21:09'da düştü, 21:44 push'u onaylanmadı. Ekrandaki veri 20:37'de eski kodla okunmuş (eski başlıklar, toplam satırı yok); yeni kod ilk başarılı okumada şablon başlıklarını ve toplamı üretir. Yeni arayüz eski şemayı da gösterebiliyor (toplam yoksa satır çizilmez).
+- **Müşteri VM'ine kurulmadı:** dağıtım kuralı gereği test sunucusunda gerçek veriyle görülmeden gitmez.
+
 ## 2026-09-23 (gece) — Baskı Öneri: Power BI şablonuyla birebir karşılaştırma ve görünüm eşliği (dal `claude/baski-oneri-eksi-tukenme`, main'de değil)
 
 - **Yöntem.** Şablonun özgün SQL'leri (`docs/analiz/pbit-yeni-baski-oneri/sql`) aynı veritabanlarında (.155 Logo, .28 CRM) olduğu gibi koşturuldu, M birleşimleri ve DAX Python'da uygulandı, canlı raporla kitap kitap karşılaştırıldı. `Logo_YeniKitapSH`'deki `CRMDATABASE` bağlı sunucusu .155'te yok; yalnız o tablo CRM'den okunan aynı satırlarla (VALUES) değiştirildi.
