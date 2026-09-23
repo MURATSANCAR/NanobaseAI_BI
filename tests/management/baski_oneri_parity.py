@@ -40,6 +40,8 @@ DATA = {
         kitap("G", stok=100, baski=YENI_BASKI),                # baskı tarihi eşiğin üstünde
         kitap("N1", stok=400, baski=ESKI),                     # yeni kitap kartı
         kitap("N2", stok=0, baski=ESKI),
+        kitap("N3", stok=50, baski=ESKI),                     # ilk yayın UTC 21:00 (İstanbul 1 Kasım)
+        kitap("N4", stok=50, baski=ESKI),                     # ilk yayın gece yarısı
     ],
     # B ve C: 2024'te satmış, son 12 ayda sıfır → yeni havuzda satır var, dönemleri 0
     "logo_satis_hizi": [hiz("A", 100.0), hiz("H", 100.0), hiz("I", -20.0), hiz("B"), hiz("C"), hiz("D"), hiz("E"), hiz("F"), hiz("G")],
@@ -50,9 +52,13 @@ DATA = {
     "crm_baski_onerisi": [{"stok_kodu": "A", "oneri_adet": 3000}],
     # N1: bu ay yayımlandı (satış süresi 0). N2: bu ay yayımlandı, stok yok.
     "crm_yeni_kitap": [{"stok_kodu": "N1", "ilk_yayin_tarihi": "2026-09-05"},
-                       {"stok_kodu": "N2", "ilk_yayin_tarihi": "2026-09-05"}],
+                       {"stok_kodu": "N2", "ilk_yayin_tarihi": "2026-09-05"},
+                       {"stok_kodu": "N3", "ilk_yayin_tarihi": "2025-10-31", "ilk_yayin_zamani": "2025-10-31T21:00:00"},
+                       {"stok_kodu": "N4", "ilk_yayin_tarihi": "2025-10-31", "ilk_yayin_zamani": "2025-10-31T00:00:00"}],
     "logo_yeni_kitap_satis": [{"stok_kodu": "N1", "gun": "2026-09-10", "miktar": 50},
-                              {"stok_kodu": "N2", "gun": "2026-09-10", "miktar": 10}],
+                              {"stok_kodu": "N2", "gun": "2026-09-10", "miktar": 10},
+                              {"stok_kodu": "N3", "gun": "2025-11-30", "miktar": -2}, {"stok_kodu": "N3", "gun": "2025-12-05", "miktar": 10},
+                              {"stok_kodu": "N4", "gun": "2025-11-30", "miktar": -2}, {"stok_kodu": "N4", "gun": "2025-12-05", "miktar": 10}],
 }
 
 def run(source_id, params=None):
@@ -116,6 +122,10 @@ hepsi.append(ok("N1 bu ay yayımlandı, stoklu: satış süresi 0, öneri Yeterl
 hepsi.append(ok("N2 bu ay yayımlandı, stoksuz: marj -1, öneri Risk/Acil",
                 y["N2"]["marj"] == -1.0 and y["N2"]["oneri"] == "Risk/Acil", y["N2"]["oneri"]))
 hepsi.append(ok("N1 dağılım satışı ilk yayın ayından", y["N1"]["dagilim_satis"] == 50))
+hepsi.append(ok("N3 saatli ilk yayın: RPT sınır gününü (30 Kasım) saymaz, Power BI gibi",
+                y["N3"]["rpt_satis"] == 10, str(y["N3"]["rpt_satis"])))
+hepsi.append(ok("N4 gece yarısı ilk yayın: RPT sınır gününü sayar",
+                y["N4"]["rpt_satis"] == 8, str(y["N4"]["rpt_satis"])))
 
 print("\nNOT sayısı:", len(m.NOTES), "| FORMÜL sayısı:", len(m.FORMULAS), "| KAYNAK sayısı:", len(m.SOURCES))
 print("SONUÇ:", f"{sum(hepsi)}/{len(hepsi)} geçti")

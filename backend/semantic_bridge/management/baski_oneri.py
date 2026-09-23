@@ -8,7 +8,7 @@ Power BI'dan bilinçli farklar `NOTES` içinde; ekranda da gösterilir.
 """
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
 REPORT_ID = "baski-oneri"
@@ -221,6 +221,22 @@ def _add_month(d: date) -> date:
     return date(y, m, 28)
 
 
+def _rpt_first_day(ilk: date, zaman: Any) -> date:
+    """Power BI: RPT = `[Fatura Tarihi] >= DATEADD(MONTH, 1, ilk yayın)`; fatura tarihi gece yarısıdır.
+    İlk yayının saati varsa (CRM UTC saklar, ör. 21:00) sınır günü o saatten sonra başladığı için
+    o günün faturaları sayılmaz; ilk sayılan gün ertesi gündür."""
+    first = _add_month(ilk)
+    t = zaman if isinstance(zaman, datetime) else None
+    if t is None and isinstance(zaman, str) and len(zaman) > 10:
+        try:
+            t = datetime.fromisoformat(zaman[:19])
+        except ValueError:
+            t = None
+    if t is not None and (t.hour, t.minute, t.second, t.microsecond) != (0, 0, 0, 0):
+        first = first + timedelta(days=1)
+    return first
+
+
 def _month_order(today: date) -> list[tuple[int, int]]:
     """Son 12 takvim ayı, eskiden yeniye: (yıl, ay)."""
     out = []
@@ -255,7 +271,9 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
     depo = {_key(r["stok_kodu"]): _num(r["depo_stok"]) for r in rows("logo_depo_stok")}
     bekleyen = {_key(r["stok_kodu"]): _num(r["bekleyen_siparis"]) for r in rows("crm_bekleyen_siparis")}
     onerilen = {_key(r["stok_kodu"]): _num(r["oneri_adet"]) for r in rows("crm_baski_onerisi")}
-    yeni = {_key(r["stok_kodu"]): _day(r["ilk_yayin_tarihi"]) for r in rows("crm_yeni_kitap") if _key(r["stok_kodu"])}
+    yeni_rows_crm = [r for r in rows("crm_yeni_kitap") if _key(r["stok_kodu"])]
+    yeni = {_key(r["stok_kodu"]): _day(r["ilk_yayin_tarihi"]) for r in yeni_rows_crm}
+    yeni_zaman = {_key(r["stok_kodu"]): r.get("ilk_yayin_zamani") for r in yeni_rows_crm}
     yeni_satis_rows = rows("logo_yeni_kitap_satis", {"stok_kodlari": sorted(yeni)}) if yeni else []
     if not yeni:
         res["logo_yeni_kitap_satis"] = {"records": [], "columns": [], "dbMs": 0, "skipped": "Yeni kitap yok"}
@@ -329,7 +347,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
         if (b.get("yayinevi") or None) in EXCLUDED_PUBLISHERS["yeni"] or not b.get("yayinevi"):
             continue
         sure = _months_between(ilk, today)
-        rpt_from = _add_month(ilk)
+        rpt_from = _rpt_first_day(ilk, yeni_zaman.get(k))
         son_yil = sum(q for d, q in sales if d >= window_start)
         dagilim = sum(q for d, q in sales if d.year == ilk.year and d.month == ilk.month)
         rpt = sum(q for d, q in sales if d >= rpt_from)
