@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-23 — İki karta tek kapı: analiz yokken GPU 1 de BI prompt'larına cevap veriyor; müşteri VM'ine inceleme ekranı
+
+- **Sorun:** BI'ın ve müşteri VM'inin bütün prompt'ları tek karta (GPU 0, `qwen38-27b`) gidiyordu; aynı anda yazanlar sırada bekliyordu. GPU 1'de editörün ana modeli (`book-director`) aynı ağırlıklardı (Qwen3.8-27B-FP8) ama yalnız kendi adına cevap verdiği ve önünde dağıtıcı olmadığı için BI'dan hiç istek almıyordu. Tek yönlü taşma vardı: yalnız editörün "kitaba sor"u GPU 1 doluyken GPU 0'a geçiyordu.
+- **Kullanıcı kararı (tasarım):** kitap okunmuyorken GPU 1'deki görsel model durur, yerine ana model kalkar ve o da prompt'lara cevap verir; aynı anda yazan kullanıcılar beklemez. Analiz başlayınca GPU 1 analize döner, prompt'lar GPU 0'a.
+- **Yapılan:** geçide `also_serves` (models.yaml; ana model `nanobaseAI` adına da cevap verir; imza yalnız doluysa değişir). `deploy/tt-gpu/llm-dispatch`: nginx `least_conn` iki karta, GPU 1 kapalıysa (ad çözülmez/bağlantı reddedilir/404) istek cevap başlamadan GPU 0'a yeniden gönderilir. Ters tünel `18885 → 8001` yerine `→ 8010` (dağıtıcı). `install.sh` her adımı doğrular (koşan analiz varsa durur), `rollback.sh` tüneli tek hamlede GPU 0'a döndürür. Editör 0.15.8-llm-dispatch.
+- **Canlı doğrulama** (test sunucusundan, BI'ın kullandığı tünelle): analiz yokken 12 eşzamanlı istek 7 GPU 0 / 5 GPU 1, 12/12 doğru, 1,36 sn. GPU 1 modeli durdurulunca (analiz başladığında geçidin yaptığı) 12/12 `200 OK`, GPU 1'e denk gelenler aynı anda GPU 0'a aktarıldı (`X-Served-By: 172.27.0.14, 172.26.0.2`). Model ~105 sn'de kendiliğinden geri kalktı, yeniden yük aldı (8/4). BI köprüsü `status ok, llm True, db True`.
+- **Bilinen sınır:** analiz tam o anda kartı alırsa GPU 1'de yazılmakta olan cevap kesilir (başlamış cevap başka karta taşınamaz). Başlamamış istekler etkilenmez.
+- **Çakışma:** Levent analizi 13:55'te kullanıcı isteğiyle durduruldu; başka bir oturum 13:57'de yeniden başlattı, 14:1x'te SUCCEEDED bitti; dağıtıcı ondan sonra kuruldu.
+- **Müşteri VM'i:** `git archive main` (`163e68c6`) → `deploy-customer-vm.sh` (`systemd-run`, EXIT 0; 19 dosya, silme yok; 5 servis ayakta, nginx -t tamam, oturumsuz uçlar 401). VM'in editör bağlantısı başka bir oturumca 13:31'de geri getirilmişti (VM 01:10'da 19 Eylül anlık görüntüsüne dönmüştü). VM köprüsünün içinden: 6 kitap, 215 soru, sayfa resmi ve bağlamı geliyor. Açık: VM'de sayfa resmi küçültülmeden iniyor (476 KB PNG) — GPU nginx'indeki sayfa yolu `?w=` parametresini iletmiyor.
+
 ## 2026-09-23 — main'e toplama, test sunucusu doğrulaması, müşteri VM'i geri getirildi (anlık görüntüye dönmüştü)
 
 - **main'e toplanan:** `claude/baski-oneri-pbi-parity` (Power BI eşliği testi + belgeler, `1fcadee6`). `claude/editor-module-issue-a090ad`'ın tek değişikliği (`pageImageUrl` genişlik parametresi) main'de zaten vardı. main push edildi.
