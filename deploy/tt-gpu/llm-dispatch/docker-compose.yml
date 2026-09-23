@@ -1,0 +1,15 @@
+# GPU sunucusunda: cd /data/editor/llm-dispatch && docker compose up -d
+name: llm-dispatch
+services:
+  dispatch:
+    image: nginx:1.29-alpine
+    container_name: llm-dispatch
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8010:8080"     # yalnız yerel: dışarıya ters tünel taşır
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks: [editor-net, qwen27_default]
+networks:
+  editor-net: {external: true}
+  qwen27_default: {external: true}

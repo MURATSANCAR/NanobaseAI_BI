@@ -7,7 +7,7 @@ Wants=network-online.target
 Type=simple
 User=gpuubuntu
 EnvironmentFile=/etc/editor-gpu-tunnel.env
-ExecStart=/usr/bin/ssh -N -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o UserKnownHostsFile=${TUNNEL_KNOWN_HOSTS} -i ${TUNNEL_KEY_FILE} -R 127.0.0.1:18885:127.0.0.1:8001 -R 127.0.0.1:18887:127.0.0.1:19110 ${TUNNEL_DESTINATION}
+ExecStart=/usr/bin/ssh -N -T -o BatchMode=yes -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o ExitOnForwardFailure=yes -o ServerAliveInterval=20 -o ServerAliveCountMax=3 -o UserKnownHostsFile=${TUNNEL_KNOWN_HOSTS} -i ${TUNNEL_KEY_FILE} -R 127.0.0.1:18885:127.0.0.1:8010 -R 127.0.0.1:18887:127.0.0.1:19110 ${TUNNEL_DESTINATION}
 Restart=always
 RestartSec=5
 TimeoutStopSec=10

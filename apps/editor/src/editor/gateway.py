@@ -74,6 +74,10 @@ class Alias:
     start_timeout_sec: int
     role: str = ""
     always_on: bool = False
+    # Further names the same server answers to. The main model on GPU 1 also answers as BI's
+    # `nanobaseAI`, so the dispatcher in front of both cards (deploy/tt-gpu/llm-dispatch) can
+    # send BI prompts to it while no book is being read.
+    also_serves: list[str] = field(default_factory=list)
     inflight: int = 0
     last_used: float = field(default_factory=time.time)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -83,7 +87,10 @@ class Alias:
         return f"http://{self.container}:8000"
 
     def spec_hash(self) -> str:
-        blob = json.dumps([self.image, self.model_dir, self.gpu, self.mem_fraction, self.args])
+        spec = [self.image, self.model_dir, self.gpu, self.mem_fraction, self.args]
+        if self.also_serves:              # only then: the other models' containers keep their hash
+            spec.append(self.also_serves)
+        blob = json.dumps(spec)
         return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
 
@@ -101,6 +108,7 @@ def load_aliases() -> dict[str, Alias]:
             start_timeout_sec=int(a.get("start_timeout_sec", d.get("start_timeout_sec", 1800))),
             role=a.get("role", ""),
             always_on=bool(a.get("always_on", False)),
+            also_serves=[str(x) for x in a.get("also_serves", [])],
         )
     return out
 
@@ -157,7 +165,7 @@ def _container(a: Alias):
 def _create(a: Alias):
     labels = {"editor.model": a.name, "editor.spec": a.spec_hash()}
     cache = f"{HOST_ROOT}/vllm-cache/{a.name}"
-    cmd = ["/model", "--served-model-name", a.name,
+    cmd = ["/model", "--served-model-name", a.name, *a.also_serves,
            "--gpu-memory-utilization", f"{a.mem_fraction:.2f}", *a.args]
     log.info("create %s (%s) gpu=%s frac=%.2f", a.container, a.real_model, a.gpu, a.mem_fraction)
     return dk.containers.create(
