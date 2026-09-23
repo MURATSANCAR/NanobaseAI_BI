@@ -8,6 +8,7 @@ Power BI'dan bilinçli farklar `NOTES` içinde; ekranda da gösterilir.
 """
 from __future__ import annotations
 
+import math
 from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
@@ -92,64 +93,71 @@ NOTES = [
     "yıllık görünümleri okunur, satır kümesi aynıdır.",
 ]
 
-# Kolon → kaynak eşlemesi ekranda başlıktan sorguya gidişi sağlar.
+# Kolon tanımları Power BI şablonundaki tablo görselinden birebir alınmıştır (2025_Yeni_Baskı Öneri Raporu):
+# başlık = görseldeki ad, biçim = modeldeki biçim dizesi, toplam = görselin toplam satırı.
+#   biçim: text · n0 (#,0) · plain (0) · general (biçimsiz ondalık) · date (Short Date) · oneri
+#   toplam: "sum" (Toplam) · "tukenme" (ölçü: Σstok ÷ Σhız) · None (Power BI toplamda boş bırakır)
+# key, başlık, grup, biçim, kaynak, toplam
 TEKRAR_COLUMNS = [
-    # key, etiket, grup, biçim, kaynak
-    ("stok_kodu", "Stok kodu", "Kitap", "text", "crm_kitap"),
-    ("urun_adi", "Ürün adı", "Kitap", "text", "crm_kitap"),
-    ("statu", "Statü", "Kitap", "text", "crm_kitap"),
-    ("yazar", "Yazar", "Kitap", "text", "crm_kitap"),
-    ("yayinevi", "Yayınevi", "Kitap", "text", "crm_kitap"),
-    ("kitaplik", "Kitaplık", "Kitap", "text", "crm_kitap"),
-    ("dizi_tur", "Dizi / tür", "Kitap", "text", "crm_kitap"),
-    ("sayfa_sayisi", "Sayfa", "Kitap", "int", "crm_kitap"),
-    ("uzeri_fiyat", "Üzeri fiyat", "Kitap", "money", "crm_kitap"),
-    ("baski_durum", "Baskı durumu", "Baskı", "text", "crm_kitap"),
-    ("son_baski_tarihi", "Son baskı", "Baskı", "date", "crm_kitap"),
-    ("son_fiyat_degisikligi", "Son fiyat değişikliği", "Baskı", "date", "logo_fiyat"),
-    ("baski_adet", "Baskı adedi", "Baskı", "int", "crm_kitap"),
-    ("stok_adedi", "Stok (CRM)", "Stok ve talep", "int", "crm_kitap"),
-    ("depo_stok", "Depo stoku (Logo)", "Stok ve talep", "int", "logo_depo_stok"),
-    ("bekleyen_siparis", "Bekleyen sipariş", "Stok ve talep", "int", "crm_bekleyen_siparis"),
-    ("oneri_adet", "Öneri adedi (30 gün)", "Stok ve talep", "int", "crm_baski_onerisi"),
-    ("yillik_toplam", "Yıllık satış", "Satış hızı", "int", "logo_satis_hizi"),
-    ("ort_satis_hizi", "Ort. satış hızı", "Satış hızı", "dec", "hesap:Ort. satış hızı"),
-    ("yillik_ort", "Yıllık ort.", "Satış hızı", "dec", "logo_satis_hizi"),
-    ("tukenme_suresi", "Tükenme (ay)", "Satış hızı", "dec", "hesap:Tükenme süresi"),
-    ("marj", "Marj", "Satış hızı", "dec", "hesap:Marj"),
-    ("oneri", "Öneri", "Satış hızı", "oneri", "hesap:Öneri"),
-    ("son6_ort", "Son 6 ay ort.", "Satış hızı", "dec", "logo_satis_hizi"),
-    ("onceki6_ort", "Önceki 6 ay ort.", "Satış hızı", "dec", "logo_satis_hizi"),
-    ("ceyrek1_ort", "Son 3 ay ort.", "Satış hızı", "dec", "logo_satis_hizi"),
-    ("ceyrek2_ort", "4–6 ay önce ort.", "Satış hızı", "dec", "logo_satis_hizi"),
-    ("ceyrek3_ort", "7–9 ay önce ort.", "Satış hızı", "dec", "logo_satis_hizi"),
-    ("ceyrek4_ort", "10–12 ay önce ort.", "Satış hızı", "dec", "logo_satis_hizi"),
+    ("stok_kodu", "StokKodu", "Kitap", "text", "crm_kitap", None),
+    ("urun_adi", "Ürün Adı", "Kitap", "text", "crm_kitap", None),
+    ("statu", "Statü", "Kitap", "text", "crm_kitap", None),
+    ("yazar", "Yazar", "Kitap", "text", "crm_kitap", None),
+    ("yayinevi", "Yayınevi", "Kitap", "text", "crm_kitap", None),
+    ("kitaplik", "Kitaplık", "Kitap", "text", "crm_kitap", None),
+    ("dizi_tur", "Dizi_Tür", "Kitap", "text", "crm_kitap", None),
+    ("sayfa_sayisi", "SayfaSayısı", "Kitap", "plain", "crm_kitap", None),
+    ("uzeri_fiyat", "Üzeri_Fiyat", "Kitap", "general", "crm_kitap", None),
+    ("baski_durum", "Baskı_Durum", "Baskı", "text", "crm_kitap", None),
+    ("son_baski_tarihi", "SonBaskıTarihi", "Baskı", "date", "crm_kitap", None),
+    ("son_fiyat_degisikligi", "Son Fiyat Değişiklik", "Baskı", "date", "logo_fiyat", None),
+    ("baski_adet", "Baskı_Adet", "Baskı", "n0", "crm_kitap", None),
+    ("stok_adedi", "StokAdedi", "Stok ve talep", "n0", "crm_kitap", "sum"),
+    ("depo_stok", "Toplam Stok", "Stok ve talep", "n0", "logo_depo_stok", "sum"),
+    ("bekleyen_siparis", "Bekleyen Sipariş", "Stok ve talep", "n0", "crm_bekleyen_siparis", "sum"),
+    ("oneri_adet", "Öneri Adet", "Stok ve talep", "plain", "crm_baski_onerisi", "sum"),
+    ("yillik_toplam", "YillikToplami", "Satış hızı", "n0", "logo_satis_hizi", None),
+    ("ort_satis_hizi", "OrtSatisHizi", "Satış hızı", "n0", "hesap:Ort. satış hızı", None),
+    ("yillik_ort", "YillikToplamiOrt", "Satış hızı", "n0", "logo_satis_hizi", None),
+    ("tukenme_suresi", "Tükenme Süresi", "Satış hızı", "general", "hesap:Tükenme süresi", "tukenme"),
+    ("marj", "Marj", "Satış hızı", "general", "hesap:Marj", None),
+    ("oneri", "Öneri", "Satış hızı", "oneri", "hesap:Öneri", None),
+    ("son6_ort", "Ilk6AyOrt", "Satış hızı", "n0", "logo_satis_hizi", None),
+    ("onceki6_ort", "Son6AyOrt", "Satış hızı", "n0", "logo_satis_hizi", None),
+    ("ceyrek1_ort", "Ceyrek1Ort", "Satış hızı", "n0", "logo_satis_hizi", None),
+    ("ceyrek2_ort", "Ceyrek2Ort", "Satış hızı", "n0", "logo_satis_hizi", None),
+    ("ceyrek3_ort", "Ceyrek3Ort", "Satış hızı", "n0", "logo_satis_hizi", None),
+    ("ceyrek4_ort", "Ceyrek4Ort", "Satış hızı", "n0", "logo_satis_hizi", None),
 ]
+# Şablonun Yeni Kitap görselinde CRM_YeniKitapDetay alanlarının adı sonuna "1" almış hâlde (Power BI aynı adlı
+# CRM_KitapDetay alanlarından ayırmak için ekler); başlıklar görseldeki gibidir.
 YENI_COLUMNS = [
-    ("stok_kodu", "Stok kodu", "Kitap", "text", "crm_yeni_kitap"),
-    ("urun_adi", "Ürün adı", "Kitap", "text", "crm_kitap"),
-    ("yazar", "Yazar", "Kitap", "text", "crm_kitap"),
-    ("yayinevi", "Yayınevi", "Kitap", "text", "crm_kitap"),
-    ("kitaplik", "Kitaplık", "Kitap", "text", "crm_kitap"),
-    ("dizi_tur", "Dizi / tür", "Kitap", "text", "crm_kitap"),
-    ("sayfa_sayisi", "Sayfa", "Kitap", "int", "crm_kitap"),
-    ("uzeri_fiyat", "Üzeri fiyat", "Kitap", "money", "crm_kitap"),
-    ("ilk_yayin_tarihi", "İlk yayın", "Baskı", "date", "crm_yeni_kitap"),
-    ("son_baski_tarihi", "Son baskı", "Baskı", "date", "crm_kitap"),
-    ("baski_durum", "Baskı durumu", "Baskı", "text", "crm_kitap"),
-    ("baski_adet", "Baskı adedi", "Baskı", "int", "crm_kitap"),
-    ("stok_adedi", "Stok (CRM)", "Stok ve talep", "int", "crm_kitap"),
-    ("satis_suresi", "Satış süresi (ay)", "Satış hızı", "int", "hesap:Satış süresi (yeni kitap)"),
-    ("son_bir_yil_satis", "Son 1 yıl satış", "Satış hızı", "int", "logo_yeni_kitap_satis"),
-    ("satis_hizi_tahmini", "Satış hızı tahmini", "Satış hızı", "dec", "hesap:Satış hızı tahmini (yeni kitap)"),
-    ("son_bir_yil_ort", "Son 1 yıl ort.", "Satış hızı", "dec", "hesap:Son 1 yıl ort. (yeni kitap)"),
-    ("rpt_satis", "Tekrar sipariş (RPT)", "Satış hızı", "int", "hesap:Tekrar sipariş (RPT)"),
-    ("rpt_hizi", "RPT hızı", "Satış hızı", "dec", "hesap:Tekrar sipariş (RPT)"),
-    ("marj", "Marj", "Satış hızı", "dec", "hesap:Marj / Öneri (yeni kitap)"),
-    ("oneri", "Öneri", "Satış hızı", "oneri", "hesap:Marj / Öneri (yeni kitap)"),
-    ("bu_ay_satis", "Bu ay satış", "Satış hızı", "int", "logo_yeni_kitap_satis"),
-    ("dagilim_satis", "Dağılım satışı", "Satış hızı", "int", "hesap:Dağılım satışı"),
+    ("stok_kodu", "Malzeme/Hizmet Kodu", "Kitap", "text", "crm_yeni_kitap", None),
+    ("urun_adi", "Ürün Adı1", "Kitap", "text", "crm_kitap", None),
+    ("yazar", "Yazar1", "Kitap", "text", "crm_kitap", None),
+    ("yayinevi", "Yayınevi1", "Kitap", "text", "crm_kitap", None),
+    ("kitaplik", "Kitaplık1", "Kitap", "text", "crm_kitap", None),
+    ("dizi_tur", "Dizi_Tür1", "Kitap", "text", "crm_kitap", None),
+    ("sayfa_sayisi", "SayfaSayısı1", "Kitap", "plain", "crm_kitap", None),
+    ("uzeri_fiyat", "Üzeri_Fiyat1", "Kitap", "general", "crm_kitap", None),
+    ("ilk_yayin_tarihi", "IlkYayinTarihi", "Baskı", "date", "crm_yeni_kitap", None),
+    ("son_baski_tarihi", "SonBaskıTarihi1", "Baskı", "date", "crm_kitap", None),
+    ("baski_durum", "Baskı_Durum1", "Baskı", "text", "crm_kitap", None),
+    ("baski_adet", "Baskı_Adet", "Baskı", "plain", "crm_kitap", None),
+    ("stok_adedi", "StokAdedi1", "Stok ve talep", "general", "crm_kitap", None),
+    ("satis_suresi", "SatisSuresi", "Satış hızı", "plain", "hesap:Satış süresi (yeni kitap)", None),
+    ("son_bir_yil_satis", "SonBirYilSatis", "Satış hızı", "n0", "logo_yeni_kitap_satis", "sum"),
+    ("satis_hizi_tahmini", "SatisHiziTahmini", "Satış hızı", "n0", "hesap:Satış hızı tahmini (yeni kitap)", "sum"),
+    ("son_bir_yil_ort", "SonBirYilSatisOrt", "Satış hızı", "n0", "hesap:Son 1 yıl ort. (yeni kitap)", "sum"),
+    ("rpt_satis", "RPTSatis", "Satış hızı", "n0", "hesap:Tekrar sipariş (RPT)", "sum"),
+    ("rpt_hizi", "RPTHizi", "Satış hızı", "n0", "hesap:Tekrar sipariş (RPT)", "sum"),
+    ("marj", "Marj_Y", "Satış hızı", "general", "hesap:Marj / Öneri (yeni kitap)", "sum"),
+    ("oneri", "Öneri_Y", "Satış hızı", "oneri", "hesap:Marj / Öneri (yeni kitap)", None),
+    ("bu_ay_satis", "BuAyinSatisi", "Satış hızı", "n0", "logo_yeni_kitap_satis", None),
+    ("dagilim_satis", "DagilimSatıs", "Satış hızı", "n0", "hesap:Dağılım satışı", "sum"),
 ]
+# Ay başlıkları iki görselde farklı yazılmış; ikisi de şablondaki gibi.
+TEKRAR_MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayis", "Haziran", "Temmuz", "Agustos", "Eylül", "Ekim", "Kasım", "Aralık"]
 MONTHS = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"]
 
 ONERI_LEVELS = ["Risk/Acil", "Kritik", "Karar Ver", "Takip Et", "Yeterli Stok"]
@@ -179,18 +187,54 @@ def _day(v: Any) -> date | None:
         return None
 
 
-def _marj_oneri(stok: float, hiz: float | None) -> tuple[float | None, str | None]:
-    """Power BI'daki `Marj` = StokAdedi / hız − 1 ve onun üstündeki `Öneri`.
+INF, NEG_INF, NAN = "∞", "-∞", "NaN"  # JSON'da sayı olarak taşınamaz; ekran Power BI gibi yazar
 
-    DAX'ın bölen-yok davranışı birebir yansıtılır: stok varken sıfıra ya da boşa bölmek
-    sonsuz verir (marj gösterilmez, öneri "Yeterli Stok"), stok da yokken sonuç boştur ve
-    `boş − 1 = −1` olduğu için öneri "Risk/Acil" olur. Yeni kitapta satış süresi 0 ise
-    bölen SQL'de NULLIF ile boş gelir; aynı dal çalışır.
-    """
-    if not hiz:  # 0 ya da None
-        return (None, "Yeterli Stok") if stok > 0 else (-1.0, "Risk/Acil")
-    marj = stok / hiz - 1
-    return marj, oneri(marj)
+
+def _dax_div(a: float | None, b: float | None) -> float | None:
+    """DAX bölmesi (Microsoft, "Blanks, empty strings, and zero values"): 5/BLANK = ∞, 0/BLANK = NaN,
+    BLANK/BLANK = BLANK; sıfıra bölme de aynı. None = BLANK."""
+    if b is None or b == 0:
+        if a is None:
+            return None
+        if a == 0:
+            return math.nan
+        return math.inf if a > 0 else -math.inf
+    if a is None:
+        return None
+    return a / b
+
+
+def _marj_oneri(stok: float | None, hiz: float | None) -> tuple[float | None, str | None]:
+    """Power BI: Marj = StokAdedi / hız − 1 ve Öneri = IF(Marj <= 0, ...). BLANK − 1 = −1; NaN hiçbir
+    eşikten küçük değildir (IEEE), öneri "Yeterli Stok" olur — Power BI çıktısıyla doğrulanacak."""
+    q = _dax_div(stok, hiz)
+    marj = -1.0 if q is None else q - 1
+    return marj, ("Yeterli Stok" if math.isnan(marj) else oneri(marj))
+
+
+def _out(v: float | None) -> float | str | None:
+    if v is None:
+        return None
+    if isinstance(v, float) and math.isnan(v):
+        return NAN
+    if v == math.inf:
+        return INF
+    if v == -math.inf:
+        return NEG_INF
+    return v
+
+
+def _sort_key(v: Any) -> tuple[int, float]:
+    """Power BI artan sıralaması: boş en küçük, sonra sayılar, sonra ∞; NaN en sonda."""
+    if v is None:
+        return (0, 0.0)
+    if v == NEG_INF:
+        return (1, 0.0)
+    if v == INF:
+        return (3, 0.0)
+    if v == NAN:
+        return (4, 0.0)
+    return (2, float(v))
 
 
 def oneri(marj: float | None) -> str | None:
@@ -251,10 +295,6 @@ def _month_order(today: date) -> list[tuple[int, int]]:
     return list(reversed(out))
 
 
-def _round(v: float | None, n: int = 2) -> float | None:
-    return None if v is None else round(v, n)
-
-
 def build(run: Callable[[str, dict | None], dict], today: date | None = None) -> dict:
     """`run(source_id, params)` kaynağı çalıştırır ve {columns, records, ...} döner."""
     today = today or date.today()
@@ -291,7 +331,6 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             kitap[k] = r
 
     order = _month_order(today)
-    month_cols = [(f"ay_{y}_{m:02d}", f"{MONTHS[m - 1]} {str(y)[2:]}") for y, m in order]
     # Yeni Kitap ay kolonları Power BI gibi ay numarasıyladır ve geçen yıl ile bu yılın aynı ayını toplar
     # (Power BI: V_SatisRaporu_2025_2026 üzerinde PIVOT ... FOR Ay IN ([1]..[12])).
     yeni_years = (today.year - 1, today.year)
@@ -309,10 +348,11 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             continue
         if (b.get("yayinevi") or "") in EXCLUDED_PUBLISHERS["tekrar"]:
             continue
-        speed = sum(_num(h.get(c)) * w for c, w in WEIGHTS)
-        stok = _num(b.get("stok_adedi"))
-        # Power BI gibi: iadesi satışından fazla olan kitapta hız eksidir ve tükenme de eksi gösterilir.
-        tuk = stok / speed if speed else None
+        # Hız Power BI'daki gibi SQL'de satır satır hesaplanır (Logo_SatisHizi.SatisHizi); yoksa ağırlıklardan.
+        speed = _num(h["satis_hizi"]) if "satis_hizi" in h else sum(_num(h.get(c)) * w for c, w in WEIGHTS)
+        stok = b.get("stok_adedi")
+        stok = None if stok is None or stok == "" else _num(stok)
+        tuk = _dax_div(stok, speed)  # Power BI: Tükenme Süresi = SUM(StokAdedi) / SUM(OrtSatisHizi)
         marj, marj_oneri = _marj_oneri(stok, speed)
         f = fiyat.get(k) or {}
         row = {
@@ -323,19 +363,19 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             "bekleyen_siparis": bekleyen.get(k),
             "oneri_adet": onerilen.get(k),
             "yillik_toplam": _num(h.get("yillik_toplam")),
-            "ort_satis_hizi": _round(speed),
-            "yillik_ort": _round(_num(h.get("yillik_ort"))),
-            "tukenme_suresi": _round(tuk),
-            "marj": _round(marj),
+            "ort_satis_hizi": speed,
+            "yillik_ort": _num(h.get("yillik_ort")),
+            "tukenme_suresi": _out(tuk),
+            "marj": _out(marj),
             "oneri": marj_oneri,
-            **{c: _round(_num(h.get(c))) for c in ("son6_ort", "onceki6_ort", "ceyrek1_ort", "ceyrek2_ort", "ceyrek3_ort", "ceyrek4_ort")},
+            **{c: _num(h.get(c)) for c in ("son6_ort", "onceki6_ort", "ceyrek1_ort", "ceyrek2_ort", "ceyrek3_ort", "ceyrek4_ort")},
         }
         a = aylik.get(k, {})
-        for (key, _), (_, m) in zip(month_cols, order):
-            row[key] = a.get(m, 0)
+        for m in range(1, 13):  # Power BI: Sorgu3 ay numarasına göre Ocak..Aralık (son 12 ay, her ay bir kez)
+            row[f"ay_{m:02d}"] = a.get(m, 0)
         tekrar.append(row)
     # Power BI sıralaması: en önce tükenecek üstte; satışı olmayan (hız 0) en sonda.
-    tekrar.sort(key=lambda r: (r["tukenme_suresi"] is None, r["tukenme_suresi"] or 0))
+    tekrar.sort(key=lambda r: _sort_key(r["tukenme_suresi"]))
 
     # ---- Yeni Kitap
     per_day: dict[str, list[tuple[date, float]]] = {}
@@ -361,7 +401,8 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
         son_yil_ort = son_yil / sure if sure else None
         rpt_hizi = rpt / sure if sure else None
         tahmin = (son_yil_ort * 0.4 + rpt_hizi * 0.6) if sure else None
-        stok = _num(b.get("stok_adedi"))
+        stok = b.get("stok_adedi")
+        stok = None if stok is None or stok == "" else _num(stok)
         marj, marj_oneri = _marj_oneri(stok, son_yil_ort)
         row = {
             "stok_kodu": k,
@@ -370,11 +411,11 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             "ilk_yayin_tarihi": ilk.isoformat(),
             "satis_suresi": sure,
             "son_bir_yil_satis": son_yil,
-            "satis_hizi_tahmini": _round(tahmin),
-            "son_bir_yil_ort": _round(son_yil_ort),
+            "satis_hizi_tahmini": tahmin,
+            "son_bir_yil_ort": son_yil_ort,
             "rpt_satis": rpt,
-            "rpt_hizi": _round(rpt_hizi),
-            "marj": _round(marj),
+            "rpt_hizi": rpt_hizi,
+            "marj": _out(marj),
             "oneri": marj_oneri,
             "bu_ay_satis": bu_ay,
             "dagilim_satis": dagilim,
@@ -385,12 +426,12 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
     yeni_rows.sort(key=lambda r: -r["son_bir_yil_satis"])
 
     def cols(spec):
-        base = [{"key": k, "label": l, "group": g, "format": f, "source": s} for k, l, g, f, s in spec]
+        base = [{"key": k, "label": l, "group": g, "format": f, "source": src, "total": t} for k, l, g, f, src, t in spec]
         if spec is TEKRAR_COLUMNS:
-            return base + [{"key": k, "label": l, "group": "Son 12 ay satış", "format": "int", "source": "logo_aylik_satis"}
-                           for k, l in month_cols]
+            return base + [{"key": f"ay_{m:02d}", "label": TEKRAR_MONTHS[m - 1], "group": "Son 12 ay satış", "format": "n0",
+                            "source": "logo_aylik_satis", "total": "sum"} for m in range(1, 13)]
         group = f"Aylık satış ({yeni_years[0]} + {yeni_years[1]})"
-        return base + [{"key": k, "label": l, "group": group, "format": "int", "source": "logo_yeni_kitap_satis"}
+        return base + [{"key": k, "label": l, "group": group, "format": "n0", "source": "logo_yeni_kitap_satis", "total": "sum"}
                        for k, l in yeni_month_cols]
 
     def view(view_id, title, hint, spec, data, filters):
@@ -403,9 +444,9 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
     return {
         "views": [
             view("tekrar", "Baskı Tekrar", "En önce tükenecek kitap üstte", TEKRAR_COLUMNS, tekrar,
-                 ["oneri", "baski_durum", "yayinevi", "statu"]),
+                 ["oneri", "baski_durum", "yayinevi", "yazar", "statu", "urun_adi"]),
             view("yeni", "Yeni Kitap", "İlk yayını son 12 ayda olanlar, en çok satan üstte", YENI_COLUMNS, yeni_rows,
-                 ["oneri", "baski_durum", "yayinevi"]),
+                 ["oneri", "baski_durum", "yayinevi", "yazar", "urun_adi"]),
         ],
         "oneriLevels": ONERI_LEVELS,
         "sourceStats": {sid: {"rows": len(r.get("records") or []), "dbMs": r.get("dbMs"), "skipped": r.get("skipped"),

@@ -5,7 +5,7 @@ import { ArrowDown, ArrowDownToLine, ArrowUp, Code2, Info, Loader2, RefreshCw, S
 import Shell from '../stitch/Shell';
 import { managementRail } from '../stitch/screens';
 import { ENGINE_ENABLED } from '../engine';
-import { clockOffset, formatCell, managementApi, mergeSnapshot, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
+import { clockOffset, formatCell, managementApi, mergeSnapshot, numberOf, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
 import LiveStatus from './LiveStatus';
 import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
 import './management.css';
@@ -19,8 +19,40 @@ type Sort = { index: number; dir: 1 | -1 } | null;
 const FILTER_LABELS: Record<string, string> = {
   baski_durum: 'Baskı durumu',
   yayinevi: 'Yayınevi',
+  yazar: 'Yazar',
   statu: 'Statü',
+  urun_adi: 'Ürün Adı',
 };
+
+const TEXTUAL = new Set(['text', 'oneri', 'date']);
+const isNum = (c: ReportColumn) => !TEXTUAL.has(c.format);
+
+/** Power BI toplam satırı: toplanan kolonlar Σ, Tükenme Süresi ölçüsü Σ StokAdedi ÷ Σ OrtSatisHizi, gerisi boş. */
+function totalsOf(view: ReportView, rows: Row[]): Array<number | null> {
+  const idx = new Map(view.columns.map((c, i) => [c.key, i]));
+  const sumAt = (i: number | undefined) => {
+    if (i === undefined) return null;
+    let any = false;
+    let acc = 0;
+    for (const r of rows) {
+      const n = numberOf(r[i]);
+      if (n === null) continue; // BLANK + x = x
+      any = true;
+      acc += n;
+    }
+    return any ? acc : null;
+  };
+  return view.columns.map((c, i) => {
+    if (c.total === 'sum') return sumAt(i);
+    if (c.total === 'tukenme') {
+      const stok = sumAt(idx.get('stok_adedi'));
+      const hiz = sumAt(idx.get('ort_satis_hizi'));
+      if (stok === null && hiz === null) return null;
+      return (stok ?? 0) / (hiz ?? 0); // JS bölmesi DAX gibi: 5/0 = ∞, 0/0 = NaN
+    }
+    return null;
+  });
+}
 
 const norm = (s: string) => s.toLocaleLowerCase('tr');
 
@@ -127,12 +159,20 @@ export default function BaskiOneri() {
     let out = oneri.size && oneriIdx !== undefined ? pre.filter((r) => oneri.has(String(r[oneriIdx]))) : pre;
     if (sort) {
       const { index, dir } = sort;
+      // Power BI sırası: boş en küçük değerdir (artanda başta), NaN her iki yönde en sonda.
+      const numeric = isNum(view.columns[index]);
+      const blank = (v: unknown) => v === null || v === undefined || v === '';
       out = [...out].sort((a, b) => {
         const x = a[index];
         const y = b[index];
-        if (x === null || x === undefined || x === '') return 1;
-        if (y === null || y === undefined || y === '') return -1;
-        return (typeof x === 'number' && typeof y === 'number' ? x - y : String(x).localeCompare(String(y), 'tr')) * dir;
+        if (blank(x) || blank(y)) return blank(x) && blank(y) ? 0 : (blank(x) ? -1 : 1) * dir;
+        if (numeric) {
+          const nx = numberOf(x) ?? 0;
+          const ny = numberOf(y) ?? 0;
+          if (Number.isNaN(nx) || Number.isNaN(ny)) return Number.isNaN(nx) && Number.isNaN(ny) ? 0 : Number.isNaN(nx) ? 1 : -1;
+          return (nx === ny ? 0 : nx < ny ? -1 : 1) * dir;
+        }
+        return String(x).localeCompare(String(y), 'tr') * dir;
       });
     }
     return { rows: out, counts };
@@ -372,16 +412,9 @@ function ReportTable({
   onSource: (f: SheetFocus) => void;
 }) {
   const cols = view.columns;
-  // Kolon grupları üst başlık satırı: ardışık aynı grup tek hücre.
-  const groups = useMemo(() => {
-    const out: Array<{ name: string; span: number }> = [];
-    for (const c of cols) {
-      const last = out[out.length - 1];
-      if (last && last.name === c.group) last.span += 1;
-      else out.push({ name: c.group, span: 1 });
-    }
-    return out;
-  }, [cols]);
+  // Şablondaki gibi toplam satırı; Power BI görselinde kolon grup başlığı yoktur.
+  const totals = useMemo(() => totalsOf(view, rows), [view, rows]);
+  const hasTotals = cols.some((c) => c.total);
   const stickyLeft = (i: number) => (i === 0 ? 0 : i === 1 ? widthOf(cols[0]) : undefined);
 
   if (rows.length === 0) {
@@ -396,13 +429,6 @@ function ReportTable({
         increaseViewportBy={400}
         fixedHeaderContent={() => (
           <>
-            <tr className="mg-group-row">
-              {groups.map((g, i) => (
-                <th key={`${g.name}-${i}`} colSpan={g.span} scope="colgroup">
-                  {g.name}
-                </th>
-              ))}
-            </tr>
             <tr>
               {cols.map((c, i) => {
                 const left = stickyLeft(i);
@@ -430,6 +456,23 @@ function ReportTable({
             </tr>
           </>
         )}
+        fixedFooterContent={
+          hasTotals
+            ? () => (
+                <tr className="mg-total-row">
+                  {cols.map((c, i) => {
+                    const left = stickyLeft(i);
+                    const v = totals[i];
+                    return (
+                      <td key={c.key} style={{ left }} className={(left !== undefined ? `mg-sticky mg-sticky-${i}` : '') + (isNum(c) ? ' is-num' : '')}>
+                        {i === 0 ? 'Toplam' : v === null ? '' : formatCell(v, c.format)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )
+            : undefined
+        }
         itemContent={(_, row) =>
           cols.map((c, i) => {
             const left = stickyLeft(i);

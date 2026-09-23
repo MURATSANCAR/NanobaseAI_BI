@@ -2,13 +2,18 @@ import { ENGINE_BASE, ENGINE_ENABLED, freshHeaders } from '../engine';
 
 /** Yönetim raporları modülünün köprü uçları: /api/v1/management/*. */
 
-export type ColumnFormat = 'text' | 'int' | 'dec' | 'money' | 'date' | 'oneri';
+/** Power BI biçim dizeleri: n0 = "#,0", plain = "0", general = biçimsiz ondalık, date = Short Date. */
+export type ColumnFormat = 'text' | 'int' | 'dec' | 'money' | 'date' | 'oneri' | 'n0' | 'plain' | 'general';
+
+/** Toplam satırı: sum = Toplam, tukenme = Σ StokAdedi ÷ Σ OrtSatisHizi (Power BI ölçüsü), null = boş. */
+export type ColumnTotal = 'sum' | 'tukenme' | null;
 
 export type ReportColumn = {
   key: string;
   label: string;
   group: string;
   format: ColumnFormat;
+  total?: ColumnTotal;
   /** Kaynak sorgu kimliği ya da `hesap:<formül adı>` */
   source: string;
 };
@@ -119,9 +124,31 @@ export const ONERI_TONE: Record<string, string> = {
 const intFmt = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 const decFmt = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 const moneyFmt = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const n0Fmt = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
+const plainFmt = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0, useGrouping: false });
+const generalFmt = new Intl.NumberFormat('tr-TR', { maximumSignificantDigits: 15, useGrouping: false });
+
+/** Köprü DAX'ın sonsuz ve NaN sonuçlarını metin taşır (JSON'da sayı değiller). */
+export function numberOf(value: string | number | null | undefined): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return value;
+  if (value === '∞') return Infinity;
+  if (value === '-∞') return -Infinity;
+  if (value === 'NaN') return NaN;
+  const n = Number(value);
+  return Number.isNaN(n) ? null : n;
+}
+
+const special = (n: number) => (Number.isNaN(n) ? 'NaN' : n === Infinity ? '∞' : n === -Infinity ? '-∞' : null);
 
 export function formatCell(value: string | number | null | undefined, format: ColumnFormat): string {
-  if (value === null || value === undefined || value === '') return '—';
+  // Power BI boş değeri boş hücre olarak gösterir.
+  if (value === null || value === undefined || value === '') return '';
+  if (format === 'n0' || format === 'plain' || format === 'general') {
+    const n = numberOf(value);
+    if (n === null) return String(value);
+    return special(n) ?? (format === 'n0' ? n0Fmt : format === 'plain' ? plainFmt : generalFmt).format(n);
+  }
   if (format === 'int' || format === 'dec' || format === 'money') {
     const n = typeof value === 'number' ? value : Number(value);
     if (!Number.isFinite(n)) return String(value);

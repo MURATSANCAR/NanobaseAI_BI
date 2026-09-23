@@ -85,23 +85,24 @@ hepsi.append(ok("A: ağırlıklı hız 50, tükenme 6 ay, marj 5, öneri Yeterli
                 t["A"]["ort_satis_hizi"] == 50.0 and t["A"]["tukenme_suresi"] == 6.0
                 and t["A"]["marj"] == 5.0 and t["A"]["oneri"] == "Yeterli Stok", t["A"]["oneri"]))
 hepsi.append(ok("H: tükenme 1,2 ay, marj 0,2, öneri Kritik",
-                t["H"]["tukenme_suresi"] == 1.2 and t["H"]["marj"] == 0.2
+                abs(t["H"]["tukenme_suresi"] - 1.2) < 1e-9 and abs(t["H"]["marj"] - 0.2) < 1e-9
                 and t["H"]["oneri"] == "Kritik", t["H"]["oneri"]))
 hepsi.append(ok("I: eksi hız → tükenme eksi (Power BI gibi), öneri Risk/Acil",
                 t["I"]["ort_satis_hizi"] == -10.0 and t["I"]["tukenme_suresi"] == -8.0
                 and t["I"]["oneri"] == "Risk/Acil", f"{t['I']['tukenme_suresi']} {t['I']['oneri']}"))
-hepsi.append(ok("B satışsız + stoklu: havuzda, hız 0, öneri Yeterli Stok",
-                "B" in t and t["B"]["ort_satis_hizi"] == 0 and t["B"]["tukenme_suresi"] is None
-                and t["B"]["oneri"] == "Yeterli Stok", t.get("B", {}).get("oneri")))
-hepsi.append(ok("C satışsız + stoksuz: marj -1, öneri Risk/Acil",
-                t["C"]["marj"] == -1.0 and t["C"]["oneri"] == "Risk/Acil", t["C"]["oneri"]))
+hepsi.append(ok("B satışsız + stoklu: havuzda, hız 0, tükenme ve marj ∞ (DAX 5/0), öneri Yeterli Stok",
+                "B" in t and t["B"]["ort_satis_hizi"] == 0 and t["B"]["tukenme_suresi"] == "∞"
+                and t["B"]["marj"] == "∞" and t["B"]["oneri"] == "Yeterli Stok", f"{t['B']['tukenme_suresi']} {t['B']['oneri']}"))
+hepsi.append(ok("C satışsız + stoksuz: 0/0 = NaN (DAX), NaN eşikten küçük değil → Yeterli Stok",
+                t["C"]["marj"] == "NaN" and t["C"]["tukenme_suresi"] == "NaN" and t["C"]["oneri"] == "Yeterli Stok",
+                f"{t['C']['marj']} {t['C']['oneri']}"))
 hepsi.append(ok("F yayınevi hariç tutuldu", "F" not in t))
 hepsi.append(ok("G baskı tarihi eşiğin üstünde, havuzda değil", "G" not in t))
 hepsi.append(ok("D pasif statü satırı havuzda (süzgeç ekranda)", "D" in t))
 hepsi.append(ok("E farklı baskı durumu havuzda (süzgeç ekranda)", "E" in t))
 sira = [r[0] for r in views["tekrar"]["rows"]]
 hepsi.append(ok("sıralama: en önce tükenen üstte, satışsızlar en sonda",
-                sira[:3] == ["I", "H", "A"] and all(t[k]["tukenme_suresi"] is None for k in sira[3:]),
+                sira[:3] == ["I", "H", "A"] and [t[k]["tukenme_suresi"] for k in sira[3:]] == ["∞", "∞", "∞", "NaN"],
                 " ".join(sira)))
 
 df = {d["key"]: d["values"] for d in views["tekrar"]["defaultFilters"]}
@@ -116,12 +117,31 @@ hepsi.append(ok("açılış süzgeci D ve E'yi gizler",
                 and t["E"]["baski_durum"] not in [v or "" for v in df["baski_durum"]]))
 hepsi.append(ok("Yeni Kitap görünümünde açılış süzgeci yok", views["yeni"]["defaultFilters"] == []))
 
+tc = views["tekrar"]["columns"]; yc = views["yeni"]["columns"]
+hepsi.append(ok("Baskı Tekrar başlıkları şablondaki gibi (41 kolon, ay Ocak..Aralık, 'Mayis', 'Agustos')",
+                len(tc) == 41 and [c["label"] for c in tc[:3]] == ["StokKodu", "Ürün Adı", "Statü"]
+                and [c["label"] for c in tc[-12:]][4] == "Mayis" and [c["label"] for c in tc[-12:]][7] == "Agustos"
+                and [c["label"] for c in tc if c["key"] == "depo_stok"] == ["Toplam Stok"], str(len(tc))))
+hepsi.append(ok("Yeni Kitap başlıkları şablondaki gibi (35 kolon, 'Ürün Adı1', 'Mayıs', 'Ağustos')",
+                len(yc) == 35 and yc[1]["label"] == "Ürün Adı1" and yc[-12:][4]["label"] == "Mayıs", str(len(yc))))
+hepsi.append(ok("toplam satırı şablondaki kolonlarda: Tekrar stok/depo/sipariş/öneri adedi/ay + tükenme ölçüsü",
+                sorted(c["key"] for c in tc if c["total"] == "sum")[:4] == ["ay_01", "ay_02", "ay_03", "ay_04"]
+                and {c["key"] for c in tc if c["total"] == "sum"} >= {"stok_adedi", "depo_stok", "bekleyen_siparis", "oneri_adet"}
+                and [c["key"] for c in tc if c["total"] == "tukenme"] == ["tukenme_suresi"]
+                and not any(c["total"] for c in tc if c["key"] in ("ort_satis_hizi", "yillik_toplam", "marj"))))
+hepsi.append(ok("Baskı Tekrar ay kolonu ay numarasıyla (A: Eylül = 120)", t["A"]["ay_09"] == 120, str(t["A"].get("ay_09"))))
+import math
+dd = m._dax_div
+hepsi.append(ok("DAX bölme tablosu: 5/BLANK=∞, 0/BLANK=NaN, BLANK/BLANK=BLANK, 5/0=∞, -5/0=-∞",
+                dd(5, None) == math.inf and math.isnan(dd(0, None)) and dd(None, None) is None
+                and dd(5, 0) == math.inf and dd(-5, 0) == -math.inf and dd(6, 3) == 2))
 print("== Yeni Kitap havuzu:", sorted(y))
 hepsi.append(ok("N1 bu ay yayımlandı, stoklu: satış süresi 0, öneri Yeterli Stok",
                 y["N1"]["satis_suresi"] == 0 and y["N1"]["son_bir_yil_ort"] is None
                 and y["N1"]["oneri"] == "Yeterli Stok", y["N1"]["oneri"]))
-hepsi.append(ok("N2 bu ay yayımlandı, stoksuz: marj -1, öneri Risk/Acil",
-                y["N2"]["marj"] == -1.0 and y["N2"]["oneri"] == "Risk/Acil", y["N2"]["oneri"]))
+hepsi.append(ok("N2 bu ay yayımlandı, stoksuz: 0/BLANK = NaN (DAX), öneri Yeterli Stok",
+                y["N2"]["marj"] == "NaN" and y["N2"]["oneri"] == "Yeterli Stok", f"{y['N2']['marj']} {y['N2']['oneri']}"))
+hepsi.append(ok("N1 stoklu, satış süresi 0: 5/BLANK = ∞ (DAX)", y["N1"]["marj"] == "∞", str(y["N1"]["marj"])))
 hepsi.append(ok("N1 dağılım satışı ilk yayın ayından", y["N1"]["dagilim_satis"] == 50))
 hepsi.append(ok("N3 saatli ilk yayın: RPT sınır gününü (30 Kasım) saymaz, Power BI gibi",
                 y["N3"]["rpt_satis"] == 17, str(y["N3"]["rpt_satis"])))

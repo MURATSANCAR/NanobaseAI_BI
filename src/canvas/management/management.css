@@ -95,6 +95,8 @@
 
 /* Tablo: yükseklik kendi kabında, yatay kaydırma kendi kabında; sayfa taşmaz. */
 .mg-table-wrap { height: clamp(420px, calc(100vh - 360px), 1400px); border: 1px solid var(--mg-line); border-radius: 18px; background: #fff; overflow: hidden; min-width: 0 }
+.mg-table .mg-total-row td, .mg-table .mg-total-row td.mg-sticky { background: #f4f1f8; border-top: 1px solid var(--mg-line); font-weight: 750; color: var(--mg-ink); padding: 8px 10px; white-space: nowrap }
+.mg-table .mg-total-row td.is-num { text-align: right; font-variant-numeric: tabular-nums }
 .mg-table-empty { display: grid; place-items: center; height: 200px; color: var(--mg-muted); font-size: 13px }
 .mg-table { border-collapse: separate; border-spacing: 0; font-size: 12.5px; table-layout: fixed }
 .mg-thead th { background: #faf8fc; color: #5f5670; font-weight: 750; text-align: left; border-bottom: 1px solid var(--mg-line); padding: 0; white-space: nowrap }

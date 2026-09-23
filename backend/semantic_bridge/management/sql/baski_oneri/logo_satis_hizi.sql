@@ -13,16 +13,27 @@
 WITH p AS (
     SELECT YEAR(GETDATE()) * 12 + MONTH(GETDATE()) - 1 AS bu_ay
 )
+-- Ortalamalar ve hız Power BI'daki gibi satır satır bölünüp toplanır (SUM(Miktar / 3) …): kayan nokta
+-- sonucu şablonla aynı çıksın diye formül ve toplama sırası Logo_SatisHizi.SatisHizi'nin birebir kopyasıdır.
 SELECT
     s.[Malzeme/Hizmet Kodu] AS stok_kodu,
-    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay     THEN s.Miktar ELSE 0 END)        AS yillik_toplam,
-    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay     THEN s.Miktar ELSE 0 END) / 12.0 AS yillik_ort,
-    SUM(CASE WHEN m.i >= p.bu_ay - 6  AND m.i < p.bu_ay     THEN s.Miktar ELSE 0 END) / 6.0  AS son6_ort,
-    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay - 6 THEN s.Miktar ELSE 0 END) / 6.0  AS onceki6_ort,
-    SUM(CASE WHEN m.i >= p.bu_ay - 3  AND m.i < p.bu_ay     THEN s.Miktar ELSE 0 END) / 3.0  AS ceyrek1_ort,
-    SUM(CASE WHEN m.i >= p.bu_ay - 6  AND m.i < p.bu_ay - 3 THEN s.Miktar ELSE 0 END) / 3.0  AS ceyrek2_ort,
-    SUM(CASE WHEN m.i >= p.bu_ay - 9  AND m.i < p.bu_ay - 6 THEN s.Miktar ELSE 0 END) / 3.0  AS ceyrek3_ort,
-    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay - 9 THEN s.Miktar ELSE 0 END) / 3.0  AS ceyrek4_ort
+    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay     THEN s.Miktar      ELSE 0 END) AS yillik_toplam,
+    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay     THEN s.Miktar / 12 ELSE 0 END) AS yillik_ort,
+    SUM(CASE WHEN m.i >= p.bu_ay - 6  AND m.i < p.bu_ay     THEN s.Miktar / 6  ELSE 0 END) AS son6_ort,
+    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay - 6 THEN s.Miktar / 6  ELSE 0 END) AS onceki6_ort,
+    SUM(CASE WHEN m.i >= p.bu_ay - 3  AND m.i < p.bu_ay     THEN s.Miktar / 3  ELSE 0 END) AS ceyrek1_ort,
+    SUM(CASE WHEN m.i >= p.bu_ay - 6  AND m.i < p.bu_ay - 3 THEN s.Miktar / 3  ELSE 0 END) AS ceyrek2_ort,
+    SUM(CASE WHEN m.i >= p.bu_ay - 9  AND m.i < p.bu_ay - 6 THEN s.Miktar / 3  ELSE 0 END) AS ceyrek3_ort,
+    SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay - 9 THEN s.Miktar / 3  ELSE 0 END) AS ceyrek4_ort,
+    (
+        SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay - 9 THEN s.Miktar / 3 * 0.2  ELSE 0 END) +
+        SUM(CASE WHEN m.i >= p.bu_ay - 9  AND m.i < p.bu_ay - 6 THEN s.Miktar / 3 * 0.05 ELSE 0 END) +
+        SUM(CASE WHEN m.i >= p.bu_ay - 6  AND m.i < p.bu_ay - 3 THEN s.Miktar / 3 * 0.1  ELSE 0 END) +
+        SUM(CASE WHEN m.i >= p.bu_ay - 3  AND m.i < p.bu_ay     THEN s.Miktar / 3 * 0.5  ELSE 0 END) +
+        SUM(CASE WHEN m.i >= p.bu_ay - 6  AND m.i < p.bu_ay     THEN s.Miktar / 6 * 0.05 ELSE 0 END) +
+        SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay - 6 THEN s.Miktar / 6 * 0.05 ELSE 0 END) +
+        SUM(CASE WHEN m.i >= p.bu_ay - 12 AND m.i < p.bu_ay     THEN s.Miktar / 12 * 0.05 ELSE 0 END)
+    ) AS satis_hizi
 FROM {satis:2024} AS s
 CROSS APPLY (SELECT s.[Yıl] * 12 + s.[Ay] - 1 AS i) AS m
 CROSS JOIN p
