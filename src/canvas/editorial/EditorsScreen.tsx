@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
-import { ENGINE_ENABLED, editorsApi, type ContractFacet, type EditorLoad } from '../engine';
+import { ENGINE_ENABLED, type ContractFacet, type EditorLoad } from '../engine';
+import { editorsOverviewOptions, projectsListOptions } from './queries';
 import { Note, Pill, errText, field, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
@@ -55,16 +56,11 @@ export default function EditorsScreen() {
   const [page, setPage] = useState(0);
   const q = useDebounced(text.trim(), 350);
 
-  const overview = useQuery({ queryKey: ['editorial', 'editors'], queryFn: () => editorsApi.overview(), enabled: ENGINE_ENABLED });
+  const overview = useQuery(editorsOverviewOptions());
   const o = overview.data;
   useEffect(() => setPage(0), [q, editor, status]);
 
-  const list = useQuery({
-    queryKey: ['editorial', 'projects', q, editor, status, o?.sinceYear, page],
-    queryFn: () => editorsApi.projects({ q, editor: editor || undefined, status: status ? Number(status) : undefined, since: o?.sinceYear, page }),
-    enabled: ENGINE_ENABLED && !!o,
-    placeholderData: keepPreviousData,
-  });
+  const list = useQuery(projectsListOptions(q, editor, status, o?.sinceYear, page));
 
   const editors = o?.items ?? [];
   const order = (o?.statuses ?? []).map((s) => s.code);

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
-import { ENGINE_ENABLED, contractsApi, type Contract, type ContractSummary } from '../engine';
+import { ENGINE_ENABLED, type Contract, type ContractSummary } from '../engine';
+import { contractsListOptions, contractsSummaryOptions } from './queries';
 import { Note, Pill, errText, field, nf } from '../admin/ui';
 import { dateTime, pct } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
@@ -108,14 +109,8 @@ export default function ContractsScreen() {
 
   useEffect(() => setPage(0), [q, status, kind, expiring, order]);
 
-  const summary = useQuery({ queryKey: ['editorial', 'contracts', 'summary'], queryFn: contractsApi.summary, enabled: ENGINE_ENABLED });
-  const list = useQuery({
-    queryKey: ['editorial', 'contracts', q, status, kind, expiring, order, page],
-    queryFn: () =>
-      contractsApi.list({ q, status: status ? Number(status) : undefined, kind: kind ? Number(kind) : undefined, expiring, order, page }),
-    enabled: ENGINE_ENABLED,
-    placeholderData: keepPreviousData,
-  });
+  const summary = useQuery(contractsSummaryOptions());
+  const list = useQuery(contractsListOptions(q, status, kind, expiring, order, page));
 
   const s = summary.data;
   const data = list.data;

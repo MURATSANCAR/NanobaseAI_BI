@@ -225,7 +225,6 @@ export default function EditorialHome() {
       {err && <Note tone="err">{home.data ? 'Veriler yenilenemedi; son alınan bilgiler gösteriliyor.' : err}</Note>}
       <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-canvas-muted" role="status">
         <span>{lastUpdated ? `Son güncelleme: ${fmtDate(new Date(lastUpdated * 1000).toISOString())}` : 'Kaydedilmiş veriler alınıyor…'}</span>
-        <span>Veriler 5 dakikada bir otomatik yenilenir.</span>
         {home.isFetching && home.data && <span>Güncelleniyor…</span>}
       </div>
       {(refreshFailed || home.data?.stale) && <Note tone="warn">Bazı veriler henüz yenilenemedi. Son başarılı bilgiler korunuyor; güncelleme yeniden denenecek.</Note>}

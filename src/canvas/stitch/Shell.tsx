@@ -5,6 +5,7 @@ import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
 import { useIsAdmin } from '../useAdmin';
 import { useTimasSession } from '../TimasSession';
+import DataRefresh from '../DataRefresh';
 
 const RAIL_ICONS = [
   (
@@ -202,6 +203,9 @@ export default function Shell({
             <span className="hidden sm:inline">Düzeni sıfırla</span>
           </button>
         )}
+
+        {/* Veri gösteren her ekranda: son güncelleme, 5 dk otomatik yenileme, elle yenileme. */}
+        <DataRefresh />
 
         {/* Share Button */}
         <button type="button" onClick={share} aria-label="Paylaş" className="glass-panel min-h-10 min-w-10 justify-center px-2.5 py-1.5 sm:min-h-0 sm:min-w-0 sm:px-4 sm:py-2 rounded-full active:scale-[0.97] shadow-glass-float flex items-center gap-1.5 text-[11px] sm:text-xs font-bold text-ink hover:bg-white hover:text-violet transition-all group whitespace-nowrap">

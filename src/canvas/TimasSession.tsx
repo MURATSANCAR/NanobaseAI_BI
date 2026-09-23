@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import { editorialHomeOptions } from './editorial/homeQuery';
+import { prefetchEditorialLists } from './editorial/queries';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
 import SessionGate from './stitch/SessionGate';
@@ -35,6 +36,7 @@ export default function RequireTimasSession() {
   useEffect(() => {
     if (q.data?.username && !q.error) {
       void qc.prefetchQuery(editorialHomeOptions(q.data.username));
+      void prefetchEditorialLists(qc);
       void import('./editorial/EditorialHome').catch(() => undefined);
     }
   }, [qc, q.data?.username, q.error]);

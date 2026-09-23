@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
-import { ENGINE_ENABLED, boardDecisionsApi, type BoardDecision, type BoardYear } from '../engine';
+import { ENGINE_ENABLED, type BoardDecision, type BoardYear } from '../engine';
+import { boardListOptions, boardSummaryOptions } from './queries';
 import { Note, Pill, errText, field, nf } from '../admin/ui';
 import { dateTime, pct } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
@@ -125,7 +126,7 @@ export default function BoardScreen() {
   const [page, setPage] = useState(0);
   const q = useDebounced(text.trim(), 350);
 
-  const summary = useQuery({ queryKey: ['editorial', 'board', 'summary'], queryFn: boardDecisionsApi.summary, enabled: ENGINE_ENABLED });
+  const summary = useQuery(boardSummaryOptions());
   const years = summary.data?.years ?? [];
   // İlk açılışta kaydı olan en yeni yıl seçilir.
   useEffect(() => {
@@ -133,12 +134,7 @@ export default function BoardScreen() {
   }, [year, years]);
   useEffect(() => setPage(0), [q, year, decision]);
 
-  const list = useQuery({
-    queryKey: ['editorial', 'board', q, year, decision, page],
-    queryFn: () => boardDecisionsApi.list({ q, year: year || undefined, decision: decision ? Number(decision) : undefined, page }),
-    enabled: ENGINE_ENABLED && year !== null,
-    placeholderData: keepPreviousData,
-  });
+  const list = useQuery(boardListOptions(q, year, decision, page));
 
   const y = years.find((r) => r.year === year);
   const accepted = y?.decisions.find((d) => decisionTone(d.label) === 'ok')?.count ?? 0;

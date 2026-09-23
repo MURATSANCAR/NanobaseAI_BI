@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { keepPreviousData, useQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, contributorsApi, type Contributor, type PersonDetail } from '../engine';
+import { contributorsListOptions, roleFacetsOptions } from './queries';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime, pct } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
@@ -134,13 +135,8 @@ export default function ContributorsScreen({ module: m }: { module: ContributorM
 
   useEffect(() => setPage(0), [q, role, order]);
 
-  const facets = useQuery({ queryKey: ['editorial', 'roles'], queryFn: contributorsApi.roles, enabled: ENGINE_ENABLED && m.roles.length > 1 });
-  const list = useQuery({
-    queryKey: ['editorial', 'contributors', roles, q, order, page],
-    queryFn: () => contributorsApi.list({ roles, q, order, page }),
-    enabled: ENGINE_ENABLED,
-    placeholderData: keepPreviousData,
-  });
+  const facets = useQuery({ ...roleFacetsOptions(), enabled: ENGINE_ENABLED && m.roles.length > 1 });
+  const list = useQuery(contributorsListOptions(roles, q, order, page));
   const person = useQuery({ queryKey: ['editorial', 'person', open], queryFn: () => contributorsApi.person(open as string), enabled: ENGINE_ENABLED && !!open });
 
   const data = list.data;
