@@ -80,6 +80,34 @@ def contract(out: dict, ids: set[str]) -> list[str]:
     return errors
 
 
+def repair(out: dict, ids: set[str]) -> tuple[dict, dict]:
+    """Sözleşmenin MEKANİK ihlallerini deterministik onarır; içerik kararı vermez.
+
+    Bir anma iki gruba yazılmışsa hangisine ait olduğu belirsizdir: "belirsiz kişi zorla
+    bağlanmaz" — bütün gruplardan çıkar, unresolved'a koyar. Hiçbir yere yazılmamış anma da
+    unresolved'a gider. Var olmayan anma kimliği atılır; conflicts tekilleştirilir.
+    (Ölçüldü: bir kitapta üç öneri de yalnız bu tür hatalarla reddedildi, eleştirmen hiç
+    koşamadı ve kitap düştü — oysa belirsizi belirsiz bırakmak yeterliydi.)"""
+    assigned = Counter(m for ch in out['characters'] for m in ch['mention_ids'])
+    dup = {m for m, n in assigned.items() if n > 1} | (set(assigned) & set(out['unresolved_mention_ids']))
+    unknown = (set(assigned) | set(out['unresolved_mention_ids'])) - ids
+    chars = []
+    for ch in out['characters']:
+        keep = [m for m in dict.fromkeys(ch['mention_ids']) if m in ids and m not in dup]
+        if keep:
+            chars.append({**ch, 'mention_ids': keep})
+    covered = {m for ch in chars for m in ch['mention_ids']}
+    unresolved = sorted((set(out['unresolved_mention_ids']) & ids) | dup | (ids - covered))
+    unresolved = [m for m in unresolved if m not in covered]
+    seen: set[str] = set()
+    conflicts = [c for c in out.get('conflicts', []) if c['mention_id'] in ids
+                 and not (c['mention_id'] in seen or seen.add(c['mention_id']))]
+    fixed = {**out, 'characters': chars, 'unresolved_mention_ids': unresolved, 'conflicts': conflicts}
+    notes = {'duplicates_unresolved': sorted(dup), 'missing_unresolved': sorted(ids - covered - set(out['unresolved_mention_ids'])),
+             'unknown_dropped': sorted(unknown), 'empty_groups_dropped': len(out['characters']) - len(chars)}
+    return fixed, notes
+
+
 async def propose(gid: str, mentions: list[dict], corrections: str = '') -> tuple[dict, int, dict]:
     short = {f'm{i}': m for i,m in enumerate(mentions)}
     pages = source.read(gid)
@@ -95,6 +123,13 @@ async def propose(gid: str, mentions: list[dict], corrections: str = '') -> tupl
         out, call_id = await Llm(gid).chat('book-director', messages, prompt=ref,
             schema=schemas.IDENTITY, max_tokens=12000, temperature=0.0, thinking=False)
         errors = contract(out,set(short))
+        repaired = None
+        if errors:
+            # Mekanik ihlal (mükerrer/eksik/uydurma anma kimliği) bir deneme kaybettirmez:
+            # deterministik onarım, sonra eleştirmen olağan yoldan koşar.
+            fixed, notes = repair(out, set(short))
+            if not contract(fixed, set(short)) and fixed['characters']:
+                out, errors, repaired = fixed, [], notes
         for ch in out['characters']:
             # The model may not invent a name — but a name it did invent is not a reason to
             # throw the grouping away: the group's own most frequent surface name replaces it.
@@ -122,7 +157,7 @@ async def propose(gid: str, mentions: list[dict], corrections: str = '') -> tupl
             if set(actual)!=expected or len(actual)!=len(expected):
                 errors.append('Identity critic omitted or duplicated a group')
             errors += [v['group_id']+': '+v['reason'] for v in judged['verdicts'] if not v['supported']]
-        attempts.append({'proposal_call':call_id,'critic_call':judge_id,'errors':errors})
+        attempts.append({'proposal_call':call_id,'critic_call':judge_id,'errors':errors,'repaired':repaired})
         if not errors:
             out, merge_call = await reconcile(gid, out, context)
             return out,call_id,{'policy':POLICY,'attempts':attempts,'reconcile_call':merge_call}
