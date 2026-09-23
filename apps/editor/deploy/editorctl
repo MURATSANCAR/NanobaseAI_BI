@@ -21,6 +21,11 @@ ROOT=${EDITOR_ROOT:-/data/editor}
 APP=$ROOT/app
 COMPOSE=(docker compose -f "$APP/deploy/docker-compose.yml" --project-name editor)
 export EDITOR_ROOT=$ROOT
+# Every Python service runs the image of the version in this tree, unless told otherwise. The compose
+# file has no default version on purpose (a missing variable used to mean a silent downgrade).
+_ver=$(cat "$APP/VERSION" 2>/dev/null || true)
+[ -n "$_ver" ] && export EDITOR_PY_IMAGE="${EDITOR_PY_IMAGE:-editor-py:$_ver}"
+[ -n "${EDITOR_PY_IMAGE:-}" ] && export EDITOR_CARDS_IMAGE="${EDITOR_CARDS_IMAGE:-$EDITOR_PY_IMAGE}"
 
 rand() { python3 -c "import secrets; print(secrets.token_urlsafe(${1:-32}))"; }
 

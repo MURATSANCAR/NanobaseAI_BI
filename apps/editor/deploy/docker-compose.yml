@@ -10,7 +10,10 @@
 name: editor
 
 x-py: &py
-  image: ${EDITOR_PY_IMAGE:-editor-py:0.15.3-condense}
+  # No default version: a service started without the variable used to fall back to an old image
+  # silently (2026-09-23: control and rebuild ran 0.15.3 while the tree was at 0.15.8). editorctl
+  # sets both variables from VERSION; a bare `docker compose` without them stops with this message.
+  image: ${EDITOR_PY_IMAGE:?EDITOR_PY_IMAGE ayarlanmadı - editorctl ile kurun}
   restart: unless-stopped
   env_file: ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
   environment:
@@ -102,7 +105,7 @@ services:
 
   cards:
     <<: *py
-    image: ${EDITOR_CARDS_IMAGE:-editor-py:0.15.3-condense}
+    image: ${EDITOR_CARDS_IMAGE:-${EDITOR_PY_IMAGE:?EDITOR_PY_IMAGE ayarlanmadı - editorctl ile kurun}}
     env_file:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
