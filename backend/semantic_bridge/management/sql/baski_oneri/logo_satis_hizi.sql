@@ -1,4 +1,5 @@
 -- Stok kodu başına dönemsel satış ve ağırlıklı aylık satış hızı.
+-- Havuz 2024 başından bu yana satışı olan kodlardır (Power BI: WHERE Yıl >= 2024).
 -- Dönemler tamamlanmış aylardır; içinde bulunulan ay hiçbir döneme girmez.
 --   son3   = son 3 ay           (Power BI: Ceyrek1)
 --   onc3   = 4-6 ay önce        (Ceyrek2)
@@ -28,5 +29,7 @@ SELECT
     SUM(CASE WHEN s.[Fatura Tarihi] >= p.m12 AND s.[Fatura Tarihi] < p.m9    THEN s.Miktar ELSE 0 END) / 3.0  AS ceyrek4_ort
 FROM dbo.V_SatisRaporu_All2 AS s
 CROSS JOIN p
-WHERE s.[Fatura Tarihi] >= p.m12 AND s.[Fatura Tarihi] < p.bu_ay
+-- Havuz Power BI ile aynı: 2024 başından bu yana satışı olan her stok kodu bir satırdır.
+-- Son 12 ayda satmayan kitap da listede kalır (dönem toplamları 0, hız 0, tükenme yok).
+WHERE s.[Yıl] >= 2024
 GROUP BY s.[Malzeme/Hizmet Kodu]

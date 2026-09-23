@@ -20,6 +20,8 @@ export type ReportView = {
   columns: ReportColumn[];
   rows: Array<Array<string | number | null>>;
   filters: string[];
+  /** Power BI dosyasında kayıtlı açılış dilimleyicileri; ekran bunları seçili açar. null = boş değer. */
+  defaultFilters?: Array<{ key: string; values: Array<string | null> }>;
 };
 
 export type ReportSnapshot = {

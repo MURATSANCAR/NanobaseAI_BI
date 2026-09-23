@@ -72,6 +72,19 @@
 .mg-tone-watch { --tone: #3e7bfa; --tone-soft: #eaf1ff; --tone-ink: #2257c4 }
 .mg-tone-ok { --tone: #12a594; --tone-soft: #e6f7f4; --tone-ink: #0b7a6d }
 
+/* Power BI dosyasında kayıtlı açılış süzgeçleri: seçili açılır, çipe basınca kalkar. */
+.mg-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px }
+.mg-presets-label { font-size: 10.5px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; color: #8b8098 }
+.mg-preset {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 10px;
+  border: 1px solid var(--mg-line); border-radius: 999px; background: #fff; cursor: pointer;
+  font-size: 12px; font-weight: 650; color: var(--mg-muted);
+  transition: transform 140ms var(--ease-out), border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+.mg-preset:active { transform: scale(0.97) }
+.mg-preset span { font-variant-numeric: tabular-nums; opacity: .7 }
+.mg-preset.is-on { border-color: var(--mg-violet); background: #f3effd; color: var(--mg-violet) }
+
 .mg-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px }
 .mg-select { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 0 1 220px }
 .mg-select span { font-size: 10.5px; font-weight: 750; letter-spacing: .04em; color: #8b8098 }
@@ -177,6 +190,7 @@ pre.mg-sql-code { padding: 12px 14px; white-space: pre }
   .mg-level { min-height: 56px }
   .mg-level strong { font-size: 18px }
   .mg-select { flex: 1 1 100% }
+  .mg-presets { width: 100% }
   .mg-count { margin-left: 0 }
   .mg-search { max-width: none }
   .mg-table-wrap { height: 70vh }
@@ -191,7 +205,7 @@ pre.mg-sql-code { padding: 12px 14px; white-space: pre }
 @media (prefers-reduced-motion: reduce) {
   .mg-sheet { transition: opacity 180ms ease }
   .mg-sheet[data-starting-style], .mg-sheet[data-ending-style] { transform: none; opacity: 0 }
-  .mg-button, .mg-level, .mg-card, .mg-card-arrow { transition: none }
+  .mg-button, .mg-level, .mg-preset, .mg-card, .mg-card-arrow { transition: none }
 }
 
 /* Canlılık satırı: renk durumu anlatır; sayaç sabit genişlikli rakamla titremez. */

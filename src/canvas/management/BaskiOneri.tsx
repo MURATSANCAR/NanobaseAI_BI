@@ -72,14 +72,19 @@ export default function BaskiOneri() {
   const [oneri, setOneri] = useState<Set<string>>(new Set());
   const [selects, setSelects] = useState<Record<string, string>>({});
   const [sort, setSort] = useState<Sort>(null);
+  // Açılış süzgeçleri seçili başlar; burada yalnız kullanıcının kaldırdıkları tutulur.
+  const [dropped, setDropped] = useState<Set<string>>(new Set());
   const [sheet, setSheet] = useState<{ open: boolean; focus: SheetFocus }>({ open: false, focus: { kind: 'all' } });
 
   // Görünüm değişince süzgeçler o görünüme aittir; taşınmaz.
   useEffect(() => {
     setOneri(new Set());
     setSelects({});
+    setDropped(new Set());
     setSort(null);
   }, [viewId]);
+
+  const presets = view?.defaultFilters ?? [];
 
   const colIndex = useMemo(() => new Map((view?.columns ?? []).map((c, i) => [c.key, i])), [view]);
   const oneriIdx = colIndex.get('oneri');
@@ -104,6 +109,13 @@ export default function BaskiOneri() {
     const needle = norm(search.trim());
     const textIdx = ['stok_kodu', 'urun_adi', 'yazar', 'yayinevi'].map((k) => colIndex.get(k)).filter((i): i is number => i !== undefined);
     const pre = view.rows.filter((r) => {
+      for (const preset of view.defaultFilters ?? []) {
+        if (dropped.has(preset.key)) continue;
+        const i = colIndex.get(preset.key);
+        if (i === undefined) continue;
+        // Power BI'da boş değer de seçiliydi; null ile boş metin aynı sayılır.
+        if (!preset.values.some((v) => (v ?? '') === (r[i] ?? ''))) return false;
+      }
       for (const [key, value] of Object.entries(selects)) {
         if (value && r[colIndex.get(key)!] !== value) return false;
       }
@@ -124,7 +136,7 @@ export default function BaskiOneri() {
       });
     }
     return { rows: out, counts };
-  }, [view, search, selects, oneri, sort, colIndex, oneriIdx]);
+  }, [view, search, selects, oneri, dropped, sort, colIndex, oneriIdx]);
 
   const toggleSort = (index: number) =>
     setSort((s) => (s?.index !== index ? { index, dir: -1 } : s.dir === -1 ? { index, dir: 1 } : null));
@@ -144,7 +156,8 @@ export default function BaskiOneri() {
 
   const refreshing = refresh.isPending || !!snap?.refreshing;
   const levels = snap?.data?.oneriLevels ?? [];
-  const activeFilters = oneri.size + Object.values(selects).filter(Boolean).length + (search ? 1 : 0);
+  const activeFilters =
+    oneri.size + Object.values(selects).filter(Boolean).length + (search ? 1 : 0) + (presets.length - dropped.size);
 
   const head = {
     tenant: 'Timaş Yayınları',
@@ -255,6 +268,37 @@ export default function BaskiOneri() {
                 })}
               </div>
 
+              {presets.length > 0 && (
+                <div className="mg-presets" role="group" aria-label="Power BI açılış süzgeçleri">
+                  <span className="mg-presets-label">Power BI açılışı</span>
+                  {presets.map((preset) => {
+                    const on = !dropped.has(preset.key);
+                    const values = preset.values.map((v) => v ?? '(boş)');
+                    return (
+                      <button
+                        key={preset.key}
+                        type="button"
+                        aria-pressed={on}
+                        title={`${FILTER_LABELS[preset.key] ?? preset.key}: ${values.join(' · ')}`}
+                        className={`mg-preset${on ? ' is-on' : ''}`}
+                        onClick={() =>
+                          setDropped((s) => {
+                            const next = new Set(s);
+                            if (next.has(preset.key)) next.delete(preset.key);
+                            else next.add(preset.key);
+                            return next;
+                          })
+                        }
+                      >
+                        {FILTER_LABELS[preset.key] ?? preset.key}
+                        <span>{values.length}</span>
+                        {on && <X size={12} aria-hidden />}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="mg-filters">
                 {Object.entries(options).map(([key, values]) => (
                   <label key={key} className="mg-select">
@@ -279,6 +323,7 @@ export default function BaskiOneri() {
                         setOneri(new Set());
                         setSelects({});
                         setSearch('');
+                        setDropped(new Set(presets.map((p) => p.key)));
                       }}
                     >
                       Süzgeçleri temizle

@@ -23,6 +23,17 @@ EXCLUDED_PUBLISHERS = {
              "L&M", "Lacivert", "Mavi Kirpi Kitap", "Sincap Kids", "Sincap Kitap", "Uçan Kitap"},
 }
 
+# Power BI dosyasında kayıtlı dilimleyici seçimi: rapor bu iki süzgeç seçili açılıyordu.
+# Ekranda kaldırılabilir çip olarak durur; kaldırılınca havuzun tamamı görünür (boş değer = None).
+DEFAULT_FILTERS = {
+    "tekrar": [
+        {"key": "statu", "values": [None, "YS04 Aktif",
+                                    "YS10A Ürün Fazlası - Stok Eritilecek Ürün (Yeniden Basılabilir)"]},
+        {"key": "baski_durum", "values": [None, "Depo Girişi Yapıldı"]},
+    ],
+    "yeni": [],
+}
+
 # Ağırlıklı satış hızı: son çeyrek en ağır, geçen yılın aynı çeyreği mevsimsellik için ikinci.
 WEIGHTS = [("ceyrek1_ort", 0.50), ("ceyrek2_ort", 0.10), ("ceyrek3_ort", 0.05), ("ceyrek4_ort", 0.20),
            ("son6_ort", 0.05), ("onceki6_ort", 0.05), ("yillik_ort", 0.05)]
@@ -44,8 +55,9 @@ SOURCES = [
 FORMULAS = [
     ("Ort. satış hızı", "0,50 × son 3 ay ort. + 0,20 × 10–12 ay önce ort. + 0,10 × 4–6 ay önce ort. + 0,05 × 7–9 ay önce ort. + 0,05 × son 6 ay ort. + 0,05 × önceki 6 ay ort. + 0,05 × yıllık ort. (aylık adet)"),
     ("Tükenme süresi", "CRM stok adedi ÷ ort. satış hızı — stok kaç ay yeter"),
-    ("Marj", "Tükenme süresi − 1"),
-    ("Öneri", "Marj ≤ 0 → Risk/Acil · ≤ 0,5 → Kritik · ≤ 1 → Karar Ver · ≤ 1,5 → Takip Et · üstü → Yeterli Stok"),
+    ("Marj", "Tükenme süresi − 1; satışı olmayan kitapta bölen yoktur, marj boş kalır"),
+    ("Öneri", "Marj ≤ 0 → Risk/Acil · ≤ 0,5 → Kritik · ≤ 1 → Karar Ver · ≤ 1,5 → Takip Et · üstü → Yeterli Stok. "
+              "Satışı olmayan kitap stoku varsa Yeterli Stok, stoku da yoksa Risk/Acil sayılır."),
     ("Satış süresi (yeni kitap)", "İlk yayından bugüne geçen ay sayısı"),
     ("Son 1 yıl ort. (yeni kitap)", "Son 12 ay satışı ÷ satış süresi"),
     ("Dağılım satışı", "İlk yayın ayındaki satış (ilk dağıtım)"),
@@ -55,12 +67,20 @@ FORMULAS = [
 ]
 
 NOTES = [
+    "Rapor Power BI dosyasının açılış görünümüyle aynı süzgeçlerle açılır: statü boş, YS04 Aktif ya da "
+    "YS10A Ürün Fazlası; baskı durumu boş ya da Depo Girişi Yapıldı. Çipler kaldırılınca havuzun tamamı görünür.",
+    "Satış hızı havuzu Power BI ile aynı: 2024 başından bu yana satışı olan her kitap listede. Son 12 ayda "
+    "hiç satmayan kitap da kalır; hızı 0, tükenmesi boş, önerisi \u201cYeterli Stok\u201d olur.",
+    "Marj ve öneri, bölen olmadığında Power BI'ın DAX davranışını izler: stok varken sonuç sonsuzdur ve "
+    "\u201cYeterli Stok\u201d yazar, stok da yokken boş sonuç \u22121 sayılır ve \u201cRisk/Acil\u201d yazar.",
     "Logo ve CRM ayrı sunucularda olduğu için Power BI'daki bellek içi ilişki burada stok koduyla birleştirmedir; sonuç aynı satırlardır.",
     "Dönemler tamamlanmış aylardır ve tarih karşılaştırması ay başına göre yapılır; Power BI'daki 'gün sonu' karşılaştırması saatli faturaları son günden düşürebiliyordu.",
     "Power BI'da 'Ilk6Ay' en yeni 6 ayı, 'Son6Ay' eski 6 ayı tutuyordu; burada 'Son 6 ay' ve 'Önceki 6 ay' olarak doğru adlarıyla gösterilir.",
     "Yeni kitap ay kolonları son 12 ayın takvim aylarıdır; Power BI iki yılın aynı ayını topluyordu.",
     "Yeni kitaplarda ilk yayın tarihi CRM'den, satış Logo'dan okunur (Power BI bağlı sunucu üzerinden tek sorguda birleştiriyordu).",
     "Kullanılmayan 'CRM_BekleyenSiparis' tablosu ve kırık 'Set Kitaplar' sayfası (modelde olmayan tabloya bağlı) alınmadı.",
+    "Yeni kitap satışı Power BI'da 'V_SatisRaporu_2025_2026' görünümünden okunuyordu; burada tüm yılları tutan "
+    "'V_SatisRaporu_All2' son 12 aya sınırlanarak okunur. İlk yayın son 12 ayda olduğu için satır kümesi aynıdır.",
 ]
 
 # Kolon → kaynak eşlemesi ekranda başlıktan sorguya gidişi sağlar.
@@ -148,6 +168,20 @@ def _day(v: Any) -> date | None:
         return datetime.fromisoformat(str(v)[:19]).date()
     except ValueError:
         return None
+
+
+def _marj_oneri(stok: float, hiz: float | None) -> tuple[float | None, str | None]:
+    """Power BI'daki `Marj` = StokAdedi / hız − 1 ve onun üstündeki `Öneri`.
+
+    DAX'ın bölen-yok davranışı birebir yansıtılır: stok varken sıfıra ya da boşa bölmek
+    sonsuz verir (marj gösterilmez, öneri "Yeterli Stok"), stok da yokken sonuç boştur ve
+    `boş − 1 = −1` olduğu için öneri "Risk/Acil" olur. Yeni kitapta satış süresi 0 ise
+    bölen SQL'de NULLIF ile boş gelir; aynı dal çalışır.
+    """
+    if not hiz:  # 0 ya da None
+        return (None, "Yeterli Stok") if stok > 0 else (-1.0, "Risk/Acil")
+    marj = stok / hiz - 1
+    return marj, oneri(marj)
 
 
 def oneri(marj: float | None) -> str | None:
@@ -247,7 +281,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
         speed = sum(_num(h.get(c)) * w for c, w in WEIGHTS)
         stok = _num(b.get("stok_adedi"))
         tuk = stok / speed if speed > 0 else None
-        marj = tuk - 1 if tuk is not None else None
+        marj, marj_oneri = _marj_oneri(stok, speed)
         f = fiyat.get(k) or {}
         row = {
             **{c: b.get(c) for c in ("stok_kodu", "urun_adi", "statu", "yazar", "yayinevi", "kitaplik", "dizi_tur",
@@ -261,7 +295,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             "yillik_ort": _round(_num(h.get("yillik_ort"))),
             "tukenme_suresi": _round(tuk),
             "marj": _round(marj),
-            "oneri": oneri(marj) if speed > 0 else "Yeterli Stok",
+            "oneri": marj_oneri,
             **{c: _round(_num(h.get(c))) for c in ("son6_ort", "onceki6_ort", "ceyrek1_ort", "ceyrek2_ort", "ceyrek3_ort", "ceyrek4_ort")},
         }
         a = aylik.get(k, {})
@@ -296,7 +330,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
         rpt_hizi = rpt / sure if sure else None
         tahmin = (son_yil_ort * 0.4 + rpt_hizi * 0.6) if sure else None
         stok = _num(b.get("stok_adedi"))
-        marj = (stok / son_yil_ort - 1) if son_yil_ort else None
+        marj, marj_oneri = _marj_oneri(stok, son_yil_ort)
         row = {
             "stok_kodu": k,
             **{c: b.get(c) for c in ("urun_adi", "yazar", "yayinevi", "kitaplik", "dizi_tur", "sayfa_sayisi", "uzeri_fiyat",
@@ -309,7 +343,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             "rpt_satis": rpt,
             "rpt_hizi": _round(rpt_hizi),
             "marj": _round(marj),
-            "oneri": oneri(marj) if son_yil_ort else ("Yeterli Stok" if sure else None),
+            "oneri": marj_oneri,
             "bu_ay_satis": bu_ay,
             "dagilim_satis": dagilim,
         }
@@ -328,6 +362,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
         columns = cols(spec)
         # Satırlar kolon sırasında dizi: binlerce satırda anahtar tekrarı yükü yarıya indirir.
         return {"id": view_id, "title": title, "hint": hint, "columns": columns, "filters": filters,
+                "defaultFilters": DEFAULT_FILTERS.get(view_id, []),
                 "rows": [[r.get(c["key"]) for c in columns] for r in data]}
 
     return {
