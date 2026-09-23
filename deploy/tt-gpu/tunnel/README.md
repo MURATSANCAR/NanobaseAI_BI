@@ -1,6 +1,6 @@
 # GPU model tüneli (TT GPU → nanobase-direct)
 
-CPU sunucusu GPU'nun özel ağına ulaşamıyor, GPU ise CPU'nun SSH portuna ulaşabiliyor. Bu ters tünel GPU'daki modeli (`qwen38-27b`, port 8001, sunulan ad `nanobaseAI`) CPU sunucusunda `127.0.0.1:18885` olarak açar. BI'ın semantik köprüsü (`nanobase-semantic-bridge.service`, :8795) modele bu adresten bağlanır (`OPENAI_API_BASE=http://127.0.0.1:18885/v1`). Tünel koparsa BI'ın model gerektiren soruları durur.
+CPU sunucusu GPU'nun özel ağına ulaşamıyor, GPU ise CPU'nun SSH portuna ulaşabiliyor. Bu ters tünel GPU'daki model dağıtıcısını (`llm-dispatch`, port 8010 → GPU 0 `qwen38-27b` ve analiz yokken GPU 1 `editor-model-director`, sunulan ad `nanobaseAI`; bkz. `../llm-dispatch/README.md`) CPU sunucusunda `127.0.0.1:18885` olarak açar. BI'ın semantik köprüsü (`nanobase-semantic-bridge.service`, :8795) modele bu adresten bağlanır (`OPENAI_API_BASE=http://127.0.0.1:18885/v1`). Tünel koparsa BI'ın model gerektiren soruları durur.
 
 Kurulu parçalar (adlar sunucudaki gerçek adlardır, tarihsel nedenle `editor-gpu-tunnel`):
 
