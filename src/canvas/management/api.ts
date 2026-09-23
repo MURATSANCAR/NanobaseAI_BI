@@ -1,4 +1,4 @@
-import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
+import { ENGINE_BASE, ENGINE_ENABLED, freshHeaders } from '../engine';
 
 /** Yönetim raporları modülünün köprü uçları: /api/v1/management/*. */
 
@@ -78,6 +78,7 @@ async function call<T>(path: string, method: 'GET' | 'POST' = 'GET'): Promise<T>
   const response = await fetch(`${ENGINE_BASE}/api/v1/management/${path}`, {
     method,
     credentials: 'include',
+    headers: method === 'GET' ? freshHeaders() : undefined,
     signal: AbortSignal.timeout(60_000),
   });
   if (!response.ok) {

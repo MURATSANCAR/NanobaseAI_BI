@@ -20,6 +20,15 @@ export const clearAuthBlock = (): void => {
   authBlocked = false;
 };
 
+/** Üst şeritteki "Verileri yenile" düğmesi basıldıktan sonraki kısa pencerede başlayan okumalar
+ *  `X-Data-Refresh: 1` taşır; köprü o istekte beş dakikalık önbelleği atlayıp kaynağı okur.
+ *  Otomatik (5 dk) yenilemeler başlığı taşımaz, önbellekten gelir. */
+let freshUntil = 0;
+export const requestFreshData = (ms = 3000): void => {
+  freshUntil = Date.now() + ms;
+};
+export const freshHeaders = (): Record<string, string> => (Date.now() < freshUntil ? { 'X-Data-Refresh': '1' } : {});
+
 export class EngineAuthError extends Error {
   constructor() {
     super('Zeki AI oturumu gerekli');
@@ -38,7 +47,7 @@ async function post<T>(path: string, body: unknown, timeoutMs = 45_000): Promise
   const res = await fetch(`${ENGINE_BASE}${path}`, {
     method: 'POST',
     credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...freshHeaders() },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
@@ -69,6 +78,7 @@ export type EngineInfo = {
 export async function engineInfo(): Promise<EngineInfo> {
   const res = await fetch(`${ENGINE_BASE}/api/v1/engine`, {
     credentials: 'include',
+    headers: freshHeaders(),
     signal: AbortSignal.timeout(15_000),
   });
   if (res.status === 401 || res.status === 403) {
@@ -197,7 +207,7 @@ export type ReviewItem = {
 };
 
 async function get<T>(path: string, timeoutMs = 20_000): Promise<T> {
-  const res = await fetch(`${ENGINE_BASE}${path}`, { credentials: 'include', signal: AbortSignal.timeout(timeoutMs) });
+  const res = await fetch(`${ENGINE_BASE}${path}`, { credentials: 'include', headers: freshHeaders(), signal: AbortSignal.timeout(timeoutMs) });
   if (res.status === 401 || res.status === 403) {
     authBlocked = true;
     throw new EngineAuthError();
@@ -392,7 +402,7 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
   const res = await fetch(`${ENGINE_BASE}${path}`, {
     method,
     credentials: 'include',
-    headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+    headers: { ...(method === 'GET' ? freshHeaders() : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });

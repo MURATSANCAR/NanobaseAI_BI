@@ -23,6 +23,7 @@ import time
 import uuid
 from collections import OrderedDict
 from contextlib import asynccontextmanager
+from contextvars import ContextVar
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Optional
@@ -468,15 +469,17 @@ class Runtime:
         key = hashlib.sha256(f"{limit}\n{phys}".encode()).hexdigest()
         if use_cache and self._cache_ttl > 0:
             self._touch_hot(key, phys, limit)
-            hit = self._cache.get(key)
-            if hit:
-                age = time.time() - hit[0]
-                # Taze kopya doğrudan gider. Süresi geçmiş kopya da gider — ama yalnız tazeleyici
-                # ayaktaysa: o zaman bekleme kimseye bir şey kazandırmaz, yenisi zaten yolda.
-                if age < self._cache_ttl or (self._refresher_alive() and age < self._stale_max):
-                    out = self._served(hit[1], hit[0])
-                    out["cached"] = True
-                    return self._labelled(sql, out)
+            hit = None if FORCE_FRESH.get() else self._cache.get(key)
+        else:
+            hit = None
+        if hit:
+            age = time.time() - hit[0]
+            # Taze kopya doğrudan gider. Süresi geçmiş kopya da gider — ama yalnız tazeleyici
+            # ayaktaysa: o zaman bekleme kimseye bir şey kazandırmaz, yenisi zaten yolda.
+            if age < self._cache_ttl or (self._refresher_alive() and age < self._stale_max):
+                out = self._served(hit[1], hit[0])
+                out["cached"] = True
+                return self._labelled(sql, out)
         out, duration = self._execute(phys, limit, interactive=True)
         computed_at = time.time()
         self._remember(key, out, duration, computed_at=computed_at)
@@ -1833,6 +1836,12 @@ def _ask_user(request: Any) -> Optional[str]:
         return None
 
 
+#: Ekrandaki "Verileri yenile" düğmesinin isteği `X-Data-Refresh: 1` taşır. O istek boyunca sonuç
+#: önbelleği okunmaz: kişi düğmeye bastıysa beş dakikalık kopyayı değil kaynağın şimdiki hâlini görür.
+#: Yeni sonuç önbelleğe yazılır, sonraki okumalar da onu alır.
+FORCE_FRESH: ContextVar[bool] = ContextVar("force_fresh", default=False)
+
+
 def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     state: dict[str, Any] = {"rt": runtime}
     from semantic_bridge import admin as admin_mod
@@ -1867,6 +1876,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             rt.stop_refresher()
 
     app = FastAPI(title="NanobaseAI Semantic Bridge", version=SEMANTIC_LAYER_VERSION, lifespan=lifespan)
+
+    @app.middleware("http")
+    async def data_refresh_header(request: Request, call_next):
+        # Eşzamanlı iş parçacıklarına bağlam kopyalanarak geçer (run_in_threadpool), yalnız bu isteği etkiler.
+        token = FORCE_FRESH.set(request.headers.get("x-data-refresh") == "1")
+        try:
+            return await call_next(request)
+        finally:
+            FORCE_FRESH.reset(token)
 
     def rt() -> Runtime:
         if state["rt"] is None:
@@ -3474,12 +3492,37 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             "expiring": lambda: editorial_mod.page(schema, run, 0, order="bitis", expiring_days=warn),
         }
 
-    app.state.editorial_home = EditorialHomeSnapshots(_home_scope, _home_builders)
+    def _view_warmers():
+        """Liste ekranlarının açılış görünümleri; uçlarla aynı SQL, önbelleği atlayıp kaynağı okur."""
+        schema = admin_mod.conf("CRM_SCHEMA")
+
+        def run(sql):
+            r = rt()
+            return r.run_sql(sql, r.settings.max_rows, use_cache=False)
+
+        return {
+            "contracts": lambda **kw: editorial_mod.page(schema, run, 0, **kw),
+            "board": lambda **kw: editorial_mod.board_page(schema, run, 0, **kw),
+            "contributors": lambda roles, **kw: editorial_mod.contributors_page(schema, run, roles, 0, **kw),
+            "projects": lambda **kw: editorial_mod.projects_page(schema, run, 0, **kw),
+        }
+
+    app.state.editorial_home = EditorialHomeSnapshots(_home_scope, _home_builders, _view_warmers)
+
+    def _remember_view(name: str, page: int, q: str, **params: Any) -> None:
+        # Yalnız açılış görünümü (arama yok, ilk sayfa) ısıtılır; aranan metin kişiye özeldir.
+        if page == 0 and not q.strip():
+            try:
+                app.state.editorial_home.remember(name, dict(params, q=""))
+            except Exception:  # noqa: BLE001 — ön ısıtma kaydı ekranı düşürmez
+                log.exception("editorial view registration failed")
 
     @app.get("/api/v1/editorial/home")
     def editorial_home(request: Request, response: Response) -> dict[str, Any]:
         # Authenticate and filter desk records on every read; never persist them in shared snapshots.
         works = desk_works(request)
+        if FORCE_FRESH.get():
+            app.state.editorial_home.refresh(force=True)
         response.headers["Cache-Control"] = "private, no-store"
         return dict(app.state.editorial_home.read(), works=works)
 
@@ -3495,10 +3538,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def editorial_contracts(request: Request, q: str = "", status: Optional[int] = None, kind: Optional[int] = None,
                             expiring: bool = False, order: str = "bitis", page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
+        expiring_days = _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60) if expiring else None
+        _remember_view("contracts", page, q, order=order, status=status, kind=kind, expiring_days=expiring_days)
         try:
             return editorial_mod.page(
-                schema, run, page, order=order, q=q, status=status, kind=kind,
-                expiring_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60) if expiring else None)
+                schema, run, page, order=order, q=q, status=status, kind=kind, expiring_days=expiring_days)
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
 
@@ -3517,8 +3561,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         # Kurul üyelerinin adlı görüşleri rol modeli gelene kadar yalnız yöneticilere açılır.
         _, _, user, _ = _greetings(request)
         admin_mod.ensure(rt().store.engine)
+        with_opinions = admin_mod.is_admin(user)
+        _remember_view("board", page, q, with_opinions=with_opinions, year=year, decision=decision)
         try:
-            return editorial_mod.board_page(schema, run, page, with_opinions=admin_mod.is_admin(user),
+            return editorial_mod.board_page(schema, run, page, with_opinions=with_opinions,
                                             q=q, year=year, decision=decision)
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
@@ -3537,6 +3583,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/contributors")
     def editorial_contributors(request: Request, roles: str = "", q: str = "", order: str = "son", page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
+        _remember_view("contributors", page, q, roles=roles.split("|"), order=order)
         return _editorial_call(editorial_mod.contributors_page, schema, run, roles.split("|"), page, q=q, order=order)
 
     @app.get("/api/v1/editorial/contributors/{contact_id}")
@@ -3598,6 +3645,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def editorial_projects(request: Request, q: str = "", editor: str = "", status: Optional[int] = None,
                            since: Optional[int] = None, page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
+        _remember_view("projects", page, q, editor=editor or None, status=status, since_year=since)
         return _editorial_call(editorial_mod.projects_page, schema, run, page, q=q, editor=editor or None,
                                status=status, since_year=since)
 
