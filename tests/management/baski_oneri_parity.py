@@ -58,6 +58,7 @@ DATA = {
     "logo_yeni_kitap_satis": [{"stok_kodu": "N1", "gun": "2026-09-10", "miktar": 50},
                               {"stok_kodu": "N2", "gun": "2026-09-10", "miktar": 10},
                               {"stok_kodu": "N3", "gun": "2025-11-30", "miktar": -2}, {"stok_kodu": "N3", "gun": "2025-12-05", "miktar": 10},
+                              {"stok_kodu": "N3", "gun": "2025-08-20", "miktar": 5}, {"stok_kodu": "N3", "gun": "2026-08-03", "miktar": 7},
                               {"stok_kodu": "N4", "gun": "2025-11-30", "miktar": -2}, {"stok_kodu": "N4", "gun": "2025-12-05", "miktar": 10}],
 }
 
@@ -123,7 +124,13 @@ hepsi.append(ok("N2 bu ay yayımlandı, stoksuz: marj -1, öneri Risk/Acil",
                 y["N2"]["marj"] == -1.0 and y["N2"]["oneri"] == "Risk/Acil", y["N2"]["oneri"]))
 hepsi.append(ok("N1 dağılım satışı ilk yayın ayından", y["N1"]["dagilim_satis"] == 50))
 hepsi.append(ok("N3 saatli ilk yayın: RPT sınır gününü (30 Kasım) saymaz, Power BI gibi",
-                y["N3"]["rpt_satis"] == 10, str(y["N3"]["rpt_satis"])))
+                y["N3"]["rpt_satis"] == 17, str(y["N3"]["rpt_satis"])))
+hepsi.append(ok("Yeni Kitap ay kolonları ay numarasıyla, iki yılın toplamı (Ağustos = 2025 + 2026)",
+                y["N3"]["ay_08"] == 12 and y["N3"]["ay_11"] == -2 and y["N3"]["ay_12"] == 10
+                and [c["label"] for c in views["yeni"]["columns"] if c["key"].startswith("ay_")][:2] == ["Ocak", "Şubat"],
+                f"ay_08={y['N3']['ay_08']}"))
+hepsi.append(ok("yayından önceki satış son 1 yıla ve RPT'ye girmez",
+                y["N3"]["son_bir_yil_satis"] == 15 and y["N3"]["rpt_satis"] == 17, f"{y['N3']['son_bir_yil_satis']} {y['N3']['rpt_satis']}"))
 hepsi.append(ok("N4 gece yarısı ilk yayın: RPT sınır gününü sayar",
                 y["N4"]["rpt_satis"] == 8, str(y["N4"]["rpt_satis"])))
 

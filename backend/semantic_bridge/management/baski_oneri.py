@@ -76,7 +76,9 @@ NOTES = [
     "Logo ve CRM ayrı sunucularda olduğu için Power BI'daki bellek içi ilişki burada stok koduyla birleştirmedir; sonuç aynı satırlardır.",
     "Dönemler tamamlanmış aylardır ve tarih karşılaştırması ay başına göre yapılır; Power BI'daki 'gün sonu' karşılaştırması saatli faturaları son günden düşürebiliyordu.",
     "Power BI'da 'Ilk6Ay' en yeni 6 ayı, 'Son6Ay' eski 6 ayı tutuyordu; burada 'Son 6 ay' ve 'Önceki 6 ay' olarak doğru adlarıyla gösterilir.",
-    "Yeni kitap ay kolonları son 12 ayın takvim aylarıdır; Power BI iki yılın aynı ayını topluyordu.",
+    "Yeni kitap ay kolonları Power BI gibi ay numarasıyladır ve geçen yıl ile bu yılın aynı ayını toplar "
+    "(ör. Eylül = Eylül 2025 + Eylül 2026). Power BI yılları 2025–2026 diye sabit yazıyordu; burada iki yıl "
+    "bugünden kurulur. Baskı Tekrar'ın ay kolonları ise son 12 takvim ayıdır, Power BI'daki gibi.",
     "Yeni kitaplarda ilk yayın tarihi CRM'den, satış Logo'dan okunur (Power BI bağlı sunucu üzerinden tek sorguda birleştiriyordu).",
     "Power BI satış hızını satır satır kayan noktayla toplar; sıfır olması gereken hız −3·10⁻¹⁷, 0,5 olması "
     "gereken hız 0,49999999999999994 çıkabilir ve öneri eşiği yanlış taraftan geçer. Burada önce toplanıp "
@@ -87,7 +89,7 @@ NOTES = [
     "okunur: satış hızı 2024'ten, fiyat 2025'ten, aylık ve yeni kitap satışı geçen yıldan bu yana. ALL2 üzerinden "
     "fiyat sorgusu 15 dakikada bitmiyordu; yıllık görünümlerle üç yıl 25 saniyede okunuyor.",
     "Yeni kitap satışı Power BI'da 'V_SatisRaporu_2025_2026' görünümünden okunuyordu; burada geçen yıl ve bu yılın "
-    "görünümleri son 12 aya sınırlanarak okunur. İlk yayın son 12 ayda olduğu için satır kümesi aynıdır.",
+    "yıllık görünümleri okunur, satır kümesi aynıdır.",
 ]
 
 # Kolon → kaynak eşlemesi ekranda başlıktan sorguya gidişi sağlar.
@@ -290,6 +292,10 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
 
     order = _month_order(today)
     month_cols = [(f"ay_{y}_{m:02d}", f"{MONTHS[m - 1]} {str(y)[2:]}") for y, m in order]
+    # Yeni Kitap ay kolonları Power BI gibi ay numarasıyladır ve geçen yıl ile bu yılın aynı ayını toplar
+    # (Power BI: V_SatisRaporu_2025_2026 üzerinde PIVOT ... FOR Ay IN ([1]..[12])).
+    yeni_years = (today.year - 1, today.year)
+    yeni_month_cols = [(f"ay_{m:02d}", MONTHS[m - 1]) for m in range(1, 13)]
 
     # ---- Baskı Tekrar: baskı tarihi geçen yılın bu ayından eski ve son 12 ayda satışı olan kitaplar
     cutoff = date(today.year - 1, today.month, 1)
@@ -373,16 +379,19 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
             "bu_ay_satis": bu_ay,
             "dagilim_satis": dagilim,
         }
-        for (key, _), (y, m) in zip(month_cols, order):
-            row[key] = sum(q for d, q in sales if d.year == y and d.month == m)
+        for m in range(1, 13):
+            row[f"ay_{m:02d}"] = sum(q for d, q in sales if d.month == m and d.year in yeni_years)
         yeni_rows.append(row)
     yeni_rows.sort(key=lambda r: -r["son_bir_yil_satis"])
 
     def cols(spec):
         base = [{"key": k, "label": l, "group": g, "format": f, "source": s} for k, l, g, f, s in spec]
-        return base + [{"key": k, "label": l, "group": "Son 12 ay satış", "format": "int",
-                        "source": "logo_aylik_satis" if spec is TEKRAR_COLUMNS else "logo_yeni_kitap_satis"}
-                       for k, l in month_cols]
+        if spec is TEKRAR_COLUMNS:
+            return base + [{"key": k, "label": l, "group": "Son 12 ay satış", "format": "int", "source": "logo_aylik_satis"}
+                           for k, l in month_cols]
+        group = f"Aylık satış ({yeni_years[0]} + {yeni_years[1]})"
+        return base + [{"key": k, "label": l, "group": group, "format": "int", "source": "logo_yeni_kitap_satis"}
+                       for k, l in yeni_month_cols]
 
     def view(view_id, title, hint, spec, data, filters):
         columns = cols(spec)
