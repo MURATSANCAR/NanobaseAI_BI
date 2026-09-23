@@ -7,7 +7,7 @@ from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
-from semantic_bridge.management import expand_sales, sales_years  # noqa: E402
+from semantic_bridge.management import _values_rows, expand_sales, sales_years  # noqa: E402
 
 sonuc = []
 
@@ -45,6 +45,9 @@ sql, _ = expand_sales("-- yorum\nFROM {satis:-1} AS s  -- kuyruk yorumu\nWHERE 1
 satir = next(l for l in sql.splitlines() if "AS s" in l)
 ok("satır sonu yorumu birleşimin kapanış parantezinden sonra kalır",
    satir.startswith(") AS s") and "-- kuyruk yorumu" in satir and sql.rstrip().endswith("WHERE 1=1"), satir)
+
+ok("VALUES satırları: her kod ayrı satır, tek tırnak kaçışlı",
+   _values_rows(["15201.01.001", "O'Neil"]) == "(N'15201.01.001'), (N'O''Neil')", _values_rows(["O'Neil"]))
 
 print("SONUÇ:", f"{sum(sonuc)}/{len(sonuc)} geçti")
 raise SystemExit(0 if all(sonuc) else 1)

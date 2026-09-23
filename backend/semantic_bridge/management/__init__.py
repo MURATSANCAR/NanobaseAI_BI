@@ -83,6 +83,12 @@ def _quoted_list(values: list[str]) -> str:
     return ", ".join("N'" + str(v).replace("'", "''") + "'" for v in values)
 
 
+def _values_rows(values: list[str]) -> str:
+    """`JOIN (VALUES ...) AS kod(k)` için satırlar. IN listesiyle aynı kümeyi seçer ama planı bozmaz
+    (ölçüm 2026-09-23, 1.433 yeni kitap kodu: IN 194 sn, VALUES birleşimi 14 sn, satırlar birebir)."""
+    return ", ".join("(N'" + str(v).replace("'", "''") + "')" for v in values)
+
+
 # Logo satış görünümü `V_SatisRaporu_ALL2`, 2015'ten bu yana her yılın `V_SatisRaporu_<yıl>` görünümünü
 # UNION ALL ile birleştirir; dışarıdaki yıl süzgeci birleşimin kollarını elemediği için her sorgu on iki
 # yılın tamamını tarar (ölçüm 2026-09-23: fiyat sorgusu 900 sn'de bitmedi, üç yıllık görünüm 25 sn).
@@ -169,7 +175,8 @@ class Reports:
         records, columns, started = [], [], time.monotonic()
         title = next(t for s, _, t, *_ in report.SOURCES if s == source_id)
         for chunk in chunks:
-            sql = text if chunk is None else text.replace("{stok_kodlari}", _quoted_list(chunk))
+            sql = text if chunk is None else (text.replace("{stok_kodlari}", _quoted_list(chunk))
+                                              .replace("{stok_kodlari_satirlari}", _values_rows(chunk)))
             try:
                 cols, rows, truncated = conn.execute(sql, MAX_ROWS)
             except Exception as exc:  # noqa: BLE001 — sürücü metni ekrana değil loga
