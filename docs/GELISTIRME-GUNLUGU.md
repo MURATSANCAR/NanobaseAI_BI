@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-23 (akşam) — GPU editör kapları tek sürümde; VM sayfa resimleri küçültülmüş iniyor
+
+- Kullanıcı GPU'da `sudo` ile koşturdu: altı editör kabı (`control`, `cards`, `mcp`, `worker`, `rebuild`, `gateway`) artık `editor-py:0.15.8-llm-dispatch` — öncesinde beş farklı sürümdeydi, `control` ve `rebuild` 0.15.3'teydi. Kapasite düzeltmesi (`is_capacity_error`) altısında da var; işçi göçleri güncel, iş bekliyor.
+- GPU nginx sayfa yolu `?w=` iletiyor. VM köprüsünün içinden «anne-terligi» s.1: `w=240` → 1.264 bayt WebP (önce 22.959 bayt tam PNG), `w=900` → 7.174 bayt, tam boy 22.959 bayt PNG — test sunucusuyla aynı. İnceleme kuyruğu VM'de 72 soru, 7 grup.
+
 ## 2026-09-23 (akşam) — Bütün dallar main'e; test sunucusu ve müşteri VM'i main ile eş, VM'de ekran ve API testi geçti
 
 - **Dallar:** `main`de olmayan içerik yalnız `claude/baski-oneri-yil-gorunumleri`'ndeydi (6 commit, 12 dosya: Baskı Öneri yıl görünümleri, fiyat zaman aşımı düzeltmesi, 5 dk yenileme, testler). Dal etkin bir oturumda olduğu için geçmişi yeniden yazılmadı, birleştirme commit'iyle alındı (`65c8fbef`); günlükteki iki giriş de korundu. `baski-oneri-pbi-parity` ve `editor-module-issue-a090ad`'ın içeriği zaten `main`deydi. `main` GitHub'a gönderildi.
