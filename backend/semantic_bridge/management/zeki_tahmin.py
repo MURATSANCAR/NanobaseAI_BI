@@ -370,8 +370,19 @@ TAB_FORMULAS = [
 ]
 
 
+def empty_text(error: str | None) -> str:
+    """Tahmin yokken sekmenin söylediği: servis bu kurulumda yoksa kalıcı durum, okuma hatasıysa neden, yoksa hazırlanıyor."""
+    if error and "bu kurulumda yok" in error:
+        return ("ZEKI AI tahmini bu kurulumda kapalı: tahmin servisi (TimesFM 3.0) yalnız test ortamında çalışıyor. "
+                "Baskı Tekrar ve Yeni Kitap sekmeleri bundan etkilenmez.")
+    if error:
+        return f"ZEKI AI tahmini şu an kurulamadı. {error}"
+    return ("ZEKI AI tahmini hazırlanıyor. Tahmin günde bir kez kurulur; Logo'dan 2015'ten bu yana satışı okuduğu için "
+            "yaklaşık yarım saat sürer.")
+
+
 def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], forecast: dict | None, today: date,
-        sql: list[dict]) -> dict:
+        sql: list[dict], error: str | None = None) -> dict:
     """Sekmenin kolonları, satırları ve açıklaması. Power BI sekmelerindeki satırlar değiştirilmez, yalnız okunur."""
     if not forecast:  # tahmin yokken tahminsiz satır göstermek yanıltır; sekme "hazırlanıyor" der
         tekrar, yeni = [], []
@@ -443,6 +454,5 @@ def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], foreca
         "columns": cols,
         "rows": rows,
         "explain": {**explanation(meta), "sql": sql, "formulas": [{"name": n, "text": t} for n, t in TAB_FORMULAS]},
-        "emptyText": None if forecast else ("ZEKI AI tahmini hazırlanıyor. Tahmin günde bir kez kurulur; ilk kurulum "
-                                            "Logo'dan 2015'ten bu yana satışı okuduğu için birkaç dakika sürer."),
+        "emptyText": None if forecast else empty_text(error),
     }

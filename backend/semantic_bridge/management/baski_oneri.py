@@ -446,6 +446,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
     from semantic_bridge.management import zeki_tahmin
 
     forecast = (inputs or {}).get(zeki_tahmin.REPORT_ID)
+    forecast_error = ((inputs or {}).get("_errors") or {}).get(zeki_tahmin.REPORT_ID)
     sql_list = []
     for sid, st in ((forecast or {}).get("sourceStats") or {}).items():
         meta = next((x for x in zeki_tahmin.SOURCES if x[0] == sid), None)
@@ -455,7 +456,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
         meta = next((x for x in SOURCES if x[0] == sid), None)
         if meta and (res.get(sid) or {}).get("sql"):
             sql_list.append({"id": sid, "title": meta[2], "description": meta[3], "sql": res[sid]["sql"]})
-    tab = zeki_tahmin.tab(tekrar, yeni_rows, bekleyen, forecast, today, sql_list)
+    tab = zeki_tahmin.tab(tekrar, yeni_rows, bekleyen, forecast, today, sql_list, error=forecast_error)
     tab_view = {"id": "tahmin", "title": "ZEKI AI Tahminleme",
                 "hint": "Stoku en önce bitecek kitap üstte (ZEKI AI tahminine göre)",
                 "columns": tab["columns"], "filters": ["oneri", "guven", "liste", "yayinevi", "yazar", "statu", "urun_adi"],

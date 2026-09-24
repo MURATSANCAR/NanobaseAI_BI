@@ -155,6 +155,13 @@ ok("üç sekme: Baskı Tekrar, Yeni Kitap, ZEKI AI Tahminleme",
    [v["title"] for v in with_fc["views"]] == ["Baskı Tekrar", "Yeni Kitap", "ZEKI AI Tahminleme"])
 ok("Power BI sekmeleri tahminle ve tahminsiz birebir aynı", with_fc["views"][:2] == without["views"][:2])
 ok("tahminsiz kurulumda üçüncü sekme boş", without["views"][2]["rows"] == [] and without["views"][2]["emptyText"])
+no_svc = bo.build(ns["run"], today=ns["TODAY"], inputs={"_errors": {zt.REPORT_ID: "Veriler yenilenemedi: ZEKI AI tahmin servisi bu kurulumda yok ya da ulaşılamıyor (x)."}})
+ok("servis yoksa sekme 'kapalı' der, 'hazırlanıyor' demez",
+   "kapalı" in no_svc["views"][2]["emptyText"] and "hazırlanıyor" not in no_svc["views"][2]["emptyText"])
+failed = bo.build(ns["run"], today=ns["TODAY"], inputs={"_errors": {zt.REPORT_ID: "Veriler yenilenemedi: “Aylık satış geçmişi” sorgusu 900 saniyede bitmedi."}})
+ok("okuma hatasında sekme nedeni gösterir", "900 saniyede bitmedi" in failed["views"][2]["emptyText"])
+ok("hata varken tahmin verisi de varsa sekme dolu (son başarılı tahmin)",
+   bo.build(ns["run"], today=ns["TODAY"], inputs={zt.REPORT_ID: fc, "_errors": {zt.REPORT_ID: "x"}})["views"][2]["emptyText"] is None)
 
 print("SONUÇ:", f"{sum(sonuc)}/{len(sonuc)} geçti")
 raise SystemExit(0 if all(sonuc) else 1)

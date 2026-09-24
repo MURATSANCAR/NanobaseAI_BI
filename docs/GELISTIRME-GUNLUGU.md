@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (00:05) — Müşteri VM'i 8733005c; ZEKI sekmesi boşken nedenini söylüyor
+
+- VM'e `git archive main` (8733005c) kuruldu: `._*` 0, bridge/jobs imajı 23:45, zeki_tahmin/__init__/baski_oneri/financial_audit md5 = main. Kabul (geçici timasai oturumu, silindi): Baskı Tekrar 5.053, Yeni Kitap 331 (test sunucusuyla aynı), Finansal Denetim `/runs` `{items,total}`, gizli tahmin raporu menüde yok.
+- **Kusur:** VM'de tahmin servisi yok; tahmin raporu bunu doğru kaydediyordu ama ZEKI sekmesi "birkaç dakika sürer, hazırlanıyor" diyordu — hiç gelmeyecek bir şeyi bekletiyordu. Hata metni de her raporda "Beş dakikada bir yeniden denenir" diyordu, tahmin raporu 30 dk'da bir dener.
+- Düzeltme: rapor kurulurken diğer raporların son hatası `inputs["_errors"]` ile geçer; `zeki_tahmin.empty_text`: servis yoksa "bu kurulumda kapalı, Power BI sekmeleri etkilenmez", okuma hatasıysa nedeni, yoksa "hazırlanıyor (~yarım saat)". `retry_text(report)` gerçek aralığı yazar. Testler: zeki_tahmin_tab 33/33, refresh_schedule 13/13.
+
 ## 2026-09-24 (23:55) — Basın ve web kapalı ortamda menüde de görünmez
 
 - Kullanıcı: "menülerde de kapattın mı, müşteride kapalı olacak." `WEB_WATCH_ENABLED` kapalıyken: rayda "Basın ve web" satırı çizilmez (`StitchRailItem.feature = 'webWatch'`, `Shell` durumu `/api/v1/editorial/web/status`'tan okur; durum gelene kadar da gizli), Kişiler detayı ve kitap sayfasındaki "Basında ve web'de" bölümü boş döner ve çizilmez. `/basin-web` adresi doğrudan açılırsa "bu ortamda kapalı" der.

@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
-from semantic_bridge.management import MIN_GAP_SECONDS, REFRESH_SECONDS, _next_due  # noqa: E402
+from semantic_bridge.management import MIN_GAP_SECONDS, REFRESH_SECONDS, _next_due, retry_text  # noqa: E402
 
 sonuc = []
 
@@ -36,6 +36,10 @@ ok("gecelik rapor uzun sürüp hata verdiyse bitişten en az 1 dk sonra",
    _next_due({"startedAt": T, "failedAt": T + 2000}, 86400) == T + 2060)
 ok("eski başarı + yeni hata: hata sayılır",
    _next_due({"startedAt": T + 90000, "updatedAt": T, "failedAt": T + 90100}, 86400) == T + 91800)
+
+ok("hata metni 5 dk'lık raporda 'Beş dakikada bir'", retry_text(type("R", (), {})) == "Beş dakikada bir yeniden denenir.")
+ok("hata metni gecelik raporda gerçek süreyi söyler (30 dk)",
+   retry_text(type("R", (), {"REFRESH_SECONDS": 86400})) == "30 dakikada bir yeniden denenir.")
 
 print("SONUÇ:", f"{sum(sonuc)}/{len(sonuc)} geçti")
 raise SystemExit(0 if all(sonuc) else 1)
