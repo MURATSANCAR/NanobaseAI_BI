@@ -17,6 +17,9 @@ const BookScreen = lazy(() => import('@/canvas/editorial/BookScreen'));
 const EditorialHome = lazy(() => import('@/canvas/editorial/EditorialHome'));
 const RedactionScreen = lazy(() => import('@/canvas/editorial/RedactionScreen'));
 const ProofScreen = lazy(() => import('@/canvas/editorial/ProofScreen'));
+const StudioHome = lazy(() => import('@/canvas/editorial/studio/StudioHome'));
+const StudioFlow = lazy(() => import('@/canvas/editorial/studio/StudioFlow'));
+const StudioEditor = lazy(() => import('@/canvas/editorial/studio/StudioEditor'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
 const AuthorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.AuthorsScreen })));
 const TranslatorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.TranslatorsScreen })));
@@ -78,6 +81,9 @@ export default function App() {
             <Route path="editoryal" element={<EditorialHome />} />
             <Route path="redaksiyon" element={<RedactionScreen />} />
             <Route path="son-okuma" element={<ProofScreen />} />
+            <Route path="kitap-tasarim" element={<StudioHome />} />
+            <Route path="kitap-tasarim/:jobId" element={<StudioFlow />} />
+            <Route path="kitap-tasarim/:jobId/studyo" element={<StudioEditor />} />
             <Route path="telif-sozlesme" element={<ContractsScreen />} />
           </Route>
 

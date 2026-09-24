@@ -1482,3 +1482,85 @@ export type EditorialSnapshotPart<T> = { data?: T; updatedAt?: number; error?: s
 export const editorialHomeApi = {
   get: () => send<EditorialHomeSnapshot>('GET', '/api/v1/editorial/home', undefined, 30_000),
 };
+
+// ---------------------------------------------------------------- Kitap Tasarım Stüdyosu
+/** Basıma hazırlık işi: GPU'daki stüdyo servisi yürütür, köprü oturumla aracılık eder. Düzenleyen kişi
+ *  oturumdan gelir; istemci ad göndermez. */
+export type StudioStepStatus = 'waiting' | 'running' | 'done' | 'warn' | 'fail' | 'skipped';
+export type StudioStep = {
+  key: string;
+  label: string;
+  status: StudioStepStatus;
+  seconds: number | null;
+  summary: string;
+  progress?: [number, number];
+  reasons?: string[];
+  names?: string[];
+  palette?: string[];
+};
+export type StudioArtVersion = { v: number; mode: string; prompt: string; by: string; at: number; dpi: number; base: number | null };
+export type StudioArt = { selected: number | null; approved: boolean; approved_by: string | null; versions: StudioArtVersion[] } | null;
+export type StudioPage = {
+  no: number;
+  kind: 'front' | 'flow' | 'full';
+  key: string | null;
+  chapter: number | null;
+  excerpt: string;
+  art: StudioArt;
+  scene: { moment: string; quote: string; characters: string[]; grounded: boolean } | null;
+};
+export type StudioCheck = { name: string; status: 'OK' | 'WARN' | 'FAIL'; detail: string };
+export type StudioBusy = { key: string; mode: string; since: number; queued?: boolean; error?: string } | null;
+export type StudioJob = {
+  job: { id: string; source: { generation_id?: string; book_id?: string; docx?: string; file_name?: string }; created_by: string; created_at: number };
+  state: { title: string; status: 'running' | 'done' | 'fail'; error: string | null; started: number; finished: number | null; steps: StudioStep[] };
+  busy: StudioBusy;
+  book: { title: string; author: string | null; meta: Record<string, string | number | null>; chapters: (string | null)[]; words: number } | null;
+  profile: { age_min: number; age_max: number; age_source: string; genre: string; illustration: string; tone: string[];
+             reading: Record<string, number>; disagreement: string | null; reasons: { claim: string; quote: string }[] } | null;
+  spec: { trim_w: number; trim_h: number; bleed: number; body_font: string; body_size: number; leading: number; paper: string;
+          hyphenate: boolean; reasons: string[] } | null;
+  layout: { art_ratio: number; body_size: number; accent: string } | null;
+  style: { medium: string; palette: string[]; accent: string; why: string } | null;
+  characters: { i: number; name: string; species: string; look: string; from_text: string[]; role: string; has_ref: boolean }[];
+  pages: StudioPage[];
+  cover: { art: StudioArt; info: { size_mm: [number, number]; binding: string; spine_mm: number } | null };
+  preflight: { status: 'OK' | 'WARN' | 'FAIL'; checks: StudioCheck[] } | null;
+  files: { ic: boolean; kapak: boolean };
+};
+export type StudioJobRow = { id: string; title: string | null; created_by: string; created_at: number;
+  source: StudioJob['job']['source']; steps: { key: string; label: string; status: StudioStepStatus }[]; busy: StudioBusy };
+
+const studioBase = (job: string) => `/api/v1/editorial/studio/jobs/${encodeURIComponent(job)}`;
+export const studioApi = {
+  list: () => send<{ jobs: StudioJobRow[] }>('GET', '/api/v1/editorial/studio/jobs', undefined, 30_000),
+  create: (bookId: string) => send<{ id: string }>('POST', '/api/v1/editorial/studio/jobs', { book_id: bookId }, 60_000),
+  /** Word dosyası ham gövdeyle gider; ad başlıkta (URL kodlu). */
+  upload: async (file: File): Promise<{ id: string }> => {
+    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/studio/jobs/docx`, {
+      method: 'POST', credentials: 'include', body: file,
+      headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                 'X-File-Name': encodeURIComponent(file.name) },
+      signal: AbortSignal.timeout(180_000),
+    });
+    if (res.status === 401 || res.status === 403) throw new EngineAuthError();
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { detail?: string } | null;
+      throw new Error(typeof j?.detail === 'string' ? j.detail : `Yükleme başarısız (${res.status})`);
+    }
+    return (await res.json()) as { id: string };
+  },
+  get: (job: string) => send<StudioJob>('GET', studioBase(job), undefined, 30_000),
+  restart: (job: string) => send<{ id: string }>('POST', `${studioBase(job)}/restart`, {}, 60_000),
+  regenerate: (job: string, key: string, mode: 'fix' | 'new', prompt: string, variants = 1) =>
+    send<{ accepted: boolean }>('POST', `${studioBase(job)}/art/${encodeURIComponent(key)}/regenerate`, { mode, prompt, variants }, 60_000),
+  select: (job: string, key: string, v: number) =>
+    send<{ ok: boolean }>('POST', `${studioBase(job)}/art/${encodeURIComponent(key)}/select`, { v }, 120_000),
+  approve: (job: string, key: string, ok: boolean) =>
+    send<{ ok: boolean }>('POST', `${studioBase(job)}/art/${encodeURIComponent(key)}/approve`, { ok }, 120_000),
+  pageUrl: (job: string, page: number, width = 600, rev = '') => `${ENGINE_BASE}${studioBase(job)}/pages/${page}/preview?w=${width}${rev ? `&r=${rev}` : ''}`,
+  coverUrl: (job: string, width = 1400, rev = '') => `${ENGINE_BASE}${studioBase(job)}/cover/preview?w=${width}${rev ? `&r=${rev}` : ''}`,
+  artUrl: (job: string, key: string, v: number, width = 800) => `${ENGINE_BASE}${studioBase(job)}/art/${encodeURIComponent(key)}/${v}?w=${width}`,
+  characterUrl: (job: string, i: number, width = 160) => `${ENGINE_BASE}${studioBase(job)}/characters/${i}?w=${width}`,
+  pdfUrl: (job: string, kind: 'ic' | 'kapak') => `${ENGINE_BASE}${studioBase(job)}/pdf/${kind}`,
+};

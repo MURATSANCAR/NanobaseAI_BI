@@ -200,6 +200,14 @@ export default function EditorialHome() {
       extra: 'Eserleri, sözleşmeleri, projeleri',
     },
     {
+      code: 'Stüdyo',
+      to: '/kitap-tasarim',
+      title: 'Kitap Tasarım Stüdyosu',
+      icon: PenLine,
+      line: 'Metinden baskıya hazır kitap',
+      extra: 'Sayfa yerleşimi, resimler, kapak, ön baskı denetimi',
+    },
+    {
       code: 'M8',
       to: '/cizer-freelancer',
       title: 'Çizer & Freelancer',
