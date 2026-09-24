@@ -3,7 +3,8 @@
 Two parts, both returning candidates for the editor (docs/son-okuma/age_fit.md):
 
 1. Readability (deterministic). The band comes from the book itself (METADATA AGE_RANGE
-   claim, book.age_group, else the band printed in the imprint). Pages are measured with
+   claim, book.age_group, the publisher's CRM target age, else the band printed in the
+   imprint). Pages are measured with
    the Turkish formulas (Ateşman 1997, Çetinkaya–Uzun 2010, Bezirci–Yılmaz 2010) and plain
    counts, and compared with what books PUBLISHED FOR THE SAME BAND actually look like: the
    percentiles in `_age_fit_ref.REFERENCE`, measured on the publisher's 418-book corpus
@@ -30,7 +31,7 @@ from . import _age_fit_text as T
 from ._age_fit_ref import REFERENCE, reference_for
 
 NAME = "age_fit"
-VERSION = "1"
+VERSION = "2"      # 2: the publisher's CRM target age range is a declared band (2026-09-24)
 LABEL = "Yaş uygunluğu"
 
 # --------------------------------------------------------------------------- band ---
@@ -50,6 +51,11 @@ def declared_band(generation_id: str, pages: list[dict]) -> tuple[tuple[int, int
         txt = row["age_group"]
         if b := T.declared_band(txt if "ya" in txt.lower() else txt + " yaş"):
             return b, "book.age_group"
+    # the publisher's record (CRM stock card, weighted target age), when the book has one
+    row = db.one("SELECT r.age_from, r.age_to FROM generation g JOIN book_version bv ON bv.id=g.book_version_id"
+                 " JOIN book_crm_record r ON r.book_id=bv.book_id WHERE g.id=%s", generation_id)
+    if row and row["age_from"] and row["age_to"] and row["age_from"] <= row["age_to"]:
+        return (int(row["age_from"]), int(row["age_to"])), "crm"
     for p in pages:                       # the imprint: "RAF: 6-10 YAŞ"
         if b := T.declared_band(" ".join(s["text"] for s in p["spans"])):
             return b, f"printed:s{p['page_no']}"

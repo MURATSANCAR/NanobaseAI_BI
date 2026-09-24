@@ -162,18 +162,23 @@ def store_crm_record(book_id: str, rep: dict) -> None:
     if not rec:
         db.one("DELETE FROM book_crm_record WHERE book_id=%s RETURNING book_id", book_id)
         return
+    # classification fields (026): an older connector does not send them and stores NULL/[]
     db.one("INSERT INTO book_crm_record(book_id, crm_book_id, crm_project_id, matched_by, crm_title, authors,"
-           " illustrators, summary, summary_field, isbn, stock_code, first_publish_date, crm_modified_on)"
-           " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (book_id) DO UPDATE SET"
+           " illustrators, summary, summary_field, isbn, stock_code, first_publish_date, crm_modified_on,"
+           " audience, genres, web_categories, age_from, age_to, page_count)"
+           " VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s) ON CONFLICT (book_id) DO UPDATE SET"
            " crm_book_id=EXCLUDED.crm_book_id, crm_project_id=EXCLUDED.crm_project_id,"
            " matched_by=EXCLUDED.matched_by, crm_title=EXCLUDED.crm_title, authors=EXCLUDED.authors,"
            " illustrators=EXCLUDED.illustrators, summary=EXCLUDED.summary, summary_field=EXCLUDED.summary_field,"
            " isbn=EXCLUDED.isbn, stock_code=EXCLUDED.stock_code, first_publish_date=EXCLUDED.first_publish_date,"
-           " crm_modified_on=EXCLUDED.crm_modified_on, synced_at=now() RETURNING book_id",
+           " crm_modified_on=EXCLUDED.crm_modified_on, audience=EXCLUDED.audience, genres=EXCLUDED.genres,"
+           " web_categories=EXCLUDED.web_categories, age_from=EXCLUDED.age_from, age_to=EXCLUDED.age_to,"
+           " page_count=EXCLUDED.page_count, synced_at=now() RETURNING book_id",
            book_id, rec["crm_book_id"], rec.get("crm_project_id"), rep["matched_by"], rec["title"],
            db.J(rec.get("authors") or []), db.J(rec.get("illustrators") or []), rec.get("summary"),
            rec.get("summary_field"), rec.get("isbn"), rec.get("stock_code"), rec.get("first_publish_date"),
-           rec.get("crm_modified_on"))
+           rec.get("crm_modified_on"), rec.get("audience"), db.J(rec.get("genres") or []),
+           rec.get("web_categories"), rec.get("age_from"), rec.get("age_to"), rec.get("page_count"))
 
 
 def store_lookup(rep: dict, source: str, data: bytes | None = None) -> dict:

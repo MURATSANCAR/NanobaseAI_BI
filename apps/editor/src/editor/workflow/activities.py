@@ -8,7 +8,7 @@ import subprocess
 
 from temporalio import activity
 
-from .. import __version__, catalog, db, document, figure_identity, knowledge, ledger, prompts, quality, retrieval, summary, vision
+from .. import __version__, book_type, catalog, db, document, figure_identity, knowledge, ledger, prompts, quality, retrieval, summary, vision
 from ..config import settings
 from ..llm import aliases, client
 
@@ -117,6 +117,13 @@ async def confirm_text_visual(generation_id: str) -> dict:
 
 @activity.defn
 async def text_chunks(generation_id: str) -> list[list[int]]:
+    """Chunks to read for characters, events, emotions and themes. A book that is not a
+    story (psychology, self-help, activity, poetry — editor.book_type) has none: reading
+    it as a story made its imprint staff characters and its author's CV events. The profile
+    is decided here, the first step that needs it, while the director model is up."""
+    p = await book_type.profile(generation_id)
+    if not book_type.is_story(p):
+        return []
     return [list(c) for c in await _t(knowledge.text_chunks, generation_id)]
 
 

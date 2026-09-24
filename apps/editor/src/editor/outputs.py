@@ -10,6 +10,7 @@ import json
 import os
 
 from . import db, foundation, source
+from .book_type import STORY_FORMS
 from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
@@ -73,7 +74,10 @@ def capture(c, gid: str) -> dict:
     if not pages or any(p['page_role']=='UNKNOWN' for p in pages): blockers.append('PAGE_ROLES_UNASSESSED')
     if reviews: blockers.append('OPEN_EDITOR_REVIEW')
     if not regression or not regression['passed']: blockers.append('REGRESSION_NOT_PASSED')
-    if not events: blockers.append('NO_USABLE_EVENTS')
+    # A book that tells no story (editor.book_type: psychology, self-help, activity, poetry)
+    # has no events to use; only a story without them is missing something.
+    form = c.execute('SELECT form FROM ed.book_profile WHERE generation_id=%s', (gid,)).fetchone()
+    if not events and (form is None or form['form'] in STORY_FORMS): blockers.append('NO_USABLE_EVENTS')
     # Scope is explicit: a visual scan alone cannot certify identity/continuity. Only an
     # editor's recorded acceptance of this very revision lifts it (foundation.accept).
     if not c.execute('SELECT 1 FROM ed.semantic_acceptance WHERE generation_id=%s AND revision=%s',

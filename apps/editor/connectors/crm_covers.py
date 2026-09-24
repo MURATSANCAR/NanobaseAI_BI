@@ -21,7 +21,9 @@
   3. publisher record for the card: authors (new_yazartext, else the «Yazar - …» participation
      rows, else the project's probable author), illustrators (new_cizerlertext), summary
      (web text > new_ozet > old summary > the project's one-sentence idea), ISBN, stock code,
-     first publication date
+     first publication date, and the publisher's classification of the book — target audience
+     (new_hedefkitle), genres (new_turlertext), web categories, target age range, page count —
+     which decides what the editor reads the book as (editor.book_type)
   4. every image the CRM knows for the book with its date: the published cover
      (new_kitap.new_resimurl, dated by the record) and the cover alternatives of the book's
      project (new_kapakalternatifi.new_Link, dated by CreatedOn); the NEWEST readable one wins
@@ -51,6 +53,7 @@ from pathlib import Path, PureWindowsPath
 PLACEHOLDER = re.compile(r"^(hi[cç]biri|none|yok)$", re.I)
 ASCII = str.maketrans("çğıöşüâîû", "cgiosuaiu")
 SUMMARY_FIELDS = ("new_kitaptanitimwebmetni", "new_ozet", "new_kitabineskiozeti")
+AUDIENCE = {1: "CHILD", 2: "YOUNG", 3: "ADULT"}         # new_hedefkitle picklist
 
 
 def norm_isbn(s: str | None) -> str:
@@ -94,7 +97,8 @@ def crm():
 def load_books(cur) -> list[dict]:
     cur.execute("SELECT new_kitapId, new_name, new_KitabnAd, new_urunadi, new_isbn, new_isbn13, new_resimurl,"
                 " new_projekarti, new_yazartext, new_cizerlertext, new_StokKodu, new_ilkyayintarihi,"
-                " ModifiedOn, " + ", ".join(f"CAST({f} AS nvarchar(max)) AS {f}" for f in SUMMARY_FIELDS) +
+                " new_hedefkitle, new_turlertext, new_webkategorileritext, new_hedefkitleyasbaslangic,"
+                " new_hedefkitleyasbitis, new_sayfasayisi, ModifiedOn, " + ", ".join(f"CAST({f} AS nvarchar(max)) AS {f}" for f in SUMMARY_FIELDS) +
                 " FROM new_kitapBase WHERE statecode=0")
     books = cur.fetchall()
     for b in books:
@@ -155,6 +159,16 @@ def participants(cur, book_id, role: str) -> list[str]:
     return [r["new_name"].split(" - ", 1)[1].strip() for r in cur.fetchall()]
 
 
+def genres(s: str | None) -> list[str]:
+    """new_turlertext: «Bilim Tarihi,İnceleme-Araştırma» — comma separated, kept as written."""
+    return list(dict.fromkeys(x.strip() for x in (s or "").split(",") if x.strip()))
+
+
+def age(v) -> int | None:
+    """A target age of 0 is an unfilled field, not a newborn reader."""
+    return int(v) if v not in (None, "") and int(v) > 0 else None
+
+
 def record(cur, book: dict) -> dict:
     """The publisher's facts about the book, as the CRM holds them (not verified in the book)."""
     proj = project(cur, book.get("new_projekarti"))
@@ -168,6 +182,10 @@ def record(cur, book: dict) -> dict:
             "summary": summary or None, "summary_field": field if summary else None,
             "isbn": book.get("new_isbn13") or book.get("new_isbn"), "stock_code": book.get("new_StokKodu"),
             "first_publish_date": first.date().isoformat() if first else None,
+            "audience": AUDIENCE.get(book.get("new_hedefkitle")), "genres": genres(book.get("new_turlertext")),
+            "web_categories": (book.get("new_webkategorileritext") or "").strip() or None,
+            "age_from": age(book.get("new_hedefkitleyasbaslangic")), "age_to": age(book.get("new_hedefkitleyasbitis")),
+            "page_count": age(book.get("new_sayfasayisi")),
             "crm_modified_on": book["ModifiedOn"].isoformat()}
 
 

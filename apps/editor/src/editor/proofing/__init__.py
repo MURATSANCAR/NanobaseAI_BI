@@ -28,9 +28,26 @@ import pkgutil
 import time
 import traceback
 
-from .. import db
+from .. import book_type, db
 
 SEVERITIES = ("INFO", "WARN", "ERROR")
+
+# Which checks mean something for which book (editor.book_type). Story continuity — how a
+# character looks, what they carry, where and when a scene is, who speaks — exists only in a
+# book that tells a story; judging content by age only for a child's or a young reader's book
+# (an adult novel read as a children's book got 81 "sensitive for children" findings,
+# 2026-09-23). Spelling, hyphenation, layout, names, editions, imprint and text contradictions
+# apply to every book.
+STORY_ONLY = frozenset({"appearance", "props", "setting", "timeline", "dialogue"})
+AGE_JUDGED_ONLY = frozenset({"age_fit"})
+
+
+def skip_reason(name: str, profile: dict) -> str | None:
+    if name in STORY_ONLY and not book_type.is_story(profile):
+        return f"hikâye anlatmayan kitap ({profile['form']})"
+    if name in AGE_JUDGED_ONLY and profile["audience"] not in book_type.AGE_JUDGED:
+        return f"okur yaşı denetlenmeyen kitap ({profile['audience']})"
+    return None
 
 
 def checks() -> dict[str, object]:
@@ -86,12 +103,23 @@ def record(generation_id: str, mod, findings: list[dict], stats: dict, started: 
 
 
 async def run_all(generation_id: str, only: list[str] | None = None) -> dict:
-    """Run every check, each isolated: one failing check never costs the book the others."""
+    """Run every check, each isolated: one failing check never costs the book the others.
+    A check that does not apply to this kind of book is recorded SKIPPED with the reason."""
     out = {}
+    profile = await book_type.profile(generation_id)
     for name, mod in checks().items():
         if only and name not in only:
             continue
         t0 = time.time()
+        reason = skip_reason(name, profile)
+        if reason:
+            with db.tx() as c:
+                c.execute("INSERT INTO proof_run(generation_id, check_name, check_version, status, stats,"
+                          " started_at, finished_at) VALUES (%s,%s,%s,'SKIPPED',%s,to_timestamp(%s),now())",
+                          (generation_id, name, str(getattr(mod, "VERSION", "?")),
+                           db.J({"reason": reason, "form": profile["form"], "audience": profile["audience"]}), t0))
+            out[name] = {"skipped": reason}
+            continue
         try:
             result = await mod.run(generation_id)
             findings, stats = (result if isinstance(result, tuple) else (result, {}))
