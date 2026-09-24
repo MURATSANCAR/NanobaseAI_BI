@@ -33,7 +33,6 @@ inputs = {"baski-oneri": {"views": [
 ]}}
 DATA = {
     "logo_son_fatura": [{"son_fatura": "2026-08-17T00:00:00"}],
-    "logo_portfoy_aylik": [{"yil": 2026, "ay": m, "miktar": 1000.0 * m} for m in range(1, 9)],
     "logo_aylik_gecmis": [{"stok_kodu": "A", "yil": 2025, "ay": m, "miktar": 10.0} for m in range(1, 13)]
                          + [{"stok_kodu": "A", "yil": 2026, "ay": m, "miktar": 20.0} for m in range(1, 9)]
                          + [{"stok_kodu": "B", "yil": 2026, "ay": m, "miktar": 5.0} for m in (5, 6, 7)]
@@ -63,9 +62,11 @@ ok("havuz Baskı Tekrar + Yeni Kitap; 6 aydan kısa geçmiş (B) gönderilmez", 
 a = next(x for x in sent["series"] if x["id"] == "A")
 ok("A: ilk satış ayından son tam aya (Temmuz 2026), Ağustos yarım ay dahil değil",
    a["start"] == "2025-01" and len(a["values"]) == 19 and a["values"][-1] == 20.0, f"{a['start']} {len(a['values'])}")
-ok("takvim + okul zirvesi (9, 10) + portföy ek değişkeni, TimesFM 3.0",
-   sent["calendar"] and sent["calendar_peak_months"] == [9, 10] and sent["shared_past"]["start"] == "2026-01"
-   and len(sent["shared_past"]["values"]) == 7 and sent["engine"] == "timesfm3")
+sp = sent["shared_past"]
+ok("takvim + okul zirvesi (9, 10) + havuz portföyü (A+B+N aylık toplamı), TimesFM 3.0",
+   sent["calendar"] and sent["calendar_peak_months"] == [9, 10] and sp["start"] == "2025-01"
+   and len(sp["values"]) == 19 and sp["values"][2] == 10.0 + 3.0 and sp["values"][-1] == 20.0 + 5.0 and sent["engine"] == "timesfm3",
+   f"{sp['start']} {len(sp['values'])} {sp['values'][2]} {sp['values'][-1]}")
 ok("kod listesi parçalı gönderilir (VALUES birleşimi)", calls["logo_aylik_gecmis"]["chunk"] == 2500)
 ok("tahmin başlangıcı Ağustos 2026, p50/p80 saklanır",
    fc["forecastStart"] == "2026-08" and fc["forecasts"]["A"]["p50"][0] == 10 and fc["forecasts"]["A"]["p80"][0] == 30)

@@ -31,8 +31,6 @@ KEEP_QUANTILES = {"p10": 0, "p50": 4, "p80": 7, "p90": 8}  # 9 kantilden sekmede
 SOURCES = [
     ("logo_aylik_gecmis", "logo", "Aylık satış geçmişi",
      "Baskı Öneri'deki kitapların 2015'ten bu yana aylık satış adedi (Power BI'ın okuduğu satırlarla aynı)."),
-    ("logo_portfoy_aylik", "logo", "Portföyün aylık satışı",
-     "Bütün kitapların toplam aylık satışı: yayınevinin büyüme eğilimi."),
     ("logo_son_fatura", "logo", "Son fatura tarihi", "Logo'daki en son fatura günü; tahminin başladığı ayı belirler."),
 ]
 FORMULAS = [
@@ -125,11 +123,6 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
     son = rows("logo_son_fatura")
     son_fatura = _day(son[0]["son_fatura"]) if son else None
     end = last_full_month(son_fatura, today)
-    port: dict[int, float] = {}
-    for r in rows("logo_portfoy_aylik"):
-        i = _mi(int(r["yil"]), int(r["ay"]))
-        if i <= end:
-            port[i] = float(r["miktar"] or 0)
     hist: dict[str, dict[int, float]] = {}
     for r in rows("logo_aylik_gecmis", {"stok_kodlari": codes, "chunk": 2500}):
         i = _mi(int(r["yil"]), int(r["ay"]))
@@ -148,6 +141,12 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
         series.append({"id": c, "start": _ms(start), "values": [h.get(i, 0.0) for i in range(start, end + 1)]})
     if not series:
         raise RuntimeError("Tahmin edilecek kitap bulunamadı (satış geçmişi yok).")
+    # Portföy (büyüme) serisi: havuzdaki bütün kitapların aylık toplamı. Bütün kodlar üzerinden ayrı bir sorgu 12 yılın
+    # birleşimini tek seferde grupladığı için 900 sn'yi aşıyordu; havuz hacmin ~%90'ı ve eğilim aynı (sınama: README).
+    port: dict[int, float] = {}
+    for h in hist.values():
+        for i, q in h.items():
+            port[i] = port.get(i, 0.0) + q
     p0 = min(port)
     payload = {"horizon": HORIZON, "series": series, "calendar": True, "calendar_peak_months": PEAK_MONTHS,
                "shared_past": {"start": _ms(p0), "values": [port.get(i, 0.0) for i in range(p0, end + 1)]},
@@ -202,7 +201,7 @@ def explanation(meta: dict) -> dict:
             {"title": "Neye baktık", "items": [
                 "Satış: Logo satış faturaları, kitap × ay, 2015'ten bugüne. Satırlar Power BI'ın okuduklarıyla aynıdır.",
                 "Mevsim: ayın yıl içindeki yeri ve okul dönemi (eylül-ekim) işareti.",
-                "Büyüme: bütün kitapların toplam aylık satışı; yayınevinin genel büyümesi.",
+                "Büyüme: listedeki bütün kitapların toplam aylık satışı; yayınevinin genel büyümesi.",
                 "Stok ve bekleyen sipariş: Baskı Tekrar sekmesindeki CRM değerleri, 5 dakikada bir güncel.",
             ]},
             {"title": "Kolonlar nasıl okunur", "items": [
