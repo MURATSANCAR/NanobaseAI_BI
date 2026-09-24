@@ -8,7 +8,15 @@ from collections import OrderedDict
 
 from forecasting.app.engines import create_engine
 from forecasting.app.engines.base import ForecastEngine
-from forecasting.contracts.models import ForecastRequest, ForecastResponse, SeriesBundle
+from forecasting.app.engines.base import month_index, month_str
+from forecasting.contracts.models import (
+    BatchForecastRequest,
+    BatchForecastResponse,
+    BatchSeriesForecast,
+    ForecastRequest,
+    ForecastResponse,
+    SeriesBundle,
+)
 
 DEFAULT_ENGINE = os.environ.get("FORECAST_ENGINE", "seasonal_naive")
 _CACHE_MAX = int(os.environ.get("FORECAST_CACHE_MAX", "512"))
@@ -70,3 +78,24 @@ class ForecastService:
             while len(self._cache) > _CACHE_MAX:
                 self._cache.popitem(last=False)
         return resp
+
+    def forecast_batch(self, req: BatchForecastRequest) -> BatchForecastResponse:
+        """Aylık seriler topluca. Önbellek yok: yönetim raporu günde bir çağırır."""
+        eng = self.engine(req.engine)
+        t0 = time.perf_counter()
+        starts = [month_index(s.start) for s in req.series]
+        contexts = [[float("nan") if v is None else float(v) for v in s.values] for s in req.series]
+        shared = (month_index(req.shared_past.start), list(req.shared_past.values)) if req.shared_past else None
+        try:
+            outs = eng.forecast_batch(contexts, starts, req.horizon, calendar=req.calendar,
+                                      peak_months=list(req.calendar_peak_months), shared=shared)
+        except NotImplementedError as e:
+            raise ValueError(str(e)) from e
+        results = [
+            BatchSeriesForecast(id=s.id, start=month_str(st + len(s.values)),
+                                quantiles=[[round(float(x), 4) for x in row] for row in q])
+            for s, st, q in zip(req.series, starts, outs)
+        ]
+        return BatchForecastResponse(engine=eng.name, engine_version=eng.version, checkpoint_sha=eng.checkpoint_sha,
+                                     horizon=req.horizon, results=results,
+                                     latency_ms=int((time.perf_counter() - t0) * 1000))

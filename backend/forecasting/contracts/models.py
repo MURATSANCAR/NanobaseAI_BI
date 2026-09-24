@@ -77,3 +77,50 @@ class ForecastResponse(BaseModel):
     forecast: list[ForecastPoint]
     warnings: list[str] = Field(default_factory=list)
     latency_ms: int = 0
+
+
+# --- toplu aylık tahmin (POST /forecast/batch) ------------------------------------
+# Yönetim raporları binlerce seriyi tek çağrıda ister; tek seri sözleşmesi (SeriesBundle) buna uygun değil.
+# Yalnız aylık seriler. Eksik ay None gönderilir, motor ara değerle doldurur.
+
+MONTH_PATTERN = r"^\d{4}-(0[1-9]|1[0-2])$"
+QUANTILE_LEVELS: tuple[float, ...] = (0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)
+
+
+class BatchSeries(BaseModel):
+    id: str = Field(min_length=1)
+    start: str = Field(pattern=MONTH_PATTERN, description="values[0] ayı, YYYY-MM")
+    values: list[float | None] = Field(min_length=1)
+
+
+class SharedCovariate(BaseModel):
+    """Bütün serilere ortak, yalnız geçmişte bilinen aylık seri (ör. portföy toplam satışı)."""
+
+    start: str = Field(pattern=MONTH_PATTERN)
+    values: list[float] = Field(min_length=1)
+
+
+class BatchForecastRequest(BaseModel):
+    horizon: int = Field(ge=1, le=36)
+    series: list[BatchSeries] = Field(min_length=1)
+    calendar: bool = Field(False, description="Ay sin/cos + zirve ayı işareti ek değişkeni (geçmiş ve gelecek)")
+    calendar_peak_months: list[int] = Field(default_factory=list)
+    shared_past: SharedCovariate | None = None
+    engine: str | None = None
+
+
+class BatchSeriesForecast(BaseModel):
+    id: str
+    start: str  # ilk tahmin ayı
+    quantiles: list[list[float]]  # horizon × len(QUANTILE_LEVELS)
+
+
+class BatchForecastResponse(BaseModel):
+    engine: str
+    engine_version: str
+    checkpoint_sha: str | None = None
+    horizon: int
+    quantile_levels: list[float] = Field(default_factory=lambda: list(QUANTILE_LEVELS))
+    results: list[BatchSeriesForecast]
+    warnings: list[str] = Field(default_factory=list)
+    latency_ms: int = 0

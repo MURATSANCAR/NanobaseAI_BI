@@ -23,11 +23,15 @@ from typing import Any
 
 from fastapi import HTTPException, Request
 
-from semantic_bridge.management import baski_oneri
+import inspect
+
+from semantic_bridge.management import baski_oneri, zeki_tahmin
 
 log = logging.getLogger(__name__)
 
-REPORTS = {m.REPORT_ID: m for m in (baski_oneri,)}
+REPORTS = {m.REPORT_ID: m for m in (baski_oneri, zeki_tahmin)}
+# Gizli rapor listede görünmez; başka bir raporun girdisidir (ör. ZEKI AI tahmini → Baskı Öneri'nin sekmesi).
+VISIBLE = {rid: m for rid, m in REPORTS.items() if not getattr(m, "HIDDEN", False)}
 SQL_DIR = Path(__file__).with_name("sql")
 MAX_ROWS = 500_000
 CODE_CHUNK = 5000  # IN listesindeki kod sayısı; SQL Server bu boyutta sabit listeyi sorunsuz işler
@@ -38,13 +42,18 @@ REFRESH_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_REFRESH_SECONDS", "300")
 MIN_GAP_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_MIN_GAP_SECONDS", "60"))
 
 
-def _next_due(snap: dict) -> float | None:
+def interval_of(report) -> int:
+    """Raporun kendi aralığı (ör. gecelik tahmin); yoksa genel 5 dk."""
+    return int(getattr(report, "REFRESH_SECONDS", None) or REFRESH_SECONDS)
+
+
+def _next_due(snap: dict, interval: int | None = None) -> float | None:
     """Bir sonraki okumanın zamanı; hiç okunmadıysa None (hemen okunur)."""
     ended = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
     started = snap.get("startedAt") or ended
     if not ended:
         return None
-    return max(started + REFRESH_SECONDS, ended + MIN_GAP_SECONDS)
+    return max(started + (interval or REFRESH_SECONDS), ended + MIN_GAP_SECONDS)
 QUERY_TIMEOUT = int(os.environ.get("MANAGEMENT_REPORT_QUERY_TIMEOUT_SEC", "900"))
 CONNECTION_LABELS = {"logo": "Logo", "crm": "CRM"}
 
@@ -171,7 +180,8 @@ class Reports:
         if params and "stok_kodlari" in params:
             codes = params["stok_kodlari"]
             # Her parça satış görünümünü baştan tarar; parça büyük tutulur (1.433 kodda 4 tarama 230 sn'ydi).
-            chunks = [codes[i:i + CODE_CHUNK] for i in range(0, len(codes), CODE_CHUNK)] or [[]]
+            size = int(params.get("chunk") or CODE_CHUNK)
+            chunks = [codes[i:i + size] for i in range(0, len(codes), size)] or [[]]
         records, columns, started = [], [], time.monotonic()
         title = next(t for s, _, t, *_ in report.SOURCES if s == source_id)
         for chunk in chunks:
@@ -206,7 +216,7 @@ class Reports:
         meta = {k: v for k, v in snap.items() if k != "data"}
         out = {**meta, "refreshing": refreshing, "hasData": "data" in snap,
                "refreshStartedAt": self._started.get(report_id) if refreshing else None,
-               "nextRefreshAt": _next_due(snap)}
+               "nextRefreshAt": _next_due(snap, interval_of(REPORTS[report_id]) if report_id in REPORTS else None)}
         if with_data and "data" in snap:
             out["data"] = snap["data"]
         return out
@@ -223,7 +233,13 @@ class Reports:
             started = time.time()
             try:
                 ctx: dict = {}
-                data = report.build(lambda sid, params: self._run(report, sid, params, ctx))
+                runner = lambda sid, params: self._run(report, sid, params, ctx)  # noqa: E731
+                if "inputs" in inspect.signature(report.build).parameters:
+                    # Başka raporların son başarılı verisi (ör. Baskı Öneri ↔ ZEKI AI tahmini birbirini okur).
+                    inputs = {rid: _load(self.path(rid)).get("data") for rid in REPORTS if rid != report_id}
+                    data = report.build(runner, inputs=inputs)
+                else:
+                    data = report.build(runner)
                 _save(path, {"data": data, "startedAt": started, "updatedAt": time.time(),
                              "durationMs": int((time.time() - started) * 1000), "error": None})
             except Exception as exc:  # noqa: BLE001 — son başarılı sonuç korunur
@@ -248,7 +264,7 @@ class Reports:
                 for rid in REPORTS:
                     snap = _load(self.path(rid))
                     # Son okumanın başlangıcından 5 dk geçtiyse (ve bitişten en az 1 dk) yeniden oku.
-                    due = _next_due(snap)
+                    due = _next_due(snap, interval_of(REPORTS[rid]))
                     if due is None or time.time() >= due:
                         self.start_refresh(rid)
                 self.stopping.wait(10)
@@ -280,11 +296,11 @@ def register(app, runtime, authorize, session_user):
     def management_reports(request: Request) -> dict[str, Any]:
         gate(request)
         out = []
-        for rid, m in REPORTS.items():
+        for rid, m in VISIBLE.items():
             snap = _load(reports.path(rid))
             out.append({"id": rid, "title": m.TITLE, "description": m.DESCRIPTION,
                         "updatedAt": snap.get("updatedAt"), "sources": len(m.SOURCES),
-                        "refreshIntervalSeconds": REFRESH_SECONDS,
+                        "refreshIntervalSeconds": interval_of(m),
                         "views": [{"id": v["id"], "title": v["title"], "rows": len(v["rows"])}
                                   for v in (snap.get("data") or {}).get("views", [])]})
         return {"reports": out}
@@ -299,7 +315,7 @@ def register(app, runtime, authorize, session_user):
             reports.start_refresh(report_id)
         unchanged = since is not None and snap.get("updatedAt") is not None and abs(float(since) - snap["updatedAt"]) < 1e-3
         snap = reports.read(report_id, with_data=not unchanged)
-        return {"id": report_id, "refreshIntervalSeconds": REFRESH_SECONDS, "serverTime": time.time(),
+        return {"id": report_id, "refreshIntervalSeconds": interval_of(REPORTS[report_id]), "serverTime": time.time(),
                 "unchanged": unchanged, **snap}
 
     @app.get("/api/v1/management/reports/{report_id}/sources")
@@ -327,7 +343,7 @@ def register(app, runtime, authorize, session_user):
                             {"started": started})
         except Exception:  # noqa: BLE001 — kayıt düşmesi yenilemeyi durdurmaz
             log.exception("management report audit failed")
-        return {"id": report_id, "refreshIntervalSeconds": REFRESH_SECONDS, "serverTime": time.time(),
+        return {"id": report_id, "refreshIntervalSeconds": interval_of(REPORTS[report_id]), "serverTime": time.time(),
                 "started": started, **reports.read(report_id, with_data=False)}
 
     return reports

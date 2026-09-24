@@ -1,6 +1,7 @@
 """NanobaseAI BI Forecast API (:8793).
 
 POST /forecast   SeriesBundle → p10/p50/p90 per horizon step (+ provenance)
+POST /forecast/batch  aylık seriler topluca → her seri için 9 kantil (yönetim raporları)
 GET  /health     ready gate (default engine loaded)
 GET  /engines    engines available in this build
 """
@@ -17,7 +18,7 @@ from fastapi.responses import JSONResponse
 
 from forecasting.app.engines import ENGINE_FACTORIES
 from forecasting.app.service import ForecastService
-from forecasting.contracts.models import ForecastRequest, ForecastResponse
+from forecasting.contracts.models import BatchForecastRequest, BatchForecastResponse, ForecastRequest, ForecastResponse
 
 log = logging.getLogger("nanobaseai.forecast")
 service = ForecastService()
@@ -69,5 +70,15 @@ def forecast(req: ForecastRequest) -> ForecastResponse:
         return service.forecast(req)
     except ValueError as e:
         raise HTTPException(status_code=400, detail={"code": "UNKNOWN_ENGINE", "message": str(e)}) from e
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail={"code": "ENGINE_UNAVAILABLE", "message": str(e)}) from e
+
+
+@app.post("/forecast/batch", response_model=BatchForecastResponse)
+def forecast_batch(req: BatchForecastRequest) -> BatchForecastResponse:
+    try:
+        return service.forecast_batch(req)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail={"code": "UNSUPPORTED", "message": str(e)}) from e
     except RuntimeError as e:
         raise HTTPException(status_code=503, detail={"code": "ENGINE_UNAVAILABLE", "message": str(e)}) from e

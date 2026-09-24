@@ -25,7 +25,7 @@ import os
 import threading
 from pathlib import Path
 
-from forecasting.app.engines.base import EngineForecast, ForecastEngine
+from forecasting.app.engines.base import EngineForecast, ForecastEngine, calendar_covariates, shared_past_slice
 from forecasting.contracts.models import ForecastPoint, SeriesBundle
 
 DEFAULT_MODEL_ID = "google/timesfm-3.0-pytorch"
@@ -50,6 +50,8 @@ class TimesFM3Engine(ForecastEngine):
         # Context cap: TimesFM 3.0 accepts long contexts, but a monthly BI series never needs more than this.
         self._max_context = int(os.environ.get("FORECAST_MAX_CONTEXT", "4096"))
         self._model = None
+        self._bulk = None  # toplu çağrılar için büyük parti boyutlu ikinci değerlendirici
+        self._bulk_batch = int(os.environ.get("FORECAST_BULK_BATCH", "64"))
         self._lock = threading.Lock()  # torch model is not re-entrant; FastAPI runs sync handlers in a threadpool
 
     @property
@@ -109,6 +111,37 @@ class TimesFM3Engine(ForecastEngine):
         ts = self._timestamps(bundle)
         pts = [ForecastPoint(timestamp=t, p10=a, p50=b, p90=c) for t, a, b, c in zip(ts, p10, p50, p90)]
         return EngineForecast(points=pts, warnings=warnings)
+
+
+    def forecast_batch(self, contexts, starts, horizon, *, calendar=False, peak_months=None, shared=None):
+        """Aylık seriler topluca. Ek değişkenler 2026-09-24 geriye dönük sınamasındaki en iyi ayarla aynı:
+        takvim (geçmiş+gelecek) ve ortak portföy serisi (yalnız geçmiş); simetrik ortalama kapalı."""
+        import numpy as np
+
+        if self._model is None:
+            self.load()
+        if self._bulk is None:
+            from timesfm3 import ModelConfig, TimesFM3Evaluator
+
+            self._bulk = TimesFM3Evaluator(ModelConfig(checkpoint_path=self.model_id, per_core_batch_size=self._bulk_batch,
+                                                       device=self._device))
+        ctx = [np.asarray(c, dtype=np.float32)[-self._max_context:] for c in contexts]
+        st = [s + (len(c0) - len(c)) for s, c0, c in zip(starts, contexts, ctx)]
+        kw = dict(horizon=horizon, return_quantiles=True, use_symmetric_averaging=self._symmetric,
+                  make_positive=True, sort_quantiles=True)
+        if calendar:
+            kw["past_future_covariates"] = [calendar_covariates(s, len(c) + horizon, peak_months or []) for s, c in zip(st, ctx)]
+        if shared is not None:
+            kw["past_only_covariates"] = [shared_past_slice(shared[0], shared[1], s, len(c)) for s, c in zip(st, ctx)]
+        with self._lock:
+            outs = list(self._bulk.predict_batch(ctx, **kw))
+        res = []
+        for out in outs:
+            q = np.asarray(out.quantiles, dtype=np.float64).reshape(-1, len(QUANTILE_LEVELS))[:horizon]
+            if q.shape[0] < horizon:
+                raise RuntimeError(f"unexpected TimesFM3 quantile shape {q.shape} for horizon {horizon}")
+            res.append(q)
+        return res
 
 
 def _checkpoint_sha(model_id: str) -> str | None:
