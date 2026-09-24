@@ -155,6 +155,28 @@ def book_proofing(book_id: UUID):
                          'suggestion':r['suggestion'],'bbox':r['bbox'],
                          'decision':decisions.get(str(r['id']))} for r in rows]}
 
+@app.get('/v1/books/{book_id}/proofing/word-map')
+def book_word_map(book_id: UUID):
+    """Kelime haritası: `word_variety` denetiminin son okunan nesildeki EN YENİ başarılı koşusunun
+    `stats`'ı — her kök, biçimleri, sayfaları, anlamları (deyimler dahil) ve çeşitlilik ölçüleri
+    (docs/son-okuma/word_variety.md). Koşu yoksa `stats` null (404 değil). Salt okuma."""
+    with foundation.read_snapshot() as c:
+        gen=_proofed_generation(c,str(book_id))
+        if gen is None:
+            raise HTTPException(404,'book not found')
+        gid=str(gen['id'])
+        try:
+            run=c.execute(
+                "SELECT check_version, stats, finished_at FROM ed.proof_run WHERE generation_id=%s"
+                " AND check_name='word_variety' AND status='SUCCEEDED' ORDER BY started_at DESC LIMIT 1",
+                (gid,)).fetchone()
+        except psycopg.errors.UndefinedTable:
+            raise HTTPException(503,'proofing tables missing (db migration 023_proofing not applied)') from None
+    return {'book_id':str(book_id),'generation_id':gid,'label':label_of('word_variety'),
+            'version':run['check_version'] if run else None,
+            'finished_at':run['finished_at'].isoformat() if run and run['finished_at'] else None,
+            'stats':run['stats'] if run else None}
+
 @app.post('/v1/books/{book_id}/proofing/findings/{finding_id}/decision')
 def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(...)):
     """Editörün bulguya kararı: «Doğru» (ACCEPT) ya da «Yanlış alarm» (REJECT + gerekçe [+ not]).

@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Editör: kelime çeşitliliği ve yakın tekrar denetimi (`word_variety`) dalda
+
+- **İstek (Yalçın Yaman, redaksiyon):** kitabın tekil kelime haritası; «göze girdi / gözüme toz kaçtı / dolabın gözü» üç ayrı «göz» olarak görülmeli. Editörde kelime tekrarı ya da çeşitlilik denetimi yoktu; yazım denetiminin Zemberek (zeyrek) kök çözümlemesi vardı.
+- **Analiz ve karar** (`apps/editor/docs/son-okuma/word_variety.md` §0): kök Zemberek'le (fiil maddesi mastar: «yüzmek» ≠ «yüz»; en uzun gövde: «gözlük» ≠ göz; belirsizlikte kitabın kendi kullanımı); anlam model gruplamasıyla (gömme/kümeleme ve TDK anlam listesi reddedildi); yakın tekrar penceresi cümle (sabit sözcük penceresi ve istatistik reddedildi); tekrarın kusur olup olmadığı iki sıralı kapalı model sorusu. İkileme, özel ad, işlev sözcüğü tekrar sayılmaz.
+- **Kod:** `proofing/word_variety.py` (hat), `proofing/_word_variety.py` (saf parçalar), `tests/test_word_variety.py` (sentetik; üç «göz» senaryosu dahil), kart servisi `GET /v1/books/{id}/proofing/word-map` (harita = en yeni başarılı koşunun `stats`'ı; migration yok). Ayarlar `EDITOR_WORD_ECHO_SENTENCES/…_SENSE_BATCH/…_CONTEXT_CHARS/…_VARIETY_PARALLEL`.
+- **Açık:** testler ve gerçek kitapta `--dry` ölçümü koşulmadı (TT VPN kapalıydı; Mac'te çalıştırma yok). Köprü + kanvas harita ekranı ve kitap geneli aşırı kullanım (öbür kitaplar derlemi) sonraki iş. Denetim `run_all`'a otomatik girer: kurulunca her kitabın son okumasında koşar.
+
 ## 2026-09-24 — Editör: bütün kitap türleri analizi; Aşama 0 (kapı hatası, bağlam aşımı) dalda
 
 - **Kullanıcı kararı:** editör yayınevindeki bütün kitap türlerine hizmet edecek (roman, tarih, psikoloji, kişisel gelişim, pedagoji, deneme, din, etkinlik, şiir…). Analiz: `apps/editor/docs/TUM-KITAP-TURLERI-ANALIZ.md`. Ölçümler: kurgu dışında künye kadrosu "karakter", özgeçmiş "olay" çıkıyor; kitabın tamamını tek çağrıya koyan adımlar uzun kitapta düşüyor (Babam Abdülhamid ~200k token, Benim Adım Ekin cevap payı katlanınca bağlam aştı) ya da `schemas.arr` 120 sınırıyla sessiz kırpıyor (Böcekleri 677 olaydan 102'si sıralı, anmaların yarısı bağlanmamış). Tür kaynağı canlı CRM `new_kitapBase.new_hedefkitle` (%98,5 dolu) ve `new_turlertext` (%53).
