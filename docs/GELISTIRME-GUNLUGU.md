@@ -6,6 +6,11 @@
 - Uçtan deneme turu 500 döndü: `tun0` yok, 192.168.0.28 (CRM) ve .155 (Logo) erişilemez (FreeTDS 20009). Tünel telefon push onayıyla açılıyor; kullanıcıya soruldu.
 - Düzeltme: web taraması yazar listesini her başarılı CRM okumasında `semantic_web_index`'e` saklar; CRM'e ulaşılamayan gecede son liste kullanılır, raporda not düşer (ilk kayıt tünel açılınca oluşur).
 
+## 2026-09-24 (20:00) — Yönetim raporları: hata veren gecelik rapor ertesi günü beklemiyor
+
+- ZEKI AI Tahminleme okuması 15:33'te bağlantı hatasıyla düştü; 24 saatlik aralık okumanın başından sayıldığı için bir sonraki deneme ertesi gün 15:33'e kalıyordu.
+- `_next_due`: son okuma hata verdiyse aralık en fazla `FAIL_RETRY_SECONDS` (varsayılan 1800 sn, env `MANAGEMENT_REPORT_FAIL_RETRY_SECONDS`). 5 dk'lık raporlar etkilenmez; bitişten en az 60 sn kuralı sürer. Test `tests/management/refresh_schedule.py` 11/11.
+
 ## 2026-09-24 (17:00) — Basın ve web: 55 kanal (haber, kitap siteleri, forum, podcast), joker anlayan robots.txt okuyucusu
 
 - Kanal araştırması (ayrı ajan, test sunucusundan ölçüm): 26 yeni açık kanal eklendi — Fikriyat, Star, Türkiye Gazetesi, Karar, Serbestiyet, Artı Gerçek, BirGün, Diken, Medyascope, Bianet; kitap siteleri Sabit Fikir, Bant Mag, Kayıp Rıhtım, Sanatatak, Bookinton, Medium kitap etiketi; forumlar Kitapça Forum (4 bölüm) ve Technopat Sosyal (kitap, edebiyat; `ai-input=yes`); Edebiyat Pod podcast'i. Toplam 55 RSS + Uludağ Sözlük + Wikidata.

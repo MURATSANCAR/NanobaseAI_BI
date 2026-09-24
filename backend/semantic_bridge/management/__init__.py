@@ -40,6 +40,9 @@ REFRESH_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_REFRESH_SECONDS", "300")
 # Aralık okumanın BAŞLANGICINDAN sayılır: okuma 2 dk sürse de veri 5 dk'da bir tazelenir. Okuma aralıktan
 # uzun sürerse bir sonraki hemen değil, bitişten en az bu kadar sonra başlar (Logo'ya kesintisiz yük binmez).
 MIN_GAP_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_MIN_GAP_SECONDS", "60"))
+# Son okuma hata verdiyse uzun aralıklı rapor (ör. gecelik tahmin) ertesi günü beklemez; en geç bu kadar sonra
+# yeniden dener. 5 dk'lık raporlar bundan etkilenmez.
+FAIL_RETRY_SECONDS = int(os.environ.get("MANAGEMENT_REPORT_FAIL_RETRY_SECONDS", "1800"))
 
 
 def interval_of(report) -> int:
@@ -53,7 +56,10 @@ def _next_due(snap: dict, interval: int | None = None) -> float | None:
     started = snap.get("startedAt") or ended
     if not ended:
         return None
-    return max(started + (interval or REFRESH_SECONDS), ended + MIN_GAP_SECONDS)
+    interval = interval or REFRESH_SECONDS
+    if (snap.get("failedAt") or 0) > (snap.get("updatedAt") or 0):
+        interval = min(interval, FAIL_RETRY_SECONDS)
+    return max(started + interval, ended + MIN_GAP_SECONDS)
 QUERY_TIMEOUT = int(os.environ.get("MANAGEMENT_REPORT_QUERY_TIMEOUT_SEC", "900"))
 CONNECTION_LABELS = {"logo": "Logo", "crm": "CRM"}
 
