@@ -230,3 +230,16 @@ def test_layout_by_illustration_type(tmp_path, ill):
         assert {p.key for p in full} >= {"acilis", "bolum-1", "bolum-2"}
         assert pm.art_pages() == {p.no for p in full}
     assert not any(p.kind == "full" and (p.key or "").startswith("son-") for p in pm.pages)
+
+
+def test_glued_hyphen_artifacts():
+    lex = Lex("yeterince", "yeterin", "olacak", "ola", "ali", "veli", "aliveli")
+    assert M.fix_inline("bu yeterin-ce iyi", lex) == "bu yeterince iyi"       # «ce» tek başına kelime değil
+    assert M.fix_inline("ne ola-cak ki", lex) == "ne olacak ki"
+    assert M.fix_inline("ali-veli geldi", lex) == "ali-veli geldi"            # iki parça da kelime: gerçek tire
+    assert M.fix_inline("aha-hahaha dedi", lex) == "aha-hahaha dedi"          # birleşen kelime geçersiz
+
+
+def test_preflight_words_ignore_hyphens():
+    from editor.production import preflight
+    assert preflight._words("aha-\nhahaha ola-cak") == preflight._words("aha-hahaha olacak")

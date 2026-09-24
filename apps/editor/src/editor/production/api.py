@@ -173,11 +173,12 @@ def job_view(job: str) -> dict:
         return {"selected": pg["selected"], "approved": pg.get("approved", False), "approved_by": pg.get("approved_by"),
                 "versions": [{k: v[k] for k in ("v", "mode", "prompt", "by", "at", "dpi", "base")} for v in pg["versions"]]}
 
+    printed = studio._pagemap(d).art_pages() if pm else set()   # resmi basılan sayfalar
     pages = []
     for p in (pm or {}).get("pages", []):
-        sc = scenes.get(p["no"])
+        sc = scenes.get(p["no"]) if p["no"] in printed else None
         pages.append({"no": p["no"], "kind": p["kind"], "key": p["key"], "chapter": p["chapter"],
-                      "excerpt": _excerpt(p["text"]), "art": art(str(p["no"])),
+                      "excerpt": _excerpt(p["text"]), "art": art(str(p["no"])) if p["no"] in printed else None,
                       "scene": {k: sc[k] for k in ("moment", "quote", "characters", "grounded")} if sc else None})
     chars = [{"i": i, "name": c["name"], "species": c["species"], "look": c["look"], "from_text": c["from_text"],
               "role": c["role"], "has_ref": c["name"] in sd.get("characters", {})}

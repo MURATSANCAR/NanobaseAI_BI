@@ -200,11 +200,19 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
             st.done("sayfa_resimleri", " · ".join(parts), status="warn" if failed or fell else "done", modes=modes)
             st.start("kapak")
             if "kapak" not in studio.studio_state(d)["pages"]:
-                try:
-                    rd = await studio._cover_render(painter, plan, spec, 1, seed, "", None)
-                    studio.add_version(d, "kapak", rd.path, mode="new", prompt="", seed=seed, by=by, dpi=rd.dpi)
-                except Exception as e:  # noqa: BLE001
-                    st.step("kapak")["error"] = f"{type(e).__name__}: {e}"[:300]
+                for attempt in range(2):
+                    try:
+                        rd = await studio._cover_render(painter, plan, spec, 1, seed, "", None)
+                        studio.add_version(d, "kapak", rd.path, mode="new", prompt="", seed=seed, by=by, dpi=rd.dpi)
+                        st.step("kapak").pop("error", None)
+                        break
+                    except Exception as e:  # noqa: BLE001
+                        body = getattr(getattr(e, "response", None), "text", "") or ""
+                        st.step("kapak")["error"] = f"{type(e).__name__}: {e} {body[:300]}"[:600]
+                        status = getattr(getattr(e, "response", None), "status_code", 0)
+                        if attempt or not 500 <= status < 600:
+                            break
+                        await asyncio.sleep(20)       # model açılıp kapanırken gelen geçici 5xx'e bir şans daha
         finally:
             # Resimler bitti (ya da hat düştü): görsel modeli beklemeden kapat, kart ana modele dönsün.
             st.data["gpu_release"] = await painter.release()

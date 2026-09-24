@@ -21,7 +21,10 @@ PT_PER_MM = 72 / 25.4
 
 
 def _words(s: str) -> list[str]:
-    return [w.casefold() for w in WORD.findall(s.replace("-\n", ""))]
+    """Karşılaştırma için kelimeler. Tireler iki tarafta da yok sayılır: dizgi gerçek bir tireden satır
+    kırabilir («aha-⏎hahaha») ya da heceleyerek tire ekleyebilir; ikisi de metin kaybı değildir."""
+    s = s.replace("\u00ad", "").replace("-\n", "").replace("-", "")
+    return [w.casefold() for w in WORD.findall(s)]
 
 
 def set_boxes(pdf: Path, bleed_mm: float) -> None:

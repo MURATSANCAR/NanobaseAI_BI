@@ -100,6 +100,7 @@ def join_hyphen(left: str, right: str, lex) -> str | None:
 
 
 _INLINE_HYPHEN = re.compile(r"(\w+)[-–] (\w+)")
+_GLUED_HYPHEN = re.compile(r"(?<![\w-])([a-zçğıöşüâîû]{2,})-([a-zçğıöşüâîû]{2,})(?![\w-])")
 
 
 def fix_inline(text: str, lex) -> str:
@@ -109,6 +110,15 @@ def fix_inline(text: str, lex) -> str:
         same_case = (m.group(1).isupper() and m.group(2).isupper()) or m.group(2).islower()
         return word if same_case and lex is not None and lex.valid(word) else m.group(0)
     text = _INLINE_HYPHEN.sub(rep, text)
+
+    def glued(m):
+        """«yeterin-ce», «ya-kalamıştım»: metin katmanında satır sonundan kalmış tire. Birleşen kelime geçerli
+        ve parçalardan biri tek başına kelime değilse birleşir; «Ali-Veli», «aha-hahaha» gibi gerçek tire kalır."""
+        a, b = m.group(1), m.group(2)
+        if lex is None or not lex.valid(a + b):
+            return m.group(0)
+        return a + b if not (lex.valid(a) and lex.valid(b)) else m.group(0)
+    text = _GLUED_HYPHEN.sub(glued, text)
     text = re.sub(r"(\w)([“«])", r"\1 \2", text)
     return re.sub(r"\s{2,}", " ", text).strip()
 

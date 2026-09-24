@@ -245,8 +245,9 @@ def refresh_preflight(d: Path) -> dict:
     pdf = d / "dizgi" / "ic-sayfalar.pdf"
     cpdf = d / "kapak" / "kapak.pdf"
     st = studio_state(d)
+    shown = {str(n) for n in _pagemap(d).art_pages()} | {"kapak"}
     renders = [{"key": f"sayfa-{k}", "dpi": pg["versions"][pg["selected"] - 1]["dpi"]}
-               for k, pg in st["pages"].items() if pg.get("selected") and k.isdigit()]
+               for k, pg in st["pages"].items() if pg.get("selected") and k in shown]
     rep = preflight.check(pdf, cpdf if cpdf.exists() else None, ms, spec, renders,
                           front_mod.missing(read(d, "front.json")["kunye"]), _plan(d).scenes)
     painted = _pagemap(d).art_pages()
@@ -254,7 +255,8 @@ def refresh_preflight(d: Path) -> dict:
     rep["checks"].append({"name": "Sayfa resimleri", "status": "FAIL" if missing else "OK",
                           "detail": "her resimli sayfanın resmi var" if not missing else
                           f"resmi olmayan sayfa: {', '.join(missing)} (stüdyoda «Farklı üret»)"})
-    waiting = sorted((k for k, pg in st["pages"].items() if not pg.get("approved")),
+    printed = {str(n) for n in painted} | {"kapak"}          # basılmayan (eski yerleşimden kalan) resim onay istemez
+    waiting = sorted((k for k, pg in st["pages"].items() if k in printed and not pg.get("approved")),
                      key=lambda k: (not k.isdigit(), int(k) if k.isdigit() else 0))
     rep["checks"].append({"name": "Editör onayı", "status": "FAIL" if waiting else "OK",
                           "detail": "bütün resimler onaylı" if not waiting else
