@@ -1,6 +1,15 @@
 # Geliştirme Günlüğü
 
-<<<<<<< HEAD
+## 2026-09-24 — Baskı Öneri'ye "ZEKI AI Tahminleme" sekmesi (TimesFM 3.0), Power BI sekmeleri değişmeden
+
+- **İstek:** Power BI sekmelerinin yanına ayrı bir tahmin sekmesi; altında son kullanıcı açıklaması ve SQL'ler. Mevcut bozulmayacak.
+- **Tahmin servisi (`backend/forecasting`):** yeni `POST /forecast/batch` — aylık seriler topluca, takvim ek değişkeni (ay sin/cos + zirve ayı) ve ortak geçmiş seri (portföy), 9 kantil. TimesFM 3.0 motoru ayrı büyük partili değerlendiriciyle; mevsimsel naif motor da toplu çalışır. Mevcut `/forecast` değişmedi. Testler 40/40 (gerçek TimesFM 3.0 toplu testi dahil).
+- **Köprü:** rapor başına yenileme aralığı (`REFRESH_SECONDS`), gizli rapor (`HIDDEN`), raporlar arası girdi (`build(..., inputs=)`). Yeni gizli rapor `baski-oneri-tahmin` günde bir: tahmin servisi hazır mı (yoksa Logo'ya hiç gitmez) → Logo son fatura → 2015'ten bu yıla satış **yıl yıl** (`{satis:yil}`; 12 yılın birleşimi tek sorguda 900 sn'yi aşıyordu) → TimesFM 3.0 12 ay. Portföy bütün kodların toplamı (sınamayla aynı).
+- **Sekme:** Baskı Tekrar + Yeni Kitap kitapları; canlı CRM stoku ve bekleyen siparişle tükenme ayı (normal/temkinli p80), baskı ihtiyacı, ZEKI öneri (Power BI eşikleri), güven (hacim), yanında Power BI önerisi/hızı/tükenmesi, bugünden ufkun sonuna aylık tahmin. Altında açıklama: neye baktık, Power BI'dan neden farklı, kolonlar, sınama tablosu, notlar, hesaplamalar, SQL'ler.
+- **Prova (test sunucusu, geçici servis :18793, canlı önbelleğe dokunmadan):** tahmin raporu 2.140 sn (Logo geçmişi 1.844 sn yük altında; TimesFM 5.200 seri 127 sn), sekme 5.384 satır; Power BI sekmeleri 5.053 / 331 satır aynı.
+- **ZEKI ile Power BI önerisi %78 aynı; ayrışan 1.167 kitap:** 585 stok 0 (Power BI 0/0 → "Yeterli"), 262 Power BI hızı eksi (→ "Risk/Acil"), 42 yeni kitap formülü, 220 ZEKI daha erken (mevsim), 55 daha geç. Gerçek tahmin ayrışmalarında geçmiş sınama hakemliği (4 kesim, 993 kitap): ZEKI %36, Power BI %25 haklı, %39 ikisi de yanlış (çoğunda ZEKI daha yakın).
+- **Testler (DB'siz):** zeki_tahmin_tab 26/26 (Power BI sekmeleri tahminle/tahminsiz birebir, servis yoksa Logo okunmaz), parity 27/27, sales_years_expand 15/15, refresh_schedule 7/7; tsc + vite temiz.
+
 ## 2026-09-24 (15:10) — main'e alındı ve test sunucusuna kuruldu: yazar giriş süreci, yeni menü, aranabilir seçim, basın ve web
 
 - main `7b2abae9 → 197e541d` (ileri sarma, push; uzak `claude/editor-author-login-flow-63e097` silindi).
@@ -26,8 +35,6 @@
 - Doğrulama: test sunucusunda `tsc --noEmit` 0; 12.000 Türkçe adlık geçici bir sayfada 375/320 px ve masaüstünde arama ("isil yilmaz" → "Işıl Yılmaz"), ↑ ile son kayda atlama, temizleme, çoklu seçim denendi; geçici dosyalar silindi. Canlı Baskı Öneri ekranı oturum gerektirdiği için ekranda denenmedi.
 - Not: `/api/v1/financial-audit/runs` son 30 raporla sınırlı (`[:30]`) — sessiz tavan kuralına aykırı, ayrı iş.
 
-=======
->>>>>>> 9c7602aea255c94ce6da8038fd0968aed14265ce
 ## 2026-09-24 — Yazar giriş süreci kodlandı (dalda, kurulmadı): dinleyici, pano, proje sayfası, kurul günü, Masam, yeni menü
 
 - **Arka uç:** `editorial_intake.py` + `app.py` uçları. CRM 5 dk'da bir baştan okunur (disk önbelleği); adımlar kanıttan hesaplanır, statüden değil — canlı ölçüm: statü geçişlerinin çoğu ara adımları atlıyor, kurulda kabul edilen 117 proje hâlâ "toplantıya hazırlanıyor". Rapor (3) ve yazara bilgi (6) CRM'de izlenmediği için portaldan işaretlenir (`semantic_editorial_intake_marks`, projenin editörü ya da yönetici; `admin_mod.audit` kaydı). Yönetim ekranına iki ayar: `EDITORIAL_INTAKE_SINCE`, `EDITORIAL_INTAKE_LATE_DAYS`.
@@ -49,14 +56,11 @@
 - Müşteri editör modülü için 9 adımlı "Yazarın Yayınevine Giriş Süreci" akışını gönderdi; kural: veri CRM'den dinlenecek. Canlı CRM'de (.28) salt okuma ile her adımın karşılığı ve doluluğu ölçüldü: `docs/analiz/yazar-giris-sureci-crm-2026-09-24.md`.
 - Omurga `new_projeBase.statuscode` (Toplantıya Hazırlanıyor → Kurula Hazır → Kurul Onaylı → İş Planı Çalışıyor); `new_projeasamasi` ve projedeki kurul sonucu/tarih alanları hiç dolu değil. Denetim kaydı Proje/Stok/Üretim/Sözleşme/Eser Katılımı/Kişi/Cari'de açık → adım zamanları geriye dönük çıkar. Editör raporu, yazara bilgi ve yazar cari formu CRM'de izlenmiyor; müşteriye 3 soru.
 - Kod değişikliği yok.
-<<<<<<< HEAD
 ## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
 
 - `deniz.akko` ile `~/bin/ttvpn-mac` sabahtan beri `p=failed` / bir kez `p=login-denied` veriyordu; tarayıcı giriyor göründüğü için istemci farkı sanıldı. Elenenler: şifre terminale bozulmadan ulaşıyor (uzunluk/karakter ölçüldü), tarayıcı kimliği, form alanıyla şifre, DSID çereziyle tünel (`error 0x07`). Uygulama içi tarayıcının ağ kaydı tarayıcının da 3 kez `p=failed` alıp 4.'de girdiğini gösterdi → şifre elle tutarsız yazılıyordu.
 - Çözüm: şifre tarayıcıda göz simgesiyle doğrulanıp kopyalandı, terminale yapıştırıldı → OTP → `Configured as 172.30.27.166`, `ssh tt-gpu` çalışıyor. 10:30'dan kalan 4 asılı openconnect süreci kapatıldı (`login-denied` sebebi). Kullanıcı şifreyi portalden değiştirdi.
 - Tarif ve hata kodları: `docs/TT-GPU-SUNUCUSU.md` §2.2 madde 5. Deneme betiği `ttvpn-mac-f` Çöp Kutusu'na taşındı.
-=======
->>>>>>> 9c7602aea255c94ce6da8038fd0968aed14265ce
 
 ## 2026-09-24 — TimesFM 3.0 × Yeni Baskı Öneri geriye dönük değerlendirmesi
 
