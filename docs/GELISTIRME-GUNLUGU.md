@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Editör: Qwen Image 2.1 kuruldu (model + imaj), `book-image` takma adı dalda
+
+- **Kullanıcı kararları:** model Qwen-Image-2.1 (lisans Qwen Research = ticari olmayan; ticari izin istenecek, gelene kadar basılacak işe gitmez); kapsam kitabın ihtiyacı olan her görsel (kapak açılımı, iç resim, tanıtım); Word dosyası CRM'den gelecek (CRM'de dosyanın yeri henüz ölçülmedi: bağlantı dosyasını köprü kabına kopyalama izin denetiminde durdu).
+- **Sunucuda (tt-gpu):** ağırlıklar `resolve/790c9263` adresinden aria2 (geçici alpine kabı, 16 bağlantı) ile indirildi, 33 GB, `verify_models.py` OK; MANIFEST'e eklendi (tek dosya bağlaması için yerinde yazıldı). İmaj `vllm/vllm-omni:qwen-image21` digest ile çekildi — 2.1 desteği (PR #7759) sürüme girmedi, imajda giriş komutu yok.
+- **Kod (dal):** `models.yaml` `book-image` (GPU 1, 0.50, `--omni`); gateway takma ad başına `entrypoint` alanı (spec hash'e yalnız doluysa girer, diğer kapların hash'i değişmez) ve `images/generations` geçişi. Referanslı düzenleme JSON `chat/completions` ile gider (proxy yalnız JSON).
+- **Sınama (geçici kap, gateway'in kuracağı komutun aynısı):** açılış 40 sn, boşta 33,3 GB, zirve 46,2 GB; okunmuş 4 kitaptan (Dünyanın En Korkak Hayvanı, Gölge Tilki, Çiçekçi Kadın, İbn Sînâ) 8 görsel, 27–30 sn/görsel. Türkçe başlık 2/4 kapakta hatalı: «Sarıöglu», «ÎBN SÎNĂ» → kapak yazısı modelden değil ayrı tipografi katmanından. Sahnelerde tutarlılık açığı: Çiçekçi Kadın'da Koreli karakterler Batılı çizildi, kim kime saksı uzatıyor ters.
+
 ## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
 
 - `deniz.akko` ile `~/bin/ttvpn-mac` sabahtan beri `p=failed` / bir kez `p=login-denied` veriyordu; tarayıcı giriyor göründüğü için istemci farkı sanıldı. Elenenler: şifre terminale bozulmadan ulaşıyor (uzunluk/karakter ölçüldü), tarayıcı kimliği, form alanıyla şifre, DSID çereziyle tünel (`error 0x07`). Uygulama içi tarayıcının ağ kaydı tarayıcının da 3 kez `p=failed` alıp 4.'de girdiğini gösterdi → şifre elle tutarsız yazılıyordu.

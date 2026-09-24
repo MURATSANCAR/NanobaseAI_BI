@@ -189,7 +189,9 @@ aliases:
     role: Kapak ve iç görsel üretimi
     kind: image
     gpu: 1
-    mem_fraction: 0.40
+    # Ölçüldü 2026-09-24 (H100 NVL, BF16): açılış 40 sn, boşta 33,3 GB, üretim sırasında 46,2 GB
+    # zirve (vLLM-Omni --gpu-memory-utilization'a uymuyor); 1024x1536 / 40 adım ~29 sn.
+    mem_fraction: 0.50
     image: vllm/vllm-omni@sha256:38c59f79fd8fc4831348a3d800a882833a1ca1c50a67458988d693f3aa80360c
     entrypoint: [vllm, serve]      # bu imajda giriş komutu yok
     args:
