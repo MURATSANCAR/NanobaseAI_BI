@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 — Kitap Tasarım Stüdyosu: okunmuş kitaptan/Word'den baskıya; GPU ve test sunucusunda canlı
+
+- **Ne:** kullanıcı isteği «Word gelmiş gibi kitabı sistem sıfırdan tasarlasın, ekranda sayfa sayfa düzeltilebilsin». `apps/editor/src/editor/production/`: metin (okunmuş kayıt + CRM; baskı artıkları kitaptan bağımsız kurallarla ve Türkçe sözlükle temizlenir), profil (künye/CRM beyanı + Ateşman + model, ayrışma gösterilir), baskı kuralları (yaşa göre punto/heceleme/font, forma katı), üslup, karakter kartı (sabit görünüş + kıyafetler), sayfa sahneleri (alıntıya bağlı, mekân/kıyafet sürekliliği), Typst dizgisi (punto ve resim bandı forma katına aranır, kalan tam sayfa resimle dolar), kapak açılımı (vektör başlık, EAN-13), künye (kitabın künyesinden alıntılı), ön kontrol (metin kelime kelime PDF'te, ölçü, kutu, font, çözünürlük, onay). Stitch ekranları `design/stitch-wow/10-11`.
+- **Deneme (Dünyanın En Korkak Hayvanı, 32 s.):** 29 resim + kapak, karakterler tutarlı; 1.415 kelimenin hepsi PDF'te; künye 13 alan kitabın künyesinden. Kalan: «Baskı» ve editör onayı.
+- **Model devri:** book-image 0.62 pay → gateway ana modeli durdurur; bekçi eskiden 7 sn sonra ana modeli geri kaldırıyordu (açılan modelin belleği henüz ayrılmamıştı) → pay toplamına bakar. Hat bitince görsel model hemen kapatılır, ana model ~10 sn'de döner (kayıtla doğrulandı).
+- **Bulunan hatalar:** düzenleme ucu parametrelerin extra_body'de tekrarını 400 ile reddediyordu, 29 resim sessizce referanssız çizilmişti (artık adımda sayı ve uyarı); vLLM-Omni istem uzunluğu başına CUDA grafiği biriktirip belleği 92 GB'a şişiriyordu → `--enforce-eager`; tek resim hatası hattı düşürüyordu → yarı çözünürlükte yeniden deneme, «resim yok» ve `/resume`.
+- **Kurulum:** kullanıcı isteğiyle daldan (main'e alınmadan) GPU'ya (yalnız değişen dosyalar, md5, `editor-py:0.15.8-studio`, gateway+studio) ve test sunucusuna (köprü + arayüz; dosyalar önce main ile eşit doğrulandı). VM'e kurulmadı.
+
 ## 2026-09-24 — Editör: Qwen Image 2.1 kuruldu (model + imaj), `book-image` takma adı dalda
 
 - **Kullanıcı kararları:** model Qwen-Image-2.1 (lisans Qwen Research = ticari olmayan; ticari izin istenecek, gelene kadar basılacak işe gitmez); kapsam kitabın ihtiyacı olan her görsel (kapak açılımı, iç resim, tanıtım); Word dosyası CRM'den gelecek (CRM'de dosyanın yeri henüz ölçülmedi: bağlantı dosyasını köprü kabına kopyalama izin denetiminde durdu).
