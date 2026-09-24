@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — TimesFM 3.0 × Yeni Baskı Öneri geriye dönük değerlendirmesi
+
+- Kullanıcı kararı: TimesFM 3.0 kullanılacak (test sunucusu demo ortamı). Baskı Tekrar havuzunda Logo aylık satışı (2015–2026) ve Logo `STINVTOT`'tan kurulan kesim stokuyla dört kesimde sınandı; ayrıntı `docs/analiz/timesfm-baski-oneri/README.md`.
+- TimesFM (mevsim + portföy ek değişkeni) dönem toplamı WAPE %35,0 / Power BI %38,8, aylık %55,0 / %62,4; dört kesimde de iyi. Okul dönemi zirvesini hâlâ eksik tahmin ediyor (−%27…−%33; Power BI −%45…−%49). Kısa vadeli tükenme uyarısında TimesFM p50 Power BI'dan ≥, p80 %77–95 yakalıyor ama 2–3× boşuna uyarı.
+- Stok kurgusu doğrulandı: 17.08 Logo stoku raporun depo stokuyla 5.053/5.053 birebir. Not: `EOS_DEPO_STOK_KONTROL_211` adına rağmen 411 (2026) firmasını okuyor.
+- Kod değişikliği yok; betikler analiz klasöründe.
+
 ## 2026-09-24 — Editör: bütün kitap türleri analizi; Aşama 0 (kapı hatası, bağlam aşımı) dalda
 
 - **Kullanıcı kararı:** editör yayınevindeki bütün kitap türlerine hizmet edecek (roman, tarih, psikoloji, kişisel gelişim, pedagoji, deneme, din, etkinlik, şiir…). Analiz: `apps/editor/docs/TUM-KITAP-TURLERI-ANALIZ.md`. Ölçümler: kurgu dışında künye kadrosu "karakter", özgeçmiş "olay" çıkıyor; kitabın tamamını tek çağrıya koyan adımlar uzun kitapta düşüyor (Babam Abdülhamid ~200k token, Benim Adım Ekin cevap payı katlanınca bağlam aştı) ya da `schemas.arr` 120 sınırıyla sessiz kırpıyor (Böcekleri 677 olaydan 102'si sıralı, anmaların yarısı bağlanmamış). Tür kaynağı canlı CRM `new_kitapBase.new_hedefkitle` (%98,5 dolu) ve `new_turlertext` (%53).
