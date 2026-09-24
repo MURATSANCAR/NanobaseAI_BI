@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Genel bakış kanvasında her kartta "SQL'i göster" + kopyala
+
+- **İstek:** Net ciro, Aylık seyir, Kanal dağılımı, En büyük cari, Kanıt & Kaynak ve ZEKİ AI özeti kartlarının hepsinde SQL görülsün, taşmasın, kopyalanabilsin.
+- **Kart başına kendi sorgusu:** özet dosyasındaki SQL (`-- ad\nsorgu` blokları) `screens.ts` `sqlParts` ile bölündü; Net ciro = months+prevSameDate+prevMonths+totals, Aylık seyir = months+prevMonths, Kanal = channels+totals, Cari = customers+months, özet = months+prevSameDate+prevMonths+totals+units, Kanıt & Kaynak = hepsi. Soru sorulunca ZEKİ AI özeti kartı motorun ürettiği SQL'i gösterir (bekleme/hata anında düğme yok).
+- **Ortak bileşen `src/canvas/stitch/CardSql.tsx`:** panel kart genişliğini aşmaz (`overflow-wrap:anywhere`, en fazla 224 px, içeride dikey kayar); ekranda FROM/WHERE/GROUP BY… yeni satıra alınır, kopya özgün metindir. Panelde metin seçilebilir ve sürükleme başlamaz (`data-nodrag`, `layout.tsx` INTERACTIVE). Kanvasta açılan kart öne alınır (yoksa panel alttaki ana kartın arkasında kalıyordu).
+- **Bulunan hata:** eski Kopyala yalnız `navigator.clipboard` kullanıyordu; müşteri VM'i `http://192.168.0.55` üzerinden açıldığı için orada pano API'si yok ve düğme sessizce hiçbir şey yapmıyordu. Artık güvenli bağlam yoksa gizli metin alanı + `execCommand('copy')`; o da olmazsa "Seçip kopyalayın" yazar.
+- **Doğrulama (test sunucusu, geçici dizin):** `tsc --noEmit` 0, `vite build` temiz. Derlenen sayfa gerçek `cfo.json` ile geçici sunucudan tarayıcıda açıldı: 6 kartta düğme; telefon düzeninde (587 px) ve 1500 px kanvasta 6 panelin hepsi kartın içinde, yatay taşma 0; açılan Kanal kartı ana kartın önünde; gerçek tıklamayla Kopyala hem güvenli bağlamda hem `http` taklidinde çalıştı. Geçici dosyalar silindi. Sunuculara kurulmadı.
+
 ## 2026-09-25 (00:45) — ZEKI AI tahmini TT GPU'da; müşteri VM'i oradan isteyecek
 
 - Kullanıcı: "GPU'da çalışsın, kalan VM'de, müşteride." Model kararı TimesFM 3.0 olduğu gibi (seçenek olarak Apache-2.0 TimesFM 2.5 sunuldu; ağırlıkların ticari olmayan lisansı hatırlatıldı, sorumluluk kullanıcıda).
@@ -7,6 +15,7 @@
 - **Eşlik ölçümü:** sabit tohumlu 200 serilik aynı toplu istek (takvim + portföy ek değişkeni) test sunucusu CPU'sunda ve GPU'da: 12 ay p50 toplamında fark %0,000; süre 7,7 sn → 2,4 sn.
 - **Köprü istemcisi:** `zeki_tahmin` `FORECAST_EXTRA_HEADER` ("Ad: değer", kitap kartlarıyla aynı) ve `FORECAST_CA_FILE` okur; uzak servis tanımlıyken ulaşılamazsa "bu kurulumda yok" demez, "GPU'ya ulaşılamıyor" der. Test 36/36.
 - **Açık:** GPU genel nginx'ine `/bi-forecast/health` (GET) ve `/bi-forecast/forecast/batch` (POST, 64 MB, 900 sn) yolu — `deploy/tt-gpu/forecast/add-forecast-route.py`, kitap kartlarıyla aynı üç kat koruma (85.105.0.0/16, mevcut gizli başlık, yöntem). Claude oturumunda izin denetimine takıldı; kullanıcı koşturacak. Sonra VM `.env`: `FORECAST_API_BASE=https://85.111.30.227/bi-forecast`, `FORECAST_EXTRA_HEADER` = kartların başlığı.
+
 
 ## 2026-09-25 — Kitap Tasarım Stüdyosu: okunmuş kitaptan/Word'den baskıya; GPU ve test sunucusunda canlı
 
@@ -43,6 +52,7 @@
 - Köprü bu arada iki kez başka bir oturum tarafından yeniden başlatıldı (23:03, 23:26; `/tmp/stf`); ilki koşan iki okumayı öldürdü, ikincisi tahmin yazıldıktan 2 sn sonra geldi.
 - **Hata:** stok 0, son 12 ay satışı 0, beklenen tahmin (p50) 0 olan 111 kitap ZEKI'de "Risk/Acil"di (ör. Sherlock Holmes 2). Kural yalnız temkinli tahmine (p80) bakıyordu; satışı durmuş kitapta p80 belirsizlikten şişer (medyan 37). Yalnız p50'ye bakmak da yanlış: geçen yıl 136 satan stoksuz kitabı "Talep yok"a atıyordu.
 - **Yeni kural:** stok yok VE (temkinli tahmin ayda 1'in altında YA DA hem son 12 tam ay satışı < 12 hem beklenen tahmin ayda 1'in altında). Canlı veride ölçüldü: "Talep yok" 685 → 926 (241 kitap Risk/Acil'den geçer, eski kuralın yakaladığı hiçbir kitap düşmez); stok 0 + satış 0 olup Risk/Acil kalan 15 kitapta model talep bekliyor. Talep yok dışında Power BI ile örtüşme %82,5. Test `zeki_tahmin_tab.py` 30/30 (durmuş ve satan stoksuz kitap vakaları eklendi).
+
 
 ## 2026-09-24 (20:55) — 55 kanal test sunucusunda; VPN kapalı, CRM okunamıyor; yazar listesi artık saklanıyor
 
@@ -88,10 +98,12 @@
 
 - Test sunucusuna kurulumdan hemen sonra Baskı Öneri 15:31'de "Invalid cursor state" (FreeTDS 24000) ile düştü: ZEKI tahmin raporu eklenince iki rapor ayrı iş parçacıklarında aynı anda yenileniyor ama tek Logo bağlantısını paylaşıyordu. Bağlantılar artık (rapor, kaynak) anahtarıyla ayrı. Test: `tests/management/report_connections.py` 3/3; diğerleri geçti.
 
+
 ## 2026-09-24 (15:40) — Yönetici her şeyi görür; Wikidata meslek listesi daraltıldı
 
 - Kullanıcı: "timasai süper yönetici, her şeyi görecek." Yazar giriş sürecinde yönetici (`admin_mod.is_admin`) bütün editörlerin bekleyen işini görür (`board(..., everyone=True)`, `todoScope: "all"`): panoda ve Masam'da editöre göre gruplu, Masam'da ayrıca editör başına süren / bekleyen / kurulda / geciken tablosu. Editör yine yalnız kendi işini görür.
 - Wikidata: meslek kümesine yanlışlıkla diplomat, hukukçu, öğretmen, profesör girmişti ("Kamran İnan" yalnız siyasetçi/diplomat olarak kabul edilmişti). Küme yalnız yazıyla ilgili mesleklere indi; ekranda gösterilen meslekler de bu kümeyle sınırlı (ör. "komplo teorisyeni" meslek olarak görünmez). Bulunan 16 kayıt yeni kuralla yeniden denetlenmek üzere sıraya kondu.
+
 
 ## 2026-09-24 — Baskı Öneri'ye "ZEKI AI Tahminleme" sekmesi (TimesFM 3.0), Power BI sekmeleri değişmeden
 

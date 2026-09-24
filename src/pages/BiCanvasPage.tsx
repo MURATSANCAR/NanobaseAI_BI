@@ -176,6 +176,8 @@ export default function BiCanvasPage() {
       main: {
         ...d.main,
         subject: 'Verine sor',
+        // Cevap görünümünde özet motorun ürettiği sorguya dayanır; bekleme/hata anında eski kartın SQL'i gösterilmez.
+        sql: !asking && answer?.sql ? answer.sql : undefined,
         loading: asking,
         model: asking ? `${PHASES[phase]}…` : answer?.latency_ms ? `${(answer.latency_ms / 1000).toFixed(1)} sn` : '',
         text: asking

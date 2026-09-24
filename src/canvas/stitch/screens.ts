@@ -254,6 +254,20 @@ function summaryTime(iso: string): string {
   return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Istanbul' });
 }
 
+/** Özet dosyasındaki SQL "-- ad\nsorgu" bloklarının birleşimi; kart yalnız kendi rakamını üreten
+ *  blokları gösterir. Blok yoksa (eski üretici, bağlantı yok) kartta düğme çıkmaz. */
+function sqlParts(all: string | null | undefined): (...names: string[]) => string | undefined {
+  const map = new Map<string, string>();
+  for (const block of (all ?? '').split(/\n{2,}(?=-- )/)) {
+    const m = block.match(/^-- (\w+)\n/);
+    if (m) map.set(m[1], block.trim());
+  }
+  return (...names) => {
+    const got = names.map((n) => map.get(n)).filter(Boolean);
+    return got.length ? got.join('\n\n') : undefined;
+  };
+}
+
 export function cfoData(c: CfoData, source: string): StitchCanvasData {
   const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Zeki AI yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
   const yok = (v: string) => (durum ? '—' : v);
@@ -269,6 +283,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
   const diger = net(9);
   const iade = Math.abs(net(2) + net(3));
 
+  const sqlOf = sqlParts(durum ? null : c.sql);
   const top = c.customers[0];
   const item = c.items[0];
   const last3 = c.months.slice(-3);
@@ -283,6 +298,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     c1: {
       icon: '💰',
       title: 'Net ciro',
+      sql: sqlOf('months', 'prevSameDate', 'prevMonths', 'totals'),
       badge: c.yoyPct == null ? String(c.year) : `${c.yoyPct >= 0 ? '+' : ''}${trPct(c.yoyPct)}`,
       big: yok(money(c.netYtd)),
       bigSuffix: '₺',
@@ -296,6 +312,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c2: {
       title: 'Aylık seyir',
+      sql: sqlOf('months', 'prevMonths'),
       badge: `${c.observedMonths || 0} ay`,
       label: lastFull ? `${AY[lastFull.ay - 1]} (son tam ay)` : 'Ay verisi yok',
       big: yok(money(lastFull?.net_ciro ?? 0)),
@@ -309,6 +326,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c3: {
       title: 'Kanal dağılımı',
+      sql: sqlOf('channels', 'totals'),
       badge: `${c.year} · brüt`,
       center: yok(money(toptan + perakende + diger + iade)),
       arcs: arcs([toptan, perakende, diger, iade]),
@@ -323,6 +341,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c4: {
       title: 'En büyük cari',
+      sql: sqlOf('customers', 'months'),
       badge: top && c.netYtd > 0 ? trPct((top.net_ciro / c.netYtd) * 100) : '—',
       initials: (top?.cari ?? '??').slice(0, 2).toUpperCase(),
       name: top?.cari ?? yok('Cari yok'),
@@ -350,6 +369,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     main: {
       badge: 'ZEKİ AI ÖZETİ',
       subject: `Net ciro · ${c.year}`,
+      sql: sqlOf('months', 'prevSameDate', 'prevMonths', 'totals', 'units'),
       timing: durum ? null : c.db,
       model: durum || `${sonTR} itibarıyla`,
       text: durum

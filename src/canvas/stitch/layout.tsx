@@ -232,7 +232,8 @@ export function LayoutProvider({
   return <LayoutCtx.Provider value={value}>{children}</LayoutCtx.Provider>;
 }
 
-const INTERACTIVE = 'a, button, input, select, textarea, [role="button"]';
+/** `data-nodrag`: kart içinde metin seçilen alan (SQL paneli); oradan sürükleme başlamaz. */
+const INTERACTIVE = 'a, button, input, select, textarea, [role="button"], [data-nodrag]';
 
 /**
  * Taşınabilir ve genişliği ayarlanabilir kart kabı. Kart içeriğindeki
