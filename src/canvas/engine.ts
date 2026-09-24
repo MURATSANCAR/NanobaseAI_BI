@@ -1072,6 +1072,8 @@ export type WebChannel = {
   lastAt: string | null;
 };
 export type WebOverview = {
+  /** Bu ortamda tarama açık mı (WEB_WATCH_ENABLED); müşteri ortamında kapalı. */
+  enabled: boolean;
   channels: WebChannel[];
   items: WebMention[];
   total: number;

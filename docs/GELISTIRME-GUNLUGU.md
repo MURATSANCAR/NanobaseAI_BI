@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (23:15) — Basın ve web müşteri ortamına kurulmaz; `WEB_WATCH_ENABLED` anahtarı
+
+- Kullanıcı kararı: sosyal medya / web taraması şimdilik müşteri VM'ine kurulmuyor, yalnız test sunucusunda. Yönetim ayarı `WEB_WATCH_ENABLED` (varsayılan kapalı): kapalı ortamda `run-due` tarama yapmaz, `/basin-web` "bu ortamda kapalı" der. VM kurulum betiği zamanlayıcıları zaten taşımıyor; `timas-web-watch.timer` VM'e kurulmaz (AGENTS.md'de). Test sunucusunda ayar veritabanından açıldı (yeniden başlatma gerekmedi).
+- Aynı akşam başka bir oturum köprüyü iki kez yeniden başlattı (22:51, 23:04); ekranda 502 ve süren tarama turu kesildi. Sunucudaki `app.py`'de main'de olmayan "kitap tasarım stüdyosu" uçları var — o oturumun işi; bu değişiklik `app.py`'ye sunucuda yerinde yamalandı, dosya üstüne yazılmadı.
+
 ## 2026-09-24 (23:45) — ZEKI AI Tahminleme canlıda doldu; "Talep yok" kuralı satışı durmuş kitabı yakalıyor
 
 - Test sunucusunda VPN açıldı, tahmin raporu 23:06–23:26 arası başarıyla koştu (Logo yıl yıl + TimesFM 3.0); ana rapor 23:32'de sekmeyi kurdu: Baskı Tekrar 5.053, Yeni Kitap 331, ZEKI AI Tahminleme 5.384 kitap / 33 kolon; açıklama 3 bölüm, 4 SQL, 6 formül; gizli rapor menüde görünmüyor. Doğrulama portal API'si üzerinden geçici timasai oturumuyla (oturum silindi).
