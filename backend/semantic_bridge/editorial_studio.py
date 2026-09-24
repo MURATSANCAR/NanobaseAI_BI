@@ -128,6 +128,11 @@ def resume(job_id: str, editor: str) -> dict:
     return post_json(f"/v1/studio/jobs/{_job(job_id)}/resume", {}, editor)
 
 
+def kunye(job_id: str, fields: dict, editor: str) -> dict:
+    clean = {str(k)[:40]: str(v)[:300] for k, v in (fields or {}).items()}
+    return post_json(f"/v1/studio/jobs/{_job(job_id)}/kunye", {"fields": clean}, editor)
+
+
 def art_action(job_id: str, key: str, action: str, body: dict, editor: str) -> dict:
     if action not in ACTIONS:
         raise StudioError(404, "İşlem yok.")

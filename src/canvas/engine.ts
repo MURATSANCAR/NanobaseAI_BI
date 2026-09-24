@@ -1662,6 +1662,8 @@ export type StudioJob = {
   pages: StudioPage[];
   cover: { art: StudioArt; info: { size_mm: [number, number]; binding: string; spine_mm: number } | null };
   preflight: { status: 'OK' | 'WARN' | 'FAIL'; checks: StudioCheck[] } | null;
+  front: { rows: { label: string; value: string; missing: boolean; editable: boolean; source: string | null }[];
+           bios: { name: string; text: string }[] } | null;
   files: { ic: boolean; kapak: boolean };
 };
 export type StudioJobRow = { id: string; title: string | null; created_by: string; created_at: number;
@@ -1689,6 +1691,8 @@ export const studioApi = {
   get: (job: string) => send<StudioJob>('GET', studioBase(job), undefined, 30_000),
   restart: (job: string) => send<{ id: string }>('POST', `${studioBase(job)}/restart`, {}, 60_000),
   resume: (job: string) => send<{ id: string }>('POST', `${studioBase(job)}/resume`, {}, 60_000),
+  kunye: (job: string, fields: Record<string, string>) =>
+    send<{ kunye: [string, string][] }>('POST', `${studioBase(job)}/kunye`, { fields }, 120_000),
   regenerate: (job: string, key: string, mode: 'fix' | 'new', prompt: string, variants = 1) =>
     send<{ accepted: boolean }>('POST', `${studioBase(job)}/art/${encodeURIComponent(key)}/regenerate`, { mode, prompt, variants }, 60_000),
   select: (job: string, key: string, v: number) =>

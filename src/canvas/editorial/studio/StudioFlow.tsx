@@ -6,6 +6,7 @@ import { ENGINE_ENABLED, studioApi, type StudioJob, type StudioStep } from '../.
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { Img, Progress, STATUS_TEXT, StepIcon, ghostBtn, gradientBtn, secs } from './shared';
+import KunyePanel from './KunyePanel';
 
 /** Yeni tasarımın akışı: içerik, CRM proje bilgisi, sistemin kararları ve canlı üretim adımları.
  *  Sayfa şeridi dizilmiş iç sayfalardan gelir (PDF'in kendisi); her karar gerekçesiyle görünür. */
@@ -209,6 +210,8 @@ export default function StudioFlow() {
               ))}
             </ul>
           </Panel>
+
+          {d.front && <KunyePanel jobId={jobId} front={d.front} />}
 
           {d.preflight && (
             <Panel>

@@ -4210,6 +4210,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), job, {"restart_of": job})
         return out
 
+    @app.post("/api/v1/editorial/studio/jobs/{job}/kunye")
+    def editorial_studio_kunye(job: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        fields = (body or {}).get("fields") or {}
+        out = _studio_call(editorial_studio.kunye, job, fields, user)
+        admin_mod.audit(engine, user, "update", "studio_kunye", job, "künye", fields)
+        return out
+
     @app.post("/api/v1/editorial/studio/jobs/{job}/resume")
     def editorial_studio_resume(job: str, request: Request) -> dict[str, Any]:
         engine, _tenant, user, _ = _books(request)

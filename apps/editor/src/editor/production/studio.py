@@ -180,6 +180,28 @@ def approve(d: Path, key: str, ok: bool, by: str) -> None:
     refresh_preflight(d)
 
 
+def set_kunye(d: Path, values: dict[str, str], by: str) -> dict:
+    """Ekranda elle girilen künye alanları (etiket → değer). Boş değer elle girişi kaldırır (sistemin
+    bulduğu değer ya da «—» geri gelir). Yerleşim değişmez; iç sayfa yeniden dizilir."""
+    from . import front as front_mod
+    fr = read(d, "front.json")
+    manual = dict(fr.get("manual") or {})
+    for label, value in values.items():
+        if label not in front_mod.EDITABLE:
+            raise ValueError(f"düzenlenemeyen alan: {label}")
+        value = " ".join(str(value).split())[:300]
+        if value:
+            manual[label] = value
+        else:
+            manual.pop(label, None)
+    fr["manual"] = manual
+    fr["manual_by"] = by
+    fr["kunye"] = front_mod.kunye(_manuscript(d), fr.get("kunye_fields") or {}, manual)
+    write(d, "front.json", fr)
+    rebuild(d)
+    return fr
+
+
 # ------------------------------------------------------------------ dizgi
 def rebuild(d: Path) -> None:
     """Seçili sürümlerle iç sayfayı ve kapağı yeniden dizer (yerleşim değişmez), ön kontrolü yeniler."""

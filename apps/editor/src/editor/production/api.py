@@ -15,6 +15,7 @@ sıra bekleyen iş ekranda «sırada» görünür.
     POST /v1/studio/jobs/{job}/art/{key}/regenerate   {mode: fix|new, prompt, variants}
     POST /v1/studio/jobs/{job}/art/{key}/select       {v}
     POST /v1/studio/jobs/{job}/art/{key}/approve      {ok}
+    POST /v1/studio/jobs/{job}/kunye   {fields}       künyenin eksik/düzeltilecek alanları
     POST /v1/studio/jobs/{job}/resume                 yarıda kalan işi sürdür
     POST /v1/studio/jobs/{job}/restart                aynı kaynakla yeni iş
     GET  /v1/studio/jobs/{job}/pdf/{kind}             ic | kapak
@@ -186,8 +187,26 @@ def job_view(job: str) -> dict:
         "spec": spec, "layout": pm and pm["layout"], "style": plan and plan["style"], "characters": chars,
         "pages": pages, "cover": {"art": art("kapak"), "info": studio.read(d, "cover.json")},
         "preflight": pre,
+        "front": _front(d),
         "files": {"ic": (d / "dizgi" / "ic-sayfalar.pdf").exists(), "kapak": (d / "kapak" / "kapak.pdf").exists()},
     }
+
+
+def _front(d: Path) -> dict | None:
+    from .front import EDITABLE, MISSING
+    fr = studio.read(d, "front.json")
+    if not fr:
+        return None
+    src = {"DIZI": "Dizi", "YAYIN_YONETMENI": "Yayın Yönetmeni", "PROJE_EDITORU": "Proje Editörü", "EDITOR": "Editör",
+           "YAYINEVI": "Yayınevi", "ADRES": "Adres", "TELEFON": "Telefon", "EPOSTA": "E-posta",
+           "SERTIFIKA": "Sertifika No", "MATBAA": "Baskı ve Cilt", "MATBAA_SERTIFIKA": "Matbaa Sertifika No",
+           "MATBAA_ADRES": "Matbaa Adresi", "TELIF": "Telif"}
+    sources = {src[k]: v.get("source") for k, v in (fr.get("kunye_fields") or {}).items() if k in src}
+    manual = fr.get("manual") or {}
+    return {"rows": [{"label": lab, "value": val, "missing": val == MISSING, "editable": lab in EDITABLE,
+                      "source": "elle girildi" if lab in manual else sources.get(lab)}
+                     for lab, val in fr["kunye"] if lab],
+            "bios": fr.get("bios", [])}
 
 
 # ------------------------------------------------------------------ görseller
@@ -341,6 +360,23 @@ async def resume(job: str, by: str = Depends(editor)) -> dict:
         raise HTTPException(409, "Sayfa planı yok; «Yeniden başlat» kullanın")
     _spawn(_resume(d))
     return {"id": job}
+
+
+class Kunye(BaseModel):
+    fields: dict[str, str] = Field(default_factory=dict)
+
+
+@app.post("/v1/studio/jobs/{job}/kunye")
+async def kunye(job: str, body: Kunye, by: str = Depends(editor)) -> dict:
+    """Künyenin eksik ya da düzeltilecek alanları; kaynağı olmayan alanı editör girer."""
+    d = _dir(job)
+    if not studio.read(d, "front.json"):
+        raise HTTPException(409, "Künye henüz hazır değil")
+    try:
+        fr = await asyncio.to_thread(studio.set_kunye, d, body.fields, by)
+    except ValueError as e:
+        raise HTTPException(400, str(e)) from None
+    return {"kunye": fr["kunye"]}
 
 
 @app.post("/v1/studio/jobs/{job}/restart")

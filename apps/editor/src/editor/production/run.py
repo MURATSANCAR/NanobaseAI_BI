@@ -140,7 +140,9 @@ async def _run(d: Path, job: dict, st: State, images: bool, seed: int) -> None:
     st.done("karakterler", ", ".join(c.name for c in chars), names=[c.name for c in chars])
 
     st.start("yerlesim")
-    front = {"kunye": front_mod.kunye(ms, front_mod.publisher()), "bios": await front_mod.bios(ms, llm)}
+    fields = await front_mod.kunye_fields(ms, llm)
+    front = {"kunye": front_mod.kunye(ms, fields), "kunye_fields": fields, "manual": {},
+             "bios": await front_mod.bios(ms, llm)}
     studio.write(d, "front.json", front)
     ts = Typesetter(d / "dizgi", studio.fonts())
     pm = await asyncio.to_thread(ts.fit, ms, spec, front, style.accent)

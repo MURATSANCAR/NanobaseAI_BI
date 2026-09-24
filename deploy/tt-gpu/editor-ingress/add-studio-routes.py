@@ -20,13 +20,17 @@ import sys
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 s = open(P, encoding="utf-8").read()
 if "EDITOR-STUDYO" in s:
-    # 2026-09-24: «kaldığı yerden devam» ucu eklendi; yalnız restart yolu olan eski blok güncellenir.
-    old = 'jobs/([0-9]{14}[0-9a-f]{6})/restart$"'
-    if old not in s:
+    # Sonradan eklenen iş uçları (resume 09-24, kunye 09-24): eski blokta yalnız restart ya da
+    # restart|resume varsa üç uca genişletilir.
+    J = "jobs/([0-9]{14}[0-9a-f]{6})/"
+    fixed = s
+    for old in (J + 'restart$"', J + '(restart|resume)$"'):
+        fixed = fixed.replace(old, J + '(restart|resume|kunye)$"')
+    fixed = fixed.replace("proxy_pass http://127.0.0.1:19142/v1/studio/jobs/$1/restart;",
+                          "proxy_pass http://127.0.0.1:19142/v1/studio/jobs/$1/$2;")
+    if fixed == s:
         print("zaten var (güncel)")
         sys.exit(0)
-    fixed = s.replace(old, 'jobs/([0-9]{14}[0-9a-f]{6})/(restart|resume)$"').replace(
-        "proxy_pass http://127.0.0.1:19142/v1/studio/jobs/$1/restart;", "proxy_pass http://127.0.0.1:19142/v1/studio/jobs/$1/$2;")
     open(P, "w", encoding="utf-8").write(fixed)
     t = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
     if t.returncode != 0:
@@ -34,7 +38,7 @@ if "EDITOR-STUDYO" in s:
         print("nginx -t DÜŞTÜ, dosya eski hâline döndü:\n", t.stderr)
         sys.exit(1)
     subprocess.run(["systemctl", "reload", "nginx"], check=True)
-    print("resume yolu eklendi, nginx reload tamam")
+    print("iş uçları güncellendi (restart|resume|kunye), nginx reload tamam")
     sys.exit(0)
 if "EDITOR-BITTI" not in s:
     print("EDITOR bloğu bulunamadı; önce add-cards-routes.py koşmalı")
@@ -71,7 +75,7 @@ block = ("    # EDITOR-STUDYO  (musteri VM -> kitap tasarim studyosu; ayni uc ka
          # regex location'da proxy_pass sabit URI taşıyamaz; yol parçası yakalanıp değişkenle verilir
          + loc("jobs/(docx)", "POST", "jobs/$1", "\n        client_max_body_size 25m;")
          + loc(f"jobs/({JOB})", "GET", "jobs/$1")
-         + loc(f"jobs/({JOB})/(restart|resume)", "POST", "jobs/$1/$2")
+         + loc(f"jobs/({JOB})/(restart|resume|kunye)", "POST", "jobs/$1/$2")
          + loc(f"jobs/({JOB})/pages/([0-9]{{1,4}})/preview", "GET", "jobs/$1/pages/$2/preview$is_args$args")
          + loc(f"jobs/({JOB})/cover/preview", "GET", "jobs/$1/cover/preview$is_args$args")
          + loc(f"jobs/({JOB})/art/({KEY})/([0-9]{{1,3}})", "GET", "jobs/$1/art/$2/$3$is_args$args")

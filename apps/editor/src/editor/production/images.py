@@ -92,8 +92,12 @@ class Painter:
     def negative(self) -> str:
         return self.plan.style.avoid + ", blurry, low quality, deformed, extra limbs, watermark"
 
-    def _prompt(self, body: str, chars: list[Character]) -> str:
-        who = " ".join(f"{c.name} is {c.species}: {c.look}." for c in chars)
+    def _prompt(self, body: str, chars: list[Character], outfits: dict | None = None) -> str:
+        """Karakter: sabit görünüş + bu resimdeki kıyafet (sahnenin seçtiği; yoksa varsayılan)."""
+        def wear(c):
+            look = c.outfit((outfits or {}).get(c.name))
+            return f" Wearing: {look}." if look else ""
+        who = " ".join(f"{c.name} is {c.species}: {c.look}.{wear(c)}" for c in chars)
         return f"{body} {who} Style: {self.plan.style.style_prompt} No text or letters anywhere."
 
     async def _generate(self, prompt: str, W: int, H: int, seed: int) -> bytes:
@@ -153,9 +157,10 @@ class Painter:
             body = f"Children's book illustration. {sc.scene} Setting: {sc.setting}."
             if direction.strip():
                 body += f" Editor's direction (follow it): {direction.strip()}."
-            prompt = self._prompt(body, chars)
+            prompt = self._prompt(body, chars, sc.outfits)
             refs = [self.refs[c.name] for c in chars if c.name in self.refs][:MAX_REFS]
-        extra = "" if base_image else " Keep each character exactly as in the reference images."
+        extra = "" if base_image else (" Keep each character's face, body and colors exactly as in the reference"
+                                       " images; clothing follows the description above.")
 
         async def draw(W: int, H: int) -> tuple[bytes, str, str]:
             if refs:

@@ -9,7 +9,6 @@ sıfırdandır, yalnız metin bağlayıcıdır.
 
 from __future__ import annotations
 
-import asyncio
 import re
 from dataclasses import asdict, dataclass, field
 
@@ -26,18 +25,27 @@ STYLE_SCHEMA = {"type": "object", "additionalProperties": False,
                                "palette": {"type": "array", "items": HEX, "minItems": 5, "maxItems": 5},
                                "accent": HEX, "style_prompt": {"type": "string"},
                                "avoid": {"type": "string"}, "why": {"type": "string"}}}
+OUTFIT = {"type": "object", "additionalProperties": False, "required": ["name", "look", "from_text"],
+          "properties": {"name": {"type": "string"}, "look": {"type": "string"},
+                         "from_text": {"type": "array", "items": {"type": "string"}}}}
 CHAR_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["characters"], "properties": {
     "characters": {"type": "array", "maxItems": 8, "items": {
         "type": "object", "additionalProperties": False,
-        "required": ["name", "species", "look", "from_text", "role"],
-        "properties": {"name": {"type": "string"}, "species": {"type": "string"}, "look": {"type": "string"},
+        "required": ["name", "species", "base_look", "outfits", "default_outfit", "from_text", "role"],
+        "properties": {"name": {"type": "string"}, "species": {"type": "string"}, "base_look": {"type": "string"},
+                       "outfits": {"type": "array", "minItems": 1, "maxItems": 5, "items": OUTFIT},
+                       "default_outfit": {"type": "string"},
                        "from_text": {"type": "array", "items": {"type": "string"}},
                        "role": {"type": "string", "enum": ["ANA", "YAN"]}}}}}}
 PAGE_SCHEMA = {"type": "object", "additionalProperties": False,
-               "required": ["moment", "quote", "characters", "scene", "setting"],
+               "required": ["moment", "quote", "characters", "outfits", "setting", "setting_reason", "scene"],
                "properties": {"moment": {"type": "string"}, "quote": {"type": "string"},
                               "characters": {"type": "array", "items": {"type": "string"}},
-                              "scene": {"type": "string"}, "setting": {"type": "string"}}}
+                              "outfits": {"type": "array", "items": {
+                                  "type": "object", "additionalProperties": False, "required": ["character", "outfit"],
+                                  "properties": {"character": {"type": "string"}, "outfit": {"type": "string"}}}},
+                              "setting": {"type": "string"}, "setting_reason": {"type": "string"},
+                              "scene": {"type": "string"}}}
 
 
 @dataclass
@@ -57,9 +65,16 @@ class Style:
 class Character:
     name: str
     species: str
-    look: str
+    look: str                     # sabit görünüş (v1 planlarında giysi dahil tek tarif)
     from_text: list[str]
     role: str
+    outfits: list[dict] = field(default_factory=list)   # [{name, look, from_text}]
+    default_outfit: str = ""
+
+    def outfit(self, name: str | None) -> str:
+        """Kıyafetin tarifi; bilinmeyen ad varsayılana düşer."""
+        by = {o["name"]: o["look"] for o in self.outfits}
+        return by.get(name or "", by.get(self.default_outfit, ""))
 
 
 @dataclass
@@ -72,6 +87,8 @@ class Scene:
     scene: str
     setting: str
     grounded: bool                # alıntı sayfa metninde birebir bulundu
+    outfits: dict = field(default_factory=dict)          # karakter → kıyafet adı (bu sayfada)
+    setting_reason: str = ""
 
 
 @dataclass
@@ -125,52 +142,65 @@ async def characters(ms: Manuscript, p: Profile, st: Style, llm) -> list[Charact
     for c in out["characters"]:
         if _norm(c["name"]) not in full:                   # metinde geçmeyen ad: kitap dışı kişi
             continue
-        c["from_text"] = [q for q in c["from_text"] if _norm(q) in full]
-        chars.append(Character(**c))
+        outfits = [{**o, "from_text": [q for q in o["from_text"] if _norm(q) in full]} for o in c["outfits"]]
+        names = {o["name"] for o in outfits}
+        chars.append(Character(name=c["name"], species=c["species"], look=c["base_look"],
+                               from_text=[q for q in c["from_text"] if _norm(q) in full], role=c["role"],
+                               outfits=outfits,
+                               default_outfit=c["default_outfit"] if c["default_outfit"] in names else outfits[0]["name"]))
     return chars
 
 
 def _char_lines(chars: list[Character]) -> str:
-    return "\n".join(f"- {c.name}: {c.species}; {c.look}" for c in chars)
+    def fits(c):
+        return "; ".join(f"«{o['name']}»{' (varsayılan)' if o['name'] == c.default_outfit else ''}: {o['look']}"
+                         for o in c.outfits) or "—"
+    return "\n".join(f"- {c.name}: {c.species}; {c.look} | kıyafetler: {fits(c)}" for c in chars)
 
 
-async def _scene(ms, p, chars, llm, page_no, kind, before, text, after, placement) -> Scene:
+async def _scene(ms, p, chars, llm, page_no, kind, before, text, after, placement,
+                 prev_setting: str = "", prev_outfits: dict | None = None) -> Scene:
+    prev = ", ".join(f"{k}: {v}" for k, v in (prev_outfits or {}).items()) or "(yok)"
     ref, prompt = render("production_page_art", title=ms.title, age=_age(p), characters=_char_lines(chars),
-                         before=before or "(yok)", page_text=text, after=after or "(yok)", placement=placement)
+                         before=before or "(yok)", page_text=text, after=after or "(yok)", placement=placement,
+                         prev_setting=prev_setting or "(ilk sayfa)", prev_outfits=prev)
     names = {c.name for c in chars}
+    fits = {c.name: {o["name"] for o in c.outfits} for c in chars}
     for attempt in range(2):
         out, _ = await llm.chat("book-director", [{"role": "user", "content": prompt}], prompt=ref,
-                                schema=PAGE_SCHEMA, max_tokens=1500, thinking=False, pages=[page_no],
+                                schema=PAGE_SCHEMA, max_tokens=1800, thinking=False, pages=[page_no],
                                 temperature=0.3 + 0.3 * attempt)
+        who = [n for n in out["characters"] if n in names]
+        wear = {o["character"]: o["outfit"] for o in out["outfits"]
+                if o["character"] in who and o["outfit"] in fits.get(o["character"], ())}
         if _norm(out["quote"]) and _norm(out["quote"]) in _norm(text):
-            return Scene(page_no, kind, out["moment"], out["quote"], [n for n in out["characters"] if n in names],
-                         out["scene"], out["setting"], True)
+            return Scene(page_no, kind, out["moment"], out["quote"], who, out["scene"], out["setting"], True,
+                         wear, out["setting_reason"])
     first = re.split(r"(?<=[.!?])\s", text.strip(), maxsplit=1)[0]
-    return Scene(page_no, kind, first, first, [n for n in names if n in text], out["scene"], out["setting"], False)
+    return Scene(page_no, kind, first, first, [n for n in names if n in text], out["scene"], out["setting"], False,
+                 wear, out["setting_reason"])
 
 
-async def scenes(ms: Manuscript, p: Profile, chars: list[Character], pm: PageMap, llm,
-                 concurrency: int = 6) -> list[Scene]:
-    """Her resimli sayfa için sahne. Akış sayfası kendi metnini, tam sayfa resim bir sonraki bölümün
-    açılışını (ya da açılış resmi ilk sayfayı) anlatır."""
-    pages = pm.pages
-    flow = [pg for pg in pages if pg.kind == "flow" and pg.text]
-    sem = asyncio.Semaphore(concurrency)
-
-    def around(i):
-        return (flow[i - 1].text if i > 0 else "", flow[i + 1].text if i + 1 < len(flow) else "")
-
-    async def one(pg, kind, text, before, after, placement):
-        async with sem:
-            return await _scene(ms, p, chars, llm, pg.no, kind, before, text, after, placement)
-
-    jobs = []
-    for i, pg in enumerate(flow):
-        b, a = around(i)
-        jobs.append(one(pg, "flow", pg.text, b, a, "üst bandında, sayfa genişliğinde"))
-    for pg in pages:
-        if pg.kind == "full":
+async def scenes(ms: Manuscript, p: Profile, chars: list[Character], pm: PageMap, llm) -> list[Scene]:
+    """Her resimli sayfa için sahne, sayfa sırasıyla: her sayfaya önceki sayfanın mekânı ve kıyafetleri
+    verilir (süreklilik). Tam sayfa resim bir sonraki bölümün açılışını anlatır."""
+    flow = [pg for pg in pm.pages if pg.kind == "flow" and pg.text]
+    out: list[Scene] = []
+    prev_setting, prev_outfits = "", {}
+    for pg in pm.pages:
+        if pg.kind == "flow" and pg.text:
+            i = flow.index(pg)
+            before, after = (flow[i - 1].text if i else ""), (flow[i + 1].text if i + 1 < len(flow) else "")
+            sc = await _scene(ms, p, chars, llm, pg.no, "flow", before, pg.text, after,
+                              "üst bandında, sayfa genişliğinde", prev_setting, prev_outfits)
+        elif pg.kind == "full":
             nxt = next((f for f in flow if f.no > pg.no), flow[-1])
             prv = next((f for f in reversed(flow) if f.no < pg.no), None)
-            jobs.append(one(pg, "full", nxt.text, prv.text if prv else "", "", "tamamında (tam sayfa)"))
-    return sorted(await asyncio.gather(*jobs), key=lambda s: s.page)
+            sc = await _scene(ms, p, chars, llm, pg.no, "full", prv.text if prv else "", nxt.text, "",
+                              "tamamında (tam sayfa)", prev_setting, prev_outfits)
+        else:
+            continue
+        out.append(sc)
+        prev_setting = sc.setting
+        prev_outfits = {**prev_outfits, **sc.outfits}
+    return out
