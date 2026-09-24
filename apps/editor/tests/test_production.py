@@ -243,6 +243,7 @@ def test_glued_hyphen_artifacts():
 def test_preflight_words_ignore_hyphens():
     from editor.production import preflight
     assert preflight._words("aha-\nhahaha ola-cak") == preflight._words("aha-hahaha olacak")
+    assert preflight._words("AhA- \nHAHA") == preflight._words("AhA- HAHA")   # yazarın tiresi + boşluk
 
 
 def test_block_ending_with_split_word_joins_on_same_page():
