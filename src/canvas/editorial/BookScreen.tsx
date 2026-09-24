@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ENGINE_ENABLED, bookCatalogApi, editorialSearchApi, findCatalogCard, type BookDetail } from '../engine';
+import { BOOK_FORM_TR, ENGINE_ENABLED, bookCatalogApi, editorialSearchApi, findCatalogCard, type BookCard, type BookDetail } from '../engine';
 import { Loading, Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime, num, pct } from '../format';
 import { ModuleFrame, Panel } from './kit';
@@ -21,8 +21,23 @@ const tone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
   return 'muted';
 };
 
-function Facts({ b }: { b: BookDetail }) {
-  const rows: Array<[string, string | null]> = [
+/** Künyedeki tür: CRM'in türü; CRM'de yoksa Zeki AI'nın kitabın metninden belirlediği tür, kaynağıyla. */
+function genreFact(b: BookDetail, card: BookCard | null): { value: string | null; note?: string } {
+  const crm = b.genres || b.shelf;
+  const p = card?.profile;
+  const pct = p?.probability != null ? ` (%${Math.round(p.probability * 100)} güven)` : '';
+  if (crm) {
+    // CRM'deki tür iki ayrı türe işaret ediyordu («Bilim Tarihi, İnceleme-Araştırma»): hangisi olarak okunduğu
+    return p?.source === 'MODEL' ? { value: crm, note: `Zeki AI: ${BOOK_FORM_TR[p.form].toLocaleLowerCase('tr')} olarak okudu${pct}` } : { value: crm };
+  }
+  if (p?.source === 'MODEL') return { value: BOOK_FORM_TR[p.form], note: `Zeki AI belirledi · CRM'de tür kaydı yok${pct}` };
+  if (p?.source === 'NONE') return { value: BOOK_FORM_TR.UNKNOWN, note: "CRM'de tür kaydı yok; Zeki AI kitabın metninden kesin karar veremedi" };
+  return { value: null };
+}
+
+function Facts({ b, card }: { b: BookDetail; card: BookCard | null }) {
+  const genre = genreFact(b, card);
+  const rows: Array<[string, string | null, string?]> = [
     ['ISBN', b.isbn],
     ['E-kitap ISBN', b.ebookIsbn],
     ['Sayfa', b.pages ? nf.format(b.pages) : null],
@@ -33,19 +48,20 @@ function Facts({ b }: { b: BookDetail }) {
     ['İlk baskı adedi', b.firstPrint ? nf.format(b.firstPrint) : null],
     ['İlk yayın', b.firstPublished ? dateTime(b.firstPublished) : null],
     ['Son baskı', b.lastPrint ? dateTime(b.lastPrint) : null],
-    ['Tür', b.genres || b.shelf],
+    ['Tür', genre.value, genre.note],
     ['Orijinal dil', b.originalLanguage],
     ['Telif durumu', b.royaltyState],
     ['Baskı durumu', b.printState],
-  ].filter(([, v]) => v) as Array<[string, string]>;
+  ].filter(([, v]) => v) as Array<[string, string, string?]>;
   return (
     <Panel>
       <h2 className="px-1 text-[13px] font-extrabold">Künye</h2>
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-2 sm:grid-cols-3 lg:grid-cols-4">
-        {rows.map(([k, v]) => (
+        {rows.map(([k, v, note]) => (
           <div key={k} className="min-w-0">
             <dt className="text-[11px] leading-snug text-canvas-muted">{k}</dt>
             <dd className="break-words text-[12.5px] font-semibold leading-snug">{v}</dd>
+            {note && <dd className="mt-0.5 break-words text-[11px] leading-snug text-canvas-violet">{note}</dd>}
           </div>
         ))}
       </dl>
@@ -286,7 +302,7 @@ export default function BookScreen() {
               {b.firstPublished && <span className="text-[12px] text-canvas-muted">İlk yayın {dateTime(b.firstPublished)}</span>}
             </div>
           </div>
-          <Facts b={b} />
+          <Facts b={b} card={cover} />
           <About b={b} />
           <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
           {b.editorBook && <ReviewPanel bookId={b.editorBook.id} />}

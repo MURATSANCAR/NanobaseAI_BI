@@ -21,6 +21,13 @@ export const SEVERITY: Record<ProofingSeverity, { label: string; tone: 'muted' |
 };
 export const SEVERITY_ORDER: ProofingSeverity[] = ['ERROR', 'WARN', 'INFO'];
 
+/** Bulgunun etiketi: denetimin varsayımı bu tür kitapta geçerli değilse «öneri», değilse seviyesi. */
+export const sevOf = (f: ProofingFinding) =>
+  f.advisory ? { label: 'öneri', tone: 'muted' as const } : SEVERITY[f.severity] ?? SEVERITY.INFO;
+
+/** «öneri: kitap bir hikâye anlatmıyor (…)» → «kitap bir hikâye anlatmıyor (…)» */
+const advisoryWhy = (s: string) => s.replace(/^öneri:\s*/i, '');
+
 /** Yanlış alarm gerekçeleri; kapalı küme, kart servisindeki CHECK ile aynı sıra. */
 export const REASONS: Array<[ProofReasonCode, string]> = [
   ['TEXT_CORRECT', 'Metin zaten doğru'],
@@ -222,7 +229,7 @@ type PanelProps = {
 function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClose, decide, busy, sheet }: PanelProps & { sheet: boolean }) {
   const active = marks.find((m) => m.key === activeKey) ?? marks[0];
   const f = active?.f;
-  const sev = f ? SEVERITY[f.severity] ?? SEVERITY.INFO : null;
+  const sev = f ? sevOf(f) : null;
   return (
     <>
       <div className="flex items-center justify-between gap-2 px-1">
@@ -280,6 +287,11 @@ function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClo
           </div>
           {f.quote && <p className="mt-1.5 break-words border-l-2 border-canvas-violet/50 pl-2 text-[13px] leading-snug text-canvas-ink">“{f.quote}”</p>}
           <p className="mt-1.5 break-words font-semibold leading-snug">{f.message}</p>
+          {f.advisory && (
+            <p className="mt-1 break-words text-[11.5px] leading-snug text-canvas-muted">
+              Öneri olarak gösteriliyor: {advisoryWhy(f.advisory)}.
+            </p>
+          )}
           {f.suggestion && (
             <p className="mt-1 break-words text-[11.5px] leading-snug text-canvas-muted">
               <span className="font-bold text-canvas-ink">Öneri:</span> {f.suggestion}

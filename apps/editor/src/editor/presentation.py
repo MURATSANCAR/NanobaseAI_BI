@@ -18,6 +18,12 @@ def cards() -> list[dict]:
             crm = c.execute('SELECT crm_title,matched_by,authors,illustrators,summary,isbn,first_publish_date'
                             ' FROM ed.book_crm_record WHERE book_id=%s', (book['id'],)).fetchone()
             verified = [x['claim'] for x in row['metadata'] if x.get('subject') == 'AUTHOR']
+            # What kind of book it was read as (editor.book_type), from its newest reading: the
+            # screen says whether the publisher's record named it or the model decided.
+            prof = c.execute('SELECT p.form, p.form_source, p.form_detail, p.audience FROM ed.book_profile p'
+                             ' JOIN ed.generation g ON g.id=p.generation_id JOIN ed.book_version v'
+                             ' ON v.id=g.book_version_id WHERE v.book_id=%s ORDER BY p.created_at DESC LIMIT 1',
+                             (book['id'],)).fetchone()
             result.append({'id': row['book_id'], 'title': row['title'],
                 'generationId': row['generation_id'],
                 'revision': row['knowledge_revision'] if row['available'] else None,
@@ -31,8 +37,22 @@ def cards() -> list[dict]:
                              if crm else None,
                 'summary': row['summary'], 'themes': row['themes'],
                 'cover': {'source': cover['source'], 'page': cover['page_no']} if cover else None,
-                'contentAvailable': row['available'], 'semanticAcceptance': False})
+                'contentAvailable': row['available'], 'semanticAcceptance': False,
+                'profile': profile_view(prof)})
     return result
+
+
+def profile_view(p: dict | None) -> dict | None:
+    """form, where it came from (CRM | MODEL | NONE), the CRM genre names it rested on and,
+    when the model decided, the probability of its choice."""
+    if not p:
+        return None
+    detail = p['form_detail'] or {}
+    model = detail.get('model') or {}
+    probs = model.get('probabilities') or {}
+    return {'form': p['form'], 'source': p['form_source'], 'audience': p['audience'],
+            'crmGenres': list((detail.get('crm') or {}).get('genres') or {}),
+            'probability': probs.get(p['form']) if p['form_source'] == 'MODEL' else None}
 
 
 def cover_path(book_id: str) -> tuple[Path,str]:

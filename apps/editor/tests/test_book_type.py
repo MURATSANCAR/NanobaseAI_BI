@@ -118,26 +118,41 @@ def test_describe():
 
 
 def test_checks_by_kind_of_book():
-    from editor.proofing import skip_reason
+    """Every check runs on every book; where its premise does not hold it reports advice."""
+    from editor.proofing import advisory_reason, as_advice
     adult_novel = _profile("FICTION", "ADULT")
     self_help = _profile("EXPOSITORY", "ADULT")
     child_story = _profile("FICTION", "CHILD")
     child_activity = _profile("ACTIVITY", "CHILD")
     unknown = _profile("UNKNOWN", "UNKNOWN")
-    # story continuity: only in a story
+    # story continuity: advice outside a story
     for name in ("appearance", "props", "setting", "timeline", "dialogue"):
-        assert skip_reason(name, adult_novel) is None
-        assert skip_reason(name, self_help)
-        assert skip_reason(name, child_activity)
-        assert skip_reason(name, unknown) is None
-    # age: only a child's or a young reader's book (or one whose reader is unknown)
-    assert skip_reason("age_fit", child_story) is None
-    assert skip_reason("age_fit", child_activity) is None
-    assert skip_reason("age_fit", _profile("FICTION", "YOUNG")) is None
-    assert skip_reason("age_fit", unknown) is None
-    assert skip_reason("age_fit", adult_novel)
-    # every book
+        assert advisory_reason(name, adult_novel) is None
+        assert advisory_reason(name, unknown) is None
+        assert advisory_reason(name, self_help).startswith("öneri:")
+        assert advisory_reason(name, child_activity).startswith("öneri:")
+    # age: advice for an adult's book
+    assert advisory_reason("age_fit", child_story) is None
+    assert advisory_reason("age_fit", child_activity) is None
+    assert advisory_reason("age_fit", _profile("FICTION", "YOUNG")) is None
+    assert advisory_reason("age_fit", unknown) is None
+    assert advisory_reason("age_fit", adult_novel).startswith("öneri:")
+    # checks that hold for every book never turn into advice
     for name in ("spelling", "name_spelling", "hyphenation", "layout", "edition_diff", "imprint_crm",
                  "series_canon", "text_contradictions"):
         for p in (adult_novel, self_help, child_activity, unknown):
-            assert skip_reason(name, p) is None
+            assert advisory_reason(name, p) is None
+
+
+def test_advice_keeps_the_finding_and_opens_no_question():
+    from editor.proofing import as_advice
+    found = [{"page": 4, "severity": "WARN", "message": "Ayşe'nin çantası s.4'te kırmızı, s.9'da mavi",
+              "quote": "kırmızı çantası", "details": {"pair": [4, 9]}},
+             {"page": None, "severity": "ERROR", "message": "m"}]
+    got = as_advice(found, "öneri: kitap bir hikâye anlatmıyor")
+    assert [f["severity"] for f in got] == ["INFO", "INFO"]           # record() queues only non-INFO
+    assert got[0]["message"] == found[0]["message"] and got[0]["quote"] == found[0]["quote"]
+    assert got[0]["details"] == {"pair": [4, 9], "advisory": "öneri: kitap bir hikâye anlatmıyor",
+                                 "severity_as_found": "WARN"}
+    assert got[1]["details"]["severity_as_found"] == "ERROR"
+    assert found[0]["severity"] == "WARN"                               # the input is not changed

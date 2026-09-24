@@ -117,13 +117,10 @@ async def confirm_text_visual(generation_id: str) -> dict:
 
 @activity.defn
 async def text_chunks(generation_id: str) -> list[list[int]]:
-    """Chunks to read for characters, events, emotions and themes. A book that is not a
-    story (psychology, self-help, activity, poetry — editor.book_type) has none: reading
-    it as a story made its imprint staff characters and its author's CV events. The profile
-    is decided here, the first step that needs it, while the director model is up."""
-    p = await book_type.profile(generation_id)
-    if not book_type.is_story(p):
-        return []
+    """Every book is read for people, events, emotions and themes, whatever its kind (user
+    decision 2026-09-24). The profile (editor.book_type) is decided here, the first step
+    that needs it, while the director model is up; later steps read it."""
+    await book_type.profile(generation_id)
     return [list(c) for c in await _t(knowledge.text_chunks, generation_id)]
 
 

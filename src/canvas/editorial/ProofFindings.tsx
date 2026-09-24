@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingCheck, type ProofingFinding, type ProofingReport, type ProofingSeverity } from '../engine';
 import { Loading, Note, Pill, nf } from '../admin/ui';
 import { Panel } from './kit';
-import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, type Decide } from './ProofEvidence';
+import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, sevOf, type Decide } from './ProofEvidence';
 
 /** M5: ZEKİ AI'ın kitabın metninde koştuğu otomatik son okuma denetimleri ve bulguları.
  *  Rapor köprüden kitap adıyla gelir; burada gösterim, yerel süzme ve editörün bulguya kararı vardır.
@@ -84,7 +84,7 @@ type Group = { page: number | null; rows: Row[] };
 
 function FindingRow({ r, active, onPick, rowRef }: { r: Row; active: boolean; onPick: () => void; rowRef?: (el: HTMLButtonElement | null) => void }) {
   const { f, n } = r;
-  const sev = SEVERITY[f.severity] ?? SEVERITY.INFO;
+  const sev = sevOf(f);
   const d = f.decision;
   return (
     <li>
