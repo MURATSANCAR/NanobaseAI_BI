@@ -68,7 +68,7 @@ export default function StudioEditor() {
   const select = useMutation({ mutationFn: (v: number) => studioApi.select(jobId, key!, v), onSuccess: refresh });
   const approve = useMutation({ mutationFn: (ok: boolean) => studioApi.approve(jobId, key!, ok), onSuccess: refresh });
 
-  if (!d) return <ModuleFrame route="/kitap-tasarim" code="Stüdyo" crumb="Sayfa stüdyosu" title="Sayfa stüdyosu" lead="" source={`İş ${jobId}`}>{q.error ? <Note tone="err">{errText(q.error, 'Okunamadı.')}</Note> : <Panel><Loading /></Panel>}</ModuleFrame>;
+  if (!d) return <ModuleFrame route="/kitap-tasarim" crumb="Sayfa stüdyosu" title="Sayfa stüdyosu" lead="" source={`İş ${jobId}`}>{q.error ? <Note tone="err">{errText(q.error, 'Okunamadı.')}</Note> : <Panel><Loading /></Panel>}</ModuleFrame>;
 
   const art = key ? artOf(d, key) : null;
   const page = key && key !== 'kapak' ? d.pages.find((p) => String(p.no) === key) : undefined;
@@ -82,7 +82,6 @@ export default function StudioEditor() {
   return (
     <ModuleFrame
       route="/kitap-tasarim"
-      code="Stüdyo"
       crumb="Sayfa stüdyosu"
       title={d.state.title}
       lead={`${total} sayfa · ${d.spec ? `${d.spec.trim_w / 10}×${d.spec.trim_h / 10} cm` : ''} · ${d.profile ? `${d.profile.age_min}–${d.profile.age_max} yaş` : ''}`}

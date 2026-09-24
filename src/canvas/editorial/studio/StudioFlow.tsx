@@ -81,7 +81,6 @@ export default function StudioFlow() {
   return (
     <ModuleFrame
       route="/kitap-tasarim"
-      code="Stüdyo"
       crumb="Yeni tasarım"
       title={d?.state.title || 'Yeni tasarım'}
       lead="İçerikten baskıya: sistem kitabı okur, CRM'den proje bilgisini alır, yaşa ve türe göre baskı kararlarını verir, sayfaları yerleştirir ve resimler."

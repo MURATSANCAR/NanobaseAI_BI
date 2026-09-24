@@ -31,7 +31,6 @@ export default function StudioHome() {
   return (
     <ModuleFrame
       route="/kitap-tasarim"
-      code="Stüdyo"
       crumb="Kitap Tasarım Stüdyosu"
       title="Kitap Tasarım Stüdyosu"
       lead="Kitabın metninden baskıya hazır iç sayfa ve kapak: CRM bilgisi, yaş ve tür, sayfa yerleşimi, resimler, dizgi ve ön baskı denetimi. Her sayfanın resmini düzeltebilir ya da yeniden ürettirebilirsiniz."
