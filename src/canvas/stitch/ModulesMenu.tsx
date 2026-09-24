@@ -22,11 +22,11 @@ export const LIVE: Record<string, string> = {
   M1: '/yayin-kurulu',
   M2: '/editor-atama',
   M3: '/redaksiyon',
-  M4: '/cevirmenler',
+  M4: '/kisiler?rol=cevirmen',
   M5: '/son-okuma',
   M6: '/telif-sozlesme',
-  M7: '/yazarlar',
-  M8: '/cizer-freelancer',
+  M7: '/kisiler?rol=yazar',
+  M8: '/kisiler?rol=cizer',
 };
 
 /** Çalışan modül grupları: ana kategori olarak en üstte durur, tıklanınca modülün kendi ana
@@ -34,7 +34,7 @@ export const LIVE: Record<string, string> = {
 export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Finans & Risk': { to: '/finansal-denetim', hint: 'Finansal denetim ve Logo kayıtları' },
   'Yönetim Raporları': { to: '/yonetim-raporlari', hint: 'Baskı önerisi ve karar raporları' },
-  'Editoryal Süreç': { to: '/editoryal', hint: 'Başvurudan baskı onayına sekiz modül' },
+  'Editoryal Süreç': { to: '/editoryal', hint: 'Masam, yazar giriş süreci, yayın kurulu' },
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
 };
 

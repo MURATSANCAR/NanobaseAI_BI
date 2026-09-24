@@ -123,7 +123,7 @@ function Row({ c, active, onOpen }: { c: Contributor; active: boolean; onOpen: (
   );
 }
 
-export default function ContributorsScreen({ module: m }: { module: ContributorModule }) {
+export default function ContributorsScreen({ module: m, aside }: { module: ContributorModule; aside?: React.ReactNode }) {
   const [text, setText] = useState('');
   const [role, setRole] = useState('');
   const [order, setOrder] = useState('son');
@@ -144,7 +144,7 @@ export default function ContributorsScreen({ module: m }: { module: ContributorM
   const err = errText(list.error || person.error, 'Kayıtlar okunamadı.');
 
   return (
-    <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'}>
+    <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'} aside={aside}>
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 

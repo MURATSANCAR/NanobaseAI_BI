@@ -920,6 +920,118 @@ export const roomsApi = {
 
 // ---------------------------------------------------------------------------- editoryal süreç (M1–M8)
 
+// ------------------------------------------------------------ yazar giriş süreci (9 adım, CRM'den)
+
+export type IntakeCard = {
+  id: string;
+  name: string | null;
+  author: string | null;
+  editor: string | null;
+  bookId: string | null;
+  /** Bulunulan adım (1–9); tamamlanmış ya da kapanmış projede null. */
+  step: number | null;
+  phase: number | null;
+  done: number;
+  progress: boolean[];
+  line: string;
+  since: string | null;
+  waitingDays: number | null;
+  late: boolean;
+  outcome: 'red' | 'iptal' | null;
+  complete: boolean;
+  boardOn: string | null;
+  modifiedOn: string | null;
+  createdOn: string | null;
+  mine: boolean;
+};
+export type IntakeStepDef = { no: number; title: string; waiting: string; owner: string; markable: string | null };
+export type IntakePhase = { no: number; title: string; lead: string; steps: Array<{ no: number; title: string }>; count: number; late: number };
+export type IntakeBoard = {
+  since: string | null;
+  at: string | null;
+  audit: boolean;
+  lateDays: number;
+  phases: IntakePhase[];
+  items: IntakeCard[];
+  completed: IntakeCard[];
+  closed: IntakeCard[];
+  todo: IntakeCard[];
+  lastBoard: string | null;
+  steps: IntakeStepDef[];
+  loading: boolean;
+  updatedAt: number | null;
+  error: string | null;
+  refreshIntervalSeconds: number;
+};
+export type IntakeStep = {
+  no: number;
+  title: string;
+  owner: string;
+  waiting: string;
+  done: boolean;
+  on: string | null;
+  source: 'crm' | 'portal' | 'cikarim' | null;
+  markable: string | null;
+  marked: boolean;
+  markedBy: string | null;
+};
+export type IntakeBoardRecord = {
+  id: string | null;
+  date: string | null;
+  decisionCode: number | null;
+  decision: string | null;
+  note: string | null;
+  printRun: string | null;
+  price: string | null;
+  royalty: string | null;
+  publishOn: string | null;
+};
+export type IntakeOpinion = { by: string | null; verdict: string | null; text: string | null; on: string | null };
+export type IntakeProject = IntakeCard & {
+  canMark: boolean;
+  steps: IntakeStep[];
+  phases: Array<{ no: number; title: string; steps: number[] }>;
+  channel: string | null;
+  status: string | null;
+  idea: string | null;
+  book: string | null;
+  publishOn: string | null;
+  contracts: number;
+  participations: number;
+  boards: IntakeBoardRecord[];
+  opinions: IntakeOpinion[] | null;
+  opinionsVisible: boolean;
+};
+export type IntakeMeeting = { date: string; total: number; accepted: number; rejected: number; revisit: number; pending: number };
+export type IntakeAgendaItem = {
+  id: string | null;
+  projectId: string | null;
+  project: string | null;
+  author: string | null;
+  editor: string | null;
+  report: boolean;
+  decisionCode: number | null;
+  decision: string | null;
+  note: string | null;
+  printRun: string | null;
+  price: string | null;
+  royalty: string | null;
+  advance: string | null;
+  publishOn: string | null;
+  opinions: IntakeOpinion[] | null;
+  opinionCount: number | null;
+};
+
+export const intakeApi = {
+  board: () => send<IntakeBoard>('GET', '/api/v1/editorial/intake', undefined, 60_000),
+  project: (id: string) => send<IntakeProject>('GET', `/api/v1/editorial/intake/${encodeURIComponent(id)}`, undefined, 60_000),
+  mark: (id: string, step: number) => send<{ ok: boolean }>('PUT', `/api/v1/editorial/intake/${encodeURIComponent(id)}/marks/${step}`, undefined, 30_000),
+  unmark: (id: string, step: number) => send<{ ok: boolean }>('DELETE', `/api/v1/editorial/intake/${encodeURIComponent(id)}/marks/${step}`, undefined, 30_000),
+  meetings: () => send<{ items: IntakeMeeting[] }>('GET', '/api/v1/editorial/intake/meetings', undefined, 60_000),
+  agenda: (day: string) =>
+    send<{ date: string; items: IntakeAgendaItem[]; opinionsVisible: boolean }>('GET', `/api/v1/editorial/intake/meetings/${encodeURIComponent(day)}`, undefined, 60_000),
+};
+
 export type ContractRate = { format: string; percent: number };
 export type ContractParty = { name: string; share: number | null; scope: string | null; viaAgent: boolean };
 export type Contract = {
@@ -969,41 +1081,6 @@ export const contractsApi = {
       undefined,
       60_000,
     ),
-};
-
-export type BoardOpinion = {
-  by: string | null;
-  verdict: string | null;
-  sales: string | null;
-  printRun: string | null;
-  price: number | null;
-  month: string | null;
-  text: string | null;
-  titleIdea: string | null;
-  on: string | null;
-};
-export type BoardDecision = {
-  id: string;
-  date: string | null;
-  decision: string | null;
-  note: string | null;
-  royalty: number | null;
-  advance: number | null;
-  printRun: string | null;
-  publishOn: string | null;
-  projectId: string | null;
-  project: string | null;
-  editor: string | null;
-  opinions: BoardOpinion[];
-};
-export type BoardYear = { year: number; total: number; sessions: number; last: string | null; decisions: ContractFacet[] };
-export type BoardPage = { items: BoardDecision[]; total: number; page: number; pageSize: number; opinionsVisible: boolean; db?: DbTiming | null };
-
-/** M1 Yayın Kurulu: CRM'deki kurul kararları ve üye görüşleri (salt okunur). */
-export const boardDecisionsApi = {
-  summary: () => send<{ years: BoardYear[]; db?: DbTiming | null }>('GET', '/api/v1/editorial/board/summary', undefined, 60_000),
-  list: (p: { q?: string; year?: number; decision?: number; page?: number }) =>
-    send<BoardPage>('GET', `/api/v1/editorial/board${qs({ q: p.q, year: p.year, decision: p.decision, page: p.page })}`, undefined, 60_000),
 };
 
 export type Contributor = { id: string; name: string | null; works: number; recentWorks: number; last: string | null; roles: Array<{ role: string; works: number }> };
@@ -1467,7 +1544,7 @@ export type EditorialHomeSnapshot = {
   parts: {
     readableBooks: EditorialSnapshotPart<{ items: string[]; at: number | null; configured: boolean; loading: boolean }>;
     contracts: EditorialSnapshotPart<ContractSummary>;
-    board: EditorialSnapshotPart<{ years: BoardYear[] }>;
+    board: EditorialSnapshotPart<{ years: Array<{ year: number; total: number; sessions: number; last: string | null; decisions: ContractFacet[] }> }>;
     editors: EditorialSnapshotPart<EditorsOverview>;
     roles: EditorialSnapshotPart<{ items: RoleFacet[] }>;
     expiring: EditorialSnapshotPart<ContractPage>;

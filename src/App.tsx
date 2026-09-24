@@ -12,15 +12,15 @@ const AdminScreen = lazy(() => import('@/canvas/admin/AdminScreen'));
 const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
-const EditorialBoardScreen = lazy(() => import('@/canvas/editorial/BoardScreen'));
+const MeetingScreen = lazy(() => import('@/canvas/editorial/intake/MeetingScreen'));
+const IntakeBoardScreen = lazy(() => import('@/canvas/editorial/intake/IntakeBoardScreen'));
+const IntakeProjectScreen = lazy(() => import('@/canvas/editorial/intake/IntakeProjectScreen'));
 const BookScreen = lazy(() => import('@/canvas/editorial/BookScreen'));
 const EditorialHome = lazy(() => import('@/canvas/editorial/EditorialHome'));
 const RedactionScreen = lazy(() => import('@/canvas/editorial/RedactionScreen'));
 const ProofScreen = lazy(() => import('@/canvas/editorial/ProofScreen'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
-const AuthorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.AuthorsScreen })));
-const TranslatorsScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.TranslatorsScreen })));
-const FreelancersScreen = lazy(() => import('@/canvas/editorial/modules').then((m) => ({ default: m.FreelancersScreen })));
+const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
@@ -68,12 +68,16 @@ export default function App() {
             <Route path="planli-raporlar" element={<ReportsScreen />} />
             <Route path="yonetim" element={<AdminScreen />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />
-            {/* Editoryal Süreç (M1–M8); ekranı hazır olan modül buraya girer. */}
-            <Route path="yayin-kurulu" element={<EditorialBoardScreen />} />
+            {/* Editoryal Süreç: Günlük (Masam, Yazar giriş süreci, Yayın kurulu) · Yayına hazırlık · Kayıtlar. */}
+            <Route path="yazar-giris" element={<IntakeBoardScreen />} />
+            <Route path="yazar-giris/:id" element={<IntakeProjectScreen />} />
+            <Route path="yayin-kurulu" element={<MeetingScreen />} />
             <Route path="editor-atama" element={<EditorsScreen />} />
-            <Route path="cevirmenler" element={<TranslatorsScreen />} />
-            <Route path="yazarlar" element={<AuthorsScreen />} />
-            <Route path="cizer-freelancer" element={<FreelancersScreen />} />
+            <Route path="kisiler" element={<PeopleScreen />} />
+            {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}
+            <Route path="yazarlar" element={<Navigate to="/kisiler?rol=yazar" replace />} />
+            <Route path="cevirmenler" element={<Navigate to="/kisiler?rol=cevirmen" replace />} />
+            <Route path="cizer-freelancer" element={<Navigate to="/kisiler?rol=cizer" replace />} />
             <Route path="kitap/:id" element={<BookScreen />} />
             <Route path="editoryal" element={<EditorialHome />} />
             <Route path="redaksiyon" element={<RedactionScreen />} />

@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Yazar giriş süreci kodlandı (dalda, kurulmadı): dinleyici, pano, proje sayfası, kurul günü, Masam, yeni menü
+
+- **Arka uç:** `editorial_intake.py` + `app.py` uçları. CRM 5 dk'da bir baştan okunur (disk önbelleği); adımlar kanıttan hesaplanır, statüden değil — canlı ölçüm: statü geçişlerinin çoğu ara adımları atlıyor, kurulda kabul edilen 117 proje hâlâ "toplantıya hazırlanıyor". Rapor (3) ve yazara bilgi (6) CRM'de izlenmediği için portaldan işaretlenir (`semantic_editorial_intake_marks`, projenin editörü ya da yönetici; `admin_mod.audit` kaydı). Yönetim ekranına iki ayar: `EDITORIAL_INTAKE_SINCE`, `EDITORIAL_INTAKE_LATE_DAYS`.
+- **Gerçek CRM'de doğrulama (test sunucusu, servis açılmadan, köprü ortamı + katalog denetimi):** 2.102 proje 5 sn'de okundu; 1.141 süren (değerlendirme 528, kurul 76, giriş 537), 934 tamamlanan, 27 red/iptal; 84 kurul toplantısı, son 22.09.2026 (15 proje, 14 kabul). `AuditBase` katalogda olmadığı için köprü reddediyor → editör/rapor tarihleri yok, bekleme bir önceki bilinen tarihten sayılıyor. Süren projelerin çoğu 14 günü aşmış görünüyor (2025'ten kalan, CRM'de kapatılmamış projeler) — ekranda "gecikti".
+- **Bulunan hata:** SQL Server çıplak kolonu şemadaki yazımıyla döndürüyor (`new_OlasYazarYazar`); satır anahtarları artık küçük harfle okunuyor. Düzeltmeden önce kişi kartı hiç görünmüyor, tamamlanan 0 çıkıyordu.
+- **Ekranlar (kanvas teması):** `/yazar-giris` (3 evre sütunu, telefonda evre seçici, "Sizi bekleyen işler", geciken/benimkiler süzgeci, tamamlanan ve kapanan katlanır listeler), `/yazar-giris/:id` (9 adım, kaynak: CRM / portal / çıkarım, tek ana düğme, kurul kararları, görüşler yalnız yöneticiye), `/yayin-kurulu` toplantı düzeni (eski liste ekranı silindi), `/editoryal` = Masam, `/kisiler` (yazar/çevirmen/çizer tek ekran; eski adresler yönlenir). Menü üç grup, öğe başına ikon. Aramada proje seçilince proje sayfası açılır.
+- **Doğrulama:** adım kuralları 20/20 (`tests/editorial/intake_steps.py`), `tsc --noEmit` test sunucusunda temiz. Tarayıcıda görülmedi — kurulum main'e alındıktan sonra.
+- Paralel iki iş: web taraması analizi (`docs/analiz/kitap-yazar-web-taramasi-2026-09-24.md`, bu dala alındı), aranabilir seçim kutusu (ayrı dalda sürüyor).
+
 ## 2026-09-24 — Yazar giriş süreci ekran tasarımı (Stitch) ve yeni editoryal menü
 
 - Stitch projesi 13426839861607265553'e, "Editorial Intelligence Canvas" tasarım sistemiyle 6 ekran eklendi: süreç panosu, proje sayfası (9 adım), kurul günü, Masam (editör masası), telefon liste, telefon proje paneli. Stitch'in uydurduğu şeyler ayıklandı: kayıt açma düğmeleri (veri CRM'den gelir), "kurul iki haftada bir" kutusu (PDF: 1–2 ayda bir), 7–9. adımlara yanlış sorumlular, kesik metinler, sahte dosya numaraları.

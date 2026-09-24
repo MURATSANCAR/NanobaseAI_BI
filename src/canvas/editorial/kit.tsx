@@ -49,7 +49,7 @@ export function ModuleFrame({
               {route !== '/editoryal' ? (
                 <Link to="/editoryal" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
                   <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
-                  Editoryal masa
+                  Masam
                 </Link>
               ) : (
                 <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Editoryal Süreç</div>

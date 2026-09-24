@@ -126,6 +126,11 @@ SPEC: list[dict[str, Any]] = [
     # (Timas_MSCRM.dbo); katalog bu adla tutar, köprü _conn_for ile .28 connectorune yönlendirir.
     {"key": "CRM_SCHEMA", "group": "crm", "label": "CRM şeması", "type": "text", "default": "Timas_MSCRM.dbo",
      "help": "veritabanı.şema biçiminde, örn. Timas_MSCRM.dbo. Boşsa CRM okunmaz"},
+    # Yazar giriş süreci (editoryal): hangi projeler izlenir, ne zaman gecikmiş sayılır.
+    {"key": "EDITORIAL_INTAKE_SINCE", "group": "crm", "label": "Yazar giriş süreci başlangıcı", "type": "text", "default": "2025-01-01",
+     "help": "Bu tarihten sonra CRM'de açılan yeni ve yenileme projeleri süreç panosunda izlenir (YYYY-AA-GG)"},
+    {"key": "EDITORIAL_INTAKE_LATE_DAYS", "group": "crm", "label": "Gecikme sınırı (gün)", "type": "int", "default": "14",
+     "help": "Bir adım bu kadar günden uzun beklerse panoda gecikti olarak işaretlenir"},
     # Kişi rehberi
     {"key": "PEOPLE_MAX_IDLE_DAYS", "group": "people", "label": "Son giriş süresi (gün)", "type": "int", "default": "365",
      "help": "Rehbere yalnız bu kadar gün içinde etki alanına giriş yapmış kişiler girer; ortak ve kullanılmayan "
