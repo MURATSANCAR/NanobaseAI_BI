@@ -139,7 +139,9 @@ def expand_sales(text: str, today: date, existing: set[int] | None = None) -> tu
 class Reports:
     def __init__(self, connection_files):
         self._connection_files = connection_files  # çağrılabilir: çalışma zamanı ayarı açılışta hazır değil
-        self._connectors: dict[str, Any] = {}
+        # Bağlantı rapor başına: her rapor kendi iş parçacığında yenilenir ve pyodbc bağlantısı iş parçacıkları arasında
+        # paylaşılamaz (iki rapor aynı Logo bağlantısını kullanınca "Invalid cursor state", 2026-09-24).
+        self._connectors: dict[tuple[str, str], Any] = {}
         self._threads: dict[str, threading.Thread] = {}
         self._guard = threading.Lock()
         self._started: dict[str, float] = {}
@@ -147,16 +149,17 @@ class Reports:
         self.scheduler = None
 
     # ---- bağlantılar
-    def _connector(self, name: str):
-        if name not in self._connectors:
+    def _connector(self, name: str, owner: str = ""):
+        key = (owner, name)
+        if key not in self._connectors:
             from semantic_layer.profiler.connectors import connector_from_file
             path = self._connection_files().get(name)
             if not path or not Path(path).exists():
                 raise RuntimeError(f"{CONNECTION_LABELS.get(name, name)} bağlantısı bu kurulumda tanımlı değil.")
             conn = connector_from_file(path)
             conn.query_timeout = QUERY_TIMEOUT  # rapor sorguları sohbet sorgularından uzun sürebilir
-            self._connectors[name] = conn
-        return self._connectors[name]
+            self._connectors[key] = conn
+        return self._connectors[key]
 
     def database_label(self, name: str) -> str:
         try:
@@ -166,8 +169,8 @@ class Reports:
         label = CONNECTION_LABELS.get(name, name)
         return f"{label} · {db}" if db else label
 
-    def _sales_years_present(self) -> set[int]:
-        conn = self._connector("logo")
+    def _sales_years_present(self, owner: str = "") -> set[int]:
+        conn = self._connector("logo", owner)
         _, rows, _ = conn.execute("SELECT name FROM sys.views WHERE name LIKE 'V[_]SatisRaporu[_]20[0-9][0-9]'", 200)
         return {int(r["name"][-4:]) for r in rows}
 
@@ -180,9 +183,9 @@ class Reports:
             text = text.replace("{satis:yil}", "{satis:%d-%d}" % (y, y))
         if _SALES_PLACEHOLDER.search(text):
             if "sales_years" not in ctx:
-                ctx["sales_years"] = self._sales_years_present()
+                ctx["sales_years"] = self._sales_years_present(report.REPORT_ID)
             text, missing = expand_sales(text, date.today(), ctx["sales_years"])
-        conn = self._connector(connection)
+        conn = self._connector(connection, report.REPORT_ID)
         chunks = [None]
         if params and "stok_kodlari" in params:
             codes = params["stok_kodlari"]
