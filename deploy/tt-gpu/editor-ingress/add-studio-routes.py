@@ -54,7 +54,8 @@ jobs = f'''    location = /editor/studio/v1/studio/jobs {{
     }}
 '''
 block = ("    # EDITOR-STUDYO  (musteri VM -> kitap tasarim studyosu; ayni uc kat koruma)\n" + jobs
-         + loc("jobs/docx", "POST", "jobs/docx", "\n        client_max_body_size 25m;")
+         # regex location'da proxy_pass sabit URI taşıyamaz; yol parçası yakalanıp değişkenle verilir
+         + loc("jobs/(docx)", "POST", "jobs/$1", "\n        client_max_body_size 25m;")
          + loc(f"jobs/({JOB})", "GET", "jobs/$1")
          + loc(f"jobs/({JOB})/restart", "POST", "jobs/$1/restart")
          + loc(f"jobs/({JOB})/pages/([0-9]{{1,4}})/preview", "GET", "jobs/$1/pages/$2/preview$is_args$args")

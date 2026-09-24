@@ -44,6 +44,7 @@ INTERNAL_KEY = os.environ.get("EDITOR_GATEWAY_INTERNAL_KEY", "")
 NETWORK = os.environ.get("EDITOR_NETWORK", "editor-net")
 GIB = 1024**3
 MEM_MARGIN = int(float(os.environ.get("EDITOR_GPU_MARGIN_GIB", "1.5")) * GIB)
+FIT_TOGETHER = 0.92          # models.yaml: aynı karttaki modellerin payları toplamı bunu aşmıyorsa birlikte sığar
 PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score",
                "pooling", "classify", "tokenize", "detokenize",
                "images/generations"}      # book-image (vLLM-Omni); edits go as JSON chat/completions
@@ -393,6 +394,14 @@ async def _keep(a: Alias) -> None:
         await asyncio.to_thread(assert_enabled)
     except RuntimeError:
         return                                # maintenance: nothing is started
+    # Boş bellek tek başına ölçü değil: yeni açılan model (ör. book-image) belleğini ancak yüklenirken
+    # ayırır, o arada kart boş görünür. Ölçüldü 2026-09-24: ana model 7 sn sonra geri kaldırıldı, iki
+    # model aynı karta bindi, resim üretimi bellek aşımıyla düştü. Kartta açık ya da açılmakta olan
+    # modellerin payları + bu modelin payı sığmıyorsa geri gelmez; o model kapanınca gelir.
+    busy = [o for o in ALIASES.values()
+            if o.name != a.name and o.gpu == a.gpu and (o.lock.locked() or _is_running(o))]
+    if sum(o.mem_fraction for o in busy) + a.mem_fraction > FIT_TOGETHER:
+        return
     need = int(a.mem_fraction * gpu_mem(a.gpu)[1]) + MEM_MARGIN
     if gpu_mem(a.gpu)[0] < need:
         return
