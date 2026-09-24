@@ -129,6 +129,8 @@ SPEC: list[dict[str, Any]] = [
     # Yazar giriş süreci (editoryal): hangi projeler izlenir, ne zaman gecikmiş sayılır.
     {"key": "EDITORIAL_INTAKE_SINCE", "group": "crm", "label": "Yazar giriş süreci başlangıcı", "type": "text", "default": "2025-01-01",
      "help": "Bu tarihten sonra CRM'de açılan yeni ve yenileme projeleri süreç panosunda izlenir (YYYY-AA-GG)"},
+    {"key": "WEB_WATCH_ENABLED", "group": "crm", "label": "Basın ve web taraması", "type": "bool", "default": "0",
+     "help": "Açıkken yazarlar ve kitapları haber akışlarında, sözlükte ve Wikidata'da her gece taranır. Müşteri ortamında kapalı (2026-09-24 kararı)"},
     {"key": "EDITORIAL_INTAKE_LATE_DAYS", "group": "crm", "label": "Gecikme sınırı (gün)", "type": "int", "default": "14",
      "help": "Bir adım bu kadar günden uzun beklerse panoda gecikti olarak işaretlenir"},
     # Kişi rehberi

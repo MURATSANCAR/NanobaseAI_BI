@@ -3683,9 +3683,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         web_mod.ensure(engine)
         return engine, tenant
 
+    def _web_enabled() -> bool:
+        return (admin_mod.conf("WEB_WATCH_ENABLED") or "0").strip().lower() in ("1", "true", "evet", "on")
+
     @app.post("/api/v1/editorial/web/run-due")
     def editorial_web_run(request: Request, budget: int = 1800) -> dict[str, Any]:
         _require_caller(request)
+        if not _web_enabled():
+            # Müşteri ortamında kapalı: zamanlayıcı yanlışlıkla kurulsa da tarama yapılmaz.
+            return {"skipped": "Basın ve web taraması bu ortamda kapalı (WEB_WATCH_ENABLED)."}
         r = rt()
         schema = admin_mod.conf("CRM_SCHEMA")
 
@@ -3700,19 +3706,28 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return web_mod.run_due(r.store.engine, r.settings.tenant_id, fetch_all, schema, r.llm_for("web", BATCH),
                                budget_seconds=max(60, min(int(budget), 6 * 3600)))
 
+    @app.get("/api/v1/editorial/web/status")
+    def editorial_web_status(request: Request) -> dict[str, Any]:
+        _greetings(request)
+        return {"enabled": _web_enabled()}
+
     @app.get("/api/v1/editorial/web")
     def editorial_web_overview(request: Request, page: int = 0, label: str = "") -> dict[str, Any]:
         engine, tenant = _web(request)
-        return web_mod.overview(engine, tenant, page, label or None)
+        return dict(web_mod.overview(engine, tenant, page, label or None), enabled=_web_enabled())
 
     @app.get("/api/v1/editorial/web/people/{contact_id}")
     def editorial_web_person(contact_id: str, request: Request) -> dict[str, Any]:
         engine, tenant = _web(request)
+        if not _web_enabled():
+            return {"items": [], "total": 0, "tone": {}, "facts": None, "checkedAt": None}
         return web_mod.person(engine, tenant, contact_id)
 
     @app.get("/api/v1/editorial/web/books/{book_id}")
     def editorial_web_book(book_id: str, request: Request) -> dict[str, Any]:
         engine, tenant = _web(request)
+        if not _web_enabled():
+            return {"items": [], "total": 0, "tone": {}}
         return web_mod.book(engine, tenant, book_id)
 
     @app.get("/api/v1/editorial/contracts/summary")

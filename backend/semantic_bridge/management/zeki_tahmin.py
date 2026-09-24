@@ -225,7 +225,7 @@ def explanation(meta: dict) -> dict:
                 "Stok ve bekleyen sipariş: Baskı Tekrar sekmesindeki CRM değerleri, 5 dakikada bir güncel.",
             ]},
             {"title": "Power BI önerisiyle neden farklı olabilir", "items": [
-                "Stok 0 ve talep varsa ZEKI \"Risk/Acil\" der; talep yoksa (temkinli tahminle bile ayda 1 adetten az) "
+                "Stok 0 ve talep varsa ZEKI \"Risk/Acil\" der; talep yoksa (son 12 ayda ve tahminde ayda 1 adetten az ya da temkinli tahminle bile ayda 1'in altında) "
                 "\"Talep yok\" der, basım gerekmez. Power BI bu ayrımı yapamaz: hız da 0 olunca 0 ÷ 0 tanımsız çıkar ve "
                 "öneri \"Yeterli Stok\" görünür, talebi olan stoksuz kitapta bile.",
                 "İadesi satışından fazla olan kitapta Power BI hızı eksi çıkar ve öneri \"Risk/Acil\" olur; ZEKI talebi "
@@ -240,7 +240,8 @@ def explanation(meta: dict) -> dict:
                 "Tükenme / Temkinli tükenme: bugünkü CRM stokunun tahmine göre bittiği ay (temkinli olan daha erken).",
                 "Baskı ihtiyacı: 12 aylık tahmin + bekleyen sipariş − stok; eksi çıkarsa 0.",
                 "Öneri (ZEKI): Power BI ile aynı eşikler (Risk/Acil … Yeterli Stok), ama ZEKI'nin tükenme süresiyle. "
-                "Ek düzey \"Talep yok\": stok yok ve temkinli tahminle bile ayda 1 adetten az satış bekleniyor.",
+                "Ek düzey \"Talep yok\": stok yok ve satış fiilen durmuş — son 12 ayda da, beklenen tahminde de ayda 1 adetten "
+                "az (ya da temkinli tahminle bile ayda 1'in altında).",
                 "Güven: Yüksek = son 12 ayda en çok satan %20, Orta = sonraki %30, Düşük = az satan yarı. Düşük "
                 "güvenli kitaplarda geçmiş sınamada hiçbir yöntem (Power BI dahil) güvenilir tahmin yapamadı.",
             ]},
@@ -362,14 +363,26 @@ TAB_FORMULAS = [
     ("ZEKI tükenme", "CRM stoku, aylık tahmin birikimini hangi ayda aşarsa o ay (temkinli: p80 yolu)."),
     ("ZEKI baskı ihtiyacı", "Tahmin + bekleyen sipariş − CRM stoku; eksiyse 0."),
     ("ZEKI öneri", "Power BI eşikleri ZEKI tükenme süresiyle: ≤1 ay Risk/Acil · ≤1,5 Kritik · ≤2 Karar Ver · ≤2,5 Takip Et. "
-                   "Stok yok ve temkinli tahmin ufuk boyunca ayda 1 adetin altındaysa Talep yok."),
+                   "Stok yok ve (son 12 tam ay satışı < 12 ve tahmin ufuk boyunca ayda 1'in altında) ya da temkinli tahmin "
+                   "ayda 1'in altındaysa Talep yok."),
     ("Güven", "Son 12 tam ay satışına göre: en çok satan %20 Yüksek, sonraki %30 Orta, kalan Düşük."),
     ("Liste", "Kitabın Power BI'daki sekmesi: Baskı Tekrar ya da Yeni Kitap."),
 ]
 
 
+def empty_text(error: str | None) -> str:
+    """Tahmin yokken sekmenin söylediği: servis bu kurulumda yoksa kalıcı durum, okuma hatasıysa neden, yoksa hazırlanıyor."""
+    if error and "bu kurulumda yok" in error:
+        return ("ZEKI AI tahmini bu kurulumda kapalı: tahmin servisi (TimesFM 3.0) yalnız test ortamında çalışıyor. "
+                "Baskı Tekrar ve Yeni Kitap sekmeleri bundan etkilenmez.")
+    if error:
+        return f"ZEKI AI tahmini şu an kurulamadı. {error}"
+    return ("ZEKI AI tahmini hazırlanıyor. Tahmin günde bir kez kurulur; Logo'dan 2015'ten bu yana satışı okuduğu için "
+            "yaklaşık yarım saat sürer.")
+
+
 def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], forecast: dict | None, today: date,
-        sql: list[dict]) -> dict:
+        sql: list[dict], error: str | None = None) -> dict:
     """Sekmenin kolonları, satırları ve açıklaması. Power BI sekmelerindeki satırlar değiştirilmez, yalnız okunur."""
     if not forecast:  # tahmin yokken tahminsiz satır göstermek yanıltır; sekme "hazırlanıyor" der
         tekrar, yeni = [], []
@@ -406,7 +419,11 @@ def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], foreca
             need = stok if stok is not None else 0.0
             s50, s80 = _deplete(p50, stok), _deplete(p80, stok)
             t50 = _real_months(s50, today)
-            no_demand = (stok is None or stok <= 0) and sum(p80) < len(p80)  # temkinli: ayda 1 adetten az
+            # Stok yok ve talep yok: temkinli tahmin bile ayda 1'in altında, ya da hem son 12 tam ayın gerçekleşen satışı
+            # hem beklenen tahmin ayda 1'in altında. Satışı durmuş kitapta p80 belirsizlikten şişer; yalnız ona bakmak
+            # "Talep yok"u hiç tetiklemiyordu (canlıda stok 0, 12 ay satış 0, p50 0 olan 111 kitap Risk/Acil'di).
+            no_demand = (stok is None or stok <= 0) and (
+                sum(p80) < len(p80) or ((s12 or 0) < 12 and sum(p50) < len(p50)))
             row.update({
                 "guven": "Yüksek" if (s12 or 0) >= cut_a and (s12 or 0) > 0 else "Orta" if (s12 or 0) >= cut_b and (s12 or 0) > 0 else "Düşük",
                 "ai_tahmin": round(sum(p50)), "ai_temkinli": round(sum(p80)), "ai_3ay": round(sum(p50[:3])),
@@ -437,6 +454,5 @@ def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], foreca
         "columns": cols,
         "rows": rows,
         "explain": {**explanation(meta), "sql": sql, "formulas": [{"name": n, "text": t} for n, t in TAB_FORMULAS]},
-        "emptyText": None if forecast else ("ZEKI AI tahmini hazırlanıyor. Tahmin günde bir kez kurulur; ilk kurulum "
-                                            "Logo'dan 2015'ten bu yana satışı okuduğu için birkaç dakika sürer."),
+        "emptyText": None if forecast else empty_text(error),
     }

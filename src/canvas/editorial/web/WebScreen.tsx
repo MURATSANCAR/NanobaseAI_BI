@@ -94,7 +94,8 @@ export default function WebScreen() {
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
-      {d && !d.lastRun && <Note tone="info">İlk tarama henüz yapılmadı.</Note>}
+      {d && !d.enabled && <Note tone="info">Basın ve web taraması bu ortamda kapalı.</Note>}
+      {d && d.enabled && !d.lastRun && <Note tone="info">İlk tarama henüz yapılmadı.</Note>}
 
       {d && (
         <KpiRow>

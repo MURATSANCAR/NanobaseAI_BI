@@ -16,6 +16,8 @@ export type StitchRailItem = {
   group?: string;
   /** Öğenin kendi ikonu; yoksa sıraya göre ortak ikon kullanılır. */
   icon?: ReactNode;
+  /** Ortamda açık olması gereken özellik; kapalıysa öğe menüde hiç görünmez (ör. müşteri ortamında basın ve web). */
+  feature?: 'webWatch';
 };
 
 export type BoardAction = {

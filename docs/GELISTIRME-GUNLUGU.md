@@ -14,6 +14,27 @@
 - **Sunucuda (tt-gpu):** ağırlıklar `resolve/790c9263` adresinden aria2 (geçici alpine kabı, 16 bağlantı) ile indirildi, 33 GB, `verify_models.py` OK; MANIFEST'e eklendi (tek dosya bağlaması için yerinde yazıldı). İmaj `vllm/vllm-omni:qwen-image21` digest ile çekildi — 2.1 desteği (PR #7759) sürüme girmedi, imajda giriş komutu yok.
 - **Kod (dal):** `models.yaml` `book-image` (GPU 1, 0.50, `--omni`); gateway takma ad başına `entrypoint` alanı (spec hash'e yalnız doluysa girer, diğer kapların hash'i değişmez) ve `images/generations` geçişi. Referanslı düzenleme JSON `chat/completions` ile gider (proxy yalnız JSON).
 - **Sınama (geçici kap, gateway'in kuracağı komutun aynısı):** açılış 40 sn, boşta 33,3 GB, zirve 46,2 GB; okunmuş 4 kitaptan (Dünyanın En Korkak Hayvanı, Gölge Tilki, Çiçekçi Kadın, İbn Sînâ) 8 görsel, 27–30 sn/görsel. Türkçe başlık 2/4 kapakta hatalı: «Sarıöglu», «ÎBN SÎNĂ» → kapak yazısı modelden değil ayrı tipografi katmanından. Sahnelerde tutarlılık açığı: Çiçekçi Kadın'da Koreli karakterler Batılı çizildi, kim kime saksı uzatıyor ters.
+## 2026-09-25 (00:05) — Müşteri VM'i 8733005c; ZEKI sekmesi boşken nedenini söylüyor
+
+- VM'e `git archive main` (8733005c) kuruldu: `._*` 0, bridge/jobs imajı 23:45, zeki_tahmin/__init__/baski_oneri/financial_audit md5 = main. Kabul (geçici timasai oturumu, silindi): Baskı Tekrar 5.053, Yeni Kitap 331 (test sunucusuyla aynı), Finansal Denetim `/runs` `{items,total}`, gizli tahmin raporu menüde yok.
+- **Kusur:** VM'de tahmin servisi yok; tahmin raporu bunu doğru kaydediyordu ama ZEKI sekmesi "birkaç dakika sürer, hazırlanıyor" diyordu — hiç gelmeyecek bir şeyi bekletiyordu. Hata metni de her raporda "Beş dakikada bir yeniden denenir" diyordu, tahmin raporu 30 dk'da bir dener.
+- Düzeltme: rapor kurulurken diğer raporların son hatası `inputs["_errors"]` ile geçer; `zeki_tahmin.empty_text`: servis yoksa "bu kurulumda kapalı, Power BI sekmeleri etkilenmez", okuma hatasıysa nedeni, yoksa "hazırlanıyor (~yarım saat)". `retry_text(report)` gerçek aralığı yazar. Testler: zeki_tahmin_tab 33/33, refresh_schedule 13/13.
+
+## 2026-09-24 (23:55) — Basın ve web kapalı ortamda menüde de görünmez
+
+- Kullanıcı: "menülerde de kapattın mı, müşteride kapalı olacak." `WEB_WATCH_ENABLED` kapalıyken: rayda "Basın ve web" satırı çizilmez (`StitchRailItem.feature = 'webWatch'`, `Shell` durumu `/api/v1/editorial/web/status`'tan okur; durum gelene kadar da gizli), Kişiler detayı ve kitap sayfasındaki "Basında ve web'de" bölümü boş döner ve çizilmez. `/basin-web` adresi doğrudan açılırsa "bu ortamda kapalı" der.
+
+## 2026-09-24 (23:15) — Basın ve web müşteri ortamına kurulmaz; `WEB_WATCH_ENABLED` anahtarı
+
+- Kullanıcı kararı: sosyal medya / web taraması şimdilik müşteri VM'ine kurulmuyor, yalnız test sunucusunda. Yönetim ayarı `WEB_WATCH_ENABLED` (varsayılan kapalı): kapalı ortamda `run-due` tarama yapmaz, `/basin-web` "bu ortamda kapalı" der. VM kurulum betiği zamanlayıcıları zaten taşımıyor; `timas-web-watch.timer` VM'e kurulmaz (AGENTS.md'de). Test sunucusunda ayar veritabanından açıldı (yeniden başlatma gerekmedi).
+- Aynı akşam başka bir oturum köprüyü iki kez yeniden başlattı (22:51, 23:04); ekranda 502 ve süren tarama turu kesildi. Sunucudaki `app.py`'de main'de olmayan "kitap tasarım stüdyosu" uçları var — o oturumun işi; bu değişiklik `app.py`'ye sunucuda yerinde yamalandı, dosya üstüne yazılmadı.
+
+## 2026-09-24 (23:45) — ZEKI AI Tahminleme canlıda doldu; "Talep yok" kuralı satışı durmuş kitabı yakalıyor
+
+- Test sunucusunda VPN açıldı, tahmin raporu 23:06–23:26 arası başarıyla koştu (Logo yıl yıl + TimesFM 3.0); ana rapor 23:32'de sekmeyi kurdu: Baskı Tekrar 5.053, Yeni Kitap 331, ZEKI AI Tahminleme 5.384 kitap / 33 kolon; açıklama 3 bölüm, 4 SQL, 6 formül; gizli rapor menüde görünmüyor. Doğrulama portal API'si üzerinden geçici timasai oturumuyla (oturum silindi).
+- Köprü bu arada iki kez başka bir oturum tarafından yeniden başlatıldı (23:03, 23:26; `/tmp/stf`); ilki koşan iki okumayı öldürdü, ikincisi tahmin yazıldıktan 2 sn sonra geldi.
+- **Hata:** stok 0, son 12 ay satışı 0, beklenen tahmin (p50) 0 olan 111 kitap ZEKI'de "Risk/Acil"di (ör. Sherlock Holmes 2). Kural yalnız temkinli tahmine (p80) bakıyordu; satışı durmuş kitapta p80 belirsizlikten şişer (medyan 37). Yalnız p50'ye bakmak da yanlış: geçen yıl 136 satan stoksuz kitabı "Talep yok"a atıyordu.
+- **Yeni kural:** stok yok VE (temkinli tahmin ayda 1'in altında YA DA hem son 12 tam ay satışı < 12 hem beklenen tahmin ayda 1'in altında). Canlı veride ölçüldü: "Talep yok" 685 → 926 (241 kitap Risk/Acil'den geçer, eski kuralın yakaladığı hiçbir kitap düşmez); stok 0 + satış 0 olup Risk/Acil kalan 15 kitapta model talep bekliyor. Talep yok dışında Power BI ile örtüşme %82,5. Test `zeki_tahmin_tab.py` 30/30 (durmuş ve satan stoksuz kitap vakaları eklendi).
 
 ## 2026-09-24 (20:55) — 55 kanal test sunucusunda; VPN kapalı, CRM okunamıyor; yazar listesi artık saklanıyor
 

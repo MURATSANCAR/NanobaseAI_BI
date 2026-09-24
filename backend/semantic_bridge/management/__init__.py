@@ -50,6 +50,15 @@ def interval_of(report) -> int:
     return int(getattr(report, "REFRESH_SECONDS", None) or REFRESH_SECONDS)
 
 
+INPUT_ERRORS = "_errors"  # build(inputs=...) içinde diğer raporların son hatası
+
+
+def retry_text(report) -> str:
+    """Hata sonrası yeniden denemenin gerçek aralığı (ör. 5 dk'lık rapor ile gecelik tahmin farklı)."""
+    minutes = max(1, round(min(interval_of(report), FAIL_RETRY_SECONDS) / 60))
+    return "Beş dakikada bir yeniden denenir." if minutes == 5 else f"{minutes} dakikada bir yeniden denenir."
+
+
 def _next_due(snap: dict, interval: int | None = None) -> float | None:
     """Bir sonraki okumanın zamanı; hiç okunmadıysa None (hemen okunur)."""
     ended = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
@@ -252,7 +261,10 @@ class Reports:
                 runner = lambda sid, params: self._run(report, sid, params, ctx)  # noqa: E731
                 if "inputs" in inspect.signature(report.build).parameters:
                     # Başka raporların son başarılı verisi (ör. Baskı Öneri ↔ ZEKI AI tahmini birbirini okur).
-                    inputs = {rid: _load(self.path(rid)).get("data") for rid in REPORTS if rid != report_id}
+                    others = {rid: _load(self.path(rid)) for rid in REPORTS if rid != report_id}
+                    inputs = {rid: snap.get("data") for rid, snap in others.items()}
+                    # Verisi olmayan raporun son hatası (ör. tahmin servisi bu kurulumda yok): ekran nedenini söyler.
+                    inputs[INPUT_ERRORS] = {rid: snap.get("error") for rid, snap in others.items() if snap.get("error")}
                     data = report.build(runner, inputs=inputs)
                 else:
                     data = report.build(runner)
@@ -260,7 +272,7 @@ class Reports:
                              "durationMs": int((time.time() - started) * 1000), "error": None})
             except Exception as exc:  # noqa: BLE001 — son başarılı sonuç korunur
                 log.warning("management report %s refresh failed: %s", report_id, exc)
-                _save(path, {**previous, "error": f"Veriler yenilenemedi: {str(exc)[:300]} Beş dakikada bir yeniden denenir.",
+                _save(path, {**previous, "error": f"Veriler yenilenemedi: {str(exc)[:300]} {retry_text(report)}",
                              "startedAt": started, "failedAt": time.time()})
 
     def start_refresh(self, report_id: str) -> bool:
