@@ -210,3 +210,23 @@ def test_preflight_catches_lost_words(tmp_path):
     ms.chapters[0].blocks.append(M.Block("para", "dizgide olmayan cümle burada."))
     rep = preflight.check(pdf, None, ms, sp, [], [], [])
     assert {c["name"]: c["status"] for c in rep["checks"]}["Metin eksiksiz"] == "FAIL"
+
+
+@typeset_only
+@pytest.mark.parametrize("ill", ["YOK", "BOLUM_BASI"])
+def test_layout_by_illustration_type(tmp_path, ill):
+    """Resimsiz kitapta resim sayfası yok, dolgu sonda boş; bölüm başı resimli kitapta her bölümün önünde
+    tam sayfa resim. Basılmayacak sayfaya resim planlanmaz (art_pages)."""
+    from editor.production.typeset import Typesetter
+    ms = _ms(blocks=12, chapters=3)
+    sp = S.build(_profile(13, 16, "GENCLIK_ROMANI", ill))
+    fr = {"kunye": front.kunye(ms, {}), "bios": []}
+    pm = Typesetter(tmp_path / "d", FONTS).fit(ms, sp, fr, "#264653")
+    assert len(pm.pages) % sp.signature == 0 and pm.layout.art_ratio == 0 and pm.layout.pad_blank
+    full = [p for p in pm.pages if p.kind == "full"]
+    if ill == "YOK":
+        assert not full and not pm.art_pages()
+    else:
+        assert {p.key for p in full} >= {"acilis", "bolum-1", "bolum-2"}
+        assert pm.art_pages() == {p.no for p in full}
+    assert not any(p.kind == "full" and (p.key or "").startswith("son-") for p in pm.pages)

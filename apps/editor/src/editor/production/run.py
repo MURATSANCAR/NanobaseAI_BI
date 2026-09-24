@@ -174,7 +174,9 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
             band, full = studio.band_mm(spec, pm), studio.full_mm(spec)
             have = set(studio.studio_state(d)["pages"])
             failed: dict[str, str] = {}
-            for i, sc in enumerate(plan.scenes, 1):
+            painted = pm.art_pages()
+            todo = [sc for sc in plan.scenes if sc.page in painted]      # sayfada basılmayacak resim çizilmez
+            for i, sc in enumerate(todo, 1):
                 if str(sc.page) not in have:
                     try:
                         rd = await painter.page(sc, *(full if sc.kind == "full" else band))
@@ -182,7 +184,7 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
                                            by=by, dpi=rd.dpi)
                     except Exception as e:  # noqa: BLE001 - tek sayfa hattı durdurmaz
                         failed[str(sc.page)] = f"{type(e).__name__}: {e}"[:300]
-                st.step("sayfa_resimleri")["progress"] = [i, len(plan.scenes)]
+                st.step("sayfa_resimleri")["progress"] = [i, len(todo)]
                 st.step("sayfa_resimleri")["failed"] = failed
                 st.flush()
             modes: dict[str, int] = {}
@@ -190,7 +192,7 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
                 if p["versions"]:
                     modes[p["versions"][0]["mode"]] = modes.get(p["versions"][0]["mode"], 0) + 1
             fell = modes.get("edit_failed→generate", 0)
-            parts = [f"{len(plan.scenes) - len(failed)}/{len(plan.scenes)} resim"]
+            parts = [f"{len(todo) - len(failed)}/{len(todo)} resim"]
             if failed:
                 parts.append(f"çizilemeyen sayfa: {', '.join(sorted(failed, key=int))} (stüdyoda yeniden üretin)")
             parts.append(f"{fell} resim karakter referansı olmadan çizildi" if fell else

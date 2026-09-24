@@ -187,7 +187,10 @@ async def scenes(ms: Manuscript, p: Profile, chars: list[Character], pm: PageMap
     flow = [pg for pg in pm.pages if pg.kind == "flow" and pg.text]
     out: list[Scene] = []
     prev_setting, prev_outfits = "", {}
+    painted = pm.art_pages()
     for pg in pm.pages:
+        if pg.no not in painted:
+            continue
         if pg.kind == "flow" and pg.text:
             i = flow.index(pg)
             before, after = (flow[i - 1].text if i else ""), (flow[i + 1].text if i + 1 < len(flow) else "")

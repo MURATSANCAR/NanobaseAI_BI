@@ -32,8 +32,10 @@ class Layout:
     art_ratio: float
     body_size: float
     accent: str
-    pads: dict = field(default_factory=dict)          # {bölüm sırası|"end": tam sayfa resim adedi}
+    pads: dict = field(default_factory=dict)          # {bölüm sırası|"end": dolgu sayfası adedi}
     opening_full: bool = True
+    chapter_art: bool = False     # her bölümün önünde tam sayfa resim (bölüm başı resimli kitap)
+    pad_blank: bool = False       # dolgu sayfaları boş (resimsiz/bölüm başı resimli kitapta sonda)
 
 
 @dataclass
@@ -50,6 +52,11 @@ class Page:
 class PageMap:
     pages: list[Page]
     layout: Layout
+
+    def art_pages(self) -> set[int]:
+        """Resmin gerçekten basıldığı sayfalar: tam sayfa resimler ve (bant varsa) metin sayfaları."""
+        band = self.layout.art_ratio > 0
+        return {p.no for p in self.pages if p.kind == "full" or (band and p.kind == "flow" and p.text)}
 
     def to_json(self) -> dict:
         return {"layout": asdict(self.layout), "pages": [asdict(p) for p in self.pages]}
@@ -128,16 +135,21 @@ class Typesetter:
         lo, hi = spec.art_ratio
         ratios = [round(hi - i * 0.04, 2) for i in range(int(round((hi - lo) / 0.04)) + 1)] if hi else [0.0]
         sizes = [spec.body_size, spec.body_size - 1]
+        # Resim türüne göre: her sayfada → üst bant + dolgu bölüm arasına tam sayfa resim; bölüm başında →
+        # açılış ve her bölümün önünde tam sayfa resim, dolgu sonda boş; resimsiz → dolgu sonda boş.
+        chapter_art = spec.illustration == "BOLUM_BASI"
+        opening = spec.illustration != "YOK"
         tried = []
         for size in sizes:
             for r in ratios:
-                lay = Layout(art_ratio=r, body_size=size, accent=accent, opening_full=bool(hi))
+                lay = Layout(art_ratio=r, body_size=size, accent=accent, opening_full=opening,
+                             chapter_art=chapter_art, pad_blank=not hi)
                 marks = self.marks(book_data(ms, spec, lay, front, {}))
                 pages = max(m["page"] for m in marks)
                 target = math.ceil(pages / spec.signature) * spec.signature
                 tried.append((target, -r, -size, target - pages, lay))
         target, _, _, pad, lay = min(tried, key=lambda t: t[:4])
-        lay.pads = self._spread_pads(ms, pad) if pad else {}
+        lay.pads = ({"end": pad} if lay.pad_blank else self._spread_pads(ms, pad)) if pad else {}
         data = book_data(ms, spec, lay, front, {})
         pm = self.page_map(ms, data, lay)
         if len(pm.pages) % spec.signature:

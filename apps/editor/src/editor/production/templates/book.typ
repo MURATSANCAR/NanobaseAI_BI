@@ -82,6 +82,7 @@
 // ---------------------------------------------------------------- öykü
 #for (ci, ch) in d.chapters.enumerate() {
   for k in range(L.pads.at(str(ci), default: 0)) { full-art("oncesi-" + str(ci) + "-" + str(k)) }
+  if L.at("chapter_art", default: false) and ci > 0 { full-art("bolum-" + str(ci)) }
   pagebreak(weak: true)
   if ch.title != none {
     block(below: 1.1em, sticky: true)[
@@ -96,4 +97,6 @@
     par[#mark((kind: "s", id: blk.id))#body#mark((kind: "e", id: blk.id))]
   }
 }
-#for k in range(L.pads.at("end", default: 0)) { full-art("son-" + str(k)) }
+#for k in range(L.pads.at("end", default: 0)) {
+  if L.at("pad_blank", default: false) { quiet[#mark((kind: "front", key: "bos-son"))] } else { full-art("son-" + str(k)) }
+}
