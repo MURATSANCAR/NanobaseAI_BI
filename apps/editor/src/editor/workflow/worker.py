@@ -12,10 +12,12 @@ from google.protobuf.duration_pb2 import Duration
 from temporalio.api.workflowservice.v1 import DescribeNamespaceRequest, RegisterNamespaceRequest
 from temporalio import activity
 from temporalio.client import Client
+from temporalio.exceptions import ApplicationError
 from temporalio.worker import ActivityInboundInterceptor, ExecuteActivityInput, Interceptor, Worker
 
 from .. import db, foundation
 from ..config import settings
+from ..llm import ContextOverflow
 from .activities import ALL
 from .workflows import BookFullAnalysis
 
@@ -51,9 +53,31 @@ class HeartbeatActivityInterceptor(ActivityInboundInterceptor):
                 await task
 
 
+class DeterministicFailureInterceptor(ActivityInboundInterceptor):
+    """A request that cannot fit the model's context fails identically on every attempt:
+    it ends the activity at once instead of spending the retry policy (4 attempts x 3 calls,
+    measured 2026-09-23). Lives here, not in the workflow's RetryPolicy, so running
+    workflows replay unchanged."""
+
+    async def execute_activity(self, input: ExecuteActivityInput):
+        try:
+            return await self.next.execute_activity(input)
+        except Exception as e:
+            cause: BaseException | None = e
+            seen: set[int] = set()
+            while cause is not None and not isinstance(cause, ContextOverflow) and id(cause) not in seen:
+                seen.add(id(cause))
+                cause = cause.__cause__ or cause.__context__
+            if cause is not None and not isinstance(cause, ContextOverflow):
+                cause = None
+            if cause is None:
+                raise
+            raise ApplicationError(str(cause)[:2000], type="ContextOverflow", non_retryable=True) from e
+
+
 class HeartbeatInterceptor(Interceptor):
     def intercept_activity(self, next: ActivityInboundInterceptor) -> ActivityInboundInterceptor:
-        return HeartbeatActivityInterceptor(next)
+        return HeartbeatActivityInterceptor(DeterministicFailureInterceptor(next))
 
 
 async def ensure_namespace(address: str, namespace: str) -> None:

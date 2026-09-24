@@ -21,7 +21,7 @@ import httpx
 from . import db
 from .config import settings
 
-MAX_RETRY_TOKENS = 32768     # fits every chat model's context next to its prompt
+MAX_RETRY_TOKENS = 32768     # upper bound; retry_budget also keeps it inside the context
 _client: httpx.AsyncClient | None = None
 _aliases: dict[str, dict] | None = None
 
@@ -103,6 +103,35 @@ class ModelError(RuntimeError):
     pass
 
 
+class ContextOverflow(ModelError):
+    """The request does not fit the model's context. The same request fails the same way
+    every time, so it is not retried here, and the worker turns it into a non-retryable
+    activity failure (workflow.worker) instead of four more identical attempts."""
+
+
+def _is_context_overflow(status: int, text: str) -> bool:
+    return status == 400 and "context length" in text.lower()
+
+
+def context_length(meta: dict) -> int | None:
+    """The served context of an alias, from its vLLM arguments (--max-model-len)."""
+    for a in meta.get("args") or []:
+        if str(a).startswith("--max-model-len="):
+            return int(str(a).split("=", 1)[1])
+    return None
+
+
+def retry_budget(max_tokens: int, prompt_tokens: int | None, context: int | None) -> int:
+    """Output budget for a retry after finish_reason=length: twice the room, bounded by
+    MAX_RETRY_TOKENS and by what the context leaves next to this prompt. Doubling without
+    the prompt in view turned a 110k-token prompt that had fit into a context overflow
+    (12000 -> 24000 output tokens, measured 2026-09-23). Never below the current budget."""
+    room = MAX_RETRY_TOKENS
+    if prompt_tokens and context:
+        room = min(room, context - prompt_tokens - 64)
+    return max(max_tokens, min(max_tokens * 2, room))
+
+
 class Llm:
     def __init__(self, generation_id: str | None = None):
         self.generation_id = generation_id
@@ -142,12 +171,15 @@ class Llm:
         last_err = None
         for attempt in range(retries + 1):
             t0 = time.time()
-            resp = None
+            resp = usage = None
             try:
                 r = await _post("/v1/chat/completions", req)
+                if _is_context_overflow(r.status_code, r.text):
+                    raise ContextOverflow(f"{r.status_code} {r.text[:1500]}")
                 if r.status_code >= 400:
                     raise ModelError(f"{r.status_code} {r.text[:1500]}")
                 data = r.json()
+                usage = data.get("usage")
                 msg = data["choices"][0]["message"]
                 text = msg.get("content") or ""
                 finish = data["choices"][0].get("finish_reason")
@@ -162,8 +194,10 @@ class Llm:
                 return out, cid
             except (ModelError, json.JSONDecodeError, httpx.HTTPError, KeyError) as e:
                 last_err = e
-                await self._record(alias, prompt, pages or [], req, resp, None, t0, False,
+                await self._record(alias, prompt, pages or [], req, resp, usage, t0, False,
                                    str(e)[:2000])
+                if isinstance(e, ContextOverflow):
+                    raise
                 if isinstance(e, ModelError) and "gpu_busy" in str(e):
                     raise
                 # A deterministic retry repeats a degenerate loop token for token:
@@ -177,7 +211,9 @@ class Llm:
                     # doubling the budget only makes the next stall run twice as long (measured
                     # 34→76s on modality_referee/merge_events), so it keeps the same budget and
                     # relies on the temperature/repetition push below to break out.
-                    req["max_tokens"] = min(req["max_tokens"] * 2, MAX_RETRY_TOKENS)
+                    req["max_tokens"] = retry_budget(
+                        req["max_tokens"], (usage or {}).get("prompt_tokens"),
+                        context_length((await aliases()).get(alias, {})))
                 if "finish_reason=length" in str(e) and (req.get("chat_template_kwargs") or {}).get("enable_thinking"):
                     # thinking used the whole budget and left no answer: answer directly
                     req["chat_template_kwargs"] = {"enable_thinking": False}
@@ -204,6 +240,8 @@ class Llm:
             resp = None
             try:
                 r = await _post("/v1/chat/completions", req)
+                if _is_context_overflow(r.status_code, r.text):
+                    raise ContextOverflow(f"{r.status_code} {r.text[:1500]}")
                 if r.status_code >= 400:
                     raise ModelError(f"{r.status_code} {r.text[:1500]}")
                 data = r.json()
@@ -223,6 +261,8 @@ class Llm:
                 last_err = e
                 await self._record(alias, prompt, pages or [], req, resp, None, t0, False,
                                    str(e)[:2000])
+                if isinstance(e, ContextOverflow):
+                    raise
                 if isinstance(e, ModelError) and "gpu_busy" in str(e):
                     raise
                 await asyncio.sleep(2 * (attempt + 1))

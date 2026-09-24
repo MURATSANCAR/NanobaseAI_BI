@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Check every downloaded model file against Hugging Face (size + LFS sha256)
-at the revision pinned in /data/editor/models/MANIFEST.json.
+at the revision pinned in /data/editor/models/MANIFEST.json, and that every model the
+gateway serves (models.yaml) is pinned there: an unpinned model is recorded with
+revision 'unknown' and fails every book's regression (dots.mocr, 2026-09-22).
 
   python3 verify_models.py [Qwen3-VL-8B-Instruct ...]   # default: all in the manifest
 """
@@ -48,10 +50,21 @@ def check(repo: str, rev: str) -> list[str]:
     return problems
 
 
+def unpinned(manifest: dict) -> list[str]:
+    import yaml
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models.yaml")
+    aliases = yaml.safe_load(open(path))["aliases"]
+    return sorted(f"{name} ({a['real_model']})" for name, a in aliases.items()
+                  if a["real_model"] not in manifest)
+
+
 def main() -> int:
     manifest = json.load(open(os.path.join(ROOT, "MANIFEST.json")))
     only = set(sys.argv[1:])
     bad = 0
+    for missing in unpinned(manifest):
+        print(f"BAD {missing}: MANIFEST.json'da revizyon yok")
+        bad += 1
     for repo, m in manifest.items():
         if only and repo.split("/")[1] not in only:
             continue

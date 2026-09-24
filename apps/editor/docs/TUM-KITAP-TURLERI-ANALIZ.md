@@ -52,8 +52,10 @@ Koddaki varsayımlar (tam envanter ajan raporunda, özet):
 - Künye/ön sayfa kişileri karakter oluyor (yalnız kurgu dışında değil, romanda da künye
   kadrosu çıkıyor — Aşk Terapi'de kapak tasarımcısı).
 - `setting` denetimi resimsiz sayfaya da derin görsel model çağırıyor (`alias<>'deferred-to-deep'`
-  koşulu `no-illustration` sayfaları da alıyor). Aile ile Bağlanma: 164 resimsiz sayfa,
-  derin görsel model 187 çağrı / 693 dk.
+  koşulu `no-illustration` sayfaları da alıyor). Ölçüm: Böcekleri 97 çağrı / 5,9 dk,
+  Beni de Kalbinde Götür 40 çağrı / 4,9 dk — hepsi resimsiz sayfada. (Düzeltme: ilk sürüm
+  Aile ile Bağlanma'nın 693 dk'sını buna bağlamıştı; o süre kitabın 76 resimli sayfasının
+  olağan derin taramasıdır — sorgu `pass='DEEP'` yerine küçük harfle yazılmıştı.)
 
 Resimsiz sayfa ayrımı zaten ucuz ve doğru çalışıyor (`nontext_ink < 0.02` → model çağrısı yok);
 taranmış (metin katmansız) PDF'te her sayfa resimli sayılıyor.

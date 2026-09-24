@@ -409,11 +409,14 @@ def run_regression_suite(generation_id: str) -> dict:
             " p.page_no=cm.page_no WHERE cm.generation_id=%s AND cm.via<>'TEXT' AND"
             " p.nontext_ink IS NOT NULL AND p.nontext_ink < %s",
             gen["book_version_id"], generation_id, settings().min_illustration_ink) == 0),
+        # Only the editor's page role excludes a page (knowledge._persist, source.project_page);
+        # the extractor's NON_STORY is a suggestion that waits in the review queue.
         _check("hikâye dışı sayfadan olay/duygu çıkarılmadı", one(
             "SELECT (SELECT count(*) FROM event e JOIN page_role r ON r.generation_id=e.generation_id AND"
-            " r.page_no BETWEEN e.page_from AND e.page_to AND r.role<>'STORY' WHERE e.generation_id=%s)"
+            " r.page_no BETWEEN e.page_from AND e.page_to AND r.role<>'STORY' AND r.source='editor'"
+            " WHERE e.generation_id=%s)"
             " + (SELECT count(*) FROM emotion m JOIN page_role r ON r.generation_id=m.generation_id AND"
-            " r.page_no=m.page_no AND r.role<>'STORY' WHERE m.generation_id=%s) AS n",
+            " r.page_no=m.page_no AND r.role<>'STORY' AND r.source='editor' WHERE m.generation_id=%s) AS n",
             generation_id, generation_id) == 0),
         _check("ön sayfa figürü yalnız referans eşleşmesiyle kesin kimlik alır", one(
             "SELECT count(*) n FROM character_mention cm JOIN page_role r ON r.generation_id=cm.generation_id"

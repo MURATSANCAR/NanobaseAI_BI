@@ -255,9 +255,10 @@ async def run(generation_id: str):
     llm = Llm(generation_id)
     pages = await asyncio.to_thread(source.read, generation_id)
     facts, rstats = await read_facts(llm, C.story_pages(pages))
+    # a page with no picture has only its 'no-illustration' screen row: nothing to look at
     illustrated = {r["page_no"] for r in await asyncio.to_thread(
-        db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s AND alias<>'deferred-to-deep'",
-        generation_id)}
+        db.all_rows, "SELECT DISTINCT page_no FROM page_scan WHERE generation_id=%s"
+        " AND alias NOT IN ('deferred-to-deep','no-illustration')", generation_id)}
     gen = await asyncio.to_thread(db.one, "SELECT book_version_id FROM generation WHERE id=%s", generation_id)
     bv = str(gen["book_version_id"])
 
