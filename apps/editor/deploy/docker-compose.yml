@@ -118,6 +118,20 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
+  # Kitap Tasarım Stüdyosu (editor.production.api): basıma hazırlık işleri ve sayfa düzenleme.
+  # Depoya yazar (production/), görsel modeli gateway'deki book-image takma adıyla çağırır.
+  studio:
+    <<: *py
+    env_file:
+      - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
+      - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
+    container_name: editor-studio
+    command: ["uvicorn", "editor.production.api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    ports:
+      - "127.0.0.1:19142:8000"
+    depends_on:
+      postgres: {condition: service_healthy}
+
   gateway:
     <<: *py
     profiles: [analysis]

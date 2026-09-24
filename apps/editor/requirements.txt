@@ -20,3 +20,7 @@ spylls
 pillow>=10
 # kapak yazısı katmanı (editor.cover_text): fontta harf var mı
 fonttools
+# Kitap Tasarım Stüdyosu (editor.production): dizgi, Word girişi, dosya yükleme
+typst==0.15.0
+python-docx
+python-multipart

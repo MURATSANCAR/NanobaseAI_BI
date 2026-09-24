@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=1440, initial-scale=1.0">
+  <title>Kitap Tasarım Stüdyosu — Sayfa stüdyosu</title>
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Phosphor Icons & Lucide Icons CDN -->
+  <script src="https://unpkg.com/@phosphor-icons/web"></script>
+  
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            ink: '#1b1f2a',
+            secondary: '#6b7280',
+            canvas: '#f7fafc',
+            coral: '#ff6b4a',
+            violet: '#7c5cff',
+          },
+          boxShadow: {
+            glass: '0 20px 40px -15px rgba(27, 31, 42, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.8) inset',
+            'glass-elevated': '0 25px 50px -12px rgba(124, 92, 255, 0.12), 0 0 0 1px rgba(255, 255, 255, 0.9) inset',
+            stage: '0 30px 60px -20px rgba(27, 31, 42, 0.12), 0 0 1px 1px rgba(0,0,0,0.04)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* Dot Grid Background */
+    .bg-dot-grid {
+      background-color: #f7fafc;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(255, 107, 74, 0.08) 0%, transparent 45%),
+        radial-gradient(circle at 85% 20%, rgba(124, 92, 255, 0.09) 0%, transparent 50%),
+        radial-gradient(circle at 50% 80%, rgba(255, 107, 74, 0.06) 0%, transparent 40%),
+        radial-gradient(circle at 75% 75%, rgba(124, 92, 255, 0.07) 0%, transparent 45%),
+        radial-gradient(#d1d5db 1px, transparent 1px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 100% 100%, 20px 20px;
+    }
+
+    /* Frosted Glass Class */
+    .frosted-panel {
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+      border-radius: 24px;
+    }
+
+    .frosted-subcard {
+      background: rgba(255, 255, 255, 0.6);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.75);
+    }
+
+    /* Gradient buttons and text */
+    .btn-gradient {
+      background: linear-gradient(135deg, #ff6b4a 0%, #7c5cff 100%);
+      color: #ffffff;
+      transition: all 0.2s ease;
+    }
+    .btn-gradient:hover:not(:disabled) {
+      box-shadow: 0 8px 24px -4px rgba(124, 92, 255, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .text-gradient {
+      background: linear-gradient(135deg, #ff6b4a 0%, #7c5cff 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(107, 114, 128, 0.2);
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(124, 92, 255, 0.4);
+    }
+  </style>
+</head>
+
+<body class="w-[1440px] h-[900px] overflow-hidden bg-dot-grid text-ink font-sans flex flex-col select-none antialiased">
+
+  <!-- ================= TOP APP HEADER ================= -->
+  <header class="h-[64px] px-5 flex items-center justify-between border-b border-white/60 bg-white/50 backdrop-blur-md z-30 shrink-0">
+    <!-- Left: Brand & Title & Meta Chips -->
+    <div class="flex items-center gap-3.5">
+      <div class="flex items-center gap-2 pr-3 border-r border-gray-200/80">
+        <div class="w-8 h-8 rounded-xl btn-gradient flex items-center justify-center text-white shadow-sm font-bold text-sm">
+          Z
+        </div>
+        <div class="leading-tight">
+          <span class="font-bold text-xs tracking-wider uppercase text-gradient">ZEKİ AI</span>
+          <span class="text-[11px] block text-secondary font-medium">Sayfa Stüdyosu</span>
+        </div>
+      </div>
+
+      <!-- Book Title -->
+      <div class="flex items-center gap-2.5">
+        <h1 class="font-bold text-ink text-[15px] tracking-tight">Dünyanın En Korkak Hayvanı</h1>
+        <span class="text-gray-300 font-light">/</span>
+        
+        <!-- Specification Chips -->
+        <div class="flex items-center gap-1.5 text-xs text-secondary font-medium">
+          <span class="px-2.5 py-0.5 rounded-full bg-white/70 border border-gray-200/80 shadow-xs font-mono text-[11px]">32 sayfa</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-white/70 border border-gray-200/80 shadow-xs font-mono text-[11px]">16,5 × 22,5 cm</span>
+          <span class="px-2.5 py-0.5 rounded-full bg-white/70 border border-gray-200/80 shadow-xs font-medium text-[11px]">6–10 yaş</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: Status Pill & Action Buttons -->
+    <div class="flex items-center gap-3">
+      <!-- Status Pill -->
+      <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-50/80 border border-amber-200/70 text-amber-900 text-xs font-medium shadow-xs">
+        <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+        <span class="font-mono font-semibold">29/29</span> resim hazır <span class="text-amber-400">·</span> <span class="font-semibold text-amber-700">3 sayfa onay bekliyor</span>
+      </div>
+
+      <!-- Preview PDF -->
+      <button class="h-9 px-3.5 rounded-xl bg-white/80 hover:bg-white border border-gray-200 text-ink text-xs font-semibold flex items-center gap-1.5 transition shadow-xs">
+        <i class="ph ph-file-pdf text-base text-secondary"></i>
+        <span>Önizleme (PDF)</span>
+      </button>
+
+      <!-- Gradient Send to Print (Disabled with tooltip trigger) -->
+      <div class="relative group">
+        <button disabled class="h-9 px-4 rounded-xl bg-gray-200 text-gray-400 text-xs font-semibold flex items-center gap-2 cursor-not-allowed border border-gray-200/60 opacity-80">
+          <i class="ph ph-printer text-base"></i>
+          <span>Baskıya gönder</span>
+        </button>
+        <!-- Tooltip -->
+        <div class="absolute right-0 top-full mt-2 hidden group-hover:flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-ink text-white text-[11px] font-medium shadow-lg whitespace-nowrap z-50 animate-in fade-in zoom-in-95 duration-150">
+          <i class="ph ph-warning-circle text-amber-400 text-sm"></i>
+          <span>Önce 3 sayfayı onaylayın</span>
+        </div>
+      </div>
+
+      <!-- Help / User avatar -->
+      <div class="w-8 h-8 rounded-full bg-white/90 border border-gray-200 flex items-center justify-center text-xs font-bold text-ink shadow-xs ml-1">
+        ZK
+      </div>
+    </div>
+  </header>
+
+  <!-- ================= MAIN BODY CONTAINER ================= -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- 1. SLIM 54px ICON RAIL -->
+    <aside class="w-[54px] bg-white/50 backdrop-blur-md border-r border-white/60 flex flex-col items-center py-4 justify-between shrink-0 z-20">
+      <div class="flex flex-col items-center gap-3">
+        <button title="Forma & Sayfa Düzeni" class="w-9 h-9 rounded-xl bg-gradient-to-tr from-coral/15 to-violet/15 text-violet flex items-center justify-center text-lg font-bold shadow-xs border border-violet/20">
+          <i class="ph-fill ph-book-open"></i>
+        </button>
+        <button title="Tipografi & Metin" class="w-9 h-9 rounded-xl text-secondary hover:text-ink hover:bg-white/80 flex items-center justify-center text-lg transition">
+          <i class="ph ph-text-t"></i>
+        </button>
+        <button title="İllüstrasyon & AI Sentezi" class="w-9 h-9 rounded-xl text-secondary hover:text-ink hover:bg-white/80 flex items-center justify-center text-lg transition">
+          <i class="ph ph-sparkle"></i>
+        </button>
+        <button title="Karakter Kanonu" class="w-9 h-9 rounded-xl text-secondary hover:text-ink hover:bg-white/80 flex items-center justify-center text-lg transition">
+          <i class="ph ph-users"></i>
+        </button>
+        <button title="Baskı Öncesi Kontrol" class="w-9 h-9 rounded-xl text-secondary hover:text-ink hover:bg-white/80 flex items-center justify-center text-lg transition">
+          <i class="ph ph-check-square-offset"></i>
+        </button>
+        <button title="Renk Paletleri" class="w-9 h-9 rounded-xl text-secondary hover:text-ink hover:bg-white/80 flex items-center justify-center text-lg transition">
+          <i class="ph ph-palette"></i>
+        </button>
+      </div>
+
+      <div class="flex flex-col items-center gap-2.5">
+        <button title="Sürüm Geçmişi" class="w-9 h-9 rounded-xl text-secondary hover:text-ink hover:bg-white/80 flex items-center justify-center text-lg transition">
+          <i class="ph ph-clock-counter-clockwise"></i>
+        </button>
+        <button title="Ayarlar" class="w-9 h-9 rounded-xl text-secondary hover:text-ink hover:bg-white/80 flex items-center justify-center text-lg transition">
+          <i class="ph ph-gear"></i>
+        </button>
+      </div>
+    </aside>
+
+    <!-- 2. LEFT 220px PAGE NAVIGATOR -->
+    <nav class="w-[220px] bg-white/60 backdrop-blur-md border-r border-white/70 flex flex-col shrink-0 z-10 overflow-hidden">
+      <!-- Navigator Header -->
+      <div class="p-3.5 pb-2.5 border-b border-gray-200/50 flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold uppercase tracking-wider text-secondary">Sayfa Gezgini</span>
+          <div class="text-xs font-semibold text-ink flex items-center gap-1 font-mono">16 Forma <span class="text-gray-300 font-sans">/</span> 32 Sayfa</div>
+        </div>
+        <button class="w-6 h-6 rounded-lg hover:bg-white/80 flex items-center justify-center text-secondary hover:text-ink text-sm transition">
+          <i class="ph ph-faders"></i>
+        </button>
+      </div>
+
+      <!-- Spreads Thumbnail List -->
+      <div class="flex-1 overflow-y-auto p-3 space-y-2.5">
+        
+        <!-- Kapak (Cover) -->
+        <div class="p-2 rounded-2xl bg-white/50 border border-gray-200/60 hover:bg-white/90 transition cursor-pointer group">
+          <div class="flex items-center justify-between text-[11px] font-mono text-secondary mb-1.5 px-0.5">
+            <span>Kapak · 1</span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-emerald-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Onaylı
+            </span>
+          </div>
+          <div class="h-11 rounded-lg bg-amber-100/70 border border-amber-200 flex items-center justify-center text-[10px] font-medium text-amber-800">
+            Ön Kapak İllüstrasyonu
+          </div>
+        </div>
+
+        <!-- Forma 2-3 -->
+        <div class="p-2 rounded-2xl bg-white/50 border border-gray-200/60 hover:bg-white/90 transition cursor-pointer">
+          <div class="flex items-center justify-between text-[11px] font-mono text-secondary mb-1.5 px-0.5">
+            <span>Sayfa 2–3</span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-emerald-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Onaylı
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 h-10">
+            <div class="bg-gray-100 rounded border border-gray-200/60 p-1 flex flex-col justify-end">
+              <div class="w-3/4 h-1 bg-gray-300 rounded-full mb-0.5"></div>
+              <div class="w-1/2 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+            <div class="bg-blue-50/70 rounded border border-blue-100 flex items-center justify-center text-[9px] text-blue-600">
+              <i class="ph ph-image"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forma 4-5 -->
+        <div class="p-2 rounded-2xl bg-white/50 border border-gray-200/60 hover:bg-white/90 transition cursor-pointer">
+          <div class="flex items-center justify-between text-[11px] font-mono text-secondary mb-1.5 px-0.5">
+            <span>Sayfa 4–5</span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-emerald-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Onaylı
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 h-10">
+            <div class="bg-emerald-50/70 rounded border border-emerald-100 flex items-center justify-center text-[9px] text-emerald-600">
+              <i class="ph ph-image"></i>
+            </div>
+            <div class="bg-gray-100 rounded border border-gray-200/60 p-1 flex flex-col justify-center space-y-1">
+              <div class="w-full h-1 bg-gray-300 rounded-full"></div>
+              <div class="w-4/5 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forma 6-7 -->
+        <div class="p-2 rounded-2xl bg-white/50 border border-gray-200/60 hover:bg-white/90 transition cursor-pointer">
+          <div class="flex items-center justify-between text-[11px] font-mono text-secondary mb-1.5 px-0.5">
+            <span>Sayfa 6–7</span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-emerald-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Onaylı
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 h-10">
+            <div class="bg-amber-50 rounded border border-amber-200/60 flex items-center justify-center text-[9px] text-amber-700">
+              <i class="ph ph-image"></i>
+            </div>
+            <div class="bg-gray-100 rounded border border-gray-200/60 p-1 flex flex-col justify-center space-y-1">
+              <div class="w-full h-1 bg-gray-300 rounded-full"></div>
+              <div class="w-3/4 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forma 8-9 (Onay Bekliyor) -->
+        <div class="p-2 rounded-2xl bg-amber-50/40 border border-amber-200/70 hover:bg-amber-50/80 transition cursor-pointer">
+          <div class="flex items-center justify-between text-[11px] font-mono text-secondary mb-1.5 px-0.5">
+            <span>Sayfa 8–9</span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-amber-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Bekliyor
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 h-10">
+            <div class="bg-white/80 rounded border border-gray-200/80 p-1 flex flex-col justify-center space-y-1">
+              <div class="w-full h-1 bg-gray-300 rounded-full"></div>
+              <div class="w-2/3 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+            <div class="bg-amber-100/60 rounded border border-amber-200 flex items-center justify-center text-[9px] text-amber-800">
+              <i class="ph ph-sparkle"></i>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forma 10-11 -->
+        <div class="p-2 rounded-2xl bg-white/50 border border-gray-200/60 hover:bg-white/90 transition cursor-pointer">
+          <div class="flex items-center justify-between text-[11px] font-mono text-secondary mb-1.5 px-0.5">
+            <span>Sayfa 10–11</span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-emerald-600">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Onaylı
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 h-10">
+            <div class="bg-purple-50/70 rounded border border-purple-100 flex items-center justify-center text-[9px] text-purple-600">
+              <i class="ph ph-image"></i>
+            </div>
+            <div class="bg-gray-100 rounded border border-gray-200/60 p-1 flex flex-col justify-center space-y-1">
+              <div class="w-full h-1 bg-gray-300 rounded-full"></div>
+              <div class="w-4/5 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Forma 12-13 (SELECTED ACTIVE SPREAD) -->
+        <div class="p-2.5 rounded-2xl bg-white border-2 border-violet shadow-glass-elevated transition cursor-pointer relative ring-2 ring-violet/10">
+          <div class="flex items-center justify-between text-[11px] font-mono font-bold text-ink mb-1.5 px-0.5">
+            <span class="flex items-center gap-1 text-violet">
+              <i class="ph-fill ph-navigation-arrow text-xs"></i> Sayfa 12–13
+            </span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-semibold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded-md border border-amber-200/60">
+              <span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span> Bekliyor
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1.5 h-12">
+            <!-- Left page 12 thumb -->
+            <div class="bg-red-50/80 rounded-lg border border-red-200/80 p-1 flex flex-col justify-between">
+              <div class="w-full h-4 bg-red-100/90 rounded flex items-center justify-center text-[8px] text-red-500">
+                <i class="ph-fill ph-balloon"></i>
+              </div>
+              <div class="w-3/4 h-1 bg-gray-400 rounded-full"></div>
+            </div>
+            <!-- Right page 13 thumb (Active target) -->
+            <div class="bg-violet-50/90 rounded-lg border-2 border-violet p-1 flex flex-col justify-between shadow-xs">
+              <div class="w-full h-5 bg-gradient-to-br from-amber-100 to-red-100 rounded flex items-center justify-center text-[8px] font-bold text-coral">
+                GÜÜM! 💥
+              </div>
+              <div class="w-1/2 h-1 bg-violet-400 rounded-full"></div>
+            </div>
+          </div>
+          <div class="mt-1 text-[10px] text-center font-medium text-violet">İncelenen Yayılım</div>
+        </div>
+
+        <!-- Forma 14-15 (Üretiliyor - Violet Status) -->
+        <div class="p-2 rounded-2xl bg-violet-50/30 border border-violet-200/60 hover:bg-violet-50/60 transition cursor-pointer">
+          <div class="flex items-center justify-between text-[11px] font-mono text-secondary mb-1.5 px-0.5">
+            <span>Sayfa 14–15</span>
+            <span class="inline-flex items-center gap-1 text-[10px] font-sans font-medium text-violet">
+              <i class="ph ph-spinner animate-spin"></i> Üretiliyor
+            </span>
+          </div>
+          <div class="grid grid-cols-2 gap-1 h-10">
+            <div class="bg-gray-100 rounded border border-gray-200/60 p-1 flex flex-col justify-center space-y-1">
+              <div class="w-full h-1 bg-gray-300 rounded-full"></div>
+              <div class="w-3/4 h-1 bg-gray-200 rounded-full"></div>
+            </div>
+            <div class="bg-violet-100/60 rounded border border-violet-200 flex items-center justify-center text-[9px] text-violet">
+              <i class="ph ph-sparkle animate-pulse"></i>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Navigator Footer Status Summary -->
+      <div class="p-3 border-t border-gray-200/60 bg-white/40 text-[11px] font-mono flex items-center justify-between text-secondary">
+        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> 26</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span> 3</span>
+        <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-violet"></span> 1</span>
+        <span class="text-[10px] text-gray-400 font-sans">Toplam 16</span>
+      </div>
+    </nav>
+
+    <!-- 3. CENTER: OPEN BOOK SPREAD ON SOFT STAGE -->
+    <main class="flex-1 flex flex-col relative overflow-hidden">
+      
+      <!-- Stage Toolbar -->
+      <div class="h-11 px-6 flex items-center justify-between border-b border-white/60 bg-white/30 backdrop-blur-sm shrink-0">
+        <div class="flex items-center gap-3 text-xs">
+          <span class="font-semibold text-ink font-mono">Forma 4 · Sayfalar 12 & 13</span>
+          <span class="text-gray-300">|</span>
+          <span class="text-secondary">Bölüm 2: İlk Deney</span>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <!-- Kesim Çizgileri Toggle -->
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-secondary hover:text-ink">
+            <input type="checkbox" checked class="w-4 h-4 rounded text-violet focus:ring-violet border-gray-300">
+            <span>Kesim çizgileri (3mm taşma)</span>
+          </label>
+
+          <span class="text-gray-300">|</span>
+
+          <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-secondary hover:text-ink">
+            <input type="checkbox" class="w-4 h-4 rounded text-violet focus:ring-violet border-gray-300">
+            <span>Tipografi ızgarası</span>
+          </label>
+
+          <span class="text-gray-300">|</span>
+
+          <!-- Zoom control -->
+          <div class="flex items-center gap-1 bg-white/70 px-2 py-0.5 rounded-lg border border-gray-200 text-xs font-mono text-secondary">
+            <button class="hover:text-ink"><i class="ph ph-minus"></i></button>
+            <span class="w-10 text-center font-medium text-ink">100%</span>
+            <button class="hover:text-ink"><i class="ph ph-plus"></i></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stage Work Area -->
+      <div class="flex-1 flex flex-col items-center justify-center p-4 relative overflow-y-auto">
+
+        <!-- ================= BOOK SPREAD (2 Portrait Pages) ================= -->
+        <div class="relative flex items-center justify-center shadow-stage rounded-xl border border-black/5 bg-[#ececec] p-1.5 max-h-[580px]">
+          
+          <!-- Book Spine Line -->
+          <div class="absolute left-1/2 top-0 bottom-0 w-[2px] -translate-x-1/2 bg-gradient-to-r from-black/15 via-black/30 to-black/15 z-30 pointer-events-none"></div>
+
+          <!-- SPREAD WRAPPER -->
+          <div class="flex bg-white rounded-lg overflow-hidden shadow-2xl relative">
+
+            <!-- PAGE 12 (Left Portrait Page) -->
+            <div class="w-[340px] h-[520px] bg-[#fffefb] p-6 flex flex-col justify-between relative border-r border-gray-200/70">
+              <!-- Bleed line indicator (dashed light red) -->
+              <div class="absolute inset-1.5 border border-dashed border-red-300/60 pointer-events-none rounded">
+                <span class="absolute top-1 left-2 text-[8px] font-mono text-red-400">GÜVENLİ ALAN (KORUMA 5mm)</span>
+              </div>
+
+              <!-- Top 46% Watercolor Illustration -->
+              <div class="h-[215px] w-full rounded-xl overflow-hidden bg-gradient-to-b from-amber-50/80 via-orange-50/40 to-white relative border border-amber-100/70 shadow-xs flex flex-col items-center justify-center">
+                <!-- Illustrated Scene Simulation: Baby wombat with lab coat blowing red balloon -->
+                <div class="relative w-full h-full flex items-center justify-center">
+                  <!-- Burrow wall & wood texture cues -->
+                  <div class="absolute bottom-0 w-full h-12 bg-amber-100/40 border-t border-amber-200/40"></div>
+                  
+                  <!-- Character: Mother & Father watching -->
+                  <div class="absolute left-6 bottom-4 flex items-end gap-1.5 opacity-90">
+                    <div class="w-12 h-14 rounded-full bg-amber-800/80 flex flex-col items-center justify-center shadow-sm text-[8px] text-amber-100">
+                      <i class="ph-fill ph-paw-print text-sm"></i>
+                      <span class="text-[7px]">Anne</span>
+                    </div>
+                    <div class="w-14 h-16 rounded-full bg-stone-700/80 flex flex-col items-center justify-center shadow-sm text-[8px] text-stone-100">
+                      <i class="ph-fill ph-paw-print text-sm"></i>
+                      <span class="text-[7px]">Baba</span>
+                    </div>
+                  </div>
+
+                  <!-- Central Baby Wombat in White Lab Coat & Goggles blowing red balloon -->
+                  <div class="relative flex flex-col items-center z-10 scale-90">
+                    <!-- Huge Red Balloon being inflated -->
+                    <div class="w-24 h-24 rounded-full bg-gradient-to-tr from-red-600 via-rose-500 to-orange-400 shadow-md flex items-center justify-center animate-pulse relative -mb-3">
+                      <div class="w-4 h-4 rounded-full bg-white/40 absolute top-3 left-4 blur-[1px]"></div>
+                      <span class="text-[9px] font-mono font-bold text-white/90 uppercase tracking-tighter">BİLİM VOMBAT</span>
+                    </div>
+                    <!-- Baby Wombat face & lab coat -->
+                    <div class="w-12 h-12 rounded-full bg-amber-700 border-2 border-white shadow-sm flex items-center justify-center relative">
+                      <!-- Goggles -->
+                      <div class="absolute top-2 w-9 h-3.5 bg-emerald-400/80 border border-emerald-700 rounded-full flex justify-around items-center px-1">
+                        <div class="w-2 h-2 rounded-full bg-cyan-100"></div>
+                        <div class="w-2 h-2 rounded-full bg-cyan-100"></div>
+                      </div>
+                    </div>
+                    <div class="w-16 h-8 bg-white border border-gray-300 rounded-t-lg -mt-1 shadow-xs flex items-center justify-center text-[7px] font-bold text-gray-500">
+                      ÖNLÜK
+                    </div>
+                  </div>
+
+                  <!-- Resolution badge -->
+                  <div class="absolute top-2 right-2 px-1.5 py-0.5 rounded bg-black/60 text-white font-mono text-[8px]">
+                    Resim 12.1 · 300 DPI
+                  </div>
+                </div>
+              </div>
+
+              <!-- Below Chapter Heading & Child-friendly Text -->
+              <div class="flex-1 pt-3.5 flex flex-col justify-between">
+                <div>
+                  <div class="text-[11px] font-bold tracking-wider uppercase text-coral mb-1 font-mono">● İLK DENEY</div>
+                  <p class="text-[12px] leading-relaxed text-gray-700 font-sans">
+                    Yavru Vombat eve vardığında, ilk iş, odasının kapısına 
+                    <span class="font-bold text-violet">“Bilim Vombatı Odası”</span> 
+                    yazan bir kâğıt yapıştırdı. Heyecandan içi kıpır kıpırdı. Vakit kaybetmeden çalışmaya koyuldu.
+                  </p>
+                  <p class="text-[12px] leading-relaxed text-gray-700 font-sans mt-2">
+                    İlk deneyini yapmak için anne ve babasını odasına çağırdı. Beyaz önlüğünü giydi, koruyucu gözlüğünü taktı. Büyük bir ciddiyetle deneyine başladı. Yavru Vombat, deneyde kullanacağı balonu şişirdi de şişirdi.
+                  </p>
+                </div>
+
+                <!-- Page Number -->
+                <div class="flex items-center justify-between text-[10px] font-mono text-gray-400 pt-2 border-t border-gray-100">
+                  <span>12</span>
+                  <span class="uppercase tracking-widest text-[9px]">Dünyanın En Korkak Hayvanı</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- PAGE 13 (Right Portrait Page) - ACTIVE SELECTION -->
+            <div class="w-[340px] h-[520px] bg-[#fffefb] p-6 flex flex-col justify-between relative">
+              
+              <!-- Bleed line indicator -->
+              <div class="absolute inset-1.5 border border-dashed border-red-300/60 pointer-events-none rounded"></div>
+
+              <!-- Top: Selected Illustration with Violet Outline & Floating Toolbar -->
+              <div class="h-[265px] w-full rounded-2xl relative border-2 border-violet ring-4 ring-violet/15 shadow-glass-elevated bg-gradient-to-b from-amber-100/40 via-red-50/50 to-orange-50/40 overflow-visible flex flex-col items-center justify-center group">
+                
+                <!-- FLOATING TOOLBAR OVER SELECTED IMAGE -->
+                <div class="absolute -top-4 left-1/2 -translate-x-1/2 z-40 bg-ink/90 backdrop-blur-md text-white px-3 py-1 rounded-full shadow-lg flex items-center gap-2.5 text-[11px] font-medium border border-white/20 whitespace-nowrap">
+                  <span class="flex items-center gap-1 text-violet-300 font-semibold"><i class="ph-fill ph-check-circle"></i> Görsel 13.1 · Seçildi</span>
+                  <span class="w-1 h-1 rounded-full bg-gray-500"></span>
+                  <button class="hover:text-coral transition flex items-center gap-1"><i class="ph ph-crop"></i> Kırp</button>
+                  <span class="w-1 h-1 rounded-full bg-gray-500"></span>
+                  <button class="hover:text-coral transition flex items-center gap-1"><i class="ph ph-textbox"></i> Metni düzenle</button>
+                </div>
+
+                <!-- Illustrated Scene: The Balloon Popping & Family Fainted -->
+                <div class="relative w-full h-full flex flex-col items-center justify-center p-3 overflow-hidden rounded-2xl">
+                  
+                  <!-- Comic Pop effect lines -->
+                  <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-30">
+                    <svg viewBox="0 0 100 100" class="w-48 h-48 stroke-coral stroke-[1.5] fill-none animate-spin" style="animation-duration: 25s;">
+                      <line x1="50" y1="50" x2="10" y2="10"/>
+                      <line x1="50" y1="50" x2="90" y2="10"/>
+                      <line x1="50" y1="50" x2="90" y2="90"/>
+                      <line x1="50" y1="50" x2="10" y2="90"/>
+                      <line x1="50" y1="50" x2="50" y2="5"/>
+                      <line x1="50" y1="50" x2="95" y2="50"/>
+                    </svg>
+                  </div>
+
+                  <!-- Exploded balloon scraps -->
+                  <div class="absolute top-8 left-10 w-4 h-3 bg-red-500 rounded-sm rotate-45 opacity-80"></div>
+                  <div class="absolute top-12 right-12 w-5 h-2 bg-orange-500 rounded-sm -rotate-12 opacity-80"></div>
+                  <div class="absolute top-20 left-16 w-3 h-3 bg-rose-600 rounded-full opacity-70"></div>
+                  
+                  <!-- Fainted Baby Wombat with dizzy eyes & family -->
+                  <div class="flex items-center justify-center gap-2 mt-4 relative z-10">
+                    <!-- Father Fainted -->
+                    <div class="flex flex-col items-center rotate-45 translate-y-3">
+                      <div class="w-9 h-9 rounded-full bg-stone-700 flex items-center justify-center text-white text-[7px]">
+                        X_X
+                      </div>
+                      <span class="text-[7px] text-gray-500 font-bold">Baba</span>
+                    </div>
+
+                    <!-- Baby Wombat in middle on back with paws up -->
+                    <div class="flex flex-col items-center -translate-y-1">
+                      <div class="w-11 h-11 rounded-full bg-amber-700 border border-white flex flex-col items-center justify-center text-white text-[8px] font-bold shadow-sm">
+                        <span>x_x</span>
+                        <div class="w-4 h-1 bg-white/70 rounded-full mt-0.5"></div>
+                      </div>
+                      <div class="px-1.5 py-0.5 bg-white/90 rounded text-[7px] font-mono text-violet font-bold shadow-xs mt-0.5">
+                        Yavru Vombat
+                      </div>
+                    </div>
+
+                    <!-- Mother Fainted -->
+                    <div class="flex flex-col items-center -rotate-45 translate-y-3">
+                      <div class="w-8 h-8 rounded-full bg-amber-800 flex items-center justify-center text-white text-[7px]">
+                        @_@
+                      </div>
+                      <span class="text-[7px] text-gray-500 font-bold">Anne</span>
+                    </div>
+                  </div>
+
+                  <!-- Small version pill -->
+                  <div class="absolute bottom-2 right-2 px-2 py-0.5 rounded-full bg-violet text-white font-mono text-[9px] font-semibold shadow-xs">
+                    v3 (Aktif)
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Page 13 Story Content: Big Coral Word GÜÜÜÜMMMM! -->
+              <div class="flex-1 pt-3 flex flex-col justify-between">
+                <div>
+                  <!-- Big Coral Comic Expression -->
+                  <div class="text-center my-1">
+                    <span class="font-extrabold text-[28px] tracking-tight text-coral drop-shadow-xs font-sans uppercase">
+                      Güüüümmmm! 💥
+                    </span>
+                  </div>
+
+                  <p class="text-[12px] leading-relaxed text-gray-700 font-sans">
+                    Balon, portakal kabuğundan fışkıran minicik damlaların etkisiyle patlamıştı. Vombat ailesi, korkunun etkisiyle hep birlikte yere yığıldı.
+                  </p>
+                  
+                  <!-- Quoted key sentence -->
+                  <p class="text-[11px] leading-relaxed text-secondary italic font-serif mt-2 pl-2 border-l-2 border-coral/60 bg-coral/5 py-1 rounded-r">
+                    “Ah, şu Vombatlar! Neden her korktuklarında bayılıverirler ki?”
+                  </p>
+                </div>
+
+                <!-- Page Number -->
+                <div class="flex items-center justify-between text-[10px] font-mono text-gray-400 pt-2 border-t border-gray-100">
+                  <span class="uppercase tracking-widest text-[9px]">Bölüm 2 · İlk Deney</span>
+                  <span>13</span>
+                </div>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ================= UNDER THE STAGE: 3 VARIANT THUMBNAILS ================= -->
+        <div class="w-[700px] mt-4 frosted-panel p-2.5 px-4 flex items-center justify-between shadow-glass">
+          <div class="flex items-center gap-2">
+            <span class="w-2 h-2 rounded-full bg-coral animate-ping"></span>
+            <span class="text-xs font-semibold text-ink">Son Üretim Varyantları:</span>
+            <span class="text-[11px] text-secondary font-mono">(Sayfa 13 için 3 adet hazır)</span>
+          </div>
+
+          <div class="flex items-center gap-2.5">
+            <!-- Variant A -->
+            <div class="group relative flex items-center gap-2 p-1.5 rounded-xl bg-white/70 border border-gray-200 hover:border-violet transition cursor-pointer">
+              <div class="w-10 h-8 rounded bg-gradient-to-br from-amber-100 to-orange-200 flex items-center justify-center text-xs font-bold text-amber-800">
+                A
+              </div>
+              <div class="text-[11px] leading-tight pr-1">
+                <span class="font-medium text-ink block">Mavi Balon</span>
+                <span class="text-[10px] text-secondary font-mono">v3.1 · %94</span>
+              </div>
+              <!-- Hover Button Overlay -->
+              <div class="absolute inset-0 bg-violet/90 rounded-xl hidden group-hover:flex items-center justify-center text-white text-[11px] font-semibold transition">
+                Bunu kullan
+              </div>
+            </div>
+
+            <!-- Variant B (Active) -->
+            <div class="group relative flex items-center gap-2 p-1.5 rounded-xl bg-violet-50 border-2 border-violet cursor-pointer">
+              <div class="w-10 h-8 rounded bg-gradient-to-br from-coral/20 to-violet/30 flex items-center justify-center text-xs font-bold text-violet">
+                B
+              </div>
+              <div class="text-[11px] leading-tight pr-1">
+                <span class="font-bold text-violet block">Meyve Kabuklu</span>
+                <span class="text-[10px] text-violet font-mono">v3 (Şu anki)</span>
+              </div>
+              <div class="px-1.5 py-0.5 rounded bg-violet text-white text-[9px] font-bold font-mono">
+                Aktif
+              </div>
+            </div>
+
+            <!-- Variant C -->
+            <div class="group relative flex items-center gap-2 p-1.5 rounded-xl bg-white/70 border border-gray-200 hover:border-violet transition cursor-pointer">
+              <div class="w-10 h-8 rounded bg-gradient-to-br from-rose-100 to-purple-200 flex items-center justify-center text-xs font-bold text-purple-800">
+                C
+              </div>
+              <div class="text-[11px] leading-tight pr-1">
+                <span class="font-medium text-ink block">Yakın Plan</span>
+                <span class="text-[10px] text-secondary font-mono">v3.2 · %91</span>
+              </div>
+              <!-- Hover Button Overlay -->
+              <div class="absolute inset-0 bg-violet/90 rounded-xl hidden group-hover:flex items-center justify-center text-white text-[11px] font-semibold transition">
+                Bunu kullan
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- 4. RIGHT INSPECTOR 380px 'Sayfa 13 · Resim' -->
+    <aside class="w-[380px] bg-white/70 backdrop-blur-xl border-l border-white/80 flex flex-col shrink-0 z-20 overflow-hidden shadow-glass">
+      
+      <!-- Inspector Header -->
+      <div class="h-12 px-5 border-b border-gray-200/50 flex items-center justify-between bg-white/40 shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-violet"></span>
+          <h2 class="font-bold text-sm text-ink font-mono tracking-tight">Sayfa 13 · Resim</h2>
+          <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-full bg-violet-50 text-violet border border-violet-100 font-sans">İllüstrasyon</span>
+        </div>
+        <div class="flex items-center gap-1">
+          <button title="Gelişmiş Parametreler" class="w-7 h-7 rounded-lg hover:bg-white text-secondary hover:text-ink flex items-center justify-center text-sm transition">
+            <i class="ph ph-sliders"></i>
+          </button>
+          <button title="Kapat" class="w-7 h-7 rounded-lg hover:bg-white text-secondary hover:text-ink flex items-center justify-center text-sm transition">
+            <i class="ph ph-x"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Inspector Scrollable Body -->
+      <div class="flex-1 overflow-y-auto p-4 space-y-4">
+
+        <!-- 1. Large Current Image Preview & Version Navigator -->
+        <div class="frosted-subcard rounded-2xl p-3 shadow-xs">
+          <div class="h-36 w-full rounded-xl bg-gradient-to-br from-amber-100/80 via-orange-50 to-red-100/70 border border-amber-200/60 flex flex-col items-center justify-center relative overflow-hidden group">
+            
+            <!-- Graphic inside preview -->
+            <div class="flex flex-col items-center">
+              <span class="text-coral font-black text-xl tracking-tight drop-shadow-xs">GÜÜM! 💥</span>
+              <div class="flex items-center gap-2 mt-1">
+                <span class="w-6 h-6 rounded-full bg-amber-700 border border-white text-[7px] text-white flex items-center justify-center font-bold">x_x</span>
+                <span class="text-[11px] text-gray-700 font-medium">Patlama ve Şaşkın Aile</span>
+              </div>
+            </div>
+
+            <!-- Resolution tag -->
+            <div class="absolute bottom-2 left-2 px-2 py-0.5 rounded bg-black/60 backdrop-blur-xs text-white text-[10px] font-mono">
+              300 DPI · CMYK Baskı Profili
+            </div>
+
+            <!-- Fullscreen enlarge button -->
+            <button class="absolute top-2 right-2 w-7 h-7 rounded-lg bg-white/80 hover:bg-white text-ink flex items-center justify-center text-xs shadow-xs transition">
+              <i class="ph ph-arrows-out-simple"></i>
+            </button>
+          </div>
+
+          <!-- Version Dots & Geçmiş -->
+          <div class="flex items-center justify-between mt-2.5 px-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[11px] font-medium text-secondary">Versiyon:</span>
+              <button class="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200">v1</button>
+              <button class="px-2 py-0.5 rounded text-[11px] font-mono font-semibold bg-gray-100 text-gray-600 hover:bg-gray-200">v2</button>
+              <button class="px-2.5 py-0.5 rounded text-[11px] font-mono font-bold bg-violet text-white shadow-xs">v3</button>
+            </div>
+            
+            <button class="text-xs text-violet hover:text-violet/80 font-semibold flex items-center gap-1 transition">
+              <i class="ph ph-clock-counter-clockwise"></i> Geçmiş
+            </button>
+          </div>
+        </div>
+
+        <!-- 2. Two-Option Segmented Control (Düzelt vs Farklı Üret) -->
+        <div class="space-y-1.5">
+          <label class="text-[11px] font-bold uppercase tracking-wider text-secondary">Üretim Yöntemi</label>
+          <div class="grid grid-cols-2 gap-2">
+            
+            <!-- Option 1: DÜZELT (Selected) -->
+            <div class="p-2.5 rounded-xl bg-violet-50/80 border-2 border-violet cursor-pointer relative shadow-xs flex flex-col justify-between">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-xs text-violet flex items-center gap-1">
+                  <i class="ph-bold ph-magic-wand"></i> Düzelt
+                </span>
+                <span class="w-2 h-2 rounded-full bg-violet"></span>
+              </div>
+              <p class="text-[10px] leading-tight text-gray-600">
+                Mevcut görseli referans alır, yalnız istediğin kısmı değiştirir.
+              </p>
+              
+              <!-- Tiny attached thumbnail 'Referans: v3' -->
+              <div class="mt-2 pt-1.5 border-t border-violet/20 flex items-center gap-1.5">
+                <div class="w-4 h-4 rounded bg-coral/30 border border-coral text-[8px] flex items-center justify-center font-bold font-mono text-coral">v3</div>
+                <span class="text-[10px] font-mono font-semibold text-violet">Referans: v3</span>
+              </div>
+            </div>
+
+            <!-- Option 2: FARKLI ÜRET -->
+            <div class="p-2.5 rounded-xl bg-white/60 border border-gray-200 hover:border-gray-300 cursor-pointer flex flex-col justify-between opacity-80 hover:opacity-100 transition">
+              <div class="flex items-center justify-between mb-1">
+                <span class="font-bold text-xs text-ink flex items-center gap-1">
+                  <i class="ph ph-sparkle text-coral"></i> Farklı üret
+                </span>
+              </div>
+              <p class="text-[10px] leading-tight text-secondary">
+                Sayfanın metninden sıfırdan yeni bir görsel çizer.
+              </p>
+              <div class="mt-2 pt-1.5 border-t border-gray-100 text-[10px] text-gray-400 font-sans">
+                Yeni kompozisyon
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- 3. Prompt Textarea & Suggestion Chips -->
+        <div class="space-y-1.5">
+          <div class="flex items-center justify-between">
+            <label class="text-[11px] font-bold uppercase tracking-wider text-secondary">Yapay Zekâ Yönergesi (Prompt)</label>
+            <span class="text-[10px] font-medium text-coral flex items-center gap-0.5"><i class="ph ph-sparkle"></i> Sihirli Genişlet</span>
+          </div>
+
+          <div class="relative">
+            <textarea 
+              rows="3" 
+              class="w-full text-xs p-3 rounded-xl bg-white border border-gray-200 focus:border-violet focus:ring-2 focus:ring-violet/10 outline-none text-ink placeholder:text-gray-400 font-sans resize-none transition"
+              placeholder="Ne değişsin? Ör. balonu maviye çevir">Portakal kabuğundan fışkıran damlacıklar daha belirgin olsun, Yavru Vombat'ın koruyucu gözlüğü yerinde kalsın.</textarea>
+            <div class="absolute bottom-2 right-2 text-[10px] font-mono text-gray-400">
+              TR · Doğal Dil
+            </div>
+          </div>
+
+          <!-- Suggestion Chips -->
+          <div class="flex flex-wrap gap-1.5 pt-1">
+            <button class="px-2 py-1 rounded-lg bg-white/80 hover:bg-white border border-gray-200/80 text-[10px] font-medium text-gray-700 hover:text-violet hover:border-violet/40 transition shadow-2xs">
+              + Işığı sıcaklaştır
+            </button>
+            <button class="px-2 py-1 rounded-lg bg-white/80 hover:bg-white border border-gray-200/80 text-[10px] font-medium text-gray-700 hover:text-violet hover:border-violet/40 transition shadow-2xs">
+              + Karakterleri yakınlaştır
+            </button>
+            <button class="px-2 py-1 rounded-lg bg-white/80 hover:bg-white border border-gray-200/80 text-[10px] font-medium text-gray-700 hover:text-violet hover:border-violet/40 transition shadow-2xs">
+              + Arka planı sadeleştir
+            </button>
+          </div>
+        </div>
+
+        <!-- 4. Row 'Karakter Tutarlılığı' with 3 Round Character Avatars -->
+        <div class="frosted-subcard rounded-xl p-2.5">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-[11px] font-bold text-ink flex items-center gap-1.5">
+              <i class="ph-fill ph-shield-check text-emerald-600"></i> Karakter Tutarlılığı (Kanon Belleği)
+            </span>
+            <span class="text-[10px] font-mono font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200/60">3/3 Bağlı</span>
+          </div>
+          
+          <div class="flex items-center gap-3">
+            <!-- Wombat Kid -->
+            <div class="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg border border-gray-200 shadow-2xs">
+              <div class="w-6 h-6 rounded-full bg-amber-700 text-white text-[9px] font-bold flex items-center justify-center">
+                YV
+              </div>
+              <div class="text-[10px] leading-tight">
+                <span class="font-semibold text-ink block">Yavru Vombat</span>
+                <span class="text-[9px] text-secondary">Ana Karakter</span>
+              </div>
+            </div>
+
+            <!-- Mother -->
+            <div class="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg border border-gray-200 shadow-2xs">
+              <div class="w-6 h-6 rounded-full bg-amber-800 text-white text-[9px] font-bold flex items-center justify-center">
+                AV
+              </div>
+              <div class="text-[10px] leading-tight">
+                <span class="font-semibold text-ink block">Anne Vombat</span>
+                <span class="text-[9px] text-secondary">Önlük & Tente</span>
+              </div>
+            </div>
+
+            <!-- Father -->
+            <div class="flex items-center gap-1.5 bg-white/80 px-2 py-1 rounded-lg border border-gray-200 shadow-2xs">
+              <div class="w-6 h-6 rounded-full bg-stone-700 text-white text-[9px] font-bold flex items-center justify-center">
+                BV
+              </div>
+              <div class="text-[10px] leading-tight">
+                <span class="font-semibold text-ink block">Baba Vombat</span>
+                <span class="text-[9px] text-secondary">Gözlüklü</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Primary Action: Gradient Button 'Düzelt ve üret' + Secondary 'Varyant ×3' -->
+        <div class="flex items-center gap-2 pt-1">
+          <button class="flex-1 h-10 rounded-xl btn-gradient font-bold text-xs flex items-center justify-center gap-2 shadow-glass">
+            <i class="ph-bold ph-sparkle text-sm"></i>
+            <span>Düzelt ve üret</span>
+          </button>
+          <button class="h-10 px-3.5 rounded-xl bg-white hover:bg-gray-50 border border-gray-200 text-ink font-semibold text-xs flex items-center gap-1.5 shadow-xs transition">
+            <i class="ph ph-copy"></i>
+            <span>Varyant ×3</span>
+          </button>
+        </div>
+
+        <!-- 6. Box 'Sahnenin Dayanağı' Quoting the Page Sentence in Italics -->
+        <div class="p-3 rounded-xl bg-amber-50/70 border border-amber-200/80 space-y-1">
+          <div class="flex items-center justify-between text-[10px] font-bold text-amber-900 uppercase tracking-wider font-mono">
+            <span class="flex items-center gap-1"><i class="ph-fill ph-quotes text-coral"></i> Sahnenin dayanağı</span>
+            <span class="text-amber-700 font-sans">Sayfa 13 · Satır 1–4</span>
+          </div>
+          <p class="text-[11px] leading-relaxed text-amber-950 font-serif italic">
+            “Vombat ailesi, korkunun etkisiyle hep birlikte yere yığıldı.”
+          </p>
+        </div>
+
+        <!-- 7. Bottom Confirmation Actions: Green Outline 'Onayla' and link 'Editöre not' -->
+        <div class="pt-2 border-t border-gray-200/60 flex items-center justify-between">
+          <button class="h-9 px-4 rounded-xl border-2 border-emerald-500 hover:bg-emerald-50 text-emerald-700 font-bold text-xs flex items-center gap-1.5 transition">
+            <i class="ph-bold ph-check text-sm"></i>
+            <span>Sayfa 13 İllüstrasyonunu Onayla</span>
+          </button>
+
+          <button class="text-xs text-secondary hover:text-ink font-semibold flex items-center gap-1 underline underline-offset-4 decoration-gray-300 hover:decoration-ink transition">
+            <i class="ph ph-chat-text"></i> Editöre not
+          </button>
+        </div>
+
+      </div>
+
+    </aside>
+
+  </div>
+
+</body>
+</html>

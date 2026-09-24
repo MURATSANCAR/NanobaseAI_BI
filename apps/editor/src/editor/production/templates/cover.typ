@@ -1,0 +1,57 @@
+// Kapak açılımı: arka | sırt | ön, taşma paylı tek sayfa. Veri: cover.json (cover.py yazar).
+#let d = json(sys.inputs.at("data", default: "cover.json"))
+#let b = d.bleed * 1mm
+#let tw = d.trim_w * 1mm
+#let th = d.trim_h * 1mm
+#let sp = d.spine * 1mm
+#let W = 2 * tw + sp + 2 * b
+#let H = th + 2 * b
+#let accent = rgb(d.accent)
+#let front-x = b + tw + sp          // ön kapağın kesim çizgisi (solda)
+
+#set page(width: W, height: H, margin: 0pt)
+#set text(font: d.body_font, lang: "tr", hyphenate: false)
+
+// ---------------------------------------------------------------- ön kapak
+#place(top + left, dx: front-x, image(d.front_image, width: tw + b, height: H, fit: "cover"))
+#for blk in d.front_text {
+  for (i, ln) in blk.lines.enumerate() {
+    place(top + left, dx: front-x, dy: blk.top * 1mm + i * blk.step * 1mm,
+      box(width: tw, align(center, text(font: blk.font, weight: blk.weight, size: blk.size * 1pt,
+        fill: rgb(blk.ink), ln))))
+  }
+}
+
+// ---------------------------------------------------------------- arka kapak
+#place(top + left, rect(width: b + tw, height: H, fill: rgb(d.back.bg), stroke: none))
+#place(top + left, dx: b + d.safe * 1mm, dy: b + d.safe * 1mm + 4mm,
+  box(width: tw - 2 * d.safe * 1mm)[
+    #set par(leading: 0.62em, spacing: 1em, justify: false)
+    #text(font: d.heading_font, weight: 800, size: 17pt, fill: accent, d.title)
+    #v(5mm)
+    #text(size: 11.5pt, fill: rgb("#2a2622"))[#for p in d.back.paragraphs [#p #parbreak()]]
+  ])
+#if d.back.age != none {
+  place(top + left, dx: b + d.safe * 1mm, dy: b + th - d.safe * 1mm - 30mm,
+    box(fill: accent, radius: 3mm, inset: (x: 3.5mm, y: 2mm),
+      text(font: d.heading_font, weight: 800, size: 12pt, fill: white, d.back.age)))
+}
+#if d.back.series != none {
+  place(top + left, dx: b + d.safe * 1mm, dy: b + th - d.safe * 1mm - 18mm,
+    text(size: 9pt, fill: rgb("#4a443c"), d.back.series))
+}
+#place(top + left, dx: b + d.safe * 1mm, dy: b + th - d.safe * 1mm - 8mm,
+  text(size: 10pt, weight: "bold", tracking: 1pt, fill: rgb("#2a2622"), upper(d.publisher)))
+#if d.barcode != none {
+  place(top + left, dx: b + tw - d.safe * 1mm - 38mm, dy: b + th - d.safe * 1mm - 26mm,
+    image(d.barcode, width: 38mm))
+}
+
+// ---------------------------------------------------------------- sırt
+#if d.spine > 3 {
+  place(top + left, dx: b + tw, rect(width: sp, height: H, fill: accent, stroke: none))
+  place(top + left, dx: b + tw, dy: b, box(width: sp, height: th,
+    align(center + horizon, rotate(90deg, reflow: true,
+      text(font: d.heading_font, weight: 800, size: calc.min(11, d.spine * 1.8) * 1pt, fill: white,
+        d.title + "  ·  " + d.author)))))
+}

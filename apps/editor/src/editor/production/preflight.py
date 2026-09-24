@@ -1,0 +1,87 @@
+"""Ön baskı denetimi. FAIL basımı durdurur, WARN editöre gösterilir.
+
+- Sayfa sayısı forma katı; her sayfa kesim + 2×taşma boyunda; TrimBox/BleedBox yazılı.
+- Bütün fontlar gömülü.
+- Metin eksiksiz: iç sayfa PDF'inden okunan kelime dizisi kitabın kelime dizisini sırasıyla içerir
+  (dizgi bir kelime bile düşürmemiş, eklememiş).
+- Resim çözünürlüğü: üretim 250 dpi altındaysa (büyütülmüş) WARN, 120 altı FAIL.
+- Editör onayı (studio.refresh_preflight): onaylanmamış resim FAIL.
+- Künyede kaynağı olmayan alan FAIL.
+- Sahne tarifinin sayfa metninde alıntısı bulunmayan resim WARN.
+"""
+
+from __future__ import annotations
+
+import re
+from difflib import SequenceMatcher
+from pathlib import Path
+
+WORD = re.compile(r"[0-9A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]+")
+PT_PER_MM = 72 / 25.4
+
+
+def _words(s: str) -> list[str]:
+    return [w.casefold() for w in WORD.findall(s.replace("-\n", ""))]
+
+
+def set_boxes(pdf: Path, bleed_mm: float) -> None:
+    """Her sayfaya TrimBox (kesim) ve BleedBox (taşma) yazar; matbaa kesimi buradan okur."""
+    import pymupdf
+    doc = pymupdf.open(pdf)
+    b = bleed_mm * PT_PER_MM
+    for page in doc:
+        r = page.rect
+        page.set_bleedbox(r)
+        page.set_trimbox(pymupdf.Rect(r.x0 + b, r.y0 + b, r.x1 - b, r.y1 - b))
+    doc.saveIncr()
+
+
+def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kunye_missing: list[str],
+          scenes: list) -> dict:
+    import pymupdf
+    out = []
+
+    def add(name, status, detail):
+        out.append({"name": name, "status": status, "detail": detail})
+
+    doc = pymupdf.open(interior)
+    n = doc.page_count
+    add("Sayfa sayısı", "OK" if n % spec.signature == 0 else "FAIL", f"{n} sayfa, forma {spec.signature}")
+    W, H = (spec.trim_w + 2 * spec.bleed) * PT_PER_MM, (spec.trim_h + 2 * spec.bleed) * PT_PER_MM
+    bad = [i + 1 for i, p in enumerate(doc) if abs(p.rect.width - W) > 0.5 or abs(p.rect.height - H) > 0.5]
+    add("Sayfa boyu (kesim + taşma)", "FAIL" if bad else "OK",
+        f"{spec.trim_w:g}×{spec.trim_h:g} mm + {spec.bleed:g} mm" + (f"; farklı: {bad}" if bad else ""))
+    trim_missing = [i + 1 for i, p in enumerate(doc) if p.trimbox == p.mediabox]
+    add("Kesim kutusu (TrimBox)", "FAIL" if trim_missing else "OK",
+        "her sayfada" if not trim_missing else f"eksik: {trim_missing[:10]}")
+    fonts = {f[3]: f[1] for p in doc for f in p.get_fonts(full=True)}
+    unembedded = sorted(name for name, ext in fonts.items() if ext in ("n/a", ""))
+    add("Fontlar gömülü", "FAIL" if unembedded else "OK",
+        ", ".join(sorted({re.sub(r"^[A-Z]{6}\+", "", f) for f in fonts})) if not unembedded else f"gömülmemiş: {unembedded}")
+    pdf_words = _words("\n".join(p.get_text() for p in doc))
+    book_words = _words(ms.text().replace("## ", ""))
+    sm = SequenceMatcher(None, book_words, pdf_words, autojunk=False)
+    covered = sum(bl.size for bl in sm.get_matching_blocks())
+    lost = len(book_words) - covered
+    miss_sample = []
+    for tag, i1, i2, _, _ in sm.get_opcodes():
+        if tag in ("delete", "replace"):
+            miss_sample.append(" ".join(book_words[i1:i2])[:60])
+    add("Metin eksiksiz", "OK" if lost == 0 else "FAIL",
+        f"{len(book_words)} kelimenin {covered}'i sırasıyla PDF'te" + (f"; eksik: {miss_sample[:5]}" if lost else ""))
+    low = [(r["key"], r["dpi"]) for r in renders if r.get("dpi") and r["dpi"] < 250]
+    worst = min((d for _, d in low), default=300)
+    add("Resim çözünürlüğü", "FAIL" if worst < 120 else "WARN" if low else "OK",
+        "bütün resimler ≥250 dpi üretildi" if not low else
+        f"{len(low)} resim düşük çözünürlükte üretilip 300 dpi'ya büyütüldü (en düşük üretim {worst} dpi)")
+    add("Künye", "FAIL" if kunye_missing else "OK",
+        "tam" if not kunye_missing else "kaynağı olmayan alan: " + ", ".join(kunye_missing))
+    ungrounded = [s.page for s in scenes if not s.grounded]
+    add("Resim–metin bağı", "WARN" if ungrounded else "OK",
+        "her resmin sahnesi sayfanın cümlesine bağlı" if not ungrounded else f"alıntısı tutmayan sayfa: {ungrounded}")
+    if cover is not None:
+        c = pymupdf.open(cover)
+        add("Kapak açılımı", "OK" if c.page_count == 1 else "FAIL",
+            f"{c[0].rect.width / PT_PER_MM:.1f}×{c[0].rect.height / PT_PER_MM:.1f} mm")
+    status = "FAIL" if any(x["status"] == "FAIL" for x in out) else "WARN" if any(x["status"] == "WARN" for x in out) else "OK"
+    return {"status": status, "checks": out}

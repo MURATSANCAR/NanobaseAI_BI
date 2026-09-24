@@ -195,7 +195,7 @@ def _scrim(img: Image.Image, box: tuple[int, int, int, int], ink) -> None:
 
 
 def _draw_block(img: Image.Image, lines: list[str], face: Face, size: int, leading: float,
-                top: int, ink, shadow: bool) -> tuple[int, int, int, int]:
+                top: int, ink, shadow: bool, draw: bool = True) -> tuple[int, int, int, int]:
     font = _font(face, size)
     d = ImageDraw.Draw(img)
     W = img.width
@@ -204,12 +204,13 @@ def _draw_block(img: Image.Image, lines: list[str], face: Face, size: int, leadi
     for ln in lines:
         l, t, r, b = font.getbbox(ln)
         x = (W - (r - l)) // 2 - l
-        if shadow:
+        if shadow and draw:
             sh = Image.new("L", img.size, 0)
             ImageDraw.Draw(sh).text((x, y + max(1, size // 40)), ln, font=font, fill=120)
             sh = sh.filter(ImageFilter.GaussianBlur(max(1, size // 30)))
             img.paste(Image.new("RGB", img.size, (0, 0, 0)), (0, 0), sh)
-        d.text((x, y), ln, font=font, fill=ink)
+        if draw:
+            d.text((x, y), ln, font=font, fill=ink)
         boxes.append((x + l, y + t, x + r, y + b))
         y += int(size * leading)
     return (min(b[0] for b in boxes), min(b[1] for b in boxes),
@@ -217,7 +218,7 @@ def _draw_block(img: Image.Image, lines: list[str], face: Face, size: int, leadi
 
 
 def compose(img: Image.Image, title: str, author: str, subtitle: str | None = None,
-            style: str = "edebiyat") -> tuple[Image.Image, dict]:
+            style: str = "edebiyat", draw_text: bool = True) -> tuple[Image.Image, dict]:
     """Yazısız kapak resmine başlık/alt başlık/yazar basar. Dönen rapor: font, punto, satırlar,
     renk, kontrast, perde kullanıldı mı."""
     st = STYLES[style]
@@ -259,15 +260,15 @@ def compose(img: Image.Image, title: str, author: str, subtitle: str | None = No
             _scrim(out, (int(W * SIDE_MARGIN), y0, W - int(W * SIDE_MARGIN), y1), ink)
 
     ink = report["title"]["ink"]
-    tb = _draw_block(out, t_lines, t_face, t_size, st.leading, top, ink, shadow=ink == LIGHT)
+    tb = _draw_block(out, t_lines, t_face, t_size, st.leading, top, ink, shadow=ink == LIGHT, draw=draw_text)
     report["title"].update(font=t_face.file, size=t_size, lines=t_lines, box=tb)
     if subtitle:
         sy = top + len(t_lines) * int(t_size * st.leading) + int(t_size * 0.25)
-        sb = _draw_block(out, s_lines, s_face, s_size, 1.1, sy, ink, shadow=ink == LIGHT)
+        sb = _draw_block(out, s_lines, s_face, s_size, 1.1, sy, ink, shadow=ink == LIGHT, draw=draw_text)
         report["subtitle"] = {"font": s_face.file, "size": s_size, "lines": s_lines, "box": sb}
     a_ink = report["author"]["ink"]
     ab = _draw_block(out, a_lines, a_face, a_size, 1.1, ay0 + ((ay1 - ay0) - a_size) // 2, a_ink,
-                     shadow=a_ink == LIGHT)
+                     shadow=a_ink == LIGHT, draw=draw_text)
     report["author"].update(font=a_face.file, size=a_size, lines=a_lines, box=ab)
     return out, report
 
