@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Yazar giriş süreci ekran tasarımı (Stitch) ve yeni editoryal menü
+
+- Stitch projesi 13426839861607265553'e, "Editorial Intelligence Canvas" tasarım sistemiyle 6 ekran eklendi: süreç panosu, proje sayfası (9 adım), kurul günü, Masam (editör masası), telefon liste, telefon proje paneli. Stitch'in uydurduğu şeyler ayıklandı: kayıt açma düğmeleri (veri CRM'den gelir), "kurul iki haftada bir" kutusu (PDF: 1–2 ayda bir), 7–9. adımlara yanlış sorumlular, kesik metinler, sahte dosya numaraları.
+- Kullanıcı onayıyla yeni menü: GÜNLÜK (Masam, Yazar giriş süreci, Yayın kurulu) · YAYINA HAZIRLIK (Redaksiyon, Çeviri, Son okuma) · KAYITLAR (Kişiler = Yazarlar+Çevirmenler+Çizer tek ekran, Sözleşmeler, Editörler). Editoryal masa → Masam; eski adresler yeni ekrana yönlenecek; proje sayfası stok kartı açılınca /kitap/:id'ye bağlanır.
+- Ekranlardan M1–M8 kodları kaldırıldı (`f714febe`, tsc test sunucusunda temiz). Menü yeniden düzeni ve yeni ekranların kodu henüz yazılmadı.
+- Stitch MCP aracı üretim süresinden (1–4 dk) önce zaman aşımına düşüyor; üretim doğrudan JSON-RPC ile 900 sn sınırla yapıldı.
+
 ## 2026-09-24 — Yazar giriş süreci (müşteri akışı) CRM'e eşlendi
 
 - Müşteri editör modülü için 9 adımlı "Yazarın Yayınevine Giriş Süreci" akışını gönderdi; kural: veri CRM'den dinlenecek. Canlı CRM'de (.28) salt okuma ile her adımın karşılığı ve doluluğu ölçüldü: `docs/analiz/yazar-giris-sureci-crm-2026-09-24.md`.
