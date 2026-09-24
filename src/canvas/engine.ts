@@ -956,6 +956,8 @@ export type IntakeBoard = {
   completed: IntakeCard[];
   closed: IntakeCard[];
   todo: IntakeCard[];
+  /** 'all': yönetici, bütün editörlerin bekleyen işi; 'mine': yalnız oturumdaki editörün. */
+  todoScope: 'all' | 'mine';
   lastBoard: string | null;
   steps: IntakeStepDef[];
   loading: boolean;

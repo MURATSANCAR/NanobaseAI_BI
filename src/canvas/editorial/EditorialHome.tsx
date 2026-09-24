@@ -6,7 +6,7 @@ import { ENGINE_ENABLED, type Work, type ContractPage, type IntakeCard } from '.
 import { useTimasSession } from '../TimasSession';
 import { editorialHomeOptions } from './homeQuery';
 import { intakeBoardOptions } from './queries';
-import { MARK_LABEL, MarkButton, Progress, waitingSentence } from './intake/parts';
+import { MARK_LABEL, MarkButton, Progress, TodoGroups, waitingSentence } from './intake/parts';
 import { Note, Pill, errText, nf, fmtDate } from '../admin/ui';
 import { dateTime } from '../format';
 import { ModuleFrame, Panel } from './kit';
@@ -181,6 +181,53 @@ function MyFiles({ running, todo, completed }: { running: IntakeCard[]; todo: In
   );
 }
 
+/** Yönetici görünümü: editör başına süren, bekleyen, geciken ve kuruldaki dosya. */
+function EditorSummary({ items, todo }: { items: IntakeCard[]; todo: IntakeCard[] }) {
+  const by = new Map<string, { editor: string; running: number; waiting: number; late: number; board: number }>();
+  for (const c of items) {
+    const k = c.editor || 'Editör atanmamış';
+    const r = by.get(k) ?? { editor: k, running: 0, waiting: 0, late: 0, board: 0 };
+    r.running += 1;
+    if (c.late) r.late += 1;
+    if (c.phase === 2) r.board += 1;
+    by.set(k, r);
+  }
+  for (const c of todo) {
+    const r = by.get(c.editor || 'Editör atanmamış');
+    if (r) r.waiting += 1;
+  }
+  const rows = [...by.values()].sort((a, b) => b.late - a.late || b.running - a.running);
+  return (
+    <Panel>
+      <h2 className="px-1 text-[13px] font-extrabold">Editörlere göre dosyalar</h2>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[420px] text-[12.5px]">
+          <thead>
+            <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+              <th className="px-2 py-1.5">Editör</th>
+              <th className="px-2 py-1.5 text-right">Süren</th>
+              <th className="px-2 py-1.5 text-right">Editörde bekleyen</th>
+              <th className="px-2 py-1.5 text-right">Kurulda</th>
+              <th className="px-2 py-1.5 text-right">Geciken</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.editor} className="border-t border-slate-100">
+                <td className="px-2 py-1.5 font-semibold">{r.editor}</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums">{nf.format(r.running)}</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums">{nf.format(r.waiting)}</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums">{nf.format(r.board)}</td>
+                <td className={`px-2 py-1.5 text-right font-mono tabular-nums ${r.late ? 'font-bold text-red-700' : ''}`}>{nf.format(r.late)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
 export default function EditorialHome() {
   const session = useTimasSession();
   const home = useQuery(editorialHomeOptions(session.data?.username ?? ''));
@@ -192,6 +239,7 @@ export default function EditorialHome() {
   const lastUpdated = updated.length ? Math.min(...updated) : null;
   const refreshFailed = Object.values(parts ?? {}).some((part) => part.error);
   const d = intake.data;
+  const all = d?.todoScope === 'all';
   const running = (d?.items ?? []).filter((c) => c.mine);
   const completed = (d?.completed ?? []).filter((c) => c.mine);
   const todo = d?.todo ?? [];
@@ -206,7 +254,9 @@ export default function EditorialHome() {
       lead={
         !d || d.loading
           ? 'Size atanmış dosyalar CRM\'den okunuyor…'
-          : running.length
+          : all
+            ? `Yönetici görünümü: ${nf.format(d.items.length)} dosya sürüyor, editörlerde ${nf.format(todo.length)} iş bekliyor.`
+            : running.length
             ? `Size atanmış ${nf.format(running.length)} dosya sürüyor.${todo.length ? ` ${nf.format(todo.length)} tanesi şu an sizi bekliyor.` : ' Şu an sizi bekleyen iş yok.'}`
             : 'Şu an size atanmış, süren dosya yok. Yeni dosya atanınca burada görünür.'
       }
@@ -217,7 +267,16 @@ export default function EditorialHome() {
       {err && <Note tone="err">{home.data || d ? 'Veriler yenilenemedi; son alınan bilgiler gösteriliyor.' : err}</Note>}
       {(refreshFailed || home.data?.stale) && <Note tone="warn">Bazı veriler henüz yenilenemedi. Son başarılı bilgiler korunuyor; güncelleme yeniden denenecek.</Note>}
 
-      {todo.length > 0 && (
+      {all && todo.length > 0 && (
+        <section>
+          <h2 className="px-1 text-[13px] font-extrabold">Editörlerin bekleyen işleri</h2>
+          <div className="mt-2">
+            <TodoGroups todo={todo} openFirst />
+          </div>
+        </section>
+      )}
+
+      {!all && todo.length > 0 && (
         <section>
           <h2 className="px-1 text-[13px] font-extrabold">Şimdi yapılacaklar</h2>
           <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -233,6 +292,7 @@ export default function EditorialHome() {
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-4">
         <div className="space-y-3">
+          {all && d && <EditorSummary items={d.items} todo={todo} />}
           {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} />}
           {works.data && <Desk works={desk} user={works.data.user} />}
         </div>

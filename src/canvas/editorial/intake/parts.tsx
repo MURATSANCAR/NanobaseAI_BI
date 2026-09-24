@@ -84,3 +84,43 @@ export function MarkButton({ projectId, step, label, className = '' }: { project
 
 /** İşaretlenebilen adımda düğmenin söylediği şey. */
 export const MARK_LABEL: Record<number, string> = { 3: 'Rapor bitti', 6: 'Yazara bildirdim' };
+
+/** Yönetici görünümü: bütün editörlerin bekleyen işi, editöre göre. En çok geciken editör üstte; grup tıklanınca açılır. */
+export function TodoGroups({ todo, openFirst = false }: { todo: IntakeCard[]; openFirst?: boolean }) {
+  const groups = new Map<string, IntakeCard[]>();
+  for (const c of todo) {
+    const k = c.editor || 'Editör atanmamış';
+    groups.set(k, [...(groups.get(k) ?? []), c]);
+  }
+  const rows = [...groups.entries()].sort((a, b) => b[1].filter((c) => c.late).length - a[1].filter((c) => c.late).length || b[1].length - a[1].length);
+  return (
+    <ul className="space-y-1.5">
+      {rows.map(([editor, cards], i) => (
+        <li key={editor}>
+          <details open={openFirst && i === 0} className="group rounded-xl bg-white/90">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 py-2 text-[12.5px] [&::-webkit-details-marker]:hidden">
+              <span className="min-w-0 break-words font-extrabold">{editor}</span>
+              <span className="flex shrink-0 items-center gap-1.5 font-mono text-[11.5px] tabular-nums">
+                <span>{nf.format(cards.length)} iş</span>
+                {cards.some((c) => c.late) && <span className="rounded bg-red-50 px-1 font-bold text-red-700">{nf.format(cards.filter((c) => c.late).length)} gecikti</span>}
+              </span>
+            </summary>
+            <ul className="border-t border-slate-100 px-3 pb-2">
+              {cards.map((c) => (
+                <li key={c.id} className="border-t border-slate-100 first:border-t-0">
+                  <Link to={`/yazar-giris/${c.id}`} className="flex flex-wrap items-baseline justify-between gap-x-3 py-1.5 text-[12px] hover:underline">
+                    <span className="min-w-0 break-words">
+                      <b className="font-extrabold">{c.name || 'Adsız proje'}</b>
+                      <span className="text-canvas-muted"> — {c.line.charAt(0).toLocaleLowerCase('tr') + c.line.slice(1)}</span>
+                    </span>
+                    <span className={`shrink-0 font-mono text-[11px] tabular-nums ${c.late ? 'font-bold text-red-700' : 'text-canvas-muted'}`}>{waitingText(c)}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </li>
+      ))}
+    </ul>
+  );
+}

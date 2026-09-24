@@ -3597,13 +3597,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/editorial/intake")
     def editorial_intake(request: Request, response: Response) -> dict[str, Any]:
-        engine, tenant, user, _, _ = _intake_ctx(request)
+        engine, tenant, user, _, is_admin = _intake_ctx(request)
         if FORCE_FRESH.get():
             app.state.editorial_intake.refresh(force=True)
         snap, part = _intake_snapshot()
         response.headers["Cache-Control"] = "private, no-store"
         out = intake_mod.board(snap, intake_mod.all_marks(engine, tenant), user, today=_today(),
-                               late_days=_int_conf("EDITORIAL_INTAKE_LATE_DAYS", 14))
+                               late_days=_int_conf("EDITORIAL_INTAKE_LATE_DAYS", 14), everyone=is_admin)
         return dict(out, loading="data" not in part, updatedAt=part.get("updatedAt"), error=part.get("error"),
                     refreshIntervalSeconds=app.state.editorial_intake.read()["refreshIntervalSeconds"])
 

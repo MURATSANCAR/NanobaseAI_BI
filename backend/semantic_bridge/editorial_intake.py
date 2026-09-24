@@ -402,8 +402,9 @@ def _mine(item: dict[str, Any], user: str) -> bool:
 
 
 def board(snapshot: dict[str, Any], marks: dict[str, dict[int, dict[str, Any]]], user: str, *,
-          today: date, late_days: int) -> dict[str, Any]:
-    """Süreç panosu: bütün projelerin kartı, evre sayıları ve oturumdaki editörün işleri."""
+          today: date, late_days: int, everyone: bool = False) -> dict[str, Any]:
+    """Süreç panosu: bütün projelerin kartı, evre sayıları ve bekleyen işler. Yönetici (`everyone`) bütün
+    editörlerin bekleyen işini görür; editör yalnız kendisininkini."""
     items = [summarize(f, marks.get(f["id"], {}), today, late_days) for f in snapshot.get("facts") or []]
     running = [x for x in items if x["step"] and not x["outcome"]]
     # En uzun bekleyen önde; gecikenler bu sayede sütunun başına çıkar.
@@ -411,7 +412,7 @@ def board(snapshot: dict[str, Any], marks: dict[str, dict[int, dict[str, Any]]],
     phases = [dict(title=ph["title"], no=ph["no"], lead=ph["lead"], steps=[{"no": n, "title": STEPS[n][0]} for n in ph["steps"]],
                    count=sum(1 for x in running if x["phase"] == ph["no"]),
                    late=sum(1 for x in running if x["phase"] == ph["no"] and x["late"])) for ph in PHASES]
-    mine_todo = [x for x in running if _mine(x, user) and x["step"] in EDITOR_STEPS]
+    mine_todo = [x for x in running if (everyone or _mine(x, user)) and x["step"] in EDITOR_STEPS]
     last_board = max((f.get("boardOn") for f in snapshot.get("facts") or [] if f.get("boardOn")), default=None)
     for x in items:
         x["mine"] = _mine(x, user)
@@ -421,7 +422,7 @@ def board(snapshot: dict[str, Any], marks: dict[str, dict[int, dict[str, Any]]],
         "lateDays": late_days, "phases": phases, "items": running,
         "completed": sorted((x for x in items if x["complete"]), key=lambda x: x["modifiedOn"] or "", reverse=True),
         "closed": sorted((x for x in items if x["outcome"]), key=lambda x: x["modifiedOn"] or "", reverse=True),
-        "todo": mine_todo, "lastBoard": last_board,
+        "todo": mine_todo, "todoScope": "all" if everyone else "mine", "lastBoard": last_board,
         "steps": [{"no": n, "title": t, "waiting": w, "owner": o, "markable": MARKABLE.get(n)} for n, (t, w, o) in STEPS.items()],
     }
 

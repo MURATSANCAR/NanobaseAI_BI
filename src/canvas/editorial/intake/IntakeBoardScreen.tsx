@@ -7,7 +7,7 @@ import { intakeBoardOptions } from '../queries';
 import { Note, btnGhost, errText, field, nf } from '../../admin/ui';
 import { dateTime, stamp } from '../../format';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
-import { ProjectCard, waitingText } from './parts';
+import { ProjectCard, TodoGroups, waitingText } from './parts';
 
 /** Yazar giriş süreci: müşterinin 9 adımı üç evrede. Her kart bir CRM projesi; sütunda en uzun bekleyen üstte. */
 
@@ -80,8 +80,21 @@ function Folded({ title, cards }: { title: string; cards: IntakeCard[] }) {
   );
 }
 
-export function TodoStrip({ todo }: { todo: IntakeCard[] }) {
+export function TodoStrip({ todo, all = false }: { todo: IntakeCard[]; all?: boolean }) {
   if (!todo.length) return null;
+  if (all)
+    return (
+      <section className="rounded-2xl border border-amber-200 bg-amber-50/90 p-3 sm:rounded-3xl sm:p-4">
+        <h2 className="flex items-center gap-2 text-[14px] font-extrabold text-amber-900">
+          <BellRing aria-hidden className="h-4 w-4" />
+          Editörlerin bekleyen işleri: {nf.format(todo.length)}
+        </h2>
+        <p className="mt-0.5 text-[11.5px] text-amber-900/80">Yönetici görünümü. Editörün adına tıklayın, işleri açılır.</p>
+        <div className="mt-2">
+          <TodoGroups todo={todo} />
+        </div>
+      </section>
+    );
   return (
     <section className="rounded-2xl border border-amber-200 bg-amber-50/90 p-3 sm:rounded-3xl sm:p-4">
       <h2 className="flex items-center gap-2 text-[14px] font-extrabold text-amber-900">
@@ -151,7 +164,7 @@ export default function IntakeBoardScreen() {
       {d?.error && <Note tone="warn">{d.error}</Note>}
       {d?.loading && <Note tone="info">CRM ilk kez okunuyor; birkaç dakika sürebilir. Ekran kendiliğinden yenilenecek.</Note>}
 
-      {d && <TodoStrip todo={d.todo} />}
+      {d && <TodoStrip todo={d.todo} all={d.todoScope === 'all'} />}
 
       {d && !d.loading && (
         <div className="flex flex-wrap items-center gap-2 px-1 text-[12px]">

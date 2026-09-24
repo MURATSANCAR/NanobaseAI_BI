@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (15:40) — Yönetici her şeyi görür; Wikidata meslek listesi daraltıldı
+
+- Kullanıcı: "timasai süper yönetici, her şeyi görecek." Yazar giriş sürecinde yönetici (`admin_mod.is_admin`) bütün editörlerin bekleyen işini görür (`board(..., everyone=True)`, `todoScope: "all"`): panoda ve Masam'da editöre göre gruplu, Masam'da ayrıca editör başına süren / bekleyen / kurulda / geciken tablosu. Editör yine yalnız kendi işini görür.
+- Wikidata: meslek kümesine yanlışlıkla diplomat, hukukçu, öğretmen, profesör girmişti ("Kamran İnan" yalnız siyasetçi/diplomat olarak kabul edilmişti). Küme yalnız yazıyla ilgili mesleklere indi; ekranda gösterilen meslekler de bu kümeyle sınırlı (ör. "komplo teorisyeni" meslek olarak görünmez). Bulunan 16 kayıt yeni kuralla yeniden denetlenmek üzere sıraya kondu.
+
 ## 2026-09-24 — Baskı Öneri'ye "ZEKI AI Tahminleme" sekmesi (TimesFM 3.0), Power BI sekmeleri değişmeden
 
 - **İstek:** Power BI sekmelerinin yanına ayrı bir tahmin sekmesi; altında son kullanıcı açıklaması ve SQL'ler. Mevcut bozulmayacak.

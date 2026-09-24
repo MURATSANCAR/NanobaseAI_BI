@@ -60,9 +60,25 @@ SHOWN = ("olumlu", "olumsuz", "notr")
 
 #: Wikidata: insan (Q5) ve yazıyla ilgili meslekler. Bu kümede mesleği olmayan aday kabul edilmez.
 WRITER_OCCUPATIONS = {
-    "Q36180", "Q482980", "Q6625963", "Q49757", "Q4853732", "Q201788", "Q11774202", "Q15949613", "Q333634",
-    "Q1930187", "Q4964182", "Q1234713", "Q3332711", "Q18844224", "Q214917", "Q1607826", "Q12144794",
-    "Q28389", "Q2526255", "Q1622272", "Q121594", "Q37226", "Q185351", "Q193391", "Q1231865",
+    "Q36180",     # yazar
+    "Q482980",    # yazar (author)
+    "Q6625963",   # roman yazarı
+    "Q49757",     # şair
+    "Q4853732",   # çocuk kitabı yazarı
+    "Q201788",    # tarihçi
+    "Q11774202",  # deneme yazarı
+    "Q15949613",  # öykü yazarı
+    "Q333634",    # çevirmen
+    "Q1930187",   # gazeteci
+    "Q4964182",   # filozof
+    "Q1234713",   # ilahiyatçı
+    "Q18844224",  # bilimkurgu yazarı
+    "Q214917",    # oyun yazarı
+    "Q1607826",   # editör
+    "Q12144794",  # nesir yazarı
+    "Q28389",     # senarist
+    "Q18814623",  # otobiyografi yazarı
+    "Q4263842",   # edebiyat eleştirmeni
 }
 WIKIDATA_API = "https://www.wikidata.org/w/api.php"
 WIKIDATA_REFRESH_DAYS = 30
@@ -377,7 +393,7 @@ def wikidata_author(name: str, books: dict[str, str]) -> dict[str, Any]:
             return {"status": "belirsiz"}
     e = fits[0]
     awards = [v.get("id") for v in _claims(e, "P166") if isinstance(v, dict)]
-    jobs = [v.get("id") for v in _claims(e, "P106") if isinstance(v, dict)]
+    jobs = [v.get("id") for v in _claims(e, "P106") if isinstance(v, dict) and v.get("id") in WRITER_OCCUPATIONS]
     works = [v.get("id") for v in _claims(e, "P800") if isinstance(v, dict)]
     names: dict[str, str] = {}
     lookup = [x for x in awards + jobs + works if x][:50]
