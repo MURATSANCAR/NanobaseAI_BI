@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 — Kapanmış dönem karşılaştırmasında da eş dönem; veri sonu ölçümü 47 sn → 0,4 sn (dalda, kurulmadı)
+
+- **Sorun:** "geçen ay net ciro bir önceki aya göre" Ağustos'un 17 gününü (veri 17.08'de bitiyor) Temmuz'un 31 günüyle kıyaslıyordu: 86,7 Mn'a karşı 107,7 Mn, yani düşüş. Eş dönem kırpması yalnız bugünü içeren dönemde çalışıyordu; kapanmış dönem "tamdır" sayılıyordu (`test_closed_period_is_left_alone`).
+- **Çözüm:** karşılaştırmada güncel dönem başlamışsa (kapanmış olsa da) ölçünün son günü ölçülür. Dönem veriyle doluysa değişmez (2025'e karşı 2024), ortada bittiyse iki taraf aynı güne kırpılır. Tek dönemli sorular ve gelecek dönemler aynı kaldı.
+- **Gerçek DB:** Ağustos 1–17 86.711.927,55 ₺ / Temmuz 1–17 76.069.567,04 ₺ — önceki cevaptaki düşüş aslında artış. 2025/2024 değişmedi (son gün 31.12.2025). Yıl sınırını aşan Aralık 2025–Ocak 2026 iki yılın tablosundan okundu.
+- **Ölçüm hızlandı:** `MAX(CASE WHEN koşul THEN tarih END)` bütün satırları tarıyordu — 2021–2025 satır tablosunda 2025 için 6–47 sn. Yeni biçim ölçü başına `TOP 1 tarih … ORDER BY tarih DESC` alt sorgusu (`same_period._last_day_sql`, iki probe ortak): 0,38 sn; açık dönemde 1,1 sn, boş cevap ölçümü 154 ms.
+- **Testler:** `test_same_period` yeni 4 test (dolu kapanmış dönem değişmez, ortada biten kırpılır, gelecek ölçülmez, kapanmış tek dönem değişmez) + probe biçimi. Paket: main ile aynı 13 + 10 hata, yeni kırılan 0.
+- **Ayrı, önceden var olan (dokunulmadı):** "Aralık 2025 ile Ocak 2026 arası … geçen yılın aynı dönemine göre" referansı bütün 2025 okunuyor; doğrusu Aralık 2024–Ocak 2025.
+
 ## 2026-09-24 — "(bir) önceki X" soruda başka bir X varsa ondan önceki X (dalda, kurulmadı)
 
 - **Sorun:** "Geçen haftaki tahsilat toplamı bir önceki haftaya göre nasıl?" iki dönemi de bugüne göre okuyordu: ikisi de 14–21 Eylül, hafta kendisiyle karşılaştırılıyordu. "Geçen" bugüne göredir, "önceki" yanındaki döneme göre.

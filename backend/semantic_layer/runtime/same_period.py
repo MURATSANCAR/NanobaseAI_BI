@@ -101,9 +101,29 @@ def _conditions(sq, entity: str, dialect) -> Optional[list[str]]:
     return list(dict.fromkeys(groups)) or [""]
 
 
+def _last_day_sql(entity: str, col: str, cond: list[str], lo: date, hi: date, dialect) -> str:
+    """Her ölçünün [lo, hi) içindeki son günü, ölçü başına bir kolon (last_0, last_1…).
+
+    Ölçü başına "en yeni tarihli bir satır" alt sorgusu: tarih indeksinden sondan okunur ve ilk uyan
+    satırda durur. `MAX(CASE WHEN koşul THEN tarih END)` bütün satırları tarıyordu — 2021–2025'i tutan
+    satır tablosunda 2025 için 6–47 sn; bu biçim 0,4 sn (gerçek DB, 2026-09-25)."""
+    rng = f"{col} >= '{lo.isoformat()}' AND {col} < '{hi.isoformat()}'"
+    subs = []
+    for i, c in enumerate(cond):
+        where = f"{rng} AND {c}" if c else rng
+        inner = dialect.limit(f"SELECT {col} FROM {entity} WHERE {where} ORDER BY {col} DESC", 1)
+        subs.append(f"({inner}) AS last_{i}")
+    return f"SELECT {', '.join(subs)}"
+
+
 def _open_current(sq, today: date) -> Optional[tuple[str, dict]]:
-    """("comparison"|"single", güncel dönem) — yalnız bugünü içeren (açık) bir güncel dönem için.
-    Kapanmış bir dönem (2025'e karşı 2024) takvimle kıyaslanır: ikisi de tamdır."""
+    """("comparison"|"single", güncel dönem).
+
+    Karşılaştırmada güncel dönem başlamışsa yeter; kapanmış olması "tamdır" demek değil. Veri bir kopyada
+    ayın ortasında biter: "geçen ay bir önceki aya göre" Ağustos'un 17 gününü Temmuz'un 31 günüyle
+    kıyaslıyor, not "eşit kapsam doğrulanmadı" deyip rakamı öyle bırakıyordu. Dönem veriyle doluysa
+    (2025'e karşı 2024) ölçülen son gün dönemin sonudur ve `apply` hiçbir şeyi değiştirmez.
+    Tek dönemde yalnız açık dönem: kapanmış tek dönemin kapsam notu ayrı bir karar."""
     comp = sq.comparison or {}
     if comp.get("current") and comp.get("reference"):
         cur = comp["current"]
@@ -114,7 +134,9 @@ def _open_current(sq, today: date) -> Optional[tuple[str, dict]]:
     else:
         return None
     start, end = _d(cur.get("start")), _d(cur.get("end"))
-    if not (start and end) or not (start <= today < end):
+    if not (start and end) or start > today:
+        return None
+    if kind == "single" and not today < end:
         return None
     return kind, cur
 
@@ -138,11 +160,8 @@ def probe_plan(sq, today: date, dialect) -> Optional[dict[str, Any]]:
     stop = min(_d(cur["end"]), today + timedelta(days=1))
     col = f"{entity}.{dialect.q(column)}"
     # Her ölçü kendi satırlarında biter (satış 17 Ağustos'ta, ileri tarihli üretim fişleri bugüne kadar):
-    # tek taramada her ölçünün son günü okunur, en erkeni alınır — iki dönemde de her ölçü dolu olsun.
-    picks = [f"MAX(CASE WHEN {c} THEN {col} END) AS last_{i}" if c else f"MAX({col}) AS last_{i}"
-             for i, c in enumerate(cond)]
-    where = f"{col} >= '{start.isoformat()}' AND {col} < '{stop.isoformat()}'"
-    sql = f"SELECT {', '.join(picks)} FROM {entity} WHERE {where}"
+    # her ölçünün son günü ayrı okunur, en erkeni alınır — iki dönemde de her ölçü dolu olsun.
+    sql = _last_day_sql(entity, col, cond, start, stop, dialect)
     return {"kind": kind, "sql": sql, "period": (start, stop), "entity": entity, "column": column}
 
 
@@ -340,12 +359,9 @@ def empty_probe(sq, today: date, dialect) -> Optional[dict[str, Any]]:
     if cond is None:
         return None
     col = f"{entity}.{dialect.q(column)}"
-    picks = [f"MAX(CASE WHEN {c} THEN {col} END) AS last_{i}" if c else f"MAX({col}) AS last_{i}"
-             for i, c in enumerate(cond)]
 
     def sql_for(lo: date, hi: date) -> str:
-        return (f"SELECT {', '.join(picks)} FROM {entity} "
-                f"WHERE {col} >= '{lo.isoformat()}' AND {col} < '{hi.isoformat()}'")
+        return _last_day_sql(entity, col, cond, lo, hi, dialect)
 
     return {"slot": slot, "entity": entity, "stop": min(slot.end, today + timedelta(days=1)), "sql_for": sql_for}
 

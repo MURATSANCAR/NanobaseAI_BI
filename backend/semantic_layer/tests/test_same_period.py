@@ -48,6 +48,9 @@ def test_comparison_is_cut_where_the_measure_data_ends():
     plan = sp.probe_plan(sq, TODAY, Dialect("tsql"))
     # the measure's own conditions, the current period only, never past today
     assert "STLINE.[TRCODE] IN (7, 8, 9)" in plan["sql"] and "< '2026-09-22'" in plan["sql"]
+    # tarih indeksinden sondan okunur: tam tarama yapan MAX(CASE …) değil
+    assert "SELECT TOP 1 STLINE.[DATE_] FROM STLINE" in plan["sql"] and "ORDER BY STLINE.[DATE_] DESC" in plan["sql"]
+    assert "CASE" not in plan["sql"]
     assert plan["period"] == (date(2026, 1, 1), date(2026, 9, 22))
     ok, last = sp.last_day_of({"records": [{"last_0": "2026-08-17T00:00:00"}]})
     assert ok and last == date(2026, 8, 17)
@@ -64,8 +67,34 @@ def test_earliest_measure_end_wins():
     assert ok and last == date(2026, 8, 17)
 
 
-def test_closed_period_is_left_alone():
+def test_closed_period_full_of_data_is_left_alone():
+    """2025'e karşı 2024: dönem kapanmış ve veri sonuna kadar dolu — ölçülür, hiçbir şey değişmez."""
     sq = _sq([("2025", "YEAR", date(2025, 1, 1), date(2026, 1, 1)), ("2024", "YEAR", date(2024, 1, 1), date(2025, 1, 1))])
+    plan = sp.probe_plan(sq, TODAY, Dialect("tsql"))
+    assert plan["period"] == (date(2025, 1, 1), date(2026, 1, 1))
+    assert not sp.apply(sq, plan, date(2025, 12, 31))
+    assert [(t.start, t.end) for t in sq.temporal] == [(date(2025, 1, 1), date(2026, 1, 1)), (date(2024, 1, 1), date(2025, 1, 1))]
+
+
+def test_closed_period_where_data_stops_midway_is_cut_on_both_sides():
+    """2026-09-24: "geçen ay net ciro bir önceki aya göre" Ağustos'un 17 gününü Temmuz'un 31 günüyle
+    kıyaslıyordu (86,7 Mn'a karşı 107,7 Mn); dönem kapandığı için ölçülmüyordu. İki taraf 17'sinde biter."""
+    sq = _sq([("gecen ay", "LAST_MONTH", date(2026, 8, 1), date(2026, 9, 1)),
+              ("bir onceki aya", "LAST_MONTH", date(2026, 7, 1), date(2026, 8, 1))])
+    plan = sp.probe_plan(sq, TODAY, Dialect("tsql"))
+    assert plan["period"] == (date(2026, 8, 1), date(2026, 9, 1))
+    assert sp.apply(sq, plan, date(2026, 8, 17))
+    assert [(t.start, t.end) for t in sq.temporal] == [(date(2026, 8, 1), date(2026, 8, 18)), (date(2026, 7, 1), date(2026, 7, 18))]
+    assert any("eş dönem" in e for e in sq.explanation)
+
+
+def test_future_period_is_not_probed():
+    sq = _sq([("gelecek yıl", "NEXT_YEAR", date(2027, 1, 1), date(2028, 1, 1)), ("bu yıl", "THIS_YEAR", date(2026, 1, 1), date(2027, 1, 1))])
+    assert sp.probe_plan(sq, TODAY, Dialect("tsql")) is None
+
+
+def test_closed_single_period_is_still_left_alone():
+    sq = _sq([("2025", "YEAR", date(2025, 1, 1), date(2026, 1, 1))], comparison=False)
     assert sp.probe_plan(sq, TODAY, Dialect("tsql")) is None
 
 

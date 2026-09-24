@@ -1,5 +1,7 @@
 # NanobaseAI BI — Proje Belleği
 
+**Eş dönem kapanmış dönemde de (2026-09-25):** karşılaştırmada güncel dönem kapanmış olsa da veri sonu ölçülür, ortada bittiyse iki taraf kırpılır; veri sonu ölçümü ölçü başına `TOP 1 … ORDER BY tarih DESC` (`same_period._last_day_sql`), tam tarama yok. Dalda, kurulmadı.
+
 **"Önceki X" (2026-09-24):** iki dönemden biri "(bir) önceki X" ve türleri aynıysa diğerinden önceki birim (`temporal.anchor_previous`); "geçen X" bugüne göre kalır. Dalda, kurulmadı.
 
 **Boş cevapta veri sonu (2026-09-24):** boş cevap + tek dönem → ölçünün son günü ölçülür (`same_period.empty_probe/empty_hint`, köprü `_data_end_hint`), açıklama tarihi söyler, `dataEnd.suggestion` aynı soruyu o döneme kurar (ayrıştırıcıdan geri geçmezse yok). Ayrıştırıcıda tek gün (`DATE`) ve `DAY_BEFORE_YESTERDAY`. Dalda, kurulmadı; gerçek DB'de (Logo .155) 10 soru + önerileri doğrulandı.
