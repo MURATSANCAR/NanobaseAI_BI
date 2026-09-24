@@ -1,0 +1,10 @@
+[Unit]
+Description=Basın ve web taraması, her gece 02:30
+
+[Timer]
+OnCalendar=*-*-* 02:30:00
+Persistent=true
+Unit=timas-web-watch.service
+
+[Install]
+WantedBy=timers.target

@@ -1032,6 +1032,49 @@ export const intakeApi = {
     send<{ date: string; items: IntakeAgendaItem[]; opinionsVisible: boolean }>('GET', `/api/v1/editorial/intake/meetings/${encodeURIComponent(day)}`, undefined, 60_000),
 };
 
+// ------------------------------------------------------------ basın ve web (açık RSS + Wikidata)
+
+export type WebTone = Partial<Record<'olumlu' | 'olumsuz' | 'notr', number>>;
+export type WebMention = {
+  contactId: string;
+  author: string;
+  books: Array<{ id: string; title: string }>;
+  label: 'olumlu' | 'olumsuz' | 'notr';
+  source: string;
+  url: string;
+  title: string;
+  summary: string | null;
+  on: string | null;
+};
+export type WebFacts = {
+  description: string | null;
+  born: number | null;
+  died: number | null;
+  occupations: string[];
+  awards: string[];
+  works: string[];
+  wikipedia: string | null;
+  wikidata: string;
+};
+export type WebOverview = {
+  items: WebMention[];
+  total: number;
+  page: number;
+  pageSize: number;
+  tone: WebTone;
+  authors: Array<{ contactId: string; author: string; total: number; tone: WebTone }>;
+  counts: { items: number; pending: number; authorsChecked: number; authorsFound: number };
+  lastRun: { at: string | null; report: Record<string, unknown> } | null;
+  sources: Array<{ key: string; label: string }>;
+};
+export type WebSubject = { items: WebMention[]; total: number; tone: WebTone; facts?: WebFacts | null; checkedAt?: string | null };
+
+export const webApi = {
+  overview: (p: { page?: number; label?: string }) => send<WebOverview>('GET', `/api/v1/editorial/web${qs({ page: p.page, label: p.label })}`, undefined, 60_000),
+  person: (id: string) => send<WebSubject>('GET', `/api/v1/editorial/web/people/${encodeURIComponent(id)}`, undefined, 60_000),
+  book: (id: string) => send<WebSubject>('GET', `/api/v1/editorial/web/books/${encodeURIComponent(id)}`, undefined, 60_000),
+};
+
 export type ContractRate = { format: string; percent: number };
 export type ContractParty = { name: string; share: number | null; scope: string | null; viaAgent: boolean };
 export type Contract = {

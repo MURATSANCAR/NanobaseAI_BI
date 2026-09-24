@@ -21,6 +21,7 @@ const RedactionScreen = lazy(() => import('@/canvas/editorial/RedactionScreen'))
 const ProofScreen = lazy(() => import('@/canvas/editorial/ProofScreen'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
+const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
@@ -74,6 +75,7 @@ export default function App() {
             <Route path="yayin-kurulu" element={<MeetingScreen />} />
             <Route path="editor-atama" element={<EditorsScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />
+            <Route path="basin-web" element={<WebScreen />} />
             {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}
             <Route path="yazarlar" element={<Navigate to="/kisiler?rol=yazar" replace />} />
             <Route path="cevirmenler" element={<Navigate to="/kisiler?rol=cevirmen" replace />} />

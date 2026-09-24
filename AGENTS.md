@@ -110,3 +110,21 @@ bitmeden yakalanmalı:
 ## Editor: kitaptan bağımsız üretim kabulü
 
 Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına, PDF hashine, sayfa numarasına veya karakter adına özel uygulama istisnası içeremez. Gerçek kitaplar bağımsız kaynaklı kabul verisidir; bir kitapta geçen kontrol tüm ürünün kabulü değildir. Aynı genel kod/prompt/model sözleşmesi farklı uzunluk ve görsel/metin yapısındaki gerçek kitaplarda doğrulanır. Kaynağa özel beklenen sonuçlar yalnız kabul kanıtında açıkça etiketlenir, üretim karar kurallarına taşınmaz. Teknik çıktı tutarlılığı, kaynak/kimlik/olay kapsamı ve üretim kabulü ayrı raporlanır. Eksik model yanıtları veya başarısız parçalar başarı sayılmaz; bilinmeyen kimlikler zorla bağlanmaz.
+
+## Basın ve web taraması (kullanıcı kararı 2026-09-24)
+
+- **Ne:** CRM'de yazar olarak eser kaydı olan kişiler ve kitapları, açık kaynaklarda aranır: Türk haber sitelerinin
+  kendi RSS akışları (kültür-sanat / kitap) ve Wikidata'nın resmi API'si. Kod `backend/semantic_bridge/web_watch.py`,
+  uç `/api/v1/editorial/web*`, tablolar `semantic_web_*`.
+- **Ne zaman:** her gece 02:30 (`scripts/server/timas-web-watch.timer` → `timas-web-watch.service` →
+  `POST /api/v1/editorial/web/run-due?budget=16200`). Bitmeyen iş (Wikidata sırası, model etiketi) sonraki geceye
+  kalır; sıra kalıcıdır, sessiz tavan yoktur. Yeni zamanlı iş ilk kez elle koşturulur, sonra zamanlayıcıya bırakılır.
+- **Ekrana yalnız doğru eşleşme çıkar:** her eşleşme yerel modele sorulur (olumlu / olumsuz / notr / ilgisiz);
+  "ilgisiz" ve henüz etiketlenmemiş kayıt hiçbir ekranda gösterilmez. Wikidata bilgisi yalnız tek ve kesin eşleşmede
+  (insan + yazıyla ilgili meslek, birden çok aday varsa CRM'deki bir kitap "bilinen eseri" olmalı) gösterilir.
+- **Nasıl taranır:** açık kimlikle (`TimasZekiBot/1.0`, iletişim adresiyle), hesapla giriş yapmadan, robots.txt'e
+  uyarak. Bot korumasını aşan araç (gizlenen tarayıcı, parmak izi taklidi, dönen IP/proxy, CAPTCHA çözme) kullanılmaz;
+  engelleyen site (1000Kitap, Kitapyurdu, D&R, Hepsiburada, Ekşi — 2026-09-24'te 403) taranmaz. O kaynaklar için yol
+  izinli kanaldır: satıcı API'si, veri anlaşması, lisanslı sosyal dinleme hizmeti.
+- **Kişisel veri tutulmaz:** muhabir ve okur adı alınmaz; haber metni kopyalanmaz (başlık, en çok 400 karakter özet,
+  bağlantı). Model dış buluta gitmez; LLM kapısından `rt.llm_for("web", BATCH)` ile gider.

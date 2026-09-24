@@ -1,6 +1,14 @@
 # Geliştirme Günlüğü
 
 <<<<<<< HEAD
+## 2026-09-24 — Basın ve web taraması: açık RSS + Wikidata, yerel model etiketi, gece zamanlayıcısı
+
+- İstek: yazar ve kitaplar için web taraması ve duygu analizi. Test sunucusundan ölçüm: 1000Kitap, Kitapyurdu, D&R, Hepsiburada ve Ekşi otomatik isteği bot korumasıyla 403'lüyor; Google News arama robots.txt'te kapalı; GDELT bu IP'den istek sınırına takılıyor. Bot korumasını aşan araçlar (Scrapling, CloakBrowser, obscura) kullanılmadı; kaynak açık RSS (12 Türk haber sitesi) + Wikidata API.
+- `web_watch.py`: akış oku → CRM yazarlarının ad soyadını başlık/özette ara (Türkçe harf farkı yok, en az iki kelime) → yerel modele "bu yazar/kitap hakkında mı, tonu ne" sor → ekrana yalnız olumlu/olumsuz/nötr. Wikidata yalnız tek ve kesin eşleşmede; adaşı varsa CRM kitabı "bilinen eseri" olmalı (ilk turda "Mehmet Yıldız" tek adaya bağlanmıştı, kural bu yüzden sıkılaştı).
+- İlk tur (elle, test sunucusu, gerçek CRM + GPU modeli, 900 sn): 530 haber, 2.115 yazar, 7 eşleşme — 7'si de ilgili (6 olumlu, 1 nötr; ör. "İskender Pala'nın kaleme aldığı 'Şiirin Sultanları' okurlarla buluştu"); Wikidata 653 yazar, 17 bulundu, 1.462 sonraki gecelere.
+- Ekran `/basin-web` (menüde Kayıtlar), Kişiler detayı ve kitap sayfasında bölüm. Zamanlayıcı her gece 02:30. Kural AGENTS.md'de.
+- Bilinen sınır: bazı akışlar yalnız 10–20 kayıt tutuyor; gece tek okuma gün içindeki haberlerin bir kısmını kaçırabilir.
+
 ## 2026-09-24 — Çok seçenekli süzgeçlere yazarak arama (`SearchSelect`)
 
 - Kullanıcı isteği: kitap adı, yazar gibi binlerce seçenekli açılır listelerden seçmek zor; arama alanı olsun. Bütün `src/` `<select>`/açılır listeleri tarandı, seçenek sayısı koddan ve CRM seçenek kümelerinden çıkarıldı.

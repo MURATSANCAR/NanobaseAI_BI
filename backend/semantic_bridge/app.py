@@ -3673,6 +3673,48 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             admin_mod.audit(engine, user, "unmark", "editorial_intake", f"{project_id}:{step}", f.get("name"), {"step": step})
         return {"ok": True, "removed": removed}
 
+    # ------------------------------------------------------------------ basın ve web
+    # Açık RSS akışları + Wikidata; eşleşme yerel modelle süzülür, ekrana yalnız ilgili bulunan çıkar.
+    # Tur gece zamanlayıcıyla (timas-web-watch.timer) bu uca gelir; mantık burada, birim yalnız çağırır.
+    from semantic_bridge import web_watch as web_mod
+
+    def _web(request: Request) -> tuple[Any, str]:
+        engine, tenant, _, _ = _greetings(request)
+        web_mod.ensure(engine)
+        return engine, tenant
+
+    @app.post("/api/v1/editorial/web/run-due")
+    def editorial_web_run(request: Request, budget: int = 1800) -> dict[str, Any]:
+        _require_caller(request)
+        r = rt()
+        schema = admin_mod.conf("CRM_SCHEMA")
+
+        def fetch_all(sql: str) -> list[dict[str, Any]]:
+            out = r.run_complete(sql)
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+            return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+        from semantic_layer.runtime.llm_queue import BATCH
+        return web_mod.run_due(r.store.engine, r.settings.tenant_id, fetch_all, schema, r.llm_for("web", BATCH),
+                               budget_seconds=max(60, min(int(budget), 6 * 3600)))
+
+    @app.get("/api/v1/editorial/web")
+    def editorial_web_overview(request: Request, page: int = 0, label: str = "") -> dict[str, Any]:
+        engine, tenant = _web(request)
+        return web_mod.overview(engine, tenant, page, label or None)
+
+    @app.get("/api/v1/editorial/web/people/{contact_id}")
+    def editorial_web_person(contact_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant = _web(request)
+        return web_mod.person(engine, tenant, contact_id)
+
+    @app.get("/api/v1/editorial/web/books/{book_id}")
+    def editorial_web_book(book_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant = _web(request)
+        return web_mod.book(engine, tenant, book_id)
+
     @app.get("/api/v1/editorial/contracts/summary")
     def editorial_contracts_summary(request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)

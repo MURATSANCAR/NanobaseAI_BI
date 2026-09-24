@@ -5,6 +5,7 @@ import { Loading, Note, Pill, errText, nf } from '../admin/ui';
 import { dateTime, num, pct } from '../format';
 import { ModuleFrame, Panel } from './kit';
 import AskBox from './AskBox';
+import { WebSection } from './web/parts';
 import Cover from './Cover';
 import ReviewPanel from './ReviewPanel';
 
@@ -286,6 +287,7 @@ export default function BookScreen() {
           <Facts b={b} />
           <About b={b} />
           <AskBox bookKey={b.id} bookTitle={b.title || undefined} />
+          <WebSection kind="book" id={b.id} framed />
           {b.editorBook && <ReviewPanel bookId={b.editorBook.id} />}
           <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
             <div className="space-y-3 lg:space-y-4">

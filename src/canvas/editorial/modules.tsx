@@ -57,5 +57,5 @@ export default function PeopleScreen() {
     </div>
   );
   // Seçim değişince liste durumu (arama, sayfa, açık kişi) sıfırlanır.
-  return <ContributorsScreen key={key} module={GROUPS[key]} aside={tabs} />;
+  return <ContributorsScreen key={key} module={GROUPS[key]} aside={tabs} initialOpen={params.get('kisi')} />;
 }
