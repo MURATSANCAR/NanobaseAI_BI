@@ -1,5 +1,7 @@
 # NanobaseAI BI — Proje Belleği
 
+**"Geçen yılın aynı dönemi" (2026-09-25):** yanındaki dönemin bir yıl/ay/çeyrek/hafta öncesi (`temporal.anchor_same_period`). Dalda, kurulmadı.
+
 **Eş dönem kapanmış dönemde de (2026-09-25):** karşılaştırmada güncel dönem kapanmış olsa da veri sonu ölçülür, ortada bittiyse iki taraf kırpılır; veri sonu ölçümü ölçü başına `TOP 1 … ORDER BY tarih DESC` (`same_period._last_day_sql`), tam tarama yok. Dalda, kurulmadı.
 
 **"Önceki X" (2026-09-24):** iki dönemden biri "(bir) önceki X" ve türleri aynıysa diğerinden önceki birim (`temporal.anchor_previous`); "geçen X" bugüne göre kalır. Dalda, kurulmadı.

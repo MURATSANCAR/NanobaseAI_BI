@@ -335,7 +335,9 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         add(m, TemporalSlot(m.group(0).strip(), prim, date(y, 1, 1), date(y + 1, 1, 1), "YEAR", params={"year": y}))
     found.sort(key=lambda x: x[0])
     found = _join_ranges(found, text)
+    found = _mark_same_period(found, text)
     slots = [s for _, _, s in found]
+    slots, _ = anchor_same_period(slots)
     slots, _ = anchor_previous(slots)
     grain = _grain_hint(text)
     if grain is None:
@@ -343,6 +345,53 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
             if s.primitive in ("MONTH_RANGE",):
                 grain = None  # a range does not imply a breakdown
     return slots, grain
+
+
+#: "geçen yılın aynı dönemi", "önceki ayın aynı günleri": the other period, one unit back.
+_SAME_AFTER = re.compile(r"^\s+ayni\s+(?:donem|zaman|sure|gun|ay|hafta)\w*")
+_SAME_UNITS = {"YEAR": 12, "QUARTER": 3, "MONTH": 1}
+
+
+def _shift_back(d: date, grain: str) -> date:
+    if grain == "WEEK":
+        return d - timedelta(days=7)
+    months = _SAME_UNITS[grain]
+    y, m = divmod(d.month - 1 - months, 12)
+    y, m = d.year + y, m + 1
+    return date(y, m, min(d.day, calendar.monthrange(y, m)[1]))
+
+
+def _mark_same_period(found: list, text: str) -> list:
+    """A previous-unit phrase followed by "aynı dönem…" is not that unit: it names a shift, and it
+    takes the words "aynı dönemine" into its own span so nothing else reads them."""
+    out = []
+    for a, b, s in found:
+        m = _SAME_AFTER.match(text[b:])
+        if m and s.primitive in ("LAST_YEAR", "LAST_QUARTER", "LAST_MONTH", "LAST_WEEK") and s.grain:
+            s = TemporalSlot((s.text + " " + m.group(0).strip()).strip(), s.primitive, s.start, s.end, s.grain,
+                             s.ambiguous, params={**(s.params or {}), "same_period": True})
+            b += m.end()
+        out.append((a, b, s))
+    return out
+
+
+def anchor_same_period(slots: list[TemporalSlot]) -> tuple[list[TemporalSlot], Optional[str]]:
+    """"Aralık 2025 ile Ocak 2026 arası … geçen yılın aynı dönemine göre": the second period is the first
+    one a year back (Aralık 2024–Ocak 2025), not the whole of last year. Same for a month, a quarter and a
+    week back ("geçen ayın aynı dönemi"). Needs exactly one other period to shift; otherwise the phrase
+    keeps its calendar reading and the comparison step decides as before."""
+    marked = [i for i, s in enumerate(slots) if (s.params or {}).get("same_period")]
+    if len(slots) != 2 or len(marked) != 1:
+        return slots, None
+    r, a = slots[marked[0]], slots[1 - marked[0]]
+    if not (a.start and a.end) or r.grain not in ("YEAR", "QUARTER", "MONTH", "WEEK"):
+        return slots, None
+    start, end = _shift_back(a.start, r.grain), _shift_back(a.end, r.grain)
+    moved = TemporalSlot(r.text, r.primitive, start, end, a.grain, r.ambiguous,
+                         params={**(r.params or {}), "same_as": a.text})
+    out = list(slots)
+    out[marked[0]] = moved
+    return out, f"'{r.text}' '{a.text}' döneminin bir {r.grain} öncesi: {start.isoformat()}–{end.isoformat()}"
 
 
 #: "önceki X" / "bir önceki X" — the X before another one. Unlike "geçen X" it is not anchored to today.
@@ -374,7 +423,10 @@ def anchor_previous(slots: list[TemporalSlot]) -> tuple[list[TemporalSlot], Opti
     Returns (slots, explanation or None)."""
     if len(slots) != 2:
         return slots, None
-    rel = [i for i, s in enumerate(slots) if _RELATIVE_PREV.match(s.text or "")]
+    # "bir önceki yılın aynı ayı" was already placed by anchor_same_period; counting back again would
+    # turn July 2025 into June 2026.
+    rel = [i for i, s in enumerate(slots)
+           if _RELATIVE_PREV.match(s.text or "") and not (s.params or {}).get("same_as")]
     if len(rel) != 1:
         return slots, None
     r, a = slots[rel[0]], slots[1 - rel[0]]
@@ -403,4 +455,4 @@ def month_count(start: date, end: date) -> int:
     return (end.year - start.year) * 12 + (end.month - start.month)
 
 
-__all__ = ["parse_temporal", "anchor_previous", "describe", "TemporalSlot", "PRIMITIVES", "MONTHS", "month_count", "calendar"]
+__all__ = ["parse_temporal", "anchor_previous", "anchor_same_period", "describe", "TemporalSlot", "PRIMITIVES", "MONTHS", "month_count", "calendar"]

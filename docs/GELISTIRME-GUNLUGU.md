@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 — "Geçen yılın aynı dönemi" yanındaki dönemin bir yıl öncesi (dalda, kurulmadı)
+
+- **Sorun:** "Aralık 2025 ile Ocak 2026 arası net ciro geçen yılın aynı dönemine göre" referansı bütün 2025 okuyordu (1,13 Mr ₺); "aynı dönemine" kelimeleri yok sayılıyordu.
+- **Çözüm (`temporal._mark_same_period` + `anchor_same_period`):** "geçen/önceki yılın (ayın, çeyreğin, haftanın) aynı dönemi/ayı/günü" ifadesi, soruda tek bir başka dönem varsa o dönemin bir birim geri kaydırılmış hâli; "aynı …" kelimeleri ifadenin parçası olur. Ay sonu kırpılır (29.02.2028 → 28.02.2027). Yanında dönem yoksa dokunulmaz; "bir önceki yılın aynı ayı" ikinci kez `anchor_previous`'tan geçmez.
+- **Gerçek DB:** Aralık 2025–Ocak 2026 192.464.743,52 ₺ / Aralık 2024–Ocak 2025 114.874.119,16 ₺; Temmuz 2026 107.653.273,52 ₺ / Temmuz 2025 71.341.513,36 ₺.
+- **Doğrulama:** `test_same_period_phrase.py` 12/12; paket: main ile aynı hatalar, yeni kırılan 0. 3.636 soruluk dönem karşılaştırması: dönemi değişen eski sorular yalnız hedeflenenler; "Bu yıl … geçen yılın aynı dönemine göre" gibi 14 soruda dönem aynı, ifade metni "aynı dönemine"yi de kapsıyor.
+- **Main'e alma:** dal güncel main'in üstünde; ff-merge + push izin denetimine takıldı, kullanıcıya bırakıldı.
+
 ## 2026-09-25 — Kapanmış dönem karşılaştırmasında da eş dönem; veri sonu ölçümü 47 sn → 0,4 sn (dalda, kurulmadı)
 
 - **Sorun:** "geçen ay net ciro bir önceki aya göre" Ağustos'un 17 gününü (veri 17.08'de bitiyor) Temmuz'un 31 günüyle kıyaslıyordu: 86,7 Mn'a karşı 107,7 Mn, yani düşüş. Eş dönem kırpması yalnız bugünü içeren dönemde çalışıyordu; kapanmış dönem "tamdır" sayılıyordu (`test_closed_period_is_left_alone`).
