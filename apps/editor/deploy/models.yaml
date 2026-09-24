@@ -175,3 +175,22 @@ aliases:
       - --reasoning-parser=qwen3
       - '--limit-mm-per-prompt={"image":6,"video":0}'
       - '--mm-processor-kwargs={"max_pixels":2408448}'
+
+  # Kitap görselleri (kapak, iç resim, tanıtım) — kullanıcı kararı 2026-09-24. Diffusion model,
+  # vLLM-Omni ile sunulur: POST /v1/images/generations (metinden görsel), referanslı düzenleme
+  # JSON /v1/chat/completions ile. Diğerleri gibi ilk istekte açılır, boşta kapanır.
+  # Lisans: Qwen Research (ticari olmayan). Ticari izin gelene kadar basılacak işe çıktı verilmez.
+  # İmaj: 2.1 desteği vLLM-Omni sürümüne henüz girmedi (PR #7759); ekibin yayınladığı
+  # `qwen-image21` imajı digest ile sabit. Sürüme girince buradan değiştirilir.
+  book-image:
+    container: editor-model-image
+    model_dir: Qwen-Image-2.1
+    real_model: Qwen/Qwen-Image-2.1
+    role: Kapak ve iç görsel üretimi
+    kind: image
+    gpu: 1
+    mem_fraction: 0.40
+    image: vllm/vllm-omni@sha256:38c59f79fd8fc4831348a3d800a882833a1ca1c50a67458988d693f3aa80360c
+    entrypoint: [vllm, serve]      # bu imajda giriş komutu yok
+    args:
+      - --omni

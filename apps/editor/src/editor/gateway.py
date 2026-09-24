@@ -45,7 +45,8 @@ NETWORK = os.environ.get("EDITOR_NETWORK", "editor-net")
 GIB = 1024**3
 MEM_MARGIN = int(float(os.environ.get("EDITOR_GPU_MARGIN_GIB", "1.5")) * GIB)
 PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score",
-               "pooling", "classify", "tokenize", "detokenize"}
+               "pooling", "classify", "tokenize", "detokenize",
+               "images/generations"}      # book-image (vLLM-Omni); edits go as JSON chat/completions
 HOP = {"content-length", "transfer-encoding", "connection", "keep-alive", "content-encoding"}
 
 # Taşma (kullanıcı kararı 2026-09-21): aynı model (Qwen3.8-27B-FP8) GPU 0'da BI için de açık. Etkileşimli
@@ -78,6 +79,9 @@ class Alias:
     # `nanobaseAI`, so the dispatcher in front of both cards (deploy/tt-gpu/llm-dispatch) can
     # send BI prompts to it while no book is being read.
     also_serves: list[str] = field(default_factory=list)
+    # Image without an entrypoint (vLLM-Omni): the command the container runs before the
+    # model path. vllm/vllm-openai images already start with `vllm serve`.
+    entrypoint: list[str] = field(default_factory=list)
     inflight: int = 0
     last_used: float = field(default_factory=time.time)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -90,6 +94,8 @@ class Alias:
         spec = [self.image, self.model_dir, self.gpu, self.mem_fraction, self.args]
         if self.also_serves:              # only then: the other models' containers keep their hash
             spec.append(self.also_serves)
+        if self.entrypoint:
+            spec.append(self.entrypoint)
         blob = json.dumps(spec)
         return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
@@ -109,6 +115,7 @@ def load_aliases() -> dict[str, Alias]:
             role=a.get("role", ""),
             always_on=bool(a.get("always_on", False)),
             also_serves=[str(x) for x in a.get("also_serves", [])],
+            entrypoint=[str(x) for x in a.get("entrypoint", [])],
         )
     return out
 
@@ -169,7 +176,7 @@ def _create(a: Alias):
            "--gpu-memory-utilization", f"{a.mem_fraction:.2f}", *a.args]
     log.info("create %s (%s) gpu=%s frac=%.2f", a.container, a.real_model, a.gpu, a.mem_fraction)
     return dk.containers.create(
-        a.image, cmd, name=a.container, labels=labels, detach=True,
+        a.image, cmd, entrypoint=a.entrypoint or None, name=a.container, labels=labels, detach=True,
         network=NETWORK, ipc_mode="host", shm_size="16g",
         ulimits=[Ulimit(name="memlock", soft=-1, hard=-1)],
         device_requests=[DeviceRequest(device_ids=[str(a.gpu)], capabilities=[["gpu"]])],
