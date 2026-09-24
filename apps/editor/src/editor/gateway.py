@@ -82,6 +82,8 @@ class Alias:
     # Image without an entrypoint (vLLM-Omni): the command the container runs before the
     # model path. vllm/vllm-openai images already start with `vllm serve`.
     entrypoint: list[str] = field(default_factory=list)
+    # Extra container environment for this alias only (e.g. PyTorch allocator settings).
+    env: dict[str, str] = field(default_factory=dict)
     inflight: int = 0
     last_used: float = field(default_factory=time.time)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
@@ -96,6 +98,8 @@ class Alias:
             spec.append(self.also_serves)
         if self.entrypoint:
             spec.append(self.entrypoint)
+        if self.env:
+            spec.append(sorted(self.env.items()))
         blob = json.dumps(spec)
         return hashlib.sha256(blob.encode()).hexdigest()[:16]
 
@@ -116,6 +120,7 @@ def load_aliases() -> dict[str, Alias]:
             always_on=bool(a.get("always_on", False)),
             also_serves=[str(x) for x in a.get("also_serves", [])],
             entrypoint=[str(x) for x in a.get("entrypoint", [])],
+            env={str(k): str(v) for k, v in (a.get("env") or {}).items()},
         )
     return out
 
@@ -182,7 +187,7 @@ def _create(a: Alias):
         device_requests=[DeviceRequest(device_ids=[str(a.gpu)], capabilities=[["gpu"]])],
         volumes={f"{HOST_ROOT}/models/{a.model_dir}": {"bind": "/model", "mode": "ro"},
                  cache: {"bind": "/root/.cache/vllm", "mode": "rw"}},
-        environment={"HF_HUB_OFFLINE": "1", "VLLM_NO_USAGE_STATS": "1",
+        environment={**a.env, "HF_HUB_OFFLINE": "1", "VLLM_NO_USAGE_STATS": "1",
                      "DO_NOT_TRACK": "1"},
         restart_policy={"Name": "no"},
     )

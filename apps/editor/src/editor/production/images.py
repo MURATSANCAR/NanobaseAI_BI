@@ -4,10 +4,11 @@ Tutarlılık: her ANA/YAN karakter önce düz zeminde bir kez çizilir (referans
 görünen karakterlerin referanslarıyla (en çok 4) düzenleme ucundan istenir; referanssız sayfa ya da
 düzenleme ucu hata verirse metinden görsel ucuna düşer (sebep kayda geçer).
 
-Boyut: model resmi piksel bütçesi içinde (EDITOR_IMAGE_PIXELS, varsayılan 1536×1024) en-boy oranını
-koruyarak üretir, sonra hedef alanın 300 dpi karşılığına Lanczos ile büyütülür. Ölçüldü 2026-09-24:
-ana model aynı kartta açıkken 2,6 MP ve üstü bellek aşımı veriyor, 1,57 MP 46 GB'ta sığıyor. Üretim
-çözünürlüğü (`native_dpi`) kayda geçer; ön kontrol 250 dpi altında büyütülmüş resmi bildirir.
+Boyut: model resmi piksel bütçesi içinde (EDITOR_IMAGE_PIXELS, varsayılan 2048×2048) en-boy oranını
+koruyarak üretir, sonra hedef alanın 300 dpi karşılığına Lanczos ile büyütülür. Bütçe, görsel modelin
+kartı tek başına kullandığı düzene göredir (models.yaml book-image 0.62 payı ana modeli durdurur);
+ana model aynı kartta açıkken 2,6 MP ve üstü bellek aşımı verir (ölçüldü 2026-09-24). Üretim
+çözünürlüğü kayda geçer; ön kontrol 250 dpi altında büyütülmüş resmi bildirir.
 
 Uç: gateway (`book-image` takma adı). EDITOR_IMAGE_URL verilirse doğrudan o sunucu (sınama).
 """
@@ -28,7 +29,7 @@ from ..config import settings
 from .art import ArtPlan, Character, Scene
 
 ALIAS = "book-image"
-PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 1536 * 1024))
+PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 2048 * 2048))
 STEPS = 40
 MAX_REFS = 4
 
@@ -107,7 +108,8 @@ class Painter:
             for b in refs]
         params = {"height": H, "width": W, "num_inference_steps": STEPS, "seed": seed,
                   "true_cfg_scale": 4.0, "negative_prompt": self.negative}
-        body = {"model": ALIAS, "messages": [{"role": "user", "content": content}], **params, "extra_body": params}
+        # Parametreler yalnız üst düzeyde: vLLM-Omni aynı alanın extra_body'de de gelmesini 400 ile reddeder.
+        body = {"model": ALIAS, "messages": [{"role": "user", "content": content}], **params}
         r = await self.http.post(f"{self.url}/v1/chat/completions", json=body, headers=self.headers)
         r.raise_for_status()
         part = r.json()["choices"][0]["message"]["content"]
@@ -180,6 +182,20 @@ class Painter:
 
         done = await asyncio.gather(*(one(sc) for sc in scenes))
         return {n: rd.path for n, rd in done}
+
+    async def release(self) -> str:
+        """Görsel modeli hemen kapatır (gateway iç ucu): iş bitince kartı ana modele geri verir, gateway'in
+        bekçisi ana modeli kendiliğinden kaldırır. Sınamada (EDITOR_IMAGE_URL) gateway yoktur, bir şey yapmaz."""
+        if os.environ.get("EDITOR_IMAGE_URL"):
+            return "doğrudan uç: kapatma yok"
+        s = settings()
+        try:
+            r = await self.http.post(f"{self.url}/internal/stop/{ALIAS}",
+                                     headers={"authorization": f"Bearer {s.gateway_internal_key}"}, timeout=90)
+            r.raise_for_status()
+            return "görsel model kapatıldı; ana model geri kalkıyor"
+        except httpx.HTTPError as e:
+            return f"görsel model kapatılamadı ({e}); boşta kalınca kendisi kapanacak"
 
     def write_log(self, path: Path) -> None:
         path.write_text(json.dumps([asdict(r) for r in self.log], ensure_ascii=False, indent=1))

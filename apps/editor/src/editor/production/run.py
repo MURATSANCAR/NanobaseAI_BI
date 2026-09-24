@@ -166,12 +166,20 @@ async def _run(d: Path, job: dict, st: State, images: bool, seed: int) -> None:
                 studio.add_version(d, str(sc.page), rd.path, mode=rd.mode, prompt="", seed=rd.seed, by=by, dpi=rd.dpi)
                 st.step("sayfa_resimleri")["progress"] = [i, len(plan.scenes)]
                 st.flush()
-            st.done("sayfa_resimleri", f"{len(plan.scenes)} resim")
+            modes: dict[str, int] = {}
+            for p in studio.studio_state(d)["pages"].values():
+                modes[p["versions"][0]["mode"]] = modes.get(p["versions"][0]["mode"], 0) + 1
+            fell = modes.get("edit_failed→generate", 0)
+            st.done("sayfa_resimleri", f"{len(plan.scenes)} resim" + (
+                f" · {fell} resim karakter referansı olmadan çizildi (referanslı uç hata verdi)" if fell else
+                f" · {modes.get('edit', 0)} resim karakter referanslı"), status="warn" if fell else "done", modes=modes)
             st.start("kapak")
             from .images import size_for
             rd = await studio._cover_render(painter, plan, spec, 1, seed, "", None)
             studio.add_version(d, "kapak", rd.path, mode="new", prompt="", seed=seed, by=by, dpi=rd.dpi)
         finally:
+            # Resimler bitti (ya da hat düştü): görsel modeli beklemeden kapat, kart ana modele dönsün.
+            st.data["gpu_release"] = await painter.release()
             await painter.close()
     else:
         for k in ("karakter_resimleri", "sayfa_resimleri", "kapak"):

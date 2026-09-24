@@ -189,9 +189,17 @@ aliases:
     role: Kapak ve iç görsel üretimi
     kind: image
     gpu: 1
-    # Ölçüldü 2026-09-24 (H100 NVL, BF16): açılış 40 sn, boşta 33,3 GB, üretim sırasında 46,2 GB
-    # zirve (vLLM-Omni --gpu-memory-utilization'a uymuyor); 1024x1536 / 40 adım ~29 sn.
-    mem_fraction: 0.50
+    # Ölçüldü 2026-09-24 (H100 NVL, BF16): açılış 40 sn, boşta 33 GB; 1,57 MP üretimde 46 GB, 4,2 MP'de
+    # ~55 GB. Ana model (45 GB) aynı kartta açıkken büyük resim ve uzun süre açık kalınca (bellek
+    # parçalanması 47,7 GB) bellek aşımı veriyor. 0.62 payı, gateway'in açılıştan önce ana modeli durdurmasını
+    # sağlar (analiz modelleriyle aynı düzen: BI soruları o sırada dağıtıcıdan GPU 0'a gider, görsel
+    # model 10 dk boşta kalınca kapanır, ana model geri gelir). Görsel 300 dpi'ya yakın (4,2 MP) üretilir.
+    mem_fraction: 0.62
+    # Tam koşu bitince hat modeli hemen kapatır (Painter.release); stüdyoda art arda düzeltmeler için
+    # boşta 5 dk bekler, sonra kapanır ve ana model geri kalkar.
+    idle_stop_sec: 300
+    env:
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
     image: vllm/vllm-omni@sha256:38c59f79fd8fc4831348a3d800a882833a1ca1c50a67458988d693f3aa80360c
     entrypoint: [vllm, serve]      # bu imajda giriş komutu yok
     args:

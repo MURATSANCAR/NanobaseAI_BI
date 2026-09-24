@@ -3959,6 +3959,119 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             log.exception("page context failed")
             raise HTTPException(502, "Sayfa şu an okunamıyor.") from None
 
+    # --------------------------------------------------- kitap tasarım stüdyosu
+    # Kitabın basıma hazırlığı GPU'daki stüdyo servisinde yürür (içerik → CRM → profil → yerleşim →
+    # resim → dizgi → kapak → ön kontrol). Köprü yalnız oturum ister, düzenleyeni oturumdan koyar ve
+    # yazan işlemleri denetim kaydına geçirir.
+
+    def _studio_call(fn, *a, what: str = "Stüdyo şu an yanıt vermiyor.", **kw):
+        from semantic_bridge import editorial_studio
+        try:
+            return fn(*a, **kw)
+        except editorial_studio.StudioError as e:
+            raise HTTPException(e.status if e.status in (400, 404, 409, 413) else 400, str(e)) from None
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+        except Exception:  # noqa: BLE001 — ayrıntı günlükte; editöre teknik hata metni gösterilmez
+            log.exception("studio call failed")
+            raise HTTPException(502, what) from None
+
+    def _studio_image(result) -> Response:
+        data, mime = result
+        return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=300"})
+
+    @app.get("/api/v1/editorial/studio/jobs")
+    def editorial_studio_jobs(request: Request) -> dict[str, Any]:
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_call(editorial_studio.jobs)
+
+    @app.post("/api/v1/editorial/studio/jobs")
+    def editorial_studio_new(request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        book_id = str((body or {}).get("book_id") or "")
+        out = _studio_call(editorial_studio.new_job, book_id, user)
+        admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), book_id, {"source": "book"})
+        return out
+
+    @app.post("/api/v1/editorial/studio/jobs/docx")
+    async def editorial_studio_new_docx(request: Request) -> dict[str, Any]:
+        """Word dosyası ham gövde olarak gelir (Content-Type docx, ad X-File-Name başlığında, URL kodlu)."""
+        engine, _tenant, user, _ = _books(request)
+        from urllib.parse import unquote
+        from semantic_bridge import editorial_studio
+        data = await request.body()
+        name = unquote(request.headers.get("x-file-name", "kitap.docx"))
+        out = _studio_call(editorial_studio.new_job_docx, name, data, user)
+        admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), name, {"source": "docx", "bytes": len(data)})
+        return out
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}")
+    def editorial_studio_job(job: str, request: Request) -> dict[str, Any]:
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_call(editorial_studio.job, job)
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/restart")
+    def editorial_studio_restart(job: str, request: Request) -> dict[str, Any]:
+        engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        out = _studio_call(editorial_studio.restart, job, user)
+        admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), job, {"restart_of": job})
+        return out
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/art/{key}/{action}")
+    def editorial_studio_art(job: str, key: str, action: str, request: Request,
+                             body: dict[str, Any] | None = None) -> dict[str, Any]:
+        engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        data = body or {}
+        clean = {"regenerate": {"mode": str(data.get("mode") or ""), "prompt": str(data.get("prompt") or "")[:1200],
+                                "variants": int(data.get("variants") or 1)},
+                 "select": {"v": int(data.get("v") or 0)},
+                 "approve": {"ok": bool(data.get("ok", True))}}.get(action)
+        if clean is None:
+            raise HTTPException(404, "İşlem yok.")
+        out = _studio_call(editorial_studio.art_action, job, key, action, clean, user)
+        admin_mod.audit(engine, user, {"regenerate": "create", "select": "update", "approve": "approve"}[action],
+                        "studio_art", f"{job}/{key}", action, clean)
+        return out
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/pages/{page_no}/preview")
+    def editorial_studio_page(job: str, page_no: int, request: Request, w: int = 900):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_image(_studio_call(editorial_studio.page_preview, job, page_no, max(120, min(int(w), 2400))))
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/cover/preview")
+    def editorial_studio_cover(job: str, request: Request, w: int = 1400):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_image(_studio_call(editorial_studio.cover_preview, job, max(200, min(int(w), 3000))))
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/art/{key}/{version}")
+    def editorial_studio_art_image(job: str, key: str, version: int, request: Request, w: int = 800):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_image(_studio_call(editorial_studio.art, job, key, version, max(0, min(int(w), 2400))))
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/characters/{i}")
+    def editorial_studio_character(job: str, i: int, request: Request, w: int = 256):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_image(_studio_call(editorial_studio.character, job, i, max(0, min(int(w), 1024))))
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/pdf/{kind}")
+    def editorial_studio_pdf(job: str, kind: str, request: Request):
+        engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        data, _mime = _studio_call(editorial_studio.pdf, job, kind, what="PDF şu an alınamıyor.")
+        admin_mod.audit(engine, user, "export", "studio_pdf", job, kind, None)
+        name = f"{job}-{'ic-sayfalar' if kind == 'ic' else 'kapak'}.pdf"
+        return Response(content=data, media_type="application/pdf",
+                        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"})
+
     @app.get("/api/v1/editorial/books/{book_id}/figures/{region_id}")
     def editorial_book_figure(book_id: str, region_id: str, request: Request):
         _books(request)
