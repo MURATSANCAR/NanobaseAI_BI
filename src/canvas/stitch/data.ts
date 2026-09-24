@@ -50,6 +50,8 @@ export type StitchCanvasData = {
   dock: [string, string, string, string];
   q: { initials: string; role: string; at: string; text: string };
   c1: {
+    /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
+    sql?: string;
     icon: string;
     title: string;
     badge: string;
@@ -64,6 +66,8 @@ export type StitchCanvasData = {
     rowValue: string;
   };
   c2: {
+    /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
+    sql?: string;
     title: string;
     badge: string;
     label: string;
@@ -80,6 +84,8 @@ export type StitchCanvasData = {
     dot: [number, number];
   };
   c3: {
+    /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
+    sql?: string;
     title: string;
     badge: string;
     center: string;
@@ -90,6 +96,8 @@ export type StitchCanvasData = {
     footValue: string;
   };
   c4: {
+    /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
+    sql?: string;
     title: string;
     badge: string;
     initials: string;
@@ -113,6 +121,8 @@ export type StitchCanvasData = {
     timing?: DbTiming | null;
   };
   main: {
+    /** Özetin dayandığı SQL; cevap görünümünde motorun ürettiği sorgu. */
+    sql?: string;
     badge: string;
     subject: string;
     model: string;
@@ -138,6 +148,8 @@ export type StitchCanvasData = {
     };
     /** Özetin dayandığı verinin veritabanından gelme süresi. */
     timing?: DbTiming | null;
+    /** Boş cevapta verinin bittiği döneme kurulmuş aynı soru; tıklayınca o soru sorulur. */
+    retry?: { question: string; busy: boolean; onAsk: (question: string) => void };
   };
   sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
   ghost: { title: string; badge: string; text: string; foot: string };

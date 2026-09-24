@@ -176,6 +176,8 @@ export default function BiCanvasPage() {
       main: {
         ...d.main,
         subject: 'Verine sor',
+        // Cevap görünümünde özet motorun ürettiği sorguya dayanır; bekleme/hata anında eski kartın SQL'i gösterilmez.
+        sql: !asking && answer?.sql ? answer.sql : undefined,
         loading: asking,
         model: asking ? `${PHASES[phase]}…` : answer?.latency_ms ? `${(answer.latency_ms / 1000).toFixed(1)} sn` : '',
         text: asking
@@ -190,6 +192,11 @@ export default function BiCanvasPage() {
         board: !asking && answer?.sql && (answer.records?.length ?? 0) > 0 ? { ...board, onAdd: () => void addToBoard() } : undefined,
         timing: !asking && answer?.records ? answer : null,
         interpret: !asking && !askErr && interpretChips.length > 0 ? { items: interpretChips, busy: asking, onPick: rephrase } : undefined,
+        // Dönem veriden sonra kaldıysa motor aynı soruyu verinin son dönemine kurup gönderir; metin motorundur.
+        retry:
+          !asking && !askErr && answer?.dataEnd?.suggestion?.question
+            ? { question: answer.dataEnd.suggestion.question, busy: asking, onAsk: rephrase }
+            : undefined,
       },
       c5: {
         ...d.c5,

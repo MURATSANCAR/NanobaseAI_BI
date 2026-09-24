@@ -815,6 +815,47 @@ class Runtime:
             changed = same_period.apply(sq, plan, last)
             log.info("same-period %s entity=%s last=%s changed=%s", plan["kind"], plan["entity"], last, changed)
 
+    def _data_end_hint(self, sq: SemanticQuery, question: str, scope_args: dict) -> Optional[dict]:
+        """Boş cevap: sorunun dönemi verinin bittiği günden sonra mı? (bkz. `same_period.empty_hint`)
+        Son gün, dönemin bitişinden geriye yıl yıl, ölçünün tablosunda profilin gördüğü ilk yıla kadar
+        aranır (sayı tavanı yok; genelde ilk adımda bulunur). Ölçülemezse None — eski not kalır."""
+        if self.connector is None:
+            return None
+        from datetime import date as _date
+        from semantic_layer.runtime import same_period
+        today = _date.today()
+        try:
+            probe = same_period.empty_probe(sq, today, Dialect(self.settings.dialect or "tsql"))
+        except Exception:  # noqa: BLE001 — açıklama bir iyileştirmedir, cevabı düşürmez
+            log.exception("data-end probe plan failed")
+            return None
+        if probe is None:
+            return None
+        starts = [same_period._d((p.time_window or (None,))[0]) for p in self.profiles
+                  if (p.entity or "").upper() == probe["entity"].upper()]
+        starts = [d for d in starts if d]
+        first = min(starts) if starts else None
+        hi, last = probe["stop"], None
+        while last is None and (first is None or hi > first):
+            lo = _date(hi.year - (1 if hi == _date(hi.year, 1, 1) else 0), 1, 1)
+            if first is not None:
+                lo = max(lo, first)
+            try:
+                got = self.run_sql(probe["sql_for"](lo, hi), 1, (lo, hi), **scope_args)
+            except Exception as e:  # noqa: BLE001
+                log.warning("data-end probe failed q=%r err=%s", question[:80], str(e)[:300])
+                return None
+            ok, last = same_period.last_day_of(got)
+            if not ok:
+                return None
+            if first is None:
+                break            # profilde başlangıç yok: yalnız dönemin yılı okunur, geriye gidilmez
+            hi = lo
+        hint = same_period.empty_hint(question, probe["slot"], last, today)
+        log.info("data-end entity=%s last=%s suggestion=%s", probe["entity"], last,
+                 bool(hint and hint.get("suggestion")))
+        return hint
+
     def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
         report = progress or (lambda stage: None)
         report("understanding")
@@ -1099,6 +1140,16 @@ class Runtime:
         self.attach_widget(result, question)
         self.remember_result(result, question=question, sql=sql)
         shown = list(result["records"])[: max(1, int(sample_size or 50))]
+        data_end = None
+        from semantic_layer.runtime.column_facts import nothing_came_back
+        if nothing_came_back(result.get("records") or [], int(result.get("totalRows") or 0)):
+            t = time.perf_counter()
+            data_end = self._data_end_hint(sq, effective_question, scope_args)
+            timings["data_end_ms"] = int((time.perf_counter() - t) * 1000)
+            if data_end:
+                # Tarihli açıklama, tarihsiz "bitiyor olabilir" notunun yerini alır.
+                sq.explanation[:] = [e for e in sq.explanation if "bu dönemden önce bitiyor" not in e]
+                sq.explanation.append(data_end["note"])
         t = time.perf_counter()
         summary = self.summarize(question, sql, result, sq)
         # What a ratio was measured against is part of the answer, not of the log: a share taken over
@@ -1141,6 +1192,8 @@ class Runtime:
             "presentation": result.get("presentation"),
             "comparison": result.get("comparison"),
             "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
+            # Boş cevapta dönem veriden sonra kaldıysa: son gün ve aynı sorunun o güne kurulmuş hâli.
+            "dataEnd": data_end,
             "columns": result["columns"],
             "records": shown,
             "shownRows": len(shown),

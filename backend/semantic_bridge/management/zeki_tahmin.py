@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import json
 import os
+import ssl
 import urllib.error
 import urllib.request
 from datetime import date, datetime, timedelta
@@ -26,6 +27,11 @@ PEAK_MONTHS = [9, 10]
 MIN_HISTORY_MONTHS = 6
 FORECAST_API_BASE = os.environ.get("FORECAST_API_BASE", "http://127.0.0.1:8793").rstrip("/")
 FORECAST_TIMEOUT = int(os.environ.get("ZEKI_FORECAST_TIMEOUT_SEC", "1800"))
+# Müşteri VM'i tahmini GPU'daki servisten ister (internet üzerinden, GPU genel nginx'i). nginx ikinci bir gizli
+# başlık ister ("Ad: değer", kitap kartlarıyla aynı biçim); sertifika kendinden imzalıysa CA dosyası verilir.
+FORECAST_EXTRA_HEADER = os.environ.get("FORECAST_EXTRA_HEADER", "").strip()
+FORECAST_CA_FILE = os.environ.get("FORECAST_CA_FILE", "").strip()
+FORECAST_LOCAL = FORECAST_API_BASE.startswith(("http://127.0.0.1", "http://localhost"))
 FIRST_YEAR = 2015  # Logo yıllık satış görünümlerinin ilki
 KEEP_QUANTILES = {"p10": 0, "p50": 4, "p80": 7, "p90": 8}  # 9 kantilden sekmede kullanılanlar
 
@@ -96,11 +102,24 @@ def pool_codes(inputs: dict | None) -> list[str]:
     return sorted(codes)
 
 
+def _headers(extra: dict | None = None) -> dict:
+    h = dict(extra or {})
+    if ":" in FORECAST_EXTRA_HEADER:
+        name, _, value = FORECAST_EXTRA_HEADER.partition(":")
+        h[name.strip()] = value.strip()
+    return h
+
+
+def _open(req, timeout: int):
+    ctx = ssl.create_default_context(cafile=FORECAST_CA_FILE) if FORECAST_CA_FILE else None
+    return urllib.request.urlopen(req, timeout=timeout, context=ctx)
+
+
 def post_batch(payload: dict) -> dict:
     req = urllib.request.Request(f"{FORECAST_API_BASE}/forecast/batch", data=json.dumps(payload).encode(),
-                                 headers={"Content-Type": "application/json"}, method="POST")
+                                 headers=_headers({"Content-Type": "application/json"}), method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=FORECAST_TIMEOUT) as r:
+        with _open(req, FORECAST_TIMEOUT) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"ZEKI AI tahmin servisi hata verdi ({e.code}): {e.read()[:200]!r}") from None
@@ -112,11 +131,13 @@ def post_batch(payload: dict) -> dict:
 def service_ready() -> None:
     """Logo'yu dakikalarca okumadan önce tahmin servisini sor; yoksa hemen dur (ör. müşteri VM'inde servis yok)."""
     try:
-        with urllib.request.urlopen(f"{FORECAST_API_BASE}/health", timeout=10) as r:
+        with _open(urllib.request.Request(f"{FORECAST_API_BASE}/health", headers=_headers()), 10) as r:
             if not json.loads(r.read()).get("ready"):
                 raise RuntimeError("ZEKI AI tahmin servisi henüz hazır değil (model yükleniyor).")
     except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError) as e:
-        raise RuntimeError(f"ZEKI AI tahmin servisi bu kurulumda yok ya da ulaşılamıyor ({FORECAST_API_BASE}).") from e
+        if FORECAST_LOCAL:  # uzak servis tanımlı değil ve yerelde de yok: bu kurulumda tahmin kapalı
+            raise RuntimeError(f"ZEKI AI tahmin servisi bu kurulumda yok ya da ulaşılamıyor ({FORECAST_API_BASE}).") from e
+        raise RuntimeError(f"ZEKI AI tahmin servisine (GPU) ulaşılamıyor ({FORECAST_API_BASE}): {e}") from e
 
 
 def build(run: Callable[[str, dict | None], dict], today: date | None = None, inputs: dict | None = None,
@@ -373,7 +394,7 @@ TAB_FORMULAS = [
 def empty_text(error: str | None) -> str:
     """Tahmin yokken sekmenin söylediği: servis bu kurulumda yoksa kalıcı durum, okuma hatasıysa neden, yoksa hazırlanıyor."""
     if error and "bu kurulumda yok" in error:
-        return ("ZEKI AI tahmini bu kurulumda kapalı: tahmin servisi (TimesFM 3.0) yalnız test ortamında çalışıyor. "
+        return ("ZEKI AI tahmini bu kurulumda kapalı: tahmin servisi (TimesFM 3.0) tanımlı değil. "
                 "Baskı Tekrar ve Yeni Kitap sekmeleri bundan etkilenmez.")
     if error:
         return f"ZEKI AI tahmini şu an kurulamadı. {error}"

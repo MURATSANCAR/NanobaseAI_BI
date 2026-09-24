@@ -7,6 +7,59 @@
 - **Word uçtan uca** (Kahramanını Yutan Kitap, portal → köprü → tünel → stüdyo): CRM kitap adıyla eşleşti; üç hata bulundu ve düzeltildi: resimsiz romana 44 görünmez resim planlanıyordu (yerleşim artık resim türüne göre, basılmayan resim çizilmez); metin katmanı aynı sayfada «ola-»/«cak!» diye bölüyordu (tireyle biten blok birleşir); ön kontrol yazarın «AhA- HAHA» tiresini hece tiresi sanıyordu. Sonuç 5.445/5.445 kelime.
 - **Kıyafet/mekân düzeltmesi doğrulandı:** kahvaltıda gündelik, 11. sayfadan önlük; 13. sayfa odada.
 - **İşletme:** kurulum için stüdyo yeniden başlatması sırada bekleyen bir işi kesti → servis açılışında yarıda kalan iş kendiliğinden sürer; kitaba tıklamak işi başlatmaz (onay kutusu). Testler 27/27.
+## 2026-09-25 — "Geçen yılın aynı dönemi" yanındaki dönemin bir yıl öncesi (dalda, kurulmadı)
+
+- **Sorun:** "Aralık 2025 ile Ocak 2026 arası net ciro geçen yılın aynı dönemine göre" referansı bütün 2025 okuyordu (1,13 Mr ₺); "aynı dönemine" kelimeleri yok sayılıyordu.
+- **Çözüm (`temporal._mark_same_period` + `anchor_same_period`):** "geçen/önceki yılın (ayın, çeyreğin, haftanın) aynı dönemi/ayı/günü" ifadesi, soruda tek bir başka dönem varsa o dönemin bir birim geri kaydırılmış hâli; "aynı …" kelimeleri ifadenin parçası olur. Ay sonu kırpılır (29.02.2028 → 28.02.2027). Yanında dönem yoksa dokunulmaz; "bir önceki yılın aynı ayı" ikinci kez `anchor_previous`'tan geçmez.
+- **Gerçek DB:** Aralık 2025–Ocak 2026 192.464.743,52 ₺ / Aralık 2024–Ocak 2025 114.874.119,16 ₺; Temmuz 2026 107.653.273,52 ₺ / Temmuz 2025 71.341.513,36 ₺.
+- **Doğrulama:** `test_same_period_phrase.py` 12/12; paket: main ile aynı hatalar, yeni kırılan 0. 3.636 soruluk dönem karşılaştırması: dönemi değişen eski sorular yalnız hedeflenenler; "Bu yıl … geçen yılın aynı dönemine göre" gibi 14 soruda dönem aynı, ifade metni "aynı dönemine"yi de kapsıyor.
+- **Main'e alma:** dal güncel main'in üstünde; ff-merge + push izin denetimine takıldı, kullanıcıya bırakıldı.
+
+## 2026-09-25 — Kapanmış dönem karşılaştırmasında da eş dönem; veri sonu ölçümü 47 sn → 0,4 sn (dalda, kurulmadı)
+
+- **Sorun:** "geçen ay net ciro bir önceki aya göre" Ağustos'un 17 gününü (veri 17.08'de bitiyor) Temmuz'un 31 günüyle kıyaslıyordu: 86,7 Mn'a karşı 107,7 Mn, yani düşüş. Eş dönem kırpması yalnız bugünü içeren dönemde çalışıyordu; kapanmış dönem "tamdır" sayılıyordu (`test_closed_period_is_left_alone`).
+- **Çözüm:** karşılaştırmada güncel dönem başlamışsa (kapanmış olsa da) ölçünün son günü ölçülür. Dönem veriyle doluysa değişmez (2025'e karşı 2024), ortada bittiyse iki taraf aynı güne kırpılır. Tek dönemli sorular ve gelecek dönemler aynı kaldı.
+- **Gerçek DB:** Ağustos 1–17 86.711.927,55 ₺ / Temmuz 1–17 76.069.567,04 ₺ — önceki cevaptaki düşüş aslında artış. 2025/2024 değişmedi (son gün 31.12.2025). Yıl sınırını aşan Aralık 2025–Ocak 2026 iki yılın tablosundan okundu.
+- **Ölçüm hızlandı:** `MAX(CASE WHEN koşul THEN tarih END)` bütün satırları tarıyordu — 2021–2025 satır tablosunda 2025 için 6–47 sn. Yeni biçim ölçü başına `TOP 1 tarih … ORDER BY tarih DESC` alt sorgusu (`same_period._last_day_sql`, iki probe ortak): 0,38 sn; açık dönemde 1,1 sn, boş cevap ölçümü 154 ms.
+- **Testler:** `test_same_period` yeni 4 test (dolu kapanmış dönem değişmez, ortada biten kırpılır, gelecek ölçülmez, kapanmış tek dönem değişmez) + probe biçimi. Paket: main ile aynı 13 + 10 hata, yeni kırılan 0.
+- **Ayrı, önceden var olan (dokunulmadı):** "Aralık 2025 ile Ocak 2026 arası … geçen yılın aynı dönemine göre" referansı bütün 2025 okunuyor; doğrusu Aralık 2024–Ocak 2025.
+
+## 2026-09-24 — "(bir) önceki X" soruda başka bir X varsa ondan önceki X (dalda, kurulmadı)
+
+- **Sorun:** "Geçen haftaki tahsilat toplamı bir önceki haftaya göre nasıl?" iki dönemi de bugüne göre okuyordu: ikisi de 14–21 Eylül, hafta kendisiyle karşılaştırılıyordu. "Geçen" bugüne göredir, "önceki" yanındaki döneme göre.
+- **Çözüm (`temporal.anchor_previous`, `parse_temporal` sonunda):** iki dönemden yalnız biri "(bir) önceki X" ise ve ikisi aynı türdense (gün/hafta/ay/çeyrek/yıl), o dönem diğerinden hemen önceki birim olur. Kalıp yok; tür üzerinden tek kural. Farklı türler ("bu ay önceki yıla göre") ve ikisi de bugüne bağlı olanlar ("geçen yıl ve geçen ay") dokunulmaz; tek dönemde "bir önceki hafta" yine bugüne göre.
+- **Doğrulama:** `test_relative_previous.py` 13/13 (geçen hafta/ay/yıl/çeyrek, dün, 2024, temmuz 2026, ocak 2026 → aralık 2025; değişmemesi gerekenler). Paket: main ile aynı hatalar + `test_llm_queue::test_background_work_yields_to_anyone_waiting` — kararsız, main'de de 5 koşunun 3'ünde kırık, dalda 1'inde. 3.631 soruluk dönem karşılaştırmasında dönemi değişen tek eski soru hedeflenen soru (7–14 Eylül'e). Gerçek DB: "geçen ay net ciro bir önceki aya göre" Ağustos 86.711.927,55 ₺ / Temmuz 107.653.273,52 ₺; tahsilat sorusu 14–21.09 ile 07–14.09 (veri 17.08'de bittiği için boş).
+- **Not (ayrı iş):** kapanmış bir dönemde veri ayın ortasında bitiyorsa (Ağustos 17'si) karşılaştırma yine takvimle yapılıyor; cevap "eşit kapsam doğrulanmadı" notu veriyor ama kırpmıyor.
+
+## 2026-09-24 — Boş cevapta verinin bittiği gün ve aynı sorunun o döneme kurulmuş hâli (dalda, kurulmadı)
+
+- **Sorun:** "Bugün en çok satan kitap" boş dönüyor, açıklama "kayıtlar bu dönemden önce bitiyor olabilir" diyordu: tarih yok, ne sorulabileceği yok. Sebep veri: BI'ın okuduğu Logo kopyası (.155) 17.08.2026'da bitiyor.
+- **Ne yapıldı (`same_period.empty_probe/empty_hint`, köprü `_data_end_hint`):** yalnız cevap boşsa (dolu cevaba sorgu eklenmez) ölçünün kendi tablosunda, katalog koşullarıyla, dönem bitmeden önceki son gün ölçülür; profilin gördüğü ilk yıla kadar yıl yıl geriye (sayı tavanı yok). Son gün dönemden önceyse açıklama "veri 17.08.2026 tarihinde bitiyor; 'Bugün' için kayıt yok" olur ve cevapta `dataEnd.suggestion` döner. Veri dönemin içindeyse boşluk sorunun süzgecindendir, öneri verilmez.
+- **Öneri soruya göre kurulur, kalıp yok:** sorudaki dönem ifadesi (kullanıcının kendi kelimeleri) aynı türden, verinin son gününü içeren dönemle değiştirilir — gün (bugün, dün, önceki gün) → o gün; hafta (bu/geçen/bir önceki hafta) → o hafta; ay → o ay; çeyrek; yıl; son N gün/ay → son güne biten aynı uzunlukta pencere. Birim son günde bitmiyorsa ifade tarih aralığıdır ("1 ağustos 2026 ile 17 ağustos 2026 arası"). Kurulan soru ayrıştırıcıdan geri geçirilir; beklenen dönemi vermezse öneri gösterilmez.
+- **Ayrıştırıcı (`temporal.py`):** tek gün artık dönem — "17 ağustos 2026", "17.08.2026", "17/08/2026", "3 mart'ta" (önceden ay olarak okunuyor ya da hiç okunmuyordu; "15 ocak ile 20 mart arası" 1 Ocak–31 Mart çıkıyordu). "bir önceki gün" = dün, "önceki gün / evvelsi gün" = dünden önceki gün (TDK). "10 ocak ayında" sayı+ay olarak kalır.
+- **Ekran:** ZEKİ AI özeti kartında boş cevabın altında önerilen soru tek tıklık düğme; metin motordan gelir.
+- **Doğrulama (test sunucusu, geçici dizin):** `test_data_end_hint.py` 34/34; `semantic_layer` paketi main ile aynı 14 hata + 10 hata (önceden var), yeni kırılan 0. Ön yüz `tsc` 0.
+- **Gerçek DB (Logo .155, VPN telefon onayıyla açıldı; köprü çalışma nesnesi sunucu açmadan, zamanlayıcısız):** bugün, Bugün…hangisi, dün, bir önceki gün, önceki gün, bu hafta, geçen hafta, bir önceki hafta, bu ay, son 7 gün → hepsi boş + "veri 17.08.2026 tarihinde bitiyor; '<kullanıcının kelimesi>' için kayıt yok" + öneri; önerilerin hepsi sorulunca veri döndü (17.08: 530 kitap, ilk KAYI SETİ 8.221,61 ₺, net ciro 180.407,29 ₺; 1–17.08: 3.737 kitap; 10–17.08 net ciro 29.959.979,08 ₺). Veri içinde kalan "geçen ay" (86.711.927,55 ₺) ve "bu yıl" (9.285 satır) cevaplarında öneri yok.
+- **Denemede bulunan hata:** "bir önceki hafta" ayrıştırıcıda yalnız "önceki hafta" olarak okunuyor, "bir" dışarıda kalıyor ve öneri "bir 17 ağustos 2026 net ciro" çıkıyordu. `_PREV` artık "bir önceki"yi ifadenin parçası sayar (hafta/ay/yıl/çeyrek); gerçek DB'de yeniden denendi, doğru.
+- **Dönem okuması karşılaştırması:** test setleri + `sl_query_log` 3.629 soru eski/yeni ayrıştırıcıdan geçti; dönemi değişen yalnız bu işin kalıpları (tek gün, önceki gün); "1 Ocak 2025 ile 31 Aralık 2026" ve "bir önceki hafta"da dönem aynı, yalnız ifade metni "1"/"bir"i de kapsıyor.
+- **Ayrı, önceden var olan sorun (dokunulmadı):** "Geçen haftaki tahsilat bir önceki haftaya göre" iki dönemi de aynı hafta (14–21.09) okuyor; "bir önceki" burada geçen haftadan önceki hafta olmalı. Tam set (set100) regresyonu koşulmadı: kod canlı köprüye kurulmadı (main'e alınmadan kurulum yok).
+
+## 2026-09-24 — Genel bakış kanvasında her kartta "SQL'i göster" + kopyala
+
+- **İstek:** Net ciro, Aylık seyir, Kanal dağılımı, En büyük cari, Kanıt & Kaynak ve ZEKİ AI özeti kartlarının hepsinde SQL görülsün, taşmasın, kopyalanabilsin.
+- **Kart başına kendi sorgusu:** özet dosyasındaki SQL (`-- ad\nsorgu` blokları) `screens.ts` `sqlParts` ile bölündü; Net ciro = months+prevSameDate+prevMonths+totals, Aylık seyir = months+prevMonths, Kanal = channels+totals, Cari = customers+months, özet = months+prevSameDate+prevMonths+totals+units, Kanıt & Kaynak = hepsi. Soru sorulunca ZEKİ AI özeti kartı motorun ürettiği SQL'i gösterir (bekleme/hata anında düğme yok).
+- **Ortak bileşen `src/canvas/stitch/CardSql.tsx`:** panel kart genişliğini aşmaz (`overflow-wrap:anywhere`, en fazla 224 px, içeride dikey kayar); ekranda FROM/WHERE/GROUP BY… yeni satıra alınır, kopya özgün metindir. Panelde metin seçilebilir ve sürükleme başlamaz (`data-nodrag`, `layout.tsx` INTERACTIVE). Kanvasta açılan kart öne alınır (yoksa panel alttaki ana kartın arkasında kalıyordu).
+- **Bulunan hata:** eski Kopyala yalnız `navigator.clipboard` kullanıyordu; müşteri VM'i `http://192.168.0.55` üzerinden açıldığı için orada pano API'si yok ve düğme sessizce hiçbir şey yapmıyordu. Artık güvenli bağlam yoksa gizli metin alanı + `execCommand('copy')`; o da olmazsa "Seçip kopyalayın" yazar.
+- **Doğrulama (test sunucusu, geçici dizin):** `tsc --noEmit` 0, `vite build` temiz. Derlenen sayfa gerçek `cfo.json` ile geçici sunucudan tarayıcıda açıldı: 6 kartta düğme; telefon düzeninde (587 px) ve 1500 px kanvasta 6 panelin hepsi kartın içinde, yatay taşma 0; açılan Kanal kartı ana kartın önünde; gerçek tıklamayla Kopyala hem güvenli bağlamda hem `http` taklidinde çalıştı. Geçici dosyalar silindi. Sunuculara kurulmadı.
+
+## 2026-09-25 (00:45) — ZEKI AI tahmini TT GPU'da; müşteri VM'i oradan isteyecek
+
+- Kullanıcı: "GPU'da çalışsın, kalan VM'de, müşteride." Model kararı TimesFM 3.0 olduğu gibi (seçenek olarak Apache-2.0 TimesFM 2.5 sunuldu; ağırlıkların ticari olmayan lisansı hatırlatıldı, sorumluluk kullanıcıda).
+- **GPU:** `deploy/tt-gpu/forecast/` — imaj `bi-forecast:timesfm3` (temel `vllm/vllm-openai:v0.27.1`: CUDA'lı torch hazır, indirme yok; TimesFM kaynağı upstream `0df95ae`, test sunucusuyla aynı commit), konteyner `bi-forecast`, yalnız `127.0.0.1:8793`, GPU 0 (BI'ın kartı, 1,9 GB; GPU 1 editörün). Ağırlıklar HF'den 16 parçalı indirildi (Mac üzerinden kopya 25 KB/sn'ydi); sha256 test sunucusuyla eş (`a7592b0a…`).
+- **Eşlik ölçümü:** sabit tohumlu 200 serilik aynı toplu istek (takvim + portföy ek değişkeni) test sunucusu CPU'sunda ve GPU'da: 12 ay p50 toplamında fark %0,000; süre 7,7 sn → 2,4 sn.
+- **Köprü istemcisi:** `zeki_tahmin` `FORECAST_EXTRA_HEADER` ("Ad: değer", kitap kartlarıyla aynı) ve `FORECAST_CA_FILE` okur; uzak servis tanımlıyken ulaşılamazsa "bu kurulumda yok" demez, "GPU'ya ulaşılamıyor" der. Test 36/36.
+- **Açık:** GPU genel nginx'ine `/bi-forecast/health` (GET) ve `/bi-forecast/forecast/batch` (POST, 64 MB, 900 sn) yolu — `deploy/tt-gpu/forecast/add-forecast-route.py`, kitap kartlarıyla aynı üç kat koruma (85.105.0.0/16, mevcut gizli başlık, yöntem). Claude oturumunda izin denetimine takıldı; kullanıcı koşturacak. Sonra VM `.env`: `FORECAST_API_BASE=https://85.111.30.227/bi-forecast`, `FORECAST_EXTRA_HEADER` = kartların başlığı.
+
 
 ## 2026-09-25 — Kitap Tasarım Stüdyosu: okunmuş kitaptan/Word'den baskıya; GPU ve test sunucusunda canlı
 
@@ -43,6 +96,7 @@
 - Köprü bu arada iki kez başka bir oturum tarafından yeniden başlatıldı (23:03, 23:26; `/tmp/stf`); ilki koşan iki okumayı öldürdü, ikincisi tahmin yazıldıktan 2 sn sonra geldi.
 - **Hata:** stok 0, son 12 ay satışı 0, beklenen tahmin (p50) 0 olan 111 kitap ZEKI'de "Risk/Acil"di (ör. Sherlock Holmes 2). Kural yalnız temkinli tahmine (p80) bakıyordu; satışı durmuş kitapta p80 belirsizlikten şişer (medyan 37). Yalnız p50'ye bakmak da yanlış: geçen yıl 136 satan stoksuz kitabı "Talep yok"a atıyordu.
 - **Yeni kural:** stok yok VE (temkinli tahmin ayda 1'in altında YA DA hem son 12 tam ay satışı < 12 hem beklenen tahmin ayda 1'in altında). Canlı veride ölçüldü: "Talep yok" 685 → 926 (241 kitap Risk/Acil'den geçer, eski kuralın yakaladığı hiçbir kitap düşmez); stok 0 + satış 0 olup Risk/Acil kalan 15 kitapta model talep bekliyor. Talep yok dışında Power BI ile örtüşme %82,5. Test `zeki_tahmin_tab.py` 30/30 (durmuş ve satan stoksuz kitap vakaları eklendi).
+
 
 ## 2026-09-24 (20:55) — 55 kanal test sunucusunda; VPN kapalı, CRM okunamıyor; yazar listesi artık saklanıyor
 
@@ -88,10 +142,12 @@
 
 - Test sunucusuna kurulumdan hemen sonra Baskı Öneri 15:31'de "Invalid cursor state" (FreeTDS 24000) ile düştü: ZEKI tahmin raporu eklenince iki rapor ayrı iş parçacıklarında aynı anda yenileniyor ama tek Logo bağlantısını paylaşıyordu. Bağlantılar artık (rapor, kaynak) anahtarıyla ayrı. Test: `tests/management/report_connections.py` 3/3; diğerleri geçti.
 
+
 ## 2026-09-24 (15:40) — Yönetici her şeyi görür; Wikidata meslek listesi daraltıldı
 
 - Kullanıcı: "timasai süper yönetici, her şeyi görecek." Yazar giriş sürecinde yönetici (`admin_mod.is_admin`) bütün editörlerin bekleyen işini görür (`board(..., everyone=True)`, `todoScope: "all"`): panoda ve Masam'da editöre göre gruplu, Masam'da ayrıca editör başına süren / bekleyen / kurulda / geciken tablosu. Editör yine yalnız kendi işini görür.
 - Wikidata: meslek kümesine yanlışlıkla diplomat, hukukçu, öğretmen, profesör girmişti ("Kamran İnan" yalnız siyasetçi/diplomat olarak kabul edilmişti). Küme yalnız yazıyla ilgili mesleklere indi; ekranda gösterilen meslekler de bu kümeyle sınırlı (ör. "komplo teorisyeni" meslek olarak görünmez). Bulunan 16 kayıt yeni kuralla yeniden denetlenmek üzere sıraya kondu.
+
 
 ## 2026-09-24 — Baskı Öneri'ye "ZEKI AI Tahminleme" sekmesi (TimesFM 3.0), Power BI sekmeleri değişmeden
 

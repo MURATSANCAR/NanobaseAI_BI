@@ -5,6 +5,7 @@ import Node, { LayoutProvider, useLayout, type BoxMap } from './layout';
 import zekiGif from '@/assets/zeki-ai.gif';
 import type { StitchCanvasData } from './data';
 import DbTimingBadge from '../DbTiming';
+import CardSql from './CardSql';
 import { questionParticle } from '../interpret';
 
 /**
@@ -117,6 +118,23 @@ function BoardButton({ b }: { b: NonNullable<StitchCanvasData['main']['board']> 
       </button>
       {b.state === 'error' && b.message && <span role="alert" className="text-[11px] font-bold text-red-600">{b.message}</span>}
     </span>
+  );
+}
+
+/** Boş cevabın altında: aynı soru, verinin bittiği döneme kurulmuş hâliyle, tek tıkla. Metni motor kurar. */
+function RetryButton({ r }: { r: NonNullable<StitchCanvasData['main']['retry']> }) {
+  return (
+    <button
+      type="button"
+      onClick={() => r.onAsk(r.question)}
+      disabled={r.busy}
+      className="mt-3 flex min-h-11 max-w-full items-center gap-2 rounded-xl bg-violet/10 px-4 py-2.5 text-left text-xs font-extrabold tracking-tight text-violet ring-1 ring-violet/25 transition-[background-color,transform] duration-150 ease-out hover:bg-violet/15 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 sm:min-h-0"
+    >
+      <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h5M20 20v-5h-5M5.5 15a7 7 0 0012.4 2.5M18.5 9A7 7 0 006.1 6.5" />
+      </svg>
+      <span className="min-w-0 [overflow-wrap:anywhere]">“{r.question}”</span>
+    </button>
   );
 }
 
@@ -248,13 +266,6 @@ function CanvasBody({
   }, []);
 
   const [ask, setAsk] = useState('');
-  const [showSql, setShowSql] = useState(false);
-  const [sqlCopied, setSqlCopied] = useState(false);
-  useLayoutEffect(() => {
-    if (!sqlCopied) return;
-    const t = window.setTimeout(() => setSqlCopied(false), 2000);
-    return () => window.clearTimeout(t);
-  }, [sqlCopied]);
   const onAsk = () => {
     const q = ask.trim();
     if (!q) return;
@@ -351,6 +362,7 @@ function CanvasBody({
               <span className="font-bold text-ink">{d.c1.rowValue}</span>
             </div>
           </div>
+          <CardSql sql={d.c1.sql} className="mt-2.5 pt-2 border-t border-slate-100" />
         </div>
 
         </Node>
@@ -404,6 +416,7 @@ function CanvasBody({
               {d.c2.foot}
             </div>
           </div>
+          <CardSql sql={d.c2.sql} className="mt-2.5 pt-2 border-t border-slate-100" />
         </div>
 
         </Node>
@@ -473,6 +486,7 @@ function CanvasBody({
             <span>{d.c3.footLabel}</span>
             <span className="font-semibold text-ink">{d.c3.footValue}</span>
           </div>
+          <CardSql sql={d.c3.sql} className="mt-2.5 pt-2 border-t border-slate-100" />
         </div>
 
         </Node>
@@ -513,6 +527,7 @@ function CanvasBody({
               <span className="font-bold text-mintSuccess">{d.c4.footValue}</span>
             </div>
           </div>
+          <CardSql sql={d.c4.sql} className="mt-2.5 pt-2 border-t border-slate-100" />
         </div>
 
         </Node>
@@ -530,10 +545,7 @@ function CanvasBody({
           </div>
 
           <div className="mt-3 space-y-2">
-            <div className="text-xs font-bold text-ink">{d.c5.summary}</div>
-            {showSql && d.c5.sql && (
-              <pre className="mt-2 max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-50 p-2 text-[11px] font-mono font-normal leading-snug text-ink">{d.c5.sql}</pre>
-            )}
+            <div className="line-clamp-4 text-xs font-bold text-ink [overflow-wrap:anywhere]">{d.c5.summary}</div>
             <div className="hidden">
           </div>
 
@@ -563,41 +575,17 @@ function CanvasBody({
               </div>
             </div>
 
-            <div className="pt-2 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  onClick={() => setShowSql((v) => !v)}
-                  disabled={!d.c5.sql}
-                  title={d.c5.sql ? undefined : 'Bu görünümde çalıştırılan bir SQL yok; bir soru sorunca çıkar.'}
-                  aria-expanded={showSql}
-                  className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-violet hover:underline flex items-center gap-1 disabled:text-muted disabled:no-underline"
-                >
-                  <span>{showSql ? "SQL'i gizle" : "SQL'i göster"}</span>
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                </button>
-                {d.c5.sql && (
-                  <button
-                    type="button"
-                    onClick={() => { void navigator.clipboard?.writeText(d.c5.sql ?? '').then(() => setSqlCopied(true)); }}
-                    title="SQL'i kopyala"
-                    className="-my-2 py-2 px-1 text-xs sm:text-[11px] font-bold text-muted hover:text-ink flex items-center gap-1"
-                  >
-                    {sqlCopied ? (
-                      <svg className="w-3 h-3 text-mintSuccess" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" /></svg>
-                    ) : (
-                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V5a2 2 0 012-2h8a2 2 0 012 2v10a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2M8 7h6a2 2 0 012 2v6" /></svg>
-                    )}
-                    <span>{sqlCopied ? 'Kopyalandı' : 'Kopyala'}</span>
-                  </button>
-                )}
-              </div>
-              {d.c5.timing ? (
-                <DbTimingBadge timing={d.c5.timing} className="justify-end text-right" />
-              ) : (
-                <span className="text-[11px] text-muted">{d.c5.latency}</span>
-              )}
-            </div>
+            <CardSql
+              sql={d.c5.sql}
+              className="pt-2"
+              right={
+                d.c5.timing ? (
+                  <DbTimingBadge timing={d.c5.timing} className="justify-end text-right" />
+                ) : (
+                  <span className="text-[11px] text-muted">{d.c5.latency}</span>
+                )
+              }
+            />
           </div>
         </div>
 
@@ -645,6 +633,7 @@ function CanvasBody({
                 <p className="text-base font-bold text-ink leading-snug">
                   {d.main.text}
                 </p>
+                {d.main.retry && <RetryButton r={d.main.retry} />}
               
                 {/* Verbatim insight mention & sub-metrics */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -661,6 +650,7 @@ function CanvasBody({
                   </span>
                 </div>
                 {d.main.timing && <DbTimingBadge timing={d.main.timing} className="mt-1.5" />}
+                <CardSql sql={d.main.sql} className="mt-2" />
               </div>
 
               {/* Action Buttons */}
