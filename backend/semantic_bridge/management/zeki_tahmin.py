@@ -26,11 +26,12 @@ PEAK_MONTHS = [9, 10]
 MIN_HISTORY_MONTHS = 6
 FORECAST_API_BASE = os.environ.get("FORECAST_API_BASE", "http://127.0.0.1:8793").rstrip("/")
 FORECAST_TIMEOUT = int(os.environ.get("ZEKI_FORECAST_TIMEOUT_SEC", "1800"))
+FIRST_YEAR = 2015  # Logo yıllık satış görünümlerinin ilki
 KEEP_QUANTILES = {"p10": 0, "p50": 4, "p80": 7, "p90": 8}  # 9 kantilden sekmede kullanılanlar
 
 SOURCES = [
     ("logo_aylik_gecmis", "logo", "Aylık satış geçmişi",
-     "Baskı Öneri'deki kitapların 2015'ten bu yana aylık satış adedi (Power BI'ın okuduğu satırlarla aynı)."),
+     "Kitap başına aylık satış adedi, 2015'ten bu yıla her yıl ayrı okunur (Power BI'ın okuduğu satırlarla aynı)."),
     ("logo_son_fatura", "logo", "Son fatura tarihi", "Logo'daki en son fatura günü; tahminin başladığı ayı belirler."),
 ]
 FORMULAS = [
@@ -123,11 +124,25 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
     son = rows("logo_son_fatura")
     son_fatura = _day(son[0]["son_fatura"]) if son else None
     end = last_full_month(son_fatura, today)
+    pool = set(codes)
     hist: dict[str, dict[int, float]] = {}
-    for r in rows("logo_aylik_gecmis", {"stok_kodlari": codes, "chunk": 2500}):
-        i = _mi(int(r["yil"]), int(r["ay"]))
-        if i <= end:
-            hist.setdefault(str(r["stok_kodu"]).strip(), {})[i] = float(r["miktar"] or 0)
+    port: dict[int, float] = {}  # portföy = bütün kodların aylık toplamı (büyüme eğilimi)
+    n_rows = db_ms = 0
+    last_sql = warning = None
+    for y in range(FIRST_YEAR, end // 12 + 1):
+        r_ = run("logo_aylik_gecmis", {"yil": y})
+        n_rows += len(r_["records"]); db_ms += r_.get("dbMs") or 0
+        last_sql, warning = r_.get("sql"), warning or r_.get("warning")
+        for r in r_["records"]:
+            i = _mi(int(r["yil"]), int(r["ay"]))
+            if i > end:
+                continue
+            q = float(r["miktar"] or 0)
+            port[i] = port.get(i, 0.0) + q
+            k = str(r["stok_kodu"]).strip()
+            if k in pool:
+                hist.setdefault(k, {})[i] = q
+    res["logo_aylik_gecmis"] = {"rowCount": n_rows, "dbMs": db_ms, "sql": last_sql, "warning": warning}
 
     series, short = [], []
     for c in codes:
@@ -141,12 +156,6 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
         series.append({"id": c, "start": _ms(start), "values": [h.get(i, 0.0) for i in range(start, end + 1)]})
     if not series:
         raise RuntimeError("Tahmin edilecek kitap bulunamadı (satış geçmişi yok).")
-    # Portföy (büyüme) serisi: havuzdaki bütün kitapların aylık toplamı. Bütün kodlar üzerinden ayrı bir sorgu 12 yılın
-    # birleşimini tek seferde grupladığı için 900 sn'yi aşıyordu; havuz hacmin ~%90'ı ve eğilim aynı (sınama: README).
-    port: dict[int, float] = {}
-    for h in hist.values():
-        for i, q in h.items():
-            port[i] = port.get(i, 0.0) + q
     p0 = min(port)
     payload = {"horizon": HORIZON, "series": series, "calendar": True, "calendar_peak_months": PEAK_MONTHS,
                "shared_past": {"start": _ms(p0), "values": [port.get(i, 0.0) for i in range(p0, end + 1)]},
@@ -167,7 +176,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
         "forecasts": fc,
         "last12": last12,
         "shortHistory": short,
-        "sourceStats": {sid: {"rows": len(r.get("records") or []), "dbMs": r.get("dbMs"), "sql": r.get("sql"),
+        "sourceStats": {sid: {"rows": r.get("rowCount", len(r.get("records") or [])), "dbMs": r.get("dbMs"), "sql": r.get("sql"),
                               "warning": r.get("warning")} for sid, r in res.items()},
         "warnings": sorted({r["warning"] for r in res.values() if r.get("warning")}),
         "asOf": today.isoformat(),
@@ -201,7 +210,7 @@ def explanation(meta: dict) -> dict:
             {"title": "Neye baktık", "items": [
                 "Satış: Logo satış faturaları, kitap × ay, 2015'ten bugüne. Satırlar Power BI'ın okuduklarıyla aynıdır.",
                 "Mevsim: ayın yıl içindeki yeri ve okul dönemi (eylül-ekim) işareti.",
-                "Büyüme: listedeki bütün kitapların toplam aylık satışı; yayınevinin genel büyümesi.",
+                "Büyüme: bütün kitapların toplam aylık satışı; yayınevinin genel büyümesi.",
                 "Stok ve bekleyen sipariş: Baskı Tekrar sekmesindeki CRM değerleri, 5 dakikada bir güncel.",
             ]},
             {"title": "Kolonlar nasıl okunur", "items": [

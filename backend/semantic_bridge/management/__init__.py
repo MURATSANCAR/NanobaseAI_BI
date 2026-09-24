@@ -106,10 +106,14 @@ def _values_rows(values: list[str]) -> str:
 SALES_VIEW_FILTER = "[Malzeme/Hizmet Kodu] NOT LIKE '157%' AND [KDVli Tutar] <> 0"
 SALES_COLUMNS = ("[Malzeme/Hizmet Kodu], [Malzeme/Hizmet Adı], [Fatura Tarihi], [Yıl], [Ay], [Miktar], "
                  "[Birim Fiyat], [Net Tutar], [Satır Türü], [Satis_Iade], [Satıcı Kodu], [Sipariş Numarası]")
-_SALES_PLACEHOLDER = re.compile(r"\{satis:(-?\d+)\}")
+_SALES_PLACEHOLDER = re.compile(r"\{satis:(-?\d+(?:-\d{4})?)\}")
 
 
 def sales_years(spec: str, today: date) -> list[int]:
+    """'2024' → 2024..bu yıl · '-1' → geçen yıl..bu yıl · '2019-2019' → yalnız 2019 (yıl yıl okuyan kaynaklar)."""
+    if len(spec) == 9 and spec[4] == "-":
+        a, b = int(spec[:4]), int(spec[5:])
+        return list(range(a, b + 1))
     n = int(spec)
     first = today.year + n if n <= 0 else n
     return list(range(first, today.year + 1))
@@ -171,6 +175,9 @@ class Reports:
         connection = next(c for s, c, *_ in report.SOURCES if s == source_id)
         text = sql_text(report.REPORT_ID, source_id)
         missing: list[int] = []
+        if params and "yil" in params:  # kaynak yıl yıl okunuyor: {satis:yil} = yalnız o yılın görünümü
+            y = int(params["yil"])
+            text = text.replace("{satis:yil}", "{satis:%d-%d}" % (y, y))
         if _SALES_PLACEHOLDER.search(text):
             if "sales_years" not in ctx:
                 ctx["sales_years"] = self._sales_years_present()

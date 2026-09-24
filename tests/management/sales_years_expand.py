@@ -49,5 +49,9 @@ ok("satır sonu yorumu birleşimin kapanış parantezinden sonra kalır",
 ok("VALUES satırları: her kod ayrı satır, tek tırnak kaçışlı",
    _values_rows(["15201.01.001", "O'Neil"]) == "(N'15201.01.001'), (N'O''Neil')", _values_rows(["O'Neil"]))
 
+ok("yıl yıl okuma: '2019-2019' → yalnız 2019", sales_years("2019-2019", EYLUL_26) == [2019])
+sql, _ = expand_sales("FROM {satis:2019-2019} AS s", EYLUL_26, {2019, 2020})
+ok("tek yıllık kol, birleşim yok", "V_SatisRaporu_2019" in sql and "UNION ALL" not in sql and "V_SatisRaporu_2020" not in sql)
+
 print("SONUÇ:", f"{sum(sonuc)}/{len(sonuc)} geçti")
 raise SystemExit(0 if all(sonuc) else 1)
