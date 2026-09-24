@@ -55,7 +55,7 @@
 .mg-search button { display: grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 8px; background: #f3f0f7; color: var(--mg-muted); cursor: pointer }
 
 /* Öneri seviyeleri: sayaç + süzgeç */
-.mg-levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px }
+.mg-levels { display: grid; grid-template-columns: repeat(var(--mg-level-count, 5), minmax(0, 1fr)); gap: 8px }
 .mg-level {
   display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; text-align: left;
   min-height: 64px; padding: 10px 12px; border: 1px solid var(--mg-line); border-radius: 14px; background: #fff; cursor: pointer;
@@ -71,6 +71,7 @@
 .mg-tone-decide { --tone: #d9a400; --tone-soft: #fff8dd; --tone-ink: #8a6700 }
 .mg-tone-watch { --tone: #3e7bfa; --tone-soft: #eaf1ff; --tone-ink: #2257c4 }
 .mg-tone-ok { --tone: #12a594; --tone-soft: #e6f7f4; --tone-ink: #0b7a6d }
+.mg-tone-none { --tone: #9aa0ad; --tone-soft: #f1f2f5; --tone-ink: #5c6270 }
 
 /* Power BI dosyasında kayıtlı açılış süzgeçleri: seçili açılır, çipe basınca kalkar. */
 .mg-presets { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px }

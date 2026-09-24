@@ -460,6 +460,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
                 "hint": "Stoku en önce bitecek kitap üstte (ZEKI AI tahminine göre)",
                 "columns": tab["columns"], "filters": ["oneri", "guven", "liste", "yayinevi", "yazar", "statu", "urun_adi"],
                 "defaultFilters": [], "explain": tab["explain"], "emptyText": tab["emptyText"],
+                "oneriLevels": zeki_tahmin.ONERI_LEVELS,
                 "rows": [[r.get(c["key"]) for c in tab["columns"]] for r in tab["rows"]]}
 
     return {

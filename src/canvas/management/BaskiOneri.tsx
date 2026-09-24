@@ -199,7 +199,7 @@ export default function BaskiOneri() {
   };
 
   const refreshing = refresh.isPending || !!snap?.refreshing;
-  const levels = snap?.data?.oneriLevels ?? [];
+  const levels = view?.oneriLevels ?? snap?.data?.oneriLevels ?? [];
   const activeFilters =
     oneri.size + Object.values(selects).filter(Boolean).length + (search ? 1 : 0) + (presets.length - dropped.size);
 
@@ -289,7 +289,7 @@ export default function BaskiOneri() {
                 </label>
               </div>
 
-              <div className="mg-levels" role="group" aria-label="Öneriye göre süz">
+              <div className="mg-levels" role="group" aria-label="Öneriye göre süz" style={{ ['--mg-level-count' as string]: levels.length || 5 }}>
                 {levels.map((level) => {
                   const on = oneri.has(level);
                   return (

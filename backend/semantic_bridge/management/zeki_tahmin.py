@@ -225,8 +225,9 @@ def explanation(meta: dict) -> dict:
                 "Stok ve bekleyen sipariş: Baskı Tekrar sekmesindeki CRM değerleri, 5 dakikada bir güncel.",
             ]},
             {"title": "Power BI önerisiyle neden farklı olabilir", "items": [
-                "Stok 0 ise ZEKI \"Risk/Acil\" der. Power BI'da hız da 0 olunca 0 ÷ 0 tanımsız çıkar ve öneri "
-                "\"Yeterli Stok\" görünür (24.09.2026'da ayrışmaların yarısı bu).",
+                "Stok 0 ve talep varsa ZEKI \"Risk/Acil\" der; talep yoksa (temkinli tahminle bile ayda 1 adetten az) "
+                "\"Talep yok\" der, basım gerekmez. Power BI bu ayrımı yapamaz: hız da 0 olunca 0 ÷ 0 tanımsız çıkar ve "
+                "öneri \"Yeterli Stok\" görünür, talebi olan stoksuz kitapta bile.",
                 "İadesi satışından fazla olan kitapta Power BI hızı eksi çıkar ve öneri \"Risk/Acil\" olur; ZEKI talebi "
                 "sıfırın altına indirmez, stok yeterliyse \"Yeterli Stok\" der (ayrışmaların beşte biri).",
                 "Okul dönemi yaklaşırken ZEKI aylık talebi yükseltir ve stoku daha erken bitirir; Power BI her ayı aynı sayar.",
@@ -238,7 +239,8 @@ def explanation(meta: dict) -> dict:
                 "Temkinli (12 ay): gerçekleşenin %80 ihtimalle altında kalacağı satış. \"Tükenmesin\" senaryosu.",
                 "Tükenme / Temkinli tükenme: bugünkü CRM stokunun tahmine göre bittiği ay (temkinli olan daha erken).",
                 "Baskı ihtiyacı: 12 aylık tahmin + bekleyen sipariş − stok; eksi çıkarsa 0.",
-                "Öneri (ZEKI): Power BI ile aynı eşikler (Risk/Acil … Yeterli Stok), ama ZEKI'nin tükenme süresiyle.",
+                "Öneri (ZEKI): Power BI ile aynı eşikler (Risk/Acil … Yeterli Stok), ama ZEKI'nin tükenme süresiyle. "
+                "Ek düzey \"Talep yok\": stok yok ve temkinli tahminle bile ayda 1 adetten az satış bekleniyor.",
                 "Güven: Yüksek = son 12 ayda en çok satan %20, Orta = sonraki %30, Düşük = az satan yarı. Düşük "
                 "güvenli kitaplarda geçmiş sınamada hiçbir yöntem (Power BI dahil) güvenilir tahmin yapamadı.",
             ]},
@@ -261,6 +263,10 @@ def explanation(meta: dict) -> dict:
 
 AY_KISA = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
 ONERI_ESIK = ((1.0, "Risk/Acil"), (1.5, "Kritik"), (2.0, "Karar Ver"), (2.5, "Takip Et"))
+# Stoku olmayan ama temkinli tahminle bile ayda 1 adet satmayacak kitap basım riski taşımaz (ölü kitap). Power BI bu
+# ayrımı yapamaz; yalnız bu sekmede görünür. 24.09.2026: stoku 0 olan 1.177 kitabın 667'si ayda 1'in altında.
+TALEP_YOK = "Talep yok"
+ONERI_LEVELS = ["Risk/Acil", "Kritik", "Karar Ver", "Takip Et", "Yeterli Stok", TALEP_YOK]
 
 
 def _oneri(t: float | None) -> str | None:
@@ -355,7 +361,8 @@ TAB_FORMULAS = [
                     "kantil (p80). İçinde bulunulan ay kalan günlere göre sayılır."),
     ("ZEKI tükenme", "CRM stoku, aylık tahmin birikimini hangi ayda aşarsa o ay (temkinli: p80 yolu)."),
     ("ZEKI baskı ihtiyacı", "Tahmin + bekleyen sipariş − CRM stoku; eksiyse 0."),
-    ("ZEKI öneri", "Power BI eşikleri ZEKI tükenme süresiyle: ≤1 ay Risk/Acil · ≤1,5 Kritik · ≤2 Karar Ver · ≤2,5 Takip Et."),
+    ("ZEKI öneri", "Power BI eşikleri ZEKI tükenme süresiyle: ≤1 ay Risk/Acil · ≤1,5 Kritik · ≤2 Karar Ver · ≤2,5 Takip Et. "
+                   "Stok yok ve temkinli tahmin ufuk boyunca ayda 1 adetin altındaysa Talep yok."),
     ("Güven", "Son 12 tam ay satışına göre: en çok satan %20 Yüksek, sonraki %30 Orta, kalan Düşük."),
     ("Liste", "Kitabın Power BI'daki sekmesi: Baskı Tekrar ya da Yeni Kitap."),
 ]
@@ -399,6 +406,7 @@ def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], foreca
             need = stok if stok is not None else 0.0
             s50, s80 = _deplete(p50, stok), _deplete(p80, stok)
             t50 = _real_months(s50, today)
+            no_demand = (stok is None or stok <= 0) and sum(p80) < len(p80)  # temkinli: ayda 1 adetten az
             row.update({
                 "guven": "Yüksek" if (s12 or 0) >= cut_a and (s12 or 0) > 0 else "Orta" if (s12 or 0) >= cut_b and (s12 or 0) > 0 else "Düşük",
                 "ai_tahmin": round(sum(p50)), "ai_temkinli": round(sum(p80)), "ai_3ay": round(sum(p50[:3])),
@@ -407,8 +415,10 @@ def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], foreca
                 "ai_tukenme_temkinli": _month_label(today, s80, len(p80)),
                 "ai_baski": max(0, round(sum(p50) + bek - need)),
                 "ai_baski_temkinli": max(0, round(sum(p80) + bek - need)),
-                "oneri": _oneri(t50) if t50 is not None else "Yeterli Stok",
+                "oneri": TALEP_YOK if no_demand else (_oneri(t50) if t50 is not None else "Yeterli Stok"),
             })
+            if no_demand:
+                row.update({"ai_tukenme_ay": None, "ai_tukenme": "Stok yok, talep yok", "ai_tukenme_temkinli": "Stok yok, talep yok"})
             for j, (key, _) in enumerate(month_keys):
                 row[key] = round(p50[j]) if j < len(p50) else None
         rows.append(row)

@@ -100,6 +100,9 @@ tekrar = [{"stok_kodu": "A", "urun_adi": "Kitap A", "yayinevi": "Timaş", "stok_
            "ort_satis_hizi": 12.0, "tukenme_suresi": 2.08},
           {"stok_kodu": "Z", "urun_adi": "Tahminsiz", "yayinevi": "Timaş", "stok_adedi": 5.0, "oneri": "Kritik",
            "ort_satis_hizi": 3.0, "tukenme_suresi": "∞"}]
+tekrar.append({"stok_kodu": "D0", "urun_adi": "Ölü kitap", "yayinevi": "Timaş", "stok_adedi": 0.0, "oneri": "Yeterli Stok",
+               "ort_satis_hizi": 0.0, "tukenme_suresi": "NaN"})
+fc["forecasts"]["D0"] = {"p10": [0.0] * 12, "p50": [0.0] * 12, "p80": [0.5] * 12, "p90": [1.0] * 12}
 yeni = [{"stok_kodu": "N", "urun_adi": "Yeni", "yayinevi": "Timaş", "stok_adedi": 0.0, "oneri": "Risk/Acil"}]
 before = copy.deepcopy((tekrar, yeni))
 t = zt.tab(tekrar, yeni, {"A": 5.0}, fc, today, [{"id": "x", "title": "x", "description": "", "sql": "SELECT 1"}])
@@ -113,7 +116,10 @@ ok("A: öneri ZEKI eşiğiyle (2,5 ay → Takip Et)", A["oneri"] == "Takip Et", 
 ok("A: tahmin ufku bugünden Temmuz 2027'ye 11 ay: 2,33 + 10×10", A["ai_tahmin"] == round(10 * 7 / 30 + 100), str(A["ai_tahmin"]))
 ok("A: baskı ihtiyacı = tahmin + bekleyen − stok", A["ai_baski"] == A["ai_tahmin"] + 5 - 25, str(A["ai_baski"]))
 ok("A: temkinli (p80) daha erken biter", A["ai_tukenme_temkinli"] == "Ekim 2026", A["ai_tukenme_temkinli"])
-ok("stoksuz yeni kitap: hemen Risk/Acil", rows["N"]["oneri"] == "Risk/Acil" and rows["N"]["liste"] == "Yeni Kitap")
+ok("stoksuz ve talebi olan yeni kitap: hemen Risk/Acil", rows["N"]["oneri"] == "Risk/Acil" and rows["N"]["liste"] == "Yeni Kitap")
+ok("stoksuz ve temkinli talebi ayda 1'in altında: 'Talep yok', tükenme sayılmaz",
+   rows["D0"]["oneri"] == "Talep yok" and rows["D0"]["ai_tukenme_ay"] is None and "talep yok" in rows["D0"]["ai_tukenme"],
+   f"{rows['D0']['oneri']} {rows['D0']['ai_tukenme']}")
 ok("tahmini olmayan kitap: 'Tahmin yok', öneri boş", rows["Z"]["guven"] == "Tahmin yok" and rows["Z"].get("oneri") is None)
 mk = [c for c in t["columns"] if c["key"].startswith("ai_m")]
 ok("aylık tahmin kolonları bugünden ufkun sonuna (Eyl 26 … Tem 27)", len(mk) == 11 and mk[0]["label"] == "Eyl 26" and mk[-1]["label"] == "Tem 27",
@@ -123,6 +129,8 @@ ok("açıklama: başlık, bölümler, sınama tablosu, SQL",
    and t["explain"]["sql"][0]["sql"] == "SELECT 1" and "Temmuz 2026" in " ".join(t["explain"]["notes"]))
 empty = zt.tab(tekrar, yeni, {}, None, today, [])
 ok("tahmin yokken sekme boş ve 'hazırlanıyor' der", empty["rows"] == [] and "hazırlanıyor" in empty["emptyText"])
+ok("ZEKI sekmesinin öneri düzeyleri 'Talep yok'u içerir, Power BI'ınkiler değişmez",
+   zt.ONERI_LEVELS[-1] == "Talep yok" and "Talep yok" not in bo.ONERI_LEVELS)
 
 # ---- Baskı Öneri raporu: üçüncü sekme eklenir, Power BI sekmeleri aynı kalır
 spec = importlib.util.spec_from_file_location("parity", ROOT / "tests/management/baski_oneri_parity.py")
