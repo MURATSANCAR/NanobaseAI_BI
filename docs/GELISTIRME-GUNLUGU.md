@@ -1,13 +1,19 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Mali denetim rapor arşivi: sessiz 30 tavanı kaldırıldı
+
+- `GET /api/v1/financial-audit/runs` en yeni 30 raporu kesiyordu (`[:30]`, yanıtta `limit:30`); "sayı tavanı yok" kuralına aykırı. Artık arşivin tamamı döner, yanıt `{items, total}`. Sayfalama eklenmedi: kayıt başına küçük bir meta dosyası, seçici listeyi zaten pencereleyerek çiziyor.
+- Arayüz: "Çalışma raporu" seçici (`SearchSelect`) bütün raporları listeler, etikette toplam görünür ("Çalışma raporu · 48 kayıt").
+- `SearchSelect` main'de yoktu (yalnız `claude/editor-author-login-flow-63e097` dalında, be018fd0); o commit bu dala cherry-pick edildi. İki dal da main'e gelirken aynı yama; günlükte çakışma çıkarsa elle birleştirilir.
+- Doğrulama: test sunucusunda (nanobase-direct, geçici kopya) `tsc --noEmit` 0, `py_compile` geçti. Gerçek arşivde (`/data/nanobaseai/bi/var/financial-audit/workpapers`) 48 rapor var — eski uç 18'ini gizliyordu; yeni gövde aynı dizinde 48'ini döndürdü (21.09 11:41 → 24.09 09:28). Servis yeniden başlatılmadı, kurulum yapılmadı; ekranda oturumlu deneme yapılmadı.
+
 ## 2026-09-24 — Çok seçenekli süzgeçlere yazarak arama (`SearchSelect`)
 
 - Kullanıcı isteği: kitap adı, yazar gibi binlerce seçenekli açılır listelerden seçmek zor; arama alanı olsun. Bütün `src/` `<select>`/açılır listeleri tarandı, seçenek sayısı koddan ve CRM seçenek kümelerinden çıkarıldı.
 - Yeni ortak bileşen `src/canvas/components/SearchSelect.tsx`: kurulu `@base-ui/react` Combobox (combobox/listbox ARIA, klavye) + elle yazılmış sabit satır yükseklikli pencereleme (bütün liste kaydırılır, tavan yok; Base UI örneği `@tanstack/react-virtual` ister, yeni paket eklenmedi). Türkçe/aksan duyarsız, kelime sırasından bağımsız eşleşme; temizle; çoklu seçim desteği. Açılış animasyonu yok (sık ve klavyeyle açılan süzgeç).
-- Geçenler: Baskı Öneri dilimleyicileri (Ürün Adı, Yazar, Yayınevi, Statü, Baskı durumu — hepsi aynı görünsün diye), mali denetim "Çalışma raporu" (≤30 kayıt). Seçilen değer ve süzme mantığı aynı.
+- Geçenler: Baskı Öneri dilimleyicileri (Ürün Adı, Yazar, Yayınevi, Statü, Baskı durumu — hepsi aynı görünsün diye), mali denetim "Çalışma raporu". Seçilen değer ve süzme mantığı aynı.
 - Kalanlar (≤12 seçenek ya da yerel seçici daha iyi): editoryal durum/tip/rol/sıralama, pano kart araçları, yönetim süzgeçleri, uyarı koşulu, rapor günü, Excel biçimi, oda rezervasyonu (oda + saat — telefonda yerel saat çarkı), kampüs alkış alıcısı (zaten `datalist` ile yazılan serbest metin).
 - Doğrulama: test sunucusunda `tsc --noEmit` 0; 12.000 Türkçe adlık geçici bir sayfada 375/320 px ve masaüstünde arama ("isil yilmaz" → "Işıl Yılmaz"), ↑ ile son kayda atlama, temizleme, çoklu seçim denendi; geçici dosyalar silindi. Canlı Baskı Öneri ekranı oturum gerektirdiği için ekranda denenmedi.
-- Not: `/api/v1/financial-audit/runs` son 30 raporla sınırlı (`[:30]`) — sessiz tavan kuralına aykırı, ayrı iş.
 
 ## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
 
