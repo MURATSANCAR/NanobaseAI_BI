@@ -114,8 +114,8 @@ export default function SearchSelect(props: SearchSelectProps) {
         value={value}
         onValueChange={(v) => props.onChange((v ?? []).map((o) => o.value))}
       >
-        <Combobox.InputGroup className={`${box} flex-wrap py-1`}>
-          <Combobox.Chips className="contents" aria-label={value.length ? `${label}: seçilenler` : undefined}>
+        <Combobox.InputGroup className={`${box} py-1`}>
+          <Combobox.Chips className="flex min-w-0 flex-1 flex-wrap items-center gap-1" aria-label={value.length ? `${label}: seçilenler` : undefined}>
             {value.map((o) => (
               <Combobox.Chip
                 key={o.value}
@@ -123,7 +123,7 @@ export default function SearchSelect(props: SearchSelectProps) {
                 className="flex min-h-8 max-w-full items-center gap-0.5 rounded-lg bg-violet-50 pl-2 text-[12px] font-bold text-canvas-ink outline-none focus-within:bg-violet-100 data-[highlighted]:bg-violet-100"
               >
                 <span className="truncate">{o.label}</span>
-                <Combobox.ChipRemove aria-label={`${o.label} seçimini kaldır`} className="flex h-8 w-8 shrink-0 items-center justify-center text-canvas-muted hover:text-canvas-ink">
+                <Combobox.ChipRemove aria-label={`${o.label} seçimini kaldır`} className="flex h-8 w-8 shrink-0 items-center justify-center text-canvas-muted hover:text-canvas-ink [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-10">
                   <X className="h-3.5 w-3.5" aria-hidden />
                 </Combobox.ChipRemove>
               </Combobox.Chip>
