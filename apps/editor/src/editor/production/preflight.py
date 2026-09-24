@@ -23,7 +23,8 @@ PT_PER_MM = 72 / 25.4
 def _words(s: str) -> list[str]:
     """Karşılaştırma için kelimeler. Tireler iki tarafta da yok sayılır: dizgi gerçek bir tireden satır
     kırabilir («aha-⏎hahaha») ya da heceleyerek tire ekleyebilir; ikisi de metin kaybı değildir."""
-    s = s.replace("\u00ad", "").replace("-\n", "").replace("-", "")
+    s = re.sub(r"[-\u2010\u2011\u00ad]\s*\n\s*", "", s)
+    s = re.sub(r"[-\u2010\u2011\u00ad]", "", s)
     return [w.casefold() for w in WORD.findall(s)]
 
 

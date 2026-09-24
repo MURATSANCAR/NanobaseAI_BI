@@ -243,3 +243,8 @@ def test_glued_hyphen_artifacts():
 def test_preflight_words_ignore_hyphens():
     from editor.production import preflight
     assert preflight._words("aha-\nhahaha ola-cak") == preflight._words("aha-hahaha olacak")
+
+
+def test_block_ending_with_split_word_joins_on_same_page():
+    out = M.normalize([(3, "Kim bilir neler ola-"), (3, "cak! Ben yürüdüm."), (3, "Yeni paragraf.")], Lex("olacak"))
+    assert [b.text for b in out[0][1]] == ["Kim bilir neler olacak! Ben yürüdüm.", "Yeni paragraf."]

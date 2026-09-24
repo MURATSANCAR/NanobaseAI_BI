@@ -139,9 +139,11 @@ def normalize(paragraphs: list[tuple[int, str]], lex=None) -> list[tuple[str | N
             if not rest:
                 continue
             text = rest
-        # Sayfa değişirken yarım kalan cümle: önceki blok cümle işaretiyle bitmiyor ve bu blok küçük
-        # harfle başlıyor → aynı paragraf.
-        if (prev is not None and page != prev_page and not prev.text.endswith(TERMINAL)
+        # Yarım kalan cümle: önceki blok cümle işaretiyle bitmiyor, bu blok küçük harfle başlıyor ve ya sayfa
+        # değişti ya da önceki blok tireyle bölünmüş bir kelimeyle bitiyor (paragraf yarım kelimeyle bitemez;
+        # metin katmanı aynı sayfada satır sonunda da bölebiliyor: «ola-» / «cak!») → aynı paragraf.
+        hyphen_end = bool(re.search(r"\w[-–]\s*$", prev.text)) if prev is not None else False
+        if (prev is not None and (page != prev_page or hyphen_end) and not prev.text.endswith(TERMINAL)
                 and text[:1].islower()):
             joined = join_hyphen(prev.text, text, lex) if re.search(r"\w[-–]\s*$", prev.text) else None
             prev.text = joined or f"{prev.text} {text}"
