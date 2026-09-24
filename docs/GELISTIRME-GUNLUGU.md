@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Mali denetim rapor arşivi: sessiz 30 tavanı kaldırıldı
+
+- `GET /api/v1/financial-audit/runs` en yeni 30 raporu kesiyordu (`[:30]`, yanıtta `limit:30`); "sayı tavanı yok" kuralına aykırı. Artık arşivin tamamı döner, yanıt `{items, total}`. Sayfalama eklenmedi: kayıt başına küçük bir meta dosyası, seçici listeyi zaten pencereleyerek çiziyor.
+- Arayüz: "Çalışma raporu" seçici (`SearchSelect`) bütün raporları listeler, etikette toplam görünür ("Çalışma raporu · 48 kayıt").
+- `SearchSelect` main'de yoktu (yalnız `claude/editor-author-login-flow-63e097` dalında, be018fd0); o commit bu dala cherry-pick edildi. İki dal da main'e gelirken aynı yama; günlükte çakışma çıkarsa elle birleştirilir.
+- Doğrulama: test sunucusunda (nanobase-direct, geçici kopya) `tsc --noEmit` 0, `py_compile` geçti. Gerçek arşivde (`/data/nanobaseai/bi/var/financial-audit/workpapers`) 48 rapor var — eski uç 18'ini gizliyordu; yeni gövde aynı dizinde 48'ini döndürdü (21.09 11:41 → 24.09 09:28). Servis yeniden başlatılmadı, kurulum yapılmadı; ekranda oturumlu deneme yapılmadı.
+
 ## 2026-09-24 (15:40) — Yönetim raporları: rapor başına ayrı veritabanı bağlantısı
 
 - Test sunucusuna kurulumdan hemen sonra Baskı Öneri 15:31'de "Invalid cursor state" (FreeTDS 24000) ile düştü: ZEKI tahmin raporu eklenince iki rapor ayrı iş parçacıklarında aynı anda yenileniyor ama tek Logo bağlantısını paylaşıyordu. Bağlantılar artık (rapor, kaynak) anahtarıyla ayrı. Test: `tests/management/report_connections.py` 3/3; diğerleri geçti.
