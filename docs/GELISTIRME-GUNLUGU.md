@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Yazar giriş süreci (müşteri akışı) CRM'e eşlendi
+
+- Müşteri editör modülü için 9 adımlı "Yazarın Yayınevine Giriş Süreci" akışını gönderdi; kural: veri CRM'den dinlenecek. Canlı CRM'de (.28) salt okuma ile her adımın karşılığı ve doluluğu ölçüldü: `docs/analiz/yazar-giris-sureci-crm-2026-09-24.md`.
+- Omurga `new_projeBase.statuscode` (Toplantıya Hazırlanıyor → Kurula Hazır → Kurul Onaylı → İş Planı Çalışıyor); `new_projeasamasi` ve projedeki kurul sonucu/tarih alanları hiç dolu değil. Denetim kaydı Proje/Stok/Üretim/Sözleşme/Eser Katılımı/Kişi/Cari'de açık → adım zamanları geriye dönük çıkar. Editör raporu, yazara bilgi ve yazar cari formu CRM'de izlenmiyor; müşteriye 3 soru.
+- Kod değişikliği yok.
+
 ## 2026-09-24 — TimesFM 3.0 × Yeni Baskı Öneri geriye dönük değerlendirmesi
 
 - Kullanıcı kararı: TimesFM 3.0 kullanılacak (test sunucusu demo ortamı). Baskı Tekrar havuzunda Logo aylık satışı (2015–2026) ve Logo `STINVTOT`'tan kurulan kesim stokuyla dört kesimde sınandı; ayrıntı `docs/analiz/timesfm-baski-oneri/README.md`.
