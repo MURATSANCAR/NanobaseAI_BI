@@ -70,7 +70,7 @@ export const editorialRail = (active: string): StitchRailItem[] =>
     { to: '/kisiler?rol=cevirmen', label: 'Çeviri', group: 'Yayına hazırlık', icon: railIcon(Languages) },
     { to: '/son-okuma', label: 'Son okuma', group: 'Yayına hazırlık', icon: railIcon(SpellCheck) },
     { to: '/kisiler', label: 'Kişiler', group: 'Kayıtlar', icon: railIcon(Contact) },
-    { to: '/basin-web', label: 'Basın ve web', group: 'Kayıtlar', icon: railIcon(Newspaper) },
+    { to: '/basin-web', label: 'Basın ve web', group: 'Kayıtlar', icon: railIcon(Newspaper), feature: 'webWatch' as const },
     { to: '/telif-sozlesme', label: 'Sözleşmeler', group: 'Kayıtlar', icon: railIcon(FileSignature) },
     { to: '/editor-atama', label: 'Editörler', group: 'Kayıtlar', icon: railIcon(UserCog) },
     { to: '/', label: 'Kampüs', icon: railIcon(House) },

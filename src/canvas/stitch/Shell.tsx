@@ -1,6 +1,8 @@
 import { Fragment, createContext, useContext, useEffect, useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ShieldCheck } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { ENGINE_ENABLED, webApi } from '../engine';
 import ModulesMenu from './ModulesMenu';
 import type { StitchRailItem } from './data';
 import { useIsAdmin } from '../useAdmin';
@@ -96,6 +98,12 @@ export default function Shell({
 }) {
   const [modulesOpen, setModulesOpen] = useState(false);
   const who = useTimasSession();
+  const webWatch = useQuery({
+    queryKey: ['editorial', 'web', 'status'],
+    queryFn: webApi.status,
+    enabled: ENGINE_ENABLED && rail.some((item) => item.feature === 'webWatch'),
+    staleTime: 10 * 60_000,
+  });
   const whoName = who.data?.displayName || who.data?.username || '';
   // Yakınlaştırma: kanvas kendi durumunu verir (onZoom); öteki ekranlarda kabuk kendisi tutar.
   // Önceden bu ekranlarda düğme sabit "%100" gösteriyor ve tıklamaya bağlı değildi.
@@ -253,6 +261,8 @@ export default function Shell({
         {rail.map((item, i) => {
           // adminOnly öğeler yetkisiz kişide render edilmez; i sabit kalsın diye diziyi filtrelemiyoruz (ikon eşlemesi konuma bağlı).
           if (item.adminOnly && !isAdmin) return null;
+          // Ortamda kapalı özellik (müşteri ortamında basın ve web) menüde hiç görünmez; durum gelene kadar da gizli.
+          if (item.feature === 'webWatch' && !webWatch.data?.enabled) return null;
           const active = item.badge === 'Aktif';
           // The audit shield has its own icon; moving it must not shift other icons.
           const iconIndex = rail.slice(0, i).filter(entry => entry.to !== '/finansal-denetim').length;

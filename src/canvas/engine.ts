@@ -1088,6 +1088,7 @@ export type WebOverview = {
 export type WebSubject = { items: WebMention[]; total: number; tone: WebTone; facts?: WebFacts | null; checkedAt?: string | null };
 
 export const webApi = {
+  status: () => send<{ enabled: boolean }>('GET', '/api/v1/editorial/web/status', undefined, 30_000),
   overview: (p: { page?: number; label?: string }) => send<WebOverview>('GET', `/api/v1/editorial/web${qs({ page: p.page, label: p.label })}`, undefined, 60_000),
   person: (id: string) => send<WebSubject>('GET', `/api/v1/editorial/web/people/${encodeURIComponent(id)}`, undefined, 60_000),
   book: (id: string) => send<WebSubject>('GET', `/api/v1/editorial/web/books/${encodeURIComponent(id)}`, undefined, 60_000),

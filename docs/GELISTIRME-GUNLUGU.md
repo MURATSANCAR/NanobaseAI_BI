@@ -1,5 +1,9 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (23:55) — Basın ve web kapalı ortamda menüde de görünmez
+
+- Kullanıcı: "menülerde de kapattın mı, müşteride kapalı olacak." `WEB_WATCH_ENABLED` kapalıyken: rayda "Basın ve web" satırı çizilmez (`StitchRailItem.feature = 'webWatch'`, `Shell` durumu `/api/v1/editorial/web/status`'tan okur; durum gelene kadar da gizli), Kişiler detayı ve kitap sayfasındaki "Basında ve web'de" bölümü boş döner ve çizilmez. `/basin-web` adresi doğrudan açılırsa "bu ortamda kapalı" der.
+
 ## 2026-09-24 (23:15) — Basın ve web müşteri ortamına kurulmaz; `WEB_WATCH_ENABLED` anahtarı
 
 - Kullanıcı kararı: sosyal medya / web taraması şimdilik müşteri VM'ine kurulmuyor, yalnız test sunucusunda. Yönetim ayarı `WEB_WATCH_ENABLED` (varsayılan kapalı): kapalı ortamda `run-due` tarama yapmaz, `/basin-web` "bu ortamda kapalı" der. VM kurulum betiği zamanlayıcıları zaten taşımıyor; `timas-web-watch.timer` VM'e kurulmaz (AGENTS.md'de). Test sunucusunda ayar veritabanından açıldı (yeniden başlatma gerekmedi).

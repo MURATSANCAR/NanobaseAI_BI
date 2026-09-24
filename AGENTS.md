@@ -121,7 +121,7 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
   vardır; sözlük girdisi girdinin kendi kalıcı adresine gider. Kod `backend/semantic_bridge/web_watch.py`,
   uç `/api/v1/editorial/web*`, tablolar `semantic_web_*`.
 - **Nerede:** yalnız test sunucusunda (kullanıcı kararı 2026-09-24: müşteri ortamına kurulmaz). Açma/kapama
-  `WEB_WATCH_ENABLED` (yönetim ekranı, varsayılan kapalı); kapalı ortamda `run-due` tarama yapmaz, ekran "kapalı" der.
+  `WEB_WATCH_ENABLED` (yönetim ekranı, varsayılan kapalı); kapalı ortamda `run-due` tarama yapmaz, menüde "Basın ve web" satırı ve kişi/kitap sayfalarındaki bölüm görünmez.
   `timas-web-watch.timer` müşteri VM'ine taşınmaz.
 - **Ne zaman:** her gece 02:30 (`scripts/server/timas-web-watch.timer` → `timas-web-watch.service` →
   `POST /api/v1/editorial/web/run-due?budget=16200`). Bitmeyen iş (Wikidata sırası, model etiketi) sonraki geceye
