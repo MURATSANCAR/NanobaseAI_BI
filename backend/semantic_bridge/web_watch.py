@@ -25,7 +25,7 @@ import time
 import unicodedata
 import urllib.parse
 import urllib.request
-import urllib.robotparser
+import urllib.error
 import uuid
 from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
@@ -69,7 +69,41 @@ FEEDS = (
     ("dunya", "Dünya", "https://www.dunya.com/rss"),
     ("kitaphaber", "Kitap Haber", "https://www.kitaphaber.com.tr/rss"),
     ("edebiyathaber", "Edebiyat Haber", "https://www.edebiyathaber.net/feed/"),
+    # 2026-09-24 kanal araştırması (test sunucusundan ölçüldü):
+    ("fikriyat_edebiyat", "Fikriyat · edebiyat", "https://www.fikriyat.com/rss/edebiyat.xml"),
+    ("fikriyat_yazarlar", "Fikriyat · yazarlar", "https://www.fikriyat.com/rss/fikriyatyazarlari.xml"),
+    ("star_sanat", "Star · sanat", "https://www.star.com.tr/rss/sanat.xml"),
+    ("star_gorus", "Star · açık görüş", "https://www.star.com.tr/rss/acikgorus.xml"),
+    ("turkiye", "Türkiye Gazetesi", "https://www.turkiyegazetesi.com.tr/feed"),
+    ("karar", "Karar", "https://www.karar.com/rss"),
+    ("serbestiyet", "Serbestiyet", "https://serbestiyet.com/feed/"),
+    ("artigercek", "Artı Gerçek", "https://artigercek.com/rss"),
+    ("birgun", "BirGün", "https://www.birgun.net/rss/home"),
+    ("diken", "Diken", "https://www.diken.com.tr/feed/"),
+    ("medyascope", "Medyascope", "https://medyascope.tv/feed/"),
+    ("bianet", "Bianet", "https://bianet.org/rss/bianet"),
+    ("sabitfikir", "Sabit Fikir", "https://www.sabitfikir.com/rss.xml"),
+    ("bantmag", "Bant Mag", "https://bantmag.com/feed/"),
+    ("kayiprihtim", "Kayıp Rıhtım", "https://kayiprihtim.com/feed/"),
+    ("sanatatak", "Sanatatak", "https://sanatatak.com/feed/"),
+    ("bookinton", "Bookinton", "https://bookinton.com/feed/"),
+    ("medium_kitap", "Medium · kitap etiketi", "https://medium.com/feed/tag/kitap"),
+    ("kitapca_inceleme", "Kitapça Forum · kitap incelemeleri", "https://forum.kitapca.gen.tr/forums/kitap-incelemeleri.18/index.rss"),
+    ("kitapca_oneri", "Kitapça Forum · kitap önerileri", "https://forum.kitapca.gen.tr/forums/kitap-onerileri.31/index.rss"),
+    ("kitapca_sohbet", "Kitapça Forum · sohbet", "https://forum.kitapca.gen.tr/forums/kitapca-sohbet.33/index.rss"),
+    ("kitapca_imza", "Kitapça Forum · imza günleri", "https://forum.kitapca.gen.tr/forums/imza-gunleri.12/index.rss"),
+    ("technopat_kitap", "Technopat Sosyal · kitap", "https://www.technopat.net/sosyal/bolum/kitap.79/index.rss"),
+    ("technopat_edebiyat", "Technopat Sosyal · edebiyat", "https://www.technopat.net/sosyal/bolum/edebiyat.207/index.rss"),
+    ("edebiyatpod", "Edebiyat Pod (podcast)", "https://anchor.fm/s/10aaece2c/podcast/rss"),
 )
+#: Kanal türü (kanal haritasında görünür); yazılmayan akış "Haber (RSS)".
+FEED_KIND = {
+    "kitaphaber": "Kitap sitesi", "edebiyathaber": "Kitap sitesi", "fikriyat_edebiyat": "Kitap sitesi",
+    "fikriyat_yazarlar": "Kitap sitesi", "sabitfikir": "Kitap sitesi", "bantmag": "Kitap sitesi", "kayiprihtim": "Kitap sitesi",
+    "sanatatak": "Kitap sitesi", "bookinton": "Kitap sitesi", "medium_kitap": "Blog",
+    "kitapca_inceleme": "Forum", "kitapca_oneri": "Forum", "kitapca_sohbet": "Forum", "kitapca_imza": "Forum",
+    "technopat_kitap": "Forum", "technopat_edebiyat": "Forum", "edebiyatpod": "Podcast",
+}
 
 #: Yazar adıyla başlık açılan sözlükler. Uludağ Sözlük robots.txt'te her yolu açıyor (2026-09-24).
 ULUDAG = ("uludag", "Uludağ Sözlük", "https://www.uludagsozluk.com")
@@ -85,6 +119,17 @@ CLOSED = (
     ("sourtimes", "Sourtimes", "robots.txt ai-input=no; bot koruması"),
     ("kizlarsoruyor", "Kızlar Soruyor", "Bot koruması (403)"),
     ("itusozluk", "İTÜ Sözlük", "Alan adı park sayfasına düşmüş; site kapalı"),
+    ("incisozluk", "İnci Sözlük", "Bot koruması (Cloudflare, 403)"),
+    ("normalsozluk", "Normal Sözlük", "robots.txt başlık ve girdi yollarını kapatıyor"),
+    ("sozlock", "Sozlock", "Ekşi içeriğinin kopyası; kaynak ai-input=no"),
+    ("diger_sozlukler", "Süslü, Blog, Ayı, Dertli, İHL, İtiraf sözlükleri", "Bot koruması, giriş zorunlu ya da site kapalı"),
+    ("donanimhaber", "DonanımHaber Forum", "Adla arama robots.txt'te kapalı; RSS yok"),
+    ("reddit", "Reddit", "robots.txt her yolu kapatıyor; OAuth API gerekiyor"),
+    ("gazeteduvar", "Gazete Duvar", "Bot koruması (403)"),
+    ("milligazete", "Milli Gazete", "Bot koruması (403)"),
+    ("ensonhaber", "Ensonhaber", "Bot koruması (403)"),
+    ("evrensel", "Evrensel", "robots.txt ai-input=no"),
+    ("quora", "Quora Türkçe", "Bot koruması (403)"),
     ("trendyol", "Trendyol yorumları", "robots.txt yorum yollarını kapatıyor"),
     ("amazon", "Amazon.com.tr", "robots.txt otomatik erişimi engelliyor"),
     ("goodreads", "Goodreads", "Kullanım şartları otomatik toplamayı yasaklıyor; API kapalı"),
@@ -93,7 +138,7 @@ CLOSED = (
     ("x", "X (Twitter)", "Giriş ve ücretli API gerekiyor"),
     ("instagram", "Instagram", "Giriş ve işletme hesabı API'si gerekiyor"),
     ("tiktok", "TikTok", "Ticari kullanıma açık API yok"),
-    ("youtube", "YouTube", "API anahtarı bekleniyor"),
+    ("youtube", "YouTube", "Kanal RSS'i robots.txt'te kapalı; Data API anahtarı gerekiyor"),
 )
 FEED_LABEL = {k: label for k, label, _ in FEEDS}
 FEED_LABEL[ULUDAG[0]] = ULUDAG[1]
@@ -213,32 +258,121 @@ def _iso(v: Optional[datetime]) -> Optional[str]:
 
 # ------------------------------------------------------------------------------------------- ağ
 
-_robots: dict[str, tuple[float, Optional[urllib.robotparser.RobotFileParser]]] = {}
+BOT_TOKEN = "timaszekibot"
+
+
+def parse_robots(text: str) -> dict[str, Any]:
+    """robots.txt → bu kimliğe uyan kurallar. Önce adımıza yazılmış grup, yoksa `*` grubu. Joker (`*`) ve satır sonu
+    (`$`) desteklenir (Python'un robotparser'ı desteklemiyor; 2026-09-24'te iTunes aramasını yanlış "izinli" saydı).
+    Content-Signal'da `ai-input=no` varsa site içeriğinin yapay zekâ girdisi olmasını istemiyor demektir: taranmaz."""
+    groups: list[tuple[list[str], list[tuple[str, str]], Optional[float]]] = []
+    agents: list[str] = []
+    rules: list[tuple[str, str]] = []
+    delay: Optional[float] = None
+    ai_input_no = False
+    last_was_agent = False
+    for raw in text.splitlines():
+        line = raw.split("#", 1)[0].strip()
+        if not line or ":" not in line:
+            continue
+        key, val = (x.strip() for x in line.split(":", 1))
+        key = key.lower()
+        if key == "content-signal" and re.search(r"ai-input\s*=\s*no", val, re.I):
+            ai_input_no = True
+        if key == "user-agent":
+            if not last_was_agent and (agents or rules):
+                groups.append((agents, rules, delay))
+                agents, rules, delay = [], [], None
+            agents.append(val.lower())
+            last_was_agent = True
+            continue
+        last_was_agent = False
+        if key in ("allow", "disallow"):
+            rules.append((key, val))
+        elif key == "crawl-delay":
+            try:
+                delay = float(val)
+            except ValueError:
+                pass
+    if agents or rules:
+        groups.append((agents, rules, delay))
+    mine = [g for g in groups if any(a != "*" and a in BOT_TOKEN for a in g[0])]
+    star = [g for g in groups if "*" in g[0]]
+    chosen = mine or star
+    return {"rules": [r for g in chosen for r in g[1]], "delay": max([g[2] for g in chosen if g[2]] or [0.0]),
+            "aiInputNo": ai_input_no}
+
+
+def _pattern(path: str) -> re.Pattern:
+    anchored = path.endswith("$")
+    body = re.escape(path[:-1] if anchored else path).replace(r"\*", ".*")
+    return re.compile("^" + body + ("$" if anchored else ""))
+
+
+def path_allowed(policy: dict[str, Any], path: str) -> bool:
+    """En uzun eşleşen kural kazanır; eşitlikte Allow (RFC 9309). Boş Disallow hiçbir şeyi kapatmaz."""
+    best_len, verdict = -1, True
+    for kind, val in policy["rules"]:
+        if not val:
+            continue
+        if _pattern(val).match(path):
+            n = len(val)
+            if n > best_len or (n == best_len and kind == "allow"):
+                best_len, verdict = n, kind == "allow"
+    return verdict
+
+
+_robots: dict[str, tuple[float, Optional[dict[str, Any]]]] = {}
+_last_hit: dict[str, float] = {}
+
+
+def _policy(root: str) -> Optional[dict[str, Any]]:
+    at, pol = _robots.get(root, (0.0, None))
+    if time.time() - at <= 86400 and root in _robots:
+        return pol
+    try:
+        req = urllib.request.Request(root + "/robots.txt", headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(req, timeout=20) as r:
+            body = r.read(512 * 1024).decode("utf-8", "replace")
+            ctype = r.headers.get("Content-Type", "")
+        # Bazı siteler robots.txt yerine HTML sayfası döndürüyor: dosya yok demektir, kısıt yok.
+        pol = None if "html" in ctype.lower() and "<html" in body[:500].lower() else parse_robots(body)
+    except urllib.error.HTTPError as e:
+        pol = None if e.code in (404, 410) else {"rules": [("disallow", "/")], "delay": 0.0, "aiInputNo": False}
+    except Exception:  # noqa: BLE001 — okunamayan robots.txt: bu tur o site atlanır
+        pol = {"rules": [("disallow", "/")], "delay": 0.0, "aiInputNo": False}
+    _robots[root] = (time.time(), pol)
+    return pol
 
 
 def allowed(url: str) -> bool:
-    """robots.txt bu yolu bu kimliğe açıyor mu? Günde bir okunur; okunamazsa (404) açık sayılır."""
+    """robots.txt bu yolu bu kimliğe açıyor mu ve site yapay zekâ girdisini reddediyor mu? Günde bir okunur."""
+    parts = urllib.parse.urlsplit(url)
+    pol = _policy(f"{parts.scheme}://{parts.netloc}")
+    if pol is None:
+        return True
+    if pol["aiInputNo"]:
+        return False
+    path = parts.path or "/"
+    if parts.query:
+        path += "?" + parts.query
+    return path_allowed(pol, path)
+
+
+def _pace(url: str) -> None:
+    """Aynı siteye istekler arası bekleme: robots.txt'teki Crawl-delay, yoksa 2 sn."""
     parts = urllib.parse.urlsplit(url)
     root = f"{parts.scheme}://{parts.netloc}"
-    at, rp = _robots.get(root, (0.0, None))
-    if time.time() - at > 86400:
-        rp = urllib.robotparser.RobotFileParser()
-        try:
-            req = urllib.request.Request(root + "/robots.txt", headers={"User-Agent": USER_AGENT})
-            with urllib.request.urlopen(req, timeout=20) as r:
-                rp.parse(r.read().decode("utf-8", "replace").splitlines())
-        except urllib.error.HTTPError as e:
-            rp = None if e.code in (404, 410) else rp
-            if e.code not in (404, 410):
-                rp.disallow_all = True
-        except Exception:  # noqa: BLE001 — okunamayan robots.txt: bu tur o site atlanır
-            rp = urllib.robotparser.RobotFileParser()
-            rp.disallow_all = True
-        _robots[root] = (time.time(), rp)
-    return True if rp is None else rp.can_fetch(USER_AGENT, url)
+    pol = _robots.get(root, (0.0, None))[1]
+    gap = max(2.0, float((pol or {}).get("delay") or 0.0))
+    wait = _last_hit.get(root, 0.0) + gap - time.time()
+    if wait > 0:
+        time.sleep(wait)
+    _last_hit[root] = time.time()
 
 
 def _get(url: str, timeout: int = 30) -> bytes:
+    _pace(url)
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Language": "tr,en;q=0.5"})
     with urllib.request.urlopen(req, timeout=timeout) as r:
         return r.read(8 * 1024 * 1024)
@@ -676,7 +810,8 @@ def _mention_rows(engine: sa.engine.Engine, tenant: str, where: list[Any], page:
                          .offset(max(0, page) * (page_size or 0)).limit(page_size)).all()
     return [{
         "contactId": r.contact_id, "author": r.author, "books": json.loads(r.books_json or "[]"), "label": r.label,
-        "source": FEED_LABEL.get(r.source, r.source), "kind": "sozluk" if r.source == ULUDAG[0] else "haber",
+        "source": FEED_LABEL.get(r.source, r.source),
+        "kind": "sozluk" if r.source == ULUDAG[0] else "forum" if FEED_KIND.get(r.source) == "Forum" else "haber",
         "url": r.url, "title": r.title, "summary": r.summary,
         "on": _iso(r.published_at or r.fetched_at),
     } for r in rows], int(total)
@@ -741,7 +876,7 @@ def channels(engine: sa.engine.Engine, tenant: str, report: dict[str, Any]) -> l
     out = []
     for key, label, url in FEEDS:
         st = feeds.get(key, "")
-        out.append({"key": key, "label": label, "kind": "Haber (RSS)", "url": url,
+        out.append({"key": key, "label": label, "kind": FEED_KIND.get(key, "Haber (RSS)"), "url": url,
                     "status": "kapalı" if "robots" in st else "hata" if "okunamadı" in st else "açık", "note": st if ("robots" in st or "okunamadı" in st) else None,
                     "read": int(read.get(key, 0)), "matched": int(matched.get(key, 0)), "relevant": int(shown.get(key, 0)),
                     "lastAt": _iso(last.get(key))})

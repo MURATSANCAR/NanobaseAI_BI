@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (17:00) — Basın ve web: 55 kanal (haber, kitap siteleri, forum, podcast), joker anlayan robots.txt okuyucusu
+
+- Kanal araştırması (ayrı ajan, test sunucusundan ölçüm): 26 yeni açık kanal eklendi — Fikriyat, Star, Türkiye Gazetesi, Karar, Serbestiyet, Artı Gerçek, BirGün, Diken, Medyascope, Bianet; kitap siteleri Sabit Fikir, Bant Mag, Kayıp Rıhtım, Sanatatak, Bookinton, Medium kitap etiketi; forumlar Kitapça Forum (4 bölüm) ve Technopat Sosyal (kitap, edebiyat; `ai-input=yes`); Edebiyat Pod podcast'i. Toplam 55 RSS + Uludağ Sözlük + Wikidata.
+- Kapalı listesi genişledi (nedenleriyle ekranda): İnci, Normal, Sozlock ve diğer sözlükler; DonanımHaber (adla arama robots'ta kapalı), Reddit (robots `/`), Gazete Duvar, Milli Gazete, Ensonhaber (403), Evrensel (`ai-input=no`), Quora; YouTube kanal RSS'i robots'ta kapalı.
+- **Düzeltme:** Python'un `robotparser`'ı `*` jokerini ve `$`'ı anlamıyor (ajan iTunes aramasında yanlış "izinli" gördü). Yerine RFC 9309 okuyucusu yazıldı: adımıza yazılmış grup önce, en uzun eşleşme kazanır, eşitlikte Allow; Content-Signal `ai-input=no` olan site taranmaz; Crawl-delay'e (ör. Sabit Fikir 10 sn) ve en az 2 sn aralığa uyulur. HTML dönen robots.txt "dosya yok" sayılır. Test `tests/editorial/web_robots.py` 14/14.
+
 ## 2026-09-24 (16:10) — Basın ve web: 29 haber akışı, Uludağ Sözlük, kanal haritası, orijinal sayfaya bağlantı
 
 - Kullanıcı: "başka kanallar da, sözlükler de; hangi kanaldan ne bulunduysa belli olsun; bulunanlara orijinal sayfaya giden link." Wikidata tanım satırı kalıyor (kullanıcı kararı).

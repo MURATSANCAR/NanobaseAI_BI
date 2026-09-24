@@ -70,7 +70,7 @@ export function MentionRow({ m, showAuthor }: { m: WebMention; showAuthor?: bool
           rel="noopener noreferrer"
           className="ml-auto inline-flex min-h-9 items-center gap-1 font-bold text-canvas-violet hover:underline sm:min-h-0"
         >
-          {m.kind === 'sozluk' ? 'Girdiye git' : 'Habere git'}
+          {m.kind === 'sozluk' ? 'Girdiye git' : m.kind === 'forum' ? 'Gönderiye git' : 'Habere git'}
           <ExternalLink aria-hidden className="h-3 w-3" />
         </a>
       </span>

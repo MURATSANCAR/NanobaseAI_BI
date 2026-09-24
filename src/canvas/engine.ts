@@ -1043,7 +1043,7 @@ export type WebMention = {
   books: Array<{ id: string; title: string }>;
   label: 'olumlu' | 'olumsuz' | 'notr';
   source: string;
-  kind: 'haber' | 'sozluk';
+  kind: 'haber' | 'sozluk' | 'forum';
   url: string;
   title: string;
   summary: string | null;

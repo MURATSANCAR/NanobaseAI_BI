@@ -114,7 +114,7 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
 ## Basın ve web taraması (kullanıcı kararı 2026-09-24)
 
 - **Ne:** CRM'de yazar olarak eser kaydı olan kişiler ve kitapları, açık kaynaklarda aranır: Türk haber sitelerinin
-  kendi RSS akışları (29 akış), yazar adıyla başlık açılan sözlükler (Uludağ Sözlük; yazar başına en yeni girdiler,
+  kendi RSS akışları ve kitap siteleri, forumlar, podcast (55 akış), yazar adıyla başlık açılan sözlükler (Uludağ Sözlük; yazar başına en yeni girdiler,
   14 günde bir) ve Wikidata'nın resmi API'si. Kanallar tek listede (`FEEDS`, `ULUDAG`, `CLOSED`); denenip
   kullanılamayan kanal `CLOSED`'a nedeniyle yazılır, ekrandaki kanal haritasında görünür.
 - **Kaynak her zaman belli:** her kaydın yanında kanal adı ve orijinal sayfaya bağlantı ("Habere git" / "Girdiye git")
@@ -127,7 +127,7 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
   "ilgisiz" ve henüz etiketlenmemiş kayıt hiçbir ekranda gösterilmez. Wikidata bilgisi yalnız tek ve kesin eşleşmede
   (insan + yazıyla ilgili meslek, birden çok aday varsa CRM'deki bir kitap "bilinen eseri" olmalı) gösterilir.
 - **Nasıl taranır:** açık kimlikle (`TimasZekiBot/1.0`, iletişim adresiyle), hesapla giriş yapmadan, robots.txt'e
-  uyarak. Bot korumasını aşan araç (gizlenen tarayıcı, parmak izi taklidi, dönen IP/proxy, CAPTCHA çözme) kullanılmaz;
+  uyarak (joker anlayan okuyucu, Content-Signal `ai-input=no`'ya ve Crawl-delay'e uyulur). Bot korumasını aşan araç (gizlenen tarayıcı, parmak izi taklidi, dönen IP/proxy, CAPTCHA çözme) kullanılmaz;
   engelleyen site (1000Kitap, Kitapyurdu, D&R, Hepsiburada, Ekşi, Kızlar Soruyor — 2026-09-24'te 403) ve
   robots.txt / Content-Signal (`ai-input=no`) ile kapatan site taranmaz. O kaynaklar için yol
   izinli kanaldır: satıcı API'si, veri anlaşması, lisanslı sosyal dinleme hizmeti.
