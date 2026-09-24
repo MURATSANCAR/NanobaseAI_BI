@@ -163,5 +163,18 @@ ok("okuma hatasında sekme nedeni gösterir", "900 saniyede bitmedi" in failed["
 ok("hata varken tahmin verisi de varsa sekme dolu (son başarılı tahmin)",
    bo.build(ns["run"], today=ns["TODAY"], inputs={zt.REPORT_ID: fc, "_errors": {zt.REPORT_ID: "x"}})["views"][2]["emptyText"] is None)
 
+# ---- uzak (GPU) tahmin servisi: gizli başlık ve ulaşılamama metni
+zt.FORECAST_EXTRA_HEADER = "X-Gate: abc:def"
+ok("gizli başlık 'Ad: değer' biçiminden okunur (değerde ':' olabilir)",
+   zt._headers({"Content-Type": "application/json"}) == {"Content-Type": "application/json", "X-Gate": "abc:def"})
+zt.FORECAST_EXTRA_HEADER = ""
+ok("başlık tanımlı değilse eklenmez", zt._headers() == {})
+zt.FORECAST_API_BASE, zt.FORECAST_LOCAL = "http://127.0.0.1:1", False  # uzak servis gibi davran, bağlantı reddedilir
+try:
+    zt.service_ready(); msg = ""
+except RuntimeError as e:
+    msg = str(e)
+ok("uzak servise ulaşılamazsa 'bu kurulumda yok' demez (sekme 'kapalı' yazmaz)", "GPU" in msg and "bu kurulumda yok" not in msg, msg)
+
 print("SONUÇ:", f"{sum(sonuc)}/{len(sonuc)} geçti")
 raise SystemExit(0 if all(sonuc) else 1)

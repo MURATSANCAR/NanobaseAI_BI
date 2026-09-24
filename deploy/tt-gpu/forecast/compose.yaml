@@ -1,0 +1,32 @@
+# TT GPU: BI tahmin servisi. Yalnız 127.0.0.1:8793; dışarıya GPU genel nginx'i (add-forecast-route.py) açar.
+# Kurulum: deploy/tt-gpu/forecast/install.sh
+name: bi-forecast
+services:
+  bi-forecast:
+    image: bi-forecast:timesfm3
+    build: ./build
+    container_name: bi-forecast
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8793:8793"
+    volumes:
+      - /data/bi-forecast/models/timesfm-3.0-pytorch:/models/timesfm-3.0-pytorch:ro
+    environment:
+      FORECAST_ENGINE: timesfm3
+      FORECAST_MODEL3_ID: /models/timesfm-3.0-pytorch
+      # TimesFM 3.0 ağırlıkları ticari olmayan lisanslı; müşteride kullanım kararı kullanıcının (2026-09-25).
+      FORECAST_ALLOW_NONCOMMERCIAL: "1"
+      FORECAST_DEVICE: cuda
+      FORECAST_BATCH: "1"
+      FORECAST_BULK_BATCH: "64"
+      FORECAST_SYMMETRIC_AVERAGING: "0"
+      FORECAST_WARM: "1"
+      FORECAST_CACHE_MAX: "512"
+      HF_HUB_OFFLINE: "1"
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              device_ids: ["0"]   # GPU 0 BI'ın; GPU 1 editörün
+              capabilities: [gpu]

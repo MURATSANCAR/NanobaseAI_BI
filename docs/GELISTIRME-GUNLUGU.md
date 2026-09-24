@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (00:45) — ZEKI AI tahmini TT GPU'da; müşteri VM'i oradan isteyecek
+
+- Kullanıcı: "GPU'da çalışsın, kalan VM'de, müşteride." Model kararı TimesFM 3.0 olduğu gibi (seçenek olarak Apache-2.0 TimesFM 2.5 sunuldu; ağırlıkların ticari olmayan lisansı hatırlatıldı, sorumluluk kullanıcıda).
+- **GPU:** `deploy/tt-gpu/forecast/` — imaj `bi-forecast:timesfm3` (temel `vllm/vllm-openai:v0.27.1`: CUDA'lı torch hazır, indirme yok; TimesFM kaynağı upstream `0df95ae`, test sunucusuyla aynı commit), konteyner `bi-forecast`, yalnız `127.0.0.1:8793`, GPU 0 (BI'ın kartı, 1,9 GB; GPU 1 editörün). Ağırlıklar HF'den 16 parçalı indirildi (Mac üzerinden kopya 25 KB/sn'ydi); sha256 test sunucusuyla eş (`a7592b0a…`).
+- **Eşlik ölçümü:** sabit tohumlu 200 serilik aynı toplu istek (takvim + portföy ek değişkeni) test sunucusu CPU'sunda ve GPU'da: 12 ay p50 toplamında fark %0,000; süre 7,7 sn → 2,4 sn.
+- **Köprü istemcisi:** `zeki_tahmin` `FORECAST_EXTRA_HEADER` ("Ad: değer", kitap kartlarıyla aynı) ve `FORECAST_CA_FILE` okur; uzak servis tanımlıyken ulaşılamazsa "bu kurulumda yok" demez, "GPU'ya ulaşılamıyor" der. Test 36/36.
+- **Açık:** GPU genel nginx'ine `/bi-forecast/health` (GET) ve `/bi-forecast/forecast/batch` (POST, 64 MB, 900 sn) yolu — `deploy/tt-gpu/forecast/add-forecast-route.py`, kitap kartlarıyla aynı üç kat koruma (85.105.0.0/16, mevcut gizli başlık, yöntem). Claude oturumunda izin denetimine takıldı; kullanıcı koşturacak. Sonra VM `.env`: `FORECAST_API_BASE=https://85.111.30.227/bi-forecast`, `FORECAST_EXTRA_HEADER` = kartların başlığı.
+
 ## 2026-09-25 — Kitap Tasarım Stüdyosu: okunmuş kitaptan/Word'den baskıya; GPU ve test sunucusunda canlı
 
 - **Ne:** kullanıcı isteği «Word gelmiş gibi kitabı sistem sıfırdan tasarlasın, ekranda sayfa sayfa düzeltilebilsin». `apps/editor/src/editor/production/`: metin (okunmuş kayıt + CRM; baskı artıkları kitaptan bağımsız kurallarla ve Türkçe sözlükle temizlenir), profil (künye/CRM beyanı + Ateşman + model, ayrışma gösterilir), baskı kuralları (yaşa göre punto/heceleme/font, forma katı), üslup, karakter kartı (sabit görünüş + kıyafetler), sayfa sahneleri (alıntıya bağlı, mekân/kıyafet sürekliliği), Typst dizgisi (punto ve resim bandı forma katına aranır, kalan tam sayfa resimle dolar), kapak açılımı (vektör başlık, EAN-13), künye (kitabın künyesinden alıntılı), ön kontrol (metin kelime kelime PDF'te, ölçü, kutu, font, çözünürlük, onay). Stitch ekranları `design/stitch-wow/10-11`.
