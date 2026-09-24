@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Boş cevapta verinin bittiği gün ve aynı sorunun o döneme kurulmuş hâli (dalda, kurulmadı)
+
+- **Sorun:** "Bugün en çok satan kitap" boş dönüyor, açıklama "kayıtlar bu dönemden önce bitiyor olabilir" diyordu: tarih yok, ne sorulabileceği yok. Sebep veri: BI'ın okuduğu Logo kopyası (.155) 17.08.2026'da bitiyor.
+- **Ne yapıldı (`same_period.empty_probe/empty_hint`, köprü `_data_end_hint`):** yalnız cevap boşsa (dolu cevaba sorgu eklenmez) ölçünün kendi tablosunda, katalog koşullarıyla, dönem bitmeden önceki son gün ölçülür; profilin gördüğü ilk yıla kadar yıl yıl geriye (sayı tavanı yok). Son gün dönemden önceyse açıklama "veri 17.08.2026 tarihinde bitiyor; 'Bugün' için kayıt yok" olur ve cevapta `dataEnd.suggestion` döner. Veri dönemin içindeyse boşluk sorunun süzgecindendir, öneri verilmez.
+- **Öneri soruya göre kurulur, kalıp yok:** sorudaki dönem ifadesi (kullanıcının kendi kelimeleri) aynı türden, verinin son gününü içeren dönemle değiştirilir — gün (bugün, dün, önceki gün) → o gün; hafta (bu/geçen/bir önceki hafta) → o hafta; ay → o ay; çeyrek; yıl; son N gün/ay → son güne biten aynı uzunlukta pencere. Birim son günde bitmiyorsa ifade tarih aralığıdır ("1 ağustos 2026 ile 17 ağustos 2026 arası"). Kurulan soru ayrıştırıcıdan geri geçirilir; beklenen dönemi vermezse öneri gösterilmez.
+- **Ayrıştırıcı (`temporal.py`):** tek gün artık dönem — "17 ağustos 2026", "17.08.2026", "17/08/2026", "3 mart'ta" (önceden ay olarak okunuyor ya da hiç okunmuyordu; "15 ocak ile 20 mart arası" 1 Ocak–31 Mart çıkıyordu). "bir önceki gün" = dün, "önceki gün / evvelsi gün" = dünden önceki gün (TDK). "10 ocak ayında" sayı+ay olarak kalır.
+- **Ekran:** ZEKİ AI özeti kartında boş cevabın altında önerilen soru tek tıklık düğme; metin motordan gelir.
+- **Doğrulama (test sunucusu, geçici dizin):** yeni `test_data_end_hint.py` 29/29; `semantic_layer` paketi main ile birebir aynı 15 hata + 10 hata (önceden var), yeni kırılan 0. Dönem okuması karşılaştırması: test setleri + `sl_query_log` 3.623 soru, eski/yeni ayrıştırıcıda yalnız 2 soru değişti (ikisi de bu iş: "bir önceki gün", "önceki gün"). Ön yüz `tsc` 0.
+- **Yapılamayan:** gerçek veritabanıyla uçtan uca deneme — köprü çalışma nesnesiyle (sunucu açmadan, zamanlayıcılar başlamadan) 11 soru soruldu, hepsi `DATA_SOURCE_UNAVAILABLE`: TİMAŞ VPN tüneli telefon onayı bekliyor (20:19'dan beri `PUSH_REQUEST`). Tam set (set100) regresyonu da bu yüzden koşulmadı. Deneme betiği sunucuda `~/dataend-stage/ask_probe.py`.
+
 ## 2026-09-24 — Genel bakış kanvasında her kartta "SQL'i göster" + kopyala
 
 - **İstek:** Net ciro, Aylık seyir, Kanal dağılımı, En büyük cari, Kanıt & Kaynak ve ZEKİ AI özeti kartlarının hepsinde SQL görülsün, taşmasın, kopyalanabilsin.
