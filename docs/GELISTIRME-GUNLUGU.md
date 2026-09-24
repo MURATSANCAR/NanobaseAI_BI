@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (sabah) — Stüdyo: baskı PDF'i (CMYK/PDF-X), Real-ESRGAN, testler, Word uçtan uca
+
+- **Baskı PDF'i:** `prepress.py` kesim işaretli (10 mm kenar), Ghostscript CMYK + PDF/X-3 (OutputIntent), TrimBox/BleedBox. Dünyanın En Korkak Hayvanı'nda 32 sayfa 20 sn, 29/29 görsel CMYK, fontlar gömülü. Öteki denetimler geçince üretilir; matbaa ICC profili tanımlanana kadar ghostscript varsayılanı + uyarı.
+- **Real-ESRGAN:** `book-upscale` (spandrel, karo karo 4×), gateway takma adı 0.06; ilk istek 16 sn, sonra 6 sn; ince çizgiler Lanczos'tan belirgin keskin, tüy dokusu biraz yumuşuyor.
+- **Word uçtan uca** (Kahramanını Yutan Kitap, portal → köprü → tünel → stüdyo): CRM kitap adıyla eşleşti; üç hata bulundu ve düzeltildi: resimsiz romana 44 görünmez resim planlanıyordu (yerleşim artık resim türüne göre, basılmayan resim çizilmez); metin katmanı aynı sayfada «ola-»/«cak!» diye bölüyordu (tireyle biten blok birleşir); ön kontrol yazarın «AhA- HAHA» tiresini hece tiresi sanıyordu. Sonuç 5.445/5.445 kelime.
+- **Kıyafet/mekân düzeltmesi doğrulandı:** kahvaltıda gündelik, 11. sayfadan önlük; 13. sayfa odada.
+- **İşletme:** kurulum için stüdyo yeniden başlatması sırada bekleyen bir işi kesti → servis açılışında yarıda kalan iş kendiliğinden sürer; kitaba tıklamak işi başlatmaz (onay kutusu). Testler 27/27.
+
 ## 2026-09-25 — Kitap Tasarım Stüdyosu: okunmuş kitaptan/Word'den baskıya; GPU ve test sunucusunda canlı
 
 - **Ne:** kullanıcı isteği «Word gelmiş gibi kitabı sistem sıfırdan tasarlasın, ekranda sayfa sayfa düzeltilebilsin». `apps/editor/src/editor/production/`: metin (okunmuş kayıt + CRM; baskı artıkları kitaptan bağımsız kurallarla ve Türkçe sözlükle temizlenir), profil (künye/CRM beyanı + Ateşman + model, ayrışma gösterilir), baskı kuralları (yaşa göre punto/heceleme/font, forma katı), üslup, karakter kartı (sabit görünüş + kıyafetler), sayfa sahneleri (alıntıya bağlı, mekân/kıyafet sürekliliği), Typst dizgisi (punto ve resim bandı forma katına aranır, kalan tam sayfa resimle dolar), kapak açılımı (vektör başlık, EAN-13), künye (kitabın künyesinden alıntılı), ön kontrol (metin kelime kelime PDF'te, ölçü, kutu, font, çözünürlük, onay). Stitch ekranları `design/stitch-wow/10-11`.
