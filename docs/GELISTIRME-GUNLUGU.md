@@ -1,5 +1,6 @@
 # Geliştirme Günlüğü
 
+<<<<<<< HEAD
 ## 2026-09-24 — Çok seçenekli süzgeçlere yazarak arama (`SearchSelect`)
 
 - Kullanıcı isteği: kitap adı, yazar gibi binlerce seçenekli açılır listelerden seçmek zor; arama alanı olsun. Bütün `src/` `<select>`/açılır listeleri tarandı, seçenek sayısı koddan ve CRM seçenek kümelerinden çıkarıldı.
@@ -9,6 +10,8 @@
 - Doğrulama: test sunucusunda `tsc --noEmit` 0; 12.000 Türkçe adlık geçici bir sayfada 375/320 px ve masaüstünde arama ("isil yilmaz" → "Işıl Yılmaz"), ↑ ile son kayda atlama, temizleme, çoklu seçim denendi; geçici dosyalar silindi. Canlı Baskı Öneri ekranı oturum gerektirdiği için ekranda denenmedi.
 - Not: `/api/v1/financial-audit/runs` son 30 raporla sınırlı (`[:30]`) — sessiz tavan kuralına aykırı, ayrı iş.
 
+=======
+>>>>>>> 9c7602aea255c94ce6da8038fd0968aed14265ce
 ## 2026-09-24 — Yazar giriş süreci kodlandı (dalda, kurulmadı): dinleyici, pano, proje sayfası, kurul günü, Masam, yeni menü
 
 - **Arka uç:** `editorial_intake.py` + `app.py` uçları. CRM 5 dk'da bir baştan okunur (disk önbelleği); adımlar kanıttan hesaplanır, statüden değil — canlı ölçüm: statü geçişlerinin çoğu ara adımları atlıyor, kurulda kabul edilen 117 proje hâlâ "toplantıya hazırlanıyor". Rapor (3) ve yazara bilgi (6) CRM'de izlenmediği için portaldan işaretlenir (`semantic_editorial_intake_marks`, projenin editörü ya da yönetici; `admin_mod.audit` kaydı). Yönetim ekranına iki ayar: `EDITORIAL_INTAKE_SINCE`, `EDITORIAL_INTAKE_LATE_DAYS`.
@@ -30,11 +33,14 @@
 - Müşteri editör modülü için 9 adımlı "Yazarın Yayınevine Giriş Süreci" akışını gönderdi; kural: veri CRM'den dinlenecek. Canlı CRM'de (.28) salt okuma ile her adımın karşılığı ve doluluğu ölçüldü: `docs/analiz/yazar-giris-sureci-crm-2026-09-24.md`.
 - Omurga `new_projeBase.statuscode` (Toplantıya Hazırlanıyor → Kurula Hazır → Kurul Onaylı → İş Planı Çalışıyor); `new_projeasamasi` ve projedeki kurul sonucu/tarih alanları hiç dolu değil. Denetim kaydı Proje/Stok/Üretim/Sözleşme/Eser Katılımı/Kişi/Cari'de açık → adım zamanları geriye dönük çıkar. Editör raporu, yazara bilgi ve yazar cari formu CRM'de izlenmiyor; müşteriye 3 soru.
 - Kod değişikliği yok.
+<<<<<<< HEAD
 ## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
 
 - `deniz.akko` ile `~/bin/ttvpn-mac` sabahtan beri `p=failed` / bir kez `p=login-denied` veriyordu; tarayıcı giriyor göründüğü için istemci farkı sanıldı. Elenenler: şifre terminale bozulmadan ulaşıyor (uzunluk/karakter ölçüldü), tarayıcı kimliği, form alanıyla şifre, DSID çereziyle tünel (`error 0x07`). Uygulama içi tarayıcının ağ kaydı tarayıcının da 3 kez `p=failed` alıp 4.'de girdiğini gösterdi → şifre elle tutarsız yazılıyordu.
 - Çözüm: şifre tarayıcıda göz simgesiyle doğrulanıp kopyalandı, terminale yapıştırıldı → OTP → `Configured as 172.30.27.166`, `ssh tt-gpu` çalışıyor. 10:30'dan kalan 4 asılı openconnect süreci kapatıldı (`login-denied` sebebi). Kullanıcı şifreyi portalden değiştirdi.
 - Tarif ve hata kodları: `docs/TT-GPU-SUNUCUSU.md` §2.2 madde 5. Deneme betiği `ttvpn-mac-f` Çöp Kutusu'na taşındı.
+=======
+>>>>>>> 9c7602aea255c94ce6da8038fd0968aed14265ce
 
 ## 2026-09-24 — TimesFM 3.0 × Yeni Baskı Öneri geriye dönük değerlendirmesi
 
