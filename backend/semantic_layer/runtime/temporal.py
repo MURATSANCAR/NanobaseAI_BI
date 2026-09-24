@@ -336,12 +336,59 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
     found.sort(key=lambda x: x[0])
     found = _join_ranges(found, text)
     slots = [s for _, _, s in found]
+    slots, _ = anchor_previous(slots)
     grain = _grain_hint(text)
     if grain is None:
         for s in slots:
             if s.primitive in ("MONTH_RANGE",):
                 grain = None  # a range does not imply a breakdown
     return slots, grain
+
+
+#: "önceki X" / "bir önceki X" — the X before another one. Unlike "geçen X" it is not anchored to today.
+_RELATIVE_PREV = re.compile(r"^(?:bir\s+)?onceki\b")
+
+
+def _unit_before(start: date, grain: str) -> Optional[tuple[date, date]]:
+    """The calendar unit of `grain` that ends where `start` begins."""
+    if grain == "DAY":
+        return start - timedelta(days=1), start
+    if grain == "WEEK":
+        return start - timedelta(days=7), start
+    if grain in ("MONTH", "QUARTER", "YEAR"):
+        months = {"MONTH": 1, "QUARTER": 3, "YEAR": 12}[grain]
+        y, m = divmod(start.month - 1 - months, 12)
+        return date(start.year + y, m + 1, 1), start
+    return None
+
+
+def anchor_previous(slots: list[TemporalSlot]) -> tuple[list[TemporalSlot], Optional[str]]:
+    """Two periods where one is "(bir) önceki X": that one is the X before the other, not before today.
+
+    "Geçen haftaki tahsilat bir önceki haftaya göre" parsed both phrases against today, so both were
+    last week and the comparison set a week beside itself. "Önceki" names a position relative to the
+    period it is compared with; "geçen" names one relative to today. The same holds for every grain:
+    "2025 ciro bir önceki yıla göre" is 2024, "dünkü satış önceki güne göre" is the day before
+    yesterday. Only a pair of the same grain is re-anchored — "bu ay önceki yıla göre" has nothing to
+    count back from — and only when exactly one of the two is relative.
+    Returns (slots, explanation or None)."""
+    if len(slots) != 2:
+        return slots, None
+    rel = [i for i, s in enumerate(slots) if _RELATIVE_PREV.match(s.text or "")]
+    if len(rel) != 1:
+        return slots, None
+    r, a = slots[rel[0]], slots[1 - rel[0]]
+    if not (a.start and a.end and a.grain and a.grain == r.grain):
+        return slots, None
+    span = _unit_before(a.start, a.grain)
+    if span is None or (r.start, r.end) == span:
+        return slots, None
+    moved = TemporalSlot(r.text, r.primitive, span[0], span[1], r.grain, r.ambiguous,
+                         params={**(r.params or {}), "relative_to": a.text})
+    out = list(slots)
+    out[rel[0]] = moved
+    return out, (f"'{r.text}' '{a.text}' dönemine göre okundu: {span[0].isoformat()}–{span[1].isoformat()} "
+                 f"(bugüne göre değil)")
 
 
 def describe(slot: TemporalSlot) -> str:
@@ -356,4 +403,4 @@ def month_count(start: date, end: date) -> int:
     return (end.year - start.year) * 12 + (end.month - start.month)
 
 
-__all__ = ["parse_temporal", "describe", "TemporalSlot", "PRIMITIVES", "MONTHS", "month_count", "calendar"]
+__all__ = ["parse_temporal", "anchor_previous", "describe", "TemporalSlot", "PRIMITIVES", "MONTHS", "month_count", "calendar"]

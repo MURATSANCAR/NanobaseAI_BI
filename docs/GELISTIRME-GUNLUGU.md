@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — "(bir) önceki X" soruda başka bir X varsa ondan önceki X (dalda, kurulmadı)
+
+- **Sorun:** "Geçen haftaki tahsilat toplamı bir önceki haftaya göre nasıl?" iki dönemi de bugüne göre okuyordu: ikisi de 14–21 Eylül, hafta kendisiyle karşılaştırılıyordu. "Geçen" bugüne göredir, "önceki" yanındaki döneme göre.
+- **Çözüm (`temporal.anchor_previous`, `parse_temporal` sonunda):** iki dönemden yalnız biri "(bir) önceki X" ise ve ikisi aynı türdense (gün/hafta/ay/çeyrek/yıl), o dönem diğerinden hemen önceki birim olur. Kalıp yok; tür üzerinden tek kural. Farklı türler ("bu ay önceki yıla göre") ve ikisi de bugüne bağlı olanlar ("geçen yıl ve geçen ay") dokunulmaz; tek dönemde "bir önceki hafta" yine bugüne göre.
+- **Doğrulama:** `test_relative_previous.py` 13/13 (geçen hafta/ay/yıl/çeyrek, dün, 2024, temmuz 2026, ocak 2026 → aralık 2025; değişmemesi gerekenler). Paket: main ile aynı hatalar + `test_llm_queue::test_background_work_yields_to_anyone_waiting` — kararsız, main'de de 5 koşunun 3'ünde kırık, dalda 1'inde. 3.631 soruluk dönem karşılaştırmasında dönemi değişen tek eski soru hedeflenen soru (7–14 Eylül'e). Gerçek DB: "geçen ay net ciro bir önceki aya göre" Ağustos 86.711.927,55 ₺ / Temmuz 107.653.273,52 ₺; tahsilat sorusu 14–21.09 ile 07–14.09 (veri 17.08'de bittiği için boş).
+- **Not (ayrı iş):** kapanmış bir dönemde veri ayın ortasında bitiyorsa (Ağustos 17'si) karşılaştırma yine takvimle yapılıyor; cevap "eşit kapsam doğrulanmadı" notu veriyor ama kırpmıyor.
+
 ## 2026-09-24 — Boş cevapta verinin bittiği gün ve aynı sorunun o döneme kurulmuş hâli (dalda, kurulmadı)
 
 - **Sorun:** "Bugün en çok satan kitap" boş dönüyor, açıklama "kayıtlar bu dönemden önce bitiyor olabilir" diyordu: tarih yok, ne sorulabileceği yok. Sebep veri: BI'ın okuduğu Logo kopyası (.155) 17.08.2026'da bitiyor.
