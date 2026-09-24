@@ -20,12 +20,13 @@ import sys
 P = os.path.realpath("/etc/nginx/sites-enabled/kitap-eczanesi")
 s = open(P, encoding="utf-8").read()
 if "EDITOR-STUDYO" in s:
-    # Sonradan eklenen iş uçları (resume 09-24, kunye 09-24): eski blokta yalnız restart ya da
-    # restart|resume varsa üç uca genişletilir.
+    # Sonradan eklenen uçlar (resume, kunye, baskı PDF'leri; 09-24/25): eski blok yerinde genişletilir.
     J = "jobs/([0-9]{14}[0-9a-f]{6})/"
     fixed = s
     for old in (J + 'restart$"', J + '(restart|resume)$"'):
         fixed = fixed.replace(old, J + '(restart|resume|kunye)$"')
+    fixed = fixed.replace(J + '(pdf)/(ic|kapak)$"', J + 'pdf/(ic|kapak|baski-ic|baski-kapak)$"')
+    fixed = fixed.replace(J + 'pdf/(ic|kapak)$"', J + 'pdf/(ic|kapak|baski-ic|baski-kapak)$"')
     fixed = fixed.replace("proxy_pass http://127.0.0.1:19142/v1/studio/jobs/$1/restart;",
                           "proxy_pass http://127.0.0.1:19142/v1/studio/jobs/$1/$2;")
     if fixed == s:
@@ -38,7 +39,7 @@ if "EDITOR-STUDYO" in s:
         print("nginx -t DÜŞTÜ, dosya eski hâline döndü:\n", t.stderr)
         sys.exit(1)
     subprocess.run(["systemctl", "reload", "nginx"], check=True)
-    print("iş uçları güncellendi (restart|resume|kunye), nginx reload tamam")
+    print("uçlar güncellendi (restart|resume|kunye, baskı PDF'leri), nginx reload tamam")
     sys.exit(0)
 if "EDITOR-BITTI" not in s:
     print("EDITOR bloğu bulunamadı; önce add-cards-routes.py koşmalı")
@@ -81,7 +82,7 @@ block = ("    # EDITOR-STUDYO  (musteri VM -> kitap tasarim studyosu; ayni uc ka
          + loc(f"jobs/({JOB})/art/({KEY})/([0-9]{{1,3}})", "GET", "jobs/$1/art/$2/$3$is_args$args")
          + loc(f"jobs/({JOB})/art/({KEY})/(regenerate|select|approve)", "POST", "jobs/$1/art/$2/$3")
          + loc(f"jobs/({JOB})/characters/([0-9]{{1,2}})", "GET", "jobs/$1/characters/$2$is_args$args")
-         + loc(f"jobs/({JOB})/pdf/(ic|kapak)", "GET", "jobs/$1/pdf/$2"))
+         + loc(f"jobs/({JOB})/pdf/(ic|kapak|baski-ic|baski-kapak)", "GET", "jobs/$1/pdf/$2"))
 open(P, "w", encoding="utf-8").write(s.replace("    # EDITOR-BITTI", block + "    # EDITOR-BITTI", 1))
 t = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
 if t.returncode != 0:

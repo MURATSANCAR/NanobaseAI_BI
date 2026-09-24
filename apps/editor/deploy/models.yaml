@@ -207,3 +207,19 @@ aliases:
       # CUDA grafiği kapalı: model her istek biçimi (istem uzunluğu × referans görsel sayısı) için ayrı grafik
       # saklıyor, bellek resim resim büyüyüp aşıyordu (ölçüldü 2026-09-24: 25 resimden sonra 92,7 GB).
       - --enforce-eager
+
+  # Resim büyütme (Real-ESRGAN x4plus, BSD-3): üretilen resim 300 dpi hedef ölçüye bununla getirilir;
+  # Lanczos yalnız bu servis açılamazsa yedektir. Küçük (≈2 GB), görsel modelle aynı kartta birlikte sığar.
+  # İmaj yerelde kurulur (editorctl install: images/upscale/Dockerfile); ağırlık MANIFEST'te sha256 ile.
+  book-upscale:
+    container: editor-model-upscale
+    model_dir: RealESRGAN_x4plus
+    real_model: xinntao/Real-ESRGAN/RealESRGAN_x4plus
+    role: Resim büyütme (baskı çözünürlüğü)
+    kind: upscale
+    gpu: 1
+    mem_fraction: 0.06
+    idle_stop_sec: 300
+    image: editor-upscale:1
+    entrypoint: [python, /srv/server.py]
+    args: []

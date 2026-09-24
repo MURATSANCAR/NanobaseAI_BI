@@ -3,7 +3,8 @@ FROM python:3.14-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 PIP_NO_CACHE_DIR=1 PYTHONPATH=/app/src
 WORKDIR /app
 # Son okuma yazım denetimi (proofing/spelling, name_spelling): Türkçe hunspell sözlüğü /app/data/hunspell/tr_TR.{dic,aff}
-RUN apt-get update && apt-get install -y --no-install-recommends hunspell-tr \
+# Baskı PDF'i (editor.production.prepress): ghostscript CMYK/PDF-X ve varsayılan ICC profilleri.
+RUN apt-get update && apt-get install -y --no-install-recommends hunspell-tr ghostscript \
     && mkdir -p /app/data/hunspell && cp /usr/share/hunspell/tr_TR.aff /usr/share/hunspell/tr_TR.dic /app/data/hunspell/ \
     && rm -rf /var/lib/apt/lists/*
 # Kapak yazısı fontları (editor.cover_text), OFL, google/fonts sabit sürüm.

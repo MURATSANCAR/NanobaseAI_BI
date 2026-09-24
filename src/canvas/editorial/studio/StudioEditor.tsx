@@ -78,7 +78,6 @@ export default function StudioEditor() {
   const busyHere = !!d.busy && !d.busy.error && d.busy.key === key;
   const busyAny = !!d.busy && !d.busy.error;
   const sceneChars = key === 'kapak' ? d.characters.slice(0, 3) : d.characters.filter((c) => page?.scene?.characters.includes(c.name));
-  const ready = d.preflight?.status === 'OK';
   const err = errText(regen.error || select.error || approve.error, '') || (d.busy?.error && d.busy.key === key ? `Üretim başarısız: ${d.busy.error}` : '');
 
   return (
@@ -95,10 +94,17 @@ export default function StudioEditor() {
           </span>
           <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}><Download className="h-4 w-4" aria-hidden />İç sayfalar</a>
           {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak</a>}
-          <span className={`${gradientBtn} ${ready ? '' : 'pointer-events-none opacity-50'}`}
-            title={ready ? 'Ön baskı denetimi geçti' : 'Önce bütün resimleri onaylayın ve ön baskı denetimini geçirin'}>
-            {ready ? 'Baskıya hazır' : 'Baskıya hazır değil'}
-          </span>
+          {d.files['baski-ic'] ? (
+            <a className={gradientBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')} title="CMYK, PDF/X-3, kesim işaretli">
+              <Download className="h-4 w-4" aria-hidden />Baskı PDF'i
+            </a>
+          ) : (
+            <span className={`${gradientBtn} pointer-events-none opacity-50`}
+              title="Bütün resimler onaylanıp ön baskı denetimi geçince CMYK baskı PDF'i üretilir">
+              Baskıya hazır değil
+            </span>
+          )}
+          {d.files['baski-kapak'] && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-kapak')}><Download className="h-4 w-4" aria-hidden />Baskı kapağı</a>}
         </div>
       }
     >

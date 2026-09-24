@@ -158,6 +158,6 @@ def character(job_id: str, i: int, width: int) -> tuple[bytes, str]:
 
 
 def pdf(job_id: str, kind: str) -> tuple[bytes, str]:
-    if kind not in ("ic", "kapak"):
+    if kind not in ("ic", "kapak", "baski-ic", "baski-kapak"):
         raise StudioError(404, "PDF yok.")
     return get_bytes(f"/v1/studio/jobs/{_job(job_id)}/pdf/{kind}", {"application/pdf"}, limit=400 * 1024 * 1024)

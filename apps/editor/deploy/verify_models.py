@@ -50,6 +50,17 @@ def check(repo: str, rev: str) -> list[str]:
     return problems
 
 
+def check_files(m: dict) -> list[str]:
+    problems = []
+    for name, want in m["files"].items():
+        p = os.path.join(ROOT, m["dir"], name)
+        if not os.path.exists(p):
+            problems.append(f"missing {p}")
+        elif sha256(p) != want:
+            problems.append(f"sha256 {p}")
+    return problems
+
+
 def unpinned(manifest: dict) -> list[str]:
     import yaml
     path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models.yaml")
@@ -68,7 +79,8 @@ def main() -> int:
     for repo, m in manifest.items():
         if only and repo.split("/")[1] not in only:
             continue
-        problems = check(repo, m["revision"])
+        # Hugging Face dışı ağırlık (ör. Real-ESRGAN, GitHub sürümü): {dir, url, files: {ad: sha256}}
+        problems = check_files(m) if "url" in m else check(repo, m["revision"])
         print(f"{'OK ' if not problems else 'BAD'} {repo}@{m['revision'][:10]}", *problems, sep="\n  ")
         bad += bool(problems)
     return 1 if bad else 0

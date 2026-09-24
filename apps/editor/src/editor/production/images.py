@@ -5,7 +5,8 @@ görünen karakterlerin referanslarıyla (en çok 4) düzenleme ucundan istenir;
 düzenleme ucu hata verirse metinden görsel ucuna düşer (sebep kayda geçer).
 
 Boyut: model resmi piksel bütçesi içinde (EDITOR_IMAGE_PIXELS, varsayılan 3 MP) en-boy oranını
-koruyarak üretir, sonra hedef alanın 300 dpi karşılığına Lanczos ile büyütülür. Bütçe, görsel modelin
+koruyarak üretir, sonra hedef alanın 300 dpi karşılığına book-upscale (Real-ESRGAN x4plus) ile büyütülür;
+servis açılamazsa Lanczos'a düşer ve not düşülür. Bütçe, görsel modelin
 kartı tek başına kullandığı düzene göredir (models.yaml book-image 0.62 payı ana modeli durdurur);
 ana model aynı kartta açıkken 2,6 MP ve üstü bellek aşımı verir; tek başına 4,2 MP'de 22 resimden sonra
 bellek 92,5 GB'a şişip aştı (ölçüldü 2026-09-24), bu yüzden 3 MP. Aşımda resim yarı çözünürlükte yeniden denenir. Üretim
@@ -30,6 +31,7 @@ from ..config import settings
 from .art import ArtPlan, Character, Scene
 
 ALIAS = "book-image"
+UPSCALE_ALIAS = "book-upscale"
 PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 3_000_000))
 STEPS = 40
 MAX_REFS = 4
@@ -190,7 +192,9 @@ class Painter:
             png, mode, note = await draw(W, H)
             note = (note + " · " if note else "") + "bellek aşımı: yarı çözünürlükte üretildi"
         TW, TH = target_px(w_mm, h_mm)
-        png = upscale(png, TW, TH)
+        png, how = await self.enlarge(png, TW, TH)
+        if how:
+            note = (note + " · " if note else "") + how
         rd = Render(key, self._save(key, png), TW, TH, dpi, seed, refs, mode, round(time.time() - t, 1), prompt, note)
         self.log.append(rd)
         return rd
@@ -206,6 +210,20 @@ class Painter:
         done = await asyncio.gather(*(one(sc) for sc in scenes))
         return {n: rd.path for n, rd in done}
 
+    async def enlarge(self, png: bytes, W: int, H: int) -> tuple[bytes, str]:
+        """Hedef ölçüye büyütme: book-upscale (Real-ESRGAN); açılamazsa Lanczos ve sebebi not olarak döner."""
+        import io
+        from PIL import Image
+        if Image.open(io.BytesIO(png)).size == (W, H) or os.environ.get("EDITOR_UPSCALE") == "lanczos":
+            return upscale(png, W, H), ""
+        try:
+            r = await self.http.post(f"{self.url}/v1/images/upscale", headers=self.headers, json={
+                "model": UPSCALE_ALIAS, "image": base64.b64encode(png).decode(), "width": W, "height": H})
+            r.raise_for_status()
+            return base64.b64decode(r.json()["image"]), ""
+        except (httpx.HTTPError, KeyError, ValueError) as e:
+            return upscale(png, W, H), f"büyütücü yok, Lanczos: {str(e)[:120]}"
+
     async def release(self) -> str:
         """Görsel modeli hemen kapatır (gateway iç ucu): iş bitince kartı ana modele geri verir, gateway'in
         bekçisi ana modeli kendiliğinden kaldırır. Sınamada (EDITOR_IMAGE_URL) gateway yoktur, bir şey yapmaz."""
@@ -213,10 +231,11 @@ class Painter:
             return "doğrudan uç: kapatma yok"
         s = settings()
         try:
-            r = await self.http.post(f"{self.url}/internal/stop/{ALIAS}",
-                                     headers={"authorization": f"Bearer {s.gateway_internal_key}"}, timeout=90)
-            r.raise_for_status()
-            return "görsel model kapatıldı; ana model geri kalkıyor"
+            for alias in (ALIAS, UPSCALE_ALIAS):
+                r = await self.http.post(f"{self.url}/internal/stop/{alias}",
+                                         headers={"authorization": f"Bearer {s.gateway_internal_key}"}, timeout=90)
+                r.raise_for_status()
+            return "görsel model ve büyütücü kapatıldı; ana model geri kalkıyor"
         except httpx.HTTPError as e:
             return f"görsel model kapatılamadı ({e}); boşta kalınca kendisi kapanacak"
 

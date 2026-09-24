@@ -18,7 +18,7 @@ sıra bekleyen iş ekranda «sırada» görünür.
     POST /v1/studio/jobs/{job}/kunye   {fields}       künyenin eksik/düzeltilecek alanları
     POST /v1/studio/jobs/{job}/resume                 yarıda kalan işi sürdür
     POST /v1/studio/jobs/{job}/restart                aynı kaynakla yeni iş
-    GET  /v1/studio/jobs/{job}/pdf/{kind}             ic | kapak
+    GET  /v1/studio/jobs/{job}/pdf/{kind}             ic | kapak | baski-ic | baski-kapak
 """
 
 from __future__ import annotations
@@ -188,7 +188,7 @@ def job_view(job: str) -> dict:
         "pages": pages, "cover": {"art": art("kapak"), "info": studio.read(d, "cover.json")},
         "preflight": pre,
         "front": _front(d),
-        "files": {"ic": (d / "dizgi" / "ic-sayfalar.pdf").exists(), "kapak": (d / "kapak" / "kapak.pdf").exists()},
+        "files": {k: (d / rel).exists() for k, (rel, _) in PDF_FILES.items()},
     }
 
 
@@ -268,15 +268,21 @@ def character_image(job: str, i: int, w: int = Query(256, ge=0, le=1024)) -> Res
     return _image(Path(path), w)
 
 
+PDF_FILES = {"ic": ("dizgi/ic-sayfalar.pdf", "ic-sayfalar"), "kapak": ("kapak/kapak.pdf", "kapak"),
+             "baski-ic": ("baski/ic-sayfalar-baski.pdf", "ic-sayfalar-BASKI-CMYK"),
+             "baski-kapak": ("baski/kapak-baski.pdf", "kapak-BASKI-CMYK")}
+
+
 @app.get("/v1/studio/jobs/{job}/pdf/{kind}")
-def pdf(job: str, kind: Literal["ic", "kapak"]) -> Response:
+def pdf(job: str, kind: Literal["ic", "kapak", "baski-ic", "baski-kapak"]) -> Response:
+    """Ekran PDF'leri (ic, kapak; RGB) ve baskı PDF'leri (baski-*; CMYK, PDF/X, kesim işaretli)."""
     d = _dir(job)
-    path = d / ("dizgi/ic-sayfalar.pdf" if kind == "ic" else "kapak/kapak.pdf")
+    rel, label = PDF_FILES[kind]
+    path = d / rel
     if not path.exists():
-        raise HTTPException(404, "PDF yok")
+        raise HTTPException(404, "Baskı PDF'i bütün denetimler geçince üretilir" if kind.startswith("baski") else "PDF yok")
     title = re.sub(r"[^\w\-]+", "-", (studio.read(d, "state.json", {}).get("title") or job)).strip("-")
-    return FileResponse(path, media_type="application/pdf",
-                        filename=f"{title}-{'ic-sayfalar' if kind == 'ic' else 'kapak'}.pdf")
+    return FileResponse(path, media_type="application/pdf", filename=f"{title}-{label}.pdf")
 
 
 # ------------------------------------------------------------------ düzenleme

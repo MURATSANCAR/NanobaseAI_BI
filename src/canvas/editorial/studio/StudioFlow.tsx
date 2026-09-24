@@ -192,6 +192,7 @@ export default function StudioFlow() {
               <div className="flex gap-2">
                 {d.files.ic && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}>İç sayfalar (PDF)</a>}
                 {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}>Kapak (PDF)</a>}
+                {d.files['baski-ic'] && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'baski-ic')}>Baskı PDF'i (CMYK)</a>}
                 <Link to={`/kitap-tasarim/${jobId}/studyo`} className={gradientBtn} aria-disabled={!typeset}
                   onClick={(e) => { if (!typeset) e.preventDefault(); }}>
                   Stüdyoya geç <ArrowRight className="h-4 w-4" aria-hidden />

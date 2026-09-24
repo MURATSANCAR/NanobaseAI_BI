@@ -1667,7 +1667,7 @@ export type StudioJob = {
   preflight: { status: 'OK' | 'WARN' | 'FAIL'; checks: StudioCheck[] } | null;
   front: { rows: { label: string; value: string; missing: boolean; editable: boolean; source: string | null }[];
            bios: { name: string; text: string }[] } | null;
-  files: { ic: boolean; kapak: boolean };
+  files: { ic: boolean; kapak: boolean; 'baski-ic': boolean; 'baski-kapak': boolean };
 };
 export type StudioJobRow = { id: string; title: string | null; created_by: string; created_at: number;
   source: StudioJob['job']['source']; steps: { key: string; label: string; status: StudioStepStatus }[]; busy: StudioBusy };
@@ -1706,5 +1706,5 @@ export const studioApi = {
   coverUrl: (job: string, width = 1400, rev = '') => `${ENGINE_BASE}${studioBase(job)}/cover/preview?w=${width}${rev ? `&r=${rev}` : ''}`,
   artUrl: (job: string, key: string, v: number, width = 800) => `${ENGINE_BASE}${studioBase(job)}/art/${encodeURIComponent(key)}/${v}?w=${width}`,
   characterUrl: (job: string, i: number, width = 160) => `${ENGINE_BASE}${studioBase(job)}/characters/${i}?w=${width}`,
-  pdfUrl: (job: string, kind: 'ic' | 'kapak') => `${ENGINE_BASE}${studioBase(job)}/pdf/${kind}`,
+  pdfUrl: (job: string, kind: 'ic' | 'kapak' | 'baski-ic' | 'baski-kapak') => `${ENGINE_BASE}${studioBase(job)}/pdf/${kind}`,
 };

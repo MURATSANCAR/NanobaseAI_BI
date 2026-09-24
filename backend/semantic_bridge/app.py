@@ -4289,7 +4289,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         from semantic_bridge import editorial_studio
         data, _mime = _studio_call(editorial_studio.pdf, job, kind, what="PDF şu an alınamıyor.")
         admin_mod.audit(engine, user, "export", "studio_pdf", job, kind, None)
-        name = f"{job}-{'ic-sayfalar' if kind == 'ic' else 'kapak'}.pdf"
+        name = f"{job}-" + {"ic": "ic-sayfalar", "kapak": "kapak", "baski-ic": "ic-sayfalar-BASKI-CMYK",
+                            "baski-kapak": "kapak-BASKI-CMYK"}.get(kind, "dosya") + ".pdf"
         return Response(content=data, media_type="application/pdf",
                         headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"})
 

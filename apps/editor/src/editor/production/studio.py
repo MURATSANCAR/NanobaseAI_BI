@@ -258,10 +258,48 @@ def refresh_preflight(d: Path) -> dict:
     rep["checks"].append({"name": "Editör onayı", "status": "FAIL" if waiting else "OK",
                           "detail": "bütün resimler onaylı" if not waiting else
                           f"onay bekleyen {len(waiting)} resim: {', '.join(waiting[:12])}"})
+    rep["checks"].append(_print_check(d, spec, ms.title, ready=not any(c["status"] == "FAIL" for c in rep["checks"])))
     rep["status"] = ("FAIL" if any(c["status"] == "FAIL" for c in rep["checks"])
                      else "WARN" if any(c["status"] == "WARN" for c in rep["checks"]) else "OK")
     write(d, "preflight.json", rep)
     return rep
+
+
+def print_paths(d: Path) -> dict[str, Path]:
+    return {"ic": d / "baski" / "ic-sayfalar-baski.pdf", "kapak": d / "baski" / "kapak-baski.pdf"}
+
+
+def _print_check(d: Path, spec: Spec, title: str, ready: bool) -> dict:
+    """Baskı PDF'leri (CMYK, PDF/X, kesim işaretli) yalnız öteki denetimler geçince üretilir; iç sayfa ya da
+    kapak değişince yenilenir. Matbaa ICC profili tanımlı değilse uyarı."""
+    from . import prepress
+    name = "Baskı PDF'i (CMYK, PDF/X)"
+    if not ready:
+        return {"name": name, "status": "WARN", "detail": "öteki denetimler geçince üretilir"}
+    src = {"ic": d / "dizgi" / "ic-sayfalar.pdf", "kapak": d / "kapak" / "kapak.pdf"}
+    out = print_paths(d)
+    notes, info = [], {}
+    try:
+        for k in ("ic", "kapak"):
+            if not src[k].exists():
+                continue
+            if not out[k].exists() or out[k].stat().st_mtime < src[k].stat().st_mtime:
+                info[k] = prepress.make(src[k], out[k], spec.bleed, title)
+            c = prepress.check(out[k])
+            if not c["output_intent"] or c["non_cmyk_images"] or c["unembedded_fonts"] or not c["boxes"]:
+                notes.append(f"{k}: çıktı niyeti {c['output_intent']}, CMYK olmayan görsel {c['non_cmyk_images']}, "
+                             f"gömülmemiş font {c['unembedded_fonts']}, kutular {c['boxes']}")
+    except Exception as e:  # noqa: BLE001 - denetim sonucu olarak görünür
+        return {"name": name, "status": "FAIL", "detail": f"üretilemedi: {e}"[:300]}
+    if notes:
+        return {"name": name, "status": "FAIL", "detail": "; ".join(notes)[:300]}
+    icc, own = prepress.icc_profile()
+    if info:
+        write(d, "prepress.json", {k: v for k, v in info.items()})
+    return {"name": name, "status": "OK" if own else "WARN",
+            "detail": (f"CMYK, PDF/X-3, kesim işaretli; profil {Path(icc).name}" if own else
+                       f"CMYK, PDF/X-3, kesim işaretli; matbaanın ICC profili tanımlı değil, varsayılan {Path(icc).name} "
+                       "kullanıldı (matbaaya sorun, EDITOR_CMYK_ICC)")}
 
 
 def page_preview(d: Path, page_no: int, width: int) -> Path:
@@ -360,6 +398,6 @@ async def _cover_render(painter: Painter, plan: ArtPlan, spec: Spec, v: int, see
         png = (await painter._edit(prompt, [Path(r).read_bytes() for r in refs], W, H, seed) if refs
                else await painter._generate(prompt, W, H, seed))
         mode = "new"
-    png = upscale(png, *target_px(*cover_mm(spec)))
+    png, _how = await painter.enlarge(png, *target_px(*cover_mm(spec)))
     path = painter._save(f"kapak.v{v}", png)
     return Render(f"kapak.v{v}", path, W, H, dpi, seed, [], mode, round(time.time() - t, 1), prompt)
