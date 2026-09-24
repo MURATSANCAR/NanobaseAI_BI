@@ -6,6 +6,13 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends hunspell-tr \
     && mkdir -p /app/data/hunspell && cp /usr/share/hunspell/tr_TR.aff /usr/share/hunspell/tr_TR.dic /app/data/hunspell/ \
     && rm -rf /var/lib/apt/lists/*
+# Kapak yazısı fontları (editor.cover_text), OFL, google/fonts sabit sürüm.
+ARG GFONTS=23e54b51ddffbc7713c583748e3bd86f62b1fa4a
+RUN mkdir -p /app/data/fonts && cd /app/data/fonts && python -c "import sys,urllib.request,urllib.parse; \
+[urllib.request.urlretrieve('https://raw.githubusercontent.com/google/fonts/'+sys.argv[1]+'/ofl/'+p, p.split('/')[1]) for p in \
+ ['baloo2/Baloo2[wght].ttf','playfairdisplay/PlayfairDisplay[wght].ttf', \
+  'cormorantgaramond/CormorantGaramond[wght].ttf','notoserif/NotoSerif[wdth,wght].ttf']]" $GFONTS \
+    && ls -la /app/data/fonts
 COPY requirements.txt /app/requirements.txt
 RUN pip install -r /app/requirements.txt
 COPY src /app/src

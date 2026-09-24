@@ -18,3 +18,5 @@ pyyaml
 zeyrek
 spylls
 pillow>=10
+# kapak yazısı katmanı (editor.cover_text): fontta harf var mı
+fonttools
