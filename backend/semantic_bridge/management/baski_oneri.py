@@ -295,7 +295,7 @@ def _month_order(today: date) -> list[tuple[int, int]]:
     return list(reversed(out))
 
 
-def build(run: Callable[[str, dict | None], dict], today: date | None = None) -> dict:
+def build(run: Callable[[str, dict | None], dict], today: date | None = None, inputs: dict | None = None) -> dict:
     """`run(source_id, params)` kaynağı çalıştırır ve {columns, records, ...} döner."""
     today = today or date.today()
     res = {}
@@ -441,12 +441,34 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None) ->
                 "defaultFilters": DEFAULT_FILTERS.get(view_id, []),
                 "rows": [[r.get(c["key"]) for c in columns] for r in data]}
 
+    # ---- ZEKI AI Tahminleme: Power BI sekmelerinin yanında ikinci görüş. Satırlar yukarıdaki listelerden okunur,
+    # onlar değiştirilmez. Talep tahmini gecelik (baski-oneri-tahmin), stok ve sipariş bu okumadan (5 dk).
+    from semantic_bridge.management import zeki_tahmin
+
+    forecast = (inputs or {}).get(zeki_tahmin.REPORT_ID)
+    sql_list = []
+    for sid, st in ((forecast or {}).get("sourceStats") or {}).items():
+        meta = next((x for x in zeki_tahmin.SOURCES if x[0] == sid), None)
+        if meta and st.get("sql"):
+            sql_list.append({"id": sid, "title": meta[2], "description": meta[3], "sql": st["sql"]})
+    for sid in ("crm_kitap", "crm_bekleyen_siparis"):
+        meta = next((x for x in SOURCES if x[0] == sid), None)
+        if meta and (res.get(sid) or {}).get("sql"):
+            sql_list.append({"id": sid, "title": meta[2], "description": meta[3], "sql": res[sid]["sql"]})
+    tab = zeki_tahmin.tab(tekrar, yeni_rows, bekleyen, forecast, today, sql_list)
+    tab_view = {"id": "tahmin", "title": "ZEKI AI Tahminleme",
+                "hint": "Stoku en önce bitecek kitap üstte (ZEKI AI tahminine göre)",
+                "columns": tab["columns"], "filters": ["oneri", "guven", "liste", "yayinevi", "yazar", "statu", "urun_adi"],
+                "defaultFilters": [], "explain": tab["explain"], "emptyText": tab["emptyText"],
+                "rows": [[r.get(c["key"]) for c in tab["columns"]] for r in tab["rows"]]}
+
     return {
         "views": [
             view("tekrar", "Baskı Tekrar", "En önce tükenecek kitap üstte", TEKRAR_COLUMNS, tekrar,
                  ["oneri", "baski_durum", "yayinevi", "yazar", "statu", "urun_adi"]),
             view("yeni", "Yeni Kitap", "İlk yayını son 12 ayda olanlar, en çok satan üstte", YENI_COLUMNS, yeni_rows,
                  ["oneri", "baski_durum", "yayinevi", "yazar", "urun_adi"]),
+            tab_view,
         ],
         "oneriLevels": ONERI_LEVELS,
         "sourceStats": {sid: {"rows": len(r.get("records") or []), "dbMs": r.get("dbMs"), "skipped": r.get("skipped"),

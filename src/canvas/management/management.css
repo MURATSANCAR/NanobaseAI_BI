@@ -217,3 +217,32 @@ pre.mg-sql-code { padding: 12px 14px; white-space: pre }
 .mg-live-side { font-variant-numeric: tabular-nums; opacity: .8 }
 .mg-live-every { padding-left: 10px; border-left: 1px solid color-mix(in srgb, currentColor 25%, transparent); font-weight: 600; opacity: .7 }
 @media (max-width: 767px) { .mg-live { border-radius: 14px } .mg-live-every { display: none } }
+
+/* ZEKI AI Tahminleme: tablonun altındaki son kullanıcı açıklaması ve SQL'ler */
+.mg-explain { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; padding: 20px; border: 1px solid var(--mg-line); border-radius: 18px; background: #fbfaff; color: var(--mg-text) }
+.mg-explain h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.2px; color: var(--mg-ink) }
+.mg-explain-intro { display: flex; flex-direction: column; gap: 8px; max-width: 78ch }
+.mg-explain-intro p { margin: 0; font-size: 13.5px; line-height: 1.6 }
+.mg-explain-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px }
+.mg-explain-card { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border: 1px solid #ebe6f0; border-radius: 14px; background: #fff; min-width: 0 }
+.mg-explain-card h3 { margin: 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: #8b8098; font-weight: 800 }
+.mg-explain-card ul { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; font-size: 13px; line-height: 1.55 }
+.mg-explain-table-wrap { overflow-x: auto }
+.mg-explain-table { width: 100%; border-collapse: collapse; font-size: 13px }
+.mg-explain-table caption { caption-side: bottom; text-align: left; padding-top: 8px; font-size: 12px; color: #74798a; line-height: 1.5 }
+.mg-explain-table th, .mg-explain-table td { padding: 8px 10px; border-bottom: 1px solid #f2eff5; text-align: left }
+.mg-explain-table thead th { font-size: 11.5px; color: #5f5670; font-weight: 750 }
+.mg-explain-table tbody th { font-weight: 600; color: var(--mg-ink) }
+.mg-explain-table .is-num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap }
+.mg-explain-formulas { margin: 0; display: flex; flex-direction: column; gap: 8px; font-size: 13px; line-height: 1.5 }
+.mg-explain-formulas dt { font-weight: 750; color: var(--mg-ink) }
+.mg-explain-formulas dd { margin: 2px 0 0 }
+.mg-explain-chevron { flex: none; color: #8b8098; transition: transform 160ms var(--ease-out) }
+.mg-explain-chevron.is-open { transform: rotate(180deg) }
+@media (max-width: 767px) {
+  .mg-explain { padding: 14px }
+  .mg-explain-grid { grid-template-columns: 1fr }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mg-explain-chevron { transition: none }
+}

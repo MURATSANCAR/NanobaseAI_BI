@@ -6,6 +6,7 @@ import Shell from '../stitch/Shell';
 import { managementRail } from '../stitch/screens';
 import { ENGINE_ENABLED } from '../engine';
 import { clockOffset, formatCell, managementApi, mergeSnapshot, numberOf, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
+import ExplainPanel from './ExplainPanel';
 import LiveStatus from './LiveStatus';
 import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
 import SearchSelect from '../components/SearchSelect';
@@ -23,6 +24,8 @@ const FILTER_LABELS: Record<string, string> = {
   yazar: 'Yazar',
   statu: 'Statü',
   urun_adi: 'Ürün Adı',
+  guven: 'Güven',
+  liste: 'Liste',
 };
 
 const TEXTUAL = new Set(['text', 'oneri', 'date']);
@@ -375,6 +378,7 @@ export default function BaskiOneri() {
               </div>
 
               <ReportTable view={view} rows={rows} sort={sort} onSort={toggleSort} onSource={openSheet} />
+              {view.explain && <ExplainPanel explain={view.explain} />}
             </>
           )}
         </div>
@@ -417,7 +421,7 @@ function ReportTable({
   const stickyLeft = (i: number) => (i === 0 ? 0 : i === 1 ? widthOf(cols[0]) : undefined);
 
   if (rows.length === 0) {
-    return <div className="mg-table-wrap mg-table-empty">Bu süzgeçlere uyan kitap yok.</div>;
+    return <div className="mg-table-wrap mg-table-empty">{view.rows.length === 0 && view.emptyText ? view.emptyText : 'Bu süzgeçlere uyan kitap yok.'}</div>;
   }
 
   return (
