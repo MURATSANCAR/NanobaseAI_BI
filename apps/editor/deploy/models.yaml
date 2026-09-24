@@ -204,3 +204,6 @@ aliases:
     entrypoint: [vllm, serve]      # bu imajda giriş komutu yok
     args:
       - --omni
+      # CUDA grafiği kapalı: model her istek biçimi (istem uzunluğu × referans görsel sayısı) için ayrı grafik
+      # saklıyor, bellek resim resim büyüyüp aşıyordu (ölçüldü 2026-09-24: 25 resimden sonra 92,7 GB).
+      - --enforce-eager
