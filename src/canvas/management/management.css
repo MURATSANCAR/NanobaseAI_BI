@@ -87,8 +87,7 @@
 
 .mg-filters { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 10px }
 .mg-select { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 0 1 220px }
-.mg-select span { font-size: 10.5px; font-weight: 750; letter-spacing: .04em; color: #8b8098 }
-.mg-select select { min-height: 40px; width: 100%; padding: 0 10px; border: 1px solid var(--mg-line); border-radius: 11px; background: #fff; font-size: 12.5px; color: var(--mg-ink) }
+.mg-select > span { font-size: 10.5px; font-weight: 750; letter-spacing: .04em; color: #8b8098 }
 .mg-count { margin: 0 0 0 auto; font-size: 12px; color: var(--mg-muted); display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px }
 .mg-count strong { color: var(--mg-ink); font-variant-numeric: tabular-nums }
 .mg-link { border: 0; background: none; padding: 4px 0; font-size: 12px; font-weight: 750; color: var(--mg-violet); cursor: pointer }

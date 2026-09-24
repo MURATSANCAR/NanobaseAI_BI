@@ -8,6 +8,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { clockOffset, formatCell, managementApi, mergeSnapshot, numberOf, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
 import LiveStatus from './LiveStatus';
 import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
+import SearchSelect from '../components/SearchSelect';
 import './management.css';
 
 const REPORT_ID = 'baski-oneri';
@@ -344,17 +345,15 @@ export default function BaskiOneri() {
 
               <div className="mg-filters">
                 {Object.entries(options).map(([key, values]) => (
-                  <label key={key} className="mg-select">
-                    <span>{FILTER_LABELS[key] ?? key}</span>
-                    <select value={selects[key] ?? ''} onChange={(e) => setSelects((s) => ({ ...s, [key]: e.target.value }))}>
-                      <option value="">Tümü</option>
-                      {values.map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div key={key} className="mg-select">
+                    <span aria-hidden>{FILTER_LABELS[key] ?? key}</span>
+                    <SearchSelect
+                      label={FILTER_LABELS[key] ?? key}
+                      options={values}
+                      value={selects[key] ?? ''}
+                      onChange={(v) => setSelects((s) => ({ ...s, [key]: v }))}
+                    />
+                  </div>
                 ))}
                 <p className="mg-count" aria-live="polite">
                   <strong>{rows.length.toLocaleString('tr-TR')}</strong> kitap · {view.hint.toLocaleLowerCase('tr')}

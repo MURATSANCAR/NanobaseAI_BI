@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 — Çok seçenekli süzgeçlere yazarak arama (`SearchSelect`)
+
+- Kullanıcı isteği: kitap adı, yazar gibi binlerce seçenekli açılır listelerden seçmek zor; arama alanı olsun. Bütün `src/` `<select>`/açılır listeleri tarandı, seçenek sayısı koddan ve CRM seçenek kümelerinden çıkarıldı.
+- Yeni ortak bileşen `src/canvas/components/SearchSelect.tsx`: kurulu `@base-ui/react` Combobox (combobox/listbox ARIA, klavye) + elle yazılmış sabit satır yükseklikli pencereleme (bütün liste kaydırılır, tavan yok; Base UI örneği `@tanstack/react-virtual` ister, yeni paket eklenmedi). Türkçe/aksan duyarsız, kelime sırasından bağımsız eşleşme; temizle; çoklu seçim desteği. Açılış animasyonu yok (sık ve klavyeyle açılan süzgeç).
+- Geçenler: Baskı Öneri dilimleyicileri (Ürün Adı, Yazar, Yayınevi, Statü, Baskı durumu — hepsi aynı görünsün diye), mali denetim "Çalışma raporu" (≤30 kayıt). Seçilen değer ve süzme mantığı aynı.
+- Kalanlar (≤12 seçenek ya da yerel seçici daha iyi): editoryal durum/tip/rol/sıralama, pano kart araçları, yönetim süzgeçleri, uyarı koşulu, rapor günü, Excel biçimi, oda rezervasyonu (oda + saat — telefonda yerel saat çarkı), kampüs alkış alıcısı (zaten `datalist` ile yazılan serbest metin).
+- Doğrulama: test sunucusunda `tsc --noEmit` 0; 12.000 Türkçe adlık geçici bir sayfada 375/320 px ve masaüstünde arama ("isil yilmaz" → "Işıl Yılmaz"), ↑ ile son kayda atlama, temizleme, çoklu seçim denendi; geçici dosyalar silindi. Canlı Baskı Öneri ekranı oturum gerektirdiği için ekranda denenmedi.
+- Not: `/api/v1/financial-audit/runs` son 30 raporla sınırlı (`[:30]`) — sessiz tavan kuralına aykırı, ayrı iş.
+
+## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
 ## 2026-09-24 — Yazar giriş süreci kodlandı (dalda, kurulmadı): dinleyici, pano, proje sayfası, kurul günü, Masam, yeni menü
 
 - **Arka uç:** `editorial_intake.py` + `app.py` uçları. CRM 5 dk'da bir baştan okunur (disk önbelleği); adımlar kanıttan hesaplanır, statüden değil — canlı ölçüm: statü geçişlerinin çoğu ara adımları atlıyor, kurulda kabul edilen 117 proje hâlâ "toplantıya hazırlanıyor". Rapor (3) ve yazara bilgi (6) CRM'de izlenmediği için portaldan işaretlenir (`semantic_editorial_intake_marks`, projenin editörü ya da yönetici; `admin_mod.audit` kaydı). Yönetim ekranına iki ayar: `EDITORIAL_INTAKE_SINCE`, `EDITORIAL_INTAKE_LATE_DAYS`.
