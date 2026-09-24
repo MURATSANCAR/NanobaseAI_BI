@@ -38,22 +38,66 @@ log = logging.getLogger("semantic.web_watch")
 
 USER_AGENT = "TimasZekiBot/1.0 (+https://portal.nanobase.ai/timas; ai@timas.com.tr)"
 
-#: Açık RSS akışları (2026-09-24'te 200 döndü). Anahtar kayıtta kaynak adı olarak kalır.
+#: Açık RSS akışları (2026-09-24'te test sunucusundan 200 döndü). Anahtar kayıtta kaynak adı olarak kalır.
 FEEDS = (
-    ("trthaber", "TRT Haber", "https://www.trthaber.com/kultur_sanat_articles.rss"),
-    ("hurriyet", "Hürriyet", "https://www.hurriyet.com.tr/rss/kitap-sanat"),
-    ("sabah", "Sabah", "https://www.sabah.com.tr/rss/kultur-sanat.xml"),
-    ("cnnturk", "CNN Türk", "https://www.cnnturk.com/feed/rss/kultur-sanat/news"),
-    ("haberturk", "Habertürk", "https://www.haberturk.com/rss/kategori/kultur-sanat.xml"),
+    ("trthaber", "TRT Haber · kültür-sanat", "https://www.trthaber.com/kultur_sanat_articles.rss"),
+    ("trthaber_manset", "TRT Haber · manşet", "https://www.trthaber.com/manset_articles.rss"),
+    ("hurriyet", "Hürriyet · kitap-sanat", "https://www.hurriyet.com.tr/rss/kitap-sanat"),
+    ("hurriyet_gundem", "Hürriyet · gündem", "https://www.hurriyet.com.tr/rss/gundem"),
+    ("sabah", "Sabah · kültür-sanat", "https://www.sabah.com.tr/rss/kultur-sanat.xml"),
+    ("cnnturk", "CNN Türk · kültür-sanat", "https://www.cnnturk.com/feed/rss/kultur-sanat/news"),
+    ("cnnturk_all", "CNN Türk · tümü", "https://www.cnnturk.com/feed/rss/all/news"),
+    ("haberturk", "Habertürk · kültür-sanat", "https://www.haberturk.com/rss/kategori/kultur-sanat.xml"),
+    ("haberturk_all", "Habertürk · tümü", "https://www.haberturk.com/rss"),
     ("bbcturkce", "BBC Türkçe", "https://feeds.bbci.co.uk/turkce/rss.xml"),
     ("dwturkce", "DW Türkçe", "https://rss.dw.com/rdf/rss-tur-all"),
-    ("sozcu", "Sözcü", "https://www.sozcu.com.tr/feeds-rss-category-kultur-sanat"),
-    ("cumhuriyet", "Cumhuriyet", "https://www.cumhuriyet.com.tr/rss/kultur-sanat"),
+    ("sozcu", "Sözcü · kültür-sanat", "https://www.sozcu.com.tr/feeds-rss-category-kultur-sanat"),
+    ("sozcu_gundem", "Sözcü · gündem", "https://www.sozcu.com.tr/feeds-rss-category-gundem"),
+    ("cumhuriyet", "Cumhuriyet · kültür-sanat", "https://www.cumhuriyet.com.tr/rss/kultur-sanat"),
     ("indyturk", "Independent Türkçe", "https://www.indyturk.com/rss.xml"),
-    ("yenisafak", "Yeni Şafak", "https://www.yenisafak.com/rss?xml=kultur-sanat"),
+    ("yenisafak", "Yeni Şafak · kültür-sanat", "https://www.yenisafak.com/rss?xml=kultur-sanat"),
+    ("yenisafak_gundem", "Yeni Şafak · gündem", "https://www.yenisafak.com/rss?xml=gundem"),
     ("dunyabizim", "Dünya Bizim", "https://www.dunyabizim.com/rss"),
+    ("milliyet", "Milliyet · son dakika", "https://www.milliyet.com.tr/rss/rssNew/SonDakikaRss.xml"),
+    ("dirilis", "Diriliş Postası", "https://www.dirilispostasi.com/rss"),
+    ("aa", "Anadolu Ajansı · güncel", "https://www.aa.com.tr/tr/rss/default?cat=guncel"),
+    ("yeniakit", "Yeni Akit · kültür-sanat", "https://www.yeniakit.com.tr/rss/haber/kultur-sanat"),
+    ("gzt", "GZT", "https://www.gzt.com/rss"),
+    ("aksam", "Akşam", "https://www.aksam.com.tr/rss/rss.asp"),
+    ("ntv", "NTV · gündem", "https://www.ntv.com.tr/gundem.rss"),
+    ("odatv", "OdaTV", "https://www.odatv.com/rss.xml"),
+    ("dunya", "Dünya", "https://www.dunya.com/rss"),
+    ("kitaphaber", "Kitap Haber", "https://www.kitaphaber.com.tr/rss"),
+    ("edebiyathaber", "Edebiyat Haber", "https://www.edebiyathaber.net/feed/"),
+)
+
+#: Yazar adıyla başlık açılan sözlükler. Uludağ Sözlük robots.txt'te her yolu açıyor (2026-09-24).
+ULUDAG = ("uludag", "Uludağ Sözlük", "https://www.uludagsozluk.com")
+TOPIC_REFRESH_DAYS = 14
+
+#: Denenmiş ama kullanılamayan kanallar: ekrandaki kanal haritasında nedeniyle görünür.
+CLOSED = (
+    ("1000kitap", "1000Kitap", "Bot koruması (Cloudflare, 403)"),
+    ("kitapyurdu", "Kitapyurdu", "Bot koruması (CloudFront, 403)"),
+    ("dr", "D&R", "Bot koruması (CloudFront, 403)"),
+    ("hepsiburada", "Hepsiburada", "Bot koruması (403)"),
+    ("eksisozluk", "Ekşi Sözlük", "Bot koruması (Cloudflare, 403); robots.txt ai-input=no"),
+    ("sourtimes", "Sourtimes", "robots.txt ai-input=no; bot koruması"),
+    ("kizlarsoruyor", "Kızlar Soruyor", "Bot koruması (403)"),
+    ("itusozluk", "İTÜ Sözlük", "Alan adı park sayfasına düşmüş; site kapalı"),
+    ("trendyol", "Trendyol yorumları", "robots.txt yorum yollarını kapatıyor"),
+    ("amazon", "Amazon.com.tr", "robots.txt otomatik erişimi engelliyor"),
+    ("goodreads", "Goodreads", "Kullanım şartları otomatik toplamayı yasaklıyor; API kapalı"),
+    ("googlenews", "Google News arama", "robots.txt arama yolunu kapatıyor"),
+    ("gdelt", "GDELT", "Bu sunucudan sürekli istek sınırı"),
+    ("x", "X (Twitter)", "Giriş ve ücretli API gerekiyor"),
+    ("instagram", "Instagram", "Giriş ve işletme hesabı API'si gerekiyor"),
+    ("tiktok", "TikTok", "Ticari kullanıma açık API yok"),
+    ("youtube", "YouTube", "API anahtarı bekleniyor"),
 )
 FEED_LABEL = {k: label for k, label, _ in FEEDS}
+FEED_LABEL[ULUDAG[0]] = ULUDAG[1]
+FEED_LABEL["wikidata"] = "Wikidata"
 
 LABELS = ("olumlu", "olumsuz", "notr", "ilgisiz")
 SHOWN = ("olumlu", "olumsuz", "notr")
@@ -127,6 +171,15 @@ AUTHORS = sa.Table(
     sa.Column("status", sa.String(16), nullable=False),        # bulundu | yok | belirsiz
     sa.Column("wikidata_id", sa.String(20)),
     sa.Column("facts_json", sa.Text),
+    sa.Column("checked_at", sa.DateTime(timezone=True), nullable=False),
+)
+TOPICS = sa.Table(
+    "semantic_web_topics", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("channel", sa.String(40), primary_key=True),
+    sa.Column("contact_id", sa.String(40), primary_key=True),
+    sa.Column("url", sa.String(500)),
+    sa.Column("entries", sa.Integer, nullable=False, default=0),
     sa.Column("checked_at", sa.DateTime(timezone=True), nullable=False),
 )
 RUNS = sa.Table(
@@ -236,6 +289,30 @@ def parse_feed(data: bytes) -> list[dict[str, Any]]:
     return out
 
 
+_TR_LOWER = str.maketrans("Iİ", "ıi")
+
+
+def uludag_url(name: str) -> str:
+    """Uludağ başlık adresi: küçük harf (Türkçe harfler korunur), boşluk → tire; en yeni girdiler önce (`1/ters`)."""
+    slug = "-".join((name or "").translate(_TR_LOWER).lower().split())
+    return f"{ULUDAG[2]}/k/{urllib.parse.quote(slug)}/1/ters/"
+
+
+def parse_uludag(page: str) -> list[dict[str, Any]]:
+    """Girdi: `<div class="entry-area" id="entry-N">` → metin `entry-body`, tarih altlıkta GG.AA.YYYY SS:DD.
+    Girdiyi yazan kullanıcının adı alınmaz."""
+    out = []
+    for m in re.finditer(r'id="entry-(\d+)">\s*<div class="entry-body"[^>]*>(.*?)</div>', page, re.S):
+        eid, body = m.group(1), m.group(2)
+        tail = page[m.end(): m.end() + 12000]
+        d = re.search(r"(\d{2})\.(\d{2})\.(\d{4}) (\d{2}):(\d{2})", tail)
+        when = datetime(int(d.group(3)), int(d.group(2)), int(d.group(1)), int(d.group(4)), int(d.group(5)), tzinfo=timezone.utc) if d else None
+        text = _plain(body, 400)
+        if text:
+            out.append({"id": eid, "text": text, "published": when})
+    return out
+
+
 # ------------------------------------------------------------------------------------------- eşleme
 
 _FOLD = str.maketrans("çğıöşüâîûÇĞIİÖŞÜÂÎÛ", "cgiosuaiucgiiosuaiu")
@@ -307,7 +384,7 @@ def authors_sql(schema: str) -> str:
 # ------------------------------------------------------------------------------------------- model
 
 PROMPT = (
-    "Bir yayınevi için haber izliyoruz. Aşağıdaki haber başlığı ve özeti, adı verilen yazar"
+    "Bir yayınevi için basını ve okur yorumlarını izliyoruz. Aşağıdaki metin (haber ya da sözlük girdisi), adı verilen yazar"
     "{books} hakkında mı? Yazarın adı yalnız benzer bir ad olarak geçiyorsa, başka biri kastediliyorsa ya da haber"
     " onunla ilgili değilse cevap: ilgisiz. İlgiliyse haberin yazara/kitaba karşı tonunu seç: olumlu, olumsuz,"
     " notr.\n\nYazar: {author}\nBaşlık: {title}\nÖzet: {summary}\n\nYalnız tek kelime yaz: olumlu, olumsuz, notr"
@@ -468,6 +545,61 @@ def run_due(engine: sa.engine.Engine, tenant: str, fetch_all: Callable[[str], li
             report["feeds"][key] = f"{len(entries)} kayıt, {fresh} yeni"
             report["newItems"] += fresh
 
+        # 1b) Uludağ Sözlük: yazar adıyla başlık; hiç bakılmamış ya da 14 günü geçmiş yazarlar sırayla.
+        # İstekler arası 3 sn; bütçenin yarısından fazlasını sözlük almaz (model etiketi ve Wikidata da sürsün).
+        ulu = {"checked": 0, "topics": 0, "entries": 0, "new": 0}
+        report["uludag"] = ulu
+        sozluk_deadline = time.monotonic() + budget_seconds / 2
+        if allowed(uludag_url("deneme")):
+            with engine.connect() as c:
+                seen_t = {r.contact_id: r.checked_at for r in c.execute(sa.select(TOPICS.c.contact_id, TOPICS.c.checked_at)
+                                                                        .where(TOPICS.c.tenant_id == tenant, TOPICS.c.channel == ULUDAG[0]))}
+
+            def due_t(cid: str) -> bool:
+                at = seen_t.get(cid)
+                return at is None or (_now() - (at if at.tzinfo else at.replace(tzinfo=timezone.utc))).days >= TOPIC_REFRESH_DAYS
+
+            for cid, person in index.people.items():
+                if time.monotonic() > sozluk_deadline:
+                    break
+                if not due_t(cid):
+                    continue
+                url = uludag_url(person["name"])
+                try:
+                    entries = parse_uludag(_get(url).decode("utf-8", "replace"))
+                except Exception as e:  # noqa: BLE001 — bir başlığın düşmesi turu durdurmaz
+                    report["errors"].append(f"uludag: {type(e).__name__}")
+                    time.sleep(3)
+                    continue
+                ulu["checked"] += 1
+                with engine.begin() as c:
+                    c.execute(TOPICS.delete().where(TOPICS.c.tenant_id == tenant, TOPICS.c.channel == ULUDAG[0], TOPICS.c.contact_id == cid))
+                    c.execute(TOPICS.insert().values(tenant_id=tenant, channel=ULUDAG[0], contact_id=cid, url=url,
+                                                     entries=len(entries), checked_at=_now()))
+                    if entries:
+                        ulu["topics"] += 1
+                        ulu["entries"] += len(entries)
+                    # Her girdi kendi kalıcı sayfasına bağlanır (`/e/<no>/`), başlığın sayfasına değil.
+                    urls = [f"{ULUDAG[2]}/e/{x['id']}/" for x in entries]
+                    known = {r.url for r in c.execute(sa.select(ITEMS.c.url).where(ITEMS.c.tenant_id == tenant, ITEMS.c.url.in_(urls)))} if urls else set()
+                    for x, u in zip(entries, urls):
+                        if u in known:
+                            continue
+                        iid = uuid.uuid4().hex
+                        c.execute(ITEMS.insert().values(id=iid, tenant_id=tenant, source=ULUDAG[0], url=u, title=person["name"],
+                                                        summary=x["text"], published_at=x["published"], fetched_at=_now()))
+                        joined = " " + " ".join(tokens(x["text"])) + " "
+                        books = [{"id": bid, "title": t} for bid, t in person["books"].items()
+                                 if len(" ".join(tokens(t))) >= 4 and f" {' '.join(tokens(t))} " in joined]
+                        c.execute(MENTIONS.insert().values(id=uuid.uuid4().hex, tenant_id=tenant, item_id=iid, contact_id=cid,
+                                                           author=person["name"][:200], books_json=json.dumps(books, ensure_ascii=False),
+                                                           created_at=_now()))
+                        ulu["new"] += 1
+                        report["newMentions"] += 1
+                time.sleep(3)
+        else:
+            report["errors"].append("uludag: robots.txt kapalı")
+
         # 2) model etiketi (en eski bekleyen önce)
         if llm is not None:
             with engine.connect() as c:
@@ -544,7 +676,8 @@ def _mention_rows(engine: sa.engine.Engine, tenant: str, where: list[Any], page:
                          .offset(max(0, page) * (page_size or 0)).limit(page_size)).all()
     return [{
         "contactId": r.contact_id, "author": r.author, "books": json.loads(r.books_json or "[]"), "label": r.label,
-        "source": FEED_LABEL.get(r.source, r.source), "url": r.url, "title": r.title, "summary": r.summary,
+        "source": FEED_LABEL.get(r.source, r.source), "kind": "sozluk" if r.source == ULUDAG[0] else "haber",
+        "url": r.url, "title": r.title, "summary": r.summary,
         "on": _iso(r.published_at or r.fetched_at),
     } for r in rows], int(total)
 
@@ -584,11 +717,45 @@ def overview(engine: sa.engine.Engine, tenant: str, page: int = 0, label: Option
         p["total"] += int(n)
         p["tone"][lab] = int(n)
     return {
+        "channels": channels(engine, tenant, json.loads(last.report_json or "{}") if last else {}),
         "items": items, "total": total, "page": page, "pageSize": PAGE, "tone": _tone(engine, tenant, []),
         "authors": sorted(people.values(), key=lambda p: -p["total"]), "counts": counts,
         "lastRun": {"at": _iso(last.finished_at), "report": json.loads(last.report_json or "{}")} if last else None,
         "sources": [{"key": k, "label": lab} for k, lab, _ in FEEDS],
     }
+
+
+def channels(engine: sa.engine.Engine, tenant: str, report: dict[str, Any]) -> list[dict[str, Any]]:
+    """Kanal haritası: her kanalda okunan kayıt, yazarla eşleşen, model "ilgili" dediği; kapalı kanallar nedeniyle."""
+    with engine.connect() as c:
+        read = dict(c.execute(sa.select(ITEMS.c.source, sa.func.count()).where(ITEMS.c.tenant_id == tenant).group_by(ITEMS.c.source)).all())
+        last = dict(c.execute(sa.select(ITEMS.c.source, sa.func.max(ITEMS.c.fetched_at)).where(ITEMS.c.tenant_id == tenant).group_by(ITEMS.c.source)).all())
+        j = MENTIONS.join(ITEMS, ITEMS.c.id == MENTIONS.c.item_id)
+        matched = dict(c.execute(sa.select(ITEMS.c.source, sa.func.count()).select_from(j).where(MENTIONS.c.tenant_id == tenant).group_by(ITEMS.c.source)).all())
+        shown = dict(c.execute(sa.select(ITEMS.c.source, sa.func.count()).select_from(j).where(MENTIONS.c.tenant_id == tenant,
+                                                                                               MENTIONS.c.label.in_(SHOWN)).group_by(ITEMS.c.source)).all())
+        topics = c.execute(sa.select(sa.func.count(), sa.func.sum(sa.case((TOPICS.c.entries > 0, 1), else_=0)))
+                           .where(TOPICS.c.tenant_id == tenant, TOPICS.c.channel == ULUDAG[0])).first()
+        wd = dict(c.execute(sa.select(AUTHORS.c.status, sa.func.count()).where(AUTHORS.c.tenant_id == tenant).group_by(AUTHORS.c.status)).all())
+    feeds = report.get("feeds") or {}
+    out = []
+    for key, label, url in FEEDS:
+        st = feeds.get(key, "")
+        out.append({"key": key, "label": label, "kind": "Haber (RSS)", "url": url,
+                    "status": "kapalı" if "robots" in st else "hata" if "okunamadı" in st else "açık", "note": st if ("robots" in st or "okunamadı" in st) else None,
+                    "read": int(read.get(key, 0)), "matched": int(matched.get(key, 0)), "relevant": int(shown.get(key, 0)),
+                    "lastAt": _iso(last.get(key))})
+    out.append({"key": ULUDAG[0], "label": ULUDAG[1], "kind": "Sözlük", "url": ULUDAG[2], "status": "açık",
+                "note": f"{int(topics[0] or 0)} yazarın başlığına bakıldı, {int(topics[1] or 0)} başlık bulundu" if topics else None,
+                "read": int(read.get(ULUDAG[0], 0)), "matched": int(matched.get(ULUDAG[0], 0)), "relevant": int(shown.get(ULUDAG[0], 0)),
+                "lastAt": _iso(last.get(ULUDAG[0]))})
+    out.append({"key": "wikidata", "label": "Wikidata", "kind": "Yazar bilgisi", "url": "https://www.wikidata.org", "status": "açık",
+                "note": f"{sum(int(v) for v in wd.values())} yazar arandı", "read": sum(int(v) for v in wd.values()),
+                "matched": int(wd.get("bulundu", 0)) + int(wd.get("belirsiz", 0)), "relevant": int(wd.get("bulundu", 0)), "lastAt": None})
+    for key, label, why in CLOSED:
+        out.append({"key": key, "label": label, "kind": "Kapalı", "url": None, "status": "engelli", "note": why,
+                    "read": 0, "matched": 0, "relevant": 0, "lastAt": None})
+    return out
 
 
 def person(engine: sa.engine.Engine, tenant: str, contact_id: str) -> dict[str, Any]:

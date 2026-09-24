@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (16:10) — Basın ve web: 29 haber akışı, Uludağ Sözlük, kanal haritası, orijinal sayfaya bağlantı
+
+- Kullanıcı: "başka kanallar da, sözlükler de; hangi kanaldan ne bulunduysa belli olsun; bulunanlara orijinal sayfaya giden link." Wikidata tanım satırı kalıyor (kullanıcı kararı).
+- Haber akışı 12 → 29 (test sunucusundan 200 dönenler: gündem ve tümü akışları, Milliyet, Diriliş, AA, Yeni Akit, GZT, Akşam, NTV, OdaTV, Dünya, Kitap Haber, Edebiyat Haber).
+- Sözlükler (test sunucusundan ölçüm): Uludağ Sözlük açık (robots.txt her şey serbest) → yazar başına `/k/<ad-soyad>/1/ters/` en yeni 25 girdi, 14 günde bir; girdi kalıcı adresi `/e/<no>/`; yazan kullanıcı adı alınmaz. Ekşi (403 + `ai-input=no`), Sourtimes (`ai-input=no`), Kızlar Soruyor (403) kapalı; İTÜ Sözlük alan adı park sayfası.
+- `/basin-web`'e kanal haritası: her kanal için okunan / eşleşen / ilgili ve son okuma; kapalı kanallar nedeniyle. Her kayıtta kanal rozeti ve "Habere git / Girdiye git" bağlantısı.
+- Kısa canlı tur (300 sn): Uludağ'da 84 yazarın başlığına bakıldı, 28'inin başlığı var, 282 girdi; etiketlenen 198: 67 olumlu, 92 olumsuz, 33 nötr, 6 ilgisiz; 84 bekliyor. Sözlük girdilerinde küfür ve hakaret içeren metinler var; olduğu gibi gösteriliyor (kullanıcıya soruldu).
+- Bu sırada test sunucusu bağlantısı iki kez koptu (yük ~8–17); ilk tur süreci arkada bitti, ikinci deneme çift çalışmasın diye durduruldu.
+
 ## 2026-09-24 — Editör: kelime çeşitliliği ve yakın tekrar denetimi (`word_variety`) dalda
 
 - **İstek (Yalçın Yaman, redaksiyon):** kitabın tekil kelime haritası; «göze girdi / gözüme toz kaçtı / dolabın gözü» üç ayrı «göz» olarak görülmeli. Editörde kelime tekrarı ya da çeşitlilik denetimi yoktu; yazım denetiminin Zemberek (zeyrek) kök çözümlemesi vardı.

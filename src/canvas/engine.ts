@@ -1043,6 +1043,7 @@ export type WebMention = {
   books: Array<{ id: string; title: string }>;
   label: 'olumlu' | 'olumsuz' | 'notr';
   source: string;
+  kind: 'haber' | 'sozluk';
   url: string;
   title: string;
   summary: string | null;
@@ -1058,7 +1059,20 @@ export type WebFacts = {
   wikipedia: string | null;
   wikidata: string;
 };
+export type WebChannel = {
+  key: string;
+  label: string;
+  kind: string;
+  url: string | null;
+  status: 'açık' | 'kapalı' | 'hata' | 'engelli';
+  note: string | null;
+  read: number;
+  matched: number;
+  relevant: number;
+  lastAt: string | null;
+};
 export type WebOverview = {
+  channels: WebChannel[];
   items: WebMention[];
   total: number;
   page: number;

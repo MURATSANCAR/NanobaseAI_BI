@@ -41,20 +41,38 @@ export function MentionRow({ m, showAuthor }: { m: WebMention; showAuthor?: bool
   return (
     <li className="border-t border-slate-100 py-2.5 first:border-t-0">
       <a href={m.url} target="_blank" rel="noopener noreferrer" className="group block">
-        <span className="flex items-start justify-between gap-2">
-          <span className="min-w-0 break-words text-[13px] font-extrabold leading-snug group-hover:underline">{m.title}</span>
-          <ExternalLink aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-canvas-muted" />
-        </span>
-        {m.summary && <span className="mt-0.5 block text-[12px] leading-snug text-canvas-muted">{m.summary}</span>}
+        {m.kind === 'sozluk' ? (
+          <span className="flex items-start justify-between gap-2">
+            <span className="min-w-0 break-words text-[12.5px] leading-snug group-hover:underline">“{m.summary}”</span>
+            <ExternalLink aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-canvas-muted" />
+          </span>
+        ) : (
+          <>
+            <span className="flex items-start justify-between gap-2">
+              <span className="min-w-0 break-words text-[13px] font-extrabold leading-snug group-hover:underline">{m.title}</span>
+              <ExternalLink aria-hidden className="mt-0.5 h-3.5 w-3.5 shrink-0 text-canvas-muted" />
+            </span>
+            {m.summary && <span className="mt-0.5 block text-[12px] leading-snug text-canvas-muted">{m.summary}</span>}
+          </>
+        )}
       </a>
       <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-canvas-muted">
         {t && <span className={`rounded-md px-1.5 py-0.5 font-bold ${t.cls}`}>{t.label}</span>}
-        <span className="font-semibold text-canvas-ink">{m.source}</span>
+        <span className="rounded-md bg-canvas-violet/10 px-1.5 py-0.5 font-bold text-canvas-violet">{m.source}</span>
         <span className="font-mono tabular-nums">{dateTime(m.on)}</span>
         {showAuthor && <span>· {m.author}</span>}
         {m.books.map((b) => (
           <span key={b.id}>· «{b.title}»</span>
         ))}
+        <a
+          href={m.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex min-h-9 items-center gap-1 font-bold text-canvas-violet hover:underline sm:min-h-0"
+        >
+          {m.kind === 'sozluk' ? 'Girdiye git' : 'Habere git'}
+          <ExternalLink aria-hidden className="h-3 w-3" />
+        </a>
       </span>
     </li>
   );

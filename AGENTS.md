@@ -114,7 +114,11 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
 ## Basın ve web taraması (kullanıcı kararı 2026-09-24)
 
 - **Ne:** CRM'de yazar olarak eser kaydı olan kişiler ve kitapları, açık kaynaklarda aranır: Türk haber sitelerinin
-  kendi RSS akışları (kültür-sanat / kitap) ve Wikidata'nın resmi API'si. Kod `backend/semantic_bridge/web_watch.py`,
+  kendi RSS akışları (29 akış), yazar adıyla başlık açılan sözlükler (Uludağ Sözlük; yazar başına en yeni girdiler,
+  14 günde bir) ve Wikidata'nın resmi API'si. Kanallar tek listede (`FEEDS`, `ULUDAG`, `CLOSED`); denenip
+  kullanılamayan kanal `CLOSED`'a nedeniyle yazılır, ekrandaki kanal haritasında görünür.
+- **Kaynak her zaman belli:** her kaydın yanında kanal adı ve orijinal sayfaya bağlantı ("Habere git" / "Girdiye git")
+  vardır; sözlük girdisi girdinin kendi kalıcı adresine gider. Kod `backend/semantic_bridge/web_watch.py`,
   uç `/api/v1/editorial/web*`, tablolar `semantic_web_*`.
 - **Ne zaman:** her gece 02:30 (`scripts/server/timas-web-watch.timer` → `timas-web-watch.service` →
   `POST /api/v1/editorial/web/run-due?budget=16200`). Bitmeyen iş (Wikidata sırası, model etiketi) sonraki geceye
@@ -124,7 +128,8 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
   (insan + yazıyla ilgili meslek, birden çok aday varsa CRM'deki bir kitap "bilinen eseri" olmalı) gösterilir.
 - **Nasıl taranır:** açık kimlikle (`TimasZekiBot/1.0`, iletişim adresiyle), hesapla giriş yapmadan, robots.txt'e
   uyarak. Bot korumasını aşan araç (gizlenen tarayıcı, parmak izi taklidi, dönen IP/proxy, CAPTCHA çözme) kullanılmaz;
-  engelleyen site (1000Kitap, Kitapyurdu, D&R, Hepsiburada, Ekşi — 2026-09-24'te 403) taranmaz. O kaynaklar için yol
+  engelleyen site (1000Kitap, Kitapyurdu, D&R, Hepsiburada, Ekşi, Kızlar Soruyor — 2026-09-24'te 403) ve
+  robots.txt / Content-Signal (`ai-input=no`) ile kapatan site taranmaz. O kaynaklar için yol
   izinli kanaldır: satıcı API'si, veri anlaşması, lisanslı sosyal dinleme hizmeti.
 - **Kişisel veri tutulmaz:** muhabir ve okur adı alınmaz; haber metni kopyalanmaz (başlık, en çok 400 karakter özet,
   bağlantı). Model dış buluta gitmez; LLM kapısından `rt.llm_for("web", BATCH)` ile gider.
