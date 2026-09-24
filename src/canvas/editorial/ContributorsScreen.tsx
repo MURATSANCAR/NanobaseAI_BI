@@ -13,7 +13,6 @@ import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 
 export type ContributorModule = {
   route: string;
-  code: string;
   crumb: string;
   title: string;
   lead: string;
@@ -145,7 +144,7 @@ export default function ContributorsScreen({ module: m }: { module: ContributorM
   const err = errText(list.error || person.error, 'Kayıtlar okunamadı.');
 
   return (
-    <ModuleFrame route={m.route} code={m.code} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'}>
+    <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'}>
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 

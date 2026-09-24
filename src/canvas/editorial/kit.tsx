@@ -20,7 +20,6 @@ export function useDebounced<T>(value: T, ms: number): T {
 /** Modül ekranının kabuğu: üst şerit, başlık ve kaydırılan gövde. */
 export function ModuleFrame({
   route,
-  code,
   crumb,
   title,
   lead,
@@ -29,7 +28,6 @@ export function ModuleFrame({
   children,
 }: {
   route: string;
-  code: string;
   crumb: string;
   title: string;
   lead: string;
@@ -40,7 +38,7 @@ export function ModuleFrame({
 }) {
   return (
     <Shell
-      head={{ tenant: 'Timaş Yayınları', section: 'Editoryal Süreç', crumb: `${code} ${crumb}`, source, presence: 'Kaynak: CRM' }}
+      head={{ tenant: 'Timaş Yayınları', section: 'Editoryal Süreç', crumb, source, presence: 'Kaynak: CRM' }}
       rail={editorialRail(route)}
     >
       <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
@@ -51,10 +49,10 @@ export function ModuleFrame({
               {route !== '/editoryal' ? (
                 <Link to="/editoryal" className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-violet hover:underline">
                   <ChevronLeft aria-hidden className="h-3.5 w-3.5" />
-                  {code} · Editoryal masa
+                  Editoryal masa
                 </Link>
               ) : (
-                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">{code} · Editoryal Süreç</div>
+                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-violet">Editoryal Süreç</div>
               )}
               <h1 className="mt-0.5 text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
               <p className="mt-1 max-w-[70ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>

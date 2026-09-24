@@ -60,14 +60,14 @@ export const railFor = (active: string): StitchRailItem[] => [
 export const editorialRail = (active: string): StitchRailItem[] =>
   [
     { to: '/editoryal', label: 'Editoryal masa' },
-    { to: '/yayin-kurulu', label: 'M1 Yayın kurulu' },
-    { to: '/editor-atama', label: 'M2 Editör atama' },
-    { to: '/redaksiyon', label: 'M3 Redaksiyon' },
-    { to: '/cevirmenler', label: 'M4 Çeviri' },
-    { to: '/son-okuma', label: 'M5 Son okuma' },
-    { to: '/telif-sozlesme', label: 'M6 Telif & sözleşme' },
-    { to: '/yazarlar', label: 'M7 Yazarlar' },
-    { to: '/cizer-freelancer', label: 'M8 Çizer & freelancer' },
+    { to: '/yayin-kurulu', label: 'Yayın kurulu' },
+    { to: '/editor-atama', label: 'Editör atama' },
+    { to: '/redaksiyon', label: 'Redaksiyon' },
+    { to: '/cevirmenler', label: 'Çeviri' },
+    { to: '/son-okuma', label: 'Son okuma' },
+    { to: '/telif-sozlesme', label: 'Telif & sözleşme' },
+    { to: '/yazarlar', label: 'Yazarlar' },
+    { to: '/cizer-freelancer', label: 'Çizer & freelancer' },
     { to: '/', label: 'Kampüs' },
   ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
 
