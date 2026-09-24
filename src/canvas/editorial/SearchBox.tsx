@@ -228,7 +228,7 @@ export default function SearchBox() {
               <Group key={`p-${q}`} q={q} kind="kisi" title="Kişiler" first={d.people} total={count('people')} pageSize={d.pageSize} onPick={setPerson}>
                 {person && <PersonBooks person={person} onClose={() => setPerson(null)} />}
               </Group>
-              <Group key={`j-${q}`} q={q} kind="proje" title="Projeler" first={d.projects} total={count('projects')} pageSize={d.pageSize} onPick={() => navigate('/editor-atama')} />
+              <Group key={`j-${q}`} q={q} kind="proje" title="Projeler" first={d.projects} total={count('projects')} pageSize={d.pageSize} onPick={(h) => navigate(`/yazar-giris/${h.id}`)} />
             </div>
           )}
         </div>
