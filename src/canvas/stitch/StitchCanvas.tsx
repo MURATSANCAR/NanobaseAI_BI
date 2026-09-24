@@ -121,6 +121,23 @@ function BoardButton({ b }: { b: NonNullable<StitchCanvasData['main']['board']> 
   );
 }
 
+/** Boş cevabın altında: aynı soru, verinin bittiği döneme kurulmuş hâliyle, tek tıkla. Metni motor kurar. */
+function RetryButton({ r }: { r: NonNullable<StitchCanvasData['main']['retry']> }) {
+  return (
+    <button
+      type="button"
+      onClick={() => r.onAsk(r.question)}
+      disabled={r.busy}
+      className="mt-3 flex min-h-11 max-w-full items-center gap-2 rounded-xl bg-violet/10 px-4 py-2.5 text-left text-xs font-extrabold tracking-tight text-violet ring-1 ring-violet/25 transition-[background-color,transform] duration-150 ease-out hover:bg-violet/15 active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 sm:min-h-0"
+    >
+      <svg className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden>
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M4 4v5h5M20 20v-5h-5M5.5 15a7 7 0 0012.4 2.5M18.5 9A7 7 0 006.1 6.5" />
+      </svg>
+      <span className="min-w-0 [overflow-wrap:anywhere]">“{r.question}”</span>
+    </button>
+  );
+}
+
 /**
  * Belirsiz kelime çipi, cevap metninin hemen üstünde: "Cari bakiyesi olarak yorumladım · Banka bakiyesi mi?".
  * Cevabın kendisinden küçük ve sakin; okunan şey cevap kalsın, düzeltme de gözden kaçmasın.
@@ -616,6 +633,7 @@ function CanvasBody({
                 <p className="text-base font-bold text-ink leading-snug">
                   {d.main.text}
                 </p>
+                {d.main.retry && <RetryButton r={d.main.retry} />}
               
                 {/* Verbatim insight mention & sub-metrics */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">

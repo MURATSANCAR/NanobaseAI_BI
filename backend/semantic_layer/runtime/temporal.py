@@ -33,9 +33,9 @@ _PREV = r"(?:gecen|son|onceki|gecmis)"
 _YEAR = r"(20\d{2})"
 
 PRIMITIVES = (
-    "TODAY", "YESTERDAY", "LAST_N_DAYS", "THIS_WEEK", "LAST_WEEK", "THIS_MONTH", "LAST_MONTH", "LAST_N_YEARS",
+    "TODAY", "YESTERDAY", "DAY_BEFORE_YESTERDAY", "LAST_N_DAYS", "THIS_WEEK", "LAST_WEEK", "THIS_MONTH", "LAST_MONTH", "LAST_N_YEARS",
     "THIS_QUARTER", "LAST_QUARTER", "THIS_YEAR", "LAST_YEAR", "MTD", "QTD", "YTD",
-    "YEAR", "MONTH", "MONTH_RANGE", "RANGE", "AMBIGUOUS_RECENT",
+    "YEAR", "MONTH", "MONTH_RANGE", "RANGE", "DATE", "AMBIGUOUS_RECENT",
 )
 
 
@@ -165,6 +165,27 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
                             today + timedelta(days=1) if known else None, "DAY", ambiguous=not known,
                             params={"year":year}))
 
+    # --- one named day: "17 ağustos 2026", "17.08.2026", "17/08/2026". Read before the month forms,
+    # which would otherwise take "ağustos 2026" and answer for the whole month. A day without a year
+    # takes the year written elsewhere in the question, else the current one (same as a bare month).
+    # "10 ocak ayında" is a count before a month, not a day: a following "ay…" leaves it to the month.
+    y_any = re.findall(_YEAR, text)
+    for m in re.finditer(rf"\b(\d{{1,2}})\s+({_MONTH_RE})\w*(?:\s+{_YEAR})?\b(?!\s+ay)", text):
+        y = int(m.group(3)) if m.group(3) else (int(y_any[0]) if y_any else today.year)
+        try:
+            day = date(y, MONTHS[m.group(2)], int(m.group(1)))
+        except ValueError:
+            continue
+        add(m, TemporalSlot(m.group(0).strip(), "DATE", day, day + timedelta(days=1), "DAY",
+                            params={"date": day.isoformat(), "year_assumed": not m.group(3) and not y_any}))
+    for m in re.finditer(rf"\b(\d{{1,2}})[./](\d{{1,2}})[./]{_YEAR}\b", text):
+        try:
+            day = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+        except ValueError:
+            continue
+        add(m, TemporalSlot(m.group(0).strip(), "DATE", day, day + timedelta(days=1), "DAY",
+                            params={"date": day.isoformat()}))
+
     # --- explicit month ranges: "2026 ocak-agustos", "ocak-agustos 2026"
     for m in re.finditer(rf"{_YEAR}\s+({_MONTH_RE})\s*-\s*({_MONTH_RE})", text):
         y, m1, m2 = int(m.group(1)), MONTHS[m.group(2)], MONTHS[m.group(3)]
@@ -281,6 +302,10 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
     simple = {
         rf"\bbugun{_CASE}\b": ("TODAY", today, today + timedelta(days=1), "DAY"),
         rf"\bdun{_CASE}\b": ("YESTERDAY", today - timedelta(days=1), today, "DAY"),
+        # "bir önceki gün" is yesterday; "önceki gün" / "evvelsi gün" is the day before it (TDK).
+        # The longer phrase is listed first so it owns its span before the shorter one can.
+        rf"\bbir onceki gun{_CASE}\b": ("YESTERDAY", today - timedelta(days=1), today, "DAY"),
+        rf"\b(?:onceki|evvelsi|evvelki) gun{_CASE}\b": ("DAY_BEFORE_YESTERDAY", today - timedelta(days=2), today - timedelta(days=1), "DAY"),
         rf"\bbu hafta{_CASE}\b": ("THIS_WEEK", today - timedelta(days=today.weekday()), today - timedelta(days=today.weekday()) + timedelta(days=7), "WEEK"),
         rf"\b{_PREV} hafta{_CASE}\b": ("LAST_WEEK", today - timedelta(days=today.weekday() + 7), today - timedelta(days=today.weekday()), "WEEK"),
         rf"\bbu ay{_CASE}\b": ("THIS_MONTH", _month_start(today.year, today.month), _next_month(today.year, today.month), "MONTH"),

@@ -101,6 +101,8 @@ export type AskAnswer = DbTiming & {
   latency_ms?: number;
   /** Belirsiz kelimelerin nasıl yorumlandığı ("bakiye" → Cari bakiyesi). Yoksa ya da boşsa hiçbir şey gösterilmez. */
   interpretations?: AnswerInterpretation[];
+  /** Boş cevapta dönem verinin bittiği günden sonra kaldıysa: son gün ve sorunun o döneme kurulmuş hâli. */
+  dataEnd?: { lastDay: string | null; note: string; suggestion: { question: string; start: string; end: string } | null } | null;
 };
 
 /** Belirsiz bir kelimenin seçilen anlamı. */

@@ -226,4 +226,152 @@ def apply(sq, plan: dict[str, Any], last: Optional[date]) -> bool:
     return True
 
 
-__all__ = ["aligned_end", "probe_plan", "last_day_of", "apply"]
+# ----------------------------------------------------------------------------------------------------
+# Boş cevap: dönem veriden sonra mı kalıyor?
+#
+# "Bugün en çok satan kitap" boş döndüğünde cevap "kayıtlar bu dönemden önce bitiyor olabilir"
+# diyordu: ne zaman bittiğini söylemiyor, ne sorulabileceğini göstermiyordu. Boş cevaptan SONRA
+# (yalnız o zaman; dolu cevaba bir sorgu eklenmez) ölçünün kendi tablosunda, sorunun dönemi bitmeden
+# önceki son gün ölçülür. O gün dönemin başından önceyse dönem veriden sonra kalıyordur: açıklama
+# tarihi söyler ve aynı soru, sorudaki dönem ifadesi verinin son gününü içeren AYNI TÜRDEN döneme
+# çevrilerek önerilir (gün → o gün, hafta → o hafta, ay → o ay, son N gün → son güne biten N gün).
+# Öneri kalıp değil, sorunun kendi metni: ifade yerinde değiştirilir ve yeni soru ayrıştırıcıdan
+# geri geçirilir; beklenen dönemi vermezse öneri hiç gösterilmez, yalnız tarihli açıklama kalır.
+# ----------------------------------------------------------------------------------------------------
+
+_AY = ("ocak", "şubat", "mart", "nisan", "mayıs", "haziran", "temmuz", "ağustos", "eylül", "ekim",
+       "kasım", "aralık")
+
+
+def _day_text(d: date) -> str:
+    return f"{d.day} {_AY[d.month - 1]} {d.year}"
+
+
+def _next_month_start(d: date) -> date:
+    return date(d.year + (d.month == 12), d.month % 12 + 1, 1)
+
+
+def _unit_of(slot, last: date) -> Optional[tuple[date, date, Optional[str]]]:
+    """Sorunun dönemi tam bir takvim birimiyse (bir gün, bir hafta, bir ay, bir çeyrek, bir yıl) verinin
+    son gününü içeren aynı birim: (başlangıç, hariç bitiş, birimin adı ya da None). Değilse None."""
+    s, e, g = slot.start, slot.end, (slot.grain or "").upper()
+    if (e - s).days == 1:
+        return last, last + timedelta(days=1), None
+    if g == "WEEK" and (e - s).days == 7 and s.weekday() == 0:
+        mon = last - timedelta(days=last.weekday())
+        return mon, mon + timedelta(days=7), None
+    if s.day == 1 and e.day == 1:
+        months = (e.year - s.year) * 12 + (e.month - s.month)
+        if months == 1:
+            ms = date(last.year, last.month, 1)
+            return ms, _next_month_start(ms), f"{_AY[last.month - 1]} {last.year}"
+        if months == 3 and s.month % 3 == 1:
+            qm = (last.month - 1) // 3 * 3 + 1
+            qs = date(last.year, qm, 1)
+            qe = _next_month_start(date(last.year, qm + 2, 1))
+            return qs, qe, f"{last.year} {_AY[qm - 1]}-{_AY[qm + 1]}"
+        if months == 12 and s.month == 1:
+            return date(last.year, 1, 1), date(last.year + 1, 1, 1), str(last.year)
+    return None
+
+
+def target_period(slot, last: date) -> tuple[date, date, str]:
+    """Önerilecek dönem ve onu söyleyen ifade. Birim verinin son gününde bitmiyorsa (ay 17'sinde bitti)
+    ifade tarih aralığıdır: "ağustos 2026" diye sormak veri dışındaki günleri de soruyor olurdu."""
+    unit = _unit_of(slot, last)
+    if unit:
+        s, e, name = unit
+        stop = min(e, last + timedelta(days=1))
+        if stop == e and name:
+            return s, e, name
+    else:
+        # son 7 gün, son 3 ay, yılbaşından bugüne...: aynı uzunlukta, verinin son gününde biten pencere
+        length = (slot.end - slot.start).days
+        s, stop = last - timedelta(days=length - 1), last + timedelta(days=1)
+    if stop - s == timedelta(days=1):
+        return s, stop, _day_text(s)
+    return s, stop, f"{_day_text(s)} ile {_day_text(stop - timedelta(days=1))} arası"
+
+
+def _span(question: str, slot_text: str) -> Optional[tuple[int, int]]:
+    """Ayrıştırıcının bulduğu dönem ifadesinin (katlanmış metin) sorudaki yeri."""
+    import re
+    from semantic_layer.normalize import fold
+    want = re.findall(r"[^\W_]+", slot_text or "")
+    toks = [(m.start(), m.end(), fold(m.group(0))) for m in re.finditer(r"[^\W_]+", question or "")]
+    n = len(want)
+    if not n:
+        return None
+    for i in range(len(toks) - n + 1):
+        if [t[2] for t in toks[i:i + n]] == want:
+            return toks[i][0], toks[i + n - 1][1]
+    return None
+
+
+def rephrase(question: str, slot_text: str, phrase: str) -> Optional[str]:
+    """Sorudaki dönem ifadesi yerine `phrase`. İfadeye kesme işaretiyle bağlı ek ("bugün'ün") da gider:
+    yeni ifadenin ünlüsüyle uyuşmaz. İfade bulunamazsa None."""
+    import re
+    span = _span(question, slot_text)
+    if not span:
+        return None
+    a, b = span
+    tail = re.match(r"['’][^\W_]+", question[b:])
+    if tail:
+        b += tail.end()
+    head = question[a]
+    text = phrase[0].upper() + phrase[1:] if head.isupper() else phrase
+    return re.sub(r"\s{2,}", " ", question[:a] + text + question[b:]).strip()
+
+
+def empty_probe(sq, today: date, dialect) -> Optional[dict[str, Any]]:
+    """Boş cevaptan sonra: tek dönemli soruda ölçünün son gününü ölçecek sorgu üreticisi.
+    Karşılaştırma, dönemi olmayan soru, gelecek dönem (tahmin sorusu) ve ölçülemeyen ölçü: None."""
+    if sq.comparison or len(sq.temporal or []) != 1:
+        return None
+    slot = sq.temporal[0]
+    if not (slot.start and slot.end) or slot.start > today:
+        return None
+    binding = sq.temporal_binding or {}
+    entity, column = binding.get("entity"), binding.get("column")
+    if not (entity and column):
+        return None
+    cond = _conditions(sq, entity, dialect)
+    if cond is None:
+        return None
+    col = f"{entity}.{dialect.q(column)}"
+    picks = [f"MAX(CASE WHEN {c} THEN {col} END) AS last_{i}" if c else f"MAX({col}) AS last_{i}"
+             for i, c in enumerate(cond)]
+
+    def sql_for(lo: date, hi: date) -> str:
+        return (f"SELECT {', '.join(picks)} FROM {entity} "
+                f"WHERE {col} >= '{lo.isoformat()}' AND {col} < '{hi.isoformat()}'")
+
+    return {"slot": slot, "entity": entity, "stop": min(slot.end, today + timedelta(days=1)), "sql_for": sql_for}
+
+
+def empty_hint(question: str, slot, last: Optional[date], today: date) -> Optional[dict[str, Any]]:
+    """Ölçülen son günle açıklama ve öneri. Veri dönemin içinde de varsa (boşluk sorunun süzgecinden)
+    None: o boşluk gerçek bir "yok"tur. Hiç veri bulunmadıysa yalnız açıklama."""
+    from semantic_layer.runtime.temporal import parse_temporal
+    if last is not None and last >= slot.start:
+        return None
+    span = _span(question, slot.text)
+    shown = question[span[0]:span[1]] if span else f"{_tr(slot.start)}–{_tr(slot.end - timedelta(days=1))}"
+    if last is None:
+        return {"lastDay": None, "suggestion": None,
+                "note": f"Veri kapsamı: '{shown}' ve öncesinde bu ölçünün kaydı yok."}
+    note = f"Veri kapsamı: veri {_tr(last)} tarihinde bitiyor; '{shown}' için kayıt yok."
+    s, e, phrase = target_period(slot, last)
+    asked = rephrase(question, slot.text, phrase)
+    suggestion = None
+    if asked:
+        got = parse_temporal(asked, today)[0]
+        # Kurulan soru ayrıştırıcıdan geri geçmeli: tek dönem, tam olarak önerilen dönem.
+        if len(got) == 1 and (got[0].start, got[0].end) == (s, e):
+            suggestion = {"question": asked, "start": s.isoformat(), "end": e.isoformat()}
+    return {"lastDay": last.isoformat(), "note": note, "suggestion": suggestion}
+
+
+__all__ = ["aligned_end", "probe_plan", "last_day_of", "apply", "empty_probe", "empty_hint",
+           "target_period", "rephrase"]

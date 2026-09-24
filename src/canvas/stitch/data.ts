@@ -148,6 +148,8 @@ export type StitchCanvasData = {
     };
     /** Özetin dayandığı verinin veritabanından gelme süresi. */
     timing?: DbTiming | null;
+    /** Boş cevapta verinin bittiği döneme kurulmuş aynı soru; tıklayınca o soru sorulur. */
+    retry?: { question: string; busy: boolean; onAsk: (question: string) => void };
   };
   sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
   ghost: { title: string; badge: string; text: string; foot: string };
