@@ -154,7 +154,6 @@ export default function BoardScreen() {
   return (
     <ModuleFrame
       route="/yayin-kurulu"
-      code="M1"
       crumb="Başvuru & Yayın Kurulu"
       title="Yayın kurulu kararları"
       lead="CRM'deki kurul toplantıları: proje, editör, karar, karar notu ve kurulun önerileri. Başvuru kuyruğu, puanlama ve yazışma şablonları CRM'de tutulmadığı için burada yok."

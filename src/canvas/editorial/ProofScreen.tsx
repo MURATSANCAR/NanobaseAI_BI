@@ -236,7 +236,6 @@ export default function ProofScreen() {
   return (
     <ModuleFrame
       route="/son-okuma"
-      code="M5"
       crumb="Son Okuma"
       title="Son okuma ve yayın onayı"
       lead="Prova PDF'inden sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve forma ölçülür; elle işaretlenen maddeler ve imzalar tamamlanınca onay oluşur. Matbaaya gönderim ve ERP tetikleme yoktur."

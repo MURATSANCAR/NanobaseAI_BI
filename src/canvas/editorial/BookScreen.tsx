@@ -87,7 +87,6 @@ function Roles({ b }: { b: BookDetail }) {
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="text-[13px] font-extrabold">Emeği geçenler</h2>
-        <span className="text-[11px] text-canvas-muted">M7 · M4 · M8</span>
       </div>
       <ul className="mt-2 space-y-1.5">
         {b.roles.map((r) => (
@@ -113,7 +112,7 @@ function Contracts({ b }: { b: BookDetail }) {
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="text-[13px] font-extrabold">Sözleşmeler</h2>
         <Link to="/telif-sozlesme" className="text-[11.5px] font-bold text-canvas-violet underline">
-          M6 Telif & Sözleşme
+          Telif ve sözleşmeler
         </Link>
       </div>
       <ul className="mt-2 space-y-1.5">
@@ -147,7 +146,7 @@ function Journey({ b }: { b: BookDetail }) {
           <h3 className="flex items-baseline gap-2 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
             Proje
             <Link to="/editor-atama" className="font-bold normal-case tracking-normal text-canvas-violet underline">
-              M2
+              Editör atama
             </Link>
           </h3>
           <ul className="mt-1 space-y-1.5">
@@ -172,7 +171,7 @@ function Journey({ b }: { b: BookDetail }) {
           <h3 className="flex items-baseline gap-2 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
             Yayın kurulu
             <Link to="/yayin-kurulu" className="font-bold normal-case tracking-normal text-canvas-violet underline">
-              M1
+              Yayın kurulu ekranı
             </Link>
           </h3>
           <ul className="mt-1 space-y-1.5">
@@ -224,7 +223,6 @@ function Desk({ b }: { b: BookDetail }) {
     <Panel>
       <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
         <h2 className="text-[13px] font-extrabold">Masadaki metin ve prova</h2>
-        <span className="text-[11px] text-canvas-muted">M3 · M5</span>
       </div>
       <ul className="mt-2 space-y-1.5">
         {b.desk.map((w) => (
@@ -265,7 +263,6 @@ export default function BookScreen() {
   return (
     <ModuleFrame
       route="/kitap"
-      code="Kitap"
       crumb={b?.title || 'Kitap'}
       title={b?.title || 'Kitap'}
       lead="Bu kitabın CRM'deki ve editoryal masadaki bütün kayıtları: künye, emeği geçenler, sözleşmeler, proje ve kurul kararı, üretim, metin ve prova."

@@ -238,7 +238,6 @@ export default function RedactionScreen() {
   return (
     <ModuleFrame
       route="/redaksiyon"
-      code="M3"
       crumb="Redaksiyon"
       title="Metin işleme ve redaksiyon"
       lead="Metin dosyası yüklenir, bölümlere ayrılır ve ölçülür; ZEKİ yazım ve üslup önerisi çıkarır, kararı editör verir. Kabul edilen öneri metne işlenir; ilk hâl saklanır."

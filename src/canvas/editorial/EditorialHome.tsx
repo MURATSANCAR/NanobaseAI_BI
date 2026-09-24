@@ -14,7 +14,6 @@ import AskBox from './AskBox';
  *  Her rakam modülün kendi ucundan gelir; kaynağı olmayan kart yoktur. */
 
 type Card = {
-  code: string;
   to: string;
   title: string;
   icon: typeof Users;
@@ -35,7 +34,6 @@ function ModuleCard({ c }: { c: Card }) {
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-canvas-violet/10 text-canvas-violet">
             <Icon aria-hidden className="h-4 w-4" />
           </span>
-          <span className="font-mono text-[11px] font-bold tabular-nums text-canvas-muted">{c.code}</span>
           <ArrowRight aria-hidden className="ml-auto h-4 w-4 shrink-0 text-canvas-muted transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
         </span>
         <span className="mt-2 block text-[13.5px] font-extrabold leading-snug">{c.title}</span>
@@ -144,7 +142,6 @@ export default function EditorialHome() {
 
   const cards: Card[] = [
     {
-      code: 'M1',
       to: '/yayin-kurulu',
       title: 'Başvuru & Yayın Kurulu',
       icon: BookOpenCheck,
@@ -152,7 +149,6 @@ export default function EditorialHome() {
       extra: year ? `${nf.format(year.sessions)} oturum · son ${dateTime(year.last)}` : undefined,
     },
     {
-      code: 'M2',
       to: '/editor-atama',
       title: 'Editör Atama',
       icon: Users,
@@ -160,7 +156,6 @@ export default function EditorialHome() {
       extra: o ? `${nf.format(assigned)} projede editör var, ${nf.format(unassigned)} projede yok` : undefined,
     },
     {
-      code: 'M3',
       to: '/redaksiyon',
       title: 'Redaksiyon',
       icon: PenLine,
@@ -168,7 +163,6 @@ export default function EditorialHome() {
       extra: !works.data ? undefined : desk.length ? `${nf.format(desk.reduce((a, w) => a + w.chapters.total, 0))} bölüm` : 'DOCX, PDF ya da TXT yükleyin',
     },
     {
-      code: 'M4',
       to: '/cevirmenler',
       title: 'Çeviri Yönetimi',
       icon: Users,
@@ -176,7 +170,6 @@ export default function EditorialHome() {
       extra: 'Eser katılım kayıtlarından',
     },
     {
-      code: 'M5',
       to: '/son-okuma',
       title: 'Son Okuma',
       icon: FileSignature,
@@ -184,7 +177,6 @@ export default function EditorialHome() {
       extra: !works.data ? undefined : desk.some((w) => w.proof) ? `${nf.format(desk.reduce((a, w) => a + w.signatures.signed, 0))}/${nf.format(desk.reduce((a, w) => a + w.signatures.total, 0))} imza` : 'Baskıya giden PDF’i yükleyin',
     },
     {
-      code: 'M6',
       to: '/telif-sozlesme',
       title: 'Telif & Sözleşme',
       icon: FileSignature,
@@ -192,7 +184,6 @@ export default function EditorialHome() {
       extra: c ? `${nf.format(c.expiring)} tanesi ${c.warnDays} günde bitiyor` : undefined,
     },
     {
-      code: 'M7',
       to: '/yazarlar',
       title: 'Yazar İlişkileri',
       icon: Users,
@@ -200,7 +191,6 @@ export default function EditorialHome() {
       extra: 'Eserleri, sözleşmeleri, projeleri',
     },
     {
-      code: 'M8',
       to: '/cizer-freelancer',
       title: 'Çizer & Freelancer',
       icon: Users,
@@ -214,8 +204,7 @@ export default function EditorialHome() {
   return (
     <ModuleFrame
       route="/editoryal"
-      code="Editoryal"
-      crumb="Masa"
+      crumb="Editoryal masa"
       title="Editoryal masa"
       lead="Başvurudan baskı onayına kadar sekiz modül. Rakamlar CRM'den ve editoryal masanın kendi kayıtlarından gelir; kaynağı olmayan bir sayı gösterilmez."
       source="Editoryal Süreç"
@@ -236,7 +225,7 @@ export default function EditorialHome() {
         <h2 className="px-1 text-[13px] font-extrabold">Modüller</h2>
         <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
           {cards.map((x) => (
-            <ModuleCard key={x.code} c={x} />
+            <ModuleCard key={x.to} c={x} />
           ))}
         </ul>
       </section>

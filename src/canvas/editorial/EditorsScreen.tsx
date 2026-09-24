@@ -75,7 +75,6 @@ export default function EditorsScreen() {
   return (
     <ModuleFrame
       route="/editor-atama"
-      code="M2"
       crumb="Editör Atama"
       title="Editörler ve projeleri"
       lead="CRM proje kartındaki “Editörü” alanından editör başına proje dağılımı. Atama önerisi, redaksiyon takvimi ve iş yükü yüzdesi CRM'de tutulmadığı için burada yok."
