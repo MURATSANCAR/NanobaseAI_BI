@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (23:45) — ZEKI AI Tahminleme canlıda doldu; "Talep yok" kuralı satışı durmuş kitabı yakalıyor
+
+- Test sunucusunda VPN açıldı, tahmin raporu 23:06–23:26 arası başarıyla koştu (Logo yıl yıl + TimesFM 3.0); ana rapor 23:32'de sekmeyi kurdu: Baskı Tekrar 5.053, Yeni Kitap 331, ZEKI AI Tahminleme 5.384 kitap / 33 kolon; açıklama 3 bölüm, 4 SQL, 6 formül; gizli rapor menüde görünmüyor. Doğrulama portal API'si üzerinden geçici timasai oturumuyla (oturum silindi).
+- Köprü bu arada iki kez başka bir oturum tarafından yeniden başlatıldı (23:03, 23:26; `/tmp/stf`); ilki koşan iki okumayı öldürdü, ikincisi tahmin yazıldıktan 2 sn sonra geldi.
+- **Hata:** stok 0, son 12 ay satışı 0, beklenen tahmin (p50) 0 olan 111 kitap ZEKI'de "Risk/Acil"di (ör. Sherlock Holmes 2). Kural yalnız temkinli tahmine (p80) bakıyordu; satışı durmuş kitapta p80 belirsizlikten şişer (medyan 37). Yalnız p50'ye bakmak da yanlış: geçen yıl 136 satan stoksuz kitabı "Talep yok"a atıyordu.
+- **Yeni kural:** stok yok VE (temkinli tahmin ayda 1'in altında YA DA hem son 12 tam ay satışı < 12 hem beklenen tahmin ayda 1'in altında). Canlı veride ölçüldü: "Talep yok" 685 → 926 (241 kitap Risk/Acil'den geçer, eski kuralın yakaladığı hiçbir kitap düşmez); stok 0 + satış 0 olup Risk/Acil kalan 15 kitapta model talep bekliyor. Talep yok dışında Power BI ile örtüşme %82,5. Test `zeki_tahmin_tab.py` 30/30 (durmuş ve satan stoksuz kitap vakaları eklendi).
+
 ## 2026-09-24 (20:55) — 55 kanal test sunucusunda; VPN kapalı, CRM okunamıyor; yazar listesi artık saklanıyor
 
 - `e883e59d` test sunucusuna kuruldu (5 dosya md5 = main, `._*` 0; köprü 200; arayüz `index-BVAUqalc.js`). Sunucu yükü 15–22, SSH iki kez koptu.

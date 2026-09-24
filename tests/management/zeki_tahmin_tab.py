@@ -103,6 +103,16 @@ tekrar = [{"stok_kodu": "A", "urun_adi": "Kitap A", "yayinevi": "Timaş", "stok_
 tekrar.append({"stok_kodu": "D0", "urun_adi": "Ölü kitap", "yayinevi": "Timaş", "stok_adedi": 0.0, "oneri": "Yeterli Stok",
                "ort_satis_hizi": 0.0, "tukenme_suresi": "NaN"})
 fc["forecasts"]["D0"] = {"p10": [0.0] * 12, "p50": [0.0] * 12, "p80": [0.5] * 12, "p90": [1.0] * 12}
+# Satışı durmuş (Sherlock Holmes 2 gibi): 12 ay satış 0, p50 0 ama belirsizlikten p80 ayda 1,5 → yine Talep yok
+tekrar.append({"stok_kodu": "D1", "urun_adi": "Durmuş", "yayinevi": "Timaş", "stok_adedi": 0.0, "oneri": "Risk/Acil",
+               "ort_satis_hizi": 0.0, "tukenme_suresi": "NaN"})
+fc["forecasts"]["D1"] = {"p10": [0.0] * 12, "p50": [0.0] * 12, "p80": [1.5] * 12, "p90": [3.0] * 12}
+fc["last12"]["D1"] = 0.0
+# Geçen yıl 136 satan stoksuz kitap: p50 düşük ama gerçekleşen satış yüksek → Risk/Acil kalır
+tekrar.append({"stok_kodu": "D2", "urun_adi": "Satan", "yayinevi": "Timaş", "stok_adedi": 0.0, "oneri": "Risk/Acil",
+               "ort_satis_hizi": 11.0, "tukenme_suresi": 0.0})
+fc["forecasts"]["D2"] = {"p10": [0.0] * 12, "p50": [0.8] * 12, "p80": [16.0] * 12, "p90": [20.0] * 12}
+fc["last12"]["D2"] = 136.0
 yeni = [{"stok_kodu": "N", "urun_adi": "Yeni", "yayinevi": "Timaş", "stok_adedi": 0.0, "oneri": "Risk/Acil"}]
 before = copy.deepcopy((tekrar, yeni))
 t = zt.tab(tekrar, yeni, {"A": 5.0}, fc, today, [{"id": "x", "title": "x", "description": "", "sql": "SELECT 1"}])
@@ -120,6 +130,8 @@ ok("stoksuz ve talebi olan yeni kitap: hemen Risk/Acil", rows["N"]["oneri"] == "
 ok("stoksuz ve temkinli talebi ayda 1'in altında: 'Talep yok', tükenme sayılmaz",
    rows["D0"]["oneri"] == "Talep yok" and rows["D0"]["ai_tukenme_ay"] is None and "talep yok" in rows["D0"]["ai_tukenme"],
    f"{rows['D0']['oneri']} {rows['D0']['ai_tukenme']}")
+ok("satışı durmuş stoksuz kitap: p80 şişkin olsa da 'Talep yok'", rows["D1"]["oneri"] == "Talep yok", rows["D1"]["oneri"])
+ok("geçen yıl satan stoksuz kitap: p50 düşük olsa da 'Risk/Acil'", rows["D2"]["oneri"] == "Risk/Acil", rows["D2"]["oneri"])
 ok("tahmini olmayan kitap: 'Tahmin yok', öneri boş", rows["Z"]["guven"] == "Tahmin yok" and rows["Z"].get("oneri") is None)
 mk = [c for c in t["columns"] if c["key"].startswith("ai_m")]
 ok("aylık tahmin kolonları bugünden ufkun sonuna (Eyl 26 … Tem 27)", len(mk) == 11 and mk[0]["label"] == "Eyl 26" and mk[-1]["label"] == "Tem 27",
