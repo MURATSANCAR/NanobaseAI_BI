@@ -5,8 +5,12 @@ tükenme/marj eşikleri, açılış dilimleyicileri, satışı olmayan kitabın 
 bölen-yok davranışı. Koşturma:  python3 tests/management/baski_oneri_parity.py
 """
 import importlib.util
+import sys
 from datetime import date
 from pathlib import Path
+
+# Baskı Öneri, ZEKI AI Tahminleme sekmesi için kardeş modülü (semantic_bridge.management.zeki_tahmin) içe aktarır.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "backend"))
 
 _spec = importlib.util.spec_from_file_location(
     "baski_oneri", Path(__file__).resolve().parents[2] / "backend/semantic_bridge/management/baski_oneri.py")

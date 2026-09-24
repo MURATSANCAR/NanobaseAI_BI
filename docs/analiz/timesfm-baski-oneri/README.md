@@ -39,10 +39,28 @@ Soru: Baskı Tekrar havuzunda (5.053 kitap) TimesFM 3.0, Power BI şablonunun a�
   Timaş Yayınları (%53,6 → %43,0) ve Eğlenceli Bilgi (%35,5 → %28,0).
 - Süre: 5 bin kitap, temel ayar ~30 sn, ek değişkenli ~150 sn (CPU) — gecelik iş için yeterli.
 
+## Stok maskeleme deneyi (2026-09-24)
+
+Logo `STINVTOT` günlük stoğundan kitap × ay stoksuz gün sayısı çıkarıldı (2021-01…2026-07; en az 7 gün stoksuz = kayıp talep ayı).
+Kitap-ayların %18,8'i işaretlendi ama bunların %77'si ilk satıştan önceki aylar (yayın öncesi); yayından sonra oran %5,1
+ve bu aylar satışın yalnız %0,9'u. Maske (NaN → motorun doğrusal ara değeri), ek değişken (stoksuz gün oranı) ve ikisi
+birlikte denendi: WAPE değişimi ≤0,5 puan, zirve sapması aynı (−%28 / −%33). Sonuç: bu veride kayıp talep küçük;
+zirve açığının sebebi her yıl büyüyen ve sivrileşen talep. Üretimde maske yok.
+
+Portföy serisini yalnız havuz kitaplarından kurmak da denendi (2025-07: %32,9 / %33,0; 2026-01: %37,2 / %36,9): fark ≤0,3 puan.
+Üretimde geçmiş yıl yıl okunduğu için portföy yine bütün kodlardan kurulur.
+
+## Üretimdeki karşılığı
+
+Baskı Öneri raporunun "ZEKI AI Tahminleme" sekmesi (`semantic_bridge/management/zeki_tahmin.py`): gizli rapor
+`baski-oneri-tahmin` günde bir Logo'dan 2015'ten bu yana aylık satışı yıl yıl okur, tahmin servisinin
+`POST /forecast/batch` ucuna (TimesFM 3.0, takvim + portföy ek değişkeni) gönderir. Sekme canlı CRM stoku ve bekleyen
+siparişle tükenme ayını, baskı ihtiyacını ve ZEKI önerisini Power BI önerisinin yanında gösterir; altında son kullanıcı
+açıklaması, bu sınamanın tablosu ve SQL'ler var. Power BI sekmeleri değişmez (test: tahminle ve tahminsiz birebir).
+
 ## Açık noktalar
 
-- Tükenen aylarda satış 0 görünüyor (kayıp talep gözlenmiyor); stok sıfırken geçen ayları maskelemek
-  zirve sapmasını azaltabilir. `STINVTOT` günlük stok bunu mümkün kılıyor — sıradaki deney.
+- Zirve açığı (−%27…−%33) sürüyor; sıradaki aday okul dönemi için ayrı büyüme/ölçek düzeltmesi.
 - Canlı Logo olmadan tahmin Temmuz 2026'dan başlar; müşteriye gösterilmeden önce canlı kaynak şart.
 
 Betikler `betikler/`: `fc_extract.py` (aylık satış + CRM), `fc_stock.py` (kesim stokları), `fc_exp.py`

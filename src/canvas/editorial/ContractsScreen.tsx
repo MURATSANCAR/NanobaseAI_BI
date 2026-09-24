@@ -121,7 +121,6 @@ export default function ContractsScreen() {
   return (
     <ModuleFrame
       route="/telif-sozlesme"
-      code="M6"
       crumb="Telif & Sözleşme"
       title="Telif ve lisans sözleşmeleri"
       lead="CRM'deki sözleşme kayıtları: kitap, hak sahibi, telif oranları, süre ve durum. Hakediş ve ödeme takvimi CRM'de tutulmadığı için burada yok."

@@ -7,6 +7,113 @@
 - **Kod (dal):** `models.yaml` `book-image` (GPU 1, 0.50, `--omni`); gateway takma ad başına `entrypoint` alanı (spec hash'e yalnız doluysa girer, diğer kapların hash'i değişmez) ve `images/generations` geçişi. Referanslı düzenleme JSON `chat/completions` ile gider (proxy yalnız JSON).
 - **Sınama (geçici kap, gateway'in kuracağı komutun aynısı):** açılış 40 sn, boşta 33,3 GB, zirve 46,2 GB; okunmuş 4 kitaptan (Dünyanın En Korkak Hayvanı, Gölge Tilki, Çiçekçi Kadın, İbn Sînâ) 8 görsel, 27–30 sn/görsel. Türkçe başlık 2/4 kapakta hatalı: «Sarıöglu», «ÎBN SÎNĂ» → kapak yazısı modelden değil ayrı tipografi katmanından. Sahnelerde tutarlılık açığı: Çiçekçi Kadın'da Koreli karakterler Batılı çizildi, kim kime saksı uzatıyor ters.
 
+## 2026-09-24 (20:55) — 55 kanal test sunucusunda; VPN kapalı, CRM okunamıyor; yazar listesi artık saklanıyor
+
+- `e883e59d` test sunucusuna kuruldu (5 dosya md5 = main, `._*` 0; köprü 200; arayüz `index-BVAUqalc.js`). Sunucu yükü 15–22, SSH iki kez koptu.
+- Uçtan deneme turu 500 döndü: `tun0` yok, 192.168.0.28 (CRM) ve .155 (Logo) erişilemez (FreeTDS 20009). Tünel telefon push onayıyla açılıyor; kullanıcıya soruldu.
+- Düzeltme: web taraması yazar listesini her başarılı CRM okumasında `semantic_web_index`'e` saklar; CRM'e ulaşılamayan gecede son liste kullanılır, raporda not düşer (ilk kayıt tünel açılınca oluşur).
+
+## 2026-09-24 (20:00) — Yönetim raporları: hata veren gecelik rapor ertesi günü beklemiyor
+
+- ZEKI AI Tahminleme okuması 15:33'te bağlantı hatasıyla düştü; 24 saatlik aralık okumanın başından sayıldığı için bir sonraki deneme ertesi gün 15:33'e kalıyordu.
+- `_next_due`: son okuma hata verdiyse aralık en fazla `FAIL_RETRY_SECONDS` (varsayılan 1800 sn, env `MANAGEMENT_REPORT_FAIL_RETRY_SECONDS`). 5 dk'lık raporlar etkilenmez; bitişten en az 60 sn kuralı sürer. Test `tests/management/refresh_schedule.py` 11/11.
+
+## 2026-09-24 (17:00) — Basın ve web: 55 kanal (haber, kitap siteleri, forum, podcast), joker anlayan robots.txt okuyucusu
+
+- Kanal araştırması (ayrı ajan, test sunucusundan ölçüm): 26 yeni açık kanal eklendi — Fikriyat, Star, Türkiye Gazetesi, Karar, Serbestiyet, Artı Gerçek, BirGün, Diken, Medyascope, Bianet; kitap siteleri Sabit Fikir, Bant Mag, Kayıp Rıhtım, Sanatatak, Bookinton, Medium kitap etiketi; forumlar Kitapça Forum (4 bölüm) ve Technopat Sosyal (kitap, edebiyat; `ai-input=yes`); Edebiyat Pod podcast'i. Toplam 55 RSS + Uludağ Sözlük + Wikidata.
+- Kapalı listesi genişledi (nedenleriyle ekranda): İnci, Normal, Sozlock ve diğer sözlükler; DonanımHaber (adla arama robots'ta kapalı), Reddit (robots `/`), Gazete Duvar, Milli Gazete, Ensonhaber (403), Evrensel (`ai-input=no`), Quora; YouTube kanal RSS'i robots'ta kapalı.
+- **Düzeltme:** Python'un `robotparser`'ı `*` jokerini ve `$`'ı anlamıyor (ajan iTunes aramasında yanlış "izinli" gördü). Yerine RFC 9309 okuyucusu yazıldı: adımıza yazılmış grup önce, en uzun eşleşme kazanır, eşitlikte Allow; Content-Signal `ai-input=no` olan site taranmaz; Crawl-delay'e (ör. Sabit Fikir 10 sn) ve en az 2 sn aralığa uyulur. HTML dönen robots.txt "dosya yok" sayılır. Test `tests/editorial/web_robots.py` 14/14.
+
+## 2026-09-24 (16:10) — Basın ve web: 29 haber akışı, Uludağ Sözlük, kanal haritası, orijinal sayfaya bağlantı
+
+- Kullanıcı: "başka kanallar da, sözlükler de; hangi kanaldan ne bulunduysa belli olsun; bulunanlara orijinal sayfaya giden link." Wikidata tanım satırı kalıyor (kullanıcı kararı).
+- Haber akışı 12 → 29 (test sunucusundan 200 dönenler: gündem ve tümü akışları, Milliyet, Diriliş, AA, Yeni Akit, GZT, Akşam, NTV, OdaTV, Dünya, Kitap Haber, Edebiyat Haber).
+- Sözlükler (test sunucusundan ölçüm): Uludağ Sözlük açık (robots.txt her şey serbest) → yazar başına `/k/<ad-soyad>/1/ters/` en yeni 25 girdi, 14 günde bir; girdi kalıcı adresi `/e/<no>/`; yazan kullanıcı adı alınmaz. Ekşi (403 + `ai-input=no`), Sourtimes (`ai-input=no`), Kızlar Soruyor (403) kapalı; İTÜ Sözlük alan adı park sayfası.
+- `/basin-web`'e kanal haritası: her kanal için okunan / eşleşen / ilgili ve son okuma; kapalı kanallar nedeniyle. Her kayıtta kanal rozeti ve "Habere git / Girdiye git" bağlantısı.
+- Kısa canlı tur (300 sn): Uludağ'da 84 yazarın başlığına bakıldı, 28'inin başlığı var, 282 girdi; etiketlenen 198: 67 olumlu, 92 olumsuz, 33 nötr, 6 ilgisiz; 84 bekliyor. Sözlük girdilerinde küfür ve hakaret içeren metinler var; olduğu gibi gösteriliyor (kullanıcıya soruldu).
+- Bu sırada test sunucusu bağlantısı iki kez koptu (yük ~8–17); ilk tur süreci arkada bitti, ikinci deneme çift çalışmasın diye durduruldu.
+
+## 2026-09-24 — Editör: kelime çeşitliliği ve yakın tekrar denetimi (`word_variety`) dalda
+
+- **İstek (Yalçın Yaman, redaksiyon):** kitabın tekil kelime haritası; «göze girdi / gözüme toz kaçtı / dolabın gözü» üç ayrı «göz» olarak görülmeli. Editörde kelime tekrarı ya da çeşitlilik denetimi yoktu; yazım denetiminin Zemberek (zeyrek) kök çözümlemesi vardı.
+- **Analiz ve karar** (`apps/editor/docs/son-okuma/word_variety.md` §0): kök Zemberek'le (fiil maddesi mastar: «yüzmek» ≠ «yüz»; en uzun gövde: «gözlük» ≠ göz; belirsizlikte kitabın kendi kullanımı); anlam model gruplamasıyla (gömme/kümeleme ve TDK anlam listesi reddedildi); yakın tekrar penceresi cümle (sabit sözcük penceresi ve istatistik reddedildi); tekrarın kusur olup olmadığı iki sıralı kapalı model sorusu. İkileme, özel ad, işlev sözcüğü tekrar sayılmaz.
+- **Kod:** `proofing/word_variety.py` (hat), `proofing/_word_variety.py` (saf parçalar), `tests/test_word_variety.py` (sentetik; üç «göz» senaryosu dahil), kart servisi `GET /v1/books/{id}/proofing/word-map` (harita = en yeni başarılı koşunun `stats`'ı; migration yok). Ayarlar `EDITOR_WORD_ECHO_SENTENCES/…_SENSE_BATCH/…_CONTEXT_CHARS/…_VARIETY_PARALLEL`.
+- **Açık:** testler ve gerçek kitapta `--dry` ölçümü koşulmadı (TT VPN kapalıydı; Mac'te çalıştırma yok). Köprü + kanvas harita ekranı ve kitap geneli aşırı kullanım (öbür kitaplar derlemi) sonraki iş. Denetim `run_all`'a otomatik girer: kurulunca her kitabın son okumasında koşar.
+
+## 2026-09-24 — Mali denetim rapor arşivi: sessiz 30 tavanı kaldırıldı
+
+- `GET /api/v1/financial-audit/runs` en yeni 30 raporu kesiyordu (`[:30]`, yanıtta `limit:30`); "sayı tavanı yok" kuralına aykırı. Artık arşivin tamamı döner, yanıt `{items, total}`. Sayfalama eklenmedi: kayıt başına küçük bir meta dosyası, seçici listeyi zaten pencereleyerek çiziyor.
+- Arayüz: "Çalışma raporu" seçici (`SearchSelect`) bütün raporları listeler, etikette toplam görünür ("Çalışma raporu · 48 kayıt").
+- `SearchSelect` main'de yoktu (yalnız `claude/editor-author-login-flow-63e097` dalında, be018fd0); o commit bu dala cherry-pick edildi. İki dal da main'e gelirken aynı yama; günlükte çakışma çıkarsa elle birleştirilir.
+- Doğrulama: test sunucusunda (nanobase-direct, geçici kopya) `tsc --noEmit` 0, `py_compile` geçti. Gerçek arşivde (`/data/nanobaseai/bi/var/financial-audit/workpapers`) 48 rapor var — eski uç 18'ini gizliyordu; yeni gövde aynı dizinde 48'ini döndürdü (21.09 11:41 → 24.09 09:28). Servis yeniden başlatılmadı, kurulum yapılmadı; ekranda oturumlu deneme yapılmadı.
+
+## 2026-09-24 (15:40) — Yönetim raporları: rapor başına ayrı veritabanı bağlantısı
+
+- Test sunucusuna kurulumdan hemen sonra Baskı Öneri 15:31'de "Invalid cursor state" (FreeTDS 24000) ile düştü: ZEKI tahmin raporu eklenince iki rapor ayrı iş parçacıklarında aynı anda yenileniyor ama tek Logo bağlantısını paylaşıyordu. Bağlantılar artık (rapor, kaynak) anahtarıyla ayrı. Test: `tests/management/report_connections.py` 3/3; diğerleri geçti.
+
+## 2026-09-24 (15:40) — Yönetici her şeyi görür; Wikidata meslek listesi daraltıldı
+
+- Kullanıcı: "timasai süper yönetici, her şeyi görecek." Yazar giriş sürecinde yönetici (`admin_mod.is_admin`) bütün editörlerin bekleyen işini görür (`board(..., everyone=True)`, `todoScope: "all"`): panoda ve Masam'da editöre göre gruplu, Masam'da ayrıca editör başına süren / bekleyen / kurulda / geciken tablosu. Editör yine yalnız kendi işini görür.
+- Wikidata: meslek kümesine yanlışlıkla diplomat, hukukçu, öğretmen, profesör girmişti ("Kamran İnan" yalnız siyasetçi/diplomat olarak kabul edilmişti). Küme yalnız yazıyla ilgili mesleklere indi; ekranda gösterilen meslekler de bu kümeyle sınırlı (ör. "komplo teorisyeni" meslek olarak görünmez). Bulunan 16 kayıt yeni kuralla yeniden denetlenmek üzere sıraya kondu.
+
+## 2026-09-24 — Baskı Öneri'ye "ZEKI AI Tahminleme" sekmesi (TimesFM 3.0), Power BI sekmeleri değişmeden
+
+- **İstek:** Power BI sekmelerinin yanına ayrı bir tahmin sekmesi; altında son kullanıcı açıklaması ve SQL'ler. Mevcut bozulmayacak.
+- **Tahmin servisi (`backend/forecasting`):** yeni `POST /forecast/batch` — aylık seriler topluca, takvim ek değişkeni (ay sin/cos + zirve ayı) ve ortak geçmiş seri (portföy), 9 kantil. TimesFM 3.0 motoru ayrı büyük partili değerlendiriciyle; mevsimsel naif motor da toplu çalışır. Mevcut `/forecast` değişmedi. Testler 40/40 (gerçek TimesFM 3.0 toplu testi dahil).
+- **Köprü:** rapor başına yenileme aralığı (`REFRESH_SECONDS`), gizli rapor (`HIDDEN`), raporlar arası girdi (`build(..., inputs=)`). Yeni gizli rapor `baski-oneri-tahmin` günde bir: tahmin servisi hazır mı (yoksa Logo'ya hiç gitmez) → Logo son fatura → 2015'ten bu yıla satış **yıl yıl** (`{satis:yil}`; 12 yılın birleşimi tek sorguda 900 sn'yi aşıyordu) → TimesFM 3.0 12 ay. Portföy bütün kodların toplamı (sınamayla aynı).
+- **Sekme:** Baskı Tekrar + Yeni Kitap kitapları; canlı CRM stoku ve bekleyen siparişle tükenme ayı (normal/temkinli p80), baskı ihtiyacı, ZEKI öneri (Power BI eşikleri), güven (hacim), yanında Power BI önerisi/hızı/tükenmesi, bugünden ufkun sonuna aylık tahmin. Altında açıklama: neye baktık, Power BI'dan neden farklı, kolonlar, sınama tablosu, notlar, hesaplamalar, SQL'ler.
+- **Prova (test sunucusu, geçici servis :18793, canlı önbelleğe dokunmadan):** tahmin raporu 2.140 sn (Logo geçmişi 1.844 sn yük altında; TimesFM 5.200 seri 127 sn), sekme 5.384 satır; Power BI sekmeleri 5.053 / 331 satır aynı.
+- **ZEKI ile Power BI önerisi %78 aynı; ayrışan 1.167 kitap:** 585 stok 0 (Power BI 0/0 → "Yeterli"), 262 Power BI hızı eksi (→ "Risk/Acil"), 42 yeni kitap formülü, 220 ZEKI daha erken (mevsim), 55 daha geç. Gerçek tahmin ayrışmalarında geçmiş sınama hakemliği (4 kesim, 993 kitap): ZEKI %36, Power BI %25 haklı, %39 ikisi de yanlış (çoğunda ZEKI daha yakın).
+- **"Talep yok" düzeyi (kullanıcının örnek istemesiyle bulundu):** stoku 0 olan 1.177 kitabın 667'sinde temkinli tahmin yılda 10 adetin altında; ör. Sherlock Holmes - Kayıp Elmas (son 12 ay 1 adet) "Risk/Acil" görünüyordu. Stok yok ve temkinli tahmin ayda 1 adetin altındaysa ZEKI artık "Talep yok" der; düzey yalnız bu sekmenin çiplerinde (Power BI çipleri değişmedi).
+- **Örnekler (açıklamaya da girdi):** Sözcüklerin Kamera Arkası — stok 36.875, Power BI 2,1 ay → Takip Et, ZEKI ekimde 62 bin talep → Risk/Acil (mevsim). Geçmiş sınamada Zerdali - Dedemle Bir Yıl (31.07.2025): Power BI 4,5 ay "Yeterli", ZEKI 2,5 ay, gerçek 2,0 ayda bitti (eylül-ekim 94 bin); Dinozorumun Saklandığı Yer'de Power BI haklı çıktı (ZEKI düz talep verdi, zirve geldi).
+- **Testler (DB'siz):** zeki_tahmin_tab 28/28 (Power BI sekmeleri tahminle/tahminsiz birebir, servis yoksa Logo okunmaz), parity 27/27, sales_years_expand 15/15, refresh_schedule 7/7; tsc + vite temiz.
+
+## 2026-09-24 (15:10) — main'e alındı ve test sunucusuna kuruldu: yazar giriş süreci, yeni menü, aranabilir seçim, basın ve web
+
+- main `7b2abae9 → 197e541d` (ileri sarma, push; uzak `claude/editor-author-login-flow-63e097` silindi).
+- Test sunucusu: değişen 35 kod dosyası kuruldu; hepsinin sunucudaki eski hâli eski main ile birebirdi (canlı iş ezilmedi), kurulum sonrası md5 35/35, `._*` 0, eski `BoardScreen.tsx` silindi. Sunucudaki belge kopyaları (AGENTS/PROJECT-MEMORY/günlük) farklıydı, dokunulmadı. `intake_steps` 20/20. Köprü yeniden başladı (56 sn, sağlık 200), arayüz `VITE_BASE=/timas/` ile derlendi, `cockpit/dist`'e alındı (yedek `dist.bak-<zaman>`), dış kapı `index-xoNabpep.js`.
+- `timas-web-watch.timer` kuruldu ve açıldı (ilk çalışma 25.09 02:30). Kural gereği önce uç elle denendi: `budget=120` → 121 sn, hata yok. İlk turda eski kuralla bulunan 17 Wikidata kaydı yeniden denetim için sıraya kondu.
+- Portal dış kapısından geçici timasai oturumuyla (sonra silindi): süreç panosu 200 (1.143 süren, 934 tamam, 27 kapanan, son kurul 22.09), toplantılar 84, 22.09 gündemi 15, basın/web 7 ilgili haber (6 olumlu, 1 nötr), proje sayfası 200, oturumsuz 401, `/timas/yazar-giris`, `/timas/basin-web`, `/timas/kisiler` 200. Tarayıcıda görsel kontrol yapılmadı (AD oturumu gerekiyor).
+- Müşteri VM'ine kurulmadı.
+
+## 2026-09-24 — Basın ve web taraması: açık RSS + Wikidata, yerel model etiketi, gece zamanlayıcısı
+
+- İstek: yazar ve kitaplar için web taraması ve duygu analizi. Test sunucusundan ölçüm: 1000Kitap, Kitapyurdu, D&R, Hepsiburada ve Ekşi otomatik isteği bot korumasıyla 403'lüyor; Google News arama robots.txt'te kapalı; GDELT bu IP'den istek sınırına takılıyor. Bot korumasını aşan araçlar (Scrapling, CloakBrowser, obscura) kullanılmadı; kaynak açık RSS (12 Türk haber sitesi) + Wikidata API.
+- `web_watch.py`: akış oku → CRM yazarlarının ad soyadını başlık/özette ara (Türkçe harf farkı yok, en az iki kelime) → yerel modele "bu yazar/kitap hakkında mı, tonu ne" sor → ekrana yalnız olumlu/olumsuz/nötr. Wikidata yalnız tek ve kesin eşleşmede; adaşı varsa CRM kitabı "bilinen eseri" olmalı (ilk turda "Mehmet Yıldız" tek adaya bağlanmıştı, kural bu yüzden sıkılaştı).
+- İlk tur (elle, test sunucusu, gerçek CRM + GPU modeli, 900 sn): 530 haber, 2.115 yazar, 7 eşleşme — 7'si de ilgili (6 olumlu, 1 nötr; ör. "İskender Pala'nın kaleme aldığı 'Şiirin Sultanları' okurlarla buluştu"); Wikidata 653 yazar, 17 bulundu, 1.462 sonraki gecelere.
+- Ekran `/basin-web` (menüde Kayıtlar), Kişiler detayı ve kitap sayfasında bölüm. Zamanlayıcı her gece 02:30. Kural AGENTS.md'de.
+- Bilinen sınır: bazı akışlar yalnız 10–20 kayıt tutuyor; gece tek okuma gün içindeki haberlerin bir kısmını kaçırabilir.
+
+## 2026-09-24 — Çok seçenekli süzgeçlere yazarak arama (`SearchSelect`)
+
+- Kullanıcı isteği: kitap adı, yazar gibi binlerce seçenekli açılır listelerden seçmek zor; arama alanı olsun. Bütün `src/` `<select>`/açılır listeleri tarandı, seçenek sayısı koddan ve CRM seçenek kümelerinden çıkarıldı.
+- Yeni ortak bileşen `src/canvas/components/SearchSelect.tsx`: kurulu `@base-ui/react` Combobox (combobox/listbox ARIA, klavye) + elle yazılmış sabit satır yükseklikli pencereleme (bütün liste kaydırılır, tavan yok; Base UI örneği `@tanstack/react-virtual` ister, yeni paket eklenmedi). Türkçe/aksan duyarsız, kelime sırasından bağımsız eşleşme; temizle; çoklu seçim desteği. Açılış animasyonu yok (sık ve klavyeyle açılan süzgeç).
+- Geçenler: Baskı Öneri dilimleyicileri (Ürün Adı, Yazar, Yayınevi, Statü, Baskı durumu — hepsi aynı görünsün diye), mali denetim "Çalışma raporu" (≤30 kayıt). Seçilen değer ve süzme mantığı aynı.
+- Kalanlar (≤12 seçenek ya da yerel seçici daha iyi): editoryal durum/tip/rol/sıralama, pano kart araçları, yönetim süzgeçleri, uyarı koşulu, rapor günü, Excel biçimi, oda rezervasyonu (oda + saat — telefonda yerel saat çarkı), kampüs alkış alıcısı (zaten `datalist` ile yazılan serbest metin).
+- Doğrulama: test sunucusunda `tsc --noEmit` 0; 12.000 Türkçe adlık geçici bir sayfada 375/320 px ve masaüstünde arama ("isil yilmaz" → "Işıl Yılmaz"), ↑ ile son kayda atlama, temizleme, çoklu seçim denendi; geçici dosyalar silindi. Canlı Baskı Öneri ekranı oturum gerektirdiği için ekranda denenmedi.
+- Not: `/api/v1/financial-audit/runs` son 30 raporla sınırlı (`[:30]`) — sessiz tavan kuralına aykırı, ayrı iş.
+
+## 2026-09-24 — Yazar giriş süreci kodlandı (dalda, kurulmadı): dinleyici, pano, proje sayfası, kurul günü, Masam, yeni menü
+
+- **Arka uç:** `editorial_intake.py` + `app.py` uçları. CRM 5 dk'da bir baştan okunur (disk önbelleği); adımlar kanıttan hesaplanır, statüden değil — canlı ölçüm: statü geçişlerinin çoğu ara adımları atlıyor, kurulda kabul edilen 117 proje hâlâ "toplantıya hazırlanıyor". Rapor (3) ve yazara bilgi (6) CRM'de izlenmediği için portaldan işaretlenir (`semantic_editorial_intake_marks`, projenin editörü ya da yönetici; `admin_mod.audit` kaydı). Yönetim ekranına iki ayar: `EDITORIAL_INTAKE_SINCE`, `EDITORIAL_INTAKE_LATE_DAYS`.
+- **Gerçek CRM'de doğrulama (test sunucusu, servis açılmadan, köprü ortamı + katalog denetimi):** 2.102 proje 5 sn'de okundu; 1.141 süren (değerlendirme 528, kurul 76, giriş 537), 934 tamamlanan, 27 red/iptal; 84 kurul toplantısı, son 22.09.2026 (15 proje, 14 kabul). `AuditBase` katalogda olmadığı için köprü reddediyor → editör/rapor tarihleri yok, bekleme bir önceki bilinen tarihten sayılıyor. Süren projelerin çoğu 14 günü aşmış görünüyor (2025'ten kalan, CRM'de kapatılmamış projeler) — ekranda "gecikti".
+- **Bulunan hata:** SQL Server çıplak kolonu şemadaki yazımıyla döndürüyor (`new_OlasYazarYazar`); satır anahtarları artık küçük harfle okunuyor. Düzeltmeden önce kişi kartı hiç görünmüyor, tamamlanan 0 çıkıyordu.
+- **Ekranlar (kanvas teması):** `/yazar-giris` (3 evre sütunu, telefonda evre seçici, "Sizi bekleyen işler", geciken/benimkiler süzgeci, tamamlanan ve kapanan katlanır listeler), `/yazar-giris/:id` (9 adım, kaynak: CRM / portal / çıkarım, tek ana düğme, kurul kararları, görüşler yalnız yöneticiye), `/yayin-kurulu` toplantı düzeni (eski liste ekranı silindi), `/editoryal` = Masam, `/kisiler` (yazar/çevirmen/çizer tek ekran; eski adresler yönlenir). Menü üç grup, öğe başına ikon. Aramada proje seçilince proje sayfası açılır.
+- **Doğrulama:** adım kuralları 20/20 (`tests/editorial/intake_steps.py`), `tsc --noEmit` test sunucusunda temiz. Tarayıcıda görülmedi — kurulum main'e alındıktan sonra.
+- Paralel iki iş: web taraması analizi (`docs/analiz/kitap-yazar-web-taramasi-2026-09-24.md`, bu dala alındı), aranabilir seçim kutusu (ayrı dalda sürüyor).
+
+## 2026-09-24 — Yazar giriş süreci ekran tasarımı (Stitch) ve yeni editoryal menü
+
+- Stitch projesi 13426839861607265553'e, "Editorial Intelligence Canvas" tasarım sistemiyle 6 ekran eklendi: süreç panosu, proje sayfası (9 adım), kurul günü, Masam (editör masası), telefon liste, telefon proje paneli. Stitch'in uydurduğu şeyler ayıklandı: kayıt açma düğmeleri (veri CRM'den gelir), "kurul iki haftada bir" kutusu (PDF: 1–2 ayda bir), 7–9. adımlara yanlış sorumlular, kesik metinler, sahte dosya numaraları.
+- Kullanıcı onayıyla yeni menü: GÜNLÜK (Masam, Yazar giriş süreci, Yayın kurulu) · YAYINA HAZIRLIK (Redaksiyon, Çeviri, Son okuma) · KAYITLAR (Kişiler = Yazarlar+Çevirmenler+Çizer tek ekran, Sözleşmeler, Editörler). Editoryal masa → Masam; eski adresler yeni ekrana yönlenecek; proje sayfası stok kartı açılınca /kitap/:id'ye bağlanır.
+- Ekranlardan M1–M8 kodları kaldırıldı (`f714febe`, tsc test sunucusunda temiz). Menü yeniden düzeni ve yeni ekranların kodu henüz yazılmadı.
+- Stitch MCP aracı üretim süresinden (1–4 dk) önce zaman aşımına düşüyor; üretim doğrudan JSON-RPC ile 900 sn sınırla yapıldı.
+
+## 2026-09-24 — Yazar giriş süreci (müşteri akışı) CRM'e eşlendi
+
+- Müşteri editör modülü için 9 adımlı "Yazarın Yayınevine Giriş Süreci" akışını gönderdi; kural: veri CRM'den dinlenecek. Canlı CRM'de (.28) salt okuma ile her adımın karşılığı ve doluluğu ölçüldü: `docs/analiz/yazar-giris-sureci-crm-2026-09-24.md`.
+- Omurga `new_projeBase.statuscode` (Toplantıya Hazırlanıyor → Kurula Hazır → Kurul Onaylı → İş Planı Çalışıyor); `new_projeasamasi` ve projedeki kurul sonucu/tarih alanları hiç dolu değil. Denetim kaydı Proje/Stok/Üretim/Sözleşme/Eser Katılımı/Kişi/Cari'de açık → adım zamanları geriye dönük çıkar. Editör raporu, yazara bilgi ve yazar cari formu CRM'de izlenmiyor; müşteriye 3 soru.
+- Kod değişikliği yok.
 ## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
 
 - `deniz.akko` ile `~/bin/ttvpn-mac` sabahtan beri `p=failed` / bir kez `p=login-denied` veriyordu; tarayıcı giriyor göründüğü için istemci farkı sanıldı. Elenenler: şifre terminale bozulmadan ulaşıyor (uzunluk/karakter ölçüldü), tarayıcı kimliği, form alanıyla şifre, DSID çereziyle tünel (`error 0x07`). Uygulama içi tarayıcının ağ kaydı tarayıcının da 3 kez `p=failed` alıp 4.'de girdiğini gösterdi → şifre elle tutarsız yazılıyordu.

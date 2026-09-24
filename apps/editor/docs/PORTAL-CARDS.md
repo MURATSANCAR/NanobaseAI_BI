@@ -1,7 +1,7 @@
 # Portal kitap kartları
 
 2026-09-21: portal cevapları kapak, başlık, yazar, sayfa kaynaklı kısa özet ve kitap seçme düğmesi içerir.
-`editor.card_api` salt okunur ayrı servistir (:19141); modelleri/işçileri başlatmaz ve bakım kilidini kaldırmaz. Uçlar: `/v1/books/cards`, `/v1/books/{id}/cover`, `/v1/books/{id}/graph`, `/v1/books/{id}/proofing` (son okuma: son neslin her denetim için en yeni koşusu + bulguları; koşu yoksa boş listeler).
+`editor.card_api` salt okunur ayrı servistir (:19141); modelleri/işçileri başlatmaz ve bakım kilidini kaldırmaz. Uçlar: `/v1/books/cards`, `/v1/books/{id}/cover`, `/v1/books/{id}/graph`, `/v1/books/{id}/proofing` (son okuma: son neslin her denetim için en yeni koşusu + bulguları; koşu yoksa boş listeler), `/v1/books/{id}/proofing/word-map` (kelime haritası: `word_variety` denetiminin en yeni başarılı koşusunun `stats`'ı — kökler, biçimler, sayfalar, anlamlar/deyimler, MTLD; koşu yoksa `stats: null`).
 
 **Tek yazma ucu (2026-09-23):** `POST /v1/books/{id}/proofing/findings/{finding_id}/decision` — editörün son okuma
 bulgusuna kararı («Doğru» / «Yanlış alarm» + gerekçe [+ not]), `ed.proof_decision` tablosuna salt ekleme. Yazılan

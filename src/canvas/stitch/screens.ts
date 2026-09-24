@@ -1,3 +1,5 @@
+import { createElement } from 'react';
+import { BookImage, Contact, FileSignature, House, Newspaper, Languages, LayoutDashboard, PenLine, Route, SpellCheck, UserCog, UsersRound } from 'lucide-react';
 import type { AlertSummary } from '../data';
 import { conditionLabel, dateTime, money, num, relative } from '../format';
 import type { CfoData } from '../cfo';
@@ -50,25 +52,29 @@ export const railFor = (active: string): StitchRailItem[] => [
   { to: '/es-anlamlilar', label: 'Eş anlamlılar', badge: active === '/es-anlamlilar' ? 'Aktif' : undefined },
   { to: '/yonetim', label: 'Yönetim', badge: active === '/yonetim' ? 'Aktif' : undefined, adminOnly: true },
   // Editoryal Süreç'e kapı; oradan ray kendi modüllerine döner.
-  { to: '/editoryal', label: 'Editoryal masa', badge: active === '/editoryal' ? 'Aktif' : undefined },
+  { to: '/editoryal', label: 'Editoryal', badge: active === '/editoryal' ? 'Aktif' : undefined },
   // Girişten sonraki ana sayfaya dönüş.
   { to: '/', label: 'Kampüs', badge: active === '/' ? 'Aktif' : undefined },
 ];
 
-/** Editoryal Süreç ekranlarının kendi rayı: BI ekranları yerine sekiz modül ve masa.
- *  Son satır BI tarafına dönüşü açık tutar (ikon eşlemesi konuma bağlı, sıra değişmez). */
+/** Editoryal Süreç ekranlarının kendi rayı: üç grup (günlük iş, yayına hazırlık, kayıtlar) ve Kampüs'e dönüş.
+ *  Her öğe kendi ikonunu taşır; grup başlığı menü açıkken görünür. */
+const railIcon = (icon: typeof House) => createElement(icon, { className: 'w-5 h-5', 'aria-hidden': true });
+
 export const editorialRail = (active: string): StitchRailItem[] =>
   [
-    { to: '/editoryal', label: 'Editoryal masa' },
-    { to: '/yayin-kurulu', label: 'M1 Yayın kurulu' },
-    { to: '/editor-atama', label: 'M2 Editör atama' },
-    { to: '/redaksiyon', label: 'M3 Redaksiyon' },
-    { to: '/cevirmenler', label: 'M4 Çeviri' },
-    { to: '/son-okuma', label: 'M5 Son okuma' },
-    { to: '/telif-sozlesme', label: 'M6 Telif & sözleşme' },
-    { to: '/yazarlar', label: 'M7 Yazarlar' },
-    { to: '/cizer-freelancer', label: 'M8 Çizer & freelancer' },
-    { to: '/', label: 'Kampüs' },
+    { to: '/editoryal', label: 'Masam', group: 'Günlük', icon: railIcon(LayoutDashboard) },
+    { to: '/yazar-giris', label: 'Yazar giriş süreci', group: 'Günlük', icon: railIcon(Route) },
+    { to: '/yayin-kurulu', label: 'Yayın kurulu', group: 'Günlük', icon: railIcon(UsersRound) },
+    { to: '/redaksiyon', label: 'Redaksiyon', group: 'Yayına hazırlık', icon: railIcon(PenLine) },
+    { to: '/kisiler?rol=cevirmen', label: 'Çeviri', group: 'Yayına hazırlık', icon: railIcon(Languages) },
+    { to: '/son-okuma', label: 'Son okuma', group: 'Yayına hazırlık', icon: railIcon(SpellCheck) },
+    { to: '/kitap-tasarim', label: 'Kitap tasarım', group: 'Yayına hazırlık', icon: railIcon(BookImage) },
+    { to: '/kisiler', label: 'Kişiler', group: 'Kayıtlar', icon: railIcon(Contact) },
+    { to: '/basin-web', label: 'Basın ve web', group: 'Kayıtlar', icon: railIcon(Newspaper) },
+    { to: '/telif-sozlesme', label: 'Sözleşmeler', group: 'Kayıtlar', icon: railIcon(FileSignature) },
+    { to: '/editor-atama', label: 'Editörler', group: 'Kayıtlar', icon: railIcon(UserCog) },
+    { to: '/', label: 'Kampüs', icon: railIcon(House) },
   ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
 
 /** Yönetim Raporları modülünün kendi rayı: grup ana sayfası, raporlar, Kampüs'e dönüş. */

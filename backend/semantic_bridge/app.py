@@ -1855,6 +1855,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         rt.start_refresher()
         app.state.financial_audit.start()
         app.state.editorial_home.start()
+        app.state.editorial_intake.start()
         app.state.management_reports.start()
         # Every request waiting for the model holds one of these threads while it waits. Forty (the
         # default) is forty waiting prompts and then /health queues behind them too.
@@ -1870,6 +1871,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             yield
         finally:
             app.state.editorial_home.stop()
+            app.state.editorial_intake.stop()
             app.state.management_reports.stop()
             app.state.financial_audit.stop()
             rt.jobs.stop()
@@ -3525,6 +3527,193 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             app.state.editorial_home.refresh(force=True)
         response.headers["Cache-Control"] = "private, no-store"
         return dict(app.state.editorial_home.read(), works=works)
+
+    # ------------------------------------------------------------------ yazar giriş süreci
+    # Müşterinin 9 adımlık akışı. Dinleyici: CRM beş dakikada bir baştan okunur, sonuç diske yazılır
+    # (EditorialHomeSnapshots); ekran bekletilmez. Adımlar okumada, portal işaretleriyle birlikte hesaplanır.
+    from semantic_bridge import editorial_intake as intake_mod
+
+    def _intake_since() -> str:
+        return admin_mod.conf("EDITORIAL_INTAKE_SINCE") or "2025-01-01"
+
+    def _intake_builders():
+        schema, since = admin_mod.conf("CRM_SCHEMA"), _intake_since()
+
+        def fetch_all(sql: str) -> list[dict[str, Any]]:
+            r = rt()
+            out = r.run_complete(sql)
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+            return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+        return {"intake": lambda: intake_mod.collect(schema, since, fetch_all)}
+
+    def _intake_scope():
+        r = rt()
+        return [r.settings.tenant_id, r.settings.datasource_id, admin_mod.conf("CRM_SCHEMA"), _intake_since()]
+
+    app.state.editorial_intake = EditorialHomeSnapshots(_intake_scope, _intake_builders, sources=("editorial_intake.py",),
+                                                        name="editorial-intake")
+
+    def _intake_ctx(request: Request) -> tuple[Any, str, str, str, bool]:
+        engine, tenant, user, display = _greetings(request)
+        intake_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        return engine, tenant, user, display, admin_mod.is_admin(user)
+
+    def _intake_error(e: "intake_mod.IntakeError") -> HTTPException:
+        return HTTPException(status_code=e.status, detail={"code": "INVALID_INTAKE", "message": str(e)})
+
+    def _intake_snapshot() -> tuple[dict[str, Any], dict[str, Any]]:
+        part = app.state.editorial_intake.read()["parts"].get("intake") or {}
+        return part.get("data") or {}, part
+
+    def _intake_fact(project_id: str) -> dict[str, Any]:
+        """Önbellekteki kayıt; yoksa (yeni açılmış ya da kapsam dışı proje) CRM'den o an okunur."""
+        snap, _ = _intake_snapshot()
+        pid = project_id.lower()
+        for f in snap.get("facts") or []:
+            if f["id"] == pid:
+                return f
+        schema, run = _editorial_request_free()
+        rows = run(intake_mod.facts_sql(schema, _intake_since(), project_id)).get("records") or []
+        if not rows:
+            raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Proje CRM'de bulunamadı."})
+        return intake_mod.fact(rows[0])
+
+    def _editorial_request_free() -> tuple[str, Any]:
+        def run(sql: str) -> dict[str, Any]:
+            r = rt()
+            try:
+                return r.run_sql(sql, r.settings.max_rows)
+            except Exception as e:  # noqa: BLE001
+                raise _sql_failure(e) from e
+        return admin_mod.conf("CRM_SCHEMA"), run
+
+    def _today():
+        from zoneinfo import ZoneInfo
+        return datetime.now(ZoneInfo("Europe/Istanbul")).date()
+
+    @app.get("/api/v1/editorial/intake")
+    def editorial_intake(request: Request, response: Response) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _intake_ctx(request)
+        if FORCE_FRESH.get():
+            app.state.editorial_intake.refresh(force=True)
+        snap, part = _intake_snapshot()
+        response.headers["Cache-Control"] = "private, no-store"
+        out = intake_mod.board(snap, intake_mod.all_marks(engine, tenant), user, today=_today(),
+                               late_days=_int_conf("EDITORIAL_INTAKE_LATE_DAYS", 14), everyone=is_admin)
+        return dict(out, loading="data" not in part, updatedAt=part.get("updatedAt"), error=part.get("error"),
+                    refreshIntervalSeconds=app.state.editorial_intake.read()["refreshIntervalSeconds"])
+
+    @app.get("/api/v1/editorial/intake/meetings")
+    def editorial_intake_meetings(request: Request) -> dict[str, Any]:
+        _intake_ctx(request)
+        schema, run = _editorial(request)
+        try:
+            return {"items": intake_mod.meetings(run(intake_mod.meetings_sql(schema)).get("records") or [])}
+        except intake_mod.IntakeError as e:
+            raise _intake_error(e) from e
+
+    @app.get("/api/v1/editorial/intake/meetings/{day}")
+    def editorial_intake_agenda(day: str, request: Request) -> dict[str, Any]:
+        _, _, _, _, is_admin = _intake_ctx(request)
+        schema, run = _editorial(request)
+        try:
+            rows = run(intake_mod.agenda_sql(schema, day)).get("records") or []
+            ids = sorted({str(r.get("proje_id")) for r in rows if r.get("proje_id")})
+            # Kurul üyelerinin adlı görüşleri rol modeli gelene kadar yalnız yöneticilere açılır.
+            opinions = [intake_mod.opinion_row(o) for o in run(intake_mod.opinions_sql(schema, ids)).get("records") or []] \
+                if is_admin and ids else ([] if is_admin else None)
+            return {"date": day, "items": intake_mod.agenda(rows, opinions), "opinionsVisible": is_admin}
+        except intake_mod.IntakeError as e:
+            raise _intake_error(e) from e
+
+    @app.get("/api/v1/editorial/intake/{project_id}")
+    def editorial_intake_project(project_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _intake_ctx(request)
+        schema, run = _editorial(request)
+        try:
+            f = _intake_fact(project_id)
+            boards = [intake_mod.board_row(b) for b in run(intake_mod.project_boards_sql(schema, project_id)).get("records") or []]
+            opinions = [intake_mod.opinion_row(o) for o in run(intake_mod.opinions_sql(schema, [project_id])).get("records") or []] \
+                if is_admin else None
+            marks = intake_mod.all_marks(engine, tenant, project_id).get(f["id"], {})
+            can_mark = is_admin or (bool(user) and (f.get("editorAccount") or "") == user.strip().lower())
+            return intake_mod.detail(f, marks, user, today=_today(), late_days=_int_conf("EDITORIAL_INTAKE_LATE_DAYS", 14),
+                                     boards=boards, opinions=opinions, can_mark=can_mark)
+        except intake_mod.IntakeError as e:
+            raise _intake_error(e) from e
+
+    @app.put("/api/v1/editorial/intake/{project_id}/marks/{step}")
+    def editorial_intake_mark(project_id: str, step: int, request: Request) -> dict[str, Any]:
+        engine, tenant, user, display, is_admin = _intake_ctx(request)
+        try:
+            f = _intake_fact(project_id)
+            if not (is_admin or (f.get("editorAccount") or "") == user.strip().lower()):
+                raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Bu adımı projenin editörü ya da yönetici işaretler."})
+            intake_mod.set_mark(engine, tenant, project_id, step, user, display)
+        except intake_mod.IntakeError as e:
+            raise _intake_error(e) from e
+        admin_mod.audit(engine, user, "mark", "editorial_intake", f"{project_id}:{step}", f.get("name"), {"step": step})
+        return {"ok": True}
+
+    @app.delete("/api/v1/editorial/intake/{project_id}/marks/{step}")
+    def editorial_intake_unmark(project_id: str, step: int, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, is_admin = _intake_ctx(request)
+        try:
+            f = _intake_fact(project_id)
+            if not (is_admin or (f.get("editorAccount") or "") == user.strip().lower()):
+                raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Bu adımı projenin editörü ya da yönetici geri alır."})
+            removed = intake_mod.clear_mark(engine, tenant, project_id, step)
+        except intake_mod.IntakeError as e:
+            raise _intake_error(e) from e
+        if removed:
+            admin_mod.audit(engine, user, "unmark", "editorial_intake", f"{project_id}:{step}", f.get("name"), {"step": step})
+        return {"ok": True, "removed": removed}
+
+    # ------------------------------------------------------------------ basın ve web
+    # Açık RSS akışları + Wikidata; eşleşme yerel modelle süzülür, ekrana yalnız ilgili bulunan çıkar.
+    # Tur gece zamanlayıcıyla (timas-web-watch.timer) bu uca gelir; mantık burada, birim yalnız çağırır.
+    from semantic_bridge import web_watch as web_mod
+
+    def _web(request: Request) -> tuple[Any, str]:
+        engine, tenant, _, _ = _greetings(request)
+        web_mod.ensure(engine)
+        return engine, tenant
+
+    @app.post("/api/v1/editorial/web/run-due")
+    def editorial_web_run(request: Request, budget: int = 1800) -> dict[str, Any]:
+        _require_caller(request)
+        r = rt()
+        schema = admin_mod.conf("CRM_SCHEMA")
+
+        def fetch_all(sql: str) -> list[dict[str, Any]]:
+            out = r.run_complete(sql)
+            path = out.get("_result_file")
+            rows = r.result_files.read(path) if path else list(out.get("records") or [])
+            cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+            return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+        from semantic_layer.runtime.llm_queue import BATCH
+        return web_mod.run_due(r.store.engine, r.settings.tenant_id, fetch_all, schema, r.llm_for("web", BATCH),
+                               budget_seconds=max(60, min(int(budget), 6 * 3600)))
+
+    @app.get("/api/v1/editorial/web")
+    def editorial_web_overview(request: Request, page: int = 0, label: str = "") -> dict[str, Any]:
+        engine, tenant = _web(request)
+        return web_mod.overview(engine, tenant, page, label or None)
+
+    @app.get("/api/v1/editorial/web/people/{contact_id}")
+    def editorial_web_person(contact_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant = _web(request)
+        return web_mod.person(engine, tenant, contact_id)
+
+    @app.get("/api/v1/editorial/web/books/{book_id}")
+    def editorial_web_book(book_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant = _web(request)
+        return web_mod.book(engine, tenant, book_id)
 
     @app.get("/api/v1/editorial/contracts/summary")
     def editorial_contracts_summary(request: Request) -> dict[str, Any]:

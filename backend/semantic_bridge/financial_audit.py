@@ -307,8 +307,10 @@ def register(app, runtime, authorize):
     def list_runs(request: Request):
         authorize(request)
         root = archive_root()
-        files = sorted(root.glob('*.meta.json'), key=lambda p:p.stat().st_mtime, reverse=True)[:30] if root.exists() else []
-        return {'items':[json.loads(p.read_text()) for p in files], 'limit':30}
+        # Bütün arşiv döner (sessiz tavan yok); seçici yazarak arar ve listeyi pencereleyerek çizer.
+        files = sorted(root.glob('*.meta.json'), key=lambda p:p.stat().st_mtime, reverse=True) if root.exists() else []
+        items = [json.loads(p.read_text()) for p in files]
+        return {'items':items, 'total':len(items)}
 
     @app.get('/api/v1/financial-audit/runs/{run_id}')
     def saved_run(request: Request, run_id: str):

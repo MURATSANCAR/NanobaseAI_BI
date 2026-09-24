@@ -6,8 +6,10 @@ import Shell from '../stitch/Shell';
 import { managementRail } from '../stitch/screens';
 import { ENGINE_ENABLED } from '../engine';
 import { clockOffset, formatCell, managementApi, mergeSnapshot, numberOf, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
+import ExplainPanel from './ExplainPanel';
 import LiveStatus from './LiveStatus';
 import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
+import SearchSelect from '../components/SearchSelect';
 import './management.css';
 
 const REPORT_ID = 'baski-oneri';
@@ -22,6 +24,8 @@ const FILTER_LABELS: Record<string, string> = {
   yazar: 'Yazar',
   statu: 'Statü',
   urun_adi: 'Ürün Adı',
+  guven: 'Güven',
+  liste: 'Liste',
 };
 
 const TEXTUAL = new Set(['text', 'oneri', 'date']);
@@ -195,7 +199,7 @@ export default function BaskiOneri() {
   };
 
   const refreshing = refresh.isPending || !!snap?.refreshing;
-  const levels = snap?.data?.oneriLevels ?? [];
+  const levels = view?.oneriLevels ?? snap?.data?.oneriLevels ?? [];
   const activeFilters =
     oneri.size + Object.values(selects).filter(Boolean).length + (search ? 1 : 0) + (presets.length - dropped.size);
 
@@ -285,7 +289,7 @@ export default function BaskiOneri() {
                 </label>
               </div>
 
-              <div className="mg-levels" role="group" aria-label="Öneriye göre süz">
+              <div className="mg-levels" role="group" aria-label="Öneriye göre süz" style={{ ['--mg-level-count' as string]: levels.length || 5 }}>
                 {levels.map((level) => {
                   const on = oneri.has(level);
                   return (
@@ -344,17 +348,15 @@ export default function BaskiOneri() {
 
               <div className="mg-filters">
                 {Object.entries(options).map(([key, values]) => (
-                  <label key={key} className="mg-select">
-                    <span>{FILTER_LABELS[key] ?? key}</span>
-                    <select value={selects[key] ?? ''} onChange={(e) => setSelects((s) => ({ ...s, [key]: e.target.value }))}>
-                      <option value="">Tümü</option>
-                      {values.map((v) => (
-                        <option key={v} value={v}>
-                          {v}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  <div key={key} className="mg-select">
+                    <span aria-hidden>{FILTER_LABELS[key] ?? key}</span>
+                    <SearchSelect
+                      label={FILTER_LABELS[key] ?? key}
+                      options={values}
+                      value={selects[key] ?? ''}
+                      onChange={(v) => setSelects((s) => ({ ...s, [key]: v }))}
+                    />
+                  </div>
                 ))}
                 <p className="mg-count" aria-live="polite">
                   <strong>{rows.length.toLocaleString('tr-TR')}</strong> kitap · {view.hint.toLocaleLowerCase('tr')}
@@ -376,6 +378,7 @@ export default function BaskiOneri() {
               </div>
 
               <ReportTable view={view} rows={rows} sort={sort} onSort={toggleSort} onSource={openSheet} />
+              {view.explain && <ExplainPanel explain={view.explain} />}
             </>
           )}
         </div>
@@ -418,7 +421,7 @@ function ReportTable({
   const stickyLeft = (i: number) => (i === 0 ? 0 : i === 1 ? widthOf(cols[0]) : undefined);
 
   if (rows.length === 0) {
-    return <div className="mg-table-wrap mg-table-empty">Bu süzgeçlere uyan kitap yok.</div>;
+    return <div className="mg-table-wrap mg-table-empty">{view.rows.length === 0 && view.emptyText ? view.emptyText : 'Bu süzgeçlere uyan kitap yok.'}</div>;
   }
 
   return (

@@ -22,14 +22,16 @@ VIEW_IDLE = 24 * 3600
 
 
 class EditorialHomeSnapshots:
-    def __init__(self, scope, builders, warmers=None):
+    def __init__(self, scope, builders, warmers=None, sources=('editorial.py',), name='editorial-home'):
         self.scope = scope
         self.builders = builders
         self.warmers = warmers or (lambda: {})
         self.views_lock = threading.Lock()
         self.stopping = threading.Event()
         self.thread = None
-        self.revision = hashlib.sha256(Path(__file__).read_bytes() + Path(__file__).with_name('editorial.py').read_bytes()).hexdigest()
+        self.name = name
+        # Kaydı üreten kod değişince eski kayıt okunmaz: klasör anahtarı bu dosyaların özetini taşır.
+        self.revision = hashlib.sha256(Path(__file__).read_bytes() + b''.join(Path(__file__).with_name(s).read_bytes() for s in sources)).hexdigest()
 
     def directory(self):
         key = hashlib.sha256(json.dumps([self.revision, self.scope()], sort_keys=True).encode()).hexdigest()
@@ -135,7 +137,7 @@ class EditorialHomeSnapshots:
                 except Exception:
                     log.exception('Editorial home refresh unavailable')
                 self.stopping.wait(5)
-        self.thread = threading.Thread(target=schedule, daemon=True, name='editorial-home-refresh')
+        self.thread = threading.Thread(target=schedule, daemon=True, name=self.name + '-refresh')
         self.thread.start()
 
     def stop(self):

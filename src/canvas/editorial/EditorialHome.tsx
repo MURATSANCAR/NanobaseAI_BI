@@ -1,50 +1,20 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { ArrowRight, BookOpenCheck, CalendarClock, FileSignature, PenLine, Users } from 'lucide-react';
-import { ENGINE_ENABLED, type Work, type ContractPage } from '../engine';
+import { ArrowRight, CalendarClock } from 'lucide-react';
+import { ENGINE_ENABLED, type Work, type ContractPage, type IntakeCard } from '../engine';
 import { useTimasSession } from '../TimasSession';
 import { editorialHomeOptions } from './homeQuery';
+import { intakeBoardOptions } from './queries';
+import { MARK_LABEL, MarkButton, Progress, TodoGroups, waitingSentence } from './intake/parts';
 import { Note, Pill, errText, nf, fmtDate } from '../admin/ui';
 import { dateTime } from '../format';
 import { ModuleFrame, Panel } from './kit';
 import SearchBox from './SearchBox';
 import AskBox from './AskBox';
 
-/** Editoryal Süreç ana ekranı: sekiz modülün özeti tek yerde ve kişinin masasında bekleyen iş.
- *  Her rakam modülün kendi ucundan gelir; kaynağı olmayan kart yoktur. */
-
-type Card = {
-  code: string;
-  to: string;
-  title: string;
-  icon: typeof Users;
-  /** Modülün kendi özetinden tek satır; veri yüklenmediyse boş. */
-  line?: string;
-  extra?: string;
-};
-
-function ModuleCard({ c }: { c: Card }) {
-  const Icon = c.icon;
-  return (
-    <li>
-      <Link
-        to={c.to}
-        className="group flex h-full flex-col rounded-2xl border border-slate-100 bg-white/85 p-3.5 transition-[transform,background-color] duration-150 ease-out hover:bg-white active:scale-[0.99]"
-      >
-        <span className="flex items-center gap-2">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-canvas-violet/10 text-canvas-violet">
-            <Icon aria-hidden className="h-4 w-4" />
-          </span>
-          <span className="font-mono text-[11px] font-bold tabular-nums text-canvas-muted">{c.code}</span>
-          <ArrowRight aria-hidden className="ml-auto h-4 w-4 shrink-0 text-canvas-muted transition-transform duration-150 ease-out group-hover:translate-x-0.5" />
-        </span>
-        <span className="mt-2 block text-[13.5px] font-extrabold leading-snug">{c.title}</span>
-        {c.line && <span className="mt-1 block text-[12px] font-semibold leading-snug text-canvas-ink">{c.line}</span>}
-        {c.extra && <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">{c.extra}</span>}
-      </Link>
-    </li>
-  );
-}
+/** Masam: editörün ana ekranı. En üstte bugün yapacağı iş, altında kendisine atanmış bütün dosyalar.
+ *  Dosya, CRM proje kartında editörü oturumdaki kişi olan yazar giriş süreci projesidir. */
 
 /** Kişinin masasında duran iş: karar bekleyen öneri, onaylanmamış bölüm, imza bekleyen prova. */
 function Desk({ works, user }: { works: Work[]; user: string }) {
@@ -120,152 +90,237 @@ function Expiring({ data }: { data?: ContractPage }) {
   );
 }
 
+const greeting = () => {
+  const h = new Date().getHours();
+  return h < 11 ? 'Günaydın' : h < 18 ? 'İyi günler' : 'İyi akşamlar';
+};
+
+/** "Şimdi yapılacaklar": tek iş, tek düğme. İşaretlenebilen adımda düğme işi kapatır, öbürlerinde projeyi açar. */
+function TodoCard({ c }: { c: IntakeCard }) {
+  const label = c.step ? MARK_LABEL[c.step] : undefined;
+  return (
+    <li className="flex flex-col rounded-2xl border border-slate-100 bg-white/90 p-3.5">
+      <span className={`self-start rounded-md px-1.5 py-0.5 font-mono text-[11px] font-bold tabular-nums ${c.late ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-800'}`}>
+        {waitingSentence(c)}
+        {c.late ? ', gecikti' : ''}
+      </span>
+      <Link to={`/yazar-giris/${c.id}`} className="mt-2 break-words text-[14px] font-extrabold leading-snug hover:underline">
+        {c.name || 'Adsız proje'}
+      </Link>
+      <span className="text-[11.5px] text-canvas-muted">{c.author || 'Yazar girilmemiş'}</span>
+      <span className="mt-2 rounded-xl bg-slate-50 px-3 py-2 text-[12.5px] font-semibold leading-snug">{c.line}</span>
+      <div className="mt-auto pt-3">
+        {label && c.step ? (
+          <MarkButton projectId={c.id} step={c.step} label={label} className="[&_button]:w-full" />
+        ) : (
+          <Link to={`/yazar-giris/${c.id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-canvas-violet px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-md transition-transform duration-150 ease-out active:scale-[0.97] sm:min-h-0">
+            Aç
+            <ArrowRight aria-hidden className="h-4 w-4" />
+          </Link>
+        )}
+      </div>
+    </li>
+  );
+}
+
+const FILTERS = [
+  { key: 'all', label: 'Tümü' },
+  { key: 'waiting', label: 'Sizde bekleyen' },
+  { key: 'board', label: 'Kurulda' },
+  { key: 'done', label: 'Tamamlanan' },
+] as const;
+
+function MyFiles({ running, todo, completed }: { running: IntakeCard[]; todo: IntakeCard[]; completed: IntakeCard[] }) {
+  const [f, setF] = useState<(typeof FILTERS)[number]['key']>('all');
+  const lists = { all: [...running, ...completed], waiting: todo, board: running.filter((c) => c.phase === 2), done: completed };
+  const items = lists[f];
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <h2 className="text-[13px] font-extrabold">Tüm dosyalarım</h2>
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Süzgeç">
+          {FILTERS.map((x) => (
+            <button
+              key={x.key}
+              type="button"
+              aria-pressed={f === x.key}
+              onClick={() => setF(x.key)}
+              className={`min-h-9 rounded-xl px-2.5 text-[11.5px] font-extrabold transition-colors duration-150 ${f === x.key ? 'bg-canvas-violet text-white' : 'bg-slate-100 text-canvas-ink hover:bg-slate-200'}`}
+            >
+              {x.label} <span className="font-mono tabular-nums">{nf.format(lists[x.key].length)}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+      {items.length === 0 ? (
+        <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan dosya yok.</p>
+      ) : (
+        <ul className="mt-2">
+          {items.map((c) => (
+            <li key={c.id} className="border-t border-slate-100 first:border-t-0">
+              <Link to={`/yazar-giris/${c.id}`} className="grid gap-1.5 py-2.5 sm:grid-cols-[minmax(0,1fr)_200px_110px] sm:items-center sm:gap-4">
+                <span className="min-w-0">
+                  <span className="block break-words text-[13px] font-extrabold leading-snug">{c.name || 'Adsız proje'}</span>
+                  <span className="block text-[11.5px] text-canvas-muted">{c.author || 'Yazar girilmemiş'}</span>
+                </span>
+                <span>
+                  <span className={`block text-[11.5px] font-semibold ${c.late ? 'text-red-700' : c.complete ? 'text-emerald-700' : ''}`}>
+                    {c.step ? `${c.line} (adım ${c.step}/9)` : c.line}
+                  </span>
+                  <span className="mt-1 block">
+                    <Progress card={c} />
+                  </span>
+                </span>
+                <span className="font-mono text-[11px] tabular-nums text-canvas-muted sm:text-right">{dateTime(c.modifiedOn)}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Panel>
+  );
+}
+
+/** Yönetici görünümü: editör başına süren, bekleyen, geciken ve kuruldaki dosya. */
+function EditorSummary({ items, todo }: { items: IntakeCard[]; todo: IntakeCard[] }) {
+  const by = new Map<string, { editor: string; running: number; waiting: number; late: number; board: number }>();
+  for (const c of items) {
+    const k = c.editor || 'Editör atanmamış';
+    const r = by.get(k) ?? { editor: k, running: 0, waiting: 0, late: 0, board: 0 };
+    r.running += 1;
+    if (c.late) r.late += 1;
+    if (c.phase === 2) r.board += 1;
+    by.set(k, r);
+  }
+  for (const c of todo) {
+    const r = by.get(c.editor || 'Editör atanmamış');
+    if (r) r.waiting += 1;
+  }
+  const rows = [...by.values()].sort((a, b) => b.late - a.late || b.running - a.running);
+  return (
+    <Panel>
+      <h2 className="px-1 text-[13px] font-extrabold">Editörlere göre dosyalar</h2>
+      <div className="mt-2 overflow-x-auto">
+        <table className="w-full min-w-[420px] text-[12.5px]">
+          <thead>
+            <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+              <th className="px-2 py-1.5">Editör</th>
+              <th className="px-2 py-1.5 text-right">Süren</th>
+              <th className="px-2 py-1.5 text-right">Editörde bekleyen</th>
+              <th className="px-2 py-1.5 text-right">Kurulda</th>
+              <th className="px-2 py-1.5 text-right">Geciken</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.editor} className="border-t border-slate-100">
+                <td className="px-2 py-1.5 font-semibold">{r.editor}</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums">{nf.format(r.running)}</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums">{nf.format(r.waiting)}</td>
+                <td className="px-2 py-1.5 text-right font-mono tabular-nums">{nf.format(r.board)}</td>
+                <td className={`px-2 py-1.5 text-right font-mono tabular-nums ${r.late ? 'font-bold text-red-700' : ''}`}>{nf.format(r.late)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Panel>
+  );
+}
+
 export default function EditorialHome() {
   const session = useTimasSession();
   const home = useQuery(editorialHomeOptions(session.data?.username ?? ''));
+  const intake = useQuery(intakeBoardOptions());
   const parts = home.data?.parts;
-  const works = { data: home.data?.works, isLoading: !home.data?.works };
-  const contracts = { data: parts?.contracts.data, isLoading: !parts?.contracts.data };
-  const board = { data: parts?.board.data, isLoading: !parts?.board.data };
-  const editors = { data: parts?.editors.data, isLoading: !parts?.editors.data };
-  const roles = { data: parts?.roles.data };
-  const updated = Object.values(parts ?? {}).flatMap((part) => part.updatedAt ? [part.updatedAt] : []);
+  const works = { data: home.data?.works };
+  const desk = works.data?.items ?? [];
+  const updated = Object.values(parts ?? {}).flatMap((part) => (part.updatedAt ? [part.updatedAt] : []));
   const lastUpdated = updated.length ? Math.min(...updated) : null;
   const refreshFailed = Object.values(parts ?? {}).some((part) => part.error);
-
-  const c = contracts.data;
-  const year = board.data?.years?.[0];
-  const o = editors.data;
-  const byRole = (name: string) => roles.data?.items.find((r) => r.role === name)?.people ?? 0;
-  const assigned = (o?.items ?? []).reduce((a, b) => a + b.total, 0);
-  const unassigned = (o?.unassigned ?? []).reduce((a, b) => a + b.count, 0);
-  const desk = works.data?.items ?? [];
-  const freelancers = ['Çizer', 'Kapak Tasarım', 'Mizanpaj Yapan', 'Redaktör', 'Tashih', 'Yayına Hazırlayan', 'Derleyen', 'Danışman'].reduce((a, r) => a + byRole(r), 0);
-
-  const cards: Card[] = [
-    {
-      code: 'M1',
-      to: '/yayin-kurulu',
-      title: 'Başvuru & Yayın Kurulu',
-      icon: BookOpenCheck,
-      line: year ? `${year.year}: ${nf.format(year.total)} karar` : undefined,
-      extra: year ? `${nf.format(year.sessions)} oturum · son ${dateTime(year.last)}` : undefined,
-    },
-    {
-      code: 'M2',
-      to: '/editor-atama',
-      title: 'Editör Atama',
-      icon: Users,
-      line: o ? `${nf.format(o.items.length)} editör` : undefined,
-      extra: o ? `${nf.format(assigned)} projede editör var, ${nf.format(unassigned)} projede yok` : undefined,
-    },
-    {
-      code: 'M3',
-      to: '/redaksiyon',
-      title: 'Redaksiyon',
-      icon: PenLine,
-      line: !works.data ? 'Okunuyor…' : desk.length ? `${nf.format(desk.filter((w) => w.manuscript).length)} eserde metin var` : 'Henüz metin yüklenmedi',
-      extra: !works.data ? undefined : desk.length ? `${nf.format(desk.reduce((a, w) => a + w.chapters.total, 0))} bölüm` : 'DOCX, PDF ya da TXT yükleyin',
-    },
-    {
-      code: 'M4',
-      to: '/cevirmenler',
-      title: 'Çeviri Yönetimi',
-      icon: Users,
-      line: roles.data ? `${nf.format(byRole('Tercüme'))} çevirmen` : undefined,
-      extra: 'Eser katılım kayıtlarından',
-    },
-    {
-      code: 'M5',
-      to: '/son-okuma',
-      title: 'Son Okuma',
-      icon: FileSignature,
-      line: !works.data ? 'Okunuyor…' : desk.length ? `${nf.format(desk.filter((w) => w.proof).length)} eserde prova var` : 'Henüz prova yüklenmedi',
-      extra: !works.data ? undefined : desk.some((w) => w.proof) ? `${nf.format(desk.reduce((a, w) => a + w.signatures.signed, 0))}/${nf.format(desk.reduce((a, w) => a + w.signatures.total, 0))} imza` : 'Baskıya giden PDF’i yükleyin',
-    },
-    {
-      code: 'M6',
-      to: '/telif-sozlesme',
-      title: 'Telif & Sözleşme',
-      icon: FileSignature,
-      line: c ? `${nf.format(c.active)} yürürlükte sözleşme` : undefined,
-      extra: c ? `${nf.format(c.expiring)} tanesi ${c.warnDays} günde bitiyor` : undefined,
-    },
-    {
-      code: 'M7',
-      to: '/yazarlar',
-      title: 'Yazar İlişkileri',
-      icon: Users,
-      line: roles.data ? `${nf.format(byRole('Yazar'))} yazar` : undefined,
-      extra: 'Eserleri, sözleşmeleri, projeleri',
-    },
-    {
-      code: 'Stüdyo',
-      to: '/kitap-tasarim',
-      title: 'Kitap Tasarım Stüdyosu',
-      icon: PenLine,
-      line: 'Metinden baskıya hazır kitap',
-      extra: 'Sayfa yerleşimi, resimler, kapak, ön baskı denetimi',
-    },
-    {
-      code: 'M8',
-      to: '/cizer-freelancer',
-      title: 'Çizer & Freelancer',
-      icon: Users,
-      line: roles.data ? `${nf.format(freelancers)} kişi` : undefined,
-      extra: roles.data ? `${nf.format(byRole('Çizer'))} çizer, ${nf.format(byRole('Kapak Tasarım'))} kapak tasarımcısı` : undefined,
-    },
-  ];
-
-  const err = errText(home.error, 'Özet okunamadı.');
+  const d = intake.data;
+  const all = d?.todoScope === 'all';
+  const running = (d?.items ?? []).filter((c) => c.mine);
+  const completed = (d?.completed ?? []).filter((c) => c.mine);
+  const todo = d?.todo ?? [];
+  const firstName = (session.data?.displayName || session.data?.username || '').split(' ')[0];
+  const err = errText(home.error || intake.error, 'Masa okunamadı.');
 
   return (
     <ModuleFrame
       route="/editoryal"
-      code="Editoryal"
-      crumb="Masa"
-      title="Editoryal masa"
-      lead="Başvurudan baskı onayına kadar sekiz modül. Rakamlar CRM'den ve editoryal masanın kendi kayıtlarından gelir; kaynağı olmayan bir sayı gösterilmez."
-      source="Editoryal Süreç"
+      crumb="Masam"
+      title={firstName ? `${greeting()} ${firstName}` : 'Masam'}
+      lead={
+        !d || d.loading
+          ? 'Size atanmış dosyalar CRM\'den okunuyor…'
+          : all
+            ? `Yönetici görünümü: ${nf.format(d.items.length)} dosya sürüyor, editörlerde ${nf.format(todo.length)} iş bekliyor.`
+            : running.length
+            ? `Size atanmış ${nf.format(running.length)} dosya sürüyor.${todo.length ? ` ${nf.format(todo.length)} tanesi şu an sizi bekliyor.` : ' Şu an sizi bekleyen iş yok.'}`
+            : 'Şu an size atanmış, süren dosya yok. Yeni dosya atanınca burada görünür.'
+      }
+      source="Kaynak: CRM"
       aside={<SearchBox />}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
-      {err && <Note tone="err">{home.data ? 'Veriler yenilenemedi; son alınan bilgiler gösteriliyor.' : err}</Note>}
-      <div className="flex flex-wrap items-center gap-2 text-[11.5px] text-canvas-muted" role="status">
-        <span>{lastUpdated ? `Son güncelleme: ${fmtDate(new Date(lastUpdated * 1000).toISOString())}` : 'Kaydedilmiş veriler alınıyor…'}</span>
-        {home.isFetching && home.data && <span>Güncelleniyor…</span>}
-      </div>
+      {err && <Note tone="err">{home.data || d ? 'Veriler yenilenemedi; son alınan bilgiler gösteriliyor.' : err}</Note>}
       {(refreshFailed || home.data?.stale) && <Note tone="warn">Bazı veriler henüz yenilenemedi. Son başarılı bilgiler korunuyor; güncelleme yeniden denenecek.</Note>}
 
-      {/* Sohbet açılışta ilk sırada: sayılar modül kartlarında zaten var (kullanıcı kararı 09-22). */}
+      {all && todo.length > 0 && (
+        <section>
+          <h2 className="px-1 text-[13px] font-extrabold">Editörlerin bekleyen işleri</h2>
+          <div className="mt-2">
+            <TodoGroups todo={todo} openFirst />
+          </div>
+        </section>
+      )}
+
+      {!all && todo.length > 0 && (
+        <section>
+          <h2 className="px-1 text-[13px] font-extrabold">Şimdi yapılacaklar</h2>
+          <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {todo.map((c) => (
+              <TodoCard key={c.id} c={c} />
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {/* Sohbet açılışta üstte kalır (kullanıcı kararı 09-22); dosyası olan editörde işlerin altına iner. */}
       <AskBox />
 
-      <section>
-        <h2 className="px-1 text-[13px] font-extrabold">Modüller</h2>
-        <ul className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-          {cards.map((x) => (
-            <ModuleCard key={x.code} c={x} />
-          ))}
-        </ul>
-      </section>
-
-      <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
-        <Expiring data={parts?.expiring.data} />
-        {works.data && <Desk works={desk} user={works.data.user} />}
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)] lg:items-start lg:gap-4">
+        <div className="space-y-3">
+          {all && d && <EditorSummary items={d.items} todo={todo} />}
+          {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} />}
+          {works.data && <Desk works={desk} user={works.data.user} />}
+        </div>
+        <div className="space-y-3">
+          <Panel>
+            <h2 className="px-1 text-[13px] font-extrabold">Yaklaşan</h2>
+            <ul className="mt-2 space-y-1.5 text-[12.5px]">
+              <li className="flex items-start gap-2 rounded-xl border border-slate-100 bg-white/85 px-3 py-2">
+                <CalendarClock aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-canvas-violet" />
+                <span className="min-w-0">
+                  <Link to="/yayin-kurulu" className="font-semibold hover:underline">
+                    {d?.lastBoard ? `Son yayın kurulu ${dateTime(d.lastBoard)}` : 'Yayın kurulu'}
+                  </Link>
+                  <span className="block text-[11px] text-canvas-muted">
+                    {running.filter((c) => c.phase === 2).length
+                      ? `${nf.format(running.filter((c) => c.phase === 2).length)} dosyanız kurul evresinde`
+                      : 'Kurul evresinde dosyanız yok'}
+                  </span>
+                </span>
+              </li>
+            </ul>
+          </Panel>
+          <Expiring data={parts?.expiring.data} />
+          <p className="px-1 text-[11px] text-canvas-muted">
+            {lastUpdated ? `Son güncelleme: ${fmtDate(new Date(lastUpdated * 1000).toISOString())}` : 'Kaydedilmiş veriler alınıyor…'}
+          </p>
+        </div>
       </div>
-
-      <Panel>
-        <h2 className="px-1 text-[13px] font-extrabold">Bu masada olmayanlar</h2>
-        <ul className="mt-2 space-y-1 px-1 text-[12px] leading-snug text-canvas-muted">
-          <li>
-            <CalendarClock aria-hidden className="mr-1 inline h-3.5 w-3.5 align-[-2px]" />
-            Başvuru kuyruğu ve puanlama: CRM'deki başvuru tablosu kullanılmıyor (19 kayıt, son 2024).
-          </li>
-          <li>Redaksiyon takvimi ve iş yükü yüzdesi: proje kartındaki aşama ve teslim tarihi alanları neredeyse boş.</li>
-          <li>Telif hakedişi ve ödeme takvimi: CRM'de hakediş kaydı yok.</li>
-          <li>Kurul oyu, atama, randevu ve freelancer kaydı gibi yazma işlemleri: CRM'e yazma yolu henüz yok.</li>
-        </ul>
-      </Panel>
     </ModuleFrame>
   );
 }

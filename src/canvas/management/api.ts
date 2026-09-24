@@ -27,6 +27,22 @@ export type ReportView = {
   filters: string[];
   /** Power BI dosyasında kayıtlı açılış dilimleyicileri; ekran bunları seçili açar. null = boş değer. */
   defaultFilters?: Array<{ key: string; values: Array<string | null> }>;
+  /** Sekmenin son kullanıcı açıklaması ve altındaki SQL'ler (ZEKI AI Tahminleme). */
+  explain?: ReportExplain;
+  /** Bu sekmenin öneri düzeyleri (yoksa raporunki). ZEKI sekmesi "Talep yok" ekler. */
+  oneriLevels?: string[];
+  /** Satır yokken tabloda gösterilecek metin (ör. tahmin hazırlanıyor). */
+  emptyText?: string | null;
+};
+
+export type ReportExplain = {
+  title: string;
+  intro: string[];
+  sections: Array<{ title: string; items: string[] }>;
+  table?: { caption: string; head: string[]; rows: string[][] };
+  notes: string[];
+  formulas?: Array<{ name: string; text: string }>;
+  sql: Array<{ id: string; title: string; description: string; sql: string }>;
 };
 
 export type ReportSnapshot = {
@@ -119,6 +135,7 @@ export const ONERI_TONE: Record<string, string> = {
   'Karar Ver': 'mg-tone-decide',
   'Takip Et': 'mg-tone-watch',
   'Yeterli Stok': 'mg-tone-ok',
+  'Talep yok': 'mg-tone-none',
 };
 
 const intFmt = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });

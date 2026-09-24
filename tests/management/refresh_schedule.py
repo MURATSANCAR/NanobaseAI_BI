@@ -28,6 +28,14 @@ ok("başarısız okuma da aynı kurala uyar",
 ok("eski önbellek (startedAt yok): bitişten 5 dk sonra", _next_due({"updatedAt": T}) == T + 300)
 ok("başarıdan sonraki hata: en yeni bitiş sayılır",
    _next_due({"startedAt": T + 600, "updatedAt": T, "failedAt": T + 900}) == T + 960)
+ok("gecelik rapor başarılıysa 24 saat bekler",
+   _next_due({"startedAt": T, "updatedAt": T + 2000}, 86400) == T + 86400)
+ok("gecelik rapor hata verdiyse 30 dk sonra yeniden dener",
+   _next_due({"startedAt": T, "failedAt": T + 600}, 86400) == T + 1800)
+ok("gecelik rapor uzun sürüp hata verdiyse bitişten en az 1 dk sonra",
+   _next_due({"startedAt": T, "failedAt": T + 2000}, 86400) == T + 2060)
+ok("eski başarı + yeni hata: hata sayılır",
+   _next_due({"startedAt": T + 90000, "updatedAt": T, "failedAt": T + 90100}, 86400) == T + 91800)
 
 print("SONUÇ:", f"{sum(sonuc)}/{len(sonuc)} geçti")
 raise SystemExit(0 if all(sonuc) else 1)

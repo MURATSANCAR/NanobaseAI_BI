@@ -6,6 +6,7 @@ import { contributorsListOptions, roleFacetsOptions } from './queries';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime, pct } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
+import { WebSection } from './web/parts';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -13,7 +14,6 @@ import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 
 export type ContributorModule = {
   route: string;
-  code: string;
   crumb: string;
   title: string;
   lead: string;
@@ -64,6 +64,8 @@ function Detail({ p, onClose }: { p: PersonDetail; onClose: () => void }) {
           ))}
         </ul>
       </Block>
+
+      <WebSection kind="person" id={p.id} />
 
       {p.contracts.length > 0 && (
         <Block title="Sözleşmeler" count={p.contracts.length}>
@@ -124,12 +126,12 @@ function Row({ c, active, onOpen }: { c: Contributor; active: boolean; onOpen: (
   );
 }
 
-export default function ContributorsScreen({ module: m }: { module: ContributorModule }) {
+export default function ContributorsScreen({ module: m, aside, initialOpen }: { module: ContributorModule; aside?: React.ReactNode; initialOpen?: string | null }) {
   const [text, setText] = useState('');
   const [role, setRole] = useState('');
   const [order, setOrder] = useState('son');
   const [page, setPage] = useState(0);
-  const [open, setOpen] = useState<string | null>(null);
+  const [open, setOpen] = useState<string | null>(initialOpen ?? null);
   const q = useDebounced(text.trim(), 350);
   const roles = useMemo(() => (role ? [role] : m.roles), [role, m.roles]);
 
@@ -145,7 +147,7 @@ export default function ContributorsScreen({ module: m }: { module: ContributorM
   const err = errText(list.error || person.error, 'Kayıtlar okunamadı.');
 
   return (
-    <ModuleFrame route={m.route} code={m.code} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'}>
+    <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'} aside={aside}>
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 

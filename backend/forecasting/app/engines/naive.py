@@ -41,3 +41,16 @@ class SeasonalNaiveEngine(ForecastEngine):
         sigma = self._residual_sigma([y[i] - y[i - m] for i in range(m, len(y))])
         # Seasonal-naive error does not compound within the first season.
         return EngineForecast(points=self._interval_points(bundle, point, sigma, widen=False), warnings=warnings)
+
+
+    def forecast_batch(self, contexts, starts, horizon, *, calendar=False, peak_months=None, shared=None):
+        """Geçen yılın aynı ayı; kantiller nokta tahmine eşit (aralık yok). Test ve TimesFM'siz kurulum için."""
+        import numpy as np
+
+        out = []
+        for ctx in contexts:
+            y = np.nan_to_num(np.asarray(ctx, dtype=np.float64), nan=0.0)
+            last = y[-12:] if len(y) >= 12 else np.resize(y, 12)
+            point = np.array([last[h % 12] for h in range(horizon)])
+            out.append(np.repeat(point[:, None], 9, axis=1))
+        return out

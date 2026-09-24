@@ -6,6 +6,7 @@ import { railFor } from '../stitch/screens';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import DeepAuditPanel, { type DeepAudit } from './DeepAuditPanel';
 import SqlEvidence from './SqlEvidence';
+import SearchSelect from '../components/SearchSelect';
 import FindingReason from './FindingReason';
 import { findingSummary, accountExplanation, balanceSignExplanation } from './findings';
 import { accountingText, checkExplanations } from './presentation';
@@ -100,7 +101,8 @@ export default function FinancialAudit() {
       void queryClient.invalidateQueries({ queryKey: ['financial-audit', 2026, ''], exact: true });
     }
   }, [runChoice, refreshStatus.data?.runId, overview.data?.runId, queryClient]);
-  const runs = useQuery({ queryKey: ['financial-audit-runs', overview.data?.runId], queryFn: () => get<{ items: Array<{runId: string; computedAt: string}> }>('runs'), enabled: !!overview.data?.runId, retry: false });
+  const runs = useQuery({ queryKey: ['financial-audit-runs', overview.data?.runId], queryFn: () => get<{ items: Array<{runId: string; computedAt: string}>; total: number }>('runs'), enabled: !!overview.data?.runId, retry: false });
+  const runOptions = useMemo(() => (runs.data?.items ?? []).map(r => ({ value: r.runId, label: new Date(r.computedAt).toLocaleString('tr-TR') })), [runs.data]);
   const detail = useQuery({ queryKey: ['financial-audit-lines', overview.data?.runId, account?.accountRef, page], queryFn: () => get<Detail>(`lines?year=2026&account=${account!.accountRef}&page=${page}`), enabled: !!account, retry: false });
   const documents = useQuery({ queryKey: ['financial-audit-documents', overview.data?.runId, documentAccount, documentPage], queryFn: () => get<DocumentPage>(`documents?year=2026&page=${documentPage}${documentAccount ? `&main_account=${documentAccount}` : ''}`), enabled: tab === 'evidence', retry: false });
   const data = overview.data;
@@ -140,7 +142,7 @@ export default function FinancialAudit() {
         <div className="audit-message" role="status">{refreshing && <Loader2 size={16} className="animate-spin" />}<span><b>Son güncelleme: {new Date(data.computedAt).toLocaleString('tr-TR')}</b> · {refreshing ? 'Yeni hesaplama arka planda hazırlanıyor; mevcut raporu incelemeye devam edebilirsiniz.' : runChoice ? 'Arşivden seçtiğiniz rapor gösteriliyor.' : 'Son tamamlanan rapor gösteriliyor. Veriler saatlik olarak ve isteğiniz üzerine yenilenir.'}</span></div>
         {(overview.error || refresh.error || refreshStatus.error || refreshStatus.data?.state === 'error') && <div className="audit-message audit-warning" role="alert"><span>{refreshStatus.data?.state === 'error' ? refreshStatus.data.message : 'Güncel rapor kontrolü tamamlanamadı. Görüntülediğiniz son başarılı rapor korunuyor.'}</span><button className="audit-button" disabled={refreshing} onClick={() => refresh.mutate()}>Yenilemeyi tekrar dene</button></div>}
 
-        <div className="audit-toolbar"><label className="audit-run-picker">Çalışma raporu <select aria-label="Kaydedilmiş denetim raporu" value={runChoice} onChange={e => { setRunChoice(e.target.value); setSelected(null); setAccount(null); }}><option value="">Son tamamlanan rapor</option>{runs.data?.items.map(r => <option key={r.runId} value={r.runId}>{new Date(r.computedAt).toLocaleString('tr-TR')}</option>)}</select></label><span className="audit-badge">{runChoice ? 'Kaydedilmiş hesaplama · Logo hareket detayı ayrı okumadır' : 'Rapor ve inceleme notları arşivlenir'}</span></div>
+        <div className="audit-toolbar"><div className="audit-run-picker"><span aria-hidden>Çalışma raporu{runs.data ? ` · ${runs.data.total.toLocaleString('tr-TR')} kayıt` : ''}</span><SearchSelect label="Kaydedilmiş denetim raporu" placeholder="Son tamamlanan rapor" className="sm:w-64" value={runChoice} onChange={v => { setRunChoice(v); setSelected(null); setAccount(null); }} options={runOptions} /></div><span className="audit-badge">{runChoice ? 'Kaydedilmiş hesaplama · Logo hareket detayı ayrı okumadır' : 'Rapor ve inceleme notları arşivlenir'}</span></div>
 
         <nav className="audit-tabs" aria-label="Denetim bölümleri">{tabs.map(([id, title]) => <button key={id} aria-current={tab === id ? 'page' : undefined} onClick={() => { setTab(id); setSearch(''); }}>{title}{id === 'catalog' && <span>{source.items.length}</span>}</button>)}</nav>
 
