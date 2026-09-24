@@ -153,3 +153,51 @@ def screen_group_names(groups: list[dict], text: str, *, min_share: float,
         out.append({"person": True, "reject_reason": None, "canonical": canonical,
                     "aliases": kept, "dropped": dropped})
     return out
+
+
+# ------------------------------------------------------------------ book credits
+# The imprint names the people who made the book — «Yayın Yönetmeni: İhsan Sönmez», «Kapak
+# Tasarımı: Ravza Kızıltuğ». They are the book's credits, not people of its text: read as
+# characters they became «Yayın Yönetmeni», «Kitabın editörü», «kapak tasarımını yapan kişi»
+# in two books of 2026-09-23. Labels as publishers print them (folded: lower case, ASCII).
+CREDIT_LABELS = (
+    "genel yayin yonetmeni", "yayin yonetmeni", "yayin koordinatoru", "yayin editoru", "proje editoru",
+    "dizi editoru", "editor", "editorler", "kapak tasarimi", "kapak tasarim", "kapak illustrasyonu",
+    "kapak resmi", "kapak", "ic tasarim", "sayfa tasarimi", "sayfa duzeni", "grafik tasarim", "mizanpaj",
+    "dizgi", "yayina hazirlayan", "yayina hazirlayanlar", "redaksiyon", "redaktor", "duzelti",
+    "son okuma", "ceviri", "ceviren", "cevirmen", "resimleyen", "resimler", "cizer", "cizimler",
+    "illustrasyon", "illustrasyonlar", "illustrator", "fotograflar", "baski", "cilt", "matbaa",
+)
+_CREDIT_ALT = "|".join(re.escape(x) for x in sorted(CREDIT_LABELS, key=len, reverse=True))
+_CREDIT = re.compile(rf"\b({_CREDIT_ALT})\b")
+_CREDIT_BEFORE = re.compile(rf"\b({_CREDIT_ALT})$")
+
+
+def _fold(s: str) -> str:
+    from .book_type import fold
+    return fold(s)
+
+
+def credit_role(name: str, quote: str, page: int | None, last_page: int) -> str | None:
+    """The imprint role this mention names («kapak tasarimi»), or None when it is a person of
+    the text. A credit is a name printed right next to a credit label, in an imprint:
+      * a block of two or more different labels (an imprint page read as one quote), or
+      * one label, the name and at most one other word, on the book's first or last pages.
+    «Editör Ahmet kapıyı açtı» in a novel keeps Ahmet a character: one label, two other words."""
+    q, n = _fold(quote), _fold(name)
+    if not n or n not in q:
+        return None
+    labels = {m.group(1) for m in _CREDIT.finditer(q)}
+    if not labels:
+        return None
+    i = q.index(n)
+    before, after = q[:i].rstrip(), q[i + len(n):].lstrip()
+    m = _CREDIT_BEFORE.search(before) or _CREDIT.match(after)
+    if not m:
+        return None
+    if len(labels) >= 2:
+        return m.group(1)
+    rest = _CREDIT.sub(" ", q.replace(n, " ")).split()
+    edge = page is not None and (page <= max(6, round(last_page * 0.08))
+                                 or page > last_page - max(4, round(last_page * 0.05)))
+    return m.group(1) if len(rest) <= 1 and edge else None

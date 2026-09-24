@@ -156,3 +156,35 @@ def test_advice_keeps_the_finding_and_opens_no_question():
                                  "severity_as_found": "WARN"}
     assert got[1]["details"]["severity_as_found"] == "ERROR"
     assert found[0]["severity"] == "WARN"                               # the input is not changed
+
+
+# ------------------------------------------------------------------ künye kadrosu
+@pytest.mark.parametrize("name, quote, page, role", [
+    # künye bloğu tek alıntı: iki ve daha çok etiket → her ad kendi etiketinin görevi
+    ("İhsan Sönmez", "Yayın Yönetmeni: İhsan Sönmez Editör: Ayşe Tuba Ayman Kapak Tasarımı: Ravza Kızıltuğ",
+     2, "yayin yonetmeni"),
+    ("Ayşe Tuba Ayman", "Yayın Yönetmeni: İhsan Sönmez Editör: Ayşe Tuba Ayman Kapak Tasarımı: Ravza Kızıltuğ",
+     2, "editor"),
+    ("Ravza Kızıltuğ", "Yayın Yönetmeni: İhsan Sönmez Editör: Ayşe Tuba Ayman Kapak Tasarımı: Ravza Kızıltuğ",
+     2, "kapak tasarimi"),
+    # tek satır künye, kitabın başında
+    ("Tuba Şaklıoğlu", "Yayına Hazırlayan: Tuba Şaklıoğlu", 4, "yayina hazirlayan"),
+    ("Sakine Korkmaz", "Yayına Hazırlayan\nSakine Korkmaz", 3, "yayina hazirlayan"),
+    # kitabın sonundaki künye
+    ("Ravza Kızıltuğ", "Kapak Tasarımı: Ravza Kızıltuğ", 207, "kapak tasarimi"),
+])
+def test_credit_names_are_not_characters(name, quote, page, role):
+    from editor.naming import credit_role
+    assert credit_role(name, quote, page, 208) == role
+
+
+@pytest.mark.parametrize("name, quote, page", [
+    ("Ahmet", "Editör Ahmet kapıyı açtı ve içeri girdi.", 40),        # romanda mesleği editör olan kişi
+    ("Ahmet", "Editör Ahmet geldi.", 90),                               # tek etiket, kitabın ortası
+    ("Maria", "Maria kapağı kapattı ve böcekleri kutuya koydu.", 2),     # etiket yok
+    ("Zeynep", "Zeynep, editörün odasına girdi.", 3),                    # etiket adın yanında değil
+    ("Leyla", "Bu kitap Leyla'ya ithaf edilmiştir.", 5),
+])
+def test_people_of_the_text_stay_characters(name, quote, page):
+    from editor.naming import credit_role
+    assert credit_role(name, quote, page, 208) is None

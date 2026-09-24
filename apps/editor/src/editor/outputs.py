@@ -38,8 +38,9 @@ def capture(c, gid: str) -> dict:
     events = c.execute("SELECT * FROM ed.usable_event WHERE generation_id=%s ORDER BY page_from,id", (gid,)).fetchall()
     emotions = c.execute("SELECT * FROM ed.usable_emotion WHERE generation_id=%s ORDER BY page_no,id", (gid,)).fetchall()
     characters = c.execute("SELECT * FROM ed.character WHERE generation_id=%s ORDER BY id", (gid,)).fetchall()
+    # advice (027_review_advisory) stays visible on the review screen but is no open question
     reviews = c.execute("SELECT id,reason,priority FROM ed.review_item WHERE generation_id=%s "
-        "AND status='OPEN' ORDER BY priority,id", (gid,)).fetchall()
+        "AND status='OPEN' AND NOT advisory ORDER BY priority,id", (gid,)).fetchall()
     contradictions = c.execute("SELECT * FROM ed.contradiction WHERE generation_id=%s ORDER BY id", (gid,)).fetchall()
     regression = c.execute("SELECT id,passed,results FROM ed.regression_run WHERE generation_id=%s "
         "ORDER BY created_at DESC,id DESC LIMIT 1", (gid,)).fetchone()

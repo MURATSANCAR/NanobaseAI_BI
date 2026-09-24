@@ -66,7 +66,8 @@ def readiness(generation_id: str) -> dict:
             "(SELECT count(*) FROM ed.usable_claim WHERE generation_id=%s) AS usable_claims, "
             "(SELECT count(*) FROM ed.usable_event WHERE generation_id=%s) AS usable_events, "
             "(SELECT count(*) FROM ed.usable_emotion WHERE generation_id=%s) AS usable_emotions, "
-            "(SELECT count(*) FROM ed.review_item WHERE generation_id=%s AND status='OPEN') AS open_reviews",
+            "(SELECT count(*) FROM ed.review_item WHERE generation_id=%s AND status='OPEN' AND NOT advisory)"
+            " AS open_reviews",
             (generation_id,)*5).fetchone()
         artifacts = c.execute("SELECT * FROM ed.derived_artifact WHERE generation_id=%s ORDER BY kind",
             (generation_id,)).fetchall()

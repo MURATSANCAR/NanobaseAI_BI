@@ -1277,6 +1277,9 @@ export type BookReviewItem = {
   figures: string[];
   actions: BookReviewAction[];
   link: 'proofing' | null;
+  /** Kitabın türüne uymayan okumanın sorusu (ör. kişisel gelişim kitabında «kim yaptı»): cevaplanabilir,
+   *  ama kabulü engellemez ve `open` sayısına girmez. Eski kart servisi göndermez. */
+  advisory?: boolean;
 };
 export type BookReviewGroup = { type: string; title: string; bulk: boolean; items: BookReviewItem[] };
 export type BookReviewQueue = {
@@ -1285,6 +1288,8 @@ export type BookReviewQueue = {
   generation_id: string;
   groups: BookReviewGroup[];
   open: number;
+  /** Açık öneriler (advisory); kabulü engellemez. */
+  advice?: number;
   decided: number;
 };
 
