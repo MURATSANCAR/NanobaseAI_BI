@@ -109,9 +109,20 @@ def post_batch(payload: dict) -> dict:
                            f"olmayabilir. Ayrıntı: {e}") from None
 
 
+def service_ready() -> None:
+    """Logo'yu dakikalarca okumadan önce tahmin servisini sor; yoksa hemen dur (ör. müşteri VM'inde servis yok)."""
+    try:
+        with urllib.request.urlopen(f"{FORECAST_API_BASE}/health", timeout=10) as r:
+            if not json.loads(r.read()).get("ready"):
+                raise RuntimeError("ZEKI AI tahmin servisi henüz hazır değil (model yükleniyor).")
+    except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError) as e:
+        raise RuntimeError(f"ZEKI AI tahmin servisi bu kurulumda yok ya da ulaşılamıyor ({FORECAST_API_BASE}).") from e
+
+
 def build(run: Callable[[str, dict | None], dict], today: date | None = None, inputs: dict | None = None,
-          post: Callable[[dict], dict] = post_batch) -> dict:
+          post: Callable[[dict], dict] = post_batch, ready: Callable[[], None] = service_ready) -> dict:
     today = today or date.today()
+    ready()
     codes = pool_codes(inputs)
     if not codes:
         raise RuntimeError("Baskı Öneri verisi henüz hazır değil; tahmin onun kitap listesiyle kurulur.")
@@ -212,6 +223,15 @@ def explanation(meta: dict) -> dict:
                 "Mevsim: ayın yıl içindeki yeri ve okul dönemi (eylül-ekim) işareti.",
                 "Büyüme: bütün kitapların toplam aylık satışı; yayınevinin genel büyümesi.",
                 "Stok ve bekleyen sipariş: Baskı Tekrar sekmesindeki CRM değerleri, 5 dakikada bir güncel.",
+            ]},
+            {"title": "Power BI önerisiyle neden farklı olabilir", "items": [
+                "Stok 0 ise ZEKI \"Risk/Acil\" der. Power BI'da hız da 0 olunca 0 ÷ 0 tanımsız çıkar ve öneri "
+                "\"Yeterli Stok\" görünür (24.09.2026'da ayrışmaların yarısı bu).",
+                "İadesi satışından fazla olan kitapta Power BI hızı eksi çıkar ve öneri \"Risk/Acil\" olur; ZEKI talebi "
+                "sıfırın altına indirmez, stok yeterliyse \"Yeterli Stok\" der (ayrışmaların beşte biri).",
+                "Okul dönemi yaklaşırken ZEKI aylık talebi yükseltir ve stoku daha erken bitirir; Power BI her ayı aynı sayar.",
+                "Gerçek tahmin ayrışmalarında geçmiş sınama (4 kesim, 993 kitap): ZEKI %36, Power BI %25 haklı çıktı; "
+                "%39'unda ikisi de tutmadı ve bunların çoğunda ZEKI gerçeğe daha yakındı.",
             ]},
             {"title": "Kolonlar nasıl okunur", "items": [
                 "Tahmin (12 ay): beklenen satış. Gerçekleşenin bundan az ya da çok olma ihtimali eşittir.",

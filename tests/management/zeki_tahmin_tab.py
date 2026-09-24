@@ -61,7 +61,21 @@ def post(payload):
                         for x in payload["series"]]}
 
 
-fc = zt.build(run, today=date(2026, 9, 24), inputs=inputs, post=post)
+fc = zt.build(run, today=date(2026, 9, 24), inputs=inputs, post=post, ready=lambda: None)
+
+
+def servis_yok():
+    raise RuntimeError("yok")
+
+
+calls.clear()
+try:
+    zt.build(run, today=date(2026, 9, 24), inputs=inputs, post=post, ready=servis_yok)
+    ok("tahmin servisi yoksa Logo okunmadan durur", False)
+except RuntimeError:
+    ok("tahmin servisi yoksa Logo okunmadan durur", calls == {}, str(list(calls)))
+calls.clear(); years.clear()
+fc = zt.build(run, today=date(2026, 9, 24), inputs=inputs, post=post, ready=lambda: None)
 ids = [x["id"] for x in sent["series"]]
 ok("havuz Baskı Tekrar + Yeni Kitap; 6 aydan kısa geçmiş (B) gönderilmez", ids == ["A", "N"] and fc["shortHistory"] == ["B"], str(ids))
 a = next(x for x in sent["series"] if x["id"] == "A")
@@ -105,7 +119,7 @@ mk = [c for c in t["columns"] if c["key"].startswith("ai_m")]
 ok("aylık tahmin kolonları bugünden ufkun sonuna (Eyl 26 … Tem 27)", len(mk) == 11 and mk[0]["label"] == "Eyl 26" and mk[-1]["label"] == "Tem 27",
    f"{len(mk)} {mk[0]['label']}…{mk[-1]['label']}")
 ok("açıklama: başlık, bölümler, sınama tablosu, SQL",
-   t["explain"]["title"] and len(t["explain"]["sections"]) == 2 and len(t["explain"]["table"]["rows"]) == 5
+   t["explain"]["title"] and len(t["explain"]["sections"]) == 3 and len(t["explain"]["table"]["rows"]) == 5
    and t["explain"]["sql"][0]["sql"] == "SELECT 1" and "Temmuz 2026" in " ".join(t["explain"]["notes"]))
 empty = zt.tab(tekrar, yeni, {}, None, today, [])
 ok("tahmin yokken sekme boş ve 'hazırlanıyor' der", empty["rows"] == [] and "hazırlanıyor" in empty["emptyText"])
