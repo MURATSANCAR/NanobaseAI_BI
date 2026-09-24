@@ -1,6 +1,6 @@
 # NanobaseAI BI — Proje Belleği
 
-**Boş cevapta veri sonu (2026-09-24):** boş cevap + tek dönem → ölçünün son günü ölçülür (`same_period.empty_probe/empty_hint`, köprü `_data_end_hint`), açıklama tarihi söyler, `dataEnd.suggestion` aynı soruyu o döneme kurar (ayrıştırıcıdan geri geçmezse yok). Ayrıştırıcıda tek gün (`DATE`) ve `DAY_BEFORE_YESTERDAY`. Dalda, kurulmadı; gerçek DB denemesi VPN yüzünden bekliyor.
+**Boş cevapta veri sonu (2026-09-24):** boş cevap + tek dönem → ölçünün son günü ölçülür (`same_period.empty_probe/empty_hint`, köprü `_data_end_hint`), açıklama tarihi söyler, `dataEnd.suggestion` aynı soruyu o döneme kurar (ayrıştırıcıdan geri geçmezse yok). Ayrıştırıcıda tek gün (`DATE`) ve `DAY_BEFORE_YESTERDAY`. Dalda, kurulmadı; gerçek DB'de (Logo .155) 10 soru + önerileri doğrulandı.
 
 **Kart SQL'i (2026-09-24):** kanvas kartlarının hepsinde "SQL'i göster" + Kopyala ortak `src/canvas/stitch/CardSql.tsx` ile; kart kendi rakamını üreten blokları gösterir (`screens.ts` `sqlParts`), kopya http'de (VM) yedek yolla çalışır. Dalda, kurulmadı.
 

@@ -29,7 +29,9 @@ _CASE = r"(?:ndaki|ndeki|daki|deki|taki|teki|ki|ku|nin|nun|nde|nda|ndan|nden|in|
 _QUARTER = r"ceyre[kg]"
 # "geçen ay", "son ay" and "önceki ay" are the same period said three ways. Listing the words that mean
 # "the one before this one" is grammar; which period they attach to is what carries the meaning.
-_PREV = r"(?:gecen|son|onceki|gecmis)"
+# "bir önceki hafta" is the same period as "önceki hafta"; the "bir" belongs to the phrase, otherwise
+# it is left behind as a stray word wherever the phrase is read or rewritten.
+_PREV = r"(?:bir\s+onceki|gecen|son|onceki|gecmis)"
 _YEAR = r"(20\d{2})"
 
 PRIMITIVES = (

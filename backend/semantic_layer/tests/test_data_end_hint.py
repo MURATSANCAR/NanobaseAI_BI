@@ -56,9 +56,17 @@ def test_a_span_between_two_days_is_those_days():
     ("önceki gün ciro", ("DAY_BEFORE_YESTERDAY", date(2026, 9, 22), date(2026, 9, 23))),
     ("evvelsi gün ciro", ("DAY_BEFORE_YESTERDAY", date(2026, 9, 22), date(2026, 9, 23))),
     ("bir önceki hafta ciro", ("LAST_WEEK", date(2026, 9, 14), date(2026, 9, 21))),
+    ("bir önceki ay ciro", ("LAST_MONTH", date(2026, 8, 1), date(2026, 9, 1))),
+    ("bir önceki yıl ciro", ("LAST_YEAR", date(2025, 1, 1), date(2026, 1, 1))),
 ])
 def test_previous_day_and_week_wordings(q, expected):
     assert _period(q) == expected
+
+
+def test_bir_belongs_to_the_period_phrase():
+    """"bir önceki hafta" okunurken "bir" dışarıda kalıyor, öneri "bir 17 ağustos 2026 net ciro" çıkıyordu."""
+    (slot,) = parse_temporal("bir önceki hafta net ciro", TODAY)[0]
+    assert slot.text == "bir onceki hafta"
 
 
 # --- boş cevap açıklaması ve öneri ----------------------------------------------------------------------
@@ -76,6 +84,9 @@ def test_previous_day_and_week_wordings(q, expected):
     ("bu hafta en çok satan kitap", date(2026, 8, 20), "17 ağustos 2026 ile 20 ağustos 2026 arası en çok satan kitap",
      date(2026, 8, 17), date(2026, 8, 21)),
     ("geçen hafta ciro", date(2026, 8, 20), "17 ağustos 2026 ile 20 ağustos 2026 arası ciro", date(2026, 8, 17), date(2026, 8, 21)),
+    ("bir önceki hafta net ciro", date(2026, 8, 20), "17 ağustos 2026 ile 20 ağustos 2026 arası net ciro",
+     date(2026, 8, 17), date(2026, 8, 21)),
+    ("bir önceki ay net ciro", date(2026, 7, 31), "temmuz 2026 net ciro", date(2026, 7, 1), date(2026, 8, 1)),
     ("geçen hafta ciro", date(2026, 8, 23), "17 ağustos 2026 ile 23 ağustos 2026 arası ciro", date(2026, 8, 17), date(2026, 8, 24)),
     # ay türü → ay son günde bitmediyse tarih aralığı, bittiyse ayın adı
     ("bu ay en çok satan kitap", LAST, "1 ağustos 2026 ile 17 ağustos 2026 arası en çok satan kitap",
