@@ -227,6 +227,10 @@ def refresh_preflight(d: Path) -> dict:
                for k, pg in st["pages"].items() if pg.get("selected") and k.isdigit()]
     rep = preflight.check(pdf, cpdf if cpdf.exists() else None, ms, spec, renders,
                           front_mod.missing(read(d, "front.json")["kunye"]), _plan(d).scenes)
+    missing = sorted(str(sc.page) for sc in _plan(d).scenes if str(sc.page) not in st["pages"])
+    rep["checks"].append({"name": "Sayfa resimleri", "status": "FAIL" if missing else "OK",
+                          "detail": "her resimli sayfanın resmi var" if not missing else
+                          f"resmi olmayan sayfa: {', '.join(missing)} (stüdyoda «Farklı üret»)"})
     waiting = sorted((k for k, pg in st["pages"].items() if not pg.get("approved")),
                      key=lambda k: (not k.isdigit(), int(k) if k.isdigit() else 0))
     rep["checks"].append({"name": "Editör onayı", "status": "FAIL" if waiting else "OK",
@@ -241,6 +245,8 @@ def refresh_preflight(d: Path) -> dict:
 def page_preview(d: Path, page_no: int, width: int) -> Path:
     import pymupdf
     pdf = d / "dizgi" / "ic-sayfalar.pdf"
+    if not pdf.exists():
+        raise FileNotFoundError("iç sayfalar henüz dizilmedi")
     out = d / "dizgi" / "onizleme" / f"s{page_no}-{width}.png"
     if out.exists() and out.stat().st_mtime >= pdf.stat().st_mtime:
         return out

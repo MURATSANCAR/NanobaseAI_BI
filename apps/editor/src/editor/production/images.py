@@ -4,10 +4,11 @@ Tutarlılık: her ANA/YAN karakter önce düz zeminde bir kez çizilir (referans
 görünen karakterlerin referanslarıyla (en çok 4) düzenleme ucundan istenir; referanssız sayfa ya da
 düzenleme ucu hata verirse metinden görsel ucuna düşer (sebep kayda geçer).
 
-Boyut: model resmi piksel bütçesi içinde (EDITOR_IMAGE_PIXELS, varsayılan 2048×2048) en-boy oranını
+Boyut: model resmi piksel bütçesi içinde (EDITOR_IMAGE_PIXELS, varsayılan 3 MP) en-boy oranını
 koruyarak üretir, sonra hedef alanın 300 dpi karşılığına Lanczos ile büyütülür. Bütçe, görsel modelin
 kartı tek başına kullandığı düzene göredir (models.yaml book-image 0.62 payı ana modeli durdurur);
-ana model aynı kartta açıkken 2,6 MP ve üstü bellek aşımı verir (ölçüldü 2026-09-24). Üretim
+ana model aynı kartta açıkken 2,6 MP ve üstü bellek aşımı verir; tek başına 4,2 MP'de 22 resimden sonra
+bellek 92,5 GB'a şişip aştı (ölçüldü 2026-09-24), bu yüzden 3 MP. Aşımda resim yarı çözünürlükte yeniden denenir. Üretim
 çözünürlüğü kayda geçer; ön kontrol 250 dpi altında büyütülmüş resmi bildirir.
 
 Uç: gateway (`book-image` takma adı). EDITOR_IMAGE_URL verilirse doğrudan o sunucu (sınama).
@@ -29,7 +30,7 @@ from ..config import settings
 from .art import ArtPlan, Character, Scene
 
 ALIAS = "book-image"
-PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 2048 * 2048))
+PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 3_000_000))
 STEPS = 40
 MAX_REFS = 4
 
@@ -154,18 +155,35 @@ class Painter:
                 body += f" Editor's direction (follow it): {direction.strip()}."
             prompt = self._prompt(body, chars)
             refs = [self.refs[c.name] for c in chars if c.name in self.refs][:MAX_REFS]
-        png = None
-        if refs:
-            try:
-                extra = "" if base_image else " Keep each character exactly as in the reference images."
-                png = await self._edit(prompt + extra, [Path(r).read_bytes() for r in refs], W, H, seed)
-                mode = "fix" if base_image else "edit"
-            except (httpx.HTTPError, KeyError, IndexError, ValueError) as e:
-                if base_image:
-                    raise                      # düzeltme referanssız yapılamaz: sessizce yeni çizime düşmez
-                mode, note = "edit_failed→generate", str(e)[:300]
-        if png is None:
-            png = await self._generate(prompt, W, H, seed)
+        extra = "" if base_image else " Keep each character exactly as in the reference images."
+
+        async def draw(W: int, H: int) -> tuple[bytes, str, str]:
+            if refs:
+                try:
+                    return (await self._edit(prompt + extra, [Path(r).read_bytes() for r in refs], W, H, seed),
+                            "fix" if base_image else "edit", "")
+                except httpx.HTTPStatusError as e:
+                    if e.response.status_code >= 500 or base_image:
+                        raise                  # bellek aşımı üst katmanda küçültülüp denenir; düzeltme referanssız yapılamaz
+                    fell = f"referanslı uç {e.response.status_code}: {e.response.text[:200]}"
+                except (httpx.HTTPError, KeyError, IndexError, ValueError) as e:
+                    if base_image:
+                        raise
+                    fell = str(e)[:300]
+                return await self._generate(prompt, W, H, seed), "edit_failed→generate", fell
+            return await self._generate(prompt, W, H, seed), "generate", ""
+
+        try:
+            png, mode, note = await draw(W, H)
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code < 500:
+                raise
+            # Görsel model uzun koşuda belleği şişirebiliyor (ölçüldü 2026-09-24: 22 resimden sonra 92,5 GB,
+            # tek başına). Aynı resim yarı piksel sayısıyla bir kez daha denenir; olmazsa hata üste çıkar.
+            W, H = int(W * 0.707) // 32 * 32, int(H * 0.707) // 32 * 32
+            dpi = round(dpi * 0.707)
+            png, mode, note = await draw(W, H)
+            note = (note + " · " if note else "") + "bellek aşımı: yarı çözünürlükte üretildi"
         TW, TH = target_px(w_mm, h_mm)
         png = upscale(png, TW, TH)
         rd = Render(key, self._save(key, png), TW, TH, dpi, seed, refs, mode, round(time.time() - t, 1), prompt, note)

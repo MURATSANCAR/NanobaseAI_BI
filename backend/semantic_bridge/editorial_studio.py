@@ -124,6 +124,10 @@ def restart(job_id: str, editor: str) -> dict:
     return post_json(f"/v1/studio/jobs/{_job(job_id)}/restart", {}, editor)
 
 
+def resume(job_id: str, editor: str) -> dict:
+    return post_json(f"/v1/studio/jobs/{_job(job_id)}/resume", {}, editor)
+
+
 def art_action(job_id: str, key: str, action: str, body: dict, editor: str) -> dict:
     if action not in ACTIONS:
         raise StudioError(404, "İşlem yok.")

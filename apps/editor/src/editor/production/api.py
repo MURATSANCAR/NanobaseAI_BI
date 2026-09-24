@@ -15,6 +15,8 @@ sıra bekleyen iş ekranda «sırada» görünür.
     POST /v1/studio/jobs/{job}/art/{key}/regenerate   {mode: fix|new, prompt, variants}
     POST /v1/studio/jobs/{job}/art/{key}/select       {v}
     POST /v1/studio/jobs/{job}/art/{key}/approve      {ok}
+    POST /v1/studio/jobs/{job}/resume                 yarıda kalan işi sürdür
+    POST /v1/studio/jobs/{job}/restart                aynı kaynakla yeni iş
     GET  /v1/studio/jobs/{job}/pdf/{kind}             ic | kapak
 """
 
@@ -35,7 +37,7 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from . import studio
-from .run import run as run_pipeline
+from .run import resume as resume_pipeline, run as run_pipeline
 
 KEY = os.environ.get("EDITOR_CARDS_KEY", "")
 GPU = asyncio.Lock()                    # görsel model tek sırada
@@ -318,6 +320,27 @@ async def approve(job: str, key: str, body: Approve, by: str = Depends(editor)) 
     except KeyError:
         raise HTTPException(404, "resim yok") from None
     return {"ok": True}
+
+
+async def _resume(d: Path) -> None:
+    BUSY[d.name] = {"key": "hat", "mode": "resume", "since": time.time()}
+    try:
+        async with GPU:
+            await resume_pipeline(d)
+    finally:
+        BUSY.pop(d.name, None)
+
+
+@app.post("/v1/studio/jobs/{job}/resume")
+async def resume(job: str, by: str = Depends(editor)) -> dict:
+    """Yarıda kalan işi kaldığı yerden sürdürür (çizilmiş resimler korunur)."""
+    d = _dir(job)
+    if BUSY.get(job) and not BUSY[job].get("error"):
+        raise HTTPException(409, "Bu kitapta süren bir iş var")
+    if not studio.read(d, "artplan.json"):
+        raise HTTPException(409, "Sayfa planı yok; «Yeniden başlat» kullanın")
+    _spawn(_resume(d))
+    return {"id": job}
 
 
 @app.post("/v1/studio/jobs/{job}/restart")

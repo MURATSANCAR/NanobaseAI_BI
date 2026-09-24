@@ -59,9 +59,10 @@ class FileLlm(Llm):
 
 
 class State:
-    def __init__(self, d: Path):
+    def __init__(self, d: Path, keep: bool = False):
         self.d = d
-        self.data = {"title": "", "started": time.time(), "finished": None, "status": "running", "error": None,
+        old = studio.read(d, "state.json") if keep else None
+        self.data = old or {"title": "", "started": time.time(), "finished": None, "status": "running", "error": None,
                      "steps": [{"key": k, "label": l, "status": "waiting", "seconds": None, "summary": ""}
                                for k, l in STEPS]}
         self.t0: dict[str, float] = {}
@@ -150,33 +151,56 @@ async def _run(d: Path, job: dict, st: State, images: bool, seed: int) -> None:
     st.done("yerlesim", f"{len(pm.pages)} sayfa · resim bandı %{pm.layout.art_ratio * 100:.0f} · "
                         f"{pm.layout.body_size:g} pt · {len(plan.scenes)} resim", pages=len(pm.pages))
 
+    await _finish(d, st, plan, spec, pm, by, seed, images)
+
+
+async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images: bool) -> None:
+    """Resimler, kapak, dizgi, ön kontrol. Yalnız eksik olanı çizer: ilk koşu da, yarıda kalan işin
+    devamı da buradan geçer. Tek resmin hatası hattı durdurmaz; sayfa «resim yok» kalır, hata kayda
+    geçer ve stüdyoda «Farklı üret» ile tamamlanır. Bitince görsel model beklemeden kapatılır."""
     if images:
         painter = Painter(d / "resim", plan, seed=seed)
         try:
-            st.start("karakter_resimleri")
-            refs = await painter.character_refs()
             sd = studio.studio_state(d)
-            sd["characters"] = refs
-            studio.write(d, "studio.json", sd)
-            st.done("karakter_resimleri", f"{len(refs)} karakter")
+            st.start("karakter_resimleri")
+            if not sd.get("characters"):
+                sd["characters"] = await painter.character_refs()
+                studio.write(d, "studio.json", sd)
+            painter.refs = dict(sd["characters"])
+            st.done("karakter_resimleri", f"{len(painter.refs)} karakter")
             st.start("sayfa_resimleri")
             band, full = studio.band_mm(spec, pm), studio.full_mm(spec)
+            have = set(studio.studio_state(d)["pages"])
+            failed: dict[str, str] = {}
             for i, sc in enumerate(plan.scenes, 1):
-                rd = await painter.page(sc, *(full if sc.kind == "full" else band))
-                studio.add_version(d, str(sc.page), rd.path, mode=rd.mode, prompt="", seed=rd.seed, by=by, dpi=rd.dpi)
+                if str(sc.page) not in have:
+                    try:
+                        rd = await painter.page(sc, *(full if sc.kind == "full" else band))
+                        studio.add_version(d, str(sc.page), rd.path, mode=rd.mode, prompt="", seed=rd.seed,
+                                           by=by, dpi=rd.dpi)
+                    except Exception as e:  # noqa: BLE001 - tek sayfa hattı durdurmaz
+                        failed[str(sc.page)] = f"{type(e).__name__}: {e}"[:300]
                 st.step("sayfa_resimleri")["progress"] = [i, len(plan.scenes)]
+                st.step("sayfa_resimleri")["failed"] = failed
                 st.flush()
             modes: dict[str, int] = {}
             for p in studio.studio_state(d)["pages"].values():
-                modes[p["versions"][0]["mode"]] = modes.get(p["versions"][0]["mode"], 0) + 1
+                if p["versions"]:
+                    modes[p["versions"][0]["mode"]] = modes.get(p["versions"][0]["mode"], 0) + 1
             fell = modes.get("edit_failed→generate", 0)
-            st.done("sayfa_resimleri", f"{len(plan.scenes)} resim" + (
-                f" · {fell} resim karakter referansı olmadan çizildi (referanslı uç hata verdi)" if fell else
-                f" · {modes.get('edit', 0)} resim karakter referanslı"), status="warn" if fell else "done", modes=modes)
+            parts = [f"{len(plan.scenes) - len(failed)}/{len(plan.scenes)} resim"]
+            if failed:
+                parts.append(f"çizilemeyen sayfa: {', '.join(sorted(failed, key=int))} (stüdyoda yeniden üretin)")
+            parts.append(f"{fell} resim karakter referansı olmadan çizildi" if fell else
+                         f"{modes.get('edit', 0)} resim karakter referanslı")
+            st.done("sayfa_resimleri", " · ".join(parts), status="warn" if failed or fell else "done", modes=modes)
             st.start("kapak")
-            from .images import size_for
-            rd = await studio._cover_render(painter, plan, spec, 1, seed, "", None)
-            studio.add_version(d, "kapak", rd.path, mode="new", prompt="", seed=seed, by=by, dpi=rd.dpi)
+            if "kapak" not in studio.studio_state(d)["pages"]:
+                try:
+                    rd = await studio._cover_render(painter, plan, spec, 1, seed, "", None)
+                    studio.add_version(d, "kapak", rd.path, mode="new", prompt="", seed=seed, by=by, dpi=rd.dpi)
+                except Exception as e:  # noqa: BLE001
+                    st.step("kapak")["error"] = f"{type(e).__name__}: {e}"[:300]
         finally:
             # Resimler bitti (ya da hat düştü): görsel modeli beklemeden kapat, kart ana modele dönsün.
             st.data["gpu_release"] = await painter.release()
@@ -190,14 +214,40 @@ async def _run(d: Path, job: dict, st: State, images: bool, seed: int) -> None:
     await asyncio.to_thread(studio.rebuild, d)
     info = studio.read(d, "cover.json")
     if images:
+        err = st.step("kapak").get("error")
         st.done("kapak", f"{info['size_mm'][0]}×{info['size_mm'][1]} mm · {info['binding']} · sırt {info['spine_mm']} mm"
-                if info else "kapak dizilemedi", status="done" if info else "fail")
+                if info else f"kapak resmi çizilemedi: {err or 'bilinmiyor'} (stüdyoda yeniden üretin)",
+                status="done" if info else "warn")
     st.done("dizgi", "ic-sayfalar.pdf" + (" + kapak.pdf" if info else ""))
     st.start("on_kontrol")
     rep = studio.read(d, "preflight.json")
     bad = [c for c in rep["checks"] if c["status"] != "OK"]
     st.done("on_kontrol", "; ".join(f"{c['name']}: {c['status']}" for c in bad) or "hepsi geçti",
             status={"OK": "done", "WARN": "warn", "FAIL": "fail"}[rep["status"]])
+
+
+async def resume(d: Path, seed: int = 42) -> dict:
+    """Yarıda kalan işi kaldığı yerden sürdürür: metin, profil, yerleşim ve çizilmiş resimler korunur,
+    yalnız eksik resimler, kapak, dizgi ve ön kontrol yapılır."""
+    job = studio.read(d, "job.json")
+    st = State(d, keep=True)
+    st.data.update(status="running", error=None, finished=None)
+    for s in st.data["steps"]:
+        if s["key"] in ("karakter_resimleri", "sayfa_resimleri", "kapak", "dizgi", "on_kontrol") and s["status"] != "done":
+            s.update(status="waiting", summary="")
+    st.flush()
+    try:
+        await _finish(d, st, studio._plan(d), studio._spec(d), studio._pagemap(d), job.get("created_by", ""), seed, True)
+        st.data["status"] = "done"
+    except Exception as e:  # noqa: BLE001
+        running = next((s for s in st.data["steps"] if s["status"] == "running"), None)
+        if running:
+            running.update(status="fail", summary=str(e)[:300])
+        st.data.update(status="fail", error=f"{type(e).__name__}: {e}"[:500])
+        (d / "hata.txt").write_text(traceback.format_exc())
+    st.data["finished"] = time.time()
+    st.flush()
+    return st.data
 
 
 def main() -> None:

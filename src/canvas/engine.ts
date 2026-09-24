@@ -1688,6 +1688,7 @@ export const studioApi = {
   },
   get: (job: string) => send<StudioJob>('GET', studioBase(job), undefined, 30_000),
   restart: (job: string) => send<{ id: string }>('POST', `${studioBase(job)}/restart`, {}, 60_000),
+  resume: (job: string) => send<{ id: string }>('POST', `${studioBase(job)}/resume`, {}, 60_000),
   regenerate: (job: string, key: string, mode: 'fix' | 'new', prompt: string, variants = 1) =>
     send<{ accepted: boolean }>('POST', `${studioBase(job)}/art/${encodeURIComponent(key)}/regenerate`, { mode, prompt, variants }, 60_000),
   select: (job: string, key: string, v: number) =>

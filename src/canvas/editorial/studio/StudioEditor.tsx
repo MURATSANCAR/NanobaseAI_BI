@@ -55,14 +55,14 @@ export default function StudioEditor() {
   useEffect(() => {
     if (!d || key === 'kapak') return;
     if (!key || !current.includes(Number(key))) {
-      const first = current.find((n) => d.pages[n - 1]?.art);
+      const first = current.find((n) => d.pages[n - 1]?.art || d.pages[n - 1]?.scene);
       if (first) setKey(String(first));
     }
   }, [d, current, key]);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['studio', 'job', jobId] });
   const regen = useMutation({
-    mutationFn: (v: { variants: number }) => studioApi.regenerate(jobId, key!, mode, prompt, v.variants),
+    mutationFn: (v: { variants: number; mode: Mode }) => studioApi.regenerate(jobId, key!, v.mode, prompt, v.variants),
     onSuccess: () => { setPrompt(''); refresh(); },
   });
   const select = useMutation({ mutationFn: (v: number) => studioApi.select(jobId, key!, v), onSuccess: refresh });
@@ -73,6 +73,8 @@ export default function StudioEditor() {
   const art = key ? artOf(d, key) : null;
   const page = key && key !== 'kapak' ? d.pages.find((p) => String(p.no) === key) : undefined;
   const sel = art?.versions.find((v) => v.v === art.selected);
+  const missing = !art && !!page?.scene;          // resmi çizilemedi: yalnız «Farklı üret»
+  const effMode: Mode = missing ? 'new' : mode;
   const busyHere = !!d.busy && !d.busy.error && d.busy.key === key;
   const busyAny = !!d.busy && !d.busy.error;
   const sceneChars = key === 'kapak' ? d.characters.slice(0, 3) : d.characters.filter((c) => page?.scene?.characters.includes(c.name));
@@ -150,7 +152,7 @@ export default function StudioEditor() {
             <div className="flex justify-center gap-0 rounded-2xl bg-slate-100/60 p-3">
               {current.map((n) => {
                 const p = d.pages[n - 1];
-                const clickable = !!p?.art;
+                const clickable = !!(p?.art || p?.scene);
                 return (
                   <button key={n} type="button" disabled={!clickable} onClick={() => setKey(String(n))}
                     aria-label={clickable ? `Sayfa ${n} resmini seç` : `Sayfa ${n}`}
@@ -188,26 +190,28 @@ export default function StudioEditor() {
 
         {/* Resim paneli */}
         <Panel>
-          {!art ? (
+          {!art && !missing ? (
             <p className="text-[12.5px] text-canvas-muted">Bu açılımda resim yok. Resimli bir sayfaya ya da kapağa tıklayın.</p>
           ) : (
             <div className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-[15px] font-extrabold">{key === 'kapak' ? 'Kapak resmi' : `Sayfa ${key} · resim`}</h2>
-                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${art.approved ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
-                  {art.approved ? `Onaylı${art.approved_by ? ` · ${art.approved_by}` : ''}` : 'Onay bekliyor'}
+                <span className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${art?.approved ? 'bg-emerald-50 text-emerald-700' : missing ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
+                  {missing ? 'Resim yok' : art?.approved ? `Onaylı${art.approved_by ? ` · ${art.approved_by}` : ''}` : 'Onay bekliyor'}
                 </span>
               </div>
+              {missing && <Note tone="warn">Bu sayfanın resmi çizilemedi. «Yeni görsel üret» ile çizin; isterseniz yönlendirme yazın.</Note>}
               {sel && <Img src={studioApi.artUrl(jobId, key!, sel.v, 760)} alt="Seçili resim" fallback="resim" className="w-full rounded-xl border border-slate-200" />}
 
               <div role="radiogroup" aria-label="Üretim yolu" className="grid grid-cols-2 gap-2">
                 {([['fix', 'Düzelt', 'Mevcut görseli referans alır, yalnız yazdığın kısmı değiştirir', Wand2],
                    ['new', 'Farklı üret', 'Sayfanın metninden sıfırdan yeni bir görsel çizer', Sparkles]] as const).map(([m, t, help, Icon]) => (
-                  <button key={m} type="button" role="radio" aria-checked={mode === m} onClick={() => setMode(m)}
-                    className={`rounded-2xl border p-2.5 text-left ${press} ${mode === m ? 'border-canvas-violet bg-violet-50/60 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/70'}`}>
+                  <button key={m} type="button" role="radio" aria-checked={effMode === m} onClick={() => setMode(m)}
+                    disabled={missing && m === 'fix'}
+                    className={`rounded-2xl border p-2.5 text-left disabled:opacity-40 ${press} ${effMode === m ? 'border-canvas-violet bg-violet-50/60 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/70'}`}>
                     <span className="flex items-center gap-1.5 text-[13px] font-extrabold"><Icon className="h-4 w-4 text-canvas-violet" aria-hidden />{t}</span>
                     <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">{help}</span>
-                    {m === 'fix' && mode === 'fix' && sel && (
+                    {m === 'fix' && effMode === 'fix' && sel && (
                       <span className="mt-1.5 inline-flex items-center gap-1 rounded-md bg-white px-1 py-0.5 font-mono text-[10.5px] text-canvas-violet">
                         <Img src={studioApi.artUrl(jobId, key!, sel.v, 64)} alt="" fallback="" className="h-4 w-5 rounded-sm object-cover" />Referans: v{sel.v}
                       </span>
@@ -217,13 +221,13 @@ export default function StudioEditor() {
               </div>
 
               <label className="flex flex-col gap-1">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{mode === 'fix' ? 'Ne değişsin?' : 'Yönlendirme (isteğe bağlı)'}</span>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{effMode === 'fix' ? 'Ne değişsin?' : 'Yönlendirme (isteğe bağlı)'}</span>
                 <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} maxLength={1200}
-                  placeholder={mode === 'fix' ? 'Ör. balonu maviye çevir, babanın gözlüğünü kaldır' : 'Ör. sahneyi daha yukarıdan göster'}
+                  placeholder={effMode === 'fix' ? 'Ör. balonu maviye çevir, babanın gözlüğünü kaldır' : 'Ör. sahneyi daha yukarıdan göster'}
                   className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-[13px] outline-none focus:border-canvas-violet" />
               </label>
               <div className="flex flex-wrap gap-1.5">
-                {SUGGEST[mode].map((s) => (
+                {SUGGEST[effMode].map((s) => (
                   <button key={s} type="button" onClick={() => setPrompt((p) => (p ? `${p}, ${s.toLocaleLowerCase('tr')}` : s))}
                     className={`rounded-full border border-slate-200 bg-white/80 px-2.5 py-1 text-[11.5px] ${press}`}>+ {s}</button>
                 ))}
@@ -244,13 +248,13 @@ export default function StudioEditor() {
               )}
 
               <div className="flex gap-2">
-                <button type="button" className={`${gradientBtn} flex-1`} disabled={busyAny || regen.isPending || (mode === 'fix' && !prompt.trim())}
-                  onClick={() => regen.mutate({ variants: 1 })}>
-                  {busyHere ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : mode === 'fix' ? <Wand2 className="h-4 w-4" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
-                  {busyHere ? (d.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : mode === 'fix' ? 'Düzelt ve üret' : 'Yeni görsel üret'}
+                <button type="button" className={`${gradientBtn} flex-1`} disabled={busyAny || regen.isPending || (effMode === 'fix' && !prompt.trim())}
+                  onClick={() => regen.mutate({ variants: 1, mode: effMode })}>
+                  {busyHere ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : effMode === 'fix' ? <Wand2 className="h-4 w-4" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
+                  {busyHere ? (d.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : effMode === 'fix' ? 'Düzelt ve üret' : 'Yeni görsel üret'}
                 </button>
-                {mode === 'new' && (
-                  <button type="button" className={ghostBtn} disabled={busyAny || regen.isPending} onClick={() => regen.mutate({ variants: 3 })}>
+                {effMode === 'new' && (
+                  <button type="button" className={ghostBtn} disabled={busyAny || regen.isPending} onClick={() => regen.mutate({ variants: 3, mode: effMode })}>
                     Varyant ×3
                   </button>
                 )}
@@ -265,10 +269,12 @@ export default function StudioEditor() {
                 </blockquote>
               )}
 
-              <button type="button" onClick={() => approve.mutate(!art.approved)} disabled={approve.isPending || busyHere}
-                className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border-2 px-4 text-[13px] font-bold ${press} ${art.approved ? 'border-slate-200 bg-white text-canvas-muted' : 'border-emerald-500 bg-white text-emerald-700'}`}>
-                <Check className="h-4 w-4" aria-hidden />{art.approved ? 'Onayı geri al' : 'Onayla'}
-              </button>
+              {art && (
+                <button type="button" onClick={() => approve.mutate(!art.approved)} disabled={approve.isPending || busyHere}
+                  className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border-2 px-4 text-[13px] font-bold ${press} ${art.approved ? 'border-slate-200 bg-white text-canvas-muted' : 'border-emerald-500 bg-white text-emerald-700'}`}>
+                  <Check className="h-4 w-4" aria-hidden />{art.approved ? 'Onayı geri al' : 'Onayla'}
+                </button>
+              )}
             </div>
           )}
         </Panel>
