@@ -227,6 +227,12 @@ TOPICS = sa.Table(
     sa.Column("entries", sa.Integer, nullable=False, default=0),
     sa.Column("checked_at", sa.DateTime(timezone=True), nullable=False),
 )
+INDEX = sa.Table(
+    "semantic_web_index", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("rows_json", sa.Text, nullable=False),
+    sa.Column("saved_at", sa.DateTime(timezone=True), nullable=False),
+)
 RUNS = sa.Table(
     "semantic_web_runs", _md,
     sa.Column("id", sa.String(32), primary_key=True),
@@ -646,7 +652,20 @@ def run_due(engine: sa.engine.Engine, tenant: str, fetch_all: Callable[[str], li
         report: dict[str, Any] = {"feeds": {}, "newItems": 0, "newMentions": 0, "labelled": 0, "wikidata": 0, "errors": []}
         with engine.begin() as c:
             c.execute(RUNS.insert().values(id=rid, tenant_id=tenant, started_at=started))
-        index = AuthorIndex(fetch_all(authors_sql(schema)))
+        # Yazar listesi CRM'den; CRM'e ulaşılamazsa (VPN kapalı) son başarılı liste kullanılır, tur boşa gitmez.
+        try:
+            rows = [{str(k).lower(): (str(v) if v is not None else None) for k, v in r.items()} for r in fetch_all(authors_sql(schema))]
+            with engine.begin() as c:
+                c.execute(INDEX.delete().where(INDEX.c.tenant_id == tenant))
+                c.execute(INDEX.insert().values(tenant_id=tenant, rows_json=json.dumps(rows, ensure_ascii=False), saved_at=_now()))
+        except Exception as e:  # noqa: BLE001
+            with engine.connect() as c:
+                saved = c.execute(sa.select(INDEX).where(INDEX.c.tenant_id == tenant)).first()
+            if saved is None:
+                raise
+            rows = json.loads(saved.rows_json)
+            report["errors"].append(f"CRM okunamadı ({type(e).__name__}); {saved.saved_at:%d.%m.%Y %H:%M} yazar listesi kullanıldı")
+        index = AuthorIndex(rows)
         report["authors"] = len(index.people)
 
         # 1) akışlar

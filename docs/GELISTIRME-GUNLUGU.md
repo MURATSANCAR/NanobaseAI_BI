@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (20:55) — 55 kanal test sunucusunda; VPN kapalı, CRM okunamıyor; yazar listesi artık saklanıyor
+
+- `e883e59d` test sunucusuna kuruldu (5 dosya md5 = main, `._*` 0; köprü 200; arayüz `index-BVAUqalc.js`). Sunucu yükü 15–22, SSH iki kez koptu.
+- Uçtan deneme turu 500 döndü: `tun0` yok, 192.168.0.28 (CRM) ve .155 (Logo) erişilemez (FreeTDS 20009). Tünel telefon push onayıyla açılıyor; kullanıcıya soruldu.
+- Düzeltme: web taraması yazar listesini her başarılı CRM okumasında `semantic_web_index`'e` saklar; CRM'e ulaşılamayan gecede son liste kullanılır, raporda not düşer (ilk kayıt tünel açılınca oluşur).
+
 ## 2026-09-24 (17:00) — Basın ve web: 55 kanal (haber, kitap siteleri, forum, podcast), joker anlayan robots.txt okuyucusu
 
 - Kanal araştırması (ayrı ajan, test sunucusundan ölçüm): 26 yeni açık kanal eklendi — Fikriyat, Star, Türkiye Gazetesi, Karar, Serbestiyet, Artı Gerçek, BirGün, Diken, Medyascope, Bianet; kitap siteleri Sabit Fikir, Bant Mag, Kayıp Rıhtım, Sanatatak, Bookinton, Medium kitap etiketi; forumlar Kitapça Forum (4 bölüm) ve Technopat Sosyal (kitap, edebiyat; `ai-input=yes`); Edebiyat Pod podcast'i. Toplam 55 RSS + Uludağ Sözlük + Wikidata.
