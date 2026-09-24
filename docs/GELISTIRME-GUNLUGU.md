@@ -1,6 +1,14 @@
 # Geliştirme Günlüğü
 
 <<<<<<< HEAD
+## 2026-09-24 (15:10) — main'e alındı ve test sunucusuna kuruldu: yazar giriş süreci, yeni menü, aranabilir seçim, basın ve web
+
+- main `7b2abae9 → 197e541d` (ileri sarma, push; uzak `claude/editor-author-login-flow-63e097` silindi).
+- Test sunucusu: değişen 35 kod dosyası kuruldu; hepsinin sunucudaki eski hâli eski main ile birebirdi (canlı iş ezilmedi), kurulum sonrası md5 35/35, `._*` 0, eski `BoardScreen.tsx` silindi. Sunucudaki belge kopyaları (AGENTS/PROJECT-MEMORY/günlük) farklıydı, dokunulmadı. `intake_steps` 20/20. Köprü yeniden başladı (56 sn, sağlık 200), arayüz `VITE_BASE=/timas/` ile derlendi, `cockpit/dist`'e alındı (yedek `dist.bak-<zaman>`), dış kapı `index-xoNabpep.js`.
+- `timas-web-watch.timer` kuruldu ve açıldı (ilk çalışma 25.09 02:30). Kural gereği önce uç elle denendi: `budget=120` → 121 sn, hata yok. İlk turda eski kuralla bulunan 17 Wikidata kaydı yeniden denetim için sıraya kondu.
+- Portal dış kapısından geçici timasai oturumuyla (sonra silindi): süreç panosu 200 (1.143 süren, 934 tamam, 27 kapanan, son kurul 22.09), toplantılar 84, 22.09 gündemi 15, basın/web 7 ilgili haber (6 olumlu, 1 nötr), proje sayfası 200, oturumsuz 401, `/timas/yazar-giris`, `/timas/basin-web`, `/timas/kisiler` 200. Tarayıcıda görsel kontrol yapılmadı (AD oturumu gerekiyor).
+- Müşteri VM'ine kurulmadı.
+
 ## 2026-09-24 — Basın ve web taraması: açık RSS + Wikidata, yerel model etiketi, gece zamanlayıcısı
 
 - İstek: yazar ve kitaplar için web taraması ve duygu analizi. Test sunucusundan ölçüm: 1000Kitap, Kitapyurdu, D&R, Hepsiburada ve Ekşi otomatik isteği bot korumasıyla 403'lüyor; Google News arama robots.txt'te kapalı; GDELT bu IP'den istek sınırına takılıyor. Bot korumasını aşan araçlar (Scrapling, CloakBrowser, obscura) kullanılmadı; kaynak açık RSS (12 Türk haber sitesi) + Wikidata API.
