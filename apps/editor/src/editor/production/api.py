@@ -63,17 +63,22 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, dependencies=[Dep
 
 
 @app.on_event("startup")
-def _interrupted() -> None:
-    """Servis yeniden başladıysa yarıda kalan hat 'kesildi' olarak işaretlenir (ekranda yeniden başlatılır)."""
+async def _interrupted() -> None:
+    """Servis yeniden başladıysa yarıda kalan işler kaldığı yerden sürer (çizilmiş resimler korunur); sayfa
+    planı henüz yoksa iş «kesildi» olarak kalır ve ekrandan baştan başlatılır. Ölçüldü 2026-09-25: kurulum
+    için yapılan yeniden başlatma sırada bekleyen bir işi 5/29 resimde kesmişti."""
     for j in studio.list_jobs():
         d = studio.root() / j["id"]
         st = studio.read(d, "state.json")
-        if st and st.get("status") == "running":
-            for s in st["steps"]:
-                if s["status"] == "running":
-                    s.update(status="fail", summary="servis yeniden başladı; hat kesildi")
-            st.update(status="fail", error="kesildi")
-            studio.write(d, "state.json", st)
+        if not st or st.get("status") != "running":
+            continue
+        for s in st["steps"]:
+            if s["status"] == "running":
+                s.update(status="fail", summary="servis yeniden başladı; kaldığı yerden sürüyor")
+        st.update(status="fail", error="kesildi")
+        studio.write(d, "state.json", st)
+        if studio.read(d, "artplan.json"):
+            _spawn(_resume(d))
 
 
 def _dir(job: str) -> Path:

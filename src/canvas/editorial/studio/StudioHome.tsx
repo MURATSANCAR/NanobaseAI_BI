@@ -1,17 +1,19 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { BookOpen, FileUp, Search } from 'lucide-react';
+import { BookOpen, FileUp, Play, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, bookCatalogApi, bookCoverUrl, studioApi } from '../../engine';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
-import { StepIcon, ago, ghostBtn } from './shared';
+import { StepIcon, ago, ghostBtn, gradientBtn } from './shared';
 
 /** Kitap Tasarım Stüdyosu girişi: okunmuş bir kitaptan ya da Word dosyasından yeni tasarım başlatır,
  *  önceki işleri listeler. Kitap bilgisi CRM'den, resimler Qwen-Image-2.1'den, dizgi Typst'ten gelir. */
 export default function StudioHome() {
   const nav = useNavigate();
   const [q, setQ] = useState('');
+  // Kitaba tıklamak işi başlatmaz: ~40 dk GPU işi, önce onay (2026-09-25: yanlış tıklamayla kopya iş açılmıştı).
+  const [pick, setPick] = useState<{ id: string; title: string } | null>(null);
   const file = useRef<HTMLInputElement>(null);
   const catalog = useQuery({ queryKey: ['editorial', 'catalog'], queryFn: bookCatalogApi.list, enabled: ENGINE_ENABLED });
   const jobs = useQuery({ queryKey: ['studio', 'jobs'], queryFn: studioApi.list, enabled: ENGINE_ENABLED, refetchInterval: 8000 });
@@ -54,11 +56,41 @@ export default function StudioHome() {
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kitap adı" aria-label="Kitap ara"
               className="w-full bg-transparent text-[13px] outline-none" />
           </label>
+          {pick && (() => {
+            const same = (jobs.data?.jobs ?? []).filter((j) => j.source.book_id === pick.id);
+            return (
+              <div role="dialog" aria-label="Tasarımı başlat" className="mt-3 rounded-2xl border border-canvas-violet/40 bg-violet-50/70 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="text-[13.5px] font-extrabold">{pick.title}</div>
+                    <p className="mt-0.5 text-[12px] text-canvas-muted">
+                      Sayfa yerleşimi, 30 civarı resim, kapak ve dizgi yaklaşık 40 dakika sürer; bu sırada resim modeli GPU'yu kullanır.
+                      {same.length > 0 && ` Bu kitabın ${same.length} tasarımı zaten var.`}
+                    </p>
+                    {same.length > 0 && (
+                      <ul className="mt-1 flex flex-wrap gap-1.5">
+                        {same.slice(0, 4).map((j) => (
+                          <li key={j.id}><Link to={`/kitap-tasarim/${j.id}`} className="text-[11.5px] font-bold text-canvas-violet underline">{ago(j.created_at)} · {j.created_by}</Link></li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                  <button type="button" onClick={() => setPick(null)} aria-label="Vazgeç" className="rounded-lg p-1 text-canvas-muted hover:bg-white"><X className="h-4 w-4" aria-hidden /></button>
+                </div>
+                <div className="mt-2 flex gap-2">
+                  <button type="button" className={gradientBtn} disabled={start.isPending} onClick={() => start.mutate(pick.id)}>
+                    <Play className="h-4 w-4" aria-hidden />{start.isPending ? 'Başlatılıyor…' : 'Yeni tasarımı başlat'}
+                  </button>
+                  <button type="button" className={ghostBtn} onClick={() => setPick(null)}>Vazgeç</button>
+                </div>
+              </div>
+            );
+          })()}
           {catalog.isLoading ? <Loading /> : (
             <ul className="mt-3 grid max-h-[520px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
               {books.map((b) => (
                 <li key={b.id}>
-                  <button type="button" disabled={start.isPending} onClick={() => start.mutate(b.id)}
+                  <button type="button" disabled={start.isPending} onClick={() => setPick({ id: b.id, title: b.publisher?.title || b.title })}
                     className="flex w-full items-center gap-3 rounded-2xl border border-white/70 bg-white/70 p-2 text-left transition-[background-color,transform] duration-150 ease-out hover:bg-white active:scale-[0.98] disabled:opacity-60">
                     <img src={bookCoverUrl(b.id)} alt="" loading="lazy" className="h-14 w-10 shrink-0 rounded-md bg-slate-100 object-cover"
                       onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} />
