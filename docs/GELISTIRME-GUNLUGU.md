@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
+
+- `deniz.akko` ile `~/bin/ttvpn-mac` sabahtan beri `p=failed` / bir kez `p=login-denied` veriyordu; tarayıcı giriyor göründüğü için istemci farkı sanıldı. Elenenler: şifre terminale bozulmadan ulaşıyor (uzunluk/karakter ölçüldü), tarayıcı kimliği, form alanıyla şifre, DSID çereziyle tünel (`error 0x07`). Uygulama içi tarayıcının ağ kaydı tarayıcının da 3 kez `p=failed` alıp 4.'de girdiğini gösterdi → şifre elle tutarsız yazılıyordu.
+- Çözüm: şifre tarayıcıda göz simgesiyle doğrulanıp kopyalandı, terminale yapıştırıldı → OTP → `Configured as 172.30.27.166`, `ssh tt-gpu` çalışıyor. 10:30'dan kalan 4 asılı openconnect süreci kapatıldı (`login-denied` sebebi). Kullanıcı şifreyi portalden değiştirdi.
+- Tarif ve hata kodları: `docs/TT-GPU-SUNUCUSU.md` §2.2 madde 5. Deneme betiği `ttvpn-mac-f` Çöp Kutusu'na taşındı.
+
 ## 2026-09-24 — TimesFM 3.0 × Yeni Baskı Öneri geriye dönük değerlendirmesi
 
 - Kullanıcı kararı: TimesFM 3.0 kullanılacak (test sunucusu demo ortamı). Baskı Tekrar havuzunda Logo aylık satışı (2015–2026) ve Logo `STINVTOT`'tan kurulan kesim stokuyla dört kesimde sınandı; ayrıntı `docs/analiz/timesfm-baski-oneri/README.md`.

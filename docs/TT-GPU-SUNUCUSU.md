@@ -30,7 +30,16 @@ Test sunucusuna yine de `openconnect` 9.12, `/usr/local/sbin/ttvpn-login` (etkil
 2. **Giriş:** `~/bin/ttvpn-mac`. `openconnect --protocol=nc --script-tun` + `ocproxy -D 11080`: tünel kullanıcı alanında kalır, root istemez, Mac'in rotaları ve DNS'i değişmez. TT iç ağına yalnız `SOCKS5 127.0.0.1:11080` üzerinden çıkılır. Kullanıcı adı, parola ve e-postaya gelen OTP'yi **kullanıcı** yazar; hiçbiri diske yazılmaz. İkinci `password:` sorusu (ekranda `frmDefender`) hesap parolası değil OTP'dir — ilk denemede bu karıştırıldı.
 3. **Sertifika:** ilk girişte "signer not found" uyarısı çıktı. Neden: `~/homebrew` altındaki GnuTLS kök sertifika dosyasını kendiliğinden bulmuyor. Sunucu sertifikası ayrıca doğrulandı (macOS `curl` hatasız; zincir TÜRK TELEKOMÜNİKASYON A.Ş → GeoTrust TLS RSA CA G1 → DigiCert Global Root G2; açık anahtar izi uyarıdakiyle aynı). Betiğe `--cafile ~/homebrew/etc/ca-certificates/cert.pem` eklendi; bu değişiklik henüz yeni bir girişle denenmedi.
 4. **SSH:** `~/.ssh/config` içinde `tt-gpu` ve `tt-gpu-vm` (ProxyCommand `nc -X 5 -x 127.0.0.1:11080`, anahtar `nanobase_ed25519`). Anahtarı iki makineye kullanıcı `ssh-copy-id` ile yükledi.
-5. **Uyku:** `caffeinate -imsu` arka planda. Kapak kapanırsa veya şarjdan çıkarsa Mac yine uyur; VPN kopunca yeniden OTP gerekir. Sunucuda çalışan işler (indirme, model) VPN kopmasından etkilenmez.
+5. **Bağlanma tarifi (2026-09-24'te doğrulandı, hesap `deniz.akko`):**
+   1. Açık kalmış eski girişleri kapat: `pkill -f 'openconnect --protocol=nc'`. Asılı yarım oturum yeni girişi `p=login-denied` ile reddettirir.
+   2. Şifreyi **elle yazma**. Tarayıcıda `https://sgmvpn.turktelekom.com.tr/ttvm` aç, şifreyi yaz, göz simgesiyle doğru olduğunu gör, kopyala (Sign in'e basma).
+   3. `~/bin/ttvpn-mac` → `username:` `deniz.akko` → `password:` Cmd+V → ikinci `password:` (`frmDefender`) e-postadaki OTP.
+   4. Başarı: `p=user-confirm` → `/dana/user/#` → `Configured as 172.30.x.x`. Kontrol: `ssh tt-gpu hostname` → `gpuubuntu`.
+
+   **Hata kodları:** `welcome.cgi?p=failed` = şifre yanlış (OTP e-postası gönderilmez); `p=login-denied` = eski oturum çakışması; `p=defender` = şifre kabul, OTP bekleniyor. Art arda `failed` hesabı kilitler — iki yanlıştan sonra durup tarayıcıdan doğrula.
+
+   **24 Eylül'de öğrenilen:** terminal `p=failed` verip tarayıcı giriyor gibi göründüğünde sebep istemci değildi. Uygulama içi tarayıcının ağ kaydı tarayıcının da 3 kez `p=failed` alıp 4.'de girdiğini gösterdi; şifre elle her seferinde aynı yazılamıyordu. Denenip **işe yaramayan** yollar (tekrarlama): tarayıcı kimliği (`--useragent`), şifreyi form alanıyla verme (`-F frmLogin:password=…`, üstelik reddedilince şifreyi kendiliğinden yeniden gönderip kilide yaklaştırır), tarayıcının `DSID` çereziyle bağlanma (`-C`, `hostname packet error 0x07` — web oturumu tünel açmaz). Teşhis için: uygulama içi tarayıcıda `/ttvm` açılır, kullanıcı girer, `welcome.cgi?p=` sırasına bakılır.
+6. **Uyku:** `caffeinate -imsu` arka planda. Kapak kapanırsa veya şarjdan çıkarsa Mac yine uyur; VPN kopunca yeniden OTP gerekir. Sunucuda çalışan işler (indirme, model) VPN kopmasından etkilenmez.
 
 ### 2.3 Test sunucusuna köprü
 
