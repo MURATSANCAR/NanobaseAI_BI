@@ -126,18 +126,16 @@ def register(app, deps: dict[str, Any]) -> None:
             log.exception("studio marketing call failed")
             raise HTTPException(502, "Stüdyo şu an yanıt vermiyor.") from None
 
-    def audit(request: Request, action: str, job: str, what: str, title: str, detail: Any = None) -> str:
+    def audit(engine, user: str, action: str, job: str, what: str, title: str, detail: Any = None) -> None:
         from semantic_bridge import admin as admin_mod
-        engine, _tenant, user, _ = auth(request)
         admin_mod.audit(engine, user, action, "studio_marketing", f"{job}/{what}"[:120], title, detail)
-        return user
 
     def write(request: Request, method: str, job: str, sub: str, what: str, title: str, body: dict | None = None,
               detail: Any = None, timeout: float = 300):
-        _engine, _tenant, user, _ = auth(request)
+        engine, _tenant, user, _ = auth(request)
         out = call(request_fn, method, job, sub, body=body, editor=user, timeout=timeout)
-        audit(request, {"POST": "create", "PUT": "update", "DELETE": "delete"}.get(method, "update"), job, what, title,
-              detail)
+        audit(engine, user, {"POST": "create", "PUT": "update", "DELETE": "delete"}.get(method, "update"), job, what,
+              title, detail)
         return out
 
     request_fn = request
@@ -172,12 +170,12 @@ def register(app, deps: dict[str, Any]) -> None:
         return write(request, "POST", job, f"/{kind}/generate", kind, "pazarlama üretimi başlatıldı", body, timeout=60)
 
     @app.put(P + "/back-cover")
-    def marketing_back_save(job: str, request: Request, body: Any = None):
+    def marketing_back_save(job: str, request: Request, body: dict[str, Any] | None = None):
         text = str(body_of(body).get("text") or "")
         return write(request, "PUT", job, "/back-cover", "back-cover", "arka kapak taslağı", {"text": text})
 
     @app.post(P + "/back-cover/{action}")
-    def marketing_back_action(job: str, action: str, request: Request, body: Any = None):
+    def marketing_back_action(job: str, action: str, request: Request, body: dict[str, Any] | None = None):
         if action not in ("approve", "apply", "revert"):
             raise HTTPException(404, "İşlem yok.")
         payload = {"text": str(body_of(body).get("text") or "")} if action == "approve" else {}
@@ -186,12 +184,12 @@ def register(app, deps: dict[str, Any]) -> None:
         return write(request, "POST", job, f"/back-cover/{action}", "back-cover", title, payload)
 
     @app.put(P + "/product")
-    def marketing_product_save(job: str, request: Request, body: Any = None):
+    def marketing_product_save(job: str, request: Request, body: dict[str, Any] | None = None):
         page = body_of(body_of(body).get("page"))
         return write(request, "PUT", job, "/product", "product", "ürün sayfası düzeltildi", {"page": page})
 
     @app.post(P + "/product/approve")
-    def marketing_product_approve(job: str, request: Request, body: Any = None):
+    def marketing_product_approve(job: str, request: Request, body: dict[str, Any] | None = None):
         page = body_of(body_of(body).get("page"))
         return write(request, "POST", job, "/product/approve", "product", "ürün sayfası onaylandı", {"page": page})
 
@@ -218,9 +216,9 @@ def register(app, deps: dict[str, Any]) -> None:
         return {"configured": True, "items": items}
 
     @app.post(P + "/product/seo")
-    def marketing_product_seo(job: str, request: Request, body: Any = None):
+    def marketing_product_seo(job: str, request: Request, body: dict[str, Any] | None = None):
         """Onaylı ürün sayfasını SEO modülüne öneri olarak kaydeder (ürün kimliği eşleşmeden seçilir). Gönderim yok."""
-        _engine, _tenant, user, _ = auth(request)
+        engine, _tenant, user, _ = auth(request)
         if seo is None:
             raise HTTPException(409, "SEO & GEO modülü bu kurulumda açık değil.")
         pid = str(body_of(body).get("product_id") or "").strip()
@@ -233,14 +231,14 @@ def register(app, deps: dict[str, Any]) -> None:
         prop = seo.external_proposal(pid, fields, user, SOURCE_LABEL)
         out = call(request_fn, "POST", job, "/product/seo", body={"product_id": pid, "proposal_id": prop["id"]},
                    editor=user, timeout=60)
-        audit(request, "create", job, "product-seo", "ürün sayfası SEO önerisi olarak kaydedildi",
+        audit(engine, user, "create", job, "product-seo", "ürün sayfası SEO önerisi olarak kaydedildi",
               {"product": pid, "proposal": prop["id"]})
         return {"proposal": {"id": prop["id"], "productId": pid, "status": prop["status"],
                              "scoreBefore": prop["score_before"], "scoreAfter": prop["score_after"]},
                 "product": out}
 
     @app.post(P + "/social")
-    def marketing_social_add(job: str, request: Request, body: Any = None):
+    def marketing_social_add(job: str, request: Request, body: dict[str, Any] | None = None):
         b = body_of(body)
         keep = {k: b.get(k) for k in ("template", "visual", "source", "headline", "effect", "color", "quote")
                 if b.get(k) is not None}
@@ -278,7 +276,7 @@ def register(app, deps: dict[str, Any]) -> None:
         return write(request, "DELETE", job, f"/social/{sid}", f"social/{sid}", "sosyal medya görseli silindi")
 
     @app.post(P + "/social/{sid}/approve")
-    def marketing_social_approve(job: str, sid: str, request: Request, body: Any = None):
+    def marketing_social_approve(job: str, sid: str, request: Request, body: dict[str, Any] | None = None):
         if not SOCIAL_ID.match(sid or ""):
             raise HTTPException(404, "Görsel bulunamadı.")
         ok = bool(body_of(body or {"ok": True}).get("ok", True))
@@ -286,12 +284,12 @@ def register(app, deps: dict[str, Any]) -> None:
                      "sosyal medya görseli onaylandı" if ok else "sosyal medya görseli onayı geri alındı", {"ok": ok})
 
     @app.put(P + "/guide")
-    def marketing_guide_save(job: str, request: Request, body: Any = None):
+    def marketing_guide_save(job: str, request: Request, body: dict[str, Any] | None = None):
         guide = body_of(body_of(body).get("guide"))
         return write(request, "PUT", job, "/guide", "guide", "öğretmen kılavuzu düzeltildi", {"guide": guide})
 
     @app.post(P + "/guide/approve")
-    def marketing_guide_approve(job: str, request: Request, body: Any = None):
+    def marketing_guide_approve(job: str, request: Request, body: dict[str, Any] | None = None):
         guide = body_of(body_of(body).get("guide"))
         return write(request, "POST", job, "/guide/approve", "guide", "öğretmen kılavuzu onaylandı", {"guide": guide})
 
