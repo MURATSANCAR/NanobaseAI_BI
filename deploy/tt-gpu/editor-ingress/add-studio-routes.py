@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, sesli okuma 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -129,6 +129,20 @@ if "EDITOR-STUDYO-OGE" not in s:
            + loc(f"{P_}/effects/({KIND})/preview", "GET", "jobs/$1/plan/effects/$2/preview$is_args$args", timeout=60))
     s = s.replace("    # EDITOR-BITTI", oge + "    # EDITOR-BITTI", 1)
     changes.append("süs/şekil ve efekt önizleme yolları")
+
+# 4) Sesli okuma (seslendirme, kelime zamanları, telaffuz sözlüğü; docs/analiz/sesli-okuma-model-secimi.md)
+if "EDITOR-STUDYO-SES" not in s:
+    N_ = f"jobs/({JOB})/narration"
+    ses = ("    # EDITOR-STUDYO-SES  (sesli okuma)\n"
+           + loc(N_, "GET", "jobs/$1/narration", timeout=60)
+           + loc(f"{N_}/(settings|lexicon)", "PUT", "jobs/$1/narration/$2")
+           + loc(f"{N_}/(run|read)", "POST", "jobs/$1/narration/$2")
+           + loc(f"{N_}/sample", "POST", "jobs/$1/narration/sample", timeout=600)
+           + loc(f"{N_}/overlay", "GET", "jobs/$1/narration/overlay")
+           + loc(f"{N_}/pages/({ID})", "GET", "jobs/$1/narration/pages/$2", timeout=60)
+           + loc(f"{N_}/pages/({ID})/audio", "GET", "jobs/$1/narration/pages/$2/audio", timeout=120))
+    s = s.replace("    # EDITOR-BITTI", ses + "    # EDITOR-BITTI", 1)
+    changes.append("sesli okuma yolları")
 
 if s == orig:
     print("zaten var (güncel)")

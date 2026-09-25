@@ -163,7 +163,38 @@ async def upscale_activity(job: str, jid: str, gid: str, new_gid: str, page: str
     await _plan_job(job, jid, lambda d: studio.upscale_asset(d, gid, new_gid, page, item, by), gpu=True)
 
 
-ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity]
+# ------------------------------------------------------------------ sesli okuma (narration.py)
+# Sayfa başına bir etkinlik: uzun kitapta başka stüdyo işleri (resim, figür) sayfalar arasına girebilir; busy.json
+# tutulmaz (seslendirme modeli küçük, görsel modelle aynı kartta birlikte sığar).
+NARRATION_RETRY = RetryPolicy(initial_interval=timedelta(seconds=20), maximum_attempts=3,
+                              non_retryable_error_types=["ValueError", "NoPlan", "VoiceUnavailable"])
+
+
+@activity.defn(name="production_narrate_page")
+async def narrate_page_activity(job: str, jid: str, pid: str, i: int, n: int, by: str) -> None:
+    from . import narration, plan as plan_mod, studio
+    d = studio.job_dir(job)
+    plan_mod.job_record(d, jid, status="running", page=pid, progress=[i, n], attempt=activity.info().attempt)
+    try:
+        await _beating(narration.narrate_page(d, pid, by))
+    except KeyError:                    # sayfa bu arada silindi
+        plan_mod.job_record(d, jid, progress=[i + 1, n])
+        return
+    except Exception as e:
+        if _last(NARRATION_RETRY) or type(e).__name__ in NARRATION_RETRY.non_retryable_error_types:
+            plan_mod.job_record(d, jid, status="fail", error=str(e)[:300])
+        raise
+    plan_mod.job_record(d, jid, progress=[i + 1, n])
+
+
+@activity.defn(name="production_narration_done")
+async def narration_done_activity(job: str, jid: str) -> None:
+    from . import plan as plan_mod, studio
+    plan_mod.job_record(studio.job_dir(job), jid, status="done")
+
+
+ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity,
+              narrate_page_activity, narration_done_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -216,4 +247,16 @@ class AssetUpscale:
                                         heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
 
 
-WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale]
+@workflow.defn(name="BookNarration")
+class BookNarration:
+    @workflow.run
+    async def run(self, job: str, jid: str, pages: list[str], by: str) -> None:
+        for i, pid in enumerate(pages):
+            await workflow.execute_activity("production_narrate_page", args=[job, jid, pid, i, len(pages), by],
+                                            start_to_close_timeout=timedelta(minutes=30),
+                                            heartbeat_timeout=BEAT, retry_policy=NARRATION_RETRY)
+        await workflow.execute_activity("production_narration_done", args=[job, jid],
+                                        start_to_close_timeout=timedelta(minutes=2))
+
+
+WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale, BookNarration]
