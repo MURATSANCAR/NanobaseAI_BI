@@ -1,5 +1,26 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (23:50) — Kitap Tasarım Stüdyosu: çocuk kitabı yaş uygunluğu raporu (H hattı; dalda, kurulmadı)
+
+- **Ne:** "Kelime düzeyi, cümle uzunluğu ve hassas içerik denetlenir. Okul ve MEB listelerine uygunluk raporu çıkar."
+  Sayfa stüdyosunda «Yaş uygunluğu» düğmesi → yan sayfa: hüküm (uygun/sınırda/uyumsuz, gerekçeli), sayfa sayfa bulgular
+  (tıklayınca sayfa düzeninde o sayfa açılır), seyrek kelimeler + sade karşılık önerisi (editör onayı, «Metne uygula»),
+  okul/MEB ölçütleri, editör kontrol listesi (kim/ne zaman), PDF (Typst). Ön kontrole bilgi satırı (baskıyı durdurmaz).
+- **Yeniden kullanım:** son okumanın `age_fit` okunabilirlik ve hassas içerik denetimi aynen; tek değişiklik `sensitive(..., llm=)`
+  (çağrı kaydı iş klasörüne). Ekranda formül/model adı yok; formüller PDF ekinde kaynak olarak.
+- **Kelime düzeyi ölçüldü, uydurulmadı:** 735 PDF'lik derlemden kendi basılı bandı 6-10 olan 286 kitap; Zemberek kökü; seyrek
+  eşiği K=1 (bant kitaplarının kendi kelime kullanımlarının %1'i), kitabın seyrek payı p95 %2,07; aynı kitap eşiği 0,6
+  (derlemdeki kitabın kendisi sayılmaz).
+- **MEB/okul kaynakları** (`docs/analiz/meb-uygunluk-olcutleri.md`): Okul Kütüphaneleri Yönetmeliği m.10 (2024) + Uygulama
+  Kılavuzu (2025), Ders Kitapları ve Eğitim Araçları Yönetmeliği m.8/6 (punto), TTKB değerlendirme kriterleri (2024), Türkçe
+  Öğretim Programı 2019 metin nitelikleri m.9, 100 Temel Eser'in 2018/17 genelgesiyle kaldırılması, 1117 sayılı Kanun m.1,
+  ilkokula kayıt 69 ay. 2024 TYMM Türkçe programı PDF'i HTTP 500 → «kaynak bulunamadı»; yaşa göre resmî sayısal eşik yok.
+- **Doğrulama:** GPU geçici kapta `test_age_report.py` (14) + `test_plan.py` + `test_production.py` → 70 geçti, 1 atlandı;
+  tsc temiz (test sunucusu); köprü vekili bridge imajında sahte stüdyoyla sınandı; ekran 320/390/768'de yatay kaymasız
+  (sahte uçlu düzenek). Gerçek veri (gateway, GPU'da iş KOPYALARI): stüdyodaki tek iş (3-6, Zeki AI okuması) → «Banda göre
+  değerlendirilemedi»; derlemden iki 6-10 kitap → «Sınırda» (seyrek pay %5,6) ve «Uyumsuz» (s.31 alay/zorbalık adayı),
+  ikisinde de kitap derlemde tanındı. İsabet (hassas/seyrek bulguların insan etiketi) ölçülmedi.
+
 ## 2026-09-25 (22:45) — Kurulum müşteri verisini silmez: köprünün durum klasörü kalıcı diskte
 
 - Kullanıcı kuralı: "ben resetleyelim demedikçe tüm sistemlerde müşterinin verileri silinmeyecek, ne var ise o kalacak."

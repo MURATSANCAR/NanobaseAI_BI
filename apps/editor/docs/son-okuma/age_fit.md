@@ -166,3 +166,10 @@ kaynaklı hassas içerik adayı. İnsan doğrulaması yapılmadı; bunlar sayıd
 6. **Diyalog payı** ölçülüyor ama hiçbir eşiğe bağlı değil (yalnız INFO).
 7. `BIO` kalıbı doğum yılı + «doğdu» arıyor: yazar tanıtımı bu kalıba uymuyorsa hikâye
    metnine karışır ve okunabilirliği bozar.
+
+## 9. Stüdyoda yeniden kullanım (2026-09-25)
+
+Kitap Tasarım Stüdyosu'nun yaş uygunluğu raporu (`production/age_report.py`) bu denetimin `readability` ve `sensitive`
+fonksiyonlarını stüdyo işinin güncel metnine uygular (kopya kural yok). `sensitive` bunun için isteğe bağlı `llm`
+alır (çağrı kaydı işin `provenance.jsonl`'ına). Rapora eklenen kelime düzeyi ve MEB/okul ölçütleri:
+`docs/analiz/meb-uygunluk-olcutleri.md`.

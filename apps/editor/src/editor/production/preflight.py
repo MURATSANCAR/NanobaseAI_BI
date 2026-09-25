@@ -107,5 +107,10 @@ def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kun
         c = pymupdf.open(cover)
         add("Kapak açılımı", "OK" if c.page_count == 1 else "FAIL",
             f"{c[0].rect.width / PT_PER_MM:.1f}×{c[0].rect.height / PT_PER_MM:.1f} mm")
+    try:    # yaş uygunluğu: bilgi satırı, baskıyı durdurmaz (age_report.preflight_line hiçbir zaman FAIL vermez)
+        from .age_report import preflight_line
+        out.append(preflight_line(Path(interior).parent.parent))
+    except Exception:  # noqa: BLE001 - rapor okunamazsa ön kontrol yine çalışır
+        pass
     status = "FAIL" if any(x["status"] == "FAIL" for x in out) else "WARN" if any(x["status"] == "WARN" for x in out) else "OK"
     return {"status": status, "checks": out}

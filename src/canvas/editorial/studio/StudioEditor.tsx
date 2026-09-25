@@ -7,6 +7,7 @@ import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { Img, ghostBtn, gradientBtn, press } from './shared';
 import { revision, useStudioJob } from './StudioFlow';
+import AgeReportEntry from './age/AgeReport';
 
 /** Sayfa stüdyosu: dizilmiş kitap açılım açılım görünür; resimli her sayfa ve kapak için iki yol vardır.
  *  DÜZELT seçili sürümü referans alır ve yalnız yazılan değişikliği yapar; FARKLI ÜRET sayfanın metninden
@@ -92,6 +93,7 @@ export default function StudioEditor() {
           <span className={`rounded-full px-3 py-1.5 text-[12px] font-bold ${waiting.length ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
             {artKeys.length - waiting.length}/{artKeys.length} resim onaylı{waiting.length ? ` · ${waiting.length} onay bekliyor` : ''}
           </span>
+          <AgeReportEntry jobId={jobId} />
           <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/sayfalar`} title="Sayfa ekle/sil/sırala, yerleşim, balon, renkli yazı, figür ve fotoğraf">
             <LayoutTemplate className="h-4 w-4" aria-hidden />Sayfa düzeni
           </Link>

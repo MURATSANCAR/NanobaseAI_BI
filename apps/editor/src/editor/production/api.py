@@ -812,3 +812,8 @@ async def plan_jobs(job: str) -> dict:
     """Süren GPU işi (busy) ve figür / zemin ayıklama / kaliteyi artırma işlerinin durumu (ekran bununla bekler)."""
     d = _plan_dir(job)
     return {"busy": await _busy(d), "jobs": await asyncio.to_thread(plan_mod.jobs, d)}
+
+
+# Yaş uygunluğu raporu (api_age.py): /v1/studio/jobs/{job}/age…
+from .api_age import router as _age_router  # noqa: E402
+app.include_router(_age_router)
