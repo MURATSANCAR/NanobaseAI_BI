@@ -4,6 +4,7 @@
 limit_req_zone $binary_remote_addr zone=timas_login:10m rate=20r/m;
 limit_req_zone $binary_remote_addr zone=timas_ask:10m rate=6r/m;
 limit_req_zone $binary_remote_addr zone=timas_api:10m rate=120r/m;
+limit_req_zone $binary_remote_addr zone=timas_studio_img:10m rate=600r/m;
 
 server {
     listen 80;
@@ -70,6 +71,39 @@ server {
         proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
         proxy_set_header x-semantic-admin "${ADMIN_TOKEN}";
         proxy_read_timeout 120s;
+    }
+
+    # Kitap Tasarım Stüdyosu önizlemeleri: bir açılışta 60+ küçük görsel; genel API sınırına (120/dk) takılmasın.
+    location ~ "^/timas/api/v1/editorial/studio/jobs/[0-9a-f]{20}/(pages/[0-9]+/preview|cover/preview|art/[0-9a-z]+/[0-9]+|characters/[0-9]+)$" {
+        if ($request_method != GET) { return 405; }
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_studio_img burst=120 nodelay;
+        limit_req_status 429;
+        rewrite ^/timas/api/(.*)$ /api/$1 break;
+        proxy_pass http://bridge:8795;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_read_timeout 120s;
+    }
+
+    # Stüdyoya Word yükleme: köprü 20 MB'a kadar kabul eder; genel API gövde sınırı 10 MB.
+    location = /timas/api/v1/editorial/studio/jobs/docx {
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_api burst=30 nodelay;
+        limit_req_status 429;
+        proxy_pass http://bridge:8795/api/v1/editorial/studio/jobs/docx;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_read_timeout 120s;
+        client_max_body_size 21M;
     }
 
     # Motor: aynı docker ağındaki bridge konteynerine ada göre.
