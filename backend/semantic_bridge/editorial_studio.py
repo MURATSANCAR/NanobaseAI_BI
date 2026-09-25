@@ -53,22 +53,30 @@ def _key(key: str) -> str:
     return key
 
 
-# Kalıcı bağlantı havuzu. Stüdyoya giden yol test sunucusunda GPU'dan gelen SSH tüneli (RTT ~170 ms), müşteri
-# VM'inde GPU'nun genel HTTPS adresi. Her istekte yeni istemci açmak her görselde yeni tünel kanalı (ya da TLS
-# el sıkışması) demekti: küçük bir görselin ilk baytı 0,35–0,7 sn, açık bağlantıda 0,175 sn (2026-09-25 ölçümü).
-# Boşta bağlantı stüdyo servisinin keep-alive süresinden (uvicorn --timeout-keep-alive 75) önce bırakılır ki
-# karşı tarafın kapattığı bağlantıya istek yazılmasın.
-_KEEPALIVE_S = 50.0
+# Okuyan istekler (GET) için kalıcı bağlantı havuzu. Stüdyoya giden yol test sunucusunda GPU'dan gelen SSH tüneli
+# (RTT ~170 ms), müşteri VM'inde GPU'nun genel HTTPS adresi. Her istekte yeni istemci açmak her görselde yeni
+# tünel kanalı (ya da TLS el sıkışması) demekti: küçük görselin ilk baytı 0,35–0,7 sn, açık bağlantıda 0,175 sn
+# (2026-09-25 ölçümü). Boşta bağlantı stüdyo servisinin keep-alive süresinden (uvicorn --timeout-keep-alive 75)
+# önce bırakılır. Karşı taraf yine de kapatmışsa (eski kurulumda 5 sn; tünelde kapanış ~0,1 sn geç duyulur ve
+# aynı anda açılan bağlantıların hepsi aynı yaştadır) GET bir kez YENİ bağlantıyla denenir. Yazan istekler
+# (POST/PUT/DELETE) havuza girmez: bayat bağlantıda yarım kalan yazım yeniden denenemez; yazım zaten seyrek.
+_KEEPALIVE_S = float(os.environ.get("EDITOR_STUDIO_KEEPALIVE_S", "50"))
 _clients: dict[str, httpx.Client] = {}
 _clients_lock = threading.Lock()
+_STALE = (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError)
+
+
+def _fresh(ca: str) -> httpx.Client:
+    return httpx.Client(verify=ca or True, follow_redirects=False)
 
 
 class _Pooled:
     """`with _client(...) as c:` kalıbını koruyan ince sarmalayıcı: çıkışta havuz kapanmaz; zaman aşımı istek
-    başına verilir. GET, boşta kapanmış bağlantıya denk gelirse bir kez yeniden denenir (yazan istekler denenmez)."""
+    başına verilir."""
 
-    def __init__(self, client: httpx.Client, timeout: float):
+    def __init__(self, client: httpx.Client, ca: str, timeout: float):
         self._c = client
+        self._ca = ca
         self._timeout = timeout
 
     def __enter__(self) -> "_Pooled":
@@ -79,12 +87,14 @@ class _Pooled:
 
     def request(self, method: str, url: str, **kw) -> httpx.Response:
         kw.setdefault("timeout", self._timeout)
+        if method.upper() != "GET":
+            with _fresh(self._ca) as c:
+                return c.request(method, url, **kw)
         try:
             return self._c.request(method, url, **kw)
-        except (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError):
-            if method.upper() != "GET":
-                raise
-            return self._c.request(method, url, **kw)
+        except _STALE:
+            with _fresh(self._ca) as c:
+                return c.request(method, url, **kw)
 
     def get(self, url: str, **kw) -> httpx.Response:
         return self.request("GET", url, **kw)
@@ -107,7 +117,7 @@ def _client(ca: str, timeout: float = 30) -> _Pooled:
                                  limits=httpx.Limits(max_connections=64, max_keepalive_connections=32,
                                                      keepalive_expiry=_KEEPALIVE_S))
                 _clients[key] = c
-    return _Pooled(c, timeout)
+    return _Pooled(c, ca, timeout)
 
 
 def _raise(r: httpx.Response) -> None:
