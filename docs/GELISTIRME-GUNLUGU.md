@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (21:20) — Ekranlarda model/ürün/teknoloji adı yok (kullanıcı kuralı)
+
+- **Kural:** kullandığımız model, ürün ve teknoloji adı hiçbir ekranda, ekrana giden sunucu metninde, basılı kitapta ve PDF belge özelliklerinde yazmaz; yerine «Zeki AI» ya da işlevin Türkçe adı. Kod yorumu, günlük ve iç kayıtta kalabilir.
+- **Temizlenen:** stüdyo kaynak satırı (Qwen-Image-2.1 → Zeki AI), künye resim notu, ZEKI AI Tahminleme açıklamaları/formülleri/hata metni (TimesFM 3.0, Google Research), basın-web «Wikidata» etiketleri (→ açık bilgi tabanı / Kaynak kaydı), yönetim yardımı («OpenAI uyumlu uç»), son okuma bulgusu (CCIP), baskı/büyütme hata metinleri (Ghostscript, Lanczos). PDF «Belge özellikleri» üretici/oluşturucu ve XMP araç adı «Zeki AI» (`preflight.brand`, her son PDF'te). Power BI adı (müşterinin kendi aracı, Baskı Öneri sekmeleri) bırakıldı, kullanıcıya soruldu.
+- **Kurulum:** test sunucusu (köprü + arayüz `index-ChQwB2Yn.js`, tahmin testleri 28/28), VM (`main` fark 0, `._*` 0, yayındaki parçalarda ad 0), GPU studio + studio-worker `editor-py:0.15.9-09251506` → `0.15.9-09252115` (testler 27/27; kurulum, çalışan «Etimesgutlu Bebek Aslan» işi bitince GPU'da kendiliğinden yapıldı — VPN kopmalarına karşı).
+
 ## 2026-09-25 (18:15) — SEO & GEO: T-soft bağlandı, ilk eşitleme; şablon meta kuralı, yazar başlıkta
 
 - **T-soft bağlantısı:** kullanıcı `zeki@timas.com.tr` ile AUI002 (geçersiz kullanıcı/şifre) aldı; web servis kullanıcı adı `zekiai` (kullanıcı söyledi, kullanıcı adını Claude güncelledi, şifreyi kullanıcı ekrandan girdi). Deneme: "Giriş başarılı, 6.781 ürün".
