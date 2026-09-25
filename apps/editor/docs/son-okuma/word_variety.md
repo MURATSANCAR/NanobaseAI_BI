@@ -117,6 +117,19 @@ sırada sorulup ortalanır).
 
 Hiçbiri tek kitapta ayarlanmadı; `ECHO_SENTENCES=1` redaksiyon alışkanlığıdır, ölçülene kadar öyle.
 
+## 4b. Sürüm 2 (2026-09-25) — ne değişti
+
+- **Sayfada işaret:** bulgunun `bbox`'ı ikinci geçişin (ilk tekrarın) kutusu; `details.marks` aynı sayfadaki
+  bütün geçişlerin kutuları. Kutu, sayfanın basılı sözcükleri (PyMuPDF `words`, okuma sırası) içinde aynı
+  sözcüğün kaçıncı geçişi olduğuyla bulunur; sayfadaki sayı bizim metnimizdekiyle tutmazsa ya da sözcük
+  satır sonunda bölünmüşse işaret konmaz (yanlış yeri işaretlemektense işaret yok). OCR sayfasında işaret yok.
+- **Genel alanlar** (kart servisi `GET …/proofing` her bulguda, köprü ve kanvas taşır): `group`
+  («kök · anlam», topluca karar), `confidence` (modelin «düzeltilmeli» olasılığı), `marks`.
+- **Öneri:** ikinci geçişin ekli hâliyle istenir; sözlükte olmayan biçim ve aynı kökün çekimi atılır; kalan her
+  öneriye kapalı soru «yerine konunca anlam korunuyor mu» (iki sıra, `KEEP`).
+- **Anlam:** istem anlamları kaba tutar (aynı anlamın farklı nesne/eklerle kullanımı tek anlam; deyim ayrı).
+- VERSION 2: kural değişti, isabet sıfırdan sayılır.
+
 ## 5. Bulgu biçimi
 
 ```json

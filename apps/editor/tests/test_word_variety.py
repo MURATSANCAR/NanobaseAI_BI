@@ -298,6 +298,11 @@ def test_valid_suggestion_needs_every_word_in_the_dictionary():
     assert not W.valid_suggestion("   ", ok)
 
 
+def test_keeps_meaning_prompt_names_the_second_occurrence():
+    p = W.keeps_meaning_prompt("x [[dut]] y [[dut]]", "dut", "incir", W.SAME, W.DIFFERENT)
+    assert "«dut» yerine «incir»" in p and p.endswith("Yalnız A ya da B yaz.")
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -194,7 +194,14 @@ async def _alternatives(llm: Llm, lex, lemma: str, sense: dict | None, marked: s
         if " " not in s and any(c[0] == lemma for c in W.candidates(lex.analyses(W.lower_tr(s)))):
             continue
         kept.append(s)
-    return kept
+    # sözlükte var olmak yetmez: öneri o cümlede aynı anlamı vermeli ("dut" yerine "incir" başka ağaçtır)
+    second = forms[1] if len(forms) > 1 else forms[0]
+    out_ok = []
+    for s in kept:
+        p, _ = await J._ab(llm, lambda x, y: W.keeps_meaning_prompt(marked, second, s, x, y), W.SAME, W.DIFFERENT, [page])
+        if p >= J.KEEP:
+            out_ok.append(s)
+    return out_ok
 
 
 async def run(generation_id: str):

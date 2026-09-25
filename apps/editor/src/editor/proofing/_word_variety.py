@@ -362,6 +362,16 @@ def flaw_prompt(lemma: str, sense: dict, marked: str, x: str, y: str, book_count
             f"Pasaj: «{marked}»\n\nBu yakın tekrar düzeltilmeli mi?\nA) {x}\nB) {y}\nYalnız A ya da B yaz.")
 
 
+SAME = "Evet: cümle aynı anlamı korur ve doğru Türkçe olur."
+DIFFERENT = "Hayır: anlam değişir, başka bir şey anlatılır ya da cümle bozulur."
+
+
+def keeps_meaning_prompt(marked: str, second: str, suggestion: str, x: str, y: str) -> str:
+    return ("Bir kitabın redaksiyonunu yapıyorsun. Aşağıdaki pasajda tekrarlanan sözcük [[ ]] içinde. "
+            f"İkinci geçiş olan «{second}» yerine «{suggestion}» yazılırsa ne olur?\n\n"
+            f"Pasaj: «{marked}»\n\nA) {x}\nB) {y}\nYalnız A ya da B yaz.")
+
+
 # ------------------------------------------------------------------ harita ve pasaj
 def build_map(occs: list[Occ], senses: dict[str, list[dict]], contexts: dict[int, str]) -> list[dict]:
     """Kitabın tekil kelime haritası: her kök bir kez, sıklığa göre. Her kökte biçimler, sayfalar
