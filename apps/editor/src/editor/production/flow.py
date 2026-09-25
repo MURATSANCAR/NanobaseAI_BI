@@ -1,5 +1,6 @@
-"""Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction) ve tek resmin yeniden üretimi
-(ArtRegenerate). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
+"""Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction), tek resmin yeniden üretimi
+(ArtRegenerate) ve sayfa planının işleri: serbest figür (FigureGenerate), kaliteyi artırma (AssetUpscale) ve
+GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
 fontlar ister, bunlar stüdyo imajında) ve kendi işçisi (worker.py, aynı anda tek etkinlik: görsel model
 tek sırada). API yalnız başlatır ve iş klasörünü okur.
 
@@ -116,7 +117,53 @@ async def regenerate_activity(job: str, key: str, mode: str, prompt: str, by: st
     await _release_if_idle(d)
 
 
-ACTIVITIES = [plan_activity, finish_activity, regenerate_activity]
+async def _plan_job(job: str, jid: str, coro_fn, gpu: bool):
+    """Sayfa planı işleri (figür, zemin ayıklama, kaliteyi artırma): durum plan-jobs/<jid>.json'da (ekran bekler).
+    GPU işi busy.json'u tutar ve bitince sırada iş yoksa görsel modeli kapatır; zemin ayıklama GPU'suzdur."""
+    from . import plan as plan_mod, studio
+    d = studio.job_dir(job)
+    if gpu:
+        _started(d)
+    plan_mod.job_record(d, jid, status="running", attempt=activity.info().attempt)
+    try:
+        res = await _beating(coro_fn(d))
+    except Exception as e:
+        final = _last(ART_RETRY) or isinstance(e, (ValueError, KeyError, FileNotFoundError))
+        plan_mod.job_record(d, jid, status="fail" if final else "running", error=str(e)[:300])
+        if gpu and final:
+            b = studio.busy(d) or {}
+            studio.set_busy(d, {**b, "error": str(e)[:300], "since": time.time()})
+            await _release_if_idle(d)
+        raise
+    plan_mod.job_record(d, jid, status="done", result=res)
+    if gpu:
+        studio.set_busy(d, None)
+        await _release_if_idle(d)
+
+
+@activity.defn(name="production_figure")
+async def figure_activity(job: str, jid: str, gid: str, prompt: str, characters: list[str], page: str | None,
+                          by: str) -> None:
+    from . import studio
+    await _plan_job(job, jid, lambda d: studio.make_figure(d, gid, prompt, characters, page, by), gpu=True)
+
+
+@activity.defn(name="production_cutout")
+async def cutout_activity(job: str, jid: str, gid: str, new_gid: str, by: str) -> None:
+    from . import studio
+
+    async def run(d):
+        return await asyncio.to_thread(studio.cutout_asset, d, gid, new_gid, by)
+    await _plan_job(job, jid, run, gpu=False)
+
+
+@activity.defn(name="production_upscale")
+async def upscale_activity(job: str, jid: str, gid: str, new_gid: str, page: str, item: str, by: str) -> None:
+    from . import studio
+    await _plan_job(job, jid, lambda d: studio.upscale_asset(d, gid, new_gid, page, item, by), gpu=True)
+
+
+ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -141,4 +188,32 @@ class ArtRegenerate:
                                         heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
 
 
-WORKFLOWS = [BookProduction, ArtRegenerate]
+@workflow.defn(name="FigureGenerate")
+class FigureGenerate:
+    @workflow.run
+    async def run(self, job: str, jid: str, gid: str, prompt: str, characters: list[str], page: str | None,
+                  by: str) -> None:
+        await workflow.execute_activity("production_figure", args=[job, jid, gid, prompt, characters, page, by],
+                                        start_to_close_timeout=timedelta(minutes=45),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="AssetCutout")
+class AssetCutout:
+    @workflow.run
+    async def run(self, job: str, jid: str, gid: str, new_gid: str, by: str) -> None:
+        await workflow.execute_activity("production_cutout", args=[job, jid, gid, new_gid, by],
+                                        start_to_close_timeout=timedelta(minutes=20),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="AssetUpscale")
+class AssetUpscale:
+    @workflow.run
+    async def run(self, job: str, jid: str, gid: str, new_gid: str, page: str, item: str, by: str) -> None:
+        await workflow.execute_activity("production_upscale", args=[job, jid, gid, new_gid, page, item, by],
+                                        start_to_close_timeout=timedelta(minutes=30),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale]
