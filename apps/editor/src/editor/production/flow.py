@@ -217,3 +217,8 @@ class AssetUpscale:
 
 
 WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale]
+
+# Seri karakter kartı (characters.py): denetim (CharacterCheck) ve öneri/çeviri (CharacterCards) aynı kuyrukta.
+from .characters import ACTIVITIES as _CARD_ACTIVITIES, WORKFLOWS as _CARD_WORKFLOWS  # noqa: E402
+ACTIVITIES += _CARD_ACTIVITIES
+WORKFLOWS += _CARD_WORKFLOWS
