@@ -1,4 +1,4 @@
--- Kitap kartı ve baskı ayrıntısı (CRM'de Power BI için hazırlanmış görünümler).
+-- Kitap kartı ve baskı ayrıntısı (CRM'de mevcut rapor için hazırlanmış görünümler).
 SELECT
     a.StokKodu      AS stok_kodu,
     a.[Ürün Adı]    AS urun_adi,

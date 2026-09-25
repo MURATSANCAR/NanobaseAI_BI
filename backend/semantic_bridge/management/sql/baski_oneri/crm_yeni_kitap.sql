@@ -1,7 +1,7 @@
 -- İlk yayın tarihi içinde bulunulan aydan 12 ay öncesine kadar olan kitaplar.
--- CRM tarihi UTC saklar: İstanbul'da 1 Kasım 00:00 olan yayın `2025-10-31 21:00` görünür. Power BI tekrar
+-- CRM tarihi UTC saklar: İstanbul'da 1 Kasım 00:00 olan yayın `2025-10-31 21:00` görünür. mevcut rapor tekrar
 -- sipariş (RPT) sınırını bu saatli değerle kurar (DATEADD(MONTH, 1, ilk yayın)); aynı sınır için saatli
--- değer de okunur. Ekrandaki ilk yayın ve dağılım ayı Power BI'daki gibi tarihten (UTC gün) alınır.
+-- değer de okunur. Ekrandaki ilk yayın ve dağılım ayı mevcut rapordaki gibi tarihten (UTC gün) alınır.
 SELECT k.new_stokkodu AS stok_kodu,
        CAST(k.new_ilkyayintarihi AS DATE) AS ilk_yayin_tarihi,
        k.new_ilkyayintarihi AS ilk_yayin_zamani

@@ -1,7 +1,7 @@
 -- Yeni kitapların (ilk yayını son 12 ay içinde) gün bazında satışı.
 -- Kod listesi CRM'deki yeni kitaplardan doldurulur (tırnak kaçışıyla) ve bir VALUES tablosu olarak
 -- birleştirilir: aynı kodları IN listesiyle seçmek planı bozup süreyi 14 sn'den 194 sn'ye çıkarıyordu.
--- Geçen yılın ve bu yılın tamamı okunur (Power BI: V_SatisRaporu_2025_2026). Ay kolonları iki yılın aynı
+-- Geçen yılın ve bu yılın tamamı okunur (mevcut rapor: V_SatisRaporu_2025_2026). Ay kolonları iki yılın aynı
 -- ayını toplar; yayından önceki satış da o aya düşer. Son 1 yıl, RPT, dağılım pencereleri hesapta süzülür.
 SELECT
     s.[Malzeme/Hizmet Kodu]           AS stok_kodu,
