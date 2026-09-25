@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 — Son okuma kanıt paneli: işaret görünür alana kayıyor (dalda, kurulmadı)
+
+- **Şikâyet:** bulguya tıklanınca sağdaki sayfada işaret (mor kutu) panelin altında, görünmüyordu. **Sebep:** yapışkan sütun görünür alandan uzundu (başlık + 70vh görsel + karar kartı) ve liste başındayken henüz yapışmadığı için ekranın altına taşıyordu; sayfa altındaki işaret görünür alanın dışında kalıyordu, panelde işarete kaydıran bir şey yoktu. Düzenekte ölçüldü: önce kutu 884–898 px, gövdenin görünür altı 836 px.
+- **Düzeltme (`ProofEvidence.tsx`, `ProofFindings.tsx`, `proofScroll.ts`):** panel görünür alana sığar (gövdenin ölçülen boyu, ekran yakınlaştırmasıyla); başlık ve karar kartı sabit, yalnız sayfa görseli kendi kabında kayar (`overscroll-behavior: contain`). Her seçimde işaret kutusu kabın ortasına getirilir — görsel yüklendikten sonra; aynı bulguya yeniden basmak da geri götürür. Fareyle yumuşak; klavye (↑/↓), yeni sayfanın ilk açılışı ve azaltılmış harekette anlık. Sütunun altı ya da üstü taşıyorsa gövde gereken kadar kaydırılır. Telefonda alttan kart aynı düzende.
+- **Sayfa numarası:** listedeki «s. N» ile paneldeki «Sayfa N» aynı sayı, görsel de aynı sayfa — kitabın PDF'teki fiziksel sırası (`ed.page.page_no`; bütün denetimler bunu yazar). Ekrandaki «s. 4» / «Sayfa 207» farkı listenin başına dönülmüş olmasından; iki numaralandırma karışmıyor. Basılı sayfa numarası (folyo) raporda yok; açık iş.
+- **Doğrulama:** test sunucusunda geçici dizinde `tsc` temiz, `proofScroll.test.ts` 5/5; sahte veriyle geçici derleme tünelle tarayıcıda: 1440 masaüstünde işaret ve sütun görünür (liste başı, liste sonu, ↑/↓), 320/390/768'de alttan kart, yatay taşma 0. Canlı veriyle ekran açılmadı.
+
 ## 2026-09-26 (00:40) — Kelime tekrarı v2: sayfada işaret, gruplu karar, anlamı korunan öneri — test sunucusunda
 
 - **Sayfada işaret:** tekrar bulgusu sayfa görselinde kutulanıyor; tekrarın aynı sayfadaki bütün geçişleri de (`marks`). Dilek Ağacı: 120 bulgunun 105'i işaretli, 96'sında ≥2 geçiş. Eşleme sayfanın basılı sözcüklerinde sıra ile; sayı tutmazsa işaret yok.

@@ -1,15 +1,26 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { bookAskApi, type ProofReasonCode, type ProofVerdict, type ProofingFinding, type ProofingSeverity } from '../engine';
 import { Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime } from '../format';
+import { useShellZoom } from '../stitch/Shell';
+import { markScrollTop } from './proofScroll';
 
 /** M5 son okuma — kanıt paneli ve karar denetimleri.
  *
  *  Bulgu tek başına bir iddiadır; editör kararı sayfayı görüp verir. Panel, bulgunun sayfasını
- *  (tam boy render, oran korunur) ve `bbox` varsa işaretli yeri gösterir; aynı sayfadaki öbür
+ *  (panel eninde, oran korunur) ve `bbox` varsa işaretli yeri gösterir; aynı sayfadaki öbür
  *  bulgular küçük numaralı noktalardır. Karar («Doğru» / «Yanlış alarm» + gerekçe) buradan verilir.
+ *
+ *  Kaydırma: panel görünür alana sığar (masaüstünde kaydırılan gövdenin boyu, darda 92dvh); başlık ve
+ *  karar kartı sabit, yalnız sayfa görseli kendi kabında kayar (`overscroll-behavior: contain`, arkadaki
+ *  liste kıpırdamaz). Her seçimde işaret kutusu bu kabın ortasına getirilir — görsel yüklendikten sonra,
+ *  çünkü kutunun yeri görselin gerçek oranına bağlı. Fareyle seçimde yumuşak, klavyede, yeni sayfanın
+ *  ilk açılışında ve azaltılmış harekette anlık.
+ *
+ *  Sayfa numarası: listedeki «s. N» ile buradaki «Sayfa N» aynı sayıdır — kitabın PDF'teki fiziksel sırası
+ *  (`ed.page.page_no`); görsel de bu sırayla getirilir. Kitabın üstüne basılı sayfa numarası farklı olabilir.
  *
  *  Masaüstünde (≥ 1024) listenin yanında yapışkan sütun; darda alttan açılan kart (body'ye portal:
  *  glass-panel'in backdrop-filter'ı `position: fixed`i kendine bağlar, portal bunu aşar). */
@@ -46,8 +57,23 @@ export type Decide = (findingId: string, verdict: ProofVerdict, reasonCode?: Pro
 export const findingKey = (f: ProofingFinding, i: number) => f.id ?? `${f.check}-${f.page ?? 'x'}-${i}`;
 
 const PAGE_IMAGE_WIDTH = 1200;
-/** Sayfa görselinin en fazla boyu (vh). */
-const MAX_PAGE_VH = 70;
+/** Panelin yapışkan üst boşluğu ve alta bırakılan pay (px, `lg:top-3`). */
+const STICKY_GAP = 12;
+
+/** Kaydırma isteği: `seq` her seçimde artar (aynı bulguya yeniden basmak da işarete geri götürür);
+ *  `instant` klavyeyle gezinmede — klavye eylemi animasyonsuzdur. */
+export type ScrollCue = { seq: number; instant: boolean };
+
+const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/** En yakın dikey kaydırma kabı (ekranın gövdesi `main`); yoksa belge. */
+function scrollParent(el: HTMLElement): HTMLElement {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const oy = getComputedStyle(p).overflowY;
+    if (oy === 'auto' || oy === 'scroll') return p;
+  }
+  return document.scrollingElement as HTMLElement;
+}
 /** İmleç hover'ı destekliyorsa; dokunmatikte hover artığı kalmasın. */
 const hoverable = '[@media(hover:hover)]:hover:bg-slate-200';
 
@@ -147,27 +173,51 @@ export function DecisionControls({ f, decide, busy }: { f: ProofingFinding; deci
 
 const pct = (v: number) => `${v / 10}%`;
 
-/** Sayfa görseli + işaretler. Çerçevenin eni `min(%100, 70vh × oran)`, boyu aspect-ratio'dan: görsel çerçeveyi
- *  tam doldurur, yüzdeler görsele birebir oturur (tarayıcının inline-block/transfer kurallarına bel bağlanmaz).
- *  Vurgu kutusunun dışı kutunun kendi gölgesiyle karartılır (tek eleman, ek katman yok); kutu animasyonsuz. */
-function PageImage({ bookId, bookTitle, page, marks, activeKey, onPick }: { bookId: string; bookTitle: string | null; page: number; marks: Array<{ key: string; n: number; f: ProofingFinding }>; activeKey: string | null; onPick: (key: string) => void }) {
-  const [ratio, setRatio] = useState<number | null>(null); // en / boy; yüklenene dek A-serisi varsayımı
-  const [failed, setFailed] = useState(false);
+/** Sayfa görseli + işaretler, kendi dikey kaydırma kabında. Çerçevenin eni kabın eni, boyu aspect-ratio'dan:
+ *  görsel çerçeveyi tam doldurur, yüzdeler görsele birebir oturur (tarayıcının inline-block/transfer kurallarına
+ *  bel bağlanmaz). Kap panelde kalan boya sığar (`shrink`, en az 200 px); sayfa ondan uzunsa kap kayar ve seçili
+ *  işaret ortaya getirilir. Vurgu kutusunun dışı kutunun kendi gölgesiyle karartılır (tek eleman, ek katman yok). */
+function PageImage({ bookId, bookTitle, page, marks, activeKey, onPick, cue }: { bookId: string; bookTitle: string | null; page: number; marks: Array<{ key: string; n: number; f: ProofingFinding }>; activeKey: string | null; onPick: (key: string) => void; cue: ScrollCue }) {
   const src = bookAskApi.pageImageUrl(bookId, page, PAGE_IMAGE_WIDTH);
-  // Sayfa değişince eski görsel yeni sayfaymış gibi durmasın.
-  useEffect(() => {
-    setRatio(null);
-    setFailed(false);
+  // Yükleme durumu adresiyle birlikte tutulur: sayfa değiştiği karede eski görselin oranı yeni sayfaya
+  // (ve işaret konumuna) karışmaz.
+  const [img, setImg] = useState<{ src: string; ratio: number } | null>(null); // en / boy
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const viewport = useRef<HTMLDivElement>(null);
+  const frameEl = useRef<HTMLDivElement>(null);
+  /** İşarete kaydırılmış son sayfa: yeni sayfanın ilk kaydırması anlık (sayfanın üstünden işarete kayan bir
+   *  açılış gürültüdür), aynı sayfada bulgudan bulguya geçiş yumuşak. */
+  const settled = useRef<string | null>(null);
+  // Yeni sayfa başından açılır (işaretsiz bulguda da önceki sayfanın kaydırması kalmasın).
+  useLayoutEffect(() => {
+    viewport.current?.scrollTo({ top: 0, behavior: 'auto' });
   }, [src]);
-  const loaded = ratio !== null;
-  const r = ratio ?? 1 / 1.41;
+  const loaded = img?.src === src;
+  const failed = failedSrc === src;
+  const r = loaded ? img.ratio : 1 / 1.41; // yüklenene dek A-serisi varsayımı
   const active = marks.find((m) => m.key === activeKey);
   const box = active?.f.bbox ?? null;
-  const frame: CSSProperties = { width: `min(100%, calc(${MAX_PAGE_VH}vh * ${r.toFixed(4)}))`, aspectRatio: `${r.toFixed(4)}` };
+  const frame: CSSProperties = { aspectRatio: `${r.toFixed(4)}` };
 
-  if (failed) return <p className="rounded-xl bg-slate-50 px-3 py-6 text-center text-[12px] text-canvas-muted">Sayfa görseli yok.</p>;
+  // Seçili işaret kabın ortasına: görsel yüklendikten sonra (kutunun yeri gerçek orana bağlı), her seçimde
+  // (`cue.seq`: aynı bulguya yeniden basmak da işarete döndürür). İşaretsiz bulguda kap yerinde kalır.
+  const boxKey = box ? box.join(',') : '';
+  useLayoutEffect(() => {
+    const v = viewport.current;
+    const fr = frameEl.current;
+    if (!loaded || !v || !fr || !box) return;
+    const first = settled.current !== src;
+    settled.current = src;
+    const top = markScrollTop(box, fr.offsetTop, fr.offsetHeight, v.clientHeight, v.scrollHeight);
+    if (Math.abs(v.scrollTop - top) < 2) return;
+    v.scrollTo({ top, behavior: first || cue.instant || reducedMotion() ? 'auto' : 'smooth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- box içeriği boxKey ile izlenir
+  }, [loaded, src, boxKey, activeKey, cue.seq, cue.instant]);
+
+  if (failed) return <p className="mt-2 shrink-0 rounded-xl bg-slate-50 px-3 py-6 text-center text-[12px] text-canvas-muted">Sayfa görseli yok.</p>;
   return (
-    <div className="relative mx-auto overflow-hidden rounded-xl bg-[#f3efff] ring-1 ring-slate-200/70" style={frame}>
+    <div ref={viewport} className="relative mt-2 min-h-[200px] shrink overflow-y-auto overscroll-contain rounded-xl ring-1 ring-slate-200/70 [scrollbar-width:thin]">
+    <div ref={frameEl} className="relative w-full overflow-hidden bg-[#f3efff]" style={frame}>
       {!loaded && <span aria-hidden className="absolute inset-0 animate-[zkShimmer_1.4s_linear_infinite] bg-[linear-gradient(100deg,#f3efff_30%,#faf8ff_50%,#f3efff_70%)] bg-[length:200%_100%] motion-reduce:animate-none" />}
       <img
         src={src}
@@ -176,9 +226,9 @@ function PageImage({ bookId, bookTitle, page, marks, activeKey, onPick }: { book
         draggable={false}
         onLoad={(e) => {
           const el = e.currentTarget;
-          setRatio(el.naturalWidth > 0 && el.naturalHeight > 0 ? el.naturalWidth / el.naturalHeight : 1 / 1.41);
+          setImg({ src, ratio: el.naturalWidth > 0 && el.naturalHeight > 0 ? el.naturalWidth / el.naturalHeight : 1 / 1.41 });
         }}
-        onError={() => setFailed(true)}
+        onError={() => setFailedSrc(src)}
         className={`absolute inset-0 h-full w-full select-none ${loaded ? 'opacity-100' : 'opacity-0'}`}
       />
       {loaded && box && (
@@ -221,6 +271,7 @@ function PageImage({ bookId, bookTitle, page, marks, activeKey, onPick }: { book
             );
           })}
     </div>
+    </div>
   );
 }
 
@@ -236,15 +287,19 @@ type PanelProps = {
   onClose: () => void;
   decide: Decide | null;
   busy: boolean;
+  /** Seçimle gelen kaydırma isteği; işaret kutusunu görünür alana getirir. */
+  cue: ScrollCue;
 };
 
-function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClose, decide, busy, sheet }: PanelProps & { sheet: boolean }) {
+/** Panel içeriği; kap (masaüstü sütunu ya da alttan kart) dikey esnek kutudur. Başlık ve alt bölüm sabit
+ *  boyda, sayfa görseli kalan boya sığıp kendi içinde kayar. */
+function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClose, decide, busy, cue, sheet }: PanelProps & { sheet: boolean }) {
   const active = marks.find((m) => m.key === activeKey) ?? marks[0];
   const f = active?.f;
   const sev = f ? sevOf(f) : null;
   return (
     <>
-      <div className="flex items-center justify-between gap-2 px-1">
+      <div className="flex shrink-0 items-center justify-between gap-2 px-1">
         <div className="flex min-w-0 flex-wrap items-baseline gap-x-1.5">
           <h3 className="text-[13px] font-extrabold">{page === null ? 'Kitap geneli' : `Sayfa ${nf.format(page)}`}</h3>
           <span className="text-[11px] text-canvas-muted">
@@ -257,16 +312,15 @@ function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClo
         </button>
       </div>
 
-      <div className="mt-2">
-        {page !== null && bookId ? (
-          <PageImage bookId={bookId} bookTitle={bookTitle} page={page} marks={marks} activeKey={active?.key ?? null} onPick={onPick} />
-        ) : (
-          <p className="rounded-xl bg-slate-50 px-3 py-4 text-center text-[12px] leading-snug text-canvas-muted">
-            {page === null ? 'Bu bulgu tek bir sayfaya bağlı değil; kitabın bütününe ilişkindir.' : 'Kitap kimliği yok; sayfa görseli getirilemiyor.'}
-          </p>
-        )}
-      </div>
+      {page !== null && bookId ? (
+        <PageImage bookId={bookId} bookTitle={bookTitle} page={page} marks={marks} activeKey={active?.key ?? null} onPick={onPick} cue={cue} />
+      ) : (
+        <p className="mt-2 shrink-0 rounded-xl bg-slate-50 px-3 py-4 text-center text-[12px] leading-snug text-canvas-muted">
+          {page === null ? 'Bu bulgu tek bir sayfaya bağlı değil; kitabın bütününe ilişkindir.' : 'Kitap kimliği yok; sayfa görseli getirilemiyor.'}
+        </p>
+      )}
 
+      <div className="shrink-0">
       {marks.length > 1 && (
         <div className="mt-2 flex flex-wrap gap-1" role="group" aria-label="Bu sayfadaki bulgular">
           {marks.map((m) => {
@@ -319,6 +373,7 @@ function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClo
           <kbd className="font-mono font-bold">↑</kbd> <kbd className="font-mono font-bold">↓</kbd> bulgular arasında · <kbd className="font-mono font-bold">Esc</kbd> kapatır
         </p>
       )}
+      </div>
     </>
   );
 }
@@ -336,11 +391,52 @@ function useEntered() {
 const enterCls = (entered: boolean) =>
   `transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.23,1,0.32,1)] motion-reduce:transition-opacity ${entered ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-1 motion-reduce:translate-y-0'}`;
 
-/** Masaüstü: liste yanında yapışkan sütun. */
+/** Yapışkan sütunun boyu: kaydırılan gövdenin görünür boyu eksi üst/alt pay. Gövde yakınlaştırma katının
+ *  dışında, sütun içinde; px değeri kata bölünür ki ekranda görünür alana sığsın. Boyut değişince yeniden ölçülür. */
+function useFitHeight(ref: RefObject<HTMLElement | null>, zoom: number) {
+  const [h, setH] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const sp = scrollParent(el);
+    const measure = () => setH(Math.max(240, Math.floor(sp.clientHeight / (zoom || 1)) - STICKY_GAP * 2));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(sp);
+    return () => ro.disconnect();
+  }, [ref, zoom]);
+  return h;
+}
+
+/** Masaüstü: liste yanında yapışkan sütun, görünür alana sığar. Seçimde sütunun altı gövdenin görünür alanının
+ *  dışında kalıyorsa (liste başındayken sütun henüz yapışmamıştır) ya da üstü taşıyorsa (liste sonunda sütun
+ *  yukarı itilir) gövde gereken kadar kaydırılır: sütun tümüyle görünür, tıklanan satır görünür alanda kalır. */
 export function ProofEvidence(props: PanelProps) {
   const entered = useEntered();
+  const ref = useRef<HTMLElement>(null);
+  const zoom = useShellZoom();
+  const fit = useFitHeight(ref, zoom);
+  const { cue } = props;
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el || fit === null) return;
+    const sp = scrollParent(el);
+    const a = el.getBoundingClientRect();
+    const p = sp === document.scrollingElement ? { top: 0, bottom: window.innerHeight } : sp.getBoundingClientRect();
+    const gap = STICKY_GAP * (zoom || 1);
+    const over = a.bottom - (p.bottom - gap); // > 0: alt görünür alanın dışında
+    const room = a.top - (p.top + gap); // < 0: üst (başlık) görünür alanın dışında — liste sonunda sütun yukarı itilir
+    const by = over > 0 ? Math.min(over, room) : room < 0 ? Math.max(room, over) : 0;
+    // Birkaç px'lik fark (giriş geçişinin 4 px'i) için gövde kıpırdamasın.
+    if (Math.abs(by) > 6) sp.scrollBy({ top: by, behavior: cue.instant || reducedMotion() ? 'auto' : 'smooth' });
+  }, [cue.seq, cue.instant, fit, zoom]);
   return (
-    <aside aria-label="Bulgu kanıtı" className={`rounded-2xl border border-canvas-violet/15 bg-white/70 p-3 lg:sticky lg:top-3 lg:self-start ${enterCls(entered)}`}>
+    <aside
+      ref={ref}
+      aria-label="Bulgu kanıtı"
+      style={fit ? { maxHeight: fit } : undefined}
+      className={`flex max-h-[calc(100dvh-140px)] flex-col overflow-y-auto overscroll-contain rounded-2xl border border-canvas-violet/15 bg-white/70 p-3 lg:sticky lg:top-3 lg:self-start ${enterCls(entered)}`}
+    >
       <EvidenceBody {...props} sheet={false} />
     </aside>
   );
@@ -368,9 +464,9 @@ export function ProofEvidenceSheet(props: PanelProps) {
         aria-label="Bulgu kanıtı"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className={`max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-white p-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl outline-none ${enterCls(entered)}`}
+        className={`flex max-h-[92dvh] w-full flex-col overflow-y-auto overscroll-contain rounded-t-3xl bg-white p-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-2xl outline-none ${enterCls(entered)}`}
       >
-        <span aria-hidden className="mx-auto mb-2 block h-1 w-10 rounded-full bg-slate-200" />
+        <span aria-hidden className="mx-auto mb-2 block h-1 w-10 shrink-0 rounded-full bg-slate-200" />
         <EvidenceBody {...props} sheet />
       </div>
     </div>,
