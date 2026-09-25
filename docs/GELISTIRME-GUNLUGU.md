@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (22:00) — T-soft'a yazma yasak: istemci yalnız okur, onay yalnız kaydeder
+
+- **Kullanıcı yasağı:** "asla tsoft api ile birşey gönderme". Kontrol: sunucu günlüğünde onay/toplu onay/geri alma çağrısı **hiç yok** — T-soft'a bugüne kadar hiçbir şey gönderilmedi.
+- **Anında kilit (canlı, ayar):** `SEO_APPROVERS=tsoft-gonderim-yasak` → kimse onaylayamaz (`/me` canApprove=false). Kod kurulunca da kalır; onay verecek kişiler ayrıca girilir.
+- **Kod kilidi:** `connections.READ_ONLY` (auth/login, auth/isLogin, */get*) dışındaki yol çağrılmadan hata atar; `update_product`/`clear_product_cache` silindi; onay = `approve` (durum `onaylandi`, metin ve karar kayıtta, gönderim yok); geri alma ucu kaldırıldı. Sunucuda denendi: 5 okuma yolu izinli, 8 yazma yolu reddedildi. Ekran metinleri: "Onayla", "Karar geçmişi", "T-soft'a hiçbir şey gönderilmez". AGENTS.md'ye kural eklendi.
+
 ## 2026-09-25 (21:20) — Ekranlarda model/ürün/teknoloji adı yok (kullanıcı kuralı)
 
 - **Kural:** kullandığımız model, ürün ve teknoloji adı hiçbir ekranda, ekrana giden sunucu metninde, basılı kitapta ve PDF belge özelliklerinde yazmaz; yerine «Zeki AI» ya da işlevin Türkçe adı. Kod yorumu, günlük ve iç kayıtta kalabilir.
