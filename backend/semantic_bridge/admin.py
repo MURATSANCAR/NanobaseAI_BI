@@ -174,6 +174,10 @@ SPEC: list[dict[str, Any]] = [
     {"key": "MERCHANT_ACCOUNT_ID", "group": "seo", "label": "Merchant Center kimliği", "type": "text", "default": "", "help": ""},
     {"key": "GOOGLE_API_KEY", "group": "seo", "label": "Google API anahtarı", "type": "secret", "default": "",
      "help": "PageSpeed ve CrUX için; yalnız bu iki API ile kısıtlı olmalı"},
+    # Kitap Tasarım Stüdyosu
+    {"key": "STUDIO_UPLOAD_MB", "group": "studio", "label": "Fotoğraf yükleme sınırı (MB)", "type": "int", "default": "60",
+     "help": "Sayfa düzeninde tek fotoğrafın en büyük boyutu; ekranda yükleme alanında yazılır. Giriş kapısı ve portal "
+             "web sunucusunun gövde sınırı da bu değere göre ayarlanmalıdır"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -202,6 +206,7 @@ GROUPS = [
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürün SEO önerileri T-soft'tan okunur, onaylanan değişiklik aynı kullanıcıyla T-soft'a gönderilir. "
              "Google verisi servis hesabıyla okunur."},
+    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni ekranının sınırları."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
 ]
