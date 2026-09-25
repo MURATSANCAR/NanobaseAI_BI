@@ -94,12 +94,14 @@ def seo_match(seo, isbn: str | None, title: str, author: str | None) -> list[dic
         p = loads(r["data_json"], {})
         barcode = re.sub(r"\D", "", str(p.get("Barcode") or r["code"] or ""))
         name, model = _norm(r["name"]), _norm(rules.text_of(p.get("Model")))
-        if digits and barcode == digits:
+        if digits and (barcode == digits or re.sub(r"\D", "", str(r["code"] or "")) == digits):
             how, rank = "ISBN eşleşmesi", 0
         elif name == _norm(t) and (not author or not model or _norm(author) in model or model in _norm(author)):
             how, rank = "ad eşleşmesi", 1
-        else:
+        elif _norm(t) and _norm(t) in name:
             how, rank = "adında geçiyor", 2
+        else:
+            continue            # kayıttaki başka bir sayı alanında geçen rakamlar eşleşme sayılmaz
         out.append({**_product_view(dict(r), site), "match": how, "rank": rank,
                     "current": {k: (rules.text_of(p.get(k)) if k == "Details" else str(p.get(k) or ""))
                                 for k in propose.FIELDS}})
