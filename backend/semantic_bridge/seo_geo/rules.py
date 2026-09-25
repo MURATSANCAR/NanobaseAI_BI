@@ -18,6 +18,9 @@ RULES: dict[str, tuple[int, str, str, str]] = {
     "meta_missing": (25, "kritik", "Meta açıklama yok",
                      "Google arama sonucunda sayfadan rastgele bir parça gösterir; yapay zekâ cevaplarında kitabın "
                      "kısa ve doğru bir özeti alınamaz."),
+    "meta_same_as_title": (15, "yüksek", "Meta açıklama başlığın kopyası",
+                           "Meta açıklama SEO başlığıyla aynı; şablondan otomatik kurulmuş, kitabı anlatmıyor. Arama "
+                           "sonucunda ikinci kez başlık görünür, yapay zekâ cevapları özet alamaz."),
     "meta_length": (8, "orta", "Meta açıklama uzunluğu uygun değil",
                     "Çok kısa açıklama arama sonucunu boş bırakır, çok uzunu Google keser."),
     "title_missing": (20, "kritik", "SEO başlığı yok",
@@ -82,10 +85,12 @@ def audit(p: dict[str, Any], lim: dict[str, int], duplicate_titles: set[str]) ->
     meta = text_of(p.get("SeoDescription"))
     if not meta:
         add("meta_missing", "SeoDescription alanı boş.")
-    elif not lim["meta_min"] <= len(meta) <= lim["meta_max"]:
+    title = text_of(p.get("SeoTitle"))
+    if meta and title and meta.lower() == title.lower():
+        add("meta_same_as_title", "SeoDescription ile SeoTitle birebir aynı.")
+    elif meta and not lim["meta_min"] <= len(meta) <= lim["meta_max"]:
         add("meta_length", f"{len(meta)} karakter; beklenen {lim['meta_min']}–{lim['meta_max']}.")
 
-    title = text_of(p.get("SeoTitle"))
     if not title:
         add("title_missing", "SeoTitle alanı boş.")
     else:

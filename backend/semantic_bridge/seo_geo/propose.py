@@ -20,8 +20,10 @@ PROMPT = """Sen Timaş Yayınları'nın e-ticaret sitesi için Türkçe SEO ve y
 Aşağıdaki kitap ürününün kaydını iyileştir. Kurallar:
 - YALNIZ aşağıdaki kayıtta yazan bilgiyi kullan. Kayıtta olmayan sayfa sayısı, yaş grubu, ödül, baskı sayısı,
   yazar biyografisi, tarih UYDURMA. Emin olmadığın bilgiyi yazma.
-- SeoTitle: {title_min}–{title_max} karakter. Kitap adı + yazar (kayıtta varsa) + "Timaş Yayınları".
-- SeoDescription: {meta_min}–{meta_max} karakter, kitabı anlatan tek paragraf, tırnak ve emoji yok.
+- SeoTitle: {title_min}–{title_max} karakter. Biçim: "Kitap adı - Yazar | Yayınevi". Yazar kayıtta varsa MUTLAKA başlıkta
+  olsun (çok yazarlıysa ilk yazar); sığmıyorsa önce yayınevini kısalt. Kategori adı başlığa girmez.
+- SeoDescription: {meta_min}–{meta_max} karakter (sınırı aşma, say), kitabı anlatan tek paragraf; başlığı tekrar etme,
+  tırnak ve emoji yok. Yazar adını geçir.
 - SearchKeywords: virgülle ayrılmış 5–10 arama kelimesi (kitap adı, yazar, konu, tür; yazım varyantları).
 - Details: HTML. Mevcut açıklamadaki bilgiyi koru, en az {desc_min_words} kelimeye ulaşacak biçimde kitabın
   konusunu anlatan paragraflar yaz; sonuna <h3>Sıkça Sorulan Sorular</h3> başlığı altında kayıttaki bilgiyle
@@ -32,6 +34,7 @@ Sadece şu JSON'u döndür, başka hiçbir şey yazma:
 
 ÜRÜN KAYDI
 Ürün adı: {name}
+Yazar: {author}
 Marka/yayınevi: {brand}
 Kategori: {category}
 Barkod/ISBN: {barcode}
@@ -53,7 +56,8 @@ def _category(p: dict[str, Any]) -> str:
 
 def build_prompt(p: dict[str, Any], lim: dict[str, int]) -> str:
     return PROMPT.format(
-        **lim, name=p.get("ProductName") or "-", brand=p.get("Brand") or "-", category=_category(p),
+        **lim, name=p.get("ProductName") or "-", author=rules.text_of(p.get("Model")) or "-",
+        brand=p.get("Brand") or "-", category=_category(p),
         barcode=p.get("Barcode") or "-", seo_title=rules.text_of(p.get("SeoTitle")) or "(boş)",
         seo_desc=rules.text_of(p.get("SeoDescription")) or "(boş)",
         keywords=rules.text_of(p.get("SearchKeywords")) or "(boş)",
@@ -75,9 +79,36 @@ def parse(raw: Optional[str]) -> dict[str, str]:
     return out
 
 
+def violations(fields: dict[str, str], lim: dict[str, int]) -> list[str]:
+    """Önerinin uzunluk sınırlarına uymayan alanları, modele geri söylenecek biçimde."""
+    out = []
+    t, m = fields.get("SeoTitle", ""), fields.get("SeoDescription", "")
+    if t and not lim["title_min"] <= len(t) <= lim["title_max"]:
+        out.append(f"SeoTitle {len(t)} karakter, {lim['title_min']}–{lim['title_max']} olmalı")
+    if m and not lim["meta_min"] <= len(m) <= lim["meta_max"]:
+        out.append(f"SeoDescription {len(m)} karakter, {lim['meta_min']}–{lim['meta_max']} olmalı")
+    if t and m and t.strip().lower() == m.strip().lower():
+        out.append("SeoDescription SeoTitle ile aynı olmamalı")
+    return out
+
+
 def suggest(llm: Any, p: dict[str, Any], lim: dict[str, int]) -> dict[str, str]:
-    raw = llm.chat([{"role": "user", "content": build_prompt(p, lim)}], max_tokens=3000, temperature=0.2)
-    return parse(raw)
+    """Öneri; sınır dışı çıkarsa model bir kez, neyin yanlış olduğu söylenerek düzeltmeye çağrılır. İkinci
+    cevap da uymazsa öneri olduğu gibi döner — ekran sayacı kırmızı gösterir, kullanıcı düzenler."""
+    messages = [{"role": "user", "content": build_prompt(p, lim)}]
+    raw = llm.chat(messages, max_tokens=3000, temperature=0.2)
+    fields = parse(raw)
+    wrong = violations(fields, lim)
+    if wrong:
+        messages += [{"role": "assistant", "content": raw},
+                     {"role": "user", "content": "Düzelt: " + "; ".join(wrong) + ". Aynı JSON biçiminde yalnız düzeltilmiş hâli döndür."}]
+        try:
+            fixed = parse(llm.chat(messages, max_tokens=3000, temperature=0.2))
+            if len(violations(fixed, lim)) < len(wrong):
+                fields = fixed
+        except ValueError:
+            pass
+    return fields
 
 
 def changed(p: dict[str, Any], fields: dict[str, str]) -> dict[str, str]:
