@@ -22,6 +22,8 @@ export type Overview = {
   rules: Array<{ rule: string; title: string; severity: Severity; count: number }>;
   proposals: Partial<Record<ProposalStatus, number>>;
   approvedThisWeek: number;
+  /** Puanı 70 altındaki en çok satan 10 kitap. */
+  priority: Array<{ id: string; name: string; score: number; sales: number; views: number }>;
   /** Her zaman false: T-soft'a yazma yok. */
   tsoftWrite: false;
   lastSync: { startedAt: string; finishedAt: string | null; count: number | null; error: string | null } | null;
@@ -43,6 +45,9 @@ export type ProductRow = {
   barcode: string | null;
   url: string | null;
   syncedAt: string;
+  /** T-soft toplam satış adedi ve görüntülenme: öncelik sırası bunlarla. */
+  sales: number;
+  views: number;
   proposal?: ProposalStatus | null;
 };
 
@@ -106,7 +111,7 @@ export const seoApi = {
   overview: () => call<Overview>('overview'),
   me: () => call<{ user: string; canApprove: boolean }>('me'),
   sync: () => call<{ started: boolean; sync: SyncState }>('sync', { method: 'POST' }),
-  products: (p: { rule?: string; status?: string; q?: string; start?: number; limit?: number }) =>
+  products: (p: { rule?: string; status?: string; q?: string; start?: number; limit?: number; order?: 'oncelik' | 'score' | 'name' }) =>
     call<{ total: number; start: number; items: ProductRow[] }>(`products?${qs(p)}`),
   product: (id: string) => call<ProductDetail>(`products/${encodeURIComponent(id)}`),
   // Model önerisi kuyrukta bekleyebilir; kısa zaman aşımı yanlış hata gösterir.

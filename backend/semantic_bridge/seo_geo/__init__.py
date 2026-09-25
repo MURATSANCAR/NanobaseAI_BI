@@ -27,6 +27,15 @@ from .store import GSC, PRODUCTS, PROPOSALS, QUESTIONS, RUNS, dumps, ensure, iso
 
 log = logging.getLogger("semantic.seo_geo")
 
+#: Öncelik: kitabın toplam satış adedi (T-soft `CountTotalSales`), eşitse görüntülenme (`StatViews`). Çok satan ve çok
+#: bakılan sayfadaki düzeltme en çok okura ulaşır. JSON içinden okunur; boş/bozuk değer 0 sayılır.
+def _json_num(key: str) -> Any:
+    raw = sa.func.nullif(sa.func.regexp_replace(sa.cast(PRODUCTS.c.data_json, sa.JSON)[key].as_string(), "[^0-9.]", "", "g"), "")
+    return sa.func.coalesce(sa.cast(raw, sa.Float), 0.0)
+
+
+SALES, VIEWS = _json_num("CountTotalSales"), _json_num("StatViews")
+
 
 class Decision(BaseModel):
     action: str = Field(pattern="^(approve|reject)$")
@@ -231,7 +240,7 @@ class SeoGeo:
         return self.proposal(pid_new)
 
     def start_batch(self, user: str, budget: int) -> bool:
-        """Önerisi olmayan, düzeltilebilir sorunlu aktif ürünler için öneri yazar; en düşük puandan başlar.
+        """Önerisi olmayan, düzeltilebilir sorunlu aktif ürünler için öneri yazar; en çok satandan başlar.
         Süre bütçesi dolunca durur, kalan iş sonraki tura kalır (sıra her turda yeniden kurulur, tavan yok)."""
         if not self._batch_lock.acquire(blocking=False):
             return False
@@ -250,7 +259,8 @@ class SeoGeo:
             with self.engine().connect() as c:
                 rows = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.issues_json).where(
                     PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True), PRODUCTS.c.rules != ",,",
-                    PRODUCTS.c.product_id.not_in(has)).order_by(PRODUCTS.c.score.asc(), PRODUCTS.c.product_id)).all()
+                    PRODUCTS.c.product_id.not_in(has)).order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc(),
+                                                                 PRODUCTS.c.product_id)).all()
             queue = [pid for pid, issues in rows if propose.fixable(loads(issues, []))]
             self.batch["queue"] = len(queue)
             for pid in queue:
@@ -305,7 +315,15 @@ def _product_view(r: dict[str, Any], site: str) -> dict[str, Any]:
     return {"id": r["product_id"], "code": r["code"], "name": r["name"], "brand": r["brand"], "active": r["active"],
             "score": r["score"], "issues": [{**i, "field": propose.RULE_FIELD.get(i.get("rule"))}
                                             for i in loads(r["issues_json"], [])], "image": _image(p, site),
-            "barcode": p.get("Barcode") or None, "url": url, "syncedAt": iso(r["synced_at"])}
+            "barcode": p.get("Barcode") or None, "url": url, "syncedAt": iso(r["synced_at"]),
+            "sales": _num(p.get("CountTotalSales")), "views": _num(p.get("StatViews"))}
+
+
+def _num(v: Any) -> int:
+    try:
+        return int(float(str(v or 0).replace(",", ".")))
+    except ValueError:
+        return 0
 
 
 def _image(p: dict[str, Any], site: str) -> Optional[str]:
@@ -357,6 +375,8 @@ def register(app, runtime, authorize, session_user):
             week = now() - timedelta(days=7)
             approved_week = c.execute(sa.select(sa.func.count()).select_from(PROPOSALS).where(
                 PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "onaylandi", PROPOSALS.c.decided_at >= week)).scalar() or 0
+            top = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name, PRODUCTS.c.score, SALES, VIEWS).where(
+                active, PRODUCTS.c.score < 70).order_by(SALES.desc(), VIEWS.desc()).limit(10)).all()
             last = c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.kind == "tsoft")
                              .order_by(RUNS.c.started_at.desc()).limit(1)).mappings().first()
         daily = seo.gsc("daily")
@@ -365,6 +385,7 @@ def register(app, runtime, authorize, session_user):
             "failing": failing, "failingThreshold": 70,
             "rules": [{"rule": k, "title": v[2], "severity": v[1], "count": by_rule[k]} for k, v in rules.RULES.items()],
             "proposals": status, "approvedThisWeek": approved_week, "tsoftWrite": False,
+            "priority": [{"id": r[0], "name": r[1], "score": r[2], "sales": int(r[3]), "views": int(r[4])} for r in top],
             "lastSync": ({"startedAt": iso(last["started_at"]), "finishedAt": iso(last["finished_at"]),
                           "count": last["count"], "error": last["error"]} if last else None),
             "sync": seo.state, "batch": seo.batch, "search": daily,
@@ -389,7 +410,7 @@ def register(app, runtime, authorize, session_user):
 
     @app.get("/api/v1/seo-geo/products")
     def seo_products(request: Request, rule: str = "", status: str = "", q: str = "", start: int = 0,
-                     limit: int = 50, order: str = "score") -> dict[str, Any]:
+                     limit: int = 50, order: str = "oncelik") -> dict[str, Any]:
         gate(request)
         tenant, site = seo.tenant(), seo.conf("SEO_SITE_URL")
         cond = [PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True)]
@@ -406,8 +427,9 @@ def register(app, runtime, authorize, session_user):
                 PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == status)))
         with seo.engine().connect() as c:
             total = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(*cond)).scalar() or 0
-            sort = PRODUCTS.c.name.asc() if order == "name" else PRODUCTS.c.score.asc()
-            rows = c.execute(sa.select(PRODUCTS).where(*cond).order_by(sort, PRODUCTS.c.product_id)
+            sort = {"name": [PRODUCTS.c.name.asc()], "score": [PRODUCTS.c.score.asc()]}.get(
+                order, [SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc()])
+            rows = c.execute(sa.select(PRODUCTS).where(*cond).order_by(*sort, PRODUCTS.c.product_id)
                              .offset(max(0, start)).limit(max(1, limit))).mappings().all()
             ids = [r["product_id"] for r in rows]
             states: dict[str, str] = {}

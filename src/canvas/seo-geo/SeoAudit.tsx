@@ -21,17 +21,18 @@ export default function SeoAudit() {
   const [q, setQ] = useState('');
   const [query, setQuery] = useState('');
   const [start, setStart] = useState(0);
+  const order = (params.get('sira') as 'oncelik' | 'score' | null) ?? 'oncelik';
 
   useEffect(() => {
     const t = setTimeout(() => setQuery(q), 300);
     return () => clearTimeout(t);
   }, [q]);
-  useEffect(() => setStart(0), [rule, status, query]);
+  useEffect(() => setStart(0), [rule, status, query, order]);
 
   const overview = useQuery({ queryKey: ['seo-overview'], queryFn: seoApi.overview, enabled: ENGINE_ENABLED, retry: false });
   const list = useQuery({
-    queryKey: ['seo-products', rule, status, query, start],
-    queryFn: () => seoApi.products({ rule, status, q: query, start, limit: PAGE }),
+    queryKey: ['seo-products', rule, status, query, start, order],
+    queryFn: () => seoApi.products({ rule, status, q: query, start, limit: PAGE, order }),
     enabled: ENGINE_ENABLED,
     retry: false,
     placeholderData: (prev) => prev,
@@ -80,10 +81,18 @@ export default function SeoAudit() {
 
       <div className="sg-audit">
         <section className="sg-card" aria-label="Ürünler">
-          <label className="sg-search" style={{ marginBottom: 12 }}>
+          <label className="sg-search" style={{ marginBottom: 8 }}>
             <Search size={16} aria-hidden />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kitap adı, ürün kodu ya da yayınevi" aria-label="Ürün ara" />
           </label>
+          <div className="sg-filters" role="radiogroup" aria-label="Sıralama" style={{ marginBottom: 12 }}>
+            <button className="sg-filter" role="radio" aria-checked={order === 'oncelik'} aria-pressed={order === 'oncelik'} onClick={() => set('sira', '')}>
+              Önce çok satan
+            </button>
+            <button className="sg-filter" role="radio" aria-checked={order === 'score'} aria-pressed={order === 'score'} onClick={() => set('sira', 'score')}>
+              Önce en düşük puan
+            </button>
+          </div>
           {list.isLoading && <Loading text="Ürünler getiriliyor…" />}
           {list.error && <Failed error={list.error} />}
           {list.data && !items.length && (
@@ -99,7 +108,7 @@ export default function SeoAudit() {
                 <span style={{ minWidth: 0 }}>
                   <span className="sg-item-name">{p.name || p.code}</span>
                   <span className="sg-item-meta sg-mono">
-                    {p.code} · {p.issues.length} sorun
+                    {fmt(p.sales)} satış · {fmt(p.views)} görüntülenme · {p.issues.length} sorun
                   </span>
                 </span>
                 <span className="sg-item-side">
