@@ -3,8 +3,9 @@ import { useDroppable } from '@dnd-kit/core';
 import { ImageUp } from 'lucide-react';
 import { studioPlanApi, type Plan, type PlanArt, type PlanBox, type PlanBubble, type PlanEffect, type PlanFreeText, type PlanPage, type PlanRun, type PlanShape } from '../../engine';
 import { r1, safeRect, trimRect, type PageDims } from './planModel';
-import { ITEM_LABEL, PRINT_DPI, findItem, itemDpi, itemKey, pageItems, rotatable, shapesOf, withBox, type ItemRef, type PageItem } from './pageItems';
+import { ITEM_LABEL, PRINT_DPI, findItem, itemDpi, itemKey, pageItems, paletteKey, rotatable, shapesOf, withBox, type ItemRef, type PageItem } from './pageItems';
 import { SHAPE_MIME } from './slots';
+import { paintOf, useElementCatalog, type RoleColors } from './elements';
 
 /** Sayfa tuvali. Altta sunucunun dizdiği sayfa önizlemesi (gerçek dizgi), üstünde seçilebilir ögeler.
  *  Konumlar yüzdeyle verilir (mm / sayfa ölçüsü); böylece kabuğun yakınlaştırması (CSS zoom) ve ekran
@@ -322,12 +323,12 @@ export default function PageCanvas({
 }
 
 // ------------------------------------------------------------------ tarayıcıda yaklaşık çizim
-function Runs({ runs, base }: { runs: PlanRun[]; base: { mmPx: number; color: string } }) {
+function Runs({ runs, base }: { runs: PlanRun[]; base: { mmPx: number; color: string; paint?: (c: string) => string | null } }) {
   return (
     <>
       {runs.map((r, i) => (
         <span key={i} style={{
-          color: r.color || base.color,
+          color: (r.color && (base.paint ? base.paint(r.color) : r.color)) || base.color,
           fontWeight: r.weight ?? undefined,
           fontSize: r.size ? r.size * PT_MM * base.mmPx : undefined,
           fontFamily: r.font === 'heading' ? '"Plus Jakarta Sans", system-ui, sans-serif' : undefined,
@@ -348,6 +349,8 @@ function LiveLayer({ job, plan, page, mmPx, bodySize, artSrc }: {
   const d = plan.page;
   const fs = (pt: number | null | undefined) => (pt ?? bodySize) * PT_MM * mmPx;
   const color = plan.palette.text || '#2C2C2A';
+  // Rol adıyla verilen renkler (şekil dolgusu, efekt, yazı parçası) kitabın rengine: katalogdaki rol renkleri.
+  const roles = useElementCatalog(job, paletteKey(plan.palette)).data?.roles ?? null;
   const art = page.art;
   const artUrl = art ? artSrc(art, Math.min(2400, Math.ceil((art.box.w * mmPx * 2) / 200) * 200 || 800)) : null;
   return (
@@ -386,8 +389,8 @@ function LiveLayer({ job, plan, page, mmPx, bodySize, artSrc }: {
       {[...page.figures.map((f) => ({ z: f.z, el: (
         <img key={f.id} src={studioPlanApi.assetUrl(job, f.asset, Math.min(1600, Math.ceil((f.box.w * mmPx * 2) / 200) * 200 || 400))} alt="" draggable={false} onError={hideBroken}
           className="absolute object-contain" style={{ ...boxStyle(f.box, d), transform: `rotate(${f.rotate}deg) scaleX(${f.flip ? -1 : 1})` }} />
-      ) })), ...page.texts.map((t) => ({ z: t.z, el: <FreeTextLive key={t.id} t={t} d={d} fs={fs(t.size)} mmPx={mmPx} color={color} /> })),
-      ...shapesOf(page).map((sh) => ({ z: sh.z, el: <ShapeLive key={sh.id} s={sh} plan={plan} fs={fs(sh.text_size ?? 14)} mmPx={mmPx} /> }))]
+      ) })), ...page.texts.map((t) => ({ z: t.z, el: <FreeTextLive key={t.id} t={t} d={d} fs={fs(t.size)} mmPx={mmPx} color={color} palette={plan.palette} roles={roles} /> })),
+      ...shapesOf(page).map((sh) => ({ z: sh.z, el: <ShapeLive key={sh.id} s={sh} plan={plan} fs={fs(sh.text_size ?? 14)} mmPx={mmPx} roles={roles} /> }))]
         .sort((a, b) => a.z - b.z).map((x) => x.el)}
     </div>
   );
@@ -395,30 +398,37 @@ function LiveLayer({ job, plan, page, mmPx, bodySize, artSrc }: {
 
 /** Efekt yazının tarayıcı taslağı: dış çizgi, gölge, harf harf renk, patlama zemini ve açı. Kavis/dalga dizgide
  *  harf harf çizilir; taslakta düz satır kalır (kaydedilince gerçek önizleme gelir). */
-function FreeTextLive({ t, d, fs, mmPx, color }: { t: PlanFreeText; d: PageDims; fs: number; mmPx: number; color: string }) {
+function FreeTextLive({ t, d, fs, mmPx, color, palette, roles }: {
+  t: PlanFreeText; d: PageDims; fs: number; mmPx: number; color: string; palette: Plan['palette']; roles: RoleColors | null;
+}) {
   const e: PlanEffect | null | undefined = t.effect;
   const p = e?.params ?? {};
+  const c = (v: unknown, fallback?: string) => paintOf(typeof v === 'string' ? v : null, palette, roles) ?? fallback;
+  const paint = (v: string) => paintOf(v, palette, roles);
   const style: CSSProperties = { ...boxStyle(t.box, d), textAlign: t.align, fontSize: fs, background: t.background ?? undefined, lineHeight: 1.2, color };
   if (e) {
     if (typeof p.angle === 'number') style.transform = `rotate(${p.angle}deg)`;
-    if (e.style === 'outline' || p.outline) style.WebkitTextStroke = `${Math.max(0.5, (p.outline_w ?? 0.6) * mmPx)}px ${p.outline ?? '#FFFFFF'}`;
-    if (e.style === 'shadow' || e.style === 'stacked' || p.shadow) {
-      style.textShadow = `${(p.shadow_dx ?? 0.8) * mmPx}px ${(p.shadow_dy ?? 0.8) * mmPx}px 0 ${p.shadow ?? '#1F3B73'}`;
+    const outline = c(p.outline);
+    if (outline && (p.outline_w ?? 0.6) > 0) style.WebkitTextStroke = `${Math.max(0.5, (p.outline_w ?? 0.6) * mmPx)}px ${outline}`;
+    const shadow = c(p.shadow);
+    if (shadow && (p.shadow_dx || p.shadow_dy || e.style === 'stacked')) {
+      style.textShadow = `${(p.shadow_dx ?? 0.8) * mmPx}px ${(p.shadow_dy ?? 0.8) * mmPx}px 0 ${shadow}`;
     }
     if (e.style === 'burst') {
-      style.background = p.burst_fill ?? '#FAC775';
+      style.background = c(p.burst_fill, '#FAC775');
       style.clipPath = 'polygon(50% 0,61% 20%,85% 8%,78% 33%,100% 42%,80% 58%,93% 82%,67% 76%,58% 100%,45% 80%,22% 94%,24% 69%,0 58%,18% 42%,6% 18%,32% 22%)';
       style.display = 'flex'; style.alignItems = 'center'; style.justifyContent = 'center'; style.padding = '12%';
     }
   }
-  const colors = e && (e.style === 'rainbow' || e.style === 'bounce') && Array.isArray(p.colors) && p.colors.length ? p.colors as string[] : null;
+  const colors = e && (e.style === 'rainbow' || e.style === 'bounce') && Array.isArray(p.colors) && p.colors.length
+    ? p.colors.map((x) => c(x, color) as string) : null;
   return (
     <div className="absolute overflow-hidden" style={style}>
       {colors
         ? [...t.runs.map((r) => r.text).join('')].map((ch, i) => (
             <span key={i} style={{ color: colors[i % colors.length], display: e?.style === 'bounce' ? 'inline-block' : undefined,
               transform: e?.style === 'bounce' ? `translateY(${i % 2 ? -0.08 : 0.08}em)` : undefined }}>{ch}</span>))
-        : <Runs runs={t.runs} base={{ mmPx, color }} />}
+        : <Runs runs={t.runs} base={{ mmPx, color, paint }} />}
     </div>
   );
 }
@@ -431,25 +441,37 @@ const POLY: Record<string, string> = {
   envelope: 'polygon(0 0,100% 0,100% 100%,0 100%)',
 };
 
-/** Süs/şeklin tarayıcı taslağı: dolgu, çizgi, saydamlık ve yazısı; asıl çizim dizgide vektördür. */
-function ShapeLive({ s, plan, fs, mmPx }: { s: PlanShape; plan: Plan; fs: number; mmPx: number }) {
+/** Süs/şeklin tarayıcı taslağı: dolgu, çizgi, saydamlık ve yazısı; asıl çizim dizgide vektördür. Aynalama yalnız
+ *  şekli çevirir, yazı düz kalır (dizgideki `draw-shape(..., mirror)` kuralı). Boş renk → türün varsayılan rolü;
+ *  taslakta paletin vurgusu ya da açık zemini. */
+function ShapeLive({ s, plan, fs, mmPx, roles }: { s: PlanShape; plan: Plan; fs: number; mmPx: number; roles: RoleColors | null }) {
   const d = plan.page;
-  const outline = s.kind === 'frame' || s.kind === 'corner' || s.kind === 'line';
-  const fill = outline ? 'transparent' : s.fill ?? plan.palette.colors[0]?.hex ?? '#F2E3C6';
-  const style: CSSProperties = {
-    ...boxStyle(s.box, d),
+  const outline = s.kind === 'frame' || s.kind === 'corner' || s.kind === 'line' || s.kind === 'scatter';
+  const paint = (v: string) => paintOf(v, plan.palette, roles);
+  const stroke = s.stroke === 'none' ? 'transparent' : paint(s.stroke ?? '') ?? roles?.accent?.hex ?? plan.palette.text;
+  // Ok çizgidir: taslakta çizgi rengiyle dolu bir ok biçimi.
+  const fill = s.kind === 'arrow' ? stroke
+    : outline || s.fill === 'none' ? 'transparent' : paint(s.fill ?? '') ?? roles?.soft?.hex ?? '#F2E3C6';
+  const frameStyle = (s.params as { style?: string } | undefined)?.style;
+  const shape: CSSProperties = {
+    position: 'absolute', inset: 0,
     background: POLY[s.kind] || !outline ? fill : 'transparent',
-    border: POLY[s.kind] ? undefined : `${Math.max(1, (s.stroke_w ?? 0.6) * mmPx)}px ${s.kind === 'frame' && (s.params as { style?: string } | undefined)?.style === 'dotted' ? 'dotted' : 'solid'} ${s.stroke ?? plan.palette.text}`,
+    border: POLY[s.kind] ? undefined : `${Math.max(1, (s.stroke_w ?? 0.6) * mmPx)}px ${frameStyle === 'dotted' ? 'dotted' : frameStyle === 'dashed' ? 'dashed' : 'solid'} ${stroke}`,
     borderRadius: ROUND[s.kind],
     clipPath: POLY[s.kind],
+    transform: s.flip ? 'scaleX(-1)' : undefined,
+  };
+  const box: CSSProperties = {
+    ...boxStyle(s.box, d),
     opacity: s.opacity ?? 1,
-    transform: `rotate(${s.rotate ?? 0}deg) scaleX(${s.flip ? -1 : 1})`,
+    transform: `rotate(${s.rotate ?? 0}deg)`,
     display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '6%', lineHeight: 1.15,
     fontSize: fs, overflow: 'hidden',
   };
   return (
-    <div className="absolute" style={style}>
-      {s.runs?.length ? <span><Runs runs={s.runs} base={{ mmPx, color: plan.palette.text }} /></span> : null}
+    <div className="absolute" style={box}>
+      <div style={shape} />
+      {s.runs?.length ? <span className="relative"><Runs runs={s.runs} base={{ mmPx, color: plan.palette.text, paint }} /></span> : null}
     </div>
   );
 }

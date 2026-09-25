@@ -340,3 +340,82 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
 9. Açık: geri al/yinele sayfa ekleme/silmeyi kapsamaz (sürüm geçmişi kapsar); tuvale bırakılan fotoğraf sunucunun
    varsayılan kutusuna düşer; ileride toplu `PUT plan/pages`. Profilde gerekçe `illustration_source`, kaynak `art_source`.
 10. HEIC/HEIF kabul edilir (`pillow-heif`, JPEG'e dönüşür); imaj yeniden derlenene kadar canlıda açık hata verir.
+
+## D teslim notları (2026-09-25, `8db7bca4`) — sözleşmeye eklenenler
+1. **Renk alanı** (şekil `fill`/`stroke`, şekil ve serbest yazı run'ı `color`, efekt renk parametreleri): `"#RRGGBB"`,
+   saydamlıkla `"#RRGGBBAA"`, `"none"` (boya yok) ya da palet rolü: `accent` (vurgu), `accent2`, `ink` (metin rengi),
+   `pop`/`pop2` (canlı dolgu), `sun` (güneş sarısı), `rose` (kalp kırmızısı), `soft`/`soft2` (açık zemin), `paper`
+   (kâğıt), `wood`/`bark` (ahşap), `deep` (koyu vurgu), `white`. Roller kitabın paletinden yalnız `elements.typ` →
+   `roles(palette)` ile hesaplanır (Python ve ekran rol rengini katalogdan okur; ikinci hesap yok). A'nın 9. notundaki
+   üç rol bu listeyle genişledi. Sayfa metni bloklarında (`text.blocks[].runs`) rol yok, yalnız hex.
+2. **Çağrı:** `draw-shape(s, palette, fonts, mirror: s.flip)`, `effect-text(t, palette, fonts)`; `palette` = `plan.palette`
+   (rengi yoksa Timaş çocuk paleti — önizleme uçlarıyla aynı), `fonts = {"body": spec.body_font, "heading":
+   spec.heading_font}`. **Aynalama draw-shape'indir:** çağıran kutuyu aynalamaz (yoksa yazı ters okunur); kutunun yeri,
+   döndürme ve z sırası çağıranın (plan.typ `shape-item`). Efekt yazıda `flip` yoktur/yok sayılır.
+3. **Punto:** şekilde `text_size`, efekt yazıda `size` null → yazı kutuya sığacak kadar büyür/küçülür, taşma olmaz.
+   Sayı verilirse sabittir; sığmazsa kesilmez, çizim `metadata((kind: "element-overflow", id))` bırakır. Dizgi bunu
+   `typst.query` ile toplar, öğenin `overflow` alanına (şekil ve efekt yazı) ve plan `warnings`'e («N. sayfa: şeklin yazısı
+   şekle sığmıyor», «serbest yazı kutusuna sığmıyor») yazar. `overflow` salt okunurdur; istemcinin gönderdiği atılır.
+4. **Efekt ek parametreleri:** `waves` (dalga sayısı), `depth` (kabartma derinliği, harf boyuna oran), `spikes` ve `seed`
+   (patlamanın uç sayısı ve tohumu; aynı tohum aynı çizim). Dış çizgi (`outline`, `outline_w`) ve gölge (`shadow`,
+   `shadow_dx`, `shadow_dy`) her stilde çalışır. Renk parametresinde `null` = yok.
+5. **Katalog** (`GET plan/elements/catalog`, tek biçim — ekran bunu okur):
+   `{groups: [{key, name, kinds}], kinds: [{kind, name, group, text, box: {w, ratio, place}, fill, stroke, stroke_w,
+   params: {anahtar: {label, type, default, choices?: [{value, label}], min, max, step}}, runs, presets: [{key, name,
+   params, box}]}], effects: [{style, name, sample, box: {w, h}, params}], roles: [{key, name, hex}], fonts}`.
+   `type`: `choice | number | int | bool | color | colors`; `min`/`max` null = açık uç (doğrulama sınırı değil).
+   `box.w` kesim genişliğine oran, `ratio` en/boy, `place` `center | page | corner`. `presets[].key` önizleme ucunun
+   `style`'ıdır; biçim seçilince `presets[].params` şeklin `params`'ına yazılır (her türde `params.style` yoktur).
+   `roles[].hex` bu kitabın paletinden hesaplanmış rol rengidir.
+6. **Yardımcılar:** `elements.new_shape(kind, page, preset)` (tıkla-ekle için motorun varsayılan şekli; renk,
+   `stroke_w`, `text_size` null), `new_effect(style)`, `validate(obj)` (şekil ya da efekt → Türkçe hata ya da None),
+   `palette_or_default(palette)`.
+7. **Dosya:** `templates/elements.typ` dizgi klasörüne `plan.typ` ile birlikte kopyalanır (`typeset.Typesetter`); dosya
+   yoksa yalnız o zaman yer tutucu yazılır (şekil çizilmez, efekt yazı düz yazı basılır, rol rengi metin rengine düşer).
+8. **Uçlar (A'nın servisinde):** `GET plan/elements/catalog`, `GET plan/elements/{kind}/preview?w=&style=`,
+   `GET plan/effects/{style}/preview?w=&text=` — saydam PNG, `Cache-Control: private, max-age=3600`, iş klasöründe
+   `dizgi/ogeler/` önbelleği. Plan olmadan da çalışır. Hata: bilinmeyen tür/stil 404 `{"code":"NOT_FOUND"}`; bilinmeyen
+   biçim ya da genişlik 16–4000 px dışı 400 `{"code":"INVALID"}`. Önizleme yazısına tavan yok (uzun yazı kutuya sığacak
+   kadar küçülür); köprü de genişliği/yazıyı kırpmaz, motorun açık hatası geçer.
+9. **Doğrulama:** sayfa `PUT`'unda her şekle ve her `texts[].effect`'e `elements.validate`; hata 400
+   `{"code":"INVALID","detail":…}` (A'nın öteki doğrulama hataları da artık aynı kodla döner). Serbest yazı hizası
+   `left | justify | center | right`.
+10. **Ön kontrol «Metin eksiksiz»:** kitap tarafında efekt yazı ve şekil yazısı yoktur (A 10. not); PDF tarafında da o
+    kutulardaki yazı okunmaz (katmanlar ve harf harf yerleşim metni çoğaltır, kitabın kelime dizisine karışmasın).
+    Sayfa metni, balon ve düz serbest yazı kutusuyla örtüşen yer okunmaya devam eder (asıl metin asla düşmez).
+    `PlanText.element_rects()` → `preflight._page_text`.
+
+## E teslim notları (2026-09-25, `c462c27f`; bağlama DE-bağlama işinde) — ekranın okuduğu biçim
+1. **Katalog, ekranda** (`elements/api.ts` → `normalizeCatalog`, D'nin 5. nottaki çıktısından tek dönüşüm):
+   `{groups: [{id, name}], items: [{kind, name, group, aspect, width, place, full_page, roles: {fill, stroke, text},
+   params: [{key, label, type, options, min, max, step, default}], text, runs, styles: [{value, label, params, box}],
+   stroke_w, text_size}], effects: [{style, name, sample, params}], roles: {rol: {name, hex}}}`. Eşleme: `groups[].key →
+   id`; `box.ratio → aspect`, `box.w → width`, `box.place → place` (`page` → `full_page`); `fill`/`stroke` → `roles`;
+   `presets[] → styles[]` (`key → value`, `name → label`); `params` sözlüğü → anahtarlı liste; `roles` listesi → sözlük.
+   E'nin ilk sürümü `styles`'ı `params.style` seçeneklerinden, `aspect`'i kökten bekliyordu; D'nin gerçek çıktısına göre
+   düzeltildi (`catalog.fixture.json` motorun gerçek çıktısıdır, test bununla koşar).
+2. **Hazır biçim** = `presets[]`: kütüphanede her biçim ayrı karo (önizleme `style` = biçim anahtarı); seçilince biçimin
+   `params`'ı şeklin `params`'ına yazılır (çerçevede bu `params.style` olur). Seçili biçim, parametreleri şekildekilerle
+   aynı olan ilk biçimdir.
+3. **Yeni şekil** motorun `new_shape`'iyle aynı alanlar: kimlik `s_` + 8 onaltılık hane, `fill`/`stroke`/`stroke_w`/
+   `text_size` null, `opacity` 1, `params` = türün varsayılanları + biçimin parametreleri, `runs` yazı taşıyan türün
+   katalogdaki varsayılan yazısı (boş olabilir: yıldız, kalp, bulut). Kutu motorun `default_box` kuralıyla (genişlik
+   kesim eninin `width` oranı, oran `aspect`, `page` = güvenli payın yarısı içeride tam sayfa, `corner` sol üst); güvenli
+   alana sığmazsa oran korunarak küçülür.
+4. **Renk seçenekleri:** kitabın paleti + «Metin rengi» (`ink`) + «Açık zemin» (`soft`) + «Beyaz»; değer hex yazılır,
+   rol rengi katalogdaki `roles[].hex`'ten (dizgiyle aynı). «Otomatik» = null (türün rolü); efekt renginde null = «Yok».
+   Rol adıyla gelen değer (motor varsayılanı, API) ekranda kitabın rengine çevrilip gösterilir.
+5. **Efekt ayarları** katalogdaki stil parametrelerinden üretilir (kavis, dalga sayısı, dış çizgi, gölge, derinlik,
+   patlama rengi/eğimi/uç/tohum, harf renkleri); stil seçilince varsayılanlar katalogdan, rol → hex. Harf renkleri
+   boşsa dizgi kitabın paletinden sırayla boyar.
+6. **Kaydırıcı aralığı** katalogdaki `min`/`max`'tan; açık uçta (ör. serpiştirme adedi) makul bir aralık, sayı kutusuna
+   daha büyük değer yazılabilir (sınır yalnız motorun doğrulama sınırı).
+7. **C'ye bağlama:** `slots.tsx` üç bileşeni verir. İstenen bağlam: `jobId`, `palette` (`plan.palette`), `page`
+   (`plan.page`), `rev` (**paletin özeti** `paletteKey`; planın her sürümü değil — yoksa her kayıtta bütün küçük resimler
+   yeniden istenir), `nextZ` (sayfadaki en büyük z + 1), `onZ` (komşu katmanla yer değiştirir, `restackStep`),
+   `onRemove`. Şekil seçiliyken «Öge» sekmesinde yalnız E'nin paneli görünür (konum, dönüş, aynalama, katman, kaldırma
+   onda). Tuvale bırakılan şekil bırakılan noktaya ortalanır (`centerBoxAt`); telefonda dokunarak eklenir ve ayarları
+   «Öge» sekmesinde açılır. Tip kaynağı `engine.ts` (`PlanShape`, `PlanEffect`, `PlanEffectParams`, `PlanColorRole`);
+   `elements/types.ts` bunları yeniden adlandırır.
+8. Açık: şeklin tarayıcı taslağı (kaydedilmeden önceki anlık görüntü) yaklaşık bir kutudur; kesin çizim dizgi
+   önizlemesiyle gelir. Aynı sayfaya bir şekil birden çok kez eklenebilir, kopyala/çoğalt düğmesi yok.

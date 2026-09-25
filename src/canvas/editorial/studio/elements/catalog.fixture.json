@@ -1,0 +1,1569 @@
+{
+ "groups": [
+  {
+   "key": "cerceve",
+   "name": "Çerçeve ve köşe",
+   "kinds": [
+    "frame",
+    "corner"
+   ]
+  },
+  {
+   "key": "yazi",
+   "name": "Yazı taşıyanlar",
+   "kinds": [
+    "sign",
+    "note",
+    "envelope",
+    "scroll",
+    "badge",
+    "ribbon"
+   ]
+  },
+  {
+   "key": "sekil",
+   "name": "Şekiller",
+   "kinds": [
+    "star",
+    "heart",
+    "cloud",
+    "burst"
+   ]
+  },
+  {
+   "key": "sus",
+   "name": "Süs, çizgi ve ok",
+   "kinds": [
+    "scatter",
+    "line",
+    "arrow"
+   ]
+  }
+ ],
+ "kinds": [
+  {
+   "kind": "frame",
+   "name": "Çerçeve",
+   "group": "cerceve",
+   "text": false,
+   "box": {
+    "w": 0.7,
+    "ratio": 0.75,
+    "place": "center"
+   },
+   "fill": "none",
+   "stroke": "accent",
+   "stroke_w": 1.2,
+   "params": {
+    "style": {
+     "label": "Çizgi",
+     "type": "choice",
+     "default": "plain",
+     "choices": [
+      {
+       "value": "plain",
+       "label": "Düz"
+      },
+      {
+       "value": "wavy",
+       "label": "Dalgalı"
+      },
+      {
+       "value": "dotted",
+       "label": "Noktalı"
+      },
+      {
+       "value": "double",
+       "label": "Çift çizgi"
+      },
+      {
+       "value": "dashed",
+       "label": "Kesik çizgi"
+      }
+     ]
+    },
+    "radius": {
+     "label": "Köşe yuvarlaklığı (mm)",
+     "type": "number",
+     "default": 4,
+     "min": 0,
+     "max": null,
+     "step": 0.5
+    },
+    "ornament": {
+     "label": "Köşe süsü",
+     "type": "choice",
+     "default": "none",
+     "choices": [
+      {
+       "value": "none",
+       "label": "Yok"
+      },
+      {
+       "value": "dot",
+       "label": "Nokta"
+      },
+      {
+       "value": "star",
+       "label": "Yıldız"
+      },
+      {
+       "value": "heart",
+       "label": "Kalp"
+      }
+     ]
+    }
+   },
+   "runs": [],
+   "presets": [
+    {
+     "key": "plain",
+     "name": "Düz çerçeve",
+     "params": {
+      "style": "plain"
+     },
+     "box": null
+    },
+    {
+     "key": "wavy",
+     "name": "Dalgalı çerçeve",
+     "params": {
+      "style": "wavy"
+     },
+     "box": null
+    },
+    {
+     "key": "dotted",
+     "name": "Noktalı çerçeve",
+     "params": {
+      "style": "dotted"
+     },
+     "box": null
+    },
+    {
+     "key": "double",
+     "name": "Çift çizgili çerçeve",
+     "params": {
+      "style": "double"
+     },
+     "box": null
+    },
+    {
+     "key": "dashed",
+     "name": "Kesik çizgili çerçeve",
+     "params": {
+      "style": "dashed"
+     },
+     "box": null
+    },
+    {
+     "key": "page",
+     "name": "Tam sayfa kenarlık",
+     "params": {
+      "style": "double",
+      "ornament": "star",
+      "radius": 6
+     },
+     "box": {
+      "place": "page"
+     }
+    }
+   ]
+  },
+  {
+   "kind": "corner",
+   "name": "Köşe süsü",
+   "group": "cerceve",
+   "text": false,
+   "box": {
+    "w": 0.26,
+    "ratio": 1.0,
+    "place": "corner"
+   },
+   "fill": "pop2",
+   "stroke": "accent",
+   "stroke_w": 0.9,
+   "params": {
+    "corner": {
+     "label": "Köşe",
+     "type": "choice",
+     "default": "tl",
+     "choices": [
+      {
+       "value": "tl",
+       "label": "Sol üst"
+      },
+      {
+       "value": "tr",
+       "label": "Sağ üst"
+      },
+      {
+       "value": "bl",
+       "label": "Sol alt"
+      },
+      {
+       "value": "br",
+       "label": "Sağ alt"
+      }
+     ]
+    },
+    "style": {
+     "label": "Biçim",
+     "type": "choice",
+     "default": "swirl",
+     "choices": [
+      {
+       "value": "swirl",
+       "label": "Kıvrım"
+      },
+      {
+       "value": "flower",
+       "label": "Çiçek"
+      },
+      {
+       "value": "dots",
+       "label": "Noktalar"
+      },
+      {
+       "value": "stars",
+       "label": "Yıldızlar"
+      }
+     ]
+    }
+   },
+   "runs": [],
+   "presets": [
+    {
+     "key": "swirl",
+     "name": "Kıvrımlı köşe",
+     "params": {
+      "style": "swirl"
+     },
+     "box": null
+    },
+    {
+     "key": "flower",
+     "name": "Çiçekli köşe",
+     "params": {
+      "style": "flower"
+     },
+     "box": null
+    },
+    {
+     "key": "dots",
+     "name": "Noktalı köşe",
+     "params": {
+      "style": "dots"
+     },
+     "box": null
+    },
+    {
+     "key": "stars",
+     "name": "Yıldızlı köşe",
+     "params": {
+      "style": "stars"
+     },
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "sign",
+   "name": "Tabela",
+   "group": "yazi",
+   "text": true,
+   "box": {
+    "w": 0.42,
+    "ratio": 1.3,
+    "place": "center"
+   },
+   "fill": "wood",
+   "stroke": "bark",
+   "stroke_w": 0.7,
+   "params": {
+    "posts": {
+     "label": "Direk",
+     "type": "int",
+     "default": 1,
+     "min": 0,
+     "max": 2,
+     "step": 1
+    },
+    "point": {
+     "label": "Uç",
+     "type": "choice",
+     "default": "none",
+     "choices": [
+      {
+       "value": "none",
+       "label": "Düz"
+      },
+      {
+       "value": "left",
+       "label": "Sola"
+      },
+      {
+       "value": "right",
+       "label": "Sağa"
+      }
+     ]
+    }
+   },
+   "runs": [
+    {
+     "text": "Orman Yolu"
+    }
+   ],
+   "presets": [
+    {
+     "key": "post",
+     "name": "Direkli tabela",
+     "params": {
+      "posts": 1
+     },
+     "box": null
+    },
+    {
+     "key": "two",
+     "name": "İki direkli tabela",
+     "params": {
+      "posts": 2
+     },
+     "box": null
+    },
+    {
+     "key": "arrow",
+     "name": "Yön tabelası",
+     "params": {
+      "posts": 1,
+      "point": "right"
+     },
+     "box": null
+    },
+    {
+     "key": "board",
+     "name": "Direksiz tabela",
+     "params": {
+      "posts": 0
+     },
+     "box": {
+      "ratio": 2.2
+     }
+    }
+   ]
+  },
+  {
+   "kind": "note",
+   "name": "Not kâğıdı",
+   "group": "yazi",
+   "text": true,
+   "box": {
+    "w": 0.36,
+    "ratio": 0.9,
+    "place": "center"
+   },
+   "fill": "paper",
+   "stroke": "wood",
+   "stroke_w": 0.4,
+   "params": {
+    "pin": {
+     "label": "Tutturma",
+     "type": "choice",
+     "default": "tape",
+     "choices": [
+      {
+       "value": "tape",
+       "label": "Bant"
+      },
+      {
+       "value": "pin",
+       "label": "Raptiye"
+      },
+      {
+       "value": "none",
+       "label": "Yok"
+      }
+     ]
+    },
+    "lines": {
+     "label": "Çizgili",
+     "type": "bool",
+     "default": false
+    }
+   },
+   "runs": [
+    {
+     "text": "Unutma!"
+    }
+   ],
+   "presets": [
+    {
+     "key": "tape",
+     "name": "Bantlı not",
+     "params": {
+      "pin": "tape"
+     },
+     "box": null
+    },
+    {
+     "key": "pin",
+     "name": "Raptiyeli not",
+     "params": {
+      "pin": "pin"
+     },
+     "box": null
+    },
+    {
+     "key": "lined",
+     "name": "Çizgili not",
+     "params": {
+      "pin": "none",
+      "lines": true
+     },
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "envelope",
+   "name": "Zarf",
+   "group": "yazi",
+   "text": true,
+   "box": {
+    "w": 0.38,
+    "ratio": 1.05,
+    "place": "center"
+   },
+   "fill": "wood",
+   "stroke": "bark",
+   "stroke_w": 0.5,
+   "params": {
+    "open": {
+     "label": "Açık (mektup görünür)",
+     "type": "bool",
+     "default": true
+    },
+    "seal": {
+     "label": "Mühür",
+     "type": "choice",
+     "default": "heart",
+     "choices": [
+      {
+       "value": "heart",
+       "label": "Kalp"
+      },
+      {
+       "value": "circle",
+       "label": "Yuvarlak"
+      },
+      {
+       "value": "none",
+       "label": "Yok"
+      }
+     ]
+    }
+   },
+   "runs": [
+    {
+     "text": "Sevgili dostum"
+    }
+   ],
+   "presets": [
+    {
+     "key": "open",
+     "name": "Açık zarf",
+     "params": {
+      "open": true
+     },
+     "box": null
+    },
+    {
+     "key": "closed",
+     "name": "Kapalı zarf",
+     "params": {
+      "open": false
+     },
+     "box": {
+      "ratio": 1.5
+     }
+    }
+   ]
+  },
+  {
+   "kind": "scroll",
+   "name": "Parşömen",
+   "group": "yazi",
+   "text": true,
+   "box": {
+    "w": 0.42,
+    "ratio": 0.72,
+    "place": "center"
+   },
+   "fill": "paper",
+   "stroke": "bark",
+   "stroke_w": 0.6,
+   "params": {
+    "orient": {
+     "label": "Yön",
+     "type": "choice",
+     "default": "vertical",
+     "choices": [
+      {
+       "value": "vertical",
+       "label": "Dikey"
+      },
+      {
+       "value": "horizontal",
+       "label": "Yatay"
+      }
+     ]
+    }
+   },
+   "runs": [
+    {
+     "text": "Bir varmış, bir yokmuş"
+    }
+   ],
+   "presets": [
+    {
+     "key": "vertical",
+     "name": "Dikey parşömen",
+     "params": {
+      "orient": "vertical"
+     },
+     "box": null
+    },
+    {
+     "key": "horizontal",
+     "name": "Yatay parşömen",
+     "params": {
+      "orient": "horizontal"
+     },
+     "box": {
+      "w": 0.55,
+      "ratio": 1.9
+     }
+    }
+   ]
+  },
+  {
+   "kind": "badge",
+   "name": "Rozet",
+   "group": "yazi",
+   "text": true,
+   "box": {
+    "w": 0.2,
+    "ratio": 0.8,
+    "place": "center"
+   },
+   "fill": "accent",
+   "stroke": "none",
+   "stroke_w": 0.6,
+   "params": {
+    "style": {
+     "label": "Biçim",
+     "type": "choice",
+     "default": "rosette",
+     "choices": [
+      {
+       "value": "rosette",
+       "label": "Fistolu"
+      },
+      {
+       "value": "circle",
+       "label": "Yuvarlak"
+      },
+      {
+       "value": "star",
+       "label": "Yıldız"
+      }
+     ]
+    },
+    "tails": {
+     "label": "Kurdele",
+     "type": "bool",
+     "default": true
+    }
+   },
+   "runs": [
+    {
+     "text": "1"
+    }
+   ],
+   "presets": [
+    {
+     "key": "rosette",
+     "name": "Fistolu rozet",
+     "params": {
+      "style": "rosette"
+     },
+     "box": null
+    },
+    {
+     "key": "circle",
+     "name": "Yuvarlak rozet",
+     "params": {
+      "style": "circle",
+      "tails": false
+     },
+     "box": {
+      "ratio": 1.0
+     }
+    },
+    {
+     "key": "star",
+     "name": "Yıldız rozet",
+     "params": {
+      "style": "star",
+      "tails": false
+     },
+     "box": {
+      "ratio": 1.0
+     }
+    }
+   ]
+  },
+  {
+   "kind": "ribbon",
+   "name": "Şerit",
+   "group": "yazi",
+   "text": true,
+   "box": {
+    "w": 0.62,
+    "ratio": 3.6,
+    "place": "center"
+   },
+   "fill": "accent",
+   "stroke": "none",
+   "stroke_w": 0.5,
+   "params": {
+    "curve": {
+     "label": "Kavis",
+     "type": "number",
+     "default": 0,
+     "min": -1,
+     "max": 1,
+     "step": 0.05
+    }
+   },
+   "runs": [
+    {
+     "text": "Birinci Bölüm"
+    }
+   ],
+   "presets": [
+    {
+     "key": "straight",
+     "name": "Düz şerit",
+     "params": {
+      "curve": 0
+     },
+     "box": null
+    },
+    {
+     "key": "arch",
+     "name": "Kavisli şerit",
+     "params": {
+      "curve": 0.6
+     },
+     "box": {
+      "ratio": 2.8
+     }
+    }
+   ]
+  },
+  {
+   "kind": "star",
+   "name": "Yıldız",
+   "group": "sekil",
+   "text": true,
+   "box": {
+    "w": 0.2,
+    "ratio": 1.0,
+    "place": "center"
+   },
+   "fill": "sun",
+   "stroke": "none",
+   "stroke_w": 0.6,
+   "params": {
+    "points": {
+     "label": "Köşe",
+     "type": "int",
+     "default": 5,
+     "min": 3,
+     "max": null,
+     "step": 1
+    },
+    "inner": {
+     "label": "İç oran",
+     "type": "number",
+     "default": 0.5,
+     "min": 0.2,
+     "max": 0.9,
+     "step": 0.05
+    },
+    "rounded": {
+     "label": "Yuvarlak köşe",
+     "type": "bool",
+     "default": true
+    }
+   },
+   "runs": [],
+   "presets": [
+    {
+     "key": "five",
+     "name": "Yıldız",
+     "params": {
+      "points": 5
+     },
+     "box": null
+    },
+    {
+     "key": "six",
+     "name": "Altı köşeli yıldız",
+     "params": {
+      "points": 6,
+      "inner": 0.58
+     },
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "heart",
+   "name": "Kalp",
+   "group": "sekil",
+   "text": true,
+   "box": {
+    "w": 0.2,
+    "ratio": 1.06,
+    "place": "center"
+   },
+   "fill": "rose",
+   "stroke": "none",
+   "stroke_w": 0.6,
+   "params": {},
+   "runs": [],
+   "presets": [
+    {
+     "key": "heart",
+     "name": "Kalp",
+     "params": {},
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "cloud",
+   "name": "Bulut",
+   "group": "sekil",
+   "text": true,
+   "box": {
+    "w": 0.4,
+    "ratio": 1.6,
+    "place": "center"
+   },
+   "fill": "white",
+   "stroke": "pop2",
+   "stroke_w": 0.7,
+   "params": {
+    "puffs": {
+     "label": "Kabarcık",
+     "type": "int",
+     "default": 9,
+     "min": 5,
+     "max": null,
+     "step": 1
+    }
+   },
+   "runs": [],
+   "presets": [
+    {
+     "key": "cloud",
+     "name": "Bulut",
+     "params": {},
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "burst",
+   "name": "Patlama",
+   "group": "sekil",
+   "text": true,
+   "box": {
+    "w": 0.36,
+    "ratio": 1.3,
+    "place": "center"
+   },
+   "fill": "sun",
+   "stroke": "ink",
+   "stroke_w": 0.7,
+   "params": {
+    "spikes": {
+     "label": "Uç",
+     "type": "int",
+     "default": 12,
+     "min": 5,
+     "max": null,
+     "step": 1
+    },
+    "seed": {
+     "label": "Çeşit",
+     "type": "int",
+     "default": 3,
+     "min": 0,
+     "max": null,
+     "step": 1
+    },
+    "inner": {
+     "label": "İç patlama",
+     "type": "bool",
+     "default": true
+    }
+   },
+   "runs": [
+    {
+     "text": "Bum!"
+    }
+   ],
+   "presets": [
+    {
+     "key": "double",
+     "name": "Patlama",
+     "params": {
+      "inner": true
+     },
+     "box": null
+    },
+    {
+     "key": "single",
+     "name": "Sade patlama",
+     "params": {
+      "inner": false
+     },
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "scatter",
+   "name": "Serpiştirme",
+   "group": "sus",
+   "text": false,
+   "box": {
+    "w": 0.6,
+    "ratio": 1.3,
+    "place": "center"
+   },
+   "fill": null,
+   "stroke": "none",
+   "stroke_w": 0,
+   "params": {
+    "item": {
+     "label": "Öğe",
+     "type": "choice",
+     "default": "star",
+     "choices": [
+      {
+       "value": "star",
+       "label": "Yıldız"
+      },
+      {
+       "value": "heart",
+       "label": "Kalp"
+      },
+      {
+       "value": "dot",
+       "label": "Nokta"
+      },
+      {
+       "value": "confetti",
+       "label": "Konfeti"
+      },
+      {
+       "value": "sparkle",
+       "label": "Pırıltı"
+      }
+     ]
+    },
+    "count": {
+     "label": "Adet",
+     "type": "int",
+     "default": 14,
+     "min": 1,
+     "max": null,
+     "step": 1
+    },
+    "seed": {
+     "label": "Dağılım",
+     "type": "int",
+     "default": 7,
+     "min": 0,
+     "max": null,
+     "step": 1
+    },
+    "size": {
+     "label": "Boy (mm)",
+     "type": "number",
+     "default": 7,
+     "min": 0.5,
+     "max": null,
+     "step": 0.5
+    }
+   },
+   "runs": [],
+   "presets": [
+    {
+     "key": "star",
+     "name": "Yıldız serpiştir",
+     "params": {
+      "item": "star"
+     },
+     "box": null
+    },
+    {
+     "key": "heart",
+     "name": "Kalp serpiştir",
+     "params": {
+      "item": "heart"
+     },
+     "box": null
+    },
+    {
+     "key": "dot",
+     "name": "Nokta serpiştir",
+     "params": {
+      "item": "dot",
+      "count": 22,
+      "size": 4
+     },
+     "box": null
+    },
+    {
+     "key": "confetti",
+     "name": "Konfeti",
+     "params": {
+      "item": "confetti",
+      "count": 26,
+      "size": 5
+     },
+     "box": null
+    },
+    {
+     "key": "sparkle",
+     "name": "Pırıltı",
+     "params": {
+      "item": "sparkle",
+      "count": 10
+     },
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "line",
+   "name": "Çizgi",
+   "group": "sus",
+   "text": false,
+   "box": {
+    "w": 0.6,
+    "ratio": 8.0,
+    "place": "center"
+   },
+   "fill": "none",
+   "stroke": "accent",
+   "stroke_w": 1.0,
+   "params": {
+    "style": {
+     "label": "Biçim",
+     "type": "choice",
+     "default": "wave",
+     "choices": [
+      {
+       "value": "wave",
+       "label": "Dalga"
+      },
+      {
+       "value": "straight",
+       "label": "Düz"
+      },
+      {
+       "value": "zigzag",
+       "label": "Zikzak"
+      },
+      {
+       "value": "dotted",
+       "label": "Noktalı"
+      },
+      {
+       "value": "dashed",
+       "label": "Kesik"
+      },
+      {
+       "value": "loops",
+       "label": "Halkalı"
+      }
+     ]
+    },
+    "waves": {
+     "label": "Dalga sayısı (0 = kendiliğinden)",
+     "type": "int",
+     "default": 0,
+     "min": 0,
+     "max": null,
+     "step": 1
+    },
+    "ends": {
+     "label": "Uçlar",
+     "type": "choice",
+     "default": "none",
+     "choices": [
+      {
+       "value": "none",
+       "label": "Yok"
+      },
+      {
+       "value": "dot",
+       "label": "Nokta"
+      },
+      {
+       "value": "star",
+       "label": "Yıldız"
+      },
+      {
+       "value": "heart",
+       "label": "Kalp"
+      }
+     ]
+    }
+   },
+   "runs": [],
+   "presets": [
+    {
+     "key": "wave",
+     "name": "Dalgalı çizgi",
+     "params": {
+      "style": "wave"
+     },
+     "box": null
+    },
+    {
+     "key": "straight",
+     "name": "Düz çizgi",
+     "params": {
+      "style": "straight",
+      "ends": "dot"
+     },
+     "box": null
+    },
+    {
+     "key": "zigzag",
+     "name": "Zikzak",
+     "params": {
+      "style": "zigzag"
+     },
+     "box": null
+    },
+    {
+     "key": "dotted",
+     "name": "Noktalı çizgi",
+     "params": {
+      "style": "dotted"
+     },
+     "box": null
+    },
+    {
+     "key": "loops",
+     "name": "Halkalı çizgi",
+     "params": {
+      "style": "loops"
+     },
+     "box": null
+    },
+    {
+     "key": "stars",
+     "name": "Yıldız uçlu çizgi",
+     "params": {
+      "style": "dashed",
+      "ends": "star"
+     },
+     "box": null
+    }
+   ]
+  },
+  {
+   "kind": "arrow",
+   "name": "Ok",
+   "group": "sus",
+   "text": false,
+   "box": {
+    "w": 0.34,
+    "ratio": 2.2,
+    "place": "center"
+   },
+   "fill": "none",
+   "stroke": "accent",
+   "stroke_w": 1.6,
+   "params": {
+    "style": {
+     "label": "Biçim",
+     "type": "choice",
+     "default": "curved",
+     "choices": [
+      {
+       "value": "curved",
+       "label": "Kıvrık"
+      },
+      {
+       "value": "straight",
+       "label": "Düz"
+      },
+      {
+       "value": "loop",
+       "label": "Halkalı"
+      }
+     ]
+    },
+    "heads": {
+     "label": "Uç",
+     "type": "choice",
+     "default": "end",
+     "choices": [
+      {
+       "value": "end",
+       "label": "Tek uç"
+      },
+      {
+       "value": "both",
+       "label": "İki uç"
+      }
+     ]
+    },
+    "dashed": {
+     "label": "Kesik çizgi",
+     "type": "bool",
+     "default": false
+    }
+   },
+   "runs": [],
+   "presets": [
+    {
+     "key": "curved",
+     "name": "Kıvrık ok",
+     "params": {
+      "style": "curved"
+     },
+     "box": null
+    },
+    {
+     "key": "straight",
+     "name": "Düz ok",
+     "params": {
+      "style": "straight"
+     },
+     "box": {
+      "ratio": 3.2
+     }
+    },
+    {
+     "key": "loop",
+     "name": "Halkalı ok",
+     "params": {
+      "style": "loop"
+     },
+     "box": null
+    },
+    {
+     "key": "dashed",
+     "name": "Kesik ok",
+     "params": {
+      "style": "curved",
+      "dashed": true
+     },
+     "box": null
+    }
+   ]
+  }
+ ],
+ "effects": [
+  {
+   "style": "burst",
+   "name": "Patlama",
+   "sample": "Güüüm!",
+   "box": {
+    "w": 80,
+    "h": 56
+   },
+   "params": {
+    "burst_fill": {
+     "label": "Patlama rengi",
+     "type": "color",
+     "default": "sun"
+    },
+    "burst_stroke": {
+     "label": "Patlama çizgisi",
+     "type": "color",
+     "default": "ink"
+    },
+    "angle": {
+     "label": "Eğim (°)",
+     "type": "number",
+     "default": -8,
+     "min": -45,
+     "max": 45,
+     "step": 1
+    },
+    "outline": {
+     "label": "Dış çizgi rengi",
+     "type": "color",
+     "default": "white"
+    },
+    "outline_w": {
+     "label": "Dış çizgi (mm)",
+     "type": "number",
+     "default": 0.7,
+     "min": 0,
+     "max": null,
+     "step": 0.1
+    },
+    "spikes": {
+     "label": "Uç",
+     "type": "int",
+     "default": 12,
+     "min": 5,
+     "max": null,
+     "step": 1
+    },
+    "seed": {
+     "label": "Çeşit",
+     "type": "int",
+     "default": 3,
+     "min": 0,
+     "max": null,
+     "step": 1
+    }
+   }
+  },
+  {
+   "style": "wave",
+   "name": "Dalga",
+   "sample": "Şişşt! Sessizce…",
+   "box": {
+    "w": 100,
+    "h": 40
+   },
+   "params": {
+    "curve": {
+     "label": "Dalga yüksekliği",
+     "type": "number",
+     "default": 0.5,
+     "min": -1,
+     "max": 1,
+     "step": 0.05
+    },
+    "waves": {
+     "label": "Dalga sayısı",
+     "type": "number",
+     "default": 1.5,
+     "min": 0.5,
+     "max": null,
+     "step": 0.5
+    },
+    "outline": {
+     "label": "Dış çizgi rengi",
+     "type": "color",
+     "default": "white"
+    },
+    "outline_w": {
+     "label": "Dış çizgi (mm)",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": null,
+     "step": 0.1
+    }
+   }
+  },
+  {
+   "style": "arc",
+   "name": "Kavis",
+   "sample": "Ağaç, çiçek, ırmak",
+   "box": {
+    "w": 100,
+    "h": 44
+   },
+   "params": {
+    "curve": {
+     "label": "Kavis",
+     "type": "number",
+     "default": 0.6,
+     "min": -1,
+     "max": 1,
+     "step": 0.05
+    },
+    "outline": {
+     "label": "Dış çizgi rengi",
+     "type": "color",
+     "default": "white"
+    },
+    "outline_w": {
+     "label": "Dış çizgi (mm)",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": null,
+     "step": 0.1
+    }
+   }
+  },
+  {
+   "style": "shadow",
+   "name": "Gölgeli",
+   "sample": "Gölgeli yazı",
+   "box": {
+    "w": 90,
+    "h": 28
+   },
+   "params": {
+    "shadow": {
+     "label": "Gölge rengi",
+     "type": "color",
+     "default": "sun"
+    },
+    "shadow_dx": {
+     "label": "Gölge sağa (mm)",
+     "type": "number",
+     "default": 0.8,
+     "min": null,
+     "max": null,
+     "step": 0.1
+    },
+    "shadow_dy": {
+     "label": "Gölge aşağı (mm)",
+     "type": "number",
+     "default": 0.8,
+     "min": null,
+     "max": null,
+     "step": 0.1
+    }
+   }
+  },
+  {
+   "style": "outline",
+   "name": "Dış çizgili",
+   "sample": "Çıtır çıtır!",
+   "box": {
+    "w": 90,
+    "h": 28
+   },
+   "params": {
+    "outline": {
+     "label": "Dış çizgi rengi",
+     "type": "color",
+     "default": "white"
+    },
+    "outline_w": {
+     "label": "Dış çizgi (mm)",
+     "type": "number",
+     "default": 0.8,
+     "min": 0,
+     "max": null,
+     "step": 0.1
+    },
+    "shadow": {
+     "label": "Gölge rengi",
+     "type": "color",
+     "default": "deep"
+    },
+    "shadow_dx": {
+     "label": "Gölge sağa (mm)",
+     "type": "number",
+     "default": 0,
+     "min": null,
+     "max": null,
+     "step": 0.1
+    },
+    "shadow_dy": {
+     "label": "Gölge aşağı (mm)",
+     "type": "number",
+     "default": 0,
+     "min": null,
+     "max": null,
+     "step": 0.1
+    }
+   }
+  },
+  {
+   "style": "stacked",
+   "name": "Kabartma",
+   "sample": "Büyük Gün",
+   "box": {
+    "w": 90,
+    "h": 30
+   },
+   "params": {
+    "shadow": {
+     "label": "Derinlik rengi",
+     "type": "color",
+     "default": "pop2"
+    },
+    "depth": {
+     "label": "Derinlik (harf boyuna oran)",
+     "type": "number",
+     "default": 0.09,
+     "min": 0,
+     "max": 0.5,
+     "step": 0.01
+    },
+    "outline": {
+     "label": "Dış çizgi rengi",
+     "type": "color",
+     "default": "white"
+    },
+    "outline_w": {
+     "label": "Dış çizgi (mm)",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": null,
+     "step": 0.1
+    }
+   }
+  },
+  {
+   "style": "bounce",
+   "name": "Zıplayan",
+   "sample": "Hop hop zıpla!",
+   "box": {
+    "w": 90,
+    "h": 30
+   },
+   "params": {
+    "colors": {
+     "label": "Harf renkleri (boş = palet)",
+     "type": "colors",
+     "default": null
+    },
+    "outline": {
+     "label": "Dış çizgi rengi",
+     "type": "color",
+     "default": "white"
+    },
+    "outline_w": {
+     "label": "Dış çizgi (mm)",
+     "type": "number",
+     "default": 0.5,
+     "min": 0,
+     "max": null,
+     "step": 0.1
+    }
+   }
+  },
+  {
+   "style": "rainbow",
+   "name": "Gökkuşağı",
+   "sample": "Gökkuşağı",
+   "box": {
+    "w": 90,
+    "h": 28
+   },
+   "params": {
+    "colors": {
+     "label": "Harf renkleri (boş = palet)",
+     "type": "colors",
+     "default": null
+    },
+    "outline": {
+     "label": "Dış çizgi rengi",
+     "type": "color",
+     "default": null
+    },
+    "outline_w": {
+     "label": "Dış çizgi (mm)",
+     "type": "number",
+     "default": 0.6,
+     "min": 0,
+     "max": null,
+     "step": 0.1
+    }
+   }
+  }
+ ],
+ "roles": [
+  {
+   "key": "accent",
+   "name": "Vurgu",
+   "hex": "#1F3B73"
+  },
+  {
+   "key": "accent2",
+   "name": "İkinci renk",
+   "hex": "#B0341C"
+  },
+  {
+   "key": "ink",
+   "name": "Yazı rengi",
+   "hex": "#2C2C2A"
+  },
+  {
+   "key": "pop",
+   "name": "Canlı vurgu",
+   "hex": "#6A8CCB"
+  },
+  {
+   "key": "pop2",
+   "name": "Canlı ikinci",
+   "hex": "#D7644D"
+  },
+  {
+   "key": "sun",
+   "name": "Güneş sarısı",
+   "hex": "#FAC965"
+  },
+  {
+   "key": "rose",
+   "name": "Gül kırmızısı",
+   "hex": "#D75840"
+  },
+  {
+   "key": "soft",
+   "name": "Açık vurgu",
+   "hex": "#DDECFF"
+  },
+  {
+   "key": "soft2",
+   "name": "Açık ikinci",
+   "hex": "#FFE2DA"
+  },
+  {
+   "key": "paper",
+   "name": "Kâğıt",
+   "hex": "#FFF6E4"
+  },
+  {
+   "key": "wood",
+   "name": "Ahşap",
+   "hex": "#D8B88B"
+  },
+  {
+   "key": "bark",
+   "name": "Koyu ahşap",
+   "hex": "#604825"
+  },
+  {
+   "key": "deep",
+   "name": "Koyu vurgu",
+   "hex": "#1D3666"
+  },
+  {
+   "key": "white",
+   "name": "Beyaz",
+   "hex": "#FFFFFF"
+  }
+ ],
+ "fonts": {
+  "body": "Andika",
+  "heading": "Baloo 2"
+ }
+}

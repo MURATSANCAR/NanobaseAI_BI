@@ -21,7 +21,8 @@ export type ElementLibraryProps = {
   page?: PageGeom | null;
   /** Yeni şeklin z'si (sözleşme: figür ve serbest katmanlar ≥ 3). Çağıran sayfadaki en büyük z + 1'i verir. */
   nextZ?: number;
-  /** Palet değişince önizlemeleri tazelemek için (ör. plan rev'i). */
+  /** Palet değişince önizlemeleri tazelemek için: paletin özeti (planın her sürümü değil; yoksa her kayıtta
+   *  bütün küçük resimler yeniden istenir). */
   rev?: string | number | null;
   className?: string;
 };
@@ -34,9 +35,10 @@ function tilesOf(items: CatalogItem[]): Tile[] {
   const out: Tile[] = [];
   for (const it of items) {
     if (it.styles.length > 1) {
+      // Her hazır biçim ayrı karo; biçim adı türü de söyler («Direkli tabela», «Dalgalı çerçeve»).
       for (const s of it.styles) {
-        const label = `${it.name} · ${s.label}`;
-        out.push({ key: `${it.kind}:${s.value}`, item: it, style: s.value, label, hay: label.toLocaleLowerCase('tr') });
+        out.push({ key: `${it.kind}:${s.value}`, item: it, style: s.value, label: s.label,
+          hay: `${s.label} ${it.name}`.toLocaleLowerCase('tr') });
       }
     } else {
       const s = it.styles[0]?.value ?? null;
@@ -48,7 +50,7 @@ function tilesOf(items: CatalogItem[]): Tile[] {
 
 export default function ElementLibrary({ jobId, onAdd, page, nextZ, rev, className = '' }: ElementLibraryProps) {
   const uid = useId();
-  const q = useElementCatalog(jobId);
+  const q = useElementCatalog(jobId, rev);
   const [term, setTerm] = useState('');
   const [group, setGroup] = useState<string>('all');
   const catalog = q.data;
@@ -129,8 +131,8 @@ export default function ElementLibrary({ jobId, onAdd, page, nextZ, rev, classNa
 
       {catalog && shown.length > 0 && (
         <p className="text-[11px] leading-snug text-canvas-muted">
-          <span className="hidden sm:inline">Öğeyi sayfaya sürükleyip bırakın ya da tıklayın; sayfanın ortasına eklenir.</span>
-          <span className="sm:hidden">Dokunduğunuz öğe sayfanın ortasına eklenir.</span>
+          <span className="hidden sm:inline">Öğeyi sayfaya sürükleyip bıraktığınız yere koyun ya da tıklayıp ekleyin.</span>
+          <span className="sm:hidden">Dokunduğunuz öğe sayfaya eklenir; ayarları «Öge» sekmesinde açılır.</span>
         </p>
       )}
     </div>

@@ -16,6 +16,7 @@ import { usePlanSync, type Conflict, type SyncState } from './autosave';
 import { usePhotoUploads } from './uploads';
 import { applyLayout, hash, hasText, preset, r1, safeRect, same, stable, uid } from './planModel';
 import { nextZ, removable, removeItem, shapesOf, type ItemRef } from './pageItems';
+import { centerBoxAt } from './elements';
 import PageStrip from './PageStrip';
 import PageCanvas, { CANVAS_DROP } from './PageCanvas';
 import { BubblesTab, EffectTab, ElementsTab, ItemTab, PageTab, PaletteTab, TABS, nudge, type EditorCtx, type Tab } from './InspectorPanel';
@@ -259,19 +260,27 @@ export default function PlanEditor() {
     setSel({ kind: 'figure', id: f.id });
   }, [plan, page, sync, setSel]);
 
+  /** Şekli sayfaya ekler. Tıkla-ekle (Öğeler paneli, telefonda dokunma): kutu panelin verdiği varsayılan yerde.
+   *  Tuvale bırakma: kutu bırakılan noktaya ortalanır (`centerBoxAt`). Kimlik çakışırsa yenisi, z sayfanın en
+   *  üstü; eksik alanlar motorun `new_shape` varsayılanlarıyla (boş renk = türün rolü). Telefonda tuval yalnız
+   *  görüntülediği için eklenen şeklin ayarları «Öge» sekmesinde açılır. */
   const addShape = useCallback((sh: Partial<PlanShape>, cx?: number, cy?: number) => {
     if (!plan || !page || !sh.kind) return;
     const s = safeRect(plan.page);
     const w = sh.box?.w ?? r1(s.w * 0.35);
     const h = sh.box?.h ?? r1(w * 0.5);
-    const x = cx === undefined ? sh.box?.x ?? s.x + (s.w - w) / 2 : cx - w / 2;
-    const y = cy === undefined ? sh.box?.y ?? s.y + (s.h - h) / 2 : cy - h / 2;
+    const base = { x: sh.box?.x ?? r1(s.x + (s.w - w) / 2), y: sh.box?.y ?? r1(s.y + (s.h - h) / 2), w, h };
+    const box = cx === undefined || cy === undefined ? base : centerBoxAt(base, cx, cy);
     const taken = new Set(shapesOf(page).map((z) => z.id));
-    const shape: PlanShape = { ...sh, id: sh.id && !taken.has(sh.id) ? sh.id : uid('s_'), kind: sh.kind, box: { x: r1(x), y: r1(y), w, h },
-      rotate: sh.rotate ?? 0, flip: sh.flip ?? false, z: nextZ(page) };
+    const shape: PlanShape = {
+      fill: null, stroke: null, stroke_w: null, opacity: 1, params: {}, runs: [], text_size: null, ...sh,
+      id: sh.id && !taken.has(sh.id) ? sh.id : uid('s_'), kind: sh.kind, box, rotate: sh.rotate ?? 0, flip: sh.flip ?? false,
+      z: nextZ(page),
+    };
     sync.setPage({ ...page, shapes: [...shapesOf(page), shape] }, '');
     setSel({ kind: 'shape', id: shape.id });
-  }, [plan, page, sync, setSel]);
+    if (!interactive) setTab('oge');
+  }, [plan, page, sync, setSel, interactive]);
 
   const makeArt = useCallback((gid: string) => {
     if (!plan || !page) return;
