@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -136,6 +136,28 @@ else:
     if widened != s:
         s = widened
         changes.append("süs/şekil yollarında tür adı kalıbı genişletildi")
+
+# 4) Pazarlama kiti (arka kapak yazısı, ürün sayfası, sosyal medya görselleri, öğretmen kılavuzu; api_marketing.py)
+if "EDITOR-STUDYO-PAZARLAMA" not in s:
+    M = f"jobs/({JOB})/marketing"
+    SID = "s_[0-9a-f]{8}"
+    pazarlama = ("    # EDITOR-STUDYO-PAZARLAMA  (pazarlama kiti: arka kapak, urun sayfasi, sosyal medya, kilavuz)\n"
+                 + loc(M, "GET", "jobs/$1/marketing", timeout=60)
+                 + loc(f"{M}/(back-cover|product|guide)/generate", "POST", "jobs/$1/marketing/$2/generate", timeout=60)
+                 + loc(f"{M}/(back-cover|product|guide)", "PUT", "jobs/$1/marketing/$2")
+                 + loc(f"{M}/(back-cover|product|guide)/approve", "POST", "jobs/$1/marketing/$2/approve")
+                 + loc(f"{M}/back-cover/(apply|revert)", "POST", "jobs/$1/marketing/back-cover/$2")
+                 + loc(f"{M}/product/seo", "POST", "jobs/$1/marketing/product/seo", timeout=60)
+                 + loc(f"{M}/product/export", "GET", "jobs/$1/marketing/product/export$is_args$args", timeout=60)
+                 + loc(f"{M}/guide/pdf", "GET", "jobs/$1/marketing/guide/pdf")
+                 + loc(f"{M}/social", "POST", "jobs/$1/marketing/social", timeout=180)
+                 + loc(f"{M}/social/zip", "GET", "jobs/$1/marketing/social/zip")
+                 + loc(f"{M}/social/sources/({KEY}|{ID})", "GET", "jobs/$1/marketing/social/sources/$2$is_args$args",
+                       timeout=60)
+                 + loc(f"{M}/social/({SID})", "GET|DELETE", "jobs/$1/marketing/social/$2$is_args$args", timeout=60)
+                 + loc(f"{M}/social/({SID})/approve", "POST", "jobs/$1/marketing/social/$2/approve", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", pazarlama + "    # EDITOR-BITTI", 1)
+    changes.append("pazarlama kiti yolları")
 
 if s == orig:
     print("zaten var (güncel)")

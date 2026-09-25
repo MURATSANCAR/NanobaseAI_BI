@@ -97,7 +97,9 @@ def _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, pane
     if ms.meta.get("ISBN"):
         (workdir / "barkod.svg").write_text(barcode.svg(ms.meta["ISBN"]))
         code = "barkod.svg"
-    summary = ms.meta.get("CRM_SUMMARY") or ""
+    # Pazarlama kitinde onaylanıp «kapağa uygula» denen arka kapak yazısı varsa o; yoksa CRM tanıtım metni.
+    from .marketing import applied_back_text
+    summary = applied_back_text(workdir.parent) or ms.meta.get("CRM_SUMMARY") or ""
     data = {"bleed": spec.bleed, "trim_w": spec.trim_w, "trim_h": spec.trim_h, "spine": spine, "safe": spec.safe,
             "accent": accent, "body_font": spec.body_font, "heading_font": spec.heading_font,
             "title": ms.title, "author": ms.author or "", "publisher": ms.meta.get("PUBLISHER") or "",

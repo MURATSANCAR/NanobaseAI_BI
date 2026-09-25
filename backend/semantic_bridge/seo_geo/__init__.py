@@ -295,6 +295,24 @@ class SeoGeo:
         self.audit(user, "create", pid, row["name"], {"proposal": pid_new})
         return self.proposal(pid_new)
 
+    def external_proposal(self, pid: str, fields: dict[str, str], user: str, source: str) -> dict[str, Any]:
+        """Başka modülün editör onaylı metnini (Kitap Tasarım Stüdyosu pazarlama kiti) bu ürünün bekleyen önerisi
+        olarak kaydeder. Akış değişmez: onay verebilen kişi SEO ekranında karar verir; hiçbir yere gönderilmez."""
+        row = self.product_row(pid)
+        p = loads(row["data_json"], {})
+        fields = propose.enforce({k: str(v or "") for k, v in fields.items() if k in propose.FIELDS},
+                                 rules.thresholds(self.conf))
+        new_id = uuid.uuid4().hex
+        with self.engine().begin() as c:
+            c.execute(PROPOSALS.delete().where(PROPOSALS.c.tenant_id == self.tenant(),
+                                               PROPOSALS.c.product_id == pid, PROPOSALS.c.status == "hazir"))
+            c.execute(PROPOSALS.insert().values(
+                id=new_id, tenant_id=self.tenant(), product_id=pid, status="hazir", fields_json=dumps(fields),
+                before_json=dumps({k: str(p.get(k) or "") for k in propose.FIELDS}), score_before=row["score"],
+                score_after=self.rescore(p, fields), model=source[:120], created_by=user, created_at=now()))
+        self.audit(user, "create", pid, row["name"], {"proposal": new_id, "source": source})
+        return self.proposal(new_id)
+
     def start_batch(self, user: str, budget: int) -> bool:
         """Önerisi olmayan, düzeltilebilir sorunlu aktif ürünler için öneri yazar; en çok satandan başlar.
         Süre bütçesi dolunca durur, kalan iş sonraki tura kalır (sıra her turda yeniden kurulur, tavan yok)."""
