@@ -90,6 +90,9 @@ export default function StudioFlow() {
       source={`İş ${jobId}`}
     >
       {err && <Note tone="err">{err}</Note>}
+      {d?.busy?.key === 'hat' && d.busy.queued && !d.busy.error && (
+        <Note tone="info">Sırada: GPU'da başka bir kitabın işi sürüyor; o bitince bu tasarım kendiliğinden başlar.</Note>
+      )}
       {failed && (
         <Note tone="err">
           Hat durdu: {d?.state.error}{' '}

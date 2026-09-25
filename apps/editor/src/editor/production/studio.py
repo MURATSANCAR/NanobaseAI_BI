@@ -75,6 +75,20 @@ def write(d: Path, name: str, obj) -> None:
     tmp.replace(d / name)
 
 
+def busy(d: Path) -> dict | None:
+    """Süren ya da sırada bekleyen GPU işi: {key, mode, since, queued, workflow_id} ya da son üretimin
+    hatası {…, error}. API işi başlatırken yazar, Temporal etkinliği başlayınca «sırada»yı kaldırır,
+    bitince siler (flow.py)."""
+    return read(d, "busy.json")
+
+
+def set_busy(d: Path, info: dict | None) -> None:
+    if info is None:
+        (d / "busy.json").unlink(missing_ok=True)
+    else:
+        write(d, "busy.json", info)
+
+
 def list_jobs() -> list[dict]:
     out = []
     if not root().exists():

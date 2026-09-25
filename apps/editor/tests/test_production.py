@@ -312,3 +312,49 @@ def test_new_day_resets_carried_outfit():
     sc = asyncio.run(_scene(ms, p, _cast(), _FakeLlm(dressed), 5, "flow", "", text2, "", "üst",
                             prev_outfits={"Tavşan": "pijama"}))
     assert sc.outfits == {"Tavşan": "pijama"}
+
+
+def test_fail_marks_retry_then_final(tmp_path, monkeypatch):
+    from editor.production import run, studio
+    monkeypatch.setattr(studio, "write", lambda d, n, o: (d / n).write_text(__import__("json").dumps(o)))
+    st = run.State(tmp_path)
+    st.start("profil")
+    run.fail(tmp_path, RuntimeError("model 503"), final=False, st=st)
+    step = st.step("profil")
+    assert st.data["status"] == "running" and step["status"] == "running" and "yeniden deneniyor" in step["summary"]
+    run.fail(tmp_path, RuntimeError("model 503"), final=True, st=st)
+    assert st.data["status"] == "fail" and st.step("profil")["status"] == "fail" and "503" in st.data["error"]
+    assert (tmp_path / "hata.txt").exists()
+
+
+def test_production_workflow_plan_then_finish():
+    """İş akışı: yeni işte plan → finish; devamda yalnız finish; finish bir kez düşerse yeniden denenir."""
+    import asyncio
+    testing = pytest.importorskip("temporalio.testing")
+    from temporalio import activity
+    from temporalio.worker import Worker
+    from editor.production.flow import WORKFLOWS
+
+    calls: list[str] = []
+
+    @activity.defn(name="production_plan")
+    async def plan(job):
+        calls.append(f"plan:{job}")
+
+    @activity.defn(name="production_finish")
+    async def finish(job, seed):
+        calls.append(f"finish:{job}:{activity.info().attempt}")
+        if job == "b" and activity.info().attempt == 1:
+            raise RuntimeError("görsel model 503")
+
+    async def main():
+        try:
+            env = await testing.WorkflowEnvironment.start_time_skipping()
+        except Exception as e:  # noqa: BLE001 - test sunucusu indirilemiyorsa
+            pytest.skip(f"Temporal test sunucusu yok: {e}")
+        async with env, Worker(env.client, task_queue="t", workflows=WORKFLOWS, activities=[plan, finish]):
+            await env.client.execute_workflow("BookProduction", args=["a", False], id="wa", task_queue="t")
+            await env.client.execute_workflow("BookProduction", args=["b", True], id="wb", task_queue="t")
+
+    asyncio.run(main())
+    assert calls == ["plan:a", "finish:a:1", "finish:b:1", "finish:b:2"]

@@ -1,0 +1,126 @@
+"""Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction) ve tek resmin yeniden üretimi
+(ArtRegenerate). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
+fontlar ister, bunlar stüdyo imajında) ve kendi işçisi (worker.py, aynı anda tek etkinlik: görsel model
+tek sırada). API yalnız başlatır ve iş klasörünü okur.
+
+Dayanıklılık: etkinlikler nabız atar; işçi düşerse etkinlik zaman aşımıyla başka denemede kaldığı yerden
+sürer (resimler sayfa sayfa kaydedilir, `run.finish` yalnız eksiği çizer). Ekrandaki durum iş klasöründe:
+state.json (adımlar) ve busy.json (süren/sıradaki GPU işi).
+"""
+
+from __future__ import annotations
+
+import asyncio
+import os
+import time
+from datetime import timedelta
+
+from temporalio import activity, workflow
+from temporalio.common import RetryPolicy
+
+QUEUE = os.environ.get("EDITOR_PRODUCTION_QUEUE", "editor-production")
+BEAT = timedelta(minutes=3)
+PLAN_RETRY = RetryPolicy(initial_interval=timedelta(seconds=30), maximum_attempts=2,
+                         non_retryable_error_types=["ValueError", "KeyError", "FileNotFoundError"])
+FINISH_RETRY = RetryPolicy(initial_interval=timedelta(seconds=30), backoff_coefficient=2.0, maximum_attempts=3,
+                           non_retryable_error_types=["ValueError", "KeyError", "FileNotFoundError"])
+ART_RETRY = RetryPolicy(initial_interval=timedelta(seconds=20), maximum_attempts=2,
+                        non_retryable_error_types=["ValueError", "KeyError"])
+
+
+# ------------------------------------------------------------------ etkinlikler (işçide koşar)
+async def _beating(coro):
+    """Uzun etkinlik boyunca nabız: işçi düşerse Temporal BEAT içinde anlar ve yeniden dener."""
+    async def beat():
+        while True:
+            activity.heartbeat()
+            await asyncio.sleep(20)
+    t = asyncio.create_task(beat())
+    try:
+        return await coro
+    finally:
+        t.cancel()
+
+
+def _started(d) -> None:
+    from . import studio
+    b = studio.busy(d) or {}
+    studio.set_busy(d, {**b, "queued": False, "attempt": activity.info().attempt, "error": None})
+
+
+def _last(policy: RetryPolicy) -> bool:
+    return activity.info().attempt >= (policy.maximum_attempts or 1)
+
+
+@activity.defn(name="production_plan")
+async def plan_activity(job: str) -> None:
+    from . import run, studio
+    d = studio.job_dir(job)
+    _started(d)
+    try:
+        await _beating(run.plan(d))
+    except Exception as e:
+        final = _last(PLAN_RETRY) or isinstance(e, (ValueError, KeyError, FileNotFoundError))
+        run.fail(d, e, final)
+        if final:
+            studio.set_busy(d, None)
+        raise
+
+
+@activity.defn(name="production_finish")
+async def finish_activity(job: str, seed: int) -> None:
+    from . import run, studio
+    d = studio.job_dir(job)
+    _started(d)
+    try:
+        await _beating(run.finish(d, seed))
+    except Exception as e:
+        final = _last(FINISH_RETRY) or isinstance(e, (ValueError, KeyError, FileNotFoundError))
+        run.fail(d, e, final)
+        if final:
+            studio.set_busy(d, None)
+        raise
+    studio.set_busy(d, None)
+
+
+@activity.defn(name="production_regenerate")
+async def regenerate_activity(job: str, key: str, mode: str, prompt: str, by: str, variants: int) -> None:
+    from . import studio
+    d = studio.job_dir(job)
+    _started(d)
+    try:
+        await _beating(studio.regenerate(d, key, mode, prompt, by, variants))
+    except Exception as e:
+        if _last(ART_RETRY) or isinstance(e, (ValueError, KeyError)):
+            b = studio.busy(d) or {}
+            studio.set_busy(d, {**b, "error": str(e)[:300], "since": time.time()})   # ekran gösterir
+        raise
+    studio.set_busy(d, None)
+
+
+ACTIVITIES = [plan_activity, finish_activity, regenerate_activity]
+
+
+# ------------------------------------------------------------------ iş akışları
+@workflow.defn(name="BookProduction")
+class BookProduction:
+    @workflow.run
+    async def run(self, job: str, resume: bool = False, seed: int = 42) -> None:
+        if not resume:
+            await workflow.execute_activity("production_plan", job, start_to_close_timeout=timedelta(hours=1),
+                                            heartbeat_timeout=BEAT, retry_policy=PLAN_RETRY)
+        await workflow.execute_activity("production_finish", args=[job, seed],
+                                        start_to_close_timeout=timedelta(hours=4),
+                                        heartbeat_timeout=BEAT, retry_policy=FINISH_RETRY)
+
+
+@workflow.defn(name="ArtRegenerate")
+class ArtRegenerate:
+    @workflow.run
+    async def run(self, job: str, key: str, mode: str, prompt: str, by: str, variants: int) -> None:
+        await workflow.execute_activity("production_regenerate", args=[job, key, mode, prompt, by, variants],
+                                        start_to_close_timeout=timedelta(minutes=45),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+WORKFLOWS = [BookProduction, ArtRegenerate]

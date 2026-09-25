@@ -132,6 +132,19 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
+  # Stüdyonun GPU işleri (editor.production.flow): Temporal `editor-production` kuyruğu, aynı anda tek
+  # etkinlik. Stüdyo API'si yalnız iş akışını başlatır; API yeniden başlasa da iş sürer.
+  studio-worker:
+    <<: *py
+    env_file:
+      - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
+      - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
+    container_name: editor-studio-worker
+    command: ["python", "-m", "editor.production.worker"]
+    depends_on:
+      postgres: {condition: service_healthy}
+      temporal: {condition: service_healthy}
+
   gateway:
     <<: *py
     profiles: [analysis]

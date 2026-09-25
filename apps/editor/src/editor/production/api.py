@@ -1,8 +1,9 @@
 """Kitap Tasarım Stüdyosu servisi (editor-studio, :8000 → host 127.0.0.1:19142).
 
 Yetki: kart servisiyle aynı anahtar (Authorization: Bearer EDITOR_CARDS_KEY); yazan her uç X-Editor
-başlığı ister (köprü oturumdaki AD hesabını koyar). GPU işleri (hat, yeniden üretim) tek sırada yürür;
-sıra bekleyen iş ekranda «sırada» görünür.
+başlığı ister (köprü oturumdaki AD hesabını koyar). GPU işleri (hat, yeniden üretim) bu serviste koşmaz:
+Temporal'da `editor-production` kuyruğuna iş akışı olarak verilir (flow.py), stüdyo işçisi tek sırada yürütür;
+sıra bekleyen iş ekranda «sırada» görünür. Servisin yeniden başlaması süren işi kesmez.
 
     GET  /v1/studio/jobs                              işler
     POST /v1/studio/jobs            {book_id}         okunmuş kitaptan yeni iş
@@ -38,12 +39,10 @@ from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field
 
 from . import studio
-from .run import resume as resume_pipeline, run as run_pipeline
+from .flow import QUEUE
+from .run import State
 
 KEY = os.environ.get("EDITOR_CARDS_KEY", "")
-GPU = asyncio.Lock()                    # görsel model tek sırada
-BUSY: dict[str, dict] = {}              # iş → {key, mode, since} (sürüyor ya da sırada)
-TASKS: set[asyncio.Task] = set()
 DOCX_MAX = 20 * 1024 * 1024
 
 
@@ -62,25 +61,6 @@ def editor(x_editor: str = Header("")) -> str:
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, dependencies=[Depends(authorize)])
 
 
-@app.on_event("startup")
-async def _interrupted() -> None:
-    """Servis yeniden başladıysa yarıda kalan işler kaldığı yerden sürer (çizilmiş resimler korunur); sayfa
-    planı henüz yoksa iş «kesildi» olarak kalır ve ekrandan baştan başlatılır. Ölçüldü 2026-09-25: kurulum
-    için yapılan yeniden başlatma sırada bekleyen bir işi 5/29 resimde kesmişti."""
-    for j in studio.list_jobs():
-        d = studio.root() / j["id"]
-        st = studio.read(d, "state.json")
-        if not st or st.get("status") != "running":
-            continue
-        for s in st["steps"]:
-            if s["status"] == "running":
-                s.update(status="fail", summary="servis yeniden başladı; kaldığı yerden sürüyor")
-        st.update(status="fail", error="kesildi")
-        studio.write(d, "state.json", st)
-        if studio.read(d, "artplan.json"):
-            _spawn(_resume(d))
-
-
 def _dir(job: str) -> Path:
     try:
         return studio.job_dir(job)
@@ -94,25 +74,61 @@ def _key(key: str) -> str:
     return key
 
 
-def _spawn(coro) -> None:
-    t = asyncio.create_task(coro)
-    TASKS.add(t)
-    t.add_done_callback(TASKS.discard)
+async def _temporal():
+    from ..jobs import temporal
+    return await temporal()
 
 
-async def _pipeline(d: Path) -> None:
-    BUSY[d.name] = {"key": "hat", "mode": "run", "since": time.time()}
+async def _busy(d: Path) -> dict | None:
+    """busy.json; iş akışı artık koşmuyorsa (iptal, zaman aşımı, elle sonlandırma) kayıt bayattır, silinir."""
+    b = studio.busy(d)
+    if not b or b.get("error") or not b.get("workflow_id"):
+        return b
     try:
-        async with GPU:
-            await run_pipeline(d)
-    finally:
-        BUSY.pop(d.name, None)
+        desc = await (await _temporal()).get_workflow_handle(b["workflow_id"]).describe()
+        running = desc.status is not None and desc.status.name == "RUNNING"
+    except Exception:  # noqa: BLE001 - Temporal'a ulaşılamıyorsa kayda güvenilir
+        return b
+    if running:
+        return b
+    studio.set_busy(d, None)
+    return None
+
+
+async def _start(d: Path, workflow: str, args: list, wf_id: str, info: dict) -> None:
+    """GPU işini kuyruğa verir. busy.json önce yazılır ki ekran «sırada»yı hemen görsün."""
+    from temporalio.exceptions import WorkflowAlreadyStartedError
+    studio.set_busy(d, {**info, "since": time.time(), "queued": True, "workflow_id": wf_id})
+    try:
+        await (await _temporal()).start_workflow(workflow, args=args, id=wf_id, task_queue=QUEUE)
+    except WorkflowAlreadyStartedError:
+        raise HTTPException(409, "Bu kitapta süren bir iş var") from None
+    except Exception as e:
+        studio.set_busy(d, None)
+        raise HTTPException(503, f"İş kuyruğuna ulaşılamadı: {type(e).__name__}") from None
+
+
+async def _pipeline(d: Path, resume: bool = False) -> None:
+    if not resume and not studio.read(d, "state.json"):
+        State(d)                        # adımlar «bekliyor» görünsün; iş sırada olabilir
+    try:
+        await _start(d, "BookProduction", [d.name, resume], f"studio-{d.name}-{int(time.time())}",
+                     {"key": "hat", "mode": "resume" if resume else "run"})
+    except HTTPException as e:
+        st = studio.read(d, "state.json")
+        if st and e.status_code == 503:                 # kuyruğa verilemedi: iş «başladı» görünmesin
+            st.update(status="fail", error=e.detail, finished=time.time())
+            studio.write(d, "state.json", st)
+        raise
 
 
 # ------------------------------------------------------------------ işler
 @app.get("/v1/studio/jobs")
-def jobs() -> dict:
-    return {"jobs": [{**j, "busy": BUSY.get(j["id"])} for j in studio.list_jobs()]}
+async def jobs() -> dict:
+    out = []
+    for j in await asyncio.to_thread(studio.list_jobs):
+        out.append({**j, "busy": await _busy(studio.root() / j["id"])})
+    return {"jobs": out}
 
 
 class NewJob(BaseModel):
@@ -129,7 +145,7 @@ async def new_job(body: NewJob, by: str = Depends(editor)) -> dict:
     if g is None:
         raise HTTPException(404, "Bu kitabın okunmuş metni yok")
     d = studio.new_job({"generation_id": str(g["id"]), "book_id": str(body.book_id)}, by)
-    _spawn(_pipeline(d))
+    await _pipeline(d)
     return {"id": d.name}
 
 
@@ -148,7 +164,7 @@ async def new_job_docx(file: UploadFile = File(...), by: str = Depends(editor)) 
     job = studio.read(d, "job.json")
     job["source"] = {"docx": str(path), "file_name": name}
     studio.write(d, "job.json", job)
-    _spawn(_pipeline(d))
+    await _pipeline(d)
     return {"id": d.name}
 
 
@@ -158,8 +174,13 @@ def _excerpt(t: str, n: int = 160) -> str:
 
 
 @app.get("/v1/studio/jobs/{job}")
-def job_view(job: str) -> dict:
+async def job_view(job: str) -> dict:
     d = _dir(job)
+    busy = await _busy(d)
+    return await asyncio.to_thread(_job_view, d, job, busy)
+
+
+def _job_view(d: Path, job: str, busy: dict | None) -> dict:
     j, st = studio.read(d, "job.json"), studio.read(d, "state.json", {})
     ms, prof, spec = studio.read(d, "manuscript.json"), studio.read(d, "profile.json"), studio.read(d, "spec.json")
     pm, plan = studio.read(d, "pagemap.json"), studio.read(d, "artplan.json")
@@ -184,7 +205,7 @@ def job_view(job: str) -> dict:
               "role": c["role"], "has_ref": c["name"] in sd.get("characters", {})}
              for i, c in enumerate((plan or {}).get("characters", []))]
     return {
-        "job": j, "state": st, "busy": BUSY.get(job),
+        "job": j, "state": st, "busy": busy,
         "book": ms and {"title": ms["title"], "author": ms["author"], "meta": ms["meta"],
                         "chapters": [c["title"] for c in ms["chapters"]],
                         "words": sum(len(b["text"].split()) for c in ms["chapters"] for b in c["blocks"])},
@@ -298,30 +319,19 @@ class Regenerate(BaseModel):
     variants: int = Field(1, ge=1, le=3)
 
 
-async def _regenerate(d: Path, key: str, body: Regenerate, by: str) -> None:
-    BUSY[d.name] = {"key": key, "mode": body.mode, "since": time.time(), "queued": GPU.locked()}
-    try:
-        async with GPU:
-            BUSY[d.name]["queued"] = False
-            await studio.regenerate(d, key, body.mode, body.prompt, by, body.variants)
-            BUSY.pop(d.name, None)
-    except Exception as e:  # noqa: BLE001 - hata ekrana taşınır
-        BUSY[d.name] = {"key": key, "mode": body.mode, "error": str(e)[:300], "since": time.time()}
-
-
 @app.post("/v1/studio/jobs/{job}/art/{key}/regenerate")
 async def regenerate(job: str, key: str, body: Regenerate, by: str = Depends(editor)) -> dict:
     d = _dir(job)
     key = _key(key)
-    b = BUSY.get(job)
+    b = await _busy(d)
     if b and not b.get("error"):
         raise HTTPException(409, "Bu kitapta süren bir üretim var; bitince tekrar deneyin")
     if body.mode == "fix" and not body.prompt.strip():
         raise HTTPException(400, "Düzeltme için neyin değişeceğini yazın")
     if not studio.read(d, "artplan.json"):
         raise HTTPException(409, "Sayfa planı henüz hazır değil")
-    BUSY.pop(job, None)
-    _spawn(_regenerate(d, key, body, by))
+    await _start(d, "ArtRegenerate", [job, key, body.mode, body.prompt, by, body.variants],
+                 f"studio-{job}-art-{key}-{int(time.time())}", {"key": key, "mode": body.mode})
     return {"accepted": True}
 
 
@@ -353,24 +363,16 @@ async def approve(job: str, key: str, body: Approve, by: str = Depends(editor)) 
     return {"ok": True}
 
 
-async def _resume(d: Path) -> None:
-    BUSY[d.name] = {"key": "hat", "mode": "resume", "since": time.time()}
-    try:
-        async with GPU:
-            await resume_pipeline(d)
-    finally:
-        BUSY.pop(d.name, None)
-
-
 @app.post("/v1/studio/jobs/{job}/resume")
 async def resume(job: str, by: str = Depends(editor)) -> dict:
     """Yarıda kalan işi kaldığı yerden sürdürür (çizilmiş resimler korunur)."""
     d = _dir(job)
-    if BUSY.get(job) and not BUSY[job].get("error"):
+    b = await _busy(d)
+    if b and not b.get("error"):
         raise HTTPException(409, "Bu kitapta süren bir iş var")
     if not studio.read(d, "artplan.json"):
         raise HTTPException(409, "Sayfa planı yok; «Yeniden başlat» kullanın")
-    _spawn(_resume(d))
+    await _pipeline(d, resume=True)
     return {"id": job}
 
 
@@ -397,5 +399,5 @@ async def restart(job: str, by: str = Depends(editor)) -> dict:
     d = _dir(job)
     src = studio.read(d, "job.json")["source"]
     nd = studio.new_job(src, by)
-    _spawn(_pipeline(nd))
+    await _pipeline(nd)
     return {"id": nd.name}

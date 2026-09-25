@@ -86,26 +86,69 @@ class State:
 
 
 async def run(d: Path, images: bool = True, seed: int = 42) -> dict:
-    job = studio.read(d, "job.json")
+    """Komut satırı: planı ve resimleri tek süreçte yapar. Stüdyo aynı iki parçayı Temporal
+    etkinliği olarak koşar (flow.py): `plan` ve `finish`, ikisi de yeniden denenebilir."""
     st = State(d)
     try:
-        await _run(d, job, st, images, seed)
+        await _run(d, studio.read(d, "job.json"), st, images, seed)
         st.data["status"] = "done"
     except Exception as e:  # noqa: BLE001 - adım hata durumuyla kapanır, ekran sebebi gösterir
-        running = next((s for s in st.data["steps"] if s["status"] == "running"), None)
-        if running:
-            running.update(status="fail", summary=str(e)[:300])
-        st.data.update(status="fail", error=f"{type(e).__name__}: {e}"[:500])
-        (d / "hata.txt").write_text(traceback.format_exc())
+        fail(d, e, final=True, st=st)
     st.data["finished"] = time.time()
     st.flush()
     return st.data
 
 
+def fail(d: Path, e: BaseException, final: bool, st: "State | None" = None) -> None:
+    """Hatayı ekrana yazar. Son deneme değilse iş «yeniden deneniyor» görünür; son denemede başarısız."""
+    st = st or State(d, keep=True)
+    running = next((s for s in st.data["steps"] if s["status"] == "running"), None)
+    msg = f"{type(e).__name__}: {e}"[:500]
+    if running:
+        running.update(status="fail" if final else "running",
+                       summary=str(e)[:300] if final else f"yeniden deneniyor: {str(e)[:250]}")
+    st.data.update(status="fail" if final else "running", error=msg if final else None)
+    if final:
+        st.data["finished"] = time.time()
+    (d / "hata.txt").write_text("".join(traceback.format_exception(type(e), e, e.__traceback__)))
+    st.flush()
+
+
+async def plan(d: Path) -> None:
+    """Metin → profil → kurallar → üslup → karakterler → yerleşim ve sahneler. Yeniden denemede baştan
+    yapılır; tamamlanmışsa (işçi sonucu bildiremeden düştüyse) atlanır."""
+    st = State(d, keep=True)
+    if st.step("yerlesim")["status"] == "done" and studio.read(d, "artplan.json"):
+        return
+    st = State(d)
+    await _plan(d, studio.read(d, "job.json"), st)
+
+
+async def finish(d: Path, seed: int = 42) -> dict:
+    """Resimler, kapak, dizgi, ön kontrol; yalnız eksik olan yapılır (ilk koşu, yeniden deneme ve
+    yarıda kalan işin devamı aynı yoldan)."""
+    job = studio.read(d, "job.json")
+    st = State(d, keep=True)
+    st.data.update(status="running", error=None, finished=None)
+    for s in st.data["steps"]:
+        if s["key"] in ("karakter_resimleri", "sayfa_resimleri", "kapak", "dizgi", "on_kontrol") and s["status"] != "done":
+            s.update(status="waiting", summary="")
+    st.flush()
+    await _finish(d, st, studio._plan(d), studio._spec(d), studio._pagemap(d), job.get("created_by", ""), seed, True)
+    st.data.update(status="done", finished=time.time())
+    st.flush()
+    return st.data
+
+
 async def _run(d: Path, job: dict, st: State, images: bool, seed: int) -> None:
+    plan_, pm = await _plan(d, job, st)
+    spec = studio._spec(d)
+    await _finish(d, st, plan_, spec, pm, job.get("created_by", ""), seed, images)
+
+
+async def _plan(d: Path, job: dict, st: State):
     llm = FileLlm(d / "provenance.jsonl")
     src = job["source"]
-    by = job.get("created_by", "")
 
     st.start("icerik")
     ms = await asyncio.to_thread(from_generation, src["generation_id"]) if src.get("generation_id") \
@@ -152,8 +195,7 @@ async def _run(d: Path, job: dict, st: State, images: bool, seed: int) -> None:
     studio.write(d, "artplan.json", plan.to_json())
     st.done("yerlesim", f"{len(pm.pages)} sayfa · resim bandı %{pm.layout.art_ratio * 100:.0f} · "
                         f"{pm.layout.body_size:g} pt · {len(plan.scenes)} resim", pages=len(pm.pages))
-
-    await _finish(d, st, plan, spec, pm, by, seed, images)
+    return plan, pm
 
 
 async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images: bool) -> None:
@@ -239,27 +281,13 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
 
 
 async def resume(d: Path, seed: int = 42) -> dict:
-    """Yarıda kalan işi kaldığı yerden sürdürür: metin, profil, yerleşim ve çizilmiş resimler korunur,
-    yalnız eksik resimler, kapak, dizgi ve ön kontrol yapılır."""
-    job = studio.read(d, "job.json")
-    st = State(d, keep=True)
-    st.data.update(status="running", error=None, finished=None)
-    for s in st.data["steps"]:
-        if s["key"] in ("karakter_resimleri", "sayfa_resimleri", "kapak", "dizgi", "on_kontrol") and s["status"] != "done":
-            s.update(status="waiting", summary="")
-    st.flush()
+    """Komut satırı: yarıda kalan işi kaldığı yerden sürdürür (metin, profil, yerleşim ve çizilmiş resimler
+    korunur)."""
     try:
-        await _finish(d, st, studio._plan(d), studio._spec(d), studio._pagemap(d), job.get("created_by", ""), seed, True)
-        st.data["status"] = "done"
+        return await finish(d, seed)
     except Exception as e:  # noqa: BLE001
-        running = next((s for s in st.data["steps"] if s["status"] == "running"), None)
-        if running:
-            running.update(status="fail", summary=str(e)[:300])
-        st.data.update(status="fail", error=f"{type(e).__name__}: {e}"[:500])
-        (d / "hata.txt").write_text(traceback.format_exc())
-    st.data["finished"] = time.time()
-    st.flush()
-    return st.data
+        fail(d, e, final=True)
+        return studio.read(d, "state.json")
 
 
 def main() -> None:
