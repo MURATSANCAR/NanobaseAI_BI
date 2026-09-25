@@ -87,7 +87,7 @@ def _read(generation_id: str, lex) -> dict:
         if form not in form_cands:
             form_cands[form] = W.candidates(lex.analyses(form))
         cs = form_cands[form]
-        if t.base[:1].isupper() and not t.base.isupper() and cs and all(c[3] for c in cs):
+        if t.base[:1].isupper() and not t.base.isupper() and cs and all(c[4] for c in cs):
             stats["skip_name"] += 1       # cümle başında, sözlükte yalnız özel ad
             continue
         form_counts[form] += 1

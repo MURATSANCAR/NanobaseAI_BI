@@ -28,9 +28,13 @@ kökün o cümlede hangi anlamda olduğu; bağlam işi — kuralla çözülmez).
   yanlış. **Reddedildi.**
 - **Zemberek morfolojisi (zeyrek)**: editörde zaten var (yazım denetimi kullanıyor, MIT/Apache).
   Biçimi sözlük maddesine indirir, türünü (ad/fiil/sıfat/zarf/zamir…) verir; fiil maddesi mastardır
-  («yüzmek»), ad «yüz» ile karışmaz. Birden çok çözümlemede kural: özel ad okuması düşer → en uzun
-  gövde (türetilmiş sözcük kendi maddesidir: «gözlük» ≠ göz) → kitapta tek çözümlü biçimleriyle sık
-  olan kök. **Seçildi.**
+  («yüzmek»), ad «yüz» ile karışmaz. Birden çok çözümlemede kural: özel ad okuması düşer → en az
+  türetmeli çözümleme (çekim grubu sınırı; türetilmiş sözcük kendi maddesidir: «gözlük» ≠ göz+lük,
+  «yüzdü» = yüzmek) → kitapta tek çözümlü biçimleriyle sık olan kök («gözüme», «gözü» varsa «göze» →
+  göz, pınar anlamındaki «göze» değil) → kısa gövde («koşa» → koşmak). Kökün çözümlemelerinde
+  belirteç/zamir/bağlaç/edat/soru/ünlem varsa işlev sözcüğüdür («bir»). **Seçildi.**
+  İlk sürüm «en uzun gövde» kuralıydı; sunucudaki gerçek Zemberek çözümlemesiyle denenince «göze»yi
+  pınar maddesine, «koşa»yı sıfata, «bir»i içerik sözcüğüne götürdü (2026-09-25) — düzeltildi.
 
 **Anlam için:**
 - Sözlükteki anlam listesi (TDK): elde lisanslı bir anlam veritabanı yok; olsa da hangi anlamın

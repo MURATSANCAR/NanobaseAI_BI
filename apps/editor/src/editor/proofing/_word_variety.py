@@ -47,9 +47,15 @@ def word_kind(base: str, apos: str, sent_start: bool) -> str:
     return "word"
 
 
-def candidates(analyses) -> list[tuple[str, str, int, bool]]:
-    """Zemberek çözümlemeleri → (kök, tür, gövde uzunluğu, özel ad mı). Kök = sözlük maddesi
-    (fiillerde mastar: "yüzmek"; ad "yüz" ile karışmaz)."""
+# Bir kökün çözümlemelerinden biri bu türlerdense kök işlev sözcüğüdür ("bir": belirteç/sıfat/sayı/zarf;
+# "o": zamir/belirteç). Sayı tek başına işlev saymaz: "yüz" hem sayı hem ad (surat).
+FUNCTION_POS = ("Det", "Pron", "Conj", "Postp", "Ques", "Interj")
+
+
+def candidates(analyses) -> list[tuple[str, str, int, int, bool]]:
+    """Zemberek çözümlemeleri → (kök, tür, türetme sayısı, gövde uzunluğu, özel ad mı). Kök = sözlük
+    maddesi (fiilde mastar: "yüzmek"; ad "yüz" ile karışmaz). Türetme sayısı çözümlemenin çekim
+    grubu sınırlarından (`group_boundaries`): "gözlük" maddesi 0, göz+lük 1."""
     out = []
     for a in analyses:
         item = getattr(a, "dict_item", None)
@@ -58,25 +64,28 @@ def candidates(analyses) -> list[tuple[str, str, int, bool]]:
         pos = getattr(getattr(item, "primary_pos", None), "value", None) or UNKNOWN_POS
         sec = getattr(getattr(item, "secondary_pos", None), "value", None)
         stem = getattr(a, "stem", None) or item.lemma
-        out.append((lower_tr(item.lemma), pos, len(stem), sec == "Prop"))
+        derivations = max(0, len(getattr(a, "group_boundaries", None) or [0]) - 1)
+        out.append((lower_tr(item.lemma), pos, derivations, len(stem), sec == "Prop"))
     return list(dict.fromkeys(out))
 
 
-def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, bool]]],
+def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, int, bool]]],
                   form_counts: dict[str, int]) -> dict[str, tuple[str, str, bool]]:
     """Her biçim için tek kök: (kök, tür, belirsiz mi).
 
     1. Özel ad çözümlemesi, sıradan çözümleme varken düşer ("Gül" / "gül").
-    2. En uzun gövde kazanır: türetilmiş sözcük kendi maddesidir ("gözlük" göz+lük değil,
-       "gözlük"); çekim ekleri gövdeyi kısaltmaz.
-    3. Kalan birden çoksa, kitapta TEK çözümlemeyle geçen biçimlerinin sıklığı büyük olan kök
-       (kitabın kendi kullanımı); eşitlikte alfabetik (tekrarlanabilir sonuç). `belirsiz` işaretlenir.
+    2. En az türetmeli çözümleme kalır: türetilmiş sözcük kendi maddesidir ("gözlük" ≠ göz+lük;
+       "yüzdü" = yüzmek, yüz+ek fiil değil).
+    3. Kalan birden çok kök varsa: kitapta TEK kökle çözümlenen biçimlerinin sıklığı büyük olan
+       (kitabın kendi kullanımı: "gözüme", "gözü" varsa "göze" → göz, pınar anlamındaki "göze" değil);
+       eşitlikte kısa gövde (yalın kök, ekli okumadan sık: "koşa" → koşmak), sonra alfabetik.
+       `belirsiz` işaretlenir.
+    Tür: kökün çözümlemelerinde işlev türü (FUNCTION_POS) varsa o; yoksa içerik türü önde.
     Çözümlemesi olmayan biçim listede yoktur (bilinmeyen: haritada ayrı sayılır)."""
     def trimmed(cs):
-        common = [c for c in cs if not c[3]]
-        cs = common or cs
-        top = max(c[2] for c in cs)
-        return list(dict.fromkeys((c[0], c[1]) for c in cs if c[2] == top))
+        cs = [c for c in cs if not c[4]] or cs
+        low = min(c[2] for c in cs)
+        return [c for c in cs if c[2] == low]
 
     pre = {f: trimmed(cs) for f, cs in form_cands.items() if cs}
     sure = collections.Counter()
@@ -85,12 +94,15 @@ def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, bool]]],
             sure[cs[0][0]] += form_counts.get(f, 1)
     out = {}
     for f, cs in pre.items():
-        lemmas = sorted({c[0] for c in cs})
-        best = sorted(lemmas, key=lambda lem: (-sure[lem], lem))[0]
-        pos = sorted(c[1] for c in cs if c[0] == best)
-        # aynı kökün birden çok türü (sıfat/ad/zarf "güzel") belirsizlik değildir; içerik türü önde
+        stem_of = {}
+        for c in cs:
+            stem_of[c[0]] = min(stem_of.get(c[0], 99), c[3])
+        lemmas = sorted(stem_of)
+        best = sorted(lemmas, key=lambda lem: (-sure[lem], stem_of[lem], lem))[0]
+        pos = sorted({c[1] for c in cs if c[0] == best})
+        func = [p for p in pos if p in FUNCTION_POS]
         content = [p for p in pos if p in CONTENT_POS]
-        out[f] = (best, (content or pos)[0], len(lemmas) > 1)
+        out[f] = (best, (func or content or pos)[0], len(lemmas) > 1)
     return out
 
 
