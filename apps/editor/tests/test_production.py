@@ -249,3 +249,66 @@ def test_preflight_words_ignore_hyphens():
 def test_block_ending_with_split_word_joins_on_same_page():
     out = M.normalize([(3, "Kim bilir neler ola-"), (3, "cak! Ben yürüdüm."), (3, "Yeni paragraf.")], Lex("olacak"))
     assert [b.text for b in out[0][1]] == ["Kim bilir neler olacak! Ben yürüdüm.", "Yeni paragraf."]
+
+
+def _cast():
+    from editor.production.art import Character
+    fit = lambda n, look="", q=(): {"name": n, "look": look, "from_text": list(q)}  # noqa: E731
+    return [Character("Tavşan", "rabbit", "", [], "ANA", [fit("gündelik"), fit("pijama", q=["Pijamasını giydi."])],
+                      "gündelik"),
+            Character("Salyangoz", "snail", "", [], "YAN", [fit("gündelik")], "gündelik")]
+
+
+class _FakeLlm:
+    def __init__(self, *outs):
+        self.outs, self.prompts = list(outs), []
+
+    async def chat(self, _alias, messages, **_):
+        self.prompts.append(messages[0]["content"])
+        return self.outs.pop(0), None
+
+
+def _page(**kw):
+    return {"moment": "m", "quote": "Tavşan uyandı.", "characters": ["Tavşan"], "outfits": [],
+            "new_day": False, "time_quote": "", "setting": "burrow", "setting_reason": "r",
+            "scene": "Tavşan yawns.", **kw}
+
+
+def test_mentions_with_turkish_suffix():
+    from editor.production.art import _mentions
+    assert _mentions("Salyangoz", "Salyangoz'un evi")
+    assert _mentions("Tavşan", "TAVŞANIN kulakları")
+    assert not _mentions("Salyangoz", "Tavşan uyandı.")
+
+
+def test_scene_cannot_add_character_absent_from_text():
+    import asyncio
+    from editor.production.art import _scene
+    llm = _FakeLlm(_page(characters=["Tavşan", "Salyangoz"], scene="Tavşan yawns. Salyangoz watches."))
+    sc = asyncio.run(_scene(types.SimpleNamespace(title="K"), types.SimpleNamespace(age_min=4, age_max=6),
+                            _cast(), llm, 3, "flow", "", "Tavşan uyandı.", "", "üst", prev_chars=["Tavşan"]))
+    assert sc.characters == ["Tavşan"]
+    assert "Salyangoz" not in sc.scene and "Salyangoz" not in llm.prompts[0]
+
+
+def test_new_day_resets_carried_outfit():
+    import asyncio
+    from editor.production.art import _scene
+    ms, p = types.SimpleNamespace(title="K"), types.SimpleNamespace(age_min=4, age_max=6)
+    text = "Ertesi sabah Tavşan uyandı."
+    wear = [{"character": "Tavşan", "outfit": "pijama"}]
+    day = _page(quote=text, outfits=wear, new_day=True, time_quote="Ertesi sabah Tavşan uyandı.")
+    sc = asyncio.run(_scene(ms, p, _cast(), _FakeLlm(day), 5, "flow", "", text, "", "üst",
+                            prev_outfits={"Tavşan": "pijama"}))
+    assert sc.new_day and sc.outfits == {"Tavşan": "gündelik"}
+    # Aynı gün sürüyorsa kıyafet de sürer; yeni gün alıntısı metinde yoksa yeni gün sayılmaz.
+    same = _page(quote=text, outfits=wear, new_day=True, time_quote="Günler geçti.")
+    sc = asyncio.run(_scene(ms, p, _cast(), _FakeLlm(same), 5, "flow", "", text, "", "üst",
+                            prev_outfits={"Tavşan": "pijama"}))
+    assert not sc.new_day and sc.outfits == {"Tavşan": "pijama"}
+    # Yeni günde metin kıyafeti yeniden giydiriyorsa kalır.
+    text2 = "Ertesi sabah Tavşan pijamasıyla kahvaltı etti."
+    dressed = _page(quote=text2, outfits=wear, new_day=True, time_quote="Ertesi sabah Tavşan pijamasıyla kahvaltı etti.")
+    sc = asyncio.run(_scene(ms, p, _cast(), _FakeLlm(dressed), 5, "flow", "", text2, "", "üst",
+                            prev_outfits={"Tavşan": "pijama"}))
+    assert sc.outfits == {"Tavşan": "pijama"}
