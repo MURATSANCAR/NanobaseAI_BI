@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -244,6 +244,20 @@ if "EDITOR-STUDYO-YAS" not in s:
            + loc(f"{A_}/pdf", "GET", "jobs/$1/age/pdf"))
     s = s.replace("    # EDITOR-BITTI", yas + "    # EDITOR-BITTI", 1)
     changes.append("yaş uygunluğu raporu yolları")
+
+# 4) Kapak tarzı ve kolaj kapak (api_collage.py): görünüm, tarz, adaylar, yükleme, seçim, düzen, etiketler, önizleme
+if "EDITOR-STUDYO-KOLAJ" not in s:
+    K_ = f"jobs/({JOB})/collage"
+    kolaj = ("    # EDITOR-STUDYO-KOLAJ  (kapak tarzi ve kolaj kapak)\n"
+             + loc(K_, "GET", "jobs/$1/collage", timeout=60)
+             + loc(f"{K_}/(style|labels)", "PUT", "jobs/$1/collage/$2")
+             + loc(f"{K_}/(photos|select|layout)", "POST", "jobs/$1/collage/$2")
+             + loc(f"{K_}/upload", "PUT", "jobs/$1/collage/upload$is_args$args",
+                   f"\n        client_max_body_size {body_mb}m;  # STUDIO_UPLOAD_MB+1", timeout=600)
+             + loc(f"{K_}/photos/(k_[0-9a-f]{{8}})", "GET", "jobs/$1/collage/photos/$2$is_args$args", timeout=60)
+             + loc(f"{K_}/preview", "GET", "jobs/$1/collage/preview$is_args$args", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", kolaj + "    # EDITOR-BITTI", 1)
+    changes.append("kapak tarzı ve kolaj yolları")
 
 if s == orig:
     print("zaten var (güncel)")

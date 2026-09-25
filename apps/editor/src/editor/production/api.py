@@ -889,3 +889,5 @@ app.include_router(_reader_router)
 # Yaş uygunluğu raporu (api_age.py): /v1/studio/jobs/{job}/age…
 from .api_age import router as _age_router  # noqa: E402
 app.include_router(_age_router)
+from .api_collage import router as _collage_router  # noqa: E402 — kapak tarzı ve kolaj kapak uçları
+app.include_router(_collage_router)

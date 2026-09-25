@@ -508,3 +508,28 @@ köprü `editorial_studio_reader.py`; ekran `studio/reader/` (Okur) ve `studio/d
 - İşaret alanları: `fid, page, no, target (block|bubble|free), id, start, end, quote, kind, reason, replacement, votes,
   passes`; `start/end` hedef metnin harf aralığı. Öneri uygulanınca ekran metni `setPage` ile değiştirir (plan sürümü artar).
 - Yönetim ayarı `STUDIO_READER_PASSES` (grup `studio`, varsayılan 3): sayfa başına bağımsız okuma; sayfa çevirmede aday öneri sayısı.
+
+## Kolaj kapak (O; kullanıcı onayı 2026-09-25)
+Kapağın ikinci tarzı. Kapak ekranında (`/kitap-tasarim/:iş/kapak`, Sayfa stüdyosundan «Kapak tarzı») editör tarzı seçer:
+`illustrated` (resimli; bugünkü yol) | `collage` | `typographic`. Seçim yoksa bugünkü kural sürer (kapak resmi varsa resimli,
+resimsiz kitapta tipografik). Motor `production/collage.py`, uçlar `production/api_collage.py`, durum `kolaj/kolaj.json`.
+- **Fotoğraf:** (a) Zeki AI: dil modeli kitabın profilinden/tanıtımından/metninden sahne yazar (genel kalıp,
+  `prompts/production_collage_scene.md`; editörün yönlendirmesi eklenebilir), görsel model bir çağrıda 3 tohumla aday
+  üretir (Temporal `CollagePhotos`, busy.json, bitince görsel model bırakılır). Negatif istem kolaja özel: «blurry, low
+  quality» gibi analog görünümle çelişen terim yok. (b) Editörün fotoğrafı (`PUT collage/upload`, fotoğraf yükleme yolu:
+  EXIF yönü, sRGB, üst veri silinir; STUDIO_UPLOAD_MB). Model fotoğrafıyla kurulan kolajda ekranda «Taslak — ticari
+  kullanım izni bekleniyor»; editörün fotoğrafında yok.
+- **Taşan figür:** figürün maskesinden (üst şeridin tonuyla anahtarlama, ufka bağlı bölge; ufuk yoksa fon dışı her şey);
+  kesimin üst kenarı maskeden hesaplanır (elle oran yok). Üst şerit düz değilse taşma yapılmaz, nedeni ekranda.
+- **Belirlenimcilik:** tohum = sha256(başlık, düzen no); aynı kitap + düzen + fotoğraf → bayt bayt aynı ön kapak.
+  «Başka düzen» düzen numarasını artırır, «Önceki düzen» geri alır.
+- **Etiketler:** başlıktan ölçülür (Special Elite; kelime sırası korunarak en dengeli şeritler, şerit ≤ kesimin %80'i);
+  editör şeritleri elle yazabilir (`PUT collage/labels`, null = otomatik); sığmayan şerit açık hata.
+- **Baskı:** ön kapak 300 dpi gri PNG (CMYK'da yalnız siyah), yazılar vektör (Türkçe harfler PDF'ten okunur); arka kapak,
+  sırt, barkod `cover.typ`'in mevcut kalıbı; sırt ve arka başlık koyu gri, arka zemin sıcak beyaz. Prepress aynı.
+- **Uçlar (`/v1/studio/jobs/{job}/collage`):** `GET` görünüm · `PUT style` · `POST photos {count, direction}` (GPU, 409
+  BUSY) · `PUT upload?filename=` (ham gövde, 413 TOO_LARGE) · `POST select {photo}` · `POST layout {layout|null}` ·
+  `PUT labels {labels|null}` · `GET photos/{k_…}?w=` · `GET preview?w=` (yalnız ön panel). Köprü birebir vekil
+  (`editorial_studio_collage.py`), giriş kapısı `EDITOR-STUDYO-KOLAJ` bloğu.
+- **Fontlar** `production/fonts/` (imaja `COPY src` ile girer): Special Elite (Apache 2.0), Courier Prime Bold (OFL; yedek
+  daktilo), Poppins Light (OFL; yazar adı). Kaynak google/fonts `23e54b51`; lisans dosyaları yanında.

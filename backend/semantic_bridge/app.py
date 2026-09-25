@@ -4436,6 +4436,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except ValueError:
             return 60
 
+    from semantic_bridge import editorial_studio_collage  # kapak tarzı ve kolaj kapak
+    editorial_studio_collage.register(app, {"auth": _books, "audit": admin_mod.audit, "upload_mb": _upload_mb})
+
     @app.get("/api/v1/editorial/studio/settings")
     def editorial_studio_settings(request: Request) -> dict[str, Any]:
         _books(request)
