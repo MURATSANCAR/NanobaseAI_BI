@@ -121,6 +121,54 @@ tutuluyor (`studio.json.pages["12"]`). Sayfa planında sayfa **kalıcı bir kay�
 - Üretim GPU işidir (Temporal, bugünkü resim işleri gibi); ekran işin bitmesini bekler, bu sırada düzenleme sürer.
 - Figür bir kez üretilir, birçok sayfada kullanılabilir; sayfadan silinmesi kütüphaneden silmez.
 
+## Efekt yazılar ve süs/şekiller (kullanıcı kararı 2026-09-25: "sadece balon olmasın")
+İki yeni iş: **D** motor (`apps/editor/src/editor/production/elements.py` + `templates/elements.typ`), **E** ekran
+(`src/canvas/editorial/studio/elements/`). A ve C bunları yalnız çağırır/yerleştirir; çizim ve katalog D'de, paneller E'de.
+
+**Efekt yazı:** `texts[]` öğesine isteğe bağlı `effect`:
+```jsonc
+"effect": {"style": "burst",          // burst | wave | arc | shadow | outline | stacked | bounce | rainbow
+           "params": {"curve": 0.6,     // arc/wave: -1..1 kavis
+                      "outline": "#FFFFFF", "outline_w": 0.8,   // mm
+                      "shadow": "#1F3B73", "shadow_dx": 0.8, "shadow_dy": 0.8,
+                      "colors": ["#B0341C", "#1F6F5B"],        // rainbow/bounce: harf harf dönen renkler
+                      "burst_fill": "#FAC775", "burst_stroke": "#2C2C2A", "angle": -8}}
+```
+Harfler vektör kalır (Türkçe doğru, düzeltilebilir); kavis/dalga harf harf yerleştirmeyle yapılır. Renkler paletten.
+
+**Şekil katmanı:** sayfa nesnesine `shapes` listesi (z sırası figürlerle aynı kural):
+```jsonc
+"shapes": [
+  {"id": "s_1a2b", "kind": "sign",      // aşağıdaki katalog
+   "box": {"x": 30, "y": 150, "w": 60, "h": 30}, "rotate": -4, "flip": false, "z": 5,
+   "fill": "#F2E3C6", "stroke": "#5B3A1E", "stroke_w": 0.6, "opacity": 1,
+   "params": {"posts": 1},              // türe özel
+   "runs": [{"text": "Sihirli Orman", "color": "#5B3A1E", "weight": 800, "font": "heading"}],  // yazı taşıyan türlerde
+   "text_size": 18}
+]
+```
+**Katalog** (`elements.CATALOG`; her tür: Türkçe ad, grup, varsayılan kutu oranı, varsayılan renk rolleri, parametreler,
+yazı taşır mı): çerçeve (`frame`: düz/dalgalı/noktalı/çift çizgi, tam sayfa kenarlık), köşe süsü (`corner`), serpiştirme
+(`scatter`: yıldız/kalp/nokta/konfeti, adet ve tohum parametresi — deterministik), ok (`arrow`: düz/kıvrık), tabela (`sign`),
+not kâğıdı (`note`), zarf (`envelope`), parşömen (`scroll`), rozet (`badge`: sayfa no/sayı), şerit (`ribbon`: bölüm başı),
+yıldız (`star`), kalp (`heart`), bulut (`cloud`), patlama (`burst`), çizgi/dalga (`line`). Hepsi vektör; renk yoksa
+paletten rol ile (`accent`, `soft`, `ink`) doldurulur.
+
+**Uçlar (D):** `GET plan/elements/catalog` → katalog; `GET plan/elements/{kind}/preview?w=&style=` → küçük PNG (kitabın
+paleti ve fontlarıyla; ekran kütüphanesi bunu gösterir); `GET plan/effects/{style}/preview?w=&text=` → efekt önizlemesi.
+Yazan uç yok: şekil ve efekt sayfa `PUT`'uyla kaydedilir. Doğrulama `elements.validate(shape|effect)` → hata metni ya da None
+(A'nın sayfa PUT'u bunu çağırır).
+
+**Dizgi bağlantısı:** `plan.typ` `#import "elements.typ": draw-shape, effect-text` yapar; `shapes` öğesini
+`draw-shape(s, palette, fonts)`, `effect`'li serbest yazıyı `effect-text(t, palette, fonts)` ile kutusuna çizer. Kutu, döndürme,
+aynalama, z sırasını A uygular; `elements.typ` kutu içine (0,0,w,h) çizer.
+
+**Ekran (E):** "Öğeler" paneli (katalog grupları, önizleme küçük resimleri, sayfaya sürükle-bırak ya da tıkla-ekle),
+"Efekt yazı" paneli (hazır stiller, kavis/gölge/dış çizgi ayarları, paletten renkler), seçili şekil/efekt için özellik
+paneli (renk rolleri, parametreler, yazı). Bileşenler C'nin düzenleyicisine takılabilir olarak dışa verilir:
+`<ElementLibrary onAdd(shape)/>`, `<EffectTextPanel value onChange/>`, `<ShapeInspector value onChange/>`; sayfaya
+ekleme/kaydetme C'nin otomatik kayıt sırasından geçer.
+
 ## Fotoğraf yükleme (kullanıcı kararı 2026-09-25)
 - Editör bilgisayardan/telefondan fotoğraf yükler (JPEG, PNG, WebP; HEIC okunabiliyorsa o da — okunamıyorsa açık hata).
   Yükleme bugünkü stüdyo kalıbıyla ham gövde `PUT` + `filename` sorgu parametresi (multipart yok).
