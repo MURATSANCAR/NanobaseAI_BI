@@ -79,6 +79,35 @@ QUESTIONS = sa.Table(
     sa.Column("created_by", sa.String(120)),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
+LINKS = sa.Table(
+    "semantic_seo_links", _md,  # T-soft link/getLinks: sayfa türü başına başlık/açıklama/indeks ayarı (yalnız okunur)
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("link", sa.String(600), primary_key=True),
+    sa.Column("type", sa.String(40), nullable=False),
+    sa.Column("table_id", sa.String(40)),
+    sa.Column("title", sa.Text),
+    sa.Column("description", sa.Text),
+    sa.Column("data_json", sa.Text, nullable=False),
+    sa.Column("synced_at", sa.DateTime(timezone=True), nullable=False),
+)
+REDIRECTS = sa.Table(
+    "semantic_seo_redirects", _md,  # anasayfaya giden 301'ler ve hedef önerisi; karar kayıtta, gönderim yok
+    sa.Column("id", sa.String(16), primary_key=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
+    sa.Column("link", sa.String(600), nullable=False),
+    sa.Column("current_target", sa.String(600)),
+    sa.Column("target", sa.String(600)),
+    sa.Column("target_type", sa.String(40)),
+    sa.Column("confidence", sa.String(12), nullable=False),   # kesin | yüksek | orta | yok
+    sa.Column("reason", sa.String(600)),
+    sa.Column("alternatives_json", sa.Text),
+    sa.Column("status", sa.String(16), nullable=False),       # bekliyor | onaylandi | reddedildi
+    sa.Column("chosen", sa.String(600)),
+    sa.Column("decided_by", sa.String(120)),
+    sa.Column("decided_at", sa.DateTime(timezone=True)),
+    sa.Column("note", sa.String(1000)),
+    sa.Column("synced_at", sa.DateTime(timezone=True), nullable=False),
+)
 _lock = threading.Lock()
 _ready: set[int] = set()
 

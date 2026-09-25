@@ -36,6 +36,7 @@ const SeoVisibility = lazy(() => import('@/canvas/seo-geo/SeoVisibility'));
 const SeoHistory = lazy(() => import('@/canvas/seo-geo/SeoHistory'));
 const SeoConnections = lazy(() => import('@/canvas/seo-geo/SeoConnections'));
 const SeoLlms = lazy(() => import('@/canvas/seo-geo/SeoLlms'));
+const SeoRedirects = lazy(() => import('@/canvas/seo-geo/SeoRedirects'));
 
 function RouteFallback() {
   return (
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="seo-geo/gecmis" element={<SeoHistory />} />
             <Route path="seo-geo/baglantilar" element={<SeoConnections />} />
             <Route path="seo-geo/llms" element={<SeoLlms />} />
+            <Route path="seo-geo/yonlendirmeler" element={<SeoRedirects />} />
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />
