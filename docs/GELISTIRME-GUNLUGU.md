@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (22:00) — Power BI adı ekranlardan kalktı; stüdyo tasarımları arşive; dal temizliği
+
+- **Power BI:** kullanıcı kararıyla ekranda «mevcut rapor» (Baskı Öneri notları, açılış süzgeci etiketi, kaynak paneli başlığı, ZEKI AI Tahminleme açıklama/kolon/grup adları, kaynak SQL panelinde görünen `--` açıklama satırları; `bi.slicer.hint`). Rapor önbelleği bir yenilemede (≤5 dk) güncellendi; test sunucusu ve VM API'sinde «Power BI» 0, yayındaki arayüz parçalarında 0. Yönetim testleri 5/5 grup geçti (eşlik 27/27, tahmin 28/28).
+- **Stüdyo tasarımları:** kullanıcı isteğiyle 12 işin tamamı ekranlardan kaldırıldı — kalıcı silme değil, `/data/editor/storage/production-arsiv/20260925/`'e taşındı (liste boş; geri almak için klasörler `production/`'a taşınır).
+- **Dallar:** `openserp-evaluation` ve `sql-goster-kartlar` oturumları arşivlendi, klasör ve dalları silindi; GitHub'da yalnız `main` + çalışan SEO/Geo oturumunun dalı (6 kaydedilmemiş dosya, dokunulmadı).
+
 ## 2026-09-25 (22:40) — SEO & GEO: llms.txt önerisi (T-soft'a gönderilmez); site ve şema bulguları
 
 - **Sitede:** `timas.com.tr/llms.txt` var ama yalnız `# LLMs.txt` (10 bayt); `llms-full.txt` yok. robots.txt yapay zekâ botlarını engellemiyor (GPTBot, ClaudeBot, PerplexityBot, Google-Extended: genel Allow). Ürün sayfasında JSON-LD Book+Product (isbn, author, numberOfPages, offers, publisher) + Organization + WebSite + BreadcrumbList var; Organization adı "timas.com.tr", açıklaması kampanya metni. Başlık ve meta canlıda da şablon kopyası. www → timas.com.tr yönleniyor; `SEO_SITE_URL` varsayılanı `https://timas.com.tr`.
