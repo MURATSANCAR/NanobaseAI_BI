@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import os
 import re
+import threading
 import uuid
 
 import httpx
@@ -52,8 +53,61 @@ def _key(key: str) -> str:
     return key
 
 
-def _client(ca: str, timeout: float = 30) -> httpx.Client:
-    return httpx.Client(timeout=timeout, verify=ca or True, follow_redirects=False)
+# Kalıcı bağlantı havuzu. Stüdyoya giden yol test sunucusunda GPU'dan gelen SSH tüneli (RTT ~170 ms), müşteri
+# VM'inde GPU'nun genel HTTPS adresi. Her istekte yeni istemci açmak her görselde yeni tünel kanalı (ya da TLS
+# el sıkışması) demekti: küçük bir görselin ilk baytı 0,35–0,7 sn, açık bağlantıda 0,175 sn (2026-09-25 ölçümü).
+# Boşta bağlantı stüdyo servisinin keep-alive süresinden (uvicorn --timeout-keep-alive 75) önce bırakılır ki
+# karşı tarafın kapattığı bağlantıya istek yazılmasın.
+_KEEPALIVE_S = 50.0
+_clients: dict[str, httpx.Client] = {}
+_clients_lock = threading.Lock()
+
+
+class _Pooled:
+    """`with _client(...) as c:` kalıbını koruyan ince sarmalayıcı: çıkışta havuz kapanmaz; zaman aşımı istek
+    başına verilir. GET, boşta kapanmış bağlantıya denk gelirse bir kez yeniden denenir (yazan istekler denenmez)."""
+
+    def __init__(self, client: httpx.Client, timeout: float):
+        self._c = client
+        self._timeout = timeout
+
+    def __enter__(self) -> "_Pooled":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        return None
+
+    def request(self, method: str, url: str, **kw) -> httpx.Response:
+        kw.setdefault("timeout", self._timeout)
+        try:
+            return self._c.request(method, url, **kw)
+        except (httpx.RemoteProtocolError, httpx.ReadError, httpx.WriteError):
+            if method.upper() != "GET":
+                raise
+            return self._c.request(method, url, **kw)
+
+    def get(self, url: str, **kw) -> httpx.Response:
+        return self.request("GET", url, **kw)
+
+    def post(self, url: str, **kw) -> httpx.Response:
+        return self.request("POST", url, **kw)
+
+    def put(self, url: str, **kw) -> httpx.Response:
+        return self.request("PUT", url, **kw)
+
+
+def _client(ca: str, timeout: float = 30) -> _Pooled:
+    key = ca or ""
+    c = _clients.get(key)
+    if c is None:
+        with _clients_lock:
+            c = _clients.get(key)
+            if c is None:
+                c = httpx.Client(verify=ca or True, follow_redirects=False,
+                                 limits=httpx.Limits(max_connections=64, max_keepalive_connections=32,
+                                                     keepalive_expiry=_KEEPALIVE_S))
+                _clients[key] = c
+    return _Pooled(c, timeout)
 
 
 def _raise(r: httpx.Response) -> None:

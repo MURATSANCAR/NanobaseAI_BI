@@ -11,8 +11,8 @@ sıra bekleyen iş ekranda «sırada» görünür. Servisin yeniden başlaması 
     POST /v1/studio/jobs/{job}/art-mode  {art_mode}   resim seçimini değiştir (yerleşim yeniden kurulur)
          art_mode: auto | every_page | chapter | none (profilin resim kararının önüne geçer)
     GET  /v1/studio/jobs/{job}                        bütün görünüm (adımlar, kararlar, sayfalar, ön kontrol)
-    GET  /v1/studio/jobs/{job}/pages/{n}/preview?w=   dizilmiş sayfa (PNG)
-    GET  /v1/studio/jobs/{job}/cover/preview?w=       kapak açılımı (PNG)
+    GET  /v1/studio/jobs/{job}/pages/{n}/preview?w=   dizilmiş sayfa (WebP)
+    GET  /v1/studio/jobs/{job}/cover/preview?w=       kapak açılımı (WebP)
     GET  /v1/studio/jobs/{job}/art/{key}/{v}?w=       resim sürümü (key: sayfa no | kapak)
     GET  /v1/studio/jobs/{job}/characters/{i}?w=      karakter referansı
     POST /v1/studio/jobs/{job}/art/{key}/regenerate   {mode: fix|new, prompt, variants}
@@ -42,6 +42,7 @@ import hmac
 import io
 import os
 import re
+import threading
 import time
 from pathlib import Path
 from typing import Literal
@@ -307,7 +308,11 @@ def _front(d: Path) -> dict | None:
 
 # ------------------------------------------------------------------ görseller
 def _image(path: Path, w: int) -> Response:
-    """İstenen genişlikte WebP (disk önbelleği); w=0 özgün PNG."""
+    """İstenen genişlikte WebP (disk önbelleği, kaynağın mtime'ına bağlı); w=0 özgün PNG.
+
+    Ekrana giden her önizleme WebP'dir: dizilmiş sayfanın PNG'si 880 px'te 1,3 MB, aynı sayfa WebP'de 34 KB.
+    GPU ile köprü arasındaki tünel saniyede ~0,8 MB taşıdığı için stüdyo ekranı bu farkla saniyelerce bekliyordu
+    (2026-09-25 ölçümü). Önbellek dosyası yarım okunmasın diye geçici adla yazılıp yerine konur."""
     if not path.exists():
         raise HTTPException(404, "görsel yok")
     if w <= 0:
@@ -321,15 +326,27 @@ def _image(path: Path, w: int) -> Response:
         im.thumbnail((w, w * 4))
         buf = io.BytesIO()
         im.save(buf, "WEBP", quality=86)
-        cache.write_bytes(buf.getvalue())
+        tmp = cache.with_name(f".{cache.name}.{os.getpid()}.{threading.get_ident()}")
+        tmp.write_bytes(buf.getvalue())
+        os.replace(tmp, cache)
     return FileResponse(cache, media_type="image/webp", headers={"Cache-Control": "private, max-age=3600"})
+
+
+def _preview(path: Path) -> Response:
+    """Dizgi önizlemesi (sayfa, kapak): PNG zaten istenen genişlikte çizilir; ekrana aynı genişlikte WebP gider."""
+    if not path.exists():
+        raise HTTPException(404, "görsel yok")
+    from PIL import Image
+    with Image.open(path) as im:
+        width = im.width
+    return _image(path, width)
 
 
 @app.get("/v1/studio/jobs/{job}/pages/{n}/preview")
 def page_preview(job: str, n: int, w: int = Query(900, ge=120, le=2400)) -> Response:
     d = _dir(job)
     try:
-        return _image(studio.page_preview(d, n, w), 0)
+        return _preview(studio.page_preview(d, n, w))
     except FileNotFoundError:
         raise HTTPException(404, "sayfa yok") from None
 
@@ -339,7 +356,7 @@ def cover_preview(job: str, w: int = Query(1400, ge=200, le=3000)) -> Response:
     d = _dir(job)
     if not (d / "kapak" / "kapak.pdf").exists():
         raise HTTPException(404, "kapak yok")
-    return _image(studio.cover_preview(d, w), 0)
+    return _preview(studio.cover_preview(d, w))
 
 
 @app.get("/v1/studio/jobs/{job}/art/{key}/{v}")
@@ -645,7 +662,7 @@ async def plan_bubbles_suggest(job: str, pid: str, by: str = Depends(editor)) ->
 def plan_preview(job: str, pid: str, w: int = Query(900, ge=120, le=2400)) -> Response:
     d = _plan_dir(job)
     try:
-        return _image(plan_mod.preview(d, pid, w), 0)
+        return _preview(plan_mod.preview(d, pid, w))
     except (KeyError, FileNotFoundError):
         raise HTTPException(404, "sayfa yok") from None
 

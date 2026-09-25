@@ -4255,9 +4255,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             log.exception("studio call failed")
             raise HTTPException(502, what) from None
 
-    def _studio_image(result) -> Response:
+    def _studio_image(result, request: Request | None = None) -> Response:
+        """Görsel yanıtı. Ekranın `r=` (dizgi sürümü) taşıyan sayfa/kapak adresleri o sürümde değişmez: bir gün
+        tarayıcıda kalır; sürüm değişince adres de değişir. Öteki görseller 5 dakika."""
         data, mime = result
-        return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=300"})
+        age = 86400 if request is not None and request.query_params.get("r") else 300
+        return Response(content=data, media_type=mime, headers={"Cache-Control": f"private, max-age={age}"})
 
     @app.get("/api/v1/editorial/studio/jobs")
     def editorial_studio_jobs(request: Request) -> dict[str, Any]:
@@ -4350,13 +4353,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def editorial_studio_page(job: str, page_no: int, request: Request, w: int = 900):
         _books(request)
         from semantic_bridge import editorial_studio
-        return _studio_image(_studio_call(editorial_studio.page_preview, job, page_no, max(120, min(int(w), 2400))))
+        return _studio_image(_studio_call(editorial_studio.page_preview, job, page_no, max(120, min(int(w), 2400))), request)
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/cover/preview")
     def editorial_studio_cover(job: str, request: Request, w: int = 1400):
         _books(request)
         from semantic_bridge import editorial_studio
-        return _studio_image(_studio_call(editorial_studio.cover_preview, job, max(200, min(int(w), 3000))))
+        return _studio_image(_studio_call(editorial_studio.cover_preview, job, max(200, min(int(w), 3000))), request)
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/art/{key}/{version}")
     def editorial_studio_art_image(job: str, key: str, version: int, request: Request, w: int = 800):
