@@ -51,12 +51,13 @@ def job_dir(job_id: str) -> Path:
     return d
 
 
-def new_job(source: dict, by: str) -> Path:
+def new_job(source: dict, by: str, art_mode: str = "auto") -> Path:
+    """`art_mode`: işi açarken resim seçimi (auto | every_page | chapter | none); profilin kararının önüne geçer."""
     job_id = time.strftime("%Y%m%d%H%M%S") + secrets.token_hex(3)
     d = root() / job_id
     d.mkdir(parents=True)
     (d / "job.json").write_text(json.dumps({"id": job_id, "source": source, "created_by": by,
-                                            "created_at": time.time()}, ensure_ascii=False))
+                                            "created_at": time.time(), "art_mode": art_mode}, ensure_ascii=False))
     return d
 
 

@@ -398,6 +398,55 @@ def test_shapes_and_effect_text_saved_and_validated(tmp_path, monkeypatch):
         P.update_page(d, pg["id"], 2, {**pg, "shapes": [{**pg["shapes"][0], "kind": "yok"}]}, "e", **QUIET)
 
 
+def test_art_mode_overrides_profile_decision():
+    from editor.production.profile import apply_art_mode
+    p = Profile(4, 8, "beyan", "RESIMLI_OYKU", "HER_SAYFA", [], {}, {}, {"illustration": "HER_SAYFA"})
+    apply_art_mode(p, "none")
+    assert (p.illustration, p.art_source) == ("YOK", "editor") and p.illustration_source == "editörün seçimi: resimsiz"
+    apply_art_mode(p, "auto")                           # seçim geri alınınca modelin okumasına döner
+    assert (p.illustration, p.art_source) == ("HER_SAYFA", "auto")
+    assert p.illustration_source == "Okur yaşı 4–8, her sayfa resimli seçildi (model okuması)"
+    q = Profile(8, 11, "beyan", "COCUK_ROMANI", "YOK", [], {}, {}, {"illustration": "YOK"})
+    assert apply_art_mode(q, "auto", "Çizer Kişi").illustration == "BOLUM_BASI"            # yayınevi kuralı
+    assert apply_art_mode(q, "every_page", "Çizer Kişi").illustration == "HER_SAYFA"       # editör seçimi önce
+    with pytest.raises(ValueError):
+        apply_art_mode(q, "bazen")
+
+
+def test_art_mode_endpoint(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from editor.production import api
+    root = tmp_path / "production"
+    d = root / "job1"
+    _mini(d)
+    studio.write(d, "manuscript.json", {"title": "K", "author": "Y", "illustrator": None, "meta": {}, "source": {},
+                                        "chapters": []})
+    studio.write(d, "job.json", {"id": "job1", "source": {}, "created_by": "t", "art_mode": "auto"})
+    studio.write(d, "studio.json", {"pages": {"7": {"versions": [], "selected": None}, "kapak": {"versions": []}},
+                                    "characters": {}})
+    monkeypatch.setattr(studio, "root", lambda: root)
+    monkeypatch.setattr(api, "KEY", "k")
+    started = []
+
+    async def pipeline(dd, resume=False):
+        started.append((dd.name, resume))
+    monkeypatch.setattr(api, "_pipeline", pipeline)
+    c = TestClient(api.app)
+    h = {"Authorization": "Bearer k", "X-Editor": "sinama"}
+    studio.set_busy(d, {"key": "hat", "since": 0})
+    r = c.post("/v1/studio/jobs/job1/art-mode", headers=h, json={"art_mode": "none"})
+    assert r.status_code == 409 and r.json()["code"] == "BUSY" and not started
+    studio.set_busy(d, None)
+    assert c.post("/v1/studio/jobs/job1/art-mode", headers=h, json={"art_mode": "bazen"}).status_code == 422
+    r = c.post("/v1/studio/jobs/job1/art-mode", headers=h, json={"art_mode": "none"})
+    assert r.status_code == 200 and started == [("job1", False)]
+    job = studio.read(d, "job.json")
+    assert job["art_mode"] == "none" and job["replan"] and not P.exists(d) and [h_["rev"] for h_ in P.history(d)] == [1]
+    pages = studio.studio_state(d)["pages"]
+    assert "7" not in pages and "kapak" in pages and any(P.ART_ID.match(k) for k in pages)   # resim silinmedi
+
+
 def test_new_workflows_registered():
     from editor.production.flow import ACTIVITIES, WORKFLOWS
     names = {getattr(w, "__temporal_workflow_definition").name for w in WORKFLOWS}
@@ -625,3 +674,31 @@ def test_without_plan_book_typ_path_unchanged(tmp_path):
     doc = pymupdf.open(d / "dizgi" / "ic-sayfalar.pdf")
     assert doc.page_count == len(studio._pagemap(d).pages)
     assert {c["name"]: c["status"] for c in studio.read(d, "preflight.json")["checks"]}["Metin eksiksiz"] == "OK"
+
+
+@typeset_only
+def test_replan_to_no_art_keeps_history_and_images(tmp_path, monkeypatch):
+    """Resim seçimi sonradan «resimsiz»: yerleşim yeniden kurulur, yeni plan yalnız yazı sayfası, sürüm numarası
+    eski planın geçmişinden sürer, eski resimler «kullanılmayan»a düşer, görsel model hiç açılmaz."""
+    from editor.production import run
+    d, ms = _job(tmp_path, child=True)
+    old = P.freeze(d, "sınama")
+    old_art = {a for _, a in P.printed_art(old)}
+
+    class NoModel:
+        def __init__(self, *a, **k):
+            raise AssertionError("görsel model açılmamalı")
+    monkeypatch.setattr(run, "Painter", NoModel)
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    run.prepare_replan(d, "none", "editör")
+    assert not P.exists(d) and studio.read(d, "job.json")["replan"]
+    asyncio.run(run.plan(d))
+    assert studio.read(d, "profile.json")["illustration"] == "YOK" and not studio.read(d, "artplan.json")["scenes"]
+    assert "replan" not in studio.read(d, "job.json")
+    asyncio.run(run.finish(d))
+    new = P.load(d)
+    assert new["rev"] == old["rev"] + 1 and [h["rev"] for h in P.history(d)] == [new["rev"], old["rev"]]
+    assert all(p["art"] is None and p["layout"] in ("text-only", "blank") for p in new["pages"])
+    assert {a["id"] for a in P.unused_art(d, new)} == old_art
+    steps = {s["key"]: s["status"] for s in studio.read(d, "state.json")["steps"]}
+    assert steps["sayfa_resimleri"] == "skipped" and steps["dizgi"] == "done"

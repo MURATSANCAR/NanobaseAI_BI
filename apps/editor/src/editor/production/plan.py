@@ -577,13 +577,17 @@ def freeze(d: Path, by: str, *, build: bool = True, locate=None, marks: list[dic
         studio.write(d, "studio.json", st)
         try:
             pages = pages_from_flow(ms, spec, pm.layout, marks, art_ids)
-            plan = {"version": 1, "rev": 0, "frozen_at": _now(), "frozen_by": by,
+            # Resim seçimi değişip plan yeniden kurulursa sürüm numarası eski planın geçmişinden sürer (üzerine yazmaz).
+            last = max((h["rev"] for h in history(d)), default=0)
+            plan = {"version": 1, "rev": last, "frozen_at": _now(), "frozen_by": by,
                     "page": geometry(spec, pm.layout), "palette": {"colors": [], "text": INK, "characters": {}},
                     "pages": pages, "assets": {}, "warnings": warn}
             _automatics(d, plan, ap, locate)
             _typeset(d, plan, build)
             plan["warnings"] = warn + [w for w in plan["warnings"] if w not in warn]
-            _commit(d, plan, by, "sayfa planı kuruldu")
+            mode = {"every_page": "her sayfa resimli", "chapter": "bölüm başı resimli", "none": "resimsiz"}.get(
+                (studio.read(d, "job.json") or {}).get("art_mode"), "otomatik")
+            _commit(d, plan, by, "sayfa planı kuruldu" + (f" (resim seçimi: {mode})" if last else ""))
         except BaseException:
             studio.write(d, "artplan.json", ap0)
             studio.write(d, "studio.json", st0)

@@ -6,8 +6,10 @@ Temporal'da `editor-production` kuyruğuna iş akışı olarak verilir (flow.py)
 sıra bekleyen iş ekranda «sırada» görünür. Servisin yeniden başlaması süren işi kesmez.
 
     GET  /v1/studio/jobs                              işler
-    POST /v1/studio/jobs            {book_id}         okunmuş kitaptan yeni iş
-    POST /v1/studio/jobs/docx       multipart file    Word dosyasından yeni iş
+    POST /v1/studio/jobs            {book_id, art_mode}  okunmuş kitaptan yeni iş
+    POST /v1/studio/jobs/docx?art_mode=  multipart file  Word dosyasından yeni iş
+    POST /v1/studio/jobs/{job}/art-mode  {art_mode}   resim seçimini değiştir (yerleşim yeniden kurulur)
+         art_mode: auto | every_page | chapter | none (profilin resim kararının önüne geçer)
     GET  /v1/studio/jobs/{job}                        bütün görünüm (adımlar, kararlar, sayfalar, ön kontrol)
     GET  /v1/studio/jobs/{job}/pages/{n}/preview?w=   dizilmiş sayfa (PNG)
     GET  /v1/studio/jobs/{job}/cover/preview?w=       kapak açılımı (PNG)
@@ -172,8 +174,12 @@ async def jobs() -> dict:
     return {"jobs": out}
 
 
+ArtMode = Literal["auto", "every_page", "chapter", "none"]
+
+
 class NewJob(BaseModel):
     book_id: UUID
+    art_mode: ArtMode = "auto"
 
 
 @app.post("/v1/studio/jobs")
@@ -185,20 +191,21 @@ async def new_job(body: NewJob, by: str = Depends(editor)) -> dict:
         "ORDER BY g.created_at DESC LIMIT 1", str(body.book_id))
     if g is None:
         raise HTTPException(404, "Bu kitabın okunmuş metni yok")
-    d = studio.new_job({"generation_id": str(g["id"]), "book_id": str(body.book_id)}, by)
+    d = studio.new_job({"generation_id": str(g["id"]), "book_id": str(body.book_id)}, by, body.art_mode)
     await _pipeline(d)
     return {"id": d.name}
 
 
 @app.post("/v1/studio/jobs/docx")
-async def new_job_docx(file: UploadFile = File(...), by: str = Depends(editor)) -> dict:
+async def new_job_docx(file: UploadFile = File(...), art_mode: ArtMode = Query("auto"),
+                       by: str = Depends(editor)) -> dict:
     name = Path(file.filename or "kitap.docx").name
     if not name.lower().endswith(".docx"):
         raise HTTPException(400, "Yalnız Word (.docx) dosyası")
     data = await file.read(DOCX_MAX + 1)
     if len(data) > DOCX_MAX or not data.startswith(b"PK"):
         raise HTTPException(400, "Dosya Word (.docx) değil ya da 20 MB'tan büyük")
-    d = studio.new_job({}, by)
+    d = studio.new_job({}, by, art_mode)
     (d / "girdi").mkdir()
     path = d / "girdi" / re.sub(r"[^\w.\-]", "_", name)
     path.write_bytes(data)
@@ -266,8 +273,9 @@ def _job_view(d: Path, job: str, busy: dict | None) -> dict:
                         "chapters": [c["title"] for c in ms["chapters"]],
                         "words": sum(len(b["text"].split()) for c in ms["chapters"] for b in c["blocks"])},
         "profile": prof and {k: prof.get(k) for k in ("age_min", "age_max", "age_source", "genre", "illustration",
-                                                       "illustration_source", "tone", "reading", "disagreement",
-                                                       "reasons")},
+                                                       "illustration_source", "art_source", "tone", "reading",
+                                                       "disagreement", "reasons")},
+        "art_mode": (j or {}).get("art_mode") or "auto",
         "spec": spec, "layout": pm and pm["layout"], "style": plan and plan["style"], "characters": chars,
         "pages": pages, "cover": {"art": art("kapak"), "info": studio.read(d, "cover.json")},
         "plan": pl and {"rev": pl["rev"], "warnings": pl.get("warnings", []), "pages": len(pl["pages"])},
@@ -462,10 +470,31 @@ async def kunye(job: str, body: Kunye, by: str = Depends(editor)) -> dict:
 async def restart(job: str, by: str = Depends(editor)) -> dict:
     """Kesilen ya da hatayla biten hattı aynı kaynakla yeni iş olarak yeniden başlatır."""
     d = _dir(job)
-    src = studio.read(d, "job.json")["source"]
-    nd = studio.new_job(src, by)
+    old = studio.read(d, "job.json")
+    nd = studio.new_job(old["source"], by, old.get("art_mode") or "auto")
     await _pipeline(nd)
     return {"id": nd.name}
+
+
+class ArtModeBody(BaseModel):
+    art_mode: ArtMode
+
+
+@app.post("/v1/studio/jobs/{job}/art-mode")
+async def art_mode(job: str, body: ArtModeBody, by: str = Depends(editor)) -> dict:
+    """Resim seçimini sonradan değiştirir: yerleşim yeniden kurulur (stüdyo işçisinde), metin/üslup/karakterler
+    korunur; eski sayfa planı geçmişte kalır, üretilmiş resimler silinmez («kullanılmayan resimler»). GPU işi
+    sürüyorsa 409."""
+    from . import run as run_mod
+    d = _dir(job)
+    b = await _busy(d)
+    if b and not b.get("error"):
+        raise Coded(409, "BUSY", "Bu kitapta süren bir üretim var; bitince tekrar deneyin")
+    if not (studio.read(d, "manuscript.json") and studio.read(d, "profile.json") and studio.read(d, "artplan.json")):
+        raise HTTPException(409, "Kitap henüz okunup yerleştirilmedi; seçim iş başlarken verilir")
+    await asyncio.to_thread(run_mod.prepare_replan, d, body.art_mode, by)
+    await _pipeline(d)
+    return {"id": job, "art_mode": body.art_mode}
 
 
 # ------------------------------------------------------------------ sayfa planı
