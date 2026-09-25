@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent,
@@ -111,7 +111,9 @@ export default function PlanEditor() {
   const plan = state.plan;
   const server = state.server;
   const interactive = useInteractive();
-  const [pageId, setPageId] = useState<string | null>(null);
+  const [search] = useSearchParams();
+  // ?sayfa=<kimlik>: yaş uygunluğu raporundaki bulgudan gelince o sayfa açılır (yoksa ilk sayfa)
+  const [pageId, setPageId] = useState<string | null>(() => search.get('sayfa'));
   const [sel, setSelRaw] = useState<ItemRef | null>(null);
   const [tab, setTab] = useState<Tab>('sayfa');
   const [suggestions, setSuggestions] = useState<PlanBubble[] | null>(null);

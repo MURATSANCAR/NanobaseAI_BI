@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -233,6 +233,17 @@ if "EDITOR-STUDYO-OKUR" not in s:
             + loc(f"{P_}/versions/(compare|preview|visual|report)", "GET", "jobs/$1/plan/versions/$2$is_args$args"))
     s = s.replace("    # EDITOR-BITTI", okur + "    # EDITOR-BITTI", 1)
     changes.append("okur araçları ve sürüm farkı yolları")
+
+# 4) Yaş uygunluğu raporu (okuma, koşu başlatma, editör kararı, onaylanan karşılığı uygulama, PDF)
+if "EDITOR-STUDYO-YAS" not in s:
+    A_ = f"jobs/({JOB})/age"
+    yas = ("    # EDITOR-STUDYO-YAS  (yas uygunlugu raporu: production/api_age.py)\n"
+           + loc(A_, "GET", "jobs/$1/age", timeout=60)
+           + loc(f"{A_}/(run|decisions)", "POST", "jobs/$1/age/$2", timeout=60)
+           + loc(f"{A_}/words/apply", "POST", "jobs/$1/age/words/apply")
+           + loc(f"{A_}/pdf", "GET", "jobs/$1/age/pdf"))
+    s = s.replace("    # EDITOR-BITTI", yas + "    # EDITOR-BITTI", 1)
+    changes.append("yaş uygunluğu raporu yolları")
 
 if s == orig:
     print("zaten var (güncel)")

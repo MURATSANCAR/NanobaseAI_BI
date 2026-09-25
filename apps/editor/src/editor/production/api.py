@@ -886,3 +886,6 @@ app.include_router(_narration)
 from .api_reader import router as _reader_router  # noqa: E402
 
 app.include_router(_reader_router)
+# Yaş uygunluğu raporu (api_age.py): /v1/studio/jobs/{job}/age…
+from .api_age import router as _age_router  # noqa: E402
+app.include_router(_age_router)

@@ -4604,6 +4604,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     editorial_studio_narration.register(app, {"auth": _books, "audit": admin_mod.audit})
     from semantic_bridge import editorial_studio_reader  # okur araçları ve sürüm farkı
     editorial_studio_reader.register(app, {"auth": _books, "audit": admin_mod.audit, "conf": admin_mod.conf})
+    from semantic_bridge import editorial_studio_age  # yaş uygunluğu raporu (/api/v1/editorial/studio/jobs/{job}/age…)
+    editorial_studio_age.register(app, {"auth": _books, "audit": admin_mod.audit})
 
     @app.get("/api/v1/editorial/books/{book_id}/figures/{region_id}")
     def editorial_book_figure(book_id: str, region_id: str, request: Request):
