@@ -24,6 +24,9 @@ server {
     # Oturum denetimi: değişiklik yapan isteklerde Origin de bakılır (giriş servisi).
     location = /_timas_session_check {
         internal;
+        # Alt istek ana isteğin gövde boyunu kendi konumuna göre de denetler; sunucu düzeyindeki 8m burada
+        # 15 MB Word yüklemesini 413 → 500 yapıyordu. Gövde iletilmez; sınırı çağıran konum koyar.
+        client_max_body_size 0;
         proxy_pass http://login:8796/check;
         proxy_pass_request_body off;
         proxy_set_header Content-Length "";
