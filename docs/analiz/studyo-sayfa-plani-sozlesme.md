@@ -131,6 +131,13 @@ tutuluyor (`studio.json.pages["12"]`). Sayfa planında sayfa **kalıcı bir kay�
   (figür arka plan ayıklamasıyla aynı yol; düz zemin değilse sonuç ekranda önizlenir, kullanıcı onaylar).
 - Baskı denetimi: yerleştirilen kutudaki etkin çözünürlük < 300 dpi ise sayfa `warnings`'ine "baskıda bulanık çıkabilir
   (… dpi)" yazılır; ön kontrol (preflight) da aynı denetimi yapar. Engellemez.
+- **Kaliteyi artır** (kullanıcı kararı 2026-09-25): düşük dpi uyarısının yanında düğme. Mevcut büyütme hattı
+  (`images.py` büyütme ucu, gateway `book-upscale` takma adı; açılamazsa Lanczos — o durumda ekranda "yalnız büyütüldü,
+  keskinleştirilemedi") fotoğrafı yerleştirildiği kutunun 300 dpi ölçüsüne yetecek kadar, en çok 4×, büyütür → yeni asset
+  (`kind: "photo"`, `derived_from: gid`, `upscale: 2|3|4`). Özgün silinmez. Ekran öncesi/sonrası karşılaştırma gösterir,
+  editör onaylarsa sayfadaki kutu yeni asset'e geçer; "özgüne dön" her zaman mümkün. 4× de yetmezse ulaşılan dpi yazılır.
+  Uç: `POST plan/assets/{gid}/upscale {"page": pid, "item": fid}` → `{"workflow": id}` (GPU işi; figür/resim işleriyle
+  aynı sıra ve model devri kuralları).
 - Boyut: tek dosya üst sınırı yönetim ayarı `STUDIO_UPLOAD_MB` (varsayılan 60) — ekranda yükleme alanında yazılı;
   aşarsa açık hata. Giriş kapısı ve portal nginx'i aynı değere göre ayarlanır (bugünkü Word ucu 21 MB kalıbı).
 
