@@ -203,7 +203,7 @@ def age_band(age_min: int | None, age_max: int | None) -> dict:
     if a <= 15:
         return {"key": "ortaokul", "label": label,
                 "language": "orta uzunlukta cümleler; yorum, karşılaştırma ve karakter çözümlemesi"}
-    return {"key": "yetiskin", "label": label,
+    return {"key": "ileri", "label": label,
             "language": "akıcı ve zengin dil; eleştirel düşünme, bağlam, tema ve üslup"}
 
 
