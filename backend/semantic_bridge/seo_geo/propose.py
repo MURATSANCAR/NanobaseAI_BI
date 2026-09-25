@@ -79,6 +79,84 @@ def parse(raw: Optional[str]) -> dict[str, str]:
     return out
 
 
+#: Kural → modelin düzelttiği alan. Listede olmayan kural (görsel, ISBN) elle çözülür; ekranda öyle yazar.
+RULE_FIELD = {
+    "meta_missing": "SeoDescription", "meta_same_as_title": "SeoDescription", "meta_length": "SeoDescription",
+    "title_missing": "SeoTitle", "title_length": "SeoTitle", "title_duplicate": "SeoTitle",
+    "desc_missing": "Details", "desc_short": "Details", "faq_missing": "Details",
+    "keywords_missing": "SearchKeywords",
+}
+
+
+def fixable(issues: list[dict[str, Any]]) -> bool:
+    return any(i.get("rule") in RULE_FIELD for i in issues)
+
+
+def _cut(text: str, limit: int) -> str:
+    """Sınırı aşan metni cümle sonundan, yoksa kelime sınırından keser; kelime ortadan bölünmez."""
+    if len(text) <= limit:
+        return text
+    head = text[:limit]
+    end = max(head.rfind(". "), head.rfind("! "), head.rfind("? "), head.rfind(".") if head.endswith(".") else -1)
+    if end >= limit * 0.6:
+        return head[:end + 1].strip()
+    return head[:head.rfind(" ")].rstrip(" ,;:-–") if " " in head else head
+
+
+def enforce(fields: dict[str, str], lim: dict[str, int]) -> dict[str, str]:
+    """Model sayamasa da sınır aşılmaz: başlıkta önce yayınevi ("| …") düşer, sonra kelime sınırından kesilir;
+    meta açıklama cümle sonundan kısaltılır."""
+    out = dict(fields)
+    t = out.get("SeoTitle", "")
+    if len(t) > lim["title_max"] and " | " in t:
+        t = t.rsplit(" | ", 1)[0].strip()
+    out["SeoTitle"] = _cut(t, lim["title_max"]) if t else t
+    m = out.get("SeoDescription", "")
+    out["SeoDescription"] = _cut(m, lim["meta_max"]) if m else m
+    return out
+
+
+def _source_text(p: dict[str, Any]) -> str:
+    parts = [p.get(k) for k in ("ProductName", "Model", "Brand", "Barcode", "SeoTitle", "SeoDescription",
+                                "SearchKeywords", "ShortDescription", "Details", "DefaultCategoryPath",
+                                "DefaultCategoryName")]
+    return rules.text_of(" ".join(str(x) for x in parts if x)).casefold()
+
+
+def _blocks(html_text: Any) -> str:
+    """Blok etiketleri (paragraf, başlık, satır) cümle sınırı sayılır; yoksa başlığın ilk kelimesi cümle ortası görünür."""
+    return rules.text_of(re.sub(r"<\s*/?\s*(p|h\d|li|br|div|ul|ol)\b[^>]*>", ". ", str(html_text or ""), flags=re.I))
+
+
+def _stem(word: str) -> str:
+    """Türkçe ek yüzünden aynı ad farklı görünmesin: kesme işaretinden sonrası atılır, uzun kelimede kök ~ ilk 5 harf."""
+    w = re.split(r"['’]", word)[0].casefold()
+    return w[:5] if len(w) > 6 else w
+
+
+def unsupported(p: dict[str, Any], fields: dict[str, str]) -> list[str]:
+    """Gerçeklik denetimi: önerideki sayılar ve cümle ortasındaki özel adlar kaynak kayıtta geçiyor mu?
+    Geçmeyen her biri listelenir; ekranda "kaynakta yok" diye gösterilir, onaylayan kişi bakar."""
+    src = _source_text(p)
+    stems = {_stem(t) for t in re.findall(r"\w+", src)}
+    found: list[str] = []
+    text = " ".join(_blocks(fields.get(k)) for k in FIELDS)
+    # İstemin kendi yazdırdığı bölüm başlığı kaynaktan gelmez; denetlenmez.
+    text = re.sub(r"Sıkça Sorulan Sorular", ". ", text, flags=re.I)
+    for n in re.findall(r"\b\d[\d.,]*\b", text):
+        n = n.strip(".,")
+        if n and n not in src and n not in found:
+            found.append(n)
+    for sentence in re.split(r"(?<=[.!?:])\s+", text):
+        for w in sentence.split()[1:]:
+            w = w.strip("\"'“”‘’()[]«»,.;:!?-–")
+            if len(w) > 2 and w[0].isupper() and not w.isupper() and _stem(w) not in stems:
+                base = re.split(r"['’]", w)[0]
+                if base not in found:
+                    found.append(base)
+    return found
+
+
 def violations(fields: dict[str, str], lim: dict[str, int]) -> list[str]:
     """Önerinin uzunluk sınırlarına uymayan alanları, modele geri söylenecek biçimde."""
     out = []
@@ -116,7 +194,7 @@ def suggest(llm: Any, p: dict[str, Any], lim: dict[str, int]) -> dict[str, str]:
                 break
             messages += [{"role": "assistant", "content": reply},
                          {"role": "user", "content": "Hâlâ yanlış: " + "; ".join(now) + ". Karakterleri say, yalnız JSON döndür."}]
-    return fields
+    return enforce(fields, lim)
 
 
 def changed(p: dict[str, Any], fields: dict[str, str]) -> dict[str, str]:

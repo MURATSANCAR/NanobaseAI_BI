@@ -16,9 +16,10 @@ export default function SeoHome() {
     enabled: ENGINE_ENABLED,
     retry: false,
     // Eşitleme sürerken sayaç ekranda ilerlesin.
-    refetchInterval: (query) => (query.state.data?.sync.running ? 3000 : false),
+    refetchInterval: (query) => (query.state.data?.sync.running ? 3000 : query.state.data?.batch.running ? 15000 : false),
   });
   const sync = useMutation({ mutationFn: seoApi.sync, onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-overview'] }) });
+  const batch = useMutation({ mutationFn: () => seoApi.batch(3600), onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-overview'] }) });
   const o = q.data;
 
   return (
@@ -40,12 +41,13 @@ export default function SeoHome() {
       {q.isLoading && <Loading text="Durum getiriliyor…" />}
       {q.error && <Failed error={q.error} />}
       {sync.error && <Failed error={sync.error} />}
-      {o && <Body o={o} />}
+      {batch.error && <Failed error={batch.error} />}
+      {o && <Body o={o} onBatch={() => batch.mutate()} batchPending={batch.isPending} />}
     </SeoLayout>
   );
 }
 
-function Body({ o }: { o: Overview }) {
+function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; batchPending: boolean }) {
   const waiting = o.proposals.hazir ?? 0;
   const daily = o.search?.rows ?? [];
   const clicks = daily.reduce((a, r) => a + r.clicks, 0);
@@ -136,6 +138,17 @@ function Body({ o }: { o: Overview }) {
             <Todo to="/seo-geo/urun-denetimi?durum=hazir" label="Onay bekleyen model önerisi" n={waiting} />
             <Todo to="/seo-geo/urun-denetimi" label={`Puanı ${o.failingThreshold}’in altındaki ürün`} n={o.failing} />
             <Todo to="/seo-geo/gecmis" label="Gönderilemeyen öneri" n={o.proposals.hata ?? 0} />
+          </div>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
+            <button className="sg-button" onClick={onBatch} disabled={batchPending || o.batch.running || !o.products}>
+              {o.batch.running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
+              {o.batch.running ? 'Öneriler yazılıyor' : 'Önerileri önceden üret (1 saat)'}
+            </button>
+            <span style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
+              {o.batch.startedAt
+                ? `${o.batch.running ? 'Sürüyor' : 'Son tur'}: ${fmt(o.batch.done)} öneri${o.batch.queue != null ? ` / ${fmt(o.batch.queue)} sırada` : ''}${o.batch.failed ? ` · ${fmt(o.batch.failed)} üretilemedi` : ''}${o.batch.error ? ` · ${o.batch.error}` : ''}`
+                : 'Her gece eşitlemeden sonra puanı en düşük üründen başlayarak öneriler hazırlanır.'}
+            </span>
           </div>
         </section>
 

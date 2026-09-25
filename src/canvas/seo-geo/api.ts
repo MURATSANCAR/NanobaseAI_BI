@@ -3,7 +3,8 @@ import { ENGINE_BASE, ENGINE_ENABLED, freshHeaders } from '../engine';
 /** SEO & GEO modülünün köprü uçları: /api/v1/seo-geo/*. */
 
 export type Severity = 'kritik' | 'yüksek' | 'orta' | 'düşük';
-export type Issue = { rule: string; severity: Severity; title: string; detail: string; why: string; weight: number };
+/** `field`: sorunu modelin düzelttiği alan; null ise elle çözülür (görsel, ISBN). */
+export type Issue = { rule: string; severity: Severity; title: string; detail: string; why: string; weight: number; field: SeoField | null };
 export type ProposalStatus = 'hazir' | 'gonderildi' | 'reddedildi' | 'hata' | 'geri_alindi';
 export const SEO_FIELDS = ['SeoTitle', 'SeoDescription', 'SearchKeywords', 'Details'] as const;
 export type SeoField = (typeof SEO_FIELDS)[number];
@@ -22,6 +23,7 @@ export type Overview = {
   sentThisWeek: number;
   lastSync: { startedAt: string; finishedAt: string | null; count: number | null; error: string | null } | null;
   sync: SyncState;
+  batch: { running: boolean; done: number; failed: number; queue: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
   search: SearchReport | null;
   connections: { tsoft: boolean; google: boolean; serviceAccount: string | null; gscSite: string | null; ga4: boolean; merchant: boolean };
 };
@@ -58,6 +60,8 @@ export type Proposal = {
   sentAt: string | null;
   result: string | null;
   productName?: string | null;
+  /** Önerideki, kaynak kayıtta geçmeyen sayı ve özel adlar (gerçeklik denetimi). */
+  unsupported?: string[];
 };
 
 export type ProductDetail = ProductRow & {
@@ -108,6 +112,7 @@ export const seoApi = {
     call<Proposal>(`proposals/${id}/decide`, { method: 'POST', body, timeout: 120_000 }),
   bulkApprove: (ids: string[], note = '') =>
     call<{ items: Array<{ id: string; status: string; result?: string; skipped?: boolean }> }>('proposals/bulk-approve', { method: 'POST', body: { ids, note }, timeout: 600_000 }),
+  batch: (budget = 3600) => call<{ started: boolean }>(`proposals/batch?budget=${budget}`, { method: 'POST' }),
   revert: (id: string) => call<Proposal>(`proposals/${id}/revert`, { method: 'POST', timeout: 120_000 }),
   history: (start = 0) => call<{ total: number; items: Proposal[] }>(`history?${qs({ start, limit: 50 })}`),
   search: (kind: 'daily' | 'queries' | 'pages') => call<SearchReport>(`search/${kind}`),

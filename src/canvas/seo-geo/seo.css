@@ -122,6 +122,14 @@
 .sg-decide input { flex: 1 1 200px; min-height: 44px; padding: 0 12px; border: 1px solid var(--sg-line); border-radius: 12px; font-size: 13px }
 .sg-decide small { flex-basis: 100%; font-size: 11.5px; color: var(--sg-muted) }
 
+/* Uyarı + öneri yan yana: solda neden ve mevcut değer, sağda önerinin kendisi; dar ekranda alt alta. */
+.sg-fix { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start }
+.sg-fix-why { display: flex; flex-direction: column; gap: 8px; min-width: 0 }
+.sg-fix-new { min-width: 0 }
+.sg-fix-new .sg-after { margin-top: 0 }
+.sg-skeleton { display: flex; align-items: center; gap: 8px; min-height: 64px; color: #3f8f6c }
+@media (max-width: 900px) { .sg-fix { grid-template-columns: 1fr } }
+
 /* Tablo */
 .sg-table-wrap { overflow-x: auto; border-radius: 16px; border: 1px solid var(--sg-line) }
 .sg-table { width: 100%; border-collapse: collapse; font-size: 12.5px; background: #fff }
