@@ -142,7 +142,7 @@ CLOSED = (
 )
 FEED_LABEL = {k: label for k, label, _ in FEEDS}
 FEED_LABEL[ULUDAG[0]] = ULUDAG[1]
-FEED_LABEL["wikidata"] = "Wikidata"
+FEED_LABEL["wikidata"] = "Açık bilgi tabanı"
 
 LABELS = ("olumlu", "olumsuz", "notr", "ilgisiz")
 SHOWN = ("olumlu", "olumsuz", "notr")
@@ -903,7 +903,7 @@ def channels(engine: sa.engine.Engine, tenant: str, report: dict[str, Any]) -> l
                 "note": f"{int(topics[0] or 0)} yazarın başlığına bakıldı, {int(topics[1] or 0)} başlık bulundu" if topics else None,
                 "read": int(read.get(ULUDAG[0], 0)), "matched": int(matched.get(ULUDAG[0], 0)), "relevant": int(shown.get(ULUDAG[0], 0)),
                 "lastAt": _iso(last.get(ULUDAG[0]))})
-    out.append({"key": "wikidata", "label": "Wikidata", "kind": "Yazar bilgisi", "url": "https://www.wikidata.org", "status": "açık",
+    out.append({"key": "wikidata", "label": "Açık bilgi tabanı", "kind": "Yazar bilgisi", "url": "https://www.wikidata.org", "status": "açık",
                 "note": f"{sum(int(v) for v in wd.values())} yazar arandı", "read": sum(int(v) for v in wd.values()),
                 "matched": int(wd.get("bulundu", 0)) + int(wd.get("belirsiz", 0)), "relevant": int(wd.get("bulundu", 0)), "lastAt": None})
     for key, label, why in CLOSED:

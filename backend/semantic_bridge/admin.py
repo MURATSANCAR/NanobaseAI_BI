@@ -130,7 +130,7 @@ SPEC: list[dict[str, Any]] = [
     {"key": "EDITORIAL_INTAKE_SINCE", "group": "crm", "label": "Yazar giriş süreci başlangıcı", "type": "text", "default": "2025-01-01",
      "help": "Bu tarihten sonra CRM'de açılan yeni ve yenileme projeleri süreç panosunda izlenir (YYYY-AA-GG)"},
     {"key": "WEB_WATCH_ENABLED", "group": "crm", "label": "Basın ve web taraması", "type": "bool", "default": "0",
-     "help": "Açıkken yazarlar ve kitapları haber akışlarında, sözlükte ve Wikidata'da her gece taranır. Müşteri ortamında kapalı (2026-09-24 kararı)"},
+     "help": "Açıkken yazarlar ve kitapları haber akışlarında, sözlükte ve açık bilgi tabanında her gece taranır. Müşteri ortamında kapalı (2026-09-24 kararı)"},
     {"key": "EDITORIAL_INTAKE_LATE_DAYS", "group": "crm", "label": "Gecikme sınırı (gün)", "type": "int", "default": "14",
      "help": "Bir adım bu kadar günden uzun beklerse panoda gecikti olarak işaretlenir"},
     # Kişi rehberi
@@ -140,7 +140,7 @@ SPEC: list[dict[str, Any]] = [
     # Yapay zekâ modeli
     {"key": "OPENAI_API_BASE", "group": "llm", "label": "Model adresi", "type": "text",
      "default": "http://127.0.0.1:18881/v1",
-     "help": "OpenAI uyumlu uç, sonunda /v1"},
+     "help": "Model servisinin adresi, sonunda /v1"},
     {"key": "LLM_MODEL_NAME", "group": "llm", "label": "Model", "type": "text",
      "default": "nanobaseAI", "help": "Sağlayıcının model adı"},
     {"key": "OPENAI_API_KEY", "group": "llm", "label": "API anahtarı", "type": "secret", "default": "",

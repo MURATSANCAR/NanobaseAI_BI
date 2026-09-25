@@ -36,7 +36,7 @@ export default function StudioHome() {
       crumb="Kitap Tasarım Stüdyosu"
       title="Kitap Tasarım Stüdyosu"
       lead="Kitabın metninden baskıya hazır iç sayfa ve kapak: CRM bilgisi, yaş ve tür, sayfa yerleşimi, resimler, dizgi ve ön baskı denetimi. Her sayfanın resmini düzeltebilir ya da yeniden ürettirebilirsiniz."
-      source="Editör · Qwen-Image-2.1"
+      source="Editör · Zeki AI"
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}

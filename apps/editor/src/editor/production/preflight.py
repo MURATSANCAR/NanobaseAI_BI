@@ -30,6 +30,23 @@ def _words(s: str) -> list[str]:
     return [w.casefold() for w in WORD.findall(s)]
 
 
+BRAND = "Zeki AI"
+_TOOL_TAGS = re.compile(r"(<(?:xmp:CreatorTool|pdf:Producer)>)[^<]*(</)")
+_TOOL_ATTRS = re.compile(r'((?:xmp:CreatorTool|pdf:Producer)=")[^"]*(")')
+_META_KEYS = ("title", "author", "subject", "keywords", "creationDate", "modDate", "trapped")
+
+
+def brand(doc) -> None:
+    """Belge özelliklerinde üretici «Zeki AI»: dizgi ve dönüştürücü yazılımın adı PDF'te görünmez
+    (kullanıcı kuralı 2026-09-25: kullandığımız model/ürün/teknoloji adı müşteriye gösterilmez)."""
+    meta = {k: v for k, v in (doc.metadata or {}).items() if k in _META_KEYS and v}
+    doc.set_metadata({**meta, "producer": BRAND, "creator": BRAND})
+    xmp = doc.get_xml_metadata()
+    if xmp:
+        xmp = _TOOL_TAGS.sub(rf"\g<1>{BRAND}\g<2>", xmp)
+        doc.set_xml_metadata(_TOOL_ATTRS.sub(rf"\g<1>{BRAND}\g<2>", xmp))
+
+
 def set_boxes(pdf: Path, bleed_mm: float) -> None:
     """Her sayfaya TrimBox (kesim) ve BleedBox (taşma) yazar; matbaa kesimi buradan okur."""
     import pymupdf
@@ -39,6 +56,7 @@ def set_boxes(pdf: Path, bleed_mm: float) -> None:
         r = page.rect
         page.set_bleedbox(r)
         page.set_trimbox(pymupdf.Rect(r.x0 + b, r.y0 + b, r.x1 - b, r.y1 - b))
+    brand(doc)
     doc.saveIncr()
 
 

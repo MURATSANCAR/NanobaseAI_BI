@@ -90,7 +90,7 @@ export default function WebScreen() {
       crumb="Basın ve web"
       title="Basın ve web"
       lead="Yazarlarımız ve kitapları hakkında haber sitelerinde ve sözlüklerde çıkanlar. Her gece taranır; yalnız gerçekten ilgili bulunanlar gösterilir, her kaydın yanında kanalı yazar."
-      source={d?.lastRun?.at ? `Son tarama ${dateTime(d.lastRun.at)}` : 'Kaynak: haber RSS, Wikidata'}
+      source={d?.lastRun?.at ? `Son tarama ${dateTime(d.lastRun.at)}` : 'Kaynak: haber akışları, açık bilgi tabanı'}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
@@ -102,7 +102,7 @@ export default function WebScreen() {
           <Kpi label="İlgili haber" value={nf.format(shown)} help="Yazar ya da kitabı hakkında olan" />
           <Kpi label="Olumlu" value={nf.format(d.tone.olumlu ?? 0)} help="Övgü, ödül, başarı" active={label === 'olumlu'} onClick={() => { setLabel(label === 'olumlu' ? '' : 'olumlu'); setPage(0); }} />
           <Kpi label="Olumsuz" value={nf.format(d.tone.olumsuz ?? 0)} help="Eleştiri, tartışma" active={label === 'olumsuz'} onClick={() => { setLabel(label === 'olumsuz' ? '' : 'olumsuz'); setPage(0); }} />
-          <Kpi label="Yazar bilgisi" value={nf.format(d.counts.authorsFound)} help={`${nf.format(d.counts.authorsChecked)} yazar Wikidata'da arandı`} />
+          <Kpi label="Yazar bilgisi" value={nf.format(d.counts.authorsFound)} help={`${nf.format(d.counts.authorsChecked)} yazar açık bilgi tabanında arandı`} />
         </KpiRow>
       )}
 

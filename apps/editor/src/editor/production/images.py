@@ -222,7 +222,7 @@ class Painter:
             r.raise_for_status()
             return base64.b64decode(r.json()["image"]), ""
         except (httpx.HTTPError, KeyError, ValueError) as e:
-            return upscale(png, W, H), f"büyütücü yok, Lanczos: {str(e)[:120]}"
+            return upscale(png, W, H), f"büyütme servisi açılamadı, basit büyütme kullanıldı: {str(e)[:120]}"
 
     async def release(self) -> str:
         """Görsel modeli hemen kapatır (gateway iç ucu): iş bitince kartı ana modele geri verir, gateway'in

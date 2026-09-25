@@ -21,7 +21,7 @@ from ..prompts import render
 from .manuscript import Manuscript
 
 MISSING = "—"
-IMAGE_CREDIT = "Yapay zekâ ile üretilmiştir (Qwen-Image-2.1, NanobaseAI Editör)"
+IMAGE_CREDIT = "Yapay zekâ ile üretilmiştir (Zeki AI)"   # model/ürün adı ekrana ve kitaba yazılmaz
 DESIGN_CREDIT = "NanobaseAI Editör · Kitap Tasarım Stüdyosu"
 PUBLISHER_FIELDS = ("YAYINEVI", "ADRES", "TELEFON", "EPOSTA", "SERTIFIKA", "MATBAA", "MATBAA_SERTIFIKA",
                     "MATBAA_ADRES", "TELIF")

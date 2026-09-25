@@ -327,7 +327,7 @@ def _compare(a: dict, b: dict, me: dict, other: dict, rel_a: dict, rel_b: dict, 
     if d is not None and d >= settings().ccip_same_max:
         out.append({**base, "severity": "WARN",
                     "message": f"«{a['canonical_name']}» çizimi {where} kitabındaki çiziminden farklı görünüyor "
-                               f"(CCIP medyan uzaklık {d:.3f} ≥ {settings().ccip_same_max}). Saç, ten, göz, "
+                               f"(görsel kimlik uzaklığı {d:.3f} ≥ {settings().ccip_same_max}). Saç, ten, göz, "
                                f"ayırt edici işaretleri iki kitabın sayfalarında karşılaştırın.",
                     "details": {**base["details"], "ccip_median": round(d, 4),
                                 "pages": [f["page_no"] for f in fa], "other_pages": [f["page_no"] for f in fb]}})

@@ -33,7 +33,7 @@ def icc_profile() -> tuple[str, bool]:
     for p in GS_DEFAULT_ICC:
         if Path(p).exists():
             return p, False
-    raise RuntimeError("CMYK ICC profili bulunamadı (EDITOR_CMYK_ICC ya da ghostscript profilleri)")
+    raise RuntimeError("CMYK renk profili bulunamadı (EDITOR_CMYK_ICC)")
 
 
 def add_marks(src: Path, dst: Path, bleed_mm: float) -> None:
@@ -70,6 +70,8 @@ def set_boxes(pdf: Path, bleed_mm: float) -> None:
         r = page.rect
         page.set_bleedbox(pymupdf.Rect(r.x0 + sl, r.y0 + sl, r.x1 - sl, r.y1 - sl))
         page.set_trimbox(pymupdf.Rect(r.x0 + sl + b, r.y0 + sl + b, r.x1 - sl - b, r.y1 - sl - b))
+    from .preflight import brand
+    brand(doc)
     doc.saveIncr()
 
 
@@ -99,7 +101,7 @@ def to_cmyk_pdfx(src: Path, dst: Path, title: str) -> dict:
     import time
     gs = shutil.which("gs")
     if not gs:
-        raise RuntimeError("ghostscript (gs) yok")
+        raise RuntimeError("baskı PDF dönüştürücüsü kurulu değil")
     icc, own = icc_profile()
     t = time.time()
     ps = _pdfx_def(icc, title, dst.parent)
@@ -110,7 +112,7 @@ def to_cmyk_pdfx(src: Path, dst: Path, title: str) -> dict:
            f"-sOutputFile={dst}", str(ps), str(src)]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
     if r.returncode != 0 or not dst.exists():
-        raise RuntimeError(f"ghostscript: {r.stderr[-600:] or r.stdout[-600:]}")
+        raise RuntimeError(f"baskı PDF dönüştürülemedi: {r.stderr[-600:] or r.stdout[-600:]}")
     return {"icc": Path(icc).name, "printer_profile": own, "seconds": round(time.time() - t, 1)}
 
 

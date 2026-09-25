@@ -19,7 +19,7 @@ from typing import Any, Callable
 
 REPORT_ID = "baski-oneri-tahmin"
 TITLE = "ZEKI AI Tahminleme (girdi)"
-DESCRIPTION = "Baskı Öneri raporundaki kitapların 12 aylık satış tahmini (TimesFM 3.0)."
+DESCRIPTION = "Baskı Öneri raporundaki kitapların 12 aylık satış tahmini (ZEKI AI tahmin modeli)."
 HIDDEN = True
 REFRESH_SECONDS = int(os.environ.get("ZEKI_FORECAST_REFRESH_SECONDS", str(24 * 3600)))
 HORIZON = 12
@@ -41,7 +41,7 @@ SOURCES = [
     ("logo_son_fatura", "logo", "Son fatura tarihi", "Logo'daki en son fatura günü; tahminin başladığı ayı belirler."),
 ]
 FORMULAS = [
-    ("Aylık tahmin", "TimesFM 3.0, kitabın aylık satış geçmişi + takvim (ay, okul dönemi) + portföy büyümesi"),
+    ("Aylık tahmin", "ZEKI AI tahmin modeli, kitabın aylık satış geçmişi + takvim (ay, okul dönemi) + portföy büyümesi"),
 ]
 NOTES: list[str] = []
 
@@ -236,7 +236,7 @@ def explanation(meta: dict) -> dict:
         "title": "Bu tahmin nasıl hesaplandı?",
         "intro": [
             "ZEKI AI her kitabın aylık satış geçmişine bakar ve önümüzdeki 12 ayın satışını ay ay tahmin eder. Bunu "
-            "Google'ın zaman serisi modeli TimesFM 3.0 ile yapar: model, çok sayıda farklı satış serisinden öğrendiği "
+            "zaman serisi tahmin modeliyle yapar: model, çok sayıda farklı satış serisinden öğrendiği "
             "kalıpları (mevsim, büyüme, yavaşlama) bu kitabın geçmişine uygular.",
             "Power BI sekmesindeki hız son 12 ayın ağırlıklı ortalamasıdır ve her ayı aynı sayar. Oysa satışınız eylülde "
             "ortalamanın yaklaşık 1,5, ekimde 1,8 katına çıkıyor; mayıs-haziranda 0,7'ye iniyor. ZEKI AI tahmini ay ay "
@@ -281,7 +281,7 @@ def explanation(meta: dict) -> dict:
             f"Tahmin, Logo'daki son tam aya kadarki satışı kullanır: {ay_adi(meta.get('lastFullMonth'))} "
             f"(Logo'daki son fatura: {son_txt}). Sonraki aylar tahmin edilen aylardır.",
             "Tahmin günde bir kez yenilenir; stok, sipariş ve tükenme 5 dakikada bir.",
-            "Model: TimesFM 3.0 (Google Research). Ağırlıkları ticari olmayan lisanslıdır; bu kurulum demo ortamıdır.",
+            "Bu kurulum demo ortamıdır.",
         ],
     }
 
@@ -384,7 +384,7 @@ TAB_COLUMNS = [
     ("pbi_tukenme", "Power BI tükenme (ay)", "Power BI", "dec", "hesap:Tükenme süresi", None),
 ]
 TAB_FORMULAS = [
-    ("ZEKI tahmin", "TimesFM 3.0'ın aylık beklenen satışının (p50) bugünden tahmin ufkunun sonuna toplamı; temkinli = %80 "
+    ("ZEKI tahmin", "ZEKI AI tahmininin aylık beklenen satışının (p50) bugünden tahmin ufkunun sonuna toplamı; temkinli = %80 "
                     "kantil (p80). İçinde bulunulan ay kalan günlere göre sayılır."),
     ("ZEKI tükenme", "CRM stoku, aylık tahmin birikimini hangi ayda aşarsa o ay (temkinli: p80 yolu)."),
     ("ZEKI baskı ihtiyacı", "Tahmin + bekleyen sipariş − CRM stoku; eksiyse 0."),
@@ -399,7 +399,7 @@ TAB_FORMULAS = [
 def empty_text(error: str | None) -> str:
     """Tahmin yokken sekmenin söylediği: servis bu kurulumda yoksa kalıcı durum, okuma hatasıysa neden, yoksa hazırlanıyor."""
     if error and "bu kurulumda yok" in error:
-        return ("ZEKI AI tahmini bu kurulumda kapalı: tahmin servisi (TimesFM 3.0) tanımlı değil. "
+        return ("ZEKI AI tahmini bu kurulumda kapalı: tahmin servisi tanımlı değil. "
                 "Baskı Tekrar ve Yeni Kitap sekmeleri bundan etkilenmez.")
     if error:
         return f"ZEKI AI tahmini şu an kurulamadı. {error}"

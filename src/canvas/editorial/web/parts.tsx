@@ -110,7 +110,7 @@ export function WebSection({ kind, id, framed }: { kind: 'person' | 'book'; id: 
               </a>
             )}
             <a className="text-canvas-violet hover:underline" href={f.wikidata} target="_blank" rel="noopener noreferrer">
-              Wikidata
+              Kaynak kaydı
             </a>
           </div>
         </div>

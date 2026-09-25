@@ -387,3 +387,21 @@ def test_designer_case_headings_split_chapters():
     ch = M.normalize([(0, "KİtApLaRdAn"), (0, "NeFrEt EdİyOrUm"), (0, "Ben kitap okumayı sevmiyorum."),
                       (0, "KoRsAnLaRlA"), (0, "BİrLİkTe BaLİnAnın"), (0, "KaRnınDa"), (0, "Gemi sallandı.")], lex=set())
     assert [h for h, _ in ch] == ["KİtApLaRdAn NeFrEt EdİyOrUm", "KoRsAnLaRlA BİrLİkTe BaLİnAnın KaRnınDa"]
+
+
+def test_pdf_properties_name_no_tool(tmp_path):
+    """Belge özelliklerinde dizgi/dönüştürücü yazılımın adı görünmez (kullanıcı kuralı 2026-09-25)."""
+    pymupdf = pytest.importorskip("pymupdf")
+    from editor.production.preflight import brand
+    doc = pymupdf.open()
+    doc.new_page()
+    doc.set_metadata({"producer": "Typst 0.15.0", "creator": "Typst", "title": "Kitap"})
+    doc.set_xml_metadata('<x:xmpmeta><rdf:Description xmp:CreatorTool="Typst"><pdf:Producer>GPL Ghostscript 10'
+                         '</pdf:Producer></rdf:Description></x:xmpmeta>')
+    brand(doc)
+    p = tmp_path / "a.pdf"
+    doc.save(p)
+    back = pymupdf.open(p)
+    assert back.metadata["producer"] == back.metadata["creator"] == "Zeki AI" and back.metadata["title"] == "Kitap"
+    xmp = back.get_xml_metadata()
+    assert "Typst" not in xmp and "Ghostscript" not in xmp and xmp.count("Zeki AI") == 2
