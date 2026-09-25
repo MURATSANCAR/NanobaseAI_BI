@@ -4,6 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, CalendarClock, ChevronRight } from 'lucide-react';
 import { ENGINE_ENABLED, type Work, type ContractPage, type IntakeCard } from '../engine';
 import { useTimasSession } from '../TimasSession';
+import { useAdminMe } from '../useAdmin';
 import { editorialHomeOptions } from './homeQuery';
 import { intakeBoardOptions } from './queries';
 import { MARK_LABEL, MarkButton, Progress, waitingSentence, waitingText } from './intake/parts';
@@ -286,7 +287,9 @@ export default function EditorialHome() {
   const lastUpdated = updated.length ? Math.min(...updated) : null;
   const refreshFailed = Object.values(parts ?? {}).some((part) => part.error);
   const d = intake.data;
-  const all = d?.todoScope === 'all';
+  const adminMe = useAdminMe();
+  // Düzen, CRM verisi (~10 sn) gelmeden yönetici kararından seçilir; yoksa sohbet açılışta yer değiştirir.
+  const all = d ? d.todoScope === 'all' : !!adminMe.data?.isAdmin;
   const running = (d?.items ?? []).filter((c) => c.mine);
   const completed = (d?.completed ?? []).filter((c) => c.mine);
   const todo = d?.todo ?? [];
@@ -335,7 +338,7 @@ export default function EditorialHome() {
       title={firstName ? `${greeting()} ${firstName}` : 'Masam'}
       lead={
         !d || d.loading
-          ? 'Size atanmış dosyalar CRM\'den okunuyor…'
+          ? (all ? 'Bütün editörlerin dosyaları CRM\'den okunuyor…' : 'Size atanmış dosyalar CRM\'den okunuyor…')
           : all
             ? 'Yönetici görünümü: bütün editörlerin dosyaları.'
             : running.length
