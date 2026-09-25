@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (öğle) — Stüdyo: sahneye metinde olmayan karakter girmez, yeni günde kıyafet sıfırlanır
+
+- **Sorun:** Dünyanın En Korkak Hayvanı'nda Salyangoz 13, 29, 31, 32. sayfalara metinde yokken giriyordu; 11. sayfada giyilen deney önlüğü 32. sayfaya kadar sürüyordu («Bir gün…» ile yeni güne geçilse de).
+- **Çözüm (`art.py`, `production_page_art` v3):** modele yalnız adı o sayfada ya da komşu sayfada geçen karakterler gösterilir (Türkçe ekli hâli de sayılır; ana karakter adı anılmadan önceki resimden sürebilir); model yine de yazarsa sahne tarifinden o cümle düşer. Model `new_day` + `time_quote` verir; alıntı sayfada bulunursa önceki günden gelen kıyafet, sayfanın metni onu giydirmiyorsa varsayılana döner ve süreklilik sıfırlanır.
+- **Gerçek kitapta (yan kapta, iş değişmeden):** Salyangoz yalnız metinde geçtiği 8. sayfada; 14. sayfa «Bir gün» → gündelik, 21–22. sayfalar metin deney söylediği için önlüklü. GPU `editor-studio`'ya iki dosya kuruldu (md5 eşit, `._*` 0), `/data/editor/app` kaynağı da güncel. Testler +3.
+
 ## 2026-09-25 (sabah) — Stüdyo: baskı PDF'i (CMYK/PDF-X), Real-ESRGAN, testler, Word uçtan uca
 
 - **Baskı PDF'i:** `prepress.py` kesim işaretli (10 mm kenar), Ghostscript CMYK + PDF/X-3 (OutputIntent), TrimBox/BleedBox. Dünyanın En Korkak Hayvanı'nda 32 sayfa 20 sn, 29/29 görsel CMYK, fontlar gömülü. Öteki denetimler geçince üretilir; matbaa ICC profili tanımlanana kadar ghostscript varsayılanı + uyarı.
