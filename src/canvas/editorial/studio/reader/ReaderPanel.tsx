@@ -197,7 +197,8 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
       {msg && <Note tone="warn">{msg}</Note>}
       {run && run.status !== 'running' && run.stats && (
         <p className="text-[11.5px] text-canvas-muted">
-          {run.stats.shown} işaret gösteriliyor · okumalarda {run.stats.raw} işaret çıktı, metinde birebir bulunamayan {run.stats.dropped} tanesi atıldı.
+          {run.stats.shown} işaret gösteriliyor · okumalarda {run.stats.raw} işaret çıktı, metinde birebir bulunamayan {run.stats.dropped} tanesi atıldı
+          {run.stats.refuted ? `, resim/konuşan iddiası ayrıca sınanıp doğrulanmayan ${run.stats.refuted} tanesi düştü` : ''}.
         </p>
       )}
       {run && (

@@ -42,11 +42,18 @@ class FakeLlm:
             return {"flags": [{"item": "M1", "kind": "CUMLE", "quote": "metinde olmayan bir cümle", "reason": "x",
                                "replacement": "y"}]}, 1
         assert prompt is R.TURN_FIX
+        self.fixes = getattr(self, "fixes", 0) + 1
+        if self.fixes == 1:
+            return {"technique": "AMA", "replacement": "Elif güldü ama sonra ağladı.", "reason": "duygu"}, 1
         return {"technique": "AMA", "replacement": "Elif güldü ama birden bir ses duydu…", "reason": "yarım kaldı"}, 1
 
     async def choose(self, alias, messages, choices, *, prompt=None, pages=None, seed=17, retries=2):
         self.chooses += 1
         text = messages[0]["content"]
+        if prompt is R.TURN_REFUTE:                  # ilk aday hikâyeyi değiştirir (düşer), ikincisi kalır
+            return ({"A": 0.2, "B": 0.8} if "ağladı" in text else {"A": 0.85, "B": 0.15}), 1
+        if prompt is R.REFUTE:
+            return ({"A": 0.9, "B": 0.1} if "güldü" in text.split("İddia")[1] else {"A": 0.3, "B": 0.7}), 1
         return ({"A": 0.9, "B": 0.07, "C": 0.03} if "koştu 1." in text else {"A": 0.1, "B": 0.3, "C": 0.6}), 1
 
 
@@ -66,6 +73,12 @@ def test_last_sentence():
     s, e = R.last_sentence("Tek cümle.")
     assert (s, e) == (0, 10)
     assert R.last_sentence("   ") is None
+    t = "Aslan çok sevindi.\n“Yaşasın! Parka gidiyoruz!” diye zıpladı."
+    s, e = R.last_sentence(t)
+    assert t[s:e] == "“Yaşasın! Parka gidiyoruz!” diye zıpladı."
+    t = "Güneş battı. Annesi, “Eve dönme zamanı,” dedi."
+    s, e = R.last_sentence(t)
+    assert t[s:e] == "Annesi, “Eve dönme zamanı,” dedi."
 
 
 def test_vote_keeps_majority_and_merges_overlaps():
@@ -95,7 +108,7 @@ def test_child_run_votes_verifies_and_records(tmp_path):
     pg = P.load(d)["pages"][0]
     text = "".join(r["text"] for r in pg["text"]["blocks"][0]["runs"])
     assert text[f["start"]:f["end"]] == f["quote"] == "bahçeye koştu" and f["replacement"] == "bahçeye gitti"
-    assert view["stats"] == {"raw": 15, "dropped": 5, "shown": 5, "failed_pages": 0, "failed_passes": 0}
+    assert view["stats"] == {"raw": 15, "dropped": 5, "shown": 5, "failed_pages": 0, "failed_passes": 0, "refuted": 0}
     assert "plan" not in view and "targets" not in view
     R.decide(d, run["id"], f["fid"], "applied", "editör")
     assert R.flat(R.load_run(d, run["id"]))["flags"][0]["decision"] == "applied"
@@ -106,6 +119,20 @@ def test_child_run_votes_verifies_and_records(tmp_path):
     assert R.latest(d, "child")["flags"] == 5
     # Ana dosyaya karar yazılmaz: koşu sürerken yeniden yazılsa da karar kaybolmaz.
     assert "decisions" not in json.loads((d / R.DIR / f"{run['id']}.json").read_text())
+
+
+def test_checkable_flags_are_refuted_before_the_editor(tmp_path):
+    """Konuşan/resim iddiası ayrı soruyla sınanır: doğrulanmayan işaret düşer ve sayılır."""
+    d = tmp_path / "job"
+    plan = _mini(d)
+
+    class Llm(FakeLlm):
+        async def chat(self, alias, messages, **kw):
+            return {"flags": [{"item": "M1", "kind": "KONUSAN", "quote": "güldü", "reason": "kim?", "replacement": ""},
+                              {"item": "M1", "kind": "KONUSAN", "quote": "bahçeye koştu", "reason": "kim?",
+                               "replacement": ""}]}, 1
+    res = asyncio.run(R.read_page(Llm(), d, plan, 0, 6, 1, asyncio.Semaphore(2)))
+    assert [f["quote"] for f in res["flags"]] == ["güldü"] and res["refuted"] == 1 and res["flags"][0]["check"] == 0.9
 
 
 def test_child_prompt_uses_book_age_and_scene(tmp_path):
@@ -128,7 +155,7 @@ def test_child_prompt_uses_book_age_and_scene(tmp_path):
 def test_turn_run_only_for_weak_page_ends(tmp_path):
     d = tmp_path / "job"
     _mini(d)
-    run = R.new_run(d, "turn", "editör")
+    run = R.new_run(d, "turn", "editör", passes=3)
     assert [t["spread"] for t in run["targets"]] == [[4, 5], [6, 7]]          # son çift sayfadan sonra çevrilmez
     assert all(t["quote"] == "güldü." or t["quote"].endswith("güldü.") for t in run["targets"])
     llm = FakeLlm()
@@ -137,7 +164,8 @@ def test_turn_run_only_for_weak_page_ends(tmp_path):
     strong, weak = view["spreads"]
     assert strong["status"] == "strong" and "replacement" not in strong
     assert weak["status"] == "suggested" and weak["technique"] == "AMA" and weak["replacement"].startswith("Elif güldü ama")
-    assert weak["technique_label"] == "«Ama…» kalıbı" and llm.chooses == 2 and llm.chats == 1
+    assert weak["technique_label"] == "«Ama…» kalıbı" and weak["tried"] == 2 and weak["check"] == 0.85
+    assert llm.chooses == 2 + 2 and llm.chats == 2                           # ölçüm ×2, aday ×2 + çürütme ×2
     R.decide(d, run["id"], weak["fid"], "rejected", "e")
     assert R.flat(R.load_run(d, run["id"]))["spreads"][1]["decision"] == "rejected"
 

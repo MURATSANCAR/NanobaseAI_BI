@@ -99,8 +99,9 @@ async def reader_child(job: str, body: ChildBody, by: str = Depends(by_editor)) 
 
 
 @router.post(P + "/reader/turn")
-async def reader_turn(job: str, by: str = Depends(by_editor)) -> dict:
-    return await _start(_plan_dir(job), "turn", by)
+async def reader_turn(job: str, body: ChildBody | None = None, by: str = Depends(by_editor)) -> dict:
+    """`passes`: güçlü olmayan sayfa sonu için en çok kaç aday öneri yazılıp çürütüleceği."""
+    return await _start(_plan_dir(job), "turn", by, (body or ChildBody(passes=1)).passes)
 
 
 def _run(d: Path, rid: str) -> dict:

@@ -8,12 +8,16 @@ bulunmak ZORUNDADIR; bulunmazsa işaret atılır (son okumanın yaş uygunluğu 
 
 Tek okuma gürültülüdür (aynı model aynı sayfada her okumada başka yer işaretler): her sayfa `passes` kez, birbirinden
 bağımsız (sıcaklıkla) okunur; aynı parçada örtüşen işaretler kümelenir ve yalnız okumaların çoğunluğunda (> yarısı)
-geçen küme gösterilir. Kaç okuma yapılacağı yönetim ayarıdır (köprü `STUDIO_READER_PASSES` gönderir).
+geçen küme gösterilir. Kaç okuma yapılacağı yönetim ayarıdır (köprü `STUDIO_READER_PASSES` gönderir). Metinden
+denetlenebilen iddialar (resimle çelişki, konuşanın belirsizliği) editöre gitmeden çürütülmeye çalışılır: ayrı bir
+kapalı küme sorusu iddiayı doğrulamazsa işaret düşer (sayılır, `refuted`).
 
 **Sayfa çevirme merakı** (yalnız resimli kitapta): her çift sayfanın (sol çift numara + sağ tek numara) sayfa
 çevrilmeden önce okunan son cümlesi için "sonra ne oldu?" gerilimi kapalı kümeyle ölçülür (tek belirteç, olasılık
 dağılımı: tek çağrı oylamanın yerini tutar). Güçlü değilse resimli kitap zanaatından bir kalıpla (soru, yarım kalan
-eylem, ses sözcüğü, "ama…", beklenti) yeniden yazım önerilir. Güçlüyse öneri yok.
+eylem, ses sözcüğü, "ama…", beklenti) yeniden yazım önerilir; öneri hikâyeye olay/duygu ekliyor, özgün cümleyi
+eksiltiyor ya da sonraki sayfada olmayanı vaat ediyorsa çürütülür ve yenisi yazılır (en çok okuma sayısı kadar aday).
+Güçlüyse öneri yok.
 
 Kurallar kitaptan bağımsızdır: istemde kitap adı/karakter/eşik yoktur; yaş ve resim kararı işin profilinden gelir.
 Model gateway üzerinden (`FileLlm`, kayıt işin provenance.jsonl'una). Sonuç `okur/<koşu>.json` (koşu sürerken her
@@ -46,6 +50,9 @@ STALE_SECONDS = 180          # koşu kaydı bu kadar süre yenilenmediyse ve bu 
 READ = PromptRef("studio_reader_child", "1")
 TURN_JUDGE = PromptRef("studio_reader_turn_judge", "1")
 TURN_FIX = PromptRef("studio_reader_turn_fix", "1")
+REFUTE = PromptRef("studio_reader_refute", "1")          # denetlenebilir işaretin çürütülmesi (resim, konuşan)
+TURN_REFUTE = PromptRef("studio_reader_turn_refute", "1")  # sayfa sonu önerisi hikâyeyi değiştiriyor mu
+KEEP_P = 0.5                 # çürütmede «iddia doğru» olasılığı bundan küçükse işaret/öneri düşer (yazı turası sınırı)
 
 KINDS = {                    # kod → ekrandaki ad
     "KELIME": "Anlaşılmayan kelime ya da deyim",
@@ -178,10 +185,13 @@ def locate(quote: str, text: str) -> tuple[int, int] | None:
 
 
 _SENT = re.compile(r"(?<=[.!?…])[\"”’»)]*\s+")
+_OPEN, _CLOSE = "“«", "”»"
+_STARTS = "“\"«‘'-–—("
 
 
 def last_sentence(text: str) -> tuple[int, int] | None:
-    """Metnin son cümlesinin yeri (son boş olmayan satırın son cümlesi)."""
+    """Metnin son cümlesinin yeri (son boş olmayan satırın son cümlesi). Tırnak içindeki noktalama cümleyi
+    bitirmez; kapanan tırnaktan sonra küçük harfle süren konuşma eki («… diye zıpladı») aynı cümledir."""
     t = text.rstrip()
     if not t.strip():
         return None
@@ -189,7 +199,10 @@ def last_sentence(text: str) -> tuple[int, int] | None:
     line = t[line_start:]
     cut = 0
     for m in _SENT.finditer(line):
-        if line[m.end():].strip():
+        rest = line[m.end():]
+        head = line[:m.end()]
+        inside = sum(head.count(c) for c in _OPEN) > sum(head.count(c) for c in _CLOSE)
+        if rest.strip() and not inside and (rest[0].isupper() or rest[0] in _STARTS):
             cut = m.end()
     start = line_start + cut
     while start < len(t) and t[start].isspace():
@@ -334,12 +347,51 @@ async def read_page(llm, d: Path, plan: dict, i: int, age: int, passes: int, sem
     if not ok:
         raise RuntimeError(f"{no}. sayfa okunamadı: {type(failed[0]).__name__}")
     flags = vote([r[0] for r in ok], len(ok))
+    texts = {(it["target"], it["id"]): it["text"] for it in items}
+    kept, refuted = [], 0
     for f in flags:
+        if f["kind"] in REFUTABLE:
+            p = await refute_flag(llm, age, f, texts[(f["target"], f["id"])], items, scene, no, sem)
+            f["check"] = round(p, 3)
+            if p < KEEP_P:
+                refuted += 1
+                continue
         f["fid"] = _fid(pg["id"], f)
         f["page"] = pg["id"]
         f["no"] = no
-    return {"no": no, "flags": flags, "raw": sum(len(r[0]) for r in ok), "dropped": sum(r[1] for r in ok),
-            "ok_passes": len(ok), "failed_passes": len(failed)}
+        kept.append(f)
+    return {"no": no, "flags": kept, "raw": sum(len(r[0]) for r in ok), "dropped": sum(r[1] for r in ok),
+            "refuted": refuted, "ok_passes": len(ok), "failed_passes": len(failed)}
+
+
+REFUTABLE = ("RESIM", "KONUSAN")    # metinden denetlenebilen iddialar; kelime/cümle/sıkıcılık okurun öznel tepkisi
+
+
+def refute_prompt(age: int, f: dict, text: str, items: list[dict], scene: str | None) -> str:
+    page = "\n".join(_item_line(h, it) for h, it in _handles(items).items())
+    if f["kind"] == "RESIM":
+        return (f"Bir çocuk kitabı sayfası.\nResmin tarifi:\n<<<{scene or '-'}>>>\nSayfanın metni:\n<<<{page}>>>\n"
+                f"İddia: metindeki «{f['quote']}» resimde görünenle çelişiyor. Gerekçe: {f['reason']}\n"
+                "Yalnız metinde yazanı resim tarifinde yazanla karşılaştır. Resimde gösterilmeyen ama çelişmeyen ayrıntı, "
+                "yer adı ya da okurun bilmediği bir kelime çelişki DEĞİLDİR.\n"
+                "A) Evet, metinle resim açıkça çelişiyor\nB) Hayır, çelişki yok\nTek harfle cevap ver.")
+    return (f"Bir çocuk kitabı sayfası ({age} yaş okur):\n<<<{page}>>>\n"
+            f"İddia: «{f['quote']}» sözünü kimin söylediği anlaşılmıyor.\n"
+            "Konuşma çizgisi, «dedi/diye sordu» eki, balonun konuşanı ya da önceki cümle konuşanı belli ediyorsa "
+            "belirsizlik yoktur.\nA) Evet, kimin konuştuğu gerçekten belirsiz\nB) Hayır, konuşan belli\n"
+            "Tek harfle cevap ver.")
+
+
+async def refute_flag(llm, age: int, f: dict, text: str, items: list[dict], scene: str | None, no: int,
+                      sem: asyncio.Semaphore) -> float:
+    """İddianın doğru olma olasılığı (kapalı küme, tek çağrı). Model yanıt veremezse işaret kalır (1.0)."""
+    try:
+        async with sem:
+            probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": refute_prompt(age, f, text, items, scene)}],
+                                        ["A", "B"], prompt=REFUTE, pages=[no])
+        return float(probs.get("A", 0.0))
+    except Exception:  # noqa: BLE001 - çürütülemeyen işaret editöre gider
+        return 1.0
 
 
 # ------------------------------------------------------------------ sayfa çevirme merakı
@@ -406,7 +458,9 @@ FIX_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["tec
                              "reason": {"type": "string", "maxLength": 300}}}
 
 
-async def judge_spread(llm, age: int, sp: dict, sem: asyncio.Semaphore) -> dict:
+async def judge_spread(llm, age: int, sp: dict, sem: asyncio.Semaphore, attempts: int = 1) -> dict:
+    """Gerilim ölçümü; güçlü değilse en çok `attempts` aday öneri yazılır, her biri çürütülür (hikâyeyi
+    değiştiren/eksilten öneri düşer), ilk ayakta kalan gösterilir. Hiçbiri kalmazsa «öneri yok»."""
     async with sem:
         probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": judge_prompt(age, sp)}], ["A", "B", "C"],
                                     prompt=TURN_JUDGE, pages=[sp["no"]])
@@ -417,16 +471,36 @@ async def judge_spread(llm, age: int, sp: dict, sem: asyncio.Semaphore) -> dict:
     if best == "A":
         res["status"] = "strong"
         return res
-    async with sem:
-        out, _ = await llm.chat(ALIAS, [{"role": "user", "content": fix_prompt(age, sp)}], schema=FIX_SCHEMA,
-                                prompt=TURN_FIX, pages=[sp["no"]], max_tokens=900, temperature=0.3, thinking=False)
-    rep = (out.get("replacement") or "").strip()
-    if not rep or rep == sp["quote"].strip():
-        res.update(status="no_fix")
-        return res
-    res.update(status="suggested", technique=out.get("technique"), replacement=rep,
-               reason=(out.get("reason") or "").strip())
+    tried = []
+    for k in range(max(1, attempts)):
+        async with sem:
+            out, _ = await llm.chat(ALIAS, [{"role": "user", "content": fix_prompt(age, sp)}], schema=FIX_SCHEMA,
+                                    prompt=TURN_FIX, pages=[sp["no"]], max_tokens=900,
+                                    temperature=0.3 if k == 0 else TEMPERATURE, thinking=False)
+        rep = (out.get("replacement") or "").strip()
+        if not rep or rep == sp["quote"].strip() or rep in (t["replacement"] for t in tried):
+            continue
+        async with sem:
+            probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": turn_refute_prompt(age, sp, rep)}],
+                                        ["A", "B"], prompt=TURN_REFUTE, pages=[sp["no"]])
+        keep = float(probs.get("A", 0.0))
+        tried.append({"replacement": rep, "technique": out.get("technique"), "keep": round(keep, 3)})
+        if keep >= KEEP_P:
+            res.update(status="suggested", technique=out.get("technique"), replacement=rep, check=round(keep, 3),
+                       reason=(out.get("reason") or "").strip(), tried=len(tried))
+            return res
+    res.update(status="no_fix", tried=len(tried), rejected=tried)
     return res
+
+
+def turn_refute_prompt(age: int, sp: dict, rep: str) -> str:
+    return (f"Resimli bir çocuk kitabı ({age} yaş). Çift sayfanın metni:\n<<<{sp['context']}>>>\n"
+            f"Sonraki sayfanın başı:\n<<<{sp['next'] or '-'}>>>\n"
+            f"Özgün son cümle: «{sp['quote']}»\nÖnerilen yeni son cümle: «{rep}»\n\n"
+            "Yeni cümle hikâyede olmayan bir olay, duygu, eşya ya da bilgi ekliyor mu, özgün cümlenin söylediğini "
+            "(konuşma dahil) atıyor mu, ya da sonraki sayfada gerçekleşmeyen bir şey vaat ediyor mu?\n"
+            "A) Hayır: aynı olayı merak uyandıracak biçimde söylüyor\nB) Evet: hikâyeyi değiştiriyor ya da eksiltiyor\n"
+            "Tek harfle cevap ver.")
 
 
 # ------------------------------------------------------------------ koşular
@@ -482,7 +556,8 @@ def flat(run: dict) -> dict:
         pages = (run.get("pages") or {}).values()
         out["stats"] = {"raw": sum(p.get("raw", 0) for p in pages), "dropped": sum(p.get("dropped", 0) for p in pages),
                         "shown": len(out["flags"]), "failed_pages": sum(1 for p in pages if p.get("error")),
-                        "failed_passes": sum(p.get("failed_passes", 0) for p in pages)}
+                        "failed_passes": sum(p.get("failed_passes", 0) for p in pages),
+                        "refuted": sum(p.get("refuted", 0) for p in pages)}
     else:
         out["spreads"] = [{**x, "technique_label": TECHNIQUES.get(x.get("technique") or "", None),
                            "decision": (dec.get(x["fid"]) or {}).get("decision")} for x in run.get("spreads") or []]
@@ -528,7 +603,7 @@ def new_run(d: Path, kind: str, by: str, passes: int | None = None) -> dict:
     rid = f"r_{secrets.token_hex(4)}"
     run = {"id": rid, "kind": kind, "status": "running", "created": _now(), "updated": _now(), "by": by,
            "plan_rev": plan["rev"], "plan": plan, "age": age["age"], "band": age["band"],
-           "passes": int(passes or 1) if kind == "child" else 1, "progress": [0, 0], "error": None}
+           "passes": int(passes or 1), "progress": [0, 0], "error": None}
     if kind == "child":
         run["pages"] = {}
         run["progress"] = [0, len(plan["pages"])]
@@ -577,7 +652,7 @@ async def execute(d: Path, rid: str, llm) -> dict:
             if key in done and done[key].get("status") != "failed":
                 return
             try:
-                res = await judge_spread(llm, run["age"], sp, sem)
+                res = await judge_spread(llm, run["age"], sp, sem, run.get("passes") or 1)
             except Exception as e:  # noqa: BLE001
                 res = {k: sp[k] for k in ("spread", "no", "page", "target", "id", "start", "end", "quote")}
                 res.update(fid=key, status="failed", error=f"{type(e).__name__}: {str(e)[:200]}")

@@ -32,7 +32,7 @@ export type TurnItem = {
 };
 export type ReaderRun = Omit<RunSummary, 'flags'> & {
   flags?: ReaderFlag[]; spreads?: TurnItem[];
-  stats?: { raw: number; dropped: number; shown: number; failed_pages: number; failed_passes: number };
+  stats?: { raw: number; dropped: number; shown: number; failed_pages: number; failed_passes: number; refuted?: number };
 };
 
 export type VersionRev = { rev: number; at: string; by: string; what: string };

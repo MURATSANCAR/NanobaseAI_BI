@@ -110,9 +110,10 @@ def register(app, deps: dict[str, Any]) -> None:
     @app.post("/api/v1/editorial/studio/jobs/{job}/plan/reader/turn")
     def editorial_reader_turn(job: str, request: Request):
         engine, _t, user, _ = auth(request)
-        out = plan(es.plan_request, "POST", job, "/reader/turn", body={}, editor=user, timeout=60)
+        n = passes(conf)
+        out = plan(es.plan_request, "POST", job, "/reader/turn", body={"passes": n}, editor=user, timeout=60)
         if not isinstance(out, Response):
-            note(engine, user, "run", f"{job}/turn", "sayfa çevirme merakı ölçümü başlatıldı")
+            note(engine, user, "run", f"{job}/turn", "sayfa çevirme merakı ölçümü başlatıldı", {"passes": n})
         return out
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/plan/reader/runs/{rid}")
