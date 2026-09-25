@@ -48,6 +48,8 @@ PAGE_SCHEMA = {"type": "object", "additionalProperties": False,
                                   "properties": {"character": {"type": "string"}, "outfit": {"type": "string"}}}},
                               "setting": {"type": "string"}, "setting_reason": {"type": "string"},
                               "scene": {"type": "string"}}}
+DIRECTION_SCHEMA = {"type": "object", "additionalProperties": False, "required": ["english"],
+                    "properties": {"english": {"type": "string"}}}
 
 
 @dataclass
@@ -257,3 +259,15 @@ async def scenes(ms: Manuscript, p: Profile, chars: list[Character], pm: PageMap
         prev_outfits = {**({} if sc.new_day else prev_outfits), **sc.outfits}
         prev_chars = sc.characters
     return out
+
+
+async def direction_en(text: str, chars: list[Character], llm) -> str:
+    """Editörün yönlendirmesi görsel model için İngilizce. Görsel model Türkçe kelimeyi başka bir şeye
+    benzetebiliyor (2026-09-25: «karga» istendi, martı çizildi). Karakter adları olduğu gibi kalır."""
+    if not text.strip():
+        return ""
+    ref, prompt = render("production_direction", text=text.strip(),
+                         characters=", ".join(c.name for c in chars) or "(yok)")
+    out, _ = await llm.chat("book-director", [{"role": "user", "content": prompt}], prompt=ref,
+                            schema=DIRECTION_SCHEMA, max_tokens=400, thinking=False, temperature=0.0)
+    return out["english"].strip() or text.strip()

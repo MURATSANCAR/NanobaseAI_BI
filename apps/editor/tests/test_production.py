@@ -358,3 +358,13 @@ def test_production_workflow_plan_then_finish():
 
     asyncio.run(main())
     assert calls == ["plan:a", "finish:a:1", "finish:b:1", "finish:b:2"]
+
+
+def test_direction_goes_to_image_model_in_english():
+    """Editörün Türkçe yönlendirmesi görsel modele çevrilerek gider (karga → martı hatası, 2026-09-25)."""
+    import asyncio
+    from editor.production.art import direction_en
+    llm = _FakeLlm({"english": "Replace the bird with a black crow."})
+    assert asyncio.run(direction_en("Kuşu kara bir karga yap", _cast(), llm)) == "Replace the bird with a black crow."
+    assert "Kuşu kara bir karga yap" in llm.prompts[0] and "Tavşan" in llm.prompts[0]
+    assert asyncio.run(direction_en("  ", _cast(), _FakeLlm())) == ""

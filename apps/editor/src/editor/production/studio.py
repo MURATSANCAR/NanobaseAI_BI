@@ -156,12 +156,13 @@ def studio_state(d: Path) -> dict:
 
 
 def add_version(d: Path, key: str, path: str, *, mode: str, prompt: str, seed: int, by: str,
-                dpi: int, base: int | None = None) -> int:
+                dpi: int, base: int | None = None, prompt_en: str = "") -> int:
     st = studio_state(d)
     pg = st["pages"].setdefault(key, {"versions": [], "selected": None, "approved": False})
     v = len(pg["versions"]) + 1
     pg["versions"].append({"v": v, "path": path, "mode": mode, "prompt": prompt, "seed": seed, "by": by,
-                           "at": time.time(), "dpi": dpi, "base": base})
+                           "at": time.time(), "dpi": dpi, "base": base,
+                           **({"prompt_en": prompt_en} if prompt_en else {})})
     pg["selected"], pg["approved"], pg["approved_by"] = v, False, None
     write(d, "studio.json", st)
     return v
@@ -359,6 +360,9 @@ async def regenerate(d: Path, key: str, mode: str, direction: str, by: str, vari
         raise ValueError("Düzeltme için neyin değişeceğini yazın")
     spec, pm, plan = _spec(d), _pagemap(d), _plan(d)
     st = studio_state(d)
+    from .run import FileLlm
+    # Görsel modele İngilizcesi gider; sürüm kaydında editörün yazdığı kalır.
+    english = await art_mod.direction_en(direction, plan.characters, FileLlm(d / "provenance.jsonl"))
     painter = Painter(d / "resim", plan)
     painter.refs = {n: p for n, p in st.get("characters", {}).items()}
     pg = st["pages"].get(key)
@@ -380,11 +384,11 @@ async def regenerate(d: Path, key: str, mode: str, direction: str, by: str, vari
             v_next = len(studio_state(d)["pages"].get(key, {"versions": []})["versions"]) + 1
             seed = random.randint(1, 2**31 - 1)
             if key == "kapak":
-                rd = await _cover_render(painter, plan, spec, v_next, seed, direction, base)
+                rd = await _cover_render(painter, plan, spec, v_next, seed, english, base)
             else:
-                rd = await painter.page(sc, *size, version=v_next, seed=seed, direction=direction, base_image=base)
+                rd = await painter.page(sc, *size, version=v_next, seed=seed, direction=english, base_image=base)
             made.append(add_version(d, key, rd.path, mode=mode, prompt=direction, seed=seed, by=by, dpi=rd.dpi,
-                                    base=pg["selected"] if base and pg else None))
+                                    base=pg["selected"] if base and pg else None, prompt_en=english))
     finally:
         await painter.close()
     import asyncio

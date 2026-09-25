@@ -27,7 +27,8 @@ export function useStudioJob(id: string) {
 export function revision(d: StudioJob | undefined) {
   if (!d) return '';
   const arts = [...d.pages.map((p) => p.art?.selected ?? 0), d.cover.art?.selected ?? 0].join('.');
-  return `${d.state.finished ?? 0}-${arts}`;
+  // Dizgi yeni sürümden birkaç saniye sonra yenilenir; önizleme adresi ancak o zaman değişmeli (built).
+  return `${d.state.finished ?? 0}-${d.built ?? 0}-${arts}`;
 }
 
 function Field({ label, value }: { label: string; value: string | number | null | undefined }) {

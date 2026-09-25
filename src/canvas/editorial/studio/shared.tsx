@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { AlertTriangle, Check, CircleDashed, Loader2, MinusCircle, X } from 'lucide-react';
 import type { StudioStepStatus } from '../../engine';
 
@@ -37,6 +37,8 @@ export function Progress({ value, total }: { value: number; total: number }) {
 /** Görsel: yüklenemezse sessizce yer tutucuya döner (sayfa henüz dizilmemiş olabilir). */
 export function Img({ src, alt, className = '', fallback }: { src: string; alt: string; className?: string; fallback: string }) {
   const [failed, setFailed] = useState(false);
+  // Adres değişince (yeni sürüm, yeni dizgi) önceki yüklemenin hatası taşınmaz.
+  useEffect(() => setFailed(false), [src]);
   if (failed) {
     return <div className={`flex items-center justify-center bg-slate-100 text-[11px] text-canvas-muted ${className}`}>{fallback}</div>;
   }

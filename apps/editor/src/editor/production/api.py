@@ -216,6 +216,9 @@ def _job_view(d: Path, job: str, busy: dict | None) -> dict:
         "preflight": pre,
         "front": _front(d),
         "files": {k: (d / rel).exists() for k, (rel, _) in PDF_FILES.items()},
+        # Dizginin son yenilenişi: ekran önizleme adresine katar. Yeni sürüm seçilince dizgi birkaç saniye sonra
+        # yenilenir; arada istenen önizleme eski sayfayı döner ve tarayıcı onu yeni adresle önbelleğe alıyordu.
+        "built": max(((d / rel).stat().st_mtime for rel, _ in PDF_FILES.values() if (d / rel).exists()), default=0),
     }
 
 

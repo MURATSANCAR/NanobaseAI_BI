@@ -1697,6 +1697,8 @@ export type StudioJob = {
   front: { rows: { label: string; value: string; missing: boolean; editable: boolean; source: string | null }[];
            bios: { name: string; text: string }[] } | null;
   files: { ic: boolean; kapak: boolean; 'baski-ic': boolean; 'baski-kapak': boolean };
+  /** Dizginin son yenilenme zamanı (sn); eski servis göndermez. */
+  built?: number;
 };
 export type StudioJobRow = { id: string; title: string | null; created_by: string; created_at: number;
   source: StudioJob['job']['source']; steps: { key: string; label: string; status: StudioStepStatus }[]; busy: StudioBusy };
