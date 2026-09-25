@@ -31,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import collections
 
+from .. import db
 from ..llm import Llm, PromptRef
 from . import _continuity as C
 from . import _spelling_judge as J
@@ -38,12 +39,12 @@ from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_variety"
-VERSION = "1"
+VERSION = "2"
 LABEL = "Kelime çeşitliliği ve yakın tekrar"
 
 DIRECTOR = "book-director"
-SENSES = PromptRef("proof_word_senses", "1")
-ALTERNATIVES = PromptRef("proof_word_alternatives", "1")
+SENSES = PromptRef("proof_word_senses", "2")
+ALTERNATIVES = PromptRef("proof_word_alternatives", "2")
 
 # Yakın tekrar penceresi, cümle cinsinden: 0 = aynı cümle, 1 = aynı ya da bir sonraki cümle.
 # Okurun tekrarı fark ettiği mesafe; sözcük sayısı değil cümle, çünkü çocuk kitabında cümle kısa,
@@ -69,6 +70,13 @@ def _read(generation_id: str, lex) -> dict:
     span_text = {(s["page"], s["idx"]): s["text"] for s in bk["spans"]}
     toks = bk["tokens"]
     sids = W.sentence_ids([t.sent_start for t in toks])
+    # bir sözcüğün sayfadaki kaçıncı geçişi (sayfa görselinde yerini bulmak için; bütün belirteçler sayılır)
+    on_page = collections.Counter()
+    nth = []
+    for t in toks:
+        k = (t.page, W.norm_word(t.word))
+        nth.append(on_page[k])
+        on_page[k] += 1
     stats = collections.Counter()
     raw = []            # (idx, tok, form)
     form_cands: dict[str, list] = {}
@@ -87,7 +95,7 @@ def _read(generation_id: str, lex) -> dict:
         if form not in form_cands:
             form_cands[form] = W.candidates(lex.analyses(form))
         cs = form_cands[form]
-        if t.base[:1].isupper() and not t.base.isupper() and cs and all(c[3] for c in cs):
+        if t.base[:1].isupper() and not t.base.isupper() and cs and all(c[4] for c in cs):
             stats["skip_name"] += 1       # cümle başında, sözlükte yalnız özel ad
             continue
         form_counts[form] += 1
@@ -99,10 +107,37 @@ def _read(generation_id: str, lex) -> dict:
             unknown[form].append(t.page)
             continue
         lem, pos, amb = chosen[form]
-        occs.append(W.Occ(i, t.page, t.span, t.start, t.end, sids[i], form, t.word, lem, pos, amb))
+        o = W.Occ(i, t.page, t.span, t.start, t.end, sids[i], form, t.word, lem, pos, amb)
+        o.extra = {"nth": nth[i], "total": on_page[(t.page, W.norm_word(t.word))], "joined": t.joined_with is not None}
+        occs.append(o)
     stats["read_tokens"] = len(raw)
     return {"occs": occs, "unknown": unknown, "span_keys": span_keys, "span_text": span_text,
             "stats": stats}
+
+
+def _page_words(book_version_id: str, page_no: int) -> list[tuple[str, list[int]]]:
+    """Sayfanın basılı sözcükleri okuma sırasıyla (normalize, 0..1000 kutu). Metin katmanı yoksa boş."""
+    from ._spelling_geometry import _doc
+    try:
+        page = _doc(book_version_id)[page_no - 1]
+        r = page.rect
+        return [(W.norm_word(w[4]), W.to1000(w[:4], (r.x0, r.y0, r.x1, r.y1))) for w in page.get_text("words")]
+    except Exception:  # noqa: BLE001 - yer işareti ektir; bulunamazsa bulgu işaretsiz gider
+        return []
+
+
+def _boxes(book_version_id: str, occs: list[W.Occ]) -> dict[int, list[int]]:
+    """Geçiş idx → sayfadaki kutu (bulunabilenler). Satır sonunda bölünmüş sözcük işaretlenmez."""
+    out, cache = {}, {}
+    for o in occs:
+        if o.extra.get("joined"):
+            continue
+        if o.page not in cache:
+            cache[o.page] = _page_words(book_version_id, o.page)
+        b = W.pick_box(cache[o.page], o.word, o.extra.get("nth", 0), o.extra.get("total", 1))
+        if b:
+            out[o.idx] = b
+    return out
 
 
 async def _senses(llm: Llm, units: dict[str, list[W.Occ]], contexts: dict[int, str], stats) -> dict[str, list[dict]]:
@@ -137,14 +172,36 @@ async def _senses(llm: Llm, units: dict[str, list[W.Occ]], contexts: dict[int, s
     return senses
 
 
-async def _alternatives(llm: Llm, lemma: str, sense: dict | None, marked: str, page: int) -> list[str]:
+async def _alternatives(llm: Llm, lex, lemma: str, sense: dict | None, marked: str, page: int,
+                        forms: list[str]) -> list[str]:
     body = (f"Aşağıdaki pasajda «{lemma}» sözcüğü aynı anlamda kısa aralıkla tekrarlanıyor ([[ ]] içinde). "
-            "Tekrarı gidermek için sonraki geçişlerin yerine konabilecek, cümlede aynı anlamı veren sözcük ya "
-            "da söyleyişler öner (Türkçe, en fazla 5; iyi karşılık yoksa boş liste).\n\n"
+            f"Tekrarı gidermek için İKİNCİ geçişin («{forms[1] if len(forms) > 1 else forms[0]}») yerine konabilecek, "
+            "cümlede aynı anlamı veren sözcük ya da söyleyişler öner. Öneriyi o geçişin cümledeki EKLİ hâliyle "
+            "yaz (aynı hâl, iyelik, zaman ve kişi ekleri), doğru Türkçe yazımla; en fazla 5, iyi karşılık yoksa boş liste.\n\n"
             + (f"Anlam: {sense['label']}\n" if sense else "") + f"Pasaj: «{marked}»")
     out, _ = await llm.chat(DIRECTOR, [{"role": "user", "content": body}], prompt=ALTERNATIVES,
                             schema=_alt_schema(), pages=[page], max_tokens=400, temperature=0.0, thinking=False)
-    return [s.strip() for s in out.get("oneriler", []) if s.strip() and W.lower_tr(s.strip()) != lemma]
+    # tekrarın kendi biçimleri ve yinelenen öneriler karşılık değildir
+    same = {lemma} | {W.lower_tr(f) for f in forms}
+    kept = []
+    for s in out.get("oneriler", []):
+        s = s.strip()
+        if not s or W.lower_tr(s) in same or s in kept:
+            continue
+        if not W.valid_suggestion(s, lex.valid):
+            continue   # sözlükte olmayan biçim ("anlasayd"): önerilmez
+        # aynı kökün başka bir çekimi karşılık değildir (tekrarın kendisi)
+        if " " not in s and any(c[0] == lemma for c in W.candidates(lex.analyses(W.lower_tr(s)))):
+            continue
+        kept.append(s)
+    # sözlükte var olmak yetmez: öneri o cümlede aynı anlamı vermeli ("dut" yerine "incir" başka ağaçtır)
+    second = forms[1] if len(forms) > 1 else forms[0]
+    out_ok = []
+    for s in kept:
+        p, _ = await J._ab(llm, lambda x, y: W.keeps_meaning_prompt(marked, second, s, x, y), W.SAME, W.DIFFERENT, [page])
+        if p >= J.KEEP:
+            out_ok.append(s)
+    return out_ok
 
 
 async def run(generation_id: str):
@@ -158,7 +215,9 @@ async def run(generation_id: str):
     by_lemma = collections.defaultdict(list)
     for o in occs:
         by_lemma[o.lemma].append(o)
-    content = {lem: os_ for lem, os_ in by_lemma.items() if any(o.pos in W.CONTENT_POS for o in os_)}
+    # içerik kökü: hiçbir geçişi işlev sözcüğü okumasıyla gelmemiş, en az biri ad/sıfat/zarf/fiil
+    content = {lem: os_ for lem, os_ in by_lemma.items()
+               if any(o.pos in W.CONTENT_POS for o in os_) and not any(o.pos in W.FUNCTION_POS for o in os_)}
     # anlam: iki kez ya da daha çok geçen her içerik kökü (bir kez geçenin anlamı haritada tektir)
     units = {lem: os_ for lem, os_ in content.items() if len(os_) >= 2}
 
@@ -172,6 +231,10 @@ async def run(generation_id: str):
     for lem, os_ in sorted(units.items()):
         single, dup = W.drop_reduplication(os_)
         stats["skip_reduplication"] += dup
+        # tamamı büyük harf: başlık, kapak/bölüm yazısı, vurgu — metindeki geçişin tekrarı sayılmaz
+        caps = {o.idx for o in single if len(o.word) > 1 and o.word.isupper()}
+        stats["skip_all_caps"] += len(caps)
+        single = [o for o in single if o.idx not in caps]
         same_sense_idx = set()
         groups = collections.defaultdict(list)
         for o in single:
@@ -199,7 +262,7 @@ async def run(generation_id: str):
         plain, marked = W.passage(rd["span_keys"], span_text, cl)
         pages = sorted({o.page for o in cl})
         async with sem:
-            p, _ = await J._ab(llm, lambda x, y: W.flaw_prompt(lem, sense, marked, x, y), W.FLAW, W.FINE, pages)
+            p, _ = await J._ab(llm, lambda x, y: W.flaw_prompt(lem, sense, marked, x, y, len(by_lemma[lem])), W.FLAW, W.FINE, pages)
         return lem, sense, cl, plain, marked, pages, p
 
     judged = await asyncio.gather(*(judge(*c) for c in cands))
@@ -208,18 +271,25 @@ async def run(generation_id: str):
 
     async def alternatives(lem, sense, cl, marked):
         async with sem:
-            return await _alternatives(llm, lem, sense, marked, cl[1].page)
+            return await _alternatives(llm, lex, lem, sense, marked, cl[1].page, [o.word for o in cl])
 
     alts_of = await asyncio.gather(*(alternatives(lem, sense, cl, marked) for lem, sense, cl, _, marked, _, _ in kept))
+    bv = str(db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)["book_version_id"])
+    boxes = await asyncio.to_thread(_boxes, bv, [o for j in kept for o in j[2]])
     for (lem, sense, cl, plain, marked, pages, p), alts in zip(kept, alts_of):
+        here = cl[1].page
+        marks = [boxes[o.idx] for o in cl if o.page == here and o.idx in boxes]
+        stats["marked"] += bool(marks)
         where = ", ".join(f"s.{o.page} «{o.word}»" for o in cl)
         findings.append({
-            "page": cl[1].page, "severity": "WARN", "quote": plain,
+            "page": here, "severity": "WARN", "quote": plain, "bbox": boxes.get(cl[1].idx),
             "message": f"«{lem}» aynı anlamda ({sense['label']}) {len(cl)} kez yakın geçiyor: {where}.",
             "suggestion": ", ".join(alts) or None,
             "details": {"lemma": lem, "sense": sense["label"], "idiom": sense["idiom"], "count": len(cl),
                         "pages": pages, "forms": [o.word for o in cl], "p_flaw": round(p, 3),
-                        "passage_marked": marked, "window_sentences": ECHO_SENTENCES}})
+                        "passage_marked": marked, "window_sentences": ECHO_SENTENCES,
+                        # ekran için genel alanlar: grup (topluca karar), güven (sıralama), sayfadaki bütün geçişler
+                        "group": f"{lem} · {sense['label']}", "confidence": round(p, 3), "marks": marks}})
         stats["kept"] += 1
     findings.sort(key=lambda f: (f["page"], f["message"]))
 

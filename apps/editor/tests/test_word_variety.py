@@ -41,8 +41,8 @@ class _Item:
 
 
 class _A:
-    def __init__(self, lemma, pos, stem, sec=None):
-        self.dict_item, self.stem = _Item(lemma, pos, sec), stem
+    def __init__(self, lemma, pos, stem, sec=None, groups=(0,)):
+        self.dict_item, self.stem, self.group_boundaries = _Item(lemma, pos, sec), stem, list(groups)
 
 
 def occ(idx, sent, lemma="göz", page=1, span=1, start=0, end=3, form=None, sense=None, pos="Noun"):
@@ -62,37 +62,77 @@ def test_word_kind_names_and_words():
 
 
 def test_candidates_read_zemberek_items():
-    cs = W.candidates([_A("göz", "Noun", "göz"), _A("Göz", "Noun", "göz", "Prop"), _A("göz", "Noun", "göz")])
-    assert cs == [("göz", "Noun", 3, False), ("göz", "Noun", 3, True)]      # tekrar eden çözümleme bir kez
+    cs = W.candidates([_A("göz", "Noun", "göz"), _A("Göz", "Noun", "göz", "Prop"), _A("göz", "Noun", "göz"),
+                       _A("göz", "Noun", "göz", groups=(0, 2))])
+    # tekrar eden çözümleme bir kez; türetme sayısı çekim grubu sınırlarından
+    assert cs == [("göz", "Noun", 0, 3, False), ("göz", "Noun", 0, 3, True), ("göz", "Noun", 1, 3, False)]
 
 
 # ------------------------------------------------------------- kök seçimi
-def test_choose_lemmas_drops_proper_reading_and_prefers_longest_stem():
+# Adaylar sunucudaki gerçek Zemberek çözümlemelerinden (2026-09-25) alındı: (kök, tür, türetme, gövde, özel ad).
+def test_choose_lemmas_prefers_fewest_derivations():
     form_cands = {
-        "gül": [("gül", "Noun", 3, True), ("gül", "Noun", 3, False), ("gülmek", "Verb", 3, False)],
-        "gözlük": [("gözlük", "Noun", 6, False), ("göz", "Noun", 3, False)],     # türetme kendi maddesi
-        "gözüme": [("göz", "Noun", 3, False)],
+        "gözlük": [("gözlük", "Noun", 0, 6, False), ("göz", "Noun", 1, 3, False)],   # türetme kendi maddesi
+        "yüzdü": [("yüzmek", "Verb", 0, 3, False), ("yüz", "Num", 1, 3, False), ("yüz", "Noun", 1, 3, False)],
+        "gözüme": [("göz", "Noun", 0, 3, False)],
     }
-    out = W.choose_lemmas(form_cands, {"gül": 1, "gözlük": 1, "gözüme": 1})
+    out = W.choose_lemmas(form_cands, {"gözlük": 1, "yüzdü": 1, "gözüme": 1})
     assert out["gözlük"] == ("gözlük", "Noun", False)
+    assert out["yüzdü"] == ("yüzmek", "Verb", False)
     assert out["gözüme"] == ("göz", "Noun", False)
-    assert out["gül"][2] is True                                   # ad/fiil belirsiz, işaretli
+
+
+def test_rare_dictionary_item_loses_to_the_books_usage():
+    # "göze": göz+yönelme, "göze" (pınar), "gözemek"; kitapta "gözüme", "gözü" varsa göz
+    form_cands = {"göze": [("gözemek", "Verb", 0, 4, False), ("göz", "Noun", 0, 3, False), ("göze", "Noun", 0, 4, False)],
+                  "gözüme": [("göz", "Noun", 0, 3, False)], "gözü": [("göz", "Noun", 0, 3, False)]}
+    assert W.choose_lemmas(form_cands, {"göze": 1, "gözüme": 1, "gözü": 1})["göze"] == ("göz", "Noun", True)
+    # kitapta başka ipucu yoksa kısa gövde (yalın kök)
+    assert W.choose_lemmas({"göze": form_cands["göze"]}, {"göze": 1})["göze"][0] == "göz"
+    koşa = [("koşa", "Adv", 0, 4, False), ("koşa", "Adj", 0, 4, False), ("koşmak", "Verb", 0, 3, False)]
+    assert W.choose_lemmas({"koşa": koşa}, {"koşa": 1})["koşa"][0] == "koşmak"
+
+
+def test_proper_reading_drops_when_a_common_one_exists():
+    out = W.choose_lemmas({"mert": [("mert", "Adj", 0, 4, False), ("mert", "Noun", 0, 4, True)]}, {"mert": 1})
+    assert out["mert"] == ("mert", "Adj", False)
 
 
 def test_choose_lemmas_ambiguity_follows_the_books_own_usage():
     # "yüz" hem ad hem "yüzmek"in kökü; kitapta tek çözümlü "yüzdü", "yüzüyor" çoksa fiil seçilir
-    form_cands = {"yüz": [("yüz", "Noun", 3, False), ("yüzmek", "Verb", 3, False)],
-                  "yüzdü": [("yüzmek", "Verb", 3, False)], "yüzüyor": [("yüzmek", "Verb", 3, False)],
-                  "yüzünü": [("yüz", "Noun", 3, False)]}
+    form_cands = {"yüz": [("yüz", "Noun", 0, 3, False), ("yüzmek", "Verb", 0, 3, False)],
+                  "yüzdü": [("yüzmek", "Verb", 0, 3, False)], "yüzüyor": [("yüzmek", "Verb", 0, 3, False)],
+                  "yüzünü": [("yüz", "Noun", 0, 3, False)]}
     out = W.choose_lemmas(form_cands, {"yüz": 1, "yüzdü": 4, "yüzüyor": 2, "yüzünü": 1})
     assert out["yüz"] == ("yüzmek", "Verb", True)
     out = W.choose_lemmas(form_cands, {"yüz": 1, "yüzdü": 1, "yüzüyor": 1, "yüzünü": 5})
     assert out["yüz"] == ("yüz", "Noun", True)
 
 
-def test_same_lemma_several_pos_is_not_ambiguous():
-    out = W.choose_lemmas({"güzel": [("güzel", "Adj", 5, False), ("güzel", "Adv", 5, False)]}, {"güzel": 1})
-    assert out["güzel"] == ("güzel", "Adj", False)
+def test_pos_function_reading_wins_for_function_words():
+    bir = [("bir", "Det", 0, 3, False), ("bir", "Adj", 0, 3, False), ("bir", "Num", 0, 3, False), ("bir", "Adv", 0, 3, False)]
+    güzel = [("güzel", "Adv", 0, 5, False), ("güzel", "Adj", 0, 5, False), ("güzel", "Noun", 0, 5, False)]
+    yüz = [("yüz", "Num", 0, 3, False), ("yüz", "Noun", 0, 3, False)]
+    out = W.choose_lemmas({"bir": bir, "güzel": güzel, "yüzünü": yüz}, {"bir": 1, "güzel": 1, "yüzünü": 1})
+    assert out["bir"] == ("bir", "Det", False)                   # işlev sözcüğü: tekrar adayı olmaz
+    assert out["güzel"] == ("güzel", "Adj", False)               # aynı kökün birden çok türü belirsizlik değil
+    assert out["yüzünü"] == ("yüz", "Noun", False)               # sayı tek başına işlev saymaz
+
+
+def test_closed_class_bare_form_wins():
+    # sunucudaki gerçek çözümlemeler: "de" demek'in emri, "ile" il+e, "için" iç+in, "o" sıfat da olabilir
+    cands = {"de": [("de", "Conj", 0, 2, False), ("demek", "Verb", 0, 2, False), ("de", "Noun", 0, 2, False)],
+             "ile": [("ile", "Postp", 0, 3, False), ("ile", "Conj", 0, 3, False), ("ilmek", "Verb", 0, 2, False),
+                     ("il", "Noun", 0, 2, False)],
+             "için": [("için", "Postp", 0, 4, False), ("içmek", "Verb", 0, 2, False), ("iç", "Noun", 0, 2, False)],
+             "o": [("o", "Det", 0, 1, False), ("o", "Interj", 0, 1, False), ("o", "Adj", 0, 1, False), ("o", "Pron", 0, 1, False)],
+             "dedi": [("demek", "Verb", 0, 2, False)], "ilde": [("il", "Noun", 0, 2, False)]}
+    out = W.choose_lemmas(cands, {k: 1 for k in cands})
+    assert out["de"] == ("de", "Conj", False)
+    assert out["ile"][0] == "ile" and out["ile"][1] in W.FUNCTION_POS
+    assert out["için"] == ("için", "Postp", False)
+    assert out["o"][0] == "o" and out["o"][1] in W.FUNCTION_POS
+    assert out["dedi"] == ("demek", "Verb", False) and out["ilde"] == ("il", "Noun", False)   # ekli biçim etkilenmez
 
 
 def test_unanalysed_form_is_left_out():
@@ -226,6 +266,41 @@ def test_marked_context_and_flaw_prompt():
     assert W.marked_context(t, s, s + 6, 8) == "…açtı ve [[gözüme]] toz kaç…"
     p = W.flaw_prompt("göz", {"label": "organ", "idiom": ""}, "x [[göz]] y [[göz]]", W.FLAW, W.FINE)
     assert "«göz» (anlamı: organ)" in p and p.endswith("Yalnız A ya da B yaz.")
+    assert "kitabın tamamında 14 kez" in W.flaw_prompt("göz", None, "x", W.FLAW, W.FINE, 14)
+
+
+# ------------------------------------------------------------- sayfadaki yer ve öneri
+def test_norm_word_strips_punctuation_and_lowercases_turkish():
+    assert W.norm_word("«Ağacı,") == "ağacı"
+    assert W.norm_word("–IŞIK!") == "ışık"
+    assert W.norm_word("Mert’in") == "mert'in"
+
+
+def test_pick_box_matches_by_order_only_when_counts_agree():
+    words = [("ağaç", [1, 1, 2, 2]), ("ve", [3, 3, 4, 4]), ("ağaç", [5, 5, 6, 6])]
+    assert W.pick_box(words, "Ağaç", 1, 2) == [5, 5, 6, 6]
+    assert W.pick_box(words, "ağaç", 0, 3) is None                  # metinde 3, sayfada 2: sıra güvenilmez
+    assert W.pick_box([("dut", [7, 7, 8, 8])], "Dut", 0, 1) == [7, 7, 8, 8]
+    assert W.pick_box([], "dut", 0, 1) is None                       # metin katmanı yok (OCR sayfası)
+
+
+def test_to1000_uses_the_page_rect():
+    assert W.to1000((50, 100, 150, 200), (0, 0, 500, 1000)) == [100, 100, 300, 200]
+    assert W.to1000((60, 110, 160, 210), (10, 10, 510, 1010)) == [100, 100, 300, 200]
+
+
+def test_valid_suggestion_needs_every_word_in_the_dictionary():
+    known = {"anlasaydı", "fark", "etseydi", "gövdesine"}
+    ok = lambda w: w in known
+    assert W.valid_suggestion("anlasaydı", ok)
+    assert W.valid_suggestion("fark etseydi", ok)
+    assert not W.valid_suggestion("anlasayd", ok)
+    assert not W.valid_suggestion("   ", ok)
+
+
+def test_keeps_meaning_prompt_names_the_second_occurrence():
+    p = W.keeps_meaning_prompt("x [[dut]] y [[dut]]", "dut", "incir", W.SAME, W.DIFFERENT)
+    assert "«dut» yerine «incir»" in p and p.endswith("Yalnız A ya da B yaz.")
 
 
 if __name__ == "__main__":

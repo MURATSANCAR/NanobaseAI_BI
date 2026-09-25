@@ -1607,6 +1607,12 @@ export type ProofingFinding = {
   /** Denetimin varsayımı bu tür kitapta geçerli değilse (ör. kişisel gelişim kitabında eşya sürekliliği)
    *  bulgu öneri olarak gelir: seviye INFO, burada nedeni. Eski kart servisi göndermez. */
   advisory?: string | null;
+  /** Birlikte karar verilebilecek bulguların ortak anahtarı (ör. kelime tekrarında «kök · anlam»). */
+  group?: string | null;
+  /** Modelin bulguya güveni (0..1); gruplu görünümde sıralama için. */
+  confidence?: number | null;
+  /** Aynı sayfada işaretlenecek öbür yerler (0..1000); ör. tekrarın bütün geçişleri. */
+  marks?: Array<[number, number, number, number]> | null;
 };
 /** Eşleşme köprüde kitap adıyla yapılır; `bookId` null ise eser motorda okunmamıştır. */
 export type ProofingReport = {

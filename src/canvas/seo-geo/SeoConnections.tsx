@@ -55,7 +55,7 @@ export default function SeoConnections() {
             <p>Gerekli: Merchant Center’da servis hesabı kullanıcı olarak ve hesap kimliği.</p>
           </Item>
           <Item title="Yapay zekâ ölçümü" ok={false} okText="">
-            <p>İzlenen soruların ChatGPT, Gemini ve Perplexity’ye düzenli sorulması. Dış servislerin API anahtarı ve ücreti için ayrı karar gerekiyor.</p>
+            <p>İzlenen sorular Gemini (ücretsiz), ChatGPT, Perplexity ve Claude’a (ücretli) resmî API’leriyle sorulur. Anahtarlar: Yönetim → Yapay zekâ görünürlüğü. Durum: AI görünürlük ekranı.</p>
           </Item>
         </div>
       )}

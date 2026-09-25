@@ -1,9 +1,10 @@
 import { useDeferredValue, useMemo, useState, type ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { ChevronRight, Search } from 'lucide-react';
-import { ENGINE_ENABLED, proofingApi, type WordMap, type WordMapEntry } from '../engine';
-import { Loading, Note, Pill, errText, field, nf } from '../admin/ui';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Check, ChevronRight, Loader2, Search, X } from 'lucide-react';
+import { ENGINE_ENABLED, proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingFinding, type WordMap, type WordMapEntry } from '../engine';
+import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { Panel } from './kit';
+import { RejectForm } from './ProofEvidence';
 
 /** M5: kitabın tekil kelime haritası (son okuma «Kelime çeşitliliği ve yakın tekrar» denetimi).
  *  Her kök bir kez: kaç kez geçtiği, ekli biçimleri, sayfaları; iki kez ya da daha çok geçen içerik
@@ -18,7 +19,7 @@ const POS: Record<string, string> = {
 const CONTENT = new Set(['Noun', 'Adj', 'Adv', 'Verb']);
 const STEP = 60;
 
-type Tab = 'all' | 'poly' | 'near' | 'unknown';
+type Tab = 'repeats' | 'all' | 'poly' | 'near' | 'unknown';
 
 const lower = (s: string) => s.replace(/I/g, 'ı').replace(/İ/g, 'i').toLocaleLowerCase('tr-TR');
 
@@ -139,8 +140,145 @@ function WordRow({ w, open, onToggle }: { w: WordMapEntry; open: boolean; onTogg
   );
 }
 
-function Body({ m }: { m: WordMap }) {
-  const [tab, setTab] = useState<Tab>('all');
+type RepeatGroup = { key: string; rows: ProofingFinding[]; top: number; pages: number[]; open: number };
+
+/** Aynı kök + aynı anlamın yakın tekrar bulguları tek satırda: modelin güveni yüksek olan üstte,
+ *  karar verilmişler en altta. Topluca «Doğru» ya da «Yanlış alarm» (gerekçeyle) her bulguya ayrı
+ *  karar olarak yazılır (kuralın isabeti bulgu başına sayılır); tek tek karar üstteki listededir. */
+function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFinding[] }) {
+  const qc = useQueryClient();
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  const [busy, setBusy] = useState<{ key: string; done: number; total: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const groups = useMemo<RepeatGroup[]>(() => {
+    const by = new Map<string, ProofingFinding[]>();
+    for (const f of findings) {
+      const k = f.group || f.message;
+      by.set(k, [...(by.get(k) ?? []), f]);
+    }
+    return [...by.entries()]
+      .map(([key, rows]) => ({
+        key,
+        rows: [...rows].sort((a, b) => (a.page ?? 0) - (b.page ?? 0)),
+        top: Math.max(...rows.map((r) => r.confidence ?? 0)),
+        pages: [...new Set(rows.map((r) => r.page).filter((p): p is number => p !== null))].sort((a, b) => a - b),
+        open: rows.filter((r) => !r.decision).length,
+      }))
+      .sort((a, b) => (a.open > 0 ? 0 : 1) - (b.open > 0 ? 0 : 1) || b.top - a.top || b.rows.length - a.rows.length);
+  }, [findings]);
+
+  const decideAll = async (g: RepeatGroup, verdict: ProofVerdict, reasonCode?: ProofReasonCode, note?: string) => {
+    const todo = g.rows.filter((r) => r.id && r.decision?.verdict !== verdict);
+    setError(null);
+    setBusy({ key: g.key, done: 0, total: todo.length });
+    try {
+      for (let i = 0; i < todo.length; i++) {
+        await proofingApi.decide({ bookId, findingId: todo[i].id as string, verdict, reasonCode, note: note || undefined });
+        setBusy({ key: g.key, done: i + 1, total: todo.length });
+      }
+      setRejecting(null);
+    } catch (e) {
+      setError(errText(e, 'Karar kaydedilemedi.'));
+    } finally {
+      setBusy(null);
+      void qc.invalidateQueries({ queryKey: ['editorial', 'proofing'] });
+    }
+  };
+
+  if (!groups.length) return <Empty>Yakın tekrar bulgusu yok.</Empty>;
+  return (
+    <>
+      {error && (
+        <div className="mt-2">
+          <Note tone="err">{error}</Note>
+        </div>
+      )}
+      <ul className="mt-2 space-y-1.5">
+        {groups.map((g) => {
+          const [lemma, sense] = g.key.split(' · ');
+          const running = busy?.key === g.key;
+          const open = openKey === g.key;
+          const accepted = g.rows.every((r) => r.decision?.verdict === 'ACCEPT');
+          const rejected = g.rows.every((r) => r.decision?.verdict === 'REJECT');
+          return (
+            <li key={g.key} className={`rounded-xl border border-slate-100 bg-white/85 ${g.open === 0 ? 'opacity-75' : ''}`}>
+              <div className="flex flex-wrap items-center gap-2 px-3 py-2">
+                <button type="button" aria-expanded={open} onClick={() => setOpenKey(open ? null : g.key)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                  <ChevronRight aria-hidden className={`h-3.5 w-3.5 shrink-0 text-canvas-muted transition-transform duration-150 ease-out ${open ? 'rotate-90' : ''}`} />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[13px] font-extrabold">
+                      {lemma} {sense && <span className="font-semibold text-canvas-muted">· {sense}</span>}
+                    </span>
+                    <span className="block truncate text-[11px] text-canvas-muted">
+                      {nf.format(g.rows.length)} yer · <Pages pages={g.pages} /> · güven %{Math.round(g.top * 100)}
+                    </span>
+                  </span>
+                </button>
+                {accepted ? <Pill tone="ok">Doğru</Pill> : rejected ? <Pill tone="muted">Yanlış alarm</Pill> : null}
+                <span className="flex shrink-0 gap-1">
+                  <button
+                    type="button"
+                    disabled={!!busy || accepted}
+                    onClick={() => void decideAll(g, 'ACCEPT')}
+                    aria-label={`${lemma}: hepsi doğru`}
+                    className={`${btnGhost} min-h-9 px-2.5 text-[11.5px]`}
+                  >
+                    {running && rejecting !== g.key ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : <Check aria-hidden className="h-3.5 w-3.5" />}
+                    Hepsi doğru
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!!busy || rejected}
+                    onClick={() => setRejecting(rejecting === g.key ? null : g.key)}
+                    aria-label={`${lemma}: hepsi yanlış alarm`}
+                    className={`${btnGhost} min-h-9 px-2.5 text-[11.5px]`}
+                  >
+                    <X aria-hidden className="h-3.5 w-3.5" />
+                    Yanlış alarm
+                  </button>
+                </span>
+              </div>
+              {running && (
+                <p className="px-3 pb-2 font-mono text-[11px] tabular-nums text-canvas-muted">
+                  {nf.format(busy?.done ?? 0)}/{nf.format(busy?.total ?? 0)} karar yazıldı
+                </p>
+              )}
+              {rejecting === g.key && (
+                <div className="px-3 pb-2">
+                  <RejectForm busy={running} onCancel={() => setRejecting(null)} onSave={(r, note) => void decideAll(g, 'REJECT', r, note)} />
+                </div>
+              )}
+              {open && (
+                <ul className="space-y-1.5 border-t border-slate-100 px-3 py-2 text-[12px]">
+                  {g.rows.map((f, i) => (
+                    <li key={f.id ?? i} className="rounded-lg bg-slate-50 px-2 py-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="font-mono text-[11px] font-bold tabular-nums">s. {f.page ?? '—'}</span>
+                        {f.decision && <Pill tone={f.decision.verdict === 'ACCEPT' ? 'ok' : 'muted'}>{f.decision.verdict === 'ACCEPT' ? 'Doğru' : 'Yanlış alarm'}</Pill>}
+                        {f.confidence != null && <span className="ml-auto font-mono text-[10.5px] tabular-nums text-canvas-muted">%{Math.round(f.confidence * 100)}</span>}
+                      </div>
+                      {f.quote && <p className="mt-0.5 break-words leading-snug">“{f.quote}”</p>}
+                      {f.suggestion && (
+                        <p className="mt-0.5 break-words text-[11.5px] text-canvas-muted">
+                          <span className="font-bold text-canvas-ink">Öneri:</span> {f.suggestion}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </>
+  );
+}
+
+function Body({ m, bookId, findings }: { m: WordMap; bookId: string; findings: ProofingFinding[] }) {
+  const [tab, setTab] = useState<Tab>(findings.length ? 'repeats' : 'all');
   const [q, setQ] = useState('');
   const query = lower(useDeferredValue(q).trim());
   const [withFunction, setWithFunction] = useState(false);
@@ -187,6 +325,9 @@ function Body({ m }: { m: WordMap }) {
       )}
 
       <div className="mt-3 flex flex-wrap items-center gap-1.5" role="group" aria-label="Görünüm">
+        <TabChip active={tab === 'repeats'} count={new Set(findings.map((f) => f.group || f.message)).size} onClick={() => reset('repeats')}>
+          Tekrar bulguları
+        </TabChip>
         <TabChip active={tab === 'all'} onClick={() => reset('all')}>
           Bütün kökler
         </TabChip>
@@ -201,6 +342,7 @@ function Body({ m }: { m: WordMap }) {
         </TabChip>
       </div>
 
+      {tab !== 'repeats' && (
       <div className="mt-2 flex flex-wrap items-center gap-2">
         <label className="relative min-w-0 flex-1 basis-48">
           <span className="sr-only">Kök ya da biçim ara</span>
@@ -229,8 +371,11 @@ function Body({ m }: { m: WordMap }) {
         )}
         <span className="ml-auto whitespace-nowrap font-mono text-[11px] tabular-nums text-canvas-muted">{nf.format(shownCount)} kayıt</span>
       </div>
+      )}
 
-      {tab === 'near' ? (
+      {tab === 'repeats' ? (
+        <Repeats bookId={bookId} findings={findings} />
+      ) : tab === 'near' ? (
         near.length === 0 ? (
           <Empty>Yan yana geçip farklı anlamda kullanılan kök yok.</Empty>
         ) : (
@@ -277,7 +422,7 @@ function Body({ m }: { m: WordMap }) {
         </ul>
       )}
 
-      {shownCount > limit && (
+      {tab !== 'repeats' && shownCount > limit && (
         <button
           type="button"
           onClick={() => setLimit((l) => l + STEP * 5)}
@@ -294,7 +439,8 @@ function Empty({ children }: { children: ReactNode }) {
   return <p className="py-6 text-center text-[12.5px] leading-snug text-canvas-muted">{children}</p>;
 }
 
-export function WordMapPanel({ bookId }: { bookId: string }) {
+/** `findings`: aynı kitabın son okuma raporundaki kelime tekrarı bulguları (gruplu karar için). */
+export function WordMapPanel({ bookId, findings = [] }: { bookId: string; findings?: ProofingFinding[] }) {
   const q = useQuery({
     queryKey: ['editorial', 'wordMap', bookId],
     queryFn: () => proofingApi.wordMap(bookId),
@@ -316,7 +462,7 @@ export function WordMapPanel({ bookId }: { bookId: string }) {
         ) : !m?.ready ? (
           <Note tone="info">Bu kitabın kelime haritası henüz çıkarılmadı. Son okuma denetimleri yeniden koşunca burada görünür.</Note>
         ) : (
-          <Body m={m} />
+          <Body m={m} bookId={bookId} findings={findings} />
         )}
       </div>
     </Panel>

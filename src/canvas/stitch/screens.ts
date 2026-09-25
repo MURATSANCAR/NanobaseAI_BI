@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { BookImage, BookUser, ClipboardCheck, CornerDownRight, FileText, Contact, FileSignature, Gauge, History, House, Newspaper, Languages, LayoutDashboard, PenLine, Plug, Route, Search, Sparkles, SpellCheck, UserCog, UsersRound } from 'lucide-react';
+import { BookImage, BookUser, Braces, ClipboardCheck, CornerDownRight, FileText, Contact, FileSignature, Gauge, History, House, Newspaper, Languages, LayoutDashboard, PenLine, Plug, Route, Search, Sparkles, SpellCheck, UserCog, UsersRound } from 'lucide-react';
 import type { AlertSummary } from '../data';
 import { conditionLabel, dateTime, money, num, relative } from '../format';
 import type { CfoData } from '../cfo';
@@ -93,6 +93,7 @@ export const seoRail = (active: string): StitchRailItem[] =>
     { to: '/seo-geo/ai-gorunurluk', label: 'AI görünürlük', group: 'İzleme', icon: railIcon(Sparkles) },
     { to: '/seo-geo/sayfalar', label: 'Yazar ve kategori', group: 'İş', icon: railIcon(BookUser) },
     { to: '/seo-geo/yonlendirmeler', label: 'Yönlendirmeler', group: 'İş', icon: railIcon(CornerDownRight) },
+    { to: '/seo-geo/sema', label: 'Şema denetimi', group: 'İş', icon: railIcon(Braces) },
     { to: '/seo-geo/llms', label: 'llms.txt', group: 'İş', icon: railIcon(FileText) },
     { to: '/seo-geo/urun-denetimi', label: 'Ürün denetimi', group: 'İş', icon: railIcon(ClipboardCheck) },
     { to: '/seo-geo/gecmis', label: 'Karar geçmişi', group: 'İş', icon: railIcon(History) },

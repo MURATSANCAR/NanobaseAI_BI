@@ -105,6 +105,12 @@ def _decisions(c, gid: str, run_ids: list[str]):
         k[0 if r['verdict']=='ACCEPT' else 1]+=r['n']
     return {str(r['finding_id']):_decision.public(r) for r in cur},counts
 
+def _num(v):
+    try:
+        return float(v) if v is not None else None
+    except (TypeError, ValueError):
+        return None
+
 def _proofed_generation(c, book_id: str):
     """Son okumanın gösterileceği nesil: denetimi koşmuş EN YENİ nesil; hiçbiri koşmadıysa en yeni nesil.
     Kitap yeniden analiz edilirken yeni nesil henüz denetlenmemiştir; en yeniyi körü körüne almak ekrandaki
@@ -133,7 +139,8 @@ def book_proofing(book_id: UUID):
                 ' FROM ed.proof_run WHERE generation_id=%s ORDER BY check_name, started_at DESC',(gid,)).fetchall()
             rows=c.execute(
                 "SELECT id, check_name, page_no, severity, message, quote, suggestion, bbox,"
-                " details->>'advisory' AS advisory FROM ed.proof_finding"
+                " details->>'advisory' AS advisory, details->>'group' AS grp, details->>'confidence' AS confidence,"
+                " details->'marks' AS marks FROM ed.proof_finding"
                 ' WHERE run_id = ANY(%s) ORDER BY page_no NULLS FIRST, severity DESC, created_at',
                 ([r['id'] for r in runs],)).fetchall() if runs else []
         except psycopg.errors.UndefinedTable:
@@ -156,6 +163,9 @@ def book_proofing(book_id: UUID):
                          'suggestion':r['suggestion'],'bbox':r['bbox'],
                          # set when the check's premise does not hold for this kind of book (proofing.as_advice)
                          'advisory':r['advisory'],
+                         # optional, set by checks that need them (word_variety): a group key for deciding
+                         # related findings together, the model's confidence, extra boxes on the same page
+                         'group':r['grp'],'confidence':_num(r['confidence']),'marks':r['marks'],
                          'decision':decisions.get(str(r['id']))} for r in rows]}
 
 @app.get('/v1/books/{book_id}/proofing/word-map')

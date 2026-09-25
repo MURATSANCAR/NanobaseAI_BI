@@ -1,4 +1,4 @@
-# Kelime çeşitliliği ve yakın tekrar (`word_variety`) — ÖLÇÜM BEKLİYOR
+# Kelime çeşitliliği ve yakın tekrar (`word_variety`) — ÖLÇÜM BEKLİYOR (sayılar var, editör kararı yok)
 
 Kaynak: `src/editor/proofing/word_variety.py` (hat, model çağrıları), `_word_variety.py` (saf
 parçalar), `_spelling_text.py` (okuma + Zemberek sözlüğü), `_spelling_judge.py` (`_ab`, `KEEP`) (v1).
@@ -28,9 +28,13 @@ kökün o cümlede hangi anlamda olduğu; bağlam işi — kuralla çözülmez).
   yanlış. **Reddedildi.**
 - **Zemberek morfolojisi (zeyrek)**: editörde zaten var (yazım denetimi kullanıyor, MIT/Apache).
   Biçimi sözlük maddesine indirir, türünü (ad/fiil/sıfat/zarf/zamir…) verir; fiil maddesi mastardır
-  («yüzmek»), ad «yüz» ile karışmaz. Birden çok çözümlemede kural: özel ad okuması düşer → en uzun
-  gövde (türetilmiş sözcük kendi maddesidir: «gözlük» ≠ göz) → kitapta tek çözümlü biçimleriyle sık
-  olan kök. **Seçildi.**
+  («yüzmek»), ad «yüz» ile karışmaz. Birden çok çözümlemede kural: özel ad okuması düşer → en az
+  türetmeli çözümleme (çekim grubu sınırı; türetilmiş sözcük kendi maddesidir: «gözlük» ≠ göz+lük,
+  «yüzdü» = yüzmek) → kitapta tek çözümlü biçimleriyle sık olan kök («gözüme», «gözü» varsa «göze» →
+  göz, pınar anlamındaki «göze» değil) → kısa gövde («koşa» → koşmak). Kökün çözümlemelerinde
+  belirteç/zamir/bağlaç/edat/soru/ünlem varsa işlev sözcüğüdür («bir»). **Seçildi.**
+  İlk sürüm «en uzun gövde» kuralıydı; sunucudaki gerçek Zemberek çözümlemesiyle denenince «göze»yi
+  pınar maddesine, «koşa»yı sıfata, «bir»i içerik sözcüğüne götürdü (2026-09-25) — düzeltildi.
 
 **Anlam için:**
 - Sözlükteki anlam listesi (TDK): elde lisanslı bir anlam veritabanı yok; olsa da hangi anlamın
@@ -113,6 +117,19 @@ sırada sorulup ortalanır).
 
 Hiçbiri tek kitapta ayarlanmadı; `ECHO_SENTENCES=1` redaksiyon alışkanlığıdır, ölçülene kadar öyle.
 
+## 4b. Sürüm 2 (2026-09-25) — ne değişti
+
+- **Sayfada işaret:** bulgunun `bbox`'ı ikinci geçişin (ilk tekrarın) kutusu; `details.marks` aynı sayfadaki
+  bütün geçişlerin kutuları. Kutu, sayfanın basılı sözcükleri (PyMuPDF `words`, okuma sırası) içinde aynı
+  sözcüğün kaçıncı geçişi olduğuyla bulunur; sayfadaki sayı bizim metnimizdekiyle tutmazsa ya da sözcük
+  satır sonunda bölünmüşse işaret konmaz (yanlış yeri işaretlemektense işaret yok). OCR sayfasında işaret yok.
+- **Genel alanlar** (kart servisi `GET …/proofing` her bulguda, köprü ve kanvas taşır): `group`
+  («kök · anlam», topluca karar), `confidence` (modelin «düzeltilmeli» olasılığı), `marks`.
+- **Öneri:** ikinci geçişin ekli hâliyle istenir; sözlükte olmayan biçim ve aynı kökün çekimi atılır; kalan her
+  öneriye kapalı soru «yerine konunca anlam korunuyor mu» (iki sıra, `KEEP`).
+- **Anlam:** istem anlamları kaba tutar (aynı anlamın farklı nesne/eklerle kullanımı tek anlam; deyim ayrı).
+- VERSION 2: kural değişti, isabet sıfırdan sayılır.
+
 ## 5. Bulgu biçimi
 
 ```json
@@ -148,7 +165,23 @@ Anlam çağrısı ≈ (≥2 geçişli içerik kökü geçişleri) / 80. Resimli 
 5–20 çağrı. 300 sayfalık roman (~80 bin sözcük, ~40 bin içerik geçişi): ~500 çağrı + yargı (aday
 başına 2 tek-token çağrı). Tek-token çağrılar ucuz; anlam çağrıları düşünme kapalı, JSON.
 
-## 8. Ölçüm — BEKLİYOR
+## 8. Ölçüm — BEKLİYOR (ilk gerçek koşu 2026-09-25)
+
+**İlk koşu — «Dilek Ağacı» (64 sayfa, nesil `54cc9789`), insan kararı yok, yalnız sayı:**
+
+| tur | ne değişti | bulgu | aday | bilinçli diye düşen | farklı anlamda yakın | çok anlamlı kök | deyim |
+|---|---|---|---|---|---|---|---|
+| dry 1 | ilk kod (en uzun gövde) | 154 | 207 | 53 | 44 | 171 | 79 |
+| dry 2 | en az türetme + kapalı sınıf + büyük harf başlık + kitap sıklığı yargıda | 123 | 151 | 28 | 11 | 160 | 50 |
+| gerçek | aynı kod, öneri ayıklama | 122 | 150 | 28 | 12 | 155 | 51 |
+
+Kitap: 3.670 sözcük geçişi, 866 kök (766 içerik), 390 bir kez geçen, MTLD (kök) 87,3; anlam çağrısı 31,
+atanamayan geçiş 0; süre ~6 dk. Tur 1'in kök hataları (gözle): «de» → demek, «ile» → il, «için» → iç,
+«ben/o» içerik sözcüğü; tur 2'de yok. Kalan gözlem: «işte» → iş (Zemberek «işte»yi yalın işlev sözcüğü
+vermiyor), «ünlü» → ün (sözlükte ayrı madde yok), «olmak/almak» çok ince anlam bölünmesi (almak 16 anlam).
+Bulguların çoğu gerçek yakın tekrar görünüyor («yürüdüler … yürüdüm», «korktum … korktuğum»), ama
+kesinlik editör kararıyla ölçülecek; çocuk kitabında bilinçli yinelemenin payı henüz bilinmiyor.
+
 
 Yapılacak (gerçek kitapta, `--dry`):
 `docker exec editor-mcp python -m editor.proofing <gen> --only word_variety --dry`
@@ -165,8 +198,8 @@ Yapılacak (gerçek kitapta, `--dry`):
 - **Kitap geneli aşırı kullanım** («aslında» 200 kez) v1'de bulgu değil: haritada sıklık var ama
   «bu kitapta fazla» demek için karşılaştırma derlemi gerekir. Aday derlem: editörün okuduğu öbür
   kitaplar (tür bazında kök sıklığı) — kitaba özel değil, veri. v2.
-- **Portal ekranı**: harita şu an kart servisinde (JSON). Köprü (`editorial_cards`) + kanvas ekranı
-  (kök arama, anlam dökümü, sayfa atlama) ayrı iş.
+- **Portal ekranı** (2026-09-25): Son Okuma (M5) → «Kelime haritası» paneli (`src/canvas/editorial/WordMapPanel.tsx`);
+  köprü `GET /api/v1/editorial/proofing/word-map?bookId=`. Sayfaya atlama yok (sayfa numarası metin).
 - **Bölüm bazında çeşitlilik** (MTLD bölüm bölüm): bölüm sınırı defterde kesinleşince.
 - Deyim yalnız model etiketinden gelir; deyim sözlüğü yok.
 - Zemberek'in bilmediği biçimler (yöresel, uydurma) haritada `unknown_forms`'ta kalır; tekrarları

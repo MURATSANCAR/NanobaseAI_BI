@@ -47,9 +47,15 @@ def word_kind(base: str, apos: str, sent_start: bool) -> str:
     return "word"
 
 
-def candidates(analyses) -> list[tuple[str, str, int, bool]]:
-    """Zemberek çözümlemeleri → (kök, tür, gövde uzunluğu, özel ad mı). Kök = sözlük maddesi
-    (fiillerde mastar: "yüzmek"; ad "yüz" ile karışmaz)."""
+# Bir kökün çözümlemelerinden biri bu türlerdense kök işlev sözcüğüdür ("bir": belirteç/sıfat/sayı/zarf;
+# "o": zamir/belirteç). Sayı tek başına işlev saymaz: "yüz" hem sayı hem ad (surat).
+FUNCTION_POS = ("Det", "Pron", "Conj", "Postp", "Ques", "Interj")
+
+
+def candidates(analyses) -> list[tuple[str, str, int, int, bool]]:
+    """Zemberek çözümlemeleri → (kök, tür, türetme sayısı, gövde uzunluğu, özel ad mı). Kök = sözlük
+    maddesi (fiilde mastar: "yüzmek"; ad "yüz" ile karışmaz). Türetme sayısı çözümlemenin çekim
+    grubu sınırlarından (`group_boundaries`): "gözlük" maddesi 0, göz+lük 1."""
     out = []
     for a in analyses:
         item = getattr(a, "dict_item", None)
@@ -58,39 +64,52 @@ def candidates(analyses) -> list[tuple[str, str, int, bool]]:
         pos = getattr(getattr(item, "primary_pos", None), "value", None) or UNKNOWN_POS
         sec = getattr(getattr(item, "secondary_pos", None), "value", None)
         stem = getattr(a, "stem", None) or item.lemma
-        out.append((lower_tr(item.lemma), pos, len(stem), sec == "Prop"))
+        derivations = max(0, len(getattr(a, "group_boundaries", None) or [0]) - 1)
+        out.append((lower_tr(item.lemma), pos, derivations, len(stem), sec == "Prop"))
     return list(dict.fromkeys(out))
 
 
-def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, bool]]],
+def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, int, bool]]],
                   form_counts: dict[str, int]) -> dict[str, tuple[str, str, bool]]:
     """Her biçim için tek kök: (kök, tür, belirsiz mi).
 
     1. Özel ad çözümlemesi, sıradan çözümleme varken düşer ("Gül" / "gül").
-    2. En uzun gövde kazanır: türetilmiş sözcük kendi maddesidir ("gözlük" göz+lük değil,
-       "gözlük"); çekim ekleri gövdeyi kısaltmaz.
-    3. Kalan birden çoksa, kitapta TEK çözümlemeyle geçen biçimlerinin sıklığı büyük olan kök
-       (kitabın kendi kullanımı); eşitlikte alfabetik (tekrarlanabilir sonuç). `belirsiz` işaretlenir.
+    2. En az türetmeli çözümleme kalır: türetilmiş sözcük kendi maddesidir ("gözlük" ≠ göz+lük;
+       "yüzdü" = yüzmek, yüz+ek fiil değil).
+    0. Biçim bir işlev sözcüğünün yalın hâliyse o okuma (`closed`).
+    3. Kalan birden çok kök varsa: kitapta TEK kökle çözümlenen biçimlerinin sıklığı büyük olan
+       (kitabın kendi kullanımı: "gözüme", "gözü" varsa "göze" → göz, pınar anlamındaki "göze" değil);
+       eşitlikte kısa gövde (yalın kök, ekli okumadan sık: "koşa" → koşmak), sonra alfabetik.
+       `belirsiz` işaretlenir.
+    Tür: kökün çözümlemelerinde işlev türü (FUNCTION_POS) varsa o; yoksa içerik türü önde.
     Çözümlemesi olmayan biçim listede yoktur (bilinmeyen: haritada ayrı sayılır)."""
     def trimmed(cs):
-        common = [c for c in cs if not c[3]]
-        cs = common or cs
-        top = max(c[2] for c in cs)
-        return list(dict.fromkeys((c[0], c[1]) for c in cs if c[2] == top))
+        cs = [c for c in cs if not c[4]] or cs
+        low = min(c[2] for c in cs)
+        return [c for c in cs if c[2] == low]
 
-    pre = {f: trimmed(cs) for f, cs in form_cands.items() if cs}
+    def closed(f, cs):
+        """Biçim bir işlev sözcüğünün yalın hâliyse o okuma: "de" bağlaç (demek'in emri değil),
+        "ile"/"için" edat (il+e, iç+in değil), "o" zamir. Kapalı sınıf sözcükleri metinde ezici
+        sıklıktadır; eş yazılı ekli okuma nadirdir."""
+        return [c for c in cs if c[0] == f and c[1] in FUNCTION_POS and c[2] == 0 and not c[4]]
+
+    pre = {f: (closed(f, cs) or trimmed(cs)) for f, cs in form_cands.items() if cs}
     sure = collections.Counter()
     for f, cs in pre.items():
         if len({c[0] for c in cs}) == 1:
             sure[cs[0][0]] += form_counts.get(f, 1)
     out = {}
     for f, cs in pre.items():
-        lemmas = sorted({c[0] for c in cs})
-        best = sorted(lemmas, key=lambda lem: (-sure[lem], lem))[0]
-        pos = sorted(c[1] for c in cs if c[0] == best)
-        # aynı kökün birden çok türü (sıfat/ad/zarf "güzel") belirsizlik değildir; içerik türü önde
+        stem_of = {}
+        for c in cs:
+            stem_of[c[0]] = min(stem_of.get(c[0], 99), c[3])
+        lemmas = sorted(stem_of)
+        best = sorted(lemmas, key=lambda lem: (-sure[lem], stem_of[lem], lem))[0]
+        pos = sorted({c[1] for c in cs if c[0] == best})
+        func = [p for p in pos if p in FUNCTION_POS]
         content = [p for p in pos if p in CONTENT_POS]
-        out[f] = (best, (content or pos)[0], len(lemmas) > 1)
+        out[f] = (best, (func or content or pos)[0], len(lemmas) > 1)
     return out
 
 
@@ -209,6 +228,9 @@ SENSE_INTRO = (
     "- Bir geçiş bir deyimin parçasıysa `deyim` alanına deyimi mastar hâliyle yaz («göze girmek»); "
     "değilse boş bırak. Aynı deyimin bütün geçişleri bir grupta olur.\n"
     "- `etiket` kısa ve genel olsun (2-5 sözcük, ör. «organ, görme», «bölme, çekmece»).\n"
+    "- Anlamları KABA tut: yalnız sözlükte ayrı madde ya da ayrı anlam olacak kadar farklı kullanımları ayır. "
+    "Aynı anlamın farklı nesnelerle, farklı zaman ya da kişi ekleriyle kullanımı tek anlamdır "
+    "(bir şeyi satın almak ile başka bir şeyi satın almak aynı anlam). Deyimler her zaman ayrı anlamdır.\n"
     "- Her numara tam bir grupta yer alır; hiçbirini atlama.\n")
 
 
@@ -282,19 +304,72 @@ def marked_context(text: str, start: int, end: int, width: int) -> str:
     return " ".join(s.split())
 
 
+# ------------------------------------------------------------------ sayfadaki yer
+def norm_word(w: str) -> str:
+    """Sayfa sözcüğü ile belirteci karşılaştırmak için: baştaki/sondaki harf olmayanlar atılır
+    (noktalama, tırnak, konuşma çizgisi), Türkçe küçük harf, kesme işaretleri birleşir."""
+    import unicodedata
+    w = unicodedata.normalize("NFKC", w or "")
+    a, b = 0, len(w)
+    while a < b and not w[a].isalpha():
+        a += 1
+    while b > a and not w[b - 1].isalpha():
+        b -= 1
+    return lower_tr(w[a:b]).translate(str.maketrans({"’": "'", "`": "'"}))
+
+
+def pick_box(page_words: list[tuple[str, list[int]]], word: str, nth: int, total: int) -> list[int] | None:
+    """Belirtecin sayfadaki kutusu: sayfanın basılı sözcükleri (okuma sırasıyla, normalize) içinde aynı
+    sözcüğün `nth`. geçişi — yalnız sayfadaki geçiş sayısı bizim metnimizdekiyle aynıysa (yoksa sıra
+    eşleşmez, yanlış yeri işaretlemektense işaret yok). Tek geçiş varsa o."""
+    hits = [b for w, b in page_words if w == norm_word(word)]
+    if hits and len(hits) == total and 0 <= nth < total:
+        return hits[nth]
+    if len(hits) == 1 and total == 1:
+        return hits[0]
+    return None
+
+
+def to1000(rect, page_rect) -> list[int]:
+    """PDF noktası → sayfa görselinde 0..1000 (öbür denetimlerin bbox biçimi)."""
+    w, h = page_rect[2] - page_rect[0], page_rect[3] - page_rect[1]
+    return [int(round((rect[0] - page_rect[0]) / w * 1000)), int(round((rect[1] - page_rect[1]) / h * 1000)),
+            int(round((rect[2] - page_rect[0]) / w * 1000)), int(round((rect[3] - page_rect[1]) / h * 1000))]
+
+
+def valid_suggestion(s: str, valid) -> bool:
+    """Öneri sözlükte var olan sözcüklerden oluşmalı ("anlasayd" gibi bozuk biçim atılır). `valid`:
+    sözcük → bool (Lexicon.valid)."""
+    words = [w for w in s.replace("-", " ").split() if w]
+    return bool(words) and all(valid(w.strip(".,;:!?…\"'«»()")) for w in words)
+
+
 # ------------------------------------------------------------------ yargı
 FLAW = ("Evet: tekrar okurken göze batıyor; eş anlamlı bir sözcük, zamir ya da cümleyi yeniden kurmakla "
         "giderilmeli.")
-FINE = ("Hayır: bilinçli ya da gerekli (vurgu, tekrar sanatı, tekerleme, şiir, diyalogda doğal konuşma, "
-        "terim ya da başka söylenişi olmayan sözcük, çocuk kitabında bilinçli yineleme).")
+FINE = ("Hayır: bilinçli ya da gerekli (hikâyenin konusu olan nesne/kişi, hitap, başka adı olmayan somut ad, "
+        "terim, vurgu, tekrar sanatı, tekerleme, şiir, diyalogda doğal konuşma, çocuk kitabında bilinçli yineleme).")
 
 
-def flaw_prompt(lemma: str, sense: dict, marked: str, x: str, y: str) -> str:
+def flaw_prompt(lemma: str, sense: dict, marked: str, x: str, y: str, book_count: int | None = None) -> str:
     what = f"«{lemma}»" + (f" (anlamı: {sense['label']}" + (f"; deyim: {sense['idiom']}" if sense["idiom"] else "")
                            + ")" if sense else "")
+    freq = (f" Bu sözcük kitabın tamamında {book_count} kez geçiyor." if book_count else "")
     return ("Bir kitabın redaksiyonunu yapan deneyimli bir editörsün. Aşağıdaki pasajda " + what
-            + " sözcüğü AYNI ANLAMDA kısa aralıkla birden çok kez geçiyor; geçtiği yerler [[ ]] içinde.\n\n"
+            + " sözcüğü AYNI ANLAMDA kısa aralıkla birden çok kez geçiyor; geçtiği yerler [[ ]] içinde." + freq
+            + " Yalnız okurun gözüne batan, yerine başka söyleyiş konabilecek tekrar düzeltilir; hikâyenin konusu "
+            "olan nesne ya da kişi, hitap sözcüğü, başka adı olmayan somut ad, terim ve bilinçli yineleme düzeltilmez.\n\n"
             f"Pasaj: «{marked}»\n\nBu yakın tekrar düzeltilmeli mi?\nA) {x}\nB) {y}\nYalnız A ya da B yaz.")
+
+
+SAME = "Evet: cümle aynı anlamı korur ve doğru Türkçe olur."
+DIFFERENT = "Hayır: anlam değişir, başka bir şey anlatılır ya da cümle bozulur."
+
+
+def keeps_meaning_prompt(marked: str, second: str, suggestion: str, x: str, y: str) -> str:
+    return ("Bir kitabın redaksiyonunu yapıyorsun. Aşağıdaki pasajda tekrarlanan sözcük [[ ]] içinde. "
+            f"İkinci geçiş olan «{second}» yerine «{suggestion}» yazılırsa ne olur?\n\n"
+            f"Pasaj: «{marked}»\n\nA) {x}\nB) {y}\nYalnız A ya da B yaz.")
 
 
 # ------------------------------------------------------------------ harita ve pasaj

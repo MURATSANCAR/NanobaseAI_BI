@@ -368,7 +368,7 @@ export default function ProofScreen() {
           )}
           {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.')} />}
           {/* Kelime haritası: aynı kitabın motordaki kaydıyla (eser dosyası ya da seçilen kitap). */}
-          {pr?.configured && pr.bookId && (s || picked) ? <WordMapPanel key={pr.bookId} bookId={pr.bookId} /> : null}
+          {pr?.configured && pr.bookId && (s || picked) ? <WordMapPanel key={pr.bookId} bookId={pr.bookId} findings={pr.findings.filter((f) => f.check === 'word_variety')} /> : null}
         </div>
       </div>
     </ModuleFrame>

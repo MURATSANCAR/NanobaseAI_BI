@@ -17,6 +17,42 @@
 - **Testler:** `tests/test_collage.py` 13 test (modelsiz; belirlenimcilik, etiket ölçümü, Türkçe harfler PDF'ten, 300 dpi gri, prepress, ön kontrol, uçlar, iş akışı) + test_plan/production/cover_text/elements: 107 geçti, 1 atlandı. tsc test sunucusunda temiz; ekran 320/390/768/1440'ta sahte köprüyle yatay kaymasız.
 - **Açık:** kitabın adı Word dosya adı ya da kısa ad olan işlerde (CRM kaydı yok) etiket o adı basar — editör şeritleri elle yazar. Kolaj/tipografik seçiliyken basılmayan kapak resmi ön kontrolde onay beklemez (`studio.refresh_preflight`).
 
+## 2026-09-26 — Son okuma kanıt paneli: işaret görünür alana kayıyor (dalda, kurulmadı)
+
+- **Şikâyet:** bulguya tıklanınca sağdaki sayfada işaret (mor kutu) panelin altında, görünmüyordu. **Sebep:** yapışkan sütun görünür alandan uzundu (başlık + 70vh görsel + karar kartı) ve liste başındayken henüz yapışmadığı için ekranın altına taşıyordu; sayfa altındaki işaret görünür alanın dışında kalıyordu, panelde işarete kaydıran bir şey yoktu. Düzenekte ölçüldü: önce kutu 884–898 px, gövdenin görünür altı 836 px.
+- **Düzeltme (`ProofEvidence.tsx`, `ProofFindings.tsx`, `proofScroll.ts`):** panel görünür alana sığar (gövdenin ölçülen boyu, ekran yakınlaştırmasıyla); başlık ve karar kartı sabit, yalnız sayfa görseli kendi kabında kayar (`overscroll-behavior: contain`). Her seçimde işaret kutusu kabın ortasına getirilir — görsel yüklendikten sonra; aynı bulguya yeniden basmak da geri götürür. Fareyle yumuşak; klavye (↑/↓), yeni sayfanın ilk açılışı ve azaltılmış harekette anlık. Sütunun altı ya da üstü taşıyorsa gövde gereken kadar kaydırılır. Telefonda alttan kart aynı düzende.
+- **Sayfa numarası:** listedeki «s. N» ile paneldeki «Sayfa N» aynı sayı, görsel de aynı sayfa — kitabın PDF'teki fiziksel sırası (`ed.page.page_no`; bütün denetimler bunu yazar). Ekrandaki «s. 4» / «Sayfa 207» farkı listenin başına dönülmüş olmasından; iki numaralandırma karışmıyor. Basılı sayfa numarası (folyo) raporda yok; açık iş.
+- **Doğrulama:** test sunucusunda geçici dizinde `tsc` temiz, `proofScroll.test.ts` 5/5; sahte veriyle geçici derleme tünelle tarayıcıda: 1440 masaüstünde işaret ve sütun görünür (liste başı, liste sonu, ↑/↓), 320/390/768'de alttan kart, yatay taşma 0. Canlı veriyle ekran açılmadı.
+
+## 2026-09-26 (00:40) — Kelime tekrarı v2: sayfada işaret, gruplu karar, anlamı korunan öneri — test sunucusunda
+
+- **Sayfada işaret:** tekrar bulgusu sayfa görselinde kutulanıyor; tekrarın aynı sayfadaki bütün geçişleri de (`marks`). Dilek Ağacı: 120 bulgunun 105'i işaretli, 96'sında ≥2 geçiş. Eşleme sayfanın basılı sözcüklerinde sıra ile; sayı tutmazsa işaret yok.
+- **Gruplu karar:** bulguya genel `group` («kök · anlam») ve `confidence`; Kelime haritası panelinde «Tekrar bulguları» sekmesi — güvene göre sıralı, topluca «Doğru / Yanlış alarm» (gerekçeli, her bulguya ayrı karar). 120 bulgu → 79 grup.
+- **Öneri:** ikinci geçişin ekli hâliyle istenir, sözlükte olmayan ve aynı kökün çekimi atılır, sonra «yerine konunca anlam korunuyor mu» sorusu: 107 öneriden 27'si kaldı (önce «dut → incir», «koşmak → süründüm» vardı).
+- **Anlam:** istem kaba anlam ister; «olmak» 11 → 1 anlam + 2 deyim. «almak» hâlâ 17 (deyim ve kalıp gerçekten çok).
+- **Kurulum (test):** main `f4709185`/`bf60bf3c`; GPU imajı `editor-py:0.15.9-1c78bd8d` yeniden derlendi, `editor-cards` yeniden kuruldu (card_api yeni alanlar); test sunucusu köprü + arayüz (`index-CYBPPGmY.js`), dosyalar öncesinde main ile aynıydı. Portal doğrulaması geçici timasai oturumuyla (silindi). word_variety VERSION 2.
+- **Sürüyor:** öbür 15 kitap v2 ile (`wv-all-books-v2`, `/data/editor/logs/wv-all-books-v2.log`); v1 toplu koşu durduruldu (yalnız Dilek'te v1 kaydı var).
+- **Açık:** müşteri VM'i (main'de SEO & GEO işleri; kullanıcı kararı), editör worker imajı (yeni kitaplarda otomatik koşu).
+
+## 2026-09-26 (02:20) — SEO & GEO test sunucusunda (c15f7d97): şema taraması yanlış adrese gitti, düzeltildi
+
+- **Kurulum:** 11 dosya (önce/sonra md5 main ile aynı, `._*` 0), arayüz `index-DW5l9nZz.js`, köprü 200. Uçlar gerçek oturumla: şema, tema belgesi (3,1 KB), GEO motor listesi (4 motor, hiçbirinin anahtarı yok); ekranlar masaüstü/390 px taşmasız.
+- **Hata:** ilk tarama 122 sayfanın hepsinde "kitap şeması yok / canonical yok" buldu. Sebep: Yönetim'deki «Mağaza adresi» (`SEO_SITE_URL`) 25.09 14:52'de T-soft kimlik bilgileri girilirken `https://satinal.timas.com.tr/rest1` olarak kaydedilmiş; tarayıcı kitap sayfası yerine REST adresine GET atmış ("Controller is not allowed!"; yalnız okuma, T-soft'a yazma yok). Ekrandaki ürün bağlantıları da bu yüzden yanlıştı. Ayar `https://timas.com.tr` yapıldı, köprü yeniden başlatıldı (yanlış tur durdu), yanlış 137 şema kaydı silindi, tarama doğru adresle yeniden başladı: ilk 71 kitapta yazar sameAs eksik 71, meta=başlık 71, soru–cevap var şema yok 29; kurum adı «timas.com.tr».
+- **Koruma (dalda, kurulmadı):** «Mağaza adresi» REST adresi ya da http(s) olmayan değer kabul etmez; tarama site adresinde `/rest` görürse ya da ilk sayfalar HTML dönmezse durur ve nedenini yazar.
+
+## 2026-09-26 (01:40) — SEO & GEO: çok motorlu yapay zekâ görünürlük ölçümü (Gemini ücretsiz; ChatGPT/Perplexity/Claude anahtarla)
+
+- **`seo_geo/geo.py`:** izlenen sorular resmî API'lerle sorulur — Gemini `generateContent` + `google_search` (ücretsiz katman), OpenAI Responses + `web_search`, Perplexity Sonar, Anthropic Messages + web araması. Anahtarı olmayan motor ölçülmez, sonuç uydurulmaz; tüketici arayüzü kazınmaz. Kullanıcı ChatGPT ve diğerlerinin de sürece katılmasını istedi; ücretsiz API'leri olmadığı ekranda ve Yönetim'de yazar.
+- **Ölçüm:** cevapta Timaş anıldı mı (ad ya da Timaş kitabı), timas.com.tr kaynak mı (Gemini kaynak adresi yönlendirme olduğu için başlık da bakılır), hangi kitaplar geçti (5.158 ad, 2+ kelime/8+ karakter), kaynak listesi, cevap. Tablo `semantic_seo_geo_results`.
+- **Kota ve takvim:** motor başına günlük sınır (Gemini varsayılan 450 — ücretsiz ~500 aşılmasın; diğerleri 100), aynı soru bir motorda `GEO_EVERY_DAYS` (7) gün içinde yeniden sorulmaz, 429'da o motor o gün durur; gece `run-due` ve "Şimdi ölç". Ayarlar Yönetim → «Yapay zekâ görünürlüğü (GEO)».
+- **Ekran `/seo-geo/ai-gorunurluk`:** motor kartları (anılma/kaynak oranı, bugünkü kullanım), soru × motor tablosu, açılınca cevap, geçen kitaplar, kaynaklar. Doğrulama: anahtar girilmediği için gerçek ölçüm **DOĞRULANAMADI**; analiz gerçek kitap listesiyle denendi.
+
+## 2026-09-26 (01:00) — SEO & GEO: sayfalar gece ön üretiminde; şema denetimi ve tema isteği belgesi
+
+- **Ön üretim:** yazar/kategori/yayınevi sayfaları da gece turunda (kitabı olan, sorunlu, önerisi olmayan; çok satandan), ürünlerle karışık 3:1 — ürün sırası binlerce olduğu için sayfalar sona kalsa günlerce sıra gelmezdi.
+- **Şema denetimi (`seo_geo/schema.py`):** canlı kitap sayfası yalnız okunarak (TimasZekiBot/1.0, robots.txt, saniyede 1) taranır; JSON-LD'de Book/Product, isbn, author Person/sameAs, publisher, numberOfPages, offers, yorumlu kitapta aggregateRating, açıklamasında soru–cevap olan kitapta FAQPage; canonical, noindex, meta=başlık. Sıra: hiç bakılmamış/en eski, eşitse çok satan; gece `run-due` en çok 2 saat, kalan sonraki gece (tavan yok). Tablo `semantic_seo_schema` (`_org` satırı kurum şeması). 12 canlı sayfa denemesi: yazar sameAs eksik 11, meta=başlık 12, sayfa sayısı eksik 4; kurum adı «timas.com.tr». İlk sürümde "soru–cevap şeması yok" 12/12 çıktı — sayfanın alt menüsündeki «Sıkça Sorulan Sorular» bağlantısı sayılıyordu; artık ürünün T-soft açıklamasına bakılır.
+- **Tema isteği belgesi:** `GET /api/v1/seo-geo/schema/theme-request.md` — son taramanın oranları, en çok satan gerçek kitaptan örnek JSON-LD (Book+Product, Person sameAs, AggregateRating), FAQPage, Organization düzeltmesi, başlık şablonu, llms.txt. Ekran `/seo-geo/sema`.
+
 ## 2026-09-26 (00:10) — SEO & GEO: yazar, kategori ve yayınevi sayfaları (denetim + Zeki AI önerisi)
 
 - **Kaynak:** `semantic_seo_links` (T-soft `link/getLinks` başlık/açıklama) + ürünler; bağ ürünün `ModelId`/`BrandId`/`DefaultCategoryId` (+`Categories`) → sayfanın `TableId`. Yazar için Wikidata özeti yalnız basın-web modülünün doğrulanmış kaydından (tablo yoksa atlanır).
@@ -53,6 +89,15 @@
 - **Ekran (`studio/book3d/`):** `three` yalnız bu bölüm ekrana yaklaşınca yüklenir; kapak 900 ms / sayfa 720 ms güçlü ease-in-out, klavyede (sunum dışı) ve azaltılmış harekette anlık; sunumda doğrusal yavaş dönüş. Sunum katmanı body'ye taşınır (kabuğun ölçeklenen kapsayıcısı `fixed`'i hapsediyordu), tuval React dışında tutulduğu için sahne yeniden kurulmaz. Karşılaştırma kaydırıcısı `clip-path`, dokunmada dikey kaydırma sayfaya kalır.
 - **Doğrulama:** `test_proof.py` 14/14 + `test_plan.py` 29 geçti (GPU'da geçici kap); `tsc` ve `vite build` test sunucusunda geçici dizinde temiz; ekran geçici sunucu + SSH tüneliyle tarayıcıda denendi (kapalı/açık kitap, kıvrılma yavaşlatılarak, sunum, PNG 468 kB, webm 2,5 MB, 320/390/768'de bölüm taşmıyor). Canlıya kurulmadı.
 - **Açık:** stüdyo sayfasının kendisi 320 px'te bölümden bağımsız 77 px yatay taşıyor (önceden var); kaynak işte yazar adı boşken kapak dizgisi «yazı alana sığmıyor: ''» ile düşüyor (bu işte kapak yoktu, denemede kopyaya yazar adı yazıldı).
+
+## 2026-09-25 (23:40) — Kelime haritası Son Okuma ekranında; gerçek kitapta iki düzeltme; test sunucusunda canlı
+
+- **Ekran:** Son Okuma (M5) → «Kelime haritası» paneli (`WordMapPanel.tsx`): farklı kök, içerik kökü, bir kez geçen, çok anlamlı kök, deyim, çeşitlilik puanı; sekmeler «Bütün kökler» (biçimler, sayfalar, anlamlar, deyimler; işlev sözcükleri isteğe bağlı), «Çok anlamlılar», «Farklı anlamda yakın geçiş» (tekrar sayılmayan «göz» örnekleri), «Tanınmayan biçimler»; arama, sıklık/A→Z, «devamını göster» (kesme yok). Köprü `GET /api/v1/editorial/proofing/word-map?bookId=` → kart servisi.
+- **Gerçek kitapta bulunan iki sınıf hata** (Dilek Ağacı, `--dry`): (1) kök seçimi «en uzun gövde» gerçek Zemberek çözümlemesinde «göze»yi pınar maddesine, «koşa»yı sıfata götürüyordu → en az türetme (çekim grubu sınırı) + kitabın kullanımı + kısa gövde; (2) kapalı sınıf önceliği yoktu («de» → demek, «ile» → il, «için» → iç; zamirler içerik) → biçim işlev sözcüğünün yalın hâliyse o okuma. Ayrıca tamamı büyük harf başlık/kapak tekrar adayı değil, yargı sorusu kitap sıklığını görür. 154 → 122 bulgu. Testler 21/21 (sunucuda, imaj içinde).
+- **Kurulum (test):** GPU'da `git archive main` → `/data/editor/releases/1c78bd8d`, imaj `editor-py:0.15.9-1c78bd8d`; yalnız `editor-cards` bu imajla yeniden kuruldu (`._*` 0, `EDITOR_CODE_VERSION` doğru). worker/mcp/gateway'e dokunulmadı (başka oturumların kuyruğu ve stüdyo işi sürüyor); bu yüzden yeni okunan kitaplarda denetim otomatik koşmaz, editör imajı tümüyle yenilenince koşar. Test sunucusu: köprü `app.py`, `editorial_cards.py` + arayüz dört dosyası (sunucuda eski main ile aynıydı), derleme `index-BLs466km.js`, köprü yeniden başlatıldı.
+- **Doğrulama:** geçici timasai oturumuyla portal: Dilek Ağacı `proofing` 122 word_variety bulgusu; `word-map` ready, 866 kök, 155 çok anlamlı, 51 deyim, 12 farklı anlamda yakın geçiş; oturumsuz 401; oturum silindi. Görsel kontrol yapılamadı (HttpOnly çerez tarayıcı panesine konamaz).
+- **Sürüyor:** okunmuş öbür 15 kitap tek seferlik kapta sırayla (`wv-all-books` birimi, günlük `/data/editor/logs/wv-all-books.log`).
+- **Müşteri VM'i: kurulmadı.** main'de başka oturumların VM'e henüz gitmemiş SEO & GEO işleri var; `git archive main` onları da götürür — kullanıcı kararı bekleniyor.
 
 ## 2026-09-25 (23:50) — Editoryal Masam: yönetici görünümü ilk ekrana sığacak biçimde yeniden düzenlendi
 
@@ -126,6 +171,7 @@
 - **Görsel:** T-soft `ImageUrl` yalnız dosya adı; kapak `ImageUrls[0].Small`'dan.
 - **Ekranlar gerçek veriyle görüntülendi** (Playwright, geçici timasai oturumu): genel bakış, ürün denetimi masaüstü ve 390 px; yatay taşma yok, sayfa hatası yok.
 - **CRM kararı bekliyor:** açıklama = CRM `new_kitapBase.new_ozet` (5.139/5.214 metin %90+ aynı), arama kelimeleri = `new_AnahtarKelimeler` (2.351/2.353 aynı), 5.466/5.656 ürün ISBN ile eşleşti; SEO başlığı/meta CRM'de yok (T-soft şablonu). Kullanıcı akışı: T-soft tara → düzeltme CRM'e → CRM T-soft'a aktarır. CRM'e yazma Dynamics Web API ve yazma yetkili servis hesabı ister (SQL'e yazılmaz).
+
 ## 2026-09-25 (18:15) — SEO & GEO: T-soft bağlandı, ilk eşitleme; şablon meta kuralı, yazar başlıkta
 
 - **T-soft bağlantısı:** kullanıcı `zeki@timas.com.tr` ile AUI002 (geçersiz kullanıcı/şifre) aldı; web servis kullanıcı adı `zekiai` (kullanıcı söyledi, kullanıcı adını Claude güncelledi, şifreyi kullanıcı ekrandan girdi). Deneme: "Giriş başarılı, 6.781 ürün".
@@ -208,6 +254,7 @@
 - **Word uçtan uca** (Kahramanını Yutan Kitap, portal → köprü → tünel → stüdyo): CRM kitap adıyla eşleşti; üç hata bulundu ve düzeltildi: resimsiz romana 44 görünmez resim planlanıyordu (yerleşim artık resim türüne göre, basılmayan resim çizilmez); metin katmanı aynı sayfada «ola-»/«cak!» diye bölüyordu (tireyle biten blok birleşir); ön kontrol yazarın «AhA- HAHA» tiresini hece tiresi sanıyordu. Sonuç 5.445/5.445 kelime.
 - **Kıyafet/mekân düzeltmesi doğrulandı:** kahvaltıda gündelik, 11. sayfadan önlük; 13. sayfa odada.
 - **İşletme:** kurulum için stüdyo yeniden başlatması sırada bekleyen bir işi kesti → servis açılışında yarıda kalan iş kendiliğinden sürer; kitaba tıklamak işi başlatmaz (onay kutusu). Testler 27/27.
+
 ## 2026-09-25 — "Geçen yılın aynı dönemi" yanındaki dönemin bir yıl öncesi (dalda, kurulmadı)
 
 - **Sorun:** "Aralık 2025 ile Ocak 2026 arası net ciro geçen yılın aynı dönemine göre" referansı bütün 2025 okuyordu (1,13 Mr ₺); "aynı dönemine" kelimeleri yok sayılıyordu.
@@ -261,7 +308,6 @@
 - **Köprü istemcisi:** `zeki_tahmin` `FORECAST_EXTRA_HEADER` ("Ad: değer", kitap kartlarıyla aynı) ve `FORECAST_CA_FILE` okur; uzak servis tanımlıyken ulaşılamazsa "bu kurulumda yok" demez, "GPU'ya ulaşılamıyor" der. Test 36/36.
 - **Açık:** GPU genel nginx'ine `/bi-forecast/health` (GET) ve `/bi-forecast/forecast/batch` (POST, 64 MB, 900 sn) yolu — `deploy/tt-gpu/forecast/add-forecast-route.py`, kitap kartlarıyla aynı üç kat koruma (85.105.0.0/16, mevcut gizli başlık, yöntem). Claude oturumunda izin denetimine takıldı; kullanıcı koşturacak. Sonra VM `.env`: `FORECAST_API_BASE=https://85.111.30.227/bi-forecast`, `FORECAST_EXTRA_HEADER` = kartların başlığı.
 
-
 ## 2026-09-25 — Kitap Tasarım Stüdyosu: okunmuş kitaptan/Word'den baskıya; GPU ve test sunucusunda canlı
 
 - **Ne:** kullanıcı isteği «Word gelmiş gibi kitabı sistem sıfırdan tasarlasın, ekranda sayfa sayfa düzeltilebilsin». `apps/editor/src/editor/production/`: metin (okunmuş kayıt + CRM; baskı artıkları kitaptan bağımsız kurallarla ve Türkçe sözlükle temizlenir), profil (künye/CRM beyanı + Ateşman + model, ayrışma gösterilir), baskı kuralları (yaşa göre punto/heceleme/font, forma katı), üslup, karakter kartı (sabit görünüş + kıyafetler), sayfa sahneleri (alıntıya bağlı, mekân/kıyafet sürekliliği), Typst dizgisi (punto ve resim bandı forma katına aranır, kalan tam sayfa resimle dolar), kapak açılımı (vektör başlık, EAN-13), künye (kitabın künyesinden alıntılı), ön kontrol (metin kelime kelime PDF'te, ölçü, kutu, font, çözünürlük, onay). Stitch ekranları `design/stitch-wow/10-11`.
@@ -276,6 +322,7 @@
 - **Sunucuda (tt-gpu):** ağırlıklar `resolve/790c9263` adresinden aria2 (geçici alpine kabı, 16 bağlantı) ile indirildi, 33 GB, `verify_models.py` OK; MANIFEST'e eklendi (tek dosya bağlaması için yerinde yazıldı). İmaj `vllm/vllm-omni:qwen-image21` digest ile çekildi — 2.1 desteği (PR #7759) sürüme girmedi, imajda giriş komutu yok.
 - **Kod (dal):** `models.yaml` `book-image` (GPU 1, 0.50, `--omni`); gateway takma ad başına `entrypoint` alanı (spec hash'e yalnız doluysa girer, diğer kapların hash'i değişmez) ve `images/generations` geçişi. Referanslı düzenleme JSON `chat/completions` ile gider (proxy yalnız JSON).
 - **Sınama (geçici kap, gateway'in kuracağı komutun aynısı):** açılış 40 sn, boşta 33,3 GB, zirve 46,2 GB; okunmuş 4 kitaptan (Dünyanın En Korkak Hayvanı, Gölge Tilki, Çiçekçi Kadın, İbn Sînâ) 8 görsel, 27–30 sn/görsel. Türkçe başlık 2/4 kapakta hatalı: «Sarıöglu», «ÎBN SÎNĂ» → kapak yazısı modelden değil ayrı tipografi katmanından. Sahnelerde tutarlılık açığı: Çiçekçi Kadın'da Koreli karakterler Batılı çizildi, kim kime saksı uzatıyor ters.
+
 ## 2026-09-25 (00:05) — Müşteri VM'i 8733005c; ZEKI sekmesi boşken nedenini söylüyor
 
 - VM'e `git archive main` (8733005c) kuruldu: `._*` 0, bridge/jobs imajı 23:45, zeki_tahmin/__init__/baski_oneri/financial_audit md5 = main. Kabul (geçici timasai oturumu, silindi): Baskı Tekrar 5.053, Yeni Kitap 331 (test sunucusuyla aynı), Finansal Denetim `/runs` `{items,total}`, gizli tahmin raporu menüde yok.
@@ -297,7 +344,6 @@
 - Köprü bu arada iki kez başka bir oturum tarafından yeniden başlatıldı (23:03, 23:26; `/tmp/stf`); ilki koşan iki okumayı öldürdü, ikincisi tahmin yazıldıktan 2 sn sonra geldi.
 - **Hata:** stok 0, son 12 ay satışı 0, beklenen tahmin (p50) 0 olan 111 kitap ZEKI'de "Risk/Acil"di (ör. Sherlock Holmes 2). Kural yalnız temkinli tahmine (p80) bakıyordu; satışı durmuş kitapta p80 belirsizlikten şişer (medyan 37). Yalnız p50'ye bakmak da yanlış: geçen yıl 136 satan stoksuz kitabı "Talep yok"a atıyordu.
 - **Yeni kural:** stok yok VE (temkinli tahmin ayda 1'in altında YA DA hem son 12 tam ay satışı < 12 hem beklenen tahmin ayda 1'in altında). Canlı veride ölçüldü: "Talep yok" 685 → 926 (241 kitap Risk/Acil'den geçer, eski kuralın yakaladığı hiçbir kitap düşmez); stok 0 + satış 0 olup Risk/Acil kalan 15 kitapta model talep bekliyor. Talep yok dışında Power BI ile örtüşme %82,5. Test `zeki_tahmin_tab.py` 30/30 (durmuş ve satan stoksuz kitap vakaları eklendi).
-
 
 ## 2026-09-24 (20:55) — 55 kanal test sunucusunda; VPN kapalı, CRM okunamıyor; yazar listesi artık saklanıyor
 
@@ -328,7 +374,7 @@
 ## 2026-09-24 — Editör: kelime çeşitliliği ve yakın tekrar denetimi (`word_variety`) dalda
 
 - **İstek (Yalçın Yaman, redaksiyon):** kitabın tekil kelime haritası; «göze girdi / gözüme toz kaçtı / dolabın gözü» üç ayrı «göz» olarak görülmeli. Editörde kelime tekrarı ya da çeşitlilik denetimi yoktu; yazım denetiminin Zemberek (zeyrek) kök çözümlemesi vardı.
-- **Analiz ve karar** (`apps/editor/docs/son-okuma/word_variety.md` §0): kök Zemberek'le (fiil maddesi mastar: «yüzmek» ≠ «yüz»; en uzun gövde: «gözlük» ≠ göz; belirsizlikte kitabın kendi kullanımı); anlam model gruplamasıyla (gömme/kümeleme ve TDK anlam listesi reddedildi); yakın tekrar penceresi cümle (sabit sözcük penceresi ve istatistik reddedildi); tekrarın kusur olup olmadığı iki sıralı kapalı model sorusu. İkileme, özel ad, işlev sözcüğü tekrar sayılmaz.
+- **Analiz ve karar** (`apps/editor/docs/son-okuma/word_variety.md` §0): kök Zemberek'le (fiil maddesi mastar: «yüzmek» ≠ «yüz»; en az türetme: «gözlük» ≠ göz+lük; belirsizlikte kitabın kendi kullanımı); anlam model gruplamasıyla (gömme/kümeleme ve TDK anlam listesi reddedildi); yakın tekrar penceresi cümle (sabit sözcük penceresi ve istatistik reddedildi); tekrarın kusur olup olmadığı iki sıralı kapalı model sorusu. İkileme, özel ad, işlev sözcüğü tekrar sayılmaz.
 - **Kod:** `proofing/word_variety.py` (hat), `proofing/_word_variety.py` (saf parçalar), `tests/test_word_variety.py` (sentetik; üç «göz» senaryosu dahil), kart servisi `GET /v1/books/{id}/proofing/word-map` (harita = en yeni başarılı koşunun `stats`'ı; migration yok). Ayarlar `EDITOR_WORD_ECHO_SENTENCES/…_SENSE_BATCH/…_CONTEXT_CHARS/…_VARIETY_PARALLEL`.
 - **Açık:** testler ve gerçek kitapta `--dry` ölçümü koşulmadı (TT VPN kapalıydı; Mac'te çalıştırma yok). Köprü + kanvas harita ekranı ve kitap geneli aşırı kullanım (öbür kitaplar derlemi) sonraki iş. Denetim `run_all`'a otomatik girer: kurulunca her kitabın son okumasında koşar.
 
@@ -343,12 +389,10 @@
 
 - Test sunucusuna kurulumdan hemen sonra Baskı Öneri 15:31'de "Invalid cursor state" (FreeTDS 24000) ile düştü: ZEKI tahmin raporu eklenince iki rapor ayrı iş parçacıklarında aynı anda yenileniyor ama tek Logo bağlantısını paylaşıyordu. Bağlantılar artık (rapor, kaynak) anahtarıyla ayrı. Test: `tests/management/report_connections.py` 3/3; diğerleri geçti.
 
-
 ## 2026-09-24 (15:40) — Yönetici her şeyi görür; Wikidata meslek listesi daraltıldı
 
 - Kullanıcı: "timasai süper yönetici, her şeyi görecek." Yazar giriş sürecinde yönetici (`admin_mod.is_admin`) bütün editörlerin bekleyen işini görür (`board(..., everyone=True)`, `todoScope: "all"`): panoda ve Masam'da editöre göre gruplu, Masam'da ayrıca editör başına süren / bekleyen / kurulda / geciken tablosu. Editör yine yalnız kendi işini görür.
 - Wikidata: meslek kümesine yanlışlıkla diplomat, hukukçu, öğretmen, profesör girmişti ("Kamran İnan" yalnız siyasetçi/diplomat olarak kabul edilmişti). Küme yalnız yazıyla ilgili mesleklere indi; ekranda gösterilen meslekler de bu kümeyle sınırlı (ör. "komplo teorisyeni" meslek olarak görünmez). Bulunan 16 kayıt yeni kuralla yeniden denetlenmek üzere sıraya kondu.
-
 
 ## 2026-09-24 — Baskı Öneri'ye "ZEKI AI Tahminleme" sekmesi (TimesFM 3.0), Power BI sekmeleri değişmeden
 
@@ -408,6 +452,7 @@
 - Müşteri editör modülü için 9 adımlı "Yazarın Yayınevine Giriş Süreci" akışını gönderdi; kural: veri CRM'den dinlenecek. Canlı CRM'de (.28) salt okuma ile her adımın karşılığı ve doluluğu ölçüldü: `docs/analiz/yazar-giris-sureci-crm-2026-09-24.md`.
 - Omurga `new_projeBase.statuscode` (Toplantıya Hazırlanıyor → Kurula Hazır → Kurul Onaylı → İş Planı Çalışıyor); `new_projeasamasi` ve projedeki kurul sonucu/tarih alanları hiç dolu değil. Denetim kaydı Proje/Stok/Üretim/Sözleşme/Eser Katılımı/Kişi/Cari'de açık → adım zamanları geriye dönük çıkar. Editör raporu, yazara bilgi ve yazar cari formu CRM'de izlenmiyor; müşteriye 3 soru.
 - Kod değişikliği yok.
+
 ## 2026-09-24 (12:00) — TT VPN girişi: terminal değil şifre yazımı; bağlanma tarifi yazıldı
 
 - `deniz.akko` ile `~/bin/ttvpn-mac` sabahtan beri `p=failed` / bir kez `p=login-denied` veriyordu; tarayıcı giriyor göründüğü için istemci farkı sanıldı. Elenenler: şifre terminale bozulmadan ulaşıyor (uzunluk/karakter ölçüldü), tarayıcı kimliği, form alanıyla şifre, DSID çereziyle tünel (`error 0x07`). Uygulama içi tarayıcının ağ kaydı tarayıcının da 3 kez `p=failed` alıp 4.'de girdiğini gösterdi → şifre elle tutarsız yazılıyordu.
@@ -594,6 +639,7 @@ Kullanıcı isteği: veri gösteren bütün menü ekranlarında veri hazır durs
 - **Doğrulama (gerçek DB, canlı portal, timasai oturumu):** kart ucu 3 kitapta çalıştı (Levent 15 düğüm/52 kenar, Vombat 11/28, Dedem 12/19). Portalda kitap seçmeden sorulan «Levent kimlerle birlikte vakit geçiriyor?» sorusunda cevapta geçen 5 karakter (Levent, Mert, Osman, Kâmil, Hayri) grafa girdi — kitabın 15 karakterinin tamamı değil. Şekillendirme mantığı 4 sentetik + gerçek kitap verisiyle ayrıca ölçüldü.
 - **Kurulum:** GPU'da `editor-py:0.15.3-condense` yeniden derlendi, `editor-cards` ve `editor-mcp` yeniden yaratıldı — bu, 20 Eylül günlüğünde açık kalan «graf MCP aracının Hermes'e görünmesi için editor-mcp yeniden başlatılmalı» maddesini de kapattı. Test sunucusunda köprünün iki dosyası (md5 karşılaştırmasıyla), frontend'in üç dosyası; sunucuda derleme (`VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas`) ve `cockpit/dist`e kopya (yedek: `dist.bak-20260922-204418`).
 - **Not:** editörün uygulama katmanı (kanıt defteri Postgres, kart servisi, Hermes) hâlâ GPU makinesinde; köprü ona ters tünelle (`:18887`, `:18889`) gidiyor. «Uygulama test ortamında, GPU'da yalnız model» ilkesine geçiş ayrı bir iş olarak konuşuldu, yapılmadı.
+
 ## 2026-09-22 — Yeni OCR ile yeniden okuma: denetim, sunucuda kalmış üç düzeltme, 5 kitap kuyruğa
 
 - **Denetim sonucu: iş bitmemişti.** Altı kitaptan yalnız `levent-dunya-harikalarinin-pesinde` yeni okuyucuyla (`0.15.2-ocr-dots`) okunmuştu, o da üç denemede FAILED'dı; kalan beş kitabın en yeni nesli hâlâ `0.9.0` (eski okuyucu). Üç düşüş üç ayrı hataydı: 09:03 `figure_identity.py` traits birleştirme (`expected str instance, list found`), 13:09 `document.py` `name 'book_stems' is not defined`, 15:59 `outputs.py` `Summary input exceeds bounded context`.
@@ -645,6 +691,7 @@ Kullanıcı isteği: veri gösteren bütün menü ekranlarında veri hazır durs
 - Test sunucusuna kuruldu (arayüz sunucuda derlendi, `index-B3mhyqEo.js`; köprü yeniden başlatıldı). Gerçek oturumla uçlar: liste 200, 9 kaynak/10 formül/6 not, oturumsuz 401, iki sayfa 200.
 - **CRM doğrulandı (13:20, .28 açıldı):** 5 CRM görünümü var. Raporun 4 CRM sorgusu Power BI'ın özgün SQL'iyle aynı canlı CRM'de karşılaştırıldı: bekleyen sipariş 1.981 kod / 107.992 adet, fark 0; baskı önerisi 16 kod / 213.000, fark 0; kitap kartı 8.518 kod, 5 alanda fark 0; Baskı Tekrar kitap havuzu (baskı tarihi süzgeci) 7.919 = 7.919. Logo (.155:1433) hâlâ kapalı.
 - **DOĞRULANAMADI — veri:** kurulum anında Logo (.155:1433) ve CRM (.28:1433) portları hem test sunucusundan hem müşteri VM'inden (.55, LAN içi) kapalıydı; SQL sunucuları müşteri tarafında erişilemez. `V_SatisRaporu_All2`, `PBI_FiyatList`, `EOS_DEPO_STOK_KONTROL_211`, `powerbikitap(detay)` görünümlerinin .155/.28'de varlığı ve rapor rakamlarının Power BI ile karşılaştırması yapılmadı. Rapor portlar açılınca kendiliğinden hazırlanır. Power BI raporu Logo'yu 192.168.0.25'ten okuyordu; görünümler .155'te yoksa SQL'ler bizim tablolara uyarlanmalı.
+
 ## 2026-09-22 — Editör CRM bağlayıcısı: bulunamayan kitap kalmasın, yazar ve özet de CRM'den
 
 - Tetikleyen: «Kaybolan Balinalar» kitabının verisi CRM'den gelmemişti. Canlı CRM'de (.28) kayıt «Kaybolan Balinaların Şarkısı» adıyla var: ISBN, kapak yolu ve proje kapak alternatifi boş (basılmamış, ilk yayın 01.12.2026); yazar ve proje fikri dolu. Eski bağlayıcı yalnız kapak alıyordu, ISBN'siz kitapta birebir başlık arıyordu.
@@ -821,7 +868,6 @@ Kullanıcı isteği: veri gösteren bütün menü ekranlarında veri hazır durs
 - Gerçek oturumlu portalda beş türün satır açıklamaları, KDV ikinci sayfa, ters bakiye hesabı/detayı ve 320 Satıcılar kontrolü görüldü. Bulgu tablosu ve katalog 320/390/768/1440 genişliklerinde sayfa taşırmadı; tablo kendi alanında kayar. Kaynakta bulgusu bulunmayan 7 derin kontrolün satır senaryoları ve örneklenmeyen alt durumlar gerçek veriyle DOĞRULANAMADI; sentetik/yerel test koşulmadı. Kapsam tüm 649 maddenin mevzuat/atomik kural kabulü değildir.
 - Kanıt: `docs/audits/financial-audit-2026-09-21/findings-acceptance.json`, `findings-browser.json`; tekrar koşucuları `scripts/server/financial-audit-findings-acceptance.py` ve `.cjs`. Hesaplama SQL’i ve hazır rapor akışı değişmedi.
 
-
 ## 2026-09-21 — Editoryal ana sayfa ön yükleme ve beş dakikada veri yenileme
 
 - Kullanıcı ilk açılışın boş olmamasını ve sayfa yerine yalnız verilerin 5 dakikada yenilenmesini istedi. Altı paylaşılan bölüm sunucuda atomik/özel dosyalarda saklanır; servis zamanlayıcısı tek kilitle gerçek kaynağı okur. Hata veya kesilme son başarılı veriyi silmez. Kişisel eserler ortak dosyaya yazılmaz, her istekte mevcut yetki süzgeci kullanılır.
@@ -839,7 +885,6 @@ Kullanıcı isteği: veri gösteren bütün menü ekranlarında veri hazır durs
 - Temel gerçek DB bağımsız karşılaştırma 144/144 geçti. İlk koşu 143/144: hesaplar eşti, test arşive ait olmayan anlık `refresh` durumunu kalıcı raporla karşılaştırıyordu. Karşılaştırma yalnız `cached`/`refresh` taşıma alanlarını dışlayacak şekilde düzeltildi, tüm hesaplama alanları karşılaştırılmaya devam edildi. Son yayında yeniden 144/144 temel + 109/109 derin = 253/253 bağımsız gerçek DB kontrolü geçti; aynı rapor `af77189a9e4e4023aee5618e1cb28524`. Aradaki derin koşu servis yeniden başlatıldığı için 40 kontrolden sonra bağlantı hatasıyla kesildi; geçerli kabul yerine sayılmadı. Koşucu yalnız bağlantı reddini sınırlı tekrarlar, HTTP/veri hatalarını gizlemez. Alt kaynak SQL hatalarının eski tam raporu değiştirmemesi ayrıca korunur.
 - Kanıt `docs/audits/financial-audit-2026-09-21/snapshot-*.json`. Yerel test/sentetik veri yok. Yenileme hatasında eski sonucu koruma kodda incelendi; canlı bağlantı kasıtlı bozularak hata testi yapılmadı. Saatlik zamanlayıcı için tam bir saatlik döngü beklenmedi; servis başlangıcı ve düğme yenilemesi gerçek veride sınandı.
 
-
 ## 2026-09-21 — Kampüs kartları yalnız ana modüllere gider
 
 - Kullanıcının isteğiyle ana sayfa kartları Genel Bakış, Editoryal Süreç ve Finans & Risk girişlerine bağlandı; adresler `ModulesMenu.GROUP_HOME` ile ortak. Alt ekran kısayolları ve genişleyen tüm-modüller listesi kaldırıldı; alt menüler modül içinde kalır.
@@ -849,7 +894,6 @@ Kullanıcı isteği: veri gösteren bütün menü ekranlarında veri hazır durs
 ## 2026-09-21 — Editor kimlik ve kaynak kapsamı düzeltmesi (sürüyor)
 
 - Aynı anmanın iki kimliğe yazılması, yanlış tür ve ad çoğunluğu kök nedenleri gerçek model kayıtlarında bulundu. Referans bütünlüğü/ikinci kimlik kontrolü ve boş OCR tamamlanma kaydı eklendi. Gerçek kabul sürüyor, genel taramalar kapalı.
-
 
 ## 2026-09-21 — Finansal Denetim ana menü bağlantısı
 
@@ -863,7 +907,6 @@ Kullanıcı isteği: veri gösteren bütün menü ekranlarında veri hazır durs
 - Son runtime `0.13.0-reads-7eda4ec1` sunucuda. Gerçek API–bağımsız DB 120/120, gerçek MCP/arama 22/22, kart/kapak 7/7, çıktı regresyonu 522/522. MCP tarih biçimi (`Z` / `+00:00`) aynı UTC anına normalize edilerek karşılaştırıldı; içerik eş. Düzeltilmiş anne olayı gerçek aramada güncel metniyle döndü.
 - 16 tablonun önce/sonra içerik hashleri aynı; yerel test veya sentetik veri yok. Bakım true, aktif Temporal/pending rebuild yok, genel worker/rebuild başlatılmadı. Geçici MCP/gateway ve arama modelleri kapatıldı; GPU 1 0 MiB. Worker/rebuild yeni image ile oluşturuldu, çalıştırılmadı.
 - Kanıt `apps/editor/docs/evidence/2026-09-21-current-reads.json`, tam özel kayıt `/data/editor/backups/20260921-current-reads/`. Hermes doğal dil/mobil tarayıcı, yeni tam analiz ve analitik kapsam kabulü açık. HTTPS kimliği bulunamadığından push bekliyor; kalan komut `git push origin main`.
-
 
 ## 2026-09-21 — Editor: düzeltme/otomatik üretim/kesinti sonrası devam canlı kabulü geçti
 
@@ -947,7 +990,6 @@ Kullanıcı isteği: veri gösteren bütün menü ekranlarında veri hazır durs
 ## 2026-09-21 — Editor: doğrulama sonrası sürümlü çıktılar
 
 Yeni workflow özetleri görsel kimlik, olgu Critic, aktör ve çelişki kontrollerinin arkasına aldı. Kanonik snapshot ve değişmez çıktı sürümleri, revizyon kontrollü yayın pointer'ı, bağımlı çıktı geçersizliği, idempotent sonuç tekrar kullanımı ve üç denemeli tüketici eklendi. Eski nesillerin içerikleri korunuyor; taramalar kapalı. Son sunucu yayını `0.12.0-outputs-b5bfc0d7`: 54/54 çıktı okuma, 18/18 ortak okuma, 544/544 kaynak kontrolü geçti. 17 tablo salt okunur koşuda aynı; model çağrısı yok. Doğrulama sırasında gelen başka yazımları yakalamak için transaction-local writer kimliği ve snapshot kontrolü eklendi. Bakım açık, GPU 1 boş. Model üretimi/düzeltme/yarış/çökme kabulü DOĞRULANAMADI; yalnız okuma kabulü. Kanıtlar `apps/editor/docs/evidence/2026-09-21-output-*.json`. Ayrıntı: `apps/editor/docs/REVISION-OUTPUTS.md`.
-
 
 ## 2026-09-21 — Kitaba sor: görünür yazı alanı ve yenilemede boş sohbet (kabul bekliyor)
 
@@ -1050,6 +1092,7 @@ Kullanıcı isteği: müşteri VM'inden GPU'ya, bizim ortamlardan bağımsız er
 - **Doğrulama:** müşteri VM köprü konteynerinden `/editor/v1/models` → 200 (sertifika doğrulamalı), gizli başlık olmadan → 403, `configured()` → True.
 - **Açık:** uçtan uca soru düştü ("Server disconnected without sending a response"). Sebep yol değil motor: GPU 1'de kitap analizi sürüyor (görsel model ~87 GB), yönetici model yüklenemiyor, Hermes 500 alıp üç denemeden sonra bırakıyor. Analiz bitince soru çalışmalı; test sunucusundan sorulan soru da aynı anda aynı şekilde düşer. Kalıcı çözüm motor tarafında (soru varken analizi bekletmek ya da soruyu kuyruğa almak) — ayrı iş.
 - Kayıt: `deploy/tt-gpu/editor-ingress/README.md` (kurulum, koruma, geri alma).
+
 ## 2026-09-21 — Karne 44 → 62/69; müşteri VM'i test sunucusuyla eşitlendi; kayıt sistemi ilkesi
 
 **Kalite kapısı (`answer-gate.py --repeat 3`, 69 altın soru):** son tam koşu **60 SAĞLAM / 9 BOZUK / 0 KARARSIZ, ham hata 0** (09-18: 44/18/7, hata 12). Sonrasında Q58 ve Q27 de düzeldi → 62. Kalan bozuk: Q4, Q10, Q13, Q29, Q40, Q49, Q51.
@@ -1124,6 +1167,7 @@ Sekiz modülün kalan ikisi. CRM'de metin, öneri, prova ya da kontrol kaydı ol
 - **Bağımlılık:** `pypdf>=5.0` (`backend/semantic_bridge/requirements.txt`), sunucudaki venv'e kuruldu.
 
 Böylece M1–M8'in sekizi de canlıda. Kalanlar: yazma tarafı (kurul oyu, atama, randevu, freelancer kaydı, hakediş), rol modeli, CRM'e yazma.
+
 ## 2026-09-20 20:00 — Editör: metinden gelen ayırt edici özellikler (cinsiyet/yaş), nesil 10 (31/31 doğru), Critic'in atladığı iddialar
 
 **Kitap kuyruğu (`editorctl queue` → `editor.cli queue`):** gelen kutusundaki her PDF sırayla analiz edilir (modeller ortak: iki analiz aynı anda GPU'yu birbirinden alır). Mühürlü nesli olan kitap atlanır (`--force` yine koşturur, `--code-version` yalnız eski koddan mühürlenmişleri). Sunucuda `systemd-run --unit=editor-queue` ile ssh oturumundan bağımsız koşar; ilerleme `journalctl -u editor-queue -f`.
@@ -1133,7 +1177,6 @@ Böylece M1–M8'in sekizi de canlıda. Kalanlar: yazma tarafı (kurul oyu, atam
 **Nesil 10 (tam koşu, regresyon geçti):** 37 figür, 31'ine ad verildi, gözle 31/31 doğru, 0 yanlış, 6 belirsiz. Robobi ilk kez adlandı (s.23, elemeyle). Tarama 5 figürde yanlış ad vermişti, hepsi düzeltildi. Nesil 7→8→9→10: ad 21→24→29→31, yanlış ?→1→0→0. Süreklilik oylaması gerçek koşuda çalıştı: Can için 2 öneri, ikisi de oylamada elendi (kuyrukta 0 süreklilik kalemi; nesil 9'da 3 tanesi editöre gidiyordu). Metin–görsel: 5 öneri, 2 teyit (s.8, s.33).
 
 **Critic'in atladığı iddialar (nesil 10'da yakalandı):** onarılan 16 iddianın 12'si kuyruğa "yeniden denetlenemedi" diye düşmüştü — model, sorulandan az iddia hakkında karar döndürüyor. Karar dönmeyen iddia bir bulgu değil, sorulmamış sorudur: `_judge` artık kararsız kalanları daha küçük yığınlarla (en çok iki tur) yeniden sorar, kuyruğa ancak o zaman gider; küme çağrısındaki hata da tüm turu düşürmüyor. Nesil 10'un 11 kalemi yeniden soruldu, 11'i de karar aldı (hepsi SUPPORTED) → kuyruk 14'ten 3'e iner.
-
 
 ## 2026-09-20 23:10 — BI soru hattı: Kural C9 yanlıştı — "sözleşme sahibi" yazar değil, imzalayan grup şirketimiz
 
@@ -1164,6 +1207,7 @@ M6'dan sonra aynı gün beş ekran daha. Hepsi salt okunur, hepsi `backend/seman
 - **M7 Yazarlar / M4 Çevirmenler / M8 Çizer & serbest çalışanlar** (`/yazarlar`, `/cevirmenler`, `/cizer-freelancer`; `ContributorsScreen.tsx` + `modules.tsx`): bulgu — `new_eserkatilimBase` (36.323 kayıt, canlı) kişiyi `new_Katilimsaglayan` → ContactBase ile tutuyor (tamamı eşleşiyor), rol `new_katilimcitipiBase` (Yazar 2.231 kişi, Çizer 515, Tercüme 478…). Önceki analizdeki "çevirmen/çizer varlığı yok" tespiti bu yüzden eksikti. Liste (eser sayısı, son 12 ay, roller) + kişi ayrıntısı (özgeçmiş, eserler, taraf olduğu sözleşmeler, projeler). E-posta/telefon bilerek döndürülmüyor.
 - **Doğrulama:** her uç önce doğrudan CRM ölçümü, sonra yan portta (8798) köprü kopyası, sonra `portal.nanobase.ai/timas` üzerinden `timasai` oturumuyla; sayfalar 200, oturumsuz 401. Görsel denetim yapılamadı (oturum çerezi tarayıcı panesine konamıyor).
 - **Kalan:** M3 Redaksiyon ve M5 Son Okuma için CRM'de veri yok (metin/prova dosyası, öneri, kontrol kaydı); dosya yükleme + kendi tablolarımız gerekir. Yazma tarafı (atama, oy, not, randevu, freelancer kaydı, hakediş) ve roller de sıradaki iş.
+
 ## 2026-09-20 23:30 — Editör: "kim ne yaptı" tek token + olasılıkla; ana model koşu başına bir kez açılır (kod main'de, sunucuda ÖLÇÜLMEDİ)
 
 **Neden:** `NandhaKishorM/laya` (0,4B kodlayıcı karar modeli; 19 Eylül'de `convaiinnovations/laya` adıyla bakılıp alınmamıştı) yeniden, bu kez kodu okunarak incelendi. Yine alınmadı: görsel girişi yok, Türkçede 20 seçenekli görevde 0,37 (İngilizce 0,78), eğitimsiz hâli çoğunluk sınıfının altında, ~20 seçenek ve ~768 token durum sınırı, fayda ancak müşteriye özel ince ayarla. Ama övülen fikir — metin üretmeden, tek geçişte, olasılığıyla tipli karar — kendi modelimizle eğitimsiz alınabiliyor ve editör bunu hiçbir yerde kullanmıyordu (`logprobs` sıfır eşleşme).
@@ -1175,7 +1219,6 @@ M6'dan sonra aynı gün beş ekran daha. Hepsi salt okunur, hepsi `backend/seman
 **Ana model açılışı (`BookFullAnalysis._run_single_phase`):** kod okumasıyla director koşu başına kesin 2, önemli olay taraması olursa 3 kez açılıyordu (derin model 0,90 istediği için her geçişte director itiliyor). **Gateway logundan ölçüldü:** 18:50–19:24 koşusunda (34 dk, eski kod) director tam 2 kez açıldı; açılış 102 ve 105 sn sürdü (derin görsel 66 sn). Yani açılış maliyeti varsayılan ~6 dk değil ~105 sn; yeni sıranın kazancı bir açılış ≈ 105 sn, koşunun ~%5'i. Geçişi zorlayan yalnız iki bağımlılık: çıkarım derin taramayı, görsel kimlik karakter listesini okur; director'ın sonraki hiçbir adımı görsel kimlik/süreklilik/metin–görsel teyidin yazdığını okumaz. Yeni sıra: derin tarama + metin–görsel teyit → director'ın bütün işi → görsel kimlik + süreklilik → kuyruk, indeks, regresyon, rapor, kart. Önemli olay sayfası taranacaksa görsel iş araya girer, director 2 kez açılır. Model çağrılarının girdisi değişmedi (varsayılan `deep` kipinde). `contradictions` activity'si `detect_contradictions` + `queue_contradictions` olarak bölündü; çalışan işler için eski sıra `workflow.patched("director-single-phase-v1")` arkasında `_run_v1` olarak duruyor.
 
 **DOĞRULANAMADI:** TT VPN kapalı, sunucuya kurulmadı, hiçbir koşu yapılmadı; yerelde yalnız sözdizimi derlendi. Sıradaki: VPN açılınca kur (göç 010 işçi açılışında uygulanır) → `measure_actors` nesil 9 → tam koşu (nesil 10): regresyon, gateway logunda `start book-director` sayısı (hedef 1), toplam süre, kuyruk büyüklüğü.
-
 
 ## 2026-09-20 22:30 — Editoryal Süreç: M6 Telif & Sözleşme ekranı (gerçek CRM verisi)
 
@@ -1195,6 +1238,7 @@ Kullanıcı Stitch projesindeki (13426839861607265553) M1–M8 ekranlarının pr
 - **Tema:** Stitch ekranları Space/Hanken Grotesk, yanık turuncu `#a33900`, düz krem yüzey, 2–12 px köşe, Material Symbols ve kendi yan menüsüyle gelmiş; bizde Plus Jakarta Sans, coral/violet, cam paneller, 24 px köşe, lucide, `Shell`. Ekranlar yalnız masaüstü; sahte model rozetleri ve birbirini tutmayan örnek veri taşınmayacak.
 - **Bulgu:** `modules.json`'da M1–M8 zaten kayıtlı, `ModulesMenu.LIVE`'da yok. Köprüde dosya yükleme, CRM'e yazma yolu ve rol modeli yok. CRM'de çevirmen/çizer/freelancer varlığı yok; hakediş 0 satır, telif ödemesi yalnız 2014; iş planı modülü ölü. En hazır modül M6 (sözleşme 14.766 satır, kurallar C4–C22), sonra M1 (kurul toplantısı 499) ve M7.
 - **Açık karar:** editoryal tabloların ve uçların nerede duracağı (BI köprüsü mü, `apps/editor` mü) ve model işlerinde hangi modelin kullanılacağı; "editör BI'dan hiçbir şey kullanmaz" kuralı ile tek frontend + CRM verisinin köprüde olması çakışıyor.
+
 ## 2026-09-20 18:10 — Editör: nesil 9 (kimlik 29/29 doğru), süreklilik bulguları da oylanır
 
 **Nesil 9 (maske düzeltmesi + tutarlılık kuralı, tam koşu, regresyon geçti):** 35 figür kırpımı gözle denetlendi: 29 ad → 29 doğru, 0 yanlış; 6 belirsizin 3'ü zaten figür değil (bölüm başlığı süsü, örtülü nesne, kırpım parçası), gerçek eksik 3 (s.3 Robobi — 2 sayfada çizili, referansı yok; s.39 Bilge ve Can). Tarama 7 figürde yanlış ad vermişti (Defne↔Bilge), kırpım eşleştirme hepsini düzeltti; s.23 profesör hatası kapandı, referanslı karakter 3 → 4. Nesil 7→8→9: ad 21→24→29, yanlış ?→1→0, belirsiz 12→9→6.
@@ -1317,6 +1361,7 @@ TT GPU'daki `qwen38-27b` kurulum dosyası ve BI semantik köprüsünün modele b
 **Model değişti, köprü bağlandı:** ~14:50'de GPU'da `qwen3.8-flash-next` kaldırıldı, 15:20'de `Qwen3.8-27B-FP8` (`nanobaseAI` adıyla, port 8001) açıldı — başka bir oturumun/kullanıcının kararı. Tam kapının son 17 sorusu bu aralıkta 502 ve "veri kaynağına ulaşılamıyor" aldı (sayaçta error 51). Kullanıcı isteğiyle köprünün `/etc/nanobase/semantic-bridge.env` satır 64 `LLM_MODEL_NAME` ve 67 `SEMANTIC_SELECTOR_MODEL` → `nanobaseAI`, köprü yeniden başlatıldı; model çağıran soru cevaplandı.
 
 **Açık:** "fatura kesildi" hâlâ CRM'e gidiyor — iki kelimelik, iki veritabanında da anlamlı ifade; sözlük onayıyla çözülmez, kaynak hakemliği/netleştirme işi (18 Eylül sırasının 4. adımı; 1.100 soruda ~16 Logo sorusu bu türden). Makine kelimesi olmadan CRM'e kaçan Logo soruları ayrı kusur ("aylar", "il", "eylülde" → ACCOUNTBASE.NEW_EYLUL). Hızlı kapı temel çizgisi yenilenmedi (katalog 61083 → 70548, 18 okuma değişti). Onaylar ekranında gerçek CRM kelimeleri ("hakediş", "sözleşme süresi") kişi onayı bekliyor.
+
 ## 2026-09-19 — GPU: ana model Qwen3.8-27B-FP8, sunulan ad `nanobaseAI`; Flash-Next silindi
 
 Neden: Flash-Next (186 GB) iki H100'e ancak n-gram tablosu RAM'e atılarak sığıyordu (resmî tarif 4 kart); Soğuk açılışta bellek sıçraması buradan geliyordu. Kullanıcı kararıyla Qwen3.8-27B-FP8'e geçildi, Flash-Next kalıcı silindi (komutu kullanıcı çalıştırdı). 27B iki karta bölünmüş tek sunucu olarak (TP2, NUMA bağlı, MTP 3, önek önbelleği, 131K) `vllm/vllm-openai:v0.27.1` ile port 8001'de açıldı. Sunulan model adı kullanıcı isteğiyle `nanobaseAI`: BI köprüsü ve TİMAŞ VM 55 bu ada çevrildi (`scripts/server/model-name-switch.sh`); depodaki varsayılanlar da. Ölçüm: tek istek 177 tok/sn (Flash-Next 130), 32 eşzamanlı 2.256 tok/sn (1.500), 20k token istem 2,2 sn / önbellekle 0,4 sn; KV 1,6 M token. Düşünme kapalı, kapalı küme + logprobs ve Türkçe görsel okuma doğrulandı. Açık: set100 tamamı. Ayrıntı: `docs/TT-GPU-SUNUCUSU.md` §4.0.
@@ -1370,6 +1415,7 @@ Müşteri VM'i (192.168.0.55) harici sağlayıcıdan (`integrate.api.nvidia.com`
 - **Kök nedenler (etki sırasıyla):** 377 ret katalogda olmayan temel iş terimi (tahsilat, açık alacak, vade, döviz, il, çeyrek, ziyaret, kargo, yazar, telif); yanlış cevaplarda alış/satış TRCODE karışması, adet yerine tutar, "kitap" listesinde hammadde/kafe ürünü, TOP/GROUP BY eksik, çelişkili WHERE; 58 boş sonucun çoğu "bugün/bu ay" — Logo 2026 verisi 17.08'de bitiyor, cevap bunu söylemiyor; 58 ret soruda "Logo"/"CRM" adı geçtiği için, 34 ret sıradan kelime ("itibarıyla", "lira", "den") yüzünden; 3 iki kaynaklı soruda plan devreye girmedi.
 - **Doğrulanmamış:** 4 soruda `/tmp/semantic-results-*` geçici dosyası bulunamadı; köprü koşu sırasında yeniden başlamadı, eşzamanlı istekte dizin temizliğinden şüpheleniliyor.
 - Kod/katalog değişikliği yok; bu yalnız ölçüm. Okunan kaynak ölçüsü görünümleri (AA_*, MIND_*) tanımadığı için gürültülü.
+
 ## 2026-09-19 — Müşteri VM'i: sürüm farkı, harici model ve GPU'ya geçiş betiği (yayın kullanıcıda)
 
 - **Test sunucusu (nanobase-direct) günceldi:** backend, bilgi paketi, arayüz kaynağı ve giriş servisi `main` ile 184 dosyada eş; derlenmiş kokpit son arayüz değişikliğinden sonra üretilmiş. Derlenecek/kurulacak bir şey yok. Sunucuda `main`de olmayan tek dosya: `scripts/server/portal-login/set_demo_username.py` (demo giriş kalıntısı; demo giriş kaldırılmıştı — silinmesi ayrı iş).
@@ -1391,6 +1437,7 @@ Müşteri VM'i (192.168.0.55) harici sağlayıcıdan (`integrate.api.nvidia.com`
 ## 2026-09-18 19:30 UTC — 1000 soruluk son kullanıcı seti (CFO / CEO / muhasebeci, Logo + CRM karışık)
 
 `tests/text2sql/set1000.jsonl`: elle yazılmış 1000 Türkçe son kullanıcı sorusu (şablon çarpımı değil). Alanlar `id` (K0001–K1000), `soru`, `kaynak` (logo 424 / crm 315 / ikisi 261), `rol` (CFO 413 / CEO 306 / muhasebeci 281), `konu`. **Neden:** set100 en zor sorulardı; gerçek kullanıcının gündelik, stratejik ve mutabakat/denetim sorularını kapsayan geniş bir liste istendi. Birebir yineleme ve set100 ile çakışma betikle ayıklandı. **Bu yalnız liste:** hiçbir soru köprüde sorulmadı, `beklenen`/referans SQL yok, `kaynak` etiketi yazarın beklentisidir (ölçüm değil). Sıradaki: hızlı kapıyla (`resolver-gate.py`) kaynak okumasını ölçmek, sonra tam koşu.
+
 ## 2026-09-18 19:00 UTC — Tam kapının ilk turu ve kapıyla ölçülen ilk düzeltme (Q28)
 
 - **İlk tam tur (7 altın soru × 3):** SAĞLAM 2 (Q21, Q68) · KARARSIZ 2 (Q28 1/3, Q71 2/3) · BOZUK 2 (Q19, Q69) · VERİ 1 (Q24 — altın dosyada kontrol türü yanlıştı). Tek seferlik "doğrulandı" ile gerçek durum arasındaki fark ilk kez sayıyla görüldü.
@@ -1516,7 +1563,6 @@ Kullanıcı isteğiyle 2026-09-17'de kaldırılan tasarım kartlarından üçü 
 - Test sunucusuna `openconnect` kuruldu; etkileşimli giriş betiği `ttvpn-login` ve rota koruyan `ttvpn-script` yerleştirildi. Betik varsayılan rotayı ve DNS'i devralmaz; amaç TİMAŞ `tun0` tünelini ve sunucu erişimini bozmamak. Kimlik bilgisi ve OTP diske yazılmaz, girişte kullanıcı tarafından yazılır.
 - Bağlantı kurulamadı ve denenmedi: sunucudan `sgmvpn.turktelekom.com.tr:443` TCP zaman aşımı veriyor, aynı adres Türkiye çıkışlı bağlantıdan 302 ile yanıt veriyor. DNS doğru çözülüyor. Neden büyük olasılıkla ağ geçidinde yurt dışı IP engeli; TT'den 38.247.162.28 için izin istenmesi gerekiyor. Betikler söz dizimi denetiminden geçti, gerçek oturumla doğrulanmadı.
 
-
 ## 2026-09-17 — Test sunucusunda düşen 10 test: kod sağlam, sunucudaki test dosyaları bayattı
 
 - **Neden:** LLM kapısı kabulünde tam paket 10 test düşürdü; aynı 10'u değişmemiş canlı ağaçta da düşüyordu. Kök neden arandı.
@@ -1545,6 +1591,7 @@ Kullanıcı isteğiyle 2026-09-17'de kaldırılan tasarım kartlarından üçü 
 - **Kanıt:** `nanobase-direct:~/llm-gate/evidence/` (`load-*.json`, `features-*.json`, `ask-*.json`, `restart-*.json`), koşturucular `~/llm-gate/accept.py`, `pgtest.py`, `probe.py`.
 - **Canlı şema değişikliği (eklemeli):** `sl_llm_queue`'ya 3 boş geçilebilir kolon (`module`, `priority`, `beats`), yeni tablolar `sl_llm_gate`, `sl_llm_job`. Eski kod bu kolonları görmez; geri almak gerekirse kolon/tablolar durabilir.
 - Tasarım ve kullanım: [docs/LLM-KAPISI.md](LLM-KAPISI.md). **Dağıtım:** kabulden sonra test sunucusunun canlı ağacına yalnız değişen 11 dosya kondu (öncesinde canlı dosyaların md5'i `main` tabanıyla birebir; sonrasında 11/11 yerelle aynı; `app.py` root sahipliği korundu), `nanobase-semantic-bridge` yeniden başlatıldı: `/health` ok, 8 slot / 2 ayrılmış, işleyici ayakta; canlı `:8795` üzerinden bir iş bırakıldı → 202, `DONE`, doğru cevap, sıra beklemesi 24 ms (model 200 sn); modelsiz «2026 net ciro» sorusu `deterministic` yoldan 11,6 sn'de döndü (bu yol değişmedi; rakamın doğruluğu bu işin kapsamında ayrıca doğrulanmadı). Müşteri VM'ine (192.168.0.55) **kurulmadı**.
+
 ## 2026-09-17 — Tüm oturumların belge denetimi; proje belleğindeki bayat bilgiler düzeltildi
 
 - Neden: kullanıcı "tüm konuşmalarda yapılan işlere bak, md dosyalarını güncelle" dedi. 16 Eylül 10:16'daki önceki denetimden sonra etkin olan BI oturumları (CRM tablo/kolon araştırması — soru 5–18 turu, sağ üst zoom, AD Administrators erişimi, kurumsal sohbet analizi, promt izleyici) ve `main` commit'leri günlükle tek tek karşılaştırıldı. Sonuç: her oturum kendi günlük girişini yazmış, eksik giriş yok; 12 `claude/*` dalının hepsi `main`de (taşınmamış commit 0), worktree'ler temiz.
