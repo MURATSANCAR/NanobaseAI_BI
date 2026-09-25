@@ -22,6 +22,7 @@ const ProofScreen = lazy(() => import('@/canvas/editorial/ProofScreen'));
 const StudioHome = lazy(() => import('@/canvas/editorial/studio/StudioHome'));
 const StudioFlow = lazy(() => import('@/canvas/editorial/studio/StudioFlow'));
 const StudioEditor = lazy(() => import('@/canvas/editorial/studio/StudioEditor'));
+const PlanEditor = lazy(() => import('@/canvas/editorial/studio/PlanEditor'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
 const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
@@ -109,6 +110,7 @@ export default function App() {
             <Route path="kitap-tasarim" element={<StudioHome />} />
             <Route path="kitap-tasarim/:jobId" element={<StudioFlow />} />
             <Route path="kitap-tasarim/:jobId/studyo" element={<StudioEditor />} />
+            <Route path="kitap-tasarim/:jobId/sayfalar" element={<PlanEditor />} />
             <Route path="telif-sozlesme" element={<ContractsScreen />} />
           </Route>
 

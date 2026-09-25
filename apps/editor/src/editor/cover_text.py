@@ -221,6 +221,8 @@ def compose(img: Image.Image, title: str, author: str, subtitle: str | None = No
             style: str = "edebiyat", draw_text: bool = True) -> tuple[Image.Image, dict]:
     """Yazısız kapak resmine başlık/alt başlık/yazar basar. Dönen rapor: font, punto, satırlar,
     renk, kontrast, perde kullanıldı mı."""
+    if not title.strip():
+        raise ValueError("kitap adı boş; künyeden kitap adını girin")
     st = STYLES[style]
     out = img.convert("RGB").copy()
     W, H = out.size
@@ -242,10 +244,12 @@ def compose(img: Image.Image, title: str, author: str, subtitle: str | None = No
         s_size, s_lines = fit(s_text, s_face, box_w, band_h - title_h, 1.1, max_lines=2,
                               max_size=max(12, int(t_size * 0.36)))
 
-    a_face = _usable(st.author, author)
+    author = (author or "").strip()
     ay0, ay1 = int(H * AUTHOR_BAND[0]), int(H * AUTHOR_BAND[1])
-    a_size, a_lines = fit(author, a_face, box_w, ay1 - ay0, 1.1, max_lines=1,
-                          max_size=max(14, int(t_size * 0.42)))
+    if author:                               # yazar adı yoksa (künyede boş) yazar satırı basılmaz
+        a_face = _usable(st.author, author)
+        a_size, a_lines = fit(author, a_face, box_w, ay1 - ay0, 1.1, max_lines=1,
+                              max_size=max(14, int(t_size * 0.42)))
 
     # Blok yüksekliği → üst bantta dikey ortalama.
     block_h = len(t_lines) * int(t_size * st.leading)
@@ -253,7 +257,8 @@ def compose(img: Image.Image, title: str, author: str, subtitle: str | None = No
         block_h += int(t_size * 0.25) + len(s_lines) * int(s_size * 1.1)
     top = ty0 + max(0, (band_h - block_h) // 2)
 
-    for key, (y0, y1) in {"title": (top, top + block_h), "author": (ay0, ay1)}.items():
+    bands = {"title": (top, top + block_h)} | ({"author": (ay0, ay1)} if author else {})
+    for key, (y0, y1) in bands.items():
         ink, c, need = _ink(out.crop((int(W * SIDE_MARGIN), y0, W - int(W * SIDE_MARGIN), y1)))
         report[key] = {"ink": ink, "contrast": c, "scrim": need}
         if need:
@@ -266,10 +271,11 @@ def compose(img: Image.Image, title: str, author: str, subtitle: str | None = No
         sy = top + len(t_lines) * int(t_size * st.leading) + int(t_size * 0.25)
         sb = _draw_block(out, s_lines, s_face, s_size, 1.1, sy, ink, shadow=ink == LIGHT, draw=draw_text)
         report["subtitle"] = {"font": s_face.file, "size": s_size, "lines": s_lines, "box": sb}
-    a_ink = report["author"]["ink"]
-    ab = _draw_block(out, a_lines, a_face, a_size, 1.1, ay0 + ((ay1 - ay0) - a_size) // 2, a_ink,
-                     shadow=a_ink == LIGHT, draw=draw_text)
-    report["author"].update(font=a_face.file, size=a_size, lines=a_lines, box=ab)
+    if author:
+        a_ink = report["author"]["ink"]
+        ab = _draw_block(out, a_lines, a_face, a_size, 1.1, ay0 + ((ay1 - ay0) - a_size) // 2, a_ink,
+                         shadow=a_ink == LIGHT, draw=draw_text)
+        report["author"].update(font=a_face.file, size=a_size, lines=a_lines, box=ab)
     return out, report
 
 

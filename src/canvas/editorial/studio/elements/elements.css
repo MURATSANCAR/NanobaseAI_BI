@@ -1,0 +1,35 @@
+/* Öğeler sayfası (ElementLibrarySheet, Base UI Drawer): telefonda alttan, geniş ekranda sağ altta yüzen panel.
+   Arada bir açılır (öğe eklemek için) → standart çekmece hareketi: açılış 280 ms çekmece eğrisi; kaydırırken
+   geçiş yok (parmağı izler); bırakınca kapanış süresi kaydırma hızıyla ölçeklenir (en çok 240 ms). Azaltılmış
+   harekette konum değişmez, yalnız opaklık. Değerler management.css .mg-sheet ile aynı aile. */
+.se-scrim {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  position: fixed; inset: 0; z-index: 80; background: #1b1f2a;
+  opacity: calc(0.3 * (1 - var(--drawer-swipe-progress, 0)));
+  transition: opacity 280ms var(--ease-drawer);
+}
+.se-scrim[data-starting-style], .se-scrim[data-ending-style] { opacity: 0 }
+.se-scrim[data-swiping] { transition-duration: 0ms }
+.se-scrim[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * 240ms) }
+
+.se-viewport { position: fixed; inset: 0; z-index: 81; display: flex; align-items: flex-end; justify-content: center }
+.se-sheet {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex; flex-direction: column; width: 100%; max-height: 85dvh; outline: none;
+  border-radius: 22px 22px 0 0; box-shadow: 0 -12px 48px #2a1f4a2e;
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition: transform 280ms var(--ease-drawer);
+  will-change: transform;
+}
+.se-sheet[data-starting-style], .se-sheet[data-ending-style] { transform: translateY(100%) }
+.se-sheet[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * 240ms) }
+.se-sheet[data-swiping] { transition-duration: 0ms; user-select: none }
+@media (min-width: 640px) {
+  .se-viewport { justify-content: flex-end; padding: 16px }
+  .se-sheet { width: 420px; max-height: min(720px, calc(100dvh - 32px)); border-radius: 22px }
+  .se-sheet[data-starting-style], .se-sheet[data-ending-style] { transform: translateY(calc(100% + 16px)) }
+}
+@media (prefers-reduced-motion: reduce) {
+  .se-sheet { transition: opacity 180ms ease }
+  .se-sheet[data-starting-style], .se-sheet[data-ending-style] { transform: translateY(var(--drawer-swipe-movement-y, 0px)); opacity: 0 }
+}

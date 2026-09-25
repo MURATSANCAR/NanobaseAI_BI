@@ -4270,20 +4270,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, _tenant, user, _ = _books(request)
         from semantic_bridge import editorial_studio
         book_id = str((body or {}).get("book_id") or "")
-        out = _studio_call(editorial_studio.new_job, book_id, user)
-        admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), book_id, {"source": "book"})
+        mode = str((body or {}).get("art_mode") or "auto")
+        out = _studio_call(editorial_studio.new_job, book_id, user, mode)
+        admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), book_id, {"source": "book", "art_mode": mode})
         return out
 
     @app.post("/api/v1/editorial/studio/jobs/docx")
-    async def editorial_studio_new_docx(request: Request) -> dict[str, Any]:
-        """Word dosyası ham gövde olarak gelir (Content-Type docx, ad X-File-Name başlığında, URL kodlu)."""
+    async def editorial_studio_new_docx(request: Request, art_mode: str = "auto") -> dict[str, Any]:
+        """Word dosyası ham gövde olarak gelir (Content-Type docx, ad X-File-Name başlığında, URL kodlu);
+        resim seçimi `art_mode` sorgu parametresinde."""
         engine, _tenant, user, _ = _books(request)
         from urllib.parse import unquote
         from semantic_bridge import editorial_studio
         data = await request.body()
         name = unquote(request.headers.get("x-file-name", "kitap.docx"))
-        out = _studio_call(editorial_studio.new_job_docx, name, data, user)
-        admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), name, {"source": "docx", "bytes": len(data)})
+        out = _studio_call(editorial_studio.new_job_docx, name, data, user, art_mode)
+        admin_mod.audit(engine, user, "create", "studio_job", out.get("id"), name,
+                        {"source": "docx", "bytes": len(data), "art_mode": art_mode})
         return out
 
     @app.get("/api/v1/editorial/studio/jobs/{job}")
@@ -4307,6 +4310,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         fields = (body or {}).get("fields") or {}
         out = _studio_call(editorial_studio.kunye, job, fields, user)
         admin_mod.audit(engine, user, "update", "studio_kunye", job, "künye", fields)
+        return out
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/art-mode")
+    def editorial_studio_art_mode(job: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
+        engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        mode = str((body or {}).get("art_mode") or "")
+        out = _studio_call(editorial_studio.set_art_mode, job, mode, user)
+        admin_mod.audit(engine, user, "update", "studio_job", job, "resim seçimi", {"art_mode": mode})
         return out
 
     @app.post("/api/v1/editorial/studio/jobs/{job}/resume")
@@ -4368,6 +4380,214 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                             "baski-kapak": "kapak-BASKI-CMYK"}.get(kind, "dosya") + ".pdf"
         return Response(content=data, media_type="application/pdf",
                         headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"})
+
+    # ---- sayfa planı (docs/analiz/studyo-sayfa-plani-sozlesme.md)
+    # Servis uçlarının birebir vekili. Oturum zorunlu; yazanlarda X-Editor = oturumdaki AD hesabı ve
+    # denetim kaydı. Servisin 4xx gövdesi ({"code": "STALE"} / {"code": "NO_PLAN"} / 409 ayrıntısı)
+    # olduğu gibi döner: ekran çakışmayı ve boş planı bu kodlardan tanır.
+
+    def _plan(fn, *a, **kw):
+        from semantic_bridge import editorial_studio
+        try:
+            return fn(*a, **kw)
+        except editorial_studio.PlanError as e:
+            return JSONResponse(status_code=e.status, content=e.body)
+        except editorial_studio.StudioError as e:
+            raise HTTPException(e.status if e.status in (400, 404, 409, 413) else 400, str(e)) from None
+        except ValueError as e:
+            raise HTTPException(400, str(e)) from None
+        except Exception:  # noqa: BLE001 — ayrıntı günlükte; editöre teknik hata metni gösterilmez
+            log.exception("studio plan call failed")
+            raise HTTPException(502, "Stüdyo şu an yanıt vermiyor.") from None
+
+    def _plan_write(request: Request, method: str, job: str, sub: str, what: str, obj: str,
+                    body: dict | None = None, params: dict | None = None, detail: Any = None):
+        engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        out = _plan(editorial_studio.plan_request, method, job, sub, body=body, editor=user, params=params)
+        if not isinstance(out, Response):
+            admin_mod.audit(engine, user, {"POST": "create", "PUT": "update", "DELETE": "delete"}.get(method, "update"),
+                            "studio_plan", f"{job}/{obj}"[:120], what, detail)
+        return out
+
+    def _json_body(body: Any) -> dict[str, Any]:
+        if not isinstance(body, dict):
+            raise HTTPException(400, "Gövde bir nesne olmalı.")
+        return body
+
+    def _rev(v: Any) -> int:
+        try:
+            return int(v)
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Sürüm (rev) eksik.") from None
+
+    def _pid(v: str) -> str:
+        from semantic_bridge import editorial_studio
+        if not editorial_studio.PLAN_ID.match(v or ""):
+            raise HTTPException(404, "Kayıt bulunamadı.")
+        return v
+
+    def _upload_mb() -> int:
+        try:
+            return max(1, int(admin_mod.conf("STUDIO_UPLOAD_MB") or 60))
+        except ValueError:
+            return 60
+
+    @app.get("/api/v1/editorial/studio/settings")
+    def editorial_studio_settings(request: Request) -> dict[str, Any]:
+        _books(request)
+        return {"upload_mb": _upload_mb()}
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/plan")
+    def editorial_plan_get(job: str, request: Request):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _plan(editorial_studio.plan_request, "GET", job, "", timeout=60)
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/freeze")
+    def editorial_plan_freeze(job: str, request: Request):
+        return _plan_write(request, "POST", job, "/freeze", "sayfa planı başlatıldı", "plan", body={})
+
+    @app.put("/api/v1/editorial/studio/jobs/{job}/plan/pages/{pid}")
+    def editorial_plan_page_put(job: str, pid: str, request: Request, body: dict[str, Any] | None = None):
+        b = _json_body(body)
+        page = _json_body(b.get("page"))
+        rev = _rev(b.get("rev"))
+        return _plan_write(request, "PUT", job, f"/pages/{_pid(pid)}", "sayfa düzenlendi", pid, body={"rev": rev, "page": page},
+                           detail={"rev": rev, "layout": page.get("layout"), "bubbles": len(page.get("bubbles") or []),
+                                   "figures": len(page.get("figures") or []), "texts": len(page.get("texts") or [])})
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/pages")
+    def editorial_plan_page_add(job: str, request: Request, body: dict[str, Any] | None = None):
+        b = _json_body(body)
+        after = b.get("after")
+        clean = {"rev": _rev(b.get("rev")), "after": _pid(str(after)) if after else None,
+                 "layout": str(b.get("layout") or "text-only")[:20]}
+        return _plan_write(request, "POST", job, "/pages", "sayfa eklendi", "pages", body=clean, detail=clean)
+
+    @app.delete("/api/v1/editorial/studio/jobs/{job}/plan/pages/{pid}")
+    def editorial_plan_page_delete(job: str, pid: str, request: Request, rev: int | None = None):
+        return _plan_write(request, "DELETE", job, f"/pages/{_pid(pid)}", "sayfa silindi", pid,
+                           params={"rev": _rev(rev)}, detail={"rev": rev})
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/order")
+    def editorial_plan_order(job: str, request: Request, body: dict[str, Any] | None = None):
+        b = _json_body(body)
+        ids = [_pid(str(x)) for x in (b.get("ids") or [])]
+        return _plan_write(request, "POST", job, "/order", "sayfa sırası değişti", "order",
+                           body={"rev": _rev(b.get("rev")), "ids": ids}, detail={"pages": len(ids)})
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/pages/{pid}/split")
+    def editorial_plan_split(job: str, pid: str, request: Request, body: dict[str, Any] | None = None):
+        b = _json_body(body)
+        try:
+            at = max(0, int(b.get("at") or 0))
+        except (TypeError, ValueError):
+            raise HTTPException(400, "Bölme yeri geçersiz.") from None
+        clean = {"rev": _rev(b.get("rev")), "block": _pid(str(b.get("block") or "")), "at": at}
+        return _plan_write(request, "POST", job, f"/pages/{_pid(pid)}/split", "metin sonraki sayfaya taşındı", pid,
+                           body=clean, detail=clean)
+
+    @app.put("/api/v1/editorial/studio/jobs/{job}/plan/palette")
+    def editorial_plan_palette(job: str, request: Request, body: dict[str, Any] | None = None):
+        b = _json_body(body)
+        palette = _json_body(b.get("palette"))
+        return _plan_write(request, "PUT", job, "/palette", "palet değişti", "palette",
+                           body={"rev": _rev(b.get("rev")), "palette": palette}, detail=palette)
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/pages/{pid}/bubbles/suggest")
+    def editorial_plan_bubbles(job: str, pid: str, request: Request):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _plan(editorial_studio.plan_request, "POST", job, f"/pages/{_pid(pid)}/bubbles/suggest", body={})
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/plan/pages/{pid}/preview")
+    def editorial_plan_preview(job: str, pid: str, request: Request, w: int = 900):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_image(_studio_call(editorial_studio.plan_bytes, job, f"/pages/{_pid(pid)}/preview",
+                                          max(120, min(int(w), 2400))))
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/plan/unused-art")
+    def editorial_plan_unused(job: str, request: Request):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _plan(editorial_studio.plan_request, "GET", job, "/unused-art", timeout=60)
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/figures")
+    def editorial_plan_figure(job: str, request: Request, body: dict[str, Any] | None = None):
+        b = _json_body(body)
+        page = b.get("page")
+        clean = {"prompt": str(b.get("prompt") or "")[:1200], "characters": [str(x)[:120] for x in (b.get("characters") or [])],
+                 "page": _pid(str(page)) if page else None}
+        if not clean["prompt"].strip():
+            raise HTTPException(400, "Figürün tarifini yazın.")
+        return _plan_write(request, "POST", job, "/figures", "figür istendi", "figures", body=clean, detail=clean)
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/plan/assets/{gid}")
+    def editorial_plan_asset(job: str, gid: str, request: Request, w: int = 400):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _studio_image(_studio_call(editorial_studio.plan_bytes, job, f"/assets/{_pid(gid)}", max(0, min(int(w), 2400))))
+
+    @app.delete("/api/v1/editorial/studio/jobs/{job}/plan/assets/{gid}")
+    def editorial_plan_asset_delete(job: str, gid: str, request: Request, rev: int | None = None):
+        return _plan_write(request, "DELETE", job, f"/assets/{_pid(gid)}", "kütüphaneden silindi", gid,
+                           params={"rev": _rev(rev)}, detail={"rev": rev})
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/assets/{gid}/cutout")
+    def editorial_plan_cutout(job: str, gid: str, request: Request):
+        return _plan_write(request, "POST", job, f"/assets/{_pid(gid)}/cutout", "arka plan kaldırma istendi", gid, body={})
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/assets/{gid}/upscale")
+    def editorial_plan_upscale(job: str, gid: str, request: Request, body: dict[str, Any] | None = None):
+        b = body if isinstance(body, dict) else {}
+        clean = {"page": _pid(str(b["page"])) if b.get("page") else None,
+                 "item": _pid(str(b["item"])) if b.get("item") else None}
+        return _plan_write(request, "POST", job, f"/assets/{_pid(gid)}/upscale", "kalite artırma istendi", gid,
+                           body=clean, detail=clean)
+
+    @app.put("/api/v1/editorial/studio/jobs/{job}/plan/photos")
+    async def editorial_plan_photo(job: str, request: Request, filename: str = "", page: str | None = None):
+        """Fotoğraf ham gövdeyle gelir (Content-Type dosyanın türü). Sınır yönetim ayarı STUDIO_UPLOAD_MB."""
+        engine, _tenant, user, _ = await run_in_threadpool(_books, request)
+        from semantic_bridge import editorial_studio
+        mb = _upload_mb()
+        limit = mb * 1024 * 1024
+        declared = request.headers.get("content-length") or ""
+        if declared.isdigit() and int(declared) > limit:
+            raise HTTPException(413, f"Fotoğraf en çok {mb} MB olabilir.")
+        data = await request.body()
+        if not data:
+            raise HTTPException(400, "Dosya boş.")
+        if len(data) > limit:
+            raise HTTPException(413, f"Fotoğraf en çok {mb} MB olabilir.")
+        mime = (request.headers.get("content-type") or "application/octet-stream").split(";")[0].strip().lower()
+        out = await run_in_threadpool(_plan, editorial_studio.plan_photo, job, filename, page, data, mime, user)
+        if not isinstance(out, Response):
+            admin_mod.audit(engine, user, "create", "studio_plan", f"{job}/photo", "fotoğraf yüklendi",
+                            {"name": filename[:200], "bytes": len(data), "page": page,
+                             "asset": out.get("asset") if isinstance(out, dict) else None})
+        return out
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/plan/history")
+    def editorial_plan_history(job: str, request: Request):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _plan(editorial_studio.plan_request, "GET", job, "/history", timeout=60)
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/restore")
+    def editorial_plan_restore(job: str, request: Request, body: dict[str, Any] | None = None):
+        b = _json_body(body)
+        rev = _rev(b.get("rev"))
+        return _plan_write(request, "POST", job, "/restore", f"sürüm {rev} geri yüklendi", "restore",
+                           body={"rev": rev}, detail={"rev": rev})
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/plan/jobs")
+    def editorial_plan_jobs(job: str, request: Request):
+        _books(request)
+        from semantic_bridge import editorial_studio
+        return _plan(editorial_studio.plan_request, "GET", job, "/jobs", timeout=30)
 
     @app.get("/api/v1/editorial/books/{book_id}/figures/{region_id}")
     def editorial_book_figure(book_id: str, region_id: str, request: Request):
