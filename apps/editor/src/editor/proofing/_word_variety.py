@@ -76,6 +76,7 @@ def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, int, bool]]],
     1. Özel ad çözümlemesi, sıradan çözümleme varken düşer ("Gül" / "gül").
     2. En az türetmeli çözümleme kalır: türetilmiş sözcük kendi maddesidir ("gözlük" ≠ göz+lük;
        "yüzdü" = yüzmek, yüz+ek fiil değil).
+    0. Biçim bir işlev sözcüğünün yalın hâliyse o okuma (`closed`).
     3. Kalan birden çok kök varsa: kitapta TEK kökle çözümlenen biçimlerinin sıklığı büyük olan
        (kitabın kendi kullanımı: "gözüme", "gözü" varsa "göze" → göz, pınar anlamındaki "göze" değil);
        eşitlikte kısa gövde (yalın kök, ekli okumadan sık: "koşa" → koşmak), sonra alfabetik.
@@ -87,7 +88,13 @@ def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, int, bool]]],
         low = min(c[2] for c in cs)
         return [c for c in cs if c[2] == low]
 
-    pre = {f: trimmed(cs) for f, cs in form_cands.items() if cs}
+    def closed(f, cs):
+        """Biçim bir işlev sözcüğünün yalın hâliyse o okuma: "de" bağlaç (demek'in emri değil),
+        "ile"/"için" edat (il+e, iç+in değil), "o" zamir. Kapalı sınıf sözcükleri metinde ezici
+        sıklıktadır; eş yazılı ekli okuma nadirdir."""
+        return [c for c in cs if c[0] == f and c[1] in FUNCTION_POS and c[2] == 0 and not c[4]]
+
+    pre = {f: (closed(f, cs) or trimmed(cs)) for f, cs in form_cands.items() if cs}
     sure = collections.Counter()
     for f, cs in pre.items():
         if len({c[0] for c in cs}) == 1:
@@ -297,15 +304,18 @@ def marked_context(text: str, start: int, end: int, width: int) -> str:
 # ------------------------------------------------------------------ yargı
 FLAW = ("Evet: tekrar okurken göze batıyor; eş anlamlı bir sözcük, zamir ya da cümleyi yeniden kurmakla "
         "giderilmeli.")
-FINE = ("Hayır: bilinçli ya da gerekli (vurgu, tekrar sanatı, tekerleme, şiir, diyalogda doğal konuşma, "
-        "terim ya da başka söylenişi olmayan sözcük, çocuk kitabında bilinçli yineleme).")
+FINE = ("Hayır: bilinçli ya da gerekli (hikâyenin konusu olan nesne/kişi, hitap, başka adı olmayan somut ad, "
+        "terim, vurgu, tekrar sanatı, tekerleme, şiir, diyalogda doğal konuşma, çocuk kitabında bilinçli yineleme).")
 
 
-def flaw_prompt(lemma: str, sense: dict, marked: str, x: str, y: str) -> str:
+def flaw_prompt(lemma: str, sense: dict, marked: str, x: str, y: str, book_count: int | None = None) -> str:
     what = f"«{lemma}»" + (f" (anlamı: {sense['label']}" + (f"; deyim: {sense['idiom']}" if sense["idiom"] else "")
                            + ")" if sense else "")
+    freq = (f" Bu sözcük kitabın tamamında {book_count} kez geçiyor." if book_count else "")
     return ("Bir kitabın redaksiyonunu yapan deneyimli bir editörsün. Aşağıdaki pasajda " + what
-            + " sözcüğü AYNI ANLAMDA kısa aralıkla birden çok kez geçiyor; geçtiği yerler [[ ]] içinde.\n\n"
+            + " sözcüğü AYNI ANLAMDA kısa aralıkla birden çok kez geçiyor; geçtiği yerler [[ ]] içinde." + freq
+            + " Yalnız okurun gözüne batan, yerine başka söyleyiş konabilecek tekrar düzeltilir; hikâyenin konusu "
+            "olan nesne ya da kişi, hitap sözcüğü, başka adı olmayan somut ad, terim ve bilinçli yineleme düzeltilmez.\n\n"
             f"Pasaj: «{marked}»\n\nBu yakın tekrar düzeltilmeli mi?\nA) {x}\nB) {y}\nYalnız A ya da B yaz.")
 
 

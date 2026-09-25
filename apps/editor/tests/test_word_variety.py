@@ -119,6 +119,22 @@ def test_pos_function_reading_wins_for_function_words():
     assert out["yüzünü"] == ("yüz", "Noun", False)               # sayı tek başına işlev saymaz
 
 
+def test_closed_class_bare_form_wins():
+    # sunucudaki gerçek çözümlemeler: "de" demek'in emri, "ile" il+e, "için" iç+in, "o" sıfat da olabilir
+    cands = {"de": [("de", "Conj", 0, 2, False), ("demek", "Verb", 0, 2, False), ("de", "Noun", 0, 2, False)],
+             "ile": [("ile", "Postp", 0, 3, False), ("ile", "Conj", 0, 3, False), ("ilmek", "Verb", 0, 2, False),
+                     ("il", "Noun", 0, 2, False)],
+             "için": [("için", "Postp", 0, 4, False), ("içmek", "Verb", 0, 2, False), ("iç", "Noun", 0, 2, False)],
+             "o": [("o", "Det", 0, 1, False), ("o", "Interj", 0, 1, False), ("o", "Adj", 0, 1, False), ("o", "Pron", 0, 1, False)],
+             "dedi": [("demek", "Verb", 0, 2, False)], "ilde": [("il", "Noun", 0, 2, False)]}
+    out = W.choose_lemmas(cands, {k: 1 for k in cands})
+    assert out["de"] == ("de", "Conj", False)
+    assert out["ile"][0] == "ile" and out["ile"][1] in W.FUNCTION_POS
+    assert out["için"] == ("için", "Postp", False)
+    assert out["o"][0] == "o" and out["o"][1] in W.FUNCTION_POS
+    assert out["dedi"] == ("demek", "Verb", False) and out["ilde"] == ("il", "Noun", False)   # ekli biçim etkilenmez
+
+
 def test_unanalysed_form_is_left_out():
     assert "zıbıdık" not in W.choose_lemmas({"zıbıdık": []}, {"zıbıdık": 2})
 
@@ -250,6 +266,7 @@ def test_marked_context_and_flaw_prompt():
     assert W.marked_context(t, s, s + 6, 8) == "…açtı ve [[gözüme]] toz kaç…"
     p = W.flaw_prompt("göz", {"label": "organ", "idiom": ""}, "x [[göz]] y [[göz]]", W.FLAW, W.FINE)
     assert "«göz» (anlamı: organ)" in p and p.endswith("Yalnız A ya da B yaz.")
+    assert "kitabın tamamında 14 kez" in W.flaw_prompt("göz", None, "x", W.FLAW, W.FINE, 14)
 
 
 if __name__ == "__main__":

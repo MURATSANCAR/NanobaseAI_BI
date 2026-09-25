@@ -158,7 +158,9 @@ async def run(generation_id: str):
     by_lemma = collections.defaultdict(list)
     for o in occs:
         by_lemma[o.lemma].append(o)
-    content = {lem: os_ for lem, os_ in by_lemma.items() if any(o.pos in W.CONTENT_POS for o in os_)}
+    # içerik kökü: hiçbir geçişi işlev sözcüğü okumasıyla gelmemiş, en az biri ad/sıfat/zarf/fiil
+    content = {lem: os_ for lem, os_ in by_lemma.items()
+               if any(o.pos in W.CONTENT_POS for o in os_) and not any(o.pos in W.FUNCTION_POS for o in os_)}
     # anlam: iki kez ya da daha çok geçen her içerik kökü (bir kez geçenin anlamı haritada tektir)
     units = {lem: os_ for lem, os_ in content.items() if len(os_) >= 2}
 
@@ -172,6 +174,10 @@ async def run(generation_id: str):
     for lem, os_ in sorted(units.items()):
         single, dup = W.drop_reduplication(os_)
         stats["skip_reduplication"] += dup
+        # tamamı büyük harf: başlık, kapak/bölüm yazısı, vurgu — metindeki geçişin tekrarı sayılmaz
+        caps = {o.idx for o in single if len(o.word) > 1 and o.word.isupper()}
+        stats["skip_all_caps"] += len(caps)
+        single = [o for o in single if o.idx not in caps]
         same_sense_idx = set()
         groups = collections.defaultdict(list)
         for o in single:
@@ -199,7 +205,7 @@ async def run(generation_id: str):
         plain, marked = W.passage(rd["span_keys"], span_text, cl)
         pages = sorted({o.page for o in cl})
         async with sem:
-            p, _ = await J._ab(llm, lambda x, y: W.flaw_prompt(lem, sense, marked, x, y), W.FLAW, W.FINE, pages)
+            p, _ = await J._ab(llm, lambda x, y: W.flaw_prompt(lem, sense, marked, x, y, len(by_lemma[lem])), W.FLAW, W.FINE, pages)
         return lem, sense, cl, plain, marked, pages, p
 
     judged = await asyncio.gather(*(judge(*c) for c in cands))
