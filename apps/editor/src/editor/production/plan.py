@@ -213,12 +213,15 @@ def _ellipse(cx, cy, rx, ry, n=72, r=lambda t: 1.0):
             for t in (2 * math.pi * i / n for i in range(n))]
 
 
-def bubble_shapes(bb: dict) -> dict:
+def bubble_shapes(bb: dict, size: float = 14.0) -> dict:
     """Balonun vektör çizimi (mm, sayfa koordinatı): dış çizgi, kuyruk, kuyruk dolgusu (dış çizginin kuyruk
-    ağzındaki parçasını örter), düşünce balonunun noktaları ve metnin iç kutusu."""
+    ağzındaki parçasını örter), düşünce balonunun noktaları ve metnin iç kutusu. İç kutu balon ölçüsünün
+    hesabıyla (bubbles.bubble_size) aynı: kenarda 0,6 em pay, yuvarlak biçimlerde metin alanı OVAL kadar küçük."""
+    from .bubbles import OVAL, PT_MM
     bx, shape = bb["box"], bb.get("shape") or "oval"
     x, y, w, h = bx["x"], bx["y"], bx["w"], bx["h"]
     cx, cy, rx, ry = x + w / 2, y + h / 2, w / 2, h / 2
+    pad = 0.6 * float(size) * PT_MM
     if shape == "box":
         rad = min(3.0, w / 4, h / 4)
         outline = []
@@ -226,18 +229,19 @@ def bubble_shapes(bb: dict) -> dict:
                              (x + rad, y + rad, 180)):
             outline += [[round(ax + rad * math.cos(math.radians(a0 + k * 15)), 2),
                          round(ay + rad * math.sin(math.radians(a0 + k * 15)), 2)] for k in range(7)]
-        inner, k = box(x + 2, y + 2, w - 4, h - 4), 1.0
-    elif shape == "shout":
-        outline = [[round(cx + rx * (1.0 if i % 2 == 0 else 0.78) * math.cos(math.pi * i / 16), 2),
-                    round(cy + ry * (1.0 if i % 2 == 0 else 0.78) * math.sin(math.pi * i / 16), 2)] for i in range(32)]
-        k = 0.56
-    elif shape == "thought":
-        outline = _ellipse(cx, cy, rx, ry, 132, lambda t: 0.92 + 0.08 * abs(math.sin(5.5 * t)))
-        k = 0.66
+        iw, ih = w - 2 * pad, h - 2 * pad
     else:
-        outline, k = _ellipse(cx, cy, rx, ry), 0.70
-    if shape != "box":
-        inner = box(cx - rx * k, cy - ry * k, 2 * rx * k, 2 * ry * k)
+        if shape == "shout":
+            outline = [[round(cx + rx * (1.0 if i % 2 == 0 else 0.84) * math.cos(math.pi * i / 16), 2),
+                        round(cy + ry * (1.0 if i % 2 == 0 else 0.84) * math.sin(math.pi * i / 16), 2)]
+                       for i in range(32)]
+        elif shape == "thought":
+            outline = _ellipse(cx, cy, rx, ry, 132, lambda t: 0.93 + 0.07 * abs(math.sin(5.5 * t)))
+        else:
+            outline = _ellipse(cx, cy, rx, ry)
+        iw, ih = (w - 2 * pad) / OVAL, (h - 2 * pad) / OVAL
+    iw, ih = max(iw, 1.0), max(ih, 1.0)
+    inner = box(cx - iw / 2, cy - ih / 2, iw, ih)
     tail = tail_fill = None
     dots = []
     t = bb.get("tail")
@@ -636,7 +640,8 @@ def render_data(d: Path, plan: dict) -> dict:
 
     def text_item(t, ink_=ink, **extra):
         return {"box": t["box"], "align": t.get("align") or "left", "size": t.get("size") or body, "ink": ink_,
-                "background": t.get("background"), "pad": 3 if t.get("background") else 0, **extra}
+                "background": t.get("background"), "pad": 3 if t.get("background") else 0, "valign": "top",
+                "leading": None, **extra}
 
     pages = []
     for pg in plan["pages"]:
@@ -653,12 +658,14 @@ def render_data(d: Path, plan: dict) -> dict:
         items.sort(key=lambda it: it["z"])
         bubbles = []
         for bb in pg["bubbles"]:
-            sh = bubble_shapes(bb)
+            size = bb.get("size") or bubble_size(body)
+            sh = bubble_shapes(bb, size)
             color = bb.get("color") or (pal.get("characters") or {}).get(bb.get("speaker") or "") or ink
+            # Balonda satır adımı 1,25 em (bubbles.LINE_EM: balon ölçüsü bununla hesaplanır), metin dikeyde ortada.
             bubbles.append({"id": bb["id"], "outline": sh["outline"], "tail": sh["tail"], "tail_fill": sh["tail_fill"],
                             "dots": sh["dots"], "stroke": ink,
-                            "text": text_item({"box": sh["inner"], "align": "center", "size": bb.get("size")}, color,
-                                              runs=[{"text": bb["text"]}])})
+                            "text": text_item({"box": sh["inner"], "align": "center", "size": size}, color,
+                                              runs=[{"text": bb["text"]}], valign="horizon", leading=0.55)})
         t = pg["text"]
         pages.append({"id": pg["id"], "art": art_item(pg["art"]) if pg["art"] else None,
                       "text": text_item(t, blocks=t["blocks"]) if t else None, "bubbles": bubbles, "items": items,

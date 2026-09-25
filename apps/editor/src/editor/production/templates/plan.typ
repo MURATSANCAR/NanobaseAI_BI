@@ -45,7 +45,8 @@
   } else if k.kind == "dialogue" { par[– #body] } else { par(body) }
 }
 
-// t: {box, align, size, ink, background, pad, blocks | runs}; kutudan taşan metin kesilmez, işaretlenir.
+// t: {box, align, valign, size, leading, ink, background, pad, blocks | runs}; kutudan taşan metin kesilmez,
+// işaretlenir. Balonda metin dikeyde ortalanır (valign: horizon) ve satır aralığı sıkıdır (leading em).
 #let textbox(t, pid, id, what) = {
   let pad = mm(t.pad)
   let w = mm(t.box.w) - 2 * pad
@@ -53,6 +54,7 @@
   let body = {
     set text(size: t.size * 1pt, fill: rgb(t.ink))
     set par(justify: t.align == "justify")
+    set par(leading: t.leading * 1em) if t.leading != none
     set align(if t.align == "center" { center } else { left })
     if "blocks" in t { for k in t.blocks { blk(k) } } else { par(runs(t.runs)) }
   }
@@ -62,7 +64,8 @@
       metadata((kind: "overflow", page: pid, id: id, what: what, need: (need + 2 * pad) / 1mm))
     }
     box(width: mm(t.box.w), height: mm(t.box.h), inset: pad, radius: if t.background != none { 2mm } else { 0mm },
-        fill: if t.background != none { rgb(t.background) } else { none }, block(width: w, body))
+        fill: if t.background != none { rgb(t.background) } else { none },
+        align(if t.valign == "horizon" { horizon } else { top }, block(width: w, body)))
   })
 }
 

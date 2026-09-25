@@ -322,6 +322,58 @@ def test_upscale_asset_marks_lanczos(tmp_path, monkeypatch):
     assert a["derived_from"] == gid and a["upscale"] == 4 and a["w_px"] == 400 and gid in P.load(d)["assets"]
 
 
+def _magenta_figure() -> bytes:
+    from PIL import Image, ImageDraw
+    im = Image.new("RGB", (300, 400), "#FF00FF")
+    ImageDraw.Draw(im).ellipse((80, 80, 220, 320), fill="#d04010")
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def test_make_figure_registers_transparent_asset_on_page(tmp_path, monkeypatch):
+    """Figür işi (model sahte): anahtar renkli zemin ayıklanır, saydam PNG kütüphaneye ve sayfaya girer."""
+    from editor.production import art as art_mod, images
+    d = tmp_path / "j"
+    plan = _mini(d)
+    seen = {}
+
+    async def en(text, chars, llm):
+        return "a small fox with a red balloon"
+
+    async def fig(self, what, chars, key_name, key_hex, seed):
+        seen.update(what=what, chars=[c.name for c in chars], key=key_hex)
+        return _magenta_figure(), "generate"
+    monkeypatch.setattr(art_mod, "direction_en", en)
+    monkeypatch.setattr(images.Painter, "figure", fig)
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    pid = plan["pages"][0]["id"]
+    out = asyncio.run(studio.make_figure(d, "g_000000aa", "kırmızı balonlu küçük tilki", ["Elif"], pid, "e"))
+    pl = P.load(d)
+    a = pl["assets"]["g_000000aa"]
+    assert out["flat"] and a["kind"] == "figure" and a["alpha"] and a["characters"] == ["Elif"]
+    assert a["prompt"] == "kırmızı balonlu küçük tilki" and seen["key"] != "#FFFFFF" and seen["chars"] == ["Elif"]
+    assert (d / "figur" / "g_000000aa.png").exists() and (d / "figur" / "g_000000aa.ham.png").exists()
+    assert pl["pages"][0]["figures"][0]["asset"] == "g_000000aa"
+    from PIL import Image
+    im = Image.open(d / a["path"])
+    assert im.mode == "RGBA" and im.getpixel((2, 2))[3] == 0 and im.width < 300           # zemin gitti, kırpıldı
+
+
+def test_cutout_asset_makes_new_unplaced_asset(tmp_path, monkeypatch):
+    d = tmp_path / "j"
+    _mini(d)
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    gid, _, _ = P.add_photo(d, _magenta_figure(), "tilki.png", None, "e", **QUIET)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    out = studio.cutout_asset(d, gid, "g_000000bb", "e")
+    pl = P.load(d)
+    assert out["asset"] == "g_000000bb" and pl["assets"]["g_000000bb"]["derived_from"] == gid
+    assert pl["assets"]["g_000000bb"]["alpha"] and gid in pl["assets"]
+    assert not any(f["asset"] == "g_000000bb" for p in pl["pages"] for f in p["figures"])   # onaysız sayfaya konmaz
+
+
 def test_new_workflows_registered():
     from editor.production.flow import ACTIVITIES, WORKFLOWS
     names = {getattr(w, "__temporal_workflow_definition").name for w in WORKFLOWS}
@@ -392,6 +444,12 @@ def test_api_codes(tmp_path, monkeypatch):
     assert c.post("/v1/studio/jobs/job1/plan/restore", headers=h, json={"rev": 1}).json()["rev"] == 4
     assert c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", json={"rev": 4, "page": pg},
                  headers={"Authorization": "Bearer k"}).status_code == 400          # X-Editor yok
+    view = c.get("/v1/studio/jobs/job1", headers=h).json()
+    assert view["plan"]["rev"] == 4 and [p["id"] for p in view["pages"]] == [p["id"] for p in P.load(root / "job1")["pages"]]
+    assert view["pages"][1]["art_id"] == "a_00000001" and view["pages"][1]["no"] == P.FRONT + 2
+    assert api._key("5", root / "job1") == "a_00000001" and api._key("kapak", root / "job1") == "kapak"
+    assert c.get("/v1/studio/jobs/job1/plan/jobs", headers=h).json() == {"busy": None, "jobs": []}
+    assert c.get("/v1/studio/jobs/job1/plan/unused-art", headers=h).json() == {"art": []}
 
 
 # ------------------------------------------------------------------ dizgiyle (editor-py imajında)
