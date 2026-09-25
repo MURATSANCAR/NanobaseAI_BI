@@ -812,3 +812,7 @@ async def plan_jobs(job: str) -> dict:
     """Süren GPU işi (busy) ve figür / zemin ayıklama / kaliteyi artırma işlerinin durumu (ekran bununla bekler)."""
     d = _plan_dir(job)
     return {"busy": await _busy(d), "jobs": await asyncio.to_thread(plan_mod.jobs, d)}
+
+
+from .api_marketing import router as marketing_router  # noqa: E402 - pazarlama kiti (api_marketing.py)
+app.include_router(marketing_router)

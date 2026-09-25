@@ -340,3 +340,15 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
 9. Açık: geri al/yinele sayfa ekleme/silmeyi kapsamaz (sürüm geçmişi kapsar); tuvale bırakılan fotoğraf sunucunun
    varsayılan kutusuna düşer; ileride toplu `PUT plan/pages`. Profilde gerekçe `illustration_source`, kaynak `art_source`.
 10. HEIC/HEIF kabul edilir (`pillow-heif`, JPEG'e dönüşür); imaj yeniden derlenene kadar canlıda açık hata verir.
+
+## J: Pazarlama kiti (2026-09-25) — sözleşmeye eklenenler
+- Motor `production/marketing.py` + `api_marketing.py` (`/v1/studio/jobs/{job}/marketing…`), iş klasöründe `pazarlama/`
+  (isler, ozet, arka-kapak, urun, sosyal/, kilavuz/, kayit.jsonl). Köprü `editorial_studio_marketing.py`
+  (`/api/v1/editorial/studio/jobs/{job}/marketing…`), ekran `studio/marketing/` (stüdyoda «Pazarlama» bölümü, dört sekme).
+- Metin motorda üretilir (kitabın metni yalnız stüdyo servisinde; gateway `book-director`); kitap pencere pencere
+  bütünüyle okunur, alıntı/kelime metinde birebir aranır. Her çıktı editör onayı ister; onaysız indirme/uygulama/SEO yok.
+- Arka kapak: `cover.py` onaylı ve «kapağa uygula» denen yazıyı `pazarlama/arka-kapak.json`'dan okur (yoksa CRM metni);
+  uzunluk `templates/marketing/measure.typ` ile cover.typ'nin arka kapak bloğuyla aynı dizgide ölçülür — cover.typ'nin
+  arka kapak bloğu değişirse measure.typ de değişir.
+- Ürün sayfası SEO'ya `SeoGeo.external_proposal` ile «hazir» öneri olarak düşer; T-soft'a yazım yok.
+- Sosyal görseller modelsiz (Pillow); model üretimi görsel kullanan görsel `draft` (ekranda uyarı, dosya adı TASLAK-).
