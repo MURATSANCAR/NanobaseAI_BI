@@ -351,7 +351,9 @@ def proofing_report(book_title):
                    'precision':c.get('precision')} for c in r.get('checks',[])],
         'findings':[{'id':f.get('id'),'check':f['check'],'label':f['label'],'page':f.get('page'),'severity':f['severity'],
                      'message':f['message'],'quote':f.get('quote'),'suggestion':f.get('suggestion'),
-                     'bbox':f.get('bbox'),'advisory':f.get('advisory'),'decision':f.get('decision')}
+                     'bbox':f.get('bbox'),'advisory':f.get('advisory'),'decision':f.get('decision'),
+                     # kelime tekrarı gibi denetimlerde: topluca karar grubu, model güveni, sayfadaki öbür geçişler
+                     'group':f.get('group'),'confidence':f.get('confidence'),'marks':f.get('marks')}
                     for f in r.get('findings',[])]})
     return out
 

@@ -269,6 +269,35 @@ def test_marked_context_and_flaw_prompt():
     assert "kitabın tamamında 14 kez" in W.flaw_prompt("göz", None, "x", W.FLAW, W.FINE, 14)
 
 
+# ------------------------------------------------------------- sayfadaki yer ve öneri
+def test_norm_word_strips_punctuation_and_lowercases_turkish():
+    assert W.norm_word("«Ağacı,") == "ağacı"
+    assert W.norm_word("–IŞIK!") == "ışık"
+    assert W.norm_word("Mert’in") == "mert'in"
+
+
+def test_pick_box_matches_by_order_only_when_counts_agree():
+    words = [("ağaç", [1, 1, 2, 2]), ("ve", [3, 3, 4, 4]), ("ağaç", [5, 5, 6, 6])]
+    assert W.pick_box(words, "Ağaç", 1, 2) == [5, 5, 6, 6]
+    assert W.pick_box(words, "ağaç", 0, 3) is None                  # metinde 3, sayfada 2: sıra güvenilmez
+    assert W.pick_box([("dut", [7, 7, 8, 8])], "Dut", 0, 1) == [7, 7, 8, 8]
+    assert W.pick_box([], "dut", 0, 1) is None                       # metin katmanı yok (OCR sayfası)
+
+
+def test_to1000_uses_the_page_rect():
+    assert W.to1000((50, 100, 150, 200), (0, 0, 500, 1000)) == [100, 100, 300, 200]
+    assert W.to1000((60, 110, 160, 210), (10, 10, 510, 1010)) == [100, 100, 300, 200]
+
+
+def test_valid_suggestion_needs_every_word_in_the_dictionary():
+    known = {"anlasaydı", "fark", "etseydi", "gövdesine"}
+    ok = lambda w: w in known
+    assert W.valid_suggestion("anlasaydı", ok)
+    assert W.valid_suggestion("fark etseydi", ok)
+    assert not W.valid_suggestion("anlasayd", ok)
+    assert not W.valid_suggestion("   ", ok)
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

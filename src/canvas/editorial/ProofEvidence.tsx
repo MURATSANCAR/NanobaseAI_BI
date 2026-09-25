@@ -52,7 +52,7 @@ const MAX_PAGE_VH = 70;
 const hoverable = '[@media(hover:hover)]:hover:bg-slate-200';
 
 /** Yanlış alarm gerekçesi: satır içi, tek satır; kapalı küme + isteğe bağlı not (≤ 500). */
-function RejectForm({ onSave, onCancel, busy, initial }: { onSave: (r: ProofReasonCode, note: string) => void; onCancel: () => void; busy: boolean; initial?: { reasonCode: ProofReasonCode | null; note: string | null } }) {
+export function RejectForm({ onSave, onCancel, busy, initial }: { onSave: (r: ProofReasonCode, note: string) => void; onCancel: () => void; busy: boolean; initial?: { reasonCode: ProofReasonCode | null; note: string | null } }) {
   const [reason, setReason] = useState<ProofReasonCode | ''>(initial?.reasonCode ?? '');
   const [note, setNote] = useState(initial?.note ?? '');
   return (
@@ -188,6 +188,18 @@ function PageImage({ bookId, bookTitle, page, marks, activeKey, onPick }: { book
           style={{ left: pct(box[0]), top: pct(box[1]), width: pct(Math.max(box[2] - box[0], 4)), height: pct(Math.max(box[3] - box[1], 4)) }}
         />
       )}
+      {/* Seçili bulgunun aynı sayfadaki öbür yerleri (ör. tekrarın bütün geçişleri): ince çerçeve, karartma yok. */}
+      {loaded &&
+        (active?.f.marks ?? [])
+          .filter((b) => !box || b.some((v, i) => v !== box[i]))
+          .map((b, i) => (
+            <div
+              key={`m${i}`}
+              aria-hidden
+              className="pointer-events-none absolute rounded-[3px] border-2 border-canvas-violet/70 bg-canvas-violet/10"
+              style={{ left: pct(b[0]), top: pct(b[1]), width: pct(Math.max(b[2] - b[0], 4)), height: pct(Math.max(b[3] - b[1], 4)) }}
+            />
+          ))}
       {loaded &&
         marks
           .filter((m) => m.f.bbox && m.key !== activeKey)

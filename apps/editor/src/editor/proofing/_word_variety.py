@@ -228,6 +228,9 @@ SENSE_INTRO = (
     "- Bir geçiş bir deyimin parçasıysa `deyim` alanına deyimi mastar hâliyle yaz («göze girmek»); "
     "değilse boş bırak. Aynı deyimin bütün geçişleri bir grupta olur.\n"
     "- `etiket` kısa ve genel olsun (2-5 sözcük, ör. «organ, görme», «bölme, çekmece»).\n"
+    "- Anlamları KABA tut: yalnız sözlükte ayrı madde ya da ayrı anlam olacak kadar farklı kullanımları ayır. "
+    "Aynı anlamın farklı nesnelerle, farklı zaman ya da kişi ekleriyle kullanımı tek anlamdır "
+    "(bir şeyi satın almak ile başka bir şeyi satın almak aynı anlam). Deyimler her zaman ayrı anlamdır.\n"
     "- Her numara tam bir grupta yer alır; hiçbirini atlama.\n")
 
 
@@ -299,6 +302,46 @@ def marked_context(text: str, start: int, end: int, width: int) -> str:
     a, b = max(0, start - width), min(len(text), end + width)
     s = ("…" if a else "") + text[a:start] + "[[" + text[start:end] + "]]" + text[end:b] + ("…" if b < len(text) else "")
     return " ".join(s.split())
+
+
+# ------------------------------------------------------------------ sayfadaki yer
+def norm_word(w: str) -> str:
+    """Sayfa sözcüğü ile belirteci karşılaştırmak için: baştaki/sondaki harf olmayanlar atılır
+    (noktalama, tırnak, konuşma çizgisi), Türkçe küçük harf, kesme işaretleri birleşir."""
+    import unicodedata
+    w = unicodedata.normalize("NFKC", w or "")
+    a, b = 0, len(w)
+    while a < b and not w[a].isalpha():
+        a += 1
+    while b > a and not w[b - 1].isalpha():
+        b -= 1
+    return lower_tr(w[a:b]).translate(str.maketrans({"’": "'", "`": "'"}))
+
+
+def pick_box(page_words: list[tuple[str, list[int]]], word: str, nth: int, total: int) -> list[int] | None:
+    """Belirtecin sayfadaki kutusu: sayfanın basılı sözcükleri (okuma sırasıyla, normalize) içinde aynı
+    sözcüğün `nth`. geçişi — yalnız sayfadaki geçiş sayısı bizim metnimizdekiyle aynıysa (yoksa sıra
+    eşleşmez, yanlış yeri işaretlemektense işaret yok). Tek geçiş varsa o."""
+    hits = [b for w, b in page_words if w == norm_word(word)]
+    if hits and len(hits) == total and 0 <= nth < total:
+        return hits[nth]
+    if len(hits) == 1 and total == 1:
+        return hits[0]
+    return None
+
+
+def to1000(rect, page_rect) -> list[int]:
+    """PDF noktası → sayfa görselinde 0..1000 (öbür denetimlerin bbox biçimi)."""
+    w, h = page_rect[2] - page_rect[0], page_rect[3] - page_rect[1]
+    return [int(round((rect[0] - page_rect[0]) / w * 1000)), int(round((rect[1] - page_rect[1]) / h * 1000)),
+            int(round((rect[2] - page_rect[0]) / w * 1000)), int(round((rect[3] - page_rect[1]) / h * 1000))]
+
+
+def valid_suggestion(s: str, valid) -> bool:
+    """Öneri sözlükte var olan sözcüklerden oluşmalı ("anlasayd" gibi bozuk biçim atılır). `valid`:
+    sözcük → bool (Lexicon.valid)."""
+    words = [w for w in s.replace("-", " ").split() if w]
+    return bool(words) and all(valid(w.strip(".,;:!?…\"'«»()")) for w in words)
 
 
 # ------------------------------------------------------------------ yargı
