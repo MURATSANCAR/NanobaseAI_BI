@@ -12,6 +12,9 @@ ana model aynı kartta açıkken 2,6 MP ve üstü bellek aşımı verir; tek ba�
 bellek 92,5 GB'a şişip aştı (ölçüldü 2026-09-24), bu yüzden 3 MP. Aşımda resim yarı çözünürlükte yeniden denenir. Üretim
 çözünürlüğü kayda geçer; ön kontrol 250 dpi altında büyütülmüş resmi bildirir.
 
+Seri karakter kartı (characters.py): dizide onaylı kartı olan karakterin istem satırı kartın tarifi ve sabit
+renkleriyle yazılır, referansı kartın görselidir; üretilen resim karta karşı denetime yazılır.
+
 Uç: gateway (`book-image` takma adı). EDITOR_IMAGE_URL verilirse doğrudan o sunucu (sınama).
 """
 
@@ -94,8 +97,29 @@ class Painter:
         self.headers = {} if direct else {"authorization": f"Bearer {s.gateway_key}"}
         self.http = httpx.AsyncClient(timeout=httpx.Timeout(1800.0, connect=10.0))
         self.log: list[Render] = []
-        self.refs: dict[str, str] = {}
+        self._refs: dict[str, str] = {}
+        self._cards = None                 # dizinin onaylı karakter kartları (characters.py), ilk kullanımda okunur
         self.bubble_space = wants_bubbles(self.dir.parent / "profile.json")     # iş klasöründeki profil
+
+    @property
+    def cards(self):
+        """Seri karakter kartları: istemde kartın tarifi ve sabit renkleri, referans olarak kartın görseli."""
+        if self._cards is None:
+            from .characters import CardSet
+            try:
+                self._cards = CardSet.for_job(self.dir.parent)
+            except Exception:  # noqa: BLE001 - kart okunamazsa işin kendi tarifleriyle çizilir
+                self._cards = CardSet()
+        return self._cards
+
+    @property
+    def refs(self) -> dict[str, str]:
+        """Karakter referansları: işin çizdiği referans; onaylı kartın görseli varsa o önce gelir."""
+        return {**self._refs, **(self.cards.ref_paths(c.name for c in self.plan.characters) if self.cards else {})}
+
+    @refs.setter
+    def refs(self, value: dict[str, str]) -> None:
+        self._refs = dict(value)
 
     @property
     def negative(self) -> str:
@@ -106,7 +130,8 @@ class Painter:
         def wear(c):
             look = c.outfit((outfits or {}).get(c.name))
             return f" Wearing: {look}." if look else ""
-        who = " ".join(f"{c.name} is {c.species}: {c.look}.{wear(c)}" for c in chars)
+        who = " ".join((self.cards.line(c, (outfits or {}).get(c.name)) if self.cards else None)
+                       or f"{c.name} is {c.species}: {c.look}.{wear(c)}" for c in chars)
         return f"{body} {who} Style: {self.plan.style.style_prompt} No text or letters anywhere."
 
     async def _generate(self, prompt: str, W: int, H: int, seed: int) -> bytes:
@@ -142,10 +167,10 @@ class Painter:
                                   "neutral friendly expression, plain white background, whole figure visible.", [c])
             png = await self._generate(prompt, 1024, 1024, self.seed + i)
             key = f"karakter-{i:02d}"
-            self.refs[c.name] = self._save(key, png)
-            self.log.append(Render(key, self.refs[c.name], 1024, 1024, 0, self.seed + i, [], "generate",
+            self._refs[c.name] = self._save(key, png)
+            self.log.append(Render(key, self._refs[c.name], 1024, 1024, 0, self.seed + i, [], "generate",
                                    round(time.time() - t, 1), prompt, c.name))
-        return self.refs
+        return dict(self._refs)
 
     async def page(self, sc: Scene, w_mm: float, h_mm: float, *, version: int = 1, seed: int | None = None,
                    direction: str = "", base_image: str | None = None, key: str | None = None) -> Render:
@@ -208,6 +233,8 @@ class Painter:
             note = (note + " · " if note else "") + how
         rd = Render(key, self._save(key, png), TW, TH, dpi, seed, refs, mode, round(time.time() - t, 1), prompt, note)
         self.log.append(rd)
+        from .characters import record
+        await record(self, rd, sc, w_mm, h_mm, direction, base_image)    # kartlı karakter varsa denetime yazılır
         return rd
 
     async def figure(self, what: str, chars: list[Character], key_name: str, key_hex: str, seed: int) -> tuple[bytes, str]:

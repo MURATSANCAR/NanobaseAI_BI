@@ -178,6 +178,11 @@ SPEC: list[dict[str, Any]] = [
     {"key": "STUDIO_UPLOAD_MB", "group": "studio", "label": "Fotoğraf yükleme sınırı (MB)", "type": "int", "default": "60",
      "help": "Sayfa düzeninde tek fotoğrafın en büyük boyutu; ekranda yükleme alanında yazılır. Giriş kapısı ve portal "
              "web sunucusunun gövde sınırı da bu değere göre ayarlanmalıdır"},
+    {"key": "STUDIO_CHARACTER_RETRIES", "group": "studio", "label": "Karakter kartına uymayan resmi yeniden üretme sayısı",
+     "type": "int", "default": "3",
+     "help": "Dizinin karakter kartına uymayan resim en çok bu kadar kez yeniden çizilir; sonra en yakın sürüm "
+             "«karakter kartına uymuyor» uyarısıyla editöre gelir. 0: yeniden çizme, yalnız işaretle. Kaydedilince "
+             "stüdyoya hemen iletilir"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -206,7 +211,7 @@ GROUPS = [
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},
-    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni ekranının sınırları."},
+    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni ve karakter kartı ayarları."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
 ]

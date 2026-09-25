@@ -854,3 +854,7 @@ async def plan_jobs(job: str) -> dict:
 
 from .api_marketing import router as marketing_router  # noqa: E402 - pazarlama kiti (api_marketing.py)
 app.include_router(marketing_router)
+
+# Seri karakter kartı uçları (api_characters.py)
+from .api_characters import router as _characters_router  # noqa: E402
+app.include_router(_characters_router)

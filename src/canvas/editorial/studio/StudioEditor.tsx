@@ -9,6 +9,8 @@ import { Img, ghostBtn, gradientBtn, press } from './shared';
 import { revision, useStudioJob } from './StudioFlow';
 import { MarketingKit } from './marketing';
 
+import { CharactersEntry } from './characters';
+
 /** Sayfa stüdyosu: dizilmiş kitap açılım açılım görünür; resimli her sayfa ve kapak için iki yol vardır.
  *  DÜZELT seçili sürümü referans alır ve yalnız yazılan değişikliği yapar; FARKLI ÜRET sayfanın metninden
  *  sıfırdan yeni resim çizer, yazılan yönlendirmeyi dikkate alır. Her yeni sürüm seçili olur ve onay düşer;
@@ -96,6 +98,7 @@ export default function StudioEditor() {
           <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/sayfalar`} title="Sayfa ekle/sil/sırala, yerleşim, balon, renkli yazı, figür ve fotoğraf">
             <LayoutTemplate className="h-4 w-4" aria-hidden />Sayfa düzeni
           </Link>
+          <CharactersEntry jobId={jobId} />
           <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}><Download className="h-4 w-4" aria-hidden />İç sayfalar</a>
           {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak</a>}
           {d.files['baski-ic'] ? (
