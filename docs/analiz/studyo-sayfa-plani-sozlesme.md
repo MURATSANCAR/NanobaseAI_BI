@@ -340,3 +340,23 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
 9. Açık: geri al/yinele sayfa ekleme/silmeyi kapsamaz (sürüm geçmişi kapsar); tuvale bırakılan fotoğraf sunucunun
    varsayılan kutusuna düşer; ileride toplu `PUT plan/pages`. Profilde gerekçe `illustration_source`, kaynak `art_source`.
 10. HEIC/HEIF kabul edilir (`pillow-heif`, JPEG'e dönüşür); imaj yeniden derlenene kadar canlıda açık hata verir.
+
+## Okur araçları ve sürüm farkı (N hattı, 2026-09-25)
+Servis `production/reader.py`, `production/versions_diff.py`, uçlar `production/api_reader.py` (api.py'ye `include_router`);
+köprü `editorial_studio_reader.py`; ekran `studio/reader/` (Okur) ve `studio/diff/` (Karşılaştır), PlanEditor başlığında iki giriş.
+
+| Yöntem | Yol (`/v1/studio/jobs/{job}/` altında) | Gövde / sorgu | Dönen |
+|---|---|---|---|
+| GET | `plan/reader` | — | `{age, band, picture_book, rev, child, turn}` (son okumaların özeti) |
+| POST | `plan/reader/child` · `plan/reader/turn` | `{"passes": n}` (köprü yönetim ayarını koyar) | `{run, already}`; GPU işi sürüyorsa 409 `BUSY`; resimsiz kitapta `turn` 400 `NOT_AVAILABLE` |
+| GET | `plan/reader/runs/{r_…}` | — | okuma: `flags[]` ya da `spreads[]`, `stats`, editör kararı her öğede |
+| POST | `plan/reader/runs/{r_…}/resume` · `/decisions` | `{flag, decision: applied\|dismissed\|accepted\|rejected\|open}` | — |
+| GET | `plan/versions` | — | bu işin geçmişi + aynı kitabın (aynı `book_id` / Word dosya adı) planlı işleri |
+| GET | `plan/versions/compare?a=iş:rev&b=iş:rev` | rev `current` olabilir | `{a, b, pages[{a,b,match,status,text[],layout[]}], counts, words, global}` |
+| GET | `plan/versions/preview?v=&page=&w=` · `visual?a=&b=&pa=&pb=` · `report?a=&b=` | — | PNG · `{regions[0–1], share}` · PDF |
+
+- Okuma kaydı `okur/<r_…>.json` (okunan planın kopyası dahil), kararlar `okur/<r_…>.decisions.json`; geçmiş sürümün
+  dizgisi `karsilastir/r<rev>/`, rapor `karsilastir/rapor-<özet>/`. Hepsi iş klasöründe, silinmez.
+- İşaret alanları: `fid, page, no, target (block|bubble|free), id, start, end, quote, kind, reason, replacement, votes,
+  passes`; `start/end` hedef metnin harf aralığı. Öneri uygulanınca ekran metni `setPage` ile değiştirir (plan sürümü artar).
+- Yönetim ayarı `STUDIO_READER_PASSES` (grup `studio`, varsayılan 3): sayfa başına bağımsız okuma; sayfa çevirmede aday öneri sayısı.
