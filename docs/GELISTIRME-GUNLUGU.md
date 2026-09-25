@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (00:40) — Kelime tekrarı v2: sayfada işaret, gruplu karar, anlamı korunan öneri — test sunucusunda
+
+- **Sayfada işaret:** tekrar bulgusu sayfa görselinde kutulanıyor; tekrarın aynı sayfadaki bütün geçişleri de (`marks`). Dilek Ağacı: 120 bulgunun 105'i işaretli, 96'sında ≥2 geçiş. Eşleme sayfanın basılı sözcüklerinde sıra ile; sayı tutmazsa işaret yok.
+- **Gruplu karar:** bulguya genel `group` («kök · anlam») ve `confidence`; Kelime haritası panelinde «Tekrar bulguları» sekmesi — güvene göre sıralı, topluca «Doğru / Yanlış alarm» (gerekçeli, her bulguya ayrı karar). 120 bulgu → 79 grup.
+- **Öneri:** ikinci geçişin ekli hâliyle istenir, sözlükte olmayan ve aynı kökün çekimi atılır, sonra «yerine konunca anlam korunuyor mu» sorusu: 107 öneriden 27'si kaldı (önce «dut → incir», «koşmak → süründüm» vardı).
+- **Anlam:** istem kaba anlam ister; «olmak» 11 → 1 anlam + 2 deyim. «almak» hâlâ 17 (deyim ve kalıp gerçekten çok).
+- **Kurulum (test):** main `f4709185`/`bf60bf3c`; GPU imajı `editor-py:0.15.9-1c78bd8d` yeniden derlendi, `editor-cards` yeniden kuruldu (card_api yeni alanlar); test sunucusu köprü + arayüz (`index-CYBPPGmY.js`), dosyalar öncesinde main ile aynıydı. Portal doğrulaması geçici timasai oturumuyla (silindi). word_variety VERSION 2.
+- **Sürüyor:** öbür 15 kitap v2 ile (`wv-all-books-v2`, `/data/editor/logs/wv-all-books-v2.log`); v1 toplu koşu durduruldu (yalnız Dilek'te v1 kaydı var).
+- **Açık:** müşteri VM'i (main'de SEO & GEO işleri; kullanıcı kararı), editör worker imajı (yeni kitaplarda otomatik koşu).
+
 ## 2026-09-26 (02:20) — SEO & GEO test sunucusunda (c15f7d97): şema taraması yanlış adrese gitti, düzeltildi
 
 - **Kurulum:** 11 dosya (önce/sonra md5 main ile aynı, `._*` 0), arayüz `index-DW5l9nZz.js`, köprü 200. Uçlar gerçek oturumla: şema, tema belgesi (3,1 KB), GEO motor listesi (4 motor, hiçbirinin anahtarı yok); ekranlar masaüstü/390 px taşmasız.
