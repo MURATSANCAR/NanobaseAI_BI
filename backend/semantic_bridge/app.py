@@ -4121,6 +4121,28 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
             raise HTTPException(502, "Son okuma raporu motordan alınamadı.") from e
 
+    @app.get("/api/v1/editorial/proofing/word-map")
+    def editorial_word_map(request: Request, bookId: str = "") -> dict[str, Any]:
+        """Kelime haritası (M5 Son Okuma): kitabın tekil kökleri, biçimleri, sayfaları, anlamları ve deyimleri;
+        yakın geçen farklı anlamlar. Salt okuma; denetim koşmadıysa `ready: false`. Motor ulaşılamazsa 502."""
+        _books(request)
+        import httpx
+        import uuid as _uuid
+        from semantic_bridge import editorial_cards
+        try:
+            _uuid.UUID(bookId)
+        except ValueError:
+            raise HTTPException(422, "Kitap kimliği gerekli.") from None
+        try:
+            return editorial_cards.word_map(bookId)
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code
+            if code == 404:
+                raise HTTPException(404, "Kitap motorda bulunamadı.") from e
+            raise HTTPException(503 if code == 503 else 502, "Kelime haritası motordan alınamadı.") from e
+        except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
+            raise HTTPException(502, "Kelime haritası motordan alınamadı.") from e
+
     @app.post("/api/v1/editorial/proofing/decision")
     def editorial_proofing_decision(body: dict[str, Any], request: Request) -> dict[str, Any]:
         """Editörün son okuma bulgusuna kararı: «Doğru» (ACCEPT) ya da «Yanlış alarm» (REJECT + gerekçe [+ not]).
@@ -4233,9 +4255,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             log.exception("studio call failed")
             raise HTTPException(502, what) from None
 
-    def _studio_image(result) -> Response:
+    def _studio_image(result, request: Request | None = None) -> Response:
+        """Görsel yanıtı. Ekranın `r=` (dizgi sürümü) taşıyan sayfa/kapak adresleri o sürümde değişmez: bir gün
+        tarayıcıda kalır; sürüm değişince adres de değişir. Öteki görseller 5 dakika."""
         data, mime = result
-        return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=300"})
+        age = 86400 if request is not None and request.query_params.get("r") else 300
+        return Response(content=data, media_type=mime, headers={"Cache-Control": f"private, max-age={age}"})
 
     @app.get("/api/v1/editorial/studio/jobs")
     def editorial_studio_jobs(request: Request) -> dict[str, Any]:
@@ -4328,13 +4353,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def editorial_studio_page(job: str, page_no: int, request: Request, w: int = 900):
         _books(request)
         from semantic_bridge import editorial_studio
-        return _studio_image(_studio_call(editorial_studio.page_preview, job, page_no, max(120, min(int(w), 2400))))
+        return _studio_image(_studio_call(editorial_studio.page_preview, job, page_no, max(120, min(int(w), 2400))), request)
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/cover/preview")
     def editorial_studio_cover(job: str, request: Request, w: int = 1400):
         _books(request)
         from semantic_bridge import editorial_studio
-        return _studio_image(_studio_call(editorial_studio.cover_preview, job, max(200, min(int(w), 3000))))
+        return _studio_image(_studio_call(editorial_studio.cover_preview, job, max(200, min(int(w), 3000))), request)
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/art/{key}/{version}")
     def editorial_studio_art_image(job: str, key: str, version: int, request: Request, w: int = 800):

@@ -126,7 +126,7 @@ export default function StudioEditor() {
                 <button type="button" onClick={() => setKey('kapak')}
                   className={`w-full rounded-xl border p-1.5 text-left ${press} ${key === 'kapak' ? 'border-canvas-violet ring-2 ring-canvas-violet/30' : 'border-white/70 bg-white/70'}`}>
                   <div className="flex items-center justify-between text-[11.5px] font-bold">Kapak <Dot art={d.cover.art} busy={busyAny && d.busy?.key === 'kapak'} /></div>
-                  <Img src={studioApi.coverUrl(jobId, 360, rev)} alt="Kapak açılımı" fallback="kapak" className="mt-1 w-full rounded-md" />
+                  <Img src={d.files.kapak ? studioApi.coverUrl(jobId, 360, rev) : null} alt="Kapak açılımı" fallback="kapak" className="mt-1 w-full rounded-md" />
                 </button>
               </li>
             )}
@@ -159,7 +159,7 @@ export default function StudioEditor() {
         {/* Açık kitap */}
         <Panel>
           {key === 'kapak' ? (
-            <Img src={studioApi.coverUrl(jobId, 1600, rev)} alt="Kapak açılımı" fallback="Kapak henüz dizilmedi"
+            <Img src={d.files.kapak ? studioApi.coverUrl(jobId, 1600, rev) : null} alt="Kapak açılımı" fallback="Kapak henüz dizilmedi"
               className="w-full rounded-xl shadow-lg" />
           ) : (
             <div className="flex justify-center gap-0 rounded-2xl bg-slate-100/60 p-3">

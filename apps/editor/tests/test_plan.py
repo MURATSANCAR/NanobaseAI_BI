@@ -922,3 +922,23 @@ def test_shapes_and_effect_text_typeset_end_to_end(tmp_path):
     studio.rebuild(d)
     rep = {c["name"]: c for c in studio.read(d, "preflight.json")["checks"]}
     assert rep["Metin eksiksiz"]["status"] == "OK", rep["Metin eksiksiz"]
+def test_preview_served_as_webp_and_refreshed(tmp_path):
+    """Dizgi önizlemesi ekrana PNG değil aynı genişlikte WebP gider (tünel bant genişliği dar; 880 px sayfa
+    1,3 MB → ~34 KB). Önbellek kaynağın mtime'ına bağlı: PNG yenilenince WebP de yenilenir."""
+    pytest.importorskip("fastapi")
+    import os
+    from PIL import Image
+    from editor.production import api
+    png = tmp_path / "onizleme" / "s1-300.png"
+    png.parent.mkdir()
+    png.write_bytes(_png(300, 405))
+    r = api._preview(png)
+    cache = Path(r.path)
+    assert r.media_type == "image/webp" and cache.parent.name == ".kucuk"
+    with Image.open(cache) as im:
+        assert im.format == "WEBP" and im.size == (300, 405)
+    first = cache.read_bytes()
+    png.write_bytes(_png(300, 405, color="#aa3333"))
+    os.utime(png, (cache.stat().st_mtime + 5, cache.stat().st_mtime + 5))
+    assert Path(api._preview(png).path).read_bytes() != first
+    assert not [p for p in cache.parent.iterdir() if p.name.startswith(".")]      # geçici dosya kalmaz

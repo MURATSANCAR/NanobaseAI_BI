@@ -1618,11 +1618,55 @@ export type ProofingReport = {
   findings: ProofingFinding[];
 };
 
+/** Kelime haritasında bir kökün bir anlamı (model gruplaması; deyimse `idiom` mastar hâliyle). */
+export type WordSense = { label: string; idiom: string; count: number; pages: number[]; example: string };
+/** Kitabın tekil kelime haritasında bir kök: biçimler ve sayfalar; ≥2 geçen içerik kökünde anlamlar. */
+export type WordMapEntry = {
+  lemma: string;
+  pos: string | null;
+  count: number;
+  forms: Record<string, number>;
+  pages: number[];
+  ambiguous: boolean;
+  senses: WordSense[];
+};
+export type WordMapSummary = {
+  wordTokens: number | null;
+  contentTokens: number | null;
+  distinctLemmas: number | null;
+  distinctContentLemmas: number | null;
+  hapaxContentLemmas: number | null;
+  polysemousLemmas: number | null;
+  idiomSenses: number | null;
+  mtldLemma: number | null;
+  mtldForm: number | null;
+  candidates: number | null;
+  kept: number | null;
+  droppedAsIntentional: number | null;
+  nearDifferentSense: number | null;
+  senseUnassigned: number | null;
+};
+/** Son okuma `word_variety` denetiminin haritası; denetim koşmadıysa `ready: false`. */
+export type WordMap = {
+  bookId: string;
+  generationId: string | null;
+  ready: boolean;
+  version: string | null;
+  finishedAt: string | null;
+  summary: WordMapSummary | null;
+  words: WordMapEntry[];
+  /** Yakın geçen ama anlamı farklı geçişler (tekrar sayılmadı); `passage`ta geçişler [[ ]] içinde. */
+  nearDifferentSense: Array<{ lemma: string; pages: number[]; senses: string[]; passage: string }>;
+  unknownForms: Array<{ form: string; count: number; pages: number[] }>;
+};
+
 export const proofingApi = {
   get: (bookTitle: string) => send<ProofingReport>('GET', `/api/v1/editorial/proofing${qs({ book: bookTitle })}`, undefined, 30_000),
   /** Editörün bulguya kararı; kararı veren oturumdaki kullanıcıdır, gövdede gönderilmez. */
   decide: (b: { bookId: string; findingId: string; verdict: ProofVerdict; reasonCode?: ProofReasonCode; note?: string }) =>
     send<{ finding_id: string; decision: ProofDecision }>('POST', '/api/v1/editorial/proofing/decision', b, 30_000),
+  /** Kelime haritası (kök, biçim, sayfa, anlam, deyim); motordaki kitap kimliğiyle. */
+  wordMap: (bookId: string) => send<WordMap>('GET', `/api/v1/editorial/proofing/word-map${qs({ bookId })}`, undefined, 30_000),
 };
 
 /** Soru sorulabilen (okunmuş) kitaplar; motordan gelir, köprüde kısa süre önbellekte tutulur. */

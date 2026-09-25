@@ -8,6 +8,7 @@ import { dateTime, num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import { UploadButton, WorkList, fmtBytes, useWorks } from './WorkPicker';
 import { ProofFindings, seriousCount } from './ProofFindings';
+import { WordMapPanel } from './WordMapPanel';
 
 /** M5 Son Okuma ve Yayın Onayı. Prova PDF'i yüklenir; sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve
  *  forma dosyadan ölçülür. Elle işaretlenen maddeler ve adı yazılı imzacılar tamamlanınca onay oluşur.
@@ -366,6 +367,8 @@ export default function ProofScreen() {
             </>
           )}
           {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.')} />}
+          {/* Kelime haritası: aynı kitabın motordaki kaydıyla (eser dosyası ya da seçilen kitap). */}
+          {pr?.configured && pr.bookId && (s || picked) ? <WordMapPanel key={pr.bookId} bookId={pr.bookId} /> : null}
         </div>
       </div>
     </ModuleFrame>

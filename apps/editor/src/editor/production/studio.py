@@ -18,6 +18,7 @@ Onaylanmamış sayfa varsa ön kontrol basımı durdurur.
 from __future__ import annotations
 
 import json
+import os
 import random
 import secrets
 import threading
@@ -394,7 +395,7 @@ def page_preview(d: Path, page_no: int, width: int) -> Path:
         raise FileNotFoundError(page_no)
     page = doc[page_no - 1]
     zoom = width / page.rect.width
-    page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)).save(out)
+    _save_pixmap(page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)), out)
     return out
 
 
@@ -407,8 +408,16 @@ def cover_preview(d: Path, width: int) -> Path:
     doc = pymupdf.open(pdf)
     page = doc[0]
     zoom = width / page.rect.width
-    page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)).save(out)
+    _save_pixmap(page.get_pixmap(matrix=pymupdf.Matrix(zoom, zoom)), out)
     return out
+
+
+def _save_pixmap(pix, out: Path) -> None:
+    """Önizleme PNG'si geçici adla yazılıp yerine konur: aynı sayfayı aynı anda isteyen ikinci istek yarım dosya
+    okumasın (ekran bir sayfayı gezginde ve açılımda birlikte isteyebilir)."""
+    tmp = out.with_name(f".{out.stem}.{os.getpid()}.{threading.get_ident()}.png")
+    pix.save(tmp)
+    os.replace(tmp, out)
 
 
 # ------------------------------------------------------------------ yeniden üretim

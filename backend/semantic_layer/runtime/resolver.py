@@ -139,6 +139,12 @@ _AVG_WORDS = frozenset(stem(w) for w in "ortalama ortalamasi".split())
 _COMPARE_CUE = re.compile(r"\b(karsilastir|karsilastirma|kiyasla|kiyaslama|vs|ayri ayri|yan yana|ikisini)\b")
 # "kaç fatura", "fatura sayısı", "kaç tane" — the question asks how many rows, not how much value.
 _COUNT_CUE = re.compile(r"\b(kac|kacar|tane|adedi|adet|sayisi|sayilari|sayilariyla|sayi)\b")
+# "satış adedi", "satış miktarı", "kaç adet satış": a unit word beside a *value* measure asks for that measure's
+# quantity twin ("satılan adet"), not its amount. Matched on the folded word itself; "tane" stays a count cue.
+_QUANTITY_WORD = re.compile(r"(adet|adedi|adedini|aded|miktar|miktari|miktarini|miktarlari)")
+_QUANTITY_ROOTS = ("adet", "aded", "miktar")
+# Words that name the amount side of a measure or glue a participle; they carry no subject of their own.
+_QUANTITY_NEUTRAL = frozenset("toplam toplami tutar tutari deger degeri bedel bedeli edilen olan yapilan".split())
 # "kaç kalem / kaç satır": the unit asked for is the line itself, whatever document key the concept counts by.
 _LINE_UNIT = re.compile(r"\b(kalem|kalemi|kalemleri|satir|satiri|satirlari)\b")
 # A movement word turns one number into a series: the answer has to be broken down over time.
@@ -581,6 +587,13 @@ class SemanticResolver:
                 consumed.discard(k)
                 sq.explanation.append(f"'{qf.tokens[k]}' sayım sözcüğü olarak okundu: '{left[0].term}' kayıtları sayılır, "
                                       f"{slot.mapping.entity} ölçüsü değil")
+
+        # 2d2) "2022 satış adedi", "ağustos satış miktarı", "kaç adet satış": the unit word sits beside a value
+        #      measure and asks for its quantity twin. "adet" is a query modifier to the n-gram matcher, so it
+        #      never reached the hits; the answer was the amount (LINENET) under the word "adet". The twin is a
+        #      certified quantity measure whose own words are the measure's words ("satış" ↔ "satılan adet",
+        #      "iade" ↔ "iade adedi"). None → the question is asked back, never answered with the amount.
+        self._quantity_twins(qf, hits, consumed, index, sq)
 
         # 2f) "iade hariç toplam ciro": the label is named in order to be left out. Read as a filter it
         #     asked for the returns alone, and the gate refused every statement that did what was asked.
@@ -1667,6 +1680,92 @@ class SemanticResolver:
         return {"term": term, "normalized": key, "certified": out, "otherSenses": candidates}
 
     # ------------------------------------------------------------------ helpers
+    @staticmethod
+    def _content_words(text: str) -> list[str]:
+        return [w for w in fold(text).split() if w not in _QUANTITY_NEUTRAL and not w.startswith(_QUANTITY_ROOTS)]
+
+    @staticmethod
+    def _same_word(a: str, b: str) -> bool:
+        """Turkish derivations of one root ("satış", "satılan", "satılmış"): a shared folded stem of four letters,
+        or the whole of a shorter word."""
+        n = min(4, len(a), len(b))
+        return a[:n] == b[:n] and (n >= 4 or a == b)
+
+    def _quantity_measures(self, index: dict) -> list[tuple[str, Concept, list[Mapping]]]:
+        """Certified quantity measures (a unit word in their own name), once per certified index."""
+        cached = getattr(self, "_qty_cache", None)
+        if cached and cached[0] is index:
+            return cached[1]
+        out, seen = [], set()
+        for key, senses in index.items():
+            for c, maps in senses:
+                if c.semantic_type != SemanticType.METRIC or not maps or c.id in seen:
+                    continue
+                words = fold(c.term).split()
+                if not any(w.startswith(_QUANTITY_ROOTS) for w in words):
+                    continue
+                if any((m.extra or {}).get("state_measure") or "/" in (m.formula or "") for m in maps):
+                    continue            # a balance or a ratio is not the quantity of a flow
+                seen.add(c.id)
+                out.append((key, c, maps))
+        self._qty_cache = (index, out)
+        return out
+
+    def _quantity_twins(self, qf, hits: list, consumed: set, index: dict, sq: SemanticQuery) -> None:
+        for k, tok in enumerate(qf.tokens):
+            if k in consumed or not _QUANTITY_WORD.fullmatch(fold(tok)):
+                continue
+            after = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.span and h.span[1] == k]
+            before = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.span and h.span[0] == k + 1]
+            measure = (after or before or [None])[0]
+            if measure is None:
+                continue
+            m = measure.mapping
+            formula = fold(m.formula or "")
+            canonical = fold((measure.explain or {}).get("canonical") or measure.term)
+            if ((m.extra or {}).get("state_measure") or "count(" in formula or "/" in formula
+                    or any(w.startswith(_QUANTITY_ROOTS) for w in canonical.split())):
+                continue            # a balance's unit, a count, a ratio, or already a quantity: 2d and later steps own it
+            # A one-word measure right before it qualifies it ("brüt satış adedi", "net satış miktarı").
+            lead = [h for h in hits if h is not measure and h.semantic_type == SemanticType.METRIC and h.span
+                    and h.span[1] == measure.span[0] and h.span[1] - h.span[0] == 1]
+            words = self._content_words(" ".join(qf.tokens[lead[0].span[0]:measure.span[1]] if lead else qf.tokens[measure.span[0]:measure.span[1]]))
+            if not words:
+                continue
+            twins = []
+            for key, c, maps in self._quantity_measures(index):
+                theirs = self._content_words(c.term)
+                if theirs and all(any(self._same_word(a, b) for b in theirs) for a in words) \
+                        and all(any(self._same_word(b, a) for a in words) for b in theirs):
+                    twins.append((key, c, maps))
+            same_entity = [t for t in twins if any(mp.entity == m.entity for mp in t[2])]
+            twins = same_entity or twins
+            span = (min(measure.span[0], lead[0].span[0] if lead else measure.span[0], k), max(measure.span[1], k + 1))
+            phrase = " ".join(qf.tokens[span[0]:span[1]])
+            if len({c.id for _, c, _ in twins}) == 1:
+                key, c, maps = twins[0]
+                slot = self._slot_from_senses(key, phrase, [(c, [mp for mp in maps if mp.entity == m.entity] or maps)], span)
+                if slot is None:
+                    continue
+                slot.explain["source"] = "quantity_twin"
+                slot.explain["why"] = f"'{tok}' '{measure.term}' ölçüsünün adedini soruyor → '{c.term}'"
+                for h in [measure] + lead:
+                    if h in hits:
+                        hits.remove(h)
+                hits.append(slot)
+                consumed.update(range(*span))
+                sq.explanation.append(f"'{phrase}' → '{c.term}' (adet ölçüsü; '{measure.term}' tutarı değil)")
+                continue
+            consumed.add(k)
+            if phrase not in sq.unhandled:
+                sq.unhandled.append(phrase)
+            names = ", ".join(sorted({c.term for _, c, _ in twins}))
+            sq.clarification.append(
+                f"‘{phrase}’ için katalogda {'birden çok adet ölçüsü var: ' + names if twins else 'tanımlı bir adet ölçüsü yok'}. "
+                f"Hangisini kastediyorsunuz — ‘{measure.term}’ tutarını mı, yoksa bir adet ölçüsünü mü?")
+            sq.explanation.append(f"'{tok}' adet soruyor; '{measure.term}' ölçüsünün adet karşılığı "
+                                  f"{'belirsiz' if twins else 'katalogda yok'} — tutar verilmedi")
+
     def _slot_from_senses(self, key: str, surface: str, senses: list[tuple[Concept, list[Mapping]]], span: tuple[int, int]) -> Optional[ResolvedSlot]:
         usable = [(c, maps) for c, maps in senses if maps]
         if not usable:
