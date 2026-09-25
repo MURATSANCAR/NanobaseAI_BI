@@ -71,6 +71,9 @@ class SeoGeo:
         self._batch_lock = threading.Lock()
         self.batch: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "queue": None,
                                       "startedAt": None, "finishedAt": None, "error": None}
+        # Sayfa önerisi uçlarla birlikte `register` içinde kurulur; ön üretim buradan çağırır.
+        self.page_queue: Any = None
+        self.make_page_proposal: Any = None
         # Aynı ürün için aynı anda ikinci üretim başlamasın (ekran açılışı + gece işi).
         self._gen_lock = threading.Lock()
         self._generating: set[str] = set()
@@ -318,12 +321,23 @@ class SeoGeo:
                     PRODUCTS.c.product_id.not_in(has)).order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc(),
                                                                  PRODUCTS.c.product_id)).all()
             queue = [pid for pid, issues in rows if propose.fixable(loads(issues, []))]
-            self.batch["queue"] = len(queue)
-            for pid in queue:
+            # Sayfalar (yazar/kategori/yayınevi) ürünlerle karışık: her 3 üründen sonra 1 sayfa; ikisi de çok satandan.
+            # Ürün sırası binlerce; sayfalar sona kalsa günlerce sıra gelmezdi.
+            pages_q = self.page_queue() if self.page_queue else []
+            self.batch["queue"] = len(queue) + len(pages_q)
+            prod_jobs = [(lambda pid=pid: self.make_proposal(pid, user, BATCH)) for pid in queue]
+            page_jobs = [(lambda k=k: self.make_page_proposal(k[0], k[1], user, BATCH)) for k in pages_q]
+            jobs = []
+            while prod_jobs or page_jobs:
+                jobs += prod_jobs[:3]
+                del prod_jobs[:3]
+                jobs += page_jobs[:1]
+                del page_jobs[:1]
+            for job in jobs:
                 if _t.monotonic() > deadline:
                     break
                 try:
-                    self.make_proposal(pid, user, BATCH)
+                    job()
                     self.batch["done"] += 1
                 except HTTPException as e:
                     if e.status_code == 503:
@@ -749,7 +763,9 @@ def register(app, runtime, authorize, session_user):
 
     @app.post("/api/v1/seo-geo/pages/{type}/{tid}/propose")
     def seo_page_propose(type: str, tid: str, request: Request) -> dict[str, Any]:
-        user = gate(request)
+        return make_page_proposal(type, tid, gate(request))
+
+    def make_page_proposal(type: str, tid: str, user: str, priority: Optional[int] = None) -> dict[str, Any]:
         l, meta, f = _page(type, tid)
         key = f"{type}:{tid}"
         with seo._gen_lock:
@@ -757,7 +773,7 @@ def register(app, runtime, authorize, session_user):
                 raise _err(409, "Bu sayfa için öneri şu an yazılıyor.")
             seo._generating.add(key)
         try:
-            llm = runtime().llm_for("seo")
+            llm = runtime().llm_for("seo", priority)
             if llm is None:
                 raise _err(503, "Yapay zekâ modeli bu kurulumda tanımlı değil.")
             lim = rules.thresholds(seo.conf)
@@ -782,6 +798,25 @@ def register(app, runtime, authorize, session_user):
         finally:
             with seo._gen_lock:
                 seo._generating.discard(key)
+
+    def page_queue() -> list[tuple[str, str]]:
+        """Ön üretim sırası: önerisi olmayan, kitabı olan ve sorunlu yazar/kategori/yayınevi sayfaları, çok satandan."""
+        links, st = _page_data()
+        lim = rules.thresholds(seo.conf)
+        with seo.engine().connect() as c:
+            has = {r[0] for r in c.execute(sa.select(PROPOSALS.c.product_id).where(
+                PROPOSALS.c.tenant_id == seo.tenant(), PROPOSALS.c.product_id.like("%:%")))}
+        out = []
+        for l in links:
+            key = (l["type"], str(l["table_id"]))
+            s = st.get(key, {})
+            if not s.get("books") or f"{key[0]}:{key[1]}" in has:
+                continue
+            if pages.audit(l["type"], _page_name(l), l["title"], l["description"], lim)["issues"]:
+                out.append((s.get("sales", 0), key))
+        return [k for _, k in sorted(out, key=lambda x: -x[0])]
+
+    seo.page_queue, seo.make_page_proposal = page_queue, make_page_proposal
 
     class PageDecision(BaseModel):
         action: str = Field(pattern="^(approve|reject)$")
