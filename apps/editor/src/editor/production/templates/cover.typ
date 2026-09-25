@@ -13,7 +13,32 @@
 #set text(font: d.body_font, lang: "tr", hyphenate: false)
 
 // ---------------------------------------------------------------- ön kapak
-#if d.front_image != none {
+#let fc = d.at("front_collage", default: none)
+#if fc != none {
+  // Kolaj (collage.py): gri katman görseli + daktilo kâğıt şeritler (vektör yazı) + ince yazar adı.
+  place(top + left, dx: front-x, image(fc.art, width: tw + b, height: H))
+  for lb in fc.labels {
+    let pad = lb.pad_mm * 1mm
+    let w = lb.w_mm * 1mm
+    let h = lb.h_mm * 1mm
+    let ink = rgb(lb.ink)
+    let body = box(width: w + 2 * pad, height: h + 2 * pad, {
+      place(top + left, image(lb.img, width: w + 2 * pad, height: h + 2 * pad, fit: "stretch"))
+      place(top + left, dx: pad, dy: pad, box(width: w, height: h, align(center + horizon,
+        text(font: fc.font, size: lb.size_pt * 1pt, fill: ink, stroke: lb.stroke_pt * 1pt + ink,
+          tracking: lb.tracking_pt * 1pt, lb.text))))
+      place(top + left, image(lb.wear_img, width: w + 2 * pad, height: h + 2 * pad, fit: "stretch"))
+    })
+    place(top + left, dx: front-x + lb.cx_mm * 1mm - (w / 2 + pad), dy: lb.cy_mm * 1mm - (h / 2 + pad),
+      rotate(lb.rot * 1deg, origin: center + horizon, body))
+  }
+  if fc.author != none {
+    let a = fc.author
+    place(top + left, dx: front-x, dy: a.y_mm * 1mm, box(width: tw, align(center,
+      text(font: a.font, weight: a.weight, size: a.size_pt * 1pt, tracking: a.tracking_pt * 1pt,
+        fill: rgb(a.ink), a.text))))
+  }
+} else if d.front_image != none {
   place(top + left, dx: front-x, image(d.front_image, width: tw + b, height: H, fit: "cover"))
 } else {
   // Tipografik kapak (resimsiz kitap): düz zemin, açık tonda daire deseni, başlık ve yazar ortada.

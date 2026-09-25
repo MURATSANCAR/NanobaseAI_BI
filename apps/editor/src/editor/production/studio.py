@@ -229,6 +229,9 @@ def page_count(d: Path) -> int:
 def build_cover(d: Path) -> None:
     """Kapak açılımı (sırt kalınlığı sayfa sayısına bağlı). Kapak resmi varsa resimli; yoksa ve kitap «resimsiz»
     seçildiyse tipografik (görsel model açılmaz); öteki kitapta kapak resmi beklenir, yapılmaz."""
+    from . import collage
+    if collage.build_cover(d):           # editör kapak tarzı seçtiyse (kolaj / tipografik) kapağı o kurar
+        return
     art = selected_art(d)
     typographic = "kapak" not in art and (read(d, "job.json") or {}).get("art_mode") == "none"
     if "kapak" not in art and not typographic:
@@ -316,6 +319,9 @@ def refresh_preflight(d: Path) -> dict:
         text_src = ms
         missing = sorted(str(sc.page) for sc in scenes if sc.page in painted and str(sc.page) not in st["pages"])
     shown = set(label)
+    from . import collage
+    if collage.style_of(d) in ("collage", "typographic"):
+        shown.discard("kapak")           # kapak resmi basılmıyor (kolaj/tipografik): onay ve dpi istemez
     renders = [{"key": f"sayfa-{label[k]}", "dpi": pg["versions"][pg["selected"] - 1]["dpi"]}
                for k, pg in st["pages"].items() if pg.get("selected") and k in shown]
     rep = preflight.check(pdf, cpdf if cpdf.exists() else None, text_src, spec, renders,

@@ -1,6 +1,7 @@
 """Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction), tek resmin yeniden üretimi
 (ArtRegenerate) ve sayfa planının işleri: serbest figür (FigureGenerate), kaliteyi artırma (AssetUpscale) ve
-GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
+GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz); kolaj kapağın fotoğraf adayları
+(CollagePhotos). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
 fontlar ister, bunlar stüdyo imajında) ve kendi işçisi (worker.py, aynı anda tek etkinlik: görsel model
 tek sırada). API yalnız başlatır ve iş klasörünü okur.
 
@@ -163,7 +164,31 @@ async def upscale_activity(job: str, jid: str, gid: str, new_gid: str, page: str
     await _plan_job(job, jid, lambda d: studio.upscale_asset(d, gid, new_gid, page, item, by), gpu=True)
 
 
-ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity]
+@activity.defn(name="production_collage_photos")
+async def collage_photos_activity(job: str, count: int, direction: str, by: str) -> None:
+    """Kolaj kapak fotoğraf adayları (GPU): sahne istemi → `count` tohumla fotoğraf → büyütme (collage.generate).
+    busy.json'u tutar; bitince sırada iş yoksa görsel model kapanır. Durum kolaj/kolaj.json → job."""
+    from . import collage, studio
+    d = studio.job_dir(job)
+    _started(d)
+    collage.set_job(d, status="running", attempt=activity.info().attempt, error=None)
+    try:
+        made = await _beating(collage.generate(d, count, direction, by))
+    except Exception as e:
+        final = _last(ART_RETRY) or isinstance(e, (ValueError, KeyError, FileNotFoundError))
+        collage.set_job(d, status="fail" if final else "running", error=str(e)[:300])
+        if final:
+            b = studio.busy(d) or {}
+            studio.set_busy(d, {**b, "error": str(e)[:300], "since": time.time()})
+            await _release_if_idle(d)
+        raise
+    collage.set_job(d, status="done", made=made, finished=time.time())
+    studio.set_busy(d, None)
+    await _release_if_idle(d)
+
+
+ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity,
+              collage_photos_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -216,4 +241,13 @@ class AssetUpscale:
                                         heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
 
 
-WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale]
+@workflow.defn(name="CollagePhotos")
+class CollagePhotos:
+    @workflow.run
+    async def run(self, job: str, count: int, direction: str, by: str) -> None:
+        await workflow.execute_activity("production_collage_photos", args=[job, count, direction, by],
+                                        start_to_close_timeout=timedelta(minutes=60),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale, CollagePhotos]

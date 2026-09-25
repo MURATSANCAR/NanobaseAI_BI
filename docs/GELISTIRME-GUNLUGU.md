@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (00:40) — Kitap Tasarım Stüdyosu: kolaj kapak (O hattı; dalda, kurulmadı)
+
+- **Ne:** kapağın ikinci tarzı. Kapak ekranı `/kitap-tasarim/:iş/kapak` (Sayfa stüdyosunda «Kapak tarzı»): resimli / kolaj / tipografik. Kolajda siyah-beyaz analog fotoğraf yırtık kâğıt gibi kesilir, öznenin yukarı uzanan parçası kesimin üstünden taşar, gri lekeler ve yırtık şeritler, başlık daktilo kâğıt şeritlerde, yazar ince geniş aralıklı. Arka kapak, sırt, barkod ve baskı hattı mevcut kalıp.
+- **Motor `production/collage.py`:** tohum başlık+düzen numarasından (aynı kitap aynı kolaj, «başka düzen» değiştirir); taşma noktası figürün maskesinden (üst şeridin tonuyla anahtarlama, ufka bağlı bölge); etiketler fontla ölçülüp kelime sırası korunarak dengeli bölünür, sığmayan şerit açık hata; ön kapak 300 dpi gri PNG, yazılar vektör. Fotoğraf: dil modeli kitabın profilinden sahne yazar (genel kalıp, kitaba özel istem yok), görsel model 3 tohumla aday (Temporal `CollagePhotos`), kolaja özel negatif istem; editör kendi fotoğrafını yükleyebilir. Model fotoğrafında ekranda «Taslak — ticari kullanım izni bekleniyor».
+- **Gerçek model (geçici kap, GPU):** çocuk kitabı (Etimesgutlu Bebek Aslan, iş dosyalarının kopyası) ve roman (Çiçekçi Kadın, okunmuş metinden) için 3'er aday; aday başı üretim 45–115 sn + büyütme 3–55 sn (model devri dahil), kompozisyon 1,5–2,5 sn. 6 adayın 6'sında figür taştı. İlk romanda denemesi sırada başka bir oturumun görsel modeli kapatması yüzünden 500 aldı, ikinci turda geçti.
+- **Ön plan ayırma:** BiRefNet (MIT) geçici kapta CPU'da denendi (220 M parametre, 445 MB ağırlık, 17–20 sn/görsel): düz gökli adaylarda anahtarlama maskesiyle ufuk üstü IoU 0,74–0,94, tepe noktası %1,3 içinde; karışık zeminde anahtarlama taşma yapmıyor, BiRefNet figürü buluyor. Kalıcı kurulmadı; öneri raporda.
+- **Testler:** `tests/test_collage.py` 13 test (modelsiz; belirlenimcilik, etiket ölçümü, Türkçe harfler PDF'ten, 300 dpi gri, prepress, ön kontrol, uçlar, iş akışı) + test_plan/production/cover_text/elements: 107 geçti, 1 atlandı. tsc test sunucusunda temiz; ekran 320/390/768/1440'ta sahte köprüyle yatay kaymasız.
+- **Açık:** kitabın adı Word dosya adı ya da kısa ad olan işlerde (CRM kaydı yok) etiket o adı basar — editör şeritleri elle yazar. Kolaj/tipografik seçiliyken basılmayan kapak resmi ön kontrolde onay beklemez (`studio.refresh_preflight`).
+
 ## 2026-09-26 (00:10) — SEO & GEO: yazar, kategori ve yayınevi sayfaları (denetim + Zeki AI önerisi)
 
 - **Kaynak:** `semantic_seo_links` (T-soft `link/getLinks` başlık/açıklama) + ürünler; bağ ürünün `ModelId`/`BrandId`/`DefaultCategoryId` (+`Categories`) → sayfanın `TableId`. Yazar için Wikidata özeti yalnız basın-web modülünün doğrulanmış kaydından (tablo yoksa atlanır).

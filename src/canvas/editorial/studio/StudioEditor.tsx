@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Download, LayoutTemplate, Loader2, Quote, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
+import { BookImage, Check, Download, LayoutTemplate, Loader2, Quote, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
 import { studioApi, type StudioArt, type StudioJob } from '../../engine';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
@@ -95,6 +95,7 @@ export default function StudioEditor() {
           <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/sayfalar`} title="Sayfa ekle/sil/sırala, yerleşim, balon, renkli yazı, figür ve fotoğraf">
             <LayoutTemplate className="h-4 w-4" aria-hidden />Sayfa düzeni
           </Link>
+          <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/kapak`} title="Kapak tarzı: resimli, kolaj ya da tipografik"><BookImage className="h-4 w-4" aria-hidden />Kapak tarzı</Link>
           <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}><Download className="h-4 w-4" aria-hidden />İç sayfalar</a>
           {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak</a>}
           {d.files['baski-ic'] ? (

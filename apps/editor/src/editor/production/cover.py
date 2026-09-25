@@ -52,12 +52,16 @@ def typographic(ms: Manuscript, spec: Spec, bg: str) -> dict:
 
 
 def build(ms: Manuscript, p: Profile, spec: Spec, pages: int, art_png: Path | None, accent: str, back_bg: str,
-          workdir: Path, font_dir: Path, front_bg: str | None = None) -> tuple[Path, dict]:
-    """`art_png` None → tipografik ön kapak (`front_bg` zemin; görsel model gerekmez)."""
+          workdir: Path, font_dir: Path, front_bg: str | None = None, collage: dict | None = None) -> tuple[Path, dict]:
+    """`art_png` None → tipografik ön kapak (`front_bg` zemin; görsel model gerekmez). `collage` verilirse ön kapak
+    kolajdır (collage.render'ın verisi: katman görseli, etiketler, yazar); arka kapak, sırt ve barkod aynı."""
     workdir.mkdir(parents=True, exist_ok=True)
     shutil.copy(TEMPLATE, workdir / "cover.typ")
     spine = spec.spine(pages)
     panel_w, panel_h = spec.trim_w + spec.bleed, spec.trim_h + 2 * spec.bleed
+    if collage is not None:
+        return _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, panel_h, None, [], None,
+                        {"typographic": False, "collage": True}, collage)
     if art_png is None:
         return _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, panel_h, None, [],
                         typographic(ms, spec, front_bg or accent), {"typographic": True})
@@ -89,7 +93,7 @@ def build(ms: Manuscript, p: Profile, spec: Spec, pages: int, art_png: Path | No
 
 
 def _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, panel_h, front_image, blocks, typo,
-             extra) -> tuple[Path, dict]:
+             extra, collage: dict | None = None) -> tuple[Path, dict]:
     import typst
     code = None
     if ms.meta.get("ISBN"):
@@ -100,12 +104,14 @@ def _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, pane
             "accent": accent, "body_font": spec.body_font, "heading_font": spec.heading_font,
             "title": ms.title, "author": ms.author or "", "publisher": ms.meta.get("PUBLISHER") or "",
             "front_image": front_image, "front_text": blocks, "front_type": typo, "barcode": code,
+            "front_collage": collage and {k: v for k, v in collage.items() if k != "fonts"},
             "back": {"bg": back_bg, "paragraphs": [x.strip() for x in summary.split("\n") if x.strip()],
                      "age": f"{p.age_min}–{p.age_max} YAŞ" if p.age_min else None,
                      "series": ms.meta.get("SERIES")}}
     (workdir / "cover.json").write_text(json.dumps(data, ensure_ascii=False))
     out = workdir / "kapak.pdf"
-    typst.compile(str(workdir / "cover.typ"), output=str(out), root=str(workdir), font_paths=[str(font_dir)],
+    fonts = [str(font_dir)] + ([collage["fonts"]] if collage and collage.get("fonts") else [])
+    typst.compile(str(workdir / "cover.typ"), output=str(out), root=str(workdir), font_paths=fonts,
                   ignore_system_fonts=True, sys_inputs={"data": "cover.json"})
     return out, {"spine_mm": spine, "binding": spec.binding(pages), **extra,
                  "size_mm": [round(2 * spec.trim_w + spine + 2 * spec.bleed, 1), panel_h]}
