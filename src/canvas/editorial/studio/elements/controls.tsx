@@ -20,6 +20,15 @@ export function Section({ title, children, aside }: { title: string; children: R
   );
 }
 
+export function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[12px] font-bold text-canvas-ink">{label}</span>
+      {children}
+    </div>
+  );
+}
+
 /** Paletten renk seçimi. `auto` verilirse ilk düğme «otomatik» (değer null) olur ve rolün rengini gösterir. */
 export function ColorChips({
   label, value, onChange, swatches, auto,
