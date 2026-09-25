@@ -101,9 +101,43 @@ Hizalayıcı açılamazsa zamanlar harf sayısıyla orantılı **tahmin** edilir
 `<span id="w-<blok>-<i>">` ile sarar (char aralıklarıyla), manifest'te XHTML öğesine `media-overlay="smil-…"`, OPF'ye
 `media:duration` (sayfa ve toplam) ve `media:active-class` (ör. `-epub-media-overlay-active`) eklenir.
 
-## Deneme (2026-09-25, TT GPU, geçici kap)
+## Deneme (2026-09-25, TT GPU sunucusu, geçici kap, CPU)
 
-Sonuçlar ve ölçümler bu belgenin sonundaki «Deneme sonucu» bölümünde.
+İki GPU da doluydu (GPU 0 BI modeli, GPU 1 görsel model çalışıyordu); deneme **CPU'da** yapıldı, çalışan hiçbir
+kaba dokunulmadı. Geçici kap `editor-upscale:1` tabanında (`pip install voxcpm==2.0.3`), öneri servisi
+(`apps/editor/images/voice/server.py`) içinde çalıştırıldı; ürün kodu (`narration.narrate_page`) bu servise bağlanıp
+iki örnek sayfayı seslendirdi. Kap ve indirilen dosyalar iş bitince silindi.
+
+- Örnekler: çocuk kitabı sayfası (anlatıcı + iki balon: «Elif» küçük kız, «Annesi» genç kadın; «Pıt pıt pıt!» ses
+  sözcüğü; «Timaş» sözlükle «tımaş»; «1. baskı», «7 yaşında») ve roman paragrafı («1923'ün», «Dr.», «2. kat»,
+  «06:45'ti», «%80», «TBMM'nin», «25.09.1923», «vb.», «XX. yüzyıl», «150 TL'lik», tireyle diyalog).
+- **Anlaşılırlık:** üretilen ses, hizalayıcıdan bağımsız bir Türkçe tanıyıcıyla (`mpoyraz/wav2vec2-xls-r-300m-cv7-turkish`)
+  yazıya döküldü, beklenen okunuşla karşılaştırıldı: **toplam harf hatası %2,4** (941 harfte 23). Farkların çoğu
+  tanıyıcının boşluk/yazım farkı («rızabey», «herşeyi»); gerçek zayıflık yalnız yansıma sözcükte («pıt pıt pıt» →
+  «fıkpıtpı»). ğ, ı, ş, ç, ö, ü; sayılar, tarih, saat, yüzde, kısaltmalar doğru okundu.
+- **Kelime zamanı:** 121 kelimenin 121'i hizalayıcıyla bulundu (tahmin 0). Çocuk sayfası 26,2 sn, roman paragrafı 45,2 sn.
+- **Hız (CPU, sıkıştırmasız):** tek başına 32 çekirdekte RTF 3,45 (6,6 sn ses 22,6 sn'de); sunucunun başka yükleriyle
+  birlikte sayfa başına RTF ~8 (26 sn ses 211 sn'de). CPU kitabın tamamı için yetmez; ürün GPU'da koşmalı. GPU ölçümü
+  yapılamadı (kartlar doluydu); yayımlanan değer ~8 GB bellek, RTX 4090'da RTF ~0,30 — kurulumda ölçülmeli.
+- Hizalamada bir hata bulundu ve düzeltildi: `merge_tokens`'a boşluk jetonu verilmezse 0 sayılıyor, bu sözlükte 0 kelime
+  ayırıcısı («|») olduğu için bütün kelimeler tahmine düşüyordu.
+
+Örnek dosyalar (oturum karalama klasörü, depoya girmez): `cocuk-sayfasi.mp3/.json/.overlay.json/.smil`,
+`roman-paragrafi.*`, ses referansları `ses-*.wav`.
+
+## Kalıcı kurulum önerisi (yapılmadı, onay bekler)
+
+1. Ağırlıklar `/data/editor/models/book-voice/` altına: `VoxCPM2/` (`openbmb/VoxCPM2`, rev `32279eff…`, ~4,6 GB) ve
+   `aligner/` (`Baybars/wav2vec2-xls-r-300m-cv8-turkish`, rev `2362365a…`, ~1,2 GB); `MANIFEST.json`'a sha256.
+2. İmaj `editor-voice:1` (`apps/editor/images/voice/Dockerfile`; vLLM-Omni tabanı, GPU'da zaten var).
+3. `models.yaml`'a takma ad: `book-voice` → `container: editor-model-voice`, `model_dir: book-voice`, `kind: voice`,
+   `gpu: 1`, `mem_fraction: 0.10` (ölçülüp düzeltilecek), `idle_stop_sec: 300`, `image: editor-voice:1`,
+   `entrypoint: [python, /srv/server.py]`, `args: []`. Görsel modelle (0,62) ve büyütücüyle (0,06) aynı kartta sığar
+   (toplam 0,78 < 0,92); ana modelle (0,48) de sığar.
+4. `gateway.py` `PASSTHROUGH`'a `"audio/narrate"` (tek satır).
+5. Stüdyo servisi ve işçisi yeni kodla yeniden kurulur (BookNarration iş akışı), giriş kapısı betiği koşulur
+   (`add-studio-routes.py`), köprü yeniden başlar. Sonra test sunucusunda gerçek bir kitabın birkaç sayfası seslendirilip
+   ekranda dinlenir, anlaşılırlık ölçümü tekrarlanır.
 
 ## Kaynaklar
 
