@@ -24,14 +24,32 @@
 }
 
 // Aynı ton, verilen açıklık (OKLCH L, 0–1) ve en çok verilen kroma: açık zeminler ve canlı dolgular için.
-// Kroma üst sınırı baskı güvenliğidir (açık tonda yüksek kroma CMYK dışına taşar).
-#let _tone(hex, l, cmax) = {
-  let (_, c, hue, ..) = oklch(rgb(hex)).components()
-  upper(rgb(oklch(l * 100%, calc.min(c, cmax), hue)).to-hex())
+// Kroma üst sınırı baskı güvenliğidir (açık tonda yüksek kroma CMYK dışına taşar). hue verilirse ton o açıya çekilir.
+// cmin: canlı rollerde (güneş, gül, canlı dolgu) soluk paletten gelen renk en az bu kromaya çıkarılır (ton korunur).
+#let _tone(hex, l, cmax, hue: none, cmin: 0) = {
+  let (_, c, h, ..) = oklch(rgb(hex)).components()
+  upper(rgb(oklch(l * 100%, calc.max(cmin, calc.min(c, cmax)), if hue == none { h } else { hue })).to-hex())
+}
+
+#let _hue(hex) = oklch(rgb(hex)).components().at(2).deg()
+
+// Paletten, verilen tona (OKLCH açısı) en yakın renk; 50°'den uzaksa yedek.
+#let _nearest-hue(hexes, target, fallback) = {
+  let pick = fallback
+  let best = 50.0
+  for h in hexes {
+    let d = calc.abs(_hue(h) - target)
+    let d = calc.min(d, 360 - d)
+    if d < best { best = d; pick = h }
+  }
+  pick
 }
 
 #let WARM-HUE = 75          // sarı-turuncu (OKLCH ton açısı); «güneş», «kâğıt», «ahşap» bu tona en yakın renkten
 #let WARM-FALLBACK = "#8A6500"   // palette sıcak renk yoksa Timaş çocuk paletinin «Hardal»ı
+#let ROSE-HUE = 25          // kırmızı; «gül» (kalp) bu tona en yakın renkten
+#let ROSE-FALLBACK = "#B0341C"   // yoksa Timaş «Kiremit»
+#let WOOD-HUE = 68          // ahşap tonu: sıcak rengin tonuyla bu açının ortası (turuncu palette pembe ahşap olmasın)
 
 // Paletten roller. Karakterlere verilmemiş renkler önce; palette.roles verilmişse o anahtarlar kazanır.
 #let roles(palette) = {
@@ -41,26 +59,22 @@
   let accent = upper(_get(palette, "accent", if pool.len() > 0 { pool.first() } else { "#B0341C" }))
   let rest = pool.filter(h => h != accent)
   let accent2 = if rest.len() > 0 { rest.first() } else { "#1F3B73" }
-  let warm = WARM-FALLBACK
-  let best = 50.0
-  for h in hexes {
-    let hue = oklch(rgb(h)).components().at(2).deg()
-    let d = calc.abs(hue - WARM-HUE)
-    let d = calc.min(d, 360 - d)
-    if d < best { best = d; warm = h }
-  }
+  let warm = _nearest-hue(hexes, WARM-HUE, WARM-FALLBACK)
+  let rose = _nearest-hue(hexes, ROSE-HUE, ROSE-FALLBACK)
+  let wh = (_hue(warm) + WOOD-HUE) / 2 * 1deg
   let r = (
     accent: accent, accent2: accent2, ink: upper(_get(palette, "text", "#2C2C2A")),
-    pop: _tone(accent, 0.64, 0.17), pop2: _tone(accent2, 0.64, 0.15), sun: _tone(warm, 0.86, 0.16),
+    pop: _tone(accent, 0.64, 0.17, cmin: 0.09), pop2: _tone(accent2, 0.64, 0.15, cmin: 0.09),
+    sun: _tone(warm, 0.86, 0.16, cmin: 0.13), rose: _tone(rose, 0.62, 0.18, cmin: 0.14),
     soft: _tone(accent, 0.94, 0.04), soft2: _tone(accent2, 0.94, 0.04), paper: _tone(warm, 0.975, 0.025),
-    wood: _tone(warm, 0.8, 0.07), bark: _tone(warm, 0.42, 0.06), deep: _tone(accent, 0.34, 0.09),
+    wood: _tone(warm, 0.8, 0.07, hue: wh), bark: _tone(warm, 0.42, 0.06, hue: wh), deep: _tone(accent, 0.34, 0.09),
     white: "#FFFFFF",
   )
   for (k, v) in _get(palette, "roles", (:)) { if type(v) == str { r.insert(k, upper(v)) } }
   // canlı dolgu listesi (serpiştirme, konfeti) ve harf harf renk listesi (gökkuşağı, zıplayan)
   let bright = (r.pop, r.sun, r.pop2)
   for h in rest.slice(calc.min(1, rest.len())) {
-    let t = _tone(h, 0.66, 0.15)
+    let t = _tone(h, 0.66, 0.15, cmin: 0.09)
     if t not in bright { bright.push(t) }
   }
   r.insert("bright", bright)
@@ -245,13 +259,21 @@
   else { _get(fonts, "heading", _get(fonts, "heading_font", "Baloo 2")) }
 }
 
-#let _runs(x) = {
+// Boş olmayan run'lar; rengi (hex ya da rol) renge çevrilmiş.
+#let _runs(x, R) = {
   let rs = _get(x, "runs", ())
   if type(rs) != array { return () }
-  rs.filter(r => type(r) == dictionary and type(r.at("text", default: none)) == str and r.text != "")
+  let out = ()
+  for r in rs {
+    if type(r) == dictionary and type(r.at("text", default: none)) == str and r.text != "" {
+      let r2 = r
+      let c = r.at("color", default: none)
+      if c != none { r2.insert("color", _col(c, R, none)) }
+      out.push(r2)
+    }
+  }
+  out
 }
-
-#let _plain(runs) = runs.map(r => r.text).join("")
 
 // Bir run'ın biçimi: font, kalınlık, punto (taban × k).
 #let _style(r, base, k, fonts) = (
@@ -270,7 +292,7 @@
     for (li, line) in lines.enumerate() {
       if li > 0 { linebreak() }
       if colors == none and not bounce {
-        let f = if paint != none { paint } else if own != none { rgb(own) } else { ink }
+        let f = if paint != none { paint } else if own != none { own } else { ink }
         text(..st, fill: f, stroke: stroke, line)
       } else {
         for (wi, word) in line.split(" ").enumerate() {
@@ -278,7 +300,7 @@
           let letters = ()
           for ch in word.clusters() {
             let f = if paint != none { paint } else if colors != none { colors.at(calc.rem(i, colors.len())) }
-                    else if own != none { rgb(own) } else { ink }
+                    else if own != none { own } else { ink }
             let t = text(..st, fill: f, stroke: stroke, ch)
             if bounce {
               let up = if calc.even(i) { -1 } else { 1 }
@@ -326,10 +348,10 @@
 }
 
 // Yazıyı alanın içine yerleştirir: katmanlar (layers) aynı düzenle üst üste basılır.
-//   layers: ((dx, dy, paint, colors, stroke), …) sırayla; son katman asıl yazı.
+//   layers: big → ((dx, dy, paint, colors, stroke), …); big = en büyük harf puntosu; son katman asıl yazı.
 #let _text-in(runs, area, size, fonts, ink, align-x, id, layers: none, bounce: false, colors: none) = context {
   let (x, y, W, H) = area
-  if runs.len() == 0 or W <= 0pt or H <= 0pt { return }
+  if runs.len() > 0 and W > 0pt and H > 0pt {
   let fixed = size != none
   let base = if fixed { size } else { 20 }
   let k = if fixed { 1.0 } else { _fit(runs, base, fonts, W, H, align-x, bounce: bounce) }
@@ -338,10 +360,13 @@
                                                 bounce: bounce, stroke: stroke), W, align-x)
   let m = measure(make(none, colors, none))
   if fixed and m.height + 0.57 * big > H + 0.5pt { metadata((kind: "element-overflow", id: id)) }
-  let top = y + (H - m.height - 0.57 * big) / 2 + 0.3 * big
-  let ls = if layers == none { ((0pt, 0pt, none, colors, none),) } else { layers }
-  for (dx, dy, paint, cols, stroke) in ls {
-    place(top + left, dx: x + dx, dy: top + dy, make(paint, cols, stroke))
+  let ty = y + (H - m.height - 0.57 * big) / 2 + 0.3 * big
+  let ls = if layers == none { ((0pt, 0pt, none, colors, none),) } else { layers(big) }
+  for (i, (dx, dy, paint, cols, stroke)) in ls.enumerate() {
+    let body = make(paint, cols, stroke)
+    // süs katmanları (gölge, dış çizgi, derinlik) PDF'te yapaylık (artifact) olarak işaretlenir; metin asıl katmandır
+    place(top + left, dx: x + dx, dy: ty + dy, if i < ls.len() - 1 { pdf.artifact(body) } else { body })
+  }
   }
 }
 
@@ -416,12 +441,13 @@
       // köşeye doğru kıvrılan asma, iki kolunda yapraklar
       let arm = ((0.94, 0.07), (0.7, 0.07), (0.47, 0.12), (0.3, 0.22), (0.22, 0.3), (0.12, 0.47), (0.07, 0.7), (0.07, 0.94))
       _smooth(arm.map(((u, v)) => P(u, v)), closed: false, stroke: _stk(S, sw))
+      // asmanın köşeye en yakın noktasından içeri dönen sarmal
       let curl = ()
-      for i in range(15) {
-        let t = i / 14
-        let a = 225deg - 330deg * t
-        let rr = 0.13 * (1 - 0.72 * t)
-        curl.push(P(0.25 + rr * calc.cos(a) * -1 + 0.0, 0.25 + rr * calc.sin(a) * -1))
+      for i in range(29) {
+        let t = i / 28
+        let a = 45deg + 400deg * t
+        let rr = 0.141 * (1 - 0.74 * t)
+        curl.push(P(0.16 + rr * calc.cos(a), 0.16 + rr * calc.sin(a)))
       }
       _smooth(curl, closed: false, stroke: _stk(S, sw * 0.9))
       for (b, t) in (((0.62, 0.08), (0.56, 0.2)), ((0.8, 0.07), (0.88, 0.16)), ((0.08, 0.62), (0.2, 0.56)),
@@ -549,13 +575,18 @@
   let pts = if p.style == "straight" {
     ((pad, h / 2), (w - pad, h / 2))
   } else if p.style == "loop" {
-    let out = ()
-    for i in range(41) {
-      let t = i / 40
-      let a = t * 2 * calc.pi
-      out.push((pad + (w - 2 * pad) * (t - 0.16 * calc.sin(a)), h * 0.62 - h * 0.34 * (1 - calc.cos(a)) * 0.5 - h * 0.12 * calc.sin(t * calc.pi)))
+    // alttan gelir, ortada bir tur atıp (kendini keserek) sağa iner
+    let (x0, x1) = (pad, w - pad)
+    let span = x1 - x0
+    let (rx, ry) = (calc.min(span * 0.17, h * 0.3), h * 0.3)
+    let out = ((x0, h * 0.84), (x0 + span * 0.22, h * 0.8))
+    for i in range(1, 24) {
+      let t = i / 24
+      let a = 90deg - 360deg * t
+      let cx = x0 + span * 0.46 + span * 0.08 * t
+      out.push((cx + rx * calc.cos(a), h * 0.46 + ry * calc.sin(a)))
     }
-    out
+    out + ((x0 + span * 0.78, h * 0.78), (x1, h * 0.6))
   } else {
     let out = ()
     for i in range(25) {
@@ -610,7 +641,7 @@
       let g = _mix(F, if S != none { S } else { black }, 0.28)
       let lx = if p.point == "left" { tip } else { 0pt }
       let rx = if p.point == "right" { tip } else { 0pt }
-      for (u0, u1, v) in ((0.1, 0.38, 0.28), (0.5, 0.86, 0.22), (0.16, 0.5, 0.8), (0.62, 0.9, 0.76)) {
+      for (u0, u1, v) in ((0.08, 0.3, 0.1), (0.56, 0.84, 0.09), (0.18, 0.46, 0.9), (0.66, 0.9, 0.91)) {   // kenara yakın: yazının altına girmez
         let xa = lx + (w - lx - rx) * u0
         let xb = lx + (w - lx - rx) * u1
         _smooth(((xa, bh * v), ((xa + xb) / 2, bh * (v + 0.03)), (xb, bh * v)), closed: false,
@@ -627,15 +658,15 @@
 
 #let _note(c) = {
   let (w, h, F, S, sw, p, R) = (c.w, c.h, c.F, c.S, c.sw, c.p, c.R)
-  let top = if p.pin == "tape" { h * 0.07 } else if p.pin == "pin" { h * 0.04 } else { sw / 2 }
+  let tp = if p.pin == "tape" { h * 0.07 } else if p.pin == "pin" { h * 0.04 } else { sw / 2 }
   let e = calc.min(w, h) * 0.15
   let (x0, x1, y1) = (sw / 2, w - sw / 2, h - sw / 2)
   let fold = if F != none { _mix(F, if S != none { S } else { black }, 0.2) } else { none }
   let body = {
-    _poly(((x0, top), (x1, top), (x1, y1 - e), (x1 - e, y1), (x0, y1)), fill: F, stroke: _stk(S, sw))
+    _poly(((x0, tp), (x1, tp), (x1, y1 - e), (x1 - e, y1), (x0, y1)), fill: F, stroke: _stk(S, sw))
     if p.lines {
       let lc = _mix(if F != none { F } else { white }, rgb(R.accent2), 0.3)
-      let yy = top + h * 0.3
+      let yy = tp + h * 0.3
       while yy < y1 - e * 0.6 {
         place(top + left, line(start: (w * 0.09, yy), end: (w * 0.91 - (if yy > y1 - e { e } else { 0pt }), yy),
           stroke: _stk(lc, sw * 0.6)))
@@ -651,16 +682,16 @@
       for i in range(teeth + 1) { pts.push((tw * (if calc.even(i) { 0.0 } else { 0.035 }), th * i / teeth)) }
       let right = ()
       for i in range(teeth + 1) { right.push((tw - tw * (if calc.even(i) { 0.0 } else { 0.035 }), th * (teeth - i) / teeth)) }
-      place(top + left, dx: w / 2 - tw / 2, dy: top - th * 0.55, rotate(-4deg, reflow: false,
+      place(top + left, dx: w / 2 - tw / 2, dy: tp - th * 0.55, rotate(-4deg, reflow: false,
         box(width: tw, height: th, polygon(fill: tc, stroke: none, ..pts, ..right))))
     } else if p.pin == "pin" {
       let r = calc.min(w, h) * 0.055
-      _dot(w / 2 + r * 0.2, top + r * 1.3, r, rgb(R.deep))
-      _dot(w / 2, top + r, r, rgb(R.pop), stroke: _stk(rgb(R.deep), sw * 0.6))
-      _dot(w / 2 - r * 0.32, top + r * 0.7, r * 0.28, white)
+      _dot(w / 2 + r * 0.2, tp + r * 1.3, r, rgb(R.deep))
+      _dot(w / 2, tp + r, r, rgb(R.pop), stroke: _stk(rgb(R.deep), sw * 0.6))
+      _dot(w / 2 - r * 0.32, tp + r * 0.7, r * 0.28, white)
     }
   }
-  let ty = top + (if p.pin == "none" { h * 0.1 } else { h * 0.13 })
+  let ty = tp + (if p.pin == "none" { h * 0.1 } else { h * 0.13 })
   (body: body, area: (w * 0.11, ty, w * 0.78, y1 - e * 0.7 - ty), ink: rgb(R.ink))
 }
 
@@ -668,7 +699,7 @@
   let (w, h, F, S, sw, p, R) = (c.w, c.h, c.F, c.S, c.sw, c.p, c.R)
   let (x0, y0, x1, y1) = (sw / 2, sw / 2, w - sw / 2, h - sw / 2)
   let shade = if F != none { _mix(F, if S != none { S } else { black }, 0.14) } else { none }
-  let seal = rgb(R.pop)
+  let seal = rgb(R.rose)
   let m = calc.min(w, h)
   let body = {}
   let area = none
@@ -832,7 +863,6 @@
       up.push((x, g.top + h * 0.05 + (g.bend)(x)))
       dn.push((x, g.bot - h * 0.05 + (g.bend)(x)))
     }
-    place(top + left, polygon(stroke: none, fill: none, ..up))
     place(top + left, curve(stroke: _stk(stitch, sw * 0.5, dash: (sw * 1.2, sw * 1.2)), curve.move(up.first()), ..up.slice(1).map(q => curve.line(q))))
     place(top + left, curve(stroke: _stk(stitch, sw * 0.5, dash: (sw * 1.2, sw * 1.2)), curve.move(dn.first()), ..dn.slice(1).map(q => curve.line(q))))
   }
@@ -875,7 +905,7 @@
       stroke: _stk(S, sw, join: "miter"))
     if p.inner {
       _poly(_burst-pts(w / 2, h / 2, w * 0.36, h * 0.36, n, 0.76, int(p.seed) + 1, rot: 180deg / n),
-        fill: rgb(R.pop), stroke: none)
+        fill: rgb(R.rose), stroke: none)
     }
   }
   let ink = if p.inner { white } else if _dark(F) { white } else { rgb(R.ink) }
@@ -905,10 +935,12 @@
       place(top + left, curve(stroke: _stk(col, sw), curve.move(pts.first()), ..pts.slice(1).map(q => curve.line(q))))
     } else if p.style == "loops" {
       let pts = ()
-      let k = waves * 12
+      // uzamış sikloid: her turda üstte bir halka (el yazısı «llll»)
+      let waves = if p.waves > 0 { waves } else { calc.max(1, int(calc.round(len / (h * 1.5)))) }
+      let k = waves * 32
       for i in range(k + 1) {
-        let t = i / k * waves * 2 * calc.pi
-        let u = (t - 1.6 * calc.sin(t)) / (waves * 2 * calc.pi)
+        let t = calc.pi + i / k * waves * 2 * calc.pi       // alttan başlar, alta biter; halkalar arada
+        let u = (t - 2.4 * calc.sin(t) - calc.pi) / (waves * 2 * calc.pi)
         pts.push((x0 + len * u, y - a * 0.9 * calc.cos(t) + a * 0.1))
       }
       _smooth(pts, closed: false, stroke: _stk(col, sw))
@@ -938,26 +970,28 @@
 #let SHAPE-DEFAULTS = (
   frame: (fill: "none", stroke: "accent", stroke_w: 1.2, params: (style: "plain", radius: 4, ornament: "none")),
   corner: (fill: "pop2", stroke: "accent", stroke_w: 0.9, params: (corner: "tl", style: "swirl")),
-  scatter: (fill: none, stroke: "none", stroke_w: 0, params: (item: "star", count: 14, seed: 7, size: 6)),
+  scatter: (fill: none, stroke: "none", stroke_w: 0, params: (item: "star", count: 14, seed: 7, size: 7)),
   arrow: (fill: "none", stroke: "accent", stroke_w: 1.6, params: (style: "curved", heads: "end", dashed: false)),
   sign: (fill: "wood", stroke: "bark", stroke_w: 0.7, params: (posts: 1, point: "none")),
-  note: (fill: "paper", stroke: "wood", stroke_w: 0.4, params: (pin: "tape", lines: true)),
+  note: (fill: "paper", stroke: "wood", stroke_w: 0.4, params: (pin: "tape", lines: false)),
   envelope: (fill: "wood", stroke: "bark", stroke_w: 0.5, params: (open: true, seal: "heart")),
   scroll: (fill: "paper", stroke: "bark", stroke_w: 0.6, params: (orient: "vertical")),
   badge: (fill: "accent", stroke: "none", stroke_w: 0.6, params: (style: "rosette", tails: true)),
-  ribbon: (fill: "accent", stroke: "none", stroke_w: 0.5, params: (curve: 0, ends: "notch")),
+  ribbon: (fill: "accent", stroke: "none", stroke_w: 0.5, params: (curve: 0)),
   star: (fill: "sun", stroke: "none", stroke_w: 0.6, params: (points: 5, inner: 0.5, rounded: true)),
-  heart: (fill: "pop", stroke: "none", stroke_w: 0.6, params: (:)),
+  heart: (fill: "rose", stroke: "none", stroke_w: 0.6, params: (:)),
   cloud: (fill: "white", stroke: "pop2", stroke_w: 0.7, params: (puffs: 9)),
   burst: (fill: "sun", stroke: "ink", stroke_w: 0.7, params: (spikes: 12, seed: 3, inner: true)),
   line: (fill: "none", stroke: "accent", stroke_w: 1.0, params: (style: "wave", waves: 0, ends: "none")),
 )
 
-#let draw-shape(s, palette, fonts) = {
+// mirror: true → şeklin çizimi yatayda aynalanır, üstündeki yazı aynalanmaz (çağıran s.flip'i buraya verir, kutuyu
+// kendisi aynalamaz; yoksa yazı ters okunur).
+#let draw-shape(s, palette, fonts, mirror: false) = {
   let R = roles(palette)
   let kind = _get(s, "kind", "star")
   let D = SHAPE-DEFAULTS.at(kind, default: SHAPE-DEFAULTS.star)
-  let p = (..D.params, .._get(s, "params", (:)))
+  let p = D.params + _get(s, "params", (:))
   let bx = _get(s, "box", (w: 40, h: 40))
   let (w, h) = (bx.w * 1mm, bx.h * 1mm)
   let op = _get(s, "opacity", 1)
@@ -966,15 +1000,18 @@
   let sw = _get(s, "stroke_w", D.stroke_w) * 1mm
   let c = (w: w, h: h, F: F, S: S, sw: sw, p: p, R: R, fonts: fonts)
   let out = SHAPES.at(kind, default: _star-shape)(c)
-  let runs = _runs(s)
+  let runs = _runs(s, R).map(r => if r.at("color", default: none) != none { r + (color: _alpha(r.color, op)) } else { r })
   box(width: w, height: h, {
-    out.body
+    if mirror { place(top + left, scale(x: -100%, reflow: false, box(width: w, height: h, out.body))) }
+    else { out.body }
     if out.area != none and runs.len() > 0 {
       let ink = _alpha(out.ink, op)
       let size = _get(s, "text_size", none)
       let path = out.at("path", default: none)
       if path == none {
-        _text-in(runs, out.area, size, fonts, ink, center, _get(s, "id", ""))
+        let (ax, ay, aw, ah) = out.area
+        let area = if mirror { (w - ax - aw, ay, aw, ah) } else { out.area }
+        _text-in(runs, area, size, fonts, ink, center, _get(s, "id", ""))
       } else {
         // kavisli şerit: harfler bandın orta çizgisi üzerinde
         context {
@@ -987,11 +1024,10 @@
             let st = _style(r, base, 1, fonts)
             for ch in r.text.replace("\n", " ").clusters() {
               let wd = measure(text(..st, ch)).width
-              letters.push((ch: ch, st: st, w: wd, fill: if _get(r, "color", none) != none { rgb(r.color) } else { ink }))
+              letters.push((ch: ch, st: st, w: wd, fill: if _get(r, "color", none) != none { r.color } else { ink }))
               total += wd
             }
           }
-          let capw = measure(text(..letters.first().st, "H")).height
           let k = if size != none { 1.0 } else { calc.min(aw / total, (path.bot - path.top) * 0.5 / (0.72 * base * 1pt)) }
           if size != none and total > aw { metadata((kind: "element-overflow", id: _get(s, "id", ""))) }
           let x = w / 2 - total * k / 2
@@ -1003,7 +1039,7 @@
             let by = mid + (path.bend)(cx) + 0.36 * base * k * 1pt
             place(top + left, dx: cx, dy: by, rotate(ang, origin: top + left, reflow: false,
               box(width: 0pt, height: 0pt, place(top + left, dx: -l.w * k / 2,
-                text(..l.st, size: l.st.size * k, fill: l.fill, top-edge: "baseline", bottom-edge: "baseline", l.ch)))))
+                text(..(l.st + (size: l.st.size * k)), fill: l.fill, top-edge: "baseline", bottom-edge: "baseline", l.ch)))))
             x += l.w * k
           }
         }
@@ -1017,9 +1053,9 @@
   burst: (burst_fill: "sun", burst_stroke: "ink", angle: -8, outline: "white", outline_w: 0.7, spikes: 12, seed: 3),
   wave: (curve: 0.5, waves: 1.5, outline: "white", outline_w: 0.6),
   arc: (curve: 0.6, outline: "white", outline_w: 0.6),
-  shadow: (shadow: "deep", shadow_dx: 0.8, shadow_dy: 0.8),
+  shadow: (shadow: "sun", shadow_dx: 0.8, shadow_dy: 0.8),
   outline: (outline: "white", outline_w: 0.8, shadow: "deep", shadow_dx: 0, shadow_dy: 0),
-  stacked: (shadow: "deep", depth: 0.09, outline: "white", outline_w: 0.6),
+  stacked: (shadow: "pop2", depth: 0.09, outline: "white", outline_w: 0.6),
   bounce: (colors: none, outline: "white", outline_w: 0.5),
   rainbow: (colors: none, outline: none, outline_w: 0.6),
 )
@@ -1077,10 +1113,10 @@
   let e = _get(t, "effect", (style: "shadow"))
   let style = _get(e, "style", "shadow")
   let D = EFFECT-DEFAULTS.at(style, default: EFFECT-DEFAULTS.shadow)
-  let p = (..D, .._get(e, "params", (:)))
+  let p = D + _get(e, "params", (:))
   let bx = _get(t, "box", (w: 80, h: 30))
   let (W, H) = (bx.w * 1mm, bx.h * 1mm)
-  let runs = _runs(t)
+  let runs = _runs(t, R)
   let size = _get(t, "size", none)
   let id = _get(t, "id", "")
   let ink = rgb(R.accent)
@@ -1093,8 +1129,7 @@
     if cs == none or cs.len() == 0 { R.letters.map(rgb) } else { cs.map(x => _col(x, R, "accent")) }
   } else { none }
   let angle = _get(p, "angle", 0) * 1deg
-  box(width: W, height: H, {
-    if runs.len() == 0 { return }
+  box(width: W, height: H, if runs.len() > 0 {
     if style == "burst" {
       let bf = _col(p.burst_fill, R, "sun")
       let bs = _col(p.burst_stroke, R, "ink")
@@ -1111,7 +1146,7 @@
             letters.push((ch: ch, st: st, w: measure(text(..st, ch)).width,
               asc: measure(text(..st, top-edge: "bounds", bottom-edge: "baseline", ch)).height,
               desc: measure(text(..st, top-edge: "baseline", bottom-edge: "bounds", ch)).height,
-              fill: if _get(r, "color", none) != none { rgb(r.color) } else { ink }))
+              fill: if _get(r, "color", none) != none { r.color } else { ink }))
           }
         }
         let placed = _along(letters, _path-units(style, _get(p, "curve", 0), _get(p, "waves", 1.5)))
@@ -1138,12 +1173,12 @@
             let f = if paint != none { paint } else { q.l.fill }
             place(top + left, dx: (ox + q.x * k) * 1pt + dx, dy: (oy + q.y * k) * 1pt + dy,
               rotate(q.a, origin: top + left, reflow: false, box(width: 0pt, height: 0pt,
-                place(top + left, dx: -q.l.w * k / 2, text(..q.l.st, size: q.l.st.size * k, fill: f, stroke: stroke,
+                place(top + left, dx: -q.l.w * k / 2, text(..(q.l.st + (size: q.l.st.size * k)), fill: f, stroke: stroke,
                   top-edge: "baseline", bottom-edge: "baseline", q.l.ch)))))
           }
         }
-        if sh != none and (sdx != 0pt or sdy != 0pt) { draw(sdx, sdy, sh, if ol != none { _stk(sh, olw * 2) } else { none }) }
-        if ol != none { draw(0pt, 0pt, ol, _stk(ol, olw * 2)) }
+        if sh != none and (sdx != 0pt or sdy != 0pt) { pdf.artifact(draw(sdx, sdy, sh, if ol != none { _stk(sh, olw * 2) } else { none })) }
+        if ol != none { pdf.artifact(draw(0pt, 0pt, ol, _stk(ol, olw * 2))) }
         draw(0pt, 0pt, none, none)
       }
     } else {
@@ -1169,13 +1204,13 @@
       }
       let body = {
         if style == "stacked" {
-          // derinlik payı: yazı sol üste kayar, katmanlar sağ alta iner
+          // derinlik payı: yazı sol üste kayar, katmanlar sağ alta iner (tek satırda derinlik ≈ yükseklik × depth)
           let (x, y, w2, h2) = area
-          let d = calc.min(w2, h2) * depth * 0.6
+          let d = h2 * depth * 0.8
           _text-in(runs, (x, y, w2 - d, h2 - d), size, fonts, ink, _align(_get(t, "align", "center")), id,
-            layers: layers-for(calc.min(w2, h2) * 0.35), bounce: false, colors: colors)
+            layers: layers-for, bounce: false, colors: colors)
         } else {
-          _text-in(runs, area, size, fonts, ink, _align(_get(t, "align", "center")), id, layers: layers-for(0pt),
+          _text-in(runs, area, size, fonts, ink, _align(_get(t, "align", "center")), id, layers: layers-for,
             bounce: style == "bounce", colors: colors)
         }
       }
