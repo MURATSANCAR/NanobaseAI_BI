@@ -1,0 +1,43 @@
+/* Okur ve Karşılaştır yan panelleri. Hareket yalnız panelin nereden geldiğini anlatır: masaüstünde sağdan,
+   telefonda alttan kayarak girer, aynı yoldan daha kısa sürede çıkar. İşaretler, liste açma ve öneri uygulama
+   anında (sık yapılan işler, hareketsiz). Azaltılmış harekette yalnız saydamlık. */
+.rd-sheet {
+  --rd-ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  position: fixed; z-index: 91; left: 0; right: 0; bottom: 0; max-height: 88dvh;
+  display: flex; flex-direction: column; background: #fff; border-radius: 22px 22px 0 0;
+  box-shadow: 0 -20px 60px -24px rgba(20, 30, 60, .35);
+  transition: transform 320ms var(--rd-ease-drawer);
+}
+.rd-sheet[data-starting-style], .rd-sheet[data-ending-style] { transform: translateY(100%) }
+.rd-sheet[data-ending-style] { transition-duration: 220ms }
+.rd-scrim { position: fixed; inset: 0; z-index: 90; background: #1b1f2a52; transition: opacity 220ms ease }
+.rd-scrim[data-starting-style], .rd-scrim[data-ending-style] { opacity: 0 }
+
+@media (min-width: 768px) {
+  .rd-sheet { left: auto; top: 0; width: min(460px, 100vw); max-height: none; border-radius: 22px 0 0 22px;
+    box-shadow: -20px 0 60px -24px rgba(20, 30, 60, .35) }
+  .rd-sheet.rd-wide { width: min(1120px, 100vw) }
+  .rd-sheet[data-starting-style], .rd-sheet[data-ending-style] { transform: translateX(100%) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rd-sheet { transition: opacity 200ms ease }
+  .rd-sheet[data-starting-style], .rd-sheet[data-ending-style] { transform: none; opacity: 0 }
+}
+
+/* Okurun işareti metnin üstünde: türüne göre alt çizgi rengi; seçili işaret dolu zemin. */
+.rd-mark { background: #FEF3C7; border-bottom: 2px solid #D97706; border-radius: 3px; padding: 0 1px; cursor: pointer; color: inherit }
+.rd-mark[data-kind="CUMLE"] { background: #EDE9FE; border-color: #7C3AED }
+.rd-mark[data-kind="KONUSAN"] { background: #E0F2FE; border-color: #0284C7 }
+.rd-mark[data-kind="RESIM"] { background: #FFE4E6; border-color: #E11D48 }
+.rd-mark[data-kind="SIKICI"], .rd-mark[data-kind="MERAK"] { background: #F1F5F9; border-color: #64748B }
+.rd-mark[data-kind="TURN"] { background: #DCFCE7; border-color: #16A34A }
+.rd-mark[data-on="true"] { outline: 2px solid currentColor; outline-offset: 1px }
+.rd-mark:focus-visible { outline: 2px solid #6D4AFF; outline-offset: 2px }
+
+/* Kelime farkı */
+.rd-ins { color: #0F6B4F; background: #DCFCE7; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; border-radius: 2px }
+.rd-del { color: #B42318; background: #FEE4E2; text-decoration: line-through; text-decoration-thickness: 2px; border-radius: 2px }
+
+/* Görsel farkın değişen bölgesi */
+.rd-region { position: absolute; border: 2px solid #E5484D; border-radius: 3px; pointer-events: none }

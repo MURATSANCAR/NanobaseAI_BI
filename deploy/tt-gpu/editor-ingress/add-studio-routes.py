@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -220,6 +220,19 @@ if "EDITOR-STUDYO-SES" not in s:
            + loc(f"{N_}/pages/({ID})/audio", "GET", "jobs/$1/narration/pages/$2/audio", timeout=120))
     s = s.replace("    # EDITOR-BITTI", ses + "    # EDITOR-BITTI", 1)
     changes.append("sesli okuma yolları")
+
+# 4) Okur araçları (çocuk gözüyle okuma, sayfa çevirme merakı) ve sürüm farkı (karşılaştırma, değişiklik raporu)
+if "EDITOR-STUDYO-OKUR" not in s:
+    RID = "r_[0-9a-f]{8}"
+    okur = ("    # EDITOR-STUDYO-OKUR  (okur araclari ve surum farki)\n"
+            + loc(f"{P_}/reader", "GET", "jobs/$1/plan/reader", timeout=60)
+            + loc(f"{P_}/reader/(child|turn)", "POST", "jobs/$1/plan/reader/$2", timeout=60)
+            + loc(f"{P_}/reader/runs/({RID})", "GET", "jobs/$1/plan/reader/runs/$2", timeout=60)
+            + loc(f"{P_}/reader/runs/({RID})/(resume|decisions)", "POST", "jobs/$1/plan/reader/runs/$2/$3", timeout=60)
+            + loc(f"{P_}/versions", "GET", "jobs/$1/plan/versions", timeout=60)
+            + loc(f"{P_}/versions/(compare|preview|visual|report)", "GET", "jobs/$1/plan/versions/$2$is_args$args"))
+    s = s.replace("    # EDITOR-BITTI", okur + "    # EDITOR-BITTI", 1)
+    changes.append("okur araçları ve sürüm farkı yolları")
 
 if s == orig:
     print("zaten var (güncel)")

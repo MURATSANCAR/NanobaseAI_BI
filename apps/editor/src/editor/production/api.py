@@ -882,3 +882,7 @@ from .api_coloring import router as _coloring_router  # noqa: E402  boyama/etkin
 app.include_router(_coloring_router)
 from .api_narration import router as _narration  # noqa: E402  (sesli okuma; docs/analiz/sesli-okuma-model-secimi.md)
 app.include_router(_narration)
+# ------------------------------------------------------------------ okur araçları ve sürüm farkı (api_reader.py)
+from .api_reader import router as _reader_router  # noqa: E402
+
+app.include_router(_reader_router)

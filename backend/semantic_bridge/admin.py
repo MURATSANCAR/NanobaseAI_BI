@@ -183,6 +183,10 @@ SPEC: list[dict[str, Any]] = [
      "help": "Dizinin karakter kartına uymayan resim en çok bu kadar kez yeniden çizilir; sonra en yakın sürüm "
              "«karakter kartına uymuyor» uyarısıyla editöre gelir. 0: yeniden çizme, yalnız işaretle. Kaydedilince "
              "stüdyoya hemen iletilir"},
+    {"key": "STUDIO_READER_PASSES", "group": "studio", "label": "Okur okuması: sayfa başına okuma sayısı", "type": "int",
+     "default": "3",
+     "help": "«Çocuk gözüyle okuma»da Zeki AI her sayfayı bu kadar kez birbirinden bağımsız okur; yalnız okumaların "
+             "yarısından fazlasında geçen işaret gösterilir. Sayı arttıkça sonuç tutarlılaşır, süre uzar"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -211,7 +215,7 @@ GROUPS = [
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},
-    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni ve karakter kartı ayarları."},
+    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
 ]
