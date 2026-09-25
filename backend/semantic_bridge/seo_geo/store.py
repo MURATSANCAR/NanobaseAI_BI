@@ -118,6 +118,22 @@ SCHEMA = sa.Table(
     sa.Column("types_json", sa.Text),
     sa.Column("checked_at", sa.DateTime(timezone=True), nullable=False),
 )
+GEO_RESULTS = sa.Table(
+    "semantic_seo_geo_results", _md,  # izlenen sorunun bir motordaki bir ölçümü
+    sa.Column("id", sa.String(32), primary_key=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
+    sa.Column("question_id", sa.String(32), nullable=False, index=True),
+    sa.Column("engine", sa.String(20), nullable=False),
+    sa.Column("model", sa.String(80)),
+    sa.Column("asked_at", sa.DateTime(timezone=True), nullable=False, index=True),
+    sa.Column("ok", sa.Boolean, nullable=False),
+    sa.Column("mentioned", sa.Boolean),
+    sa.Column("cited", sa.Boolean),
+    sa.Column("books_json", sa.Text),
+    sa.Column("sources_json", sa.Text),
+    sa.Column("answer", sa.Text),
+    sa.Column("error", sa.String(500)),
+)
 _lock = threading.Lock()
 _ready: set[int] = set()
 

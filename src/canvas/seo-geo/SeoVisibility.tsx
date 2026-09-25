@@ -1,27 +1,37 @@
-import { useState } from 'react';
+import { Fragment, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Loader2, Play, Plus, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { dateTime, seoApi } from './api';
+import { dateTime, fmt, seoApi, type GeoResult, type Question } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
 
-/** AI görünürlük (GEO): izlenecek soruların listesi. Ölçüm (soruların yapay zekâ motorlarına sorulup Timaş'ın
- *  anılıp anılmadığının kaydı) ayrı bir karar ister: dış motorların API anahtarı ve ücreti. Bağlanana kadar
- *  ekran ölçüm sonucu uydurmaz, yalnız soru listesini tutar. */
+/** AI görünürlük (GEO): izlenen sorular yapay zekâ motorlarına resmî API'leriyle sorulur; Timaş anıldı mı, site kaynak
+ *  gösterildi mi, hangi kitaplar geçti. Anahtarı girilmemiş motor ölçülmez ve ekranda sonuç uydurulmaz. */
 export default function SeoVisibility() {
   const qc = useQueryClient();
   const [text, setText] = useState('');
   const [category, setCategory] = useState('');
-  const list = useQuery({ queryKey: ['seo-questions'], queryFn: seoApi.questions, enabled: ENGINE_ENABLED, retry: false });
-  const add = useMutation({
-    mutationFn: () => seoApi.addQuestion(text.trim(), category.trim()),
-    onSuccess: () => {
-      setText('');
-      qc.invalidateQueries({ queryKey: ['seo-questions'] });
-    },
+  const [open, setOpen] = useState<string | null>(null);
+  const list = useQuery({
+    queryKey: ['seo-questions'],
+    queryFn: seoApi.questions,
+    enabled: ENGINE_ENABLED,
+    retry: false,
+    refetchInterval: (q) => (q.state.data?.run.running ? 15000 : false),
   });
-  const del = useMutation({ mutationFn: seoApi.deleteQuestion, onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-questions'] }) });
+  const refresh = () => qc.invalidateQueries({ queryKey: ['seo-questions'] });
+  const add = useMutation({ mutationFn: () => seoApi.addQuestion(text.trim(), category.trim()), onSuccess: () => { setText(''); refresh(); } });
+  const del = useMutation({ mutationFn: seoApi.deleteQuestion, onSuccess: refresh });
+  const measure = useMutation({ mutationFn: seoApi.measure, onSuccess: refresh });
   const items = list.data?.items ?? [];
+  const engines = list.data?.engines ?? [];
+  const active = engines.filter((e) => e.configured);
+  const run = list.data?.run;
+
+  const rate = (id: string, key: 'mentioned' | 'cited') => {
+    const done = items.map((q) => q.results?.[id]).filter((r): r is GeoResult => !!r && r.ok);
+    return done.length ? `%${Math.round((100 * done.filter((r) => r[key]).length) / done.length)}` : '—';
+  };
 
   return (
     <SeoLayout
@@ -29,17 +39,47 @@ export default function SeoVisibility() {
       crumb="AI görünürlük"
       eyebrow="SEO & GEO · yapay zekâ cevapları"
       title="Yapay zekâ cevaplarında Timaş"
-      lead="Okurların ChatGPT, Gemini, Perplexity ve Google AI Overviews’a sorduğu sorularda Timaş’ın ve kitaplarının anılıp anılmadığı. Önce izlenecek sorular belirlenir; ölçüm motoru bağlanınca her soru düzenli sorulur ve sonuç burada görünür."
+      lead="İzlenen sorular Gemini, ChatGPT, Perplexity ve Claude’a resmî API’leriyle sorulur; cevapta Timaş’ın anılıp anılmadığı, timas.com.tr’nin kaynak gösterilip gösterilmediği ve hangi Timaş kitaplarının geçtiği kaydedilir. Gemini ücretsiz katmanla çalışır; diğerleri anahtar girilirse ölçülür."
+      actions={
+        <button className="sg-button primary" onClick={() => measure.mutate()} disabled={!active.length || measure.isPending || run?.running || !items.length}>
+          {run?.running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Play size={16} aria-hidden />}
+          {run?.running ? `Soruluyor · ${fmt(run.done)} cevap` : 'Şimdi ölç'}
+        </button>
+      }
     >
-      {list.data && !list.data.measuring && (
-        <p className="sg-banner">
-          Ölçüm motoru henüz bağlı değil: soruların dış yapay zekâ servislerine sorulması için bu servislerin API anahtarı gerekiyor ve kullanım ücretlidir. Karar verilene kadar burada ölçüm sonucu gösterilmez.
-        </p>
+      {list.isLoading && <Loading text="Sorular getiriliyor…" />}
+      {list.error && <Failed error={list.error} />}
+      {measure.error && <Failed error={measure.error} />}
+
+      {list.data && (
+        <section className="sg-kpis" aria-label="Motorlar">
+          {engines.map((e) => (
+            <div key={e.id} className="sg-kpi">
+              <div className="sg-kpi-label">{e.label}</div>
+              {e.configured ? (
+                <>
+                  <div className="sg-kpi-value sg-mono" style={{ fontSize: 20 }}>
+                    {rate(e.id, 'mentioned')} <small>anılma</small>
+                  </div>
+                  <div className="sg-kpi-note">
+                    Kaynak {rate(e.id, 'cited')} · bugün {fmt(e.usedToday)} / {fmt(e.daily)} {e.free ? '(ücretsiz)' : '(ücretli)'}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="sg-kpi-value" style={{ fontSize: 16, color: 'var(--sg-muted)' }}>Bağlı değil</div>
+                  <div className="sg-kpi-note">{e.free ? 'Ücretsiz anahtar: aistudio.google.com' : 'Ücretli; anahtar girilirse ölçülür'} · Yönetim → Yapay zekâ görünürlüğü</div>
+                </>
+              )}
+            </div>
+          ))}
+        </section>
       )}
+      {run?.error && <p className="sg-banner err">Son ölçüm: {run.error}</p>}
 
       <section className="sg-card">
         <h2>İzlenen sorular</h2>
-        <p className="sg-sub">Bir okurun gerçekten soracağı biçimde yazın; örneğin “çocuklar için değerler eğitimi kitabı önerir misin”.</p>
+        <p className="sg-sub">Bir okurun gerçekten soracağı biçimde yazın; örneğin “çocuklar için değerler eğitimi kitabı önerir misin”. Her soru her motorda haftada bir sorulur.</p>
         <form
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}
           onSubmit={(e) => {
@@ -54,13 +94,10 @@ export default function SeoVisibility() {
             <input value={category} onChange={(e) => setCategory(e.target.value)} placeholder="Konu (isteğe bağlı)" aria-label="Konu" maxLength={80} />
           </label>
           <button className="sg-button primary" type="submit" disabled={add.isPending || text.trim().length < 5}>
-            {add.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Plus size={16} aria-hidden />}
-            Soru ekle
+            {add.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Plus size={16} aria-hidden />} Soru ekle
           </button>
         </form>
         {add.error && <Failed error={add.error} />}
-        {list.isLoading && <Loading text="Sorular getiriliyor…" />}
-        {list.error && <Failed error={list.error} />}
         {list.data && !items.length && (
           <div className="sg-empty">
             <h2>Henüz soru yok</h2>
@@ -73,27 +110,43 @@ export default function SeoVisibility() {
               <thead>
                 <tr>
                   <th>Soru</th>
-                  <th>Konu</th>
-                  <th>Ekleyen</th>
-                  <th>Son ölçüm</th>
+                  {engines.map((e) => (
+                    <th key={e.id} style={{ textAlign: 'center' }}>{e.label.split(' ')[0]}</th>
+                  ))}
                   <th aria-label="İşlem" />
                 </tr>
               </thead>
               <tbody>
                 {items.map((q) => (
-                  <tr key={q.id}>
-                    <td>{q.text}</td>
-                    <td>{q.category ? <span className="sg-chip">{q.category}</span> : '—'}</td>
-                    <td className="sg-mono" style={{ fontSize: 11.5 }}>
-                      {q.createdBy} · {dateTime(q.createdAt)}
-                    </td>
-                    <td style={{ color: 'var(--sg-muted)' }}>Ölçülmedi</td>
-                    <td>
-                      <button className="sg-button" style={{ minHeight: 36 }} onClick={() => del.mutate(q.id)} disabled={del.isPending} aria-label="Soruyu sil">
-                        <Trash2 size={14} aria-hidden />
-                      </button>
-                    </td>
-                  </tr>
+                  <Fragment key={q.id}>
+                    <tr>
+                      <td>
+                        <button className="sg-bar-row" style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', font: 'inherit', textAlign: 'left', display: 'flex', gap: 6 }}
+                          onClick={() => setOpen(open === q.id ? null : q.id)} aria-expanded={open === q.id}>
+                          {open === q.id ? <ChevronDown size={14} aria-hidden /> : <ChevronRight size={14} aria-hidden />}
+                          <span>{q.text}</span>
+                        </button>
+                        {q.category && <span className="sg-chip" style={{ marginLeft: 20 }}>{q.category}</span>}
+                      </td>
+                      {engines.map((e) => (
+                        <td key={e.id} style={{ textAlign: 'center' }}>
+                          <Cell r={q.results?.[e.id]} configured={e.configured} />
+                        </td>
+                      ))}
+                      <td>
+                        <button className="sg-button" style={{ minHeight: 36 }} onClick={() => del.mutate(q.id)} disabled={del.isPending} aria-label="Soruyu sil">
+                          <Trash2 size={14} aria-hidden />
+                        </button>
+                      </td>
+                    </tr>
+                    {open === q.id && (
+                      <tr>
+                        <td colSpan={engines.length + 2}>
+                          <Answers q={q} labels={Object.fromEntries(engines.map((e) => [e.id, e.label]))} />
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -101,5 +154,47 @@ export default function SeoVisibility() {
         )}
       </section>
     </SeoLayout>
+  );
+}
+
+function Cell({ r, configured }: { r?: GeoResult; configured: boolean }) {
+  if (!configured) return <span style={{ color: 'var(--sg-muted)' }}>—</span>;
+  if (!r) return <span style={{ color: 'var(--sg-muted)', fontSize: 11 }}>ölçülmedi</span>;
+  if (!r.ok) return <span className="sg-chip bad" title={r.error ?? ''}>hata</span>;
+  return (
+    <span style={{ display: 'inline-flex', gap: 4 }}>
+      <span className={`sg-chip ${r.mentioned ? 'good' : 'bad'}`}>{r.mentioned ? 'anıldı' : 'yok'}</span>
+      {r.cited && <span className="sg-chip violet">kaynak</span>}
+    </span>
+  );
+}
+
+function Answers({ q, labels }: { q: Question; labels: Record<string, string> }) {
+  const res = Object.entries(q.results ?? {});
+  if (!res.length) return <p style={{ color: 'var(--sg-muted)', margin: 0 }}>Bu soru henüz sorulmadı.</p>;
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      {res.map(([id, r]) => (
+        <div key={id} className="sg-field">
+          <div className="sg-field-head">
+            <span>{labels[id] ?? id}</span>
+            <span className="sg-mono">{dateTime(r.askedAt)} · {r.model}</span>
+          </div>
+          {r.ok ? (
+            <>
+              {r.books.length > 0 && <p style={{ margin: '0 0 8px', fontSize: 12.5 }}><b>Geçen Timaş kitapları:</b> {r.books.join(' · ')}</p>}
+              <div className="sg-before" style={{ background: '#faf8fc', color: 'var(--sg-text)', maxHeight: 260 }}>{r.answer}</div>
+              {r.sources.length > 0 && (
+                <p style={{ margin: '8px 0 0', fontSize: 11.5, wordBreak: 'break-all' }}>
+                  <b>Kaynaklar:</b> {r.sources.slice(0, 10).map((s) => s.title || s.url).join(' · ')}
+                </p>
+              )}
+            </>
+          ) : (
+            <p className="sg-banner err" style={{ margin: 0 }}>{r.error}</p>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }

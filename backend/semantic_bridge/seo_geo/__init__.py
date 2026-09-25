@@ -22,10 +22,10 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, llms, pages, propose, redirects, rules, schema
+from . import connections, geo, llms, pages, propose, redirects, rules, schema
 import hashlib
 
-from .store import GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, dumps, ensure, iso, loads, now
+from .store import GEO_RESULTS, GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -71,6 +71,8 @@ class SeoGeo:
         self._batch_lock = threading.Lock()
         self.batch: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "queue": None,
                                       "startedAt": None, "finishedAt": None, "error": None}
+        self._geo_lock = threading.Lock()
+        self.geo_state: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "startedAt": None, "finishedAt": None, "error": None}
         self._crawl_lock = threading.Lock()
         self.crawl: dict[str, Any] = {"running": False, "done": 0, "queue": None, "startedAt": None, "finishedAt": None, "error": None}
         # Sayfa önerisi uçlarla birlikte `register` içinde kurulur; ön üretim buradan çağırır.
@@ -352,6 +354,88 @@ class SeoGeo:
             self.batch.update(running=False, finishedAt=iso(now()))
             self._batch_lock.release()
 
+    # ---------------------------------------------------------------- GEO ölçümü
+    def geo_engines(self) -> list[dict[str, Any]]:
+        from datetime import datetime, timezone
+
+        day = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        with self.engine().connect() as c:
+            used = dict(c.execute(sa.select(GEO_RESULTS.c.engine, sa.func.count()).where(
+                GEO_RESULTS.c.tenant_id == self.tenant(), GEO_RESULTS.c.asked_at >= day).group_by(GEO_RESULTS.c.engine)).all())
+        out = []
+        for eid, e in geo.ENGINES.items():
+            try:
+                daily = int(self.conf(e["daily"]) or 0)
+            except ValueError:
+                daily = 0
+            out.append({"id": eid, "label": e["label"], "configured": bool(self.conf(e["key"])), "free": bool(e["free"]),
+                        "daily": daily, "usedToday": used.get(eid, 0),
+                        "model": self.conf(e["model"]) or geo.DEFAULT_MODEL[eid]})
+        return out
+
+    def start_geo(self, budget: int) -> bool:
+        if not self._geo_lock.acquire(blocking=False):
+            return False
+        self.geo_state.update(running=True, done=0, failed=0, startedAt=iso(now()), finishedAt=None, error=None)
+        threading.Thread(target=self._geo, args=(budget,), name="seo-geo", daemon=True).start()
+        return True
+
+    def _geo(self, budget: int) -> None:
+        """Her motor için: günlük sınırı dolmamışsa, son `GEO_EVERY_DAYS` gün içinde o motorda sorulmamış soruları sorar."""
+        import time as _t
+        from datetime import timedelta as _td
+
+        deadline = _t.monotonic() + max(60, budget)
+        tenant = self.tenant()
+        try:
+            try:
+                every = max(1, int(self.conf("GEO_EVERY_DAYS") or 7))
+            except ValueError:
+                every = 7
+            with self.engine().connect() as c:
+                questions = [(r[0], r[1]) for r in c.execute(sa.select(QUESTIONS.c.id, QUESTIONS.c.text).where(
+                    QUESTIONS.c.tenant_id == tenant).order_by(QUESTIONS.c.created_at))]
+                prods = [loads(r[0], {}) for r in c.execute(sa.select(PRODUCTS.c.data_json).where(
+                    PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True)))]
+            books = geo.book_index(prods, rules.text_of)
+            for eng in self.geo_engines():
+                if not eng["configured"]:
+                    continue
+                left = eng["daily"] - eng["usedToday"]
+                since = now() - _td(days=every)
+                with self.engine().connect() as c:
+                    recent = {r[0] for r in c.execute(sa.select(GEO_RESULTS.c.question_id).where(
+                        GEO_RESULTS.c.tenant_id == tenant, GEO_RESULTS.c.engine == eng["id"], GEO_RESULTS.c.ok.is_(True),
+                        GEO_RESULTS.c.asked_at >= since))}
+                key = self.conf(geo.ENGINES[eng["id"]]["key"])
+                for qid, text in questions:
+                    if left <= 0 or _t.monotonic() > deadline:
+                        break
+                    if qid in recent:
+                        continue
+                    row = dict(id=uuid.uuid4().hex, tenant_id=tenant, question_id=qid, engine=eng["id"], model=eng["model"],
+                               asked_at=now())
+                    try:
+                        answer, cites = geo.ask(eng["id"], text, key, eng["model"])
+                        a = geo.analyse(answer, cites, books)
+                        row.update(ok=True, mentioned=a["mentioned"], cited=a["cited"], books_json=dumps(a["books"]),
+                                   sources_json=dumps(cites[:30]), answer=answer[:6000])
+                        self.geo_state["done"] += 1
+                    except (geo.EngineError, httpx_errors()) as e:
+                        row.update(ok=False, error=str(e)[:500])
+                        self.geo_state["failed"] += 1
+                        if "429" in str(e):
+                            left = 0
+                    with self.engine().begin() as c:
+                        c.execute(GEO_RESULTS.insert().values(**row))
+                    left -= 1
+        except Exception as e:  # noqa: BLE001
+            self.geo_state["error"] = str(e)[:500]
+            log.exception("seo geo run failed")
+        finally:
+            self.geo_state.update(running=False, finishedAt=iso(now()))
+            self._geo_lock.release()
+
     def start_crawl(self, budget: int, delay: float = 1.0) -> bool:
         """Ürün sayfalarının şema denetimi: hiç bakılmamış ya da en eski bakılan önce, eşitse çok satan önce.
         Bütçe dolunca durur; sonraki tur kaldığı yerden sürer (tavan yok)."""
@@ -447,6 +531,12 @@ class SeoGeo:
             c.execute(PRODUCTS.update().where(PRODUCTS.c.tenant_id == self.tenant(), PRODUCTS.c.product_id == pid)
                       .values(score=a["score"], issues_json=dumps(a["issues"]), data_json=dumps(p), synced_at=now(),
                               rules="," + ",".join(i["rule"] for i in a["issues"]) + ","))
+
+
+def httpx_errors() -> type:
+    import httpx
+
+    return httpx.HTTPError
 
 
 def _product_view(r: dict[str, Any], site: str) -> dict[str, Any]:
@@ -1018,9 +1108,29 @@ def register(app, runtime, authorize, session_user):
         with seo.engine().connect() as c:
             rows = c.execute(sa.select(QUESTIONS).where(QUESTIONS.c.tenant_id == seo.tenant())
                              .order_by(QUESTIONS.c.created_at)).mappings().all()
+        # Her sorunun her motordaki son ölçümü.
+        with seo.engine().connect() as c:
+            res = c.execute(sa.select(GEO_RESULTS).where(GEO_RESULTS.c.tenant_id == seo.tenant())
+                            .order_by(GEO_RESULTS.c.asked_at.asc())).mappings().all()
+        last: dict[str, dict[str, Any]] = {}
+        for r in res:
+            last.setdefault(r["question_id"], {})[r["engine"]] = {
+                "ok": r["ok"], "mentioned": r["mentioned"], "cited": r["cited"], "books": loads(r["books_json"], []),
+                "sources": loads(r["sources_json"], []), "answer": r["answer"], "error": r["error"],
+                "askedAt": iso(r["asked_at"]), "model": r["model"]}
+        engines = seo.geo_engines()
         return {"items": [{"id": r["id"], "text": r["text"], "category": r["category"], "createdBy": r["created_by"],
-                           "createdAt": iso(r["created_at"])} for r in rows],
-                "measuring": False}
+                           "createdAt": iso(r["created_at"]), "results": last.get(r["id"], {})} for r in rows],
+                "measuring": any(e["configured"] for e in engines), "engines": engines, "run": seo.geo_state}
+
+    @app.post("/api/v1/seo-geo/questions/measure")
+    def seo_geo_measure(request: Request, budget: int = 1800) -> dict[str, Any]:
+        user = gate(request)
+        if not any(e["configured"] for e in seo.geo_engines()):
+            raise _err(409, "Hiçbir yapay zekâ motorunun anahtarı girilmemiş (Yönetim → Yapay zekâ görünürlüğü).")
+        started = seo.start_geo(budget)
+        seo.audit(user, "run", "geo", "GEO ölçümü", {"started": started})
+        return {"started": started, "run": seo.geo_state}
 
     @app.post("/api/v1/seo-geo/questions")
     def seo_question_add(body: Question, request: Request) -> dict[str, Any]:
@@ -1062,6 +1172,8 @@ def register(app, runtime, authorize, session_user):
                 _t.sleep(10)
             seo.start_batch("zamanlayıcı", budget)
             seo.start_crawl(min(budget, 7200))
+            if any(e["configured"] for e in seo.geo_engines()):
+                seo.start_geo(min(budget, 7200))
         threading.Thread(target=later, name="seo-batch-wait", daemon=True).start()
         out["batch"] = f"başlayacak (bütçe {budget} sn)"
         return out

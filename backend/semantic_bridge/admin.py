@@ -174,6 +174,27 @@ SPEC: list[dict[str, Any]] = [
     {"key": "MERCHANT_ACCOUNT_ID", "group": "seo", "label": "Merchant Center kimliği", "type": "text", "default": "", "help": ""},
     {"key": "GOOGLE_API_KEY", "group": "seo", "label": "Google API anahtarı", "type": "secret", "default": "",
      "help": "PageSpeed ve CrUX için; yalnız bu iki API ile kısıtlı olmalı"},
+    # Yapay zekâ görünürlüğü (GEO): izlenen sorular bu motorlara resmî API'leriyle sorulur. Anahtarsız motor ölçülmez.
+    {"key": "GEMINI_API_KEY", "group": "geo", "label": "Gemini API anahtarı (ücretsiz)", "type": "secret", "default": "",
+     "help": "aistudio.google.com → Get API key. Google aramalı cevap ücretsiz katmanda günde ~500 istek"},
+    {"key": "GEO_GEMINI_DAILY", "group": "geo", "label": "Gemini günlük soru sınırı", "type": "int", "default": "450",
+     "help": "Ücretsiz kota aşılmasın diye; bir günde en çok bu kadar soru sorulur, kalan ertesi güne kalır"},
+    {"key": "GEO_GEMINI_MODEL", "group": "geo", "label": "Gemini modeli", "type": "text", "default": "gemini-2.5-flash",
+     "help": "Aramalı cevabı ücretsiz katmanda olan model"},
+    {"key": "GEO_OPENAI_API_KEY", "group": "geo", "label": "ChatGPT (OpenAI) API anahtarı — ücretli", "type": "secret",
+     "default": "", "help": "Web aramalı cevap ücretlidir (1.000 arama ~10 $ + kullanım). Boşsa ChatGPT ölçülmez"},
+    {"key": "GEO_OPENAI_DAILY", "group": "geo", "label": "ChatGPT günlük soru sınırı", "type": "int", "default": "100", "help": ""},
+    {"key": "GEO_OPENAI_MODEL", "group": "geo", "label": "ChatGPT modeli", "type": "text", "default": "gpt-5-mini", "help": ""},
+    {"key": "PERPLEXITY_API_KEY", "group": "geo", "label": "Perplexity API anahtarı — ücretli", "type": "secret",
+     "default": "", "help": "Boşsa Perplexity ölçülmez"},
+    {"key": "GEO_PERPLEXITY_DAILY", "group": "geo", "label": "Perplexity günlük soru sınırı", "type": "int", "default": "100", "help": ""},
+    {"key": "GEO_PERPLEXITY_MODEL", "group": "geo", "label": "Perplexity modeli", "type": "text", "default": "sonar", "help": ""},
+    {"key": "GEO_ANTHROPIC_API_KEY", "group": "geo", "label": "Claude (Anthropic) API anahtarı — ücretli", "type": "secret",
+     "default": "", "help": "Boşsa Claude ölçülmez"},
+    {"key": "GEO_CLAUDE_DAILY", "group": "geo", "label": "Claude günlük soru sınırı", "type": "int", "default": "100", "help": ""},
+    {"key": "GEO_CLAUDE_MODEL", "group": "geo", "label": "Claude modeli", "type": "text", "default": "claude-sonnet-5", "help": ""},
+    {"key": "GEO_EVERY_DAYS", "group": "geo", "label": "Aynı soru kaç günde bir sorulur", "type": "int", "default": "7",
+     "help": "Bir soru bir motorda bu kadar gün geçmeden yeniden sorulmaz"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -202,6 +223,9 @@ GROUPS = [
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},
+    {"id": "geo", "label": "Yapay zekâ görünürlüğü (GEO)",
+     "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
+             "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
 ]
