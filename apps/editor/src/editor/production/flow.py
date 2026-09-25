@@ -83,6 +83,22 @@ async def finish_activity(job: str, seed: int) -> None:
     studio.set_busy(d, None)
 
 
+async def _release_if_idle(d) -> None:
+    """Tek resmin üretimi bittiğinde sırada başka stüdyo işi yoksa görsel modeli hemen kapatır (kart ana
+    modele döner); sırada iş varsa açık kalır, model iki iş arasında yeniden yüklenmez."""
+    from . import studio
+    from .images import Painter
+    waiting = [j["id"] for j in studio.list_jobs() if j["id"] != d.name
+               and (b := studio.busy(studio.root() / j["id"])) and not b.get("error")]
+    if waiting:
+        return
+    painter = Painter(d / "resim", studio._plan(d))
+    try:
+        activity.logger.info("görsel model: %s", await painter.release())
+    finally:
+        await painter.close()
+
+
 @activity.defn(name="production_regenerate")
 async def regenerate_activity(job: str, key: str, mode: str, prompt: str, by: str, variants: int) -> None:
     from . import studio
@@ -94,8 +110,10 @@ async def regenerate_activity(job: str, key: str, mode: str, prompt: str, by: st
         if _last(ART_RETRY) or isinstance(e, (ValueError, KeyError)):
             b = studio.busy(d) or {}
             studio.set_busy(d, {**b, "error": str(e)[:300], "since": time.time()})   # ekran gösterir
+            await _release_if_idle(d)
         raise
     studio.set_busy(d, None)
+    await _release_if_idle(d)
 
 
 ACTIVITIES = [plan_activity, finish_activity, regenerate_activity]

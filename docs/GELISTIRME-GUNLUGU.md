@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (öğleden sonra) — Stüdyo işleri Temporal'a taşındı
+
+- **Neden:** hat ve yeniden üretim stüdyo API'sinin içinde asyncio göreviydi; kurulum için yapılan yeniden başlatma işi kesiyordu, sıra bellekteydi.
+- **Yapılan:** `production/flow.py` — `BookProduction` (plan → finish) ve `ArtRegenerate` iş akışları, `editor-production` kuyruğu; `production/worker.py` + compose `studio-worker` (stüdyo imajı: Typst/Ghostscript/fontlar gerekli, analiz işçisi eski imajda), aynı anda tek etkinlik. `run.py` plan/finish/fail olarak bölündü; son deneme değilse adım «yeniden deneniyor» görünür. API'den `GPU` kilidi, `BUSY`, açılışta devam kaldırıldı; `busy.json` iş klasöründe, iş akışı artık koşmuyorsa bayat kayıt silinir. Ekranda sıradaki hat için «Sırada» notu.
+- **Model devri:** tek resmin üretimi görsel modeli 5 dk boşta bırakıyordu (ana model o sürede kapalı) → sırada başka stüdyo işi yoksa hemen kapatılır; ölçüldü: resim 13:21:02 bitti, görsel model kapandı, ana model 37 sn sonra kalktı.
+- **Doğrulama (GPU, gerçek model):** API üretim sürerken yeniden başlatıldı → iş bitti; işçi çizim sırasında yeniden başlatıldı → 3 dk sonra 2. deneme, 1 dk'da bitti. Sınama sürümleri (7, 8, 9. sayfa v2, «claude-sinama») seçili değil, v1'e geri alındı. Testler 23/23 (Temporal test sunucusuyla iş akışı testi dahil). `._*` 0, iki konteyner `editor-py:0.15.8-studio-flow`.
+
 ## 2026-09-25 (öğle) — Stüdyo: sahneye metinde olmayan karakter girmez, yeni günde kıyafet sıfırlanır
 
 - **Sorun:** Dünyanın En Korkak Hayvanı'nda Salyangoz 13, 29, 31, 32. sayfalara metinde yokken giriyordu; 11. sayfada giyilen deney önlüğü 32. sayfaya kadar sürüyordu («Bir gün…» ile yeni güne geçilse de).
