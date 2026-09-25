@@ -838,6 +838,12 @@ def save_guide(d: Path, guide: dict, by: str, approve: bool = False) -> dict:
     return guide_view(d)
 
 
+def _tr_time(t: float) -> str:
+    """Türkiye saati (UTC+3, yaz saati uygulaması yok)."""
+    from datetime import datetime, timedelta, timezone
+    return datetime.fromtimestamp(t, timezone(timedelta(hours=3))).strftime("%d.%m.%Y %H:%M")
+
+
 def _accent(d: Path) -> str:
     ap = studio.read(d, "artplan.json") or {}
     return ((ap.get("style") or {}).get("accent")) or "#1F3B73"
@@ -875,8 +881,7 @@ def build_guide_pdf(d: Path) -> Path:
             "label": ct.tr_upper("Öğretmen okuma kılavuzu"), "chips": chips, "cover_image": cover,
             "reading": read_rows, **{k: g[k] for k in ("summary", "values", "outcomes", "vocabulary", "activities",
                                                         "sections")},
-            "approval": f"Hazırlayan: Zeki AI · Editör onayı: {ap['by']}, "
-                        f"{time.strftime('%d.%m.%Y %H:%M', time.localtime(ap['at']))}"}
+            "approval": f"Hazırlayan: Zeki AI · Editör onayı: {ap['by']}, {_tr_time(ap['at'])}"}
     (wd / "kilavuz.json").write_text(json.dumps(data, ensure_ascii=False))
     out = wd / "kilavuz.pdf"
     typst.compile(str(wd / "guide.typ"), output=str(out), root=str(wd), font_paths=[str(studio.fonts())],
@@ -1202,8 +1207,8 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
         band = int(H * (0.30 if template == "kare" else 0.24)) if headline else by_h + 2 * m
         img.paste(_cover_fit(pic, W, H - band), (0, 0))
         if headline:
-            _draw_headline(img, headline, style.title, (m, H - band + m // 2, W - m, H - m - by_h), effect, accents,
-                           ink, int(band * 0.42))
+            _draw_headline(img, headline, style.title, (m, H - band + m // 2, W - m, H - m - by_h - m // 3), effect,
+                           accents, ink, int(band * 0.42))
         small(byline, m, W - m, H - m - by_h)
     return img, draft
 
