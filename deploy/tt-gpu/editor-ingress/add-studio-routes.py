@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -258,6 +258,15 @@ if "EDITOR-STUDYO-KOLAJ" not in s:
              + loc(f"{K_}/preview", "GET", "jobs/$1/collage/preview$is_args$args", timeout=60))
     s = s.replace("    # EDITOR-BITTI", kolaj + "    # EDITOR-BITTI", 1)
     changes.append("kapak tarzı ve kolaj yolları")
+
+# 4) 3B kitap ve baskı provası (yalnız okuma; api_proof.py). Kâğıt/katman/genişlik sorgu parametresidir.
+if "EDITOR-STUDYO-PROVA" not in s:
+    PR = f"jobs/({JOB})/proof"
+    prova = ("    # EDITOR-STUDYO-PROVA  (3B kitap olculeri ve kagit provasi)\n"
+             + loc(PR, "GET", "jobs/$1/proof", timeout=60)
+             + loc(f"{PR}/(cover|pages/[0-9]{{1,4}})(/report)?", "GET", "jobs/$1/proof/$2$3$is_args$args", timeout=120))
+    s = s.replace("    # EDITOR-BITTI", prova + "    # EDITOR-BITTI", 1)
+    changes.append("3B kitap ve baskı provası yolları")
 
 if s == orig:
     print("zaten var (güncel)")
