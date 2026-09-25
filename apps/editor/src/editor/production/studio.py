@@ -241,9 +241,9 @@ def rebuild(d: Path) -> None:
     """Seçili sürümlerle iç sayfayı ve kapağı yeniden dizer (yerleşim değişmez), ön kontrolü yeniler. Sayfa planı
     varsa iç sayfa planın şablonuyla (plan.typ) dizilir; plan değişmez."""
     from . import plan as plan_mod
-    pl = plan_mod.load(d)
-    if pl is not None:
-        plan_mod.build_pdf(d, pl)
+    if plan_mod.exists(d):
+        with plan_mod._locked(d):           # plan yazımıyla aynı dizgi klasörü: tek sıra
+            plan_mod.build_pdf(d, plan_mod.load(d))
         build_cover(d)
         refresh_preflight(d)
         return
