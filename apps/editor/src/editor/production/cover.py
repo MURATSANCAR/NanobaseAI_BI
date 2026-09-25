@@ -52,7 +52,9 @@ def build(ms: Manuscript, p: Profile, spec: Spec, pages: int, art_png: Path, acc
     st = ct.STYLES[style]
     blocks = []
     for key, leading in (("title", st.leading), ("author", 1.1)):
-        r = rep[key]
+        r = rep.get(key)
+        if r is None:                        # yazar adı boş: yazar bloğu yok
+            continue
         size_mm = r["size"] * mm_per_px
         blocks.append({"lines": r["lines"], "font": _family(r["font"]), "weight": _face(st, key).weight,
                        "size": round(size_mm * PT_PER_MM, 1), "top": round(r["box"][1] * mm_per_px, 2),

@@ -261,11 +261,22 @@ def from_docx(path: str, lex=None) -> Manuscript:
             from ..proofing._spelling_text import upper_tr
             t = upper_tr(t)                  # bölüm başlığı kuralıyla aynı yoldan geçsin
         paras.append((0, t))
-    ms = Manuscript(title=title or path.rsplit("/", 1)[-1], author=author,
+    ms = Manuscript(title=title or _docx_title(doc, path), author=author,
                     source={"kind": "docx", "path": path})
     ms.chapters = [Chapter(h, b) for h, b in normalize(paras, lex)]
     _crm_by_title(ms)
     return ms
+
+
+def _docx_title(doc, path: str) -> str:
+    """Başlık stili kullanılmamış dosyada kitap adı: belge özelliklerindeki başlık, yoksa dosya adı
+    (uzantısız; alt çizgi ve tire boşluk olur). Belge özelliğindeki yazar alanı kullanılmaz: çoğu zaman
+    dosyayı kaydeden kişidir, kitabın yazarı değil."""
+    t = (getattr(doc.core_properties, "title", None) or "").strip()
+    if t:
+        return t
+    stem = re.sub(r"\.(docx?|rtf|odt)$", "", path.rsplit("/", 1)[-1], flags=re.I)
+    return re.sub(r"\s+", " ", re.sub(r"[_\-]+", " ", stem)).strip() or stem
 
 
 def _crm_by_title(ms: Manuscript) -> None:
