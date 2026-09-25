@@ -4,7 +4,7 @@ Model yok; Pillow + numpy. Kurallar kitaptan bağımsızdır.
 
 - Yükleme (`ingest`): EXIF yönü uygulanır, gömülü renk profili varsa sRGB'ye çevrilir, EXIF/konum ve öteki üst
   veriler atılır (kişisel veri). Saydamlığı olan dosya PNG, öteki JPEG (kalite 95, renk alt örneklemesiz) kalır.
-  HEIC yalnız sunucuda okuyucusu kuruluysa okunur; değilse açık hata.
+  HEIC/HEIF (telefon) pillow-heif ile okunur ve JPEG'e döner; kütüphane yoksa açık hata.
 - Zemin ayıklama (`cutout`): zemin rengi kenar şeridinin ortancasından ölçülür; zemin gürültüsü kenar şeridindeki
   uzaklıkların %95'liğinden. Bir piksel zemine uzaklığı eşiğin altındaysa ve kenara zeminden bir yolla bağlıysa
   saydamdır (fotoğrafta figürün içindeki benzer renk korunur). Figürde zemin düz tek renk istendiği için (anahtar
@@ -26,17 +26,32 @@ KEYS = (("magenta", "#FF00FF"), ("bright green", "#00FF00"), ("cyan", "#00FFFF")
 
 
 # ------------------------------------------------------------------ yükleme
+HEIF_FORMATS = ("HEIF", "HEIC", "AVIF")
+
+
+def heic_supported() -> bool:
+    """HEIC/HEIF okuyucusunu Pillow'a bir kez kaydeder; kütüphane yoksa False (öteki biçimler etkilenmez)."""
+    global _HEIC
+    if _HEIC is None:
+        try:
+            import pillow_heif
+            pillow_heif.register_heif_opener()
+            _HEIC = True
+        except ImportError:
+            _HEIC = False
+    return _HEIC
+
+
+_HEIC: bool | None = None
+
+
 def _open(data: bytes, filename: str):
     from PIL import Image, UnidentifiedImageError
     heic = filename.lower().endswith((".heic", ".heif")) or data[4:12] in (b"ftypheic", b"ftypheix", b"ftypmif1",
                                                                            b"ftypmsf1", b"ftypheif")
-    if heic:
-        try:
-            import pillow_heif
-            pillow_heif.register_heif_opener()
-        except ImportError:
-            raise ValueError("HEIC fotoğrafı bu sunucuda okunamıyor; telefonda JPEG («En uyumlu») olarak "
-                             "paylaşıp yeniden yükleyin") from None
+    if heic and not heic_supported():
+        raise ValueError("HEIC fotoğrafı bu sunucuda okunamıyor; telefonda JPEG («En uyumlu») olarak "
+                         "paylaşıp yeniden yükleyin")
     try:
         im = Image.open(io.BytesIO(data))
         im.load()
@@ -71,7 +86,8 @@ def ingest(data: bytes, filename: str) -> dict:
     alpha = im.mode == "RGBA"
     im.info = {}                                # EXIF, konum, renk profili, metin parçaları: hiçbiri yazılmaz
     buf = io.BytesIO()
-    if alpha or (fmt != "JPEG" and _lossless(im)):
+    # Telefon fotoğrafı (HEIC/HEIF) JPEG'e döner: dizgi ve tarayıcı HEIC okumaz.
+    if alpha or (fmt not in ("JPEG", *HEIF_FORMATS) and _lossless(im)):
         im.save(buf, "PNG", compress_level=6)   # üst veri parametresi verilmez: EXIF ve metin parçaları yazılmaz
         ext = "png"
     else:

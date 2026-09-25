@@ -265,6 +265,24 @@ def test_photo_ingest_orientation_and_metadata():
         photo.ingest(b"bu bir resim degil", "x.jpg")
 
 
+def test_photo_ingest_heic_becomes_jpeg():
+    """Telefonun HEIC fotoğrafı JPEG'e döner; EXIF (yön uygulanıp) ve öteki üst veri atılır."""
+    pytest.importorskip("pillow_heif")
+    from PIL import Image
+    assert photo.heic_supported()
+    ex = Image.Exif()
+    ex[0x010F] = "Telefon"
+    buf = io.BytesIO()
+    try:
+        Image.new("RGB", (64, 32), "#336699").save(buf, "HEIF", exif=ex, quality=90)
+    except (KeyError, OSError, ValueError) as e:                          # kodlayıcısız kurulum
+        pytest.skip(f"HEIC yazılamıyor: {e}")
+    out = photo.ingest(buf.getvalue(), "IMG_0001.HEIC")
+    im = Image.open(io.BytesIO(out["bytes"]))
+    assert out["ext"] == "jpg" and im.format == "JPEG" and sorted(im.size) == [32, 64] and not out["alpha"]
+    assert len(im.getexif()) == 0
+
+
 def test_dpi_and_upscale_factor():
     assert round(photo.dpi(3000, 2000, {"w": 254, "h": 169.3})) == 300
     assert round(photo.dpi(1000, 1000, {"w": 254, "h": 127}, "cover")) == 100
@@ -700,5 +718,32 @@ def test_replan_to_no_art_keeps_history_and_images(tmp_path, monkeypatch):
     assert new["rev"] == old["rev"] + 1 and [h["rev"] for h in P.history(d)] == [new["rev"], old["rev"]]
     assert all(p["art"] is None and p["layout"] in ("text-only", "blank") for p in new["pages"])
     assert {a["id"] for a in P.unused_art(d, new)} == old_art
-    steps = {s["key"]: s["status"] for s in studio.read(d, "state.json")["steps"]}
-    assert steps["sayfa_resimleri"] == "skipped" and steps["dizgi"] == "done"
+    steps = {s["key"]: s for s in studio.read(d, "state.json")["steps"]}
+    assert steps["sayfa_resimleri"]["status"] == "skipped" and steps["dizgi"]["status"] == "done"
+    # Resimsiz kitabın kapağı tipografik: model açılmadan (NoModel) üretildi.
+    import pymupdf
+    info = studio.read(d, "cover.json")
+    assert info["typographic"] and steps["kapak"]["summary"].startswith("tipografik kapak")
+    cover = pymupdf.open(d / "kapak" / "kapak.pdf")
+    assert cover.page_count == 1 and "Deneme Kitabı" in " ".join(cover[0].get_text().split())
+    rep = {c["name"]: c["status"] for c in studio.read(d, "preflight.json")["checks"]}
+    assert rep["Kapak açılımı"] == "OK"
+    # «Kapağa resim üret» resimsiz kitapta da çalışır: tek kapak resmi, kapak resimli yola döner.
+    from PIL import Image
+    from editor.production.images import Render
+    png = d / "resim" / "kapak.v1.png"
+    Image.new("RGB", (800, 1100), "#6688aa").save(png)
+
+    class OneCover:
+        def __init__(self, *a, **k):
+            self.refs = {}
+
+        async def close(self):
+            pass
+
+    async def cover_render(painter, plan, spec, v, seed, direction, base):
+        return Render("kapak.v1", str(png), 800, 1100, 300, seed, [], "new", 0.1, "p")
+    monkeypatch.setattr(studio, "Painter", OneCover)
+    monkeypatch.setattr(studio, "_cover_render", cover_render)
+    assert asyncio.run(studio.regenerate(d, "kapak", "new", "", "editör")) == [1]
+    assert not studio.read(d, "cover.json")["typographic"] and "kapak" in studio.selected_art(d)

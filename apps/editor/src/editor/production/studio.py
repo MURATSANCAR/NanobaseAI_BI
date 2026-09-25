@@ -227,15 +227,29 @@ def page_count(d: Path) -> int:
 
 
 def build_cover(d: Path) -> None:
-    """Kapak açılımı (sırt kalınlığı sayfa sayısına bağlı). Kapak resmi yoksa yapılmaz."""
+    """Kapak açılımı (sırt kalınlığı sayfa sayısına bağlı). Kapak resmi varsa resimli; yoksa ve kitap «resimsiz»
+    seçildiyse tipografik (görsel model açılmaz); öteki kitapta kapak resmi beklenir, yapılmaz."""
     art = selected_art(d)
-    if "kapak" not in art:
+    typographic = "kapak" not in art and (read(d, "job.json") or {}).get("art_mode") == "none"
+    if "kapak" not in art and not typographic:
         return
     ms, spec, plan = _manuscript(d), _spec(d), _plan(d)
-    cpdf, info = cover_mod.build(ms, _profile(d), spec, page_count(d), Path(art["kapak"]), plan.style.accent,
-                                 _back_bg(plan.style.palette), d / "kapak", fonts())
+    cpdf, info = cover_mod.build(ms, _profile(d), spec, page_count(d), None if typographic else Path(art["kapak"]),
+                                 plan.style.accent, _back_bg(plan.style.palette), d / "kapak", fonts(),
+                                 front_bg=_cover_bg(d, plan.style) if typographic else None)
     preflight.set_boxes(cpdf, spec.bleed)
     write(d, "cover.json", info)
+
+
+def _cover_bg(d: Path, style) -> str:
+    """Tipografik kapağın zemini: sayfa planının paletinden (yoksa üsluptan) beyaz yazıyı okutan ilk renk
+    (kontrast ≥ 4,5); hiçbiri tutmazsa vurgu rengi (yazı koyu mürekkebe döner)."""
+    from . import plan as plan_mod
+    from .palette import contrast
+    pl = plan_mod.load(d)
+    colors = [c["hex"] for c in ((pl or {}).get("palette") or {}).get("colors", []) if c.get("hex")] + \
+        list(style.palette or [])
+    return next((c for c in colors if contrast(c) >= 4.5), style.accent)
 
 
 def rebuild(d: Path) -> None:
