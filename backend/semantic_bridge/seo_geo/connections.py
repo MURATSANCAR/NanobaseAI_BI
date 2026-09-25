@@ -3,7 +3,11 @@
 T-soft yöntem ve alan adları mağazanın kendi konsolundaki katalogdan alındı (`/rest1/ConsoleHelper/getApiDetails`,
 2026-09-25): giriş `auth/login/{kullanıcı}` + `pass`, sonraki çağrılar `token` parametresi taşır. Liste yöntemleri en
 çok 500 kayıt döner, `start` ile sayfalanır. `updateProducts` gönderilen anahtarı yazar; gönderilmeyen alan
-korunur (boş gönderilen alan sıfırlanır), o yüzden yalnız değişen alan gönderilir.
+korunur (boş gönderilen alan sıfırlanır).
+
+**T-soft'a yazma YASAK (kullanıcı kararı 2026-09-25):** bu istemci yalnız okur. `READ_ONLY` dışındaki her yöntem
+(`update*`, `set*`, `delete*`, önbellek temizleme dahil) çağrılmadan hata atar. Onaylanan öneriler T-soft'a gitmez;
+gidecekleri yer CRM'dir (Web API yetkisi bekleniyor).
 
 Google için yeni bağımlılık yok: servis hesabı JWT'si sunucudaki `openssl` ile imzalanır, belirteç ve
 Search Console çağrıları httpx ile yapılır.
@@ -17,6 +21,7 @@ import os
 import subprocess
 import tempfile
 import threading
+import re
 import time
 from typing import Any, Optional
 
@@ -26,6 +31,9 @@ log = logging.getLogger("semantic.seo_geo")
 
 #: Bir liste çağrısında T-soft'un verdiği en çok kayıt (konsol: "Default:50, Max:500").
 PAGE = 500
+
+#: Çağrılmasına izin verilen T-soft yöntemleri: yalnız okuma. Liste dışı yol (yazma) hiç gönderilmez.
+READ_ONLY = re.compile(r"^(auth/(login/[^/]+|isLogin)|[A-Za-z]+/get[A-Za-z]*(/[^/]*)?)$")
 
 
 class ConnectionError_(RuntimeError):
@@ -100,7 +108,10 @@ class TSoft:
         return self._token
 
     def call(self, path: str, params: Optional[dict[str, Any]] = None, *, timeout: float = 120) -> dict[str, Any]:
-        """`path` örn. `product/get`. Başarısız cevapta Türkçe hata atar; belirteç düşmüşse bir kez yeniden girer."""
+        """`path` örn. `product/get`. Yalnız okuma yöntemleri; başarısız cevapta Türkçe hata atar, belirteç düşmüşse bir
+        kez yeniden girer."""
+        if not READ_ONLY.match(path):
+            raise ConnectionError_(f"T-soft'a yazma kapalı: «{path}» çağrılmadı (yalnız okuma izinli).")
         with self._lock:
             base, user, pw = self._creds()
             if self._token is None or self._key != (base, user, pw):
@@ -143,16 +154,6 @@ class TSoft:
         rows = data.get("data") or []
         return rows[0] if rows else None
 
-    def update_product(self, product_id: str, fields: dict[str, str]) -> dict[str, Any]:
-        """Yalnız verilen alanlar gider; gönderilmeyen alan T-soft'ta olduğu gibi kalır."""
-        return self.call("product/updateProducts", {"data": [{"ProductId": product_id, **fields}]})
-
-    def clear_product_cache(self) -> None:
-        """Yazma sonrası vitrin eski metni göstermesin. Hata gönderimi geri almaz, yalnız günlüğe yazılır."""
-        try:
-            self.call("setting/deleteCache/product", {})
-        except ConnectionError_ as e:
-            log.warning("T-soft önbelleği temizlenemedi: %s", e)
 
 
 def _find(obj: Any, key: str) -> Any:

@@ -1,8 +1,8 @@
 """SEO & GEO tabloları (meta veritabanı). Göç yok: `ensure()` eksik tabloyu kurar.
 
 - semantic_seo_products: T-soft'tan okunan ürünün son hâli, denetim puanı ve sorunları.
-- semantic_seo_proposals: model önerisi → insan kararı → T-soft'a gönderim. Gönderimden önceki değerler
-  `before_json`'da durur; geri alma bunlarla yapılır.
+- semantic_seo_proposals: model önerisi → insan kararı (onay/ret). Hiçbir yere gönderilmez; öneri anındaki değerler
+  `before_json`'da durur.
 - semantic_seo_runs: eşitleme turları (ne zaman, kaç ürün, hata).
 - semantic_seo_gsc: Search Console'dan okunan özetler (tür başına son hâl).
 - semantic_seo_questions: yapay zekâ görünürlüğü için izlenen sorular.
@@ -36,7 +36,7 @@ PROPOSALS = sa.Table(
     sa.Column("id", sa.String(32), primary_key=True),
     sa.Column("tenant_id", sa.String(80), nullable=False, index=True),
     sa.Column("product_id", sa.String(40), nullable=False, index=True),
-    sa.Column("status", sa.String(16), nullable=False),     # hazir | gonderildi | reddedildi | hata | geri_alindi
+    sa.Column("status", sa.String(16), nullable=False),     # hazir | onaylandi | reddedildi (eski: gonderildi/hata/geri_alindi — yazma kapandı)
     sa.Column("fields_json", sa.Text, nullable=False),      # önerilen alanlar (onayda düzenlenmiş hâli yazılır)
     sa.Column("before_json", sa.Text, nullable=False),      # öneri anındaki T-soft değerleri
     sa.Column("score_before", sa.Integer),
