@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (15:55) — ZEKI AI Tahminleme müşteri VM'inde çalışıyor (tahmin TT GPU'dan)
+
+- Kullanıcı `allow-source-ip.py 212.156.126.250/32`'yi GPU'da koşturdu: 21 yola eklendi. VM köprüsünden GPU sağlık 200; kitap kartları da yeniden 200 (aynı IP yüzünden 403 alıyordu).
+- **Geri sarma olayı:** 14:54'te başka bir oturum VM'e `bi-main-845773a4` kurdu — gece 00:34'ten eski bir `main` commit'i (66adc63a'yı içermiyor); kayıtlı `vm-deploy` birimi yok. 14:27'deki e8a4de91'den 15 dosya geri gitti (ZEKI bekleme düzeltmesi, stüdyo ekranları/`editorial_studio.py`, editör denetim ekranları/`editorial_cards.py`). Kullanıcı onayıyla `/tmp/bi-main-e8a4de91` `systemd-run --unit=vm-deploy-e8a4de91-geri` ile yeniden kuruldu: VM ağacı = e8a4de91 (fark 0), imaj 14:21'deki doğrulanmış imaj, `._*` 0, 3 `FORECAST_*` ayarı konteynerde. Kural: kurulacak sha VM'dekini içermeli (`git merge-base --is-ancestor`).
+- **VM sonucu:** tahmin 15:16:58–15:41:44 (1.485 sn; Logo .155 yıl yıl, yük altında), motor TimesFM 3.0, sha `a7592b0a`, 5.200 seri, başlangıç 2026-08. Ana rapor 15:52'de sekmeyi kurdu: Baskı Tekrar 5.053, Yeni Kitap 331, ZEKI 5.384; öneri dağılımı test sunucusuyla birebir (Yeterli Stok 3.598, Talep yok 930, Risk/Acil 460, Kritik 88, Takip Et 65, Karar Ver 59, tahminsiz 184). Portal kabulü (geçici timasai oturumu, silindi) 200; gizli tahmin raporu menüde yok.
+- Açılış bekleme mantığı VM'de doğrulandı: konteyner yenilenince tahmin "Baskı Öneri'nin ilk okuması bekleniyor" diye dakikada bir bekledi, ana rapor bitince başladı.
+
 ## 2026-09-25 (15:10) — Kurulum: kart SQL'i, veri sonu önerisi, dönem okumaları → test sunucusu ve müşteri VM'i
 
 - **main:** `920b6a2f → 845773a4` (ileri sarma + push kullanıcıda; Claude oturumunda izin denetimine takıldı). Dal iki yerden silindi.
