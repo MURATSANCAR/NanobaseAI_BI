@@ -4567,6 +4567,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         from semantic_bridge import editorial_studio
         return _plan(editorial_studio.plan_request, "GET", job, "/jobs", timeout=30)
 
+    from semantic_bridge import editorial_studio_characters  # seri karakter kartı
+    editorial_studio_characters.register(app, {"auth": _books})
+
     @app.get("/api/v1/editorial/books/{book_id}/figures/{region_id}")
     def editorial_book_figure(book_id: str, region_id: str, request: Request):
         _books(request)

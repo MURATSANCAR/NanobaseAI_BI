@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, seri karakter kartı 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -129,6 +129,28 @@ if "EDITOR-STUDYO-OGE" not in s:
            + loc(f"{P_}/effects/({KIND})/preview", "GET", "jobs/$1/plan/effects/$2/preview$is_args$args", timeout=60))
     s = s.replace("    # EDITOR-BITTI", oge + "    # EDITOR-BITTI", 1)
     changes.append("süs/şekil ve efekt önizleme yolları")
+
+# 4) Seri karakter kartı (apps/editor/src/editor/production/api_characters.py); kart ve referans kimlikleri biçimle sınırlı
+if "EDITOR-STUDYO-KARAKTER" not in s:
+    K = f"jobs/({JOB})/character-cards"
+    CID = "c_[0-9a-f]{8}"
+    RID = "r_[0-9a-f]{8}"
+    kart = ("    # EDITOR-STUDYO-KARAKTER  (seri karakter karti)\n"
+            + loc(K, "GET", "jobs/$1/character-cards", timeout=60)
+            + loc(f"{K}/series", "PUT", "jobs/$1/character-cards/series", timeout=60)
+            + loc(f"{K}/(suggest|check|cards)", "POST", "jobs/$1/character-cards/$2", timeout=60)
+            + loc(f"{K}/(history)", "GET", "jobs/$1/character-cards/$2", timeout=60)
+            + loc(f"{K}/cards/({CID})", "PUT|DELETE", "jobs/$1/character-cards/cards/$2$is_args$args", timeout=60)
+            + loc(f"{K}/cards/({CID})/(approve|translate|palette)", "POST", "jobs/$1/character-cards/cards/$2/$3")
+            + loc(f"{K}/cards/({CID})/refs", "PUT|POST", "jobs/$1/character-cards/cards/$2/refs$is_args$args",
+                  f"\n        client_max_body_size {body_mb}m;  # STUDIO_UPLOAD_MB+1", timeout=600)
+            + loc(f"{K}/cards/({CID})/refs/({RID})", "GET|DELETE",
+                  "jobs/$1/character-cards/cards/$2/refs/$3$is_args$args", timeout=60)
+            + loc(f"{K}/cards/({CID})/refs/({RID})/primary", "POST",
+                  "jobs/$1/character-cards/cards/$2/refs/$3/primary", timeout=60)
+            + loc("character-settings", "GET|PUT", "character-settings", timeout=30))
+    s = s.replace("    # EDITOR-BITTI", kart + "    # EDITOR-BITTI", 1)
+    changes.append("seri karakter kartı yolları")
 
 if s == orig:
     print("zaten var (güncel)")
