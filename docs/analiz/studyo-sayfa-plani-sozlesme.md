@@ -323,3 +323,20 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
   tarayıcı içi geri al/yinele (Ctrl/Cmd+Z, Shift+Z).
 - Telefonda: tuvalde yalnız görüntüleme + sağ paneldeki alanlarla düzenleme (sürükleme masaüstünde).
 - Ekranda model/teknoloji adı yok ("Zeki AI" ya da işlev adı).
+
+## C teslim notları (2026-09-25, `92671863`) — sözleşmeye eklenenler
+1. `GET plan/pages/{pid}/preview` taşma paylı tam sayfayı (W×H) kapsar; ekran kutuları bu görüntünün üstüne yüzdeyle koyar.
+2. `pages[].art.selected` salt okunurdur (seçili sürüm); istemci yazmaz.
+3. Resimsiz sayfaya resimli yerleşim: istemci `art.id: null` gönderir, sunucu `a_<8hex>` verir ve boş sahne kaydı açar.
+4. Hazır yerleşim formülü (`planModel.preset` ile aynı): s = bleed+safe; art-top resim {0,0,W,0,52H}, yazı altta güvenli
+   alanda; art-bottom simetriği; art-left/right yarım sayfa; text-over-art yazı {s, 0,62H, W−2s, H−s−0,62H}, zemin
+   `#FFFFFFE6`; text-only güvenli alan; art-full/blank yazısız. Cilt payı (gutter) kullanılmaz.
+5. `plan/jobs` satırı: `{workflow, kind: figure|photo|upscale|cutout|art, status: queued|running|done|failed, page, item,
+   source, asset, progress:[n,toplam], error, note}`.
+6. `after: null` = başa ekle. Yapısal yazımlardan (ekle/sil/böl/sıra) sonra ekran planı yeniden okur; dönüş gövdesinin
+   biçimine bağlı değildir.
+7. Köprüde `GET /api/v1/editorial/studio/settings → {"upload_mb"}` (fotoğraf sınırı ekrana).
+8. Hata gövdesi köprüden olduğu gibi geçer; ekran hem `{"code","detail"}` hem `{"detail":{…}}` okur.
+9. Açık: geri al/yinele sayfa ekleme/silmeyi kapsamaz (sürüm geçmişi kapsar); tuvale bırakılan fotoğraf sunucunun
+   varsayılan kutusuna düşer; ileride toplu `PUT plan/pages`. Profilde gerekçe `illustration_source`, kaynak `art_source`.
+10. HEIC/HEIF kabul edilir (`pillow-heif`, JPEG'e dönüşür); imaj yeniden derlenene kadar canlıda açık hata verir.
