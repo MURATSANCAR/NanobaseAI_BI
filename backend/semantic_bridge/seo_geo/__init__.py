@@ -22,10 +22,10 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, llms, pages, propose, redirects, rules
+from . import connections, llms, pages, propose, redirects, rules, schema
 import hashlib
 
-from .store import GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, dumps, ensure, iso, loads, now
+from .store import GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -71,6 +71,8 @@ class SeoGeo:
         self._batch_lock = threading.Lock()
         self.batch: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "queue": None,
                                       "startedAt": None, "finishedAt": None, "error": None}
+        self._crawl_lock = threading.Lock()
+        self.crawl: dict[str, Any] = {"running": False, "done": 0, "queue": None, "startedAt": None, "finishedAt": None, "error": None}
         # Sayfa önerisi uçlarla birlikte `register` içinde kurulur; ön üretim buradan çağırır.
         self.page_queue: Any = None
         self.make_page_proposal: Any = None
@@ -349,6 +351,75 @@ class SeoGeo:
         finally:
             self.batch.update(running=False, finishedAt=iso(now()))
             self._batch_lock.release()
+
+    def start_crawl(self, budget: int, delay: float = 1.0) -> bool:
+        """Ürün sayfalarının şema denetimi: hiç bakılmamış ya da en eski bakılan önce, eşitse çok satan önce.
+        Bütçe dolunca durur; sonraki tur kaldığı yerden sürer (tavan yok)."""
+        if not self._crawl_lock.acquire(blocking=False):
+            return False
+        self.crawl.update(running=True, done=0, queue=None, startedAt=iso(now()), finishedAt=None, error=None)
+        threading.Thread(target=self._crawl, args=(budget, delay), name="seo-schema", daemon=True).start()
+        return True
+
+    def _crawl(self, budget: int, delay: float) -> None:
+        import time as _t
+
+        deadline = _t.monotonic() + max(60, budget)
+        tenant, site = self.tenant(), (self.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        fetcher = None
+        try:
+            with self.engine().connect() as c:
+                rows = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.data_json, SCHEMA.c.checked_at)
+                                 .select_from(PRODUCTS.outerjoin(SCHEMA, sa.and_(SCHEMA.c.tenant_id == PRODUCTS.c.tenant_id,
+                                                                                SCHEMA.c.product_id == PRODUCTS.c.product_id)))
+                                 .where(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True))
+                                 .order_by(SCHEMA.c.checked_at.asc().nullsfirst(), SALES.desc())).all()
+            queue = []
+            for pid, data, _ in rows:
+                p = loads(data, {})
+                if str(p.get("Barcode") or "").startswith(("978", "979")) and p.get("SeoLink"):
+                    queue.append((pid, f"{site}/{str(p['SeoLink']).strip('/')}", _num(p.get("CommentCount")),
+                                  schema.has_faq(rules.text_of(p.get("Details")))))
+            self.crawl["queue"] = len(queue)
+            fetcher = schema.Fetcher(site)
+            org_saved = False
+            for pid, url, comments, faq in queue:
+                if _t.monotonic() > deadline:
+                    break
+                if not fetcher.allowed(url):
+                    continue
+                try:
+                    code, html = fetcher.get(url)
+                except Exception:  # noqa: BLE001 — ağ hatası sayfanın sorunu sayılır, tur sürer
+                    code, html = 0, ""
+                if code == 200:
+                    page = schema.parse(html)
+                    found = schema.audit(page, comments, faq)
+                    types = sorted({t for it in page["items"] for t in schema._types(it)})
+                    if not org_saved:
+                        self._save_schema("_org", site, 200, [], schema.organization(page))
+                        org_saved = True
+                else:
+                    found, types = ["fetch_error"], []
+                self._save_schema(pid, url, code, found, types)
+                self.crawl["done"] += 1
+                _t.sleep(delay)
+        except Exception as e:  # noqa: BLE001
+            self.crawl["error"] = str(e)[:500]
+            log.exception("seo schema crawl failed")
+        finally:
+            if fetcher:
+                fetcher.close()
+            self.crawl.update(running=False, finishedAt=iso(now()))
+            self._crawl_lock.release()
+
+    def _save_schema(self, pid: str, url: str, code: int, found: list[str], types: Any) -> None:
+        tenant = self.tenant()
+        vals = dict(url=url[:800], status=code, issues="," + ",".join(found) + ",", types_json=dumps(types), checked_at=now())
+        with self.engine().begin() as c:
+            n = c.execute(SCHEMA.update().where(SCHEMA.c.tenant_id == tenant, SCHEMA.c.product_id == pid).values(**vals)).rowcount
+            if not n:
+                c.execute(SCHEMA.insert().values(tenant_id=tenant, product_id=pid, **vals))
 
     def approve(self, prop: dict[str, Any], fields: dict[str, str], user: str, note: str) -> dict[str, Any]:
         """Onay: onaylanan alanlar ve karar kaydedilir, hiçbir yere gönderilmez (T-soft'a yazma yasak)."""
@@ -841,6 +912,76 @@ def register(app, runtime, authorize, session_user):
         seo.audit(user, body.action, prop["product_id"], prop["product_id"], {"proposal": proposal_id, "kind": "page"})
         return _proposal_view(seo.proposal(proposal_id))
 
+    # ------------------------------------------------------------ şema denetimi
+    def _schema_summary() -> dict[str, Any]:
+        tenant = seo.tenant()
+        with seo.engine().connect() as c:
+            rows = c.execute(sa.select(SCHEMA.c.issues).where(SCHEMA.c.tenant_id == tenant, SCHEMA.c.product_id != "_org")).all()
+            org = c.execute(sa.select(SCHEMA.c.types_json, SCHEMA.c.checked_at).where(
+                SCHEMA.c.tenant_id == tenant, SCHEMA.c.product_id == "_org")).first()
+            books = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(PRODUCTS.c.tenant_id == tenant,
+                                                                                    PRODUCTS.c.active.is_(True))).scalar() or 0
+            last = c.execute(sa.select(sa.func.max(SCHEMA.c.checked_at)).where(SCHEMA.c.tenant_id == tenant)).scalar()
+        counts: dict[str, int] = {k: 0 for k in schema.CHECKS}
+        for (issues,) in rows:
+            for k in filter(None, (issues or "").split(",")):
+                counts[k] = counts.get(k, 0) + 1
+        return {"checked": len(rows), "activeProducts": books, "counts": counts, "lastChecked": iso(last),
+                "organization": loads(org[0], None) if org else None, "crawl": seo.crawl,
+                "checks": [{"id": k, "severity": v[0], "title": v[1], "why": v[2], "count": counts.get(k, 0)}
+                           for k, v in schema.CHECKS.items()]}
+
+    @app.get("/api/v1/seo-geo/schema")
+    def seo_schema(request: Request, issue: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:
+        gate(request)
+        out = _schema_summary()
+        cond = [SCHEMA.c.tenant_id == seo.tenant(), SCHEMA.c.product_id != "_org", SCHEMA.c.issues != ",,"]
+        if issue:
+            if issue not in schema.CHECKS:
+                raise _err(422, "Bilinmeyen denetim.")
+            cond.append(SCHEMA.c.issues.like(f"%,{issue},%"))
+        with seo.engine().connect() as c:
+            total = c.execute(sa.select(sa.func.count()).select_from(SCHEMA).where(*cond)).scalar() or 0
+            rows = c.execute(sa.select(SCHEMA.c.product_id, SCHEMA.c.url, SCHEMA.c.status, SCHEMA.c.issues, SCHEMA.c.checked_at,
+                                       PRODUCTS.c.name, SALES).select_from(SCHEMA.join(PRODUCTS, sa.and_(
+                PRODUCTS.c.tenant_id == SCHEMA.c.tenant_id, PRODUCTS.c.product_id == SCHEMA.c.product_id)))
+                .where(*cond).order_by(SALES.desc()).offset(max(0, start)).limit(max(1, limit))).all()
+        out["total"] = total
+        out["items"] = [{"id": r[0], "url": r[1], "status": r[2], "issues": [i for i in (r[3] or "").split(",") if i],
+                         "checkedAt": iso(r[4]), "name": r[5], "sales": int(r[6] or 0)} for r in rows]
+        return out
+
+    @app.post("/api/v1/seo-geo/schema/crawl")
+    def seo_schema_crawl(request: Request, budget: int = 3600) -> dict[str, Any]:
+        user = gate(request)
+        started = seo.start_crawl(budget)
+        seo.audit(user, "run", "schema", "Şema taraması", {"started": started, "budget": budget})
+        return {"started": started, "crawl": seo.crawl}
+
+    @app.get("/api/v1/seo-geo/schema/theme-request.md")
+    def seo_theme_request(request: Request):
+        """T-soft / ajans için tema isteği belgesi (son taramanın sayılarıyla, gerçek bir kitaptan örnek)."""
+        gate(request)
+        from fastapi.responses import Response
+
+        s = _schema_summary()
+        example = None
+        with seo.engine().connect() as c:
+            row = c.execute(sa.select(PRODUCTS.c.data_json).where(PRODUCTS.c.tenant_id == seo.tenant(), PRODUCTS.c.active.is_(True))
+                            .order_by(SALES.desc()).limit(1)).first()
+        if row:
+            p = loads(row[0], {})
+            site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+            wiki = _wiki(rules.text_of(p.get("Model"))) or {}
+            imgs = p.get("ImageUrls") or []
+            example = {"name": rules.text_of(p.get("ProductName")), "isbn": p.get("Barcode"), "author": rules.text_of(p.get("Model")),
+                       "brand": rules.text_of(p.get("Brand")), "price": p.get("SellingPrice"), "url": f"{site}/{p.get('SeoLink')}",
+                       "image": (imgs[0].get("ImageUrl") if imgs and isinstance(imgs[0], dict) else None),
+                       "wikidata": wiki.get("wikidata")}
+        text = schema.theme_request(s["counts"], s["checked"], s["organization"], example)
+        return Response(text, media_type="text/markdown; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="tema-istegi-schema.md"'})
+
     @app.get("/api/v1/seo-geo/history")
     def seo_history(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:
         gate(request)
@@ -920,6 +1061,7 @@ def register(app, runtime, authorize, session_user):
             while seo.state.get("running"):
                 _t.sleep(10)
             seo.start_batch("zamanlayıcı", budget)
+            seo.start_crawl(min(budget, 7200))
         threading.Thread(target=later, name="seo-batch-wait", daemon=True).start()
         out["batch"] = f"başlayacak (bütçe {budget} sn)"
         return out

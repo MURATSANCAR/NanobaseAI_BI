@@ -123,6 +123,17 @@ export type PageDetail = {
   proposals: Array<Omit<Proposal, 'fields'> & { fields: Partial<Record<PageField, string>> }>;
 };
 
+export type SchemaReport = {
+  checked: number;
+  activeProducts: number;
+  lastChecked: string | null;
+  organization: { name?: string; description?: string; url?: string; sameAs?: unknown } | null;
+  crawl: { running: boolean; done: number; queue: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
+  checks: Array<{ id: string; severity: Severity; title: string; why: string; count: number }>;
+  total: number;
+  items: Array<{ id: string; url: string; status: number; issues: string[]; checkedAt: string; name: string; sales: number }>;
+};
+
 export type Question = { id: string; text: string; category: string | null; createdBy: string | null; createdAt: string };
 
 async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T> {
@@ -181,6 +192,9 @@ export const seoApi = {
   proposePage: (type: PageKind, id: string) => call<Proposal>(`pages/${type}/${encodeURIComponent(id)}/propose`, { method: 'POST', timeout: 300_000 }),
   decidePage: (id: string, body: { action: 'approve' | 'reject'; fields?: Partial<Record<PageField, string>>; note?: string }) =>
     call<Proposal>(`pages/proposals/${id}/decide`, { method: 'POST', body }),
+  schema: (p: { issue?: string; start?: number; limit?: number }) => call<SchemaReport>(`schema?${qs(p)}`),
+  schemaCrawl: (budget = 3600) => call<{ started: boolean }>(`schema/crawl?budget=${budget}`, { method: 'POST' }),
+  themeRequestUrl: () => `${ENGINE_BASE}/api/v1/seo-geo/schema/theme-request.md`,
   questions: () => call<{ items: Question[]; measuring: boolean }>('questions'),
   addQuestion: (text: string, category: string) => call<{ id: string }>('questions', { method: 'POST', body: { text, category } }),
   deleteQuestion: (id: string) => call<{ deleted: boolean }>(`questions/${id}`, { method: 'DELETE' }),

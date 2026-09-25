@@ -108,6 +108,16 @@ REDIRECTS = sa.Table(
     sa.Column("note", sa.String(1000)),
     sa.Column("synced_at", sa.DateTime(timezone=True), nullable=False),
 )
+SCHEMA = sa.Table(
+    "semantic_seo_schema", _md,  # canlı ürün sayfasının şema denetimi (yalnız okunarak tarandı)
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("product_id", sa.String(40), primary_key=True),   # "_org": site geneli kurum şeması
+    sa.Column("url", sa.String(800)),
+    sa.Column("status", sa.Integer),
+    sa.Column("issues", sa.String(400), nullable=False, default=""),  # ",no_isbn,no_faq,"
+    sa.Column("types_json", sa.Text),
+    sa.Column("checked_at", sa.DateTime(timezone=True), nullable=False),
+)
 _lock = threading.Lock()
 _ready: set[int] = set()
 
