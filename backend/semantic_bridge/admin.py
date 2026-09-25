@@ -178,6 +178,10 @@ SPEC: list[dict[str, Any]] = [
     {"key": "STUDIO_UPLOAD_MB", "group": "studio", "label": "Fotoğraf yükleme sınırı (MB)", "type": "int", "default": "60",
      "help": "Sayfa düzeninde tek fotoğrafın en büyük boyutu; ekranda yükleme alanında yazılır. Giriş kapısı ve portal "
              "web sunucusunun gövde sınırı da bu değere göre ayarlanmalıdır"},
+    {"key": "STUDIO_READER_PASSES", "group": "studio", "label": "Okur okuması: sayfa başına okuma sayısı", "type": "int",
+     "default": "3",
+     "help": "«Çocuk gözüyle okuma»da Zeki AI her sayfayı bu kadar kez birbirinden bağımsız okur; yalnız okumaların "
+             "yarısından fazlasında geçen işaret gösterilir. Sayı arttıkça sonuç tutarlılaşır, süre uzar"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -206,7 +210,7 @@ GROUPS = [
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},
-    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni ekranının sınırları."},
+    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni ekranının sınırları ve okur araçları."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
 ]

@@ -812,3 +812,9 @@ async def plan_jobs(job: str) -> dict:
     """Süren GPU işi (busy) ve figür / zemin ayıklama / kaliteyi artırma işlerinin durumu (ekran bununla bekler)."""
     d = _plan_dir(job)
     return {"busy": await _busy(d), "jobs": await asyncio.to_thread(plan_mod.jobs, d)}
+
+
+# ------------------------------------------------------------------ okur araçları ve sürüm farkı (api_reader.py)
+from .api_reader import router as _reader_router  # noqa: E402
+
+app.include_router(_reader_router)
