@@ -34,12 +34,13 @@ export function Progress({ value, total }: { value: number; total: number }) {
   );
 }
 
-/** Görsel: yüklenemezse sessizce yer tutucuya döner (sayfa henüz dizilmemiş olabilir). */
-export function Img({ src, alt, className = '', fallback }: { src: string; alt: string; className?: string; fallback: string }) {
+/** Görsel: yüklenemezse sessizce yer tutucuya döner (sayfa henüz dizilmemiş olabilir). `src` boşsa hiç istek
+ *  atılmaz, doğrudan yer tutucu görünür (ör. kapak PDF'i yokken kapak önizlemesi). */
+export function Img({ src, alt, className = '', fallback }: { src: string | null; alt: string; className?: string; fallback: string }) {
   const [failed, setFailed] = useState(false);
   // Adres değişince (yeni sürüm, yeni dizgi) önceki yüklemenin hatası taşınmaz.
   useEffect(() => setFailed(false), [src]);
-  if (failed) {
+  if (failed || !src) {
     return <div className={`flex items-center justify-center bg-slate-100 text-[11px] text-canvas-muted ${className}`}>{fallback}</div>;
   }
   return <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} className={className} />;
