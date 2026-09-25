@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (17:50) — SEO & GEO test sunucusunda (main 275e8ef2)
+
+- **Kurulum:** main'deki 25 dosya tek tek (`git archive 275e8ef2 <dosyalar>`); önce sunucudaki her dosyanın md5'i eski main (2286091d) ile karşılaştırıldı, 25/25 aynıydı (başka oturumun işi ezilmedi). Kurulum sonrası md5 main ile birebir, `._*` 0. Arayüz sunucuda derlendi (`index-BtDKtvLo.js`, yedek `cockpit/dist.bak-20260925-174701`), köprü yeniden başladı (44 sn, health 200). `timas-seo.timer` kuruldu; ilk koşu elle yapıldı (başarılı; T-soft ve Google tanımsız olduğu için ikisi de atlandı), sonraki 26.09 03:00.
+- **Kabul (gerçek oturum, geçici timasai oturumu, sonra silindi):** `/api/v1/seo-geo/` overview/me/products/history/search/questions 200; boş soru 422; T-soft tanımsızken eşitleme 409 ve Türkçe mesaj; Yönetim'de `seo` grubu 15 ayarla görünüyor; `/timas/seo-geo/urun-denetimi` 200. `semantic_seo_*` tabloları meta veritabanında kuruldu.
+- **Açık:** T-soft kullanıcısı ve Google servis hesabı girilmediği için eşitleme/öneri/gönderim gerçek veriyle **DOĞRULANAMADI**. Müşteri VM'ine kurulmadı (test sunucusunda gerçek veri doğrulaması bekleniyor).
+- **Ücretsiz GEO ölçümü araştırması:** ücretsiz ve kurallara uygun yollar Gemini 2.5 Flash + Google Search (günde 500 aramalı cevap), SerpApi ayda 250 (AI Bakışı), Bing Webmaster AI Performance (Copilot), Exa/Tavily ile yerel model (dolaylı). ChatGPT/Perplexity gerçek cevabı ücretsiz ölçülemez; açık kaynak araçların hepsi ücretli kazıma ya da arayüz kazıma kullanıyor, kurulmadı.
+
 ## 2026-09-25 (18:30) — SEO & GEO modülü: Stitch ekranları, T-soft denetim/onay hattı, Search Console bağlayıcısı (dalda, kurulmadı)
 
 - **Tasarım:** Stitch'te portal jetonlarıyla yeni tasarım sistemi «Timaş Portal Kanvas» (`assets/12401857364778149884`); 5 ekran `design/stitch-wow/seo-geo/` (genel bakış, ürün denetimi & onay, AI görünürlük, anahtar kelimeler, bağlantılar). Uzun üretimler MCP'de zaman aşımına düştüğü için JSON-RPC ile sırayla üretildi.
