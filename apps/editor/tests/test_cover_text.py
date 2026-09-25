@@ -73,3 +73,29 @@ def test_busy_background_gets_scrim():
     _, rep = ct.compose(img, "İbn Sînâ", "Gürbüz Deniz", subtitle="Ahlakın Elifbesi", style="klasik")
     assert rep["title"]["scrim"] and rep["author"]["scrim"]
     assert rep["subtitle"]["lines"]
+
+
+@fonts
+def test_empty_author_skips_author_block():
+    """Word'den açılan işte yazar adı yoksa kapak düşmez; yazar bloğu basılmaz (canlı hata 2026-09-25:
+    «yazı alana sığmıyor: ''»)."""
+    img = Image.new("RGB", (1200, 1800), (200, 210, 220))
+    for author in ("", "   ", None):
+        _, rep = ct.compose(img, "Etimesgutlu Bebek Aslan", author, None, "cocuk", draw_text=False)
+        assert "author" not in rep and rep["title"]["lines"]
+
+
+def test_empty_title_is_explained():
+    img = Image.new("RGB", (600, 900), (200, 210, 220))
+    with pytest.raises(ValueError, match="kitap adı boş"):
+        ct.compose(img, "  ", "Yazar", None, "cocuk", draw_text=False)
+
+
+def test_docx_title_from_file_name():
+    from types import SimpleNamespace
+    from editor.production.manuscript import _docx_title
+    doc = SimpleNamespace(core_properties=SimpleNamespace(title=""))
+    assert _docx_title(doc, "/x/girdi/Etimesgutlu_Bebek_Aslan.docx") == "Etimesgutlu Bebek Aslan"
+    assert _docx_title(doc, "/x/Küçük-Prens__son.DOCX") == "Küçük Prens son"
+    doc.core_properties.title = "Belge Başlığı"
+    assert _docx_title(doc, "/x/a_b.docx") == "Belge Başlığı"

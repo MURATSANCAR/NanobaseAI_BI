@@ -53,5 +53,5 @@
   place(top + left, dx: b + tw, dy: b, box(width: sp, height: th,
     align(center + horizon, rotate(90deg, reflow: true,
       text(font: d.heading_font, weight: 800, size: calc.min(11, d.spine * 1.8) * 1pt, fill: white,
-        d.title + "  ·  " + d.author)))))
+        if d.author != "" { d.title + "  ·  " + d.author } else { d.title })))))
 }
