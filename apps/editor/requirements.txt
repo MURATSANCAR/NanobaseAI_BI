@@ -26,3 +26,5 @@ fonttools
 typst==0.15.0
 python-docx
 python-multipart
+# stüdyo fotoğraf yükleme (editor.production.photo): telefonun HEIC/HEIF fotoğrafı (libheif tekerlekte gömülü)
+pillow-heif==1.8.0
