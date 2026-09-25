@@ -137,14 +137,17 @@ async def _senses(llm: Llm, units: dict[str, list[W.Occ]], contexts: dict[int, s
     return senses
 
 
-async def _alternatives(llm: Llm, lemma: str, sense: dict | None, marked: str, page: int) -> list[str]:
+async def _alternatives(llm: Llm, lemma: str, sense: dict | None, marked: str, page: int,
+                        forms: list[str]) -> list[str]:
     body = (f"Aşağıdaki pasajda «{lemma}» sözcüğü aynı anlamda kısa aralıkla tekrarlanıyor ([[ ]] içinde). "
             "Tekrarı gidermek için sonraki geçişlerin yerine konabilecek, cümlede aynı anlamı veren sözcük ya "
             "da söyleyişler öner (Türkçe, en fazla 5; iyi karşılık yoksa boş liste).\n\n"
             + (f"Anlam: {sense['label']}\n" if sense else "") + f"Pasaj: «{marked}»")
     out, _ = await llm.chat(DIRECTOR, [{"role": "user", "content": body}], prompt=ALTERNATIVES,
                             schema=_alt_schema(), pages=[page], max_tokens=400, temperature=0.0, thinking=False)
-    return [s.strip() for s in out.get("oneriler", []) if s.strip() and W.lower_tr(s.strip()) != lemma]
+    # tekrarın kendi biçimleri ve yinelenen öneriler karşılık değildir
+    same = {lemma} | {W.lower_tr(f) for f in forms}
+    return list(dict.fromkeys(s.strip() for s in out.get("oneriler", []) if s.strip() and W.lower_tr(s.strip()) not in same))
 
 
 async def run(generation_id: str):
@@ -214,7 +217,7 @@ async def run(generation_id: str):
 
     async def alternatives(lem, sense, cl, marked):
         async with sem:
-            return await _alternatives(llm, lem, sense, marked, cl[1].page)
+            return await _alternatives(llm, lem, sense, marked, cl[1].page, [o.word for o in cl])
 
     alts_of = await asyncio.gather(*(alternatives(lem, sense, cl, marked) for lem, sense, cl, _, marked, _, _ in kept))
     for (lem, sense, cl, plain, marked, pages, p), alts in zip(kept, alts_of):
