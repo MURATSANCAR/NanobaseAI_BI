@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, e-kitap 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -129,6 +129,22 @@ if "EDITOR-STUDYO-OGE" not in s:
            + loc(f"{P_}/effects/({KIND})/preview", "GET", "jobs/$1/plan/effects/$2/preview$is_args$args", timeout=60))
     s = s.replace("    # EDITOR-BITTI", oge + "    # EDITOR-BITTI", 1)
     changes.append("süs/şekil ve efekt önizleme yolları")
+
+# 4) E-kitap (EPUB): üret/durum, indir, e-ISBN, alt metinler, önizleme dosyaları (e-kitabın içinden, izinli türler)
+if "EDITOR-STUDYO-EKITAP" not in s:
+    E_ = f"jobs/({JOB})/epub"
+    AKEY = "kapak|[ag]_[0-9a-f]{8}"
+    EPATH = "(?:[A-Za-z0-9_-]+/){0,4}[A-Za-z0-9_-]+\\.(?:xhtml|css|jpg|png|svg|ttf|otf)"
+    ekitap = ("    # EDITOR-STUDYO-EKITAP  (e-kitap: api_epub.py)\n"
+              + loc(E_, "GET|POST", "jobs/$1/epub", timeout=60)
+              + loc(f"{E_}/(file|alt)", "GET", "jobs/$1/epub/$2", timeout=300)
+              + loc(f"{E_}/meta", "PUT", "jobs/$1/epub/meta", timeout=60)
+              + loc(f"{E_}/alt/({AKEY})", "PUT", "jobs/$1/epub/alt/$2", timeout=60)
+              + loc(f"{E_}/alt/({AKEY})/suggest", "POST", "jobs/$1/epub/alt/$2/suggest", timeout=240)
+              + loc(f"{E_}/alt/({AKEY})/image", "GET", "jobs/$1/epub/alt/$2/image$is_args$args", timeout=60)
+              + loc(f"{E_}/content/([0-9a-f]{{12}})/({EPATH})", "GET", "jobs/$1/epub/content/$2/$3", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", ekitap + "    # EDITOR-BITTI", 1)
+    changes.append("e-kitap yolları")
 
 if s == orig:
     print("zaten var (güncel)")
