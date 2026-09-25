@@ -335,6 +335,8 @@ def refresh_preflight(d: Path) -> dict:
                           "detail": "bütün resimler onaylı" if not waiting else
                           f"onay bekleyen {len(waiting)} resim: {', '.join(waiting[:12])}"})
     rep["checks"].append(_print_check(d, spec, ms.title, ready=not any(c["status"] == "FAIL" for c in rep["checks"])))
+    from . import epub as epub_mod
+    rep["checks"] += epub_mod.preflight_checks(d)          # e-kitap: bilgi satırı (basımı durdurmaz)
     rep["status"] = ("FAIL" if any(c["status"] == "FAIL" for c in rep["checks"])
                      else "WARN" if any(c["status"] == "WARN" for c in rep["checks"]) else "OK")
     write(d, "preflight.json", rep)
