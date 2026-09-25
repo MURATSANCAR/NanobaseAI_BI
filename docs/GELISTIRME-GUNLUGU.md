@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (15:00) — Müşteri VM'i `main`e (stüdyo dahil); GPU editörü 0.15.9; basın-web VM'de kapalı
+
+- **Kullanıcı kararları:** müşteri ortamında yazar/sosyal medya/basın-web taraması menüsü ve özelliği şimdilik KAPALI (`WEB_WATCH_ENABLED` varsayılan 0; VM'de `enabled:false` doğrulandı, timer kurulmadı). Kitap Tasarım Stüdyosu VM'de AÇIK (Qwen Image lisansı ticari değil; kullanıcı riski bilerek seçti).
+- **Sıra:** GPU editörü `main`e çekildi — `editor-py:0.15.9-kapi-sinir` (kitap türü, Aşama 0, kelime çeşitliliği, stüdyo Temporal), 8 servis, göç 026/027; testler 170 geçti, 1 kalış günlükte bilinen sıraya bağlı `test_proofing_contract`. Test sunucusu `main`in 5 arayüz dosyası + `editorial_cards.py` ile birebir (fark 0), köprü model kuyruğu boşken yeniden başlatıldı, arayüz `index-Cg9vjxyc.js`. Kitap türü kartlarda henüz boş: `book_profile` kitap yeniden okununca ya da son okumada bir kez yazılır, mevcut 25 kitapta satır yok (ekran CRM türünü gösterir).
+- **Word 10–20 MB:** test portalında ve VM'de genel API gövde sınırı 10 MB idi → Word ucuna 21 MB (`deploy/nanobase-direct/add-studio-docx-size.py`, VM şablonu, NPM 21m). VM'de ayrıca oturum denetimi alt isteği sunucu düzeyindeki 8m'yi uyguluyordu: 8 MB üstü her istek 413→500; alt istekte `client_max_body_size 0`.
+- **VM doğrulaması (timasai kısa oturum):** basın-web `enabled:false`, stüdyo 9 iş, 29/29 önizleme 200 (429 yok), kitap kartı 25, `._*` 0.
+
 ## 2026-09-25 (14:10) — VM → GPU tahmin: TİMAŞ çıkış IP'si değişti; açılışta tahmin 30 dk beklemiyor
 
 - VPN açıldı (kullanıcı; canlı Logo .25 erişimi şimdilik olmayacak, .155 kopyasıyla devam). VM `.env`'ine `FORECAST_API_BASE`, `FORECAST_EXTRA_HEADER` (kart başlığından kopya, ekrana yazılmadı), `FORECAST_CA_FILE=/app/ad/gpu-editor-ca.pem` eklendi — GPU sertifikası kendinden imzalı, CA'sız istek SSL hatası verir.
