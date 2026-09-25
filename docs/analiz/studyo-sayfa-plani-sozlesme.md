@@ -121,6 +121,21 @@ tutuluyor (`studio.json.pages["12"]`). Sayfa planında sayfa **kalıcı bir kay�
 - Üretim GPU işidir (Temporal, bugünkü resim işleri gibi); ekran işin bitmesini bekler, bu sırada düzenleme sürer.
 - Figür bir kez üretilir, birçok sayfada kullanılabilir; sayfadan silinmesi kütüphaneden silmez.
 
+## Başlangıçta resim seçimi (kullanıcı kararı 2026-09-25: "tüm kitaplar çocuk kitabı olmayacak")
+- İş açılırken (kitaptan ya da Word'den) seçim: `art_mode` = `auto` (varsayılan, önerilen) | `every_page` (HER_SAYFA) |
+  `chapter` (BOLUM_BASI) | `none` (YOK). `POST jobs` ve `POST jobs/docx` (sorgu parametresi) bunu alır; `job.json`'a yazılır.
+- `auto` dışındaki seçim profilin resim kararının **önüne geçer** (`profile.py` karar sırası: kullanıcı seçimi > yayınevi
+  kaydı/çizer kuralı > model). `profile.json`'a `art_source: "editor"|"auto"` ve gerekçe yazılır; ekran otomatik kararı
+  gerekçesiyle gösterir ("Okur yaşı 7–9, her sayfa resimli seçildi").
+- `none`: resim adımı hiç koşmaz, görsel model açılmaz; sayfa planı `text-only` yerleşimle kurulur.
+- Sonradan değiştirme: `POST jobs/{job}/art-mode {"art_mode": …}` → yerleşim yeniden kurulur (`restart` benzeri, plan
+  varsa yeni plan; eski plan `plan-history`'de kalır), üretilmiş resimler silinmez, kullanılmayan resimlere düşer. GPU
+  işi sürüyorsa 409.
+- Otomatik çocuk öğeleri (balon, renkli yazı) yalnız `bubbles.wanted(profile)` doğruysa; resimsiz kitapta kullanıcı
+  efekt yazı, şekil, fotoğraf ve figürü elle ekleyebilir.
+- Ekran (C): yeni iş formunda dört seçenekli kartlar (kısa açıklamalı, `auto` seçili), iş sayfasında mevcut seçim ve
+  "değiştir" (onaylı, sonuçlarını söyler). Köprü `art_mode`'u geçirir ve `art-mode` ucunu vekil eder.
+
 ## Efekt yazılar ve süs/şekiller (kullanıcı kararı 2026-09-25: "sadece balon olmasın")
 İki yeni iş: **D** motor (`apps/editor/src/editor/production/elements.py` + `templates/elements.typ`), **E** ekran
 (`src/canvas/editorial/studio/elements/`). A ve C bunları yalnız çağırır/yerleştirir; çizim ve katalog D'de, paneller E'de.
