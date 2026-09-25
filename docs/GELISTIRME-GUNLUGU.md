@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (01:40) — SEO & GEO: çok motorlu yapay zekâ görünürlük ölçümü (Gemini ücretsiz; ChatGPT/Perplexity/Claude anahtarla)
+
+- **`seo_geo/geo.py`:** izlenen sorular resmî API'lerle sorulur — Gemini `generateContent` + `google_search` (ücretsiz katman), OpenAI Responses + `web_search`, Perplexity Sonar, Anthropic Messages + web araması. Anahtarı olmayan motor ölçülmez, sonuç uydurulmaz; tüketici arayüzü kazınmaz. Kullanıcı ChatGPT ve diğerlerinin de sürece katılmasını istedi; ücretsiz API'leri olmadığı ekranda ve Yönetim'de yazar.
+- **Ölçüm:** cevapta Timaş anıldı mı (ad ya da Timaş kitabı), timas.com.tr kaynak mı (Gemini kaynak adresi yönlendirme olduğu için başlık da bakılır), hangi kitaplar geçti (5.158 ad, 2+ kelime/8+ karakter), kaynak listesi, cevap. Tablo `semantic_seo_geo_results`.
+- **Kota ve takvim:** motor başına günlük sınır (Gemini varsayılan 450 — ücretsiz ~500 aşılmasın; diğerleri 100), aynı soru bir motorda `GEO_EVERY_DAYS` (7) gün içinde yeniden sorulmaz, 429'da o motor o gün durur; gece `run-due` ve "Şimdi ölç". Ayarlar Yönetim → «Yapay zekâ görünürlüğü (GEO)».
+- **Ekran `/seo-geo/ai-gorunurluk`:** motor kartları (anılma/kaynak oranı, bugünkü kullanım), soru × motor tablosu, açılınca cevap, geçen kitaplar, kaynaklar. Doğrulama: anahtar girilmediği için gerçek ölçüm **DOĞRULANAMADI**; analiz gerçek kitap listesiyle denendi.
+
 ## 2026-09-26 (01:00) — SEO & GEO: sayfalar gece ön üretiminde; şema denetimi ve tema isteği belgesi
 
 - **Ön üretim:** yazar/kategori/yayınevi sayfaları da gece turunda (kitabı olan, sorunlu, önerisi olmayan; çok satandan), ürünlerle karışık 3:1 — ürün sırası binlerce olduğu için sayfalar sona kalsa günlerce sıra gelmezdi.
