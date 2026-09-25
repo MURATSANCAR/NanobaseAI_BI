@@ -29,15 +29,18 @@ import httpx
 
 from ..config import settings
 from .art import ArtPlan, Character, Scene
+from .bubbles import wanted as wants_bubbles
 
 ALIAS = "book-image"
 UPSCALE_ALIAS = "book-upscale"
 PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 3_000_000))
 STEPS = 40
 MAX_REFS = 4
-BUBBLE_SPACE = (" Leave the upper part of the picture calm and simple (plain sky, wall or background) as free space"
-                " for speech bubbles; keep faces out of that area.")
 FIGURE_PX = (896, 1152)            # serbest figür üretim boyu (~1 MP, dik); 40–60 mm kutuda 500+ dpi
+# Çocuk kitabında (bubbles.wanted) konuşma balonları resmin üstüne dizgide basılır: sayfa resmi üst bölgede sade
+# bir boşluk bırakır. Düzeltmede (base_image) kompozisyon korunduğu için eklenmez; kapakta balon yoktur.
+BUBBLE_SPACE = ("Leave a calm, empty area in the upper part of the picture (plain sky or plain wall, no important "
+                "details there) for speech bubbles.")
 
 
 def size_for(w_mm: float, h_mm: float, dpi: int = 300) -> tuple[int, int, int]:
@@ -92,8 +95,7 @@ class Painter:
         self.http = httpx.AsyncClient(timeout=httpx.Timeout(1800.0, connect=10.0))
         self.log: list[Render] = []
         self.refs: dict[str, str] = {}
-        # Çocuk kitabında konuşma balonları resmin üstüne vektör olarak basılır: üretimde üst bölge sade bırakılır.
-        self.bubble_space = False
+        self.bubble_space = wants_bubbles(self.dir.parent / "profile.json")     # iş klasöründeki profil
 
     @property
     def negative(self) -> str:
@@ -164,10 +166,10 @@ class Painter:
             # Sayfa planında sonradan eklenen sayfanın sahnesi yoktur: tarif yalnız editörün yönlendirmesidir.
             body = "Children's book illustration." + (f" {sc.scene}" if sc.scene else "") + \
                 (f" Setting: {sc.setting}." if sc.setting else "")
+            if self.bubble_space and sc.kind in ("flow", "full"):
+                body += f" {BUBBLE_SPACE}"
             if direction.strip():
                 body += f" Editor's direction (follow it): {direction.strip()}."
-            if self.bubble_space:
-                body += BUBBLE_SPACE
             prompt = self._prompt(body, chars, sc.outfits)
             refs = [self.refs[c.name] for c in chars if c.name in self.refs][:MAX_REFS]
         extra = "" if base_image else (" Keep each character's face, body and colors exactly as in the reference"
