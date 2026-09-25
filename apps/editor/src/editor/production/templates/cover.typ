@@ -31,10 +31,12 @@
   place(top + left, dx: front-x + d.safe * 1mm, dy: b + th * 0.22, box(width: inner, align(center)[
     #set par(leading: 0.45em, justify: false)
     #text(font: d.heading_font, weight: 800, size: ft.title_size * 1pt, fill: ink, d.title)
-    #v(8mm)
-    #box(width: 18mm, line(length: 100%, stroke: 1.2pt + ink))
-    #v(6mm)
-    #text(font: d.heading_font, weight: 600, size: ft.author_size * 1pt, fill: ink, d.author)
+    #if d.author != "" [
+      #v(8mm)
+      #box(width: 18mm, line(length: 100%, stroke: 1.2pt + ink))
+      #v(6mm)
+      #text(font: d.heading_font, weight: 600, size: ft.author_size * 1pt, fill: ink, d.author)
+    ]
   ]))
   place(top + left, dx: front-x + d.safe * 1mm, dy: b + th - d.safe * 1mm - 8mm, box(width: inner,
     align(center, text(size: 10pt, weight: "bold", tracking: 1.5pt, fill: ink, upper(d.publisher)))))
@@ -78,5 +80,5 @@
   place(top + left, dx: b + tw, dy: b, box(width: sp, height: th,
     align(center + horizon, rotate(90deg, reflow: true,
       text(font: d.heading_font, weight: 800, size: calc.min(11, d.spine * 1.8) * 1pt, fill: white,
-        d.title + "  ·  " + d.author)))))
+        if d.author != "" { d.title + "  ·  " + d.author } else { d.title })))))
 }

@@ -103,6 +103,8 @@ def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kun
     ungrounded = [s.page for s in scenes if not s.grounded]
     add("Resim–metin bağı", "WARN" if ungrounded else "OK",
         "her resmin sahnesi sayfanın cümlesine bağlı" if not ungrounded else f"alıntısı tutmayan sayfa: {ungrounded}")
+    if not (getattr(ms, "author", None) or "").strip():
+        add("Yazar adı", "WARN", "yazar adı girilmemiş; kapakta ve sırtta yazar satırı basılmadı — künyeden girin")
     if cover is not None:
         c = pymupdf.open(cover)
         add("Kapak açılımı", "OK" if c.page_count == 1 else "FAIL",
