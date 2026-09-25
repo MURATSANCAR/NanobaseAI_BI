@@ -140,9 +140,10 @@ def sections(d: Path) -> list[Section]:
     return out
 
 
-def windows(text: str, size: int = WINDOW_CHARS) -> list[str]:
-    """Metni paragraf sınırından en çok `size` harflik parçalara böler; tek paragraf daha uzunsa cümle sınırından,
-    o da olmazsa boşluktan. Hiçbir harf düşmez: parçaların birleşimi metnin tamamıdır."""
+def windows(text: str, size: int | None = None) -> list[str]:
+    """Metni paragraf sınırından en çok `size` (varsayılan WINDOW_CHARS) harflik parçalara böler; tek paragraf daha
+    uzunsa cümle sınırından, o da olmazsa boşluktan. Hiçbir kelime düşmez: parçaların birleşimi metnin tamamıdır."""
+    size = size or WINDOW_CHARS
     paras = [p for p in re.split(r"\n\s*\n", text) if p.strip()]
     pieces: list[str] = []
     for p in paras:
@@ -459,7 +460,8 @@ async def gen_back(d: Path, llm, by: str, progress=lambda n, t, w="": None) -> d
     old = _read(d, "arka-kapak.json", {})
     _write(d, "arka-kapak.json", {**old, "options": opts, "capacity": cap, "generated_by": by, "generated_at": _now(),
                                   "draft": old.get("draft") or {"text": opts[0]["text"], "by": by, "at": _now(),
-                                                                "from": opts[0]["id"]}})
+                                                                "from": opts[0]["id"],
+                                                                **{k: opts[0][k] for k in ("height_mm", "fill", "fits")}}})
     log_event(d, by, "arka kapak üretildi", options=len(opts))
     progress(1, 1, "Arka kapak yazıldı")
     return _read(d, "arka-kapak.json")
@@ -476,7 +478,7 @@ def save_back(d: Path, text: str, by: str) -> dict:
     """Editörün düzelttiği taslak; onay varsa düşer (onaylanan metin değiştiyse)."""
     st = _read(d, "arka-kapak.json", {})
     text = _clean_text(text)
-    st["draft"] = {"text": text, "by": by, "at": _now()}
+    st["draft"] = {"text": text, "by": by, "at": _now(), **_fit_info(d, [text])[0]}
     if st.get("approved") and st["approved"]["text"] != text:
         st["approved"] = None
     _write(d, "arka-kapak.json", st)
@@ -486,8 +488,9 @@ def save_back(d: Path, text: str, by: str) -> dict:
 def approve_back(d: Path, text: str, by: str) -> dict:
     st = _read(d, "arka-kapak.json", {})
     text = _clean_text(text)
-    st["draft"] = {"text": text, "by": by, "at": _now()}
-    st["approved"] = {"text": text, "by": by, "at": _now(), **_fit_info(d, [text])[0]}
+    fit = _fit_info(d, [text])[0]
+    st["draft"] = {"text": text, "by": by, "at": _now(), **fit}
+    st["approved"] = {"text": text, "by": by, "at": _now(), **fit}
     _write(d, "arka-kapak.json", st)
     log_event(d, by, "arka kapak onaylandı", words=len(text.split()))
     return back_view(d)
@@ -537,16 +540,10 @@ def back_view(d: Path) -> dict:
         g = back_geometry(d)
     except Exception:  # noqa: BLE001 - spec yoksa alan bilgisi yok
         g = None
-    draft = st.get("draft")
-    fit = None
-    if draft and g:
-        try:
-            fit = _fit_info(d, [draft["text"]])[0]
-        except Exception:  # noqa: BLE001 - ölçüm yapılamazsa yalnız alan bilgisi eksik kalır
-            log.exception("back cover measure failed")
-    return {"options": st.get("options", []), "capacity": st.get("capacity"), "area": g and
-            {"width_mm": g["width"], "height_mm": g["height"]}, "draft": draft, "draft_fit": fit,
-            "approved": st.get("approved"), "applied": st.get("applied"), "crm": _crm(d) if _crm(d) != "(yok)" else "",
+    crm = _crm(d)
+    return {"options": st.get("options", []), "capacity": st.get("capacity"),
+            "area": g and {"width_mm": g["width"], "height_mm": g["height"]}, "draft": st.get("draft"),
+            "approved": st.get("approved"), "applied": st.get("applied"), "crm": "" if crm == "(yok)" else crm,
             "generated_by": st.get("generated_by"), "generated_at": st.get("generated_at")}
 
 
@@ -830,7 +827,13 @@ def save_guide(d: Path, guide: dict, by: str, approve: bool = False) -> dict:
         (mdir(d) / "kilavuz" / "kilavuz.pdf").unlink(missing_ok=True)
     _write(d, "kilavuz.json", st)
     if approve:
-        build_guide_pdf(d)
+        try:
+            build_guide_pdf(d)
+        except Exception as e:
+            log.exception("guide pdf failed")
+            st["approved"] = None
+            _write(d, "kilavuz.json", st)
+            raise ValueError(f"Kılavuz PDF'i dizilemedi, onay kaydedilmedi: {str(e)[:200]}") from None
         log_event(d, by, "öğretmen kılavuzu onaylandı, PDF dizildi")
     return guide_view(d)
 
@@ -1077,7 +1080,8 @@ def _cover_fit(im, w: int, h: int):
 
 def render_social(d: Path, template: str, visual: str, source: str | None, headline: str, effect: str,
                   color: str | None, quote: str | None):
-    """Tek görsel (PNG, RGB). Dönen: (Image, draft)."""
+    """Tek görsel (PNG, RGB). Dönen: (Image, draft). Yerleşim şablona göre: kare ve dikeyde üstte başlık, ortada
+    görsel, altta kitap adı/yazar; yatayda görsel solda (alıntıda kapak sağda), yazı öbür yarıda."""
     from PIL import Image, ImageDraw, ImageFilter
     if template not in TEMPLATES:
         raise ValueError("Şablon: kare, dikey ya da yatay.")
@@ -1090,25 +1094,38 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
     if bg not in cols:
         raise ValueError("Renk kitabın paletinden seçilmeli.")
     W, H = TEMPLATES[template]
+    wide = template == "yatay"
     ms = studio._manuscript(d)
     style, body = _faces(d)
     headline = re.sub(r"\s+", " ", headline or "").strip()
     accents = [c for c in cols if c != bg] or [bg]
     img = Image.new("RGB", (W, H), _rgb(bg))
     ink = _ink_on(bg)
-    draft = False
     srcs = {s["key"]: s for s in social_sources(d)}
     m = int(min(W, H) * 0.06)
     byline = ms.title + (f" · {ms.author}" if ms.author else "")
+    by_size = int(min(W, H) * 0.04)
+    by_h = int(by_size * 1.2 * 2)
 
-    def small(text, y, size_max, face=body, color_=ink, box_w=W - 2 * m):
-        size, lines = _fit(text, face, box_w, int(size_max * 2.4), 1.15, size_max, 14)
-        f = _font(face, size)
+    def small(text, x0, x1, y, size_max=by_size):
+        size, lines = _fit(text, body, x1 - x0, int(size_max * 2.4), 1.15, size_max, 14)
+        f = _font(body, size)
         dr = ImageDraw.Draw(img)
         for i, ln in enumerate(lines):
-            dr.text(((W - ct._width(f, ln)) // 2 - f.getbbox(ln)[0], y + i * int(size * 1.15)), ln, font=f,
-                    fill=_rgb(color_))
-        return y + len(lines) * int(size * 1.15)
+            dr.text((x0 + (x1 - x0 - ct._width(f, ln)) // 2 - f.getbbox(ln)[0], y + i * int(size * 1.15)), ln,
+                    font=f, fill=_rgb(ink))
+
+    def shadowed(pic, x, y):
+        sh = Image.new("L", img.size, 0)
+        off = max(6, pic.height // 60)
+        ImageDraw.Draw(sh).rectangle((x + off, y + off * 2, x + pic.width + off, y + pic.height + off * 2), fill=140)
+        sh = sh.filter(ImageFilter.GaussianBlur(off * 2))
+        img.paste(Image.new("RGB", img.size, (15, 12, 10)), (0, 0), sh)
+        img.paste(pic, (x, y))
+
+    def scaled(pic, max_w, max_h):
+        k = min(max_w / pic.width, max_h / pic.height)
+        return pic.resize((max(1, int(pic.width * k)), max(1, int(pic.height * k))), Image.Resampling.LANCZOS)
 
     if visual == "quote":
         q = clean_quote(quote or "")
@@ -1116,29 +1133,33 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
             raise ValueError("Alıntı boş olamaz.")
         if not in_book(q, norm("\n".join(s.text for s in sections(d)))):
             raise ValueError("Bu alıntı kitabın metninde birebir geçmiyor; kitaptan aynen alın.")
-        qf = ct.Face(style.subtitle.file, style.subtitle.weight)
-        top, bottom = int(H * 0.16), int(H * (0.70 if template != "yatay" else 0.74))
-        left = m * 2
-        box_w = W - 2 * left - (int(W * 0.30) if template == "yatay" else 0)
-        size, lines = _fit(f"“{q}”", qf, box_w, bottom - top, 1.25, int(min(W, H) * 0.09), 22)
+        draft = False
+        cover = _cover_front(d, 1200) if "kapak" in srcs else None
+        if cover is not None:
+            draft = srcs["kapak"]["draft"]
+        qf = style.subtitle
+        if wide:
+            cv = scaled(cover, W * 0.3, H - 2 * m) if cover else None
+            x1 = W - m - (cv.width + m if cv else 0)
+            qbox = (m * 2, m * 2, x1 - m, H - m - by_h - m // 2)
+            if cv:
+                shadowed(cv, W - m - cv.width, (H - cv.height) // 2)
+        else:
+            cv = scaled(cover, W * 0.5, H * (0.2 if template == "kare" else 0.22)) if cover else None
+            low = H - m - (cv.height + m // 2 if cv else 0) - by_h
+            qbox = (m * 2, int(H * 0.14), W - m * 2, low - m // 2)
+            if cv:
+                shadowed(cv, (W - cv.width) // 2, H - m - cv.height)
+        size, lines = _fit(f"“{q}”", qf, qbox[2] - qbox[0], qbox[3] - qbox[1], 1.25, int(min(W, H) * 0.085), 22)
         f = _font(qf, size)
         dr = ImageDraw.Draw(img)
-        y = top + (bottom - top - len(lines) * int(size * 1.25)) // 2
+        y = qbox[1] + (qbox[3] - qbox[1] - len(lines) * int(size * 1.25)) // 2
         for i, ln in enumerate(lines):
-            x = left + (box_w - ct._width(f, ln)) // 2 - f.getbbox(ln)[0]
-            dr.text((x, y + i * int(size * 1.25)), ln, font=f, fill=_rgb(ink))
-        dr.rectangle((W // 2 - m, int(H * 0.09), W // 2 + m, int(H * 0.09) + max(4, m // 6)), fill=_rgb(accents[0]))
-        by_y = bottom + m // 2
-        small("— " + byline, by_y, int(min(W, H) * 0.038))
-        if "kapak" in srcs:
-            cv = _cover_front(d, int(H * (0.62 if template == "yatay" else 0.22)))
-            cx = W - cv.width - m if template == "yatay" else (W - cv.width) // 2
-            cy = (H - cv.height) // 2 if template == "yatay" else H - cv.height - m
-            if template != "yatay" and cy < by_y + int(min(W, H) * 0.12):
-                cv = None
-            if cv is not None:
-                img.paste(cv, (cx, cy))
-                draft = draft or srcs["kapak"]["draft"]
+            dr.text((qbox[0] + (qbox[2] - qbox[0] - ct._width(f, ln)) // 2 - f.getbbox(ln)[0], y + i * int(size * 1.25)),
+                    ln, font=f, fill=_rgb(ink))
+        cx = (qbox[0] + qbox[2]) // 2
+        dr.rectangle((cx - m, qbox[1] - m // 2, cx + m, qbox[1] - m // 2 + max(4, m // 6)), fill=_rgb(accents[0]))
+        small("— " + byline, qbox[0], qbox[2], qbox[3] + m // 3)
         return img, draft
 
     key = source or ("kapak" if visual == "cover" else None)
@@ -1147,53 +1168,43 @@ def render_social(d: Path, template: str, visual: str, source: str | None, headl
     draft = srcs[key]["draft"]
     pic = source_image(d, key, 1800)
     if visual == "cover":
-        if template == "yatay":
-            ch = int(H * 0.84)
-            cv = pic.resize((int(pic.width * ch / pic.height), ch), Image.Resampling.LANCZOS)
-            cx, cy = m * 2, (H - ch) // 2
-            area = (cx + cv.width + m * 2, m * 2, W - m * 2, H - m * 2)
-        else:
-            ch = int(H * (0.62 if template == "dikey" else 0.58))
-            cv = pic.resize((int(pic.width * ch / pic.height), ch), Image.Resampling.LANCZOS)
-            if cv.width > W - 2 * m:
-                cv = cv.resize((W - 2 * m, int(cv.height * (W - 2 * m) / cv.width)), Image.Resampling.LANCZOS)
-            cx = (W - cv.width) // 2
-            cy = int(H * (0.25 if template == "dikey" else 0.30)) if headline else (H - cv.height) // 2
-            area = (m, m, W - m, cy - m // 2)
-        shadow = Image.new("L", img.size, 0)
-        off = max(6, cv.height // 60)
-        ImageDraw.Draw(shadow).rectangle((cx + off, cy + off * 2, cx + cv.width + off, cy + cv.height + off * 2), fill=140)
-        shadow = shadow.filter(ImageFilter.GaussianBlur(off * 2))
-        img.paste(Image.new("RGB", img.size, (15, 12, 10)), (0, 0), shadow)
-        img.paste(cv, (cx, cy))
-        if headline:
-            if template == "yatay":
-                half = (area[3] - area[1]) * 2 // 3
-                _draw_headline(img, headline, style.title, (area[0], area[1], area[2], area[1] + half), effect,
-                               accents, ink, int(H * 0.16))
-                small(byline, area[1] + half + m // 2, int(H * 0.06), box_w=area[2] - area[0])
+        if wide:
+            cv = scaled(pic, W * 0.42, H - 2 * m)
+            shadowed(cv, m * 2, (H - cv.height) // 2)
+            x0 = m * 2 + cv.width + m * 2
+            if headline:
+                _draw_headline(img, headline, style.title, (x0, m, W - m, H - m - by_h - m // 2), effect, accents,
+                               ink, int(H * 0.16))
+                small(byline, x0, W - m, H - m - by_h)
             else:
-                _draw_headline(img, headline, style.title, area, effect, accents, ink, int(W * 0.12))
-                small(byline, cy + cv.height + m, int(W * 0.04))
+                small(byline, x0, W - m, (H - by_h) // 2)
         else:
-            small(byline, cy + cv.height + m // 2, int(W * 0.04)) if template != "yatay" else None
+            head_h = int(H * (0.22 if template == "dikey" else 0.24)) if headline else 0
+            room = H - 2 * m - head_h - by_h - m
+            cv = scaled(pic, W - 2 * m, room)
+            y = m + head_h + (room - cv.height) // 2 + (m // 2 if headline else 0)
+            if headline:
+                _draw_headline(img, headline, style.title, (m, m, W - m, m + head_h), effect, accents, ink,
+                               int(W * 0.12))
+            shadowed(cv, (W - cv.width) // 2, y)
+            small(byline, m, W - m, H - m - by_h)
         return img, draft
 
-    # visual == "page": resim tam zemin, altta ya da yanda yazı bandı
-    if template == "yatay":
+    # visual == "page": resim zemini doldurur, yanda ya da altta yazı bandı
+    if wide:
         pw = int(W * 0.58)
         img.paste(_cover_fit(pic, pw, H), (0, 0))
-        area = (pw + m, m * 2, W - m, H - m * 3)
         if headline:
-            _draw_headline(img, headline, style.title, area, effect, accents, ink, int(H * 0.14))
-        small(byline, H - m * 2 - int(H * 0.05), int(H * 0.045), box_w=W - pw - 2 * m)
+            _draw_headline(img, headline, style.title, (pw + m, m, W - m, H - m - by_h - m // 2), effect, accents,
+                           ink, int(H * 0.14))
+        small(byline, pw + m, W - m, H - m - by_h if headline else (H - by_h) // 2)
     else:
-        band = int(H * (0.30 if template == "kare" else 0.24))
+        band = int(H * (0.30 if template == "kare" else 0.24)) if headline else by_h + 2 * m
         img.paste(_cover_fit(pic, W, H - band), (0, 0))
-        area = (m, H - band + m // 2, W - m, H - m - int(W * 0.06))
         if headline:
-            _draw_headline(img, headline, style.title, area, effect, accents, ink, int(band * 0.42))
-        small(byline, H - m - int(W * 0.05), int(W * 0.036))
+            _draw_headline(img, headline, style.title, (m, H - band + m // 2, W - m, H - m - by_h), effect, accents,
+                           ink, int(band * 0.42))
+        small(byline, m, W - m, H - m - by_h)
     return img, draft
 
 
@@ -1308,4 +1319,4 @@ def view(d: Path) -> dict:
         log.exception("quote list failed")
     return {"title": ms.title, "author": ms.author, "band": age_band(prof.get("age_min"), prof.get("age_max")),
             "tasks": tasks(d), "back_cover": back_view(d), "product": product_view(d), "social": social_view(d),
-            "quotes": dg_quotes, "guide": guide_view(d), "events": events(d)[:50]}
+            "quotes": dg_quotes, "guide": guide_view(d), "events": events(d)}
