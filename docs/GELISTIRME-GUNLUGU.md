@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (01:00) — SEO & GEO: sayfalar gece ön üretiminde; şema denetimi ve tema isteği belgesi
+
+- **Ön üretim:** yazar/kategori/yayınevi sayfaları da gece turunda (kitabı olan, sorunlu, önerisi olmayan; çok satandan), ürünlerle karışık 3:1 — ürün sırası binlerce olduğu için sayfalar sona kalsa günlerce sıra gelmezdi.
+- **Şema denetimi (`seo_geo/schema.py`):** canlı kitap sayfası yalnız okunarak (TimasZekiBot/1.0, robots.txt, saniyede 1) taranır; JSON-LD'de Book/Product, isbn, author Person/sameAs, publisher, numberOfPages, offers, yorumlu kitapta aggregateRating, açıklamasında soru–cevap olan kitapta FAQPage; canonical, noindex, meta=başlık. Sıra: hiç bakılmamış/en eski, eşitse çok satan; gece `run-due` en çok 2 saat, kalan sonraki gece (tavan yok). Tablo `semantic_seo_schema` (`_org` satırı kurum şeması). 12 canlı sayfa denemesi: yazar sameAs eksik 11, meta=başlık 12, sayfa sayısı eksik 4; kurum adı «timas.com.tr». İlk sürümde "soru–cevap şeması yok" 12/12 çıktı — sayfanın alt menüsündeki «Sıkça Sorulan Sorular» bağlantısı sayılıyordu; artık ürünün T-soft açıklamasına bakılır.
+- **Tema isteği belgesi:** `GET /api/v1/seo-geo/schema/theme-request.md` — son taramanın oranları, en çok satan gerçek kitaptan örnek JSON-LD (Book+Product, Person sameAs, AggregateRating), FAQPage, Organization düzeltmesi, başlık şablonu, llms.txt. Ekran `/seo-geo/sema`.
+
 ## 2026-09-26 (00:10) — SEO & GEO: yazar, kategori ve yayınevi sayfaları (denetim + Zeki AI önerisi)
 
 - **Kaynak:** `semantic_seo_links` (T-soft `link/getLinks` başlık/açıklama) + ürünler; bağ ürünün `ModelId`/`BrandId`/`DefaultCategoryId` (+`Categories`) → sayfanın `TableId`. Yazar için Wikidata özeti yalnız basın-web modülünün doğrulanmış kaydından (tablo yoksa atlanır).
