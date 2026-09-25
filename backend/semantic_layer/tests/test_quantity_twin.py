@@ -75,3 +75,15 @@ def test_a_certified_quantity_name_and_a_balance_unit_are_left_alone(catalog, pr
 def test_the_amount_is_still_the_amount(catalog, profiles):
     sq = _resolver(catalog, profiles).resolve("2022 satış tutarı", today=TODAY)
     assert [m for m, _ in _metrics(sq)] == ["satis tutari"], _metrics(sq)
+
+
+def test_a_listed_unit_word_and_a_quantity_measure_keep_their_old_reading(catalog, profiles):
+    """Tam set regresyonu 2026-09-25: "ciro, adet ve iade" bir liste; "sevk adedi"nde sevk zaten adet ölçüsü
+    ("sevk edilen adet" eş anlamlısıyla). İkisinde de geri soru sorulmaz."""
+    _certify(catalog, "sevkiyat", SemanticType.METRIC, Mapping(concept_id="", entity="STLINE", table_pattern=STL,
+             formula="SUM(STLINE.AMOUNT)", extra={"func": "SUM", "conditions": ["STLINE.TRCODE IN (8)"]}), synonyms=["sevk", "sevk edilen adet"])
+    r = _resolver(catalog, profiles)
+    sq = r.resolve("2024 ile 2025'i ciro, adet ve iade açısından yan yana koy.", today=TODAY)
+    assert not sq.clarification, sq.clarification
+    sq = r.resolve("Kargo çıkış şubesine göre sevk adedi nasıl dağılıyor?", today=TODAY)
+    assert not any("adet" in c for c in sq.clarification), sq.clarification

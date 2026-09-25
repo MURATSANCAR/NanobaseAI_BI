@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (00:40) — Sohbet K1: "adet/miktar" sorulunca tutar dönmüyor
+
+- Müşteri VM'i analizi (66 gerçek kullanıcı sorusu, yalnız okuma): %24 doğru; sınıflar K2 özel ad 16, **K1 adet→tutar 10**, K3 gün/saat/aralık 9, K4 tanımlı ölçü eşleşmiyor 7, K5 yazım 2. K1 ve K2 test sunucusunda da aynı (genel, VM'e özgü değil). Sıra kullanıcıyla: K1 → K2 → K3 → K4 → K5.
+- **K1 kök neden:** "adet/adedi" n-gram eşleştiricide niteleyici (MODIFIERS) sayılıp hiç eşleşmeye girmiyor, "miktar" katalogda yok → "2022 satış adedi", "kaç adet satış", "ağustos satış miktarı" hepsi `SUM(LINENET)` (tutar) döndü; "brüt satış adedi" brüt kâr **marjı** döndü. Kelime ne çözülmüş ne yok sayılmış görünüyordu.
+- **Düzeltme (genel):** `resolver.py` 2d2 `_quantity_twins`: bir değer ölçüsünün hemen önünde/ardında adet sözcüğü (adet/adedi/miktar…) varsa ölçünün sertifikalı **adet karşılığı** aranır — adında ya da eş anlamlısında birim sözcüğü olan ve ölçünün kendi sözcüklerini taşıyan ölçü ("satış" ↔ "satılan adet"). Aynı ifade birden çok kavrama bağlıysa o ifade doğrudan sorulunca seçilen okunur. Karşılık yoksa ya da belirsizse tutar verilmez, geri sorulur ("brüt/net satış adedi"). Durum ölçüsünün birimi ("stok adedi"), sayılan kayıt ("sipariş adedi"), oran, zaten adet olan ölçü ("sevk adedi"), liste virgülü ("ciro, adet ve iade") dokunulmaz.
+- **Doğrulama:** `test_quantity_twin.py` 6/6 (+ `test_count_after_term`); `semantic_layer` testlerinde `main`'e göre yeni düşen yok (main'de zaten 28 düşen var; `test_llm_queue` yükte zamanlama, tek başına geçer). Tam set modelsiz/DB'siz plan karşılaştırması 1.600 soru: 1.592 aynı, 8 değişen hepsi "satış adedi" → adet (ilk iki denemede çıkan 4 bozulma — liste virgülü, "sevk" eş anlamlısı — ve 8 gereksiz geri soru düzeltildi). Gerçek Logo: "2026 mayıs satış adedi" üretilen SQL 732.779 = bağımsız referans 732.779 (eski cevap 87,8 Mn TL tutardı).
+
 ## 2026-09-26 (00:40) — Kelime tekrarı v2: sayfada işaret, gruplu karar, anlamı korunan öneri — test sunucusunda
 
 - **Sayfada işaret:** tekrar bulgusu sayfa görselinde kutulanıyor; tekrarın aynı sayfadaki bütün geçişleri de (`marks`). Dilek Ağacı: 120 bulgunun 105'i işaretli, 96'sında ≥2 geçiş. Eşleme sayfanın basılı sözcüklerinde sıra ile; sayı tutmazsa işaret yok.
@@ -15,6 +22,7 @@
 - **Kurulum:** 11 dosya (önce/sonra md5 main ile aynı, `._*` 0), arayüz `index-DW5l9nZz.js`, köprü 200. Uçlar gerçek oturumla: şema, tema belgesi (3,1 KB), GEO motor listesi (4 motor, hiçbirinin anahtarı yok); ekranlar masaüstü/390 px taşmasız.
 - **Hata:** ilk tarama 122 sayfanın hepsinde "kitap şeması yok / canonical yok" buldu. Sebep: Yönetim'deki «Mağaza adresi» (`SEO_SITE_URL`) 25.09 14:52'de T-soft kimlik bilgileri girilirken `https://satinal.timas.com.tr/rest1` olarak kaydedilmiş; tarayıcı kitap sayfası yerine REST adresine GET atmış ("Controller is not allowed!"; yalnız okuma, T-soft'a yazma yok). Ekrandaki ürün bağlantıları da bu yüzden yanlıştı. Ayar `https://timas.com.tr` yapıldı, köprü yeniden başlatıldı (yanlış tur durdu), yanlış 137 şema kaydı silindi, tarama doğru adresle yeniden başladı: ilk 71 kitapta yazar sameAs eksik 71, meta=başlık 71, soru–cevap var şema yok 29; kurum adı «timas.com.tr».
 - **Koruma (dalda, kurulmadı):** «Mağaza adresi» REST adresi ya da http(s) olmayan değer kabul etmez; tarama site adresinde `/rest` görürse ya da ilk sayfalar HTML dönmezse durur ve nedenini yazar.
+
 
 ## 2026-09-26 (01:40) — SEO & GEO: çok motorlu yapay zekâ görünürlük ölçümü (Gemini ücretsiz; ChatGPT/Perplexity/Claude anahtarla)
 
