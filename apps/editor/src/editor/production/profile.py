@@ -36,6 +36,7 @@ class Profile:
     model: dict
     disagreement: str | None = None
     reasons: list[dict] = field(default_factory=list)
+    illustration_source: str = "model okuması"
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -95,10 +96,23 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s.replace("’", "'")).strip().casefold()
 
 
+def illustration_decision(model: str, genre: str, illustrator: str | None) -> tuple[str, str]:
+    """Resim kararı. Yayınevi kaydında çizeri olan kitap resimlidir: modelin «YOK»u geçersizdir (model Word
+    taslağında resim göremediği için resimsiz sanıyordu; 2026-09-25, çizeri kayıtlı 8–11 yaş romanı).
+    Resimle okunan türlerde her sayfa, ötekilerde bölüm başı."""
+    if illustrator and model == "YOK":
+        return ("HER_SAYFA" if genre in ("RESIMLI_OYKU", "ILK_OKUMA") else "BOLUM_BASI",
+                f"yayınevi kaydı: çizer {illustrator}")
+    if illustrator:
+        return model, f"yayınevi kaydı (çizer {illustrator}) + model okuması"
+    return model, "model okuması"
+
+
 async def build(ms: Manuscript, llm) -> Profile:
     from ..prompts import render
     stats = reading_stats(ms)
-    ref, prompt = render("production_profile", title=ms.title, text=_model_text(ms))
+    ref, prompt = render("production_profile", title=ms.title, text=_model_text(ms),
+                         illustrator=ms.illustrator or "(yayınevi kaydında çizer yok)")
     out, _ = await llm.chat("book-director", [{"role": "user", "content": prompt}], prompt=ref,
                             schema=SCHEMA, max_tokens=3000, thinking=False)
     full = _norm(ms.text())
@@ -111,8 +125,9 @@ async def build(ms: Manuscript, llm) -> Profile:
     gap = max(abs(age_min - out["age_min"]), abs(age_max - out["age_max"]))
     disagreement = (f"Beyan {age_min}-{age_max}, model {out['age_min']}-{out['age_max']} yaş"
                     if decl and gap > 2 else None)
+    illustration, ill_source = illustration_decision(out["illustration"], out["genre"], ms.illustrator)
     return Profile(age_min=age_min, age_max=age_max, age_source=source, genre=out["genre"],
-                   illustration=out["illustration"], tone=out["tone"], reading=stats,
+                   illustration=illustration, illustration_source=ill_source, tone=out["tone"], reading=stats,
                    declared={"age": decl, "genre": ms.meta.get("GENRE")},
                    model={k: out[k] for k in ("age_min", "age_max", "genre", "illustration")},
                    disagreement=disagreement, reasons=reasons)

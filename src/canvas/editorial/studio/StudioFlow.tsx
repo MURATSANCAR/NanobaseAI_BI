@@ -24,6 +24,8 @@ export function useStudioJob(id: string) {
 }
 
 /** Önizleme adresi, işin son değişikliğiyle değişsin (tarayıcı eski sayfayı göstermesin). */
+const ILLUSTRATION_TR: Record<string, string> = { HER_SAYFA: 'Her sayfada', BOLUM_BASI: 'Bölüm başlarında', YOK: 'Resimsiz' };
+
 export function revision(d: StudioJob | undefined) {
   if (!d) return '';
   const arts = [...d.pages.map((p) => p.art?.selected ?? 0), d.cover.art?.selected ?? 0].join('.');
@@ -136,6 +138,7 @@ export default function StudioFlow() {
                   <Field label="Stok kodu" value={d.book?.meta?.STOCK_CODE as string} />
                   <Field label="Hedef yaş" value={d.profile ? `${d.profile.age_min}–${d.profile.age_max}` : null} />
                   <Field label="Tür" value={d.book?.meta?.GENRE as string} />
+                  <Field label="Resim" value={d.profile ? `${ILLUSTRATION_TR[d.profile.illustration] ?? d.profile.illustration}${d.profile.illustration_source ? ` · ${d.profile.illustration_source}` : ''}` : null} />
                 </div>
                 {summary.length > 0 && (
                   <blockquote className="mt-3 rounded-2xl border-l-4 border-canvas-violet/50 bg-white/70 px-3 py-2 text-[12.5px] italic leading-relaxed text-slate-700">

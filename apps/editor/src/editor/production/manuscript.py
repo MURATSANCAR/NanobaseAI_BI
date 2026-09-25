@@ -60,12 +60,27 @@ def _letters(s: str) -> str:
     return re.sub(r"[^A-Za-zÇĞİÖŞÜÂÎÛçğıöşüâîû]", "", s)
 
 
+_LOWER_UPPER = re.compile(r"[a-zçğıöşüâîû][A-ZÇĞİÖŞÜÂÎÛ]")
+
+
+def _styled_case(t: str) -> bool:
+    """Tasarımcı yazımı başlık: «KİtApLaRdAn NeFrEt EdİyOrUm», «EvE Dönüş». Kelimelerin en az yarısı ya
+    tamamen büyük ya da kelime içinde küçükten büyüğe geçen harf taşır; en az biri bu geçişi taşır (düz
+    metinde kelime içinde küçük harften sonra büyük harf gelmez)."""
+    words = [_letters(w) for w in t.split() if len(_letters(w)) >= 2]
+    if not words:
+        return False
+    mixed = [w for w in words if _LOWER_UPPER.search(w)]
+    styled = [w for w in words if _LOWER_UPPER.search(w) or w == w.upper()]
+    return bool(mixed) and 2 * len(styled) >= len(words)
+
+
 def is_heading(text: str) -> bool:
-    """Bölüm başlığı: bütün harfleri büyük, en çok 6 kelime, cümle işaretiyle bitmeyen, konuşma ya da
-    alıntı olmayan satır."""
+    """Bölüm başlığı: bütün harfleri büyük (ya da tasarımcı yazımı, `_styled_case`), en çok 6 kelime, cümle
+    işaretiyle bitmeyen, konuşma ya da alıntı olmayan satır."""
     t = text.strip()
     letters = _letters(t)
-    return (bool(letters) and len(letters) >= 3 and letters == letters.upper()
+    return (bool(letters) and len(letters) >= 3 and (letters == letters.upper() or _styled_case(t))
             and len(t.split()) <= 6 and not t.endswith(TERMINAL)
             and not DIALOGUE.match(t) and not t.startswith(("“", "\"", "«")))
 
@@ -133,7 +148,14 @@ def normalize(paragraphs: list[tuple[int, str]], lex=None) -> list[tuple[str | N
         if not text:
             continue
         head, rest = (text, "") if is_heading(text) else split_leading_heading(text)
-        if head:
+        if head and chapters[-1][0] is not None and not chapters[-1][1]:
+            # Başlık birkaç satıra bölünmüş («KoRsAnLaRlA» / «BİrLİkTe BaLİnAnın» / «KaRnınDa»): tek başlık.
+            chapters[-1] = (f"{chapters[-1][0]} {head}", [])
+            prev = None
+            if not rest:
+                continue
+            text = rest
+        elif head:
             chapters.append((head, []))
             prev = None
             if not rest:
@@ -260,6 +282,8 @@ def _crm_by_title(ms: Manuscript) -> None:
         return
     r = hit[0]
     ms.author = ms.author or ", ".join(r["authors"] or []) or None
+    # Çizer kitabın resimli olduğunun yayınevi kaydıdır (profil resim kararında kullanır).
+    ms.illustrator = ms.illustrator or ", ".join(r["illustrators"] or []) or None
     ms.meta |= {k: v for k, v in (("ISBN", r["isbn"]), ("STOCK_CODE", r["stock_code"]),
                                   ("CRM_SUMMARY", r["summary"])) if v}
     ms.source["crm_book_id"] = str(r["crm_book_id"])

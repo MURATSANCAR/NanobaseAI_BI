@@ -1684,7 +1684,7 @@ export type StudioJob = {
   state: { title: string; status: 'running' | 'done' | 'fail'; error: string | null; started: number; finished: number | null; steps: StudioStep[] };
   busy: StudioBusy;
   book: { title: string; author: string | null; meta: Record<string, string | number | null>; chapters: (string | null)[]; words: number } | null;
-  profile: { age_min: number; age_max: number; age_source: string; genre: string; illustration: string; tone: string[];
+  profile: { age_min: number; age_max: number; age_source: string; genre: string; illustration: string; illustration_source?: string | null; tone: string[];
              reading: Record<string, number>; disagreement: string | null; reasons: { claim: string; quote: string }[] } | null;
   spec: { trim_w: number; trim_h: number; bleed: number; body_font: string; body_size: number; leading: number; paper: string;
           hyphenate: boolean; reasons: string[] } | null;

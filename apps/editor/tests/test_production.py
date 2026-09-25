@@ -368,3 +368,22 @@ def test_direction_goes_to_image_model_in_english():
     assert asyncio.run(direction_en("Kuşu kara bir karga yap", _cast(), llm)) == "Replace the bird with a black crow."
     assert "Kuşu kara bir karga yap" in llm.prompts[0] and "Tavşan" in llm.prompts[0]
     assert asyncio.run(direction_en("  ", _cast(), _FakeLlm())) == ""
+
+
+def test_illustrator_on_record_means_illustrated():
+    """Çizeri kayıtlı kitap resimlidir: modelin «YOK»u (taslakta resim yok diye) geçersiz (2026-09-25)."""
+    from editor.production.profile import illustration_decision
+    assert illustration_decision("YOK", "COCUK_ROMANI", "Julian Ariza") == ("BOLUM_BASI", "yayınevi kaydı: çizer Julian Ariza")
+    assert illustration_decision("YOK", "RESIMLI_OYKU", "X")[0] == "HER_SAYFA"
+    assert illustration_decision("HER_SAYFA", "COCUK_ROMANI", "X")[0] == "HER_SAYFA"
+    assert illustration_decision("YOK", "YETISKIN_ROMANI", None) == ("YOK", "model okuması")
+
+
+def test_designer_case_headings_split_chapters():
+    """Tasarımcı yazımı başlıklar bölüm açar, satırlara bölünmüş başlık birleşir (Kahramanını Yutan Kitap)."""
+    assert M.is_heading("KİtApLaRdAn") and M.is_heading("NeFrEt EdİyOrUm") and M.is_heading("EvE Dönüş")
+    assert not M.is_heading("Kahkaha atıveriyorum. Ahahaha HADİYE benim")
+    assert not M.is_heading("Didem Demirel") and not M.is_heading("NANiii NA- Niii")
+    ch = M.normalize([(0, "KİtApLaRdAn"), (0, "NeFrEt EdİyOrUm"), (0, "Ben kitap okumayı sevmiyorum."),
+                      (0, "KoRsAnLaRlA"), (0, "BİrLİkTe BaLİnAnın"), (0, "KaRnınDa"), (0, "Gemi sallandı.")], lex=set())
+    assert [h for h, _ in ch] == ["KİtApLaRdAn NeFrEt EdİyOrUm", "KoRsAnLaRlA BİrLİkTe BaLİnAnın KaRnınDa"]
