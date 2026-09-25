@@ -17,6 +17,11 @@ const GROUP_CHECK: Record<string, { id: string; label: string; help: string }> =
     help: 'CRM ayrı bir bağlantı değil: aynı sunucudaki başka bir veritabanı. Deneme, o veritabanının okunabildiğine bakar.',
   },
   llm: { id: 'llm', label: 'Sor', help: 'Modele tek kelimelik bir soru sorar; cevabın süresini ve geldiğini gösterir.' },
+  seo: {
+    id: 'seo',
+    label: 'Bağlantıyı sına',
+    help: 'T-soft’a kaydedilen kullanıcıyla giriş yapar, bir ürün okur; servis hesabı girildiyse Search Console’dan son 7 günü sorar. Hiçbir şey yazmaz.',
+  },
 };
 
 const SOURCE: Record<AdminSetting['source'], string> = {

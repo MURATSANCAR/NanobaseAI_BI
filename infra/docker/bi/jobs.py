@@ -39,6 +39,7 @@ JOBS = [
     ("uyarı kontrolü", "/api/v1/alerts/check", int(os.environ.get("ALERTS_EVERY_SEC", "900")), 590),
     ("pano kartları", "/api/v1/board/run-due", int(os.environ.get("BOARD_EVERY_SEC", "900")), 590),
     ("planlı raporlar", "/api/v1/reports/run-due", int(os.environ.get("REPORTS_EVERY_SEC", "300")), 1700),
+    ("SEO & GEO eşitlemesi", "/api/v1/seo-geo/run-due", int(os.environ.get("SEO_EVERY_SEC", "86400")), 1700),
 ]
 
 

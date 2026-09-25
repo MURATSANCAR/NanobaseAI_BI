@@ -147,6 +147,33 @@ SPEC: list[dict[str, Any]] = [
      "help": "Kaydedilen anahtar ekranda bir daha gösterilmez"},
     {"key": "LLM_TIMEOUT_SEC", "group": "llm", "label": "Zaman aşımı (sn)", "type": "int", "default": "240",
      "help": "Bir soru için modelin cevabı beklenecek en uzun süre"},
+    # SEO & GEO: T-soft mağazası ve Google. Parola ve anahtarlar ekranda bir daha gösterilmez.
+    {"key": "TSOFT_BASE", "group": "seo", "label": "T-soft REST adresi", "type": "text",
+     "default": "https://satinal.timas.com.tr/rest1", "help": "Mağazanın REST1 kökü, sonunda /rest1"},
+    {"key": "TSOFT_USER", "group": "seo", "label": "T-soft web servis kullanıcısı", "type": "text", "default": "",
+     "help": "T-soft panelindeki web servis kullanıcısı; IP kısıtı varsa bu sunucunun IP'si izinli olmalı"},
+    {"key": "TSOFT_PASSWORD", "group": "seo", "label": "T-soft şifresi", "type": "secret", "default": "",
+     "help": "Kaydedilen şifre ekranda bir daha gösterilmez"},
+    {"key": "SEO_SITE_URL", "group": "seo", "label": "Mağaza adresi", "type": "text", "default": "https://www.timas.com.tr",
+     "help": "Ürün sayfası bağlantıları ve arama önizlemesi bu adresle kurulur"},
+    {"key": "SEO_APPROVERS", "group": "seo", "label": "Onay verebilenler", "type": "text", "default": "",
+     "help": "AD hesap adları, virgülle. T-soft'a gönderimi bunlar onaylar. Boşsa yöneticiler onaylar"},
+    {"key": "SEO_TITLE_MIN", "group": "seo", "label": "SEO başlığı en kısa (karakter)", "type": "int", "default": "30", "help": ""},
+    {"key": "SEO_TITLE_MAX", "group": "seo", "label": "SEO başlığı en uzun (karakter)", "type": "int", "default": "65",
+     "help": "Google başlığı yaklaşık 60–65 karakterden sonra keser"},
+    {"key": "SEO_META_MIN", "group": "seo", "label": "Meta açıklama en kısa (karakter)", "type": "int", "default": "120", "help": ""},
+    {"key": "SEO_META_MAX", "group": "seo", "label": "Meta açıklama en uzun (karakter)", "type": "int", "default": "160", "help": ""},
+    {"key": "SEO_DESC_MIN_WORDS", "group": "seo", "label": "Ürün açıklaması en az (kelime)", "type": "int", "default": "150",
+     "help": "Bundan kısa açıklama hem arama hem yapay zekâ cevapları için zayıf sayılır"},
+    {"key": "GSC_SITE", "group": "seo", "label": "Search Console mülkü", "type": "text", "default": "sc-domain:timas.com.tr",
+     "help": "Alan adı mülkü sc-domain:… ya da https://… biçiminde"},
+    {"key": "GOOGLE_SERVICE_ACCOUNT_JSON", "group": "seo", "label": "Google servis hesabı (JSON)", "type": "secret", "default": "",
+     "help": "Cloud'da indirilen anahtar dosyasının içeriği. Servis hesabı Search Console'a kullanıcı, GA4'e Görüntüleyici olarak eklenmiş olmalı"},
+    {"key": "GA4_PROPERTY_ID", "group": "seo", "label": "GA4 mülk kimliği", "type": "text", "default": "",
+     "help": "Yönetici → Mülk ayrıntıları'ndaki sayı"},
+    {"key": "MERCHANT_ACCOUNT_ID", "group": "seo", "label": "Merchant Center kimliği", "type": "text", "default": "", "help": ""},
+    {"key": "GOOGLE_API_KEY", "group": "seo", "label": "Google API anahtarı", "type": "secret", "default": "",
+     "help": "PageSpeed ve CrUX için; yalnız bu iki API ile kısıtlı olmalı"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -172,6 +199,9 @@ GROUPS = [
              "süre içinde giriş yapmamış hesaplar girmez."},
     {"id": "llm", "label": "Yapay zekâ modeli (LLM)",
      "help": "Soruyu SQL'e çeviren model. Kaydedilen değer hemen geçerli olur, servis yeniden başlatılmaz."},
+    {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
+     "help": "Ürün SEO önerileri T-soft'tan okunur, onaylanan değişiklik aynı kullanıcıyla T-soft'a gönderilir. "
+             "Google verisi servis hesabıyla okunur."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
 ]
@@ -825,6 +855,18 @@ def email_config_test() -> tuple[bool, str]:
     return True, f"Ayarlı: {cfg['host']}:{cfg['port']} · gönderen {cfg['sender']}. Gerçek deneme için bir adrese gönderin."
 
 
+def _seo_check() -> tuple[bool, str]:
+    """T-soft'a giriş ve Search Console'a sorgu; ikisinin sonucu tek satırda. Google henüz girilmediyse
+    yalnız T-soft'un sonucu belirler."""
+    from semantic_bridge.seo_geo import connections
+
+    t_ok, t_msg = connections.tsoft_test()
+    if not conf("GOOGLE_SERVICE_ACCOUNT_JSON"):
+        return t_ok, f"T-soft: {t_msg} · Google: servis hesabı girilmedi."
+    g_ok, g_msg = connections.gsc_test()
+    return t_ok and g_ok, f"T-soft: {t_msg} · Google: {g_msg}"
+
+
 #: Tek tuşla çalışan denemeler. E-posta burada yalnız ayar bütünlüğüne bakar: bir denemenin
 #: kimseye posta göndermemesi gerekir.
 CHECKS: list[dict[str, Any]] = [
@@ -833,6 +875,7 @@ CHECKS: list[dict[str, Any]] = [
     {"id": "llm", "group": "llm", "label": "Yapay zekâ modeli", "run": llm_test},
     {"id": "directory", "group": "directory", "label": "Active Directory", "run": lambda: directory_test("")},
     {"id": "email", "group": "email", "label": "E-posta ayarı", "run": email_config_test},
+    {"id": "seo", "group": "seo", "label": "T-soft ve Google", "run": lambda: _seo_check()},
     {"id": "store", "group": None, "label": "Meta veritabanı", "run": store_test},
 ]
 _CHECK_BY_ID = {c["id"]: c for c in CHECKS}
@@ -1028,6 +1071,7 @@ TIMERS = [
     {"unit": "timas-alerts.timer", "label": "Uyarı kontrolü", "every": "15 dk"},
     {"unit": "timas-reports.timer", "label": "Planlı raporlar", "every": "5 dk"},
     {"unit": "timas-board.timer", "label": "Pano kartı tazeleme", "every": "15 dk"},
+    {"unit": "timas-seo.timer", "label": "SEO & GEO eşitlemesi", "every": "gece 03:00"},
     {"unit": "nanobase-semantic-worker.timer", "label": "Gece katalog taraması", "every": "gece"},
     {"unit": "nanobase-semantic-watchdog.timer", "label": "Köprü sağlık denetimi", "every": "5 dk"},
 ]

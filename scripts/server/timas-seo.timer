@@ -1,0 +1,10 @@
+[Unit]
+Description=SEO & GEO eşitlemesi, her gece 03:00
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=timas-seo.service
+
+[Install]
+WantedBy=timers.target

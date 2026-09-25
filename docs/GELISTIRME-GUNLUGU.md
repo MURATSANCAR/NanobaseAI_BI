@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (18:30) — SEO & GEO modülü: Stitch ekranları, T-soft denetim/onay hattı, Search Console bağlayıcısı (dalda, kurulmadı)
+
+- **Tasarım:** Stitch'te portal jetonlarıyla yeni tasarım sistemi «Timaş Portal Kanvas» (`assets/12401857364778149884`); 5 ekran `design/stitch-wow/seo-geo/` (genel bakış, ürün denetimi & onay, AI görünürlük, anahtar kelimeler, bağlantılar). Uzun üretimler MCP'de zaman aşımına düştüğü için JSON-RPC ile sırayla üretildi.
+- **Modül:** Kampüs'te 5. kutu «SEO & GEO», modül menüsünde yeni grup (M25/M26 Pazarlama'dan taşındı), kendi rayı `seoRail`, rotalar `/seo-geo`, `/urun-denetimi`, `/anahtar-kelimeler`, `/ai-gorunurluk`, `/gecmis`, `/baglantilar`. Ekranlar yalnız gerçek veri gösterir; veri yoksa neyin eksik olduğunu söyler.
+- **Backend `semantic_bridge/seo_geo/`:** T-soft REST1 istemcisi (giriş `auth/login/{user}`+`pass`, `product/get` 500'lük sayfalar, `updateProducts` yalnız değişen alanlar — boş gönderilen alan T-soft'ta sıfırlanır), 11 kurallı denetim (meta/başlık yok-uzunluk-yinelenen, açıklama yok/kısa, SSS yok, arama kelimesi, görsel, ISBN; eşikler Yönetim ekranında), model önerisi `rt.llm_for("seo")` (yalnız kayıttaki bilgi; SeoLink bilerek değiştirilmez), onay → gönderim → ürünü geri okuyup doğrulama, önceki değerlerle geri alma, `semantic_audit` kaydı. Search Console servis hesabıyla; JWT sunucudaki `openssl` ile imzalanır (yeni bağımlılık yok). Tablolar `semantic_seo_*`. Gece `timas-seo.timer` 03:00 → `/api/v1/seo-geo/run-due` (Docker yığınında `jobs.py`).
+- **Ayarlar:** Yönetim → «SEO & GEO» grubu (T-soft kullanıcı/şifre, onay verebilenler, eşikler, GSC mülkü, servis hesabı JSON'u, GA4/Merchant kimliği, API anahtarı) + «Bağlantıyı sına». Kimlik bilgileri kullanıcı tarafından ekrandan girilecek; Claude girmedi.
+- **Search Console gözlemi (zeki@, 25.09):** `sc-domain:timas.com.tr` — 3 ayda 245.202 tıklama; dizinde 22.129, dizin dışı 41.677 (yönlendirmeli 18.436, standart etiketli alternatif 12.807, taranmış-dizinde değil 5.108, 404 3.934, 5xx 41). zeki@ mülk sahibi değil (servis hesabını sahip eklemeli); GA4 ve Merchant Center'a erişimi yok.
+- **Doğrulama:** test sunucusunda geçici klasörde (`/tmp/seo-build`) `tsc -b` temiz, `vite build` başarılı; köprü sunucu Python ortamında yükleniyor, 16 uç kayıtlı; T-soft sunucudan erişilebilir (`isLogin` → "Token bulunamadı!", cevap biçimi istemciyle uyumlu). **DOĞRULANAMADI:** T-soft ve Google kimlik bilgileri girilmediği için gerçek eşitleme/öneri/gönderim koşulmadı; kurulum `main`e birleşmeyi bekliyor.
+
 ## 2026-09-25 (15:55) — ZEKI AI Tahminleme müşteri VM'inde çalışıyor (tahmin TT GPU'dan)
 
 - Kullanıcı `allow-source-ip.py 212.156.126.250/32`'yi GPU'da koşturdu: 21 yola eklendi. VM köprüsünden GPU sağlık 200; kitap kartları da yeniden 200 (aynı IP yüzünden 403 alıyordu).

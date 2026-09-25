@@ -29,6 +29,12 @@ const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'))
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
+const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
+const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
+const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
+const SeoVisibility = lazy(() => import('@/canvas/seo-geo/SeoVisibility'));
+const SeoHistory = lazy(() => import('@/canvas/seo-geo/SeoHistory'));
+const SeoConnections = lazy(() => import('@/canvas/seo-geo/SeoConnections'));
 
 function RouteFallback() {
   return (
@@ -65,6 +71,13 @@ export default function App() {
             {/* Yönetim Raporları: diğer modüllerden ayrı, kendi rayı ve uçlarıyla (/api/v1/management). */}
             <Route path="yonetim-raporlari" element={<ManagementHome />} />
             <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
+            {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
+            <Route path="seo-geo" element={<SeoHome />} />
+            <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
+            <Route path="seo-geo/anahtar-kelimeler" element={<SeoSearch />} />
+            <Route path="seo-geo/ai-gorunurluk" element={<SeoVisibility />} />
+            <Route path="seo-geo/gecmis" element={<SeoHistory />} />
+            <Route path="seo-geo/baglantilar" element={<SeoConnections />} />
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />

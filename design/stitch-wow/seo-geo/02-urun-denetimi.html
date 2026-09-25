@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+
+<html class="h-full" lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Timaş · SEO &amp; GEO · Ürün Denetimi &amp; Onay</title>
+<!-- Google Fonts: Plus Jakarta Sans, Public Sans & JetBrains Mono -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Public+Sans:wght@500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS CDN -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            ink: "#1B1F2A",
+            muted: "#6B7280",
+            coral: "#FF6B4A",
+            violet: "#7C5CFF",
+            mint: "#10B981",
+            amber: "#F59E0B"
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "sans-serif"],
+            display: ["Plus Jakarta Sans", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    /* Dot Grid Background overlay */
+    .bg-dot-grid {
+      background-size: 24px 24px;
+      background-image: radial-gradient(rgba(30, 41, 59, 0.12) 1.25px, transparent 1.25px);
+    }
+    
+    /* Mesh gradient backdrop */
+    .mesh-gradient-bg {
+      background-color: #f7fafc;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(255, 232, 214, 0.75) 0px, transparent 50%),
+        radial-gradient(at 50% 35%, rgba(221, 235, 255, 0.65) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, rgba(227, 255, 241, 0.7) 0px, transparent 55%);
+    }
+
+    /* Washi tape highlight styling */
+    .washi-tape {
+      background-color: rgba(255, 243, 205, 0.85);
+      border-left: 2px dashed #d97706;
+      border-right: 2px dashed #d97706;
+    }
+
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(100, 116, 139, 0.6);
+    }
+  </style>
+</head>
+<body class="font-body text-[#1B1F2A] mesh-gradient-bg min-h-screen selection:bg-coral/20 selection:text-ink relative overflow-x-hidden">
+<!-- Subtle Global Dot Grid Layer -->
+<div class="fixed inset-0 bg-dot-grid pointer-events-none z-0"></div>
+<!-- ========================================================================= -->
+<!-- LEFT SHELL: 54px Dual Rail + 236px Glass Menu Panel (= 290px Left Sidebar) -->
+<!-- ========================================================================= -->
+<aside class="fixed top-0 bottom-0 left-0 flex z-40 border-r border-white/80 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.08)] bg-white/70 backdrop-blur-2xl">
+<!-- 54px Ultra-Slim Icon Rail -->
+<div class="w-[54px] border-r border-white/80 flex flex-col items-center justify-between py-4">
+<div class="flex flex-col items-center gap-6">
+<!-- Brand Glyph Anchor -->
+<div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#FF6B4A] to-[#7C5CFF] flex items-center justify-center text-white shadow-md shadow-violet/20 font-black text-base tracking-tighter">
+          T
+        </div>
+<!-- Module Rail Icons -->
+<nav class="flex flex-col items-center gap-4 text-slate-400">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center hover:text-ink hover:bg-white/80 transition-all text-slate-500" title="Genel Bakış">
+<span class="material-symbols-outlined text-[20px]">space_dashboard</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-white text-ink shadow-sm font-semibold" title="SEO &amp; GEO Portal">
+<span class="material-symbols-outlined text-[20px] text-coral">monitoring</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center hover:text-ink hover:bg-white/80 transition-all text-slate-500" title="İçerik Stüdyosu">
+<span class="material-symbols-outlined text-[20px]">edit_note</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center hover:text-ink hover:bg-white/80 transition-all text-slate-500" title="Katalog &amp; Metadata">
+<span class="material-symbols-outlined text-[20px]">auto_stories</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center hover:text-ink hover:bg-white/80 transition-all text-slate-500" title="Performans &amp; Raporlar">
+<span class="material-symbols-outlined text-[20px]">analytics</span>
+</button>
+</nav>
+</div>
+<div class="flex flex-col items-center gap-3">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/60 transition-colors" title="ZEKİ Asistan">
+<span class="material-symbols-outlined text-[20px]">psychology</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/60 transition-colors" title="Ayarlar">
+<span class="material-symbols-outlined text-[20px]">settings</span>
+</button>
+</div>
+</div>
+<!-- 236px Secondary Navigation Panel -->
+<div class="w-[236px] flex flex-col justify-between p-4">
+<div>
+<!-- Portal Brand Header -->
+<div class="px-2 pt-1 pb-4 flex items-center justify-between border-b border-white/60">
+<div>
+<div class="flex items-center gap-2">
+<span class="font-headline font-extrabold text-slate-900 text-base tracking-tight">SEO &amp; GEO</span>
+<span class="text-[10px] uppercase font-bold tracking-widest px-1.5 py-0.5 rounded-full bg-violet/10 text-violet font-mono">ZEKİ AI</span>
+</div>
+<p class="text-xs text-slate-500 font-medium">Yapay Zeka Portalı</p>
+</div>
+<span class="inline-flex w-2 h-2 rounded-full bg-mint animate-pulse" title="Canlı Veri Akışı"></span>
+</div>
+<!-- Grouped Navigation Links -->
+<div class="mt-4 flex flex-col gap-1">
+<span class="text-[10px] uppercase font-label tracking-widest text-slate-400 px-3 font-semibold mb-1">Optimizasyon</span>
+<a class="px-3.5 py-2 font-headline font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2.5 rounded-xl hover:bg-white/60 transition-colors text-xs" href="#">
+<span class="material-symbols-outlined text-lg">dashboard</span>
+<span>Genel Bakış</span>
+</a>
+<!-- Active Destination Link -->
+<a class="bg-gradient-to-r from-orange-500 to-indigo-600 text-white font-headline font-semibold rounded-xl shadow-sm px-3.5 py-2.5 flex items-center justify-between gap-2 text-xs active:scale-[0.98] transition-transform" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg">task_alt</span>
+<span>Ürün Denetimi &amp; Onay</span>
+</div>
+<span class="font-mono text-[11px] bg-white/20 px-1.5 py-0.5 rounded-md font-semibold text-white">1.284</span>
+</a>
+<a class="px-3.5 py-2 font-headline font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2.5 rounded-xl hover:bg-white/60 transition-colors text-xs" href="#">
+<span class="material-symbols-outlined text-lg">manage_search</span>
+<span>Anahtar Kelimeler &amp; Sıralama</span>
+</a>
+<a class="px-3.5 py-2 font-headline font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2.5 rounded-xl hover:bg-white/60 transition-colors text-xs" href="#">
+<span class="material-symbols-outlined text-lg">explore</span>
+<span>AI Görünürlük (GEO)</span>
+</a>
+<a class="px-3.5 py-2 font-headline font-medium text-slate-600 hover:text-slate-900 flex items-center justify-between gap-2 rounded-xl hover:bg-white/60 transition-colors text-xs" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg">health_and_safety</span>
+<span>Teknik Sağlık</span>
+</div>
+<span class="font-mono text-[11px] text-mint font-semibold bg-mint/10 px-1.5 py-0.5 rounded">82%</span>
+</a>
+<a class="px-3.5 py-2 font-headline font-medium text-slate-600 hover:text-slate-900 flex items-center justify-between gap-2 rounded-xl hover:bg-white/60 transition-colors text-xs" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg">history</span>
+<span>Gönderim Geçmişi</span>
+</div>
+<span class="font-mono text-[11px] text-slate-500 font-semibold bg-slate-200/50 px-1.5 py-0.5 rounded">118</span>
+</a>
+</div>
+<div class="mt-6 flex flex-col gap-1">
+<span class="text-[10px] uppercase font-label tracking-widest text-slate-400 px-3 font-semibold mb-1">Entegrasyonlar</span>
+<a class="px-3.5 py-2 font-headline font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2.5 rounded-xl hover:bg-white/60 transition-colors text-xs" href="#">
+<span class="material-symbols-outlined text-lg">hub</span>
+<span>Bağlantılar</span>
+</a>
+<a class="px-3.5 py-2 font-headline font-medium text-slate-600 hover:text-slate-900 flex items-center gap-2.5 rounded-xl hover:bg-white/60 transition-colors text-xs" href="#">
+<span class="material-symbols-outlined text-lg">tune</span>
+<span>Ayarlar</span>
+</a>
+</div>
+</div>
+<!-- T-soft Sync Status Card at bottom -->
+<div class="p-3 rounded-xl bg-white/70 border border-white/90 shadow-sm mt-4">
+<div class="flex items-center justify-between mb-1.5">
+<div class="flex items-center gap-1.5">
+<span class="inline-block w-2 h-2 rounded-full bg-mint"></span>
+<span class="text-[11px] font-semibold text-slate-800">T-soft E-Ticaret</span>
+</div>
+<span class="text-[10px] font-mono text-slate-400 font-medium">REST v2</span>
+</div>
+<p class="text-[11px] text-slate-500">Senkronizasyon: <strong class="text-slate-700 font-medium">Aktif</strong></p>
+<p class="text-[10px] text-slate-400 font-mono mt-0.5">Son ping: 42ms · 9.692 SKU</p>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- TOP APP BAR: Glass Strip -->
+<!-- ========================================================================= -->
+<header class="fixed top-0 right-0 left-[290px] z-30 h-16 bg-white/70 backdrop-blur-md border-b border-white/80 shadow-sm flex items-center justify-between px-8">
+<!-- Breadcrumb Anchor & Context -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span class="font-bold tracking-tight text-slate-800">Timaş</span>
+<span class="text-slate-300">/</span>
+<span>SEO &amp; GEO</span>
+<span class="text-slate-300">/</span>
+<span class="font-semibold text-slate-900 bg-white/80 px-2.5 py-1 rounded-full border border-white shadow-xs">Ürün Denetimi &amp; Onay</span>
+</div>
+<!-- Live Sync status chip -->
+<div class="hidden xl:flex items-center gap-1.5 bg-mint/10 text-mint border border-mint/20 px-2.5 py-1 rounded-full text-[11px] font-medium font-mono">
+<span class="w-1.5 h-1.5 rounded-full bg-mint animate-ping"></span>
+<span>T-soft bağlı · son eşitleme 24.09 03:00</span>
+</div>
+<span class="bg-slate-200/60 text-slate-600 text-[10px] font-mono uppercase tracking-wider px-2 py-0.5 rounded-md font-semibold">Örnek Veri</span>
+</div>
+<!-- Actions & User Profile -->
+<div class="flex items-center gap-3">
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-headline text-xs font-semibold px-3.5 py-2 rounded-xl border border-white/90 shadow-xs flex items-center gap-1.5 transition-all active:scale-95">
+<span class="material-symbols-outlined text-[17px] text-violet">sync</span>
+<span>T-soft Kataloğunu Tara</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-600 p-2 rounded-xl border border-white/90 shadow-xs relative" title="Bildirimler">
+<span class="material-symbols-outlined text-[20px]">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-coral"></span>
+</button>
+<div class="h-6 w-px bg-slate-200"></div>
+<!-- Avatar Profile -->
+<div class="flex items-center gap-2 pl-1">
+<div class="w-9 h-9 rounded-full bg-gradient-to-tr from-coral to-violet text-white font-bold text-xs flex items-center justify-center shadow-xs">
+          EA
+        </div>
+<div class="hidden lg:block text-left">
+<div class="text-xs font-bold text-slate-800 leading-tight">Emre Aydın</div>
+<div class="text-[10px] text-slate-400 font-label">Katalog &amp; SEO Direktörü</div>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- MAIN WORKSPACE CONTENT CANVAS -->
+<!-- ========================================================================= -->
+<main class="ml-[290px] pt-20 pb-28 px-8 max-w-[1720px] mx-auto relative z-10">
+<!-- 1. KPI SUMMARY ROW (5 CARDS) -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+<!-- Card 1 -->
+<div class="bg-white/95 rounded-xl p-4 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.06)] border border-white/90 flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between text-slate-400">
+<span class="text-[11px] font-label font-bold uppercase tracking-wider text-slate-500">Taranan Ürün</span>
+<span class="material-symbols-outlined text-slate-400 text-lg">menu_book</span>
+</div>
+<div class="mt-3">
+<div class="text-2xl font-extrabold font-mono text-ink tracking-tight">9.692</div>
+<div class="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+<span class="w-1.5 h-1.5 rounded-full bg-mint"></span>
+<span>aktif katalog SKU</span>
+</div>
+</div>
+</div>
+<!-- Card 2: Critical -->
+<div class="bg-white/95 rounded-xl p-4 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.06)] border-l-4 border-l-coral border border-white/90 flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between">
+<span class="text-[11px] font-label font-bold uppercase tracking-wider text-coral">Uyumsuz Ürün</span>
+<span class="material-symbols-outlined text-coral text-lg">warning</span>
+</div>
+<div class="mt-3">
+<div class="text-2xl font-extrabold font-mono text-slate-900 tracking-tight">1.284</div>
+<div class="flex items-center gap-1.5 mt-1 text-[11px] font-semibold text-coral font-mono">
+<span>%13.2 kritik uyarı</span>
+</div>
+</div>
+</div>
+<!-- Card 3: AI Generated -->
+<div class="bg-white/95 rounded-xl p-4 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.06)] border border-white/90 flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between text-slate-400">
+<span class="text-[11px] font-label font-bold uppercase tracking-wider text-violet">Onay Bekleyen Öneri</span>
+<span class="material-symbols-outlined text-violet text-lg">auto_awesome</span>
+</div>
+<div class="mt-3">
+<div class="text-2xl font-extrabold font-mono text-violet tracking-tight">342</div>
+<div class="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+<span class="text-violet font-semibold">ZEKİ AI</span> üretti
+          </div>
+</div>
+</div>
+<!-- Card 4: Sent -->
+<div class="bg-white/95 rounded-xl p-4 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.06)] border border-white/90 flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between text-slate-400">
+<span class="text-[11px] font-label font-bold uppercase tracking-wider text-slate-500">T-soft'a Gönderilen</span>
+<span class="material-symbols-outlined text-slate-400 text-lg">cloud_done</span>
+</div>
+<div class="mt-3">
+<div class="text-2xl font-extrabold font-mono text-ink tracking-tight">118</div>
+<div class="flex items-center gap-1.5 mt-1 text-[11px] text-mint font-semibold font-mono">
+<span>↑ bu hafta aktarıldı</span>
+</div>
+</div>
+</div>
+<!-- Card 5: Score -->
+<div class="bg-white/95 rounded-xl p-4 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.06)] border border-white/90 flex flex-col justify-between hover:shadow-md transition-shadow">
+<div class="flex items-center justify-between text-slate-400">
+<span class="text-[11px] font-label font-bold uppercase tracking-wider text-slate-500">Ortalama Katalog Puanı</span>
+<span class="material-symbols-outlined text-slate-400 text-lg">speed</span>
+</div>
+<div class="mt-3">
+<div class="flex items-baseline gap-2">
+<span class="text-2xl font-extrabold font-mono text-ink tracking-tight">64</span>
+<span class="text-xs font-mono text-slate-400">/ 100</span>
+</div>
+<div class="flex items-center gap-1 mt-1 text-[11px] font-semibold text-mint font-mono">
+<span>+6 puan artış</span>
+<span class="text-slate-400 text-[10px] font-body font-normal">(son 30 gün)</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 2. RULE FILTER CHIPS (HORIZONTAL SCROLL) -->
+<div class="mb-6 flex items-center gap-2 overflow-x-auto pb-1 text-xs no-scrollbar">
+<span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-label mr-1 whitespace-nowrap">Kural Filtreleri:</span>
+<button class="bg-slate-900 text-white font-semibold px-3 py-1.5 rounded-full text-xs whitespace-nowrap shadow-xs flex items-center gap-1.5">
+<span>Tümü</span>
+<span class="bg-white/20 px-1.5 py-0.2 rounded-full font-mono text-[10px]">1.284</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-3 py-1.5 rounded-full border border-white/90 shadow-xs whitespace-nowrap flex items-center gap-1.5">
+<span>Meta Açıklama Eksik</span>
+<span class="bg-coral/10 text-coral font-bold px-1.5 py-0.2 rounded-full font-mono text-[10px]">412</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-3 py-1.5 rounded-full border border-white/90 shadow-xs whitespace-nowrap flex items-center gap-1.5">
+<span>SEO Başlığı Çok Uzun / Kısa</span>
+<span class="bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded-full font-mono text-[10px]">233</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-3 py-1.5 rounded-full border border-white/90 shadow-xs whitespace-nowrap flex items-center gap-1.5">
+<span>Book / Person Şeması Yok</span>
+<span class="bg-amber/10 text-amber font-bold px-1.5 py-0.2 rounded-full font-mono text-[10px]">508</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-3 py-1.5 rounded-full border border-white/90 shadow-xs whitespace-nowrap flex items-center gap-1.5">
+<span>Açıklama &lt;150 Kelime</span>
+<span class="bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded-full font-mono text-[10px]">297</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-3 py-1.5 rounded-full border border-white/90 shadow-xs whitespace-nowrap flex items-center gap-1.5">
+<span>Görsel Alt Metni Yok</span>
+<span class="bg-coral/10 text-coral font-bold px-1.5 py-0.2 rounded-full font-mono text-[10px]">611</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-3 py-1.5 rounded-full border border-white/90 shadow-xs whitespace-nowrap flex items-center gap-1.5">
+<span>ISBN / Yayın Yılı Eksik</span>
+<span class="bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded-full font-mono text-[10px]">89</span>
+</button>
+<button class="bg-white hover:bg-slate-50 text-slate-700 font-medium px-3 py-1.5 rounded-full border border-white/90 shadow-xs whitespace-nowrap flex items-center gap-1.5">
+<span>Yinelenen Başlık</span>
+<span class="bg-slate-100 text-slate-600 font-bold px-1.5 py-0.2 rounded-full font-mono text-[10px]">41</span>
+</button>
+</div>
+<!-- 3. SPLIT WORKSPACE: LEFT PRODUCT LIST + RIGHT AUDIT DETAIL -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- ========================================================= -->
+<!-- COLUMN A: PRODUCT SELECTION LIST (lg:col-span-5) -->
+<!-- ========================================================= -->
+<section class="lg:col-span-5 bg-white/95 rounded-2xl p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.12)] border border-white/90">
+<!-- Search & Sort Controls -->
+<div class="flex items-center gap-2 mb-3">
+<div class="relative flex-1">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">search</span>
+<input class="w-full bg-slate-50/80 border border-slate-200/80 rounded-xl pl-9 pr-3 py-2 text-xs font-headline focus:ring-2 focus:ring-violet focus:outline-none placeholder:text-slate-400" placeholder="Uyumsuz ürünlerde ara..." type="text"/>
+</div>
+<button class="flex items-center gap-1 text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80 px-3 py-2 rounded-xl whitespace-nowrap">
+<span class="material-symbols-outlined text-sm text-slate-500">sort</span>
+<span>Öncelik: Kritik</span>
+</button>
+</div>
+<!-- Bulk Action Sub-bar -->
+<div class="flex items-center justify-between py-2 px-1 border-b border-slate-100 text-xs mb-3">
+<label class="flex items-center gap-2 cursor-pointer font-medium text-slate-600">
+<input checked="" class="rounded text-violet focus:ring-violet/30 w-4 h-4 border-slate-300" type="checkbox"/>
+<span>Tümünü Seç <span class="font-mono font-semibold text-slate-900">(3 seçili)</span></span>
+</label>
+<button class="text-xs font-bold text-violet hover:text-indigo-700 bg-violet/10 px-2.5 py-1 rounded-lg transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">cloud_upload</span>
+<span>Seçilenleri Onayla ve T-soft'a Gönder (3)</span>
+</button>
+</div>
+<!-- Products List Stack -->
+<div class="space-y-2.5">
+<!-- PRODUCT 1: ACTIVE / SELECTED -->
+<article class="p-3.5 rounded-xl border-2 border-coral/80 bg-gradient-to-r from-orange-50/50 via-white to-white shadow-md relative cursor-pointer transition-all">
+<div class="flex items-start gap-3">
+<input checked="" class="mt-1 rounded text-violet focus:ring-violet/30 w-4 h-4 border-slate-300" type="checkbox"/>
+<div class="w-12 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 shadow-xs relative">
+<img class="w-full h-full object-cover" data-alt="Cover illustration of a vibrant Turkish children's adventure novel titled İyilik Timi showing curious detective kids and a glowing wooden mystery box in soft cinematic storybook light with warm coral and indigo atmospheric grading." src="https://lh3.googleusercontent.com/aida-public/AB6AXuABrj7UfUyncDpcYhEvqRKS8lwi8W54JPfU1t1poqpaE3EC82deZAklpPmeGxUNuKJQ-3oeuWy0JSO_-Mg-eBuEO3b3PCEf1xJA82kY_T5v5xdMBtWXPG94Rsb6buwgueQXtRES2xMF_PraC0zL_J6bknRP0eRRypne8p96xGpZIG50VduIRf11cFn48U0Llz-uHuhWLuk3-eV7Eze58cJRkgRs9Oz_WmHTapbsxWMlulXkHEJf_dMZPRAuawuz25R_DxktsBbRTrLq"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<h2 class="font-bold text-slate-900 text-sm truncate font-headline">İyilik Timi – 1: Gizemli Kutu</h2>
+<span class="bg-red-100 text-red-700 font-mono text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">38/100</span>
+</div>
+<p class="text-xs text-slate-500 font-medium">Merve Şebnem Gökdere</p>
+<div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 mt-1">
+<span>T-SOFT ID: <strong class="text-slate-600">#48291</strong></span>
+<span>·</span>
+<span>ISBN: 9786050832112</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100/80">
+<div class="flex items-center gap-1 text-[11px] text-coral font-semibold">
+<span class="material-symbols-outlined text-xs">error</span>
+<span>4 kritik sorun tespit edildi</span>
+</div>
+<span class="bg-coral/10 text-coral font-bold text-[10px] uppercase font-mono px-2 py-0.5 rounded-md">Öneri Hazır</span>
+</div>
+</div>
+</div>
+</article>
+<!-- PRODUCT 2 -->
+<article class="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/80 shadow-xs cursor-pointer transition-all">
+<div class="flex items-start gap-3">
+<input checked="" class="mt-1 rounded text-violet focus:ring-violet/30 w-4 h-4 border-slate-300" type="checkbox"/>
+<div class="w-12 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 shadow-xs">
+<img class="w-full h-full object-cover" data-alt="Cover art of Kayıp Atlas novel featuring an antique celestial world map and gold foil compass embellishments in an editorial classic book design style under elegant studio light." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKLgWcmlAF2e5fP0fc8DTexgN7WMyemFdCxuWvhYTy1-xeQLBxLS5A-iq48EHumEuKA1AMP8rutcfPavrRM1EAjItzGV8Oxq0fIf2LuUs4EWmbWuN98HlRNs1qQUmB0Vv3k3pEAA4yDngSLrG4udYGC2BbWBF4nt1XUTVSn4CZ7Wox03srfXfR6O7ui8L_CstWf5L9BrjSYHoC28ZSuGuSblq9NHiYUC5f_CuHHQrINZfKFrqWJIVYczRZAz6vfiVTqYv_KaB6kJqT"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<h2 class="font-bold text-slate-800 text-sm truncate font-headline">Kayıp Atlas (Ciltli Özel Baskı)</h2>
+<span class="bg-amber-100 text-amber-800 font-mono text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">52/100</span>
+</div>
+<p class="text-xs text-slate-500 font-medium">Elif Aydın</p>
+<div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 mt-1">
+<span>T-SOFT ID: <strong class="text-slate-600">#48182</strong></span>
+<span>·</span>
+<span>ISBN: 9786050849921</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100/80">
+<div class="flex items-center gap-1 text-[11px] text-amber-700 font-medium">
+<span class="material-symbols-outlined text-xs">warning</span>
+<span>2 sorun (Meta tag &amp; SSS)</span>
+</div>
+<span class="bg-slate-100 text-slate-600 font-bold text-[10px] uppercase font-mono px-2 py-0.5 rounded-md">Onay Bekliyor</span>
+</div>
+</div>
+</div>
+</article>
+<!-- PRODUCT 3 -->
+<article class="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/80 shadow-xs cursor-pointer transition-all">
+<div class="flex items-start gap-3">
+<input checked="" class="mt-1 rounded text-violet focus:ring-violet/30 w-4 h-4 border-slate-300" type="checkbox"/>
+<div class="w-12 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 shadow-xs">
+<img class="w-full h-full object-cover" data-alt="Playful whimsical cover illustration of a children's storybook Dünyanın En Korkak Hayvanı showing an expressive cartoon rabbit hiding behind tall forest grass in soft green and mint tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDnHoWjhVNN7pQgbMgHL7ZWv2JdSd1kuB2iTpBRdZhSpYZl4Gf5FHVqu0lqN724kU3bWScSPkHSmAEqdh3oo0IFTU1-0VK_b65lCdrMN0qKH2kU4Xsd62bcHtd3aty2nWTnghbES0ktMXsbMa1wTL4LK6HhZMLZX6zV9nnp7oHlcRn5IUunadcU3ntrmJpGxfjo1n1RC4viPfcU9aefC_SHjMyvI2l55JeYBjxzKxh1_BLaBkuqs2tryygs6Gqud8uexpAeClMWYrSA"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<h2 class="font-bold text-slate-800 text-sm truncate font-headline">Dünyanın En Korkak Hayvanı</h2>
+<span class="bg-red-100 text-red-700 font-mono text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">44/100</span>
+</div>
+<p class="text-xs text-slate-500 font-medium">Caner Sarıoğlu</p>
+<div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 mt-1">
+<span>T-SOFT: <strong class="text-slate-600">#47904</strong></span>
+<span>·</span>
+<span>ISBN: 9786050811090</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100/80">
+<div class="flex items-center gap-1 text-[11px] text-coral font-medium">
+<span class="material-symbols-outlined text-xs">error</span>
+<span>3 sorun (Schema eksik)</span>
+</div>
+<span class="bg-coral/10 text-coral font-bold text-[10px] uppercase font-mono px-2 py-0.5 rounded-md">Öneri Hazır</span>
+</div>
+</div>
+</div>
+</article>
+<!-- PRODUCT 4: Sent / Healthy -->
+<article class="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/80 shadow-xs cursor-pointer transition-all opacity-85">
+<div class="flex items-start gap-3">
+<input class="mt-1 rounded text-violet focus:ring-violet/30 w-4 h-4 border-slate-300" type="checkbox"/>
+<div class="w-12 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 shadow-xs">
+<img class="w-full h-full object-cover" data-alt="Cover of a history book titled Osmanlı'da Gündelik Hayat with miniature painting details from Istanbul Ottoman palace archives, balanced and stately academic cover style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBYzwtr8aXHM0nnJvqiiAL7KFYx76S0f5GlLJqP5kYtzSqZf3smmcMRWTQTgRtkBSXARQwCqd7-0CkJggFCuOlWDWsySMzLLKKQJgrb6RKr_-Hy6Zz7Z2teylrX87oojGgIqfwd9lLtzulwS4XEVUJsDazz9qxNNUz8VW788a77cGHUPXwG9cHcv7qPtdT8av304R7f_ZKpVN5SvWY65TWpv9dOdWscv5i9gL3l2w4jomqrqu_-DwZ5j-bKG2R6LggSt2N-Y-6yRiT9"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<h2 class="font-bold text-slate-800 text-sm truncate font-headline">Osmanlı'da Gündelik Hayat</h2>
+<span class="bg-mint/15 text-mint font-mono text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">78/100</span>
+</div>
+<p class="text-xs text-slate-500 font-medium">Doç. Dr. Ferit Demir</p>
+<div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 mt-1">
+<span>T-SOFT: <strong class="text-slate-600">#46399</strong></span>
+<span>·</span>
+<span>1 minör uyarı</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100/80">
+<span class="text-[11px] text-slate-500">T-soft senkronizasyonu tamam</span>
+<span class="bg-mint/10 text-mint font-bold text-[10px] uppercase font-mono px-2 py-0.5 rounded-md flex items-center gap-1">
+<span class="material-symbols-outlined text-[12px]">done</span> Gönderildi
+                  </span>
+</div>
+</div>
+</div>
+</article>
+<!-- PRODUCT 5: Rejected -->
+<article class="p-3.5 rounded-xl border border-slate-200/90 bg-white hover:bg-slate-50/80 shadow-xs cursor-pointer transition-all opacity-70">
+<div class="flex items-start gap-3">
+<input class="mt-1 rounded text-violet focus:ring-violet/30 w-4 h-4 border-slate-300" type="checkbox"/>
+<div class="w-12 h-16 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 shadow-xs">
+<img class="w-full h-full object-cover" data-alt="Cover artwork of Gökyüzü Çırakları showing a starry night constellation and teenage telescope observers in deep dark blue and cyan graphic style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCkAr50EkknAKVbgI6so-Psf24zbLIibsohzMYUFZOysKnMUis5GOehKAF3phzr1lmQHk11QL3m_E9NA4pFtQn3UkTJINx4Pz9Kw9Nz2W1_rM12fd9W6tZx4dCQ5FK4K21XHaawpu3PZ2pcr12AaC5JhqrRSRaKQpGgdEeRNEe1syr4CkbVle-Qw6jWAxMGh4qkqY0v_LO9bonxKHTSNAK-OzSmPcPOO0QGe2yBS3z0iRiSv8F6TTfvRqxVJJXIAqiKgcEhanmdjV6B"/>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center justify-between gap-1">
+<h2 class="font-bold text-slate-800 text-sm truncate font-headline">Gökyüzü Çırakları</h2>
+<span class="bg-slate-100 text-slate-500 font-mono text-[11px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap">--/100</span>
+</div>
+<p class="text-xs text-slate-500 font-medium">Aylin Demir</p>
+<div class="flex items-center gap-2 text-[11px] font-mono text-slate-400 mt-1">
+<span>T-SOFT: <strong class="text-slate-600">#48892</strong></span>
+<span>·</span>
+<span>İnceleme reddedildi</span>
+</div>
+<div class="flex items-center justify-between mt-2 pt-2 border-t border-slate-100/80">
+<span class="text-[11px] text-slate-400">Yazar revizyonu talep edildi</span>
+<span class="bg-red-50 text-red-600 font-bold text-[10px] uppercase font-mono px-2 py-0.5 rounded-md">Reddedildi</span>
+</div>
+</div>
+</div>
+</article>
+</div>
+<!-- Pagination -->
+<div class="flex items-center justify-between pt-4 mt-4 border-t border-slate-100 text-xs">
+<span class="text-slate-500 font-mono">Sayfa 1 / 129 (1.284 kayıt)</span>
+<div class="flex items-center gap-1">
+<button class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-400 hover:text-slate-700 bg-white" disabled="">
+<span class="material-symbols-outlined text-sm">chevron_left</span>
+</button>
+<button class="w-7 h-7 rounded-lg bg-slate-900 text-white font-mono font-bold flex items-center justify-center text-xs">1</button>
+<button class="w-7 h-7 rounded-lg hover:bg-slate-100 font-mono text-slate-600 flex items-center justify-center text-xs">2</button>
+<button class="w-7 h-7 rounded-lg hover:bg-slate-100 font-mono text-slate-600 flex items-center justify-center text-xs">3</button>
+<span class="px-1 text-slate-400">...</span>
+<button class="w-7 h-7 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-50 bg-white">
+<span class="material-symbols-outlined text-sm">chevron_right</span>
+</button>
+</div>
+</div>
+</section>
+<!-- ========================================================= -->
+<!-- COLUMN B: LARGE DETAIL AUDIT & DIFF CARD (lg:col-span-7) -->
+<!-- ========================================================= -->
+<section class="lg:col-span-7 space-y-6">
+<!-- Main Audit Card -->
+<div class="bg-white/95 rounded-2xl p-6 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.12)] border border-white/90">
+<!-- DETAIL HEADER -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-100">
+<div class="flex items-start gap-4">
+<div class="w-16 h-22 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden shadow-sm flex-shrink-0">
+<img class="w-full h-full object-cover" data-alt="High resolution studio shot of the book cover İyilik Timi Gizemli Kutu by Merve Şebnem Gökdere with sharp editorial typography, official Timaş Yayınları crest, and bright contemporary children's fiction aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuANgJzvq9kHj-peMS9YBYgn5SO-lmgvV1euOWL87AKW17CQ5E-LlCDuqijBbtCf5dUrpQ3T2_PF9Qt4lWzfoKiZXepOUYPGaunTPMms13ODB5o_hFnRjrSGTRJR00Y2WHIZgVo-rimjc46AHU4eyTMDfd39uK0fXCwQJOBpn_RmD3hCNOma_Vm9bkoAdUt-56_b5mnbYYcJ8EMu7XBzwarEnTJoPqKrTmoOFUj206Ruze3cCkYo1WxTfNNOejjKZqxgTjJrD4TYL9K2"/>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<span class="washi-tape px-2 py-0.5 text-[10px] font-bold tracking-wider uppercase text-amber-900 font-mono">Çocuk &amp; İlk Gençlik</span>
+<span class="text-xs font-mono text-slate-400">T-soft #48291</span>
+</div>
+<h1 class="text-xl font-extrabold text-slate-900 font-headline mt-1">İyilik Timi – 1: Gizemli Kutu</h1>
+<div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500 mt-1">
+<span>Yazar: <strong class="text-slate-800">Merve Şebnem Gökdere</strong></span>
+<span>·</span>
+<span>Editör: <strong class="text-slate-800">Selin Karahan</strong></span>
+<span>·</span>
+<span class="font-mono">Barkod: 9786050832112</span>
+</div>
+</div>
+</div>
+<!-- SEO Score Delta Badge -->
+<div class="flex items-center gap-3 bg-gradient-to-r from-red-50 via-amber-50 to-emerald-50 border border-slate-200/80 p-3 rounded-2xl shadow-xs self-start md:self-auto">
+<div class="text-center px-2">
+<div class="text-[10px] uppercase font-label font-bold text-slate-400 tracking-wider">Mevcut Skor</div>
+<div class="text-lg font-mono font-extrabold text-red-600">38<span class="text-xs text-slate-400">/100</span></div>
+</div>
+<span class="material-symbols-outlined text-slate-400">trending_flat</span>
+<div class="text-center px-2">
+<div class="text-[10px] uppercase font-label font-bold text-mint tracking-wider flex items-center justify-center gap-0.5">
+<span class="material-symbols-outlined text-[13px]">bolt</span> ZEKİ Önerisi
+                </div>
+<div class="text-lg font-mono font-extrabold text-mint">94<span class="text-xs text-slate-400">/100</span></div>
+</div>
+<div class="bg-mint text-white text-[11px] font-mono font-bold px-2 py-1 rounded-lg">
+                +56 Puan
+              </div>
+</div>
+</div>
+<!-- SECTION (a): NEDEN UYUMSUZ? (4 KRİTİK TESPİT) -->
+<div class="mt-6">
+<div class="flex items-center justify-between mb-3">
+<h2 class="text-xs font-bold font-label uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-coral text-base">emergency</span>
+<span>Neden Uyumsuz? (4 Kritik Tespit)</span>
+</h2>
+<span class="text-[11px] font-mono text-slate-400">T-soft Denetim Motoru v4.8</span>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+<div class="p-3 rounded-xl bg-red-50/60 border border-red-200/60 text-xs">
+<div class="flex items-center gap-1.5 font-bold text-red-800 mb-1">
+<span class="material-symbols-outlined text-sm">remove_circle</span>
+<span>Meta Açıklama Yok</span>
+</div>
+<p class="text-slate-600 text-[11px] leading-relaxed">
+                  Google arama sonuçlarında rastgele sayfa içi metin kırpılıyor, AI modelleri kitap hakkında anlamlı özet çıkaramıyor.
+                </p>
+</div>
+<div class="p-3 rounded-xl bg-red-50/60 border border-red-200/60 text-xs">
+<div class="flex items-center gap-1.5 font-bold text-red-800 mb-1">
+<span class="material-symbols-outlined text-sm">person_off</span>
+<span>Yazar Person Şeması Eksik</span>
+</div>
+<p class="text-slate-600 text-[11px] leading-relaxed">
+                  Perplexity ve ChatGPT aramalarında yazar külliyatı ile kitap arasında anlamsal ontoloji bağı kurulamıyor.
+                </p>
+</div>
+<div class="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 text-xs">
+<div class="flex items-center gap-1.5 font-bold text-amber-800 mb-1">
+<span class="material-symbols-outlined text-sm">short_text</span>
+<span>Açıklama Çok Kısa (62 Kelime)</span>
+</div>
+<p class="text-slate-600 text-[11px] leading-relaxed">
+                  Minimum 150 kelime şartı sağlanmıyor; arama niyetini karşılayacak yapılandırılmış SSS ve pedagojik bilgi eksik.
+                </p>
+</div>
+<div class="p-3 rounded-xl bg-amber-50/60 border border-amber-200/60 text-xs">
+<div class="flex items-center gap-1.5 font-bold text-amber-800 mb-1">
+<span class="material-symbols-outlined text-sm">broken_image</span>
+<span>Kapak Görselinde Alt Etiket Boş</span>
+</div>
+<p class="text-slate-600 text-[11px] leading-relaxed">
+                  Görsel dosya adı sadece <code class="font-mono bg-white px-1 rounded text-slate-800">IMG_921.jpg</code> olarak kalmış, Google Görseller ve multimodal GEO indeksleyemiyor.
+                </p>
+</div>
+</div>
+</div>
+<!-- SECTION (b): MEVCUT VERİ ↔ ZEKİ AI ÖNERİSİ (DEĞİŞİKLİK MATRİSİ) -->
+<div class="mt-8">
+<div class="flex items-center justify-between mb-4">
+<h2 class="text-xs font-bold font-label uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-violet text-base">difference</span>
+<span>Mevcut Veri ↔ ZEKİ AI Önerisi (Değişiklik Matrisi)</span>
+</h2>
+<span class="bg-violet/10 text-violet font-mono text-[11px] font-semibold px-2 py-0.5 rounded-full">T-soft REST Hazır</span>
+</div>
+<div class="space-y-4">
+<!-- 1. SEO BAŞLIĞI -->
+<div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-bold text-slate-800 font-headline flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-violet"></span> 1. SEO Başlığı (Title Tag)
+                  </span>
+<span class="font-mono text-[11px] text-mint font-semibold">54 / 68 Karakter (İdeal)</span>
+</div>
+<div class="space-y-1.5">
+<div class="flex items-baseline gap-2 bg-red-50/70 p-2 rounded-lg text-slate-500">
+<span class="font-mono text-[10px] text-red-500 font-bold uppercase w-14 flex-shrink-0">Mevcut:</span>
+<span class="line-through decoration-coral decoration-2 text-slate-600 font-medium">İyilik Timi - 1</span>
+</div>
+<div class="flex items-baseline gap-2 bg-mint/10 border border-mint/20 p-2 rounded-lg text-slate-800">
+<span class="font-mono text-[10px] text-mint font-bold uppercase w-14 flex-shrink-0">ZEKİ AI:</span>
+<span class="font-bold text-slate-900">İyilik Timi 1: Gizemli Kutu – Merve Şebnem Gökdere | Timaş</span>
+</div>
+</div>
+</div>
+<!-- 2. META AÇIKLAMA -->
+<div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-bold text-slate-800 font-headline flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-violet"></span> 2. Meta Açıklama (Meta Description)
+                  </span>
+<span class="font-mono text-[11px] text-mint font-semibold">148 / 160 Karakter (GEO Uyumlu)</span>
+</div>
+<div class="space-y-1.5">
+<div class="flex items-baseline gap-2 bg-red-50/70 p-2 rounded-lg text-slate-500">
+<span class="font-mono text-[10px] text-red-500 font-bold uppercase w-14 flex-shrink-0">Mevcut:</span>
+<span class="italic text-red-600 font-medium">[BOŞ - T-soft alanında metin tanımlanmamış]</span>
+</div>
+<div class="flex items-baseline gap-2 bg-mint/10 border border-mint/20 p-2.5 rounded-lg text-slate-800">
+<span class="font-mono text-[10px] text-mint font-bold uppercase w-14 flex-shrink-0">ZEKİ AI:</span>
+<span class="leading-relaxed font-medium">
+                      Merve Şebnem Gökdere'nin çok satan çocuk serisi İyilik Timi ilk kitabı Gizemli Kutu ile başlıyor. 9–12 yaş için değerler eğitimi ve macera Timaş'ta.
+                    </span>
+</div>
+</div>
+</div>
+<!-- 3. KANONİK URL & SLUG -->
+<div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-bold text-slate-800 font-headline flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-violet"></span> 3. Kanonik URL &amp; Slug Yapısı
+                  </span>
+<span class="text-[11px] font-mono text-slate-400">301 Otomatik Yönlendirme Dahil</span>
+</div>
+<div class="space-y-1.5 font-mono text-[11px]">
+<div class="flex items-baseline gap-2 bg-red-50/70 p-2 rounded-lg text-slate-500">
+<span class="text-[10px] text-red-500 font-bold uppercase w-14 flex-shrink-0">Mevcut:</span>
+<span class="line-through decoration-coral">/urun/iyilik-timi-1-urun48291.html</span>
+</div>
+<div class="flex items-baseline gap-2 bg-mint/10 border border-mint/20 p-2 rounded-lg text-slate-800">
+<span class="text-[10px] text-mint font-bold uppercase w-14 flex-shrink-0">ZEKİ AI:</span>
+<span class="font-semibold text-slate-900">/kitap/iyilik-timi-1-gizemli-kutu</span>
+</div>
+</div>
+</div>
+<!-- 4. GENİŞLETİLMİŞ AÇIKLAMA & SSS BLOĞU -->
+<div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-bold text-slate-800 font-headline flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-violet"></span> 4. Genişletilmiş Açıklama &amp; SSS Bloğu
+                  </span>
+<span class="font-mono text-[11px] text-slate-500 font-semibold">62 Kelime → <strong class="text-mint">272 Kelime</strong></span>
+</div>
+<div class="space-y-2">
+<div class="bg-red-50/70 p-2 rounded-lg text-slate-600 leading-relaxed">
+<span class="font-mono text-[10px] text-red-500 font-bold uppercase block mb-0.5">Mevcut Ham Metin (62 kelime):</span>
+                    "İyilik Timi gizemli bir maceraya atılıyor. Çocuklar okul bahçesinde buldukları sandığın sırrını çözmeye çalışırken birbirlerine kenetlenir. Güzel ahlak ve yardımlaşma üzerine yazılmış sıcacık bir hikaye..."
+                  </div>
+<div class="bg-mint/10 border border-mint/20 p-3 rounded-lg text-slate-800 leading-relaxed space-y-2">
+<span class="font-mono text-[10px] text-mint font-bold uppercase block">ZEKİ Zenginleştirilmiş Metin &amp; Pedagojik SSS Bloğu:</span>
+<p class="font-medium text-slate-900">
+                      Merve Şebnem Gökdere’nin kaleminden çıkan <strong>İyilik Timi – 1: Gizemli Kutu</strong>, ilkokul ve ortaokul çağındaki genç okurları sürükleyici bir mahalle dedektifliği serüvenine davet ediyor. Okul bahçesinde bulunan kilitli sandık, yalnızca bir bilmece değil; empati, dayanışma ve fedakarlık değerlerini sınayan bir yolculuğun anahtarıdır.
+                    </p>
+<div class="bg-white/80 p-2.5 rounded-lg border border-mint/30 space-y-1.5 mt-2">
+<div class="font-semibold text-violet text-[11px] flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">quiz</span> Sıkça Sorulan Sorular (SEO &amp; GEO Snippet):
+                      </div>
+<p class="text-[11px] text-slate-700">
+<strong>S: İyilik Timi hangi yaş grubu için uygundur?</strong><br/>
+<span class="text-slate-600">C: Pedagog onaylı içeriğiyle 9–12 yaş çocuk edebiyatı ve değerler eğitimi için uygundur. İlkokul 4. ve ortaokul 5. sınıf seviyesine hitap eder.</span>
+</p>
+</div>
+</div>
+</div>
+</div>
+<!-- 5. KAPAK GÖRSELİ ALT METNİ -->
+<div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-bold text-slate-800 font-headline flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-violet"></span> 5. Kapak Görseli Alt Metni (Image Alt Attribute)
+                  </span>
+<span class="font-mono text-[11px] text-mint font-semibold">GEO Multimodal Uyumlu</span>
+</div>
+<div class="space-y-1.5">
+<div class="flex items-baseline gap-2 bg-red-50/70 p-2 rounded-lg text-slate-500 font-mono text-[11px]">
+<span class="text-[10px] text-red-500 font-bold uppercase w-14 flex-shrink-0">Mevcut:</span>
+<span class="line-through decoration-coral">alt="" veya [alt="IMG_921.jpg"]</span>
+</div>
+<div class="flex items-baseline gap-2 bg-mint/10 border border-mint/20 p-2 rounded-lg text-slate-800">
+<span class="font-mono text-[10px] text-mint font-bold uppercase w-14 flex-shrink-0">ZEKİ AI:</span>
+<span class="font-semibold text-slate-900">alt="İyilik Timi 1 Gizemli Kutu - Merve Şebnem Gökdere Kitap Kapağı Timaş Yayınları"</span>
+</div>
+</div>
+</div>
+<!-- 6. YAPILANDIRILMIŞ VERİ SCHEMA.ORG JSON-LD -->
+<div class="p-4 rounded-xl bg-slate-50/80 border border-slate-200/80 text-xs">
+<div class="flex items-center justify-between mb-2">
+<span class="font-bold text-slate-800 font-headline flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-violet"></span> 6. Yapılandırılmış Veri (Schema.org JSON-LD: Book + Author)
+                  </span>
+<span class="bg-violet/10 text-violet px-2 py-0.5 rounded font-mono text-[10px] font-bold">Otomatik Script Enjeksiyonu</span>
+</div>
+<div class="bg-slate-900 text-slate-200 p-3 rounded-xl font-mono text-[11px] overflow-x-auto leading-relaxed border border-slate-800 shadow-inner">
+<pre class="text-emerald-400">{
+  "@context": "https://schema.org",
+  "@type": "Book",
+  "name": "İyilik Timi – 1: Gizemli Kutu",
+  "isbn": "9786050832112",
+  "author": {
+    "@type": "Person",
+    "name": "Merve Şebnem Gökdere",
+    "sameAs": "https://timas.com.tr/yazar/merve-sebnem-gokdere"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Timaş Yayınları"
+  },
+  "inLanguage": "tr",
+  "bookFormat": "https://schema.org/Paperback"
+}</pre>
+</div>
+</div>
+</div>
+</div>
+<!-- SECTION (c): PREVIEWS (SERP & GEO TEST) -->
+<div class="mt-8 pt-6 border-t border-slate-100">
+<h2 class="text-xs font-bold font-label uppercase tracking-wider text-slate-700 mb-4 flex items-center gap-1.5">
+<span class="material-symbols-outlined text-mint text-base">visibility</span>
+<span>Canlı Önizlemeler: Google SERP &amp; GEO AI Çıktısı</span>
+</h2>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- GOOGLE SERP PREVIEW -->
+<div class="p-4 rounded-xl bg-white border border-slate-200 shadow-xs flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-[11px] font-semibold text-slate-500 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-blue-600">travel_explore</span>
+<span>Google SERP Snippet</span>
+</span>
+<span class="text-[10px] font-mono text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">Masaüstü / Mobil</span>
+</div>
+<div class="space-y-1">
+<div class="text-[11px] text-slate-500 font-mono flex items-center gap-1 truncate">
+<span>timas.com.tr</span>
+<span>›</span>
+<span>kitap</span>
+<span>›</span>
+<span class="text-slate-700 font-semibold">iyilik-timi-1-gizemli-kutu</span>
+</div>
+<a class="text-blue-700 hover:underline font-headline font-bold text-sm block leading-snug" href="#">
+                      İyilik Timi 1: Gizemli Kutu – Merve Şebnem Gökdere | Timaş
+                    </a>
+<p class="text-xs text-slate-600 leading-relaxed">
+                      Merve Şebnem Gökdere'nin çok satan çocuk serisi İyilik Timi ilk kitabı Gizemli Kutu ile başlıyor. 9–12 yaş için değerler eğitimi ve macera Timaş'ta.
+                    </p>
+</div>
+</div>
+<div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+<span>Önbellek boyutu: 1.2 KB</span>
+<span class="text-mint font-semibold">CTR Tahmini: +%28</span>
+</div>
+</div>
+<!-- GEO TEST - AI RESPONSE PREVIEW -->
+<div class="p-4 rounded-xl bg-gradient-to-br from-violet/5 via-white to-orange-50/30 border border-violet/20 shadow-xs flex flex-col justify-between">
+<div>
+<div class="flex items-center justify-between mb-2">
+<span class="text-[11px] font-semibold text-violet flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">psychology</span>
+<span>GEO Testi: Perplexity &amp; ChatGPT-4o</span>
+</span>
+<span class="text-[10px] font-bold text-violet bg-violet/10 px-2 py-0.5 rounded-full font-mono">Atıf Doğrulandı</span>
+</div>
+<div class="p-2.5 rounded-lg bg-white/80 border border-violet/10 mb-2">
+<span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-0.5">Kullanıcı Arama İstemi:</span>
+<p class="text-xs italic text-slate-700">"9-12 yaş için macera ve değerler eğitimi kitabı önerir misin?"</p>
+</div>
+<div class="space-y-1.5 text-xs text-slate-700 leading-relaxed">
+<p>
+                      "9-12 yaş grubu için pedagojik olarak tavsiye edilen kitapların başında <strong>Merve Şebnem Gökdere'nin İyilik Timi – 1: Gizemli Kutu</strong> eseri gelmektedir..."
+                    </p>
+<div class="flex items-center gap-2 pt-1">
+<span class="text-[10px] font-semibold text-slate-400">Doğrudan Atıf:</span>
+<span class="inline-flex items-center gap-1 text-[11px] font-medium text-violet bg-white px-2 py-0.5 rounded-md border border-violet/20 shadow-xs">
+<span class="material-symbols-outlined text-xs">link</span> timas.com.tr
+                      </span>
+</div>
+</div>
+</div>
+<div class="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400 font-mono">
+<span>Knowledge Graph Bağlantısı: %99.2</span>
+<span class="text-violet font-semibold">GEO Sırası: #1</span>
+</div>
+</div>
+</div>
+</div>
+<!-- SECTION (d): AKSİYON VE ONAY ÇUBUĞU -->
+<div class="mt-8 pt-6 border-t border-slate-200/80">
+<!-- Editör Notu Girişi -->
+<div class="mb-4">
+<label class="block text-xs font-bold text-slate-700 mb-1.5 font-headline">
+                Editör Denetim Notu:
+              </label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-slate-400 text-lg">edit_note</span>
+<input class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-xs font-headline focus:ring-2 focus:ring-violet focus:outline-none text-slate-800" type="text" value="T-soft kategori eşleşmesi (Çocuk Kitapları) ve 9-12 yaş grubu etiketi doğru. Schema doğrulaması başarılı."/>
+</div>
+</div>
+<!-- Action Buttons Toolbar -->
+<div class="flex flex-wrap items-center justify-between gap-3">
+<div class="flex items-center gap-2">
+<!-- Primary Gradient Approval Button -->
+<button class="bg-gradient-to-r from-orange-500 to-indigo-600 hover:opacity-95 text-white font-headline text-xs font-bold px-5 py-2.5 rounded-xl shadow-md shadow-violet/20 flex items-center gap-2 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-base">rocket_launch</span>
+<span>Onayla ve T-soft'a Gönder</span>
+</button>
+<!-- Manuel Düzenle -->
+<button class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 font-headline text-xs font-semibold px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95">
+<span class="material-symbols-outlined text-base text-slate-500">edit</span>
+<span>Manuel Düzenle</span>
+</button>
+<!-- Yeniden Üret -->
+<button class="bg-white hover:bg-slate-50 text-slate-700 border border-slate-200/90 font-headline text-xs font-semibold px-3.5 py-2.5 rounded-xl shadow-xs flex items-center gap-1.5 transition-all active:scale-95">
+<span class="material-symbols-outlined text-base text-violet">refresh</span>
+<span>Farklı Prompt ile Yeniden Üret</span>
+</button>
+</div>
+<!-- Reject / Ghost -->
+<button class="text-red-600 hover:text-red-700 hover:bg-red-50 text-xs font-semibold px-3.5 py-2.5 rounded-xl transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-base">close</span>
+<span>Reddet</span>
+</button>
+</div>
+<!-- Security Footnote -->
+<div class="mt-4 flex items-center justify-between text-[11px] text-slate-400 font-medium">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-sm text-slate-500">lock</span>
+<span>Onaylanmadan T-soft'a hiçbir şey gönderilmez. Tüm değişiklikler T-soft REST API üzerinden canlı mağazaya iletilir.</span>
+</span>
+<span class="font-mono text-[10px]">İşlem ID: ZEK-2024-48291-REV3</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<!-- ========================================================================= -->
+<!-- FLOATING BOTTOM DOCK: ZEKİ AI ASSISTANT INPUT & CONTROLS -->
+<!-- ========================================================================= -->
+<aside class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full w-full max-w-3xl bg-white/90 backdrop-blur-2xl border border-white/90 shadow-[0_24px_64px_-12px_rgba(18,24,45,0.18)]">
+<div class="flex items-center justify-between px-4 py-2 gap-3">
+<!-- Sparkle Icon & Question Input -->
+<div class="flex items-center gap-2.5 flex-1 min-w-0">
+<div class="w-8 h-8 rounded-full bg-gradient-to-r from-coral to-violet flex items-center justify-center text-white shadow-xs flex-shrink-0">
+<span class="material-symbols-outlined text-base">arrow_back_ios_new</span>
+</div>
+<input class="w-full bg-transparent border-none text-xs font-headline text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-0 p-0" placeholder="ZEKİ AI'ye SEO/GEO sor… (ör: Tüm çocuk kitaplarında eksik meta açıklamaları listele)" type="text"/>
+</div>
+<!-- Quick Context Chips -->
+<div class="hidden md:flex items-center gap-1.5 flex-shrink-0">
+<button class="text-[11px] font-mono bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1 rounded-full border border-slate-200 transition-colors">
+          Model: GPT-4o
+        </button>
+<button class="text-[11px] font-headline bg-violet/10 hover:bg-violet/20 text-violet font-semibold px-2.5 py-1 rounded-full transition-colors flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">tune</span>
+<span>Toplu Denetim</span>
+</button>
+</div>
+<!-- Send Gradient Button -->
+<button class="bg-gradient-to-r from-orange-500 to-indigo-600 hover:opacity-95 text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md active:scale-95 transition-all flex-shrink-0" title="Gönder">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+</button>
+</div>
+</aside>
+</body></html>

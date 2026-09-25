@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SEO &amp; GEO — Bağlantılar — Timaş Portal Kanvas</title>
+<!-- Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Public+Sans:wght@500;600;700&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            ink: "#1B1F2A",
+            muted: "#6B7280",
+            coral: "#FF6B4A",
+            violet: "#7C5CFF",
+            mint: "#10B981",
+            amber: "#F59E0B"
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "sans-serif"],
+            display: ["Plus Jakarta Sans", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    /* Dot Grid Background overlay */
+    .mesh-bg {
+      background-color: #f7fafc;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(255, 232, 214, 0.75) 0px, transparent 50%),
+        radial-gradient(at 50% 40%, rgba(221, 235, 255, 0.65) 0px, transparent 55%),
+        radial-gradient(at 100% 100%, rgba(227, 255, 241, 0.7) 0px, transparent 50%);
+    }
+
+    .dot-pattern {
+      background-image: radial-gradient(rgba(30, 41, 59, 0.14) 1.25px, transparent 1.25px);
+      background-size: 24px 24px;
+    }
+
+    .washi-tape {
+      background-color: rgba(255, 243, 205, 0.9);
+      border-left: 2px dashed #f59e0b;
+      border-right: 2px dashed #f59e0b;
+    }
+
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.4);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="mesh-bg min-h-screen text-ink font-body antialiased relative selection:bg-coral/20 selection:text-ink">
+<!-- Background Dot Texture -->
+<div class="fixed inset-0 dot-pattern pointer-events-none z-0 opacity-80"></div>
+<!-- Left Narrow Icon Rail (54px) -->
+<aside class="fixed top-0 bottom-0 left-0 w-[54px] bg-white/70 backdrop-blur-xl border-r border-white/80 z-50 flex flex-col items-center justify-between py-4 shadow-sm">
+<div class="flex flex-col items-center gap-6">
+<div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-coral to-violet flex items-center justify-center text-white font-headline font-extrabold text-sm shadow-md shadow-coral/20">
+        T
+      </div>
+<div class="w-6 h-[1px] bg-slate-200"></div>
+<nav class="flex flex-col gap-4">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/80 transition-all" title="Ana Sayfa">
+<span class="material-symbols-outlined text-xl">space_dashboard</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/80 transition-all" title="İzleme &amp; Raporlama">
+<span class="material-symbols-outlined text-xl">monitoring</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/80 transition-all" title="İçerik Stüdyosu">
+<span class="material-symbols-outlined text-xl">edit_note</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/80 transition-all" title="Katalog &amp; Kitaplar">
+<span class="material-symbols-outlined text-xl">auto_stories</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/80 transition-all" title="Performans">
+<span class="material-symbols-outlined text-xl">analytics</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center bg-coral/10 text-coral font-semibold transition-all shadow-inner" title="Bağlantılar &amp; Entegrasyonlar">
+<span class="material-symbols-outlined text-xl">link</span>
+</button>
+</nav>
+</div>
+<div class="flex flex-col items-center gap-3">
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-ink hover:bg-white/80 transition-all" title="Ayarlar">
+<span class="material-symbols-outlined text-xl">settings</span>
+</button>
+<div class="w-7 h-7 rounded-full bg-slate-200 border border-white flex items-center justify-center overflow-hidden">
+<span class="font-headline font-bold text-[10px] text-slate-600">EA</span>
+</div>
+</div>
+</aside>
+<!-- Left Main Navigation Sidebar (236px) -->
+<aside class="fixed top-0 bottom-0 left-[54px] w-[236px] bg-white/75 backdrop-blur-2xl border-r border-white/80 z-40 flex flex-col justify-between p-4 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.06)]">
+<div>
+<!-- Header -->
+<div class="px-2 pt-2 pb-4">
+<div class="flex items-center justify-between mb-1">
+<div class="font-headline font-extrabold text-ink text-base tracking-tight flex items-center gap-1.5">
+<span>SEO &amp; GEO</span>
+</div>
+<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-mint/10 text-mint text-[10px] font-mono font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-mint animate-pulse"></span>
+            Canlı
+          </span>
+</div>
+<p class="font-label text-[11px] text-muted tracking-wide flex items-center gap-1.5">
+<span>Yapay Zeka Portalı</span>
+<span class="text-slate-300">·</span>
+<span class="font-mono text-[10px]">v3.4</span>
+</p>
+</div>
+<!-- Action Button -->
+<div class="mb-4">
+<button class="w-full py-2 px-3 rounded-xl bg-white/90 border border-slate-200/80 hover:border-coral/40 text-ink font-headline text-xs font-semibold flex items-center justify-center gap-2 shadow-sm hover:shadow transition-all group">
+<span class="material-symbols-outlined text-coral text-base transition-transform group-hover:scale-110">add_circle</span>
+<span>Yeni Analiz Başlat</span>
+</button>
+</div>
+<!-- Main Navigation Menu -->
+<div class="space-y-1">
+<span class="text-[10px] font-label font-bold uppercase tracking-wider text-muted px-2.5 mb-1 block">Modüller</span>
+<a class="text-slate-600 hover:text-ink px-2.5 py-2 font-headline text-xs font-medium flex items-center justify-between rounded-xl hover:bg-white/60 transition-colors" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg text-slate-400">space_dashboard</span>
+<span>Genel Bakış</span>
+</div>
+</a>
+<a class="text-slate-600 hover:text-ink px-2.5 py-2 font-headline text-xs font-medium flex items-center justify-between rounded-xl hover:bg-white/60 transition-colors" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg text-slate-400">fact_check</span>
+<span>Ürün Denetimi &amp; Onay</span>
+</div>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold">1.284</span>
+</a>
+<a class="text-slate-600 hover:text-ink px-2.5 py-2 font-headline text-xs font-medium flex items-center justify-between rounded-xl hover:bg-white/60 transition-colors" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg text-slate-400">trending_up</span>
+<span>Anahtar Kelimeler &amp; Sıralama</span>
+</div>
+</a>
+<a class="text-slate-600 hover:text-ink px-2.5 py-2 font-headline text-xs font-medium flex items-center justify-between rounded-xl hover:bg-white/60 transition-colors" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg text-violet">psychology</span>
+<span>AI Görünürlük (GEO)</span>
+</div>
+<span class="w-1.5 h-1.5 rounded-full bg-violet animate-ping"></span>
+</a>
+<a class="text-slate-600 hover:text-ink px-2.5 py-2 font-headline text-xs font-medium flex items-center justify-between rounded-xl hover:bg-white/60 transition-colors" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg text-slate-400">health_and_safety</span>
+<span>Teknik Sağlık</span>
+</div>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-mint/15 text-mint font-semibold">82%</span>
+</a>
+<a class="text-slate-600 hover:text-ink px-2.5 py-2 font-headline text-xs font-medium flex items-center justify-between rounded-xl hover:bg-white/60 transition-colors" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg text-slate-400">history_edu</span>
+<span>Gönderim Geçmişi</span>
+</div>
+<span class="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-slate-100 text-slate-600 font-semibold">118</span>
+</a>
+</div>
+</div>
+<!-- Bottom Secondary Group with ACTIVE Bağlantılar Item -->
+<div class="space-y-1 pt-4 border-t border-slate-200/60">
+<span class="text-[10px] font-label font-bold uppercase tracking-wider text-muted px-2.5 mb-1 block">Sistem &amp; Veri</span>
+<!-- Active Item: Exact Design System Gradient Pill -->
+<a class="bg-gradient-to-r from-coral to-violet text-white font-headline text-xs font-semibold rounded-xl shadow-md shadow-coral/20 px-3 py-2 flex items-center justify-between" href="#">
+<div class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-lg">link</span>
+<span>Bağlantılar</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-white shadow-sm"></span>
+</a>
+<a class="text-slate-600 hover:text-ink px-2.5 py-2 font-headline text-xs font-medium flex items-center gap-2.5 rounded-xl hover:bg-white/60 transition-colors" href="#">
+<span class="material-symbols-outlined text-lg text-slate-400">tune</span>
+<span>Ayarlar &amp; Parametreler</span>
+</a>
+</div>
+</aside>
+<!-- Top Bar Strip (Fixed 16h / 64px) -->
+<header class="fixed top-0 right-0 left-[290px] h-16 bg-white/70 backdrop-blur-md border-b border-white/80 z-30 flex items-center justify-between px-8 shadow-sm">
+<!-- Breadcrumb & Status Chips -->
+<div class="flex items-center gap-3">
+<div class="flex items-center gap-1.5 font-label text-xs font-medium text-muted">
+<span class="font-bold tracking-tight text-ink">TİMAŞ</span>
+<span class="text-slate-300">/</span>
+<span class="text-slate-600 font-semibold">SEO &amp; GEO</span>
+<span class="text-slate-300">/</span>
+<span class="text-ink font-semibold">Bağlantılar &amp; Entegrasyonlar</span>
+</div>
+<div class="h-4 w-[1px] bg-slate-200 ml-1"></div>
+<!-- Live Connection Pill -->
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-mint/10 border border-mint/20 text-mint font-headline text-[11px] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-mint animate-pulse"></span>
+<span>T-soft bağlı · 8/8 Entegrasyon Aktif</span>
+</div>
+<!-- Sample Data Indicator -->
+<span class="px-2 py-0.5 rounded-md bg-slate-100 text-slate-500 font-mono text-[10px] font-medium border border-slate-200/60">
+        Canlı API Akışı
+      </span>
+</div>
+<!-- Right Controls Strip -->
+<div class="flex items-center gap-3">
+<!-- Date Chip -->
+<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/80 border border-slate-200/70 text-slate-700 text-xs font-mono font-medium shadow-sm">
+<span class="material-symbols-outlined text-sm text-slate-400">calendar_today</span>
+<span>Son 30 Gün · 24.09.2026</span>
+</div>
+<!-- Sync Button -->
+<button class="w-8 h-8 rounded-full bg-white/80 border border-slate-200/70 hover:border-slate-300 text-slate-600 flex items-center justify-center hover:bg-white shadow-sm transition-all" title="Veri Yenile">
+<span class="material-symbols-outlined text-base">sync</span>
+</button>
+<!-- Notifications -->
+<button class="relative w-8 h-8 rounded-full bg-white/80 border border-slate-200/70 hover:border-slate-300 text-slate-600 flex items-center justify-center hover:bg-white shadow-sm transition-all" title="Bildirimler">
+<span class="material-symbols-outlined text-base">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-coral ring-2 ring-white"></span>
+</button>
+<div class="h-5 w-[1px] bg-slate-200"></div>
+<!-- User Profile -->
+<div class="flex items-center gap-2.5 pl-1">
+<div class="w-8 h-8 rounded-full bg-gradient-to-br from-violet to-coral p-[1.5px] shadow-sm">
+<div class="w-full h-full bg-white rounded-full flex items-center justify-center overflow-hidden">
+<span class="font-headline font-bold text-xs text-ink">EA</span>
+</div>
+</div>
+<div class="flex flex-col text-left">
+<span class="font-headline text-xs font-bold text-ink leading-tight">Emre Aydın</span>
+<span class="font-label text-[10px] text-muted leading-tight">Katalog &amp; SEO Direktörü</span>
+</div>
+</div>
+</div>
+</header>
+<!-- Main Canvas Container -->
+<main class="ml-[290px] pt-20 pb-28 px-8 z-10 relative max-w-[1550px]">
+<!-- Hero / Title Header Section -->
+<div class="mb-6 flex items-start justify-between">
+<div>
+<div class="flex items-center gap-2 mb-1">
+<span class="text-xs font-label uppercase tracking-wider text-muted font-bold">Entegrasyon Ekosistemi</span>
+<span class="text-slate-300">•</span>
+<span class="font-mono text-xs text-mint font-semibold">Tüm Servisler Operasyonel (100%)</span>
+</div>
+<h1 class="text-2xl font-headline font-extrabold text-ink tracking-tight">Bağlantılar &amp; API Koordinatörü</h1>
+<p class="text-xs text-slate-500 font-normal mt-0.5 max-w-2xl">
+          Timaş Yayınları kataloğunun e-ticaret altyapısı, arama motorları ve üretken yapay zeka (GEO) tarama servisleriyle çift yönlü senkronizasyon haritası.
+        </p>
+</div>
+<div class="flex items-center gap-2.5">
+<button class="px-3.5 py-2 rounded-xl bg-white/90 border border-slate-200/80 hover:bg-white text-slate-700 font-headline text-xs font-semibold flex items-center gap-2 shadow-sm transition-all">
+<span class="material-symbols-outlined text-sm text-slate-500">terminal</span>
+<span>Webhooks &amp; Uç Noktalar</span>
+</button>
+<button class="px-3.5 py-2 rounded-xl bg-gradient-to-r from-coral to-violet text-white font-headline text-xs font-semibold flex items-center gap-2 shadow-md shadow-coral/20 hover:opacity-95 transition-all">
+<span class="material-symbols-outlined text-sm">add</span>
+<span>Yeni Servis Ekle</span>
+</button>
+</div>
+</div>
+<!-- Main Content Bento 2-Column Grid -->
+<div class="grid grid-cols-12 gap-6 items-start">
+<!-- Left Column: Platform Connection Cards (Col Span 8) -->
+<div class="col-span-12 lg:col-span-8 space-y-5">
+<!-- Cards Subgrid -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<!-- 1. T-soft E-Ticaret Card (Featured / Full Width Span 2) -->
+<div class="md:col-span-2 bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.1)] relative overflow-hidden transition-all hover:shadow-[0_25px_65px_-15px_rgba(20,30,60,0.14)]">
+<div class="absolute top-0 right-0 left-0 h-1 bg-gradient-to-r from-coral via-violet to-mint"></div>
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-2xl bg-orange-50 border border-orange-200/60 flex items-center justify-center text-orange-600 font-extrabold font-headline text-lg shadow-sm">
+                  TS
+                </div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline font-bold text-sm text-ink">T-soft E-Ticaret Altyapısı</h2>
+<span class="px-2 py-0.5 rounded-full bg-mint/10 border border-mint/20 text-mint font-mono text-[10px] font-semibold inline-flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-mint"></span>
+                      Bağlı &amp; Canlı
+                    </span>
+</div>
+<p class="font-mono text-[11px] text-slate-500 mt-0.5">REST v1 · satinal.timas.com.tr/rest1</p>
+</div>
+</div>
+<!-- Last sync tag -->
+<div class="text-right">
+<span class="text-[10px] uppercase font-label text-muted font-bold tracking-wider block">Son Senkronizasyon</span>
+<span class="font-mono text-xs font-semibold text-slate-800">24.09.2026 09:42:18</span>
+</div>
+</div>
+<!-- Credentials & Scope Bento Inside -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3 p-3.5 rounded-xl bg-slate-50/70 border border-slate-200/60 mb-4">
+<div>
+<span class="text-[10px] font-label uppercase tracking-wider text-muted block mb-0.5 font-bold">API Kullanıcı Adı</span>
+<span class="font-mono text-xs font-semibold text-ink">timas_seo_bot</span>
+</div>
+<div>
+<span class="text-[10px] font-label uppercase tracking-wider text-muted block mb-0.5 font-bold">API Güvenlik Anahtarı</span>
+<span class="font-mono text-xs text-slate-500 tracking-wider">••••••••••••••••</span>
+</div>
+<div>
+<span class="text-[10px] font-label uppercase tracking-wider text-muted block mb-0.5 font-bold">Gecikme (Latency)</span>
+<span class="font-mono text-xs font-semibold text-mint">34 ms (Kusursuz)</span>
+</div>
+</div>
+<!-- Yetkiler / Scopes -->
+<div class="mb-4">
+<span class="text-[10px] font-label uppercase tracking-wider text-muted font-bold block mb-1.5">Yetki Kapsamı (Authorized Scopes)</span>
+<div class="flex flex-wrap gap-1.5">
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 font-headline text-[11px] text-slate-700 shadow-2xs">
+<span class="material-symbols-outlined text-mint text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                  Ürün Okuma / Yazma
+                </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 font-headline text-[11px] text-slate-700 shadow-2xs">
+<span class="material-symbols-outlined text-mint text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                  Kategori Yönetimi
+                </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 font-headline text-[11px] text-slate-700 shadow-2xs">
+<span class="material-symbols-outlined text-mint text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                  Yayınevi / Marka
+                </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 font-headline text-[11px] text-slate-700 shadow-2xs">
+<span class="material-symbols-outlined text-mint text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                  Kanonik / Meta URL
+                </span>
+<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-slate-200/80 font-headline text-[11px] text-slate-700 shadow-2xs">
+<span class="material-symbols-outlined text-mint text-sm" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+                  301 Yönlendirmeler
+                </span>
+</div>
+</div>
+<!-- Footer Action Row -->
+<div class="flex items-center justify-between pt-3 border-t border-slate-100">
+<span class="text-[11px] text-slate-500 font-label">Aktif SKU İletişimi: <b class="font-mono text-ink">9.692 kitap</b></span>
+<div class="flex items-center gap-2">
+<button class="px-3 py-1.5 rounded-lg border border-slate-200 hover:border-slate-300 text-slate-700 hover:bg-slate-50 font-headline text-xs font-semibold flex items-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-sm">wifi_tethering</span>
+<span>Bağlantıyı Sına</span>
+</button>
+<button class="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-headline text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors">
+<span class="material-symbols-outlined text-sm">cached</span>
+<span>Yeniden Senkronize Et</span>
+</button>
+</div>
+</div>
+</div>
+<!-- 2. Google Search Console Card -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.08)] flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-xl bg-blue-50 border border-blue-200/60 flex items-center justify-center text-blue-600 font-extrabold font-headline shadow-2xs">
+<span class="material-symbols-outlined text-xl">manage_search</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xs text-ink">Google Search Console</h3>
+<span class="font-mono text-[10px] text-slate-500">Domain Property</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-mint/10 text-mint font-mono text-[10px] font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-mint"></span> Bağlı
+                </span>
+</div>
+<!-- Service Account Copy Chip -->
+<div class="mb-3">
+<span class="text-[10px] font-label uppercase tracking-wider text-muted font-bold block mb-1">Servis Hesabı (OAuth Bot)</span>
+<div class="flex items-center justify-between p-2 rounded-lg bg-slate-50 border border-slate-200/70">
+<span class="font-mono text-[10px] text-slate-700 truncate mr-2">timas-seo-agent@timas-zeki-ai.iam.gserviceaccount.com</span>
+<button class="text-slate-400 hover:text-slate-700 p-0.5 rounded hover:bg-slate-200/60" title="Kopyala">
+<span class="material-symbols-outlined text-xs">content_copy</span>
+</button>
+</div>
+</div>
+<!-- Washi-tape Notice Alert -->
+<div class="washi-tape p-2.5 rounded-lg mb-3">
+<div class="flex items-start gap-1.5">
+<span class="material-symbols-outlined text-amber text-sm mt-0.5">verified_user</span>
+<p class="font-headline text-[11px] text-amber-900 leading-tight">
+                    Search Console mülk ayarlarında bu servis hesabına <b class="font-semibold">"Tam Yetki"</b> atanmalıdır.
+                  </p>
+</div>
+</div>
+<div class="space-y-1 text-[11px] font-mono text-slate-600">
+<div class="flex justify-between">
+<span class="text-muted">Doğrulanan Mülk:</span>
+<span class="font-semibold text-ink">https://www.timas.com.tr/</span>
+</div>
+<div class="flex justify-between">
+<span class="text-muted">Son Crawl İndeksi:</span>
+<span class="text-mint font-semibold">14 dk önce</span>
+</div>
+</div>
+</div>
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
+<span class="text-[11px] text-slate-500 font-label">URL Denetim API: Aktif</span>
+<button class="text-coral hover:text-coral/80 text-xs font-headline font-semibold flex items-center gap-1">
+<span>Rapor Aç</span>
+<span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- 3. Google Analytics 4 (GA4) Card -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.08)] flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-xl bg-amber-50 border border-amber-200/60 flex items-center justify-center text-amber-600 font-extrabold font-headline shadow-2xs">
+<span class="material-symbols-outlined text-xl">query_stats</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xs text-ink">Google Analytics 4 (GA4)</h3>
+<span class="font-mono text-[10px] text-slate-500">Measurement Protocol v2</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-mint/10 text-mint font-mono text-[10px] font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-mint"></span> Bağlı
+                </span>
+</div>
+<div class="space-y-2 mb-3">
+<div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200/60 flex items-center justify-between">
+<div>
+<span class="text-[10px] font-label uppercase tracking-wider text-muted font-bold block">Mülk Kimliği (Property ID)</span>
+<span class="font-mono text-xs font-bold text-ink">G-892419024</span>
+</div>
+<span class="px-2 py-0.5 rounded bg-blue-50 text-blue-700 font-mono text-[10px] font-semibold">Timaş Ana Portal</span>
+</div>
+<p class="text-[11px] text-slate-600 font-body leading-relaxed">
+                  API Ölçüm Protokolü aktif. Organik trafik ve yapay zeka tavsiye yönlendirmeleri (GEO Referrals) anlık akıyor.
+                </p>
+</div>
+<div class="p-2 rounded-lg bg-mint/5 border border-mint/20 flex items-center justify-between text-[11px] font-mono">
+<span class="text-slate-600">Bugünkü Organik Olaylar:</span>
+<span class="font-bold text-mint">+48.210 hit</span>
+</div>
+</div>
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
+<span class="text-[11px] text-slate-500 font-label">Veri Akışı: Web Yayını</span>
+<button class="text-coral hover:text-coral/80 text-xs font-headline font-semibold flex items-center gap-1">
+<span>Metrikleri İncele</span>
+<span class="material-symbols-outlined text-xs">arrow_forward</span>
+</button>
+</div>
+</div>
+<!-- 4. Google Merchant Center Card -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.08)] flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200/60 flex items-center justify-center text-emerald-600 font-extrabold font-headline shadow-2xs">
+<span class="material-symbols-outlined text-xl">storefront</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xs text-ink">Google Merchant Center</h3>
+<span class="font-mono text-[10px] text-slate-500">Kitap &amp; E-Ticaret Feed</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-mint/10 text-mint font-mono text-[10px] font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-mint"></span> Bağlı
+                </span>
+</div>
+<div class="space-y-2 mb-3">
+<div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200/60">
+<div class="flex justify-between items-center mb-1">
+<span class="text-[10px] font-label uppercase tracking-wider text-muted font-bold">Hesap Kimliği (Merchant ID)</span>
+<span class="font-mono text-xs font-bold text-ink">MC-5829104</span>
+</div>
+<div class="flex justify-between items-center">
+<span class="text-[10px] font-label text-muted">Feed XML URL:</span>
+<span class="font-mono text-[10px] text-slate-700 bg-white px-1.5 py-0.5 rounded border border-slate-200">/api/feeds/google-books.xml</span>
+</div>
+</div>
+<div class="flex items-center justify-between text-xs p-2 rounded-lg bg-slate-50/50">
+<span class="text-slate-600 font-headline">İndekslenen Kitap SKU:</span>
+<span class="font-mono font-bold text-ink">9.692 SKU Aktif</span>
+</div>
+</div>
+</div>
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
+<span class="text-[11px] text-mint font-mono flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">check</span> 0 Hata / 14 Uyarı
+              </span>
+<button class="text-slate-600 hover:text-ink text-xs font-headline font-semibold">Feed Yenile</button>
+</div>
+</div>
+<!-- 5. PageSpeed Insights & Chrome UX Report (CrUX) -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.08)] flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-xl bg-purple-50 border border-purple-200/60 flex items-center justify-center text-purple-600 font-extrabold font-headline shadow-2xs">
+<span class="material-symbols-outlined text-xl">speed</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xs text-ink">PageSpeed &amp; CrUX API</h3>
+<span class="font-mono text-[10px] text-slate-500">Core Web Vitals Engine</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-mint/10 text-mint font-mono text-[10px] font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-mint"></span> Bağlı
+                </span>
+</div>
+<div class="space-y-2 mb-3">
+<div class="flex justify-between items-center text-xs font-mono">
+<span class="text-muted">API Anahtarı:</span>
+<span class="font-semibold text-slate-800">AIzaSyD9...X81kQ</span>
+</div>
+<!-- Daily Quota Bar -->
+<div>
+<div class="flex justify-between text-[11px] font-mono mb-1">
+<span class="text-slate-600 font-label">Günlük Kota Kullanımı:</span>
+<span class="font-semibold text-slate-800">1.800 / 10.000 (%18)</span>
+</div>
+<div class="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+<div class="h-full bg-violet rounded-full" style="width: 18%"></div>
+</div>
+</div>
+<div class="grid grid-cols-3 gap-1.5 pt-2 text-center">
+<div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+<span class="text-[9px] font-label text-muted block">LCP</span>
+<span class="font-mono text-xs font-bold text-mint">1.4s</span>
+</div>
+<div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+<span class="text-[9px] font-label text-muted block">INP</span>
+<span class="font-mono text-xs font-bold text-mint">62ms</span>
+</div>
+<div class="bg-slate-50 p-1.5 rounded-lg border border-slate-200/60">
+<span class="text-[9px] font-label text-muted block">CLS</span>
+<span class="font-mono text-xs font-bold text-mint">0.02</span>
+</div>
+</div>
+</div>
+</div>
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
+<span class="text-[11px] text-slate-500 font-label">Tüm Şablonlar Geçti</span>
+<button class="text-coral hover:text-coral/80 text-xs font-headline font-semibold">Test Başlat</button>
+</div>
+</div>
+<!-- 6. Bing Webmaster & IndexNow Card -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.08)] flex flex-col justify-between">
+<div>
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-xl bg-sky-50 border border-sky-200/60 flex items-center justify-center text-sky-600 font-extrabold font-headline shadow-2xs">
+<span class="material-symbols-outlined text-xl">bolt</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xs text-ink">Bing &amp; IndexNow Protokolü</h3>
+<span class="font-mono text-[10px] text-slate-500">Anında İndeks Tetikleyici</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-mint/10 text-mint font-mono text-[10px] font-semibold flex items-center gap-1">
+<span class="w-1.5 h-1.5 rounded-full bg-mint"></span> Bağlı
+                </span>
+</div>
+<div class="space-y-2 mb-3 text-xs">
+<div class="p-2 rounded-lg bg-slate-50 border border-slate-200/60 font-mono text-[11px] space-y-1">
+<div class="flex justify-between">
+<span class="text-muted">IndexNow API Key:</span>
+<span class="font-semibold text-ink">b82f...91c0</span>
+</div>
+<div class="flex justify-between">
+<span class="text-muted">Kök Anahtar Dosyası:</span>
+<span class="text-violet font-semibold">849204810294.txt</span>
+</div>
+</div>
+<p class="text-[11px] text-slate-500 font-body leading-relaxed">
+                  Sayfa ve katalog güncellemeleri anında Bing, Yandex ve Naver botlarına otonom pinglenir.
+                </p>
+</div>
+</div>
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
+<span class="text-[11px] text-mint font-mono">Son Ping: 12 dk önce</span>
+<button class="text-slate-600 hover:text-ink text-xs font-headline font-semibold">Test Ping</button>
+</div>
+</div>
+<!-- 7. Yandex Webmaster Card (Attention Amber) -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-amber-300/60 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.08)] flex flex-col justify-between relative overflow-hidden">
+<div class="absolute -right-8 -top-8 w-24 h-24 bg-amber-200/30 rounded-full blur-xl pointer-events-none"></div>
+<div>
+<div class="flex items-start justify-between mb-3">
+<div class="flex items-center gap-2.5">
+<div class="w-10 h-10 rounded-xl bg-red-50 border border-red-200/60 flex items-center justify-center text-red-600 font-extrabold font-headline shadow-2xs">
+<span class="font-headline font-extrabold text-sm">Y</span>
+</div>
+<div>
+<h3 class="font-headline font-bold text-xs text-ink">Yandex Webmaster</h3>
+<span class="font-mono text-[10px] text-slate-500">OAuth 2.0 Doğrulama</span>
+</div>
+</div>
+<span class="px-2 py-0.5 rounded-full bg-amber/15 text-amber-700 font-mono text-[10px] font-semibold flex items-center gap-1 border border-amber-300/60">
+<span class="w-1.5 h-1.5 rounded-full bg-amber animate-pulse"></span> Yetki Bekliyor
+                </span>
+</div>
+<!-- Warning Alert Box -->
+<div class="p-3 rounded-xl bg-amber-50/90 border border-amber-200/80 mb-3 space-y-1">
+<div class="flex items-center gap-1.5 text-amber-800 font-headline font-bold text-xs">
+<span class="material-symbols-outlined text-sm">warning</span>
+<span>OAuth 2.0 Token Süresi Yaklaşıyor</span>
+</div>
+<p class="font-mono text-[11px] text-amber-900 leading-tight">
+                  Kalan Geçerlilik: <b class="font-bold">3 gün</b>. Otomatik yenileme başarısız oldu, yeniden izin gerekiyor.
+                </p>
+</div>
+<p class="text-[11px] text-slate-500 font-body">
+                Yandex arama motoru bölgesel sıralama ve turbo sayfa entegrasyonu için token gereklidir.
+              </p>
+</div>
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between mt-3">
+<span class="text-[10px] font-mono text-muted">ID: timas_yandex_web</span>
+<button class="px-3 py-1.5 rounded-lg bg-amber text-white font-headline text-xs font-semibold flex items-center gap-1 shadow-sm hover:bg-amber-600 transition-colors">
+<span class="material-symbols-outlined text-xs">key</span>
+<span>OAuth ile Yeniden Doğrula</span>
+</button>
+</div>
+</div>
+<!-- 8. Yapay Zekâ Ölçüm Motorları (GEO Radar) - Span 2 Bottom Bento -->
+<div class="md:col-span-2 bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.1)] relative">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-3">
+<div class="w-12 h-12 rounded-2xl bg-violet/10 border border-violet/20 flex items-center justify-center text-violet font-extrabold shadow-sm">
+<span class="material-symbols-outlined text-2xl">radar</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="font-headline font-bold text-sm text-ink">Yapay Zekâ Ölçüm Motorları (GEO Radar)</h2>
+<span class="px-2 py-0.5 rounded-full bg-violet/10 border border-violet/20 text-violet font-mono text-[10px] font-semibold">
+                      3/3 Model API Doğrulandı
+                    </span>
+</div>
+<p class="text-xs text-slate-500 mt-0.5">
+                    İzlenen 240 günlük prompt sorgusu bu anahtarlarla otonom taranır ve Timaş kitaplarının alıntı oranları ölçülür.
+                  </p>
+</div>
+</div>
+<span class="px-2.5 py-1 rounded-full bg-slate-100 text-slate-700 font-mono text-[11px] font-medium">
+                Günlük 2.400 API Çağrısı
+              </span>
+</div>
+<!-- 3 AI Engine Credentials Grid -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+<!-- OpenAI -->
+<div class="p-3 rounded-xl bg-slate-50/80 border border-slate-200/60 hover:bg-white transition-all">
+<div class="flex items-center justify-between mb-1">
+<span class="font-headline font-bold text-xs text-ink flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-mint"></span>
+                    OpenAI (GPT-4o)
+                  </span>
+<span class="font-mono text-[10px] text-mint font-semibold">Aktif</span>
+</div>
+<div class="font-mono text-[11px] text-slate-600 truncate mb-1">sk-proj-...84Fa</div>
+<span class="text-[10px] font-label text-muted">Sentetik ChatGPT sorguları</span>
+</div>
+<!-- Perplexity -->
+<div class="p-3 rounded-xl bg-slate-50/80 border border-slate-200/60 hover:bg-white transition-all">
+<div class="flex items-center justify-between mb-1">
+<span class="font-headline font-bold text-xs text-ink flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-mint"></span>
+                    Perplexity (Sonar)
+                  </span>
+<span class="font-mono text-[10px] text-mint font-semibold">Aktif</span>
+</div>
+<div class="font-mono text-[11px] text-slate-600 truncate mb-1">pplx-...99A2</div>
+<span class="text-[10px] font-label text-muted">Canlı web ve kaynak analizi</span>
+</div>
+<!-- Google Gemini -->
+<div class="p-3 rounded-xl bg-slate-50/80 border border-slate-200/60 hover:bg-white transition-all">
+<div class="flex items-center justify-between mb-1">
+<span class="font-headline font-bold text-xs text-ink flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-mint"></span>
+                    Google Gemini Pro
+                  </span>
+<span class="font-mono text-[10px] text-mint font-semibold">Aktif</span>
+</div>
+<div class="font-mono text-[11px] text-slate-600 truncate mb-1">AIzaSy...77Kx</div>
+<span class="text-[10px] font-label text-muted">AI Overview serp görünürlüğü</span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Right Column: Rules & Audit Log (Col Span 4) -->
+<div class="col-span-12 lg:col-span-4 space-y-5">
+<!-- Card 1: Onay Kuralları & Otomasyon Politikası -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.1)]">
+<div class="flex items-center gap-2.5 mb-2">
+<div class="w-8 h-8 rounded-lg bg-violet/10 text-violet flex items-center justify-center">
+<span class="material-symbols-outlined text-lg">policy</span>
+</div>
+<div>
+<h2 class="font-headline font-bold text-sm text-ink">Onay Kuralları &amp; Otomasyon</h2>
+<span class="text-[11px] font-label text-muted">Katalog Koruma Mekanizması</span>
+</div>
+</div>
+<p class="text-xs text-slate-500 mb-4 font-body">
+            Yapay zeka tarafından üretilen SEO &amp; GEO meta verilerinin canlı kataloğa yansıtılma kuralları:
+          </p>
+<div class="space-y-3.5">
+<!-- Toggle 1: Locked Strict Policy -->
+<div class="p-3 rounded-xl bg-slate-50 border border-slate-200/70 flex items-start justify-between gap-3">
+<div class="space-y-0.5">
+<div class="flex items-center gap-1.5">
+<span class="font-headline font-bold text-xs text-ink">T-soft'a her gönderim onay ister</span>
+<span class="material-symbols-outlined text-slate-400 text-xs">lock</span>
+</div>
+<p class="text-[10px] text-muted leading-tight">Otomatik kör gönderim kapalıdır. Kurumsal güvenlik gereği zorunludur.</p>
+</div>
+<div class="w-9 h-5 rounded-full bg-slate-800 flex items-center justify-end px-0.5 cursor-not-allowed opacity-90">
+<div class="w-4 h-4 rounded-full bg-white shadow-xs"></div>
+</div>
+</div>
+<!-- Toggle 2 -->
+<div class="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 flex items-start justify-between gap-3">
+<div class="space-y-0.5">
+<span class="font-headline font-semibold text-xs text-ink block">Önizleme Doğrulaması</span>
+<p class="text-[10px] text-muted leading-tight">Onaylanan öneriyi T-soft'a aktarmadan önce diff görünümünde göster.</p>
+</div>
+<div class="w-9 h-5 rounded-full bg-gradient-to-r from-coral to-violet flex items-center justify-end px-0.5 cursor-pointer shadow-inner">
+<div class="w-4 h-4 rounded-full bg-white shadow-xs"></div>
+</div>
+</div>
+<!-- Toggle 3 -->
+<div class="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 flex items-start justify-between gap-3">
+<div class="space-y-0.5">
+<span class="font-headline font-semibold text-xs text-ink block">Önbellek Temizleme</span>
+<p class="text-[10px] text-muted leading-tight">Gönderimden hemen sonra T-soft Varnish &amp; CDN önbelleğini purge et.</p>
+</div>
+<div class="w-9 h-5 rounded-full bg-gradient-to-r from-coral to-violet flex items-center justify-end px-0.5 cursor-pointer shadow-inner">
+<div class="w-4 h-4 rounded-full bg-white shadow-xs"></div>
+</div>
+</div>
+<!-- Toggle 4 -->
+<div class="p-3 rounded-xl bg-slate-50/70 border border-slate-200/60 flex items-start justify-between gap-3">
+<div class="space-y-0.5">
+<span class="font-headline font-semibold text-xs text-ink block">IndexNow Anında Bildirim</span>
+<p class="text-[10px] text-muted leading-tight">Onaylanan URL değişikliklerini saniyeler içinde arama motorlarına ilet.</p>
+</div>
+<div class="w-9 h-5 rounded-full bg-gradient-to-r from-coral to-violet flex items-center justify-end px-0.5 cursor-pointer shadow-inner">
+<div class="w-4 h-4 rounded-full bg-white shadow-xs"></div>
+</div>
+</div>
+</div>
+<!-- Washi-tape info block -->
+<div class="washi-tape p-3 rounded-xl mt-4">
+<div class="flex items-start gap-2">
+<span class="material-symbols-outlined text-amber text-base mt-0.5">shield</span>
+<p class="text-[11px] text-amber-950 font-body leading-snug">
+<b class="font-semibold">Kritik Güvenlik Notu:</b> Meta başlık ve kanonik (canonical) URL değişiklikleri kıdemli editör çift onay mekanizmasına tabidir.
+              </p>
+</div>
+</div>
+</div>
+<!-- Card 2: Denetim Kaydı (Audit Log) -->
+<div class="bg-white/95 backdrop-blur-xl rounded-[24px] border border-white/80 p-5 shadow-[0_20px_60px_-15px_rgba(20,30,60,0.1)]">
+<div class="flex items-center justify-between mb-3">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-coral text-lg">receipt_long</span>
+<h2 class="font-headline font-bold text-sm text-ink">Denetim Kaydı (Audit Log)</h2>
+</div>
+<span class="font-mono text-[10px] text-muted">Son 5 İşlem</span>
+</div>
+<!-- Log Timeline -->
+<div class="space-y-3 relative before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-[2px] before:bg-slate-200/70">
+<!-- Event 1 -->
+<div class="flex items-start gap-3 relative">
+<div class="w-6 h-6 rounded-full bg-mint/20 border-2 border-white text-mint flex items-center justify-center shrink-0 z-10 shadow-xs">
+<span class="material-symbols-outlined text-xs">check</span>
+</div>
+<div class="space-y-0.5 flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-headline text-xs font-bold text-ink">Emre Aydın</span>
+<span class="font-mono text-[10px] text-slate-500 font-semibold">Bugün 09:14</span>
+</div>
+<p class="text-[11px] text-slate-600 leading-tight">
+<span class="font-medium text-ink">'İyilik Timi - 1'</span> Meta ve Kanonik URL T-soft'a aktarıldı.
+                </p>
+<span class="inline-block font-mono text-[9px] text-mint font-semibold bg-mint/10 px-1 rounded">200 OK · Başarılı</span>
+</div>
+</div>
+<!-- Event 2 -->
+<div class="flex items-start gap-3 relative">
+<div class="w-6 h-6 rounded-full bg-violet/20 border-2 border-white text-violet flex items-center justify-center shrink-0 z-10 shadow-xs">
+<span class="material-symbols-outlined text-xs">smart_toy</span>
+</div>
+<div class="space-y-0.5 flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-headline text-xs font-bold text-ink">ZEKİ AI Bot</span>
+<span class="font-mono text-[10px] text-slate-500 font-semibold">Bugün 08:30</span>
+</div>
+<p class="text-[11px] text-slate-600 leading-tight">
+                  GSC 301 yönlendirme haritası eşitlendi (12 URL çözümlendi).
+                </p>
+<span class="inline-block font-mono text-[9px] text-violet font-semibold bg-violet/10 px-1 rounded">Otonom Cron</span>
+</div>
+</div>
+<!-- Event 3 -->
+<div class="flex items-start gap-3 relative">
+<div class="w-6 h-6 rounded-full bg-slate-200 border-2 border-white text-slate-600 flex items-center justify-center shrink-0 z-10 shadow-xs">
+<span class="material-symbols-outlined text-xs">edit</span>
+</div>
+<div class="space-y-0.5 flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-headline text-xs font-bold text-ink">Selin Karahan</span>
+<span class="font-mono text-[10px] text-slate-500 font-semibold">Dün 17:45</span>
+</div>
+<p class="text-[11px] text-slate-600 leading-tight">
+<span class="font-medium text-ink">'Kayıp Atlas'</span> Schema.org Book JSON-LD onaylandı.
+                </p>
+</div>
+</div>
+<!-- Event 4 -->
+<div class="flex items-start gap-3 relative">
+<div class="w-6 h-6 rounded-full bg-sky-100 border-2 border-white text-sky-600 flex items-center justify-center shrink-0 z-10 shadow-xs">
+<span class="material-symbols-outlined text-xs">send</span>
+</div>
+<div class="space-y-0.5 flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-headline text-xs font-bold text-ink">Emre Aydın</span>
+<span class="font-mono text-[10px] text-slate-500 font-semibold">Dün 14:20</span>
+</div>
+<p class="text-[11px] text-slate-600 leading-tight">
+                  IndexNow API 42 yeni kitap URL'si Bing ve Yandex'e pinglendi.
+                </p>
+</div>
+</div>
+<!-- Event 5 -->
+<div class="flex items-start gap-3 relative">
+<div class="w-6 h-6 rounded-full bg-amber-100 border-2 border-white text-amber-600 flex items-center justify-center shrink-0 z-10 shadow-xs">
+<span class="material-symbols-outlined text-xs">vpn_key</span>
+</div>
+<div class="space-y-0.5 flex-1 min-w-0">
+<div class="flex items-center justify-between">
+<span class="font-headline text-xs font-bold text-ink">Sistem Güvenliği</span>
+<span class="font-mono text-[10px] text-slate-500 font-semibold">Dün 03:00</span>
+</div>
+<p class="text-[11px] text-slate-600 leading-tight">
+                  T-soft API Token yenilendi ve güvenli bağlantı doğrulandı.
+                </p>
+</div>
+</div>
+</div>
+<!-- Download Action Button -->
+<div class="pt-4 border-t border-slate-100 mt-4">
+<button class="w-full py-2.5 px-3 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200/80 text-slate-700 font-headline text-xs font-semibold flex items-center justify-center gap-2 transition-all">
+<span class="material-symbols-outlined text-base text-slate-500">download</span>
+<span>Tüm Denetim Günlüğünü İndir (CSV)</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Bottom Floating Glass Dock (Fixed at bottom center) -->
+<div class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4">
+<div class="bg-white/90 backdrop-blur-2xl rounded-full border border-white/90 shadow-[0_24px_64px_-12px_rgba(18,24,45,0.18)] flex items-center justify-between px-5 py-2.5 gap-4">
+<!-- AI Sparkle Icon -->
+<div class="flex items-center gap-2">
+<div class="w-7 h-7 rounded-full bg-gradient-to-r from-coral to-violet flex items-center justify-center text-white shrink-0 shadow-sm">
+<span class="material-symbols-outlined text-base">auto_awesome</span>
+</div>
+<span class="font-headline font-bold text-transparent bg-clip-text bg-gradient-to-r from-coral to-violet text-xs hidden sm:inline">
+          ZEKİ AI
+        </span>
+</div>
+<!-- Question Input -->
+<div class="flex-1 min-w-0">
+<input class="w-full bg-transparent border-0 p-0 text-xs font-headline text-ink placeholder:text-slate-400 focus:ring-0 focus:outline-none" placeholder="ZEKİ AI'ye SEO/GEO bağlantıları ve API durumu sor..." type="text"/>
+</div>
+<!-- Quick Context Chips & Actions -->
+<div class="flex items-center gap-2 shrink-0">
+<button class="hidden md:flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-100 hover:bg-slate-200/70 text-[11px] font-mono text-slate-600 transition-colors">
+<span class="material-symbols-outlined text-xs">tune</span>
+<span>Model: GPT-4o</span>
+</button>
+<button class="bg-gradient-to-r from-coral to-violet text-white rounded-full w-8 h-8 flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined text-base">arrow_upward</span>
+</button>
+</div>
+</div>
+</div>
+</body></html>

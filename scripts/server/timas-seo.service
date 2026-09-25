@@ -1,0 +1,11 @@
+[Unit]
+Description=SEO & GEO: T-soft ürün eşitlemesi ve denetimi, Search Console okuması
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/seo-geo/run-due); birim yalnız çağırır. T-soft eşitlemesi köprüde arka planda sürer,
+# bağlantısı tanımlı olmayan kaynak atlanır. $$ ile anahtar kabuktan okunur, günlüğe düşmez.
+TimeoutStartSec=30min
+ExecStart=/bin/sh -c 'curl -fsS -m 1700 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/seo-geo/run-due"'

@@ -27,6 +27,8 @@ export const LIVE: Record<string, string> = {
   M6: '/telif-sozlesme',
   M7: '/kisiler?rol=yazar',
   M8: '/kisiler?rol=cizer',
+  M25: '/seo-geo',
+  M26: '/seo-geo/ai-gorunurluk',
 };
 
 /** Çalışan modül grupları: ana kategori olarak en üstte durur, tıklanınca modülün kendi ana
@@ -36,6 +38,7 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'Yönetim Raporları': { to: '/yonetim-raporlari', hint: 'Baskı önerisi ve karar raporları' },
   'Editoryal Süreç': { to: '/editoryal', hint: 'Masam, yazar giriş süreci, yayın kurulu' },
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },
+  'SEO & GEO': { to: '/seo-geo', hint: 'T-soft ürün denetimi, Google ve yapay zekâ görünürlüğü' },
 };
 
 /** Yalnız yöneticilere açık ekranlar; bu ekranlara götüren modüller yetkisiz kişide hiç listelenmez. */

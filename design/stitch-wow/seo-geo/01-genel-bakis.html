@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+
+<html lang="tr"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Timaş Yayınları Editoryal Portalı — SEO &amp; GEO Genel Bakış</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&amp;family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;family=Public+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              ink: '#1B1F2A',
+              muted: '#6B7280',
+              coral: '#FF6B4A',
+              violet: '#7C5CFF',
+              mint: '#10B981',
+              amber: '#F59E0B',
+              canvas: '#f7fafc'
+            }
+          },
+          borderRadius: {
+            "DEFAULT": "0.5rem",
+            "lg": "1rem",
+            "xl": "1.5rem",
+            "2xl": "1.25rem",
+            "3xl": "1.5rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Plus Jakarta Sans", "sans-serif"],
+            display: ["Plus Jakarta Sans", "sans-serif"],
+            body: ["Plus Jakarta Sans", "sans-serif"],
+            label: ["Public Sans", "sans-serif"],
+            mono: ["JetBrains Mono", "monospace"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    /* Dot grid canvas background */
+    .canvas-mesh {
+      background-color: #f7fafc;
+      background-image: 
+        radial-gradient(at 0% 0%, rgba(255, 232, 214, 0.65) 0px, transparent 50%),
+        radial-gradient(at 50% 40%, rgba(221, 235, 255, 0.55) 0px, transparent 60%),
+        radial-gradient(at 100% 100%, rgba(227, 255, 241, 0.6) 0px, transparent 55%),
+        radial-gradient(rgba(30, 41, 59, 0.12) 1.25px, transparent 1.25px);
+      background-size: 100% 100%, 100% 100%, 100% 100%, 24px 24px;
+      background-attachment: fixed;
+    }
+
+    /* Glass and card elevation */
+    .glass-surface {
+      background: rgba(255, 255, 255, 0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.9);
+    }
+
+    .kanvas-card {
+      background: rgba(255, 255, 255, 0.96);
+      border-radius: 24px;
+      box-shadow: 0 20px 60px -15px rgba(20, 30, 60, 0.08), 0 4px 16px -2px rgba(20, 30, 60, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.95);
+    }
+
+    .brand-gradient-btn {
+      background: linear-gradient(135deg, #FF6B4A 0%, #7C5CFF 100%);
+    }
+
+    .brand-gradient-text {
+      background: linear-gradient(135deg, #FF6B4A 0%, #7C5CFF 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Washi tape effect */
+    .washi-tape {
+      background-color: rgba(255, 243, 205, 0.85);
+      border-left: 2px dashed #F59E0B;
+      border-right: 2px dashed #F59E0B;
+    }
+
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(107, 114, 128, 0.25);
+      border-radius: 9999px;
+    }
+  </style>
+</head>
+<body class="canvas-mesh font-body text-[#1B1F2A] min-h-screen flex flex-col antialiased selection:bg-[#FF6B4A]/20 selection:text-[#1B1F2A]">
+<!-- Top Global Header (Source of Truth JSON Navigation Blueprint) -->
+<header class="w-full px-6 py-2.5 flex items-center justify-between mx-auto border-b border-slate-200/70 glass-surface sticky top-0 z-40">
+<div class="flex items-center gap-6">
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded-lg bg-gradient-to-tr from-[#FF6B4A] to-[#7C5CFF] flex items-center justify-center text-white shadow-sm font-headline font-bold text-sm tracking-tight">
+          T
+        </div>
+<span class="font-headline text-[15px] font-bold tracking-tight text-[#1B1F2A]">
+          Timaş Yayınları Editoryal Portalı
+        </span>
+</div>
+<!-- Top nav links from JSON -->
+<nav class="hidden lg:flex items-center gap-6 ml-4 text-xs font-medium">
+<a class="text-[#FF6B4A] font-semibold border-b-2 border-[#FF6B4A] pb-1 flex items-center gap-1" href="#">
+          Projeler
+        </a>
+<a class="text-[#6B7280] hover:text-[#1B1F2A] transition-colors pb-1" href="#">Katalog</a>
+<a class="text-[#6B7280] hover:text-[#1B1F2A] transition-colors pb-1" href="#">Yazarlar</a>
+<a class="text-[#6B7280] hover:text-[#1B1F2A] transition-colors pb-1" href="#">Telif &amp; Sözleşmeler</a>
+<a class="text-[#6B7280] hover:text-[#1B1F2A] transition-colors pb-1" href="#">Arşiv</a>
+</nav>
+</div>
+<!-- Header Actions & Search -->
+<div class="flex items-center gap-3">
+<!-- Search input -->
+<div class="relative hidden md:block w-64">
+<span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-white/80 border border-slate-200 rounded-full text-xs text-[#1B1F2A] placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#7C5CFF]/30 transition-all font-body" placeholder="Portalda veya ISBN ara…" type="text"/>
+</div>
+<!-- Action Buttons -->
+<button class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 transition-colors shadow-2xs">
+<span class="material-symbols-outlined text-[16px] text-slate-500">ios_share</span>
+<span>Dışa Aktar</span>
+</button>
+<button class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-white brand-gradient-btn hover:opacity-95 shadow-sm shadow-[#FF6B4A]/25 transition-all">
+<span class="material-symbols-outlined text-[16px]">add</span>
+<span>Yeni Proje</span>
+</button>
+<!-- Trailing icon cluster -->
+<div class="flex items-center gap-1 border-l border-slate-200/80 pl-3 ml-1 text-slate-500">
+<button class="p-1.5 hover:bg-slate-100/80 rounded-full transition-colors relative" title="Bildirimler">
+<span class="material-symbols-outlined text-lg">notifications</span>
+<span class="absolute top-1 right-1 w-2 h-2 rounded-full bg-[#FF6B4A] ring-2 ring-white"></span>
+</button>
+<button class="p-1.5 hover:bg-slate-100/80 rounded-full transition-colors" title="Yardım">
+<span class="material-symbols-outlined text-lg">help_outline</span>
+</button>
+</div>
+<!-- Profile -->
+<div class="flex items-center gap-2 pl-2">
+<img alt="Editoryal Direktör Profil Fotoğrafı" class="w-7 h-7 rounded-full object-cover ring-1 ring-slate-300 shadow-2xs" data-alt="A distinguished editorial director portrait in a bright modern publishing office with books on minimal wooden shelves in the background, soft ambient daytime lighting, wearing a stylish navy blazer with a warm smile, ultra high resolution editorial portrait." src="https://lh3.googleusercontent.com/aida-public/AB6AXuArFfKp8ToOPPOpmpoM2gi5pq1T7PNFqQna042Cjdk8VDxgxHtDqJh8MGakCMdlBsXOJIanQ5REw5b9ABiK-tYUtzqaPs6O9iHbmTPzr6nBte-bzEjpIwy6JmsyN6q0CHD7-88BqQ1nrR0riDY0leqhro3JoisLM_NNNxcfOBsD8JzaLxosfIemrd9_ySRkQ1Nj0LP8JQr3fM3L0FE0ma60kaHf57wrYVr7EFO_v5WTl08oAuAunEpQxMEb9Z2iEsb2Li-Bp4-JIJHk"/>
+</div>
+</div>
+</header>
+<!-- App Structure: Icon Rail + Sidebar + Content Canvas -->
+<div class="flex flex-1 relative overflow-hidden">
+<!-- 1. LEFT 54px VERTICAL MODULE RAIL -->
+<aside class="w-[54px] shrink-0 glass-surface border-r border-slate-200/70 flex flex-col items-center py-4 justify-between z-30">
+<div class="flex flex-col items-center gap-4 w-full">
+<!-- Timaş emblem -->
+<div class="w-9 h-9 rounded-xl bg-[#1B1F2A] text-white flex items-center justify-center font-bold text-xs shadow-sm hover:scale-105 transition-transform cursor-pointer" title="Timaş Portal">
+          TM
+        </div>
+<!-- Module switcher icons -->
+<nav class="flex flex-col items-center gap-2 mt-2 w-full">
+<button class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 transition-colors" title="Kitap Yönetimi">
+<span class="material-symbols-outlined text-[20px]">auto_stories</span>
+</button>
+<button class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 transition-colors" title="Metin Analitiği">
+<span class="material-symbols-outlined text-[20px]">document_scanner</span>
+</button>
+<!-- Active Module: SEO & Search -->
+<div class="relative w-full flex items-center justify-center">
+<div class="absolute left-0 w-1 h-5 bg-[#FF6B4A] rounded-r-full"></div>
+<button class="w-10 h-10 rounded-xl bg-white shadow-xs text-[#FF6B4A] flex items-center justify-center" title="SEO &amp; GEO İndeksi">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill" style="font-variation-settings: 'FILL' 1;">travel_explore</span>
+</button>
+</div>
+<button class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 transition-colors" title="Sözleşmeler">
+<span class="material-symbols-outlined text-[20px]">verified_user</span>
+</button>
+<button class="w-10 h-10 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100/80 transition-colors" title="İş Akışı &amp; Takvim">
+<span class="material-symbols-outlined text-[20px]">format_list_numbered</span>
+</button>
+</nav>
+</div>
+<!-- Rail bottom -->
+<div class="flex flex-col items-center gap-3">
+<button class="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors" title="Sistem Ayarları">
+<span class="material-symbols-outlined text-[20px]">tune</span>
+</button>
+</div>
+</aside>
+<!-- 2. 236px SUB-NAVIGATION SIDEBAR -->
+<aside class="w-[236px] shrink-0 glass-surface border-r border-slate-200/70 p-4 flex flex-col justify-between hidden md:flex z-20">
+<div class="space-y-6">
+<!-- Module Header -->
+<div class="flex items-center justify-between px-1">
+<div class="flex items-center gap-2">
+<h2 class="font-headline font-bold text-sm tracking-tight text-[#1B1F2A]">SEO &amp; GEO</h2>
+<span class="font-mono text-[10px] font-semibold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">v3.4</span>
+</div>
+<span class="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" title="Sistem Canlı"></span>
+</div>
+<!-- Links Group -->
+<div class="space-y-1">
+<p class="font-label text-[10px] uppercase font-bold text-slate-400 tracking-wider px-2 mb-2">Görünürlük Modülleri</p>
+<!-- Active Link: Genel Bakış -->
+<a class="brand-gradient-btn text-white font-medium text-xs rounded-xl px-3 py-2 flex items-center justify-between shadow-xs" href="#">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[17px]">dashboard</span>
+<span>Genel Bakış</span>
+</span>
+<span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+</a>
+<!-- Ürün Denetimi & Onay -->
+<a class="text-slate-600 hover:text-[#1B1F2A] hover:bg-white/80 transition-colors text-xs font-medium rounded-xl px-3 py-2 flex items-center justify-between" href="#">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[17px] text-slate-400">fact_check</span>
+<span>Ürün Denetimi &amp; Onay</span>
+</span>
+<span class="font-mono text-[10px] bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded-full border border-slate-200">1.284</span>
+</a>
+<!-- Anahtar Kelimeler & Sıralama -->
+<a class="text-slate-600 hover:text-[#1B1F2A] hover:bg-white/80 transition-colors text-xs font-medium rounded-xl px-3 py-2 flex items-center justify-between" href="#">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[17px] text-slate-400">query_stats</span>
+<span>Anahtar Kelimeler</span>
+</span>
+</a>
+<!-- AI Görünürlük (GEO) -->
+<a class="text-slate-600 hover:text-[#1B1F2A] hover:bg-white/80 transition-colors text-xs font-medium rounded-xl px-3 py-2 flex items-center justify-between" href="#">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[17px] text-[#7C5CFF]">neurology</span>
+<span>AI Görünürlük (GEO)</span>
+</span>
+<span class="w-2 h-2 rounded-full bg-[#7C5CFF]"></span>
+</a>
+<!-- Teknik Sağlık -->
+<a class="text-slate-600 hover:text-[#1B1F2A] hover:bg-white/80 transition-colors text-xs font-medium rounded-xl px-3 py-2 flex items-center justify-between" href="#">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[17px] text-[#10B981]">health_and_safety</span>
+<span>Teknik Sağlık</span>
+</span>
+<span class="font-mono text-[10px] bg-emerald-50 text-[#10B981] font-semibold px-1.5 py-0.5 rounded-full border border-emerald-200">82%</span>
+</a>
+<!-- Gönderim Geçmişi -->
+<a class="text-slate-600 hover:text-[#1B1F2A] hover:bg-white/80 transition-colors text-xs font-medium rounded-xl px-3 py-2 flex items-center justify-between" href="#">
+<span class="flex items-center gap-2.5">
+<span class="material-symbols-outlined text-[17px] text-slate-400">history_toggle_off</span>
+<span>Gönderim Geçmişi</span>
+</span>
+<span class="font-mono text-[10px] text-slate-400">118</span>
+</a>
+</div>
+<!-- Secondary Bottom Group -->
+<div class="space-y-2 pt-4 border-t border-slate-200/60">
+<p class="font-label text-[10px] uppercase font-bold text-slate-400 tracking-wider px-2">Bağlantılar &amp; Entegrasyon</p>
+<div class="space-y-0.5 text-xs">
+<a class="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-[#1B1F2A] rounded-lg hover:bg-white/60" href="#">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>T-soft E-Ticaret</span>
+</a>
+<a class="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-[#1B1F2A] rounded-lg hover:bg-white/60" href="#">
+<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+<span>Google Search Console</span>
+</a>
+<a class="flex items-center gap-2 px-3 py-1.5 text-slate-600 hover:text-[#1B1F2A] rounded-lg hover:bg-white/60" href="#">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+<span>Bing Webmaster</span>
+</a>
+</div>
+</div>
+</div>
+<!-- Quick support note -->
+<div class="p-3 bg-white/60 rounded-2xl border border-slate-200/80 text-[11px] text-slate-500 space-y-1">
+<div class="flex items-center justify-between text-[#1B1F2A] font-medium">
+<span class="flex items-center gap-1.5">
+<span class="material-symbols-outlined text-sm text-[#FF6B4A]">sync</span>
+            Senkronizasyon
+          </span>
+<span class="font-mono text-[10px]">14:22</span>
+</div>
+<p class="text-[10px] text-slate-400 leading-tight">Günde 4 kez otomatik sitemap güncellemesi aktif.</p>
+</div>
+</aside>
+<!-- 3. MAIN CONTENT CANVAS -->
+<main class="flex-1 overflow-y-auto px-6 py-6 pb-32">
+<div class="max-w-[1360px] mx-auto space-y-6">
+<!-- Top Bar Navigation Strip -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white/70 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/90 shadow-2xs">
+<!-- Breadcrumb -->
+<div class="flex items-center gap-2 text-xs text-slate-500">
+<span class="font-medium text-slate-700">Timaş</span>
+<span class="text-slate-300">/</span>
+<span class="font-medium text-slate-700">SEO &amp; GEO</span>
+<span class="text-slate-300">/</span>
+<span class="font-bold text-[#1B1F2A] flex items-center gap-1">
+              Genel Bakış
+            </span>
+</div>
+<!-- Controls cluster -->
+<div class="flex items-center flex-wrap gap-2.5">
+<!-- Date range chip -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1 bg-white rounded-full border border-slate-200 text-xs font-medium text-slate-700 shadow-2xs">
+<span class="material-symbols-outlined text-[15px] text-[#7C5CFF]">calendar_today</span>
+<span>Son 28 gün · 28.08–24.09.2026</span>
+</div>
+<!-- Small grey chip -->
+<span class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 border border-slate-200">
+              Örnek veri
+            </span>
+<!-- Action buttons -->
+<button class="inline-flex items-center gap-1 px-3 py-1 bg-white hover:bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-full transition-colors">
+<span class="material-symbols-outlined text-[15px] text-slate-500">refresh</span>
+<span>Yeniden Tara</span>
+</button>
+<button class="inline-flex items-center gap-1 px-3.5 py-1 brand-gradient-btn text-white text-xs font-semibold rounded-full shadow-xs hover:opacity-95 transition-opacity">
+<span class="material-symbols-outlined text-[15px]">summarize</span>
+<span>Rapor Oluştur</span>
+</button>
+</div>
+</div>
+<!-- 1. Header Section -->
+<section class="space-y-2.5">
+<div class="flex items-center gap-2">
+<span class="font-label text-[11px] tracking-[0.08em] uppercase font-bold text-[#FF6B4A] bg-[#FF6B4A]/10 px-2.5 py-0.5 rounded-md border border-[#FF6B4A]/20">
+              GEO &amp; ARAMA MOTORU İNDEKSİ
+            </span>
+<span class="text-slate-300">•</span>
+<span class="text-xs text-slate-500 flex items-center gap-1">
+<span class="material-symbols-outlined text-xs text-emerald-500">verified</span>
+              Gerçek zamanlı dizin durumu
+            </span>
+</div>
+<h1 class="font-headline text-2xl lg:text-3xl font-extrabold tracking-tight text-[#1B1F2A]">
+            timas.com.tr arama ve yapay zekâ görünürlüğü
+          </h1>
+<!-- ZEKİ AI One-line Callout Bar -->
+<div class="p-3.5 rounded-2xl glass-surface border border-violet-200/80 bg-gradient-to-r from-white/95 via-violet-50/40 to-amber-50/30 flex items-center justify-between gap-3 shadow-xs">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-xl brand-gradient-btn flex items-center justify-center text-white shrink-0 shadow-xs">
+<span class="material-symbols-outlined text-[18px]">auto_awesome</span>
+</div>
+<p class="text-xs text-slate-700 leading-snug">
+<span class="font-bold text-[#7C5CFF]">ZEKİ AI Değerlendirmesi:</span> 
+                Genel arama trafiği <span class="font-mono font-semibold text-[#10B981] bg-emerald-50 px-1 rounded">+%12,4</span> artarken, ChatGPT ve Perplexity atıflarında son 4 haftada <span class="font-mono font-semibold text-[#7C5CFF] bg-violet-50 px-1 rounded">+%28 sıçrama</span> kaydedildi.
+              </p>
+</div>
+<a class="hidden sm:inline-flex items-center gap-1 text-xs font-semibold text-[#7C5CFF] hover:underline shrink-0" href="#">
+<span>Detaylı Analiz</span>
+<span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+</section>
+<!-- 2. KPI 5-Card Row with Sparklines -->
+<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+<!-- KPI 1 -->
+<div class="kanvas-card p-4 flex flex-col justify-between relative overflow-hidden group hover:translate-y-[-2px] transition-transform">
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-label text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Organik tıklama</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-[#FF6B4A] transition-colors text-base">ads_click</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-mono text-2xl font-bold tracking-tight text-[#1B1F2A]">184.320</span>
+<span class="font-mono text-xs font-semibold text-[#10B981] flex items-center">
+<span class="material-symbols-outlined text-[13px]">trending_up</span>+%12,4
+                </span>
+</div>
+<p class="text-[11px] text-slate-400">Google Web &amp; Görsel</p>
+</div>
+<!-- Coral Sparkline SVG -->
+<div class="pt-3">
+<svg class="w-full h-8 overflow-visible" fill="none" preserveaspectratio="none" viewbox="0 0 100 28">
+<path d="M0,22 Q15,20 30,14 T60,16 T85,6 L100,8" stroke="#FF6B4A" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+<path d="M0,22 Q15,20 30,14 T60,16 T85,6 L100,8 L100,28 L0,28 Z" fill="url(#coralGrad)" opacity="0.12"></path>
+<defs>
+<lineargradient id="coralGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#FF6B4A"></stop>
+<stop offset="100%" stop-color="#FF6B4A" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- KPI 2 -->
+<div class="kanvas-card p-4 flex flex-col justify-between relative overflow-hidden group hover:translate-y-[-2px] transition-transform">
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-label text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Gösterim</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-[#F59E0B] transition-colors text-base">visibility</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-mono text-2xl font-bold tracking-tight text-[#1B1F2A]">6,2 Mn</span>
+<span class="font-mono text-xs font-semibold text-[#10B981] flex items-center">
+<span class="material-symbols-outlined text-[13px]">trending_up</span>+%8,1
+                </span>
+</div>
+<p class="text-[11px] text-slate-400">SERP gösterimleri</p>
+</div>
+<!-- Orange / Amber Sparkline SVG -->
+<div class="pt-3">
+<svg class="w-full h-8 overflow-visible" fill="none" preserveaspectratio="none" viewbox="0 0 100 28">
+<path d="M0,24 Q20,18 40,20 T75,9 L100,5" stroke="#F59E0B" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+<path d="M0,24 Q20,18 40,20 T75,9 L100,5 L100,28 L0,28 Z" fill="url(#amberGrad)" opacity="0.12"></path>
+<defs>
+<lineargradient id="amberGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#F59E0B"></stop>
+<stop offset="100%" stop-color="#F59E0B" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- KPI 3 -->
+<div class="kanvas-card p-4 flex flex-col justify-between relative overflow-hidden group hover:translate-y-[-2px] transition-transform">
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-label text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Ort. pozisyon</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-[#10B981] transition-colors text-base">leaderboard</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-mono text-2xl font-bold tracking-tight text-[#1B1F2A]">11,8</span>
+<span class="font-mono text-xs font-semibold text-[#10B981] flex items-center">
+<span class="material-symbols-outlined text-[13px]">north</span>1,3 sıra
+                </span>
+</div>
+<p class="text-[11px] text-slate-400">İlk 10 hedefi: %64</p>
+</div>
+<!-- Green Sparkline SVG -->
+<div class="pt-3">
+<svg class="w-full h-8 overflow-visible" fill="none" preserveaspectratio="none" viewbox="0 0 100 28">
+<path d="M0,25 Q25,23 50,15 T80,10 L100,4" stroke="#10B981" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+<path d="M0,25 Q25,23 50,15 T80,10 L100,4 L100,28 L0,28 Z" fill="url(#mintGrad)" opacity="0.12"></path>
+<defs>
+<lineargradient id="mintGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#10B981"></stop>
+<stop offset="100%" stop-color="#10B981" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- KPI 4 -->
+<div class="kanvas-card p-4 flex flex-col justify-between relative overflow-hidden group hover:translate-y-[-2px] transition-transform">
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-label text-[11px] uppercase tracking-wider text-slate-500 font-semibold">AI anılma oranı</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-[#7C5CFF] transition-colors text-base">psychology</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-mono text-2xl font-bold tracking-tight text-[#7C5CFF]">%18</span>
+<span class="font-mono text-xs font-semibold text-[#7C5CFF] flex items-center">
+<span class="material-symbols-outlined text-[13px]">add</span>4 puan
+                </span>
+</div>
+<p class="text-[11px] text-slate-400">ChatGPT · Gemini · Perplexity</p>
+</div>
+<!-- Violet Sparkline SVG -->
+<div class="pt-3">
+<svg class="w-full h-8 overflow-visible" fill="none" preserveaspectratio="none" viewbox="0 0 100 28">
+<path d="M0,26 Q30,22 55,18 T85,7 L100,3" stroke="#7C5CFF" stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2"></path>
+<path d="M0,26 Q30,22 55,18 T85,7 L100,3 L100,28 L0,28 Z" fill="url(#violetGrad)" opacity="0.15"></path>
+<defs>
+<lineargradient id="violetGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#7C5CFF"></stop>
+<stop offset="100%" stop-color="#7C5CFF" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+</div>
+</div>
+<!-- KPI 5 -->
+<div class="kanvas-card p-4 flex flex-col justify-between relative overflow-hidden group hover:translate-y-[-2px] transition-transform">
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<span class="font-label text-[11px] uppercase tracking-wider text-slate-500 font-semibold">Ürün SEO puanı</span>
+<span class="material-symbols-outlined text-slate-300 group-hover:text-[#10B981] transition-colors text-base">speed</span>
+</div>
+<div class="flex items-baseline gap-2">
+<span class="font-mono text-2xl font-bold tracking-tight text-[#1B1F2A]">64<span class="text-sm font-normal text-slate-400">/100</span></span>
+<span class="font-mono text-xs font-semibold text-[#10B981] flex items-center">
+<span class="material-symbols-outlined text-[13px]">add</span>6 puan
+                </span>
+</div>
+<p class="text-[11px] text-slate-400">Core Web Vitals İyi</p>
+</div>
+<!-- Progress Pill -->
+<div class="pt-4 space-y-1.5">
+<div class="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden p-0.5 border border-slate-200">
+<div class="h-full rounded-full bg-gradient-to-r from-[#FF6B4A] via-[#F59E0B] to-[#10B981]" style="width: 64%"></div>
+</div>
+<div class="flex justify-between font-mono text-[9px] text-slate-400 px-0.5">
+<span>0</span>
+<span>50</span>
+<span>100</span>
+</div>
+</div>
+</div>
+</section>
+<!-- 3. Middle Grid Section (8 cols vs 4 cols) -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- LEFT LARGE CARD (8 cols) -->
+<div class="kanvas-card p-6 lg:col-span-8 space-y-5">
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-slate-100">
+<div>
+<h3 class="font-headline font-bold text-base text-[#1B1F2A] tracking-tight">
+                  Organik trafik ve AI asistanlarından gelen ziyaret
+                </h3>
+<p class="text-xs text-slate-500">12 haftalık karşılaştırmalı hacim ve atıf yönlendirme eğrisi</p>
+</div>
+<!-- Dual Legend -->
+<div class="flex items-center gap-4 text-xs">
+<div class="flex items-center gap-1.5 font-medium text-slate-700">
+<span class="w-3 h-3 rounded-full bg-[#FF6B4A]"></span>
+<span>Google Organik</span>
+</div>
+<div class="flex items-center gap-1.5 font-medium text-slate-700">
+<span class="w-3 h-3 rounded-full bg-[#7C5CFF]"></span>
+<span>AI Asistan Ziyaretleri</span>
+</div>
+</div>
+</div>
+<!-- 12-Week Interactive Line Chart -->
+<div class="relative w-full h-64 pt-2">
+<svg class="w-full h-full overflow-visible" fill="none" viewbox="0 0 760 220">
+<!-- Grid Lines -->
+<line stroke="#f1f5f9" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="760" y1="20" y2="20"></line>
+<line stroke="#f1f5f9" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="760" y1="70" y2="70"></line>
+<line stroke="#f1f5f9" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="760" y1="120" y2="120"></line>
+<line stroke="#f1f5f9" stroke-dasharray="4 4" stroke-width="1" x1="0" x2="760" y1="170" y2="170"></line>
+<line stroke="#e2e8f0" stroke-width="1" x1="0" x2="760" y1="210" y2="210"></line>
+<!-- AI Shaded Fill -->
+<path d="M 20,185 Q 90,180 160,175 T 300,165 T 440,145 T 580,105 T 720,60 L 720,210 L 20,210 Z" fill="url(#aiAreaGrad)" opacity="0.35"></path>
+<!-- Google Organic Curve (Coral line) -->
+<path d="M 20,95 C 90,85 160,110 230,85 C 300,60 370,80 440,65 C 510,50 580,60 650,45 C 685,38 720,35 720,35" stroke="#FF6B4A" stroke-linecap="round" stroke-width="3"></path>
+<!-- AI Assistant Curve (Violet line) -->
+<path d="M 20,185 C 90,182 160,178 230,172 C 300,165 370,160 440,145 C 510,130 580,105 650,78 C 685,68 720,60 720,60" stroke="#7C5CFF" stroke-linecap="round" stroke-width="3.5"></path>
+<!-- Upward Inflection Pulse Point on AI curve -->
+<circle class="animate-pulse" cx="580" cy="105" fill="#7C5CFF" r="5"></circle>
+<circle cx="720" cy="60" fill="#7C5CFF" r="6" stroke="#ffffff" stroke-width="2"></circle>
+<circle cx="720" cy="35" fill="#FF6B4A" r="5" stroke="#ffffff" stroke-width="2"></circle>
+<defs>
+<lineargradient id="aiAreaGrad" x1="0" x2="0" y1="0" y2="1">
+<stop offset="0%" stop-color="#7C5CFF" stop-opacity="0.6"></stop>
+<stop offset="100%" stop-color="#7C5CFF" stop-opacity="0"></stop>
+</lineargradient>
+</defs>
+</svg>
+<!-- Chart Labels / Weeks -->
+<div class="flex justify-between font-mono text-[10px] text-slate-400 mt-2 px-1">
+<span>Hf 1</span>
+<span>Hf 2</span>
+<span>Hf 3</span>
+<span>Hf 4</span>
+<span>Hf 5</span>
+<span>Hf 6</span>
+<span>Hf 7</span>
+<span>Hf 8</span>
+<span>Hf 9</span>
+<span class="text-[#7C5CFF] font-semibold">Hf 10 (Sıçrama)</span>
+<span>Hf 11</span>
+<span class="font-bold text-[#1B1F2A]">Hf 12 (Güncel)</span>
+</div>
+</div>
+<!-- Footnote banner -->
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-600">
+<span class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-[#7C5CFF]"></span>
+<span class="font-medium">AI yönlendirmeleri son çeyrekte organik trafiğin <span class="font-mono font-bold text-[#7C5CFF]">%19,2</span>'sine ulaştı.</span>
+</span>
+<span class="font-mono text-[11px] text-slate-400">Veri kaynağı: Referrer Logs + GA4 UTM</span>
+</div>
+</div>
+<!-- RIGHT CARD (4 cols) -->
+<div class="kanvas-card p-5 lg:col-span-4 space-y-4">
+<!-- Washi-tape sticky callout card at top -->
+<div class="washi-tape p-3.5 rounded-xl text-xs space-y-1 shadow-2xs">
+<div class="flex items-center gap-1.5 font-bold text-amber-900">
+<span>📌 Bu hafta öne çıkan keşif:</span>
+</div>
+<p class="text-amber-800 text-xs leading-relaxed font-medium">
+                Perplexity'de ilk kez <strong class="underline decoration-amber-400 font-semibold">"en iyi çocuklar için değerler eğitimi kitabı"</strong> aramasında Timaş Çocuk serisi kaynak gösterildi!
+              </p>
+</div>
+<!-- "AI motorlarında Timaş" Bar Matrix -->
+<div class="space-y-3 pt-1">
+<div class="flex items-center justify-between">
+<h4 class="font-headline font-bold text-sm text-[#1B1F2A] flex items-center gap-1.5">
+<span class="material-symbols-outlined text-[17px] text-[#7C5CFF]">hub</span>
+                  AI motorlarında Timaş
+                </h4>
+<span class="font-mono text-[10px] text-slate-400">Görünürlük Payı</span>
+</div>
+<!-- Matrix items -->
+<div class="space-y-2.5">
+<!-- ChatGPT -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium">
+<span class="text-slate-700 flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#10B981]"></span>
+                      ChatGPT Search
+                    </span>
+<span class="font-mono text-slate-800 font-semibold">%22 <span class="text-[10px] text-[#10B981] font-mono">(+%3,2)</span></span>
+</div>
+<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+<div class="bg-[#10B981] h-full rounded-full" style="width: 22%"></div>
+</div>
+</div>
+<!-- Gemini -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium">
+<span class="text-slate-700 flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-blue-500"></span>
+                      Google Gemini
+                    </span>
+<span class="font-mono text-slate-800 font-semibold">%17 <span class="text-[10px] text-blue-500 font-mono">(+%1,8)</span></span>
+</div>
+<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+<div class="bg-blue-500 h-full rounded-full" style="width: 17%"></div>
+</div>
+</div>
+<!-- Perplexity (Lider) -->
+<div class="space-y-1 p-2 rounded-xl bg-violet-50/70 border border-violet-100">
+<div class="flex justify-between text-xs font-medium">
+<span class="text-[#7C5CFF] font-bold flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#7C5CFF]"></span>
+                      Perplexity <span class="text-[10px] font-mono uppercase bg-[#7C5CFF] text-white px-1.5 py-0.2 rounded font-semibold">Lider</span>
+</span>
+<span class="font-mono text-[#7C5CFF] font-bold">%26 <span class="text-[10px] text-emerald-600 font-mono">(+%6,4)</span></span>
+</div>
+<div class="w-full bg-violet-200/60 h-2 rounded-full overflow-hidden">
+<div class="brand-gradient-btn h-full rounded-full" style="width: 26%"></div>
+</div>
+</div>
+<!-- Google AI Overviews -->
+<div class="space-y-1">
+<div class="flex justify-between text-xs font-medium">
+<span class="text-slate-700 flex items-center gap-1.5">
+<span class="w-2 h-2 rounded-full bg-[#F59E0B]"></span>
+                      Google AI Overviews
+                    </span>
+<span class="font-mono text-slate-800 font-semibold">%9 <span class="text-[10px] text-slate-400 font-mono">(0,0%)</span></span>
+</div>
+<div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+<div class="bg-[#F59E0B] h-full rounded-full" style="width: 9%"></div>
+</div>
+</div>
+</div>
+<!-- Total Cited Works Badge -->
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between">
+<span class="text-xs text-slate-500">Total atıf alan başlık:</span>
+<span class="font-mono text-xs font-bold text-[#1B1F2A] bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200">
+                  342 Eser
+                </span>
+</div>
+</div>
+</div>
+</section>
+<!-- 4. Bottom Grid Section (7 cols vs 3 cols vs 2 cols) -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+<!-- LEFT CARD (7 cols): Öne çıkan sayfalar Table -->
+<div class="kanvas-card p-5 lg:col-span-7 flex flex-col justify-between">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<div>
+<h3 class="font-headline font-bold text-base text-[#1B1F2A]">Öne çıkan sayfalar</h3>
+<p class="text-xs text-slate-400">En çok SERP &amp; GEO tıklaması alan ilk 5 Timaş URL'si</p>
+</div>
+<a class="text-xs text-[#FF6B4A] hover:underline font-medium" href="#">Tümünü gör (1.284)</a>
+</div>
+<!-- Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left text-xs">
+<thead>
+<tr class="border-b border-slate-100 font-label text-[10px] uppercase text-slate-400">
+<th class="py-2 font-semibold">Sayfa / Slug</th>
+<th class="py-2 font-semibold text-right">Tıklama</th>
+<th class="py-2 font-semibold text-right">Poz.</th>
+<th class="py-2 font-semibold text-right">Fark</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-slate-100/80">
+<!-- Row 1 -->
+<tr class="hover:bg-slate-50/80 transition-colors group">
+<td class="py-2.5 font-mono text-[11px] text-slate-700 group-hover:text-[#FF6B4A] transition-colors truncate max-w-[220px]">
+                        /iyilik-timi-1-gizemli-kutu
+                      </td>
+<td class="py-2.5 font-mono font-semibold text-right text-slate-900">19.120</td>
+<td class="py-2.5 font-mono text-right text-slate-600">1,4</td>
+<td class="py-2.5 font-mono text-right text-[#10B981] font-semibold">↑ +1</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-slate-50/80 transition-colors group">
+<td class="py-2.5 font-mono text-[11px] text-slate-700 group-hover:text-[#FF6B4A] transition-colors truncate max-w-[220px]">
+                        /yazar/elif-aydin
+                      </td>
+<td class="py-2.5 font-mono font-semibold text-right text-slate-900">16.890</td>
+<td class="py-2.5 font-mono text-right text-slate-600">3,8</td>
+<td class="py-2.5 font-mono text-right text-slate-400 font-medium">= 0</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-slate-50/80 transition-colors group">
+<td class="py-2.5 font-mono text-[11px] text-slate-700 group-hover:text-[#FF6B4A] transition-colors truncate max-w-[220px]">
+                        /kategori/cocuk-kitaplari
+                      </td>
+<td class="py-2.5 font-mono font-semibold text-right text-slate-900">14.300</td>
+<td class="py-2.5 font-mono text-right text-slate-600">4,2</td>
+<td class="py-2.5 font-mono text-right text-[#10B981] font-semibold">↑ +2</td>
+</tr>
+<!-- Row 4 -->
+<tr class="hover:bg-slate-50/80 transition-colors group">
+<td class="py-2.5 font-mono text-[11px] text-slate-700 group-hover:text-[#FF6B4A] transition-colors truncate max-w-[220px]">
+                        /kitap/kayip-atlas
+                      </td>
+<td class="py-2.5 font-mono font-semibold text-right text-slate-900">9.840</td>
+<td class="py-2.5 font-mono text-right text-slate-600">6,9</td>
+<td class="py-2.5 font-mono text-right text-rose-500 font-semibold">↓ -1</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-slate-50/80 transition-colors group">
+<td class="py-2.5 font-mono text-[11px] text-slate-700 group-hover:text-[#FF6B4A] transition-colors truncate max-w-[220px]">
+                        /kategori/tarih-inceleme
+                      </td>
+<td class="py-2.5 font-mono font-semibold text-right text-slate-900">8.210</td>
+<td class="py-2.5 font-mono text-right text-slate-600">8,1</td>
+<td class="py-2.5 font-mono text-right text-[#10B981] font-semibold">↑ +3</td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
+<span>* Pozisyon verileri Google Search Console API entegrasyonuyladır.</span>
+<span class="font-mono">Sayfa 1 / 48</span>
+</div>
+</div>
+<!-- MIDDLE CARD (3 cols): Onay bekleyenler & Aksiyonlar -->
+<div class="kanvas-card p-5 lg:col-span-3 flex flex-col justify-between space-y-4">
+<div class="space-y-3">
+<div class="flex items-center justify-between">
+<h3 class="font-headline font-bold text-sm text-[#1B1F2A]">Onay bekleyenler</h3>
+<span class="w-2 h-2 rounded-full bg-[#FF6B4A]"></span>
+</div>
+<p class="text-xs text-slate-400">ZEKİ AI motoru tarafından tespit edilen kritik adımlar</p>
+<!-- Action Item 1 -->
+<div class="p-3 bg-violet-50/50 rounded-xl border border-violet-100/80 space-y-1.5">
+<div class="flex items-center justify-between">
+<span class="font-mono text-xs font-bold text-[#7C5CFF]">342 ürün önerisi</span>
+<button class="px-2.5 py-0.5 text-[11px] font-semibold text-white brand-gradient-btn rounded-full shadow-2xs hover:opacity-90 transition-opacity">
+                    İncele
+                  </button>
+</div>
+<p class="text-[11px] text-slate-600 leading-snug">ZEKİ AI tarafından zenginleştirilmiş meta ve şema etiketleri.</p>
+</div>
+<!-- Action Item 2 -->
+<div class="p-3 bg-amber-50/50 rounded-xl border border-amber-100/80 space-y-1.5">
+<div class="flex items-center justify-between">
+<span class="font-mono text-xs font-bold text-[#F59E0B]">12 kırık bağlantı</span>
+<button class="px-2.5 py-0.5 text-[11px] font-semibold text-[#1B1F2A] bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-colors">
+                    İncele
+                  </button>
+</div>
+<p class="text-[11px] text-slate-600 leading-snug">301 yönlendirmesi hazır, eşleşme onayı bekliyor.</p>
+</div>
+<!-- Action Item 3 -->
+<div class="p-3 bg-rose-50/50 rounded-xl border border-rose-100/80 space-y-1.5">
+<div class="flex items-center justify-between">
+<span class="font-mono text-xs font-bold text-rose-600">3 kanonik URL çakışması</span>
+<button class="px-2.5 py-0.5 text-[11px] font-semibold text-[#1B1F2A] bg-white border border-slate-200 rounded-full hover:bg-slate-50 transition-colors">
+                    İncele
+                  </button>
+</div>
+<p class="text-[11px] text-slate-600 leading-snug">Baskısı tükenen alt serilerde canonical düzeltmesi.</p>
+</div>
+</div>
+<button class="w-full py-1.5 text-xs font-medium text-slate-600 hover:text-[#1B1F2A] bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors text-center">
+              Toplu Onay Moduna Geç
+            </button>
+</div>
+<!-- RIGHT CARD (2 cols): Bağlantı Durumu -->
+<div class="kanvas-card p-5 lg:col-span-2 flex flex-col justify-between space-y-4">
+<div class="space-y-3">
+<h3 class="font-headline font-bold text-sm text-[#1B1F2A]">Bağlantı durumu</h3>
+<p class="text-xs text-slate-400">Veri akış hatları</p>
+<div class="space-y-2.5 text-xs">
+<!-- T-soft -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+<span class="font-medium text-slate-700">T-soft</span>
+<span class="inline-flex items-center gap-1 font-mono text-[10px] text-[#10B981] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+                    Bağlı
+                  </span>
+</div>
+<!-- Search Console -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+<span class="font-medium text-slate-700">GSC</span>
+<span class="inline-flex items-center gap-1 font-mono text-[10px] text-[#10B981] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#10B981]"></span>
+                    Bağlı
+                  </span>
+</div>
+<!-- GA4 -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+<span class="font-medium text-slate-700">GA4</span>
+<span class="inline-flex items-center gap-1 font-mono text-[10px] text-[#F59E0B] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#F59E0B]"></span>
+                    Bekliyor
+                  </span>
+</div>
+<!-- Merchant Center -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+<span class="font-medium text-slate-700">Merchant</span>
+<span class="inline-flex items-center gap-1 font-mono text-[10px] text-[#F59E0B] font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-[#F59E0B]"></span>
+                    Bekliyor
+                  </span>
+</div>
+<!-- Bing Webmaster -->
+<div class="flex items-center justify-between p-2 rounded-lg bg-slate-50">
+<span class="font-medium text-slate-700">Bing</span>
+<span class="inline-flex items-center gap-1 font-mono text-[10px] text-slate-400 font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+                    Yok
+                  </span>
+</div>
+</div>
+</div>
+<button class="w-full text-[11px] font-semibold text-[#7C5CFF] hover:underline pt-2 text-center">
+              + Yeni Entegrasyon Ekle
+            </button>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- FLOATING DOCK AT BOTTOM CENTER (Timaş Portal Signature ZEKİ AI Pill) -->
+<aside aria-label="ZEKİ AI Asistanı" class="fixed bottom-5 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-[760px]">
+<div class="bg-white/85 backdrop-blur-2xl rounded-full p-2 pl-4 pr-2 border border-white/95 shadow-[0_24px_64px_-12px_rgba(18,24,45,0.18)] flex items-center justify-between gap-3 transition-all hover:shadow-[0_28px_72px_-10px_rgba(18,24,45,0.22)]">
+<!-- Sparkle Icon -->
+<div class="w-8 h-8 rounded-full brand-gradient-btn flex items-center justify-center text-white shrink-0 shadow-sm shadow-[#FF6B4A]/30">
+<span class="material-symbols-outlined text-[18px]">magic_button</span>
+</div>
+<!-- Input and Suggestions -->
+<div class="flex-1 flex flex-col justify-center min-w-0">
+<input class="w-full bg-transparent border-0 p-0 text-xs sm:text-sm font-medium text-[#1B1F2A] placeholder-slate-400 focus:ring-0 focus:outline-none truncate" placeholder="ZEKİ AI'ye SEO/GEO sor… (ör: 'Çocuk kitaplarında AI atıflarını nasıl artırırız?')" type="text"/>
+</div>
+<!-- Quick Suggestion Tags (Hidden on smallest mobile) -->
+<div class="hidden md:flex items-center gap-1.5 shrink-0">
+<button class="text-[10px] font-medium bg-slate-100 hover:bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full transition-colors">
+          ⚡ 301 Kuralları
+        </button>
+<button class="text-[10px] font-medium bg-violet-50 hover:bg-violet-100 text-[#7C5CFF] px-2.5 py-1 rounded-full transition-colors">
+          ✨ Perplexity Trendi
+        </button>
+</div>
+<!-- Send Gradient Button -->
+<button class="w-9 h-9 rounded-full brand-gradient-btn text-white flex items-center justify-center hover:scale-105 active:scale-95 transition-transform shadow-xs shrink-0" title="Gönder">
+<span class="material-symbols-outlined text-[17px]">arrow_upward</span>
+</button>
+</div>
+</aside>
+</body></html>

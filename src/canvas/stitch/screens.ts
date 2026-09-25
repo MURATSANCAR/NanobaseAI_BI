@@ -1,5 +1,5 @@
 import { createElement } from 'react';
-import { BookImage, Contact, FileSignature, House, Newspaper, Languages, LayoutDashboard, PenLine, Route, SpellCheck, UserCog, UsersRound } from 'lucide-react';
+import { BookImage, ClipboardCheck, Contact, FileSignature, Gauge, History, House, Newspaper, Languages, LayoutDashboard, PenLine, Plug, Route, Search, Sparkles, SpellCheck, UserCog, UsersRound } from 'lucide-react';
 import type { AlertSummary } from '../data';
 import { conditionLabel, dateTime, money, num, relative } from '../format';
 import type { CfoData } from '../cfo';
@@ -83,6 +83,18 @@ export const managementRail = (active: string): StitchRailItem[] =>
     { to: '/yonetim-raporlari', label: 'Yönetim raporları' },
     { to: '/yonetim-raporlari/baski-oneri', label: 'Yeni baskı öneri' },
     { to: '/', label: 'Kampüs' },
+  ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
+
+/** SEO & GEO modülünün kendi rayı: izleme (genel bakış, arama, yapay zekâ), iş (ürün denetimi, geçmiş), bağlantılar. */
+export const seoRail = (active: string): StitchRailItem[] =>
+  [
+    { to: '/seo-geo', label: 'Genel bakış', group: 'İzleme', icon: railIcon(Gauge) },
+    { to: '/seo-geo/anahtar-kelimeler', label: 'Arama ve kelimeler', group: 'İzleme', icon: railIcon(Search) },
+    { to: '/seo-geo/ai-gorunurluk', label: 'AI görünürlük', group: 'İzleme', icon: railIcon(Sparkles) },
+    { to: '/seo-geo/urun-denetimi', label: 'Ürün denetimi', group: 'İş', icon: railIcon(ClipboardCheck) },
+    { to: '/seo-geo/gecmis', label: 'Gönderim geçmişi', group: 'İş', icon: railIcon(History) },
+    { to: '/seo-geo/baglantilar', label: 'Bağlantılar', group: 'Ayar', icon: railIcon(Plug) },
+    { to: '/', label: 'Kampüs', icon: railIcon(House) },
   ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
 
 const DOCK = [

@@ -130,6 +130,21 @@
   ]
  },
  {
+  "title": "SEO & GEO",
+  "modules": [
+   {
+    "id": "M25",
+    "title": "İçerik Pazarlaması ve SEO",
+    "sections": 3
+   },
+   {
+    "id": "M26",
+    "title": "Yapay Zekâ Görünürlüğü — GEO",
+    "sections": 3
+   }
+  ]
+ },
+ {
   "title": "Pazarlama",
   "modules": [
    {
@@ -180,16 +195,6 @@
    {
     "id": "M24",
     "title": "Katalog ve Bülten Yönetimi",
-    "sections": 3
-   },
-   {
-    "id": "M25",
-    "title": "İçerik Pazarlaması ve SEO",
-    "sections": 3
-   },
-   {
-    "id": "M26",
-    "title": "Yapay Zekâ Görünürlüğü — GEO",
     "sections": 3
    },
    {

@@ -4675,6 +4675,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.financial_audit = financial_audit.register(app, rt, _require_caller)
     from semantic_bridge import management
     app.state.management_reports = management.register(app, rt, _require_caller, _board_user)
+    from semantic_bridge import seo_geo
+    app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     return app
 
 
