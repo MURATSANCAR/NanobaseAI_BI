@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (22:45) — Kurulum müşteri verisini silmez: köprünün durum klasörü kalıcı diskte
+
+- Kullanıcı kuralı: "ben resetleyelim demedikçe tüm sistemlerde müşterinin verileri silinmeyecek, ne var ise o kalacak."
+- Denetim (VM, `docker diff`): köprü `/data/nanobaseai/bi/var` altına konteyner katmanında yazıyordu → her kurulumda siliniyordu: `management-reports` (Baskı Öneri/ZEKI önbelleği; bugün 3 kurulumda sekme 25-30 dk boş), `financial-audit` (Finansal Denetim rapor arşivi ve çalışma notları — arşivde bu yüzden 1 rapor vardı; önceki kayıtlar geri getirilemez, yedek yok), `editorial-home`; kod ayrıca `var/editorial`'a yazar. Güvende olanlar: Postgres (`bi_pgdata`), yönetim ayarları (DB), AD ayarı (`./secrets/ad`), giriş oturumları (`bi_login`), planlı raporlar (`bi_reports`), metrikler (`bi_metrics`).
+- Düzeltme: compose'a `bi_var:/data/nanobaseai/bi/var` (köprü). `deploy-customer-vm.sh`: `bi_var` ilk kez oluşturuluyorsa çalışan köprünün mevcut durumu önce bu diske kopyalanır (geçişte de silme yok); kurulum sonunda rapor önbelleği dosya sayısı önce→sonra yazılır. Test sunucusunda durum zaten ana makine diskinde (`/data/nanobaseai/bi/var`), GPU tahmin servisi durumsuz.
+
 ## 2026-09-25 (23:30) — SEO & GEO: satışa göre öncelik; anasayfaya giden 301'ler için hedef önerisi
 
 - **Öncelik:** ürün listesi ve gece ön üretimi T-soft `CountTotalSales` + `StatViews` ile en çok satandan başlar (Postgres'te JSON içinden); genel bakışta puanı 70 altı en çok satan 10 kitap. Gerçek veride ilk sıra «İyilik Timi (Yazar İmzalı)» 2.390 satış, puan 62.
