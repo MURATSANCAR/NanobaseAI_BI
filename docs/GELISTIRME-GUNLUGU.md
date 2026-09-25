@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (23:55) — Kitap Tasarım Stüdyosu: 3B kitap ve kâğıda göre baskı provası (L hattı, dalda)
+
+- **Neden:** satış ve kurul sunumunda kitabın gerçek hâli (döner kapak, çevrilen sayfalar) ve seçilecek kâğıtta (kuşe, mat kuşe, 1. hamur, şamua) baskıda nasıl görüneceği ekranda görülsün.
+- **Motor (`production/proof.py`, `api_proof.py`, `icc/`):** sayfa/kapak önizlemesi kâğıdın basım profiline çevrilir ve geri ekrana (kâğıt tonuyla / tonsuz); renk kaybı ve mürekkep yükü taranmış saydam katman + özet. Profiller TT GPU'daki Ubuntu `colord-data` 1.4.7 paketinden, CC0 (indirme yapılmadı), sha256 `icc/LISANS.md`'de. Kalınlık kâğıda göre (gramaj × hacim; kuşe 0,11 ve 1. hamur 0,09 mm `spec.CALIPER` ile aynı).
+- **Ölçüm (gerçek iş, kopya klasörde):** 8 sayfalık resimli kitapta kuşede renk kaybı ≈ %0–0,1, 1. hamur/şamuada gün batımı sayfasında %51 (koyu doygun yeşiller). İlk sürümde kaplamasız kâğıtta metin sayfasının siyahı da «kayıp» çıkıyordu (siyah L≈9'a açılıyor) → açıklık farkı yarı ağırlıkla sayılıyor; ayrıca Pillow'un LAB dizisi a/b'yi işaretli bayt veriyor (düz okuyunca 255'lik sahte fark).
+- **Ekran (`studio/book3d/`):** `three` yalnız bu bölüm ekrana yaklaşınca yüklenir; kapak 900 ms / sayfa 720 ms güçlü ease-in-out, klavyede (sunum dışı) ve azaltılmış harekette anlık; sunumda doğrusal yavaş dönüş. Sunum katmanı body'ye taşınır (kabuğun ölçeklenen kapsayıcısı `fixed`'i hapsediyordu), tuval React dışında tutulduğu için sahne yeniden kurulmaz. Karşılaştırma kaydırıcısı `clip-path`, dokunmada dikey kaydırma sayfaya kalır.
+- **Doğrulama:** `test_proof.py` 14/14 + `test_plan.py` 29 geçti (GPU'da geçici kap); `tsc` ve `vite build` test sunucusunda geçici dizinde temiz; ekran geçici sunucu + SSH tüneliyle tarayıcıda denendi (kapalı/açık kitap, kıvrılma yavaşlatılarak, sunum, PNG 468 kB, webm 2,5 MB, 320/390/768'de bölüm taşmıyor). Canlıya kurulmadı.
+- **Açık:** stüdyo sayfasının kendisi 320 px'te bölümden bağımsız 77 px yatay taşıyor (önceden var); kaynak işte yazar adı boşken kapak dizgisi «yazı alana sığmıyor: ''» ile düşüyor (bu işte kapak yoktu, denemede kopyaya yazar adı yazıldı).
+
 ## 2026-09-25 (23:50) — Editoryal Masam: yönetici görünümü ilk ekrana sığacak biçimde yeniden düzenlendi
 
 - **Sorun:** yönetici açılışında «Editör atanmamış» grubu (206 iş) varsayılan açık geliyordu; sayfa 9.884 px, sohbet/editör tablosu/sözleşmeler 8.300 px'ten sonra başlıyordu. Aynı editör sayıları iki yerde (gruplar + tablo) tekrarlanıyordu, her satırda kırmızı gün sayısı vardı (işlerin çoğu geciktiği için vurgu anlamını yitirmişti), üst şeritte «Kaynak: CRM» iki kez yazıyordu.
