@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (15:10) — Kurulum: kart SQL'i, veri sonu önerisi, dönem okumaları → test sunucusu ve müşteri VM'i
+
+- **main:** `920b6a2f → 845773a4` (ileri sarma + push kullanıcıda; Claude oturumunda izin denetimine takıldı). Dal iki yerden silindi.
+- **Test sunucusu (00:44):** değişen 14 dosya; 12'si sunucuda eski main ile aynıydı. `app.py` ve `engine.ts` sunucuda farklıydı — başka oturumun main'e girmemiş Stüdyo baskı-PDF işi (`d4cf7361`); üzerine yazılmadı, üç yönlü birleştirmeyle iki iş korundu. Root sahipli üç dosya `sudo cp` ile. `._*` 0, köprü yeniden başladı (42 sn, health 200), testler 76/76, arayüz `index-CoiPDxgD.js` (yedek `dist.bak-20260925-004613`). **Uyarı:** Stüdyo işi sunucuda kurulu ama main'de değil; bir sonraki `git archive main` kurulumu onu siler.
+- **VPN:** 25.09'da üç telefon onayı ulaşmadı (AUTH_FAILED); dördüncüsü 12:52'de açıldı.
+- **Test sunucusu doğrulaması:** canlı köprüde 3 soru doğru. set100: 80 aynı, 5 açılan, 12 bozulan — hiçbiri bu değişiklikten değil: 7'si zaman aşımı/bağlantı kopması (14:12'de başka oturum köprüyü yeniden başlattı; aynı dakikalarda yönetim raporunun Logo sorgusu da zaman aşımına düştü), 5'i modelin yazdığı SQL'in değişmesi (`same_period_ms: 0`, dönem okuması aynı). A032'nin bugünkü SQL'i 21 Eylül'dekiyle birebir aynı; 105 sn → 1.636 sn yavaşlık veritabanı yükünden.
+- **Müşteri VM'i (15:00):** kaynak `git archive 845773a4` → `/tmp/bi-main-845773a4`, `deploy-customer-vm.sh` (kullanıcı çalıştırdı; VM erişimi Claude'da izin denetimine takılıyor). db konteyneri 2 gündür ayakta (anlık görüntüye dönüş yok), uçlar 200/401. Kontroller: `._*` 0, bridge imajı 25.09 15:00, konteynerde yeni kod var. Köprü içinden 3 soru test sunucusuyla kuruşu kuruşuna aynı (86.711.927,55 ₺; 192.464.743,52 / 114.874.119,16 ₺; "bugün" önerisi). Stüdyo baskı-PDF işi VM'de yok (main'de değil).
+
 ## 2026-09-25 (15:00) — Müşteri VM'i `main`e (stüdyo dahil); GPU editörü 0.15.9; basın-web VM'de kapalı
 
 - **Kullanıcı kararları:** müşteri ortamında yazar/sosyal medya/basın-web taraması menüsü ve özelliği şimdilik KAPALI (`WEB_WATCH_ENABLED` varsayılan 0; VM'de `enabled:false` doğrulandı, timer kurulmadı). Kitap Tasarım Stüdyosu VM'de AÇIK (Qwen Image lisansı ticari değil; kullanıcı riski bilerek seçti).
