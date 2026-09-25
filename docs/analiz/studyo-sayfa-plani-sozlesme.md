@@ -136,6 +136,30 @@ tutuluyor (`studio.json.pages["12"]`). Sayfa planında sayfa **kalıcı bir kay�
 - Ekran (C): yeni iş formunda dört seçenekli kartlar (kısa açıklamalı, `auto` seçili), iş sayfasında mevcut seçim ve
   "değiştir" (onaylı, sonuçlarını söyler). Köprü `art_mode`'u geçirir ve `art-mode` ucunu vekil eder.
 
+- **Resimsiz kitabın kapağı (karar 2026-09-25):** `none` seçilince kapak yazı ağırlıklı (tipografik) üretilir: paletten
+  zemin, başlık/yazar kitabın başlık fontuyla, isteğe bağlı şekil/desen; görsel model açılmaz. Kapak ekranında "kapağa resim
+  üret" yine seçilebilir (tek kapak resmi için model açılır).
+
+## A teslim notları (2026-09-25, `63389c49`) — sözleşmeye eklenenler
+1. Blok `kind`: `para | dialogue | sound | heading`; `dialogue` balona geçmeyen kitapta metinde "– " ile basılır.
+2. `plan.page` ek alanları: `art_ratio` (hazır yerleşimde resim bandı oranı), `body_size` (varsayılan punto).
+3. Meşgul kuralı: aynı işte GPU işi sürüyorsa **yalnız GPU isteyen** yazanlar (resim, figür, kaliteyi artır, art-mode)
+   409 `BUSY` döner; plan düzenlemeleri süren işi beklemez.
+4. Sayfa dışına taşan kutu reddedilmez, sayfaya kırpılır (en küçük kenar 1 mm); dönen `page` düzeltilmiş hâlidir
+   (çevrimdışı sıradaki düzenleme 400 ile kaybolmasın diye).
+5. Metni olan sayfa resim-yalnız yerleşime (`art-full`, `blank`) geçirilmek istenirse 400: "önce metni taşıyın".
+6. Hata gövdesi `{"code","detail"}`; `STALE`'de `rev`, `IN_USE`'da `pages`, `TOO_LARGE`'da `limit_mb`.
+7. Dönüşler: `unused-art` → `{"art":[{"id","selected","approved","versions"}]}`; `figures` → `{"workflow","job","asset"}`;
+   `jobs` → `{"busy","jobs":[…]}`; `photos` ayrıca `rev`, `warnings`, `figure`; `dpi_hint` sayfaya konduysa o kutudaki,
+   konmadıysa tam sayfaya sığınca olacak dpi.
+8. Ek alanlar: `bubbles[].size|warning|overflow`, `texts[].overflow`; kökte `updated_at|updated_by|built_seconds|
+   restored_from`; asset'te `derived_from|upscale|dpi|sharpened|note|cutout|prompt_en|seed|mode|key`.
+9. Şekil `fill`/`stroke`: hex ya da palet rolü (`accent|soft|ink`); Typst paletine `accent`, `ink` eklenir.
+10. Ön kontrol "metin eksiksiz" denetimi plan varken planın metniyle karşılaştırır; efekt yazı ve şekil yazısı bu
+    denetime girmez.
+11. API'den çağrılan freeze balonları kuralla yerleştirir; hat sonundaki freeze kuyruğu konuşana yöneltmek için görsel
+    okuyucuyu gateway üzerinden çağırır.
+
 ## Efekt yazılar ve süs/şekiller (kullanıcı kararı 2026-09-25: "sadece balon olmasın")
 İki yeni iş: **D** motor (`apps/editor/src/editor/production/elements.py` + `templates/elements.typ`), **E** ekran
 (`src/canvas/editorial/studio/elements/`). A ve C bunları yalnız çağırır/yerleştirir; çizim ve katalog D'de, paneller E'de.
