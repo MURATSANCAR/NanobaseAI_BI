@@ -22,8 +22,10 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, llms, propose, rules
-from .store import GSC, PRODUCTS, PROPOSALS, QUESTIONS, RUNS, dumps, ensure, iso, loads, now
+from . import connections, llms, propose, redirects, rules
+import hashlib
+
+from .store import GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -129,6 +131,12 @@ class SeoGeo:
                 if len(rows) < connections.PAGE:
                     break
             self._store(products)
+            # Sayfa ayarları ve yönlendirmeler: yazar/kategori/yayınevi sayfaları ve anasayfa 301'leri için.
+            self.state.update(kind="links")
+            links = self._all("link/getLinks")
+            refs = self._all("link/getReferralLinks")
+            self._store_links(links)
+            self._store_redirects(links, refs, products)
         except Exception as e:  # noqa: BLE001 — hata ekrana taşınır, eski veri korunur
             error = str(e)[:1000]
             log.exception("seo sync failed")
@@ -138,6 +146,54 @@ class SeoGeo:
                     finished_at=now(), count=len(products), error=error))
             self.state.update(running=False, error=error)
             self._sync_lock.release()
+
+    def _all(self, path: str) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        while True:
+            rows = connections.tsoft.call(path, {"start": len(out), "limit": connections.PAGE}).get("data") or []
+            out.extend(rows)
+            self.state.update(done=len(out), total=None)
+            if len(rows) < connections.PAGE:
+                return out
+
+    def _store_links(self, links: list[dict[str, Any]]) -> None:
+        tenant, at = self.tenant(), now()
+        seen: dict[str, dict[str, Any]] = {}
+        for l in links:
+            link = str(l.get("Link") or "").strip().strip("/")[:600]
+            if link and str(l.get("Type") or "") != "301" and link not in seen:
+                seen[link] = dict(tenant_id=tenant, link=link, type=str(l.get("Type") or "")[:40],
+                                  table_id=str(l.get("TableId") or "")[:40], title=l.get("Title"),
+                                  description=l.get("Description"), data_json=dumps(l), synced_at=at)
+        values = list(seen.values())
+        with self.engine().begin() as c:
+            c.execute(LINKS.delete().where(LINKS.c.tenant_id == tenant))
+            for i in range(0, len(values), 1000):
+                c.execute(LINKS.insert(), values[i:i + 1000])
+
+    def _store_redirects(self, links: list[dict[str, Any]], refs: list[dict[str, Any]],
+                         products: list[dict[str, Any]]) -> None:
+        """Anasayfaya giden 301'ler için öneri; verilmiş kararlar korunur, düzelmiş olan (artık anasayfaya gitmeyen)
+        bekleyen kayıt silinir."""
+        tenant, at = self.tenant(), now()
+        idx = redirects.Index(links, products)
+        home = {str(r.get("Link") or "").strip().strip("/"): r for r in refs
+                if redirects.is_home(r.get("RedirectLink")) and str(r.get("RedirectLink") or "").strip()}
+        with self.engine().begin() as c:
+            old = {r["link"]: r for r in c.execute(sa.select(REDIRECTS).where(REDIRECTS.c.tenant_id == tenant)).mappings()}
+            for link, r in home.items():
+                sug = redirects.suggest(link, idx)
+                vals = dict(current_target=str(r.get("RedirectLink") or "")[:600], target=(sug["target"] or None),
+                            target_type=sug["type"], confidence=sug["confidence"], reason=sug["reason"][:600],
+                            alternatives_json=dumps(sug["alternatives"]), synced_at=at)
+                if link in old:
+                    c.execute(REDIRECTS.update().where(REDIRECTS.c.id == old[link]["id"]).values(**vals))
+                else:
+                    rid = hashlib.sha1(f"{tenant}|{link}".encode()).hexdigest()[:16]
+                    c.execute(REDIRECTS.insert().values(id=rid, tenant_id=tenant, link=link[:600], status="bekliyor", **vals))
+            gone = [r["id"] for l, r in old.items() if l not in home and r["status"] == "bekliyor"]
+            if gone:
+                c.execute(REDIRECTS.delete().where(REDIRECTS.c.id.in_(gone)))
 
     def _store(self, products: list[dict[str, Any]]) -> None:
         lim = rules.thresholds(self.conf)
@@ -520,6 +576,94 @@ def register(app, runtime, authorize, session_user):
             except Exception as e:  # noqa: BLE001 — site erişilemezse öneri yine gösterilir
                 current[name] = {"status": None, "error": str(e)[:200]}
         return {**out, "site": site, "current": current}
+
+    def _redirect_view(r: Any) -> dict[str, Any]:
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        return {"id": r["id"], "link": r["link"], "url": f"{site}/{r['link']}", "current": r["current_target"],
+                "target": r["target"], "targetType": r["target_type"], "confidence": r["confidence"],
+                "reason": r["reason"], "alternatives": loads(r["alternatives_json"], []), "status": r["status"],
+                "chosen": r["chosen"], "decidedBy": r["decided_by"], "decidedAt": iso(r["decided_at"]), "note": r["note"]}
+
+    @app.get("/api/v1/seo-geo/redirects")
+    def seo_redirects(request: Request, confidence: str = "", status: str = "", q: str = "", start: int = 0,
+                      limit: int = 50) -> dict[str, Any]:
+        gate(request)
+        tenant = seo.tenant()
+        cond = [REDIRECTS.c.tenant_id == tenant]
+        if confidence:
+            cond.append(REDIRECTS.c.confidence == confidence)
+        if status:
+            cond.append(REDIRECTS.c.status == status)
+        if q.strip():
+            cond.append(sa.or_(REDIRECTS.c.link.ilike(f"%{q.strip()}%"), REDIRECTS.c.target.ilike(f"%{q.strip()}%")))
+        order = sa.case({"kesin": 0, "yüksek": 1, "orta": 2}, value=REDIRECTS.c.confidence, else_=3)
+        with seo.engine().connect() as c:
+            total = c.execute(sa.select(sa.func.count()).select_from(REDIRECTS).where(*cond)).scalar() or 0
+            rows = c.execute(sa.select(REDIRECTS).where(*cond).order_by(order, REDIRECTS.c.link)
+                             .offset(max(0, start)).limit(max(1, limit))).mappings().all()
+            counts = {f"{a}|{b}": n for a, b, n in c.execute(sa.select(REDIRECTS.c.confidence, REDIRECTS.c.status,
+                                                                        sa.func.count()).where(REDIRECTS.c.tenant_id == tenant)
+                                                              .group_by(REDIRECTS.c.confidence, REDIRECTS.c.status)).all()}
+        return {"total": total, "items": [_redirect_view(r) for r in rows], "counts": counts}
+
+    class RedirectDecision(BaseModel):
+        action: str = Field(pattern="^(approve|reject)$")
+        target: str = Field(default="", max_length=600)
+        note: str = Field(default="", max_length=1000)
+
+    @app.post("/api/v1/seo-geo/redirects/{rid}/decide")
+    def seo_redirect_decide(rid: str, body: RedirectDecision, request: Request) -> dict[str, Any]:
+        """Karar yalnız kaydedilir; T-soft'a yazılmaz. Onaylananlar CSV ile panelden girilir."""
+        user = approver(request)
+        target = (body.target or "").strip().strip("/")
+        with seo.engine().begin() as c:
+            r = c.execute(sa.select(REDIRECTS).where(REDIRECTS.c.tenant_id == seo.tenant(), REDIRECTS.c.id == rid)).mappings().first()
+            if not r:
+                raise _err(404, "Yönlendirme bulunamadı.")
+            chosen = target or r["target"]
+            if body.action == "approve" and not chosen:
+                raise _err(422, "Hedef adres seçilmeden onaylanamaz.")
+            c.execute(REDIRECTS.update().where(REDIRECTS.c.id == rid).values(
+                status="onaylandi" if body.action == "approve" else "reddedildi",
+                chosen=chosen if body.action == "approve" else None, decided_by=user, decided_at=now(),
+                note=body.note or None))
+            r = c.execute(sa.select(REDIRECTS).where(REDIRECTS.c.id == rid)).mappings().first()
+        seo.audit(user, body.action, rid, r["link"], {"kind": "redirect", "target": r["chosen"]})
+        return _redirect_view(r)
+
+    @app.post("/api/v1/seo-geo/redirects/approve-confidence")
+    def seo_redirect_bulk(request: Request, confidence: str = "kesin") -> dict[str, Any]:
+        """Bir güven düzeyindeki bekleyen önerilerin hepsini onaylar (yalnız "kesin" ve "yüksek")."""
+        user = approver(request)
+        if confidence not in ("kesin", "yüksek"):
+            raise _err(422, "Toplu onay yalnız kesin ve yüksek güvende yapılır.")
+        with seo.engine().begin() as c:
+            n = c.execute(REDIRECTS.update().where(
+                REDIRECTS.c.tenant_id == seo.tenant(), REDIRECTS.c.status == "bekliyor",
+                REDIRECTS.c.confidence == confidence, REDIRECTS.c.target.is_not(None)).values(
+                status="onaylandi", chosen=REDIRECTS.c.target, decided_by=user, decided_at=now())).rowcount
+        seo.audit(user, "approve", confidence, "Toplu yönlendirme onayı", {"kind": "redirect", "count": n})
+        return {"approved": n}
+
+    @app.get("/api/v1/seo-geo/redirects/export.csv")
+    def seo_redirect_export(request: Request):
+        """Onaylanan yönlendirmeler: T-soft paneline elle girilmek için (Link;RedirectLink)."""
+        gate(request)
+        import csv
+        import io
+        from fastapi.responses import Response
+
+        with seo.engine().connect() as c:
+            rows = c.execute(sa.select(REDIRECTS.c.link, REDIRECTS.c.chosen, REDIRECTS.c.decided_by, REDIRECTS.c.decided_at)
+                             .where(REDIRECTS.c.tenant_id == seo.tenant(), REDIRECTS.c.status == "onaylandi")
+                             .order_by(REDIRECTS.c.link)).all()
+        buf = io.StringIO()
+        w = csv.writer(buf, delimiter=";")
+        w.writerow(["Link", "RedirectLink", "Onaylayan", "Tarih"])
+        for link, chosen, by, at in rows:
+            w.writerow([link, chosen, by, iso(at)])
+        return Response("\ufeff" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="yonlendirme-onerileri.csv"'})
 
     @app.get("/api/v1/seo-geo/history")
     def seo_history(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:

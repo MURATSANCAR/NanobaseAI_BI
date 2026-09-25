@@ -80,6 +80,24 @@ export type ProductDetail = ProductRow & {
   proposals: Proposal[];
 };
 
+export type Confidence = 'kesin' | 'yüksek' | 'orta' | 'yok';
+export type Redirect = {
+  id: string;
+  link: string;
+  url: string;
+  current: string | null;
+  target: string | null;
+  targetType: string | null;
+  confidence: Confidence;
+  reason: string | null;
+  alternatives: Array<{ link: string; type: string; score: number }>;
+  status: 'bekliyor' | 'onaylandi' | 'reddedildi';
+  chosen: string | null;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  note: string | null;
+};
+
 export type Question = { id: string; text: string; category: string | null; createdBy: string | null; createdAt: string };
 
 async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T> {
@@ -125,6 +143,13 @@ export const seoApi = {
   search: (kind: 'daily' | 'queries' | 'pages') => call<SearchReport>(`search/${kind}`),
   searchRefresh: () => call<{ counts: Record<string, number> }>('search/refresh', { method: 'POST', timeout: 300_000 }),
   llms: () => call<{ llms: string; full: string; books: number; brands: number; authors: number; listedSellers: number; sellers: number; site: string; current: Record<string, { status: number | null; text?: string | null; error?: string }> }>('llms'),
+  redirects: (p: { confidence?: string; status?: string; q?: string; start?: number; limit?: number }) =>
+    call<{ total: number; items: Redirect[]; counts: Record<string, number> }>(`redirects?${qs(p)}`),
+  decideRedirect: (id: string, body: { action: 'approve' | 'reject'; target?: string; note?: string }) =>
+    call<Redirect>(`redirects/${id}/decide`, { method: 'POST', body }),
+  approveRedirects: (confidence: 'kesin' | 'yüksek') =>
+    call<{ approved: number }>(`redirects/approve-confidence?confidence=${encodeURIComponent(confidence)}`, { method: 'POST' }),
+  redirectCsvUrl: () => `${ENGINE_BASE}/api/v1/seo-geo/redirects/export.csv`,
   questions: () => call<{ items: Question[]; measuring: boolean }>('questions'),
   addQuestion: (text: string, category: string) => call<{ id: string }>('questions', { method: 'POST', body: { text, category } }),
   deleteQuestion: (id: string) => call<{ deleted: boolean }>(`questions/${id}`, { method: 'DELETE' }),
