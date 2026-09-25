@@ -313,7 +313,11 @@ def vote(passes: list[list[dict]], n: int) -> list[dict]:
                                            and (m["start"], m["end"]) == (best["start"], best["end"])), "")
         out.append({k: best[k] for k in ("target", "id", "start", "end", "quote", "kind", "reason")} |
                    {"replacement": rep, "votes": votes, "passes": n,
-                    "kinds": sorted({m["kind"] for m in c})})
+                    "kinds": sorted({m["kind"] for m in c}),
+                    # aynı aralık için öteki okumaların önerileri: ilk öneri sınamayı geçemezse sıradaki denenir
+                    "alternatives": list(dict.fromkeys(m["replacement"] for m in same if m["replacement"]
+                                                       and m["replacement"] != rep
+                                                       and (m["start"], m["end"]) == (best["start"], best["end"])))})
     return sorted(out, key=lambda f: (f["target"] != "block", f["id"], f["start"]))
 
 
@@ -356,12 +360,43 @@ async def read_page(llm, d: Path, plan: dict, i: int, age: int, passes: int, sem
             if p < KEEP_P:
                 refuted += 1
                 continue
+        if f["replacement"]:
+            f["replacement"], rejected = await pick_replacement(llm, age, f, texts[(f["target"], f["id"])], no, sem)
+            f["replacements_rejected"] = rejected
+        f.pop("alternatives", None)
         f["fid"] = _fid(pg["id"], f)
         f["page"] = pg["id"]
         f["no"] = no
         kept.append(f)
     return {"no": no, "flags": kept, "raw": sum(len(r[0]) for r in ok), "dropped": sum(r[1] for r in ok),
             "refuted": refuted, "ok_passes": len(ok), "failed_passes": len(failed)}
+
+
+REPLACE = PromptRef("studio_reader_replacement_check", "1")
+
+
+async def pick_replacement(llm, age: int, f: dict, text: str, no: int, sem: asyncio.Semaphore) -> tuple[str, int]:
+    """İşaretin önerisi metne konmadan sınanır: doğru Türkçe mi, anlamı ve olayı koruyor mu, bu yaşa daha uygun mu.
+    Geçemeyen öneri atılır, aynı aralık için öteki okumaların önerisi denenir; hiçbiri geçmezse işaret önerisiz
+    kalır (editör yine görür). Dönen: (öneri ya da "", atılan öneri sayısı)."""
+    rejected = 0
+    for rep in [f["replacement"], *f.get("alternatives", [])]:
+        new = text[:f["start"]] + rep + text[f["end"]:]
+        prompt = (f"Bir çocuk kitabı ({age} yaş okur). Özgün metin:\n<<<{text}>>>\nÖnerilen yeni metin:\n<<<{new}>>>\n"
+                  f"Değişen yer: «{f['quote']}» → «{rep}»\n"
+                  "Yeni metin doğru ve doğal Türkçe mi, olayı ve anlamı koruyor mu, bu yaştaki okur için özgününden daha "
+                  "anlaşılır mı?\nA) Evet, üçü de\nB) Hayır\nTek harfle cevap ver.")
+        try:
+            async with sem:
+                probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": prompt}], ["A", "B"], prompt=REPLACE,
+                                            pages=[no])
+        except Exception:  # noqa: BLE001 - sınanamayan öneri gösterilmez; işaret kalır
+            rejected += 1
+            continue
+        if float(probs.get("A", 0.0)) >= KEEP_P:
+            return rep, rejected
+        rejected += 1
+    return "", rejected
 
 
 REFUTABLE = ("RESIM", "KONUSAN")    # metinden denetlenebilen iddialar; kelime/cümle/sıkıcılık okurun öznel tepkisi

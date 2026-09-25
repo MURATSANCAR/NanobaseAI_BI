@@ -52,6 +52,8 @@ class FakeLlm:
         text = messages[0]["content"]
         if prompt is R.TURN_REFUTE:                  # ilk aday hikâyeyi değiştirir (düşer), ikincisi kalır
             return ({"A": 0.2, "B": 0.8} if "ağladı" in text else {"A": 0.85, "B": 0.15}), 1
+        if prompt is R.REPLACE:                      # bozuk Türkçe öneri düşer
+            return ({"A": 0.1, "B": 0.9} if "uyku uykuya" in text else {"A": 0.8, "B": 0.2}), 1
         if prompt is R.REFUTE:
             return ({"A": 0.9, "B": 0.1} if "güldü" in text.split("İddia")[1] else {"A": 0.3, "B": 0.7}), 1
         return ({"A": 0.9, "B": 0.07, "C": 0.03} if "koştu 1." in text else {"A": 0.1, "B": 0.3, "C": 0.6}), 1
@@ -100,7 +102,7 @@ def test_child_run_votes_verifies_and_records(tmp_path):
     assert run["age"] == 4 and run["progress"] == [0, 5]
     llm = FakeLlm()
     out = asyncio.run(R.execute(d, run["id"], llm))
-    assert out["status"] == "done" and llm.chats == 15
+    assert out["status"] == "done" and llm.chats == 15 and llm.chooses == 5          # öneri sınaması sayfa başı 1
     view = R.flat(R.load_run(d, run["id"]))
     assert all(f["kind"] == "KELIME" and f["votes"] == 2 and f["passes"] == 3 for f in view["flags"])
     assert len(view["flags"]) == 5 and {f["no"] for f in view["flags"]} == {4, 5, 6, 7, 8}
@@ -133,6 +135,16 @@ def test_checkable_flags_are_refuted_before_the_editor(tmp_path):
                                "replacement": ""}]}, 1
     res = asyncio.run(R.read_page(Llm(), d, plan, 0, 6, 1, asyncio.Semaphore(2)))
     assert [f["quote"] for f in res["flags"]] == ["güldü"] and res["refuted"] == 1 and res["flags"][0]["check"] == 0.9
+
+
+def test_broken_replacement_falls_back_to_another_reading():
+    f = {"start": 20, "end": 31, "quote": "mışıl mışıl", "replacement": "uyku uykuya", "alternatives": ["tatlı tatlı"]}
+    text = "Etimesgutlu aslan, mışıl mışıl uykuya daldı."
+    f["start"], f["end"] = R.locate("mışıl mışıl", text)
+    rep, rejected = asyncio.run(R.pick_replacement(FakeLlm(), 3, f, text, 8, asyncio.Semaphore(1)))
+    assert rep == "tatlı tatlı" and rejected == 1
+    f["alternatives"] = []
+    assert asyncio.run(R.pick_replacement(FakeLlm(), 3, f, text, 8, asyncio.Semaphore(1))) == ("", 1)
 
 
 def test_child_prompt_uses_book_age_and_scene(tmp_path):
