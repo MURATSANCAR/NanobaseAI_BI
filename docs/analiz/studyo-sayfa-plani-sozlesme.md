@@ -121,6 +121,19 @@ tutuluyor (`studio.json.pages["12"]`). Sayfa planında sayfa **kalıcı bir kay�
 - Üretim GPU işidir (Temporal, bugünkü resim işleri gibi); ekran işin bitmesini bekler, bu sırada düzenleme sürer.
 - Figür bir kez üretilir, birçok sayfada kullanılabilir; sayfadan silinmesi kütüphaneden silmez.
 
+## Fotoğraf yükleme (kullanıcı kararı 2026-09-25)
+- Editör bilgisayardan/telefondan fotoğraf yükler (JPEG, PNG, WebP; HEIC okunabiliyorsa o da — okunamıyorsa açık hata).
+  Yükleme bugünkü stüdyo kalıbıyla ham gövde `PUT` + `filename` sorgu parametresi (multipart yok).
+- Sunucu: EXIF yönü uygulanır, sRGB'ye çevrilir, EXIF/konum bilgisi silinir (kişisel veri), `foto/<gid>.<ext>` olarak
+  saklanır, `assets`'e `{"kind": "photo", "w_px", "h_px", "alpha", "name", "by", "at"}` ile girer.
+- Kullanım: (a) figür gibi serbest katman (`figures` listesi, aynı alanlar), (b) sayfanın ana resmi (`art.id` yerine
+  `art.asset` = gid; `studio.json` sürümlerine karışmaz), (c) isteğe bağlı "arka planı kaldır" → yeni saydam asset
+  (figür arka plan ayıklamasıyla aynı yol; düz zemin değilse sonuç ekranda önizlenir, kullanıcı onaylar).
+- Baskı denetimi: yerleştirilen kutudaki etkin çözünürlük < 300 dpi ise sayfa `warnings`'ine "baskıda bulanık çıkabilir
+  (… dpi)" yazılır; ön kontrol (preflight) da aynı denetimi yapar. Engellemez.
+- Boyut: tek dosya üst sınırı yönetim ayarı `STUDIO_UPLOAD_MB` (varsayılan 60) — ekranda yükleme alanında yazılı;
+  aşarsa açık hata. Giriş kapısı ve portal nginx'i aynı değere göre ayarlanır (bugünkü Word ucu 21 MB kalıbı).
+
 ## Otomatik kayıt, kesintiye dayanıklılık (kullanıcı kararı 2026-09-25: "yapılanlar asla kaybolmasın")
 - **Sunucu:** `plan.json` her yazımda atomik yazılır; önceki hâli `plan-history/<rev>.json` olarak saklanır (silinmez,
   tavan yok). `GET plan/history` sürüm listesi, `POST plan/restore {"rev": n}` o sürümü yeni sürüm olarak geri yükler.
@@ -157,6 +170,8 @@ direction=…)`), yönlendirme zorunlu.
 | POST | `plan/figures` | `{"prompt": "…", "characters": ["Elif"], "page": pid\|null}` | `{"workflow": id}` (GPU işi başlar; bitince asset `assets`'e, `page` verildiyse o sayfaya eklenir) |
 | GET | `plan/assets/{gid}?w=` | — | PNG (saydam) |
 | DELETE | `plan/assets/{gid}?rev=n` | — | kullanılıyorsa 409 (hangi sayfalarda) |
+| PUT | `plan/photos?filename=…&page=pid` | ham dosya gövdesi | `{"asset": gid, "w_px", "h_px", "dpi_hint"}`; `page` verildiyse figür olarak eklenir |
+| POST | `plan/assets/{gid}/cutout` | — | `{"workflow": id}` → saydam yeni asset (onaylanınca kullanılır) |
 | GET | `plan/history` | — | `[{"rev", "at", "by", "what"}]` |
 | POST | `plan/restore` | `{"rev": n}` | `plan.json` (yeni rev) |
 | GET | `plan/jobs` | — | süren figür/resim işleri ve durumları (ekran bununla bekler) |
@@ -194,6 +209,10 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
 - Figür: "Figür üret" (tarif + isteğe bağlı karakter referansı) → iş biterken ekranda bekleme durumu; figür
   kütüphanesi paneli, figürü sayfaya sürükleyip bırakma; tuvalde sürükle, köşeden boyutlandır, döndür, aynala,
   öne/arkaya.
+- Fotoğraf: "Fotoğraf yükle" (dosya seç ya da tuvale sürükle-bırak; telefonda kamera/galeri), yükleme ilerlemesi,
+  kütüphanede figürlerle birlikte; sayfaya bırak, "sayfa resmi yap", "arka planı kaldır" (önizle → onayla);
+  düşük çözünürlük uyarısı kutunun üstünde görünür. Yükleme bağlantı koparsa yeniden denenir; dosya cihazda
+  (IndexedDB) yükleme bitene kadar tutulur.
 - Serbest yazı: "Yazı ekle" → tuvalde kutu; sürükle/boyutlandır, yerinde yaz, paletten renk, punto, kalınlık.
 - Otomatik kayıt ve çevrimdışı sıra (yukarıdaki bölüm); sürüm geçmişi paneli ("geri al" = `plan/restore`),
   tarayıcı içi geri al/yinele (Ctrl/Cmd+Z, Shift+Z).
