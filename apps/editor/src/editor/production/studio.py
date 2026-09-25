@@ -218,8 +218,35 @@ def set_kunye(d: Path, values: dict[str, str], by: str) -> dict:
 
 
 # ------------------------------------------------------------------ dizgi
+def page_count(d: Path) -> int:
+    """İç sayfa sayısı: sayfa planı varsa ön sayfalar + plan sayfaları, yoksa akışın sayfa haritası."""
+    from . import plan as plan_mod
+    pl = plan_mod.load(d)
+    return plan_mod.FRONT + len(pl["pages"]) if pl else len(_pagemap(d).pages)
+
+
+def build_cover(d: Path) -> None:
+    """Kapak açılımı (sırt kalınlığı sayfa sayısına bağlı). Kapak resmi yoksa yapılmaz."""
+    art = selected_art(d)
+    if "kapak" not in art:
+        return
+    ms, spec, plan = _manuscript(d), _spec(d), _plan(d)
+    cpdf, info = cover_mod.build(ms, _profile(d), spec, page_count(d), Path(art["kapak"]), plan.style.accent,
+                                 _back_bg(plan.style.palette), d / "kapak", fonts())
+    preflight.set_boxes(cpdf, spec.bleed)
+    write(d, "cover.json", info)
+
+
 def rebuild(d: Path) -> None:
-    """Seçili sürümlerle iç sayfayı ve kapağı yeniden dizer (yerleşim değişmez), ön kontrolü yeniler."""
+    """Seçili sürümlerle iç sayfayı ve kapağı yeniden dizer (yerleşim değişmez), ön kontrolü yeniler. Sayfa planı
+    varsa iç sayfa planın şablonuyla (plan.typ) dizilir; plan değişmez."""
+    from . import plan as plan_mod
+    pl = plan_mod.load(d)
+    if pl is not None:
+        plan_mod.build_pdf(d, pl)
+        build_cover(d)
+        refresh_preflight(d)
+        return
     ms, spec, pm = _manuscript(d), _spec(d), _pagemap(d)
     front = read(d, "front.json")
     art = selected_art(d)
@@ -238,12 +265,7 @@ def rebuild(d: Path) -> None:
     preflight.set_boxes(pdf, spec.bleed)
     for f in (dz / "onizleme").glob("*.png") if (dz / "onizleme").exists() else []:
         f.unlink()
-    if "kapak" in art:
-        plan = _plan(d)
-        cpdf, info = cover_mod.build(ms, _profile(d), spec, len(pm.pages), Path(art["kapak"]), plan.style.accent,
-                                     _back_bg(plan.style.palette), d / "kapak", fonts())
-        preflight.set_boxes(cpdf, spec.bleed)
-        write(d, "cover.json", info)
+    build_cover(d)
     refresh_preflight(d)
 
 
@@ -255,23 +277,44 @@ def _back_bg(palette: list[str]) -> str:
 
 
 def refresh_preflight(d: Path) -> dict:
+    import dataclasses
+
     from . import front as front_mod
+    from . import plan as plan_mod
     ms, spec = _manuscript(d), _spec(d)
     pdf = d / "dizgi" / "ic-sayfalar.pdf"
     cpdf = d / "kapak" / "kapak.pdf"
     st = studio_state(d)
-    shown = {str(n) for n in _pagemap(d).art_pages()} | {"kapak"}
-    renders = [{"key": f"sayfa-{k}", "dpi": pg["versions"][pg["selected"] - 1]["dpi"]}
+    pl = plan_mod.load(d)
+    scenes = _plan(d).scenes
+    if pl is not None:
+        # Sayfa planında: resimler kimlikle, sayfa numarası planın sırasından; metin planın metni.
+        at = dict((aid, no) for no, aid in plan_mod.printed_art(pl))
+        label = {aid: str(no) for aid, no in at.items()} | {"kapak": "kapak"}
+        text_src = plan_mod.PlanText(pl)
+        scenes = [dataclasses.replace(sc, page=at[sc.art_id]) for sc in scenes if sc.art_id in at]
+        missing = sorted((str(no) for aid, no in at.items() if aid not in st["pages"]), key=int)
+    else:
+        painted = _pagemap(d).art_pages()
+        at = {str(n): n for n in painted}
+        label = {k: k for k in at} | {"kapak": "kapak"}
+        text_src = ms
+        missing = sorted(str(sc.page) for sc in scenes if sc.page in painted and str(sc.page) not in st["pages"])
+    shown = set(label)
+    renders = [{"key": f"sayfa-{label[k]}", "dpi": pg["versions"][pg["selected"] - 1]["dpi"]}
                for k, pg in st["pages"].items() if pg.get("selected") and k in shown]
-    rep = preflight.check(pdf, cpdf if cpdf.exists() else None, ms, spec, renders,
-                          front_mod.missing(read(d, "front.json")["kunye"]), _plan(d).scenes)
-    painted = _pagemap(d).art_pages()
-    missing = sorted(str(sc.page) for sc in _plan(d).scenes if sc.page in painted and str(sc.page) not in st["pages"])
+    rep = preflight.check(pdf, cpdf if cpdf.exists() else None, text_src, spec, renders,
+                          front_mod.missing(read(d, "front.json")["kunye"]), scenes)
     rep["checks"].append({"name": "Sayfa resimleri", "status": "FAIL" if missing else "OK",
                           "detail": "her resimli sayfanın resmi var" if not missing else
                           f"resmi olmayan sayfa: {', '.join(missing)} (stüdyoda «Farklı üret»)"})
-    printed = {str(n) for n in painted} | {"kapak"}          # basılmayan (eski yerleşimden kalan) resim onay istemez
-    waiting = sorted((k for k, pg in st["pages"].items() if k in printed and not pg.get("approved")),
+    if pl is not None:
+        low = plan_mod.low_dpi(d, pl)
+        rep["checks"].append({"name": "Yerleşimde çözünürlük", "status": "WARN" if low else "OK",
+                              "detail": "her görsel kutusunda en az 300 dpi" if not low else
+                              "; ".join(f"{no}. sayfa {kind} {v} dpi" for no, kind, v in low)})
+    # basılmayan (eski yerleşimden kalan ya da sayfadan kaldırılan) resim onay istemez
+    waiting = sorted((label[k] for k, pg in st["pages"].items() if k in shown and not pg.get("approved")),
                      key=lambda k: (not k.isdigit(), int(k) if k.isdigit() else 0))
     rep["checks"].append({"name": "Editör onayı", "status": "FAIL" if waiting else "OK",
                           "detail": "bütün resimler onaylı" if not waiting else

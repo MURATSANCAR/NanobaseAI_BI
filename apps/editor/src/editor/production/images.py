@@ -35,6 +35,9 @@ UPSCALE_ALIAS = "book-upscale"
 PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 3_000_000))
 STEPS = 40
 MAX_REFS = 4
+BUBBLE_SPACE = (" Leave the upper part of the picture calm and simple (plain sky, wall or background) as free space"
+                " for speech bubbles; keep faces out of that area.")
+FIGURE_PX = (896, 1152)            # serbest figür üretim boyu (~1 MP, dik); 40–60 mm kutuda 500+ dpi
 
 
 def size_for(w_mm: float, h_mm: float, dpi: int = 300) -> tuple[int, int, int]:
@@ -89,6 +92,8 @@ class Painter:
         self.http = httpx.AsyncClient(timeout=httpx.Timeout(1800.0, connect=10.0))
         self.log: list[Render] = []
         self.refs: dict[str, str] = {}
+        # Çocuk kitabında konuşma balonları resmin üstüne vektör olarak basılır: üretimde üst bölge sade bırakılır.
+        self.bubble_space = False
 
     @property
     def negative(self) -> str:
@@ -156,9 +161,13 @@ class Painter:
                       f"composition, characters, colors and drawing style. No text or letters anywhere.")
             refs = [base_image] + [self.refs[c.name] for c in chars if c.name in self.refs][:MAX_REFS - 1]
         else:
-            body = f"Children's book illustration. {sc.scene} Setting: {sc.setting}."
+            # Sayfa planında sonradan eklenen sayfanın sahnesi yoktur: tarif yalnız editörün yönlendirmesidir.
+            body = "Children's book illustration." + (f" {sc.scene}" if sc.scene else "") + \
+                (f" Setting: {sc.setting}." if sc.setting else "")
             if direction.strip():
                 body += f" Editor's direction (follow it): {direction.strip()}."
+            if self.bubble_space:
+                body += BUBBLE_SPACE
             prompt = self._prompt(body, chars, sc.outfits)
             refs = [self.refs[c.name] for c in chars if c.name in self.refs][:MAX_REFS]
         extra = "" if base_image else (" Keep each character's face, body and colors exactly as in the reference"
@@ -198,6 +207,28 @@ class Painter:
         rd = Render(key, self._save(key, png), TW, TH, dpi, seed, refs, mode, round(time.time() - t, 1), prompt, note)
         self.log.append(rd)
         return rd
+
+    async def figure(self, what: str, chars: list[Character], key_name: str, key_hex: str, seed: int) -> tuple[bytes, str]:
+        """Serbest figür: kitabın üslubunda, düz tek renk zemin üzerinde tek figür (zemin sonra ayıklanır,
+        photo.cutout). Karakter seçildiyse referansıyla düzenleme ucundan; referans ucu hata verirse metinden.
+        Dönen: (PNG, yol «edit» | «generate» | «edit_failed→generate»)."""
+        W, H = FIGURE_PX
+        body = (f"A single isolated figure for a children's book: {what}. The whole figure is visible and centered, "
+                f"with a wide empty margin on every side. Background: one flat, uniform, solid {key_name} colour "
+                f"({key_hex}) everywhere, no gradient, no texture, no cast shadow, no floor, no scenery, nothing else.")
+        prompt = self._prompt(body, chars)
+        refs = [self.refs[c.name] for c in chars if c.name in self.refs][:MAX_REFS]
+        if refs:
+            try:
+                extra = " Keep each character's face, body and colors exactly as in the reference images."
+                return await self._edit(prompt + extra, [Path(r).read_bytes() for r in refs], W, H, seed), "edit"
+            except httpx.HTTPStatusError as e:
+                if e.response.status_code >= 500:
+                    raise
+            except (httpx.HTTPError, KeyError, IndexError, ValueError):
+                pass
+            return await self._generate(prompt, W, H, seed), "edit_failed→generate"
+        return await self._generate(prompt, W, H, seed), "generate"
 
     async def pages(self, scenes: list[Scene], band_mm: tuple[float, float], full_mm: tuple[float, float],
                     concurrency: int = 1) -> dict[int, str]:
