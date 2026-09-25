@@ -163,7 +163,15 @@ async def upscale_activity(job: str, jid: str, gid: str, new_gid: str, page: str
     await _plan_job(job, jid, lambda d: studio.upscale_asset(d, gid, new_gid, page, item, by), gpu=True)
 
 
-ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity]
+@activity.defn(name="production_epub")
+async def epub_activity(job: str, layout: str, by: str) -> None:
+    """E-kitap (GPU'suz; alt metin önerisi model gateway'inden): durum epub/state.json'da (epub.build_job yazar)."""
+    from . import epub, studio
+    await _beating(epub.build_job(studio.job_dir(job), layout, by))
+
+
+ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity,
+              epub_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -216,7 +224,16 @@ class AssetUpscale:
                                         heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
 
 
-WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale]
+@workflow.defn(name="EpubBuild")
+class EpubBuild:
+    @workflow.run
+    async def run(self, job: str, layout: str, by: str) -> None:
+        await workflow.execute_activity("production_epub", args=[job, layout, by],
+                                        start_to_close_timeout=timedelta(minutes=60),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale, EpubBuild]
 
 # Seri karakter kartı (characters.py): denetim (CharacterCheck) ve öneri/çeviri (CharacterCards) aynı kuyrukta.
 from .characters import ACTIVITIES as _CARD_ACTIVITIES, WORKFLOWS as _CARD_WORKFLOWS  # noqa: E402

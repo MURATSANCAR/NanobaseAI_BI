@@ -9,6 +9,7 @@ import { Img, ghostBtn, gradientBtn, press } from './shared';
 import { revision, useStudioJob } from './StudioFlow';
 import { MarketingKit } from './marketing';
 import { CharactersEntry } from './characters';
+import { EpubSection } from './epub';
 
 /** Sayfa stüdyosu: dizilmiş kitap açılım açılım görünür; resimli her sayfa ve kapak için iki yol vardır.
  *  DÜZELT seçili sürümü referans alır ve yalnız yazılan değişikliği yapar; FARKLI ÜRET sayfanın metninden
@@ -292,6 +293,7 @@ export default function StudioEditor() {
         </Panel>
       </div>
       <MarketingKit jobId={jobId} />
+      <EpubSection jobId={jobId} />
       {d.preflight && d.preflight.status !== 'OK' && (
         <Note tone={d.preflight.status === 'FAIL' ? 'warn' : 'info'}>
           Ön baskı denetimi: {d.preflight.checks.filter((c) => c.status !== 'OK').map((c) => `${c.name} — ${c.detail}`).join(' · ')}{' '}
