@@ -347,6 +347,9 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
         st.done("kapak", f"{info['size_mm'][0]}×{info['size_mm'][1]} mm · {info['binding']} · sırt {info['spine_mm']} mm"
                 if info else f"kapak resmi çizilemedi: {err or 'bilinmiyor'} (stüdyoda yeniden üretin)",
                 status="done" if info else "warn")
+    elif info and info.get("typographic"):
+        st.done("kapak", f"tipografik kapak (resimsiz kitap) · {info['size_mm'][0]}×{info['size_mm'][1]} mm · "
+                         f"sırt {info['spine_mm']} mm · stüdyoda kapağa resim üretilebilir")
     st.done("dizgi", "ic-sayfalar.pdf" + (" + kapak.pdf" if info else ""))
     st.start("on_kontrol")
     rep = studio.read(d, "preflight.json")
