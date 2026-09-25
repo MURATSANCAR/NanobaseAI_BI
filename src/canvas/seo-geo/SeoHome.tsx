@@ -131,6 +131,39 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; 
           )}
         </section>
 
+        <section className="sg-card sg-span-12">
+          <h2>Önce düzeltilecek kitaplar</h2>
+          <p className="sg-sub">Puanı 70’in altındaki kitaplardan en çok satan 10’u; düzeltme en çok okura buradan ulaşır.</p>
+          {o.priority.length ? (
+            <div className="sg-table-wrap">
+              <table className="sg-table">
+                <thead>
+                  <tr>
+                    <th>Kitap</th>
+                    <th style={{ textAlign: 'right' }}>Satış</th>
+                    <th style={{ textAlign: 'right' }}>Görüntülenme</th>
+                    <th style={{ textAlign: 'right' }}>Puan</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {o.priority.map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        <Link to={`/seo-geo/urun-denetimi?urun=${encodeURIComponent(r.id)}`}>{r.name}</Link>
+                      </td>
+                      <td className="num">{fmt(r.sales)}</td>
+                      <td className="num">{fmt(r.views)}</td>
+                      <td className="num">{r.score}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <p className="sg-banner">Ürünler henüz okunmadı.</p>
+          )}
+        </section>
+
         <section className="sg-card sg-span-6">
           <h2>İş listesi</h2>
           <p className="sg-sub">Karar bekleyen işler.</p>
