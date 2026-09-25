@@ -396,28 +396,45 @@ def cover_preview(d: Path, width: int) -> Path:
 
 # ------------------------------------------------------------------ yeniden üretim
 async def regenerate(d: Path, key: str, mode: str, direction: str, by: str, variants: int = 1) -> list[int]:
-    """`key`: sayfa numarası ya da «kapak». Dönen: yeni sürüm numaraları (sonuncusu seçili)."""
+    """`key`: sayfa numarası, sayfa planındaki resim kimliği (a_…) ya da «kapak». Dönen: yeni sürüm numaraları
+    (sonuncusu seçili). Planda resim kutusunun ölçüsünde üretilir; plana sonradan eklenen sayfanın sahnesi yoktur,
+    yönlendirme zorunludur (sahne = yönlendirme + sayfa metninde adı geçen karakterler)."""
     if mode not in ("fix", "new"):
         raise ValueError("mod fix ya da new olmalı")
     if mode == "fix" and not direction.strip():
         raise ValueError("Düzeltme için neyin değişeceğini yazın")
+    from . import plan as plan_mod
     spec, pm, plan = _spec(d), _pagemap(d), _plan(d)
     st = studio_state(d)
-    from .run import FileLlm
-    # Görsel modele İngilizcesi gider; sürüm kaydında editörün yazdığı kalır.
-    english = await art_mod.direction_en(direction, plan.characters, FileLlm(d / "provenance.jsonl"))
-    painter = Painter(d / "resim", plan)
-    painter.refs = {n: p for n, p in st.get("characters", {}).items()}
     pg = st["pages"].get(key)
     if key == "kapak":
         chars = plan.characters[:1]
         sc = Scene(0, "cover", "", "", [c.name for c in chars], _cover_scene(plan), "", True)
         size = cover_mm(spec)
+    elif key.startswith("a_"):
+        pl = plan_mod.load(d) or {"pages": []}
+        no, ppg = plan_mod.page_of_art(pl, key)
+        sc = next((s for s in plan.scenes if s.art_id == key), None)
+        if sc is None:
+            if ppg is None:
+                raise ValueError("bu resim hiçbir sayfada değil")
+            if not direction.strip() and not pg:
+                raise ValueError("Yeni resim için ne çizileceğini yazın")
+            text = plan_mod.page_text(ppg)
+            sc = Scene(no, "flow", "", "", [c.name for c in plan.characters if art_mod._mentions(c.name, text)],
+                       "", "", False, art_id=key)
+        size = ((ppg["art"]["box"]["w"], ppg["art"]["box"]["h"]) if ppg else
+                full_mm(spec) if sc.kind == "full" else band_mm(spec, pm))
     else:
         sc = next((s for s in plan.scenes if s.page == int(key)), None)
         if sc is None:
             raise ValueError("bu sayfada resim yok")
         size = full_mm(spec) if sc.kind == "full" else band_mm(spec, pm)
+    from .run import FileLlm
+    # Görsel modele İngilizcesi gider; sürüm kaydında editörün yazdığı kalır.
+    english = await art_mod.direction_en(direction, plan.characters, FileLlm(d / "provenance.jsonl"))
+    painter = Painter(d / "resim", plan)
+    painter.refs = {n: p for n, p in st.get("characters", {}).items()}
     base = pg["versions"][pg["selected"] - 1]["path"] if (mode == "fix" and pg and pg.get("selected")) else None
     if mode == "fix" and not base:
         raise ValueError("düzeltilecek görsel yok")
@@ -429,7 +446,8 @@ async def regenerate(d: Path, key: str, mode: str, direction: str, by: str, vari
             if key == "kapak":
                 rd = await _cover_render(painter, plan, spec, v_next, seed, english, base)
             else:
-                rd = await painter.page(sc, *size, version=v_next, seed=seed, direction=english, base_image=base)
+                rd = await painter.page(sc, *size, version=v_next, seed=seed, direction=english, base_image=base,
+                                        key=f"resim-{key}" if key.startswith("a_") else None)
             made.append(add_version(d, key, rd.path, mode=mode, prompt=direction, seed=seed, by=by, dpi=rd.dpi,
                                     base=pg["selected"] if base and pg else None, prompt_en=english))
     finally:
@@ -465,3 +483,109 @@ async def _cover_render(painter: Painter, plan: ArtPlan, spec: Spec, v: int, see
     png, _how = await painter.enlarge(png, *target_px(*cover_mm(spec)))
     path = painter._save(f"kapak.v{v}", png)
     return Render(f"kapak.v{v}", path, W, H, dpi, seed, [], mode, round(time.time() - t, 1), prompt)
+
+
+# ------------------------------------------------------------------ sayfa planı: figür, zemin ayıklama, büyütme
+def _save_asset(d: Path, rel: str, data: bytes) -> None:
+    (d / rel).parent.mkdir(parents=True, exist_ok=True)
+    tmp = d / (rel + ".tmp")
+    tmp.write_bytes(data)
+    tmp.replace(d / rel)
+
+
+async def make_figure(d: Path, gid: str, prompt: str, characters: list[str], page: str | None, by: str) -> dict:
+    """Serbest figür (GPU): tarif İngilizceye çevrilir, kitabın üslubunda düz tek renk zemin üzerinde çizilir
+    (renk kitabın paletinden en uzak anahtar renk), zemin ayıklanır (photo.cutout), figur/<gid>.png saydam kaydedilir,
+    kütüphaneye girer; `page` verildiyse o sayfaya eklenir. Ham çizim figur/<gid>.ham.png olarak saklanır."""
+    from . import photo, plan as plan_mod
+    from .run import FileLlm
+    ap = _plan(d)
+    chars = [c for c in ap.characters if c.name in characters]
+    english = await art_mod.direction_en(prompt, ap.characters, FileLlm(d / "provenance.jsonl"))
+    key_name, key_hex = photo.key_color(ap.style.palette)
+    painter = Painter(d / "figur", ap)
+    painter.refs = dict(studio_state(d).get("characters", {}))
+    seed = random.randint(1, 2**31 - 1)
+    try:
+        raw, mode = await painter.figure(english, chars, key_name, key_hex, seed)
+    finally:
+        await painter.close()
+    _save_asset(d, f"figur/{gid}.ham.png", raw)
+    import asyncio
+    png, info = await asyncio.to_thread(photo.cutout, raw, True)
+    rel = f"figur/{gid}.png"
+    _save_asset(d, rel, png)
+    meta = {"kind": "figure", "prompt": prompt, "prompt_en": english, "path": rel, "w_px": info["w_px"],
+            "h_px": info["h_px"], "alpha": True, "by": by, "at": plan_mod._now(), "characters": [c.name for c in chars],
+            "seed": seed, "mode": mode, "key": key_hex, "cutout": {k: info[k] for k in ("bg", "noise", "flat", "removed")}}
+    await asyncio.to_thread(plan_mod.add_asset, d, gid, meta, page, by, post="sync")
+    return {"asset": gid, "flat": info["flat"]}
+
+
+def cutout_asset(d: Path, gid: str, new_gid: str, by: str) -> dict:
+    """Fotoğrafın (ya da figürün) zeminini ayıklar → yeni saydam varlık (`derived_from`); sayfaya konmaz, editör
+    önizleyip onaylayınca kutu yeni varlığa geçer (sayfa PUT'u). Düz olmayan zemin `flat: false` ile döner."""
+    from . import photo, plan as plan_mod
+    pl = plan_mod.load(d)
+    a = (pl or {}).get("assets", {}).get(gid)
+    if not a:
+        raise KeyError(f"kütüphanede yok: {gid}")
+    png, info = photo.cutout((d / a["path"]).read_bytes(), a.get("kind") == "figure")
+    rel = f"{'figur' if a.get('kind') == 'figure' else 'foto'}/{new_gid}.png"
+    _save_asset(d, rel, png)
+    meta = {"kind": a.get("kind", "photo"), "path": rel, "w_px": info["w_px"], "h_px": info["h_px"], "alpha": True,
+            "name": a.get("name"), "by": by, "at": plan_mod._now(), "derived_from": gid,
+            "cutout": {k: info[k] for k in ("bg", "noise", "flat", "removed")}}
+    plan_mod.add_asset(d, new_gid, meta, None, by, post="sync")
+    return {"asset": new_gid, "flat": info["flat"],
+            "note": "" if info["flat"] else "Zemin düz değil; sonucu önizleyip onaylayın."}
+
+
+async def upscale_asset(d: Path, gid: str, new_gid: str, page: str, item: str, by: str) -> dict:
+    """«Kaliteyi artır» (GPU): yerleştirildiği kutuda 300 dpi'ye yetecek katsayıyla (2–4) büyütür → yeni varlık
+    (`derived_from`, `upscale`); özgün silinmez, sayfaya konmaz (editör onaylayınca kutu yeni varlığa geçer).
+    Büyütme servisi açılamazsa basit büyütme yapılır ve sonuçta yazılır. 4× de yetmezse ulaşılan dpi döner."""
+    import asyncio
+    import io
+
+    from PIL import Image
+
+    from . import photo, plan as plan_mod
+    pl = plan_mod.load(d)
+    bx, fit, used = plan_mod.placement(pl, page, item)
+    if used != gid:
+        raise ValueError("bu kutudaki görsel başka bir varlık")
+    a = pl["assets"][gid]
+    now = photo.dpi(a["w_px"], a["h_px"], bx, fit)
+    f = photo.upscale_factor(now)
+    src = Image.open(d / a["path"])
+    alpha = src.getchannel("A") if src.mode in ("RGBA", "LA") else None
+    W, H = src.width * f, src.height * f
+    buf = io.BytesIO()
+    src.convert("RGB").save(buf, "PNG")
+    painter = Painter(d / "foto", _plan(d))
+    try:
+        png, how = await painter.enlarge(buf.getvalue(), W, H)
+    finally:
+        await painter.close()
+    out = Image.open(io.BytesIO(png)).convert("RGB")
+    if out.size != (W, H):
+        out = out.resize((W, H), Image.Resampling.LANCZOS)
+    b2 = io.BytesIO()
+    if alpha is not None:
+        out.putalpha(alpha.resize((W, H), Image.Resampling.LANCZOS))
+        out.save(b2, "PNG", compress_level=6)
+        ext = "png"
+    else:
+        out.save(b2, "JPEG", quality=95, subsampling=0)
+        ext = "jpg"
+    rel = f"foto/{new_gid}.{ext}"
+    await asyncio.to_thread(_save_asset, d, rel, b2.getvalue())
+    reached = photo.dpi(W, H, bx, fit)
+    note = "Yalnız büyütüldü, keskinleştirilemedi." if how else ""
+    meta = {"kind": a.get("kind", "photo"), "path": rel, "w_px": W, "h_px": H, "alpha": alpha is not None,
+            "name": a.get("name"), "by": by, "at": plan_mod._now(), "derived_from": gid, "upscale": f,
+            "dpi": int(round(reached)), "sharpened": not how, **({"note": note} if note else {})}
+    await asyncio.to_thread(plan_mod.add_asset, d, new_gid, meta, None, by, post="sync")
+    return {"asset": new_gid, "factor": f, "dpi_before": int(round(now)), "dpi": int(round(reached)),
+            "enough": round(reached) >= photo.LOW_DPI, "note": note}

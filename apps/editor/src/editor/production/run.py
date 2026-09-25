@@ -264,6 +264,16 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
             st.start(k)
             st.done(k, "atlandı", status="skipped")
 
+    # Sayfa planı: resimler hazır olunca sayfalar kalıcı kayda dönüşür (plan.py); dizgi bundan sonra plandan.
+    # Kurulamazsa iş akışla dizilir (eski yol), hata kayda geçer; plan ekrandan ya da devamda yeniden denenir.
+    from . import plan as plan_mod
+    try:
+        locate = plan_mod.locator(studio.read(d, "artplan.json")["characters"]) if images else None
+        await asyncio.to_thread(plan_mod.freeze, d, by, locate=locate)
+        st.data.pop("plan_error", None)
+    except Exception as e:  # noqa: BLE001
+        st.data["plan_error"] = f"{type(e).__name__}: {e}"[:300]
+        (d / "hata-plan.txt").write_text("".join(traceback.format_exception(type(e), e, e.__traceback__)))
     st.start("dizgi")
     await asyncio.to_thread(studio.rebuild, d)
     info = studio.read(d, "cover.json")

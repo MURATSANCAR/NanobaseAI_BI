@@ -69,6 +69,7 @@ def ingest(data: bytes, filename: str) -> dict:
     if im.mode == "RGBA" and im.getchannel("A").getextrema()[0] == 255:
         im = im.convert("RGB")                  # saydamlık kanalı var ama kullanılmıyor
     alpha = im.mode == "RGBA"
+    im.info = {}                                # EXIF, konum, renk profili, metin parçaları: hiçbiri yazılmaz
     buf = io.BytesIO()
     if alpha or (fmt != "JPEG" and _lossless(im)):
         im.save(buf, "PNG", compress_level=6)   # üst veri parametresi verilmez: EXIF ve metin parçaları yazılmaz

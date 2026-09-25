@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import contextlib
 import fcntl
-import importlib
 import json
 import math
 import os
@@ -374,6 +373,8 @@ def _clean_page(p: dict, plan: dict, old: dict | None = None) -> dict:
              "color": _hex(bb.get("color"), "balon"), "source": bb.get("source") or "editor"}
         if bb.get("size") is not None:
             o["size"] = float(bb["size"])
+        if bb.get("warning") and o["source"] == "auto":       # yerleşimin notu; editör taşıyınca düşer
+            o["warning"] = str(bb["warning"])
         out["bubbles"].append(o)
     for f in p.get("figures") or []:
         if f.get("asset") not in assets:
@@ -389,53 +390,46 @@ def _clean_page(p: dict, plan: dict, old: dict | None = None) -> dict:
     return out
 
 
-# ------------------------------------------------------------------ B işinin otomatikleri (yoksa atlanır)
-def _auto(name: str):
-    try:
-        return importlib.import_module(f"{__package__}.{name}")
-    except ImportError:
-        return None
+# ------------------------------------------------------------------ otomatikler (palette, colorize, bubbles)
+def bubble_size(body: float) -> float:
+    """Balon puntosu: gövde puntosunun iki altı (en az 10 pt); balon ölçüsü de bununla hesaplanır."""
+    return max(10.0, float(body) - 2.0)
 
 
-def auto_palette(image_paths: list[Path], style_palette: list[str]) -> list[dict]:
-    m = _auto("palette")
-    if m is not None:
-        return m.extract(image_paths, n=6)
-    return [{"name": f"Renk {i + 1}", "hex": h.upper(), "source": "resim"} for i, h in enumerate(style_palette or [])]
-
-
-def auto_characters(characters: list[dict], colors: list[dict]) -> dict:
-    m = _auto("palette")
-    return m.assign_characters(characters, colors) if m is not None and characters else {}
-
-
-def auto_colorize(blocks: list[dict], characters: dict, palette: dict) -> list[dict]:
-    m = _auto("colorize")
-    return m.apply(blocks, characters, palette) if m is not None else blocks
-
-
-def auto_bubbles(blocks: list[dict], speakers: list[str]) -> tuple[list[dict], list[dict]]:
-    m = _auto("bubbles")
-    return m.from_dialogue(blocks, speakers) if m is not None else (blocks, [])
-
-
-def auto_place(bubbles: list[dict], art_box, text_box, image_path, locate, page: dict) -> list[dict]:
-    m = _auto("bubbles")
-    if m is not None:
-        return m.place(bubbles, art_box, text_box, image_path, locate)
-    # Modül yoksa: güvenli alanın üst kenarına yan yana, kuyruksuz (editör taşır).
+def _fallback_box(i: int, page: dict, art_box: dict | None) -> dict:
+    """Yerleşim bir balona kutu veremediyse: güvenli alanın üst kenarına yan yana (editör taşır)."""
     x0, y0, x1, _ = safe_rect(page)
     top = max(y0, (art_box or {}).get("y", y0))
     w, h = min(60.0, (x1 - x0) * 0.45), 24.0
-    for i, bb in enumerate(bubbles):
-        bb["box"] = box(x0 + (i % 2) * (x1 - x0 - w), top + (i // 2) * (h + 4), w, h)
-        bb.setdefault("tail", None)
-    return bubbles
+    return box(x0 + (i % 2) * (x1 - x0 - w), top + (i // 2) * (h + 4), w, h)
 
 
-def is_child(prof: dict | None) -> bool:
-    """Balon ve renk kurallarının otomatik uygulandığı kitap: çocuk (≤12 yaş) ve her sayfası resimli."""
-    return bool(prof) and (prof.get("age_max") or 99) <= 12 and prof.get("illustration") == "HER_SAYFA"
+def suggest_bubbles(plan: dict, pg: dict, speakers: list[str], image_path, locate) -> list[dict]:
+    """Sayfanın diyalog bloklarından balon önerisi (kaydetmez): konuşan, biçim, kutu, kuyruk."""
+    from . import bubbles as bubbles_mod
+    if not pg["text"]:
+        return []
+    _, bbs = bubbles_mod.from_dialogue(pg["text"]["blocks"], speakers)
+    return _placed(plan, pg, bbs, image_path, locate)
+
+
+def _placed(plan: dict, pg: dict, bbs: list[dict], image_path, locate) -> list[dict]:
+    from . import bubbles as bubbles_mod
+    if not bbs:
+        return []
+    size = bubble_size(plan["page"].get("body_size") or 14)
+    placed = bubbles_mod.place(bbs, pg["art"], pg["text"]["box"] if pg["text"] else None, image_path,
+                               locate or (lambda _p, _n: None), page=plan["page"], size=size)
+    out = []
+    for i, bb in enumerate(placed):
+        o = {**bb, "size": bb.get("size") or size, "source": bb.get("source") or "auto"}
+        if not o.get("box"):
+            o["box"] = _fallback_box(i, plan["page"], (pg["art"] or {}).get("box"))
+        c = _clean_page({"id": pg["id"], "bubbles": [o]}, plan)["bubbles"][0]
+        if bb.get("warning"):
+            c["warning"] = str(bb["warning"])
+        out.append(c)
+    return out
 
 
 # ------------------------------------------------------------------ dondurma
@@ -527,52 +521,60 @@ def freeze(d: Path, by: str, *, build: bool = True, locate=None, marks: list[dic
         pm2 = Typesetter.from_marks(ms, marks, pm.layout)
         warn = [] if len(pm2.pages) == len(pm.pages) else [
             f"Dondurmada sayfa bölünmesi özgün dizgiden farklı çıktı ({len(pm.pages)} → {len(pm2.pages)} sayfa)."]
-        # Resim kimliği göçü: yarıda kalan dondurma yeniden koşarsa aynı kimlikler kullanılır (artplan'dan).
+        # Resim kimliği göçü. Plan yazılamazsa göç geri alınır: plan.json yokken eski yol (book.typ) resmi sayfa
+        # numarasıyla arar. Yarıda kalan dondurma yeniden koşarsa artplan'daki kimlikler yeniden kullanılır.
+        ap0, st0 = json.loads(json.dumps(ap)), studio.studio_state(d)
         painted = pm2.art_pages()
         art_ids = {}
         for sc in ap["scenes"]:
             if sc["page"] in painted:
                 sc["art_id"] = sc.get("art_id") or new_id("a")
                 art_ids[sc["page"]] = sc["art_id"]
-        studio.write(d, "artplan.json", ap)
-        st = studio.studio_state(d)
+        st = json.loads(json.dumps(st0))
         for no, aid in art_ids.items():
             if str(no) in st["pages"] and aid not in st["pages"]:
                 st["pages"][aid] = st["pages"].pop(str(no))
+        studio.write(d, "artplan.json", ap)
         studio.write(d, "studio.json", st)
-        pages = pages_from_flow(ms, spec, pm.layout, marks, art_ids)
-        plan = {"version": 1, "rev": 0, "frozen_at": _now(), "frozen_by": by,
-                "page": geometry(spec, pm.layout), "palette": {"colors": [], "text": INK, "characters": {}},
-                "pages": pages, "assets": {}, "warnings": warn}
-        _automatics(d, plan, ap, locate)
-        _typeset(d, plan, build)
-        plan["warnings"] = warn + [w for w in plan["warnings"] if w not in warn]
-        _commit(d, plan, by, "sayfa planı kuruldu")
+        try:
+            pages = pages_from_flow(ms, spec, pm.layout, marks, art_ids)
+            plan = {"version": 1, "rev": 0, "frozen_at": _now(), "frozen_by": by,
+                    "page": geometry(spec, pm.layout), "palette": {"colors": [], "text": INK, "characters": {}},
+                    "pages": pages, "assets": {}, "warnings": warn}
+            _automatics(d, plan, ap, locate)
+            _typeset(d, plan, build)
+            plan["warnings"] = warn + [w for w in plan["warnings"] if w not in warn]
+            _commit(d, plan, by, "sayfa planı kuruldu")
+        except BaseException:
+            studio.write(d, "artplan.json", ap0)
+            studio.write(d, "studio.json", st0)
+            (d / PLAN).unlink(missing_ok=True)
+            raise
     return plan
 
 
 def _automatics(d: Path, plan: dict, ap: dict, locate) -> None:
-    """Palet (her kitap), karakter renkleri; çocuk profilinde diyalog → balon ve renkli yazı."""
+    """Palet (her kitap: resimlerden, baskıya uygun), karakter renkleri; çocuk profilinde (bubbles.wanted)
+    diyalog → balon ve renkli yazı (ses sözcüğü, karakter adı)."""
+    from . import bubbles as bubbles_mod
+    from . import colorize, palette
     sel = studio.selected_art(d)
     paths = [Path(sel[pg["art"]["id"]]) for pg in plan["pages"] if pg["art"] and pg["art"]["id"] in sel]
     chars = ap.get("characters") or []
-    colors = auto_palette(paths, (ap.get("style") or {}).get("palette") or [])
-    plan["palette"] = {"colors": colors, "text": INK, "characters": auto_characters(chars, colors)}
-    if not is_child(studio.read(d, "profile.json")):
+    colors = palette.extract(paths, n=6)
+    plan["palette"] = {"colors": colors, "text": INK,
+                       "characters": palette.assign_characters(chars, colors) if chars else {}}
+    if not bubbles_mod.wanted(studio.read(d, "profile.json")):
         return
     names = [c["name"] for c in chars]
     for pg in plan["pages"]:
         if not pg["text"]:
             continue
-        blocks, bubbles = auto_bubbles(pg["text"]["blocks"], names)
+        blocks, bbs = bubbles_mod.from_dialogue(pg["text"]["blocks"], names)
         pg["text"]["blocks"] = blocks
-        if bubbles:
-            img = sel.get(pg["art"]["id"]) if pg["art"] else None
-            bubbles = auto_place(bubbles, pg["art"]["box"] if pg["art"] else None, pg["text"]["box"], img,
-                                 locate or (lambda _p, _n: None), plan["page"])
-            pg["bubbles"] = _clean_page({"id": pg["id"], "bubbles": [{**bb, "source": bb.get("source") or "auto"}
-                                                                     for bb in bubbles]}, plan)["bubbles"]
-        pg["text"]["blocks"] = auto_colorize(pg["text"]["blocks"], plan["palette"]["characters"], plan["palette"])
+        pg["bubbles"] = _placed(plan, pg, bbs, sel.get(pg["art"]["id"]) if pg["art"] else None, locate)
+        pg["text"]["blocks"] = colorize.apply(pg["text"]["blocks"], plan["palette"]["characters"], plan["palette"],
+                                              body_size=plan["page"].get("body_size"))
 
 
 # ------------------------------------------------------------------ dizgi
@@ -770,6 +772,8 @@ def warnings(d: Path | None, plan: dict) -> list[str]:
                        "sayfaya taşıyın).")
         if any(bb.get("overflow") for bb in pg["bubbles"]):
             out.append(f"{no}. sayfa: balon metni balona sığmıyor.")
+        for msg in dict.fromkeys(bb["warning"] for bb in pg["bubbles"] if bb.get("warning")):
+            out.append(f"{no}. sayfa: {msg}")
         if any(x.get("overflow") for x in pg["texts"]):
             out.append(f"{no}. sayfa: serbest yazı kutusuna sığmıyor.")
     if d is not None:
@@ -1133,7 +1137,7 @@ def _post_run_once(d: Path, cover: bool) -> None:
 
 # ------------------------------------------------------------------ görsel okuyucu (balonun kuyruğu için)
 def locator(characters: list[dict], timeout: float = 180.0):
-    """`locate(image_path, name) -> (x0, y0, x1, y1) | None`: karakterin başının resimdeki kutusu, 0–1 oranında.
+    """`locate(image_path, name) -> {"x","y","w","h"} | None`: karakterin başı/yüzü, resme göre 0–1 oran.
     Görsel okuyan model gateway üzerinden (`book-vision-fast`); bulamazsa ya da hata olursa None."""
     import base64
     import io
@@ -1170,7 +1174,9 @@ def locator(characters: list[dict], timeout: float = 180.0):
             r.raise_for_status()
             out = json.loads(r.json()["choices"][0]["message"]["content"])
             x0, y0, x1, y1 = (min(max(v / 1000, 0.0), 1.0) for v in out["box"])
-            return (x0, y0, x1, y1) if out["found"] and x1 > x0 and y1 > y0 else None
+            if not (out["found"] and x1 > x0 and y1 > y0):
+                return None
+            return {"x": x0, "y": y0, "w": x1 - x0, "h": y1 - y0}
         except Exception:  # noqa: BLE001 - kuyruk kuralla yerleşir
             return None
     return locate
