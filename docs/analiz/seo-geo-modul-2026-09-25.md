@@ -75,3 +75,23 @@ Veriyle doğrulanan eşleme (ISBN ile 5.466/5.656 aktif ürün): T-soft `Details
 (5.139/5.214 metin %90+ aynı), `SearchKeywords` = `new_AnahtarKelimeler` (2.351/2.353 aynı). SEO başlığı/meta CRM'de
 yok; T-soft şablonundan (ad + kategori + yayınevi + yazar), ikisi birebir aynı. Yazar T-soft'ta `Model` alanında.
 Bu karar gelene kadar gönderim T-soft'a doğrudan yapılır ve `Details`/`SearchKeywords` için CRM aktarımıyla ezilme riski vardır.
+
+## T-soft API: yalnız okuyarak neler alınıyor (canlı sınama, 2026-09-25)
+
+Bütün çağrılar yazma kilitli istemciyle (`READ_ONLY`); T-soft'a hiçbir şey gönderilmedi.
+
+| Kaynak | Yöntem | Ne var |
+|---|---|---|
+| Ürün (6.781) | `product/get` | 135 alan: SeoLink/SeoTitle/SeoDescription, Details, ShortDescription (yalnız 28 dolu), SearchKeywords (2.686), Barcode=ISBN, Brand=yayınevi, **Model=yazar**, Additional6=künye (6.556), CommentCount/CommentRate, CountTotalSales (5.683 ürün, toplam 430.644), StatViews, RelatedProductsIds, GoogleCategoryId (0 dolu); `FetchFilters` Yaş/Sınıf/Eser Dili, `FetchCatalogData` yazar kimliği |
+| Kategori (138) | `category/getCategories` | SeoTitle/SeoDescription 136 dolu, 42'sinde başlık = kategori adı; ShortDescription 2 |
+| Marka/yayınevi (35) | `brand/getBrands` | SEO alanları 7'sinde boş |
+| Yazar (1.773) | `model/getModels` | kayıtta SEO alanı yok; başlık/açıklama getLinks'te (64 boş); biyografi yok |
+| Etiket (6.346) | `product/getTags` | 249'unda SEO başlığı |
+| Sayfa ayarları (27.825) | `link/getLinks` | tür başına Title/Description, PageIndex/Follow/Canonical (hemen hepsi "atanmamış"), sitemap önceliği; Keywords okuma cevabında yok |
+| 301 (12.464) | `link/getReferralLinks` | **717 yönlendirme anasayfaya** (yumuşak 404) |
+| Yorum (86) | `product/getComments` | 67 ürün, 80×5 yıldız; hiçbiri cevaplanmamış |
+| SEO şablonu | `setting/getSettingByCategory/6` | otomatik şablon Title = `%UrunAd% %KatAd% %Marka% %Model%`; **UrunDetaySchemaOrg, LocalBusinessSchemaOrg boş**; PasifUrunYonlendirme kapalı |
+| İçerik | `content/getContent` (14), `news/getNews` (1 test) | blog gövdesi için okuma yöntemi yok (20 yazı yalnız getLinks'te) |
+| Sipariş (62.903) | `order/get` | **kişisel veri** içerir; SEO için yalnız UTM kaynağı ve tarih — kişisel alanları atan toplama katmanı olmadan kullanılmaz |
+
+Lisans dışı: video (PRE041), çok dil (PRE031). robots.txt / llms.txt / sitemap için API yöntemi yok.

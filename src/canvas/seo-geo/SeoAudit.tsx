@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, RotateCcw, Search, Sparkles, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Search, Sparkles, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import {
   FIELD_LABEL, SEO_FIELDS, STATUS_LABEL, dateTime, fmt, scoreTone, seoApi,
@@ -53,7 +53,7 @@ export default function SeoAudit() {
       crumb="Ürün denetimi"
       eyebrow="SEO & GEO · T-soft ürünleri"
       title="Ürün denetimi ve onay"
-      lead="Her ürün kurallardan geçer; neden uyumsuz olduğu yazılır. Model ürünün kendi kaydından öneri üretir, onay verdiğinizde yalnız değişen alanlar T-soft’a gider ve geri okunarak doğrulanır."
+      lead="Her ürün kurallardan geçer; neden uyumsuz olduğu yazılır. Zeki AI ürünün kendi kaydından öneri üretir; onay kararı kayıt altına alınır. T-soft’a hiçbir şey gönderilmez."
     >
       <div className="sg-filters" role="toolbar" aria-label="Kural süzgeci">
         <button className="sg-filter" aria-pressed={!rule && !status} onClick={() => setParams(new URLSearchParams(), { replace: true })}>
@@ -260,7 +260,7 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
             {pending
               ? 'Öneriler yazılıyor…'
               : proposal
-                ? `Zeki AI · ${dateTime(proposal.createdAt)} · değişen alan ${changed.length}. Öneriyi gönderimden önce düzenleyebilirsiniz.`
+                ? `Zeki AI · ${dateTime(proposal.createdAt)} · değişen alan ${changed.length}. Öneriyi onaylamadan önce düzenleyebilirsiniz.`
                 : 'Öneri henüz yok.'}
           </p>
         </div>
@@ -367,14 +367,14 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
             <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Editör notu (isteğe bağlı)" aria-label="Editör notu" />
             <button className="sg-button primary" disabled={!canApprove || decide.isPending || changed.length === 0} onClick={() => decide.mutate('approve')}>
               {decide.isPending && decide.variables === 'approve' ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
-              Onayla ve gönder
+              Onayla
             </button>
             <button className="sg-button danger" disabled={!canApprove || decide.isPending} onClick={() => decide.mutate('reject')}>
               <X size={16} aria-hidden /> Reddet
             </button>
             <small>
               {canApprove
-                ? 'Onay verilmeden hiçbir şey gönderilmez. Gönderimden önceki değerler saklanır; geri alınabilir.'
+                ? 'Onay yalnız kaydedilir; T-soft’a gönderim yok. Onaylanan metin CRM bağlantısı gelince CRM’e yazılacak.'
                 : 'Onay yetkiniz yok; öneriyi görebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'}
             </small>
           </div>
@@ -384,19 +384,12 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
   );
 }
 
-function LastDecision({ proposal, canApprove, onDone }: { proposal: Proposal; canApprove: boolean; onDone: () => void }) {
-  const revert = useMutation({ mutationFn: () => seoApi.revert(proposal.id), onSuccess: onDone });
-  const tone = proposal.status === 'gonderildi' ? 'ok' : proposal.status === 'hata' ? 'err' : '';
+function LastDecision({ proposal }: { proposal: Proposal; canApprove?: boolean; onDone?: () => void }) {
+  const tone = proposal.status === 'onaylandi' || proposal.status === 'gonderildi' ? 'ok' : proposal.status === 'hata' ? 'err' : '';
   return (
     <div className={`sg-banner ${tone}`}>
       <b>{STATUS_LABEL[proposal.status]}</b> · {proposal.decidedBy ?? '—'} · {dateTime(proposal.decidedAt)}
       {proposal.result ? ` — ${proposal.result}` : ''}
-      {proposal.status === 'gonderildi' && canApprove && (
-        <button className="sg-button" style={{ marginLeft: 12, minHeight: 36 }} onClick={() => revert.mutate()} disabled={revert.isPending}>
-          <RotateCcw size={14} aria-hidden /> Geri al
-        </button>
-      )}
-      {revert.error && <span> · {(revert.error as Error).message}</span>}
     </div>
   );
 }

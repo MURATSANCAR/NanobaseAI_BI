@@ -16,10 +16,10 @@ export default function SeoHistory() {
   return (
     <SeoLayout
       path="/seo-geo/gecmis"
-      crumb="Gönderim geçmişi"
+      crumb="Karar geçmişi"
       eyebrow="SEO & GEO · kararlar"
-      title="Gönderim geçmişi"
-      lead="Onaylanan, reddedilen, gönderilemeyen ve geri alınan öneriler. Gönderilen bir değişikliği geri almak için ürünü açın."
+      title="Karar geçmişi"
+      lead="Onaylanan ve reddedilen öneriler: kim, ne zaman, hangi alanlar. T-soft’a hiçbir şey gönderilmez; onaylananlar CRM bağlantısı gelince CRM’e yazılacak."
     >
       {h.isLoading && <Loading text="Geçmiş getiriliyor…" />}
       {h.error && <Failed error={h.error} />}
@@ -50,7 +50,7 @@ export default function SeoHistory() {
                       <Link to={`/seo-geo/urun-denetimi?urun=${encodeURIComponent(p.productId)}`}>{p.productName || p.productId}</Link>
                     </td>
                     <td>
-                      <span className={`sg-chip ${p.status === 'gonderildi' ? 'good' : p.status === 'hata' ? 'bad' : ''}`}>{STATUS_LABEL[p.status]}</span>
+                      <span className={`sg-chip ${p.status === 'onaylandi' || p.status === 'gonderildi' ? 'good' : p.status === 'hata' ? 'bad' : ''}`}>{STATUS_LABEL[p.status]}</span>
                     </td>
                     <td>{Object.keys(p.fields).map((k) => FIELD_LABEL[k as SeoField] ?? k).join(', ')}</td>
                     <td className="num">

@@ -5,7 +5,8 @@ import { ENGINE_BASE, ENGINE_ENABLED, freshHeaders } from '../engine';
 export type Severity = 'kritik' | 'yüksek' | 'orta' | 'düşük';
 /** `field`: sorunu modelin düzelttiği alan; null ise elle çözülür (görsel, ISBN). */
 export type Issue = { rule: string; severity: Severity; title: string; detail: string; why: string; weight: number; field: SeoField | null };
-export type ProposalStatus = 'hazir' | 'gonderildi' | 'reddedildi' | 'hata' | 'geri_alindi';
+/** `gonderildi`/`hata`/`geri_alindi` eski kayıtlar içindir; T-soft'a yazma kapandı (2026-09-25). */
+export type ProposalStatus = 'hazir' | 'onaylandi' | 'reddedildi' | 'gonderildi' | 'hata' | 'geri_alindi';
 export const SEO_FIELDS = ['SeoTitle', 'SeoDescription', 'SearchKeywords', 'Details'] as const;
 export type SeoField = (typeof SEO_FIELDS)[number];
 export type Fields = Partial<Record<SeoField, string>>;
@@ -20,7 +21,9 @@ export type Overview = {
   failingThreshold: number;
   rules: Array<{ rule: string; title: string; severity: Severity; count: number }>;
   proposals: Partial<Record<ProposalStatus, number>>;
-  sentThisWeek: number;
+  approvedThisWeek: number;
+  /** Her zaman false: T-soft'a yazma yok. */
+  tsoftWrite: false;
   lastSync: { startedAt: string; finishedAt: string | null; count: number | null; error: string | null } | null;
   sync: SyncState;
   batch: { running: boolean; done: number; failed: number; queue: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
@@ -113,10 +116,10 @@ export const seoApi = {
   bulkApprove: (ids: string[], note = '') =>
     call<{ items: Array<{ id: string; status: string; result?: string; skipped?: boolean }> }>('proposals/bulk-approve', { method: 'POST', body: { ids, note }, timeout: 600_000 }),
   batch: (budget = 3600) => call<{ started: boolean }>(`proposals/batch?budget=${budget}`, { method: 'POST' }),
-  revert: (id: string) => call<Proposal>(`proposals/${id}/revert`, { method: 'POST', timeout: 120_000 }),
   history: (start = 0) => call<{ total: number; items: Proposal[] }>(`history?${qs({ start, limit: 50 })}`),
   search: (kind: 'daily' | 'queries' | 'pages') => call<SearchReport>(`search/${kind}`),
   searchRefresh: () => call<{ counts: Record<string, number> }>('search/refresh', { method: 'POST', timeout: 300_000 }),
+  llms: () => call<{ llms: string; full: string; books: number; brands: number; authors: number; listedSellers: number; sellers: number; site: string; current: Record<string, { status: number | null; text?: string | null; error?: string }> }>('llms'),
   questions: () => call<{ items: Question[]; measuring: boolean }>('questions'),
   addQuestion: (text: string, category: string) => call<{ id: string }>('questions', { method: 'POST', body: { text, category } }),
   deleteQuestion: (id: string) => call<{ deleted: boolean }>(`questions/${id}`, { method: 'DELETE' }),
@@ -131,6 +134,7 @@ export const FIELD_LABEL: Record<SeoField, string> = {
 
 export const STATUS_LABEL: Record<ProposalStatus, string> = {
   hazir: 'Onay bekliyor',
+  onaylandi: 'Onaylandı',
   gonderildi: 'Gönderildi',
   reddedildi: 'Reddedildi',
   hata: 'Gönderilemedi',

@@ -3,9 +3,9 @@
 Akış (docs/analiz/seo-geo-modul-2026-09-25.md):
 1. Eşitleme: T-soft'taki bütün ürünler sayfa sayfa okunur, kurallardan geçer, puan ve sorunlarıyla saklanır.
 2. Öneri: kullanıcı bir ürün için öneri ister; model ürünün kendi kaydından SEO alanlarını yazar.
-3. Karar: onay verebilen kişi öneriyi (gerekirse düzenleyip) onaylar ya da reddeder. Onay T-soft'a yalnız
-   değişen alanları gönderir, sonra ürünü yeniden okuyup yazıldığını doğrular. Onaysız hiçbir şey gitmez.
-4. Geri alma: gönderimden önceki değerler saklıdır; aynı yoldan geri yazılır.
+3. Karar: onay verebilen kişi öneriyi (gerekirse düzenleyip) onaylar ya da reddeder. Onay yalnız kararı ve
+   onaylanan metni kaydeder. **T-soft'a hiçbir şey gönderilmez** (kullanıcı yasağı 2026-09-25; istemci yalnız
+   okur). Onaylanan metnin gideceği yer CRM'dir; CRM Web API yetkisi gelince bu adım eklenecek.
 Her karar ve gönderim `semantic_audit`'e yazılır.
 
 Uçlar `/api/v1/seo-geo/*`; oturum şart. `run-due` gece zamanlayıcısının ucudur (yalnız çağıran belirteci).
@@ -22,7 +22,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, propose, rules
+from . import connections, llms, propose, rules
 from .store import GSC, PRODUCTS, PROPOSALS, QUESTIONS, RUNS, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
@@ -270,33 +270,20 @@ class SeoGeo:
             self.batch.update(running=False, finishedAt=iso(now()))
             self._batch_lock.release()
 
-    def send(self, prop: dict[str, Any], fields: dict[str, str], user: str, note: str) -> dict[str, Any]:
-        """Onaylanan alanları T-soft'a yazar ve ürünü yeniden okuyarak doğrular."""
+    def approve(self, prop: dict[str, Any], fields: dict[str, str], user: str, note: str) -> dict[str, Any]:
+        """Onay: onaylanan alanlar ve karar kaydedilir, hiçbir yere gönderilmez (T-soft'a yazma yasak)."""
         row = self.product_row(prop["product_id"])
         p = loads(row["data_json"], {})
         change = propose.changed(p, fields)
-        status, result = "gonderildi", ""
         if not change:
-            status, result = "reddedildi", "Önerilen alanların hepsi T-soft'taki değerle aynı; gönderilecek değişiklik yok."
-        else:
-            try:
-                connections.tsoft.update_product(prop["product_id"], change)
-                connections.tsoft.clear_product_cache()
-                fresh = connections.tsoft.product(prop["product_id"]) or {}
-                missed = [k for k, v in change.items() if str(fresh.get(k) or "").strip() != v.strip()]
-                if missed:
-                    status, result = "hata", "T-soft kabul etti ama yeniden okunduğunda şu alanlar farklı: " + ", ".join(missed)
-                else:
-                    result = "Yazıldı ve yeniden okunarak doğrulandı: " + ", ".join(change)
-                    self._store_one(fresh or {**p, **change})
-            except connections.ConnectionError_ as e:
-                status, result = "hata", str(e)[:1000]
+            raise _err(409, "Önerilen alanların hepsi mevcut değerle aynı; onaylanacak değişiklik yok.")
         with self.engine().begin() as c:
             c.execute(PROPOSALS.update().where(PROPOSALS.c.id == prop["id"]).values(
-                status=status, fields_json=dumps({**loads(prop["fields_json"], {}), **fields}), decided_by=user,
-                decided_at=now(), note=note or None, sent_at=now() if status == "gonderildi" else None, result=result))
-        self.audit(user, "approve" if status == "gonderildi" else "send_fail", prop["product_id"], row["name"],
-                   {"proposal": prop["id"], "fields": list(change), "status": status, "result": result})
+                status="onaylandi", fields_json=dumps({**loads(prop["fields_json"], {}), **fields}), decided_by=user,
+                decided_at=now(), note=note or None,
+                result="Onaylandı: " + ", ".join(change) + ". Gönderim yok; CRM bağlantısı bekleniyor.",
+                score_after=self.rescore(p, change)))
+        self.audit(user, "approve", prop["product_id"], row["name"], {"proposal": prop["id"], "fields": list(change)})
         return self.proposal(prop["id"])
 
     def _store_one(self, p: dict[str, Any]) -> None:
@@ -351,7 +338,7 @@ def register(app, runtime, authorize, session_user):
     def approver(request: Request) -> str:
         user = gate(request)
         if not seo.can_approve(user):
-            raise _err(403, "T-soft'a gönderimi onaylama yetkiniz yok (Yönetim → SEO & GEO → Onay verebilenler).")
+            raise _err(403, "Öneri onaylama yetkiniz yok (Yönetim → SEO & GEO → Onay verebilenler).")
         return user
 
     @app.get("/api/v1/seo-geo/overview")
@@ -368,8 +355,8 @@ def register(app, runtime, authorize, session_user):
             status = dict(c.execute(sa.select(PROPOSALS.c.status, sa.func.count()).where(
                 PROPOSALS.c.tenant_id == tenant).group_by(PROPOSALS.c.status)).all())
             week = now() - timedelta(days=7)
-            sent_week = c.execute(sa.select(sa.func.count()).select_from(PROPOSALS).where(
-                PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "gonderildi", PROPOSALS.c.sent_at >= week)).scalar() or 0
+            approved_week = c.execute(sa.select(sa.func.count()).select_from(PROPOSALS).where(
+                PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "onaylandi", PROPOSALS.c.decided_at >= week)).scalar() or 0
             last = c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.kind == "tsoft")
                              .order_by(RUNS.c.started_at.desc()).limit(1)).mappings().first()
         daily = seo.gsc("daily")
@@ -377,7 +364,7 @@ def register(app, runtime, authorize, session_user):
             "products": total, "activeAverage": round(float(avg), 1) if avg is not None else None,
             "failing": failing, "failingThreshold": 70,
             "rules": [{"rule": k, "title": v[2], "severity": v[1], "count": by_rule[k]} for k, v in rules.RULES.items()],
-            "proposals": status, "sentThisWeek": sent_week,
+            "proposals": status, "approvedThisWeek": approved_week, "tsoftWrite": False,
             "lastSync": ({"startedAt": iso(last["started_at"]), "finishedAt": iso(last["finished_at"]),
                           "count": last["count"], "error": last["error"]} if last else None),
             "sync": seo.state, "batch": seo.batch, "search": daily,
@@ -465,7 +452,7 @@ def register(app, runtime, authorize, session_user):
             seo.audit(user, "reject", prop["product_id"], prop["product_id"], {"proposal": proposal_id, "note": body.note})
             return _proposal_view(seo.proposal(proposal_id))
         fields = {k: v for k, v in (body.fields or loads(prop["fields_json"], {})).items() if k in propose.FIELDS}
-        return _proposal_view(seo.send(prop, fields, user, body.note))
+        return _proposal_view(seo.approve(prop, fields, user, body.note))
 
     @app.post("/api/v1/seo-geo/proposals/bulk-approve")
     def seo_bulk(body: BulkApprove, request: Request) -> dict[str, Any]:
@@ -476,32 +463,13 @@ def register(app, runtime, authorize, session_user):
             if prop["status"] != "hazir":
                 out.append({"id": pid, "status": prop["status"], "skipped": True})
                 continue
-            done = seo.send(prop, loads(prop["fields_json"], {}), user, body.note)
-            out.append({"id": pid, "status": done["status"], "result": done["result"]})
+            try:
+                done = seo.approve(prop, loads(prop["fields_json"], {}), user, body.note)
+                out.append({"id": pid, "status": done["status"], "result": done["result"]})
+            except HTTPException as e:
+                out.append({"id": pid, "status": prop["status"], "skipped": True, "result": str(e.detail)})
         return {"items": out}
 
-    @app.post("/api/v1/seo-geo/proposals/{proposal_id}/revert")
-    def seo_revert(proposal_id: str, request: Request) -> dict[str, Any]:
-        user = approver(request)
-        prop = seo.proposal(proposal_id)
-        if prop["status"] != "gonderildi":
-            raise _err(409, "Yalnız gönderilmiş öneri geri alınır.")
-        before = loads(prop["before_json"], {})
-        fields = {k: before.get(k, "") for k in loads(prop["fields_json"], {}) if k in propose.FIELDS}
-        # Boş gönderilen alan T-soft'ta boşalır; önceki değer boşsa geri alma onu da boşaltır.
-        try:
-            connections.tsoft.update_product(prop["product_id"], fields)
-            connections.tsoft.clear_product_cache()
-            fresh = connections.tsoft.product(prop["product_id"])
-            if fresh:
-                seo._store_one(fresh)
-        except connections.ConnectionError_ as e:
-            raise _err(502, str(e)) from None
-        with seo.engine().begin() as c:
-            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == proposal_id).values(
-                status="geri_alindi", result=f"Geri alındı ({user}): " + ", ".join(fields)))
-        seo.audit(user, "revert", prop["product_id"], prop["product_id"], {"proposal": proposal_id, "fields": list(fields)})
-        return _proposal_view(seo.proposal(proposal_id))
 
     @app.post("/api/v1/seo-geo/proposals/batch")
     def seo_batch(request: Request, budget: int = 3600) -> dict[str, Any]:
@@ -509,6 +477,27 @@ def register(app, runtime, authorize, session_user):
         started = seo.start_batch(user, budget)
         seo.audit(user, "run", "batch", "SEO öneri ön üretimi", {"started": started, "budget": budget})
         return {"started": started, "batch": seo.batch}
+
+    @app.get("/api/v1/seo-geo/llms")
+    def seo_llms(request: Request, top: int = 100) -> dict[str, Any]:
+        """llms.txt önerisi (eşitlenmiş veriden) ve sitedeki mevcut dosya. Hiçbir yere yazılmaz."""
+        gate(request)
+        site = seo.conf("SEO_SITE_URL") or "https://timas.com.tr"
+        with seo.engine().connect() as c:
+            data = [loads(r[0], {}) for r in c.execute(sa.select(PRODUCTS.c.data_json).where(
+                PRODUCTS.c.tenant_id == seo.tenant()))]
+        out = llms.build(data, site, max(1, top))
+        current: dict[str, Any] = {}
+        for name in ("llms.txt", "llms-full.txt"):
+            try:
+                import httpx
+                r = httpx.get(f"{site.rstrip('/')}/{name}", timeout=20, follow_redirects=True,
+                              headers={"User-Agent": "TimasZekiBot/1.0 (+ai@timas.com.tr)"})
+                current[name] = {"status": r.status_code,
+                                 "text": r.text[:20000] if r.status_code == 200 and "text/plain" in r.headers.get("content-type", "") else None}
+            except Exception as e:  # noqa: BLE001 — site erişilemezse öneri yine gösterilir
+                current[name] = {"status": None, "error": str(e)[:200]}
+        return {**out, "site": site, "current": current}
 
     @app.get("/api/v1/seo-geo/history")
     def seo_history(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:
