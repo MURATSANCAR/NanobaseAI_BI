@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (18:15) — SEO & GEO: T-soft bağlandı, ilk eşitleme; şablon meta kuralı, yazar başlıkta
+
+- **T-soft bağlantısı:** kullanıcı `zeki@timas.com.tr` ile AUI002 (geçersiz kullanıcı/şifre) aldı; web servis kullanıcı adı `zekiai` (kullanıcı söyledi, kullanıcı adını Claude güncelledi, şifreyi kullanıcı ekrandan girdi). Deneme: "Giriş başarılı, 6.781 ürün".
+- **İlk eşitleme (test sunucusu, 15:02):** 6.781 ürün 31 sn'de okundu, 5.656 aktif. Bulgu: SeoTitle ve SeoDescription T-soft'ta şablondan otomatik (ad + kategori + yayınevi + yazar, çift boşluklu) ve **birbirinin aynısı** — "meta yok" kuralı 0 yakalıyordu. Yazar `Model` alanında, yayınevi `Brand`'de.
+- **Düzeltme:** yeni kural `meta_same_as_title` (gerçek veride 5.644/5.656 ürün); istemde yazar `Model`'den verilir, başlık "Kitap adı - Yazar | Yayınevi"; öneri uzunluk sınırını aşarsa model bir kez neyin yanlış olduğu söylenerek düzeltmeye çağrılır. Gerçek veride yeni kurallarla ort. puan 65,6, 70 altı 4.293 (geçici klasörde ölçüldü, canlıya kurulmadı).
+- **Model önerisi (canlı, T-soft'a yazmadan):** «Valide Sultanlar Seti (4 Kitap)» için 5 sn, puan 71→92; iki kusur görüldü (yazar başlıktan düştü, meta 165 karakter) — yukarıdaki düzeltmenin sebebi. Öneri "onay bekliyor" durumunda; gönderim yapılmadı.
+
 ## 2026-09-25 (17:50) — SEO & GEO test sunucusunda (main 275e8ef2)
 
 - **Kurulum:** main'deki 25 dosya tek tek (`git archive 275e8ef2 <dosyalar>`); önce sunucudaki her dosyanın md5'i eski main (2286091d) ile karşılaştırıldı, 25/25 aynıydı (başka oturumun işi ezilmedi). Kurulum sonrası md5 main ile birebir, `._*` 0. Arayüz sunucuda derlendi (`index-BtDKtvLo.js`, yedek `cockpit/dist.bak-20260925-174701`), köprü yeniden başladı (44 sn, health 200). `timas-seo.timer` kuruldu; ilk koşu elle yapıldı (başarılı; T-soft ve Google tanımsız olduğu için ikisi de atlandı), sonraki 26.09 03:00.
