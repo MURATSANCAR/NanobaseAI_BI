@@ -96,7 +96,7 @@ export function roleColor(palette: Palette | null | undefined, r: ColorRole): st
 
 export type Swatch = { hex: string; name: string };
 
-/** Seçilebilir renkler: kitabın paleti + gövde metni rengi + beyaz; aynı renk bir kez. */
+/** Seçilebilir renkler: kitabın paleti + gövde metni rengi + açık zemin (vurgunun açığı) + beyaz; aynı renk bir kez. */
 export function swatches(palette: Palette | null | undefined): Swatch[] {
   const out: Swatch[] = [];
   const add = (hex: string | null | undefined, name: string) => {
@@ -105,6 +105,7 @@ export function swatches(palette: Palette | null | undefined): Swatch[] {
   };
   for (const c of palette?.colors ?? []) add(c.hex, c.name);
   add(palette?.text || '#2C2C2A', 'Metin rengi');
+  add(roleColor(palette, 'soft'), 'Açık zemin');
   add('#FFFFFF', 'Beyaz');
   return out;
 }
@@ -122,7 +123,7 @@ export function effectDefaults(style: EffectStyle, palette: Palette | null | und
   const ink = roleColor(palette, 'ink');
   const cols = (palette?.colors ?? []).map((c) => c.hex);
   const d: Record<EffectStyle, EffectParams> = {
-    burst: { burst_fill: mix(accent, '#FFFFFF', 0.55), burst_stroke: ink, angle: -8 },
+    burst: { burst_fill: roleColor(palette, 'soft'), burst_stroke: ink, angle: -8 },
     wave: { curve: 0.5 },
     arc: { curve: 0.6 },
     shadow: { shadow: accent, shadow_dx: 0.8, shadow_dy: 0.8 },

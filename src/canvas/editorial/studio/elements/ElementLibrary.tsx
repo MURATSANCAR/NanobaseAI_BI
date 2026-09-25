@@ -1,4 +1,4 @@
-import { useMemo, useState, type DragEvent } from 'react';
+import { useId, useMemo, useState, type DragEvent } from 'react';
 import { Drawer } from '@base-ui/react/drawer';
 import { RefreshCw, Search, X } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
@@ -47,6 +47,7 @@ function tilesOf(items: CatalogItem[]): Tile[] {
 }
 
 export default function ElementLibrary({ jobId, onAdd, page, nextZ, rev, className = '' }: ElementLibraryProps) {
+  const uid = useId();
   const q = useElementCatalog(jobId);
   const [term, setTerm] = useState('');
   const [group, setGroup] = useState<string>('all');
@@ -106,10 +107,10 @@ export default function ElementLibrary({ jobId, onAdd, page, nextZ, rev, classNa
         </p>
       )}
 
-      {sections.map((g) => (
-        <section key={g.id} aria-labelledby={`el-g-${g.id}`} className="flex flex-col gap-1.5">
-          {(group === 'all' || sections.length > 1) && <h3 id={`el-g-${g.id}`} className={sectionTitle}>{g.name}</h3>}
-          {group !== 'all' && sections.length === 1 && <h3 id={`el-g-${g.id}`} className="sr-only">{g.name}</h3>}
+      {sections.map((g, gi) => (
+        <section key={g.id} aria-labelledby={`${uid}-g${gi}`} className="flex flex-col gap-1.5">
+          {(group === 'all' || sections.length > 1) && <h3 id={`${uid}-g${gi}`} className={sectionTitle}>{g.name}</h3>}
+          {group !== 'all' && sections.length === 1 && <h3 id={`${uid}-g${gi}`} className="sr-only">{g.name}</h3>}
           <ul className="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-2">
             {g.tiles.map((t) => (
               <li key={t.key}>

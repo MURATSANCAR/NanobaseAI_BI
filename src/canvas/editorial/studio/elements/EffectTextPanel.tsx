@@ -207,7 +207,7 @@ export function LivePreview({ effect, text, color }: { effect: Effect | null; te
   return (
     <figure className="m-0">
       <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`Önizleme: ${effect ? EFFECT_LABEL[effect.style] : 'düz yazı'} — ${text}`}
-        className="block h-auto w-full rounded-xl border border-slate-200 bg-white">
+        className="block h-auto w-full rounded-xl border border-slate-200 bg-slate-100">
         {body}
       </svg>
     </figure>
