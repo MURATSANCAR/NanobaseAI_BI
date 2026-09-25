@@ -36,7 +36,9 @@ def _book(p: dict[str, Any], site: str) -> str:
 
 
 def build(products: list[dict[str, Any]], site: str, top: int = 100) -> dict[str, Any]:
-    active = [p for p in products if str(p.get("IsActive", "1")).lower() not in ("0", "false")]
+    # Kitap = ISBN'li ürün (978/979 önekli barkod); oyun hamuru, kırtasiye gibi ticari ürünler listelere girmez.
+    active = [p for p in products if str(p.get("IsActive", "1")).lower() not in ("0", "false")
+              and str(p.get("Barcode") or "").strip().startswith(("978", "979"))]
     brands = collections.Counter(rules.text_of(p.get("Brand")) for p in active if p.get("Brand"))
     brand_link = {rules.text_of(p.get("Brand")): p.get("BrandLink") for p in active if p.get("Brand")}
     cats = collections.Counter(" > ".join(x.strip() for x in f"{p.get('DefaultCategoryPath') or ''}{p.get('DefaultCategoryName') or ''}".split(">") if x.strip())

@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (22:40) — SEO & GEO: llms.txt önerisi (T-soft'a gönderilmez); site ve şema bulguları
+
+- **Sitede:** `timas.com.tr/llms.txt` var ama yalnız `# LLMs.txt` (10 bayt); `llms-full.txt` yok. robots.txt yapay zekâ botlarını engellemiyor (GPTBot, ClaudeBot, PerplexityBot, Google-Extended: genel Allow). Ürün sayfasında JSON-LD Book+Product (isbn, author, numberOfPages, offers, publisher) + Organization + WebSite + BreadcrumbList var; Organization adı "timas.com.tr", açıklaması kampanya metni. Başlık ve meta canlıda da şablon kopyası. www → timas.com.tr yönleniyor; `SEO_SITE_URL` varsayılanı `https://timas.com.tr`.
+- **llms.txt önerisi:** `seo_geo/llms.py`, modelsiz ve belirlenimli; kitap = 978/979 ISBN'li ürün (ticari ürünler dışarıda). Özet dosya: yayınevleri (31, bağlantılı), kategoriler, en çok satan 100 (satışı olan kitaplar arasından, başlıkta sayı yazar), en çok kitabı olan 100 yazar, site haritaları; `llms-full.txt` bütün kitaplar, yayınevine göre (sınırsız). Uç `GET /api/v1/seo-geo/llms` sitedeki mevcut dosyayı da okur. Ekran `/seo-geo/llms`: kopyala/indir, yükleme T-soft panelinden elle.
+- **Şema verisi:** 5.180 aktif kitaptan yalnız 59'unda okur yorumu (toplam 76); yazarların 194/1.298'inde doğrulanmış Wikidata kimliği var (basın-web modülünün yazar taraması, test sunucusu).
+- **T-soft API araştırması** ayrı ajanla, yalnız okuma yöntemleriyle sürüyor.
+
 ## 2026-09-25 (22:00) — T-soft'a yazma yasak: istemci yalnız okur, onay yalnız kaydeder
 
 - **Kullanıcı yasağı:** "asla tsoft api ile birşey gönderme". Kontrol: sunucu günlüğünde onay/toplu onay/geri alma çağrısı **hiç yok** — T-soft'a bugüne kadar hiçbir şey gönderilmedi.
