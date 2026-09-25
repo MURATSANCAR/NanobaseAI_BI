@@ -21,6 +21,7 @@ import PageCanvas, { CANVAS_DROP } from './PageCanvas';
 import { BubblesTab, EffectTab, ElementsTab, ItemTab, PageTab, PaletteTab, TABS, nudge, type EditorCtx, type Tab } from './InspectorPanel';
 import FigureLibrary, { jobDone, jobFailed } from './FigureLibrary';
 import HistoryPanel from './HistoryPanel';
+import StudioReaderEntry from './reader';
 import { ConfirmDialog, Modal } from './dialogs';
 import type { AssetJobKind } from './AssetTools';
 import './plan.css';
@@ -355,6 +356,7 @@ export default function PlanEditor() {
           <button type="button" className={ghostBtn} onClick={() => sync.redoStep()} disabled={!state.canRedo} title="Yinele (Shift+Ctrl/Cmd+Z)" aria-label="Yinele"><Redo2 className="h-4 w-4" aria-hidden /></button>
         </>
       )}
+      {ctx && <StudioReaderEntry ctx={ctx} goTo={setPageId} />}
       <Link className={ghostBtn} to={`/kitap-tasarim/${job}/studyo`}>Resim stüdyosu</Link>
     </div>
   );
