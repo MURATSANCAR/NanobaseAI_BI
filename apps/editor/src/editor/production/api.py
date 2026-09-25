@@ -812,3 +812,7 @@ async def plan_jobs(job: str) -> dict:
     """Süren GPU işi (busy) ve figür / zemin ayıklama / kaliteyi artırma işlerinin durumu (ekran bununla bekler)."""
     d = _plan_dir(job)
     return {"busy": await _busy(d), "jobs": await asyncio.to_thread(plan_mod.jobs, d)}
+
+
+from .api_coloring import router as _coloring_router  # noqa: E402  boyama/etkinlik kitabı (coloring.py)
+app.include_router(_coloring_router)

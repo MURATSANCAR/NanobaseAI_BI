@@ -1,6 +1,7 @@
 """Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction), tek resmin yeniden üretimi
 (ArtRegenerate) ve sayfa planının işleri: serbest figür (FigureGenerate), kaliteyi artırma (AssetUpscale) ve
-GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
+GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz); boyama kitabı (ColoringBook, modelsiz) ve
+çizgiyi görsel modelle yeniden çizme (ColoringRedraw). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
 fontlar ister, bunlar stüdyo imajında) ve kendi işçisi (worker.py, aynı anda tek etkinlik: görsel model
 tek sırada). API yalnız başlatır ve iş klasörünü okur.
 
@@ -163,7 +164,26 @@ async def upscale_activity(job: str, jid: str, gid: str, new_gid: str, page: str
     await _plan_job(job, jid, lambda d: studio.upscale_asset(d, gid, new_gid, page, item, by), gpu=True)
 
 
-ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity]
+@activity.defn(name="production_coloring")
+async def coloring_activity(job: str) -> None:
+    """Boyama / etkinlik kitabı (coloring.py): çizgi, cümle, etkinlik, kapak, dizgi; görsel model açılmaz."""
+    from . import coloring, studio
+    d = studio.job_dir(job)
+    _started(d)
+    try:
+        await _beating(coloring.build(d))
+    finally:
+        studio.set_busy(d, None)
+
+
+@activity.defn(name="production_coloring_redraw")
+async def coloring_redraw_activity(job: str, jid: str, aid: str, by: str) -> None:
+    from . import coloring
+    await _plan_job(job, jid, lambda d: coloring.redraw(d, aid, by), gpu=True)
+
+
+ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity, upscale_activity,
+              coloring_activity, coloring_redraw_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -216,4 +236,21 @@ class AssetUpscale:
                                         heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
 
 
-WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale]
+@workflow.defn(name="ColoringBook")
+class ColoringBook:
+    @workflow.run
+    async def run(self, job: str) -> None:
+        await workflow.execute_activity("production_coloring", job, start_to_close_timeout=timedelta(hours=2),
+                                        heartbeat_timeout=BEAT, retry_policy=PLAN_RETRY)
+
+
+@workflow.defn(name="ColoringRedraw")
+class ColoringRedraw:
+    @workflow.run
+    async def run(self, job: str, jid: str, aid: str, by: str) -> None:
+        await workflow.execute_activity("production_coloring_redraw", args=[job, jid, aid, by],
+                                        start_to_close_timeout=timedelta(minutes=45),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale, ColoringBook, ColoringRedraw]

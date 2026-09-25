@@ -51,12 +51,13 @@ def job_dir(job_id: str) -> Path:
     return d
 
 
-def new_job(source: dict, by: str, art_mode: str = "auto") -> Path:
-    """`art_mode`: işi açarken resim seçimi (auto | every_page | chapter | none); profilin kararının önüne geçer."""
+def new_job(source: dict, by: str, art_mode: str = "auto", extra: dict | None = None) -> Path:
+    """`art_mode`: işi açarken resim seçimi (auto | every_page | chapter | none); profilin kararının önüne geçer.
+    `extra`: türetilmiş işin alanları (boyama kitabı: `kind`, `derived_from`; coloring.py)."""
     job_id = time.strftime("%Y%m%d%H%M%S") + secrets.token_hex(3)
     d = root() / job_id
     d.mkdir(parents=True)
-    (d / "job.json").write_text(json.dumps({"id": job_id, "source": source, "created_by": by,
+    (d / "job.json").write_text(json.dumps({**(extra or {}), "id": job_id, "source": source, "created_by": by,
                                             "created_at": time.time(), "art_mode": art_mode}, ensure_ascii=False))
     return d
 
@@ -166,6 +167,9 @@ def add_version(d: Path, key: str, path: str, *, mode: str, prompt: str, seed: i
                            **({"prompt_en": prompt_en} if prompt_en else {})})
     pg["selected"], pg["approved"], pg["approved_by"] = v, False, None
     write(d, "studio.json", st)
+    if (read(d, "job.json") or {}).get("kind") == "coloring":       # boyama kitabı: çizgi baskı kuralına
+        from . import coloring
+        coloring.after_version(d, key, path)
     return v
 
 

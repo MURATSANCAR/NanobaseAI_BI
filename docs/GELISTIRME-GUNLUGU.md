@@ -1,5 +1,24 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (23:55) — Stüdyo: resimli kitaptan boyama / etkinlik kitabı (K hattı, dalda)
+
+- **Ne:** kaynak kitabın stüdyo sayfasında «Boyama kitabı üret» (yalnız boyama / boyama + etkinlik, etkinlik seçimi ve
+  sırası, kısa cümle kaynağı). Yeni iş türetilir (`kind: coloring`, `derived_from`), kaynak iş değişmez; yeni kitap
+  plan.json ile kurulur, sayfa düzeni ekranında aynı araçlarla düzenlenir. Sayfa düzeni: sol sayfada hikâyeden kısa cümle,
+  sağ sayfada tam sayfa boyama; seçilen etkinlikler; forma katına «Kendi resmini çiz»; cevap anahtarı. Kapak kaynak
+  kapağın yarısı renkli yarısı çizgi; ISBN yeni ürün için boşalır.
+- **Çizgi (modelsiz):** renk bölgesi + kenar gücü + komşuluk grafiğinde birleştirme → kapalı, kırıntısız, yaşa göre kalın,
+  yalnız siyah-beyaz çizgi (numpy + PIL; imaja paket eklenmedi). Gerçek stüdyo çıktılarında (Etimesgutlu Bebek Aslan, 5
+  sayfa + 3 karakter, dosyalar okunarak) karakterler tanınır, yüz ayrıntısı ve yumuşak ışıklı arka plan zayıf.
+- **Çizgi (görsel model):** düzenleme ucuyla «boyama sayfası» yeniden çizimi aynı 3 sayfada belirgin daha iyi (temiz
+  kontur, yüz, eşya), ~80–120 sn/sayfa; bir sayfada arka planı tümüyle attı. Ekranda sayfa başına «Zeki AI ile yeniden çiz»,
+  sonuç taslak işaretli (lisans ticari değil). Deneme öncesi busy.json ve Temporal boştu; bitince görsel model kapatıldı.
+- **Etkinlikler (modelsiz):** renk sayıya göre boyama, noktaları birleştir, farkı bul, labirent, kelime avı, eşleştirme.
+- **Testler:** `apps/editor/tests/test_coloring.py` 16 + `test_plan.py` → 45 geçti, 1 atlandı (GPU'da geçici kap,
+  editor-py:0.15.9-09252115). tsc test sunucusunda temiz. Push/merge/dağıtım yapılmadı.
+- **Açık:** akış ekranındaki «resim seçimi» kartı boyama işinde gizlenmeli (StudioFlow); model çizgisinin kompozisyonu
+  koruması için istem/ölçüm; bulmaca (çapraz) yok, kelime avı var.
+
 ## 2026-09-25 (23:50) — Editoryal Masam: yönetici görünümü ilk ekrana sığacak biçimde yeniden düzenlendi
 
 - **Sorun:** yönetici açılışında «Editör atanmamış» grubu (206 iş) varsayılan açık geliyordu; sayfa 9.884 px, sohbet/editör tablosu/sözleşmeler 8.300 px'ten sonra başlıyordu. Aynı editör sayıları iki yerde (gruplar + tablo) tekrarlanıyordu, her satırda kırmızı gün sayısı vardı (işlerin çoğu geciktiği için vurgu anlamını yitirmişti), üst şeritte «Kaynak: CRM» iki kez yazıyordu.

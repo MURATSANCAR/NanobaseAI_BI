@@ -340,3 +340,35 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
 9. Açık: geri al/yinele sayfa ekleme/silmeyi kapsamaz (sürüm geçmişi kapsar); tuvale bırakılan fotoğraf sunucunun
    varsayılan kutusuna düşer; ileride toplu `PUT plan/pages`. Profilde gerekçe `illustration_source`, kaynak `art_source`.
 10. HEIC/HEIF kabul edilir (`pillow-heif`, JPEG'e dönüşür); imaj yeniden derlenene kadar canlıda açık hata verir.
+
+## Boyama / etkinlik kitabı (K, 2026-09-25) — resimli kitaptan türetilen ek ürün
+- **Türetme:** kaynak iş değişmez. `POST jobs/{iş}/coloring {mode: coloring|coloring_activities, activities:[{kind,
+  source?, count?}], captions: model|rule}` yeni iş açar; job.json'da `kind: "coloring"`, `derived_from`, `coloring`
+  (seçenekler). `studio.new_job(..., extra=)` kancası. Hat Temporal `ColoringBook` (işçide, görsel model açılmaz):
+  kaynak → çizgi → kısa cümle → etkinlik → kapak → dizgi → ön kontrol; adımlar `state.json`'da (hata «bitti + error»:
+  akış ekranının «kaldığı yerden devam»ı kitap hattına aittir, boyama işi `coloring/retry` ile sürer).
+- **Çizgi (modelsiz, `lineart.extract`):** ortanca süzgeç → CIELAB k-ortalama bölgeler → komşuluk grafiğinde zayıf sınır
+  (ΔE/mm) ve küçük bölge birleştirme (`raster.merge_regions`, kapalı şekiller) → göz gibi küçük belirgin bölge korunur,
+  koyu olan dolu siyah → yaşa göre kalınlık (≤6: 1,2 mm, ≤9: 0,9, üstü 0,6) → küçük delik doldurma → 2× ölçüde yumuşak
+  kenarla yeniden ikileme. Çıktı 1 bit PNG (yalnız siyah/beyaz), 600 dpi.
+- **Çizgi (görsel model, isteğe bağlı):** `POST coloring/art/{a_…}/redraw` → `ColoringRedraw` (GPU, busy, bitince
+  `_release_if_idle`), kaynağın renkli resmi düzenleme ucuna «boyama sayfası» istemiyle, dönen çizgi `lineart.clean_drawn`
+  ile aynı baskı kuralına. Yeni sürüm `mode: "lineart-model"`; ekranda «taslak» (lisans ticari değil). Boyama işinde
+  «Düzelt / Farklı üret» ile gelen sürüm de `add_version` kancasında (`coloring.after_version`) ikilenir; artplan üslubu
+  çizgi üslubudur.
+- **Sayfalar (plan.json doğrudan kurulur):** her resim için [kısa cümle | boyama] çifti (boyama sağ sayfada, güvenli alanda
+  `contain`), etkinlik sayfaları (başlık + yönerge serbest yazı, gövde `art.asset` = `etkinlik/<gid>.png`, varlık
+  `kind: "activity"`), forma katına kadar «Kendi resmini çiz» (bilgi olarak yazılır), en sonda cevap anahtarı. Sayfa
+  rolleri `coloring.json.pages[pid]`'de (plan sayfasına alan eklenmez; sayfa düzenlense de rol kalır).
+- **Kısa cümle:** metin modeli (`production_coloring_caption`, en çok 8/12/16 kelime), tutmazsa kural (diyalogsuz ilk
+  cümle). Editör `POST coloring/sentences {items:[{aid, text?, approved?}]}` ile düzeltir/onaylar; metin değişirse karşı
+  sayfanın metni plan yazımıyla güncellenir.
+- **Etkinlikler (`activities.py`, modelsiz, tohumlu):** renk sayıya göre boyama, noktaları birleştir (karakter
+  referansının dış konturu), farkı bul (parça sil / aynala / kapalı alanı karart / boş alana şekil ekle), labirent,
+  kelime avı (karakter adları + sık kelimeler, Türkçe büyük harf), eşleştirme (karakter ↔ gölge). Sayı tavanı yok;
+  sığmayan yeni sayfaya geçer ya da bilgi olarak döner.
+- **Kapak:** kaynak kapak resminin sol üst yarısı renkli, sağ alt yarısı çizgi; başlık «… – Boyama (ve Etkinlik)
+  Kitabı»; ISBN yeni ürün için boşalır (künyede eksik görünür).
+- **Uçlar:** servis `api_coloring.py` (`GET|POST coloring`, `POST coloring/retry|sentences`, `POST coloring/art/{a_}/redraw`),
+  köprü `editorial_studio_coloring.py` (aynı yollar `/api/v1/editorial/studio/jobs/{iş}/coloring…`), GPU girişi
+  `EDITOR-STUDYO-BOYAMA` bloğu. Ekran `studio/coloring/ColoringPanel` (stüdyo sayfasının altında).

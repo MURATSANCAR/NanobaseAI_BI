@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, boyama kitabı 09-25) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -129,6 +129,16 @@ if "EDITOR-STUDYO-OGE" not in s:
            + loc(f"{P_}/effects/({KIND})/preview", "GET", "jobs/$1/plan/effects/$2/preview$is_args$args", timeout=60))
     s = s.replace("    # EDITOR-BITTI", oge + "    # EDITOR-BITTI", 1)
     changes.append("süs/şekil ve efekt önizleme yolları")
+
+# 4) Boyama / etkinlik kitabı (api_coloring.py): yeni iş, yeniden dene, kısa cümle, çizgiyi yeniden çiz
+if "EDITOR-STUDYO-BOYAMA" not in s:
+    C_ = f"jobs/({JOB})/coloring"
+    boy = ("    # EDITOR-STUDYO-BOYAMA  (boyama/etkinlik kitabi)\n"
+           + loc(C_, "GET|POST", "jobs/$1/coloring", timeout=120)
+           + loc(f"{C_}/(retry|sentences)", "POST", "jobs/$1/coloring/$2")
+           + loc(f"{C_}/art/(a_[0-9a-f]{{8}})/redraw", "POST", "jobs/$1/coloring/art/$2/redraw"))
+    s = s.replace("    # EDITOR-BITTI", boy + "    # EDITOR-BITTI", 1)
+    changes.append("boyama/etkinlik kitabı yolları")
 
 if s == orig:
     print("zaten var (güncel)")
