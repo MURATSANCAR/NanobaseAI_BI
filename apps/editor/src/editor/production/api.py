@@ -29,6 +29,7 @@ Sayfa planı (plan.py; sözleşme docs/analiz/studyo-sayfa-plani-sozlesme.md), h
     GET plan/pages/{pid}/preview?w= · GET plan/unused-art · POST plan/figures · GET|DELETE plan/assets/{gid}
     PUT plan/photos?filename=&page= (ham gövde) · POST plan/assets/{gid}/cutout · POST plan/assets/{gid}/upscale
     GET plan/history · POST plan/restore · GET plan/jobs
+3B kitap ve baskı provası (api_proof.py, yalnız okuma): GET proof · GET proof/pages/{n}|cover[/report]?paper=&w=&layer=
 Hatalar gövdede `code` taşır: NO_PLAN (404), STALE (409, güncel `rev`), BUSY (409), IN_USE (409, sayfalar),
 TOO_LARGE (413). Plan düzenlemeleri süren GPU işini beklemez; yalnız GPU isteyen yazımlar (resim, figür, kaliteyi
 artırma) süren GPU işinde 409 döner. `art/{key}` uçlarında key sayfa no, resim kimliği (a_…) ya da «kapak»;
@@ -812,3 +813,8 @@ async def plan_jobs(job: str) -> dict:
     """Süren GPU işi (busy) ve figür / zemin ayıklama / kaliteyi artırma işlerinin durumu (ekran bununla bekler)."""
     d = _plan_dir(job)
     return {"busy": await _busy(d), "jobs": await asyncio.to_thread(plan_mod.jobs, d)}
+
+
+# ------------------------------------------------------------------ 3B kitap ve baskı provası (api_proof.py)
+from .api_proof import router as proof_router  # noqa: E402
+app.include_router(proof_router)
