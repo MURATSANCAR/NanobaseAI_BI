@@ -22,7 +22,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, propose, rules
+from . import connections, llms, propose, rules
 from .store import GSC, PRODUCTS, PROPOSALS, QUESTIONS, RUNS, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
@@ -477,6 +477,27 @@ def register(app, runtime, authorize, session_user):
         started = seo.start_batch(user, budget)
         seo.audit(user, "run", "batch", "SEO öneri ön üretimi", {"started": started, "budget": budget})
         return {"started": started, "batch": seo.batch}
+
+    @app.get("/api/v1/seo-geo/llms")
+    def seo_llms(request: Request, top: int = 100) -> dict[str, Any]:
+        """llms.txt önerisi (eşitlenmiş veriden) ve sitedeki mevcut dosya. Hiçbir yere yazılmaz."""
+        gate(request)
+        site = seo.conf("SEO_SITE_URL") or "https://timas.com.tr"
+        with seo.engine().connect() as c:
+            data = [loads(r[0], {}) for r in c.execute(sa.select(PRODUCTS.c.data_json).where(
+                PRODUCTS.c.tenant_id == seo.tenant()))]
+        out = llms.build(data, site, max(1, top))
+        current: dict[str, Any] = {}
+        for name in ("llms.txt", "llms-full.txt"):
+            try:
+                import httpx
+                r = httpx.get(f"{site.rstrip('/')}/{name}", timeout=20, follow_redirects=True,
+                              headers={"User-Agent": "TimasZekiBot/1.0 (+ai@timas.com.tr)"})
+                current[name] = {"status": r.status_code,
+                                 "text": r.text[:20000] if r.status_code == 200 and "text/plain" in r.headers.get("content-type", "") else None}
+            except Exception as e:  # noqa: BLE001 — site erişilemezse öneri yine gösterilir
+                current[name] = {"status": None, "error": str(e)[:200]}
+        return {**out, "site": site, "current": current}
 
     @app.get("/api/v1/seo-geo/history")
     def seo_history(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:

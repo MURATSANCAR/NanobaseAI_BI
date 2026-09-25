@@ -154,7 +154,7 @@ SPEC: list[dict[str, Any]] = [
      "help": "T-soft panelindeki web servis kullanıcısı (yalnız okuma için kullanılır); IP kısıtı varsa bu sunucunun IP'si izinli olmalı"},
     {"key": "TSOFT_PASSWORD", "group": "seo", "label": "T-soft şifresi", "type": "secret", "default": "",
      "help": "Kaydedilen şifre ekranda bir daha gösterilmez"},
-    {"key": "SEO_SITE_URL", "group": "seo", "label": "Mağaza adresi", "type": "text", "default": "https://www.timas.com.tr",
+    {"key": "SEO_SITE_URL", "group": "seo", "label": "Mağaza adresi", "type": "text", "default": "https://timas.com.tr",
      "help": "Ürün sayfası bağlantıları ve arama önizlemesi bu adresle kurulur"},
     {"key": "SEO_APPROVERS", "group": "seo", "label": "Onay verebilenler", "type": "text", "default": "",
      "help": "AD hesap adları, virgülle. SEO önerilerini bunlar onaylar (onay kayıt altına alınır; T-soft'a gönderim yok). Boşsa yöneticiler onaylar"},

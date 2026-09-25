@@ -119,6 +119,7 @@ export const seoApi = {
   history: (start = 0) => call<{ total: number; items: Proposal[] }>(`history?${qs({ start, limit: 50 })}`),
   search: (kind: 'daily' | 'queries' | 'pages') => call<SearchReport>(`search/${kind}`),
   searchRefresh: () => call<{ counts: Record<string, number> }>('search/refresh', { method: 'POST', timeout: 300_000 }),
+  llms: () => call<{ llms: string; full: string; books: number; brands: number; authors: number; listedSellers: number; sellers: number; site: string; current: Record<string, { status: number | null; text?: string | null; error?: string }> }>('llms'),
   questions: () => call<{ items: Question[]; measuring: boolean }>('questions'),
   addQuestion: (text: string, category: string) => call<{ id: string }>('questions', { method: 'POST', body: { text, category } }),
   deleteQuestion: (id: string) => call<{ deleted: boolean }>(`questions/${id}`, { method: 'DELETE' }),
