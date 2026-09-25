@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (00:10) — SEO & GEO: yazar, kategori ve yayınevi sayfaları (denetim + Zeki AI önerisi)
+
+- **Kaynak:** `semantic_seo_links` (T-soft `link/getLinks` başlık/açıklama) + ürünler; bağ ürünün `ModelId`/`BrandId`/`DefaultCategoryId` (+`Categories`) → sayfanın `TableId`. Yazar için Wikidata özeti yalnız basın-web modülünün doğrulanmış kaydından (tablo yoksa atlanır).
+- **Denetim (`seo_geo/pages.py`):** başlık yok / yalnız ad / uzunluk, açıklama yok / başlığın ya da adın kopyası / uzunluk, tanıtım metni yok (yazar ve kategori; T-soft'ta alan yok). Gerçek veride yazar 1.773 sayfa (1.342'sinde kitap): başlık=ad 1.709, açıklama=başlık 1.707; kategori 137: başlık=ad 48, açıklama uzunluğu 43; yayınevi 35: 7'si boş.
+- **Öneri:** SEO başlığı + meta + 80–160 kelimelik tanıtım; istem sayfanın kitap sayısı, satışı, en çok satan 12 kitabı, kategori/yayınevi/yazar dağılımı ve (varsa) Wikidata özetiyle; verilmeyen biyografik bilgi yasak, gerçeklik denetimi tanıtım metnini de tarar; başlık/meta sınırı kodla korunur. Öneri `semantic_seo_proposals`'ta `model:<id>` / `category:<id>` / `brand:<id>` anahtarıyla; onay yalnız kayıt.
+- **Ekran `/seo-geo/sayfalar`:** Yazarlar/Kategoriler/Yayınevleri; çok satandan aza; sayfa açılınca öneri kendiliğinden; öne çıkan kitaplar, kategoriler, Wikidata bağlantısı; uyarının yanında öneri.
 ## 2026-09-25 (23:50) — Editoryal Masam: yönetici görünümü ilk ekrana sığacak biçimde yeniden düzenlendi
 
 - **Sorun:** yönetici açılışında «Editör atanmamış» grubu (206 iş) varsayılan açık geliyordu; sayfa 9.884 px, sohbet/editör tablosu/sözleşmeler 8.300 px'ten sonra başlıyordu. Aynı editör sayıları iki yerde (gruplar + tablo) tekrarlanıyordu, her satırda kırmızı gün sayısı vardı (işlerin çoğu geciktiği için vurgu anlamını yitirmişti), üst şeritte «Kaynak: CRM» iki kez yazıyordu.

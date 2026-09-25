@@ -22,7 +22,7 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, llms, propose, redirects, rules
+from . import connections, llms, pages, propose, redirects, rules
 import hashlib
 
 from .store import GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, dumps, ensure, iso, loads, now
@@ -664,6 +664,147 @@ def register(app, runtime, authorize, session_user):
             w.writerow([link, chosen, by, iso(at)])
         return Response("\ufeff" + buf.getvalue(), media_type="text/csv; charset=utf-8",
                         headers={"Content-Disposition": 'attachment; filename="yonlendirme-onerileri.csv"'})
+
+    # ------------------------------------------------------------ yazar / kategori / yayınevi sayfaları
+    def _page_data() -> tuple[list[dict[str, Any]], dict[tuple[str, str], dict[str, Any]]]:
+        tenant = seo.tenant()
+        with seo.engine().connect() as c:
+            links = [dict(r) for r in c.execute(sa.select(LINKS.c.link, LINKS.c.type, LINKS.c.table_id, LINKS.c.title,
+                                                          LINKS.c.description).where(
+                LINKS.c.tenant_id == tenant, LINKS.c.type.in_(list(pages.KINDS)))).mappings()]
+            prods = [loads(r[0], {}) for r in c.execute(sa.select(PRODUCTS.c.data_json).where(PRODUCTS.c.tenant_id == tenant))]
+        return links, pages.stats(prods)
+
+    def _page_name(l: dict[str, Any]) -> str:
+        return rules.text_of(l.get("title")).split("|")[0].strip() or l["link"].replace("-", " ").title()
+
+    def _wiki(name: str) -> Optional[dict[str, Any]]:
+        try:
+            with seo.engine().connect() as c:
+                row = c.execute(sa.text("select facts_json from semantic_web_authors where wikidata_id is not null "
+                                        "and lower(name) = lower(:n) limit 1"), {"n": name}).first()
+            return loads(row[0], None) if row else None
+        except Exception:  # noqa: BLE001 — basın-web modülü kapalı ortamda tablo yoktur
+            return None
+
+    @app.get("/api/v1/seo-geo/pages")
+    def seo_pages(request: Request, type: str = "model", q: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:
+        gate(request)
+        if type not in pages.KINDS:
+            raise _err(422, "Bilinmeyen sayfa türü.")
+        links, st = _page_data()
+        lim = rules.thresholds(seo.conf)
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        with seo.engine().connect() as c:
+            states = dict(c.execute(sa.select(PROPOSALS.c.product_id, PROPOSALS.c.status).where(
+                PROPOSALS.c.tenant_id == seo.tenant(), PROPOSALS.c.product_id.like(f"{type}:%"))
+                .order_by(PROPOSALS.c.created_at)).all())
+        items = []
+        for l in links:
+            if l["type"] != type:
+                continue
+            s = st.get((type, str(l["table_id"])), {})
+            name = _page_name(l)
+            if q.strip() and q.strip().casefold() not in (name + " " + l["link"]).casefold():
+                continue
+            a = pages.audit(type, name, l["title"], l["description"], lim)
+            items.append({"id": str(l["table_id"]), "name": name, "link": l["link"], "url": f"{site}/{l['link']}",
+                          "books": s.get("books", 0), "sales": s.get("sales", 0), "score": a["score"],
+                          "issues": len(a["issues"]), "proposal": states.get(f"{type}:{l['table_id']}")})
+        items.sort(key=lambda x: (-x["sales"], -x["books"], x["name"]))
+        return {"total": len(items), "items": items[max(0, start):max(0, start) + max(1, limit)],
+                "withBooks": sum(1 for x in items if x["books"])}
+
+    def _page(type: str, tid: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        if type not in pages.KINDS:
+            raise _err(422, "Bilinmeyen sayfa türü.")
+        links, st = _page_data()
+        l = next((x for x in links if x["type"] == type and str(x["table_id"]) == tid), None)
+        if not l:
+            raise _err(404, "Sayfa bulunamadı; önce T-soft eşitlemesi yapılmalı.")
+        name = _page_name(l)
+        f = pages.facts(type, name, st.get((type, tid), {}), _wiki(name) if type == "model" else None)
+        return l, {"name": name}, f
+
+    @app.get("/api/v1/seo-geo/pages/{type}/{tid}")
+    def seo_page(type: str, tid: str, request: Request) -> dict[str, Any]:
+        gate(request)
+        l, meta, f = _page(type, tid)
+        lim = rules.thresholds(seo.conf)
+        a = pages.audit(type, meta["name"], l["title"], l["description"], lim)
+        src = pages.source_record(type, meta["name"], l["title"], l["description"], f)
+        with seo.engine().connect() as c:
+            props = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.tenant_id == seo.tenant(),
+                                                         PROPOSALS.c.product_id == f"{type}:{tid}")
+                              .order_by(PROPOSALS.c.created_at.desc())).mappings().all()
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        out_props = []
+        for r in props:
+            fl = loads(r["fields_json"], {})
+            out_props.append({**_proposal_view(dict(r)), "unsupported": propose.unsupported(
+                src, {"SeoTitle": fl.get("SeoTitle", ""), "SeoDescription": fl.get("SeoDescription", ""), "Details": fl.get("Intro", "")})})
+        return {"type": type, "id": tid, "name": meta["name"], "link": l["link"], "url": f"{site}/{l['link']}",
+                "current": {"SeoTitle": rules.text_of(l["title"]), "SeoDescription": rules.text_of(l["description"]), "Intro": ""},
+                "facts": f, "score": a["score"], "issues": a["issues"], "limits": lim, "proposals": out_props}
+
+    @app.post("/api/v1/seo-geo/pages/{type}/{tid}/propose")
+    def seo_page_propose(type: str, tid: str, request: Request) -> dict[str, Any]:
+        user = gate(request)
+        l, meta, f = _page(type, tid)
+        key = f"{type}:{tid}"
+        with seo._gen_lock:
+            if key in seo._generating:
+                raise _err(409, "Bu sayfa için öneri şu an yazılıyor.")
+            seo._generating.add(key)
+        try:
+            llm = runtime().llm_for("seo")
+            if llm is None:
+                raise _err(503, "Yapay zekâ modeli bu kurulumda tanımlı değil.")
+            lim = rules.thresholds(seo.conf)
+            try:
+                fields = pages.suggest(llm, type, meta["name"], l["title"], l["description"], f, lim)
+            except ValueError as e:
+                raise _err(502, f"Öneri üretilemedi: {e}") from None
+            before = pages.audit(type, meta["name"], l["title"], l["description"], lim)
+            after = pages.audit(type, meta["name"], fields["SeoTitle"], fields["SeoDescription"], lim)
+            after_score = min(100, after["score"] + (15 if fields.get("Intro") and type in ("model", "category") else 0))
+            pid = uuid.uuid4().hex
+            with seo.engine().begin() as c:
+                c.execute(PROPOSALS.delete().where(PROPOSALS.c.tenant_id == seo.tenant(), PROPOSALS.c.product_id == key,
+                                                   PROPOSALS.c.status == "hazir"))
+                c.execute(PROPOSALS.insert().values(
+                    id=pid, tenant_id=seo.tenant(), product_id=key, status="hazir", fields_json=dumps(fields),
+                    before_json=dumps({"SeoTitle": rules.text_of(l["title"]), "SeoDescription": rules.text_of(l["description"]), "Intro": ""}),
+                    score_before=before["score"], score_after=after_score, model=getattr(llm, "model", None),
+                    created_by=user, created_at=now()))
+            seo.audit(user, "create", key, meta["name"], {"proposal": pid})
+            return _proposal_view(seo.proposal(pid))
+        finally:
+            with seo._gen_lock:
+                seo._generating.discard(key)
+
+    class PageDecision(BaseModel):
+        action: str = Field(pattern="^(approve|reject)$")
+        fields: dict[str, str] = Field(default_factory=dict)
+        note: str = Field(default="", max_length=1000)
+
+    @app.post("/api/v1/seo-geo/pages/proposals/{proposal_id}/decide")
+    def seo_page_decide(proposal_id: str, body: PageDecision, request: Request) -> dict[str, Any]:
+        """Karar yalnız kaydedilir; T-soft'a yazılmaz (hedef CRM/T-soft paneli)."""
+        user = approver(request)
+        prop = seo.proposal(proposal_id)
+        if prop["status"] != "hazir" or ":" not in prop["product_id"]:
+            raise _err(409, "Bu öneri için karar verilemez.")
+        fields = {k: v for k, v in (body.fields or loads(prop["fields_json"], {})).items() if k in pages.FIELDS}
+        approve = body.action == "approve"
+        with seo.engine().begin() as c:
+            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == proposal_id).values(
+                status="onaylandi" if approve else "reddedildi",
+                fields_json=dumps({**loads(prop["fields_json"], {}), **fields}) if approve else prop["fields_json"],
+                decided_by=user, decided_at=now(), note=body.note or None,
+                result=("Onaylandı; gönderim yok (T-soft paneli/CRM)." if approve else None)))
+        seo.audit(user, body.action, prop["product_id"], prop["product_id"], {"proposal": proposal_id, "kind": "page"})
+        return _proposal_view(seo.proposal(proposal_id))
 
     @app.get("/api/v1/seo-geo/history")
     def seo_history(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:

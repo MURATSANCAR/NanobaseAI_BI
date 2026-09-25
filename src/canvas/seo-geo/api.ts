@@ -98,6 +98,31 @@ export type Redirect = {
   note: string | null;
 };
 
+export type PageKind = 'model' | 'category' | 'brand';
+export type PageRow = { id: string; name: string; link: string; url: string; books: number; sales: number; score: number; issues: number; proposal: ProposalStatus | null };
+export type PageField = 'SeoTitle' | 'SeoDescription' | 'Intro';
+export type PageDetail = {
+  type: PageKind;
+  id: string;
+  name: string;
+  link: string;
+  url: string;
+  current: Record<PageField, string>;
+  facts: {
+    books: number;
+    sales: number;
+    top: Array<{ name: string; author: string; sales: number }>;
+    cats: string[];
+    brands: string[];
+    authors: string[];
+    wikidata: { description?: string; born?: number; wikidata?: string; wikipedia?: string | null } | null;
+  };
+  score: number;
+  issues: Array<Omit<Issue, 'field'> & { field: PageField }>;
+  limits: ProductDetail['limits'];
+  proposals: Array<Omit<Proposal, 'fields'> & { fields: Partial<Record<PageField, string>> }>;
+};
+
 export type Question = { id: string; text: string; category: string | null; createdBy: string | null; createdAt: string };
 
 async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T> {
@@ -150,6 +175,12 @@ export const seoApi = {
   approveRedirects: (confidence: 'kesin' | 'yüksek') =>
     call<{ approved: number }>(`redirects/approve-confidence?confidence=${encodeURIComponent(confidence)}`, { method: 'POST' }),
   redirectCsvUrl: () => `${ENGINE_BASE}/api/v1/seo-geo/redirects/export.csv`,
+  pages: (p: { type: PageKind; q?: string; start?: number; limit?: number }) =>
+    call<{ total: number; withBooks: number; items: PageRow[] }>(`pages?${qs(p)}`),
+  page: (type: PageKind, id: string) => call<PageDetail>(`pages/${type}/${encodeURIComponent(id)}`),
+  proposePage: (type: PageKind, id: string) => call<Proposal>(`pages/${type}/${encodeURIComponent(id)}/propose`, { method: 'POST', timeout: 300_000 }),
+  decidePage: (id: string, body: { action: 'approve' | 'reject'; fields?: Partial<Record<PageField, string>>; note?: string }) =>
+    call<Proposal>(`pages/proposals/${id}/decide`, { method: 'POST', body }),
   questions: () => call<{ items: Question[]; measuring: boolean }>('questions'),
   addQuestion: (text: string, category: string) => call<{ id: string }>('questions', { method: 'POST', body: { text, category } }),
   deleteQuestion: (id: string) => call<{ deleted: boolean }>(`questions/${id}`, { method: 'DELETE' }),
