@@ -316,8 +316,8 @@ export default function BaskiOneri() {
               </div>
 
               {presets.length > 0 && (
-                <div className="mg-presets" role="group" aria-label="Power BI açılış süzgeçleri">
-                  <span className="mg-presets-label">Power BI açılışı</span>
+                <div className="mg-presets" role="group" aria-label="Mevcut rapor açılış süzgeçleri">
+                  <span className="mg-presets-label">Mevcut rapor açılışı</span>
                   {presets.map((preset) => {
                     const on = !dropped.has(preset.key);
                     const values = preset.values.map((v) => v ?? '(boş)');

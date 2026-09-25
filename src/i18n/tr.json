@@ -1448,7 +1448,7 @@
   "bi.slicer.all": "Tümü",
   "bi.slicer.clear": "Filtreleri temizle",
   "bi.slicer.empty": "Grafik verisi gelince burada açılır listeler çıkar. İsterseniz grafikteki bir çubuğa da tıklayabilirsiniz.",
-  "bi.slicer.hint": "Bir değer seçin; panodaki tüm kutucuklar buna göre süzülür (Excel / Power BI sayfa filtresi gibi).",
+  "bi.slicer.hint": "Bir değer seçin; panodaki tüm kutucuklar buna göre süzülür (Excel sayfa filtresi gibi).",
   "bi.slicer.title": "Pano filtreleri",
   "bi.sources.activate": "Bu kaynağı kullan",
   "bi.sources.activeBadge": "Aktif",

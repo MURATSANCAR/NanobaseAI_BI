@@ -1448,7 +1448,7 @@
   "bi.slicer.all": "All",
   "bi.slicer.clear": "Clear filters",
   "bi.slicer.empty": "After you have chart data, filter dropdowns appear here. You can also click a bar or slice on a chart.",
-  "bi.slicer.hint": "Pick a value to show only matching tiles — like a page filter in Power BI.",
+  "bi.slicer.hint": "Pick a value to show only matching tiles — like a page filter.",
   "bi.slicer.title": "Board filters",
   "bi.sources.activate": "Use this source",
   "bi.sources.activeBadge": "Active",

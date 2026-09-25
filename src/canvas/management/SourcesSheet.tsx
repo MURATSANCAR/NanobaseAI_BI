@@ -97,7 +97,7 @@ export default function SourcesSheet({
               [
                 ['sources', `Sorgular${query.data ? ` (${query.data.sources.length})` : ''}`],
                 ['formulas', 'Hesaplamalar'],
-                ['notes', 'Power BI’dan farklar'],
+                ['notes', 'Mevcut rapordan farklar'],
               ] as Array<[Tab, string]>
             ).map(([id, label]) => (
               <button key={id} type="button" role="tab" aria-selected={tab === id} className="mg-seg-item" onClick={() => setTab(id)}>

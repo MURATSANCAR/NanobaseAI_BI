@@ -1,10 +1,10 @@
 """Yeni Baskı Öneri raporu — Power BI şablonunun ("2025_Yeni_Baskı Öneri Raporu") köprüdeki karşılığı.
 
-Power BI modeli Logo ve CRM tablolarını bellekte ilişkiyle birleştiriyordu. Burada da öyle: Logo ile
+Mevcut rapor modeli Logo ve CRM tablolarını bellekte ilişkiyle birleştiriyordu. Burada da öyle: Logo ile
 CRM ayrı SQL sunucularında durduğu için tek sorguda birleşemezler; her kaynak kendi sorgusuyla okunur,
 birleştirme ve DAX hesapları aşağıda stok koduna göre yapılır.
 
-Power BI'dan bilinçli farklar `NOTES` içinde; ekranda da gösterilir.
+Mevcut rapordan bilinçli farklar `NOTES` içinde; ekranda da gösterilir.
 """
 from __future__ import annotations
 
@@ -68,28 +68,28 @@ FORMULAS = [
 ]
 
 NOTES = [
-    "Rapor Power BI dosyasının açılış görünümüyle aynı süzgeçlerle açılır: statü boş, YS04 Aktif ya da "
+    "Rapor, mevcut raporun açılış görünümüyle aynı süzgeçlerle açılır: statü boş, YS04 Aktif ya da "
     "YS10A Ürün Fazlası; baskı durumu boş ya da Depo Girişi Yapıldı. Çipler kaldırılınca havuzun tamamı görünür.",
-    "Satış hızı havuzu Power BI ile aynı: 2024 başından bu yana satışı olan her kitap listede. Son 12 ayda "
+    "Satış hızı havuzu mevcut raporla aynı: 2024 başından bu yana satışı olan her kitap listede. Son 12 ayda "
     "hiç satmayan kitap da kalır; hızı 0, tükenmesi boş, önerisi \u201cYeterli Stok\u201d olur.",
-    "Marj ve öneri, bölen olmadığında Power BI'ın DAX davranışını izler: stok varken sonuç sonsuzdur ve "
+    "Marj ve öneri, bölen olmadığında mevcut raporun DAX davranışını izler: stok varken sonuç sonsuzdur ve "
     "\u201cYeterli Stok\u201d yazar, stok da yokken boş sonuç \u22121 sayılır ve \u201cRisk/Acil\u201d yazar.",
-    "Logo ve CRM ayrı sunucularda olduğu için Power BI'daki bellek içi ilişki burada stok koduyla birleştirmedir; sonuç aynı satırlardır.",
-    "Dönemler tamamlanmış aylardır ve tarih karşılaştırması ay başına göre yapılır; Power BI'daki 'gün sonu' karşılaştırması saatli faturaları son günden düşürebiliyordu.",
-    "Power BI'da 'Ilk6Ay' en yeni 6 ayı, 'Son6Ay' eski 6 ayı tutuyordu; burada 'Son 6 ay' ve 'Önceki 6 ay' olarak doğru adlarıyla gösterilir.",
-    "Yeni kitap ay kolonları Power BI gibi ay numarasıyladır ve geçen yıl ile bu yılın aynı ayını toplar "
-    "(ör. Eylül = Eylül 2025 + Eylül 2026). Power BI yılları 2025–2026 diye sabit yazıyordu; burada iki yıl "
-    "bugünden kurulur. Baskı Tekrar'ın ay kolonları ise son 12 takvim ayıdır, Power BI'daki gibi.",
-    "Yeni kitaplarda ilk yayın tarihi CRM'den, satış Logo'dan okunur (Power BI bağlı sunucu üzerinden tek sorguda birleştiriyordu).",
-    "Power BI satış hızını satır satır kayan noktayla toplar; sıfır olması gereken hız −3·10⁻¹⁷, 0,5 olması "
+    "Logo ve CRM ayrı sunucularda olduğu için mevcut rapordaki bellek içi ilişki burada stok koduyla birleştirmedir; sonuç aynı satırlardır.",
+    "Dönemler tamamlanmış aylardır ve tarih karşılaştırması ay başına göre yapılır; mevcut rapordaki 'gün sonu' karşılaştırması saatli faturaları son günden düşürebiliyordu.",
+    "Mevcut raporda 'Ilk6Ay' en yeni 6 ayı, 'Son6Ay' eski 6 ayı tutuyordu; burada 'Son 6 ay' ve 'Önceki 6 ay' olarak doğru adlarıyla gösterilir.",
+    "Yeni kitap ay kolonları mevcut rapordaki gibi ay numarasıyladır ve geçen yıl ile bu yılın aynı ayını toplar "
+    "(ör. Eylül = Eylül 2025 + Eylül 2026). Mevcut rapor yılları 2025–2026 diye sabit yazıyordu; burada iki yıl "
+    "bugünden kurulur. Baskı Tekrar'ın ay kolonları ise son 12 takvim ayıdır, mevcut rapordaki gibi.",
+    "Yeni kitaplarda ilk yayın tarihi CRM'den, satış Logo'dan okunur (mevcut rapor bağlı sunucu üzerinden tek sorguda birleştiriyordu).",
+    "Mevcut rapor satış hızını satır satır kayan noktayla toplar; sıfır olması gereken hız −3·10⁻¹⁷, 0,5 olması "
     "gereken hız 0,49999999999999994 çıkabilir ve öneri eşiği yanlış taraftan geçer. Burada önce toplanıp "
     "sonra bölünür; 2026-09-23 karşılaştırmasında 5.053 kitabın 2'sinde öneri bu yüzden farklıdır.",
     "Kullanılmayan 'CRM_BekleyenSiparis' tablosu ve kırık 'Set Kitaplar' sayfası (modelde olmayan tabloya bağlı) alınmadı.",
-    "Logo satışı Power BI'da 'V_SatisRaporu_ALL2' (2015'ten bu yana her yılın birleşimi) ve onun üstündeki "
+    "Logo satışı mevcut raporda 'V_SatisRaporu_ALL2' (2015'ten bu yana her yılın birleşimi) ve onun üstündeki "
     "'PBI_FiyatList' görünümlerinden okunuyordu. Burada aynı satırlar yalnız gereken yılların görünümlerinden "
     "okunur: satış hızı 2024'ten, fiyat 2025'ten, aylık ve yeni kitap satışı geçen yıldan bu yana. ALL2 üzerinden "
     "fiyat sorgusu 15 dakikada bitmiyordu; yıllık görünümlerle üç yıl 25 saniyede okunuyor.",
-    "Yeni kitap satışı Power BI'da 'V_SatisRaporu_2025_2026' görünümünden okunuyordu; burada geçen yıl ve bu yılın "
+    "Yeni kitap satışı mevcut raporda 'V_SatisRaporu_2025_2026' görünümünden okunuyordu; burada geçen yıl ve bu yılın "
     "yıllık görünümleri okunur, satır kümesi aynıdır.",
 ]
 
@@ -187,7 +187,7 @@ def _day(v: Any) -> date | None:
         return None
 
 
-INF, NEG_INF, NAN = "∞", "-∞", "NaN"  # JSON'da sayı olarak taşınamaz; ekran Power BI gibi yazar
+INF, NEG_INF, NAN = "∞", "-∞", "NaN"  # JSON'da sayı olarak taşınamaz; ekran mevcut rapordaki gibi yazar
 
 
 def _dax_div(a: float | None, b: float | None) -> float | None:
@@ -206,7 +206,7 @@ def _dax_div(a: float | None, b: float | None) -> float | None:
 
 def _marj_oneri(stok: float | None, hiz: float | None) -> tuple[float | None, str | None]:
     """Power BI: Marj = StokAdedi / hız − 1 ve Öneri = IF(Marj <= 0, ...). BLANK − 1 = −1; NaN hiçbir
-    eşikten küçük değildir (IEEE), öneri "Yeterli Stok" olur — Power BI çıktısıyla doğrulanacak."""
+    eşikten küçük değildir (IEEE), öneri "Yeterli Stok" olur — mevcut rapor çıktısıyla doğrulanacak."""
     q = _dax_div(stok, hiz)
     marj = -1.0 if q is None else q - 1
     return marj, ("Yeterli Stok" if math.isnan(marj) else oneri(marj))
@@ -352,7 +352,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
         speed = _num(h["satis_hizi"]) if "satis_hizi" in h else sum(_num(h.get(c)) * w for c, w in WEIGHTS)
         stok = b.get("stok_adedi")
         stok = None if stok is None or stok == "" else _num(stok)
-        tuk = _dax_div(stok, speed)  # Power BI: Tükenme Süresi = SUM(StokAdedi) / SUM(OrtSatisHizi)
+        tuk = _dax_div(stok, speed)  # mevcut rapor: Tükenme Süresi = SUM(StokAdedi) / SUM(OrtSatisHizi)
         marj, marj_oneri = _marj_oneri(stok, speed)
         f = fiyat.get(k) or {}
         row = {
@@ -371,7 +371,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
             **{c: _num(h.get(c)) for c in ("son6_ort", "onceki6_ort", "ceyrek1_ort", "ceyrek2_ort", "ceyrek3_ort", "ceyrek4_ort")},
         }
         a = aylik.get(k, {})
-        for m in range(1, 13):  # Power BI: Sorgu3 ay numarasına göre Ocak..Aralık (son 12 ay, her ay bir kez)
+        for m in range(1, 13):  # mevcut rapor: Sorgu3 ay numarasına göre Ocak..Aralık (son 12 ay, her ay bir kez)
             row[f"ay_{m:02d}"] = a.get(m, 0)
         tekrar.append(row)
     # Power BI sıralaması: en önce tükenecek üstte; satışı olmayan (hız 0) en sonda.
@@ -388,7 +388,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
     for k, ilk in yeni.items():
         sales = per_day.get(k)
         if not sales or ilk is None:
-            continue  # Power BI satır üretmiyordu: satış tablosuyla iç birleşim
+            continue  # mevcut rapor satır üretmiyordu: satış tablosuyla iç birleşim
         b = kitap.get(k) or {}
         if (b.get("yayinevi") or None) in EXCLUDED_PUBLISHERS["yeni"] or not b.get("yayinevi"):
             continue

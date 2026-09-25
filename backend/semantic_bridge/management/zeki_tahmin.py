@@ -37,7 +37,7 @@ KEEP_QUANTILES = {"p10": 0, "p50": 4, "p80": 7, "p90": 8}  # 9 kantilden sekmede
 
 SOURCES = [
     ("logo_aylik_gecmis", "logo", "Aylık satış geçmişi",
-     "Kitap başına aylık satış adedi, 2015'ten bu yıla her yıl ayrı okunur (Power BI'ın okuduğu satırlarla aynı)."),
+     "Kitap başına aylık satış adedi, 2015'ten bu yıla her yıl ayrı okunur (mevcut raporun okuduğu satırlarla aynı)."),
     ("logo_son_fatura", "logo", "Son fatura tarihi", "Logo'daki en son fatura günü; tahminin başladığı ayı belirler."),
 ]
 FORMULAS = [
@@ -238,26 +238,26 @@ def explanation(meta: dict) -> dict:
             "ZEKI AI her kitabın aylık satış geçmişine bakar ve önümüzdeki 12 ayın satışını ay ay tahmin eder. Bunu "
             "zaman serisi tahmin modeliyle yapar: model, çok sayıda farklı satış serisinden öğrendiği "
             "kalıpları (mevsim, büyüme, yavaşlama) bu kitabın geçmişine uygular.",
-            "Power BI sekmesindeki hız son 12 ayın ağırlıklı ortalamasıdır ve her ayı aynı sayar. Oysa satışınız eylülde "
+            "Baskı Tekrar sekmesindeki hız son 12 ayın ağırlıklı ortalamasıdır ve her ayı aynı sayar. Oysa satışınız eylülde "
             "ortalamanın yaklaşık 1,5, ekimde 1,8 katına çıkıyor; mayıs-haziranda 0,7'ye iniyor. ZEKI AI tahmini ay ay "
-            "verdiği için stokun hangi ayda biteceğini daha doğru söyler. Power BI sekmeleri değişmez; bu sekme yanında "
+            "verdiği için stokun hangi ayda biteceğini daha doğru söyler. Baskı Tekrar ve Yeni Kitap sekmeleri değişmez; bu sekme yanında "
             "ikinci bir görüştür.",
         ],
         "sections": [
             {"title": "Neye baktık", "items": [
-                "Satış: Logo satış faturaları, kitap × ay, 2015'ten bugüne. Satırlar Power BI'ın okuduklarıyla aynıdır.",
+                "Satış: Logo satış faturaları, kitap × ay, 2015'ten bugüne. Satırlar mevcut raporun okuduklarıyla aynıdır.",
                 "Mevsim: ayın yıl içindeki yeri ve okul dönemi (eylül-ekim) işareti.",
                 "Büyüme: bütün kitapların toplam aylık satışı; yayınevinin genel büyümesi.",
                 "Stok ve bekleyen sipariş: Baskı Tekrar sekmesindeki CRM değerleri, 5 dakikada bir güncel.",
             ]},
-            {"title": "Power BI önerisiyle neden farklı olabilir", "items": [
+            {"title": "Mevcut rapor önerisiyle neden farklı olabilir", "items": [
                 "Stok 0 ve talep varsa ZEKI \"Risk/Acil\" der; talep yoksa (son 12 ayda ve tahminde ayda 1 adetten az ya da temkinli tahminle bile ayda 1'in altında) "
-                "\"Talep yok\" der, basım gerekmez. Power BI bu ayrımı yapamaz: hız da 0 olunca 0 ÷ 0 tanımsız çıkar ve "
+                "\"Talep yok\" der, basım gerekmez. Mevcut rapor bu ayrımı yapamaz: hız da 0 olunca 0 ÷ 0 tanımsız çıkar ve "
                 "öneri \"Yeterli Stok\" görünür, talebi olan stoksuz kitapta bile.",
-                "İadesi satışından fazla olan kitapta Power BI hızı eksi çıkar ve öneri \"Risk/Acil\" olur; ZEKI talebi "
+                "İadesi satışından fazla olan kitapta mevcut rapor hızı eksi çıkar ve öneri \"Risk/Acil\" olur; ZEKI talebi "
                 "sıfırın altına indirmez, stok yeterliyse \"Yeterli Stok\" der (ayrışmaların beşte biri).",
-                "Okul dönemi yaklaşırken ZEKI aylık talebi yükseltir ve stoku daha erken bitirir; Power BI her ayı aynı sayar.",
-                "Gerçek tahmin ayrışmalarında geçmiş sınama (4 kesim, 993 kitap): ZEKI %36, Power BI %25 haklı çıktı; "
+                "Okul dönemi yaklaşırken ZEKI aylık talebi yükseltir ve stoku daha erken bitirir; mevcut rapor her ayı aynı sayar.",
+                "Gerçek tahmin ayrışmalarında geçmiş sınama (4 kesim, 993 kitap): ZEKI %36, mevcut rapor %25 haklı çıktı; "
                 "%39'unda ikisi de tutmadı ve bunların çoğunda ZEKI gerçeğe daha yakındı.",
             ]},
             {"title": "Kolonlar nasıl okunur", "items": [
@@ -265,16 +265,16 @@ def explanation(meta: dict) -> dict:
                 "Temkinli (12 ay): gerçekleşenin %80 ihtimalle altında kalacağı satış. \"Tükenmesin\" senaryosu.",
                 "Tükenme / Temkinli tükenme: bugünkü CRM stokunun tahmine göre bittiği ay (temkinli olan daha erken).",
                 "Baskı ihtiyacı: 12 aylık tahmin + bekleyen sipariş − stok; eksi çıkarsa 0.",
-                "Öneri (ZEKI): Power BI ile aynı eşikler (Risk/Acil … Yeterli Stok), ama ZEKI'nin tükenme süresiyle. "
+                "Öneri (ZEKI): Mevcut raporla aynı eşikler (Risk/Acil … Yeterli Stok), ama ZEKI'nin tükenme süresiyle. "
                 "Ek düzey \"Talep yok\": stok yok ve satış fiilen durmuş — son 12 ayda da, beklenen tahminde de ayda 1 adetten "
                 "az (ya da temkinli tahminle bile ayda 1'in altında).",
                 "Güven: Yüksek = son 12 ayda en çok satan %20, Orta = sonraki %30, Düşük = az satan yarı. Düşük "
-                "güvenli kitaplarda geçmiş sınamada hiçbir yöntem (Power BI dahil) güvenilir tahmin yapamadı.",
+                "güvenli kitaplarda geçmiş sınamada hiçbir yöntem (mevcut rapor dahil) güvenilir tahmin yapamadı.",
             ]},
         ],
         "table": {"caption": f"Geriye dönük sınama: geçmişteki {BACKTEST['kesimler']} kesimlerinde, o güne kadarki "
                              "veriyle tahmin edilip gerçekleşen satışla karşılaştırıldı (Baskı Tekrar kitapları).",
-                  "head": ["Ölçü", "Power BI hızı", "ZEKI AI"], "rows": BACKTEST["rows"]},
+                  "head": ["Ölçü", "Mevcut rapor hızı", "ZEKI AI"], "rows": BACKTEST["rows"]},
         "notes": [
             "Okul dönemi zirvesini ZEKI AI da eksik tahmin ediyor (zirve her yıl büyüyor). Zirve öncesi baskı kararında "
             "\"Temkinli\" kolonlarına bakın.",
@@ -379,20 +379,20 @@ TAB_COLUMNS = [
     ("ai_baski", "Baskı ihtiyacı", "ZEKI AI", "n0", "hesap:ZEKI baskı ihtiyacı", "sum"),
     ("ai_baski_temkinli", "Temkinli baskı ihtiyacı", "ZEKI AI", "n0", "hesap:ZEKI baskı ihtiyacı", "sum"),
     ("oneri", "Öneri (ZEKI)", "ZEKI AI", "oneri", "hesap:ZEKI öneri", None),
-    ("pbi_oneri", "Öneri (Power BI)", "Power BI", "oneri", "hesap:Öneri", None),
-    ("pbi_hiz", "Power BI hızı (aylık)", "Power BI", "n0", "hesap:Ort. satış hızı", None),
-    ("pbi_tukenme", "Power BI tükenme (ay)", "Power BI", "dec", "hesap:Tükenme süresi", None),
+    ("pbi_oneri", "Öneri (mevcut rapor)", "Mevcut rapor", "oneri", "hesap:Öneri", None),
+    ("pbi_hiz", "Mevcut rapor hızı (aylık)", "Mevcut rapor", "n0", "hesap:Ort. satış hızı", None),
+    ("pbi_tukenme", "Mevcut rapor tükenme (ay)", "Mevcut rapor", "dec", "hesap:Tükenme süresi", None),
 ]
 TAB_FORMULAS = [
     ("ZEKI tahmin", "ZEKI AI tahmininin aylık beklenen satışının (p50) bugünden tahmin ufkunun sonuna toplamı; temkinli = %80 "
                     "kantil (p80). İçinde bulunulan ay kalan günlere göre sayılır."),
     ("ZEKI tükenme", "CRM stoku, aylık tahmin birikimini hangi ayda aşarsa o ay (temkinli: p80 yolu)."),
     ("ZEKI baskı ihtiyacı", "Tahmin + bekleyen sipariş − CRM stoku; eksiyse 0."),
-    ("ZEKI öneri", "Power BI eşikleri ZEKI tükenme süresiyle: ≤1 ay Risk/Acil · ≤1,5 Kritik · ≤2 Karar Ver · ≤2,5 Takip Et. "
+    ("ZEKI öneri", "Mevcut rapor eşikleri ZEKI tükenme süresiyle: ≤1 ay Risk/Acil · ≤1,5 Kritik · ≤2 Karar Ver · ≤2,5 Takip Et. "
                    "Stok yok ve (son 12 tam ay satışı < 12 ve tahmin ufuk boyunca ayda 1'in altında) ya da temkinli tahmin "
                    "ayda 1'in altındaysa Talep yok."),
     ("Güven", "Son 12 tam ay satışına göre: en çok satan %20 Yüksek, sonraki %30 Orta, kalan Düşük."),
-    ("Liste", "Kitabın Power BI'daki sekmesi: Baskı Tekrar ya da Yeni Kitap."),
+    ("Liste", "Kitabın rapordaki sekmesi: Baskı Tekrar ya da Yeni Kitap."),
 ]
 
 
