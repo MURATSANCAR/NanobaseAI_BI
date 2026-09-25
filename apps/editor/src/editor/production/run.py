@@ -117,11 +117,74 @@ def fail(d: Path, e: BaseException, final: bool, st: "State | None" = None) -> N
 async def plan(d: Path) -> None:
     """Metin → profil → kurallar → üslup → karakterler → yerleşim ve sahneler. Yeniden denemede baştan
     yapılır; tamamlanmışsa (işçi sonucu bildiremeden düştüyse) atlanır."""
+    job = studio.read(d, "job.json")
     st = State(d, keep=True)
+    if job.get("replan"):                   # resim seçimi sonradan değişti (prepare_replan)
+        await _replan(d, job, st)
+        return
     if st.step("yerlesim")["status"] == "done" and studio.read(d, "artplan.json"):
         return
     st = State(d)
-    await _plan(d, studio.read(d, "job.json"), st)
+    await _plan(d, job, st)
+
+
+REPLAN_STEPS = ("profil", "kurallar", "yerlesim", "karakter_resimleri", "sayfa_resimleri", "kapak", "dizgi",
+                "on_kontrol")
+
+
+def prepare_replan(d: Path, art_mode: str, by: str) -> None:
+    """Resim seçimi sonradan değişti: yerleşim yeniden kurulacak (stüdyo işçisinde `plan` → `finish`).
+    Metin, üslup ve karakterler korunur. Eski sayfa planı `plan-history`'de kalır (yeni plan sürüm numarasını
+    sürdürür); üretilmiş resimler silinmez: sayfa numaralı kayıtlar kimliğe taşınır ve «kullanılmayan
+    resimler»e düşer (yeni yerleşimin sayfa numarasıyla karışmasın). Kapak resmi korunur."""
+    from . import plan as plan_mod
+    from .profile import ART_MODES
+    if art_mode not in (*ART_MODES, "auto"):
+        raise ValueError(f"bilinmeyen resim seçimi: {art_mode}")
+    job = studio.read(d, "job.json")
+    job.update(art_mode=art_mode, replan=True, replan_by=by, replan_at=time.time())
+    studio.write(d, "job.json", job)
+    (d / plan_mod.PLAN).unlink(missing_ok=True)
+    sd = studio.studio_state(d)
+    for k in [k for k in sd["pages"] if k.isdigit()]:
+        sd["pages"][plan_mod.new_id("a")] = sd["pages"].pop(k)
+    studio.write(d, "studio.json", sd)
+    st = State(d, keep=True)
+    for s in st.data["steps"]:
+        if s["key"] in REPLAN_STEPS:
+            s.update(status="waiting", summary="")
+    st.data.update(status="running", error=None, finished=None)
+    st.flush()
+
+
+async def _replan(d: Path, job: dict, st: State) -> None:
+    """Profil (yeni seçimle) → kurallar → yerleşim ve sahneler; üslup, karakterler ve künye eskisinden."""
+    from .art import Character, Style
+    from .profile import Profile, apply_art_mode
+    llm = FileLlm(d / "provenance.jsonl")
+    ms = studio._manuscript(d)
+    ap = studio.read(d, "artplan.json")
+    st.start("profil")
+    prof = apply_art_mode(Profile(**studio.read(d, "profile.json")), job.get("art_mode"), ms.illustrator)
+    studio.write(d, "profile.json", prof.to_json())
+    st.done("profil", f"{prof.age_min}–{prof.age_max} yaş · {prof.genre} · {prof.illustration_source}")
+    st.start("kurallar")
+    spec = spec_mod.build(prof)
+    studio.write(d, "spec.json", spec.to_json())
+    st.done("kurallar", f"{spec.trim_w:g}×{spec.trim_h:g} mm · {spec.body_font} · {spec.paper}", reasons=spec.reasons)
+    st.start("yerlesim")
+    style = Style(**ap["style"])
+    chars = [Character(**c) for c in ap["characters"]]
+    ts = Typesetter(d / "dizgi", studio.fonts())
+    pm = await asyncio.to_thread(ts.fit, ms, spec, studio.read(d, "front.json"), style.accent)
+    studio.write(d, "pagemap.json", pm.to_json())
+    plan = art_mod.ArtPlan(style, chars)
+    plan.scenes = await art_mod.scenes(ms, prof, chars, pm, llm)
+    studio.write(d, "artplan.json", plan.to_json())
+    st.done("yerlesim", f"{len(pm.pages)} sayfa · resim bandı %{pm.layout.art_ratio * 100:.0f} · "
+                        f"{pm.layout.body_size:g} pt · {len(plan.scenes)} resim", pages=len(pm.pages))
+    job.pop("replan", None)
+    studio.write(d, "job.json", job)
 
 
 async def finish(d: Path, seed: int = 42) -> dict:
@@ -134,7 +197,9 @@ async def finish(d: Path, seed: int = 42) -> dict:
         if s["key"] in ("karakter_resimleri", "sayfa_resimleri", "kapak", "dizgi", "on_kontrol") and s["status"] != "done":
             s.update(status="waiting", summary="")
     st.flush()
-    await _finish(d, st, studio._plan(d), studio._spec(d), studio._pagemap(d), job.get("created_by", ""), seed, True)
+    # «Resimsiz» seçildiyse resim adımları hiç koşmaz, görsel model açılmaz.
+    await _finish(d, st, studio._plan(d), studio._spec(d), studio._pagemap(d), job.get("created_by", ""), seed,
+                  job.get("art_mode") != "none")
     st.data.update(status="done", finished=time.time())
     st.flush()
     return st.data
@@ -143,7 +208,7 @@ async def finish(d: Path, seed: int = 42) -> dict:
 async def _run(d: Path, job: dict, st: State, images: bool, seed: int) -> None:
     plan_, pm = await _plan(d, job, st)
     spec = studio._spec(d)
-    await _finish(d, st, plan_, spec, pm, job.get("created_by", ""), seed, images)
+    await _finish(d, st, plan_, spec, pm, job.get("created_by", ""), seed, images and job.get("art_mode") != "none")
 
 
 async def _plan(d: Path, job: dict, st: State):
@@ -166,7 +231,7 @@ async def _plan(d: Path, job: dict, st: State):
     studio.write(d, "manuscript.json", ms.to_json())
 
     st.start("profil")
-    prof = await profile_mod.build(ms, llm)
+    prof = await profile_mod.build(ms, llm, art_mode=job.get("art_mode", "auto"))
     st.done("profil", f"{prof.age_min}–{prof.age_max} yaş · {prof.genre} · Ateşman {prof.reading['atesman']}",
             status="warn" if prof.disagreement else "done")
     studio.write(d, "profile.json", prof.to_json())
@@ -264,6 +329,16 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
             st.start(k)
             st.done(k, "atlandı", status="skipped")
 
+    # Sayfa planı: resimler hazır olunca sayfalar kalıcı kayda dönüşür (plan.py); dizgi bundan sonra plandan.
+    # Kurulamazsa iş akışla dizilir (eski yol), hata kayda geçer; plan ekrandan ya da devamda yeniden denenir.
+    from . import plan as plan_mod
+    try:
+        locate = plan_mod.locator(studio.read(d, "artplan.json")["characters"]) if images else None
+        await asyncio.to_thread(plan_mod.freeze, d, by, locate=locate)
+        st.data.pop("plan_error", None)
+    except Exception as e:  # noqa: BLE001
+        st.data["plan_error"] = f"{type(e).__name__}: {e}"[:300]
+        (d / "hata-plan.txt").write_text("".join(traceback.format_exception(type(e), e, e.__traceback__)))
     st.start("dizgi")
     await asyncio.to_thread(studio.rebuild, d)
     info = studio.read(d, "cover.json")
@@ -272,6 +347,9 @@ async def _finish(d: Path, st: State, plan, spec, pm, by: str, seed: int, images
         st.done("kapak", f"{info['size_mm'][0]}×{info['size_mm'][1]} mm · {info['binding']} · sırt {info['spine_mm']} mm"
                 if info else f"kapak resmi çizilemedi: {err or 'bilinmiyor'} (stüdyoda yeniden üretin)",
                 status="done" if info else "warn")
+    elif info and info.get("typographic"):
+        st.done("kapak", f"tipografik kapak (resimsiz kitap) · {info['size_mm'][0]}×{info['size_mm'][1]} mm · "
+                         f"sırt {info['spine_mm']} mm · stüdyoda kapağa resim üretilebilir")
     st.done("dizgi", "ic-sayfalar.pdf" + (" + kapak.pdf" if info else ""))
     st.start("on_kontrol")
     rep = studio.read(d, "preflight.json")

@@ -37,6 +37,7 @@ class Profile:
     disagreement: str | None = None
     reasons: list[dict] = field(default_factory=list)
     illustration_source: str = "model okuması"
+    art_source: str = "auto"               # resim kararı: "editor" (işi açarken seçildi) | "auto" (kural + model)
 
     def to_json(self) -> dict:
         return asdict(self)
@@ -108,7 +109,27 @@ def illustration_decision(model: str, genre: str, illustrator: str | None) -> tu
     return model, "model okuması"
 
 
-async def build(ms: Manuscript, llm) -> Profile:
+ART_MODES = {"every_page": "HER_SAYFA", "chapter": "BOLUM_BASI", "none": "YOK"}     # "auto": karar kuralla
+ILLUSTRATION_LABEL = {"HER_SAYFA": "her sayfa resimli", "BOLUM_BASI": "bölüm başı resimli", "YOK": "resimsiz"}
+
+
+def apply_art_mode(p: Profile, mode: str | None, illustrator: str | None = None) -> Profile:
+    """Resim kararının sırası: editörün işi açarken seçtiği (`art_mode`) > yayınevi kaydı/çizer kuralı > model.
+    `auto` ya da boş: kural + model (modelin okuması `p.model`'de saklı; seçim geri alınınca ona dönülür).
+    Gerekçe `illustration_source`'a, kaynak `art_source`'a yazılır (ekran gösterir)."""
+    if mode in ART_MODES:
+        p.illustration, p.art_source = ART_MODES[mode], "editor"
+        p.illustration_source = f"editörün seçimi: {ILLUSTRATION_LABEL[p.illustration]}"
+        return p
+    if mode not in (None, "", "auto"):
+        raise ValueError(f"bilinmeyen resim seçimi: {mode}")
+    ill, src = illustration_decision((p.model or {}).get("illustration") or p.illustration, p.genre, illustrator)
+    p.illustration, p.art_source = ill, "auto"
+    p.illustration_source = f"Okur yaşı {p.age_min}–{p.age_max}, {ILLUSTRATION_LABEL[ill]} seçildi ({src})"
+    return p
+
+
+async def build(ms: Manuscript, llm, art_mode: str | None = "auto") -> Profile:
     from ..prompts import render
     stats = reading_stats(ms)
     ref, prompt = render("production_profile", title=ms.title, text=_model_text(ms),
@@ -126,8 +147,8 @@ async def build(ms: Manuscript, llm) -> Profile:
     disagreement = (f"Beyan {age_min}-{age_max}, model {out['age_min']}-{out['age_max']} yaş"
                     if decl and gap > 2 else None)
     illustration, ill_source = illustration_decision(out["illustration"], out["genre"], ms.illustrator)
-    return Profile(age_min=age_min, age_max=age_max, age_source=source, genre=out["genre"],
-                   illustration=illustration, illustration_source=ill_source, tone=out["tone"], reading=stats,
-                   declared={"age": decl, "genre": ms.meta.get("GENRE")},
-                   model={k: out[k] for k in ("age_min", "age_max", "genre", "illustration")},
-                   disagreement=disagreement, reasons=reasons)
+    return apply_art_mode(Profile(age_min=age_min, age_max=age_max, age_source=source, genre=out["genre"],
+                                  illustration=illustration, illustration_source=ill_source, tone=out["tone"],
+                                  reading=stats, declared={"age": decl, "genre": ms.meta.get("GENRE")},
+                                  model={k: out[k] for k in ("age_min", "age_max", "genre", "illustration")},
+                                  disagreement=disagreement, reasons=reasons), art_mode, ms.illustrator)
