@@ -51,6 +51,7 @@ ART_TOP = 0.52                             # resim bandı oranı (kitabın kendi
 GAP = 9.0                                  # resim ile yazı arası (mm; book.typ'deki üst boşlukla aynı)
 Z_FREE = 3                                 # figür ve serbest yazının en alt katmanı
 HEX = re.compile(r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
+ROLES = ("accent", "soft", "ink")          # şekil renginde palet rolü (elements.typ çözer)
 ART_ID = re.compile(r"^a_[0-9a-f]{8}$")
 
 
@@ -336,7 +337,8 @@ def _clean_page(p: dict, plan: dict, old: dict | None = None) -> dict:
     if layout not in LAYOUTS:
         raise ValueError(f"bilinmeyen yerleşim: {layout}")
     out = {"id": p["id"], "chapter": p.get("chapter", (old or {}).get("chapter")), "layout": layout,
-           "art": None, "text": None, "bubbles": [], "figures": [], "texts": [], "overflow": bool(p.get("overflow"))}
+           "art": None, "text": None, "bubbles": [], "figures": [], "texts": [], "shapes": [],
+           "overflow": bool(p.get("overflow"))}
     a = p.get("art")
     if a:
         aid, gid = a.get("id"), a.get("asset")
@@ -387,11 +389,44 @@ def _clean_page(p: dict, plan: dict, old: dict | None = None) -> dict:
                                "box": _clamp_box(f.get("box"), page, "figür"),
                                "rotate": round(float(f.get("rotate") or 0) % 360, 2), "flip": bool(f.get("flip")),
                                "z": max(Z_FREE, int(f.get("z") or Z_FREE))})
+    el = _elements()
     for x in p.get("texts") or []:
-        out["texts"].append({"id": str(x.get("id") or new_id("t")), **_text_common(x, page, "serbest yazı"),
-                             "runs": _runs(x.get("runs") or [], "serbest yazı"),
-                             "z": max(Z_FREE, int(x.get("z") or Z_FREE))})
+        t = {"id": str(x.get("id") or new_id("t")), **_text_common(x, page, "serbest yazı"),
+             "runs": _runs(x.get("runs") or [], "serbest yazı"), "z": max(Z_FREE, int(x.get("z") or Z_FREE))}
+        if x.get("effect"):
+            eff = x["effect"]
+            if not isinstance(eff, dict) or not eff.get("style"):
+                raise ValueError("efekt yazı: style gerekli")
+            err = el.validate(eff) if el is not None else None
+            if err:
+                raise ValueError(f"efekt yazı: {err}")
+            t["effect"] = {"style": str(eff["style"]), "params": dict(eff.get("params") or {})}
+        out["texts"].append(t)
+    for s in p.get("shapes") or []:
+        if not isinstance(s, dict) or not s.get("kind"):
+            raise ValueError("şekil: kind gerekli")
+        o = {**s, "id": str(s.get("id") or new_id("s")), "kind": str(s["kind"]),
+             "box": _clamp_box(s.get("box"), page, "şekil"), "rotate": round(float(s.get("rotate") or 0) % 360, 2),
+             "flip": bool(s.get("flip")), "z": max(Z_FREE, int(s.get("z") or Z_FREE))}
+        for k in ("fill", "stroke"):
+            if o.get(k) is not None and not (isinstance(o[k], str) and (HEX.match(o[k]) or o[k] in ROLES)):
+                raise ValueError(f"şekil: {k} #RRGGBB ya da palet rolü ({', '.join(ROLES)})")
+        if o.get("runs") is not None:
+            o["runs"] = _runs(o["runs"], "şekil yazısı")
+        err = el.validate(o) if el is not None else None
+        if err:
+            raise ValueError(f"şekil: {err}")
+        out["shapes"].append(o)
     return out
+
+
+def _elements():
+    """Şekil ve efekt yazı modülü (D işi); yoksa doğrulama yalnız bu dosyadaki temel denetimle."""
+    try:
+        from . import elements
+        return elements
+    except ImportError:
+        return None
 
 
 # ------------------------------------------------------------------ otomatikler (palette, colorize, bubbles)
@@ -461,7 +496,7 @@ def pages_from_flow(ms, spec, layout, marks: list[dict], art_ids: dict[int, str]
         if p.kind == "front" and p.key in FRONT_KEYS:
             continue
         pg = {"id": new_id("p"), "chapter": p.chapter, "layout": "blank", "art": None, "text": None, "bubbles": [],
-              "figures": [], "texts": [], "overflow": False}
+              "figures": [], "texts": [], "shapes": [], "overflow": False}
         if p.kind == "full":
             pg["layout"] = "art-full"
             pg["art"] = {"id": art_ids.get(p.no) or new_id("a"), "box": box(0, 0, W, H), "fit": "cover",
@@ -654,8 +689,11 @@ def render_data(d: Path, plan: dict) -> dict:
             items.append({"type": "figure", "id": f["id"], "box": f["box"], "rotate": f["rotate"], "flip": f["flip"],
                           "path": rel, "z": f["z"]})
         for x in pg["texts"]:
-            items.append({"type": "text", "id": x["id"], "z": x["z"], **text_item(x, runs=x["runs"])})
-        items.sort(key=lambda it: it["z"])
+            items.append({"type": "text", "id": x["id"], "z": x["z"], **text_item(x, runs=x["runs"]),
+                          "effect": x.get("effect")})
+        for s in pg.get("shapes", []):
+            items.append({**s, "type": "shape"})
+        items.sort(key=lambda it: it["z"])                 # figür, serbest yazı ve şekil aynı z kuralıyla
         bubbles = []
         for bb in pg["bubbles"]:
             size = bb.get("size") or bubble_size(body)
@@ -671,8 +709,10 @@ def render_data(d: Path, plan: dict) -> dict:
                       "text": text_item(t, blocks=t["blocks"]) if t else None, "bubbles": bubbles, "items": items,
                       "folio": t is not None})
     fr = studio.read(d, "front.json")
+    from .typeset import has_elements
     return {"book": {"title": ms.title, "author": ms.author or "", "publisher": ms.meta.get("PUBLISHER") or ""},
-            "spec": spec.to_json(), "front": fr, "accent": accent, "body_size": body, "pages": pages}
+            "spec": spec.to_json(), "front": fr, "accent": accent, "body_size": body, "pages": pages,
+            "palette": {**pal, "accent": pal.get("accent") or accent, "ink": ink}, "elements": has_elements()}
 
 
 def build_pdf(d: Path, plan: dict) -> dict:
@@ -835,7 +875,7 @@ def insert_page(d: Path, rev: int, after: str | None, layout: str, by: str, **kw
         i = index(plan, after) + 1 if after else 0
         prev = plan["pages"][i - 1] if i > 0 else None
         pg = {"id": new_id("p"), "chapter": prev["chapter"] if prev else None, "layout": "blank", "art": None,
-              "text": None, "bubbles": [], "figures": [], "texts": [], "overflow": False}
+              "text": None, "bubbles": [], "figures": [], "texts": [], "shapes": [], "overflow": False}
         _apply_preset(pg, layout, plan["page"])
         plan["pages"].insert(i, pg)
         return pg
@@ -900,7 +940,7 @@ def split_page(d: Path, pid: str, rev: int, block: str, at: int, by: str, **kw) 
             raise ValueError("taşınacak metin yok")
         pg["text"]["blocks"] = first
         new = {"id": new_id("p"), "chapter": pg["chapter"], "layout": "blank", "art": None, "text": None,
-               "bubbles": [], "figures": [], "texts": [], "overflow": False}
+               "bubbles": [], "figures": [], "texts": [], "shapes": [], "overflow": False}
         _apply_preset(new, "text-only", plan["page"])
         new["text"].update(align=pg["text"]["align"], size=pg["text"]["size"], blocks=rest)
         plan["pages"].insert(i + 1, new)
@@ -974,7 +1014,8 @@ def add_asset(d: Path, gid: str, meta: dict, page: str | None, by: str, *, share
         if not page:
             return None
         pg = _page(plan, page)
-        z = max([f["z"] for f in pg["figures"]] + [x["z"] for x in pg["texts"]] + [Z_FREE - 1]) + 1
+        z = max([f["z"] for f in pg["figures"]] + [x["z"] for x in pg["texts"]] +
+                [s["z"] for s in pg.get("shapes", [])] + [Z_FREE - 1]) + 1
         f = {"id": new_id("f"), "asset": gid, "box": _default_figure_box(plan["page"], meta["w_px"], meta["h_px"], share),
              "rotate": 0, "flip": False, "z": z}
         pg["figures"].append(f)
@@ -1060,7 +1101,9 @@ class PlanText:
         for pg in self.plan["pages"]:
             parts.append(page_text(pg))
             parts += [bb["text"] for bb in pg["bubbles"]]
-            parts += ["".join(r["text"] for r in x["runs"]) for x in sorted(pg["texts"], key=lambda x: x["z"])]
+            # Efekt yazı harf harf yerleşir, PDF'ten kelime sırasıyla okunamaz; şekil yazısı süstür: denetime girmez.
+            parts += ["".join(r["text"] for r in x["runs"]) for x in sorted(pg["texts"], key=lambda x: x["z"])
+                      if not x.get("effect")]
         return "\n\n".join(p for p in parts if p)
 
 

@@ -28,6 +28,15 @@ TEMPLATES = Path(__file__).resolve().parent / "templates"
 TEMPLATE = TEMPLATES / "book.typ"
 PLAN_TEMPLATE = TEMPLATES / "plan.typ"   # sayfa planı: akışsız, her sayfa kendi kutularıyla
 SHARED = ("front.typ",)                  # iki şablonun ortak parçası (ön sayfalar)
+# Şekil ve efekt yazı çizimi (D işi, templates/elements.typ). Dosya yoksa plan.typ derlensin diye yer tutucu yazılır;
+# plan.render_data `elements: false` verir, efekt yazı düz yazı olarak basılır, şekil çizilmez.
+ELEMENTS = "elements.typ"
+ELEMENTS_STUB = ("// Yer tutucu: templates/elements.typ yok.\n"
+                 "#let draw-shape(s, palette, fonts) = none\n#let effect-text(t, palette, fonts) = none\n")
+
+
+def has_elements() -> bool:
+    return (TEMPLATES / ELEMENTS).exists()
 FRONT_PAGES = 4                         # iç kapak, künye, yazar/çizer, açılış resmi (ya da boş)
 SOUND = re.compile(r"(\w)\1\1")          # «Güüüümmm», «Roooaaah»: aynı harf 3+ kez
 
@@ -93,6 +102,10 @@ class Typesetter:
         self.dir.mkdir(parents=True, exist_ok=True)
         for name in SHARED:
             shutil.copy(TEMPLATES / name, self.dir / name)
+        if has_elements():
+            shutil.copy(TEMPLATES / ELEMENTS, self.dir / ELEMENTS)
+        else:
+            (self.dir / ELEMENTS).write_text(ELEMENTS_STUB)
         shutil.copy(template, self.dir / template.name)
         self.main = template.name
         self.fonts = [str(font_dir)]

@@ -3,6 +3,8 @@
 // Katmanlar: resim → yazı kutusu → balonlar → figür/fotoğraf/serbest yazı (z sırasıyla; Python sıralar).
 // Yazı kutusuna sığmayan metin kesilmez; `overflow` işareti Python'a döner (plan.py sayfaya yazar).
 #import "front.typ": mark, front-pages
+// Şekil ve efekt yazı (D işi): kutunun içine (0,0,w,h) çizer; kutu, döndürme, aynalama ve z sırası burada.
+#import "elements.typ": draw-shape, effect-text
 #let d = json(sys.inputs.at("data", default: "data.json"))
 #let s = d.spec
 #let b = s.bleed * 1mm
@@ -81,9 +83,12 @@
     place(top + left, dx: mm(a.dx), dy: mm(a.dy), image(a.path, width: mm(a.iw), height: mm(a.ih)))
   }))
 
-#let figure-item(f) = at(f.box, box(width: mm(f.box.w), height: mm(f.box.h),
-  rotate(f.rotate * 1deg, scale(x: if f.flip { -100% } else { 100% },
-    image(f.path, width: mm(f.box.w), height: mm(f.box.h), fit: "contain")))))
+#let turned(it, body) = at(it.box, box(width: mm(it.box.w), height: mm(it.box.h),
+  rotate(it.rotate * 1deg, scale(x: if it.flip { -100% } else { 100% }, body))))
+
+#let figure-item(f) = turned(f, image(f.path, width: mm(f.box.w), height: mm(f.box.h), fit: "contain"))
+
+#let shape-item(s) = turned(s, box(width: mm(s.box.w), height: mm(s.box.h), draw-shape(s, d.palette, fonts)))
 
 // ---------------------------------------------------------------- balon
 // bb: {outline, tail | none, tail_fill | none, dots, stroke, text}; şekiller mm cinsinden çokgen (Python hesaplar).
@@ -107,7 +112,11 @@
     #if pg.text != none { textbox(pg.text, pg.id, pg.id, "text") }
     #for bb in pg.bubbles { bubble(bb, pg.id) }
     #for it in pg.items {
-      if it.type == "text" { textbox(it, pg.id, it.id, "free") } else { figure-item(it) }
+      if it.type == "text" and it.effect != none and d.elements {
+        at(it.box, box(width: mm(it.box.w), height: mm(it.box.h), effect-text(it, d.palette, fonts)))
+      } else if it.type == "text" { textbox(it, pg.id, it.id, "free") }
+      else if it.type == "shape" { if d.elements { shape-item(it) } }
+      else { figure-item(it) }
     }
     #if pg.folio {
       place(top + left, dy: H - b - 12mm, box(width: W, align(center,

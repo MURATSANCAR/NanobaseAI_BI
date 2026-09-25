@@ -374,6 +374,30 @@ def test_cutout_asset_makes_new_unplaced_asset(tmp_path, monkeypatch):
     assert not any(f["asset"] == "g_000000bb" for p in pl["pages"] for f in p["figures"])   # onaysız sayfaya konmaz
 
 
+def test_shapes_and_effect_text_saved_and_validated(tmp_path, monkeypatch):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["shapes"] = [{"kind": "sign", "box": {"x": 30, "y": 150, "w": 60, "h": 30}, "rotate": -4, "fill": "#F2E3C6",
+                     "stroke": "ink", "params": {"posts": 1}, "runs": [{"text": "Sihirli Orman", "weight": 800}]}]
+    pg["texts"] = [{"box": {"x": 20, "y": 40, "w": 60, "h": 18}, "runs": [{"text": "Güüüm!"}],
+                    "effect": {"style": "burst", "params": {"angle": -8}}, "z": 6}]
+    new, page = P.update_page(d, pg["id"], 1, pg, "e", **QUIET)
+    s = page["shapes"][0]
+    assert s["id"].startswith("s_") and s["rotate"] == 356 and s["z"] == P.Z_FREE and s["params"] == {"posts": 1}
+    assert page["texts"][0]["effect"]["style"] == "burst"
+    assert "Güüüm" not in P.PlanText(new).text()                            # efekt yazı metin denetimine girmez
+    with pytest.raises(ValueError):
+        P.update_page(d, pg["id"], 2, {**pg, "shapes": [{"box": pg["shapes"][0]["box"]}]}, "e", **QUIET)
+    fake = types.ModuleType("editor.production.elements")
+    fake.validate = lambda o: "bilinmeyen tür" if o.get("kind") == "yok" else None
+    monkeypatch.setitem(sys.modules, "editor.production.elements", fake)
+    import editor.production as prod
+    monkeypatch.setattr(prod, "elements", fake, raising=False)
+    with pytest.raises(ValueError, match="bilinmeyen tür"):
+        P.update_page(d, pg["id"], 2, {**pg, "shapes": [{**pg["shapes"][0], "kind": "yok"}]}, "e", **QUIET)
+
+
 def test_new_workflows_registered():
     from editor.production.flow import ACTIVITIES, WORKFLOWS
     names = {getattr(w, "__temporal_workflow_definition").name for w in WORKFLOWS}
@@ -572,7 +596,11 @@ def test_plan_typ_draws_bubbles_figures_photos_and_runs(tmp_path):
     pg["texts"] = [{"box": {"x": 20, "y": 180, "w": 100, "h": 20}, "align": "center", "size": 20,
                     "background": "#FFFFFFE6",
                     "runs": [{"text": "Sihirli "}, {"text": "orman", "color": "#1F3B73", "weight": 800, "font": "heading"}],
-                    "z": 5}]
+                    "z": 5},
+                   {"box": {"x": 20, "y": 205, "w": 80, "h": 16}, "size": 18, "runs": [{"text": "Güüüm efekt"}],
+                    "effect": {"style": "burst", "params": {}}, "z": 7}]
+    pg["shapes"] = [{"kind": "star", "box": {"x": 120, "y": 170, "w": 30, "h": 30}, "rotate": 10, "flip": True,
+                     "fill": "#FAC775", "z": 6}]
     new, page = P.update_page(d, pid, pl["rev"], pg, "e", post="none")
     assert "hata-plan.txt" not in {p.name for p in d.iterdir()}
     doc = pymupdf.open(d / "dizgi" / "ic-sayfalar.pdf")
@@ -580,6 +608,9 @@ def test_plan_typ_draws_bubbles_figures_photos_and_runs(tmp_path):
     text = doc[P.page_no(new, pid) - 1].get_text()
     flat = " ".join(text.split())
     assert "Sihirli orman" in flat and all(f"Balon {s} ğüşıöç" in flat for s in P.SHAPES)
+    from editor.production.typeset import has_elements
+    if not has_elements():                             # çizim modülü yokken efekt yazı düz yazı olarak basılır
+        assert "Güüüm efekt" in flat
     assert len(doc[P.page_no(new, pid) - 1].get_images()) >= 2                  # fotoğraf + figür
     assert P.preview(d, pid, 300).exists()
 
