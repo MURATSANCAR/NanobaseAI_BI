@@ -120,7 +120,12 @@ def _source_text(p: dict[str, Any]) -> str:
     parts = [p.get(k) for k in ("ProductName", "Model", "Brand", "Barcode", "SeoTitle", "SeoDescription",
                                 "SearchKeywords", "ShortDescription", "Details", "DefaultCategoryPath",
                                 "DefaultCategoryName")]
-    return rules.text_of(" ".join(str(x) for x in parts if x)).casefold()
+    return _lower(rules.text_of(" ".join(str(x) for x in parts if x)))
+
+
+def _lower(s: str) -> str:
+    """Türkçe küçük harf: `casefold` "İ"yi "i̇" (noktalı) yapar, "İlk" kaynaktaki "ilk" ile eşleşmezdi."""
+    return s.replace("İ", "i").replace("I", "ı").lower()
 
 
 def _blocks(html_text: Any) -> str:
@@ -130,7 +135,7 @@ def _blocks(html_text: Any) -> str:
 
 def _stem(word: str) -> str:
     """Türkçe ek yüzünden aynı ad farklı görünmesin: kesme işaretinden sonrası atılır, uzun kelimede kök ~ ilk 5 harf."""
-    w = re.split(r"['’]", word)[0].casefold()
+    w = _lower(re.split(r"['’]", word)[0])
     return w[:5] if len(w) > 6 else w
 
 
