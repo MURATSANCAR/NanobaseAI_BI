@@ -52,7 +52,7 @@ TURN_JUDGE = PromptRef("studio_reader_turn_judge", "1")
 TURN_FIX = PromptRef("studio_reader_turn_fix", "1")
 REFUTE = PromptRef("studio_reader_refute", "1")          # denetlenebilir işaretin çürütülmesi (resim, konuşan)
 TURN_REFUTE = PromptRef("studio_reader_turn_refute", "1")  # sayfa sonu önerisi hikâyeyi değiştiriyor mu
-KEEP_P = 0.5                 # çürütmede «iddia doğru» olasılığı bundan küçükse işaret/öneri düşer (yazı turası sınırı)
+KEEP_P = 0.5                 # çürütmede «iddia doğru» olasılığı bunu aşmazsa işaret/öneri düşer (yazı turası kalmaz)
 
 KINDS = {                    # kod → ekrandaki ad
     "KELIME": "Anlaşılmayan kelime ya da deyim",
@@ -357,7 +357,7 @@ async def read_page(llm, d: Path, plan: dict, i: int, age: int, passes: int, sem
         if f["kind"] in REFUTABLE:
             p = await refute_flag(llm, age, f, texts[(f["target"], f["id"])], items, scene, no, sem)
             f["check"] = round(p, 3)
-            if p < KEEP_P:
+            if p <= KEEP_P:
                 refuted += 1
                 continue
         if f["replacement"]:
@@ -393,7 +393,7 @@ async def pick_replacement(llm, age: int, f: dict, text: str, no: int, sem: asyn
         except Exception:  # noqa: BLE001 - sınanamayan öneri gösterilmez; işaret kalır
             rejected += 1
             continue
-        if float(probs.get("A", 0.0)) >= KEEP_P:
+        if float(probs.get("A", 0.0)) > KEEP_P:
             return rep, rejected
         rejected += 1
     return "", rejected
@@ -520,7 +520,7 @@ async def judge_spread(llm, age: int, sp: dict, sem: asyncio.Semaphore, attempts
                                         ["A", "B"], prompt=TURN_REFUTE, pages=[sp["no"]])
         keep = float(probs.get("A", 0.0))
         tried.append({"replacement": rep, "technique": out.get("technique"), "keep": round(keep, 3)})
-        if keep >= KEEP_P:
+        if keep > KEEP_P:
             res.update(status="suggested", technique=out.get("technique"), replacement=rep, check=round(keep, 3),
                        reason=(out.get("reason") or "").strip(), tried=len(tried))
             return res
