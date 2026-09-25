@@ -356,6 +356,33 @@ def proofing_report(book_title):
     return out
 
 
+def word_map(book_id):
+    """Kelime haritası (son okuma `word_variety`): kart servisinin `stats`'ı ekranın diline çevrilir.
+    Denetim bu kitapta henüz koşmadıysa `ready=False` ve boş liste. Köprü hesap yapmaz, yalnız biçimler."""
+    r=request('/v1/books/'+str(uuid.UUID(book_id))+'/proofing/word-map').json()
+    st=r.get('stats') or None
+    out={'bookId':book_id,'generationId':r.get('generation_id'),'ready':st is not None,
+         'version':r.get('version'),'finishedAt':r.get('finished_at'),'summary':None,'words':[],
+         'nearDifferentSense':[],'unknownForms':[]}
+    if not st: return out
+    out['summary']={k2:st.get(k) for k,k2 in (('word_tokens','wordTokens'),('content_tokens','contentTokens'),
+        ('distinct_lemmas','distinctLemmas'),('distinct_content_lemmas','distinctContentLemmas'),
+        ('hapax_content_lemmas','hapaxContentLemmas'),('polysemous_lemmas','polysemousLemmas'),
+        ('idiom_senses','idiomSenses'),('mtld_lemma','mtldLemma'),('mtld_form','mtldForm'),
+        ('candidates','candidates'),('kept','kept'),('dropped_as_intentional','droppedAsIntentional'),
+        ('near_repeat_different_sense','nearDifferentSense'),('sense_unassigned','senseUnassigned'))}
+    out['words']=[{'lemma':w['lemma'],'pos':w.get('pos'),'count':w['count'],'forms':w.get('forms') or {},
+                   'pages':w.get('pages') or [],'ambiguous':bool(w.get('ambiguous')),
+                   'senses':[{'label':s['label'],'idiom':s.get('idiom') or '','count':s['count'],
+                              'pages':s.get('pages') or [],'example':s.get('example') or ''}
+                             for s in (w.get('senses') or [])]} for w in st.get('map') or []]
+    out['nearDifferentSense']=[{'lemma':x['lemma'],'pages':x.get('pages') or [],'senses':x.get('senses') or [],
+                                'passage':x.get('passage') or ''} for x in st.get('near_repeat_different_sense_examples') or []]
+    out['unknownForms']=[{'form':u['form'],'count':u['count'],'pages':u.get('pages') or []}
+                         for u in st.get('unknown_forms') or []]
+    return out
+
+
 def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by):
     """Editörün bulguya kararını kart servisine iletir; kart servisinin döndürdüğü geçerli kararı verir.
     Köprü editör veritabanına dokunmaz; doğrulama (gerekçe, nesil, not uzunluğu) kart servisindedir."""
