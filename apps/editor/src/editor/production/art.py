@@ -94,6 +94,7 @@ class Scene:
     outfits: dict = field(default_factory=dict)          # karakter → kıyafet adı (bu sayfada)
     setting_reason: str = ""
     new_day: bool = False         # metin bu sayfada yeni bir güne geçti (alıntısı sayfada bulundu)
+    art_id: str | None = None     # sayfa planındaki kalıcı resim kimliği (plan.freeze yazar; sayfa sırası değişse de sabit)
 
 
 @dataclass

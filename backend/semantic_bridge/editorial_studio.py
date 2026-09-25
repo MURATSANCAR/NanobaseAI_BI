@@ -16,8 +16,18 @@ import httpx
 from semantic_bridge.editorial_cards import _headers as _card_headers
 
 JOB = re.compile(r"^[0-9]{14}[0-9a-f]{6}$")
-KEY = re.compile(r"^(?:[0-9]{1,4}|kapak)$")
+KEY = re.compile(r"^(?:[0-9]{1,4}|kapak|a_[0-9a-f]{8})$")   # sayfa no, kapak ya da planın resim kimliği
+# Sayfa planı kimlikleri (sayfa p_…, figür/fotoğraf g_…): yalnız harf, rakam, _ ve -; yol parçası taşıyamaz.
+PLAN_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 ACTIONS = {"regenerate", "select", "approve"}
+ART_MODES = {"auto", "every_page", "chapter", "none"}   # başlangıçta resim seçimi (sözleşme)
+
+
+def art_mode(v: str | None) -> str:
+    m = (v or "auto").strip()
+    if m not in ART_MODES:
+        raise StudioError(400, "Resim seçimi geçersiz.")
+    return m
 IMAGE_MIME = {"image/png", "image/jpeg", "image/webp"}
 DOCX_MAX = 20 * 1024 * 1024
 
@@ -99,17 +109,17 @@ def jobs() -> dict:
     return get_json("/v1/studio/jobs")
 
 
-def new_job(book_id: str, editor: str) -> dict:
-    return post_json("/v1/studio/jobs", {"book_id": str(uuid.UUID(book_id))}, editor)
+def new_job(book_id: str, editor: str, mode: str = "auto") -> dict:
+    return post_json("/v1/studio/jobs", {"book_id": str(uuid.UUID(book_id)), "art_mode": art_mode(mode)}, editor)
 
 
-def new_job_docx(name: str, data: bytes, editor: str) -> dict:
+def new_job_docx(name: str, data: bytes, editor: str, mode: str = "auto") -> dict:
     if not name.lower().endswith(".docx") or not data.startswith(b"PK") or len(data) > DOCX_MAX:
         raise StudioError(400, "Yalnız 20 MB'a kadar Word (.docx) dosyası yüklenebilir.")
     base, headers, ca = _base()
     headers["X-Editor"] = editor[:200]
     with _client(ca, timeout=120) as c:
-        r = c.post(base + "/v1/studio/jobs/docx", headers=headers, files={
+        r = c.post(base + "/v1/studio/jobs/docx", headers=headers, params={"art_mode": art_mode(mode)}, files={
             "file": (os.path.basename(name), data,
                      "application/vnd.openxmlformats-officedocument.wordprocessingml.document")})
     _raise(r)
@@ -126,6 +136,11 @@ def restart(job_id: str, editor: str) -> dict:
 
 def resume(job_id: str, editor: str) -> dict:
     return post_json(f"/v1/studio/jobs/{_job(job_id)}/resume", {}, editor)
+
+
+def set_art_mode(job_id: str, mode: str, editor: str) -> dict:
+    """Resim seçimini sonradan değiştirir; servis yerleşimi yeniden kurar (GPU işi sürüyorsa 409)."""
+    return post_json(f"/v1/studio/jobs/{_job(job_id)}/art-mode", {"art_mode": art_mode(mode)}, editor)
 
 
 def kunye(job_id: str, fields: dict, editor: str) -> dict:
@@ -161,3 +176,78 @@ def pdf(job_id: str, kind: str) -> tuple[bytes, str]:
     if kind not in ("ic", "kapak", "baski-ic", "baski-kapak"):
         raise StudioError(404, "PDF yok.")
     return get_bytes(f"/v1/studio/jobs/{_job(job_id)}/pdf/{kind}", {"application/pdf"}, limit=400 * 1024 * 1024)
+
+
+# ------------------------------------------------------------------ sayfa planı
+# Sözleşme: docs/analiz/studyo-sayfa-plani-sozlesme.md. Köprü servisin uçlarını birebir vekil eder; 4xx
+# yanıtının gövdesi ({"code": "STALE"}, {"code": "NO_PLAN"}, 409'da kullanan sayfalar …) değiştirilmeden
+# ekrana gider, çünkü ekran çakışmayı ve boş planı koddan tanır.
+class PlanError(Exception):
+    def __init__(self, status: int, body: object):
+        super().__init__(f"plan {status}")
+        self.status = status
+        self.body = body
+
+
+def plan_id(v: str) -> str:
+    if not PLAN_ID.match(v or ""):
+        raise StudioError(404, "Kayıt bulunamadı.")
+    return v
+
+
+def _plan_raise(r: httpx.Response) -> None:
+    if 400 <= r.status_code < 500:
+        try:
+            body = r.json()
+        except ValueError:
+            body = {"detail": "İstek kabul edilmedi."}
+        raise PlanError(r.status_code, body)
+    r.raise_for_status()
+
+
+def plan_request(method: str, job_id: str, sub: str, *, body: dict | None = None, editor: str | None = None,
+                 params: dict | None = None, timeout: float = 300) -> object:
+    """`/v1/studio/jobs/{iş}/plan{sub}` çağrısı; yazanlarda X-Editor oturumdaki AD hesabıdır. Yazan uçlar
+    bütün kitabı yeniden dizdiği için süre uzun tutulur."""
+    base, headers, ca = _base()
+    if editor is not None:
+        headers["X-Editor"] = editor[:200]
+    url = f"{base}/v1/studio/jobs/{_job(job_id)}/plan{sub}"
+    with _client(ca, timeout=timeout) as c:
+        r = c.request(method, url, headers=headers, json=body, params=params)
+    _plan_raise(r)
+    return r.json()
+
+
+def plan_bytes(job_id: str, sub: str, width: int) -> tuple[bytes, str]:
+    """Plan görselleri (sayfa önizlemesi, figür/fotoğraf). Yalnız görsel türleri geçer."""
+    base, headers, ca = _base()
+    with _client(ca, timeout=120) as c:
+        r = c.get(f"{base}/v1/studio/jobs/{_job(job_id)}/plan{sub}", headers=headers, params={"w": width})
+    _raise(r)
+    mime = r.headers.get("content-type", "").split(";")[0]
+    if mime not in IMAGE_MIME:
+        raise StudioError(404, "Görsel bulunamadı.")
+    if len(r.content) > 40 * 1024 * 1024:
+        raise StudioError(413, "Görsel çok büyük.")
+    return r.content, mime
+
+
+PHOTO_MIME = {"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/octet-stream"}
+
+
+def plan_photo(job_id: str, filename: str, page: str | None, data: bytes, mime: str, editor: str) -> object:
+    """Fotoğraf yükleme: ham gövdeli PUT (Word ucunun kalıbı; multipart yok). Tür ve boyutu servis de denetler."""
+    name = os.path.basename((filename or "").replace("\\", "/")).strip()[:200] or "fotograf"
+    if mime not in PHOTO_MIME:
+        raise StudioError(400, "Yalnız JPEG, PNG, WebP ya da HEIC fotoğraf yüklenebilir.")
+    params = {"filename": name}
+    if page:
+        params["page"] = plan_id(page)
+    base, headers, ca = _base()
+    headers["X-Editor"] = editor[:200]
+    headers["Content-Type"] = mime
+    with _client(ca, timeout=600) as c:
+        r = c.put(f"{base}/v1/studio/jobs/{_job(job_id)}/plan/photos", headers=headers, params=params, content=data)
+    _plan_raise(r)
+    return r.json()
