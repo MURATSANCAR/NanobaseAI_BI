@@ -59,3 +59,19 @@ Google tarafında şifre değil servis hesabı kullanılır.
 3. AI Görünürlük (GEO) — izlenen sorular, motor matrisi, paylaşılan ses, cevap içi atıf
 4. Anahtar Kelimeler & Sıralama — pozisyon dağılımı, fırsatlar, kanibalizasyon
 5. Bağlantılar — T-soft/Google/Bing/Yandex/AI anahtarları, onay kuralları, denetim kaydı
+
+## BEKLEYEN: CRM'e yazma (müşteriden istenecek — 2026-09-25 kullanıcı kararı)
+
+Akış: T-soft taranır → eksikler bulunur → onaylanan düzeltme **CRM'deki kitap kaydına** yazılır → CRM kendi aktarımıyla
+T-soft'a gönderir → sonraki taramada T-soft'ta göründüğü doğrulanır. Şimdilik bekliyor; müşteriden istenecekler:
+
+1. Dynamics CRM Web API adresi (on-prem, `.28` CRMDATBASE'in önündeki uygulama sunucusu) ve **kitap kaydına yazma
+   yetkili servis hesabı**. SQL'e doğrudan yazılmaz (CRM eklentilerini ve kayıt geçmişini atlar).
+2. SEO başlığı / meta açıklama için karar: CRM `new_kitap`'a iki yeni alan + CRM→T-soft aktarımına eklenmesi (öneri),
+   ya da bu ikisinin T-soft'a doğrudan yazılması.
+3. CRM→T-soft aktarımını kim yönetiyor, hangi sıklıkla çalışıyor.
+
+Veriyle doğrulanan eşleme (ISBN ile 5.466/5.656 aktif ürün): T-soft `Details` = CRM `new_kitapBase.new_ozet`
+(5.139/5.214 metin %90+ aynı), `SearchKeywords` = `new_AnahtarKelimeler` (2.351/2.353 aynı). SEO başlığı/meta CRM'de
+yok; T-soft şablonundan (ad + kategori + yayınevi + yazar), ikisi birebir aynı. Yazar T-soft'ta `Model` alanında.
+Bu karar gelene kadar gönderim T-soft'a doğrudan yapılır ve `Details`/`SearchKeywords` için CRM aktarımıyla ezilme riski vardır.
