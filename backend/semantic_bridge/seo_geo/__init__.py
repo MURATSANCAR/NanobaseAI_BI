@@ -59,8 +59,13 @@ class SeoGeo:
 
     # ---------------------------------------------------------------- ortak
     def engine(self) -> sa.engine.Engine:
+        from semantic_bridge import admin as admin_mod
+
         eng = self.runtime().store.engine
         ensure(eng)
+        # Ayar okuyucu (T-soft kullanıcısı, Google anahtarı) veritabanına bağlanmadan `conf` yalnız ortam
+        # dosyasını görür; köprü yeniden başlayıp Yönetim ekranı henüz açılmadıysa eşitleme "tanımlı değil" derdi.
+        admin_mod.ensure(eng)
         return eng
 
     def tenant(self) -> str:
@@ -270,6 +275,7 @@ def register(app, runtime, authorize, session_user):
 
     def gate(request: Request) -> str:
         authorize(request)
+        seo.engine()
         return session_user(request)
 
     def approver(request: Request) -> str:
@@ -489,6 +495,7 @@ def register(app, runtime, authorize, session_user):
     def seo_run_due(request: Request) -> dict[str, Any]:
         """Gece zamanlayıcısı: T-soft eşitlemesi (arka planda) ve Search Console okuması. Bağlı olmayan atlanır."""
         authorize(request)
+        seo.engine()
         out: dict[str, Any] = {}
         out["tsoft"] = seo.start_sync("zamanlayıcı") if connections.tsoft.configured() else "tanımlı değil"
         if connections.service_account_email():

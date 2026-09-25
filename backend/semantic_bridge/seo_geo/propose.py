@@ -102,12 +102,20 @@ def suggest(llm: Any, p: dict[str, Any], lim: dict[str, int]) -> dict[str, str]:
     if wrong:
         messages += [{"role": "assistant", "content": raw},
                      {"role": "user", "content": "Düzelt: " + "; ".join(wrong) + ". Aynı JSON biçiminde yalnız düzeltilmiş hâli döndür."}]
-        try:
-            fixed = parse(llm.chat(messages, max_tokens=3000, temperature=0.2))
-            if len(violations(fixed, lim)) < len(wrong):
-                fields = fixed
-        except ValueError:
-            pass
+        # En çok iki düzeltme turu; daha iyi olan (daha az ihlal) tutulur.
+        for _ in range(2):
+            try:
+                reply = llm.chat(messages, max_tokens=3000, temperature=0.2)
+                fixed = parse(reply)
+            except ValueError:
+                break
+            now = violations(fixed, lim)
+            if len(now) < len(wrong):
+                fields, wrong = fixed, now
+            if not wrong:
+                break
+            messages += [{"role": "assistant", "content": reply},
+                         {"role": "user", "content": "Hâlâ yanlış: " + "; ".join(now) + ". Karakterleri say, yalnız JSON döndür."}]
     return fields
 
 
