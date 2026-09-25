@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { BookOpen, FileUp, Play, Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, bookCatalogApi, bookCoverUrl, studioApi } from '../../engine';
+import { ENGINE_ENABLED, bookCatalogApi, bookCoverUrl, studioApi, type StudioArtMode } from '../../engine';
+import { ART_MODES, ArtModePicker, artModeDuration } from './ArtMode';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { StepIcon, ago, ghostBtn, gradientBtn } from './shared';
@@ -17,8 +18,9 @@ export default function StudioHome() {
   const file = useRef<HTMLInputElement>(null);
   const catalog = useQuery({ queryKey: ['editorial', 'catalog'], queryFn: bookCatalogApi.list, enabled: ENGINE_ENABLED });
   const jobs = useQuery({ queryKey: ['studio', 'jobs'], queryFn: studioApi.list, enabled: ENGINE_ENABLED, refetchInterval: 8000 });
-  const start = useMutation({ mutationFn: studioApi.create, onSuccess: (r) => nav(`/kitap-tasarim/${r.id}`) });
-  const upload = useMutation({ mutationFn: studioApi.upload, onSuccess: (r) => nav(`/kitap-tasarim/${r.id}`) });
+  const [artMode, setArtMode] = useState<StudioArtMode>('auto');
+  const start = useMutation({ mutationFn: (id: string) => studioApi.create(id, artMode), onSuccess: (r) => nav(`/kitap-tasarim/${r.id}`) });
+  const upload = useMutation({ mutationFn: (f: File) => studioApi.upload(f, artMode), onSuccess: (r) => nav(`/kitap-tasarim/${r.id}`) });
 
   const books = useMemo(() => {
     const key = q.trim().toLocaleLowerCase('tr');
@@ -50,7 +52,11 @@ export default function StudioHome() {
             <input ref={file} type="file" accept=".docx" className="hidden"
               onChange={(e) => { const f = e.target.files?.[0]; if (f) upload.mutate(f); e.target.value = ''; }} />
           </div>
-          <p className="mt-1 text-[12px] text-canvas-muted">Ya da editörün okuduğu bir kitabı seçin; okunmuş metin ve analiz yeniden kullanılır.</p>
+          <div className="mt-2">
+            <div className="mb-1.5 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Resim kullanımı</div>
+            <ArtModePicker value={artMode} onChange={setArtMode} disabled={start.isPending || upload.isPending} />
+          </div>
+          <p className="mt-3 text-[12px] text-canvas-muted">Word dosyası yükleyin ya da editörün okuduğu bir kitabı seçin; okunmuş metin ve analiz yeniden kullanılır.</p>
           <label className="mt-3 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/80 px-3 py-2">
             <Search className="h-4 w-4 text-canvas-muted" aria-hidden />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Kitap adı" aria-label="Kitap ara"
@@ -64,7 +70,7 @@ export default function StudioHome() {
                   <div>
                     <div className="text-[13.5px] font-extrabold">{pick.title}</div>
                     <p className="mt-0.5 text-[12px] text-canvas-muted">
-                      Sayfa yerleşimi, 30 civarı resim, kapak ve dizgi yaklaşık 40 dakika sürer; bu sırada resim modeli GPU'yu kullanır.
+                      Resim kullanımı: {ART_MODES.find((m) => m.key === artMode)?.title}. {artModeDuration(artMode)}
                       {same.length > 0 && ` Bu kitabın ${same.length} tasarımı zaten var.`}
                     </p>
                     {same.length > 0 && (

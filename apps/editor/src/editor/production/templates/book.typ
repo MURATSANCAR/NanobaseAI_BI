@@ -1,5 +1,7 @@
 // İç sayfa şablonu. Veri: data.json (typeset.py yazar). Ölçüler taşma paylı sayfa üzerinden:
 // sayfa = kesim + 2×taşma; resim bandı taşma payına kadar uzanır, yazı güvenli alanın içinde kalır.
+// Ön sayfalar front.typ'de (plan.typ de aynısını kullanır).
+#import "front.typ": mark, quiet-page, front-pages
 #let d = json(sys.inputs.at("data", default: "data.json"))
 #let s = d.spec
 #let L = d.layout
@@ -10,6 +12,9 @@
 #let accent = rgb(L.accent)
 #let art = d.art
 #let body-size = L.body_size * 1pt
+// Sayfa planı dondurulurken (plan.freeze) sayfa sınırından bölünen blokların kelimeleri tek tek işaretlenir:
+// hangi kelimenin hangi sayfada kaldığı buradan okunur. Normal dizgide boş.
+#let wordmarks = d.at("wordmarks", default: ())
 
 #set document(title: d.book.title, author: d.book.author)
 #set text(font: s.body_font, size: body-size, lang: "tr", hyphenate: s.hyphenate,
@@ -20,8 +25,6 @@
 
 #let placeholder(w, h, label) = rect(width: w, height: h, fill: accent.lighten(82%), stroke: none,
   align(center + horizon, text(font: s.heading_font, size: 13pt, fill: accent.darken(10%), label)))
-
-#let mark(v) = context metadata(v + (page: here().page()))
 
 #let flow-bg = context {
   let n = str(here().page())
@@ -42,44 +45,21 @@
   else { placeholder(W, H, [Tam sayfa resim · s. #n]) }
 })[#mark((kind: "full", key: key))]
 
-#let quiet(body) = page(background: none, footer: none,
-  margin: (x: b + s.safe * 1mm + 6mm, top: b + 28mm, bottom: b + 22mm), body)
+#let quiet(body) = quiet-page(b, s, body)
 
 // ---------------------------------------------------------------- ön sayfalar
-#quiet[
-  #mark((kind: "front", key: "ic_kapak"))
-  #align(center)[
-    #v(18mm)
-    #text(font: s.heading_font, weight: 800, size: 30pt, fill: accent, hyphenate: false, d.book.title)
-    #v(10mm)
-    #text(size: 15pt, d.book.author)
-  ]
-  #place(bottom + center, text(size: 11pt, tracking: 1.5pt, fill: luma(90), upper(d.book.publisher)))
-]
-#quiet[
-  #mark((kind: "front", key: "kunye"))
-  #set text(size: 8.5pt)
-  #set par(leading: 0.5em, spacing: 0.9em, justify: false)
-  #place(bottom + left, block(width: 100%)[
-    #for row in d.front.kunye [
-      #if row.at(0) == "" [#v(2mm)] else [*#row.at(0)* #h(1mm) #row.at(1) \ ]
-    ]
-  ])
-]
-#quiet[
-  #mark((kind: "front", key: "yazar_cizer"))
-  #set text(size: 11pt)
-  #set par(leading: 0.55em, spacing: 1em, justify: false)
-  #for bio in d.front.bios [
-    #text(font: s.heading_font, weight: 700, size: 15pt, fill: accent, bio.name)
-    #v(1mm)
-    #bio.text
-    #v(8mm)
-  ]
-]
+#front-pages(d, accent, b)
 #if L.opening_full { full-art("acilis") } else { quiet[#mark((kind: "front", key: "bos"))] }
 
 // ---------------------------------------------------------------- öykü
+#let words(blk) = {
+  if blk.id in wordmarks {
+    for (i, w) in blk.text.split(" ").enumerate() {
+      if i > 0 [ ]
+      [#w#mark((kind: "w", id: blk.id, i: i))]
+    }
+  } else { blk.text }
+}
 #for (ci, ch) in d.chapters.enumerate() {
   for k in range(L.pads.at(str(ci), default: 0)) { full-art("oncesi-" + str(ci) + "-" + str(k)) }
   if L.at("chapter_art", default: false) and ci > 0 { full-art("bolum-" + str(ci)) }
@@ -91,9 +71,9 @@
     ]
   }
   for blk in ch.blocks {
-    let body = if blk.kind == "dialogue" [– #blk.text]
-      else if blk.kind == "sound" { text(font: s.heading_font, weight: 800, size: 1.35em, fill: accent, blk.text) }
-      else [#blk.text]
+    let body = if blk.kind == "dialogue" [– #words(blk)]
+      else if blk.kind == "sound" { text(font: s.heading_font, weight: 800, size: 1.35em, fill: accent, words(blk)) }
+      else [#words(blk)]
     par[#mark((kind: "s", id: blk.id))#body#mark((kind: "e", id: blk.id))]
   }
 }

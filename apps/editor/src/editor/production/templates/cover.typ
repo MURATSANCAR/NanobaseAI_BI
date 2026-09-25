@@ -13,7 +13,32 @@
 #set text(font: d.body_font, lang: "tr", hyphenate: false)
 
 // ---------------------------------------------------------------- ön kapak
-#place(top + left, dx: front-x, image(d.front_image, width: tw + b, height: H, fit: "cover"))
+#if d.front_image != none {
+  place(top + left, dx: front-x, image(d.front_image, width: tw + b, height: H, fit: "cover"))
+} else {
+  // Tipografik kapak (resimsiz kitap): düz zemin, açık tonda daire deseni, başlık ve yazar ortada.
+  let ft = d.front_type
+  let bg = rgb(ft.bg)
+  let ink = rgb(ft.ink)
+  place(top + left, dx: front-x, box(width: tw + b, height: H, clip: true, {
+    place(top + left, rect(width: tw + b, height: H, fill: bg, stroke: none))
+    for c in ft.dots {
+      place(top + left, dx: (c.at(0) - c.at(2)) * 1mm, dy: (c.at(1) - c.at(2)) * 1mm,
+        circle(radius: c.at(2) * 1mm, fill: bg.lighten(9%), stroke: none))
+    }
+  }))
+  let inner = tw - 2 * d.safe * 1mm
+  place(top + left, dx: front-x + d.safe * 1mm, dy: b + th * 0.22, box(width: inner, align(center)[
+    #set par(leading: 0.45em, justify: false)
+    #text(font: d.heading_font, weight: 800, size: ft.title_size * 1pt, fill: ink, d.title)
+    #v(8mm)
+    #box(width: 18mm, line(length: 100%, stroke: 1.2pt + ink))
+    #v(6mm)
+    #text(font: d.heading_font, weight: 600, size: ft.author_size * 1pt, fill: ink, d.author)
+  ]))
+  place(top + left, dx: front-x + d.safe * 1mm, dy: b + th - d.safe * 1mm - 8mm, box(width: inner,
+    align(center, text(size: 10pt, weight: "bold", tracking: 1.5pt, fill: ink, upper(d.publisher)))))
+}
 #for blk in d.front_text {
   for (i, ln) in blk.lines.enumerate() {
     place(top + left, dx: front-x, dy: blk.top * 1mm + i * blk.step * 1mm,
