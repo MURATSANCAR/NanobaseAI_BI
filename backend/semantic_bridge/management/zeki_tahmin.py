@@ -89,6 +89,11 @@ def last_full_month(son_fatura: date | None, today: date) -> int:
     return min(m, cap)
 
 
+class NotReady(RuntimeError):
+    """Bağımlı rapor (Baskı Öneri) ilk okumasını henüz bitirmedi: hata değil, bekleme. Zamanlayıcı kısa aralıkla dener."""
+    waiting = True
+
+
 def pool_codes(inputs: dict | None) -> list[str]:
     """Baskı Öneri'nin Baskı Tekrar ve Yeni Kitap sekmelerindeki bütün kitaplar."""
     data = (inputs or {}).get("baski-oneri") or {}
@@ -146,7 +151,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
     ready()
     codes = pool_codes(inputs)
     if not codes:
-        raise RuntimeError("Baskı Öneri verisi henüz hazır değil; tahmin onun kitap listesiyle kurulur.")
+        raise NotReady("Baskı Öneri'nin ilk okuması bekleniyor; tahmin onun kitap listesiyle kurulur.")
     res: dict[str, dict] = {}
 
     def rows(source_id: str, params: dict | None = None) -> list[dict]:

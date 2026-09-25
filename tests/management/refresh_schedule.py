@@ -37,6 +37,12 @@ ok("gecelik rapor uzun sürüp hata verdiyse bitişten en az 1 dk sonra",
 ok("eski başarı + yeni hata: hata sayılır",
    _next_due({"startedAt": T + 90000, "updatedAt": T, "failedAt": T + 90100}, 86400) == T + 91800)
 
+ok("bağımlı rapor bekleniyorsa gecelik rapor 1 dk sonra yeniden dener (30 dk değil)",
+   _next_due({"startedAt": T, "failedAt": T - 500, "waitingAt": T + 2}, 86400) == T + 2 + MIN_GAP_SECONDS)
+ok("bekleme sonrası başarı: normal aralığa döner",
+   _next_due({"startedAt": T + 100, "updatedAt": T + 900, "waitingAt": T + 2}, 86400) == T + 100 + 86400)
+ok("bekleme sonrası hata: hata aralığı (30 dk)",
+   _next_due({"startedAt": T + 100, "failedAt": T + 200, "waitingAt": T + 2}, 86400) == T + 1900)
 ok("hata metni 5 dk'lık raporda 'Beş dakikada bir'", retry_text(type("R", (), {})) == "Beş dakikada bir yeniden denenir.")
 ok("hata metni gecelik raporda gerçek süreyi söyler (30 dk)",
    retry_text(type("R", (), {"REFRESH_SECONDS": 86400})) == "30 dakikada bir yeniden denenir.")

@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (14:10) — VM → GPU tahmin: TİMAŞ çıkış IP'si değişti; açılışta tahmin 30 dk beklemiyor
+
+- VPN açıldı (kullanıcı; canlı Logo .25 erişimi şimdilik olmayacak, .155 kopyasıyla devam). VM `.env`'ine `FORECAST_API_BASE`, `FORECAST_EXTRA_HEADER` (kart başlığından kopya, ekrana yazılmadı), `FORECAST_CA_FILE=/app/ad/gpu-editor-ca.pem` eklendi — GPU sertifikası kendinden imzalı, CA'sız istek SSL hatası verir.
+- VM'e **dar kapsam** kurulum: yalnız `zeki_tahmin.py` (md5 `59e3bea0` = main = test sunucusu), köprü imajı yeniden derlendi. Tam `main` kurulmadı: 920b6a2f sonrası `main`'de test sunucusunda olmayan editör/stüdyo işleri var, Kitap Tasarım Stüdyosu VM'e gitmiyor (lisans bekliyor) — başka oturumların işi.
+- 11:30'da VM'den GPU yolu tam doğrulandı (başlıksız 403, yanlış yöntem 405, sağlık ve gerçek tahmin 200, sha `a7592b0a`). 13:51'de köprünün isteği **403**: GPU nginx günlüğünde kaynak `212.156.126.250` — TİMAŞ'ın internet çıkışı 85.105.155.33'ten ikinci hatta (WatchGuard, VPN'in de bağlandığı adres) geçmiş; izin listesi yalnız 85.105.0.0/16. Kitap kartları ve stüdyo yolları da aynı listede.
+- `deploy/tt-gpu/editor-ingress/allow-source-ip.py`: müşteri ağına izin veren her satıra tek adres (/32) ekler, idempotent, `nginx -t` geçmezse geri döner. GPU nginx'i ortak kaynak olduğu için kullanıcı koşturacak.
+- **Açılış yarışı:** konteyner yenilenince tahmin raporu Baskı Öneri'den önce başlıyor, "veri hazır değil" hatasıyla 30 dk bekliyordu. Artık `zeki_tahmin.NotReady` (waiting) hata değil bekleme olarak kaydedilir (`waitingAt`), zamanlayıcı 60 sn sonra dener; sekme "hazırlanıyor" der. Test `report_waiting.py` 4/4, `refresh_schedule` 16/16.
+
 ## 2026-09-25 (öğleden sonra) — Stüdyo işleri Temporal'a taşındı
 
 - **Neden:** hat ve yeniden üretim stüdyo API'sinin içinde asyncio göreviydi; kurulum için yapılan yeniden başlatma işi kesiyordu, sıra bellekteydi.

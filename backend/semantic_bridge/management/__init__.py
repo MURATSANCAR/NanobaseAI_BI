@@ -61,10 +61,13 @@ def retry_text(report) -> str:
 
 def _next_due(snap: dict, interval: int | None = None) -> float | None:
     """Bir sonraki okumanın zamanı; hiç okunmadıysa None (hemen okunur)."""
-    ended = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0)
+    waiting = snap.get("waitingAt") or 0
+    ended = max(snap.get("updatedAt") or 0, snap.get("failedAt") or 0, waiting)
     started = snap.get("startedAt") or ended
     if not ended:
         return None
+    if waiting >= ended:  # bağımlı rapor bekleniyor (ör. açılışta Baskı Öneri): kısa aralıkla yeniden dene
+        return ended + MIN_GAP_SECONDS
     interval = interval or REFRESH_SECONDS
     if (snap.get("failedAt") or 0) > (snap.get("updatedAt") or 0):
         interval = min(interval, FAIL_RETRY_SECONDS)
@@ -271,9 +274,13 @@ class Reports:
                 _save(path, {"data": data, "startedAt": started, "updatedAt": time.time(),
                              "durationMs": int((time.time() - started) * 1000), "error": None})
             except Exception as exc:  # noqa: BLE001 — son başarılı sonuç korunur
+                if getattr(exc, "waiting", False):  # hata değil: bağımlı veri hazır olunca yeniden denenir
+                    log.info("management report %s waiting: %s", report_id, exc)
+                    _save(path, {**previous, "waiting": str(exc), "startedAt": started, "waitingAt": time.time()})
+                    return
                 log.warning("management report %s refresh failed: %s", report_id, exc)
                 _save(path, {**previous, "error": f"Veriler yenilenemedi: {str(exc)[:300]} {retry_text(report)}",
-                             "startedAt": started, "failedAt": time.time()})
+                             "startedAt": started, "failedAt": time.time(), "waiting": None, "waitingAt": None})
 
     def start_refresh(self, report_id: str) -> bool:
         with self._guard:
