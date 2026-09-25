@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (23:40) — Kelime haritası Son Okuma ekranında; gerçek kitapta iki düzeltme; test sunucusunda canlı
+
+- **Ekran:** Son Okuma (M5) → «Kelime haritası» paneli (`WordMapPanel.tsx`): farklı kök, içerik kökü, bir kez geçen, çok anlamlı kök, deyim, çeşitlilik puanı; sekmeler «Bütün kökler» (biçimler, sayfalar, anlamlar, deyimler; işlev sözcükleri isteğe bağlı), «Çok anlamlılar», «Farklı anlamda yakın geçiş» (tekrar sayılmayan «göz» örnekleri), «Tanınmayan biçimler»; arama, sıklık/A→Z, «devamını göster» (kesme yok). Köprü `GET /api/v1/editorial/proofing/word-map?bookId=` → kart servisi.
+- **Gerçek kitapta bulunan iki sınıf hata** (Dilek Ağacı, `--dry`): (1) kök seçimi «en uzun gövde» gerçek Zemberek çözümlemesinde «göze»yi pınar maddesine, «koşa»yı sıfata götürüyordu → en az türetme (çekim grubu sınırı) + kitabın kullanımı + kısa gövde; (2) kapalı sınıf önceliği yoktu («de» → demek, «ile» → il, «için» → iç; zamirler içerik) → biçim işlev sözcüğünün yalın hâliyse o okuma. Ayrıca tamamı büyük harf başlık/kapak tekrar adayı değil, yargı sorusu kitap sıklığını görür. 154 → 122 bulgu. Testler 21/21 (sunucuda, imaj içinde).
+- **Kurulum (test):** GPU'da `git archive main` → `/data/editor/releases/1c78bd8d`, imaj `editor-py:0.15.9-1c78bd8d`; yalnız `editor-cards` bu imajla yeniden kuruldu (`._*` 0, `EDITOR_CODE_VERSION` doğru). worker/mcp/gateway'e dokunulmadı (başka oturumların kuyruğu ve stüdyo işi sürüyor); bu yüzden yeni okunan kitaplarda denetim otomatik koşmaz, editör imajı tümüyle yenilenince koşar. Test sunucusu: köprü `app.py`, `editorial_cards.py` + arayüz dört dosyası (sunucuda eski main ile aynıydı), derleme `index-BLs466km.js`, köprü yeniden başlatıldı.
+- **Doğrulama:** geçici timasai oturumuyla portal: Dilek Ağacı `proofing` 122 word_variety bulgusu; `word-map` ready, 866 kök, 155 çok anlamlı, 51 deyim, 12 farklı anlamda yakın geçiş; oturumsuz 401; oturum silindi. Görsel kontrol yapılamadı (HttpOnly çerez tarayıcı panesine konamaz).
+- **Sürüyor:** okunmuş öbür 15 kitap tek seferlik kapta sırayla (`wv-all-books` birimi, günlük `/data/editor/logs/wv-all-books.log`).
+- **Müşteri VM'i: kurulmadı.** main'de başka oturumların VM'e henüz gitmemiş SEO & GEO işleri var; `git archive main` onları da götürür — kullanıcı kararı bekleniyor.
+
 ## 2026-09-26 (01:40) — SEO & GEO: çok motorlu yapay zekâ görünürlük ölçümü (Gemini ücretsiz; ChatGPT/Perplexity/Claude anahtarla)
 
 - **`seo_geo/geo.py`:** izlenen sorular resmî API'lerle sorulur — Gemini `generateContent` + `google_search` (ücretsiz katman), OpenAI Responses + `web_search`, Perplexity Sonar, Anthropic Messages + web araması. Anahtarı olmayan motor ölçülmez, sonuç uydurulmaz; tüketici arayüzü kazınmaz. Kullanıcı ChatGPT ve diğerlerinin de sürece katılmasını istedi; ücretsiz API'leri olmadığı ekranda ve Yönetim'de yazar.

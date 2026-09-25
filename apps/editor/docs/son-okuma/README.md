@@ -22,7 +22,7 @@ bazı eşikler ölçülmüş, kesinlik yok; **ölçüm bekliyor** = gerçek kita
 | `spelling` | Yazım ve noktalama | kurallar + sözlük + model | [spelling.md](spelling.md) | kısmen (boşluk/hece eşikleri ölçüldü; kesinlik bekliyor) |
 | `text_contradictions` | Metin içi çelişki | model öneri + deterministik doğrulama + model yargı | [text_contradictions.md](text_contradictions.md) | kısmen (window okuyucusu ölçülüp kapatıldı; kesinlik bekliyor) |
 | `timeline` | Zaman çizelgesi | defter + model yargı | [timeline.md](timeline.md) | ölçüm bekliyor |
-| `word_variety` | Kelime çeşitliliği ve yakın tekrar | Zemberek kök + model anlam ayrımı + model yargı; kelime haritası | [word_variety.md](word_variety.md) | ölçüm bekliyor |
+| `word_variety` | Kelime çeşitliliği ve yakın tekrar | Zemberek kök + model anlam ayrımı + model yargı; kelime haritası | [word_variety.md](word_variety.md) | kısmen (Dilek Ağacı: 122 bulgu, 866 kök; kesinlik bekliyor) |
 
 İlk gerçek koşu (2026-09-22, «Levent Dünya Harikalarının Peşinde», nesil `60e5d717`; insan
 doğrulaması yok, yalnız sayı): layout 78 (66 WARN), spelling 21 WARN, hyphenation 20 INFO,
