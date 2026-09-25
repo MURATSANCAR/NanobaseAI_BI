@@ -465,8 +465,11 @@ class SeoGeo:
                     queue.append((pid, f"{site}/{str(p['SeoLink']).strip('/')}", _num(p.get("CommentCount")),
                                   schema.has_faq(rules.text_of(p.get("Details")))))
             self.crawl["queue"] = len(queue)
+            if "/rest" in site.lower():
+                raise RuntimeError(f"Mağaza adresi yanlış görünüyor ({site}); Yönetim → SEO & GEO → Mağaza adresi.")
             fetcher = schema.Fetcher(site)
             org_saved = False
+            not_html = 0
             for pid, url, comments, faq in queue:
                 if _t.monotonic() > deadline:
                     break
@@ -476,6 +479,11 @@ class SeoGeo:
                     code, html = fetcher.get(url)
                 except Exception:  # noqa: BLE001 — ağ hatası sayfanın sorunu sayılır, tur sürer
                     code, html = 0, ""
+                if code == -1:
+                    not_html += 1
+                    if not_html >= 5 and self.crawl["done"] < 5:
+                        raise RuntimeError(f"İlk sayfalar HTML dönmüyor; mağaza adresi ({site}) yanlış olabilir.")
+                    continue
                 if code == 200:
                     page = schema.parse(html)
                     found = schema.audit(page, comments, faq)

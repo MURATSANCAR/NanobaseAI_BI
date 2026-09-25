@@ -524,6 +524,9 @@ def is_admin(user: Optional[str]) -> bool:
 def _validate(spec: dict[str, Any], raw: Any) -> str:
     t = spec["type"]
     v = "" if raw is None else str(raw).strip()
+    if spec["key"] == "SEO_SITE_URL" and v and ("/rest" in v.lower() or not v.lower().startswith(("http://", "https://"))):
+        # 2026-09-25: T-soft REST adresi bu kutuya girilmiş, şema taraması ve bağlantılar API adresine gitmişti.
+        raise AdminError("«Mağaza adresi» sitenin adresi olmalı (örn. https://timas.com.tr); T-soft REST adresi üstteki kutuya girilir.")
     if t == "bool":
         return "1" if v in ("1", "true", "True", "on", "evet") else "0"
     if t == "int":

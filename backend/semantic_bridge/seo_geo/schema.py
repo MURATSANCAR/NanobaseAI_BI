@@ -137,6 +137,8 @@ class Fetcher:
 
     def get(self, url: str) -> tuple[int, str]:
         r = self.client.get(url)
+        if r.status_code == 200 and "html" not in r.headers.get("content-type", "").lower():
+            return -1, ""  # HTML olmayan cevap: adres bir sayfa değil (ör. yanlışlıkla API adresi)
         return r.status_code, r.text if r.status_code == 200 else ""
 
     def close(self) -> None:
