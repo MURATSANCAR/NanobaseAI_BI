@@ -50,13 +50,13 @@ class CardError(Exception):
 
 def _cid(v: str) -> str:
     if not CARD.match(v or ""):
-        raise editorial_studio.StudioError(404, "Kart bulunamadı.")
+        raise HTTPException(404, "Kart bulunamadı.")
     return v
 
 
 def _rid(v: str) -> str:
     if not REF.match(v or ""):
-        raise editorial_studio.StudioError(404, "Görsel bulunamadı.")
+        raise HTTPException(404, "Görsel bulunamadı.")
     return v
 
 

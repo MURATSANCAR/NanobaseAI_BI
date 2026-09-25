@@ -340,3 +340,28 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
 9. Açık: geri al/yinele sayfa ekleme/silmeyi kapsamaz (sürüm geçmişi kapsar); tuvale bırakılan fotoğraf sunucunun
    varsayılan kutusuna düşer; ileride toplu `PUT plan/pages`. Profilde gerekçe `illustration_source`, kaynak `art_source`.
 10. HEIC/HEIF kabul edilir (`pillow-heif`, JPEG'e dönüşür); imaj yeniden derlenene kadar canlıda açık hata verir.
+
+## G: Seri karakter kartı (2026-09-25)
+Kullanıcı sözü: "Aynı karakter serinin her kitabında aynı görünsün diye karakterin görünüşü ve renkleri bir kez kaydedilir,
+her görselde kullanılır." Motor `production/characters.py`, uçlar `production/api_characters.py`, köprü
+`editorial_studio_characters.py`, ekran `studio/characters/` (stüdyoda «Karakterler» düğmesi → yan panel).
+- **Dizi kimliği** `series_canon` kurallarıyla: editörün iş için yazdığı ad (`seri.json`) > `book.universe` > künye «Dizi»
+  (elle / okunan) ve kitap kaydı SERIES (`series_names`; dizi ismi olmayan yayınevi etiketi dizi değildir); `same_series`
+  eşleşen dizi klasörü yeniden kullanılır. Bulunamazsa uçlar 409 `NO_SERIES`, ekran dizi adını sorar.
+- **Depo** `<storage>/series/<dizi>/characters.json` (+`rev`, `gecmis/<rev>.json`, `ref/r_….png`); kart işe kopyalanmaz.
+  Kart: `name, aliases, kind, age, species_en, look_tr, look_en, colors{hair,fur,eyes,skin,outfit,accent}, palette_color,
+  outfits[{name, look_tr, look_en, color, default}], refs[{id, primary, source}], status draft|approved, version, en_stale`.
+  İçerik değişen kart taslağa döner; resimlerde yalnız ONAYLI kart kullanılır. `palette_color` «Bu kitaba uygula» ile
+  plan paletine (`palette.characters`) yazılır.
+- **Resim hattı** (`images.Painter`): kartlı karakterin istem satırı kartın İngilizce tarifi + sabit renkler (ad + hex) +
+  kıyafet; referansı kartın birincil görseli (düzenleme ucu referans görsel alıyor). Üretilen her sayfa resmi
+  `karakter-denetimi.json`'a «bekliyor» yazılır, `CharacterCheck` iş akışı kuyruğa girer.
+- **Denetim**: görsel okuyucu bütün bedenin kutusunu bulur, kesit görsel kimlik servisinde kartın referanslarıyla
+  karşılaştırılır (ortanca uzaklık, eşik `ccip_same_max`). Uymayan resim yeni tohumla yeniden çizilir; en çok
+  `STUDIO_CHARACTER_RETRIES` kez (yönetim ekranı, grup `studio`, varsayılan 3; köprü değeri `PUT /v1/studio/character-settings`
+  ile stüdyoya iletir). Aşılınca en yakın sürüm seçili kalır, panelde «karakter kartına uymuyor». Düzeltme (fix) sürümü ve
+  editörün onayladığı/başka sürüm seçtiği resim yeniden çizilmez.
+- **Uçlar** `/v1/studio/jobs/{job}/character-cards` altında: `GET` · `PUT series` · `POST suggest|check|cards` ·
+  `PUT|DELETE cards/{c_…}` · `POST cards/{c_…}/approve|translate|palette` · `PUT|POST cards/{c_…}/refs` ·
+  `GET|DELETE cards/{c_…}/refs/{r_…}` · `POST …/refs/{r_…}/primary` · `GET history`; `GET|PUT /v1/studio/character-settings`.
+  Köprü aynı yolları `/api/v1/editorial/studio/…` altında vekil eder (4xx gövdesi aynen; yazanlar `studio_character` denetim kaydı).

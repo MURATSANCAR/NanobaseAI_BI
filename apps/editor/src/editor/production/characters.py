@@ -1168,14 +1168,15 @@ async def cards_activity(job: str, op: str, names: list[str], cid: str, by: str)
     """Öneri (sanat planından taslak kartlar) ya da çeviri (Türkçe → modele giden tarif); yalnız ana model."""
     from . import flow, studio
     d = studio.job_dir(job)
-    _task(d, **{op: {"status": "running", "workflow": activity.info().workflow_id}})
+    tag = {"workflow": activity.info().workflow_id, **({"card": cid} if cid else {})}
+    _task(d, **{op: {"status": "running", **tag}})
     try:
         out = await flow._beating(suggest(d, names, by) if op == "suggest" else translate(d, cid, by))
     except Exception as e:
         final = flow._last(CHECK_RETRY) or isinstance(e, (ValueError, KeyError, FileNotFoundError, NoSeries))
-        _task(d, **{op: {"status": "fail" if final else "running", "error": str(e)[:300]}})
+        _task(d, **{op: {"status": "fail" if final else "running", "error": str(e)[:300], **tag}})
         raise
-    _task(d, **{op: {"status": "done", "result": out}})
+    _task(d, **{op: {"status": "done", "result": out, **tag}})
     return out
 
 

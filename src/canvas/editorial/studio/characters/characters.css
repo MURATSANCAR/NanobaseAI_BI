@@ -1,0 +1,35 @@
+/* «Karakterler» paneli: base-ui Drawer. Açılış/kapanış ara sıra olur → standart çekmece hareketi (iOS benzeri
+   eğri, 280 ms açılış, kapanış daha kısa ve kaydırma gücüne göre). Yalnız transform ve opacity. Telefonda alttan,
+   masaüstünde sağ altta yüzen panel; ikisi de aynı yoldan (aşağı) girer ve çıkar. Azaltılmış harekette yalnız
+   saydamlık. Liste ↔ kart düzenleyici geçişi hareketsizdir (sık yapılan gezinme). */
+.cc-scrim {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  position: fixed; inset: 0; z-index: 80; background: #1b1f2a;
+  opacity: calc(0.3 * (1 - var(--drawer-swipe-progress, 0)));
+  transition: opacity 280ms var(--ease-drawer);
+}
+.cc-scrim[data-starting-style], .cc-scrim[data-ending-style] { opacity: 0 }
+.cc-scrim[data-swiping] { transition-duration: 0ms }
+.cc-scrim[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * 240ms) }
+
+.cc-viewport { position: fixed; inset: 0; z-index: 81; display: flex; align-items: flex-end; justify-content: center }
+.cc-sheet {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  display: flex; flex-direction: column; width: 100%; max-width: 100vw; height: 92dvh; outline: none;
+  border-radius: 22px 22px 0 0; box-shadow: 0 -12px 48px #2a1f4a2e;
+  transform: translateY(var(--drawer-swipe-movement-y, 0px));
+  transition: transform 280ms var(--ease-drawer);
+  will-change: transform;
+}
+.cc-sheet[data-starting-style], .cc-sheet[data-ending-style] { transform: translateY(100%) }
+.cc-sheet[data-ending-style] { transition-duration: calc(var(--drawer-swipe-strength, 1) * 240ms) }
+.cc-sheet[data-swiping] { transition-duration: 0ms; user-select: none }
+@media (min-width: 640px) {
+  .cc-viewport { justify-content: flex-end; padding: 16px }
+  .cc-sheet { width: 520px; height: calc(100dvh - 32px); border-radius: 22px }
+  .cc-sheet[data-starting-style], .cc-sheet[data-ending-style] { transform: translateY(calc(100% + 16px)) }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-sheet { transition: opacity 180ms ease }
+  .cc-sheet[data-starting-style], .cc-sheet[data-ending-style] { transform: translateY(var(--drawer-swipe-movement-y, 0px)); opacity: 0 }
+}
