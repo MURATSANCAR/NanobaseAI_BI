@@ -206,6 +206,17 @@ add-studio-routes.py`) yeni yolları ve `PUT`/`DELETE` yöntemlerini tanır.
   ve güvenli alanın dışına taşmaz.
 - Resim istemine çocuk profilinde balon için boş alan (üst bölgede sade gökyüzü/duvar) bırakma cümlesi eklenir.
 
+**B teslim notları (2026-09-25, `d8d0db35`) — imzalara isteğe bağlı ekler:**
+- `colorize.apply(blocks, characters, palette, *, body_size=None)`: ses sözcüğü run'ının `size`'ı gövde puntosunun
+  1,35 katı; `body_size` verilmezse `size` yazılmaz. Vurgu rengi `palette.accent` varsa o, yoksa paletin karakterlere
+  verilmemiş ilk rengi. `palette` plan paleti (dict) ya da renk listesi olabilir. Çıktıda blok `text` yerine `runs` taşır.
+- `bubbles.place(..., *, page=None, size=14.0)`: `page` = `plan.page`; verilmezse sınır resim kutusudur. `size` balon puntosu.
+- `locate(image_path, name) -> {"x","y","w","h"} | None`: konuşanın **başı/yüzü**, resme göre 0–1 oran (1,5'ten büyük
+  değer piksel sayılır). Hata verirse kuyruk null olur, hat düşmez.
+- Balon nesnesinde isteğe bağlı `"warning"` (metin): yer bulunamazsa ekranda gösterilir.
+- Çocuk kitabı kuralı tek yerde: `bubbles.wanted(profile)` (freeze bunu kullanır).
+- `images.py` çocuk profilinde üretilen sayfa resmi istemine balon için boş alan cümlesini ekler (düzeltme ve kapakta değil).
+
 ## Ekran (C yazar; `src/canvas/editorial/studio/`)
 - Sayfa şeridi: küçük önizlemeler, sürükle-bırak sıralama, sil (onaylı), araya boş sayfa ekle, 8'in katı uyarısı.
 - Sayfa tuvali: sayfanın dizgi önizlemesi üstünde resim, yazı kutusu ve balonlar **seçilebilir, sürüklenebilir, köşeden
