@@ -22,6 +22,8 @@ export type Overview = {
   rules: Array<{ rule: string; title: string; severity: Severity; count: number }>;
   proposals: Partial<Record<ProposalStatus, number>>;
   approvedThisWeek: number;
+  /** Puanı 70 altındaki en çok satan 10 kitap. */
+  priority: Array<{ id: string; name: string; score: number; sales: number; views: number }>;
   /** Her zaman false: T-soft'a yazma yok. */
   tsoftWrite: false;
   lastSync: { startedAt: string; finishedAt: string | null; count: number | null; error: string | null } | null;
@@ -43,6 +45,9 @@ export type ProductRow = {
   barcode: string | null;
   url: string | null;
   syncedAt: string;
+  /** T-soft toplam satış adedi ve görüntülenme: öncelik sırası bunlarla. */
+  sales: number;
+  views: number;
   proposal?: ProposalStatus | null;
 };
 
@@ -73,6 +78,49 @@ export type ProductDetail = ProductRow & {
   /** Yönetim ekranındaki eşikler; sayaçlar bunlarla renklenir. */
   limits: { title_min: number; title_max: number; meta_min: number; meta_max: number; desc_min_words: number };
   proposals: Proposal[];
+};
+
+export type Confidence = 'kesin' | 'yüksek' | 'orta' | 'yok';
+export type Redirect = {
+  id: string;
+  link: string;
+  url: string;
+  current: string | null;
+  target: string | null;
+  targetType: string | null;
+  confidence: Confidence;
+  reason: string | null;
+  alternatives: Array<{ link: string; type: string; score: number }>;
+  status: 'bekliyor' | 'onaylandi' | 'reddedildi';
+  chosen: string | null;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  note: string | null;
+};
+
+export type PageKind = 'model' | 'category' | 'brand';
+export type PageRow = { id: string; name: string; link: string; url: string; books: number; sales: number; score: number; issues: number; proposal: ProposalStatus | null };
+export type PageField = 'SeoTitle' | 'SeoDescription' | 'Intro';
+export type PageDetail = {
+  type: PageKind;
+  id: string;
+  name: string;
+  link: string;
+  url: string;
+  current: Record<PageField, string>;
+  facts: {
+    books: number;
+    sales: number;
+    top: Array<{ name: string; author: string; sales: number }>;
+    cats: string[];
+    brands: string[];
+    authors: string[];
+    wikidata: { description?: string; born?: number; wikidata?: string; wikipedia?: string | null } | null;
+  };
+  score: number;
+  issues: Array<Omit<Issue, 'field'> & { field: PageField }>;
+  limits: ProductDetail['limits'];
+  proposals: Array<Omit<Proposal, 'fields'> & { fields: Partial<Record<PageField, string>> }>;
 };
 
 export type Question = { id: string; text: string; category: string | null; createdBy: string | null; createdAt: string };
@@ -106,7 +154,7 @@ export const seoApi = {
   overview: () => call<Overview>('overview'),
   me: () => call<{ user: string; canApprove: boolean }>('me'),
   sync: () => call<{ started: boolean; sync: SyncState }>('sync', { method: 'POST' }),
-  products: (p: { rule?: string; status?: string; q?: string; start?: number; limit?: number }) =>
+  products: (p: { rule?: string; status?: string; q?: string; start?: number; limit?: number; order?: 'oncelik' | 'score' | 'name' }) =>
     call<{ total: number; start: number; items: ProductRow[] }>(`products?${qs(p)}`),
   product: (id: string) => call<ProductDetail>(`products/${encodeURIComponent(id)}`),
   // Model önerisi kuyrukta bekleyebilir; kısa zaman aşımı yanlış hata gösterir.
@@ -120,6 +168,19 @@ export const seoApi = {
   search: (kind: 'daily' | 'queries' | 'pages') => call<SearchReport>(`search/${kind}`),
   searchRefresh: () => call<{ counts: Record<string, number> }>('search/refresh', { method: 'POST', timeout: 300_000 }),
   llms: () => call<{ llms: string; full: string; books: number; brands: number; authors: number; listedSellers: number; sellers: number; site: string; current: Record<string, { status: number | null; text?: string | null; error?: string }> }>('llms'),
+  redirects: (p: { confidence?: string; status?: string; q?: string; start?: number; limit?: number }) =>
+    call<{ total: number; items: Redirect[]; counts: Record<string, number> }>(`redirects?${qs(p)}`),
+  decideRedirect: (id: string, body: { action: 'approve' | 'reject'; target?: string; note?: string }) =>
+    call<Redirect>(`redirects/${id}/decide`, { method: 'POST', body }),
+  approveRedirects: (confidence: 'kesin' | 'yüksek') =>
+    call<{ approved: number }>(`redirects/approve-confidence?confidence=${encodeURIComponent(confidence)}`, { method: 'POST' }),
+  redirectCsvUrl: () => `${ENGINE_BASE}/api/v1/seo-geo/redirects/export.csv`,
+  pages: (p: { type: PageKind; q?: string; start?: number; limit?: number }) =>
+    call<{ total: number; withBooks: number; items: PageRow[] }>(`pages?${qs(p)}`),
+  page: (type: PageKind, id: string) => call<PageDetail>(`pages/${type}/${encodeURIComponent(id)}`),
+  proposePage: (type: PageKind, id: string) => call<Proposal>(`pages/${type}/${encodeURIComponent(id)}/propose`, { method: 'POST', timeout: 300_000 }),
+  decidePage: (id: string, body: { action: 'approve' | 'reject'; fields?: Partial<Record<PageField, string>>; note?: string }) =>
+    call<Proposal>(`pages/proposals/${id}/decide`, { method: 'POST', body }),
   questions: () => call<{ items: Question[]; measuring: boolean }>('questions'),
   addQuestion: (text: string, category: string) => call<{ id: string }>('questions', { method: 'POST', body: { text, category } }),
   deleteQuestion: (id: string) => call<{ deleted: boolean }>(`questions/${id}`, { method: 'DELETE' }),

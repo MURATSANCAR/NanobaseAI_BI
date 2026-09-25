@@ -1,6 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, EngineAuthError, freshHeaders } from '../../../engine';
-import type { Catalog, CatalogGroup, CatalogItem, CatalogParam, ColorRole } from './types';
+import {
+  COLOR_ROLES, EFFECT_STYLES, type Catalog, type CatalogEffect, type CatalogGroup, type CatalogItem, type CatalogParam,
+  type CatalogStyle, type ColorRole, type EffectStyle, type RoleColors, type Run,
+} from './types';
 
 /** Öğeler ve efekt yazı uçları (köprü: /api/v1/editorial/studio/jobs/{job}/plan/…). engine.ts'teki `send` ile
  *  aynı kurallar: adres ENGINE_BASE, oturum çerezi (credentials: include), 401/403 → EngineAuthError, motorun
@@ -32,108 +35,114 @@ const qs = (o: Record<string, string | number | null | undefined>) => {
 };
 
 export const elementsApi = {
-  catalog: async (job: string): Promise<Catalog> => normalizeCatalog(await getJson<unknown>(`${base(job)}/elements/catalog`)),
-  /** Kitabın paleti ve fontlarıyla küçük PNG. `rev` yalnız tarayıcı önbelleğini tazeler (palet değişince). */
+  /** `key` paletin özeti: palet değişince rol renkleri yeniden okunur (tarayıcı önbelleği atlanır). */
+  catalog: async (job: string, key?: string | number | null): Promise<Catalog> =>
+    normalizeCatalog(await getJson<unknown>(`${base(job)}/elements/catalog${qs({ r: key })}`)),
+  /** Kitabın paleti ve fontlarıyla küçük PNG. `style` hazır biçimin anahtarı (`CatalogStyle.value`). `rev` yalnız
+   *  tarayıcı önbelleğini tazeler (palet değişince; çağıran paletin özetini verir, planın her sürümünü değil). */
   previewUrl: (job: string, kind: string, w: number, style?: string | null, rev?: string | number | null) =>
     `${ENGINE_BASE}${base(job)}/elements/${encodeURIComponent(kind)}/preview${qs({ w, style, r: rev })}`,
   effectPreviewUrl: (job: string, style: string, w: number, text: string, rev?: string | number | null) =>
     `${ENGINE_BASE}${base(job)}/effects/${encodeURIComponent(style)}/preview${qs({ w, text, r: rev })}`,
 };
 
-/** Katalog bir iş boyunca değişmez; bir kez okunur. */
-export function useElementCatalog(jobId: string) {
+/** Katalog bir iş boyunca değişmez (rol renkleri paletle değişir: anahtara paletin özeti girer). */
+export function useElementCatalog(jobId: string, paletteKey?: string | number | null) {
   return useQuery({
-    queryKey: ['studio', 'elements', 'catalog', jobId],
-    queryFn: () => elementsApi.catalog(jobId),
+    queryKey: ['studio', 'elements', 'catalog', jobId, paletteKey ?? ''],
+    queryFn: () => elementsApi.catalog(jobId, paletteKey),
     enabled: !!jobId,
     staleTime: 30 * 60_000,
     gcTime: 60 * 60_000,
     retry: 1,
+    placeholderData: (prev) => prev,
   });
 }
 
 // ---------------------------------------------------------------- katalog biçimi
-// Motor kataloğu liste ya da tür→tanım sözlüğü olarak verebilir; alan adlarında küçük farklar (label/name,
-// ratio/aspect, has_text/text) burada tek biçime indirilir. Bilinmeyen alan atılmaz, yalnız okunmaz.
+// Motorun (`elements.catalog`) çıktısı:
+//   {groups: [{key, name, kinds}], kinds: [{kind, name, group, text, box: {w, ratio, place}, fill, stroke, stroke_w,
+//    params: {anahtar: {label, type, default, choices: [{value, label}], min, max, step}}, runs,
+//    presets: [{key, name, params, box}]}], effects: [{style, name, sample, box, params}], roles: [{key, name, hex}],
+//    fonts}
+// Ekrandaki biçim `types.ts` → Catalog. Tek dönüşüm burası; alan adı farkı başka yerde kapatılmaz.
 
 type Raw = Record<string, unknown>;
 const isObj = (v: unknown): v is Raw => !!v && typeof v === 'object' && !Array.isArray(v);
 const str = (v: unknown, d = '') => (typeof v === 'string' ? v : v == null ? d : String(v));
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined);
-const ROLES: ColorRole[] = ['accent', 'soft', 'ink'];
-const role = (v: unknown): ColorRole | null => (ROLES.includes(v as ColorRole) ? (v as ColorRole) : null);
+const role = (v: unknown): ColorRole | 'none' | null => (v === 'none' ? 'none' : COLOR_ROLES.includes(v as ColorRole) ? (v as ColorRole) : null);
+const TYPES: CatalogParam['type'][] = ['choice', 'number', 'int', 'bool', 'color', 'colors', 'text'];
+const PLACES = ['center', 'page', 'corner'] as const;
+const place = (v: unknown) => (PLACES.includes(v as (typeof PLACES)[number]) ? (v as (typeof PLACES)[number]) : undefined);
 
 function options(v: unknown): { value: string; label: string }[] {
-  if (Array.isArray(v)) {
-    return v.map((o) => (isObj(o) ? { value: str(o.value ?? o.id ?? o.key), label: str(o.label ?? o.name ?? o.value ?? o.id) } : { value: str(o), label: str(o) }));
-  }
-  if (isObj(v)) return Object.entries(v).map(([value, label]) => ({ value, label: str(label, value) }));
-  return [];
+  if (!Array.isArray(v)) return [];
+  return v.map((o) => (isObj(o) ? { value: str(o.value ?? o.key), label: str(o.label ?? o.name ?? o.value) } : { value: str(o), label: str(o) }));
 }
 
-function param(key: string, raw: unknown): CatalogParam {
-  const o: Raw = isObj(raw) ? raw : { default: raw };
-  const opts = options(o.options ?? o.choices ?? o.values);
-  const def = o.default;
-  let type = str(o.type) as CatalogParam['type'];
-  if (!['choice', 'number', 'int', 'bool', 'color', 'text'].includes(type)) {
-    type = opts.length ? 'choice'
-      : typeof def === 'boolean' ? 'bool'
-      : typeof def === 'number' ? (Number.isInteger(def) && !o.step ? 'int' : 'number')
-      : typeof def === 'string' && /^#[0-9a-f]{3,8}$/i.test(def) ? 'color'
-      : 'text';
-  }
+function param(key: string, o: Raw): CatalogParam {
+  const opts = options(o.choices);
+  const t = str(o.type) as CatalogParam['type'];
   return {
-    key, type, options: opts.length ? opts : undefined, default: def,
-    label: str(o.label ?? o.name, key), min: num(o.min), max: num(o.max), step: num(o.step), unit: o.unit ? str(o.unit) : undefined,
+    key, type: TYPES.includes(t) ? t : opts.length ? 'choice' : 'text', options: opts.length ? opts : undefined, default: o.default,
+    label: str(o.label, key), min: num(o.min), max: num(o.max), step: num(o.step),
   };
 }
 
-function params(v: unknown): CatalogParam[] {
-  if (Array.isArray(v)) return v.filter(isObj).map((p) => param(str(p.key ?? p.name ?? p.id), p)).filter((p) => p.key);
-  if (isObj(v)) return Object.entries(v).map(([k, p]) => param(k, p));
-  return [];
+const params = (v: unknown): CatalogParam[] => (isObj(v) ? Object.entries(v).filter(([, p]) => isObj(p)).map(([k, p]) => param(k, p as Raw)) : []);
+
+function runs(v: unknown): Run[] {
+  return Array.isArray(v) ? v.filter(isObj).map((r) => ({ ...(r as Run), text: str(r.text) })) : [];
 }
 
-function item(kind: string, o: Raw): CatalogItem {
-  const roles = isObj(o.roles) ? o.roles : isObj(o.colors) ? o.colors : {};
-  const ps = params(o.params ?? o.parameters);
-  // Biçim seçenekleri ya ayrı alanda ya da `style` parametresinin seçeneklerinde.
-  let styles = options(o.styles ?? o.variants);
-  if (!styles.length) styles = ps.find((p) => p.key === 'style')?.options ?? [];
-  const aspect = num(o.aspect) ?? num(o.ratio) ?? (Array.isArray(o.box) && num(o.box[0]) && num(o.box[1]) ? (o.box[0] as number) / (o.box[1] as number) : undefined);
+function presetBox(v: unknown): CatalogStyle['box'] {
+  if (!isObj(v)) return null;
+  return { w: num(v.w), ratio: num(v.ratio), place: place(v.place) };
+}
+
+function item(o: Raw): CatalogItem {
+  const box = isObj(o.box) ? o.box : {};
+  const styles: CatalogStyle[] = Array.isArray(o.presets)
+    ? o.presets.filter(isObj).map((p) => ({ value: str(p.key), label: str(p.name, str(p.key)), params: isObj(p.params) ? p.params : {}, box: presetBox(p.box) }))
+    : [];
+  const text = o.text === true;
   return {
-    kind,
-    name: str(o.name ?? o.label ?? o.title, kind),
-    group: str(o.group, 'Diğer'),
-    aspect: aspect && aspect > 0 ? aspect : 0,
-    full_page: o.full_page === true || o.page === true,
-    roles: { fill: role(roles.fill), stroke: role(roles.stroke), text: role(roles.text ?? roles.ink) },
-    params: ps.filter((p) => p.key !== 'style'),
-    text: o.text === true || o.has_text === true || o.carries_text === true,
+    kind: str(o.kind),
+    name: str(o.name, str(o.kind)),
+    group: str(o.group, 'diger'),
+    aspect: num(box.ratio) ?? 1,
+    width: num(box.w) ?? 0.4,
+    place: place(box.place) ?? 'center',
+    full_page: box.place === 'page',
+    roles: { fill: role(o.fill), stroke: role(o.stroke), text: 'ink' },
+    params: params(o.params),
+    text,
+    runs: text ? runs(o.runs) : [],
     styles,
     stroke_w: num(o.stroke_w),
-    text_size: num(o.text_size),
+    text_size: num(o.text_size) ?? null,
   };
+}
+
+function effect(o: Raw): CatalogEffect | null {
+  const style = str(o.style) as EffectStyle;
+  if (!EFFECT_STYLES.includes(style)) return null;
+  return { style, name: str(o.name, style), sample: str(o.sample), params: params(o.params) };
 }
 
 export function normalizeCatalog(raw: unknown): Catalog {
-  const root: Raw = isObj(raw) ? raw : { items: raw };
-  const src = root.items ?? root.kinds ?? root.catalog ?? root.elements ?? (isObj(raw) && !root.groups ? raw : []);
-  const items: CatalogItem[] = Array.isArray(src)
-    ? src.filter(isObj).map((o) => item(str(o.kind ?? o.id ?? o.key), o)).filter((i) => i.kind)
-    : isObj(src) ? Object.entries(src).filter(([, o]) => isObj(o)).map(([k, o]) => item(k, o as Raw)) : [];
-  // Gruplar: verildiyse o sırayla; verilmediyse öğelerde geçtiği sırayla.
-  const given: CatalogGroup[] = Array.isArray(root.groups)
-    ? root.groups.map((g) => (isObj(g) ? { id: str(g.id ?? g.key ?? g.name), name: str(g.name ?? g.label ?? g.id) } : { id: str(g), name: str(g) }))
-    : isObj(root.groups) ? Object.entries(root.groups).map(([id, name]) => ({ id, name: str(name, id) })) : [];
-  const groups = [...given];
-  for (const it of items) {
-    if (!groups.some((g) => g.id === it.group)) {
-      const byName = groups.find((g) => g.name === it.group);
-      if (byName) it.group = byName.id;
-      else groups.push({ id: it.group, name: it.group });
-    }
+  const root: Raw = isObj(raw) ? raw : {};
+  const items = (Array.isArray(root.kinds) ? root.kinds : []).filter(isObj).map(item).filter((i) => i.kind);
+  const groups: CatalogGroup[] = (Array.isArray(root.groups) ? root.groups : []).filter(isObj)
+    .map((g) => ({ id: str(g.key), name: str(g.name, str(g.key)) }));
+  for (const it of items) if (!groups.some((g) => g.id === it.group)) groups.push({ id: it.group, name: 'Diğer' });
+  const effects = (Array.isArray(root.effects) ? root.effects : []).filter(isObj).map(effect).filter((e): e is CatalogEffect => !!e);
+  const roles: RoleColors = {};
+  for (const r of Array.isArray(root.roles) ? root.roles : []) {
+    if (!isObj(r)) continue;
+    const k = role(r.key);
+    if (k && k !== 'none' && typeof r.hex === 'string') roles[k] = { name: str(r.name, k), hex: r.hex };
   }
-  return { groups: groups.filter((g) => items.some((i) => i.group === g.id)), items };
+  return { groups: groups.filter((g) => items.some((i) => i.group === g.id)), items, effects, roles };
 }

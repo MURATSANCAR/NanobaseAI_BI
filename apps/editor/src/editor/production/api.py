@@ -29,8 +29,11 @@ Sayfa planı (plan.py; sözleşme docs/analiz/studyo-sayfa-plani-sozlesme.md), h
     GET plan/pages/{pid}/preview?w= · GET plan/unused-art · POST plan/figures · GET|DELETE plan/assets/{gid}
     PUT plan/photos?filename=&page= (ham gövde) · POST plan/assets/{gid}/cutout · POST plan/assets/{gid}/upscale
     GET plan/history · POST plan/restore · GET plan/jobs
+    GET plan/elements/catalog · GET plan/elements/{kind}/preview?w=&style= · GET plan/effects/{style}/preview?w=&text=
+        (öğeler ve efekt yazı: katalog ve kitabın paleti/fontlarıyla küçük saydam PNG; elements.py)
 Hatalar gövdede `code` taşır: NO_PLAN (404), STALE (409, güncel `rev`), BUSY (409), IN_USE (409, sayfalar),
-TOO_LARGE (413). Plan düzenlemeleri süren GPU işini beklemez; yalnız GPU isteyen yazımlar (resim, figür, kaliteyi
+TOO_LARGE (413), INVALID (400, doğrulama: sayfa nesnesi, şekil, efekt, önizleme parametresi), NOT_FOUND (404, öğe
+türü ya da efekt stili yok). Plan düzenlemeleri süren GPU işini beklemez; yalnız GPU isteyen yazımlar (resim, figür, kaliteyi
 artırma) süren GPU işinde 409 döner. `art/{key}` uçlarında key sayfa no, resim kimliği (a_…) ya da «kapak»;
 plan varken sayfa no o sayfanın resim kimliğine çevrilir (eski ekran bozulmaz).
 """
@@ -523,7 +526,7 @@ async def _write(fn, *args, **kw):
     except KeyError as e:
         raise HTTPException(404, str(e.args[0] if e.args else e)) from None
     except ValueError as e:
-        raise HTTPException(400, str(e)) from None
+        raise Coded(400, "INVALID", str(e)) from None
 
 
 async def _gpu_free(d: Path) -> None:
@@ -789,6 +792,41 @@ async def plan_upscale(job: str, gid: str, body: Upscale, by: str = Depends(edit
     await _start(d, "AssetUpscale", [job, jid, gid, new, body.page, body.item, by], wf,
                  {"key": "buyut", "mode": "upscale", "asset": new, "job": jid})
     return {"workflow": wf, "job": jid, "asset": new, "factor": photo.upscale_factor(now), "dpi_before": int(round(now))}
+
+
+# ------------------------------------------------------------------ öğeler ve efekt yazı (elements.py)
+# Plan olmadan da çalışır (kütüphane plan kurulmadan gösterilebilir): palet planınki, yoksa Timaş çocuk paleti.
+# Önizleme deterministiktir; iş klasöründe (dizgi/ogeler/) önbelleğe yazılır, tarayıcı da bir saat tutar.
+_PREVIEW_HEAD = {"Cache-Control": "private, max-age=3600"}
+
+
+def _elements_call(fn, *args) -> Response:
+    try:
+        return Response(fn(*args), media_type="image/png", headers=_PREVIEW_HEAD)
+    except KeyError as e:
+        raise Coded(404, "NOT_FOUND", f"Böyle bir öğe yok: {e.args[0] if e.args else e}") from None
+    except ValueError as e:
+        raise Coded(400, "INVALID", str(e)) from None
+
+
+@app.get(P + "/elements/catalog")
+def plan_elements_catalog(job: str) -> dict:
+    from . import elements
+    return elements.catalog(_dir(job))
+
+
+@app.get(P + "/elements/{kind}/preview")
+def plan_element_preview(job: str, kind: str, w: int = Query(240), style: str | None = Query(None)) -> Response:
+    """`style`: katalogdaki hazır biçimin anahtarı (`presets[].key`); verilmezse türün ilk biçimi."""
+    from . import elements
+    return _elements_call(elements.render_shape_preview, kind, w, style or None, _dir(job))
+
+
+@app.get(P + "/effects/{style}/preview")
+def plan_effect_preview(job: str, style: str, w: int = Query(360), text: str | None = Query(None)) -> Response:
+    """`text` verilmezse stilin örnek metni. Metin uzunluğuna tavan yok: uzun metin kutuya sığacak kadar küçülür."""
+    from . import elements
+    return _elements_call(elements.render_effect_preview, style, text, w, _dir(job))
 
 
 @app.get(P + "/history")

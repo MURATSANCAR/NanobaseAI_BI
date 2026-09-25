@@ -43,6 +43,8 @@ services:
       - ./secrets/crm-mssql-connection.json:/app/secrets/crm-mssql-connection.json:ro
       - ./secrets/ad:/app/ad
       - bi_reports:/data/reports
+      # Uygulamanın yazdığı durum (rapor önbelleği, Finansal Denetim arşivi, editör verisi): kurulumda silinmez.
+      - bi_var:/data/nanobaseai/bi/var
     depends_on:
       db:
         condition: service_healthy
@@ -111,3 +113,5 @@ volumes:
     name: bi_login
   bi_reports:
     name: bi_reports
+  bi_var:
+    name: bi_var

@@ -74,6 +74,36 @@ export function restack(p: PlanPage, r: ItemRef, dir: 'front' | 'back'): PlanPag
   };
 }
 
+/** Bir adım öne/arkaya: katmanlı ögeler (figür, serbest yazı, şekil) arasında komşusuyla yer değiştirir. En öndeki
+ *  öne, en arkadaki arkaya giderse sayfa değişmez. z'ler 3'ten başlayarak sırayla yeniden yazılır. */
+export function restackStep(p: PlanPage, r: ItemRef, dir: 'front' | 'back'): PlanPage {
+  const layered = [
+    ...p.figures.map((f) => ({ kind: 'figure', id: f.id, z: f.z })),
+    ...p.texts.map((t) => ({ kind: 'free', id: t.id, z: t.z })),
+    ...shapesOf(p).map((s) => ({ kind: 'shape', id: s.id, z: s.z })),
+  ].sort((a, b) => a.z - b.z);
+  const i = layered.findIndex((x) => x.kind === r.kind && x.id === r.id);
+  const j = dir === 'front' ? i + 1 : i - 1;
+  if (i < 0 || j < 0 || j >= layered.length) return p;
+  [layered[i], layered[j]] = [layered[j], layered[i]];
+  const z = new Map(layered.map((x, k) => [`${x.kind}:${x.id}`, 3 + k]));
+  return {
+    ...p,
+    figures: p.figures.map((f) => ({ ...f, z: z.get(`figure:${f.id}`) ?? f.z })),
+    texts: p.texts.map((t) => ({ ...t, z: z.get(`free:${t.id}`) ?? t.z })),
+    ...(p.shapes ? { shapes: p.shapes.map((s) => ({ ...s, z: z.get(`shape:${s.id}`) ?? s.z })) } : {}),
+  };
+}
+
+/** Paletin kısa özeti: öğe önizlemeleri ve rol renkleri yalnız palet değişince yeniden istenir (planın her sürümünde
+ *  değil). */
+export function paletteKey(palette: { colors: { hex: string }[]; text: string; characters: Record<string, string>; accent?: string | null }): string {
+  const s = JSON.stringify([palette.colors.map((c) => c.hex), palette.text, palette.characters, palette.accent ?? null]);
+  let h = 5381;
+  for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
 export const nextZ = (p: PlanPage) => Math.max(2, ...p.figures.map((f) => f.z), ...p.texts.map((t) => t.z), ...shapesOf(p).map((s) => s.z)) + 1;
 
 /** Kutudaki etkin çözünürlük (dpi): `cover` kırparak doldurur, `contain` sığdırır (figür/fotoğraf katmanı). */

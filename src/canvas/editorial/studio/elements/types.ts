@@ -1,93 +1,43 @@
-/** Efekt yazılar ve süs/şekiller — sayfa planı sözleşmesindeki alanların birebir karşılığı
- *  (docs/analiz/studyo-sayfa-plani-sozlesme.md → «Efekt yazılar ve süs/şekiller»). Ölçüler mm, köken taşma
- *  paylı sayfanın sol üstü. Bu dosyada alan adı değişirse önce sözleşme değişir. */
+import type {
+  Plan, PlanBox, PlanColorRole, PlanEffect, PlanEffectParams, PlanEffectStyle, PlanPalette, PlanRun, PlanShape,
+} from '../../../engine';
 
-export type Box = { x: number; y: number; w: number; h: number };
+/** Efekt yazılar ve süs/şekiller (docs/analiz/studyo-sayfa-plani-sozlesme.md → «Efekt yazılar ve süs/şekiller»).
+ *  Sayfa nesnesindeki alanların tek kaynağı `engine.ts`'tir (PlanShape, PlanEffect …); burada yalnız kısa adlarla
+ *  yeniden verilir. Katalog tipleri motorun `GET plan/elements/catalog` çıktısının ekrandaki (normalleştirilmiş)
+ *  hâlidir; dönüşüm `api.ts` → `normalizeCatalog`. Ölçüler mm, köken taşma paylı sayfanın sol üstü. */
 
-/** Yazı parçası (`run`). `source: "editor"` olan parçaya otomatik kural dokunmaz. */
-export type Run = {
-  text: string;
-  color?: string | null;
-  weight?: 400 | 700 | 800;
-  size?: number | null;
-  font?: 'body' | 'heading';
-  source?: 'auto' | 'editor';
-};
+export type Box = PlanBox;
+export type Run = PlanRun;
+export type Shape = PlanShape;
+export type Effect = PlanEffect;
+export type EffectParams = PlanEffectParams;
+export type EffectStyle = PlanEffectStyle;
+export type Palette = PlanPalette;
+/** Palet rolü: renk boşsa dizgi kitabın paletinden bu rolle doldurur. */
+export type ColorRole = PlanColorRole;
+/** `plan.page` — varsayılan kutuyu yerleştirmek için. */
+export type PageGeom = Pick<Plan['page'], 'w' | 'h' | 'bleed' | 'safe'> & { gutter?: number };
 
 /** Sözleşmedeki katalog türleri. Motor yeni tür eklerse ekran onu da gösterir (string). */
 export const SHAPE_KINDS = [
   'frame', 'corner', 'scatter', 'arrow', 'sign', 'note', 'envelope', 'scroll',
   'badge', 'ribbon', 'star', 'heart', 'cloud', 'burst', 'line',
 ] as const;
-export type KnownShapeKind = (typeof SHAPE_KINDS)[number];
-export type ShapeKind = KnownShapeKind | (string & {});
+export type ShapeKind = Shape['kind'];
 
-/** Şekil katmanı öğesi (`page.shapes[]`). `fill`/`stroke` null → motor paletten rolle doldurur. */
-export type Shape = {
-  id: string;
-  kind: ShapeKind;
-  box: Box;
-  rotate: number;
-  flip: boolean;
-  z: number;
-  fill: string | null;
-  stroke: string | null;
-  stroke_w: number;
-  opacity: number;
-  /** Türe özel; biçim seçeneği (düz/dalgalı/…) `params.style`'da durur. */
-  params: Record<string, unknown>;
-  /** Yalnız yazı taşıyan türlerde. */
-  runs?: Run[];
-  text_size?: number | null;
-};
+export const EFFECT_STYLES: readonly EffectStyle[] = ['burst', 'wave', 'arc', 'shadow', 'outline', 'stacked', 'bounce', 'rainbow'];
 
-export const EFFECT_STYLES = ['burst', 'wave', 'arc', 'shadow', 'outline', 'stacked', 'bounce', 'rainbow'] as const;
-export type EffectStyle = (typeof EFFECT_STYLES)[number];
+export const COLOR_ROLES: readonly ColorRole[] = [
+  'accent', 'accent2', 'ink', 'pop', 'pop2', 'sun', 'rose', 'soft', 'soft2', 'paper', 'wood', 'bark', 'deep', 'white',
+];
 
-export type EffectParams = {
-  /** arc/wave: -1..1 kavis. */
-  curve?: number;
-  outline?: string;
-  /** mm */
-  outline_w?: number;
-  shadow?: string;
-  /** mm */
-  shadow_dx?: number;
-  /** mm */
-  shadow_dy?: number;
-  /** rainbow/bounce: harf harf dönen renkler. */
-  colors?: string[];
-  burst_fill?: string;
-  burst_stroke?: string;
-  /** derece */
-  angle?: number;
-};
-
-/** Serbest yazının (`page.texts[]`) isteğe bağlı `effect` alanı. */
-export type Effect = { style: EffectStyle; params: EffectParams };
-
-/** Palet rengi rolü; şekil rengi boşsa motor bu rolle doldurur. */
-export type ColorRole = 'accent' | 'soft' | 'ink';
-
-export type PaletteColor = { name: string; hex: string; source?: 'resim' | 'timas' | 'editor' | string };
-
-/** `plan.palette`. `accent` B'nin teslim notunda isteğe bağlı alan. */
-export type Palette = {
-  colors: PaletteColor[];
-  text: string;
-  characters?: Record<string, string>;
-  accent?: string | null;
-  soft?: string | null;
-};
-
-/** `plan.page` — varsayılan kutuyu güvenli alana yerleştirmek için. */
-export type PageGeom = { w: number; h: number; bleed: number; safe: number; gutter?: number };
-
-/** Katalog parametresi. `type` verilmezse varsayılan değerden çıkarılır. */
+/** Katalog parametresi (motorda `params` sözlüğünün bir öğesi; burada anahtarıyla liste). `min`/`max` motorun
+ *  doğrulama sınırıdır (yoksa açık uçlu); ekran kaydırıcı aralığını bundan alır, sayı kutusu açık uçta sınır koymaz. */
 export type CatalogParam = {
   key: string;
   label: string;
-  type: 'choice' | 'number' | 'int' | 'bool' | 'color' | 'text';
+  type: 'choice' | 'number' | 'int' | 'bool' | 'color' | 'colors' | 'text';
   options?: { value: string; label: string }[];
   min?: number;
   max?: number;
@@ -96,26 +46,40 @@ export type CatalogParam = {
   default?: unknown;
 };
 
-/** Katalogdaki tür (`elements.CATALOG` öğesi): Türkçe ad, grup, varsayılan kutu oranı (en/boy), varsayılan renk
- *  rolleri, parametreler, yazı taşır mı. `styles` biçim seçenekleri (çerçeve: düz/dalgalı/…). */
+/** Hazır biçim (motorda `presets[]`): önizleme ucunun `style`'ı `value`'dur; seçilince `params` şeklin
+ *  parametrelerine yazılır, `box` yeni eklenen şeklin kutusunu belirler (oran, genişlik, yer). */
+export type CatalogStyle = {
+  value: string;
+  label: string;
+  params: Record<string, unknown>;
+  box?: { w?: number; ratio?: number; place?: 'center' | 'page' | 'corner' } | null;
+};
+
+/** Katalogdaki tür. `aspect` en/boy; `width` kesim genişliğine oran; `full_page` güvenli alanın yarısı içeride tam
+ *  sayfa (çerçeve kenarlığı); `place: corner` sol üst köşe. `roles` boş renk alanının varsayılan rolü ("none" = boya
+ *  yok). `runs` yazı taşıyan türün varsayılan yazısı (boş olabilir: yıldıza yazı sonradan yazılır). */
 export type CatalogItem = {
   kind: ShapeKind;
   name: string;
   group: string;
-  /** en / boy; 0 ya da `full_page` → güvenli alanın tamamı (çerçeve). */
   aspect: number;
+  width: number;
+  place: 'center' | 'page' | 'corner';
   full_page?: boolean;
-  roles: { fill?: ColorRole | null; stroke?: ColorRole | null; text?: ColorRole | null };
+  roles: { fill?: ColorRole | 'none' | null; stroke?: ColorRole | 'none' | null; text?: ColorRole | null };
   params: CatalogParam[];
   text: boolean;
-  styles: { value: string; label: string }[];
-  /** Varsayılan çizgi kalınlığı (mm) ve yazı puntosu; yoksa ekranın varsayılanı. */
+  runs: Run[];
+  styles: CatalogStyle[];
   stroke_w?: number;
-  text_size?: number;
+  text_size?: number | null;
 };
 
 export type CatalogGroup = { id: string; name: string };
-export type Catalog = { groups: CatalogGroup[]; items: CatalogItem[] };
+export type CatalogEffect = { style: EffectStyle; name: string; sample: string; params: CatalogParam[] };
+/** Rol → bu kitabın paletinden hesaplanmış renk (dizgiyle birebir aynı hesap, motordan). */
+export type RoleColors = Partial<Record<ColorRole, { name: string; hex: string }>>;
+export type Catalog = { groups: CatalogGroup[]; items: CatalogItem[]; effects: CatalogEffect[]; roles: RoleColors };
 
 /** Sayfaya sürükle-bırakta taşınan veri türü; içerik hazır bir `Shape` (JSON). */
 export const SHAPE_DND_TYPE = 'application/x-studio-shape';

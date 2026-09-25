@@ -1,60 +1,76 @@
 import { useEffect, useId, useState } from 'react';
-import { ArrowDownToLine, ArrowUpToLine, RotateCcw, Shuffle, Trash2 } from 'lucide-react';
+import { AlertTriangle, ArrowDownToLine, ArrowUpToLine, RotateCcw, Shuffle, Trash2 } from 'lucide-react';
 import { ghostBtn, press } from '../shared';
 import { elementsApi, useElementCatalog } from './api';
-import { ColorChips, Field, Section, Segmented, Slider, Thumb, Toggle } from './controls';
-import { ROLE_LABEL, roleColor, runsText, editRuns, styleRuns, swatches } from './model';
-import type { Box, CatalogParam, ColorRole, Palette, Run, Shape } from './types';
+import { ColorChips, ColorList, Field, Section, Segmented, Slider, Thumb, Toggle } from './controls';
+import { ROLE_LABEL, applyStyle, paintOf, runsText, editRuns, styleOf, styleRuns, swatches, type Swatch } from './model';
+import type { Box, CatalogParam, ColorRole, Palette, RoleColors, Run, Shape } from './types';
 
-/** Seçili şeklin özellik paneli: biçim, renk rolleri (boş = kitabın paletinden otomatik), türe özel parametreler,
- *  yazı taşıyan türlerde yazı ve paletten renk, konum/boyut (mm), saydamlık, döndürme, aynalama. Her değişiklik
- *  `onChange(shape)`; telefonda tuval yalnız görüntülediği için konum/boyut da buradan düzenlenir. */
+/** Seçili şeklin özellik paneli: hazır biçim, renkler (boş = kitabın paletinden otomatik), türe özel parametreler,
+ *  yazı taşıyan türlerde yazı ve paletten renk, konum/boyut (mm), saydamlık, döndürme, aynalama, katman sırası.
+ *  Her değişiklik `onChange(shape)`; telefonda tuval yalnız görüntülediği için konum/boyut da buradan düzenlenir. */
 
 export type ShapeInspectorProps = {
   jobId: string;
   value: Shape;
   onChange: (shape: Shape) => void;
   palette?: Palette | null;
+  /** Paletin özeti: palet değişince önizleme ve rol renkleri tazelenir. */
   rev?: string | number | null;
-  /** Verilirse «Öne getir / Arkaya gönder» düğmeleri görünür (z'yi çağıran hesaplar). */
+  /** Verilirse «Öne al / Arkaya al» düğmeleri görünür (z'yi çağıran komşu öğeye göre değiştirir). */
   onZ?: (dir: 'front' | 'back') => void;
-  /** Verilirse «Sil» düğmesi görünür. */
+  /** Verilirse «Sayfadan kaldır» düğmesi görünür. */
   onRemove?: () => void;
   className?: string;
 };
 
-const WEIGHTS: { value: 400 | 700 | 800; label: string }[] = [
+const WEIGHTS: { value: number; label: string }[] = [
   { value: 400, label: 'Normal' }, { value: 700, label: 'Kalın' }, { value: 800, label: 'Çok kalın' },
 ];
 const FONTS: { value: 'body' | 'heading'; label: string }[] = [{ value: 'body', label: 'Metin' }, { value: 'heading', label: 'Başlık' }];
+const NONE = { hex: '#FFFFFF00', name: 'Yok' };
+/** Dönüş 0–360 saklanır; ekranda −180…180. */
+const signedDeg = (v: number) => (v > 180 ? v - 360 : v);
 
 export default function ShapeInspector({ jobId, value, onChange, palette, rev, onZ, onRemove, className = '' }: ShapeInspectorProps) {
-  const q = useElementCatalog(jobId);
+  const q = useElementCatalog(jobId, rev);
+  const roles = q.data?.roles;
   const item = q.data?.items.find((i) => i.kind === value.kind);
-  const sw = swatches(palette);
+  const sw = swatches(palette, roles);
+  const params = value.params ?? {};
   const set = (patch: Partial<Shape>) => onChange({ ...value, ...patch });
-  const setParam = (k: string, v: unknown) => onChange({ ...value, params: { ...value.params, [k]: v } });
-  const auto = (r: ColorRole | null | undefined) => (r ? { hex: roleColor(palette, r), name: ROLE_LABEL[r] } : { hex: roleColor(palette, 'accent'), name: ROLE_LABEL.accent });
-  const style = typeof value.params.style === 'string' ? value.params.style : null;
+  const setParam = (k: string, v: unknown) => onChange({ ...value, params: { ...params, [k]: v } });
+  const auto = (r: ColorRole | 'none' | null | undefined) =>
+    !r || r === 'none' ? NONE : { hex: paintOf(r, palette, roles) ?? '#FFFFFF', name: ROLE_LABEL[r] };
+  const style = styleOf(item, params);
   const name = item?.name ?? value.kind;
-  const hasText = item ? item.text : value.runs !== undefined;
+  const hasText = item ? item.text : !!value.runs?.length;
+  const strokeW = value.stroke_w ?? item?.stroke_w ?? 0.6;
+  const opacity = value.opacity ?? 1;
 
   return (
     <div className={`flex min-w-0 flex-col gap-3 ${className}`}>
       <div className="flex items-center gap-3">
-        <Thumb src={elementsApi.previewUrl(jobId, value.kind, 128, style, rev)} alt="" fallback={name} className="h-14 w-14 shrink-0 rounded-xl border border-slate-200" />
+        <Thumb src={elementsApi.previewUrl(jobId, value.kind, 128, style?.value, rev)} alt="" fallback={name} className="h-14 w-14 shrink-0 rounded-xl border border-slate-200" />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[15px] font-extrabold">{name}</h2>
+          <h2 className="truncate text-[15px] font-extrabold">{style?.label ?? name}</h2>
           <p className="text-[11.5px] text-canvas-muted">Süs / şekil · katman {value.z}</p>
         </div>
       </div>
+
+      {value.overflow && (
+        <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          Yazı şekle sığmıyor. Puntoyu küçültün ya da «Şekle sığdır»ı açın.
+        </p>
+      )}
 
       {(onZ || onRemove) && (
         <div className="flex flex-wrap gap-1.5">
           {onZ && (
             <>
-              <button type="button" className={ghostBtn} onClick={() => onZ('front')}><ArrowUpToLine className="h-4 w-4" aria-hidden />Öne getir</button>
-              <button type="button" className={ghostBtn} onClick={() => onZ('back')}><ArrowDownToLine className="h-4 w-4" aria-hidden />Arkaya gönder</button>
+              <button type="button" className={ghostBtn} onClick={() => onZ('front')}><ArrowUpToLine className="h-4 w-4" aria-hidden />Öne al</button>
+              <button type="button" className={ghostBtn} onClick={() => onZ('back')}><ArrowDownToLine className="h-4 w-4" aria-hidden />Arkaya al</button>
             </>
           )}
           {onRemove && (
@@ -67,26 +83,27 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
       )}
 
       {item && item.styles.length > 1 && (
-        <Section title="Biçim">
-          <Segmented label="Biçim" value={style} options={item.styles} onChange={(v) => setParam('style', v)} />
+        <Section title="Hazır biçim">
+          <Segmented label="Hazır biçim" value={style?.value ?? null} options={item.styles}
+            onChange={(v) => { const st = item.styles.find((s) => s.value === v); if (st) onChange(applyStyle(value, st)); }} />
         </Section>
       )}
 
       <Section title="Renkler">
         <Field label="Dolgu">
-          <ColorChips label="Dolgu rengi" value={value.fill} swatches={sw} auto={auto(item?.roles.fill ?? 'soft')} onChange={(hex) => set({ fill: hex })} />
+          <ColorChips label="Dolgu rengi" value={value.fill ?? null} swatches={sw} auto={auto(item ? item.roles.fill : 'soft')} onChange={(hex) => set({ fill: hex })} />
         </Field>
         <Field label="Çizgi">
-          <ColorChips label="Çizgi rengi" value={value.stroke} swatches={sw} auto={auto(item?.roles.stroke ?? 'ink')} onChange={(hex) => set({ stroke: hex })} />
+          <ColorChips label="Çizgi rengi" value={value.stroke ?? null} swatches={sw} auto={auto(item ? item.roles.stroke : 'ink')} onChange={(hex) => set({ stroke: hex })} />
         </Field>
-        <Slider label="Çizgi kalınlığı" unit="mm" value={value.stroke_w} min={0} max={3} step={0.1} hardMin={0} onChange={(v) => set({ stroke_w: v })} />
+        <Slider label="Çizgi kalınlığı" unit="mm" value={strokeW} min={0} max={Math.max(3, strokeW * 2)} step={0.1} hardMin={0} onChange={(v) => set({ stroke_w: v })} />
       </Section>
 
       {item && item.params.length > 0 && (
         <Section title="Ayarlar">
           <div className="flex flex-col gap-3">
             {item.params.map((p) => (
-              <ParamControl key={p.key} param={p} value={value.params[p.key] ?? p.default} onChange={(v) => setParam(p.key, v)} swatches={sw} palette={palette} />
+              <ParamControl key={p.key} param={p} value={params[p.key] ?? p.default} onChange={(v) => setParam(p.key, v)} swatches={sw} palette={palette} roles={roles} />
             ))}
           </div>
         </Section>
@@ -96,7 +113,12 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
         <Section title="Yazı">
           <RunsEditor runs={value.runs ?? []} onChange={(runs) => set({ runs })} swatches={sw}
             autoText={auto(item?.roles.text ?? 'ink')} />
-          <Slider label="Punto" unit="pt" value={value.text_size ?? 18} min={6} max={72} step={1} hardMin={1} onChange={(v) => set({ text_size: v })} />
+          <Toggle label="Şekle sığdır" checked={value.text_size == null}
+            onChange={(fit) => set({ text_size: fit ? null : item?.text_size ?? 18 })} />
+          {value.text_size != null && (
+            <Slider label="Punto" unit="pt" value={value.text_size} min={6} max={Math.max(72, value.text_size)} step={1} hardMin={1}
+              onChange={(v) => set({ text_size: v })} />
+          )}
         </Section>
       )}
 
@@ -105,23 +127,28 @@ export default function ShapeInspector({ jobId, value, onChange, palette, rev, o
       </Section>
 
       <Section title="Görünüm">
-        <Slider label="Saydamlık" unit="%" value={Math.round(value.opacity * 100)} min={0} max={100} step={1} hardMin={0} hardMax={100}
+        <Slider label="Saydamlık" unit="%" value={Math.round(opacity * 100)} min={0} max={100} step={1} hardMin={0} hardMax={100}
           onChange={(v) => set({ opacity: v / 100 })} format={(v) => `%${v} görünür`} />
-        <Slider label="Döndürme" unit="°" value={value.rotate} min={-180} max={180} step={1} hardMin={-180} hardMax={180} onChange={(v) => set({ rotate: v })} />
+        <Slider label="Döndürme" unit="°" value={signedDeg(value.rotate ?? 0)} min={-180} max={180} step={1} hardMin={-180} hardMax={180} onChange={(v) => set({ rotate: v })} />
         <div className="flex flex-wrap gap-1.5">
-          <Toggle label="Aynala" checked={value.flip} onChange={(flip) => set({ flip })} />
-          <button type="button" className={ghostBtn} disabled={value.rotate === 0} onClick={() => set({ rotate: 0 })}>
+          <Toggle label="Aynala" checked={!!value.flip} onChange={(flip) => set({ flip })} />
+          <button type="button" className={ghostBtn} disabled={!value.rotate} onClick={() => set({ rotate: 0 })}>
             <RotateCcw className="h-4 w-4" aria-hidden />Düz
           </button>
         </div>
+        {value.flip && hasText && <p className="text-[11px] text-canvas-muted">Aynalamada şekil döner; üstündeki yazı düz okunur.</p>}
       </Section>
       {!item && q.error && <p className="text-[11px] text-amber-700">Öğe kataloğu okunamadı; türe özel ayarlar gösterilemiyor.</p>}
     </div>
   );
 }
 
-function ParamControl({ param, value, onChange, swatches: sw, palette }: {
-  param: CatalogParam; value: unknown; onChange: (v: unknown) => void; swatches: ReturnType<typeof swatches>; palette?: Palette | null;
+/** Katalog parametresinin denetimi (şekil ve efekt panelleri ortak). Renk alanında boş değer «yok» demektir; rol adı
+ *  kitabın rengine çevrilip gösterilir. Sayı alanında kaydırıcı katalogdaki min/max'tan, açık uçta makul bir aralıktan
+ *  gelir; sayı kutusuna daha büyük değer yazılabilir (sınır yalnız katalogdaki doğrulama sınırı). */
+export function ParamControl({ param, value, onChange, swatches: sw, palette, roles, format }: {
+  param: CatalogParam; value: unknown; onChange: (v: unknown) => void; swatches: Swatch[]; palette?: Palette | null;
+  roles?: RoleColors | null; format?: (v: number) => string;
 }) {
   const id = useId();
   if (param.type === 'choice' && param.options) {
@@ -129,7 +156,20 @@ function ParamControl({ param, value, onChange, swatches: sw, palette }: {
   }
   if (param.type === 'bool') return <Toggle label={param.label} checked={!!value} onChange={onChange} />;
   if (param.type === 'color') {
-    return <Field label={param.label}><ColorChips label={param.label} value={(value as string) ?? null} swatches={sw} auto={{ hex: roleColor(palette, 'accent'), name: ROLE_LABEL.accent }} onChange={onChange} /></Field>;
+    return (
+      <Field label={param.label}>
+        <ColorChips label={param.label} value={paintOf(value as string | null, palette, roles)} swatches={sw} auto={NONE} onChange={onChange} />
+      </Field>
+    );
+  }
+  if (param.type === 'colors') {
+    const list = Array.isArray(value) ? (value as string[]).map((c) => paintOf(c, palette, roles) ?? c) : [];
+    return (
+      <Field label={`${param.label}${list.length ? ` (${list.length})` : ''}`}>
+        <ColorList label={param.label} value={list} swatches={sw} onChange={(v) => onChange(v.length ? v : null)} />
+        {!list.length && <p className="text-[11px] text-canvas-muted">Renk seçilmezse harfler kitabın paletinden sırayla boyanır.</p>}
+      </Field>
+    );
   }
   if (param.type === 'number' || param.type === 'int') {
     const v = typeof value === 'number' ? value : Number(value) || 0;
@@ -140,7 +180,7 @@ function ParamControl({ param, value, onChange, swatches: sw, palette }: {
     return (
       <div className="flex flex-col gap-1">
         <Slider label={param.label} unit={param.unit} value={v} min={min} max={max} step={param.step ?? (int ? 1 : 0.1)}
-          hardMin={param.min} hardMax={param.max} onChange={(n) => onChange(int ? Math.round(n) : n)} />
+          hardMin={param.min} hardMax={param.max} format={format} onChange={(n) => onChange(int ? Math.round(n) : n)} />
         {seed && (
           <button type="button" className={`${ghostBtn} self-start`} onClick={() => onChange(Math.floor(Math.random() * 100000))}>
             <Shuffle className="h-4 w-4" aria-hidden />Yeniden dağıt
@@ -160,7 +200,7 @@ function ParamControl({ param, value, onChange, swatches: sw, palette }: {
 
 /** Düz metin kutusu + seçime biçim. Seçim yoksa biçim bütün yazıya uygulanır. */
 function RunsEditor({ runs, onChange, swatches: sw, autoText }: {
-  runs: Run[]; onChange: (runs: Run[]) => void; swatches: ReturnType<typeof swatches>; autoText: { hex: string; name: string };
+  runs: Run[]; onChange: (runs: Run[]) => void; swatches: Swatch[]; autoText: { hex: string; name: string };
 }) {
   const id = useId();
   const [sel, setSel] = useState<[number, number]>([0, 0]);

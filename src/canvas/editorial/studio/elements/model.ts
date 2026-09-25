@@ -1,7 +1,11 @@
-import type { Box, CatalogItem, ColorRole, Effect, EffectParams, EffectStyle, PageGeom, Palette, Run, Shape } from './types';
+import type {
+  Box, CatalogEffect, CatalogItem, CatalogStyle, ColorRole, Effect, EffectParams, EffectStyle, PageGeom, Palette, RoleColors, Run, Shape,
+} from './types';
 
-/** Öğelerin saf yardımcıları: kimlik, varsayılan kutu, palet rolleri, yazı parçası düzenleme. Ekran bileşeni yok. */
+/** Öğelerin saf yardımcıları: kimlik, varsayılan kutu, hazır biçim, palet rolleri, yazı parçası düzenleme. Ekran
+ *  bileşeni yok. Varsayılanlar motorun kataloğundan gelir (tek kaynak); burada yalnız sayfaya yerleştirme hesabı. */
 
+/** Şekil kimliği: `s_` + 8 onaltılık hane (motorun `new_shape`'iyle aynı biçim). */
 export function newId(prefix: 's'): string {
   const b = new Uint8Array(4);
   crypto.getRandomValues(b);
@@ -20,18 +24,33 @@ export function safeArea(page: PageGeom | null | undefined): Box {
   return { x: m, y: m, w: p.w - 2 * m, h: p.h - 2 * m };
 }
 
-/** Katalog türünün varsayılan kutusu: tam sayfa türler güvenli alanın tamamı; diğerleri güvenli alan eninin
- *  %40'ı, oranına göre boy (boy güvenli alanın %40'ını geçerse boydan küçültülür), güvenli alanın ortasında. */
-export function defaultBox(item: CatalogItem, page: PageGeom | null | undefined): Box {
-  const s = safeArea(page);
-  if (item.full_page || !item.aspect) return { x: round(s.x), y: round(s.y), w: round(s.w), h: round(s.h) };
-  let w = s.w * 0.4;
-  let h = w / item.aspect;
-  if (h > s.h * 0.4) {
-    h = s.h * 0.4;
-    w = h * item.aspect;
+/** Şeklin parametrelerine uyan hazır biçim (parametreleri şekildekilerle aynı olan ilk biçim); yoksa null. */
+export function styleOf(item: CatalogItem | undefined, params: Record<string, unknown> | undefined): CatalogStyle | null {
+  if (!item) return null;
+  const p = params ?? {};
+  return item.styles.find((s) => Object.entries(s.params).every(([k, v]) => p[k] === v)) ?? null;
+}
+
+/** Yeni şeklin kutusu (motorun `default_box` kuralı): genişlik kesim eninin `width` oranı, boy orana göre; `page`
+ *  yerleşimi güvenli payın yarısı içeride tam sayfa, `corner` sol üst köşe, `center` sayfanın ortası. Kutu güvenli
+ *  alana sığmazsa oran korunarak küçülür (yalnız ilk yerleşim; editör sonra istediği kadar büyütür). */
+export function defaultBox(item: CatalogItem, page: PageGeom | null | undefined, style?: CatalogStyle | null): Box {
+  const p = page ?? FALLBACK_PAGE;
+  const b = style?.box ?? {};
+  const where = b.place ?? item.place;
+  const ratio = b.ratio ?? item.aspect ?? 1;
+  const half = p.safe / 2;
+  if (where === 'page') {
+    return { x: round(p.bleed + half), y: round(p.bleed + half), w: round(p.w - 2 * p.bleed - p.safe), h: round(p.h - 2 * p.bleed - p.safe) };
   }
-  return { x: round(s.x + (s.w - w) / 2), y: round(s.y + (s.h - h) / 2), w: round(w), h: round(h) };
+  const s = safeArea(p);
+  let w = (p.w - 2 * p.bleed) * (b.w ?? item.width);
+  let h = w / (ratio > 0 ? ratio : 1);
+  const k = Math.min(1, s.w / w, s.h / h);
+  w *= k;
+  h *= k;
+  if (where === 'corner') return { x: round(p.bleed + half), y: round(p.bleed + half), w: round(w), h: round(h) };
+  return { x: round((p.w - w) / 2), y: round((p.h - h) / 2), w: round(w), h: round(h) };
 }
 
 /** Kutuyu verilen noktaya ortalar (sürükle-bırakta bırakılan yer, mm). */
@@ -45,30 +64,40 @@ function paramDefaults(item: CatalogItem): Record<string, unknown> {
   return out;
 }
 
-/** Katalog türünden sayfaya eklenmeye hazır şekil. Renkler boş: motor kitabın paletinden rolle doldurur. */
+/** Katalog türünden sayfaya eklenmeye hazır şekil (motorun `new_shape`'iyle aynı alanlar). Renk, çizgi kalınlığı ve
+ *  punto boş: dizgi türün varsayılan rolünü, kalınlığını kullanır, yazıyı şekle sığdırır. `style` hazır biçimin
+ *  anahtarı; verilmezse türün ilk biçimi. */
 export function shapeFromCatalog(item: CatalogItem, opts: { page?: PageGeom | null; z?: number; style?: string | null } = {}): Shape {
-  const params = paramDefaults(item);
-  const style = opts.style ?? item.styles[0]?.value;
-  if (style) params.style = style;
+  const style = item.styles.find((s) => s.value === opts.style) ?? item.styles[0] ?? null;
   return {
     id: newId('s'),
     kind: item.kind,
-    box: defaultBox(item, opts.page),
+    box: defaultBox(item, opts.page, style),
     rotate: 0,
     flip: false,
     z: opts.z ?? 3,
     fill: null,
     stroke: null,
-    stroke_w: item.stroke_w ?? 0.6,
+    stroke_w: null,
     opacity: 1,
-    params,
-    ...(item.text ? { runs: [{ text: item.name, weight: 800 as const, font: 'heading' as const, source: 'editor' as const }], text_size: item.text_size ?? 18 } : {}),
+    params: { ...paramDefaults(item), ...(style?.params ?? {}) },
+    runs: item.text ? item.runs.map((r) => ({ ...r })) : [],
+    text_size: null,
   };
+}
+
+/** Hazır biçimi mevcut şekle uygular: biçimin parametreleri yazılır, kutu ve öbür ayarlar korunur. */
+export function applyStyle(shape: Shape, style: CatalogStyle): Shape {
+  return { ...shape, params: { ...(shape.params ?? {}), ...style.params } };
 }
 
 // ---------------------------------------------------------------- palet
 
-export const ROLE_LABEL: Record<ColorRole, string> = { accent: 'Vurgu', soft: 'Açık zemin', ink: 'Mürekkep' };
+export const ROLE_LABEL: Record<ColorRole, string> = {
+  accent: 'Vurgu', accent2: 'İkinci renk', ink: 'Metin rengi', pop: 'Canlı vurgu', pop2: 'Canlı ikinci',
+  sun: 'Güneş sarısı', rose: 'Gül kırmızısı', soft: 'Açık zemin', soft2: 'Açık ikinci', paper: 'Kâğıt',
+  wood: 'Ahşap', bark: 'Koyu ahşap', deep: 'Koyu vurgu', white: 'Beyaz',
+};
 
 function hexToRgb(hex: string): [number, number, number] | null {
   const m = /^#?([0-9a-f]{6}|[0-9a-f]{3})/i.exec(hex.trim());
@@ -84,28 +113,40 @@ export function mix(hex: string, withHex: string, t: number): string {
   return `#${a.map((v, i) => Math.round(v + (b[i] - v) * t).toString(16).padStart(2, '0')).join('').toUpperCase()}`;
 }
 
-/** Rolün paletteki karşılığı (ekrandaki «otomatik» örneği için; kaydedilen değer null kalır). */
-export function roleColor(palette: Palette | null | undefined, r: ColorRole): string {
+/** Rolün bu kitaptaki rengi: katalogdaki (dizgiyle aynı hesap) değer; katalog henüz gelmediyse paletten yaklaşık. */
+export function roleColor(palette: Palette | null | undefined, r: ColorRole, roles?: RoleColors | null): string {
+  const exact = roles?.[r]?.hex;
+  if (exact) return exact;
   const ink = palette?.text || '#2C2C2A';
   const used = new Set(Object.values(palette?.characters ?? {}).map((c) => c.toUpperCase()));
   const accent = palette?.accent || palette?.colors.find((c) => !used.has(c.hex.toUpperCase()))?.hex || palette?.colors[0]?.hex || '#1F3B73';
   if (r === 'ink') return ink;
-  if (r === 'accent') return accent;
-  return palette?.soft || mix(accent, '#FFFFFF', 0.78);
+  if (r === 'white') return '#FFFFFF';
+  if (r === 'soft' || r === 'soft2' || r === 'paper') return mix(accent, '#FFFFFF', 0.82);
+  if (r === 'deep' || r === 'bark') return mix(accent, '#000000', 0.45);
+  return accent;
+}
+
+/** Renk alanının ekranda boyanacak değeri: hex olduğu gibi, rol kitabın rengine, "none"/boş → null. */
+export function paintOf(v: string | null | undefined, palette: Palette | null | undefined, roles?: RoleColors | null): string | null {
+  if (!v || v === 'none') return null;
+  if (v.startsWith('#')) return v;
+  return roleColor(palette, v as ColorRole, roles);
 }
 
 export type Swatch = { hex: string; name: string };
 
-/** Seçilebilir renkler: kitabın paleti + gövde metni rengi + açık zemin (vurgunun açığı) + beyaz; aynı renk bir kez. */
-export function swatches(palette: Palette | null | undefined): Swatch[] {
+/** Seçilebilir renkler: kitabın paleti + metin rengi + açık zemin (vurgunun açık tonu, `soft` rolü) + beyaz; aynı renk
+ *  bir kez. Değer hex yazılır; açık zemin katalogdaki rol renginden (dizgiyle aynı). */
+export function swatches(palette: Palette | null | undefined, roles?: RoleColors | null): Swatch[] {
   const out: Swatch[] = [];
   const add = (hex: string | null | undefined, name: string) => {
     if (!hex || out.some((s) => s.hex.toUpperCase() === hex.toUpperCase())) return;
-    out.push({ hex, name });
+    out.push({ hex: hex.toUpperCase(), name });
   };
   for (const c of palette?.colors ?? []) add(c.hex, c.name);
-  add(palette?.text || '#2C2C2A', 'Metin rengi');
-  add(roleColor(palette, 'soft'), 'Açık zemin');
+  add(roleColor(palette, 'ink', roles), 'Metin rengi');
+  add(roleColor(palette, 'soft', roles), 'Açık zemin');
   add('#FFFFFF', 'Beyaz');
   return out;
 }
@@ -113,33 +154,28 @@ export function swatches(palette: Palette | null | undefined): Swatch[] {
 // ---------------------------------------------------------------- efekt
 
 export const EFFECT_LABEL: Record<EffectStyle, string> = {
-  burst: 'Patlama', wave: 'Dalga', arc: 'Kavis', shadow: 'Gölge',
-  outline: 'Dış çizgi', stacked: 'Katmanlı', bounce: 'Zıplayan', rainbow: 'Gökkuşağı',
+  burst: 'Patlama', wave: 'Dalga', arc: 'Kavis', shadow: 'Gölgeli',
+  outline: 'Dış çizgili', stacked: 'Kabartma', bounce: 'Zıplayan', rainbow: 'Gökkuşağı',
 };
 
-/** Stil seçilince ilk değerler; önceki efektte aynı alan varsa o korunur. */
-export function effectDefaults(style: EffectStyle, palette: Palette | null | undefined, prev?: EffectParams): EffectParams {
-  const accent = roleColor(palette, 'accent');
-  const ink = roleColor(palette, 'ink');
-  const cols = (palette?.colors ?? []).map((c) => c.hex);
-  const d: Record<EffectStyle, EffectParams> = {
-    burst: { burst_fill: roleColor(palette, 'soft'), burst_stroke: ink, angle: -8 },
-    wave: { curve: 0.5 },
-    arc: { curve: 0.6 },
-    shadow: { shadow: accent, shadow_dx: 0.8, shadow_dy: 0.8 },
-    outline: { outline: '#FFFFFF', outline_w: 0.8 },
-    stacked: { shadow: accent, shadow_dx: 0.6, shadow_dy: 0.6 },
-    bounce: { colors: cols.slice(0, 3).length ? cols.slice(0, 3) : [accent, ink] },
-    rainbow: { colors: cols.length ? cols : [accent, ink] },
-  };
-  const out: EffectParams = { ...d[style] };
-  if (prev) for (const k of Object.keys(out) as (keyof EffectParams)[]) if (prev[k] !== undefined) (out as Record<string, unknown>)[k] = prev[k];
+/** Stil seçilince ilk değerler: katalogdaki varsayılanlar, rol adları bu kitabın rengine çevrilmiş (ekrandaki renk
+ *  seçimiyle aynı dil: hex). Önceki efektte aynı alan varsa o korunur. Katalog yoksa boş: dizgi stilin kendi
+ *  varsayılanını kullanır. Harf renkleri boş kalır (dizgi kitabın paletinden sırayla boyar). */
+export function effectDefaults(spec: CatalogEffect | undefined, palette: Palette | null | undefined,
+  roles?: RoleColors | null, prev?: EffectParams): EffectParams {
+  const out: EffectParams = {};
+  for (const p of spec?.params ?? []) {
+    if (p.default === undefined || p.default === null) continue;
+    out[p.key] = p.type === 'color' && typeof p.default === 'string' ? paintOf(p.default, palette, roles) : p.default;
+  }
+  if (prev) for (const k of Object.keys(out)) if (prev[k] !== undefined) out[k] = prev[k];
   return out;
 }
 
-export function setEffectStyle(style: EffectStyle | null, prev: Effect | null, palette: Palette | null | undefined): Effect | null {
+export function setEffectStyle(style: EffectStyle | null, prev: Effect | null, spec: CatalogEffect | undefined,
+  palette: Palette | null | undefined, roles?: RoleColors | null): Effect | null {
   if (!style) return null;
-  return { style, params: effectDefaults(style, palette, prev?.params) };
+  return { style, params: effectDefaults(spec, palette, roles, prev?.params) };
 }
 
 // ---------------------------------------------------------------- yazı parçaları

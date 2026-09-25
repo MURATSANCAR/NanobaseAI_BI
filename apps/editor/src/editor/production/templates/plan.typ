@@ -4,7 +4,7 @@
 // Yazı kutusuna sığmayan metin kesilmez; `overflow` işareti Python'a döner (plan.py sayfaya yazar).
 #import "front.typ": mark, front-pages
 // Şekil ve efekt yazı (D işi): kutunun içine (0,0,w,h) çizer; kutu, döndürme, aynalama ve z sırası burada.
-#import "elements.typ": draw-shape, effect-text
+#import "elements.typ": draw-shape, effect-text, roles
 #let d = json(sys.inputs.at("data", default: "data.json"))
 #let s = d.spec
 #let b = s.bleed * 1mm
@@ -12,6 +12,9 @@
 #let H = s.trim_h * 1mm + 2 * b
 #let accent = rgb(d.accent)
 #let fonts = (body: s.body_font, heading: s.heading_font)
+// Yazı rengi palet rolü de olabilir (şekil/serbest yazı: "accent", "ink" …); rol kitabın paletinden çözülür.
+#let R = roles(d.palette)
+#let paint(c) = if c.starts-with("#") { rgb(c) } else { rgb(R.at(c, default: d.palette.at("text", default: "#2C2C2A"))) }
 
 #set document(title: d.book.title, author: d.book.author)
 #set text(font: s.body_font, size: d.body_size * 1pt, lang: "tr", hyphenate: s.hyphenate,
@@ -29,7 +32,7 @@
 // ---------------------------------------------------------------- yazı
 #let run(r) = {
   let a = (:)
-  if r.at("color", default: none) != none { a.insert("fill", rgb(r.color)) }
+  if r.at("color", default: none) != none { a.insert("fill", paint(r.color)) }
   if r.at("weight", default: none) != none { a.insert("weight", r.weight) }
   if r.at("size", default: none) != none { a.insert("size", r.size * 1pt) }
   if r.at("font", default: none) != none { a.insert("font", fonts.at(r.font)) }
@@ -57,7 +60,7 @@
     set text(size: t.size * 1pt, fill: rgb(t.ink))
     set par(justify: t.align == "justify")
     set par(leading: t.leading * 1em) if t.leading != none
-    set align(if t.align == "center" { center } else { left })
+    set align(if t.align == "center" { center } else if t.align == "right" { right } else { left })
     if "blocks" in t { for k in t.blocks { blk(k) } } else { par(runs(t.runs)) }
   }
   at(t.box, context {
@@ -88,7 +91,9 @@
 
 #let figure-item(f) = turned(f, image(f.path, width: mm(f.box.w), height: mm(f.box.h), fit: "contain"))
 
-#let shape-item(s) = turned(s, box(width: mm(s.box.w), height: mm(s.box.h), draw-shape(s, d.palette, fonts)))
+// Şekil kutusu yalnız döner; aynalamayı draw-shape yapar (yazı aynalanmaz, ters okunmaz).
+#let shape-item(s) = at(s.box, box(width: mm(s.box.w), height: mm(s.box.h),
+  rotate(s.rotate * 1deg, draw-shape(s, d.palette, fonts, mirror: s.flip))))
 
 // ---------------------------------------------------------------- balon
 // bb: {outline, tail | none, tail_fill | none, dots, stroke, text}; şekiller mm cinsinden çokgen (Python hesaplar).

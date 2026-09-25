@@ -22,10 +22,21 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, llms, propose, rules
-from .store import GSC, PRODUCTS, PROPOSALS, QUESTIONS, RUNS, dumps, ensure, iso, loads, now
+from . import connections, llms, pages, propose, redirects, rules
+import hashlib
+
+from .store import GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
+
+#: Öncelik: kitabın toplam satış adedi (T-soft `CountTotalSales`), eşitse görüntülenme (`StatViews`). Çok satan ve çok
+#: bakılan sayfadaki düzeltme en çok okura ulaşır. JSON içinden okunur; boş/bozuk değer 0 sayılır.
+def _json_num(key: str) -> Any:
+    raw = sa.func.nullif(sa.func.regexp_replace(sa.cast(PRODUCTS.c.data_json, sa.JSON)[key].as_string(), "[^0-9.]", "", "g"), "")
+    return sa.func.coalesce(sa.cast(raw, sa.Float), 0.0)
+
+
+SALES, VIEWS = _json_num("CountTotalSales"), _json_num("StatViews")
 
 
 class Decision(BaseModel):
@@ -120,6 +131,12 @@ class SeoGeo:
                 if len(rows) < connections.PAGE:
                     break
             self._store(products)
+            # Sayfa ayarları ve yönlendirmeler: yazar/kategori/yayınevi sayfaları ve anasayfa 301'leri için.
+            self.state.update(kind="links")
+            links = self._all("link/getLinks")
+            refs = self._all("link/getReferralLinks")
+            self._store_links(links)
+            self._store_redirects(links, refs, products)
         except Exception as e:  # noqa: BLE001 — hata ekrana taşınır, eski veri korunur
             error = str(e)[:1000]
             log.exception("seo sync failed")
@@ -129,6 +146,54 @@ class SeoGeo:
                     finished_at=now(), count=len(products), error=error))
             self.state.update(running=False, error=error)
             self._sync_lock.release()
+
+    def _all(self, path: str) -> list[dict[str, Any]]:
+        out: list[dict[str, Any]] = []
+        while True:
+            rows = connections.tsoft.call(path, {"start": len(out), "limit": connections.PAGE}).get("data") or []
+            out.extend(rows)
+            self.state.update(done=len(out), total=None)
+            if len(rows) < connections.PAGE:
+                return out
+
+    def _store_links(self, links: list[dict[str, Any]]) -> None:
+        tenant, at = self.tenant(), now()
+        seen: dict[str, dict[str, Any]] = {}
+        for l in links:
+            link = str(l.get("Link") or "").strip().strip("/")[:600]
+            if link and str(l.get("Type") or "") != "301" and link not in seen:
+                seen[link] = dict(tenant_id=tenant, link=link, type=str(l.get("Type") or "")[:40],
+                                  table_id=str(l.get("TableId") or "")[:40], title=l.get("Title"),
+                                  description=l.get("Description"), data_json=dumps(l), synced_at=at)
+        values = list(seen.values())
+        with self.engine().begin() as c:
+            c.execute(LINKS.delete().where(LINKS.c.tenant_id == tenant))
+            for i in range(0, len(values), 1000):
+                c.execute(LINKS.insert(), values[i:i + 1000])
+
+    def _store_redirects(self, links: list[dict[str, Any]], refs: list[dict[str, Any]],
+                         products: list[dict[str, Any]]) -> None:
+        """Anasayfaya giden 301'ler için öneri; verilmiş kararlar korunur, düzelmiş olan (artık anasayfaya gitmeyen)
+        bekleyen kayıt silinir."""
+        tenant, at = self.tenant(), now()
+        idx = redirects.Index(links, products)
+        home = {str(r.get("Link") or "").strip().strip("/"): r for r in refs
+                if redirects.is_home(r.get("RedirectLink")) and str(r.get("RedirectLink") or "").strip()}
+        with self.engine().begin() as c:
+            old = {r["link"]: r for r in c.execute(sa.select(REDIRECTS).where(REDIRECTS.c.tenant_id == tenant)).mappings()}
+            for link, r in home.items():
+                sug = redirects.suggest(link, idx)
+                vals = dict(current_target=str(r.get("RedirectLink") or "")[:600], target=(sug["target"] or None),
+                            target_type=sug["type"], confidence=sug["confidence"], reason=sug["reason"][:600],
+                            alternatives_json=dumps(sug["alternatives"]), synced_at=at)
+                if link in old:
+                    c.execute(REDIRECTS.update().where(REDIRECTS.c.id == old[link]["id"]).values(**vals))
+                else:
+                    rid = hashlib.sha1(f"{tenant}|{link}".encode()).hexdigest()[:16]
+                    c.execute(REDIRECTS.insert().values(id=rid, tenant_id=tenant, link=link[:600], status="bekliyor", **vals))
+            gone = [r["id"] for l, r in old.items() if l not in home and r["status"] == "bekliyor"]
+            if gone:
+                c.execute(REDIRECTS.delete().where(REDIRECTS.c.id.in_(gone)))
 
     def _store(self, products: list[dict[str, Any]]) -> None:
         lim = rules.thresholds(self.conf)
@@ -231,7 +296,7 @@ class SeoGeo:
         return self.proposal(pid_new)
 
     def start_batch(self, user: str, budget: int) -> bool:
-        """Önerisi olmayan, düzeltilebilir sorunlu aktif ürünler için öneri yazar; en düşük puandan başlar.
+        """Önerisi olmayan, düzeltilebilir sorunlu aktif ürünler için öneri yazar; en çok satandan başlar.
         Süre bütçesi dolunca durur, kalan iş sonraki tura kalır (sıra her turda yeniden kurulur, tavan yok)."""
         if not self._batch_lock.acquire(blocking=False):
             return False
@@ -250,7 +315,8 @@ class SeoGeo:
             with self.engine().connect() as c:
                 rows = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.issues_json).where(
                     PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True), PRODUCTS.c.rules != ",,",
-                    PRODUCTS.c.product_id.not_in(has)).order_by(PRODUCTS.c.score.asc(), PRODUCTS.c.product_id)).all()
+                    PRODUCTS.c.product_id.not_in(has)).order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc(),
+                                                                 PRODUCTS.c.product_id)).all()
             queue = [pid for pid, issues in rows if propose.fixable(loads(issues, []))]
             self.batch["queue"] = len(queue)
             for pid in queue:
@@ -305,7 +371,15 @@ def _product_view(r: dict[str, Any], site: str) -> dict[str, Any]:
     return {"id": r["product_id"], "code": r["code"], "name": r["name"], "brand": r["brand"], "active": r["active"],
             "score": r["score"], "issues": [{**i, "field": propose.RULE_FIELD.get(i.get("rule"))}
                                             for i in loads(r["issues_json"], [])], "image": _image(p, site),
-            "barcode": p.get("Barcode") or None, "url": url, "syncedAt": iso(r["synced_at"])}
+            "barcode": p.get("Barcode") or None, "url": url, "syncedAt": iso(r["synced_at"]),
+            "sales": _num(p.get("CountTotalSales")), "views": _num(p.get("StatViews"))}
+
+
+def _num(v: Any) -> int:
+    try:
+        return int(float(str(v or 0).replace(",", ".")))
+    except ValueError:
+        return 0
 
 
 def _image(p: dict[str, Any], site: str) -> Optional[str]:
@@ -357,6 +431,8 @@ def register(app, runtime, authorize, session_user):
             week = now() - timedelta(days=7)
             approved_week = c.execute(sa.select(sa.func.count()).select_from(PROPOSALS).where(
                 PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "onaylandi", PROPOSALS.c.decided_at >= week)).scalar() or 0
+            top = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name, PRODUCTS.c.score, SALES, VIEWS).where(
+                active, PRODUCTS.c.score < 70).order_by(SALES.desc(), VIEWS.desc()).limit(10)).all()
             last = c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.kind == "tsoft")
                              .order_by(RUNS.c.started_at.desc()).limit(1)).mappings().first()
         daily = seo.gsc("daily")
@@ -365,6 +441,7 @@ def register(app, runtime, authorize, session_user):
             "failing": failing, "failingThreshold": 70,
             "rules": [{"rule": k, "title": v[2], "severity": v[1], "count": by_rule[k]} for k, v in rules.RULES.items()],
             "proposals": status, "approvedThisWeek": approved_week, "tsoftWrite": False,
+            "priority": [{"id": r[0], "name": r[1], "score": r[2], "sales": int(r[3]), "views": int(r[4])} for r in top],
             "lastSync": ({"startedAt": iso(last["started_at"]), "finishedAt": iso(last["finished_at"]),
                           "count": last["count"], "error": last["error"]} if last else None),
             "sync": seo.state, "batch": seo.batch, "search": daily,
@@ -389,7 +466,7 @@ def register(app, runtime, authorize, session_user):
 
     @app.get("/api/v1/seo-geo/products")
     def seo_products(request: Request, rule: str = "", status: str = "", q: str = "", start: int = 0,
-                     limit: int = 50, order: str = "score") -> dict[str, Any]:
+                     limit: int = 50, order: str = "oncelik") -> dict[str, Any]:
         gate(request)
         tenant, site = seo.tenant(), seo.conf("SEO_SITE_URL")
         cond = [PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True)]
@@ -406,8 +483,9 @@ def register(app, runtime, authorize, session_user):
                 PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == status)))
         with seo.engine().connect() as c:
             total = c.execute(sa.select(sa.func.count()).select_from(PRODUCTS).where(*cond)).scalar() or 0
-            sort = PRODUCTS.c.name.asc() if order == "name" else PRODUCTS.c.score.asc()
-            rows = c.execute(sa.select(PRODUCTS).where(*cond).order_by(sort, PRODUCTS.c.product_id)
+            sort = {"name": [PRODUCTS.c.name.asc()], "score": [PRODUCTS.c.score.asc()]}.get(
+                order, [SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc()])
+            rows = c.execute(sa.select(PRODUCTS).where(*cond).order_by(*sort, PRODUCTS.c.product_id)
                              .offset(max(0, start)).limit(max(1, limit))).mappings().all()
             ids = [r["product_id"] for r in rows]
             states: dict[str, str] = {}
@@ -498,6 +576,235 @@ def register(app, runtime, authorize, session_user):
             except Exception as e:  # noqa: BLE001 — site erişilemezse öneri yine gösterilir
                 current[name] = {"status": None, "error": str(e)[:200]}
         return {**out, "site": site, "current": current}
+
+    def _redirect_view(r: Any) -> dict[str, Any]:
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        return {"id": r["id"], "link": r["link"], "url": f"{site}/{r['link']}", "current": r["current_target"],
+                "target": r["target"], "targetType": r["target_type"], "confidence": r["confidence"],
+                "reason": r["reason"], "alternatives": loads(r["alternatives_json"], []), "status": r["status"],
+                "chosen": r["chosen"], "decidedBy": r["decided_by"], "decidedAt": iso(r["decided_at"]), "note": r["note"]}
+
+    @app.get("/api/v1/seo-geo/redirects")
+    def seo_redirects(request: Request, confidence: str = "", status: str = "", q: str = "", start: int = 0,
+                      limit: int = 50) -> dict[str, Any]:
+        gate(request)
+        tenant = seo.tenant()
+        cond = [REDIRECTS.c.tenant_id == tenant]
+        if confidence:
+            cond.append(REDIRECTS.c.confidence == confidence)
+        if status:
+            cond.append(REDIRECTS.c.status == status)
+        if q.strip():
+            cond.append(sa.or_(REDIRECTS.c.link.ilike(f"%{q.strip()}%"), REDIRECTS.c.target.ilike(f"%{q.strip()}%")))
+        order = sa.case({"kesin": 0, "yüksek": 1, "orta": 2}, value=REDIRECTS.c.confidence, else_=3)
+        with seo.engine().connect() as c:
+            total = c.execute(sa.select(sa.func.count()).select_from(REDIRECTS).where(*cond)).scalar() or 0
+            rows = c.execute(sa.select(REDIRECTS).where(*cond).order_by(order, REDIRECTS.c.link)
+                             .offset(max(0, start)).limit(max(1, limit))).mappings().all()
+            counts = {f"{a}|{b}": n for a, b, n in c.execute(sa.select(REDIRECTS.c.confidence, REDIRECTS.c.status,
+                                                                        sa.func.count()).where(REDIRECTS.c.tenant_id == tenant)
+                                                              .group_by(REDIRECTS.c.confidence, REDIRECTS.c.status)).all()}
+        return {"total": total, "items": [_redirect_view(r) for r in rows], "counts": counts}
+
+    class RedirectDecision(BaseModel):
+        action: str = Field(pattern="^(approve|reject)$")
+        target: str = Field(default="", max_length=600)
+        note: str = Field(default="", max_length=1000)
+
+    @app.post("/api/v1/seo-geo/redirects/{rid}/decide")
+    def seo_redirect_decide(rid: str, body: RedirectDecision, request: Request) -> dict[str, Any]:
+        """Karar yalnız kaydedilir; T-soft'a yazılmaz. Onaylananlar CSV ile panelden girilir."""
+        user = approver(request)
+        target = (body.target or "").strip().strip("/")
+        with seo.engine().begin() as c:
+            r = c.execute(sa.select(REDIRECTS).where(REDIRECTS.c.tenant_id == seo.tenant(), REDIRECTS.c.id == rid)).mappings().first()
+            if not r:
+                raise _err(404, "Yönlendirme bulunamadı.")
+            chosen = target or r["target"]
+            if body.action == "approve" and not chosen:
+                raise _err(422, "Hedef adres seçilmeden onaylanamaz.")
+            c.execute(REDIRECTS.update().where(REDIRECTS.c.id == rid).values(
+                status="onaylandi" if body.action == "approve" else "reddedildi",
+                chosen=chosen if body.action == "approve" else None, decided_by=user, decided_at=now(),
+                note=body.note or None))
+            r = c.execute(sa.select(REDIRECTS).where(REDIRECTS.c.id == rid)).mappings().first()
+        seo.audit(user, body.action, rid, r["link"], {"kind": "redirect", "target": r["chosen"]})
+        return _redirect_view(r)
+
+    @app.post("/api/v1/seo-geo/redirects/approve-confidence")
+    def seo_redirect_bulk(request: Request, confidence: str = "kesin") -> dict[str, Any]:
+        """Bir güven düzeyindeki bekleyen önerilerin hepsini onaylar (yalnız "kesin" ve "yüksek")."""
+        user = approver(request)
+        if confidence not in ("kesin", "yüksek"):
+            raise _err(422, "Toplu onay yalnız kesin ve yüksek güvende yapılır.")
+        with seo.engine().begin() as c:
+            n = c.execute(REDIRECTS.update().where(
+                REDIRECTS.c.tenant_id == seo.tenant(), REDIRECTS.c.status == "bekliyor",
+                REDIRECTS.c.confidence == confidence, REDIRECTS.c.target.is_not(None)).values(
+                status="onaylandi", chosen=REDIRECTS.c.target, decided_by=user, decided_at=now())).rowcount
+        seo.audit(user, "approve", confidence, "Toplu yönlendirme onayı", {"kind": "redirect", "count": n})
+        return {"approved": n}
+
+    @app.get("/api/v1/seo-geo/redirects/export.csv")
+    def seo_redirect_export(request: Request):
+        """Onaylanan yönlendirmeler: T-soft paneline elle girilmek için (Link;RedirectLink)."""
+        gate(request)
+        import csv
+        import io
+        from fastapi.responses import Response
+
+        with seo.engine().connect() as c:
+            rows = c.execute(sa.select(REDIRECTS.c.link, REDIRECTS.c.chosen, REDIRECTS.c.decided_by, REDIRECTS.c.decided_at)
+                             .where(REDIRECTS.c.tenant_id == seo.tenant(), REDIRECTS.c.status == "onaylandi")
+                             .order_by(REDIRECTS.c.link)).all()
+        buf = io.StringIO()
+        w = csv.writer(buf, delimiter=";")
+        w.writerow(["Link", "RedirectLink", "Onaylayan", "Tarih"])
+        for link, chosen, by, at in rows:
+            w.writerow([link, chosen, by, iso(at)])
+        return Response("\ufeff" + buf.getvalue(), media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": 'attachment; filename="yonlendirme-onerileri.csv"'})
+
+    # ------------------------------------------------------------ yazar / kategori / yayınevi sayfaları
+    def _page_data() -> tuple[list[dict[str, Any]], dict[tuple[str, str], dict[str, Any]]]:
+        tenant = seo.tenant()
+        with seo.engine().connect() as c:
+            links = [dict(r) for r in c.execute(sa.select(LINKS.c.link, LINKS.c.type, LINKS.c.table_id, LINKS.c.title,
+                                                          LINKS.c.description).where(
+                LINKS.c.tenant_id == tenant, LINKS.c.type.in_(list(pages.KINDS)))).mappings()]
+            prods = [loads(r[0], {}) for r in c.execute(sa.select(PRODUCTS.c.data_json).where(PRODUCTS.c.tenant_id == tenant))]
+        return links, pages.stats(prods)
+
+    def _page_name(l: dict[str, Any]) -> str:
+        return rules.text_of(l.get("title")).split("|")[0].strip() or l["link"].replace("-", " ").title()
+
+    def _wiki(name: str) -> Optional[dict[str, Any]]:
+        try:
+            with seo.engine().connect() as c:
+                row = c.execute(sa.text("select facts_json from semantic_web_authors where wikidata_id is not null "
+                                        "and lower(name) = lower(:n) limit 1"), {"n": name}).first()
+            return loads(row[0], None) if row else None
+        except Exception:  # noqa: BLE001 — basın-web modülü kapalı ortamda tablo yoktur
+            return None
+
+    @app.get("/api/v1/seo-geo/pages")
+    def seo_pages(request: Request, type: str = "model", q: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:
+        gate(request)
+        if type not in pages.KINDS:
+            raise _err(422, "Bilinmeyen sayfa türü.")
+        links, st = _page_data()
+        lim = rules.thresholds(seo.conf)
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        with seo.engine().connect() as c:
+            states = dict(c.execute(sa.select(PROPOSALS.c.product_id, PROPOSALS.c.status).where(
+                PROPOSALS.c.tenant_id == seo.tenant(), PROPOSALS.c.product_id.like(f"{type}:%"))
+                .order_by(PROPOSALS.c.created_at)).all())
+        items = []
+        for l in links:
+            if l["type"] != type:
+                continue
+            s = st.get((type, str(l["table_id"])), {})
+            name = _page_name(l)
+            if q.strip() and q.strip().casefold() not in (name + " " + l["link"]).casefold():
+                continue
+            a = pages.audit(type, name, l["title"], l["description"], lim)
+            items.append({"id": str(l["table_id"]), "name": name, "link": l["link"], "url": f"{site}/{l['link']}",
+                          "books": s.get("books", 0), "sales": s.get("sales", 0), "score": a["score"],
+                          "issues": len(a["issues"]), "proposal": states.get(f"{type}:{l['table_id']}")})
+        items.sort(key=lambda x: (-x["sales"], -x["books"], x["name"]))
+        return {"total": len(items), "items": items[max(0, start):max(0, start) + max(1, limit)],
+                "withBooks": sum(1 for x in items if x["books"])}
+
+    def _page(type: str, tid: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+        if type not in pages.KINDS:
+            raise _err(422, "Bilinmeyen sayfa türü.")
+        links, st = _page_data()
+        l = next((x for x in links if x["type"] == type and str(x["table_id"]) == tid), None)
+        if not l:
+            raise _err(404, "Sayfa bulunamadı; önce T-soft eşitlemesi yapılmalı.")
+        name = _page_name(l)
+        f = pages.facts(type, name, st.get((type, tid), {}), _wiki(name) if type == "model" else None)
+        return l, {"name": name}, f
+
+    @app.get("/api/v1/seo-geo/pages/{type}/{tid}")
+    def seo_page(type: str, tid: str, request: Request) -> dict[str, Any]:
+        gate(request)
+        l, meta, f = _page(type, tid)
+        lim = rules.thresholds(seo.conf)
+        a = pages.audit(type, meta["name"], l["title"], l["description"], lim)
+        src = pages.source_record(type, meta["name"], l["title"], l["description"], f)
+        with seo.engine().connect() as c:
+            props = c.execute(sa.select(PROPOSALS).where(PROPOSALS.c.tenant_id == seo.tenant(),
+                                                         PROPOSALS.c.product_id == f"{type}:{tid}")
+                              .order_by(PROPOSALS.c.created_at.desc())).mappings().all()
+        site = (seo.conf("SEO_SITE_URL") or "https://timas.com.tr").rstrip("/")
+        out_props = []
+        for r in props:
+            fl = loads(r["fields_json"], {})
+            out_props.append({**_proposal_view(dict(r)), "unsupported": propose.unsupported(
+                src, {"SeoTitle": fl.get("SeoTitle", ""), "SeoDescription": fl.get("SeoDescription", ""), "Details": fl.get("Intro", "")})})
+        return {"type": type, "id": tid, "name": meta["name"], "link": l["link"], "url": f"{site}/{l['link']}",
+                "current": {"SeoTitle": rules.text_of(l["title"]), "SeoDescription": rules.text_of(l["description"]), "Intro": ""},
+                "facts": f, "score": a["score"], "issues": a["issues"], "limits": lim, "proposals": out_props}
+
+    @app.post("/api/v1/seo-geo/pages/{type}/{tid}/propose")
+    def seo_page_propose(type: str, tid: str, request: Request) -> dict[str, Any]:
+        user = gate(request)
+        l, meta, f = _page(type, tid)
+        key = f"{type}:{tid}"
+        with seo._gen_lock:
+            if key in seo._generating:
+                raise _err(409, "Bu sayfa için öneri şu an yazılıyor.")
+            seo._generating.add(key)
+        try:
+            llm = runtime().llm_for("seo")
+            if llm is None:
+                raise _err(503, "Yapay zekâ modeli bu kurulumda tanımlı değil.")
+            lim = rules.thresholds(seo.conf)
+            try:
+                fields = pages.suggest(llm, type, meta["name"], l["title"], l["description"], f, lim)
+            except ValueError as e:
+                raise _err(502, f"Öneri üretilemedi: {e}") from None
+            before = pages.audit(type, meta["name"], l["title"], l["description"], lim)
+            after = pages.audit(type, meta["name"], fields["SeoTitle"], fields["SeoDescription"], lim)
+            after_score = min(100, after["score"] + (15 if fields.get("Intro") and type in ("model", "category") else 0))
+            pid = uuid.uuid4().hex
+            with seo.engine().begin() as c:
+                c.execute(PROPOSALS.delete().where(PROPOSALS.c.tenant_id == seo.tenant(), PROPOSALS.c.product_id == key,
+                                                   PROPOSALS.c.status == "hazir"))
+                c.execute(PROPOSALS.insert().values(
+                    id=pid, tenant_id=seo.tenant(), product_id=key, status="hazir", fields_json=dumps(fields),
+                    before_json=dumps({"SeoTitle": rules.text_of(l["title"]), "SeoDescription": rules.text_of(l["description"]), "Intro": ""}),
+                    score_before=before["score"], score_after=after_score, model=getattr(llm, "model", None),
+                    created_by=user, created_at=now()))
+            seo.audit(user, "create", key, meta["name"], {"proposal": pid})
+            return _proposal_view(seo.proposal(pid))
+        finally:
+            with seo._gen_lock:
+                seo._generating.discard(key)
+
+    class PageDecision(BaseModel):
+        action: str = Field(pattern="^(approve|reject)$")
+        fields: dict[str, str] = Field(default_factory=dict)
+        note: str = Field(default="", max_length=1000)
+
+    @app.post("/api/v1/seo-geo/pages/proposals/{proposal_id}/decide")
+    def seo_page_decide(proposal_id: str, body: PageDecision, request: Request) -> dict[str, Any]:
+        """Karar yalnız kaydedilir; T-soft'a yazılmaz (hedef CRM/T-soft paneli)."""
+        user = approver(request)
+        prop = seo.proposal(proposal_id)
+        if prop["status"] != "hazir" or ":" not in prop["product_id"]:
+            raise _err(409, "Bu öneri için karar verilemez.")
+        fields = {k: v for k, v in (body.fields or loads(prop["fields_json"], {})).items() if k in pages.FIELDS}
+        approve = body.action == "approve"
+        with seo.engine().begin() as c:
+            c.execute(PROPOSALS.update().where(PROPOSALS.c.id == proposal_id).values(
+                status="onaylandi" if approve else "reddedildi",
+                fields_json=dumps({**loads(prop["fields_json"], {}), **fields}) if approve else prop["fields_json"],
+                decided_by=user, decided_at=now(), note=body.note or None,
+                result=("Onaylandı; gönderim yok (T-soft paneli/CRM)." if approve else None)))
+        seo.audit(user, body.action, prop["product_id"], prop["product_id"], {"proposal": proposal_id, "kind": "page"})
+        return _proposal_view(seo.proposal(proposal_id))
 
     @app.get("/api/v1/seo-geo/history")
     def seo_history(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:

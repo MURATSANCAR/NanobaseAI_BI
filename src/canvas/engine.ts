@@ -1761,18 +1761,34 @@ export type PlanBubble = { id: string; speaker: string | null; text: string; sha
   tail: { x: number; y: number } | null; color: string | null; source: 'auto' | 'editor' | string };
 export type PlanFigure = { id: string; asset: string; box: PlanBox; rotate: number; flip: boolean; z: number };
 /** Efekt yazı (sözleşme «Efekt yazılar ve süs/şekiller»); çizimi dizgide, panel E hattında. */
+/** Şekil ve efekt yazının tek tip kaynağı burasıdır; `studio/elements/types.ts` bunları yeniden adlandırarak verir.
+ *  Renk alanı "#RRGGBB(AA)", palet rolü (`PlanColorRole`, dizgi kitabın paletinden çözer) ya da "none" (boya yok). */
+export type PlanColorRole = 'accent' | 'accent2' | 'ink' | 'pop' | 'pop2' | 'sun' | 'rose' | 'soft' | 'soft2' | 'paper'
+  | 'wood' | 'bark' | 'deep' | 'white';
 export type PlanEffectStyle = 'burst' | 'wave' | 'arc' | 'shadow' | 'outline' | 'stacked' | 'bounce' | 'rainbow';
-export type PlanEffect = { style: PlanEffectStyle | string; params?: {
-  curve?: number; outline?: string; outline_w?: number; shadow?: string; shadow_dx?: number; shadow_dy?: number;
-  colors?: string[]; burst_fill?: string; burst_stroke?: string; angle?: number; [k: string]: unknown } };
+/** Stilin kullanmadığı alan etkisizdir; dış çizgi ve gölge her stilde çalışır. null renk = yok. */
+export type PlanEffectParams = {
+  /** arc/wave: -1..1 kavis */ curve?: number; /** wave: dalga sayısı */ waves?: number;
+  outline?: string | null; /** mm */ outline_w?: number; shadow?: string | null; /** mm */ shadow_dx?: number; /** mm */ shadow_dy?: number;
+  /** stacked: derinlik (harf boyuna oran) */ depth?: number;
+  /** rainbow/bounce: harf harf dönen renkler; boş → kitabın paletinden */ colors?: string[] | null;
+  burst_fill?: string | null; burst_stroke?: string | null; /** derece */ angle?: number;
+  /** burst: uç sayısı ve tohum (aynı tohum → aynı çizim) */ spikes?: number; seed?: number;
+  [k: string]: unknown;
+};
+export type PlanEffect = { style: PlanEffectStyle; params: PlanEffectParams };
+/** `size` null → yazı kutuya sığacak kadar büyür/küçülür; sayı verilirse sabittir, sığmazsa dizgi `overflow` yazar. */
 export type PlanFreeText = { id: string; box: PlanBox; align: 'left' | 'justify' | 'center' | 'right'; size: number | null;
-  background: string | null; runs: PlanRun[]; z: number; effect?: PlanEffect | null };
-/** Süs/şekil katmanı (çerçeve, tabela, not kâğıdı, yıldız …); z kuralı figürlerle aynı (≥ 3). */
+  background: string | null; runs: PlanRun[]; z: number; effect?: PlanEffect | null; overflow?: boolean };
+/** Süs/şekil katmanı (çerçeve, tabela, not kâğıdı, yıldız …); z kuralı figürlerle aynı (≥ 3). Boş renk → türün
+ *  varsayılan rolü; `text_size` null → yazı şekle sığdırılır; `flip` şekli aynalar, yazıyı aynalamaz. */
 export type PlanShapeKind = 'frame' | 'corner' | 'scatter' | 'arrow' | 'sign' | 'note' | 'envelope' | 'scroll' | 'badge'
   | 'ribbon' | 'star' | 'heart' | 'cloud' | 'burst' | 'line';
-export type PlanShape = { id: string; kind: PlanShapeKind | string; box: PlanBox; rotate: number; flip: boolean; z: number;
+export type PlanShape = { id: string; kind: PlanShapeKind | (string & {}); box: PlanBox; rotate: number; flip: boolean; z: number;
   fill?: string | null; stroke?: string | null; stroke_w?: number | null; opacity?: number | null;
-  params?: Record<string, unknown>; runs?: PlanRun[]; text_size?: number | null };
+  params?: Record<string, unknown>; runs?: PlanRun[]; text_size?: number | null;
+  /** Salt okunur (dizgi yazar): sabit puntolu yazı şekle sığmadı. */
+  overflow?: boolean };
 /** `id`: çizilen resim (a_…); `asset`: sayfa resmi yapılan yüklenmiş fotoğraf (g_…). İkisinden biri dolu olur. */
 export type PlanArt = { id: string | null; asset?: string | null; box: PlanBox; fit: 'cover' | 'contain'; focus: { x: number; y: number };
   /** Salt okunur: çizilen resmin seçili sürümü (tarayıcı taslağında resmi göstermek için; sözleşmeye önerildi). */
@@ -1783,7 +1799,8 @@ export type PlanPage = { id: string; chapter: number | null; layout: PlanLayout;
   /** Eski planlarda yok; ekran boş liste sayar. */
   shapes?: PlanShape[]; overflow: boolean };
 export type PlanColor = { name: string; hex: string; source: 'resim' | 'timas' | 'editor' | string };
-export type PlanPalette = { colors: PlanColor[]; text: string; characters: Record<string, string> };
+/** `accent` isteğe bağlı (B teslim notu): verilirse vurgu rolü odur. */
+export type PlanPalette = { colors: PlanColor[]; text: string; characters: Record<string, string>; accent?: string | null };
 export type PlanAsset = { kind: 'figure' | 'photo' | string; prompt?: string; name?: string; path: string; w_px: number; h_px: number;
   alpha: boolean; by: string; at: string; characters?: string[];
   /** Arka planı kaldırılmış ya da kalitesi artırılmış kopyanın özgünü. */

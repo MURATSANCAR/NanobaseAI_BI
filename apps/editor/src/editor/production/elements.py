@@ -3,7 +3,8 @@
 
 Çizim `templates/elements.typ`'tedir: `draw-shape(s, palette, fonts)` bir `shapes[]` öğesini, `effect-text(t, palette,
 fonts)` `effect`'li bir serbest yazıyı kendi kutusunun içine (0,0,w,h) vektör olarak çizer; kutunun sayfadaki yeri,
-döndürme, aynalama ve z sırası çağıranındır (plan.typ). Bu modül:
+döndürme ve z sırası çağıranındır (plan.typ); aynalama `draw-shape(..., mirror: s.flip)` ile çizimde (yazı düz
+kalır). Bu modül:
 - `CATALOG` / `EFFECTS`: her tür ve stil için Türkçe ad, grup, varsayılan kutu, renk rolleri, parametreler (tür,
   seçenekler, varsayılan) ve hazır biçimler (`presets`; önizleme ucundaki `style`). Varsayılanlar `elements.typ`'teki
   SHAPE-DEFAULTS / EFFECT-DEFAULTS ile aynıdır (test sınar); ikisi birlikte değişir.
@@ -565,9 +566,15 @@ def book_context(job_dir: Path | None) -> tuple[dict, dict]:
             fonts = {"body": spec.get("body_font") or fonts["body"], "heading": spec.get("heading_font") or fonts["heading"]}
         except (OSError, ValueError):
             pass
+    return palette_or_default(palette), fonts
+
+
+def palette_or_default(palette: dict | None) -> dict:
+    """Çizimde kullanılan palet: plan paleti; rengi yoksa Timaş çocuk paleti (planın öbür alanları korunur). Önizleme
+    uçları ve dizgi (plan.render_data) aynı paleti verir; önizlemedeki rol rengi sayfadakiyle aynı çıkar."""
     if not palette or not palette.get("colors"):
-        palette = {**default_palette(), **({k: v for k, v in (palette or {}).items() if k != "colors"})}
-    return palette, fonts
+        return {**default_palette(), **({k: v for k, v in (palette or {}).items() if k != "colors"})}
+    return palette
 
 
 def _typst_dir(main: str, data: dict) -> tempfile.TemporaryDirectory:

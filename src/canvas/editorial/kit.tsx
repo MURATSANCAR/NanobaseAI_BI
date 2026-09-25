@@ -24,6 +24,7 @@ export function ModuleFrame({
   title,
   lead,
   source,
+  presence = 'Kaynak: CRM',
   aside,
   children,
 }: {
@@ -32,13 +33,15 @@ export function ModuleFrame({
   title: string;
   lead: string;
   source: string;
+  /** Üst şeridin sağındaki kısa durum; verilmezse kaynak adı. */
+  presence?: string;
   /** Başlığın sağ üstüne yerleşen öge (ör. kitap arama). */
   aside?: ReactNode;
   children: ReactNode;
 }) {
   return (
     <Shell
-      head={{ tenant: 'Timaş Yayınları', section: 'Editoryal Süreç', crumb, source, presence: 'Kaynak: CRM' }}
+      head={{ tenant: 'Timaş Yayınları', section: 'Editoryal Süreç', crumb, source, presence }}
       rail={editorialRail(route)}
     >
       <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">

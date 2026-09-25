@@ -121,14 +121,21 @@ else:
         changes.append(f"fotoğraf gövde sınırı {body_mb} MB")
 
 # 3) Süs/şekil kataloğu ve efekt önizlemeleri (yalnız okuma; yazan uç yok, şekil sayfa PUT'uyla kaydedilir)
+KIND = "[a-z][a-z0-9_-]{0,31}"                      # köprünün NAME kalıbıyla aynı (rakam da olabilir)
 if "EDITOR-STUDYO-OGE" not in s:
-    KIND = "[a-z][a-z_-]{0,31}"
     oge = ("    # EDITOR-STUDYO-OGE  (sus/sekil katalogu ve efekt yazi onizlemeleri)\n"
            + loc(f"{P_}/elements/catalog", "GET", "jobs/$1/plan/elements/catalog", timeout=60)
            + loc(f"{P_}/elements/({KIND})/preview", "GET", "jobs/$1/plan/elements/$2/preview$is_args$args", timeout=60)
            + loc(f"{P_}/effects/({KIND})/preview", "GET", "jobs/$1/plan/effects/$2/preview$is_args$args", timeout=60))
     s = s.replace("    # EDITOR-BITTI", oge + "    # EDITOR-BITTI", 1)
     changes.append("süs/şekil ve efekt önizleme yolları")
+else:
+    # 09-25 ilk sürümü tür/stil adında rakama izin vermiyordu; yerinde genişletilir.
+    widened = s.replace("/elements/([a-z][a-z_-]{0,31})/preview", f"/elements/({KIND})/preview").replace(
+        "/effects/([a-z][a-z_-]{0,31})/preview", f"/effects/({KIND})/preview")
+    if widened != s:
+        s = widened
+        changes.append("süs/şekil yollarında tür adı kalıbı genişletildi")
 
 if s == orig:
     print("zaten var (güncel)")

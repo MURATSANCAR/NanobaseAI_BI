@@ -7,8 +7,9 @@ import {
 } from '../../engine';
 import { btnGhost, btnPrimary, field, label as labelCls } from '../../admin/ui';
 import { LAYOUTS, applyLayout, contrastOnWhite, hasText, isHex, outsideSafe, preset, r1, safeRect, uid } from './planModel';
-import { ITEM_LABEL, findItem, nextZ, pageItems, removable, removeItem, restack, shapesOf, withBox, type ItemRef } from './pageItems';
+import { ITEM_LABEL, findItem, nextZ, pageItems, paletteKey, removable, removeItem, restack, restackStep, shapesOf, withBox, type ItemRef } from './pageItems';
 import { slots } from './slots';
+import { EFFECT_LABEL } from './elements';
 import RunsEditor, { paletteChips } from './RunsEditor';
 import AssetTools, { type AssetJobKind } from './AssetTools';
 import { ConfirmDialog } from './dialogs';
@@ -237,6 +238,20 @@ export function ItemTab({ ctx }: { ctx: EditorCtx }) {
   const shape = sel.kind === 'shape' ? shapesOf(page).find((x) => x.id === sel.id) : undefined;
   const turn = fig ?? shape;
   const setShape = (next: PlanShape, key = '') => ctx.setPage({ ...page, shapes: shapesOf(page).map((x) => (x.id === next.id ? next : x)) }, key);
+  if (shape && slots.ShapeInspector) {
+    const Inspector = slots.ShapeInspector;
+    return (
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-end">
+          <button type="button" className="text-[12px] font-bold text-canvas-muted hover:underline" onClick={() => ctx.setSel(null)}>Seçimi bırak</button>
+        </div>
+        <Inspector jobId={ctx.job} value={shape} palette={plan.palette} rev={paletteKey(plan.palette)}
+          onChange={(next) => setShape(next, `shape:${shape.id}`)}
+          onZ={(dir) => ctx.setPage(restackStep(page, sel, dir), '')}
+          onRemove={() => { ctx.setPage(removeItem(page, sel), ''); ctx.setSel(null); }} />
+      </div>
+    );
+  }
   const useAsset = (gid: string) => {
     if (sel.kind === 'figure') ctx.setPage({ ...page, figures: page.figures.map((f) => (f.id === sel.id ? { ...f, asset: gid } : f)) }, '');
     else if (sel.kind === 'art' && page.art) ctx.setPage({ ...page, art: { ...page.art, id: null, asset: gid } }, '');
@@ -330,12 +345,10 @@ export function ItemTab({ ctx }: { ctx: EditorCtx }) {
       {free && <FreeTextEditor ctx={ctx} page={page} t={free} />}
       {free && slots.EffectTextPanel && (
         <button type="button" className={btnGhost} onClick={() => ctx.openTab('efekt')}>
-          <Sparkles className="h-4 w-4" aria-hidden />{free.effect ? `Efekt yazı: ${free.effect.style}` : 'Efekt ver'}
+          <Sparkles className="h-4 w-4" aria-hidden />{free.effect ? `Efekt yazı: ${EFFECT_LABEL[free.effect.style] ?? 'özel'}` : 'Efekt ver'}
         </button>
       )}
-      {shape && (slots.ShapeInspector
-        ? <slots.ShapeInspector value={shape} onChange={(next) => setShape(next, `shape:${shape.id}`)} />
-        : <ShapeBasics ctx={ctx} s={shape} onChange={setShape} />)}
+      {shape && <ShapeBasics ctx={ctx} s={shape} onChange={setShape} />}
       {bub && <BubbleFields ctx={ctx} page={page} b={bub} />}
 
       {removable(sel) && (
@@ -404,9 +417,23 @@ function FreeTextEditor({ ctx, page, t }: { ctx: EditorCtx; page: PlanPage; t: P
   const heading = t.runs.every((r) => r.font === 'heading');
   return (
     <div className="flex flex-col gap-2">
+      {t.overflow && (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-[12px] font-semibold text-amber-800">
+          Yazı kutusuna sığmıyor; kutuyu büyütün, puntoyu küçültün{t.effect ? ' ya da «Kutuya sığdır»ı açın' : ''}.
+        </p>
+      )}
       <RunsEditor runs={t.runs} palette={ctx.plan.palette} label="Yazı" rows={2} onChange={(runs, key) => put({ runs }, key ? `${key}:${t.id}` : '')} />
       <div className="flex flex-wrap items-end gap-2">
-        <div className="w-24"><Num label="Punto" step={1} min={6} value={t.size} onChange={(v) => put({ size: Math.max(6, v) }, `size:${t.id}`)} /></div>
+        {!(t.effect && t.size == null) && (
+          <div className="w-24"><Num label="Punto" step={1} min={6} value={t.size} onChange={(v) => put({ size: Math.max(6, v) }, `size:${t.id}`)} /></div>
+        )}
+        {t.effect && (
+          <label className="flex items-center gap-1.5 pb-2 text-[12px] font-bold">
+            <input type="checkbox" checked={t.size == null} className="accent-[#7C5CFF]"
+              onChange={(e) => put({ size: e.target.checked ? null : 24 })} />
+            Kutuya sığdır
+          </label>
+        )}
         <select value={t.align} onChange={(e) => put({ align: e.target.value as PlanFreeText['align'] })} aria-label="Hizalama"
           className="min-h-10 rounded-xl border border-slate-200 bg-white px-2 text-[12px] font-bold">
           <option value="left">Sola</option><option value="center">Orta</option><option value="right">Sağa</option>
@@ -603,7 +630,7 @@ export function ElementsTab({ ctx }: { ctx: EditorCtx }) {
   const Lib = slots.ElementLibrary;
   if (!Lib) return null;
   if (!ctx.page) return <p className="text-[12.5px] text-canvas-muted">Soldan bir sayfa seçin.</p>;
-  return <Lib onAdd={(shape) => ctx.addShape(shape)} />;
+  return <Lib jobId={ctx.job} page={ctx.plan.page} nextZ={nextZ(ctx.page)} rev={paletteKey(ctx.plan.palette)} onAdd={(shape) => ctx.addShape(shape)} />;
 }
 
 /** Efekt yazı sekmesi: seçili serbest yazıya efekt verir; seçili değilse yeni serbest yazı ekletir. */
@@ -625,7 +652,11 @@ export function EffectTab({ ctx }: { ctx: EditorCtx }) {
       </div>
     );
   }
-  return <Panel value={t.effect ?? null} onChange={(effect) => ctx.setPage({ ...page, texts: page.texts.map((x) => (x.id === t.id ? { ...x, effect } : x)) }, `effect:${t.id}`)} />;
+  return (
+    <Panel jobId={ctx.job} value={t.effect ?? null} palette={ctx.plan.palette} rev={paletteKey(ctx.plan.palette)}
+      text={t.runs.map((r) => r.text).join('')} textColor={t.runs.find((r) => r.color)?.color ?? null}
+      onChange={(effect) => ctx.setPage({ ...page, texts: page.texts.map((x) => (x.id === t.id ? { ...x, effect } : x)) }, `effect:${t.id}`)} />
+  );
 }
 
 /** Şekil özellik paneli (E hattının paneli takılana kadar): dolgu ve çizgi rengi paletten, saydamlık, yazı. */

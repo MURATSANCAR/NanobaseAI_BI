@@ -37,7 +37,21 @@ $SSH "$VM" "cd $DST/infra/docker/bi && grep -q '^SEMANTIC_ADMIN_TOKEN=.' .env ||
   grep -q '^PORTAL_ORIGIN=http' .env || { echo 'HATA: .env içinde PORTAL_ORIGIN yok; giriş 403 döner'; exit 1; }
   test -s secrets/ad/timas-ad.json || { echo 'HATA: secrets/ad/timas-ad.json yok; giriş 503 döner'; exit 1; }
   test -s secrets/crm-mssql-connection.json || { echo 'HATA: secrets/crm-mssql-connection.json yok; CRM ekranları Logo sunucusuna düşer'; exit 1; }
-  docker compose build bridge web login && docker compose up -d && sleep 60 && docker compose ps --format '{{.Service}} {{.State}} {{.Status}}'
+  docker compose build bridge web login
+  # Kurulum müşteri verisini silmez (kullanıcı kuralı 2026-09-25). bi_var ilk kez oluşturuluyorsa çalışan köprünün
+  # konteyner katmanındaki durum (rapor önbelleği, Finansal Denetim arşivi, editör verisi) önce bu diske kopyalanır.
+  if ! docker volume inspect bi_var >/dev/null 2>&1; then
+    docker volume create bi_var >/dev/null
+    if docker inspect bi-bridge-1 >/dev/null 2>&1; then
+      rm -rf /tmp/bi-var-seed && docker cp bi-bridge-1:/data/nanobaseai/bi/var /tmp/bi-var-seed 2>/dev/null || mkdir -p /tmp/bi-var-seed
+      docker run --rm --entrypoint sh -v bi_var:/v -v /tmp/bi-var-seed:/src:ro nanobase-bi-bridge:latest -c 'cp -a /src/. /v/ && find /v -type f | wc -l' | sed 's/^/bi_var: taşınan dosya /'
+      rm -rf /tmp/bi-var-seed
+    fi
+  fi
+  before=\$(docker exec bi-bridge-1 sh -c 'ls /data/nanobaseai/bi/var/management-reports 2>/dev/null | wc -l' 2>/dev/null || echo 0)
+  docker compose up -d && sleep 60 && docker compose ps --format '{{.Service}} {{.State}} {{.Status}}'
+  after=\$(docker exec bi-bridge-1 sh -c 'ls /data/nanobaseai/bi/var/management-reports 2>/dev/null | wc -l')
+  echo \"bi_var korundu: rapor önbelleği dosya \$before → \$after\"
   docker compose exec -T web nginx -t
   # Oturumsuz: sayfa 200, veri yolları 401, giriş servisi oturum sorusuna 401.
   for p in / /timas/ /timas/auth/session /timas/api/v1/engine /timas/api/v1/alerts /timas/metrics/cfo.json; do echo \"\$p -> \$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8088\$p)\"; done
