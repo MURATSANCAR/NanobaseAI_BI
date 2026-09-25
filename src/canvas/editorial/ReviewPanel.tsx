@@ -95,7 +95,9 @@ function Item({ bookId, title, it, picked, onPick, decide, busy }: {
             <p className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
               {it.subject}
               {it.pages.length > 0 && ` · s.${it.pages.join(', ')}`}
-              {it.priority === 1 && <span className="ml-2 normal-case tracking-normal text-red-700">Önce bakılmalı</span>}
+              {it.advisory
+                ? <span className="ml-2 normal-case tracking-normal text-canvas-violet">Öneri · kabulü engellemez</span>
+                : it.priority === 1 && <span className="ml-2 normal-case tracking-normal text-red-700">Önce bakılmalı</span>}
             </p>
           </div>
           <h4 className="mt-1 text-[14px] font-extrabold leading-snug">{it.question}</h4>
@@ -231,18 +233,19 @@ export default function ReviewPanel({ bookId }: { bookId: string }) {
         <h2 className="text-[15px] font-extrabold">İnceleme</h2>
         {d && (
           <span className="text-[12px] font-bold text-canvas-muted">
-            {d.open} soru bekliyor{d.decided ? ` · ${d.decided} karara bağlandı` : ''}
+            {d.open} soru bekliyor{d.advice ? ` · ${d.advice} öneri` : ''}{d.decided ? ` · ${d.decided} karara bağlandı` : ''}
           </span>
         )}
       </div>
       <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
         Okuma bu yerlerde emin olamadı ve size soruyor. Sayfanın küçük resmine dokunursanız sayfa büyür.
         Bunlar cevaplanmadan kitabın okuması yayına kabul edilmez.
+        {d?.advice ? ' «Öneri» işaretliler bu kitabın türüne tam uymayan okumadan gelir; bakmanız iyi olur ama kabulü engellemez.' : ''}
       </p>
 
       {err && <div className="mt-3"><Note tone="err">{err}</Note></div>}
       {saved && <div className="mt-3" role="status"><Note tone={saved.includes('kaydedilemedi') ? 'warn' : 'ok'}>{saved}</Note></div>}
-      {d && d.open === 0 && <div className="mt-3"><Note tone="ok">Bu kitapta bekleyen soru yok.</Note></div>}
+      {d && d.open === 0 && <div className="mt-3"><Note tone="ok">Bu kitapta bekleyen soru yok{d.advice ? `; ${d.advice} öneri isterseniz aşağıda` : ''}.</Note></div>}
 
       <div className="mt-4 space-y-6">
         {d?.groups.map((g) => (

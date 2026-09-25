@@ -1418,6 +1418,9 @@ export type BookReviewItem = {
   figures: string[];
   actions: BookReviewAction[];
   link: 'proofing' | null;
+  /** Kitabın türüne uymayan okumanın sorusu (ör. kişisel gelişim kitabında «kim yaptı»): cevaplanabilir,
+   *  ama kabulü engellemez ve `open` sayısına girmez. Eski kart servisi göndermez. */
+  advisory?: boolean;
 };
 export type BookReviewGroup = { type: string; title: string; bulk: boolean; items: BookReviewItem[] };
 export type BookReviewQueue = {
@@ -1426,6 +1429,8 @@ export type BookReviewQueue = {
   generation_id: string;
   groups: BookReviewGroup[];
   open: number;
+  /** Açık öneriler (advisory); kabulü engellemez. */
+  advice?: number;
   decided: number;
 };
 
@@ -1486,6 +1491,25 @@ export type BookCard = {
     isbn: string | null;
     firstPublishDate: string | null;
   } | null;
+  /** Kitabın hangi türden okunduğu (motorun book_type'ı). `source`: CRM türü belirledi, ya da CRM'de tür
+   *  yok/iki türe işaret ediyor ve Zeki AI kitabın metninden belirledi (MODEL); NONE ise belirlenemedi. */
+  profile?: {
+    form: BookForm;
+    source: 'CRM' | 'MODEL' | 'EDITOR' | 'NONE';
+    audience: 'CHILD' | 'YOUNG' | 'ADULT' | 'UNKNOWN';
+    crmGenres: string[];
+    probability: number | null;
+  } | null;
+};
+
+export type BookForm = 'FICTION' | 'NARRATIVE_NONFICTION' | 'EXPOSITORY' | 'ACTIVITY' | 'POETRY' | 'UNKNOWN';
+export const BOOK_FORM_TR: Record<BookForm, string> = {
+  FICTION: 'Kurgu',
+  NARRATIVE_NONFICTION: 'Gerçek kişi ve olay anlatısı',
+  EXPOSITORY: 'Fikir, bilgi ya da rehber',
+  ACTIVITY: 'Etkinlik ya da ders kitabı',
+  POETRY: 'Şiir',
+  UNKNOWN: 'Belirlenemedi',
 };
 
 export type BookQuestion = {
@@ -1580,6 +1604,9 @@ export type ProofingFinding = {
   quote: string | null;
   suggestion: string | null;
   bbox: [number, number, number, number] | null;
+  /** Denetimin varsayımı bu tür kitapta geçerli değilse (ör. kişisel gelişim kitabında eşya sürekliliği)
+   *  bulgu öneri olarak gelir: seviye INFO, burada nedeni. Eski kart servisi göndermez. */
+  advisory?: string | null;
 };
 /** Eşleşme köprüde kitap adıyla yapılır; `bookId` null ise eser motorda okunmamıştır. */
 export type ProofingReport = {

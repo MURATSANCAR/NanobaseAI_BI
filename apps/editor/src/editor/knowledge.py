@@ -144,7 +144,7 @@ def _route(st: ChunkState) -> str:
 def _persist(st: ChunkState) -> ChunkState:
     gid, o, call_id = st["generation_id"], st["out"], st["call_id"]
     counts = {"mentions": 0, "events": 0, "emotions": 0, "themes": 0, "dropped_no_evidence": 0,
-              "dropped_non_story": 0}
+              "dropped_non_story": 0, "credits": 0, "credit_people": []}
     with db.tx() as c:
         idx = ledger.PageIndex.load(c, gid)
         pages = _valid_pages(c, gid)
@@ -168,7 +168,15 @@ def _persist(st: ChunkState) -> ChunkState:
              "events": [e for e in o["events"] if story(e, "page_from", "page_to")],
              "emotions": [e for e in o["emotions"] if story(e, "page")],
              "themes": [t for t in o["themes"] if story(t)]}
+        last_page = max(pages) if pages else 0
         for m in o["character_mentions"]:
+            # a name printed as the book's credit (imprint) is not a person of the text
+            role = naming.credit_role(m["surface_name"], " ".join(e["quote"] for e in m["evidence"]),
+                                      m.get("page"), last_page)
+            if role:
+                counts["credits"] += 1
+                counts["credit_people"].append({"name": m["surface_name"], "role": role, "page": m.get("page")})
+                continue
             evs = ledger.evidence_from_model(c, gid, idx, m["evidence"], valid_pages=pages)
             if not evs:
                 counts["dropped_no_evidence"] += 1

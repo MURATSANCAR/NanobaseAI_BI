@@ -184,6 +184,8 @@ def public_card(card):
     # Yayınevinin CRM kaydı: kitaptan doğrulanmış değil, kartta etiketli gösterilir (eski kart servisi göndermez).
     out['authorsSource']=card.get('authorsSource')
     out['publisher']=card.get('publisher')
+    # Kitabın hangi türden okunduğu ve bunu kimin belirlediği (CRM ya da Zeki AI); eski kart servisi göndermez.
+    out['profile']=card.get('profile')
     return out
 
 
@@ -349,7 +351,8 @@ def proofing_report(book_title):
                    'precision':c.get('precision')} for c in r.get('checks',[])],
         'findings':[{'id':f.get('id'),'check':f['check'],'label':f['label'],'page':f.get('page'),'severity':f['severity'],
                      'message':f['message'],'quote':f.get('quote'),'suggestion':f.get('suggestion'),
-                     'bbox':f.get('bbox'),'decision':f.get('decision')} for f in r.get('findings',[])]})
+                     'bbox':f.get('bbox'),'advisory':f.get('advisory'),'decision':f.get('decision')}
+                    for f in r.get('findings',[])]})
     return out
 
 

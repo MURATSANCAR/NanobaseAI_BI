@@ -28,9 +28,33 @@ import pkgutil
 import time
 import traceback
 
-from .. import db
+from .. import book_type, db
 
 SEVERITIES = ("INFO", "WARN", "ERROR")
+
+# Every check runs on every book (user decision 2026-09-24: what a children's book gets, every
+# book gets). Where a check's premise does not hold for this kind of book (editor.book_type) —
+# story continuity (how a character looks, what they carry, where and when a scene is, who
+# speaks) in a book that tells no story, content judged for a child's age in an adult's book —
+# its findings are kept as advice: severity INFO, the reason in details.advisory, no review
+# item, nothing that blocks acceptance. (An adult novel read as a children's book had opened
+# 81 "sensitive for children" questions, 2026-09-23.)
+STORY_ONLY = frozenset({"appearance", "props", "setting", "timeline", "dialogue"})
+AGE_JUDGED_ONLY = frozenset({"age_fit"})
+
+
+def advisory_reason(name: str, profile: dict) -> str | None:
+    if name in STORY_ONLY and not book_type.is_story(profile):
+        return "öneri: kitap bir hikâye anlatmıyor (" + book_type.describe(profile) + ")"
+    if name in AGE_JUDGED_ONLY and profile["audience"] not in book_type.AGE_JUDGED:
+        return "öneri: kitap çocuk ya da genç okur için değil (" + book_type.describe(profile) + ")"
+    return None
+
+
+def as_advice(findings: list[dict], reason: str) -> list[dict]:
+    """The same findings, as advice: INFO, with the reason; message and evidence unchanged."""
+    return [{**f, "severity": "INFO", "details": {**(f.get("details") or {}), "advisory": reason,
+             "severity_as_found": f.get("severity", "WARN")}} for f in findings]
 
 
 def checks() -> dict[str, object]:
@@ -86,15 +110,20 @@ def record(generation_id: str, mod, findings: list[dict], stats: dict, started: 
 
 
 async def run_all(generation_id: str, only: list[str] | None = None) -> dict:
-    """Run every check, each isolated: one failing check never costs the book the others."""
+    """Run every check, each isolated: one failing check never costs the book the others.
+    A check whose premise does not hold for this kind of book reports advice (as_advice)."""
     out = {}
+    profile = await book_type.profile(generation_id)
     for name, mod in checks().items():
         if only and name not in only:
             continue
         t0 = time.time()
+        reason = advisory_reason(name, profile)
         try:
             result = await mod.run(generation_id)
             findings, stats = (result if isinstance(result, tuple) else (result, {}))
+            if reason:
+                findings, stats = as_advice(findings, reason), {**stats, "advisory": reason}
             out[name] = record(generation_id, mod, findings, stats, t0)
         except Exception as e:  # noqa: BLE001 - recorded, the other checks go on
             with db.tx() as c:

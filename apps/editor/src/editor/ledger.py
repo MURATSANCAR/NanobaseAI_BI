@@ -236,10 +236,21 @@ def queue_review(conn: psycopg.Connection, generation_id: str, *, reason: str,
     if existing:
         return str(existing["id"])
     row = conn.execute(
-        "INSERT INTO review_item(generation_id, claim_id, contradiction_id, reason, priority, page_role_page_no)"
-        " VALUES (%s,%s,%s,%s,%s,%s) RETURNING id",
-        (generation_id, claim_id, contradiction_id, reason[:2000], priority, page_role_page_no)).fetchone()
+        "INSERT INTO review_item(generation_id, claim_id, contradiction_id, reason, priority, page_role_page_no,"
+        " advisory) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING id",
+        (generation_id, claim_id, contradiction_id, reason[:2000], priority, page_role_page_no,
+         advisory_review(conn, generation_id))).fetchone()
     return str(row["id"])
+
+
+def advisory_review(conn: psycopg.Connection, generation_id: str) -> bool:
+    """A book that tells no story (editor.book_type) is still read for characters, events,
+    modality and who-did-what (user decision 2026-09-24); the questions that reading raises
+    about it are advice for the editor, not questions that must be closed before acceptance
+    (027_review_advisory). A generation without a profile is read as before."""
+    from .book_type import STORY_FORMS
+    row = conn.execute("SELECT form FROM book_profile WHERE generation_id=%s", (generation_id,)).fetchone()
+    return bool(row) and row["form"] not in STORY_FORMS
 
 
 def corrections_for_book(conn: psycopg.Connection, book_id: str) -> list[dict[str, Any]]:

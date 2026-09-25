@@ -52,7 +52,7 @@ def get_job_status(job_id: str) -> dict:
            "generation_id": str(gen["id"]) if gen else None}
     if gen:
         out["open_review_items"] = (db.one("SELECT count(*) n FROM review_item WHERE generation_id=%s"
-                                           " AND status='OPEN'", gen["id"]) or {}).get("n")
+                                           " AND status='OPEN' AND NOT advisory", gen["id"]) or {}).get("n")
         rep = get_report(str(gen['id']))
         out['report_id'] = rep.get('id') if rep['available'] else None
         out['report_available'] = rep['available']

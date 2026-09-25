@@ -185,7 +185,7 @@ def _view(it: dict, quote: dict | None, figures: list[str]) -> dict:
 
 def _rows(generation_id: str, status: str, limit: int) -> list[dict]:
     return db.all_rows(
-        "SELECT r.id, r.priority, r.reason, r.status, r.page_role_page_no, r.proof_run_id,"
+        "SELECT r.id, r.priority, r.reason, r.status, r.advisory, r.page_role_page_no, r.proof_run_id,"
         " r.claim_id, r.contradiction_id, c.kind AS claim_kind, c.claim, c.source_pages, c.payload,"
         " x.kind AS contradiction_kind, x.description, x.pages"
         " FROM review_item r LEFT JOIN claim c ON c.id=r.claim_id"
@@ -219,18 +219,22 @@ def queue(book_id: str, status: str = "OPEN", limit: int = 500) -> dict:
     gen = _newest_generation(book_id)
     rows = _rows(gen["id"], status, limit)
     quotes, figures = _evidence([r["claim_id"] for r in rows if r["claim_id"]])
-    items = [_view(r, quotes.get(str(r["claim_id"])), figures.get(str(r["claim_id"]), [])[:4]) for r in rows]
+    # advice (027_review_advisory): shown, answerable, after the questions, never counted as open
+    items = [{**_view(r, quotes.get(str(r["claim_id"])), figures.get(str(r["claim_id"]), [])[:4]),
+              "advisory": bool(r["advisory"])} for r in rows]
     groups = []
     for typ in ORDER:
         # In the order the book is read: an editor goes through a group page by page.
         members = sorted((i for i in items if i["type"] == typ),
-                         key=lambda i: (i["pages"][0] if i["pages"] else 10**6, i["priority"]))
+                         key=lambda i: (i["advisory"], i["pages"][0] if i["pages"] else 10**6, i["priority"]))
         if members:
             groups.append({"type": typ, "title": GROUP[typ][0], "bulk": GROUP[typ][1], "items": members})
-    counts = db.all_rows("SELECT status, count(*) AS n FROM review_item WHERE generation_id=%s"
-                         " GROUP BY status", gen["id"])
+    counts = db.all_rows("SELECT status, advisory, count(*) AS n FROM review_item WHERE generation_id=%s"
+                         " GROUP BY status, advisory", gen["id"])
     return {"book_id": book_id, "title": gen["title"], "generation_id": gen["id"],
-            "groups": groups, "open": sum(r["n"] for r in counts if r["status"] == "OPEN"),
+            "groups": groups,
+            "open": sum(r["n"] for r in counts if r["status"] == "OPEN" and not r["advisory"]),
+            "advice": sum(r["n"] for r in counts if r["status"] == "OPEN" and r["advisory"]),
             "decided": sum(r["n"] for r in counts if r["status"] != "OPEN")}
 
 

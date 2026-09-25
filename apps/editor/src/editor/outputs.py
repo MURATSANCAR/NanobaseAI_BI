@@ -10,6 +10,7 @@ import json
 import os
 
 from . import db, foundation, source
+from .book_type import STORY_FORMS
 from .config import settings
 
 ORDER = ('chapter_summaries', 'book_summary', 'search_index', 'report', 'catalog')
@@ -37,8 +38,9 @@ def capture(c, gid: str) -> dict:
     events = c.execute("SELECT * FROM ed.usable_event WHERE generation_id=%s ORDER BY page_from,id", (gid,)).fetchall()
     emotions = c.execute("SELECT * FROM ed.usable_emotion WHERE generation_id=%s ORDER BY page_no,id", (gid,)).fetchall()
     characters = c.execute("SELECT * FROM ed.character WHERE generation_id=%s ORDER BY id", (gid,)).fetchall()
+    # advice (027_review_advisory) stays visible on the review screen but is no open question
     reviews = c.execute("SELECT id,reason,priority FROM ed.review_item WHERE generation_id=%s "
-        "AND status='OPEN' ORDER BY priority,id", (gid,)).fetchall()
+        "AND status='OPEN' AND NOT advisory ORDER BY priority,id", (gid,)).fetchall()
     contradictions = c.execute("SELECT * FROM ed.contradiction WHERE generation_id=%s ORDER BY id", (gid,)).fetchall()
     regression = c.execute("SELECT id,passed,results FROM ed.regression_run WHERE generation_id=%s "
         "ORDER BY created_at DESC,id DESC LIMIT 1", (gid,)).fetchone()
@@ -73,7 +75,10 @@ def capture(c, gid: str) -> dict:
     if not pages or any(p['page_role']=='UNKNOWN' for p in pages): blockers.append('PAGE_ROLES_UNASSESSED')
     if reviews: blockers.append('OPEN_EDITOR_REVIEW')
     if not regression or not regression['passed']: blockers.append('REGRESSION_NOT_PASSED')
-    if not events: blockers.append('NO_USABLE_EVENTS')
+    # A book that tells no story (editor.book_type: psychology, self-help, activity, poetry)
+    # has no events to use; only a story without them is missing something.
+    form = c.execute('SELECT form FROM ed.book_profile WHERE generation_id=%s', (gid,)).fetchone()
+    if not events and (form is None or form['form'] in STORY_FORMS): blockers.append('NO_USABLE_EVENTS')
     # Scope is explicit: a visual scan alone cannot certify identity/continuity. Only an
     # editor's recorded acceptance of this very revision lifts it (foundation.accept).
     if not c.execute('SELECT 1 FROM ed.semantic_acceptance WHERE generation_id=%s AND revision=%s',
