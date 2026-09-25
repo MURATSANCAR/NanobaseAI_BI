@@ -880,3 +880,5 @@ from .api_epub import router as epub_router  # noqa: E402 - e-kitap uçları (ap
 app.include_router(epub_router)
 from .api_coloring import router as _coloring_router  # noqa: E402  boyama/etkinlik kitabı (coloring.py)
 app.include_router(_coloring_router)
+from .api_narration import router as _narration  # noqa: E402  (sesli okuma; docs/analiz/sesli-okuma-model-secimi.md)
+app.include_router(_narration)

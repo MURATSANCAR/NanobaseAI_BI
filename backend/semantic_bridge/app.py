@@ -4600,6 +4600,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     editorial_studio_characters.register(app, {"auth": _books})
     from semantic_bridge import editorial_studio_epub  # e-kitap (EPUB): üret, denetim, önizleme, alt metin, e-ISBN
     editorial_studio_epub.register(app, {"auth": _books, "audit": admin_mod.audit})
+    from semantic_bridge import editorial_studio_narration  # sesli okuma (docs/analiz/sesli-okuma-model-secimi.md)
+    editorial_studio_narration.register(app, {"auth": _books, "audit": admin_mod.audit})
 
     @app.get("/api/v1/editorial/books/{book_id}/figures/{region_id}")
     def editorial_book_figure(book_id: str, region_id: str, request: Request):

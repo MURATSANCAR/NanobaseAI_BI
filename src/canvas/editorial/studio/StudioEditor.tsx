@@ -11,6 +11,7 @@ import { MarketingKit } from './marketing';
 import { CharactersEntry } from './characters';
 import { EpubSection } from './epub';
 import { ColoringPanel } from './coloring';
+import { NarrationSection } from './narration';
 
 /** Sayfa stüdyosu: dizilmiş kitap açılım açılım görünür; resimli her sayfa ve kapak için iki yol vardır.
  *  DÜZELT seçili sürümü referans alır ve yalnız yazılan değişikliği yapar; FARKLI ÜRET sayfanın metninden
@@ -296,6 +297,7 @@ export default function StudioEditor() {
       <MarketingKit jobId={jobId} />
       <EpubSection jobId={jobId} />
       <div className="mt-3 lg:mt-4"><ColoringPanel jobId={jobId} job={d} /></div>
+      <NarrationSection jobId={jobId} />
       {d.preflight && d.preflight.status !== 'OK' && (
         <Note tone={d.preflight.status === 'FAIL' ? 'warn' : 'info'}>
           Ön baskı denetimi: {d.preflight.checks.filter((c) => c.status !== 'OK').map((c) => `${c.name} — ${c.detail}`).join(' · ')}{' '}
