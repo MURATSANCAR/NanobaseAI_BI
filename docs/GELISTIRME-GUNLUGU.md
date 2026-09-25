@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (23:30) — SEO & GEO: satışa göre öncelik; anasayfaya giden 301'ler için hedef önerisi
+
+- **Öncelik:** ürün listesi ve gece ön üretimi T-soft `CountTotalSales` + `StatViews` ile en çok satandan başlar (Postgres'te JSON içinden); genel bakışta puanı 70 altı en çok satan 10 kitap. Gerçek veride ilk sıra «İyilik Timi (Yazar İmzalı)» 2.390 satış, puan 62.
+- **Yönlendirmeler (`seo_geo/redirects.py`, modelsiz):** T-soft'ta 12.464 301'in 717'si anasayfaya gidiyor (yumuşak 404). Sıra: adresteki ISBN aktif kitabınsa kesin; pasifse aynı adlı aktif kitap; `katilimci/…` yalnız birebir aynı adlı yazar; `haber/etkinlik/…` yalnız blog/içerik; kelime kümesi aynı ya da hedefin 3+ kelimesi eski adreste → yüksek, 2 kelime ya da yalnız karakter benzerliği ≥%85 → orta; altı öneri yok. İlk sürümde "oguz-demir → arzu-demir", "kis-kitapligi → is-kitapligi" gibi yanlış eşleşmeler görüldü, kurallar bu yüzden sıkılaştı. Gerçek veride: 205 kesin, 88 yüksek, 34 orta, 390 yok. Eşitleme `link/getLinks` ve `link/getReferralLinks`'i de okur (~60 sn), `semantic_seo_links` / `semantic_seo_redirects`; verilen kararlar yeniden eşitlemede korunur. Ekran `/seo-geo/yonlendirmeler`: güven/durum süzgeci, hedefi düzenle, tek tek ya da kesin/yüksek toplu onay, onaylananlar CSV (`Link;RedirectLink`) — T-soft'a gönderim yok.
+
 ## 2026-09-25 (22:00) — Power BI adı ekranlardan kalktı; stüdyo tasarımları arşive; dal temizliği
 
 - **Power BI:** kullanıcı kararıyla ekranda «mevcut rapor» (Baskı Öneri notları, açılış süzgeci etiketi, kaynak paneli başlığı, ZEKI AI Tahminleme açıklama/kolon/grup adları, kaynak SQL panelinde görünen `--` açıklama satırları; `bi.slicer.hint`). Rapor önbelleği bir yenilemede (≤5 dk) güncellendi; test sunucusu ve VM API'sinde «Power BI» 0, yayındaki arayüz parçalarında 0. Yönetim testleri 5/5 grup geçti (eşlik 27/27, tahmin 28/28).
