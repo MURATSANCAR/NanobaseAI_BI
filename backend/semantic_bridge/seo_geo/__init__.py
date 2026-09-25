@@ -56,6 +56,13 @@ class SeoGeo:
         self._sync_lock = threading.Lock()
         self.state: dict[str, Any] = {"running": False, "kind": None, "done": 0, "total": None,
                                       "startedAt": None, "error": None}
+        # Ön üretim: puanı en düşük üründen başlayarak öneriler model boştayken hazırlanır.
+        self._batch_lock = threading.Lock()
+        self.batch: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "queue": None,
+                                      "startedAt": None, "finishedAt": None, "error": None}
+        # Aynı ürün için aynı anda ikinci üretim başlamasın (ekran açılışı + gece işi).
+        self._gen_lock = threading.Lock()
+        self._generating: set[str] = set()
 
     # ---------------------------------------------------------------- ortak
     def engine(self) -> sa.engine.Engine:
@@ -189,10 +196,21 @@ class SeoGeo:
     def rescore(self, p: dict[str, Any], fields: dict[str, str]) -> int:
         return rules.audit({**p, **fields}, rules.thresholds(self.conf), set())["score"]
 
-    def make_proposal(self, pid: str, user: str) -> dict[str, Any]:
+    def make_proposal(self, pid: str, user: str, priority: Optional[int] = None) -> dict[str, Any]:
+        with self._gen_lock:
+            if pid in self._generating:
+                raise _err(409, "Bu ürün için öneri şu an yazılıyor; birkaç saniye sonra yeniden açın.")
+            self._generating.add(pid)
+        try:
+            return self._make_proposal(pid, user, priority)
+        finally:
+            with self._gen_lock:
+                self._generating.discard(pid)
+
+    def _make_proposal(self, pid: str, user: str, priority: Optional[int]) -> dict[str, Any]:
         row = self.product_row(pid)
         p = loads(row["data_json"], {})
-        llm = self.runtime().llm_for("seo")
+        llm = self.runtime().llm_for("seo", priority)
         if llm is None:
             raise _err(503, "Yapay zekâ modeli bu kurulumda tanımlı değil.")
         try:
@@ -211,6 +229,46 @@ class SeoGeo:
                 model=getattr(llm, "model", None) or self.conf("LLM_MODEL_NAME"), created_by=user, created_at=now()))
         self.audit(user, "create", pid, row["name"], {"proposal": pid_new})
         return self.proposal(pid_new)
+
+    def start_batch(self, user: str, budget: int) -> bool:
+        """Önerisi olmayan, düzeltilebilir sorunlu aktif ürünler için öneri yazar; en düşük puandan başlar.
+        Süre bütçesi dolunca durur, kalan iş sonraki tura kalır (sıra her turda yeniden kurulur, tavan yok)."""
+        if not self._batch_lock.acquire(blocking=False):
+            return False
+        self.batch.update(running=True, done=0, failed=0, queue=None, startedAt=iso(now()), finishedAt=None, error=None)
+        threading.Thread(target=self._batch, args=(user, budget), name="seo-batch", daemon=True).start()
+        return True
+
+    def _batch(self, user: str, budget: int) -> None:
+        import time as _t
+        from semantic_layer.runtime.llm_queue import BATCH
+
+        deadline = _t.monotonic() + max(60, budget)
+        try:
+            tenant = self.tenant()
+            has = sa.select(PROPOSALS.c.product_id).where(PROPOSALS.c.tenant_id == tenant)
+            with self.engine().connect() as c:
+                rows = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.issues_json).where(
+                    PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True), PRODUCTS.c.rules != ",,",
+                    PRODUCTS.c.product_id.not_in(has)).order_by(PRODUCTS.c.score.asc(), PRODUCTS.c.product_id)).all()
+            queue = [pid for pid, issues in rows if propose.fixable(loads(issues, []))]
+            self.batch["queue"] = len(queue)
+            for pid in queue:
+                if _t.monotonic() > deadline:
+                    break
+                try:
+                    self.make_proposal(pid, user, BATCH)
+                    self.batch["done"] += 1
+                except HTTPException as e:
+                    if e.status_code == 503:
+                        raise
+                    self.batch["failed"] += 1
+        except Exception as e:  # noqa: BLE001 — tur durur, üretilenler kalır
+            self.batch["error"] = str(getattr(e, "detail", e))[:500]
+            log.exception("seo batch failed")
+        finally:
+            self.batch.update(running=False, finishedAt=iso(now()))
+            self._batch_lock.release()
 
     def send(self, prop: dict[str, Any], fields: dict[str, str], user: str, note: str) -> dict[str, Any]:
         """Onaylanan alanları T-soft'a yazar ve ürünü yeniden okuyarak doğrular."""
@@ -258,8 +316,20 @@ def _product_view(r: dict[str, Any], site: str) -> dict[str, Any]:
     link = p.get("SeoLink") or p.get("Url") or p.get("ProductUrl") or ""
     url = link if str(link).startswith("http") else (f"{site.rstrip('/')}/{str(link).lstrip('/')}" if link else None)
     return {"id": r["product_id"], "code": r["code"], "name": r["name"], "brand": r["brand"], "active": r["active"],
-            "score": r["score"], "issues": loads(r["issues_json"], []), "image": p.get("ImageUrl") or None,
+            "score": r["score"], "issues": [{**i, "field": propose.RULE_FIELD.get(i.get("rule"))}
+                                            for i in loads(r["issues_json"], [])], "image": _image(p, site),
             "barcode": p.get("Barcode") or None, "url": url, "syncedAt": iso(r["synced_at"])}
+
+
+def _image(p: dict[str, Any], site: str) -> Optional[str]:
+    """T-soft `ImageUrl` yalnız dosya adı taşır; tam adres `ImageUrls` listesindedir."""
+    imgs = p.get("ImageUrls") or []
+    if imgs and isinstance(imgs[0], dict):
+        return imgs[0].get("Small") or imgs[0].get("Medium") or imgs[0].get("ImageUrl") or None
+    raw = str(p.get("ImageUrlCdn") or p.get("ImageUrl") or "").strip()
+    if not raw:
+        return None
+    return raw if raw.startswith("http") else f"{site.rstrip('/')}/{raw.lstrip('/')}"
 
 
 def _proposal_view(r: dict[str, Any]) -> dict[str, Any]:
@@ -310,7 +380,7 @@ def register(app, runtime, authorize, session_user):
             "proposals": status, "sentThisWeek": sent_week,
             "lastSync": ({"startedAt": iso(last["started_at"]), "finishedAt": iso(last["finished_at"]),
                           "count": last["count"], "error": last["error"]} if last else None),
-            "sync": seo.state, "search": daily,
+            "sync": seo.state, "batch": seo.batch, "search": daily,
             "connections": {"tsoft": connections.tsoft.configured(),
                             "google": bool(connections.service_account_email()),
                             "serviceAccount": connections.service_account_email(),
@@ -374,7 +444,8 @@ def register(app, runtime, authorize, session_user):
                 "current": {k: str(p.get(k) or "") for k in propose.FIELDS},
                 "details": {"words": rules.words(p.get("Details")), "shortDescription": rules.text_of(p.get("ShortDescription"))},
                 "limits": rules.thresholds(seo.conf),
-                "proposals": [_proposal_view(dict(r)) for r in props]}
+                "proposals": [{**_proposal_view(dict(r)),
+                               "unsupported": propose.unsupported(p, loads(r["fields_json"], {}))} for r in props]}
 
     @app.post("/api/v1/seo-geo/products/{pid}/propose")
     def seo_propose(pid: str, request: Request) -> dict[str, Any]:
@@ -431,6 +502,13 @@ def register(app, runtime, authorize, session_user):
                 status="geri_alindi", result=f"Geri alındı ({user}): " + ", ".join(fields)))
         seo.audit(user, "revert", prop["product_id"], prop["product_id"], {"proposal": proposal_id, "fields": list(fields)})
         return _proposal_view(seo.proposal(proposal_id))
+
+    @app.post("/api/v1/seo-geo/proposals/batch")
+    def seo_batch(request: Request, budget: int = 3600) -> dict[str, Any]:
+        user = gate(request)
+        started = seo.start_batch(user, budget)
+        seo.audit(user, "run", "batch", "SEO öneri ön üretimi", {"started": started, "budget": budget})
+        return {"started": started, "batch": seo.batch}
 
     @app.get("/api/v1/seo-geo/history")
     def seo_history(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:
@@ -492,7 +570,7 @@ def register(app, runtime, authorize, session_user):
         return {"deleted": bool(n)}
 
     @app.post("/api/v1/seo-geo/run-due")
-    def seo_run_due(request: Request) -> dict[str, Any]:
+    def seo_run_due(request: Request, budget: int = 18000) -> dict[str, Any]:
         """Gece zamanlayıcısı: T-soft eşitlemesi (arka planda) ve Search Console okuması. Bağlı olmayan atlanır."""
         authorize(request)
         seo.engine()
@@ -505,6 +583,14 @@ def register(app, runtime, authorize, session_user):
                 out["gsc"] = f"hata: {e}"
         else:
             out["gsc"] = "tanımlı değil"
+        # Öneriler eşitlemeden sonra: süren eşitleme bitene kadar bekler, sonra en düşük puandan başlar.
+        def later() -> None:
+            import time as _t
+            while seo.state.get("running"):
+                _t.sleep(10)
+            seo.start_batch("zamanlayıcı", budget)
+        threading.Thread(target=later, name="seo-batch-wait", daemon=True).start()
+        out["batch"] = f"başlayacak (bütçe {budget} sn)"
         return out
 
     return seo

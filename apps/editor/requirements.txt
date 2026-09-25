@@ -18,6 +18,8 @@ pyyaml
 zeyrek
 spylls
 pillow>=10
+# stüdyo otomatikleri (editor.production.palette / bubbles): renk kümeleme ve resmin boş alan haritası
+numpy
 # kapak yazısı katmanı (editor.cover_text): fontta harf var mı
 fonttools
 # Kitap Tasarım Stüdyosu (editor.production): dizgi, Word girişi, dosya yükleme

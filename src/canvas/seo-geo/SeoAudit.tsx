@@ -149,12 +149,23 @@ function Detail({ id }: { id: string }) {
     qc.invalidateQueries({ queryKey: ['seo-overview'] });
   };
   const propose = useMutation({ mutationFn: () => seoApi.propose(id), onSuccess: refresh });
+  const p = d.data;
+  const open = p?.proposals.find((x) => x.status === 'hazir');
+  const last = p?.proposals.find((x) => x.status !== 'hazir');
+  const needs = !!p && !open && p.issues.some((i) => i.field);
+
+  // Öneri kendiliğinden: ürün açılınca, düzeltilebilir sorun varsa ve bekleyen öneri yoksa bir kez istenir.
+  const [asked, setAsked] = useState<string | null>(null);
+  useEffect(() => {
+    if (needs && asked !== id && !propose.isPending) {
+      setAsked(id);
+      propose.mutate();
+    }
+  }, [needs, id, asked, propose]);
 
   if (d.isLoading) return <Loading text="Ürün açılıyor…" />;
   if (d.error) return <Failed error={d.error} />;
-  const p = d.data!;
-  const open = p.proposals.find((x) => x.status === 'hazir');
-  const last = p.proposals.find((x) => x.status !== 'hazir');
+  if (!p) return null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -176,7 +187,7 @@ function Detail({ id }: { id: string }) {
           </div>
           <div style={{ textAlign: 'right' }}>
             <div className="sg-kpi-label">Puan</div>
-            <div className={`sg-kpi-value sg-mono`} style={{ color: p.score >= 80 ? '#0f7a51' : p.score >= 50 ? '#9a5b00' : '#c2361b' }}>
+            <div className="sg-kpi-value sg-mono" style={{ color: p.score >= 80 ? '#0f7a51' : p.score >= 50 ? '#9a5b00' : '#c2361b' }}>
               {p.score}
               <small>/100</small>
             </div>
@@ -185,39 +196,19 @@ function Detail({ id }: { id: string }) {
         </div>
       </div>
 
-      <div className="sg-card">
-        <h2>Neden uyumsuz?</h2>
-        <p className="sg-sub">{p.issues.length ? `${p.issues.length} sorun bulundu.` : 'Kurallara uyuyor.'}</p>
-        {p.issues.length > 0 && (
-          <div className="sg-issues">
-            {p.issues.map((i) => (
-              <article key={i.rule} className={`sg-issue ${i.severity}`}>
-                <h3>
-                  <i className={`sg-dot ${i.severity}`} aria-hidden />
-                  {i.title}
-                </h3>
-                <p>{i.detail}</p>
-                <p>{i.why}</p>
-              </article>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {open ? (
-        <Review key={open.id} product={p} proposal={open} canApprove={!!me.data?.canApprove} onDone={refresh} onRegenerate={() => propose.mutate()} regenerating={propose.isPending} />
+      {p.issues.length === 0 ? (
+        <div className="sg-banner ok">Bu ürün kurallara uyuyor.</div>
       ) : (
-        <div className="sg-card">
-          <h2>Model önerisi</h2>
-          <p className="sg-sub">
-            Model yalnız bu ürünün T-soft kaydındaki bilgiyi kullanır; kayıtta olmayan bilgiyi (sayfa sayısı, yaş grubu, ödül) yazmaz. Öneri siz onaylamadan gönderilmez.
-          </p>
-          {propose.error && <Failed error={propose.error} />}
-          <button className="sg-button primary" onClick={() => propose.mutate()} disabled={propose.isPending || p.issues.length === 0}>
-            {propose.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />}
-            {propose.isPending ? 'Öneri yazılıyor…' : 'Öneri üret'}
-          </button>
-        </div>
+        <Review
+          key={open?.id ?? 'bekliyor'}
+          product={p}
+          proposal={open}
+          pending={propose.isPending}
+          error={propose.error}
+          canApprove={!!me.data?.canApprove}
+          onDone={refresh}
+          onRegenerate={() => propose.mutate()}
+        />
       )}
 
       {last && <LastDecision proposal={last} canApprove={!!me.data?.canApprove} onDone={refresh} />}
@@ -225,23 +216,26 @@ function Detail({ id }: { id: string }) {
   );
 }
 
-function Review({ product, proposal, canApprove, onDone, onRegenerate, regenerating }: {
+/** Uyarılar alan alan gruplanır; her grubun hemen yanında o alanın mevcut değeri ve modelin önerisi durur.
+ *  Modelin düzeltmediği sorunlar (görsel, ISBN) ayrı "elle yapılacak" grubunda. */
+function Review({ product, proposal, pending, error, canApprove, onDone, onRegenerate }: {
   product: ProductDetail;
-  proposal: Proposal;
+  proposal: Proposal | undefined;
+  pending: boolean;
+  error: unknown;
   canApprove: boolean;
   onDone: () => void;
   onRegenerate: () => void;
-  regenerating: boolean;
 }) {
   const initial = useMemo(() => {
     const o: Fields = {};
-    SEO_FIELDS.forEach((k) => (o[k] = proposal.fields[k] ?? ''));
+    SEO_FIELDS.forEach((k) => (o[k] = proposal?.fields[k] ?? ''));
     return o;
   }, [proposal]);
   const [fields, setFields] = useState<Fields>(initial);
   const [note, setNote] = useState('');
   const decide = useMutation({
-    mutationFn: (action: 'approve' | 'reject') => seoApi.decide(proposal.id, { action, fields: action === 'approve' ? fields : undefined, note }),
+    mutationFn: (action: 'approve' | 'reject') => seoApi.decide(proposal!.id, { action, fields: action === 'approve' ? fields : undefined, note }),
     onSuccess: onDone,
   });
 
@@ -249,75 +243,143 @@ function Review({ product, proposal, canApprove, onDone, onRegenerate, regenerat
   const limits: Partial<Record<SeoField, [number, number]>> = {
     SeoTitle: [L.title_min, L.title_max],
     SeoDescription: [L.meta_min, L.meta_max],
-    Details: [L.desc_min_words, Number.POSITIVE_INFINITY],
   };
+  const groups = SEO_FIELDS.map((k) => ({ field: k, issues: product.issues.filter((i) => i.field === k) }));
+  const manual = product.issues.filter((i) => !i.field);
   const changed = SEO_FIELDS.filter((k) => (fields[k] ?? '').trim() && (fields[k] ?? '').trim() !== (product.current[k] ?? '').trim());
   const title = fields.SeoTitle || product.current.SeoTitle || product.name;
   const desc = fields.SeoDescription || product.current.SeoDescription;
+  const unsupported = proposal?.unsupported ?? [];
 
   return (
     <div className="sg-card">
-      <h2>Mevcut ↔ ZEKİ AI önerisi</h2>
-      <p className="sg-sub">
-        Model {proposal.model ?? '—'} · {dateTime(proposal.createdAt)} · değişen alan {changed.length}. Önerilen metni gönderimden önce düzenleyebilirsiniz.
-      </p>
-
-      <div className="sg-diff">
-        {SEO_FIELDS.map((k) => {
-          const now = product.current[k] ?? '';
-          const next = fields[k] ?? '';
-          const lim = limits[k];
-          const len = k === 'Details' ? plain(next).split(/\s+/).filter(Boolean).length : next.length;
-          return (
-            <div key={k} className="sg-field">
-              <div className="sg-field-head">
-                <span>{FIELD_LABEL[k]}</span>
-                <span className={`sg-mono ${lim && (len < lim[0] || len > lim[1]) ? 'over' : ''}`}>
-                  {k === 'Details' ? `${fmt(len)} kelime · en az ${fmt(L.desc_min_words)}` : lim ? `${len} / ${lim[0]}–${lim[1]} karakter` : `${len} karakter`}
-                </span>
-              </div>
-              <p className="sg-tag">MEVCUT</p>
-              <div className={`sg-before ${now ? '' : 'empty'}`}>{now ? (k === 'Details' ? plain(now) : now) : 'Boş'}</div>
-              <p className="sg-tag" style={{ marginTop: 8 }}>ÖNERİ</p>
-              <textarea
-                className="sg-after"
-                rows={k === 'Details' ? 10 : k === 'SeoDescription' ? 3 : 2}
-                value={next}
-                onChange={(e) => setFields({ ...fields, [k]: e.target.value })}
-                aria-label={`${FIELD_LABEL[k]} önerisi`}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      <p className="sg-tag" style={{ marginTop: 16 }}>GOOGLE’DA GÖRÜNÜŞÜ (YAKLAŞIK)</p>
-      <div className="sg-snippet">
-        <div className="u">{product.url ?? 'timas.com.tr'}</div>
-        <div className="t">{title}</div>
-        <div className="d">{desc || 'Meta açıklama yok; Google sayfadan kendisi bir parça seçer.'}</div>
-      </div>
-
-      {decide.error && <div style={{ marginTop: 12 }}><Failed error={decide.error} /></div>}
-      <div className="sg-decide" style={{ marginTop: 16 }}>
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Editör notu (isteğe bağlı)" aria-label="Editör notu" />
-        <button className="sg-button primary" disabled={!canApprove || decide.isPending || changed.length === 0} onClick={() => decide.mutate('approve')}>
-          {decide.isPending && decide.variables === 'approve' ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
-          Onayla ve T-soft’a gönder
-        </button>
-        <button className="sg-button" onClick={onRegenerate} disabled={regenerating || decide.isPending}>
-          {regenerating ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />}
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
+        <div>
+          <h2>Uyarılar ve ZEKİ AI önerisi</h2>
+          <p className="sg-sub" style={{ margin: 0 }}>
+            {pending
+              ? 'Öneriler yazılıyor…'
+              : proposal
+                ? `Zeki AI · ${dateTime(proposal.createdAt)} · değişen alan ${changed.length}. Öneriyi gönderimden önce düzenleyebilirsiniz.`
+                : 'Öneri henüz yok.'}
+          </p>
+        </div>
+        <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
+          {pending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />}
           Yeniden üret
         </button>
-        <button className="sg-button danger" disabled={!canApprove || decide.isPending} onClick={() => decide.mutate('reject')}>
-          <X size={16} aria-hidden /> Reddet
-        </button>
-        <small>
-          {canApprove
-            ? 'Onay verilmeden T-soft’a hiçbir şey gönderilmez. Gönderimden önceki değerler saklanır; Gönderim geçmişinden geri alınabilir.'
-            : 'Onay yetkiniz yok; öneriyi görebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'}
-        </small>
       </div>
+      {!!error && <div style={{ marginTop: 12 }}><Failed error={error} /></div>}
+      {unsupported.length > 0 && (
+        <p className="sg-banner" style={{ marginTop: 12 }}>
+          Gerçeklik denetimi: öneride ürün kaydında geçmeyen ifadeler var — <b>{unsupported.join(', ')}</b>. Onaylamadan önce doğru olduklarına bakın.
+        </p>
+      )}
+
+      <div className="sg-diff" style={{ marginTop: 16 }}>
+        {groups
+          .filter((g) => g.issues.length || changed.includes(g.field))
+          .map(({ field: k, issues }) => {
+            const now = product.current[k] ?? '';
+            const next = fields[k] ?? '';
+            const lim = limits[k];
+            const len = k === 'Details' ? plain(next).split(/\s+/).filter(Boolean).length : next.length;
+            const over = lim ? len < lim[0] || len > lim[1] : k === 'Details' ? len < L.desc_min_words : false;
+            return (
+              <section key={k} className="sg-field" aria-label={FIELD_LABEL[k]}>
+                <div className="sg-field-head">
+                  <span>{FIELD_LABEL[k]}</span>
+                  {next && (
+                    <span className={`sg-mono ${over ? 'over' : ''}`}>
+                      {k === 'Details' ? `${fmt(len)} kelime · en az ${fmt(L.desc_min_words)}` : lim ? `${len} / ${lim[0]}–${lim[1]} karakter` : `${len} karakter`}
+                    </span>
+                  )}
+                </div>
+                <div className="sg-fix">
+                  <div className="sg-fix-why">
+                    {issues.map((i) => (
+                      <article key={i.rule} className={`sg-issue ${i.severity}`}>
+                        <h3>
+                          <i className={`sg-dot ${i.severity}`} aria-hidden />
+                          {i.title}
+                        </h3>
+                        <p>{i.detail}</p>
+                        <p>{i.why}</p>
+                      </article>
+                    ))}
+                    <p className="sg-tag" style={{ marginTop: 8 }}>MEVCUT</p>
+                    <div className={`sg-before ${now ? '' : 'empty'}`}>{now ? (k === 'Details' ? plain(now) : now) : 'Boş'}</div>
+                  </div>
+                  <div className="sg-fix-new">
+                    <p className="sg-tag">ZEKİ AI ÖNERİSİ</p>
+                    {pending && !proposal ? (
+                      <div className="sg-after sg-skeleton" aria-busy="true">
+                        <Loader2 size={14} className="animate-spin" aria-hidden /> Yazılıyor…
+                      </div>
+                    ) : (
+                      <textarea
+                        className="sg-after"
+                        rows={k === 'Details' ? 12 : k === 'SeoDescription' ? 4 : 2}
+                        value={next}
+                        onChange={(e) => setFields({ ...fields, [k]: e.target.value })}
+                        placeholder={proposal ? 'Bu alan için öneri yok' : 'Öneri bekleniyor'}
+                        aria-label={`${FIELD_LABEL[k]} önerisi`}
+                      />
+                    )}
+                  </div>
+                </div>
+              </section>
+            );
+          })}
+
+        {manual.length > 0 && (
+          <section className="sg-field" aria-label="Elle yapılacaklar">
+            <div className="sg-field-head">
+              <span>Elle yapılacaklar</span>
+            </div>
+            <div className="sg-issues">
+              {manual.map((i) => (
+                <article key={i.rule} className={`sg-issue ${i.severity}`}>
+                  <h3>
+                    <i className={`sg-dot ${i.severity}`} aria-hidden />
+                    {i.title}
+                  </h3>
+                  <p>{i.detail}</p>
+                  <p>Model bunu üretemez; CRM ya da T-soft kaydında düzeltilmeli.</p>
+                </article>
+              ))}
+            </div>
+          </section>
+        )}
+      </div>
+
+      {proposal && (
+        <>
+          <p className="sg-tag" style={{ marginTop: 16 }}>GOOGLE’DA GÖRÜNÜŞÜ (YAKLAŞIK)</p>
+          <div className="sg-snippet">
+            <div className="u">{product.url ?? 'timas.com.tr'}</div>
+            <div className="t">{title}</div>
+            <div className="d">{desc || 'Meta açıklama yok; Google sayfadan kendisi bir parça seçer.'}</div>
+          </div>
+
+          {decide.error && <div style={{ marginTop: 12 }}><Failed error={decide.error} /></div>}
+          <div className="sg-decide" style={{ marginTop: 16 }}>
+            <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Editör notu (isteğe bağlı)" aria-label="Editör notu" />
+            <button className="sg-button primary" disabled={!canApprove || decide.isPending || changed.length === 0} onClick={() => decide.mutate('approve')}>
+              {decide.isPending && decide.variables === 'approve' ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Check size={16} aria-hidden />}
+              Onayla ve gönder
+            </button>
+            <button className="sg-button danger" disabled={!canApprove || decide.isPending} onClick={() => decide.mutate('reject')}>
+              <X size={16} aria-hidden /> Reddet
+            </button>
+            <small>
+              {canApprove
+                ? 'Onay verilmeden hiçbir şey gönderilmez. Gönderimden önceki değerler saklanır; geri alınabilir.'
+                : 'Onay yetkiniz yok; öneriyi görebilir ve yeniden ürettirebilirsiniz. Yetki: Yönetim → SEO & GEO → Onay verebilenler.'}
+            </small>
+          </div>
+        </>
+      )}
     </div>
   );
 }

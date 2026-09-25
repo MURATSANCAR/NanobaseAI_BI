@@ -29,12 +29,17 @@ import httpx
 
 from ..config import settings
 from .art import ArtPlan, Character, Scene
+from .bubbles import wanted as wants_bubbles
 
 ALIAS = "book-image"
 UPSCALE_ALIAS = "book-upscale"
 PIXEL_BUDGET = int(os.environ.get("EDITOR_IMAGE_PIXELS", 3_000_000))
 STEPS = 40
 MAX_REFS = 4
+# Çocuk kitabında (bubbles.wanted) konuşma balonları resmin üstüne dizgide basılır: sayfa resmi üst bölgede sade
+# bir boşluk bırakır. Düzeltmede (base_image) kompozisyon korunduğu için eklenmez; kapakta balon yoktur.
+BUBBLE_SPACE = ("Leave a calm, empty area in the upper part of the picture (plain sky or plain wall, no important "
+                "details there) for speech bubbles.")
 
 
 def size_for(w_mm: float, h_mm: float, dpi: int = 300) -> tuple[int, int, int]:
@@ -89,6 +94,7 @@ class Painter:
         self.http = httpx.AsyncClient(timeout=httpx.Timeout(1800.0, connect=10.0))
         self.log: list[Render] = []
         self.refs: dict[str, str] = {}
+        self.bubble_space = wants_bubbles(self.dir.parent / "profile.json")     # iş klasöründeki profil
 
     @property
     def negative(self) -> str:
@@ -157,6 +163,8 @@ class Painter:
             refs = [base_image] + [self.refs[c.name] for c in chars if c.name in self.refs][:MAX_REFS - 1]
         else:
             body = f"Children's book illustration. {sc.scene} Setting: {sc.setting}."
+            if self.bubble_space and sc.kind in ("flow", "full"):
+                body += f" {BUBBLE_SPACE}"
             if direction.strip():
                 body += f" Editor's direction (follow it): {direction.strip()}."
             prompt = self._prompt(body, chars, sc.outfits)
