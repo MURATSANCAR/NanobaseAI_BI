@@ -104,6 +104,7 @@ PROMPT = """Sen Timaş Yayınları'nın e-ticaret sitesi (timas.com.tr) için T�
 Aşağıdaki {kind_tr} sayfası için öneri yaz. Kurallar:
 - YALNIZ aşağıdaki bilgiyi kullan. Doğum yeri/tarihi, eğitim, ödül, kişisel hayat gibi verilmeyen bilgi UYDURMA.
   Wikidata özeti verildiyse yalnız oradaki bilgiyi kullanabilirsin.
+- Satış adedi şirket içi bilgidir: satış rakamını, "çok satan" sıralamasını ya da satış sayısını metne YAZMA.
 - SeoTitle: {title_min}–{title_max} karakter. {title_hint}
 - SeoDescription: {meta_min}–{meta_max} karakter, tek paragraf; başlığı tekrar etme, tırnak ve emoji yok.
 - Intro: 80–160 kelimelik tanıtım paragrafı (HTML değil düz metin). {intro_hint}
@@ -115,8 +116,7 @@ Ad: {name}
 Mevcut başlık: {title}
 Mevcut açıklama: {desc}
 Sitedeki aktif kitap sayısı: {books}
-Toplam satış adedi: {sales}
-En çok satan kitaplar: {top}
+Öne çıkan kitaplar: {top}
 Kategoriler: {cats}
 Yayınevleri: {brands}
 {extra}"""
@@ -161,7 +161,8 @@ def build_prompt(kind: str, name: str, title: Any, desc: Any, f: dict[str, Any],
 
 def source_record(kind: str, name: str, title: Any, desc: Any, f: dict[str, Any]) -> dict[str, Any]:
     """Gerçeklik denetimi için kaynak: ürün kaydı biçiminde (propose.unsupported bunu okur)."""
-    text = " ".join([name, rules.text_of(title), rules.text_of(desc), " ".join(t["name"] + " " + (t["author"] or "") for t in f["top"]),
+    text = " ".join([name, rules.text_of(title), rules.text_of(desc), f"{f['books']} kitap",
+                     " ".join(t["name"] + " " + (t["author"] or "") for t in f["top"]),
                      " ".join(f["cats"]), " ".join(f["brands"]), " ".join(f.get("authors") or []),
                      json.dumps(f.get("wikidata") or {}, ensure_ascii=False), "Timaş Yayınları Timaş Yayın Grubu"])
     return {"ProductName": name, "Details": text}
