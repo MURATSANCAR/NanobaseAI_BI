@@ -32,7 +32,8 @@ SHARED = ("front.typ",)                  # iki şablonun ortak parçası (ön sa
 # plan.render_data `elements: false` verir, efekt yazı düz yazı olarak basılır, şekil çizilmez.
 ELEMENTS = "elements.typ"
 ELEMENTS_STUB = ("// Yer tutucu: templates/elements.typ yok.\n"
-                 "#let draw-shape(s, palette, fonts) = none\n#let effect-text(t, palette, fonts) = none\n")
+                 "#let draw-shape(s, palette, fonts, mirror: false) = none\n#let effect-text(t, palette, fonts) = none\n"
+                 "#let roles(palette) = (:)\n")
 
 
 def has_elements() -> bool:

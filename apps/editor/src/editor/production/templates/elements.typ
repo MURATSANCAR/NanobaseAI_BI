@@ -1,7 +1,8 @@
 // Öğeler: süs/şekil katmanı ve efekt yazı (sayfa planı sözleşmesi, «Efekt yazılar ve süs/şekiller»).
-//   draw-shape(s, palette, fonts)   plan sayfasının shapes[] öğesini kendi kutusunun içine (0,0,w,h) çizer
+//   draw-shape(s, palette, fonts, mirror: s.flip)   plan sayfasının shapes[] öğesini kutusunun içine (0,0,w,h) çizer
 //   effect-text(t, palette, fonts)  effect'li serbest yazıyı (texts[] öğesi) kutusunun içine çizer
-// Kutunun sayfadaki yeri, döndürme, aynalama ve z sırası çağıranındır (plan.typ). Her şey vektör; harfler metin
+// Kutunun sayfadaki yeri, döndürme ve z sırası çağıranındır (plan.typ); aynalamayı draw-shape yapar (yazı düz kalır,
+// çağıran kutuyu aynalamaz). Her şey vektör; harfler metin
 // olarak kalır (Türkçe doğru, PDF'te aranır, düzeltilebilir). Rastgelelik yalnız tohumlu: aynı girdi → aynı çizim.
 // Renk alanı "#RRGGBB" ya da rol adıdır (roles); rol kitabın paletinden türetilir. Varsayılanlar SHAPE-DEFAULTS
 // ve EFFECT-DEFAULTS'ta; elements.py'deki katalogla aynı oldukları test_elements'ta sınanır.

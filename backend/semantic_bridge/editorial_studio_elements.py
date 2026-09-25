@@ -3,7 +3,9 @@
 Sözleşme: docs/analiz/studyo-sayfa-plani-sozlesme.md → «Efekt yazılar ve süs/şekiller». Stüdyo servisindeki
 (`/v1/studio/jobs/{job}/plan/...`) üç okuyan ucun birebir vekili; yazan uç yok (şekil ve efekt sayfa PUT'uyla
 kaydedilir). Oturum zorunlu (stüdyonun öteki uçlarıyla aynı `_books` denetimi); görseller PNG olarak aynen
-geçer, bugünkü önizlemeler gibi kısa süre tarayıcı önbelleğinde tutulur.
+geçer, bugünkü önizlemeler gibi kısa süre tarayıcı önbelleğinde tutulur. Genişlik ve önizleme yazısı olduğu gibi
+geçer: sınır motorundadır ve açık hatadır (genişlik 16–4000 px); köprü sessizce kırpmaz, yazıya tavan koymaz (uzun
+yazı önizlemede kutuya sığacak kadar küçülür).
 
 app.py'de `_books` tanımından sonra (stüdyo bloğunun yanında) tek satırla bağlanır:
     editorial_studio_elements.register(app, {"auth": _books})
@@ -26,7 +28,6 @@ log = logging.getLogger(__name__)
 # değişmesin diye biçimle sınırlanır, listeyle değil. Serbest yol parçası servise geçmez.
 NAME = re.compile(r"^[a-z][a-z0-9_-]{0,31}$")
 STYLE = re.compile(r"^[a-z0-9_-]{0,32}$")
-PREVIEW_TEXT_MAX = 200
 IMAGE_MIME = {"image/png"}
 CACHE = {"Cache-Control": "private, max-age=300"}
 
@@ -38,8 +39,7 @@ def _name(v: str, what: str) -> str:
 
 
 def _width(w: int) -> int:
-    # Bugünkü önizleme uçlarıyla aynı kalıp: küçük resim ölçüsü makul aralıkta tutulur.
-    return max(32, min(int(w), 1600))
+    return int(w)
 
 
 def catalog(job_id: str) -> dict:
@@ -57,8 +57,6 @@ def element_preview(job_id: str, kind: str, width: int, style: str) -> tuple[byt
 
 def effect_preview(job_id: str, style: str, width: int, text: str) -> tuple[bytes, str]:
     text = (text or "").strip()
-    if len(text) > PREVIEW_TEXT_MAX:
-        raise editorial_studio.StudioError(400, f"Önizleme yazısı en çok {PREVIEW_TEXT_MAX} harf olabilir.")
     q = {"w": width, **({"text": text} if text else {})}
     return editorial_studio.get_bytes(
         f"/v1/studio/jobs/{editorial_studio._job(job_id)}/plan/effects/{_name(style, 'Efekt')}/preview?{urlencode(q)}",

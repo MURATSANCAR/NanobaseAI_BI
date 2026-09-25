@@ -43,7 +43,7 @@ LAYOUTS = ("art-top", "art-bottom", "art-full", "art-left", "art-right", "text-o
            "custom")
 KINDS = ("para", "dialogue", "sound", "heading")
 SHAPES = ("oval", "thought", "shout", "box")
-ALIGNS = ("left", "justify", "center")
+ALIGNS = ("left", "justify", "center", "right")   # right: serbest yazı ve efekt yazı (ekranın «Sağa»sı)
 FITS = ("cover", "contain")
 INK = "#2C2C2A"                            # gövde metni rengi (palet vermezse)
 OVER_ART_BG = "#FFFFFFE6"                  # «yazı resmin üstünde» yerleşiminde yarı saydam kutu
@@ -51,7 +51,10 @@ ART_TOP = 0.52                             # resim bandı oranı (kitabın kendi
 GAP = 9.0                                  # resim ile yazı arası (mm; book.typ'deki üst boşlukla aynı)
 Z_FREE = 3                                 # figür ve serbest yazının en alt katmanı
 HEX = re.compile(r"^#[0-9A-Fa-f]{6}([0-9A-Fa-f]{2})?$")
-ROLES = ("accent", "soft", "ink")          # şekil renginde palet rolü (elements.typ çözer)
+# Şekil ve efekt yazı renginde palet rolü (elements.typ `roles` çözer; liste elements.ROLES ile aynı, test sınar).
+# "none" = boya yok (dolgusuz / çizgisiz).
+ROLES = ("accent", "accent2", "ink", "pop", "pop2", "sun", "rose", "soft", "soft2", "paper", "wood", "bark", "deep",
+         "white")
 ART_ID = re.compile(r"^a_[0-9a-f]{8}$")
 
 
@@ -285,7 +288,8 @@ def _hex(v, what: str) -> str | None:
     return v.upper()
 
 
-def _runs(runs, what: str) -> list[dict]:
+def _runs(runs, what: str, roles: bool = False) -> list[dict]:
+    """`roles`: renk palet rolü de olabilir (şekil yazısı, serbest yazı; dizgi rolü paletten çözer)."""
     if not isinstance(runs, list):
         raise ValueError(f"{what}: runs listesi gerekli")
     out = []
@@ -294,7 +298,7 @@ def _runs(runs, what: str) -> list[dict]:
             raise ValueError(f"{what}: her run'da text olmalı")
         o = {"text": r["text"]}
         if r.get("color") not in (None, ""):
-            o["color"] = _hex(r["color"], what)
+            o["color"] = r["color"] if roles and r["color"] in ROLES else _hex(r["color"], what)
         if r.get("weight") is not None:
             wt = int(r["weight"])
             if not 100 <= wt <= 900:
@@ -392,7 +396,7 @@ def _clean_page(p: dict, plan: dict, old: dict | None = None) -> dict:
     el = _elements()
     for x in p.get("texts") or []:
         t = {"id": str(x.get("id") or new_id("t")), **_text_common(x, page, "serbest yazı"),
-             "runs": _runs(x.get("runs") or [], "serbest yazı"), "z": max(Z_FREE, int(x.get("z") or Z_FREE))}
+             "runs": _runs(x.get("runs") or [], "serbest yazı", roles=True), "z": max(Z_FREE, int(x.get("z") or Z_FREE))}
         if x.get("effect"):
             eff = x["effect"]
             if not isinstance(eff, dict) or not eff.get("style"):
@@ -405,14 +409,14 @@ def _clean_page(p: dict, plan: dict, old: dict | None = None) -> dict:
     for s in p.get("shapes") or []:
         if not isinstance(s, dict) or not s.get("kind"):
             raise ValueError("şekil: kind gerekli")
-        o = {**s, "id": str(s.get("id") or new_id("s")), "kind": str(s["kind"]),
+        o = {**{k: v for k, v in s.items() if k != "overflow"}, "id": str(s.get("id") or new_id("s")), "kind": str(s["kind"]),
              "box": _clamp_box(s.get("box"), page, "şekil"), "rotate": round(float(s.get("rotate") or 0) % 360, 2),
              "flip": bool(s.get("flip")), "z": max(Z_FREE, int(s.get("z") or Z_FREE))}
         for k in ("fill", "stroke"):
-            if o.get(k) is not None and not (isinstance(o[k], str) and (HEX.match(o[k]) or o[k] in ROLES)):
-                raise ValueError(f"şekil: {k} #RRGGBB ya da palet rolü ({', '.join(ROLES)})")
+            if o.get(k) is not None and not (isinstance(o[k], str) and (HEX.match(o[k]) or o[k] in ROLES or o[k] == "none")):
+                raise ValueError(f"şekil: {k} #RRGGBB, «none» ya da palet rolü ({', '.join(ROLES)})")
         if o.get("runs") is not None:
-            o["runs"] = _runs(o["runs"], "şekil yazısı")
+            o["runs"] = _runs(o["runs"], "şekil yazısı", roles=True)
         err = el.validate(o) if el is not None else None
         if err:
             raise ValueError(f"şekil: {err}")
@@ -655,6 +659,9 @@ def render_data(d: Path, plan: dict) -> dict:
     sel = studio.selected_art(d)
     pal = plan.get("palette") or {}
     ink = pal.get("text") or INK
+    el = _elements()
+    from .typeset import has_elements
+    drawn = has_elements()
     body = plan["page"].get("body_size") or spec.body_size
     px: dict = {}
 
@@ -693,8 +700,9 @@ def render_data(d: Path, plan: dict) -> dict:
             items.append({"type": "figure", "id": f["id"], "box": f["box"], "rotate": f["rotate"], "flip": f["flip"],
                           "path": rel, "z": f["z"]})
         for x in pg["texts"]:
+            # Efektli yazı elements.typ'ye kendi `size`'ıyla gider: null → kutuya sığdır (taşma işareti yok).
             items.append({"type": "text", "id": x["id"], "z": x["z"], **text_item(x, runs=x["runs"]),
-                          "effect": x.get("effect")})
+                          "effect": x.get("effect"), **({"size": x.get("size")} if x.get("effect") and drawn else {})})
         for s in pg.get("shapes", []):
             items.append({**s, "type": "shape"})
         items.sort(key=lambda it: it["z"])                 # figür, serbest yazı ve şekil aynı z kuralıyla
@@ -713,10 +721,10 @@ def render_data(d: Path, plan: dict) -> dict:
                       "text": text_item(t, blocks=t["blocks"]) if t else None, "bubbles": bubbles, "items": items,
                       "folio": t is not None})
     fr = studio.read(d, "front.json")
-    from .typeset import has_elements
     return {"book": {"title": ms.title, "author": ms.author or "", "publisher": ms.meta.get("PUBLISHER") or ""},
             "spec": spec.to_json(), "front": fr, "accent": accent, "body_size": body, "pages": pages,
-            "palette": {**pal, "accent": pal.get("accent") or accent, "ink": ink}, "elements": has_elements()}
+            # Şekil ve efekt yazının paleti planın kendisi (önizleme uçlarıyla aynı rol renkleri); yoksa Timaş paleti.
+            "palette": el.palette_or_default(pal) if el is not None else pal, "elements": drawn}
 
 
 def build_pdf(d: Path, plan: dict) -> dict:
@@ -732,7 +740,8 @@ def build_pdf(d: Path, plan: dict) -> dict:
     prev = d / "dizgi" / "onizleme"
     for f in prev.glob("*.png") if prev.exists() else []:
         f.unlink(missing_ok=True)
-    return {"overflow": [m for m in marks if m["kind"] == "overflow"], "seconds": round(time.time() - t, 2)}
+    return {"overflow": [m for m in marks if m["kind"] in ("overflow", "element-overflow")],
+            "seconds": round(time.time() - t, 2)}
 
 
 def _typeset(d: Path, plan: dict, build: bool) -> None:
@@ -752,16 +761,24 @@ def _typeset(d: Path, plan: dict, build: bool) -> None:
 
 
 def apply_overflow(plan: dict, marks: list[dict]) -> None:
+    """Dizginin taşma işaretleri → sayfa, balon, serbest yazı ve şekil `overflow` alanları. elements.typ'nin
+    işareti (`element-overflow`: sabit puntolu şekil/efekt yazısı kutuya sığmadı) sayfa taşımaz; kimlikle bulunur."""
     over: dict[str, set] = {}
+    elem: set[str] = set()
     for m in marks:
-        over.setdefault(m["page"], set()).add((m["what"], m["id"]))
+        if m["kind"] == "element-overflow":
+            elem.add(str(m.get("id") or ""))
+        else:
+            over.setdefault(m["page"], set()).add((m["what"], m["id"]))
     for pg in plan["pages"]:
         o = over.get(pg["id"], set())
         pg["overflow"] = ("text", pg["id"]) in o
         for bb in pg["bubbles"]:
             bb["overflow"] = ("bubble", bb["id"]) in o
         for x in pg["texts"]:
-            x["overflow"] = ("free", x["id"]) in o
+            x["overflow"] = ("free", x["id"]) in o or (bool(x.get("effect")) and x["id"] in elem)
+        for s in pg.get("shapes", []):
+            s["overflow"] = s["id"] in elem
 
 
 def page_no(plan: dict, pid: str) -> int:
@@ -827,6 +844,9 @@ def warnings(d: Path | None, plan: dict) -> list[str]:
             out.append(f"{no}. sayfa: {msg}")
         if any(x.get("overflow") for x in pg["texts"]):
             out.append(f"{no}. sayfa: serbest yazı kutusuna sığmıyor.")
+        if any(s.get("overflow") for s in pg.get("shapes", [])):
+            out.append(f"{no}. sayfa: şeklin yazısı şekle sığmıyor (puntoyu küçültün ya da boş bırakıp kutuya "
+                       "sığdırın).")
     if d is not None:
         for no, kind, v in low_dpi(d, plan):
             out.append(f"{no}. sayfa: {kind} baskıda bulanık çıkabilir ({v} dpi).")
@@ -1109,6 +1129,31 @@ class PlanText:
             parts += ["".join(r["text"] for r in x["runs"]) for x in sorted(pg["texts"], key=lambda x: x["z"])
                       if not x.get("effect")]
         return "\n\n".join(p for p in parts if p)
+
+    def element_rects(self) -> dict[int, tuple[list, list]]:
+        """PDF tarafında denetim dışı bölgeler: {PDF sayfa dizini (0'dan): (dışarıda tutulan, korunan)} kutular mm.
+        Efekt yazı ve şekil yazısı dizgide katman katman (gölge, dış çizgi, derinlik) ve harf harf basılır; PDF'ten
+        okunan kelime dizisine karışıp kitabın metnini bölmesin diye o kutulardaki yazı okunmaz. Sayfa metni, balon ve
+        düz serbest yazı kutusuyla örtüşen yer okunmaya devam eder (asıl metin asla düşmez)."""
+        out: dict[int, tuple[list, list]] = {}
+        for i, pg in enumerate(self.plan["pages"]):
+            drop = [_aabb(x["box"], 0) for x in pg["texts"] if x.get("effect")]
+            drop += [_aabb(s["box"], s.get("rotate") or 0) for s in pg.get("shapes", []) if s.get("runs")]
+            if not drop:
+                continue
+            keep = [pg["text"]["box"]] if pg["text"] else []
+            keep += [bb["box"] for bb in pg["bubbles"]] + [x["box"] for x in pg["texts"] if not x.get("effect")]
+            out[FRONT + i] = (drop, keep)
+        return out
+
+
+def _aabb(bx: dict, rotate: float) -> dict:
+    """Merkezi etrafında döndürülmüş kutunun eksenlere paralel sınır kutusu (mm)."""
+    a = math.radians(rotate or 0)
+    c, s = abs(math.cos(a)), abs(math.sin(a))
+    w, h = bx["w"] * c + bx["h"] * s, bx["w"] * s + bx["h"] * c
+    cx, cy = bx["x"] + bx["w"] / 2, bx["y"] + bx["h"] / 2
+    return {"x": cx - w / 2, "y": cy - h / 2, "w": w, "h": h}
 
 
 def placement(plan: dict, pid: str, item: str) -> tuple[dict, str, str]:

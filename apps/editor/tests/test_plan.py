@@ -747,3 +747,178 @@ def test_replan_to_no_art_keeps_history_and_images(tmp_path, monkeypatch):
     monkeypatch.setattr(studio, "_cover_render", cover_render)
     assert asyncio.run(studio.regenerate(d, "kapak", "new", "", "editör")) == [1]
     assert not studio.read(d, "cover.json")["typographic"] and "kapak" in studio.selected_art(d)
+
+
+
+# ------------------------------------------------------------------ öğeler (D) ile sayfa planı (A) bağlantısı
+def test_plan_color_roles_match_elements():
+    from editor.production import elements as el
+    assert set(P.ROLES) == set(el.ROLES)
+
+
+def test_shape_and_effect_roles_none_and_client_overflow(tmp_path):
+    """Şekil/efekt renginde D'nin bütün rolleri ve «none» geçer; istemcinin gönderdiği `overflow` yok sayılır
+    (dizgi yazar); şekil ve efekt yazısı run'ında rol geçer, sayfa metninde geçmez."""
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["shapes"] = [{"kind": "note", "box": {"x": 30, "y": 40, "w": 40, "h": 40}, "fill": "paper", "stroke": "none",
+                     "overflow": True, "runs": [{"text": "Not", "color": "bark"}]},
+                    {"kind": "cloud", "box": {"x": 80, "y": 40, "w": 40, "h": 30}, "fill": "white", "stroke": "pop2"}]
+    pg["texts"] = [{"box": {"x": 20, "y": 90, "w": 60, "h": 18}, "runs": [{"text": "Hop", "color": "sun"}],
+                    "effect": {"style": "stacked", "params": {"shadow": "deep", "depth": 0.12, "shadow_dx": 0.4}}}]
+    _, page = P.update_page(d, pg["id"], 1, pg, "e", **QUIET)
+    assert [s["fill"] for s in page["shapes"]] == ["paper", "white"] and "overflow" not in page["shapes"][0]
+    assert page["shapes"][0]["runs"][0]["color"] == "bark" and page["texts"][0]["runs"][0]["color"] == "sun"
+    bad = json.loads(json.dumps(pg))
+    bad["text"]["blocks"][0]["runs"][0]["color"] = "accent"
+    with pytest.raises(ValueError):
+        P.update_page(d, pg["id"], 2, bad, "e", **QUIET)
+    arc = {**pg["texts"][0], "effect": {"style": "arc", "params": {"curve": 3}}}
+    with pytest.raises(ValueError, match="en çok 1"):                     # D'nin doğrulaması: kavis -1..1
+        P.update_page(d, pg["id"], 2, {**pg, "texts": [arc]}, "e", **QUIET)
+
+
+def test_element_overflow_marks_go_to_items_and_warnings(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = plan["pages"][0]
+    pg["shapes"] = [{"id": "s_00000001", "kind": "badge", "box": {"x": 1, "y": 1, "w": 9, "h": 9}, "z": 3}]
+    pg["texts"] = [{"id": "t_00000001", "box": {"x": 1, "y": 1, "w": 9, "h": 9}, "runs": [{"text": "x"}], "z": 4,
+                    "effect": {"style": "arc", "params": {}}},
+                   {"id": "t_00000002", "box": {"x": 1, "y": 1, "w": 9, "h": 9}, "runs": [{"text": "y"}], "z": 5}]
+    P.apply_overflow(plan, [{"kind": "element-overflow", "id": "s_00000001"},
+                            {"kind": "element-overflow", "id": "t_00000001"},
+                            {"kind": "element-overflow", "id": "t_00000002"}])   # efektsiz yazıda bu işaret yok sayılır
+    assert pg["shapes"][0]["overflow"] and pg["texts"][0]["overflow"] and not pg["texts"][1]["overflow"]
+    w = " ".join(P.warnings(None, plan))
+    assert f"{P.FRONT + 1}. sayfa: şeklin yazısı şekle sığmıyor" in w and "serbest yazı kutusuna sığmıyor" in w
+
+
+def test_plan_text_element_rects_skip_effects_and_shape_text(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = plan["pages"][2]
+    pg["texts"] = [{"id": "t1", "box": {"x": 10, "y": 10, "w": 40, "h": 20}, "runs": [{"text": "Güm"}], "z": 3,
+                    "effect": {"style": "burst", "params": {}}}]
+    pg["shapes"] = [{"id": "s1", "kind": "sign", "box": {"x": 60, "y": 10, "w": 40, "h": 20}, "rotate": 90, "z": 4,
+                     "runs": [{"text": "Yol"}]},
+                    {"id": "s2", "kind": "star", "box": {"x": 60, "y": 60, "w": 20, "h": 20}, "z": 5}]
+    rects = P.PlanText(plan).element_rects()
+    assert list(rects) == [P.FRONT + 2]
+    drop, keep = rects[P.FRONT + 2]
+    assert len(drop) == 2 and keep == [pg["text"]["box"]]
+    assert drop[1] == pytest.approx({"x": 70, "y": 0, "w": 20, "h": 40})     # 90° dönmüş kutunun sınırı
+
+
+def test_api_invalid_code(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from editor.production import api
+    root = tmp_path / "production"
+    _mini(root / "job1")
+    monkeypatch.setattr(studio, "root", lambda: root)
+    monkeypatch.setattr(api, "KEY", "k")
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    c = TestClient(api.app)
+    h = {"Authorization": "Bearer k", "X-Editor": "sinama"}
+    pg = c.get("/v1/studio/jobs/job1/plan", headers=h).json()["pages"][0]
+    bad = {**pg, "shapes": [{"kind": "yok", "box": {"x": 10, "y": 10, "w": 10, "h": 10}}]}
+    r = c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", headers=h, json={"rev": 1, "page": bad})
+    assert r.status_code == 400 and r.json()["code"] == "INVALID" and "yok" in r.json()["detail"]
+    bad = {**pg, "texts": [{"box": {"x": 10, "y": 10, "w": 30, "h": 10}, "runs": [{"text": "a"}],
+                            "effect": {"style": "burst", "params": {"burst_fill": "morumsu"}}}]}
+    r = c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", headers=h, json={"rev": 1, "page": bad})
+    assert r.status_code == 400 and r.json()["code"] == "INVALID" and "Patlama" in r.json()["detail"]
+
+
+@typeset_only
+def test_elements_endpoints(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from editor.production import api
+    root = tmp_path / "production"
+    _mini(root / "job1")
+    monkeypatch.setattr(studio, "root", lambda: root)
+    monkeypatch.setattr(api, "KEY", "k")
+    c = TestClient(api.app)
+    h = {"Authorization": "Bearer k"}
+    base = "/v1/studio/jobs/job1/plan"
+    cat = c.get(f"{base}/elements/catalog", headers=h).json()
+    kinds = {k["kind"]: k for k in cat["kinds"]}
+    assert {"sign", "frame", "scatter"} <= set(kinds) and cat["groups"][0]["key"] and cat["effects"]
+    assert {p["key"] for p in kinds["sign"]["presets"]} >= {"post", "arrow"}
+    assert kinds["scatter"]["params"]["count"]["min"] == 1 and kinds["scatter"]["params"]["count"]["max"] is None
+    roles = {r["key"]: r["hex"] for r in cat["roles"]}
+    assert roles["accent"] == "#B0341C"                                       # kitabın (planın) paletinden
+    r = c.get(f"{base}/elements/sign/preview?w=120&style=arrow", headers=h)
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png" and r.content[:4] == b"\x89PNG"
+    assert r.headers["cache-control"] == "private, max-age=3600"
+    r = c.get(f"{base}/elements/yok/preview", headers=h)
+    assert r.status_code == 404 and r.json()["code"] == "NOT_FOUND"
+    r = c.get(f"{base}/elements/sign/preview?style=yok", headers=h)
+    assert r.status_code == 400 and r.json()["code"] == "INVALID"
+    r = c.get(f"{base}/elements/sign/preview?w=5", headers=h)
+    assert r.status_code == 400 and r.json()["code"] == "INVALID"
+    long = "Uzun bir önizleme yazısı, çok çok uzun. " * 12                    # tavan yok: kutuya sığacak kadar küçülür
+    r = c.get(f"{base}/effects/arc/preview", params={"w": 300, "text": long}, headers=h)
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+    assert c.get(f"{base}/effects/yok/preview", headers=h).json()["code"] == "NOT_FOUND"
+
+
+@typeset_only
+def test_shapes_and_effect_text_typeset_end_to_end(tmp_path):
+    """Şekil ve efekt yazılı sayfa PUT → dizgi: şekil PDF'te vektör, efekt yazının metni PDF'te; aynalı tabelanın
+    yazısı düz (soldan sağa) okunur; sabit puntosu sığmayan şekil ve efekt yazısı `overflow` ve plan uyarısında; ön
+    kontrolün «Metin eksiksiz» denetimi bu yazılardan etkilenmez."""
+    import pymupdf
+    from editor.production import elements as el
+    from editor.production.preflight import PT_PER_MM
+    d, ms = _job(tmp_path, child=False)
+    pl = P.freeze(d, "sınama", build=False)
+    pl, pg = P.insert_page(d, pl["rev"], pl["pages"][0]["id"], "blank", "e", build=False, post="none")
+    pid = pg["id"]
+    pg = json.loads(json.dumps(pg))
+    pg["shapes"] = [
+        {"id": "s_aaaaaaa1", "kind": "sign", "box": {"x": 20, "y": 30, "w": 70, "h": 50}, "flip": True, "z": 5,
+         "fill": "wood", "params": {"posts": 1, "point": "right"}, "runs": [{"text": "Orman Yolu", "weight": 800}]},
+        {"id": "s_aaaaaaa2", "kind": "star", "box": {"x": 110, "y": 30, "w": 30, "h": 30}, "rotate": 15, "z": 6,
+         "fill": "sun"},
+        {"id": "s_aaaaaaa3", "kind": "badge", "box": {"x": 20, "y": 120, "w": 30, "h": 30}, "z": 7, "text_size": 90,
+         "runs": [{"text": "Büyük yazı"}]},
+    ]
+    pg["texts"] = [
+        {"id": "t_aaaaaaa1", "box": {"x": 60, "y": 160, "w": 80, "h": 40}, "size": None, "z": 8, "align": "center",
+         "runs": [{"text": "Güüüm!", "color": "accent", "weight": 800, "font": "heading"}],
+         "effect": {"style": "burst", "params": {"angle": -8}}},
+        {"id": "t_aaaaaaa2", "box": {"x": 100, "y": 110, "w": 30, "h": 10}, "size": 60, "z": 9,
+         "runs": [{"text": "Şişşt sessizce"}], "effect": {"style": "arc", "params": {"curve": 0.5}}},
+    ]
+    new, page = P.update_page(d, pid, pl["rev"], pg, "e", post="none")
+    assert not (d / "hata-plan.txt").exists()
+    over = {s["id"]: s["overflow"] for s in page["shapes"]} | {t["id"]: t["overflow"] for t in page["texts"]}
+    assert over == {"s_aaaaaaa1": False, "s_aaaaaaa2": False, "s_aaaaaaa3": True, "t_aaaaaaa1": False,
+                    "t_aaaaaaa2": True}
+    no = P.page_no(new, pid)
+    warns = " ".join(new["warnings"])
+    assert f"{no}. sayfa: şeklin yazısı şekle sığmıyor" in warns
+    assert f"{no}. sayfa: serbest yazı kutusuna sığmıyor" in warns
+
+    doc = pymupdf.open(d / "dizgi" / "ic-sayfalar.pdf")
+    p = doc[no - 1]
+    assert p.get_images() == []                                                 # hepsi vektör
+    star = pymupdf.Rect(110 * PT_PER_MM, 30 * PT_PER_MM, 140 * PT_PER_MM, 60 * PT_PER_MM)
+    sun = el.roles_for(el.palette_or_default(new["palette"]))["sun"]
+    rgb = tuple(int(sun[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    fills = [dr for dr in p.get_drawings() if dr.get("fill") and dr["rect"].intersects(star)]
+    assert any(all(abs(a - b) < 0.02 for a, b in zip(dr["fill"], rgb)) for dr in fills), "yıldız vektörü yok"
+    flat = "".join(p.get_text().split())
+    assert "Güüüm" in flat and "OrmanYolu" in flat
+    dirs = [ln["dir"] for b in p.get_text("dict")["blocks"] for ln in b.get("lines", [])
+            if any("Orman" in sp["text"] for sp in ln["spans"])]
+    assert dirs and all(dx > 0.99 for dx, _ in dirs), dirs                      # aynalı tabelada yazı düz
+
+    studio.rebuild(d)
+    rep = {c["name"]: c for c in studio.read(d, "preflight.json")["checks"]}
+    assert rep["Metin eksiksiz"]["status"] == "OK", rep["Metin eksiksiz"]
