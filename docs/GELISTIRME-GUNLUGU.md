@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-25 (23:50) — Editoryal Masam: yönetici görünümü ilk ekrana sığacak biçimde yeniden düzenlendi
+
+- **Sorun:** yönetici açılışında «Editör atanmamış» grubu (206 iş) varsayılan açık geliyordu; sayfa 9.884 px, sohbet/editör tablosu/sözleşmeler 8.300 px'ten sonra başlıyordu. Aynı editör sayıları iki yerde (gruplar + tablo) tekrarlanıyordu, her satırda kırmızı gün sayısı vardı (işlerin çoğu geciktiği için vurgu anlamını yitirmişti), üst şeritte «Kaynak: CRM» iki kez yazıyordu.
+- **Düzeltme (`EditorialHome.tsx`, `kit.tsx`):** üstte 4 sayı kartı; bekleyen iş grupları ile editör tablosu tek tabloda birleşti (satıra dokununca o editörün işleri açılır, liste kendi içinde kayar, sınır yok); yönetici görünümünde sohbet + Yaklaşan + sözleşmeler sağ sütunda; gün sayıları nötr renkte. `ModuleFrame` isteğe bağlı `presence` aldı (Masam'da dosya sayısı).
+- **Açık kalan:** sohbetteki kitap çiplerinde bazı kitaplar başlık yerine dosya adıyla (`duvarlari-yikmak`, `Dilek Agaci.indd`) ve boş kapakla görünüyor; veri eşleme sorunu, ayrı iş.
+
 ## 2026-09-25 (22:45) — Kurulum müşteri verisini silmez: köprünün durum klasörü kalıcı diskte
 
 - Kullanıcı kuralı: "ben resetleyelim demedikçe tüm sistemlerde müşterinin verileri silinmeyecek, ne var ise o kalacak."
