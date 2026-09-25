@@ -338,7 +338,7 @@ def register(app, runtime, authorize, session_user):
     def approver(request: Request) -> str:
         user = gate(request)
         if not seo.can_approve(user):
-            raise _err(403, "T-soft'a gönderimi onaylama yetkiniz yok (Yönetim → SEO & GEO → Onay verebilenler).")
+            raise _err(403, "Öneri onaylama yetkiniz yok (Yönetim → SEO & GEO → Onay verebilenler).")
         return user
 
     @app.get("/api/v1/seo-geo/overview")
@@ -355,8 +355,8 @@ def register(app, runtime, authorize, session_user):
             status = dict(c.execute(sa.select(PROPOSALS.c.status, sa.func.count()).where(
                 PROPOSALS.c.tenant_id == tenant).group_by(PROPOSALS.c.status)).all())
             week = now() - timedelta(days=7)
-            sent_week = c.execute(sa.select(sa.func.count()).select_from(PROPOSALS).where(
-                PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "gonderildi", PROPOSALS.c.sent_at >= week)).scalar() or 0
+            approved_week = c.execute(sa.select(sa.func.count()).select_from(PROPOSALS).where(
+                PROPOSALS.c.tenant_id == tenant, PROPOSALS.c.status == "onaylandi", PROPOSALS.c.decided_at >= week)).scalar() or 0
             last = c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.kind == "tsoft")
                              .order_by(RUNS.c.started_at.desc()).limit(1)).mappings().first()
         daily = seo.gsc("daily")
@@ -364,7 +364,7 @@ def register(app, runtime, authorize, session_user):
             "products": total, "activeAverage": round(float(avg), 1) if avg is not None else None,
             "failing": failing, "failingThreshold": 70,
             "rules": [{"rule": k, "title": v[2], "severity": v[1], "count": by_rule[k]} for k, v in rules.RULES.items()],
-            "proposals": status, "sentThisWeek": sent_week,
+            "proposals": status, "approvedThisWeek": approved_week, "tsoftWrite": False,
             "lastSync": ({"startedAt": iso(last["started_at"]), "finishedAt": iso(last["finished_at"]),
                           "count": last["count"], "error": last["error"]} if last else None),
             "sync": seo.state, "batch": seo.batch, "search": daily,

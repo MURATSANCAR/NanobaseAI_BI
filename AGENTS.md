@@ -136,3 +136,11 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
   izinli kanaldır: satıcı API'si, veri anlaşması, lisanslı sosyal dinleme hizmeti.
 - **Kişisel veri tutulmaz:** muhabir ve okur adı alınmaz; haber metni kopyalanmaz (başlık, en çok 400 karakter özet,
   bağlantı). Model dış buluta gitmez; LLM kapısından `rt.llm_for("web", BATCH)` ile gider.
+
+## T-soft'a yazma yok (kullanıcı yasağı 2026-09-25)
+
+- T-soft REST1 API'sine **hiçbir şey gönderilmez**: `updateProducts`, `setProducts`, `setProductLanguage`, `setLinks`,
+  `setReferralLinks`, `htmlBlock/set`, `setting/deleteCache` ve her türlü `set*/update*/delete*` — deneme, test ya da
+  "tek ürün" gerekçesi dahil. Yalnız okuma: `auth/login`, `auth/isLogin`, `*/get*`.
+- Kodda koruma `backend/semantic_bridge/seo_geo/connections.py` → `READ_ONLY`; liste dışı yol çağrılmadan hata atar.
+- SEO/GEO önerileri onaylanır ve kayıt altında durur; hedef CRM (müşteriden Web API yetkisi bekleniyor), T-soft değil.

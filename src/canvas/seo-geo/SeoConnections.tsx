@@ -33,8 +33,8 @@ export default function SeoConnections() {
       {c && (
         <div className="sg-conn">
           <Item title="T-soft mağazası" ok={c.tsoft} okText="Tanımlı">
-            <p>Ürünler buradan okunur; onaylanan SEO alanları (başlık, meta açıklama, arama kelimeleri, açıklama) buraya yazılır. Ürün adresi (SEO link) değiştirilmez.</p>
-            <p>Gerekli: T-soft panelinde web servis kullanıcısı; IP kısıtı varsa sunucu IP’si izinli olmalı.</p>
+            <p>Ürünler buradan <b>yalnız okunur</b>; T-soft’a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında durur, gidecekleri yer CRM (Web API yetkisi bekleniyor).</p>
+            <p>Gerekli: T-soft panelinde web servis kullanıcısı (okuma); IP kısıtı varsa sunucu IP’si izinli olmalı.</p>
           </Item>
           <Item title="Google Search Console" ok={c.google} okText="Servis hesabı tanımlı">
             <p>Aranan kelimeler, sayfa performansı. Mülk: <code>{c.gscSite ?? '—'}</code></p>

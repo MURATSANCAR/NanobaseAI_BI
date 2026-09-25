@@ -28,7 +28,7 @@ export default function SeoHome() {
       crumb="Genel bakış"
       eyebrow="SEO & GEO · timas.com.tr"
       title="Arama ve yapay zekâ görünürlüğü"
-      lead="T-soft’taki ürünlerin SEO durumu, Google’daki performans ve onay bekleyen model önerileri. Onaysız hiçbir değişiklik mağazaya gönderilmez."
+      lead="T-soft’taki ürünlerin SEO durumu, Google’daki performans ve onay bekleyen model önerileri. T-soft’tan yalnız okunur; mağazaya hiçbir şey gönderilmez."
       actions={
         o?.connections.tsoft && (
           <button className="sg-button" onClick={() => sync.mutate()} disabled={sync.isPending || o.sync.running}>
@@ -69,7 +69,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; 
         <Kpi label="T-soft ürünü" value={fmt(o.products)} note={o.lastSync ? `Son okuma ${dateTime(o.lastSync.finishedAt || o.lastSync.startedAt)}` : 'Henüz okunmadı'} />
         <Kpi label="Ortalama puan" value={o.activeAverage == null ? '—' : fmt(o.activeAverage, 1)} unit="/100" note="Aktif ürünler" />
         <Kpi label="Düzeltilmesi gereken" value={fmt(o.failing)} note={`Puanı ${o.failingThreshold}’in altında`} />
-        <Kpi label="Onay bekleyen öneri" value={fmt(waiting)} note={`Bu hafta gönderilen ${fmt(o.sentThisWeek)}`} />
+        <Kpi label="Onay bekleyen öneri" value={fmt(waiting)} note={`Bu hafta onaylanan ${fmt(o.approvedThisWeek)}`} />
         <Kpi
           label="Google tıklaması"
           value={o.search ? fmt(clicks) : '—'}
@@ -137,7 +137,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; 
           <div className="sg-bars">
             <Todo to="/seo-geo/urun-denetimi?durum=hazir" label="Onay bekleyen model önerisi" n={waiting} />
             <Todo to="/seo-geo/urun-denetimi" label={`Puanı ${o.failingThreshold}’in altındaki ürün`} n={o.failing} />
-            <Todo to="/seo-geo/gecmis" label="Gönderilemeyen öneri" n={o.proposals.hata ?? 0} />
+            <Todo to="/seo-geo/gecmis" label="Onaylanan öneri (CRM bağlantısını bekliyor)" n={o.proposals.onaylandi ?? 0} />
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
             <button className="sg-button" onClick={onBatch} disabled={batchPending || o.batch.running || !o.products}>
