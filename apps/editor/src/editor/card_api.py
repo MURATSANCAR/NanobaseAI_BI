@@ -168,6 +168,38 @@ def book_proofing(book_id: UUID):
                          'group':r['grp'],'confidence':_num(r['confidence']),'marks':r['marks'],
                          'decision':decisions.get(str(r['id']))} for r in rows]}
 
+@app.get('/v1/books/{book_id}/proofing/export.docx')
+def book_proofing_docx(book_id: UUID):
+    """Son okuma bulguları kitabın metnine Word yorumu olarak işlenmiş .docx (redaksiyon Word'de yapılır).
+    Son okunan neslin her denetiminin en yeni koşusu; editörün «yanlış alarm» dediği bulgu hariç, geri kalan
+    hiçbir bulgu düşmez (yeri bulunamayan sayfa başlığına bağlanır). Salt okuma."""
+    from . import source
+    from .proofing import _export_docx
+    with foundation.read_snapshot() as c:
+        gen=_proofed_generation(c,str(book_id))
+        if gen is None:
+            raise HTTPException(404,'book not found')
+        gid=str(gen['id'])
+        title=(c.execute('SELECT b.title FROM ed.book b WHERE b.id=%s',(str(book_id),)).fetchone() or {}).get('title') or 'kitap'
+        try:
+            runs=c.execute('SELECT DISTINCT ON (check_name) id FROM ed.proof_run WHERE generation_id=%s'
+                           ' ORDER BY check_name, started_at DESC',(gid,)).fetchall()
+            rows=c.execute('SELECT id, check_name, page_no, severity, message, quote, suggestion, details FROM ed.proof_finding'
+                           ' WHERE run_id = ANY(%s) ORDER BY page_no NULLS FIRST, severity DESC, created_at',
+                           ([r['id'] for r in runs],)).fetchall() if runs else []
+        except psycopg.errors.UndefinedTable:
+            raise HTTPException(503,'proofing tables missing (db migration 023_proofing not applied)') from None
+        decisions,_=_decisions(c,gid,[r['id'] for r in runs]) if runs else ({},{})
+    findings=[{'page':r['page_no'],'check':r['check_name'],'label':label_of(r['check_name']),'message':r['message'],
+               'quote':r['quote'],'suggestion':r['suggestion'],'details':r['details'] or {}} for r in rows
+              if (decisions.get(str(r['id'])) or {}).get('verdict')!='REJECT']
+    body=_export_docx.build(title,source.read(gid),findings)
+    safe=''.join(ch if ch.isascii() and (ch.isalnum() or ch in '-_') else '-' for ch in title).strip('-') or 'kitap'
+    from urllib.parse import quote as _q
+    return Response(body,media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={'Content-Disposition':f"attachment; filename=\"son-okuma-{safe}.docx\"; filename*=UTF-8''"
+                             + _q(f'son-okuma-{title}.docx')})
+
 @app.get('/v1/books/{book_id}/proofing/word-map')
 def book_word_map(book_id: UUID):
     """Kelime haritası: `word_variety` denetiminin son okunan nesildeki EN YENİ başarılı koşusunun

@@ -4128,6 +4128,30 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
             raise HTTPException(502, "Son okuma raporu motordan alınamadı.") from e
 
+    @app.get("/api/v1/editorial/proofing/export.docx")
+    def editorial_proofing_docx(request: Request, bookId: str = "") -> Response:
+        """Son okuma bulguları kitabın metnine Word yorumu olarak işlenmiş .docx (redaksiyon Word'de yapılır).
+        Editörün «yanlış alarm» dediği bulgu hariç. Salt okuma; motor ulaşılamazsa 502."""
+        _books(request)
+        import httpx
+        import uuid as _uuid
+        from semantic_bridge import editorial_cards
+        try:
+            _uuid.UUID(bookId)
+        except ValueError:
+            raise HTTPException(422, "Kitap kimliği gerekli.") from None
+        try:
+            body, disposition = editorial_cards.proofing_docx(bookId)
+        except httpx.HTTPStatusError as e:
+            code = e.response.status_code
+            if code == 404:
+                raise HTTPException(404, "Kitap motorda bulunamadı.") from e
+            raise HTTPException(503 if code == 503 else 502, "Word dosyası motordan alınamadı.") from e
+        except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
+            raise HTTPException(502, "Word dosyası motordan alınamadı.") from e
+        return Response(body, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        headers={"Content-Disposition": disposition})
+
     @app.get("/api/v1/editorial/proofing/word-map")
     def editorial_word_map(request: Request, bookId: str = "") -> dict[str, Any]:
         """Kelime haritası (M5 Son Okuma): kitabın tekil kökleri, biçimleri, sayfaları, anlamları ve deyimleri;

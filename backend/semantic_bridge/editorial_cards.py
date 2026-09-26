@@ -385,6 +385,12 @@ def word_map(book_id):
     return out
 
 
+def proofing_docx(book_id):
+    """Son okuma bulguları Word yorumu olarak işlenmiş .docx: (baytlar, Content-Disposition). Köprü üretmez, iletir."""
+    r=request('/v1/books/'+str(uuid.UUID(book_id))+'/proofing/export.docx')
+    return r.content, r.headers.get('content-disposition') or 'attachment; filename="son-okuma.docx"'
+
+
 def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by):
     """Editörün bulguya kararını kart servisine iletir; kart servisinin döndürdüğü geçerli kararı verir.
     Köprü editör veritabanına dokunmaz; doğrulama (gerekçe, nesil, not uzunluğu) kart servisindedir."""

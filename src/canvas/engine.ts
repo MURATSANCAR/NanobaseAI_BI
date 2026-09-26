@@ -1673,6 +1673,24 @@ export const proofingApi = {
   /** Editörün bulguya kararı; kararı veren oturumdaki kullanıcıdır, gövdede gönderilmez. */
   decide: (b: { bookId: string; findingId: string; verdict: ProofVerdict; reasonCode?: ProofReasonCode; note?: string }) =>
     send<{ finding_id: string; decision: ProofDecision }>('POST', '/api/v1/editorial/proofing/decision', b, 30_000),
+  /** Bulgular kitabın metnine Word yorumu olarak işlenmiş .docx (yanlış alarm denenler hariç). */
+  exportDocx: async (bookId: string): Promise<{ blob: Blob; name: string }> => {
+    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/proofing/export.docx${qs({ bookId })}`, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(300_000),
+    });
+    if (res.status === 401 || res.status === 403) {
+      authBlocked = true;
+      throw new EngineAuthError();
+    }
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { detail?: string } | null;
+      throw new Error(j?.detail || `Word dosyası üretilemedi (${res.status})`);
+    }
+    const star = /filename\*=UTF-8''([^;]+)/.exec(res.headers.get('Content-Disposition') ?? '');
+    const plain = /filename="([^"]+)"/.exec(res.headers.get('Content-Disposition') ?? '');
+    return { blob: await res.blob(), name: star ? decodeURIComponent(star[1]) : plain?.[1] ?? 'son-okuma.docx' };
+  },
   /** Kelime haritası (kök, biçim, sayfa, anlam, deyim); motordaki kitap kimliğiyle. */
   wordMap: (bookId: string) => send<WordMap>('GET', `/api/v1/editorial/proofing/word-map${qs({ bookId })}`, undefined, 30_000),
 };

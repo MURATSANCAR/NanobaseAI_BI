@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingCheck, type ProofingFinding, type ProofingReport, type ProofingSeverity } from '../engine';
+import { FileText, Loader2 } from 'lucide-react';
+import { download } from '../board/export';
+import { EngineAuthError, proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingCheck, type ProofingFinding, type ProofingReport, type ProofingSeverity } from '../engine';
 import { Loading, Note, Pill, nf } from '../admin/ui';
 import { Panel } from './kit';
 import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, sevOf, type Decide, type ScrollCue } from './ProofEvidence';
@@ -384,7 +386,10 @@ export function ProofFindings({
 
   return (
     <Panel>
-      <h2 className="px-1 text-[13px] font-extrabold">ZEKİ AI son okuma</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-1">
+        <h2 className="text-[13px] font-extrabold">ZEKİ AI son okuma</h2>
+        {bookId && report?.checks.length ? <WordExport bookId={bookId} /> : null}
+      </div>
       <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
         Motor, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez. Bulguya tıklayın: sayfa ve işaretli yer açılır, kararı oradan verirsiniz. Karar bulguya iliştirilir ve kuralın isabetini ölçer; kitabı değiştirmez.
         {report?.bookTitle ? ` Eşleşen kitap: ${report.bookTitle}.` : ''}
@@ -392,6 +397,39 @@ export function ProofFindings({
       {picker ? <div className="mt-2">{picker}</div> : null}
       <div className="mt-2">{body}</div>
     </Panel>
+  );
+}
+
+/** Bulgular kitabın metnine Word yorumu olarak işlenmiş .docx; redaksiyon Word'de yapılır. */
+function WordExport({ bookId }: { bookId: string }) {
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const run = async () => {
+    setBusy(true);
+    setErr(null);
+    try {
+      const { blob, name } = await proofingApi.exportDocx(bookId);
+      download(name, blob);
+    } catch (e) {
+      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : e instanceof Error ? e.message : 'Word dosyası üretilemedi.');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <span className="flex items-center gap-2">
+      {err && <span className="text-[11px] text-red-700">{err}</span>}
+      <button
+        type="button"
+        onClick={() => void run()}
+        disabled={busy}
+        title="Bulgular metne Word yorumu olarak işlenir; yanlış alarm denenler aktarılmaz."
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg bg-slate-100 px-2.5 py-1 text-[11.5px] font-bold text-canvas-ink transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-60 [@media(hover:hover)]:hover:bg-slate-200"
+      >
+        {busy ? <Loader2 aria-hidden className="h-3.5 w-3.5 animate-spin" /> : <FileText aria-hidden className="h-3.5 w-3.5" />}
+        {busy ? 'Hazırlanıyor…' : "Word'e aktar"}
+      </button>
+    </span>
   );
 }
 

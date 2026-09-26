@@ -210,6 +210,113 @@ def mtld(seq: list[str], threshold: float = 0.72) -> float | None:
     return round((one(seq) + one(list(reversed(seq)))) / 2, 1)
 
 
+# ------------------------------------------------------------------ kitap geneli sıklık (anahtar sözcük)
+# Log-likelihood (Dunning 1993) ki-kare dağılımında 1 serbestlik derecesiyle; 15,13 = p < 0,0001.
+# Derlem dilbiliminde anahtar sözcük için alışılmış kesim; kitapta ayarlanmadı.
+KEYNESS_G2 = 15.13
+
+
+def log_likelihood(a: int, n_book: int, b: int, n_corpus: int) -> float:
+    """Sözcüğün kitaptaki (a / n_book) ve derlemdeki (b / n_corpus) sıklığı arasındaki farkın G² değeri."""
+    import math
+    if a + b == 0 or n_book <= 0 or n_corpus <= 0:
+        return 0.0
+    e1 = n_book * (a + b) / (n_book + n_corpus)
+    e2 = n_corpus * (a + b) / (n_book + n_corpus)
+    g = 0.0
+    if a:
+        g += a * math.log(a / e1)
+    if b:
+        g += b * math.log(b / e2)
+    return 2 * g
+
+
+def overused(book: dict[str, int], n_book: int, corpus: dict[str, int], n_corpus: int,
+             g2: float = KEYNESS_G2) -> list[dict]:
+    """Kitapta derleme göre anlamlı ölçüde SIK kullanılan kökler (G² ≥ g2 ve kitap oranı derlemden büyük).
+    Derlemde hiç geçmeyen sözcük de sayılır (oran sonsuz); sıralama G²'ye göre."""
+    out = []
+    for lem, a in book.items():
+        b = corpus.get(lem, 0)
+        if a * n_corpus <= b * n_book:
+            continue
+        g = log_likelihood(a, n_book, b, n_corpus)
+        if g >= g2:
+            out.append({"lemma": lem, "count": a, "corpus_count": b, "g2": round(g, 1),
+                        "per10k": round(a / n_book * 10000, 1), "corpus_per10k": round(b / n_corpus * 10000, 2),
+                        "ratio": round((a / n_book) / (b / n_corpus), 1) if b else None})
+    return sorted(out, key=lambda x: -x["g2"])
+
+
+# ------------------------------------------------------------------ cümle başı
+def start_runs(starts: list[str], alpha: float) -> list[tuple[int, int, float]]:
+    """Art arda aynı sözcükle başlayan cümle dizileri: (ilk, son+1, olasılık). Sözcüğün kitapta cümle
+    başlatma oranı p ise art arda k cümlenin onunla başlaması tesadüfen p^(k−1); bu `alpha`'dan küçükse
+    tekdüzelik. «Ben» cümlelerin %10'unu başlatıyorsa iki «Ben…» olağan (0,1), üç tanesi değil (0,01)."""
+    freq = collections.Counter(starts)
+    n = len(starts)
+    out, i = [], 0
+    while i < n:
+        j = i + 1
+        while j < n and starts[j] == starts[i]:
+            j += 1
+        k = j - i
+        if k >= 2:
+            p = (freq[starts[i]] / n) ** (k - 1)
+            if p < alpha:
+                out.append((i, j, p))
+        i = j
+    return out
+
+
+# ------------------------------------------------------------------ kalıp ifade
+def repeated_phrases(seq: list[tuple[int, int, str, bool]], min_n: int = 3, min_content: int = 2
+                     ) -> list[tuple[int, list[int]]]:
+    """Kitapta en az iki kez geçen söz öbekleri, kök dizisi üstünden: (uzunluk, başlangıç konumları).
+
+    `seq`: (belirteç sırası, cümle, kök, içerik mi) — okuma sırasıyla. Öbek bitişik belirteçlerden ve
+    tek cümleden oluşur (arada özel ad ya da atlanan belirteç varsa kopar). En az `min_n` sözcük ve en az
+    `min_content` içerik sözcüğü («bir gün daha» gibi işlev ağırlıklı öbekler sayılmaz). Üst üste binen
+    geçişler tek sayılır. Yalnız EN UZUN hâl döner: aynı geçişlerle daha uzun bir öbeğin parçası olan
+    kısa öbek bildirilmez. Uzunluk sınırı yok."""
+    def ok_at(i: int, n: int) -> bool:
+        if i + n > len(seq):
+            return False
+        for k in range(1, n):
+            if seq[i + k][0] != seq[i + k - 1][0] + 1 or seq[i + k][1] != seq[i][1]:
+                return False
+        return sum(1 for k in range(n) if seq[i + k][3]) >= min_content
+
+    def groups(n: int, starts) -> dict[tuple, list[int]]:
+        by: dict[tuple, list[int]] = {}
+        for i in starts:
+            if ok_at(i, n):
+                by.setdefault(tuple(seq[i + k][2] for k in range(n)), []).append(i)
+        out = {}
+        for key, pos in by.items():
+            kept = []
+            for i in pos:                       # üst üste binen geçişler tek sayılır
+                if not kept or i >= kept[-1] + n:
+                    kept.append(i)
+            if len(kept) >= 2:
+                out[key] = kept
+        return out
+
+    found: list[tuple[int, list[int]]] = []
+    cur = groups(min_n, range(len(seq)))
+    n = min_n
+    while cur:
+        nxt = groups(n + 1, sorted({i for pos in cur.values() for i in pos} | {i - 1 for pos in cur.values() for i in pos if i > 0}))
+        longer = {i for pos in nxt.values() for i in pos}
+        for key, pos in cur.items():
+            # bir uzun öbek (aynı yerden ya da bir önceki sözcükten başlayan) bu öbeğin BÜTÜN geçişlerini
+            # kapsıyorsa kısa olan bildirilmez; bir geçiş bile açıkta kalırsa kısa öbek de bildirilir
+            if not all(i in longer or i - 1 in longer for i in pos):
+                found.append((n, pos))
+        cur, n = nxt, n + 1
+    return sorted(found, key=lambda x: (x[1][0], -x[0]))
+
+
 # ------------------------------------------------------------------ anlam ayrımı
 def rounds(units: dict[str, list], batch: int) -> list[list[list[tuple[str, list]]]]:
     """Anlam çağrılarının planı. Her kök geçişleriyle `batch`'lik parçalara bölünür; r. tur her
@@ -420,13 +527,13 @@ def build_map(occs: list[Occ], senses: dict[str, list[dict]], contexts: dict[int
     return sorted(rows, key=lambda r: (-r["count"], r["lemma"]))
 
 
-def passage(span_keys: list[tuple[int, int]], span_text: dict[tuple[int, int], str], occs: list[Occ]
-            ) -> tuple[str, str]:
-    """Tekrarın geçtiği metin: ilk geçişin span'ından sonuncunun span'ına kadar (arada ne varsa).
-    (düz metin, geçişleri [[ ]] ile işaretli metin)."""
+def passage(span_keys: list[tuple[int, int]], span_text: dict[tuple[int, int], str], occs: list[Occ],
+            until: tuple[int, int] | None = None) -> tuple[str, str]:
+    """Tekrarın geçtiği metin: ilk geçişin span'ından sonuncunun span'ına (ya da `until` span'ına) kadar,
+    arada ne varsa. (düz metin, geçişleri [[ ]] ile işaretli metin)."""
     pos = {k: i for i, k in enumerate(span_keys)}
     a = min(pos[(o.page, o.span)] for o in occs)
-    b = max(pos[(o.page, o.span)] for o in occs)
+    b = max([pos[(o.page, o.span)] for o in occs] + ([pos[until]] if until in pos else []))
     plain, marked = [], []
     for k in span_keys[a:b + 1]:
         txt = span_text[k]
