@@ -147,6 +147,11 @@ _QUANTITY_ROOTS = ("adet", "aded", "miktar")
 _QUANTITY_NEUTRAL = frozenset("toplam toplami tutar tutari deger degeri bedel bedeli edilen olan yapilan".split())
 # "kaç kalem / kaç satır": the unit asked for is the line itself, whatever document key the concept counts by.
 _PLURAL = re.compile(r"(lar|ler)(i|ı|in|ın|a|e|da|de|dan|den)?$")
+# The question particle of a polite request — with its person ending ("mısın", "misiniz", "musunuz", "miyiz"). A
+# bare "mı" follows nouns too ("zincir mağazalar mı, dağıtımcılar mı?") and says nothing about the word before it.
+_REQUEST_PARTICLE = re.compile(r"m[iu](?:s[iu]n(?:[iu]z)?|y[iu]z)")
+# Verbs that only ask for an answer to be presented (prepare, show, tell, list, give, bring, take out, write).
+_PRESENT_VERBS = ("hazirl", "goster", "soyle", "soyl", "listel", "ver", "getir", "cikar", "yaz", "sun")
 
 
 def _participle_like(word: str) -> bool:
@@ -860,6 +865,19 @@ class SemanticResolver:
         # 5) temporal
         sq.temporal = list(qf.temporal)
         sq.grain = qf.grain
+        # "20.08.2026 03:00 ve 21.08.2026 03:00 arasındaki": a time of day. No certified column of these
+        # records carries it, so the day bounds are all this can filter on — asked, never silently dropped.
+        for t in sq.temporal:
+            p = t.params or {}
+            times = [v for v in (p.get("time"), p.get("from_time"), p.get("to_time")) if v]
+            if times and t.start and t.end:
+                last = t.end - timedelta(days=1)
+                days = t.start.strftime("%d.%m.%Y") + ("" if last == t.start else "–" + last.strftime("%d.%m.%Y"))
+                ask = (f"‘{t.text}’: saat ({', '.join(dict.fromkeys(times))}) bu veride sorgulanabilir bir alan olarak "
+                       f"tanımlı değil; yalnız gün bazında süzülebilir. {days} tam günlerini mi alayım?")
+                if ask not in sq.clarification:
+                    sq.clarification.append(ask)
+                sq.explanation.append(f"'{t.text}' saat içeriyor; saat alanı tanımlı değil, gün sınırı {days}")
         # "son iki yılda nasıl değişti": a change over a window of whole years is read year by year —
         # one figure for the window would answer "how much", not "how did it change".
         if not sq.grain and sq.temporal and re.search(r"\b(nasil degis|degisim|degisti|degismis|seyri|trend)", fold(question)):
@@ -1052,6 +1070,12 @@ class SemanticResolver:
                 continue
             st = folded_tokens[k]
             if st in STOPWORDS_S or st in MODIFIERS_S or st in METRIC_VOCAB_S or st in _ENTITY_WORDS or tok.isdigit():
+                continue
+            if k + 1 < len(qf.tokens) and _REQUEST_PARTICLE.fullmatch(qf.tokens[k + 1]) and tok.startswith(_PRESENT_VERBS):
+                # "listesini hazırlar mısın", "tutarıyla söyler misin": the verb only asks for the answer to be
+                # shown. "yaşlandırır mısın", "karşılaştırır mısın" say what to compute and stay.
+                if tok not in sq.ignored:
+                    sq.ignored.append(tok)
                 continue
             if st in _TIME_WORDS or any(tok in tokenize(t.text) for t in qf.temporal):
                 continue

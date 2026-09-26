@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (12:30) — Sohbet K3: tarih aralığı, saat, ISO ve kısmi tarih; soru sonu fiilleri
+
+- Müşteri VM'inin sorgu kaydından tarihli 26 gerçek soru çekildi (yalnız okuma). "20.08.2026 03:00:00 ve 21.08.2026 03:00:00 arasındaki toplam net sipariş tutarı" (3 yazımla) iki günün kıyası (iki kolon) olarak derleniyordu; ISO "2026-08-20 03:00:00" yıl, "21.008.2026" yıl sanılıyordu; "saat 03:00" tanımsız niteleyici reddi alıyordu. "1 şubat 2026 tarihinde … gerçekleşmiştir", "… sipariş mevcut", "… listesini hazırlar mısın" tarih doğru okunduğu hâlde son fiil yüzünden reddediliyordu.
+- **temporal.py:** tarihten sonra gelen saat ("03:00", "03:00:00", "saat 03:00") tarihin parçası, `params.time`; ISO gün; noktalı tarihte fazladan sıfır ("21.008.2026" = 21 Ağustos). "X ve Y arası…": "ve" yalnız ikinci uçtan sonra "aras…" gelince aralık bağlar (tek başına "2025 ve 2026" iki dönem kalır); aralık uçlarının saati `from_time/to_time`.
+- **Saat:** bu kayıtlarda sertifikalı saat alanı yok (Logo'da `TIME_`/`FTIME` var, katalogda değil) → aralık gün sınırıyla kurulur ve geri sorulur: "saat bu veride sorgulanabilir değil; 20.08–21.08 tam günlerini mi alayım?" Saat desteği (kolon sertifikası + derleyicide TIME_ kodu) ayrı iş.
+- **Soru sonu fiilleri:** "gerçekleşti/gerçekleşmiş/gerçekleşmiştir/mevcut" dilbilgisi kelimesi; kişi ekli nazik istek ekinden ("mısın/misiniz") önceki **sunma** fiili (hazırla, göster, söyle, listele, ver, getir, çıkar, yaz) yok sayılır. "yaşlandırır mısın", "karşılaştırır mısın" niyet taşır, kalır; yalın "mı" ("mağazalar mı, dağıtımcılar mı") kural dışı. İlk denemede "hazırlar" listeye girince kökü "hazır"ı yuttu ("108 Diğer Hazır Değerler" düştü) — tam set yakaladı, liste yerine ek kuralına geçildi.
+- **Doğrulama:** `test_temporal_range_time.py` 5/5; tam set 1.612 soru (1.600 + 12 gerçek tarih sorusu, taban dc7dc192): 17 değişen, 4 gerçek soru yeni derleniyor, 3 saatli soru bilerek geri soruyor, 10 yalnız dolgu fiili listesi; derlenmez olan başka soru yok. Gerçek Logo: "1 şubat 2026 … kaç adet satış" 154 = referans 154.
+
 ## 2026-09-26 (07:30) — Sohbet K2: özel adlar veride bulunuyor (etiket sözlüğü)
 
 - **Kök neden (veriyle ölçüldü):** yayınevi `ITEMS.SPECODE` katalogda sertifikalı ama tarama profili şekil başına tek tabloyu okuduğu için eski firmanın tek harfli kodlarını görmüştü (15 değer); 2026 kopyasındaki yayınevi adları ('Portakal K', 'Antik Kita', 'Timaş Okul' — alan 10 karakterde kesik) hiç aranamıyordu. `CLCARD.CITY` çok değerli olduğu için enum sayılmıyor, "İstanbul" yalnız `CITYCODE`'da (132 kart; CITY'de 86.145) bulunuyordu. Çözümleyici veritabanına hiç gitmiyor, değer yoklama (value_probe) yalnız modele ipucu veriyor.
