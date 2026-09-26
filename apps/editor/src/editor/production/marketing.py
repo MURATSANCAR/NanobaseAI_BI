@@ -220,8 +220,9 @@ def facts(d: Path) -> list[dict]:
     def add(key, label, value, source):
         if value not in (None, "", []):
             rows.append({"key": key, "label": label, "value": str(value), "source": source})
-    add("title", "Kitap adı", ms.title, "kitap kaydı")
-    add("author", "Yazar", ms.author, "kitap kaydı")
+    from .manuscript import field_source           # editör düzelttiyse «editör: …»
+    add("title", "Kitap adı", ms.title, field_source(ms.source, "title").get("label") or "kitap kaydı")
+    add("author", "Yazar", ms.author, field_source(ms.source, "author").get("label") or "kitap kaydı")
     add("illustrator", "Çizer", ms.illustrator, "kitap kaydı")
     add("publisher", "Yayınevi", ms.meta.get("PUBLISHER"), "kitap kaydı")
     add("series", "Dizi", ms.meta.get("SERIES"), "kitap kaydı")

@@ -18,7 +18,8 @@ sıra bekleyen iş ekranda «sırada» görünür. Servisin yeniden başlaması 
     POST /v1/studio/jobs/{job}/art/{key}/regenerate   {mode: fix|new, prompt, variants}
     POST /v1/studio/jobs/{job}/art/{key}/select       {v}
     POST /v1/studio/jobs/{job}/art/{key}/approve      {ok}
-    POST /v1/studio/jobs/{job}/kunye   {fields}       künyenin eksik/düzeltilecek alanları
+    POST /v1/studio/jobs/{job}/kunye   {fields, book?}  künyenin eksik/düzeltilecek alanları; book {title?, author?}
+         kitap adı/yazar düzeltmesi (el yazmasına yazılır, kapak + sayfalar yeniden dizilir; boş kitap adı 400)
     POST /v1/studio/jobs/{job}/resume                 yarıda kalan işi sürdür
     POST /v1/studio/jobs/{job}/restart                aynı kaynakla yeni iş
     GET  /v1/studio/jobs/{job}/pdf/{kind}             ic | kapak | baski-ic | baski-kapak
@@ -273,7 +274,8 @@ def _job_view(d: Path, job: str, busy: dict | None) -> dict:
               "role": c["role"], "has_ref": c["name"] in sd.get("characters", {})}
              for i, c in enumerate((plan or {}).get("characters", []))]
     return {
-        "job": j, "state": st, "busy": busy,
+        # Başlık el yazmasından (editörün kitap adı düzeltmesi; süren hattın durum yazımı eski adı geri koyamaz).
+        "job": j, "state": {**st, "title": (ms or {}).get("title") or st.get("title")} if st else st, "busy": busy,
         "book": ms and {"title": ms["title"], "author": ms["author"], "meta": ms["meta"],
                         "chapters": [c["title"] for c in ms["chapters"]],
                         "words": sum(len(b["text"].split()) for c in ms["chapters"] for b in c["blocks"])},
@@ -285,7 +287,7 @@ def _job_view(d: Path, job: str, busy: dict | None) -> dict:
         "pages": pages, "cover": {"art": art("kapak"), "info": studio.read(d, "cover.json")},
         "plan": pl and {"rev": pl["rev"], "warnings": pl.get("warnings", []), "pages": len(pl["pages"])},
         "preflight": pre,
-        "front": _front(d),
+        "front": _front(d, ms),
         "files": {k: (d / rel).exists() for k, (rel, _) in PDF_FILES.items()},
         # Dizginin son yenilenişi: ekran önizleme adresine katar. Yeni sürüm seçilince dizgi birkaç saniye sonra
         # yenilenir; arada istenen önizleme eski sayfayı döner ve tarayıcı onu yeni adresle önbelleğe alıyordu.
@@ -293,21 +295,45 @@ def _job_view(d: Path, job: str, busy: dict | None) -> dict:
     }
 
 
-def _front(d: Path) -> dict | None:
+def _front(d: Path, ms: dict | None = None) -> dict | None:
+    """Künye paneli: satırlar (etiket, değer, eksik mi, düzenlenir mi, kaynak). «Kitap» ve «Yazar» satırları el
+    yazmasını düzeltir (`field`: title | author); kaynakları okunduğu yer ya da editörün düzeltmesi (`edited`: kim,
+    ne zaman, eski değer). Yazarsız kitapta «Yazar» satırı künyede basılmaz ama panelde düzenlenebilir kalır."""
     from .front import EDITABLE, MISSING
+    from .manuscript import BOOK_FIELDS, field_source
     fr = studio.read(d, "front.json")
     if not fr:
         return None
+    msrc = (ms or {}).get("source") or {}
+    book_rows = {}
+    for f, lab in BOOK_FIELDS.items():
+        s = field_source(msrc, f)
+        book_rows[lab] = {"field": f, "source": s.get("label"),
+                          "edited": {k: s[k] for k in ("by", "at", "was")} if "by" in s else None}
     src = {"DIZI": "Dizi", "YAYIN_YONETMENI": "Yayın Yönetmeni", "PROJE_EDITORU": "Proje Editörü", "EDITOR": "Editör",
            "YAYINEVI": "Yayınevi", "ADRES": "Adres", "TELEFON": "Telefon", "EPOSTA": "E-posta",
            "SERTIFIKA": "Sertifika No", "MATBAA": "Baskı ve Cilt", "MATBAA_SERTIFIKA": "Matbaa Sertifika No",
            "MATBAA_ADRES": "Matbaa Adresi", "TELIF": "Telif"}
     sources = {src[k]: v.get("source") for k, v in (fr.get("kunye_fields") or {}).items() if k in src}
     manual = fr.get("manual") or {}
-    return {"rows": [{"label": lab, "value": val, "missing": val == MISSING, "editable": lab in EDITABLE,
-                      "source": "elle girildi" if lab in manual else sources.get(lab)}
-                     for lab, val in fr["kunye"] if lab],
-            "bios": fr.get("bios", [])}
+    rows = []
+    for lab, val in fr["kunye"]:
+        if not lab:
+            continue
+        if lab in book_rows:
+            b = book_rows[lab]
+            known = val not in (MISSING, "") or b["edited"]          # boş değerin «okunduğu yer»i olmaz
+            rows.append({"label": lab, "value": val, "missing": val == MISSING, "editable": True, "field": b["field"],
+                         "source": b["source"] if known else None, "edited": b["edited"]})
+        else:
+            rows.append({"label": lab, "value": val, "missing": val == MISSING, "editable": lab in EDITABLE,
+                         "source": "elle girildi" if lab in manual else sources.get(lab)})
+    if not any(r["label"] == "Yazar" for r in rows):          # yazarsız kitap: panelde yine düzenlenir
+        b = book_rows["Yazar"]
+        at = next((i + 1 for i, r in enumerate(rows) if r["label"] == "Kitap"), 0)
+        rows.insert(at, {"label": "Yazar", "value": "", "missing": False, "editable": True, "field": "author",
+                         "source": b["source"], "edited": b["edited"], "none": True})
+    return {"rows": rows, "bios": fr.get("bios", [])}
 
 
 # ------------------------------------------------------------------ görseller
@@ -398,7 +424,7 @@ def pdf(job: str, kind: Literal["ic", "kapak", "baski-ic", "baski-kapak"]) -> Re
     path = d / rel
     if not path.exists():
         raise HTTPException(404, "Baskı PDF'i bütün denetimler geçince üretilir" if kind.startswith("baski") else "PDF yok")
-    title = re.sub(r"[^\w\-]+", "-", (studio.read(d, "state.json", {}).get("title") or job)).strip("-")
+    title = re.sub(r"[^\w\-]+", "-", (studio.title_of(d) or job)).strip("-")
     return FileResponse(path, media_type="application/pdf", filename=f"{title}-{label}.pdf")
 
 
@@ -470,21 +496,29 @@ async def resume(job: str, by: str = Depends(editor)) -> dict:
     return {"id": job}
 
 
+class BookFields(BaseModel):
+    title: str | None = None
+    author: str | None = None
+
+
 class Kunye(BaseModel):
     fields: dict[str, str] = Field(default_factory=dict)
+    book: BookFields | None = None
 
 
 @app.post("/v1/studio/jobs/{job}/kunye")
 async def kunye(job: str, body: Kunye, by: str = Depends(editor)) -> dict:
-    """Künyenin eksik ya da düzeltilecek alanları; kaynağı olmayan alanı editör girer."""
+    """Künyenin eksik ya da düzeltilecek alanları; kaynağı olmayan alanı editör girer. `book`: kitap adı / yazar
+    düzeltmesi (boş kitap adı 400; yazar boş olabilir). Kapak ve sayfalar yeniden dizilince döner."""
     d = _dir(job)
-    if not studio.read(d, "front.json"):
+    if not studio.read(d, "front.json") or not studio.read(d, "manuscript.json"):
         raise HTTPException(409, "Künye henüz hazır değil")
+    book = body.book.model_dump(exclude_none=True) if body.book else None
     try:
-        fr = await asyncio.to_thread(studio.set_kunye, d, body.fields, by)
+        fr = await asyncio.to_thread(studio.set_kunye, d, body.fields, by, book)
     except ValueError as e:
         raise HTTPException(400, str(e)) from None
-    return {"kunye": fr["kunye"]}
+    return {"kunye": fr["kunye"], "book": fr["book"], "changed": fr["changed"], "was": fr["was"], "crm": fr["crm"]}
 
 
 @app.post("/v1/studio/jobs/{job}/restart")
