@@ -593,7 +593,7 @@ class SemanticResolver:
         #      never reached the hits; the answer was the amount (LINENET) under the word "adet". The twin is a
         #      certified quantity measure whose own words are the measure's words ("satış" ↔ "satılan adet",
         #      "iade" ↔ "iade adedi"). None → the question is asked back, never answered with the amount.
-        self._quantity_twins(qf, hits, consumed, index, sq)
+        self._quantity_twins(question, qf, hits, consumed, index, sq)
 
         # 2f) "iade hariç toplam ciro": the label is named in order to be left out. Read as a filter it
         #     asked for the returns alone, and the gate refused every statement that did what was asked.
@@ -1691,27 +1691,29 @@ class SemanticResolver:
         n = min(4, len(a), len(b))
         return a[:n] == b[:n] and (n >= 4 or a == b)
 
-    def _quantity_measures(self, index: dict) -> list[tuple[str, Concept, list[Mapping]]]:
-        """Certified quantity measures (a unit word in their own name), once per certified index."""
+    def _quantity_measures(self, index: dict) -> list[tuple[str, Concept, list[Mapping], str]]:
+        """Certified quantity measures — a unit word in their name *or any certified synonym* ("sevkiyat" is
+        certified as "sevk edilen adet" too) — once per certified index: (key, concept, mappings, words)."""
         cached = getattr(self, "_qty_cache", None)
         if cached and cached[0] is index:
             return cached[1]
-        out, seen = [], set()
+        out = []
         for key, senses in index.items():
             for c, maps in senses:
-                if c.semantic_type != SemanticType.METRIC or not maps or c.id in seen:
+                if c.semantic_type != SemanticType.METRIC or not maps:
                     continue
-                words = fold(c.term).split()
-                if not any(w.startswith(_QUANTITY_ROOTS) for w in words):
-                    continue
-                if any((m.extra or {}).get("state_measure") or "/" in (m.formula or "") for m in maps):
-                    continue            # a balance or a ratio is not the quantity of a flow
-                seen.add(c.id)
-                out.append((key, c, maps))
+                for words in {fold(c.term), fold((c.explain or {}).get("surface") or ""), fold(key)}:
+                    if not words or not any(w.startswith(_QUANTITY_ROOTS) for w in words.split()):
+                        continue
+                    if any((m.extra or {}).get("state_measure") or "/" in (m.formula or "") for m in maps):
+                        continue        # a balance or a ratio is not the quantity of a flow
+                    out.append((key, c, maps, words))
         self._qty_cache = (index, out)
         return out
 
-    def _quantity_twins(self, qf, hits: list, consumed: set, index: dict, sq: SemanticQuery) -> None:
+    def _quantity_twins(self, question: str, qf, hits: list, consumed: set, index: dict, sq: SemanticQuery) -> None:
+        quantity_ids = {c.id for _, c, _, _ in self._quantity_measures(index)}
+        folded_q = fold(question)
         for k, tok in enumerate(qf.tokens):
             if k in consumed or not _QUANTITY_WORD.fullmatch(fold(tok)):
                 continue
@@ -1726,6 +1728,12 @@ class SemanticResolver:
             if ((m.extra or {}).get("state_measure") or "count(" in formula or "/" in formula
                     or any(w.startswith(_QUANTITY_ROOTS) for w in canonical.split())):
                 continue            # a balance's unit, a count, a ratio, or already a quantity: 2d and later steps own it
+            if measure.concept_id in quantity_ids:
+                continue            # "sevk adedi": the measure is itself certified as a quantity
+            edge = qf.tokens[measure.span[1] - 1] if measure in after else qf.tokens[measure.span[0]]
+            pair = (re.escape(edge), re.escape(fold(tok))) if measure in after else (re.escape(fold(tok)), re.escape(edge))
+            if re.search(rf"\b{pair[0]}\w*\s*[,;/]\s*{pair[1]}\b", folded_q):
+                continue            # "ciro, adet ve iade": items of a list, not a measure and its unit
             # A one-word measure right before it qualifies it ("brüt satış adedi", "net satış miktarı").
             lead = [h for h in hits if h is not measure and h.semantic_type == SemanticType.METRIC and h.span
                     and h.span[1] == measure.span[0] and h.span[1] - h.span[0] == 1]
@@ -1733,20 +1741,27 @@ class SemanticResolver:
             if not words:
                 continue
             twins = []
-            for key, c, maps in self._quantity_measures(index):
-                theirs = self._content_words(c.term)
+            for key, c, maps, their_words in self._quantity_measures(index):
+                theirs = self._content_words(their_words)
                 if theirs and all(any(self._same_word(a, b) for b in theirs) for a in words) \
                         and all(any(self._same_word(b, a) for a in words) for b in theirs):
-                    twins.append((key, c, maps))
+                    if c.id not in {t[1].id for t in twins}:
+                        twins.append((key, c, maps))
             same_entity = [t for t in twins if any(mp.entity == m.entity for mp in t[2])]
             twins = same_entity or twins
             span = (min(measure.span[0], lead[0].span[0] if lead else measure.span[0], k), max(measure.span[1], k + 1))
             phrase = " ".join(qf.tokens[span[0]:span[1]])
-            if len({c.id for _, c, _ in twins}) == 1:
-                key, c, maps = twins[0]
-                slot = self._slot_from_senses(key, phrase, [(c, [mp for mp in maps if mp.entity == m.entity] or maps)], span)
-                if slot is None:
-                    continue
+            # Several concepts under one certified phrase ("satılan adet" names both "adet" and "satılan adet"):
+            # the twin is what that phrase resolves to when asked for directly — one reading, not a question.
+            keys = {key for key, _, _ in twins}
+            slot = None
+            if len(keys) == 1:
+                key = next(iter(keys))
+                senses = [(c, [mp for mp in maps if mp.entity == m.entity] or maps) for c, maps in index.get(key) or []
+                          if c.semantic_type == SemanticType.METRIC and c.id in {t[1].id for t in twins}]
+                slot = self._slot_from_senses(key, phrase, senses, span) if senses else None
+            if slot is not None:
+                c = next(t[1] for t in twins if t[1].id == slot.concept_id)
                 slot.explain["source"] = "quantity_twin"
                 slot.explain["why"] = f"'{tok}' '{measure.term}' ölçüsünün adedini soruyor → '{c.term}'"
                 for h in [measure] + lead:
