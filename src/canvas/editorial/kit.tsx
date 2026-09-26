@@ -1,8 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
-import { editorialRail } from '../stitch/screens';
 import DbTimingBadge, { type DbTiming } from '../DbTiming';
 import { btnGhost, nf } from '../admin/ui';
 
@@ -39,12 +38,15 @@ export function ModuleFrame({
   aside?: ReactNode;
   children: ReactNode;
 }) {
+  // Menüde olmayan detay sayfası (stüdyo işi, kapak…): kırıntının son halkası iş adı + bölüm.
+  const { pathname } = useLocation();
+  const onDetail = pathname.replace(/\/+$/, '') !== route;
+  const detail = onDetail ? [title, crumb].filter((x, i, a) => x && a.indexOf(x) === i).join(' · ') || undefined : undefined;
   return (
     <Shell
-      head={{ tenant: 'Timaş Yayınları', section: 'Editoryal Süreç', crumb, source, presence }}
-      rail={editorialRail(route)}
+      head={{ tenant: 'Timaş Yayınları', section: 'Editoryal', crumb, source, presence, detail }}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+      <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
         <ZoomStage>
           <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-6 lg:gap-4">
             <header className="relative z-20 flex flex-col gap-3 px-1 lg:flex-row lg:items-start lg:justify-between lg:gap-6">

@@ -1,8 +1,8 @@
 import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, MessageSquarePlus, Plus, Search, Sparkles, X } from 'lucide-react';
+import AdminGuard from '../AdminGuard';
 import Shell, { ZoomStage } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
   EngineAuthError,
@@ -31,7 +31,17 @@ function fieldName(g: { entity: string; column: string | null }) {
   return g.column ? `${g.entity}.${g.column}` : g.entity;
 }
 
+/** Eş anlamlılar yalnız yöneticilere açık (2026-09-26 menü düzeni: Yönetim grubunda). Yazan uçlar köprüde zaten
+ *  yöneticiye kapalıydı; ekran da artık yetkisiz kişide hiç yüklenmez. */
 export default function VocabularyScreen() {
+  return (
+    <AdminGuard crumb="Eş anlamlılar">
+      <VocabularyInner />
+    </AdminGuard>
+  );
+}
+
+function VocabularyInner() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('oneri');
   const [q, setQ] = useState('');
@@ -121,9 +131,8 @@ export default function VocabularyScreen() {
         source: `${nf.format(counts?.PROPOSED ?? 0)} öneri bekliyor`,
         presence: `${nf.format(counts?.APPROVED ?? 0)} onaylı`,
       }}
-      rail={railFor('/es-anlamlilar')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-visible">
+      <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px] md:overflow-visible">
       <ZoomStage className="h-full">
         <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:flex-row md:gap-4 md:pb-0">
           {/* Sol: alanlar */}

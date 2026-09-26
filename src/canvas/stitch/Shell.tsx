@@ -1,46 +1,17 @@
-import { Fragment, createContext, useContext, useEffect, useRef, useState } from 'react';
+import { Suspense, createContext, lazy, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ShieldCheck } from 'lucide-react';
-import { useQuery } from '@tanstack/react-query';
-import { ENGINE_ENABLED, webApi } from '../engine';
+import { Search } from 'lucide-react';
 import ModulesMenu from './ModulesMenu';
-import type { StitchRailItem } from './data';
-import { useIsAdmin } from '../useAdmin';
 import { useTimasSession } from '../TimasSession';
 import DataRefresh from '../DataRefresh';
+import DesktopNav from '../nav/DesktopNav';
+import PhoneNav from '../nav/PhoneNav';
+import CommandPalette from '../nav/CommandPalette';
+import { pushRecent } from '../nav/navState';
+import { NavUiContext, initials, paletteKey, useNavData, type NavUi } from '../nav/useNav';
+import '../nav/nav.css';
 
-const RAIL_ICONS = [
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
-  ),
-  (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" /></svg>
-  ),
-];
+const ProfileDialog = lazy(() => import('../kampus/ProfileDialog'));
 
 export type ShellHead = {
   tenant: string;
@@ -50,13 +21,8 @@ export type ShellHead = {
   presence: string;
   /** Verilmezse kabuk kendi yakınlaştırmasını gösterir. */
   zoom?: string;
-};
-
-/** "Deniz Kaya" → "DK"; hesap adı ise ilk iki harf. */
-const initials = (name: string) => {
-  const parts = name.trim().split(/[\s._@-]+/).filter(Boolean);
-  const s = parts.length >= 2 ? parts[0][0] + parts[parts.length - 1][0] : (parts[0] ?? '?').slice(0, 2);
-  return s.toLocaleUpperCase('tr');
+  /** Menüde olmayan detay sayfasının adı (kitap adı, stüdyo işi…); kırıntının son halkası ve «Son açılanlar». */
+  detail?: string;
 };
 
 export const ZOOM_MIN = 0.5;
@@ -66,7 +32,7 @@ const ZoomContext = createContext(1);
 export const useShellZoom = () => useContext(ZoomContext);
 
 /**
- * Ekran içeriğinin yakınlaştırılan katı. `main` sabit kalır (üst şerit ve rayla hizası bozulmaz),
+ * Ekran içeriğinin yakınlaştırılan katı. `main` sabit kalır (üst şerit ve menüyle hizası bozulmaz),
  * içi CSS `zoom` ile büyür/küçülür; taşan kısım main'in kendi kaydırmasında kalır.
  */
 export function ZoomStage({ className = '', style, children }: { className?: string; style?: React.CSSProperties; children: React.ReactNode }) {
@@ -78,56 +44,68 @@ export function ZoomStage({ className = '', style, children }: { className?: str
   );
 }
 
+const pathOf = (to: string) => to.split('?')[0];
+
 /**
- * Ortak kabuk: nokta ızgara, üst şerit, sol ray ve modül menüsü. Kanvas
- * ekranları da pano da bunu kullanır; başlık ve menü her sayfada aynı olsun.
+ * Ortak kabuk: nokta ızgara, üst şerit ve portalın tek menüsü (nav/navModel.ts). Masaüstünde çalışma alanı
+ * rayı + bağlam paneli, telefonda alt çubuk + menü sayfası; ⌘K / Ctrl K «Ara veya git». Menü ekrandan
+ * bağımsızdır: hangi öğenin etkin olduğu adresten bulunur. Ekranların `main`'i `.shell-stage`'e göre
+ * yerleşir (menünün yanında başlar, telefonda alt çubuğun üstünde biter).
  */
 export default function Shell({
   head,
-  rail,
   onZoom,
   onReset,
   children,
 }: {
   head: ShellHead;
-  rail: StitchRailItem[];
   onZoom?: (delta: number) => void;
   /** Düzen değiştirilmişse sıfırlama düğmesi çıkar. */
   onReset?: () => void;
   children: React.ReactNode;
 }) {
-  const [modulesOpen, setModulesOpen] = useState(false);
   const who = useTimasSession();
-  const webWatch = useQuery({
-    queryKey: ['editorial', 'web', 'status'],
-    queryFn: webApi.status,
-    enabled: ENGINE_ENABLED && rail.some((item) => item.feature === 'webWatch'),
-    staleTime: 10 * 60_000,
-  });
   const whoName = who.data?.displayName || who.data?.username || '';
+  const nav = useNavData();
+  const loc = useLocation();
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [modulesOpen, setModulesOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+
   // Yakınlaştırma: kanvas kendi durumunu verir (onZoom); öteki ekranlarda kabuk kendisi tutar.
-  // Önceden bu ekranlarda düğme sabit "%100" gösteriyor ve tıklamaya bağlı değildi.
   const [ownZoom, setOwnZoom] = useState(1);
   const zoomHandler = onZoom ?? ((delta: number) => setOwnZoom((z) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, Number((z + delta).toFixed(2))))));
   const zoomLabel = head.zoom ?? `%${Math.round(ownZoom * 100)}`;
-  // Yönetim, Veri Sözlüğü ve Onaylar yalnız yöneticilerde çıkar; yükleme/hata durumunda gizli kalır.
-  const isAdmin = useIsAdmin();
-  // Ray açık/kapalı. Açıkken menü adları ikonun yanında yazar; bir menüye gidince, Esc'e basınca ya da dışarı tıklanınca kapanır.
-  const [railOpen, setRailOpen] = useState(false);
-  const railRef = useRef<HTMLElement | null>(null);
+
+  // ⌘K / Ctrl K her ekranda paleti açar/kapatır.
   useEffect(() => {
-    if (!railOpen) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setRailOpen(false);
-    const onDown = (e: PointerEvent) => {
-      if (railRef.current && !railRef.current.contains(e.target as Node)) setRailOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+      }
     };
     window.addEventListener('keydown', onKey);
-    window.addEventListener('pointerdown', onDown);
-    return () => {
-      window.removeEventListener('keydown', onKey);
-      window.removeEventListener('pointerdown', onDown);
-    };
-  }, [railOpen]);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Kırıntı: çalışma alanı › ekran › (detay sayfasıysa) iş/kitap adı.
+  const active = nav.active;
+  const onDetail = !!active && loc.pathname.replace(/\/+$/, '') !== pathOf(active.item.to);
+  const detail = head.detail ?? (active && onDetail && head.crumb && head.crumb !== active.item.label ? head.crumb : undefined);
+  const crumbGroup = active ? (active.group.id === 'kampus' ? null : active.group.label) : head.section;
+  const crumbItem = active ? active.item.label : head.crumb;
+
+  // Son açılanlar: menüdeki her ekran ve detay sayfası (Kampüs hariç — rayda hep var).
+  const { update } = nav;
+  const here = loc.pathname + loc.search;
+  const recentLabel = active && active.group.id !== 'kampus' ? detail ?? active.item.label : null;
+  const recentGroup = active ? (detail ? `${active.group.label} · ${active.item.label}` : active.group.label) : '';
+  useEffect(() => {
+    if (!recentLabel) return;
+    update((s) => ({ ...s, recent: pushRecent(s.recent, { to: here, label: recentLabel, group: recentGroup, at: Date.now() }) }));
+  }, [here, recentLabel, recentGroup, update]);
+
   const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
   // Pano izni reddedilirse (odak yok, güvenli bağlam değil) eski yönteme düşer; o da olmazsa bunu söyler.
   const share = () => {
@@ -159,37 +137,68 @@ export default function Shell({
       done(fallback());
     }
   };
-  useLocation();
+
+  const openPalette = useCallback(() => {
+    setModulesOpen(false);
+    setPaletteOpen(true);
+  }, []);
+  const ui = useMemo<NavUi>(
+    () => ({
+      openPalette,
+      openModules: () => setModulesOpen((v) => !v),
+      openProfile: () => setProfileOpen(true),
+    }),
+    [openPalette],
+  );
 
   return (
+    <NavUiContext.Provider value={ui}>
     <ZoomContext.Provider value={onZoom ? 1 : ownZoom}>
-    <div className="bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative print:h-auto print:overflow-visible print:bg-white">
+    <div
+      data-docked={nav.state.collapsed ? '0' : '1'}
+      className="nav-root bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative print:h-auto print:overflow-visible print:bg-white"
+    >
     {/* Interactive Dot Grid Overlay */}
     <div className="absolute inset-0 dot-grid pointer-events-none z-0 print:hidden"></div>
 
+    <DesktopNav nav={nav} whoName={whoName} modulesOpen={modulesOpen} />
+
+    <div className="shell-stage">
     {/* ================= TOP FLOATING NAVIGATION ================= */}
     <header className="print:hidden absolute top-3 inset-x-3 sm:top-5 sm:inset-x-5 lg:inset-x-7 flex items-center justify-between gap-2 z-40 pointer-events-none">
-      {/* Top-Left Glass Breadcrumb Pill */}
-      <div className="glass-panel min-w-0 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-glass-float flex items-center gap-2 sm:gap-3 pointer-events-auto transition-transform hover:scale-[1.01]">
-        <div className="w-6 h-6 sm:w-7 sm:h-7 shrink-0 rounded-full bg-gradient-to-tr from-coral to-violet flex items-center justify-center text-white font-black text-[11px] sm:text-xs shadow-sm">
+      {/* Kırıntı: çalışma alanı › ekran › detay. Telefonda yalnız ekran adı. */}
+      <nav aria-label="Konum" className="glass-panel min-w-0 px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-full shadow-glass-float flex items-center gap-2 sm:gap-3 pointer-events-auto">
+        <Link to="/" aria-label={`${head.tenant} · Kampüs`} className="md:hidden w-6 h-6 sm:w-7 sm:h-7 shrink-0 rounded-full bg-gradient-to-tr from-coral to-violet flex items-center justify-center text-white font-black text-[11px] sm:text-xs shadow-sm">
           T
-        </div>
-        <div className="flex min-w-0 items-center text-xs font-semibold tracking-tight text-ink">
-          <Link to="/" className="hidden sm:inline text-ink font-bold hover:text-violet transition">{head.tenant}</Link>
-          <svg className="hidden sm:block w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-          <span className="hidden md:inline text-muted">{head.section}</span>
-          <svg className="hidden md:block w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
-          <span className="min-w-0 truncate bg-violet/10 text-violet px-2 py-0.5 rounded-full font-bold flex items-center gap-1.5">
-            <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-violet animate-pulse"></span>
-            <span className="truncate">{head.crumb}</span>
-          </span>
-        </div>
-        <span className="hidden lg:inline text-[11px] text-muted/70 border-l border-slate-200/80 pl-2.5 font-medium">{head.source}</span>
-      </div>
+        </Link>
+        <ol className="flex min-w-0 items-center text-xs font-semibold tracking-tight text-ink">
+          {crumbGroup && (
+            <li className="hidden sm:flex items-center text-muted">
+              {crumbGroup}
+              <svg aria-hidden className="w-3.5 h-3.5 mx-1.5 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+            </li>
+          )}
+          {detail && active ? (
+            <>
+              <li className="hidden md:flex items-center min-w-0">
+                <Link to={active.item.to} className="truncate text-ink font-bold">{crumbItem}</Link>
+                <svg aria-hidden className="w-3.5 h-3.5 mx-1.5 shrink-0 text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" /></svg>
+              </li>
+              <li className="min-w-0 truncate bg-violet/10 text-violet px-2 py-0.5 rounded-full font-bold" aria-current="page">
+                <span className="truncate">{detail}</span>
+              </li>
+            </>
+          ) : (
+            <li className="min-w-0 truncate bg-violet/10 text-violet px-2 py-0.5 rounded-full font-bold" aria-current="page">
+              <span className="truncate">{crumbItem}</span>
+            </li>
+          )}
+        </ol>
+        {head.source && <span className="hidden xl:inline max-w-[260px] truncate text-[11px] text-muted/70 border-l border-slate-200/80 pl-2.5 font-medium">{head.source}</span>}
+      </nav>
 
-      {/* Top-Right Actions & Collaboration Pill */}
+      {/* Top-Right Actions */}
       <div className="flex items-center gap-1.5 sm:gap-3 pointer-events-auto">
-        {/* Oturumdaki kişi: AD'deki ad soyadın baş harfleri. Önceden tasarımdan kalan üç sahte kişi vardı. */}
         <div className="hidden lg:flex glass-panel px-3 py-1.5 rounded-full shadow-glass-float items-center gap-2">
           <div
             className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 text-white font-bold text-[11px] flex items-center justify-center ring-2 ring-white shadow-sm"
@@ -199,6 +208,16 @@ export default function Shell({
           </div>
           <span className="text-[11px] font-semibold text-muted pl-1">{head.presence}</span>
         </div>
+
+        {/* Telefonda arama üst şeritte (masaüstünde rayda). */}
+        <button
+          type="button"
+          onClick={openPalette}
+          aria-label={`Ara veya git (${paletteKey()})`}
+          className="md:hidden glass-panel min-h-10 min-w-10 flex items-center justify-center rounded-full shadow-glass-float text-ink active:scale-[0.97] transition-transform"
+        >
+          <Search aria-hidden className="h-4 w-4" />
+        </button>
 
         {onReset && (
           <button
@@ -230,119 +249,20 @@ export default function Shell({
       </div>
     </header>
 
-    {/* ================= LEFT FLOATING VERTICAL MODULE RAIL ================= */}
-      {/* Ray yalnız var olan ekranları taşır; ölü bağlantı yok. Üstteki ok rayı açar: adlar ikonun yanında yazar. */}
-      <aside
-        ref={railRef}
-        data-open={railOpen ? '1' : '0'}
-        className={
-          'rail print:hidden absolute left-1.5 top-20 bottom-[148px] sm:left-6 sm:top-24 sm:bottom-24 z-30 flex flex-col items-stretch justify-start gap-1.5 sm:gap-2.5 py-2 sm:py-4 px-0 sm:px-2 glass-panel rounded-2xl sm:rounded-3xl shadow-glass-float overflow-y-auto overflow-x-hidden ' +
-          (railOpen ? 'w-[200px] sm:w-[216px]' : 'w-10 sm:w-[54px]')
-        }
-      >
-        <button
-          type="button"
-          onClick={() => setRailOpen((v) => !v)}
-          aria-label={railOpen ? 'Menüyü daralt' : 'Menüyü genişlet'}
-          aria-expanded={railOpen}
-          title={railOpen ? 'Daralt' : 'Genişlet'}
-          className="rail-item mx-auto sm:mx-0 w-10 h-8 shrink-0 rounded-lg sm:rounded-xl text-muted hover:text-ink hover:bg-white/80 active:scale-[0.97] transition flex items-center justify-center"
-        >
-          <svg
-            className={'w-4 h-4 transition-transform duration-200 ' + (railOpen ? 'rotate-180' : '')}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        {rail.map((item, i) => {
-          // adminOnly öğeler yetkisiz kişide render edilmez; i sabit kalsın diye diziyi filtrelemiyoruz (ikon eşlemesi konuma bağlı).
-          if (item.adminOnly && !isAdmin) return null;
-          // Ortamda kapalı özellik (müşteri ortamında basın ve web) menüde hiç görünmez; durum gelene kadar da gizli.
-          if (item.feature === 'webWatch' && !webWatch.data?.enabled) return null;
-          const active = item.badge === 'Aktif';
-          // The audit shield has its own icon; moving it must not shift other icons.
-          const iconIndex = rail.slice(0, i).filter(entry => entry.to !== '/finansal-denetim').length;
-          return (
-            <Fragment key={item.to}>
-            {item.group && item.group !== rail[i - 1]?.group && (
-              railOpen ? (
-                <div className="shrink-0 px-3 pt-2 text-[10.5px] font-bold uppercase tracking-wide text-muted">{item.group}</div>
-              ) : (
-                i > 0 && <div aria-hidden className="mx-auto my-0.5 h-px w-6 shrink-0 bg-slate-200 sm:w-8" />
-              )
-            )}
-            <div className="relative group flex items-center shrink-0">
-              <Link
-                to={item.to}
-                onClick={() => setRailOpen(false)}
-                aria-label={item.label}
-                aria-current={active ? 'page' : undefined}
-                className={
-                  'rail-item flex items-center min-w-0 overflow-hidden h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl transition [&_svg]:w-4 [&_svg]:h-4 sm:[&_svg]:w-5 sm:[&_svg]:h-5 ' +
-                  (railOpen ? 'w-full pr-3 ' : 'w-10 mx-auto sm:mx-0 ') +
-                  (active
-                    ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-md'
-                    : 'hover:bg-white/80 text-muted hover:text-ink')
-                }
-              >
-                <span className="w-10 h-10 shrink-0 flex items-center justify-center">{item.icon ?? (item.to === '/finansal-denetim' ? <ShieldCheck className="w-5 h-5" /> : RAIL_ICONS[iconIndex % RAIL_ICONS.length])}</span>
-                <span className="rail-label min-w-0 truncate text-[13px] font-semibold tracking-tight" aria-hidden={!railOpen}>
-                  {item.label}
-                </span>
-              </Link>
-              {!railOpen && (
-                <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
-                  {item.label}
-                </div>
-              )}
-            </div>
-            </Fragment>
-          );
-        })}
-
-        {/* Modül menüsü: 18 grup, 67 modül. Ekran açmaz, listeler. */}
-        <div className="relative group flex items-center mt-auto shrink-0">
-          <button
-            type="button"
-            onClick={() => {
-              setModulesOpen((v) => !v);
-              setRailOpen(false);
-            }}
-            aria-label="Modüller"
-            className={
-              'rail-item flex items-center min-w-0 overflow-hidden h-10 active:scale-[0.97] rounded-xl sm:rounded-2xl transition ' +
-              (railOpen ? 'w-full pr-3 ' : 'w-10 mx-auto sm:mx-0 ') +
-              (modulesOpen
-                ? 'bg-gradient-to-tr from-coral to-violet text-white shadow-md'
-                : 'hover:bg-white/80 text-muted hover:text-ink')
-            }
-          >
-            <span className="w-10 h-10 shrink-0 flex items-center justify-center">
-              <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </span>
-            <span className="rail-label min-w-0 truncate text-[13px] font-semibold tracking-tight" aria-hidden={!railOpen}>
-              Modüller
-            </span>
-          </button>
-          {!railOpen && (
-            <div className="absolute left-10 sm:left-14 z-50 whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white opacity-0 shadow-xl transition duration-150 pointer-events-none group-hover:opacity-100">
-              Modüller
-            </div>
-          )}
-        </div>
-      </aside>
-
-      <ModulesMenu open={modulesOpen} onClose={() => setModulesOpen(false)} />
-
       {/* ================= INFINITE CANVAS STAGE ================= */}
       {children}
     </div>
+
+      <PhoneNav nav={nav} whoName={whoName} />
+      <ModulesMenu open={modulesOpen} onClose={() => setModulesOpen(false)} />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} nav={nav} />
+      {profileOpen && (
+        <Suspense fallback={null}>
+          <ProfileDialog open={profileOpen} onClose={() => setProfileOpen(false)} />
+        </Suspense>
+      )}
+    </div>
     </ZoomContext.Provider>
+    </NavUiContext.Provider>
   );
 }

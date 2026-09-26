@@ -217,6 +217,11 @@ SPEC: list[dict[str, Any]] = [
      "default": "Administrators",
      "help": "Bu Active Directory grubunun üyeleri de yönetici sayılır (iç içe gruplar dahil). "
              "Boş bırakılırsa yalnız yukarıdaki liste geçerli olur"},
+    {"key": "TIMAS_EDITOR_GROUP", "group": "access", "label": "Editör AD grubu", "type": "text",
+     "default": "",
+     "help": "Bu Active Directory grubunun üyeleri (iç içe gruplar dahil) menüde Editoryal'i en üstte, "
+             "«Çalışma alanım» olarak açık görür; Analiz ve Finans daraltılmış gelir. Yetki vermez, yalnız "
+             "menü düzenidir. Boş bırakılırsa herkes aynı menüyü görür"},
 ]
 _BY_KEY = {s["key"]: s for s in SPEC}
 GROUPS = [
@@ -241,7 +246,8 @@ GROUPS = [
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
              "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},
     {"id": "access", "label": "Yetki",
-     "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri."},
+     "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
+             "Editör grubu yalnız menünün düzenini belirler."},
 ]
 #: Dosyada tutulan ayarlar: anahtar → (dosya, dosyadaki alan adı). Veritabanı yerine dosya, çünkü
 #: bu değerleri okuyan başka bir süreç var (giriş servisi, bağlantıyı kuran sürücü).
@@ -403,12 +409,25 @@ def admin_group_members() -> frozenset[str]:
     Canlı AD burada OKUNMAZ; görüntüyü `refresh_admin_group` (15 dk'lık timer) tazeler. Grup adı
     boşsa ya da görüntü yoksa boş küme döner; o zaman yalnız `TIMAS_ADMIN_USERS` listesi geçerlidir.
     """
-    group = conf("TIMAS_ADMIN_GROUP").strip().lower()
+    return _snapshot_members(_grp_mem, conf("TIMAS_ADMIN_GROUP").strip().lower())
+
+
+#: Editör AD grubunun bellek önbelleği (yönetici grubununkiyle aynı düzen, ayrı kayıt).
+_ed_mem: dict[str, Any] = {"at": 0.0, "group": "", "members": frozenset()}
+
+
+def editor_group_members() -> frozenset[str]:
+    """Editör AD grubunun (`TIMAS_EDITOR_GROUP`) üyeleri — yönetici grubu gibi DB anlık görüntüsünden
+    okunur, canlı AD istek yolunda okunmaz. Grup tanımlı değilse boş küme."""
+    return _snapshot_members(_ed_mem, conf("TIMAS_EDITOR_GROUP").strip().lower())
+
+
+def _snapshot_members(mem: dict[str, Any], group: str) -> frozenset[str]:
     now = time.time()
-    if _grp_mem["group"] == group and now - _grp_mem["at"] < _GRP_MEM_TTL:
-        return _grp_mem["members"]  # type: ignore[return-value]
+    if mem["group"] == group and now - mem["at"] < _GRP_MEM_TTL:
+        return mem["members"]  # type: ignore[no-any-return]
     members = _load_group_snapshot(group)
-    _grp_mem.update(at=now, group=group, members=members)
+    mem.update(at=now, group=group, members=members)
     return members
 
 
@@ -447,10 +466,20 @@ def group_snapshot() -> dict[str, Any]:
 
 
 def refresh_admin_group(engine: Optional[sa.engine.Engine] = None) -> dict[str, Any]:
-    """Yönetici AD grubunu canlı okuyup DB'ye yazar. 15 dk'lık timer bunu çağırır (istek yolunda değil).
-    Tazeleme başarısız olursa eldeki üye görüntüsü SİLİNMEZ; yalnız hata kaydedilir ki yetki düşmesin."""
+    """Yönetici AD grubunu (ve tanımlıysa editör AD grubunu) canlı okuyup DB'ye yazar. 15 dk'lık timer bunu
+    çağırır (istek yolunda değil). Dönen cevap yönetici grubununkidir; editör grubunun sonucu `editor`
+    alanındadır. Tazeleme başarısız olursa eldeki üye görüntüsü SİLİNMEZ; yalnız hata kaydedilir."""
+    out = _refresh_group(engine, "TIMAS_ADMIN_GROUP")
+    if conf("TIMAS_EDITOR_GROUP").strip():
+        ed = _refresh_group(engine, "TIMAS_EDITOR_GROUP")
+        ed.pop("members", None)
+        out["editor"] = ed
+    return out
+
+
+def _refresh_group(engine: Optional[sa.engine.Engine], key: str) -> dict[str, Any]:
     eng = engine or _engine
-    group = conf("TIMAS_ADMIN_GROUP").strip()
+    group = conf(key).strip()
     if eng is None:
         return {"ok": False, "error": "veritabanı bağlı değil"}
     ensure(eng)
@@ -464,7 +493,7 @@ def refresh_admin_group(engine: Optional[sa.engine.Engine] = None) -> dict[str, 
     try:
         members = sorted(_read_group_members(cfg, group))
     except Exception as e:  # noqa: BLE001
-        log.warning("admin: yönetici grubu tazelenemedi, eski görüntü korunuyor: %s", e)
+        log.warning("admin: %s tazelenemedi, eski görüntü korunuyor: %s", key, e)
         try:
             with eng.begin() as c:
                 c.execute(GROUP_CACHE.update().where(GROUP_CACHE.c.group_name == group)
@@ -476,8 +505,9 @@ def refresh_admin_group(engine: Optional[sa.engine.Engine] = None) -> dict[str, 
     with eng.begin() as c:
         c.execute(GROUP_CACHE.delete().where(GROUP_CACHE.c.group_name == group))
         c.execute(GROUP_CACHE.insert().values(group_name=group, members=body, updated_at=now, error=None))
-    _grp_mem.update(at=0.0)   # bellek önbelleğini geçersiz kıl: sonraki okuma yeni görüntüyü alsın
-    log.info("admin: yönetici grubu tazelendi (%s): %d üye", group, len(members))
+    _grp_mem.update(at=0.0)   # bellek önbelleklerini geçersiz kıl: sonraki okuma yeni görüntüyü alsın
+    _ed_mem.update(at=0.0)
+    log.info("admin: %s tazelendi (%s): %d üye", key, group, len(members))
     return {"ok": True, "group": group, "count": len(members), "at": _iso(now), "members": members}
 
 
@@ -524,6 +554,13 @@ def _read_group_members(cfg: dict[str, str], group: str) -> frozenset[str]:
 def _ldap_escape(v: str) -> str:
     """RFC 4515 filtre kaçışı: girilen grup adı filtreyi bozmasın."""
     return v.replace("\\", "\\5c").replace("*", "\\2a").replace("(", "\\28").replace(")", "\\29").replace("\x00", "\\00")
+
+
+def is_editor(user: Optional[str]) -> bool:
+    """Editör AD grubunun üyesi mi (menü düzeni için; yetki vermez). Grup tanımlı değilse herkes için False."""
+    if not user or not conf("TIMAS_EDITOR_GROUP").strip():
+        return False
+    return user.strip().lower() in editor_group_members()
 
 
 def is_admin(user: Optional[str]) -> bool:

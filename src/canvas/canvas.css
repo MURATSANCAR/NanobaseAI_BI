@@ -501,29 +501,6 @@
 .xd-sheet[aria-busy='true'] .xd-body {
   opacity: 0.45;
 }
-/* Sol ray: genişlik geçişi ve menü adlarının belirmesi. Adlar ray açılınca sağdan kayarak gelir, kapanınca hemen söner. */
-.rail {
-  transition: width 200ms cubic-bezier(0.23, 1, 0.32, 1);
-}
-.rail .rail-label {
-  opacity: 0;
-  transform: translateX(-6px);
-  transition: opacity 120ms ease, transform 120ms ease;
-  pointer-events: none;
-}
-.rail[data-open='1'] .rail-label {
-  opacity: 1;
-  transform: translateX(0);
-  transition: opacity 180ms cubic-bezier(0.23, 1, 0.32, 1) 60ms, transform 180ms cubic-bezier(0.23, 1, 0.32, 1) 60ms;
-}
-@media (prefers-reduced-motion: reduce) {
-  .rail,
-  .rail .rail-label {
-    transition-duration: 0ms;
-    transform: none;
-  }
-}
-
 /* ------------------------------------------------------------------ */
 /* Zeki AI "düşünüyor" göstergesi — yanıt beklenirken karar kartında.  */
 /* Amaç: durum bildirimi. Yalnız opacity/transform; ana thread dışı.    */

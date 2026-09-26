@@ -2,7 +2,6 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, Database, Loader2 } from 'lucide-react';
 import Shell from '../stitch/Shell';
-import { managementRail } from '../stitch/screens';
 import { ENGINE_ENABLED } from '../engine';
 import { managementApi, sinceText } from './api';
 import './management.css';
@@ -19,7 +18,6 @@ export default function ManagementHome() {
   return (
     <Shell
       head={{ tenant: 'Timaş Yayınları', section: 'Yönetim Raporları', crumb: 'Raporlar', source: 'Logo + CRM', presence: `${reports.length || ''} rapor`.trim() }}
-      rail={managementRail('/yonetim-raporlari')}
     >
       <main className="mg-main">
         <div className="mg-page">

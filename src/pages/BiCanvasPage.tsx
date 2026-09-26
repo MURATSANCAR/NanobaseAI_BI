@@ -221,8 +221,8 @@ export default function BiCanvasPage() {
       {screen === 'uyarilar' ? (
         // Uyarılar: kural listesi ve yeni kural formu sayfanın kendisidir. Önceden burası boş kabuktu ve
         // panele götüren hiçbir düğme yoktu; kural kurma akışına arayüzden ulaşılamıyordu.
-        <Shell head={{ tenant: view.tenant, section: view.section, crumb: view.crumb, source: view.source, presence: view.presence }} rail={view.rail}>
-          <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+        <Shell head={{ tenant: view.tenant, section: view.section, crumb: view.crumb, source: view.source, presence: view.presence }}>
+          <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
             <ZoomStage className="h-full">
               <AlertsPanel
                 inline

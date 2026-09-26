@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowDownToLine, ArrowRight, Check, ChevronLeft, ChevronRight, CircleHelp, FileSearch, Loader2, RefreshCw, Search, ShieldCheck } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
 import { ENGINE_BASE, ENGINE_ENABLED } from '../engine';
 import DeepAuditPanel, { type DeepAudit } from './DeepAuditPanel';
 import SqlEvidence from './SqlEvidence';
@@ -123,13 +122,13 @@ export default function FinancialAudit() {
   const refreshing = refresh.isPending || refreshStatus.data?.state === 'refreshing';
   const refreshButton = <button className="audit-button" disabled={refreshing || !ENGINE_ENABLED} onClick={() => refresh.mutate()}><RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />{refreshing ? 'Veriler yenileniyor' : 'Verileri yenile'}</button>;
 
-  if (!data) return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal Denetim', source: 'Logo · muhasebe', presence: 'Kayıtlı denetim raporu' }} rail={railFor('/finansal-denetim')}><main className="audit-main"><div className="audit-page"><h1>Finansal Denetim</h1><section className="audit-panel" aria-busy={overview.isFetching}><h2>{overview.isFetching ? 'Kayıtlı rapor açılıyor' : 'Rapor şu anda açılamadı'}</h2><p>{overview.isFetching ? 'Son tamamlanan hesaplama sunucudaki kayıttan getiriliyor.' : refreshStatus.data?.message || (overview.error instanceof Error ? overview.error.message : 'İlk rapor hazırlandığında burada otomatik gösterilecek.')}</p>{!overview.isFetching && <div className="audit-heading-actions"><button className="audit-button" onClick={() => overview.refetch()}>Raporu tekrar aç</button>{refreshButton}</div>}</section></div></main></Shell>;
+  if (!data) return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal denetim', source: 'Logo · muhasebe', presence: 'Kayıtlı denetim raporu' }}><main className="audit-main"><div className="audit-page"><h1>Finansal denetim</h1><section className="audit-panel" aria-busy={overview.isFetching}><h2>{overview.isFetching ? 'Kayıtlı rapor açılıyor' : 'Rapor şu anda açılamadı'}</h2><p>{overview.isFetching ? 'Son tamamlanan hesaplama sunucudaki kayıttan getiriliyor.' : refreshStatus.data?.message || (overview.error instanceof Error ? overview.error.message : 'İlk rapor hazırlandığında burada otomatik gösterilecek.')}</p>{!overview.isFetching && <div className="audit-heading-actions"><button className="audit-button" onClick={() => overview.refetch()}>Raporu tekrar aç</button>{refreshButton}</div>}</section></div></main></Shell>;
 
-  return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal Denetim', source: 'Logo · muhasebe', presence: `Veri: ${day(data.lastDate)}` }} rail={railFor('/finansal-denetim')}>
+  return <Shell head={{ tenant: 'Timaş Yayınları', section: 'Finans & Risk', crumb: 'Finansal denetim', source: 'Logo · muhasebe', presence: `Veri: ${day(data.lastDate)}` }}>
     <main className="audit-main">
       <ZoomStage><div className="audit-page">
         <header className="audit-heading">
-          <div><div className="audit-eyebrow">FİNANS & RİSK / DENETİM MASASI</div><h1>Rakamların arkasını görün<span>.</span></h1><p>Finansal Denetim · Genel görünümden hesaplamaya, hesaplamadan Logo kaydına.</p></div>
+          <div><div className="audit-eyebrow">FİNANS & RİSK / DENETİM MASASI</div><h1>Rakamların arkasını görün<span>.</span></h1><p>Finansal denetim · Genel görünümden hesaplamaya, hesaplamadan Logo kaydına.</p></div>
           <div className="audit-heading-actions">{refreshButton}<a className="audit-button" href={`${ENGINE_BASE}/api/v1/financial-audit/runs/${data.runId}/export`} download><ArrowDownToLine size={16} /> Raporu indir</a></div>
         </header>
 

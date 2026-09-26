@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, PencilLine, Search, X } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { ScanBadge } from '../DbTiming';
-import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
   EngineAuthError,
@@ -58,7 +57,7 @@ function technical(it: ReviewItem): string {
 
 export default function ApprovalsScreen() {
   return (
-    <AdminGuard rail="/onaylar" crumb="Onaylar">
+    <AdminGuard crumb="Onaylar">
       <ApprovalsScreenInner />
     </AdminGuard>
   );
@@ -138,9 +137,8 @@ function ApprovalsScreenInner() {
         source: `${nf.format(queue.data?.waiting ?? 0)} bekleyen`,
         presence: `${nf.format(queue.data?.total ?? 0)} aday`,
       }}
-      rail={railFor('/onaylar')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-visible">
+      <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px] md:overflow-visible">
       <ZoomStage className="h-full">
         <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:flex-row md:gap-4 md:pb-0">
           {/* Kuyruk */}

@@ -2,7 +2,6 @@ import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import { Activity, Bell, CalendarClock, History, LayoutGrid, MessageSquareText, Settings2, Users } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
 import { ENGINE_ENABLED, EngineAuthError, adminApi } from '../engine';
 import NoAccess from '../NoAccess';
 import Overview from './Overview';
@@ -74,13 +73,12 @@ export default function AdminScreen() {
       head={{
         tenant: 'Timaş Yayınları',
         section: 'Yapay Zeka Raporları',
-        crumb: 'Yönetim',
+        crumb: 'Portal ayarları',
         source: me.data?.user ? `${me.data.user}${me.data.isAdmin ? ' · yönetici' : ''}` : '',
         presence: overview.data ? (overview.data.email.configured ? 'E-posta hazır' : 'E-posta ayarı yok') : '',
       }}
-      rail={railFor('/yonetim')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] md:overflow-visible">
+      <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px] md:overflow-visible">
       <ZoomStage className="h-full">
         <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 md:h-full md:flex-row md:gap-4 md:pb-0">
           {me.data?.isAdmin && (
@@ -88,7 +86,7 @@ export default function AdminScreen() {
               aria-label="Yönetim bölümleri"
               className="glass-panel w-full shrink-0 rounded-2xl p-2 shadow-glass-float sm:rounded-3xl md:w-[240px] md:p-3"
             >
-              <div className="hidden px-2 pb-2 text-[13px] font-extrabold md:block">Yönetim</div>
+              <div className="hidden px-2 pb-2 text-[13px] font-extrabold md:block">Portal ayarları</div>
               {/* Telefonda yatay kayan çipler, masaüstünde dikey liste */}
               <ul className="flex gap-1 [scrollbar-width:none] overflow-x-auto md:flex-col md:overflow-visible">
                 {TABS.map((t) => {

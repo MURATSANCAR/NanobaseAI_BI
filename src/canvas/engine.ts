@@ -750,7 +750,9 @@ const qs = (o: Record<string, string | number | undefined>) => {
 };
 
 export const adminApi = {
-  me: () => send<{ user: string; isAdmin: boolean }>('GET', '/api/v1/admin/me', undefined, 15_000),
+  /** Oturumdaki kişinin rolü. `isEditor`: yönetim ekranındaki «Editör AD grubu» üyesi (ayar boşsa false);
+   *  eski köprü göndermez, o zaman editör sayılmaz. */
+  me: () => send<{ user: string; isAdmin: boolean; isEditor?: boolean }>('GET', '/api/v1/admin/me', undefined, 15_000),
   overview: () => send<AdminOverview>('GET', '/api/v1/admin/overview', undefined, 30_000),
   settings: () => send<AdminSettings>('GET', '/api/v1/admin/settings', undefined, 15_000),
   saveSettings: (values: Record<string, string>) =>

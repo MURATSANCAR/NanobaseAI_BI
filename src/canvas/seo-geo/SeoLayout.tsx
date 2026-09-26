@@ -1,11 +1,10 @@
 import type { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 import Shell from '../stitch/Shell';
-import { seoRail } from '../stitch/screens';
 import './seo.css';
 
-/** SEO & GEO ekranlarının ortak iskeleti: kanvas kabuğu, modülün rayı, başlık. */
-export default function SeoLayout({ path, crumb, eyebrow, title, lead, actions, children }: {
+/** SEO & GEO ekranlarının ortak iskeleti: kanvas kabuğu (menü adresten etkin öğeyi bulur), başlık. `path` ekranın adresidir; menü artık onu okumaz. */
+export default function SeoLayout({ crumb, eyebrow, title, lead, actions, children }: {
   path: string;
   crumb: string;
   eyebrow: string;
@@ -15,7 +14,7 @@ export default function SeoLayout({ path, crumb, eyebrow, title, lead, actions, 
   children: ReactNode;
 }) {
   return (
-    <Shell head={{ tenant: 'Timaş Yayınları', section: 'SEO & GEO', crumb, source: 'T-soft + Google', presence: 'timas.com.tr' }} rail={seoRail(path)}>
+    <Shell head={{ tenant: 'Timaş Yayınları', section: 'SEO & GEO', crumb, source: 'T-soft + Google', presence: 'timas.com.tr' }}>
       <main className="sg-main">
         <div className="sg-page">
           <header className="sg-heading">

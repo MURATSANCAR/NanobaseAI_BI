@@ -36,7 +36,7 @@ export default function SeoVisibility() {
   return (
     <SeoLayout
       path="/seo-geo/ai-gorunurluk"
-      crumb="AI görünürlük"
+      crumb="Yapay zekâ görünürlüğü"
       eyebrow="SEO & GEO · yapay zekâ cevapları"
       title="Yapay zekâ cevaplarında Timaş"
       lead="İzlenen sorular Gemini, ChatGPT, Perplexity ve Claude’a resmî API’leriyle sorulur; cevapta Timaş’ın anılıp anılmadığı, timas.com.tr’nin kaynak gösterilip gösterilmediği ve hangi Timaş kitaplarının geçtiği kaydedilir. Gemini ücretsiz katmanla çalışır; diğerleri anahtar girilirse ölçülür."

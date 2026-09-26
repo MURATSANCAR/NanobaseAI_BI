@@ -1,9 +1,7 @@
-import { createElement } from 'react';
-import { BookImage, BookUser, Braces, ClipboardCheck, CornerDownRight, FileText, Contact, FileSignature, Gauge, History, House, Newspaper, Languages, LayoutDashboard, PenLine, Plug, Route, Search, Sparkles, SpellCheck, UserCog, UsersRound } from 'lucide-react';
 import type { AlertSummary } from '../data';
 import { conditionLabel, dateTime, money, num, relative } from '../format';
 import type { CfoData } from '../cfo';
-import type { StitchArc, StitchCanvasData, StitchRailItem } from './data';
+import type { StitchArc, StitchCanvasData } from './data';
 
 /** Halka dilimleri: çevre 87.96 (2πr, r=14). Paylar değerlerden hesaplanır. */
 function arcs(values: number[]): [StitchArc, StitchArc, StitchArc, StitchArc] {
@@ -37,70 +35,6 @@ function spark(values: number[]): { areaPath: string; linePath: string; dot: [nu
   return { areaPath: `${line} L 210 50 L 0 50 Z`, linePath: line, dot: last };
 }
 
-/** Raydaki on yuva: tasarımın kendi sırası, uygulamanın gerçek ekranları.
- *  Etiketler src/i18n/tr.json'daki adlarla birebir aynı. */
-/** Ray yalnız var olan kanvas ekranlarını gösterir. Ölü bağlantı bırakmıyoruz:
- *  yeni ekran eklendikçe buraya bir satır girer. */
-export const railFor = (active: string): StitchRailItem[] => [
-  { to: '/genel-bakis', label: 'Genel bakış', badge: active === '/genel-bakis' ? 'Aktif' : undefined },
-  { to: '/finansal-denetim', label: 'Finansal Denetim', badge: active === '/finansal-denetim' ? 'Aktif' : undefined },
-  { to: '/uyarilar', label: 'Uyarılar', badge: active === '/uyarilar' ? 'Aktif' : undefined },
-  { to: '/planli-raporlar', label: 'Planlı raporlar', badge: active === '/planli-raporlar' ? 'Aktif' : undefined },
-  { to: '/panolar', label: 'Panolar', badge: active === '/panolar' ? 'Aktif' : undefined },
-  { to: '/veri-sozlugu', label: 'Veri Sözlüğü', badge: active === '/veri-sozlugu' ? 'Aktif' : undefined, adminOnly: true },
-  { to: '/onaylar', label: 'Onaylar', badge: active === '/onaylar' ? 'Aktif' : undefined, adminOnly: true },
-  { to: '/es-anlamlilar', label: 'Eş anlamlılar', badge: active === '/es-anlamlilar' ? 'Aktif' : undefined },
-  { to: '/yonetim', label: 'Yönetim', badge: active === '/yonetim' ? 'Aktif' : undefined, adminOnly: true },
-  // Editoryal Süreç'e kapı; oradan ray kendi modüllerine döner.
-  { to: '/editoryal', label: 'Editoryal', badge: active === '/editoryal' ? 'Aktif' : undefined },
-  // Girişten sonraki ana sayfaya dönüş.
-  { to: '/', label: 'Kampüs', badge: active === '/' ? 'Aktif' : undefined },
-];
-
-/** Editoryal Süreç ekranlarının kendi rayı: üç grup (günlük iş, yayına hazırlık, kayıtlar) ve Kampüs'e dönüş.
- *  Her öğe kendi ikonunu taşır; grup başlığı menü açıkken görünür. */
-const railIcon = (icon: typeof House) => createElement(icon, { className: 'w-5 h-5', 'aria-hidden': true });
-
-export const editorialRail = (active: string): StitchRailItem[] =>
-  [
-    { to: '/editoryal', label: 'Masam', group: 'Günlük', icon: railIcon(LayoutDashboard) },
-    { to: '/yazar-giris', label: 'Yazar giriş süreci', group: 'Günlük', icon: railIcon(Route) },
-    { to: '/yayin-kurulu', label: 'Yayın kurulu', group: 'Günlük', icon: railIcon(UsersRound) },
-    { to: '/redaksiyon', label: 'Redaksiyon', group: 'Yayına hazırlık', icon: railIcon(PenLine) },
-    { to: '/kisiler?rol=cevirmen', label: 'Çeviri', group: 'Yayına hazırlık', icon: railIcon(Languages) },
-    { to: '/son-okuma', label: 'Son okuma', group: 'Yayına hazırlık', icon: railIcon(SpellCheck) },
-    { to: '/kitap-tasarim', label: 'Kitap tasarım', group: 'Yayına hazırlık', icon: railIcon(BookImage) },
-    { to: '/kisiler', label: 'Kişiler', group: 'Kayıtlar', icon: railIcon(Contact) },
-    { to: '/basin-web', label: 'Basın ve web', group: 'Kayıtlar', icon: railIcon(Newspaper), feature: 'webWatch' as const },
-    { to: '/telif-sozlesme', label: 'Sözleşmeler', group: 'Kayıtlar', icon: railIcon(FileSignature) },
-    { to: '/editor-atama', label: 'Editörler', group: 'Kayıtlar', icon: railIcon(UserCog) },
-    { to: '/', label: 'Kampüs', icon: railIcon(House) },
-  ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
-
-/** Yönetim Raporları modülünün kendi rayı: grup ana sayfası, raporlar, Kampüs'e dönüş. */
-export const managementRail = (active: string): StitchRailItem[] =>
-  [
-    { to: '/yonetim-raporlari', label: 'Yönetim raporları' },
-    { to: '/yonetim-raporlari/baski-oneri', label: 'Yeni baskı öneri' },
-    { to: '/', label: 'Kampüs' },
-  ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
-
-/** SEO & GEO modülünün kendi rayı: izleme (genel bakış, arama, yapay zekâ), iş (ürün denetimi, geçmiş), bağlantılar. */
-export const seoRail = (active: string): StitchRailItem[] =>
-  [
-    { to: '/seo-geo', label: 'Genel bakış', group: 'İzleme', icon: railIcon(Gauge) },
-    { to: '/seo-geo/anahtar-kelimeler', label: 'Arama ve kelimeler', group: 'İzleme', icon: railIcon(Search) },
-    { to: '/seo-geo/ai-gorunurluk', label: 'AI görünürlük', group: 'İzleme', icon: railIcon(Sparkles) },
-    { to: '/seo-geo/sayfalar', label: 'Yazar ve kategori', group: 'İş', icon: railIcon(BookUser) },
-    { to: '/seo-geo/yonlendirmeler', label: 'Yönlendirmeler', group: 'İş', icon: railIcon(CornerDownRight) },
-    { to: '/seo-geo/sema', label: 'Şema denetimi', group: 'İş', icon: railIcon(Braces) },
-    { to: '/seo-geo/llms', label: 'llms.txt', group: 'İş', icon: railIcon(FileText) },
-    { to: '/seo-geo/urun-denetimi', label: 'Ürün denetimi', group: 'İş', icon: railIcon(ClipboardCheck) },
-    { to: '/seo-geo/gecmis', label: 'Karar geçmişi', group: 'İş', icon: railIcon(History) },
-    { to: '/seo-geo/baglantilar', label: 'Bağlantılar', group: 'Ayar', icon: railIcon(Plug) },
-    { to: '/', label: 'Kampüs', icon: railIcon(House) },
-  ].map((x) => ({ ...x, badge: active === x.to ? 'Aktif' : undefined }));
-
 const DOCK = [
   { to: '/genel-bakis', label: 'Genel bakış' },
   { to: '/panolar', label: 'Panolar' },
@@ -116,7 +50,6 @@ const base = (crumb: string, source: string, ask: string, q: StitchCanvasData['q
   presence: 'canlı veri',
   zoom: '%100',
   askPlaceholder: ask,
-  rail: railFor(DOCK[activeDock]?.to ?? '/'),
   dockLinks: DOCK.map((c, i) => ({ to: c.to, active: i === activeDock, dot: c.dot })),
   dock: DOCK.map((c) => c.label) as [string, string, string, string],
   q,
