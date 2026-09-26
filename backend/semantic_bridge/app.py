@@ -4676,6 +4676,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if applied:
             r.rebuild()
             log.info("admin: ayar uygulandı (%s)", ", ".join(applied))
+        if keys & {"TIMAS_ADMIN_GROUP", "TIMAS_EDITOR_GROUP"}:
+            # Yeni grup adı 15 dk'lık zamanlayıcıyı beklemesin: üyeler arka planda bir kez okunur (istek yolunda
+            # AD okunmaz; çalışma zamanı yeniden kurulmaz).
+            threading.Thread(target=lambda: admin_mod.refresh_admin_group(r.store.engine), name="ad-group-refresh", daemon=True).start()
+            applied.append("AD grubu (üyeler arka planda okunuyor)")
         return {"applied": applied, "applyError": error}
 
     def _close_quietly(c: Any) -> None:
@@ -4689,7 +4694,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _require_caller(request)
         user = _board_user(request)
         admin_mod.ensure(rt().store.engine)
-        return {"user": user, "isAdmin": admin_mod.is_admin(user)}
+        # isEditor: «Editör AD grubu» üyesi → menüde Editoryal en üstte (yalnız düzen, yetki değil).
+        return {"user": user, "isAdmin": admin_mod.is_admin(user), "isEditor": admin_mod.is_editor(user)}
 
     @app.get("/api/v1/admin/group")
     def admin_group(request: Request) -> dict[str, Any]:

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Drawer } from '@base-ui/react/drawer';
-import { Bell, ChevronRight, Grid2x2, House, LayoutDashboard, LayoutGrid, Search, SendHorizontal, Sparkles, X } from 'lucide-react';
+import { Bell, ChevronRight, Grid2x2, House, LayoutDashboard, LayoutGrid, Menu, Search, SendHorizontal, Sparkles, X } from 'lucide-react';
 import { homeGroup, type NavGroupId } from './navModel';
 import { NavList } from './NavList';
 import { initials, roleLabel, useNavUi, type NavData } from './useNav';
@@ -40,7 +40,9 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
     <>
       <nav aria-label="Ana menü" className="nav-bar glass-dock grid grid-cols-5 items-center rounded-[22px] px-1 shadow-dock-shadow md:hidden print:hidden">
         <Link to="/" className={`${btn} ${tone(at('/'))}`} aria-current={at('/') ? 'page' : undefined}>
-          <House aria-hidden className="h-[22px] w-[22px]" />
+          <span className="flex h-7 items-center">
+            <House aria-hidden className="h-[22px] w-[22px]" />
+          </span>
           Kampüs
         </Link>
         <Link to="/editoryal" className={`${btn} ${tone(at('/editoryal'))}`} aria-current={at('/editoryal') ? 'page' : undefined}>
@@ -56,10 +58,10 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
           <span className="font-extrabold">Zeki AI</span>
         </button>
         <Link to="/uyarilar" className={`${btn} ${tone(at('/uyarilar'))}`} aria-current={at('/uyarilar') ? 'page' : undefined}>
-          <span className="relative">
+          <span className="relative flex h-7 items-center">
             <Bell aria-hidden className="h-[22px] w-[22px]" />
             {nav.alertCount > 0 && (
-              <span className="absolute -right-2 -top-1.5 min-w-[18px] rounded-full bg-coral px-1 text-center text-[10.5px] font-extrabold leading-[18px] text-white ring-2 ring-white">
+              <span className="absolute -right-2.5 -top-0.5 min-w-[18px] rounded-full bg-coral px-1 text-center text-[10.5px] font-extrabold leading-[18px] text-white ring-2 ring-white">
                 {nav.alertCount}
               </span>
             )}
@@ -67,7 +69,9 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
           Uyarılar
         </Link>
         <button type="button" onClick={() => setMenuOpen(true)} className={`${btn} ${tone(menuOpen)}`} aria-haspopup="dialog" aria-expanded={menuOpen}>
-          <LayoutGrid aria-hidden className="h-[22px] w-[22px]" />
+          <span className="flex h-7 items-center">
+            <Menu aria-hidden className="h-[22px] w-[22px]" />
+          </span>
           Menü
         </button>
       </nav>

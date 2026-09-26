@@ -104,6 +104,9 @@ export default function CommandPalette({ open, onOpenChange, nav }: { open: bool
         />
         {serverWaiting && <Loader2 aria-label="Aranıyor" className="h-4 w-4 shrink-0 animate-spin text-muted" />}
         <kbd className="hidden shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[11px] font-bold text-muted md:block">Esc</kbd>
+        <button type="button" onClick={() => onOpenChange(false)} className="nav-bar-btn min-h-11 shrink-0 rounded-xl px-2 text-[14px] font-bold text-violet md:hidden">
+          Vazgeç
+        </button>
       </div>
 
       <Command.List className="cmdk-list px-2 pb-2">

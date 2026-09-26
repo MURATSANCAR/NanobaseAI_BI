@@ -29,7 +29,13 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
   const isLg = useMedia('(min-width: 1024px)');
   const docked = isLg && !nav.state.collapsed;
   const [viewing, setViewing] = useState<NavGroupId | null>(null);
-  const [flyout, setFlyout] = useState(false);
+  const [flyout, setFlyoutRaw] = useState(false);
+  // Panel yalnız kişinin kendi eylemiyle hareket eder (bkz. nav.css data-anim).
+  const [anim, setAnim] = useState(false);
+  const setFlyout = (v: boolean) => {
+    setAnim(true);
+    setFlyoutRaw(v);
+  };
   const railRef = useRef<HTMLElement>(null);
   const panelRef = useRef<HTMLElement>(null);
 
@@ -72,7 +78,10 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
     panelRef.current?.toggleAttribute('inert', panelState === 'hidden');
   }, [panelState]);
 
-  const setCollapsed = (collapsed: boolean) => nav.update((s) => ({ ...s, collapsed }));
+  const setCollapsed = (collapsed: boolean) => {
+    setAnim(true);
+    nav.update((s) => ({ ...s, collapsed }));
+  };
   const recent = (nav.state.recent ?? []).slice(0, RECENT_PANEL);
   const isOverview = shown?.id === 'kampus';
 
@@ -156,6 +165,20 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
         })}
 
         <div className="mt-auto" />
+        {isLg && nav.state.collapsed && (
+          <button
+            type="button"
+            onClick={() => {
+              setCollapsed(false);
+              setFlyout(false);
+            }}
+            aria-label="Paneli aç"
+            title="Paneli aç"
+            className="nav-tile nav-ghost mb-1 flex h-10 w-11 shrink-0 items-center justify-center rounded-2xl text-muted"
+          >
+            <PanelLeftOpen aria-hidden className="h-5 w-5" />
+          </button>
+        )}
         <button
           type="button"
           data-state={modulesOpen ? 'active' : 'idle'}
@@ -183,13 +206,14 @@ export default function DesktopNav({ nav, whoName, modulesOpen }: { nav: NavData
         <aside
           ref={panelRef}
           data-state={panelState}
+          data-anim={anim ? '1' : '0'}
           aria-label={`${shown.label} ekranları`}
           aria-hidden={panelState === 'hidden' ? true : undefined}
           className="nav-panel glass-panel hidden flex-col rounded-[26px] shadow-glass-float md:flex print:hidden"
         >
           <header className="flex items-start gap-2 border-b border-slate-200/70 px-4 pb-3 pt-4">
             <div className="min-w-0 flex-1">
-              <h2 className="truncate text-[18px] font-extrabold leading-tight tracking-tight text-ink">{isOverview ? 'Tüm çalışma alanları' : shown.label}</h2>
+              <h2 className="truncate text-[18px] font-extrabold leading-tight tracking-tight text-ink">{isOverview ? 'Tüm ekranlar' : shown.label}</h2>
               <p className="mt-0.5 truncate text-[11.5px] font-medium text-muted">{isOverview ? 'Kampüs · bütün ekranlar' : shown.hint}</p>
             </div>
             {panelState === 'docked' ? (

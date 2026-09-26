@@ -63,12 +63,19 @@ function scheduleSave(value: NavState) {
   }, 800);
 }
 
+// Sunucu kaydı gelmeden yapılan değişiklikler (ilk ekrandaki «son açılan» kaydı, erken daraltma) sırada
+// bekler; kayıt gelince onun üstüne sırayla uygulanır. Yoksa boş önbellekle başlayan yeni bir cihaz
+// sunucudaki tercihi ezerdi, ya da geç gelen eski cevap yeni değişikliği silerdi.
+let loaded = !ENGINE_ENABLED;
+let queued: Array<(s: NavState) => NavState> = [];
+
 export function updateNavState(qc: QueryClient, fn: (s: NavState) => NavState) {
   const cur = (qc.getQueryData<NavState>(QK) ?? readLocal() ?? {}) as NavState;
   const next = fn(cur);
   qc.setQueryData(QK, next);
   writeLocal(next);
-  scheduleSave(next);
+  if (loaded) scheduleSave(next);
+  else queued.push(fn);
 }
 
 export function useNavState(): { state: NavState; update: (fn: (s: NavState) => NavState) => void } {
@@ -76,10 +83,22 @@ export function useNavState(): { state: NavState; update: (fn: (s: NavState) => 
   const q = useQuery({
     queryKey: QK,
     queryFn: async () => {
-      const r = await prefsApi.get<NavState>(NAV_PREF_KEY);
-      // Cevap gelmeden kişi menüde bir şey değiştirdiyse (yazılmayı bekliyor) onun üstüne yazma.
-      const v = pending ?? r.value ?? {};
+      let r: Awaited<ReturnType<typeof prefsApi.get<NavState>>>;
+      try {
+        r = await prefsApi.get<NavState>(NAV_PREF_KEY);
+      } catch (e) {
+        // Kayıt okunamadı (oturum yok, köprü kapalı): menü önbellekle çalışır, sonraki değişiklik yazılmayı dener.
+        loaded = true;
+        queued = [];
+        throw e;
+      }
+      let v: NavState = r.value ?? {};
+      const replay = queued;
+      queued = [];
+      loaded = true;
+      for (const fn of replay) v = fn(v);
       writeLocal(v);
+      if (replay.length) scheduleSave(v);
       return v;
     },
     enabled: ENGINE_ENABLED,

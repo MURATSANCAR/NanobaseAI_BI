@@ -12,7 +12,6 @@ import SearchSelect from '../components/SearchSelect';
 import './management.css';
 
 const REPORT_ID = 'baski-oneri';
-const ROUTE = '/yonetim-raporlari/baski-oneri';
 
 type Row = ReportView['rows'][number];
 type Sort = { index: number; dir: 1 | -1 } | null;

@@ -85,18 +85,26 @@
   z-index: 35;
   transform: translateX(0);
   opacity: 1;
-  transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out);
 }
 .nav-panel[data-state='hidden'] {
   transform: translateX(calc(-100% - 12px));
   opacity: 0;
   pointer-events: none;
   visibility: hidden;
+}
+/* Hareket yalnız kişi paneli kendisi açıp kapattığında: sayfa açılırken sunucudan gelen tercih paneli
+   kaydırmasın (ekran her geçişte yeniden kurulur). */
+.nav-panel[data-anim='1'] {
+  transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out);
+}
+.nav-panel[data-anim='1'][data-state='hidden'] {
   /* kapanırken görünürlük hareket bitince düşer; açılırken hemen gelir */
   transition: transform 200ms var(--ease-out), opacity 160ms var(--ease-out), visibility 0s linear 200ms;
 }
 .nav-panel[data-state='flyout'] {
   z-index: 45;
+  /* içeriğin üstünde durur: arkadaki yazı okunmasın diye neredeyse opak */
+  background: rgba(255, 255, 255, 0.97);
   box-shadow: 0 24px 60px -12px rgba(42, 31, 74, 0.28);
 }
 .nav-row {
@@ -245,9 +253,11 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav-panel,
-  .nav-panel[data-state='hidden'] {
+  .nav-panel[data-anim='1'],
+  .nav-panel[data-anim='1'][data-state='hidden'] {
     transition: opacity 120ms ease, visibility 0s linear 120ms;
+  }
+  .nav-panel[data-state='hidden'] {
     transform: none;
   }
   .nav-tile,
