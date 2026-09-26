@@ -223,3 +223,31 @@ aliases:
     image: editor-upscale:1
     entrypoint: [python, /srv/server.py]
     args: []
+
+  # Sesli okuma (kullanıcı kararı 2026-09-26): VoxCPM2 seslendirme (OpenBMB, Apache-2.0) + Türkçe CTC zorla
+  # hizalama (Baybars/wav2vec2-xls-r-300m-cv8-turkish, Apache-2.0) tek serviste, POST /v1/audio/narrate.
+  # Seçim ve lisanslar: docs/analiz/sesli-okuma-model-secimi.md. Klasör iki alt klasör taşır: VoxCPM2/ ve
+  # aligner/ (ikisi de MANIFEST'te sha256 ile; hizalayıcının kaydı ayrı anahtar). İmaj yerelde kurulur
+  # (editorctl install: images/voice/Dockerfile).
+  # Ölçüldü 2026-09-26 (H100 NVL, GPU 1, ana model yanında açıkken): açılış 82 sn (torch.compile + ısınma; derleme
+  # önbelleği doluyken 41 sn), hazırken 7,6 GiB, üretimde tepe 9,8 GiB (nvidia-smi; PyTorch 9,1 GiB). Pay servis
+  # içinde PyTorch tavanıdır (server.py): 0.10 (9,4 GiB) tepeye çok yakındı, 0.12 (11,2 GiB) pay bırakır.
+  # RTF 0,34–0,46 (sayfa sesinin süresine göre üretim süresi; derlemesiz 0,59–0,74). Kartta birlikte sığar:
+  # ana model 0.48 + 0.12 = 0.60; görsel model 0.62 + büyütücü 0.06 + 0.12 = 0.80 (FIT_TOGETHER 0.92).
+  book-voice:
+    container: editor-model-voice
+    model_dir: book-voice
+    real_model: openbmb/VoxCPM2
+    role: Sesli okuma (seslendirme + kelime zamanı)
+    kind: voice
+    gpu: 1
+    mem_fraction: 0.12
+    idle_stop_sec: 300
+    # Derleme önbelleği gateway'in bu takma ada ayırdığı kalıcı klasörde (/root/.cache/vllm → vllm-cache/book-voice):
+    # ikinci açılıştan sonra 82 sn yerine 41 sn.
+    env:
+      TORCHINDUCTOR_CACHE_DIR: /root/.cache/vllm/inductor
+      TRITON_CACHE_DIR: /root/.cache/vllm/triton
+    image: editor-voice:1
+    entrypoint: [python, /srv/server.py]
+    args: []

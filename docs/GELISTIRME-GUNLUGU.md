@@ -1,5 +1,25 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (06:00) — Sesli okuma modeli GPU'ya kalıcı kuruldu (ağırlık + imaj); gateway'e girişi kurulumda
+
+- **Kullanıcı kararı:** sesli okuma modeli GPU sunucusuna kalıcı kurulsun. Kalıcı olan yalnız ağırlıklar + MANIFEST ve
+  imaj; çalışan gateway/stüdyo/işçi kaplarına dokunulmadı (yeni models.yaml imaja girince kullanıcı kuracak).
+- **Ağırlıklar** `/data/editor/models/book-voice/` (6,22 GB): `VoxCPM2/` ← `openbmb/VoxCPM2@32279eff…`, `aligner/` ←
+  `Baybars/wav2vec2-xls-r-300m-cv8-turkish@2362365a…` (dil modeli alınmadı); ikisi Apache-2.0, `LICENSE` yanlarında.
+  `MANIFEST.json`'a iki anahtar, dosya başına sha256; her dosya Hugging Face ile doğrulandı, `verify_models.py` OK.
+- **İmaj** `editor-voice:1` (kendi katmanı 32,5 MB, vLLM-Omni tabanı). `voxcpm` `--no-deps` kuruldu: bağımlılıkla
+  kurulum tabanın NCCL'ini indiriyordu.
+- **Ölçüm (GPU 1, geçici kap, ana model yanında açıkken; görsel model kapalı, süren iş yoktu):** açılış 82 sn
+  (torch.compile + ısınma; derleme önbelleği doluyken 41 sn, derlemesiz 28 sn), tepe bellek 9,8 GiB (PyTorch 9,1),
+  RTF 0,34–0,46 (derlemesiz 0,59–0,74), 225 kelimenin 225'i hizalayıcıyla. Pay 0.10 tepeye çok yakın çıktı → **0.12**;
+  görsel model + büyütücüyle toplam 0.80, ana modelle 0.60 (sınır 0.92).
+- **Depo:** `models.yaml` `book-voice` (0.12, boşta 300 sn, derleme önbelleği gateway'in kalıcı `vllm-cache`'inde),
+  `gateway.py` `PASSTHROUGH` `audio/narrate`, `server.py` payı PyTorch tavanı olarak uygular ve belleği `/health`'te
+  verir, `editorctl install` `editor-voice:1` derler, Dockerfile `--no-deps`. Ayrıntı ve tablo:
+  `docs/analiz/sesli-okuma-model-secimi.md` «Kalıcı kurulum».
+- **Kurulumda kalan:** main → yeni editor-py imajı → gateway + stüdyo + işçi yeniden kurulur (ana model durmaz,
+  gateway kapları ayrı) → gateway üzerinden bir sayfa seslendirilir, devir gateway kaydında görülür.
+
 ## 2026-09-26 (05:40) — Portalın yeni menüsü: tek menü tanımı, çalışma alanı rayı + bağlam paneli, telefon alt çubuğu, ⌘K (dalda, kurulmadı)
 
 - **Neden:** menü modüle girince tamamen değişiyordu (dört ayrı ray: `railFor`, `editorialRail`, `managementRail`, `seoRail`, 14 dosyada `rail={…}`), ikonlar sıraya göre veriliyordu, telefonda ray + ikinci alt şerit vardı. Kullanıcı onayı: «menüde önerini uygula» (tasarım 02-B, 03, 04–05, 06).
