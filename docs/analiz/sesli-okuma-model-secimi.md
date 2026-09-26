@@ -125,19 +125,56 @@ iki örnek sayfayı seslendirdi. Kap ve indirilen dosyalar iş bitince silindi.
 Örnek dosyalar (oturum karalama klasörü, depoya girmez): `cocuk-sayfasi.mp3/.json/.overlay.json/.smil`,
 `roman-paragrafi.*`, ses referansları `ses-*.wav`.
 
-## Kalıcı kurulum önerisi (yapılmadı, onay bekler)
+## Kalıcı kurulum (2026-09-26, kullanıcı onayıyla)
 
-1. Ağırlıklar `/data/editor/models/book-voice/` altına: `VoxCPM2/` (`openbmb/VoxCPM2`, rev `32279eff…`, ~4,6 GB) ve
-   `aligner/` (`Baybars/wav2vec2-xls-r-300m-cv8-turkish`, rev `2362365a…`, ~1,2 GB); `MANIFEST.json`'a sha256.
-2. İmaj `editor-voice:1` (`apps/editor/images/voice/Dockerfile`; vLLM-Omni tabanı, GPU'da zaten var).
-3. `models.yaml`'a takma ad: `book-voice` → `container: editor-model-voice`, `model_dir: book-voice`, `kind: voice`,
-   `gpu: 1`, `mem_fraction: 0.10` (ölçülüp düzeltilecek), `idle_stop_sec: 300`, `image: editor-voice:1`,
-   `entrypoint: [python, /srv/server.py]`, `args: []`. Görsel modelle (0,62) ve büyütücüyle (0,06) aynı kartta sığar
-   (toplam 0,78 < 0,92); ana modelle (0,48) de sığar.
-4. `gateway.py` `PASSTHROUGH`'a `"audio/narrate"` (tek satır).
-5. Stüdyo servisi ve işçisi yeni kodla yeniden kurulur (BookNarration iş akışı), giriş kapısı betiği koşulur
-   (`add-studio-routes.py`), köprü yeniden başlar. Sonra test sunucusunda gerçek bir kitabın birkaç sayfası seslendirilip
-   ekranda dinlenir, anlaşılırlık ölçümü tekrarlanır.
+GPU'da kalıcı olan yalnız ağırlıklar + MANIFEST ve imaj; gateway'e girmesi (yeni `models.yaml` + `gateway.py` ile
+editor-py imajı) kullanıcının kurulum adımıdır.
+
+1. **Ağırlıklar** `/data/editor/models/book-voice/` (6,22 GB), yalnız resmî Hugging Face deposundan, sabit rev ile:
+   - `VoxCPM2/` ← `openbmb/VoxCPM2` @ `32279effe8c19989596f05d353d1447f51d9e915` (4,96 GB: `model.safetensors`,
+     `audiovae.pth`, yapılandırma ve sözlük dosyaları, `README.md` model kartı `license: apache-2.0`). `LICENSE` model
+     deposunda yok; OpenBMB'nin kod deposundan (`OpenBMB/VoxCPM` @ `f772e498a45fbb5fb8e13fbf9b9c48be9fe33e69`, Apache-2.0).
+   - `aligner/` ← `Baybars/wav2vec2-xls-r-300m-cv8-turkish` @ `2362365a60811ed6740ec7702b2a28aca8914715` (1,26 GB:
+     `pytorch_model.bin` + işlemci/sözlük dosyaları + model kartı). Dil modeli (`language_model/`, 0,5 GB) ve eğitim
+     betikleri alınmadı (hizalamada kullanılmaz). `LICENSE` = apache.org Apache-2.0 metni.
+   - `MANIFEST.json`'da iki anahtar (`openbmb/VoxCPM2`, `Baybars/wav2vec2-xls-r-300m-cv8-turkish`): `dir`, `revision`,
+     `url`, `license`, `files` (dosya başına sha256). Her dosya Hugging Face ile karşılaştırıldı (büyük dosyada LFS
+     sha256, küçük dosyada blob kimliği); `deploy/verify_models.py VoxCPM2 wav2vec2-xls-r-300m-cv8-turkish` OK.
+2. **İmaj** `editor-voice:1` (`sha256:8f3220f8e465…`, 35,9 GB ama tamamına yakını vLLM-Omni tabanıyla ortak; kendi
+   katmanı 32,5 MB). `pip install --no-deps voxcpm==2.0.3`: bağımlılıkla kurulum tabanın `nvidia-nccl-cu13`'ünü
+   2.30.7 → 2.29.7'ye indiriyordu, öteki bağımlılıkların hepsi tabanda var.
+3. **`models.yaml`** `book-voice`: `gpu: 1`, `mem_fraction: 0.12`, `idle_stop_sec: 300`, `image: editor-voice:1`,
+   `entrypoint: [python, /srv/server.py]`, derleme önbelleği (`TORCHINDUCTOR_CACHE_DIR`/`TRITON_CACHE_DIR`) gateway'in
+   kalıcı `vllm-cache/book-voice` klasöründe. Pay servis içinde PyTorch'un bellek tavanıdır (`server.py`,
+   `--gpu-memory-utilization`).
+4. **`gateway.py`** `PASSTHROUGH`'a `audio/narrate`.
+
+### GPU ölçümü (2026-09-26 05:45–05:55, geçici kap, GPU 1, ana model yanında açıkken)
+
+Önce kontrol: GPU 1'de yalnız ana model (47 GiB), `busy.json` yok, Temporal'da süren iş yok, görsel model kapalı.
+Kap gateway'in kuracağı kabın aynısı (aynı imaj, `/model` salt okunur, `HF_HUB_OFFLINE=1`, GPU 1); ürün kodu
+(`narration.page_units → pieces → voice_ref → _call → word_times`) kaba bağlanıp sayfaları seslendirdi. Çalışan hiçbir
+kaba dokunulmadı; kap, önbellek ve çıktılar iş bitince silindi.
+
+| Yapılandırma | Açılış | Bellek hazır / tepe (nvidia-smi) | Çocuk sayfası (8 parça, 22 sn ses) | Roman paragrafı (6 parça, 45 sn) | Uzun cümle (2 × ~390 harf, 48 sn) |
+|---|---|---|---|---|---|
+| torch.compile, tavan 0.10, önbellek boş | 82 sn | 7,6 / 9,8 GiB (PyTorch tepe 9,1) | RTF 0,46 (+ 3 sesin referansı 6,9 sn) | RTF 0,35 | RTF 0,34 |
+| torch.compile, tavan 0.12, önbellek dolu | **41 sn** | 7,6 / 9,3 GiB | RTF 0,41 | RTF 0,37 | — |
+| derlemesiz, tavan 0.12 | 28 sn | 6,7 / 8,3 GiB | RTF 0,63–0,74 | RTF 0,59 | — |
+
+- **Pay:** 0.10 (9,4 GiB) PyTorch tepesine (9,1 GiB) çok yakın → **0.12** (11,2 GiB). Aynı kartta: ana model 0.48 +
+  0.12 = 0.60; görsel model 0.62 + büyütücü 0.06 + 0.12 = 0.80 < 0.92.
+- **Derleme açık kalır:** açılış bir kez 41–82 sn, üretim ~1,7 kat hızlı; kitap sayfa sayfa art arda okunduğu için
+  (boşta 300 sn) açılış bir kez ödenir. RTF, ana model aynı kartta %52 meşgulken ölçüldü.
+- **Kelime zamanı:** 225 kelimenin 225'i hizalayıcıyla (tahmin 0); açılan yazımlar tek kelime olarak zamanlandı
+  («1923'ün» 0,00–1,22 sn, «25.09.1923» 11,47–13,43 sn, «TBMM'nin» → «te be me menin» 10,71–11,47 sn).
+
+### Kurulumda kalan (kullanıcı)
+
+Yeni editor-py imajı (models.yaml imaja girer) ile gateway yeniden kurulur; stüdyo servisi ve işçisi yeni kodla
+kalkar (BookNarration), giriş kapısı betiği (`add-studio-routes.py`) ve köprü; sonra test sunucusunda gerçek bir
+kitabın birkaç sayfası gateway üzerinden seslendirilip ekranda dinlenir (model devri gateway kaydıyla doğrulanır),
+anlaşılırlık ölçümü tekrarlanır.
 
 ## Kaynaklar
 

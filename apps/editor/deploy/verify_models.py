@@ -79,7 +79,8 @@ def main() -> int:
     for repo, m in manifest.items():
         if only and repo.split("/")[1] not in only:
             continue
-        # Hugging Face dışı ağırlık (ör. Real-ESRGAN, GitHub sürümü): {dir, url, files: {ad: sha256}}
+        # Hugging Face dışı ağırlık (ör. Real-ESRGAN, GitHub sürümü) ya da depodan seçilmiş dosyalar (book-voice:
+        # VoxCPM2 + hizalayıcı, alt klasörde, dil modeli alınmadı): {dir, url, files: {ad: sha256}}
         problems = check_files(m) if "url" in m else check(repo, m["revision"])
         print(f"{'OK ' if not problems else 'BAD'} {repo}@{m['revision'][:10]}", *problems, sep="\n  ")
         bad += bool(problems)

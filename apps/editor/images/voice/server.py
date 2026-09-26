@@ -1,4 +1,4 @@
-"""book-voice (ÖNERİ, gateway'e henüz eklenmedi): Türkçe seslendirme + kelime zamanlaması servisi.
+"""book-voice: Türkçe seslendirme + kelime zamanlaması servisi; gateway takma adı olarak istekte açılır.
 
 Seslendirme VoxCPM2 (OpenBMB, Apache-2.0); kelime zamanı Türkçe wav2vec2 CTC modeliyle zorla hizalama
 (Baybars/wav2vec2-xls-r-300m-cv8-turkish, Apache-2.0; hizalama torchaudio `forced_align`). Seçim ve lisanslar:
@@ -6,7 +6,9 @@ docs/analiz/sesli-okuma-model-secimi.md. Metnin okunuşa çevrilmesi (sayı, tar
 editörün `production/narration.py`'sindedir; bu servise okunacak metin gelir.
 
 Gateway kalıbı book-upscale ile aynı: komut vLLM biçimindedir (`/model --served-model-name … --gpu-memory-utilization …`);
-`/model` altında iki klasör beklenir: `VoxCPM2/` ve `aligner/`. Kalan argümanlar yok sayılır.
+`/model` altında iki klasör beklenir: `VoxCPM2/` ve `aligner/` (ağırlıklar MANIFEST'te sha256 ile). Kalan argümanlar
+yok sayılır. `--gpu-memory-utilization` bu süreçte PyTorch'un bellek tavanıdır: gateway kartı modellerin payına göre
+paylaştırır (FIT_TOGETHER), servis payını aşarsa yanındaki modelle bellek aşımına düşmesin diye kendi payında kalır.
 
 Ses: tarifle tasarım (`voice.design`, gerçek kişi sesi gerekmez) ya da referansla klonlama (`voice.ref_audio` +
 `voice.ref_text`; referans genellikle bir kez tarifle üretilmiş model çıktısıdır, kitap boyunca aynı ses kalır).
@@ -50,6 +52,8 @@ ap.add_argument("--no-compile", action="store_true")
 args, _ = ap.parse_known_args()
 
 DEVICE = args.device if (args.device != "cuda" or torch.cuda.is_available()) else "cpu"
+if DEVICE.startswith("cuda") and args.gpu_memory_utilization:
+    torch.cuda.set_per_process_memory_fraction(float(args.gpu_memory_utilization))
 TTS_DIR = os.path.join(args.model_dir, "VoxCPM2")
 ALIGN_DIR = os.path.join(args.model_dir, "aligner")
 _lock = threading.Lock()                                      # tek sıra: model aynı anda tek istek
@@ -77,13 +81,20 @@ app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 @app.on_event("startup")
 def _startup() -> None:
     global TTS, ALIGNER, SR
+    t0 = time.time()
     TTS, ALIGNER = _load()
     SR = int(getattr(TTS.tts_model, "sample_rate", 48000))
+    peak = torch.cuda.max_memory_reserved() / 2**30 if DEVICE.startswith("cuda") else 0.0
+    print(f"book-voice hazır: {time.time() - t0:.1f} sn, aygıt {DEVICE}, bellek {peak:.1f} GiB", flush=True)
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": TTS is not None, "aligner": ALIGNER is not None, "sample_rate": SR, "device": DEVICE}
+    mem = {}
+    if DEVICE.startswith("cuda"):
+        mem = {"reserved_gib": round(torch.cuda.memory_reserved() / 2**30, 2),
+               "peak_gib": round(torch.cuda.max_memory_reserved() / 2**30, 2)}
+    return {"ok": TTS is not None, "aligner": ALIGNER is not None, "sample_rate": SR, "device": DEVICE, **mem}
 
 
 class Voice(BaseModel):

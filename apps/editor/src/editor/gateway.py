@@ -48,7 +48,8 @@ FIT_TOGETHER = 0.92          # models.yaml: aynı karttaki modellerin payları t
 PASSTHROUGH = {"chat/completions", "completions", "embeddings", "rerank", "score",
                "pooling", "classify", "tokenize", "detokenize",
                "images/generations",      # book-image (vLLM-Omni); edits go as JSON chat/completions
-               "images/upscale"}          # book-upscale (Real-ESRGAN, images/upscale/server.py)
+               "images/upscale",          # book-upscale (Real-ESRGAN, images/upscale/server.py)
+               "audio/narrate"}           # book-voice (seslendirme + kelime zamanı, images/voice/server.py)
 HOP = {"content-length", "transfer-encoding", "connection", "keep-alive", "content-encoding"}
 
 # Taşma (kullanıcı kararı 2026-09-21): aynı model (Qwen3.8-27B-FP8) GPU 0'da BI için de açık. Etkileşimli

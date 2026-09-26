@@ -109,6 +109,7 @@ EOV
     -f "$APP/images/py/Dockerfile" "$APP"
   docker build -q -t editor-embed:latest -f "$APP/images/embed/Dockerfile" "$APP" >/dev/null
   docker build -q -t editor-upscale:1 -f "$APP/images/upscale/Dockerfile" "$APP" >/dev/null
+  docker build -q -t editor-voice:1 -f "$APP/images/voice/Dockerfile" "$APP" >/dev/null
   echo "installed editor-py:$ver"
 }
 
