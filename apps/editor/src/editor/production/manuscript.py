@@ -225,14 +225,18 @@ def from_generation(generation_id: str, lex=None) -> Manuscript:
         fields["CRM_SUMMARY"] = crm["summary"]
     if card.get("age_min"):
         fields |= {"age_min": card["age_min"], "age_max": card["age_max"]}
+    crm_author = ", ".join(crm.get("authors") or [])
+    author = crm_author or _first(meta, "AUTHOR")
     ms = Manuscript(
         title=crm.get("crm_title") or _first(meta, "TITLE") or card.get("title") or g["file_title"],
-        author=", ".join(crm.get("authors") or []) or _first(meta, "AUTHOR"),
+        author=author,
         illustrator=", ".join(crm.get("illustrators") or []) or _first(meta, "ILLUSTRATOR"),
         meta=fields,
         source={"kind": "generation", "generation_id": str(generation_id), "book_id": str(g["book_id"]),
                 "crm_book_id": str(crm["crm_book_id"]) if crm.get("crm_book_id") else None,
-                "non_story_pages": sorted(non_story)})
+                "non_story_pages": sorted(non_story),
+                "origin": {"title": "crm" if crm.get("crm_title") else "card",
+                           "author": "crm" if crm_author else "card" if author else None}})
     paras = [(r["page_no"], r["text"]) for r in rows if r["page_no"] not in non_story]
     ms.chapters = [Chapter(h, b) for h, b in normalize(paras, lex)]
     return ms
@@ -262,7 +266,8 @@ def from_docx(path: str, lex=None) -> Manuscript:
             t = upper_tr(t)                  # bölüm başlığı kuralıyla aynı yoldan geçsin
         paras.append((0, t))
     ms = Manuscript(title=title or _docx_title(doc, path), author=author,
-                    source={"kind": "docx", "path": path})
+                    source={"kind": "docx", "path": path,
+                            "origin": {"title": "docx", "author": "docx" if author else None}})
     ms.chapters = [Chapter(h, b) for h, b in normalize(paras, lex)]
     _crm_by_title(ms)
     return ms
@@ -279,23 +284,108 @@ def _docx_title(doc, path: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[_\-]+", " ", stem)).strip() or stem
 
 
-def _crm_by_title(ms: Manuscript) -> None:
-    """Word dosyasının kitap adı CRM kaydıyla (editörün eşlediği kitaplar) birebir eşleşirse kitap
-    bilgisi oradan gelir. Eşleşme yoksa alanlar boş kalır; ekranda elle tamamlanır."""
+def crm_lookup(title: str) -> tuple[dict | None, str]:
+    """Kitap adıyla CRM kaydı (editörün eşlediği kitaplar): büyük/küçük harf ve boşluk farkı gözetmeden birebir.
+    Dönen: (kayıt ya da None, eşleşme özeti: «kitap adı» | «yok» | «N aday»)."""
     from .. import db
     from ..proofing._spelling_text import lower_tr
     rows = db.all_rows("SELECT crm_title, authors, illustrators, summary, isbn, stock_code, crm_book_id "
                        "FROM ed.book_crm_record")
-    key = lower_tr(re.sub(r"\s+", " ", ms.title)).strip()
+    key = lower_tr(re.sub(r"\s+", " ", title or "")).strip()
     hit = [r for r in rows if r["crm_title"] and lower_tr(re.sub(r"\s+", " ", r["crm_title"])).strip() == key]
     if len(hit) != 1:
-        ms.source["crm_match"] = "yok" if not hit else f"{len(hit)} aday"
+        return None, "yok" if not hit else f"{len(hit)} aday"
+    return hit[0], "kitap adı"
+
+
+def _crm_by_title(ms: Manuscript) -> None:
+    """Word dosyasının kitap adı CRM kaydıyla (editörün eşlediği kitaplar) birebir eşleşirse kitap
+    bilgisi oradan gelir. Eşleşme yoksa alanlar boş kalır; ekranda elle tamamlanır."""
+    r, match = crm_lookup(ms.title)
+    if r is None:
+        ms.source["crm_match"] = match
         return
-    r = hit[0]
+    if not ms.author and r["authors"]:
+        ms.source.setdefault("origin", {})["author"] = "crm"
     ms.author = ms.author or ", ".join(r["authors"] or []) or None
     # Çizer kitabın resimli olduğunun yayınevi kaydıdır (profil resim kararında kullanır).
     ms.illustrator = ms.illustrator or ", ".join(r["illustrators"] or []) or None
     ms.meta |= {k: v for k, v in (("ISBN", r["isbn"]), ("STOCK_CODE", r["stock_code"]),
                                   ("CRM_SUMMARY", r["summary"])) if v}
     ms.source["crm_book_id"] = str(r["crm_book_id"])
-    ms.source["crm_match"] = "kitap adı"
+    ms.source["crm_match"] = match
+
+
+# ------------------------------------------------------------------ editörün düzelttiği kitap bilgisi
+# Kitap adı ve yazar okunduğu yerden gelir (CRM, Word dosyası, okunmuş kitabın kartı); editör künyede düzeltir.
+# Tek doğruluk kaynağı manuscript.json'un kendi `title`/`author` alanıdır: kapak, iç kapak, künye, dizgi, pazarlama
+# kiti, e-kitap, kolaj etiketleri hepsi oradan okur, hiçbiri değişmez. Okunan özgün değer `source.read`'de,
+# editörün geçerli düzeltmesi `source.edits`'te (kim, ne zaman, eski değer), bütün düzeltmeler `source.edit_log`'da
+# kalır. Editörün girdiği değer her zaman kazanır: CRM eşleşmesi onu ezmez, metin yeniden okunursa yeniden uygulanır.
+BOOK_FIELDS = {"title": "Kitap", "author": "Yazar"}
+ORIGIN_LABEL = {"crm": "yayınevi kaydı", "docx": "Word dosyası", "card": "okunmuş kitap"}
+
+
+def field_source(source: dict, field: str) -> dict:
+    """Kitap adının / yazarın kaynağı ekran için: editör düzeltmesiyse {"label", "by", "at", "was"}, değilse
+    {"label"} (okunduğu yer). Kaynağı kayda geçmemiş eski işlerde kaynağın türünden çıkarılır."""
+    e = (source.get("edits") or {}).get(field)
+    if e:
+        return {"label": f"editör: {e.get('by') or '?'}", "by": e.get("by"), "at": e.get("at"), "was": e.get("was")}
+    origin = source.get("origin") or {}
+    o = origin.get(field) or ""
+    if field not in origin:
+        kind, linked = source.get("kind"), bool(source.get("crm_book_id"))
+        if kind == "docx":
+            o = "crm" if field == "author" and linked else "docx"
+        elif kind == "generation":
+            o = "crm" if linked else "card"
+    return {"label": ORIGIN_LABEL[o]} if o in ORIGIN_LABEL else {}
+
+
+def author_cleared(source: dict) -> bool:
+    """Editör yazarı bilerek boş bıraktı (yazarsız kitap): künyede «Yazar» satırı basılmaz, eksik sayılmaz."""
+    e = (source.get("edits") or {}).get("author")
+    return bool(e) and not e.get("value")
+
+
+def reapply_edits(ms: Manuscript, old_source: dict | None) -> None:
+    """Metin aynı iş klasöründe yeniden okunduğunda editörün kitap adı/yazar düzeltmeleri korunur."""
+    old = old_source or {}
+    if not old.get("edits"):
+        return
+    ms.source["read"] = {k: getattr(ms, k) for k in BOOK_FIELDS}
+    for k, e in old["edits"].items():
+        if k in BOOK_FIELDS:
+            setattr(ms, k, e.get("value") or None)
+    ms.source["edits"] = old["edits"]
+    ms.source["edit_log"] = old.get("edit_log") or []
+
+
+def fill_from_crm(m: dict, row: dict, manual: dict | None = None) -> list[str]:
+    """Kitap adı değişince bulunan CRM kaydından yalnız BOŞ alanlar dolar; editörün girdiği alan (düzeltilmiş ya da
+    bilerek boş bırakılmış yazar, künyede elle girilen ISBN) ezilmez. İş başka bir CRM kaydına bağlıysa iki kayıt
+    karışmaz, hiçbir şey dolmaz. `m` manuscript.json sözlüğü, yerinde değişir. Dönen: dolan alanlar."""
+    src = m.setdefault("source", {})
+    rid = str(row["crm_book_id"])
+    if src.get("crm_book_id") and str(src["crm_book_id"]) != rid:
+        return []
+    filled = []
+    authors = ", ".join(row.get("authors") or [])
+    if authors and not m.get("author") and "author" not in (src.get("edits") or {}):
+        m["author"] = authors
+        src.setdefault("origin", {})["author"] = "crm"
+        filled.append("author")
+    ill = ", ".join(row.get("illustrators") or [])
+    if ill and not m.get("illustrator"):
+        m["illustrator"] = ill
+        filled.append("illustrator")
+    meta = m.setdefault("meta", {})
+    manual = manual or {}
+    for key, value, label in (("ISBN", row.get("isbn"), "ISBN"), ("STOCK_CODE", row.get("stock_code"), None),
+                              ("CRM_SUMMARY", row.get("summary"), None)):
+        if value and not meta.get(key) and not (label and manual.get(label)):
+            meta[key] = value
+            filled.append(key)
+    src["crm_book_id"] = rid
+    return filled

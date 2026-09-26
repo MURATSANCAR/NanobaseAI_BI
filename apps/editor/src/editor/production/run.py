@@ -27,7 +27,7 @@ from . import profile as profile_mod
 from . import spec as spec_mod
 from . import studio
 from .images import Painter
-from .manuscript import from_docx, from_generation
+from .manuscript import from_docx, from_generation, reapply_edits
 from .typeset import Typesetter
 
 STEPS = [("icerik", "İçerik okundu"), ("crm", "CRM proje verisi"), ("profil", "Yaş ve tür profili"),
@@ -218,6 +218,8 @@ async def _plan(d: Path, job: dict, st: State):
     st.start("icerik")
     ms = await asyncio.to_thread(from_generation, src["generation_id"]) if src.get("generation_id") \
         else await asyncio.to_thread(from_docx, src["docx"])
+    # Aynı işte metin yeniden okunuyorsa (yarıda kalan planın yeniden denemesi) editörün kitap adı/yazar düzeltmesi kalır.
+    reapply_edits(ms, (studio.read(d, "manuscript.json") or {}).get("source"))
     st.data["title"] = ms.title
     words = sum(len(b.text.split()) for _, _, b in ms.blocks())
     st.done("icerik", f"{len(ms.chapters)} bölüm · {words} kelime")

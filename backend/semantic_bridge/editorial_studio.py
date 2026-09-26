@@ -146,10 +146,10 @@ def get_json(path: str) -> dict:
     return r.json()
 
 
-def post_json(path: str, body: dict, editor: str) -> dict:
+def post_json(path: str, body: dict, editor: str, timeout: float = 30) -> dict:
     base, headers, ca = _base()
     headers["X-Editor"] = editor[:200]
-    with _client(ca) as c:
+    with _client(ca, timeout=timeout) as c:
         r = c.post(base + path, headers=headers, json=body)
     _raise(r)
     return r.json()
@@ -207,9 +207,27 @@ def set_art_mode(job_id: str, mode: str, editor: str) -> dict:
     return post_json(f"/v1/studio/jobs/{_job(job_id)}/art-mode", {"art_mode": art_mode(mode)}, editor)
 
 
-def kunye(job_id: str, fields: dict, editor: str) -> dict:
+BOOK_FIELDS = ("title", "author")
+
+
+def book_fields(book: dict | None) -> dict | None:
+    """Künyedeki kitap adı / yazar düzeltmesi: yalnız bu iki alan, metin olarak; verilmeyen alan değişmez. Boş kitap
+    adını servis açık hatayla reddeder; burada kesilmez (sessiz sınır yok)."""
+    if not book:
+        return None
+    if not isinstance(book, dict):
+        raise StudioError(400, "Kitap bilgisi geçersiz.")
+    out = {k: str(book[k]) for k in BOOK_FIELDS if book.get(k) is not None}
+    return out or None
+
+
+def kunye(job_id: str, fields: dict, editor: str, book: dict | None = None) -> dict:
+    """Künye alanları ve kitap adı/yazar düzeltmesi. Servis kapağı ve sayfaları yeniden dizip döner (uzun sürebilir)."""
     clean = {str(k)[:40]: str(v)[:300] for k, v in (fields or {}).items()}
-    return post_json(f"/v1/studio/jobs/{_job(job_id)}/kunye", {"fields": clean}, editor)
+    body: dict = {"fields": clean}
+    if (b := book_fields(book)) is not None:
+        body["book"] = b
+    return post_json(f"/v1/studio/jobs/{_job(job_id)}/kunye", body, editor, timeout=300)
 
 
 def art_action(job_id: str, key: str, action: str, body: dict, editor: str) -> dict:

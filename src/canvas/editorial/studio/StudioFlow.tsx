@@ -225,7 +225,7 @@ export default function StudioFlow() {
             </ul>
           </Panel>
 
-          {d.front && <KunyePanel jobId={jobId} front={d.front} />}
+          {d.front && <KunyePanel jobId={jobId} front={d.front} rev={rev} hasCover={!!d.files.kapak} />}
 
           {d.preflight && (
             <Panel>

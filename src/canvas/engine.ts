@@ -1751,11 +1751,22 @@ export type StudioJob = {
   pages: StudioPage[];
   cover: { art: StudioArt; info: { size_mm: [number, number]; binding: string; spine_mm: number } | null };
   preflight: { status: 'OK' | 'WARN' | 'FAIL'; checks: StudioCheck[] } | null;
-  front: { rows: { label: string; value: string; missing: boolean; editable: boolean; source: string | null }[];
-           bios: { name: string; text: string }[] } | null;
+  front: { rows: StudioKunyeRow[]; bios: { name: string; text: string }[] } | null;
   files: { ic: boolean; kapak: boolean; 'baski-ic': boolean; 'baski-kapak': boolean };
   /** Dizginin son yenilenme zamanı (sn); eski servis göndermez. */
   built?: number;
+};
+/** Künye satırı. `field` varsa satır kitap adı / yazardır: kaydı künye alanı değil el yazmasının kendisini düzeltir
+ *  (kapak, iç kapak, künye, dizgi yeniden kurulur). `edited`: editörün düzeltmesi (kim, ne zaman, eski değer).
+ *  `none`: yazarsız kitap (künyede basılmıyor, panelde düzenlenir). Eski servis `field`/`edited` göndermez. */
+export type StudioKunyeRow = {
+  label: string; value: string; missing: boolean; editable: boolean; source: string | null;
+  field?: 'title' | 'author'; edited?: { by: string | null; at: number | null; was: string | null } | null; none?: boolean;
+};
+export type StudioBookEdit = { title?: string; author?: string };
+export type StudioKunyeResult = {
+  kunye: [string, string][]; book?: { title: string; author: string | null }; changed?: string[];
+  crm?: { match: string; filled: string[]; linked?: boolean } | null;
 };
 export type StudioJobRow = { id: string; title: string | null; created_by: string; created_at: number;
   source: StudioJob['job']['source']; steps: { key: string; label: string; status: StudioStepStatus }[]; busy: StudioBusy };
@@ -1786,8 +1797,10 @@ export const studioApi = {
   /** Resim seçimini sonradan değiştirir: yerleşim yeniden kurulur, resimler silinmez. */
   setArtMode: (job: string, artMode: StudioArtMode) =>
     send<{ id?: string; ok?: boolean }>('POST', `${studioBase(job)}/art-mode`, { art_mode: artMode }, 120_000),
-  kunye: (job: string, fields: Record<string, string>) =>
-    send<{ kunye: [string, string][] }>('POST', `${studioBase(job)}/kunye`, { fields }, 120_000),
+  /** Künye alanları ve kitap adı/yazar düzeltmesi; servis kapağı ve sayfaları yeniden dizince döner. */
+  kunye: (job: string, fields: Record<string, string>, book?: StudioBookEdit) =>
+    send<StudioKunyeResult>('POST', `${studioBase(job)}/kunye`,
+      book && Object.keys(book).length ? { fields, book } : { fields }, 300_000),
   regenerate: (job: string, key: string, mode: 'fix' | 'new', prompt: string, variants = 1) =>
     send<{ accepted: boolean }>('POST', `${studioBase(job)}/art/${encodeURIComponent(key)}/regenerate`, { mode, prompt, variants }, 60_000),
   select: (job: string, key: string, v: number) =>

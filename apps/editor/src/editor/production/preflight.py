@@ -82,7 +82,7 @@ def _page_text(page, drop: list[dict], keep: list[dict]) -> str:
 
 
 def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kunye_missing: list[str],
-          scenes: list) -> dict:
+          scenes: list, book=None) -> dict:
     import pymupdf
     out = []
 
@@ -125,8 +125,13 @@ def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kun
     ungrounded = [s.page for s in scenes if not s.grounded]
     add("Resim–metin bağı", "WARN" if ungrounded else "OK",
         "her resmin sahnesi sayfanın cümlesine bağlı" if not ungrounded else f"alıntısı tutmayan sayfa: {ungrounded}")
-    if not (getattr(ms, "author", None) or "").strip():
-        add("Yazar adı", "WARN", "yazar adı girilmemiş; kapakta ve sırtta yazar satırı basılmadı — künyeden girin")
+    b = book if book is not None else ms          # sayfa planında `ms` planın metnidir; kitap bilgisi `book`'ta
+    if not (getattr(b, "author", None) or "").strip():
+        from .manuscript import author_cleared
+        if author_cleared(getattr(b, "source", None) or {}):
+            add("Yazar adı", "OK", "yazarsız basılıyor (editörün kararı); kapakta ve sırtta yazar satırı yok")
+        else:
+            add("Yazar adı", "WARN", "yazar adı girilmemiş; kapakta ve sırtta yazar satırı basılmadı — künyeden girin")
     if cover is not None:
         c = pymupdf.open(cover)
         add("Kapak açılımı", "OK" if c.page_count == 1 else "FAIL",

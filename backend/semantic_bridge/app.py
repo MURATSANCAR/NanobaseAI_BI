@@ -4311,8 +4311,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, _tenant, user, _ = _books(request)
         from semantic_bridge import editorial_studio
         fields = (body or {}).get("fields") or {}
-        out = _studio_call(editorial_studio.kunye, job, fields, user)
-        admin_mod.audit(engine, user, "update", "studio_kunye", job, "künye", fields)
+        book = (body or {}).get("book") or None
+        out = _studio_call(editorial_studio.kunye, job, fields, user, book)
+        detail = dict(fields)
+        if book:      # kitap adı / yazar düzeltmesi: yeni değer, eski değer ve CRM eşleşmesi kayda
+            detail["book"] = {"sent": editorial_studio.book_fields(book), "changed": out.get("changed"),
+                              "was": out.get("was"), "now": out.get("book"), "crm": out.get("crm")}
+        admin_mod.audit(engine, user, "update", "studio_kunye", job, "künye", detail)
         return out
 
     @app.post("/api/v1/editorial/studio/jobs/{job}/art-mode")

@@ -201,26 +201,119 @@ def approve(d: Path, key: str, ok: bool, by: str) -> None:
     refresh_preflight(d)
 
 
-def set_kunye(d: Path, values: dict[str, str], by: str) -> dict:
-    """Ekranda elle girilen künye alanları (etiket → değer). Boş değer elle girişi kaldırır (sistemin
-    bulduğu değer ya da «—» geri gelir). Yerleşim değişmez; iç sayfa yeniden dizilir."""
+def title_of(d: Path) -> str | None:
+    """İşin kitap adı: el yazması (editörün düzeltmesi dahil), yoksa hattın durum kaydı."""
+    return (read(d, "manuscript.json") or {}).get("title") or (read(d, "state.json") or {}).get("title")
+
+
+def set_kunye(d: Path, values: dict[str, str], by: str, book: dict[str, str | None] | None = None) -> dict:
+    """Ekranda künye. `values`: elle girilen künye alanları (etiket → değer); boş değer elle girişi kaldırır (sistemin
+    bulduğu değer ya da «—» geri gelir). `book`: kitap adı / yazar düzeltmesi ({"title", "author"}; None ya da
+    verilmeyen alan değişmez). Kitap adı boş olamaz; yazar boş bırakılabilir (yazarsız kitap: kapakta yazar satırı,
+    künyede «Yazar» satırı basılmaz). Düzeltme el yazmasına yazılır (manuscript.BOOK_FIELDS notu), kitap adı değişince
+    CRM'de birebir eşleşme aranır ve yalnız boş alanlar dolar. Sonra iç sayfa ve kapak yeniden dizilir, ön kontrol
+    yenilenir; görsel çizilmez, yerleşim değişmez. Yeni değerle dizilemezse (kapak yazısı sığmıyor, fontta olmayan
+    harf) hiçbir şey kaydedilmez, eski hâl geri dizilir, sebep açık hatayla döner."""
     from . import front as front_mod
-    fr = read(d, "front.json")
-    manual = dict(fr.get("manual") or {})
-    for label, value in values.items():
+    from . import manuscript as ms_mod
+    for label in values:
         if label not in front_mod.EDITABLE:
             raise ValueError(f"düzenlenemeyen alan: {label}")
-        value = " ".join(str(value).split())[:300]
-        if value:
-            manual[label] = value
-        else:
-            manual.pop(label, None)
-    fr["manual"] = manual
-    fr["manual_by"] = by
-    fr["kunye"] = front_mod.kunye(_manuscript(d), fr.get("kunye_fields") or {}, manual)
-    write(d, "front.json", fr)
-    rebuild(d)
-    return fr
+    changes = {}
+    for k, v in (book or {}).items():
+        if k not in ms_mod.BOOK_FIELDS:
+            raise ValueError(f"düzenlenemeyen alan: {k}")
+        if v is not None:
+            changes[k] = " ".join(str(v).split())
+    if "title" in changes and not changes["title"]:
+        raise ValueError("Kitap adı boş olamaz")
+    with lock(d.name):
+        files = ("manuscript.json", "front.json", "state.json", "kolaj/kolaj.json")
+        snap = {n: (d / n).read_bytes() for n in files if (d / n).exists()}
+        fr = read(d, "front.json")
+        manual = dict(fr.get("manual") or {})
+        for label, value in values.items():
+            value = " ".join(str(value).split())[:300]
+            if value:
+                manual[label] = value
+            else:
+                manual.pop(label, None)
+        m = read(d, "manuscript.json")
+        changed, crm = _edit_book(m, changes, by, manual)
+        if changed:
+            write(d, "manuscript.json", m)
+            _after_book_edit(d, m, crm)
+        fr["manual"] = manual
+        if values:
+            fr["manual_by"] = by
+        if "author" in changed or "author" in (crm or {}).get("filled", []):
+            fr["bios"] = front_mod.bios_for_author(fr.get("bios"), m.get("author"))
+        fr["kunye"] = front_mod.kunye(_manuscript(d), fr.get("kunye_fields") or {}, manual)
+        write(d, "front.json", fr)
+        try:
+            rebuild(d)
+        except ValueError as e:
+            for n, data in snap.items():
+                (d / n).write_bytes(data)
+            try:
+                rebuild(d)
+            except Exception:  # noqa: BLE001 - asıl hata aşağıda döner
+                pass
+            raise ValueError(f"Kaydedilmedi, kapak ve sayfalar bu değerle dizilemiyor: {e}") from None
+    edits = (m.get("source") or {}).get("edits") or {}
+    return {**fr, "book": {"title": m.get("title"), "author": m.get("author")}, "changed": changed,
+            "was": {k: edits[k].get("was") for k in changed}, "crm": crm}
+
+
+def _edit_book(m: dict, changes: dict[str, str], by: str, manual: dict) -> tuple[list[str], dict | None]:
+    """El yazmasına kitap adı / yazar düzeltmesi (yerinde). Değişmeyen değer kayda girmez; yalnız yazarı henüz
+    kimse boş bırakmamışken boş kaydetmek «yazarsız kitap» kararı olarak kayda girer. Dönen: (değişen alanlar,
+    kitap adı değiştiyse CRM araması {match, filled})."""
+    from . import manuscript as ms_mod
+    src = m.setdefault("source", {})
+    now, changed = time.time(), []
+    for k, v in changes.items():
+        cur = m.get(k) or ""
+        if v == cur and (v or k in (src.get("edits") or {})):
+            continue
+        src.setdefault("read", {f: m.get(f) for f in ms_mod.BOOK_FIELDS})     # okunan özgün değer bir kez
+        e = {"value": v, "by": by, "at": now, "was": m.get(k)}
+        src.setdefault("edits", {})[k] = e
+        src.setdefault("edit_log", []).append({"field": k, **e})
+        m[k] = v or None
+        changed.append(k)
+    crm = None
+    if "title" in changed:
+        try:
+            row, match = ms_mod.crm_lookup(m["title"])
+            filled = ms_mod.fill_from_crm(m, row, manual) if row else []
+            crm = {"match": match, "filled": filled,
+                   "linked": bool(row) and str(src.get("crm_book_id")) == str(row["crm_book_id"])}
+        except Exception as e:  # noqa: BLE001 - CRM'e ulaşılamaması düzeltmeyi durdurmaz; sonuçta yazılır
+            crm = {"match": "denenemedi", "filled": [], "error": f"{type(e).__name__}"}
+        src["crm_match"] = crm["match"]
+        next(x for x in reversed(src["edit_log"]) if x["field"] == "title")["crm"] = crm
+    return changed, crm
+
+
+def _after_book_edit(d: Path, m: dict, crm: dict | None) -> None:
+    """Kitap adı/yazar değişince işin öteki kayıtları: iş listesindeki ad, CRM adımının özeti (eşleşme bulunduysa),
+    kolajın elle bölünmüş etiketleri (eski adın kelimeleriyse kalkar, yeni addan otomatik bölünür)."""
+    st = read(d, "state.json")
+    if st:
+        st["title"] = m["title"]
+        step = next((s for s in st.get("steps", []) if s.get("key") == "crm"), None)
+        if step and crm and crm.get("linked") and step.get("status") != "done":
+            step.update(status="done", summary=f"{m['title']} · {m.get('author') or '—'} · ISBN "
+                                               f"{(m.get('meta') or {}).get('ISBN') or '—'} (kitap adı düzeltilince eşleşti)")
+        write(d, "state.json", st)
+    from . import collage
+    if (d / collage.DIR / collage.STATE).exists():
+        with collage.locked(d):
+            cs = collage.load(d)
+            if cs.get("labels") and " ".join(cs["labels"]).split() != (m["title"] or "").split():
+                cs["labels"] = None
+                collage.save(d, cs)
 
 
 # ------------------------------------------------------------------ dizgi
@@ -330,7 +423,7 @@ def refresh_preflight(d: Path) -> dict:
     renders = [{"key": f"sayfa-{label[k]}", "dpi": pg["versions"][pg["selected"] - 1]["dpi"]}
                for k, pg in st["pages"].items() if pg.get("selected") and k in shown]
     rep = preflight.check(pdf, cpdf if cpdf.exists() else None, text_src, spec, renders,
-                          front_mod.missing(read(d, "front.json")["kunye"]), scenes)
+                          front_mod.missing(read(d, "front.json")["kunye"]), scenes, book=ms)
     rep["checks"].append({"name": "Sayfa resimleri", "status": "FAIL" if missing else "OK",
                           "detail": "her resimli sayfanın resmi var" if not missing else
                           f"resmi olmayan sayfa: {', '.join(missing)} (stüdyoda «Farklı üret»)"})

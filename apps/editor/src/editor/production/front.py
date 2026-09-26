@@ -93,14 +93,17 @@ async def kunye_fields(ms: Manuscript, llm) -> dict:
 
 
 def kunye(ms: Manuscript, f: dict, manual: dict | None = None) -> list[list[str]]:
-    """Künye satırları [etiket, değer]; `manual` ekranda elle girilen değerler (etiket → değer)."""
+    """Künye satırları [etiket, değer]; `manual` ekranda elle girilen değerler (etiket → değer). Kitap adı ve yazar
+    el yazmasından (editörün düzeltmesi oraya yazılır); editör yazarı bilerek boş bıraktıysa «Yazar» satırı yok."""
+    from .manuscript import author_cleared
     m = manual or {}
 
     def v(label, key=None, fallback=None):
         return m.get(label) or (f.get(key, {}).get("value") if key else None) or fallback or MISSING
 
+    author = [] if not ms.author and author_cleared(ms.source or {}) else [["Yazar", ms.author or MISSING]]
     rows = [
-        ["Kitap", ms.title], ["Yazar", ms.author or MISSING],
+        ["Kitap", ms.title], *author,
         ["Resimler", IMAGE_CREDIT], ["Kapak ve İç Tasarım", DESIGN_CREDIT],
         ["Dizi", v("Dizi", "DIZI", ms.meta.get("SERIES"))],
         ["Yayın Yönetmeni", v("Yayın Yönetmeni", "YAYIN_YONETMENI")],
@@ -122,9 +125,18 @@ def kunye(ms: Manuscript, f: dict, manual: dict | None = None) -> list[list[str]
     return rows
 
 
-# Ekranda düzenlenebilen etiketler (kitap adı, yazar, resim/tasarım satırları sistemden gelir).
-EDITABLE = ("Dizi", "Yayın Yönetmeni", "Proje Editörü", "Editör", "Baskı", "ISBN", "Yayınevi", "Adres", "Telefon",
+# Ekranda düzenlenebilen etiketler. Kitap adı ve yazar da düzenlenir ama künye alanı olarak değil: el yazmasının
+# kendisi düzeltilir (studio.set_kunye `book`); resim/tasarım satırları sistemindir.
+EDITABLE =("Dizi", "Yayın Yönetmeni", "Proje Editörü", "Editör", "Baskı", "ISBN", "Yayınevi", "Adres", "Telefon",
             "E-posta", "Sertifika No", "Baskı ve Cilt", "Matbaa Sertifika No", "Matbaa Adresi", "Telif")
+
+
+def bios_for_author(bios: list[dict], author: str | None) -> list[dict]:
+    """Yazar değişince tanıtım sayfası: kitabın kendi künyesinden bulunmuş tanıtımlardan yalnız yeni yazar adında
+    geçen kişininki kalır; hiçbiri kalmazsa yer tutucu yeni adla (tanıtım uydurulmaz)."""
+    keep = [b for b in bios or [] if author and b.get("text") not in (None, "", MISSING)
+            and b.get("name") and b["name"] in author]
+    return keep or [{"name": author or MISSING, "text": MISSING}]
 
 
 def missing(rows: list[list[str]]) -> list[str]:

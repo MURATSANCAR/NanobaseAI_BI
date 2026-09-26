@@ -1,5 +1,50 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (06:00) — Kitap Tasarım Stüdyosu: künyede «Kitap adı» ve «Yazar» düzeltilir (dalda, kurulmadı)
+
+- **Neden:** Word'den açılan eski işlerde kitap adı dosya adı kalmıştı («Etimesgutlu_Bebek_Aslan.docx»), CRM eşleşmesi
+  yoksa yazar boştu; künye bu iki alanı düzelttirmiyordu. Kullanıcı onayıyla eklendi.
+- **Doğruluk kaynağı kararı:** ayrı `overrides.json` değil, `manuscript.json`'un kendi `title`/`author` alanı. Gerekçe:
+  kapak (resimli/tipografik/kolaj), iç kapak, künye, dizgi (`plan.typ`/`book.typ` üst verisi), pazarlama kiti, e-kitap,
+  karakter/yaş raporu ve boyama kitabı kopyası bu alanı hem `studio._manuscript` hem ham `read(…manuscript.json)` ile
+  okuyor; katman eklemek bütün okuyucuları değiştirmek demekti, birini unutmak eski adı geri basardı. Özgün okunan değer
+  kaybolmasın diye `source.read` (ilk düzeltmede bir kez), geçerli düzeltme `source.edits` (değer, kim, ne zaman, eski
+  değer), bütün geçmiş `source.edit_log` (kitap adında CRM araması sonucuyla). Metin aynı işte yeniden okunursa
+  (`run._plan` yeniden denemesi) `reapply_edits` düzeltmeyi yeniden uygular: editörün değeri her zaman kazanır.
+- **Motor:** `studio.set_kunye(d, fields, by, book)` künye alanlarını ve kitap adı/yazarı tek kayıtta uygular, bir kez
+  yeniden dizer (iç sayfa + kapak + ön kontrol; görsel çizilmez, yerleşim değişmez). Boş kitap adı açık hata (400).
+  Yazar boş kaydedilirse «yazarsız kitap» kararı: kapakta/sırtta yazar yok, künyede «Yazar» satırı basılmaz, ön
+  kontrolün «Künye»sinde eksik sayılmaz, «Yazar adı» OK (kimse karar vermediyse eskisi gibi eksik + uyarı). Kitap adı
+  değişince `manuscript.crm_lookup` (eski `_crm_by_title` kalıbı, ortak) birebir eşleşme arar; `fill_from_crm` yalnız
+  boş alanı doldurur (yazar, çizer, ISBN, stok kodu, arka kapak yazısı), editörün yazarı ya da künyede elle girilen ISBN
+  ezilmez, iş başka bir CRM kaydına bağlıysa hiçbir şey karışmaz; eşleşince CRM adımı «düzeltilince eşleşti» olur. CRM'e
+  ulaşılamazsa düzeltme durmaz, sonuç «denenemedi». Yeni değerle dizilemezse (kapak yazısı sığmıyor, fontta olmayan harf)
+  dosyalar geri yazılır, eski hâl yeniden dizilir, «Kaydedilmedi…» hatası döner. Yazar tanıtım sayfası yeni yazara
+  uyar (`front.bios_for_author`), elle bölünmüş kolaj etiketleri eski adın kelimeleriyse sıfırlanır. İş listesi, PDF
+  dosya adı, yaş raporu başlığı el yazmasından (`studio.title_of`; süren hattın durum yazımı eski adı geri koyamaz).
+- **Kaynak gösterimi:** `manuscript.field_source` → «yayınevi kaydı» / «Word dosyası» / «okunmuş kitap» / «editör: ad»
+  (+ tarih, önceki değer). Yeni işlerde okunduğu yer `source.origin`'e yazılıyor, eski işlerde kaynağın türünden
+  çıkarılıyor. Pazarlama kitinin kesin bilgilerinde de aynı etiket.
+- **Ayrıca düzeldi:** sayfa planlı işlerde ön kontrolün «Yazar adı» uyarısı yazar olsa da çıkıyordu (ön kontrole kitap
+  bilgisi yerine planın metni gidiyordu); `preflight.check(..., book=ms)`.
+- **Uç ve köprü:** `POST /v1/studio/jobs/{job}/kunye` `{fields, book?: {title?, author?}}` → `{kunye, book, changed, was,
+  crm}`; eski istemci (yalnız `fields`) aynen çalışır. Köprü `editorial_studio.kunye(..., book)` yalnız iki alanı geçirir
+  (kesmez), zaman aşımı 300 sn; audit `studio_kunye` kaydına `book: {sent, changed, was, now, crm}` eklenir.
+- **Ekran (`KunyePanel.tsx`):** üstte tam genişlik «Kitap adı» ve «Yazar» (telefonda 16 px), altında kaynak satırı;
+  boş kitap adında satır içi hata ve kaydet kapalı; yazar eksikken «Yazarsız bas»; kaydederken «Kapak ve sayfalar
+  yeniden diziliyor…», bitince yenilenen kapak + iç kapak + künye küçük resimleri ve CRM sonucu; «Vazgeç». Hareket
+  eklenmedi. Stüdyo başlıkları `state.title`'ı okuyor, servis onu el yazmasından veriyor.
+- **Doğrulama:** GPU'da editor-py imajında geçici kapta tam set 484 geçti, 1 atlandı, 1 kırmızı = bilinen
+  `test_proofing_contract` sıra bağımlılığı; yeni `tests/test_kunye_book.py` (dizgiyle: resimli + akış, tipografik +
+  sayfa planı, kolaj; kapak/iç kapak/künye/PDF üst verisi yeni değerle, geri alma; CRM sahte satırlarla). Gerçek işin
+  (Etimesgutlu Bebek Aslan) kopyasında düzeltme 2,7 sn: iç kapak, künye ve kapakta yeni ad, «Metin eksiksiz» OK;
+  özgün iş salt okunur bağlandı, kopya silindi. Test sunucusunda geçici dizinde `tsc` 0, vitest 18/18, `vite build`
+  geçti; sahte servisli düzenekte 320/390/768'de yatay taşma 0, boş ad hatası, kaydetme durumu ve sonuç görüldü.
+  Köprü `py_compile`. Hiçbir sunucuya kurulmadı.
+- **Açık:** künyede elle girilen ISBN arka kapak barkoduna gitmiyor (barkod yalnız `meta.ISBN`'den; bu işten önce de
+  böyleydi). Kolaj düzeninin tohumu kitap adından: ad değişince kolaj yerleşimi de değişir (fotoğraf aynı). Pazarlama
+  kitinde modelin daha önce yazdığı metinler eski adı taşıyabilir (yeniden üretilince düzelir); e-kitap «eski» görünür.
+
 ## 2026-09-26 (05:40) — Portalın yeni menüsü: tek menü tanımı, çalışma alanı rayı + bağlam paneli, telefon alt çubuğu, ⌘K (dalda, kurulmadı)
 
 - **Neden:** menü modüle girince tamamen değişiyordu (dört ayrı ray: `railFor`, `editorialRail`, `managementRail`, `seoRail`, 14 dosyada `rail={…}`), ikonlar sıraya göre veriliyordu, telefonda ray + ikinci alt şerit vardı. Kullanıcı onayı: «menüde önerini uygula» (tasarım 02-B, 03, 04–05, 06).

@@ -732,7 +732,7 @@ async def _run(d: Path, by: str, llm) -> dict:
             pg = at_page.get(p["page_no"])
             p["pid"], p["label"] = (pg["pid"], pg["label"]) if pg else (None, None)
     checks = await asyncio.to_thread(auto_checks, d, pages, band, out_f, words, wstats) if child else []
-    title = (studio.read(d, "state.json") or {}).get("title") or (studio.read(d, "manuscript.json") or {}).get("title")
+    title = studio.title_of(d)
     rep = {"version": VERSION, "at": time.time(), "by": by, "seconds": round(time.time() - t0, 1), "title": title,
            "text_hash": text_hash(pages), "text_source": src, "band": list(band) if band else None,
            "band_source": band_src, "child": child, "reference": ref_key,

@@ -195,5 +195,5 @@ def versions_report(job: str, a: str = Query(...), b: str = Query(...), by: str 
     d = _plan_dir(job)
     va, vb = _v(d, a), _v(d, b)
     pdf = vd.report(d, va, vb, by)
-    title = re.sub(r"[^\w\-]+", "-", (studio.read(d, "state.json", {}).get("title") or job)).strip("-")
+    title = re.sub(r"[^\w\-]+", "-", (studio.title_of(d) or job)).strip("-")
     return FileResponse(pdf, media_type="application/pdf", filename=f"{title}-degisiklik-raporu-{va.rev}-{vb.rev}.pdf")
