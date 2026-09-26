@@ -153,12 +153,28 @@ def drop_reduplication(occs: list[Occ]) -> tuple[list[Occ], int]:
     return kept, dropped
 
 
-def clusters(occs: list[Occ], window: int) -> list[list[Occ]]:
-    """Yakın tekrar: ardışık iki geçiş arasında en çok `window` cümle varsa aynı küme
-    (0 = aynı cümle, 1 = aynı ya da bir sonraki cümle). Girdi sıralı; ≥2 geçişli kümeler döner."""
+def chance_near(gap: int, rate: float) -> float:
+    """Sözcük kitaba rastgele serpilmiş olsaydı, bir geçişten sonraki `gap` belirteç içinde yeniden
+    görünme olasılığı: 1 − (1 − oran)^gap. Oran = sözcüğün (o anlamda) kitaptaki geçişi / kitabın
+    sözcük sayısı. «olmak» her 50 sözcükte bir geçiyorsa 10 sözcük arayla yeniden görünmesi olağandır
+    (≈0,18); kitapta 5 kez geçen bir sözcüğün 20 sözcük arayla yinelenmesi değildir (≈0,003)."""
+    if gap <= 0 or rate <= 0:
+        return 0.0
+    return 1.0 - (1.0 - min(rate, 1.0)) ** gap
+
+
+def clusters(occs: list[Occ], window: int, rate: float | None = None, alpha: float | None = None
+             ) -> list[list[Occ]]:
+    """Yakın tekrar: ardışık iki geçiş arasında en çok `window` cümle varsa (0 = aynı cümle, 1 = aynı ya
+    da bir sonraki cümle) VE — `rate` verilmişse — bu yakınlığın tesadüf olasılığı `alpha`'dan küçükse
+    aynı küme. Sık sözcüğün (yardımcı fiil, kitabın konusu) olağan yakınlığı tekrar sayılmaz.
+    Girdi sıralı; ≥2 geçişli kümeler döner."""
     out, cur = [], []
     for o in occs:
-        if cur and o.sent - cur[-1].sent <= window:
+        near = bool(cur) and o.sent - cur[-1].sent <= window
+        if near and rate is not None and alpha is not None:
+            near = chance_near(o.idx - cur[-1].idx, rate) < alpha
+        if near:
             cur.append(o)
             continue
         if len(cur) >= 2:

@@ -157,6 +157,25 @@ def test_clusters_by_sentence_window():
     assert W.clusters([occ(1, 0)], 1) == []
 
 
+def test_chance_near_grows_with_frequency_and_gap():
+    assert W.chance_near(0, 0.02) == 0.0 and W.chance_near(5, 0) == 0.0
+    assert round(W.chance_near(10, 1 / 50), 2) == 0.18        # sık sözcük: 10 sözcük arayla olağan
+    assert W.chance_near(20, 5 / 30000) < 0.005                # seyrek sözcük: 20 sözcük arayla değil
+    assert W.chance_near(20, 0.02) > W.chance_near(10, 0.02) > W.chance_near(10, 0.001)
+
+
+def test_frequent_word_near_repeat_is_chance_level_rare_one_is_not():
+    # aynı iki geçiş deseni (aynı ve bir sonraki cümle, 12 belirteç arayla)
+    pair = [occ(100, 4), occ(112, 5)]
+    assert W.clusters(pair, 1) != []                                        # süzgeçsiz: aday
+    assert W.clusters(pair, 1, rate=1 / 40, alpha=0.05) == []               # yardımcı fiil sıklığında: tesadüf
+    assert len(W.clusters(pair, 1, rate=4 / 30000, alpha=0.05)) == 1        # seyrek sözcük: tekrar
+    # zincir yalnız anlamlı halkalarla kurulur
+    chain = [occ(10, 0), occ(12, 0), occ(60, 1), occ(62, 1)]
+    got = W.clusters(chain, 1, rate=1 / 200, alpha=0.05)
+    assert [[o.idx for o in c] for c in got] == [[10, 12], [60, 62]]
+
+
 # ------------------------------------------------------------- çeşitlilik
 def test_mtld_rewards_variety_and_ignores_length():
     assert W.mtld([]) is None

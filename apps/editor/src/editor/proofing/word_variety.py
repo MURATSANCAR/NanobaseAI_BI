@@ -39,7 +39,7 @@ from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_variety"
-VERSION = "2"
+VERSION = "3"
 LABEL = "Kelime çeşitliliği ve yakın tekrar"
 
 DIRECTOR = "book-director"
@@ -55,6 +55,9 @@ SENSE_BATCH = C.setting("word_sense_batch", 80)            # EDITOR_WORD_SENSE_B
 # Geçişin iki yanında gösterilen karakter (anlam için bağlam).
 CONTEXT_CHARS = C.setting("word_context_chars", 70)        # EDITOR_WORD_CONTEXT_CHARS
 PARALLEL = C.setting("word_variety_parallel", 4)           # EDITOR_WORD_VARIETY_PARALLEL
+# Yakınlık, sözcüğün kitaptaki sıklığıyla tesadüfen beklenenden fazla olmalı: rastgele serpilmiş olsa bu
+# kadar yakın düşme olasılığı bu değerin altında. 0,05 alışılmış anlamlılık düzeyi; kitapta ayarlanmadı.
+ECHO_ALPHA = C.setting("word_echo_alpha", 0.05)            # EDITOR_WORD_ECHO_ALPHA
 
 
 def _alt_schema() -> dict:
@@ -228,6 +231,12 @@ async def run(generation_id: str):
     findings = []
     near_different = []
     cands = []
+    # her kök + anlamın kitaptaki oranı (ikileme ve başlıklar dahil bütün geçişler / kitabın sözcükleri)
+    words_in_book = max(stats["read_tokens"], 1)
+    rate_of = collections.Counter()
+    for lem, os_ in units.items():
+        for o in os_:
+            rate_of[(lem, o.sense)] += 1 / words_in_book
     for lem, os_ in sorted(units.items()):
         single, dup = W.drop_reduplication(os_)
         stats["skip_reduplication"] += dup
@@ -242,7 +251,11 @@ async def run(generation_id: str):
         for sense_no, grp in groups.items():
             if sense_no is None:
                 continue      # anlamı atanamayan geçiş tekrar sayılmaz (haritada «belirsiz»)
-            for cl in W.clusters(grp, ECHO_SENTENCES):
+            rate = rate_of[(lem, sense_no)]
+            plain = W.clusters(grp, ECHO_SENTENCES)
+            kept_cl = W.clusters(grp, ECHO_SENTENCES, rate, ECHO_ALPHA)
+            stats["skip_chance_level"] += sum(len(c) for c in plain) - sum(len(c) for c in kept_cl)
+            for cl in kept_cl:
                 cands.append((lem, sense_no, cl))
                 same_sense_idx.update(o.idx for o in cl)
         # aynı kök yakın geçmiş ama anlamlar farklı: tekrar değil (haritada görünür, sayılır)
@@ -288,6 +301,10 @@ async def run(generation_id: str):
             "details": {"lemma": lem, "sense": sense["label"], "idiom": sense["idiom"], "count": len(cl),
                         "pages": pages, "forms": [o.word for o in cl], "p_flaw": round(p, 3),
                         "passage_marked": marked, "window_sentences": ECHO_SENTENCES,
+                        "book_count": len(by_lemma[lem]),
+                        # en yakın iki geçişin tesadüfen bu kadar yakın düşme olasılığı
+                        "chance": round(min(W.chance_near(b.idx - a.idx, rate_of[(lem, cl[0].sense)])
+                                            for a, b in zip(cl, cl[1:])), 4),
                         # ekran için genel alanlar: grup (topluca karar), güven (sıralama), sayfadaki bütün geçişler
                         "group": f"{lem} · {sense['label']}", "confidence": round(p, 3), "marks": marks}})
         stats["kept"] += 1
