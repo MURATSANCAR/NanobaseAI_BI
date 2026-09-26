@@ -95,3 +95,24 @@ Bütün çağrılar yazma kilitli istemciyle (`READ_ONLY`); T-soft'a hiçbir şe
 | Sipariş (62.903) | `order/get` | **kişisel veri** içerir; SEO için yalnız UTM kaynağı ve tarih — kişisel alanları atan toplama katmanı olmadan kullanılmaz |
 
 Lisans dışı: video (PRE041), çok dil (PRE031). robots.txt / llms.txt / sitemap için API yöntemi yok.
+
+## Search Console denetimi (2026-09-26, zeki@ ile yalnız okunarak, son 3 ay)
+
+Elle işlem yok, güvenlik sorunu yok. Tıklama 245 B, gösterim 9,73 Mn, TO %2,5, ortalama sıra 5,6. Tıklamanın çoğu marka
+aramasından ("timaş" %43,8 TO). En büyük fırsat örneği: "halis aydemir" 45 B gösterim, TO %2,8, sıra 7 (yazar sayfası zayıf).
+
+| # | Sorun | Sayı | Sebep / örnek | Kim düzeltir |
+|---|---|---|---|---|
+| 1 | Mobil INP > 200 ms | 6.539 URL (mobilde "iyi" 0) | Dokunuşa geç tepki; LCP/CLS temiz → tema JavaScript'i | T-soft/tema |
+| 2 | Tarandı, dizine eklenmedi | 5.108 | Seri kitaplarda benzer/kısa açıklamalar ("Kıkırtılı Hikayeler 3. sınıf"), zayıf etiket sayfaları ("mufredata-uygun-kitaplar") | Bu modül (ürün/sayfa önerileri) → CRM |
+| 3 | 404 | 3.934 | Eski site haberleri (`haber/…-<guid>`), silinmiş kitap ve yazar sayfaları (`ozgur-balpinar`), satinal kopyaları | Yönlendirme ekranı (GSC API gelince 404 listesiyle genişler) → T-soft paneli |
+| 4 | Parametreli kopya sayfalar | 12.807 (canonical doğru) | Öneri kutusu site içi bağlantıya `utm_source=seux-smart…` ekliyor; `?category=`, `?multi=` süzgeçleri | Tema (iç bağlantıda UTM yok) + T-soft `NoIndexGetParametreleri` |
+| 5 | Google başka standart seçti / standart yok | 1.179 + 132 | Kopya içerik | Bu modül + tema |
+| 6 | Eski sitemap'ler | 7 eski (2011–2016) + çift gönderim | WordPress `*-sitemap.xml` (2 hatalı), `custompages/sitemap.aspx` getirilemiyor; hem timas hem satinal sitemap'i | Search Console (Tam yetkili kullanıcı) |
+| 7 | API alan adları taranıyor | cmsapi 59 B, storeapi 56 B istek; satinal 612 B | API ve ikinci alan adı Google'a açık | Sunucu/T-soft: robots.txt ile kapatma, satinal → timas 301 |
+| 8 | Ortalama yanıt süresi | 775 ms; timas.com.tr'de "geçmişte sorun" | Sunucu yanıtı yavaş | T-soft/barındırma |
+| 9 | Video | 87 video, 0 dizinde | "Video izleme sayfasında yer almıyor" (gömülü videolar ana içerik değil) | Tema (video sayfası) — T-soft video lisansı kapalı |
+| 10 | 5xx / noindex / 403 | 41 / 33 / 5 | Tek tek bakılmalı | T-soft |
+
+Sağlam olanlar: HTTPS 6.656/6.656, ürün snippet'i ve satıcı girişi 4.872 geçerli (0 hata), içerik haritası 4.987, yorum snippet'i 137,
+masaüstü Core Web Vitals hepsi iyi.
