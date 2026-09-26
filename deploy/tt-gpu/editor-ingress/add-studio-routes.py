@@ -177,7 +177,8 @@ if "EDITOR-STUDYO-KARAKTER" not in s:
                   "jobs/$1/character-cards/cards/$2/refs/$3$is_args$args", timeout=60)
             + loc(f"{K}/cards/({CID})/refs/({RID})/primary", "POST",
                   "jobs/$1/character-cards/cards/$2/refs/$3/primary", timeout=60)
-            + loc("character-settings", "GET|PUT", "character-settings", timeout=30))
+            # Düzenli ifadeli location'da proxy_pass yolu değişkensiz olamaz (nginx -t düşer); $is_args$args şart.
+            + loc("character-settings", "GET|PUT", "character-settings$is_args$args", timeout=30))
     s = s.replace("    # EDITOR-BITTI", kart + "    # EDITOR-BITTI", 1)
     changes.append("seri karakter kartı yolları")
 
