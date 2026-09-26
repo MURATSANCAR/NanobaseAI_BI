@@ -1,5 +1,10 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (04:00) — Müşteri VM'inde Son Okuma ve kelime haritası açıldı (TT GPU nginx)
+
+- Kullanıcı onayıyla `/etc/nginx/sites-available/kitap-eczanesi` (TT GPU, depoda değil — gizli geçit başlığı taşır) içine üç `location` eklendi; hepsi mevcut `/review` bloğunun IP kısıtı + `X-Editor-Gate` kalıbıyla, yöntem sınırlı, yalnız kart servisine (127.0.0.1:19141): `GET …/proofing`, `GET …/proofing/word-map`, `POST …/proofing/findings/{id}/decision`. `nginx -t` geçti, reload.
+- VM'de doğrulama (geçici timasai oturumu, silindi): Dilek Ağacı Son Okuma raporu 15 denetim, kelime tekrarı 120 bulgu / 79 grup / 112 işaretli; kelime haritası hazır (866 kök, 163 çok anlamlı, 14 farklı anlamda yakın geçiş); karar ucu geçersiz gövdeye kart servisinin 422'sini döndürüyor (veri yazılmadı). Bu yollar olmadığı için VM'de Son Okuma bundan önce hiç veri alamıyordu.
+
 ## 2026-09-26 (03:30) — Kelime tekrarı v3: tesadüf süzgeci; GPU editöre kuruldu
 
 - **Neden:** v2 «Duvarları Yıkmak»ta 1.450 bulgu; en kalabalıklar yardımcı fiiller (olmak 84, etmek 53) ve konu sözcüğü (insan 76) — sık sözcük doğal olarak yakın geçer.
