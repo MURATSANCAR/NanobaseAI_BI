@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (03:30) — Kelime tekrarı v3: tesadüf süzgeci; GPU editöre kuruldu
+
+- **Neden:** v2 «Duvarları Yıkmak»ta 1.450 bulgu; en kalabalıklar yardımcı fiiller (olmak 84, etmek 53) ve konu sözcüğü (insan 76) — sık sözcük doğal olarak yakın geçer.
+- **Ne:** iki geçiş, cümle penceresine ek olarak kök+anlamın kitap oranıyla tesadüfen bu kadar yakın düşme olasılığı `EDITOR_WORD_ECHO_ALPHA` (0,05) altındaysa tekrar: `P = 1 − (1 − n/N)^aralık`. Bulguda `details.chance`, `book_count`; `stats.skip_chance_level`. VERSION 3, testler 28/28.
+- **Ölçüm (dry):** Dilek Ağacı 120 → 100; Duvarları Yıkmak 1.450 → 1.266 (olmak 84 → 16, insan 76 → 12, etmek 53 → 0). Toplam düşüş küçük: kalanlar seyrek sözcüklerin gerçek yakın tekrarı; deneme türünde terim yinelemesi. Tür bazında öneri düzeyi ya da eşik kararı editör kararlarıyla verilecek (`word_variety.md` §4c).
+- **Kurulum:** main `2b2df5f8` → GPU `releases/2b2df5f8`, `editor-py:0.15.9-2b2df5f8`; sekiz Python servisi yeniden kuruldu (Temporal'da koşan iş 0), kod sürümü doğru, `._*` 0, kart/stüdyo 200. Test sunucusu ve VM'de değişen dosya yok (yalnız editör kodu).
+- **Toplu iş:** VPN kopukken v2 toplu iş 12 kitabı bitirmişti; v3 ile 16 kitap yeniden (`wv-all-books-v3b`).
+- **Hâlâ bekleyen:** TT GPU nginx'inde `/proofing*` yolları (VM'de Son Okuma 502) — kullanıcı onayı.
+
 ## 2026-09-26 (03:00) — Kitap Tasarım Stüdyosu hatları main'e alındı (kurulmadı)
 
 - **Kullanıcı kararı:** «main merge et». Paralel hatların hepsi ortak dalda (`worktree-studio-page-plan`) birleştirildi,

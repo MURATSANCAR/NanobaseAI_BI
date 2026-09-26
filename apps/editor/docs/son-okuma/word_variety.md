@@ -143,6 +143,18 @@ sözcük 20 sözcük arayla P ≈ 0,003 (tekrar). Eleneni `stats.skip_chance_lev
 `details.chance` ve `details.book_count`. Kaba bir model: dil sahne sahne kümelenir, sık sözcükte de
 gerçek yankı kaçabilir (ör. aynı cümlede iki «olmak») — ölçümle bakılacak.
 
+**Ölçüm (dry, 2026-09-26):**
+
+| kitap | v2 bulgu / grup | v3 bulgu / grup | tesadüf diye elenen geçiş | olmak | insan | etmek |
+|---|---|---|---|---|---|---|
+| Dilek Ağacı (64 s., 3.739 sözcük) | 120 / 79 | 100 / 80 | 74 | 2 | — | — |
+| Duvarları Yıkmak (224 s., 36.020 sözcük) | 1.450 / 636 | 1.266 / 632 | 531 | 84 → 16 | 76 → 12 | 53 → 0 |
+
+Süzgeç yardımcı fiil ve konu sözcüğü yığılmasını giderdi; toplam yalnız %13 düştü. Kalanlar seyrek
+sözcüklerin gerçekten yakın yinelenmesi («toplum bireylerden oluşur ve bireylerin … bireysel»); deneme/
+kişisel gelişim türünde yazar anahtar terimi bilerek yineler. Sonraki karar editör kararlarıyla: türe göre
+bu denetim öneri (INFO) mi olmalı, yoksa α daha mı sıkı — tek kitaba bakıp eşik ayarlanmaz.
+
 ## 5. Bulgu biçimi
 
 ```json
