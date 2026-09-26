@@ -146,6 +146,14 @@ _QUANTITY_ROOTS = ("adet", "aded", "miktar")
 # Words that name the amount side of a measure or glue a participle; they carry no subject of their own.
 _QUANTITY_NEUTRAL = frozenset("toplam toplami tutar tutari deger degeri bedel bedeli edilen olan yapilan".split())
 # "kaç kalem / kaç satır": the unit asked for is the line itself, whatever document key the concept counts by.
+_PLURAL = re.compile(r"(lar|ler)(i|ı|in|ın|a|e|da|de|dan|den)?$")
+
+
+def _participle_like(word: str) -> bool:
+    """"satan", "satanlar", "gelen": a verb stem with the present participle, plural or not. `is_participle`
+    does not know the short form; a bare "-an/-en" ending counts only when the rest is a known verb root."""
+    base = _PLURAL.sub("", word) if len(word) > 5 else word
+    return base.endswith(("an", "en")) and len(base) > 3 and verb_root(base) is not None and verb_root(base) == base[:-2]
 _LINE_UNIT = re.compile(r"\b(kalem|kalemi|kalemleri|satir|satiri|satirlari)\b")
 # A movement word turns one number into a series: the answer has to be broken down over time.
 # Cue words are recognised through the morphology, not by allowing any letters to follow. A tail of
@@ -354,6 +362,9 @@ class SemanticResolver:
         self.default_temporal = default_temporal
         self.conventions = conventions or Conventions.from_profiles(profiles)
         self._value_index: dict[str, list[tuple[str, str, str]]] = {}
+        # The label dictionary (label_values.py): every value of the certified text columns, from every copy
+        # of the table. None → the file the bridge builds daily; tests hand one in.
+        self.label_matcher = None
         self._edges: dict[str, set[str]] = {}
         self._related_cache: dict[str, set[str]] = {}
         self._fk_edges: dict[str, set[str]] = {}      # yönlü: hangi varlıktan hangisine tek satır gidilir
@@ -523,6 +534,11 @@ class SemanticResolver:
                 for k, tok in enumerate(qf.tokens):
                     if tok.upper() == col or tok in values:
                         consumed.add(k)
+
+        # 2a) names the data holds ("Portakal Kitap", "Timaş Okul", "İstanbul", "antik yayınları"): looked
+        #     for in the label dictionary before single words are read as profile values, so "Timaş Okul"
+        #     (a publisher) is not split into an item code and a customer channel.
+        self._label_names(qf, hits, consumed, sq)
 
         # 2b) profile-backed literal values: a token that *is* a value of a certified column
         #     ("KITAPCI" ∈ CLCARD.SPECODE2 profile) — the column meaning is certified, the value is observed.
@@ -832,6 +848,11 @@ class SemanticResolver:
                 if slot.semantic_type == SemanticType.COLUMN and slot.mapping and slot not in sq.group_by:
                     sq.group_by.append(slot)
                     slot.explain["role"] = "rank_group_by"
+
+        # 4f2) a name read in 2a before any measure was known ("İstanbul'da en çok satılan", the measure comes
+        #      from the verb later): if the column it landed on cannot be reached from the measure, the
+        #      nearest candidate that can is taken — a customer's city, not a shipping address.
+        self._relocate_labels(hits, sq)
 
         # 4g) grain: can this measure be attributed to the breakdown that was asked for?
         self._match_measure_to_grain(sq, hits, index)
@@ -1680,6 +1701,162 @@ class SemanticResolver:
         return {"term": term, "normalized": key, "certified": out, "otherSenses": candidates}
 
     # ------------------------------------------------------------------ helpers
+    def _label_source(self, entity: str) -> str:
+        from semantic_layer.runtime.label_values import is_crm
+        prof = self.by_entity.get(entity)
+        return "crm" if prof is not None and is_crm(prof) else "logo"
+
+    def _label_slot(self, hit, span: tuple[int, int], alternatives: list) -> Optional[ResolvedSlot]:
+        prof = self.by_entity.get(hit.entity)
+        if prof is None:
+            return None
+        m = Mapping(concept_id="", entity=hit.entity, table_pattern=prof.table_pattern, column=hit.column, operator="IN", values=[hit.value])
+        how = {"exact": "değer", "cut": "alan genişliğinde kesilmiş değer", "name": "ad + şirket türü"}[hit.how]
+        return ResolvedSlot(term=hit.value, semantic_type=SemanticType.DIMENSION_VALUE, status="PROFILE", mapping=m, confidence=0.9,
+                            explain={"why": f"veride {hit.entity}.{hit.column} = '{hit.value}' ({hit.rows} satır; {how})",
+                                     "source": "label_values", "how": hit.how, "rows": hit.rows,
+                                     "also_in": [f"{a.entity}.{a.column}={a.value} ({a.rows})" for a in alternatives],
+                                     "label_candidates": [{"entity": a.entity, "column": a.column, "value": a.value, "rows": a.rows,
+                                                           "how": a.how} for a in [hit, *alternatives]]},
+                            span=span)
+
+    def _label_names(self, qf, hits: list, consumed: set, sq: SemanticQuery) -> None:
+        from semantic_layer.runtime import label_values
+        lm = self.label_matcher if self.label_matcher is not None else label_values.matcher()
+        if lm is None:
+            return
+        tokens = qf.tokens
+        measures = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.mapping.entity]
+        # A name is a filter on the measure: on its database, on a table the measure's rows can be joined to.
+        sources = {self._label_source(h.mapping.entity) for h in measures} or None
+        # Nearest tables first: a customer's city (CLCARD, joined to the sales lines) before a shipping
+        # address two joins away that the compiler cannot reach from them.
+        tiers = [set().union(*(self._related_entities(h.mapping.entity, hops) for h in measures)) for hops in (1, 2)] if measures else []
+
+        def look(toks: list[str]) -> list:
+            for ents in (*tiers, None):
+                found = lm.find(toks, sources, ents)
+                if found:
+                    return found
+            return []
+
+        # One word alone is a name only when it is written as one: capitalised and not merely the first word
+        # of a sentence ("…en çok satılan kitaplar İstanbul'da", "Hepsiburada'da"). Lower-case common words
+        # ("yeni", "yazar", "tarih", "fiyat") are values of some column somewhere and never names.
+        named = self._capitalised_words(sq.question)
+        acronyms = {fold(w) for w in re.findall(r"\b[A-ZÇĞİÖŞÜ]{2,4}\b", sq.question or "")}
+        index = self.store.certified_index(self.tenant_id, self.datasource_id)
+        vocabulary = {k for k in index if " " not in k}
+        # Every word of every certified measure's name ("kdv tutarı", "birikmiş amortisman"): later steps read
+        # these as measures, and a label taken here first would take the words away from them.
+        measure_words = {w for k, senses in index.items() if any(c.semantic_type == SemanticType.METRIC for c, _ in senses)
+                         for w in k.split()}
+
+        def name_word(t: str) -> bool:
+            """A word that can carry a name: not grammar, not a measure word, not a verb form, not a number, not
+            the kind-of-company word and not a word the catalog already defines ("sipariş", "yazar")."""
+            st = stem(t)
+            return not (t in STOPWORDS_S or t in MODIFIERS_S or t in METRIC_VOCAB_S or t.isdigit() or is_participle(t)
+                        or _participle_like(t) or t in label_values.ORG_SUFFIX or t in vocabulary or st in vocabulary
+                        or t in measure_words or st in measure_words)
+
+        def names_something(toks: list[str]) -> bool:
+            if len(toks) == 1:
+                # One word is a name only when written as one; "CRM'de" is the database named, not a value in it,
+                # and a short all-capitals word ("KDV'miz", "ISBN'i") is an abbreviation of a term.
+                return (toks[0] in named and toks[0] not in acronyms and name_word(toks[0])
+                        and self._source_named(toks[0]) is None)
+            # "en çok satan", "bir yazarı": ordinary words that happen to be some field's value. A name starts
+            # with a word of its own ("Mavi Kirpi", "Timaş Okul").
+            head = toks[0]
+            return (name_word(head) or self._source_named(head) is not None) and head not in acronyms
+
+        # A certified name read on the other database than every measure ("antik kitap" is also a CRM contact
+        # flag, while the sales are in Logo): the same words are looked for as a label beside the measure.
+        for h in list(hits):
+            if h.semantic_type not in (SemanticType.COLUMN, SemanticType.DIMENSION_VALUE) or not h.mapping or not h.span:
+                continue
+            if not sources or self._label_source(h.mapping.entity) in sources:
+                continue
+            if not names_something(tokens[h.span[0]:h.span[1]]):
+                continue            # "kdv", "sipariş": a catalog word, not a name to look for as a value
+            found = look(tokens[h.span[0]:h.span[1]])
+            slot = self._label_slot(found[0], h.span, found[1:]) if found else None
+            if slot is not None:
+                hits[hits.index(h)] = slot
+                sq.explanation.append(f"'{' '.join(tokens[h.span[0]:h.span[1]])}' ölçünün veri tabanında bir değer: "
+                                      f"{found[0].entity}.{found[0].column} = '{found[0].value}' "
+                                      f"('{h.term}' diğer veri tabanındaki {h.mapping.entity}.{h.mapping.column} değil)")
+        # Words nothing has read yet, longest phrase first.
+        spans = sorted(((i, j) for i in range(len(tokens)) for j in range(i + 1, min(len(tokens), i + 4) + 1)),
+                       key=lambda s: (-(s[1] - s[0]), s[0]))
+        for i, j in spans:
+            if any(k in consumed for k in range(i, j)):
+                continue
+            toks = tokens[i:j]
+            if all(t in STOPWORDS_S or t in MODIFIERS_S or t in METRIC_VOCAB_S or t.isdigit() for t in toks):
+                continue
+            if not names_something(toks):
+                continue
+            found = look(toks)
+            slot = self._label_slot(found[0], (i, j), found[1:]) if found else None
+            if slot is None:
+                continue
+            hits.append(slot)
+            consumed.update(range(i, j))
+            sq.explanation.append(f"'{' '.join(toks)}' → {found[0].entity}.{found[0].column} = '{found[0].value}' "
+                                  f"[veri, {found[0].rows} satır]"
+                                  + (f"; aynı değer başka kolonda da var: {', '.join(f'{a.entity}.{a.column} ({a.rows})' for a in found[1:3])}"
+                                     if len(found) > 1 else ""))
+
+    @staticmethod
+    def _capitalised_words(question: str) -> set[str]:
+        """Folded words written as names: capitalised past the start of a sentence, or carrying a suffix after an
+        apostrophe — Turkish writes "İstanbul'da", "Hepsiburada'dan" only for proper nouns."""
+        out: set[str] = set()
+        for w in re.findall(r"([^\W\d_]+)['’]", question or ""):
+            out.update(tokenize(w))
+        for sentence in re.split(r"[.!?\n]+", question or ""):
+            words = re.findall(r"[^\W\d_]+", sentence)
+            for k, w in enumerate(words):
+                if w[:1].isupper() and k > 0:
+                    out.update(tokenize(w))
+        return out
+
+    def _relocate_labels(self, hits: list, sq: SemanticQuery) -> None:
+        measures = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.mapping.entity]
+        if not measures:
+            return
+        for h in [h for h in hits if (h.explain or {}).get("source") == "label_values" and h.mapping]:
+            reach2 = set().union(*(self._related_entities(m.mapping.entity, 2) for m in measures))
+            cands = (h.explain or {}).get("label_candidates") or []
+            if h.mapping.entity not in reach2 and not any(c["entity"] in reach2 for c in cands):
+                # Nothing the measure can reach holds this name: no filter is better than one that cannot apply.
+                hits.remove(h)
+                if h.term not in sq.unresolved:
+                    sq.unresolved.append(fold(h.term))
+                sq.explanation.append(f"'{h.term}' veride {h.mapping.entity}.{h.mapping.column} değeri, ama ölçünün "
+                                      f"tablosundan ulaşılamıyor; filtre olarak kullanılmadı")
+        for pos, h in enumerate(hits):
+            cands = (h.explain or {}).get("label_candidates") if (h.explain or {}).get("source") == "label_values" else None
+            if not cands or not h.mapping:
+                continue
+            for hops in (1, 2):
+                reach = set().union(*(self._related_entities(m.mapping.entity, hops) for m in measures))
+                if h.mapping.entity in reach:
+                    break
+                near = [c for c in cands if c["entity"] in reach and self.by_entity.get(c["entity"]) is not None]
+                if near:
+                    c = max(near, key=lambda c: c["rows"])
+                    prof = self.by_entity[c["entity"]]
+                    old = f"{h.mapping.entity}.{h.mapping.column}"
+                    h.mapping = Mapping(concept_id="", entity=c["entity"], table_pattern=prof.table_pattern, column=c["column"],
+                                        operator="IN", values=[c["value"]])
+                    h.term = c["value"]
+                    h.explain = {**h.explain, "why": f"veride {c['entity']}.{c['column']} = '{c['value']}' ({c['rows']} satır); "
+                                                     f"{old} ölçünün tablosundan ulaşılamıyor", "rows": c["rows"], "how": c["how"]}
+                    break
+
     @staticmethod
     def _content_words(text: str) -> list[str]:
         return [w for w in fold(text).split() if w not in _QUANTITY_NEUTRAL and not w.startswith(_QUANTITY_ROOTS)]
@@ -2997,7 +3174,7 @@ class SemanticResolver:
         Built from the relationships the source itself declares, so it says nothing about any
         particular schema — only that a filter has to land somewhere the answer can reach.
         """
-        cached = self._related_cache.get(root)
+        cached = self._related_cache.get((root, hops))
         if cached is not None:
             return cached
         if not self._edges:
@@ -3015,7 +3192,7 @@ class SemanticResolver:
                 nxt |= self._edges.get(e, set())
             frontier = nxt - seen
             seen |= frontier
-        self._related_cache[root] = seen
+        self._related_cache[(root, hops)] = seen
         return seen
 
     def _entity_for_column(self, col: str, hits: list[ResolvedSlot]) -> Optional[str]:

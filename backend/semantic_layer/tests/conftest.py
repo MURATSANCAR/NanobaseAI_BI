@@ -15,6 +15,13 @@ from semantic_layer.profiler.connectors import SQLiteConnector
 from semantic_layer.profiler.profiler import Profiler
 from semantic_layer.store.catalog_store import open_store
 
+
+@pytest.fixture(autouse=True)
+def _no_live_label_dictionary(monkeypatch, tmp_path):
+    """The resolver reads the daily label dictionary from disk; a test sees only the one it hands in."""
+    from semantic_layer.runtime import label_values
+    monkeypatch.setattr(label_values, "PATH", str(tmp_path / "label-values.json"))
+
 ROOT = Path(__file__).resolve().parents[3]
 PROJECT = ROOT / "configs" / "semantic" / "knowledge" / "logo"
 ENUM_PROBE = ROOT / "artifacts" / "timas" / "apply-all.json"

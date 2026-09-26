@@ -1910,6 +1910,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         app.state.editorial_home.start()
         app.state.editorial_intake.start()
         app.state.management_reports.start()
+        # Label dictionary (every value of the certified text columns, every table copy): built on its own
+        # connections when missing or a day old, then daily. The resolver only reads the file.
+        label_stop = threading.Event()
+        if os.environ.get("SEMANTIC_LABEL_VALUES_BUILD", "1").strip().lower() not in ("0", "false", "no", "off"):
+            from semantic_layer.runtime import label_values
+            label_values.start_refresher(lambda: state["rt"], label_stop)
         # Every request waiting for the model holds one of these threads while it waits. Forty (the
         # default) is forty waiting prompts and then /health queues behind them too.
         try:
@@ -1923,6 +1929,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         try:
             yield
         finally:
+            label_stop.set()
             app.state.editorial_home.stop()
             app.state.editorial_intake.stop()
             app.state.management_reports.stop()
