@@ -1,5 +1,27 @@
 # Geliştirme Günlüğü
 
+## 2026-09-26 (06:20) — Stüdyo + yeni menü + künye: test sunucusu ve GPU stüdyosuna kuruldu (main `3e84765b`)
+
+- **Kullanıcı kararı:** stüdyo test sunucusuna ve GPU'ya kurulsun; künyeye kitap adı/yazar; sesli okuma modeli kalıcı.
+  Etimesgutlu Bebek Aslan yeniden başlatılmadı (karar verilmedi; ad künyeden düzeltilebilir).
+- **GPU:** `releases/87232e97` (git archive, `._*` 0), `editor-py:0.15.9-87232e97`; yalnız `editor-studio` ve
+  `editor-studio-worker` bu imaja alındı (gateway ve analiz servisleri `2b2df5f8`'de kaldı). `editor-voice:1` derlendi.
+  Giriş kapısı betiği ilk koşuda `nginx -t`'den düştü (dosya kendiliğinden geri döndü): `character-settings` yolunun
+  `proxy_pass`'ı değişkensizdi → `$is_args$args` eklendi (`3e84765b`), canlı dosyanın kopyasında denenip uygulandı,
+  ikinci koşu «zaten var».
+- **Test sunucusu:** köprü: 10 yeni `editorial_studio_*.py` + 4 güncelleme (admin, app, editorial_studio,
+  seo_geo/__init__) — canlıdaki hâllerin hepsi main'in eski sürümleriydi (main'de olmayan yama yok), md5 denetimli
+  kopya, geçici kopyada içe aktarma denendi (uç 224 → 336), `nanobase-semantic-bridge` yeniden başladı. Ön yüz:
+  130 dosya (87 yeni, 43 güncelleme; yabancı hâl yok), `npm ci` (three, cmdk), `VITE_BASE=/timas/` derleme,
+  `cockpit/dist` yedeklenip (`dist.bak-20260926-061650`) değişti; portal `index-CLsxMlE4.js`.
+- **Doğrulama (köprü → tünel → GPU kapısı → stüdyo, köprünün kendi istemcisiyle):** iş listesi, öğe kataloğu (15
+  tür), şekil/efekt önizlemeleri (PNG), pazarlama, e-kitap, yaş raporu, boyama, kolaj, prova, karakter kartı ve
+  ayarı, sayfa önizlemesi WebP. Plan isteyen uçlar (plan, okur, sürümler, sesli okuma) bu işte plan olmadığı için
+  beklenen `NO_PLAN`.
+- **Bekleyen:** gateway'in yeni imaja alınması (`book-voice` takma adı ve `audio/narrate`) — başka oturumun toplu
+  işi (`wv-all-books-v3b`, 16 kitap) gateway'i kullanıyor; bitince yapılacak. Görsel üreten uçtan uca deneme de o
+  zamana (görsel model açılınca ana model durur). Müşteri VM'i: test sunucusunda doğrulama + kullanıcı onayından sonra.
+
 ## 2026-09-26 (06:00) — Sesli okuma modeli GPU'ya kalıcı kuruldu (ağırlık + imaj); gateway'e girişi kurulumda
 
 - **Kullanıcı kararı:** sesli okuma modeli GPU sunucusuna kalıcı kurulsun. Kalıcı olan yalnız ağırlıklar + MANIFEST ve

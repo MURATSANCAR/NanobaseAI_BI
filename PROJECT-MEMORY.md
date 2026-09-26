@@ -14,6 +14,8 @@
 
 **Boş cevapta veri sonu (2026-09-24):** boş cevap + tek dönem → ölçünün son günü ölçülür (`same_period.empty_probe/empty_hint`, köprü `_data_end_hint`), açıklama tarihi söyler, `dataEnd.suggestion` aynı soruyu o döneme kurar (ayrıştırıcıdan geri geçmezse yok). Ayrıştırıcıda tek gün (`DATE`) ve `DAY_BEFORE_YESTERDAY`. Kuruldu (test + VM, 25.09); gerçek DB'de doğrulandı.
 
+**Yayın durumu (2026-09-26 06:20):** test sunucusu (köprü + ön yüz) ve GPU stüdyosu (`editor-studio`, `editor-studio-worker` = `editor-py:0.15.9-87232e97`) main `3e84765b` ile eş: Kitap Tasarım Stüdyosu'nun bütün hatları, yeni menü, künyede kitap adı/yazar. GPU'da gateway ve analiz servisleri `2b2df5f8`'de; `book-voice` takma adı gateway yeni imaja alınınca açılır (ağırlıklar ve `editor-voice:1` hazır). Müşteri VM'ine bu sürüm kurulmadı.
+
 **Yayın durumu (2026-09-25 15:10):** test sunucusu ve müşteri VM'i `main` (`845773a4`) ile eş (kart SQL'i, boş cevapta veri sonu önerisi, "önceki X", kapanmış dönemde eş dönem, "geçen yılın aynı dönemi"); VM'de 3 soru test sunucusuyla birebir. İstisna: test sunucusunda main'de olmayan Stüdyo baskı-PDF işi (`d4cf7361`) de kurulu; `app.py`/`engine.ts` üç yönlü birleşik.
 
 **Kart SQL'i (2026-09-24):** kanvas kartlarının hepsinde "SQL'i göster" + Kopyala ortak `src/canvas/stitch/CardSql.tsx` ile; kart kendi rakamını üreten blokları gösterir (`screens.ts` `sqlParts`), kopya http'de (VM) yedek yolla çalışır. Kuruldu (test + VM, 25.09).
