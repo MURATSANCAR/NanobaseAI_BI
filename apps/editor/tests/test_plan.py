@@ -1,0 +1,944 @@
+"""Sayfa planı (editor.production.plan, photo, plan.typ): model ve veritabanı yok. Typst ve fontlar editor-py
+imajında; yoksa dizgi testleri atlanır. Çalıştır:
+
+    pytest apps/editor/tests/test_plan.py
+"""
+
+from __future__ import annotations
+
+import asyncio
+import io
+import json
+import sys
+import types
+from dataclasses import asdict
+from pathlib import Path
+
+import pytest
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+
+class _Stub(types.ModuleType):
+    def __getattr__(self, name):
+        if name.startswith("__"):
+            raise AttributeError(name)
+        sub = _Stub(f"{self.__name__}.{name}")
+        sys.modules[sub.__name__] = sub
+        return sub
+
+
+for _mod in ("psycopg", "psycopg.rows", "psycopg.types", "psycopg.types.json", "psycopg_pool"):
+    sys.modules.setdefault(_mod, _Stub(_mod))
+
+from editor.production import front, manuscript as M, photo, plan as P, spec as S, studio  # noqa: E402
+from editor.production.profile import Profile  # noqa: E402
+
+FONTS = Path("/app/data/fonts")
+HAS_TYPST = FONTS.joinpath("Andika-Regular.ttf").exists()
+try:
+    import typst  # noqa: F401
+except ImportError:
+    HAS_TYPST = False
+typeset_only = pytest.mark.skipif(not HAS_TYPST, reason="typst/fontlar yok (editor-py imajında koşar)")
+QUIET = {"build": False, "post": "none"}                 # dizgisiz, ön kontrolsüz yazım (saf testler)
+
+
+def _png(w, h, color="#3366aa", mode="RGB") -> bytes:
+    from PIL import Image
+    buf = io.BytesIO()
+    Image.new(mode, (w, h), color).save(buf, "PNG")
+    return buf.getvalue()
+
+
+def _prof(child: bool) -> Profile:
+    return (Profile(4, 8, "beyan", "RESIMLI_OYKU", "HER_SAYFA", [], {}, {}, {}) if child
+            else Profile(13, 16, "beyan", "GENCLIK_ROMANI", "BOLUM_BASI", [], {}, {}, {}))
+
+
+# ------------------------------------------------------------------ elle kurulan küçük plan (dizgisiz)
+def _mini(d: Path, n: int = 5) -> dict:
+    """spec.json + plan.json (n yazı sayfası, sayfa 2'de resim a_00000001) + artplan; rev 1."""
+    d.mkdir(parents=True, exist_ok=True)
+    sp = S.build(_prof(True))
+    studio.write(d, "spec.json", sp.to_json())
+    studio.write(d, "profile.json", _prof(True).to_json())
+    studio.write(d, "artplan.json", {"style": {"palette": ["#264653"], "accent": "#264653", "avoid": "text",
+                                               "style_prompt": "s", "medium": "", "line": "", "lighting": "",
+                                               "mood": "", "why": ""},
+                                     "characters": [{"name": "Elif", "species": "girl", "look": "", "from_text": [],
+                                                     "role": "ANA", "outfits": [], "default_outfit": ""}],
+                                     "scenes": []})
+    page = P.geometry(sp)
+    pages = []
+    for i in range(n):
+        pr = P.preset("art-top" if i == 1 else "text-only", page)
+        pg = {"id": f"p_{i:08x}", "chapter": 0, "layout": "art-top" if i == 1 else "text-only", "art": None,
+              "text": {"box": pr["text"], "align": "left", "size": None, "background": None,
+                       "blocks": [{"id": f"c0b{i}", "kind": "para",
+                                   "runs": [{"text": f"Elif bahçeye koştu {i}. "},
+                                            {"text": "Elif", "color": "#B0341C", "weight": 700, "source": "auto"},
+                                            {"text": " güldü."}]}]},
+              "bubbles": [], "figures": [], "texts": [], "overflow": False}
+        if i == 1:
+            pg["art"] = {"id": "a_00000001", "box": pr["art"], "fit": "cover", "focus": {"x": 0.5, "y": 0.5}}
+        pages.append(pg)
+    plan = {"version": 1, "rev": 0, "page": page, "pages": pages, "assets": {}, "warnings": [],
+            "palette": {"colors": [{"name": "Kiremit", "hex": "#B0341C", "source": "resim"}], "text": "#2C2C2A",
+                        "characters": {"Elif": "#B0341C"}}}
+    P._commit(d, plan, "sınama", "kuruldu")
+    return plan
+
+
+def test_presets_inside_page_and_safe_area():
+    page = P.geometry(S.build(_prof(True)))
+    for lay in P.LAYOUTS:
+        pr = P.preset(lay, page)
+        if lay == "custom":
+            assert pr is None
+            continue
+        for k in ("art", "text"):
+            bx = pr[k]
+            if bx:
+                assert bx["x"] >= 0 and bx["y"] >= 0 and bx["w"] > 0 and bx["h"] > 0
+                assert bx["x"] + bx["w"] <= page["w"] + 1e-6 and bx["y"] + bx["h"] <= page["h"] + 1e-6
+        if pr["text"]:
+            assert P.inside_safe(pr["text"], page), lay
+    assert P.preset("art-top", page)["art"]["w"] == page["w"]
+    assert P.preset("text-over-art", page)["background"] == P.OVER_ART_BG
+    with pytest.raises(ValueError):
+        P.preset("yok-boyle", page)
+
+
+def test_bubble_shapes():
+    bb = {"box": {"x": 20, "y": 20, "w": 50, "h": 24}, "tail": {"x": 60, "y": 80}, "shape": "oval"}
+    sh = P.bubble_shapes(bb)
+    assert len(sh["outline"]) == 72 and sh["tail"][1] == [60, 80] and sh["tail_fill"] and not sh["dots"]
+    inner = sh["inner"]
+    assert 20 < inner["x"] and inner["x"] + inner["w"] < 70 and 20 < inner["y"] and inner["y"] + inner["h"] < 44
+    th = P.bubble_shapes({**bb, "shape": "thought"})
+    assert th["tail"] is None and len(th["dots"]) == 3
+    assert len(P.bubble_shapes({**bb, "shape": "shout"})["outline"]) == 32
+    assert P.bubble_shapes({**bb, "shape": "box"})["tail"]
+    assert P.bubble_shapes({**bb, "tail": {"x": 45, "y": 32}})["tail"] is None     # uç balonun içinde: kuyruk yok
+
+
+def test_update_page_rev_history_and_stale(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["text"]["box"]["x"] += 5
+    pg["texts"] = [{"box": {"x": 30, "y": 40, "w": 60, "h": 20}, "align": "center", "size": 22,
+                    "runs": [{"text": "Sihirli orman", "color": "#1F3B73", "weight": 800, "font": "heading"}]}]
+    new, page = P.update_page(d, pg["id"], 1, pg, "editör", **QUIET)
+    assert new["rev"] == 2 and page["texts"][0]["id"].startswith("t_") and page["texts"][0]["z"] == P.Z_FREE
+    with pytest.raises(P.Stale) as e:
+        P.update_page(d, pg["id"], 1, pg, "editör", **QUIET)
+    assert e.value.rev == 2
+    assert [h["rev"] for h in P.history(d)] == [2, 1]
+    assert P.history(d)[0]["by"] == "editör"
+    prov = [json.loads(x) for x in (d / "provenance.jsonl").read_text().splitlines()]
+    assert [p["rev"] for p in prov if p["kind"] == "plan"] == [1, 2]
+    with pytest.raises(ValueError):                   # bilinmeyen renk biçimi
+        P.update_page(d, pg["id"], 2, {**pg, "texts": [{**pg["texts"][0], "runs": [{"text": "x", "color": "kırmızı"}]}]},
+                      "editör", **QUIET)
+
+
+def test_boxes_clamped_into_page_and_safe_warning(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["text"]["box"] = {"x": -20, "y": 5, "w": 500, "h": 50}
+    new, page = P.update_page(d, pg["id"], 1, pg, "e", **QUIET)
+    bx = page["text"]["box"]
+    assert bx["x"] == 0 and bx["w"] == plan["page"]["w"]
+    assert any("4. sayfa: yazı kutusu güvenli alanın dışına" in w for w in new["warnings"])
+
+
+def test_layout_change_applies_preset_and_keeps_text(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    new, page = P.update_page(d, pg["id"], 1, {**pg, "layout": "text-over-art"}, "e", **QUIET)
+    assert page["art"]["id"].startswith("a_") and page["text"]["background"] == P.OVER_ART_BG
+    assert page["text"]["blocks"] == pg["text"]["blocks"]
+    with pytest.raises(ValueError):                   # metni olan sayfa «tam sayfa resim» olamaz (metin kaybolmaz)
+        P.update_page(d, pg["id"], 2, {**page, "layout": "art-full"}, "e", **QUIET)
+
+
+def test_insert_delete_order_and_unused_art(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    studio.write(d, "studio.json", {"pages": {"a_00000001": {"versions": [], "selected": None}}, "characters": {}})
+    new, pg = P.insert_page(d, 1, plan["pages"][0]["id"], "art-top", "e", **QUIET)
+    assert new["pages"][1]["id"] == pg["id"] and pg["art"]["id"].startswith("a_") and pg["text"]["blocks"] == []
+    new, _ = P.delete_page(d, plan["pages"][1]["id"], new["rev"], "e", **QUIET)
+    assert all(p["id"] != plan["pages"][1]["id"] for p in new["pages"])
+    assert [a["id"] for a in P.unused_art(d, new)] == ["a_00000001"]         # resim silinmedi, boşta
+    ids = [p["id"] for p in new["pages"]][::-1]
+    new, _ = P.order(d, new["rev"], ids, "e", **QUIET)
+    assert [p["id"] for p in new["pages"]] == ids
+    with pytest.raises(ValueError):
+        P.order(d, new["rev"], ids[:-1], "e", **QUIET)
+
+
+def test_eight_multiple_warning_never_adds_pages(tmp_path):
+    d = tmp_path / "j"
+    _mini(d, n=5)                                     # 3 ön sayfa + 5 = 8
+    pl = P.load(d)
+    assert not [w for w in P.warnings(d, pl) if "katı değil" in w]
+    new, _ = P.insert_page(d, 1, None, "blank", "e", **QUIET)
+    assert "Sayfa sayısı 8'in katı değil: 7 sayfa eksik." in new["warnings"] and len(new["pages"]) == 6
+
+
+def test_split_moves_rest_to_new_page(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = plan["pages"][0]
+    at = len("Elif bahçeye koştu 0. Elif")
+    new, (a, b) = P.split_page(d, pg["id"], 1, "c0b0", at, "e", **QUIET)
+    assert "".join(r["text"] for r in a["text"]["blocks"][0]["runs"]) == "Elif bahçeye koştu 0. Elif"
+    assert "".join(r["text"] for r in b["text"]["blocks"][0]["runs"]) == "güldü."
+    assert new["pages"][1]["id"] == b["id"] and b["layout"] == "text-only"
+
+
+def test_palette_recolors_auto_runs_only(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["text"]["blocks"][0]["runs"].append({"text": " Elif!", "color": "#B0341C", "source": "editor"})
+    new, _ = P.update_page(d, pg["id"], 1, pg, "e", **QUIET)
+    pal = {**new["palette"], "characters": {"Elif": "#1F6F5B"}}
+    new, _ = P.set_palette(d, new["rev"], pal, "e", **QUIET)
+    runs = new["pages"][0]["text"]["blocks"][0]["runs"]
+    assert runs[1]["color"] == "#1F6F5B" and runs[-1]["color"] == "#B0341C"
+
+
+def test_restore_keeps_later_assets(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["text"]["blocks"][0]["runs"] = [{"text": "değişti"}]
+    P.update_page(d, pg["id"], 1, pg, "e", **QUIET)
+    P.add_asset(d, "g_00000001", {"kind": "figure", "path": "figur/g_00000001.png", "w_px": 10, "h_px": 10},
+                None, "e", **QUIET)
+    new, _ = P.restore(d, 1, "e", **QUIET)
+    assert new["rev"] == 4 and new["restored_from"] == 1
+    assert new["pages"][0]["text"]["blocks"][0]["runs"][0]["text"].startswith("Elif bahçeye")
+    assert "g_00000001" in new["assets"]
+    with pytest.raises(KeyError):
+        P.restore(d, 99, "e", **QUIET)
+
+
+def test_assets_in_use_and_low_dpi_photo(tmp_path):
+    from PIL import Image
+    d = tmp_path / "j"
+    plan = _mini(d)
+    buf = io.BytesIO()
+    Image.new("RGB", (300, 200), "#aa3322").save(buf, "JPEG")
+    gid, meta, res = P.add_photo(d, buf.getvalue(), "kedi.jpg", plan["pages"][0]["id"], "e", **QUIET)
+    assert meta["kind"] == "photo" and (d / meta["path"]).exists() and res["figure"]["asset"] == gid
+    assert any("fotoğraf baskıda bulanık çıkabilir" in w for w in res["plan"]["warnings"])
+    with pytest.raises(P.InUse) as e:
+        P.delete_asset(d, gid, res["plan"]["rev"], "e", **QUIET)
+    assert e.value.pages == [4]
+    pg = json.loads(json.dumps(res["plan"]["pages"][0]))
+    pg["figures"] = []
+    new, _ = P.update_page(d, pg["id"], res["plan"]["rev"], pg, "e", **QUIET)
+    new, _ = P.delete_asset(d, gid, new["rev"], "e", **QUIET)
+    assert gid not in new["assets"] and (d / meta["path"]).exists()        # dosya diskte kalır
+
+
+def test_photo_ingest_orientation_and_metadata():
+    from PIL import Image
+    ex = Image.Exif()
+    ex[0x0112] = 6                                    # 90° döndür
+    ex[0x010F] = "Kamera"
+    buf = io.BytesIO()
+    Image.new("RGB", (40, 20), "#123456").save(buf, "JPEG", exif=ex)
+    out = photo.ingest(buf.getvalue(), "foto.jpg")
+    im = Image.open(io.BytesIO(out["bytes"]))
+    assert (out["ext"], im.size, out["alpha"]) == ("jpg", (20, 40), False) and len(im.getexif()) == 0
+    png = photo.ingest(_png(30, 30, (255, 0, 0, 128), "RGBA"), "saydam.png")
+    assert png["ext"] == "png" and png["alpha"]
+    with pytest.raises(ValueError):
+        photo.ingest(b"bu bir resim degil", "x.jpg")
+
+
+def test_photo_ingest_heic_becomes_jpeg():
+    """Telefonun HEIC fotoğrafı JPEG'e döner; EXIF (yön uygulanıp) ve öteki üst veri atılır."""
+    pytest.importorskip("pillow_heif")
+    from PIL import Image
+    assert photo.heic_supported()
+    ex = Image.Exif()
+    ex[0x010F] = "Telefon"
+    buf = io.BytesIO()
+    try:
+        Image.new("RGB", (64, 32), "#336699").save(buf, "HEIF", exif=ex, quality=90)
+    except (KeyError, OSError, ValueError) as e:                          # kodlayıcısız kurulum
+        pytest.skip(f"HEIC yazılamıyor: {e}")
+    out = photo.ingest(buf.getvalue(), "IMG_0001.HEIC")
+    im = Image.open(io.BytesIO(out["bytes"]))
+    assert out["ext"] == "jpg" and im.format == "JPEG" and sorted(im.size) == [32, 64] and not out["alpha"]
+    assert len(im.getexif()) == 0
+
+
+def test_dpi_and_upscale_factor():
+    assert round(photo.dpi(3000, 2000, {"w": 254, "h": 169.3})) == 300
+    assert round(photo.dpi(1000, 1000, {"w": 254, "h": 127}, "cover")) == 100
+    assert photo.upscale_factor(250) == 2 and photo.upscale_factor(90) == 4 and photo.upscale_factor(120) == 3
+    assert photo.upscale_factor(40) == 4                                     # 4× de yetmez: en çok 4
+
+
+def test_cutout_keyed_and_connected():
+    import numpy as np
+    from PIL import Image, ImageDraw
+    rng = np.random.default_rng(1)
+    a = np.clip(np.array([255, 0, 255]) + rng.normal(0, 4, (200, 200, 3)), 0, 255).astype("uint8")
+    im = Image.fromarray(a, "RGB")
+    dr = ImageDraw.Draw(im)
+    dr.ellipse((20, 20, 80, 80), fill="#cc2222")                             # dolu figür
+    dr.ellipse((110, 110, 190, 190), outline="#2244cc", width=14)            # içi zemin olan halka
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    png, info = photo.cutout(buf.getvalue(), keyed=True)
+    out = Image.open(io.BytesIO(png))
+    assert out.mode == "RGBA" and info["flat"] and info["removed"] > 0.3
+    x0, y0 = info["crop"][:2]
+    A = np.asarray(out.getchannel("A"))
+    assert A[50 - y0, 50 - x0] == 255                  # figürün içi opak
+    assert A[150 - y0, 150 - x0] < 10                  # halkanın içi (kapalı zemin) saydam: anahtar renk
+    assert out.width < 200 and out.height < 200        # figüre kırpıldı
+    png2, _ = photo.cutout(buf.getvalue(), keyed=False)
+    B = np.asarray(Image.open(io.BytesIO(png2)).getchannel("A"))
+    assert B[150 - y0, 150 - x0] == 255                # fotoğrafta kenara bağlı olmayan zemin korunur
+    assert photo.key_color(["#FF10F0", "#E020E0"])[1] != "#FF00FF"          # kitabın rengine yakın anahtar seçilmez
+
+
+def test_regenerate_new_art_needs_direction(tmp_path):
+    d = tmp_path / "j"
+    _mini(d)
+    studio.write(d, "pagemap.json", {"layout": {"art_ratio": 0.5, "body_size": 16, "accent": "#264653"}, "pages": []})
+    with pytest.raises(ValueError, match="ne çizileceğini"):
+        asyncio.run(studio.regenerate(d, "a_00000001", "new", "  ", "e"))
+
+
+def test_upscale_asset_marks_lanczos(tmp_path, monkeypatch):
+    from editor.production import images
+    d = tmp_path / "j"
+    plan = _mini(d)
+    gid, meta, res = P.add_photo(d, _png(100, 80), "k.png", plan["pages"][0]["id"], "e", **QUIET)
+
+    async def lanczos(self, png, W, H):
+        return images.upscale(png, W, H), "servis açılamadı"
+    monkeypatch.setattr(images.Painter, "enlarge", lanczos)
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    out = asyncio.run(studio.upscale_asset(d, gid, "g_00000002", plan["pages"][0]["id"], res["figure"]["id"], "e"))
+    a = P.load(d)["assets"]["g_00000002"]
+    assert out["factor"] == 4 and not out["enough"] and out["note"].startswith("Yalnız büyütüldü")
+    assert a["derived_from"] == gid and a["upscale"] == 4 and a["w_px"] == 400 and gid in P.load(d)["assets"]
+
+
+def _magenta_figure() -> bytes:
+    from PIL import Image, ImageDraw
+    im = Image.new("RGB", (300, 400), "#FF00FF")
+    ImageDraw.Draw(im).ellipse((80, 80, 220, 320), fill="#d04010")
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    return buf.getvalue()
+
+
+def test_make_figure_registers_transparent_asset_on_page(tmp_path, monkeypatch):
+    """Figür işi (model sahte): anahtar renkli zemin ayıklanır, saydam PNG kütüphaneye ve sayfaya girer."""
+    from editor.production import art as art_mod, images
+    d = tmp_path / "j"
+    plan = _mini(d)
+    seen = {}
+
+    async def en(text, chars, llm):
+        return "a small fox with a red balloon"
+
+    async def fig(self, what, chars, key_name, key_hex, seed):
+        seen.update(what=what, chars=[c.name for c in chars], key=key_hex)
+        return _magenta_figure(), "generate"
+    monkeypatch.setattr(art_mod, "direction_en", en)
+    monkeypatch.setattr(images.Painter, "figure", fig)
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    pid = plan["pages"][0]["id"]
+    out = asyncio.run(studio.make_figure(d, "g_000000aa", "kırmızı balonlu küçük tilki", ["Elif"], pid, "e"))
+    pl = P.load(d)
+    a = pl["assets"]["g_000000aa"]
+    assert out["flat"] and a["kind"] == "figure" and a["alpha"] and a["characters"] == ["Elif"]
+    assert a["prompt"] == "kırmızı balonlu küçük tilki" and seen["key"] != "#FFFFFF" and seen["chars"] == ["Elif"]
+    assert (d / "figur" / "g_000000aa.png").exists() and (d / "figur" / "g_000000aa.ham.png").exists()
+    assert pl["pages"][0]["figures"][0]["asset"] == "g_000000aa"
+    from PIL import Image
+    im = Image.open(d / a["path"])
+    assert im.mode == "RGBA" and im.getpixel((2, 2))[3] == 0 and im.width < 300           # zemin gitti, kırpıldı
+
+
+def test_cutout_asset_makes_new_unplaced_asset(tmp_path, monkeypatch):
+    d = tmp_path / "j"
+    _mini(d)
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    gid, _, _ = P.add_photo(d, _magenta_figure(), "tilki.png", None, "e", **QUIET)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    out = studio.cutout_asset(d, gid, "g_000000bb", "e")
+    pl = P.load(d)
+    assert out["asset"] == "g_000000bb" and pl["assets"]["g_000000bb"]["derived_from"] == gid
+    assert pl["assets"]["g_000000bb"]["alpha"] and gid in pl["assets"]
+    assert not any(f["asset"] == "g_000000bb" for p in pl["pages"] for f in p["figures"])   # onaysız sayfaya konmaz
+
+
+def test_shapes_and_effect_text_saved_and_validated(tmp_path, monkeypatch):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["shapes"] = [{"kind": "sign", "box": {"x": 30, "y": 150, "w": 60, "h": 30}, "rotate": -4, "fill": "#F2E3C6",
+                     "stroke": "ink", "params": {"posts": 1}, "runs": [{"text": "Sihirli Orman", "weight": 800}]}]
+    pg["texts"] = [{"box": {"x": 20, "y": 40, "w": 60, "h": 18}, "runs": [{"text": "Güüüm!"}],
+                    "effect": {"style": "burst", "params": {"angle": -8}}, "z": 6}]
+    new, page = P.update_page(d, pg["id"], 1, pg, "e", **QUIET)
+    s = page["shapes"][0]
+    assert s["id"].startswith("s_") and s["rotate"] == 356 and s["z"] == P.Z_FREE and s["params"] == {"posts": 1}
+    assert page["texts"][0]["effect"]["style"] == "burst"
+    assert "Güüüm" not in P.PlanText(new).text()                            # efekt yazı metin denetimine girmez
+    with pytest.raises(ValueError):
+        P.update_page(d, pg["id"], 2, {**pg, "shapes": [{"box": pg["shapes"][0]["box"]}]}, "e", **QUIET)
+    fake = types.ModuleType("editor.production.elements")
+    fake.validate = lambda o: "bilinmeyen tür" if o.get("kind") == "yok" else None
+    monkeypatch.setitem(sys.modules, "editor.production.elements", fake)
+    import editor.production as prod
+    monkeypatch.setattr(prod, "elements", fake, raising=False)
+    with pytest.raises(ValueError, match="bilinmeyen tür"):
+        P.update_page(d, pg["id"], 2, {**pg, "shapes": [{**pg["shapes"][0], "kind": "yok"}]}, "e", **QUIET)
+
+
+def test_art_mode_overrides_profile_decision():
+    from editor.production.profile import apply_art_mode
+    p = Profile(4, 8, "beyan", "RESIMLI_OYKU", "HER_SAYFA", [], {}, {}, {"illustration": "HER_SAYFA"})
+    apply_art_mode(p, "none")
+    assert (p.illustration, p.art_source) == ("YOK", "editor") and p.illustration_source == "editörün seçimi: resimsiz"
+    apply_art_mode(p, "auto")                           # seçim geri alınınca modelin okumasına döner
+    assert (p.illustration, p.art_source) == ("HER_SAYFA", "auto")
+    assert p.illustration_source == "Okur yaşı 4–8, her sayfa resimli seçildi (model okuması)"
+    q = Profile(8, 11, "beyan", "COCUK_ROMANI", "YOK", [], {}, {}, {"illustration": "YOK"})
+    assert apply_art_mode(q, "auto", "Çizer Kişi").illustration == "BOLUM_BASI"            # yayınevi kuralı
+    assert apply_art_mode(q, "every_page", "Çizer Kişi").illustration == "HER_SAYFA"       # editör seçimi önce
+    with pytest.raises(ValueError):
+        apply_art_mode(q, "bazen")
+
+
+def test_art_mode_endpoint(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from editor.production import api
+    root = tmp_path / "production"
+    d = root / "job1"
+    _mini(d)
+    studio.write(d, "manuscript.json", {"title": "K", "author": "Y", "illustrator": None, "meta": {}, "source": {},
+                                        "chapters": []})
+    studio.write(d, "job.json", {"id": "job1", "source": {}, "created_by": "t", "art_mode": "auto"})
+    studio.write(d, "studio.json", {"pages": {"7": {"versions": [], "selected": None}, "kapak": {"versions": []}},
+                                    "characters": {}})
+    monkeypatch.setattr(studio, "root", lambda: root)
+    monkeypatch.setattr(api, "KEY", "k")
+    started = []
+
+    async def pipeline(dd, resume=False):
+        started.append((dd.name, resume))
+    monkeypatch.setattr(api, "_pipeline", pipeline)
+    c = TestClient(api.app)
+    h = {"Authorization": "Bearer k", "X-Editor": "sinama"}
+    studio.set_busy(d, {"key": "hat", "since": 0})
+    r = c.post("/v1/studio/jobs/job1/art-mode", headers=h, json={"art_mode": "none"})
+    assert r.status_code == 409 and r.json()["code"] == "BUSY" and not started
+    studio.set_busy(d, None)
+    assert c.post("/v1/studio/jobs/job1/art-mode", headers=h, json={"art_mode": "bazen"}).status_code == 422
+    r = c.post("/v1/studio/jobs/job1/art-mode", headers=h, json={"art_mode": "none"})
+    assert r.status_code == 200 and started == [("job1", False)]
+    job = studio.read(d, "job.json")
+    assert job["art_mode"] == "none" and job["replan"] and not P.exists(d) and [h_["rev"] for h_ in P.history(d)] == [1]
+    pages = studio.studio_state(d)["pages"]
+    assert "7" not in pages and "kapak" in pages and any(P.ART_ID.match(k) for k in pages)   # resim silinmedi
+
+
+def test_new_workflows_registered():
+    from editor.production.flow import ACTIVITIES, WORKFLOWS
+    names = {getattr(w, "__temporal_workflow_definition").name for w in WORKFLOWS}
+    assert {"FigureGenerate", "AssetCutout", "AssetUpscale"} <= names
+    acts = {getattr(a, "__temporal_activity_definition").name for a in ACTIVITIES}
+    assert {"production_figure", "production_cutout", "production_upscale"} <= acts
+
+
+def test_figure_workflow_runs_activity_with_args():
+    testing = pytest.importorskip("temporalio.testing")
+    from temporalio import activity
+    from temporalio.worker import Worker
+    from editor.production.flow import WORKFLOWS
+    calls = []
+
+    @activity.defn(name="production_figure")
+    async def fig(job, jid, gid, prompt, characters, page, by):
+        calls.append((job, gid, prompt, characters, page))
+
+    @activity.defn(name="production_upscale")
+    async def up(job, jid, gid, new_gid, page, item, by):
+        calls.append((job, gid, new_gid, page, item))
+
+    async def main():
+        try:
+            env = await testing.WorkflowEnvironment.start_time_skipping()
+        except Exception as e:  # noqa: BLE001
+            pytest.skip(f"Temporal test sunucusu yok: {e}")
+        async with env, Worker(env.client, task_queue="t", workflows=WORKFLOWS, activities=[fig, up]):
+            await env.client.execute_workflow("FigureGenerate", args=["a", "j", "g_1", "tilki", ["Elif"], None, "e"],
+                                              id="wf", task_queue="t")
+            await env.client.execute_workflow("AssetUpscale", args=["a", "j", "g_1", "g_2", "p_1", "art", "e"],
+                                              id="wu", task_queue="t")
+    asyncio.run(main())
+    assert calls == [("a", "g_1", "tilki", ["Elif"], None), ("a", "g_1", "g_2", "p_1", "art")]
+
+
+def test_api_codes(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from editor.production import api
+    root = tmp_path / "production"
+    _mini(root / "job1")
+    (root / "job2").mkdir(parents=True)
+    monkeypatch.setattr(studio, "root", lambda: root)
+    monkeypatch.setattr(api, "KEY", "k")
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    monkeypatch.setenv("STUDIO_UPLOAD_MB", "1")
+    c = TestClient(api.app)
+    h = {"Authorization": "Bearer k", "X-Editor": "sinama"}
+    r = c.get("/v1/studio/jobs/job2/plan", headers=h)
+    assert r.status_code == 404 and r.json()["code"] == "NO_PLAN"
+    pl = c.get("/v1/studio/jobs/job1/plan", headers=h).json()
+    pg = pl["pages"][0]
+    r = c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", headers=h, json={"rev": 1, "page": pg})
+    assert r.status_code == 200 and r.json()["rev"] == 2
+    r = c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", headers=h, json={"rev": 1, "page": pg})
+    assert r.status_code == 409 and r.json()["code"] == "STALE" and r.json()["rev"] == 2
+    r = c.put("/v1/studio/jobs/job1/plan/photos?filename=b.jpg", headers=h, content=b"x" * (1024 * 1024 + 10))
+    assert r.status_code == 413 and r.json()["code"] == "TOO_LARGE"
+    r = c.put("/v1/studio/jobs/job1/plan/photos?filename=b.png", headers=h, content=_png(64, 48))
+    assert r.status_code == 200 and r.json()["w_px"] == 64
+    gid = r.json()["asset"]
+    r = c.get(f"/v1/studio/jobs/job1/plan/assets/{gid}?w=64", headers=h)
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+    assert [x["rev"] for x in c.get("/v1/studio/jobs/job1/plan/history", headers=h).json()] == [3, 2, 1]
+    assert c.post("/v1/studio/jobs/job1/plan/restore", headers=h, json={"rev": 1}).json()["rev"] == 4
+    assert c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", json={"rev": 4, "page": pg},
+                 headers={"Authorization": "Bearer k"}).status_code == 400          # X-Editor yok
+    view = c.get("/v1/studio/jobs/job1", headers=h).json()
+    assert view["plan"]["rev"] == 4 and [p["id"] for p in view["pages"]] == [p["id"] for p in P.load(root / "job1")["pages"]]
+    assert view["pages"][1]["art_id"] == "a_00000001" and view["pages"][1]["no"] == P.FRONT + 2
+    assert api._key("5", root / "job1") == "a_00000001" and api._key("kapak", root / "job1") == "kapak"
+    assert c.get("/v1/studio/jobs/job1/plan/jobs", headers=h).json() == {"busy": None, "jobs": []}
+    assert c.get("/v1/studio/jobs/job1/plan/unused-art", headers=h).json() == {"art": []}
+
+
+# ------------------------------------------------------------------ dizgiyle (editor-py imajında)
+def _job(tmp_path: Path, child: bool) -> tuple[Path, M.Manuscript]:
+    """Gerçek dizgiyle kurulmuş iş klasörü: el yazması, profil, spec, künye, sayfa haritası, sahneler, resimler."""
+    from PIL import Image
+
+    from editor.production.art import Scene
+    from editor.production.typeset import Typesetter
+    d = tmp_path / "job"
+    d.mkdir()
+    ms = M.Manuscript(title="Deneme Kitabı", author="Yazar", meta={"PUBLISHER": "YAYINEVİ"})
+    for c in range(2):
+        bl = []
+        for b in range(10):
+            if b % 4 == 1:
+                bl.append(M.Block("dialogue", f"Bak, bir yıldız {c}{b}! dedi Elif."))
+            else:
+                bl.append(M.Block("para", "Elif " + " ".join(["kelime"] * 40) + f" ağaç{c}{b} şişe ığdır."))
+        ms.chapters.append(M.Chapter(f"BÖLÜM {c + 1}", bl))
+    prof = _prof(child)
+    sp = S.build(prof)
+    fr = {"kunye": front.kunye(ms, {}), "kunye_fields": {}, "manual": {}, "bios": [{"name": "Yazar", "text": "Tanıtım."}]}
+    pm = Typesetter(d / "dizgi", FONTS).fit(ms, sp, fr, "#264653")
+    for name, obj in (("manuscript.json", ms.to_json()), ("profile.json", prof.to_json()), ("spec.json", sp.to_json()),
+                      ("front.json", fr), ("pagemap.json", pm.to_json()),
+                      ("job.json", {"id": "job", "source": {}, "created_by": "t"})):
+        studio.write(d, name, obj)
+    style = {"medium": "m", "line": "l", "lighting": "l", "mood": "m", "accent": "#264653", "style_prompt": "s",
+             "palette": ["#264653", "#2A9D8F", "#E9C46A", "#F4A261", "#E76F51"], "avoid": "text", "why": "w"}
+    chars = [{"name": "Elif", "species": "girl", "look": "red coat", "from_text": [], "role": "ANA", "outfits": [],
+              "default_outfit": ""}]
+    kinds = {p.no: p.kind for p in pm.pages}
+    art = sorted(pm.art_pages())
+    scenes = [asdict(Scene(no, kinds[no], "m", "q", ["Elif"], "s", "set", True)) for no in art]
+    studio.write(d, "artplan.json", {"style": style, "characters": chars, "scenes": scenes})
+    (d / "resim").mkdir()
+    pages = {}
+    for i, no in enumerate(art):
+        p = d / "resim" / f"sayfa-{no:02d}.v1.png"
+        Image.new("RGB", (600, 400), ("#88aacc", "#ccaa88", "#aaccaa")[i % 3]).save(p)
+        pages[str(no)] = {"versions": [{"v": 1, "path": str(p), "mode": "generate", "prompt": "", "seed": 1, "by": "t",
+                                        "at": 0, "dpi": 300, "base": None}], "selected": 1, "approved": True}
+    studio.write(d, "studio.json", {"pages": pages, "characters": {}})
+    return d, ms
+
+
+@typeset_only
+def test_freeze_keeps_every_word_and_migrates_art(tmp_path):
+    """Yetişkin/genç kitabı: dondurma sonrası planın metni el yazmasıyla kelime kelime aynı (sayfa sınırından
+    bölünen bloklar dahil), hiçbir sayfa taşmıyor, resimler kimliğe taşındı, iç sayfa plan.typ'den dizildi."""
+    from editor.production import preflight
+    d, ms = _job(tmp_path, child=False)
+    pm = studio._pagemap(d)
+    before = studio.selected_art(d)
+    pl = P.freeze(d, "sınama")
+    assert pl["rev"] == 1 and len(pl["pages"]) == len(pm.pages) - P.FRONT
+    assert preflight._words(P.PlanText(pl).text()) == preflight._words(ms.text().replace("## ", ""))
+    assert any(k["id"].endswith("-2") for p in pl["pages"] if p["text"] for k in p["text"]["blocks"])  # bölünen blok
+    assert not any(p["overflow"] for p in pl["pages"])
+    assert not [w for w in pl["warnings"] if "güvenli alan" in w or "sığmıyor" in w]
+    sel = studio.selected_art(d)
+    assert set(sel) == {a for _, a in P.printed_art(pl)} and sorted(sel.values()) == sorted(before.values())
+    assert all(s["art_id"] for s in studio.read(d, "artplan.json")["scenes"])
+    assert P.freeze(d, "başka")["rev"] == 1                                # varsa bozmaz
+    import pymupdf
+    assert pymupdf.open(d / "dizgi" / "ic-sayfalar.pdf").page_count == P.FRONT + len(pl["pages"])
+    studio.rebuild(d)
+    rep = studio.read(d, "preflight.json")
+    got = {c["name"]: c["status"] for c in rep["checks"]}
+    assert got["Metin eksiksiz"] == "OK" and got["Sayfa resimleri"] == "OK" and got["Sayfa sayısı"] == "OK"
+
+
+@typeset_only
+def test_freeze_child_bubbles_colors_and_overflow(tmp_path):
+    d, ms = _job(tmp_path, child=True)
+    pl = P.freeze(d, "sınama")
+    bubbles = [b for p in pl["pages"] for b in p["bubbles"]]
+    assert bubbles and all(b["box"] for b in bubbles) and any(b["speaker"] == "Elif" for b in bubbles)
+    assert not any(k["kind"] == "dialogue" for p in pl["pages"] if p["text"] for k in p["text"]["blocks"])
+    elif_ = pl["palette"]["characters"]["Elif"]
+    assert pl["palette"]["colors"] and any(r.get("color") == elif_ for p in pl["pages"] if p["text"]
+                                           for k in p["text"]["blocks"] for r in k["runs"])
+    # Küçük yazı kutusu: metin kesilmez, taşma işaretlenir; büyütünce kalkar.
+    pg = json.loads(json.dumps(next(p for p in pl["pages"] if p["text"] and p["text"]["blocks"])))
+    no = P.page_no(pl, pg["id"])
+    pg["text"]["box"]["h"] = 8
+    new, page = P.update_page(d, pg["id"], pl["rev"], pg, "e", post="none")
+    assert page["overflow"] and f"{no}. sayfa: metin kutusuna sığmıyor" in " ".join(new["warnings"])
+    pg["text"]["box"]["h"] = 140
+    pg["text"]["size"] = 9
+    new, page = P.update_page(d, pg["id"], new["rev"], pg, "e", post="none")
+    assert not page["overflow"]
+
+
+@typeset_only
+def test_plan_typ_draws_bubbles_figures_photos_and_runs(tmp_path):
+    import pymupdf
+    from PIL import Image
+    d, ms = _job(tmp_path, child=True)
+    pl = P.freeze(d, "sınama", build=False)
+    pid = pl["pages"][2]["id"]
+    fig = Image.new("RGBA", (200, 300), (0, 0, 0, 0))
+    fig.paste((200, 30, 30, 255), (50, 50, 150, 250))
+    buf = io.BytesIO()
+    fig.save(buf, "PNG")
+    (d / "figur").mkdir()
+    (d / "figur" / "g_0000000f.png").write_bytes(buf.getvalue())
+    P.add_asset(d, "g_0000000f", {"kind": "figure", "path": "figur/g_0000000f.png", "w_px": 200, "h_px": 300,
+                                  "alpha": True}, pid, "e", build=False, post="none")
+    gid, _, res = P.add_photo(d, _png(1200, 900, "#446688"), "manzara.png", None, "e", build=False, post="none")
+    pl = P.load(d)
+    pg = json.loads(json.dumps(P._page(pl, pid)))
+    pg["layout"] = "custom"
+    pg["art"] = {**(pg["art"] or {}), "asset": gid, "box": {"x": 0, "y": 0, "w": 100, "h": 80}, "fit": "cover",
+                 "focus": {"x": 0.2, "y": 0.8}}
+    pg["bubbles"] = [{"text": f"Balon {s} ğüşıöç", "shape": s, "speaker": "Elif", "tail": {"x": 60, "y": 150},
+                      "box": {"x": 20 + 30 * i, "y": 30 + 20 * i, "w": 48, "h": 22}} for i, s in enumerate(P.SHAPES)]
+    pg["figures"][0].update(rotate=15, flip=True)
+    pg["texts"] = [{"box": {"x": 20, "y": 180, "w": 100, "h": 20}, "align": "center", "size": 20,
+                    "background": "#FFFFFFE6",
+                    "runs": [{"text": "Sihirli "}, {"text": "orman", "color": "#1F3B73", "weight": 800, "font": "heading"}],
+                    "z": 5},
+                   {"box": {"x": 20, "y": 205, "w": 80, "h": 16}, "size": 18, "runs": [{"text": "Güüüm efekt"}],
+                    "effect": {"style": "burst", "params": {}}, "z": 7}]
+    pg["shapes"] = [{"kind": "star", "box": {"x": 120, "y": 170, "w": 30, "h": 30}, "rotate": 10, "flip": True,
+                     "fill": "#FAC775", "z": 6}]
+    new, page = P.update_page(d, pid, pl["rev"], pg, "e", post="none")
+    assert "hata-plan.txt" not in {p.name for p in d.iterdir()}
+    doc = pymupdf.open(d / "dizgi" / "ic-sayfalar.pdf")
+    assert doc.page_count == P.FRONT + len(new["pages"])
+    text = doc[P.page_no(new, pid) - 1].get_text()
+    flat = " ".join(text.split())
+    assert "Sihirli orman" in flat and all(f"Balon {s} ğüşıöç" in flat for s in P.SHAPES)
+    from editor.production.typeset import has_elements
+    if not has_elements():                             # çizim modülü yokken efekt yazı düz yazı olarak basılır
+        assert "Güüüm efekt" in flat
+    assert len(doc[P.page_no(new, pid) - 1].get_images()) >= 2                  # fotoğraf + figür
+    assert P.preview(d, pid, 300).exists()
+
+
+@typeset_only
+def test_without_plan_book_typ_path_unchanged(tmp_path):
+    """Geri uyum: plan.json yoksa dizgi akıştan (book.typ), resimler sayfa numarasıyla; plan kendiliğinden oluşmaz."""
+    import pymupdf
+    d, ms = _job(tmp_path, child=True)
+    studio.rebuild(d)
+    assert not P.exists(d) and all(k.isdigit() for k in studio.studio_state(d)["pages"])
+    doc = pymupdf.open(d / "dizgi" / "ic-sayfalar.pdf")
+    assert doc.page_count == len(studio._pagemap(d).pages)
+    assert {c["name"]: c["status"] for c in studio.read(d, "preflight.json")["checks"]}["Metin eksiksiz"] == "OK"
+
+
+@typeset_only
+def test_replan_to_no_art_keeps_history_and_images(tmp_path, monkeypatch):
+    """Resim seçimi sonradan «resimsiz»: yerleşim yeniden kurulur, yeni plan yalnız yazı sayfası, sürüm numarası
+    eski planın geçmişinden sürer, eski resimler «kullanılmayan»a düşer, görsel model hiç açılmaz."""
+    from editor.production import run
+    d, ms = _job(tmp_path, child=True)
+    old = P.freeze(d, "sınama")
+    old_art = {a for _, a in P.printed_art(old)}
+
+    class NoModel:
+        def __init__(self, *a, **k):
+            raise AssertionError("görsel model açılmamalı")
+    monkeypatch.setattr(run, "Painter", NoModel)
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    run.prepare_replan(d, "none", "editör")
+    assert not P.exists(d) and studio.read(d, "job.json")["replan"]
+    asyncio.run(run.plan(d))
+    assert studio.read(d, "profile.json")["illustration"] == "YOK" and not studio.read(d, "artplan.json")["scenes"]
+    assert "replan" not in studio.read(d, "job.json")
+    asyncio.run(run.finish(d))
+    new = P.load(d)
+    assert new["rev"] == old["rev"] + 1 and [h["rev"] for h in P.history(d)] == [new["rev"], old["rev"]]
+    assert all(p["art"] is None and p["layout"] in ("text-only", "blank") for p in new["pages"])
+    assert {a["id"] for a in P.unused_art(d, new)} == old_art
+    steps = {s["key"]: s for s in studio.read(d, "state.json")["steps"]}
+    assert steps["sayfa_resimleri"]["status"] == "skipped" and steps["dizgi"]["status"] == "done"
+    # Resimsiz kitabın kapağı tipografik: model açılmadan (NoModel) üretildi.
+    import pymupdf
+    info = studio.read(d, "cover.json")
+    assert info["typographic"] and steps["kapak"]["summary"].startswith("tipografik kapak")
+    cover = pymupdf.open(d / "kapak" / "kapak.pdf")
+    assert cover.page_count == 1 and "Deneme Kitabı" in " ".join(cover[0].get_text().split())
+    rep = {c["name"]: c["status"] for c in studio.read(d, "preflight.json")["checks"]}
+    assert rep["Kapak açılımı"] == "OK"
+    # «Kapağa resim üret» resimsiz kitapta da çalışır: tek kapak resmi, kapak resimli yola döner.
+    from PIL import Image
+    from editor.production.images import Render
+    png = d / "resim" / "kapak.v1.png"
+    Image.new("RGB", (800, 1100), "#6688aa").save(png)
+
+    class OneCover:
+        def __init__(self, *a, **k):
+            self.refs = {}
+
+        async def close(self):
+            pass
+
+    async def cover_render(painter, plan, spec, v, seed, direction, base):
+        return Render("kapak.v1", str(png), 800, 1100, 300, seed, [], "new", 0.1, "p")
+    monkeypatch.setattr(studio, "Painter", OneCover)
+    monkeypatch.setattr(studio, "_cover_render", cover_render)
+    assert asyncio.run(studio.regenerate(d, "kapak", "new", "", "editör")) == [1]
+    assert not studio.read(d, "cover.json")["typographic"] and "kapak" in studio.selected_art(d)
+
+
+
+# ------------------------------------------------------------------ öğeler (D) ile sayfa planı (A) bağlantısı
+def test_plan_color_roles_match_elements():
+    from editor.production import elements as el
+    assert set(P.ROLES) == set(el.ROLES)
+
+
+def test_shape_and_effect_roles_none_and_client_overflow(tmp_path):
+    """Şekil/efekt renginde D'nin bütün rolleri ve «none» geçer; istemcinin gönderdiği `overflow` yok sayılır
+    (dizgi yazar); şekil ve efekt yazısı run'ında rol geçer, sayfa metninde geçmez."""
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = json.loads(json.dumps(plan["pages"][0]))
+    pg["shapes"] = [{"kind": "note", "box": {"x": 30, "y": 40, "w": 40, "h": 40}, "fill": "paper", "stroke": "none",
+                     "overflow": True, "runs": [{"text": "Not", "color": "bark"}]},
+                    {"kind": "cloud", "box": {"x": 80, "y": 40, "w": 40, "h": 30}, "fill": "white", "stroke": "pop2"}]
+    pg["texts"] = [{"box": {"x": 20, "y": 90, "w": 60, "h": 18}, "runs": [{"text": "Hop", "color": "sun"}],
+                    "effect": {"style": "stacked", "params": {"shadow": "deep", "depth": 0.12, "shadow_dx": 0.4}}}]
+    _, page = P.update_page(d, pg["id"], 1, pg, "e", **QUIET)
+    assert [s["fill"] for s in page["shapes"]] == ["paper", "white"] and "overflow" not in page["shapes"][0]
+    assert page["shapes"][0]["runs"][0]["color"] == "bark" and page["texts"][0]["runs"][0]["color"] == "sun"
+    bad = json.loads(json.dumps(pg))
+    bad["text"]["blocks"][0]["runs"][0]["color"] = "accent"
+    with pytest.raises(ValueError):
+        P.update_page(d, pg["id"], 2, bad, "e", **QUIET)
+    arc = {**pg["texts"][0], "effect": {"style": "arc", "params": {"curve": 3}}}
+    with pytest.raises(ValueError, match="en çok 1"):                     # D'nin doğrulaması: kavis -1..1
+        P.update_page(d, pg["id"], 2, {**pg, "texts": [arc]}, "e", **QUIET)
+
+
+def test_element_overflow_marks_go_to_items_and_warnings(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = plan["pages"][0]
+    pg["shapes"] = [{"id": "s_00000001", "kind": "badge", "box": {"x": 1, "y": 1, "w": 9, "h": 9}, "z": 3}]
+    pg["texts"] = [{"id": "t_00000001", "box": {"x": 1, "y": 1, "w": 9, "h": 9}, "runs": [{"text": "x"}], "z": 4,
+                    "effect": {"style": "arc", "params": {}}},
+                   {"id": "t_00000002", "box": {"x": 1, "y": 1, "w": 9, "h": 9}, "runs": [{"text": "y"}], "z": 5}]
+    P.apply_overflow(plan, [{"kind": "element-overflow", "id": "s_00000001"},
+                            {"kind": "element-overflow", "id": "t_00000001"},
+                            {"kind": "element-overflow", "id": "t_00000002"}])   # efektsiz yazıda bu işaret yok sayılır
+    assert pg["shapes"][0]["overflow"] and pg["texts"][0]["overflow"] and not pg["texts"][1]["overflow"]
+    w = " ".join(P.warnings(None, plan))
+    assert f"{P.FRONT + 1}. sayfa: şeklin yazısı şekle sığmıyor" in w and "serbest yazı kutusuna sığmıyor" in w
+
+
+def test_plan_text_element_rects_skip_effects_and_shape_text(tmp_path):
+    d = tmp_path / "j"
+    plan = _mini(d)
+    pg = plan["pages"][2]
+    pg["texts"] = [{"id": "t1", "box": {"x": 10, "y": 10, "w": 40, "h": 20}, "runs": [{"text": "Güm"}], "z": 3,
+                    "effect": {"style": "burst", "params": {}}}]
+    pg["shapes"] = [{"id": "s1", "kind": "sign", "box": {"x": 60, "y": 10, "w": 40, "h": 20}, "rotate": 90, "z": 4,
+                     "runs": [{"text": "Yol"}]},
+                    {"id": "s2", "kind": "star", "box": {"x": 60, "y": 60, "w": 20, "h": 20}, "z": 5}]
+    rects = P.PlanText(plan).element_rects()
+    assert list(rects) == [P.FRONT + 2]
+    drop, keep = rects[P.FRONT + 2]
+    assert len(drop) == 2 and keep == [pg["text"]["box"]]
+    assert drop[1] == pytest.approx({"x": 70, "y": 0, "w": 20, "h": 40})     # 90° dönmüş kutunun sınırı
+
+
+def test_api_invalid_code(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from editor.production import api
+    root = tmp_path / "production"
+    _mini(root / "job1")
+    monkeypatch.setattr(studio, "root", lambda: root)
+    monkeypatch.setattr(api, "KEY", "k")
+    monkeypatch.setattr(P, "after_write", lambda *a, **k: None)
+    monkeypatch.setattr(P, "_typeset", lambda d, plan, build: plan.__setitem__("warnings", P.warnings(d, plan)))
+    c = TestClient(api.app)
+    h = {"Authorization": "Bearer k", "X-Editor": "sinama"}
+    pg = c.get("/v1/studio/jobs/job1/plan", headers=h).json()["pages"][0]
+    bad = {**pg, "shapes": [{"kind": "yok", "box": {"x": 10, "y": 10, "w": 10, "h": 10}}]}
+    r = c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", headers=h, json={"rev": 1, "page": bad})
+    assert r.status_code == 400 and r.json()["code"] == "INVALID" and "yok" in r.json()["detail"]
+    bad = {**pg, "texts": [{"box": {"x": 10, "y": 10, "w": 30, "h": 10}, "runs": [{"text": "a"}],
+                            "effect": {"style": "burst", "params": {"burst_fill": "morumsu"}}}]}
+    r = c.put(f"/v1/studio/jobs/job1/plan/pages/{pg['id']}", headers=h, json={"rev": 1, "page": bad})
+    assert r.status_code == 400 and r.json()["code"] == "INVALID" and "Patlama" in r.json()["detail"]
+
+
+@typeset_only
+def test_elements_endpoints(tmp_path, monkeypatch):
+    pytest.importorskip("fastapi")
+    from fastapi.testclient import TestClient
+    from editor.production import api
+    root = tmp_path / "production"
+    _mini(root / "job1")
+    monkeypatch.setattr(studio, "root", lambda: root)
+    monkeypatch.setattr(api, "KEY", "k")
+    c = TestClient(api.app)
+    h = {"Authorization": "Bearer k"}
+    base = "/v1/studio/jobs/job1/plan"
+    cat = c.get(f"{base}/elements/catalog", headers=h).json()
+    kinds = {k["kind"]: k for k in cat["kinds"]}
+    assert {"sign", "frame", "scatter"} <= set(kinds) and cat["groups"][0]["key"] and cat["effects"]
+    assert {p["key"] for p in kinds["sign"]["presets"]} >= {"post", "arrow"}
+    assert kinds["scatter"]["params"]["count"]["min"] == 1 and kinds["scatter"]["params"]["count"]["max"] is None
+    roles = {r["key"]: r["hex"] for r in cat["roles"]}
+    assert roles["accent"] == "#B0341C"                                       # kitabın (planın) paletinden
+    r = c.get(f"{base}/elements/sign/preview?w=120&style=arrow", headers=h)
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png" and r.content[:4] == b"\x89PNG"
+    assert r.headers["cache-control"] == "private, max-age=3600"
+    r = c.get(f"{base}/elements/yok/preview", headers=h)
+    assert r.status_code == 404 and r.json()["code"] == "NOT_FOUND"
+    r = c.get(f"{base}/elements/sign/preview?style=yok", headers=h)
+    assert r.status_code == 400 and r.json()["code"] == "INVALID"
+    r = c.get(f"{base}/elements/sign/preview?w=5", headers=h)
+    assert r.status_code == 400 and r.json()["code"] == "INVALID"
+    long = "Uzun bir önizleme yazısı, çok çok uzun. " * 12                    # tavan yok: kutuya sığacak kadar küçülür
+    r = c.get(f"{base}/effects/arc/preview", params={"w": 300, "text": long}, headers=h)
+    assert r.status_code == 200 and r.headers["content-type"] == "image/png"
+    assert c.get(f"{base}/effects/yok/preview", headers=h).json()["code"] == "NOT_FOUND"
+
+
+@typeset_only
+def test_shapes_and_effect_text_typeset_end_to_end(tmp_path):
+    """Şekil ve efekt yazılı sayfa PUT → dizgi: şekil PDF'te vektör, efekt yazının metni PDF'te; aynalı tabelanın
+    yazısı düz (soldan sağa) okunur; sabit puntosu sığmayan şekil ve efekt yazısı `overflow` ve plan uyarısında; ön
+    kontrolün «Metin eksiksiz» denetimi bu yazılardan etkilenmez."""
+    import pymupdf
+    from editor.production import elements as el
+    from editor.production.preflight import PT_PER_MM
+    d, ms = _job(tmp_path, child=False)
+    pl = P.freeze(d, "sınama", build=False)
+    pl, pg = P.insert_page(d, pl["rev"], pl["pages"][0]["id"], "blank", "e", build=False, post="none")
+    pid = pg["id"]
+    pg = json.loads(json.dumps(pg))
+    pg["shapes"] = [
+        {"id": "s_aaaaaaa1", "kind": "sign", "box": {"x": 20, "y": 30, "w": 70, "h": 50}, "flip": True, "z": 5,
+         "fill": "wood", "params": {"posts": 1, "point": "right"}, "runs": [{"text": "Orman Yolu", "weight": 800}]},
+        {"id": "s_aaaaaaa2", "kind": "star", "box": {"x": 110, "y": 30, "w": 30, "h": 30}, "rotate": 15, "z": 6,
+         "fill": "sun"},
+        {"id": "s_aaaaaaa3", "kind": "badge", "box": {"x": 20, "y": 120, "w": 30, "h": 30}, "z": 7, "text_size": 90,
+         "runs": [{"text": "Büyük yazı"}]},
+    ]
+    pg["texts"] = [
+        {"id": "t_aaaaaaa1", "box": {"x": 60, "y": 160, "w": 80, "h": 40}, "size": None, "z": 8, "align": "center",
+         "runs": [{"text": "Güüüm!", "color": "accent", "weight": 800, "font": "heading"}],
+         "effect": {"style": "burst", "params": {"angle": -8}}},
+        {"id": "t_aaaaaaa2", "box": {"x": 100, "y": 110, "w": 30, "h": 10}, "size": 60, "z": 9,
+         "runs": [{"text": "Şişşt sessizce"}], "effect": {"style": "arc", "params": {"curve": 0.5}}},
+    ]
+    new, page = P.update_page(d, pid, pl["rev"], pg, "e", post="none")
+    assert not (d / "hata-plan.txt").exists()
+    over = {s["id"]: s["overflow"] for s in page["shapes"]} | {t["id"]: t["overflow"] for t in page["texts"]}
+    assert over == {"s_aaaaaaa1": False, "s_aaaaaaa2": False, "s_aaaaaaa3": True, "t_aaaaaaa1": False,
+                    "t_aaaaaaa2": True}
+    no = P.page_no(new, pid)
+    warns = " ".join(new["warnings"])
+    assert f"{no}. sayfa: şeklin yazısı şekle sığmıyor" in warns
+    assert f"{no}. sayfa: serbest yazı kutusuna sığmıyor" in warns
+
+    doc = pymupdf.open(d / "dizgi" / "ic-sayfalar.pdf")
+    p = doc[no - 1]
+    assert p.get_images() == []                                                 # hepsi vektör
+    star = pymupdf.Rect(110 * PT_PER_MM, 30 * PT_PER_MM, 140 * PT_PER_MM, 60 * PT_PER_MM)
+    sun = el.roles_for(el.palette_or_default(new["palette"]))["sun"]
+    rgb = tuple(int(sun[i:i + 2], 16) / 255 for i in (1, 3, 5))
+    fills = [dr for dr in p.get_drawings() if dr.get("fill") and dr["rect"].intersects(star)]
+    assert any(all(abs(a - b) < 0.02 for a, b in zip(dr["fill"], rgb)) for dr in fills), "yıldız vektörü yok"
+    flat = "".join(p.get_text().split())
+    assert "Güüüm" in flat and "OrmanYolu" in flat
+    dirs = [ln["dir"] for b in p.get_text("dict")["blocks"] for ln in b.get("lines", [])
+            if any("Orman" in sp["text"] for sp in ln["spans"])]
+    assert dirs and all(dx > 0.99 for dx, _ in dirs), dirs                      # aynalı tabelada yazı düz
+
+    studio.rebuild(d)
+    rep = {c["name"]: c for c in studio.read(d, "preflight.json")["checks"]}
+    assert rep["Metin eksiksiz"]["status"] == "OK", rep["Metin eksiksiz"]
+def test_preview_served_as_webp_and_refreshed(tmp_path):
+    """Dizgi önizlemesi ekrana PNG değil aynı genişlikte WebP gider (tünel bant genişliği dar; 880 px sayfa
+    1,3 MB → ~34 KB). Önbellek kaynağın mtime'ına bağlı: PNG yenilenince WebP de yenilenir."""
+    pytest.importorskip("fastapi")
+    import os
+    from PIL import Image
+    from editor.production import api
+    png = tmp_path / "onizleme" / "s1-300.png"
+    png.parent.mkdir()
+    png.write_bytes(_png(300, 405))
+    r = api._preview(png)
+    cache = Path(r.path)
+    assert r.media_type == "image/webp" and cache.parent.name == ".kucuk"
+    with Image.open(cache) as im:
+        assert im.format == "WEBP" and im.size == (300, 405)
+    first = cache.read_bytes()
+    png.write_bytes(_png(300, 405, color="#aa3333"))
+    os.utime(png, (cache.stat().st_mtime + 5, cache.stat().st_mtime + 5))
+    assert Path(api._preview(png).path).read_bytes() != first
+    assert not [p for p in cache.parent.iterdir() if p.name.startswith(".")]      # geçici dosya kalmaz

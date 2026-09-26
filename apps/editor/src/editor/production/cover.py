@@ -3,6 +3,10 @@
 
 Ön kapak yazısının yeri, puntosu ve rengi `cover_text` ile resmin kendisinden hesaplanır (perde
 gerekiyorsa resme işlenir); yazı PDF'e vektör olarak basılır, harf hatası olmaz.
+
+Resimsiz kitapta (art_mode=none, kapak resmi yok) ön kapak tipografiktir (`typographic`): paletten zemin, başlık
+ve yazar başlık fontuyla, sade desen; arka kapak, barkod ve sırt aynı. Editör sonradan kapağa resim üretirse
+resimli yola döner.
 """
 
 from __future__ import annotations
@@ -27,13 +31,40 @@ def front_art_prompt(scene: str, style_prompt: str) -> str:
     return f"Children's book front cover illustration. {scene} Style: {style_prompt}." + ct.COVER_PROMPT_SUFFIX
 
 
-def build(ms: Manuscript, p: Profile, spec: Spec, pages: int, art_png: Path, accent: str, back_bg: str,
-          workdir: Path, font_dir: Path) -> tuple[Path, dict]:
-    import typst
+def typographic(ms: Manuscript, spec: Spec, bg: str) -> dict:
+    """Resimsiz kitabın ön kapağı (art_mode=none): paletten düz zemin, başlık ve yazar kitabın başlık fontuyla,
+    zeminin bir ton açığında sade daire deseni. Desen başlıktan türeyen tohumla: aynı kitap hep aynı kapak.
+    Yazı rengi zemine karşı okunur olan (beyaz ya da koyu mürekkep; WCAG ≥ 4.5)."""
+    import hashlib
+    import random
+    from .palette import contrast
+    rng = random.Random(int(hashlib.sha256(ms.title.encode()).hexdigest()[:8], 16))
+    w, h = spec.trim_w + spec.bleed, spec.trim_h + 2 * spec.bleed
+    # Daireler yazının bandına (yüksekliğin %20–%62'si) girmez: üstte ve altta, dönüşümlü.
+    dots = []
+    for i in range(7):
+        r = rng.uniform(6, 24)
+        y = rng.uniform(-r * 0.5, h * 0.20 - r) if i % 2 == 0 else rng.uniform(h * 0.62 + r, h + r * 0.5)
+        dots.append([round(rng.uniform(0, w), 1), round(y, 1), round(r, 1)])
+    n = len(ms.title)
+    return {"bg": bg, "ink": "#FFFFFF" if contrast(bg) >= 4.5 else "#2C2C2A", "dots": dots,
+            "title_size": round(max(24.0, min(44.0, 44.0 - (n - 12) * 0.8)), 1), "author_size": 15.0}
+
+
+def build(ms: Manuscript, p: Profile, spec: Spec, pages: int, art_png: Path | None, accent: str, back_bg: str,
+          workdir: Path, font_dir: Path, front_bg: str | None = None, collage: dict | None = None) -> tuple[Path, dict]:
+    """`art_png` None → tipografik ön kapak (`front_bg` zemin; görsel model gerekmez). `collage` verilirse ön kapak
+    kolajdır (collage.render'ın verisi: katman görseli, etiketler, yazar); arka kapak, sırt ve barkod aynı."""
     workdir.mkdir(parents=True, exist_ok=True)
     shutil.copy(TEMPLATE, workdir / "cover.typ")
     spine = spec.spine(pages)
     panel_w, panel_h = spec.trim_w + spec.bleed, spec.trim_h + 2 * spec.bleed
+    if collage is not None:
+        return _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, panel_h, None, [], None,
+                        {"typographic": False, "collage": True}, collage)
+    if art_png is None:
+        return _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, panel_h, None, [],
+                        typographic(ms, spec, front_bg or accent), {"typographic": True})
     img = Image.open(art_png).convert("RGB")
     # resmi panel oranına kırp (ortadan)
     want = panel_w / panel_h
@@ -59,23 +90,34 @@ def build(ms: Manuscript, p: Profile, spec: Spec, pages: int, art_png: Path, acc
         blocks.append({"lines": r["lines"], "font": _family(r["font"]), "weight": _face(st, key).weight,
                        "size": round(size_mm * PT_PER_MM, 1), "top": round(r["box"][1] * mm_per_px, 2),
                        "step": round(r["size"] * leading * mm_per_px, 2), "ink": "#%02x%02x%02x" % tuple(r["ink"])})
+    return _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, panel_h, front.name, blocks, None,
+                    {"style": style, "text": rep, "typographic": False})
+
+
+def _compile(ms, p, spec, workdir, font_dir, accent, back_bg, spine, pages, panel_h, front_image, blocks, typo,
+             extra, collage: dict | None = None) -> tuple[Path, dict]:
+    import typst
     code = None
     if ms.meta.get("ISBN"):
         (workdir / "barkod.svg").write_text(barcode.svg(ms.meta["ISBN"]))
         code = "barkod.svg"
-    summary = ms.meta.get("CRM_SUMMARY") or ""
+    # Pazarlama kitinde onaylanıp «kapağa uygula» denen arka kapak yazısı varsa o; yoksa CRM tanıtım metni.
+    from .marketing import applied_back_text
+    summary = applied_back_text(workdir.parent) or ms.meta.get("CRM_SUMMARY") or ""
     data = {"bleed": spec.bleed, "trim_w": spec.trim_w, "trim_h": spec.trim_h, "spine": spine, "safe": spec.safe,
             "accent": accent, "body_font": spec.body_font, "heading_font": spec.heading_font,
             "title": ms.title, "author": ms.author or "", "publisher": ms.meta.get("PUBLISHER") or "",
-            "front_image": front.name, "front_text": blocks, "barcode": code,
+            "front_image": front_image, "front_text": blocks, "front_type": typo, "barcode": code,
+            "front_collage": collage and {k: v for k, v in collage.items() if k != "fonts"},
             "back": {"bg": back_bg, "paragraphs": [x.strip() for x in summary.split("\n") if x.strip()],
                      "age": f"{p.age_min}–{p.age_max} YAŞ" if p.age_min else None,
                      "series": ms.meta.get("SERIES")}}
     (workdir / "cover.json").write_text(json.dumps(data, ensure_ascii=False))
     out = workdir / "kapak.pdf"
-    typst.compile(str(workdir / "cover.typ"), output=str(out), root=str(workdir), font_paths=[str(font_dir)],
+    fonts = [str(font_dir)] + ([collage["fonts"]] if collage and collage.get("fonts") else [])
+    typst.compile(str(workdir / "cover.typ"), output=str(out), root=str(workdir), font_paths=fonts,
                   ignore_system_fonts=True, sys_inputs={"data": "cover.json"})
-    return out, {"spine_mm": spine, "binding": spec.binding(pages), "style": style, "text": rep,
+    return out, {"spine_mm": spine, "binding": spec.binding(pages), **extra,
                  "size_mm": [round(2 * spec.trim_w + spine + 2 * spec.bleed, 1), panel_h]}
 
 

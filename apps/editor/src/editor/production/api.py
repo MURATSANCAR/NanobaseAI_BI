@@ -6,11 +6,13 @@ Temporal'da `editor-production` kuyruğuna iş akışı olarak verilir (flow.py)
 sıra bekleyen iş ekranda «sırada» görünür. Servisin yeniden başlaması süren işi kesmez.
 
     GET  /v1/studio/jobs                              işler
-    POST /v1/studio/jobs            {book_id}         okunmuş kitaptan yeni iş
-    POST /v1/studio/jobs/docx       multipart file    Word dosyasından yeni iş
+    POST /v1/studio/jobs            {book_id, art_mode}  okunmuş kitaptan yeni iş
+    POST /v1/studio/jobs/docx?art_mode=  multipart file  Word dosyasından yeni iş
+    POST /v1/studio/jobs/{job}/art-mode  {art_mode}   resim seçimini değiştir (yerleşim yeniden kurulur)
+         art_mode: auto | every_page | chapter | none (profilin resim kararının önüne geçer)
     GET  /v1/studio/jobs/{job}                        bütün görünüm (adımlar, kararlar, sayfalar, ön kontrol)
-    GET  /v1/studio/jobs/{job}/pages/{n}/preview?w=   dizilmiş sayfa (PNG)
-    GET  /v1/studio/jobs/{job}/cover/preview?w=       kapak açılımı (PNG)
+    GET  /v1/studio/jobs/{job}/pages/{n}/preview?w=   dizilmiş sayfa (WebP)
+    GET  /v1/studio/jobs/{job}/cover/preview?w=       kapak açılımı (WebP)
     GET  /v1/studio/jobs/{job}/art/{key}/{v}?w=       resim sürümü (key: sayfa no | kapak)
     GET  /v1/studio/jobs/{job}/characters/{i}?w=      karakter referansı
     POST /v1/studio/jobs/{job}/art/{key}/regenerate   {mode: fix|new, prompt, variants}
@@ -20,6 +22,21 @@ sıra bekleyen iş ekranda «sırada» görünür. Servisin yeniden başlaması 
     POST /v1/studio/jobs/{job}/resume                 yarıda kalan işi sürdür
     POST /v1/studio/jobs/{job}/restart                aynı kaynakla yeni iş
     GET  /v1/studio/jobs/{job}/pdf/{kind}             ic | kapak | baski-ic | baski-kapak
+
+Sayfa planı (plan.py; sözleşme docs/analiz/studyo-sayfa-plani-sozlesme.md), hepsi /v1/studio/jobs/{job}/ altında:
+    GET plan · POST plan/freeze · PUT|DELETE plan/pages/{pid} · POST plan/pages · POST plan/order
+    POST plan/pages/{pid}/split · PUT plan/palette · POST plan/pages/{pid}/bubbles/suggest
+    GET plan/pages/{pid}/preview?w= · GET plan/unused-art · POST plan/figures · GET|DELETE plan/assets/{gid}
+    PUT plan/photos?filename=&page= (ham gövde) · POST plan/assets/{gid}/cutout · POST plan/assets/{gid}/upscale
+    GET plan/history · POST plan/restore · GET plan/jobs
+    GET plan/elements/catalog · GET plan/elements/{kind}/preview?w=&style= · GET plan/effects/{style}/preview?w=&text=
+        (öğeler ve efekt yazı: katalog ve kitabın paleti/fontlarıyla küçük saydam PNG; elements.py)
+3B kitap ve baskı provası (api_proof.py, yalnız okuma): GET proof · GET proof/pages/{n}|cover[/report]?paper=&w=&layer=
+Hatalar gövdede `code` taşır: NO_PLAN (404), STALE (409, güncel `rev`), BUSY (409), IN_USE (409, sayfalar),
+TOO_LARGE (413), INVALID (400, doğrulama: sayfa nesnesi, şekil, efekt, önizleme parametresi), NOT_FOUND (404, öğe
+türü ya da efekt stili yok). Plan düzenlemeleri süren GPU işini beklemez; yalnız GPU isteyen yazımlar (resim, figür, kaliteyi
+artırma) süren GPU işinde 409 döner. `art/{key}` uçlarında key sayfa no, resim kimliği (a_…) ya da «kapak»;
+plan varken sayfa no o sayfanın resim kimliğine çevrilir (eski ekran bozulmaz).
 """
 
 from __future__ import annotations
@@ -29,21 +46,31 @@ import hmac
 import io
 import os
 import re
+import threading
 import time
 from pathlib import Path
 from typing import Literal
 from uuid import UUID
 
-from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, UploadFile
-from fastapi.responses import FileResponse, Response
+from fastapi import Depends, FastAPI, File, Header, HTTPException, Query, Request, UploadFile
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
+from . import plan as plan_mod
 from . import studio
 from .flow import QUEUE
 from .run import State
 
 KEY = os.environ.get("EDITOR_CARDS_KEY", "")
 DOCX_MAX = 20 * 1024 * 1024
+
+
+def upload_mb() -> int:
+    """Fotoğraf yükleme üst sınırı (MB): yönetim ayarı STUDIO_UPLOAD_MB, varsayılan 60. Aşan yükleme açık hata alır."""
+    try:
+        return max(1, int(os.environ.get("STUDIO_UPLOAD_MB", "60")))
+    except ValueError:
+        return 60
 
 
 def authorize(authorization: str = Header("")) -> None:
@@ -61,6 +88,18 @@ def editor(x_editor: str = Header("")) -> str:
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, dependencies=[Depends(authorize)])
 
 
+class Coded(Exception):
+    """Gövdesinde `code` taşıyan hata (sözleşmedeki NO_PLAN, STALE, BUSY, IN_USE, TOO_LARGE)."""
+
+    def __init__(self, status: int, code: str, detail: str, **extra):
+        self.status, self.body = status, {"code": code, "detail": detail, **extra}
+
+
+@app.exception_handler(Coded)
+async def _coded(_req, e: Coded):
+    return JSONResponse(e.body, status_code=e.status)
+
+
 def _dir(job: str) -> Path:
     try:
         return studio.job_dir(job)
@@ -68,9 +107,18 @@ def _dir(job: str) -> Path:
         raise HTTPException(404, "iş yok") from None
 
 
-def _key(key: str) -> str:
-    if key != "kapak" and not re.fullmatch(r"[0-9]{1,4}", key):
+def _key(key: str, d: Path | None = None) -> str:
+    """Resim anahtarı: «kapak», resim kimliği (a_…) ya da sayfa no. Plan varken sayfa no o sayfanın resmine çevrilir."""
+    if key == "kapak" or plan_mod.ART_ID.match(key):
+        return key
+    if not re.fullmatch(r"[0-9]{1,4}", key):
         raise HTTPException(404, "resim yok")
+    pl = plan_mod.load(d) if d is not None else None
+    if pl is not None:
+        aid = plan_mod.art_at(pl, int(key))
+        if not aid:
+            raise HTTPException(404, "bu sayfada resim yok")
+        return aid
     return key
 
 
@@ -131,8 +179,12 @@ async def jobs() -> dict:
     return {"jobs": out}
 
 
+ArtMode = Literal["auto", "every_page", "chapter", "none"]
+
+
 class NewJob(BaseModel):
     book_id: UUID
+    art_mode: ArtMode = "auto"
 
 
 @app.post("/v1/studio/jobs")
@@ -144,20 +196,21 @@ async def new_job(body: NewJob, by: str = Depends(editor)) -> dict:
         "ORDER BY g.created_at DESC LIMIT 1", str(body.book_id))
     if g is None:
         raise HTTPException(404, "Bu kitabın okunmuş metni yok")
-    d = studio.new_job({"generation_id": str(g["id"]), "book_id": str(body.book_id)}, by)
+    d = studio.new_job({"generation_id": str(g["id"]), "book_id": str(body.book_id)}, by, body.art_mode)
     await _pipeline(d)
     return {"id": d.name}
 
 
 @app.post("/v1/studio/jobs/docx")
-async def new_job_docx(file: UploadFile = File(...), by: str = Depends(editor)) -> dict:
+async def new_job_docx(file: UploadFile = File(...), art_mode: ArtMode = Query("auto"),
+                       by: str = Depends(editor)) -> dict:
     name = Path(file.filename or "kitap.docx").name
     if not name.lower().endswith(".docx"):
         raise HTTPException(400, "Yalnız Word (.docx) dosyası")
     data = await file.read(DOCX_MAX + 1)
     if len(data) > DOCX_MAX or not data.startswith(b"PK"):
         raise HTTPException(400, "Dosya Word (.docx) değil ya da 20 MB'tan büyük")
-    d = studio.new_job({}, by)
+    d = studio.new_job({}, by, art_mode)
     (d / "girdi").mkdir()
     path = d / "girdi" / re.sub(r"[^\w.\-]", "_", name)
     path.write_bytes(data)
@@ -194,13 +247,28 @@ def _job_view(d: Path, job: str, busy: dict | None) -> dict:
         return {"selected": pg["selected"], "approved": pg.get("approved", False), "approved_by": pg.get("approved_by"),
                 "versions": [{k: v[k] for k in ("v", "mode", "prompt", "by", "at", "dpi", "base")} for v in pg["versions"]]}
 
-    printed = studio._pagemap(d).art_pages() if pm else set()   # resmi basılan sayfalar
+    pl = plan_mod.load(d)
     pages = []
-    for p in (pm or {}).get("pages", []):
-        sc = scenes.get(p["no"]) if p["no"] in printed else None
-        pages.append({"no": p["no"], "kind": p["kind"], "key": p["key"], "chapter": p["chapter"],
-                      "excerpt": _excerpt(p["text"]), "art": art(str(p["no"])) if p["no"] in printed else None,
-                      "scene": {k: sc[k] for k in ("moment", "quote", "characters", "grounded")} if sc else None})
+    if pl is not None:
+        # Sayfa planı varsa sayfalar plandan (ön sayfalar akıştan); resim kimlikle, sahne kimlikle bulunur.
+        by_art = {s.get("art_id"): s for s in (plan or {}).get("scenes", []) if s.get("art_id")}
+        for p in (pm or {}).get("pages", [])[:plan_mod.FRONT]:
+            pages.append({"no": p["no"], "kind": p["kind"], "key": p["key"], "chapter": p["chapter"], "excerpt": "",
+                          "art": None, "scene": None})
+        for i, p in enumerate(pl["pages"]):
+            aid = (p["art"] or {}).get("id") if p["art"] and not p["art"].get("asset") else None
+            sc = by_art.get(aid)
+            pages.append({"no": plan_mod.FRONT + i + 1, "id": p["id"], "layout": p["layout"], "art_id": aid,
+                          "kind": "full" if p["layout"] == "art-full" else "flow", "key": None, "chapter": p["chapter"],
+                          "excerpt": _excerpt(plan_mod.page_text(p)), "art": art(aid) if aid else None,
+                          "scene": {k: sc[k] for k in ("moment", "quote", "characters", "grounded")} if sc else None})
+    else:
+        printed = studio._pagemap(d).art_pages() if pm else set()   # resmi basılan sayfalar
+        for p in (pm or {}).get("pages", []):
+            sc = scenes.get(p["no"]) if p["no"] in printed else None
+            pages.append({"no": p["no"], "kind": p["kind"], "key": p["key"], "chapter": p["chapter"],
+                          "excerpt": _excerpt(p["text"]), "art": art(str(p["no"])) if p["no"] in printed else None,
+                          "scene": {k: sc[k] for k in ("moment", "quote", "characters", "grounded")} if sc else None})
     chars = [{"i": i, "name": c["name"], "species": c["species"], "look": c["look"], "from_text": c["from_text"],
               "role": c["role"], "has_ref": c["name"] in sd.get("characters", {})}
              for i, c in enumerate((plan or {}).get("characters", []))]
@@ -210,10 +278,12 @@ def _job_view(d: Path, job: str, busy: dict | None) -> dict:
                         "chapters": [c["title"] for c in ms["chapters"]],
                         "words": sum(len(b["text"].split()) for c in ms["chapters"] for b in c["blocks"])},
         "profile": prof and {k: prof.get(k) for k in ("age_min", "age_max", "age_source", "genre", "illustration",
-                                                       "illustration_source", "tone", "reading", "disagreement",
-                                                       "reasons")},
+                                                       "illustration_source", "art_source", "tone", "reading",
+                                                       "disagreement", "reasons")},
+        "art_mode": (j or {}).get("art_mode") or "auto",
         "spec": spec, "layout": pm and pm["layout"], "style": plan and plan["style"], "characters": chars,
         "pages": pages, "cover": {"art": art("kapak"), "info": studio.read(d, "cover.json")},
+        "plan": pl and {"rev": pl["rev"], "warnings": pl.get("warnings", []), "pages": len(pl["pages"])},
         "preflight": pre,
         "front": _front(d),
         "files": {k: (d / rel).exists() for k, (rel, _) in PDF_FILES.items()},
@@ -242,7 +312,11 @@ def _front(d: Path) -> dict | None:
 
 # ------------------------------------------------------------------ görseller
 def _image(path: Path, w: int) -> Response:
-    """İstenen genişlikte WebP (disk önbelleği); w=0 özgün PNG."""
+    """İstenen genişlikte WebP (disk önbelleği, kaynağın mtime'ına bağlı); w=0 özgün PNG.
+
+    Ekrana giden her önizleme WebP'dir: dizilmiş sayfanın PNG'si 880 px'te 1,3 MB, aynı sayfa WebP'de 34 KB.
+    GPU ile köprü arasındaki tünel saniyede ~0,8 MB taşıdığı için stüdyo ekranı bu farkla saniyelerce bekliyordu
+    (2026-09-25 ölçümü). Önbellek dosyası yarım okunmasın diye geçici adla yazılıp yerine konur."""
     if not path.exists():
         raise HTTPException(404, "görsel yok")
     if w <= 0:
@@ -256,15 +330,27 @@ def _image(path: Path, w: int) -> Response:
         im.thumbnail((w, w * 4))
         buf = io.BytesIO()
         im.save(buf, "WEBP", quality=86)
-        cache.write_bytes(buf.getvalue())
+        tmp = cache.with_name(f".{cache.name}.{os.getpid()}.{threading.get_ident()}")
+        tmp.write_bytes(buf.getvalue())
+        os.replace(tmp, cache)
     return FileResponse(cache, media_type="image/webp", headers={"Cache-Control": "private, max-age=3600"})
+
+
+def _preview(path: Path) -> Response:
+    """Dizgi önizlemesi (sayfa, kapak): PNG zaten istenen genişlikte çizilir; ekrana aynı genişlikte WebP gider."""
+    if not path.exists():
+        raise HTTPException(404, "görsel yok")
+    from PIL import Image
+    with Image.open(path) as im:
+        width = im.width
+    return _image(path, width)
 
 
 @app.get("/v1/studio/jobs/{job}/pages/{n}/preview")
 def page_preview(job: str, n: int, w: int = Query(900, ge=120, le=2400)) -> Response:
     d = _dir(job)
     try:
-        return _image(studio.page_preview(d, n, w), 0)
+        return _preview(studio.page_preview(d, n, w))
     except FileNotFoundError:
         raise HTTPException(404, "sayfa yok") from None
 
@@ -274,13 +360,13 @@ def cover_preview(job: str, w: int = Query(1400, ge=200, le=3000)) -> Response:
     d = _dir(job)
     if not (d / "kapak" / "kapak.pdf").exists():
         raise HTTPException(404, "kapak yok")
-    return _image(studio.cover_preview(d, w), 0)
+    return _preview(studio.cover_preview(d, w))
 
 
 @app.get("/v1/studio/jobs/{job}/art/{key}/{v}")
 def art_image(job: str, key: str, v: int, w: int = Query(800, ge=0, le=2400)) -> Response:
     d = _dir(job)
-    pg = studio.studio_state(d)["pages"].get(_key(key))
+    pg = studio.studio_state(d)["pages"].get(_key(key, d))
     if not pg or not 1 <= v <= len(pg["versions"]):
         raise HTTPException(404, "sürüm yok")
     return _image(Path(pg["versions"][v - 1]["path"]), w)
@@ -326,14 +412,18 @@ class Regenerate(BaseModel):
 @app.post("/v1/studio/jobs/{job}/art/{key}/regenerate")
 async def regenerate(job: str, key: str, body: Regenerate, by: str = Depends(editor)) -> dict:
     d = _dir(job)
-    key = _key(key)
+    key = _key(key, d)
     b = await _busy(d)
     if b and not b.get("error"):
         raise HTTPException(409, "Bu kitapta süren bir üretim var; bitince tekrar deneyin")
     if body.mode == "fix" and not body.prompt.strip():
         raise HTTPException(400, "Düzeltme için neyin değişeceğini yazın")
-    if not studio.read(d, "artplan.json"):
+    ap = studio.read(d, "artplan.json")
+    if not ap:
         raise HTTPException(409, "Sayfa planı henüz hazır değil")
+    if (key.startswith("a_") and not body.prompt.strip() and key not in studio.studio_state(d)["pages"]
+            and not any(s.get("art_id") == key for s in ap["scenes"])):
+        raise HTTPException(400, "Yeni resim için ne çizileceğini yazın")
     await _start(d, "ArtRegenerate", [job, key, body.mode, body.prompt, by, body.variants],
                  f"studio-{job}-art-{key}-{int(time.time())}", {"key": key, "mode": body.mode})
     return {"accepted": True}
@@ -347,7 +437,7 @@ class Select(BaseModel):
 async def select(job: str, key: str, body: Select, by: str = Depends(editor)) -> dict:
     d = _dir(job)
     try:
-        await asyncio.to_thread(studio.select, d, _key(key), body.v, by)
+        await asyncio.to_thread(studio.select, d, _key(key, d), body.v, by)
     except (KeyError, ValueError) as e:
         raise HTTPException(400, str(e)) from None
     return {"ok": True}
@@ -361,7 +451,7 @@ class Approve(BaseModel):
 async def approve(job: str, key: str, body: Approve, by: str = Depends(editor)) -> dict:
     d = _dir(job)
     try:
-        await asyncio.to_thread(studio.approve, d, _key(key), body.ok, by)
+        await asyncio.to_thread(studio.approve, d, _key(key, d), body.ok, by)
     except KeyError:
         raise HTTPException(404, "resim yok") from None
     return {"ok": True}
@@ -401,7 +491,407 @@ async def kunye(job: str, body: Kunye, by: str = Depends(editor)) -> dict:
 async def restart(job: str, by: str = Depends(editor)) -> dict:
     """Kesilen ya da hatayla biten hattı aynı kaynakla yeni iş olarak yeniden başlatır."""
     d = _dir(job)
-    src = studio.read(d, "job.json")["source"]
-    nd = studio.new_job(src, by)
+    old = studio.read(d, "job.json")
+    nd = studio.new_job(old["source"], by, old.get("art_mode") or "auto")
     await _pipeline(nd)
     return {"id": nd.name}
+
+
+class ArtModeBody(BaseModel):
+    art_mode: ArtMode
+
+
+@app.post("/v1/studio/jobs/{job}/art-mode")
+async def art_mode(job: str, body: ArtModeBody, by: str = Depends(editor)) -> dict:
+    """Resim seçimini sonradan değiştirir: yerleşim yeniden kurulur (stüdyo işçisinde), metin/üslup/karakterler
+    korunur; eski sayfa planı geçmişte kalır, üretilmiş resimler silinmez («kullanılmayan resimler»). GPU işi
+    sürüyorsa 409."""
+    from . import run as run_mod
+    d = _dir(job)
+    b = await _busy(d)
+    if b and not b.get("error"):
+        raise Coded(409, "BUSY", "Bu kitapta süren bir üretim var; bitince tekrar deneyin")
+    if not (studio.read(d, "manuscript.json") and studio.read(d, "profile.json") and studio.read(d, "artplan.json")):
+        raise HTTPException(409, "Kitap henüz okunup yerleştirilmedi; seçim iş başlarken verilir")
+    await asyncio.to_thread(run_mod.prepare_replan, d, body.art_mode, by)
+    await _pipeline(d)
+    return {"id": job, "art_mode": body.art_mode}
+
+
+# ------------------------------------------------------------------ sayfa planı
+P = "/v1/studio/jobs/{job}/plan"
+
+
+def _plan_dir(job: str) -> Path:
+    d = _dir(job)
+    if not plan_mod.exists(d):
+        raise Coded(404, "NO_PLAN", "Bu kitabın sayfa planı yok")
+    return d
+
+
+async def _write(fn, *args, **kw):
+    """Plan yazımı iş parçacığında; plan hataları sözleşmedeki kodlarla döner."""
+    try:
+        return await asyncio.to_thread(fn, *args, **kw)
+    except plan_mod.Stale as e:
+        raise Coded(409, "STALE", "Plan başka bir yerde değişti; güncel hâli alınıp yeniden uygulanmalı",
+                    rev=e.rev) from None
+    except plan_mod.NoPlan:
+        raise Coded(404, "NO_PLAN", "Bu kitabın sayfa planı yok") from None
+    except plan_mod.InUse as e:
+        raise Coded(409, "IN_USE", f"Bu görsel kullanılıyor: {', '.join(f'{n}. sayfa' for n in e.pages)}",
+                    pages=e.pages) from None
+    except KeyError as e:
+        raise HTTPException(404, str(e.args[0] if e.args else e)) from None
+    except ValueError as e:
+        raise Coded(400, "INVALID", str(e)) from None
+
+
+async def _gpu_free(d: Path) -> None:
+    b = await _busy(d)
+    if b and not b.get("error"):
+        raise Coded(409, "BUSY", "Bu kitapta süren bir üretim var; bitince tekrar deneyin")
+
+
+def _saved(plan: dict, **extra) -> dict:
+    return {"rev": plan["rev"], "warnings": plan.get("warnings", []), **extra}
+
+
+@app.get(P)
+def plan_get(job: str) -> Response:
+    d = _plan_dir(job)
+    return JSONResponse(plan_mod.load(d), headers={"Cache-Control": "no-store"})
+
+
+@app.post(P + "/freeze")
+async def plan_freeze(job: str, by: str = Depends(editor)) -> Response:
+    """Sayfa planını kurar (varsa bozmaz, aynısını döner). Balon yerleşimi burada görsel okuyucusuz (kuralla)."""
+    d = _dir(job)
+    if not plan_mod.exists(d):
+        if not (studio.read(d, "pagemap.json") and studio.read(d, "artplan.json")):
+            raise HTTPException(409, "Sayfa planı için önce kitabın yerleşimi bitmeli")
+        await _write(plan_mod.freeze, d, by)
+        plan_mod.after_write(d, cover=True)
+    return JSONResponse(plan_mod.load(d), headers={"Cache-Control": "no-store"})
+
+
+class PageBody(BaseModel):
+    rev: int
+    page: dict
+
+
+@app.put(P + "/pages/{pid}")
+async def plan_page_put(job: str, pid: str, body: PageBody, by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, page = await _write(plan_mod.update_page, d, pid, body.rev, body.page, by)
+    return _saved(plan, page=page)
+
+
+class NewPage(BaseModel):
+    rev: int
+    after: str | None = None
+    layout: str = "text-only"
+
+
+@app.post(P + "/pages")
+async def plan_page_new(job: str, body: NewPage, by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, page = await _write(plan_mod.insert_page, d, body.rev, body.after, body.layout, by)
+    return _saved(plan, page=page)
+
+
+@app.delete(P + "/pages/{pid}")
+async def plan_page_delete(job: str, pid: str, rev: int = Query(...), by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, _ = await _write(plan_mod.delete_page, d, pid, rev, by)
+    return _saved(plan, ok=True)
+
+
+class Order(BaseModel):
+    rev: int
+    ids: list[str]
+
+
+@app.post(P + "/order")
+async def plan_order(job: str, body: Order, by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, _ = await _write(plan_mod.order, d, body.rev, body.ids, by)
+    return plan
+
+
+class Split(BaseModel):
+    rev: int
+    block: str
+    at: int = Field(ge=0)
+
+
+@app.post(P + "/pages/{pid}/split")
+async def plan_split(job: str, pid: str, body: Split, by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, pages = await _write(plan_mod.split_page, d, pid, body.rev, body.block, body.at, by)
+    return _saved(plan, pages=pages)
+
+
+class PaletteBody(BaseModel):
+    rev: int
+    palette: dict
+
+
+@app.put(P + "/palette")
+async def plan_palette(job: str, body: PaletteBody, by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, _ = await _write(plan_mod.set_palette, d, body.rev, body.palette, by)
+    return plan
+
+
+@app.post(P + "/pages/{pid}/bubbles/suggest")
+async def plan_bubbles_suggest(job: str, pid: str, by: str = Depends(editor)) -> dict:
+    """Sayfanın diyaloğundan balon önerisi (kaydetmez). Kuyruk için görsel okuyucu gateway üzerinden."""
+    d = _plan_dir(job)
+    pl = plan_mod.load(d)
+    ap = studio.read(d, "artplan.json") or {"characters": []}
+
+    def run():
+        pg = plan_mod._page(pl, pid)
+        sel = studio.selected_art(d)
+        img = sel.get(pg["art"]["id"]) if pg["art"] and pg["art"].get("id") else None
+        if pg["art"] and pg["art"].get("asset") in pl["assets"]:
+            img = str(d / pl["assets"][pg["art"]["asset"]]["path"])
+        return plan_mod.suggest_bubbles(pl, pg, [c["name"] for c in ap["characters"]], img,
+                                        plan_mod.locator(ap["characters"]) if img else None)
+    return {"bubbles": await _write(run)}
+
+
+@app.get(P + "/pages/{pid}/preview")
+def plan_preview(job: str, pid: str, w: int = Query(900, ge=120, le=2400)) -> Response:
+    d = _plan_dir(job)
+    try:
+        return _preview(plan_mod.preview(d, pid, w))
+    except (KeyError, FileNotFoundError):
+        raise HTTPException(404, "sayfa yok") from None
+
+
+@app.get(P + "/unused-art")
+def plan_unused(job: str) -> dict:
+    d = _plan_dir(job)
+    return {"art": plan_mod.unused_art(d, plan_mod.load(d))}
+
+
+class Figure(BaseModel):
+    prompt: str = Field(min_length=1, max_length=1200)
+    characters: list[str] = Field(default_factory=list)
+    page: str | None = None
+
+
+@app.post(P + "/figures")
+async def plan_figure(job: str, body: Figure, by: str = Depends(editor)) -> dict:
+    """Serbest figür (GPU işi). Bitince varlık kütüphaneye, `page` verildiyse o sayfaya eklenir."""
+    d = _plan_dir(job)
+    await _gpu_free(d)
+    pl = plan_mod.load(d)
+    if body.page and not any(p["id"] == body.page for p in pl["pages"]):
+        raise HTTPException(404, f"sayfa yok: {body.page}")
+    names = {c["name"] for c in (studio.read(d, "artplan.json") or {}).get("characters", [])}
+    unknown = [c for c in body.characters if c not in names]
+    if unknown:
+        raise HTTPException(400, f"kitapta böyle karakter yok: {', '.join(unknown)}")
+    gid, jid = plan_mod.new_id("g"), plan_mod.new_id("j")
+    wf = f"studio-{job}-figur-{gid}"
+    plan_mod.job_record(d, jid, kind="figure", status="queued", asset=gid, page=body.page, prompt=body.prompt, by=by,
+                        workflow=wf)
+    await _start(d, "FigureGenerate", [job, jid, gid, body.prompt, body.characters, body.page, by], wf,
+                 {"key": "figur", "mode": "figure", "asset": gid, "job": jid})
+    return {"workflow": wf, "job": jid, "asset": gid}
+
+
+def _asset_image(path: Path, w: int) -> Response:
+    """Kütüphane görseli; w>0 saydamlığı koruyan küçük PNG (disk önbelleği), w=0 özgün dosya."""
+    if not path.exists():
+        raise HTTPException(404, "görsel yok")
+    head = {"Cache-Control": "private, max-age=3600"}
+    if w <= 0:
+        return FileResponse(path, media_type="image/png" if path.suffix == ".png" else "image/jpeg", headers=head)
+    w = max(64, min(w, 2400))
+    cache = path.parent / ".kucuk" / f"{path.stem}-{w}.png"
+    if not cache.exists() or cache.stat().st_mtime < path.stat().st_mtime:
+        from PIL import Image
+        cache.parent.mkdir(exist_ok=True)
+        im = Image.open(path)
+        im = im.convert("RGBA" if im.mode in ("RGBA", "LA", "P") else "RGB")
+        im.thumbnail((w, w * 4))
+        im.save(cache, "PNG", compress_level=6)
+    return FileResponse(cache, media_type="image/png", headers=head)
+
+
+@app.get(P + "/assets/{gid}")
+def plan_asset(job: str, gid: str, w: int = Query(0, ge=0, le=2400)) -> Response:
+    d = _plan_dir(job)
+    a = plan_mod.load(d).get("assets", {}).get(gid)
+    if not a:
+        raise HTTPException(404, "kütüphanede yok")
+    return _asset_image(d / a["path"], w)
+
+
+@app.delete(P + "/assets/{gid}")
+async def plan_asset_delete(job: str, gid: str, rev: int = Query(...), by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, _ = await _write(plan_mod.delete_asset, d, gid, rev, by)
+    return _saved(plan, ok=True)
+
+
+@app.put(P + "/photos")
+async def plan_photo(job: str, request: Request, filename: str = Query(..., min_length=1, max_length=300),
+                     page: str | None = None, by: str = Depends(editor)) -> dict:
+    """Fotoğraf yükleme: ham gövde (multipart yok). Sınır STUDIO_UPLOAD_MB; aşan yükleme 413 TOO_LARGE."""
+    from . import photo
+    d = _plan_dir(job)
+    if page and not any(p["id"] == page for p in plan_mod.load(d)["pages"]):
+        raise HTTPException(404, f"sayfa yok: {page}")
+    mb = upload_mb()
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf += chunk
+        if len(buf) > mb * 1024 * 1024:
+            raise Coded(413, "TOO_LARGE", f"Dosya {mb} MB sınırını aşıyor", limit_mb=mb)
+    if not buf:
+        raise HTTPException(400, "Boş dosya")
+    gid, meta, res = await _write(plan_mod.add_photo, d, bytes(buf), filename, page, by)
+    plan, fig = res["plan"], res["figure"]
+    hint = photo.dpi(meta["w_px"], meta["h_px"], fig["box"] if fig else {"w": plan["page"]["w"], "h": plan["page"]["h"]})
+    return _saved(plan, asset=gid, w_px=meta["w_px"], h_px=meta["h_px"], dpi_hint=int(round(hint)), figure=fig)
+
+
+async def _start_plain(workflow: str, args: list, wf_id: str) -> None:
+    """GPU'suz iş (busy tutmaz): aynı kuyrukta sırayla yürür."""
+    try:
+        await (await _temporal()).start_workflow(workflow, args=args, id=wf_id, task_queue=QUEUE)
+    except Exception as e:
+        raise HTTPException(503, f"İş kuyruğuna ulaşılamadı: {type(e).__name__}") from None
+
+
+@app.post(P + "/assets/{gid}/cutout")
+async def plan_cutout(job: str, gid: str, by: str = Depends(editor)) -> dict:
+    """Arka planı kaldır: saydam yeni varlık (onaylanınca sayfadaki kutu ona geçirilir)."""
+    d = _plan_dir(job)
+    if gid not in plan_mod.load(d).get("assets", {}):
+        raise HTTPException(404, "kütüphanede yok")
+    new, jid = plan_mod.new_id("g"), plan_mod.new_id("j")
+    wf = f"studio-{job}-zemin-{new}"
+    plan_mod.job_record(d, jid, kind="cutout", status="queued", source=gid, asset=new, by=by, workflow=wf)
+    await _start_plain("AssetCutout", [job, jid, gid, new, by], wf)
+    return {"workflow": wf, "job": jid, "asset": new}
+
+
+class Upscale(BaseModel):
+    page: str
+    item: str
+
+
+@app.post(P + "/assets/{gid}/upscale")
+async def plan_upscale(job: str, gid: str, body: Upscale, by: str = Depends(editor)) -> dict:
+    """Kaliteyi artır (GPU işi): kutusunda 300 dpi'ye yetecek katsayıyla (2–4) büyütülmüş yeni varlık."""
+    from . import photo
+    d = _plan_dir(job)
+    await _gpu_free(d)
+    pl = plan_mod.load(d)
+    try:
+        bx, fit, used = plan_mod.placement(pl, body.page, body.item)
+    except KeyError as e:
+        raise HTTPException(404, str(e.args[0])) from None
+    if used != gid:
+        raise HTTPException(400, "bu kutudaki görsel başka bir varlık")
+    a = pl["assets"][gid]
+    now = photo.dpi(a["w_px"], a["h_px"], bx, fit)
+    new, jid = plan_mod.new_id("g"), plan_mod.new_id("j")
+    wf = f"studio-{job}-buyut-{new}"
+    plan_mod.job_record(d, jid, kind="upscale", status="queued", source=gid, asset=new, page=body.page,
+                        item=body.item, by=by, workflow=wf, dpi_before=int(round(now)),
+                        factor=photo.upscale_factor(now))
+    await _start(d, "AssetUpscale", [job, jid, gid, new, body.page, body.item, by], wf,
+                 {"key": "buyut", "mode": "upscale", "asset": new, "job": jid})
+    return {"workflow": wf, "job": jid, "asset": new, "factor": photo.upscale_factor(now), "dpi_before": int(round(now))}
+
+
+# ------------------------------------------------------------------ öğeler ve efekt yazı (elements.py)
+# Plan olmadan da çalışır (kütüphane plan kurulmadan gösterilebilir): palet planınki, yoksa Timaş çocuk paleti.
+# Önizleme deterministiktir; iş klasöründe (dizgi/ogeler/) önbelleğe yazılır, tarayıcı da bir saat tutar.
+_PREVIEW_HEAD = {"Cache-Control": "private, max-age=3600"}
+
+
+def _elements_call(fn, *args) -> Response:
+    try:
+        return Response(fn(*args), media_type="image/png", headers=_PREVIEW_HEAD)
+    except KeyError as e:
+        raise Coded(404, "NOT_FOUND", f"Böyle bir öğe yok: {e.args[0] if e.args else e}") from None
+    except ValueError as e:
+        raise Coded(400, "INVALID", str(e)) from None
+
+
+@app.get(P + "/elements/catalog")
+def plan_elements_catalog(job: str) -> dict:
+    from . import elements
+    return elements.catalog(_dir(job))
+
+
+@app.get(P + "/elements/{kind}/preview")
+def plan_element_preview(job: str, kind: str, w: int = Query(240), style: str | None = Query(None)) -> Response:
+    """`style`: katalogdaki hazır biçimin anahtarı (`presets[].key`); verilmezse türün ilk biçimi."""
+    from . import elements
+    return _elements_call(elements.render_shape_preview, kind, w, style or None, _dir(job))
+
+
+@app.get(P + "/effects/{style}/preview")
+def plan_effect_preview(job: str, style: str, w: int = Query(360), text: str | None = Query(None)) -> Response:
+    """`text` verilmezse stilin örnek metni. Metin uzunluğuna tavan yok: uzun metin kutuya sığacak kadar küçülür."""
+    from . import elements
+    return _elements_call(elements.render_effect_preview, style, text, w, _dir(job))
+
+
+@app.get(P + "/history")
+def plan_history(job: str) -> list:
+    return plan_mod.history(_plan_dir(job))
+
+
+class Restore(BaseModel):
+    rev: int = Field(ge=1)
+
+
+@app.post(P + "/restore")
+async def plan_restore(job: str, body: Restore, by: str = Depends(editor)) -> dict:
+    d = _plan_dir(job)
+    plan, _ = await _write(plan_mod.restore, d, body.rev, by)
+    return plan
+
+
+@app.get(P + "/jobs")
+async def plan_jobs(job: str) -> dict:
+    """Süren GPU işi (busy) ve figür / zemin ayıklama / kaliteyi artırma işlerinin durumu (ekran bununla bekler)."""
+    d = _plan_dir(job)
+    return {"busy": await _busy(d), "jobs": await asyncio.to_thread(plan_mod.jobs, d)}
+
+
+from .api_marketing import router as marketing_router  # noqa: E402 - pazarlama kiti (api_marketing.py)
+app.include_router(marketing_router)
+
+# Seri karakter kartı uçları (api_characters.py)
+from .api_characters import router as _characters_router  # noqa: E402
+app.include_router(_characters_router)
+
+from .api_epub import router as epub_router  # noqa: E402 - e-kitap uçları (api_epub.py)
+app.include_router(epub_router)
+from .api_coloring import router as _coloring_router  # noqa: E402  boyama/etkinlik kitabı (coloring.py)
+app.include_router(_coloring_router)
+from .api_narration import router as _narration  # noqa: E402  (sesli okuma; docs/analiz/sesli-okuma-model-secimi.md)
+app.include_router(_narration)
+# ------------------------------------------------------------------ okur araçları ve sürüm farkı (api_reader.py)
+from .api_reader import router as _reader_router  # noqa: E402
+
+app.include_router(_reader_router)
+# Yaş uygunluğu raporu (api_age.py): /v1/studio/jobs/{job}/age…
+from .api_age import router as _age_router  # noqa: E402
+app.include_router(_age_router)
+from .api_collage import router as _collage_router  # noqa: E402 — kapak tarzı ve kolaj kapak uçları
+app.include_router(_collage_router)
+# ------------------------------------------------------------------ 3B kitap ve baskı provası (api_proof.py)
+from .api_proof import router as proof_router  # noqa: E402
+app.include_router(proof_router)

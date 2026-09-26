@@ -3,7 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingCheck, type ProofingFinding, type ProofingReport, type ProofingSeverity } from '../engine';
 import { Loading, Note, Pill, nf } from '../admin/ui';
 import { Panel } from './kit';
-import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, sevOf, type Decide } from './ProofEvidence';
+import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, sevOf, type Decide, type ScrollCue } from './ProofEvidence';
 
 /** M5: ZEKİ AI'ın kitabın metninde koştuğu otomatik son okuma denetimleri ve bulguları.
  *  Rapor köprüden kitap adıyla gelir; burada gösterim, yerel süzme ve editörün bulguya kararı vardır.
@@ -136,6 +136,8 @@ export function ProofFindings({
   const [activeKey, setActiveKey] = useState<string | null>(null);
   /** Sayfa başlığına tıklanınca sayfa açılır, bulgu seçilmez; bu durumda panelde o sayfanın ilk bulgusu gösterilir. */
   const [activePage, setActivePage] = useState<number | null | undefined>(undefined);
+  /** Her seçimde artan kaydırma isteği: panel işaret kutusunu görünür alana getirir. Klavyeyle anlık. */
+  const [cue, setCue] = useState<ScrollCue>({ seq: 0, instant: false });
   const bookId = report?.bookId ?? null;
 
   // Karar yazma: kim olduğu oturumdan gelir; tekrar basmak yeni karar yazar. Kaydedilince rapor yeniden okunur (karar + isabet birlikte gelir).
@@ -196,10 +198,12 @@ export function ProofFindings({
   const pick = useCallback((key: string) => {
     setActiveKey(key);
     setActivePage(undefined);
+    setCue((c) => ({ seq: c.seq + 1, instant: false }));
   }, []);
   const openPage = (page: number | null) => {
     setActiveKey(null);
     setActivePage(page);
+    setCue((c) => ({ seq: c.seq + 1, instant: false }));
   };
   const close = useCallback(() => {
     setActiveKey(null);
@@ -240,6 +244,7 @@ export function ProofFindings({
       const key = flat[next].key;
       setActiveKey(key);
       setActivePage(undefined);
+      setCue((c) => ({ seq: c.seq + 1, instant: true }));
       rowEls.current.get(key)?.scrollIntoView({ block: 'nearest' });
     };
     document.addEventListener('keydown', onKey);
@@ -252,7 +257,7 @@ export function ProofFindings({
     setActivePage(undefined);
   }, [bookId]);
 
-  const panelProps = { bookId, bookTitle: report?.bookTitle ?? null, page: panelPage ?? null, marks, activeKey: activeRow?.key ?? null, onPick: pick, onClose: close, decide, busy: decideM.isPending };
+  const panelProps = { bookId, bookTitle: report?.bookTitle ?? null, page: panelPage ?? null, marks, activeKey: activeRow?.key ?? null, onPick: pick, onClose: close, decide, busy: decideM.isPending, cue };
 
   let body: ReactNode;
   if (error) body = <Note tone="err">{error}</Note>;

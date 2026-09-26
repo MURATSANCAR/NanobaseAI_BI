@@ -1,6 +1,5 @@
 # Geliştirme Günlüğü
 
-<<<<<<< HEAD
 ## 2026-09-26 (01:30) — Güncel main (471de531) üç ortama kuruldu: test sunucusu, GPU editör, müşteri VM'i
 
 - **Kullanıcı kararı:** «tüm güncel merge edilmiş yapıyı kur» — SEO & GEO dahil main'in tamamı, sırayla test → GPU → VM.
@@ -9,14 +8,35 @@
 - **Kelime haritası toplu iş:** önceki toplu iş betiği her kitapta yeni olay döngüsü açtığı için ikinci kitapta düştü (model istemcisi ilk döngüye bağlı) — tek döngüye alındı, `wv-all-books-v3` 14 kitapla sürüyor.
 - **Müşteri VM'i:** geriye sarma denetimi (VM'deki `3e6c479b` ⊂ `471de531`) geçti; `git archive` yalnız kurulum yolları (24 MB) `/tmp/bi-main-471de531`, `systemd-run --user vm-deploy-471de531`, günlük `/tmp/vm-deploy-471de531.log`. Beş kap ayakta, `bi_var` korundu (4 → 4), oturumsuz uçlar 401, nginx testi geçti. Kontroller: `._*` 0; köprüdeki `editorial_cards.py`, `app.py`, `resolver.py` md5 = main; arayüz paketinde «Kelime haritası». Oturumlu deneme (login kabında geçici timasai oturumu, silindi): **Son Okuma raporu 502** — köprü kart servisine TT GPU nginx'i (`/etc/nginx/sites-available/kitap-eczanesi`, beyaz liste) üzerinden gidiyor; listede `…/proofing`, `…/proofing/word-map`, `…/proofing/findings/{id}/decision` yok, istek varsayılan siteye düşüp HTML dönüyor. Yani VM'de Son Okuma bu kurulumdan önce de veri alamıyordu. Üç `location` (mevcut `/review` bloğunun IP kısıtı + geçit başlığı kalıbıyla) eklenmeli; bu değişiklik izin denetimine takıldı, kullanıcı onayı bekliyor. Dosya depoda değil (gizli geçit başlığı taşıyor).
 - **Bulunan kalite sorunu (Duvarları Yıkmak, 224 s.):** 1.450 bulgu / 636 grup; en kalabalıklar yardımcı fiiller (olmak 84, etmek 53, yapmak 13) ve kitabın konu sözcüğü (insan 76). Öneri: sözcüğün kitaptaki sıklığına göre «bu yakınlık tesadüfle beklenenden fazla mı» süzgeci; ayrı iş.
-=======
 ## 2026-09-26 (00:40) — Sohbet K1: "adet/miktar" sorulunca tutar dönmüyor
 
 - Müşteri VM'i analizi (66 gerçek kullanıcı sorusu, yalnız okuma): %24 doğru; sınıflar K2 özel ad 16, **K1 adet→tutar 10**, K3 gün/saat/aralık 9, K4 tanımlı ölçü eşleşmiyor 7, K5 yazım 2. K1 ve K2 test sunucusunda da aynı (genel, VM'e özgü değil). Sıra kullanıcıyla: K1 → K2 → K3 → K4 → K5.
 - **K1 kök neden:** "adet/adedi" n-gram eşleştiricide niteleyici (MODIFIERS) sayılıp hiç eşleşmeye girmiyor, "miktar" katalogda yok → "2022 satış adedi", "kaç adet satış", "ağustos satış miktarı" hepsi `SUM(LINENET)` (tutar) döndü; "brüt satış adedi" brüt kâr **marjı** döndü. Kelime ne çözülmüş ne yok sayılmış görünüyordu.
 - **Düzeltme (genel):** `resolver.py` 2d2 `_quantity_twins`: bir değer ölçüsünün hemen önünde/ardında adet sözcüğü (adet/adedi/miktar…) varsa ölçünün sertifikalı **adet karşılığı** aranır — adında ya da eş anlamlısında birim sözcüğü olan ve ölçünün kendi sözcüklerini taşıyan ölçü ("satış" ↔ "satılan adet"). Aynı ifade birden çok kavrama bağlıysa o ifade doğrudan sorulunca seçilen okunur. Karşılık yoksa ya da belirsizse tutar verilmez, geri sorulur ("brüt/net satış adedi"). Durum ölçüsünün birimi ("stok adedi"), sayılan kayıt ("sipariş adedi"), oran, zaten adet olan ölçü ("sevk adedi"), liste virgülü ("ciro, adet ve iade") dokunulmaz.
 - **Doğrulama:** `test_quantity_twin.py` 6/6 (+ `test_count_after_term`); `semantic_layer` testlerinde `main`'e göre yeni düşen yok (main'de zaten 28 düşen var; `test_llm_queue` yükte zamanlama, tek başına geçer). Tam set modelsiz/DB'siz plan karşılaştırması 1.600 soru: 1.592 aynı, 8 değişen hepsi "satış adedi" → adet (ilk iki denemede çıkan 4 bozulma — liste virgülü, "sevk" eş anlamlısı — ve 8 gereksiz geri soru düzeltildi). Gerçek Logo: "2026 mayıs satış adedi" üretilen SQL 732.779 = bağımsız referans 732.779 (eski cevap 87,8 Mn TL tutardı).
->>>>>>> 5bd755662cb68362c0996bd067a1ec6d0492cd9e
+## 2026-09-26 (00:30) — Kitap Tasarım Stüdyosu: süs/şekil ve efekt yazı motoru (D) ile panelleri (E) sayfa planına ve düzenleyiciye bağlandı
+
+- **Motor (A↔D):** stüdyo servisine üç okuyan uç (`plan/elements/catalog`, `plan/elements/{tür}/preview?w=&style=`, `plan/effects/{stil}/preview?w=&text=`; saydam PNG, 1 saat önbellek; bilinmeyen tür/stil 404 `NOT_FOUND`, geçersiz biçim/genişlik 400 `INVALID`). Plan doğrulama hataları artık 400 `{"code":"INVALID","detail"}`. Renk alanlarında D'nin bütün palet rolleri + `none` (sayfa metninde yalnız hex). Şekil kutuyu değil çizimi aynalar (`draw-shape(..., mirror: s.flip)`), yazı düz okunur. Plan ve önizleme aynı paleti verir (`elements.palette_or_default`); önceden dizgi pagemap vurgusunu palete karıştırıyordu, önizlemedeki renk sayfadakinden farklı çıkabilirdi. Sabit puntolu şekil/efekt yazısı sığmazsa `element-overflow` işareti öğenin `overflow`'una ve plan uyarısına yazılıyor (önceden toplanmıyordu). Efekt yazıda punto boşsa kutuya sığdırılıyor (önceden gövde puntosu veriliyordu). Serbest yazıda «Sağa» hizası motorda da geçerli (ekran gönderiyordu, motor 400 veriyordu).
+- **Ön kontrol:** «Metin eksiksiz» PDF tarafında efekt yazı ve şekil yazısı kutularını okumaz (katmanlar ve harf harf yerleşim metni çoğaltıyordu); sayfa metni/balon kutusuyla örtüşen yer okunmaya devam eder.
+- **Köprü ve giriş kapısı:** `editorial_studio_elements.register` app.py'de bağlandı; köprü önizleme genişliğini sessizce kırpmıyor, önizleme yazısına 200 harf tavanı kaldırıldı (motor açık hatayla sınırlar, uzun yazıyı küçültür). Giriş kapısında tür/stil adı kalıbı rakamı da kabul ediyor (eski blok yerinde genişler).
+- **Ekran (C↔E):** yuvalar dolu; paneller iş kimliği, palet, sayfa geometrisi, paletin özeti (her kayıtta küçük resimler yeniden istenmesin diye plan sürümü değil), yeni z, komşu katmanla yer değiştirme ve kaldırma alıyor. Katalog normalleştirici motorun gerçek çıktısına göre yeniden yazıldı (`presets` = hazır biçim; önceki sürüm `styles`/`aspect` bekliyordu, biçimi olmayan türlerde `params.style` gönderip 400 alacaktı). Tipler tek kaynak `engine.ts`. Tuvale bırakılan şekil bırakılan noktaya ortalanır, telefonda dokunarak eklenir ve «Öge» sekmesi açılır; tarayıcı taslağında aynalama yazıyı çevirmez, rol renkleri kitabın rengiyle gösterilir.
+- **Doğrulama:** GPU'da editör imajında (`editor-py:0.15.9-09252115`) tam set 271 geçti, 1 atlandı (pillow_heif), 1 kırmızı = bilinen `test_proofing_contract` sıra bağımlılığı; yeni uçtan uca test: şekil + efekt yazı sayfa PUT → dizgi → PDF'te yıldız vektörü (rol rengiyle), efekt metni, aynalı tabelada yazı soldan sağa, taşma uyarısı, ön kontrol «Metin eksiksiz» OK. Test sunucusunda geçici dizinde `tsc` temiz, vitest 13/13 (motorun gerçek katalog çıktısıyla), `vite build` geçti. Kurulum yapılmadı (dal main'de değil).
+
+## 2026-09-26 (00:40) — Kitap Tasarım Stüdyosu: kolaj kapak (O hattı; dalda, kurulmadı)
+
+- **Ne:** kapağın ikinci tarzı. Kapak ekranı `/kitap-tasarim/:iş/kapak` (Sayfa stüdyosunda «Kapak tarzı»): resimli / kolaj / tipografik. Kolajda siyah-beyaz analog fotoğraf yırtık kâğıt gibi kesilir, öznenin yukarı uzanan parçası kesimin üstünden taşar, gri lekeler ve yırtık şeritler, başlık daktilo kâğıt şeritlerde, yazar ince geniş aralıklı. Arka kapak, sırt, barkod ve baskı hattı mevcut kalıp.
+- **Motor `production/collage.py`:** tohum başlık+düzen numarasından (aynı kitap aynı kolaj, «başka düzen» değiştirir); taşma noktası figürün maskesinden (üst şeridin tonuyla anahtarlama, ufka bağlı bölge); etiketler fontla ölçülüp kelime sırası korunarak dengeli bölünür, sığmayan şerit açık hata; ön kapak 300 dpi gri PNG, yazılar vektör. Fotoğraf: dil modeli kitabın profilinden sahne yazar (genel kalıp, kitaba özel istem yok), görsel model 3 tohumla aday (Temporal `CollagePhotos`), kolaja özel negatif istem; editör kendi fotoğrafını yükleyebilir. Model fotoğrafında ekranda «Taslak — ticari kullanım izni bekleniyor».
+- **Gerçek model (geçici kap, GPU):** çocuk kitabı (Etimesgutlu Bebek Aslan, iş dosyalarının kopyası) ve roman (Çiçekçi Kadın, okunmuş metinden) için 3'er aday; aday başı üretim 45–115 sn + büyütme 3–55 sn (model devri dahil), kompozisyon 1,5–2,5 sn. 6 adayın 6'sında figür taştı. İlk romanda denemesi sırada başka bir oturumun görsel modeli kapatması yüzünden 500 aldı, ikinci turda geçti.
+- **Ön plan ayırma:** BiRefNet (MIT) geçici kapta CPU'da denendi (220 M parametre, 445 MB ağırlık, 17–20 sn/görsel): düz gökli adaylarda anahtarlama maskesiyle ufuk üstü IoU 0,74–0,94, tepe noktası %1,3 içinde; karışık zeminde anahtarlama taşma yapmıyor, BiRefNet figürü buluyor. Kalıcı kurulmadı; öneri raporda.
+- **Testler:** `tests/test_collage.py` 13 test (modelsiz; belirlenimcilik, etiket ölçümü, Türkçe harfler PDF'ten, 300 dpi gri, prepress, ön kontrol, uçlar, iş akışı) + test_plan/production/cover_text/elements: 107 geçti, 1 atlandı. tsc test sunucusunda temiz; ekran 320/390/768/1440'ta sahte köprüyle yatay kaymasız.
+- **Açık:** kitabın adı Word dosya adı ya da kısa ad olan işlerde (CRM kaydı yok) etiket o adı basar — editör şeritleri elle yazar. Kolaj/tipografik seçiliyken basılmayan kapak resmi ön kontrolde onay beklemez (`studio.refresh_preflight`).
+
+## 2026-09-26 — Son okuma kanıt paneli: işaret görünür alana kayıyor (dalda, kurulmadı)
+
+- **Şikâyet:** bulguya tıklanınca sağdaki sayfada işaret (mor kutu) panelin altında, görünmüyordu. **Sebep:** yapışkan sütun görünür alandan uzundu (başlık + 70vh görsel + karar kartı) ve liste başındayken henüz yapışmadığı için ekranın altına taşıyordu; sayfa altındaki işaret görünür alanın dışında kalıyordu, panelde işarete kaydıran bir şey yoktu. Düzenekte ölçüldü: önce kutu 884–898 px, gövdenin görünür altı 836 px.
+- **Düzeltme (`ProofEvidence.tsx`, `ProofFindings.tsx`, `proofScroll.ts`):** panel görünür alana sığar (gövdenin ölçülen boyu, ekran yakınlaştırmasıyla); başlık ve karar kartı sabit, yalnız sayfa görseli kendi kabında kayar (`overscroll-behavior: contain`). Her seçimde işaret kutusu kabın ortasına getirilir — görsel yüklendikten sonra; aynı bulguya yeniden basmak da geri götürür. Fareyle yumuşak; klavye (↑/↓), yeni sayfanın ilk açılışı ve azaltılmış harekette anlık. Sütunun altı ya da üstü taşıyorsa gövde gereken kadar kaydırılır. Telefonda alttan kart aynı düzende.
+- **Sayfa numarası:** listedeki «s. N» ile paneldeki «Sayfa N» aynı sayı, görsel de aynı sayfa — kitabın PDF'teki fiziksel sırası (`ed.page.page_no`; bütün denetimler bunu yazar). Ekrandaki «s. 4» / «Sayfa 207» farkı listenin başına dönülmüş olmasından; iki numaralandırma karışmıyor. Basılı sayfa numarası (folyo) raporda yok; açık iş.
+- **Doğrulama:** test sunucusunda geçici dizinde `tsc` temiz, `proofScroll.test.ts` 5/5; sahte veriyle geçici derleme tünelle tarayıcıda: 1440 masaüstünde işaret ve sütun görünür (liste başı, liste sonu, ↑/↓), 320/390/768'de alttan kart, yatay taşma 0. Canlı veriyle ekran açılmadı.
 
 ## 2026-09-26 (00:40) — Kelime tekrarı v2: sayfada işaret, gruplu karar, anlamı korunan öneri — test sunucusunda
 
@@ -57,6 +77,34 @@
 - **Düzeltme kuruldu (dddfa31e):** yeniden üretilen iki yazar önerisinde (Ahmet Şimşirgil, Pip Jones) satış rakamı yok. Gerçeklik denetimi Türkçe «İ»yi `casefold` ile «i̇» yapıp «İlk» kelimesini yanlış işaretliyordu; Türkçe küçültme kullanılır.
 - **Ekran `/seo-geo/sayfalar`:** Yazarlar/Kategoriler/Yayınevleri; çok satandan aza; sayfa açılınca öneri kendiliğinden; öne çıkan kitaplar, kategoriler, Wikidata bağlantısı; uyarının yanında öneri.
 
+## 2026-09-25 (23:55) — Stüdyo: resimli kitaptan boyama / etkinlik kitabı (K hattı, dalda)
+
+- **Ne:** kaynak kitabın stüdyo sayfasında «Boyama kitabı üret» (yalnız boyama / boyama + etkinlik, etkinlik seçimi ve
+  sırası, kısa cümle kaynağı). Yeni iş türetilir (`kind: coloring`, `derived_from`), kaynak iş değişmez; yeni kitap
+  plan.json ile kurulur, sayfa düzeni ekranında aynı araçlarla düzenlenir. Sayfa düzeni: sol sayfada hikâyeden kısa cümle,
+  sağ sayfada tam sayfa boyama; seçilen etkinlikler; forma katına «Kendi resmini çiz»; cevap anahtarı. Kapak kaynak
+  kapağın yarısı renkli yarısı çizgi; ISBN yeni ürün için boşalır.
+- **Çizgi (modelsiz):** renk bölgesi + kenar gücü + komşuluk grafiğinde birleştirme → kapalı, kırıntısız, yaşa göre kalın,
+  yalnız siyah-beyaz çizgi (numpy + PIL; imaja paket eklenmedi). Gerçek stüdyo çıktılarında (Etimesgutlu Bebek Aslan, 5
+  sayfa + 3 karakter, dosyalar okunarak) karakterler tanınır, yüz ayrıntısı ve yumuşak ışıklı arka plan zayıf.
+- **Çizgi (görsel model):** düzenleme ucuyla «boyama sayfası» yeniden çizimi aynı 3 sayfada belirgin daha iyi (temiz
+  kontur, yüz, eşya), ~80–120 sn/sayfa; bir sayfada arka planı tümüyle attı. Ekranda sayfa başına «Zeki AI ile yeniden çiz»,
+  sonuç taslak işaretli (lisans ticari değil). Deneme öncesi busy.json ve Temporal boştu; bitince görsel model kapatıldı.
+- **Etkinlikler (modelsiz):** renk sayıya göre boyama, noktaları birleştir, farkı bul, labirent, kelime avı, eşleştirme.
+- **Testler:** `apps/editor/tests/test_coloring.py` 16 + `test_plan.py` → 45 geçti, 1 atlandı (GPU'da geçici kap,
+  editor-py:0.15.9-09252115). tsc test sunucusunda temiz. Push/merge/dağıtım yapılmadı.
+- **Açık:** akış ekranındaki «resim seçimi» kartı boyama işinde gizlenmeli (StudioFlow); model çizgisinin kompozisyonu
+  koruması için istem/ölçüm; bulmaca (çapraz) yok, kelime avı var.
+
+## 2026-09-25 (23:55) — Kitap Tasarım Stüdyosu: 3B kitap ve kâğıda göre baskı provası (L hattı, dalda)
+
+- **Neden:** satış ve kurul sunumunda kitabın gerçek hâli (döner kapak, çevrilen sayfalar) ve seçilecek kâğıtta (kuşe, mat kuşe, 1. hamur, şamua) baskıda nasıl görüneceği ekranda görülsün.
+- **Motor (`production/proof.py`, `api_proof.py`, `icc/`):** sayfa/kapak önizlemesi kâğıdın basım profiline çevrilir ve geri ekrana (kâğıt tonuyla / tonsuz); renk kaybı ve mürekkep yükü taranmış saydam katman + özet. Profiller TT GPU'daki Ubuntu `colord-data` 1.4.7 paketinden, CC0 (indirme yapılmadı), sha256 `icc/LISANS.md`'de. Kalınlık kâğıda göre (gramaj × hacim; kuşe 0,11 ve 1. hamur 0,09 mm `spec.CALIPER` ile aynı).
+- **Ölçüm (gerçek iş, kopya klasörde):** 8 sayfalık resimli kitapta kuşede renk kaybı ≈ %0–0,1, 1. hamur/şamuada gün batımı sayfasında %51 (koyu doygun yeşiller). İlk sürümde kaplamasız kâğıtta metin sayfasının siyahı da «kayıp» çıkıyordu (siyah L≈9'a açılıyor) → açıklık farkı yarı ağırlıkla sayılıyor; ayrıca Pillow'un LAB dizisi a/b'yi işaretli bayt veriyor (düz okuyunca 255'lik sahte fark).
+- **Ekran (`studio/book3d/`):** `three` yalnız bu bölüm ekrana yaklaşınca yüklenir; kapak 900 ms / sayfa 720 ms güçlü ease-in-out, klavyede (sunum dışı) ve azaltılmış harekette anlık; sunumda doğrusal yavaş dönüş. Sunum katmanı body'ye taşınır (kabuğun ölçeklenen kapsayıcısı `fixed`'i hapsediyordu), tuval React dışında tutulduğu için sahne yeniden kurulmaz. Karşılaştırma kaydırıcısı `clip-path`, dokunmada dikey kaydırma sayfaya kalır.
+- **Doğrulama:** `test_proof.py` 14/14 + `test_plan.py` 29 geçti (GPU'da geçici kap); `tsc` ve `vite build` test sunucusunda geçici dizinde temiz; ekran geçici sunucu + SSH tüneliyle tarayıcıda denendi (kapalı/açık kitap, kıvrılma yavaşlatılarak, sunum, PNG 468 kB, webm 2,5 MB, 320/390/768'de bölüm taşmıyor). Canlıya kurulmadı.
+- **Açık:** stüdyo sayfasının kendisi 320 px'te bölümden bağımsız 77 px yatay taşıyor (önceden var); kaynak işte yazar adı boşken kapak dizgisi «yazı alana sığmıyor: ''» ile düşüyor (bu işte kapak yoktu, denemede kopyaya yazar adı yazıldı).
+
 ## 2026-09-25 (23:40) — Kelime haritası Son Okuma ekranında; gerçek kitapta iki düzeltme; test sunucusunda canlı
 
 - **Ekran:** Son Okuma (M5) → «Kelime haritası» paneli (`WordMapPanel.tsx`): farklı kök, içerik kökü, bir kez geçen, çok anlamlı kök, deyim, çeşitlilik puanı; sekmeler «Bütün kökler» (biçimler, sayfalar, anlamlar, deyimler; işlev sözcükleri isteğe bağlı), «Çok anlamlılar», «Farklı anlamda yakın geçiş» (tekrar sayılmayan «göz» örnekleri), «Tanınmayan biçimler»; arama, sıklık/A→Z, «devamını göster» (kesme yok). Köprü `GET /api/v1/editorial/proofing/word-map?bookId=` → kart servisi.
@@ -71,6 +119,27 @@
 - **Sorun:** yönetici açılışında «Editör atanmamış» grubu (206 iş) varsayılan açık geliyordu; sayfa 9.884 px, sohbet/editör tablosu/sözleşmeler 8.300 px'ten sonra başlıyordu. Aynı editör sayıları iki yerde (gruplar + tablo) tekrarlanıyordu, her satırda kırmızı gün sayısı vardı (işlerin çoğu geciktiği için vurgu anlamını yitirmişti), üst şeritte «Kaynak: CRM» iki kez yazıyordu.
 - **Düzeltme (`EditorialHome.tsx`, `kit.tsx`):** üstte 4 sayı kartı; bekleyen iş grupları ile editör tablosu tek tabloda birleşti (satıra dokununca o editörün işleri açılır, liste kendi içinde kayar, sınır yok); yönetici görünümünde sohbet + Yaklaşan + sözleşmeler sağ sütunda; gün sayıları nötr renkte. Düzen CRM verisini beklemeden `useAdminMe` ile seçilir (yoksa ~10 sn sonra sohbet yer değiştiriyordu). Test sunucusunda ölçüldü: sayfa 9.884 → 2.135 px. `ModuleFrame` isteğe bağlı `presence` aldı (Masam'da dosya sayısı).
 - **Açık kalan:** sohbetteki kitap çiplerinde bazı kitaplar başlık yerine dosya adıyla (`duvarlari-yikmak`, `Dilek Agaci.indd`) ve boş kapakla görünüyor; veri eşleme sorunu, ayrı iş.
+
+## 2026-09-25 (23:50) — Kitap Tasarım Stüdyosu: çocuk kitabı yaş uygunluğu raporu (H hattı; dalda, kurulmadı)
+
+- **Ne:** "Kelime düzeyi, cümle uzunluğu ve hassas içerik denetlenir. Okul ve MEB listelerine uygunluk raporu çıkar."
+  Sayfa stüdyosunda «Yaş uygunluğu» düğmesi → yan sayfa: hüküm (uygun/sınırda/uyumsuz, gerekçeli), sayfa sayfa bulgular
+  (tıklayınca sayfa düzeninde o sayfa açılır), seyrek kelimeler + sade karşılık önerisi (editör onayı, «Metne uygula»),
+  okul/MEB ölçütleri, editör kontrol listesi (kim/ne zaman), PDF (Typst). Ön kontrole bilgi satırı (baskıyı durdurmaz).
+- **Yeniden kullanım:** son okumanın `age_fit` okunabilirlik ve hassas içerik denetimi aynen; tek değişiklik `sensitive(..., llm=)`
+  (çağrı kaydı iş klasörüne). Ekranda formül/model adı yok; formüller PDF ekinde kaynak olarak.
+- **Kelime düzeyi ölçüldü, uydurulmadı:** 735 PDF'lik derlemden kendi basılı bandı 6-10 olan 286 kitap; Zemberek kökü; seyrek
+  eşiği K=1 (bant kitaplarının kendi kelime kullanımlarının %1'i), kitabın seyrek payı p95 %2,07; aynı kitap eşiği 0,6
+  (derlemdeki kitabın kendisi sayılmaz).
+- **MEB/okul kaynakları** (`docs/analiz/meb-uygunluk-olcutleri.md`): Okul Kütüphaneleri Yönetmeliği m.10 (2024) + Uygulama
+  Kılavuzu (2025), Ders Kitapları ve Eğitim Araçları Yönetmeliği m.8/6 (punto), TTKB değerlendirme kriterleri (2024), Türkçe
+  Öğretim Programı 2019 metin nitelikleri m.9, 100 Temel Eser'in 2018/17 genelgesiyle kaldırılması, 1117 sayılı Kanun m.1,
+  ilkokula kayıt 69 ay. 2024 TYMM Türkçe programı PDF'i HTTP 500 → «kaynak bulunamadı»; yaşa göre resmî sayısal eşik yok.
+- **Doğrulama:** GPU geçici kapta `test_age_report.py` (14) + `test_plan.py` + `test_production.py` → 70 geçti, 1 atlandı;
+  tsc temiz (test sunucusu); köprü vekili bridge imajında sahte stüdyoyla sınandı; ekran 320/390/768'de yatay kaymasız
+  (sahte uçlu düzenek). Gerçek veri (gateway, GPU'da iş KOPYALARI): stüdyodaki tek iş (3-6, Zeki AI okuması) → «Banda göre
+  değerlendirilemedi»; derlemden iki 6-10 kitap → «Sınırda» (seyrek pay %5,6) ve «Uyumsuz» (s.31 alay/zorbalık adayı),
+  ikisinde de kitap derlemde tanındı. İsabet (hassas/seyrek bulguların insan etiketi) ölçülmedi.
 
 ## 2026-09-25 (22:45) — Kurulum müşteri verisini silmez: köprünün durum klasörü kalıcı diskte
 

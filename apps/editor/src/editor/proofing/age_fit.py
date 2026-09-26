@@ -237,10 +237,11 @@ def candidates(pages: list[dict]) -> list[dict]:
 
 
 async def sensitive(generation_id: str, pages: list[dict], band: tuple[int, int] | None,
-                    only: list[dict] | None = None) -> tuple[list[dict], dict]:
+                    only: list[dict] | None = None, llm: Llm | None = None) -> tuple[list[dict], dict]:
+    """`llm`: çağrı kaydını başka yere yazan istemci (stüdyonun yaş raporu işin klasörüne yazar)."""
     band_txt = f"{band[0]}-{band[1]} yaş" if band else "belirtilmemiş (çocuk kitabı)"
     cands = only if only is not None else candidates(pages)
-    llm = Llm(generation_id)
+    llm = llm or Llm(generation_id)
     letters = list(CATEGORIES)
     sem = asyncio.Semaphore(4)
     stats = {"candidates": len(cands), "classified_not_none": 0, "quote_not_verbatim": 0,

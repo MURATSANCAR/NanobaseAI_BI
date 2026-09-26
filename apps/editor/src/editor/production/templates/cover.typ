@@ -13,7 +13,59 @@
 #set text(font: d.body_font, lang: "tr", hyphenate: false)
 
 // ---------------------------------------------------------------- ön kapak
-#place(top + left, dx: front-x, image(d.front_image, width: tw + b, height: H, fit: "cover"))
+#let fc = d.at("front_collage", default: none)
+#if fc != none {
+  // Kolaj (collage.py): gri katman görseli + daktilo kâğıt şeritler (vektör yazı) + ince yazar adı.
+  place(top + left, dx: front-x, image(fc.art, width: tw + b, height: H))
+  for lb in fc.labels {
+    let pad = lb.pad_mm * 1mm
+    let w = lb.w_mm * 1mm
+    let h = lb.h_mm * 1mm
+    let ink = rgb(lb.ink)
+    let body = box(width: w + 2 * pad, height: h + 2 * pad, {
+      place(top + left, image(lb.img, width: w + 2 * pad, height: h + 2 * pad, fit: "stretch"))
+      place(top + left, dx: pad, dy: pad, box(width: w, height: h, align(center + horizon,
+        text(font: fc.font, size: lb.size_pt * 1pt, fill: ink, stroke: lb.stroke_pt * 1pt + ink,
+          tracking: lb.tracking_pt * 1pt, lb.text))))
+      place(top + left, image(lb.wear_img, width: w + 2 * pad, height: h + 2 * pad, fit: "stretch"))
+    })
+    place(top + left, dx: front-x + lb.cx_mm * 1mm - (w / 2 + pad), dy: lb.cy_mm * 1mm - (h / 2 + pad),
+      rotate(lb.rot * 1deg, origin: center + horizon, body))
+  }
+  if fc.author != none {
+    let a = fc.author
+    place(top + left, dx: front-x, dy: a.y_mm * 1mm, box(width: tw, align(center,
+      text(font: a.font, weight: a.weight, size: a.size_pt * 1pt, tracking: a.tracking_pt * 1pt,
+        fill: rgb(a.ink), a.text))))
+  }
+} else if d.front_image != none {
+  place(top + left, dx: front-x, image(d.front_image, width: tw + b, height: H, fit: "cover"))
+} else {
+  // Tipografik kapak (resimsiz kitap): düz zemin, açık tonda daire deseni, başlık ve yazar ortada.
+  let ft = d.front_type
+  let bg = rgb(ft.bg)
+  let ink = rgb(ft.ink)
+  place(top + left, dx: front-x, box(width: tw + b, height: H, clip: true, {
+    place(top + left, rect(width: tw + b, height: H, fill: bg, stroke: none))
+    for c in ft.dots {
+      place(top + left, dx: (c.at(0) - c.at(2)) * 1mm, dy: (c.at(1) - c.at(2)) * 1mm,
+        circle(radius: c.at(2) * 1mm, fill: bg.lighten(9%), stroke: none))
+    }
+  }))
+  let inner = tw - 2 * d.safe * 1mm
+  place(top + left, dx: front-x + d.safe * 1mm, dy: b + th * 0.22, box(width: inner, align(center)[
+    #set par(leading: 0.45em, justify: false)
+    #text(font: d.heading_font, weight: 800, size: ft.title_size * 1pt, fill: ink, d.title)
+    #if d.author != "" [
+      #v(8mm)
+      #box(width: 18mm, line(length: 100%, stroke: 1.2pt + ink))
+      #v(6mm)
+      #text(font: d.heading_font, weight: 600, size: ft.author_size * 1pt, fill: ink, d.author)
+    ]
+  ]))
+  place(top + left, dx: front-x + d.safe * 1mm, dy: b + th - d.safe * 1mm - 8mm, box(width: inner,
+    align(center, text(size: 10pt, weight: "bold", tracking: 1.5pt, fill: ink, upper(d.publisher)))))
+}
 #for blk in d.front_text {
   for (i, ln) in blk.lines.enumerate() {
     place(top + left, dx: front-x, dy: blk.top * 1mm + i * blk.step * 1mm,

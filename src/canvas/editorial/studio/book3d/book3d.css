@@ -1,0 +1,38 @@
+/* 3B ve prova bölümü. Sahnenin kendi hareketi (kapak, sayfa, dönüş) çizim döngüsündedir; burada yalnız zemin,
+   sekme göstergesi ve karşılaştırma kaydırıcısının dokunma davranışı var. */
+.book3d {
+  --b3-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* Sahnenin zemini: kanvas temasının yumuşak ışığı; kitap saydam tuvalde bunun üstünde durur. */
+.book3d-stage {
+  background:
+    radial-gradient(120% 90% at 50% 20%, #ffffff 0%, #f3f1fb 45%, #e7e9f3 100%);
+  touch-action: none;           /* sürükleme kitabı döndürür, sayfayı kaydırmaz */
+  cursor: grab;
+}
+.book3d-stage:active { cursor: grabbing }
+.book3d-present { background: radial-gradient(120% 90% at 50% 20%, #ffffff 0%, #f1eff9 50%, #e2e5f1 100%) }
+.book3d-present .book3d-stage { background: transparent }
+
+/* Sekme göstergesi: seçili sekmeye kayar (durum değişimi; sık tıklanmaz). */
+.b3-tabs { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr }
+.b3-tab-ind {
+  position: absolute; inset: 3px auto 3px 3px; width: calc(50% - 3px); border-radius: 10px; background: #fff;
+  box-shadow: 0 1px 3px rgba(20, 30, 60, .12);
+  transition: transform 200ms var(--b3-ease-out);
+}
+.b3-tabs[data-tab="proof"] .b3-tab-ind { transform: translateX(100%) }
+
+/* Karşılaştırma: yatay sürükleme çizgiyi taşır, dikey kaydırma sayfaya kalır. */
+.proof-compare { touch-action: pan-y; cursor: ew-resize }
+.proof-compare img { pointer-events: none; -webkit-user-drag: none; user-select: none }
+
+/* Katman renk örnekleri (sunucunun taradığı renklerle aynı) */
+.proof-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px }
+.proof-swatch-gamut { background: repeating-linear-gradient(45deg, #d61f8a 0 3px, #fff 3px 6px) }
+.proof-swatch-tac { background: repeating-linear-gradient(45deg, #eb7800 0 3px, #222 3px 6px) }
+
+@media (prefers-reduced-motion: reduce) {
+  .b3-tab-ind { transition: none }
+}

@@ -1729,13 +1729,18 @@ export type StudioPage = {
 };
 export type StudioCheck = { name: string; status: 'OK' | 'WARN' | 'FAIL'; detail: string };
 export type StudioBusy = { key: string; mode: string; since: number; queued?: boolean; error?: string } | null;
+/** Başlangıçta resim seçimi: otomatik (önerilen) | her sayfa | yalnız bölüm başları | resimsiz. */
+export type StudioArtMode = 'auto' | 'every_page' | 'chapter' | 'none';
 export type StudioJob = {
-  job: { id: string; source: { generation_id?: string; book_id?: string; docx?: string; file_name?: string }; created_by: string; created_at: number };
+  job: { id: string; source: { generation_id?: string; book_id?: string; docx?: string; file_name?: string }; created_by: string; created_at: number;
+         art_mode?: StudioArtMode };
   state: { title: string; status: 'running' | 'done' | 'fail'; error: string | null; started: number; finished: number | null; steps: StudioStep[] };
   busy: StudioBusy;
   book: { title: string; author: string | null; meta: Record<string, string | number | null>; chapters: (string | null)[]; words: number } | null;
   profile: { age_min: number; age_max: number; age_source: string; genre: string; illustration: string; illustration_source?: string | null; tone: string[];
-             reading: Record<string, number>; disagreement: string | null; reasons: { claim: string; quote: string }[] } | null;
+             reading: Record<string, number>; disagreement: string | null; reasons: { claim: string; quote: string }[];
+             /** Resim kararının kaynağı (editör seçimi ya da otomatik) ve gerekçesi. */
+             art_source?: 'editor' | 'auto'; art_reason?: string | null } | null;
   spec: { trim_w: number; trim_h: number; bleed: number; body_font: string; body_size: number; leading: number; paper: string;
           hyphenate: boolean; reasons: string[] } | null;
   layout: { art_ratio: number; body_size: number; accent: string } | null;
@@ -1756,10 +1761,11 @@ export type StudioJobRow = { id: string; title: string | null; created_by: strin
 const studioBase = (job: string) => `/api/v1/editorial/studio/jobs/${encodeURIComponent(job)}`;
 export const studioApi = {
   list: () => send<{ jobs: StudioJobRow[] }>('GET', '/api/v1/editorial/studio/jobs', undefined, 30_000),
-  create: (bookId: string) => send<{ id: string }>('POST', '/api/v1/editorial/studio/jobs', { book_id: bookId }, 60_000),
+  create: (bookId: string, artMode: StudioArtMode = 'auto') =>
+    send<{ id: string }>('POST', '/api/v1/editorial/studio/jobs', { book_id: bookId, art_mode: artMode }, 60_000),
   /** Word dosyası ham gövdeyle gider; ad başlıkta (URL kodlu). */
-  upload: async (file: File): Promise<{ id: string }> => {
-    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/studio/jobs/docx`, {
+  upload: async (file: File, artMode: StudioArtMode = 'auto'): Promise<{ id: string }> => {
+    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/studio/jobs/docx?art_mode=${artMode}`, {
       method: 'POST', credentials: 'include', body: file,
       headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
                  'X-File-Name': encodeURIComponent(file.name) },
@@ -1775,6 +1781,9 @@ export const studioApi = {
   get: (job: string) => send<StudioJob>('GET', studioBase(job), undefined, 30_000),
   restart: (job: string) => send<{ id: string }>('POST', `${studioBase(job)}/restart`, {}, 60_000),
   resume: (job: string) => send<{ id: string }>('POST', `${studioBase(job)}/resume`, {}, 60_000),
+  /** Resim seçimini sonradan değiştirir: yerleşim yeniden kurulur, resimler silinmez. */
+  setArtMode: (job: string, artMode: StudioArtMode) =>
+    send<{ id?: string; ok?: boolean }>('POST', `${studioBase(job)}/art-mode`, { art_mode: artMode }, 120_000),
   kunye: (job: string, fields: Record<string, string>) =>
     send<{ kunye: [string, string][] }>('POST', `${studioBase(job)}/kunye`, { fields }, 120_000),
   regenerate: (job: string, key: string, mode: 'fix' | 'new', prompt: string, variants = 1) =>
@@ -1788,4 +1797,169 @@ export const studioApi = {
   artUrl: (job: string, key: string, v: number, width = 800) => `${ENGINE_BASE}${studioBase(job)}/art/${encodeURIComponent(key)}/${v}?w=${width}`,
   characterUrl: (job: string, i: number, width = 160) => `${ENGINE_BASE}${studioBase(job)}/characters/${i}?w=${width}`,
   pdfUrl: (job: string, kind: 'ic' | 'kapak' | 'baski-ic' | 'baski-kapak') => `${ENGINE_BASE}${studioBase(job)}/pdf/${kind}`,
+};
+
+// ------------------------------------------------ Stüdyo sayfa planı (docs/analiz/studyo-sayfa-plani-sozlesme.md)
+/** Ölçüler mm; köken taşma paylı sayfanın sol üstü. */
+export type PlanBox = { x: number; y: number; w: number; h: number };
+export type PlanRun = { text: string; color?: string | null; weight?: number | null; size?: number | null;
+  font?: 'body' | 'heading' | null; source?: 'auto' | 'editor' | null };
+export type PlanBlock = { id: string; kind: 'para' | 'sound' | 'heading' | string; runs: PlanRun[] };
+export type PlanLayout = 'art-top' | 'art-bottom' | 'art-full' | 'art-left' | 'art-right' | 'text-over-art' | 'text-only' | 'blank' | 'custom';
+export type PlanBubbleShape = 'oval' | 'thought' | 'shout' | 'box';
+export type PlanBubble = { id: string; speaker: string | null; text: string; shape: PlanBubbleShape; box: PlanBox;
+  tail: { x: number; y: number } | null; color: string | null; source: 'auto' | 'editor' | string };
+export type PlanFigure = { id: string; asset: string; box: PlanBox; rotate: number; flip: boolean; z: number };
+/** Efekt yazı (sözleşme «Efekt yazılar ve süs/şekiller»); çizimi dizgide, panel E hattında. */
+/** Şekil ve efekt yazının tek tip kaynağı burasıdır; `studio/elements/types.ts` bunları yeniden adlandırarak verir.
+ *  Renk alanı "#RRGGBB(AA)", palet rolü (`PlanColorRole`, dizgi kitabın paletinden çözer) ya da "none" (boya yok). */
+export type PlanColorRole = 'accent' | 'accent2' | 'ink' | 'pop' | 'pop2' | 'sun' | 'rose' | 'soft' | 'soft2' | 'paper'
+  | 'wood' | 'bark' | 'deep' | 'white';
+export type PlanEffectStyle = 'burst' | 'wave' | 'arc' | 'shadow' | 'outline' | 'stacked' | 'bounce' | 'rainbow';
+/** Stilin kullanmadığı alan etkisizdir; dış çizgi ve gölge her stilde çalışır. null renk = yok. */
+export type PlanEffectParams = {
+  /** arc/wave: -1..1 kavis */ curve?: number; /** wave: dalga sayısı */ waves?: number;
+  outline?: string | null; /** mm */ outline_w?: number; shadow?: string | null; /** mm */ shadow_dx?: number; /** mm */ shadow_dy?: number;
+  /** stacked: derinlik (harf boyuna oran) */ depth?: number;
+  /** rainbow/bounce: harf harf dönen renkler; boş → kitabın paletinden */ colors?: string[] | null;
+  burst_fill?: string | null; burst_stroke?: string | null; /** derece */ angle?: number;
+  /** burst: uç sayısı ve tohum (aynı tohum → aynı çizim) */ spikes?: number; seed?: number;
+  [k: string]: unknown;
+};
+export type PlanEffect = { style: PlanEffectStyle; params: PlanEffectParams };
+/** `size` null → yazı kutuya sığacak kadar büyür/küçülür; sayı verilirse sabittir, sığmazsa dizgi `overflow` yazar. */
+export type PlanFreeText = { id: string; box: PlanBox; align: 'left' | 'justify' | 'center' | 'right'; size: number | null;
+  background: string | null; runs: PlanRun[]; z: number; effect?: PlanEffect | null; overflow?: boolean };
+/** Süs/şekil katmanı (çerçeve, tabela, not kâğıdı, yıldız …); z kuralı figürlerle aynı (≥ 3). Boş renk → türün
+ *  varsayılan rolü; `text_size` null → yazı şekle sığdırılır; `flip` şekli aynalar, yazıyı aynalamaz. */
+export type PlanShapeKind = 'frame' | 'corner' | 'scatter' | 'arrow' | 'sign' | 'note' | 'envelope' | 'scroll' | 'badge'
+  | 'ribbon' | 'star' | 'heart' | 'cloud' | 'burst' | 'line';
+export type PlanShape = { id: string; kind: PlanShapeKind | (string & {}); box: PlanBox; rotate: number; flip: boolean; z: number;
+  fill?: string | null; stroke?: string | null; stroke_w?: number | null; opacity?: number | null;
+  params?: Record<string, unknown>; runs?: PlanRun[]; text_size?: number | null;
+  /** Salt okunur (dizgi yazar): sabit puntolu yazı şekle sığmadı. */
+  overflow?: boolean };
+/** `id`: çizilen resim (a_…); `asset`: sayfa resmi yapılan yüklenmiş fotoğraf (g_…). İkisinden biri dolu olur. */
+export type PlanArt = { id: string | null; asset?: string | null; box: PlanBox; fit: 'cover' | 'contain'; focus: { x: number; y: number };
+  /** Salt okunur: çizilen resmin seçili sürümü (tarayıcı taslağında resmi göstermek için; sözleşmeye önerildi). */
+  selected?: number | null };
+export type PlanText = { box: PlanBox; align: 'left' | 'justify' | 'center'; size: number | null; background: string | null; blocks: PlanBlock[] };
+export type PlanPage = { id: string; chapter: number | null; layout: PlanLayout; art: PlanArt | null; text: PlanText | null;
+  bubbles: PlanBubble[]; figures: PlanFigure[]; texts: PlanFreeText[];
+  /** Eski planlarda yok; ekran boş liste sayar. */
+  shapes?: PlanShape[]; overflow: boolean };
+export type PlanColor = { name: string; hex: string; source: 'resim' | 'timas' | 'editor' | string };
+/** `accent` isteğe bağlı (B teslim notu): verilirse vurgu rolü odur. */
+export type PlanPalette = { colors: PlanColor[]; text: string; characters: Record<string, string>; accent?: string | null };
+export type PlanAsset = { kind: 'figure' | 'photo' | string; prompt?: string; name?: string; path: string; w_px: number; h_px: number;
+  alpha: boolean; by: string; at: string; characters?: string[];
+  /** Arka planı kaldırılmış ya da kalitesi artırılmış kopyanın özgünü. */
+  derived_from?: string | null; upscale?: number | null; cutout?: boolean;
+  /** Sunucunun sonuç notu (ör. «yalnız büyütüldü, keskinleştirilemedi»). */
+  note?: string | null };
+export type Plan = {
+  version: number; rev: number; frozen_at: string; frozen_by: string;
+  page: { w: number; h: number; bleed: number; safe: number; gutter: number };
+  palette: PlanPalette; pages: PlanPage[]; assets: Record<string, PlanAsset>; warnings: string[];
+};
+export type PlanHistoryItem = { rev: number; at: string; by: string; what: string };
+/** `plan/jobs` satırı. Sözleşme alan adlarını sabitlemiyor; ekran bilinmeyen alanı yok sayar. */
+export type PlanJob = { workflow?: string; id?: string; kind?: string; status?: string; page?: string | null; prompt?: string;
+  error?: string | null; progress?: [number, number] | number | null; asset?: string | null; since?: number | string;
+  item?: string | null; source?: string | null; note?: string | null };
+export type PhotoUpload = { asset: string; w_px: number; h_px: number; dpi_hint?: number | null };
+
+/** Plan uçlarının hatası: durum kodu ve gövdedeki `code` (STALE, NO_PLAN …) kaybolmaz. */
+export class StudioPlanError extends Error {
+  constructor(public status: number, public code: string | null, message: string, public body: unknown) {
+    super(message);
+    this.name = 'StudioPlanError';
+  }
+}
+
+async function planSend<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T> {
+  const res = await fetch(`${ENGINE_BASE}${path}`, {
+    method,
+    credentials: 'include',
+    headers: body === undefined ? {} : { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+    signal: AbortSignal.timeout(timeoutMs),
+  });
+  if (res.status === 401 || res.status === 403) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as Record<string, unknown> | null;
+    // Servis `{"code": …}` ya da FastAPI kalıbıyla `{"detail": {"code": …}}` / `{"detail": "…"}` dönebilir.
+    const detail = j?.detail as Record<string, unknown> | string | undefined;
+    const inner = (typeof detail === 'object' && detail) ? detail : j ?? {};
+    const code = typeof inner.code === 'string' ? inner.code : null;
+    const msg = typeof detail === 'string' ? detail
+      : typeof inner.message === 'string' ? inner.message
+      : typeof inner.detail === 'string' ? inner.detail : `İstek kabul edilmedi (${res.status})`;
+    throw new StudioPlanError(res.status, code, msg, j);
+  }
+  return (await res.json()) as T;
+}
+
+const planBase = (job: string) => `${studioBase(job)}/plan`;
+const pid = (id: string) => encodeURIComponent(id);
+export const studioPlanApi = {
+  get: (job: string) => planSend<Plan>('GET', planBase(job), undefined, 30_000),
+  freeze: (job: string) => planSend<Plan>('POST', `${planBase(job)}/freeze`, {}, 300_000),
+  putPage: (job: string, rev: number, page: PlanPage) =>
+    planSend<{ page: PlanPage; rev: number; warnings?: string[] }>('PUT', `${planBase(job)}/pages/${pid(page.id)}`, { rev, page }, 180_000),
+  addPage: (job: string, rev: number, after: string | null, layout: PlanLayout) =>
+    planSend<Partial<Plan> & { page?: PlanPage; rev: number }>('POST', `${planBase(job)}/pages`, { rev, after, layout }, 180_000),
+  deletePage: (job: string, rev: number, id: string) =>
+    planSend<{ ok: boolean; rev: number; warnings?: string[] }>('DELETE', `${planBase(job)}/pages/${pid(id)}?rev=${rev}`, undefined, 180_000),
+  order: (job: string, rev: number, ids: string[]) => planSend<Plan>('POST', `${planBase(job)}/order`, { rev, ids }, 180_000),
+  split: (job: string, rev: number, id: string, block: string, at: number) =>
+    planSend<Partial<Plan> & { rev: number }>('POST', `${planBase(job)}/pages/${pid(id)}/split`, { rev, block, at }, 180_000),
+  palette: (job: string, rev: number, palette: PlanPalette) => planSend<Plan>('PUT', `${planBase(job)}/palette`, { rev, palette }, 180_000),
+  suggestBubbles: (job: string, id: string) =>
+    planSend<{ bubbles: PlanBubble[] } | PlanBubble[]>('POST', `${planBase(job)}/pages/${pid(id)}/bubbles/suggest`, {}, 180_000),
+  unusedArt: (job: string) => planSend<{ ids?: string[]; art?: string[] } | string[]>('GET', `${planBase(job)}/unused-art`, undefined, 30_000),
+  figure: (job: string, prompt: string, characters: string[], page: string | null) =>
+    planSend<{ workflow: string }>('POST', `${planBase(job)}/figures`, { prompt, characters, page }, 60_000),
+  deleteAsset: (job: string, rev: number, gid: string) =>
+    planSend<{ ok: boolean; rev: number }>('DELETE', `${planBase(job)}/assets/${pid(gid)}?rev=${rev}`, undefined, 60_000),
+  history: (job: string) => planSend<PlanHistoryItem[] | { history: PlanHistoryItem[] }>('GET', `${planBase(job)}/history`, undefined, 30_000),
+  restore: (job: string, rev: number) => planSend<Plan>('POST', `${planBase(job)}/restore`, { rev }, 300_000),
+  jobs: (job: string) => planSend<PlanJob[] | { jobs: PlanJob[] }>('GET', `${planBase(job)}/jobs`, undefined, 30_000),
+  cutout: (job: string, gid: string) => planSend<{ workflow: string }>('POST', `${planBase(job)}/assets/${pid(gid)}/cutout`, {}, 60_000),
+  upscale: (job: string, gid: string, page: string | null, item: string | null) =>
+    planSend<{ workflow: string }>('POST', `${planBase(job)}/assets/${pid(gid)}/upscale`, { page, item }, 60_000),
+  /** Stüdyo ayarları (yönetim ekranı): fotoğraf başına en büyük boyut. */
+  settings: () => planSend<{ upload_mb: number }>('GET', '/api/v1/editorial/studio/settings', undefined, 30_000),
+  /** Ham gövdeyle fotoğraf yükleme; ilerleme için XHR (fetch yükleme ilerlemesi vermez). */
+  uploadPhoto: (job: string, file: Blob, filename: string, page: string | null, onProgress: (sent: number, total: number) => void,
+    signal?: AbortSignal) => new Promise<PhotoUpload>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    const q = `filename=${encodeURIComponent(filename)}${page ? `&page=${pid(page)}` : ''}`;
+    xhr.open('PUT', `${ENGINE_BASE}${planBase(job)}/photos?${q}`);
+    xhr.withCredentials = true;
+    xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+    xhr.upload.onprogress = (e) => onProgress(e.loaded, e.lengthComputable ? e.total : file.size);
+    xhr.onload = () => {
+      if (xhr.status === 401 || xhr.status === 403) { authBlocked = true; reject(new EngineAuthError()); return; }
+      let j: Record<string, unknown> | null = null;
+      try { j = JSON.parse(xhr.responseText) as Record<string, unknown>; } catch { /* gövdesiz */ }
+      if (xhr.status >= 200 && xhr.status < 300 && j) { resolve(j as unknown as PhotoUpload); return; }
+      const detail = j?.detail as Record<string, unknown> | string | undefined;
+      const inner = (typeof detail === 'object' && detail) ? detail : j ?? {};
+      const msg = typeof detail === 'string' ? detail : typeof inner.message === 'string' ? inner.message : `Yükleme kabul edilmedi (${xhr.status})`;
+      reject(new StudioPlanError(xhr.status, typeof inner.code === 'string' ? inner.code : null, msg, j));
+    };
+    xhr.onerror = () => reject(new TypeError('ağ'));
+    xhr.ontimeout = () => reject(new TypeError('zaman aşımı'));
+    xhr.onabort = () => reject(new DOMException('iptal', 'AbortError'));
+    xhr.timeout = 15 * 60_000;
+    signal?.addEventListener('abort', () => xhr.abort());
+    xhr.send(file);
+  }),
+  /** `v` önbellek anahtarıdır: sayfanın sunucudaki hâli değişince değişir. */
+  previewUrl: (job: string, id: string, width: number, v: string) => `${ENGINE_BASE}${planBase(job)}/pages/${pid(id)}/preview?w=${width}&v=${v}`,
+  assetUrl: (job: string, gid: string, width = 400) => `${ENGINE_BASE}${planBase(job)}/assets/${pid(gid)}?w=${width}`,
 };

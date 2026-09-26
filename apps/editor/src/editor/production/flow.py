@@ -1,5 +1,8 @@
-"""Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction) ve tek resmin yeniden üretimi
-(ArtRegenerate). Kendi kuyruğu `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
+"""Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction), tek resmin yeniden üretimi
+(ArtRegenerate) ve sayfa planının işleri: serbest figür (FigureGenerate), kaliteyi artırma (AssetUpscale) ve
+GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz); boyama kitabı (ColoringBook, modelsiz) ve
+çizgiyi görsel modelle yeniden çizme (ColoringRedraw); kolaj kapağın fotoğraf adayları (CollagePhotos). Kendi kuyruğu
+`editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
 fontlar ister, bunlar stüdyo imajında) ve kendi işçisi (worker.py, aynı anda tek etkinlik: görsel model
 tek sırada). API yalnız başlatır ve iş klasörünü okur.
 
@@ -116,7 +119,133 @@ async def regenerate_activity(job: str, key: str, mode: str, prompt: str, by: st
     await _release_if_idle(d)
 
 
-ACTIVITIES = [plan_activity, finish_activity, regenerate_activity]
+async def _plan_job(job: str, jid: str, coro_fn, gpu: bool):
+    """Sayfa planı işleri (figür, zemin ayıklama, kaliteyi artırma): durum plan-jobs/<jid>.json'da (ekran bekler).
+    GPU işi busy.json'u tutar ve bitince sırada iş yoksa görsel modeli kapatır; zemin ayıklama GPU'suzdur."""
+    from . import plan as plan_mod, studio
+    d = studio.job_dir(job)
+    if gpu:
+        _started(d)
+    plan_mod.job_record(d, jid, status="running", attempt=activity.info().attempt)
+    try:
+        res = await _beating(coro_fn(d))
+    except Exception as e:
+        final = _last(ART_RETRY) or isinstance(e, (ValueError, KeyError, FileNotFoundError))
+        plan_mod.job_record(d, jid, status="fail" if final else "running", error=str(e)[:300])
+        if gpu and final:
+            b = studio.busy(d) or {}
+            studio.set_busy(d, {**b, "error": str(e)[:300], "since": time.time()})
+            await _release_if_idle(d)
+        raise
+    plan_mod.job_record(d, jid, status="done", result=res)
+    if gpu:
+        studio.set_busy(d, None)
+        await _release_if_idle(d)
+
+
+@activity.defn(name="production_figure")
+async def figure_activity(job: str, jid: str, gid: str, prompt: str, characters: list[str], page: str | None,
+                          by: str) -> None:
+    from . import studio
+    await _plan_job(job, jid, lambda d: studio.make_figure(d, gid, prompt, characters, page, by), gpu=True)
+
+
+@activity.defn(name="production_cutout")
+async def cutout_activity(job: str, jid: str, gid: str, new_gid: str, by: str) -> None:
+    from . import studio
+
+    async def run(d):
+        return await asyncio.to_thread(studio.cutout_asset, d, gid, new_gid, by)
+    await _plan_job(job, jid, run, gpu=False)
+
+
+@activity.defn(name="production_upscale")
+async def upscale_activity(job: str, jid: str, gid: str, new_gid: str, page: str, item: str, by: str) -> None:
+    from . import studio
+    await _plan_job(job, jid, lambda d: studio.upscale_asset(d, gid, new_gid, page, item, by), gpu=True)
+
+
+@activity.defn(name="production_epub")
+async def epub_activity(job: str, layout: str, by: str) -> None:
+    """E-kitap (GPU'suz; alt metin önerisi model gateway'inden): durum epub/state.json'da (epub.build_job yazar)."""
+    from . import epub, studio
+    await _beating(epub.build_job(studio.job_dir(job), layout, by))
+
+
+@activity.defn(name="production_coloring")
+async def coloring_activity(job: str) -> None:
+    """Boyama / etkinlik kitabı (coloring.py): çizgi, cümle, etkinlik, kapak, dizgi; görsel model açılmaz."""
+    from . import coloring, studio
+    d = studio.job_dir(job)
+    _started(d)
+    try:
+        await _beating(coloring.build(d))
+    finally:
+        studio.set_busy(d, None)
+
+
+@activity.defn(name="production_coloring_redraw")
+async def coloring_redraw_activity(job: str, jid: str, aid: str, by: str) -> None:
+    from . import coloring
+    await _plan_job(job, jid, lambda d: coloring.redraw(d, aid, by), gpu=True)
+
+
+# ------------------------------------------------------------------ sesli okuma (narration.py)
+# Sayfa başına bir etkinlik: uzun kitapta başka stüdyo işleri (resim, figür) sayfalar arasına girebilir; busy.json
+# tutulmaz (seslendirme modeli küçük, görsel modelle aynı kartta birlikte sığar).
+NARRATION_RETRY = RetryPolicy(initial_interval=timedelta(seconds=20), maximum_attempts=3,
+                              non_retryable_error_types=["ValueError", "NoPlan", "VoiceUnavailable"])
+
+
+@activity.defn(name="production_narrate_page")
+async def narrate_page_activity(job: str, jid: str, pid: str, i: int, n: int, by: str) -> None:
+    from . import narration, plan as plan_mod, studio
+    d = studio.job_dir(job)
+    plan_mod.job_record(d, jid, status="running", page=pid, progress=[i, n], attempt=activity.info().attempt)
+    try:
+        await _beating(narration.narrate_page(d, pid, by))
+    except KeyError:                    # sayfa bu arada silindi
+        plan_mod.job_record(d, jid, progress=[i + 1, n])
+        return
+    except Exception as e:
+        if _last(NARRATION_RETRY) or type(e).__name__ in NARRATION_RETRY.non_retryable_error_types:
+            plan_mod.job_record(d, jid, status="fail", error=str(e)[:300])
+        raise
+    plan_mod.job_record(d, jid, progress=[i + 1, n])
+
+
+@activity.defn(name="production_narration_done")
+async def narration_done_activity(job: str, jid: str) -> None:
+    from . import plan as plan_mod, studio
+    plan_mod.job_record(studio.job_dir(job), jid, status="done")
+
+
+@activity.defn(name="production_collage_photos")
+async def collage_photos_activity(job: str, count: int, direction: str, by: str) -> None:
+    """Kolaj kapak fotoğraf adayları (GPU): sahne istemi → `count` tohumla fotoğraf → büyütme (collage.generate).
+    busy.json'u tutar; bitince sırada iş yoksa görsel model kapanır. Durum kolaj/kolaj.json → job."""
+    from . import collage, studio
+    d = studio.job_dir(job)
+    _started(d)
+    collage.set_job(d, status="running", attempt=activity.info().attempt, error=None)
+    try:
+        made = await _beating(collage.generate(d, count, direction, by))
+    except Exception as e:
+        final = _last(ART_RETRY) or isinstance(e, (ValueError, KeyError, FileNotFoundError))
+        collage.set_job(d, status="fail" if final else "running", error=str(e)[:300])
+        if final:
+            b = studio.busy(d) or {}
+            studio.set_busy(d, {**b, "error": str(e)[:300], "since": time.time()})
+            await _release_if_idle(d)
+        raise
+    collage.set_job(d, status="done", made=made, finished=time.time())
+    studio.set_busy(d, None)
+    await _release_if_idle(d)
+
+
+ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity,
+              upscale_activity, epub_activity, coloring_activity, coloring_redraw_activity, narrate_page_activity,
+              narration_done_activity, collage_photos_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -141,4 +270,85 @@ class ArtRegenerate:
                                         heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
 
 
-WORKFLOWS = [BookProduction, ArtRegenerate]
+@workflow.defn(name="FigureGenerate")
+class FigureGenerate:
+    @workflow.run
+    async def run(self, job: str, jid: str, gid: str, prompt: str, characters: list[str], page: str | None,
+                  by: str) -> None:
+        await workflow.execute_activity("production_figure", args=[job, jid, gid, prompt, characters, page, by],
+                                        start_to_close_timeout=timedelta(minutes=45),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="AssetCutout")
+class AssetCutout:
+    @workflow.run
+    async def run(self, job: str, jid: str, gid: str, new_gid: str, by: str) -> None:
+        await workflow.execute_activity("production_cutout", args=[job, jid, gid, new_gid, by],
+                                        start_to_close_timeout=timedelta(minutes=20),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="AssetUpscale")
+class AssetUpscale:
+    @workflow.run
+    async def run(self, job: str, jid: str, gid: str, new_gid: str, page: str, item: str, by: str) -> None:
+        await workflow.execute_activity("production_upscale", args=[job, jid, gid, new_gid, page, item, by],
+                                        start_to_close_timeout=timedelta(minutes=30),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="EpubBuild")
+class EpubBuild:
+    @workflow.run
+    async def run(self, job: str, layout: str, by: str) -> None:
+        await workflow.execute_activity("production_epub", args=[job, layout, by],
+                                        start_to_close_timeout=timedelta(minutes=60),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="CollagePhotos")
+class CollagePhotos:
+    @workflow.run
+    async def run(self, job: str, count: int, direction: str, by: str) -> None:
+        await workflow.execute_activity("production_collage_photos", args=[job, count, direction, by],
+                                        start_to_close_timeout=timedelta(minutes=60),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="ColoringBook")
+class ColoringBook:
+    @workflow.run
+    async def run(self, job: str) -> None:
+        await workflow.execute_activity("production_coloring", job, start_to_close_timeout=timedelta(hours=2),
+                                        heartbeat_timeout=BEAT, retry_policy=PLAN_RETRY)
+
+
+@workflow.defn(name="ColoringRedraw")
+class ColoringRedraw:
+    @workflow.run
+    async def run(self, job: str, jid: str, aid: str, by: str) -> None:
+        await workflow.execute_activity("production_coloring_redraw", args=[job, jid, aid, by],
+                                        start_to_close_timeout=timedelta(minutes=45),
+                                        heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
+
+
+@workflow.defn(name="BookNarration")
+class BookNarration:
+    @workflow.run
+    async def run(self, job: str, jid: str, pages: list[str], by: str) -> None:
+        for i, pid in enumerate(pages):
+            await workflow.execute_activity("production_narrate_page", args=[job, jid, pid, i, len(pages), by],
+                                            start_to_close_timeout=timedelta(minutes=30),
+                                            heartbeat_timeout=BEAT, retry_policy=NARRATION_RETRY)
+        await workflow.execute_activity("production_narration_done", args=[job, jid],
+                                        start_to_close_timeout=timedelta(minutes=2))
+
+
+WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale, EpubBuild, ColoringBook,
+             ColoringRedraw, BookNarration, CollagePhotos]
+
+# Seri karakter kartı (characters.py): denetim (CharacterCheck) ve öneri/çeviri (CharacterCards) aynı kuyrukta.
+from .characters import ACTIVITIES as _CARD_ACTIVITIES, WORKFLOWS as _CARD_WORKFLOWS  # noqa: E402
+ACTIVITIES += _CARD_ACTIVITIES
+WORKFLOWS += _CARD_WORKFLOWS

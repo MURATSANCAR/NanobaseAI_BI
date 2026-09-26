@@ -174,6 +174,19 @@ SPEC: list[dict[str, Any]] = [
     {"key": "MERCHANT_ACCOUNT_ID", "group": "seo", "label": "Merchant Center kimliği", "type": "text", "default": "", "help": ""},
     {"key": "GOOGLE_API_KEY", "group": "seo", "label": "Google API anahtarı", "type": "secret", "default": "",
      "help": "PageSpeed ve CrUX için; yalnız bu iki API ile kısıtlı olmalı"},
+    # Kitap Tasarım Stüdyosu
+    {"key": "STUDIO_UPLOAD_MB", "group": "studio", "label": "Fotoğraf yükleme sınırı (MB)", "type": "int", "default": "60",
+     "help": "Sayfa düzeninde tek fotoğrafın en büyük boyutu; ekranda yükleme alanında yazılır. Giriş kapısı ve portal "
+             "web sunucusunun gövde sınırı da bu değere göre ayarlanmalıdır"},
+    {"key": "STUDIO_CHARACTER_RETRIES", "group": "studio", "label": "Karakter kartına uymayan resmi yeniden üretme sayısı",
+     "type": "int", "default": "3",
+     "help": "Dizinin karakter kartına uymayan resim en çok bu kadar kez yeniden çizilir; sonra en yakın sürüm "
+             "«karakter kartına uymuyor» uyarısıyla editöre gelir. 0: yeniden çizme, yalnız işaretle. Kaydedilince "
+             "stüdyoya hemen iletilir"},
+    {"key": "STUDIO_READER_PASSES", "group": "studio", "label": "Okur okuması: sayfa başına okuma sayısı", "type": "int",
+     "default": "3",
+     "help": "«Çocuk gözüyle okuma»da Zeki AI her sayfayı bu kadar kez birbirinden bağımsız okur; yalnız okumaların "
+             "yarısından fazlasında geçen işaret gösterilir. Sayı arttıkça sonuç tutarlılaşır, süre uzar"},
     # Yapay zekâ görünürlüğü (GEO): izlenen sorular bu motorlara resmî API'leriyle sorulur. Anahtarsız motor ölçülmez.
     {"key": "GEMINI_API_KEY", "group": "geo", "label": "Gemini API anahtarı (ücretsiz)", "type": "secret", "default": "",
      "help": "aistudio.google.com → Get API key. Google aramalı cevap ücretsiz katmanda günde ~500 istek"},
@@ -223,6 +236,7 @@ GROUPS = [
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},
+    {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
     {"id": "geo", "label": "Yapay zekâ görünürlüğü (GEO)",
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
              "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},

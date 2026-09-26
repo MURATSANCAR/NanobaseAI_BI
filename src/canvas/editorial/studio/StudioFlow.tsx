@@ -7,6 +7,7 @@ import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { Img, Progress, STATUS_TEXT, StepIcon, ghostBtn, gradientBtn, secs } from './shared';
 import KunyePanel from './KunyePanel';
+import { ArtModeCard } from './ArtMode';
 
 /** Yeni tasarımın akışı: içerik, CRM proje bilgisi, sistemin kararları ve canlı üretim adımları.
  *  Sayfa şeridi dizilmiş iç sayfalardan gelir (PDF'in kendisi); her karar gerekçesiyle görünür. */
@@ -119,6 +120,11 @@ export default function StudioFlow() {
                   <span className="font-bold">{d.job.source.file_name || 'Editörün okuduğu kitap'}</span>
                   {d.book && <span className="font-mono text-[11.5px] text-canvas-muted">{d.book.chapters.length} bölüm · {d.book.words.toLocaleString('tr-TR')} kelime</span>}
                 </div>
+              </Panel>
+
+              <Panel>
+                <h2 className="mb-2 text-[15px] font-extrabold">Resim kullanımı</h2>
+                <ArtModeCard job={jobId} d={d} />
               </Panel>
 
               <Panel>

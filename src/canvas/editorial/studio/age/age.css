@@ -1,0 +1,29 @@
+/* Yaş uygunluğu raporu: yan sayfa. Masaüstünde sağdan, telefonda alttan tam yükseklikte gelir (açıldığı yeri
+   gösterir); açılış 300 ms, kapanış 200 ms, iOS benzeri çekmece eğrisi. Azaltılmış harekette yalnız saydamlık. */
+.age-scrim { position: fixed; inset: 0; z-index: 90; background: #1b1f2a52; transition: opacity 200ms ease }
+.age-scrim[data-starting-style], .age-scrim[data-ending-style] { opacity: 0 }
+
+.age-sheet {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  position: fixed; z-index: 91; display: flex; flex-direction: column; background: #fbfaf7;
+  box-shadow: 0 30px 80px -20px rgba(20, 30, 60, .35);
+  inset: 8px 0 0 0; border-radius: 20px 20px 0 0;           /* telefon: alttan */
+  transform: translateY(0);
+  transition: transform 300ms var(--ease-drawer), opacity 200ms ease;
+}
+.age-sheet[data-starting-style], .age-sheet[data-ending-style] { transform: translateY(100%) }
+.age-sheet[data-ending-style] { transition-duration: 200ms }
+
+@media (min-width: 768px) {
+  .age-sheet { inset: 0 0 0 auto; width: min(760px, 100vw); border-radius: 22px 0 0 22px; transform: translateX(0) }
+  .age-sheet[data-starting-style], .age-sheet[data-ending-style] { transform: translateX(100%) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .age-sheet, .age-sheet[data-starting-style], .age-sheet[data-ending-style] { transform: none; transition: opacity 200ms ease }
+  .age-sheet[data-starting-style], .age-sheet[data-ending-style] { opacity: 0 }
+}
+
+/* sekme şeridi kendi kabında kayar; sayfa yatay kaymaz */
+.age-tabs { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch }
+.age-tabs::-webkit-scrollbar { display: none }

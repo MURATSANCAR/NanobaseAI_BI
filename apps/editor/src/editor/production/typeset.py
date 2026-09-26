@@ -8,6 +8,8 @@
 2. Resimler geldikten sonra aynı yerleşimle yeniden derle (resim metnin akışını değiştirmez).
 
 Sayfa haritası (`PageMap`) her sayfanın türünü ve metnini verir; resim tarifleri buradan yazılır.
+Sayfa planı dondurulduktan sonra (plan.py) iç sayfalar akıştan değil `templates/plan.typ` ile dizilir;
+ön sayfalar iki yolda da `templates/front.typ`'den.
 """
 
 from __future__ import annotations
@@ -22,7 +24,20 @@ from pathlib import Path
 from .manuscript import Manuscript
 from .spec import Spec
 
-TEMPLATE = Path(__file__).resolve().parent / "templates" / "book.typ"
+TEMPLATES = Path(__file__).resolve().parent / "templates"
+TEMPLATE = TEMPLATES / "book.typ"
+PLAN_TEMPLATE = TEMPLATES / "plan.typ"   # sayfa planı: akışsız, her sayfa kendi kutularıyla
+SHARED = ("front.typ",)                  # iki şablonun ortak parçası (ön sayfalar)
+# Şekil ve efekt yazı çizimi (D işi, templates/elements.typ). Dosya yoksa plan.typ derlensin diye yer tutucu yazılır;
+# plan.render_data `elements: false` verir, efekt yazı düz yazı olarak basılır, şekil çizilmez.
+ELEMENTS = "elements.typ"
+ELEMENTS_STUB = ("// Yer tutucu: templates/elements.typ yok.\n"
+                 "#let draw-shape(s, palette, fonts, mirror: false) = none\n#let effect-text(t, palette, fonts) = none\n"
+                 "#let roles(palette) = (:)\n")
+
+
+def has_elements() -> bool:
+    return (TEMPLATES / ELEMENTS).exists()
 FRONT_PAGES = 4                         # iç kapak, künye, yazar/çizer, açılış resmi (ya da boş)
 SOUND = re.compile(r"(\w)\1\1")          # «Güüüümmm», «Roooaaah»: aynı harf 3+ kez
 
@@ -68,8 +83,11 @@ def block_kind(kind: str, text: str) -> str:
     return kind
 
 
-def book_data(ms: Manuscript, spec: Spec, layout: Layout, front: dict, art: dict[int, str]) -> dict:
+def book_data(ms: Manuscript, spec: Spec, layout: Layout, front: dict, art: dict[int, str],
+              wordmarks: list[str] | None = None) -> dict:
+    """`wordmarks`: kelimeleri tek tek işaretlenecek bloklar (plan.freeze, sayfa sınırından bölünen blok için)."""
     return {
+        "wordmarks": wordmarks or [],
         "book": {"title": ms.title, "author": ms.author or "", "publisher": ms.meta.get("PUBLISHER") or ""},
         "spec": asdict(spec), "layout": asdict(layout), "front": front,
         "art": {str(k): v for k, v in art.items()},
@@ -80,33 +98,61 @@ def book_data(ms: Manuscript, spec: Spec, layout: Layout, front: dict, art: dict
 
 
 class Typesetter:
-    def __init__(self, workdir: Path, font_dir: Path):
+    def __init__(self, workdir: Path, font_dir: Path, template: Path = TEMPLATE):
         self.dir = Path(workdir)
         self.dir.mkdir(parents=True, exist_ok=True)
-        shutil.copy(TEMPLATE, self.dir / "book.typ")
+        for name in SHARED:
+            shutil.copy(TEMPLATES / name, self.dir / name)
+        if has_elements():
+            shutil.copy(TEMPLATES / ELEMENTS, self.dir / ELEMENTS)
+        else:
+            (self.dir / ELEMENTS).write_text(ELEMENTS_STUB)
+        shutil.copy(template, self.dir / template.name)
+        self.main = template.name
         self.fonts = [str(font_dir)]
 
     def _write(self, data: dict, name: str) -> str:
         (self.dir / name).write_text(json.dumps(data, ensure_ascii=False))
         return name
 
+    @staticmethod
+    def _kinds(out: str) -> list[dict]:
+        return [m["value"] for m in json.loads(out) if isinstance(m.get("value"), dict) and "kind" in m["value"]]
+
     def marks(self, data: dict) -> list[dict]:
         import typst
         name = self._write(data, "data.json")
-        out = typst.query(str(self.dir / "book.typ"), "metadata", root=str(self.dir),
+        out = typst.query(str(self.dir / self.main), "metadata", root=str(self.dir),
                           font_paths=self.fonts, ignore_system_fonts=True, sys_inputs={"data": name})
-        return [m["value"] for m in json.loads(out) if isinstance(m.get("value"), dict) and "kind" in m["value"]]
+        return self._kinds(out)
 
     def compile(self, data: dict, pdf: str) -> Path:
         import typst
         name = self._write(data, "data.json")
         path = self.dir / pdf
-        typst.compile(str(self.dir / "book.typ"), output=str(path), root=str(self.dir),
+        typst.compile(str(self.dir / self.main), output=str(path), root=str(self.dir),
                       font_paths=self.fonts, ignore_system_fonts=True, sys_inputs={"data": name})
         return path
 
+    def build(self, data: dict, pdf: str) -> tuple[Path, list[dict]]:
+        """Tek derleyiciyle önce işaretler (taşma vb.), sonra PDF: ikinci geçiş ilkinin önbelleğinden yararlanır.
+        PDF önce geçici adla yazılır, sonra yerine konur: yarım dosyayı okuyan olmaz."""
+        import typst
+        name = self._write(data, "data.json")
+        c = typst.Compiler(str(self.dir / self.main), root=str(self.dir), font_paths=self.fonts,
+                           ignore_system_fonts=True, sys_inputs={"data": name})
+        marks = self._kinds(c.query("metadata"))
+        path = self.dir / pdf
+        tmp = path.with_name(path.stem + ".yeni.pdf")
+        c.compile(output=str(tmp))
+        return tmp, marks
+
     def page_map(self, ms: Manuscript, data: dict, layout: Layout) -> PageMap:
-        marks = self.marks(data)
+        return self.from_marks(ms, self.marks(data), layout)
+
+    @staticmethod
+    def from_marks(ms: Manuscript, marks: list[dict], layout: Layout) -> PageMap:
+        """İşaretlerden sayfa haritası (plan.freeze kelime işaretli geçişte de kullanır)."""
         total = max(m["page"] for m in marks)
         pages = {n: Page(n, "flow") for n in range(1, total + 1)}
         texts = {f"c{ci}b{bi}": b.text for ci, bi, b in ms.blocks()}

@@ -1,12 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Check, Download, Loader2, Quote, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
+import { BookImage, Check, Download, LayoutTemplate, Loader2, Quote, RefreshCw, Sparkles, Wand2 } from 'lucide-react';
 import { studioApi, type StudioArt, type StudioJob } from '../../engine';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { Img, ghostBtn, gradientBtn, press } from './shared';
 import { revision, useStudioJob } from './StudioFlow';
+import { MarketingKit } from './marketing';
+import { CharactersEntry } from './characters';
+import { EpubSection } from './epub';
+import { ColoringPanel } from './coloring';
+import { NarrationSection } from './narration';
+import AgeReportEntry from './age/AgeReport';
+import { BookProofSection } from './book3d';
 
 /** Sayfa stüdyosu: dizilmiş kitap açılım açılım görünür; resimli her sayfa ve kapak için iki yol vardır.
  *  DÜZELT seçili sürümü referans alır ve yalnız yazılan değişikliği yapar; FARKLI ÜRET sayfanın metninden
@@ -92,6 +99,12 @@ export default function StudioEditor() {
           <span className={`rounded-full px-3 py-1.5 text-[12px] font-bold ${waiting.length ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
             {artKeys.length - waiting.length}/{artKeys.length} resim onaylı{waiting.length ? ` · ${waiting.length} onay bekliyor` : ''}
           </span>
+          <AgeReportEntry jobId={jobId} />
+          <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/sayfalar`} title="Sayfa ekle/sil/sırala, yerleşim, balon, renkli yazı, figür ve fotoğraf">
+            <LayoutTemplate className="h-4 w-4" aria-hidden />Sayfa düzeni
+          </Link>
+          <CharactersEntry jobId={jobId} />
+          <Link className={ghostBtn} to={`/kitap-tasarim/${jobId}/kapak`} title="Kapak tarzı: resimli, kolaj ya da tipografik"><BookImage className="h-4 w-4" aria-hidden />Kapak tarzı</Link>
           <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'ic')}><Download className="h-4 w-4" aria-hidden />İç sayfalar</a>
           {d.files.kapak && <a className={ghostBtn} href={studioApi.pdfUrl(jobId, 'kapak')}><Download className="h-4 w-4" aria-hidden />Kapak</a>}
           {d.files['baski-ic'] ? (
@@ -119,7 +132,7 @@ export default function StudioEditor() {
                 <button type="button" onClick={() => setKey('kapak')}
                   className={`w-full rounded-xl border p-1.5 text-left ${press} ${key === 'kapak' ? 'border-canvas-violet ring-2 ring-canvas-violet/30' : 'border-white/70 bg-white/70'}`}>
                   <div className="flex items-center justify-between text-[11.5px] font-bold">Kapak <Dot art={d.cover.art} busy={busyAny && d.busy?.key === 'kapak'} /></div>
-                  <Img src={studioApi.coverUrl(jobId, 360, rev)} alt="Kapak açılımı" fallback="kapak" className="mt-1 w-full rounded-md" />
+                  <Img src={d.files.kapak ? studioApi.coverUrl(jobId, 360, rev) : null} alt="Kapak açılımı" fallback="kapak" className="mt-1 w-full rounded-md" />
                 </button>
               </li>
             )}
@@ -152,7 +165,7 @@ export default function StudioEditor() {
         {/* Açık kitap */}
         <Panel>
           {key === 'kapak' ? (
-            <Img src={studioApi.coverUrl(jobId, 1600, rev)} alt="Kapak açılımı" fallback="Kapak henüz dizilmedi"
+            <Img src={d.files.kapak ? studioApi.coverUrl(jobId, 1600, rev) : null} alt="Kapak açılımı" fallback="Kapak henüz dizilmedi"
               className="w-full rounded-xl shadow-lg" />
           ) : (
             <div className="flex justify-center gap-0 rounded-2xl bg-slate-100/60 p-3">
@@ -285,6 +298,11 @@ export default function StudioEditor() {
           )}
         </Panel>
       </div>
+      <MarketingKit jobId={jobId} />
+      <EpubSection jobId={jobId} />
+      <div className="mt-3 lg:mt-4"><ColoringPanel jobId={jobId} job={d} /></div>
+      <NarrationSection jobId={jobId} />
+      <BookProofSection jobId={jobId} d={d} rev={rev} />
       {d.preflight && d.preflight.status !== 'OK' && (
         <Note tone={d.preflight.status === 'FAIL' ? 'warn' : 'info'}>
           Ön baskı denetimi: {d.preflight.checks.filter((c) => c.status !== 'OK').map((c) => `${c.name} — ${c.detail}`).join(' · ')}{' '}

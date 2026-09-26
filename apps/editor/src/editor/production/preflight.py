@@ -60,6 +60,27 @@ def set_boxes(pdf: Path, bleed_mm: float) -> None:
     doc.saveIncr()
 
 
+def _page_text(page, drop: list[dict], keep: list[dict]) -> str:
+    """Sayfanın metni, `drop` kutularındaki yazı (efekt yazı, şekil yazısı) hariç; `keep` kutularıyla örtüşen yer
+    okunur. Kutular mm; satır yapısı get_text() ile aynı (satır sonu tireleri `_words` birleştirir)."""
+    def inside(x, y, bx):
+        return bx["x"] <= x <= bx["x"] + bx["w"] and bx["y"] <= y <= bx["y"] + bx["h"]
+
+    lines = []
+    for b in page.get_text("dict")["blocks"]:
+        for ln in b.get("lines", []):
+            parts = []
+            for sp in ln["spans"]:
+                x0, y0, x1, y1 = sp["bbox"]
+                cx, cy = (x0 + x1) / 2 / PT_PER_MM, (y0 + y1) / 2 / PT_PER_MM
+                if any(inside(cx, cy, bx) for bx in drop) and not any(inside(cx, cy, bx) for bx in keep):
+                    continue
+                parts.append(sp["text"])
+            if parts:
+                lines.append("".join(parts))
+    return "\n".join(lines)
+
+
 def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kunye_missing: list[str],
           scenes: list) -> dict:
     import pymupdf
@@ -82,7 +103,8 @@ def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kun
     unembedded = sorted(name for name, ext in fonts.items() if ext in ("n/a", ""))
     add("Fontlar gömülü", "FAIL" if unembedded else "OK",
         ", ".join(sorted({re.sub(r"^[A-Z]{6}\+", "", f) for f in fonts})) if not unembedded else f"gömülmemiş: {unembedded}")
-    pdf_words = _words("\n".join(p.get_text() for p in doc))
+    skip = ms.element_rects() if hasattr(ms, "element_rects") else {}
+    pdf_words = _words("\n".join(_page_text(p, *skip[i]) if i in skip else p.get_text() for i, p in enumerate(doc)))
     book_words = _words(ms.text().replace("## ", ""))
     sm = SequenceMatcher(None, book_words, pdf_words, autojunk=False)
     covered = sum(bl.size for bl in sm.get_matching_blocks())
@@ -109,5 +131,10 @@ def check(interior: Path, cover: Path | None, ms, spec, renders: list[dict], kun
         c = pymupdf.open(cover)
         add("Kapak açılımı", "OK" if c.page_count == 1 else "FAIL",
             f"{c[0].rect.width / PT_PER_MM:.1f}×{c[0].rect.height / PT_PER_MM:.1f} mm")
+    try:    # yaş uygunluğu: bilgi satırı, baskıyı durdurmaz (age_report.preflight_line hiçbir zaman FAIL vermez)
+        from .age_report import preflight_line
+        out.append(preflight_line(Path(interior).parent.parent))
+    except Exception:  # noqa: BLE001 - rapor okunamazsa ön kontrol yine çalışır
+        pass
     status = "FAIL" if any(x["status"] == "FAIL" for x in out) else "WARN" if any(x["status"] == "WARN" for x in out) else "OK"
     return {"status": status, "checks": out}

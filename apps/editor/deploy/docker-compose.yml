@@ -126,7 +126,9 @@ services:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
     container_name: editor-studio
-    command: ["uvicorn", "editor.production.api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
+    # Köprü bağlantıyı açık tutar (50 sn); sunucu ondan uzun tutmalı ki boşta kapanan bağlantıya istek düşmesin.
+    command: ["uvicorn", "editor.production.api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log",
+              "--timeout-keep-alive", "75"]
     ports:
       - "127.0.0.1:19142:8000"
     depends_on:
