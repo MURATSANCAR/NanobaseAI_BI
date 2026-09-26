@@ -112,6 +112,7 @@ sırada sorulup ortalanır).
 | `SENSE_BATCH` | 80 | env `EDITOR_WORD_SENSE_BATCH` | anlam çağrısı başına geçiş; yalnız çağrı boyu, kapsam değil |
 | `CONTEXT_CHARS` | 70 | env `EDITOR_WORD_CONTEXT_CHARS` | anlam için geçişin iki yanında karakter |
 | `PARALLEL` | 4 | env `EDITOR_WORD_VARIETY_PARALLEL` | aynı anda model çağrısı |
+| `ECHO_ALPHA` | 0,05 | env `EDITOR_WORD_ECHO_ALPHA` | yakınlığın tesadüf olasılığı bunun altındaysa tekrar (§4c); alışılmış anlamlılık düzeyi |
 | `J.KEEP` | 0,5 | `_spelling_judge` | iki yönlü seçimin argmax'ı; ayarlanmış değer değil |
 | MTLD eşiği | 0,72 | `_word_variety.mtld` | ölçünün yazındaki sabiti (McCarthy & Jarvis 2010) |
 
@@ -129,6 +130,18 @@ Hiçbiri tek kitapta ayarlanmadı; `ECHO_SENTENCES=1` redaksiyon alışkanlığ�
   öneriye kapalı soru «yerine konunca anlam korunuyor mu» (iki sıra, `KEEP`).
 - **Anlam:** istem anlamları kaba tutar (aynı anlamın farklı nesne/eklerle kullanımı tek anlam; deyim ayrı).
 - VERSION 2: kural değişti, isabet sıfırdan sayılır.
+
+## 4c. Sürüm 3 (2026-09-26) — tesadüf süzgeci
+
+Sürüm 2 «Duvarları Yıkmak»ta (224 s., 34.601 sözcük) 1.450 bulgu / 636 grup verdi; en kalabalıklar yardımcı
+fiiller (olmak 84, etmek 53) ve kitabın konu sözcüğü (insan 76). Sık sözcük yakın geçer; bu tekrar değil
+dilin olağan dağılımıdır. Artık iki geçiş, cümle penceresine ek olarak, sözcüğün (o anlamdaki) kitap
+oranıyla **tesadüfen bu kadar yakın düşme olasılığı** `EDITOR_WORD_ECHO_ALPHA` (0,05) altındaysa kümelenir:
+`P = 1 − (1 − n/N)^aralık` (n = kök+anlamın kitaptaki geçişi, N = kitabın sözcüğü, aralık = belirteç).
+Örnek: her 50 sözcükte bir geçen sözcük 10 sözcük arayla P ≈ 0,18 (tekrar değil); kitapta 5 kez geçen
+sözcük 20 sözcük arayla P ≈ 0,003 (tekrar). Eleneni `stats.skip_chance_level` sayar; bulguda
+`details.chance` ve `details.book_count`. Kaba bir model: dil sahne sahne kümelenir, sık sözcükte de
+gerçek yankı kaçabilir (ör. aynı cümlede iki «olmak») — ölçümle bakılacak.
 
 ## 5. Bulgu biçimi
 
