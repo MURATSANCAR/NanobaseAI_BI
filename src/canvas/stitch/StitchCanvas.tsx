@@ -282,15 +282,14 @@ function CanvasBody({
         presence: d.presence,
         zoom: d.zoom,
       }}
-      rail={d.rail}
       onZoom={onZoom}
       onReset={dirty ? reset : undefined}
     >
-    <main ref={alanRef} className="absolute inset-x-0 top-16 bottom-[136px] sm:top-[84px] sm:bottom-[92px] overflow-auto">
-        {/* Telefonda sahne ölçeklenmez ve kartlar alt alta akar; ray solda yüzdüğü için içerik ondan içeride başlar. */}
+    <main ref={alanRef} className="absolute inset-x-0 top-16 bottom-2 sm:top-[84px] md:bottom-[92px] overflow-auto">
+        {/* Telefonda sahne ölçeklenmez ve kartlar alt alta akar. */}
         <div
           ref={stageRef}
-          className={stacked ? 'relative mx-auto w-full pb-6 pl-14 pr-3 pt-1' : 'relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]'}
+          className={stacked ? 'relative mx-auto w-full pb-6 pl-3 pr-3 pt-1' : 'relative mx-auto h-full min-h-[640px] w-full max-w-[1760px]'}
           style={stacked ? undefined : { zoom: (zoom ?? 1) * sig }}
         >
 
@@ -723,7 +722,8 @@ function CanvasBody({
       </main>
 
       {/* ================= BOTTOM FLOATING DOCK & ZEKİ CHAT INPUT ================= */}
-      <div className="absolute bottom-3 inset-x-2 sm:bottom-6 sm:inset-x-0 flex justify-center z-40 pointer-events-none">
+      {/* Telefonda (<768) yok: alt çubuk menüdür, soru «Zeki AI» düğmesinden sorulur (menü ikinci şerit olmasın). */}
+      <div className="absolute bottom-6 inset-x-0 hidden md:flex justify-center z-40 pointer-events-none">
         <div className="glass-dock p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl shadow-dock-shadow flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pointer-events-auto border border-white/90 max-w-[940px] w-full">
 
           {/* 4 Quick Module Chips */}

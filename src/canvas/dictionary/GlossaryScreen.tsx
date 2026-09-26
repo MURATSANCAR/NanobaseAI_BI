@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Check, ChevronDown, Database, Loader2, PenLine, Search, Sparkles, X } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { ScanBadge } from '../DbTiming';
-import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
   EngineAuthError,
@@ -509,7 +508,7 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
 
 export default function GlossaryScreen() {
   return (
-    <AdminGuard rail="/veri-sozlugu" crumb="Veri Sözlüğü">
+    <AdminGuard crumb="Veri sözlüğü">
       <GlossaryScreenInner />
     </AdminGuard>
   );
@@ -644,19 +643,18 @@ function GlossaryScreenInner() {
       head={{
         tenant: 'Timaş Yayınları',
         section: 'Yapay Zeka Raporları',
-        crumb: 'Veri Sözlüğü',
+        crumb: 'Veri sözlüğü',
         source: TABS.find((t) => t.id === tab)?.title ?? '',
         presence: 'canlı',
       }}
-      rail={railFor('/veri-sozlugu')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+      <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
       <ZoomStage className="h-full">
         <div className="mx-auto flex min-h-full w-full max-w-[1760px] flex-col gap-3 pb-4 md:gap-3">
           {/* Başlık ve bölüm seçimi tek satırda: çalışma alanına yer kalsın */}
           <div className="flex shrink-0 flex-col gap-2 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
             <div className="min-w-0">
-              <h1 className="text-[20px] font-extrabold leading-tight tracking-tight text-canvas-ink">Veri Sözlüğü</h1>
+              <h1 className="text-[20px] font-extrabold leading-tight tracking-tight text-canvas-ink">Veri sözlüğü</h1>
               <p className="text-[12.5px] text-canvas-muted">{TABS.find((t) => t.id === tab)?.help}</p>
             </div>
             <div role="tablist" className="glass-panel -mx-1 flex gap-1 overflow-x-auto rounded-2xl p-1 shadow-glass-float [scrollbar-width:none] lg:mx-0 [&::-webkit-scrollbar]:hidden">

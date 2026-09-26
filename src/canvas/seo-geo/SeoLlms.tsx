@@ -17,9 +17,9 @@ export default function SeoLlms() {
   return (
     <SeoLayout
       path="/seo-geo/llms"
-      crumb="llms.txt"
+      crumb="Yapay zekâ tarama dosyası"
       eyebrow="SEO & GEO · yapay zekâ dosyası"
-      title="llms.txt önerisi"
+      title="Yapay zekâ tarama dosyası"
       lead="ChatGPT, Gemini ve Perplexity gibi motorlara sitenin ne olduğunu, hangi yayınevlerini ve kitapları taşıdığını anlatan dosya. Öneri T-soft’tan okunan veriden kurulur; T-soft’a gönderilmez, panelden elle yüklenir."
     >
       {q.isLoading && <Loading text="Öneri hazırlanıyor…" />}

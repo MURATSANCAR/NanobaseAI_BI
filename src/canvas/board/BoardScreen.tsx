@@ -51,7 +51,6 @@ import {
   type CardResult,
 } from './store';
 import Shell, { ZoomStage, useShellZoom } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
 
 /** Giriş yapan kişi; pano ona ait. */
 function useUser(): string {
@@ -638,11 +637,10 @@ export default function BoardScreen() {
         source: user || 'oturum yok',
         presence: `${cards.length} kart`,
       }}
-      rail={railFor('/panolar')}
     >
       {/* Araç şeridi: tümünü yenile, PDF, kayıt durumu */}
       {cards.length > 0 && (
-        <div className="pano-noprint absolute left-14 right-2 top-14 z-30 flex justify-end sm:left-[92px] sm:right-6 sm:top-[76px]">
+        <div className="pano-noprint absolute left-2 right-2 top-14 z-30 flex justify-end sm:left-6 sm:right-6 sm:top-[76px]">
           <div className="glass-panel flex items-center gap-1 rounded-full px-1.5 py-1 shadow-glass-float">
             <button
               type="button"
@@ -699,7 +697,7 @@ export default function BoardScreen() {
       </div>
 
       {/* Kartlar */}
-      <main className="pano-print-main pano-scroll absolute bottom-[152px] left-14 right-2 top-[104px] sm:bottom-[118px] sm:left-[92px] sm:right-6 sm:top-[124px] overflow-auto">
+      <main className="pano-print-main pano-scroll absolute bottom-[152px] left-2 right-2 top-[104px] sm:bottom-[118px] sm:left-6 sm:right-6 sm:top-[124px] overflow-auto">
       <ZoomStage className="h-full">
         <div
           // Yazdırırken genişlik A4'ün yazı alanıdır (~700 px): grafikler kâğıttaki boyuta göre çizilir, sonradan esnemez.
@@ -915,7 +913,7 @@ export default function BoardScreen() {
       </main>
 
       {/* Önizleme + soru çubuğu */}
-      <div className="pano-noprint absolute bottom-3 left-14 right-2 sm:bottom-6 sm:left-[92px] sm:right-6 z-40 flex justify-center">
+      <div className="pano-noprint absolute bottom-3 left-2 right-2 sm:bottom-6 sm:left-6 sm:right-6 z-40 flex justify-center">
         <div className="w-full max-w-[980px]">
           {pending && (
             <div

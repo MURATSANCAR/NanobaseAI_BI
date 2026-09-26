@@ -12,7 +12,7 @@
   --sg-grad: linear-gradient(135deg, #ff6b4a 0%, #7c5cff 100%);
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   position: absolute;
-  inset: 84px 24px 24px 92px;
+  inset: 84px 24px 24px 24px;
   overflow-y: auto;
   overscroll-behavior: contain;
   color: var(--sg-text);
@@ -155,7 +155,7 @@
 .sg-chart { width: 100%; height: 180px }
 
 @media (max-width: 767px) {
-  .sg-main { inset: 64px 8px 8px 56px }
+  .sg-main { inset: 64px 8px 8px 8px }
   .sg-card { padding: 14px; border-radius: 20px }
   .sg-decide { position: static }
 }

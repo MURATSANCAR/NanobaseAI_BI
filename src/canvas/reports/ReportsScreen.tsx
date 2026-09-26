@@ -2,7 +2,6 @@ import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CheckCircle2, Download, Loader2, Mail, Pause, PencilLine, Play, Plus, RefreshCw, Sparkles, Trash2, X } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
 import {
   ENGINE_ENABLED,
   EngineAuthError,
@@ -380,9 +379,8 @@ export default function ReportsScreen() {
         source: `${nf.format(active)} etkin plan`,
         presence: email?.configured ? 'E-posta hazır' : 'E-posta ayarı yok',
       }}
-      rail={railFor('/planli-raporlar')}
     >
-      <main className="absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px] lg:overflow-visible">
+      <main className="absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px] lg:overflow-visible">
       <ZoomStage className="h-full">
         <div className="mx-auto flex w-full max-w-[1760px] flex-col gap-3 pb-4 lg:h-full lg:flex-row lg:gap-4 lg:pb-0">
           {/* Planlar */}

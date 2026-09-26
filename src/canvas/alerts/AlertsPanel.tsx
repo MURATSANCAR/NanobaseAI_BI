@@ -144,7 +144,7 @@ export default function AlertsPanel({
   inline?: boolean;
 }) {
   return (
-    <div className={inline ? 'flex justify-center pb-4' : 'absolute bottom-[148px] left-2 right-2 z-50 flex justify-center sm:bottom-28 sm:left-[92px] sm:right-6'}>
+    <div className={inline ? 'flex justify-center pb-4' : 'absolute bottom-2 left-2 right-2 z-50 flex justify-center sm:left-6 sm:right-6 md:bottom-28'}>
       <div className={`${inline ? '' : 'max-h-[calc(100dvh-230px)] overflow-auto '}w-full max-w-[1040px] rounded-2xl border border-white bg-white p-3 text-canvas-ink shadow-canvas-card ring-1 ring-slate-900/5 sm:rounded-3xl sm:p-5`}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-1 rounded-xl bg-slate-100 p-1">

@@ -3,7 +3,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { TableVirtuoso, type TableComponents } from 'react-virtuoso';
 import { ArrowDown, ArrowDownToLine, ArrowUp, Code2, Info, Loader2, RefreshCw, Search, X } from 'lucide-react';
 import Shell from '../stitch/Shell';
-import { managementRail } from '../stitch/screens';
 import { ENGINE_ENABLED } from '../engine';
 import { clockOffset, formatCell, managementApi, mergeSnapshot, numberOf, ONERI_TONE, type ReportColumn, type ReportSnapshot, type ReportView } from './api';
 import ExplainPanel from './ExplainPanel';
@@ -206,13 +205,13 @@ export default function BaskiOneri() {
   const head = {
     tenant: 'Timaş Yayınları',
     section: 'Yönetim Raporları',
-    crumb: 'Yeni Baskı Öneri',
+    crumb: 'Baskı önerisi',
     source: 'Logo + CRM',
     presence: snap?.updatedAt ? `Veri: ${new Date(snap.updatedAt * 1000).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}` : 'Hazırlanıyor',
   };
 
   return (
-    <Shell head={head} rail={managementRail(ROUTE)}>
+    <Shell head={head}>
       <main className="mg-main">
         <div className="mg-page">
           <header className="mg-heading">

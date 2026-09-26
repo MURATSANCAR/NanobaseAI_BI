@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 /** Stitch kanvasının metin yuvaları. Tasarım sabit; bu tip yalnız hangi
  *  metnin nereye gireceğini söyler. Yeni ekran = yeni bir bu nesne. */
 import type { DbTiming } from '../DbTiming';
@@ -6,20 +5,6 @@ import type { DbTiming } from '../DbTiming';
 export type StitchRow = { label: string; value: string };
 export type StitchSourceRow = { name: string; tag: string };
 export type StitchArc = { dash: string; offset: string };
-/** Sol raydaki on yuva. Etiketler uygulamanın kendi menüsünden gelir. */
-export type StitchRailItem = {
-  to: string;
-  label: string;
-  badge?: string;
-  adminOnly?: boolean;
-  /** Grup başlığı; önceki öğeden farklıysa menü açıkken başlık, kapalıyken ince çizgi çıkar. */
-  group?: string;
-  /** Öğenin kendi ikonu; yoksa sıraya göre ortak ikon kullanılır. */
-  icon?: ReactNode;
-  /** Ortamda açık olması gereken özellik; kapalıysa öğe menüde hiç görünmez (ör. müşteri ortamında basın ve web). */
-  feature?: 'webWatch';
-};
-
 export type BoardAction = {
   state: 'idle' | 'saving' | 'done' | 'error';
   onAdd: () => void;
@@ -45,7 +30,6 @@ export type StitchCanvasData = {
   presence: string;
   zoom: string;
   askPlaceholder: string;
-  rail: StitchRailItem[];
   dockLinks: Array<{ to: string; active?: boolean; dot?: boolean }>;
   dock: [string, string, string, string];
   q: { initials: string; role: string; at: string; text: string };

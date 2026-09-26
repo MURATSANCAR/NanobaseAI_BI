@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Shell, { ZoomStage } from '../stitch/Shell';
-import { railFor } from '../stitch/screens';
 import {
   Download,
   ArrowRight,
@@ -217,10 +216,9 @@ export default function KampusPage() {
         source: 'Birlikte Üretiyor, Birlikte Okuyoruz',
         presence: `${firstName} çevrimiçi`,
       }}
-      rail={railFor('/')}
     >
       {/* Kanvas ekranlarıyla aynı sahne: ortak kabuk (zemin, yazı, ray), içerik kendi içinde kayar. */}
-      <main className="kp-root absolute bottom-2 left-14 right-2 top-16 overflow-y-auto overscroll-contain text-ink/80 antialiased selection:bg-violet/20 selection:text-ink sm:bottom-6 sm:left-[92px] sm:right-6 sm:top-[84px]">
+      <main className="kp-root absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain text-ink/80 antialiased selection:bg-violet/20 selection:text-ink sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
       <ZoomStage className="h-full">
         {/* ARAÇ ÇUBUĞU: arama, bülten, bildirim, kişi */}
         <div className="glass-panel mx-auto flex w-full max-w-[1720px] items-center gap-2 rounded-2xl px-2 py-2 shadow-glass-float sm:gap-3 sm:rounded-3xl sm:px-3">
