@@ -1,5 +1,90 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M46 Bütçe planlama ve kontrolü: kitap bazlı satış hedefleri, senaryolar, onay, izleme ve %80 sapma uyarısı
+
+- **Neden:** yol haritası adım 4. M15 (yeni kitap pazarlama), M17 (backlist), M18, M29/M30 (dağılım, saha) onaylı kitap
+  hedefini girdi alıyor; portalda bütçe/hedef yoktu. CRM'in `new_kitapBase.new_ilkyilsatishedefi` alanı hiçbir kayıtta dolu
+  değil (2023–2028 ölçüldü, 0) — hedefin kaynağı bu modül.
+- **Ekran `/timas/butce`** (menü Finans › Bütçe ve hedefler, Kampüs modül listesinde M46): sekmeler İzleme · Kitap hedefleri ·
+  Yeni kitap programı · Departman bütçesi · Senaryolar ve onay; yıl/plan/sekme adreste. «ZEKİ AI önerisi» üç taslak plan
+  kurar (muhafazakâr / temel / iyimser); taslak düzenlenir (kitap, program, departman satırı; elle düzeltilen satır yeniden
+  hesapta korunur), onaya gönderilir, **gönderen onaylayamaz** (iki göz), onaylanan yılın yürürlükteki planı olur, önceki
+  arşive geçer; «Revize et» gerekçeyle yeni taslak sürüm açar. Kitap hedefleri CSV (Excel, `;` ve ondalık virgül).
+- **Gerçekleşme (Logo, mevcut ölçü tanımları):** faturalı satış satırı (`STLINE`, `LINETYPE=0`, `INVOICEREF<>0`,
+  `CANCELLED=0`, TRCODE 7/8/9 − 2/3), net ciro = `LINENET`, maliyet = `AMOUNT×OUTCOST` (maliyetli satırlarda; marj bunlara
+  bölünür). Gider = `EMFLINE` 7xx hesapları, yansıtma (7x1) ve dönem sonu kapanış satırları (aynı fişte yansıtma borcu olan)
+  hariç; departman = masraf merkezi (harfle başlayan kod), kitaba açılmış rakamlı merkezler tek satır. Yıl → Logo firması
+  `L_CAPIPERIOD`'dan (411 = 2026, 211 = 2021–25), kopya yıllar atlanır. Okuma köprünün kendi tablolarına yazılır
+  (`semantic_budget_sales_actuals`, `…expense_actuals`, `…books`, `…meta`); son yıl saatte bir, geçmiş yıl haftada bir.
+- **Kararlar (veriye bakılarak, gerekçeli):**
+  1. *Taban penceresi:* plan yılından önceki takvim yılı Logo'da tamamsa o yıl (2026 → 2025), değilse son 12 tam ay (2027 →
+     Ağustos 2025 – Temmuz 2026; Logo .155 17.08.2026'da donmuş).
+  2. *Backlist:* taban net adet × (1 + hacim) · birim fiyat = kitabın taban net birim fiyatı × (1 + fiyat artışı) · marj =
+     kitabın kendi maliyetli satırları, yoksa yayınevi, yoksa şirket. Plan yılı verinin ötesindeyse ve kitap Baskı Öneri'nin
+     ZEKİ AI tahmininde varsa (M11, 5.200 kitap) taban = 12 aylık p50 toplamı (tahmin Ağustos 2026'dan başlıyor).
+  3. *Yeni kitap:* ilk yayını pencere sonundan plan yılı sonuna (CRM `new_ilkyayintarihi`); beklenti = pencerede çıkan
+     kitapların yayınevi bazında «satışta geçen ay başına net adet» × plan yılındaki satış ayı. Yayın tarihi geçmiş ama Logo'da
+     stok kartı açılmamış kayıt o kodla yayımlanmamış sayılır, hedef almaz (2026 CRM'inde 1.041 kayıt → 563 yeni kitap hedefi).
+  4. *Yeni kitap programı:* yayınevi başına pencerede çıkan başlık sayısı beklenir; CRM'de adıyla planlı olanlar kitap hedefi,
+     kalan «ek başlık» × kohortun başlık başına ortalaması.
+  5. *Varsayılanlar:* hacim %5 / %10 / %15 (iş tanımı); fiyat artışı ölçülür — son yılın tam ayları ile geçen yılın aynı ayları,
+     iki dönemde de satılan kitaplarda Σ bu yıl ciro ÷ Σ (bu yıl adet × geçen yıl birim fiyat) − 1 (sepet değişimi fiyat
+     sayılmaz): **%27,15**; gider artışı aynı aylarla ölçülür: **%61,67** (2026 Oca–Tem 492,7 Mn / 2025 Oca–Tem 304,7 Mn; hepsi
+     ekranda «ölçüldü» etiketiyle, değiştirilebilir).
+  6. *İzleme:* yıllık hedef aylara taban penceresinin şirket aylık ciro/adet dağılımıyla yayılır (yeni kitapta yayın ayından
+     itibaren); beklenen = hedef × verinin bittiği güne kadar geçen pay (ay içi gün oranı). Oran = gerçekleşen ÷ beklenen,
+     **%80 altı sapma** (`esik`), %80–100 izlenmeli. Departmanda kullanım ≥ %100 aşım, ≥ %90 sınırda.
+  7. *Uyarı kapsamı:* ilk kabulde 2026 temel planında 11.276 kitabın 7.720'si eşik altındaydı (çoğu yılda birkaç bin liralık
+     backlist) ve 7.779 uyarı açıldı — pazarlama/saha modülüne iş olarak gidemez. Kitap uyarısı hedef cirosunun %80'ini
+     oluşturan kitaplar için açılır (ABC'nin A sınıfı; plan parametresi `uyariKapsam`, %100 = her kitap). Diğerlerinin durumu
+     ekranda ve listede kalır; yayınevi ve şirket uyarısı kapsamdan bağımsız. Sonuç 481 açık uyarı.
+  8. Ticari ürün (157 ile başlayan kod) kitap hedefine girmez (yönetim raporlarıyla aynı ayrım); şirket gerçekleşeninde de yok.
+- **Uyarı:** `timas-budget.timer` saatte bir `POST /api/v1/budget/run-due` → bayat gerçekleşmeyi okur, yürürlükteki planda
+  sapmayı değerlendirir (düzelen kapanır), yeni uyarıları tek özet e-postayla `BUDGET_ALERT_RECIPIENTS`'e (Yönetim ayarı)
+  gönderir. SMTP/alıcı yoksa uyarı kayıtta bekler, bildirim `no_recipient`/`no_smtp` döner.
+- **Diğer modüllere sözleşme (M15, M17, M18, M29, M30 okur):**
+  - `GET /api/v1/budget/targets?year=2026[&segment=yeni|backlist][&stok=K1,K2][&yayinevi=…][&actuals=false]` → yalnız
+    **yürürlükteki** plan: `{year, plan:{id, version, scenario, title, approvedAt, approvedBy, revisionOf}, asof,
+    items:[{stokKodu, ad, segment, yayinevi, kitaplik, ilkYayin, hedef:{adet, ciro, marj, brutKar},
+    aylik:[{ay, adet, ciro}×12], gerceklesme:{beklenenAdet, beklenenCiro, gercekAdet, gercekCiro, gercekMarj, oranAdet,
+    oranCiro, durum: iyi|izle|sapma|baslamadi}}], program:[{yayinevi, ekBaslik, baslikAdet, baslikCiro, marj}]}`.
+    Onaylı plan yoksa `plan: null`, `items: []`. Aylık dağılımın toplamı yıllık hedefe eşittir.
+  - `GET /api/v1/budget/deviations?year=&status=acik|kapandi|bilgi&kind=satis|gider|revizyon&scope=kitap|yayinevi|toplam|merkez&module=M18`
+    → uyarı kaydı `{id, planId, kind, scope, key (stok kodu / yayınevi / merkez|hesap), label, ratio, expected, actual, gap,
+    modules:[…], status, firstAt, lastAt, closedAt}`. Hedef değişince (onay/revizyon) `kind=revizyon, status=bilgi` kaydı düşer:
+    okuyan modül `plan.id` değişimini buradan ya da `targets`'tan görür.
+  - Köprü içi: `semantic_bridge.budget.approved_targets(engine, tenant, year, codes=…, segment=…)`; veritabanında
+    `semantic_budget_approved_targets` görünümü (tenant_id, year, plan_id, version, scenario, approved_at, approved_by,
+    stok_kodu, ad, segment, yayinevi, kitaplik, ilk_yayin, hedef_adet, hedef_ciro, hedef_marj).
+  - Yetki: okuyacak modülün sayfa anahtarı `access.RULES`'taki `/api/v1/budget/targets` ve `/deviations` satırlarına eklenir.
+- **Yetki:** `sayfa:butce`; `ozellik:butce.duzenle` (öneri, düzeltme, onaya gönderme, revizyon, gerçekleşmeyi yenileme;
+  «Bütün» ile gelir); `ozellik:butce.onay` (açıkça verilir). CSV dışa aktarım `ozellik:veri.disa-aktar`. Her yazma
+  `semantic_audit`'e (`budget_plan`, `budget_target`, `budget_program`, `budget_dept`, `budget_export`, `budget_actuals`).
+- **Kod:** `backend/semantic_bridge/budget.py` (tablolar, öneri, onay, izleme, uyarı, sözleşme), `budget_sources.py`
+  (Logo/CRM SQL), `budget_api.py` (uçlar, `app.py`'de iki satır), `scripts/server/timas-budget.{service,timer}`; ön yüz
+  `src/canvas/budget/`. Testler `backend/semantic_layer/tests/test_budget.py` (13).
+- **Doğrulama (test sunucusu, `git archive` kopyası, yan port 8798, gerçek Logo .155 + CRM .28 + gerçek katalog
+  veritabanı, kısa ömürlü oturum):** pytest bütçe + yetki 25/25; `tsc -b` 0; vitest 47/47 (menü ↔ yetki kataloğu dahil).
+  Kabul betiği **36/36**, referanslar doğrudan Logo sorgusuyla:
+  - Okunan gerçekleşme: 2026 net ciro **837.901.631,04 ₺** (kokpitteki satır seviyesi net ciroyla birebir), 2025
+    **1.131.776.352,93 ₺**; gider 2025 711,98 Mn, 2026 (17.08'e kadar) 502,77 Mn; CRM kitap kartı 13.593. İlk okuma 3 dk 14 sn
+    (2025 satışları 163 sn), sonraki saatlik okuma ~15 sn.
+  - 2026 önerisi (48,8 sn, üç senaryo): 11.276 kitap, net ciro muhafazakâr 1,889 Mr / temel 1,979 Mr / iyimser 2,069 Mr ₺,
+    marj %74,8, 563 yeni kitap + 41 ek başlık, departman bütçesi 1,151 Mr ₺. İlk 8 backlist kitapta taban adet ve hedef
+    ciro doğrudan Logo 2025 sorgusuyla kuruşu kuruşuna aynı (ör. 15201.01.6181: 331.179 ad. → 364.297 ad., 35.616.670,20 ₺).
+  - 2027 temel: taban Ağustos 2025 – Temmuz 2026, 11.284 kitap, 2,432 Mr ₺; tahmin tabanlı kitaplarda taban = p50 toplamı
+    (ör. 329.504 → 362.454 ad.).
+  - Onay akışı: eksi adet 400, elle düzeltme yeniden hesapta korunuyor, gönderen onaylayınca 409, ikinci kişi onaylıyor,
+    yürürlükteki plan değişmiyor (409).
+  - İzleme (17.08.2026): şirket gerçekleşen **836.137.528,94 ₺** = doğrudan Logo 2026 net ciro (157 hariç) birebir; şirket
+    oranı %90,7, kitap hedefleri %90,4; durumlar iyi 2.518 · izlenmeli 724 · sapma 7.720 · başlamadı 314; 6 örnek kitabın
+    gerçekleşeni ve Pazarlama 760 gideri (9.185.929,27 ₺) doğrudan sorguyla aynı. Yani 2025 tabanına %10 hacim + %27 fiyat
+    koyan temel senaryo yılın bu noktasında hedefin %90,7'sinde.
+  - Uyarı: kapsam öncesi 7.779, kapsamla 481 açık uyarı (81'i ilk sayfada kitap, 9 departman aşımı); sözleşme ucunda aylık
+    toplam yıllık hedefe eşit; CSV 11.276 satır. Uç süreleri: kitap listesi (izlemeli, 11 bin satır) ~1,0 sn, izleme 1,4 sn,
+    karşılaştırma 1,5 sn, sözleşme (563 yeni kitap, aylık) 0,5 sn.
+- **Kabul verisi silindi:** 11 plan (kitap satırı 124.052, program 249, departman 1.520), 8.262 uyarı kaydı.
+
 ## 2026-09-28 — Yetki Aşama C: ZEKİ AI veri kapsamı
 
 - **Veri alanları** (`backend/semantic_bridge/data_domains.json`): ortak başvuru (her zaman açık: döviz kuru, birim, özel kod, il-ilçe), satış ve sipariş, stok ve üretim, cari ve tahsilat, muhasebe, banka-kasa-çek, telif ve sözleşme (CRM), yayın (CRM), sistem ve günlük, atanmamış. Varlık adı önekleri atılıp Logo/CRM tablo ailesi kurallarıyla alana düşer; yöneticinin ekrandan ataması (`semantic_access_entity_domains`) kuralın önüne geçer. İlk ölçüm (katalog 2.282 varlık: 1.529 Logo, 753 CRM): satırların ~%99,9'u atanmış alanlarda; atanmamış kalanlar küçük/boş şirkete özel tablolar.
