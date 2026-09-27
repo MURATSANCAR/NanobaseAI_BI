@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { EngineAuthError } from '../engine';
+import { EngineAuthError, EngineForbiddenError } from '../engine';
 
 export const nf = new Intl.NumberFormat('tr-TR');
 const dtf = new Intl.DateTimeFormat('tr-TR', {
@@ -21,7 +21,13 @@ export const fmtUnitTime = (v: string | null | undefined) => {
 };
 
 export const errText = (e: unknown, fallback: string) =>
-  e instanceof EngineAuthError ? 'Oturum gerekli.' : e ? (e as Error).message || fallback : null;
+  e instanceof EngineForbiddenError
+    ? e.message
+    : e instanceof EngineAuthError
+      ? 'Oturum gerekli.'
+      : e
+        ? (e as Error).message || fallback
+        : null;
 
 export const btn =
   'inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3.5 py-2 text-[12.5px] font-extrabold transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-50 disabled:active:scale-100 sm:min-h-0';

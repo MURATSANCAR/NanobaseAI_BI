@@ -4208,7 +4208,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         try:
             return fn(*a, **kw)
         except tr_mod.TranslationError as e:
-            raise HTTPException(status_code=e.status, detail={"code": "TRANSLATION", "message": str(e)}) from e
+            # 403 = işteki rol yetmiyor (oturum geçerli): ön yüz bunu oturum düşmesi sanmasın diye FORBIDDEN.
+            code = "FORBIDDEN" if e.status == 403 else "TRANSLATION"
+            raise HTTPException(status_code=e.status, detail={"code": code, "message": str(e)}) from e
 
     def _attachment(body: bytes, name: str, media: str) -> Response:
         ascii_name = name.encode("ascii", "ignore").decode() or "dosya"
