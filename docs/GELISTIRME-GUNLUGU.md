@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (02:10) — Yetki Aşama C test sunucusunda doğrulandı
+
+- Kod `main`de; test sunucusuna başka bir oturumun `main` kurulumuyla geldi (01:40 dosyalar, 01:45 ön yüz derlemesi, köprü 02:06'da yeniden başladı). Köprü + `semantic_layer` + `src` ağacı `main` ile dosya dosya eş (477/477).
+- Gerçek oturumla (geçici `timasai` + yönetici olmayan deneme oturumu, sonra silindi; yalnız okuma uçları ve bir SQL okuması — test verisi bırakılmadı): katalogda 10 veri alanı; deneme hesabı «Herkes» ile 9 `veri:*` anahtarı (ortak her zaman açık); canlı katalogda alan sayıları satış 276, sistem 248, stok 194, cari 137, muhasebe 95, banka-kasa 34, ortak 17, yayın (CRM) 575, telif-sözleşme 31, atanmamış 675 (2.282 varlık); kişi gözüyle bütün alanlar açık; deneme hesabının cari SQL'i veri kapsamı bağlamıyla 200.
+- Kapsam dışı ret canlıda denenmedi (Herkes daraltılmadan denenemez; birim testleri kapsıyor). Müşteri VM'ine kurulmadı (toplu kurulumla gidecek).
+
 ## 2026-09-28 (02:10) — Test sunucusuna main `c6699f5d` kuruldu (M2 + M4, M6, M7, M8, SEO & GEO, Yetki A+B, sesli bülten)
 
 - **Neden şimdi:** M2 kurulumu, test sunucusundaki ortak dosyalarda `main` dışı M7/M8 kodu durduğu için bekletilmişti (kullanıcı kararı). M7, M8 ve bülten `main`'e girince `main` bütün olarak kuruldu. VM'e kurulmadı; VM toplu gidecek.
