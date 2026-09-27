@@ -235,7 +235,14 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
         add(m, TemporalSlot(m.group(0).strip(), "MONTH", _month_start(y, mo), _next_month(y, mo), "MONTH", params={"year": y, "month": mo, "year_assumed": not y_all}))
     # --- relative
     # "son üç ay", "son on beş gün": people write the count out as often as they type it.
-    _N = r"(\d{1,3}|[a-z]+(?:\s+[a-z]+)?)"
+    # A two-word count ("on beş", "yirmi dört") never takes the unit as its second word: in "son üç ay
+    # aylık" the count swallowed "ay", the unit became "aylık", the count read as nothing, and the
+    # period was dropped — the question ran over every record.
+    _N = r"(\d{1,3}|[a-z]+(?:\s+(?!(?:gun|hafta|ay|yil)\w*\b)[a-z]+)?)"
+    # "son üç ay", "geçen üç ay", "geçtiğimiz üç ay", "geçmiş üç ay": the same window said four ways.
+    # Only "son" was read; "geçen üç ay" fell to the default year and "geçtiğimiz üç ay" went to the
+    # model, which put June–August on one question and July–September on the next.
+    _LASTN = r"(?:son|gecen|gectigimiz|gecmis)"
 
     def _count(raw: str) -> Optional[int]:
         raw = raw.strip()
@@ -250,18 +257,18 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
             total += v
         return total or None
 
-    for m in re.finditer(rf"\bson\s+{_N}\s+gun\w*", text):
+    for m in re.finditer(rf"\b{_LASTN}\s+{_N}\s+gun\w*", text):
         n = _count(m.group(1))
         if n is None:
             continue
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_DAYS", today - timedelta(days=n), today + timedelta(days=1), "DAY", params={"n": n}))
-    for m in re.finditer(rf"\bson\s+{_N}\s+yil\w*", text):
+    for m in re.finditer(rf"\b{_LASTN}\s+{_N}\s+yil\w*", text):
         n = _count(m.group(1))
         if n is None:
             continue
         n = max(1, min(20, n))
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_YEARS", date(today.year - n + 1, 1, 1), date(today.year + 1, 1, 1), "YEAR", params={"n": n}))
-    for m in re.finditer(rf"\bson\s+{_N}\s+ay\w*", text):
+    for m in re.finditer(rf"\b{_LASTN}\s+{_N}\s+ay\w*", text):
         n = _count(m.group(1))
         if n is None:
             continue
@@ -274,7 +281,7 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
             start_m += 12
             y -= 1
         add(m, TemporalSlot(m.group(0).strip(), "LAST_N_MONTHS", _month_start(y, start_m), _next_month(today.year, today.month), "MONTH", params={"n": n}))
-    for m in re.finditer(rf"\bson\s+{_N}\s+hafta\w*", text):
+    for m in re.finditer(rf"\b{_LASTN}\s+{_N}\s+hafta\w*", text):
         n = _count(m.group(1))
         if n is None:
             continue
