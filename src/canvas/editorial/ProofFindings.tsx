@@ -391,7 +391,7 @@ export function ProofFindings({
         {bookId && report?.checks.length ? <WordExport bookId={bookId} /> : null}
       </div>
       <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
-        Motor, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez. Bulguya tıklayın: sayfa ve işaretli yer açılır, kararı oradan verirsiniz. Karar bulguya iliştirilir ve kuralın isabetini ölçer; kitabı değiştirmez.
+        ZEKİ AI, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez. Bulguya tıklayın: sayfa ve işaretli yer açılır, kararı oradan verirsiniz. Karar bulguya iliştirilir ve kuralın isabetini ölçer; kitabı değiştirmez.
         {report?.bookTitle ? ` Eşleşen kitap: ${report.bookTitle}.` : ''}
       </p>
       {picker ? <div className="mt-2">{picker}</div> : null}

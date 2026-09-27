@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, EngineAuthError, freshHeaders } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** Sesli okuma uçları (köprü: /api/v1/editorial/studio/jobs/{job}/narration…). engine.ts'teki `send` ile aynı
  *  kurallar: adres ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError. Servisin kodlu hataları
@@ -50,7 +51,7 @@ async function fail(res: Response): Promise<never> {
   const d = j?.detail as { code?: string; detail?: string; message?: string } | string | undefined;
   const code = j?.code ?? (typeof d === 'object' ? d?.code : undefined) ?? null;
   const msg = typeof d === 'string' ? d : d?.detail || d?.message;
-  throw new NarrationError(msg || `Zeki AI ${res.status}`, code, res.status);
+  throw new NarrationError(msg || httpErrorText(res.status), code, res.status);
 }
 
 async function call<T>(method: string, path: string, body?: unknown, timeoutMs = 60_000): Promise<T> {

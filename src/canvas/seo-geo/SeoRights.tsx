@@ -79,7 +79,7 @@ export default function SeoRights() {
       {s && !s.books && !running && (
         <div className="sg-empty">
           <h2>CRM henüz okunmadı</h2>
-          <p>“CRM’den yeniden oku”ya basın ya da gece işini bekleyin. Okuma yalnız SELECT’tir; CRM’de hiçbir şey değişmez.</p>
+          <p>“CRM’den yeniden oku”ya basın ya da gece işini bekleyin. CRM’den yalnız okunur; CRM’de hiçbir şey değişmez.</p>
         </div>
       )}
 

@@ -2,7 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { BOOK_FORM_TR, ENGINE_ENABLED, bookCatalogApi, editorialSearchApi, findCatalogCard, type BookCard, type BookDetail } from '../engine';
 import { Loading, Note, Pill, errText, nf } from '../admin/ui';
-import { dateTime, num, pct } from '../format';
+import { dateTime, num, pct, crmLabel } from '../format';
 import { ModuleFrame, Panel } from './kit';
 import AskBox from './AskBox';
 import { WebSection } from './web/parts';
@@ -143,7 +143,7 @@ function Contracts({ b }: { b: BookDetail }) {
             </span>
             <span className="flex shrink-0 gap-1.5">
               {c.daysLeft != null && c.daysLeft >= 0 && c.daysLeft <= 60 && <Pill tone="err">{nf.format(c.daysLeft)} gün</Pill>}
-              {c.status && <Pill tone={tone(c.status)}>{c.status}</Pill>}
+              {c.status && <Pill tone={tone(c.status)}>{crmLabel(c.status)}</Pill>}
             </span>
           </li>
         ))}
@@ -171,7 +171,7 @@ function Journey({ b }: { b: BookDetail }) {
               <li key={p.id} className="rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="min-w-0 break-words font-semibold">{p.name}</span>
-                  {p.status && <Pill tone={tone(p.status)}>{p.status}</Pill>}
+                  {p.status && <Pill tone={tone(p.status)}>{crmLabel(p.status)}</Pill>}
                 </div>
                 <div className="mt-0.5 text-[11px] text-canvas-muted">
                   {[p.editor ? `Editör: ${p.editor}` : 'Editör atanmamış', p.text && `Metin: ${p.text}`, p.stage, p.on && dateTime(p.on)].filter(Boolean).join(' · ')}
@@ -218,7 +218,7 @@ function Journey({ b }: { b: BookDetail }) {
               <li key={p.id} className="rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-mono text-[11.5px] tabular-nums">{dateTime(p.on)}</span>
-                  {p.status && <Pill tone={tone(p.status)}>{p.status}</Pill>}
+                  {p.status && <Pill tone={tone(p.status)}>{crmLabel(p.status)}</Pill>}
                 </div>
                 <div className="mt-0.5 text-[11px] text-canvas-muted">
                   {[p.editor && `Sorumlu editör: ${p.editor}`, p.designer && `Grafiker: ${p.designer}`, p.firstText && `ilk metin ${dateTime(p.firstText)}`, p.delivery && `teslim ${dateTime(p.delivery)}`]
@@ -294,7 +294,7 @@ export default function BookScreen() {
           <div className="flex items-start gap-3 px-1">
             {cover?.cover && <Cover id={cover.id} alt={`${b.title || 'Kitap'} kapağı`} className="h-[104px] w-[72px] sm:h-[140px] sm:w-24" />}
             <div className="flex min-w-0 flex-wrap items-center gap-2">
-              {b.status && <Pill tone={tone(b.status)}>{b.status}</Pill>}
+              {b.status && <Pill tone={tone(b.status)}>{crmLabel(b.status)}</Pill>}
               {b.printState && <Pill tone="muted">{b.printState}</Pill>}
               {b.pages ? <span className="text-[12px] text-canvas-muted">{num(b.pages, 0)} sayfa</span> : null}
               {b.firstPublished && <span className="text-[12px] text-canvas-muted">İlk yayın {dateTime(b.firstPublished)}</span>}

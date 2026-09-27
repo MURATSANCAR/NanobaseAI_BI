@@ -1,4 +1,5 @@
 import { ENGINE_BASE, EngineAuthError, freshHeaders } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** Yaş uygunluğu raporu uçları (köprü: /api/v1/editorial/studio/jobs/{job}/age…; servis: production/api_age.py).
  *  engine.ts'teki `send` kuralları: adres ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError, motorun Türkçe
@@ -50,7 +51,7 @@ async function send<T>(method: 'GET' | 'POST', url: string, body?: unknown, time
     const j = (await res.json().catch(() => null)) as { detail?: unknown; code?: string } | null;
     const d = j?.detail;
     const msg = typeof d === 'string' ? d : (d && typeof d === 'object' && 'detail' in d ? String((d as { detail: unknown }).detail) : '');
-    const err = new Error(msg || `İstek kabul edilmedi (${res.status})`) as Error & { code?: string };
+    const err = new Error(msg || httpErrorText(res.status)) as Error & { code?: string };
     err.code = j?.code;
     throw err;
   }

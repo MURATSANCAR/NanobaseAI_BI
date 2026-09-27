@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { ENGINE_ENABLED, type Contract, type ContractSummary } from '../engine';
 import { contractsListOptions, contractsSummaryOptions } from './queries';
 import { Note, Pill, errText, field, nf } from '../admin/ui';
-import { dateTime, pct } from '../format';
+import { crmLabel, dateTime, pct } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 
 /** M6 Telif & Sözleşme. Sözleşme portföyü CRM'den okunur; CRM'de kaydı olmayan şey (hakediş,
@@ -68,7 +68,7 @@ function Title({ c }: { c: Contract }) {
 
 function Terms({ c }: { c: Contract }) {
   const advance = c.advance ? `Avans ${money.format(c.advance)}${c.currency ? ` ${c.currency}` : ''}` : null;
-  const parts = [c.kind, c.payment, c.basis, advance].filter(Boolean);
+  const parts = [c.kind && crmLabel(c.kind), c.payment, c.basis, advance].filter(Boolean);
   return <div className="text-[11px] leading-snug text-canvas-muted">{parts.join(' · ') || '—'}</div>;
 }
 
@@ -147,7 +147,7 @@ export default function ContractsScreen() {
                   <option value="">Tüm durumlar</option>
                   {s?.statuses.map((o) => (
                     <option key={o.code} value={o.code}>
-                      {o.label} ({nf.format(o.count)})
+                      {crmLabel(o.label)} ({nf.format(o.count)})
                     </option>
                   ))}
                 </select>
@@ -155,7 +155,7 @@ export default function ContractsScreen() {
                   <option value="">Tüm tipler</option>
                   {s?.kinds.map((o) => (
                     <option key={o.code} value={o.code}>
-                      {o.label} ({nf.format(o.count)})
+                      {crmLabel(o.label)} ({nf.format(o.count)})
                     </option>
                   ))}
                 </select>
@@ -187,7 +187,7 @@ export default function ContractsScreen() {
                   <li key={c.id} className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
                     <div className="flex items-start justify-between gap-2">
                       <Title c={c} />
-                      {c.status && <Pill tone={statusTone(c.status)}>{c.status}</Pill>}
+                      {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
                     </div>
                     <div className="mt-2">
                       <Parties c={c} />
@@ -241,7 +241,7 @@ export default function ContractsScreen() {
                             </div>
                           </td>
                           <td className="px-3 py-2.5">
-                            {c.status && <Pill tone={statusTone(c.status)}>{c.status}</Pill>}
+                            {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
                             {c.stage && <div className="mt-1 text-[11px] leading-snug text-canvas-muted">{c.stage}</div>}
                           </td>
                         </tr>

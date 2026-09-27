@@ -4,7 +4,7 @@ import { Search } from 'lucide-react';
 import { ENGINE_ENABLED, type ContractFacet, type EditorLoad } from '../engine';
 import { editorsOverviewOptions, projectsListOptions } from './queries';
 import { Note, Pill, errText, field, nf } from '../admin/ui';
-import { dateTime } from '../format';
+import { crmLabel, dateTime } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 
 /** M2 Editör Atama. CRM proje kartındaki "Editörü" alanından editör başına proje dağılımı ve proje listesi.
@@ -18,7 +18,7 @@ function Bar({ parts, order, max }: { parts: ContractFacet[]; order: number[]; m
     <div className="flex h-2 overflow-hidden rounded-full bg-slate-100" style={{ width: `${Math.max(4, (total / max) * 100)}%` }}>
       {order.map((code, i) => {
         const part = parts.find((p) => p.code === code);
-        return part ? <div key={code} className={TONES[i % TONES.length]} style={{ width: `${(part.count / total) * 100}%` }} title={`${part.label}: ${nf.format(part.count)}`} /> : null;
+        return part ? <div key={code} className={TONES[i % TONES.length]} style={{ width: `${(part.count / total) * 100}%` }} title={`${crmLabel(part.label)}: ${nf.format(part.count)}`} /> : null;
       })}
     </div>
   );
@@ -98,7 +98,7 @@ export default function EditorsScreen() {
             {o.statuses.map((s, i) => (
               <li key={s.code} className="flex items-center gap-1.5">
                 <span aria-hidden className={`h-2 w-2 rounded-full ${TONES[i % TONES.length]}`} />
-                <span>{s.label}</span>
+                <span>{crmLabel(s.label)}</span>
                 <span className="font-mono font-bold tabular-nums">{nf.format(s.count)}</span>
               </li>
             ))}
@@ -128,7 +128,7 @@ export default function EditorsScreen() {
               <option value="">Tüm durumlar</option>
               {(current?.byStatus ?? o?.statuses ?? []).map((s) => (
                 <option key={s.code} value={s.code}>
-                  {s.label} ({nf.format(s.count)})
+                  {crmLabel(s.label)} ({nf.format(s.count)})
                 </option>
               ))}
             </select>
@@ -143,7 +143,7 @@ export default function EditorsScreen() {
                     <div className="break-words font-extrabold leading-snug">{j.name || 'Adsız proje'}</div>
                     <div className="mt-0.5 text-[11.5px] text-canvas-muted">{j.author ? `Yazar: ${j.author}` : 'Yazar girilmemiş'}</div>
                   </div>
-                  {j.status && <Pill tone="muted">{j.status}</Pill>}
+                  {j.status && <Pill tone="muted">{crmLabel(j.status)}</Pill>}
                 </div>
                 <div className="mt-1.5 text-[11px] leading-snug text-canvas-muted">
                   {[

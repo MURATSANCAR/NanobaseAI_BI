@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, EngineAuthError } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** Seri karakter kartı uçları (köprü: /api/v1/editorial/studio/jobs/{job}/character-cards/…). engine.ts'teki
  *  `send` ile aynı kurallar (ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError, motorun Türkçe mesajı);
@@ -58,7 +59,7 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
     const j = (await res.json().catch(() => null)) as { code?: string; rev?: number; detail?: unknown } | null;
     const d = j?.detail as { code?: string; rev?: number; detail?: string; message?: string } | string | undefined;
     const msg = typeof d === 'string' ? d : d?.detail || d?.message;
-    throw new CardsError(msg || `Zeki AI ${res.status}`, res.status, j?.code ?? (typeof d === 'object' ? d?.code : undefined),
+    throw new CardsError(msg || httpErrorText(res.status), res.status, j?.code ?? (typeof d === 'object' ? d?.code : undefined),
       j?.rev ?? (typeof d === 'object' ? d?.rev : undefined));
   }
   return (await res.json()) as T;

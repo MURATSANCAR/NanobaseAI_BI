@@ -1,4 +1,5 @@
 import { ENGINE_BASE, EngineAuthError, StudioPlanError, type PlanBox } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** Okur araçları ve sürüm farkı uçları (köprü: backend/semantic_bridge/editorial_studio_reader.py). Hata gövdesi
  *  sayfa planı uçlarıyla aynı: `{"code","detail"}` ya da `{"detail": …}`; ekran `StudioPlanError` okur. */
@@ -68,7 +69,7 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
     const inner = (typeof detail === 'object' && detail) ? detail : j ?? {};
     const code = typeof inner.code === 'string' ? inner.code : null;
     const msg = typeof detail === 'string' ? detail : typeof inner.detail === 'string' ? inner.detail
-      : typeof inner.message === 'string' ? inner.message : `İstek kabul edilmedi (${res.status})`;
+      : typeof inner.message === 'string' ? inner.message : httpErrorText(res.status);
     throw new StudioPlanError(res.status, code, msg, j);
   }
   return (await res.json()) as T;

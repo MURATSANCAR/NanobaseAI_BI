@@ -1,5 +1,6 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ENGINE_BASE, EngineAuthError, freshHeaders } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** Pazarlama kiti uçları (köprü: /api/v1/editorial/studio/jobs/{job}/marketing/…). Metin üretimi stüdyo servisinde
  *  arka planda sürer; ekran `tasks`'ı izler. Düzenleyen kişi oturumdan gelir, istemci ad göndermez. Hata metni
@@ -91,7 +92,7 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } | string } | null;
     const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
-    throw new Error(msg || `Zeki AI ${res.status}`);
+    throw new Error(msg || httpErrorText(res.status));
   }
   return (await res.json()) as T;
 }

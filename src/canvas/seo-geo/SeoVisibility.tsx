@@ -55,7 +55,8 @@ export default function SeoVisibility() {
         <section className="sg-kpis" aria-label="Motorlar">
           {engines.map((e) => (
             <div key={e.id} className="sg-kpi">
-              <div className="sg-kpi-label">{e.label}</div>
+              {/* Marka adı: Türkçe büyük harf «GEMİNİ» yazmasın. */}
+              <div className="sg-kpi-label" lang="en">{e.label}</div>
               {e.configured ? (
                 <>
                   <div className="sg-kpi-value sg-mono" style={{ fontSize: 20 }}>

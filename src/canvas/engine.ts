@@ -7,6 +7,7 @@
  * diye gösterir, sahte sayı üretmez.
  */
 import type { DbTiming } from './DbTiming';
+import { httpErrorText } from './httpError';
 
 const RAW_BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '';
 export const ENGINE_BASE = RAW_BASE.replace(/\/$/, '');
@@ -64,7 +65,7 @@ async function post<T>(path: string, body: unknown, timeoutMs = 45_000): Promise
     authBlocked = true;
     throw new EngineAuthError();
   }
-  if (!res.ok) throw new Error(`Zeki AI ${res.status}`);
+  if (!res.ok) throw new Error(httpErrorText(res.status));
   return (await res.json()) as T;
 }
 
@@ -94,7 +95,7 @@ export async function engineInfo(): Promise<EngineInfo> {
     authBlocked = true;
     throw new EngineAuthError();
   }
-  if (!res.ok) throw new Error(`Zeki AI ${res.status}`);
+  if (!res.ok) throw new Error(httpErrorText(res.status));
   return (await res.json()) as EngineInfo;
 }
 
@@ -223,7 +224,7 @@ async function get<T>(path: string, timeoutMs = 20_000): Promise<T> {
     authBlocked = true;
     throw new EngineAuthError();
   }
-  if (!res.ok) throw new Error(`Zeki AI ${res.status}`);
+  if (!res.ok) throw new Error(httpErrorText(res.status));
   return (await res.json()) as T;
 }
 
@@ -430,7 +431,7 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } | string } | null;
     const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
-    throw new Error(msg || `Zeki AI ${res.status}`);
+    throw new Error(msg || httpErrorText(res.status));
   }
   return (await res.json()) as T;
 }
@@ -958,7 +959,7 @@ async function roomsSend<T>(method: string, path: string, body?: unknown): Promi
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string; booking?: RoomBooking } | string } | null;
     const d = j?.detail;
     const msg = typeof d === 'string' ? d : d?.message;
-    throw new RoomsError(msg || `Oda servisi ${res.status}`, res.status, typeof d === 'object' ? d?.booking : undefined);
+    throw new RoomsError(msg || httpErrorText(res.status), res.status, typeof d === 'object' ? d?.booking : undefined);
   }
   return (await res.json()) as T;
 }
@@ -1431,7 +1432,7 @@ const upload = async (path: string, file: File) => {
   }
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } } | null;
-    throw new Error(j?.detail?.message || `Zeki AI ${res.status}`);
+    throw new Error(j?.detail?.message || httpErrorText(res.status));
   }
   return (await res.json()) as { fileId: string; version: number };
 };
@@ -2035,7 +2036,7 @@ async function planSend<T>(method: string, path: string, body?: unknown, timeout
     const code = typeof inner.code === 'string' ? inner.code : null;
     const msg = typeof detail === 'string' ? detail
       : typeof inner.message === 'string' ? inner.message
-      : typeof inner.detail === 'string' ? inner.detail : `İstek kabul edilmedi (${res.status})`;
+      : typeof inner.detail === 'string' ? inner.detail : httpErrorText(res.status);
     throw new StudioPlanError(res.status, code, msg, j);
   }
   return (await res.json()) as T;

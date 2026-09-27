@@ -2,6 +2,7 @@ import { useQueries } from '@tanstack/react-query';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, isAuthBlocked, runSql } from './engine';
 import type { DbTiming } from './DbTiming';
+import { httpErrorText } from './httpError';
 
 /**
  * CFO'nun ekranda görmek istediği rakamlar. Hepsi semantic bridge üzerinden
@@ -157,7 +158,7 @@ async function fetchSnapshot(): Promise<RawSets> {
     signal: AbortSignal.timeout(12_000),
   });
   if (res.status === 401 || res.status === 403) throw new EngineAuthError();
-  if (!res.ok) throw new Error(`Özet ${res.status}`);
+  if (!res.ok) throw new Error(httpErrorText(res.status));
   const j = (await res.json()) as Partial<RawSets> & { generatedAt?: string; db?: DbTiming | null };
   return {
     months: j.months ?? [],

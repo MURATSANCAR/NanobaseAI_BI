@@ -23,7 +23,7 @@ const TABS: Array<{ id: AdminTab; label: string; icon: typeof Activity }> = [
   { id: 'alerts', label: 'Uyarılar', icon: Bell },
   { id: 'cards', label: 'Pano kartları', icon: LayoutGrid },
   { id: 'people', label: 'Kişiler', icon: Users },
-  { id: 'prompts', label: 'Promt izleme', icon: MessageSquareText },
+  { id: 'prompts', label: 'Soru izleme', icon: MessageSquareText },
   { id: 'audit', label: 'Değişiklik kaydı', icon: History },
 ];
 

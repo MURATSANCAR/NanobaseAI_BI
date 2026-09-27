@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, freshHeaders } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** Boyama / etkinlik kitabı uçları (köprü: /api/v1/editorial/studio/jobs/{job}/coloring…). engine.ts'teki `send`
  *  kuralları: adres ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError, servisin Türkçe hata metni aynen. */
@@ -51,7 +52,7 @@ async function call<T>(method: 'GET' | 'POST', path: string, body?: unknown, tim
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string; detail?: string } | string } | null;
     const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message ?? j?.detail?.detail;
-    throw new Error(msg || `Zeki AI ${res.status}`);
+    throw new Error(msg || httpErrorText(res.status));
   }
   return (await res.json()) as T;
 }

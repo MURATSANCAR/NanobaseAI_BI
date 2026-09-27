@@ -4,6 +4,7 @@ import {
   COLOR_ROLES, EFFECT_STYLES, type Catalog, type CatalogEffect, type CatalogGroup, type CatalogItem, type CatalogParam,
   type CatalogStyle, type ColorRole, type EffectStyle, type RoleColors, type Run,
 } from './types';
+import { httpErrorText } from '../../../httpError';
 
 /** Öğeler ve efekt yazı uçları (köprü: /api/v1/editorial/studio/jobs/{job}/plan/…). engine.ts'teki `send` ile
  *  aynı kurallar: adres ENGINE_BASE, oturum çerezi (credentials: include), 401/403 → EngineAuthError, motorun
@@ -22,7 +23,7 @@ async function getJson<T>(path: string, timeoutMs = 30_000): Promise<T> {
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string } | string } | null;
     const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
-    throw new Error(msg || `Zeki AI ${res.status}`);
+    throw new Error(msg || httpErrorText(res.status));
   }
   return (await res.json()) as T;
 }

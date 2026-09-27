@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BookOpen, Check, Loader2, PenLine, X } from 'lucide-react';
-import { ENGINE_ENABLED, deskApi, proofingApi, readableBooksApi, type DeskCheck, type DeskFile, type ProofState } from '../engine';
+import { ENGINE_ENABLED, bookCatalogApi, deskApi, findCatalogCard, proofingApi, readableBooksApi, type BookCard, type DeskCheck, type DeskFile, type ProofState } from '../engine';
 import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '../admin/ui';
 import { dateTime, num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
@@ -153,9 +153,11 @@ function Signers({ s, onChanged }: { s: ProofState; onChanged: () => void }) {
 }
 
 /** Eser dosyası yokken motorun okuduğu kitaplardan seçim: çipler sarar, yatay kaydırma yok. */
-function BookChips({ books, picked, onPick }: { books: string[]; picked: string | null; onPick: (title: string | null) => void }) {
+/** Değer köprünün kitap adıdır (bulgular onunla eşleşir); ekranda katalogdaki yayınevi başlığı görünür,
+ *  yoksa ad olduğu gibi. Böylece «dedem-tekrar-cocuk-oldu» yerine «Dedem Tekrar Çocuk Oldu» yazar. */
+function BookChips({ books, cards, picked, onPick }: { books: string[]; cards?: BookCard[]; picked: string | null; onPick: (title: string | null) => void }) {
   return (
-    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Motorun okuduğu kitaplar">
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="ZEKİ AI'ın okuduğu kitaplar">
       <BookOpen aria-hidden className="h-3.5 w-3.5 shrink-0 text-canvas-muted" />
       {books.map((t) => {
         const active = picked === t;
@@ -169,7 +171,7 @@ function BookChips({ books, picked, onPick }: { books: string[]; picked: string 
               active ? 'bg-canvas-violet text-white shadow-sm' : 'bg-white text-canvas-ink ring-1 ring-slate-200 hover:ring-canvas-violet/40'
             }`}
           >
-            {t}
+            {findCatalogCard(cards, t)?.publisher?.title || t}
           </button>
         );
       })}
@@ -214,6 +216,8 @@ export default function ProofScreen() {
     refetchInterval: (query) => (query.state.data?.loading ? 15000 : 5 * 60_000),
   });
   const readable = books.data?.items ?? [];
+  // Aynı anahtar Kitap 360 ile ortak: katalog bir kez gelir.
+  const catalog = useQuery({ queryKey: ['editorial', 'bookCatalog'], queryFn: bookCatalogApi.list, enabled: ENGINE_ENABLED && noWork, staleTime: 5 * 60_000 });
   // URL'deki kitap listede yoksa (ad değişmiş, liste henüz gelmemiş) yine de seçilebilir kalsın.
   const chips = picked && !readable.includes(picked) ? [picked, ...readable] : readable;
   // Motorun otomatik denetimleri; eşleşme köprüde kitap adıyla yapılır, prova PDF'inden bağımsızdır.
@@ -240,7 +244,7 @@ export default function ProofScreen() {
       crumb="Son Okuma"
       title="Son okuma ve yayın onayı"
       lead="Prova PDF'inden sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve forma ölçülür; elle işaretlenen maddeler ve imzalar tamamlanınca onay oluşur. Matbaaya gönderim ve ERP tetikleme yoktur."
-      source={s ? s.work.title : noWork && picked ? picked : 'Editoryal masa'}
+      source={s ? s.work.title : noWork && picked ? findCatalogCard(catalog.data?.items, picked)?.publisher?.title || picked : 'Editoryal masa'}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
@@ -323,7 +327,7 @@ export default function ProofScreen() {
                   ) : books.error ? (
                     <Note tone="err">{errText(books.error, 'Okunmuş kitap listesi alınamadı.')}</Note>
                   ) : chips.length ? (
-                    <BookChips books={chips} picked={picked} onPick={pick} />
+                    <BookChips books={chips} cards={catalog.data?.items} picked={picked} onPick={pick} />
                   ) : null
                 }
                 idle={

@@ -7,6 +7,7 @@ import SessionGate from './stitch/SessionGate';
 import GreetingsInbox from './kampus/GreetingsInbox';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, clearAuthBlock } from './engine';
 import { canSeePage, usePageAccess } from './useAdmin';
+import { httpErrorText } from './httpError';
 
 /**
  * Timaş oturum kapısı. Giriş yalnız Timaş giriş servisindedir (`/timas/auth/`); eski portal servisi
@@ -19,7 +20,7 @@ export function useTimasSession() {
     queryFn: async () => {
       const res = await fetch(`${ENGINE_BASE}/auth/session`, { credentials: 'include' });
       if (res.status === 401 || res.status === 403) throw new EngineAuthError();
-      if (!res.ok) throw new Error(`Oturum servisi ${res.status}`);
+      if (!res.ok) throw new Error(httpErrorText(res.status));
       // Oturum geçerli: 401 yüzünden durmuş yoklamalar (uyarılar, CFO) yeniden başlar.
       clearAuthBlock();
       // username: hesap adı (pano anahtarı); displayName: AD'deki ad soyad.

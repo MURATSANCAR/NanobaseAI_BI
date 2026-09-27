@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { BookOpen, FolderOpen, Loader2, Search, User, X } from 'lucide-react';
 import { ENGINE_ENABLED, editorialSearchApi, type SearchHit, type SearchKind } from '../engine';
 import { Note, Pill, errText, nf } from '../admin/ui';
-import { dateTime } from '../format';
+import { dateTime, crmLabel } from '../format';
 import { useDebounced } from './kit';
 
 /** Editoryal ana ekranın sağ üstündeki kitap arama: yazılan metin kitap adında (5+ rakamsa ISBN'de de),
@@ -28,7 +28,7 @@ function Hit({ h, onPick }: { h: SearchHit; onPick: () => void }) {
           {[h.note, h.extra, h.date && dateTime(h.date)].filter(Boolean).join(' · ') || (h.kind === 'kisi' ? 'Esere katkı vermiş' : '')}
         </span>
       </span>
-      {h.status && h.kind !== 'kisi' && <Pill tone="muted">{h.status}</Pill>}
+      {h.status && h.kind !== 'kisi' && <Pill tone="muted">{crmLabel(h.status)}</Pill>}
     </>
   );
   const cls = 'zk-press flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left hover:bg-canvas-violet/5';

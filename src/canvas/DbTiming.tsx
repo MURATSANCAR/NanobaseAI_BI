@@ -57,10 +57,19 @@ export function dbTimingText(t: DbTiming | null | undefined, now = Date.now()): 
   return head;
 }
 
+/** Parçalar kaynağa göre toplanır («Logo 3,20 sn · CRM 1,10 sn»). Parçanın `name`'i köprünün iç sorgu adıdır
+ *  (months, prevSameDate…) ve ekrana çıkmaz; tek kaynaklı sonuçta döküm gösterilmez. */
 function partsText(parts: DbPart[] | null | undefined): string | null {
   if (!parts || parts.length < 2) return null;
-  const label = (p: DbPart) => (p.source === 'crm' ? 'CRM' : p.source === 'logo' ? 'Logo' : p.name);
-  return parts.map((p) => `${label(p)} ${p.ms == null ? 'ölçülmedi' : formatDbMs(p.ms)}`).join(' · ');
+  const sums = new Map<string, number | null>();
+  for (const p of parts) {
+    const label = p.source === 'crm' ? 'CRM' : p.source === 'logo' ? 'Logo' : null;
+    if (!label) continue;
+    const prev = sums.has(label) ? sums.get(label)! : 0;
+    sums.set(label, prev == null || p.ms == null ? null : prev + p.ms);
+  }
+  if (sums.size < 2) return null;
+  return [...sums].map(([label, ms]) => `${label} ${ms == null ? 'ölçülmedi' : formatDbMs(ms)}`).join(' · ');
 }
 
 type Props = { timing: DbTiming | null | undefined; className?: string; tone?: 'muted' | 'onDark' };

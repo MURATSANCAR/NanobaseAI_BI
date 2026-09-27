@@ -64,3 +64,15 @@ export const scheduleStatus = (s: string | undefined): { label: string; tone: 'o
   if (v === 'sent' || v === 'completed') return { label: 'Gönderildi', tone: 'muted' };
   return { label: s || '—', tone: 'muted' };
 };
+
+/** CRM seçenek etiketi ekranda: adı tanımlanmamış kod çıplak sayı olarak kalmaz («Adı tanımsız (100000001)»),
+ *  CRM'de elle yazılmış parantez boşlukları düzelir («( Yeni Proje )Proje» → «(Yeni Proje) Proje»). */
+export function crmLabel(v: string | null | undefined): string {
+  const s = (v ?? '').trim();
+  if (/^\d{6,}$/.test(s)) return `Adı tanımsız (${s})`;
+  return s
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    .replace(/\)(?=[^\s,.;:)])/g, ') ')
+    .replace(/\s{2,}/g, ' ');
+}
