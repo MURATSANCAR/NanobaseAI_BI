@@ -31,11 +31,16 @@ function CheckResult({ check }: { check: EpubCheck }) {
   const tone = n ? 'text-rose-700 bg-rose-50' : w ? 'text-amber-800 bg-amber-50' : 'text-emerald-700 bg-emerald-50';
   const Icon = n ? XCircle : w ? AlertTriangle : CheckCircle2;
   const issues = [...check.errors, ...check.warnings];
+  // «Tam denetim»: e-kitap standardının bütün kuralları (sunucuda kuruluysa); değilse yalnız yapısal denetim.
+  const kind = check.full ? 'Tam denetim' : 'Yapısal denetim';
   return (
     <div className="flex flex-col gap-1.5">
       <div className={`flex items-center gap-2 rounded-xl px-3 py-2 text-[12.5px] font-bold ${tone}`}>
         <Icon className="h-4 w-4 shrink-0" aria-hidden />
-        {n ? `E-kitap denetimi: ${n} hata${w ? `, ${w} uyarı` : ''}` : w ? `E-kitap denetimi geçti · ${w} uyarı` : 'E-kitap denetimi geçti'}
+        <span className="min-w-0 flex-1">
+          {n ? `E-kitap denetimi: ${n} hata${w ? `, ${w} uyarı` : ''}` : w ? `E-kitap denetimi geçti · ${w} uyarı` : 'E-kitap denetimi geçti'}
+        </span>
+        <span className="shrink-0 rounded-full bg-white/80 px-2 py-0.5 text-[10.5px] font-bold">{kind}</span>
       </div>
       {check.note && <p className="text-[11.5px] text-canvas-muted">{check.note}</p>}
       {issues.length > 0 && (
