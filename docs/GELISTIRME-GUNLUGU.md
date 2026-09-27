@@ -20,7 +20,7 @@
 - **Hata 1 (gerçek CRM'de yakalandı, birim testi yakalayamazdı):** ısı haritası sözleşmeli yazarlarda 0 döndü — `SQL Server 207 Invalid column name 'new_kisi'`. «Yazar mı» alt sorgusunun `t` takma adı dış sorgudaki sözleşme tarafı `t`'sini gölgeliyordu. Takma adlar `ya_e/ya_t`; test alt sorguda dış takma adların kullanılmadığını denetler. Yan portta (8798) aday köprüyle gerçek CRM: **548 yürürlükte sözleşmeli yazar**, ilk okuma 7,3 sn, sonraki sayfa 0,4 sn; CRM olayları aylara dağılıyor (ör. bir yazarda 23 sözleşme, son 12 ayda 2 eser + 2 sözleşme).
 - **Hata 2:** CRM tarihleri UTC geliyor (`2026-09-28T21:00:00` = 29 Eylül); ekran ilk 10 karakteri aldığı için bitişi bir gün erken yazıyordu. `fmtDay` saatli değeri İstanbul gününe çevirir.
 - **Gözlem:** «Reddedilen ve iptal projeler de» seçilince havuz yine 72 — Red/İptal projeler CRM'de etkin değil (`statecode=1`) olduğundan zaten dışarıda kalıyor; seçenek zararsız, veri böyle.
-- İki düzeltme `main`e girince aynı dar yolla kurulacak (yalnız `author_relations.py` + 3 ön yüz dosyası). Müşteri VM'ine kurulmadı.
+- **Düzeltmeler kuruldu (main `c9eb4fcc`, 00:10):** aynı dar yol — canlının güncel kopyasından aday ağaç (tsc 0, köprü testleri 20/20, derleme), arada canlı değişmedi, 5 dosya kopyalandı, köprü yeniden başladı, derleme `index-Bg54S3Fc.js`. Portal üzerinden kabul: ısı haritası sözleşmeli **548** yazar (ilk açılış 12,4 sn, sonraki sayfalar ~0,5 sn, son sayfa 48 satır), ad araması «Harman» 2, havuz araması «Can» 6, ajanda/arşiv uçları 200. Müşteri VM'ine kurulmadı.
 
 ## 2026-09-27 (gece) — Son okuma: aynı kitapta hatırlama (editör kararı yeniden okumaya taşınır)
 
