@@ -174,6 +174,20 @@ SPEC: list[dict[str, Any]] = [
     {"key": "MERCHANT_ACCOUNT_ID", "group": "seo", "label": "Merchant Center kimliği", "type": "text", "default": "", "help": ""},
     {"key": "GOOGLE_API_KEY", "group": "seo", "label": "Google API anahtarı", "type": "secret", "default": "",
      "help": "PageSpeed ve CrUX için; yalnız bu iki API ile kısıtlı olmalı"},
+    {"key": "BING_WEBMASTER_API_KEY", "group": "seo", "label": "Bing Webmaster API anahtarı", "type": "secret", "default": "",
+     "help": "bing.com/webmasters → Ayarlar → API erişimi. ChatGPT'nin web araması büyük ölçüde Bing dizinine dayanır; "
+             "Bing'deki sorgu, tıklama ve tarama sorunları buradan okunur. Yalnız okuma"},
+    {"key": "INDEXNOW_KEY", "group": "seo", "label": "IndexNow anahtarı", "type": "secret", "default": "",
+     "help": "8–128 harf/rakam. Aynı adla bir metin dosyası sitenin köküne konmalı (https://timas.com.tr/<anahtar>.txt, "
+             "içinde yalnız anahtar); dosyayı site yöneticisi koyar. Dosya doğrulanınca değişen sayfalar Bing ve "
+             "Yandex'e bildirilir. T-soft'a yazılmaz"},
+    {"key": "SERPAPI_KEY", "group": "seo", "label": "SerpApi anahtarı (rakip sırası)", "type": "secret", "default": "",
+     "help": "serpapi.com ücretsiz katman ayda 250 arama. Boşsa rakip karşılaştırması yapılmaz"},
+    {"key": "SEO_SERP_MONTHLY", "group": "seo", "label": "Rakip araması aylık sınır", "type": "int", "default": "240",
+     "help": "Ücretsiz kota aşılmasın diye bir ayda en çok bu kadar Google araması yapılır"},
+    {"key": "SEO_COMPETITORS", "group": "seo", "label": "İzlenen rakip alan adları", "type": "text",
+     "default": "dr.com.tr,kitapyurdu.com,idefix.com,amazon.com.tr,bkmkitap.com,hepsiburada.com,trendyol.com",
+     "help": "Virgülle. Aynı kitap aramasında bu sitelerin Google sırası timas.com.tr ile karşılaştırılır"},
     # Kitap Tasarım Stüdyosu
     {"key": "STUDIO_UPLOAD_MB", "group": "studio", "label": "Fotoğraf yükleme sınırı (MB)", "type": "int", "default": "60",
      "help": "Sayfa düzeninde tek fotoğrafın en büyük boyutu; ekranda yükleme alanında yazılır. Giriş kapısı ve portal "
