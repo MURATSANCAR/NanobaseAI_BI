@@ -263,6 +263,21 @@ def _join_lines(lines: list[str]) -> list[tuple[str, bool]]:
     return out
 
 
+def pdf_lines(pages: list[list[str]]) -> list[str]:
+    """Sayfa numarası ve her sayfada tekrar eden üst/alt bilgi (kitap adı, yazar) metne karışmaz: tek başına
+    sayı/Roma rakamı olan satır ve sayfaların %30'undan fazlasında (en az 3) geçen kısa satır atılır."""
+    pages = [[ln.strip() for ln in pg] for pg in pages]
+    key = lambda ln: re.sub(r"\d+", "#", ln)   # noqa: E731
+    seen = Counter(k for pg in pages for k in {key(ln) for ln in pg if ln and len(ln) <= 60})
+    limit = max(3, 0.3 * len(pages))
+    lines: list[str] = []
+    for pg in pages:
+        lines.extend(ln for ln in pg if not re.fullmatch(r"[\divxlcIVXLC]{1,5}", ln or "x")
+                     and not (ln and len(ln) <= 60 and seen[key(ln)] >= limit))
+    # Sayfa sonu paragrafı bitirmez: sayfa arasında bölünen cümle tek segment kalır.
+    return lines
+
+
 def paragraphs(filename: str, data: bytes) -> list[tuple[str, bool]]:
     """(paragraf, başlık mı). DOCX stil başlığını, TXT boş satırı, PDF satır birleştirmeyi kullanır."""
     ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
@@ -277,11 +292,7 @@ def paragraphs(filename: str, data: bytes) -> list[tuple[str, bool]]:
             reader = desk._pdf_reader(data)
         except desk.DeskError as e:
             raise TranslationError(str(e), e.status) from e
-        lines: list[str] = []
-        for page in reader.pages:
-            lines.extend((page.extract_text() or "").splitlines())
-            lines.append("")
-        return _join_lines(lines)
+        return _join_lines(pdf_lines([(page.extract_text() or "").splitlines() for page in reader.pages]))
     if ext in ("txt", "md"):
         text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
         if ext == "md":
@@ -787,10 +798,11 @@ def upload_source(engine: sa.engine.Engine, tenant: str, user: str, see_all: boo
         if job.source_sha256 == sha:
             raise TranslationError("Bu dosya son yüklenen kaynakla aynı; yeni sürüm açılmadı.", 409)
         # Önceki sürümdeki çeviriler aynı kaynak cümlesine taşınır (ilk eşleşen); onay çevrildi'ye iner.
-        carry: dict[str, Any] = {}
+        # Aynı cümle birden çok kez geçiyorsa sırayla eşleşir (ilk geçiş ilk geçişe).
+        carry: dict[str, list[Any]] = defaultdict(list)
         for r in conn.execute(sa.select(SEGMENTS).where(SEGMENTS.c.job_id == job_id).order_by(SEGMENTS.c.no)).all():
             if (r.target or "").strip() or r.draft:
-                carry.setdefault(_norm_src(r.source), r)
+                carry[_norm_src(r.source)].append(r)
         version = int(job.source_version or 0) + 1
         ext = re.sub(r"[^a-z0-9]", "", filename.lower().rsplit(".", 1)[-1])[:8] if "." in filename else "bin"
         folder = os.path.join(_root(), job_id)
@@ -803,8 +815,12 @@ def upload_source(engine: sa.engine.Engine, tenant: str, user: str, see_all: boo
         kept = 0
         rows = []
         for s in segs:
-            old = carry.get(_norm_src(s["source"]))
-            row = {"id": _new(), "job_id": job_id, **s, "target": "", "status": "bos", "draft": None}
+            olds = carry.get(_norm_src(s["source"]))
+            old = (olds.pop(0) if len(olds) > 1 else olds[0]) if olds else None
+            # Toplu eklemede her satır aynı anahtarları taşır.
+            row = {"id": _new(), "job_id": job_id, **s, "target": "", "status": "bos", "draft": None, "submitted": None,
+                   "note": None, "translated_by": None, "translated_at": None, "approved_by": None, "approved_at": None,
+                   "updated_by": None, "updated_at": None}
             if old is not None:
                 kept += 1 if (old.target or "").strip() else 0
                 row.update(target=old.target or "", draft=old.draft,
@@ -1150,17 +1166,20 @@ def start_draft(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool,
             if job.draft_state == "calisiyor" or job_id in _running:
                 raise TranslationError("Bu işte taslak zaten sürüyor.", 409)
             _running.add(job_id)
-        q = sa.select(SEGMENTS).where(SEGMENTS.c.job_id == job_id, SEGMENTS.c.status == "bos",
-                                      sa.or_(SEGMENTS.c.draft.is_(None), SEGMENTS.c.draft == ""))
-        if chapter is not None:
-            q = q.where(SEGMENTS.c.chapter == int(chapter))
-        todo = conn.execute(q.order_by(SEGMENTS.c.no)).all()
-        if not todo:
+        try:
+            q = sa.select(SEGMENTS).where(SEGMENTS.c.job_id == job_id, SEGMENTS.c.status == "bos",
+                                          sa.or_(SEGMENTS.c.draft.is_(None), SEGMENTS.c.draft == ""))
+            if chapter is not None:
+                q = q.where(SEGMENTS.c.chapter == int(chapter))
+            todo = conn.execute(q.order_by(SEGMENTS.c.no)).all()
+            if not todo:
+                raise TranslationError("Taslak bekleyen boş segment yok.", 409)
+            terms = [t for t in _terms_for(conn, tenant, job) if t.status == "onayli" and t.target_term]
+            conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(
+                draft_state="calisiyor", draft_note=None, draft_done=0, draft_total=len(todo)))
+        except BaseException:
             _running.discard(job_id)
-            raise TranslationError("Taslak bekleyen boş segment yok.", 409)
-        terms = [t for t in _terms_for(conn, tenant, job) if t.status == "onayli" and t.target_term]
-        conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(
-            draft_state="calisiyor", draft_note=None, draft_done=0, draft_total=len(todo)))
+            raise
     index = TermIndex(terms)
     system = DRAFT_SYSTEM.format(src=LANGS[job.source_lang], tgt=LANGS[job.target_lang])
     ids = [r.id for r in todo]
@@ -1318,11 +1337,9 @@ def import_terms(engine: sa.engine.Engine, tenant: str, user: str, src: str, tgt
     text = data.decode("utf-8-sig", errors="replace")
     if not text.strip():
         raise TranslationError("Dosya boş.")
-    try:
-        dialect = csv.Sniffer().sniff(text[:4096], delimiters=",;\t")
-    except csv.Error:
-        dialect = csv.excel
-    rows = list(csv.reader(io.StringIO(text), dialect))
+    first = text.splitlines()[0] if text.splitlines() else ""
+    delim = max(("\t", ";", ","), key=lambda d: (first.count(d), d == ";"))
+    rows = list(csv.reader(io.StringIO(text), delimiter=delim))
     if rows and fold(rows[0][0]).strip() in ("kaynak", "source", "kaynak terim", "terim"):
         rows = rows[1:]
     added = updated = skipped = 0

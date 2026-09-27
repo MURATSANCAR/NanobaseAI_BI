@@ -49,6 +49,12 @@ def test_headings_open_chapters_and_segments_keep_paragraphs():
     assert segs[1]["para"] == segs[2]["para"] and segs[0]["no"] == 1 and segs[-1]["no"] == 5
 
 
+def test_pdf_lines_drop_page_numbers_and_running_heads():
+    pages = [["THE ROAD", "It was a long", "road indeed.", "12"], ["THE ROAD", "Next page text.", "13"], ["THE ROAD", "More here.", "14"]]
+    paras = T._join_lines(T.pdf_lines(pages))
+    assert paras == [("It was a long road indeed.", False), ("Next page text.", False), ("More here.", False)]
+
+
 def test_txt_md_and_docx_paragraphs():
     txt = "PROLOGUE\n\nFirst line\ncontinues here.\n\nSecond paragraph."
     assert T.paragraphs("a.txt", txt.encode()) == [("PROLOGUE", True), ("First line continues here.", False), ("Second paragraph.", False)]
@@ -160,7 +166,7 @@ def test_xliff_round_trip_keeps_approved_segments(engine):
     assert name.endswith(".xlf") and b'state="signed-off"' in xlf
     edited = xlf.replace(b"<source>Nobody came to the Grand Vizier.</source>",
                          b'<source>Nobody came to the Grand Vizier.</source><target state="translated">Sadrazama kimse gelmedi.</target>')
-    edited = edited.replace(b'<target state="signed-off">BİRİNCİ BÖLÜM</target>', b'<target state="translated">DEĞİŞTİ</target>')
+    edited = edited.replace('<target state="signed-off">BİRİNCİ BÖLÜM</target>'.encode(), '<target state="translated">DEĞİŞTİ</target>'.encode())
     out = T.import_xliff(engine, TENANT, "ayse", False, jid, edited)
     assert out["updated"] == 1 and out["confirmed"] == 1 and out["locked"] == 1
     with pytest.raises(T.TranslationError):
