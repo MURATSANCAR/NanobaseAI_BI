@@ -1,5 +1,17 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 — M2 Editör atama: atama, kural tablosu, iş yükü, takvim çakışması, Görevlerim
+
+- **Neden:** M2 ekranı yalnız okuyordu (CRM «Editörü» alanından editör başına proje sayısı). Eksik dört parça: atama yapma, kategori–editör kural tablosu, iş yükü ve takvim çakışması, editörün kendi görev panosu.
+- **Karar — CRM'e yazılmaz:** CRM'e yazma yetkimiz yok. Atama, termin, kapasite, izin ve kural köprünün tablolarında (`semantic_editorial_{tasks,task_log,editor_profiles,absences,rule_versions}`, `editorial_assign.py`); CRM projesinin üstüne bindirilir. Ekran «CRM kartını ayrıca güncelleyin» der.
+- **Ölçüm (CRM .28, 2024'ten beri 2.738 etkin proje):** editör 1.798'inde dolu. Kategori adayları: Kitaplık 1.341, marka (yayınevi, `new_markaBase`) 2.721; yayın sınıfı ve sorumlu departman 0, metin teslim 21, hedef baskı 0. Takvim bu yüzden CRM tarihinden değil görev termininden kurulur. Editörsüz: «Kurul onaylı» 278, «İş planı» 74 → ilk süzgeç bu iki durum. CRM «iş planı» durumu kitap basıldıktan sonra da kapanmıyor (bir editörde 276 açık proje) → CRM sayısı yüke katılmaz, ayrı gösterilir.
+- **Öneri (model yok, gerekçeli):** kural birincil 40 / yedek 20 + bu kategorideki CRM geçmişi (en deneyimliye oranla ≤30) + boş kapasite ≤20 (kapasite girilmemişse 10) − çakışma başına 25. CRM hesabı kapalı ya da profilde «atamaya kapalı» olan «Atanamayanlar»da, nedeniyle.
+- **Çakışma:** izin aralığı ya da eşzamanlı açık görev > kapasite (terminsiz açık görev kapasiteyi süresiz tutar). Çakışmalı atama yalnız «Çakışmaya rağmen ata» ile kaydedilir, görev geçmişine yazılır. Takvim 12 hafta, çakışma günleri birleştirilmiş aralık.
+- **Kural tablosu:** taslak → onay → yürürlükte; önceki sürüm arşiv. «CRM geçmişinden öner» taslağa, her kategoride en çok proje yürütmüş etkin editörü birincil, sonraki ikisini yedek yazar; onaylanmadan öneriyi etkilemez. Onay, onaylayanın gördüğü sürümle yapılır (arada değiştiyse 409).
+- **Görevlerim (`/gorevlerim`):** portal kişisi → CRM kullanıcısı (`DomainName` = `TIMAS\hesap`). Dört sütun, «Başladım / Tamamladım», termin değişikliği gerekçe ister; CRM'de editörü olup panoda olmayan projeler «Panoma al»; izin ekleme.
+- **Yetki:** `ozellik:editor-atama.ata`, `.kural`, `.kural-onay` (üçü de açıkça verilir, «Bütün» rolüyle gelmez); editör kendi görevini ve iznini yetkisiz günceller. Menüye `sayfa:gorevlerim`.
+- **Doğrulama:** (aşağıda)
+
 ## 2026-09-27 (gece) — M4 Çeviri: segmentleme, terim bankası, çeviri masam, kalite raporu
 
 - **Neden:** M4 yalnız CRM'deki çevirmen listesiydi. Kaynak metni parçalama, terim bankası, çevirmenin kendi ekranı ve kalite raporu yoktu; CRM'de bunların karşılığı yok, M3/M5 gibi köprünün kendi tablolarıyla kuruldu.
