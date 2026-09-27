@@ -271,7 +271,11 @@ function Rationale({ p }: { p: Plan }) {
                       <div className="font-mono text-[11px] text-canvas-muted">{c.stokKodu}{c.pencere ? ` · ${fmtDay(c.pencere[0])}` : ''}</div>
                       {c.modelKarar && <div className="mt-1"><Pill tone={KARAR[c.modelKarar].tone}>{KARAR[c.modelKarar].label}</Pill></div>}
                     </td>
-                    <td className={`${td} max-w-[260px] text-[11.5px]`}>{c.gerekce ?? '—'}{!c.secildi && <div className="font-bold">Öneriye girmedi</div>}</td>
+                    <td className={`${td} max-w-[260px] text-[11.5px]`}>
+                      {c.gerekce ?? '—'}
+                      {b.modelAyiklama && c.benzerlik !== null && <div className="text-canvas-muted">Benzerlik {fmtPct(c.benzerlik, 0)}</div>}
+                      {!c.secildi && <div className="font-bold">Öneriye girmedi</div>}
+                    </td>
                     <td className={`${td} text-right font-mono tabular-nums`}>{n0(c.net)}</td>
                     <td className={`${td} text-right font-mono tabular-nums`}>{c.satis ? fmtPct((c.iade ?? 0) / c.satis, 0) : '—'}</td>
                     <td className={`${td} text-right font-mono tabular-nums`}>{n0(c.musteri)}</td>

@@ -24,10 +24,11 @@
      sıfırsa da listede; Logo kodu olmayan dağılım carisi «Logo kodu yok» satırı (Excel'deki listeyle aynı kalsın).
   6. *Benzer kitap:* M10'un emsal veri kümesi ve puanı yeniden kullanıldı (CRM emsali, yazar, dizi, kitaplık, yayınevi,
      fiyat, sayfa; yakın çıkış ağırlıklı); pencere Logo'nun okunabilen ilk yılına (2021) yapışıksa aday atlanır. M10 hazır
-     değilse bütçenin kitap kartı (yazar/kitaplık/yayınevi). ZEKİ AI adayları «benzer / az / değil» diye ayıklar («az» yarım
-     ağırlık); ikiden az aday kalırsa ayıklama yok sayılır. Köprünün model istemcisi olasılık (logprobs) vermiyor —
-     `benzerlik_olasiligi` kolonu puanın 0–1 ölçeği; LLM kapısındaki `choose` (seçim + olasılık, dalda) main'e girince
-     bağlanabilir. Baskı tekrarında benzer kitap yerine kitabın kendi son 56 günü.
+     değilse bütçenin kitap kartı (yazar/kitaplık/yayınevi). ZEKİ AI her adayı LLM kapısının `choose`'uyla «benzer / az
+     benzer / benzemez» diye sınıflar (main `e1d28e7d`); karar yalnız p ≥ 0,90 ve marj ≥ 0,50 ise kabul, altı «emin değil»
+     ve aday puanıyla kalır; «az» yarım ağırlık, «benzemez» öneriye girmez; ikiden az aday kalırsa ayıklama yok sayılır.
+     `benzerlik_olasiligi` = P(benzer) + P(az benzer) (olasılık yoksa puanın 0–1 ölçeği). Baskı tekrarında benzer kitap
+     yerine kitabın kendi son 56 günü.
   7. *Gerekçe metni:* ZEKİ AI 3–5 cümle yazar; metinde olgularda geçmeyen bir sayı varsa atılır, kural metni yazılır
      (rakamı model üretmez).
   8. *Takip ve uyarı zamanı:* süreler bugüne değil **Logo verisinin bittiği güne** göre (donmuş .155 kopyasında her onaylı

@@ -132,7 +132,7 @@ COMPS = sa.Table(
     sa.Column("pencere_bas", sa.String(10)),
     sa.Column("pencere_bit", sa.String(10)),
     sa.Column("puan", sa.Float),
-    sa.Column("benzerlik_olasiligi", sa.Float),                # puanın 0–1 ölçeği (model olasılığı değil; bkz. günlük)
+    sa.Column("benzerlik_olasiligi", sa.Float),                # ZEKİ AI P(benzer)+P(az benzer); yoksa puanın 0–1 ölçeği
     sa.Column("model_karar", sa.String(12)),                   # benzer | az | degil | None (model yok)
     sa.Column("gerekce", sa.String(500)),
     sa.Column("secildi", sa.Boolean, nullable=False, default=True),
@@ -749,10 +749,43 @@ def _candidates(engine: sa.engine.Engine, S: Sources, code: str, name: Optional[
     return out[: 2 * k], "kitap-karti"
 
 
-def _model_screen(llm: Any, target: dict[str, Any], cands: list[dict[str, Any]]) -> dict[str, str]:
-    """ZEKİ AI: her aday için «benzer / az / değil». Kapalı küme; rakam istenmez. Hata olursa boş."""
+#: Kapalı küme seçimin seçenekleri → karar; otomatik kabul eşiği (LLM kapısı önerisi, docs/analiz/llm-choose.md).
+SCREEN_CHOICES = {"benzer": "benzer", "az benzer": "az", "benzemez": "degil"}
+SCREEN_MIN_PROB, SCREEN_MIN_MARGIN = 0.90, 0.50
+
+
+def _describe(c: dict[str, Any]) -> str:
+    return (f"{c.get('ad') or c.get('code')} | yazar: {c.get('yazar') or '-'} | kitaplık: {c.get('kitaplik') or '-'} | "
+            f"yayınevi: {c.get('yayinevi') or '-'}")
+
+
+def _model_screen(llm: Any, target: dict[str, Any], cands: list[dict[str, Any]]) -> tuple[dict[str, str], dict[str, float]]:
+    """ZEKİ AI: her aday için «benzer / az / değil» ve «en az az benzer» olasılığı. Kapalı küme; rakam istenmez.
+
+    Kapı `choose` verirse aday başına tek token + olasılık (`QueuedLlm.choose`): karar yalnız p ≥ 0,90 ve marj ≥ 0,50
+    ise kabul edilir, altı «emin değil» sayılır ve aday puanıyla kalır. `choose` yoksa tek çağrıda metin listesi.
+    Model cevap veremezse ayıklama yapılmaz (boş)."""
     if llm is None or not cands:
-        return {}
+        return {}, {}
+    if hasattr(llm, "choose"):
+        verdict: dict[str, str] = {}
+        probs: dict[str, float] = {}
+        system = ("Bir yayınevinin satış planlama yardımcısısın. Yeni kitabın ilk dağılımı için eski bir kitabın okur kitlesi "
+                  "ve satış kanalı bakımından karşılaştırılabilir olup olmadığına karar verirsin.")
+        for c in cands:
+            prompt = (f"Yeni kitap: {_describe({**target, 'code': target['code']})}\n"
+                      f"Eski kitap: {_describe(c)} | ortak özellik: {', '.join(c.get('neden') or []) or '-'}\n"
+                      "Eski kitabın ilk haftalardaki müşteri ve bölge dağılımı yeni kitaba örnek alınabilir mi?")
+            try:
+                res = llm.choose(prompt, list(SCREEN_CHOICES), system=system)
+            except Exception as e:  # noqa: BLE001 — model yok: ayıklama yapılmaz
+                log.warning("dist: aday ayıklaması yapılamadı: %s", e)
+                return {}, {}
+            if res.probs:
+                probs[c["code"]] = round(float(res.probs.get("benzer", 0.0)) + float(res.probs.get("az benzer", 0.0)), 4)
+            if res.choice in SCREEN_CHOICES and res.confident(SCREEN_MIN_PROB, SCREEN_MIN_MARGIN):
+                verdict[c["code"]] = SCREEN_CHOICES[res.choice]
+        return verdict, probs
     lines = [f"{c['code']} | {c.get('ad') or ''} | yazar: {c.get('yazar') or '-'} | kitaplık: {c.get('kitaplik') or '-'} | "
              f"yayınevi: {c.get('yayinevi') or '-'} | ortak: {', '.join(c.get('neden') or []) or '-'}" for c in cands]
     msg = [
@@ -769,7 +802,7 @@ def _model_screen(llm: Any, target: dict[str, Any], cands: list[dict[str, Any]])
         raw = llm.chat(msg, max_tokens=40 * len(cands) + 64, temperature=0.0)
     except Exception as e:  # noqa: BLE001
         log.warning("dist: aday ayıklaması yapılamadı: %s", e)
-        return {}
+        return {}, {}
     # Satırda geçen aday kodu (uzun kod önce; kodun parçası olan kısa kod eşleşmesin) ve karar sözcüğü.
     pats = [(c["code"], re.compile(r"(?<![0-9A-Za-z.])" + re.escape(c["code"]) + r"(?![0-9A-Za-z])"))
             for c in sorted(cands, key=lambda x: -len(x["code"]))]
@@ -785,7 +818,7 @@ def _model_screen(llm: Any, target: dict[str, Any], cands: list[dict[str, Any]])
             out[code] = "az"
         elif "benzer" in tail:
             out[code] = "benzer"
-    return out
+    return out, {}
 
 
 def _rationale(llm: Any, facts: str, fallback: str) -> tuple[str, str]:
@@ -846,6 +879,7 @@ def build_proposal(engine: sa.engine.Engine, tenant: str, S: Sources, code: str)
         if not cands:
             warnings.append("Benzer kitap bulunamadı; öneri boş, adetler elle girilir.")
         verdict: dict[str, str] = {}
+        model_probs: dict[str, float] = {}
         if cands and p["model"]:
             target = {"code": code, "ad": book.ad, "yayinevi": book.yayinevi}
             store = S.m10()
@@ -856,14 +890,14 @@ def build_proposal(engine: sa.engine.Engine, tenant: str, S: Sources, code: str)
                     target.update(yazar=tb.authors_text or None, kitaplik=tb.library or None)
             except Exception:  # noqa: BLE001 — hedef kitabın kartı yoksa adıyla sorulur
                 pass
-            verdict = _model_screen(S.llm(), target, cands)
-            model_used = bool(verdict)
+            verdict, model_probs = _model_screen(S.llm(), target, cands)
+            model_used = bool(verdict or model_probs)
         kept = [c for c in cands if verdict.get(c["code"]) != "degil"]
         if verdict and len(kept) < 2:
             warnings.append("ZEKİ AI ayıklaması yeterli benzer kitap bırakmadı; puan sırası kullanıldı.")
             verdict, kept, model_used = {}, cands, False
         for c in cands:
-            comps_meta[c["code"]] = {**c, "karar": verdict.get(c["code"]), "secildi": False}
+            comps_meta[c["code"]] = {**c, "karar": verdict.get(c["code"]), "olasilik": model_probs.get(c["code"]), "secildi": False}
         firsts = logo.first_sales([c["code"] for c in kept], first_year) if kept else {}
         lo = date(first_year, 1, 1)
         for c in kept:
@@ -970,9 +1004,11 @@ def build_proposal(engine: sa.engine.Engine, tenant: str, S: Sources, code: str)
             "net_ciro": round(pc["ciro"], 2) if pc else None, "musteri": len(pc.get("cariler") or []) if pc else None,
             "kanallar_json": _dump(pc.get("kanal") or {}), "crm_dagilim_adet": h.get("adet"),
             "crm_dagilim_siparis": h.get("siparis")})
+    # Benzerlik olasılığı: ZEKİ AI'ın «benzer» + «az benzer» olasılığı (kapı verdiyse); yoksa puanın 0–1 ölçeği.
     top = max((c["puan"] for c in comp_rows), default=0) or 1
     for c in comp_rows:
-        c["benzerlik_olasiligi"] = round(c["puan"] / top, 4) if c["puan"] else 0.0
+        pm = (comps_meta.get(c["comp_stok_kodu"]) or {}).get("olasilik")
+        c["benzerlik_olasiligi"] = pm if pm is not None else (round(c["puan"] / top, 4) if c["puan"] else 0.0)
     used = [c for c in comp_rows if c["secildi"]]
     mx = matrix([{**ln} for ln in line_rows])
     facts_lines = [

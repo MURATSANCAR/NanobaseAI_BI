@@ -221,6 +221,32 @@ def test_model_screen_drops_unlike_comps_and_cannot_write_numbers(engine):
     assert plan["gerekceKaynak"] == "kural"
 
 
+class ChooseLlm:
+    """Kapının `choose`'u: C1 kesin benzer, C2 kararsız (eşik altı → karar yok, puanıyla kalır)."""
+
+    def choose(self, prompt, choices, **_):
+        from semantic_layer.runtime.llm_choose import Choice
+
+        if "Eski Roman" in prompt:
+            return Choice(choice="benzer", index=0, probs={"benzer": 0.95, "az benzer": 0.03, "benzemez": 0.02},
+                          method="logprobs", margin=0.92, coverage=0.99)
+        return Choice(choice="benzemez", index=2, probs={"benzer": 0.30, "az benzer": 0.25, "benzemez": 0.45},
+                      method="logprobs", margin=0.15, coverage=0.99)
+
+    def chat(self, messages, **_):
+        return "Gerekçe."
+
+
+def test_model_screen_with_choose_keeps_uncertain_comps(engine):
+    _seed(engine, stok=1_000)
+    plan = D.generate(engine, T, "mudur", "N1", FakeSources(verdict_llm=ChooseLlm()))
+    comps = {c["stokKodu"]: c for c in plan["benzerler"]}
+    assert comps["C1"]["modelKarar"] == "benzer" and comps["C1"]["benzerlik"] == pytest.approx(0.98)
+    # C2 «benzemez» dedi ama emin değil (p 0,45 < 0,90): karar yazılmaz, aday öneride kalır.
+    assert comps["C2"]["modelKarar"] is None and comps["C2"]["secildi"] and comps["C2"]["benzerlik"] == pytest.approx(0.55)
+    assert plan["basis"]["modelAyiklama"] and plan["gerekceKaynak"] == "model"
+
+
 def test_open_plan_blocks_a_second_proposal(engine):
     _seed(engine)
     D.generate(engine, T, "mudur", "N1", FakeSources())
