@@ -107,7 +107,7 @@ kayıtlar üzerinden cevaplanır.
 
 - «Ekibimde bu çeyrek check-in yapmayan kim var?»
 - «Satış biriminin hedeflerinden hangisi şirketin yıllık ciro hedefine bağlı değil?»
-- «Ayşe'nin yıl içindeki tamamlanan editörlük işlerini özetle.» (yalnız yöneticisi ve İK)
+- «<Ekibimdeki bir editörün> yıl içindeki tamamlanan editörlük işlerini özetle.» (yalnız yöneticisi ve İK)
 - «Bu değerlendirme yorumumu somut örneklerle yeniden yaz.»
 - «Değerlendirme döneminde hangi birimlerin tamamlanma oranı yüzde 50'nin altında?»
 - «Satış ekibinin bu yılki faturalı net satışı hedefin yüzde kaçında?» (Logo'dan, §13)
