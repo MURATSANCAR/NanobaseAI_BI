@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Archive, ArchiveRestore, CalendarPlus, CalendarDays, ExternalLink, Lock, NotebookPen, Pencil, UserRound } from 'lucide-react';
 import {
@@ -11,7 +11,7 @@ import {
   type AuthorHeat,
   type AuthorMeeting,
 } from '../../engine';
-import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../../admin/ui';
+import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../../admin/ui';
 import { useCan } from '../../useAdmin';
 import Sheet from '../studio/reader/Sheet';
 import MeetingForm, { type MeetingMode, type MeetingTarget } from './MeetingForm';
@@ -241,6 +241,89 @@ function CardInfo({ card }: { card: AuthorCard }) {
   );
 }
 
+/** Çapraz yazar önerisi: e-ticaret siparişlerinde bu yazarın kitabıyla aynı sepette alınan yazarlar. Müşteri
+ *  bilgisi kullanılmaz; yalnız ortak sipariş sayısı. Eşik köprüde (en az birkaç ortak sipariş, beklenenden sık). */
+function RelatedAuthors({ contactId, compact }: { contactId: string; compact?: boolean }) {
+  const [page, setPage] = useState(0);
+  const q = useQuery({
+    queryKey: ['authors', 'related', contactId, page],
+    queryFn: () => authorsApi.related(contactId, page),
+    enabled: ENGINE_ENABLED && !!contactId,
+    placeholderData: keepPreviousData,
+    staleTime: 10 * 60_000,
+  });
+  const d = q.data;
+  if (q.error) return null;
+  if (!d) return null;
+  const items = compact ? d.items.slice(0, 3) : d.items;
+  return (
+    <section>
+      <h3 className="flex items-baseline gap-2 text-[12px] font-extrabold">
+        Birlikte alınan yazarlar
+        <span className="font-mono font-semibold tabular-nums text-canvas-muted">{nf.format(d.total)}</span>
+      </h3>
+      <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">
+        E-ticaret siparişlerinde bu yazarın kitabıyla aynı sepette alınan yazarlar; ortak etkinlik, set ve tanıtım için aday.
+      </p>
+      {!d.run && <p className="mt-1 text-[12px] text-canvas-muted">Sipariş verisi henüz okunmadı; ilk gece turundan sonra görünür.</p>}
+      {d.run && !d.items.length && (
+        <p className="mt-1 text-[12px] text-canvas-muted">
+          En az {d.minOrders} ortak siparişe ve beklenenden sık birlikte alınmaya ulaşan yazar yok.
+        </p>
+      )}
+      {items.length > 0 && (
+        <ul className="mt-1.5 space-y-1.5">
+          {items.map((r) => (
+            <li key={r.contactId} className="rounded-xl border border-slate-100 bg-white px-3 py-2">
+              <div className="flex items-baseline justify-between gap-2">
+                <Link
+                  to={`/yazar-iliskileri?kisi=${encodeURIComponent(r.contactId)}&ad=${encodeURIComponent(r.name ?? '')}`}
+                  className="min-w-0 break-words text-[12.5px] font-extrabold hover:underline"
+                >
+                  {r.name || 'Adı kayıtlı değil'}
+                </Link>
+                <span className="shrink-0 font-mono text-[11.5px] font-bold tabular-nums">{nf.format(r.orders)} ortak sipariş</span>
+              </div>
+              <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">
+                {r.share != null ? `Bu yazarın siparişlerindeki payı %${nf.format(r.share)} · ` : ''}
+                {`beklenenden ${nf.format(r.lift)} kat sık`}
+              </div>
+              {!compact && r.books.length > 0 && (
+                <div className="mt-1 text-[11px] leading-snug">
+                  {r.books.slice(0, 2).map((b, i) => (
+                    <div key={i} className="break-words">
+                      <span className="text-canvas-muted">Birlikte:</span> {b.a || '—'} + {b.b || '—'}{' '}
+                      <span className="font-mono tabular-nums text-canvas-muted">({nf.format(b.orders)})</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {!compact && d.total > d.pageSize && (
+        <div className="mt-1.5 flex items-center justify-between gap-2 text-[11.5px]">
+          <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={page === 0 || q.isFetching} onClick={() => setPage((p) => Math.max(0, p - 1))}>
+            Önceki
+          </button>
+          <span className="font-mono tabular-nums text-canvas-muted">
+            {nf.format(page * d.pageSize + 1)}–{nf.format(page * d.pageSize + d.items.length)} / {nf.format(d.total)}
+          </span>
+          <button type="button" className={`${btnGhost} !min-h-9 !py-1`} disabled={(page + 1) * d.pageSize >= d.total || q.isFetching} onClick={() => setPage((p) => p + 1)}>
+            Sonraki
+          </button>
+        </div>
+      )}
+      {d.run && (
+        <p className="mt-1 text-[10.5px] text-canvas-muted">
+          Son okuma {fmtDay(d.run.at)} · {nf.format(d.run.orders)} sipariş
+        </p>
+      )}
+    </section>
+  );
+}
+
 /** Panelin gövdesi: Sheet içinde de Kişiler ayrıntısında da kullanılır. */
 export function RelationBody({ target, months, onOpenCard, compact }: { target: PanelTarget; months?: string[]; onOpenCard?: (id: string) => void; compact?: boolean }) {
   const qc = useQueryClient();
@@ -350,6 +433,10 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
           </button>
         )}
       </section>
+
+      {(detail?.crmContactId || target.crm?.id) && (
+        <RelatedAuthors contactId={(detail?.crmContactId || target.crm?.id) as string} compact={compact} />
+      )}
 
       {detail && !compact && canWrite && (
         <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3">

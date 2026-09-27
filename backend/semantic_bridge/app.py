@@ -4685,6 +4685,40 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             admin_mod.audit(engine, user, "update", "author_meeting", out["id"], out["topic"], diff)
         return out
 
+    # Çapraz yazar önerisi: e-ticarette (T-soft, yalnız okuma) aynı siparişte birlikte alınan yazarlar. Gece turu
+    # zamanlayıcıdan (timas-copurchase.timer); müşteri verisi (ad, adres, telefon) okunmaz.
+    from semantic_bridge import author_copurchase as cop_mod
+
+    @app.post("/api/v1/editorial/authors/copurchase/run-due")
+    def authors_copurchase_run(request: Request) -> dict[str, Any]:
+        _require_caller(request)
+        from semantic_bridge.seo_geo import connections as tsoft_conn
+        r = rt()
+        admin_mod.ensure(r.store.engine)
+        if not tsoft_conn.tsoft.configured():
+            return {"skipped": "T-soft bağlantısı bu ortamda tanımlı değil."}
+        engine, tenant, schema = r.store.engine, r.settings.tenant_id, admin_mod.conf("CRM_SCHEMA")
+        cop_mod.ensure(engine)
+
+        def job() -> None:
+            try:
+                out = cop_mod.run(engine, tenant, tsoft_conn.tsoft.call, _crm_fetch_all, schema)
+                log.info("author copurchase: %s", out)
+            except Exception:  # noqa: BLE001 — hata tur kaydına yazıldı
+                log.exception("author copurchase failed")
+
+        threading.Thread(target=job, name="author-copurchase", daemon=True).start()
+        return {"started": True}
+
+    @app.get("/api/v1/editorial/authors/related/{contact_id}")
+    def authors_related(contact_id: str, request: Request, page: int = 0) -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        cop_mod.ensure(engine)
+        try:
+            return cop_mod.related(engine, tenant, contact_id, page)
+        except cop_mod.CopurchaseError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "AUTHOR_RELATIONS", "message": str(e)}) from e
+
     @app.delete("/api/v1/editorial/authors/meetings/{meeting_id}")
     def authors_meeting_delete(meeting_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)

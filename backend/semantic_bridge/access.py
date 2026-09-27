@@ -496,6 +496,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/corporate/run-due", SYSTEM),
     ("/api/v1/corporate/", frozenset({page("kurumsal-satis")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
+    ("/api/v1/editorial/authors/copurchase/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
     ("/api/v1/editorial/contracts", frozenset({page("telif-sozlesme")})),
