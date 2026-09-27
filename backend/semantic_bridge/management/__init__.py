@@ -30,7 +30,7 @@ from semantic_bridge.management import baski_oneri, zeki_tahmin
 log = logging.getLogger(__name__)
 
 REPORTS = {m.REPORT_ID: m for m in (baski_oneri, zeki_tahmin)}
-# Gizli rapor listede görünmez; başka bir raporun girdisidir (ör. ZEKI AI tahmini → Baskı Öneri'nin sekmesi).
+# Gizli rapor listede görünmez; başka bir raporun girdisidir (ör. ZEKİ AI tahmini → Baskı Öneri'nin sekmesi).
 VISIBLE = {rid: m for rid, m in REPORTS.items() if not getattr(m, "HIDDEN", False)}
 SQL_DIR = Path(__file__).with_name("sql")
 MAX_ROWS = 500_000
@@ -263,7 +263,7 @@ class Reports:
                 ctx: dict = {}
                 runner = lambda sid, params: self._run(report, sid, params, ctx)  # noqa: E731
                 if "inputs" in inspect.signature(report.build).parameters:
-                    # Başka raporların son başarılı verisi (ör. Baskı Öneri ↔ ZEKI AI tahmini birbirini okur).
+                    # Başka raporların son başarılı verisi (ör. Baskı Öneri ↔ ZEKİ AI tahmini birbirini okur).
                     others = {rid: _load(self.path(rid)) for rid in REPORTS if rid != report_id}
                     inputs = {rid: snap.get("data") for rid, snap in others.items()}
                     # Verisi olmayan raporun son hatası (ör. tahmin servisi bu kurulumda yok): ekran nedenini söyler.

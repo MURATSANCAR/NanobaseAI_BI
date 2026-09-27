@@ -27,9 +27,9 @@ export type ReportView = {
   filters: string[];
   /** Power BI dosyasında kayıtlı açılış dilimleyicileri; ekran bunları seçili açar. null = boş değer. */
   defaultFilters?: Array<{ key: string; values: Array<string | null> }>;
-  /** Sekmenin son kullanıcı açıklaması ve altındaki SQL'ler (ZEKI AI Tahminleme). */
+  /** Sekmenin son kullanıcı açıklaması ve altındaki SQL'ler (ZEKİ AI Tahminleme). */
   explain?: ReportExplain;
-  /** Bu sekmenin öneri düzeyleri (yoksa raporunki). ZEKI sekmesi "Talep yok" ekler. */
+  /** Bu sekmenin öneri düzeyleri (yoksa raporunki). ZEKİ sekmesi "Talep yok" ekler. */
   oneriLevels?: string[];
   /** Satır yokken tabloda gösterilecek metin (ör. tahmin hazırlanıyor). */
   emptyText?: string | null;

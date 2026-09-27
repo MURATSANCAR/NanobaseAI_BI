@@ -88,7 +88,7 @@ export default function IntakeProjectScreen() {
         <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
         Süreç panosu
       </Link>
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {!p && !err && <Loading />}
 

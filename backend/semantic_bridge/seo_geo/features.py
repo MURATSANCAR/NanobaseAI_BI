@@ -8,7 +8,7 @@
 - speed.py        PageSpeed Insights + CrUX: sayfa türü başına hız ve Core Web Vitals
 - competitors.py  aynı kitap aramasında rakip sitelerin Google sırası (SerpApi, aylık kota)
 - entity.py       kimlik: Wikidata, Organization sameAs, bilgi paneli hazırlığı
-- guides.py       soruya cevap veren rehber/liste sayfası taslakları (Zeki AI yazar, insan onaylar; hiçbir yere gönderilmez)
+- guides.py       soruya cevap veren rehber/liste sayfası taslakları (ZEKİ AI yazar, insan onaylar; hiçbir yere gönderilmez)
 
 Kurallar: T-soft'a ve CRM'e yazma yok; ekranda model/teknoloji adı yok; sessiz sayı tavanı yok (kota ayarı hariç).
 """

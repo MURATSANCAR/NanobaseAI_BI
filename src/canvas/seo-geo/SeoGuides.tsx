@@ -87,7 +87,7 @@ const words = (s: string) => s.split(/\s+/).filter(Boolean).length;
 const muted = { fontSize: 12, color: 'var(--sg-muted)' } as const;
 
 /** Rehber içerikler: okurun "hangi kitap?" sorusuna cevap veren liste sayfası taslakları. Konu aramalardan ve izlenen
- *  sorulardan çıkar, kitaplar yalnız kendi kataloğumuzdan seçilir; Zeki AI yazar, insan onaylar, hiçbir yere gönderilmez. */
+ *  sorulardan çıkar, kitaplar yalnız kendi kataloğumuzdan seçilir; ZEKİ AI yazar, insan onaylar, hiçbir yere gönderilmez. */
 export default function SeoGuides() {
   const [params, setParams] = useSearchParams();
   const tab = params.get('liste') === 'taslaklar' ? 'taslaklar' : 'konular';
@@ -128,7 +128,7 @@ export default function SeoGuides() {
       crumb="Rehber içerikler"
       eyebrow="SEO & GEO · rehber içerikler"
       title="Rehber içerikler"
-      lead="Yapay zekâ cevap motorları ve Google, okurun “hangi kitap?” sorusuna cevap veren liste ve rehber sayfalarını kaynak gösterir; tek kitabın ürün sayfası bu soruyu cevaplamaz. Konular Search Console aramalarından ve izlenen sorulardan çıkar, kitaplar yalnız kendi kataloğumuzdan ve CRM kartlarından seçilir. Zeki AI taslağı yazar, kaynakta olmayan bilgi işaretlenir. Onay yalnız kaydedilir; siteye hiçbir şey gönderilmez."
+      lead="Yapay zekâ cevap motorları ve Google, okurun “hangi kitap?” sorusuna cevap veren liste ve rehber sayfalarını kaynak gösterir; tek kitabın ürün sayfası bu soruyu cevaplamaz. Konular Search Console aramalarından ve izlenen sorulardan çıkar, kitaplar yalnız kendi kataloğumuzdan ve CRM kartlarından seçilir. ZEKİ AI taslağı yazar, kaynakta olmayan bilgi işaretlenir. Onay yalnız kaydedilir; siteye hiçbir şey gönderilmez."
     >
       <div className="sg-filters" role="tablist" aria-label="Liste">
         <button className="sg-filter" role="tab" aria-selected={tab === 'konular'} aria-pressed={tab === 'konular'} onClick={() => set({ liste: '', taslak: '' })}>
@@ -240,7 +240,7 @@ export default function SeoGuides() {
               <h2>{tab === 'konular' ? 'Bir konu seçin' : 'Bir taslak seçin'}</h2>
               <p>
                 {tab === 'konular'
-                  ? 'Soldan bir konu seçtiğinizde bu soruya uyan kitaplarımız ve neden seçildikleri açılır; seçtiğiniz kitaplarla Zeki AI taslak yazar.'
+                  ? 'Soldan bir konu seçtiğinizde bu soruya uyan kitaplarımız ve neden seçildikleri açılır; seçtiğiniz kitaplarla ZEKİ AI taslak yazar.'
                   : 'Soldan bir taslak seçtiğinizde metni düzenleyip onaylayabilir ya da dışa aktarabilirsiniz.'}
               </p>
             </div>
@@ -345,7 +345,7 @@ function TopicPanel({ topicKey, draft }: { topicKey: string; draft: GuideTopic['
             {activeDraft ? 'Seçimle yeniden üret' : 'Taslak üret'}
           </button>
         </div>
-        {create.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>Zeki AI taslağı yazıyor; kitap sayısına göre birkaç dakika sürebilir.</p>}
+        {create.isPending && <p className="sg-banner" style={{ marginTop: 12 }}>ZEKİ AI taslağı yazıyor; kitap sayısına göre birkaç dakika sürebilir.</p>}
         {create.error && <div style={{ marginTop: 12 }}><Failed error={create.error} /></div>}
         {!tot && <p className="sg-banner" style={{ marginTop: 12 }}>Bu konuya uyan kitap verimizde bulunamadı; CRM kartlarında tür ya da anahtar kelime eksik olabilir.</p>}
         <div className="sg-list" style={{ marginTop: 12 }}>
@@ -440,7 +440,7 @@ function Editor({ guide }: { guide: Guide }) {
     <div className="sg-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <div>
-          <h2>Zeki AI taslağı</h2>
+          <h2>ZEKİ AI taslağı</h2>
           <p className="sg-sub" style={{ margin: 0 }}>
             {guide.topic.title} · {dateTime(guide.createdAt)} · {guide.createdBy ?? '—'}
             {open ? ' · onaylamadan önce düzenleyebilirsiniz' : ''}

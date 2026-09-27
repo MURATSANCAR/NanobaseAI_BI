@@ -141,7 +141,7 @@ export default function SocialTab({ jobId, v, refresh }: { jobId: string; v: Mar
 
           {draftSelected && (
             <Note tone="warn">
-              <span className="inline-flex items-start gap-1.5"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{s.draft_note}: seçilen görsel Zeki AI ile çizildi.</span>
+              <span className="inline-flex items-start gap-1.5"><AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />{s.draft_note}: seçilen görsel ZEKİ AI ile çizildi.</span>
             </Note>
           )}
           {err && <Note tone="err">{err}</Note>}

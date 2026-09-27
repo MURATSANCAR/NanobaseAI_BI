@@ -54,7 +54,7 @@ export default function ProductTab({ jobId, v, refresh }: { jobId: string; v: Ma
     <div className="flex min-w-0 flex-col gap-4">
       <Generate task={v.tasks.product} has={!!pr.page} onRun={() => gen.mutate()} pending={gen.isPending} what="Ürün sayfası" />
       <p className="text-[12px] text-canvas-muted">
-        Yaş, tür, sayfa, boyut gibi bilgiler kitabın kaydından ve dizgiden gelir; Zeki AI bunları değiştirmez. Uzunluk
+        Yaş, tür, sayfa, boyut gibi bilgiler kitabın kaydından ve dizgiden gelir; ZEKİ AI bunları değiştirmez. Uzunluk
         sınırları SEO & GEO ayarlarındandır. E-ticaret sitesine hiçbir şey gönderilmez: onaylı sayfa SEO ekranına öneri olarak düşer.
       </p>
       {err && <Note tone="err">{err}</Note>}

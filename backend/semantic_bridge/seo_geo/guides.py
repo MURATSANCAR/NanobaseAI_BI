@@ -11,7 +11,7 @@ Akış:
 2. Kitap seçimi yalnız bizim verimizden: T-soft'ta aktif ürün + barkodla CRM kitap kartı (tür, web kategorisi,
    anahtar kelime, hedef kitle, yaş). CRM'de "bizim değil / çekildi / geri istendi" işaretli kitap alınmaz.
    Konu kelimeleri bu alanlarla eşleştirilir; eşitlikte çok satan önde. Neden eşleştiği yazılır.
-3. Taslak Zeki AI ile (LLM kapısı, `llm_for("seo", …)`): SEO başlığı, meta açıklama, giriş, kitap başına bir
+3. Taslak ZEKİ AI ile (LLM kapısı, `llm_for("seo", …)`): SEO başlığı, meta açıklama, giriş, kitap başına bir
    paragraf (yalnız o kitabın kendi bilgisinden), 3–5 soru–cevap. ItemList + FAQPage JSON-LD'yi model değil kod
    kurar. Gerçeklik denetimi (`propose.unsupported`) kaynakta geçmeyen sayı ve özel adları işaretler.
 4. Karar: onay verebilen kişi düzenleyip onaylar ya da reddeder. Onay yalnız kayıttır; hiçbir yere gönderilmez

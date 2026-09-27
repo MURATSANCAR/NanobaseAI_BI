@@ -148,7 +148,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
 
   return (
     <ModuleFrame route={m.route} crumb={m.crumb} title={m.title} lead={m.lead} source={data ? `${nf.format(data.total)} ${m.people}` : 'CRM eser katılımları'} aside={aside}>
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {data && (

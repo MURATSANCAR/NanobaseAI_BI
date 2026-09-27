@@ -86,7 +86,7 @@ export default function BiCanvasPage() {
         setAnsweredQ(q);
         setAnswer({ ...a, summary: a.summary ?? a.explanation });
       })
-      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'Zeki AI yanıt vermedi'))
+      .catch((e) => setAskErr(e instanceof EngineAuthError ? 'Oturum gerekli' : 'ZEKİ AI yanıt vermedi'))
       .finally(() => runNext());
   };
   const ask = (q: string) => {
@@ -184,7 +184,7 @@ export default function BiCanvasPage() {
           ? `“${PHASES[phase]}…”`
           : askErr
             ? `“${askErr}.”`
-            : `“${answer?.summary ?? 'Zeki AI özet üretmedi.'}”`,
+            : `“${answer?.summary ?? 'ZEKİ AI özet üretmedi.'}”`,
         m1: { label: 'Satır:', value: String(rows) },
         m2: { label: 'Kolon:', value: String(answer?.columns?.length ?? 0) },
         m3: { label: 'Tip:', value: answer?.type ?? '—' },

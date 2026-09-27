@@ -7,9 +7,9 @@ import { NavList } from './NavList';
 import { initials, roleLabel, useNavUi, type NavData } from './useNav';
 
 /**
- * Telefon menüsü (<768 px): sol ray yok. Alt çubuk: Kampüs · Masam · Zeki AI · Uyarılar · Menü.
+ * Telefon menüsü (<768 px): sol ray yok. Alt çubuk: Kampüs · Masam · ZEKİ AI · Uyarılar · Menü.
  * «Menü» alttan açılan sayfadır (arama, çalışma alanı çipleri, seçili alanın ekranları, tüm modüller,
- * profil). «Zeki AI» soruyu alır, cevap Genel bakış'ta açılır (Kampüs'teki kutuyla aynı yol).
+ * profil). «ZEKİ AI» soruyu alır, cevap Genel bakış'ta açılır (Kampüs'teki kutuyla aynı yol).
  */
 export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: string }) {
   const ui = useNavUi();
@@ -51,11 +51,11 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
           </span>
           Masam
         </Link>
-        <button type="button" onClick={() => setAskOpen(true)} className={`${btn} -mt-7 text-ink`} aria-label="Zeki AI'a sor">
+        <button type="button" onClick={() => setAskOpen(true)} className={`${btn} -mt-7 text-ink`} aria-label="ZEKİ AI'a sor">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-coral to-violet text-white shadow-[0_12px_26px_-10px_rgba(124,92,255,0.9)] ring-4 ring-white">
             <Sparkles aria-hidden className="h-6 w-6" />
           </span>
-          <span className="font-extrabold">Zeki AI</span>
+          <span className="font-extrabold">ZEKİ AI</span>
         </button>
         <Link to="/uyarilar" className={`${btn} ${tone(at('/uyarilar'))}`} aria-current={at('/uyarilar') ? 'page' : undefined}>
           <span className="relative flex h-7 items-center">
@@ -175,7 +175,7 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-coral to-violet text-white">
                     <Sparkles aria-hidden className="h-5 w-5" />
                   </span>
-                  <Drawer.Title className="flex-1 text-[19px] font-extrabold tracking-tight">Zeki AI'a sor</Drawer.Title>
+                  <Drawer.Title className="flex-1 text-[19px] font-extrabold tracking-tight">ZEKİ AI'a sor</Drawer.Title>
                   <Drawer.Close className="nav-bar-btn flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-muted" aria-label="Kapat">
                     <X aria-hidden className="h-5 w-5" />
                   </Drawer.Close>

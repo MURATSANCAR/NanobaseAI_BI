@@ -219,7 +219,7 @@ pre.mg-sql-code { padding: 12px 14px; white-space: pre }
 .mg-live-every { padding-left: 10px; border-left: 1px solid color-mix(in srgb, currentColor 25%, transparent); font-weight: 600; opacity: .7 }
 @media (max-width: 767px) { .mg-live { border-radius: 14px } .mg-live-every { display: none } }
 
-/* ZEKI AI Tahminleme: tablonun altındaki son kullanıcı açıklaması ve SQL'ler */
+/* ZEKİ AI Tahminleme: tablonun altındaki son kullanıcı açıklaması ve SQL'ler */
 .mg-explain { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; padding: 20px; border: 1px solid var(--mg-line); border-radius: 18px; background: #fbfaff; color: var(--mg-text) }
 .mg-explain h2 { margin: 0; font-size: 17px; font-weight: 800; letter-spacing: -.2px; color: var(--mg-ink) }
 .mg-explain-intro { display: flex; flex-direction: column; gap: 8px; max-width: 78ch }

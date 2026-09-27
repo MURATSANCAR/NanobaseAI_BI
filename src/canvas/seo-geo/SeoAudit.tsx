@@ -55,7 +55,7 @@ export default function SeoAudit() {
       crumb="Ürün denetimi"
       eyebrow="SEO & GEO · T-soft ürünleri"
       title="Ürün denetimi ve onay"
-      lead="Her ürün kurallardan geçer; neden uyumsuz olduğu yazılır. Zeki AI ürünün kendi kaydından öneri üretir; onay kararı kayıt altına alınır. T-soft’a hiçbir şey gönderilmez."
+      lead="Her ürün kurallardan geçer; neden uyumsuz olduğu yazılır. ZEKİ AI ürünün kendi kaydından öneri üretir; onay kararı kayıt altına alınır. T-soft’a hiçbir şey gönderilmez."
     >
       <div className="sg-filters" role="toolbar" aria-label="Kural süzgeci">
         <button className="sg-filter" aria-pressed={!rule && !status} onClick={() => setParams(new URLSearchParams(), { replace: true })}>
@@ -278,7 +278,7 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
             {pending
               ? 'Öneriler yazılıyor…'
               : proposal
-                ? `Zeki AI · ${dateTime(proposal.createdAt)} · değişen alan ${changed.length}. Öneriyi onaylamadan önce düzenleyebilirsiniz.`
+                ? `ZEKİ AI · ${dateTime(proposal.createdAt)} · değişen alan ${changed.length}. Öneriyi onaylamadan önce düzenleyebilirsiniz.`
                 : 'Öneri henüz yok.'}
           </p>
         </div>

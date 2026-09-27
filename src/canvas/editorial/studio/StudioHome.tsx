@@ -38,9 +38,9 @@ export default function StudioHome() {
       crumb="Kitap Tasarım Stüdyosu"
       title="Kitap Tasarım Stüdyosu"
       lead="Kitabın metninden baskıya hazır iç sayfa ve kapak: CRM bilgisi, yaş ve tür, sayfa yerleşimi, resimler, dizgi ve ön baskı denetimi. Her sayfanın resmini düzeltebilir ya da yeniden ürettirebilirsiniz."
-      source="Editör · Zeki AI"
+      source="Editör · ZEKİ AI"
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
       <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr] lg:gap-4">
         <Panel>

@@ -31,7 +31,7 @@ export const requestFreshData = (ms = 3000): void => {
 export const freshHeaders = (): Record<string, string> => (Date.now() < freshUntil ? { 'X-Data-Refresh': '1' } : {});
 
 export class EngineAuthError extends Error {
-  constructor(message = 'Zeki AI oturumu gerekli') {
+  constructor(message = 'ZEKİ AI oturumu gerekli') {
     super(message);
     this.name = 'EngineAuthError';
   }
@@ -1600,7 +1600,7 @@ export type BookCard = {
     firstPublishDate: string | null;
   } | null;
   /** Kitabın hangi türden okunduğu (motorun book_type'ı). `source`: CRM türü belirledi, ya da CRM'de tür
-   *  yok/iki türe işaret ediyor ve Zeki AI kitabın metninden belirledi (MODEL); NONE ise belirlenemedi. */
+   *  yok/iki türe işaret ediyor ve ZEKİ AI kitabın metninden belirledi (MODEL); NONE ise belirlenemedi. */
   profile?: {
     form: BookForm;
     source: 'CRM' | 'MODEL' | 'EDITOR' | 'NONE';

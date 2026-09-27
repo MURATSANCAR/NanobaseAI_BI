@@ -6,13 +6,13 @@ import { Img, ghostBtn, press } from '../shared';
 import { epubApi, useAlts, type AltItem, type AltSource } from './api';
 
 /** Alt metinleri gözden geçir: her görselin küçüğü, hangi sayfada olduğu, metni ve nereden geldiği. Editörün yazdığı
- *  her zaman kazanır; «Yeniden öner» Zeki AI'dan yeni öneri alır. Varsayılan görünüm yalnız gözden geçirilmesi
+ *  her zaman kazanır; «Yeniden öner» ZEKİ AI'dan yeni öneri alır. Varsayılan görünüm yalnız gözden geçirilmesi
  *  gerekenler (boş, sayfanın anından yazılmış ya da resim değiştiği için eskimiş). */
 
 const SOURCE: Record<AltSource, string> = {
   editor: 'Editör yazdı',
   sahne: 'Sahne tarifinden',
-  model: 'Görselden (Zeki AI)',
+  model: 'Görselden (ZEKİ AI)',
   tarif: 'Figürün tarifinden',
   an: 'Sayfanın anından · gözden geçirin',
   kapak: 'Kitap bilgisinden',
@@ -59,7 +59,7 @@ function Row({ jobId, it }: { jobId: string; it: AltItem }) {
             Kaydet
           </button>
           <button type="button" className={ghostBtn} disabled={suggest.isPending} onClick={() => suggest.mutate()}
-            title="Zeki AI görselden ya da sahnenin tarifinden yeni bir alt metin önerir; yazdığınızın yerine geçer">
+            title="ZEKİ AI görselden ya da sahnenin tarifinden yeni bir alt metin önerir; yazdığınızın yerine geçer">
             {suggest.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
             {suggest.isPending ? 'Öneriliyor…' : 'Yeniden öner'}
           </button>

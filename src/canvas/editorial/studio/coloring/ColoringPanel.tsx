@@ -9,7 +9,7 @@ import { Img, Progress, ghostBtn, gradientBtn, press } from '../shared';
 import { coloringApi, useColoring, type ColoringDerived, type ColoringKind, type ColoringMode, type ColoringSource } from './api';
 
 /** Boyama / etkinlik kitabı: kaynak kitabın stüdyo sayfasında «üret» kartı ve türetilmiş işlerin ilerlemesi;
- *  boyama işinin kendi sayfasında kısa cümle onayı, çizgilerin yöntemi ve «Zeki AI ile yeniden çiz».
+ *  boyama işinin kendi sayfasında kısa cümle onayı, çizgilerin yöntemi ve «ZEKİ AI ile yeniden çiz».
  *  Hareket yok (sık kullanılan bir çalışma ekranı): yalnız basış geri bildirimi (`press`) ve ilerleme çubuğu. */
 
 const KIND_HELP: Record<ColoringKind, string> = {
@@ -127,7 +127,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
           )}
 
           <div role="radiogroup" aria-label="Kısa cümleler" className="flex flex-wrap gap-2 text-[12px]">
-            {([['model', `Kısa cümleleri Zeki AI önersin (en çok ${v.caption_words} kelime, siz onaylarsınız)`], ['rule', 'Metnin ilk cümlesinden kısalt']] as const).map(([c, t]) => (
+            {([['model', `Kısa cümleleri ZEKİ AI önersin (en çok ${v.caption_words} kelime, siz onaylarsınız)`], ['rule', 'Metnin ilk cümlesinden kısalt']] as const).map(([c, t]) => (
               <button key={c} type="button" role="radio" aria-checked={captions === c} onClick={() => setCaptions(c)}
                 className={`min-h-10 rounded-full border px-3 text-left ${press} ${captions === c ? 'border-canvas-violet bg-violet-50/70 font-bold text-canvas-violet' : 'border-slate-200 bg-white/80'}`}>{t}</button>
             ))}
@@ -182,7 +182,7 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
 }
 
 // ---------------------------------------------------------------- boyama işi: cümleler, çizgiler
-const SOURCE_TEXT: Record<string, string> = { model: 'Zeki AI önerisi', kural: 'Metinden kısaltıldı', editor: 'Editör yazdı' };
+const SOURCE_TEXT: Record<string, string> = { model: 'ZEKİ AI önerisi', kural: 'Metinden kısaltıldı', editor: 'Editör yazdı' };
 
 function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
   const qc = useQueryClient();
@@ -238,7 +238,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <div className="mt-2">
           <Note tone="warn">
             <AlertTriangle className="mr-1 inline h-4 w-4" aria-hidden />
-            Taslak: {v.drafts.filter(Boolean).map((n) => `${n}. sayfa`).join(', ')} çizgisi Zeki AI ile yeniden çizildi. Bu çizgiler ticari basıma uygun değildir; basımdan önce modelsiz çizgiye dönün ya da çizerin elinden geçirin.
+            Taslak: {v.drafts.filter(Boolean).map((n) => `${n}. sayfa`).join(', ')} çizgisi ZEKİ AI ile yeniden çizildi. Bu çizgiler ticari basıma uygun değildir; basımdan önce modelsiz çizgiye dönün ya da çizerin elinden geçirin.
           </Note>
         </div>
       )}
@@ -298,7 +298,7 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <section className="mt-3">
           <h3 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Boyama çizgileri</h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
-            Çizgi modelsiz çıkarılır. Yetmezse «Zeki AI ile yeniden çiz» yeni sürüm üretir (taslak); sürümler ve onay yukarıdaki sayfa gezgininde.
+            Çizgi modelsiz çıkarılır. Yetmezse «ZEKİ AI ile yeniden çiz» yeni sürüm üretir (taslak); sürümler ve onay yukarıdaki sayfa gezgininde.
           </p>
           <ul className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
             {v.arts.map((a) => {
@@ -311,13 +311,13 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                   <div className="flex items-center justify-between gap-1 text-[11px]">
                     <span className="font-mono text-canvas-muted">{a.no ? `s. ${a.no}` : '—'}</span>
                     <span className={`rounded-full px-1.5 py-0.5 font-bold ${a.draft ? 'bg-amber-50 text-amber-700' : 'bg-slate-100 text-canvas-muted'}`}>
-                      {a.draft ? 'Zeki AI · taslak' : 'Modelsiz'}
+                      {a.draft ? 'ZEKİ AI · taslak' : 'Modelsiz'}
                     </span>
                   </div>
                   <button type="button" disabled={gpuBusy || running || redraw.isPending} onClick={() => redraw.mutate(a.aid)}
                     className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-bold disabled:opacity-50 ${press}`}>
                     {here ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <PenLine className="h-4 w-4" aria-hidden />}
-                    {here ? (v.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : 'Zeki AI ile yeniden çiz'}
+                    {here ? (v.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : 'ZEKİ AI ile yeniden çiz'}
                   </button>
                 </li>
               );

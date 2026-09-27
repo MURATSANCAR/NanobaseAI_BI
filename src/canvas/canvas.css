@@ -502,7 +502,7 @@
   opacity: 0.45;
 }
 /* ------------------------------------------------------------------ */
-/* Zeki AI "düşünüyor" göstergesi — yanıt beklenirken karar kartında.  */
+/* ZEKİ AI "düşünüyor" göstergesi — yanıt beklenirken karar kartında.  */
 /* Amaç: durum bildirimi. Yalnız opacity/transform; ana thread dışı.    */
 /* ------------------------------------------------------------------ */
 .zeki-thinking {
@@ -555,7 +555,7 @@
   }
 }
 
-/* ---------------------------------------------------------------- ZEKI AI (kitaba sor + kitap ara) */
+/* ---------------------------------------------------------------- ZEKİ AI (kitaba sor + kitap ara) */
 .zk-press {
   transition-property: transform, background-color, color, box-shadow, opacity;
   transition-duration: 0.16s;
@@ -607,7 +607,7 @@
   box-shadow: 0 0 0 4px rgba(124, 92, 255, 0.12), 0 10px 30px -14px rgba(124, 92, 255, 0.45);
 }
 
-/* ZEKI AI küresi: dönen renk halkası. */
+/* ZEKİ AI küresi: dönen renk halkası. */
 .zk-orb {
   background: conic-gradient(from 0deg, #ff6b4a, #c55cf0, #7c5cff, #38bdf8, #10b981, #ff6b4a);
   animation: zkSpin 6s linear infinite;

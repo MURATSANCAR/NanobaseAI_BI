@@ -722,7 +722,7 @@ function CanvasBody({
       </main>
 
       {/* ================= BOTTOM FLOATING DOCK & ZEKİ CHAT INPUT ================= */}
-      {/* Telefonda (<768) yok: alt çubuk menüdür, soru «Zeki AI» düğmesinden sorulur (menü ikinci şerit olmasın). */}
+      {/* Telefonda (<768) yok: alt çubuk menüdür, soru «ZEKİ AI» düğmesinden sorulur (menü ikinci şerit olmasın). */}
       <div className="absolute bottom-6 inset-x-0 hidden md:flex justify-center z-40 pointer-events-none">
         <div className="glass-dock p-2 sm:p-2.5 rounded-2xl sm:rounded-3xl shadow-dock-shadow flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 pointer-events-auto border border-white/90 max-w-[940px] w-full">
 

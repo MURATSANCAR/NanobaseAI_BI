@@ -491,12 +491,12 @@ export default function BoardScreen() {
       const cols = (a.columns ?? []) as Col[];
       const rows = (a.records ?? []) as Row[];
       if (!a.sql || !rows.length) {
-        setErr(a.summary || a.explanation || 'Zeki AI bu soruya tablo döndürmedi.');
+        setErr(a.summary || a.explanation || 'ZEKİ AI bu soruya tablo döndürmedi.');
       } else {
         setPending({ title: q, sql: a.sql, cols, rows, chart: suggestChart(cols, rows), at: Date.now(), timing: timingOf(a) });
       }
     } catch (e) {
-      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'Zeki AI yanıt vermedi.');
+      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
     } finally {
       setAsking(false);
     }
@@ -557,7 +557,7 @@ export default function BoardScreen() {
       const rows = (a.records ?? []) as Row[];
       const sql = a.sql;
       if (!sql || rows.length !== 1 || numericCols(cols, rows).length < 2) {
-        setErr(a.summary || 'Zeki AI bu karşılaştırmayı tek satırda iki sayı olarak veremedi.');
+        setErr(a.summary || 'ZEKİ AI bu karşılaştırmayı tek satırda iki sayı olarak veremedi.');
         return;
       }
       const next = cards.map((c) => (c.id === card.id ? { ...c, sql, question: q, chart: 'kpi' as ChartKind } : c));
@@ -570,7 +570,7 @@ export default function BoardScreen() {
       await pushToServer(next);
       void qc.invalidateQueries({ queryKey: ['pano', card.id, sql] });
     } catch (e) {
-      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'Zeki AI yanıt vermedi.');
+      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
     } finally {
       setComparing(null);
     }

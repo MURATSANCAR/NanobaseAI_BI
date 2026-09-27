@@ -184,7 +184,7 @@ def public_card(card):
     # Yayınevinin CRM kaydı: kitaptan doğrulanmış değil, kartta etiketli gösterilir (eski kart servisi göndermez).
     out['authorsSource']=card.get('authorsSource')
     out['publisher']=card.get('publisher')
-    # Kitabın hangi türden okunduğu ve bunu kimin belirlediği (CRM ya da Zeki AI); eski kart servisi göndermez.
+    # Kitabın hangi türden okunduğu ve bunu kimin belirlediği (CRM ya da ZEKİ AI); eski kart servisi göndermez.
     out['profile']=card.get('profile')
     return out
 

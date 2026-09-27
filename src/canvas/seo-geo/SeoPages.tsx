@@ -18,7 +18,7 @@ const FIELDS: Array<{ id: PageField; label: string }> = [
   { id: 'Intro', label: 'Tanıtım metni' },
 ];
 
-/** Yazar, kategori ve yayınevi sayfaları: başlık/açıklama denetimi ve Zeki AI önerisi (SEO başlığı, meta, tanıtım).
+/** Yazar, kategori ve yayınevi sayfaları: başlık/açıklama denetimi ve ZEKİ AI önerisi (SEO başlığı, meta, tanıtım).
  *  Öneri sayfanın kitaplarından, satışlarından ve doğrulanmış Wikidata bilgisinden kurulur; T-soft'a gönderilmez. */
 export default function SeoPages() {
   const [params, setParams] = useSearchParams();
@@ -54,7 +54,7 @@ export default function SeoPages() {
       crumb="Yazar ve kategori"
       eyebrow="SEO & GEO · sayfalar"
       title="Yazar, kategori ve yayınevi sayfaları"
-      lead="Bu sayfaların başlık ve açıklaması çoğunlukla yalnız ad. Zeki AI, sayfanın kitaplarından, satışlarından ve doğrulanmış Wikidata bilgisinden SEO başlığı, meta açıklama ve tanıtım metni önerir; uydurma bilgi işaretlenir. Karar yalnız kaydedilir, T-soft’a gönderilmez."
+      lead="Bu sayfaların başlık ve açıklaması çoğunlukla yalnız ad. ZEKİ AI, sayfanın kitaplarından, satışlarından ve doğrulanmış Wikidata bilgisinden SEO başlığı, meta açıklama ve tanıtım metni önerir; uydurma bilgi işaretlenir. Karar yalnız kaydedilir, T-soft’a gönderilmez."
     >
       <div className="sg-filters" role="tablist" aria-label="Sayfa türü">
         {KINDS.map((k) => (
@@ -112,7 +112,7 @@ export default function SeoPages() {
           ) : (
             <div className="sg-empty">
               <h2>Bir sayfa seçin</h2>
-              <p>Soldan bir yazar, kategori ya da yayınevi seçtiğinizde sorunları ve Zeki AI önerisi burada açılır.</p>
+              <p>Soldan bir yazar, kategori ya da yayınevi seçtiğinizde sorunları ve ZEKİ AI önerisi burada açılır.</p>
             </div>
           )}
         </section>
@@ -231,8 +231,8 @@ function Review({ page, proposal, pending, error, canApprove, onRegenerate, onDo
     <div className="sg-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', alignItems: 'baseline' }}>
         <div>
-          <h2>Uyarılar ve Zeki AI önerisi</h2>
-          <p className="sg-sub" style={{ margin: 0 }}>{pending ? 'Öneriler yazılıyor…' : proposal ? `Zeki AI · ${dateTime(proposal.createdAt)}` : 'Öneri henüz yok.'}</p>
+          <h2>Uyarılar ve ZEKİ AI önerisi</h2>
+          <p className="sg-sub" style={{ margin: 0 }}>{pending ? 'Öneriler yazılıyor…' : proposal ? `ZEKİ AI · ${dateTime(proposal.createdAt)}` : 'Öneri henüz yok.'}</p>
         </div>
         <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
           {pending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />} Yeniden üret

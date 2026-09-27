@@ -205,7 +205,7 @@ SPEC: list[dict[str, Any]] = [
              "stüdyoya hemen iletilir"},
     {"key": "STUDIO_READER_PASSES", "group": "studio", "label": "Okur okuması: sayfa başına okuma sayısı", "type": "int",
      "default": "3",
-     "help": "«Çocuk gözüyle okuma»da Zeki AI her sayfayı bu kadar kez birbirinden bağımsız okur; yalnız okumaların "
+     "help": "«Çocuk gözüyle okuma»da ZEKİ AI her sayfayı bu kadar kez birbirinden bağımsız okur; yalnız okumaların "
              "yarısından fazlasında geçen işaret gösterilir. Sayı arttıkça sonuç tutarlılaşır, süre uzar"},
     # Yapay zekâ görünürlüğü (GEO): izlenen sorular bu motorlara resmî API'leriyle sorulur. Anahtarsız motor ölçülmez.
     {"key": "GEMINI_API_KEY", "group": "geo", "label": "Gemini API anahtarı (ücretsiz)", "type": "secret", "default": "",
@@ -290,7 +290,7 @@ def store_keys(store: str) -> list[str]:
 #: Ayarı kaydedilince neyin yeniden kurulacağı; köprü (app.py) bu listelere bakar.
 LLM_KEYS = ("OPENAI_API_BASE", "LLM_MODEL_NAME", "OPENAI_API_KEY", "LLM_TIMEOUT_SEC")
 #: Modelin ürün içindeki adı. Hangi sağlayıcının hangi modeli olduğu bir kurulum ayrıntısıdır ve
-#: yerine başkası konabilir; ekranda ürünün kendi adı yazar (sohbetteki "Zeki AI" kimliğiyle aynı
+#: yerine başkası konabilir; ekranda ürünün kendi adı yazar (sohbetteki "ZEKİ AI" kimliğiyle aynı
 #: kural). Teknik ad, düzeltilecek yerde — «Model» ayarının kendisinde — duruyor.
 LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 

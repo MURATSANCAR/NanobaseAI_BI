@@ -104,7 +104,7 @@ export const NAV: NavGroup[] = [
     hint: 'Göstergeler, panolar ve uyarılar',
     icon: ChartColumn,
     items: [
-      { id: 'genel-bakis', label: 'Genel bakış', to: '/genel-bakis', icon: LayoutDashboard, hint: 'Finansal göstergeler ve Zeki AI\'a soru', keywords: ['ciro', 'soru', 'sor'] },
+      { id: 'genel-bakis', label: 'Genel bakış', to: '/genel-bakis', icon: LayoutDashboard, hint: 'Finansal göstergeler ve ZEKİ AI\'a soru', keywords: ['ciro', 'soru', 'sor'] },
       { id: 'panolar', label: 'Panolar', to: '/panolar', icon: LayoutGrid, hint: 'Kişisel pano kartları', keywords: ['pano', 'panom', 'kart'] },
       { id: 'planli-raporlar', label: 'Planlı raporlar', to: '/planli-raporlar', icon: CalendarClock, hint: 'E-postayla giden zamanlı raporlar', keywords: ['rapor', 'excel'] },
       { id: 'uyarilar', label: 'Uyarılar', to: '/uyarilar', icon: Bell, hint: 'Eşik kuralları ve bildirimler', badge: 'alerts', keywords: ['uyarı', 'kural', 'eşik'] },
