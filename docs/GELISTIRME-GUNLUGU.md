@@ -15,7 +15,7 @@
   cevabı (onay/değiştirme/geri al) normal karar + `carried_from` (göç `028_proof_decision_carry.sql`, `CLEAR` kararı);
   isabet taşınanı saymaz, onaylananın kaynağını ikinci kez saymaz.
 - **Ekran:** taşınan yanlış alarm varsayılan listede ve sayaçlarda yok, «N bulgu … gizlendi» notu + «göster»;
-  «karar verilenler»de «önceki okumadan» rozeti ve satırda «Geri al»; taşınan doğru listede «önceki okumada doğru».
+  «karar verilenler»de «önceki okumada yanlış alarm» rozeti ve «Geri al» (darda satırın altında); taşınan doğru listede «önceki okumada doğru».
   Kanıt panelinde kaynak (tarih, kim, gerekçe) ve «Geri al». Köprü `hidden` ve `carriedFrom` geçirir.
 - **Kuru koşu (canlı DB, yalnız okuma):** gerçek karar Levent'te taşınıyor; sanal kararla aynı koşu 18.907→18.662
   (245 belirsiz), nesiller arası 101→100, sürüm değişimi 14.493→12.729 (24 belirsiz); Dilek Ağacı 80 çift elle

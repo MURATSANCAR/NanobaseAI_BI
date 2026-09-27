@@ -110,7 +110,7 @@ kararlar kendiliğinden doğru bağlanır ve hiçbir koşu adımı (worker) değ
 sayımdan düşer, yalnız yenisi sayılır (sürüm farklıysa ikisi kendi sürümünde sayılır). CLEAR isabete girmez.
 
 **Ekran:** taşınan «yanlış alarm» varsayılan listede yok, sayaçlara (hata/uyarı/bilgi, denetim çipleri, KPI) girmez;
-«N bulgu önceki okumadaki yanlış alarm kararıyla gizlendi» notu; «karar verilenler» süzgecinde «önceki okumadan»
+«N bulgu önceki okumadaki yanlış alarm kararıyla gizlendi» notu; «karar verilenler» süzgecinde «önceki okumada yanlış alarm»
 rozetiyle ve satırdaki «Geri al» ile. Taşınan «doğru» listede kalır («önceki okumada doğru»). Word'e aktarımda taşınan
 yanlış alarm da hariç. Denetim çipinde `hidden` = gizlenen sayısı.
 

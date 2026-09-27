@@ -19,7 +19,7 @@ import { carriedFromOf, isCarriedReject, isPending, severityCounts } from './pro
  *
  *  Aynı kitapta hatırlama: yeniden okumada aynı bulgu önceki okumadaki kararı alır (kart servisi eşler, yazmaz).
  *  Önceki okumada «yanlış alarm» denmiş bulgu listede görünmez ve sayaçlara girmez («N bulgu … gizlendi» notu);
- *  «karar verilenler» süzgecinde «önceki okumadan» rozetiyle durur ve «Geri al» ile tek dokunuşta listeye döner.
+ *  «karar verilenler» süzgecinde «önceki okumada yanlış alarm» rozetiyle durur ve «Geri al» ile tek dokunuşta listeye döner.
  *  «Doğru» denmiş olan listede kalır, «önceki okumada doğru» işaretiyle. */
 
 /** WARN + ERROR: KPI ve özet satırındaki "ciddi" sayısı. */
@@ -101,7 +101,7 @@ function FindingRow({ r, active, onPick, rowRef, onUndo, busy }: { r: Row; activ
   // Önceki okumada «doğru» denmiş bulgu bekleyen iş gibi durur (soluklaşmaz); öbür kararlılar soluk.
   const dim = d && !(d.inherited && d.verdict === 'ACCEPT');
   return (
-    <li className="flex items-stretch gap-1.5">
+    <li className="flex flex-col gap-1 sm:flex-row sm:items-stretch sm:gap-1.5">
       <button
         ref={rowRef}
         type="button"
@@ -118,12 +118,7 @@ function FindingRow({ r, active, onPick, rowRef, onUndo, busy }: { r: Row; activ
             <span className="min-w-0 truncate text-[11px] text-canvas-muted">{f.label}</span>
             {d && !d.inherited && <Pill tone={d.verdict === 'ACCEPT' ? 'ok' : 'muted'}>{d.verdict === 'ACCEPT' ? 'Doğru' : 'Yanlış alarm'}</Pill>}
             {d?.inherited && d.verdict === 'ACCEPT' && <Pill tone="ok">önceki okumada doğru</Pill>}
-            {d?.inherited && d.verdict === 'REJECT' && (
-              <>
-                <Pill tone="muted">Yanlış alarm</Pill>
-                <Pill tone="violet">önceki okumadan</Pill>
-              </>
-            )}
+            {d?.inherited && d.verdict === 'REJECT' && <Pill tone="violet">önceki okumada yanlış alarm</Pill>}
           </span>
           <span className="mt-0.5 line-clamp-2 break-words font-semibold leading-snug">{f.message}</span>
           {f.quote && <span className="mt-0.5 block truncate text-[11.5px] text-canvas-ink/70">“{f.quote}”</span>}
@@ -135,7 +130,7 @@ function FindingRow({ r, active, onPick, rowRef, onUndo, busy }: { r: Row; activ
           onClick={onUndo}
           disabled={busy}
           title={`Önceki okumanın kararı bu bulguya uygulanmaz; bulgu yeniden listeye girer (${inheritedLabel(f)}).`}
-          className={`${btnGhost} shrink-0 px-2.5 text-[11.5px]`}
+          className={`${btnGhost} shrink-0 self-end px-3 text-[11.5px] sm:self-auto`}
         >
           Geri al
         </button>
