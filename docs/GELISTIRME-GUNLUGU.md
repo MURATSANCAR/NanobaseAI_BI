@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (02:00) — Müşteri VM'ine `c6699f5d` kuruldu (M2, M6, M7, M46, bülten, Yetki Aşama C, çeviri düzeltmeleri)
+
+- **Karar (kullanıcı onayıyla):** VM `cec2bbe3`'teydi (Aşama B; M8 ve M4 dünkü 00:21 kurulumuyla zaten oradaydı). Test sunucusundaki kaynak `c6699f5d` ile md5 birebir eşti. Test köprüsü 01:31'de başlamıştı, 01:40'ta gelen dosyaları yüklememişti; yeniden başlatıldı. `main`in sonraki hâli (`b132f836`: M10 İlk baskı, M12 Üretim) test sunucusunda kurulu değil → VM'e **gitmedi**; VM'deki sürüm `c6699f5d`.
+- **Test sunucusunda salt okuma kabul** (15 dk'lık `timasai` oturumu, sonra silindi): serbest çalışanlar, çeviri, editör atama/Görevlerim, yazar ilişkileri, sözleşmeler, bütçe, yetki veri alanları, bülten işleri + 9 sayfa → hepsi 200; `/editorial/documents` 404 (kart servisinde `/v1/documents` yok).
+- **VM kurulumu:** `git archive c6699f5d` → `/tmp/bi-main-c6699f5d` → `systemd-run --unit=vm-deploy-c6699f5d`, günlük `/tmp/vm-deploy-c6699f5d.log`, EXIT 0. `bi_var` korundu (rapor önbelleği 4 → 4). Kontroller: `._*` kaynakta 0, köprü konteynerinde 0; köprü/web imajı 2026-09-28 01:55, çalışan konteynerler bu imajda; köprüdeki `app.py`/`freelance.py` md5 = `c6699f5d`; web `index-CgactCpa.js` = test sunucusuyla aynı paket. NPM özel ayarı `client_max_body_size` 21m → 201m (`nginx -t` geçti, reload). Konteynerde `var/freelance` yazılabilir (root).
+- **VM kabulü** (dış kapı `http://192.168.0.55/timas`, giriş konteynerinde 15 dk'lık `timasai` oturumu, sonra silindi): 31 denemenin 30'u geçti. Kalan: `/api/v1/editorial/documents` 502 — «v cx» commit'indeki belge incelemesi uçları; editör kart servisinde karşılığı yok ve TT GPU nginx beyaz listesinde bu yol yok. Bunu kullanan ekran yok, kullanıcıya görünmez; özellik bitince beyaz listeye `location` eklenmeli.
+- **Temizlik:** dünkü M8 uçtan uca denemesinden `semantic_audit`'te kalan 16 satır (kişi/paket/teslim/hakediş/ileti) silindi (yeni kural «test verisi bırakılmaz»). Test sunucusunda başka oturumlara ait 3 `timasai` oturumuna dokunulmadı.
+
 ## 2026-09-28 — M12 Üretim yönetimi: üretim takvimi, matbaa takibi, gecikme uyarıları (CRM üretim kartı + Logo)
 
 - **Neden:** yol haritası B bloku adım 3. Baskı kararı verilen kitabın dosya teslimi → matbaa → baskı çıkışı → depo
