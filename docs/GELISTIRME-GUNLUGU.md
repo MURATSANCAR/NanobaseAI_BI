@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Test verisi temizliği (Yönetim → Kişiler)
+
+- Salt okuma ile bulundu: Kişiler listesi pano kartı, planlı rapor, değişiklik kaydı ve yönetici listesinden derlenir. `claude` (8 satır, 15 Eylül SMTP ayarlarının girişi), `qa-excel-draft` (24, Excel taslak kabulü) ve `qa-pano-a` (9, pano kabulü) yalnız değişiklik kaydında kalmıştı; ayrıca M7 kabulünden «ZZ Kabul Deneme Yazarı» kartı, iptal randevusu ve 5 kayıt satırı.
+- Kullanıcı sunucuda önce listeleyen, sonra `--sil` ile tek işlemde silen betiği çalıştırdı: değişiklik kaydı 46 satır, randevu 1, yazar kartı 1 silindi. SMTP ayarlarının kendisi yerinde; yalnız kimin girdiği izi gitti. `Timas` hesabının 2 pano kartı (14 Eylül) gerçek olabileceği için dokunulmadı.
+- Değişiklik kaydının 4007, 4008, 4011 numaraları (M7 kabulü arasında) henüz incelenmedi; salt okuma betiği sunucuda (`/tmp/claude-8b569b78/check_gaps.py`).
+
 ## 2026-09-28 (01:10) — Sesli bülten: «Metinden üret» (ZEKİ AI seslendirir, taslak düşer) — kod hazır, GPU'ya kurulmadı
 
 - **Neden:** Kampüs bülteni altyapısı hazırdı ama sunucuda üretilmiş ses yoktu; seslendirme modeli (`book-voice`) GPU'da hazır, kapıya bağlı değil (09-26'dan beri bekliyor). Kullanıcı kararı: üretim otomatik olsun.
@@ -10,12 +16,13 @@
 - **Kurulum sırası (bekliyor):** main → GPU: `editor-py` imajı (bu main) ile `gateway` + `editor-studio` + `editor-studio-worker` yeniden kurulur (kitap kuyruğu boşken; kullanıcı onayı), `add-studio-routes.py` → test sunucusu: köprü + arayüz → Yönetim'den kısa bir metin seslendirilip Kampüs'te çalınır. GPU'ya bu oturumdan erişilemedi (Mac VPN kapalı).
 - **Bağlantı olayı:** bu oturumun art arda ssh/scp ve port yoklamaları Mac'in IP'sinin test sunucusunda düşürülmesine katkı verdi; kullanıcı kuralı (AGENTS.md «Test sunucusuna tek ssh bağlantısı») bundan sonra uygulanıyor: tek kalıcı bağlantı (ControlMaster), tek akışla dosya, port yoklaması yok.
 
-## 2026-09-28 — M7: ısıya CRM izi, «ilgi bekleyen» nedenleri (dalda, kurulmadı)
+## 2026-09-28 — M7: ısıya CRM izi, «ilgi bekleyen» nedenleri
 
 - **Neden:** portala henüz görüşme yazılmadığı için ısı haritasındaki 549 yazarın hepsi «temas yok»tu; sözleşmesi bitmek üzere olup kimsenin aramadığı yazar ayrıca görünmüyordu.
 - **Isı:** yakınlık payı (en çok 50, 180 günde sıfır) son görüşme ya da CRM'deki son iz — yazar adına yeni eser kaydı, başlamış sözleşme — hangisi yeniyse ondan (`with_trace`, `latest_trace`); sıklık ve ton yalnız görüşmeden, bu yüzden iz tek başına «sıcak» yapmaz. Kart panelinde de aynı iz (`crm_trace_sql`; CRM okunamazsa panel yalnız görüşmeyle açılır). CRM olay ayı İstanbul saatiyle (UTC +3), ay sonundaki kayıtlar önceki aya düşmüyor.
 - **İlgi bekleyen** (`attention`): sözleşmesi `EDITORIAL_CONTRACT_WARN_DAYS` (60) içinde biten ve 60 gündür görüşülmeyen yazar, notu girilmemiş geçmiş randevu, tarihi geçmiş sıradaki adım. Isı haritasında sayaç düğmesi, «İlgi bekleyen» kapsamı ve satırda neden; «Isı nasıl hesaplanır» metni güncellendi.
 - **Doğrulama (test sunucusu, gerçek CRM .28, dalın kopyası):** son 12 ayda izi olan sözleşmeli yazar 224 = SQL referansı 224; ilgi bekleyen 13 = referans 13 (portal görüşmesi yokken sözleşmesi 60 gün içinde biten). Dağılım 549 yazarda: ılık 36, soğuk 188, temas yok 325, sıcak 0 (görüşme yok). Testler `test_author_relations` + `test_access` 24/24, `tsc -b` temiz.
+- **Kurulum (01:28, main `5f9ca81e`):** 5 dosya (author_relations, testi, CardPanel, HeatMapTab, shared) sunucuda değişiklik öncesi main ile md5 aynıydı → kopyalandı, sonrası main ile aynı. `app.py` ve `engine.ts` sunucuda main'den farklı (M2 gibi canlıya alınmamış işler) → dosyanın tamamı değil yalnız bu değişikliğin yaması uygulandı (önce kopyada; canlı arada değişmediği yamayla karşılaştırılarak doğrulandı). Ön yüz canlı kaynağın kopyasında derlendi (`tsc -b` 0), `cockpit/dist`'e kondu: `index-CBCtqdja.js`. `._*` 0. Köprü yeniden başladı, sağlık 200. Canlı kodla: testler 24/24, CRM referansıyla 224 = 224 ve 13 = 13. Portal oturumuyla ekran kontrolü yapılmadı. Müşteri VM'ine kurulmadı.
 - **Çapraz yazar önerisi yapılmadı:** kitaplık (%96 dolu) çok geniş — «Çocuk Kitaplığı» 3.084 kitap, en çok kitabı olan yazarlar ve «Komisyon», «Anonim» öne çıkıyor; dizi (%93) çoğunlukla tek yazarın serisi; tür metni %44 dolu. Anlamlı öneri için ortak alım verisi (e-ticaret siparişleri) gerekir; karar kullanıcıda.
 
 ## 2026-09-28 — M6 Sözleşmeler test sunucusuna kuruldu; gerçek oturumla uçtan uca 29/29; kural: CRM'e yazma yok
