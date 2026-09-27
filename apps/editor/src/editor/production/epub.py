@@ -720,8 +720,11 @@ class Narr:
         self.placed: dict[str, str | None] = {}     # kelime kimliği → belge
         self.durations: dict[str, float] = {}       # SMIL kimliği → süre
         self.smil_of: dict[str, str] = {}           # belge → SMIL yolu
+        from .sfx import page_audio
         for pg in ov["pages"]:
-            pack.add(f"audio/{pg['page']}.mp3", Path(pg["audio"]).read_bytes(), id=f"ses-{pg['page']}")
+            # efektler açık ve karışım güncelse efektli sayfa sesi (kelime zamanları aynı), değilse anlatım
+            src = page_audio(ov["job"], pg["page"], Path(pg["audio"]))
+            pack.add(f"audio/{pg['page']}.mp3", Path(src).read_bytes(), id=f"ses-{pg['page']}")
 
     def runs(self, runs: list[dict], bid: str | None, fonts: dict, scale_pt=None) -> str | None:
         ws = self.words.get(bid) if bid else None
@@ -1420,6 +1423,9 @@ def inputs_hash(d: Path, audio: bool = False) -> str:
         for p in sorted((sd / "sayfa").glob("*.json")) if (sd / "sayfa").exists() else []:
             h.update(p.name.encode() + p.read_bytes())
         h.update((sd / "ayar.json").read_bytes() if (sd / "ayar.json").exists() else b"-")
+        for p in sorted((sd / "efekt" / "karisim").glob("*.json")) if (sd / "efekt" / "karisim").exists() else []:
+            h.update(p.name.encode() + p.read_bytes())     # efektli karışım değişince e-kitap «eski»
+        h.update((sd / "efekt" / "ayar.json").read_bytes() if (sd / "efekt" / "ayar.json").exists() else b"-")
     return h.hexdigest()[:16]
 
 
@@ -1457,6 +1463,9 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool 
     alts = {k: v.get("text") or "" for k, v in alts_rec.items()}
     alts.setdefault("kapak", cover_alt(ms))
     rows = kunye_rows(front, eisbn, pisbn)
+    if audio:
+        from . import sfx
+        rows += sfx.kunye_rows(d)                 # sesli e-kitapta efekt kaynakçası (atıf gerekenler dahil)
     faces = font_faces([spec.body_font, spec.heading_font])
     faces = [f for f in faces if f.style == "normal"] or faces        # dizgide eğik yazı yok
     for f in faces:

@@ -1,6 +1,7 @@
 # editor-py-studio: Kitap Tasarım Stüdyosu'nun imajı (editor-studio API'si + editor-studio-worker).
 # editor-py'nin üstüne yalnız stüdyonun gerektirdiği katman: tam e-kitap denetimi (EPUBCheck 5.4.0, W3C) ve onu
-# çalıştıran başsız Java. Öteki editör servisleri (gateway, kartlar, MCP, işçi…) editor-py'de kalır, etkilenmez.
+# çalıştıran başsız Java; sesli okumadaki efekt karışımı için ffmpeg ve efekt aramasının metin kolu (onnxruntime).
+# Öteki editör servisleri (gateway, kartlar, MCP, işçi…) editor-py'de kalır, etkilenmez.
 #
 #   docker build -t editor-py-studio:<etiket> --build-arg BASE=editor-py:<etiket> -f images/studio/Dockerfile .
 #
@@ -30,3 +31,11 @@ PY
 ENV EDITOR_EPUBCHECK_JAR=/opt/epubcheck-5.4.0/epubcheck.jar
 RUN test -f /opt/epubcheck-5.4.0/LICENSE.txt && test -f /opt/epubcheck-5.4.0/THIRD-PARTY.txt \
     && java -jar "$EDITOR_EPUBCHECK_JAR" --version
+# Sesli okumaya efekt sesleri (production/sfx.py, sfx_library.py): karışım ve yükseklik ölçümü ffmpeg ile (Debian
+# paketi, LGPL/GPL derlemesi; ayrı süreç olarak çağrılır), efekt havuzunda metinle arama için ses-metin eşleme
+# modelinin metin kolu ONNX olarak CPU'da çalışır (onnxruntime MIT, tokenizers Apache-2.0). Havuzun kendisi ve
+# metin kolu imaja girmez: /data/editor/sfx birimi salt okunur bağlanır (deploy/docker-compose.yml).
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg && rm -rf /var/lib/apt/lists/* \
+    && ffmpeg -hide_banner -version | head -1 \
+    && pip install --no-cache-dir onnxruntime==1.30.0 tokenizers==0.23.2 \
+    && python -c "import onnxruntime, tokenizers; print(onnxruntime.__version__, tokenizers.__version__)"

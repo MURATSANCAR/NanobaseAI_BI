@@ -129,6 +129,11 @@ services:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
     container_name: editor-studio
+    # Efekt sesleri havuzu (production/sfx_library.py): imaja girmez, salt okunur birim. Klasör yoksa Docker boş
+    # klasör açar; stüdyo «havuz bağlı değil» der, sesli okuma efektsiz sürer.
+    volumes:
+      - ${EDITOR_ROOT:-/data/editor}/storage:/data/editor/storage
+      - ${EDITOR_ROOT:-/data/editor}/sfx:/data/editor/sfx:ro
     # Köprü bağlantıyı açık tutar (50 sn); sunucu ondan uzun tutmalı ki boşta kapanan bağlantıya istek düşmesin.
     command: ["uvicorn", "editor.production.api:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log",
               "--timeout-keep-alive", "75"]
@@ -146,6 +151,9 @@ services:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
     container_name: editor-studio-worker
+    volumes:
+      - ${EDITOR_ROOT:-/data/editor}/storage:/data/editor/storage
+      - ${EDITOR_ROOT:-/data/editor}/sfx:/data/editor/sfx:ro   # efekt havuzu (seslendirme sonrası karışım)
     command: ["python", "-m", "editor.production.worker"]
     depends_on:
       postgres: {condition: service_healthy}
