@@ -105,6 +105,37 @@ CHECKS: dict[str, tuple[str, str, str]] = {
                      "kapak kitapla eşleşmez."),
 }
 IMAGE_CHECKS = ("img_no_alt", "img_empty_alt", "img_bad_name", "img_no_size", "main_img_alt")
+#: Taranan sayfaların en az bu oranında (ve en az CHROME_MIN_PAGES sayfada) aynı adresle geçen görsel sitenin
+#: şablonudur (logo, simge, ödeme rozeti): sayfa uyarısı sayılmaz, tema isteğinde tek madde olur. İlk canlı
+#: taramada (2026-09-27, 70 sayfa) şablon görselleri yüzünden görsel uyarıları 66/70 sayfada çıkıyordu.
+CHROME_SHARE, CHROME_MIN_PAGES = 0.30, 5
+_IMG_KEYS = (("img_no_alt", "noAlt"), ("img_empty_alt", "emptyAlt"), ("img_bad_name", "badName"), ("img_no_size", "noSize"))
+
+
+def chrome_images(pages: list[dict[str, Any]]) -> set[str]:
+    """Şablon görselleri: sayfa başına tekil sayılır; `pages` her sayfanın `images` özeti (noAlt, emptyAlt…)."""
+    n = len(pages)
+    if n < CHROME_MIN_PAGES:
+        return set()
+    seen: collections.Counter = collections.Counter()
+    for img in pages:
+        seen.update({src for _, k in _IMG_KEYS for src in (img.get(k) or [])})
+    need = max(CHROME_MIN_PAGES, CHROME_SHARE * n)
+    return {src for src, c in seen.items() if c >= need}
+
+
+def without_chrome(images: dict[str, Any], chrome: set[str]) -> tuple[dict[str, Any], set[str]]:
+    """Şablon görselleri ayıklanmış özet ve kalan görsel sorunları."""
+    out = dict(images)
+    flags = set()
+    for key, k in _IMG_KEYS:
+        raw = images.get(k + "All", images.get(k)) or []
+        kept = [s for s in raw if s not in chrome]
+        out[k + "All"], out[k] = raw, kept
+        if kept:
+            flags.add(key)
+    out["chrome"] = sorted({s for _, k in _IMG_KEYS for s in (images.get(k + "All", images.get(k)) or []) if s in chrome})
+    return out, flags
 KINDS = {"product": "Ürün", "category": "Kategori", "brand": "Yayınevi", "author": "Yazar", "home": "Anasayfa"}
 LINK_KIND = {"model": "author", "category": "category", "brand": "brand"}
 
@@ -635,6 +666,7 @@ class Tech:
                 self.state["done"] += 1
                 pause()
             self.mark_duplicates()
+            self.mark_images()
         except Exception as e:  # noqa: BLE001 — tur durur, bakılanlar kalır
             self.state["error"] = str(e)[:500]
             log.exception("seo tech crawl failed")
@@ -684,6 +716,28 @@ class Tech:
             if not n:
                 c.execute(TECH.insert().values(tenant_id=tenant, url=t["url"][:800], **row))
         return row
+
+    def mark_images(self) -> int:
+        """Şablon görsellerini sayfa uyarılarından çıkarır; tarama sonunda bütün kayıt üzerinden yeniden hesaplanır."""
+        tenant = self.seo.tenant()
+        with self.engine().connect() as c:
+            rows = c.execute(sa.select(TECH.c.url, TECH.c.issues, TECH.c.data_json, TECH.c.status)
+                             .where(TECH.c.tenant_id == tenant)).all()
+        pages = [(url, issues, loads(dj, {})) for url, issues, dj, st in rows if st == 200]
+        chrome = chrome_images([d.get("images") or {} for _, _, d in pages])
+        changed = 0
+        with self.engine().begin() as c:
+            for url, issues, d in pages:
+                imgs, flags = without_chrome(d.get("images") or {}, chrome)
+                old = [i for i in (issues or "").split(",") if i]
+                parts = [i for i in old if i not in dict(_IMG_KEYS)] + [k for k, _ in _IMG_KEYS if k in flags]
+                if parts == old and imgs == d.get("images"):
+                    continue
+                d["images"] = imgs
+                c.execute(TECH.update().where(TECH.c.tenant_id == tenant, TECH.c.url == url)
+                          .values(issues="," + ",".join(parts) + "," if parts else "", data_json=dumps(d)))
+                changed += 1
+        return changed
 
     def mark_duplicates(self) -> int:
         tenant = self.seo.tenant()

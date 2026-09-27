@@ -203,3 +203,19 @@ def test_parse_psi_and_thresholds():
     assert out["labCategory"]["lcp"] == "poor" and out["field"]["cls"] == {"p75": 0.12, "category": "ni"}
     assert out["field"]["lcp"]["category"] == "good" and out["fieldOrigin"] is True
     assert speed.category("inp", 200) == "good" and speed.category("inp", 201) == "ni" and speed.category("cls", 0.26) == "poor"
+
+
+def test_chrome_images_are_not_page_issues():
+    from semantic_bridge.seo_geo import tech
+
+    logo, icon, cover = "https://x/logo.png", "https://x/i.svg", "https://x/kapak.jpg"
+    pages = [{"noAlt": [], "emptyAlt": [logo, icon], "badName": [icon], "noSize": [logo]} for _ in range(9)]
+    pages.append({"noAlt": [cover], "emptyAlt": [logo], "badName": [], "noSize": [logo, cover]})
+    chrome = tech.chrome_images(pages)
+    assert chrome == {logo, icon}
+    imgs, flags = tech.without_chrome(pages[-1], chrome)
+    assert flags == {"img_no_alt", "img_no_size"} and imgs["noSize"] == [cover] and imgs["chrome"] == [logo]
+    # yeniden hesap: ham liste korunur, ikinci geçiş aynı sonucu verir
+    again, flags2 = tech.without_chrome(imgs, chrome)
+    assert flags2 == flags and again["noSizeAll"] == [logo, cover]
+    assert tech.chrome_images(pages[:3]) == set()   # az sayfada şablon kararı verilmez
