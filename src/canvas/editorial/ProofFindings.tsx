@@ -146,6 +146,7 @@ export function ProofFindings({
   error,
   picker,
   idle,
+  document,
 }: {
   report: ProofingReport | undefined;
   loading: boolean;
@@ -154,6 +155,8 @@ export function ProofFindings({
   picker?: ReactNode;
   /** Sorgu çalışmıyorken (kitap seçilmemiş) gösterilen metin; verilmezse yükleniyor, null ise hiçbir şey gösterilir. */
   idle?: string | null;
+  /** Belge incelemesi: kitap kimliği yok (sayfa görseli ve karar yok); başlık, açıklama ve Word düğmesi belgenin. */
+  document?: { title: string; lead: ReactNode; action?: ReactNode };
 }) {
   const qc = useQueryClient();
   const desktop = useDesktop();
@@ -304,7 +307,7 @@ export function ProofFindings({
   else if (loading) body = <Loading />;
   else if (!report) body = idle === undefined ? <Loading /> : idle ? <Empty>{idle}</Empty> : null;
   else if (!report.configured) body = <Empty>ZEKİ AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.</Empty>;
-  else if (!report.bookId) body = <Empty>Bu eser motorda henüz okunmamış. Kitap adı motordaki adla birebir eşleşmeli.</Empty>;
+  else if (!report.bookId && !document) body = <Empty>Bu eser motorda henüz okunmamış. Kitap adı motordaki adla birebir eşleşmeli.</Empty>;
   else if (!report.checks.length) body = <Empty>Eser okunmuş, denetimler henüz koşmamış. Motor sırası gelince burada görünür.</Empty>;
   else
     body = (
@@ -445,13 +448,17 @@ export function ProofFindings({
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        <h2 className="text-[13px] font-extrabold">ZEKİ AI son okuma</h2>
-        {bookId && canExport && report?.checks.length ? <WordExport bookId={bookId} /> : null}
+        <h2 className="text-[13px] font-extrabold">{document ? document.title : 'ZEKİ AI son okuma'}</h2>
+        {document ? document.action ?? null : bookId && canExport && report?.checks.length ? <WordExport bookId={bookId} /> : null}
       </div>
+      {document ? (
+        <div className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">{document.lead}</div>
+      ) : (
       <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
         ZEKİ AI, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez. Bulguya tıklayın: sayfa ve işaretli yer açılır, kararı oradan verirsiniz. Karar bulguya iliştirilir ve kuralın isabetini ölçer; kitabı değiştirmez.
         {report?.bookTitle ? ` Eşleşen kitap: ${report.bookTitle}.` : ''}
       </p>
+      )}
       {picker ? <div className="mt-2">{picker}</div> : null}
       <div className="mt-2">{body}</div>
     </Panel>
