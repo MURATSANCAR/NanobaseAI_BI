@@ -35,6 +35,10 @@ const FreelanceScreen = lazy(() => import('@/canvas/editorial/freelance/Freelanc
 const AuthorRelationsScreen = lazy(() => import('@/canvas/editorial/authors/AuthorRelationsScreen'));
 const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
+const ContractDetail = lazy(() => import('@/canvas/editorial/contracts/ContractDetail'));
+const NewContract = lazy(() => import('@/canvas/editorial/contracts/NewContract'));
+const ContractPayments = lazy(() => import('@/canvas/editorial/contracts/PaymentsScreen'));
+const ContractTemplates = lazy(() => import('@/canvas/editorial/contracts/TemplatesScreen'));
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
@@ -168,6 +172,10 @@ export default function App() {
             <Route path="kitap-tasarim/:jobId/sayfalar" element={<PlanEditor />} />
             <Route path="kitap-tasarim/:jobId/kapak" element={<CoverScreen />} />
             <Route path="telif-sozlesme" element={<ContractsScreen />} />
+            <Route path="telif-sozlesme/yeni" element={<NewContract />} />
+            <Route path="telif-sozlesme/odemeler" element={<ContractPayments />} />
+            <Route path="telif-sozlesme/sablonlar" element={<ContractTemplates />} />
+            <Route path="telif-sozlesme/:key" element={<ContractDetail />} />
           </Route>
           </Route>
 

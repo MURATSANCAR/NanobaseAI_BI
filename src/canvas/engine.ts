@@ -1293,6 +1293,8 @@ export type Contract = {
   modifiedOn: string | null;
   books: Array<{ id: string | null; title: string }>;
   parties: ContractParty[];
+  /** Portalda düzenlenmişse portal kaydının durumu ve CRM'e işlenmemiş fark sayısı. */
+  portal?: { id: string; status: string; statusLabel: string; updatedAt: string; diff: number } | null;
 };
 export type ContractPage = { items: Contract[]; total: number; page: number; pageSize: number; db?: DbTiming | null };
 export type ContractFacet = { code: number; label: string | null; count: number };

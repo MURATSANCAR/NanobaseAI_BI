@@ -3955,10 +3955,22 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         expiring_days = _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60) if expiring else None
         _remember_view("contracts", page, q, order=order, status=status, kind=kind, expiring_days=expiring_days)
         try:
-            return editorial_mod.page(
+            out = editorial_mod.page(
                 schema, run, page, order=order, q=q, status=status, kind=kind, expiring_days=expiring_days)
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
+        # Portalda düzenlenen CRM sözleşmeleri: satırda «portalda» rozeti ve durumu.
+        engine, tenant, _, _ = _greetings(request)
+        state = contracts_mod.crm_state(engine, tenant, [c["id"] for c in out["items"] if c.get("id")])
+        for c in out["items"]:
+            c["portal"] = state.get((c.get("id") or "").lower())
+        return out
+
+    from semantic_bridge import contracts as contracts_mod
+    from semantic_bridge import contracts_api as contracts_api_mod
+
+    contracts_api_mod.register(app, rt=rt, greetings=_greetings, can=_can, editorial=_editorial,
+                               crm_prefix=editorial_mod._prefix, audit=admin_mod.audit)
 
     @app.get("/api/v1/editorial/board/summary")
     def editorial_board_summary(request: Request) -> dict[str, Any]:
