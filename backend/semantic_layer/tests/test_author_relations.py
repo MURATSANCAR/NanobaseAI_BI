@@ -193,3 +193,10 @@ def test_heatmap_merges_crm_authors_and_cards(engine):
 
     broken = R.heatmap("Timas_MSCRM.dbo", down, engine, T, "ayse")
     assert broken["crmOk"] is False and broken["total"] == 1
+
+
+def test_open_ended_contract_counts_as_active():
+    """Süresiz sözleşmede bitiş tarihi geçmiş görünür; yazar yine sözleşmeli sayılır, en yakın bitişe girmez."""
+    sql = R.contracted_authors_sql("Timas_MSCRM.dbo")
+    assert "ISNULL(s.new_suresizsozlesme, 0) = 1 OR s.new_SozlesmeBitisTarihi IS NULL" in sql
+    assert "MIN(CASE WHEN ISNULL(s.new_suresizsozlesme, 0) = 0 THEN s.new_SozlesmeBitisTarihi END)" in sql

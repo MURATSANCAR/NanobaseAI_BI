@@ -782,11 +782,13 @@ def contracted_authors_sql(schema: str) -> str:
     p = _prefix(schema)
     return (
         "SELECT k.ContactId, k.FullName, COUNT(DISTINCT s.new_sozlesmeId) AS sozlesme,"
-        " MIN(s.new_SozlesmeBitisTarihi) AS en_yakin_bitis"
+        " MIN(CASE WHEN ISNULL(s.new_suresizsozlesme, 0) = 0 THEN s.new_SozlesmeBitisTarihi END) AS en_yakin_bitis"
         f" FROM {p}new_sozlesmetarafiBase t JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid"
         f" JOIN {p}ContactBase k ON k.ContactId = t.new_kisi"
         f" WHERE t.statecode = 0 AND s.statecode = 0 AND s.statuscode IN ({', '.join(map(str, CONTRACT_ACTIVE))})"
-        " AND (s.new_SozlesmeBitisTarihi IS NULL OR s.new_SozlesmeBitisTarihi >= CAST(GETDATE() AS date))"
+        # Süresiz sözleşme, bitiş tarihi geçmiş görünse de yürürlüktedir; en yakın bitişe girmez.
+        " AND (ISNULL(s.new_suresizsozlesme, 0) = 1 OR s.new_SozlesmeBitisTarihi IS NULL"
+        " OR s.new_SozlesmeBitisTarihi >= CAST(GETDATE() AS date))"
         f" AND {_is_author(p, 't.new_kisi')}"
         " GROUP BY k.ContactId, k.FullName"
     )

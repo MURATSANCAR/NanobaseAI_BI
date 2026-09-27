@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M7 ısı haritası: süresiz sözleşmesi olan yazar haritadan düşüyordu (dalda, kurulmadı)
+
+- `contracted_authors_sql` yürürlüğü bitiş tarihine bakarak seçiyordu; süresiz sözleşmede (`new_suresizsozlesme = 1`) bitiş tarihi geçmiş görünür, yazar sözleşmesiz sayılıyordu. Süresiz sözleşme artık yürürlükte, «en yakın bitiş»e girmez.
+- **Doğrulama (test sunucusu, gerçek CRM .28, canlı kodun kopyası):** sözleşmeli yazar 549 = CRM referansı 549 (düzeltme öncesi 548); yazar × yürürlükteki sözleşme 3.223 = 3.223; son 12 ay yeni eser 338 = 338, sözleşme başlangıcı 314 = 314; aday havuzu 72 = 72. `test_author_relations.py` geçti.
+- Not: aynı gece M7 iki oturumda ayrı ayrı yazılmıştı; `main`'deki (`author_relations.py`) kaldı, öteki dal (`claude/m7-yazar-iliskileri-58819f`) birleştirilmedi. Takma ad gölgelemesi hatasını iki oturum da bulmuştu; `main`'deki düzeltme (`692045c6`) geçerli.
+
 ## 2026-09-27 (22:30) — Yetki Aşama B test sunucusuna kuruldu
 
 - `main` `a25f8229`: değişen 40 dosya sunucuda değişiklik öncesi `main` ile md5 eşitti, 1 yeni dosya (`SqlGate.tsx`); `._*` 0. Köprü yeniden başlatıldı (sağlıklı), ön yüz `VITE_BASE=/timas/` ile derlendi; yayındaki derleme `index-heX0_F9q.js`.
