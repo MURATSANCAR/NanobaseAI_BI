@@ -416,6 +416,46 @@ class SemanticResolver:
 
     # ------------------------------------------------------------------ public
     def resolve(self, question: str, today: Optional[date] = None) -> SemanticQuery:
+        sq = self._resolve(question, today)
+        if not sq.unresolved:
+            return sq
+        # K5: "2026 şuabt ayında toplamkaç adet satış", "faturalarının saysıı ve toplam tutatrları" — a few letters
+        # turned a well-formed question into "not in the catalog". Only the words left unresolved are corrected,
+        # each to the one known word within reach, and the corrected reading is kept only if it resolves more.
+        fixed, notes = self._spell(question, sq.unresolved)
+        if not notes:
+            return sq
+        again = self._resolve(fixed, today)
+        if len(again.unresolved) >= len(sq.unresolved):
+            return sq
+        again.question = question
+        again.explanation.insert(0, "yazım: " + ", ".join(f"'{a}' → '{b}'" for a, b in notes) + " olarak okundu")
+        return again
+
+    def _spell(self, question: str, unresolved: list[str]) -> tuple[str, list[tuple[str, str]]]:
+        from semantic_layer.runtime.spelling import Speller
+        from semantic_layer.runtime.temporal import MONTHS
+        index = self.store.certified_index(self.tenant_id, self.datasource_id)
+        if getattr(self, "_speller_for", None) is not index:
+            words = {w for key in index for w in key.split()} | set(MONTHS) | set(_TIME_WORDS) | set(METRIC_VOCAB_S)
+            self._speller, self._speller_for = Speller(words), index
+        wanted = {fold(u) for u in unresolved}
+        notes: list[tuple[str, str]] = []
+
+        def swap(m: re.Match) -> str:
+            word = m.group(0)
+            if fold(word) not in wanted:
+                return word
+            if word[:1].isupper() and question[:m.start()].strip():
+                return word         # a capitalised word inside the sentence is a name (K2), not a misspelling
+            better = self._speller.correct(word)
+            if better is None:
+                return word
+            notes.append((word, better))
+            return better
+        return re.sub(r"[^\W\d_]+", swap, question), notes
+
+    def _resolve(self, question: str, today: Optional[date] = None) -> SemanticQuery:
         from semantic_layer.runtime.monthly_analysis import resolve_frame
         framed = resolve_frame(self, question, today)
         if framed is not None:
