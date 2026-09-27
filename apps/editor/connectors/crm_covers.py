@@ -60,8 +60,13 @@ def norm_isbn(s: str | None) -> str:
     return re.sub(r"[^0-9Xx]", "", s or "").upper()
 
 
+# editördeki başlık dosya adından gelebilir: «Dilek Agaci.indd», «…-arsiv.pdf» — uzantı başlığın parçası değil
+DOC_EXT = re.compile(r"\.(indd|pdf|docx?|idml|rtf|txt|epub)\s*$", re.I)
+
+
 def fold(s: str | None) -> str:
-    s = unicodedata.normalize("NFKC", s or "").casefold().translate(ASCII)
+    s = DOC_EXT.sub("", unicodedata.normalize("NFKC", s or "").strip())
+    s = s.casefold().translate(ASCII)
     s = "".join(ch for ch in unicodedata.normalize("NFKD", s) if not unicodedata.combining(ch))
     return re.sub(r"[^a-z0-9]+", " ", s).strip()
 

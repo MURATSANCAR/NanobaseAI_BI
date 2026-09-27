@@ -167,6 +167,30 @@ async def _model_form(generation_id: str, title: str, genres: list[str], candida
             "sample_pages": [n for n, _ in sample], "model_call_id": call_id}
 
 
+def _refresh_from_crm(row: dict) -> dict | None:
+    """Profil CRM kaydı gelmeden kararlaştırılmışsa (okur kitlesi yok ya da tür kitabın metninden seçildi) ve
+    CRM kaydı sonradan geldiyse profil CRM'e göre düzelir: okur kitlesi ve yaş aralığı CRM'den; tür, CRM tek
+    tür söylüyorsa ondan (öncelik sırası profile() ile aynı). Editörün verdiği karar değişmez. Değişen yoksa None."""
+    rec = db.one("SELECT r.audience, r.genres, r.web_categories, r.age_from, r.age_to FROM book_crm_record r"
+                 " JOIN book_version v ON v.book_id=r.book_id JOIN generation g ON g.book_version_id=v.id"
+                 " WHERE g.id=%s", row["generation_id"])
+    if not rec:
+        return None
+    upd: dict = {}
+    if row["audience_source"] == "NONE" and rec.get("audience"):
+        upd.update(audience=rec["audience"], audience_source="CRM", age_from=rec.get("age_from"),
+                   age_to=rec.get("age_to"))
+    crm = crm_forms(list(rec.get("genres") or []), rec.get("web_categories"))
+    # editörün kararı (EDITOR) CRM'le ezilmez; yalnız metinden seçilen ya da hiç seçilemeyen tür
+    if row["form_source"] in ("MODEL", "NONE") and len(crm["forms"]) == 1:
+        upd.update(form=crm["forms"][0], form_source="CRM")
+    if not upd:
+        return None
+    sets = ", ".join(f"{k}=%s" for k in upd)
+    return db.one(f"UPDATE book_profile SET {sets} WHERE generation_id=%s RETURNING *", *upd.values(),
+                  row["generation_id"])
+
+
 def _stored(generation_id: str) -> dict | None:
     return db.one("SELECT * FROM book_profile WHERE generation_id=%s", generation_id)
 
@@ -175,6 +199,8 @@ async def profile(generation_id: str) -> dict:
     """The generation's profile; decided and stored on first use (idempotent)."""
     row = await asyncio.to_thread(_stored, generation_id)
     if row:
+        if row["audience_source"] == "NONE" or row["form_source"] in ("MODEL", "NONE"):
+            row = await asyncio.to_thread(_refresh_from_crm, row) or row
         return row
     info = await asyncio.to_thread(
         db.one, "SELECT b.id AS book_id, b.title, g.book_version_id FROM generation g"
