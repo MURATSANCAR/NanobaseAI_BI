@@ -12,10 +12,11 @@
 - **Yetki:** `ozellik:sozlesme.duzenle|hakedis|sablon` açıkça verilir («Bütün» ile gelmez); `/api/v1/editorial/contracts` yalnız Sözleşmeler sayfasıyla; Word indirme dışa aktarma yetkisiyle.
 - **Doğrulama (sunucuda, ayrı kopyada):** `test_contracts.py` + `test_access.py` 38/38; tam paket 1.099 geçti, kalan 13 hata + 10 kurulum hatası `main`deki sayıyla aynı, hiçbiri bu işten değil; ön yüz `tsc` temiz, vitest 36/36. Test sunucusu 22:00–23:20 arası iki kez erişilemedi (kısa sürede açılan çok SSH bağlantısından sonra bütün portlar ~1 saat kapandı); sonrası tek kalıcı SSH bağlantısıyla (ControlMaster) sorunsuz.
 
-## 2026-09-28 — M7 ısı haritası: süresiz sözleşmesi olan yazar haritadan düşüyordu (dalda, kurulmadı)
+## 2026-09-28 — M7 ısı haritası: süresiz sözleşmesi olan yazar haritadan düşüyordu
 
 - `contracted_authors_sql` yürürlüğü bitiş tarihine bakarak seçiyordu; süresiz sözleşmede (`new_suresizsozlesme = 1`) bitiş tarihi geçmiş görünür, yazar sözleşmesiz sayılıyordu. Süresiz sözleşme artık yürürlükte, «en yakın bitiş»e girmez.
 - **Doğrulama (test sunucusu, gerçek CRM .28, canlı kodun kopyası):** sözleşmeli yazar 549 = CRM referansı 549 (düzeltme öncesi 548); yazar × yürürlükteki sözleşme 3.223 = 3.223; son 12 ay yeni eser 338 = 338, sözleşme başlangıcı 314 = 314; aday havuzu 72 = 72. `test_author_relations.py` geçti.
+- **Kurulum (00:34, main `a5994dff`):** yalnız `author_relations.py` ve testi; sunucudaki hâl düzeltme öncesi main (`cec2bbe3`) ile md5 aynıydı, kurulum sonrası main ile aynı, `._*` 0. Köprü yeniden başladı (sağlık 200). Canlı ağaçtaki kodla gerçek CRM'e karşı tekrar: sözleşmeli yazar 549 = 549, diğer sayılar aynı; testler 9/9. Portal oturumuyla ekran kontrolü bu kurulumda yapılmadı. Müşteri VM'ine kurulmadı.
 - Not: aynı gece M7 iki oturumda ayrı ayrı yazılmıştı; `main`'deki (`author_relations.py`) kaldı, öteki dal (`claude/m7-yazar-iliskileri-58819f`) birleştirilmedi. Takma ad gölgelemesi hatasını iki oturum da bulmuştu; `main`'deki düzeltme (`692045c6`) geçerli.
 
 ## 2026-09-27 (22:30) — Yetki Aşama B test sunucusuna kuruldu
