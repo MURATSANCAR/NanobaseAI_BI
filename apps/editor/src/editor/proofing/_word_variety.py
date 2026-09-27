@@ -113,6 +113,34 @@ def choose_lemmas(form_cands: dict[str, list[tuple[str, str, int, int, bool]]],
     return out
 
 
+# ------------------------------------------------------------------ yinelenen OCR eki
+def _key_text(t: str) -> str:
+    return " ".join("".join(ch if ch.isalnum() else " " for ch in lower_tr(t)).split())
+
+
+def duplicate_supplements(spans: list[dict], probe: int = 40) -> set[tuple[int, int]]:
+    """Sayfanın metin katmanında ZATEN bulunan OCR ekleri (source.read ek span'ı; `supplement`): aynı
+    paragraf iki kez okunmuş olur ve her sözcük denetiminde sahte tekrar üretir. Ekin başı ve sonu
+    (`probe` karakter, noktalama ve büyük/küçük harf yok sayılarak) aynı sayfanın katman metninde geçiyorsa
+    ek yinelenmiştir. Dönen: (sayfa, span idx)."""
+    layer: dict[int, str] = {}
+    for sp in spans:
+        if not sp.get("supplement"):
+            layer[sp["page"]] = layer.get(sp["page"], "") + " " + _key_text(sp["text"])
+    out = set()
+    for sp in spans:
+        if not sp.get("supplement"):
+            continue
+        k = _key_text(sp["text"])
+        page_text = layer.get(sp["page"], "")
+        if not k or not page_text:
+            continue
+        head, tail = k[:probe], k[-probe:]
+        if head in page_text and tail in page_text:
+            out.add((sp["page"], sp["idx"]))
+    return out
+
+
 # ------------------------------------------------------------------ konum
 def sentence_ids(sent_starts: list[bool]) -> list[int]:
     """Belirteç akışında cümle numarası; sayfa sınırı cümleyi bölmez (cümle sayfadan taşar)."""

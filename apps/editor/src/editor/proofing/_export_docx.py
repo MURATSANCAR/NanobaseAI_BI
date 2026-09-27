@@ -18,8 +18,15 @@ AUTHOR = "Zeki AI"
 INITIALS = "ZA"
 
 
+def xml_safe(s: str) -> str:
+    """Word (XML) kabul etmeyen karakterler atılır: denetim karakterleri (PDF metin katmanından gelir),
+    yarım vekil ve özel kullanım alanı, U+FFFE/U+FFFF. Sekme ve satır sonu kalır."""
+    return "".join(ch for ch in (s or "") if ch in "\t\n" or (
+        unicodedata.category(ch) not in ("Cc", "Cs", "Co") and ch not in "\ufffe\uffff"))
+
+
 def _norm(s: str) -> str:
-    return " ".join(unicodedata.normalize("NFKC", s or "").split())
+    return " ".join(xml_safe(unicodedata.normalize("NFKC", s or "")).split())
 
 
 def needles(f: dict) -> list[str]:
@@ -71,9 +78,9 @@ def cuts(text: str, spans: list[tuple[int, int, int]]) -> list[tuple[str, list[i
 
 
 def comment_text(f: dict, placed: bool) -> str:
-    t = f"{f.get('label') or f.get('check')}: {f['message']}"
+    t = xml_safe(f"{f.get('label') or f.get('check')}: {f['message']}")
     if f.get("suggestion"):
-        t += f"\nÖneri: {f['suggestion']}"
+        t += "\nÖneri: " + xml_safe(f["suggestion"])
     if not placed:
         t += "\n(Metinde tam yeri bulunamadı; sayfaya bağlandı.)"
     return t
@@ -84,7 +91,7 @@ def build(title: str, pages: list[dict], findings: list[dict]) -> bytes:
     ({page, check, label, message, suggestion, quote, details}). Word belgesinin baytları."""
     from docx import Document
     doc = Document()
-    doc.add_heading(f"{title} — son okuma", level=1)
+    doc.add_heading(xml_safe(f"{title} — son okuma"), level=1)
     doc.add_paragraph(f"Zeki AI son okuma bulguları yorum olarak metne işlendi ({len(findings)} bulgu). "
                       "Metin, kitabın okunan hâlidir; sayfa numaraları basılı kitaba göredir.")
 
@@ -93,7 +100,7 @@ def build(title: str, pages: list[dict], findings: list[dict]) -> bytes:
         doc.add_heading("Kitap geneli", level=2)
         for f in book_wide:
             p = doc.add_paragraph()
-            run = p.add_run(f"{f.get('label') or f.get('check')}: {f['message']}")
+            run = p.add_run(xml_safe(f"{f.get('label') or f.get('check')}: {f['message']}"))
             doc.add_comment(run, text=comment_text(f, True), author=AUTHOR, initials=INITIALS)
 
     by_page: dict[int, list[dict]] = {}
@@ -132,7 +139,7 @@ def build(title: str, pages: list[dict], findings: list[dict]) -> bytes:
         doc.add_heading("Metni okunmamış sayfalar", level=2)
         for f in orphans:
             p = doc.add_paragraph()
-            run = p.add_run(f"s.{f['page']} — {f.get('label') or f.get('check')}: {f['message']}")
+            run = p.add_run(xml_safe(f"s.{f['page']} — {f.get('label') or f.get('check')}: {f['message']}"))
             doc.add_comment(run, text=comment_text(f, False), author=AUTHOR, initials=INITIALS)
     buf = io.BytesIO()
     doc.save(buf)

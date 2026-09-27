@@ -169,10 +169,11 @@ def book_proofing(book_id: UUID):
                          'decision':decisions.get(str(r['id']))} for r in rows]}
 
 @app.get('/v1/books/{book_id}/proofing/export.docx')
-def book_proofing_docx(book_id: UUID):
+def book_proofing_docx(book_id: UUID, info: bool = Query(default=False)):
     """Son okuma bulguları kitabın metnine Word yorumu olarak işlenmiş .docx (redaksiyon Word'de yapılır).
-    Son okunan neslin her denetiminin en yeni koşusu; editörün «yanlış alarm» dediği bulgu hariç, geri kalan
-    hiçbir bulgu düşmez (yeri bulunamayan sayfa başlığına bağlanır). Salt okuma."""
+    Son okunan neslin her denetiminin en yeni koşusu; uyarı ve hata düzeyi (`info=true` ile bilgi düzeyi de —
+    denetimlerin özet satırları ve öneri olarak gelenler); editörün «yanlış alarm» dediği bulgu hariç, geri
+    kalan hiçbir bulgu düşmez (yeri bulunamayan sayfa başlığına bağlanır). Salt okuma."""
     from . import source
     from .proofing import _export_docx
     with foundation.read_snapshot() as c:
@@ -192,7 +193,7 @@ def book_proofing_docx(book_id: UUID):
         decisions,_=_decisions(c,gid,[r['id'] for r in runs]) if runs else ({},{})
     findings=[{'page':r['page_no'],'check':r['check_name'],'label':label_of(r['check_name']),'message':r['message'],
                'quote':r['quote'],'suggestion':r['suggestion'],'details':r['details'] or {}} for r in rows
-              if (decisions.get(str(r['id'])) or {}).get('verdict')!='REJECT']
+              if (decisions.get(str(r['id'])) or {}).get('verdict')!='REJECT' and (info or r['severity']!='INFO')]
     body=_export_docx.build(title,source.read(gid),findings)
     safe=''.join(ch if ch.isascii() and (ch.isalnum() or ch in '-_') else '-' for ch in title).strip('-') or 'kitap'
     from urllib.parse import quote as _q

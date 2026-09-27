@@ -129,6 +129,24 @@ def test_comment_text_mentions_suggestion_and_unplaced():
     assert t.startswith("Yakın tekrar: «göz» iki kez.") and "Öneri: bakış" in t and "bulunamadı" in t
 
 
+def test_xml_safe_drops_control_characters_from_pdf_text():
+    assert X.xml_safe("Ağaç\x00\x0b dalı\x1f\tkırık\n") == "Ağaç dalı\tkırık\n"
+    assert X._norm("a\x02  b") == "a b"
+    assert "\x01" not in X.comment_text({"label": "L", "message": "m\x01", "suggestion": "s\x02"}, True)
+
+
+def test_duplicate_ocr_supplement_is_detected_by_page_layer_text():
+    spans = [
+        {"page": 22, "idx": 2, "text": "Çay bahçesindeki herkes bir tiyatro sahnesi izler gibi onu izliyordu. Ceyda teyze birden"},
+        {"page": 22, "idx": 3, "text": "kafasını kaldırdı."},
+        {"page": 22, "idx": 8, "supplement": True,
+         "text": "Çay bahçesindeki herkes bir tiyatro sahnesi izler gibi onu izliyordu. Ceyda teyze birden kafasını kaldırdı."},
+        {"page": 22, "idx": 9, "supplement": True, "text": "Resmin içindeki tabelada yazan: Dilek Ağacı"},
+        {"page": 23, "idx": 1, "supplement": True, "text": "Çay bahçesindeki herkes bir tiyatro sahnesi izler gibi"},
+    ]
+    assert W.duplicate_supplements(spans) == {(22, 8)}     # katmanda olan ek; yeni metin taşıyan ek kalır
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

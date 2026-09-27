@@ -40,8 +40,9 @@ CONTEXT_CHARS = C.setting("word_context_chars", 70)         # EDITOR_WORD_CONTEX
 PARALLEL = C.setting("word_variety_parallel", 4)            # EDITOR_WORD_VARIETY_PARALLEL
 YOUNG_READERS = ("CHILD", "YOUNG")
 
-BETTER = "Evet: bu cümlede önerilen Türkçe karşılık doğru ve daha uygun."
-KEEP_AS_IS = "Hayır: yabancı sözcük burada gerekli (terim, ad, alıntı, yerleşmiş kullanım) ya da karşılık uymuyor."
+BETTER = "Evet: sözcük Türkçeye yerleşmemiş; önerilen karşılık bu cümlede AYNI anlamı verir ve daha uygun."
+KEEP_AS_IS = ("Hayır: sözcük Türkçeye yerleşmiş, ya da burada gerekli (terim, ad, alıntı), ya da karşılık "
+              "anlamı tam vermiyor.")
 HEAVY = "Evet: bu yaştaki okur bu sözcüğün anlamını büyük olasılıkla bilmez; daha basit sözcük gerekir."
 FINE = "Hayır: bu yaştaki okur anlar ya da bağlamdan çıkarır; ya da sözcük öğretmek için bilerek seçilmiş."
 
@@ -49,9 +50,10 @@ FINE = "Hayır: bu yaştaki okur anlar ya da bağlamdan çıkarır; ya da sözc�
 def list_prompt(kind: str, words: list[str], reader: str) -> str:
     if kind == "foreign":
         ask = ("Aşağıdaki sözcüklerden, günümüz Batı dillerinden (İngilizce, Fransızca vb.) gelmiş, Türkçeye "
-               "yerleşmemiş ve yaygın bir TÜRKÇE KARŞILIĞI olanları seç (ör. online → çevrim içi, feedback → geri "
-               "bildirim). Arapça ya da Farsça kökenli yerleşik sözcükleri (kitap, dünya, insan) ve karşılığı "
-               "olmayanları SEÇME. Her seçtiğin için karşılığı yaz.")
+               "YERLEŞMEMİŞ ve aynı anlamı taşıyan yaygın bir TÜRKÇE KARŞILIĞI olanları seç. Türkçeye yerleşmiş "
+               "sözcükleri (internet, televizyon, telefon, doktor gibi herkesin kullandığı ve sözlükte olanlar), "
+               "Arapça ya da Farsça kökenli sözcükleri ve karşılığı anlamı tam vermeyenleri SEÇME. Her seçtiğin "
+               "için karşılığı yaz.")
     else:
         ask = (f"Okur {reader}. Aşağıdaki sözcüklerden, bu yaştaki okurun anlamını büyük olasılıkla BİLMEYECEĞİ "
                "sözcükleri seç ve her biri için bu yaşa uygun daha basit bir karşılık yaz. Gündelik sözcükleri seçme.")

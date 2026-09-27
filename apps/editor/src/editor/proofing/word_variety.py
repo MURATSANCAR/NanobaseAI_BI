@@ -39,7 +39,7 @@ from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_variety"
-VERSION = "3"
+VERSION = "4"
 LABEL = "Kelime çeşitliliği ve yakın tekrar"
 
 DIRECTOR = "book-director"
@@ -72,6 +72,7 @@ def _read(generation_id: str, lex) -> dict:
     span_keys = [(s["page"], s["idx"]) for s in bk["spans"]]
     span_text = {(s["page"], s["idx"]): s["text"] for s in bk["spans"]}
     toks = bk["tokens"]
+    dup = W.duplicate_supplements(bk["spans"])       # katmanda zaten olan OCR eki: ikinci okuma
     sids = W.sentence_ids([t.sent_start for t in toks])
     # bir sözcüğün sayfadaki kaçıncı geçişi (sayfa görselinde yerini bulmak için; bütün belirteçler sayılır)
     on_page = collections.Counter()
@@ -87,6 +88,9 @@ def _read(generation_id: str, lex) -> dict:
     for i, t in enumerate(toks):
         if t.garbled or t.fragment:
             stats["skip_garbled_or_fragment"] += 1
+            continue
+        if (t.page, t.span) in dup:
+            stats["skip_duplicate_ocr"] += 1
             continue
         if t.page not in story:
             stats["skip_non_story_page"] += 1

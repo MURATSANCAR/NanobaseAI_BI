@@ -41,6 +41,7 @@ def _sentences(generation_id: str, lex) -> dict:
     bk = T.read_book(generation_id, lex)
     story = {p["page_no"] for p in C.story_pages(bk["pages"])}
     toks = bk["tokens"]
+    dup = W.duplicate_supplements(bk["spans"])
     on_page, nth = collections.Counter(), []
     for t in toks:
         k = (t.page, W.norm_word(t.word))
@@ -57,8 +58,10 @@ def _sentences(generation_id: str, lex) -> dict:
     starts = []
     for a, b in sents:
         t = toks[a]
-        if t.garbled or t.fragment or t.page not in story:
+        if t.garbled or t.fragment or t.page not in story or (t.page, t.span) in dup:
             continue
+        if t.base[:1].islower():
+            continue          # küçük harfle «başlayan» cümle konuşma çizgisinden sonraki devamdır («… dedim»)
         o = W.Occ(a, t.page, t.span, t.start, t.end, len(starts), W.lower_tr(t.base), t.word, "", "")
         o.extra = {"nth": nth[a], "total": on_page[(t.page, W.norm_word(t.word))],
                    "joined": t.joined_with is not None,
