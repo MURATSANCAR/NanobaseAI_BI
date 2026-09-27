@@ -29,7 +29,7 @@ const invalidateAccess = (qc: ReturnType<typeof useQueryClient>) => qc.invalidat
 
 export default function AccessAdmin() {
   const qc = useQueryClient();
-  const [view, setView] = useState<'roles' | 'person'>('roles');
+  const [view, setView] = useState<'roles' | 'data' | 'person'>('roles');
   const refresh = useMutation({ mutationFn: accessApi.refresh, onSuccess: () => void invalidateAccess(qc) });
 
   return (
@@ -56,6 +56,7 @@ export default function AccessAdmin() {
         {(
           [
             ['roles', 'Roller'],
+            ['data', 'Veri alanları'],
             ['person', 'Kişi gözüyle'],
           ] as const
         ).map(([id, text]) => (
@@ -74,7 +75,7 @@ export default function AccessAdmin() {
         ))}
       </div>
 
-      {view === 'roles' ? <Roles /> : <PersonView />}
+      {view === 'roles' ? <Roles /> : view === 'data' ? <DataDomains /> : <PersonView />}
     </Section>
   );
 }
@@ -287,6 +288,31 @@ function RoleEditor({
             );
           })}
         </div>
+
+        <fieldset className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
+          <legend className="px-1 text-[12.5px] font-extrabold">ZEKİ AI veri alanları</legend>
+          <p className="px-1 pb-1.5 text-[11.5px] text-canvas-muted">
+            ZEKİ AI'a sorulan soruların, panoların, planlı raporların ve uyarıların hangi verileri okuyabileceği. Kapsam dışı
+            soru açık bir retle cevaplanır.
+          </p>
+          <div className="grid gap-0.5 sm:grid-cols-2 xl:grid-cols-3">
+            {catalog.data.map((d) =>
+              d.always ? (
+                <div key={d.key} className="flex min-h-11 items-center gap-2 px-1 text-[12.5px] font-semibold text-canvas-muted sm:min-h-8" title={d.hint}>
+                  <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                  {d.label} <span className="text-[11px] font-normal">(herkese açık)</span>
+                </div>
+              ) : (
+                <TriCheck key={d.key} checked={draft.allPerms || perms.has(d.key)} disabled={draft.allPerms} onChange={(on) => toggle([d.key], on)}>
+                  <span className="min-w-0 flex-1" title={d.hint}>
+                    <span className="block text-[12.5px] font-semibold leading-snug">{d.label}</span>
+                    <span className="block truncate text-[11px] leading-snug text-canvas-muted">{d.hint}</span>
+                  </span>
+                </TriCheck>
+              ),
+            )}
+          </div>
+        </fieldset>
 
         {save.error && <Note tone="err">{errText(save.error, 'Rol kaydedilemedi.')}</Note>}
         {remove.error && <Note tone="err">{errText(remove.error, 'Rol silinemedi.')}</Note>}
@@ -670,9 +696,125 @@ function PersonView() {
                 ))}
               </div>
             </Card>
+            <Card className="space-y-2">
+              <div className={label}>ZEKİ AI'ın bu kişi için okuyabildiği veri</div>
+              <ul className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
+                {e.data.map((d) => (
+                  <li key={d.id} className={`flex items-center gap-2 text-[12.5px] ${d.allowed ? 'font-semibold' : 'text-canvas-muted/70'}`} title={d.hint}>
+                    {d.allowed ? <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> : <X className="h-3.5 w-3.5 shrink-0" />}
+                    {d.label}
+                  </li>
+                ))}
+              </ul>
+            </Card>
           </div>
         ) : null}
       </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ veri alanları */
+
+/** Kataloğun her varlığı hangi veri alanında: kural dosyasından ya da yöneticinin atamasıyla. Atanmamış varlıklar
+ *  kimseye açılmaz (Herkes daraltılınca); yönetici buradan alanını seçer. */
+function DataDomains() {
+  const qc = useQueryClient();
+  const list = useQuery({ queryKey: ['access', 'data-entities'], queryFn: accessApi.dataEntities, retry: false, staleTime: 60_000 });
+  const catalog = useQuery({ queryKey: ['access', 'catalog'], queryFn: accessApi.catalog, retry: false, staleTime: 10 * 60_000 });
+  const domains = catalog.data?.data ?? [];
+  const counts = list.data?.counts ?? {};
+  const [filter, setFilter] = useState<string | null>(null);
+  const [q, setQ] = useState('');
+  const active = filter ?? ((counts.atanmamis ?? 0) > 0 ? 'atanmamis' : 'all');
+  const set = useMutation({
+    mutationFn: (v: { entity: string; domain: string | null }) => accessApi.setEntityDomain(v.entity, v.domain),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['access', 'data-entities'] }),
+  });
+  const needle = trFold(q.trim());
+  const rows = (list.data?.items ?? []).filter(
+    (r) => (active === 'all' || r.domain === active) && (!needle || trFold(`${r.entity} ${r.description}`).includes(needle)),
+  );
+  const [shown, setShown] = useState(100);
+  useEffect(() => setShown(100), [active, needle]);
+
+  if (list.isLoading || catalog.isLoading) return <Loading />;
+  if (list.error || catalog.error) return <Note tone="err">{errText(list.error ?? catalog.error, 'Veri alanları okunamadı.')}</Note>;
+  const total = list.data?.items.length ?? 0;
+
+  return (
+    <div className="space-y-3">
+      <Note tone="info">
+        Her tablo bir veri alanına düşer; rol, ZEKİ AI'ın hangi alanları okuyabileceğini taşır. Alan kurallarla atanır; buradan
+        seçtiğiniz alan kuralın önüne geçer. «Atanmamış» tablolar, «Herkes» rolü daraltıldığında yalnız yöneticiye açık kalır.
+      </Note>
+      <div className="flex flex-wrap gap-1.5">
+        {[{ id: 'all', label: 'Hepsi', n: total }, ...domains.map((d) => ({ id: d.id, label: d.label, n: counts[d.id] ?? 0 }))].map((c) => (
+          <button
+            key={c.id}
+            type="button"
+            onClick={() => setFilter(c.id)}
+            aria-pressed={active === c.id}
+            className={`min-h-11 rounded-lg px-2.5 text-[12px] font-extrabold transition-colors sm:min-h-8 ${
+              active === c.id ? 'bg-white text-canvas-ink shadow-sm ring-1 ring-canvas-violet/30' : 'bg-slate-100 text-canvas-muted hover:text-canvas-ink'
+            } ${c.id === 'atanmamis' && c.n > 0 ? 'text-amber-800' : ''}`}
+          >
+            {c.label} <span className="tabular-nums opacity-70">{nf.format(c.n)}</span>
+          </button>
+        ))}
+      </div>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Tablo adı ya da açıklaması" className={`${field} pl-9`} />
+      </div>
+      {set.error && <Note tone="err">{errText(set.error, 'Alan değiştirilemedi.')}</Note>}
+      {rows.length === 0 ? (
+        <p className="py-6 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte tablo yok.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100 bg-white/80">
+          {rows.slice(0, shown).map((r) => (
+            <li key={r.entity} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-3 py-2">
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-1.5">
+                  <span className="truncate font-mono text-[12px] font-bold">{r.entity}</span>
+                  <Pill tone={r.source === 'crm' ? 'ok' : 'muted'}>{r.source === 'crm' ? 'CRM' : 'Logo'}</Pill>
+                </span>
+                <span className="block truncate text-[11.5px] text-canvas-muted">
+                  {[r.description, `${nf.format(r.rows)} satır`, r.tables > 1 ? `${nf.format(r.tables)} tablo` : ''].filter(Boolean).join(' · ')}
+                </span>
+              </span>
+              <select
+                aria-label={`${r.entity} veri alanı`}
+                value={r.domain}
+                disabled={set.isPending}
+                onChange={(e) => set.mutate({ entity: r.entity, domain: e.target.value })}
+                className="min-h-11 rounded-lg border border-slate-200 bg-white px-2 text-[12.5px] font-semibold sm:min-h-8"
+              >
+                {domains.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.label}
+                  </option>
+                ))}
+              </select>
+              {r.manual && (
+                <button
+                  type="button"
+                  onClick={() => set.mutate({ entity: r.entity, domain: null })}
+                  className="min-h-11 rounded-lg px-2 text-[11.5px] font-bold text-canvas-muted hover:text-canvas-ink sm:min-h-0"
+                  title="Yöneticinin atamasını kaldır; alan kurala göre belirlensin"
+                >
+                  Kurala dön
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {rows.length > shown && (
+        <button type="button" onClick={() => setShown((n) => n + 200)} className={`${btnGhost} w-full`}>
+          Devamını göster ({nf.format(rows.length - shown)} tablo daha)
+        </button>
+      )}
     </div>
   );
 }

@@ -23,6 +23,8 @@ import re
 import threading
 import time
 import uuid
+from contextlib import contextmanager
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
@@ -78,8 +80,19 @@ MEMBERS = sa.Table(
 )
 
 SUBJECT_TYPES = {"ad_group": "AD grubu", "ou": "AD birimi (OU)", "crm_role": "CRM rolü", "user": "Kişi"}
+#: Yöneticinin ekrandan verdiği varlık → veri alanı ataması; `data_domains.json` kuralının önüne geçer.
+ENTITY_DOMAINS = sa.Table(
+    "semantic_access_entity_domains", _md,
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("entity", sa.String(200), primary_key=True),
+    sa.Column("domain", sa.String(40), nullable=False),
+    sa.Column("updated_by", sa.String(120)),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+)
+
 EVERYONE_ID = "herkes"
 CATALOG_FILE = Path(__file__).with_name("access_catalog.json")
+DOMAINS_FILE = Path(__file__).with_name("data_domains.json")
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -116,15 +129,178 @@ def catalog() -> dict[str, Any]:
 
 
 def all_keys() -> frozenset[str]:
-    """Sayfa ve özellik anahtarlarının hepsi."""
+    """Sayfa, özellik ve veri alanı anahtarlarının hepsi."""
     cat = catalog()
-    return frozenset(p["key"] for p in cat["pages"]) | frozenset(f["key"] for f in cat.get("features", []))
+    return (frozenset(p["key"] for p in cat["pages"]) | frozenset(f["key"] for f in cat.get("features", []))
+            | frozenset(data_key(d["id"]) for d in data_domains() if not d.get("always")))
 
 
 def explicit_keys() -> frozenset[str]:
     """«Bütün sayfalar ve işlemler» ile gelmeyen, role tek tek verilen özellikler (bugüne kadar yalnız yöneticinin
     yaptığı işler). Kurulumda Herkes bütün yetkilerle açılırken kimsenin eski yetkisi bu yolla genişlemez."""
     return frozenset(f["key"] for f in catalog().get("features", []) if f.get("explicit"))
+
+
+# ------------------------------------------------------------------ veri alanları (Aşama C)
+#
+# ZEKİ AI'ın hangi tabloları okuyabileceği. Kataloğun her varlığı bir alana düşer (kural dosyası + yöneticinin
+# ekrandan ataması); rol `veri:<alan>` anahtarlarını taşır. Kapı SQL'in çalıştığı tek geçittedir
+# (`Runtime._check_data_scope`): istek kişinin alanlarını `DATA_ALLOWED` bağlamında taşır, kapsam dışı varlık
+# okuyan SQL çalışmaz. Bağlam boşsa (zamanlayıcı dışı sistem işi, yönetici) sınır yoktur.
+
+_domains_cache: dict[str, Any] = {}
+
+
+def _domains_data() -> dict[str, Any]:
+    if not _domains_cache:
+        data = json.loads(DOMAINS_FILE.read_text(encoding="utf-8"))
+        data["_rules"] = [(r["domain"], r.get("source", "any"), re.compile(r["pattern"])) for r in data["rules"]]
+        _domains_cache.update(data)
+    return _domains_cache
+
+
+def data_domains() -> list[dict[str, Any]]:
+    return [dict(d) for d in _domains_data()["domains"]]
+
+
+def data_key(domain_id: str) -> str:
+    return "veri:" + domain_id
+
+
+def always_domains() -> frozenset[str]:
+    return frozenset(d["id"] for d in _domains_data()["domains"] if d.get("always"))
+
+
+def _norm_entity(name: str) -> str:
+    n = (name or "").upper()
+    changed = True
+    while changed:
+        changed = False
+        for pre in _domains_data()["strip_prefixes"]:
+            if n.startswith(pre) and len(n) > len(pre):
+                n, changed = n[len(pre):], True
+    return n
+
+
+def rule_domain(entity: str, source: str) -> str:
+    """Kural dosyasına göre alan; hiçbir kural tutmazsa 'atanmamis'."""
+    n = _norm_entity(entity)
+    for domain, src, rx in _domains_data()["_rules"]:
+        if src in ("any", source) and rx.search(n):
+            return domain
+    return "atanmamis"
+
+
+_ent_cache: dict[str, Any] = {"key": None, "at": 0.0, "map": {}}
+
+
+def entity_domains(engine: sa.engine.Engine, tenant: str, profiles: list[Any]) -> dict[str, str]:
+    """Varlık (büyük harf) → alan. Yönetici ataması kuralın önüne geçer. 30 sn bellek."""
+    from semantic_layer.data_source import data_source
+
+    key = (id(engine), tenant, len(profiles), id(profiles))
+    if _ent_cache["key"] == key and time.monotonic() - _ent_cache["at"] < _TTL:
+        return _ent_cache["map"]
+    _md.create_all(engine, checkfirst=True)
+    with engine.connect() as c:
+        over = {str(e).upper(): d for e, d in c.execute(sa.select(ENTITY_DOMAINS.c.entity, ENTITY_DOMAINS.c.domain)
+                                                         .where(ENTITY_DOMAINS.c.tenant_id == tenant)).all()}
+    out: dict[str, str] = {}
+    for p in profiles:
+        e = p.entity.upper()
+        if e not in out:
+            out[e] = over.get(e) or rule_domain(p.entity, data_source(getattr(p, "schema_name", None)))
+    _ent_cache.update(key=key, at=time.monotonic(), map=out)
+    return out
+
+
+def set_entity_domain(engine: sa.engine.Engine, tenant: str, actor: str, entity: str, domain: Optional[str]) -> None:
+    """Yöneticinin ataması; `domain` None ise atama kalkar, kural geçerli olur."""
+    ids = {d["id"] for d in data_domains()}
+    if domain is not None and domain not in ids:
+        raise AccessError("Bilinmeyen veri alanı.")
+    _md.create_all(engine, checkfirst=True)
+    e = (entity or "").strip().upper()
+    if not e:
+        raise AccessError("Varlık seçilmedi.")
+    with engine.begin() as c:
+        c.execute(ENTITY_DOMAINS.delete().where(ENTITY_DOMAINS.c.tenant_id == tenant, ENTITY_DOMAINS.c.entity == e))
+        if domain is not None:
+            c.execute(ENTITY_DOMAINS.insert().values(tenant_id=tenant, entity=e, domain=domain, updated_by=actor,
+                                                     updated_at=_now()))
+    _ent_cache["key"] = None
+
+
+def domain_listing(engine: sa.engine.Engine, tenant: str, profiles: list[Any]) -> list[dict[str, Any]]:
+    """Yönetim ekranı: her varlık, kaynağı, satır sayısı, alanı ve alanın nereden geldiği (kural / ekran)."""
+    from semantic_layer.data_source import data_source
+
+    emap = entity_domains(engine, tenant, profiles)
+    with engine.connect() as c:
+        over = {str(e).upper() for (e,) in c.execute(sa.select(ENTITY_DOMAINS.c.entity)
+                                                     .where(ENTITY_DOMAINS.c.tenant_id == tenant)).all()}
+    seen: dict[str, dict[str, Any]] = {}
+    for p in profiles:
+        e = p.entity.upper()
+        row = seen.get(e)
+        if row is None:
+            row = seen[e] = {"entity": p.entity, "source": data_source(getattr(p, "schema_name", None)),
+                             "description": getattr(p, "description", None) or "", "rows": 0, "tables": 0,
+                             "domain": emap.get(e, "atanmamis"), "manual": e in over}
+        row["rows"] += int(getattr(p, "row_count", 0) or 0)
+        row["tables"] += 1
+    return sorted(seen.values(), key=lambda r: (-r["rows"], r["entity"]))
+
+
+#: İsteği yapan kişinin okuyabileceği veri alanları; None = sınır yok (yönetici, sistem işi).
+DATA_ALLOWED: ContextVar[Optional[frozenset[str]]] = ContextVar("access_data_allowed", default=None)
+
+
+class DataScopeError(PermissionError):
+    """SQL, kişinin rolünde olmayan bir veri alanını okuyor. Mesaj ekranda olduğu gibi gösterilir."""
+
+    def __init__(self, domains: list[str]):
+        self.domains = domains
+        names = ", ".join(f"«{d}»" for d in domains)
+        super().__init__(f"Bu soru {names} verisine dayanıyor; bu veri rolünüzde yok. Erişim için bir yöneticiye başvurun.")
+
+
+def allowed_domains(acc: "Access") -> Optional[frozenset[str]]:
+    """Kişinin okuyabileceği alanlar; yöneticide None (sınır yok). Ortak başvuru alanları her zaman açık."""
+    if acc.admin:
+        return None
+    granted = acc.granted()
+    return frozenset(d["id"] for d in data_domains() if d.get("always") or data_key(d["id"]) in granted)
+
+
+def check_entities(entities: set[str], emap: dict[str, str], allowed: Optional[frozenset[str]]) -> None:
+    if allowed is None:
+        return
+    labels = {d["id"]: d["label"] for d in data_domains()}
+    missing = sorted({emap.get(e.upper(), "atanmamis") for e in entities} - allowed)
+    if missing:
+        raise DataScopeError([labels.get(m, m) for m in missing])
+
+
+def allowed_for(user: Optional[str]) -> Optional[frozenset[str]]:
+    """Kişinin alanları (zamanlayıcı, sahibinin adına koşarken). Kişi yoksa ya da yetki okunamazsa hiçbir alan."""
+    if not _bound or not user:
+        return frozenset(always_domains()) if _bound else None
+    try:
+        return allowed_domains(effective(_bound["engine"](), _bound["tenant"](), user, _bound["is_admin"]))
+    except Exception as e:  # noqa: BLE001
+        log.warning("access: %s için veri kapsamı okunamadı, kapalı sayıldı: %s", user, e)
+        return frozenset(always_domains())
+
+
+@contextmanager
+def acting_as(user: Optional[str]):
+    """Zamanlayıcıdaki kart/rapor/uyarı sahibinin veri kapsamıyla koşar: yetkisi daralan kişinin raporu da daralır."""
+    token = DATA_ALLOWED.set(allowed_for(user))
+    try:
+        yield
+    finally:
+        DATA_ALLOWED.reset(token)
 
 
 def page(item_id: str) -> str:
@@ -855,4 +1031,7 @@ def explain(engine: sa.engine.Engine, tenant: str, user: str, is_admin: Callable
     keys = acc.granted()
     pages = [{**p, "allowed": p["key"] in keys} for p in cat["pages"]]
     features = [{**f, "allowed": f["key"] in keys} for f in cat.get("features", [])]
-    return {**acc.view(), "adGroups": groups, "crmRoles": crm, "pages": pages, "features": features, "notes": notes}
+    allowed = allowed_domains(acc)
+    data = [{**d, "key": data_key(d["id"]), "allowed": allowed is None or d["id"] in allowed} for d in data_domains()]
+    return {**acc.view(), "adGroups": groups, "crmRoles": crm, "pages": pages, "features": features, "data": data,
+            "notes": notes}

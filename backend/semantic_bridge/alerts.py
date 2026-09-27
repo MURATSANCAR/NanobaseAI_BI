@@ -360,7 +360,11 @@ def _check(engine, tenant, ds, runner, notifier, *, only, now, remind, owner=Non
         # last_notify dolar, değer eşiğin berisine dönünce boşalır.
         was = rule["state"] == "triggered" or (rule["state"] == "error" and rule["last_notify"] is not None)
         try:
-            answer = runner(rule)
+            from semantic_bridge import access as access_mod
+
+            # Kuralın sahibinin veri kapsamıyla (yetki Aşama C).
+            with access_mod.acting_as(rule["created_by"]):
+                answer = runner(rule)
             if "dbMs" in answer or "cached" in answer:
                 upd["last_db_json"] = json.dumps({"dbMs": answer.get("dbMs"), "cached": bool(answer.get("cached")),
                                                   "computedAt": answer.get("computedAt")})

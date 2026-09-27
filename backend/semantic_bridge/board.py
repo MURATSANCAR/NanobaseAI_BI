@@ -358,8 +358,12 @@ def run_due(engine: sa.engine.Engine, tenant: str, ds: str, runner: Runner, *, n
             if not _due(row, now):
                 continue
             summary["due"] += 1
+            from semantic_bridge import access as access_mod
             try:
-                _store_result(engine, row["id"], runner(row["sql"]), auto=True)
+                # Kart sahibinin veri kapsamıyla (yetki Aşama C): yetkisi daralan kişinin kartı da daralır.
+                with access_mod.acting_as(row["username"]):
+                    result = runner(row["sql"])
+                _store_result(engine, row["id"], result, auto=True)
                 summary["ran"] += 1
             except Exception as e:  # noqa: BLE001
                 log.warning("board: kart %s tazelenemedi: %s", row["id"], e)

@@ -92,6 +92,41 @@ def allowed_tables(sql: str, profiles: list[SchemaProfile], context: dict[str, s
     return True, "ok"
 
 
+def entities_read(sql: str, profiles: list[SchemaProfile], context: dict[str, str],
+                  dialect: Optional[str] = "tsql") -> Optional[set[str]]:
+    """The catalog entities (upper case) a statement reads, matched exactly as `allowed_tables` matches them.
+    None when the statement cannot be read — a caller deciding access must treat that as a refusal."""
+    by_name: dict[str, set[str]] = {}
+    for p in profiles:
+        ent = p.entity.upper()
+        phys = physical_name(p.table_pattern, {**p.context, **(context or {})}).upper()
+        names = {ent, phys, p.table_name.upper()}
+        if p.schema_name:
+            qual = p.schema_name.upper()
+            names.update({f"{qual}.{phys}", f"{qual}.{p.table_name.upper()}"})
+        for n in names:
+            by_name.setdefault(n, set()).add(ent)
+    schemas = {s for p in profiles if p.schema_name for s in
+               [p.schema_name.upper(), p.schema_name.upper().replace(".", "_"), *p.schema_name.upper().split(".")] if s}
+    refs = _physical_references(sql, dialect)
+    if refs is None:
+        return None
+    out: set[str] = set()
+    entity_names = {p.entity.upper() for p in profiles}
+    for name in refs:
+        raw = strip_quotes(name).upper()
+        bare = raw.split(".")[-1]
+        candidates = {raw, bare, logical_table(raw).entity.upper()}
+        for schema in schemas | {"DBO", "PUBLIC", "MAIN"}:
+            if bare.startswith(schema + "_"):
+                candidates.add(bare[len(schema) + 1:])
+        hit = set().union(*(by_name.get(c, set()) for c in candidates))
+        if not hit:
+            hit = {k for k in entity_names if _bare_entity(k) == _bare_entity(bare)}
+        out |= hit
+    return out
+
+
 def validate_sql(sql: str) -> tuple[bool, str]:
     s = strip_comments(sql or "").strip().rstrip(";").strip()
     if not s:
