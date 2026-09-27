@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Check, Copy } from 'lucide-react';
+import SqlGate from './SqlGate';
 
 /**
  * SQL metni, renklendirilmiş. shiki yalnız bu bileşen ilk açıldığında ve yalnız SQL dili + tek tema
@@ -21,7 +22,7 @@ function loadHighlighter(): Promise<Highlighter> {
   return highlighter;
 }
 
-export default function SqlCode({ sql, label }: { sql: string; label: string }) {
+function SqlCodeInner({ sql, label }: { sql: string; label: string }) {
   const [html, setHtml] = useState<string | null>(null);
   const [copied, setCopied] = useState<'ok' | 'fail' | null>(null);
 
@@ -65,5 +66,14 @@ export default function SqlCode({ sql, label }: { sql: string; label: string }) 
         </pre>
       )}
     </div>
+  );
+}
+
+/** «SQL'i göster ve kopyala» rolde yoksa sorgu kutusu hiç çıkmaz; hesap açıklamaları kalır. */
+export default function SqlCode(props: { sql: string; label: string }) {
+  return (
+    <SqlGate>
+      <SqlCodeInner {...props} />
+    </SqlGate>
   );
 }

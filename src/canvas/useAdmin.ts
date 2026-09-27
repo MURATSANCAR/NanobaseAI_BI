@@ -69,3 +69,10 @@ export function canOpenRoute(access: PageAccess | null, to: string): boolean {
   const item = permissionItemFor(to);
   return !item || canSeePage(access, item.id);
 }
+
+/** Sayfa içindeki bir işlem (`ozellik:*`) kişinin rolünde mi. Yetkisiz işlem ekranda hiç gösterilmez (karar
+ *  2026-09-27); asıl kapı köprüde. Yetki henüz gelmediyse false: düğme bir an sonra görünür, yanlışlıkla açık kalmaz. */
+export function useCan(feature: string): boolean {
+  const access = usePageAccess();
+  return access === 'all' || (access !== null && access.has(`ozellik:${feature}`));
+}

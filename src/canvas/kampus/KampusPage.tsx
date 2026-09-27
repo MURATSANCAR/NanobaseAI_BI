@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { GROUP_HOME } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
-import { canOpenRoute, usePageAccess } from '../useAdmin';
+import { canOpenRoute, useCan, usePageAccess } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
@@ -87,6 +87,9 @@ export default function KampusPage() {
   // Ana modül kutuları kişinin rolündeki sayfalara göre: açamayacağı modül gösterilmez.
   const pages = usePageAccess();
   const tiles = MODULE_TILES.filter((m) => canOpenRoute(pages, m.to));
+  // ZEKİ'ye soru: rolde «Zeki AI'a soru sorma» ve cevabın açıldığı Genel bakış olmalı; yoksa kutu gösterilmez.
+  const canAskZeki = useCan('zeki.soru') && canOpenRoute(pages, '/genel-bakis');
+  const canExport = useCan('veri.disa-aktar');
   const session = useTimasSession();
   const fullName = session.data?.displayName || session.data?.username || '';
   const firstName = fullName.split(/[\s._@]/)[0] || fullName;
@@ -133,7 +136,7 @@ export default function KampusPage() {
     if (!v) return;
     // Rakam ya da kişi/kat adıysa rehberde süzülür; değilse soru ZEKİ'ye gider.
     const hits = everyone.some((p) => haystack(p).some((x) => trNorm(x).includes(trNorm(v))));
-    if (hits || /^\d+$/.test(v)) {
+    if (hits || /^\d+$/.test(v) || !canAskZeki) {
       setFloor(ALL_FLOORS);
       setTerm(v);
       directoryRef.current?.scrollIntoView({ block: 'start' });
@@ -438,6 +441,7 @@ export default function KampusPage() {
                 <h2 className="kp-display text-xl font-bold leading-snug tracking-tight text-ink sm:text-2xl">
                   Selam {firstName}! Ben <span className="text-violet">ZEKİ</span>, bugün hangi işi kolaylaştıralım?
                 </h2>
+                {canAskZeki ? (<>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted">
                   Satış, ciro, iade, tahsilat ve cari sorularını Logo verisinden cevaplarım; kişi ve dahili aramak için üstteki arama kutusu var.
                 </p>
@@ -483,6 +487,9 @@ export default function KampusPage() {
                   <Sparkle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet" />
                   <span>Sorunuz ZEKİ AI Genel Bakış ekranında gerçek veriyle cevaplanır.</span>
                 </div>
+                </>) : (
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted">Kişi ve dahili aramak için üstteki arama kutusunu kullanın.</p>
+                )}
               </div>
             </div>
           </section>
@@ -787,6 +794,7 @@ export default function KampusPage() {
             <span>•</span>
             <span className="font-medium text-violet">Birlikte Üretiyor, Birlikte Okuyoruz</span>
           </div>
+          {canExport && (
           <button
             type="button"
             onClick={downloadDirectory}
@@ -796,6 +804,7 @@ export default function KampusPage() {
           >
             <Download className="h-3.5 w-3.5" /> Dahili Rehber (CSV)
           </button>
+          )}
         </div>
       </footer>
       </ZoomStage>

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { AlertTriangle, BadgeCheck, CircleDashed, Loader2, Sparkles } from 'lucide-react';
 import { Progress, ago, ghostBtn, gradientBtn } from '../shared';
 import type { MkTask, Signed } from './api';
+import { useCan } from '../../../useAdmin';
 
 /** Pazarlama kitinin ortak parçaları. Yeni hareket yok: basışta stüdyonun `press` küçülmesi ve ilerleme çubuğu
  *  (shared.tsx) kullanılır; sekme değişimi anlıktır (sık kullanılır). */
@@ -33,14 +34,18 @@ export function Generate({ task, has, onRun, pending, what }: {
   task: MkTask | undefined; has: boolean; onRun: () => void; pending: boolean; what: string;
 }) {
   const running = task?.status === 'running' || pending;
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const [n, t] = task?.progress ?? [0, 0];
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className={has ? ghostBtn : gradientBtn} disabled={running} onClick={onRun}>
-          {running ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-          {running ? 'ZEKİ AI yazıyor…' : has ? 'Yeniden üret' : `${what} üret`}
-        </button>
+        {(canProduce || running) && (
+          <button type="button" className={has ? ghostBtn : gradientBtn} disabled={running || !canProduce} onClick={onRun}>
+            {running ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
+            {running ? 'ZEKİ AI yazıyor…' : has ? 'Yeniden üret' : `${what} üret`}
+          </button>
+        )}
         {running && task?.step && <span className="text-[12px] text-canvas-muted">{task.step}{t ? ` · ${n}/${t}` : ''}</span>}
       </div>
       {running && t > 0 && <Progress value={n} total={t} />}

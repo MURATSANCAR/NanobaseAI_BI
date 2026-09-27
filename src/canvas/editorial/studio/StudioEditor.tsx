@@ -14,6 +14,7 @@ import { ColoringPanel } from './coloring';
 import { NarrationSection } from './narration';
 import AgeReportEntry from './age/AgeReport';
 import { BookProofSection } from './book3d';
+import { useCan } from '../../useAdmin';
 
 /** Sayfa stüdyosu: dizilmiş kitap açılım açılım görünür; resimli her sayfa ve kapak için iki yol vardır.
  *  DÜZELT seçili sürümü referans alır ve yalnız yazılan değişikliği yapar; FARKLI ÜRET sayfanın metninden
@@ -68,6 +69,8 @@ export default function StudioEditor() {
   }, [d, current, key]);
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['studio', 'job', jobId] });
+  // Görsel üretmek GPU harcar: «Kitap tasarımında üretim». Yoksa seçim ve onay sürer, üretim düğmeleri çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const regen = useMutation({
     mutationFn: (v: { variants: number; mode: Mode }) => studioApi.regenerate(jobId, key!, v.mode, prompt, v.variants),
     onSuccess: () => { setPrompt(''); refresh(); },
@@ -266,7 +269,7 @@ export default function StudioEditor() {
                 </div>
               )}
 
-              <div className="flex gap-2">
+              {canProduce && <div className="flex gap-2">
                 <button type="button" className={`${gradientBtn} flex-1`} disabled={busyAny || regen.isPending || (effMode === 'fix' && !prompt.trim())}
                   onClick={() => regen.mutate({ variants: 1, mode: effMode })}>
                   {busyHere ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : effMode === 'fix' ? <Wand2 className="h-4 w-4" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
@@ -277,7 +280,7 @@ export default function StudioEditor() {
                     Varyant ×3
                   </button>
                 )}
-              </div>
+              </div>}
               {busyAny && !busyHere && <p className="text-[11.5px] text-canvas-muted">Başka bir resim çiziliyor ({d.busy?.key === 'kapak' ? 'kapak' : `sayfa ${d.busy?.key}`}); bitince bu resim için üretim açılır.</p>}
 
               {page?.scene && (

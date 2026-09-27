@@ -5,6 +5,7 @@ import { Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Search, Sparkl
 import { ENGINE_ENABLED } from '../engine';
 import { STATUS_LABEL, dateTime, fmt, scoreTone, seoApi, type PageDetail, type PageField, type PageKind } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 const PAGE = 30;
 const KINDS: Array<{ id: PageKind; label: string }> = [
@@ -130,17 +131,19 @@ function Detail({ kind, id }: { kind: PageKind; id: string }) {
     qc.invalidateQueries({ queryKey: ['seo-pages'] });
   };
   const propose = useMutation({ mutationFn: () => seoApi.proposePage(kind, id), onSuccess: refresh });
+  // Öneri üretmek model harcar: «SEO önerisi üretme».
+  const canPropose = useCan('seo.oneri-uret');
   const p = d.data;
   const open = p?.proposals.find((x) => x.status === 'hazir');
   const last = p?.proposals.find((x) => x.status !== 'hazir');
   const [asked, setAsked] = useState<string | null>(null);
   useEffect(() => {
     const key = `${kind}:${id}`;
-    if (p && !open && p.issues.length && asked !== key && !propose.isPending) {
+    if (canPropose && p && !open && p.issues.length && asked !== key && !propose.isPending) {
       setAsked(key);
       propose.mutate();
     }
-  }, [p, open, kind, id, asked, propose]);
+  }, [canPropose, p, open, kind, id, asked, propose]);
 
   if (d.isLoading) return <Loading text="Sayfa açılıyor…" />;
   if (d.error) return <Failed error={d.error} />;
@@ -197,7 +200,7 @@ function Detail({ kind, id }: { kind: PageKind; id: string }) {
         <p className="sg-banner ok">Bu sayfa kurallara uyuyor.</p>
       ) : (
         <Review key={open?.id ?? 'bekliyor'} page={p} proposal={open} pending={propose.isPending} error={propose.error}
-          canApprove={!!me.data?.canApprove} onRegenerate={() => propose.mutate()} onDone={refresh} />
+          canApprove={!!me.data?.canApprove} onRegenerate={canPropose ? () => propose.mutate() : undefined} onDone={refresh} />
       )}
       {last && (
         <p className={`sg-banner ${last.status === 'onaylandi' ? 'ok' : ''}`}>
@@ -215,7 +218,7 @@ function Review({ page, proposal, pending, error, canApprove, onRegenerate, onDo
   pending: boolean;
   error: unknown;
   canApprove: boolean;
-  onRegenerate: () => void;
+  onRegenerate?: () => void;
   onDone: () => void;
 }) {
   const initial = useMemo(() => ({ SeoTitle: proposal?.fields.SeoTitle ?? '', SeoDescription: proposal?.fields.SeoDescription ?? '', Intro: proposal?.fields.Intro ?? '' }), [proposal]);
@@ -234,9 +237,9 @@ function Review({ page, proposal, pending, error, canApprove, onRegenerate, onDo
           <h2>Uyarılar ve ZEKİ AI önerisi</h2>
           <p className="sg-sub" style={{ margin: 0 }}>{pending ? 'Öneriler yazılıyor…' : proposal ? `ZEKİ AI · ${dateTime(proposal.createdAt)}` : 'Öneri henüz yok.'}</p>
         </div>
-        <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
+        {onRegenerate && <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
           {pending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />} Yeniden üret
-        </button>
+        </button>}
       </div>
       {!!error && <div style={{ marginTop: 12 }}><Failed error={error} /></div>}
       {unsupported.length > 0 && (

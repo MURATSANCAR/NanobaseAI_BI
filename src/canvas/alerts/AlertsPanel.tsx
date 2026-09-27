@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Pause, Play, RotateCw, Trash2, X } from 'lucide-react';
 import DbTimingBadge from '../DbTiming';
+import { useCan } from '../useAdmin';
 import {
   alertsApi,
   ask as askEngine,
@@ -143,6 +144,11 @@ export default function AlertsPanel({
   /** Uyarılar ekranının kendi gövdesi: kanvasın üstünde yüzen kart değil, sayfanın içeriği. Kapat düğmesi çıkmaz. */
   inline?: boolean;
 }) {
+  // Rol: kural yazmak «Uyarı kuralı yazma» ister; yeni kural önce değeri ölçtüğü için Zeki AI sorusu da gerekir.
+  const canRule = useCan('uyari.kural');
+  const canAsk = useCan('zeki.soru');
+  const canNew = canRule && canAsk;
+  const view = mode === 'yeni' && canNew ? 'yeni' : 'kurallar';
   return (
     <div className={inline ? 'flex justify-center pb-4' : 'absolute bottom-2 left-2 right-2 z-50 flex justify-center sm:left-6 sm:right-6 md:bottom-28'}>
       <div className={`${inline ? '' : 'max-h-[calc(100dvh-230px)] overflow-auto '}w-full max-w-[1040px] rounded-2xl border border-white bg-white p-3 text-canvas-ink shadow-canvas-card ring-1 ring-slate-900/5 sm:rounded-3xl sm:p-5`}>
@@ -151,7 +157,7 @@ export default function AlertsPanel({
             {(
               [
                 ['kurallar', `Kurallar (${rules.length})`],
-                ['yeni', 'Yeni kural'],
+                ...(canNew ? ([['yeni', 'Yeni kural']] as const) : []),
               ] as const
             ).map(([m, label]) => (
               <button
@@ -160,7 +166,7 @@ export default function AlertsPanel({
                 onClick={() => onMode(m)}
                 className={[
                   'rounded-lg px-3 py-1.5 text-[12px] font-extrabold transition',
-                  mode === m ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:text-canvas-ink',
+                  view === m ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:text-canvas-ink',
                 ].join(' ')}
               >
                 {label}
@@ -181,7 +187,13 @@ export default function AlertsPanel({
           </div>
         )}
 
-        <div className="mt-4">{mode === 'yeni' ? <NewRule draft={draft} onSaved={() => onMode('kurallar')} /> : <RuleList rules={rules} onNew={() => onMode('yeni')} />}</div>
+        <div className="mt-4">
+          {view === 'yeni' ? (
+            <NewRule draft={draft} onSaved={() => onMode('kurallar')} />
+          ) : (
+            <RuleList rules={rules} onNew={canNew ? () => onMode('yeni') : undefined} canEdit={canRule} />
+          )}
+        </div>
       </div>
     </div>
   );
@@ -362,7 +374,7 @@ function NewRule({ draft, onSaved }: { draft: RuleDraft | null; onSaved: () => v
   );
 }
 
-function RuleList({ rules, onNew }: { rules: AlertRule[]; onNew: () => void }) {
+function RuleList({ rules, onNew, canEdit }: { rules: AlertRule[]; onNew?: () => void; canEdit: boolean }) {
   const qc = useQueryClient();
   const refresh = () => void qc.invalidateQueries({ queryKey: QUERY_KEY });
   const checkAll = useMutation({ mutationFn: () => alertsApi.check(), onSuccess: refresh });
@@ -370,11 +382,16 @@ function RuleList({ rules, onNew }: { rules: AlertRule[]; onNew: () => void }) {
   if (!rules.length) {
     return (
       <div className="py-8 text-center text-[13px] text-canvas-muted">
-        Henüz kural yok.{' '}
-        <button type="button" onClick={onNew} className="font-bold text-canvas-violet underline-offset-2 hover:underline">
-          İlk kuralı kurun
-        </button>
-        : örneğin “bu ayın iade tutarı 5 milyonu aşarsa haber ver”.
+        Henüz kural yok.
+        {onNew && (
+          <>
+            {' '}
+            <button type="button" onClick={onNew} className="font-bold text-canvas-violet underline-offset-2 hover:underline">
+              İlk kuralı kurun
+            </button>
+            : örneğin “bu ayın iade tutarı 5 milyonu aşarsa haber ver”.
+          </>
+        )}
       </div>
     );
   }
@@ -387,6 +404,7 @@ function RuleList({ rules, onNew }: { rules: AlertRule[]; onNew: () => void }) {
             ? `${checkAll.data.checked} kural kontrol edildi · ${checkAll.data.triggered} tanesi eşiği aşıyor${checkAll.data.errors.length ? ` · ${checkAll.data.errors.length} ölçülemedi` : ''}`
             : 'Sunucu her 15 dakikada bir kontrol eder.'}
         </span>
+        {canEdit && (
         <button
           type="button"
           onClick={() => checkAll.mutate()}
@@ -396,18 +414,19 @@ function RuleList({ rules, onNew }: { rules: AlertRule[]; onNew: () => void }) {
           {checkAll.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCw className="h-3.5 w-3.5" />}
           Hepsini şimdi kontrol et
         </button>
+        )}
       </div>
       {checkAll.isError && <div className="mb-2 rounded-xl bg-red-50 px-3 py-2 text-[12px] text-red-700">{errText(checkAll.error)}</div>}
       <div className="divide-y divide-slate-100 rounded-2xl border border-slate-100">
         {rules.map((r) => (
-          <RuleRow key={r.id} rule={r} onChanged={refresh} />
+          <RuleRow key={r.id} rule={r} onChanged={refresh} canEdit={canEdit} />
         ))}
       </div>
     </div>
   );
 }
 
-function RuleRow({ rule, onChanged }: { rule: AlertRule; onChanged: () => void }) {
+function RuleRow({ rule, onChanged, canEdit }: { rule: AlertRule; onChanged: () => void; canEdit: boolean }) {
   const [confirm, setConfirm] = useState(false);
   const toggle = useMutation({
     mutationFn: () => alertsApi.update(rule.id, { status: rule.status === 'paused' ? 'active' : 'paused' }),
@@ -445,6 +464,7 @@ function RuleRow({ rule, onChanged }: { rule: AlertRule; onChanged: () => void }
         )}
         {err && <div className="mt-1 text-[11.5px] font-semibold text-red-700">{errText(err)}</div>}
       </div>
+      {canEdit && (
       <div className="flex items-center gap-0.5">
         <button type="button" title="Şimdi kontrol et" onClick={() => check.mutate()} disabled={check.isPending} className={btn}>
           {check.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCw className="h-4 w-4" />}
@@ -478,6 +498,7 @@ function RuleRow({ rule, onChanged }: { rule: AlertRule; onChanged: () => void }
           </button>
         )}
       </div>
+      )}
     </div>
   );
 }

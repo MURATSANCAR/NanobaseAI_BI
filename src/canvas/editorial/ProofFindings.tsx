@@ -6,6 +6,7 @@ import { EngineAuthError, proofingApi, type ProofReasonCode, type ProofVerdict, 
 import { Loading, Note, Pill, nf } from '../admin/ui';
 import { Panel } from './kit';
 import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, sevOf, type Decide, type ScrollCue } from './ProofEvidence';
+import { useCan } from '../useAdmin';
 
 /** M5: ZEKİ AI'ın kitabın metninde koştuğu otomatik son okuma denetimleri ve bulguları.
  *  Rapor köprüden kitap adıyla gelir; burada gösterim, yerel süzme ve editörün bulguya kararı vardır.
@@ -148,7 +149,10 @@ export function ProofFindings({
       proofingApi.decide({ bookId: bookId as string, ...v }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['editorial', 'proofing'] }),
   });
-  const decide: Decide | null = bookId ? (findingId, verdict, reasonCode, note) => decideM.mutateAsync({ findingId, verdict, reasonCode, note }) : null;
+  // Rolde «Son okuma bulgusuna karar» yoksa karar düğmeleri çıkmaz; bulgular okunur.
+  const canDecide = useCan('son-okuma.karar');
+  const canExport = useCan('veri.disa-aktar');
+  const decide: Decide | null = bookId && canDecide ? (findingId, verdict, reasonCode, note) => decideM.mutateAsync({ findingId, verdict, reasonCode, note }) : null;
 
   const findings = report?.findings ?? [];
   const keyed = useMemo(() => findings.map((f, i) => ({ key: findingKey(f, i), f })), [findings]);
@@ -388,7 +392,7 @@ export function ProofFindings({
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
         <h2 className="text-[13px] font-extrabold">ZEKİ AI son okuma</h2>
-        {bookId && report?.checks.length ? <WordExport bookId={bookId} /> : null}
+        {bookId && canExport && report?.checks.length ? <WordExport bookId={bookId} /> : null}
       </div>
       <p className="mt-1 px-1 text-[11.5px] leading-snug text-canvas-muted">
         ZEKİ AI, kitabın metnini okuyup otomatik denetimleri koşar; bulgular yalnız öneridir, kontrol listesini etkilemez. Bulguya tıklayın: sayfa ve işaretli yer açılır, kararı oradan verirsiniz. Karar bulguya iliştirilir ve kuralın isabetini ölçer; kitabı değiştirmez.

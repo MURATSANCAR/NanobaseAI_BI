@@ -328,8 +328,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),
     (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
-                               r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/(run|read|sample)"
-                               r"|collage/photos|marketing/[^/]+/generate|marketing/social)$", "ozellik:tasarim.uret"),
+                               r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"
+                               r"|collage/photos|marketing/[^/]+/generate)$", "ozellik:tasarim.uret"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",
      "ozellik:seo.oneri-uret"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",

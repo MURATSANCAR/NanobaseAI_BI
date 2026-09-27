@@ -116,7 +116,7 @@ function Roles() {
                 >
                   <span className="flex items-center gap-2">
                     <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold">{r.name}</span>
-                    <Pill tone={r.allPerms ? 'violet' : 'muted'}>{r.allPerms ? 'Bütün sayfalar' : `${r.perms.length}/${total} sayfa`}</Pill>
+                    <Pill tone={r.allPerms ? 'violet' : 'muted'}>{r.allPerms ? 'Bütün sayfalar' : `${r.perms.filter((k) => k.startsWith('sayfa:')).length}/${total} sayfa`}</Pill>
                   </span>
                   <span className="mt-0.5 block text-[11.5px] text-canvas-muted">
                     {r.system
@@ -231,36 +231,58 @@ function RoleEditor({
             onChange={(e) => setDraft({ ...draft, allPerms: e.target.checked })}
             className="h-4 w-4 accent-canvas-violet"
           />
-          <span className="text-[12.5px] font-bold">Bütün sayfalar</span>
-          <span className="text-[11.5px] text-canvas-muted">sonradan eklenen sayfalar dahil</span>
+          <span className="text-[12.5px] font-bold">Bütün sayfalar ve işlemler</span>
+          <span className="text-[11.5px] text-canvas-muted">sonradan eklenenler dahil; «ayrıca verilir» işaretliler hariç</span>
         </label>
 
-        <div className={`grid gap-2 sm:grid-cols-2 xl:grid-cols-3 ${draft.allPerms ? 'pointer-events-none opacity-45' : ''}`} aria-disabled={draft.allPerms}>
+        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
           {catalog.areas.map((area) => {
             const pages = catalog.pages.filter((p) => p.area === area.id);
-            const keys = pages.map((p) => p.key);
-            const n = keys.filter((k) => perms.has(k)).length;
+            const features = catalog.features.filter((f) => f.area === area.id);
+            // Alan başlığı sayfaları ve olağan işlemleri birlikte seçer; açıkça verilen işlemler toplu seçilmez.
+            const bulk = [...pages.map((p) => p.key), ...features.filter((f) => !f.explicit).map((f) => f.key)];
+            const n = bulk.filter((k) => perms.has(k)).length;
+            const covered = draft.allPerms;
             return (
               <fieldset key={area.id} className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
                 <legend className="sr-only">{area.label}</legend>
-                <TriCheck
-                  checked={n === keys.length}
-                  mixed={n > 0 && n < keys.length}
-                  onChange={(on) => toggle(keys, on)}
-                  className="border-b border-slate-100 pb-1.5"
-                >
-                  <span className="flex-1 text-[12.5px] font-extrabold">{area.label}</span>
-                  <span className="text-[11px] font-bold tabular-nums text-canvas-muted">
-                    {n}/{keys.length}
-                  </span>
-                </TriCheck>
+                {bulk.length > 0 && (
+                  <TriCheck
+                    checked={covered || n === bulk.length}
+                    mixed={!covered && n > 0 && n < bulk.length}
+                    disabled={covered}
+                    onChange={(on) => toggle(bulk, on)}
+                    className="border-b border-slate-100 pb-1.5"
+                  >
+                    <span className="flex-1 text-[12.5px] font-extrabold">{area.label}</span>
+                    <span className="text-[11px] font-bold tabular-nums text-canvas-muted">{covered ? 'hepsi' : `${n}/${bulk.length}`}</span>
+                  </TriCheck>
+                )}
+                {bulk.length === 0 && <div className="border-b border-slate-100 px-1 pb-1.5 text-[12.5px] font-extrabold">{area.label}</div>}
                 <div className="mt-1 space-y-0.5">
                   {pages.map((p) => (
-                    <TriCheck key={p.key} checked={perms.has(p.key)} onChange={(on) => toggle([p.key], on)}>
+                    <TriCheck key={p.key} checked={covered || perms.has(p.key)} disabled={covered} onChange={(on) => toggle([p.key], on)}>
                       <span className="text-[12.5px] font-semibold">{p.label}</span>
                     </TriCheck>
                   ))}
                 </div>
+                {features.length > 0 && (
+                  <div className="mt-1.5 border-t border-dashed border-slate-200 pt-1.5">
+                    <div className="px-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">İşlemler</div>
+                    {features.map((f) => {
+                      const on = f.explicit ? perms.has(f.key) : covered || perms.has(f.key);
+                      return (
+                        <TriCheck key={f.key} checked={on} disabled={covered && !f.explicit} onChange={(v) => toggle([f.key], v)}>
+                          <span className="min-w-0 flex-1" title={f.hint}>
+                            <span className="block text-[12.5px] font-semibold leading-snug">{f.label}</span>
+                            <span className="block truncate text-[11px] leading-snug text-canvas-muted">{f.hint}</span>
+                          </span>
+                          {f.explicit && <Pill tone="warn">ayrıca verilir</Pill>}
+                        </TriCheck>
+                      );
+                    })}
+                  </div>
+                )}
               </fieldset>
             );
           })}
@@ -318,12 +340,14 @@ function RoleEditor({
 function TriCheck({
   checked,
   mixed = false,
+  disabled = false,
   onChange,
   className = '',
   children,
 }: {
   checked: boolean;
   mixed?: boolean;
+  disabled?: boolean;
   onChange: (on: boolean) => void;
   className?: string;
   children: ReactNode;
@@ -333,8 +357,15 @@ function TriCheck({
     if (ref.current) ref.current.indeterminate = mixed;
   }, [mixed]);
   return (
-    <label className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-1 sm:min-h-8 ${className}`}>
-      <input ref={ref} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 shrink-0 accent-canvas-violet" />
+    <label className={`flex min-h-11 items-center gap-2 rounded-lg px-1 sm:min-h-8 ${disabled ? 'opacity-45' : 'cursor-pointer'} ${className}`}>
+      <input
+        ref={ref}
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+        className="h-4 w-4 shrink-0 accent-canvas-violet"
+      />
       {children}
     </label>
   );
@@ -612,7 +643,7 @@ function PersonView() {
               </div>
             </Card>
             <Card className="space-y-2">
-              <div className={label}>Gördüğü sayfalar</div>
+              <div className={label}>Gördüğü sayfalar ve yapabildiği işlemler (italik)</div>
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
                 {areas.map((a) => (
                   <div key={a.id} className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
@@ -624,6 +655,14 @@ function PersonView() {
                           <li key={p.key} className={`flex items-center gap-2 text-[12.5px] ${p.allowed ? 'font-semibold' : 'text-canvas-muted/70'}`}>
                             {p.allowed ? <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> : <X className="h-3.5 w-3.5 shrink-0" />}
                             {p.label}
+                          </li>
+                        ))}
+                      {e.features
+                        .filter((f) => f.area === a.id)
+                        .map((f) => (
+                          <li key={f.key} className={`flex items-center gap-2 text-[12px] ${f.allowed ? 'font-semibold' : 'text-canvas-muted/70'}`}>
+                            {f.allowed ? <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> : <X className="h-3.5 w-3.5 shrink-0" />}
+                            <span className="italic">{f.label}</span>
                           </li>
                         ))}
                     </ul>

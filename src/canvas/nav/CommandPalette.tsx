@@ -7,6 +7,7 @@ import { ENGINE_ENABLED, editorialSearchApi, type SearchHit, type SearchKind } f
 import { flatItems, permissionItemFor, scoreText } from './navModel';
 import { RECENT_KEEP } from './navState';
 import { ago, type NavData } from './useNav';
+import { useCan } from '../useAdmin';
 
 /**
  * «Ara veya git» (⌘K / Ctrl K): ekranlar menü tanımından, kitaplar/kişiler/projeler Editoryal aramasından
@@ -79,6 +80,8 @@ export default function CommandPalette({ open, onOpenChange, nav }: { open: bool
     }
   };
 
+  // Zeki AI'a sor: «Zeki AI'a soru sorma» ve cevabın açıldığı Genel bakış rolde olmalı.
+  const canAsk = useCan('zeki.soru') && nav.groups.some((g) => g.items.some((i) => i.id === 'genel-bakis'));
   // Son açılanlardan rolde artık olmayan sayfa düşer (menüden kalkan sayfa burada da görünmesin).
   const visibleIds = new Set(flatItems(nav.groups).map((x) => x.item.id));
   const recent = (nav.state.recent ?? []).filter((r) => {
@@ -192,7 +195,7 @@ export default function CommandPalette({ open, onOpenChange, nav }: { open: bool
 
         {search.error && dq === text && <p className="px-3 py-2 text-[12px] text-rose-700">Kitap ve kişi araması yapılamadı.</p>}
 
-        {text && (
+        {text && canAsk && (
           <Command.Group heading="ZEKİ AI">
             <Command.Item value="zeki" onSelect={() => go(`/genel-bakis?soru=${encodeURIComponent(text)}`)} className="!border !border-dashed !border-violet/30">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-coral to-violet text-white">

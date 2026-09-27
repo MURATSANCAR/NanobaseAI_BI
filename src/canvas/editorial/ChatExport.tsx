@@ -1,12 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { FileDown, Loader2 } from 'lucide-react';
 import { bookAskApi } from '../engine';
+import { useCan } from '../useAdmin';
 
 /** «PDF olarak dışa aktar»: ekrandaki sohbeti (bu açılışta gösterilen soru kimlikleri, ekran sırasıyla) sunucuda
  *  üretilen A4 PDF olarak indirir. Tarayıcı yazdırma diyaloğu yok: köprü `application/pdf` döner, burada blob'a
  *  alınıp `<a download>` ile kaydedilir (oturum çerezi fetch ile gider; `<a href>` ile de giderdi ama hata
  *  gövdesini sayfa olarak açardı). `ids` boşken düğme devre dışı — aktarılacak bir şey yok. */
-export default function ChatExport({ ids, bookTitle }: { ids: string[]; bookTitle?: string }) {
+/** «Dışa aktarma» rolde yoksa düğme hiç çıkmaz. */
+export default function ChatExport(props: { ids: string[]; bookTitle?: string }) {
+  return useCan('veri.disa-aktar') ? <ChatExportButton {...props} /> : null;
+}
+
+function ChatExportButton({ ids, bookTitle }: { ids: string[]; bookTitle?: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const alive = useRef(true);

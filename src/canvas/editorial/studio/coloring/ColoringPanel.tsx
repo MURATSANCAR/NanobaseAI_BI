@@ -7,6 +7,7 @@ import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { Img, Progress, ghostBtn, gradientBtn, press } from '../shared';
 import { coloringApi, useColoring, type ColoringDerived, type ColoringKind, type ColoringMode, type ColoringSource } from './api';
+import { useCan } from '../../../useAdmin';
 
 /** Boyama / etkinlik kitabı: kaynak kitabın stüdyo sayfasında «üret» kartı ve türetilmiş işlerin ilerlemesi;
  *  boyama işinin kendi sayfasında kısa cümle onayı, çizgilerin yöntemi ve «ZEKİ AI ile yeniden çiz».
@@ -30,6 +31,8 @@ export default function ColoringPanel({ jobId, job }: { jobId: string; job?: Stu
 
 // ---------------------------------------------------------------- kaynak kitap: üret
 function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const nav = useNavigate();
   const qc = useQueryClient();
   const [mode, setMode] = useState<ColoringMode>('coloring_activities');
@@ -135,11 +138,11 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
 
           {create.error && <Note tone="err">{errText(create.error, 'Başlatılamadı.')}</Note>}
           <div className="flex flex-wrap gap-2">
-            <button type="button" className={`${gradientBtn} flex-1 sm:flex-none`} disabled={create.isPending || (mode === 'coloring_activities' && !order.length)}
+            {canProduce && <button type="button" className={`${gradientBtn} flex-1 sm:flex-none`} disabled={create.isPending || (mode === 'coloring_activities' && !order.length)}
               onClick={() => create.mutate()}>
               {create.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
               {mode === 'coloring' ? 'Boyama kitabını üret' : 'Boyama ve etkinlik kitabını üret'}
-            </button>
+            </button>}
             <button type="button" className={ghostBtn} onClick={() => setOpen(false)}>Vazgeç</button>
           </div>
           <p className="text-[11px] text-canvas-muted">Çizgiler görsel model açılmadan çıkarılır; birkaç dakika sürer. Yeni kitap ayrı bir iş olarak açılır, sayfa düzeni ekranında düzenlenir.</p>
@@ -185,6 +188,8 @@ function SourceCard({ jobId, v }: { jobId: string; v: ColoringSource }) {
 const SOURCE_TEXT: Record<string, string> = { model: 'ZEKİ AI önerisi', kural: 'Metinden kısaltıldı', editor: 'Editör yazdı' };
 
 function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const qc = useQueryClient();
   const refresh = () => {
     qc.invalidateQueries({ queryKey: ['studio', 'coloring', jobId] });
@@ -228,9 +233,9 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
         <div className="mt-2">
           <Note tone="err">
             Hat durdu: {v.state.error}{' '}
-            <button type="button" className="font-bold underline" disabled={retry.isPending} onClick={() => retry.mutate()}>
+            {canProduce && <button type="button" className="font-bold underline" disabled={retry.isPending} onClick={() => retry.mutate()}>
               <RotateCcw className="mr-1 inline h-3.5 w-3.5" aria-hidden />Kaldığı yerden yeniden dene
-            </button>
+            </button>}
           </Note>
         </div>
       )}
@@ -314,11 +319,11 @@ function DerivedCard({ jobId, v }: { jobId: string; v: ColoringDerived }) {
                       {a.draft ? 'ZEKİ AI · taslak' : 'Modelsiz'}
                     </span>
                   </div>
-                  <button type="button" disabled={gpuBusy || running || redraw.isPending} onClick={() => redraw.mutate(a.aid)}
+                  {canProduce && <button type="button" disabled={gpuBusy || running || redraw.isPending} onClick={() => redraw.mutate(a.aid)}
                     className={`inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 text-[12px] font-bold disabled:opacity-50 ${press}`}>
                     {here ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <PenLine className="h-4 w-4" aria-hidden />}
                     {here ? (v.busy?.queued ? 'Sırada…' : 'Çiziliyor…') : 'ZEKİ AI ile yeniden çiz'}
-                  </button>
+                  </button>}
                 </li>
               );
             })}

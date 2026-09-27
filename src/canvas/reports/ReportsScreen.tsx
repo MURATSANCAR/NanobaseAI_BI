@@ -16,6 +16,7 @@ import {
 } from '../engine';
 import ExcelDraft, { duplicateLabels } from './ExcelDraft';
 import DbTimingBadge from '../DbTiming';
+import { useCan } from '../useAdmin';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const dtf = new Intl.DateTimeFormat('tr-TR', {
@@ -234,6 +235,10 @@ function Stat({ k, v }: { k: string; v: string }) {
 
 export default function ReportsScreen() {
   const qc = useQueryClient();
+  // Rol: oluşturma/değiştirme/çalıştırma «Planlı rapor oluşturma», indirme «Dışa aktarma», SQL ayrı işlem.
+  const canPlan = useCan('rapor.planla');
+  const canExport = useCan('veri.disa-aktar');
+  const canSql = useCan('kart.sql-goster');
   /** '' = yeni rapor; aksi halde seçili raporun kimliği. */
   const [sel, setSel] = useState('');
   const [text, setText] = useState('');
@@ -389,10 +394,12 @@ export default function ReportsScreen() {
               <span className="text-[13px] font-extrabold">Planlı raporlar</span>
               <span className="text-[11px] font-bold text-canvas-muted">{reports.length} plan</span>
             </div>
-            <button type="button" onClick={startNew} className={`${btn} mt-2.5 justify-center bg-gradient-to-r from-canvas-coral to-canvas-violet text-white shadow-md`}>
-              <Plus className="h-4 w-4" />
-              Yeni rapor
-            </button>
+            {canPlan && (
+              <button type="button" onClick={startNew} className={`${btn} mt-2.5 justify-center bg-gradient-to-r from-canvas-coral to-canvas-violet text-white shadow-md`}>
+                <Plus className="h-4 w-4" />
+                Yeni rapor
+              </button>
+            )}
             <div className="mt-2 flex-1 space-y-1 overflow-auto pr-1">
               {list.isLoading && (
                 <div className="flex h-24 items-center justify-center text-canvas-muted">
@@ -440,7 +447,11 @@ export default function ReportsScreen() {
               {errText && <div className="rounded-xl bg-red-50 px-3 py-2 text-[12px] font-semibold text-red-700">{errText}</div>}
               {done && <div className="rounded-xl bg-emerald-50 px-3 py-2 text-[12px] font-semibold text-emerald-700">{done}</div>}
 
-              {!cur ? (
+              {!cur && !canPlan ? (
+                <div className="rounded-xl bg-slate-50 px-3 py-6 text-center text-[12.5px] text-canvas-muted">
+                  Soldan bir plan seçin. Yeni planlı rapor oluşturmak rolünüzde yok.
+                </div>
+              ) : !cur ? (
                 <>
                   <div>
                     <div className="text-[11px] font-bold uppercase tracking-[.16em] text-canvas-muted">Yeni planlı rapor</div>
@@ -625,7 +636,7 @@ export default function ReportsScreen() {
                     </div>
                   )}
 
-                  {cur.sql && (
+                  {cur.sql && canSql && (
                     <details>
                       <summary className="cursor-pointer text-[11px] font-bold text-canvas-muted">Son kullanılan SQL</summary>
                       <pre className="mt-1 max-h-48 overflow-auto rounded-xl bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">{cur.sql}</pre>
@@ -633,6 +644,7 @@ export default function ReportsScreen() {
                   )}
 
                   <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                    {canPlan && (
                     <button
                       type="button"
                       disabled={run.isPending}
@@ -642,12 +654,14 @@ export default function ReportsScreen() {
                       {run.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                       {run.isPending ? 'Çalışıyor…' : 'Şimdi çalıştır'}
                     </button>
-                    {cur.hasFile && (
+                    )}
+                    {cur.hasFile && canExport && (
                       <a href={reportsApi.fileUrl(cur.id)} className={`${btn} bg-canvas-ink text-white shadow-md`}>
                         <Download className="h-4 w-4" />
                         Son dosyayı indir
                       </a>
                     )}
+                    {canPlan && (<>
                     <button
                       type="button"
                       onClick={() => {
@@ -682,6 +696,7 @@ export default function ReportsScreen() {
                         Sil
                       </button>
                     )}
+                    </>)}
                   </div>
                 </>
               )}

@@ -9,6 +9,7 @@ import ExplainPanel from './ExplainPanel';
 import LiveStatus from './LiveStatus';
 import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
 import SearchSelect from '../components/SearchSelect';
+import { useCan } from '../useAdmin';
 import './management.css';
 
 const REPORT_ID = 'baski-oneri';
@@ -76,6 +77,9 @@ function csvOf(view: ReportView, rows: Row[]) {
 
 export default function BaskiOneri() {
   const queryClient = useQueryClient();
+  // Rol: CSV «Dışa aktarma», yenileme «Yönetim raporunu yenileme» ister.
+  const canExport = useCan('veri.disa-aktar');
+  const canRefresh = useCan('yonetim-raporu.yenile');
   const key = ['management-report', REPORT_ID];
   // Sunucu Logo ve CRM'i beş dakikada bir okur. Ekran yalnız durumu sorar (`since`); veri değiştiyse
   // yenisi gelir, değişmediyse ekrandaki veri olduğu gibi kalır.
@@ -225,13 +229,17 @@ export default function BaskiOneri() {
               <button type="button" className="mg-button" onClick={() => openSheet({ kind: 'all' })}>
                 <Code2 size={16} /> SQL ve hesaplar
               </button>
-              <button type="button" className="mg-button" onClick={download} disabled={!view || rows.length === 0}>
-                <ArrowDownToLine size={16} /> CSV
-              </button>
-              <button type="button" className="mg-button" onClick={() => refresh.mutate()} disabled={refreshing || !ENGINE_ENABLED}>
-                <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
-                {refreshing ? 'Yenileniyor' : 'Verileri yenile'}
-              </button>
+              {canExport && (
+                <button type="button" className="mg-button" onClick={download} disabled={!view || rows.length === 0}>
+                  <ArrowDownToLine size={16} /> CSV
+                </button>
+              )}
+              {canRefresh && (
+                <button type="button" className="mg-button" onClick={() => refresh.mutate()} disabled={refreshing || !ENGINE_ENABLED}>
+                  <RefreshCw size={16} className={refreshing ? 'animate-spin' : ''} />
+                  {refreshing ? 'Yenileniyor' : 'Verileri yenile'}
+                </button>
+              )}
             </div>
           </header>
 

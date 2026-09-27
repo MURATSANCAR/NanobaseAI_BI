@@ -5,11 +5,14 @@ import { Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi, type SearchReport } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 type Kind = 'queries' | 'pages';
 
 /** Arama ve kelimeler: Search Console'daki sorgular ve sayfalar. Bütün satırlar gelir; ekran süzer ve sayfalar. */
 export default function SeoSearch() {
+  // Okuma/tarama/ölçüm başlatmak «SEO eşitleme ve ölçüm» ister; rolde yoksa düğme çıkmaz.
+  const canRun = useCan('seo.calistir');
   const qc = useQueryClient();
   const [kind, setKind] = useState<Kind>('queries');
   const [filter, setFilter] = useState('');
@@ -31,7 +34,7 @@ export default function SeoSearch() {
       title="Aranan kelimeler ve sayfalar"
       lead="Google’da timas.com.tr’yi getiren sorgular ve sayfalar: tıklama, gösterim, tıklama oranı ve ortalama sıra. Veri her gece okunur; son 3 gün Google’da kesinleşmediği için dahil edilmez."
       actions={
-        <button className="sg-button" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
+        canRun && <button className="sg-button" onClick={() => refresh.mutate()} disabled={refresh.isPending}>
           {refresh.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
           Şimdi oku
         </button>

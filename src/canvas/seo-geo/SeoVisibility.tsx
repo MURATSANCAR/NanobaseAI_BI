@@ -4,10 +4,13 @@ import { ChevronDown, ChevronRight, Loader2, Play, Plus, Trash2 } from 'lucide-r
 import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi, type GeoResult, type Question } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 /** AI görünürlük (GEO): izlenen sorular yapay zekâ motorlarına resmî API'leriyle sorulur; Timaş anıldı mı, site kaynak
  *  gösterildi mi, hangi kitaplar geçti. Anahtarı girilmemiş motor ölçülmez ve ekranda sonuç uydurulmaz. */
 export default function SeoVisibility() {
+  // Okuma/tarama/ölçüm başlatmak «SEO eşitleme ve ölçüm» ister; rolde yoksa düğme çıkmaz.
+  const canRun = useCan('seo.calistir');
   const qc = useQueryClient();
   const [text, setText] = useState('');
   const [category, setCategory] = useState('');
@@ -41,7 +44,7 @@ export default function SeoVisibility() {
       title="Yapay zekâ cevaplarında Timaş"
       lead="İzlenen sorular Gemini, ChatGPT, Perplexity ve Claude’a resmî API’leriyle sorulur; cevapta Timaş’ın anılıp anılmadığı, timas.com.tr’nin kaynak gösterilip gösterilmediği ve hangi Timaş kitaplarının geçtiği kaydedilir. Gemini ücretsiz katmanla çalışır; diğerleri anahtar girilirse ölçülür."
       actions={
-        <button className="sg-button primary" onClick={() => measure.mutate()} disabled={!active.length || measure.isPending || run?.running || !items.length}>
+        canRun && <button className="sg-button primary" onClick={() => measure.mutate()} disabled={!active.length || measure.isPending || run?.running || !items.length}>
           {run?.running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Play size={16} aria-hidden />}
           {run?.running ? `Soruluyor · ${fmt(run.done)} cevap` : 'Şimdi ölç'}
         </button>
@@ -81,7 +84,7 @@ export default function SeoVisibility() {
       <section className="sg-card">
         <h2>İzlenen sorular</h2>
         <p className="sg-sub">Bir okurun gerçekten soracağı biçimde yazın; örneğin “çocuklar için değerler eğitimi kitabı önerir misin”. Her soru her motorda haftada bir sorulur.</p>
-        <form
+        {canRun && <form
           style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}
           onSubmit={(e) => {
             e.preventDefault();
@@ -97,7 +100,7 @@ export default function SeoVisibility() {
           <button className="sg-button primary" type="submit" disabled={add.isPending || text.trim().length < 5}>
             {add.isPending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Plus size={16} aria-hidden />} Soru ekle
           </button>
-        </form>
+        </form>}
         {add.error && <Failed error={add.error} />}
         {list.data && !items.length && (
           <div className="sg-empty">
@@ -135,9 +138,9 @@ export default function SeoVisibility() {
                         </td>
                       ))}
                       <td>
-                        <button className="sg-button" style={{ minHeight: 36 }} onClick={() => del.mutate(q.id)} disabled={del.isPending} aria-label="Soruyu sil">
+                        {canRun && <button className="sg-button" style={{ minHeight: 36 }} onClick={() => del.mutate(q.id)} disabled={del.isPending} aria-label="Soruyu sil">
                           <Trash2 size={14} aria-hidden />
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                     {open === q.id && (

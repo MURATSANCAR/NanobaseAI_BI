@@ -818,21 +818,26 @@ export const adminApi = {
 /** Bağ türü: AD grubu, AD birimi (OU), CRM güvenlik rolü ya da tek kişi. */
 export type AccessSubjectType = 'ad_group' | 'ou' | 'crm_role' | 'user';
 
-/** Oturumdaki kişinin görebildiği sayfalar. `all`: yönetici ya da «bütün sayfalar» açık bir rol. */
+/** Oturumdaki kişinin görebildiği sayfalar ve işlemler (`perms`: `sayfa:*` + `ozellik:*`). `all` yalnız yöneticide
+ *  doğrudur; «bütün» rolü açıkça verilen işlemleri kapsamadığı için liste her zaman `perms`ten okunur. */
 export type AccessMe = {
   user: string;
   isAdmin: boolean;
   isEditor?: boolean;
   all: boolean;
+  allRoles?: boolean;
   perms: string[];
   roles: Array<{ id: string; name: string; via: string[] }>;
 };
 
 export type AccessPage = { key: string; area: string; label: string };
+/** Sayfa içindeki işlem. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
+export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean };
 export type AccessCatalog = {
   version: number;
   areas: Array<{ id: string; label: string }>;
   pages: AccessPage[];
+  features: AccessFeature[];
   subjectTypes: Record<AccessSubjectType, string>;
 };
 
@@ -871,6 +876,7 @@ export type AccessExplain = AccessMe & {
   adGroups: string[];
   crmRoles: string[];
   pages: Array<AccessPage & { allowed: boolean }>;
+  features: Array<AccessFeature & { allowed: boolean }>;
   notes: string[];
 };
 
