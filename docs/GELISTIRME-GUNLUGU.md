@@ -67,6 +67,14 @@
 - **Açık:** matbaa kapasitesi ve teklif listesi CRM/Logo'da yok, portalda teklif olarak girilir; YAYFED/bakanlık uyum
   listesi yok (CRM'de yalnız bandrol durumu, ekranda gösteriliyor); gecikme bildirimi ekranda, e-posta ile gitmiyor
   (SMTP kurulunca uyarılar modülüne bağlanabilir); kalite sorunu oranı ancak portalda işaretlendikçe ölçülür.
+- **Durum:** kod dalda (`worktree-agent-a83583b6e0e83abe9`), `main` (`e757a77c`, M46 dahil) üstüne rebase'li, çakışmasız.
+  **main'e taşınmadı** (bu oturumda main'e yazma izni yoktu) ve kural gereği **test sunucusuna kurulmadı**; VM'e kurulmadı.
+  Sunucudaki ortak dosyalar (`app.py`, `access.py`, `access_catalog.json`, `App.tsx`, `engine.ts`, `navModel.ts`,
+  `ModulesMenu.tsx`) `main`den farklı (sunucu `main`in gerisinde) → kurulum tam dosya değil, yalnız M12 yamasıyla
+  (`git diff <önceki main> <M12 commit> -- backend src`, canlı ağacın kopyasında kuru deneme + tsc + vite build). Yeni
+  uçlar için köprünün yeniden başlatılması gerekir (`semantic/reload` rota eklemez). Sonra portalda `timasai` kısa
+  oturumuyla: `/api/v1/editorial/production/{meta,overview,cards,delays,printers,calendar,print-exit}` okunur, yazma
+  uçları yalnız geçersiz gövdeyle (400) denenir; `/timas/uretim` 320/390/768 px ve masaüstünde açılır.
 
 ## 2026-09-28 — M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk baskı önerisi, ilk satış takibi, dürüst geçmiş sınama
 
