@@ -237,7 +237,7 @@ def test_market_first_year_net_of_returns_and_scenarios():
         sales.append({"kod": f"K{i}", "yil": 2024, "ay": 3, "kanal": "Mağaza", "tur": "Satış", "adet": qty})
         sales.append({"kod": f"K{i}", "yil": 2025, "ay": 2, "kanal": "E-ticaret", "tur": "Satış", "adet": 100})   # 12. ay
         sales.append({"kod": f"K{i}", "yil": 2025, "ay": 3, "kanal": "E-ticaret", "tur": "Satış", "adet": 1000})  # 13. ay: dışarıda
-    sales.append({"kod": "K0", "yil": 2024, "ay": 4, "kanal": "Toptancı", "tur": "Satış İade", "adet": 200})
+    sales.append({"kod": "K0", "yil": 2024, "ay": 4, "kanal": "Toptancı", "tur": "İade", "adet": 200})
     out = K.compute(books, sales, today)
     assert out["books"] == 6 and out["withSales"] == 5 and out["withoutSales"] == 1
     firsts = {b["code"]: b["firstYear"] for b in out["list"]}
@@ -249,6 +249,7 @@ def test_market_first_year_net_of_returns_and_scenarios():
     # Son 36 ay: 2023-10 … 2026-09 → bütün satırlar.
     assert ch == {"Mağaza": 2900, "E-ticaret": 5500, "Toptancı": -200} and out["last36"] == 8200
     assert out["curve"][0] == 400 and len(out["curve"]) == 12
+    assert K.channel_label("KITAPCI") == "Kitapçı" and K.channel_label("  ") == "Kanal girilmemiş"
 
 
 def test_overlap_query_uses_significant_words_only():

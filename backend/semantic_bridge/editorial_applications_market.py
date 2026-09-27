@@ -186,6 +186,20 @@ def _day(v: Any) -> Optional[date]:
         return None
 
 
+#: Logo satış görünümünün KANAL kodları (2026 görünümünde görülenler) → ekrandaki ad. Listede olmayan kod
+#: olduğu gibi, baş harfi büyük yazılır; boş kod «Kanal girilmemiş».
+CHANNELS = {"KITAPCI": "Kitapçı", "E-TICARET": "E-ticaret", "ZINCIR": "Zincir", "DAGITICI": "Dağıtıcı",
+            "MAGAZA": "Mağaza", "DIGER": "Diğer", "FUAR": "Fuar", "KURUM": "Kurum", "HAVUZ": "Havuz",
+            "YURTDIŞI": "Yurt dışı", "YURTDISI": "Yurt dışı", "ZİNCİR MAĞ": "Zincir mağaza", "YAZAR": "Yazar"}
+
+
+def channel_label(code: Any) -> str:
+    c = _s(code)
+    if not c:
+        return "Kanal girilmemiş"
+    return CHANNELS.get(c.upper(), c[:1].upper() + c[1:].lower())
+
+
 def percentile(xs: list[float], q: float) -> Optional[float]:
     """Doğrusal ara değerli yüzdelik (numpy 'linear' ile aynı)."""
     if not xs:
@@ -202,7 +216,9 @@ def _net(tur: Any, adet: Any) -> float:
         q = float(adet or 0)
     except (TypeError, ValueError):
         return 0.0
-    return -abs(q) if "iade" in str(tur or "").lower() else q
+    # Görünüm «Satış» / «İade» yazar; "İade".lower() noktalı i verir (i̇ade), büyük harfle karşılaştırılır.
+    u = str(tur or "").upper()
+    return -abs(q) if ("İADE" in u or "IADE" in u) else q
 
 
 def compute(books: list[dict[str, Any]], sales: list[dict[str, Any]], today: date) -> dict[str, Any]:
@@ -238,7 +254,7 @@ def compute(books: list[dict[str, Any]], sales: list[dict[str, Any]], today: dat
             b["firstYear"] += q
             b["curve"][k] += q
         if last36_from <= mi <= now_i:
-            name = _s(r.get("kanal")) or "Belirtilmemiş"
+            name = channel_label(r.get("kanal"))
             channels[name] = channels.get(name, 0.0) + q
             last36 += q
     sold = [b for b in by_code.values() if b["lines"] > 0]

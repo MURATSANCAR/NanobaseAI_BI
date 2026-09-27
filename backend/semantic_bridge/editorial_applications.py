@@ -412,8 +412,9 @@ def _row(c: Any, tenant: str, app_id: str) -> Any:
 
 def _next_no(c: Any, tenant: str, year: int) -> str:
     prefix = f"B-{year}-"
-    last = c.execute(sa.select(sa.func.max(APPS.c.no)).where(APPS.c.tenant_id == tenant, APPS.c.no.like(prefix + "%"))).scalar()
-    n = int(last.rsplit("-", 1)[-1]) + 1 if last else 1
+    nos = c.execute(sa.select(APPS.c.no).where(APPS.c.tenant_id == tenant, APPS.c.no.like(prefix + "%"))).scalars()
+    # Sayısal en büyük (metin sıralaması 9999'dan sonra yanılır).
+    n = max((int(x.rsplit("-", 1)[-1]) for x in nos if x.rsplit("-", 1)[-1].isdigit()), default=0) + 1
     return f"{prefix}{n:04d}"
 
 

@@ -58,7 +58,7 @@ function Actions({ a, onEdit }: { a: AppDetail; onEdit: () => void }) {
   const meta = useAppMeta();
   const me = meta.data?.me;
   const people = usePeopleOptions();
-  const [sheet, setSheet] = useState<Sheet>(null);
+  const [sheet, setSheetRaw] = useState<Sheet>(null);
   const [assignee, setAssignee] = useState('');
   const [sessionId, setSessionId] = useState('');
   const canWrite = !!me?.canWrite;
@@ -89,6 +89,12 @@ function Actions({ a, onEdit }: { a: AppDetail; onEdit: () => void }) {
     mutationFn: (note: string) => applicationsApi.reopen(a.id, note),
     onSuccess: () => done('Başvuru yeniden açıldı'),
   });
+  // Panel her açılışta temiz: önceki denemenin hatası taşınmaz.
+  const setSheet = (v: Sheet) => {
+    decide.reset();
+    reopen.reset();
+    setSheetRaw(v);
+  };
   const agenda = useMutation({
     mutationFn: () => boardApi.addAgenda(sessionId, a.id),
     onSuccess: () => done('Kurul gündemine eklendi'),
