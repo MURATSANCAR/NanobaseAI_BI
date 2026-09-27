@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (21:20) — Yetki Aşama A test sunucusuna kuruldu
+
+- `main` `7220ffae`: değişen 14 dosya sunucuda değişiklik öncesi `main` ile md5 eşitti (başka oturumun işi yoktu), 4 yeni dosya eklendi; `._*` 0. Köprü yeniden başlatıldı (sağlıklı), ön yüz sunucuda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas` ile derlendi, `cockpit/dist`e kondu; yayındaki derleme `index-DzEIButO.js`.
+- Gerçek oturumla (geçici `timasai` + yönetici olmayan deneme oturumu, iş bitince silindi): `/access/me` yöneticide 29/29 sayfa, rol listesinde yalnız «Herkes» (bütün sayfalar); AD'den 140 grup, 44 birim, 216 kişi, CRM'den 121 rol aday olarak geliyor; yönetici olmayan kişiye yetki yönetimi ve zamanlayıcı ucu 403, sayfalar (Herkes açık) 200; `generate_summary` 404.
+- `timas-admin-group.service` elle bir kez koşturuldu: yönetici grubu + yetki üyeleri turu başarılı (bağ olmadığı için 0 okuma).
+- Görsel doğrulama yapılamadı: oturum çerezi HttpOnly, tarayıcı panesine konamıyor; ekran `https://portal.nanobase.ai/timas/yonetim?bolum=access`. Müşteri VM'ine kurulmadı.
+
 ## 2026-09-27 — Yetki Aşama A: rol modeli, köprüde sayfa kapısı, Yönetim → Yetkiler
 
 - **Model** (`backend/semantic_bridge/access.py`): AD grubu / AD birimi (OU) / CRM güvenlik rolü / kişi → rol → sayfa anahtarları (`sayfa:<menü id>`, katalog `access_catalog.json`). Kişinin yetkisi rollerin birleşimi; yönetici her şeyi görür. «Herkes» sistem rolü kurulumda «bütün sayfalar» açık gelir — kullanıcı kararı: roller prod öncesi atanır, o gün daraltılır; kurulum anında davranış değişmez.
