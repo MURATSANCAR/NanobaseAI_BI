@@ -1172,7 +1172,12 @@ REPAIR_SYSTEM = (
 REPAIRABLE = ("sayi", "terim", "yasak", "noktalama", "denge", "baglanti", "ayni")
 
 
-def _batches(rows: list[Any], words: int = 600, count: int = 40) -> Iterable[list[Any]]:
+#: Bir model çağrısına giden en çok kelime/segment. Model başka modüllerle paylaşılıyor; yük altında 600 kelimelik
+#: parça 900 sn'lik çağrı sınırını aştı (2026-09-28 ölçümü). Küçük parça: çağrı kısa, ara kayıt sık.
+BATCH_WORDS, BATCH_SEGMENTS = 250, 20
+
+
+def _batches(rows: list[Any], words: int = BATCH_WORDS, count: int = BATCH_SEGMENTS) -> Iterable[list[Any]]:
     cur: list[Any] = []
     n = 0
     for r in rows:
