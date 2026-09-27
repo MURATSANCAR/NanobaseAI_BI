@@ -1,5 +1,30 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (22:00) — Stüdyo: erkek anlatıcı «sıcak masalcı», sayfa düzeni kendiliğinden, tam e-kitap denetimi kalıcı
+
+- **Neden:** kullanıcı adına verilen üç karar: erkek anlatıcı varsayılanı «sıcak masalcı» (dinlenen kaydın kendisiyle),
+  sayfa düzeni ekranında «başlat» düğmesi beklenmesin, tam e-kitap denetimi geçici kapta değil imajda olsun.
+- **Erkek anlatıcı:** tarif çalıştırmadan çalıştırmaya biraz farklı ses verdiği için referans kayıt pakette sabit
+  (`production/sesler/anlatici-erkek-masalci.wav`, 820 kB, sha256 `narration.PINNED`'de; modelin tariften ürettiği
+  ses, gerçek kişi kaydı değil). Kaydın metni hizalayıcıyla okundu: `REF_TEXT` ile aynı («Bir varmış bir yokmuş…»).
+  `voice_ref` modeli çağırmaz; dosya yok ya da özet tutmazsa üretim durur. Eski `anlatici-erkek` bu sese yönlenir;
+  ekranda «önerilen» rozeti. Genel varsayılan (kadın anlatıcı) değişmedi. Neden repo'da: tek kopya oturum karalama
+  klasöründeydi (geçici); imaja girince kurulumda ayrı kopyalama adımı gerekmez.
+- **Sayfa düzeni:** yeni `POST plan/prepare` (servis, köprü, giriş kapısı `EDITOR-STUDYO-PLANHAZIR`) sesli okumanın
+  kullandığı `auto_plan_dir` yolunu çağırır; ekran açılışta onu çağırıp «Sayfa düzeni hazırlanıyor…» gösterir,
+  düşerse «Yeniden dene». `GET plan` tetiklemez (otomatik kayıt «plan yok» cevabına dayanıyor).
+- **Tam denetim:** `images/studio/Dockerfile` (editor-py + openjdk-21-jre-headless + EPUBCheck 5.4.0, W3C GitHub
+  sürümü, sha256 sabit, lisans dosyalarıyla), yalnız `editor-studio` ve `editor-studio-worker` bu imajla kalkar
+  (`EDITOR_STUDIO_IMAGE`, `editorctl studio-image`). Boyut: katmanlar +246 MB (JRE 210 MB, denetim 36 MB), liste
+  boyutu 1,21 → 1,56 GB. Ekranda sonuçta «Tam denetim» / «Yapısal denetim».
+- **Doğrulama (GPU, geçici `editor-py:test-c0f00abe` + `editor-py-studio:test-c0f00abe`, iş bitince silindi):** tam
+  set 522 geçti, 1 bilinen sıra bağımlılığı (`test_proofing_contract`, tek başına 3/3). Gerçek seslendirilmiş işin
+  kopyasından (`2026092716271423aee2`) sabit sayfa ve akışkan sesli EPUB imajın içinden tam denetimle: 0 hata / 0 uyarı
+  (4 sayfa, 136 kelime, 78,3 sn; komut satırından da «No errors or warnings detected»). Planı olmayan eski işin
+  kopyasında (`20260925193351a17c8f`) ekranın akışı: `GET plan` 404 → `prepare` 409 PREPARING → 200 ready, plan 5
+  sayfa, iç sayfa PDF'i 8 → 8, metin kelime kelime aynı. Giriş kapısı betiği canlı dosyanın kopyasında kuru koşuldu
+  (ikinci koşu «zaten var»). Ön yüz test sunucusunda: tsc temiz, vitest 35/35, vite build tamam. Kurulmadı.
+
 ## 2026-09-27 (21:00) — Stüdyo sesli okuma: kendiliğinden sayfa düzeni, sesli e-kitap, ses kütüphanesi ve «ses yükle»
 
 - **Neden:** eski iş (`20260925193351a17c8f`, planı yok) sesli okumada «önce sayfa düzenini açın» diyordu; e-kitapta

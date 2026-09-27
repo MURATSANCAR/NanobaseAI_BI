@@ -193,7 +193,7 @@ güncelken üretilir (`epub.audio_gap`; değilse ekranda neden + «Eksik sesleri
   `-epub-media-overlay-active` (stilde yumuşak sarı zemin). Erişilebilirlik: `accessMode auditory`,
   `synchronizedAudioText`; özet cümlesi sesli olduğunu söyler.
 - **Denetim:** yapısal denetim ses eşlemesini de sınar (SMIL listede, süre üst veride, her `<text>` sayfadaki bir
-  kimliğe, her `<audio>` paketteki sese, klip başı < sonu). **EPUBCheck 5.4.0** (GPU'da geçici kap, Java 21):
+  kimliğe, her `<audio>` paketteki sese, klip başı < sonu). **EPUBCheck 5.4.0** (GPU'da geçici kap, Java 21; 2026-09-27 akşamından beri stüdyo imajında kalıcı: `images/studio/Dockerfile`, ekranda «Tam denetim»):
   deneme işinin kopyasından gerçek seslerle sabit sayfa ve akışkan sesli EPUB → 0 hata / 0 uyarı; sınama EPUB'ları da
   (sabit, akışkan) 0/0.
 - **Önizlemede dinle:** ekran e-kitabın kendi SMIL ve MP3'lerini içerikten okur, sesi çalar, okunan kelimeye aynı sınıfı
@@ -212,8 +212,17 @@ okunuş başına bir kez üretilir, yayınevi düzeyinde saklanır (`_ses/ornek/
 — 34 erkek tarif denemesinden 21'i; tutan kalıp «calm … man in his …, low/deep (baritone) male voice …». Seçilen erkek
 tarifleri 86–95 Hz, kadın tarifleri 160–267 Hz; sayfa sesleri referansla aynı aralıkta (ör. sıcak masalcı ref 87 Hz →
 sayfalar 79–80 Hz). Aynı tarif ve tohum GPU'da çalıştırmadan çalıştırmaya biraz değişebiliyor (radyo tiyatrosu 118 →
-93 Hz): bir aday varsayılan yapılacaksa onun **dinlenen referansı** (`…-referans.wav`) `_ses/sesler/<ses>.wav|json`'a
-konur, yeniden üretilmez.
+93 Hz): bir aday varsayılan yapılacaksa onun **dinlenen referansı** kullanılır, yeniden üretilmez.
+
+**Varsayılan erkek anlatıcı (kullanıcı kararı 2026-09-27): «sıcak masalcı» (`anlatici-erkek-masalci`).** Dinlenen
+referans kaydın kendisi (`aday-1-anlatici-erkek-masalci-referans.wav`: 48 kHz tek kanal, 8,54 sn, 87 Hz, REF_TEXT ve
+REF_SEED ile tariften üretildi; gerçek kişi kaydı değil) pakette durur: `apps/editor/src/editor/production/sesler/
+anlatici-erkek-masalci.wav` (820 kB), sha256 `41c9a3b2…cdcffc785` kodda (`narration.PINNED`). Yayınevi klasörüne
+(`_ses/sesler/`) yazılmaz, imajla gelir; kurulumda GPU'ya ayrıca dosya kopyalanmaz. `voice_ref` bu seste modeli
+çağırmaz; dosya yoksa ya da özeti tutmazsa üretim açık Türkçe hatayla durur (tariften sessizce başka ses üretilmez).
+Eski «Erkek anlatıcı» kimliği (`anlatici-erkek`) bu sese yönlenir (`narration.ALIASES`: kayıtlı ayar, API, sayfa
+birimleri); listede ayrı satır yok, o sesle okunmuş sayfalar «güncel değil» görünür. Ekranda anlatıcı grubunda kadın
+anlatıcının (genel varsayılan, değişmedi) hemen ardından, erkeklerin en üstünde «önerilen» rozetiyle.
 
 **Ses yükle (izinli referans ses, `production/voices.py`):** yayınevinin kendi seslendirmeni için. Hak beyanı zorunlu:
 «Bu sesin ticari kullanım hakkı yayınevimize aittir» onayı + sesin sahibinin adı + izin belgesi (PDF/PNG/JPEG) ya da
