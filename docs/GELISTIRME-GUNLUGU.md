@@ -1,5 +1,29 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (gece) — Son okuma: aynı kitapta hatırlama (editör kararı yeniden okumaya taşınır)
+
+- **Neden:** kullanıcı kararı — yeniden okumada aynı bulgu (aynı denetim, aynı sayfa ya da aynı alıntı) önceki kararı
+  alsın; yanlış alarm tekrar çıkmasın, «doğru» denen işaretli gelsin. Yalnız aynı kitap; kural kendiliğinden değişmez.
+  Bugün kararlar nesle bağlıydı: Levent'in tek kararı (09-22, nesil `60e5d717`) yeni nesilde (`371f11cd`) görünmüyordu.
+- **Parmak izi** (`apps/editor/src/editor/proofing/_carry.py`, saf): denetim adı (sürüm değil) + `details` kimlik alanları
+  (tür/kural kodu, ad çifti, sözcük/kök/kalıp, geçiş biçimleri, metin rengi) + normalleştirilmiş alıntı. Mesaj metni,
+  ölçüler ve model etiketleri dışarıda. Sayfa yalnız aynı anahtarlı geçişleri ayırır (nesiller arası kayma düzeltilir,
+  aynı sayfada işaret kutusu sırası); alıntısızda sayfa + tür. Bire bir karşılıklı en yakın eşleme; eşitlikte taşımaz
+  (adayların kararı aynıysa taşır). En yeni karar geçerli; «geri al» taşımayı durdurur.
+- **Yer: okumada** (`card_api._carried`, `GET …/proofing` ve Word'e aktarım). Veritabanına kendiliğinden yazılmaz:
+  `proof_decision` insanın kaydıdır; makine satırı yanlış eşlemeyi kalıcı kılar ve isabeti çift sayardı. Editörün
+  cevabı (onay/değiştirme/geri al) normal karar + `carried_from` (göç `028_proof_decision_carry.sql`, `CLEAR` kararı);
+  isabet taşınanı saymaz, onaylananın kaynağını ikinci kez saymaz.
+- **Ekran:** taşınan yanlış alarm varsayılan listede ve sayaçlarda yok, «N bulgu … gizlendi» notu + «göster»;
+  «karar verilenler»de «önceki okumadan» rozeti ve satırda «Geri al»; taşınan doğru listede «önceki okumada doğru».
+  Kanıt panelinde kaynak (tarih, kim, gerekçe) ve «Geri al». Köprü `hidden` ve `carriedFrom` geçirir.
+- **Kuru koşu (canlı DB, yalnız okuma):** gerçek karar Levent'te taşınıyor; sanal kararla aynı koşu 18.907→18.662
+  (245 belirsiz), nesiller arası 101→100, sürüm değişimi 14.493→12.729 (24 belirsiz); Dilek Ağacı 80 çift elle
+  bakıldı, yanlış eşleşme yok. Rapor süresi 3–116 ms.
+- **Test:** `test_proof_carry.py` 18 + karar testleri; editör tam set 542 geçti (bilinen `test_proofing_contract`
+  sıra bağımlılığı tek başına geçer); geçici PostgreSQL'de 001–028 + uçtan uca (rapor, onay, geri al, 422, Word,
+  üçüncü okuma, 028 öncesi yol). Ön yüz tsc temiz, vitest 41/41, build geçti.
+
 ## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
 
 - Bağlayıcının zamanlayıcısı yoktu; yeni okunan kitaplar okur kitlesini/yaşı/türü almıyor, yaş denetimleri koşmuyordu. Nerede koşmalı: CRM (.28) test sunucusundan erişiliyor; editöre test sunucusundan yalnız TT GPU'nun açtığı ters tüneller var (kart 18889, stüdyo 18890). `editor-mcp` dışarı açık değil ve açmak bütün MCP araçlarını açardı.
