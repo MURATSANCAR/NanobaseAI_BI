@@ -84,7 +84,9 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
 
       <Box
         title={`Satış senaryoları · ${fc.launchName} çıkış`}
-        help="Kötümser / baz / iyimser: geçmişte benzer tahminlerin gerçekleşme dağılımının %20 / %50 / %80 noktaları."
+        help={`Kötümser / baz / iyimser: geçmişte benzer tahminlerin gerçekleşme dağılımının %20 / %50 / %80 noktaları.${
+          onLaunch ? ' Yayın ayı toplamı pek değiştirmez (geçmiş sınamada mevsim ve pazar düzeltmesi isabeti artırmadı); ayları ve emsallerin yaşını değiştirir.' : ''
+        }`}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <TierPill tier={fc.horizons['6'].tier} />
