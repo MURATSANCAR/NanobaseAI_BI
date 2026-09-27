@@ -33,6 +33,10 @@ from datetime import date, datetime, timedelta
 from typing import Any, Callable, Optional
 from zoneinfo import ZoneInfo
 
+# Uç imzalarındaki `Request` modül düzeyinde olmalı: `from __future__ import annotations` tip adını modülün
+# globallerinde arar; fonksiyon içinde içe aktarılırsa `request` sorgu parametresi sanılır ve her uç 422 döner.
+from fastapi import HTTPException, Request
+
 from semantic_bridge import production_plan as plan_mod
 from semantic_bridge import production_store as store
 from semantic_bridge.production_plan import KEYS, MILESTONES, STAGES, parse_day
@@ -851,8 +855,6 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     auth(request) → (engine, tenant, user, display) · can(user, key) → bool · is_admin(user) → bool ·
     audit(engine, user, action, kind, id, title, detail) · conf(key, default) → str · fresh() → bool ·
     crm_connect() / logo_connect() → salt okunur bağlantı · studio_jobs() → stüdyo iş listesi (isteğe bağlı)."""
-    from fastapi import HTTPException, Request
-
     auth, can, is_admin, audit, conf, fresh = (deps[k] for k in ("auth", "can", "is_admin", "audit", "conf", "fresh"))
     settings = lambda: settings_from(conf)  # noqa: E731
     source = Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA"),

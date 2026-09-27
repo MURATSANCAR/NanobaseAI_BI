@@ -178,6 +178,19 @@ def test_every_bridge_route_has_a_rule(monkeypatch, store, settings):
     assert missing == []
 
 
+def test_no_bridge_route_takes_request_as_query(monkeypatch, store, settings):
+    """`from __future__ import annotations` + fonksiyon içinde içe aktarılan `Request` → FastAPI `request`i sorgu
+    parametresi sanar, uç her istekte 422 döner (SEO rehberi 2026-09-27, M12 Üretim 2026-09-28 canlıda böyle çıktı)."""
+    app, _ = _app(monkeypatch, store, settings)
+    bad = []
+    for route in app.routes:
+        dep = getattr(route, "dependant", None)
+        for q in (dep.query_params if dep is not None else []):
+            if q.name in ("request", "body") or q.name[:1].isupper():
+                bad.append(f"{sorted(route.methods)} {route.path}: {q.name}")
+    assert bad == []
+
+
 def test_page_gate_in_the_bridge(monkeypatch, store, settings):
     app, client = _app(monkeypatch, store, settings)
     engine = store.engine
