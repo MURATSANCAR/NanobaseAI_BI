@@ -216,7 +216,7 @@ TİMAŞ için mükemmel sistem: Logo'nun finansal bakiyesi ile CRM'in raf stoğu
 hatası, sayım, iade) gösteren; her kitap için "kaç gün yeter + baskı kaç günde gelir" hesabını yapıp bitmeden 1 baskı süresi önce
 uyaran; okul sezonunu ayrı öğrenen; fazla stoğu kampanya/set önerisine çeviren bir pano.
 
-Bir iş günü:
+Bir iş günü (saatler ve sayılar örnek biçimdir, ölçüm değildir):
 - 07:45 Telefonda sabah bülteni: "Logo'ya aktarılamayan 12 hareket (3'ü depolar arası sevk), 18 kitap 30 gün içinde bitiyor, 4'ünde
   açık baskı kartı yok."
 - 08:15 Masaüstünde "Bugün ilgilenilecekler": aktarım hatalarını tıklar, CRM fiş numarası ve Logo mesajı görünür, BT'ye iletir.

@@ -197,7 +197,7 @@ Mükemmel sistem: her gönderinin sipariş → teslim zaman çizelgesi tek kartt
 şehir kırılımıyla; Logo faturası gönderi bazında eşleşmiş; kurye değişikliği öncesi "bu kural geçen çeyrekte uygulansaydı maliyet/süre
 ne olurdu" simülasyonu.
 
-Bir iş günü:
+Bir iş günü (saatler ve sayılar örnek biçimdir, ölçüm değildir):
 - 08:00 Telefonda: "Dün 1.240 sipariş sevk, 9 entegrasyon hatası (7 Aras adres hatası), 31 gönderi 5 günü geçti."
 - 08:30 Hata listesi: adres hatalı 7 siparişi müşteri hizmetlerine yönlendirir (liste Excel).
 - 10:00 Teslim bekleyenler: 5+ gün olan 31 gönderiyi firma bazında ayırır, iki firmayı arar.

@@ -201,7 +201,7 @@ Mükemmel sistem: 6 aylık yük takvimi M12 kartlarından kendiliğinden dolu; a
 olarak; her matbaanın borcu, önümüzdeki ödemeleri ve karnesi tek sayfada; "bu işi Kasım'a kaydırırsam yayın ayı kaçar mı" sorusuna
 kritik yol cevabı.
 
-Bir iş günü:
+Bir iş günü (saatler ve sayılar örnek biçimdir, ölçüm değildir):
 - 08:30 Açılış: Ekim'de iki matbaada geçen yılın en yüksek ayının %30 üstü yük; 6 iş aynı haftada.
 - 09:00 Çakışma listesinden 2 baskı tekrarı işini (öncelik "Normal") Kasım'a kaydırma önerisini onaylar; M12'de kartı değiştirmesi için not.
 - 10:30 Kağıt: Kasım–Ocak ihtiyacı 60 gr kitap kâğıdı X ton; satın almaya ihtiyaç listesini gönderir.

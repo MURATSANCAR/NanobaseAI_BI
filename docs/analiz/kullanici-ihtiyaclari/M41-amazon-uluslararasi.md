@@ -182,7 +182,7 @@ belirleyicidir (varsayım).
 Mükemmel sistem: kitap başına "uluslararası kart": hangi dillere hakkı satılmış, hangi ülkelerde fiziksel satılmış, Amazon'da nerede
 ne kadar; pazar değerlendirme kartı rakam + gerekçe; listeleme taslağı hedef dilde, TİMAŞ'ın üslubunda; aylık rapor.
 
-Bir iş günü:
+Bir iş günü (saatler ve sayılar örnek biçimdir, ölçüm değildir):
 - 09:00 Açılış: Amazon TR'ye bu ay 1.800 adet sevk, 240 iade; konsinyede kalan 3.100.
 - 10:00 Yurtdışı: Almanya carilerinde geçen yıla göre %12 artış; en çok satan 20 kitap.
 - 11:30 Haklar ve diller: İngilizce hakkı satılmış 14 kitaptan 3'ünün Türkçe baskısı Almanya'da iyi satıyor → fuar notu (M27).

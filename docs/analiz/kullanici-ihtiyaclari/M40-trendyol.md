@@ -176,7 +176,7 @@ değerin çoğu **fark ve risk görünürlüğü**nden gelir.
 Mükemmel sistem: sabah tek ekranda "puanı düşürecek riskler" (stok farkı, geciken paket, cevapsız soru, olumsuz yorum); kitap
 bazında Trendyol satış hızı diğer kanallarla yan yana; kampanya öncesi vitrin listesi gerekçesiyle; haftalık özet telefonda.
 
-Bir iş günü:
+Bir iş günü (saatler ve sayılar örnek biçimdir, ölçüm değildir):
 - 08:00 Telefonda: "12 kitap Trendyol'da stokta, depoda yok; 5 paket 2 günü geçti; 9 cevapsız soru."
 - 08:30 Stok farkı listesiyle panelde 12 ürünü kapatır (kendisi; sistem göndermez).
 - 10:00 Sorular: Zeki AI taslaklarını düzenleyip panelden yanıtlar.

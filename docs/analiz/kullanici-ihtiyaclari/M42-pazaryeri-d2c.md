@@ -200,8 +200,8 @@ yazma katmanı kapsam dışı olduğu için değer ölçüm, kıyas ve öneriden
 Mükemmel sistem: sabah kanal karnesi (dün + ay + yıl); kitap × kanal matrisi; kanal iskontosu değişince kâr simülasyonu; D2C'nin
 güçlü olduğu kitaplar ve müşteri değeri pazar yerleriyle yan yana; aylık karne telefonda.
 
-Bir iş günü:
-- 09:00 Telefonda: "Kitapyurdu bu ay geçen yılın %18 üstünde; Hepsiburada iade oranı %11; D2C payı %6,2." (örnek biçim, gerçek sayı değil)
+Bir iş günü (saatler ve sayılar örnek biçimdir, ölçüm değildir):
+- 09:00 Telefonda: "Kitapyurdu bu ay geçen yılın %18 üstünde; Hepsiburada iade oranı %11; D2C payı %6,2."
 - 10:00 Hepsiburada detayında en çok iade edilen 10 kitabı indirir, sevkiyat adedini düşürme notu yazar.
 - 11:30 İskonto simülasyonu: Kitapyurdu'na +2 puan iskonto → marj etkisi; öneriyi finansa gönderir (K2).
 - 14:00 D2C büyüme: D2C'de oransal olarak güçlü 15 kitap → Kasım'a D2C'ye özel set önerisi (M53'e).
@@ -249,7 +249,7 @@ yalnız "Zeki AI".
 **Tablolar**
 - `semantic_channel_accounts` (tenant_id, platform 'hepsiburada'|'trendyol'|'amazon'|'kitapyurdu'|'dr'|'idefix'|'timas.com.tr'|'diger',
   logo_cari_kodu, logo_firma, crm_account_id, yontem 'zeki'|'elle', olasilik, onaylayan, onay_tarihi).
-- `semantic_channel_suggestions` (id, tenant_id, platform, tur 'iskonto'|'stok-payi'|'d2c-set'|'d2c-sadakat', payload_json,
+- `semantic_channel_suggestions` (id, tenant_id, platform, tur 'iskonto'|'stok-payi'|'d2c-set'|'d2c-sadakat' (M40/M41 ekler: 'vitrin'|'sponsorlu'|'metin'|'pazar'), payload_json,
   model_gerekce, durum 'taslak'|'onayli'|'red', karar_veren, karar_tarihi).
 - `semantic_channel_scorecards` (tenant_id, yil, ay, platform, net_ciro, adet, iade, iskonto, marj, maliyetsiz_satir, hesap_zamani) —
   önbellek; satır tavanı yok.
