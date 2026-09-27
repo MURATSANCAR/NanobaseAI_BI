@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (akşam) — Word'e aktarım VM'de; CRM okur kitlesi/yaş editöre geldi; yaş parçası kitap geneli uyarı
+
+- **VM Word'e aktarım:** kullanıcı onayıyla TT GPU nginx'ine (`kitap-eczanesi`) `…/proofing/export.docx` yolu (aynı IP kısıtı + geçit başlığı, GET, 300 sn okuma süresi). VM portalından geçici oturumla indirildi: 200, 60 KB `.docx`, dosya adı doğru.
+- **Yaş parçası neden hiç koşmuyordu:** `book_crm_record` 25 kitabın 6'sında ve okur kitlesi/yaş alanları boştu — CRM bağlayıcısı 22 Eylül'den beri (sınıflandırma alanlarından önceki sürümle) bir kez elle koşmuş, zamanlayıcı yok. Bağlayıcı main sürümüyle, uygulamanın kendi fonksiyonlarıyla koşturuldu (GPU `cover_requests` → test sunucusunda CRM eşleşmesi → GPU `store_crm_lookup`; görsel yok): 22/25 eşleşti — 15 yetişkin, 6 çocuk, 1 genç; yaş aralığı 4 çocuk kitabında. Eşleşmeyen 3 kitap (Dilek Ağacı, Dijital Dünyada Ebeveyn Olmak, Babam Sultan Abdülhamid arşiv) CRM'de yok.
+- **Düzeltmeler:** `book_type.profile` — profil CRM kaydı gelmeden kararlaştırılmışsa sonradan gelen CRM'e göre okur kitlesi, yaş ve (tek türse) tür güncellenir, editör kararı ezilmez (bütün profiller UNKNOWN kalmıştı); `crm_covers.fold` dosya uzantısını atar («Dilek Agaci.indd»).
+- **word_choice v2–v3:** Anne Terliği (4–6) ilk koşuda 167 bulgu — künye/tanıtım sözcükleri (ISBN, TSE, «takdim») ve bozuk kökler → kısa kök (<4) ve hep büyük harfli biçim dışarıda, doğrulama sorusu «anlatı değil» seçeneğini taşır. Sonrasında 164: «bijon», «ardiye», «hazırcevap» 4–6 yaş için gerçekten ağır → yaşa ağır sözcük tek tek INFO, kitap geneli tek WARN (sayı, 1.000 sözcükte oran, tam liste). Levent (9–11) 35.
+- **Kurulum:** main `9385d972` → GPU editör sekiz servis (Temporal'da koşan iş 0, kod sürümü doğru, `._*` 0). Toplu iş `rt-all-books3` sürüm farkındalıklı (güncel sürümle koşmuş denetim atlanır) 16 kitapta sürüyor.
+- **Açık:** CRM bağlayıcısı için zamanlayıcı yok (yeni kitaplar okur kitlesini almaz) — ayrı iş.
+
 ## 2026-09-27 (21:30) — Uçtan uca gezinti: 34 menü ekranı son kullanıcı gibi denendi, bulunanlar düzeltildi
 
 - **Nasıl:** test sunucusunda Playwright (görünmez Chrome) + geçici `timasai` oturumu (iş bitince silindi); her menü ekranı açıldı, konsol/ağ hataları, ekran metni ve görüntüsü toplandı, sekmeler ve açılır parçalar tıklandı (kaydet/gönder/onayla/sil gibi yazan düğmelere dokunulmadı), telefon genişliğinde (390) yatay taşma ölçüldü: 34/34 taşma yok. Betikler `/tmp/e2e-menu/` (sunucu).
