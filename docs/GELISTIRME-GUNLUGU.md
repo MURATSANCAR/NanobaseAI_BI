@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 — Yetki mekanizması analizi (AD grubu → rol → sayfa / özellik / veri alanı)
+
+- İstek: AD kullanıcı ve gruplarına bağlı yetki; sayfa/menü görünürlüğü ve ekran özellikleri rol bazlı. Önce analiz istendi; kod yazılmadı. Belge `docs/analiz/yetki-mekanizmasi-2026-09-27.md`.
+- **Bugünkü durum (kaynak taraması):** yalnız yönetici (liste + AD grubu, 15 dk grup görüntüsü `semantic_admin_group`) ve editör (yalnız menü sırası) var. Köprüde 333 uç; ~%87'si giriş yapmış herkese açık (16 hiç kontrolsüz, 25 yalnız jeton, ~244 oturum). Menüden gizlemek bugün güvenlik sağlamıyor; rotalar adresle açılıyor.
+- **Önce kapanacak açıklar:** `generate_summary` kontrolsüz SQL çalıştırıyor; `run_sql` yalnız jetonla ve ön yüz ham SQL gönderiyor; Finansal denetimin 12 ucu kişiyi okumuyor; `_require_admin` jeton boşsa açık; kitap tasarım işlerinde sahip kontrolü yok.
+- **Kullanıcı kararları:** rol katmanı (AD grubu/kişi → rol → yetki, birleşim, yasak kuralı yok); yetkisiz özellik gizlenir; Zeki AI veri kapsamı bu işe dahil (veri alanı `Runtime.run_sql` → `allowed_tables` tek geçidinde + model bağlamında + zamanlı işler sahibinin kapsamıyla); şimdilik «Herkes» rolü her şeyi görür, roller prod öncesi atanır.
+- **Açık:** AD'deki grup yapısı okunamadı (test sunucusuna SSH zaman aşımı). Döküm betiği `scripts/server/ad-groups-inventory.py` (salt okuma, kişi adı yazmaz) sunucu erişilince koşulacak; rollerin departman gruplarına mı `Portal-*` gruplarına mı bağlanacağı buna göre.
+- Aşamalar: A açıklar + sayfa/menü (3 gün), B ekran özellikleri (2 gün), C veri kapsamı (3–4 gün, tam set regresyonuyla).
+
 ## 2026-09-27 — Masaüstü menüsü tek ray: bağlam paneli kalktı, alanlar ray içinde açılıyor
 
 - Kullanıcı isteği: menü olarak yalnız soldaki ray kalsın, açılıp kapanabilsin; öteki (232 px bağlam paneli: «Tüm ekranlar» ağacı + «Son açılanlar») kalksın. Seçim: alt ekranlar rayın içinde akordeon; Tüm modüller ve profil düğmesi yerinde.
