@@ -22,8 +22,9 @@
 - **Bilerek dokunulmayan:** `age_fit.readability/sensitive` kendi metni (stüdyo yaş raporu `age_report._fid` bulgu
   kimliğini metinle kuruyor; değişse eski kararlar kopardı) — son okuma metni `age_fit.run()`'da şablondan.
 - **Doğrulama:** GPU geçici kap (`editor-py:0.15.9-87232e97`): tam set 531 geçti + bilinen `test_proofing_contract`
-  sıra bağımlılığı (tek başına 3/3); yeni `test_proof_messages.py`. Örnek Word ve önce/sonra tablosu oturum
-  karalamasında (`son-okuma-word/`). Kurulmadı.
+  sıra bağımlılığı (tek başına 3/3); yeni `test_proof_messages.py`. Ön yüz test sunucusunda geçici dizinde: tsc
+  temiz, vitest 38/38, vite build tamam. Örnek Word ve önce/sonra tablosu oturum karalamasında (`son-okuma-word/`).
+  Geçici dizinler silindi. Kurulmadı.
 
 ## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
 
