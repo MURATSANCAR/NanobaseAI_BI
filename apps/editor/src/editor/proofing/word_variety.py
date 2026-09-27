@@ -34,6 +34,7 @@ import collections
 from .. import db
 from ..llm import ContextOverflow, Llm, ModelError, PromptRef
 from . import _continuity as C
+from . import _doc_context as D
 from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
@@ -249,7 +250,7 @@ async def run(generation_id: str):
     # anlam: iki kez ya da daha çok geçen her içerik kökü (bir kez geçenin anlamı haritada tektir)
     units = {lem: os_ for lem, os_ in content.items() if len(os_) >= 2}
 
-    llm = Llm(generation_id)
+    llm = Llm(D.llm_gid(generation_id))
     senses = await _senses(llm, units, contexts, stats)
 
     # yakın tekrar: aynı kök + aynı anlam
@@ -312,8 +313,8 @@ async def run(generation_id: str):
             return await _alternatives(llm, lex, lem, sense, marked, cl[1].page, [o.word for o in cl])
 
     alts_of = await asyncio.gather(*(alternatives(lem, sense, cl, marked) for lem, sense, cl, _, marked, _, _ in kept))
-    bv = str(db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)["book_version_id"])
-    boxes = await asyncio.to_thread(_boxes, bv, [o for j in kept for o in j[2]])
+    bv = await asyncio.to_thread(D.book_version, generation_id)
+    boxes = await asyncio.to_thread(_boxes, bv, [o for j in kept for o in j[2]]) if bv else {}
     for (lem, sense, cl, plain, marked, pages, p), alts in zip(kept, alts_of):
         here = cl[1].page
         marks = [boxes[o.idx] for o in cl if o.page == here and o.idx in boxes]

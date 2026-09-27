@@ -24,6 +24,7 @@ import collections
 from .. import book_type, db
 from ..llm import Llm
 from . import _continuity as C
+from . import _doc_context as D
 from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
@@ -44,16 +45,16 @@ HABIT = "Evet: yazarın dil alışkanlığı; kitaba yayılmış, okur fark eder
 NATURAL = "Hayır: olay örgüsü ya da konu gereği, terim, ya da bu türde doğal kullanım."
 
 
-def _corpus(generation_id: str, form: str | None) -> tuple[dict[str, int], int, int, str]:
+def _corpus(generation_id: str, form: str | None, exclude_book: bool = True) -> tuple[dict[str, int], int, int, str]:
     """Öbür kitapların kök sayıları, sözcük toplamı, kitap sayısı, kapsam (her kitabın en yeni başarılı
     koşusu). Olağan sıklık aynı türde ölçülür: aynı biçimde (kurgu, deneme…) en az MIN_BOOKS kitap varsa
     yalnız onlar, yoksa bütün kitaplar — masalın fiilleri deneme kitaplarından doğal olarak sıktır."""
     rows = db.all_rows(
         "SELECT DISTINCT ON (v.book_id) r.stats, bp.form FROM proof_run r JOIN generation g ON g.id=r.generation_id"
         " JOIN book_version v ON v.id=g.book_version_id LEFT JOIN book_profile bp ON bp.generation_id=g.id"
-        " WHERE r.check_name='word_variety' AND r.status='SUCCEEDED' AND v.book_id <>"
-        " (SELECT v2.book_id FROM generation g2 JOIN book_version v2 ON v2.id=g2.book_version_id WHERE g2.id=%s)"
-        " ORDER BY v.book_id, r.started_at DESC", generation_id)
+        " WHERE r.check_name='word_variety' AND r.status='SUCCEEDED' AND (NOT %s OR v.book_id <>"
+        " (SELECT v2.book_id FROM generation g2 JOIN book_version v2 ON v2.id=g2.book_version_id WHERE g2.id=%s))"
+        " ORDER BY v.book_id, r.started_at DESC", exclude_book, generation_id if exclude_book else None)
     same = [r for r in rows if form and form != "UNKNOWN" and r.get("form") == form]
     scope = "aynı türdeki" if len(same) >= MIN_BOOKS else "bütün"
     if len(same) >= MIN_BOOKS:
@@ -96,8 +97,10 @@ async def run(generation_id: str):
     rd = await asyncio.to_thread(_read, generation_id, lex)
     occs: list[W.Occ] = rd["occs"]
     stats = collections.Counter({k: v for k, v in rd["stats"].items()})
-    prof = await book_type.profile(generation_id)
-    corpus, n_corpus, books, scope = await asyncio.to_thread(_corpus, generation_id, prof.get("form"))
+    prof = await D.profile(generation_id)
+    # belgede dışlanacak kitap yok: derlem yayınevinin bütün okunmuş kitapları
+    corpus, n_corpus, books, scope = await asyncio.to_thread(_corpus, generation_id, prof.get("form"),
+                                                             not D.is_document(generation_id))
     stats["corpus_books"], stats["corpus_words"], stats["book_words"] = books, n_corpus, len(occs)
     stats["corpus_scope"] = scope
     if books < MIN_BOOKS or not occs:
@@ -114,7 +117,7 @@ async def run(generation_id: str):
     what = book_type.describe(prof)          # «yetişkinler için kurgu bir kitap»
     book_pages = len({o.page for o in occs})
     span_text = rd["span_text"]
-    llm = Llm(generation_id)
+    llm = Llm(D.llm_gid(generation_id))
     sem = asyncio.Semaphore(PARALLEL)
 
     def examples(os_: list[W.Occ]) -> list[W.Occ]:

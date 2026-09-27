@@ -28,3 +28,5 @@ python-docx
 python-multipart
 # stüdyo fotoğraf yükleme (editor.production.photo): telefonun HEIC/HEIF fotoğrafı (libheif tekerlekte gömülü)
 pillow-heif==1.8.0
+# belge incelemesi (editor.document_review): .rtf metni
+striprtf

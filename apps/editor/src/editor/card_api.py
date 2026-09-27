@@ -12,7 +12,7 @@ import hmac
 import os
 import functools
 import io
-from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Path
+from fastapi import Body, Depends, FastAPI, File, Form, Header, HTTPException, Query, Path, UploadFile
 from fastapi.responses import FileResponse, Response
 import psycopg
 from .presentation import cards, cover_path, page_path
@@ -239,6 +239,80 @@ def book_proofing(book_id: UUID):
                          # related findings together, the model's confidence, extra boxes on the same page
                          'group':r['grp'],'confidence':_num(r['confidence']),'marks':r['marks'],
                          'decision':decisions.get(str(r['id']))} for r in rows]}
+
+# ------------------------------------------------------------------ belge incelemesi (editor.document_review)
+@app.post('/v1/documents')
+async def document_upload(file: UploadFile = File(...), title: str = Form(default=''), audience: str = Form(default=''),
+                          age_from: int | None = Form(default=None), age_to: int | None = Form(default=None),
+                          x_editor: str = Header(default='')):
+    """Editörün yüklediği belge (doc, docx, pdf, odt, rtf, txt, md): metni çıkarılır, sayfalanır, kuyruğa girer
+    (QUEUED); metin denetimleri `document-review` servisinde koşar. Yükleyen = X-Editor (köprü oturumdan verir).
+    Okur kitlesi/yaş isteğe bağlı: verilirse yaşa ağır sözcük denetimi de koşar."""
+    from . import document_review as DR
+    who=(x_editor or '').strip()
+    if not who:
+        raise HTTPException(400,'Yükleyen (X-Editor) eksik.')
+    data=await file.read()
+    try:
+        row=DR.create(data,file.filename or 'belge',title,who,audience or None,age_from,age_to)
+    except DR.DocumentError as e:
+        raise HTTPException(422,str(e)) from None
+    return {**row,'id':str(row['id']),'created_at':row['created_at'].isoformat()}
+
+@app.get('/v1/documents')
+def document_list(uploaded_by: str = Query(default='')):
+    """Yüklenen belgeler (yeniden eskiye); `uploaded_by` verilirse yalnız onunkiler. Metin döndürülmez."""
+    with foundation.read_snapshot() as c:
+        rows=c.execute("SELECT id, title, file_name, format, page_kind, words, status, error, uploaded_by, created_at, finished_at,"
+                       " (SELECT count(*) FROM ed.document_finding f WHERE f.document_id=d.id AND f.severity<>'INFO'"
+                       "  AND f.run_id IN (SELECT DISTINCT ON (check_name) id FROM ed.document_run r WHERE r.document_id=d.id"
+                       "  ORDER BY check_name, started_at DESC)) AS serious"
+                       " FROM ed.document_review d WHERE (%s='' OR uploaded_by=%s) ORDER BY created_at DESC",
+                       (uploaded_by,uploaded_by)).fetchall()
+    iso=lambda t: t.isoformat() if t else None
+    return {'items':[{**r,'id':str(r['id']),'created_at':iso(r['created_at']),'finished_at':iso(r['finished_at'])} for r in rows]}
+
+@app.get('/v1/documents/{doc_id}')
+def document_report(doc_id: UUID):
+    """Belgenin durumu, denetimleri ve bulguları (son okuma raporuyla aynı biçim; karar yok)."""
+    from . import document_review as DR
+    with foundation.read_snapshot() as c:
+        r=DR.report(c,str(doc_id))
+    if r is None:
+        raise HTTPException(404,'document not found')
+    return r
+
+@app.get('/v1/documents/{doc_id}/word-map')
+def document_word_map(doc_id: UUID):
+    """Belgenin kelime haritası: word_variety koşusunun `stats`'ı (kitaptakiyle aynı biçim)."""
+    with foundation.read_snapshot() as c:
+        d=c.execute('SELECT id FROM ed.document_review WHERE id=%s',(str(doc_id),)).fetchone()
+        if d is None:
+            raise HTTPException(404,'document not found')
+        run=c.execute("SELECT check_version, stats, finished_at FROM ed.document_run WHERE document_id=%s"
+                      " AND check_name='word_variety' AND status='SUCCEEDED' ORDER BY started_at DESC LIMIT 1",
+                      (str(doc_id),)).fetchone()
+    return {'document_id':str(doc_id),'label':label_of('word_variety'),'version':run['check_version'] if run else None,
+            'finished_at':run['finished_at'].isoformat() if run and run['finished_at'] else None,
+            'stats':run['stats'] if run else None}
+
+@app.get('/v1/documents/{doc_id}/export.docx')
+def document_docx(doc_id: UUID, info: bool = Query(default=False)):
+    """Belgenin metni, bulgular Word yorumu olarak (kitaptaki Word'e aktarımla aynı)."""
+    from . import document_review as DR
+    from .proofing import _export_docx
+    with foundation.read_snapshot() as c:
+        d=c.execute('SELECT title, pages FROM ed.document_review WHERE id=%s',(str(doc_id),)).fetchone()
+        r=DR.report(c,str(doc_id)) if d else None
+    if d is None:
+        raise HTTPException(404,'document not found')
+    findings=[f for f in r['findings'] if info or f['severity']!='INFO']
+    body=_export_docx.build(d['title'],d['pages'],findings)
+    safe=''.join(ch if ch.isascii() and (ch.isalnum() or ch in '-_') else '-' for ch in d['title']).strip('-') or 'belge'
+    from urllib.parse import quote as _q
+    return Response(body,media_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                    headers={'Content-Disposition':f"attachment; filename=\"inceleme-{safe}.docx\"; filename*=UTF-8''"
+                             + _q(f"inceleme-{d['title']}.docx")})
 
 @app.get('/v1/catalog/cover-requests')
 def catalog_cover_requests():

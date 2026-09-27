@@ -22,6 +22,7 @@ import collections
 from .. import book_type, db
 from ..llm import Llm
 from . import _continuity as C
+from . import _doc_context as D
 from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
@@ -70,9 +71,9 @@ async def run(generation_id: str):
     stats["candidates"] = len(found)
     if not found:
         return [], dict(stats)
-    prof = await book_type.profile(generation_id)
+    prof = await D.profile(generation_id)
     what = book_type.describe(prof)
-    llm = Llm(generation_id)
+    llm = Llm(D.llm_gid(generation_id))
     sem = asyncio.Semaphore(PARALLEL)
     span_text = rd["span_text"]
 
@@ -87,9 +88,9 @@ async def run(generation_id: str):
     judged = await asyncio.gather(*(judge(n, pos) for n, pos in found))
     kept = [j for j in judged if j[-1] >= J.KEEP]
     stats["dropped_as_fine"] = len(judged) - len(kept)
-    bv = str(db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)["book_version_id"])
+    bv = await asyncio.to_thread(D.book_version, generation_id)
     second = [occs[pos[1] + k] for n, pos, _, _ in kept for k in range(n)]
-    boxes = await asyncio.to_thread(_boxes, bv, second)
+    boxes = await asyncio.to_thread(_boxes, bv, second) if bv else {}
     findings = []
     for n, pos, shown, p in kept:
         here = occs[pos[1]].page
