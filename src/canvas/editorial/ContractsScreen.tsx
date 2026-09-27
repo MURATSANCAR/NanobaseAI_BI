@@ -1,14 +1,18 @@
 import { useEffect, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { CalendarClock, FilePlus2, Library, Search } from 'lucide-react';
 import { ENGINE_ENABLED, type Contract, type ContractSummary } from '../engine';
 import { contractsListOptions, contractsSummaryOptions } from './queries';
-import { Note, Pill, errText, field, nf } from '../admin/ui';
+import { Note, Pill, btnGhost, btnPrimary, errText, field, nf } from '../admin/ui';
 import { crmLabel, dateTime, pct } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
+import { contractApi, metaOptions } from './contracts/api';
+import { Tabs, day, errMsg, statusTone as portalTone } from './contracts/ui';
 
-/** M6 Telif & Sözleşme. Sözleşme portföyü CRM'den okunur; CRM'de kaydı olmayan şey (hakediş,
- *  ödeme takvimi, telif kademesi) ekranda yer almaz. */
+/** M6 Telif & Sözleşme. Portföy CRM'den okunur (salt okunur). Yeni taslak, düzenleme, zeyilname, ödeme
+ *  takvimi, hakediş ve şablonlar portalda tutulur (bkz. `backend/semantic_bridge/contracts.py`); satıra
+ *  dokununca sözleşmenin sayfası açılır. */
 
 const money = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 0 });
 
@@ -60,8 +64,13 @@ function Title({ c }: { c: Contract }) {
   const books = c.books.map((b) => b.title);
   return (
     <div className="min-w-0">
-      <div className="break-words font-extrabold leading-snug">{books.length ? books.join(' · ') : 'Kitap bağlanmamış'}</div>
-      <div className="mt-0.5 font-mono text-[11px] text-canvas-muted">{c.no || c.code || '—'}</div>
+      <Link to={`/telif-sozlesme/${c.id}`} className="break-words font-extrabold leading-snug hover:text-canvas-violet hover:underline">
+        {books.length ? books.join(' · ') : 'Kitap bağlanmamış'}
+      </Link>
+      <div className="mt-0.5 flex flex-wrap items-center gap-1.5 font-mono text-[11px] text-canvas-muted">
+        {c.no || c.code || '—'}
+        {c.portal && <Pill tone="violet">Portalda: {c.portal.statusLabel}{c.portal.diff ? ` · ${c.portal.diff} fark` : ''}</Pill>}
+      </div>
     </div>
   );
 }
@@ -98,7 +107,64 @@ function Kpis({ s, expiring, onExpiring }: { s: ContractSummary; expiring: boole
   );
 }
 
+function PortalRecords() {
+  const [text, setText] = useState('');
+  const [status, setStatus] = useState('');
+  const q = useDebounced(text.trim(), 300);
+  const meta = useQuery(metaOptions());
+  const list = useQuery({ queryKey: ['contracts', 'records', q, status], queryFn: () => contractApi.records({ q, status }) });
+  const items = list.data?.items ?? [];
+  return (
+    <Panel>
+      <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px]">
+        <label className="relative block">
+          <span className="sr-only">Portal kayıtlarında ara</span>
+          <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
+          <input type="search" value={text} onChange={(e) => setText(e.target.value)} placeholder="No, ad, taraf ya da kitap" className={`${field} pl-9`} />
+        </label>
+        <select aria-label="Durum" value={status} onChange={(e) => setStatus(e.target.value)} className={field}>
+          <option value="">Tüm durumlar</option>
+          {Object.entries(meta.data?.statuses ?? {}).map(([k, v]) => (
+            <option key={k} value={k}>{v}</option>
+          ))}
+        </select>
+      </div>
+      {list.error && <div className="mt-3"><Note tone="err">{errMsg(list.error)}</Note></div>}
+      {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
+      {list.data && !items.length && (
+        <p className="py-10 text-center text-[12.5px] text-canvas-muted">Portalda açılmış ya da düzenlenmiş sözleşme yok. «Yeni sözleşme» ile taslak açın ya da CRM listesinden bir sözleşmeyi düzenleyin.</p>
+      )}
+      <ul className="mt-3 space-y-2">
+        {items.map((r) => (
+          <li key={r.id}>
+            <Link to={`/telif-sozlesme/${r.crmId ?? r.id}`} className="block rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px] transition-transform duration-150 ease-out hover:border-canvas-violet/40 active:scale-[0.99]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="font-extrabold">{r.terms.title || r.no}</span>
+                <Pill tone={portalTone(r.status)}>{r.statusLabel}</Pill>
+                {r.crmId ? <Pill tone="muted">CRM</Pill> : <Pill tone="violet">Portalda açıldı</Pill>}
+                {r.expired && <Pill tone="warn">Bitiş geçti</Pill>}
+                {r.payments?.overdue ? <Pill tone="err">{r.payments.overdue} ödeme gecikti</Pill> : null}
+              </div>
+              <div className="mt-1 text-[11.5px] text-canvas-muted">
+                <span className="font-mono">{r.no}</span>
+                {r.terms.parties.length ? ` · ${r.terms.parties.map((p) => p.name).join(', ')}` : ''}
+                {r.payments?.next ? ` · sıradaki ödeme ${day(r.payments.next)}` : ''}
+                {` · ${r.updatedBy}`}
+              </div>
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Panel>
+  );
+}
+
 export default function ContractsScreen() {
+  const nav = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const source = params.get('kaynak') === 'portal' ? 'portal' : 'crm';
+  const meta = useQuery(metaOptions());
+  const records = useQuery({ queryKey: ['contracts', 'records', '', ''], queryFn: () => contractApi.records({}) });
   const [text, setText] = useState('');
   const [status, setStatus] = useState('');
   const [kind, setKind] = useState('');
@@ -123,13 +189,46 @@ export default function ContractsScreen() {
       route="/telif-sozlesme"
       crumb="Telif & Sözleşme"
       title="Telif ve lisans sözleşmeleri"
-      lead="CRM'deki sözleşme kayıtları: kitap, hak sahibi, telif oranları, süre ve durum. Hakediş ve ödeme takvimi CRM'de tutulmadığı için burada yok."
+      lead="CRM'deki sözleşmeler ve portalda açılan taslaklar. Sözleşmeye dokununca şartlar, metin, zeyilname, ödeme takvimi ve hakediş açılır. Portal CRM'e yazmaz; farklar sözleşme sayfasında listelenir."
       source={s ? `${nf.format(s.active)} yürürlükte sözleşme` : 'CRM sözleşmeleri'}
+      aside={
+        <div className="flex flex-wrap justify-start gap-1.5 lg:justify-end">
+          {meta.data?.can.edit && (
+            <button type="button" className={btnPrimary} onClick={() => nav('/telif-sozlesme/yeni')}>
+              <FilePlus2 aria-hidden className="h-4 w-4" />
+              Yeni sözleşme
+            </button>
+          )}
+          <Link to="/telif-sozlesme/odemeler" className={btnGhost}>
+            <CalendarClock aria-hidden className="h-4 w-4" />
+            Ödeme takvimi
+          </Link>
+          <Link to="/telif-sozlesme/sablonlar" className={btnGhost}>
+            <Library aria-hidden className="h-4 w-4" />
+            Şablonlar
+          </Link>
+        </div>
+      }
     >
             {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
             {err && <Note tone="err">{err}</Note>}
             {s && <Kpis s={s} expiring={expiring} onExpiring={() => setExpiring((v) => !v)} />}
 
+            <Tabs
+              value={source}
+              onChange={(v) => setParams((p) => {
+                const n = new URLSearchParams(p);
+                if (v === 'portal') n.set('kaynak', 'portal');
+                else n.delete('kaynak');
+                return n;
+              }, { replace: true })}
+              items={[
+                { id: 'crm', label: 'CRM sözleşmeleri' },
+                { id: 'portal', label: 'Portal kayıtları', count: records.data?.items.length },
+              ]}
+            />
+
+            {source === 'portal' ? <PortalRecords /> : (
             <Panel>
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_200px_180px_170px]">
                 <label className="relative block">
@@ -251,6 +350,7 @@ export default function ContractsScreen() {
                 </div>
               )}
             </Panel>
+            )}
     </ModuleFrame>
   );
 }

@@ -8,6 +8,7 @@ yalnız yazana ve katılımcılara gider; randevu tarihi değişince oda yeni sa
 
 from __future__ import annotations
 
+import re
 from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
@@ -155,6 +156,11 @@ def test_crm_sql_is_read_only_and_escaped():
     assert "100000012" not in R.pool_list_sql(s, "2024-01-01", 0, closed=True)
     assert "GETDATE()" in R.contracted_authors_sql(s) and "100000007" in R.contracted_authors_sql(s)
     assert "UNION ALL" in R.crm_events_sql(s, "2025-10-01")
+    # «yazar mı» alt sorgusu dış sorgunun takma adlarını gölgelemez (t.new_kisi dıştaki sözleşme tarafıdır)
+    for q in (R.contracted_authors_sql(s), R.crm_events_sql(s, "2025-10-01"), R.pool_list_sql(s, "2024-01-01", 0)):
+        inner = q[q.index("EXISTS (SELECT 1"):]
+        inner = inner[:inner.index(")") + 1]
+        assert not re.search(r"Base (t|e|k|j|r|s)\b", inner), inner
     with pytest.raises(R.RelationError):
         R.pool_count_sql("bad;name", "2024-01-01")
     with pytest.raises(R.RelationError):
@@ -187,3 +193,10 @@ def test_heatmap_merges_crm_authors_and_cards(engine):
 
     broken = R.heatmap("Timas_MSCRM.dbo", down, engine, T, "ayse")
     assert broken["crmOk"] is False and broken["total"] == 1
+
+
+def test_open_ended_contract_counts_as_active():
+    """Süresiz sözleşmede bitiş tarihi geçmiş görünür; yazar yine sözleşmeli sayılır, en yakın bitişe girmez."""
+    sql = R.contracted_authors_sql("Timas_MSCRM.dbo")
+    assert "ISNULL(s.new_suresizsozlesme, 0) = 1 OR s.new_SozlesmeBitisTarihi IS NULL" in sql
+    assert "MIN(CASE WHEN ISNULL(s.new_suresizsozlesme, 0) = 0 THEN s.new_SozlesmeBitisTarihi END)" in sql

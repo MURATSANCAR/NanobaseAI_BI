@@ -27,12 +27,12 @@ import {
   type TranslationJob,
   type TranslationJobDetail,
 } from '../../engine';
-import { Loading, Note, Pill, btn, btnGhost, errText, field, fmtDate, label, nf } from '../../admin/ui';
+import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '../../admin/ui';
 import { dateTime } from '../../format';
 import { useCan } from '../../useAdmin';
 import { useTimasSession } from '../../TimasSession';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
-import { CATEGORY, FileButton, ProgressBar, SEG, SEVERITY, StagePill, dirOf, langName, pair, paceText, pct, useWide } from './parts';
+import { CATEGORY, FileButton, ProgressBar, SEG, SEVERITY, StagePill, dirOf, fmtDay, langName, pair, paceText, pct, useWide } from './parts';
 
 /** Çeviri masam: çevirmenin ve inceleyenin kendi ekranı. Sol: bölümün segmentleri (kaynak | hedef); etkin
  *  segmentte yazılır. Sağ (telefonda segmentin altında): terimler, çeviri belleği, ZEKİ taslağı, otomatik
@@ -92,7 +92,7 @@ function MyJobs({ me }: { me: string }) {
                   <span className="font-mono tabular-nums">
                     {translator ? `${nf.format(j.segments.bos + j.segments.taslak)} segment çevrilecek` : `${nf.format(j.segments.cevrildi)} segment onay bekliyor`}
                   </span>
-                  {j.dueDate && <span className="text-canvas-muted">teslim {fmtDate(j.dueDate)}</span>}
+                  {j.dueDate && <span className="text-canvas-muted">teslim {fmtDay(j.dueDate)}</span>}
                   {j.pace.overdue ? <Pill tone="err">Teslim geçti</Pill> : j.pace.late ? <Pill tone="warn">Gecikme riski</Pill> : null}
                 </span>
               </Link>
@@ -843,7 +843,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
               XLIFF yükle
             </FileButton>
           )}
-          {mode === 'ceviri' && j.roles.translate && j.draft.done > 0 && (
+          {mode === 'ceviri' && j.roles.translate && items.some((s) => s.hasDraft && s.status === 'bos') && (
             <button type="button" disabled={placeDrafts.isPending} onClick={() => placeDrafts.mutate()} className={btnGhost}>
               <Sparkles aria-hidden className="h-4 w-4" />
               {ch ? 'Bu bölümde taslakları yerleştir' : 'Taslakları yerleştir'}

@@ -298,6 +298,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/web/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
+    ("/api/v1/editorial/contracts", frozenset({page("telif-sozlesme")})),
     ("/api/v1/editorial/", _EDITORIAL),
     ("/api/v1/people", OPEN),                      # Kampüs rehberi
     ("/api/v1/me/", OPEN),
@@ -326,7 +327,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/(board/export\.xlsx|reports/[^/]+/file|financial-audit/runs/[^/]+/export"
                          r"|seo-geo/redirects/export\.csv|editorial/proofing/export\.docx|editorial/ask/export\.pdf"
                          r"|editorial/translation/jobs/[^/]+/(export\.docx|quality\.csv)|editorial/translation/terms/export\.csv"
-                         r"|editorial/freelance/payouts/[^/]+/export\.csv)$",
+                         r"|editorial/freelance/payouts/[^/]+/export\.csv"
+                         r"|editorial/contracts/(item|addenda|statements)/[^/]+/document\.docx)$",
      "ozellik:veri.disa-aktar"),
     (frozenset({"PUT"}), r"^/api/v1/board$", "ozellik:pano.duzenle"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/reports(/(?!run-due$)[^/]+(/run)?)?$", "ozellik:rapor.planla"),

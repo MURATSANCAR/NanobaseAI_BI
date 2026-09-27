@@ -489,6 +489,30 @@
       "label": "SEO önerisi onaylama",
       "hint": "Ürün, sayfa ve yönlendirme önerilerini onaylama/reddetme (Onay verebilenler listesine ek)",
       "explicit": true
+    },
+    {
+      "key": "ozellik:sozlesme.duzenle",
+      "area": "kayitlar",
+      "page": "sayfa:telif-sozlesme",
+      "label": "Sözleşme düzenleme",
+      "hint": "Yeni sözleşme taslağı, şart ve metin düzenleme, durum, zeyilname, ödeme planı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sozlesme.hakedis",
+      "area": "kayitlar",
+      "page": "sayfa:telif-sozlesme",
+      "label": "Hakediş ve ödeme",
+      "hint": "Hakediş hesaplama, onaylama, iptal; ödemeyi ödendi işaretleme (Logo okur)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sozlesme.sablon",
+      "area": "kayitlar",
+      "page": "sayfa:telif-sozlesme",
+      "label": "Sözleşme şablonları",
+      "hint": "Şablon kütüphanesine ekleme, düzenleme, Word şablonu yükleme, arşivleme",
+      "explicit": true
     }
   ]
 }

@@ -733,9 +733,11 @@ def _since(value: str) -> str:
 
 
 def _is_author(p: str, col: str) -> str:
-    return (f"EXISTS (SELECT 1 FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t"
-            f" ON t.new_katilimcitipiId = e.new_katilimciTipi WHERE e.statecode = 0 AND t.new_name = N'Yazar'"
-            f" AND e.new_Katilimsaglayan = {col})")
+    # Alt sorgunun takma adları (ya_e, ya_t) dış sorguda kullanılmaz: dıştaki `t`/`e` ile çakışınca SQL Server
+    # içteki tabloyu seçer ve `t.new_kisi` «Invalid column name» verir (2026-09-28, canlı CRM'de yakalandı).
+    return (f"EXISTS (SELECT 1 FROM {p}new_eserkatilimBase ya_e JOIN {p}new_katilimcitipiBase ya_t"
+            f" ON ya_t.new_katilimcitipiId = ya_e.new_katilimciTipi WHERE ya_e.statecode = 0 AND ya_t.new_name = N'Yazar'"
+            f" AND ya_e.new_Katilimsaglayan = {col})")
 
 
 def _pool_from(p: str, since: str, q: str, closed: bool) -> str:
@@ -780,11 +782,13 @@ def contracted_authors_sql(schema: str) -> str:
     p = _prefix(schema)
     return (
         "SELECT k.ContactId, k.FullName, COUNT(DISTINCT s.new_sozlesmeId) AS sozlesme,"
-        " MIN(s.new_SozlesmeBitisTarihi) AS en_yakin_bitis"
+        " MIN(CASE WHEN ISNULL(s.new_suresizsozlesme, 0) = 0 THEN s.new_SozlesmeBitisTarihi END) AS en_yakin_bitis"
         f" FROM {p}new_sozlesmetarafiBase t JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = t.new_sozlesmeid"
         f" JOIN {p}ContactBase k ON k.ContactId = t.new_kisi"
         f" WHERE t.statecode = 0 AND s.statecode = 0 AND s.statuscode IN ({', '.join(map(str, CONTRACT_ACTIVE))})"
-        " AND (s.new_SozlesmeBitisTarihi IS NULL OR s.new_SozlesmeBitisTarihi >= CAST(GETDATE() AS date))"
+        # Süresiz sözleşme, bitiş tarihi geçmiş görünse de yürürlüktedir; en yakın bitişe girmez.
+        " AND (ISNULL(s.new_suresizsozlesme, 0) = 1 OR s.new_SozlesmeBitisTarihi IS NULL"
+        " OR s.new_SozlesmeBitisTarihi >= CAST(GETDATE() AS date))"
         f" AND {_is_author(p, 't.new_kisi')}"
         " GROUP BY k.ContactId, k.FullName"
     )

@@ -33,10 +33,17 @@ export function monthLong(key: string): string {
 }
 
 const dayFmt = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+const dayFmtTr = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Istanbul' });
 const weekdayFmt = new Intl.DateTimeFormat('tr-TR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' });
-/** 'YYYY-AA-GG' → '12 Eyl 2026' (gün dilimi kaymadan). */
+/** 'YYYY-AA-GG' → '12 Eyl 2026' (gün dilimi kaymadan). Saatli değer (CRM tarihleri, zaman damgaları) UTC'dir:
+ *  İstanbul gününe çevrilir — CRM «29 Eylül» bitişini `2026-09-28T21:00:00` diye verir. */
 export function fmtDay(day: string | null | undefined): string {
   if (!day) return '—';
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}/.test(day)) {
+    const iso = day.replace(' ', 'T');
+    const t = new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(iso) ? iso : `${iso}Z`);
+    if (!Number.isNaN(t.getTime())) return dayFmtTr.format(t);
+  }
   const [y, m, d] = day.slice(0, 10).split('-').map(Number);
   return dayFmt.format(new Date(Date.UTC(y, m - 1, d)));
 }

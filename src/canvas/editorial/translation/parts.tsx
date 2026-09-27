@@ -2,7 +2,7 @@ import { useEffect, useId, useState, type ReactNode } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { FileUp, Loader2 } from 'lucide-react';
 import { peopleApi, type JobStage, type SegmentStatus, type TranslationJob, type TranslationPace } from '../../engine';
-import { Note, Pill, btn, errText, field, fmtDate, nf } from '../../admin/ui';
+import { Note, Pill, btn, errText, field, nf } from '../../admin/ui';
 
 /** M4 Çeviri ekranlarının ortak parçaları: etiketler, ilerleme çubuğu, kişi seçici, dosya düğmesi. */
 
@@ -62,6 +62,18 @@ export const CATEGORY: Record<string, string> = {
 
 export const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 
+const dayThisYear = new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short' });
+const dayOtherYear = new Intl.DateTimeFormat('tr-TR', { day: '2-digit', month: 'short', year: 'numeric' });
+/** Teslim, bitiş ve gün gibi yalnız gün olan tarihler: saat yazılmaz. «2026-10-07» yerel gün olarak okunur;
+ *  `new Date('2026-10-07')` UTC gece yarısı sayıp İstanbul'da «03:00» gösteriyordu. Başka yıl ise yıl eklenir. */
+export function fmtDay(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso);
+  const d = m ? new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])) : new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return (d.getFullYear() === new Date().getFullYear() ? dayThisYear : dayOtherYear).format(d);
+}
+
 /** Çevrilen (mor) ve onaylanan (yeşil) kelimeler aynı çubukta. Geçiş yok: çubuk her ⌘+Enter onayında değişir,
  *  klavyeyle sık tetiklenen değişim anında görünmeli. */
 export function ProgressBar({ done, approved, total, label }: { done: number; approved: number; total: number; label: string }) {
@@ -97,10 +109,10 @@ export function paceText(job: Pick<TranslationJob, 'dueDate' | 'words'>, p: Tran
       ? `Son ${nf.format(p.windowDays)} günde günde ortalama ${nf.format(Math.round(p.perDay))} kelime çevrildi`
       : 'Son 14 günde çevrilen segment yok',
   );
-  if (p.finish) parts.push(`bu hızla ${fmtDate(p.finish)} tarihinde biter`);
+  if (p.finish) parts.push(`bu hızla ${fmtDay(p.finish)} tarihinde biter`);
   if (job.dueDate) {
-    if (p.overdue) parts.push(`teslim tarihi (${fmtDate(job.dueDate)}) geçti, ${nf.format(left)} kelime kaldı`);
-    else if (p.needPerDay != null) parts.push(`teslime (${fmtDate(job.dueDate)}) yetişmek için günde ${nf.format(Math.ceil(p.needPerDay))} kelime gerekiyor`);
+    if (p.overdue) parts.push(`teslim tarihi (${fmtDay(job.dueDate)}) geçti, ${nf.format(left)} kelime kaldı`);
+    else if (p.needPerDay != null) parts.push(`teslime (${fmtDay(job.dueDate)}) yetişmek için günde ${nf.format(Math.ceil(p.needPerDay))} kelime gerekiyor`);
   }
   return parts.join('; ') + '.';
 }

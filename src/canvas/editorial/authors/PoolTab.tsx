@@ -27,7 +27,7 @@ function CardRow({ c, onOpen }: { c: AuthorCardSummary; onOpen: () => void }) {
             {[c.genre, c.sourceLabel, c.ownerDisplay || c.owner].filter(Boolean).join(' · ') || 'Ayrıntı girilmedi'}
           </span>
           <span className="mt-1 flex flex-wrap gap-1">
-            {c.heat.next && <Pill tone="violet">Randevu {fmtDay(c.heat.next.slice(0, 10))}</Pill>}
+            {c.heat.next && <Pill tone="violet">Randevu {fmtDay(c.heat.next)}</Pill>}
             {c.openSteps > 0 && <Pill tone="warn">{c.openSteps} açık adım</Pill>}
             {c.tags.slice(0, 3).map((t) => (
               <Pill key={t} tone="muted">
