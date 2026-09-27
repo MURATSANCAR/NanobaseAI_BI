@@ -880,7 +880,7 @@ function Desk({ jobId, me }: { jobId: string; me: string }) {
         {j.draft.state === 'calisiyor' && (
           <div className="mt-2">
             <Note tone="info">
-              ZEKİ taslağı hazırlanıyor: {nf.format(j.draft.done)} / {nf.format(j.draft.total)} segment.
+              ZEKİ taslağı hazırlanıyor: %{pct(j.draft.done, j.draft.total)}.
             </Note>
           </div>
         )}

@@ -9,7 +9,7 @@ yalnız yazana ve katılımcılara gider; randevu tarihi değişince oda yeni sa
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -200,3 +200,54 @@ def test_open_ended_contract_counts_as_active():
     sql = R.contracted_authors_sql("Timas_MSCRM.dbo")
     assert "ISNULL(s.new_suresizsozlesme, 0) = 1 OR s.new_SozlesmeBitisTarihi IS NULL" in sql
     assert "MIN(CASE WHEN ISNULL(s.new_suresizsozlesme, 0) = 0 THEN s.new_SozlesmeBitisTarihi END)" in sql
+
+
+def test_crm_trace_feeds_recency_only():
+    """CRM izi yalnız yakınlık payına girer: görüşmesiz yazar izine göre ılık/soğuk olur, «sıcak» için görüşme gerekir;
+    görüşme izden yeniyse iz puanı değiştirmez. CRM tarihi UTC'dir, İstanbul gününe çevrilir."""
+    now = datetime(2026, 9, 27, 12, tzinfo=timezone.utc)
+    fresh = R.with_trace(R.heat([], now), date(2026, 9, 20), "eser", now)
+    assert fresh["band"] == "ilik" and fresh["score"] == 48 and fresh["recencyFrom"] == "eser" and fresh["traceDays"] == 7
+    stale = R.with_trace(R.heat([], now), date(2026, 1, 1), "sozlesme", now)
+    assert stale["band"] == "soguk" and stale["score"] == 0 and stale["recencyFrom"] == "sozlesme"
+    met = R.heat([SimpleNamespace(status="yapildi", starts_at=now - timedelta(days=1), tone="olumlu")], now)
+    same = R.with_trace(met, date(2026, 9, 1), "eser", now)
+    assert same["score"] == met["score"] and same["recencyFrom"] == "gorusme" and same["lastTrace"] == "2026-09-01"
+    assert R.with_trace(met, None, None, now) is met
+    # «29 Eylül» başlayan sözleşme CRM'de 28 Eylül 21:00 UTC; ileri tarihli iz sayılmaz
+    day, kind = R.latest_trace([("sozlesme", "2026-09-25T21:00:00"), ("eser", "2026-09-10 08:00:00"), ("sozlesme", "2026-10-02T21:00:00")], now)
+    assert (day, kind) == (date(2026, 9, 26), "sozlesme")
+    sql = R.crm_events_sql("Timas_MSCRM.dbo", "2025-10-01")
+    assert "MAX(x.gun) AS son" in sql and "DATEADD(hour, 3, x.gun)" in sql
+    assert "DATEADD(day, 1, GETDATE())" in R.crm_trace_sql("Timas_MSCRM.dbo", GUID)
+
+
+def test_attention_reasons():
+    now = datetime(2026, 9, 27, 12, tzinfo=timezone.utc)
+    silent = R.heat([], now)
+    assert R.attention(silent, "2026-10-20T21:00:00", [], warn_days=60, now=now) == ["Sözleşmesi 24 gün sonra bitiyor; hiç görüşme yazılmadı"]
+    assert R.attention(silent, "2027-06-01", [], warn_days=60, now=now) == []
+    talked = R.heat([SimpleNamespace(status="yapildi", starts_at=now - timedelta(days=10), tone=None)], now)
+    assert R.attention(talked, "2026-10-20", [], warn_days=60, now=now) == []
+    ms = [SimpleNamespace(status="planlandi", starts_at=now - timedelta(days=2), next_step=None, next_done=False, next_due=None),
+          SimpleNamespace(status="yapildi", starts_at=now - timedelta(days=30), next_step="Dosya", next_done=False,
+                          next_due=date(2026, 9, 20))]
+    assert R.attention(talked, None, ms, warn_days=60, now=now) == ["Geçmiş randevunun notu girilmedi", "Sıradaki adımın tarihi geçti"]
+
+
+def test_heatmap_trace_and_attention_scope(engine):
+    today = datetime.now(R.TZ)
+
+    def fetch_all(sql):
+        if "UNION ALL" in sql:
+            return [{"kisi": GUID, "tur": "eser", "yil": today.year, "ay": today.month, "adet": 1,
+                     "son": (datetime.now(timezone.utc) - timedelta(days=3)).strftime("%Y-%m-%dT%H:%M:%S")}]
+        end = (today + timedelta(days=20)).date().isoformat()
+        return [{"ContactId": GUID, "FullName": "Sözleşmeli Yazar", "sozlesme": 1, "en_yakin_bitis": end}]
+
+    out = R.heatmap("Timas_MSCRM.dbo", fetch_all, engine, T, "ayse", warn_days=60)
+    row = out["items"][0]
+    assert row["heat"]["band"] == "ilik" and row["heat"]["recencyFrom"] == "eser"
+    assert row["attention"] and "hiç görüşme yazılmadı" in row["attention"][0]
+    assert out["attention"] == 1
+    assert R.heatmap("Timas_MSCRM.dbo", fetch_all, engine, T, "ayse", scope="ilgi")["total"] == 1

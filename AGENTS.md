@@ -171,3 +171,13 @@ Kullanıcının 2026-09-21 talimatı: üretim düzeltmeleri hiçbir kitap adına
   "tek ürün" gerekçesi dahil. Yalnız okuma: `auth/login`, `auth/isLogin`, `*/get*`.
 - Kodda koruma `backend/semantic_bridge/seo_geo/connections.py` → `READ_ONLY`; liste dışı yol çağrılmadan hata atar.
 - SEO/GEO önerileri onaylanır ve kayıt altında durur; hedef CRM (müşteriden Web API yetkisi bekleniyor), T-soft değil.
+
+## CRM'e yazma yok (kullanıcı kuralı 2026-09-28)
+
+- Müşteri CRM'ine (Dynamics, 192.168.0.28 `Timas_MSCRM`) **yazma yetkimiz yok**. CRM'e hiçbir yoldan yazılmaz:
+  SQL `INSERT/UPDATE/DELETE/MERGE`, Dynamics Web API, plugin ya da iş akışı tetikleme — deneme, test ya da «tek kayıt»
+  gerekçesi dahil. CRM bağlantısı yalnız okumadır.
+- Yazma isteyen her özellik (sözleşme düzenleme, zeyilname, hakediş, ödeme takvimi, editör atama, randevu, SEO onayı…)
+  köprünün kendi `semantic_*` tablolarında tutulur. Ekran, CRM'deki değerle portaldaki değer arasındaki farkı
+  «CRM'e işlenmesi gereken» diye gösterir; CRM'e işleme müşterinin kendi kullanıcılarının elle yaptığı iştir.
+- Kural, müşteri yazma yetkisi verip kullanıcı açıkça kaldırana kadar geçerlidir.

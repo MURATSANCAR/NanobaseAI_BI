@@ -1,18 +1,20 @@
 import { useEffect, useState } from 'react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
+import { AlertTriangle, Search } from 'lucide-react';
 import { ENGINE_ENABLED, authorsApi, type AuthorHeatRow, type HeatBand } from '../../engine';
 import { Note, errText, field, nf } from '../../admin/ui';
 import { Pager, Panel, useDebounced } from '../kit';
-import { BAND, cellClass, fmtDay, monthLabel, monthLong, useAuthorsMeta } from './shared';
+import { BAND, TRACE, cellClass, daysAgo, fmtDay, monthLabel, monthLong, useAuthorsMeta } from './shared';
 import type { PanelTarget } from './CardPanel';
 
 /** İlişki ısı haritası: satır yazar, sütun son 12 ay, hücre o ay yapılan görüşme sayısı. Satırlar yürürlükte
  *  sözleşmesi olan yazarlar (CRM) ile ilişki kartı olan herkestir. Varsayılan sıra en soğuk önce: aranması gereken
- *  yazar üstte. CRM olayları (yeni eser, yeni sözleşme) hücrenin köşesinde nokta. */
+ *  yazar üstte. CRM olayları (yeni eser, yeni sözleşme) hücrenin köşesinde nokta ve ısının yakınlık payına son iz
+ *  olarak girer. «İlgi bekleyen» nedeni satırın altında yazar. */
 
 const SCOPES = [
   { key: 'hepsi', label: 'Hepsi' },
+  { key: 'ilgi', label: 'İlgi bekleyen' },
   { key: 'sozlesmeli', label: 'Sözleşmesi süren yazarlar' },
   { key: 'havuz', label: 'Aday havuzu' },
   { key: 'benim', label: 'Benim yazarlarım' },
@@ -30,12 +32,19 @@ function Row({ r, months, onOpen }: { r: AuthorHeatRow; months: string[]; onOpen
     r.contracts ? `${r.contracts} sözleşme${r.contractEnds ? `, ${fmtDay(r.contractEnds)} bitiş` : ''}` : null,
     r.ownerDisplay || r.owner,
   ].filter(Boolean);
+  const trace = r.heat.recencyFrom && r.heat.recencyFrom !== 'gorusme' && r.heat.traceKind ? `${TRACE[r.heat.traceKind]} ${daysAgo(r.heat.traceDays)}` : null;
   return (
     <tr className="group border-t border-slate-100">
       <th scope="row" className="sticky left-0 z-10 bg-white p-0 text-left font-normal group-hover:bg-slate-50">
         <button type="button" onClick={onOpen} className="block w-full min-w-[170px] max-w-[260px] px-3 py-2 text-left">
           <span className="block truncate text-[12.5px] font-extrabold leading-snug">{r.name}</span>
           <span className="block truncate text-[11px] leading-snug text-canvas-muted">{sub.join(' · ') || (r.crmContactId ? 'CRM yazarı' : 'Portal kartı')}</span>
+          {r.attention.length > 0 && (
+            <span className="mt-0.5 flex items-start gap-1 text-[11px] font-semibold leading-snug text-amber-800">
+              <AlertTriangle aria-hidden className="mt-px h-3 w-3 shrink-0" />
+              <span className="line-clamp-2">{r.attention.join(' · ')}</span>
+            </span>
+          )}
         </button>
       </th>
       {r.heat.months.map((n, i) => (
@@ -50,10 +59,14 @@ function Row({ r, months, onOpen }: { r: AuthorHeatRow; months: string[]; onOpen
         </td>
       ))}
       <td className="whitespace-nowrap px-3 py-2 text-right">
-        <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold ${b.pill}`}>
+        <span
+          className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-bold ${b.pill}`}
+          title={trace ? `Yakınlık CRM'deki son izden: ${trace}` : r.heat.lastContact ? `Son görüşme ${daysAgo(r.heat.daysSince)}` : undefined}
+        >
           <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${b.dot}`} />
           <span className="font-mono tabular-nums">{r.heat.score}</span>
         </span>
+        {trace && <span className="mt-0.5 block text-[10.5px] font-semibold text-canvas-muted">CRM izi</span>}
       </td>
     </tr>
   );
@@ -116,6 +129,20 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
               <span className="font-mono tabular-nums">{nf.format(data.bands[k])}</span>
             </span>
           ))}
+          {data.attention > 0 && (
+            <button
+              type="button"
+              onClick={() => setScope((s) => (s === 'ilgi' ? 'hepsi' : 'ilgi'))}
+              aria-pressed={scope === 'ilgi'}
+              className={`inline-flex min-h-9 items-center gap-1 rounded-lg px-2 py-1 text-[11.5px] font-extrabold transition-transform duration-150 ease-out active:scale-[0.97] ${
+                scope === 'ilgi' ? 'bg-amber-600 text-white' : 'bg-amber-50 text-amber-900 ring-1 ring-inset ring-amber-200'
+              }`}
+            >
+              <AlertTriangle aria-hidden className="h-3.5 w-3.5" />
+              İlgi bekleyen
+              <span className="font-mono tabular-nums">{nf.format(data.attention)}</span>
+            </button>
+          )}
           <button type="button" onClick={() => setWhy((v) => !v)} aria-expanded={why} className="ml-auto text-[12px] font-extrabold text-canvas-violet underline">
             Isı nasıl hesaplanır
           </button>
@@ -123,9 +150,11 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
       )}
       {why && h && (
         <div className="mt-2 rounded-2xl bg-slate-50 p-3 text-[12px] leading-snug">
-          Puan yalnız yayınevinden biriyle yapılmış görüşmelerden çıkar (100 üzerinden): son görüşme ne kadar yakınsa en çok {h.recencyMax} ({h.recencyDays} günde sıfırlanır), son 12 ayda her
-          görüşme {h.frequencyEach} (en çok {h.frequencyMax}), son üç görüşmenin tonu en çok {h.toneMax} (olumlu {h.toneMax}, nötr ya da belirtilmemiş {h.toneMax / 2}, olumsuz 0). Hiç görüşme yoksa «temas yok».
-          Görüşme varsa 0–33 soğuk, 34–66 ılık, 67–100 sıcak. Yeşil nokta o ay CRM'de yazar adına yeni eser ya da sözleşme kaydı açıldığını gösterir; puana girmez.
+          Puan 100 üzerinden üç paydan çıkar. Yakınlık en çok {h.recencyMax} ({h.recencyDays} günde sıfırlanır): son görüşme ya da CRM'deki son iz (yazar adına yeni eser kaydı,
+          başlayan sözleşme) hangisi yeniyse ondan. Sıklık: son 12 ayda her görüşme {h.frequencyEach} (en çok {h.frequencyMax}). Ton: son üç görüşme en çok {h.toneMax} (olumlu {h.toneMax}, nötr ya da
+          belirtilmemiş {h.toneMax / 2}, olumsuz 0). Sıklık ve ton yalnız görüşmeden gelir; bu yüzden «sıcak» için gerçek görüşme gerekir. 0–33 soğuk, 34–66 ılık, 67–100 sıcak; son 12 ayda ne görüşme ne iz
+          varsa «temas yok». Yeşil nokta o ay CRM'deki yeni eser ya da sözleşme kaydıdır. «İlgi bekleyen»: sözleşmesi {data?.warnDays ?? 60} gün içinde biten ve 60 gündür görüşülmeyen yazar, notu
+          girilmemiş geçmiş randevu, tarihi geçmiş sıradaki adım.
         </div>
       )}
 

@@ -3538,6 +3538,89 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(r.store.engine, user, "delete", "bulletin", bulletin_id, out["title"], {"bytes": out["size"]})
         return {"ok": True}
 
+    # Metinden üretim: stüdyo (GPU sırası) ZEKİ AI sesiyle seslendirir, köprü bitince sesi taslak bülten yapar.
+    from semantic_bridge import editorial_studio as studio_mod
+
+    def _studio_bulletin_start(body: dict[str, Any], editor: str) -> dict[str, Any]:
+        import httpx
+        try:
+            return studio_mod.post_json("/v1/studio/bulletins", body, editor, timeout=60)
+        except studio_mod.StudioError as e:
+            raise bulletins_mod.BulletinError(422 if e.status == 400 else e.status, str(e)) from None
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 503:
+                raise bulletins_mod.BulletinError(503, "ZEKİ AI seslendirme bu kurulumda henüz açık değil.") from None
+            raise bulletins_mod.BulletinError(502, "Stüdyo şu an yanıt vermiyor.") from None
+        except httpx.HTTPError:
+            raise bulletins_mod.BulletinError(502, "Stüdyoya ulaşılamadı.") from None
+
+    def _studio_bulletin_state(bid: str) -> dict[str, Any]:
+        return studio_mod.get_json(f"/v1/studio/bulletins/{bid}")
+
+    def _studio_bulletin_audio(bid: str) -> bytes:
+        data, _mime = studio_mod.get_bytes(f"/v1/studio/bulletins/{bid}/audio", {"audio/mpeg"},
+                                           limit=bulletins_mod.max_bytes())
+        return data
+
+    _bulletin_poller = {"on": False}
+    _bulletin_poller_lock = threading.Lock()
+
+    def _poll_bulletins() -> None:
+        """Bekleyen üretim varken 20 sn'de bir eşitler; biten ses taslak bülten olur. Bekleyen kalmayınca durur."""
+        try:
+            while True:
+                time.sleep(20)
+                r = rt()
+                try:
+                    bulletins_mod.sync_jobs(r.store.engine, r.settings.tenant_id, _studio_bulletin_state, _studio_bulletin_audio)
+                    if bulletins_mod.pending(r.store.engine, r.settings.tenant_id) == 0:
+                        return
+                except Exception:  # noqa: BLE001
+                    log.exception("bulletin poller")
+        finally:
+            _bulletin_poller["on"] = False
+
+    def _ensure_bulletin_poller() -> None:
+        with _bulletin_poller_lock:
+            if not _bulletin_poller["on"]:
+                _bulletin_poller["on"] = True
+                threading.Thread(target=_poll_bulletins, name="bulletin-poller", daemon=True).start()
+
+    @app.get("/api/v1/admin/bulletins/jobs")
+    def bulletin_jobs(request: Request) -> dict[str, Any]:
+        _admin_gate(request)
+        r = rt()
+        items = bulletins_mod.sync_jobs(r.store.engine, r.settings.tenant_id, _studio_bulletin_state, _studio_bulletin_audio)
+        if bulletins_mod.pending(r.store.engine, r.settings.tenant_id):
+            _ensure_bulletin_poller()
+        return {"items": items}
+
+    @app.get("/api/v1/admin/bulletins/voices")
+    def bulletin_voices(request: Request) -> dict[str, Any]:
+        """Stüdyonun ses kütüphanesi (kaldırılmışlar hariç). Stüdyo kapalıysa boş liste ve neden."""
+        _admin_gate(request)
+        try:
+            out = studio_mod.get_json("/v1/studio/voices")
+        except Exception:  # noqa: BLE001
+            log.exception("bulletin voices")
+            return {"voices": [], "groups": {}, "error": "Ses listesi şu an alınamadı."}
+        voices = [v for v in (out.get("voices") or []) if not v.get("removed")]
+        return {"voices": voices, "groups": out.get("groups") or {}}
+
+    @app.post("/api/v1/admin/bulletins/generate", status_code=202)
+    def bulletin_generate(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        user = _admin_gate(request)
+        r = rt()
+        try:
+            job = bulletins_mod.start_generation(r.store.engine, r.settings.tenant_id, user, str(body.get("text") or ""),
+                                                 body.get("voice"), body.get("title"), _studio_bulletin_start)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        admin_mod.audit(r.store.engine, user, "create", "bulletin", job["id"], job["title"] or "Metinden bülten",
+                        {"chars": job["chars"], "voice": job["voice"]})
+        _ensure_bulletin_poller()
+        return job
+
     # ------------------------------------------------------------------ kişi rehberi ve profil
     # Rehber CRM'den gelir (yalnız gerçek, etkin kullanıcılar). Kişinin eklediği dahili/kat/fotoğraf sunucuda.
     from semantic_bridge import people as people_mod
@@ -4451,10 +4534,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         {"stage": out["stage"], "crm": out["crmContactId"]})
         return out
 
+    def _rel_trace(request: Request, heat: dict[str, Any], contact_id: Optional[str]) -> dict[str, Any]:
+        """Kart panelindeki ısıya CRM'deki son izi (yeni eser, sözleşme başlangıcı) katar; CRM okunamazsa ısı olduğu gibi."""
+        if not contact_id:
+            return heat
+        try:
+            schema, run = _editorial(request)
+            row = (run(rel_mod.crm_trace_sql(schema, contact_id)).get("records") or [{}])[0]
+            day, kind = rel_mod.latest_trace([("eser", row.get("eser")), ("sozlesme", row.get("sozlesme"))])
+            return rel_mod.with_trace(heat, day, kind)
+        except Exception:  # noqa: BLE001 — iz bir ektir, paneli düşürmez
+            log.exception("author relations: CRM izi okunamadı")
+            return heat
+
     @app.get("/api/v1/editorial/authors/cards/{card_id}")
     def authors_card(card_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)
-        return _rel_call(rel_mod.card_detail, engine, tenant, user, admin, card_id)
+        out = _rel_call(rel_mod.card_detail, engine, tenant, user, admin, card_id)
+        out["heat"] = _rel_trace(request, out["heat"], out.get("crmContactId"))
+        return out
 
     @app.patch("/api/v1/editorial/authors/cards/{card_id}")
     def authors_card_update(card_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -4467,7 +4565,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/authors/by-crm/{contact_id}")
     def authors_by_crm(contact_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)
-        return _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
+        out = _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
+        out["heat"] = _rel_trace(request, out["heat"], contact_id)
+        return out
 
     @app.post("/api/v1/editorial/authors/by-crm/{contact_id}/card", status_code=201)
     def authors_crm_card(contact_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -4497,7 +4597,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def authors_heatmap(request: Request, scope: str = "hepsi", q: str = "", order: str = "soguk", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _, _ = _rel(request)
         return _rel_call(rel_mod.heatmap, admin_mod.conf("CRM_SCHEMA"), _crm_fetch_all, engine, tenant, user,
-                         scope=scope, q=q, order=order, page_no=page)
+                         scope=scope, q=q, order=order, page_no=page,
+                         warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60))
 
     @app.get("/api/v1/editorial/authors/agenda")
     def authors_agenda(request: Request, scope: str = "benim", days: int = 30) -> dict[str, Any]:

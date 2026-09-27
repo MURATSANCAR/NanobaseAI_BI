@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Radio, Trash2, Upload } from 'lucide-react';
-import { bulletinAudioUrl, bulletinsApi, type Bulletin, type BulletinPatch } from '../engine';
+import { Loader2, Radio, Trash2, Upload, Wand2 } from 'lucide-react';
+import { bulletinAudioUrl, bulletinsApi, type Bulletin, type BulletinJob, type BulletinPatch } from '../engine';
 import { clock } from '../kampus/BulletinCard';
 import { Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate, label, nf } from './ui';
 
@@ -110,6 +110,124 @@ function Row({ b }: { b: Bulletin }) {
   );
 }
 
+const TEXT_MAX = 30000;
+/** Türkçe konuşmada saniyede ~14 karakter (seslendirme ölçümü); yalnız yaklaşık süre göstermek için. */
+const CHARS_PER_SEC = 14;
+
+const JOB_LABEL: Record<BulletinJob['status'], { label: string; tone: 'muted' | 'violet' | 'ok' | 'err' }> = {
+  queued: { label: 'Sırada', tone: 'muted' },
+  running: { label: 'Seslendiriliyor', tone: 'violet' },
+  done: { label: 'Hazır', tone: 'ok' },
+  fail: { label: 'Olmadı', tone: 'err' },
+};
+
+/** Metinden bülten: ZEKİ AI seslendirir (GPU'da kitap işleriyle aynı sırada); bitince ses aşağıya taslak düşer. */
+function GeneratePanel() {
+  const qc = useQueryClient();
+  const voices = useQuery({ queryKey: ['admin', 'bulletin-voices'], queryFn: bulletinsApi.voices, staleTime: 10 * 60_000, retry: false });
+  const jobs = useQuery({
+    queryKey: ['admin', 'bulletin-jobs'],
+    queryFn: bulletinsApi.jobs,
+    retry: false,
+    // Süren iş varken durum 10 sn'de bir yenilenir; biten iş taslak listesini de tazeler.
+    refetchInterval: (q) => (q.state.data?.items.some((j) => j.status === 'queued' || j.status === 'running') ? 10_000 : false),
+  });
+  const [title, setTitle] = useState('');
+  const [text, setText] = useState('');
+  const [voice, setVoice] = useState<string>('');
+  const list = voices.data?.voices ?? [];
+  const chosen = voice || list.find((v) => v.recommended)?.id || list[0]?.id || '';
+
+  const seen = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const done = (jobs.data?.items ?? []).filter((j) => j.bulletinId && !seen.current.has(j.id));
+    if (done.length) {
+      done.forEach((j) => seen.current.add(j.id));
+      void qc.invalidateQueries({ queryKey: ['admin', 'bulletins'] });
+    }
+  }, [jobs.data, qc]);
+
+  const go = useMutation({
+    mutationFn: () => bulletinsApi.generate({ text, voice: chosen || null, title: title.trim() || null }),
+    onSuccess: () => {
+      setText('');
+      setTitle('');
+      void qc.invalidateQueries({ queryKey: ['admin', 'bulletin-jobs'] });
+    },
+  });
+  const secs = Math.round(text.trim().length / CHARS_PER_SEC);
+  const groups = voices.data?.groups ?? {};
+  const byGroup = list.reduce<Record<string, typeof list>>((acc, v) => ((acc[v.group] ??= []).push(v), acc), {});
+  const recent = (jobs.data?.items ?? []).slice(0, 6);
+
+  return (
+    <div className="rounded-2xl border border-canvas-violet/20 bg-canvas-violet/[0.04] p-3 sm:p-4">
+      <div className="flex items-center gap-2 text-[13px] font-extrabold">
+        <Wand2 className="h-4 w-4 text-canvas-violet" aria-hidden /> Metinden üret
+      </div>
+      <p className="mt-1 text-[12px] text-canvas-muted">
+        Metni yazın, ZEKİ AI seslendirsin. İş GPU'da kitap seslendirmeleriyle aynı sıraya girer; 10 dakikalık bir bülten birkaç dakikada hazır olur ve
+        aşağıya taslak olarak düşer. Rakam, tarih ve kısaltmalar yayınevi sözlüğüyle okunur.
+      </p>
+      <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_260px]">
+        <label className="block">
+          <span className={label}>Başlık</span>
+          <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="ör. Haftanın bülteni · 3. hafta" className={field} />
+        </label>
+        <label className="block">
+          <span className={label}>Ses</span>
+          <select value={chosen} onChange={(e) => setVoice(e.target.value)} disabled={!list.length} className={field}>
+            {!list.length && <option value="">{voices.isLoading ? 'Yükleniyor…' : 'Ses listesi alınamadı'}</option>}
+            {Object.entries(byGroup).map(([g, vs]) => (
+              <optgroup key={g} label={groups[g] ?? g}>
+                {vs.map((v) => (
+                  <option key={v.id} value={v.id}>
+                    {v.label}
+                    {v.recommended ? ' · önerilen' : ''}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
+          </select>
+        </label>
+      </div>
+      <label className="mt-2 block">
+        <span className={label}>Bülten metni</span>
+        <textarea value={text} rows={8} maxLength={TEXT_MAX} onChange={(e) => setText(e.target.value)} placeholder="Paragraflar arasında boş satır bırakın; ZEKİ AI paragraf sonlarında biraz durur." className={`${field} resize-y`} />
+      </label>
+      <div className="mt-2 flex flex-wrap items-center gap-2">
+        <button type="button" disabled={!text.trim() || go.isPending} onClick={() => go.mutate()} className={btnPrimary}>
+          {go.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+          ZEKİ AI ile seslendir
+        </button>
+        <span className="text-[11.5px] tabular-nums text-canvas-muted">
+          {nf.format(text.trim().length)} / {nf.format(TEXT_MAX)} karakter{secs ? ` · yaklaşık ${clock(secs)}` : ''}
+        </span>
+      </div>
+      {go.error && <div className="mt-2"><Note tone="err">{errText(go.error, 'Seslendirme başlatılamadı.')}</Note></div>}
+      {voices.data?.error && <div className="mt-2"><Note tone="warn">{voices.data.error}</Note></div>}
+      {recent.length > 0 && (
+        <ul className="mt-3 flex flex-col gap-1.5" aria-live="polite">
+          {recent.map((j) => {
+            const s = JOB_LABEL[j.status];
+            return (
+              <li key={j.id} className="flex flex-wrap items-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-[12px]">
+                <Pill tone={s.tone}>{s.label}</Pill>
+                <span className="min-w-0 flex-1 truncate font-semibold">{j.title || 'Sesli bülten'}</span>
+                <span className="text-canvas-muted">
+                  {nf.format(j.chars)} karakter · {j.createdBy} · {fmtDate(j.createdAt)}
+                  {j.bulletinId ? ' · taslaklarda' : ''}
+                </span>
+                {j.error && <span className="w-full text-[11.5px] text-red-700">{j.error}</span>}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 /** Yönetim → Sesli bülten: sunucuda üretilen ses dosyaları Kampüs'e buradan çıkar. */
 export default function BulletinsAdmin() {
   const qc = useQueryClient();
@@ -156,6 +274,7 @@ export default function BulletinsAdmin() {
         </>
       }
     >
+      <GeneratePanel />
       {progress && (
         <div className="rounded-xl bg-white/70 p-3 text-[12px]" role="status" aria-live="polite">
           <div className="flex justify-between gap-2">

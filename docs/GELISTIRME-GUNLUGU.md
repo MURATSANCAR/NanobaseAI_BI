@@ -24,11 +24,38 @@
   küçük…», ayrıntı ayrı).
 - **Kalan:** müşteri VM'i (onayla); yeni stüdyo işlemlerinin rol kapısına bağlanması; efekt sesi havuzu (sürüyor).
 
+## 2026-09-28 (01:10) — Sesli bülten: «Metinden üret» (ZEKİ AI seslendirir, taslak düşer) — kod hazır, GPU'ya kurulmadı
+
+- **Neden:** Kampüs bülteni altyapısı hazırdı ama sunucuda üretilmiş ses yoktu; seslendirme modeli (`book-voice`) GPU'da hazır, kapıya bağlı değil (09-26'dan beri bekliyor). Kullanıcı kararı: üretim otomatik olsun.
+- **Stüdyo (`apps/editor`):** `production/bulletin.py` — metin paragraflara, paragraf cümlelere; cümleler `SEG_CHARS`'a kadar parçada toplanır (tek cümle 1.800'ü aşarsa kelime sınırından bölünür; sunucu parça başına 2.000 alır), okunuş yayınevi sözlüğüyle, bütün parçalar tek `/v1/audio/narrate` çağrısında → `ses.mp3`. Depo `<stüdyo>/_ses/bulten/<b…>/` (`istek.json`, `durum.json`). Temporal `BulletinNarration` (etkinlik `production_bulletin`, sayfa seslendirmesiyle aynı yeniden deneme kuralı) — GPU sırasına kitap işleriyle birlikte girer. Uçlar `POST /v1/studio/bulletins`, `GET …/{id}`, `GET …/{id}/audio`. Test `apps/editor/tests/test_bulletin.py`.
+- **Köprü:** tablo `semantic_kampus_bulletin_jobs`; `POST /api/v1/admin/bulletins/generate` (yönetici, denetim), `GET …/jobs` (stüdyodan eşitler), `GET …/voices` (ses kütüphanesi, kaldırılmışlar hariç). Biten işin sesi **bir kez** taslak bülten olur (seslendiren «ZEKİ AI», kaynak sunucu); bekleyen iş varken 20 sn'lik takipçi iş parçacığı (ekran kapalı olsa da taslak düşer); stüdyoya ulaşılamazsa iş korunur, sonra yeniden denenir. Test `test_bulletins.py` (+3).
+- **Ekran:** Yönetim → Sesli bülten → «Metinden üret»: başlık, ses (gruplu, önerilen işaretli), metin (30.000 karakter, yaklaşık süre), «ZEKİ AI ile seslendir», iş listesi (Sırada / Seslendiriliyor / Hazır · taslaklarda / Olmadı + neden), süren iş varken 10 sn'de bir yenilenir.
+- **GPU nginx:** `add-studio-routes.py` 7. bölüm `EDITOR-STUDYO-BULTEN` (POST oluşturma 1 MB; GET durum ve ses). Kapı (`gateway`) `book-voice` takma adıyla yeni imaja alınmadıkça stüdyo 503 `NO_VOICE` döner, ekran «ZEKİ AI seslendirme bu kurulumda henüz açık değil» der.
+- **Kurulum sırası (bekliyor):** main → GPU: `editor-py` imajı (bu main) ile `gateway` + `editor-studio` + `editor-studio-worker` yeniden kurulur (kitap kuyruğu boşken; kullanıcı onayı), `add-studio-routes.py` → test sunucusu: köprü + arayüz → Yönetim'den kısa bir metin seslendirilip Kampüs'te çalınır. GPU'ya bu oturumdan erişilemedi (Mac VPN kapalı).
+- **Bağlantı olayı:** bu oturumun art arda ssh/scp ve port yoklamaları Mac'in IP'sinin test sunucusunda düşürülmesine katkı verdi; kullanıcı kuralı (AGENTS.md «Test sunucusuna tek ssh bağlantısı») bundan sonra uygulanıyor: tek kalıcı bağlantı (ControlMaster), tek akışla dosya, port yoklaması yok.
+
+## 2026-09-28 — M7: ısıya CRM izi, «ilgi bekleyen» nedenleri (dalda, kurulmadı)
+
+- **Neden:** portala henüz görüşme yazılmadığı için ısı haritasındaki 549 yazarın hepsi «temas yok»tu; sözleşmesi bitmek üzere olup kimsenin aramadığı yazar ayrıca görünmüyordu.
+- **Isı:** yakınlık payı (en çok 50, 180 günde sıfır) son görüşme ya da CRM'deki son iz — yazar adına yeni eser kaydı, başlamış sözleşme — hangisi yeniyse ondan (`with_trace`, `latest_trace`); sıklık ve ton yalnız görüşmeden, bu yüzden iz tek başına «sıcak» yapmaz. Kart panelinde de aynı iz (`crm_trace_sql`; CRM okunamazsa panel yalnız görüşmeyle açılır). CRM olay ayı İstanbul saatiyle (UTC +3), ay sonundaki kayıtlar önceki aya düşmüyor.
+- **İlgi bekleyen** (`attention`): sözleşmesi `EDITORIAL_CONTRACT_WARN_DAYS` (60) içinde biten ve 60 gündür görüşülmeyen yazar, notu girilmemiş geçmiş randevu, tarihi geçmiş sıradaki adım. Isı haritasında sayaç düğmesi, «İlgi bekleyen» kapsamı ve satırda neden; «Isı nasıl hesaplanır» metni güncellendi.
+- **Doğrulama (test sunucusu, gerçek CRM .28, dalın kopyası):** son 12 ayda izi olan sözleşmeli yazar 224 = SQL referansı 224; ilgi bekleyen 13 = referans 13 (portal görüşmesi yokken sözleşmesi 60 gün içinde biten). Dağılım 549 yazarda: ılık 36, soğuk 188, temas yok 325, sıcak 0 (görüşme yok). Testler `test_author_relations` + `test_access` 24/24, `tsc -b` temiz.
+- **Çapraz yazar önerisi yapılmadı:** kitaplık (%96 dolu) çok geniş — «Çocuk Kitaplığı» 3.084 kitap, en çok kitabı olan yazarlar ve «Komisyon», «Anonim» öne çıkıyor; dizi (%93) çoğunlukla tek yazarın serisi; tür metni %44 dolu. Anlamlı öneri için ortak alım verisi (e-ticaret siparişleri) gerekir; karar kullanıcıda.
+
+## 2026-09-28 — M6 Sözleşmeler test sunucusuna kuruldu; gerçek oturumla uçtan uca 29/29; kural: CRM'e yazma yok
+
+- **Kurulum (main `a65d9a9d`):** sunucudaki ortak dosyalar (`app.py`, `access.py`, `access_catalog.json`, `App.tsx`, `engine.ts`) hiçbir commit'le birebir eşleşmedi; sunucu `main`in gerisinde (ör. M2 editör atama kurulmamış), fazlası yok. Tam dosya kopyası o işleri habersizce kurardı → yalnız M6 farkı (`f605e7be..a65d9a9d`) yama olarak uygulandı (kuru deneme temiz), 19 yeni dosya eklendi. Önce sunucu ağacının kopyasında test 38/38 ve `tsc` temiz; kopyalanan dosyalar md5 ile eş, `._*` 0. Köprü yeniden başladı (sağlıklı), arayüz `/timas/` ayarlarıyla ayrı klasöre derlenip `cockpit/dist`e kondu: `index-Bn-oS5mh.js`.
+- **Uçtan uca (portal.nanobase.ai/timas, geçici `timasai` + yönetici olmayan deneme oturumu):** CRM sözleşme sayfası salt okunur açılıyor (grup kaydıyla); CRM sözleşmesinde hakediş önizlemesi gerçek Logo'dan 19,5 sn, TL telif kabul referansıyla eşit (59.278,86), kur TCMB; önizleme CRM kaydını portala almıyor. Taslak (`TS-2026-0001`, metin şablondan) → Word → düzenleme → eski sürümle yazma 409 → yürürlük → gerekçesiz şart değişikliği 400 → zeyilname imza → şarta işlendi → Word → ödeme planı (avans) → hakediş (brüt 1.272,77 USD, avans 1.000 mahsup, net 272,77) → onay → ödeme takviminde vade 30.07.2026 → çakışan dönem 409 → hakediş bildirimi Word → ödendi → ödenmiş hakediş iptal edilemez. Yetkisiz kişi okuyabiliyor, taslak açamıyor ve ödendi işaretleyemiyor (403 FORBIDDEN). Seçiciler (kitap stok kodu, taraf) CRM'den geliyor. **29/29.** Deneme kayıtları (1 sözleşme, 10 olay, 1 zeyilname, 2 ödeme, 1 hakediş) ve oturumlar silindi.
+- **Görsel denetim yapılamadı:** oturum çerezi HttpOnly, tarayıcı panesine konamıyor. Ekran: `https://portal.nanobase.ai/timas/telif-sozlesme`.
+- **Kural (kullanıcı, 2026-09-28):** müşteri CRM'ine yazma yetkimiz yok → `AGENTS.md` «CRM'e yazma yok». M6 buna uyuyor: CRM'e yalnız `run_sql` (SELECT) ile okuyor, yazmalar `semantic_contract*` tablolarında.
+- **Müşteri VM'ine kurulmadı:** VM'e `main` gidince VM'de olmayan Yetki, SEO ve diğer modüller de gider; kullanıcı kararı bekliyor.
+
 ## 2026-09-28 — Kural: test kullanıcısı ve test verisi bırakılmaz
 
 - Portal Yönetim → Kişiler'de test sırasında yazılmış `claude` adlı hesap kalmıştı. Kişi listesi pano kartı, planlı rapor, `semantic_audit.actor` ve yönetici listesinden derlenir; testte kullanılan ad kalıcı görünür.
 - AGENTS.md'ye kural eklendi: test için açılan hesap/oturum/kayıt aynı iş içinde silinir, yeni kullanıcı adı uydurulmaz (yalnız `timasai` kısa oturumu), yazma uçları önce geçersiz gövdeyle denenir, kabul sonunda Kişiler listesi kontrol edilir.
 - Mevcut `claude` kaydının hangi tablodan geldiği ve silinmesi: test sunucusuna SSH erişimi o anda kapalıydı (IP geçici engelli); açık iş.
+
 
 ## 2026-09-27 (gece) — M6 Sözleşmeler: düzenleme, yeni taslak, zeyilname, ödeme takvimi, hakediş, şablon kütüphanesi
 

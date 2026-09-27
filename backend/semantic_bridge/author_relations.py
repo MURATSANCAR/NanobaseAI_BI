@@ -698,11 +698,75 @@ def heat(meetings: Iterable[Any], now: Optional[datetime] = None) -> dict[str, A
         last3 = done[:3]
         tone = round(sum(TONE_POINTS.get(m.tone, 10) for m in last3) / len(last3))
         score = recency + freq + tone
-    band = "yok" if not done else "soguk" if score <= 33 else "ilik" if score <= 66 else "sicak"
+    band = _band(score) if done else "yok"
     return {"score": score, "band": band, "parts": {"recency": recency, "frequency": freq, "tone": tone},
             "lastContact": _iso(done[0].starts_at) if done else None, "daysSince": days,
             "contactsYear": in_year, "months": [by_month[k] for k in keys],
-            "next": _iso(upcoming[0].starts_at) if upcoming else None}
+            "next": _iso(upcoming[0].starts_at) if upcoming else None,
+            "recencyFrom": "gorusme" if done else None, "lastTrace": None, "traceKind": None, "traceDays": None}
+
+
+def _band(score: int) -> str:
+    return "soguk" if score <= 33 else "ilik" if score <= 66 else "sicak"
+
+
+#: CRM izleri: yazar adına açılan eser kaydı ve başlayan sözleşme. Yalnız yakınlık puanına girer.
+TRACE_LABELS = {"eser": "yeni eser kaydı", "sozlesme": "sözleşme başlangıcı"}
+
+
+def _crm_day(v: Any) -> Optional[date]:
+    """CRM tarihi (UTC saklanır) → İstanbul günü. Yalnız gün olan alanlar gece yarısından önceki UTC saatle gelir."""
+    if v is None or v == "":
+        return None
+    if isinstance(v, datetime):
+        d = v
+    elif isinstance(v, date):
+        return v
+    else:
+        try:
+            d = datetime.fromisoformat(str(v).strip().replace(" ", "T").replace("Z", "+00:00"))
+        except ValueError:
+            return None
+    return (d if d.tzinfo else d.replace(tzinfo=timezone.utc)).astimezone(TZ).date()
+
+
+def with_trace(h: dict[str, Any], day: Optional[date], kind: Optional[str], now: Optional[datetime] = None) -> dict[str, Any]:
+    """Isıya CRM izini katar: yakınlık, son görüşme ile son iz hangisi yeniyse ondan hesaplanır; sıklık ve ton yalnız
+    görüşmeden gelir. Böylece hiç görüşme yazılmamış yazar da CRM hareketine göre soğuk/ılık ayrılır; «sıcak» için
+    gerçek görüşme gerekir (iz tek başına en çok yakınlık puanını, 50'yi verir)."""
+    if day is None:
+        return h
+    now = now or _now()
+    t_days = max(0, (now.astimezone(TZ).date() - day).days)
+    out = dict(h, lastTrace=day.isoformat(), traceKind=kind, traceDays=t_days)
+    if h.get("daysSince") is not None and h["daysSince"] <= t_days:
+        return out
+    recency = round(RECENCY_MAX * max(0.0, 1 - t_days / RECENCY_DAYS))
+    score = recency + h["parts"]["frequency"] + h["parts"]["tone"]
+    return dict(out, score=score, band=_band(score), recencyFrom=kind, parts=dict(h["parts"], recency=recency))
+
+
+def attention(h: dict[str, Any], contract_ends: Optional[str], meetings: Iterable[Any], *, warn_days: int,
+              now: Optional[datetime] = None) -> list[str]:
+    """«İlgi bekleyen» nedenleri: sözleşmesi yakında biten ama 60 gündür görüşülmeyen yazar, notu girilmemiş geçmiş
+    randevu, tarihi geçmiş sıradaki adım. Görüşme günleri yalnız portal kaydından (CRM izi temas sayılmaz)."""
+    now = now or _now()
+    today = now.astimezone(TZ).date()
+    out: list[str] = []
+    end = _crm_day(contract_ends) if contract_ends else None
+    if end is not None:
+        left = (end - today).days
+        talked = h.get("daysSince")          # yalnız görüşmeden; CRM izi bunu değiştirmez
+        if 0 <= left <= warn_days and (talked is None or talked > 60):
+            out.append(f"Sözleşmesi {left} gün sonra bitiyor; " + ("hiç görüşme yazılmadı" if talked is None else f"{talked} gündür görüşme yok"))
+    ms = list(meetings)
+    late = sum(1 for m in ms if m.status == "planlandi" and _utc(m.starts_at) < now)
+    if late:
+        out.append("Geçmiş randevunun notu girilmedi" if late == 1 else f"{late} geçmiş randevunun notu girilmedi")
+    steps = sum(1 for m in ms if m.status == "yapildi" and m.next_step and not m.next_done and m.next_due and m.next_due < today)
+    if steps:
+        out.append("Sıradaki adımın tarihi geçti" if steps == 1 else f"{steps} sıradaki adımın tarihi geçti")
+    return out
 
 
 # ------------------------------------------------------------------------------------------ CRM (salt okuma)
@@ -795,22 +859,49 @@ def contracted_authors_sql(schema: str) -> str:
 
 
 def crm_events_sql(schema: str, since: str) -> str:
-    """Son 12 ayda yazarların CRM olayları, kişi × ay: yazar rolüyle yeni eser kaydı ve başlayan sözleşme."""
+    """Son 12 ayda yazarların CRM olayları, kişi × ay: yazar rolüyle yeni eser kaydı ve başlayan sözleşme. Ay İstanbul
+    saatiyle (CRM UTC saklar; +3 saat), `son` o aydaki en yeni kaydın ham (UTC) zamanı — ısıdaki son iz buradan."""
     p = _prefix(schema)
     s = _since(since)
     return (
-        "SELECT x.kisi, x.tur, x.yil, x.ay, COUNT(*) AS adet FROM ("
-        " SELECT e.new_Katilimsaglayan AS kisi, 'eser' AS tur, YEAR(e.CreatedOn) AS yil, MONTH(e.CreatedOn) AS ay"
+        "SELECT x.kisi, x.tur, YEAR(DATEADD(hour, 3, x.gun)) AS yil, MONTH(DATEADD(hour, 3, x.gun)) AS ay,"
+        " COUNT(*) AS adet, MAX(x.gun) AS son FROM ("
+        " SELECT e.new_Katilimsaglayan AS kisi, 'eser' AS tur, e.CreatedOn AS gun"
         f" FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
         f" WHERE e.statecode = 0 AND t.new_name = N'Yazar' AND e.CreatedOn >= '{s}'"
         " UNION ALL"
-        " SELECT r.new_kisi AS kisi, 'sozlesme' AS tur, YEAR(s.new_SozlesmeBaslangicTarihi) AS yil,"
-        " MONTH(s.new_SozlesmeBaslangicTarihi) AS ay"
+        " SELECT r.new_kisi AS kisi, 'sozlesme' AS tur, s.new_SozlesmeBaslangicTarihi AS gun"
         f" FROM {p}new_sozlesmetarafiBase r JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = r.new_sozlesmeid"
         f" WHERE r.statecode = 0 AND s.statecode = 0 AND s.new_SozlesmeBaslangicTarihi >= '{s}'"
         f" AND {_is_author(p, 'r.new_kisi')}"
-        ") x WHERE x.kisi IS NOT NULL GROUP BY x.kisi, x.tur, x.yil, x.ay"
+        ") x WHERE x.kisi IS NOT NULL GROUP BY x.kisi, x.tur, YEAR(DATEADD(hour, 3, x.gun)), MONTH(DATEADD(hour, 3, x.gun))"
     )
+
+
+def crm_trace_sql(schema: str, contact_id: str) -> str:
+    """Tek yazarın son CRM izi (kart panelindeki ısı için): yazar rolüyle son eser kaydı ve bugüne kadar başlamış son sözleşme."""
+    p = _prefix(schema)
+    cid = _guid(contact_id)
+    return (
+        "SELECT (SELECT MAX(e.CreatedOn)"
+        f" FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t ON t.new_katilimcitipiId = e.new_katilimciTipi"
+        f" WHERE e.statecode = 0 AND t.new_name = N'Yazar' AND e.new_Katilimsaglayan = '{cid}') AS eser,"
+        " (SELECT MAX(s.new_SozlesmeBaslangicTarihi)"
+        f" FROM {p}new_sozlesmetarafiBase r JOIN {p}new_sozlesmeBase s ON s.new_sozlesmeId = r.new_sozlesmeid"
+        f" WHERE r.statecode = 0 AND s.statecode = 0 AND r.new_kisi = '{cid}'"
+        " AND s.new_SozlesmeBaslangicTarihi < DATEADD(day, 1, GETDATE())) AS sozlesme"
+    )
+
+
+def latest_trace(pairs: Iterable[tuple[str, Any]], now: Optional[datetime] = None) -> tuple[Optional[date], Optional[str]]:
+    """(tür, CRM tarihi) çiftlerinden bugüne kadarki en yeni iz: (İstanbul günü, tür)."""
+    today = (now or _now()).astimezone(TZ).date()
+    best: tuple[Optional[date], Optional[str]] = (None, None)
+    for kind, raw in pairs:
+        d = _crm_day(raw)
+        if d is not None and d <= today and (best[0] is None or d > best[0]):
+            best = (d, kind)
+    return best
 
 
 def similar_sql(schema: str, name: str) -> str:
@@ -1021,9 +1112,10 @@ def similar(schema: str, run: Optional[Callable[[str], dict[str, Any]]], engine:
 
 def heatmap(schema: str, fetch_all: Callable[[str], list[dict[str, Any]]], engine: sa.engine.Engine, tenant: str,
             user: str, *, scope: str = "hepsi", q: str = "", order: str = "soguk", page_no: int = 0,
-            now: Optional[datetime] = None) -> dict[str, Any]:
+            now: Optional[datetime] = None, warn_days: int = 60) -> dict[str, Any]:
     """Satırlar: yürürlükte sözleşmesi olan yazarlar (CRM) ∪ kartı olan herkes (arşiv hariç). Hücre: o ayda
-    yapılan görüşme sayısı; CRM olayları (yeni eser, yeni sözleşme) ayrı sayı. Tamamı hesaplanır, sayfa sayfa döner."""
+    yapılan görüşme sayısı; CRM olayları (yeni eser, yeni sözleşme) ayrı sayı ve ısının yakınlık payına son iz olarak
+    girer (`with_trace`). «İlgi bekleyen» nedenleri satırda (`attention`). Tamamı hesaplanır, sayfa sayfa döner."""
     now = now or _now()
     keys = month_keys(now)
     since = keys[0] + "-01"
@@ -1070,13 +1162,23 @@ def heatmap(schema: str, fetch_all: Callable[[str], list[dict[str, Any]]], engin
             continue
         n = _n(e.get("adet"))
         r["crm"][i] += n
+        r.setdefault("_traces", []).append((_s(e.get("tur")) or "eser", e.get("son")))
         if _s(e.get("tur")) == "sozlesme":
             r["crmContracts"] += n
         else:
             r["crmBooks"] += n
 
+    for r in rows.values():
+        day, kind = latest_trace(r.pop("_traces", []), now)
+        if r["crmContactId"]:
+            r["heat"] = with_trace(r["heat"], day, kind, now)
+        r["attention"] = attention(r["heat"], r["contractEnds"], by_card.get(r["cardId"] or "", []),
+                                   warn_days=warn_days, now=now)
+
     items = list(rows.values())
-    if scope == "sozlesmeli":
+    if scope == "ilgi":
+        items = [r for r in items if r["attention"]]
+    elif scope == "sozlesmeli":
         items = [r for r in items if r["contracts"]]
     elif scope == "havuz":
         items = [r for r in items if r["stage"] in POOL_STAGES]
@@ -1088,6 +1190,7 @@ def heatmap(schema: str, fetch_all: Callable[[str], list[dict[str, Any]]], engin
     bands = {"yok": 0, "soguk": 0, "ilik": 0, "sicak": 0}
     for r in items:
         bands[r["heat"]["band"]] += 1
+    waiting = sum(1 for r in rows.values() if r["attention"] and (not nq or nq in _norm(r["name"])))
     if order == "sicak":
         items.sort(key=lambda r: (-r["heat"]["score"], r["name"].casefold()))
     elif order == "ad":
@@ -1103,4 +1206,5 @@ def heatmap(schema: str, fetch_all: Callable[[str], list[dict[str, Any]]], engin
         r.pop("_created_by", None)
         r.pop("_mine", None)
     return {"months": keys, "items": chunk, "total": total, "page": page_no, "pageSize": PAGE_SIZE,
-            "bands": bands, "crmOk": crm_ok, "crmError": crm_error, "scope": scope, "order": order}
+            "bands": bands, "attention": waiting, "warnDays": warn_days, "crmOk": crm_ok, "crmError": crm_error,
+            "scope": scope, "order": order}

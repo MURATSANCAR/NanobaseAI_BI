@@ -54,7 +54,27 @@ BULLETINS = sa.Table(
     sa.Index("ix_semantic_kampus_bulletins_pub", "tenant_id", "status", "published_at"),
 )
 
+# Metinden üretim: iş stüdyoda (GPU sırası) koşar; kimliği stüdyonun bülten kimliğidir. Bitince ses alınıp taslak
+# bülten olur (`bulletin_id`). Durum stüdyodan eşitlenir (`sync_jobs`); köprü bekleyen iş varken kendisi de sorar.
+JOBS = sa.Table(
+    "semantic_kampus_bulletin_jobs", _md,
+    sa.Column("id", sa.String(40), primary_key=True),
+    sa.Column("tenant_id", sa.String(80), nullable=False),
+    sa.Column("title", sa.String(300)),
+    sa.Column("voice", sa.String(120)),
+    sa.Column("chars", sa.Integer, nullable=False),
+    sa.Column("status", sa.String(20), nullable=False),          # queued | running | done | fail
+    sa.Column("error", sa.Text),
+    sa.Column("bulletin_id", sa.String(40)),
+    sa.Column("created_by", sa.String(120), nullable=False),
+    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
+    sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
+)
+
 DRAFT, PUBLISHED = "taslak", "yayinda"
+TEXT_MAX = 30000
+#: Ekranda seslendiren; teknoloji adı yazılmaz.
+NARRATOR = "ZEKİ AI"
 SOURCES = ("yükleme", "sunucu")
 RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
 
@@ -274,6 +294,78 @@ def audio(engine: sa.engine.Engine, tenant: str, bid: str, range_header: Optiona
         chunk = f.read(end - start + 1)
     return Response(chunk, status_code=206, media_type=row["mime"],
                     headers={**base, "Content-Range": f"bytes {start}-{end}/{size}"})
+
+
+# ------------------------------------------------------------------ metinden üretim (stüdyo → taslak bülten)
+
+def _job_api(row: Any) -> dict[str, Any]:
+    r = dict(row._mapping if hasattr(row, "_mapping") else row)
+    return {"id": r["id"], "title": r["title"], "voice": r["voice"], "chars": r["chars"], "status": r["status"],
+            "error": r["error"], "bulletinId": r["bulletin_id"], "createdBy": r["created_by"],
+            "createdAt": r["created_at"].isoformat() if r["created_at"] else None}
+
+
+def start_generation(engine: sa.engine.Engine, tenant: str, user: str, text: str, voice: Optional[str],
+                     title: Optional[str], studio_start: Any) -> dict[str, Any]:
+    """Metni stüdyoya verir (iş GPU sırasına girer) ve takip kaydını yazar. `studio_start(body, editor)` → durum."""
+    ensure(engine)
+    text = (text or "").strip()
+    if not text:
+        raise BulletinError(422, "Bülten metni boş.")
+    if len(text) > TEXT_MAX:
+        raise BulletinError(422, f"Bülten metni en çok {TEXT_MAX:,} karakter olabilir.".replace(",", "."))
+    st = studio_start({"text": text, "voice": voice or None, "title": _clean(title, 300)}, user)
+    now = _now()
+    row = {"id": str(st["id"])[:40], "tenant_id": tenant, "title": _clean(title, 300), "voice": st.get("voice") or voice,
+           "chars": len(text), "status": st.get("status") or "queued", "error": st.get("error"), "bulletin_id": None,
+           "created_by": user[:120], "created_at": now, "updated_at": now}
+    with engine.begin() as c:
+        c.execute(JOBS.insert().values(**row))
+    return _job_api(row)
+
+
+_sync_lock = threading.Lock()
+
+
+def sync_jobs(engine: sa.engine.Engine, tenant: str, studio_state: Any, studio_audio: Any) -> list[dict[str, Any]]:
+    """Süren işlerin durumunu stüdyodan alır; biten işin sesini taslak bülten olarak ekler (bir kez).
+    Son 20 iş döner. Stüdyoya ulaşılamazsa iş olduğu gibi kalır, sonraki eşitlemede yeniden denenir."""
+    ensure(engine)
+    with _sync_lock:
+        with engine.connect() as c:
+            open_rows = c.execute(sa.select(JOBS).where(
+                JOBS.c.tenant_id == tenant,
+                sa.or_(JOBS.c.status.in_(("queued", "running")),
+                       sa.and_(JOBS.c.status == "done", JOBS.c.bulletin_id.is_(None))))).fetchall()
+        for row in open_rows:
+            r = row._mapping
+            try:
+                st = studio_state(r["id"])
+                vals: dict[str, Any] = {"status": st.get("status") or r["status"], "error": st.get("error"),
+                                        "updated_at": _now()}
+                if vals["status"] == "done" and not r["bulletin_id"]:
+                    data = studio_audio(r["id"])
+                    b = add(engine, tenant, r["created_by"], data, original_name=f"{r['id']}.mp3",
+                            title=r["title"] or "Sesli bülten", voice=NARRATOR, duration_sec=st.get("duration"),
+                            source="sunucu", publish=False)
+                    vals["bulletin_id"] = b["id"]
+            except Exception as e:  # noqa: BLE001 — geçici (stüdyo kapalı, ağ); durum korunur, sonra yeniden denenir
+                vals = {"error": f"Durum alınamadı, yeniden denenecek: {str(e)[:200]}", "updated_at": _now()}
+            with engine.begin() as c:
+                c.execute(JOBS.update().where(JOBS.c.id == r["id"]).values(**vals))
+    with engine.connect() as c:
+        rows = c.execute(sa.select(JOBS).where(JOBS.c.tenant_id == tenant)
+                         .order_by(JOBS.c.created_at.desc()).limit(20)).fetchall()
+    return [_job_api(r) for r in rows]
+
+
+def pending(engine: sa.engine.Engine, tenant: str) -> int:
+    ensure(engine)
+    with engine.connect() as c:
+        return int(c.execute(sa.select(sa.func.count()).select_from(JOBS).where(
+            JOBS.c.tenant_id == tenant,
+            sa.or_(JOBS.c.status.in_(("queued", "running")),
+                   sa.and_(JOBS.c.status == "done", JOBS.c.bulletin_id.is_(None))))).scalar() or 0)
 
 
 # ------------------------------------------------------------------ komut satırı (sunucuda üretilen ses)

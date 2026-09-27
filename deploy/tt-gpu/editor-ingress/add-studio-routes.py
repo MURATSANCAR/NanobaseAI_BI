@@ -314,6 +314,25 @@ if "EDITOR-STUDYO-IFADE" not in s:
     s = s.replace("    # EDITOR-BITTI", ifade + "    # EDITOR-BITTI", 1)
     changes.append("sesli okuma ifade yolları")
 
+# 7) Kampüs sesli bülteni (09-28; bulletin.py, api_narration.py): kitaptan bağımsız metin → ZEKİ AI sesi.
+#    Oluşturma yalnız POST (gövde ≤ 30.000 karakter metin, 1 MB yeter); durum ve ses yalnız GET.
+if "EDITOR-STUDYO-BULTEN" not in s:
+    BIDP = "b[0-9a-f]{12}"
+    bulten = ("    # EDITOR-STUDYO-BULTEN  (Kampus sesli bulteni: bulletin.py)\n"
+              + f'''    location = /editor/studio/v1/studio/bulletins {{
+{guard}
+        if ($request_method != POST) {{ return 405; }}
+        client_max_body_size 1m;
+        proxy_pass {UP}/bulletins;
+        proxy_set_header Host $host;
+        proxy_read_timeout 60s;
+    }}
+'''
+              + loc(f"bulletins/({BIDP})", "GET", "bulletins/$1", timeout=30)
+              + loc(f"bulletins/({BIDP})/audio", "GET", "bulletins/$1/audio", timeout=120))
+    s = s.replace("    # EDITOR-BITTI", bulten + "    # EDITOR-BITTI", 1)
+    changes.append("Kampüs sesli bülteni yolları")
+
 if s == orig:
     print("zaten var (güncel)")
     sys.exit(0)
