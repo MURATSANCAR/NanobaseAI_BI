@@ -117,19 +117,19 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
         return dict(call(C.due_list, engine, tenant, status=status, within=within, kind=kind), can=caps(user))
 
     @app.get("/api/v1/editorial/contracts/lookup/books")
-    def lookup_books(request: Request, q: str = "") -> dict[str, Any]:
+    def lookup_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         session(request)
         schema, run = editorial(request)
-        rows = run(call(C.book_lookup_sql, crm_prefix(schema), q)).get("records") or []
-        return {"items": C._crm_books(rows)}
+        rows = run(call(C.book_lookup_sql, crm_prefix(schema), q, page)).get("records") or []
+        return {"items": C._crm_books(rows), **C.lookup_page(rows, page)}
 
     @app.get("/api/v1/editorial/contracts/lookup/parties")
-    def lookup_parties(request: Request, q: str = "") -> dict[str, Any]:
+    def lookup_parties(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         session(request)
         schema, run = editorial(request)
-        rows = run(call(C.party_lookup_sql, crm_prefix(schema), q)).get("records") or []
+        rows = run(call(C.party_lookup_sql, crm_prefix(schema), q, page)).get("records") or []
         return {"items": [{"type": str(r.get("tur")), "id": str(r.get("id") or ""), "name": str(r.get("ad") or "").strip()}
-                          for r in rows if str(r.get("ad") or "").strip()]}
+                          for r in rows], **C.lookup_page(rows, page)}
 
     # ------------------------------------------------------------------ kayıt
 

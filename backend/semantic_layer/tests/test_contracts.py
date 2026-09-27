@@ -441,3 +441,42 @@ def test_access_catalog_has_explicit_contract_features():
     feats = {f["key"]: f for f in cat["features"]}
     for k in ("ozellik:sozlesme.duzenle", "ozellik:sozlesme.hakedis", "ozellik:sozlesme.sablon"):
         assert feats[k]["explicit"] is True and feats[k]["page"] == "sayfa:telif-sozlesme"
+
+
+def test_terms_keep_every_party_book_and_tier():
+    t = T.clean({"parties": [{"name": f"Taraf {i}"} for i in range(60)],  # eski tavan 50
+                 "books": [{"title": f"Kitap {i}"} for i in range(250)],  # eski tavan 200
+                 "tiers": [{"from": i * 100, "rate": 5} for i in range(25)]})  # eski tavan 20
+    assert len(t["parties"]) == 60 and t["parties"][-1]["name"] == "Taraf 59"
+    assert len(t["books"]) == 250 and t["books"][-1]["title"] == "Kitap 249"
+    assert len(t["tiers"]) == 25 and t["tiers"][-1]["from"] == 2400
+
+
+def test_periods_cover_the_whole_contract():
+    from datetime import date
+
+    out = R.periods({"start": "1980-01-01", "periodMonths": 1}, date(2026, 9, 28))  # eski tavan 400 dönem
+    assert len(out) == (2026 - 1980) * 12 + 9
+    assert out[-1] == (date(2026, 9, 1), date(2026, 9, 30))
+
+
+def test_crm_related_contracts_are_not_capped():
+    sql = C.related_sql("p.", "3f2504e0-4f89-11d3-9a0c-0305e82c3301", None)
+    assert "TOP" not in sql.upper().split("FROM")[0]
+
+
+def test_lookups_page_with_visible_total():
+    for build in (C.book_lookup_sql, C.party_lookup_sql):
+        first, third = build("p.", "ahmet"), build("p.", "ahmet", 2)
+        for sql in (first, third):
+            assert "TOP " not in sql.upper() and "COUNT(*) OVER ()" in sql
+        assert first.endswith("OFFSET 0 ROWS FETCH NEXT 20 ROWS ONLY")
+        assert third.endswith("OFFSET 40 ROWS FETCH NEXT 20 ROWS ONLY")
+        with pytest.raises(T.ContractError):
+            build("p.", "ahmet", "x")
+    # kişi ve firma tek listede sayılır: toplam ikisinin birleşimi üzerinden
+    assert ") x ORDER BY" in C.party_lookup_sql("p.", "ahmet")
+    rows = [{"toplam": 45}] * 20
+    assert C.lookup_page(rows, 0) == {"total": 45, "shown": 20, "page": 0}
+    assert C.lookup_page([{"toplam": 45}] * 5, 2) == {"total": 45, "shown": 45, "page": 2}
+    assert C.lookup_page([], 0) == {"total": 0, "shown": 0, "page": 0}

@@ -1211,7 +1211,7 @@ def related_sql(p: str, crm_id: str, parent: Optional[str]) -> str:
     if parent and is_crm_id(parent):
         pg = parent.upper()
         ids += [f"r.new_sozlesmeId = '{pg}'", f"UPPER(r.new_anasozlesmeid) = '{{{pg}}}'"]
-    return ("SELECT TOP 200 r.new_sozlesmeId, r.new_name, CAST(r.statuscode AS int) AS durum_kod, r.new_SozlesmeBaslangicTarihi,"
+    return ("SELECT r.new_sozlesmeId, r.new_name, CAST(r.statuscode AS int) AS durum_kod, r.new_SozlesmeBaslangicTarihi,"
             " r.new_SozlesmeBitisTarihi, r.new_anasozlesmeid"
             f" FROM {p}new_sozlesmeBase r WHERE r.statecode = 0 AND r.new_sozlesmeId <> '{g}' AND ({' OR '.join(ids)})"
             " ORDER BY r.new_name")
@@ -1352,21 +1352,45 @@ def _like(text: str) -> str:
     return k
 
 
-def book_lookup_sql(p: str, q: str) -> str:
+LOOKUP_PAGE_SIZE = 20
+
+
+def _page(page: Any) -> str:
+    """Seçici sayfası: sonuç kesilmez, toplam (`toplam`) her satırda gelir, ekran «Daha fazla göster» ile ilerler."""
+    try:
+        n = max(0, int(page or 0))
+    except (TypeError, ValueError):
+        raise ContractError("Sayfa numarası geçerli değil.") from None
+    return f" OFFSET {n * LOOKUP_PAGE_SIZE} ROWS FETCH NEXT {LOOKUP_PAGE_SIZE} ROWS ONLY"
+
+
+def lookup_page(rows: list[dict[str, Any]], page: Any) -> dict[str, Any]:
+    """Seçici cevabının sayfa bilgisi: CRM'deki gerçek eşleşme sayısı (`total`) ve bu sayfayla birlikte gösterilen
+    kayıt sayısı (`shown`). Sayım CRM kaydı üzerinedir; e-kitabı olan kitap kartı listede iki satır olur."""
+    n = max(0, int(page or 0))
+    total = int(rows[0].get("toplam") or 0) if rows else 0
+    return {"total": total, "shown": min(total, n * LOOKUP_PAGE_SIZE + len(rows)), "page": n}
+
+
+def book_lookup_sql(p: str, q: str, page: Any = 0) -> str:
     """Taslağa kitap eklemek için: ad, ISBN, stok kodu (hakediş bu kodla Logo'yu okur)."""
     k = _like(q)
     d = re.sub(r"[^0-9Xx]", "", q or "").upper()
     match = [f"b.new_name LIKE N'%{k}%'", f"b.new_StokKodu LIKE N'%{k}%'"]
     if len(d) >= 5:
         match.append(f"REPLACE(REPLACE(ISNULL(b.new_isbn13, ''), '-', ''), ' ', '') LIKE '%{d}%'")
-    return ("SELECT TOP 20 b.new_kitapId, b.new_name, b.new_StokKodu, b.new_isbn13, b.new_kdvdahilfiyat, b.new_EKitapStokKodu"
-            f" FROM {p}new_kitapBase b WHERE b.statecode = 0 AND ({' OR '.join(match)}) ORDER BY b.new_name")
+    return ("SELECT b.new_kitapId, b.new_name, b.new_StokKodu, b.new_isbn13, b.new_kdvdahilfiyat, b.new_EKitapStokKodu,"
+            " COUNT(*) OVER () AS toplam"
+            f" FROM {p}new_kitapBase b WHERE b.statecode = 0 AND ({' OR '.join(match)}) ORDER BY b.new_name, b.new_kitapId"
+            + _page(page))
 
 
-def party_lookup_sql(p: str, q: str) -> str:
-    """Taraf: CRM kişisi ya da firması."""
+def party_lookup_sql(p: str, q: str, page: Any = 0) -> str:
+    """Taraf: CRM kişisi ya da firması, ada göre tek listede."""
     k = _like(q)
-    return ("SELECT TOP 20 'kisi' AS tur, c.ContactId AS id, c.FullName AS ad FROM "
-            f"{p}ContactBase c WHERE c.statecode = 0 AND c.FullName LIKE N'%{k}%'"
-            " UNION ALL SELECT TOP 20 'firma' AS tur, a.AccountId AS id, a.Name AS ad FROM "
-            f"{p}AccountBase a WHERE a.statecode = 0 AND a.Name LIKE N'%{k}%'")
+    return ("SELECT x.tur, x.id, x.ad, COUNT(*) OVER () AS toplam FROM ("
+            f"SELECT 'kisi' AS tur, c.ContactId AS id, c.FullName AS ad FROM {p}ContactBase c"
+            f" WHERE c.statecode = 0 AND c.FullName LIKE N'%{k}%'"
+            f" UNION ALL SELECT 'firma' AS tur, a.AccountId AS id, a.Name AS ad FROM {p}AccountBase a"
+            f" WHERE a.statecode = 0 AND a.Name LIKE N'%{k}%') x ORDER BY x.ad, x.tur, x.id"
+            + _page(page))
