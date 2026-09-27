@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { AlertTriangle, BookOpen, CheckCircle2, Download, Eye, EyeOff, Loader2, XCircle } from 'lucide-react';
+import { AlertTriangle, BookOpen, CheckCircle2, Download, Eye, EyeOff, Headphones, Loader2, Volume2, VolumeX, XCircle } from 'lucide-react';
 import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
-import { Progress, ghostBtn, gradientBtn, press } from '../shared';
+import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
+import { narrationApi } from '../narration/api';
 import AltTextList from './AltTextList';
 import EpubPreview from './EpubPreview';
-import { epubApi, isbnOk, useEpub, type EpubCheck, type EpubView, type EpubWant } from './api';
+import { epubApi, isbnOk, useEpub, type EpubAudioInfo, type EpubCheck, type EpubView, type EpubWant } from './api';
 
-/** Stüdyonun «E-kitap» bölümü: aynı sayfa planından e-kitap. Biçim (otomatik öneriyle), e-ISBN, üret düğmesi ve
- *  ilerleme, e-kitap denetiminin sonucu (Türkçe), indir, sayfa sayfa önizleme ve alt metinleri gözden geçirme.
- *  Ekranda teknoloji adı yok. */
+/** Stüdyonun «E-kitap» bölümü: aynı sayfa planından e-kitap. Biçim (otomatik öneriyle), ses (sesli e-kitap: okurken
+ *  dinle, okunan kelime vurgulu — yalnız bütün sayfaların sesi hazırken; değilse uyarı ve eksik sesleri üretme), e-ISBN,
+ *  üret düğmesi ve ilerleme, e-kitap denetiminin sonucu (Türkçe), indir, sayfa sayfa önizleme (sesliyse önizlemede
+ *  dinle) ve alt metinleri gözden geçirme. Ekranda teknoloji adı yok. */
 
 const STEP: Record<string, string> = { alt: 'Alt metinler hazırlanıyor', dizgi: 'Sayfalar diziliyor', denetim: 'E-kitap denetleniyor' };
 const LAYOUT_TEXT = { fixed: 'Sabit sayfa', reflow: 'Akışkan metin' } as const;
@@ -51,6 +53,53 @@ function CheckResult({ check }: { check: EpubCheck }) {
   );
 }
 
+/** Ses seçimi: sesli e-kitap yalnız bütün sayfaların sesi hazır ve güncelken seçilebilir; eksikse neden ve «eksik
+ *  sesleri üret» düğmesi. */
+function AudioChoice({ jobId, info, on, setOn }: { jobId: string; info: EpubAudioInfo; on: boolean; setOn: (v: boolean) => void }) {
+  const qc = useQueryClient();
+  const run = useMutation({
+    mutationFn: () => narrationApi.run(jobId, null),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: ['studio', 'narration', jobId] });
+      void qc.invalidateQueries({ queryKey: ['studio', 'epub', jobId] });
+    },
+  });
+  const todo = info.missing + info.stale;
+  const options: [boolean, string, string, typeof Volume2][] = [
+    [true, 'Sesli e-kitap', info.ready ? `Okurken dinle; okunan kelime vurgulanır · ${secs(info.duration)}` : 'Yalnız bütün sayfaların sesi hazırken', Volume2],
+    [false, 'Sessiz e-kitap', 'Yalnız metin ve görseller', VolumeX],
+  ];
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="radiogroup" aria-label="E-kitabın sesi" className="grid gap-2 sm:grid-cols-2">
+        {options.map(([k, t, help, Icon]) => (
+          <button key={t} type="button" role="radio" aria-checked={on === k} onClick={() => setOn(k)}
+            disabled={k && !info.ready}
+            className={`flex items-start gap-2 rounded-2xl border p-2.5 text-left disabled:opacity-40 ${press} ${on === k ? 'border-canvas-violet bg-violet-50/60 ring-2 ring-canvas-violet/25' : 'border-slate-200 bg-white/70'}`}>
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-canvas-violet" aria-hidden />
+            <span className="min-w-0">
+              <span className="block text-[12.5px] font-extrabold">{t}</span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-canvas-muted">{help}</span>
+            </span>
+          </button>
+        ))}
+      </div>
+      {!info.ready && info.reason && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1"><Note tone="warn">{info.reason}</Note></div>
+          {todo > 0 && (
+            <button type="button" className={ghostBtn} disabled={run.isPending || run.isSuccess} onClick={() => run.mutate()}>
+              {run.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Headphones className="h-4 w-4" aria-hidden />}
+              {run.isSuccess ? 'Seslendirme başladı' : `Eksik sesleri üret (${todo} sayfa)`}
+            </button>
+          )}
+        </div>
+      )}
+      {run.error && <Note tone="err">{errText(run.error, 'Seslendirme başlatılamadı.')}</Note>}
+    </div>
+  );
+}
+
 function Eisbn({ jobId, v }: { jobId: string; v: EpubView }) {
   const qc = useQueryClient();
   const [val, setVal] = useState(isbnFmt(v.meta.eisbn));
@@ -87,10 +136,13 @@ export default function EpubSection({ jobId }: { jobId: string }) {
   const q = useEpub(jobId);
   const v = q.data;
   const [want, setWant] = useState<EpubWant>('auto');
+  const [audioChoice, setAudioChoice] = useState<boolean | null>(null);
   const [preview, setPreview] = useState(false);
   const [alts, setAlts] = useState(false);
+  const withAudio = !!v?.audio?.ready && (audioChoice ?? true);
+  // Sesli e-kitap seçilip sesler sonradan eksik düşerse (metin değişti) sessize döner; ekran seçimi gösterir.
   const build = useMutation({
-    mutationFn: () => epubApi.build(jobId, want),
+    mutationFn: () => epubApi.build(jobId, want, withAudio),
     onSuccess: (data) => qc.setQueryData(['studio', 'epub', jobId], data),
   });
 
@@ -143,6 +195,8 @@ export default function EpubSection({ jobId }: { jobId: string }) {
           <Eisbn jobId={jobId} v={v} />
         </div>
 
+        <AudioChoice jobId={jobId} info={v.audio} on={withAudio} setOn={setAudioChoice} />
+
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button type="button" className={`${gradientBtn} sm:w-auto`} disabled={working || build.isPending} onClick={() => build.mutate()}>
             {working || build.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <BookOpen className="h-4 w-4" aria-hidden />}
@@ -169,6 +223,8 @@ export default function EpubSection({ jobId }: { jobId: string }) {
                 <dt className="text-canvas-muted">Biçim</dt><dd className="font-bold">{LAYOUT_TEXT[r.layout]}</dd>
                 <dt className="text-canvas-muted">Sayfa / bölüm</dt><dd className="font-bold">{r.pages.length}</dd>
                 <dt className="text-canvas-muted">Görsel</dt><dd className="font-bold">{r.images}{r.alt_missing ? ` · ${r.alt_missing} alt metinsiz` : ' · hepsinin alt metni var'}</dd>
+                <dt className="text-canvas-muted">Ses</dt>
+                <dd className="font-bold">{r.audio?.on ? `Sesli · ${secs(r.audio.duration)}${r.audio.narrators.length ? ` · ${r.audio.narrators.join(', ')}` : ''}` : 'Sessiz'}</dd>
                 <dt className="text-canvas-muted">e-ISBN</dt><dd className="font-bold">{r.eisbn ? isbnFmt(r.eisbn) : 'yok'}</dd>
                 <dt className="text-canvas-muted">Yazı tipleri</dt>
                 <dd className="font-bold">{[...new Set(r.fonts.filter((f) => f.embedded).map((f) => f.family))].join(', ') || 'okuyucunun'}</dd>
@@ -186,7 +242,7 @@ export default function EpubSection({ jobId }: { jobId: string }) {
         <div className="flex flex-wrap gap-2">
           {r && (
             <button type="button" className={ghostBtn} aria-expanded={preview} onClick={() => setPreview((p) => !p)}>
-              {preview ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}{preview ? 'Önizlemeyi kapat' : 'Önizle'}
+              {preview ? <EyeOff className="h-4 w-4" aria-hidden /> : <Eye className="h-4 w-4" aria-hidden />}{preview ? 'Önizlemeyi kapat' : r.audio?.on ? 'Önizle ve dinle' : 'Önizle'}
             </button>
           )}
           {v.has_plan && (
