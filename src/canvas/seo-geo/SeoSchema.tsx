@@ -5,12 +5,15 @@ import { ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, RefreshCw }
 import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 const PAGE = 40;
 
 /** Şema denetimi: canlı kitap sayfalarının yapılandırılmış verisi (JSON-LD), yalnız okunarak taranır. Şemayı T-soft
  *  teması üretir; buradan tema isteği belgesi indirilir. T-soft'a hiçbir şey yazılmaz. */
 export default function SeoSchema() {
+  // Okuma/tarama/ölçüm başlatmak «SEO eşitleme ve ölçüm» ister; rolde yoksa düğme çıkmaz.
+  const canRun = useCan('seo.calistir');
   const qc = useQueryClient();
   const [issue, setIssue] = useState('');
   const [start, setStart] = useState(0);
@@ -36,10 +39,10 @@ export default function SeoSchema() {
       lead="Google ve yapay zekâ motorları kitabı, yazarı ve fiyatı sayfadaki yapılandırılmış veriden (schema.org) okur. Sayfalar yalnız okunarak, saniyede bir taranır; eksikler kitap başına listelenir. Şemayı T-soft teması ürettiği için düzeltme tema isteğiyle yapılır."
       actions={
         <>
-          <button className="sg-button" onClick={() => crawl.mutate()} disabled={crawl.isPending || d?.crawl.running}>
+          {canRun && <button className="sg-button" onClick={() => crawl.mutate()} disabled={crawl.isPending || d?.crawl.running}>
             {d?.crawl.running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
             {d?.crawl.running ? `Taranıyor ${fmt(d.crawl.done)}${d.crawl.queue ? ` / ${fmt(d.crawl.queue)}` : ''}` : 'Taramayı başlat (1 saat)'}
-          </button>
+          </button>}
           <a className="sg-button primary" href={seoApi.themeRequestUrl()}>
             <Download size={16} aria-hidden /> Tema isteği belgesi
           </a>

@@ -32,6 +32,8 @@ import uuid
 from typing import Any, Optional
 
 import sqlalchemy as sa
+from fastapi import HTTPException, Request
+from pydantic import BaseModel, Field
 
 from . import crm, propose, rules
 from .store import _md, dumps, iso, loads, now
@@ -516,10 +518,22 @@ def slug(text: str) -> str:
 
 
 # ------------------------------------------------------------------ uçlar
+# Modül düzeyinde: `from __future__ import annotations` ile FastAPI tipleri modülün globallerinde arar; içeride
+# tanımlı model/Request sorgu parametresi sanılır (422 «query.request missing»).
+class GuideCreate(BaseModel):
+    topicKey: str = Field(min_length=1, max_length=40)
+    bookIds: Optional[list[str]] = None
+
+
+class GuideDecision(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+    fields: dict[str, Any] = Field(default_factory=dict)
+    bookIds: Optional[list[str]] = None
+    note: str = Field(default="", max_length=1000)
+
+
 def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde, modülün düzeni böyle
-    from fastapi import HTTPException, Request
     from fastapi.responses import HTMLResponse
-    from pydantic import BaseModel, Field
 
     from . import EAN, _image
     from .store import CRM_BOOKS, PRODUCTS, QUESTIONS
@@ -674,16 +688,6 @@ def register(app, ctx) -> None:  # noqa: C901 — uçlar tek yerde, modülün d�
         finally:
             with seo._gen_lock:
                 seo._generating.discard(gen_key)
-
-    class GuideCreate(BaseModel):
-        topicKey: str = Field(min_length=1, max_length=40)
-        bookIds: Optional[list[str]] = None
-
-    class GuideDecision(BaseModel):
-        action: str = Field(pattern="^(approve|reject)$")
-        fields: dict[str, Any] = Field(default_factory=dict)
-        bookIds: Optional[list[str]] = None
-        note: str = Field(default="", max_length=1000)
 
     @app.get("/api/v1/seo-geo/guides/topics")
     def guide_topics(request: Request, start: int = 0, limit: int = 50) -> dict[str, Any]:

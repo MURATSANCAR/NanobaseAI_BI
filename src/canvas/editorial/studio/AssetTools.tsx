@@ -3,6 +3,7 @@ import { Check, ImageMinus, Loader2, RotateCcw, Sparkles } from 'lucide-react';
 import { studioPlanApi, type Plan, type PlanAsset, type PlanBox } from '../../engine';
 import { btnGhost, btnPrimary } from '../../admin/ui';
 import { PRINT_DPI, effectiveDpi } from './pageItems';
+import { useCan } from '../../useAdmin';
 
 /** Fotoğraf/figür araçları: etkin çözünürlük, «Kaliteyi artır» (öncesi/sonrası karşılaştırma → Kullan),
  *  «Arka planı kaldır» (önizle → onayla) ve «Özgüne dön». Sonuç kopyaları plandaki `assets`'ten okunur
@@ -36,6 +37,8 @@ export default function AssetTools({ job, plan, gid, box, fit, running, onStart,
   const dpi = effectiveDpi(a, box, fit);
   const low = dpi !== null && dpi < PRINT_DPI;
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const [err, setErr] = useState<string | null>(null);
   const start = (k: AssetJobKind) => { setErr(null); onStart(k).catch((e: Error) => setErr(e.message)); };
 
@@ -59,12 +62,12 @@ export default function AssetTools({ job, plan, gid, box, fit, running, onStart,
       {low && (
         <div className="rounded-xl bg-amber-50 px-2.5 py-2 text-[12px] font-semibold text-amber-800">
           Baskıda bulanık çıkabilir ({dpi} dpi; baskı için {PRINT_DPI} dpi gerekir). Kutuyu küçültün ya da kaliteyi artırın.
-          <div className="mt-1.5">
+          {canProduce && <div className="mt-1.5">
             <button type="button" className={btnPrimary} disabled={running.has('upscale')} onClick={() => start('upscale')}>
               {running.has('upscale') ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
               {running.has('upscale') ? 'Kalite artırılıyor…' : 'Kaliteyi artır'}
             </button>
-          </div>
+          </div>}
         </div>
       )}
 
@@ -92,7 +95,7 @@ export default function AssetTools({ job, plan, gid, box, fit, running, onStart,
               <button type="button" className={btnGhost} onClick={() => setDismissed(new Set([...dismissed, cutout[0]]))}>Vazgeç</button>
             </div>
           </div>
-        ) : (
+        ) : canProduce && (
           <button type="button" className={btnGhost} disabled={running.has('cutout')} onClick={() => start('cutout')}>
             {running.has('cutout') ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <ImageMinus className="h-4 w-4" aria-hidden />}
             {running.has('cutout') ? 'Arka plan kaldırılıyor…' : 'Arka planı kaldır'}

@@ -8,6 +8,7 @@ import { ModuleFrame, Panel } from '../kit';
 import { Img, Progress, STATUS_TEXT, StepIcon, ghostBtn, gradientBtn, secs } from './shared';
 import KunyePanel from './KunyePanel';
 import { ArtModeCard } from './ArtMode';
+import { useCan } from '../../useAdmin';
 
 /** Yeni tasarımın akışı: içerik, CRM proje bilgisi, sistemin kararları ve canlı üretim adımları.
  *  Sayfa şeridi dizilmiş iç sayfalardan gelir (PDF'in kendisi); her karar gerekçesiyle görünür. */
@@ -69,6 +70,8 @@ export default function StudioFlow() {
   const { jobId = '' } = useParams();
   const nav = useNavigate();
   const q = useStudioJob(jobId);
+  // Yeniden başlatma ve kaldığı yerden sürdürme GPU harcar: «Kitap tasarımında üretim».
+  const canProduce = useCan('tasarim.uret');
   const restart = useMutation({ mutationFn: () => studioApi.restart(jobId), onSuccess: (r) => nav(`/kitap-tasarim/${r.id}`) });
   const qc = useQueryClient();
   const resume = useMutation({ mutationFn: () => studioApi.resume(jobId), onSuccess: () => qc.invalidateQueries({ queryKey: ['studio', 'job', jobId] }) });
@@ -100,14 +103,16 @@ export default function StudioFlow() {
       {failed && (
         <Note tone="err">
           Hat durdu: {d?.state.error}{' '}
-          {d?.pages.length ? (
+          {canProduce && d?.pages.length ? (
             <button type="button" className="mr-3 font-bold underline" onClick={() => resume.mutate()} disabled={resume.isPending}>
               <RotateCcw className="mr-1 inline h-3.5 w-3.5" aria-hidden />Kaldığı yerden devam et
             </button>
           ) : null}
-          <button type="button" className="font-bold underline" onClick={() => restart.mutate()} disabled={restart.isPending}>
-            Baştan başlat
-          </button>
+          {canProduce && (
+            <button type="button" className="font-bold underline" onClick={() => restart.mutate()} disabled={restart.isPending}>
+              Baştan başlat
+            </button>
+          )}
         </Note>
       )}
       {!d ? <Panel><Loading /></Panel> : (

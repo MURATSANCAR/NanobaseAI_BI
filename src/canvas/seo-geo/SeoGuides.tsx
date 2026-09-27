@@ -163,9 +163,9 @@ export default function SeoGuides() {
                   <h2>Konu yok</h2>
                   <p>
                     {topics.data.search.savedAt
-                      ? 'Aramalarda liste ya da öneri arayan sorgu bulunamadı. İzlenen sorulara soru ekleyerek konu açabilirsiniz.'
-                      : 'Search Console verisi henüz okunmadı.'}{' '}
-                    <Link to="/seo-geo/ai-gorunurluk">İzlenen sorular</Link>
+                      ? 'Aramalarda liste ya da öneri arayan sorgu bulunamadı.'
+                      : 'Search Console verisi henüz okunmadı; konular okunan aramalardan çıkar.'}{' '}
+                    Konuyu elle açmak için <Link to="/seo-geo/ai-gorunurluk">izlenen sorulara</Link> soru ekleyin.
                   </p>
                 </div>
               )}

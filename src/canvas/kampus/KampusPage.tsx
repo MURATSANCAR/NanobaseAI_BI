@@ -14,24 +14,22 @@ import {
   LayoutGrid,
   MessageCircle,
   Mic,
-  Pause,
   Phone,
   PhoneCall,
-  Play,
   Plus,
-  Radio,
   Search,
   Sparkle,
   Sparkles,
 } from 'lucide-react';
 import { GROUP_HOME } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
-import { canOpenRoute, usePageAccess } from '../useAdmin';
+import { canOpenRoute, useCan, usePageAccess } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
 import { relative } from '../format';
 import PersonAvatar from './PersonAvatar';
+import BulletinCard from './BulletinCard';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
@@ -87,14 +85,15 @@ export default function KampusPage() {
   // Ana modül kutuları kişinin rolündeki sayfalara göre: açamayacağı modül gösterilmez.
   const pages = usePageAccess();
   const tiles = MODULE_TILES.filter((m) => canOpenRoute(pages, m.to));
+  // ZEKİ'ye soru: rolde «Zeki AI'a soru sorma» ve cevabın açıldığı Genel bakış olmalı; yoksa kutu gösterilmez.
+  const canAskZeki = useCan('zeki.soru') && canOpenRoute(pages, '/genel-bakis');
+  const canExport = useCan('veri.disa-aktar');
   const session = useTimasSession();
   const fullName = session.data?.displayName || session.data?.username || '';
   const firstName = fullName.split(/[\s._@]/)[0] || fullName;
 
   // ZEKİ kutusu: soru BI kanvasına gider, cevabı motor verir.
   const [zekiQ, setZekiQ] = useState('');
-  // Sesli bülten oynatıcı: gerçek ses kaynağı sonra bağlanacak; şimdilik oynat/duraklat durumu.
-  const [playing, setPlaying] = useState(false);
   // Kitap seçme: tasarım geri geldi, gerçek katalog sonra bağlanacak.
   const [selectedBook, setSelectedBook] = useState<string | null>(null);
   const askZeki = (q: string) => {
@@ -133,7 +132,7 @@ export default function KampusPage() {
     if (!v) return;
     // Rakam ya da kişi/kat adıysa rehberde süzülür; değilse soru ZEKİ'ye gider.
     const hits = everyone.some((p) => haystack(p).some((x) => trNorm(x).includes(trNorm(v))));
-    if (hits || /^\d+$/.test(v)) {
+    if (hits || /^\d+$/.test(v) || !canAskZeki) {
       setFloor(ALL_FLOORS);
       setTerm(v);
       directoryRef.current?.scrollIntoView({ block: 'start' });
@@ -322,59 +321,8 @@ export default function KampusPage() {
       <div className="mx-auto grid w-full max-w-[1720px] grid-cols-1 gap-4 py-4 sm:gap-5 lg:grid-cols-12">
         {/* SOL SÜTUN */}
         <aside className="flex min-w-0 flex-col gap-4 lg:col-span-3">
-          {/* SESLİ BÜLTEN — podcast oynatıcı (ses kaynağı sonra bağlanacak) */}
-          <section id="podcast-hub" className="kp-card relative overflow-hidden rounded-2xl bg-gradient-to-r from-ink via-[#262b45] to-ink p-5 text-white">
-            <div className="pointer-events-none absolute bottom-0 right-0 top-0 w-1/3 bg-gradient-to-l from-violet/25 to-transparent" />
-            <div className="relative z-10 flex flex-col items-start justify-between gap-4">
-              <div className="flex min-w-0 items-center gap-3.5">
-                <div className="kp-glow flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-violet text-white">
-                  <Radio className="h-6 w-6" />
-                </div>
-                <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="kp-mono whitespace-nowrap rounded border border-violet/40 bg-violet/25 px-2 py-0.5 text-[11px] font-bold uppercase tracking-wider text-coral">
-                      Haftanın Sesli Bülteni
-                    </span>
-                    <span className="kp-mono text-[11px] text-muted/70">14 Dk • Bölüm #42</span>
-                  </div>
-                  <h3 className="kp-display mt-1 text-sm font-bold text-white">"Matbaadan Raflara: Editör Masasında Bir Kitabın Doğuşu"</h3>
-                  <p className="mt-0.5 text-xs text-muted/60">Konuk: Prof. Dr. M. Yılmaz &amp; Deniz Kaya (Seslendiren: ZEKİ Voice)</p>
-                </div>
-              </div>
-              <div className="flex w-full items-center justify-between gap-3">
-                <button
-                  type="button"
-                  aria-label={playing ? 'Duraklat' : 'Oynat'}
-                  onClick={() => setPlaying((v) => !v)}
-                  className="kp-press flex h-11 w-11 items-center justify-center rounded-full bg-white text-ink shadow-md hover:bg-violet hover:text-white"
-                >
-                  {playing ? <Pause className="h-5 w-5 fill-current" /> : <Play className="ml-0.5 h-5 w-5 fill-current" />}
-                </button>
-                <span className={`kp-mono text-[11px] ${playing ? 'text-coral' : 'text-muted/70'}`}>
-                  {playing ? '02:15 / 14:12 (Çalıyor)' : '00:00 / 14:12'}
-                </span>
-              </div>
-            </div>
-            <div className="mt-4 flex h-4 items-center gap-1 border-t border-white/10 pt-3">
-              {[
-                ['bg-violet', 'h-2', true],
-                ['bg-coral', 'h-3', true],
-                ['bg-slate-500', 'h-1.5', false],
-                ['bg-violet', 'h-4', true],
-                ['bg-slate-500', 'h-2', false],
-                ['bg-coral', 'h-3.5', true],
-                ['bg-slate-500', 'h-1', false],
-                ['bg-violet', 'h-3', false],
-                ['bg-slate-600', 'h-2', false],
-                ['bg-coral/70', 'h-4', false],
-              ].map(([c, h, pulse], i) => (
-                <span key={i} className={`w-1 shrink-0 rounded-full ${c} ${h} ${pulse && playing ? 'animate-pulse' : ''}`} />
-              ))}
-              <span className="ml-2 h-1 w-full rounded-full bg-white/10">
-                <span className="block h-1 rounded-full bg-violet" style={{ width: playing ? '16%' : '24%' }} />
-              </span>
-            </div>
-          </section>
+          {/* SESLİ BÜLTEN — sunucuda üretilen ses (bkz. BulletinCard, Yönetim → Sesli bülten) */}
+          <BulletinCard />
 
           {/* ÖNEMLİ GÜNLER & AJANDA — içerik sonra gerçek takvime bağlanacak */}
           <Card id="ajanda" className="p-4">
@@ -438,6 +386,7 @@ export default function KampusPage() {
                 <h2 className="kp-display text-xl font-bold leading-snug tracking-tight text-ink sm:text-2xl">
                   Selam {firstName}! Ben <span className="text-violet">ZEKİ</span>, bugün hangi işi kolaylaştıralım?
                 </h2>
+                {canAskZeki ? (<>
                 <p className="mt-1.5 text-xs leading-relaxed text-muted">
                   Satış, ciro, iade, tahsilat ve cari sorularını Logo verisinden cevaplarım; kişi ve dahili aramak için üstteki arama kutusu var.
                 </p>
@@ -483,6 +432,9 @@ export default function KampusPage() {
                   <Sparkle className="mt-0.5 h-3.5 w-3.5 shrink-0 text-violet" />
                   <span>Sorunuz ZEKİ AI Genel Bakış ekranında gerçek veriyle cevaplanır.</span>
                 </div>
+                </>) : (
+                  <p className="mt-1.5 text-xs leading-relaxed text-muted">Kişi ve dahili aramak için üstteki arama kutusunu kullanın.</p>
+                )}
               </div>
             </div>
           </section>
@@ -787,6 +739,7 @@ export default function KampusPage() {
             <span>•</span>
             <span className="font-medium text-violet">Birlikte Üretiyor, Birlikte Okuyoruz</span>
           </div>
+          {canExport && (
           <button
             type="button"
             onClick={downloadDirectory}
@@ -796,6 +749,7 @@ export default function KampusPage() {
           >
             <Download className="h-3.5 w-3.5" /> Dahili Rehber (CSV)
           </button>
+          )}
         </div>
       </footer>
       </ZoomStage>

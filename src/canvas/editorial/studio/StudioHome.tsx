@@ -7,11 +7,14 @@ import { ART_MODES, ArtModePicker, artModeDuration } from './ArtMode';
 import { Loading, Note, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { StepIcon, ago, ghostBtn, gradientBtn } from './shared';
+import { useCan } from '../../useAdmin';
 
 /** Kitap Tasarım Stüdyosu girişi: okunmuş bir kitaptan ya da Word dosyasından yeni tasarım başlatır,
  *  önceki işleri listeler. Kitap bilgisi CRM'den, resimler Qwen-Image-2.1'den, dizgi Typst'ten gelir. */
 export default function StudioHome() {
   const nav = useNavigate();
+  // «Kitap tasarımında üretim» (GPU) rolde yoksa yeni tasarım başlatılamaz; var olan işler açılır.
+  const canProduce = useCan('tasarim.uret');
   const [q, setQ] = useState('');
   // Kitaba tıklamak işi başlatmaz: ~40 dk GPU işi, önce onay (2026-09-25: yanlış tıklamayla kopya iş açılmıştı).
   const [pick, setPick] = useState<{ id: string; title: string } | null>(null);
@@ -43,6 +46,7 @@ export default function StudioHome() {
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
       <div className="grid gap-3 lg:grid-cols-[1.4fr_1fr] lg:gap-4">
+        {canProduce ? (
         <Panel>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="text-[15px] font-extrabold">Yeni tasarım</h2>
@@ -111,6 +115,12 @@ export default function StudioHome() {
             </ul>
           )}
         </Panel>
+        ) : (
+          <Panel>
+            <h2 className="text-[15px] font-extrabold">Yeni tasarım</h2>
+            <p className="mt-2 text-[12.5px] text-canvas-muted">Yeni tasarım başlatmak rolünüzde yok. Var olan tasarımları yandan açabilirsiniz.</p>
+          </Panel>
+        )}
 
         <Panel>
           <h2 className="text-[15px] font-extrabold">Tasarımlar</h2>

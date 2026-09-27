@@ -7,6 +7,7 @@ import { Progress } from './shared';
 import { Label, characterNames, type EditorCtx } from './InspectorPanel';
 import { PHOTO_TYPES, type UploadItem } from './uploads';
 import { ConfirmDialog } from './dialogs';
+import { useCan } from '../../useAdmin';
 
 /** Kütüphane sekmesi: fotoğraf yükleme (dosya seç, tuvale bırak, telefonda kamera/galeri), figür üretme,
  *  süren işler ve iş başına figür/fotoğraf kütüphanesi. Kütüphanedeki öge tuvale sürüklenir (masaüstü)
@@ -39,6 +40,8 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
   onMakeArt: (gid: string) => void;
   onDeleteAsset: (gid: string) => Promise<void>;
 }) {
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const pick = useRef<HTMLInputElement | null>(null);
   const cam = useRef<HTMLInputElement | null>(null);
   const [prompt, setPrompt] = useState('');
@@ -111,7 +114,7 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
       </section>
 
       {/* Figür üret */}
-      <section className="flex flex-col gap-2">
+      {canProduce && <section className="flex flex-col gap-2">
         <Label>Figür üret</Label>
         <textarea rows={2} className={field} value={prompt} onChange={(e) => setPrompt(e.target.value)} maxLength={600}
           placeholder="Ör. kırmızı balonlu küçük tilki" aria-label="Figür tarifi" />
@@ -137,7 +140,7 @@ export default function FigureLibrary({ ctx, uploads, onUpload, onRemoveUpload, 
         </button>
         <p className="text-[11.5px] text-canvas-muted">Figür kitabın üslubuyla, saydam zeminle çizilir. Üretim sürerken düzenlemeye devam edebilirsiniz.</p>
         {err && <p className="text-[12px] font-semibold text-rose-700">{err}</p>}
-      </section>
+      </section>}
 
       {(active.length > 0 || failed.length > 0) && (
         <section className="flex flex-col gap-1.5" aria-live="polite">

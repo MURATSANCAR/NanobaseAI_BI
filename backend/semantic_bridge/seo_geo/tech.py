@@ -9,6 +9,7 @@ süre bütçesi. `/rest` yollarına hiç gidilmez. T-soft'a ve CRM'e hiçbir şe
     X-Robots-Tag, hreflang, başlık uzunluğu, h1 sayısı, taranan sayfalarda yinelenen başlık, izleme parametreleri
     (canonical ve site içi bağlantılarda), görseller (alt metni, anlamsız dosya adı, boyut), kapak görselinin alt metni.
     Sıra: hiç bakılmamış ya da en eski bakılan önce; bütçe dolunca durur, sonraki tur kaldığı yerden sürer (tavan yok).
+    Sayfanın site içi bağlantıları (hedef + bağlantı metni) `links.py`nin tablosuna yazılır; analiz orada.
 (b) Sitemap — robots.txt'teki `Sitemap:` satırları (yoksa /sitemap.xml), dizin dosyaları iç içe (gzip dahil), sitemap
     başına adres sayısı ve en yeni lastmod (30 günden eski ya da açılmayan işaretlenir), sitemaplerden örneklem
     denetimi (örneklem büyüklüğü parametre; sonuç "örneklem" diye raporlanır), aktif ürünlerden sitemapte olmayanlar.
@@ -105,6 +106,37 @@ CHECKS: dict[str, tuple[str, str, str]] = {
                      "kapak kitapla eşleşmez."),
 }
 IMAGE_CHECKS = ("img_no_alt", "img_empty_alt", "img_bad_name", "img_no_size", "main_img_alt")
+#: Taranan sayfaların en az bu oranında (ve en az CHROME_MIN_PAGES sayfada) aynı adresle geçen görsel sitenin
+#: şablonudur (logo, simge, ödeme rozeti): sayfa uyarısı sayılmaz, tema isteğinde tek madde olur. İlk canlı
+#: taramada (2026-09-27, 70 sayfa) şablon görselleri yüzünden görsel uyarıları 66/70 sayfada çıkıyordu.
+CHROME_SHARE, CHROME_MIN_PAGES = 0.30, 5
+_IMG_KEYS = (("img_no_alt", "noAlt"), ("img_empty_alt", "emptyAlt"), ("img_bad_name", "badName"), ("img_no_size", "noSize"))
+
+
+def chrome_images(pages: list[dict[str, Any]]) -> set[str]:
+    """Şablon görselleri: sayfa başına tekil sayılır; `pages` her sayfanın `images` özeti (noAlt, emptyAlt…)."""
+    n = len(pages)
+    if n < CHROME_MIN_PAGES:
+        return set()
+    seen: collections.Counter = collections.Counter()
+    for img in pages:
+        seen.update({src for _, k in _IMG_KEYS for src in (img.get(k) or [])})
+    need = max(CHROME_MIN_PAGES, CHROME_SHARE * n)
+    return {src for src, c in seen.items() if c >= need}
+
+
+def without_chrome(images: dict[str, Any], chrome: set[str]) -> tuple[dict[str, Any], set[str]]:
+    """Şablon görselleri ayıklanmış özet ve kalan görsel sorunları."""
+    out = dict(images)
+    flags = set()
+    for key, k in _IMG_KEYS:
+        raw = images.get(k + "All", images.get(k)) or []
+        kept = [s for s in raw if s not in chrome]
+        out[k + "All"], out[k] = raw, kept
+        if kept:
+            flags.add(key)
+    out["chrome"] = sorted({s for _, k in _IMG_KEYS for s in (images.get(k + "All", images.get(k)) or []) if s in chrome})
+    return out, flags
 KINDS = {"product": "Ürün", "category": "Kategori", "brand": "Yayınevi", "author": "Yazar", "home": "Anasayfa"}
 LINK_KIND = {"model": "author", "category": "category", "brand": "brand"}
 
@@ -160,6 +192,10 @@ class _Page(HTMLParser):
         self.h1 = 0
         self.images: list[dict[str, Any]] = []
         self.links: list[str] = []
+        #: Site içi bağlantı analizi (links.py) için bağlantı + görünen metin: metin yoksa içindeki görselin alt metni,
+        #: o da yoksa aria-label/title.
+        self.anchors: list[dict[str, str]] = []
+        self._a: Optional[dict[str, Any]] = None
         self.og_image: Optional[str] = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
@@ -184,10 +220,26 @@ class _Page(HTMLParser):
             src = a.get("data-src") or a.get("data-original") or a.get("data-lazy") or a.get("src") or ""
             self.images.append({"src": src.strip(), "alt": a["alt"] if "alt" in a else None,
                                 "width": a.get("width") or None, "height": a.get("height") or None})
-        elif tag == "a" and a.get("href"):
-            self.links.append(a["href"].strip())
+            if self._a is not None and a.get("alt", "").strip():
+                self._a["alt"].append(a["alt"])
+        elif tag == "a":
+            self._close_anchor()
+            if a.get("href"):
+                self.links.append(a["href"].strip())
+                self._a = {"href": a["href"].strip(), "text": [], "alt": [], "rel": a.get("rel", "").lower(),
+                           "label": a.get("aria-label") or a.get("title") or ""}
+
+    def _close_anchor(self) -> None:
+        if self._a is None:
+            return
+        a, self._a = self._a, None
+        text = re.sub(r"\s+", " ", "".join(a["text"])).strip() or re.sub(r"\s+", " ", " ".join(a["alt"])).strip() \
+            or re.sub(r"\s+", " ", a["label"]).strip()
+        self.anchors.append({"href": a["href"], "text": text[:300], "rel": a["rel"]})
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "a":
+            self._close_anchor()
         if tag == "title" and self._title is not None and self.title is None:
             self.title = re.sub(r"\s+", " ", "".join(self._title)).strip()
             self._title = None
@@ -195,6 +247,8 @@ class _Page(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self._title is not None:
             self._title.append(data)
+        if self._a is not None:
+            self._a["text"].append(data)
 
 
 def parse_page(html: str) -> dict[str, Any]:
@@ -206,8 +260,9 @@ def parse_page(html: str) -> dict[str, Any]:
         pass
     if p.title is None and p._title is not None:
         p.title = re.sub(r"\s+", " ", "".join(p._title)).strip()
+    p._close_anchor()
     return {"title": p.title, "robots": [r for r in p.robots if r], "canonicals": p.canonicals, "hreflang": p.hreflang,
-            "h1": p.h1, "images": p.images, "links": p.links, "ogImage": p.og_image}
+            "h1": p.h1, "images": p.images, "links": p.links, "anchors": p.anchors, "ogImage": p.og_image}
 
 
 def canonical_kind(canonical: Optional[str], final_url: str) -> str:
@@ -635,6 +690,7 @@ class Tech:
                 self.state["done"] += 1
                 pause()
             self.mark_duplicates()
+            self.mark_images()
         except Exception as e:  # noqa: BLE001 — tur durur, bakılanlar kalır
             self.state["error"] = str(e)[:500]
             log.exception("seo tech crawl failed")
@@ -673,6 +729,11 @@ class Tech:
                                          "final": cchain[-1]["url"]}
                         if cchain[-1]["status"] != 200 or len(cchain) > 1:
                             issues.append("canonical_broken")
+                n = self._save_links(t["url"], final, page)
+                if n is not None:
+                    data["internalLinks"] = n  # bağlantıları kaydedildi (site içi bağlantı analizi bunu "taranmış" sayar)
+        if "internalLinks" not in data:
+            self._save_links(t["url"], None, None)  # açılmayan sayfanın eski bağlantıları silinir
         issues = list(dict.fromkeys(issues))
         row = dict(kind=t["kind"], product_id=t["productId"], status=chain[-1]["status"] if chain else 0,
                    chain_json=dumps(chain), issues="," + ",".join(issues) + ",", title=(title or None) and title[:500],
@@ -684,6 +745,38 @@ class Tech:
             if not n:
                 c.execute(TECH.insert().values(tenant_id=tenant, url=t["url"][:800], **row))
         return row
+
+    def _save_links(self, page_url: str, final: Optional[str], page: Optional[dict[str, Any]]) -> Optional[int]:
+        """Sayfanın site içi bağlantılarını `semantic_seo_links_edges`e yazar (links.py). Hata taramayı durdurmaz."""
+        try:
+            from . import links as _links
+
+            return _links.record(self.engine(), self.seo.tenant(), self.site(), page_url, final, page)
+        except Exception:  # noqa: BLE001
+            log.exception("seo internal links save failed: %s", page_url)
+            return None
+
+    def mark_images(self) -> int:
+        """Şablon görsellerini sayfa uyarılarından çıkarır; tarama sonunda bütün kayıt üzerinden yeniden hesaplanır."""
+        tenant = self.seo.tenant()
+        with self.engine().connect() as c:
+            rows = c.execute(sa.select(TECH.c.url, TECH.c.issues, TECH.c.data_json, TECH.c.status)
+                             .where(TECH.c.tenant_id == tenant)).all()
+        pages = [(url, issues, loads(dj, {})) for url, issues, dj, st in rows if st == 200]
+        chrome = chrome_images([d.get("images") or {} for _, _, d in pages])
+        changed = 0
+        with self.engine().begin() as c:
+            for url, issues, d in pages:
+                imgs, flags = without_chrome(d.get("images") or {}, chrome)
+                old = [i for i in (issues or "").split(",") if i]
+                parts = [i for i in old if i not in dict(_IMG_KEYS)] + [k for k, _ in _IMG_KEYS if k in flags]
+                if parts == old and imgs == d.get("images"):
+                    continue
+                d["images"] = imgs
+                c.execute(TECH.update().where(TECH.c.tenant_id == tenant, TECH.c.url == url)
+                          .values(issues="," + ",".join(parts) + "," if parts else "", data_json=dumps(d)))
+                changed += 1
+        return changed
 
     def mark_duplicates(self) -> int:
         tenant = self.seo.tenant()

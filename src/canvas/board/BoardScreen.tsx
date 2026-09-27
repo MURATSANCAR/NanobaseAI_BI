@@ -27,14 +27,16 @@ import {
   EngineAuthError,
   ask as askEngine,
   boardApi,
+  displayWordsApi,
   type BoardCardResult,
   type BoardRefresh,
   type SqlResult,
 } from '../engine';
 import { stamp } from '../format';
 import DbTimingBadge, { type DbTiming } from '../DbTiming';
-import Chart, { CHART_LABEL, allowedCharts, numericCols, suggestChart, type Col, type Row } from './Chart';
+import Chart, { CHART_LABEL, allowedCharts, numericCols, setDisplayWords, suggestChart, type Col, type Row } from './Chart';
 import { download, fileName, toCsv } from './export';
+import { useCan } from '../useAdmin';
 import {
   fromDto,
   loadBoard,
@@ -172,6 +174,21 @@ function ToolSelect({
 }
 
 /** Başlık ve not: kaleme basınca yerinde düzenlenir, Enter/Kaydet yazar. */
+/** Salt okunur başlık: düzenleme yetkisi olmayan kişi kartın adını ve notunu görür. */
+function ReadOnlyHead({ card }: { card: BoardCard }) {
+  return (
+    <div className="min-w-0">
+      <div
+        className="truncate text-[14px] font-bold leading-7 text-canvas-ink"
+        title={card.question && card.question !== card.title ? `Soru: ${card.question}` : card.title}
+      >
+        {card.title}
+      </div>
+      {card.note && <div className="line-clamp-2 text-[11px] font-medium leading-snug text-canvas-muted">{card.note}</div>}
+    </div>
+  );
+}
+
 function EditableHead({ card, onChange }: { card: BoardCard; onChange: (p: Partial<BoardCard>) => void }) {
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(card.title);
@@ -257,6 +274,7 @@ function CardFrame({
   actions,
   foot,
   stacked = false,
+  locked = false,
 }: {
   card: BoardCard;
   onChange: (patch: Partial<BoardCard>) => void;
@@ -272,6 +290,8 @@ function CardFrame({
   foot: React.ReactNode;
   /** Telefonda kart konumsuz, tam genişlikte; sürükleme parmakla kaydırmayı kilitlemesin. */
   stacked?: boolean;
+  /** Rolde «Panoya kart ekleme ve düzenleme» yok: kart taşınmaz, boyutlanmaz, silinmez. */
+  locked?: boolean;
 }) {
   const [live, setLive] = useState<{ dx: number; dy: number; w: number; h: number } | null>(null);
   const [mode, setMode] = useState<'move' | 'size' | null>(null);
@@ -325,15 +345,15 @@ function CardFrame({
       data-drag={mode ?? undefined}
       // Telefonda kart içeriği kadar uzar; grafik alanı sabit (aşağıda), başlık/not/kontroller onu ezmez.
       style={stacked ? undefined : { left: card.x, top: card.y, width: w, height: h, transform: shift, zIndex: mode ? 999 : (card.z ?? 20) }}
-      onPointerDown={stacked ? undefined : (e) => down(e, 'move')}
-      onPointerMove={stacked ? undefined : move}
-      onPointerUp={stacked ? undefined : up}
-      onPointerCancel={stacked ? undefined : up}
+      onPointerDown={stacked || locked ? undefined : (e) => down(e, 'move')}
+      onPointerMove={stacked || locked ? undefined : move}
+      onPointerUp={stacked || locked ? undefined : up}
+      onPointerCancel={stacked || locked ? undefined : up}
     >
       <div className="glass-card pano-card flex h-full flex-col rounded-[22px] p-3 shadow-canvas-card sm:p-4">
-        <div className={['border-b border-slate-100 pb-2', stacked ? '' : 'pano-handle cursor-grab'].join(' ')}>
+        <div className={['border-b border-slate-100 pb-2', stacked || locked ? '' : 'pano-handle cursor-grab'].join(' ')}>
           <div className="flex items-start gap-1.5">
-            {!stacked && (
+            {!stacked && !locked && (
               <span
                 className="pano-noprint -ml-1 flex h-7 shrink-0 items-center text-slate-300 transition-colors group-hover/card:text-slate-400"
                 title="Sürükleyip taşı"
@@ -345,14 +365,16 @@ function CardFrame({
             <div className="min-w-0 flex-1">{head}</div>
             <div className="pano-noprint flex shrink-0 items-center gap-0.5">
               {actions}
-              <button
-                type="button"
-                onClick={onRemove}
-                title="Karttan çıkar"
-                className="pano-press flex h-7 w-7 items-center justify-center rounded-md text-canvas-muted transition-colors hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover/card:opacity-100 md:focus-visible:opacity-100"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-              </button>
+              {!locked && (
+                <button
+                  type="button"
+                  onClick={onRemove}
+                  title="Karttan çıkar"
+                  className="pano-press flex h-7 w-7 items-center justify-center rounded-md text-canvas-muted transition-colors hover:bg-red-50 hover:text-red-600 md:opacity-0 md:group-hover/card:opacity-100 md:focus-visible:opacity-100"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
             </div>
           </div>
           {toolbar && <div className="pano-noprint mt-1.5 flex flex-wrap items-center gap-1.5">{toolbar}</div>}
@@ -360,7 +382,7 @@ function CardFrame({
         <div className="flex min-h-0 flex-1 flex-col pt-2">{children}</div>
         <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-slate-100 pt-1.5">{foot}</div>
       </div>
-      {!stacked && (
+      {!stacked && !locked && (
         <span
           onPointerDown={(e) => down(e, 'size')}
           onPointerMove={move}
@@ -388,6 +410,11 @@ const timingOf = (a: DbTiming): DbTiming => ({ dbMs: a.dbMs, cached: a.cached, c
  */
 export default function BoardScreen() {
   const user = useUser();
+  // Rol: düzenleme yoksa pano salt okunur; soru, dışa aktarma ve SQL ayrı işlemler.
+  const canEdit = useCan('pano.duzenle');
+  const canAsk = useCan('zeki.soru');
+  const canExport = useCan('veri.disa-aktar');
+  const canSql = useCan('kart.sql-goster');
   const [cards, setCards] = useState<BoardCard[]>([]);
   const [prompt, setPrompt] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
@@ -396,6 +423,9 @@ export default function BoardScreen() {
   const [err, setErr] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed'>('idle');
   const [comparing, setComparing] = useState<string | null>(null);
+  // Kolon başlıkları katalogdaki Türkçe yazımla («Satış tutarı»); harita gelince kartlar yeniden çizilir.
+  const words = useQuery({ queryKey: ['display-words'], queryFn: displayWordsApi.get, enabled: ENGINE_ENABLED, staleTime: 30 * 60_000, retry: false });
+  setDisplayWords(words.data?.words);
   /** Excel üretilirken: 'all' ya da kart kimliği. */
   const [exporting, setExporting] = useState<string | null>(null);
   /** PDF: kartlar yazdırma için alt alta, animasyonsuz dizilir; pencere kapanınca eski düzen döner. */
@@ -576,6 +606,38 @@ export default function BoardScreen() {
     }
   };
 
+  /** Kart kaydedildiği günün SQL'ini tekrarlar; motor o soruyu sonradan daha doğru cevaplamaya başlasa da
+   *  (ör. «… 5 tane» sınırı) kart eskisini koşmaya devam eder. Kişi isteyince soru bugünkü motora yeniden
+   *  sorulur, kartın SQL'i ve sonucu yenisiyle değişir; başlık, grafik ve yer aynı kalır. */
+  const reask = async (card: BoardCard) => {
+    if (!ENGINE_ENABLED) return;
+    setComparing(card.id);
+    setErr(null);
+    try {
+      const a = await askEngine(card.question || card.title);
+      const cols = (a.columns ?? []) as Col[];
+      const rows = (a.records ?? []) as Row[];
+      const sql = a.sql;
+      if (!sql || !cols.length) {
+        setErr(a.summary || 'ZEKİ AI bu soruya şu an tablo olarak cevap veremedi; kart değişmedi.');
+        return;
+      }
+      const next = cards.map((c) => (c.id === card.id ? { ...c, sql } : c));
+      setCards(next);
+      saveBoard(user, next);
+      const seed = { columns: cols, records: rows, ...timingOf(a) } as SqlResult<Row>;
+      qc.setQueryData(['pano', card.id, sql], seed, { updatedAt: Date.now() });
+      saveResult(user, card.id, { ...(seed as unknown as CardResult), at: Date.now() });
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      await pushToServer(next);
+      void qc.invalidateQueries({ queryKey: ['pano', card.id, sql] });
+    } catch (e) {
+      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi; kart değişmedi.');
+    } finally {
+      setComparing(null);
+    }
+  };
+
   /** Excel sunucuda üretilir: SQL tam koşar, her kart bir sayfa, grafik Excel'in kendi grafiği. */
   const exportExcel = async (ids: string[], key: string) => {
     if (!ENGINE_ENABLED || exporting) return;
@@ -652,6 +714,7 @@ export default function BoardScreen() {
               <RefreshCw className={['h-3.5 w-3.5', anyFetching ? 'animate-spin' : ''].join(' ')} />
               <span className="hidden sm:inline">Tümünü yenile</span>
             </button>
+            {canExport && (<>
             <button
               type="button"
               onClick={() => void exportExcel([], 'all')}
@@ -672,6 +735,7 @@ export default function BoardScreen() {
               <FileText className="h-3.5 w-3.5 text-red-600" />
               PDF
             </button>
+            </>)}
             <span className="hidden items-center gap-1 border-l border-slate-200/80 pl-2 pr-1 text-[11px] font-semibold text-canvas-muted sm:flex">
               {saveState === 'saving' ? (
                 <>
@@ -743,7 +807,8 @@ export default function BoardScreen() {
                 onChange={(p) => patch(c.id, p)}
                 onFront={() => front(c.id)}
                 onRemove={() => remove(c.id)}
-                head={<EditableHead card={c} onChange={(p) => patch(c.id, p)} />}
+                locked={!canEdit}
+                head={canEdit ? <EditableHead card={c} onChange={(p) => patch(c.id, p)} /> : <ReadOnlyHead card={c} />}
                 actions={
                   <button
                     type="button"
@@ -755,7 +820,7 @@ export default function BoardScreen() {
                   </button>
                 }
                 toolbar={
-                  <>
+                  !canEdit ? undefined : <>
                       <ToolSelect value={c.chart} title="Grafik tipi" onChange={(v) => patch(c.id, { chart: v as ChartKind })}>
                         {options.map((o) => (
                           <option key={o} value={o}>
@@ -777,7 +842,18 @@ export default function BoardScreen() {
                           3B
                         </button>
                       )}
-                      {isKpi && !compared && (
+                      {canAsk && (
+                      <button
+                        type="button"
+                        onClick={() => void reask(c)}
+                        disabled={comparing === c.id}
+                        title="Soruyu bugünkü ZEKİ AI'a yeniden sor; kartın sorgusu yenisiyle değişir"
+                        className="pano-press h-7 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-canvas-muted transition-colors hover:border-slate-300 disabled:opacity-60"
+                      >
+                        {comparing === c.id ? 'Soruluyor…' : 'Yeniden sor'}
+                      </button>
+                      )}
+                      {isKpi && !compared && canAsk && (
                         <ToolSelect
                           value=""
                           disabled={comparing === c.id}
@@ -850,6 +926,7 @@ export default function BoardScreen() {
                       )}
                     </span>
                     <span className="pano-noprint flex items-center gap-0.5">
+                      {canExport && (<>
                       <button
                         type="button"
                         disabled={!rows.length}
@@ -870,6 +947,8 @@ export default function BoardScreen() {
                         {exporting === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
                         Excel
                       </button>
+                      </>)}
+                      {canSql && (
                       <button
                         type="button"
                         onClick={() => patch(c.id, { sqlOpen: !sqlOpen })}
@@ -885,6 +964,7 @@ export default function BoardScreen() {
                           className={['h-3 w-3 transition-transform duration-200 ease-[cubic-bezier(0.77,0,0.175,1)]', sqlOpen ? 'rotate-180' : ''].join(' ')}
                         />
                       </button>
+                      )}
                     </span>
                   </>
                 }
@@ -904,7 +984,7 @@ export default function BoardScreen() {
                   )}
                 </div>
                 {r?.data && !r.isFetching && <DbTimingBadge timing={r.data} className="mt-1 shrink-0" />}
-                {sqlOpen && !printing && <SqlPanel sql={c.sql} className="pano-noprint mt-2 h-[152px] shrink-0" />}
+                {sqlOpen && canSql && !printing && <SqlPanel sql={c.sql} className="pano-noprint mt-2 h-[152px] shrink-0" />}
               </CardFrame>
             );
           })}
@@ -964,6 +1044,7 @@ export default function BoardScreen() {
                   <Chart kind={pending.chart} cols={pending.cols} rows={pending.rows} depth={false} />
                 </div>
 
+                {canSql && (<>
                 <button
                   type="button"
                   onClick={() => setPendingSql((v) => !v)}
@@ -977,6 +1058,7 @@ export default function BoardScreen() {
                   />
                 </button>
                 {pendingSql && <SqlPanel sql={pending.sql} className="mt-1 h-[160px]" />}
+                </>)}
               </div>
 
               {/* Büyük çağrı: sonucu panoya sabitle. */}
@@ -1010,6 +1092,7 @@ export default function BoardScreen() {
             </div>
           )}
 
+          {canEdit && canAsk && (
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -1034,6 +1117,7 @@ export default function BoardScreen() {
               {asking ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
             </button>
           </form>
+          )}
         </div>
       </div>
     </Shell>

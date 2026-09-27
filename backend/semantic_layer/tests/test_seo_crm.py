@@ -53,7 +53,8 @@ def test_read_joins_books_contracts_and_parties():
 
     def execute(sql, limit):
         if "StringMap" in sql:
-            rows = ([{"v": 100000004, "l": "YS04 Aktif"}] if "yayincilikstatusu" in sql else [{"v": 1, "l": "Çocuk"}])
+            rows = ([{"v": 100000004, "l": "YS04 Aktif"}] if "yayincilikstatusu" in sql
+                    else [{"v": 1, "l": "Kitap"}] if "'new_tip'" in sql else [{"v": 1, "l": "Çocuk"}])
         elif "new_sozlesmetarafiBase" in sql:
             rows = [{"contract_id": contract_id.lower(), "person": "Metin Özdamarlar", "company": None}]
         elif "new_new_sozlesme_new_kitapBase" in sql:
@@ -61,7 +62,7 @@ def test_read_joins_books_contracts_and_parties():
                      "ebook": 1, "zbook": 1, "audiobook": 0}]
         else:
             rows = [{"id": book_id, "name": "İyilik Timi", "ean": "9786259834658", "isbn": "978-625-98346-5-8",
-                     "status": 100000004, "tsoft": 1, "audience": 1, "summary": "<p>İyilik&nbsp;peşinde</p>",
+                     "status": 100000004, "kind": 1, "tsoft": 1, "audience": 1, "summary": "<p>İyilik&nbsp;peşinde</p>",
                      "preview_pdf": "https://cdn.timas.com.tr/preview/9786259834658.pdf",
                      "website": "https://www.youtube.com/embed/x", "youtube": None},
                     {"id": "x", "name": "Barkodsuz", "ean": "-", "status": None}]
@@ -86,3 +87,11 @@ def test_truncated_crm_result_stops():
 def test_label_sql_scopes_by_entity():
     sql = crm.label_sql("Timas_MSCRM.dbo.", "new_hedefkitle")
     assert "Timas_MSCRM.MetadataSchema.Entity" in sql and "'new_kitap'" in sql
+
+
+def test_non_book_and_set_kinds():
+    assert crm.by_kind("yok", "x", "Pazarlama Materyalleri", "YS04 Aktif", False)[0] == "kitap_degil"
+    assert crm.by_kind("yok", "x", "Kitap", "Ticari Ürün", False)[0] == "kitap_degil"
+    assert crm.by_kind("yok", "x", "Set", "YS04 Aktif", False)[0] == "set"
+    assert crm.by_kind("var", "x", "Set", "YS04 Aktif", True)[0] == "var"
+    assert crm.by_kind("eksik", "x", "Kitap", "YS04 Aktif", True)[0] == "eksik"

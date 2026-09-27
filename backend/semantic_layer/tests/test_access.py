@@ -221,3 +221,58 @@ def test_access_admin_endpoints(monkeypatch, store, settings):
     from semantic_bridge import admin as admin_mod
     kinds = [row["kind"] for row in admin_mod.audit_list(store.engine)["items"]]
     assert kinds.count("access") == 4
+
+
+# ------------------------------------------------------------------ ekran özellikleri (Aşama B)
+
+
+def test_all_role_does_not_carry_the_explicit_features(engine):
+    everyone = A.effective(engine, TENANT, "biri", is_admin)
+    assert everyone.can("ozellik:pano.duzenle", "ozellik:tasarim.uret") and everyone.can("ozellik:tasarim.uret")
+    for key in A.explicit_keys():
+        assert not everyone.can(key), key          # kurulumda kimsenin yöneticiye özel yetkisi genişlemez
+    assert A.explicit_keys() >= {"ozellik:oda.yonet", "ozellik:masa.herkesinki", "ozellik:yazar-giris.herkesinki",
+                                 "ozellik:yayin-kurulu.gorusler", "ozellik:seo.onay"}
+    rid = A.save_role(engine, TENANT, "zekiai", {"name": "Kurul", "perms": ["ozellik:yayin-kurulu.gorusler"]})["id"]
+    A.add_binding(engine, TENANT, "zekiai", rid, {"type": "user", "subject": "ayse"})
+    assert A.effective(engine, TENANT, "ayse", is_admin).can("ozellik:yayin-kurulu.gorusler")
+    assert A.effective(engine, TENANT, "zekiai", is_admin).can("ozellik:oda.yonet")
+    view = A.effective(engine, TENANT, "ayse", is_admin).view()
+    assert view["all"] is False and "ozellik:yayin-kurulu.gorusler" in view["perms"] and "ozellik:oda.yonet" not in view["perms"]
+
+
+def test_feature_rules_match_the_actions_not_the_reads():
+    f = A.features_for
+    assert f("POST", "/api/v1/ask") == ["ozellik:zeki.soru"] and f("POST", "/api/v1/ask/stream") == ["ozellik:zeki.soru"]
+    assert f("GET", "/api/v1/board") == [] and f("PUT", "/api/v1/board") == ["ozellik:pano.duzenle"]
+    assert f("GET", "/api/v1/board/export.xlsx") == ["ozellik:veri.disa-aktar"]
+    assert f("GET", "/api/v1/reports/r1/file") == ["ozellik:veri.disa-aktar"]
+    assert f("POST", "/api/v1/reports/r1/run") == ["ozellik:rapor.planla"] and f("POST", "/api/v1/reports/run-due") == []
+    assert f("DELETE", "/api/v1/alerts/a1") == ["ozellik:uyari.kural"] and f("GET", "/api/v1/alerts/a1/events") == []
+    assert f("POST", "/api/v1/editorial/studio/jobs") == ["ozellik:tasarim.uret"]
+    assert f("POST", "/api/v1/editorial/studio/jobs/j1/art/k/regenerate") == ["ozellik:tasarim.uret"]
+    assert f("POST", "/api/v1/editorial/studio/jobs/j1/art/k/approve") == []
+    assert f("POST", "/api/v1/editorial/studio/jobs/j1/kunye") == []
+    assert f("GET", "/api/v1/financial-audit/lines") == ["ozellik:denetim.detay"]
+    assert f("POST", "/api/v1/seo-geo/questions/measure") == ["ozellik:seo.calistir"]
+    assert f("POST", "/api/v1/seo-geo/proposals/p1/decide") == []          # onay ucun içinde (açıkça verilen)
+    keys = {k for _, _, k in A.FEATURE_RULES}
+    assert keys <= A.all_keys() - A.explicit_keys()
+
+
+def test_feature_gate_in_the_bridge(monkeypatch, store, settings):
+    app, client = _app(monkeypatch, store, settings)
+    engine = store.engine
+    A.ensure(engine, TENANT)
+    _narrow_everyone(engine)
+    rid = A.save_role(engine, TENANT, "zekiai", {"name": "Pano okuyucu", "perms": ["sayfa:panolar"]})["id"]
+    A.add_binding(engine, TENANT, "zekiai", rid, {"type": "user", "subject": "ayse"})
+    A.invalidate()
+    a = {"cookie": "timas_session=a"}
+    assert client.get("/api/v1/board", headers=a).status_code != 403
+    put = client.put("/api/v1/board", json={"cards": []}, headers=a)
+    assert put.status_code == 403 and put.json()["detail"]["message"] == "Bu işlem rolünüzde yok."
+    assert client.post("/api/v1/ask", json={"question": "x"}, headers=a).status_code == 403
+    A.save_role(engine, TENANT, "zekiai", {"name": "Pano okuyucu", "perms": ["sayfa:panolar", "ozellik:pano.duzenle"]}, rid)
+    A.invalidate()
+    assert client.put("/api/v1/board", json={"cards": []}, headers=a).status_code != 403

@@ -8,6 +8,7 @@ import { ModuleFrame, Panel } from '../../kit';
 import { Img, ghostBtn, gradientBtn, press } from '../shared';
 import { revision, useStudioJob } from '../StudioFlow';
 import { collageApi, collageKey, useCollage, type CollageView, type CoverStyle } from './api';
+import { useCan } from '../../../useAdmin';
 
 /** Kapak ekranı: kapak tarzı seçimi (resimli / kolaj / tipografik) ve kolaj kapağın ayarları. Kolajda fotoğraf
  *  adayları (ZEKİ AI üretir ya da editör yükler), «başka düzen», etiket şeritleri ve ön kapak önizlemesi.
@@ -137,6 +138,8 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
   onSelect: (id: string) => void; onLayout: (n: number | null) => void; onLabels: (l: string[] | null) => void;
   onUpload: (f: File) => void; uploading: boolean; onGenerate: (count: number, direction: string) => void; generating: boolean;
 }) {
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const [direction, setDirection] = useState('');
   const file = useRef<HTMLInputElement>(null);
   const running = !!v.job && (v.job.status === 'queued' || v.job.status === 'running');
@@ -174,11 +177,11 @@ function CollagePanel({ jobId, v, pending, uploadMb, onSelect, onLayout, onLabel
             className="rounded-xl border border-slate-200 bg-white/90 px-3 py-2 text-base outline-none focus:border-canvas-violet sm:text-[13px]" />
         </label>
         <div className="mt-2 flex flex-col gap-2">
-          <button type="button" className={gradientBtn} disabled={running || otherBusy || generating}
+          {canProduce && <button type="button" className={gradientBtn} disabled={running || otherBusy || generating}
             onClick={() => onGenerate(3, direction)}>
             {running ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
             {running ? (v.job?.status === 'queued' ? 'Sırada…' : `Hazırlanıyor… ${v.job?.done ?? 0}/${v.job?.total ?? 3}`) : '3 aday üret'}
-          </button>
+          </button>}
           <button type="button" className={ghostBtn} disabled={uploading} onClick={() => file.current?.click()}>
             {uploading ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Upload className="h-4 w-4" aria-hidden />}
             {uploading ? 'Yükleniyor…' : 'Fotoğraf yükle'}

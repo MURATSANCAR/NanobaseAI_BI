@@ -46,7 +46,7 @@ function Rows({ rows, checkId }: { rows: Array<Record<string, string | number | 
   return <div className="audit-table-scroll"><table><thead><tr>{checkId && <th>Bulgu açıklaması</th>}{columns.map(k => <th key={k}>{labels[k] ?? k}</th>)}</tr></thead><tbody>{rows.map((r,i) => <tr key={i}>{checkId && <td className="audit-reason-cell"><FindingReason explanation={rowExplanation(checkId,r)} /></td>}{columns.map(k => <td key={k}>{value(k,r[k])}</td>)}</tr>)}</tbody></table></div>;
 }
 
-export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit; runId?: string; load: <T>(path: string) => Promise<T> }) {
+export default function DeepAuditPanel({ data, runId, load, canDetail = true }: { data?: DeepAudit; runId?: string; load: <T>(path: string) => Promise<T>; /** «Denetim ayrıntısı» rolde yoksa istisna satırları açılmaz. */ canDetail?: boolean }) {
   const [selected, setSelected] = useState('');
   const [page, setPage] = useState(0);
   const details = useQuery({ queryKey: ['audit-exceptions',runId,selected,page],
@@ -67,7 +67,7 @@ export default function DeepAuditPanel({ data, runId, load }: { data?: DeepAudit
         <span className={`audit-status-icon ${c.status}`}>{c.status==='passed' ? <Check size={17}/> : <FileSearch size={17}/>}</span>
         <div><h3>{c.title}</h3><p>{c.tested == null ? 'Kaynak okunamadı' : `${number.format(c.tested)} kayıt / grup değerlendirildi`}</p>
           {c.status === 'finding' && <FindingReason explanation={findingSummary(c)} />}<details><summary>Nasıl kontrol ediliyor?</summary><p>{checkExplanations[c.id] ?? accountingText(c.formula)}</p><p>{accountingText(c.limitation)}</p></details><SqlEvidence sql={c.sql} description={`Rapor hazırlanırken çalıştırılan sorgudur. İncelenen kayıt sayısı: ${c.sqlResultColumns?.tested ?? 'rows'}; bu kontrolün bulgu sayısı: ${c.sqlResultColumns?.affected ?? 'eski raporda belirtilmemiş'}. Aynı sorgu birden fazla kontrolü hesaplayabilir.`} title="Kontrolün SQL sorgusu" /></div>
-        <button className="audit-button" disabled={c.affected == null || c.status==='unverified'} onClick={() => {setSelected(c.id);setPage(0);}}>
+        <button className="audit-button" disabled={!canDetail || c.affected == null || c.status==='unverified'} onClick={() => {setSelected(c.id);setPage(0);}}>
           {c.affected == null || c.status==='unverified' ? 'Doğrulanamadı' : c.affected ? `${number.format(c.affected)} inceleme adayı` : 'Fark bulunmadı'} <ArrowRight size={14}/>
         </button>
       </article>)}</div>

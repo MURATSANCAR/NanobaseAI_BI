@@ -65,6 +65,14 @@ def _split_codes(raw: str) -> tuple[str, ...]:
 
 
 _NAME_CONJ = frozenset({"ve", "ile", "veya"})
+#: "KDV dahil satış tutarı", "vergiler dahil toplam tutar": "dahil" is grammar on its own ("iade dahil")
+#: but inside a measure's name it is the name. Split there, the certified name was never looked up and
+#: "kdv" was left alone — a word the model then read three different ways.
+_NAME_INNER = _NAME_CONJ | {"dahil"}
+#: "toplam" is grammar in "toplam ciro" but part of the name in "toplam KDV", "fatura toplam tutarı": a name
+#: the catalog certified with it was never looked up. It is kept only beside a word that names something —
+#: not a measure word, not grammar — so "toplam tutar" alone stays the generic phrase it is.
+_NAME_TOTAL = "toplam"
 
 
 def is_content_word(w: str) -> bool:
@@ -92,10 +100,14 @@ def extract_question_facts(question: str, n_max: int = 3) -> QuestionFacts:
             wst = stems[i:j]
             # "ödenecek vergi ve fonlar": a name may carry a conjunction inside it. Only between two
             # content words — at an edge "ve" joins two things, it is not part of either.
-            inner = [w for w in window[1:-1] if w in _NAME_CONJ]
-            if any(w in time_words or (w in STOPWORDS_S and w not in inner) or w.isdigit() for w in window):
+            inner = [w for w in window[1:-1] if w in _NAME_INNER]
+            named = any(w != _NAME_TOTAL and w not in STOPWORDS_S and s not in MODIFIERS_S and s not in METRIC_VOCAB_S
+                        for w, s in zip(window, wst))
+            # never as the last word: "faturalarda toplam KDV" — "toplam" qualifies what follows it
+            kept = inner + ([_NAME_TOTAL] if named and window[-1] != _NAME_TOTAL else [])
+            if any(w in time_words or (w in STOPWORDS_S and w not in kept) or w.isdigit() for w in window):
                 continue
-            if inner and any(w in STOPWORDS_S for w in (window[0], window[-1])):
+            if inner and any(w in STOPWORDS_S and w != _NAME_TOTAL for w in (window[0], window[-1])):
                 continue
             if all(w in MODIFIERS_S for w in wst):
                 continue

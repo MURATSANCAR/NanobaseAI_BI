@@ -5,6 +5,7 @@ import { Area, AreaChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'rec
 import { ENGINE_ENABLED } from '../engine';
 import { dateTime, fmt, seoApi, type Overview } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 /** Genel bakış: ürün puanları, kural dağılımı, onay bekleyenler, Search Console özeti, bağlantılar. Veri yoksa
  *  örnek göstermez; ne eksikse onu söyler. */
@@ -18,6 +19,9 @@ export default function SeoHome() {
     // Eşitleme sürerken sayaç ekranda ilerlesin.
     refetchInterval: (query) => (query.state.data?.sync.running ? 3000 : query.state.data?.batch.running ? 15000 : false),
   });
+  // T-soft okuma «SEO eşitleme ve ölçüm», toplu öneri «SEO önerisi üretme» ister.
+  const canRun = useCan('seo.calistir');
+  const canPropose = useCan('seo.oneri-uret');
   const sync = useMutation({ mutationFn: seoApi.sync, onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-overview'] }) });
   const batch = useMutation({ mutationFn: () => seoApi.batch(3600), onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-overview'] }) });
   const o = q.data;
@@ -30,7 +34,7 @@ export default function SeoHome() {
       title="Arama ve yapay zekâ görünürlüğü"
       lead="T-soft’taki ürünlerin SEO durumu, Google’daki performans ve onay bekleyen model önerileri. T-soft’tan yalnız okunur; mağazaya hiçbir şey gönderilmez."
       actions={
-        o?.connections.tsoft && (
+        o?.connections.tsoft && canRun && (
           <button className="sg-button" onClick={() => sync.mutate()} disabled={sync.isPending || o.sync.running}>
             {o.sync.running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
             {o.sync.running ? `Okunuyor ${fmt(o.sync.done)}${o.sync.total ? ` / ${fmt(o.sync.total)}` : ''}` : 'T-soft’tan yeniden oku'}
@@ -42,12 +46,12 @@ export default function SeoHome() {
       {q.error && <Failed error={q.error} />}
       {sync.error && <Failed error={sync.error} />}
       {batch.error && <Failed error={batch.error} />}
-      {o && <Body o={o} onBatch={() => batch.mutate()} batchPending={batch.isPending} />}
+      {o && <Body o={o} onBatch={canPropose ? () => batch.mutate() : undefined} batchPending={batch.isPending} />}
     </SeoLayout>
   );
 }
 
-function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; batchPending: boolean }) {
+function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void; batchPending: boolean }) {
   const waiting = o.proposals.hazir ?? 0;
   const daily = o.search?.rows ?? [];
   const clicks = daily.reduce((a, r) => a + r.clicks, 0);
@@ -179,10 +183,10 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; 
             )}
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
-            <button className="sg-button" onClick={onBatch} disabled={batchPending || o.batch.running || !o.products}>
+            {onBatch && <button className="sg-button" onClick={onBatch} disabled={batchPending || o.batch.running || !o.products}>
               {o.batch.running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
               {o.batch.running ? 'Öneriler yazılıyor' : 'Önerileri önceden üret (1 saat)'}
-            </button>
+            </button>}
             <span style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
               {o.batch.startedAt
                 ? `${o.batch.running ? 'Sürüyor' : 'Son tur'}: ${fmt(o.batch.done)} öneri${o.batch.queue != null ? ` / ${fmt(o.batch.queue)} sırada` : ''}${o.batch.failed ? ` · ${fmt(o.batch.failed)} üretilemedi` : ''}${o.batch.error ? ` · ${o.batch.error}` : ''}`

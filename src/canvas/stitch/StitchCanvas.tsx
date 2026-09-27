@@ -6,6 +6,7 @@ import zekiGif from '@/assets/zeki-ai.gif';
 import type { StitchCanvasData } from './data';
 import DbTimingBadge from '../DbTiming';
 import CardSql from './CardSql';
+import { useCan } from '../useAdmin';
 import { questionParticle } from '../interpret';
 
 /**
@@ -226,6 +227,9 @@ function CanvasBody({
   screen?: string;
   stageRef: React.MutableRefObject<HTMLDivElement | null>;
 }) {
+  // Rol: soru kutusu «Zeki AI'a soru sorma», panoya ekleme «Panoya kart ekleme» ister; yoksa hiç görünmez.
+  const canAsk = useCan('zeki.soru');
+  const canPin = useCan('pano.duzenle');
   const { reset, dirty, stacked } = useLayout();
 
   /**
@@ -632,7 +636,7 @@ function CanvasBody({
                 <p className="text-base font-bold text-ink leading-snug">
                   {d.main.text}
                 </p>
-                {d.main.retry && <RetryButton r={d.main.retry} />}
+                {d.main.retry && canAsk && <RetryButton r={d.main.retry} />}
               
                 {/* Verbatim insight mention & sub-metrics */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
@@ -654,7 +658,7 @@ function CanvasBody({
 
               {/* Action Buttons */}
               <div className="mt-4 flex flex-wrap items-center gap-2 sm:gap-3">
-                {d.main.board && <BoardButton b={d.main.board} />}
+                {d.main.board && canPin && <BoardButton b={d.main.board} />}
                 {/* Primary Gradient Action */}
                 <Link to={d.main.primaryTo} className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-coral to-violet text-white text-xs font-extrabold tracking-tight shadow-md hover:shadow-lg hover:opacity-95 transition-all flex items-center gap-2 active:scale-95">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -745,6 +749,7 @@ function CanvasBody({
             ))}
           </div>
 
+          {canAsk && (
           <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
             {/* Wide Rounded AI Input */}
             <div className="flex-1 min-w-0 flex items-center bg-white/90 hover:bg-white rounded-2xl px-4 py-2 border border-slate-200/80 shadow-inner transition">
@@ -772,6 +777,7 @@ function CanvasBody({
               </button>
             </div>
           </div>
+          )}
 
         </div>
       </div>

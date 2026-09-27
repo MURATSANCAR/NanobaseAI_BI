@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { useLayout } from './layout';
+import { useCan } from '../useAdmin';
 
 /**
  * Kartın altındaki "SQL'i göster" şeridi ve açılan panel. Panel kartın genişliğini aşmaz:
@@ -40,7 +41,9 @@ async function copyText(text: string): Promise<boolean> {
   return ok;
 }
 
-export default function CardSql({ sql, right, className = '' }: { sql?: string; right?: ReactNode; className?: string }) {
+export default function CardSql({ sql: given, right, className = '' }: { sql?: string; right?: ReactNode; className?: string }) {
+  // «SQL'i göster ve kopyala» rolde yoksa şerit hiç görünmez; kartın sağ tarafındaki öğeler kalır.
+  const sql = useCan('kart.sql-goster') ? given : undefined;
   const [open, setOpen] = useState(false);
   const { bringFront } = useLayout();
   const [copy, setCopy] = useState<'idle' | 'done' | 'fail'>('idle');

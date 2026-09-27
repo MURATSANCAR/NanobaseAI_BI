@@ -5,6 +5,7 @@ import { ArrowRight, Loader2, PenLine } from 'lucide-react';
 import { bookReviewApi, type BookReviewAction, type BookReviewGroup, type BookReviewItem } from '../engine';
 import { Loading, Note, btn, btnGhost, errText, field, label } from '../admin/ui';
 import { Panel } from './kit';
+import { useCan } from '../useAdmin';
 
 /** Analizin kitapta emin olamayıp editöre sorduğu yerler. Her kayıt tek bakışta okunur: soru, kitabın o
  *  sayfadaki kendi cümlesi, sayfanın resmi ve ne yapacağını söyleyen düğmeler. Motorun iç notları, güven
@@ -70,7 +71,8 @@ function PageLarge({ bookId, page, figures }: { bookId: string; page: number; fi
 
 function Item({ bookId, title, it, picked, onPick, decide, busy }: {
   bookId: string; title: string; it: BookReviewItem; picked: boolean; onPick: (() => void) | null;
-  decide: Decide; busy: boolean;
+  /** Rolde «Kitap inceleme kararı» yoksa undefined: soru okunur, karar düğmeleri çıkmaz. */
+  decide?: Decide; busy: boolean;
 }) {
   const [large, setLarge] = useState(false);
   const [fixing, setFixing] = useState(false);
@@ -113,7 +115,7 @@ function Item({ bookId, title, it, picked, onPick, decide, busy }: {
             <Link to={`/son-okuma?kitap=${encodeURIComponent(title)}`} className={`${no} mt-2`}>
               Son Okuma ekranında aç <ArrowRight aria-hidden className="h-4 w-4" />
             </Link>
-          ) : (
+          ) : decide && (
             <div className="mt-2 flex flex-wrap gap-2">
               {it.actions.filter((a) => a.key !== 'fix').map((a) => (
                 <button key={a.key} type="button" disabled={busy} onClick={() => decide([it.id], a.key)}
@@ -129,7 +131,7 @@ function Item({ bookId, title, it, picked, onPick, decide, busy }: {
             </div>
           )}
 
-          {fixing && (
+          {fixing && decide && (
             <div className="mt-2 space-y-2">
               <label className={label} htmlFor={`d-${it.id}`}>Doğrusu ne?</label>
               <textarea id={`d-${it.id}`} value={note} onChange={(e) => setNote(e.target.value)} rows={2} className={field}
@@ -147,7 +149,7 @@ function Item({ bookId, title, it, picked, onPick, decide, busy }: {
   );
 }
 
-function Group({ bookId, title, g, decide, busy }: { bookId: string; title: string; g: BookReviewGroup; decide: Decide; busy: boolean }) {
+function Group({ bookId, title, g, decide, busy }: { bookId: string; title: string; g: BookReviewGroup; decide?: Decide; busy: boolean }) {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [confirm, setConfirm] = useState<BookReviewAction | null>(null);
   // Toplu cevap yalnız aynı soruyu soran kayıtlarda anlamlı: düğme adları gruptaki ilk kayıttan.
@@ -165,7 +167,7 @@ function Group({ bookId, title, g, decide, busy }: { bookId: string; title: stri
         <h3 className="text-[13.5px] font-extrabold">
           {g.title} <span className="font-bold text-canvas-muted">· {g.items.length}</span>
         </h3>
-        {g.bulk && g.items.length > 1 && (
+        {decide && g.bulk && g.items.length > 1 && (
           <button type="button" onClick={() => setPicked(all ? new Set() : new Set(g.items.map((i) => i.id)))}
             className={`${no} h-8 px-2.5 text-[11.5px]`}>
             {all ? 'Seçimi kaldır' : 'Hepsini seç'}
@@ -173,7 +175,7 @@ function Group({ bookId, title, g, decide, busy }: { bookId: string; title: stri
         )}
       </div>
 
-      {g.bulk && picked.size > 0 && (
+      {decide && g.bulk && picked.size > 0 && (
         <div className="sticky bottom-2 z-10 flex flex-wrap items-center gap-2 rounded-xl border border-canvas-violet/20 bg-white/95 p-2 shadow-md">
           {confirm ? (
             <>
@@ -200,7 +202,7 @@ function Group({ bookId, title, g, decide, busy }: { bookId: string; title: stri
 
       {g.items.map((it) => (
         <Item key={it.id} bookId={bookId} title={title} it={it} busy={busy} decide={decide}
-          picked={picked.has(it.id)} onPick={g.bulk ? () => toggle(it.id) : null} />
+          picked={picked.has(it.id)} onPick={decide && g.bulk ? () => toggle(it.id) : null} />
       ))}
     </section>
   );
@@ -221,6 +223,7 @@ export default function ReviewPanel({ bookId }: { bookId: string }) {
     },
   });
   const decide: Decide = (items, choice, note) => { setSaved(null); run.mutate({ items, choice, note }); };
+  const canDecide = useCan('kitap.inceleme-karar');
   const err = errText(q.error || run.error, 'İnceleme kayıtları okunamadı.');
 
   if (q.isLoading) return <Panel><Loading /></Panel>;
@@ -249,7 +252,7 @@ export default function ReviewPanel({ bookId }: { bookId: string }) {
 
       <div className="mt-4 space-y-6">
         {d?.groups.map((g) => (
-          <Group key={g.type} bookId={bookId} title={d.title} g={g} decide={decide} busy={run.isPending} />
+          <Group key={g.type} bookId={bookId} title={d.title} g={g} decide={canDecide ? decide : undefined} busy={run.isPending} />
         ))}
       </div>
     </Panel>

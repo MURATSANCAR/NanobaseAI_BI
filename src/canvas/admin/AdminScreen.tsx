@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Activity, Bell, CalendarClock, History, KeyRound, LayoutGrid, MessageSquareText, Settings2, Users } from 'lucide-react';
+import { Activity, Bell, CalendarClock, History, KeyRound, LayoutGrid, MessageSquareText, Radio, Settings2, Users } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { ENGINE_ENABLED, EngineAuthError, adminApi } from '../engine';
 import NoAccess from '../NoAccess';
@@ -11,9 +11,10 @@ import People from './People';
 import AccessAdmin from './AccessAdmin';
 import AuditLog from './AuditLog';
 import PromptTracker from './PromptTracker';
+import BulletinsAdmin from './BulletinsAdmin';
 import { Loading, Note } from './ui';
 
-export type AdminTab = 'overview' | 'settings' | 'access' | 'reports' | 'alerts' | 'cards' | 'people' | 'prompts' | 'audit';
+export type AdminTab = 'overview' | 'settings' | 'access' | 'reports' | 'alerts' | 'cards' | 'people' | 'prompts' | 'bulletins' | 'audit';
 
 const TABS: Array<{ id: AdminTab; label: string; icon: typeof Activity }> = [
   { id: 'overview', label: 'Genel durum', icon: Activity },
@@ -24,6 +25,7 @@ const TABS: Array<{ id: AdminTab; label: string; icon: typeof Activity }> = [
   { id: 'cards', label: 'Pano kartları', icon: LayoutGrid },
   { id: 'people', label: 'Kişiler', icon: Users },
   { id: 'prompts', label: 'Soru izleme', icon: MessageSquareText },
+  { id: 'bulletins', label: 'Sesli bülten', icon: Radio },
   { id: 'audit', label: 'Değişiklik kaydı', icon: History },
 ];
 
@@ -66,6 +68,8 @@ export default function AdminScreen() {
     <People me={me.data.user} />
   ) : tab === 'prompts' ? (
     <PromptTracker />
+  ) : tab === 'bulletins' ? (
+    <BulletinsAdmin />
   ) : tab === 'audit' ? (
     <AuditLog />
   ) : (

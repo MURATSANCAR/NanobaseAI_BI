@@ -16,6 +16,7 @@ const KINDS = [
   ['booking', 'Oda rezervasyonu'],
   ['access', 'Yetki'],
   ['session', 'Oturum'],
+  ['bulletin', 'Sesli bülten'],
 ] as const;
 const ACTIONS = [
   ['', 'Her işlem'],
@@ -26,6 +27,8 @@ const ACTIONS = [
   ['approve', 'Onay'],
   ['reject', 'Ret'],
   ['correct', 'Düzeltme'],
+  ['publish', 'Yayınlama'],
+  ['unpublish', 'Yayından çekme'],
 ] as const;
 
 /** Ayrıntı: {alan: {from, to}} farkı ya da düz alanlar. */

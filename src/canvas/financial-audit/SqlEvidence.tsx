@@ -1,8 +1,11 @@
 import { useState } from 'react';
 import { Copy, Code2 } from 'lucide-react';
+import { useCan } from '../useAdmin';
 
 export default function SqlEvidence({ sql, description, title = 'Bulgunun SQL sorgusu' }: { sql?: string | null; description: string; title?: string }) {
   const [message, setMessage] = useState('');
+  // «SQL'i göster ve kopyala» rolde yoksa sorgu bölümü hiç çıkmaz.
+  if (!useCan('kart.sql-goster')) return null;
   if (!sql) return <p className="audit-sql-unavailable">Bu kayıtlı raporda sorgu bilgisi bulunmuyor.</p>;
   async function copy() {
     try { await navigator.clipboard.writeText(sql!); setMessage('Sorgu kopyalandı.'); }

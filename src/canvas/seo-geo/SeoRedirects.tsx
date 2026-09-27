@@ -4,6 +4,7 @@ import { Check, ChevronLeft, ChevronRight, Download, ExternalLink, Loader2, Sear
 import { ENGINE_ENABLED } from '../engine';
 import { fmt, seoApi, type Confidence, type Redirect } from './api';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 const PAGE = 40;
 const CONF: Array<{ id: Confidence; label: string; tone: string }> = [
@@ -17,6 +18,7 @@ const STATUS: Record<Redirect['status'], string> = { bekliyor: 'Bekliyor', onayl
 /** Anasayfaya giden 301 yönlendirmeleri: her biri için doğru hedef önerisi, gerekçesi ve alternatifleri. Karar yalnız
  *  kaydedilir; T-soft'a yazılmaz. Onaylananlar CSV olarak indirilip T-soft panelinden elle girilir. */
 export default function SeoRedirects() {
+  const canExport = useCan('veri.disa-aktar');
   const qc = useQueryClient();
   const [confidence, setConfidence] = useState<Confidence | ''>('');
   const [status, setStatus] = useState<'' | Redirect['status']>('bekliyor');
@@ -55,7 +57,7 @@ export default function SeoRedirects() {
       title="Anasayfaya giden yönlendirmeler"
       lead="Silinen sayfaların eski adresi anasayfaya yönlenirse Google bunu “yumuşak 404” sayar. Her eski adres için en doğru yaşayan sayfa önerilir: ISBN’den aynı kitap, aynı adlı yazar ya da adres benzerliği. Karar yalnız kaydedilir; T-soft’a gönderilmez — onaylananları CSV olarak indirip panelden girin."
       actions={
-        <a className="sg-button" href={seoApi.redirectCsvUrl()}>
+        canExport && <a className="sg-button" href={seoApi.redirectCsvUrl()}>
           <Download size={16} aria-hidden /> Onaylananları indir (CSV)
         </a>
       }

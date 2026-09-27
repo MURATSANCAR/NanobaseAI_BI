@@ -9,6 +9,7 @@ import {
 } from './api';
 import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 const PAGE = 30;
 const plain = (html: string) => html.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -159,6 +160,8 @@ function Detail({ id }: { id: string }) {
     qc.invalidateQueries({ queryKey: ['seo-overview'] });
   };
   const propose = useMutation({ mutationFn: () => seoApi.propose(id), onSuccess: refresh });
+  // Öneri üretmek model harcar: «SEO önerisi üretme». Yoksa kendiliğinden istenmez, «yeniden üret» çıkmaz.
+  const canPropose = useCan('seo.oneri-uret');
   const p = d.data;
   const open = p?.proposals.find((x) => x.status === 'hazir');
   const last = p?.proposals.find((x) => x.status !== 'hazir');
@@ -167,11 +170,11 @@ function Detail({ id }: { id: string }) {
   // Öneri kendiliğinden: ürün açılınca, düzeltilebilir sorun varsa ve bekleyen öneri yoksa bir kez istenir.
   const [asked, setAsked] = useState<string | null>(null);
   useEffect(() => {
-    if (needs && asked !== id && !propose.isPending) {
+    if (canPropose && needs && asked !== id && !propose.isPending) {
       setAsked(id);
       propose.mutate();
     }
-  }, [needs, id, asked, propose]);
+  }, [canPropose, needs, id, asked, propose]);
 
   if (d.isLoading) return <Loading text="Ürün açılıyor…" />;
   if (d.error) return <Failed error={d.error} />;
@@ -223,7 +226,7 @@ function Detail({ id }: { id: string }) {
           error={propose.error}
           canApprove={!!me.data?.canApprove}
           onDone={refresh}
-          onRegenerate={() => propose.mutate()}
+          onRegenerate={canPropose ? () => propose.mutate() : undefined}
         />
       )}
 
@@ -243,7 +246,7 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
   error: unknown;
   canApprove: boolean;
   onDone: () => void;
-  onRegenerate: () => void;
+  onRegenerate?: () => void;
 }) {
   const initial = useMemo(() => {
     const o: Fields = {};
@@ -282,10 +285,10 @@ function Review({ product, proposal, pending, error, canApprove, onDone, onRegen
                 : 'Öneri henüz yok.'}
           </p>
         </div>
-        <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
+        {onRegenerate && <button className="sg-button" onClick={onRegenerate} disabled={pending || decide.isPending}>
           {pending ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <Sparkles size={16} aria-hidden />}
           Yeniden üret
-        </button>
+        </button>}
       </div>
       {!!error && <div style={{ marginTop: 12 }}><Failed error={error} /></div>}
       {unsupported.length > 0 && (

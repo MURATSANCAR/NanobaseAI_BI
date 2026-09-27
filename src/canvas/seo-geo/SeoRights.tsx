@@ -6,13 +6,16 @@ import { ENGINE_ENABLED } from '../engine';
 import { FLAG_LABEL, RIGHTS_LABEL, RIGHTS_TONE, dateTime, fmt, seoApi, type CrmFilter, type CrmRights } from './api';
 import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
+import { useCan } from '../useAdmin';
 
 const PAGE = 40;
-const RIGHTS_ORDER: CrmRights[] = ['eksik', 'incele', 'yok', 'var', 'koruma_disi'];
+const RIGHTS_ORDER: CrmRights[] = ['eksik', 'incele', 'yok', 'var', 'koruma_disi', 'set', 'kitap_degil'];
 
 /** Haklar ve CRM: T-soft'ta satıştaki kitapların CRM kartı, internette gösterim hakkı ve yayın durumu.
  *  Google Kitaplar önizlemesi, tadımlık PDF ve SEO önceliği bu bilgiye bağlıdır. CRM'e yazılmaz. */
 export default function SeoRights() {
+  // Okuma/tarama/ölçüm başlatmak «SEO eşitleme ve ölçüm» ister; rolde yoksa düğme çıkmaz.
+  const canRun = useCan('seo.calistir');
   const qc = useQueryClient();
   const [params, setParams] = useSearchParams();
   const filter = (params.get('suzgec') ?? '') as CrmFilter | '';
@@ -65,7 +68,7 @@ export default function SeoRights() {
       title="Haklar ve CRM"
       lead="T-soft’ta satıştaki her kitabın CRM kartı: internette gösterim hakkı (Google Kitaplar önizlemesi, tadımlık PDF), yayın durumu ve SEO’ya kaynak olabilecek bilgiler. CRM’den yalnız okunur. Hak kararı ön süzgeçtir; kesin söz telif biriminindir."
       actions={
-        <button className="sg-button" onClick={() => read.mutate()} disabled={read.isPending || running}>
+        canRun && <button className="sg-button" onClick={() => read.mutate()} disabled={read.isPending || running}>
           {running ? <Loader2 size={16} className="animate-spin" aria-hidden /> : <RefreshCw size={16} aria-hidden />}
           {running ? 'CRM okunuyor (1–2 dk)' : 'CRM’den yeniden oku'}
         </button>

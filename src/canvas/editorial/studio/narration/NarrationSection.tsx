@@ -10,6 +10,7 @@ import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
 import VoicePicker from './VoicePicker';
 import VoiceUpload from './VoiceUpload';
+import { useCan } from '../../../useAdmin';
 import {
   NarrationError, narrationApi, useNarration, useNarrationPage,
   type NarrationOverview, type NarrationPageRow,
@@ -106,6 +107,8 @@ function Summary({ d }: { d: NarrationOverview }) {
 }
 
 function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refresh: () => void }) {
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const job = d.job;
   const running = !!job && (job.status === 'queued' || job.status === 'running');
   const todo = d.summary.missing + d.summary.stale;
@@ -153,7 +156,7 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
       {job?.status === 'fail' && <Note tone="err">Seslendirme yarıda kaldı{job.error ? `: ${job.error}` : ''}. «Seslendir» ile kalan sayfalar üretilir.</Note>}
       {(run.error || sample.error) && <Note tone="err">{errText(run.error || sample.error, 'İşlem yapılamadı.')}</Note>}
 
-      <div className="flex flex-wrap items-center gap-2">
+      {canProduce && <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={gradientBtn} disabled={!d.available || running || run.isPending || todo === 0}
           onClick={() => run.mutate({ pages: null })}
           title={todo ? 'Sesi olmayan ve güncel olmayan sayfalar seslendirilir' : 'Bütün sayfalar güncel'}>
@@ -166,7 +169,7 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
             <RefreshCw className="h-4 w-4" aria-hidden />Tümünü yeniden üret
           </button>
         )}
-      </div>
+      </div>}
       {running && job && (
         <div className="flex flex-col gap-1">
           <Progress value={job.progress?.[0] ?? 0} total={job.progress?.[1] ?? 0} />
@@ -177,7 +180,7 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
       )}
 
       <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
-        <Listen jobId={jobId} d={d} running={running} onRegen={(pid) => run.mutate({ pages: [pid] })} regenBusy={run.isPending} />
+        <Listen jobId={jobId} d={d} running={running} onRegen={canProduce ? (pid) => run.mutate({ pages: [pid] }) : undefined} regenBusy={run.isPending} />
         <div className="flex min-w-0 flex-col gap-4">
           <Voices jobId={jobId} d={d} onPlay={play} playing={player.playing} onSaved={refresh} />
           <div className="h-px bg-slate-200/80" />
@@ -190,7 +193,7 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
 
 // ---------------------------------------------------------------- dinle
 function Listen({ jobId, d, running, onRegen, regenBusy }: {
-  jobId: string; d: NarrationOverview; running: boolean; onRegen: (pid: string) => void; regenBusy: boolean;
+  jobId: string; d: NarrationOverview; running: boolean; onRegen?: (pid: string) => void; regenBusy: boolean;
 }) {
   const readable = useMemo(() => d.pages.filter((p) => p.status !== 'empty'), [d.pages]);
   const [pid, setPid] = useState<string | null>(null);
@@ -274,7 +277,7 @@ function Listen({ jobId, d, running, onRegen, regenBusy }: {
                 className="w-full accent-[#7C5CFF]" />
             </div>
             <span className="font-mono text-[11.5px] tabular-nums text-canvas-muted">{secs(t)} / {secs(page?.duration ?? row?.duration ?? 0)}</span>
-            {row && (
+            {row && onRegen && (
               <button type="button" className={`${ghostBtn} ml-auto`} disabled={!d.available || running || regenBusy}
                 onClick={() => onRegen(row.id)} title="Bu sayfanın sesi yeniden üretilir">
                 <RefreshCw className="h-4 w-4" aria-hidden /><span>Yeniden üret</span>

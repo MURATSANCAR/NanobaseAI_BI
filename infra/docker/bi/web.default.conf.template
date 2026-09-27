@@ -109,6 +109,22 @@ server {
         client_max_body_size 21M;
     }
 
+    # Kampüs sesli bülteni yükleme: köprü 60 MB'a kadar ses kabul eder (BULLETIN_MAX_MB).
+    location = /timas/api/v1/admin/bulletins {
+        set $timas_original_method $request_method;
+        auth_request /_timas_session_check;
+        limit_req zone=timas_api burst=30 nodelay;
+        limit_req_status 429;
+        proxy_pass http://bridge:8795/api/v1/admin/bulletins$is_args$args;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header x-semantic-caller "${CALLER_TOKEN}";
+        proxy_read_timeout 300s;
+        client_max_body_size 61M;
+    }
+
     # Motor: aynı docker ağındaki bridge konteynerine ada göre.
     location /timas/api/ {
         set $timas_original_method $request_method;

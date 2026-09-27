@@ -5,6 +5,7 @@ import { ENGINE_ENABLED, proofingApi, type ProofReasonCode, type ProofVerdict, t
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { Panel } from './kit';
 import { RejectForm } from './ProofEvidence';
+import { useCan } from '../useAdmin';
 
 /** M5: kitabın tekil kelime haritası (son okuma «Kelime çeşitliliği ve yakın tekrar» denetimi).
  *  Her kök bir kez: kaç kez geçtiği, ekli biçimleri, sayfaları; iki kez ya da daha çok geçen içerik
@@ -146,6 +147,8 @@ type RepeatGroup = { key: string; rows: ProofingFinding[]; top: number; pages: n
  *  karar verilmişler en altta. Topluca «Doğru» ya da «Yanlış alarm» (gerekçeyle) her bulguya ayrı
  *  karar olarak yazılır (kuralın isabeti bulgu başına sayılır); tek tek karar üstteki listededir. */
 function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFinding[] }) {
+  // Toplu karar «Son okuma bulgusuna karar» ister; yoksa yalnız liste görünür.
+  const canDecide = useCan('son-okuma.karar');
   const qc = useQueryClient();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
@@ -218,7 +221,7 @@ function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFindi
                   </span>
                 </button>
                 {accepted ? <Pill tone="ok">Doğru</Pill> : rejected ? <Pill tone="muted">Yanlış alarm</Pill> : null}
-                <span className="flex shrink-0 gap-1">
+                {canDecide && <span className="flex shrink-0 gap-1">
                   <button
                     type="button"
                     disabled={!!busy || accepted}
@@ -239,7 +242,7 @@ function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFindi
                     <X aria-hidden className="h-3.5 w-3.5" />
                     Yanlış alarm
                   </button>
-                </span>
+                </span>}
               </div>
               {running && (
                 <p className="px-3 pb-2 font-mono text-[11px] tabular-nums text-canvas-muted">

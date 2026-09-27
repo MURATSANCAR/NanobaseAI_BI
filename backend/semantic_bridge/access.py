@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import threading
 import time
 import uuid
@@ -83,7 +84,7 @@ CATALOG_FILE = Path(__file__).with_name("access_catalog.json")
 _ready: set[int] = set()
 _lock = threading.Lock()
 _TTL = 30.0
-_state: dict[str, Any] = {"at": 0.0, "tenant": None, "roles": {}, "bindings": [], "members": {}}
+_state: dict[str, Any] = {"at": 0.0, "key": None, "roles": {}, "bindings": [], "members": {}}
 
 
 class AccessError(ValueError):
@@ -115,7 +116,15 @@ def catalog() -> dict[str, Any]:
 
 
 def all_keys() -> frozenset[str]:
-    return frozenset(p["key"] for p in catalog()["pages"])
+    """Sayfa ve özellik anahtarlarının hepsi."""
+    cat = catalog()
+    return frozenset(p["key"] for p in cat["pages"]) | frozenset(f["key"] for f in cat.get("features", []))
+
+
+def explicit_keys() -> frozenset[str]:
+    """«Bütün sayfalar ve işlemler» ile gelmeyen, role tek tek verilen özellikler (bugüne kadar yalnız yöneticinin
+    yaptığı işler). Kurulumda Herkes bütün yetkilerle açılırken kimsenin eski yetkisi bu yolla genişlemez."""
+    return frozenset(f["key"] for f in catalog().get("features", []) if f.get("explicit"))
 
 
 def page(item_id: str) -> str:
@@ -156,7 +165,10 @@ def invalidate() -> None:
 
 
 def _load(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
-    if _state["tenant"] == tenant and time.monotonic() - _state["at"] < _TTL:
+    # Anahtar veritabanı + tenant: aynı süreçte iki veritabanı (testler, yönetim ekranının denemesi) birbirinin
+    # rollerini görmesin.
+    key = (id(engine), tenant)
+    if _state["key"] == key and time.monotonic() - _state["at"] < _TTL:
         return _state
     with engine.connect() as c:
         roles = {r["id"]: {**dict(r), "perms": set()} for r in
@@ -171,7 +183,7 @@ def _load(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
                 members[(t, s)] = frozenset(str(x).strip().lower() for x in json.loads(m or "[]") if str(x).strip())
             except ValueError:
                 members[(t, s)] = frozenset()
-    _state.update(at=time.monotonic(), tenant=tenant, roles=roles, bindings=bindings, members=members)
+    _state.update(at=time.monotonic(), key=key, roles=roles, bindings=bindings, members=members)
     return _state
 
 
@@ -188,12 +200,19 @@ class Access:
     roles: list[dict[str, Any]] = field(default_factory=list)
 
     def can(self, *keys: str) -> bool:
-        return self.admin or self.all or any(k in self.perms for k in keys)
+        """Anahtarlardan biri verilmiş mi. «Bütün» rolü açıkça verilen özellikleri kapsamaz."""
+        return self.admin or any(k in self.granted() for k in keys)
+
+    def granted(self) -> frozenset[str]:
+        if self.admin:
+            return all_keys()
+        return (all_keys() - explicit_keys()) | self.perms if self.all else self.perms
 
     def view(self) -> dict[str, Any]:
-        keys = all_keys() if (self.admin or self.all) else self.perms
-        return {"user": self.user, "isAdmin": self.admin, "all": self.admin or self.all,
-                "perms": sorted(keys), "roles": self.roles}
+        # `all` yalnız yöneticide doğru: ön yüz o zaman listeye bakmaz. «Bütün» rolünde bile açıkça verilen
+        # özellikler listede yoksa kapalıdır; bu yüzden ön yüz her zaman `perms` listesini okur.
+        return {"user": self.user, "isAdmin": self.admin, "all": self.admin, "allRoles": self.all,
+                "perms": sorted(self.granted()), "roles": self.roles}
 
 
 def effective(engine: sa.engine.Engine, tenant: str, user: str,
@@ -223,6 +242,25 @@ def effective(engine: sa.engine.Engine, tenant: str, user: str,
     return Access(user=u, admin=admin, all=every, perms=frozenset(perms & all_keys()), roles=roles)
 
 
+_bound: dict[str, Any] = {}
+
+
+def bind(engine: Callable[[], sa.engine.Engine], tenant: Callable[[], str], is_admin: Callable[[str], bool]) -> None:
+    """Köprü açılışta bağlar: yetkiyi uç dışındaki modüller de (SEO onayı gibi) aynı hesapla sorsun."""
+    _bound.update(engine=engine, tenant=tenant, is_admin=is_admin)
+
+
+def user_can(user: Optional[str], key: str) -> bool:
+    """Kişiye bu anahtar verilmiş mi (yönetici her şey). Köprü bağlanmadıysa ya da okunamazsa False."""
+    if not user or not _bound:
+        return False
+    try:
+        return effective(_bound["engine"](), _bound["tenant"](), user, _bound["is_admin"]).can(key)
+    except Exception as e:  # noqa: BLE001
+        log.warning("access: %s için %s okunamadı: %s", user, key, e)
+        return False
+
+
 # ------------------------------------------------------------------ köprü uçlarının sayfa kuralı
 
 OPEN = "open"        # oturum yeter (ortak uçlar; kendi kontrolü varsa o da geçerli)
@@ -231,7 +269,8 @@ SYSTEM = "system"    # yalnız zamanlayıcı/betik (çerezsiz) ya da yönetici
 
 _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-rakip", "seo-ai", "seo-sayfalar",
                                    "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
-                                   "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti"))
+                                   "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
+                                   "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kisiler", "basin-web", "telif-sozlesme",
                                          "editor-atama"))
@@ -259,6 +298,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/people", OPEN),                      # Kampüs rehberi
     ("/api/v1/me/", OPEN),
     ("/api/v1/greetings", OPEN),
+    ("/api/v1/bulletins", OPEN),                   # Kampüs sesli bülteni (yazma /api/v1/admin/bulletins)
     ("/api/v1/rooms", OPEN),
     ("/api/v1/ask", OPEN),                         # veri kapsamı Aşama C'de SQL kapısında
     ("/api/v1/run_sql", OPEN),
@@ -271,6 +311,42 @@ RULES: list[tuple[str, Any]] = [
     ("/health", OPEN),
 ]
 _RULES = sorted(RULES, key=lambda r: len(r[0]), reverse=True)
+
+
+#: Sayfa içindeki işlemler: (yöntemler, yol deseni, anahtar). Sayfa kuralından SONRA bakılır; eşleşen her
+#: desenin anahtarı istenir. Açıkça verilen (explicit) özellikler burada değil, ucun içinde denetlenir
+#: (yönetici yerine «yönetici ya da bu yetki»).
+_S = r"^/api/v1/editorial/studio/jobs"
+FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
+    (frozenset({"POST"}), r"^/api/v1/ask(/stream)?$", "ozellik:zeki.soru"),
+    (frozenset({"GET"}), r"^/api/v1/(board/export\.xlsx|reports/[^/]+/file|financial-audit/runs/[^/]+/export"
+                         r"|seo-geo/redirects/export\.csv|editorial/proofing/export\.docx|editorial/ask/export\.pdf)$",
+     "ozellik:veri.disa-aktar"),
+    (frozenset({"PUT"}), r"^/api/v1/board$", "ozellik:pano.duzenle"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/reports(/(?!run-due$)[^/]+(/run)?)?$", "ozellik:rapor.planla"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/alerts(/[^/]+)?$", "ozellik:uyari.kural"),
+    (frozenset({"GET"}), r"^/api/v1/financial-audit/(lines|documents|runs/[^/]+/exceptions/.+)$", "ozellik:denetim.detay"),
+    (frozenset({"POST"}), r"^/api/v1/financial-audit/runs/[^/]+/reviews/.+$", "ozellik:denetim.inceleme"),
+    (frozenset({"POST"}), r"^/api/v1/financial-audit/refresh$", "ozellik:denetim.yenile"),
+    (frozenset({"POST"}), r"^/api/v1/management/reports/[^/]+/refresh$", "ozellik:yonetim-raporu.yenile"),
+    (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
+    (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
+    (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),
+    (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
+                               r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"
+                               r"|collage/photos|marketing/[^/]+/generate)$", "ozellik:tasarim.uret"),
+    (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",
+     "ozellik:seo.oneri-uret"),
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",
+     "ozellik:seo.calistir"),
+]
+_FEATURE_RULES = [(m, re.compile(rx), k) for m, rx, k in FEATURE_RULES]
+
+
+def features_for(method: str, path: str) -> list[str]:
+    """Bu isteğin istediği özellik anahtarları (sayfa kuralına ek)."""
+    m = method.upper()
+    return [k for methods, rx, k in _FEATURE_RULES if m in methods and rx.match(path)]
 
 
 def rule_for(path: str) -> Any:
@@ -753,6 +829,7 @@ def explain(engine: sa.engine.Engine, tenant: str, user: str, is_admin: Callable
         except Exception as e:  # noqa: BLE001
             notes.append(f"CRM okunamadı: {type(e).__name__}")
     cat = catalog()
-    keys = all_keys() if (acc.admin or acc.all) else acc.perms
+    keys = acc.granted()
     pages = [{**p, "allowed": p["key"] in keys} for p in cat["pages"]]
-    return {**acc.view(), "adGroups": groups, "crmRoles": crm, "pages": pages, "notes": notes}
+    features = [{**f, "allowed": f["key"] in keys} for f in cat.get("features", [])]
+    return {**acc.view(), "adGroups": groups, "crmRoles": crm, "pages": pages, "features": features, "notes": notes}

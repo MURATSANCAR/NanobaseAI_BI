@@ -377,7 +377,7 @@ class SemanticResolver:
         # Kolon adları, açıklamaları ve içerdikleri değerler üzerinde sözlük araması. Dışarıdan
         # verilir; verilmezse çözümleme bugünkü gibi yalnız sertifikalı sözlükten yürür.
         self.columns: Any = None
-        self._measure_columns: dict[tuple[str, str], tuple[str, str]] = {}
+        self._measure_columns: dict[tuple[str, str], list[tuple[str, str, tuple[str, ...]]]] = {}
 
     @staticmethod
     def _measure_expressions(question, qf, sq):
@@ -474,7 +474,10 @@ class SemanticResolver:
 
         # 1) greedy longest-match over clause-local n-grams
         hits: list[ResolvedSlot] = []
-        for i, j, key in sorted(qf.terms, key=lambda t: (-(t[1] - t[0]), t[0])):
+        # A name read with "toplam" in it ("fatura toplam tutarı") is ranked by its other words: counted in full it
+        # took "fatura" away from "alış faturalarımızın" and the purchase filter was lost; 4a2 reads the measure
+        # from the filter's noun instead.
+        for i, j, key in sorted(qf.terms, key=lambda t: (-sum(1 for w in qf.tokens[t[0]:t[1]] if w != "toplam"), t[0])):
             if any(k in consumed for k in range(i, j)):
                 continue
             # The key reaching this point has already been stemmed, and stemming an inflected word
@@ -780,6 +783,16 @@ class SemanticResolver:
                 hits.append(inferred)
                 sq.slots = hits
 
+        # 4a2) "satış fatura tutarı", "iade faturalarının toplamı": the document noun went to the filter and the
+        #      measure word was left on its own; the certified measure named by the two together is the one asked
+        #      for ("fatura tutarı", "fatura toplamı"), on the filter's own table. "… sayısı ve toplam tutarı":
+        #      the second measure of a list, on the table already read.
+        while (shared := self._metric_over_filter(qf, hits, consumed, index)) is not None:
+            hits.append(shared)
+            sq.slots = hits
+            sq.explanation.append(f"'{shared.term}' → '{shared.explain.get('canonical')}' "
+                                  f"({'belge adı hem filtre hem ölçünün adı' if shared.explain.get('source') == 'shares_filter_word' else 'okunan tablonun ölçüsü'})")
+
         # 4b) composed metric: certified measure column + aggregation word, when no certified metric matched
         #     ("iade tutarı" = 'iade' filtresi + 'satış tutarı' ölçü kolonu → SUM(INVOICE.NETTOTAL))
         # The composition is anchored on a certified column, so any resolved slot is enough to say which
@@ -802,6 +815,11 @@ class SemanticResolver:
                 # step 6, where its record-verb reading drops it as a word that does not narrow rows.
                 continue
             slot = self._backoff(tok, k, index)
+            if slot is not None and slot.semantic_type == SemanticType.METRIC and any(
+                    h.semantic_type == SemanticType.METRIC and h.span and (h.span[0] == k + 1 or h.span[1] == k) for h in hits):
+                # "kdvli satış tutarı": the word sits on a measure it qualifies. Guessed as a measure of its own
+                # ("kdvli" → "kdvli tutar") it added a second, unasked figure; step 6b2 asks which one is meant.
+                continue
             if slot is not None:
                 hits.append(slot)
                 consumed.add(k)
@@ -1128,6 +1146,12 @@ class SemanticResolver:
         #     does not define, the schema may still contain: the question is then about a column
         #     nobody wrote down, not about something this deployment has no answer for.
         self._from_data(sq, index, qf, consumed)
+
+        # 6b2) "kdvli iade tutarı": a word that only ever occurs in the names of certified measures, sitting
+        #      on a measure it does not name. Sent on as an undefined word, the model wrote its own formula —
+        #      "2026 ağustos kdvli satış tutarı" came back as 161,4 Mn, 87,9 Mn and 171,1 Mn on four asks.
+        #      The certified measures that carry the word are offered instead.
+        self._measure_modifiers(sq, qf, hits, index)
 
         # 6c) "karşılıksız çıkan VEYA protesto olan çekler": two labels of one column joined by "or" are one
         #     restriction to either — not two restrictions that contradict each other (which refused the
@@ -2104,7 +2128,7 @@ class SemanticResolver:
         if getattr(self, "_cache_key", None) == key:
             return
         values: dict[str, list[tuple[str, str, str]]] = {}
-        measures: dict[tuple[str, str], tuple[str, str]] = {}
+        measures: dict[tuple[str, str], list[tuple[str, str, tuple[str, ...]]]] = {}
         seen: set[tuple[str, str]] = set()
         for senses in index.values():
             for concept, maps in senses:
@@ -2118,7 +2142,9 @@ class SemanticResolver:
                     seen.add((m.entity, col.name, concept.normalized_term))
                     if any(t in col.data_type.lower() for t in _NUMERIC_TYPES) and not col.is_primary_key and not col.ref_entity:
                         head = concept.normalized_term.split()[-1]
-                        measures.setdefault((m.entity, head), (col.name, concept.term))
+                        entry = (col.name, concept.term, tuple(dict.fromkeys([concept.term, *(concept.synonyms or [])])))
+                        if entry not in measures.setdefault((m.entity, head), []):
+                            measures[(m.entity, head)].append(entry)
                     if col.sensitive:
                         continue        # personal data never becomes a searchable value literal
                     observed = [str(v) for v, _ in col.meaningful_values()] if col.is_enum() else []
@@ -3002,6 +3028,107 @@ class SemanticResolver:
                 out.append((key, kept))
         return out
 
+    def _measure_modifiers(self, sq: SemanticQuery, qf: Any, hits: list[ResolvedSlot], index: dict) -> None:
+        """Only a word right before the measure, whose certified names are that word plus measure words
+        ("kdvli tutar"): a qualifier of an amount, not a subject of its own ("sabit giderler", "ciro, tahsilat")."""
+        metrics = [h for h in hits if h.semantic_type == SemanticType.METRIC and h.mapping and h.span]
+        for tok in list(sq.unresolved):
+            at = [k for k, t in enumerate(qf.tokens) if t == tok]
+            measure = next((h for h in metrics for k in at if h.span[0] == k + 1), None)
+            if measure is None:
+                continue
+            root = stem(tok)
+            names = sorted({c.term for key, senses in index.items()
+                            if key.split()[0] == root and len(key.split()) > 1
+                            and all(w in METRIC_VOCAB_S for w in key.split()[1:])
+                            for c, maps in senses if c.semantic_type == SemanticType.METRIC and maps})
+            if not names:
+                continue
+            sq.unresolved.remove(tok)
+            phrase = f"{tok} {measure.term}"
+            if phrase not in sq.unhandled:
+                sq.unhandled.append(phrase)
+            sq.clarification.append(
+                f"‘{phrase}’ katalogda tanımlı bir ölçü değil. ‘{tok}’ şu tanımlı ölçülerde geçiyor: "
+                f"{', '.join(names)}. Hangisini kastediyorsunuz?")
+            sq.explanation.append(f"'{tok}' bir ölçü niteleyicisi; '{measure.term}' ile birlikte tanımlı değil — model formül yazmadı")
+
+    def _metric_over_filter(self, qf: Any, hits: list[ResolvedSlot], consumed: set[int], index: dict) -> Optional[ResolvedSlot]:
+        """A certified measure named around a free measure word, on a table the question already reads.
+
+        Longest-first matching gives an overlapping word to whichever phrase starts first: "satış fatura
+        tutarı" is read "satış fatura" (the sales-invoice filter) + "tutarı", and the lone measure word was
+        then composed from whatever column came first. Two readings are taken here, both ending on a free
+        measure word and both only on a table already read:
+          - the name begins inside a filter ("fatura tutarı", "faturalarının toplamı"): that filter's table;
+          - the name is measure words only ("toplam tutarı"), which say nothing about a table by themselves:
+            the table of the filters and measures already read, and — when a measure is already there — only
+            as the next item of a list ("fatura sayısı ve toplam tutarı"), never as a second reading of it."""
+        filters = [h for h in hits if h.semantic_type == SemanticType.DIMENSION_VALUE and h.mapping and h.span
+                   and h.span[1] > h.span[0]]
+        has_metric = any(h.semantic_type == SemanticType.METRIC for h in hits)
+        placed = {h.mapping.entity for h in hits if h.mapping and h.semantic_type in (SemanticType.METRIC, SemanticType.DIMENSION_VALUE)}
+        measure_word = lambda k: stem(qf.tokens[k]) in METRIC_VOCAB_S or fold(qf.tokens[k]) == "toplam"
+        best = None
+        for last, tok in enumerate(qf.tokens):
+            if last in consumed or stem(tok) not in METRIC_VOCAB_S:
+                continue
+            if fold(tok) == "toplam" and last + 1 < len(qf.tokens):
+                continue            # "faturalarındaki toplam KDV tutarı": "toplam" qualifies what follows it
+            for i in range(max(0, last - 3), last):
+                owner = next((f for f in filters if f.span[0] <= i < f.span[1]), None)
+                between = range(i, last)
+                if owner is not None and not has_metric:
+                    if any(k not in range(*owner.span) and (k in consumed or not measure_word(k)) for k in between):
+                        continue
+                    entities = {owner.mapping.entity}
+                elif owner is None and all(k not in consumed and measure_word(k) for k in between):
+                    if has_metric and not (i > 0 and fold(qf.tokens[i - 1]) in ("ve", "ile", ",")):
+                        continue
+                    entities = placed
+                else:
+                    continue
+                key = " ".join(stem(t) for t in qf.tokens[i:last + 1])
+                senses = [(c, [m for m in maps if m.entity in entities]) for c, maps in (index.get(key) or [])
+                          if c.semantic_type == SemanticType.METRIC]
+                senses = [(c, maps) for c, maps in senses if maps]
+                if len({c.id for c, _ in senses}) == 1 and (best is None or last + 1 - i > best[1] - best[0]):
+                    best = (i, last + 1, key, senses, owner)
+        if best is None:
+            return None
+        i, j, key, senses, owner = best
+        slot = self._slot_from_senses(key, " ".join(qf.tokens[i:j]), senses, (i, j))
+        if slot is None:
+            return None
+        slot.explain["source"] = "shares_filter_word" if owner is not None else "measure_words_on_read_table"
+        consumed.update(k for k in range(i, j) if owner is None or k not in range(*owner.span))
+        return slot
+
+    @classmethod
+    def _named_measure_column(cls, candidates: list[tuple], head: str, tokens: list[str]) -> Optional[tuple[str, str]]:
+        """The measure column the question actually names: every content word of one of its certified names
+        (term or synonym) is in the question. 2026-09-26, müşteri VM'i: "satış fatura tutarı" and "iade
+        faturalarının toplam tutarı" were summed over INVOICE.TOTALVAT — the first "…tutar" column on the
+        entity, certified as "fatura KDV tutarı" — and on STLINE the first one was "iskonto tutarı". Neither
+        "KDV" nor "iskonto" was in the question. Several columns naming it equally well are a choice, not a
+        composition."""
+        asked = [fold(t) for t in tokens]
+        best: list[tuple[int, tuple[str, str]]] = []
+        for column, term, *rest in candidates:
+            covered = []
+            for surface in (rest[0] if rest else (term,)):
+                words = [w for w in tokenize(surface) if w not in _QUANTITY_NEUTRAL and w not in STOPWORDS_S
+                         and not cls._same_word(w, head)]
+                if all(any(cls._same_word(w, a) for a in asked) for w in words):
+                    covered.append(len(words))
+            if covered:
+                best.append((max(covered), (column, term)))
+        if not best:
+            return None
+        top = max(n for n, _ in best)
+        named = [c for n, c in best if n == top]
+        return named[0] if len({c for c, _ in named}) == 1 else None
+
     def _compose_metric(self, qf: Any, hits: list[ResolvedSlot], primary: Optional[str], consumed: set[int]) -> Optional[ResolvedSlot]:
         entity = primary or next((s_.mapping.entity for s_ in hits if s_.mapping), None)
         prof = self.by_entity.get(entity or "")
@@ -3012,7 +3139,7 @@ class SemanticResolver:
             head = stem(tok)
             if head not in METRIC_VOCAB_S:
                 continue
-            found = self._measure_columns.get((entity, head))
+            found = self._named_measure_column(self._measure_columns.get((entity, head)) or [], head, qf.tokens)
             if not found:
                 continue
             column, source_term = found

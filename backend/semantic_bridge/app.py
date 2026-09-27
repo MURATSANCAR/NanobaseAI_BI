@@ -1961,12 +1961,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     from semantic_bridge import access as access_mod
 
-    def _gate_verdict(path: str, cookie: str) -> Optional[tuple[int, str]]:
+    access_mod.bind(lambda: rt().store.engine, lambda: rt().settings.tenant_id, admin_mod.is_admin)
+
+    def _can(user: str, key: str) -> bool:
+        """Yönetici ya da rolünde bu yetki var (açıkça verilen özellikler için: «Bütün» rolü bunları kapsamaz)."""
+        return access_mod.user_can(user, key)
+
+    def _gate_verdict(method: str, path: str, cookie: str) -> Optional[tuple[int, str]]:
         """Sayfa kapısı: bu isteği kişi yapıyorsa (portal oturum çerezi) uç, kişinin görebildiği bir sayfaya ait
-        olmalı. Çerezsiz istek zamanlayıcı/betiktir; onlar uçların kendi jeton kontrolünden geçer.
+        olmalı; sayfa içindeki işlemse (sil, onayla, dışa aktar, GPU'lu üretim…) o işlemin yetkisi de gerekir.
+        Çerezsiz istek zamanlayıcı/betiktir; onlar uçların kendi jeton kontrolünden geçer.
         None = geçer; (durum, mesaj) = durdur."""
         rule = access_mod.rule_for(path)
-        if rule in (access_mod.OPEN, access_mod.OWN) or "timas_session" not in cookie:
+        wanted = access_mod.features_for(method, path)
+        if rule == access_mod.OWN or "timas_session" not in cookie or (rule == access_mod.OPEN and not wanted):
             return None
         from semantic_bridge import board as board_mod
 
@@ -1982,12 +1990,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if rule == access_mod.SYSTEM:
             return None if admin_mod.is_admin(user) else (403, "Bu işlem zamanlayıcıya aittir.")
         acc = access_mod.effective(r.store.engine, r.settings.tenant_id, user, admin_mod.is_admin)
-        return None if acc.can(*rule) else (403, "Bu sayfaya yetkiniz yok.")
+        if rule != access_mod.OPEN and not acc.can(*rule):
+            return 403, "Bu sayfaya yetkiniz yok."
+        if any(not acc.can(k) for k in wanted):
+            return 403, "Bu işlem rolünüzde yok."
+        return None
 
     @app.middleware("http")
     async def page_gate(request: Request, call_next):
         try:
-            verdict = await run_in_threadpool(_gate_verdict, request.url.path, request.headers.get("cookie", ""))
+            verdict = await run_in_threadpool(_gate_verdict, request.method, request.url.path, request.headers.get("cookie", ""))
         except Exception as e:  # noqa: BLE001
             # Yetki okunamadıysa kişiye kapalı; kapı açık kalmaz.
             log.warning("access: sayfa kapısı karar veremedi (%s): %s", request.url.path, e)
@@ -2309,6 +2321,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r.rules_text = r._load_rules()
         r.rebuild()
         return {"ok": True, "profiles": len(r.profiles)}
+
+    _display_words: dict[str, Any] = {}
+
+    @app.get("/api/v1/semantic/display-words")
+    def display_words_map() -> dict[str, Any]:
+        """ASCII sözcük → katalogdaki Türkçe yazım («satis» → «satış»). Ekran kolon başlıklarını bununla
+        yazar; katalog değişene kadar aynı harita döner (bkz. display_words.py)."""
+        from semantic_bridge import display_words
+        r = rt()
+        s = r.settings
+        version = r.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
+        if _display_words.get("version") != version:
+            _display_words.update(version=version, words=display_words.build(
+                display_words.catalog_texts(r.store, s.tenant_id, s.datasource_id)))
+        return {"words": _display_words["words"], "version": str(version)}
 
     @app.get("/api/v1/semantic/concepts")
     def concepts(request: Request, status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
@@ -3324,7 +3351,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r = rt()
         rooms_mod.ensure(r.store.engine)
         admin_mod.ensure(r.store.engine)
-        return r.store.engine, r.settings.tenant_id, user, display, admin_mod.is_admin(user)
+        # Oda ekleme/kaldırma ve başkasının rezervasyonunu iptal: yönetici ya da «Toplantı odalarını yönetme».
+        return r.store.engine, r.settings.tenant_id, user, display, _can(user, "ozellik:oda.yonet")
 
     def _room_error(e: "rooms_mod.RoomError") -> HTTPException:
         detail: dict[str, Any] = {"code": type(e).__name__.upper(), "message": str(e)}
@@ -3429,6 +3457,86 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, display = _greetings(request)
         ids = body.get("ids") if isinstance(body.get("ids"), list) else []
         return {"marked": greetings_mod.mark_seen(engine, tenant, user, display, ids)}
+
+    # ------------------------------------------------------------------ kampüs sesli bülteni
+    # Sunucuda üretilen ses Kampüs'te çalar. Okuma oturumla, ekleme/yayın yalnız yöneticiyle (bkz. bulletins.py).
+    from semantic_bridge import bulletins as bulletins_mod
+
+    def _bulletin_error(e: "bulletins_mod.BulletinError") -> HTTPException:
+        return HTTPException(status_code=e.status, detail={"code": "BULLETIN", "message": str(e)})
+
+    def _bulletin_reader(request: Request) -> tuple[Any, str]:
+        _require_caller(request)
+        _board_user(request)                                   # oturum yoksa 401
+        r = rt()
+        return r.store.engine, r.settings.tenant_id
+
+    @app.get("/api/v1/bulletins/current")
+    def bulletin_current(request: Request) -> dict[str, Any]:
+        engine, tenant = _bulletin_reader(request)
+        return {"item": bulletins_mod.current(engine, tenant)}
+
+    @app.get("/api/v1/bulletins")
+    def bulletin_list(request: Request) -> dict[str, Any]:
+        engine, tenant = _bulletin_reader(request)
+        return {"items": bulletins_mod.listing(engine, tenant, published_only=True)}
+
+    @app.get("/api/v1/bulletins/{bulletin_id}/audio")
+    def bulletin_audio(bulletin_id: str, request: Request) -> Response:
+        engine, tenant = _bulletin_reader(request)
+        # Taslağı yalnız yönetici dinler (Yönetim ekranında yayından önce).
+        drafts_ok = admin_mod.is_admin(_board_user(request))
+        try:
+            return bulletins_mod.audio(engine, tenant, bulletin_id, request.headers.get("range"), published_only=not drafts_ok)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+
+    @app.get("/api/v1/admin/bulletins")
+    def bulletin_admin_list(request: Request) -> dict[str, Any]:
+        _admin_gate(request)
+        r = rt()
+        return {"items": bulletins_mod.listing(r.store.engine, r.settings.tenant_id, published_only=False),
+                "maxMb": bulletins_mod.max_bytes() // (1024 * 1024)}
+
+    @app.post("/api/v1/admin/bulletins", status_code=201)
+    async def bulletin_upload(request: Request, filename: str = "", duration: str = "") -> dict[str, Any]:
+        user = await run_in_threadpool(_admin_gate, request)
+        if int(request.headers.get("content-length") or 0) > bulletins_mod.max_bytes():
+            raise HTTPException(status_code=413, detail={"code": "BULLETIN", "message":
+                                f"Ses dosyası {bulletins_mod.max_bytes() // (1024 * 1024)} MB'tan büyük olamaz."})
+        data = await request.body()
+        r = rt()
+        try:
+            out = await run_in_threadpool(lambda: bulletins_mod.add(
+                r.store.engine, r.settings.tenant_id, user, data, original_name=filename or None, duration_sec=duration or None))
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        admin_mod.audit(r.store.engine, user, "create", "bulletin", out["id"], out["title"], {"bytes": out["size"], "mime": out["mime"]})
+        return out
+
+    @app.patch("/api/v1/admin/bulletins/{bulletin_id}")
+    def bulletin_update(bulletin_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        user = _admin_gate(request)
+        r = rt()
+        try:
+            out = bulletins_mod.update(r.store.engine, r.settings.tenant_id, bulletin_id, body)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        action = "publish" if body.get("status") == bulletins_mod.PUBLISHED else "unpublish" if body.get("status") == bulletins_mod.DRAFT else "update"
+        admin_mod.audit(r.store.engine, user, action, "bulletin", bulletin_id, out["title"],
+                        {k: body[k] for k in body if k in ("title", "episode", "voice", "status", "durationSec")})
+        return out
+
+    @app.delete("/api/v1/admin/bulletins/{bulletin_id}")
+    def bulletin_delete(bulletin_id: str, request: Request) -> dict[str, Any]:
+        user = _admin_gate(request)
+        r = rt()
+        try:
+            out = bulletins_mod.remove(r.store.engine, r.settings.tenant_id, bulletin_id)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        admin_mod.audit(r.store.engine, user, "delete", "bulletin", bulletin_id, out["title"], {"bytes": out["size"]})
+        return {"ok": True}
 
     # ------------------------------------------------------------------ kişi rehberi ve profil
     # Rehber CRM'den gelir (yalnız gerçek, etkin kullanıcılar). Kişinin eklediği dahili/kat/fotoğraf sunucuda.
@@ -3657,10 +3765,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                                         name="editorial-intake")
 
     def _intake_ctx(request: Request) -> tuple[Any, str, str, str, bool]:
+        """Son alan: herkesin projesini görme ve her projede adım işaretleme (yönetici ya da «Yazar giriş: herkesin projesi»)."""
         engine, tenant, user, display = _greetings(request)
         intake_mod.ensure(engine)
         admin_mod.ensure(engine)
-        return engine, tenant, user, display, admin_mod.is_admin(user)
+        return engine, tenant, user, display, _can(user, "ozellik:yazar-giris.herkesinki")
 
     def _intake_error(e: "intake_mod.IntakeError") -> HTTPException:
         return HTTPException(status_code=e.status, detail={"code": "INVALID_INTAKE", "message": str(e)})
@@ -3718,15 +3827,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/editorial/intake/meetings/{day}")
     def editorial_intake_agenda(day: str, request: Request) -> dict[str, Any]:
-        _, _, _, _, is_admin = _intake_ctx(request)
+        _, _, user, _, _ = _intake_ctx(request)
+        see = _can(user, "ozellik:yayin-kurulu.gorusler")
         schema, run = _editorial(request)
         try:
             rows = run(intake_mod.agenda_sql(schema, day)).get("records") or []
             ids = sorted({str(r.get("proje_id")) for r in rows if r.get("proje_id")})
-            # Kurul üyelerinin adlı görüşleri rol modeli gelene kadar yalnız yöneticilere açılır.
+            # Kurul üyelerinin adlı görüşleri: yönetici ya da «Yayın kurulu: üye görüşleri».
             opinions = [intake_mod.opinion_row(o) for o in run(intake_mod.opinions_sql(schema, ids)).get("records") or []] \
-                if is_admin and ids else ([] if is_admin else None)
-            return {"date": day, "items": intake_mod.agenda(rows, opinions), "opinionsVisible": is_admin}
+                if see and ids else ([] if see else None)
+            return {"date": day, "items": intake_mod.agenda(rows, opinions), "opinionsVisible": see}
         except intake_mod.IntakeError as e:
             raise _intake_error(e) from e
 
@@ -3738,7 +3848,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             f = _intake_fact(project_id)
             boards = [intake_mod.board_row(b) for b in run(intake_mod.project_boards_sql(schema, project_id)).get("records") or []]
             opinions = [intake_mod.opinion_row(o) for o in run(intake_mod.opinions_sql(schema, [project_id])).get("records") or []] \
-                if is_admin else None
+                if _can(user, "ozellik:yayin-kurulu.gorusler") else None
             marks = intake_mod.all_marks(engine, tenant, project_id).get(f["id"], {})
             can_mark = is_admin or (bool(user) and (f.get("editorAccount") or "") == user.strip().lower())
             return intake_mod.detail(f, marks, user, today=_today(), late_days=_int_conf("EDITORIAL_INTAKE_LATE_DAYS", 14),
@@ -3862,10 +3972,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def editorial_board(request: Request, q: str = "", year: Optional[int] = None, decision: Optional[int] = None,
                         page: int = 0) -> dict[str, Any]:
         schema, run = _editorial(request)
-        # Kurul üyelerinin adlı görüşleri rol modeli gelene kadar yalnız yöneticilere açılır.
+        # Kurul üyelerinin adlı görüşleri: yönetici ya da «Yayın kurulu: üye görüşleri».
         _, _, user, _ = _greetings(request)
         admin_mod.ensure(rt().store.engine)
-        with_opinions = admin_mod.is_admin(user)
+        with_opinions = _can(user, "ozellik:yayin-kurulu.gorusler")
         _remember_view("board", page, q, with_opinions=with_opinions, year=year, decision=decision)
         try:
             return editorial_mod.board_page(schema, run, page, with_opinions=with_opinions,
@@ -3911,7 +4021,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             desk.ensure(engine)
             admin_mod.ensure(engine)
             title = (out.get("title") or "").strip().lower()
-            works = [w for w in desk.list_works(engine, tenant, user, admin_mod.is_admin(user))
+            works = [w for w in desk.list_works(engine, tenant, user, _can(user, "ozellik:masa.herkesinki"))
                      if title and w["title"].strip().lower() == title]
             out["desk"] = works
         except Exception:  # noqa: BLE001 — masa kaydı bir ektir, kitap sayfasını düşürmez
@@ -3966,7 +4076,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.ensure(engine)
         if first:
             desk_mod.reset_stale_reviews(engine)
-        return engine, tenant, user, admin_mod.is_admin(user)
+        # Herkesin eseri: yönetici ya da «Masam: herkesin işi».
+        return engine, tenant, user, _can(user, "ozellik:masa.herkesinki")
 
     def _desk_call(fn, *a, **kw):
         try:

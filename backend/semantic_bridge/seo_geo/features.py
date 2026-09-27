@@ -21,7 +21,12 @@ from typing import Any, Callable
 
 log = logging.getLogger("semantic.seo_geo")
 
-MODULES = ("impact", "opportunities", "bing", "tech", "speed", "competitors", "entity", "guides")
+MODULES = ("impact", "opportunities", "bing", "tech", "speed", "competitors", "entity", "guides",
+           # 2. tur (2026-09-27): izleme/uyarı + haftalık rapor, yapay zekânın kaynakları, yarışan sayfalar, sezon takvimi,
+           # site içi bağlantılar, Google taraması (URL Denetimi + Cloudflare bot analitiği), okur yorumları, video,
+           # satıştan kalkan kitap sayfaları, yazar sayfası güven sinyalleri, Bing'den gelen bağlantılar
+           "watch", "ai_sources", "cannibal", "seasons", "links", "crawlbot", "reviews", "video", "sunset",
+           "authors", "backlinks")
 
 
 @dataclass

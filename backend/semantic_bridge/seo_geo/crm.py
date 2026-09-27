@@ -12,7 +12,7 @@ Ne okunur (2026-09-26/27 canlı CRM .28 ölçümü, docs/analiz/seo-geo-modul-20
 
 Hak kararı (kitap başına): yürürlükteki bütün Telif Alış sözleşmelerinde iletim hakkı varsa `var`; biri eksikse
 `eksik`; hepsi var ama serbest metinli hak notu varsa `incele`; yürürlükte Telif Alış yoksa `yok` (koruma dışı
-eserse `koruma_disi`). Kesin söz telif biriminindir; bu bir ön süzgeçtir.
+eserse `koruma_disi`). Kitap olmayan ürün `kitap_degil`, kendi sözleşmesi olmayan set `set`. Kesin söz telif biriminindir; bu bir ön süzgeçtir.
 """
 from __future__ import annotations
 
@@ -28,7 +28,13 @@ CONNECTION_FILE = os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobase
 ALIS, SATIS = 5, 1
 #: Yayıncılık durumu etiketinin kodu → SEO uyarısı. Etiket CRM'den okunur; kod (YS05 …) etiketin başındadır.
 STATUS_FLAGS = {"YS01": "iptal", "YS05": "bizim_degil", "YS06": "devredildi", "YS11": "cekildi", "YS12": "geri_istendi"}
-RIGHTS = ("var", "incele", "eksik", "yok", "koruma_disi")
+RIGHTS = ("var", "incele", "eksik", "yok", "koruma_disi", "set", "kitap_degil")
+#: CRM ürün türü (`new_Tip` etiketi) ya da yayın durumu kitap değilse telif sorusu anlamsız: "kitap_degil".
+#: Setin hakkı içindeki kitaplardan gelir; kendi telif alış sözleşmesi yoksa "set" (T-soft'ta satıştaki 651 setin
+#: 56'sında kendi sözleşmesi var, 2026-09-27). Etiketler CRM'den okunur, burada yalnız karşılaştırma adları var.
+NON_BOOK_KINDS = ("pazarlama materyalleri", "promosyon")
+NON_BOOK_STATUS = ("ticari ürün",)
+SET_KINDS = ("set",)
 _TAG = re.compile(r"<[^>]+>")
 _WS = re.compile(r"\s+")
 LIMIT = 500_000
@@ -61,7 +67,7 @@ def _day(v: Any) -> Optional[date]:
 def book_sql(p: str) -> str:
     return (
         "SELECT k.new_kitapId AS id, k.new_name AS name, k.new_ean13 AS ean, k.new_isbn13 AS isbn, k.new_ekitapisbn AS ebook_isbn,"
-        " k.new_kitap_yayincilikstatusu AS status, CAST(ISNULL(k.new_tsoftaktif, 0) AS int) AS tsoft,"
+        " k.new_kitap_yayincilikstatusu AS status, k.new_Tip AS kind, CAST(ISNULL(k.new_tsoftaktif, 0) AS int) AS tsoft,"
         " k.new_orjinaladi AS original_title, k.new_orijinaldil AS original_language, k.new_ilkyayintarihi AS first_published,"
         " k.new_ilkyayinulkesi AS first_country, k.new_hedefkitle AS audience, k.new_hedefkitleyasbaslangic AS age_from,"
         " k.new_hedefkitleyasbitis AS age_to, k.new_yazartext AS authors, k.new_cizerlertext AS illustrators,"
@@ -133,6 +139,18 @@ def verdict(contracts: list[dict[str, Any]], today: date) -> tuple[str, str]:
     return "var", "Yürürlükteki bütün telif alış sözleşmelerinde internette gösterim hakkı var."
 
 
+def by_kind(decision: str, why: str, kind_label: Optional[str], status_label: Optional[str],
+            has_contracts: bool) -> tuple[str, str]:
+    """Ürün türüne göre karar düzeltmesi: kitap olmayan üründe telif sorulmaz; set kendi sözleşmesi yoksa içindekilere bakar."""
+    kind = (kind_label or "").strip().casefold()
+    status = (status_label or "").strip().casefold()
+    if kind in NON_BOOK_KINDS or status in NON_BOOK_STATUS:
+        return "kitap_degil", f"CRM'de kitap değil ({status_label if status in NON_BOOK_STATUS else kind_label}); telif sözleşmesi aranmaz."
+    if kind in SET_KINDS and not has_contracts:
+        return "set", "Set ürünü; kendi telif sözleşmesi yok, hak içindeki kitaplara göre değerlendirilir."
+    return decision, why
+
+
 def status_flag(label: Optional[str]) -> Optional[str]:
     code = (label or "").split(" ", 1)[0].upper()
     return STATUS_FLAGS.get(code)
@@ -150,6 +168,7 @@ def read(schema: str, execute: Callable[[str, int], Any], today: Optional[date] 
 
     labels = {int(r["v"]): r["l"] for r in rows(label_sql(p, "new_kitap_yayincilikstatusu"))}
     audience = {int(r["v"]): r["l"] for r in rows(label_sql(p, "new_hedefkitle"))}
+    kinds = {int(r["v"]): r["l"] for r in rows(label_sql(p, "new_tip"))}
     parties: dict[str, list[str]] = {}
     for r in rows(party_sql(p)):
         name = (r.get("person") or r.get("company") or "").strip()
@@ -167,10 +186,12 @@ def read(schema: str, execute: Callable[[str, int], Any], today: Optional[date] 
         contracts = by_book.get(str(b["id"]).upper(), [])
         decision, why = verdict(contracts, today)
         label = labels.get(int(b["status"])) if b.get("status") is not None else None
+        kind = kinds.get(int(b["kind"])) if b.get("kind") is not None else None
+        decision, why = by_kind(decision, why, kind, label, bool(contracts))
         live = [c for c in contracts if in_force(c, today)]
         out.append({
             "ean": ean, "bookId": str(b["id"]), "name": b.get("name"), "rights": decision, "rightsWhy": why,
-            "statusLabel": label, "statusFlag": status_flag(label), "tsoftActive": bool(b.get("tsoft")),
+            "statusLabel": label, "statusFlag": status_flag(label), "kind": kind, "tsoftActive": bool(b.get("tsoft")),
             "isbn": clean(b.get("isbn")), "ebookIsbn": clean(b.get("ebook_isbn")),
             "originalTitle": clean(b.get("original_title")), "originalLanguage": clean(b.get("original_language")),
             "firstPublished": str(_day(b.get("first_published")) or "") or None, "firstCountry": clean(b.get("first_country")),
