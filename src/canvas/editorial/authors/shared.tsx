@@ -12,6 +12,9 @@ export const BAND: Record<HeatBand, { label: string; pill: string; dot: string }
   yok: { label: 'Temas yok', pill: 'bg-slate-100 text-canvas-muted', dot: 'bg-slate-300' },
 };
 
+/** CRM'deki iz türleri: ısının yakınlık payına girer (görüşme yoksa ya da daha yeniyse). */
+export const TRACE: Record<string, string> = { eser: 'yeni eser kaydı', sozlesme: 'sözleşme başlangıcı' };
+
 /** Ay hücresi: o ayda yapılan görüşme sayısı. 0 boş, 3 ve üstü en koyu. */
 export function cellClass(n: number): string {
   if (n <= 0) return 'bg-slate-100/80';

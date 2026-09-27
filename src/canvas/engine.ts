@@ -1378,6 +1378,11 @@ export type AuthorHeat = {
   contactsYear: number;
   months: number[];
   next: string | null;
+  /** Yakınlık payının kaynağı: son görüşme ya da CRM'deki son iz (yeni eser kaydı, sözleşme başlangıcı). */
+  recencyFrom: 'gorusme' | 'eser' | 'sozlesme' | null;
+  lastTrace: string | null;
+  traceKind: 'eser' | 'sozlesme' | null;
+  traceDays: number | null;
 };
 export type AuthorCard = {
   id: string;
@@ -1510,6 +1515,8 @@ export type AuthorHeatRow = {
   crm: number[];
   crmBooks: number;
   crmContracts: number;
+  /** «İlgi bekleyen» nedenleri (sözleşme bitiyor + görüşme yok, notu girilmemiş randevu, geçmiş adım). */
+  attention: string[];
 };
 export type AuthorHeatmap = {
   months: string[];
@@ -1518,6 +1525,8 @@ export type AuthorHeatmap = {
   page: number;
   pageSize: number;
   bands: Record<HeatBand, number>;
+  attention: number;
+  warnDays: number;
   crmOk: boolean;
   crmError: string | null;
 };

@@ -4451,10 +4451,25 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         {"stage": out["stage"], "crm": out["crmContactId"]})
         return out
 
+    def _rel_trace(request: Request, heat: dict[str, Any], contact_id: Optional[str]) -> dict[str, Any]:
+        """Kart panelindeki ısıya CRM'deki son izi (yeni eser, sözleşme başlangıcı) katar; CRM okunamazsa ısı olduğu gibi."""
+        if not contact_id:
+            return heat
+        try:
+            schema, run = _editorial(request)
+            row = (run(rel_mod.crm_trace_sql(schema, contact_id)).get("records") or [{}])[0]
+            day, kind = rel_mod.latest_trace([("eser", row.get("eser")), ("sozlesme", row.get("sozlesme"))])
+            return rel_mod.with_trace(heat, day, kind)
+        except Exception:  # noqa: BLE001 — iz bir ektir, paneli düşürmez
+            log.exception("author relations: CRM izi okunamadı")
+            return heat
+
     @app.get("/api/v1/editorial/authors/cards/{card_id}")
     def authors_card(card_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)
-        return _rel_call(rel_mod.card_detail, engine, tenant, user, admin, card_id)
+        out = _rel_call(rel_mod.card_detail, engine, tenant, user, admin, card_id)
+        out["heat"] = _rel_trace(request, out["heat"], out.get("crmContactId"))
+        return out
 
     @app.patch("/api/v1/editorial/authors/cards/{card_id}")
     def authors_card_update(card_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -4467,7 +4482,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/authors/by-crm/{contact_id}")
     def authors_by_crm(contact_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _, admin = _rel(request)
-        return _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
+        out = _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
+        out["heat"] = _rel_trace(request, out["heat"], contact_id)
+        return out
 
     @app.post("/api/v1/editorial/authors/by-crm/{contact_id}/card", status_code=201)
     def authors_crm_card(contact_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -4497,7 +4514,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def authors_heatmap(request: Request, scope: str = "hepsi", q: str = "", order: str = "soguk", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _, _ = _rel(request)
         return _rel_call(rel_mod.heatmap, admin_mod.conf("CRM_SCHEMA"), _crm_fetch_all, engine, tenant, user,
-                         scope=scope, q=q, order=order, page_no=page)
+                         scope=scope, q=q, order=order, page_no=page,
+                         warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60))
 
     @app.get("/api/v1/editorial/authors/agenda")
     def authors_agenda(request: Request, scope: str = "benim", days: int = 30) -> dict[str, Any]:

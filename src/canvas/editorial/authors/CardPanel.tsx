@@ -16,7 +16,7 @@ import { useCan } from '../../useAdmin';
 import Sheet from '../studio/reader/Sheet';
 import MeetingForm, { type MeetingMode, type MeetingTarget } from './MeetingForm';
 import CardForm from './CardForm';
-import { BAND, HeatPill, cellClass, lastMonths, daysAgo, downloadIcs, fmtDay, invalidateAuthors, monthLabel, useAuthorsMeta } from './shared';
+import { BAND, HeatPill, TRACE, cellClass, lastMonths, daysAgo, downloadIcs, fmtDay, invalidateAuthors, monthLabel, useAuthorsMeta } from './shared';
 
 /** Bir yazarın ilişki kaydı: kart, ısı dökümü, randevu ve görüşme notları. Kartı olmayan CRM kişisi için de açılır;
  *  ilk randevu ya da not yazılınca kart kendiliğinden oluşur. */
@@ -74,6 +74,9 @@ export function HeatBreakdown({ heat, months }: { heat: AuthorHeat; months?: str
       <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
         Son görüşme {daysAgo(heat.daysSince)}; son 12 ayda {heat.contactsYear} görüşme.
         {heat.next ? ` Sıradaki randevu ${fmtDay(heat.next)}.` : ''}
+        {heat.recencyFrom && heat.recencyFrom !== 'gorusme' && heat.traceKind
+          ? ` Yakınlık CRM'deki son izden: ${TRACE[heat.traceKind]}, ${daysAgo(heat.traceDays)}.`
+          : ''}
       </p>
     </div>
   );
