@@ -32,14 +32,14 @@ import asyncio
 import collections
 
 from .. import db
-from ..llm import Llm, PromptRef
+from ..llm import ContextOverflow, Llm, ModelError, PromptRef
 from . import _continuity as C
 from . import _spelling_judge as J
 from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_variety"
-VERSION = "4"
+VERSION = "5"
 LABEL = "Kelime çeşitliliği ve yakın tekrar"
 
 DIRECTOR = "book-director"
@@ -151,18 +151,38 @@ async def _senses(llm: Llm, units: dict[str, list[W.Occ]], contexts: dict[int, s
     senses: dict[str, list[dict]] = {}
     sem = asyncio.Semaphore(PARALLEL)
 
-    async def ask(call):
+    async def ask(call) -> list[tuple[dict, dict]]:
+        """Bir anlam çağrısı → [(cevap, numara eşlemi)]. Cevap bütçeye sığmazsa (uzun etiket/deyim) çağrı
+        ikiye bölünüp yeniden sorulur, tek geçişe inene kadar; tek geçiş de düşerse boş cevap (geçiş
+        «belirsiz» kalır ve sayılır), denetim düşmez."""
         body, ids = W.sense_prompt(call, contexts, senses)
         schema = W.sense_schema(len(call), len(ids))
-        async with sem:
-            out, _ = await llm.chat(DIRECTOR, [{"role": "user", "content": body}], prompt=SENSES, schema=schema,
-                                    pages=sorted({o.page for _, part in call for o in part}),
-                                    max_tokens=600 + 16 * len(ids), temperature=0.0, thinking=False)
-        stats["sense_calls"] += 1
-        return out, ids
+        try:
+            async with sem:
+                # geçiş başına ~40 belirteç: numara + gerektiğinde etiket ve deyim
+                out, _ = await llm.chat(DIRECTOR, [{"role": "user", "content": body}], prompt=SENSES, schema=schema,
+                                        pages=sorted({o.page for _, part in call for o in part}),
+                                        max_tokens=1000 + 40 * len(ids), temperature=0.0, thinking=False)
+            stats["sense_calls"] += 1
+            return [(out, ids)]
+        except ModelError as e:
+            if isinstance(e, ContextOverflow) or "gpu_busy" in str(e):
+                raise
+            items = [(lem, o) for lem, part in call for o in part]
+            if len(items) <= 1:
+                stats["sense_call_failed"] += 1
+                return [({"sozcukler": []}, ids)]
+            stats["sense_split"] += 1
+            out_all = []
+            for piece in (items[: len(items) // 2], items[len(items) // 2:]):
+                grouped: dict[str, list] = {}
+                for lem, o in piece:
+                    grouped.setdefault(lem, []).append(o)
+                out_all += await ask(list(grouped.items()))
+            return out_all
 
     for rnd in W.rounds(units, SENSE_BATCH):
-        results = await asyncio.gather(*(ask(call) for call in rnd))
+        results = [pair for r in await asyncio.gather(*(ask(call) for call in rnd)) for pair in r]
         missing = []
         for out, ids in results:
             for n in W.merge_senses(out, ids, senses):
@@ -174,8 +194,8 @@ async def _senses(llm: Llm, units: dict[str, list[W.Occ]], contexts: dict[int, s
                 again[lem].append(o)
             stats["sense_retried"] += len(missing)
             for call in [c for r in W.rounds(dict(again), SENSE_BATCH) for c in r]:
-                out, ids = await ask(call)
-                stats["sense_unassigned"] += len(W.merge_senses(out, ids, senses))
+                for out, ids in await ask(call):
+                    stats["sense_unassigned"] += len(W.merge_senses(out, ids, senses))
     return senses
 
 

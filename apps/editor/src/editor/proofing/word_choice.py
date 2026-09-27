@@ -33,9 +33,9 @@ VERSION = "1"
 LABEL = "Yabancı ve yaşa ağır sözcükler"
 
 DIRECTOR = "book-director"
-FOREIGN_LIST = PromptRef("proof_word_foreign", "1")
-AGE_LIST = PromptRef("proof_word_age", "1")
-BATCH = C.setting("word_choice_batch", 150)                 # EDITOR_WORD_CHOICE_BATCH (yalnız çağrı boyu)
+FOREIGN_LIST = PromptRef("proof_word_foreign", "2")
+AGE_LIST = PromptRef("proof_word_age", "2")
+BATCH = C.setting("word_choice_batch", 80)                 # EDITOR_WORD_CHOICE_BATCH (yalnız çağrı boyu)
 CONTEXT_CHARS = C.setting("word_context_chars", 70)         # EDITOR_WORD_CONTEXT_CHARS
 PARALLEL = C.setting("word_variety_parallel", 4)            # EDITOR_WORD_VARIETY_PARALLEL
 YOUNG_READERS = ("CHILD", "YOUNG")
@@ -48,22 +48,28 @@ FINE = "Hayır: bu yaştaki okur anlar ya da bağlamdan çıkarır; ya da sözc�
 
 
 def list_prompt(kind: str, words: list[str], reader: str) -> str:
+    """Her sözcük için sınıf istenir (yalnız «seç» denince model boş liste döndürüyordu, 2026-09-27)."""
     if kind == "foreign":
-        ask = ("Aşağıdaki sözcüklerden, günümüz Batı dillerinden (İngilizce, Fransızca vb.) gelmiş, Türkçeye "
-               "YERLEŞMEMİŞ ve aynı anlamı taşıyan yaygın bir TÜRKÇE KARŞILIĞI olanları seç. Türkçeye yerleşmiş "
-               "sözcükleri (internet, televizyon, telefon, doktor gibi herkesin kullandığı ve sözlükte olanlar), "
-               "Arapça ya da Farsça kökenli sözcükleri ve karşılığı anlamı tam vermeyenleri SEÇME. Her seçtiğin "
-               "için karşılığı yaz.")
+        ask = ("Aşağıdaki HER sözcüğü sınıflandır:\n"
+               "- TURKCE: Türkçe ya da Arapça/Farsça kökenli yerleşik sözcük (kitap, dünya, insan, güzel).\n"
+               "- YERLESIK: Batı dillerinden gelmiş ama Türkçeye yerleşmiş, sözlükte olan, herkesin kullandığı "
+               "(internet, televizyon, telefon, doktor, otobüs).\n"
+               "- KARSILIKLI: Batı dillerinden gelmiş, yerleşmemiş ve aynı anlamı veren yaygın bir Türkçe karşılığı "
+               "olan; `karsilik` alanına o karşılığı yaz.\n"
+               "Emin değilsen TURKCE ya da YERLESIK de. KARSILIKLI dışındakilerde `karsilik` boş kalır.")
     else:
-        ask = (f"Okur {reader}. Aşağıdaki sözcüklerden, bu yaştaki okurun anlamını büyük olasılıkla BİLMEYECEĞİ "
-               "sözcükleri seç ve her biri için bu yaşa uygun daha basit bir karşılık yaz. Gündelik sözcükleri seçme.")
-    return (ask + " Yalnız listedeki sözcükleri, listedeki yazımıyla kullan; uygun sözcük yoksa boş liste ver.\n\n"
-            "Sözcükler: " + ", ".join(words))
+        ask = (f"Okur {reader}. Aşağıdaki HER sözcüğü sınıflandır:\n"
+               "- BILIR: bu yaştaki okur anlamını bilir ya da bağlamdan çıkarır.\n"
+               "- AGIR: bu yaştaki okur anlamını büyük olasılıkla bilmez; `karsilik` alanına bu yaşa uygun daha "
+               "basit bir sözcük yaz.\nEmin değilsen BILIR de.")
+    return ask + "\n\nHer sözcük listede tam bir kez, yazımı değiştirmeden.\n\nSözcükler: " + ", ".join(words)
 
 
-def list_schema(n: int) -> dict:
+def list_schema(kind: str, n: int) -> dict:
+    classes = ["TURKCE", "YERLESIK", "KARSILIKLI"] if kind == "foreign" else ["BILIR", "AGIR"]
     return schemas.obj({"sozcukler": schemas.arr(schemas.obj({
-        "sozcuk": {"type": "string", "maxLength": 80}, "karsilik": {"type": "string", "maxLength": 80}}), 0, n)})
+        "sozcuk": {"type": "string", "maxLength": 80}, "sinif": {"type": "string", "enum": classes},
+        "karsilik": {"type": "string", "maxLength": 80}}), n, n)})
 
 
 def reader_of(prof: dict) -> str | None:
@@ -92,7 +98,7 @@ async def _candidates(llm: Llm, kind: str, words: list[str], reader: str | None,
         async with sem:
             out, _ = await llm.chat(DIRECTOR, [{"role": "user", "content": list_prompt(kind, part, reader or "")}],
                                     prompt=FOREIGN_LIST if kind == "foreign" else AGE_LIST,
-                                    schema=list_schema(len(part)), max_tokens=400 + 12 * len(part),
+                                    schema=list_schema(kind, len(part)), max_tokens=600 + 30 * len(part),
                                     temperature=0.0, thinking=False)
         stats[f"{kind}_calls"] += 1
         return out
@@ -103,7 +109,7 @@ async def _candidates(llm: Llm, kind: str, words: list[str], reader: str | None,
             s, k = W.lower_tr((w.get("sozcuk") or "").strip()), (w.get("karsilik") or "").strip()
             if s not in known:
                 stats[f"{kind}_not_in_list"] += 1        # model listede olmayanı yazdı
-            elif k and W.lower_tr(k) != s:
+            elif w.get("sinif") in ("KARSILIKLI", "AGIR") and k and W.lower_tr(k) != s:
                 got.setdefault(s, k)
     return got
 

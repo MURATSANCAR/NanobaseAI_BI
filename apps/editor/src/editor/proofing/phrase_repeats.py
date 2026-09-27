@@ -7,7 +7,7 @@ Hat:
 1. Kök dizisi (deterministik): `word_variety._read` (Zemberek kök; özel ad, bozuk span, hikâye dışı sayfa
    dışarıda — bunlar öbeği koparır). «kalbi küt küt attı» ile «kalbim küt küt atıyordu» aynı öbektir.
 2. Aday (`_word_variety.repeated_phrases`): tek cümlede, bitişik, en az 3 sözcük ve en az 2 içerik
-   sözcüğü, kitapta en az 2 geçiş; yalnız en uzun hâl.
+   sözcüğü, kitapta en az 2 geçiş; yalnız en uzun hâl; öbekte en az bir fiil (fiilsiz ad öbeği terimdir).
 3. Yargı (model, kapalı soru, iki sırada ortalama): göze batan kalıp anlatım mı (çeşitlendirilmeli), yoksa
    deyim, ad, terim, nakarat ya da bilinçli yineleme mi? `p ≥ KEEP` → WARN.
 
@@ -61,7 +61,11 @@ async def run(generation_id: str):
     occs: list[W.Occ] = rd["occs"]
     stats = collections.Counter()
     seq = [(o.idx, o.sent, o.lemma, o.pos in W.CONTENT_POS) for o in occs]
-    found = W.repeated_phrases(seq)
+    # kalıp anlatım bir eylem ya da betimleme kalıbıdır («gözler önüne seriyor», «kalbi küt küt attı»);
+    # fiilsiz ad öbeği terimdir («sosyal medya», «yapay zekâ»), tekrarı redaksiyon konusu değildir
+    all_found = W.repeated_phrases(seq)
+    found = [(n, pos) for n, pos in all_found if any(occs[pos[0] + k].pos == "Verb" for k in range(n))]
+    stats["skip_no_verb"] = len(all_found) - len(found)
     stats["candidates"] = len(found)
     if not found:
         return [], dict(stats)
