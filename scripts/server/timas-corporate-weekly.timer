@@ -1,0 +1,10 @@
+[Unit]
+Description=Haftalık sipariş vermeyen bayi özeti, pazartesi 07:30
+
+[Timer]
+OnCalendar=Mon *-*-* 07:30:00
+Persistent=true
+Unit=timas-corporate-weekly.service
+
+[Install]
+WantedBy=timers.target

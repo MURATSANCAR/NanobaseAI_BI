@@ -107,6 +107,7 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/ceviri/abc/kalite')).toBe('ceviri');
     expect(at('/ceviri/masam')).toBe('ceviri-masam');
     expect(at('/ceviri/masam/abc')).toBe('ceviri-masam');
+    expect(at('/kurumsal-satis/firsat/abc')).toBe('kurumsal-satis'); // M32 fırsat sayfası → Kurumsal ve B2B
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

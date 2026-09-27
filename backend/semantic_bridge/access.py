@@ -492,6 +492,9 @@ RULES: list[tuple[str, Any]] = [
     # sayfasına açılır; o satır M30'da yazılır.
     ("/api/v1/schools/run-due", SYSTEM),
     ("/api/v1/schools/", frozenset({page("okul-tanitim")})),
+    # M32 Kurumsal satış ve B2B.
+    ("/api/v1/corporate/run-due", SYSTEM),
+    ("/api/v1/corporate/", frozenset({page("kurumsal-satis")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
@@ -570,6 +573,15 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:saha.not"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/field/overrides(/[^/]+)?$", "ozellik:saha.oncelik-duzenle"),
     (frozenset({"GET"}), r"^/api/v1/field/report/weekly\.xlsx$", "ozellik:veri.disa-aktar"),
+    # M32 Kurumsal satış: fırsat, paket, teklif, kurum segmenti, hatırlatmadan fırsat, veri yenileme. Teklif onayı/geri
+    # gönderme açıkça verilen `kurumsal.teklif-onay` ile ucun içinde denetlenir; bu kural onlara uygulanmaz.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/corporate/(opportunities(/[^/]+(/quotes)?)?|quotes/[^/]+(/(submit|withdraw|sent|result|letter))?"
+     r"|packages/suggest|accounts/[^/]+|reminders/[^/]+(/opportunity)?|refresh)$", "ozellik:kurumsal.teklif"),
+    (frozenset({"POST"}), r"^/api/v1/corporate/themes/[^/]+/approve$", "ozellik:kurumsal.tema-onay"),
+    (frozenset({"GET"}), r"^/api/v1/corporate/b2b/.+$", "ozellik:kurumsal.b2b"),
+    (frozenset({"GET"}), r"^/api/v1/corporate/(quotes/[^/]+/document\.(pdf|xlsx)|b2b/(dealers|highlights)\.csv)$",
+     "ozellik:veri.disa-aktar"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
     # M31: ziyaret raporu, plan önerisi/düzeltmesi, katalog, bayi önerme; bağlam (ilçe endeksi, takvim) yükleme.

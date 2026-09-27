@@ -320,6 +320,11 @@
       "key": "sayfa:okul-tanitim",
       "area": "satis",
       "label": "Okul tanıtım"
+    },
+    {
+      "key": "sayfa:kurumsal-satis",
+      "area": "satis",
+      "label": "Kurumsal ve B2B"
     }
   ],
   "features": [
@@ -690,6 +695,42 @@
       "page": "sayfa:okul-tanitim",
       "label": "İlçe endeksi ve akademik takvim yükleme",
       "hint": "Dış veriyi (ilçe gelişmişlik endeksi, tatil ve sınav haftaları) CSV/Excel ile yükleme"
+    },
+    {
+      "key": "ozellik:kurumsal.teklif",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Fırsat, paket ve teklif hazırlama",
+      "hint": "Fırsat açma ve aşama güncelleme, paket önerisi, teklif taslağı, onaya gönderme, gönderildi/sonuç kaydı, kurum segmenti, veri yenileme"
+    },
+    {
+      "key": "ozellik:kurumsal.herkesinki",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Bütün ekibin fırsatları",
+      "hint": "Başka temsilcilerin fırsat ve tekliflerini görme, fırsatı başka temsilciye devretme"
+    },
+    {
+      "key": "ozellik:kurumsal.teklif-onay",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Kurumsal teklif onayı",
+      "hint": "İndirim ya da marj eşiğini aşan teklifi onaylama veya geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kurumsal.b2b",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Bayi paneli",
+      "hint": "Sipariş vermeyen bayiler, bayi kitap karması, öne çıkarılacak kitap listesi"
+    },
+    {
+      "key": "ozellik:kurumsal.tema-onay",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Kitap teması onayı",
+      "hint": "ZEKİ AI'ın kitaba önerdiği temayı onaylama, reddetme; elle tema ekleme"
     }
   ]
 }

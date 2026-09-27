@@ -6661,6 +6661,17 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "system": lambda: (rt().store.engine, rt().settings.tenant_id),
         "require_caller": _require_caller,
     })
+
+    # M32 Kurumsal satış ve B2B: kurum listesi, paket, teklif, fırsat, hatırlatma, bayi paneli. Uçlar /api/v1/corporate/*.
+    from semantic_bridge import corporate_sales_api
+    app.state.corporate = corporate_sales_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("kurumsal", priority),
+    })
     return app
 
 
