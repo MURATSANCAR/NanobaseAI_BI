@@ -273,7 +273,7 @@ _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bi
                                    "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kisiler", "basin-web", "telif-sozlesme",
-                                         "editor-atama", "gorevlerim"))
+                                         "editor-atama", "gorevlerim", "serbest-calisanlar"))
 
 #: En uzun eşleşen önek kazanır. Yeni bir uç eklenince burada bir öneke düşmeli; düşmezse test kırılır
 #: (test_access.py → köprünün bütün yolları). Ortak uçlar geniş tutuldu (bir sayfanın çağırdığı uç
@@ -292,6 +292,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/board", frozenset({page("panolar"), page("genel-bakis")})),
     ("/api/v1/editorial/studio", frozenset({page("kitap-tasarim")})),
     ("/api/v1/editorial/translation", frozenset({page("ceviri"), page("ceviri-masam")})),
+    # Kişiler ekranı CRM kişisinin serbest çalışan kaydını sorar; geri kalan her şey Serbest çalışanlar sayfasının.
+    ("/api/v1/editorial/freelance/lookup", frozenset({page("kisiler"), page("serbest-calisanlar")})),
+    ("/api/v1/editorial/freelance/", frozenset({page("serbest-calisanlar")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
@@ -322,7 +325,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/ask(/stream)?$", "ozellik:zeki.soru"),
     (frozenset({"GET"}), r"^/api/v1/(board/export\.xlsx|reports/[^/]+/file|financial-audit/runs/[^/]+/export"
                          r"|seo-geo/redirects/export\.csv|editorial/proofing/export\.docx|editorial/ask/export\.pdf"
-                         r"|editorial/translation/jobs/[^/]+/(export\.docx|quality\.csv)|editorial/translation/terms/export\.csv)$",
+                         r"|editorial/translation/jobs/[^/]+/(export\.docx|quality\.csv)|editorial/translation/terms/export\.csv"
+                         r"|editorial/freelance/payouts/[^/]+/export\.csv)$",
      "ozellik:veri.disa-aktar"),
     (frozenset({"PUT"}), r"^/api/v1/board$", "ozellik:pano.duzenle"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/reports(/(?!run-due$)[^/]+(/run)?)?$", "ozellik:rapor.planla"),
@@ -341,6 +345,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/editorial/translation/jobs/[^/]+/(draft|to-redaction)$", "ozellik:ceviri.yonet"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/editorial/translation/terms(/(?!propose$)[^/]+)?$", "ozellik:ceviri.terim"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/translation/terms/import$", "ozellik:ceviri.terim"),
+    # Serbest çalışan kaydı, paket, atama, teslim kararı, hakediş taslağı. Yazışma ve öneri (suggest) sayfayla gelir;
+    # hakediş onayı/ödemesi açıkça verilen `serbest.hakedis-onay` ile ucun içinde denetlenir.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/editorial/freelance/((people|portfolio|packages|tasks|assign|deliveries)(/.*)?|payouts(/[^/]+/(submit|delete))?)$",
+     "ozellik:serbest.yonet"),
     (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),
     (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
                                r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"

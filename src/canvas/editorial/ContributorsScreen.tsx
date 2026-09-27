@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, contributorsApi, type Contributor, type PersonDetail } from '../engine';
+import { Link } from 'react-router-dom';
+import { BriefcaseBusiness, Search, X } from 'lucide-react';
+import { ENGINE_ENABLED, contributorsApi, freelanceApi, type Contributor, type PersonDetail } from '../engine';
+import { canSeePage, usePageAccess } from '../useAdmin';
 import { contributorsListOptions, roleFacetsOptions } from './queries';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime, pct, crmLabel } from '../format';
@@ -42,6 +44,37 @@ function Block({ title, count, children }: { title: string; count: number; child
   );
 }
 
+/** CRM katılımcı tipi → serbest çalışan iş rolü (kayıt formunu önceden doldurmak için). */
+const FREELANCE_ROLE: Record<string, string> = {
+  Çizer: 'cizer',
+  'Kapak Tasarım': 'kapak',
+  'Mizanpaj Yapan': 'mizanpaj',
+  Redaktör: 'redaksiyon',
+  Tashih: 'tashih',
+  'Yayına Hazırlayan': 'yayina-hazirlik',
+  Danışman: 'danismanlik',
+  Tercüme: 'ceviri',
+};
+
+/** Çizer / çevirmen kartında serbest çalışan kaydına geçiş: kayıtlıysa kartı açar, değilse formu CRM'den doldurur. */
+function FreelanceLink({ p }: { p: PersonDetail }) {
+  const access = usePageAccess();
+  const allowed = canSeePage(access, 'serbest-calisanlar');
+  const role = p.works.map((w) => FREELANCE_ROLE[w.role ?? '']).find(Boolean);
+  const hit = useQuery({ queryKey: ['fl', 'lookup', p.id], queryFn: () => freelanceApi.lookup([p.id]), enabled: ENGINE_ENABLED && allowed && !!role });
+  if (!allowed || !role || !hit.data) return null;
+  const id = hit.data.items[p.id.toLowerCase()];
+  const to = id
+    ? `/serbest-calisanlar?bolum=kisiler&kisi=${encodeURIComponent(id)}`
+    : `/serbest-calisanlar?bolum=kisiler&yeni=kisi&crm=${encodeURIComponent(p.id)}&ad=${encodeURIComponent(p.name ?? '')}&rol=${role}`;
+  return (
+    <Link to={to} className={`${btnGhost} mt-2`}>
+      <BriefcaseBusiness aria-hidden className="h-4 w-4" />
+      {id ? 'Serbest çalışan kartı' : 'Serbest çalışan havuzuna ekle'}
+    </Link>
+  );
+}
+
 function Detail({ p, onClose }: { p: PersonDetail; onClose: () => void }) {
   return (
     <div className="text-[12.5px]">
@@ -51,6 +84,7 @@ function Detail({ p, onClose }: { p: PersonDetail; onClose: () => void }) {
           <X aria-hidden className="h-4 w-4" />
         </button>
       </div>
+      <FreelanceLink p={p} />
       {p.bio && <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-line leading-snug text-canvas-muted">{p.bio}</p>}
 
       <Block title="Eserler" count={p.works.length}>

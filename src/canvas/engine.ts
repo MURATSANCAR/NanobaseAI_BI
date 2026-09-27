@@ -2545,3 +2545,272 @@ export const studioPlanApi = {
   previewUrl: (job: string, id: string, width: number, v: string) => `${ENGINE_BASE}${planBase(job)}/pages/${pid(id)}/preview?w=${width}&v=${v}`,
   assetUrl: (job: string, gid: string, width = 400) => `${ENGINE_BASE}${planBase(job)}/assets/${pid(gid)}?w=${width}`,
 };
+
+// ------------------------------------------------------ serbest çalışanlar (M8)
+
+export type FlRole = { key: string; label: string; unit: string; hoursPerUnit: number };
+export type FlRate = { role: string; unit: string; price: number };
+export type FlAway = { from: string; to: string; note?: string | null };
+export type FlStats = { active: number; waiting: number; done: number; late: number; onTimeRate: number | null; avgRevisions: number | null; payable: number };
+export type FlPerson = {
+  id: string;
+  name: string;
+  roles: string[];
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  website: string | null;
+  crmContactId: string | null;
+  logoCard: string | null;
+  styles: string[];
+  note: string | null;
+  weeklyHours: number;
+  rates: FlRate[];
+  away: FlAway[];
+  status: 'aktif' | 'pasif';
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
+  stats: FlStats;
+  preview?: string[];
+};
+export type FlPortfolioItem = { id: string; title: string | null; tags: string[]; book: string | null; filename: string; mime: string; bytes: number; uploadedBy: string; uploadedAt: string };
+export type FlTaskStatus = 'atanmadi' | 'atandi' | 'calisiyor' | 'teslim' | 'revizyon' | 'onaylandi' | 'iptal';
+export type FlDelivery = {
+  id: string;
+  taskId: string;
+  version: number;
+  note: string | null;
+  link: string | null;
+  filename: string | null;
+  bytes: number | null;
+  uploadedBy: string;
+  uploadedAt: string;
+  decision: 'bekliyor' | 'kabul' | 'revizyon';
+  decisionNote: string | null;
+  decidedBy: string | null;
+  decidedAt: string | null;
+};
+export type FlTask = {
+  id: string;
+  packageId: string;
+  personId: string | null;
+  personName?: string | null;
+  personEmail?: string | null;
+  title: string;
+  role: string;
+  units: number;
+  unit: string;
+  unitPrice: number;
+  amount: number;
+  effortHours: number;
+  start: string | null;
+  due: string | null;
+  status: FlTaskStatus;
+  revisions: number;
+  assignedAt: string | null;
+  firstDeliveredAt: string | null;
+  acceptedAt: string | null;
+  payoutId: string | null;
+  late: boolean;
+  packageTitle?: string;
+  bookTitle?: string | null;
+  deliveries?: FlDelivery[];
+};
+export type FlPayoutHead = {
+  id: string;
+  no: number;
+  personId: string;
+  personName: string | null;
+  status: 'taslak' | 'onay' | 'onaylandi' | 'odendi';
+  total: number;
+  note: string | null;
+  returnNote: string | null;
+  createdBy: string;
+  createdAt: string;
+  submittedBy: string | null;
+  submittedAt: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  paidOn: string | null;
+  paidRef: string | null;
+  paidBy: string | null;
+};
+export type FlPersonDetail = FlPerson & { portfolio: FlPortfolioItem[]; tasks: FlTask[]; payouts: FlPayoutHead[] };
+export type FlPackageRow = {
+  id: string;
+  title: string;
+  bookTitle: string | null;
+  role: string;
+  due: string | null;
+  status: 'acik' | 'kapandi' | 'iptal';
+  owner: string;
+  createdAt: string;
+  tasks: number;
+  counts: Record<FlTaskStatus, number>;
+  people: string[];
+  amount: number;
+  late: number;
+  unread: number;
+};
+export type FlPackage = {
+  id: string;
+  title: string;
+  bookTitle: string | null;
+  bookId: string | null;
+  role: string;
+  brief: string | null;
+  due: string | null;
+  status: 'acik' | 'kapandi' | 'iptal';
+  owner: string;
+  createdBy: string;
+  createdAt: string;
+  tasks: FlTask[];
+};
+export type FlTaskInput = { title: string; units: number | string; unit?: string; unitPrice?: number | string; effortHours?: number | string; start?: string; due?: string; role?: string };
+export type FlCapacityCell = { week: string; capacity: number; load: number; ratio: number | null; away: boolean };
+export type FlCapacity = {
+  weeks: string[];
+  today: string;
+  unassigned: { tasks: number; hours: number };
+  people: Array<{
+    id: string;
+    name: string;
+    roles: string[];
+    weeklyHours: number;
+    weeks: FlCapacityCell[];
+    active: number;
+    late: number;
+    tasks: Array<{ id: string; title: string; packageId: string; packageTitle: string; start: string | null; due: string | null; effortHours: number; status: FlTaskStatus; late: boolean }>;
+  }>;
+};
+export type FlSuggestion = {
+  taskId: string;
+  title?: string;
+  role?: string;
+  suggested: string | null;
+  note: string | null;
+  candidates: Array<{ personId: string; name: string; freeHours: number; fits: boolean; onTimeRate: number | null; reason: string }>;
+};
+export type FlPayable = { personId: string; personName: string; total: number; tasks: FlTask[] };
+export type FlPayout = FlPayoutHead & {
+  person: { id: string; name: string; logoCard: string | null; email: string | null };
+  lines: Array<{ id: string; taskId: string; description: string; units: number; unit: string; unitPrice: number; amount: number }>;
+};
+export type FlMessageKind = 'ic' | 'giden' | 'gelen' | 'sistem';
+export type FlMessage = {
+  id: string;
+  thread: string;
+  taskId: string | null;
+  kind: FlMessageKind;
+  author: string;
+  authorDisplay: string | null;
+  mine: boolean;
+  body: string;
+  emailTo: string | null;
+  emailStatus: 'gonderildi' | 'gonderilemedi' | 'ayar-yok' | 'adres-yok' | null;
+  createdAt: string;
+};
+export type FlThread = { thread: string; title: string; kind: 'paket' | 'kisi'; recipients: Array<{ id: string; name: string; email: string | null }>; messages: FlMessage[] };
+export type FlInboxItem = { thread: string; kind: 'paket' | 'kisi'; title: string; subtitle: string | null; count: number; unread: number; at: string | null; last: { kind: FlMessageKind; body: string; author: string } | null };
+export type FlOverview = {
+  people: { active: number; passive: number };
+  tasks: { unassigned: number; active: number; late: number; review: number };
+  payable: number;
+  payouts: Partial<Record<FlPayoutHead['status'], { count: number; total: number }>>;
+  unread: number;
+  roles: FlRole[];
+  units: string[];
+  email: { configured: boolean; sender: string | null };
+  me: { username: string; canManage: boolean; canApprove: boolean };
+};
+export type FlLogoCard = { code: string | null; name: string | null; specode: string | null; city: string | null; freelance: boolean };
+export type FlLogoMovements = {
+  found: boolean;
+  code: string | null;
+  name?: string | null;
+  specode?: string | null;
+  year: number;
+  lines: Array<{ day: string | null; type: string; trcode: number; side: 'alacak' | 'borc'; amount: number; no: string | null; doc: string | null; text: string | null }>;
+  credit?: number;
+  debit?: number;
+  balance?: number;
+  last?: string | null;
+  truncated?: boolean;
+  db?: DbTiming | null;
+};
+
+const FL = '/api/v1/editorial/freelance';
+const enc = encodeURIComponent;
+
+/** Ham gövdeyle dosya yükleme; sayfa kapısının 403'ü (yetki) oturum düşmesinden ayrılır. */
+const flUpload = async <T,>(path: string, file: File, extra: Record<string, string> = {}): Promise<T> => {
+  const res = await fetch(`${ENGINE_BASE}${path}${qs({ filename: file.name, ...extra })}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: file,
+    signal: AbortSignal.timeout(900_000),
+  });
+  if (res.status === 401) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as { detail?: { code?: string; message?: string } | string } | null;
+    const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
+    if (res.status === 403) throw new EngineForbiddenError(msg || 'Bu işlem rolünüzde yok.');
+    throw new Error(msg || httpErrorText(res.status));
+  }
+  return (await res.json()) as T;
+};
+
+export const freelanceApi = {
+  overview: () => send<FlOverview>('GET', `${FL}/overview`, undefined, 30_000),
+  people: (p: { q?: string; role?: string; status?: string } = {}) =>
+    send<{ items: FlPerson[]; total: number; roles: FlRole[]; units: string[] }>('GET', `${FL}/people${qs(p)}`, undefined, 30_000),
+  person: (id: string) => send<FlPersonDetail>('GET', `${FL}/people/${enc(id)}`, undefined, 30_000),
+  createPerson: (b: Record<string, unknown>) => send<FlPersonDetail>('POST', `${FL}/people`, b, 30_000),
+  updatePerson: (id: string, b: Record<string, unknown>) => send<FlPersonDetail>('PATCH', `${FL}/people/${enc(id)}`, b, 30_000),
+  lookup: (crmIds: string[]) => send<{ items: Record<string, string> }>('GET', `${FL}/lookup${qs({ crm: crmIds.join('|') })}`, undefined, 30_000),
+  addPortfolio: (personId: string, file: File, meta: { title?: string; tags?: string; book?: string } = {}) =>
+    flUpload<FlPortfolioItem>(`${FL}/people/${enc(personId)}/portfolio`, file, Object.fromEntries(Object.entries(meta).filter(([, v]) => v)) as Record<string, string>),
+  updatePortfolio: (id: string, b: { title?: string; tags?: string[]; book?: string }) => send<{ ok: boolean }>('PATCH', `${FL}/portfolio/${enc(id)}`, b, 30_000),
+  deletePortfolio: (id: string) => send<{ ok: boolean }>('DELETE', `${FL}/portfolio/${enc(id)}`, undefined, 30_000),
+  portfolioUrl: (id: string) => `${ENGINE_BASE}${FL}/portfolio/${enc(id)}`,
+  packages: (p: { q?: string; status?: string } = {}) => send<{ items: FlPackageRow[]; total: number }>('GET', `${FL}/packages${qs(p)}`, undefined, 30_000),
+  package: (id: string) => send<FlPackage>('GET', `${FL}/packages/${enc(id)}`, undefined, 30_000),
+  createPackage: (b: { title: string; role: string; due?: string; bookTitle?: string; bookId?: string; brief?: string; tasks: FlTaskInput[] }) =>
+    send<{ id: string; title: string }>('POST', `${FL}/packages`, b, 30_000),
+  updatePackage: (id: string, b: Record<string, unknown>) => send<{ ok: boolean }>('PATCH', `${FL}/packages/${enc(id)}`, b, 30_000),
+  addTasks: (id: string, tasks: FlTaskInput[]) => send<{ added: number }>('POST', `${FL}/packages/${enc(id)}/tasks`, { tasks }, 30_000),
+  updateTask: (id: string, b: Record<string, unknown>) => send<{ ok: boolean }>('PATCH', `${FL}/tasks/${enc(id)}`, b, 30_000),
+  deleteTask: (id: string) => send<{ ok: boolean }>('DELETE', `${FL}/tasks/${enc(id)}`, undefined, 30_000),
+  assign: (items: Array<{ taskId: string; personId: string | null }>, notify: boolean) =>
+    send<{ assigned: number; mail: { gonderildi: number; diger: number } | null }>('POST', `${FL}/assign`, { items, notify }, 120_000),
+  suggest: (taskIds: string[]) => send<{ items: FlSuggestion[] }>('POST', `${FL}/suggest`, { taskIds }, 30_000),
+  capacity: (p: { weeks?: number; role?: string; start?: string } = {}) => send<FlCapacity>('GET', `${FL}/capacity${qs(p)}`, undefined, 30_000),
+  deliverFile: (taskId: string, file: File, note?: string) =>
+    flUpload<{ id: string; version: number }>(`${FL}/tasks/${enc(taskId)}/delivery`, file, note ? { note } : {}),
+  deliverLink: (taskId: string, link: string, note?: string) =>
+    send<{ id: string; version: number }>('POST', `${FL}/tasks/${enc(taskId)}/delivery-link`, { link, note }, 30_000),
+  decide: (deliveryId: string, decision: 'kabul' | 'revizyon', note: string, notify: boolean) =>
+    send<{ ok: boolean; mail: FlMessage['emailStatus'] }>('POST', `${FL}/deliveries/${enc(deliveryId)}/decision`, { decision, note, notify }, 60_000),
+  deliveryUrl: (id: string) => `${ENGINE_BASE}${FL}/deliveries/${enc(id)}/file`,
+  payable: () => send<{ items: FlPayable[] }>('GET', `${FL}/payable`, undefined, 30_000),
+  payouts: (p: { status?: string; person?: string } = {}) =>
+    send<{ items: FlPayoutHead[]; totals: Record<FlPayoutHead['status'], number> }>('GET', `${FL}/payouts${qs(p)}`, undefined, 30_000),
+  payout: (id: string) => send<FlPayout>('GET', `${FL}/payouts/${enc(id)}`, undefined, 30_000),
+  createPayout: (b: { personId: string; taskIds?: string[]; note?: string }) =>
+    send<{ id: string; no: number; total: number; personName: string }>('POST', `${FL}/payouts`, b, 30_000),
+  payoutAction: (id: string, action: 'submit' | 'return' | 'approve' | 'pay' | 'delete', b: { note?: string; paidOn?: string; paidRef?: string } = {}) =>
+    send<{ id: string; no: number; action: string }>('POST', `${FL}/payouts/${enc(id)}/${action}`, b, 30_000),
+  payoutCsvUrl: (id: string) => `${ENGINE_BASE}${FL}/payouts/${enc(id)}/export.csv`,
+  inbox: () => send<{ items: FlInboxItem[]; unread: number }>('GET', `${FL}/inbox`, undefined, 30_000),
+  thread: (id: string) => send<FlThread>('GET', `${FL}/threads/${enc(id)}`, undefined, 30_000),
+  post: (id: string, b: { kind: 'ic' | 'giden' | 'gelen'; body: string; personId?: string; taskId?: string }) =>
+    send<{ id: string; emailStatus: FlMessage['emailStatus'] }>('POST', `${FL}/threads/${enc(id)}/messages`, b, 60_000),
+  logoCards: (q: string) => send<{ items: FlLogoCard[]; year: number; db?: DbTiming | null }>('GET', `${FL}/logo/cards${qs({ q })}`, undefined, 60_000),
+  logo: (personId: string) => send<FlLogoMovements>('GET', `${FL}/people/${enc(personId)}/logo`, undefined, 60_000),
+};

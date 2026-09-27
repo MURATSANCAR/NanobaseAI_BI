@@ -29,7 +29,7 @@ const GROUPS: Record<string, ContributorModule & { tab: string }> = {
     route: '/kisiler',
     crumb: 'Kişiler',
     title: 'Kişiler',
-    lead: "CRM'de çizer, kapak tasarım, mizanpaj, redaksiyon ve yayına hazırlama rolleriyle eser kaydı olan kişiler. Kapasite, puan, hız ve hakediş CRM'de tutulmadığı için burada yok.",
+    lead: "CRM'de çizer, kapak tasarım, mizanpaj, redaksiyon ve yayına hazırlama rolleriyle eser kaydı olan kişiler. İş dağıtımı, kapasite, teslim ve hakediş «Serbest çalışanlar» ekranında; kişiyi oraya kartındaki düğmeyle ekleyin.",
     roles: CONTRIBUTOR_ROLES.freelancers,
     people: 'kişi',
   },
