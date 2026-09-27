@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
+
+- Bağlayıcının zamanlayıcısı yoktu; yeni okunan kitaplar okur kitlesini/yaşı/türü almıyor, yaş denetimleri koşmuyordu. Nerede koşmalı: CRM (.28) test sunucusundan erişiliyor; editöre test sunucusundan yalnız TT GPU'nun açtığı ters tüneller var (kart 18889, stüdyo 18890). `editor-mcp` dışarı açık değil ve açmak bütün MCP araçlarını açardı.
+- Kart servisine iki uç: `GET /v1/catalog/cover-requests`, `POST /v1/catalog/crm-lookups` (aynı `catalog` işlevleri). Bağlayıcı `EDITOR_CATALOG_BASE/KEY` verilince kart servisine gider — köprünün zaten tuttuğu anahtar, yeni anahtar taşınmadı; uçlar köprüden ve VM nginx'inden geçmez.
+- `scripts/server/editor-crm-connector.{service,timer}` → test sunucusu `/etc/systemd/system`, bağlayıcı `/data/nanobaseai/bi/connectors/crm_covers.py` (main), her gece 03:10 (`Persistent=true`). İlk elle koşu: 25 kitap ~1 dk, 22 eşleşme, başarı.
+- Editör `fc63d52d` (sekiz servis, koşan iş akışı 0, kod sürümü doğru, `._*` 0).
+
 ## 2026-09-27 (akşam) — Word'e aktarım VM'de; CRM okur kitlesi/yaş editöre geldi; yaş parçası kitap geneli uyarı
 
 - **VM Word'e aktarım:** kullanıcı onayıyla TT GPU nginx'ine (`kitap-eczanesi`) `…/proofing/export.docx` yolu (aynı IP kısıtı + geçit başlığı, GET, 300 sn okuma süresi). VM portalından geçici oturumla indirildi: 200, 60 KB `.docx`, dosya adı doğru.
