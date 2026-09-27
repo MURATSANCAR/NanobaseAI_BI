@@ -19,6 +19,7 @@ import {
   type FixedKey,
   type Inputs,
   type Overview,
+  type PrinterQuote,
   type Spec,
   type Stage,
   type Suggested,
@@ -264,6 +265,16 @@ export default function CalcPane({ ov }: { ov: Overview }) {
             <NumField label="Baskı başına hazırlık" suffix="₺" value={form.printSetup} disabled={readOnly} onChange={(v) => set({ printSetup: v })} hint="Kalıp ve ayar gibi adetten bağımsız bedel (eğriden)" />
             <NumField label="Genel gider payı" suffix="%" percent value={form.overheadRate} disabled={readOnly} onChange={(v) => set({ overheadRate: v })} hint="Baskı ve kâğıda eklenir (varsayım)" />
           </Group>
+
+          {!readOnly && (book.data?.quotes.length ?? 0) > 0 && (
+            <QuoteHint
+              quotes={book.data!.quotes}
+              onUse={(unit) => {
+                set({ printService: unit });
+                setStage('kesin');
+              }}
+            />
+          )}
 
           <Group title="Sabit giderler (kitap başına)" help="Serbest çalışanlar ekranında bu kitaba açılmış iş paketleri çeviri/grafik/redaksiyon kutularına gelir.">
             {FIXED_ORDER.map((k) => (
@@ -681,5 +692,38 @@ function Results({ r, chosenQty, onPickPrice }: { r: CalcResult; chosenQty: numb
         </section>
       )}
     </>
+  );
+}
+
+/** M12 üretim kartındaki matbaa teklifleri: Aşama 2'de baskı hizmeti bedeli tekliften gelir. */
+function QuoteHint({ quotes, onUse }: { quotes: PrinterQuote[]; onUse: (unit: number) => void }) {
+  const unitOf = (q: PrinterQuote) => q.unitPrice ?? (q.totalPrice && q.printQty ? q.totalPrice / q.printQty : null);
+  return (
+    <Panel>
+      <h3 className="text-[13px] font-extrabold">Matbaa teklifleri (Üretim ekranından)</h3>
+      <p className="mt-0.5 text-[11.5px] text-canvas-muted">
+        Kesin fiyat (Aşama 2) matbaa teklifiyle hesaplanır. Teklifin kâğıt içerip içermediğini kontrol edin: Timaş kâğıdı kendi alıyorsa kâğıt kutusu ayrıca kalır.
+      </p>
+      <ul className="mt-2 space-y-1.5">
+        {quotes.slice(0, 5).map((q) => {
+          const unit = unitOf(q);
+          return (
+            <li key={q.id} className="flex flex-wrap items-center gap-2 text-[12.5px]">
+              <span className="font-bold">{q.printer}</span>
+              <span className="text-canvas-muted">
+                {[q.printNo ? `${q.printNo}. baskı` : null, unit != null ? `${tl2(unit)} / adet` : null, q.totalPrice != null ? `toplam ${tl0(q.totalPrice)}` : null, q.deliveryDay ? `teslim ${day(q.deliveryDay)}` : null, q.byName]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </span>
+              {unit != null && (
+                <button type="button" className={btnGhost} onClick={() => onUse(unit)}>
+                  Baskı hizmetine yaz
+                </button>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Panel>
   );
 }

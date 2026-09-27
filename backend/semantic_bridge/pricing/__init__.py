@@ -139,6 +139,26 @@ def freelance_costs(engine: Any, tenant: str, book_id: Optional[str]) -> dict[st
     return {"items": items, "byKey": by}
 
 
+def production_quotes(engine: Any, tenant: str, crm_prints: list[dict]) -> list[dict]:
+    """M12 üretim kartlarına girilen matbaa teklifleri (kitabın CRM üretim kayıtlarına göre). Yalnız okunur;
+    Aşama 2'de «baskı hizmeti» kutusuna yazılabilir. M12 tabloları yoksa boş."""
+    ids = {p["id"]: p for p in crm_prints if p.get("id")}
+    if not ids:
+        return []
+    try:
+        from semantic_bridge import production_store as ps
+        _, quotes = ps.load(engine, tenant, list(ids))
+    except Exception:  # noqa: BLE001 — üretim modülü bu kurulumda yoksa teklif listesi boş
+        log.info("pricing: üretim teklifleri okunamadı", exc_info=True)
+        return []
+    out = []
+    for cid, items in quotes.items():
+        for q in items:
+            out.append({**q, "printNo": (ids.get(cid) or {}).get("no"), "printQty": (ids.get(cid) or {}).get("qty")})
+    out.sort(key=lambda q: q.get("at") or "", reverse=True)
+    return out
+
+
 def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
     """ctx: session(request) → (engine, tenant, user, display); can(user, key) → bool; audit(...); is_admin(user)."""
     session, can, audit, is_admin = ctx["session"], ctx["can"], ctx["audit"], ctx["is_admin"]
@@ -242,6 +262,7 @@ def register(app, runtime: Callable[[], Any], ctx: dict[str, Any]):
         defaults = S.get_defaults(engine, tenant)
         det["suggested"] = D.suggested_inputs(snap, det["spec"], defaults)
         det["freelance"] = freelance_costs(engine, tenant, (det["book"] or {}).get("id"))
+        det["quotes"] = production_quotes(engine, tenant, det["crmPrints"])
         det["analyses"] = S.list_analyses(engine, tenant, book=(det["book"] or {}).get("id"))["items"] \
             if (det["book"] or {}).get("id") else []
         det["market"] = S.market_list(engine, tenant, book=(det["book"] or {}).get("id"))["items"] \

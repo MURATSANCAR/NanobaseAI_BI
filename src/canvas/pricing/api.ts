@@ -60,7 +60,7 @@ export type Royalty = { rate: number; basis: 'kapak' | 'net'; basisLabel: string
 
 export type LogoPrint = { date: string | null; invoice: string | null; printer: string | null; qty: number; cost: number; unit: number };
 export type CrmPrint = {
-  no: number | null; year: number | null; date: string | null; qty: number | null; price: number | null; suggestedQty: number | null;
+  id: string | null; no: number | null; year: number | null; date: string | null; qty: number | null; price: number | null; suggestedQty: number | null;
   pages: number | null; binding: string | null; type: string | null; gsm: number | null; colors: number | null; printer: string | null;
 };
 export type YearSales = { year: string; qty: number; net: number; gross: number; cogs: number; costedQty: number; soldQty: number; avgNet: number | null; unitCost: number | null };
@@ -104,6 +104,13 @@ export type BookDetail = {
   freelance: { items: Array<{ role: string; status: string; amount: number; package: string; key: FixedKey }>; byKey: Partial<Record<FixedKey, number>> };
   analyses: AnalysisHead[];
   market: MarketPrice[];
+  /** Üretim ekranında (M12) bu kitabın baskı kartlarına girilen matbaa teklifleri. */
+  quotes: PrinterQuote[];
+};
+
+export type PrinterQuote = {
+  id: string; cardId: string; printer: string; unitPrice: number | null; totalPrice: number | null; deliveryDay: string | null;
+  note: string | null; byName: string; at: string | null; printNo: number | null; printQty: number | null;
 };
 
 export type Inputs = {

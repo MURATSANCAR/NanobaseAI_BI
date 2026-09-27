@@ -238,7 +238,7 @@ class Builder:
             if not code:
                 continue
             crm_prints.setdefault(code, []).append({
-                "no": _i(r.get("baski_no")), "year": _i(r.get("yil")), "date": _day(r.get("tarih")) or _day(r.get("depo")),
+                "id": str(r.get("id") or "").lower() or None, "no": _i(r.get("baski_no")), "year": _i(r.get("yil")), "date": _day(r.get("tarih")) or _day(r.get("depo")),
                 "qty": _i(r.get("adet")), "price": _f(r.get("fiyat")), "suggestedQty": _i(r.get("oneri_adet")),
                 "pages": _i(r.get("sayfa")), "binding": _label(labels, "new_uretim.new_ciltlemesekli", r.get("cilt")),
                 "type": _label(labels, "new_uretim.new_baskitipi", r.get("baski_tipi")), "gsm": _f(r.get("gramaj")),
