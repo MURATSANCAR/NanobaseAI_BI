@@ -22,3 +22,13 @@ Sözcük başına bir: ilk geçtiği sayfa, `suggestion` karşılık, `details.p
 ## Bilinen sınırlar
 TDK karşılıklar kılavuzu yok; aday modelin bilgisidir, doğrulama kitabın cümlesiyle yapılır. Yayınevi
 politikası (hangi yabancı sözcüğe izin) editör kararlarıyla ölçülecek.
+
+## Ölçüm (dry, 2026-09-27)
+- İlk istem («seç») modelde boş liste döndürüyordu (online/feedback bile); her sözcüğü sınıflandırma istenince
+  yakalanıyor. İlk sürümdeki «online → çevrim içi» örneği modeli «internet → çevrim içi» yanlışına yöneltti; kaldırıldı.
+- Duvarları Yıkmak: 3.372 kök + 780 tanınmayan biçim, 119 aday, cümleyle doğrulamada 109 elendi, 9 kaldı:
+  perspektif → bakış açısı, faktör → etken, enteresan → ilginç, problem → sorun, pozitif → olumlu,
+  realite → gerçeklik, anksiyete → kaygı, defo → kusur; «suiistimal → suistimal» yazım farkıydı → 1-2 harf
+  uzak karşılık artık atılır.
+- Dilek Ağacı: 0 (çocuk kitabı).
+- **Yaş parçası hiçbir kitapta koşmadı:** `book_crm_record` 6 kitap, hiçbirinde okur kitlesi/yaş yok.

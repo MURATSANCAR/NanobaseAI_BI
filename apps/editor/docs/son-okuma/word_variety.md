@@ -229,3 +229,10 @@ Yapılacak (gerçek kitapta, `--dry`):
 - Deyim yalnız model etiketinden gelir; deyim sözlüğü yok.
 - Zemberek'in bilmediği biçimler (yöresel, uydurma) haritada `unknown_forms`'ta kalır; tekrarları
   aranmaz.
+
+## 4d. Sürüm 4–5 (2026-09-27)
+- v4: sayfanın metin katmanında zaten bulunan OCR eki okuma dışı (`duplicate_supplements`); aynı paragraf
+  iki kez okunup sahte tekrar üretiyordu (Dilek Ağacı s.22, 79 sözcük).
+- v5: anlam çağrısının cevabı bütçeye sığmazsa denetim düşüyordu (Duvarları Yıkmak): bütçe geçiş başına ~40
+  belirteç; yine sığmazsa çağrı ikiye bölünüp yeniden sorulur, tek geçiş de düşerse «belirsiz». Duvarları
+  Yıkmak: 357 çağrı, bölünme 0, atanamayan 1, 1.285 bulgu.

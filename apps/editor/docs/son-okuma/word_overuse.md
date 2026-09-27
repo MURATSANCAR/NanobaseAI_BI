@@ -30,3 +30,10 @@ WARN (sayfa yok). Adlar aday değildir: çoğunlukla kitabın konusudur («insan
 Derlem yayınevinin okunmuş kitaplarıdır (tür karışık); çocuk kitabı yetişkin romanıyla kıyaslanır. Derlem
 büyüdükçe ve tür bazında yeterli kitap oldukça tür içi karşılaştırma eklenebilir. «Hep dedi» gibi konuşma
 fiili tekdüzeliği bu denetimde görünür (fiil).
+
+## Ölçüm (dry, 2026-09-27; insan kararı yok)
+- Dilek Ağacı (kurgu, 3.599 sözcük; derlem aynı türde 7 kitap): ilk sürüm 14 bulgu, çoğu olay örgüsü sözcüğü
+  («zengin», «koşmak», «sabah»). İsteme sözcüğün kitaba yayılımı ve «yazara azalt der miydin» sorusu eklenince
+  **4**: demek (2,5 kat — «hep dedi»), almak, anlatmak, güzel.
+- Duvarları Yıkmak (deneme, 34.583 sözcük; derlem aynı türde 6 kitap): 47 bulgu; başta «maalesef» 7,7 kat,
+  «âdeta» 18 kat, «asıl» 2,4 kat; arada konu sıfatları («karanlık», «kıskanç»).

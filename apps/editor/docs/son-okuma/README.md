@@ -23,10 +23,10 @@ bazı eşikler ölçülmüş, kesinlik yok; **ölçüm bekliyor** = gerçek kita
 | `text_contradictions` | Metin içi çelişki | model öneri + deterministik doğrulama + model yargı | [text_contradictions.md](text_contradictions.md) | kısmen (window okuyucusu ölçülüp kapatıldı; kesinlik bekliyor) |
 | `timeline` | Zaman çizelgesi | defter + model yargı | [timeline.md](timeline.md) | ölçüm bekliyor |
 | `word_variety` | Kelime çeşitliliği ve yakın tekrar | Zemberek kök + model anlam ayrımı + model yargı; kelime haritası | [word_variety.md](word_variety.md) | kısmen (Dilek Ağacı: 122 bulgu, 866 kök; kesinlik bekliyor) |
-| `word_overuse` | Sık kullanılan sözcükler (yazar tikleri) | G² derlem karşılaştırması + model yargı | [word_overuse.md](word_overuse.md) | ölçüm bekliyor |
-| `sentence_starts` | Cümle başı tekdüzeliği | tesadüf olasılığı + model yargı | [sentence_starts.md](sentence_starts.md) | ölçüm bekliyor |
-| `phrase_repeats` | Kalıp ifade tekrarı | kök dizisi öbekleri + model yargı | [phrase_repeats.md](phrase_repeats.md) | ölçüm bekliyor |
-| `word_choice` | Yabancı ve yaşa ağır sözcükler | model aday + cümleyle doğrulama | [word_choice.md](word_choice.md) | ölçüm bekliyor |
+| `word_overuse` | Sık kullanılan sözcükler (yazar tikleri) | G² derlem karşılaştırması + model yargı | [word_overuse.md](word_overuse.md) | kısmen (2 kitapta sayı; kesinlik bekliyor) |
+| `sentence_starts` | Cümle başı tekdüzeliği | tesadüf olasılığı + model yargı | [sentence_starts.md](sentence_starts.md) | kısmen (2 kitapta sayı; kesinlik bekliyor) |
+| `phrase_repeats` | Kalıp ifade tekrarı | kök dizisi öbekleri + model yargı | [phrase_repeats.md](phrase_repeats.md) | kısmen (2 kitapta sayı; kesinlik bekliyor) |
+| `word_choice` | Yabancı ve yaşa ağır sözcükler | model aday + cümleyle doğrulama | [word_choice.md](word_choice.md) | kısmen (2 kitapta sayı; kesinlik bekliyor) |
 
 İlk gerçek koşu (2026-09-22, «Levent Dünya Harikalarının Peşinde», nesil `60e5d717`; insan
 doğrulaması yok, yalnız sayı): layout 78 (66 WARN), spelling 21 WARN, hyphenation 20 INFO,

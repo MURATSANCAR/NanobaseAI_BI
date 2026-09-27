@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 — Redaksiyon araçları: yazar tikleri, cümle başı, kalıp ifade, yabancı/yaşa ağır sözcük, Word'e aktarım
+
+- **Yeni dört son okuma denetimi** (`apps/editor/src/editor/proofing/`): `word_overuse` (zarf/sıfat/fiil yayınevinin aynı türdeki öbür kitaplarından anlamlı sık, G² ≥ 15,13 + model «yazara azalt der miydin», yayılım bilgisiyle), `sentence_starts` (art arda aynı sözcükle başlayan cümle, p^(k−1) < 0,05 + model), `phrase_repeats` (≥3 sözcük, ≥2 içerik, en az bir fiil, kitapta ≥2 kez, en uzun hâl + model), `word_choice` (Türkçe karşılığı olan yabancı sözcük; çocuk/genç kitabında yaşa ağır sözcük — her sözcük sınıflandırılır, kitabın cümlesiyle doğrulanır).
+- **Word'e aktarım:** kart servisi `GET /v1/books/{id}/proofing/export.docx` (`_export_docx.py`, python-docx yorum API'si): okunan metin, bulgular «Zeki AI» yorumu; yanlış alarm ve (varsayılan) bilgi düzeyi hariç; yeri bulunamayan sayfa başlığına bağlanır. Köprü `…/proofing/export.docx?bookId=`, Son Okuma panelinde «Word'e aktar». Dilek Ağacı: 198 bulgu, 15'i sayfa başlığına.
+- **Gerçek kitapta bulunup düzeltilenler:** PDF metnindeki XML dışı karakter Word'ü düşürüyordu; OCR eki katmandaki paragrafı ikinci kez okuyordu (sahte tekrar; word_variety v4); anlam çağrısı bütçeye sığmayınca word_variety düşüyordu (v5: bölünerek yeniden); «seç» sorusunda model boş liste dönüyordu (sınıf sorusu); «online → çevrim içi» örneği yanlış yönlendiriyordu; tik denetimi masal fiillerini tik sayıyordu (aynı tür derlemi + yayılım); kalıp denetimi terim öbeklerini sayıyordu (fiil şartı); yazım farkı yabancı sözcük sanılıyordu. Ölçümler `docs/son-okuma/*.md`.
+- **Kurulum:** main `20e5d472` → GPU editör (`editor-py:0.15.9-20e5d472`, sekiz Python servisi, Temporal'da koşan iş 0, kod sürümü doğru, `._*` 0; kart/stüdyo/docx 200); test sunucusu 16 dosya daha main'e eşitlendi (hepsi main'in eski sürümü ya da yeni dosya; SEO & GEO CRM, menü), motor testleri 986/12 (aynı 12 önceden var), köprü yeniden başladı, arayüz `index-BKuHkTSE.js`, portal uçları + docx indirme oturumla doğrulandı. Toplu iş `rt-all-books` 16 kitapta yeni denetimleri koşuyor (sonra word_overuse).
+- **Açık:** VM için TT GPU nginx'ine `…/proofing/export.docx` yolu (onay); yaş parçası CRM okur kitlesi olmadan koşmuyor.
+
 ## 2026-09-27 — Yetki mekanizması analizi (AD grubu → rol → sayfa / özellik / veri alanı)
 
 - İstek: AD kullanıcı ve gruplarına bağlı yetki; sayfa/menü görünürlüğü ve ekran özellikleri rol bazlı. Önce analiz istendi; kod yazılmadı. Belge `docs/analiz/yetki-mekanizmasi-2026-09-27.md`.

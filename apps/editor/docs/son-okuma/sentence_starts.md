@@ -16,3 +16,8 @@ Art arda cümleler aynı sözcükle (kökle) başlıyor ve bu tesadüf düzeyind
 ## Bulgu
 İkinci cümlenin sayfası; `bbox` ikinci cümlenin ilk sözcüğü, `marks` aynı sayfadaki bütün cümle başları;
 `group` «cümle başı · kök».
+
+## Ölçüm (dry, 2026-09-27)
+- Dilek Ağacı: 581 cümle, 6 bulgu («Nergis», «SENİN», «Buldum», «Kimi», «Bana», «Senin» ikili). İlk sürümde
+  konuşma çizgisinden sonraki devam cümlesi («… dedim») başlangıç sayılıyordu; düzeltildi.
+- Duvarları Yıkmak: 3.632 cümle, 54 bulgu (61 aday, 7 bilinçli).
