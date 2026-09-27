@@ -67,6 +67,18 @@ git branch -d <dal-adı>
 - Merge, dağıtımın yerine geçmez: sunucuya kurulan sürüm neyse `main` de o olmalıdır. Sunucuya yama atılıp `main`e girmemiş kod bırakılmaz.
 - Bu kural bir talimattır, hook değil — CI/branch-protection ile zorlanmıyor; oturumdaki Claude'un ve kullanıcının uygulamasına bağlıdır.
 
+## Test sunucusuna tek ssh bağlantısı (kullanıcı kararı 2026-09-28)
+
+Art arda ssh/scp ve port yoklamasından sonra Mac'in dış IP'si test sunucusuna (38.247.162.28) hem SSH hem portal (443)
+için ağ katmanında düşürülmeye başladı; sunucuda fail2ban/CrowdSec/ufw sınırı yok, engel barındırma ağında.
+
+- İşin başında **tek kalıcı bağlantı** açılır ve bütün komutlar onun üzerinden geçer:
+  `ssh -fN -o ControlMaster=yes -o ControlPath=/tmp/cm-<ad> -o ControlPersist=2h nanobase-direct`, sonra her komutta
+  `-o ControlPath=/tmp/cm-<ad>`.
+- Dosyalar tek akışla gider (`git archive … | ssh … tar -x`); dosya başına ayrı scp yok.
+- **`nc -z` ile port yoklaması yapılmaz** (el sıkışmasız bağlantı). Erişim kesilirse 5 dk arayla tek gerçek ssh denemesi.
+- Sunucudaki geçici çalışma klasörü oturuma özgüdür (`/tmp/claude-<oturum>`); başka oturumun klasörü (`/tmp/m7` gibi) kullanılmaz, silinmez.
+
 ## Test kullanıcısı ve test verisi bırakılmaz (kullanıcı kuralı 2026-09-28)
 
 Portal Yönetim → Kişiler'de `claude` adlı bir hesap kalmıştı. Kişi listesi pano kartı, planlı rapor, değişiklik kaydı
