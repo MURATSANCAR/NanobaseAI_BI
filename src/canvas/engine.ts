@@ -2742,7 +2742,6 @@ export type FlLogoMovements = {
 };
 
 const FL = '/api/v1/editorial/freelance';
-const enc = encodeURIComponent;
 
 /** Ham gövdeyle dosya yükleme; sayfa kapısının 403'ü (yetki) oturum düşmesinden ayrılır. */
 const flUpload = async <T,>(path: string, file: File, extra: Record<string, string> = {}): Promise<T> => {
