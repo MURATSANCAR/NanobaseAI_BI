@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Headphones, Loader2, Pause, Play, RefreshCw,
 import { Note, errText } from '../../../admin/ui';
 import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
+import ExpressionEditor from './ExpressionEditor';
 import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
 import VoicePicker from './VoicePicker';
@@ -292,6 +293,8 @@ function Listen({ jobId, d, running, onRegen, regenBusy }: {
           {pq.error ? <Note tone="err">{errText(pq.error, 'Sayfa okunamadı.')}</Note>
             : page ? <ReadAlong blocks={page.blocks} audio={audio} voices={d.voices} timed={!!done} />
               : <div className="py-6 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
+          {/* İFADE KATMANI: seçili sayfanın cümle cümle ifadesi (ExpressionEditor.tsx) */}
+          {row && <ExpressionEditor jobId={jobId} pid={row.id} canVoice={d.available} busy={running || regenBusy} onRegen={onRegen} />}
         </>
       )}
     </div>

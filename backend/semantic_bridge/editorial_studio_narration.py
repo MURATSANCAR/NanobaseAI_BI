@@ -8,6 +8,10 @@ AD hesabıdır ve denetim kaydı düşer. Servisin kodlu 4xx/503 gövdesi ({"cod
 Ses dosyası: servis bütün dosyayı verir, köprü tarayıcının `Range` isteğini kendisi karşılar (206 Partial Content);
 iOS Safari sesi yalnız aralık desteği olan adresten çalar, ileri/geri sarma da buna bağlı.
 
+İfade katmanı (cümle başına ifade ve vurgu; editörde `production/expression.py`):
+`GET/PUT …/narration/pages/{sayfa}/expression`, `POST …/expression/suggest` (Zeki AI önerisi, 300 sn),
+`POST …/expression/sample` (bu cümleyi dinle, audio/mpeg). Yazanlar (PUT, suggest) denetim kaydına düşer.
+
 Ses kütüphanesi (yayınevi düzeyinde): `GET/POST /api/v1/editorial/studio/voices`, `GET …/voices/{ses}/document`
 (izin belgesi), `DELETE …/voices/{ses}` (yalnız yönetici). Yükleme hak beyanı ister (onay, sesin sahibi, belge ya da
 belge numarası); köprü yüklemeyi ve kaldırmayı denetim kaydına yazar (kim, ne zaman, belge).
@@ -231,6 +235,48 @@ def register(app, deps: dict[str, Any] | Any) -> None:
     def editorial_narration_overlay(job: str, request: Request):
         auth(request)
         return call(request_fn, "GET", job, "/overlay", timeout=120)
+
+    # ---------------------------------------------------------------- ifade katmanı (production/api_expression.py)
+    def expr_items(b: dict) -> list[dict]:
+        items = b.get("items")
+        if not isinstance(items, list):
+            raise HTTPException(400, "items bir liste olmalı.")
+        out = []
+        for it in items:
+            if not isinstance(it, dict):
+                continue
+            emph = it.get("emphasis") if isinstance(it.get("emphasis"), list) else []
+            out.append({"key": str(it.get("key") or "")[:100], "label": str(it.get("label") or "notr")[:20],
+                        "emphasis": [str(w)[:80] for w in emph]})
+        return out
+
+    @app.get("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}/expression")
+    def editorial_narration_expression(job: str, page: str, request: Request):
+        auth(request)
+        return call(request_fn, "GET", job, f"/pages/{pid(page)}/expression", timeout=60)
+
+    @app.put("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}/expression")
+    def editorial_narration_expression_set(job: str, page: str, request: Request, body: dict[str, Any] | None = None):
+        items = expr_items(obj(body))
+        what = "sesli okuma ifadesi: " + ", ".join(f"{i['key']}={i['label']}" for i in items)[:200]
+        return write(request, "PUT", job, f"/pages/{pid(page)}/expression", what, {"items": items})
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}/expression/suggest")
+    def editorial_narration_expression_suggest(job: str, page: str, request: Request, body: dict[str, Any] | None = None):
+        b = obj(body or {})
+        return write(request, "POST", job, f"/pages/{pid(page)}/expression/suggest", "sesli okuma ifadesi: Zeki AI önerisi",
+                     {"replace_editor": b.get("replace_editor") is True}, timeout=300)
+
+    @app.post("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}/expression/sample")
+    def editorial_narration_expression_sample(job: str, page: str, request: Request, body: dict[str, Any] | None = None):
+        _engine, _tenant, user, _ = auth(request)
+        b = obj(body)
+        item = expr_items({"items": [b]})[0]
+        out = call(audio_bytes, job, f"/pages/{pid(page)}/expression/sample", method="POST", body=item, editor=user,
+                   timeout=600)
+        if isinstance(out, Response):
+            return out
+        return ranged(out, request.headers.get("range"), {"Cache-Control": "no-store"})
 
     # ---------------------------------------------------------------- ses kütüphanesi
     @app.get("/api/v1/editorial/studio/voices")

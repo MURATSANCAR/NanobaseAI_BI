@@ -128,6 +128,7 @@ VOICES: list[dict] = [
        "A kind elderly grandmother in her seventies, soft affectionate slightly shaky voice"),
     _v("yasli-erkek", "Yaşlı adam", "bilge", "karakter", "A wise elderly grandfather in his seventies, low warm slow voice"),
 ]
+from .voices_lively import extend as _lively; GROUPS, VOICES = _lively(GROUPS, VOICES)  # noqa: E402,E702 — CANLI MASAL ANLATICISI kancası (voices_lively.py)
 VOICE_IDS = {v["id"] for v in VOICES}
 DEFAULT_NARRATOR = "anlatici-kadin"
 # Referans cümle: Türkçe seslerin hepsini (ı, ğ, ş, ç, ö, ü) taşır; ses bir kez bununla üretilir, sonra klonlanır.
@@ -839,8 +840,12 @@ def page_input(d: Path, pg: dict, cfg: dict | None = None, lex: Lexicon | None =
     lex = lex or lexicon(d)
     units = page_units(pg, cfg, lex)
     plist = pieces(units)
+    # İFADE KATMANI kancası (expression.py): cümlenin ifadesi parçaya işlenir (p.extra → servise style/clone/rate/
+    # pause_before_ms; cümle sonu duraklaması; vurgu). İşaretsiz sayfada x None: özet eskisiyle aynı kalır.
+    from . import expression
+    plist, x = expression.apply(d, pg, units, plist)
     h = _hash({"v": VERSION, "p": [(p.text, p.voice, p.pause_ms) for p in plist],
-               "w": [[w.text for w in u.words] for u in units]})
+               "w": [[w.text for w in u.words] for u in units], **({"x": x} if x else {})})
     return units, plist, h
 
 
@@ -967,7 +972,8 @@ async def narrate_page(d: Path, pid: str, by: str) -> dict:
         return {"page": pid, "status": "empty"}
     refs = {vid: await voice_ref(vid) for vid in {p.voice for p in plist}}
     body = {"segments": [{"text": p.text, "voice": refs[p.voice], "pause_ms": p.pause_ms,
-                          "words": [s for k in p.words for s in units[p.unit].words[k].say]} for p in plist],
+                          "words": [s for k in p.words for s in units[p.unit].words[k].say],
+                          **getattr(p, "extra", {})} for p in plist],       # İFADE KATMANI (expression.apply)
             "format": "mp3", "align": True}
     t0 = time.time()
     out = await _call(body)

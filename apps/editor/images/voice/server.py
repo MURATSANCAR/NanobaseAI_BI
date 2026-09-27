@@ -14,12 +14,20 @@ Ses: tarifle tasarım (`voice.design`, gerçek kişi sesi gerekmez) ya da refera
 `voice.ref_text`; referans genellikle bir kez tarifle üretilmiş model çıktısıdır, kitap boyunca aynı ses kalır).
 
     GET  /health
-    POST /v1/audio/narrate {model, segments: [{text, voice, pause_ms, words}], format: mp3|wav, align: bool}
+    POST /v1/audio/narrate {model, segments: [{text, voice, pause_ms, words, style?, rate?, pause_before_ms?, clone?}],
+                            format: mp3|wav, align: bool}
          → {audio: base64, format, sample_rate, duration, seconds,
             segments: [{start, end, aligned, words: [{start, end, score} | null, …]}]}
 
 `words`: hizalanacak kelimeler (okunuşun kelimeleri, sırasıyla). Dönen `words` aynı uzunluktadır; hizalanamayan
 kelime null döner (çağıran tahminle doldurur). Zamanlar saniye, bütün sesin başından.
+
+İfade katmanı (editörün `production/expression.py`'si; ölçüm docs/analiz/sesli-okuma-ifade-katmani.md):
+`style` parçanın ton talimatıdır ("whispering", "excited, faster" …) ve metnin başına `(style)` olarak girer.
+`clone` referanslı seste klon kipidir: `full` referans sesi + metni (devam kipi, en tutarlı ses), `ref` yalnız
+referans sesi (talimat bu kipte etkili); boşsa `style` varken `ref`, yokken `full`. `rate` konuşma hızıdır: üretimden
+sonra perdeyi koruyan zaman esnetme (rubberband; yoksa atempo), kelime zamanları esnetilmiş sesten hizalanır.
+`pause_before_ms` parçadan önce sessizliktir; `cfg` parçanın yönlendirme gücüdür (boşsa `--cfg`).
 """
 
 from __future__ import annotations
@@ -109,6 +117,11 @@ class Segment(BaseModel):
     pause_ms: int = Field(300, ge=0, le=5000)
     words: list[str] = []
     seed: int | None = None
+    style: str | None = Field(None, max_length=200)             # ifade: ton talimatı, "(style)metin"
+    rate: float = Field(1.0, ge=0.7, le=1.4)                    # ifade: konuşma hızı (sonradan, perde korunur)
+    pause_before_ms: int = Field(0, ge=0, le=3000)              # ifade: parçadan önce sessizlik
+    clone: str | None = Field(None, pattern="^(full|ref)$")     # referanslı seste klon kipi (boş: style → ref)
+    cfg: float | None = Field(None, ge=1.0, le=3.0)            # ifade: yönlendirme gücü (boş: sunucu varsayılanı)
 
 
 class Narrate(BaseModel):
@@ -136,27 +149,49 @@ def _fade(wav: np.ndarray, ms: int = 12) -> np.ndarray:
     return wav
 
 
+def _stretch(wav: np.ndarray, rate: float) -> np.ndarray:
+    """Konuşma hızı: perdeyi koruyan zaman esnetme (rate > 1 hızlı). rubberband yoksa atempo; ikisi de düşerse aynen."""
+    if abs(rate - 1.0) < 0.01 or len(wav) == 0:
+        return wav
+    raw = np.clip(wav, -1, 1).astype("<f4").tobytes()
+    for flt in (f"rubberband=tempo={rate:.3f}:transients=smooth:formant=preserved", f"atempo={rate:.3f}"):
+        r = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1",
+                            "-i", "pipe:0", "-af", flt, "-f", "f32le", "-ar", str(SR), "-ac", "1", "pipe:1"],
+                           input=raw, capture_output=True)
+        if r.returncode == 0 and r.stdout:
+            return np.frombuffer(r.stdout, dtype="<f4").copy()
+    return wav
+
+
 def _speak(seg: Segment, tmp: str) -> np.ndarray:
     text, ref = seg.text, None
     v = seg.voice
+    style = (seg.style or "").strip().strip("()").strip()
     if v.ref_audio:
         ref = os.path.join(tmp, f"ref-{abs(hash(v.ref_audio)) % 10**9}.wav")
         if not os.path.exists(ref):
             with open(ref, "wb") as f:
                 f.write(base64.b64decode(v.ref_audio))
+        if style:
+            text = f"({style}){text}"
     elif v.design:
-        text = f"({v.design.strip()}){text}"
+        text = f"({v.design.strip()}{', ' + style if style else ''}){text}"
+    elif style:
+        text = f"({style}){text}"
     if seg.seed is not None:
         torch.manual_seed(seg.seed)
         np.random.seed(seg.seed % (2**32))
-    kw = {"text": text, "cfg_value": args.cfg, "inference_timesteps": args.steps, "normalize": False, "denoise": False}
-    if ref and v.ref_text:
+    kw = {"text": text, "cfg_value": seg.cfg or args.cfg, "inference_timesteps": args.steps, "normalize": False,
+          "denoise": False}
+    clone = seg.clone or ("ref" if style else "full")
+    if ref and v.ref_text and clone == "full":
         # Referans hem ses hem metinle verilir: en tutarlı klon (VoxCPM2 "ultimate cloning").
         kw.update(prompt_wav_path=ref, prompt_text=v.ref_text, reference_wav_path=ref)
     elif ref:
+        # Yalnız referans sesi (VoxCPM2 "controllable cloning"): ses referanstan, ton talimattan.
         kw.update(reference_wav_path=ref)
     wav = TTS.generate(**kw)
-    return _fade(_trim(np.asarray(wav, dtype=np.float32)))
+    return _fade(_trim(_stretch(np.asarray(wav, dtype=np.float32), seg.rate)))
 
 
 # ------------------------------------------------------------------ hizalama
@@ -248,6 +283,10 @@ def narrate(req: Narrate) -> dict:
         for seg in req.segments:
             wav = _speak(seg, tmp)
             words = _align(wav, seg.words) if req.align else [None] * len(seg.words)
+            if seg.pause_before_ms:
+                before = np.zeros(int(SR * seg.pause_before_ms / 1000), dtype=np.float32)
+                parts.append(before)
+                pos += len(before)
             start = pos / SR
             out.append({"start": round(start, 3), "end": round((pos + len(wav)) / SR, 3), "aligned": ALIGNER is not None,
                         "words": [None if w is None else {**w, "start": round(w["start"] + start, 3),
