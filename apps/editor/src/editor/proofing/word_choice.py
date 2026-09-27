@@ -139,8 +139,13 @@ async def run(generation_id: str):
     # karşılığın her sözcüğü sözlükte olmalı
     def valid(alt: str) -> bool:
         return W.valid_suggestion(alt, lex.valid)
-    cands = [("foreign", w, a) for w, a in foreign.items() if valid(a)] + \
-            [("age", w, a) for w, a in heavy.items() if valid(a) and w not in foreign]
+    # karşılık sözcüğün kendisine bir-iki harf uzaksa bu bir yazım farkıdır («suiistimal»/«suistimal»),
+    # yabancı ya da ağır sözcük değil; yazım denetiminin işi
+    def spelling_variant(w: str, alt: str) -> bool:
+        return " " not in alt and T.edit_distance(W.lower_tr(w), W.lower_tr(alt)) <= 2
+
+    cands = [("foreign", w, a) for w, a in foreign.items() if valid(a) and not spelling_variant(w, a)] + \
+            [("age", w, a) for w, a in heavy.items() if valid(a) and not spelling_variant(w, a) and w not in foreign]
     stats["dropped_invalid_alternative"] = len(foreign) + len(heavy) - len(cands)
 
     # bu sözcüğün kitaptaki geçişleri: kök için okuma katmanından, çözümlenemeyen biçim için sayfalar
