@@ -92,8 +92,9 @@ def register(app, deps: dict[str, Any]) -> None:
     # ---------------------------------------------------------------- okur
     @app.get("/api/v1/editorial/studio/jobs/{job}/plan/reader")
     def editorial_reader_info(job: str, request: Request):
-        auth(request)
-        out = plan(es.plan_request, "GET", job, "/reader", timeout=60)
+        _e, _t, user, _ = auth(request)
+        # Plan yoksa servis sayfa düzenini kendiliğinden kurar (409 PREPARING); kurulumu kimin açtığı kayda geçer.
+        out = plan(es.plan_request, "GET", job, "/reader", editor=user, timeout=60)
         if isinstance(out, dict):
             out["passes"] = passes(conf)
         return out
@@ -147,8 +148,8 @@ def register(app, deps: dict[str, Any]) -> None:
     # ---------------------------------------------------------------- sürüm farkı
     @app.get("/api/v1/editorial/studio/jobs/{job}/plan/versions")
     def editorial_versions(job: str, request: Request):
-        auth(request)
-        return plan(es.plan_request, "GET", job, "/versions", timeout=60)
+        _e, _t, user, _ = auth(request)
+        return plan(es.plan_request, "GET", job, "/versions", editor=user, timeout=60)
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/plan/versions/compare")
     def editorial_versions_compare(job: str, request: Request, a: str = "", b: str = ""):

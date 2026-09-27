@@ -8,6 +8,10 @@ AD hesabıdır ve denetim kaydı düşer. Servisin kodlu 4xx/503 gövdesi ({"cod
 Ses dosyası: servis bütün dosyayı verir, köprü tarayıcının `Range` isteğini kendisi karşılar (206 Partial Content);
 iOS Safari sesi yalnız aralık desteği olan adresten çalar, ileri/geri sarma da buna bağlı.
 
+Ses kütüphanesi (yayınevi düzeyinde): `GET/POST /api/v1/editorial/studio/voices`, `GET …/voices/{ses}/document`
+(izin belgesi), `DELETE …/voices/{ses}` (yalnız yönetici). Yükleme hak beyanı ister (onay, sesin sahibi, belge ya da
+belge numarası); köprü yüklemeyi ve kaldırmayı denetim kaydına yazar (kim, ne zaman, belge).
+
 app.py'de `_books` tanımından sonra (stüdyo bloğunun yanında) iki satırla bağlanır:
     from semantic_bridge import editorial_studio_narration
     editorial_studio_narration.register(app, {"auth": _books, "audit": admin_mod.audit})
@@ -30,6 +34,28 @@ AUDIO_MAX = 200 * 1024 * 1024
 SAMPLE_TEXT_MAX = 300
 READ_TEXT_MAX = 2000
 RANGE = re.compile(r"^bytes=(\d*)-(\d*)$")
+VOICE_ID = re.compile(r"^yuklenen-[0-9a-f]{8}$")
+DOC_MIME = {"application/pdf", "image/png", "image/jpeg"}
+VOICE_BODY_MAX = 250 * 1024 * 1024        # üç dosya (kayıt, özgün dosya, belge) base64; servis dosya başına STUDIO_UPLOAD_MB uygular
+
+
+def voices_request(method: str, sub: str = "", *, body: dict | None = None, editor: str | None = None,
+                   admin: bool = False, timeout: float = 120) -> object:
+    base, headers, ca = editorial_studio._base()
+    if editor is not None:
+        headers["X-Editor"] = editor[:200]
+    if admin:
+        headers["X-Editor-Admin"] = "1"
+    with editorial_studio._client(ca, timeout=timeout) as c:
+        r = c.request(method, f"{base}/v1/studio/voices{sub}", headers=headers, json=body)
+    if 400 <= r.status_code < 500 or r.status_code == 503:
+        try:
+            payload = r.json()
+        except ValueError:
+            payload = {"detail": "İstek kabul edilmedi."}
+        raise editorial_studio.PlanError(r.status_code, payload)
+    r.raise_for_status()
+    return r.json()
 
 
 def _url(job_id: str, sub: str) -> tuple[str, dict, str]:
@@ -137,9 +163,10 @@ def register(app, deps: dict[str, Any] | Any) -> None:
         return v
 
     @app.get("/api/v1/editorial/studio/jobs/{job}/narration")
-    def editorial_narration(job: str, request: Request):
-        auth(request)
-        return call(request_fn, "GET", job, "", timeout=60)
+    def editorial_narration(job: str, request: Request, retry: bool = False):
+        # Plan yoksa servis sayfa düzenini kendiliğinden kurar (409 PREPARING); kurulumu kimin açtığı kayda geçer.
+        _e, _t, user, _ = auth(request)
+        return call(request_fn, "GET", job, "?retry=1" if retry else "", editor=user, timeout=60)
 
     @app.put("/api/v1/editorial/studio/jobs/{job}/narration/settings")
     def editorial_narration_settings(job: str, request: Request, body: dict[str, Any] | None = None):
@@ -204,3 +231,74 @@ def register(app, deps: dict[str, Any] | Any) -> None:
     def editorial_narration_overlay(job: str, request: Request):
         auth(request)
         return call(request_fn, "GET", job, "/overlay", timeout=120)
+
+    # ---------------------------------------------------------------- ses kütüphanesi
+    @app.get("/api/v1/editorial/studio/voices")
+    def editorial_voices(request: Request):
+        _e, _t, _user, is_admin = auth(request)
+        out = call(voices_request, "GET")
+        if isinstance(out, dict):
+            out["can_remove"] = bool(is_admin)
+        return out
+
+    @app.post("/api/v1/editorial/studio/voices")
+    async def editorial_voice_add(request: Request):
+        engine, _tenant, user, _ = auth(request)
+        raw = await request.body()
+        if len(raw) > VOICE_BODY_MAX:
+            raise HTTPException(413, "Yükleme çok büyük.")
+        try:
+            import json as _json
+            b = _json.loads(raw)
+        except ValueError:
+            raise HTTPException(400, "Gövde okunamadı.") from None
+        b = obj(b)
+
+        def f(name: str) -> dict | None:
+            v = b.get(name)
+            if not isinstance(v, dict) or not isinstance(v.get("data"), str):
+                return None
+            return {"name": str(v.get("name") or "")[:300], "data": v["data"]}
+        clean = {"label": str(b.get("label") or "")[:120], "group": str(b.get("group") or "")[:40],
+                 "note": str(b.get("note") or "")[:200], "owner": str(b.get("owner") or "")[:200],
+                 "confirm": b.get("confirm") is True, "reference": str(b.get("reference") or "")[:400],
+                 "audio": str(b.get("audio") or ""), "document": f("document"), "original": f("original")}
+        out = call(voices_request, "POST", body=clean, editor=user, timeout=300)
+        if audit is not None and not isinstance(out, Response):
+            try:
+                v = out.get("voice") or {}
+                rights = out.get("rights") or {}
+                audit(engine, user, "create", "studio_voice", str(v.get("id"))[:120],
+                      f"ses kütüphanesine ses yüklendi: {v.get('label')}",
+                      {"owner": clean["owner"], "group": clean["group"], "statement": rights.get("statement"),
+                       "confirmed": rights.get("confirmed"), "document": (rights.get("document") or {}).get("name"),
+                       "reference": rights.get("reference"), "stats": out.get("stats")})
+            except Exception:  # noqa: BLE001 — denetim kaydı düşmezse işlem geri alınmaz, günlüğe yazılır
+                log.exception("studio voice audit failed")
+        return out
+
+    @app.get("/api/v1/editorial/studio/voices/{vid}/document")
+    def editorial_voice_document(vid: str, request: Request):
+        auth(request)
+        if not VOICE_ID.match(vid or ""):
+            raise HTTPException(404, "Ses bulunamadı.")
+        data, mime = call(editorial_studio.get_bytes, f"/v1/studio/voices/{vid}/document", DOC_MIME)
+        ext = {"application/pdf": "pdf", "image/png": "png", "image/jpeg": "jpg"}[mime]
+        return Response(content=data, media_type=mime, headers={
+            "Content-Disposition": f'inline; filename="izin-belgesi-{vid}.{ext}"', "Cache-Control": "private, no-store",
+            "X-Content-Type-Options": "nosniff", "Content-Security-Policy": "script-src 'none'; object-src 'none'"})
+
+    @app.delete("/api/v1/editorial/studio/voices/{vid}")
+    def editorial_voice_remove(vid: str, request: Request):
+        engine, _tenant, user, is_admin = auth(request)
+        if not is_admin:
+            raise HTTPException(403, "Sesi kütüphaneden yalnız yönetici kaldırabilir.")
+        if not VOICE_ID.match(vid or ""):
+            raise HTTPException(404, "Ses bulunamadı.")
+        out = call(voices_request, "DELETE", f"/{vid}", editor=user, admin=True)
+        if audit is not None and not isinstance(out, Response):
+            try:
+                audit(engine, user, "delete", "studio_voice", vid, "ses kütüphaneden kaldırıldı", None)
+            except Exception:  # noqa: BLE001
+                log.exception("studio voice audit failed")
+        return out

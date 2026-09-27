@@ -1,17 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   DndContext, DragOverlay, KeyboardSensor, PointerSensor, useSensor, useSensors, type DragEndEvent, type DragStartEvent,
 } from '@dnd-kit/core';
-import { ChevronLeft, ChevronRight, CloudOff, Check, Loader2, Redo2, Undo2, AlertTriangle, LayoutTemplate } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CloudOff, Check, Loader2, Redo2, Undo2, AlertTriangle, RefreshCw } from 'lucide-react';
 import {
-  studioApi, studioPlanApi, type Plan, type PlanArt, type PlanBubble, type PlanFigure, type PlanJob, type PlanLayout, type PlanPage, type PlanShape,
+  StudioPlanError, studioApi, studioPlanApi, type Plan, type PlanArt, type PlanBubble, type PlanFigure, type PlanJob, type PlanLayout, type PlanPage, type PlanShape,
 } from '../../engine';
 import { Loading, Note, btnGhost, btnPrimary, errText } from '../../admin/ui';
 import { ModuleFrame, Panel } from '../kit';
 import { useStudioJob } from './StudioFlow';
-import { gradientBtn, ghostBtn } from './shared';
+import { ghostBtn } from './shared';
 import { usePlanSync, type Conflict, type SyncState } from './autosave';
 import { usePhotoUploads } from './uploads';
 import { applyLayout, hash, hasText, preset, r1, safeRect, same, stable, uid } from './planModel';
@@ -93,6 +93,70 @@ function ConflictDialog({ c, plan, onResolve }: { c: Conflict; plan: Plan; onRes
   );
 }
 
+/** Planı olmayan işte ekran açılınca sayfa düzeni kendiliğinden kurulur (sunucuda `plan/prepare`; sesli okuma ve okur
+ *  bölümleriyle aynı kurulum). Kurulurken «hazırlanıyor» görünür ve kısa aralıkla yeniden sorulur (kitabın üretimi
+ *  sürüyorsa seyrek); hazır olunca plan okunur ve düzenleyici açılır. Kurulum düşerse neden + «Yeniden dene». Açılış
+ *  hareketsiz: yalnız mevcut dönen gösterge (hareket azaltılmışsa durur). */
+function PlanPreparing({ job, onReady }: { job: string; onReady: () => void }) {
+  const qc = useQueryClient();
+  const key = ['studio', 'plan', 'prepare', job];
+  const q = useQuery({
+    queryKey: key,
+    queryFn: () => studioPlanApi.prepare(job),
+    retry: false,
+    gcTime: 0,
+    refetchOnWindowFocus: false,
+    refetchInterval: (x) => {
+      const e = x.state.error;
+      if (e instanceof StudioPlanError && e.code === 'PREPARING') return (e.body as { state?: string } | null)?.state === 'waiting' ? 15_000 : 2500;
+      return false;
+    },
+  });
+  const ready = q.data?.status === 'ready';
+  const done = useRef(false);
+  useEffect(() => {
+    if (ready && !done.current) { done.current = true; onReady(); }   // plan bir kez okunur
+  }, [ready, onReady]);
+  const [retrying, setRetrying] = useState(false);
+  const retry = async (again: boolean) => {
+    setRetrying(true);
+    try { if (again) await studioPlanApi.prepare(job, true); } catch { /* sonuç aşağıdaki sorguyla okunur */ }
+    setRetrying(false);
+    void qc.invalidateQueries({ queryKey: key });
+  };
+  const e = q.error instanceof StudioPlanError ? q.error : null;
+  const waiting = e?.code === 'PREPARING' && (e.body as { state?: string } | null)?.state === 'waiting';
+  const preparing = !q.error || e?.code === 'PREPARING';
+
+  if (preparing) {
+    return (
+      <div className="mx-auto flex max-w-[560px] items-start gap-3 py-8" role="status" aria-live="polite">
+        <Loader2 className="mt-0.5 h-5 w-5 shrink-0 animate-spin text-canvas-violet motion-reduce:animate-none" aria-hidden />
+        <div className="min-w-0">
+          <h2 className="text-[16px] font-extrabold">{waiting ? 'Kitap üretiliyor' : 'Sayfa düzeni hazırlanıyor…'}</h2>
+          <p className="mt-1 text-[12.5px] leading-snug text-canvas-muted">
+            {waiting
+              ? 'Kitabın üretimi bitince sayfa düzeni kendiliğinden kurulur ve bu ekran açılır.'
+              : 'Bugünkü dizgi ve resimler sayfa sayfa kalıcı bir plana dönüşüyor; birkaç saniye sürer. Mevcut PDF\'ler ve resimler bozulmaz.'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  if (e?.code === 'NO_PLAN') {
+    return <div className="mx-auto max-w-[560px] py-6"><Note tone="info">{e.message}</Note></div>;
+  }
+  return (
+    <div className="mx-auto flex max-w-[560px] flex-col items-start gap-2 py-6">
+      <Note tone="err">{e?.code === 'PLAN_FAILED' ? e.message : errText(q.error, 'Sayfa düzeni hazırlanamadı.')}</Note>
+      <button type="button" className={ghostBtn} disabled={retrying} onClick={() => retry(e?.code === 'PLAN_FAILED')}>
+        {retrying ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
+        Yeniden dene
+      </button>
+    </div>
+  );
+}
+
 function figureBox(plan: Plan, a: { w_px: number; h_px: number } | undefined, cx?: number, cy?: number) {
   const s = safeRect(plan.page);
   const w = r1(s.w * 0.4);
@@ -119,8 +183,6 @@ export default function PlanEditor() {
   const [suggestions, setSuggestions] = useState<PlanBubble[] | null>(null);
   const [started, setStarted] = useState<Record<string, { kind: string; gid?: string }>>({});
   const [fastUntil, setFastUntil] = useState(0);
-  const [freezing, setFreezing] = useState(false);
-  const [freezeErr, setFreezeErr] = useState<string | null>(null);
   const [dragGid, setDragGid] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [askDiscard, setAskDiscard] = useState(false);
@@ -381,28 +443,9 @@ export default function PlanEditor() {
   }
 
   if (state.status === 'no-plan' || !plan || !ctx) {
-    const freeze = async () => {
-      setFreezing(true); setFreezeErr(null);
-      try { await sync.freeze(); } catch (e) { setFreezeErr(errText(e, 'Sayfa düzeni başlatılamadı.')); } finally { setFreezing(false); }
-    };
     return (
       <ModuleFrame route="/kitap-tasarim" crumb="Sayfa düzeni" title={title} lead="" source={`İş ${job}`} aside={aside}>
-        <Panel>
-          <div className="mx-auto flex max-w-[560px] flex-col items-center gap-3 py-8 text-center">
-            <LayoutTemplate className="h-10 w-10 text-canvas-violet" aria-hidden />
-            <h2 className="text-[18px] font-extrabold">Bu kitabın sayfa düzeni henüz başlatılmadı</h2>
-            <p className="text-[12.5px] leading-snug text-canvas-muted">
-              Başlatınca bugünkü dizgi ve resimler sayfa sayfa kalıcı bir plana dönüşür. Sonra sayfa ekleyip silebilir,
-              sıralayabilir, resim ve yazıyı yerinde taşıyıp boyutlandırabilir, balon ve renkli yazı ekleyebilirsiniz.
-              Mevcut PDF'ler ve resimler bozulmaz.
-            </p>
-            <button type="button" className={gradientBtn} disabled={freezing} onClick={freeze}>
-              {freezing ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <LayoutTemplate className="h-4 w-4" aria-hidden />}
-              {freezing ? 'Sayfa düzeni hazırlanıyor…' : 'Sayfa düzenini başlat'}
-            </button>
-            {freezeErr && <Note tone="err">{freezeErr}</Note>}
-          </div>
-        </Panel>
+        <Panel><PlanPreparing job={job} onReady={() => sync.reload()} /></Panel>
       </ModuleFrame>
     );
   }

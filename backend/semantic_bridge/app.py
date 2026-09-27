@@ -4530,6 +4530,16 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def editorial_plan_freeze(job: str, request: Request):
         return _plan_write(request, "POST", job, "/freeze", "sayfa planı başlatıldı", "plan", body={})
 
+    @app.post("/api/v1/editorial/studio/jobs/{job}/plan/prepare")
+    def editorial_plan_prepare(job: str, request: Request, retry: bool = False):
+        """Sayfa düzeni ekranının açılışı: plan yoksa servis kendiliğinden kurar (409 PREPARING/PLAN_FAILED, 404
+        NO_PLAN gövdeleri olduğu gibi ekrana). Ekran her açılışta çağırdığı için denetim kaydı düşülmez; kurulumu
+        yapan kişi planın geçmişinde (X-Editor) durur."""
+        _engine, _tenant, user, _ = _books(request)
+        from semantic_bridge import editorial_studio
+        return _plan(editorial_studio.plan_request, "POST", job, "/prepare", body={}, editor=user,
+                     params={"retry": 1} if retry else None, timeout=60)
+
     @app.put("/api/v1/editorial/studio/jobs/{job}/plan/pages/{pid}")
     def editorial_plan_page_put(job: str, pid: str, request: Request, body: dict[str, Any] | None = None):
         b = _json_body(body)

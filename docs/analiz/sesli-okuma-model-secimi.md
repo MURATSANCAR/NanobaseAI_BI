@@ -176,6 +176,67 @@ kalkar (BookNarration), giriş kapısı betiği (`add-studio-routes.py`) ve köp
 kitabın birkaç sayfası gateway üzerinden seslendirilip ekranda dinlenir (model devri gateway kaydıyla doğrulanır),
 anlaşılırlık ölçümü tekrarlanır.
 
+## Sesli e-kitap: EPUB 3 medya kaplaması (2026-09-27)
+
+E-kitap bölümünde «Sesli e-kitap» / «Sessiz e-kitap» seçimi. Sesli yalnız bütün okunacak sayfaların sesi hazır ve
+güncelken üretilir (`epub.audio_gap`; değilse ekranda neden + «Eksik sesleri üret», servis 409 `AUDIO_INCOMPLETE`).
+
+- **Kelimeler:** sesi olan her blokta (yazı bloğu, balon, serbest yazı, akışkanda başlık) kelime `char` aralığıyla
+  `<span id="w-<blok>-<i>">` içine sarılır (`epub.wrap_runs`): biçim parçası (renkli karakter adı) kelimenin ortasından
+  geçse de kelime tek parça, biçim içeride; metin gerçek metin kalır. Sabit sayfa ve akışkan düzenin ikisinde.
+  Akışkanda sayfa sınırından bölünen blok tek paragrafta iki kimlik takımıyla; dipnot paragrafı sarılmaz.
+- **SMIL:** belge başına bir (`smil/s005.smil` ya da bölüm `smil/bolum-001.smil`; bölüm birden çok sayfanın sesini
+  taşır), `narration.smil_doc`: aynı sesteki ardışık kelimelerin arası öndekine katılır (okuyucu klipten klibe
+  geçerken cümle arası duraklamayı atlamaz). Sesler `audio/<sayfa>.mp3`.
+- **OPF:** XHTML öğesinde `media-overlay`, `media:duration` (belge başına + toplam; toplam belge sürelerinin
+  milisaniyeyle toplamı), `media:narrator` (kullanılan seslerin adı), `media:active-class` =
+  `-epub-media-overlay-active` (stilde yumuşak sarı zemin). Erişilebilirlik: `accessMode auditory`,
+  `synchronizedAudioText`; özet cümlesi sesli olduğunu söyler.
+- **Denetim:** yapısal denetim ses eşlemesini de sınar (SMIL listede, süre üst veride, her `<text>` sayfadaki bir
+  kimliğe, her `<audio>` paketteki sese, klip başı < sonu). **EPUBCheck 5.4.0** (GPU'da geçici kap, Java 21; 2026-09-27 akşamından beri stüdyo imajında kalıcı: `images/studio/Dockerfile`, ekranda «Tam denetim»):
+  deneme işinin kopyasından gerçek seslerle sabit sayfa ve akışkan sesli EPUB → 0 hata / 0 uyarı; sınama EPUB'ları da
+  (sabit, akışkan) 0/0.
+- **Önizlemede dinle:** ekran e-kitabın kendi SMIL ve MP3'lerini içerikten okur, sesi çalar, okunan kelimeye aynı sınıfı
+  verir (çerçevede betik çalışmaz; kelime dışarıdan işaretlenir), sayfa bitince sonraki sesli sayfaya geçer. Köprü MP3'ü
+  aralıklı (206) verir.
+
+## Ses kütüphanesi (2026-09-27)
+
+Gruplar ekranda başlık: **Anlatıcı**, **Çocuk kitabı anlatıcısı**, **Yetişkin kitap okuyucusu**, **Karakter sesleri**;
+her grupta kadın ve erkek 3'er aday (`narration.VOICES`), hepsi yalnız yazılı tariften (hiçbir gerçek kişinin kaydı
+yok). Varsayılanlar (`anlatici-kadin`) kullanıcı seçene kadar değişmez. Her sesin yanında «dinle»: kısa örnek, ses ve
+okunuş başına bir kez üretilir, yayınevi düzeyinde saklanır (`_ses/ornek/`).
+
+**Tarif denetimi (temel frekans, YIN):** tarif referans cümlesiyle üretilip ortanca F0 ölçüldü. Erkek tariflerinde
+«lively / bright / energetic / cheerful / friendly smile» sözcükleri sesi tiz (≈ 180–290 Hz, kadın ya da çocuk) çıkarıyordu
+— 34 erkek tarif denemesinden 21'i; tutan kalıp «calm … man in his …, low/deep (baritone) male voice …». Seçilen erkek
+tarifleri 86–95 Hz, kadın tarifleri 160–267 Hz; sayfa sesleri referansla aynı aralıkta (ör. sıcak masalcı ref 87 Hz →
+sayfalar 79–80 Hz). Aynı tarif ve tohum GPU'da çalıştırmadan çalıştırmaya biraz değişebiliyor (radyo tiyatrosu 118 →
+93 Hz): bir aday varsayılan yapılacaksa onun **dinlenen referansı** kullanılır, yeniden üretilmez.
+
+**Varsayılan erkek anlatıcı (kullanıcı kararı 2026-09-27): «sıcak masalcı» (`anlatici-erkek-masalci`).** Dinlenen
+referans kaydın kendisi (`aday-1-anlatici-erkek-masalci-referans.wav`: 48 kHz tek kanal, 8,54 sn, 87 Hz, REF_TEXT ve
+REF_SEED ile tariften üretildi; gerçek kişi kaydı değil) pakette durur: `apps/editor/src/editor/production/sesler/
+anlatici-erkek-masalci.wav` (820 kB), sha256 `41c9a3b2…cdcffc785` kodda (`narration.PINNED`). Yayınevi klasörüne
+(`_ses/sesler/`) yazılmaz, imajla gelir; kurulumda GPU'ya ayrıca dosya kopyalanmaz. `voice_ref` bu seste modeli
+çağırmaz; dosya yoksa ya da özeti tutmazsa üretim açık Türkçe hatayla durur (tariften sessizce başka ses üretilmez).
+Eski «Erkek anlatıcı» kimliği (`anlatici-erkek`) bu sese yönlenir (`narration.ALIASES`: kayıtlı ayar, API, sayfa
+birimleri); listede ayrı satır yok, o sesle okunmuş sayfalar «güncel değil» görünür. Ekranda anlatıcı grubunda kadın
+anlatıcının (genel varsayılan, değişmedi) hemen ardından, erkeklerin en üstünde «önerilen» rozetiyle.
+
+**Ses yükle (izinli referans ses, `production/voices.py`):** yayınevinin kendi seslendirmeni için. Hak beyanı zorunlu:
+«Bu sesin ticari kullanım hakkı yayınevimize aittir» onayı + sesin sahibinin adı + izin belgesi (PDF/PNG/JPEG) ya da
+belge numarası/açıklaması; kim/ne zaman/belge ses kaydının yanında (`_ses/kutuphane/<ses>/kayit.json`, `izin.*`,
+özgün dosya `kaynak.*`) ve köprünün denetim kaydında. Kayıt tarayıcıda çözülür (wav/mp3/m4a/ogg → tek kanal 24 kHz
+16 bit), sunucuda: ≥ 16 kHz, baş/son sessizlik kırpılır, 30–60 sn konuşma, gürültü farkı ≥ 18 dB, kırpılmış örnek
+≤ %0,2, konuşma payı ≥ %45, seviye eşitlenir; red nedeni Türkçe. Üretimde kaydın 8–15 sn'lik ilk parçası (duraklamada
+biter) metinsiz referans olarak gider (servisin `ref_audio` yolu; `ref_text` yok). Yönetici kaldırabilir: kaldırılan
+ses seçilemez, seslendirme reddedilir, eski sayfa sesleri ve kayıt durur. Uçlar: servis `/v1/studio/voices` (GET, POST,
+`{ses}/document`, DELETE + `X-Editor-Admin`), köprü `/api/v1/editorial/studio/voices…` (kaldırma yalnız yönetici).
+Uçtan uca deneme (GPU, gateway): referans olarak **modelin tariften ürettiği** 50 sn'lik kayıt yüklendi (ölçü: gürültü
+farkı 38,5 dB, konuşma payı %75, referans parçası 13,9 sn), deneme işinin 5. ve 7. sayfası bu sesle okundu (sayfa
+F0'ı referansınkiyle aynı aralıkta: 195 → 195–210 Hz), kaldırıldıktan sonra yeni seslendirme reddedildi.
+
 ## Kaynaklar
 
 - VoxCPM2: <https://github.com/OpenBMB/VoxCPM>, <https://huggingface.co/openbmb/VoxCPM2>
