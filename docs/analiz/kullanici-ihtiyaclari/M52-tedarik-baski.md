@@ -171,6 +171,7 @@ matbaalara ve kağıtçılara olan borç Logo'da ve kapama kullanılmadığı i�
 - M12: `production.py` (kart okuma, firma/dönem bulma, `/printers`), `production_plan.py` (`printer_stats`, `parse_day`).
 - `backend/semantic_bridge/management/` (5 dk önbellek, kaynak SQL paneli), `contracts_docs.py` (dış kütüphanesiz Word çıktısı).
 - Katalogdaki FIFO/vade SQL'leri: `configs/semantic/knowledge/logo/knowledge/sql/{satici-borcu-yaslandirma-fifo.md, satici-borcu-vadesi-gecmis-fifo.md, planlanan-odeme-vadesi.md}`.
+- main'deki `backend/semantic_bridge/budget_sources.py` (M46): `runner`, `firms_by_year`, `read_data_end`, `expense_sql` (gider okuma deseni).
 - `alerts.py`, `reports.py`, `SearchSelect.tsx`.
 
 ## 10. Uzmanlara sorulacak sorular

@@ -164,6 +164,7 @@ düşündürüyor (varsayım).
 
 **Mevcut kodda yeniden kullanılacaklar**
 - `backend/semantic_bridge/alerts.py`, `reports.py`, `board.py`; M43 `stock_sources.py` (aynı CRM bağlantısı).
+- main'deki `backend/semantic_bridge/budget_sources.py` (M46): `runner`, `firms_by_year`, `read_data_end` (Logo firma/yıl ve veri günü).
 - `backend/semantic_bridge/management/` 5 dk önbellek + ⓘ kaynak SQL paneli deseni.
 - `src/canvas/components/SearchSelect.tsx`, dışa aktarma (`ozellik:veri.disa-aktar`).
 

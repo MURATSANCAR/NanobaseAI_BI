@@ -119,7 +119,7 @@ Kitapyurdu, D-Market, Point). timas.com.tr T-soft'ta; T-soft siparişleri CRM'e 
 
 ## 6. Veri
 
-| Gereken veri | Kaynak | Depoda bilinen durumu | Boşluk |
+| Gereken veri | Kaynak (Logo / CRM / T-soft / kullanıcı girer / dış) | Depoda bilinen durumu | Boşluk |
 |---|---|---|---|
 | Kanal net ciro, adet, iade | Logo faturalı `STLINE` (`INVOICEREF <> 0`), TRCODE 7,8,9 − 2,3, `LINENET`; `CLCARD.SPECODE2` | `kanal_net_ciro` ölçüsü ve SQL çifti var | .155 donmuş (2026-08-17) |
 | İskonto | `STLINE` LINETYPE 2, ölçü `iskonto_yuku` | Tanımlı | Yok |
@@ -219,7 +219,7 @@ Bir iş günü:
 
 ## 13. Zeki AI (yerel model), Logo ve CRM nerede kullanılır
 
-| Adım | Logo | CRM | Yerel model (Zeki AI) ne yapar | Neden |
+| Adım | Logo (hangi tablo/görünüm/ölçü) | CRM (hangi varlık/alan) | Yerel model (Zeki AI) ne yapar | Neden |
 |---|---|---|---|---|
 | Kanal karnesi | `LG_411_01_STLINE` faturalı satır (`INVOICEREF <> 0`, TRCODE 7,8,9 − 2,3, `LINENET`), `LG_411_CLCARD.SPECODE2`; önceki yıllar `LG_211_*` + tarih süzgeci; ölçüler `kanal_net_ciro`, `iade_orani`, `iskonto_yuku`, `brut_kar_marji` | — | — | Rakam kayıt sisteminden |
 | Cari ↔ platform eşleme | `CLCARD` (CODE, DEFINITION_, SPECODE2) | `AccountBase` (ad, `new_logicalref`, `new_FirmaKanal`, `new_cariozelKod2`) | Aday eşleşme (kapalı küme: platform listesi + "platform değil") — tek token + olasılık; kullanıcı onaylar | Unvan platform adına benzemiyor (D-MARKET, Turkuvaz) |

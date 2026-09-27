@@ -182,7 +182,9 @@ kararları Power BI "Yeni Baskı Öneri" raporuyla veriliyordu (artık portalda 
   `management/baski_oneri.py` (5 dk önbellek, `{satis:<yıl>}` yer tutucusu, kaynak SQL paneli).
 - `backend/semantic_bridge/management/zeki_tahmin.py` (tahmin istemcisi).
 - `backend/semantic_bridge/alerts.py` (eşik kuralı), `reports.py` (planlı rapor e-postası), `board.py` (pano kartı).
-- `backend/semantic_bridge/freelance_logo.py` ve M12 `production.py` içindeki firma/dönem bulma (`L_CAPIPERIOD`).
+- main'deki `backend/semantic_bridge/budget_sources.py` (M46, commit `f2f85077`): `runner(path)` (salt okunur bağlantı), `firms_by_year`
+  (yıl → Logo firma, `L_CAPIPERIOD`), `read_data_end` (Logo son veri günü — ekrandaki "veri tarihi"). Bu worktree'de henüz yok;
+  kodlamaya main'den başlanır. Alternatif desen: `freelance_logo.py`, M12 `production.py`.
 - `src/canvas/components/SearchSelect.tsx`, `src/canvas/management/` tablo + ⓘ kaynak paneli, `src/canvas/DataRefresh.tsx`.
 
 ## 10. Uzmanlara sorulacak sorular

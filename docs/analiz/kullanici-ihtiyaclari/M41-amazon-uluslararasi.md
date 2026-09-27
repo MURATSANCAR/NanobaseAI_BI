@@ -113,7 +113,7 @@ yurtdışı satışını kapsar.
 | Konsinye sevk | CRM `new_siparisBase.new_siparistipi = 14`, `new_sevkiyatBase`; Logo irsaliye (TRCODE 8) faturalanmamış satırlar (Kural 18) | Alanlar biliniyor | Sipariş sayısı ve konsinyede kalan **ölçülecek** |
 | Amazon satıcı hesabı verisi (sipariş, stok, fiyat, iade, hakediş) | Amazon satıcı API'si (salt okunur rapor/okuma) | Bağlantı **yok** | Hesap türü (satıcı/tedarikçi) ve yetki (Soru 1) |
 | Yurtdışı satış | Logo `CLCARD.SPECODE2 = 'YURTDIŞI'` (yazım ölçülecek), `CLCARD.COUNTRY`/`CITY`, `INVOICE.TRCURR`, `TRRATE`; döviz `L_DAILYEXCHANGES` | Kanal kodu biliniyor; 2026'da 74 döviz faturası | Ülke alanı doluluğu **ölçülecek** |
-| Satılmış yabancı haklar | CRM sözleşme (tip Telif Satış, `new_sozlesmetarafi.new_yurticiyurtdisi`), M6 portal tabloları (`semantic_contracts`) | Tablolar biliniyor | Dil/ülke alanı **ölçülecek** |
+| Satılmış yabancı haklar | CRM `new_sozlesmeBase` (`new_SozlesmeTipi = 1` Telif Satış — TİMAŞ hakkı yurtdışına satar; 5 = Telif Alış), kitap bağı `new_new_sozlesme_new_kitapBase`, taraf `new_sozlesmetarafiBase` (`new_Firma`/`new_kisi`, `new_yurticiyurtdisi`); M6 portal tabloları (`semantic_contracts`) | Tip kodları 2026-09-26'da canlı CRM'de ölçüldü (bellek `crm-digital-rights-fields`); ~3.725 Telif Satış (2026-09-15 profili) | Dil/ülke alanı **ölçülecek** |
 | Kitap üst verisi (başlık, yazar, özet, sayfa, ebat) | CRM `new_kitapBase` (`new_name`, `new_urunadi`, `new_ozet`, `new_yazartext`, `new_ean13`) | SEO modülünde okunuyor | Yok |
 | Bestseller sırası, rakip fiyat | Yalnız resmî API (satıcı API'si kendi ürünleri için sıra/fiyat verebilir; varsayım) | — | Kazıma yasak |
 | Hedef pazar okur demografisi | Dış veri | — | Bu sürümde yok (kullanıcı girer) |
