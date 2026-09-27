@@ -48,7 +48,7 @@ const pathOf = (to: string) => to.split('?')[0];
 
 /**
  * Ortak kabuk: nokta ızgara, üst şerit ve portalın tek menüsü (nav/navModel.ts). Masaüstünde çalışma alanı
- * rayı + bağlam paneli, telefonda alt çubuk + menü sayfası; ⌘K / Ctrl K «Ara veya git». Menü ekrandan
+ * rayı (alanlar içinde açılır), telefonda alt çubuk + menü sayfası; ⌘K / Ctrl K «Ara veya git». Menü ekrandan
  * bağımsızdır: hangi öğenin etkin olduğu adresten bulunur. Ekranların `main`'i `.shell-stage`'e göre
  * yerleşir (menünün yanında başlar, telefonda alt çubuğun üstünde biter).
  */
@@ -155,7 +155,6 @@ export default function Shell({
     <NavUiContext.Provider value={ui}>
     <ZoomContext.Provider value={onZoom ? 1 : ownZoom}>
     <div
-      data-docked={nav.state.collapsed ? '0' : '1'}
       className="nav-root bg-mesh-canvas font-canvas text-ink w-full h-[100dvh] overflow-hidden select-none relative print:h-auto print:overflow-visible print:bg-white"
     >
     {/* Interactive Dot Grid Overlay */}

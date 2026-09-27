@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 — Masaüstü menüsü tek ray: bağlam paneli kalktı, alanlar ray içinde açılıyor
+
+- Kullanıcı isteği: menü olarak yalnız soldaki ray kalsın, açılıp kapanabilsin; öteki (232 px bağlam paneli: «Tüm ekranlar» ağacı + «Son açılanlar») kalksın. Seçim: alt ekranlar rayın içinde akordeon; Tüm modüller ve profil düğmesi yerinde.
+- `nav/DesktopNav.tsx` yeniden yazıldı: ray 68 → 84 px (alt ekran adları iki satıra sığsın), alan tıklanınca altındaki ekranlar rayın içinde açılır, tekrar tıklanınca kapanır; aynı anda bir alan açık, ekran değişince bulunulan alan açılır. Alt başlıklar («Günlük», «İş») ince çizgi; Uyarılar rozeti simgenin köşesinde; kapalı liste `inert`.
+- Hareket: günde onlarca kez → 180 ms güçlü ease-out, grid satırı + opacity, yalnız tıklamada (ekran açılışında anlık); azaltılmış harekette yalnız opaklık.
+- Kalkanlar: panel, daraltma/sabitleme düğmeleri, `data-docked`, `NavTree`, `RECENT_PANEL`, `NavState.collapsed/open`. Son açılanlar ⌘K paletinde duruyor. Sahne solu 80/320 → 96 px sabit. Telefon menüsü değişmedi.
+- Doğrulama: yerel dev sunucusu koşulmaz (Mac'te işlem yok); ekran doğrulaması main'e alınıp test sunucusuna kurulunca yapılacak.
+
 ## 2026-09-27 — SEO & GEO: CRM kitap kartı ve dijital haklar
 
 - **Neden:** Google Kitaplar'a önizleme yüklemeden önce "bu kitabı internette gösterme hakkımız var mı" sorusu. Canlı CRM'de (yalnız okuma) kitap ve sözleşme tablolarının bütün alanları doluluk oranıyla tarandı.

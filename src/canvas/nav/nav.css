@@ -1,9 +1,9 @@
-/* Ortak menü: masaüstünde 68 px çalışma alanı rayı + 232 px bağlam paneli, telefonda alt çubuk + menü sayfası.
-   Ekranların `main`'i kabuğun sahnesine (.shell-stage) göre yerleşir; sahne rayın/panelin yanında başlar,
+/* Ortak menü: masaüstünde tek 84 px ray (alanlar içinde akordeon gibi açılır), telefonda alt çubuk + menü
+   sayfası. Ekranların `main`'i kabuğun sahnesine (.shell-stage) göre yerleşir; sahne rayın yanında başlar,
    telefonda alt çubuğun üstünde biter. Böylece ekranlar menünün ölçüsünü bilmez.
 
-   Hareket: panel daraltma/açma ara sıra olur → 200 ms güçlü ease-out, yalnız transform + opacity (sahne
-   genişliği anında değişir, panel rayın arkasına kayar). Telefon çekmecesi iOS eğrisi 280 ms, kaydırmayla
+   Hareket: raydaki alan günde onlarca kez açılıp kapanır → kısa tutulur: 180 ms güçlü ease-out, yükseklik
+   (grid satırı; akordeonda transform karşılığı yok) + opacity. Telefon çekmecesi iOS eğrisi 280 ms, kaydırmayla
    kapanır. Komut paleti hiç hareket etmez (klavyeyle günde defalarca açılır). Hover yalnız fareli
    cihazlarda; azaltılmış harekette anlık. */
 
@@ -11,9 +11,7 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
   --nav-rail-left: 12px;
-  --nav-rail-w: 68px;
-  --nav-panel-left: 88px;
-  --nav-panel-w: 232px;
+  --nav-rail-w: 84px;
 }
 
 .shell-stage {
@@ -27,12 +25,7 @@
 @media (min-width: 768px) {
   .shell-stage {
     bottom: 0;
-    left: 80px;
-  }
-}
-@media (min-width: 1024px) {
-  .nav-root[data-docked='1'] .shell-stage {
-    left: 320px;
+    left: 96px;
   }
 }
 @media print {
@@ -70,42 +63,33 @@
     background: rgba(255, 255, 255, 0.85);
     color: #1b1f2a;
   }
-  .nav-recent:hover {
-    background: rgba(124, 92, 255, 0.06);
-  }
 }
 
-/* ------------------------------------------------------------------ panel */
-.nav-panel {
-  position: absolute;
-  top: 12px;
-  bottom: 12px;
-  left: var(--nav-panel-left);
-  width: var(--nav-panel-w);
-  z-index: 35;
-  transform: translateX(0);
+/* ------------------------------------------------------------------ raydaki alan (akordeon) */
+.nav-sub {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+.nav-sub[data-open='1'] {
+  grid-template-rows: 1fr;
   opacity: 1;
 }
-.nav-panel[data-state='hidden'] {
-  transform: translateX(calc(-100% - 12px));
-  opacity: 0;
-  pointer-events: none;
+.nav-sub[data-open='0'] {
   visibility: hidden;
 }
-/* Hareket yalnız kişi paneli kendisi açıp kapattığında: sayfa açılırken sunucudan gelen tercih paneli
-   kaydırmasın (ekran her geçişte yeniden kurulur). */
-.nav-panel[data-anim='1'] {
-  transition: transform 200ms var(--ease-out), opacity 200ms var(--ease-out);
+/* Hareket yalnız kişi alanı kendisi açıp kapattığında; kapanırken görünürlük hareket bitince düşer. */
+.nav-sub[data-anim='1'] {
+  transition: grid-template-rows 180ms var(--ease-out), opacity 180ms var(--ease-out);
 }
-.nav-panel[data-anim='1'][data-state='hidden'] {
-  /* kapanırken görünürlük hareket bitince düşer; açılırken hemen gelir */
-  transition: transform 200ms var(--ease-out), opacity 160ms var(--ease-out), visibility 0s linear 200ms;
+.nav-sub[data-anim='1'][data-open='0'] {
+  transition: grid-template-rows 180ms var(--ease-out), opacity 120ms var(--ease-out), visibility 0s linear 180ms;
 }
-.nav-panel[data-state='flyout'] {
-  z-index: 45;
-  /* içeriğin üstünde durur: arkadaki yazı okunmasın diye neredeyse opak */
-  background: rgba(255, 255, 255, 0.97);
-  box-shadow: 0 24px 60px -12px rgba(42, 31, 74, 0.28);
+.nav-chevron {
+  transition: transform 180ms var(--ease-out);
+}
+.nav-chevron[data-open='1'] {
+  transform: rotate(180deg);
 }
 .nav-row {
   transition: transform 140ms var(--ease-out), background-color 150ms ease, color 150ms ease;
@@ -253,12 +237,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .nav-panel[data-anim='1'],
-  .nav-panel[data-anim='1'][data-state='hidden'] {
+  .nav-sub[data-anim='1'],
+  .nav-sub[data-anim='1'][data-open='0'] {
     transition: opacity 120ms ease, visibility 0s linear 120ms;
   }
-  .nav-panel[data-state='hidden'] {
-    transform: none;
+  .nav-chevron {
+    transition: none;
   }
   .nav-tile,
   .nav-row,

@@ -1,10 +1,9 @@
 import { useCallback } from 'react';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { ENGINE_ENABLED, prefsApi } from '../engine';
-import type { NavGroupId } from './navModel';
 
 /**
- * Menünün kişiye ait durumu: panel daraltılmış mı, gruplu listede hangi grup açık, son açılan ekranlar.
+ * Menünün kişiye ait durumu: son açılan ekranlar.
  * Doğrusu sunucudaki kişi tercihidir (`semantic_user_prefs`, anahtar `nav:state`); başka bilgisayardan
  * girilince aynı menü gelir. Tarayıcı yalnız önbellek tutar: ilk boyamada sunucu cevabı gelene kadar
  * titremesin diye.
@@ -12,15 +11,12 @@ import type { NavGroupId } from './navModel';
 
 export type RecentEntry = { to: string; label: string; group: string; at: number };
 export type NavState = {
-  collapsed?: boolean;
-  open?: Partial<Record<NavGroupId, boolean>>;
   recent?: RecentEntry[];
 };
 
-/** «Son açılanlar» bir yakınlık listesidir: en yeni 12 farklı ekran tutulur (eskisi düşer). Panel bunların
- *  ilk 4'ünü gösterir (dar alanda okunur kalsın), komut paleti 12'sinin hepsini; ekranda «son 12» yazar. */
+/** «Son açılanlar» bir yakınlık listesidir: en yeni 12 farklı ekran tutulur (eskisi düşer); komut paleti
+ *  hepsini gösterir, ekranda «son 12» yazar. */
 export const RECENT_KEEP = 12;
-export const RECENT_PANEL = 4;
 
 export const NAV_PREF_KEY = 'nav:state';
 const LS_KEY = 'timas.nav:state';
@@ -63,7 +59,7 @@ function scheduleSave(value: NavState) {
   }, 800);
 }
 
-// Sunucu kaydı gelmeden yapılan değişiklikler (ilk ekrandaki «son açılan» kaydı, erken daraltma) sırada
+// Sunucu kaydı gelmeden yapılan değişiklikler (ilk ekrandaki «son açılan» kaydı) sırada
 // bekler; kayıt gelince onun üstüne sırayla uygulanır. Yoksa boş önbellekle başlayan yeni bir cihaz
 // sunucudaki tercihi ezerdi, ya da geç gelen eski cevap yeni değişikliği silerdi.
 let loaded = !ENGINE_ENABLED;
