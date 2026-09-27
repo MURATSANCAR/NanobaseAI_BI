@@ -1,5 +1,35 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (21:00) — Stüdyo sesli okuma: kendiliğinden sayfa düzeni, sesli e-kitap, ses kütüphanesi ve «ses yükle»
+
+- **Neden:** eski iş (`20260925193351a17c8f`, planı yok) sesli okumada «önce sayfa düzenini açın» diyordu; e-kitapta
+  «okurken dinle» yoktu; kullanıcı erkek anlatıcı ve genel bir ses kütüphanesi istedi (gerçek kişi kaydından kopya
+  yok), yayınevinin kendi seslendirmeni için izin belgeli ses yükleme.
+- **Kendiliğinden plan (`plan.ensure`):** tetikleyen uçlar planı *tüketen* bölümlerin girişleri — `GET narration`,
+  `POST narration/run`, `GET plan/reader`, `GET plan/versions`. `GET plan` tetiklemez: Sayfa düzeni ekranının kendi
+  «başlat» düğmesi var, otomatik kaydın yeniden okuması `NO_PLAN` sözleşmesine dayanıyor; okur ve sürüm farkı zaten o
+  ekranın içinde. Dondurmanın aynı yolu arka planda (görsel çizilmez, balon kuralla), ekran 409 `PREPARING` görüp
+  bekler; hat sürüyorsa `waiting`, düşerse `PLAN_FAILED` (`?retry=1`). Eski işin kopyasında (GPU geçici kap, özgün
+  resim klasörü salt okunur): 1,3 sn, plan 5 sayfa, iç sayfa PDF'i 8 → 8 sayfa ve bütün sayfaların kelimeleri aynı;
+  ardından «Seslendir» iş akışı başladı, bir sayfa sahte sesle üretildi.
+- **Sesli e-kitap:** EPUB 3 medya kaplaması (kelime span'leri, belge başına SMIL, sayfa MP3'leri, OPF süre/anlatıcı/
+  vurgu sınıfı; sabit sayfa ve akışkan). Yalnız bütün sesler hazırken (eksikte ekranda neden + «Eksik sesleri üret»).
+  Deneme işinin kopyasından gerçek seslerle sabit sayfa (2,6 MB, 4 sayfa, 136 kelime, 78,3 sn) ve akışkan sesli EPUB:
+  **EPUBCheck 5.4.0: 0 hata, 0 uyarı** (ikisi de). Ekranda «Önizle ve dinle».
+- **Ses kütüphanesi:** 4 grup, her grupta kadın ve erkek 3'er tarifli aday; erkek tariflerinin 34 denemesinden 21'i
+  temel frekans ölçümüyle tiz çıktı (canlı/parlak/neşeli sözcükleri), «calm … low male voice» kalıbına geçildi; seçilen
+  erkekler 86–95 Hz, kadınlar 160–267 Hz; sayfa sesleri referansla aynı aralıkta. Her aday deneme işinin 5. ve 7.
+  sayfasını (yetişkinler okunmuş bir romandan iki paragrafı) okudu; dosyalar oturum karalama klasöründe
+  (`ses-kutuphanesi/<grup>/`). Varsayılan değişmedi; seçim kullanıcıda.
+- **Ses yükle:** hak beyanı zorunlu (onay, sesin sahibi, izin belgesi ya da numarası), kayıt denetimi ve
+  normalleştirme, yönetici kaldırması, köprüde denetim kaydı. Uçtan uca GPU denemesinde referans olarak modelin
+  tariften ürettiği 50 sn'lik kayıt kullanıldı (gerçek kişi kaydı yok); sayfalar o sesle okundu, kaldırılınca yeni
+  üretim reddedildi.
+- **Doğrulama:** editör testleri GPU geçici kapta (`editor-py:0.15.9-87232e97`, EPUBCheck'li): 518 geçti, 1 bilinen
+  sıra bağımlılığı (`test_proofing_contract`). Ön yüz test sunucusunda: tsc temiz, vitest 35/35, vite build tamam. Köprü:
+  uç sınaması 18/18 (sahte servis), bütün uygulama geçici kopyada içe aktarıldı (343 uç). Giriş kapısı betiği canlı
+  dosyanın kopyasında kuru koşuldu. Kurulmadı (push/merge/dağıtım yok).
+
 ## 2026-09-27 — Masaüstü menüsü tek ray: bağlam paneli kalktı, alanlar ray içinde açılıyor
 
 - Kullanıcı isteği: menü olarak yalnız soldaki ray kalsın, açılıp kapanabilsin; öteki (232 px bağlam paneli: «Tüm ekranlar» ağacı + «Son açılanlar») kalksın. Seçim: alt ekranlar rayın içinde akordeon; Tüm modüller ve profil düğmesi yerinde.
