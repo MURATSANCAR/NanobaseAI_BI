@@ -29,6 +29,7 @@ export const LIVE: Record<string, string> = {
   M6: '/telif-sozlesme',
   M7: '/yazar-iliskileri',
   M8: '/serbest-calisanlar',
+  M9: '/fiyatlama',
   M10: '/ilk-baski',
   M11: '/yonetim-raporlari/baski-oneri',
   M12: '/uretim',

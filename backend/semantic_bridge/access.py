@@ -473,6 +473,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/field/run-due", SYSTEM),
     ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
     ("/api/v1/field/", frozenset({page("saha")})),
+    ("/api/v1/pricing/", frozenset({page("fiyatlama")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -583,6 +584,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/corporate/b2b/.+$", "ozellik:kurumsal.b2b"),
     (frozenset({"GET"}), r"^/api/v1/corporate/(quotes/[^/]+/document\.(pdf|xlsx)|b2b/(dealers|highlights)\.csv)$",
      "ozellik:veri.disa-aktar"),
+    # Fiyatlama (M9): analiz, pazar fiyatı, varsayılan ve toplu zam teklifi yazımı. Hesap (`calc`) ve okuma sayfayla
+    # gelir; onay imzaları açıkça verilen `fiyatlama.onay-<rol>` ile ucun içinde denetlenir.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/pricing/(analyses(/[^/]+(/(submit|withdraw|archive))?)?|market(/[^/]+)?|defaults|proposals|refresh)$",
+     "ozellik:fiyatlama.yaz"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
     # M31: ziyaret raporu, plan önerisi/düzeltmesi, katalog, bayi önerme; bağlam (ilçe endeksi, takvim) yükleme.

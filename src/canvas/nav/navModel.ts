@@ -23,6 +23,7 @@ import {
   Radar,
   Bell,
   BookA,
+  Calculator,
   BookImage,
   BookOpen,
   BookPlus,
@@ -150,6 +151,14 @@ export const NAV: NavGroup[] = [
         parent: 'yonetim-raporlari',
         hint: 'Yeniden basılacak kitap önerileri',
         keywords: ['yeni baskı öneri', 'baskı', 'tahmin'],
+      },
+      {
+        id: 'fiyatlama',
+        label: 'Fiyatlama ve maliyet',
+        to: '/fiyatlama',
+        icon: Calculator,
+        hint: 'Kitap maliyeti, başabaş, kapak fiyatı önerisi ve gerçekleşen marj',
+        keywords: ['fiyat', 'maliyet', 'başabaş', 'kapak fiyatı', 'marj', 'birim maliyet', 'zam'],
       },
       {
         id: 'ilk-baski',

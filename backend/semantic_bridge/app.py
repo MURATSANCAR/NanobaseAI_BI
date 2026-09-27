@@ -6642,6 +6642,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.budget = budget_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import distribution_api
     app.state.distribution = distribution_api.register(app, rt, _require_caller, _can)
+
+    # Fiyatlama ve maliyet (M9): kendi paketi (`semantic_bridge/pricing`), uçlar /api/v1/pricing/*.
+    from semantic_bridge import pricing
+    app.state.pricing = pricing.register(app, rt, {"session": _greetings, "can": _can, "audit": admin_mod.audit,
+                                                   "is_admin": admin_mod.is_admin})
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing
