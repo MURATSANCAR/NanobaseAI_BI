@@ -17,6 +17,7 @@ export type BudgetParams = {
   giderKaynak?: string;
   marjDegisim: number;
   esik: number;
+  uyariKapsam?: number;
   tahmin: boolean;
   pencere?: string;
 };
@@ -152,6 +153,8 @@ export type Tracking = {
   asof?: string | null;
   esik?: number;
   gecenPay?: number;
+  /** Kitap uyarısının kapsamı: hedef cirosunun bu payını oluşturan kitaplar. */
+  uyariKapsam?: { pay: number; kitap: number; sapma: number };
   kitapHedefleri?: GroupTrack;
   sirket?: GroupTrack;
   program?: { hedefCiro: number; beklenenCiro: number };

@@ -11,7 +11,7 @@ import { NumField } from './parts';
 const SC: Array<[Scenario, string]> = [['muhafazakar', 'Muhafazakâr'], ['temel', 'Temel'], ['iyimser', 'İyimser']];
 const pct = (v: number | undefined | null) => (v === null || v === undefined ? '' : (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 2 }));
 
-export type ParamText = { hacim: Record<Scenario, string>; fiyat: string; gider: string; marjDegisim: string; esik: string; tahmin: boolean };
+export type ParamText = { hacim: Record<Scenario, string>; fiyat: string; gider: string; marjDegisim: string; esik: string; uyariKapsam: string; tahmin: boolean };
 
 export function toText(p: BudgetParams): ParamText {
   return {
@@ -20,6 +20,7 @@ export function toText(p: BudgetParams): ParamText {
     gider: pct(p.gider),
     marjDegisim: pct(p.marjDegisim),
     esik: pct(p.esik),
+    uyariKapsam: pct(p.uyariKapsam ?? 0.8),
     tahmin: !!p.tahmin,
   };
 }
@@ -36,6 +37,7 @@ export function fromText(t: ParamText): Partial<BudgetParams> {
     gider: n(t.gider, 'Gider artışı'),
     marjDegisim: n(t.marjDegisim, 'Marj değişimi'),
     esik: n(t.esik, 'Uyarı eşiği'),
+    uyariKapsam: n(t.uyariKapsam, 'Uyarı kapsamı'),
     tahmin: t.tahmin,
   };
 }
@@ -58,6 +60,8 @@ export function ParamsForm({ value, onChange, sources, only, forecast }: {
         <NumField id="p-gider" label="Gider artışı (departman)" value={value.gider} onChange={set('gider')} suffix="%" help={sources?.gider} />
         <NumField id="p-marj" label="Marj değişimi (puan)" value={value.marjDegisim} onChange={set('marjDegisim')} suffix="%" help="Kitabın taban marjına eklenir" />
         <NumField id="p-esik" label="Sapma uyarı eşiği" value={value.esik} onChange={set('esik')} suffix="%" help="Gerçekleşen, beklenenin bu oranının altına düşünce uyarı" />
+        <NumField id="p-kapsam" label="Kitap uyarısı kapsamı" value={value.uyariKapsam} onChange={set('uyariKapsam')} suffix="%"
+          help="Hedef cirosunun bu payını oluşturan kitaplar uyarı açar; diğerlerinin durumu listede görünür. %100: her kitap" />
       </div>
       <label className="flex min-h-11 items-start gap-2 text-[12.5px]">
         <input type="checkbox" className="mt-1 h-4 w-4" checked={value.tahmin} onChange={(e) => onChange({ ...value, tahmin: e.target.checked })} />

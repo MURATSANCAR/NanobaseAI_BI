@@ -200,8 +200,8 @@ def test_two_eyes_approval_archives_the_previous_plan_and_revision_replaces_it(e
 
 # ------------------------------------------------------------------ izleme ve uyarı
 
-def _approve(engine, year=2026, scenario="temel"):
-    p = B.generate(engine, T, "hazirlayan", {"year": year, "scenarios": [scenario], "params": {"fiyat": 0}})[0]
+def _approve(engine, year=2026, scenario="temel", scope=1.0):
+    p = B.generate(engine, T, "hazirlayan", {"year": year, "scenarios": [scenario], "params": {"fiyat": 0, "uyariKapsam": scope}})[0]
     B.submit(engine, T, "hazirlayan", p["id"])
     B.decide(engine, T, "mudur", p["id"], True)
     return p
@@ -241,6 +241,23 @@ def test_tracking_expected_to_date_and_the_80_percent_alert(engine):
     assert not any(d["key"] == "K2" for d in B.deviations(engine, T, 2026)["items"])
     closed = B.deviations(engine, T, 2026, status="kapandi")["items"]
     assert any(d["key"] == "K2" for d in closed)
+
+
+def test_book_alerts_cover_the_books_that_make_the_target(engine):
+    """Varsayılan kapsam: hedef cirosunun %80'ini oluşturan kitaplar. Küçük kitap listede «sapma» kalır, uyarı açmaz."""
+    _seed(engine)
+    p = _approve(engine, scope=0.8)
+    assert B.plan_summary(engine, T, p["id"])["params"]["uyariKapsam"] == 0.8
+    b = _books(engine, p["id"])
+    assert b["K2"]["izleme"]["durum"] == "sapma"
+    B.evaluate_alerts(engine, T, 2026)
+    keys = {d["key"] for d in B.deviations(engine, T, 2026)["items"] if d["scope"] == "kitap"}
+    assert "K2" not in keys
+    tr = B.tracking(engine, T, 2026)
+    assert tr["uyariKapsam"]["pay"] == 0.8 and "K2" not in B.alert_scope(
+        [type("R", (), {"stok_kodu": k, "ciro": v["ciro"]}) for k, v in b.items()], 0.8)
+    with pytest.raises(B.BudgetError):
+        B.generate(engine, T, "u", {"year": 2026, "scenarios": []})
 
 
 def test_department_overrun_opens_a_cost_alert(engine):

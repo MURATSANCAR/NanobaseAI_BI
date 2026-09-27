@@ -158,6 +158,9 @@ export default function TrackingTab({ plan, trackable, onFilter }: { plan: Plan;
       {plan.status !== 'onayli' && <Note tone="info">Bu plan henüz yürürlükte değil; aşağıdaki izleme «onaylansaydı» görünümüdür, uyarı açmaz.</Note>}
       <p className="px-1 text-[12px] font-semibold text-canvas-muted">
         {fmtDay(d.asof)} itibarıyla · yılın %{Math.round((d.gecenPay ?? 0) * 100)}'i geçti · eşik %{Math.round(esik * 100)} · beklenen, hedefin taban dönemdeki aylık satış dağılımına göre bugüne düşen payıdır.
+        {d.uyariKapsam && (
+          <> Kitap uyarısı hedef cirosunun %{Math.round(d.uyariKapsam.pay * 100)}'ini oluşturan {fmtInt(d.uyariKapsam.kitap)} kitap için açılır; bunların {fmtInt(d.uyariKapsam.sapma)}'i eşik altında. Diğer kitapların durumu Kitap hedefleri listesinde.</>
+        )}
       </p>
       <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-4 lg:gap-4">
         <Summary title="Şirket satışı" g={d.sirket} help="Kitap hedefleri + yeni kitap programı; gerçekleşende planda olmayan kitapların satışı da var." />

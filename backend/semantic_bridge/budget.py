@@ -196,6 +196,10 @@ SEGMENTS = {"yeni": "Yeni kitap", "backlist": "Backlist"}
 DEFAULT_GROWTH = {"muhafazakar": 0.05, "temel": 0.10, "iyimser": 0.15}
 DEFAULT_THRESHOLD = 0.80
 EARLY_WARNING = 0.90
+#: Kitap uyarısı hedef cirosunun bu payını oluşturan kitaplar (büyükten küçüğe; ABC'nin A sınıfı) için açılır.
+#: 2026-09-28 kabulünde 2026 temel planda 11.276 kitabın 7.720'si eşik altındaydı; çoğu yılda birkaç bin liralık
+#: kitaplardı ve her biri pazarlama/saha modülüne iş olarak gidemez. Diğer kitapların durumu ekranda ve listede kalır.
+DEFAULT_ALERT_SCOPE = 0.80
 #: Satış sapması uyarısını okuyacak modüller (iş tanımı: M18 pazarlama planı, M30 saha; M15/M17/M29 hedefi girdi alır).
 SALES_ALERT_MODULES = "M15,M17,M18,M29,M30"
 PAGE_SIZE = 100
@@ -469,6 +473,7 @@ def default_params(engine: sa.engine.Engine, year: int) -> dict[str, Any]:
         "giderKaynak": f"Ölçüldü: {expense['label']}" if expense["value"] is not None else "Ölçülemedi; elle girin.",
         "marjDegisim": 0.0,
         "esik": DEFAULT_THRESHOLD,
+        "uyariKapsam": DEFAULT_ALERT_SCOPE,
         "tahmin": year > end.year,
         "pencere": w["label"],
     }
@@ -483,7 +488,8 @@ def _clean_params(body: dict[str, Any], base: dict[str, Any]) -> dict[str, Any]:
                 hv[k] = _num(body["hacim"][k], f"{SCENARIOS[k]} hacim büyümesi", minimum=-0.9, maximum=5)
         p["hacim"] = hv
     for key, label, lo, hi in (("fiyat", "Fiyat artışı", -0.9, 5), ("gider", "Gider artışı", -0.9, 5),
-                               ("marjDegisim", "Marj değişimi", -1, 1), ("esik", "Uyarı eşiği", 0.05, 1)):
+                               ("marjDegisim", "Marj değişimi", -1, 1), ("esik", "Uyarı eşiği", 0.05, 1),
+                               ("uyariKapsam", "Uyarı kapsamı", 0.05, 1)):
         if key in body and body[key] is not None and body[key] != "":
             p[key] = _num(body[key], label, minimum=lo, maximum=hi)
             if key in ("fiyat", "gider"):
@@ -728,7 +734,8 @@ def generate(engine: sa.engine.Engine, tenant: str, user: str, body: dict[str, A
              forecast: Optional[dict[str, Any]] = None) -> list[dict[str, Any]]:
     """ZEKİ AI önerisi: seçilen senaryolar için birer taslak plan."""
     year = _check_year(body.get("year"))
-    scenarios = [s for s in (body.get("scenarios") or list(SCENARIOS)) if s in SCENARIOS]
+    raw = body.get("scenarios")
+    scenarios = [s for s in (list(SCENARIOS) if raw is None else raw) if s in SCENARIOS]
     if not scenarios:
         raise BudgetError("En az bir senaryo seçin.")
     params = _clean_params(body.get("params") or {}, default_params(engine, year))
@@ -1299,6 +1306,10 @@ def tracking(engine: sa.engine.Engine, tenant: str, year: int, plan_id: Optional
             dep_tot["gercek"] += d["izleme"]["gercek"]
     return {
         "year": row.year, "plan": plan, "asof": info["asof"], "esik": info["esik"], "gecenPay": info["gecenPay"],
+        "uyariKapsam": (lambda share, keys: {"pay": share, "kitap": len(keys),
+                                             "sapma": sum(1 for r, t in zip(rows, tr) if t["durum"] == "sapma" and r.stok_kodu in keys)})(
+            float(plan["params"].get("uyariKapsam") or DEFAULT_ALERT_SCOPE),
+            alert_scope(rows, float(plan["params"].get("uyariKapsam") or DEFAULT_ALERT_SCOPE))),
         "kitapHedefleri": fin(total), "sirket": fin(tot_all),
         "program": {"hedefCiro": round(prog["ciro"], 2), "beklenenCiro": round(program_expected, 2)},
         "hedefDisi": {k: round(v, 2) if isinstance(v, float) else v for k, v in outside.items()},
@@ -1378,6 +1389,20 @@ def approved_targets(engine: sa.engine.Engine, tenant: str, year: int, *, codes:
 # ------------------------------------------------------------------ uyarılar
 
 
+def alert_scope(rows: list[Any], share: float) -> set[str]:
+    """Hedef cirosu büyükten küçüğe sıralanınca toplamın `share` payını oluşturan kitaplar (payı geçen kitap dahil)."""
+    ordered = sorted(rows, key=lambda r: (-(r.ciro or 0), r.stok_kodu))
+    total = sum(max(0.0, r.ciro or 0) for r in ordered)
+    out: set[str] = set()
+    acc = 0.0
+    for r in ordered:
+        if total > 0 and acc >= share * total - 1e-9:
+            break
+        out.add(r.stok_kodu)
+        acc += max(0.0, r.ciro or 0)
+    return out
+
+
 def evaluate_alerts(engine: sa.engine.Engine, tenant: str, year: int) -> dict[str, Any]:
     """Yürürlükteki planda %eşik altındaki kitap/yayınevi/toplam ve aşan departman satırı için uyarı açar; düzelen kapanır."""
     with engine.connect() as c:
@@ -1388,9 +1413,11 @@ def evaluate_alerts(engine: sa.engine.Engine, tenant: str, year: int) -> dict[st
     with engine.connect() as c:
         rows = c.execute(sa.select(BOOKS).where(BOOKS.c.plan_id == row.id)).all()
     t_books, _ = _track_books(engine, row, rows)
+    scope = float(_j(row.params_json, {}).get("uyariKapsam") or DEFAULT_ALERT_SCOPE)
+    in_scope = alert_scope(rows, scope)
     failing: dict[tuple[str, str, str], dict[str, Any]] = {}
     for r, t in zip(rows, t_books):
-        if t["durum"] == "sapma":
+        if t["durum"] == "sapma" and r.stok_kodu in in_scope:
             failing[("satis", "kitap", r.stok_kodu)] = {
                 "label": f"{r.ad or r.stok_kodu}", "ratio": t["oranCiro"] if r.ciro > 0 else t["oranAdet"],
                 "expected": t["beklenenCiro"], "actual": t["gercekCiro"], "gap": round(t["beklenenCiro"] - t["gercekCiro"], 2),
