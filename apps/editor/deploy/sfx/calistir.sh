@@ -7,6 +7,13 @@
 set -eu
 HERE=$(cd "$(dirname "$0")/../.." && pwd)
 IMAGE=${SFX_IMAGE:-editor-voice:1}
+if [ "${1:-}" = "ac" ]; then
+  # FSD50K çok diskli zip64: Python açamaz, `zip -s 0` gerekir (imajda yok) → bu adım kök kullanıcıyla paket kurar,
+  # bitince açılan her şeyi çağıranın kimliğine devreder.
+  exec docker run --rm --name sfx-havuz-ac -v /data/editor/sfx:/data/editor/sfx -v "$HERE":/src:ro \
+    --entrypoint bash "$IMAGE" -c "(command -v zip >/dev/null || (apt-get update -qq >/dev/null 2>&1; apt-get install -y -qq zip >/dev/null 2>&1)); \
+      cd /tmp && python3 /src/deploy/sfx/havuz.py ac; rc=\$?; chown -R $(id -u):$(id -g) /data/editor/sfx; exit \$rc"
+fi
 DEV=${SFX_DEVICE:-cuda}
 GPU=()
 [ "$DEV" = "cuda" ] && GPU=(--gpus '"device=0"')

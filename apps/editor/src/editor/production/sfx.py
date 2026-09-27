@@ -58,6 +58,7 @@ MIX_VERSION = 1
 ALIAS = "book-director"
 VOTES = 3
 VOTE_MIN = 2
+READ_TEMPERATURE = 0.7
 CANDIDATES = 3
 CHILD_MAX = 12                    # yaş bandı bu yaşın altında başlıyorsa çocuk kitabı (efekt varsayılan açık)
 
@@ -428,8 +429,9 @@ async def suggest_page(d: Path, pid: str, by: str, llm=None, keep_editor: bool =
     if not any(u.text.strip() for u in units):
         reads = []
     else:
-        temps = [0.2, 0.6, 0.9][:VOTES] + [0.7] * max(0, VOTES - 3)
-        reads = await asyncio.gather(*[_read_page(llm, units, pid, t) for t in temps])
+        # bağımsız örnekler aynı sıcaklıkta: 0,2'de model sık sık boş liste veriyordu (2026-09-28 ölçümü; dere
+        # sayfasında 0,2 → 0 ipucu, 0,7 → «şırıl şırıl akan»), oylama gürültüyü süzer
+        reads = await asyncio.gather(*[_read_page(llm, units, pid, READ_TEMPERATURE) for _ in range(VOTES)])
     cues, stats = _vote(list(reads), units)
     old = _read(page_file(d, pid)) or {}
     kept = [c for c in old.get("cues", []) if keep_editor and c.get("source") == "editor"]

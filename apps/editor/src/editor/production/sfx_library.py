@@ -368,20 +368,26 @@ class _TextEncoder:
         cfg = json.loads((d / "metin.json").read_text()) if (d / "metin.json").exists() else {}
         self.max_len = int(cfg.get("max_len", 77))
         self.pad_id = int(cfg.get("pad_id", 1))
+        self.fixed = bool(cfg.get("fixed"))          # metin kolu tek metin × max_len şekliyle dışa aktarıldı
         self.inputs = {i.name for i in self.sess.get_inputs()}
+        self.tok.no_padding()                        # kaydedilen tokenizer dolgu ayarını taşıyabilir; dolguyu biz yaparız
+        self.tok.enable_truncation(self.max_len)
+
+    def _one(self, text: str):
+        np = self.np
+        e = self.tok.encode(text)
+        x = e.ids[: self.max_len]
+        n = self.max_len if self.fixed else len(x)
+        ids = np.full((1, n), self.pad_id, dtype=np.int64)
+        mask = np.zeros((1, n), dtype=np.int64)
+        ids[0, :len(x)] = x
+        mask[0, :len(x)] = 1                          # dolgu belirteçlerine dikkat edilmez
+        feed = {"input_ids": ids, "attention_mask": mask}
+        return self.sess.run(None, {k: v for k, v in feed.items() if k in self.inputs})[0][0]
 
     def __call__(self, texts: list[str]):
         np = self.np
-        encs = [self.tok.encode(t) for t in texts]
-        n = min(self.max_len, max(len(e.ids) for e in encs))
-        ids = np.full((len(encs), n), self.pad_id, dtype=np.int64)
-        mask = np.zeros((len(encs), n), dtype=np.int64)
-        for k, e in enumerate(encs):
-            x = e.ids[:n]
-            ids[k, :len(x)] = x
-            mask[k, :len(x)] = 1
-        feed = {"input_ids": ids, "attention_mask": mask}
-        out = self.sess.run(None, {k: v for k, v in feed.items() if k in self.inputs})[0]
+        out = np.stack([self._one(t) for t in texts])
         return out / np.linalg.norm(out, axis=1, keepdims=True)
 
 

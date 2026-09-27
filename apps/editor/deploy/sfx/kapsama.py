@@ -13,9 +13,10 @@ istem yok. Çıktılar /data/editor/sfx/_olcum/ altında.
 
 Derlem: /data/organized/cocuk altındaki bütün PDF'ler + öteki klasörlerde künyesinde CHILD_MAX yaşın altında başlayan
 bant yazan kitaplar (nonbook hariç); aynı metin tek sayılır. Sayfa metni okumadaki paragraf kurucuyla
-(document.paragraphs_from_layout). Derlem çok büyük olduğu için ölçüm TEK OKUMA ile yapılır (stüdyodaki oylama
-kitap içi kesinlik içindir; burada istenen, çocuk kitaplarının istediği seslerin çeşitliliğidir) ve ardışık PAGES_PER_CALL
-sayfa tek çağrıda okunur; alıntısı metinde birebir geçmeyen ipucu yine atılır.
+(document.paragraphs_from_layout). Derlem çok büyük olduğu için ardışık PAGES_PER_CALL sayfa tek çağrıda okunur ve
+her okuma turu ayrı dosyaya yazılır (`--etiket`); eşleştirme bütün turların BİRLEŞİMİNİ alır (stüdyodaki oylama kitap
+içi kesinlik içindir; burada istenen, çocuk kitaplarının isteyebileceği seslerin eksiksiz listesidir). Alıntısı
+metinde birebir geçmeyen ipucu her turda atılır.
 """
 
 from __future__ import annotations
@@ -97,6 +98,9 @@ def _units(book: dict, pages: list[dict]):
     return units
 
 
+TEMPERATURE = 0.7                 # 0,2'de model çok sayfalı parçada çoğunlukla boş liste veriyordu (ölçüldü)
+
+
 async def _chunk(llm, book: dict, pages: list[dict], sem: asyncio.Semaphore) -> list[dict]:
     from editor.production import sfx
     units = _units(book, pages)
@@ -104,7 +108,7 @@ async def _chunk(llm, book: dict, pages: list[dict], sem: asyncio.Semaphore) -> 
         return []
     async with sem:
         try:
-            items = await sfx._read_page(llm, units, "olcum", 0.2)
+            items = await sfx._read_page(llm, units, "olcum", TEMPERATURE)
         except Exception as e:  # noqa: BLE001
             return [{"error": f"{type(e).__name__}: {str(e)[:200]}", "book": book["path"],
                      "pages": [p["page"] for p in pages]}]
@@ -117,14 +121,14 @@ async def _chunk(llm, book: dict, pages: list[dict], sem: asyncio.Semaphore) -> 
     return out
 
 
-async def step_ipucu(sample: int | None):
+async def step_ipucu(sample: int | None, label: str = ""):
     from editor.production.run import FileLlm
     books = [json.loads(x) for x in (OUT / "sayfalar.jsonl").read_text().splitlines() if x.strip()]
     if sample:
         step = max(1, len(books) // sample)
         books = books[::step][:sample]
     done = set()
-    outp = OUT / "ipuclari.jsonl"
+    outp = OUT / (f"ipuclari-{label}.jsonl" if label else "ipuclari.jsonl")
     if outp.exists():
         for line in outp.read_text().splitlines():
             r = json.loads(line)
@@ -163,7 +167,7 @@ def _key(r: dict) -> str:
 
 def step_esle():
     from editor.production import sfx_library as L
-    cues = [json.loads(x) for x in (OUT / "ipuclari.jsonl").read_text().splitlines() if x.strip()]
+    cues = [json.loads(x) for f in sorted(OUT.glob("ipuclari*.jsonl")) for x in f.read_text().splitlines() if x.strip()]
     cues = [c for c in cues if "query" in c]
     groups: dict[str, dict] = {}
     for c in cues:
@@ -240,12 +244,13 @@ if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("adim")
     ap.add_argument("--ornek", type=int, default=None)
+    ap.add_argument("--etiket", default="")          # ek okuma turu: ipuclari-<etiket>.jsonl (eşleştirme hepsini birleştirir)
     ap.add_argument("--esik", type=float, default=0.2)
     a = ap.parse_args()
     if a.adim == "metin":
         step_metin()
     elif a.adim == "ipucu":
-        asyncio.run(step_ipucu(a.ornek))
+        asyncio.run(step_ipucu(a.ornek, a.etiket))
     elif a.adim == "esle":
         step_esle()
     elif a.adim == "ayar":

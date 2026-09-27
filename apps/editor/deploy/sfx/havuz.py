@@ -649,6 +649,18 @@ def step_metin():
     log("ONNX eşdeğerlik (en küçük kosinüs):", worst)
     if worst < 0.999:
         raise SystemExit("ONNX metin kolu torch ile eşdeğer değil")
+    # uçtan uca: stüdyonun kullandığı kodlayıcı (sfx_library._TextEncoder: tokenizer.json + ONNX) torch'la aynı mı
+    enc = L._TextEncoder(d)
+    worst = 1.0
+    for t in ["dog", "a strong explosion far away", "ördek vaklıyor"]:
+        e = proc.tokenizer([t], return_tensors="pt")
+        with torch.no_grad():
+            ref = T(model)(e["input_ids"], e["attention_mask"]).numpy()[0]
+        got = enc([t])[0]
+        worst = min(worst, float(ref @ got / np.linalg.norm(ref)))
+    log("stüdyo kodlayıcısı eşdeğerlik:", worst)
+    if worst < 0.999:
+        raise SystemExit("stüdyonun metin kodlayıcısı torch ile eşdeğer değil")
 
 
 def step_gobek():
