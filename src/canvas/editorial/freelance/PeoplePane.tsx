@@ -473,12 +473,12 @@ export function LogoMovements({ personId }: { personId: string }) {
       {d?.found && (
         <>
           <p className="mt-1 text-[11.5px] text-canvas-muted">
-            {d.name} {d.specode ? `· ${d.specode}` : ''} {d.last ? `· son hareket ${day(d.last)}` : ''}
+            {d.name} {d.specode ? `· ${d.specode}` : ''} {d.last ? `· son hareket ${day(d.last)}` : ''} · alacak: fatura, makbuz, açılış; borç: ödeme, virman
           </p>
           <div className="mt-2 grid grid-cols-3 gap-2">
-            <Stat label="Fatura / makbuz" value={tl(d.credit)} />
-            <Stat label="Ödeme" value={tl(d.debit)} />
-            <Stat label="Bakiye" value={tl(d.balance)} />
+            <Stat label="Alacak" value={tl(d.credit)} />
+            <Stat label="Borç" value={tl(d.debit)} />
+            <Stat label={(d.balance ?? 0) >= 0 ? 'Borcumuz' : 'Alacağımız'} value={tl(Math.abs(d.balance ?? 0))} />
           </div>
           {!d.lines.length ? (
             <p className="mt-2 text-[12px] text-canvas-muted">Bu yıl hareket yok.</p>
