@@ -1,5 +1,6 @@
 import { keepPreviousData, queryOptions, type QueryClient } from '@tanstack/react-query';
 import { ENGINE_ENABLED, contractsApi, contributorsApi, editorsApi, intakeApi } from '../engine';
+import { editorialHomeOptions } from './homeQuery';
 
 /**
  * Editoryal liste ekranlarının sorguları. Ekran da girişteki ön yükleme de aynı tanımı kullanır;
@@ -74,20 +75,62 @@ export const contributorsListOptions = (roles: string[], q: string, order: strin
     placeholderData: keepPreviousData,
   });
 
+/** Ön yüklenen liste bu süre taze sayılır: sayfa yenilense de yeniden istenmez. */
+const PREFETCH_FRESH_MS = 5 * 60_000;
+/** Aynı anda en çok bu kadar ön yükleme isteği: hepsi CRM'e gider, açık ekranın isteklerini bekletmesin. */
+const PREFETCH_PARALLEL = 2;
+
+/** Açık ekranın kendi istekleri bitene kadar bekler (en çok `maxMs`). Ön yükleme onlarla yarışmasın. */
+function whenIdle(qc: QueryClient, maxMs = 20_000): Promise<void> {
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      unsubscribe();
+      window.clearTimeout(cap);
+      window.clearTimeout(first);
+      resolve();
+    };
+    const check = () => {
+      if (qc.isFetching() === 0) finish();
+    };
+    const unsubscribe = qc.getQueryCache().subscribe(() => window.setTimeout(check, 0));
+    const cap = window.setTimeout(finish, maxMs);
+    // Ekran ilk isteklerini atana kadar kısa bir pay; sonra boşsa hemen başlar.
+    const first = window.setTimeout(check, 1500);
+  });
+}
+
 /**
- * Girişten hemen sonra editoryal ekranların açılış görünümleri arka planda alınır; menüden
- * açıldıklarında liste beklemeden ekranda olur. Hata ekranı düşürmez: ekran açılınca kendisi yeniden dener.
+ * Girişten sonra editoryal ekranların açılış görünümleri arka planda alınır; menüden açıldıklarında liste
+ * beklemeden ekranda olur. Açık ekranın verisi geldikten sonra başlar, ikişer ikişer gider ve taze olanı
+ * yeniden istemez: eskiden her sayfa yüklenişinde sekiz CRM isteği ekranın kendi istekleriyle aynı anda
+ * gidiyor, Veri sözlüğü gibi ilgisiz ekranları 20 sn'ye kadar bekletiyordu. Hata ekranı düşürmez.
  */
-export async function prefetchEditorialLists(qc: QueryClient): Promise<void> {
+export async function prefetchEditorialLists(qc: QueryClient, username: string): Promise<void> {
   if (!ENGINE_ENABLED) return;
-  const jobs: Array<Promise<unknown>> = [
-    qc.prefetchQuery(intakeBoardOptions()),
-    qc.prefetchQuery(contractsSummaryOptions()),
-    qc.prefetchQuery(contractsListOptions('', '', '', false, 'bitis', 0)),
-    qc.prefetchQuery(roleFacetsOptions()),
-    ...Object.values(CONTRIBUTOR_ROLES).map((roles) => qc.prefetchQuery(contributorsListOptions(roles, '', 'son', 0))),
+  await whenIdle(qc);
+  const fresh = { staleTime: PREFETCH_FRESH_MS };
+  const jobs: Array<() => Promise<unknown>> = [
+    () => qc.prefetchQuery({ ...editorialHomeOptions(username), ...fresh }),
+    () => qc.prefetchQuery({ ...intakeBoardOptions(), ...fresh }),
+    () => qc.prefetchQuery({ ...contractsSummaryOptions(), ...fresh }),
+    () => qc.prefetchQuery({ ...contractsListOptions('', '', '', false, 'bitis', 0), ...fresh }),
+    () => qc.prefetchQuery({ ...roleFacetsOptions(), ...fresh }),
+    ...Object.values(CONTRIBUTOR_ROLES).map((roles) => () => qc.prefetchQuery({ ...contributorsListOptions(roles, '', 'son', 0), ...fresh })),
     // Editör listesi özetten gelen varsayılana (başlangıç yılı) bağlı.
-    qc.fetchQuery(editorsOverviewOptions()).then((o) => qc.prefetchQuery(projectsListOptions('', '', '', o.sinceYear, 0))),
+    () =>
+      qc
+        .fetchQuery({ ...editorsOverviewOptions(), ...fresh })
+        .then((o) => qc.prefetchQuery({ ...projectsListOptions('', '', '', o.sinceYear, 0), ...fresh })),
   ];
-  await Promise.allSettled(jobs);
+  let next = 0;
+  const worker = async () => {
+    while (next < jobs.length) {
+      const job = jobs[next++];
+      await job().catch(() => undefined);
+    }
+  };
+  await Promise.all(Array.from({ length: PREFETCH_PARALLEL }, worker));
 }

@@ -376,6 +376,21 @@ class CatalogStore:
     def list_mappings(self, concept_id: str) -> list[Mapping]:
         return [self._row_to_mapping(r) for r in self._rows(sa.select(S.sl_mapping).where(S.sl_mapping.c.concept_id == concept_id))]
 
+    def list_mappings_many(self, concept_ids: list[str]) -> dict[str, list[Mapping]]:
+        """Many concepts' mappings in a handful of queries.
+
+        The glossary lists every certified term with its mappings; one `list_mappings` per term was
+        five thousand round trips and 13–15 s per screen open. Same rows, same order within a concept,
+        read in chunks of IN (…)."""
+        out: dict[str, list[Mapping]] = {cid: [] for cid in concept_ids}
+        ids = list(out)
+        for i in range(0, len(ids), 1000):
+            chunk = ids[i:i + 1000]
+            for r in self._rows(sa.select(S.sl_mapping).where(S.sl_mapping.c.concept_id.in_(chunk))):
+                m = self._row_to_mapping(r)
+                out[m.concept_id].append(m)
+        return out
+
     def replace_mappings(self, concept_id: str, mappings: list[Mapping]) -> None:
         c = self.get_concept(concept_id)
         with self.engine.begin() as conn:
