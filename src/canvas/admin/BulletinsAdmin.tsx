@@ -145,7 +145,7 @@ export default function BulletinsAdmin() {
   return (
     <Section
       title="Sesli bülten"
-      help={`Kampüs'teki «Haftanın Sesli Bülteni» en son yayınlanan kaydı çalar. Eklenen ses önce taslaktır; başlığını yazıp yayınlayın. mp3, m4a, ogg ya da wav, en çok ${maxMb} MB. Sunucuda üretilen ses sunucuda tek komutla da eklenir: python -m semantic_bridge.bulletins add dosya.mp3 --title "…" --publish`}
+      help={`Kampüs'teki «Haftanın Sesli Bülteni» en son yayınlanan kaydı çalar. Eklenen ses önce taslaktır; başlığını yazıp yayınlayın. mp3, m4a, ogg ya da wav, en çok ${maxMb} MB. Sunucuda üretilen ses sunucuda tek komutla da eklenir: sudo scripts/server/kampus-bulletin.sh add dosya.mp3 --title "…" --publish`}
       action={
         <>
           <input ref={input} type="file" accept="audio/*,.mp3,.m4a,.ogg,.wav" className="hidden" onChange={(e) => void pick(e.target.files?.[0])} />
