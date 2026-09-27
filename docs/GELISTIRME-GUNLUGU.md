@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Yetki Aşama C: ZEKİ AI veri kapsamı
+
+- **Veri alanları** (`backend/semantic_bridge/data_domains.json`): ortak başvuru (her zaman açık: döviz kuru, birim, özel kod, il-ilçe), satış ve sipariş, stok ve üretim, cari ve tahsilat, muhasebe, banka-kasa-çek, telif ve sözleşme (CRM), yayın (CRM), sistem ve günlük, atanmamış. Varlık adı önekleri atılıp Logo/CRM tablo ailesi kurallarıyla alana düşer; yöneticinin ekrandan ataması (`semantic_access_entity_domains`) kuralın önüne geçer. İlk ölçüm (katalog 2.282 varlık: 1.529 Logo, 753 CRM): satırların ~%99,9'u atanmış alanlarda; atanmamış kalanlar küçük/boş şirkete özel tablolar.
+- **Kapı SQL'in çalıştığı yerde**: `Runtime._check_data_scope` — `run_sql`, `run_complete` ve iki kaynaklı planın her parçası, SQL'in okuduğu varlıkları (`guardrails.entities_read`, `allowed_tables` ile aynı eşleme) kişinin alanlarıyla karşılaştırır; okunamayan SQL kapsam dışı sayılır. Soru → `NOT_PERMITTED` açık ret («Bu soru «Satış ve sipariş» verisine dayanıyor; bu veri rolünüzde yok»), `run_sql` → 403 `FORBIDDEN`.
+- **Kişinin alanları isteğe** sayfa kapısında taşınır (`DATA_ALLOWED` bağlamı) — yalnız serbest SQL yolları: `/ask`, `/run_sql`, `/board`, `/reports`, `/alerts`. Hazır ekran uçları (denetim, yönetim raporu, editoryal, kişiler) sabit sorgu çalıştırır, onları sayfa/işlem yetkisi korur. Yönetici ve çerezsiz sistem işi sınırsız.
+- **Zamanlı işler sahibinin kapsamıyla** (`access.acting_as`): pano tazeleme, planlı rapor, uyarı kontrolü; kapsam dışına düşen öğe hata yazar, eski veriyi göndermez.
+- **Ekran**: rolde «ZEKİ AI veri alanları» onay kutuları (Bütün sayfalar ve işlemler bunları da kapsar); Yetkiler → «Veri alanları» (alan başına sayı, tablo arama, tablo başına alan seçimi, «Kurala dön»); Kişi gözüyle «ZEKİ AI'ın okuyabildiği veri»; Promt izlemede «Yetki dışı veri» türü.
+- **Davranış kurulumda aynı**: «Herkes» bütün veri alanlarını taşır; daraltma prod öncesi.
+- **Doğrulama**: yetki + veri kapsamı testleri sunucuda 19/19 (kural örnekleri, SQL'den varlık çıkarma, SQL geçidi, yönetici ataması, köprüde kişi başına kapsam, zamanlı işin sahip kapsamı). Test sunucusuna SSH gün içinde sık kesildi.
+
 ## 2026-09-28 — Test verisi temizliği (Yönetim → Kişiler)
 
 - Salt okuma ile bulundu: Kişiler listesi pano kartı, planlı rapor, değişiklik kaydı ve yönetici listesinden derlenir. `claude` (8 satır, 15 Eylül SMTP ayarlarının girişi), `qa-excel-draft` (24, Excel taslak kabulü) ve `qa-pano-a` (9, pano kabulü) yalnız değişiklik kaydında kalmıştı; ayrıca M7 kabulünden «ZZ Kabul Deneme Yazarı» kartı, iptal randevusu ve 5 kayıt satırı.
