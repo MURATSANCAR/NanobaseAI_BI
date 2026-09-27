@@ -133,7 +133,7 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-label="Promt ayrıntısı"
+        aria-label="Soru ayrıntısı"
         tabIndex={-1}
         ref={(el) => el?.focus()}
         onKeyDown={(e) => {
@@ -165,7 +165,7 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
           {q.isLoading ? (
             <Loading />
           ) : q.error || !d ? (
-            <Note tone="err">{errText(q.error, 'Promt okunamadı.')}</Note>
+            <Note tone="err">{errText(q.error, 'Soru okunamadı.')}</Note>
           ) : (
             <>
               {d.answerSummary && (
@@ -306,7 +306,7 @@ export default function PromptTracker() {
 
   return (
     <Section
-      title="Promt izleme"
+      title="Soru izleme"
       help="Müşteri ortamında sorulan her soru, üretilen SQL, sonuç ve kapının kararı. Satıra dokunun; incelemek ve nereyi düzelteceğimizi işaretlemek için."
       action={
         <button type="button" onClick={csv} className={btnGhost}>
@@ -378,7 +378,7 @@ export default function PromptTracker() {
       {list.isLoading ? (
         <Loading />
       ) : list.error ? (
-        <Note tone="err">{errText(list.error, 'Promtlar okunamadı.')}</Note>
+        <Note tone="err">{errText(list.error, 'Sorular okunamadı.')}</Note>
       ) : items.length ? (
         <div className="rounded-2xl border border-slate-100 bg-white/80 px-4">
           <ul className="divide-y divide-slate-100">
@@ -388,7 +388,7 @@ export default function PromptTracker() {
           </ul>
         </div>
       ) : (
-        <Note tone="info">Bu süzgece uyan promt yok.</Note>
+        <Note tone="info">Bu süzgece uyan soru yok.</Note>
       )}
       {list.hasNextPage && (
         <button type="button" onClick={() => list.fetchNextPage()} disabled={list.isFetchingNextPage} className={btnGhost}>

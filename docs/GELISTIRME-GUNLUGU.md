@@ -1,5 +1,49 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (22:30) — Sesli okumada ifade katmanı ve «Canlı masal anlatıcısı» (dalda; kurulmadı)
+
+- **Neden:** kullanıcı onayı — Zeki AI her cümleyi işaretler (heyecan, merak, korku, neşe, fısıltı, üzüntü, vurgu), ses o
+  cümleyi farklı ton/hız/duraklamayla okur, editör cümle cümle değiştirir. Ayrıca dramatik, geniş perdeli masal
+  anlatıcıları için yeni ses grubu.
+- **Önce ölçüldü** (GPU 1, geçici ses kabı, deneme işinin kopyası; `docs/analiz/sesli-okuma-ifade-katmani.md`):
+  tam klonda talimat metne girince model talimatı sesli okuyor (harf hatası %45–111); referans-yalnız klonda talimat
+  dinleniyor ama ses kimliği kayıyor (talimatsız +%16 perde, kısa ünlemde 474–522 Hz, harf hatası %10–20); hız
+  talimatla değişmiyor; vurgu talimatı işe yaramıyor, kelimeden önce kısa durak yarıyor (+3 dB). Üçüncü yol «ifade
+  örneği» (aynı sesin talimatla okunmuş referans cümlesinin devamı, tam klon) uzun cümlede ölçülü ama gerçek sayfanın
+  ünlemli cümlesinde yükselen tonlarda aştı. **Ürüne yalnız işe yarayan kondu:** fısıltı (talimat) ve üzüntü (ifade
+  örneği) tonlu; öteki ifadeler hız + duraklama; vurgu kısa durak. Uçtan uca 7 ses × 2 sayfa: üzüntü −3…−10 dB, harf
+  hatası aynı; fısıltı −4…−13 dB, erkek seslerde sesli oranı −0,36…−0,75, harf hatası %1,2 → %5,0.
+- **Kod:** `production/expression.py` + `api_expression.py`, narration.py'de iki kanca (`page_input`, `narrate_page`) ve
+  ses grubu için bir satır, `voices_lively.py`, ses servisi yeni alanlar (`editor-voice:2` GPU'da derlendi; models.yaml
+  ve editorctl :2), köprü uçları (+ denetim), giriş kapısı `EDITOR-STUDYO-IFADE`, ekran `ExpressionEditor.tsx`.
+- **Zeki AI önerisi** deneme işinde: 5. sayfa 9 cümle 19 sn, 7. sayfa 12 cümle 46 sn; ünlemler neşe/heyecan %67–91,
+  anlatım ve «dedi» nötr.
+- **Canlı masal anlatıcısı:** 12 tarif × 2 tohum; erkek «theatrical … baritone» 168–193 Hz ile elendi; seçilen kadın
+  259/207/265 Hz, erkek 103/120/105 Hz (varsayılan kadın 6,3 yt'ye karşı 7,3–11,5 yt). Dinlenen referanslar GPU'da
+  `_ses/sesler/canli-*.wav|json` olarak sabitlendi (yeni dosya; var olan ses değişmedi). Varsayılan anlatıcı aynı.
+- **Doğrulama:** editör testleri GPU geçici kapta (`editor-py:0.15.9-87232e97`): 481 geçti, 47 atlandı, 1 bilinen sıra
+  bağımlılığı (`test_proofing_contract`, tek başına 3/3); yeni `test_expression.py` 10/10. Köprü ifade uçları sahte
+  servisle 8/8. Ön yüz test sunucusunda geçici dizinde: `tsc` temiz, vitest 38/38, vite build tamam. Giriş kapısı betiği
+  canlı nginx dosyasının kopyasında koşuldu, `nginx -t` geçti. Kurulmadı (push/merge/dağıtım yok); ekranın görsel
+  denetimi yapılamadı (test sunucusuna SSH zaman aşımı).
+
+## 2026-09-27 (21:20) — Yetki Aşama A test sunucusuna kuruldu
+
+- `main` `7220ffae`: değişen 14 dosya sunucuda değişiklik öncesi `main` ile md5 eşitti (başka oturumun işi yoktu), 4 yeni dosya eklendi; `._*` 0. Köprü yeniden başlatıldı (sağlıklı), ön yüz sunucuda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas` ile derlendi, `cockpit/dist`e kondu; yayındaki derleme `index-DzEIButO.js`.
+- Gerçek oturumla (geçici `timasai` + yönetici olmayan deneme oturumu, iş bitince silindi): `/access/me` yöneticide 29/29 sayfa, rol listesinde yalnız «Herkes» (bütün sayfalar); AD'den 140 grup, 44 birim, 216 kişi, CRM'den 121 rol aday olarak geliyor; yönetici olmayan kişiye yetki yönetimi ve zamanlayıcı ucu 403, sayfalar (Herkes açık) 200; `generate_summary` 404.
+- `timas-admin-group.service` elle bir kez koşturuldu: yönetici grubu + yetki üyeleri turu başarılı (bağ olmadığı için 0 okuma).
+- Görsel doğrulama yapılamadı: oturum çerezi HttpOnly, tarayıcı panesine konamıyor; ekran `https://portal.nanobase.ai/timas/yonetim?bolum=access`. Müşteri VM'ine kurulmadı.
+
+## 2026-09-27 — Yetki Aşama A: rol modeli, köprüde sayfa kapısı, Yönetim → Yetkiler
+
+- **Model** (`backend/semantic_bridge/access.py`): AD grubu / AD birimi (OU) / CRM güvenlik rolü / kişi → rol → sayfa anahtarları (`sayfa:<menü id>`, katalog `access_catalog.json`). Kişinin yetkisi rollerin birleşimi; yönetici her şeyi görür. «Herkes» sistem rolü kurulumda «bütün sayfalar» açık gelir — kullanıcı kararı: roller prod öncesi atanır, o gün daraltılır; kurulum anında davranış değişmez.
+- **Üyelik**: istek yolunda AD/CRM okunmaz; `semantic_access_members` görüntüsü 15 dk'lık `timas-admin-group` turunda (`/api/v1/admin/group/refresh`) tazelenir, bağ eklenince o bağ hemen okunur; okunamayan kaynağın eski üyeleri silinmez. CRM rolü kök rol kimliğiyle tutulur, üyeler iş birimi kopyalarından `ParentRootRoleId` ile toplanır.
+- **Kapı köprüde**: `page_gate` ara katmanı — portal oturum çerezi taşıyan istek, ucun sayfa kuralındaki sayfalardan birini ister (en uzun önek; kuralı olmayan uç kişiye kapalı, test köprünün bütün yollarını kurala düşürür). Çerezsiz zamanlayıcı/betik geçer; zamanlayıcı uçlarını (run-due) kişi yalnız yöneticiyse tetikler. Giriş servisine sorulan oturum 10 sn bellekte.
+- **Açıklar kapandı**: `/api/v1/generate_summary` kaldırıldı (kontrolsüz SQL çalıştırıyordu, kullanan yoktu); `SEMANTIC_ADMIN_TOKEN` boşken yönetici uçları oturumlu kişiye açık kalmıyor.
+- **Ön yüz**: `/api/v1/access/me` → menü (`visibleNav`), rota kapısı (`PageGate`: adrese elle gidilince «Bu sayfa rolünüzde yok»), Kampüs modül kutuları, «Tüm modüller», ⌘K son açılanlar, uyarı rozeti ve editoryal ön yükleme yalnız yetkili kişide. Köprünün 403 `FORBIDDEN`'ı oturumu düşmüş saymaz (`EngineForbiddenError`).
+- **Yönetim → Yetkiler**: roller (alan → sayfa onay kutuları, «bütün sayfalar»), bağlar (AD grubu / AD birimi / CRM rolü / kişi seç, üye sayısıyla; kaldır), «Kişi gözüyle» (roller ve nereden geldiği, AD grupları, CRM rolleri, gördüğü sayfalar). Her değişiklik değişiklik kaydında «Yetki».
+- **Doğrulama**: köprü testleri `test_access.py` 9/9 (sunucuda); tam paket 984 geçti, kalan 13 + 10 hata `main`de de aynı. Ön yüz `tsc` temiz, vitest 36/36 (menü–katalog eşleşmesi dahil). Gerçek AD/CRM okumaları test sunucusunda salt okuma ile denendi. Tarayıcıda uçtan uca doğrulama `main`e taşındıktan sonra test sunucusunda.
+
 ## 2026-09-27 (22:00) — Stüdyo: erkek anlatıcı «sıcak masalcı», sayfa düzeni kendiliğinden, tam e-kitap denetimi kalıcı
 
 - **Neden:** kullanıcı adına verilen üç karar: erkek anlatıcı varsayılanı «sıcak masalcı» (dinlenen kaydın kendisiyle),

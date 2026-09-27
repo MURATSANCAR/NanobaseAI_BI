@@ -14,12 +14,24 @@ Ses: tarifle tasarım (`voice.design`, gerçek kişi sesi gerekmez) ya da refera
 `voice.ref_text`; referans genellikle bir kez tarifle üretilmiş model çıktısıdır, kitap boyunca aynı ses kalır).
 
     GET  /health
-    POST /v1/audio/narrate {model, segments: [{text, voice, pause_ms, words}], format: mp3|wav, align: bool}
+    POST /v1/audio/narrate {model, segments: [{text, voice, pause_ms, words, style?, rate?, pause_before_ms?, clone?,
+                            cfg?}], format: mp3|wav, align: bool, measure?: bool}
          → {audio: base64, format, sample_rate, duration, seconds,
             segments: [{start, end, aligned, words: [{start, end, score} | null, …]}]}
 
 `words`: hizalanacak kelimeler (okunuşun kelimeleri, sırasıyla). Dönen `words` aynı uzunluktadır; hizalanamayan
 kelime null döner (çağıran tahminle doldurur). Zamanlar saniye, bütün sesin başından.
+
+İfade katmanı (editörün `production/expression.py`'si; ölçüm docs/analiz/sesli-okuma-ifade-katmani.md):
+`style` parçanın ton talimatıdır ("whispering", "excited, faster" …) ve metnin başına `(style)` olarak girer.
+`clone` referanslı seste klon kipidir: `full` referans sesi + metni (devam kipi, en tutarlı ses), `ref` yalnız
+referans sesi (talimat bu kipte etkili); boşsa `style` varken `ref`, yokken `full`. `rate` konuşma hızıdır: üretimden
+sonra perdeyi koruyan zaman esnetme (rubberband; yoksa atempo), kelime zamanları esnetilmiş sesten hizalanır.
+`pause_before_ms` parçadan önce sessizliktir; `cfg` parçanın yönlendirme gücüdür (boşsa `--cfg`).
+Tam klonda talimat metne girerse model onu sesli okur (ölçüm: harf hatası %45–111); tam klonda ton, `voice.prompt_audio`
+ile verilir: aynı sesin referans cümlesini ifadeyle okuyan örnek, devam kipi onun tonunu sürdürür, kimlik referanstan.
+`measure: true` her parçaya `measure` ekler (ortanca perde, enerji, sesli oranı, tanıyıcıyla harf hatası oranı):
+ifade örneği adayları bununla seçilir.
 """
 
 from __future__ import annotations
@@ -101,6 +113,7 @@ class Voice(BaseModel):
     design: str | None = None          # tarif: "orta yaşlı, sıcak sesli kadın anlatıcı" (İngilizce de olur)
     ref_audio: str | None = None       # base64 WAV (klon)
     ref_text: str | None = None
+    prompt_audio: str | None = None    # base64 WAV: devam kipinin örnek sesi (ifade örneği; metni ref_text), kimlik ref_audio'dan
 
 
 class Segment(BaseModel):
@@ -109,6 +122,11 @@ class Segment(BaseModel):
     pause_ms: int = Field(300, ge=0, le=5000)
     words: list[str] = []
     seed: int | None = None
+    style: str | None = Field(None, max_length=200)             # ifade: ton talimatı, "(style)metin"
+    rate: float = Field(1.0, ge=0.7, le=1.4)                    # ifade: konuşma hızı (sonradan, perde korunur)
+    pause_before_ms: int = Field(0, ge=0, le=3000)              # ifade: parçadan önce sessizlik
+    clone: str | None = Field(None, pattern="^(full|ref)$")     # referanslı seste klon kipi (boş: style → ref)
+    cfg: float | None = Field(None, ge=1.0, le=3.0)            # ifade: yönlendirme gücü (boş: sunucu varsayılanı)
 
 
 class Narrate(BaseModel):
@@ -116,6 +134,8 @@ class Narrate(BaseModel):
     segments: list[Segment] = Field(min_length=1)
     format: str = "mp3"
     align: bool = True
+    measure: bool = False              # parça başına ölçü: perde, enerji, sesli oranı, tanıyıcıyla harf hatası
+
 
 
 # ------------------------------------------------------------------ seslendirme
@@ -136,27 +156,56 @@ def _fade(wav: np.ndarray, ms: int = 12) -> np.ndarray:
     return wav
 
 
+def _stretch(wav: np.ndarray, rate: float) -> np.ndarray:
+    """Konuşma hızı: perdeyi koruyan zaman esnetme (rate > 1 hızlı). rubberband yoksa atempo; ikisi de düşerse aynen."""
+    if abs(rate - 1.0) < 0.01 or len(wav) == 0:
+        return wav
+    raw = np.clip(wav, -1, 1).astype("<f4").tobytes()
+    for flt in (f"rubberband=tempo={rate:.3f}:transients=smooth:formant=preserved", f"atempo={rate:.3f}"):
+        r = subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-f", "f32le", "-ar", str(SR), "-ac", "1",
+                            "-i", "pipe:0", "-af", flt, "-f", "f32le", "-ar", str(SR), "-ac", "1", "pipe:1"],
+                           input=raw, capture_output=True)
+        if r.returncode == 0 and r.stdout:
+            return np.frombuffer(r.stdout, dtype="<f4").copy()
+    return wav
+
+
 def _speak(seg: Segment, tmp: str) -> np.ndarray:
     text, ref = seg.text, None
     v = seg.voice
+    style = (seg.style or "").strip().strip("()").strip()
     if v.ref_audio:
         ref = os.path.join(tmp, f"ref-{abs(hash(v.ref_audio)) % 10**9}.wav")
         if not os.path.exists(ref):
             with open(ref, "wb") as f:
                 f.write(base64.b64decode(v.ref_audio))
+        if style:
+            text = f"({style}){text}"
     elif v.design:
-        text = f"({v.design.strip()}){text}"
+        text = f"({v.design.strip()}{', ' + style if style else ''}){text}"
+    elif style:
+        text = f"({style}){text}"
     if seg.seed is not None:
         torch.manual_seed(seg.seed)
         np.random.seed(seg.seed % (2**32))
-    kw = {"text": text, "cfg_value": args.cfg, "inference_timesteps": args.steps, "normalize": False, "denoise": False}
-    if ref and v.ref_text:
-        # Referans hem ses hem metinle verilir: en tutarlı klon (VoxCPM2 "ultimate cloning").
-        kw.update(prompt_wav_path=ref, prompt_text=v.ref_text, reference_wav_path=ref)
+    kw = {"text": text, "cfg_value": seg.cfg or args.cfg, "inference_timesteps": args.steps, "normalize": False,
+          "denoise": False}
+    clone = seg.clone or ("ref" if style else "full")
+    if ref and v.ref_text and clone == "full":
+        # Referans hem ses hem metinle verilir: en tutarlı klon (VoxCPM2 "ultimate cloning"). `prompt_audio` varsa devam
+        # kipi onun tonunu sürdürür (aynı sesin ifadeli örneği), kimlik yine referanstan.
+        prompt = ref
+        if v.prompt_audio:
+            prompt = os.path.join(tmp, f"prompt-{abs(hash(v.prompt_audio)) % 10**9}.wav")
+            if not os.path.exists(prompt):
+                with open(prompt, "wb") as f:
+                    f.write(base64.b64decode(v.prompt_audio))
+        kw.update(prompt_wav_path=prompt, prompt_text=v.ref_text, reference_wav_path=ref)
     elif ref:
+        # Yalnız referans sesi (VoxCPM2 "controllable cloning"): ses referanstan, ton talimattan.
         kw.update(reference_wav_path=ref)
     wav = TTS.generate(**kw)
-    return _fade(_trim(np.asarray(wav, dtype=np.float32)))
+    return _fade(_trim(_stretch(np.asarray(wav, dtype=np.float32), seg.rate)))
 
 
 # ------------------------------------------------------------------ hizalama
@@ -217,6 +266,47 @@ def _align(wav: np.ndarray, words: list[str]) -> list[dict | None]:
     return out
 
 
+# ------------------------------------------------------------------ ölçü (ifade örneği seçimi)
+def _heard(wav: np.ndarray) -> str:
+    """Hizalayıcı modelin açgözlü CTC çözümü (tanıyıcı olarak): anlaşılırlık denetimi için."""
+    proc, model = ALIGNER
+    x = _resample16(wav)
+    feats = proc(x.numpy(), sampling_rate=16000, return_tensors="pt").input_values.to(DEVICE)
+    with torch.inference_mode():
+        ids = model(feats).logits.argmax(-1)
+    return proc.batch_decode(ids)[0]
+
+
+def _lev(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _measure(wav: np.ndarray, text: str) -> dict:
+    """Ortanca perde (Hz), etkin konuşmada ortalama enerji (dBFS), sesli kare oranı, harf hatası oranı."""
+    import librosa
+    y = _resample16(wav).numpy()
+    rms = librosa.feature.rms(y=y, frame_length=400, hop_length=160)[0]
+    db = 20 * np.log10(rms + 1e-9)
+    active = db > db.max() - 35
+    f0, vflag, _ = librosa.pyin(y, fmin=60, fmax=600, sr=16000, frame_length=1024, hop_length=160)
+    n = min(len(f0), len(active))
+    voiced = vflag[:n] & active[:n] & ~np.isnan(f0[:n])
+    out = {"f0": round(float(np.median(f0[:n][voiced])), 1) if voiced.sum() > 5 else None,
+           "energy_db": round(float(db[:n][active[:n]].mean()), 2) if active.any() else None,
+           "voiced_ratio": round(float(voiced.sum() / max(1, active[:n].sum())), 3)}
+    if ALIGNER is not None:
+        clean = lambda t: re.sub(r"[^a-zçğıöşüâîû]", "", t.translate(_LOWER).lower())   # noqa: E731
+        want, got = clean(text), clean(_heard(wav))
+        out["cer"] = round(_lev(want, got) / max(1, len(want)), 3)
+    return out
+
+
 # ------------------------------------------------------------------ çıktı
 def _encode(wav: np.ndarray, fmt: str) -> bytes:
     pcm = (np.clip(wav, -1, 1) * 32767).astype("<i2").tobytes()
@@ -248,10 +338,15 @@ def narrate(req: Narrate) -> dict:
         for seg in req.segments:
             wav = _speak(seg, tmp)
             words = _align(wav, seg.words) if req.align else [None] * len(seg.words)
+            if seg.pause_before_ms:
+                before = np.zeros(int(SR * seg.pause_before_ms / 1000), dtype=np.float32)
+                parts.append(before)
+                pos += len(before)
             start = pos / SR
             out.append({"start": round(start, 3), "end": round((pos + len(wav)) / SR, 3), "aligned": ALIGNER is not None,
                         "words": [None if w is None else {**w, "start": round(w["start"] + start, 3),
-                                                          "end": round(w["end"] + start, 3)} for w in words]})
+                                                          "end": round(w["end"] + start, 3)} for w in words],
+                        **({"measure": _measure(wav, seg.text)} if req.measure else {})})
             gap = np.zeros(int(SR * seg.pause_ms / 1000), dtype=np.float32)
             parts += [wav, gap]
             pos += len(wav) + len(gap)

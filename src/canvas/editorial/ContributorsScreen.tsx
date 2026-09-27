@@ -4,7 +4,7 @@ import { Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, contributorsApi, type Contributor, type PersonDetail } from '../engine';
 import { contributorsListOptions, roleFacetsOptions } from './queries';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
-import { dateTime, pct } from '../format';
+import { dateTime, pct, crmLabel } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import { WebSection } from './web/parts';
 
@@ -73,7 +73,7 @@ function Detail({ p, onClose }: { p: PersonDetail; onClose: () => void }) {
             {p.contracts.map((c) => (
               <li key={c.id} className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
                 <span className="font-mono text-[11.5px] tabular-nums">{c.no || '—'}</span>
-                {c.status && <Pill tone={statusTone(c.status)}>{c.status}</Pill>}
+                {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
                 <span className="font-mono text-[11px] tabular-nums text-canvas-muted">
                   {dateTime(c.start)} – {dateTime(c.end)}
                 </span>

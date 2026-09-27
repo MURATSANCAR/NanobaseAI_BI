@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi ve sayfa düzeninin kendiliğinden kurulumu 09-27) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu ve sesli okumada ifade katmanı 09-27) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -302,6 +302,17 @@ if "EDITOR-STUDYO-SESKUTUPHANE" not in s:
              + loc(f"voices/({VID})", "DELETE", "voices/$1", timeout=60))
     s = s.replace("    # EDITOR-BITTI", kutup + "    # EDITOR-BITTI", 1)
     changes.append(f"ses kütüphanesi yolları (yükleme gövdesi {voice_mb} MB)")
+
+# 6) Sesli okumada ifade katmanı (api_expression.py): cümle başına ifade/vurgu, Zeki AI önerisi, bu cümleyi dinle.
+#    Düzenli ifadeli location'da proxy_pass yolu değişkenlerle kurulur ($1/$2/$3), sabit yol yazılamaz.
+if "EDITOR-STUDYO-IFADE" not in s:
+    X_ = f"jobs/({JOB})/narration/pages/({ID})/expression"
+    ifade = ("    # EDITOR-STUDYO-IFADE  (sesli okumada ifade: api_expression.py)\n"
+             + loc(X_, "GET|PUT", "jobs/$1/narration/pages/$2/expression", timeout=60)
+             + loc(f"{X_}/(suggest)", "POST", "jobs/$1/narration/pages/$2/expression/$3", timeout=300)
+             + loc(f"{X_}/(sample)", "POST", "jobs/$1/narration/pages/$2/expression/$3", timeout=600))
+    s = s.replace("    # EDITOR-BITTI", ifade + "    # EDITOR-BITTI", 1)
+    changes.append("sesli okuma ifade yolları")
 
 if s == orig:
     print("zaten var (güncel)")

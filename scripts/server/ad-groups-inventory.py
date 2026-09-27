@@ -43,11 +43,11 @@ def main():
         if e.get('type') != 'searchResEntry':
             continue
         a = e['attributes']
-        gt = int(a.get('groupType') or 0) & 0xFFFFFFFF
+        gt = int(first(a.get('groupType')) or 0) & 0xFFFFFFFF
         kind = 'güvenlik' if gt & 0x80000000 else 'dağıtım'
         scope = ('yerleşik' if gt & 1 else 'global' if gt & 2 else 'etki-alanı-yerel' if gt & 4
                  else 'evrensel' if gt & 8 else '?')
-        rows.append((ou_of(a.get('distinguishedName') or e['dn']), a.get('sAMAccountName'), kind, scope,
+        rows.append((ou_of(first(a.get('distinguishedName')) or e['dn']), first(a.get('sAMAccountName')), kind, scope,
                      len(a.get('member') or []), str(first(a.get('description')))[:70]))
     rows.sort()
     print(f'toplam grup: {len(rows)}')
@@ -62,7 +62,7 @@ def main():
     for e in conn.extend.standard.paged_search(c['base_dn'], ENABLED_PERSON, SUBTREE, paged_size=500,
                                                generator=True, attributes=['distinguishedName']):
         if e.get('type') == 'searchResEntry':
-            users[ou_of(e['attributes'].get('distinguishedName') or e['dn'])] += 1
+            users[ou_of(first(e['attributes'].get('distinguishedName')) or e['dn'])] += 1
     print(f'\n== etkin kullanıcıların OU dağılımı ({sum(users.values())})')
     for ou, n in users.most_common():
         print(f'{n:5}  {ou}')

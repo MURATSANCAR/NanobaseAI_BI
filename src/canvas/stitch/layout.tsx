@@ -78,8 +78,9 @@ function writeLocal(key: string, v: BoxMap | null) {
 /** Beş kartın tek satırda dizildiği yuvalar. Sıra tasarımdaki sıradır. */
 const ROW = ['c1', 'c2', 'c3', 'c4', 'c5'];
 const GAP_MIN = 16;
-/** Sol menü sahnenin üstünde yüzüyor; kartlar onun altına girmesin. */
-const RAIL = 92;
+/** Sol kenar payı. Sahne (.shell-stage) menünün yanında başlar; menü için ayrıca yer ayrılmaz
+ *  (eskiden ray sahnenin üstünde yüzdüğü için 92 px bırakılıyordu, kartlar boşuna sağa itiliyordu). */
+const RAIL = GAP_MIN;
 
 /**
  * Varsayılan yerleşimi sahne genişliğine göre kurar.

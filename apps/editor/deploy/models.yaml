@@ -248,6 +248,8 @@ aliases:
     env:
       TORCHINDUCTOR_CACHE_DIR: /root/.cache/vllm/inductor
       TRITON_CACHE_DIR: /root/.cache/vllm/triton
-    image: editor-voice:1
+    # :2 (2026-09-27) ifade katmanı: style/rate/pause_before_ms/clone/cfg, voice.prompt_audio, measure
+    # (sha256:b0cf45d34e28…, GPU'da derlendi; :1 ile aynı taban ve voxcpm katmanı, yalnız server.py değişti).
+    image: editor-voice:2
     entrypoint: [python, /srv/server.py]
     args: []

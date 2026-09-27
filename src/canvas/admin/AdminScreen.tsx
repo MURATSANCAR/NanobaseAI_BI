@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
-import { Activity, Bell, CalendarClock, History, LayoutGrid, MessageSquareText, Settings2, Users } from 'lucide-react';
+import { Activity, Bell, CalendarClock, History, KeyRound, LayoutGrid, MessageSquareText, Settings2, Users } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { ENGINE_ENABLED, EngineAuthError, adminApi } from '../engine';
 import NoAccess from '../NoAccess';
@@ -8,20 +8,22 @@ import Overview from './Overview';
 import SettingsPanel from './SettingsPanel';
 import { AlertsAdmin, CardsAdmin, ReportsAdmin } from './Definitions';
 import People from './People';
+import AccessAdmin from './AccessAdmin';
 import AuditLog from './AuditLog';
 import PromptTracker from './PromptTracker';
 import { Loading, Note } from './ui';
 
-export type AdminTab = 'overview' | 'settings' | 'reports' | 'alerts' | 'cards' | 'people' | 'prompts' | 'audit';
+export type AdminTab = 'overview' | 'settings' | 'access' | 'reports' | 'alerts' | 'cards' | 'people' | 'prompts' | 'audit';
 
 const TABS: Array<{ id: AdminTab; label: string; icon: typeof Activity }> = [
   { id: 'overview', label: 'Genel durum', icon: Activity },
   { id: 'settings', label: 'Ayarlar', icon: Settings2 },
+  { id: 'access', label: 'Yetkiler', icon: KeyRound },
   { id: 'reports', label: 'Planlı raporlar', icon: CalendarClock },
   { id: 'alerts', label: 'Uyarılar', icon: Bell },
   { id: 'cards', label: 'Pano kartları', icon: LayoutGrid },
   { id: 'people', label: 'Kişiler', icon: Users },
-  { id: 'prompts', label: 'Promt izleme', icon: MessageSquareText },
+  { id: 'prompts', label: 'Soru izleme', icon: MessageSquareText },
   { id: 'audit', label: 'Değişiklik kaydı', icon: History },
 ];
 
@@ -52,6 +54,8 @@ export default function AdminScreen() {
     <NoAccess user={me.data?.user} />
   ) : tab === 'settings' ? (
     <SettingsPanel />
+  ) : tab === 'access' ? (
+    <AccessAdmin />
   ) : tab === 'reports' ? (
     <ReportsAdmin />
   ) : tab === 'alerts' ? (

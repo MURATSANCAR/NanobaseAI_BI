@@ -1,4 +1,4 @@
-"""Semantic Bridge — the cockpit contract (/api/v1/ask, /run_sql, /engine, /generate_summary).
+"""Semantic Bridge — the cockpit contract (/api/v1/ask, /run_sql, /engine).
 
     USER → Qwen-free Resolver → CERTIFIED catalog → DeterministicCompiler → SQL Server
                            └─ MISS / complex → ExistingCompiler (Qwen + certified facts) → dry-run → SQL Server
@@ -1802,7 +1802,11 @@ def _require_admin(request: Any) -> None:
     the Eş anlamlılar screen (all session-only) failed with 403 wherever the token was set."""
     token = os.environ.get("SEMANTIC_ADMIN_TOKEN", "")
     if not token:
-        return                      # not configured: the loopback binding is the only control
+        # Not configured. A person (portal session cookie) must still be an admin — before 2026-09-27 an
+        # unset token opened these writes to every signed-in user. Cookieless loopback jobs pass.
+        if "timas_session" in request.headers.get("cookie", "") and not _session_is_admin(request):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Bu işlem yalnız yöneticiler içindir."})
+        return
     supplied = request.headers.get("x-semantic-admin", "") or request.query_params.get("admin_token", "")
     if secrets_compare(supplied, token):
         return                      # server/CLI: shared token
@@ -1952,6 +1956,44 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if state["rt"] is None:
             state["rt"] = build_runtime()
         return state["rt"]
+
+    from semantic_bridge import access as access_mod
+
+    def _gate_verdict(path: str, cookie: str) -> Optional[tuple[int, str]]:
+        """Sayfa kapısı: bu isteği kişi yapıyorsa (portal oturum çerezi) uç, kişinin görebildiği bir sayfaya ait
+        olmalı. Çerezsiz istek zamanlayıcı/betiktir; onlar uçların kendi jeton kontrolünden geçer.
+        None = geçer; (durum, mesaj) = durdur."""
+        rule = access_mod.rule_for(path)
+        if rule in (access_mod.OPEN, access_mod.OWN) or "timas_session" not in cookie:
+            return None
+        from semantic_bridge import board as board_mod
+
+        try:
+            user = board_mod.user_of(cookie)
+        except board_mod.NoUser:
+            return 401, "Oturum gerekli."
+        r = rt()
+        admin_mod.ensure(r.store.engine)
+        if rule is None:
+            log.warning("access: kuralı olmayan uç kişiye kapalı: %s", path)
+            return (None if admin_mod.is_admin(user) else (403, "Bu işleme yetkiniz yok."))
+        if rule == access_mod.SYSTEM:
+            return None if admin_mod.is_admin(user) else (403, "Bu işlem zamanlayıcıya aittir.")
+        acc = access_mod.effective(r.store.engine, r.settings.tenant_id, user, admin_mod.is_admin)
+        return None if acc.can(*rule) else (403, "Bu sayfaya yetkiniz yok.")
+
+    @app.middleware("http")
+    async def page_gate(request: Request, call_next):
+        try:
+            verdict = await run_in_threadpool(_gate_verdict, request.url.path, request.headers.get("cookie", ""))
+        except Exception as e:  # noqa: BLE001
+            # Yetki okunamadıysa kişiye kapalı; kapı açık kalmaz.
+            log.warning("access: sayfa kapısı karar veremedi (%s): %s", request.url.path, e)
+            verdict = (503, "Yetki bilgisi şu an okunamıyor.")
+        if verdict is not None:
+            code = {401: "UNAUTHORIZED", 403: "FORBIDDEN"}.get(verdict[0], "UNAVAILABLE")
+            return JSONResponse(status_code=verdict[0], content={"detail": {"code": code, "message": verdict[1]}})
+        return await call_next(request)
 
     @app.get("/health")
     def health() -> JSONResponse:
@@ -2107,14 +2149,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         return StreamingResponse(events(), media_type="application/x-ndjson",
                                  headers={"X-Accel-Buffering": "no", "Cache-Control": "no-store"})
 
-    @app.post("/api/v1/generate_summary")
-    def generate_summary(body: dict[str, Any]) -> dict[str, Any]:
-        r = rt()
-        try:
-            result = r.run_sql(str(body.get("sql") or ""), int(body.get("sampleSize") or 50))
-        except Exception as e:  # noqa: BLE001
-            raise _sql_failure(e) from e
-        return {"summary": r.summarize(str(body.get("question") or ""), str(body.get("sql") or ""), result)}
+    # 2026-09-27: /api/v1/generate_summary kaldırıldı — hiçbir kontrol yapmadan gövdedeki SQL'i çalıştırıyordu ve
+    # ne ön yüz ne betikler kullanıyordu (yetki analizi, bölüm 7.8).
 
     @app.post("/api/v1/feedback")
     def feedback(body: FeedbackIn) -> dict[str, Any]:
@@ -4752,9 +4788,140 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.post("/api/v1/admin/group/refresh")
     def admin_group_refresh(request: Request) -> dict[str, Any]:
         """Yönetici AD grubunu canlı okuyup DB anlık görüntüsünü tazeler.
-        15 dk'lık `timas-admin-group.timer` çağırır (caller token ile); yönetici ekrandan da tetikler."""
+        15 dk'lık `timas-admin-group.timer` çağırır (caller token ile); yönetici ekrandan da tetikler.
+        Aynı tur yetki bağlarının (AD grubu, OU, CRM rolü) üye görüntüsünü de tazeler."""
         _require_caller(request)
-        return admin_mod.refresh_admin_group(rt().store.engine)
+        if "timas_session" in request.headers.get("cookie", ""):
+            _admin(request)                  # kişi ise yönetici olmalı; zamanlayıcı çerezsiz gelir
+        engine = rt().store.engine
+        out = admin_mod.refresh_admin_group(engine)
+        try:
+            out["access"] = access_mod.refresh(engine, access_dir)
+        except Exception as e:  # noqa: BLE001
+            log.warning("access: üye görüntüsü tazelenemedi: %s", e)
+            out["access"] = {"ok": False, "error": f"{type(e).__name__}: {e}"[:400]}
+        return out
+
+    # ------------------------------------------------------------------ yetki
+    # AD grubu / OU / CRM rolü / kişi → rol → sayfa. Kapı köprüde (page_gate); ekran yalnız bunu yansıtır.
+
+    access_dir = access_mod.Directory(lambda: {k: admin_mod.conf(k) for k in admin_mod.store_keys("ad")},
+                                      lambda: admin_mod.conf("CRM_SCHEMA"))
+
+    def _access_admin(request: Request) -> tuple[Any, str, str]:
+        r, engine, tenant, _, user = _admin(request)
+        access_mod.ensure(engine, tenant)
+        return engine, tenant, user
+
+    def _access_fail(e: Exception) -> HTTPException:
+        if isinstance(e, LookupError):
+            return HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Rol ya da bağ bulunamadı."})
+        return HTTPException(status_code=422, detail={"code": "INVALID", "message": str(e)})
+
+    @app.get("/api/v1/access/me")
+    def access_me(request: Request) -> dict[str, Any]:
+        """Oturumdaki kişinin görebildiği sayfalar. Menü, rota kapısı ve Kampüs kartları bunu okur."""
+        _require_caller(request)
+        user = _board_user(request)
+        r = rt()
+        admin_mod.ensure(r.store.engine)
+        acc = access_mod.effective(r.store.engine, r.settings.tenant_id, user, admin_mod.is_admin)
+        return {**acc.view(), "isEditor": admin_mod.is_editor(user)}
+
+    @app.get("/api/v1/access/catalog")
+    def access_catalog(request: Request) -> dict[str, Any]:
+        _access_admin(request)
+        return {**access_mod.catalog(), "subjectTypes": access_mod.SUBJECT_TYPES}
+
+    @app.get("/api/v1/access/roles")
+    def access_roles(request: Request) -> dict[str, Any]:
+        engine, tenant, _ = _access_admin(request)
+        return {"items": access_mod.list_roles(engine, tenant)}
+
+    @app.post("/api/v1/access/roles", status_code=201)
+    def access_role_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user = _access_admin(request)
+        try:
+            out = access_mod.save_role(engine, tenant, user, body)
+        except (access_mod.AccessError, LookupError) as e:
+            raise _access_fail(e) from e
+        admin_mod.audit(engine, user, "create", "access", out["id"], out["after"]["name"], out["after"])
+        return out
+
+    @app.put("/api/v1/access/roles/{role_id}")
+    def access_role_update(role_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user = _access_admin(request)
+        try:
+            out = access_mod.save_role(engine, tenant, user, body, role_id)
+        except (access_mod.AccessError, LookupError) as e:
+            raise _access_fail(e) from e
+        admin_mod.audit(engine, user, "update", "access", role_id, out["after"]["name"],
+                        {"before": out["before"], "after": out["after"]})
+        return out
+
+    @app.delete("/api/v1/access/roles/{role_id}")
+    def access_role_delete(role_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user = _access_admin(request)
+        try:
+            row = access_mod.delete_role(engine, tenant, role_id)
+        except access_mod.AccessError as e:
+            raise _access_fail(e) from e
+        if row is None:
+            raise _access_fail(LookupError(role_id))
+        admin_mod.audit(engine, user, "delete", "access", role_id, row["name"], None)
+        return {"ok": True}
+
+    @app.post("/api/v1/access/roles/{role_id}/bindings", status_code=201)
+    def access_binding_add(role_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Bağı ekler ve üyelerini hemen okur: yönetici kaç kişiye yetki verdiğini zamanlayıcıyı beklemeden görür."""
+        engine, tenant, user = _access_admin(request)
+        try:
+            out = access_mod.add_binding(engine, tenant, user, role_id, body)
+        except (access_mod.AccessError, LookupError) as e:
+            raise _access_fail(e) from e
+        if out["type"] != "user":
+            out["refresh"] = access_mod.refresh(engine, access_dir, only=(out["type"], out["subject"]))
+        admin_mod.audit(engine, user, "create", "access", out["id"], f'{out["role"]} ← {out["label"]}',
+                        {"type": out["type"], "subject": out["subject"]})
+        return out
+
+    @app.delete("/api/v1/access/bindings/{binding_id}")
+    def access_binding_delete(binding_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user = _access_admin(request)
+        row = access_mod.delete_binding(engine, tenant, binding_id)
+        if row is None:
+            raise _access_fail(LookupError(binding_id))
+        admin_mod.audit(engine, user, "delete", "access", binding_id, f'{row["role"]} ← {row.get("label") or row["subject"]}',
+                        {"type": row["subject_type"], "subject": row["subject"]})
+        return {"ok": True}
+
+    @app.get("/api/v1/access/subjects")
+    def access_subjects(request: Request) -> dict[str, Any]:
+        """Bağlanabilecek AD grupları / OU'lar / CRM rolleri / kişiler, üye sayısıyla (canlı okunur, 5 dk bellek)."""
+        _access_admin(request)
+        kind = request.query_params.get("type", "")
+        try:
+            return {"type": kind, "items": access_dir.candidates(kind)}
+        except access_mod.AccessError as e:
+            raise _access_fail(e) from e
+        except Exception as e:  # noqa: BLE001
+            source = "CRM" if kind == "crm_role" else "Active Directory"
+            raise HTTPException(status_code=503, detail={
+                "code": "UNAVAILABLE", "message": f"{source} okunamadı: {type(e).__name__}"}) from e
+
+    @app.get("/api/v1/access/explain")
+    def access_explain(user: str, request: Request) -> dict[str, Any]:
+        """Kişi gözüyle: hangi AD grupları ve CRM rolleri, hangi roller hangi yoldan, hangi sayfalar."""
+        engine, tenant, _ = _access_admin(request)
+        who = (user or "").strip().lower()
+        if not who:
+            raise _access_fail(access_mod.AccessError("Kişi seçilmedi."))
+        return access_mod.explain(engine, tenant, who, admin_mod.is_admin, access_dir)
+
+    @app.post("/api/v1/access/refresh")
+    def access_refresh(request: Request) -> dict[str, Any]:
+        engine, _, _ = _access_admin(request)
+        return access_mod.refresh(engine, access_dir)
 
     @app.get("/api/v1/admin/overview")
     def admin_overview(request: Request) -> dict[str, Any]:

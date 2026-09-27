@@ -4,7 +4,9 @@
 kullanıcı bir gruba eklenince o grubun gördüğü her şeyi görür. (2) Ekranlardaki özellikler de rol bazlı
 açılır/kapanır.
 
-Bu belge yalnız analizdir; kod yazılmadı. Kararlar bölüm 10'da.
+Kararlar bölüm 10'da. **Durum (2026-09-27):** Aşama A'nın sayfa/menü kısmı kodlandı (`backend/semantic_bridge/access.py`,
+köprüde `page_gate`, `/api/v1/access/*`, ön yüzde `PageGate` + menü + Yönetim → Yetkiler). Ekran özellikleri (Aşama B) ve
+Zeki AI veri kapsamı (Aşama C) sırada.
 
 ---
 
@@ -406,6 +408,7 @@ müşteri VM'i.
 | Zeki AI veri kapsamı | **Bu işe dahil** (bölüm 8, Aşama C) |
 | Varsayılan | **Şimdilik herkes her şeyi görür**; roller prod öncesi atanır |
 | AD grup adları | **AD'deki mevcut yapıya bakılacak** — bkz. bölüm 11 |
+| CRM kullanıcı grupları | **CRM güvenlik rolü de bağ türü** (AD grubu, AD birimi/OU, CRM rolü, kişi); yönetici Yetkiler ekranında seçer ve kaldırır |
 
 ## 11. AD'deki gruplar — açık
 

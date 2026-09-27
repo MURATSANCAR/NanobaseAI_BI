@@ -197,14 +197,25 @@ export type VisibleGroup = NavGroup & {
   defaultOpen: boolean;
 };
 
+/** Menü öğesi rolle açılan bir sayfa mı: Kampüs herkese, Yönetim yöneticiye açık; geri kalanı `sayfa:<id>` yetkisi ister. */
+export const needsPagePermission = (group: NavGroup, item: NavItem) => group.id !== 'kampus' && !group.adminOnly && !item.adminOnly;
+
 /** Kişinin göreceği menü: yetki ve ortam bayrağına göre süzülmüş, role göre sıralanmış.
  *  Yönetici her şeyi + Yönetim grubunu görür. Editör AD grubundaki kişi (yönetici değilse) Editoryal'i en
  *  üstte «Çalışma alanım» etiketiyle ve Kayıtlar'la açık görür; Analiz, Finans ve Pazarlama daraltılmış
  *  gelir (gizlenmez). Ortamda kapalı özellik (bayrak false ya da henüz bilinmiyor) hiç görünmez. */
-export function visibleNav(role: NavRole, flags: NavFlags = {}): VisibleGroup[] {
-  const keep = (i: NavItem) => (!i.adminOnly || role.isAdmin) && (!i.feature || flags[i.feature] === true);
+export function visibleNav(
+  role: NavRole,
+  flags: NavFlags = {},
+  pages: 'all' | ReadonlySet<string> | null = 'all',
+): VisibleGroup[] {
+  // pages: kişinin görebildiği `sayfa:<id>` anahtarları (köprü karar verir); null = henüz bilinmiyor → rol sayfaları gizli.
+  const allowed = (g: NavGroup, i: NavItem) =>
+    !needsPagePermission(g, i) || pages === 'all' || (pages !== null && pages.has(`sayfa:${i.id}`));
+  const keep = (g: NavGroup) => (i: NavItem) =>
+    (!i.adminOnly || role.isAdmin) && (!i.feature || flags[i.feature] === true) && allowed(g, i);
   const groups = NAV.filter((g) => !g.adminOnly || role.isAdmin)
-    .map((g) => ({ ...g, items: g.items.filter(keep), defaultOpen: true } as VisibleGroup))
+    .map((g) => ({ ...g, items: g.items.filter(keep(g)), defaultOpen: true } as VisibleGroup))
     .filter((g) => g.items.length > 0);
   if (!role.isEditor || role.isAdmin) return groups;
   const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'pazarlama'];
@@ -255,6 +266,13 @@ export function matchActive(groups: NavGroup[], pathname: string, search = ''): 
     }
   }
   return best ? { group: best.group, item: best.item } : null;
+}
+
+/** Bir bağlantı adresinin (sorgu parçası dahil) rolle açılan menü sayfası; Kampüs, Yönetim ve menü dışı adreste null. */
+export function permissionItemFor(to: string): NavItem | null {
+  const [path, params] = splitTo(to);
+  const hit = matchActive(NAV, path, params.toString());
+  return hit && needsPagePermission(hit.group, hit.item) ? hit.item : null;
 }
 
 /** Arama/filtre için Türkçe harfleri sadeleştirir: «Çeviri» ≈ «ceviri», «İ/ı» ≈ «i». */

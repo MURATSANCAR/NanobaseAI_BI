@@ -373,7 +373,7 @@ function RuleList({ rules, onNew }: { rules: AlertRule[]; onNew: () => void }) {
         Henüz kural yok.{' '}
         <button type="button" onClick={onNew} className="font-bold text-canvas-violet underline-offset-2 hover:underline">
           İlk kuralı kurun
-        </button>{' '}
+        </button>
         : örneğin “bu ayın iade tutarı 5 milyonu aşarsa haber ver”.
       </div>
     );

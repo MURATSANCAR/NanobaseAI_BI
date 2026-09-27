@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, EngineAuthError, freshHeaders } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** E-kitap uçları (köprü: /api/v1/editorial/studio/jobs/{job}/epub…). engine.ts'teki `send` ile aynı kurallar:
  *  adres ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError, motorun Türkçe hata metni olduğu gibi taşınır
@@ -68,7 +69,7 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string; detail?: string } | string } | null;
     const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.detail ?? j?.detail?.message;
-    throw new EpubError(msg || `Zeki AI ${res.status}`, res.status);
+    throw new EpubError(msg || httpErrorText(res.status), res.status);
   }
   return (await res.json()) as T;
 }

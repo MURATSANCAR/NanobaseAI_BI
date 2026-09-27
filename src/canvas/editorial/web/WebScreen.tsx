@@ -94,7 +94,13 @@ export default function WebScreen() {
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
-      {d && !d.enabled && <Note tone="info">Basın ve web taraması bu ortamda kapalı.</Note>}
+      {d && !d.enabled && (
+        <Note tone="info">
+          {d.lastRun?.at
+            ? `Gece taraması bu ortamda kapalı; aşağıdakiler ${dateTime(d.lastRun.at)} tarihli son taramadan, yeni haber eklenmiyor.`
+            : 'Basın ve web taraması bu ortamda kapalı.'}
+        </Note>
+      )}
       {d && d.enabled && !d.lastRun && <Note tone="info">İlk tarama henüz yapılmadı.</Note>}
 
       {d && (

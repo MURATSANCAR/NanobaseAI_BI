@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import groups from '../modules.json';
-import { useIsAdmin } from '../useAdmin';
+import { canOpenRoute, useIsAdmin, usePageAccess } from '../useAdmin';
 import { trFold } from '../nav/navModel';
 
 /**
@@ -57,6 +57,7 @@ const ADMIN_ROUTES = new Set(['/veri-sozlugu', '/onaylar', '/es-anlamlilar', '/y
 export default function ModulesMenu({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [q, setQ] = useState('');
   const isAdmin = useIsAdmin();
+  const pages = usePageAccess();
   const raw = groups as Group[];
 
   useEffect(() => {
@@ -67,11 +68,12 @@ export default function ModulesMenu({ open, onClose }: { open: boolean; onClose:
   }, [open, onClose]);
 
   const data = useMemo(() => {
-    if (isAdmin) return raw;
+    // Yönetim ekranları yalnız yöneticide; rolle açılan ekranlar kişinin rolünde yoksa modül hiç listelenmez.
+    const keep = (id: string) => !LIVE[id] || ((isAdmin || !ADMIN_ROUTES.has(LIVE[id])) && canOpenRoute(pages, LIVE[id]));
     return raw
-      .map((g) => ({ ...g, modules: g.modules.filter((m) => !ADMIN_ROUTES.has(LIVE[m.id])) }))
+      .map((g) => ({ ...g, modules: g.modules.filter((m) => keep(m.id)) }))
       .filter((g) => g.modules.length > 0);
-  }, [raw, isAdmin]);
+  }, [raw, isAdmin, pages]);
 
   const filtered = useMemo(() => {
     const needle = trFold(q.trim());

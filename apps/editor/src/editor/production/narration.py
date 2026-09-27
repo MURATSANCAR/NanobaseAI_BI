@@ -128,6 +128,7 @@ VOICES: list[dict] = [
        "A kind elderly grandmother in her seventies, soft affectionate slightly shaky voice"),
     _v("yasli-erkek", "Yaşlı adam", "bilge", "karakter", "A wise elderly grandfather in his seventies, low warm slow voice"),
 ]
+from .voices_lively import extend as _lively; GROUPS, VOICES = _lively(GROUPS, VOICES)  # noqa: E402,E702 — CANLI MASAL ANLATICISI kancası (voices_lively.py)
 VOICE_IDS = {v["id"] for v in VOICES}
 DEFAULT_NARRATOR = "anlatici-kadin"
 # Erkek anlatıcı istendiğinde kullanılan ses (kullanıcı kararı 2026-09-27: «sıcak masalcı»). Eski «Erkek anlatıcı»
@@ -886,8 +887,12 @@ def page_input(d: Path, pg: dict, cfg: dict | None = None, lex: Lexicon | None =
     lex = lex or lexicon(d)
     units = page_units(pg, cfg, lex)
     plist = pieces(units)
+    # İFADE KATMANI kancası (expression.py): cümlenin ifadesi parçaya işlenir (p.extra; cümle sonu duraklaması; vurgu),
+    # servis gövdesine narrate_page'deki `expression.prepare` çevirir. İşaretsiz sayfada x None: özet eskisiyle aynı.
+    from . import expression
+    plist, x = expression.apply(d, pg, units, plist)
     h = _hash({"v": VERSION, "p": [(p.text, p.voice, p.pause_ms) for p in plist],
-               "w": [[w.text for w in u.words] for u in units]})
+               "w": [[w.text for w in u.words] for u in units], **({"x": x} if x else {})})
     return units, plist, h
 
 
@@ -1022,6 +1027,8 @@ async def narrate_page(d: Path, pid: str, by: str) -> dict:
                           "words": [s for k in p.words for s in units[p.unit].words[k].say]} for p in plist],
             "format": "mp3", "align": True}
     t0 = time.time()
+    from . import expression
+    await expression.prepare(body, plist)          # İFADE KATMANI kancası: ifade örneği / talimat, hız, önceki durak
     out = await _call(body)
     blocks = word_times(units, plist, out["segments"])
     est = any(w.get("estimated") for b in blocks for w in b["words"])

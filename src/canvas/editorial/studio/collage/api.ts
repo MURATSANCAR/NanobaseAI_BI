@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, freshHeaders } from '../../../engine';
+import { httpErrorText } from '../../../httpError';
 
 /** Kapak tarzı ve kolaj kapak uçları (köprü: /api/v1/editorial/studio/jobs/{job}/collage…). Kurallar engine.ts'teki
  *  `send` ile aynı: adres ENGINE_BASE, oturum çerezi, 401/403 → EngineAuthError. Hata gövdesi {"code","detail"} ya da
@@ -75,7 +76,7 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
     const d = j?.detail as { code?: string; detail?: string; message?: string } | string | undefined;
     const msg = typeof d === 'string' ? d : d?.detail || d?.message;
     const code = j?.code ?? (typeof d === 'object' ? d?.code : undefined) ?? null;
-    throw new CollageError(msg || `Zeki AI ${res.status}`, res.status, code);
+    throw new CollageError(msg || httpErrorText(res.status), res.status, code);
   }
   return (await res.json()) as T;
 }

@@ -2,7 +2,7 @@ import { createContext, useContext, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED, alertsApi, webApi } from '../engine';
-import { useNavRole } from '../useAdmin';
+import { canSeePage, useNavRole, usePageAccess } from '../useAdmin';
 import { matchActive, visibleNav, type NavGroup, type NavItem, type NavRole, type VisibleGroup } from './navModel';
 import { useNavState, type NavState } from './navState';
 
@@ -18,6 +18,7 @@ export type NavData = {
 /** Menünün bütün verisi: rol, ortam bayrağı, etkin öğe, uyarı sayısı ve kişinin menü tercihi. */
 export function useNavData(): NavData {
   const role = useNavRole();
+  const pages = usePageAccess();
   // Basın ve web yalnız ortamda açıksa görünür; durum gelene kadar gizli (müşteri ortamında kapalı).
   const web = useQuery({
     queryKey: ['editorial', 'web', 'status'],
@@ -30,15 +31,16 @@ export function useNavData(): NavData {
   const alerts = useQuery({
     queryKey: ['zeki-uyarilar'],
     queryFn: alertsApi.list,
-    enabled: ENGINE_ENABLED,
+    // Uyarı sayısı yalnız Uyarılar sayfasını görebilen kişi için sorulur (köprü ötekine 403 verir).
+    enabled: ENGINE_ENABLED && canSeePage(pages, 'uyarilar'),
     staleTime: 60_000,
     retry: false,
   });
   const loc = useLocation();
   const { state, update } = useNavState();
   const groups = useMemo(
-    () => visibleNav({ isAdmin: role.isAdmin, isEditor: role.isEditor }, { webWatch: web.data?.enabled === true }),
-    [role.isAdmin, role.isEditor, web.data?.enabled],
+    () => visibleNav({ isAdmin: role.isAdmin, isEditor: role.isEditor }, { webWatch: web.data?.enabled === true }, pages),
+    [role.isAdmin, role.isEditor, web.data?.enabled, pages],
   );
   const active = useMemo(() => matchActive(groups, loc.pathname, loc.search), [groups, loc.pathname, loc.search]);
   const alertCount = (alerts.data?.alerts ?? []).filter((a) => a.status === 'active' && a.state === 'triggered').length;

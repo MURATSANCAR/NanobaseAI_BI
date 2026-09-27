@@ -26,7 +26,7 @@ export default function SeoHome() {
     <SeoLayout
       path="/seo-geo"
       crumb="SEO özeti"
-      eyebrow="SEO & GEO · timas.com.tr"
+      eyebrow="SEO & GEO · TIMAS.COM.TR"
       title="Arama ve yapay zekâ görünürlüğü"
       lead="T-soft’taki ürünlerin SEO durumu, Google’daki performans ve onay bekleyen model önerileri. T-soft’tan yalnız okunur; mağazaya hiçbir şey gönderilmez."
       actions={

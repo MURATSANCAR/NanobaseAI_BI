@@ -276,7 +276,7 @@ LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
-              "room": "Toplantı odası", "booking": "Oda rezervasyonu"}
+              "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
