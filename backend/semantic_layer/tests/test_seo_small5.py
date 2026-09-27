@@ -181,3 +181,11 @@ def test_backlink_domains_and_url_norm():
     doms = backlinks.domains([("a", "https://www.x.com/1"), ("b", "https://x.com/2"), ("a", "https://y.org/")])
     assert doms[0] == {"domain": "x.com", "links": 2, "pages": 2}
     assert backlinks.norm_url("https://www.timas.com.tr/Kitap/") == backlinks.norm_url("timas.com.tr/kitap")
+
+
+def test_sunset_without_search_data_waits():
+    from semantic_bridge.seo_geo import sunset
+    a, t, why = sunset.recommend("bizim_degil", 0, None, "/yazar-x", has_search=False)
+    assert a == "arama_verisi" and t is None and "Search Console" in why
+    assert sunset.recommend("baski_bitti", 0, ("/yeni-baski", "aynı ISBN"), None, has_search=False)[0] == "yeni_baski_301"
+    assert sunset.recommend("bizim_degil", 0, None, None, has_search=True)[0] == "gone_410"

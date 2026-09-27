@@ -47,7 +47,8 @@ REASON_LABEL = {"iptal": "İptal", "bizim_degil": "Artık bizim değil", "devred
 #: Hakkı bizde olmayan (ya da hiç yayımlanmamış) kitaplar.
 GONE_REASONS = {"bizim_degil", "devredildi", "geri_istendi", "iptal"}
 ACTIONS = {"yeni_baski_301": "Yeni baskıya 301", "yazar_301": "Yazar sayfasına 301",
-           "stokta_yok": "Stokta yok olarak kalsın", "gone_410": "410 — kalıcı olarak kaldırıldı"}
+           "stokta_yok": "Stokta yok olarak kalsın", "gone_410": "410 — kalıcı olarak kaldırıldı",
+           "arama_verisi": "Arama verisi bekleniyor"}
 REDIRECT_ACTIONS = {"yeni_baski_301", "yazar_301"}
 _EDITION = re.compile(r"\((?:[^)]*)\)|\b(?:yeni|[0-9]+\.?)\s*bask[ıi]\b|\b(?:ciltli|karton kapak|cep boy|b[üu]y[üu]k boy|"
                       r"ciltsiz|kutulu|[öo]zel bask[ıi])\b", re.I)
@@ -163,10 +164,17 @@ class Editions:
 
 
 def recommend(reason: str, impressions: int, edition: Optional[tuple[str, str]],
-              author_link: Optional[str], searched_min: int = SEARCHED_MIN) -> tuple[str, Optional[str], str]:
-    """(eylem, hedef, gerekçe). Kurallar dosya başında."""
+              author_link: Optional[str], searched_min: int = SEARCHED_MIN,
+              has_search: bool = True) -> tuple[str, Optional[str], str]:
+    """(eylem, hedef, gerekçe). Kurallar dosya başında.
+
+    Arama verisi yoksa (Search Console okunmamış) "aranmıyor" bilinemez: yeni baskı dışında 301/410 önerilmez, karar
+    arama verisine kalır. İlk kurulumda veri yokken 281 sayfaya 410, 749'una yazar 301'i öneriliyordu (2026-09-27)."""
     if edition:
         return "yeni_baski_301", edition[0], edition[1]
+    if not has_search:
+        return ("arama_verisi", None, "Search Console verisi yok; sayfanın aranıp aranmadığı bilinmeden yönlendirme ya da "
+                "kalıcı kaldırma önerilmez. Veri gelince yeniden hesaplanır; o zamana kadar sayfa olduğu gibi kalsın.")
     searched = impressions >= searched_min
     seen = f"son 28 günde {impressions} gösterim"
     if reason in GONE_REASONS:
@@ -208,7 +216,9 @@ def register(app, ctx) -> None:
                     PRODUCTS.outerjoin(CRM_BOOKS, sa.and_(CRM_BOOKS.c.tenant_id == PRODUCTS.c.tenant_id, CRM_BOOKS.c.ean == EAN)))
                     .where(PRODUCTS.c.tenant_id == tenant)).all()
                 links = c.execute(sa.select(LINKS.c.link, LINKS.c.type, LINKS.c.table_id).where(LINKS.c.tenant_id == tenant)).all()
-            gsc = gsc_by_path((seo.gsc("pages") or {}).get("rows") or [])
+            g_pages = seo.gsc("pages")
+            has_search = bool(g_pages and g_pages.get("rows"))
+            gsc = gsc_by_path((g_pages or {}).get("rows") or [])
             prods = [(pid, active, loads(d, {}), loads(cj, None) if cj else None) for pid, active, d, cj in rows]
             editions = Editions([p for _, _, p, _ in prods])
             idx = redirects.Index([{"Type": t, "Link": l} for l, t, _ in links], [p for _, _, p, _ in prods])
@@ -226,7 +236,7 @@ def register(app, ctx) -> None:
                         continue
                     reason = "pasif"
                 author = authors.get(str(p.get("ModelId") or ""))
-                action, target, why = recommend(reason, imp, editions.find(p, idx), author)
+                action, target, why = recommend(reason, imp, editions.find(p, idx), author, has_search=has_search)
                 if active:
                     why += " Sitede hâlâ satışta."
                 found[pid] = dict(link=slug[:600], name=rules.text_of(p.get("ProductName"))[:500], reason=reason,

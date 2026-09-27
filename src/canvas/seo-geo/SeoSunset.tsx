@@ -7,7 +7,7 @@ import SeoLayout, { Failed, Loading } from './SeoLayout';
 import { useCan } from '../useAdmin';
 
 const PAGE = 40;
-type Action = 'yeni_baski_301' | 'yazar_301' | 'stokta_yok' | 'gone_410';
+type Action = 'yeni_baski_301' | 'yazar_301' | 'stokta_yok' | 'gone_410' | 'arama_verisi';
 type Status = 'bekliyor' | 'onaylandi' | 'reddedildi';
 type Row = {
   id: string;
@@ -44,8 +44,8 @@ type Resp = {
   lastBuilt: string | null;
   gsc: { start: string; end: string } | null;
 };
-const ORDER: Action[] = ['yeni_baski_301', 'yazar_301', 'stokta_yok', 'gone_410'];
-const TONE: Record<Action, string> = { yeni_baski_301: 'good', yazar_301: 'violet', stokta_yok: 'mid', gone_410: 'bad' };
+const ORDER: Action[] = ['yeni_baski_301', 'yazar_301', 'stokta_yok', 'gone_410', 'arama_verisi'];
+const TONE: Record<Action, string> = { yeni_baski_301: 'good', yazar_301: 'violet', stokta_yok: 'mid', gone_410: 'bad', arama_verisi: '' };
 const STATUS: Record<Status, string> = { bekliyor: 'Bekliyor', onaylandi: 'Onaylandı', reddedildi: 'Reddedildi' };
 const REDIRECTS: Action[] = ['yeni_baski_301', 'yazar_301'];
 
@@ -183,6 +183,7 @@ const NOTE: Record<Action, string> = {
   yazar_301: 'Trafik yazar sayfasına taşınır',
   stokta_yok: 'Sayfa aranıyor ya da hedef yok; kalsın',
   gone_410: 'Hak bizde değil ve aranmıyor',
+  arama_verisi: 'Aranıp aranmadığı bilinmiyor; karar veriye kalır',
 };
 
 function SunsetRow({ r, actions, canApprove, onDone }: { r: Row; actions: Record<Action, string>; canApprove: boolean; onDone: () => void }) {
