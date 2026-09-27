@@ -579,7 +579,9 @@ class Directory:
     def list_groups(self) -> list[dict[str, Any]]:
         """Güvenlik grupları (dağıtım listeleri ve Windows'un yerleşik grupları hariç), doğrudan üye sayısıyla."""
         def read() -> list[dict[str, Any]]:
-            rows = self._search("(&(objectClass=group)(groupType:1.2.840.113556.1.4.803:=2147483648))",
+            # Windows'un kendi grupları (Domain Admins, RODC, DnsAdmins…) isCriticalSystemObject taşır; listeye girmez.
+            rows = self._search("(&(objectClass=group)(groupType:1.2.840.113556.1.4.803:=2147483648)"
+                                "(!(isCriticalSystemObject=TRUE)))",
                                 ["sAMAccountName", "description", "member", "groupType"])
             out = []
             for r in rows:
@@ -589,7 +591,8 @@ class Directory:
                     continue
                 name = _first(r.get("sAMAccountName"))
                 if name:
-                    out.append({"subject": name, "label": name, "hint": _ou_path(dn) or "",
+                    parent = dn.split(",", 1)[1] if "," in dn else ""
+                    out.append({"subject": name, "label": name, "hint": _ou_path(parent),
                                 "detail": _first(r.get("description")), "count": len(r.get("member") or [])})
             return sorted(out, key=lambda x: x["label"].lower())
         return self._cached("groups", 300.0, read)

@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 — Yetki Aşama A: rol modeli, köprüde sayfa kapısı, Yönetim → Yetkiler
+
+- **Model** (`backend/semantic_bridge/access.py`): AD grubu / AD birimi (OU) / CRM güvenlik rolü / kişi → rol → sayfa anahtarları (`sayfa:<menü id>`, katalog `access_catalog.json`). Kişinin yetkisi rollerin birleşimi; yönetici her şeyi görür. «Herkes» sistem rolü kurulumda «bütün sayfalar» açık gelir — kullanıcı kararı: roller prod öncesi atanır, o gün daraltılır; kurulum anında davranış değişmez.
+- **Üyelik**: istek yolunda AD/CRM okunmaz; `semantic_access_members` görüntüsü 15 dk'lık `timas-admin-group` turunda (`/api/v1/admin/group/refresh`) tazelenir, bağ eklenince o bağ hemen okunur; okunamayan kaynağın eski üyeleri silinmez. CRM rolü kök rol kimliğiyle tutulur, üyeler iş birimi kopyalarından `ParentRootRoleId` ile toplanır.
+- **Kapı köprüde**: `page_gate` ara katmanı — portal oturum çerezi taşıyan istek, ucun sayfa kuralındaki sayfalardan birini ister (en uzun önek; kuralı olmayan uç kişiye kapalı, test köprünün bütün yollarını kurala düşürür). Çerezsiz zamanlayıcı/betik geçer; zamanlayıcı uçlarını (run-due) kişi yalnız yöneticiyse tetikler. Giriş servisine sorulan oturum 10 sn bellekte.
+- **Açıklar kapandı**: `/api/v1/generate_summary` kaldırıldı (kontrolsüz SQL çalıştırıyordu, kullanan yoktu); `SEMANTIC_ADMIN_TOKEN` boşken yönetici uçları oturumlu kişiye açık kalmıyor.
+- **Ön yüz**: `/api/v1/access/me` → menü (`visibleNav`), rota kapısı (`PageGate`: adrese elle gidilince «Bu sayfa rolünüzde yok»), Kampüs modül kutuları, «Tüm modüller», ⌘K son açılanlar, uyarı rozeti ve editoryal ön yükleme yalnız yetkili kişide. Köprünün 403 `FORBIDDEN`'ı oturumu düşmüş saymaz (`EngineForbiddenError`).
+- **Yönetim → Yetkiler**: roller (alan → sayfa onay kutuları, «bütün sayfalar»), bağlar (AD grubu / AD birimi / CRM rolü / kişi seç, üye sayısıyla; kaldır), «Kişi gözüyle» (roller ve nereden geldiği, AD grupları, CRM rolleri, gördüğü sayfalar). Her değişiklik değişiklik kaydında «Yetki».
+- **Doğrulama**: köprü testleri `test_access.py` 9/9 (sunucuda); tam paket 984 geçti, kalan 13 + 10 hata `main`de de aynı. Ön yüz `tsc` temiz, vitest 36/36 (menü–katalog eşleşmesi dahil). Gerçek AD/CRM okumaları test sunucusunda salt okuma ile denendi. Tarayıcıda uçtan uca doğrulama `main`e taşındıktan sonra test sunucusunda.
+
 ## 2026-09-27 — Redaksiyon araçları: yazar tikleri, cümle başı, kalıp ifade, yabancı/yaşa ağır sözcük, Word'e aktarım
 
 - **Yeni dört son okuma denetimi** (`apps/editor/src/editor/proofing/`): `word_overuse` (zarf/sıfat/fiil yayınevinin aynı türdeki öbür kitaplarından anlamlı sık, G² ≥ 15,13 + model «yazara azalt der miydin», yayılım bilgisiyle), `sentence_starts` (art arda aynı sözcükle başlayan cümle, p^(k−1) < 0,05 + model), `phrase_repeats` (≥3 sözcük, ≥2 içerik, en az bir fiil, kitapta ≥2 kez, en uzun hâl + model), `word_choice` (Türkçe karşılığı olan yabancı sözcük; çocuk/genç kitabında yaşa ağır sözcük — her sözcük sınıflandırılır, kitabın cümlesiyle doğrulanır).
