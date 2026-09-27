@@ -6,6 +6,7 @@ import { Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime } from '../format';
 import { useShellZoom } from '../stitch/Shell';
 import { markScrollTop } from './proofScroll';
+import { carriedFromOf } from './proofCarry';
 
 /** M5 son okuma — kanıt paneli ve karar denetimleri.
  *
@@ -51,7 +52,15 @@ export const REASONS: Array<[ProofReasonCode, string]> = [
 ];
 export const reasonLabel = (code: ProofReasonCode | null) => REASONS.find(([c]) => c === code)?.[1] ?? code ?? '';
 
-export type Decide = (findingId: string, verdict: ProofVerdict, reasonCode?: ProofReasonCode, note?: string) => Promise<unknown>;
+/** `carriedFrom`: bulgunun gösterilen kararı önceki okumadan taşınmışsa onun kimliği (bkz. carriedFromOf). */
+export type Decide = (findingId: string, verdict: ProofVerdict | 'CLEAR', reasonCode?: ProofReasonCode, note?: string, carriedFrom?: string) => Promise<unknown>;
+
+/** Taşınan kararın kaynağı, tek satır: «önceki okumadan (27.09.2026)» / «bu okumanın önceki koşusundan». */
+export function inheritedLabel(f: ProofingFinding) {
+  const src = f.decision?.source;
+  if (!src) return 'önceki okumadan';
+  return src.sameReading ? 'bu okumanın önceki koşusundan' : `önceki okumadan${src.readAt ? ` (${dateTime(src.readAt)})` : ''}`;
+}
 
 /** Listede ve panelde aynı bulguyu tanıyan anahtar; kimlik yoksa denetim+sayfa+sıra. */
 export const findingKey = (f: ProofingFinding, i: number) => f.id ?? `${f.check}-${f.page ?? 'x'}-${i}`;
@@ -110,9 +119,12 @@ export function RejectForm({ onSave, onCancel, busy, initial }: { onSave: (r: Pr
   );
 }
 
-/** «Doğru» / «Yanlış alarm» + gerekçe. Karar bulguya iliştirilir, kitabı değiştirmez; tekrar basmak yeni karar yazar. */
+/** «Doğru» / «Yanlış alarm» + gerekçe. Karar bulguya iliştirilir, kitabı değiştirmez; tekrar basmak yeni karar yazar.
+ *  Karar önceki okumadan taşındıysa: kaynağı yazılır; «Doğru»/«Yanlış alarm» onu onaylar ya da değiştirir, «Geri al»
+ *  bu bulguyu kararsız bırakır (taşınan karar bu bulguya uygulanmaz). Üçü de kaynağa bağlanarak yazılır. */
 export function DecisionControls({ f, decide, busy }: { f: ProofingFinding; decide: Decide | null; busy: boolean }) {
   const d = f.decision;
+  const carriedFrom = carriedFromOf(f);
   const [rejecting, setRejecting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   // Başka bulguya geçince açık gerekçe formu ve hata o bulguyla gitsin.
@@ -121,9 +133,9 @@ export function DecisionControls({ f, decide, busy }: { f: ProofingFinding; deci
     setErr(null);
   }, [f.id, f.check, f.page, f.message]);
   if (!decide || !f.id) return null;
-  const run = (verdict: ProofVerdict, reasonCode?: ProofReasonCode, note?: string) => {
+  const run = (verdict: ProofVerdict | 'CLEAR', reasonCode?: ProofReasonCode, note?: string) => {
     setErr(null);
-    decide(f.id as string, verdict, reasonCode, note)
+    decide(f.id as string, verdict, reasonCode, note, carriedFrom)
       .then(() => setRejecting(false))
       .catch((e: unknown) => setErr(errText(e, 'Karar kaydedilemedi.')));
   };
@@ -151,8 +163,14 @@ export function DecisionControls({ f, decide, busy }: { f: ProofingFinding; deci
         >
           Yanlış alarm
         </button>
+        {carriedFrom && (
+          <button type="button" disabled={busy} onClick={() => run('CLEAR')} title="Bu bulgu kararsız kalır; önceki okumanın kararı buna uygulanmaz." className={`${btnGhost} px-2.5`}>
+            Geri al
+          </button>
+        )}
         {d && (
           <span className="min-w-0 break-words text-[11px] text-canvas-muted">
+            {d.inherited && <span className="font-bold text-canvas-ink">{inheritedLabel(f)}: </span>}
             {d.decidedBy} · {dateTime(d.at)}
             {rejected && d.reasonCode ? ` · ${reasonLabel(d.reasonCode)}` : ''}
             {d.note ? ` — ${d.note}` : ''}
