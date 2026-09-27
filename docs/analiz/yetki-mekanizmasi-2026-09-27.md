@@ -6,7 +6,8 @@ açılır/kapanır.
 
 Kararlar bölüm 10'da. **Durum (2026-09-27):** Aşama A'nın sayfa/menü kısmı kodlandı (`backend/semantic_bridge/access.py`,
 köprüde `page_gate`, `/api/v1/access/*`, ön yüzde `PageGate` + menü + Yönetim → Yetkiler). Ekran özellikleri (Aşama B) kodlandı
-(20 özellik anahtarı; bölüm 7'deki öneriden farkları günlükte). Zeki AI veri kapsamı (Aşama C) sırada.
+(20 özellik anahtarı; bölüm 7'deki öneriden farkları günlükte). ZEKİ AI veri kapsamı (Aşama C) kodlandı
+(veri alanları `data_domains.json`, SQL geçidinde kişi kapsamı; ayrıntı günlükte 2026-09-28).
 
 ---
 

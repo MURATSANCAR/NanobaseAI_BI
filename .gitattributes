@@ -1,0 +1,3 @@
+# Geliştirme günlüğüne her oturum en üste giriş ekler; aynı anda iki oturum eklediğinde birleştirme her seferinde
+# çakışıyordu. «union» iki tarafın satırlarını da korur (girişler silinmez, yalnız eklenir).
+docs/GELISTIRME-GUNLUGU.md merge=union

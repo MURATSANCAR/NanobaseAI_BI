@@ -24,6 +24,7 @@ import collections
 from .. import book_type, db, schemas
 from ..llm import Llm, PromptRef
 from . import _continuity as C
+from . import _doc_context as D
 from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
@@ -134,9 +135,9 @@ async def run(generation_id: str):
         del by[lem]
     stats["skip_short_lemma"], stats["skip_all_caps_lemma"] = len(short), len(caps)
     unknown = {f: ps for f, ps in rd["unknown"].items() if f.isalpha() and len(f) >= 4}
-    prof = await book_type.profile(generation_id)
+    prof = await D.profile(generation_id)
     what, reader = book_type.describe(prof), reader_of(prof)
-    llm = Llm(generation_id)
+    llm = Llm(D.llm_gid(generation_id))
     words = sorted(by)
     stats["lemmas"], stats["unknown_forms"] = len(words), len(unknown)
 
@@ -184,9 +185,9 @@ async def run(generation_id: str):
     judged = await asyncio.gather(*(judge(*c) for c in cands))
     kept = [j for j in judged if j[-1] >= J.KEEP]
     stats["dropped_by_check"] = len(judged) - len(kept)
-    bv = str(db.one("SELECT book_version_id FROM generation WHERE id=%s", generation_id)["book_version_id"])
+    bv = await asyncio.to_thread(D.book_version, generation_id)
     firsts = [first_ctx[w][2] for _, w, _, _ in kept if first_ctx[w][2] is not None]
-    boxes = await asyncio.to_thread(_boxes, bv, firsts)
+    boxes = await asyncio.to_thread(_boxes, bv, firsts) if bv else {}
     findings = []
     for kind, w, alt, p in kept:
         marked, page, o = first_ctx[w]

@@ -1,0 +1,140 @@
+{
+  "_note": "ZEKİ AI veri alanları (yetki Aşama C). Her katalog varlığı bir alana düşer; rol hangi alanları okuyabileceğini `veri:<id>` anahtarlarıyla taşır. Kural sırası önemlidir: ilk eşleşen kazanır. Ad, önekleri (LG_, LV_, LAV_, VW_, ZEN_VW_, V_, MS_, A_MS_, A_, AA_, NY_, T_, NEW_) atılıp büyük harfle eşlenir. Hiçbir kurala düşmeyen varlık 'atanmamis' alanındadır; yönetici Yetkiler → Veri alanları'ndan tek tek atar (ekrandaki atama kuralın önüne geçer).",
+  "version": 1,
+  "strip_prefixes": [
+    "ZEN_VW_",
+    "A_MS_",
+    "LG_",
+    "LV_",
+    "LAV_",
+    "VW_",
+    "MS_",
+    "AA_",
+    "NY_",
+    "V_",
+    "A_",
+    "T_",
+    "NEW_NEW_",
+    "NEW_"
+  ],
+  "domains": [
+    {
+      "id": "ortak",
+      "label": "Ortak başvuru",
+      "hint": "Döviz kuru, birim, özel kod, il-ilçe: her sorguda birleşen başvuru tabloları; herkese açık, rolle kapatılmaz",
+      "always": true
+    },
+    {
+      "id": "satis",
+      "label": "Satış ve sipariş",
+      "hint": "Fatura, irsaliye, sipariş, sevkiyat, kampanya, fiyat listesi, satış hedefi"
+    },
+    {
+      "id": "stok",
+      "label": "Stok ve üretim",
+      "hint": "Malzeme/kitap kartı, stok hareketi, depo, reçete, üretim"
+    },
+    {
+      "id": "cari",
+      "label": "Cari ve tahsilat",
+      "hint": "Cari kart ve hareketleri, ödeme/tahsilat, vade, risk, müşteri adresi"
+    },
+    {
+      "id": "muhasebe",
+      "label": "Muhasebe",
+      "hint": "Muhasebe fişi, hesap planı, mizan, bilanço, masraf merkezi, e-defter, bütçe"
+    },
+    {
+      "id": "banka-kasa",
+      "label": "Banka, kasa, çek-senet",
+      "hint": "Banka ve kasa hareketleri, çek ve senet"
+    },
+    {
+      "id": "telif-sozlesme",
+      "label": "Telif ve sözleşme",
+      "hint": "CRM sözleşmeleri, sözleşme tarafları, telif ve eser katılımı"
+    },
+    {
+      "id": "yayin-crm",
+      "label": "Yayın (CRM)",
+      "hint": "Kitap, proje, kapak, kişi, etkinlik, haber ve CRM'in öteki kayıtları"
+    },
+    {
+      "id": "sistem",
+      "label": "Sistem ve günlük",
+      "hint": "Logo sistem tabloları, işlem günlükleri, kullanıcı ve yetki tabloları"
+    },
+    {
+      "id": "atanmamis",
+      "label": "Atanmamış",
+      "hint": "Hiçbir kurala düşmeyen varlıklar; yönetici alanını seçene kadar burada"
+    }
+  ],
+  "rules": [
+    {
+      "domain": "ortak",
+      "source": "any",
+      "pattern": "EXCHANGE|CURRENCYLIST|DISTRICT|^SPECODES|^UNITSET|^UNITBARCODE|^TRCODES|^SEMT|^ILCE|^ULKE|^DIL$"
+    },
+    {
+      "domain": "telif-sozlesme",
+      "source": "crm",
+      "pattern": "SOZLESME|TELIF|HAKEDIS|AVANS|ESERKATILIM"
+    },
+    {
+      "domain": "satis",
+      "source": "crm",
+      "pattern": "SIPARIS|SEVKIYAT|KARGO|KUPON|KAMPANYA|SATISHEDEF|ISKONTO|FIYATLISTE|BEKLEYENURUN|B2B|SETISLEMI"
+    },
+    {
+      "domain": "stok",
+      "source": "crm",
+      "pattern": "MALZEME|SERILOT|KUTU|STOK|URETIM|^PRODUCT|URUNKATEGORI|^RAF"
+    },
+    {
+      "domain": "cari",
+      "source": "crm",
+      "pattern": "^ACCOUNT|CUSTOMERADDRESS|TAHSILAT|^ADRES|ZIYARETYER"
+    },
+    {
+      "domain": "muhasebe",
+      "source": "crm",
+      "pattern": "BUTCE"
+    },
+    {
+      "domain": "yayin-crm",
+      "source": "crm",
+      "pattern": "."
+    },
+    {
+      "domain": "sistem",
+      "source": "logo",
+      "pattern": "^L_|SYSLOG|LOGREP|CHANGELOG|HISTORY|DATAEXCH|DOCPRINT|FICHEOBJECT|DEFNFLD|^APPROVE|CAPI|^DLG_|LDOCNUM|FIRMPARAM|DYNREP|RPLAYS|OCCUPATION|PERDOC|^APPROVAL|^APPPARAM|USAGESTAT|^ENV$|^WFTASK|^MMX_"
+    },
+    {
+      "domain": "banka-kasa",
+      "source": "logo",
+      "pattern": "^BN|BANKACC|^KS|CSHTOTS|^CSCARD|^CSROLL|^CSTRANS|^CS[A-Z]*$|^GNTOTBN|^GNTOTCSH|NETEKSTRE|NETAHSILAT|VPOS"
+    },
+    {
+      "domain": "muhasebe",
+      "source": "logo",
+      "pattern": "^EM|ACCDIST|ACCFCASGN|GLASSGN|EBOOK|TAXDECL|^FA[A-Z]|COSTDIST|MIZAN|BILANCO|BLNC|MUHASEBE|KMPG_MLYT|^ACCCODES|^FINT|MALIYET|MLYT"
+    },
+    {
+      "domain": "cari",
+      "source": "logo",
+      "pattern": "^CL|PAYTRANS|PAYPLAN|PAYLINE|PAYICIN|GUARANTOR|CRDACREF|CARI|MUSTERI|BORCKAPAMA|^PY|^GNTOTCL|^HRMS_"
+    },
+    {
+      "domain": "satis",
+      "source": "logo",
+      "pattern": "INVOICE|^STLINE|^STFICHE|ORFICHE|ORFLINE|SHIPINFO|STSHIPPED|DISTORD|CMPGN|PRCLIST|PRCLSTDIV|SLSMAN|SLSCLREL|EINVOICE|EARCHIVE|INVEXIM|DISPLINE|SATIS|IRSALIYE|FATURA|USATIS|HEDEF|STLINEEXCH|POLINE|SATINALMA|ORDLINEEXCH|ORDFEXCH|STFEXCH|RETAMOUNT|CAMPAIGN"
+    },
+    {
+      "domain": "stok",
+      "source": "logo",
+      "pattern": "^ITM|^ITEMS|UNITBARCODE|UNITSET|^INVDEF|STINV|GNTOTST|STCOMPLN|^BOM|BOMASTER|BOMREVSN|PRODORD|QPROD|SRVCARD|STOK|URUN|PRODUCTS|URETIM|DEPO|SUPPASGN|^SRV|ROUTING|RTNGLINE|OPERTION|WORKSTAT|SHFTASGN|OPRTREQ|STLNIOPEGGING|^WHLIST"
+    }
+  ]
+}

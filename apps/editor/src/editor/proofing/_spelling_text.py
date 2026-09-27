@@ -218,8 +218,9 @@ def read_book(generation_id: str, lex: Lexicon | None = None) -> dict:
     a dangling "xxx-" is joined with the nearest following lowercase span start (same page,
     then the next page) that makes a valid word; unmatched pieces are marked `fragment` and
     never reported (they are layout, not spelling)."""
+    from . import _doc_context as D
     lex = lex or lexicon()
-    pages = source.read(generation_id)
+    pages = D.pages(generation_id) or source.read(generation_id)
     spans = spans_of(pages)
     prev_end = ""
     for i, s in enumerate(spans):

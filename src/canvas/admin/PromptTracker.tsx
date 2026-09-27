@@ -11,6 +11,7 @@ const TYPE: Record<string, { label: string; tone: 'ok' | 'warn' | 'err' | 'muted
   INCOMPLETE_ANSWER: { label: 'Eksik', tone: 'warn' },
   NON_SQL_QUERY: { label: 'SQL yok', tone: 'muted' },
   SQL_INVALID: { label: 'SQL geçersiz', tone: 'err' },
+  NOT_PERMITTED: { label: 'Yetki dışı veri', tone: 'warn' },
   DATA_UNAVAILABLE: { label: 'Veri kapsam dışı', tone: 'muted' },
   DATA_SOURCE_UNAVAILABLE: { label: 'Kaynak ulaşılamaz', tone: 'err' },
   MODULE_INTRO: { label: 'Tanıtım', tone: 'muted' },

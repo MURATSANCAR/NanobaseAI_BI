@@ -197,6 +197,16 @@ services:
     depends_on:
       postgres: {condition: service_healthy}
 
+  # Belge incelemesi (editor.document_review): Son Okuma ekranından yüklenen belgelerde metin denetimleri.
+  # Kuyruk veritabanında (document_review.status); kitap okumasından ayrı, model kapısından geçer.
+  document-review:
+    <<: *py
+    profiles: [analysis]
+    container_name: editor-document-review
+    command: ["python", "-m", "editor.document_review", "consume"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
   worker:
     <<: *py
     profiles: [analysis]

@@ -1069,7 +1069,11 @@ def run_due(engine: sa.engine.Engine, tenant: str, ds: str, asker: Asker, fetche
                 REPORTS.c.next_run_at.is_not(None), REPORTS.c.next_run_at <= now)).mappings().all()
         for r in rows:
             summary["due"] += 1
-            out = run_report(engine, r["id"], asker, fetcher, manual=False, now=now, link=link)
+            from semantic_bridge import access as access_mod
+
+            # Raporun sahibinin veri kapsamıyla (yetki Aşama C): kapsam dışına düşen rapor hata verir, eski veriyi göndermez.
+            with access_mod.acting_as(r["username"]):
+                out = run_report(engine, r["id"], asker, fetcher, manual=False, now=now, link=link)
             if out["lastStatus"] == "failed":
                 summary["errors"].append({"id": r["id"], "user": r["username"], "error": out["lastError"]})
             else:

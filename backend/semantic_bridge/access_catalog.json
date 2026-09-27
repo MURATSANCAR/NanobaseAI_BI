@@ -68,6 +68,11 @@
       "label": "Baskı önerisi"
     },
     {
+      "key": "sayfa:butce",
+      "area": "finans",
+      "label": "Bütçe ve hedefler"
+    },
+    {
       "key": "sayfa:editoryal",
       "area": "editoryal",
       "label": "Masam"
@@ -362,6 +367,21 @@
       "page": "sayfa:yonetim-raporlari",
       "label": "Yönetim raporunu yenileme",
       "hint": "Baskı önerisi «Verileri yenile»"
+    },
+    {
+      "key": "ozellik:butce.duzenle",
+      "area": "finans",
+      "page": "sayfa:butce",
+      "label": "Bütçe taslağı hazırlama",
+      "hint": "ZEKİ AI önerisi, kitap hedefi/program/departman düzeltmesi, onaya gönderme, revizyon, gerçekleşmeyi yenileme"
+    },
+    {
+      "key": "ozellik:butce.onay",
+      "area": "finans",
+      "page": "sayfa:butce",
+      "label": "Bütçe onayı",
+      "hint": "Onaya gönderilen planı yürürlüğe alma ya da geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
     },
     {
       "key": "ozellik:masa.herkesinki",

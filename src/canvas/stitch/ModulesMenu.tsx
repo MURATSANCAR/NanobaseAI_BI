@@ -33,6 +33,7 @@ export const LIVE: Record<string, string> = {
   M14: '/kitap-tasarim',
   M25: '/seo-geo',
   M26: '/seo-geo/ai-gorunurluk',
+  M46: '/butce',
 };
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */

@@ -42,6 +42,7 @@ const ContractTemplates = lazy(() => import('@/canvas/editorial/contracts/Templa
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
+const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -108,6 +109,8 @@ export default function App() {
             {/* Yönetim Raporları: diğer modüllerden ayrı, kendi rayı ve uçlarıyla (/api/v1/management). */}
             <Route path="yonetim-raporlari" element={<ManagementHome />} />
             <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
+            {/* M46 Bütçe planlama ve kontrolü (/api/v1/budget). */}
+            <Route path="butce" element={<BudgetScreen />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />

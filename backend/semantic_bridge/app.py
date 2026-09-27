@@ -414,6 +414,21 @@ class Runtime:
         return [r for _, r in scored[: self.settings.recall_limit]]
 
     # ------------------------------------------------------------------ execution
+    def _check_data_scope(self, sql: str) -> None:
+        """Yetki Aşama C: isteği yapan kişinin rolündeki veri alanları dışında bir varlık okuyan SQL çalışmaz.
+        Kişi bağlamı yoksa (yönetici, sistem işi) sınır yoktur; okunamayan SQL kapsam dışı sayılır."""
+        from semantic_bridge import access as access_mod
+        from semantic_layer.runtime.guardrails import entities_read
+
+        allowed = access_mod.DATA_ALLOWED.get()
+        if allowed is None:
+            return
+        ents = entities_read(sql, self.profiles, self.settings.context, self.settings.dialect or None)
+        if ents is None:
+            raise access_mod.DataScopeError(["okunamayan"])
+        emap = access_mod.entity_domains(self.store.engine, self.settings.tenant_id, self.profiles)
+        access_mod.check_entities(ents, emap, allowed)
+
     def _physical(self, sql: str, period: Optional[tuple] = None, *, scope=None) -> str:
         """`period` lets an entity split one-table-per-year resolve to the tables that year needs.
 
@@ -460,6 +475,7 @@ class Runtime:
         ok, why = allowed_tables(sql, self.profiles, self.settings.context, self.settings.dialect or None)
         if not ok:
             raise ValueError(f"SQL rejected: {why}")
+        self._check_data_scope(sql)
         limit = max(1, min(int(limit or self.settings.max_rows), self.settings.max_rows))
         # The period travels with the SQL so the answer is executed against the same tables the
         # response reports. Without it the two disagree the moment a question spans a year boundary,
@@ -525,6 +541,7 @@ class Runtime:
         ok, why = allowed_tables(sql, self.profiles, self.settings.context, self.settings.dialect or None)
         if not ok:
             raise ValueError(why)
+        self._check_data_scope(sql)
         phys = self._physical(sql, period, **({"scope": scope} if scope else {}))
         if not hasattr(self.connector, 'batches'):
             # Non-DB adapters retain their explicit bounded execution contract.
@@ -1111,6 +1128,12 @@ class Runtime:
             report("querying")
             result = self.run_complete(sql, self._asked_period(sq), **scope_args)
         except Exception as e:  # noqa: BLE001
+            from semantic_bridge import access as access_mod
+            if isinstance(e, access_mod.DataScopeError):
+                qid = _log(sql=sql, compiler=compiled.compiler, catalog_version=compiled.catalog_version, resolved=sq.to_dict(),
+                           executed=False, error=str(e), answer_type="NOT_PERMITTED", answer_summary=str(e))
+                return {"id": uuid.uuid4().hex, "type": "NOT_PERMITTED", "explanation": str(e),
+                        "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
             err = str(e)[:800]
             down = is_connection_error(e)
             slow = is_query_timeout(e)
@@ -1222,6 +1245,7 @@ class Runtime:
         connector = self.crm_connector if (part.source and self.crm_connector is not None) else self.connector
         if connector is None:
             raise RuntimeError("no database connector")
+        self._check_data_scope(part.sql)
         phys = self._physical(part.sql, period, **scope_args)
         if self._conn_for(phys) is not connector:
             raise ValueError(f"'{part.name}' parçası bildirdiği kaynağın dışında bir tablo okuyor")
@@ -1263,6 +1287,13 @@ class Runtime:
             columns, rows = federated.execute(plan, lambda part: self._plan_rows(part, period, scope_args, parts_ms))
             out = self.result_files.write(iter([(columns, rows)]), self.settings.max_rows)
         except Exception as e:  # noqa: BLE001
+            from semantic_bridge import access as access_mod
+            if isinstance(e, access_mod.DataScopeError):
+                qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
+                                           compiler=compiled.compiler, catalog_version=compiled.catalog_version,
+                                           resolved=sq.to_dict(), executed=False, error=str(e))
+                return {"id": uuid.uuid4().hex, "type": "NOT_PERMITTED", "explanation": str(e),
+                        "threadId": thread_id, "timings": timings, "semantic": semantic, "queryId": qid}
             err = str(e)[:800]
             down = is_connection_error(e)
             qid = self.store.log_query(self.settings.tenant_id, self.settings.datasource_id, question, sql=text,
@@ -1967,47 +1998,61 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         """Yönetici ya da rolünde bu yetki var (açıkça verilen özellikler için: «Bütün» rolü bunları kapsamaz)."""
         return access_mod.user_can(user, key)
 
-    def _gate_verdict(method: str, path: str, cookie: str) -> Optional[tuple[int, str]]:
+    # ZEKİ AI'ın serbest SQL yolları: bu uçlarda kişinin veri alanları isteğe taşınır (Aşama C). Hazır ekran uçları
+    # (denetim, yönetim raporu, editoryal…) sabit sorgu çalıştırır; onları sayfa ve işlem yetkisi korur.
+    _DATA_PATHS = ("/api/v1/ask", "/api/v1/run_sql", "/api/v1/board", "/api/v1/reports", "/api/v1/alerts")
+    _NO_SCOPE = object()
+
+    def _gate_verdict(method: str, path: str, cookie: str) -> tuple[Optional[tuple[int, str]], Any]:
         """Sayfa kapısı: bu isteği kişi yapıyorsa (portal oturum çerezi) uç, kişinin görebildiği bir sayfaya ait
         olmalı; sayfa içindeki işlemse (sil, onayla, dışa aktar, GPU'lu üretim…) o işlemin yetkisi de gerekir.
         Çerezsiz istek zamanlayıcı/betiktir; onlar uçların kendi jeton kontrolünden geçer.
-        None = geçer; (durum, mesaj) = durdur."""
+        Dönen: (None = geçer | (durum, mesaj), kişinin veri alanları ya da _NO_SCOPE)."""
         rule = access_mod.rule_for(path)
         wanted = access_mod.features_for(method, path)
-        if rule == access_mod.OWN or "timas_session" not in cookie or (rule == access_mod.OPEN and not wanted):
-            return None
+        data = path.startswith(_DATA_PATHS) and not path.endswith("/run-due")
+        if rule == access_mod.OWN or "timas_session" not in cookie or (rule == access_mod.OPEN and not wanted and not data):
+            return None, _NO_SCOPE
         from semantic_bridge import board as board_mod
 
         try:
             user = board_mod.user_of(cookie)
         except board_mod.NoUser:
-            return 401, "Oturum gerekli."
+            return (401, "Oturum gerekli."), _NO_SCOPE
         r = rt()
         admin_mod.ensure(r.store.engine)
         if rule is None:
             log.warning("access: kuralı olmayan uç kişiye kapalı: %s", path)
-            return (None if admin_mod.is_admin(user) else (403, "Bu işleme yetkiniz yok."))
+            return (None if admin_mod.is_admin(user) else (403, "Bu işleme yetkiniz yok.")), _NO_SCOPE
         if rule == access_mod.SYSTEM:
-            return None if admin_mod.is_admin(user) else (403, "Bu işlem zamanlayıcıya aittir.")
+            return (None if admin_mod.is_admin(user) else (403, "Bu işlem zamanlayıcıya aittir.")), _NO_SCOPE
         acc = access_mod.effective(r.store.engine, r.settings.tenant_id, user, admin_mod.is_admin)
         if rule != access_mod.OPEN and not acc.can(*rule):
-            return 403, "Bu sayfaya yetkiniz yok."
+            return (403, "Bu sayfaya yetkiniz yok."), _NO_SCOPE
         if any(not acc.can(k) for k in wanted):
-            return 403, "Bu işlem rolünüzde yok."
-        return None
+            return (403, "Bu işlem rolünüzde yok."), _NO_SCOPE
+        return None, (access_mod.allowed_domains(acc) if data else _NO_SCOPE)
 
     @app.middleware("http")
     async def page_gate(request: Request, call_next):
         try:
-            verdict = await run_in_threadpool(_gate_verdict, request.method, request.url.path, request.headers.get("cookie", ""))
+            verdict, scope = await run_in_threadpool(_gate_verdict, request.method, request.url.path,
+                                                     request.headers.get("cookie", ""))
         except Exception as e:  # noqa: BLE001
             # Yetki okunamadıysa kişiye kapalı; kapı açık kalmaz.
             log.warning("access: sayfa kapısı karar veremedi (%s): %s", request.url.path, e)
-            verdict = (503, "Yetki bilgisi şu an okunamıyor.")
+            verdict, scope = (503, "Yetki bilgisi şu an okunamıyor."), _NO_SCOPE
         if verdict is not None:
             code = {401: "UNAUTHORIZED", 403: "FORBIDDEN"}.get(verdict[0], "UNAVAILABLE")
             return JSONResponse(status_code=verdict[0], content={"detail": {"code": code, "message": verdict[1]}})
-        return await call_next(request)
+        if scope is _NO_SCOPE:
+            return await call_next(request)
+        # Kişinin veri alanları bu isteğin bağlamında: SQL geçidi (Runtime._check_data_scope) buradan okur.
+        token = access_mod.DATA_ALLOWED.set(scope)
+        try:
+            return await call_next(request)
+        finally:
+            access_mod.DATA_ALLOWED.reset(token)
 
     @app.get("/health")
     def health() -> JSONResponse:
@@ -2036,6 +2081,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         Unreachable or overloaded source → 503 and a sentence the reader can act on: wait and retry.
         Anything else is a statement the source rejected, which is a 400 and worth showing verbatim.
         """
+        from semantic_bridge import access as access_mod
+        if isinstance(e, access_mod.DataScopeError):
+            return HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": str(e)})
         if is_connection_error(e):
             return HTTPException(status_code=503, detail={
                 "code": "DATA_SOURCE_UNAVAILABLE",
@@ -6111,7 +6159,31 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/access/catalog")
     def access_catalog(request: Request) -> dict[str, Any]:
         _access_admin(request)
-        return {**access_mod.catalog(), "subjectTypes": access_mod.SUBJECT_TYPES}
+        return {**access_mod.catalog(), "subjectTypes": access_mod.SUBJECT_TYPES,
+                "data": [{**d, "key": access_mod.data_key(d["id"])} for d in access_mod.data_domains()]}
+
+    @app.get("/api/v1/access/data-entities")
+    def access_data_entities(request: Request) -> dict[str, Any]:
+        """Veri alanları: kataloğun her varlığı, alanı ve alanın nereden geldiği (kural / yönetici)."""
+        engine, tenant, _ = _access_admin(request)
+        items = access_mod.domain_listing(engine, tenant, rt().profiles)
+        counts: dict[str, int] = {}
+        for it in items:
+            counts[it["domain"]] = counts.get(it["domain"], 0) + 1
+        return {"items": items, "counts": counts, "domains": access_mod.data_domains()}
+
+    @app.put("/api/v1/access/data-entities/{entity}")
+    def access_data_entity_set(entity: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """Varlığın alanını yönetici belirler; `domain: null` atamayı kaldırır (kural geçerli olur)."""
+        engine, tenant, user = _access_admin(request)
+        domain = body.get("domain")
+        try:
+            access_mod.set_entity_domain(engine, tenant, user, entity, str(domain) if domain else None)
+        except access_mod.AccessError as e:
+            raise _access_fail(e) from e
+        admin_mod.audit(engine, user, "update", "access", entity.upper(), f"{entity} → {domain or 'kurala göre'}",
+                        {"entity": entity.upper(), "domain": domain})
+        return {"ok": True}
 
     @app.get("/api/v1/access/roles")
     def access_roles(request: Request) -> dict[str, Any]:
@@ -6439,6 +6511,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.financial_audit = financial_audit.register(app, rt, _require_caller)
     from semantic_bridge import management
     app.state.management_reports = management.register(app, rt, _require_caller, _board_user)
+    from semantic_bridge import budget_api
+    app.state.budget = budget_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing

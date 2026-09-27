@@ -833,11 +833,14 @@ export type AccessMe = {
 export type AccessPage = { key: string; area: string; label: string };
 /** Sayfa içindeki işlem. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
 export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean };
+/** ZEKİ AI veri alanı (yetki Aşama C). `always`: herkese açık ortak başvuru, rolle kapatılmaz. */
+export type AccessDataDomain = { id: string; key: string; label: string; hint: string; always?: boolean };
 export type AccessCatalog = {
   version: number;
   areas: Array<{ id: string; label: string }>;
   pages: AccessPage[];
   features: AccessFeature[];
+  data: AccessDataDomain[];
   subjectTypes: Record<AccessSubjectType, string>;
 };
 
@@ -877,7 +880,18 @@ export type AccessExplain = AccessMe & {
   crmRoles: string[];
   pages: Array<AccessPage & { allowed: boolean }>;
   features: Array<AccessFeature & { allowed: boolean }>;
+  data: Array<AccessDataDomain & { allowed: boolean }>;
   notes: string[];
+};
+
+export type AccessDataEntity = {
+  entity: string;
+  source: 'logo' | 'crm';
+  description: string;
+  rows: number;
+  tables: number;
+  domain: string;
+  manual: boolean;
 };
 
 export const accessApi = {
@@ -900,6 +914,11 @@ export const accessApi = {
   subjects: (type: AccessSubjectType) =>
     send<{ type: AccessSubjectType; items: AccessCandidate[] }>('GET', `/api/v1/access/subjects${qs({ type })}`, undefined, 120_000),
   explain: (user: string) => send<AccessExplain>('GET', `/api/v1/access/explain${qs({ user })}`, undefined, 120_000),
+  /** Kataloğun her varlığı ve veri alanı; `manual`: alanı yönetici atadı (kural değil). */
+  dataEntities: () =>
+    send<{ items: AccessDataEntity[]; counts: Record<string, number> }>('GET', '/api/v1/access/data-entities', undefined, 60_000),
+  setEntityDomain: (entity: string, domain: string | null) =>
+    send<{ ok: boolean }>('PUT', `/api/v1/access/data-entities/${encodeURIComponent(entity)}`, { domain }, 30_000),
   refresh: () =>
     send<{ ok: boolean; refreshed: number; failed: Array<{ type: string; subject: string; error: string }> }>(
       'POST',
