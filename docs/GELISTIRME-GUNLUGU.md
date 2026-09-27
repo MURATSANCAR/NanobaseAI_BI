@@ -1,5 +1,54 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M32 B2B web sitesi ve kurumsal satış yönetimi (dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Neden:** kurumsal teklifler bugün sistem dışında (CRM `OpportunityBase` 12, `QuoteBase` 1 kayıt), paket her seferinde
+  sıfırdan, geçen yıl alan kurum hatırlanmıyor, sipariş vermeyen bayi listesi yok. Analiz:
+  `docs/analiz/kullanici-ihtiyaclari/M32-b2b-kurumsal-satis.md` (14. bölüm planı uygulandı).
+- **Ne yapıldı:** köprü `corporate_sales*.py` (4 dosya, `/api/v1/corporate/*`), ekran `src/canvas/corporate/`, menüde yeni
+  **Satış ve saha** alanı (M29–M33 ortak; bu dal açtı, `NavGroupId` + katalog `areas`), Kampüs M32, yönetim ekranında
+  «Kurumsal satış ve B2B» ayar grubu, iki zamanlayıcı birimi, pytest `test_corporate_sales.py`, vitest `corporate/api.test.ts`,
+  kabul betikleri `scripts/acceptance/M32/`.
+  - Kurumlar: Logo `SPECODE2 = KURUM` carileri + CRM kurum kartları (`new_cariozelKod2` KURUM ya da `new_KurumRolu` 2/3/4);
+    cari kodu (yoksa `new_logicalref`) ile eşlenir. Alım geçmişi yıl kopyalarından **kodla** birleşir (LOGICALREF firmadan
+    firmaya aynı olmayabilir); `CORP_HISTORY_YEARS` (3) yıl.
+  - Paket oluşturucu: tema (onaylı) + stok ≥ paket sayısı + bugün geçerli Logo fiyatı; sıra bu yılın net satış adedi; paket
+    başı bütçeye açgözlü doldurma, alternatifler birbirinden farklı kitaplarla. Teklif: kalem, satır indirimi, marj, onay,
+    sürüm, PDF/Excel, gönderildi/kabul/ret; kabul fırsatı «kazanıldı» yapar, değeri teklif tutarı.
+  - Hatırlatma: bu ay ve başlangıcı 45 gün içindeki aylar için geçen yıl aynı ayda net alımı olan kurum; fırsata tek tıkla döner.
+  - Bayi paneli: bayi kanalında son satış faturası 60 günden eski ve önceki 12 ayda faturası olan cariler (gün **Logo verisinin
+    bittiği güne** göre — .155 kopyası 17.08.2026'da donmuş; takvim günüyle herkes «sessiz» çıkardı), ABC sınıfı, CRM B2B
+    sipariş sayısı; bayi ayrıntısında kitaplık karması ve «eksik tamamla»; öne çıkarılacak kitaplar CSV.
+- **Kararlar (sormadan, gerekçeli — analiz §10):**
+  1. *Site:* işletmeci ve yetki bilinmiyor; kullanıcı kararıyla (2026-09-28) otomatik dış gönderim yok. Öne çıkarma ve sessiz
+     bayi listesi CSV; siteye insan girer.
+  2. *Onay basamağı:* tek basamak — satırda indirim > %30 (analizin iş günü örneği) ya da marj biliniyor ve < %0 (maliyetin
+     altı). İkisi de yönetim ekranında; boş bırakılan kural onay istemez.
+  3. *Kurum segmenti:* CRM kurum rolü (Devlet/Resmi → kamu, Özel STK → vakıf) önce; yoksa ZEKİ AI `choose` önerisi eşik
+     (p ≥ 0,70, marj ≥ 0,30) geçerse «öneri»; elle seçim her şeyi ezer ve gece okuması korur.
+  4. *Fiyat:* Logo `PRCLIST` esas (kayıt sistemi Logo). Birden çok geçerli liste: cariye bağlı olmayan → küçük öncelik → en yeni
+     başlangıç; liste kodu ve sayısı ekranda. CRM fiyatı yalnız Logo listesi yoksa teklife elle eklenen kitapta, etiketli;
+     otomatik pakete girmez (analiz: «fiyatı eski kitap önerilirse kullanmam»).
+  5. *Maliyet:* görev metni gereği M9'un arkasında; M9 bağlanana kadar «maliyet bilinmiyor», marj kuralı devre dışı, onay yalnız
+     indirimle. Logo son maliyetli satır seçeneği (`CORP_COST_SOURCE=logo`, «tahmini») hazır ama kapalı.
+  6. *Hacim indirimi:* sabit oran yazılmadı; ayar boşsa son 12 ay kurum faturalarında aynı adet aralığında gerçekleşen
+     iskontonun medyanı (aralıkta 5 faturadan az ise öneri yok, ekranda yazılır).
+  7. *Tema:* kapalı küme = CRM `new_temaBase` (115 tema) + `CORP_THEMES`; model kitaba **tek** tema önerir («Hiçbiri» seçeneğiyle;
+     `choose` çok etiketli değil), fazlası elle eklenir. CRM tema bağı portalda değiştirilmez.
+  8. *Belge:* görev metni PDF/Excel dedi (analizdeki Word yerine). Maliyet ve marj belgeye yazılmaz; onaysız teklif «TASLAK».
+  9. *E-posta:* yalnız iç bildirim (onay bekleyen teklif, haftalık sessiz bayi özeti), alıcılar yönetim ekranında, boşsa gitmez.
+     Temsilciye günlük özet e-postası yazılmadı (toplu e-posta kararı); yaklaşan kararlar ekranda.
+  10. *Güvenlik:* bayi web kullanıcı tablosundan yalnız sayı okunur; kullanıcı adı/şifre kolonları hiçbir sorguda yok.
+- **Ölçülecek (kabul listesinde):** CRM kolonları (`AccountBase.DoNotEMail`, `obs_sendtoemailiys`, `new_KurumunTemsilcisi`'nin
+  hedefi SystemUser mı; `new_kitap` görünümünde `new_kitaplikidName`, `new_turlertext`, `new_yaslartext`,
+  `new_hedefkitleyasbaslangic`), KURUM carisi sayısı, bayi kanal kodları (DAGITICI dahil mi), `PRCLIST` TL listesi kapsamı,
+  hacim geçmişi fatura sayıları, gece okumasının süresi (stok sorgusu bütün güncel kopyayı tarar), `choose` eşiklerinin
+  kabul oranı.
+- **Doğrulama:** yalnız `py_compile` ve JSON denetimi (kural: Mac'te koşu yok). Test sunucusunda kalan adımlar: main'e taşıma →
+  kurulum (köprü + arayüz `VITE_BASE=/timas/`) → `run-due` elle bir kez (bellek: zamanlı işi önce elle koştur) → pytest
+  `test_corporate_sales.py` + `test_access.py` + vitest → `scripts/acceptance/M32/kabul.py` (K1–K8 gerçek Logo/CRM, `--api
+  --yazma` timasai kısa oturumu) → `temizlik.py` → zamanlayıcıları etkinleştir → 320/390/768 px ve masaüstü tarayıcı kontrolü.
+
 ## 2026-09-28 — M31 Okul tanıtım ve ziyaret yönetimi (bayi eşleştirme dahil) — DOĞRULANAMADI, sunucu kapalı
 
 - **Neden:** yol haritası «Satış ve saha» bloğu. Okul tanıtım ekibinin hangi okula, ne zaman, hangi kitaplarla gideceği;

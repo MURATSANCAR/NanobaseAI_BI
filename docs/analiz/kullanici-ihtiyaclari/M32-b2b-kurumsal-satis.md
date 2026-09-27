@@ -1,6 +1,6 @@
 # M32 — B2B Web Sitesi ve Kurumsal Satış Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: `specs/M32.txt`, `specs/M18.txt`, `specs/M28.txt` (başlık), `specs/M53.txt` (başlık),
+Durum: kodlandı (dal `worktree-agent-a8cc0b291fb46413f`, sunucuda doğrulanmadı; günlük 2026-09-28 M32) · Tarih: 2026-09-28 · Kaynaklar: `specs/M32.txt`, `specs/M18.txt`, `specs/M28.txt` (başlık), `specs/M53.txt` (başlık),
 `veri_haritasi2.txt`, `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md` (§2 B2B ürün servisi, §4 B2B portal), `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`,
 `configs/semantic/knowledge/crm/OKUNUR-TABLOLAR.md` + `table_descriptions.json`, `configs/semantic/knowledge/logo/knowledge/{rules/logo-erp.md (Kural 3, 8, 11), glossary, sql/kanal-bazinda-net-ciro-nedir.md}`,
 `docs/analiz/yetki-mekanizmasi-2026-09-27.md`, `backend/semantic_bridge/{access.py, budget*.py, contracts*.py, board_excel.py}`,
