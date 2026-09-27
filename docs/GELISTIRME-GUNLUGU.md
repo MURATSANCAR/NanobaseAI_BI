@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M7: ısıya CRM izi, «ilgi bekleyen» nedenleri (dalda, kurulmadı)
+
+- **Neden:** portala henüz görüşme yazılmadığı için ısı haritasındaki 549 yazarın hepsi «temas yok»tu; sözleşmesi bitmek üzere olup kimsenin aramadığı yazar ayrıca görünmüyordu.
+- **Isı:** yakınlık payı (en çok 50, 180 günde sıfır) son görüşme ya da CRM'deki son iz — yazar adına yeni eser kaydı, başlamış sözleşme — hangisi yeniyse ondan (`with_trace`, `latest_trace`); sıklık ve ton yalnız görüşmeden, bu yüzden iz tek başına «sıcak» yapmaz. Kart panelinde de aynı iz (`crm_trace_sql`; CRM okunamazsa panel yalnız görüşmeyle açılır). CRM olay ayı İstanbul saatiyle (UTC +3), ay sonundaki kayıtlar önceki aya düşmüyor.
+- **İlgi bekleyen** (`attention`): sözleşmesi `EDITORIAL_CONTRACT_WARN_DAYS` (60) içinde biten ve 60 gündür görüşülmeyen yazar, notu girilmemiş geçmiş randevu, tarihi geçmiş sıradaki adım. Isı haritasında sayaç düğmesi, «İlgi bekleyen» kapsamı ve satırda neden; «Isı nasıl hesaplanır» metni güncellendi.
+- **Doğrulama (test sunucusu, gerçek CRM .28, dalın kopyası):** son 12 ayda izi olan sözleşmeli yazar 224 = SQL referansı 224; ilgi bekleyen 13 = referans 13 (portal görüşmesi yokken sözleşmesi 60 gün içinde biten). Dağılım 549 yazarda: ılık 36, soğuk 188, temas yok 325, sıcak 0 (görüşme yok). Testler `test_author_relations` + `test_access` 24/24, `tsc -b` temiz.
+- **Çapraz yazar önerisi yapılmadı:** kitaplık (%96 dolu) çok geniş — «Çocuk Kitaplığı» 3.084 kitap, en çok kitabı olan yazarlar ve «Komisyon», «Anonim» öne çıkıyor; dizi (%93) çoğunlukla tek yazarın serisi; tür metni %44 dolu. Anlamlı öneri için ortak alım verisi (e-ticaret siparişleri) gerekir; karar kullanıcıda.
+
 ## 2026-09-28 — M6 Sözleşmeler test sunucusuna kuruldu; gerçek oturumla uçtan uca 29/29; kural: CRM'e yazma yok
 
 - **Kurulum (main `a65d9a9d`):** sunucudaki ortak dosyalar (`app.py`, `access.py`, `access_catalog.json`, `App.tsx`, `engine.ts`) hiçbir commit'le birebir eşleşmedi; sunucu `main`in gerisinde (ör. M2 editör atama kurulmamış), fazlası yok. Tam dosya kopyası o işleri habersizce kurardı → yalnız M6 farkı (`f605e7be..a65d9a9d`) yama olarak uygulandı (kuru deneme temiz), 19 yeni dosya eklendi. Önce sunucu ağacının kopyasında test 38/38 ve `tsc` temiz; kopyalanan dosyalar md5 ile eş, `._*` 0. Köprü yeniden başladı (sağlıklı), arayüz `/timas/` ayarlarıyla ayrı klasöre derlenip `cockpit/dist`e kondu: `index-Bn-oS5mh.js`.
