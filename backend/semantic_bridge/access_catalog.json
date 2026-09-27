@@ -27,6 +27,10 @@
       "label": "Kayıtlar"
     },
     {
+      "id": "satis",
+      "label": "Satış ve saha"
+    },
+    {
       "id": "pazarlama",
       "label": "Pazarlama"
     }
@@ -66,6 +70,11 @@
       "key": "sayfa:baski-oneri",
       "area": "finans",
       "label": "Baskı önerisi"
+    },
+    {
+      "key": "sayfa:ilk-baski",
+      "area": "finans",
+      "label": "İlk baskı tahmini"
     },
     {
       "key": "sayfa:butce",
@@ -128,6 +137,11 @@
       "label": "Serbest çalışanlar"
     },
     {
+      "key": "sayfa:uretim",
+      "area": "editoryal",
+      "label": "Üretim yönetimi"
+    },
+    {
       "key": "sayfa:kisiler",
       "area": "kayitlar",
       "label": "Kişiler"
@@ -151,6 +165,16 @@
       "key": "sayfa:editor-atama",
       "area": "kayitlar",
       "label": "Editör atama"
+    },
+    {
+      "key": "sayfa:ilk-dagilim",
+      "area": "satis",
+      "label": "İlk dağılım"
+    },
+    {
+      "key": "sayfa:saha",
+      "area": "satis",
+      "label": "Saha ve tahsilat"
     },
     {
       "key": "sayfa:seo-geo",
@@ -291,6 +315,16 @@
       "key": "sayfa:seo-baglanti",
       "area": "pazarlama",
       "label": "Bağlantılar"
+    },
+    {
+      "key": "sayfa:okul-tanitim",
+      "area": "satis",
+      "label": "Okul tanıtım"
+    },
+    {
+      "key": "sayfa:kurumsal-satis",
+      "area": "satis",
+      "label": "Kurumsal ve B2B"
     }
   ],
   "features": [
@@ -369,6 +403,21 @@
       "hint": "Baskı önerisi «Verileri yenile»"
     },
     {
+      "key": "ozellik:ilk-baski.karar",
+      "area": "finans",
+      "page": "sayfa:ilk-baski",
+      "label": "İlk baskı kararı",
+      "hint": "Yeni kitap için ilk baskı adedini karar olarak kaydetme ve onaya gönderme"
+    },
+    {
+      "key": "ozellik:ilk-baski.onay",
+      "area": "finans",
+      "page": "sayfa:ilk-baski",
+      "label": "İlk baskı onayı (satış / üretim)",
+      "hint": "İlk baskı kararına satış ya da üretim onayı verme; iki onay iki ayrı kişiden gelir",
+      "explicit": true
+    },
+    {
       "key": "ozellik:butce.duzenle",
       "area": "finans",
       "page": "sayfa:butce",
@@ -381,6 +430,29 @@
       "page": "sayfa:butce",
       "label": "Bütçe onayı",
       "hint": "Onaya gönderilen planı yürürlüğe alma ya da geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:dagilim.plan",
+      "area": "satis",
+      "page": "sayfa:ilk-dagilim",
+      "label": "Dağılım planı hazırlama",
+      "hint": "ZEKİ AI önerisi, bölge/kanal/müşteri adedini ve rezervi düzeltme, onaya gönderme, revizyon, listeyi ve takibi yenileme"
+    },
+    {
+      "key": "ozellik:dagilim.onay",
+      "area": "satis",
+      "page": "sayfa:ilk-dagilim",
+      "label": "Dağılım onayı (lojistik)",
+      "hint": "Onaya gönderilen planı onaylama ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:dagilim.herkesinki",
+      "area": "satis",
+      "page": "sayfa:ilk-dagilim",
+      "label": "İlk dağılım: bütün bölgeler",
+      "hint": "Bütün carilerin dağılım satırlarını görme; yoksa BMT yalnız CRM'de sahibi olduğu carileri görür",
       "explicit": true
     },
     {
@@ -489,6 +561,59 @@
       "explicit": true
     },
     {
+      "key": "ozellik:uretim.yaz",
+      "area": "editoryal",
+      "page": "sayfa:uretim",
+      "label": "Üretim kartına kayıt",
+      "hint": "Gerçekleşen tarih, hedef yayın tarihi, kalite sonucu, not ve matbaa teklifi girme"
+    },
+    {
+      "key": "ozellik:uretim.matbaa-onay",
+      "area": "editoryal",
+      "page": "sayfa:uretim",
+      "label": "Matbaa seçimini onaylama",
+      "hint": "Prodüksiyon müdürünün matbaa onayı; onay kaydı sipariş talebine esas olur",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:saha.not",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Ziyaret notu ve ödeme planı taslağı",
+      "hint": "Ziyaret planlama, görüşme notu, ödeme sözü, takip e-postası taslağı, ödeme planı önerisi ve onaya gönderme"
+    },
+    {
+      "key": "ozellik:saha.oncelik-duzenle",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Ziyaret önceliğini değiştirme",
+      "hint": "Bir müşteriyi gerekçeyle öne alma (müdür önceliği); listede gerekçe çipi olarak görünür"
+    },
+    {
+      "key": "ozellik:saha.herkesinki",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Bütün temsilcilerin carileri",
+      "hint": "Saha ekranında yalnız kendi carileri yerine bütün temsilcilerin portföyü, tahsilatı ve ziyaretleri (müdür, finans, yönetim)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:saha.odeme-plani-onay",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Ödeme planı onayı",
+      "hint": "Onaya gönderilen ödeme planını onaylama ya da gerekçeyle geri çevirme (öneren/gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:saha.performans",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Temsilci karşılaştırması",
+      "hint": "Haftalık saha raporunda bütün temsilcilerin satırları (kişisel performans verisi)",
+      "explicit": true
+    },
+    {
       "key": "ozellik:seo.oneri-uret",
       "area": "pazarlama",
       "page": "sayfa:seo-urun",
@@ -533,6 +658,79 @@
       "label": "Sözleşme şablonları",
       "hint": "Şablon kütüphanesine ekleme, düzenleme, Word şablonu yükleme, arşivleme",
       "explicit": true
+    },
+    {
+      "key": "ozellik:okul.ziyaret",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Okul ziyareti ve plan yazma",
+      "hint": "Ziyaret raporu, haftalık plan önerisi ve düzeltmesi, katalog hazırlama, bayi önerme"
+    },
+    {
+      "key": "ozellik:okul.plan",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Ziyaret planı onayı",
+      "hint": "Haftalık ziyaret planındaki okulları onaylama"
+    },
+    {
+      "key": "ozellik:okul.herkesinki",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Okul tanıtım: bütün ekip",
+      "hint": "Bütün okulları, bütün temsilcilerin planını ve ziyaret raporlarını görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okul.bayi-onay",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Okul–bayi eşleştirme onayı",
+      "hint": "Zeki AI'ın ya da temsilcinin önerdiği okul–bayi eşleşmesini onaylama ya da reddetme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okul.baglam-yukle",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "İlçe endeksi ve akademik takvim yükleme",
+      "hint": "Dış veriyi (ilçe gelişmişlik endeksi, tatil ve sınav haftaları) CSV/Excel ile yükleme"
+    },
+    {
+      "key": "ozellik:kurumsal.teklif",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Fırsat, paket ve teklif hazırlama",
+      "hint": "Fırsat açma ve aşama güncelleme, paket önerisi, teklif taslağı, onaya gönderme, gönderildi/sonuç kaydı, kurum segmenti, veri yenileme"
+    },
+    {
+      "key": "ozellik:kurumsal.herkesinki",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Bütün ekibin fırsatları",
+      "hint": "Başka temsilcilerin fırsat ve tekliflerini görme, fırsatı başka temsilciye devretme"
+    },
+    {
+      "key": "ozellik:kurumsal.teklif-onay",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Kurumsal teklif onayı",
+      "hint": "İndirim ya da marj eşiğini aşan teklifi onaylama veya geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kurumsal.b2b",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Bayi paneli",
+      "hint": "Sipariş vermeyen bayiler, bayi kitap karması, öne çıkarılacak kitap listesi"
+    },
+    {
+      "key": "ozellik:kurumsal.tema-onay",
+      "area": "satis",
+      "page": "sayfa:kurumsal-satis",
+      "label": "Kitap teması onayı",
+      "hint": "ZEKİ AI'ın kitaba önerdiği temayı onaylama, reddetme; elle tema ekleme"
     }
   ]
 }

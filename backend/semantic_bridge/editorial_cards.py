@@ -10,6 +10,7 @@ import os
 import re
 import threading
 import time
+import urllib.parse
 import uuid
 import httpx
 
@@ -366,6 +367,11 @@ def word_map(book_id):
     """Kelime haritası (son okuma `word_variety`): kart servisinin `stats`'ı ekranın diline çevrilir.
     Denetim bu kitapta henüz koşmadıysa `ready=False` ve boş liste. Köprü hesap yapmaz, yalnız biçimler."""
     r=request('/v1/books/'+str(uuid.UUID(book_id))+'/proofing/word-map').json()
+    return _word_map_shape(book_id, r)
+
+
+def _word_map_shape(book_id, r):
+    """Kart servisinin kelime haritası cevabı → ekranın biçimi (kitap ve belge için aynı)."""
     st=r.get('stats') or None
     out={'bookId':book_id,'generationId':r.get('generation_id'),'ready':st is not None,
          'version':r.get('version'),'finishedAt':r.get('finished_at'),'summary':None,'words':[],
@@ -393,6 +399,41 @@ def proofing_docx(book_id):
     """Son okuma bulguları Word yorumu olarak işlenmiş .docx: (baytlar, Content-Disposition). Köprü üretmez, iletir."""
     r=request('/v1/books/'+str(uuid.UUID(book_id))+'/proofing/export.docx')
     return r.content, r.headers.get('content-disposition') or 'attachment; filename="son-okuma.docx"'
+
+
+# ------------------------------------------------------------------ belge incelemesi (kart servisi /v1/documents)
+def document_upload(data: bytes, filename: str, title: str, audience: str, age_from, age_to, user: str) -> dict:
+    """Yüklenen belge kart servisine çok parçalı gider; metin çıkarma ve kuyruk editörde. Yükleyen = oturum."""
+    base,headers,ca=_headers()
+    headers['X-Editor']=user[:200]
+    form={'title':title or '','audience':audience or ''}
+    if age_from not in (None,''): form['age_from']=str(int(age_from))
+    if age_to not in (None,''): form['age_to']=str(int(age_to))
+    with httpx.Client(timeout=300,verify=ca or True,follow_redirects=False) as client:
+        r=client.post(base+'/v1/documents',headers=headers,data=form,files={'file':(filename or 'belge',data)})
+        r.raise_for_status()
+        return r.json()
+
+
+def documents(user: str, see_all: bool) -> dict:
+    """Belgeler: kişi kendi yüklediklerini, yönetici hepsini görür."""
+    path='/v1/documents'+('' if see_all else '?uploaded_by='+urllib.parse.quote(user))
+    return request(path).json()
+
+
+def document(doc_id: str) -> dict:
+    return request('/v1/documents/'+str(uuid.UUID(doc_id))).json()
+
+
+def document_word_map(doc_id: str) -> dict:
+    """Belgenin kelime haritası, kitaptakiyle aynı biçimde."""
+    r=request('/v1/documents/'+str(uuid.UUID(doc_id))+'/word-map').json()
+    return _word_map_shape(doc_id, r)
+
+
+def document_docx(doc_id: str):
+    r=request('/v1/documents/'+str(uuid.UUID(doc_id))+'/export.docx')
+    return r.content, r.headers.get('content-disposition') or 'attachment; filename="inceleme.docx"'
 
 
 def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by, carried_from=None):

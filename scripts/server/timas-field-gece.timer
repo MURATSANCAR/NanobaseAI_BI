@@ -1,0 +1,10 @@
+[Unit]
+Description=Saha (M30) gece turu: her gün 06:30 (ilk kez elle koşturulur: systemctl start timas-field@gece)
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+Unit=timas-field@gece.service
+
+[Install]
+WantedBy=timers.target

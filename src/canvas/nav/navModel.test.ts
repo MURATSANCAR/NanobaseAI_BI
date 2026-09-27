@@ -32,7 +32,7 @@ describe('sayfa yetkisi', () => {
 describe('rol görünürlüğü', () => {
   it('yönetici bütün grupları ve Yönetim grubunu görür', () => {
     const g = visibleNav(admin, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'pazarlama', 'yonetim']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'yonetim']);
     expect(itemIds(g)).toEqual(expect.arrayContaining(['veri-sozlugu', 'onaylar', 'es-anlamlilar', 'portal-ayarlari']));
   });
 
@@ -45,7 +45,7 @@ describe('rol görünürlüğü', () => {
 
   it('ayar boşsa (editör değil) gruplar normal sırada ve hepsi açık gelir', () => {
     const g = visibleNav(user, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'pazarlama']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama']);
     expect(g.every((x) => x.defaultOpen)).toBe(true);
     expect(g.some((x) => x.tag)).toBe(false);
     expect(homeGroup(user)).toBe('analiz');
@@ -53,7 +53,7 @@ describe('rol görünürlüğü', () => {
 
   it('editör: Editoryal en üstte «Çalışma alanım», Analiz ve Finans kapalı ama görünür, Yönetim yok', () => {
     const g = visibleNav(editor, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'pazarlama']);
+    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama']);
     const by = Object.fromEntries(g.map((x) => [x.id, x]));
     expect(by.editoryal.tag).toBe('Çalışma alanım');
     expect(by.editoryal.defaultOpen).toBe(true);
@@ -107,6 +107,7 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/ceviri/abc/kalite')).toBe('ceviri');
     expect(at('/ceviri/masam')).toBe('ceviri-masam');
     expect(at('/ceviri/masam/abc')).toBe('ceviri-masam');
+    expect(at('/kurumsal-satis/firsat/abc')).toBe('kurumsal-satis'); // M32 fırsat sayfası → Kurumsal ve B2B
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

@@ -25,11 +25,11 @@ from fastapi import HTTPException, Request
 
 import inspect
 
-from semantic_bridge.management import baski_oneri, zeki_tahmin
+from semantic_bridge.management import baski_oneri, ilk_baski, zeki_tahmin
 
 log = logging.getLogger(__name__)
 
-REPORTS = {m.REPORT_ID: m for m in (baski_oneri, zeki_tahmin)}
+REPORTS = {m.REPORT_ID: m for m in (baski_oneri, zeki_tahmin, ilk_baski)}
 # Gizli rapor listede görünmez; başka bir raporun girdisidir (ör. ZEKİ AI tahmini → Baskı Öneri'nin sekmesi).
 VISIBLE = {rid: m for rid, m in REPORTS.items() if not getattr(m, "HIDDEN", False)}
 SQL_DIR = Path(__file__).with_name("sql")
@@ -123,7 +123,8 @@ def _values_rows(values: list[str]) -> str:
 # Her kol ALL2'nin kendi süzgecini taşır; kolonlar adla seçilir (SELECT * birleşimi kolon kaydırabilir).
 SALES_VIEW_FILTER = "[Malzeme/Hizmet Kodu] NOT LIKE '157%' AND [KDVli Tutar] <> 0"
 SALES_COLUMNS = ("[Malzeme/Hizmet Kodu], [Malzeme/Hizmet Adı], [Fatura Tarihi], [Yıl], [Ay], [Miktar], "
-                 "[Birim Fiyat], [Net Tutar], [Satır Türü], [Satis_Iade], [Satıcı Kodu], [Sipariş Numarası]")
+                 "[Birim Fiyat], [Net Tutar], [Satır Türü], [Satis_Iade], [Satıcı Kodu], [Sipariş Numarası], "
+                 "[KANAL], [Fatura Türü]")  # kanal: ilk baskı tahmininin kanal dağılımı (2015–2026 görünümlerinin hepsinde var)
 _SALES_PLACEHOLDER = re.compile(r"\{satis:(-?\d+(?:-\d{4})?)\}")
 
 
@@ -264,7 +265,9 @@ class Reports:
                 runner = lambda sid, params: self._run(report, sid, params, ctx)  # noqa: E731
                 if "inputs" in inspect.signature(report.build).parameters:
                     # Başka raporların son başarılı verisi (ör. Baskı Öneri ↔ ZEKİ AI tahmini birbirini okur).
-                    others = {rid: _load(self.path(rid)) for rid in REPORTS if rid != report_id}
+                    # Kendi başına rapor (STANDALONE, ör. ilk baskı tahmini) başkasının girdisi değildir; dosyası okunmaz.
+                    others = {rid: _load(self.path(rid)) for rid, m in REPORTS.items()
+                              if rid != report_id and not getattr(m, "STANDALONE", False)}
                     inputs = {rid: snap.get("data") for rid, snap in others.items()}
                     # Verisi olmayan raporun son hatası (ör. tahmin servisi bu kurulumda yok): ekran nedenini söyler.
                     inputs[INPUT_ERRORS] = {rid: snap.get("error") for rid, snap in others.items() if snap.get("error")}
@@ -381,4 +384,6 @@ def register(app, runtime, authorize, session_user):
         return {"id": report_id, "refreshIntervalSeconds": interval_of(REPORTS[report_id]), "serverTime": time.time(),
                 "started": started, **reports.read(report_id, with_data=False)}
 
+    from semantic_bridge.management import ilk_baski_api
+    reports.first_print = ilk_baski_api.register(app, runtime, gate, reports)
     return reports

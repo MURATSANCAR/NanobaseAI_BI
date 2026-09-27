@@ -899,12 +899,14 @@ class Runtime:
             for stale in list(self.threads)[:-100]:
                 self.threads.pop(stale, None)
                 self.thread_plans.pop(stale, None)
-        from semantic_bridge.chat_scope import BI_INTRO, is_intro
-        if is_intro(question):
+        from semantic_bridge import chat_scope
+        # Kimlik/model sorusu ve selam modelsiz ayrılır: cevap sabit metindir, model adı sızmaz.
+        scope = chat_scope.classify(question)
+        if scope.is_intro:
             qid = _log(sql=None, compiler="intro", catalog_version=None, executed=False,
-                       answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
+                       answer_type="MODULE_INTRO", answer_summary=scope.reply, gate={"chatScope": scope.to_dict()})
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
+                    "explanation": scope.reply, "threadId": thread_id, "timings": timings, "queryId": qid}
         self.ensure_fresh()
         t = time.perf_counter()
         from semantic_layer.runtime.conversation import compose_followup, bind_followup_value
@@ -923,12 +925,26 @@ class Runtime:
         scope_args = {"scope": sq.context_scope} if sq.context_scope else {}
         # Certified data concepts are positive evidence of a BI request. Only unplaced
         # questions need the conversational classifier; unknown terms remain eligible.
-        if not any(slot.mapping is not None for slot in sq.slots) and is_intro(
-                question, self.llm_for("chat"), has_context=bool(self.thread_plans.get(thread_id))):
-            qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
-                       resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
-            return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
+        # 2026-09-28: kapsam şirketin bütün modülleri. Sınıflandırıcı ret yalnız kimlik ve şirket dışı
+        # sohbette verir; şirket sorusunun konusu sohbete verisi bağlanmamış bir alansa tahmin yerine
+        # «henüz veri bağlı değil» denir (chat_topics.json, yönetim ayarı CHAT_CONNECTED_TOPICS).
+        if not any(slot.mapping is not None for slot in sq.slots):
+            scope = chat_scope.classify(question, self.llm_for("chat"),
+                                        has_context=bool(self.thread_plans.get(thread_id)))
+            if scope.is_intro:
+                qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
+                           resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=scope.reply,
+                           gate={"chatScope": scope.to_dict()})
+                return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
+                        "explanation": scope.reply, "threadId": thread_id, "timings": timings, "queryId": qid}
+            if scope.not_connected:
+                reason = scope.reply
+                qid = _log(sql=None, compiler="topic", catalog_version=sq.catalog_version, executed=False,
+                           resolved=sq.to_dict(), error=reason, answer_type="DATA_UNAVAILABLE",
+                           answer_summary=reason, gate={"chatScope": scope.to_dict()})
+                return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
+                        "chatScope": scope.to_dict(), "threadId": thread_id, "timings": timings,
+                        "semantic": {"query": sq.to_dict(), "chatScope": scope.to_dict()}, "queryId": qid}
         if self.thread_plans.get(thread_id) is not None and getattr(self, "existing", None) is not None:
             bind_followup_value(question, sq, self.thread_plans[thread_id], self.existing.probe,
                                 self.existing.columns, self.conventions)
@@ -5489,6 +5505,83 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
             raise HTTPException(502, "Son okuma raporu motordan alınamadı.") from e
 
+    # ---------------------------------------------------------- belge incelemesi (Son Okuma → «Belge incele»)
+    def _doc_error(e: Exception, what: str):
+        import httpx
+        if isinstance(e, httpx.HTTPStatusError):
+            code = e.response.status_code
+            if code in (404, 422):
+                try:
+                    detail = e.response.json().get("detail") or what
+                except ValueError:
+                    detail = what
+                raise HTTPException(code, detail) from e
+            raise HTTPException(503 if code == 503 else 502, what) from e
+        raise HTTPException(502, what) from e
+
+    def _doc_owned(doc_id: str, user: str, is_admin: bool) -> dict:
+        """Belgeyi yalnız yükleyen ve yönetici görür; başkasının belgesi 404 (var olduğu da söylenmez)."""
+        from semantic_bridge import editorial_cards
+        try:
+            r = editorial_cards.document(doc_id)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Belge incelemesi motordan alınamadı.")
+        if not is_admin and (r.get("document") or {}).get("uploaded_by") != user:
+            raise HTTPException(404, "Belge bulunamadı.")
+        return r
+
+    @app.put("/api/v1/editorial/documents")
+    async def editorial_document_upload(request: Request, filename: str = "", title: str = "", audience: str = "",
+                                        ageFrom: str = "", ageTo: str = "") -> dict[str, Any]:
+        """Belge yükle (doc, docx, pdf, odt, rtf, txt, md; gövde ham dosya): metni Zeki AI'ın metin denetimlerine
+        girer (kelime tekrarı, tik sözcük, cümle başı, kalıp ifade, yabancı/yaşa ağır sözcük). Yükleyen = oturum."""
+        engine, _tenant, user, _admin = await run_in_threadpool(_books, request)
+        from semantic_bridge import editorial_cards
+        data = await request.body()
+        try:
+            out = await run_in_threadpool(editorial_cards.document_upload, data, filename, title, audience,
+                                          ageFrom or None, ageTo or None, user)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Belge yüklenemedi.")
+        admin_mod.audit(engine, user, "upload", "editorial_document", out.get("id"), filename, {"bytes": len(data)})
+        return out
+
+    @app.get("/api/v1/editorial/documents")
+    def editorial_documents(request: Request) -> dict[str, Any]:
+        _engine, _tenant, user, is_admin = _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            return editorial_cards.documents(user, is_admin)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Belgeler motordan alınamadı.")
+
+    @app.get("/api/v1/editorial/documents/{doc_id}")
+    def editorial_document(doc_id: str, request: Request) -> dict[str, Any]:
+        _engine, _tenant, user, is_admin = _books(request)
+        return _doc_owned(doc_id, user, is_admin)
+
+    @app.get("/api/v1/editorial/documents/{doc_id}/word-map")
+    def editorial_document_word_map(doc_id: str, request: Request) -> dict[str, Any]:
+        _engine, _tenant, user, is_admin = _books(request)
+        _doc_owned(doc_id, user, is_admin)
+        from semantic_bridge import editorial_cards
+        try:
+            return editorial_cards.document_word_map(doc_id)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Kelime haritası motordan alınamadı.")
+
+    @app.get("/api/v1/editorial/documents/{doc_id}/export.docx")
+    def editorial_document_docx(doc_id: str, request: Request) -> Response:
+        _engine, _tenant, user, is_admin = _books(request)
+        _doc_owned(doc_id, user, is_admin)
+        from semantic_bridge import editorial_cards
+        try:
+            body, disposition = editorial_cards.document_docx(doc_id)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Word dosyası motordan alınamadı.")
+        return Response(body, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        headers={"Content-Disposition": disposition})
+
     @app.get("/api/v1/editorial/proofing/export.docx")
     def editorial_proofing_docx(request: Request, bookId: str = "") -> Response:
         """Son okuma bulguları kitabın metnine Word yorumu olarak işlenmiş .docx (redaksiyon Word'de yapılır).
@@ -6513,12 +6606,72 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.management_reports = management.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import budget_api
     app.state.budget = budget_api.register(app, rt, _require_caller, _can)
+    from semantic_bridge import distribution_api
+    app.state.distribution = distribution_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing
     editorial_studio_marketing.register(app, {"auth": _books, "seo": app.state.seo_geo})
     from semantic_bridge import editorial_studio_coloring
     editorial_studio_coloring.register(app, {"auth": _books, "audit": admin_mod.audit})
+
+    # M12 Üretim Yönetimi: CRM üretim kartı + Logo üretim emri/depo girişi (kendi salt okunur bağlantılarıyla) +
+    # portal kayıtları. Uçlar /api/v1/editorial/production/*.
+    from semantic_bridge import production as production_mod
+    from semantic_bridge import editorial_studio as _production_studio
+
+    def _production_connect(path_of):
+        def connect():
+            from semantic_layer.profiler.connectors import connector_from_file
+            return connector_from_file(path_of())
+        return connect
+
+    app.state.production = production_mod.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "studio_jobs": _production_studio.jobs,
+    })
+
+    # M30 Saha satış ve tahsilat (BMT): CRM atama/risk/tahsilat + Logo bakiye/yaşlandırma/satış; uçlar /api/v1/field/*.
+    from semantic_bridge import field_sales_api
+    app.state.field_sales = field_sales_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda: rt().llm_for("saha"), "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
+
+    # M31 Okul tanıtım ve ziyaret: CRM ziyaret yerleri/etkinlik/sipariş + Logo stok/fiyat/bayi satışı (salt okunur) +
+    # portal kayıtları (plan, bayi eşleşmesi, katalog, ortak ziyaret tablosu). Uçlar /api/v1/schools/*.
+    from semantic_bridge import school_visits_api
+    from semantic_layer.runtime.llm_queue import BATCH as _SCHOOLS_BATCH
+
+    app.state.schools = school_visits_api.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority: rt().llm_for("okul", _SCHOOLS_BATCH if priority else None),
+        "system": lambda: (rt().store.engine, rt().settings.tenant_id),
+        "require_caller": _require_caller,
+    })
+
+    # M32 Kurumsal satış ve B2B: kurum listesi, paket, teklif, fırsat, hatırlatma, bayi paneli. Uçlar /api/v1/corporate/*.
+    from semantic_bridge import corporate_sales_api
+    app.state.corporate = corporate_sales_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("kurumsal", priority),
+    })
     return app
 
 

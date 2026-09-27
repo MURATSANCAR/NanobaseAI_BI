@@ -1,0 +1,10 @@
+[Unit]
+Description=Saha (M30) haftalık rapor e-postası: pazartesi 07:30 (yalnız FIELD_REPORT_RECIPIENTS iç alıcıları; boşsa gitmez)
+
+[Timer]
+OnCalendar=Mon *-*-* 07:30:00
+Persistent=true
+Unit=timas-field@haftalik.service
+
+[Install]
+WantedBy=timers.target

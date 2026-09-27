@@ -1,0 +1,10 @@
+[Unit]
+Description=Okul tanıtım gece işi, her gece 03:30 (CRM bağlayıcısı 03:10'dan sonra)
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+Unit=timas-schools.service
+
+[Install]
+WantedBy=timers.target

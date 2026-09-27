@@ -1,0 +1,1965 @@
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: flow\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: flow/flow/doctype/flow_session/flow_session.py:464
+msgid ""
+"\n"
+"\n"
+"[File truncated to fit the context window.]"
+msgstr ""
+"\n"
+"\n"
+"[Dosya, bağlam penceresine sığması için kısaltıldı.]"
+
+#: frontend/src/lib/toolMeta.js:189
+msgid "${count(a.names)} ${doctype}"
+msgstr "${count(a.names)} ${doctype}"
+
+#: frontend/src/components/ChipList.vue:29
+msgid "+{0} more"
+msgstr "+{0} daha"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "<code>Agent</code> memories are shared with everyone who uses the agent. <code>User</code> memories are visible only to their user."
+msgstr "<code>Agent</code> bellekleri, ajanı kullanan herkesle paylaşılır. <code>User</code> bellekleri yalnızca ilgili kullanıcıya görünür."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "<code>Imported</code> tools are loaded from a Python module by path. <code>Script</code> tools store code in the database and run it in a <code>safe_exec</code> sandbox."
+msgstr "<code>Imported</code> araçlar, yol üzerinden bir Python modülünden yüklenir. <code>Script</code> araçları kodu veritabanında saklar ve <code>safe_exec</code> kum havuzunda çalıştırır."
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:124
+msgid "<code>main</code> must not accept <code>*args</code> or <code>**kwargs</code>."
+msgstr "<code>main</code>, <code>*args</code> veya <code>**kwargs</code> kabul etmemelidir."
+
+#: flow/flow/workspace/flow/flow.json
+msgid "<span class=\"h4\"><b>Flow</b></span>"
+msgstr "<span class=\"h4\"><b>NanobaseAI</b></span>"
+
+#: flow/flow/workspace/flow/flow.json
+msgid "<span class=\"h4\"><b>Manage</b></span>"
+msgstr "<span class=\"h4\"><b>Yönet</b></span>"
+
+#: flow/utils/conditions.py:36
+msgid "A multi-line condition must set a <code>result</code> variable."
+msgstr "Çok satırlı bir koşul, <code>result</code> değişkeni ayarlamalıdır."
+
+#: flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_provider/flow_provider.json
+msgid "API Key"
+msgstr "API Anahtarı"
+
+#: flow/flow/doctype/flow_provider/flow_provider.json
+msgid "API key for this provider. Leave empty for local servers (Ollama, LM Studio) that don't require authentication."
+msgstr "Bu sağlayıcı için API anahtarı. Kimlik doğrulama gerektirmeyen yerel sunucular (Ollama, LM Studio) için boş bırakın."
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "API key to authenticate with this model's endpoint. Needed when no Provider is linked."
+msgstr "Bu modelin uç noktasıyla kimlik doğrulama için API anahtarı. Sağlayıcı bağlantılı değilse gereklidir."
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "Active"
+msgstr "Aktif"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json flow/flow/doctype/flow_session/flow_session.json flow/flow/doctype/flow_trigger/flow_trigger.json frontend/src/components/Composer.vue:173
+msgid "Agent"
+msgstr "Ajan"
+
+#: flow/flow/doctype/flow_session/flow_session.py:87
+msgid "Agent Locked"
+msgstr "Ajan Kilitli"
+
+#: flow/lib/session.py:47
+msgid "Agent Mismatch"
+msgstr "Ajan Eşleşmez"
+
+#: flow/lib/session.py:85
+msgid "Agent Required"
+msgstr "Ajan Gerekli"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Agent configuration captured at run start (instructions + tool slugs)."
+msgstr "Çalışma başlangıcında yakalanan ajan yapılandırması (talimatlar + araç kimlikleri)."
+
+#: flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Agents"
+msgstr "Ajanlar"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json
+msgid "Agents created by Frappe and protected from deletion."
+msgstr "NanobaseAI tarafından oluşturulan ve silinmeye karşı korunan ajanlar."
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_session/flow_session.json
+msgid "All"
+msgstr "Tümü"
+
+#: flow/api/api.py:263 flow/api/api.py:265
+msgid "Answers must be a JSON object."
+msgstr "Cevaplar bir JSON nesnesi olmalıdır."
+
+#: frontend/src/components/ConfirmCard.vue:40
+msgid "Approve"
+msgstr "Onayla"
+
+#: flow/lib/agent.py:443
+msgid ""
+"Approve `{0}`?\n"
+"\n"
+"{1}"
+msgstr ""
+"`{0}` onaylansın mı?\n"
+"\n"
+"{1}"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "Archived"
+msgstr "Arşivlendi"
+
+#: flow/flow/doctype/flow_run/flow_run_detail.html:42
+msgid "Arguments"
+msgstr "Argümanlar"
+
+#: frontend/src/components/EmptyState.vue:57
+msgid "Ask about your data, draft records, or run a task."
+msgstr "Verileriniz hakkında sorun, taslak kayıtlar oluşturun veya bir görev çalıştırın."
+
+#: frontend/src/components/Composer.vue:56
+msgid "Ask {0}…"
+msgstr "{0}'a sorun…"
+
+#: frontend/src/components/Composer.vue:147
+msgid "Attach file"
+msgstr "Dosya ekle"
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Attachments"
+msgstr "Ekler"
+
+#: flow/api/api.py:247
+msgid "Attachments must be a JSON array of file ids."
+msgstr "Ekler, dosya kimliklerinden oluşan bir JSON dizisi olmalıdır."
+
+#: flow/api/api.py:249
+msgid "Attachments must be a list of file ids."
+msgstr "Ekler, dosya kimliklerinden oluşan bir liste olmalıdır."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Auto Approve Tool Calls"
+msgstr "Araç Çağrılarını Otomatik Onayla"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Auto Sync"
+msgstr "Otomatik Eşitleme"
+
+#: frontend/src/components/FeedbackBar.vue:91
+msgid "Bad response"
+msgstr "Hatalı yanıt"
+
+#: flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_provider/flow_provider.json
+msgid "Base URL"
+msgstr "Temel URL"
+
+#: flow/flow/doctype/flow_model/flow_model.py:86 flow/flow/doctype/flow_provider/flow_provider.py:71
+msgid "Base URL must be an absolute http(s) URL."
+msgstr "Temel URL, mutlak bir http(s) URL olmalıdır."
+
+#: flow/knowledge/extract.py:370
+msgid "Blocked URL"
+msgstr "Engellenmiş URL"
+
+#: frontend/src/components/ConfirmCard.vue:120 frontend/src/components/FeedbackBar.vue:112
+msgid "Cancel"
+msgstr "İptal"
+
+#: flow/knowledge/extract.py:151
+msgid "Cannot Read PDF"
+msgstr "PDF Okunamıyor"
+
+#: flow/api/api.py:58
+msgid "Cannot Resume"
+msgstr "Devam Ettirilemiyor"
+
+#: flow/flow/doctype/flow_session/flow_session.py:86
+msgid "Cannot change the agent on an existing session."
+msgstr "Mevcut oturumda temsilci değiştirilemez."
+
+#: flow/utils/system_generated.py:34
+msgid "Cannot change {0} of system-generated {1} {2}."
+msgstr "Sistem tarafından oluşturulan {1} {2} için {0} değiştirilemez."
+
+#: flow/utils/system_generated.py:46
+msgid "Cannot delete system-generated {0} {1}."
+msgstr "Sistem tarafından oluşturulan {0} {1} silinemez."
+
+#: flow/utils/system_generated.py:28
+msgid "Cannot remove the system-generated flag from {0} {1}."
+msgstr "{0} {1} için sistem tarafından oluşturulan bayrağı kaldırılamaz."
+
+#: flow/utils/system_generated.py:55
+msgid "Cannot rename system-generated {0} {1}."
+msgstr "Sistem tarafından oluşturulan {0} {1} yeniden adlandırılamaz."
+
+#: frontend/src/components/ActivityGroup.vue:39
+msgid "Changes requested"
+msgstr "Değişiklik istendi"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Characters per chunk for this source. Leave 0 to inherit the global default from Flow Knowledge Settings."
+msgstr "Bu kaynak için parça başına karakter sayısı. 0 bırakırsanız Bilgi Bankası Ayarları'ndaki genel değer kullanılır."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Characters shared between consecutive chunks to preserve context across boundaries."
+msgstr "Bağlamı sınırlar arasında korumak için ardışık parçalar arasında paylaşılan karakterler."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Characters shared between consecutive chunks. Leave 0 to inherit the global default."
+msgstr "Ardışık parçalar arasında paylaşılan karakterler. 0 bırakırsanız, genel varsayılanı devralır."
+
+#: flow/knowledge/extract.py:102
+msgid "Child table fields are not supported as content fields: {0}"
+msgstr "Alt tablo alanları içerik alanı olarak desteklenmez: {0}"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Chunk Count"
+msgstr "Parça Sayısı"
+
+#: flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json
+msgid "Chunk Index"
+msgstr "Parça İndeksi"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Chunk Overlap"
+msgstr "Parça Çakışması"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:35 flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.py:73
+msgid "Chunk Overlap must be smaller than Chunk Size."
+msgstr "Parça Çakışması, Parça Boyutundan küçük olmalıdır."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Chunk Size"
+msgstr "Parça Boyutu"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:33
+msgid "Chunk Size must be at least 1."
+msgstr "Parça Boyutu en az 1 olmalıdır."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.js:47
+msgid "Chunk settings changed. The {0} existing chunks for this source will be deleted and rebuilt with the new settings. Re-process now?"
+msgstr "Parça ayarları değiştirildi. Bu kaynak için {0} mevcut parça silinecek ve yeni ayarlarla yeniden oluşturulacak. Şimdi yeniden işleyin mi?"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Chunking"
+msgstr "Parçalama"
+
+#: frontend/src/components/PanelHeader.vue:38
+msgid "Close (Ctrl+I)"
+msgstr "Kapat (Ctrl+I)"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Code"
+msgstr "Kod"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:105
+msgid "Code has invalid Python syntax: {0}"
+msgstr "Kod geçersiz Python sözdizimi içeriyor: {0}"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:91
+msgid "Code is required for Script tools."
+msgstr "Script araçları için kod zorunludur."
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:117 flow/lib/resolver.py:127
+msgid "Code must define a top-level <code>main</code> function."
+msgstr "Kod, üst düzey bir <code>main</code> fonksiyonu tanımlamalıdır."
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:135
+msgid "Code must not call <code>main()</code> directly (line {0})."
+msgstr "Kod, <code>main()</code> fonksiyonunu doğrudan çağırmamalıdır (satır {0})."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Comma-separated fieldnames whose values are indexed, e.g. <code>subject, description, resolution</code>"
+msgstr "Değerleri indekslenen, virgülle ayrılmış alan adları, örn. <code>subject, description, resolution</code>"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_run/flow_run.json
+msgid "Completed"
+msgstr "Tamamlandı"
+
+#: flow/flow/doctype/flow_run/flow_run_detail.html:21
+msgid "Completion"
+msgstr "Tamamlanma"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Condition"
+msgstr "Koşul"
+
+#: flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_run/flow_run_detail.html:27
+msgid "Config Snapshot"
+msgstr "Yapılandırma Anlık Görüntüsü"
+
+#: flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Configuration"
+msgstr "Yapılandırma"
+
+#: flow/flow/doctype/flow_model/flow_model.js:25 flow/flow/doctype/flow_model/flow_model.py:154
+msgid "Connection OK"
+msgstr "Bağlantı Tamam"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "Content"
+msgstr "İçerik"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Content Fields"
+msgstr "İçerik Alanları"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.py:64
+msgid "Content Fields is required for a DocType source."
+msgstr "Belge Türü kaynağı için İçerik Alanları zorunludur."
+
+#: flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json
+msgid "Content Hash"
+msgstr "İçerik Özeti"
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "Context Window"
+msgstr "Bağlam Penceresi"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Conversation this run belongs to."
+msgstr "Bu çalışmanın ait olduğu konuşma."
+
+#: flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Conversations"
+msgstr "Konuşmalar"
+
+#: flow/lib/resolver.py:51
+msgid "Could not import tool from {0}: {1}"
+msgstr "Araç {0} konumundan içe aktarılamadı: {1}"
+
+#: flow/knowledge/extract.py:358
+msgid "Could not resolve URL host."
+msgstr "URL ana makinesi çözümlenemedi."
+
+#: frontend/src/components/FeedbackBar.vue:61
+msgid "Could not save feedback."
+msgstr "Geri bildirim kaydedilemedi."
+
+#: frontend/src/components/AttachmentChip.vue:23
+msgid "Couldn't attach file"
+msgstr "Dosya eklenemedi"
+
+#: frontend/src/components/EmptyState.vue:30
+msgid "Create and enable a Flow Model with your provider credentials."
+msgstr "Sağlayıcı bilgilerinizle bir NanobaseAI Modeli oluşturup etkinleştirin."
+
+#: flow/tools/builtins.py:336
+msgid ""
+"Create {0} {1} record(s):\n"
+"\n"
+"{2}"
+msgstr ""
+"{0} {1} kaydı oluşturun:\n"
+"\n"
+"{2}"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Cron Expression"
+msgstr "Cron İfadesi"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:61
+msgid "Cron Expression is required for Scheduled triggers."
+msgstr "Zamanlanmış tetikleyiciler için Cron İfadesi gereklidir."
+
+#: frontend/src/components/Composer.vue:48 frontend/src/components/Composer.vue:200
+msgid "Default"
+msgstr "Varsayılan"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Definition"
+msgstr "Tanım"
+
+#: flow/tools/builtins.py:400
+msgid "Delete {0} {1}: {2}"
+msgstr "{0} {1} sil: {2}"
+
+#: frontend/src/components/ActivityGroup.vue:38
+msgid "Denied"
+msgstr "Reddedildi"
+
+#: frontend/src/components/ConfirmCard.vue:41
+msgid "Deny"
+msgstr "Reddet"
+
+#: frontend/src/components/ConfirmCard.vue:115
+msgid "Describe what you want instead…"
+msgstr "Ne istediğinizi açıklayın…"
+
+#: flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Description"
+msgstr "Açıklama"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Description (LLM-facing)"
+msgstr "Açıklama (LLM'ye yönelik)"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Detail"
+msgstr "Ayrıntı"
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:87
+msgid "Disabled Agent"
+msgstr "Devre Dışı Temsilci"
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:97 flow/flow/doctype/flow_session/flow_session.py:76
+msgid "Disabled Model"
+msgstr "Devre Dışı Model"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Doc Event"
+msgstr "Belge Olayı"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:57
+msgid "Doc Event is required for DocType Event triggers."
+msgstr "Belge Türü Olayı tetikleyicileri için Belge Olayı gereklidir."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "DocType"
+msgstr "Belge Türü"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "DocType Event"
+msgstr "Belge Türü Olayı"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "DocType of the document that fired the trigger."
+msgstr "Tetikleyiciyi ateşleyen belgenin Belge Türü."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "DocType whose events fire this trigger."
+msgstr "Bu tetikleyiciyi ateşleyen olaylara sahip Belge Türü."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Document that fired the trigger."
+msgstr "Tetikleyiciyi ateşleyen belge."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Dotted Python path to the <code>Tool</code> object, e.g. <code>flow.tools.builtins.search_doctypes</code>."
+msgstr "<code>Tool</code> nesnesine giden noktalı Python yolu, örn. <code>flow.tools.builtins.search_doctypes</code>."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Down"
+msgstr "Aşağı"
+
+#: flow/api/api.py:253
+msgid "Each attachment must be a file id."
+msgstr "Her ek bir dosya kimliği olmalıdır."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Embedding Dimension"
+msgstr "Gömme Boyutu"
+
+#: flow/knowledge/store.py:70
+msgid "Embedding Dimension Mismatch"
+msgstr "Gömme Boyutu Eşleşmez"
+
+#: flow/knowledge/embedder.py:74 flow/knowledge/embedder.py:81
+msgid "Embedding Failed"
+msgstr "Gömme Başarısız Oldu"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Embedding Model"
+msgstr "Gömme Modeli"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:52
+msgid "Embedding Model In Use"
+msgstr "Kullanımda Olan Gömme Modeli"
+
+#: flow/knowledge/embedder.py:80
+msgid "Embedding provider returned {0} vectors for {1} inputs."
+msgstr "Gömme sağlayıcısı {1} girdi için {0} vektör döndürdü."
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.py:58
+msgid "Empty File"
+msgstr "Boş Dosya"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.py:35
+msgid "Empty Memory"
+msgstr "Boş Bellek"
+
+#: frontend/src/components/EmptyState.vue:46
+msgid "Enable Server Scripts in your site config so the assistant can run code."
+msgstr "Asistanın kod çalıştırabilmesi için site yapılandırmanızda Sunucu Betiklerini etkinleştirin."
+
+#: frontend/src/components/EmptyState.vue:37
+msgid "Enable a Flow Agent (Flow Agent is created automatically once a model exists)."
+msgstr "Bir NanobaseAI Ajanı etkinleştirin (model eklenince ajan kendiliğinden oluşur)."
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_provider/flow_provider.json flow/flow/doctype/flow_tool/flow_tool.json flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Enabled"
+msgstr "Etkin"
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "Endpoint for this model, e.g. a self-hosted Ollama (<code>http://localhost:11434</code>) or a proxy. Needed when no Provider is linked."
+msgstr "Bu modelin uç noktası, örn. kendi kendine barındırılan bir Ollama (<code>http://localhost:11434</code>) veya bir vekil. Sağlayıcı bağlanmadığında gereklidir."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_run/flow_run.json frontend/src/store.js:416 frontend/src/store.js:485
+msgid "Error"
+msgstr "Hata"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Error Log"
+msgstr "Hata Günlüğü"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Event"
+msgstr "Olay"
+
+#: frontend/src/components/PanelHeader.vue:28
+msgid "Exit full screen"
+msgstr "Tam ekrandan çık"
+
+#: flow/flow/doctype/flow_provider/flow_provider.json
+msgid "Extra Parameters"
+msgstr "Ek Parametreler"
+
+#: flow/flow/doctype/flow_provider/flow_provider.json
+msgid "Extra Params"
+msgstr "Ek Parametreler"
+
+#: flow/flow/doctype/flow_provider/flow_provider.py:85
+msgid "Extra Params may not include reserved keys: {0}."
+msgstr "Ek Parametreler, yedeklenmiş anahtarları içermemeli: {0}."
+
+#: flow/flow/doctype/flow_provider/flow_provider.py:81
+msgid "Extra Params must be a JSON object."
+msgstr "Ek Parametreler bir JSON nesnesi olmalıdır."
+
+#: flow/flow/doctype/flow_provider/flow_provider.py:79
+msgid "Extra Params must be valid JSON."
+msgstr "Ek Parametreler geçerli JSON olmalıdır."
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "Extracted Text"
+msgstr "Çıkarılan Metin"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_run/flow_run.json frontend/src/components/ActivityGroup.vue:36 frontend/src/components/ActivityStep.vue:66 frontend/src/components/AttachmentChip.vue:40
+msgid "Failed"
+msgstr "Başarısız"
+
+#: flow/flow/doctype/flow_run/flow_run.py:86
+msgid "Failed runs must include an error message."
+msgstr "Başarısız çalıştırmalar bir hata mesajı içermelidir."
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json flow/flow/doctype/flow_run/flow_run.json
+msgid "Feedback"
+msgstr "Geri Bildirim"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Feedback Comment"
+msgstr "Geri Bildirim Yorumu"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Feedback Rating"
+msgstr "Geri Bildirim Puanı"
+
+#: flow/api/api.py:123
+msgid "Feedback Too Long"
+msgstr "Geri Bildirim Çok Uzun"
+
+#: flow/api/api.py:130
+msgid "Feedback applies to finished runs only (this run is {0})."
+msgstr "Geri bildirim yalnızca tamamlanmış çalıştırmalara uygulanır (bu çalıştırma {0})."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "File"
+msgstr "Dosya"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "File Name"
+msgstr "Dosya Adı"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "File Size"
+msgstr "Dosya Boyutu"
+
+#: flow/knowledge/extract.py:379
+msgid "File Too Large"
+msgstr "Dosya Çok Büyük"
+
+#: flow/api/api.py:172
+msgid "File is required."
+msgstr "Dosya zorunludur."
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Files attached across all runs in this conversation."
+msgstr "Bu konuşmadaki tüm çalıştırmalarda ekli dosyalar."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Filters"
+msgstr "Filtreler"
+
+#: flow/knowledge/extract.py:309
+msgid "Filters must be a JSON object."
+msgstr "Filtreler bir JSON nesnesi olmalıdır."
+
+#: flow/knowledge/extract.py:307
+msgid "Filters must be valid JSON."
+msgstr "Filtreler geçerli JSON olmalıdır."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Final assistant message when the run completes."
+msgstr "Çalıştırma tamamlandığında son asistan mesajı."
+
+#: frontend/src/components/EmptyState.vue:20
+msgid "Finish setup to start"
+msgstr "Başlamak için kurulumu tamamlayın"
+
+#: flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow"
+msgstr "Akış"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Agent"
+msgstr "Akış Ajanı"
+
+#: flow/flow/doctype/flow_agent_knowledge_base/flow_agent_knowledge_base.json
+msgid "Flow Agent Knowledge Base"
+msgstr "Akış Ajanı Bilgi Bankası"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "Flow Agent Memory"
+msgstr "Akış Ajanı Belleği"
+
+#: flow/flow/doctype/flow_agent_tool/flow_agent_tool.json
+msgid "Flow Agent Tool"
+msgstr "Akış Ajanı Aracı"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Flow Agent to run when this trigger fires."
+msgstr "Bu tetikleyici ateşlendiğinde çalıştırılacak Akış Ajanı."
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:87
+msgid "Flow Agent {0} is disabled."
+msgstr "Akış Ajanı {0} devre dışı."
+
+#: flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Knowledge Base"
+msgstr "Akış Bilgi Bankası"
+
+#: flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json
+msgid "Flow Knowledge Chunk"
+msgstr "Akış Bilgi Parçası"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Knowledge Settings"
+msgstr "Akış Bilgi Ayarları"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:75
+msgid "Flow Knowledge Settings Required"
+msgstr "Akış Bilgi Ayarları Gerekli"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Knowledge Source"
+msgstr "Akış Bilgi Kaynağı"
+
+#: flow/flow/doctype/flow_model/flow_model.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Model"
+msgstr "NanobaseAI Modeli"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json
+msgid "Flow Model used to drive this agent."
+msgstr "Bu ajanı çalıştırmak için kullanılan NanobaseAI Modeli."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Flow Model used to embed chunks and queries. Its Model ID must be an embedding model, e.g. <code>openai/text-embedding-3-small</code>."
+msgstr "Parçaları ve sorguları gömmek için kullanılan NanobaseAI Modeli. Model Kimliği bir gömme modeli olmalıdır, örn. <code>openai/text-embedding-3-small</code>."
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:97 flow/flow/doctype/flow_session/flow_session.py:75 flow/knowledge/embedder.py:55
+msgid "Flow Model {0} is disabled."
+msgstr "NanobaseAI Modeli {0} devre dışı bırakıldı."
+
+#: flow/flow/doctype/flow_provider/flow_provider.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Provider"
+msgstr "NanobaseAI Sağlayıcısı"
+
+#: flow/flow/doctype/flow_run/flow_run.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Run"
+msgstr "NanobaseAI Çalıştırma"
+
+#: flow/flow/doctype/flow_session/flow_session.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Session"
+msgstr "NanobaseAI Oturumu"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "Flow Session Attachment"
+msgstr "NanobaseAI Oturumu Eki"
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "Flow Session Message"
+msgstr "NanobaseAI Oturumu Mesajı"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Tool"
+msgstr "NanobaseAI Aracı"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json
+msgid "Flow Tools this agent can call. Defaults to the three primitives (describe, read, execute) on creation."
+msgstr "Bu ajanın çağırabileceği NanobaseAI Araçları. Oluşturulurken varsayılan olarak üç temel işlev (tanımla, oku, çalıştır) kullanılır."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Flow Trigger"
+msgstr "NanobaseAI Tetikleyici"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Flow Trigger that started this run, when source is Trigger."
+msgstr "Kaynak Tetikleyici olduğunda bu çalıştırmayı başlatan NanobaseAI Tetikleyici."
+
+#: frontend/src/store.js:76
+msgid "Flow failed to load. Refresh the page to retry."
+msgstr "NanobaseAI yüklenemedi. Tekrar denemek için sayfayı yenileyin."
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Full chat transcript across all runs in this conversation."
+msgstr "Bu konuşmadaki tüm çalıştırmalar boyunca tam sohbet dökümü."
+
+#: frontend/src/components/PanelHeader.vue:28
+msgid "Full screen"
+msgstr "Tam ekran"
+
+#: frontend/src/components/FeedbackBar.vue:81
+msgid "Good response"
+msgstr "İyi yanıt"
+
+#: flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json
+msgid "Hash of the source document's indexed text; lets re-sync skip unchanged rows."
+msgstr "Kaynak belgenin indekslenmiş metninin özeti; yeniden senkronizasyonda değişmemiş satırların atlanmasını sağlar."
+
+#: flow/workspace_sidebar/flow.json
+msgid "Home"
+msgstr "Ana Sayfa"
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "How this conversation was started. Trigger sessions are hidden from the chat panel's recent list."
+msgstr "Bu konuşma nasıl başlatıldı. Tetikleyici oturumları sohbet panelinin son listesinde gizlenir."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "How this run was started."
+msgstr "Bu çalıştırma nasıl başlatıldı."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Hybrid"
+msgstr "Hibrit"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Hybrid fuses vector similarity with keyword matching. Vector uses similarity alone."
+msgstr "Hibrit, vektör benzerliğini anahtar kelime eşleştirmesiyle birleştirir. Vektör yalnızca benzerliği kullanır."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Import Path"
+msgstr "İçe Aktarma Yolu"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:79
+msgid "Import Path is required for Imported tools."
+msgstr "İçe Aktarılan araçlar için İçe Aktarma Yolu zorunludur."
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:82
+msgid "Import Path must be a dotted Python path (e.g. <code>flow.tools.builtins.search</code>)."
+msgstr "İçe Aktarma Yolu, noktalı bir Python yolu olmalıdır (örn. <code>flow.tools.builtins.search</code>)."
+
+#: flow/lib/resolver.py:60
+msgid "Import path {0} is not a Tool or callable."
+msgstr "İçe aktarma yolu {0} bir Araç veya çağrılabilir bir öğe değil."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Imported"
+msgstr "İçe Aktarılan"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:88
+msgid "Imported tools must not define inline code."
+msgstr "İçe aktarılan araçlar satır içi kod tanımlamamalıdır."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Indexing"
+msgstr "İndeksleme"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "Inline"
+msgstr "Satır İçi"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "Inline: full text injected every turn. Retrieval: chunked and embedded, top matches injected per turn (for oversized files)."
+msgstr "Satır İçi: tam metin her turda enjekte edilir. Geri Getirme: parçalara ayrılır ve gömülür, en iyi eşleşmeler her turda enjekte edilir (aşırı büyük dosyalar için)."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Input"
+msgstr "Girdi"
+
+#: flow/api/api.py:32
+msgid "Input is required."
+msgstr "Girdi zorunludur."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Input → Output"
+msgstr "Girdi → Çıktı"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_run/flow_run_detail.html:34
+msgid "Instructions"
+msgstr "Talimatlar"
+
+#: flow/api/api.py:263 flow/api/api.py:265
+msgid "Invalid Answers"
+msgstr "Geçersiz Yanıtlar"
+
+#: flow/api/api.py:172
+msgid "Invalid Attachment"
+msgstr "Geçersiz Ek"
+
+#: flow/api/api.py:247 flow/api/api.py:249 flow/api/api.py:253
+msgid "Invalid Attachments"
+msgstr "Geçersiz Ekler"
+
+#: flow/flow/doctype/flow_model/flow_model.py:87 flow/flow/doctype/flow_provider/flow_provider.py:71
+msgid "Invalid Base URL"
+msgstr "Geçersiz Temel URL"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:33 flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:35 flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.py:73
+msgid "Invalid Chunking"
+msgstr "Geçersiz Parçalama"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:106 flow/flow/doctype/flow_tool/flow_tool.py:136
+msgid "Invalid Code"
+msgstr "Geçersiz Kod"
+
+#: flow/utils/conditions.py:33 flow/utils/conditions.py:37
+msgid "Invalid Condition"
+msgstr "Geçersiz Koşul"
+
+#: flow/knowledge/extract.py:96 flow/knowledge/extract.py:103
+msgid "Invalid Content Fields"
+msgstr "Geçersiz İçerik Alanları"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:71
+msgid "Invalid Cron"
+msgstr "Geçersiz Cron"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:59
+msgid "Invalid Doc Event: {0}"
+msgstr "Geçersiz Belge Olayı: {0}"
+
+#: flow/knowledge/extract.py:307 flow/knowledge/extract.py:309
+msgid "Invalid Filters"
+msgstr "Geçersiz Filtreler"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:85
+msgid "Invalid Import Path"
+msgstr "Geçersiz Dışa Aktarma Yolu"
+
+#: flow/api/api.py:32
+msgid "Invalid Input"
+msgstr "Geçersiz Girdi"
+
+#: flow/flow/doctype/flow_run/flow_run.py:79
+msgid "Invalid JSON"
+msgstr "Geçersiz JSON"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:85
+msgid "Invalid Jinja template: {0}"
+msgstr "Geçersiz Jinja şablonu: {0}"
+
+#: flow/knowledge/knowledge.py:77
+msgid "Invalid Knowledge Base"
+msgstr "Geçersiz Bilgi Bankası"
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:67
+msgid "Invalid Max Iterations"
+msgstr "Geçersiz Maksimum Tekrar Sayısı"
+
+#: flow/flow/doctype/flow_model/flow_model.py:77 flow/flow/doctype/flow_model/flow_model.py:119
+msgid "Invalid Model ID"
+msgstr "Geçersiz Model Kimliği"
+
+#: flow/flow/doctype/flow_model/flow_model.py:96 flow/flow/doctype/flow_model/flow_model.py:98 flow/flow/doctype/flow_provider/flow_provider.py:79 flow/flow/doctype/flow_provider/flow_provider.py:81
+msgid "Invalid Params"
+msgstr "Geçersiz Parametreler"
+
+#: flow/flow/doctype/flow_provider/flow_provider.py:63
+msgid "Invalid Provider"
+msgstr "Geçersiz Sağlayıcı"
+
+#: flow/api/api.py:118
+msgid "Invalid Rating"
+msgstr "Geçersiz Puan"
+
+#: flow/api/api.py:72 flow/api/api.py:116
+msgid "Invalid Run"
+msgstr "Geçersiz Çalıştırma"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:49
+msgid "Invalid Run As"
+msgstr "Geçersiz Çalıştırma Olarak"
+
+#: flow/memory/memory.py:46
+msgid "Invalid Scope"
+msgstr "Geçersiz Kapsam"
+
+#: flow/api/api.py:87
+msgid "Invalid Session"
+msgstr "Geçersiz Oturum"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:125
+msgid "Invalid Signature"
+msgstr "Geçersiz İmza"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:73
+msgid "Invalid Slug"
+msgstr "Geçersiz Slug"
+
+#: flow/knowledge/extract.py:89
+msgid "Invalid Source"
+msgstr "Geçersiz Kaynak"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:85
+msgid "Invalid Template"
+msgstr "Geçersiz Şablon"
+
+#: flow/lib/resolver.py:61
+msgid "Invalid Tool"
+msgstr "Geçersiz Araç"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:98
+msgid "Invalid Type"
+msgstr "Geçersiz Tür"
+
+#: flow/knowledge/extract.py:351 flow/knowledge/extract.py:353 flow/knowledge/extract.py:358
+msgid "Invalid URL"
+msgstr "Geçersiz URL"
+
+#: flow/utils/conditions.py:33
+msgid "Invalid condition: {0}"
+msgstr "Geçersiz koşul: {0}"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:71
+msgid "Invalid cron expression: {0}"
+msgstr "Geçersiz cron ifadesi: {0}"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Iterations"
+msgstr "Tekrarlar"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Jinja template rendered into the agent input. <code>doc</code> and <code>now</code> are in scope, e.g. <code>Summarize {{ doc.doctype }} {{ doc.name }} and suggest next steps: {{ doc.description }}</code>"
+msgstr "Ajan girdisine dönüştürülen Jinja şablonu. <code>doc</code> ve <code>now</code> kapsamdadır, örn. <code>Summarize {{ doc.doctype }} {{ doc.name }} and suggest next steps: {{ doc.description }}</code>"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.py:38
+msgid "Keep each memory under {0} characters — split or shorten it."
+msgstr "Her belleği {0} karakterin altında tutun — bölün veya kısaltın."
+
+#: flow/api/api.py:122
+msgid "Keep feedback under {0} characters."
+msgstr "Geri bildirimi {0} karakterin altında tutun."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Keep this source in sync with a daily incremental sweep."
+msgstr "Bu kaynağı günlük artımlı bir taramayla senkronize tutun."
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "Keywords"
+msgstr "Anahtar Kelimeler"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/workspace/flow/flow.json flow/workspace_sidebar/flow.json
+msgid "Knowledge"
+msgstr "Bilgi"
+
+#: flow/flow/doctype/flow_agent_knowledge_base/flow_agent_knowledge_base.json flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Knowledge Base"
+msgstr "Bilgi Bankası"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json
+msgid "Knowledge Bases"
+msgstr "Bilgi Bankaları"
+
+#: flow/knowledge/embedder.py:45
+msgid "Knowledge Not Configured"
+msgstr "Bilgi Yapılandırılmadı"
+
+#: flow/knowledge/store.py:167
+msgid "Knowledge Store Not Ready"
+msgstr "Bilgi Deposu Hazır Değil"
+
+#: flow/knowledge/knowledge.py:77
+msgid "Knowledge base title is required."
+msgstr "Bilgi bankası başlığı zorunludur."
+
+#: flow/flow/doctype/flow_agent/flow_agent.json
+msgid "Knowledge bases this agent can search. Empty means all enabled knowledge bases."
+msgstr "Bu ajanın aramasına izin verilen bilgi bankaları. Boş bırakılırsa tüm etkin bilgi bankaları kullanılır."
+
+#: flow/knowledge/retriever.py:58
+msgid "Knowledge search requires at least one knowledge base."
+msgstr "Bilgi araması için en az bir bilgi bankası gereklidir."
+
+#: flow/knowledge/store.py:67
+msgid "Knowledge store has dimension {0} but {1} was requested. Rebuild the knowledge store."
+msgstr "Bilgi deposunun boyutu {0} ancak {1} istendi. Bilgi deposunu yeniden oluşturun."
+
+#: flow/knowledge/store.py:166
+msgid "Knowledge store is not initialized. Configure Flow Knowledge Settings and ingest a source."
+msgstr "Bilgi deposu hazır değil. Bilgi Bankası Ayarları'nı yapın ve bir kaynak ekleyin."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Last Fired At"
+msgstr "Son Tetiklenme Zamanı"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Last Synced At"
+msgstr "Son Eşitleme Zamanı"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Last time this scheduled trigger fired. Set by the system."
+msgstr "Bu zamanlanmış tetikleyicinin son kez tetiklendiği zaman. Sistem tarafından ayarlanır."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "List of tool calls the agent executed."
+msgstr "Ajanın yürüttüğü araç çağrılarının listesi."
+
+#: flow/flow/doctype/flow_model/flow_model.py:129
+msgid "LiteLLM is not installed. Run <code>bench setup requirements</code>."
+msgstr "Model bağlantı bileşeni kurulu değil. Sistem yöneticinize başvurun."
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "LiteLLM model identifier. With a Provider linked, pick or type just the model (e.g. <code>claude-sonnet-4-6</code>); otherwise use <code>provider/model</code> form, e.g. <code>anthropic/claude-sonnet-4-6</code>, <code>openai/gpt-4.1</code>, <code>ollama/llama3.1</code>"
+msgstr "Model kimliği. Bir Sağlayıcı bağlıysa yalnız model adını seçin ya da yazın (ör. <code>nanobaseAI</code>); değilse <code>sağlayıcı/model</code> biçimini kullanın, ör. <code>openai/nanobaseAI</code>."
+
+#: flow/flow/doctype/flow_provider/flow_provider.json
+msgid "LiteLLM provider name, e.g. <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>gemini</code>. Any Flow Model whose Model ID starts with this provider uses these credentials unless it sets its own."
+msgstr "Sağlayıcı adı, ör. <code>openai</code>, <code>anthropic</code>, <code>openrouter</code>, <code>gemini</code>. Model kimliği bu sağlayıcıyla başlayan her NanobaseAI Modeli, kendi bilgisi yoksa bu bilgileri kullanır."
+
+#: frontend/src/components/Composer.vue:54
+msgid "Loading…"
+msgstr "Yükleniyor…"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_session/flow_session.json
+msgid "Manual"
+msgstr "Manuel"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_run/flow_run_detail.html:32
+msgid "Max Iterations"
+msgstr "Maksimum İterasyon"
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:67
+msgid "Max Iterations must be at least 1."
+msgstr "Maksimum iterasyon en az 1 olmalıdır."
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "Max input tokens. Auto-detected from the model on save; managed by Flow, not user-editable. 0 = unknown."
+msgstr "En fazla girdi belirteci. Kaydederken modelden otomatik algılanır; NanobaseAI yönetir, elle değiştirilemez. 0 = bilinmiyor."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Maximum characters per chunk."
+msgstr "Parça başına maksimum karakter sayısı."
+
+#: flow/flow/doctype/flow_agent/flow_agent.json
+msgid "Maximum number of think → tool → think loops before the run gives up."
+msgstr "Çalışma vazgeçmeden önce maksimum düşün → araç → düşün döngüsü sayısı."
+
+#: flow/memory/memory.py:108
+msgid "Memory Limit"
+msgstr "Bellek Sınırı"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.py:39
+msgid "Memory Too Long"
+msgstr "Bellek Çok Uzun"
+
+#: flow/tools/builtins.py:188
+msgid "Memory Unavailable"
+msgstr "Bellek Kullanılamıyor"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.py:35
+msgid "Memory content is required."
+msgstr "Bellek içeriği zorunludur."
+
+#: flow/tools/builtins.py:188
+msgid "Memory is not configured for this agent."
+msgstr "Bu ajan için bellek yapılandırılmamış."
+
+#: flow/memory/memory.py:107
+msgid "Memory limit reached — consolidate existing memories (pass memory_id) instead of adding."
+msgstr "Bellek sınırına ulaşıldı — eklemek yerine mevcut bellekleri birleştirin (memory_id gönderin)."
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "Message body. Null for assistant turns that only call tools."
+msgstr "Mesaj gövdesi. Yalnızca araç çağıran asistan turları için Null."
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Messages"
+msgstr "Mesajlar"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:91
+msgid "Missing Code"
+msgstr "Eksik Kod"
+
+#: flow/lib/session.py:97
+msgid "Missing Default Agent"
+msgstr "Eksik Varsayılan Ajan"
+
+#: flow/flow/doctype/flow_model/flow_model.py:130
+msgid "Missing Dependency"
+msgstr "Eksik Bağımlılık"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:79
+msgid "Missing Import Path"
+msgstr "Eksik Dışa Aktarma Yolu"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.py:42
+msgid "Missing User"
+msgstr "Eksik Kullanıcı"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:118 flow/lib/resolver.py:127
+msgid "Missing main()"
+msgstr "Eksik main()"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "Mode"
+msgstr "Mod"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_run/flow_run_detail.html:31 flow/flow/doctype/flow_session/flow_session.json frontend/src/components/Composer.vue:196
+msgid "Model"
+msgstr "Model"
+
+#: flow/knowledge/embedder.py:55
+msgid "Model Disabled"
+msgstr "Model Devre Dışı"
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "Model ID"
+msgstr "Model Kimliği"
+
+#: flow/flow/doctype/flow_model/flow_model.py:74
+msgid "Model ID must be in <code>provider/model</code> form (e.g. <code>anthropic/claude-sonnet-4-6</code>). Only lowercase provider names and alphanumerics, dashes, dots, colons or slashes in the model part are allowed."
+msgstr "Model Kimliği <code>sağlayıcı/model</code> biçiminde olmalıdır (örn. <code>anthropic/claude-sonnet-4-6</code>). Yalnızca küçük harfli sağlayıcı adları ve model kısmında alfanümerikler, tireler, noktalar, iki nokta üst üste veya eğik çizgiler izin verilir."
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:94
+msgid "Model Not Permitted"
+msgstr "Model İzin Verilmiyor"
+
+#: frontend/src/components/EmptyState.vue:55 frontend/src/components/PanelHeader.vue:16
+msgid "NanobaseAI"
+msgstr "NanobaseAI"
+
+#: frontend/src/components/PanelHeader.vue:21
+msgid "New chat"
+msgstr "Yeni sohbet"
+
+#: frontend/src/lib/toolMeta.js:95
+msgid "No"
+msgstr "Hayır"
+
+#: flow/knowledge/retriever.py:59
+msgid "No Knowledge Base"
+msgstr "Bilgi Bankası yok"
+
+#: flow/knowledge/extract.py:89
+msgid "No content fields configured."
+msgstr "İçerik alanı yapılandırılmadı."
+
+#: flow/memory/memory.py:139
+msgid "No editable memory {0} — check the id in <agent_memory>."
+msgstr "Düzenlenebilir bellek {0} yok — <agent_memory> içindeki kimliği kontrol edin."
+
+#: frontend/src/components/PanelDropdown.vue:98
+msgid "No matches"
+msgstr "Eşleşme yok"
+
+#: frontend/src/components/SessionsMenu.vue:100
+msgid "No matching sessions"
+msgstr "Eşleşen oturum yok"
+
+#: flow/flow/doctype/flow_session/flow_session_transcript.html:19
+msgid "No messages yet."
+msgstr "Henüz mesaj yok."
+
+#: flow/tools/builtins.py:414
+msgid "No permission to delete {0} {1}."
+msgstr "{0} {1} silme izni yok."
+
+#: flow/utils/safe_exec.py:80 flow/utils/safe_exec.py:126
+msgid "No permission to read {0}"
+msgstr "{0} okuma izni yok"
+
+#: flow/utils/safe_exec.py:86 flow/utils/safe_exec.py:92
+msgid "No permission to read {0} {1}"
+msgstr "{0} {1} okuma izni yok"
+
+#: flow/tools/builtins.py:383
+msgid "No permission to update {0} {1}."
+msgstr "{0} {1} güncelleme izni yok."
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.py:58
+msgid "No readable text found in this file."
+msgstr "Bu dosyada okunabilir metin bulunamadı."
+
+#: frontend/src/components/SessionsMenu.vue:100
+msgid "No recent sessions"
+msgstr "Son oturumlar yok"
+
+#: flow/lib/session.py:115
+msgid "Not permitted to resume this run."
+msgstr "Bu çalışmayı sürdürme izni yok."
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.py:50
+msgid "Not permitted to use this file."
+msgstr "Bu dosyayı kullanma izni yok."
+
+#: flow/lib/session.py:107
+msgid "Not permitted to use this session."
+msgstr "Bu oturumu kullanma izni yok."
+
+#: flow/flow/doctype/flow_session/flow_session.py:297
+msgid "Nothing to Resume"
+msgstr "Sürdürülecek Bir Şey Yok"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "One short, self-contained fact."
+msgstr "Kısa, kendi içinde tam bir olgu."
+
+#: flow/api/api.py:57
+msgid "Only Paused runs can be resumed (this run is {0})."
+msgstr "Yalnızca Duraklatılmış çalışmaları sürdürülebilir (bu çalışma {0})."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Optional JSON filters selecting which documents to index, e.g. <code>{\"status\": \"Resolved\"}</code>"
+msgstr "Dizinlenecek belgeleri seçen isteğe bağlı JSON filtreleri, örn. <code>{\"status\": \"Çözüldü\"}</code>"
+
+#: flow/flow/doctype/flow_provider/flow_provider.json
+msgid "Optional JSON object of provider-specific kwargs merged into every call (e.g. <code>{\"api_version\": \"2024-02-01\"}</code> for Azure). A model's own params take precedence."
+msgstr "Her çağrıya birleştirilen sağlayıcıya özgü isteğe bağlı JSON nesnesi (örn. Azure için <code>{\"api_version\": \"2024-02-01\"}</code>). Modelin kendi parametreleri önceliklidir."
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "Optional JSON object passed to the model (e.g. <code>{\"temperature\": 0.2, \"max_tokens\": 1024}</code>)"
+msgstr "Modele iletilen isteğe bağlı JSON nesnesi (örn. <code>{\"temperature\": 0.2, \"max_tokens\": 1024}</code>)"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Optional Python condition; the trigger fires only if it is truthy. A single expression (e.g. <code>doc.status == \"Open\"</code>), or a multi-line script that must assign the verdict to a variable named <code>result</code>. Runs in the server-script sandbox with <code>doc</code> in scope for DocType events. Requires server scripts to be enabled in the bench configuration; without it the condition is treated as not met and the trigger does not fire."
+msgstr "İsteğe bağlı Python koşulu; tetikleyici yalnızca doğruysa çalışır. Tek bir ifade (örn. <code>doc.status == \"Açık\"</code>) veya <code>result</code> adlı bir değişkene sonucu ataması gereken çok satırlı bir betik. Belge Türü olayları için <code>doc</code> kapsamda sunucu betiği kum havuzunda çalışır. Bench yapılandırmasında sunucu betiklerinin etkinleştirilmesi gerekir; aksi halde koşul sağlanmamış sayılır ve tetikleyici çalışmaz."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Optional plain-English summary for human reviewers."
+msgstr "İnsan denetleyiciler için isteğe bağlı düz İngilizce özet."
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "Optional search aliases (synonyms, codes, alternate names) that improve retrieval. Used only for keyword matching, never shown to the agent as a fact."
+msgstr "Getirimi iyileştiren isteğe bağlı arama takma adları (eş anlamlılar, kodlar, alternatif adlar). Yalnızca anahtar kelime eşleştirmesi için kullanılır, ajana olgu olarak asla gösterilmez."
+
+#: flow/flow/doctype/flow_provider/flow_provider.json
+msgid "Optional. Override the provider's default endpoint, e.g. a proxy or self-hosted gateway."
+msgstr "İsteğe bağlı. Sağlayıcının varsayılan son noktasını geçersiz kılın, örn. bir vekil veya kendi kendine barındırılan geçit."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Original user input that started the run."
+msgstr "Çalışmayı başlatan orijinal kullanıcı girişi."
+
+#: frontend/src/components/ConfirmCard.vue:104
+msgid "Other…"
+msgstr "Diğer…"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Output"
+msgstr "Çıktı"
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Override the agent's default model for this conversation. Empty falls back to the agent's model."
+msgstr "Bu sohbet için ajanın varsayılan modelini geçersiz kılın. Boş bırakılırsa ajanın modeline geri dönülür."
+
+#: flow/knowledge/extract.py:151
+msgid "PDF is password protected and cannot be read."
+msgstr "PDF şifre korumalı ve okunamıyor."
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "Parameters"
+msgstr "Parametreler"
+
+#: flow/flow/doctype/flow_model/flow_model.json
+msgid "Params"
+msgstr "Parametreler"
+
+#: flow/flow/doctype/flow_model/flow_model.py:102
+msgid "Params may not include reserved keys: {0}."
+msgstr "Parametreler yedeklenmiş anahtarları içeremez: {0}."
+
+#: flow/flow/doctype/flow_model/flow_model.py:98
+msgid "Params must be a JSON object."
+msgstr "Parametreler bir JSON nesnesi olmalıdır."
+
+#: flow/flow/doctype/flow_model/flow_model.py:96
+msgid "Params must be valid JSON."
+msgstr "Parametreler geçerli JSON olmalıdır."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Pause the run and ask the user to approve each call before this tool executes."
+msgstr "Bu aracı çalıştırmadan önce çalışmayı duraklatın ve her çağrı için kullanıcıdan onay isteyin."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Paused"
+msgstr "Duraklatıldı"
+
+#: flow/flow/doctype/flow_run/flow_run.py:84
+msgid "Paused runs must have at least one pending question."
+msgstr "Durdurulan çalıştırmaların en az bir bekleyen sorusu olmalıdır."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Pending"
+msgstr "Bekleyen"
+
+#: flow/flow/doctype/flow_run/flow_run_detail.html:56
+msgid "Pending Questions"
+msgstr "Bekleyen Sorular"
+
+#: flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json
+msgid "Position of this chunk within its source, starting at 0."
+msgstr "Bu parçanın kaynağındaki konumu, 0'dan başlar."
+
+#: frontend/src/components/SessionsMenu.vue:58
+msgid "Previous sessions"
+msgstr "Önceki oturumlar"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Processing"
+msgstr "İşleniyor"
+
+#: flow/flow/doctype/flow_run/flow_run_detail.html:21 flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Prompt"
+msgstr "İstemi"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Prompt Template"
+msgstr "İstemi Şablonu"
+
+#: flow/utils/system_generated.py:29 flow/utils/system_generated.py:37 flow/utils/system_generated.py:47 flow/utils/system_generated.py:56
+msgid "Protected"
+msgstr "Korumalı"
+
+#: flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_provider/flow_provider.json
+msgid "Provider"
+msgstr "Sağlayıcı"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Python source. Must define a top-level <code>main</code> function. Executed in a server-script sandbox. Requires server scripts to be enabled in the bench configuration."
+msgstr "Python kaynağı. Üst düzey bir <code>main</code> fonksiyonu tanımlamalıdır. Sunucu betiği kum havuzunda çalıştırılır. Bench yapılandırmasında sunucu betiklerinin etkinleştirilmesi gerekir."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Questions"
+msgstr "Sorular"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Questions waiting on a user answer. Present only when status is Paused."
+msgstr "Kullanıcı yanıtı bekleyen sorular. Yalnızca durum Durdurulduğunda mevcuttur."
+
+#: frontend/src/components/ActivityGroup.vue:27
+msgid "Ran {0} steps"
+msgstr "{0} adım çalıştırıldı"
+
+#: flow/api/api.py:118
+msgid "Rating must be Up, Down, or None."
+msgstr "Puanlama Yukarı, Aşağı veya Yok olmalıdır."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.js:53
+msgid "Re-ingestion started"
+msgstr "Yeniden işleme başlatıldı"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.js:24
+msgid "Reconcile"
+msgstr "Uyumlulaştır"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.js:26
+msgid "Reconcile started"
+msgstr "Uyumlulaştırma başlatıldı"
+
+#: frontend/src/components/RecordsList.vue:55
+msgid "Record {0}"
+msgstr "Kayıt {0}"
+
+#: flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_run/flow_run.json
+msgid "Reference DocType"
+msgstr "Referans Belge Türü"
+
+#: flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json flow/flow/doctype/flow_run/flow_run.json
+msgid "Reference Name"
+msgstr "Referans Adı"
+
+#: flow/flow/doctype/flow_session/flow_session.py:491
+msgid "Relevant excerpts from the attached file(s):"
+msgstr "Ekli dosyalardan ilgili alıntılar:"
+
+#: flow/knowledge/extract.py:379
+msgid "Remote file exceeds the size limit."
+msgstr "Uzak dosya boyut sınırını aşıyor."
+
+#: frontend/src/components/AttachmentChip.vue:50
+msgid "Remove"
+msgstr "Kaldır"
+
+#: frontend/src/api/stream.js:18 frontend/src/api/stream.js:21
+msgid "Request failed ({0})"
+msgstr "İstek başarısız oldu ({0})"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Requires Confirmation"
+msgstr "Onay Gerekli"
+
+#: flow/flow/doctype/flow_model/flow_model.py:103 flow/flow/doctype/flow_provider/flow_provider.py:86
+msgid "Reserved Params"
+msgstr "Yedek Parametreler"
+
+#: frontend/src/components/MessageList.vue:62
+msgid "Response interrupted"
+msgstr "Yanıt yarıda kesildi"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.js:17
+msgid "Resync"
+msgstr "Yeniden Eşitle"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.js:19
+msgid "Resync started"
+msgstr "Yeniden eşitleme başlatıldı"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "Retrieval"
+msgstr "Getirme"
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "Role"
+msgstr "Rol"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "Run"
+msgstr "Çalıştır"
+
+#: flow/tools/builtins.py:429
+msgid "Run '{0}' on {1} {2}: {3}"
+msgstr "{1} {2} üzerinde '{0}' çalıştır: {3}"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Run As"
+msgstr "Şu Kimlikle Çalıştır"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:48
+msgid "Run As must be an enabled user."
+msgstr "Çalıştırma kimliği etkin bir kullanıcı olmalıdır."
+
+#: flow/flow/doctype/flow_session/flow_session.py:405
+msgid "Run In Progress"
+msgstr "Çalıştırma Devam Ediyor"
+
+#: flow/api/api.py:131
+msgid "Run Not Finished"
+msgstr "Çalıştırma Tamamlanmadı"
+
+#: flow/flow/doctype/flow_session/flow_session.py:393
+msgid "Run Paused"
+msgstr "Çalıştırma Durduruldu"
+
+#: flow/tools/builtins.py:200 frontend/src/lib/toolMeta.js:193
+msgid "Run Python code"
+msgstr "Python kodu çalıştır"
+
+#: flow/api/api.py:72 flow/api/api.py:116
+msgid "Run is required."
+msgstr "Çalıştırma gerekli."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Run the agent as this user, so its tools act with a defined, least-privilege permission scope. Defaults to the trigger's owner when empty. Prefer a purpose-scoped service user over a full administrator."
+msgstr "Ajanı bu kullanıcı olarak çalıştırın, böylece araçları tanımlı, en az yetkili izin kapsamıyla hareket eder. Boş bırakılırsa tetikleyicinin sahibine varsayılan olarak atanır. Tam yetkili bir yönetici yerine amaç odaklı bir hizmet kullanıcısı tercih edin."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Run this trigger's tool calls without asking for approval. Required for unattended triggers — otherwise the run pauses waiting for a confirmation."
+msgstr "Bu tetikleyicinin araç çağrılarını onay sormadan çalıştırın. Denetimsiz tetikleyiciler için gereklidir — aksi halde çalıştırma onay beklerken duraklar."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Running"
+msgstr "Çalışıyor"
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Runs"
+msgstr "Çalıştırmalar"
+
+#: flow/flow/doctype/flow_model/flow_model.js:14
+msgid "Save the document before testing the connection."
+msgstr "Bağlantıyı test etmeden önce belgeyi kaydedin."
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Saved Flow Agent driving this conversation. Empty for sessions driven by a code-defined agent."
+msgstr "Bu sohbeti yürüten kayıtlı NanobaseAI Ajanı. Kodla tanımlanan ajanın yürüttüğü oturumlarda boştur."
+
+#: frontend/src/components/FeedbackBar.vue:57
+msgid "Saved to agent memory."
+msgstr "Ajan belleğine kaydedildi."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Scheduled"
+msgstr "Zamanlanmış"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "Scope"
+msgstr "Kapsam"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Script"
+msgstr "Betik"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:94
+msgid "Script tools must not specify an Import Path."
+msgstr "Betik araçları bir İçe Aktarma Yolu belirtmemelidir."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Search Type"
+msgstr "Arama Türü"
+
+#: frontend/src/components/SessionsMenu.vue:69
+msgid "Search sessions…"
+msgstr "Oturumları ara…"
+
+#: frontend/src/components/SessionsMenu.vue:94
+msgid "Searching…"
+msgstr "Aranıyor…"
+
+#: frontend/src/components/PanelDropdown.vue:76
+msgid "Search…"
+msgstr "Ara…"
+
+#: flow/flow/doctype/flow_run/flow_run_detail.html:59
+msgid "Select any"
+msgstr "Herhangi birini seç"
+
+#: flow/flow/doctype/flow_run/flow_run_detail.html:59
+msgid "Select one"
+msgstr "Birini seç"
+
+#: frontend/src/components/Composer.vue:224 frontend/src/components/ConfirmCard.vue:124
+msgid "Send"
+msgstr "Gönder"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Session"
+msgstr "Oturum"
+
+#: flow/api/api.py:87
+msgid "Session is required."
+msgstr "Oturum gerekli."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:74
+msgid "Set an embedding model in Flow Knowledge Settings before adding knowledge bases or sources."
+msgstr "Bilgi bankası ya da kaynak eklemeden önce Bilgi Bankası Ayarları'nda bir gömme modeli seçin."
+
+#: flow/knowledge/embedder.py:44
+msgid "Set an embedding model in Flow Knowledge Settings first."
+msgstr "Önce Bilgi Bankası Ayarları'nda bir gömme modeli seçin."
+
+#: frontend/src/components/Composer.vue:55
+msgid "Setup required…"
+msgstr "Kurulum gerekli…"
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Short label for this conversation. Auto-generated from the first user message if left blank."
+msgstr "Bu konuşma için kısa etiket. Boş bırakılırsa ilk kullanıcı mesajından otomatik oluşturulur."
+
+#: frontend/src/components/ChipList.vue:29 frontend/src/components/ClampText.vue:35 frontend/src/components/CodeBlock.vue:28 frontend/src/components/RecordsList.vue:78
+msgid "Show less"
+msgstr "Daha azını göster"
+
+#: frontend/src/components/ClampText.vue:35
+msgid "Show more"
+msgstr "Daha fazlasını göster"
+
+#: frontend/src/components/RecordsList.vue:78
+msgid "Show {0} more"
+msgstr "{0} daha fazla göster"
+
+#: frontend/src/components/CodeBlock.vue:29
+msgid "Show {0} more lines"
+msgstr "{0} satır daha göster"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Shown to the LLM. Should state what the tool does and how to interpret the return value."
+msgstr "LLM'ye gösterilir. Aracın ne yaptığını ve dönüş değerinin nasıl yorumlanması gerektiğini belirtmelidir."
+
+#: flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json
+msgid "Shown to the agent: what this knowledge base contains and when to search it. Helps the agent decide whether to use it."
+msgstr "Ajana gösterilir: Bu bilgi bankasının ne içerdiğini ve ne zaman aranması gerektiğini belirtir. Ajanın kullanıp kullanmama kararına yardımcı olur."
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "Size in bytes."
+msgstr "Bayt cinsinden boyut."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Slug"
+msgstr "Slug"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:70
+msgid "Slug must be snake_case: start with a lowercase letter, then lowercase letters, digits or underscores."
+msgstr "Slug snake_case olmalıdır: küçük harfle başlar, ardından küçük harfler, rakamlar veya alt çizgiler gelir."
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Snake-cased name the LLM sees. Used as the unique identifier."
+msgstr "LLM'nin gördüğü snake_case ad. Benzersiz tanımlayıcı olarak kullanılır."
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_session/flow_session.json
+msgid "Source"
+msgstr "Kaynak"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "Source Run"
+msgstr "Kaynak Çalıştırma"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Source Type"
+msgstr "Kaynak Türü"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Standard 5-field cron, e.g. '0 9 * * 5' for every Friday 09:00."
+msgstr "Standart 5 alanlı cron, örn. her Cuma 09:00 için '0 9 * * 5'."
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_run/flow_run.json
+msgid "Status"
+msgstr "Durum"
+
+#: frontend/src/components/Composer.vue:213
+msgid "Stop"
+msgstr "Durdur"
+
+#: frontend/src/components/FeedbackBar.vue:116
+msgid "Submit"
+msgstr "Gönder"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Summary (human-facing)"
+msgstr "Özet (insanlara yönelik)"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_tool/flow_tool.json
+msgid "System Generated"
+msgstr "Sistem Tarafından Oluşturuldu"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_agent_memory/flow_agent_memory.json flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json flow/flow/doctype/flow_knowledge_chunk/flow_knowledge_chunk.json flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_provider/flow_provider.json flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_session/flow_session.json flow/flow/doctype/flow_tool/flow_tool.json flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "System Manager"
+msgstr "Sistem Yöneticisi"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json
+msgid "System message shown to the LLM. Describe the agent's role, scope, and rules."
+msgstr "LLM'ye gösterilen sistem mesajı. Ajanın rolünü, kapsamını ve kurallarını açıklayın."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Target DocType"
+msgstr "Hedef Belge Türü"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.py:55
+msgid "Target DocType is required for DocType Event triggers."
+msgstr "Belge Türü Olay tetikleyicileri için Hedef Belge Türü zorunludur."
+
+#: flow/flow/doctype/flow_model/flow_model.js:10
+msgid "Test Connection"
+msgstr "Bağlantıyı Test Et"
+
+#: flow/flow/doctype/flow_model/flow_model.js:20
+msgid "Testing connection…"
+msgstr "Bağlantı test ediliyor…"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Text"
+msgstr "Metin"
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "The Flow Run that produced this message."
+msgstr "Bu mesajı üreten Akış Çalıştırması."
+
+#: frontend/src/components/EmptyState.vue:23
+msgid "The assistant needs a few things configured first:"
+msgstr "Yardımcı için önce birkaç şey yapılandırılmalı:"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.json
+msgid "The run (turn) this file was sent with."
+msgstr "Bu dosyanın gönderildiği çalışma (tur)."
+
+#: flow/flow/doctype/flow_session/flow_session.py:474
+msgid "The user attached file(s) (large; relevant excerpts shown below): {0}"
+msgstr "Kullanıcı dosya ekledi (büyük; ilgili alıntılar aşağıda gösteriliyor): {0}"
+
+#: flow/flow/doctype/flow_session/flow_session.py:466
+msgid "The user attached the following file(s):"
+msgstr "Kullanıcı aşağıdaki dosyaları ekledi:"
+
+#: flow/lib/session.py:94
+msgid "The {0} agent is missing. Create a Flow Model first to auto-provision it."
+msgstr "{0} ajanı eksik. Otomatik olarak oluşturmak için önce bir Akış Modeli oluşturun."
+
+#: frontend/src/components/WorkingIndicator.vue:6
+msgid "Thinking…"
+msgstr "Düşünüyor…"
+
+#: flow/flow/doctype/flow_session/flow_session.py:404
+msgid "This session already has a run in progress."
+msgstr "Bu oturumda zaten devam eden bir çalışma var."
+
+#: flow/flow/doctype/flow_session/flow_session.py:392
+msgid "This session has a paused run. Resume it before starting a new turn."
+msgstr "Bu oturumda duraklatılmış bir çalışma var. Yeni bir tur başlatmadan önce devam ettirin."
+
+#: flow/flow/doctype/flow_session/flow_session.py:297
+msgid "This session has no paused run to resume."
+msgstr "Bu oturumda devam ettirilecek duraklatılmış bir çalışma yok."
+
+#: flow/flow/doctype/flow_session/flow_session.py:303
+msgid "This session has no transcript to resume from."
+msgstr "Bu oturumda devam edilecek bir transkript yok."
+
+#: flow/lib/session.py:46
+msgid "This session is bound to agent {0} and cannot be switched."
+msgstr "Bu oturum {0} ajanına bağlıdır ve değiştirilemez."
+
+#: flow/lib/session.py:84
+msgid "This session was created with a code agent; pass agent= to continue it."
+msgstr "Bu oturum bir kod ajanıyla oluşturuldu; devam etmek için agent= parametresini geçirin."
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Thumbs rating the user gave this response."
+msgstr "Kullanıcının bu yanıtı için verdiği başparmak puanı."
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_knowledge_base/flow_knowledge_base.json flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json flow/flow/doctype/flow_model/flow_model.json flow/flow/doctype/flow_run/flow_run_detail.html:30 flow/flow/doctype/flow_session/flow_session.json flow/flow/doctype/flow_tool/flow_tool.json flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Title"
+msgstr "Başlık"
+
+#: frontend/src/main.js:121
+msgid "Toggle NanobaseAI panel"
+msgstr "NanobaseAI panelini aç/kapat"
+
+#: flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_run/flow_run_detail.html:19
+msgid "Token Usage"
+msgstr "Jeton Kullanımı"
+
+#: flow/flow/doctype/flow_agent_tool/flow_agent_tool.json flow/flow/doctype/flow_run/flow_run_detail.html:42
+msgid "Tool"
+msgstr "Araç"
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "Tool Call ID"
+msgstr "Araç Çağrı Kimliği"
+
+#: flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_run/flow_run_detail.html:40 flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "Tool Calls"
+msgstr "Araç Çağrıları"
+
+#: flow/lib/resolver.py:52
+msgid "Tool Import Failed"
+msgstr "Araç İçe Aktarma Başarısız Oldu"
+
+#: flow/flow/doctype/flow_agent/flow_agent.json flow/flow/doctype/flow_run/flow_run_detail.html:33
+msgid "Tools"
+msgstr "Araçlar"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Tools created by Frappe and protected from deletion."
+msgstr "NanobaseAI'nin oluşturduğu, silinmeye karşı korunan araçlar."
+
+#: flow/flow/doctype/flow_run/flow_run_detail.html:21
+msgid "Total"
+msgstr "Toplam"
+
+#: flow/flow/doctype/flow_session/flow_session.json
+msgid "Transcript"
+msgstr "Transkript"
+
+#: flow/flow/doctype/flow_run/flow_run.json flow/flow/doctype/flow_session/flow_session.json
+msgid "Trigger"
+msgstr "Tetikleyici"
+
+#: flow/flow/doctype/flow_tool/flow_tool.json
+msgid "Type"
+msgstr "Tür"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:98
+msgid "Type must be Imported or Script."
+msgstr "Tür, İçe Aktarılan veya Betik olmalıdır."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "URL"
+msgstr "URL"
+
+#: flow/knowledge/extract.py:353
+msgid "URL has no host."
+msgstr "URL'de ana bilgisayar yok."
+
+#: flow/knowledge/extract.py:351
+msgid "URL must use http or https."
+msgstr "URL http veya https kullanmalıdır."
+
+#: flow/knowledge/extract.py:370
+msgid "URL resolves to a non-public address."
+msgstr "URL, herkese açık olmayan bir adrese çözümleniyor."
+
+#: frontend/src/components/FeedbackBar.vue:81 frontend/src/components/FeedbackBar.vue:91
+msgid "Undo rating"
+msgstr "Değerlendirmeyi geri al"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:88
+msgid "Unexpected Code"
+msgstr "Beklenmeyen Kod"
+
+#: flow/flow/doctype/flow_tool/flow_tool.py:95
+msgid "Unexpected Import Path"
+msgstr "Beklenmeyen Dışa Aktarma Yolu"
+
+#: flow/memory/memory.py:140
+msgid "Unknown Memory"
+msgstr "Bilinmeyen Bellek"
+
+#: flow/knowledge/extract.py:95
+msgid "Unknown fields for {0}: {1}"
+msgstr "{0} için bilinmeyen alanlar: {1}"
+
+#: flow/flow/doctype/flow_provider/flow_provider.py:60
+msgid "Unknown provider {0}. It must be a LiteLLM provider name (e.g. openai, anthropic, openrouter, gemini)."
+msgstr "Bilinmeyen sağlayıcı {0}. Tanınan bir sağlayıcı adı olmalıdır (ör. openai, anthropic, openrouter, gemini)."
+
+#: flow/flow/doctype/flow_model/flow_model.js:13
+msgid "Unsaved Changes"
+msgstr "Kaydedilmemiş Değişiklikler"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.py:54
+msgid "Unsupported File"
+msgstr "Desteklenmeyen Dosya"
+
+#: flow/knowledge/extract.py:140
+msgid "Unsupported Format"
+msgstr "Desteklenmeyen Biçim"
+
+#: flow/knowledge/extract.py:140
+msgid "Unsupported file format: .{0}"
+msgstr "Desteklenmeyen dosya biçimi: .{0}"
+
+#: flow/flow/doctype/flow_session_attachment/flow_session_attachment.py:54
+msgid "Unsupported file type: .{0}"
+msgstr "Desteklenmeyen dosya türü: .{0}"
+
+#: flow/knowledge/extract.py:46
+msgid "Unsupported source type: {0}"
+msgstr "Desteklenmeyen kaynak türü: {0}"
+
+#: flow/flow/doctype/flow_run/flow_run.json
+msgid "Up"
+msgstr "Yukarı"
+
+#: flow/tools/builtins.py:368
+msgid ""
+"Update {0} {1} ({2}):\n"
+"\n"
+"{3}"
+msgstr ""
+"{0} {1} güncellendi ({2}):\n"
+"\n"
+"{3}"
+
+#: frontend/src/api/client.js:84
+msgid "Upload failed ({0})"
+msgstr "Yükleme başarısız ({0})"
+
+#: frontend/src/components/AttachmentChip.vue:42
+msgid "Uploading…"
+msgstr "Yükleniyor…"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.json
+msgid "User"
+msgstr "Kullanıcı"
+
+#: flow/flow/doctype/flow_agent_memory/flow_agent_memory.py:42
+msgid "User-scoped memories must have a user."
+msgstr "Kullanıcı kapsamlı bellekler bir kullanıcıya sahip olmalıdır."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Vector"
+msgstr "Vektör"
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.json
+msgid "Vector width of the embedding model. Detected automatically when the embedding model is saved."
+msgstr "Gömme modelinin vektör genişliği. Gömme modeli kaydedildiğinde otomatik olarak algılanır."
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.json
+msgid "Watermark for incremental DocType sync: rows modified after this are re-checked."
+msgstr "Artımlı Belge Türü senkronizasyonu için filigran: bundan sonra değiştirilen satırlar yeniden kontrol edilir."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "What kind of event fires this trigger."
+msgstr "Bu tetikleyiciyi hangi tür olay ateşler."
+
+#: frontend/src/components/FeedbackBar.vue:108
+msgid "What went wrong? How should it respond instead?"
+msgstr "Ne yanlış gitti? Bunun yerine nasıl yanıt verilmeli?"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "When"
+msgstr "Ne Zaman"
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "When role is 'assistant', the list of tool calls the model requested."
+msgstr "Rol 'assistant' olduğunda, modelin istediği araç çağrıları listesi."
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "When role is 'tool', the assistant tool_call.id this result answers."
+msgstr "Rol 'tool' olduğunda, bu sonucu yanıtlayan asistan tool_call.id değeri."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "Which lifecycle event of the target DocType fires this trigger."
+msgstr "Hedef Belge Türü'nün hangi yaşam döngüsü olayı bu tetikleyiciyi ateşler."
+
+#: frontend/src/lib/toolMeta.js:95
+msgid "Yes"
+msgstr "Evet"
+
+#: flow/flow/doctype/flow_agent/flow_agent.py:92
+msgid "You are not permitted to use Flow Model {0}."
+msgstr "NanobaseAI Modeli {0} için yetkiniz yok."
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "after_insert"
+msgstr "after_insert"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "on_cancel"
+msgstr "on_cancel"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "on_submit"
+msgstr "on_submit"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "on_trash"
+msgstr "on_trash"
+
+#: flow/flow/doctype/flow_trigger/flow_trigger.json
+msgid "on_update"
+msgstr "on_update"
+
+#: frontend/src/lib/toolMeta.js:189
+msgid "records"
+msgstr "kayıtlar"
+
+#: flow/memory/memory.py:46
+msgid "scope must be 'agent' or 'user'."
+msgstr "kapsam 'agent' veya 'user' olmalıdır."
+
+#: flow/flow/doctype/flow_session_message/flow_session_message.json
+msgid "system | user | assistant | tool"
+msgstr "system | user | assistant | tool"
+
+#: flow/flow/doctype/flow_knowledge_source/flow_knowledge_source.py:57
+msgid "{0} is required for a {1} source."
+msgstr "{0}, {1} kaynağı için zorunludur."
+
+#: flow/flow/doctype/flow_knowledge_settings/flow_knowledge_settings.py:49
+msgid "{0} knowledge chunks were embedded with the current model. Delete all knowledge sources before changing the embedding model."
+msgstr "{0} bilgi parçası mevcut modelle gömüldü. Gömme modelini değiştirmeden önce tüm bilgi kaynaklarını silin."
+
+#: flow/flow/doctype/flow_run/flow_run.py:78
+msgid "{0} must be valid JSON."
+msgstr "{0} geçerli JSON olmalıdır."

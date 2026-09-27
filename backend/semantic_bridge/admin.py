@@ -85,6 +85,8 @@ SPEC: list[dict[str, Any]] = [
      "help": "Eski dosyalar bu sayıdan sonra silinir"},
     {"key": "BUDGET_ALERT_RECIPIENTS", "group": "delivery", "label": "Bütçe uyarısı alıcıları", "type": "text", "default": "",
      "help": "Virgülle e-posta adresleri. Satış hedefinin eşik altına düşmesi ve departman bütçesi aşımı özetle gider"},
+    {"key": "DIST_ALERT_RECIPIENTS", "group": "delivery", "label": "İlk dağılım uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (satış, lojistik). Plansız kitap, sevk gecikmesi, hiç satmayan bölge özetle gider; müşteriye gönderim yok"},
     # Toplantı odaları
     {"key": "ROOM_DAY_START", "group": "rooms", "label": "Takvim başlangıcı", "type": "time", "default": "08:00",
      "help": "Oda takviminin ilk saati, SS:DD"},
@@ -247,6 +249,38 @@ SPEC: list[dict[str, Any]] = [
     {"key": "GEO_CLAUDE_MODEL", "group": "geo", "label": "Claude modeli", "type": "text", "default": "claude-sonnet-5", "help": ""},
     {"key": "GEO_EVERY_DAYS", "group": "geo", "label": "Aynı soru kaç günde bir sorulur", "type": "int", "default": "7",
      "help": "Bir soru bir motorda bu kadar gün geçmeden yeniden sorulmaz"},
+    # Zeki AI sohbeti (chat_scope.py, chat_topics.json)
+    {"key": "CHAT_CONNECTED_TOPICS", "group": "chat", "label": "Verisi bağlı sohbet konuları", "type": "text",
+     "default": "",
+     "help": "Virgülle konu kimlikleri, örn. finans,satis,stok,yayin,telif,tedarik,lojistik,basin,kurumsal,ik. "
+             "Boşsa Logo ve CRM kataloğunda verisi olan konular bağlı sayılır. Bağlı olmayan konudaki soruya "
+             "Zeki AI tahmin yerine «henüz veri bağlı değil» der"},
+    # M32 Kurumsal satış ve B2B
+    {"key": "CORP_CHANNEL", "group": "corporate", "label": "Kurum kanalı (Logo özel kod 2)", "type": "text", "default": "KURUM",
+     "help": "Kurum carileri Logo'da bu özel kod 2 değeriyle ayrılır; alım geçmişi ve hacim indirimi geçmişi bu kanaldan okunur"},
+    {"key": "CORP_DEALER_CHANNELS", "group": "corporate", "label": "Bayi kanalları", "type": "text", "default": "BAYI,KITAPCI",
+     "help": "Virgülle, Logo özel kod 2 değerleri. Bayi paneli (sipariş vermeyen bayi, öne çıkarılacak kitaplar) bu kanallardan okunur"},
+    {"key": "CORP_DISCOUNT_APPROVAL_PCT", "group": "corporate", "label": "Teklif onay eşiği: indirim (%)", "type": "text", "default": "30",
+     "help": "Bir kalemin indirimi bunu aşarsa teklif satış müdürü onayına düşer. Boş: indirim onay istemez"},
+    {"key": "CORP_MARGIN_MIN_PCT", "group": "corporate", "label": "Teklif onay eşiği: en düşük marj (%)", "type": "text", "default": "0",
+     "help": "Maliyet biliniyorsa teklif marjı bunun altındaysa onaya düşer (0 = maliyetin altında satış). Boş: marj onay istemez"},
+    {"key": "CORP_VOLUME_TIERS", "group": "corporate", "label": "Hacim indirimi kademeleri", "type": "text", "default": "",
+     "help": "Örn. 100:10;300:15;1000:20 (adet:indirim %). Boşsa son 12 ayın kurum faturalarında aynı adet aralığında "
+             "gerçekleşen iskontonun medyanı önerilir"},
+    {"key": "CORP_COST_SOURCE", "group": "corporate", "label": "Teklif marjı için birim maliyet", "type": "text", "default": "m9",
+     "help": "m9: birim maliyet modülü (bağlanana kadar maliyet «bilinmiyor»); logo: Logo'da kitabın son maliyetli satış satırı "
+             "(tahmini); yok: marj hesaplanmaz"},
+    {"key": "CORP_THEMES", "group": "corporate", "label": "Kurumsal paket temaları", "type": "text",
+     "default": "Liderlik ve yönetim;Kişisel gelişim;İş hayatı;Yeni çalışan;Çocuk kütüphanesi;Aile;Değerler eğitimi",
+     "help": "Noktalı virgülle. CRM'deki temalara eklenir; ZEKİ AI kitaplara yalnız bu listeden tema önerir, onaylanan tema paket önerisine girer"},
+    {"key": "CORP_REMINDER_LEAD_DAYS", "group": "corporate", "label": "Dönemsel hatırlatma kaç gün önce", "type": "int", "default": "45",
+     "help": "Geçen yıl aynı ayda alım yapan kurumlar, o ayın başından bu kadar gün önce hatırlatma listesine girer"},
+    {"key": "CORP_DEALER_SILENT_DAYS", "group": "corporate", "label": "Sipariş vermeyen bayi (gün)", "type": "int", "default": "60",
+     "help": "Son satış faturası bu kadar günden eski (Logo verisinin bittiği güne göre) ve önceki 12 ayda alımı olan bayi"},
+    {"key": "CORP_APPROVAL_RECIPIENTS", "group": "corporate", "label": "Onay bekleyen teklif bildirimi", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (satış müdürü). Boşsa bildirim gitmez; kuyruk ekranda durur. Kuruma hiçbir e-posta gitmez"},
+    {"key": "CORP_B2B_REPORT_TO", "group": "corporate", "label": "Haftalık bayi özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri. Pazartesi sabahı sipariş vermeyen bayi listesi ekiyle gider; boşsa gitmez"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -277,9 +311,14 @@ GROUPS = [
              "süre içinde giriş yapmamış hesaplar girmez."},
     {"id": "llm", "label": "Yapay zekâ modeli (LLM)",
      "help": "Soruyu SQL'e çeviren model. Kaydedilen değer hemen geçerli olur, servis yeniden başlatılmaz."},
+    {"id": "chat", "label": "Zeki AI sohbeti",
+     "help": "Sohbet şirketin bütün modüllerinin sorularını cevaplar; kimlik ve şirket dışı sorulara kısa tanıtım "
+             "verir. Burada hangi konuların verisinin sohbete bağlı olduğu seçilir."},
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},
+    {"id": "corporate", "label": "Kurumsal satış ve B2B",
+     "help": "Teklif onay eşikleri, hacim indirimi, tema listesi ve bayi paneli. B2B sitesine, CRM'e ve Logo'ya hiçbir şey yazılmaz."},
     {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
     {"id": "geo", "label": "Yapay zekâ görünürlüğü (GEO)",
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "

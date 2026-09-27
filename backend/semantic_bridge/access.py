@@ -449,7 +449,7 @@ _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bi
                                    "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
-                                         "editor-atama", "gorevlerim", "serbest-calisanlar"))
+                                         "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
 #: En uzun eşleşen önek kazanır. Yeni bir uç eklenince burada bir öneke düşmeli; düşmezse test kırılır
 #: (test_access.py → köprünün bütün yolları). Ortak uçlar geniş tutuldu (bir sayfanın çağırdığı uç
@@ -462,9 +462,17 @@ RULES: list[tuple[str, Any]] = [
     # M46 Bütçe. Onaylı hedefleri okuyacak modül (M15/M17/M18/M29/M30) kendi sayfa anahtarını targets/deviations
     # satırlarına ekler; yazma uçları butce sayfasında kalır.
     ("/api/v1/budget/run-due", SYSTEM),
-    ("/api/v1/budget/targets", frozenset({page("butce")})),
-    ("/api/v1/budget/deviations", frozenset({page("butce")})),
+    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
+    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
     ("/api/v1/budget/", frozenset({page("butce")})),
+    ("/api/v1/management/first-print/", frozenset({page("ilk-baski")})),
+    # M29 İlk dağılım (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/distribution/run-due", SYSTEM),
+    ("/api/v1/distribution/", frozenset({page("ilk-dagilim")})),
+    # M30 Saha satış ve tahsilat. Ziyaret kaydı M30/M31 ortak (semantic_saha_ziyaret): okul tanıtım sayfası da okur/yazar.
+    ("/api/v1/field/run-due", SYSTEM),
+    ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
+    ("/api/v1/field/", frozenset({page("saha")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -477,6 +485,16 @@ RULES: list[tuple[str, Any]] = [
     # Kişiler ekranı CRM kişisinin serbest çalışan kaydını sorar; geri kalan her şey Serbest çalışanlar sayfasının.
     ("/api/v1/editorial/freelance/lookup", frozenset({page("kisiler"), page("serbest-calisanlar")})),
     ("/api/v1/editorial/freelance/", frozenset({page("serbest-calisanlar")})),
+    # M12 Üretim yönetimi; baskı çıkış tarihi (M29/M16 tüketir) editoryal sayfalardan da okunur.
+    ("/api/v1/editorial/production/print-exit", _EDITORIAL),
+    ("/api/v1/editorial/production/", frozenset({page("uretim")})),
+    # M31 Okul tanıtım ve ziyaret. Ortak ziyaret tablosunun saha uçları (M30, /api/v1/field/) da okul-tanitim
+    # sayfasına açılır; o satır M30'da yazılır.
+    ("/api/v1/schools/run-due", SYSTEM),
+    ("/api/v1/schools/", frozenset({page("okul-tanitim")})),
+    # M32 Kurumsal satış ve B2B.
+    ("/api/v1/corporate/run-due", SYSTEM),
+    ("/api/v1/corporate/", frozenset({page("kurumsal-satis")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
@@ -524,6 +542,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/budget/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|refresh)$",
      "ozellik:butce.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/budget/plans/[^/]+/export\.csv$", "ozellik:veri.disa-aktar"),
+    # İlk dağılım: öneri, düzeltme, onaya gönderme, revizyon, takip ve liste yenileme. Onay/geri gönderme açıkça
+    # verilen `dagilim.onay` ile ucun içinde; sevk listesi (Excel) dışa aktarma yetkisiyle.
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/distribution/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|books/refresh)$",
+     "ozellik:dagilim.plan"),
+    (frozenset({"GET"}), r"^/api/v1/distribution/plans/[^/]+/export\.xlsx$", "ozellik:veri.disa-aktar"),
+    # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
+    (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
@@ -539,8 +564,34 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/freelance/((people|portfolio|packages|tasks|assign|deliveries)(/.*)?|payouts(/[^/]+/(submit|delete))?)$",
      "ozellik:serbest.yonet"),
+    # Üretim kartına tarih/not/kalite/teklif yazma; matbaa onayı açıkça verilen `uretim.matbaa-onay` ile ucun içinde.
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/editorial/production/(cards/[^/]+/(entries|quotes)|entries/[^/]+|quotes/[^/]+)$",
+     "ozellik:uretim.yaz"),
+    # Saha: ziyaret notu, takip taslağı ve ödeme planı taslağı; müdür önceliği. Plan onayı/reddi, bütün temsilcileri görme
+    # ve temsilci karşılaştırması açıkça verilen anahtarlarla ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/field/(visits(/[^/]+(/followup-draft)?)?|payment-plans(/[^/]+(/submit)?)?)$",
+     "ozellik:saha.not"),
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/field/overrides(/[^/]+)?$", "ozellik:saha.oncelik-duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/field/report/weekly\.xlsx$", "ozellik:veri.disa-aktar"),
+    # M32 Kurumsal satış: fırsat, paket, teklif, kurum segmenti, hatırlatmadan fırsat, veri yenileme. Teklif onayı/geri
+    # gönderme açıkça verilen `kurumsal.teklif-onay` ile ucun içinde denetlenir; bu kural onlara uygulanmaz.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/corporate/(opportunities(/[^/]+(/quotes)?)?|quotes/[^/]+(/(submit|withdraw|sent|result|letter))?"
+     r"|packages/suggest|accounts/[^/]+|reminders/[^/]+(/opportunity)?|refresh)$", "ozellik:kurumsal.teklif"),
+    (frozenset({"POST"}), r"^/api/v1/corporate/themes/[^/]+/approve$", "ozellik:kurumsal.tema-onay"),
+    (frozenset({"GET"}), r"^/api/v1/corporate/b2b/.+$", "ozellik:kurumsal.b2b"),
+    (frozenset({"GET"}), r"^/api/v1/corporate/(quotes/[^/]+/document\.(pdf|xlsx)|b2b/(dealers|highlights)\.csv)$",
+     "ozellik:veri.disa-aktar"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
+    # M31: ziyaret raporu, plan önerisi/düzeltmesi, katalog, bayi önerme; bağlam (ilçe endeksi, takvim) yükleme.
+    # Plan onayı (`okul.plan`), bayi eşleştirme onayı (açıkça verilen `okul.bayi-onay`) ve bütün ekibi görme
+    # (`okul.herkesinki`) ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}),
+     r"^/api/v1/schools/((?!run-due$|context/)[^/]+/(visits(/suggest)?|plan|catalog|dealers)|plan/generate|plan/[^/]+"
+     r"|visits/[^/]+/next-done)$", "ozellik:okul.ziyaret"),
+    (frozenset({"POST"}), r"^/api/v1/schools/context/upload$", "ozellik:okul.baglam-yukle"),
+    (frozenset({"GET"}), r"^/api/v1/schools/catalogs/[^/]+\.pdf$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),
     (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
                                r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"

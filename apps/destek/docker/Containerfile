@@ -1,0 +1,75 @@
+# NanobaseAI Destek imajı: Frappe çatısı + telephony (üst kaynaktan, sabit sürüm)
+# + depodaki markalı helpdesk, flow ve nanobase_brand.
+# Yapı frappe_docker images/layered/Containerfile'ı izler; fark, uygulamaların
+# git'ten değil bu depodan (apps/destek/frappe-apps) gelmesi.
+# Derleme bağlamı: apps/destek   →  docker build -f docker/Containerfile .
+
+ARG IMAGE_BRANCH=version-16
+
+FROM frappe/build:${IMAGE_BRANCH} AS builder
+
+ARG FRAPPE_REF=v16.35.0
+ARG TELEPHONY_REF=039cf39f245d6818ead03cf94eea6ce7f9c1e1f7
+
+USER frappe
+WORKDIR /home/frappe
+
+RUN bench init \
+      --frappe-branch=${FRAPPE_REF} \
+      --no-procfile \
+      --no-backups \
+      --skip-redis-config-generation \
+      --skip-assets \
+      /home/frappe/frappe-bench
+
+WORKDIR /home/frappe/frappe-bench
+
+RUN git clone --filter=blob:none https://github.com/frappe/telephony apps/telephony \
+ && git -C apps/telephony checkout -q ${TELEPHONY_REF}
+
+COPY --chown=frappe:frappe frappe-apps/helpdesk apps/helpdesk
+COPY --chown=frappe:frappe frappe-apps/flow apps/flow
+COPY --chown=frappe:frappe frappe-apps/nanobase_brand apps/nanobase_brand
+
+# Kurulum sırası önemli: nanobase_brand en sonda — şablon ve çeviri önceliği ondadır.
+# simge.py çatının ve Helpdesk'in logo/simge/açılış görsellerini NanobaseAI simgesiyle değiştirir.
+# Yalnız ön yüz derleme bağımlılıkları silinir; çatının node_modules'u canlı bildirim
+# servisi (socketio.js) için çalışma anında gerekir.
+# compile-po-to-mo çevirileri derledikten sonra site önbelleğini temizlemek için --site ister;
+# o son adım imajda anlamsız, derlendiği .mo dosyasından denetlenir.
+# bench build, package.json'unda build betiği olan uygulamaları da derler (destek ekranı, yapay zekâ paneli).
+RUN printf 'frappe\ntelephony\nhelpdesk\nflow\nnanobase_brand\n' > sites/apps.txt \
+ && for app in telephony helpdesk flow nanobase_brand; do \
+      ./env/bin/pip install --no-cache-dir -e apps/$app || exit 1; \
+    done \
+ && bench setup requirements --node \
+ && ./env/bin/python apps/nanobase_brand/nanobase_brand/simge.py apps \
+ && bench build --production \
+ && (bench compile-po-to-mo --force || true) \
+ && test -s sites/assets/locale/tr/LC_MESSAGES/nanobase_brand.mo \
+ && echo "{}" > sites/common_site_config.json \
+ && find apps -mindepth 1 -path "*/.git" -prune -exec rm -rf {} + \
+ && rm -rf apps/helpdesk/desk/node_modules apps/flow/node_modules \
+ && find apps -name '._*' -type f -delete
+
+FROM frappe/base:${IMAGE_BRANCH} AS backend
+
+ARG CODE_VERSION=dev
+ENV DESTEK_CODE_VERSION=${CODE_VERSION}
+
+USER frappe
+COPY --from=builder --chown=frappe:frappe /home/frappe/frappe-bench /home/frappe/frappe-bench
+WORKDIR /home/frappe/frappe-bench
+
+RUN cp -r sites/assets assets && rm -rf sites/assets
+
+VOLUME ["/home/frappe/frappe-bench/sites", "/home/frappe/frappe-bench/logs"]
+
+USER root
+COPY docker/resources/main-entrypoint.sh /usr/local/bin/entrypoint.sh
+COPY docker/resources/start.sh /usr/local/bin/start.sh
+RUN chmod 755 /usr/local/bin/entrypoint.sh /usr/local/bin/start.sh
+
+USER frappe
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["start.sh"]

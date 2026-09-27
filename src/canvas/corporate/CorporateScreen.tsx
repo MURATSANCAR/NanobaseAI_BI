@@ -1,0 +1,150 @@
+import { useCallback, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { Loader2, RefreshCw } from 'lucide-react';
+import { Loading, Note, btnGhost, errText } from '../admin/ui';
+import { Tabs } from '../budget/parts';
+import { Kpi, KpiRow } from '../editorial/kit';
+import { ENGINE_ENABLED } from '../engine';
+import AccountsTab from './AccountsTab';
+import DealerPanel from './DealerPanel';
+import PackageBuilder from './PackageBuilder';
+import Pipeline from './Pipeline';
+import { ApprovalsTab, RemindersTab, ThemesTab } from './WorkTabs';
+import { CorporateFrame } from './parts';
+import { corporateApi, fmtDay, fmtInt, fmtPct, fmtShort, growth } from './api';
+
+/** M32 Kurumsal satış ve B2B. Sekme adres çubuğunda (?sekme=); paket oluşturucu `?firsat=` ile bir fırsata teklif ekler. */
+
+type Tab = 'firsat' | 'paket' | 'kurum' | 'hatirlatma' | 'onay' | 'tema' | 'bayi';
+
+export default function CorporateScreen() {
+  const qc = useQueryClient();
+  const [params, setParams] = useSearchParams();
+  const meta = useQuery({ queryKey: ['corporate', 'meta'], queryFn: corporateApi.meta, enabled: ENGINE_ENABLED, staleTime: 60_000 });
+  const sum = useQuery({ queryKey: ['corporate', 'summary'], queryFn: corporateApi.summary, enabled: ENGINE_ENABLED });
+  const m = meta.data;
+  const s = sum.data;
+
+  const tabs: Array<{ key: Tab; label: string; badge?: number | null }> = [
+    { key: 'firsat', label: 'Fırsatlar' },
+    { key: 'paket', label: 'Paket oluşturucu' },
+    { key: 'kurum', label: 'Kurumlar' },
+    { key: 'hatirlatma', label: 'Hatırlatmalar', badge: s?.hatirlatma || null },
+    ...(m?.me.canApprove ? [{ key: 'onay' as Tab, label: 'Onay bekleyen', badge: s?.onayBekleyen || null }] : []),
+    ...(m?.me.canTheme ? [{ key: 'tema' as Tab, label: 'Kitap temaları', badge: s?.temaOnerisi || null }] : []),
+    ...(m?.me.canB2b ? [{ key: 'bayi' as Tab, label: 'Bayi paneli' }] : []),
+  ];
+  const tab: Tab = (tabs.find((t) => t.key === params.get('sekme'))?.key ?? 'firsat') as Tab;
+  const go = useCallback(
+    (t: Tab) => {
+      const p = new URLSearchParams(params);
+      if (t === 'firsat') p.delete('sekme');
+      else p.set('sekme', t);
+      if (t !== 'paket') {
+        p.delete('firsat');
+        p.delete('tema');
+      }
+      setParams(p, { replace: true });
+    },
+    [params, setParams],
+  );
+
+  // Veri yenilenirken durum yoklanır; bitince bütün görünümler tazelenir.
+  const running = m?.status.running;
+  const status = useQuery({
+    queryKey: ['corporate', 'status'],
+    queryFn: corporateApi.status,
+    enabled: ENGINE_ENABLED && !!running,
+    refetchInterval: (q) => (q.state.data && !q.state.data.running ? false : 4000),
+  });
+  useEffect(() => {
+    if (running && status.data && !status.data.running) {
+      qc.invalidateQueries({ queryKey: ['corporate'] });
+      if (status.data.error) toast.error(status.data.error);
+      else toast.success('Logo ve CRM verileri güncellendi.');
+    }
+  }, [running, status.data, qc]);
+  const refresh = useMutation({
+    mutationFn: corporateApi.refresh,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['corporate', 'meta'] }),
+    onError: (e) => toast.error(errText(e, 'Yenileme başlatılamadı.') ?? ''),
+  });
+
+  const err = errText(meta.error, 'Ekran bilgisi okunamadı.') ?? errText(sum.error, 'Özet okunamadı.');
+  const g = s ? growth(s.kurumCiro, s.kurumCiroGecenYil) : null;
+  const last = m?.status.last;
+  const busy = !!(running || refresh.isPending);
+
+  return (
+    <CorporateFrame
+      title="Kurumsal satış ve B2B"
+      lead="Kurumlara tema paketi, teklif ve fırsat takibi; geçen yıl bu dönemde alan kurumların hatırlatması; sipariş vermeyen bayiler ve öne çıkarılacak kitaplar. Kurum alımları, stok ve fiyat Logo'dan; kurum temsilcisi ve kitap temaları CRM'den okunur. Siteye, CRM'e ve Logo'ya hiçbir şey yazılmaz; teklif belgesini temsilci gönderir."
+      source={s?.dataEnd ? `Logo · ${fmtDay(s.dataEnd)} tarihine kadar` : 'Logo + CRM'}
+      presence={busy ? (status.data?.step ?? m?.status.step ?? 'Okunuyor') : last?._at ? `Son okuma ${fmtDay(last._at)}` : 'Henüz okunmadı'}
+      aside={
+        m?.me.canQuote ? (
+          <div className="flex flex-col items-stretch gap-1 lg:items-end">
+            <button type="button" className={btnGhost} disabled={busy} onClick={() => refresh.mutate()}>
+              {busy ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <RefreshCw aria-hidden className="h-4 w-4" />}
+              {busy ? (status.data?.step ?? m.status.step ?? 'Okunuyor…') : 'Verileri yenile'}
+            </button>
+            <span className="text-[11px] text-canvas-muted lg:text-right">Her gece 04:00'te kendiliğinden yenilenir.</span>
+          </div>
+        ) : undefined
+      }
+    >
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {err && <Note tone="err">{err}</Note>}
+      {last && last.ok === false && <Note tone="err">Son okuma başarısız: {last.error}</Note>}
+      {last?.warnings?.map((w) => <Note key={w} tone="warn">{w}</Note>)}
+      {!s?.dataEnd && s && !busy && <Note tone="info">Veriler henüz okunmadı. «Verileri yenile» ile Logo ve CRM okunur (birkaç dakika sürebilir).</Note>}
+
+      <KpiRow>
+        <Kpi
+          label={s?.window ? `Kurum cirosu ${s.window.year} ${s.window.label}` : 'Kurum cirosu'}
+          value={s ? fmtShort(s.kurumCiro) : '—'}
+          help={s ? `Geçen yıl aynı dönem ${fmtShort(s.kurumCiroGecenYil)}${g !== null ? ` · ${g >= 0 ? '+' : ''}${fmtPct(g)}` : ''}` : 'KURUM kanalı net ciro'}
+          active={tab === 'kurum'}
+          onClick={() => go('kurum')}
+        />
+        <Kpi
+          label="Açık fırsat"
+          value={s ? fmtInt(s.acikFirsat) : '—'}
+          help={s ? `Tahmini ${fmtShort(s.acikFirsatDeger)}${m && !m.me.seeAll ? ' · sizin' : ''}` : 'Aday → Karar'}
+          active={tab === 'firsat'}
+          onClick={() => go('firsat')}
+        />
+        <Kpi
+          label="Hatırlatma"
+          value={s ? fmtInt(s.hatirlatma) : '—'}
+          help={s ? `Geçen yıl bu dönemde ${fmtShort(s.hatirlatmaTutar)} alan kurumlar` : 'Dönemsel alım'}
+          active={tab === 'hatirlatma'}
+          onClick={() => go('hatirlatma')}
+        />
+        {m?.me.canB2b ? (
+          <Kpi
+            label="Sipariş vermeyen bayi"
+            value={s ? fmtInt(s.sessizBayi) : '—'}
+            help={s && m ? `${m.settings.silentDays} gündür faturası yok · ${fmtInt(s.bayi)} bayiden` : 'Bayi kanalı'}
+            active={tab === 'bayi'}
+            onClick={() => go('bayi')}
+          />
+        ) : (
+          <Kpi label="Onay bekleyen" value={s ? fmtInt(s.onayBekleyen) : '—'} help="İndirim/marj eşiğini aşan teklif" />
+        )}
+      </KpiRow>
+
+      <Tabs tabs={tabs} value={tab} onChange={go} />
+      {meta.isLoading && <Loading />}
+      {m && tab === 'firsat' && <Pipeline meta={m} onReminders={() => go('hatirlatma')} />}
+      {m && tab === 'paket' && <PackageBuilder meta={m} />}
+      {m && tab === 'kurum' && <AccountsTab meta={m} />}
+      {m && tab === 'hatirlatma' && <RemindersTab meta={m} />}
+      {m && tab === 'onay' && <ApprovalsTab />}
+      {m && tab === 'tema' && <ThemesTab meta={m} />}
+      {m && tab === 'bayi' && <DealerPanel meta={m} />}
+    </CorporateFrame>
+  );
+}

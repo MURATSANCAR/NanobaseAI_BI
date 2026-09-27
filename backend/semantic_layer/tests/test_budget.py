@@ -305,7 +305,8 @@ def test_notify_sends_one_summary_and_marks_alerts(engine):
 def test_budget_rules():
     assert A.rule_for("/api/v1/budget/run-due") == A.SYSTEM
     assert A.rule_for("/api/v1/budget/plans") == frozenset({"sayfa:butce"})
-    assert A.rule_for("/api/v1/budget/targets") == frozenset({"sayfa:butce"})
+    # Okuyan modüller sayfa anahtarını ekler (M29 ilk dağılım).
+    assert "sayfa:butce" in A.rule_for("/api/v1/budget/targets")
     assert A.features_for("POST", "/api/v1/budget/plans/generate") == ["ozellik:butce.duzenle"]
     assert A.features_for("PATCH", "/api/v1/budget/plans/abc/books/K1") == ["ozellik:butce.duzenle"]
     assert A.features_for("POST", "/api/v1/budget/plans/abc/approve") == []

@@ -33,6 +33,9 @@ const MyTasksScreen = lazy(() => import('@/canvas/editorial/MyTasksScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
 const FreelanceScreen = lazy(() => import('@/canvas/editorial/freelance/FreelanceScreen'));
 const AuthorRelationsScreen = lazy(() => import('@/canvas/editorial/authors/AuthorRelationsScreen'));
+const ProductionScreen = lazy(() => import('@/canvas/editorial/production/ProductionScreen'));
+const CorporateScreen = lazy(() => import('@/canvas/corporate/CorporateScreen'));
+const CorporateOpportunity = lazy(() => import('@/canvas/corporate/OpportunityPage'));
 const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 const ContractDetail = lazy(() => import('@/canvas/editorial/contracts/ContractDetail'));
@@ -43,6 +46,15 @@ const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudi
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
+const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
+const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
+const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
+const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
+const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
+const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'));
+const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
+const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
+const SchoolCard = lazy(() => import('@/canvas/schools/SchoolCard'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -111,6 +123,19 @@ export default function App() {
             <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
             {/* M46 Bütçe planlama ve kontrolü (/api/v1/budget). */}
             <Route path="butce" element={<BudgetScreen />} />
+            {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
+            <Route path="ilk-baski" element={<FirstPrintScreen />} />
+            <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />
+            <Route path="ilk-baski/yeni" element={<FreeForecastPage />} />
+            {/* M29 İlk dağılım (Satış ve saha): dağılım bekleyenler, plan, takip, Bölgem (/api/v1/distribution). */}
+            <Route path="ilk-dagilim" element={<DistributionScreen />} />
+            <Route path="ilk-dagilim/:stok" element={<DistributionPlan />} />
+            {/* M30 Saha satış ve tahsilat (BMT): telefon önce; müşteri brifingi cari koduyla (/api/v1/field). */}
+            <Route path="saha" element={<FieldScreen />} />
+            <Route path="saha/musteri/:code" element={<CustomerBrief />} />
+            {/* M31 Okul tanıtım ve ziyaret (/api/v1/schools): telefon öncelikli «Bu hafta», okul kartı, bayi kuyruğu, dönem raporu. */}
+            <Route path="okul-tanitim" element={<SchoolsScreen />} />
+            <Route path="okul-tanitim/:id" element={<SchoolCard />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
@@ -155,6 +180,10 @@ export default function App() {
             <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />
             <Route path="serbest-calisanlar" element={<FreelanceScreen />} />
+            <Route path="uretim" element={<ProductionScreen />} />
+            {/* M32 Kurumsal satış ve B2B (/api/v1/corporate): fırsat, paket, teklif, hatırlatma, bayi paneli. */}
+            <Route path="kurumsal-satis" element={<CorporateScreen />} />
+            <Route path="kurumsal-satis/firsat/:id" element={<CorporateOpportunity />} />
             <Route path="yazar-iliskileri" element={<AuthorRelationsScreen />} />
             <Route path="basin-web" element={<WebScreen />} />
             {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}

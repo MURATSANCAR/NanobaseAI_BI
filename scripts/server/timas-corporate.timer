@@ -1,0 +1,10 @@
+[Unit]
+Description=Kurumsal satış ve B2B gece okuması, her gün 04:00
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=timas-corporate.service
+
+[Install]
+WantedBy=timers.target

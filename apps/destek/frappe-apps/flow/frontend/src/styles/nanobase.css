@@ -1,0 +1,31 @@
+/* NanobaseAI teması — masaüstü yapay zekâ paneli. postcss derlemede her kuralı
+   #flow-root altına alır. Değerler: nanobase_brand/public/css/nanobase.css. */
+
+/* frappe-ui sürümüne göre birincil düğme gri-7 ya da gri-10 yüzeyini kullanır. */
+button.bg-surface-gray-7,
+button.bg-surface-gray-10 {
+	background-color: #7c5cff;
+	color: #fff;
+	transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1), background-color 160ms ease;
+}
+
+button.bg-surface-gray-7:hover,
+button.bg-surface-gray-10:hover {
+	background-color: #6a4af0;
+}
+
+button.bg-surface-gray-7:active:not(:disabled),
+button.bg-surface-gray-10:active:not(:disabled) {
+	background-color: #5a3bdb;
+	transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	button.bg-surface-gray-7,
+	button.bg-surface-gray-10,
+	button.bg-surface-gray-7:active:not(:disabled),
+	button.bg-surface-gray-10:active:not(:disabled) {
+		transition: background-color 160ms ease;
+		transform: none;
+	}
+}

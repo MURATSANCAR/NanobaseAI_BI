@@ -1,0 +1,85 @@
+/* NanobaseAI teması — destek ekranı (/helpdesk). frappe-ui jetonlarının üstüne
+   portalın kanvas dilini koyar (tailwind.config.js `canvas`, src/canvas/canvas.css).
+   Masaüstü karşılığı: nanobase_brand/public/css/nanobase.css. */
+
+:root {
+  --nb-ink: #1b1f2a;
+  --nb-violet: #7c5cff;
+  --nb-violet-hover: #6a4af0;
+  --nb-violet-press: #5a3bdb;
+  --nb-font: "DM Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --nb-font-display: "Plus Jakarta Sans", "DM Sans", ui-sans-serif, system-ui,
+    sans-serif;
+  --nb-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --nb-mesh: radial-gradient(
+      circle at 12% 18%,
+      rgba(255, 232, 214, 0.95) 0%,
+      rgba(255, 232, 214, 0.3) 38%,
+      transparent 60%
+    ),
+    radial-gradient(
+      circle at 50% 45%,
+      rgba(221, 235, 255, 0.9) 0%,
+      rgba(221, 235, 255, 0.35) 45%,
+      transparent 70%
+    ),
+    radial-gradient(
+      circle at 88% 82%,
+      rgba(227, 255, 241, 0.95) 0%,
+      rgba(227, 255, 241, 0.3) 40%,
+      transparent 65%
+    );
+}
+
+html {
+  font-family: var(--nb-font);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--nb-font-display);
+  letter-spacing: -0.01em;
+}
+
+/* Birincil (solid) düğmeler mor. frappe-ui solid rengi gri-10 yüzeyinden
+   alır; yüzey jetonunu değiştirmek ipucu ve rozetleri de boyardı, o yüzden
+   yalnız düğme öğesi hedeflenir. */
+button.bg-surface-gray-10,
+a.bg-surface-gray-10 {
+  background-color: var(--nb-violet);
+  color: #fff;
+}
+
+button.bg-surface-gray-10:hover,
+a.bg-surface-gray-10:hover {
+  background-color: var(--nb-violet-hover);
+}
+
+button.bg-surface-gray-10:active,
+a.bg-surface-gray-10:active {
+  background-color: var(--nb-violet-press);
+}
+
+button.bg-surface-gray-10 {
+  transition: transform 160ms var(--nb-ease-out), background-color 160ms ease;
+}
+
+button.bg-surface-gray-10:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button.bg-surface-gray-10,
+  button.bg-surface-gray-10:active:not(:disabled) {
+    transition: background-color 160ms ease;
+    transform: none;
+  }
+}
+
+/* Kenar çubuğu portal kabuğundaki mesh zemini taşır (yalnız açık tema). */
+:root:not([data-theme="dark"]) .bg-surface-sidebar,
+:root:not([data-theme="dark"]) .bg-surface-menu-bar {
+  background-color: #f7fafc;
+  background-image: var(--nb-mesh);
+}

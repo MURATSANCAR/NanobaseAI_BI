@@ -1,0 +1,10 @@
+[Unit]
+Description=Saha (M30) hafif tur: 15 dakikada bir CRM tahsilat reddi ve riske takılan sipariş bildirimi (portal içi)
+
+[Timer]
+OnBootSec=9min
+OnUnitActiveSec=15min
+Unit=timas-field@hafif.service
+
+[Install]
+WantedBy=timers.target

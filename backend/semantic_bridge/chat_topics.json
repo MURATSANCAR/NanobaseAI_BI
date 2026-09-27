@@ -1,0 +1,139 @@
+{
+  "_note": "Zeki AI sohbet konuları (kullanıcı kararı 2026-09-28: sohbet yalnız finans değil, şirketin bütün modüllerinin sorularını cevaplar). Niyet sınıflandırıcı soruyu bu kapalı listeden bir konuya koyar; konu, cevabın dayandığı kayıttır, soranın birimi değil. `data`: konunun kayıtlarının bulunduğu katalog veri alanları (data_domains.json kimlikleri). Boş `data` = bu konunun verisi sohbete henüz bağlanmadı; o konudaki soruya tahmin yerine «henüz veri bağlı değil» denir. Yönetim ekranındaki CHAT_CONNECTED_TOPICS doluysa bağlı konuların tam listesi odur (bu dosyadaki varsayılanın yerine geçer). `label` ekranda görünür: teknoloji adı yazılmaz. `modules`: analiz belgelerindeki modül kodları, yalnız belge amaçlı.",
+  "version": 1,
+  "topics": [
+    {
+      "id": "finans",
+      "label": "finans ve bütçe",
+      "hint": "gelir tablosu, net ciro, brüt kâr, kârlılık, nakit akışı, gider, bütçe, beyanname, çek ve senet, banka, döviz",
+      "modules": ["M45", "M46", "DYK"],
+      "data": ["muhasebe", "banka-kasa", "satis", "cari"]
+    },
+    {
+      "id": "satis",
+      "label": "satış, bayi ve tahsilat",
+      "hint": "fatura, satış adedi, iade, kanal, cari, bayi ve kitapçı, vade, alacak, tahsilat, sipariş, ilk dağılım ve sevk, kurumsal satış, set satışı",
+      "modules": ["M29", "M30", "M32", "M38", "M53", "M59"],
+      "data": ["satis", "cari"]
+    },
+    {
+      "id": "stok",
+      "label": "depo ve stok",
+      "hint": "stok miktarı, stok devir hızı, depo, depolar arası sevk, sayım, bekleyen sipariş karşısında stok",
+      "modules": ["M43"],
+      "data": ["stok"]
+    },
+    {
+      "id": "yayin",
+      "label": "kitap kataloğu ve yayın programı",
+      "hint": "kitap kartı, kategori ve kitaplık, hedef kitle, yeni kitap programı, üretim, e-kitap ve sesli kitap hakları, yazar ve proje kayıtları",
+      "modules": ["H1", "M10", "M11", "M12", "M36"],
+      "data": ["yayin-crm", "stok"]
+    },
+    {
+      "id": "telif",
+      "label": "yazar telif ve sözleşmeler",
+      "hint": "telif, avans, hakediş, sözleşme süresi, çeviri ve yabancı hak satışı, yazar ödemeleri",
+      "modules": ["M54"],
+      "data": ["telif-sozlesme"]
+    },
+    {
+      "id": "tedarik",
+      "label": "tedarik ve baskı",
+      "hint": "matbaa, baskı adedi, baskı maliyeti, kâğıt ihtiyacı, matbaa borcu, depo girişi bekleyen baskılar",
+      "modules": ["M52"],
+      "data": ["stok", "cari", "muhasebe"]
+    },
+    {
+      "id": "lojistik",
+      "label": "lojistik ve kargo",
+      "hint": "kargo firması, desi maliyeti, teslim süresi, koli, sevk edilmemiş sipariş, tahsilatlı kargo",
+      "modules": ["M44"],
+      "data": ["satis", "muhasebe"]
+    },
+    {
+      "id": "basin",
+      "label": "basın ve halkla ilişkiler",
+      "hint": "basında çıkan haberler, basın bülteni, gazeteci ve medya ilişkisi, röportaj",
+      "modules": ["M20"],
+      "data": ["yayin-crm"]
+    },
+    {
+      "id": "kurumsal",
+      "label": "fuar, etkinlik ve kurumsal ilişkiler",
+      "hint": "fuar, imza günü, etkinlik, ödül başvurusu, okul ziyareti, kanaat önderi, kamu projesi, ihale ilanı ve teklif",
+      "modules": ["M27", "M28", "M31", "M33"],
+      "data": ["yayin-crm"]
+    },
+    {
+      "id": "pazarlama",
+      "label": "pazarlama planları ve içerik",
+      "hint": "yeni kitap ve backlist pazarlama planı, lansman, aylık plan ve föy, pazarlama bütçesi, görsel ve metin içerik, katalog, bülten açılma ve tıklama",
+      "modules": ["M15", "M16", "M17", "M18", "M19", "M24"],
+      "data": []
+    },
+    {
+      "id": "dijital",
+      "label": "sosyal medya ve dijital reklam",
+      "hint": "sosyal medya paylaşımı, etkileşim, yorum, reklam harcaması, tıklama başı maliyet, kampanya getirisi, influencer işbirliği",
+      "modules": ["M21", "M22", "M23"],
+      "data": []
+    },
+    {
+      "id": "eticaret",
+      "label": "e-ticaret sitesi ve pazar yerleri",
+      "hint": "site siparişi, görüntülenme, sepet, site müşterisi ve segmenti, site kampanyası, pazar yeri mağaza paneli, pazar yeri iadesi ve yorumu",
+      "modules": ["H3", "M34", "M35", "M40", "M41", "M42"],
+      "data": []
+    },
+    {
+      "id": "okur",
+      "label": "okur topluluğu ve iletişim izinleri",
+      "hint": "okur kaydı, e-posta ve ileti izni, izin reddi, ilgi alanı, okur segmenti, okur yorumu",
+      "modules": ["H2", "M37"],
+      "data": []
+    },
+    {
+      "id": "destek",
+      "label": "müşteri hizmetleri ve kurumsal e-posta",
+      "hint": "destek talebi, şikâyet, çözüm süresi, ilk yanıt süresi, cevapsız ileti, kurumsal gelen kutusu",
+      "modules": ["H4", "M51"],
+      "data": []
+    },
+    {
+      "id": "ik",
+      "label": "insan kaynakları",
+      "hint": "işe alım, açık pozisyon, aday, mülakat, performans hedefi ve değerlendirme, eğitim, gelişim planı, çalışan anketi ve bağlılık",
+      "modules": ["M55", "M56", "M57", "M58"],
+      "data": []
+    },
+    {
+      "id": "risk",
+      "label": "risk ve uyum",
+      "hint": "risk kaydı, risk göstergesi, sigorta poliçesi, kişisel veri ihlali, uyum takvimi",
+      "modules": ["M47", "M49"],
+      "data": []
+    },
+    {
+      "id": "yonetim",
+      "label": "yönetim kurulu kararları",
+      "hint": "kurul toplantısı, kurul kararı ve aksiyonu, kurul gündemi",
+      "modules": ["DYK"],
+      "data": []
+    },
+    {
+      "id": "pazar",
+      "label": "pazar araştırması ve rakipler",
+      "hint": "rakip yayınevi, rakip kitap ve fiyatı, sektör raporu, pazar büyüklüğü",
+      "modules": ["M39"],
+      "data": []
+    },
+    {
+      "id": "isletim",
+      "label": "Zeki AI ve sistem işletimi",
+      "hint": "planlı raporların gönderimi, bağlantı kesintisi, sohbet cevap süresi, soru kuyruğu, sürüm, hatalı cevaplar, eş anlamlı onayı, sunucu diski",
+      "modules": ["M48", "M50"],
+      "data": []
+    }
+  ]
+}

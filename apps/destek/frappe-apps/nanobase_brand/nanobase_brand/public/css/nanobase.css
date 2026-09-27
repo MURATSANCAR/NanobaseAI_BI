@@ -1,0 +1,139 @@
+/* NanobaseAI teması — masaüstü (/app, /desk) ve web sayfaları (/login).
+   Değerler portalın kanvas dilinden: tailwind.config.js `canvas` jetonları ve
+   src/canvas/canvas.css. Destek ekranının (/helpdesk) karşılığı:
+   helpdesk/desk/src/nanobase-theme.css — bir değeri değiştiren ikisini birden değiştirir. */
+
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Plus+Jakarta+Sans:wght@600;700;800&display=swap");
+
+:root {
+	--nb-ink: #1b1f2a;
+	--nb-violet: #7c5cff;
+	--nb-violet-hover: #6a4af0;
+	--nb-violet-press: #5a3bdb;
+	--nb-coral: #ff6b4a;
+	--nb-font: "DM Sans", "Inter", ui-sans-serif, system-ui, sans-serif;
+	--nb-font-display: "Plus Jakarta Sans", "DM Sans", ui-sans-serif, system-ui, sans-serif;
+	--nb-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+
+	--font-stack: var(--nb-font);
+	--primary: var(--nb-violet);
+	--primary-color: var(--nb-violet);
+	--btn-primary: var(--nb-violet);
+	--border-primary: var(--nb-violet);
+	--progress-bar-bg: var(--nb-violet);
+}
+
+[data-theme="dark"] {
+	--primary: #9d86ff;
+	--primary-color: #9d86ff;
+	--btn-primary: var(--nb-violet);
+	--border-primary: #9d86ff;
+}
+
+body {
+	font-family: var(--nb-font);
+}
+
+h1,
+h2,
+h3,
+.page-title .title-text,
+.login-content .page-card-head h4 {
+	font-family: var(--nb-font-display);
+	letter-spacing: -0.01em;
+}
+
+.btn.btn-primary,
+.btn.btn-primary:focus {
+	background-color: var(--nb-violet);
+	border-color: var(--nb-violet);
+	color: #fff;
+}
+
+.btn.btn-primary:hover {
+	background-color: var(--nb-violet-hover);
+	border-color: var(--nb-violet-hover);
+}
+
+.btn.btn-primary:active {
+	background-color: var(--nb-violet-press);
+}
+
+/* Basınca hafifçe küçülür: arayüz tıklamayı duydu. */
+.btn {
+	transition: transform 160ms var(--nb-ease-out), background-color 160ms ease;
+}
+
+.btn:active:not(:disabled) {
+	transform: scale(0.97);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.btn,
+	.btn:active:not(:disabled) {
+		transition: background-color 160ms ease;
+		transform: none;
+	}
+}
+
+/* Giriş sayfası: portalın mesh zemini ve cam kart. */
+body[data-path="login"],
+body[data-path="update-password"],
+body[data-path="login"] .page_content {
+	background-color: #f7fafc;
+	background-image: radial-gradient(circle at 12% 18%, rgba(255, 232, 214, 0.95) 0%, rgba(255, 232, 214, 0.3) 38%, transparent 60%),
+		radial-gradient(circle at 50% 45%, rgba(221, 235, 255, 0.9) 0%, rgba(221, 235, 255, 0.35) 45%, transparent 70%),
+		radial-gradient(circle at 88% 82%, rgba(227, 255, 241, 0.95) 0%, rgba(227, 255, 241, 0.3) 40%, transparent 65%);
+	background-attachment: fixed;
+}
+
+body[data-path="login"] .page-card,
+body[data-path="login"] .login-content {
+	border-radius: 1.25rem;
+}
+
+body[data-path="login"] .login-content {
+	background: rgba(255, 255, 255, 0.86);
+	-webkit-backdrop-filter: blur(20px);
+	backdrop-filter: blur(20px);
+	border: 1px solid rgba(255, 255, 255, 0.9);
+	box-shadow: 0 28px 70px -12px rgba(20, 30, 60, 0.18);
+}
+
+/* Giriş düğmesi btn-primary değil btn-login taşır; giriş paketi onu
+   `.for-login .page-card .page-card-actions .btn-login` (4 sınıf) ile gri-900'e boyar
+   ve bu dosyadan sonra yüklenir. Aynı zincir gövde öznitelikleriyle öneklenir ki
+   yükleme sırasından bağımsız kazansın. */
+body[data-path] .page-card .page-card-actions .btn-login,
+body[data-path] .page-card .page-card-actions .btn-ldap-login,
+body[data-path="update-password"] .btn.btn-primary {
+	background: var(--nb-violet);
+	border-color: var(--nb-violet);
+	color: #fff;
+}
+
+body[data-path] .page-card .page-card-actions .btn-login:hover,
+body[data-path] .page-card .page-card-actions .btn-login:focus,
+body[data-path] .page-card .page-card-actions .btn-ldap-login:hover,
+body[data-path="update-password"] .btn.btn-primary:hover {
+	background: var(--nb-violet-hover);
+	border-color: var(--nb-violet-hover);
+}
+
+body[data-path] .page-card .page-card-actions .btn-login:active,
+body[data-path] .page-card .page-card-actions .btn-ldap-login:active,
+body[data-path="update-password"] .btn.btn-primary:active {
+	background: var(--nb-violet-press);
+}
+
+body[data-path] .page-card .page-card-actions .btn-login:disabled {
+	background: var(--nb-violet);
+	opacity: 0.6;
+}
+
+body[data-path="login"] .app-logo {
+	border-radius: 14px;
+}
+
+/* Masaüstündeki yapay zekâ paneli (#flow-root) kendi derlemesinde temalanır:
+   flow/frontend/src/styles/nanobase.css. */

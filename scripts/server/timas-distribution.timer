@@ -1,0 +1,11 @@
+[Unit]
+Description=İlk dağılım listesi, takip ve uyarılar; her gün 07:30 ve 13:30
+
+[Timer]
+OnCalendar=*-*-* 07:30:00
+OnCalendar=*-*-* 13:30:00
+Persistent=true
+Unit=timas-distribution.service
+
+[Install]
+WantedBy=timers.target

@@ -50,6 +50,7 @@ from typing import Any, Iterator, Optional
 import sqlalchemy as sa
 
 from semantic_layer.models import new_id
+from semantic_layer.runtime import llm_choose as C
 from semantic_layer.store import schema as S
 
 log = logging.getLogger(__name__)
@@ -547,8 +548,91 @@ class QueuedLlm:
         on_admitted = kwargs.pop("on_admitted", None)      # told when the wait is over and the call begins
         if cancel is not None and not _accepts_cancel(self.llm):
             kwargs.pop("cancel")
+        with self._turn(messages, user_id=kwargs.pop("user_id", None), cancel=cancel, on_admitted=on_admitted):
+            return self.llm.chat(messages, **kwargs)
+
+    def choose(self, prompt: str, choices: list[str], *, system: Optional[str] = None,
+               top_logprobs: int = C.DEFAULT_TOP_LOGPROBS, text_max_tokens: int = 16,
+               user_id: Optional[str] = None, cancel: Optional[threading.Event] = None,
+               on_admitted: Optional[Any] = None) -> "C.Choice":
+        """Kapalı küme seçim: `choices` içinden biri ve her seçeneğin olasılığı (toplamı 1).
+
+        Her model çağrısı bu sarmalayıcının sırasından ve slotundan geçer (`chat` ile aynı bilet).
+        Seçenekler A, B, C… etiketleriyle soruya eklenir; model tek token (etiket) yazar, olasılıklar o
+        token'ın adaylarından okunur. 26'dan çok seçenekte eleme turu yapılır (her tur ayrı bilet).
+        Uç logprobs/structured_outputs vermezse metin seçeneğe eşlenir ve `probs=None` döner
+        (`method="text"`); eşlenemezse `choice=None` (`method="none"`). Model hiç cevap veremezse
+        istisna yükselir. Eşik çağırana aittir: `result.confident(min_prob, min_margin)`.
+        Belge: docs/analiz/llm-choose.md."""
+        options = C.check_choices(choices)
+        if len(options) == 1:
+            return C.Choice(options[0], 0, {options[0]: 1.0}, C.SINGLE, 1.0, None, 0)
+        return self._choose(prompt, options, system=system, top_logprobs=top_logprobs, text_max_tokens=text_max_tokens,
+                            user_id=user_id, cancel=cancel, on_admitted=on_admitted)
+
+    def _choose(self, prompt: str, options: list[str], **kw: Any) -> "C.Choice":
+        if len(options) <= len(C.LABELS):
+            return self._choose_once(prompt, options, **kw)
+        groups = C.split_groups(options)
+        results = [self._choose(prompt, g, **kw) for g in groups]
+        finalists = [r.choice for r in results if r.choice is not None]
+        if not finalists:
+            last = results[-1]
+            return C.Choice(None, None, None, C.NONE, None, None, sum(r.calls for r in results), last.raw, last.error)
+        if len(finalists) == 1:
+            final = C.Choice(finalists[0], 0, {finalists[0]: 1.0}, C.SINGLE, 1.0, None, 0)
+        else:
+            final = self._choose(prompt, finalists, **kw)
+        return C.combine_rounds(groups, results, final)
+
+    def _choose_once(self, prompt: str, options: list[str], *, system: Optional[str], top_logprobs: int, text_max_tokens: int,
+                     user_id: Optional[str], cancel: Optional[threading.Event], on_admitted: Optional[Any]) -> "C.Choice":
+        labels = list(C.LABELS[:len(options)])
+        messages = C.build_messages(prompt, options, system=system)
+        cancel_kw = {"cancel": cancel} if cancel is not None and _accepts_cancel(self.llm) else {}
+        error: Optional[str] = None
+        calls = 0
+        with self._turn(messages, user_id=user_id, cancel=cancel, on_admitted=on_admitted):
+            if callable(getattr(self.llm, "complete", None)):
+                calls += 1
+                try:
+                    reply = self.llm.complete(messages, max_tokens=1, temperature=0.0, stream=False,
+                                              body=C.request_body(labels, top_logprobs), **cancel_kw)
+                except Exception as e:  # noqa: BLE001 — only "this request is not understood" falls back
+                    if not _not_understood(e):
+                        raise
+                    error, reply = f"yapılandırılmış seçim desteklenmiyor: {e}", None
+                if reply is not None:
+                    raw = str(((reply or {}).get("message") or {}).get("content") or "")
+                    probs, coverage = C.read_logprobs(reply, labels)
+                    said = raw.strip() if raw.strip() in labels else None
+                    if probs is not None:
+                        label = C.decide(labels, probs, said)
+                        by_choice = {options[labels.index(k)]: v for k, v in probs.items()}
+                        picked = options[labels.index(label)]
+                        return C.Choice(picked, labels.index(label), by_choice, C.LOGPROBS,
+                                        C.margin_of(by_choice, picked), coverage, calls, raw, None)
+                    error = "cevapta etiket olasılığı yok"
+                    index = C.match_text(raw, options)
+                    if index is not None:
+                        return C.Choice(options[index], index, None, C.TEXT, None, None, calls, raw, error)
+                    error = f"{error}; cevap eşlenemedi, düz metinle yeniden soruldu"
+            else:
+                error = "istemci yapılandırılmış seçimi desteklemiyor"
+            # Yedek yol: aynı biletle düz metin. Olasılık yok; çağıran «emin değil» sayar.
+            calls += 1
+            raw = str(self.llm.chat(messages, max_tokens=text_max_tokens, temperature=0.0, **cancel_kw) or "")
+            index = C.match_text(raw, options)
+            if index is None:
+                return C.Choice(None, None, None, C.NONE, None, None, calls, raw, error)
+            return C.Choice(options[index], index, None, C.TEXT, None, None, calls, raw, error)
+
+    @contextmanager
+    def _turn(self, messages: list[dict[str, str]], *, user_id: Optional[str], cancel: Optional[threading.Event],
+              on_admitted: Optional[Any]) -> Iterator[Ticket]:
+        """One ticket: wait for the slot, remember what the wait was, tell the caller it is admitted."""
         with self.queue.lease(purpose=self.purpose, tenant_id=self.tenant_id, datasource_id=self.datasource_id,
-                              user_id=kwargs.pop("user_id", None), question=_first_user_message(messages),
+                              user_id=user_id, question=_first_user_message(messages),
                               module=self.module, priority=self.priority, cancel=cancel) as ticket:
             self._last.wait_ms, self._last.ahead = ticket.waited_ms, ticket.ahead
             if on_admitted is not None:
@@ -556,11 +640,22 @@ class QueuedLlm:
                     on_admitted(ticket)
                 except Exception:  # noqa: BLE001
                     pass
-            return self.llm.chat(messages, **kwargs)
+            yield ticket
 
 
 def _accepts_cancel(llm: Any) -> bool:
     return bool(getattr(llm, "supports_cancel", False))
+
+
+#: 4xx that mean "this endpoint does not take this request" — structured_outputs or logprobs unknown,
+#: top_logprobs above the server's limit. Load (408/429) and everything 5xx are not in it: those are
+#: the model being busy or gone, and a plain-text retry would only wait twice.
+_NOT_UNDERSTOOD = frozenset({400, 404, 405, 413, 415, 422, 501})
+
+
+def _not_understood(error: Exception) -> bool:
+    status = getattr(error, "status", None)
+    return isinstance(status, int) and status in _NOT_UNDERSTOOD
 
 
 def _first_user_message(messages: list[dict[str, str]]) -> str:

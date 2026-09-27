@@ -48,6 +48,20 @@ class Decision(BaseModel):
     note: str = Field(default="", max_length=1000)
 
 
+# Gövde modelleri modül düzeyinde olmalı: `from __future__ import annotations` tip adını modülün globallerinde
+# arar; fonksiyon içinde tanımlanan model `body` sorgu parametresi sanılır ve uç her istekte 422 döner.
+class RedirectDecision(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+    target: str = Field(default="", max_length=600)
+    note: str = Field(default="", max_length=1000)
+
+
+class PageDecision(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+    fields: dict[str, str] = Field(default_factory=dict)
+    note: str = Field(default="", max_length=1000)
+
+
 class BulkApprove(BaseModel):
     ids: list[str] = Field(min_length=1)
     note: str = Field(default="", max_length=1000)
@@ -883,11 +897,6 @@ def register(app, runtime, authorize, session_user):
                                                               .group_by(REDIRECTS.c.confidence, REDIRECTS.c.status)).all()}
         return {"total": total, "items": [_redirect_view(r) for r in rows], "counts": counts}
 
-    class RedirectDecision(BaseModel):
-        action: str = Field(pattern="^(approve|reject)$")
-        target: str = Field(default="", max_length=600)
-        note: str = Field(default="", max_length=1000)
-
     @app.post("/api/v1/seo-geo/redirects/{rid}/decide")
     def seo_redirect_decide(rid: str, body: RedirectDecision, request: Request) -> dict[str, Any]:
         """Karar yalnız kaydedilir; T-soft'a yazılmaz. Onaylananlar CSV ile panelden girilir."""
@@ -1080,11 +1089,6 @@ def register(app, runtime, authorize, session_user):
         return [k for _, k in sorted(out, key=lambda x: -x[0])]
 
     seo.page_queue, seo.make_page_proposal = page_queue, make_page_proposal
-
-    class PageDecision(BaseModel):
-        action: str = Field(pattern="^(approve|reject)$")
-        fields: dict[str, str] = Field(default_factory=dict)
-        note: str = Field(default="", max_length=1000)
 
     @app.post("/api/v1/seo-geo/pages/proposals/{proposal_id}/decide")
     def seo_page_decide(proposal_id: str, body: PageDecision, request: Request) -> dict[str, Any]:

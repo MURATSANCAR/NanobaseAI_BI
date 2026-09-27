@@ -54,7 +54,8 @@ const ALL_FLOORS = 'ALL';
 /** "4. Kat E-12" gibi serbest metinden sıralanabilir kat etiketi. */
 const floorKey = (f: string) => f.trim();
 
-/** ZEKİ yalnız finans/satış verisine cevap verir (chat_scope); örnekler de o kapsamdan. */
+/** Zeki AI şirketin bütün modüllerinin sorularını kapsar (chat_scope, 2026-09-28); verisi bağlı olmayan konuda
+ * «henüz veri bağlı değil» der. Hızlı örnekler bugün sohbete verisi bağlı konulardan (satış ve finans) seçildi. */
 const PROMPTS = [
   { label: '💰 Bu yıl net ciro', q: 'Bu yıl net ciro ne kadar?' },
   { label: '🏬 En çok satan 5 kanal', q: 'Bu yıl en çok satış yapılan 5 kanalı göster' },

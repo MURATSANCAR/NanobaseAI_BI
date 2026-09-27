@@ -410,7 +410,7 @@ export type AlertInput = {
 };
 
 /** GET dışı istekler; motorun düz Türkçe hata mesajını olduğu gibi taşır. */
-async function send<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T> {
+export async function send<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T> {
   const res = await fetch(`${ENGINE_BASE}${path}`, {
     method,
     credentials: 'include',
@@ -2523,6 +2523,73 @@ export const proofingApi = {
   },
   /** Kelime haritası (kök, biçim, sayfa, anlam, deyim); motordaki kitap kimliğiyle. */
   wordMap: (bookId: string) => send<WordMap>('GET', `/api/v1/editorial/proofing/word-map${qs({ bookId })}`, undefined, 30_000),
+};
+
+/** Belge incelemesi: Son Okuma ekranından yüklenen belge (doc, docx, pdf, odt, rtf, txt, md) üstünde metin denetimleri. */
+export type DocumentStatus = 'QUEUED' | 'RUNNING' | 'DONE' | 'FAILED';
+export type DocumentItem = {
+  id: string;
+  title: string;
+  file_name: string;
+  format: string;
+  /** PRINTED: PDF'in basılı sayfaları; APPROXIMATE: sayfasız belge ~250 sözcüklük sayfalara bölündü. */
+  page_kind: 'PRINTED' | 'APPROXIMATE';
+  words: number;
+  status: DocumentStatus;
+  error: string | null;
+  uploaded_by: string;
+  created_at: string;
+  finished_at: string | null;
+  serious: number;
+};
+export type DocumentReport = {
+  document: DocumentItem & { audience: string | null; age_from: number | null; age_to: number | null; pages: number };
+  checks: ProofingCheck[];
+  findings: ProofingFinding[];
+};
+export const DOCUMENT_ACCEPT = '.doc,.docx,.pdf,.odt,.rtf,.txt,.md';
+
+export const documentApi = {
+  list: () => send<{ items: DocumentItem[] }>('GET', '/api/v1/editorial/documents', undefined, 30_000),
+  get: (id: string) => send<DocumentReport>('GET', `/api/v1/editorial/documents/${encodeURIComponent(id)}`, undefined, 30_000),
+  wordMap: (id: string) => send<WordMap>('GET', `/api/v1/editorial/documents/${encodeURIComponent(id)}/word-map`, undefined, 30_000),
+  /** Ham dosya gövdesi (müsvedde yüklemesiyle aynı yol); başlık, okur kitlesi ve yaş isteğe bağlı. */
+  upload: async (file: File, o: { title?: string; audience?: string; ageFrom?: string; ageTo?: string } = {}) => {
+    const q = qs({ filename: file.name, title: o.title || undefined, audience: o.audience || undefined, ageFrom: o.ageFrom || undefined, ageTo: o.ageTo || undefined });
+    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/documents${q}`, {
+      method: 'PUT',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/octet-stream' },
+      body: file,
+      signal: AbortSignal.timeout(600_000),
+    });
+    if (res.status === 401 || res.status === 403) {
+      authBlocked = true;
+      throw new EngineAuthError();
+    }
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { detail?: string | { message?: string } } | null;
+      const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.message;
+      throw new Error(msg || httpErrorText(res.status));
+    }
+    return (await res.json()) as DocumentItem;
+  },
+  exportDocx: async (id: string): Promise<{ blob: Blob; name: string }> => {
+    const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/documents/${encodeURIComponent(id)}/export.docx`, {
+      credentials: 'include',
+      signal: AbortSignal.timeout(300_000),
+    });
+    if (res.status === 401 || res.status === 403) {
+      authBlocked = true;
+      throw new EngineAuthError();
+    }
+    if (!res.ok) {
+      const j = (await res.json().catch(() => null)) as { detail?: string } | null;
+      throw new Error(j?.detail || `Word dosyası üretilemedi (${res.status})`);
+    }
+    const star = /filename\*=UTF-8''([^;]+)/.exec(res.headers.get('Content-Disposition') ?? '');
+    return { blob: await res.blob(), name: star ? decodeURIComponent(star[1]) : 'inceleme.docx' };
+  },
 };
 
 /** Soru sorulabilen (okunmuş) kitaplar; motordan gelir, köprüde kısa süre önbellekte tutulur. */

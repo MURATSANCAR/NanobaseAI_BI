@@ -17,18 +17,23 @@ import {
   TrendingUp,
   Swords,
   Target,
+  Truck,
+  Waypoints,
   Library,
   Radar,
   Bell,
   BookA,
   BookImage,
   BookOpen,
+  BookPlus,
   BookUser,
   BriefcaseBusiness,
+  Building2,
   Braces,
   CalendarClock,
   ChartColumn,
   ClipboardCheck,
+  Factory,
   Contact,
   CornerDownRight,
   FileChartColumn,
@@ -42,6 +47,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LayoutGrid,
+  MapPinned,
   Megaphone,
   Newspaper,
   NotebookPen,
@@ -49,6 +55,7 @@ import {
   Plug,
   Printer,
   Route,
+  School,
   Search,
   Settings,
   ShieldCheck,
@@ -68,7 +75,7 @@ import {
  * öğe olarak girmez, `also` ile en yakın menü öğesine bağlanır ki doğru öğe etkin görünsün.
  */
 
-export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'pazarlama' | 'yonetim';
+export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts';
 
@@ -145,6 +152,14 @@ export const NAV: NavGroup[] = [
         keywords: ['yeni baskı öneri', 'baskı', 'tahmin'],
       },
       {
+        id: 'ilk-baski',
+        label: 'İlk baskı tahmini',
+        to: '/ilk-baski',
+        icon: BookPlus,
+        hint: 'Yeni kitabın satış senaryoları ve ilk baskı adedi',
+        keywords: ['ilk baskı', 'satış tahmini', 'yeni kitap', 'emsal', 'senaryo', 'üretim adedi'],
+      },
+      {
         id: 'butce',
         label: 'Bütçe ve hedefler',
         to: '/butce',
@@ -172,6 +187,7 @@ export const NAV: NavGroup[] = [
       { id: 'son-okuma', label: 'Son okuma', to: '/son-okuma', icon: SpellCheck, section: 'Yayına hazırlık', hint: 'Baskı öncesi son denetim', keywords: ['yazım', 'denetim', 'okuma'] },
       { id: 'kitap-tasarim', label: 'Kitap tasarım', to: '/kitap-tasarim', icon: BookImage, section: 'Yayına hazırlık', hint: 'Sayfa, kapak ve baskı provası', keywords: ['stüdyo', 'kapak', 'mizanpaj', 'resim'] },
       { id: 'serbest-calisanlar', label: 'Serbest çalışanlar', to: '/serbest-calisanlar', icon: BriefcaseBusiness, section: 'Yayına hazırlık', hint: 'Çizer ve serbest çalışan havuzu, iş paketleri, kapasite, hakediş', keywords: ['çizer', 'freelancer', 'illüstratör', 'hakediş', 'iş paketi', 'kapasite'] },
+      { id: 'uretim', label: 'Üretim yönetimi', to: '/uretim', icon: Factory, section: 'Üretim', hint: 'Baskı takvimi, matbaa takibi ve gecikmeler; depo girişi Logo\'dan', keywords: ['üretim', 'matbaa', 'baskı takvimi', 'depo girişi', 'gecikme', 'bandrol', 'baskı çıkışı'] },
     ],
   },
   {
@@ -185,6 +201,43 @@ export const NAV: NavGroup[] = [
       { id: 'basin-web', label: 'Basın ve web', to: '/basin-web', icon: Newspaper, hint: 'Açık kaynaklarda yazar ve kitap haberleri', feature: 'webWatch', keywords: ['haber', 'basın'] },
       { id: 'telif-sozlesme', label: 'Sözleşmeler', to: '/telif-sozlesme', icon: FileSignature, hint: 'Telif ve sözleşme kayıtları', keywords: ['telif', 'sözleşme'] },
       { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, hint: 'Atama, iş yükü, takvim ve kategori kuralları', keywords: ['editörler', 'atama', 'iş yükü', 'takvim', 'kural'] },
+    ],
+  },
+  {
+    // M29–M33 ortak çalışma alanı (ilk dağılım, saha, okul tanıtım, kurumsal satış, ihale); ilk açan M29.
+    id: 'satis',
+    label: 'Satış ve saha',
+    hint: 'İlk dağılım, saha satışı ve kurumsal satış',
+    icon: Waypoints,
+    items: [
+      {
+        id: 'ilk-dagilim',
+        label: 'İlk dağılım',
+        to: '/ilk-dagilim',
+        icon: Truck,
+        section: 'Planlama',
+        hint: 'Yeni kitabın bölge, kanal ve müşteri dağılımı; sevk listesi ve ilk 8 hafta takibi',
+        keywords: ['dağılım', 'sevk', 'sevk listesi', 'bölge', 'bmt', 'bölgem', 'depo girişi', 'yeni kitap', 'iade'],
+      },
+      { id: 'saha', label: 'Saha ve tahsilat', to: '/saha', icon: MapPinned, section: 'Saha', hint: 'Bugünün ziyaret sırası, müşteri brifingi, vadesi geçmiş alacak ve CRM tahsilat onayı', keywords: ['bmt', 'ziyaret', 'tahsilat', 'vadesi geçmiş', 'yaşlandırma', 'brifing', 'ödeme planı', 'saha satış', 'bayi', 'kitapçı'] },
+      {
+        id: 'okul-tanitim',
+        label: 'Okul tanıtım',
+        to: '/okul-tanitim',
+        icon: School,
+        section: 'Saha',
+        hint: 'Okul ziyaret planı, okul kartı, kademeye uygun katalog, bayi eşleştirme ve ziyaret raporu',
+        keywords: ['okul', 'ziyaret', 'öğretmen', 'katalog', 'bayi eşleştirme', 'okul örneği', 'akademik takvim'],
+      },
+      {
+        id: 'kurumsal-satis',
+        label: 'Kurumsal ve B2B',
+        to: '/kurumsal-satis',
+        icon: Building2,
+        section: 'Kurumsal',
+        hint: 'Kurum fırsatları, tema paketi ve teklif, dönemsel hatırlatma, sipariş vermeyen bayiler',
+        keywords: ['kurumsal satış', 'teklif', 'fırsat', 'paket', 'kurum', 'b2b', 'bayi', 'hediye kitap', 'hatırlatma', 'kitapsiparis'],
+      },
     ],
   },
   {
@@ -271,8 +324,8 @@ export function visibleNav(
     .map((g) => ({ ...g, items: g.items.filter(keep(g)), defaultOpen: true } as VisibleGroup))
     .filter((g) => g.items.length > 0);
   if (!role.isEditor || role.isAdmin) return groups;
-  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'pazarlama'];
-  const closed = new Set<NavGroupId>(['analiz', 'finans', 'pazarlama']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)
