@@ -37,6 +37,7 @@ import httpx
 
 from .. import db, source
 from ..config import settings
+from . import _messages as M
 
 NAME = "series_canon"
 VERSION = "1"
@@ -280,44 +281,38 @@ def _compare(a: dict, b: dict, me: dict, other: dict, rel_a: dict, rel_b: dict, 
     """Findings for one recurring character: A in this book, B in the other book."""
     out = []
     page = a["first_page"]
-    where = f"«{other['title']}»" + (f" (dizinin {other['matched_series']['number']}. kitabı)"
-                                     if other.get("matched_series", {}).get("number") else "")
     base = {"page": page, "details": {"character": a["canonical_name"], "other_book": other["title"],
                                      "other_character": b["canonical_name"], "other_first_page": b["first_page"],
                                      "same_universe_basis": universe}}
+
+    def add(f: dict, issue: str, **extra):
+        # metin ve öneri tek yerde: _messages; `issue` bulgunun türü (metinden bağımsız), değerler details'te
+        f = {**base, **f}
+        f["details"] = {**f.get("details", base["details"]), "issue": issue, **extra}
+        out.append(M.put(NAME, f, advice="suggestion" not in f))
     shared = set(a["keys"]) & set(b["keys"])
     for k in shared:
         if a["keys"][k] != b["keys"][k]:
-            out.append({**base, "severity": "WARN", "quote": a["keys"][k], "suggestion": b["keys"][k],
-                        "message": f"Ad yazımı dizideki öbür kitaptan farklı: bu kitapta «{a['keys'][k]}», "
-                                   f"{where} kitabında «{b['keys'][k]}» (s.{b['first_page']})."})
+            add({"severity": "WARN", "quote": a["keys"][k], "suggestion": b["keys"][k]}, "name_differs")
     if not shared:
         ka, kb = sorted(a["keys"])[0], sorted(b["keys"])[0]
-        out.append({**base, "severity": "WARN", "quote": a["keys"][ka], "suggestion": b["keys"][kb],
-                    "message": f"Ad yazımı dizideki öbür kitaptan bir harf farklı olabilir: bu kitapta "
-                               f"«{a['keys'][ka]}», {where} kitabında «{b['keys'][kb]}». Aynı karakterse yazım "
-                               f"birleştirilmeli; farklı karakterse yok sayın."})
+        add({"severity": "WARN", "quote": a["keys"][ka], "suggestion": b["keys"][kb]}, "name_near")
     if a["kind"] not in FLAT_KINDS and b["kind"] not in FLAT_KINDS and a["kind"] != b["kind"]:
-        out.append({**base, "severity": "WARN",
-                    "message": f"«{a['canonical_name']}» bu kitapta {a['kind']}, {where} kitabında {b['kind']}. "
-                               f"Hikâye bu değişikliği açıklamıyorsa dizi tutarsızlığı."})
+        add({"severity": "WARN"}, "being_differs", being=a["kind"], other_being=b["kind"])
     ta, tb = a["traits"] or {}, b["traits"] or {}
-    for field, tr in (("sex", "cinsiyet"), ("age_band", "yaş grubu")):
+    for field, issue in (("sex", "sex_differs"), ("age_band", "age_group_differs")):
         va, vb = ta.get(field), tb.get(field)
         if va and vb and "UNKNOWN" not in (va, vb) and va != vb:
-            out.append({**base, "severity": "WARN",
-                        "message": f"«{a['canonical_name']}» için {tr} farklı: bu kitapta {va}, {where} kitabında "
-                                   f"{vb}. Hikâye açıklamıyorsa (ör. zaman geçmesi) dizi tutarsızlığı."})
+            add({"severity": "WARN"}, issue, value=va, other_value=vb)
     for (x, y), rels in rel_a.items():
         if x != a["id"] or y not in pair_ids:
             continue
         other_rels = rel_b.get((b["id"], pair_ids[y]["b"]))
         if other_rels and not (rels & other_rels):
-            out.append({**base, "severity": "WARN",
-                        "message": f"Akrabalık farklı: bu kitapta «{a['canonical_name']}», «{pair_ids[y]['name']}» "
-                                   f"için {'/'.join(sorted(rels))}; {where} kitabında {'/'.join(sorted(other_rels))}.",
-                        "details": {**base["details"], "description": a["description"],
-                                    "other_description": b["description"]}})
+            add({"severity": "WARN", "details": {**base["details"], "description": a["description"],
+                                                  "other_description": b["description"]}},
+                "relation_differs", other_name=pair_ids[y]["name"], relation="/".join(sorted(rels)),
+                other_relation="/".join(sorted(other_rels)))
     fa, fb = _figures(a["id"]), _figures(b["id"])
     # One drawing against one is a single noisy distance (measured: 2 of 3 same-character
     # 1-vs-1 comparisons crossed the threshold); at least MIN_FIGURES on each side.
@@ -325,12 +320,9 @@ def _compare(a: dict, b: dict, me: dict, other: dict, rel_a: dict, rel_b: dict, 
         return out
     d = cross_distance([list(f["vector"]) for f in fa], [list(f["vector"]) for f in fb])
     if d is not None and d >= settings().ccip_same_max:
-        out.append({**base, "severity": "WARN",
-                    "message": f"«{a['canonical_name']}» çizimi {where} kitabındaki çiziminden farklı görünüyor "
-                               f"(görsel kimlik uzaklığı {d:.3f} ≥ {settings().ccip_same_max}). Saç, ten, göz, "
-                               f"ayırt edici işaretleri iki kitabın sayfalarında karşılaştırın.",
-                    "details": {**base["details"], "ccip_median": round(d, 4),
-                                "pages": [f["page_no"] for f in fa], "other_pages": [f["page_no"] for f in fb]}})
+        add({"severity": "WARN", "details": {**base["details"], "ccip_median": round(d, 4),
+                                              "pages": [f["page_no"] for f in fa],
+                                              "other_pages": [f["page_no"] for f in fb]}}, "drawing_differs")
     return out
 
 
@@ -362,14 +354,12 @@ async def run(generation_id: str):
     me = book_facts(str(gen["book_id"]), generation_id)
     stats = {"series": me["series"], "universe": me["universe"], "peers": []}
     if not me["series"] and not me["universe"]:
-        return [{"page": None, "severity": "INFO",
-                 "message": "Kitabın dizisi belirlenemedi (künyede dizi adı yok, kitaba evren/dizi girilmemiş); "
-                            "dizi karşılaştırması yapılmadı."}], stats
+        return [M.put(NAME, {"page": None, "severity": "INFO", "details": {"issue": "no_series"}}, advice=True)], stats
     peers = [p for p in _peers(me) if p[0]["gid"]]
     label = me["universe"] or ", ".join(s["shown"] + (f" (dizinin {s['number']}. kitabı)" if s["number"] else "") for s in me["series"])
     if not peers:
-        return [{"page": None, "severity": "INFO",
-                 "message": f"Dizi: {label}. Bu diziden analiz edilmiş başka kitap yok; karşılaştırma yapılmadı."}], stats
+        return [M.put(NAME, {"page": None, "severity": "INFO", "details": {"issue": "no_peers", "series": label}},
+                      advice=True)], stats
     findings = []
     ca = characters(me)
     rel_a = relations(ca)
@@ -382,14 +372,13 @@ async def run(generation_id: str):
                                "recurring_candidates": [(a["canonical_name"], b["canonical_name"]) for a, b in pairs],
                                "proper_named": [len(ca), len(cb)], "different_authors": bool(coincidence)})
         if not pairs:
-            findings.append({"page": None, "severity": "INFO",
-                             "message": f"Dizi: {label}. «{other['title']}» ile karşılaştırıldı: ortak karakter yok."})
+            findings.append(M.put(NAME, {"page": None, "severity": "INFO", "details": {
+                "issue": "no_common", "series": label, "other_book": other["title"]}}, advice=True))
             continue
         if coincidence:
-            findings.append({"page": None, "severity": "INFO",
-                             "message": f"«{other['title']}» aynı dizide ama yazarları farklı (bağımsız hikâyeler); "
-                                        f"aynı adlı karakterler tesadüf sayıldı: "
-                                        + ", ".join(a["canonical_name"] for a, _ in pairs) + "."})
+            findings.append(M.put(NAME, {"page": None, "severity": "INFO", "details": {
+                "issue": "different_authors", "other_book": other["title"],
+                "names": ", ".join(a["canonical_name"] for a, _ in pairs)}}, advice=True))
             continue
         rel_b = relations(cb)
         pair_ids = {a["id"]: {"b": b["id"], "name": a["canonical_name"]} for a, b in pairs}

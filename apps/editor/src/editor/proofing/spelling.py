@@ -33,35 +33,13 @@ from .. import db
 from ..llm import Llm
 from . import _spelling_judge as J
 from . import _spelling_rules as R
+from . import _messages as M
 from . import _spelling_text as T
 from ._spelling_geometry import confirms, printed_gap
 
 NAME = "spelling"
 VERSION = "1"
 LABEL = "Yazım ve noktalama"
-
-MESSAGES = {
-    "bilinmeyen_kelime": "«{word}» sözlüklerde yok; yazım hatası olabilir.",
-    "tekrarlanan_hece": "«{word}» sözcüğünde bir hece iki kez yazılmış olabilir.",
-    "tekrarlanan_kelime": "«{word}» art arda iki kez yazılmış.",
-    "ek_uyumu": "Ek, sözcüğün ses uyumuna uymuyor ({rule}).",
-    "kesme_eksik": "Özel ada gelen ek kesme işaretiyle ayrılmalı.",
-    "gereksiz_kesme": "Cins isimden sonra kesme işareti kullanılmaz.",
-    "büyük_harf": "Cümle büyük harfle başlamalı.",
-    "tutarlılık": "Kitapta çoğunlukla «{book_majority}» kullanılmış; burada «{used}» var ({style}).",
-}
-
-
-def _message(c: dict) -> str:
-    d = c["details"]
-    if "rule" in d and c["kind"] not in MESSAGES:
-        return d["rule"]
-    tmpl = MESSAGES.get(c["kind"], d.get("rule", c["kind"]))
-    try:
-        return tmpl.format(**{"word": d.get("word", c["quote"]), **d})
-    except (KeyError, IndexError):
-        return tmpl
-
 
 def _alt_phrases(span_text: str, c: dict) -> tuple[str, list[str]]:
     """(phrase as our text has it, the same phrase with each proposed correction) for the
@@ -162,8 +140,9 @@ async def run(generation_id: str):
             if v["p_error"] < J.KEEP:
                 stats["dropped_as_intentional"] += 1
                 continue
-        findings.append({"page": c["page"], "severity": "WARN", "quote": c["quote"],
-                         "message": _message(c), "suggestion": c.get("suggestion"), "details": det})
+        # metin tek yerde: _messages; ham öneri (doğru yazım) suggestion'da kalır
+        findings.append(M.put(NAME, {"page": c["page"], "severity": "WARN", "quote": c["quote"],
+                                     "suggestion": c.get("suggestion"), "details": det}))
         stats["kept:" + c["kind"]] += 1
     findings.sort(key=lambda f: (f["page"] or 0, f["details"]["kind"]))
     return findings, dict(stats)

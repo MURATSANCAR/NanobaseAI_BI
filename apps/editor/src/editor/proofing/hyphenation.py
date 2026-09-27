@@ -28,11 +28,12 @@ import re
 
 from .. import db
 from . import _hyphenation_tr as tr
+from . import _messages as M
 from ._layout_lines import Line, book, norm_bbox, page_lines, unreliable
 
 NAME = "hyphenation"
 VERSION = "1"
-LABEL = "Satır sonu heceleme"
+LABEL = "Satır sonu bölme"
 
 HYPHENS = "-\u00ad\u2010\u2011"   # hyphen-minus, soft hyphen (InDesign exports it), hyphen, nb-hyphen
 LOOKALIKE = "\u2012\u2013\u2014\u2212"   # figure dash, en dash, em dash, minus
@@ -179,10 +180,11 @@ async def run(generation_id: str):
              "line_end_breaks": 0, "checked": 0, "compound": 0, "unresolved": 0, "not_syllabifiable": 0,
              "lines_unreadable_glyphs": 0}
 
-    def add(page, sev, msg, quote, bb, suggestion=None, **details):
-        findings.append({"page": page, "severity": sev, "message": msg, "quote": quote,
-                         "bbox": norm_bbox(doc[page - 1], bb), "suggestion": suggestion,
-                         "details": details})
+    def add(page, sev, quote, bb, suggestion=None, **details):
+        # metin tek yerde: _messages; burada yalnız kural, kanıt ve ham öneri (doğru bölme)
+        findings.append(M.put(NAME, {"page": page, "severity": sev, "quote": quote,
+                                     "bbox": norm_bbox(doc[page - 1], bb), "suggestion": suggestion,
+                                     "details": details}))
 
     for pno, lines in lines_by_page.items():
         run_len, run_start = 0, None
@@ -201,8 +203,7 @@ async def run(generation_id: str):
                                    (lines[i - 1].text if i else ""))
                 if (b and len(m.group(1)) in b and m.group(2) in HYPHENS and not opened
                         and vocab.lower.get(tr.lower_tr(word), 0) + vocab.cap.get(tr.lower_tr(word), 0) > 0):
-                    add(pno, "WARN", "Satır içinde heceleme çizgisi kalmış (metin yeniden akmış olabilir).",
-                        m.group(0), cur.bbox, suggestion=word, rule="stray_hyphen")
+                    add(pno, "WARN", m.group(0), cur.bbox, suggestion=word, rule="stray_hyphen")
             ends_dash = cur.text.rstrip()[-1:] in HYPHENS + LOOKALIKE
             if not ends_dash:
                 run_len = 0
@@ -231,21 +232,16 @@ async def run(generation_id: str):
             if run_len == 1:
                 run_start = cur
             if run_len == LADDER + 1:
-                add(pno, "INFO", f"Art arda {LADDER}'ten fazla satır sonu heceleme çizgisiyle bitiyor"
-                    " (merdiven).", run_start.text[-20:], (run_start.x0, run_start.y0, cur.x1, cur.y1),
-                    rule="ladder")
+                add(pno, "INFO", run_start.text[-20:], (run_start.x0, run_start.y0, cur.x1, cur.y1),
+                    rule="ladder", lines=LADDER + 1)
             if a["dash"] in LOOKALIKE:
-                add(pno, "WARN", f"Satır sonu bölmede kısa çizgi yerine “{a['dash']}” (U+{ord(a['dash']):04X})"
-                    " kullanılmış.", quote, cur.bbox, suggestion=f"{a['left']}-", rule="lookalike_dash",
+                add(pno, "WARN", quote, cur.bbox, suggestion=f"{a['left']}-", rule="lookalike_dash",
                     char=f"U+{ord(a['dash']):04X}")
             if a["kind"] == "apos_hyphen":
-                add(pno, "WARN", "Kesme işaretinden sonra kısa çizgi kullanılmış; TDK: satır sonunda"
-                    " yalnız kesme işareti kalır.", quote, cur.bbox, suggestion=f"{a['left']}",
-                    rule="apostrophe_hyphen")
+                add(pno, "WARN", quote, cur.bbox, suggestion=f"{a['left']}", rule="apostrophe_hyphen")
                 continue
             if a["kind"] == "in_suffix":
-                add(pno, "INFO", "Özel adın kesmeyle ayrılan eki satır sonunda bölünmüş; bölme"
-                    " kesme işaretinde yapılabilir.", quote, cur.bbox,
+                add(pno, "INFO", quote, cur.bbox,
                     suggestion=f"{a['stem']}’ / {a['word'][len(a['stem']) + 1:]}", rule="apostrophe_suffix")
                 continue
             word, cut = a["word"], a["cut"]
@@ -257,13 +253,11 @@ async def run(generation_id: str):
             allowed = tr.allowed_breaks(word) or []
             if cut not in breaks:
                 near = min(allowed, key=lambda k: abs(k - cut)) if allowed else None
-                add(pno, "ERROR", f"“{word}” hece sınırında bölünmemiş (heceler: {tr.hyphenate(word)}).",
-                    quote, cur.bbox, suggestion=(f"{word[:near]}- / {word[near:]}" if near else
+                add(pno, "ERROR", quote, cur.bbox, suggestion=(f"{word[:near]}- / {word[near:]}" if near else
                                                  f"{word} (bölmeden)"),
                     rule="not_syllable_boundary", word=word, cut=cut, syllables=tr.hyphenate(word))
             elif cut < 2 or len(word) - cut < 2:
-                add(pno, "WARN", "Satır sonunda ya da başında tek harf bırakılmış (TDK: tek harf bırakılmaz).",
-                    quote, cur.bbox, suggestion=(f"{word[:allowed[0]]}- / {word[allowed[0]:]}" if allowed
+                add(pno, "WARN", quote, cur.bbox, suggestion=(f"{word[:allowed[0]]}- / {word[allowed[0]:]}" if allowed
                                                  else f"{word} (bölmeden)"),
                     rule="single_letter", word=word, cut=cut)
             before = cur.text.rstrip()[:-(len(a["left"]) + 1)].rstrip()
@@ -275,15 +269,11 @@ async def run(generation_id: str):
                        (vocab.lower.get(lw, 0) == 0 and (vocab.cap_mid.get(lw, 0) > 0
                                                           or not _sentence_start(before)))))
             if proper:
-                add(pno, "INFO", f"Özel ad “{word}” satır sonunda bölünmüş (TDK'ye aykırı değil;"
-                    " yayınevi üslubu çoğunlukla bölmez).", quote, cur.bbox, rule="proper_noun", word=word)
+                add(pno, "INFO", quote, cur.bbox, rule="proper_noun", word=word)
             if turn is not None:
                 leaf = pno % 2 == 1          # odd PDF page = recto: the next page is behind the leaf
-                add(pno, "WARN" if leaf else "INFO",
-                    ("Bölünen kelime sayfa çevrilince devam ediyor (s." if leaf else
-                     "Bölünen kelime karşı sayfada devam ediyor (s.") + f"{turn}); sayfanın son satırı"
-                    " bölünmemeli.", quote, cur.bbox, rule="page_turn" if leaf else "spread_break",
-                    next_page=turn)
+                add(pno, "WARN" if leaf else "INFO", quote, cur.bbox,
+                    rule="page_turn" if leaf else "spread_break", next_page=turn)
     stats["findings_by_rule"] = {}
     for f in findings:
         r = f["details"].get("rule")

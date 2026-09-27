@@ -33,10 +33,11 @@ from .. import schemas, source
 from ..llm import Llm
 from . import _attributes as A
 from . import _continuity as C
+from . import _messages as M
 
 NAME = "dialogue"
 VERSION = "1"
-LABEL = "Diyalog atfı ve ses"
+LABEL = "Konuşmalar"
 
 JUDGE_MIN = C.setting("dialogue_judge_min", 0.5)          # EDITOR_DIALOGUE_JUDGE_MIN
 ERROR_MIN = C.setting("dialogue_error_min", 0.8)          # EDITOR_DIALOGUE_ERROR_MIN
@@ -212,27 +213,21 @@ def _ev(ln: dict) -> dict:
 def finding_attribution(c: dict, v: dict, names: dict[str, str], evs_on_page: list[dict]) -> dict:
     ln = c["line"]
     p = v["p"]
-    who = ", ".join(names.get(i, i) for i in c["present"]) or "-"
-    return {"page": ln["page"], "severity": "ERROR" if p >= ERROR_MIN else "WARN", "quote": ln["quote"],
-            "message": (f"Diyalog atfı — s.{ln['page']} “{ln['quote']}” repliği «{ln['speaker_name']}» adına yazılmış; "
-                        f"olay kayıtlarına göre bu sahnede olanlar: {who}. Hikâye {ln['speaker_name']}'in "
-                        "orada olduğunu açıklamıyor."),
-            "suggestion": "Repliğin sahibini ve sahnede kimin olduğunu kontrol edin; adı ya da olay anlatımını düzeltin.",
+    # metin ve öneri tek yerde: _messages (details'ten kurulur)
+    return M.put(NAME, {"page": ln["page"], "severity": "ERROR" if p >= ERROR_MIN else "WARN", "quote": ln["quote"],
             "details": {"rule": "A", "a": _ev(ln), "b": {"page": ln["page"], "present": [names.get(i, i) for i in c["present"]],
                                                           "events": evs_on_page},
-                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(p, 3)}}
+                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(p, 3)}},
+                 advice=True)
 
 
 def finding_address(c: dict, v: dict) -> dict:
     a, b = c["a"], c["b"]
-    return {"page": b["page"], "severity": "WARN", "quote": b["quote"],
-            "message": (f"Ses/hitap — «{a['speaker_name']}», «{a['addressee_name']}» adlı karaktere {c['uses']} "
-                        f"replikte çoğunlukla {CATEGORY_TR[c['dominant']]} sesleniyor (s.{a['page']} «{a['address_term']}»); "
-                        f"s.{b['page']}'de {CATEGORY_TR[b['category']]}: «{b['address_term']}». Hikâye bu değişimi açıklamıyor."),
-            "suggestion": "Hitabı öteki repliklerle aynı yapın ya da değişimin nedenini metinde gösterin.",
+    return M.put(NAME, {"page": b["page"], "severity": "WARN", "quote": b["quote"],
             "details": {"rule": "B", "dominant": c["dominant"], "deviant": b["category"], "uses": c["uses"],
                         "share": round(c["share"], 3), "a": _ev(a), "b": _ev(b),
-                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(v["p"], 3)}}
+                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(v["p"], 3)}},
+                 advice=True)
 
 
 async def check(lines: list[dict], pages: list[dict], llm, evs: list[dict], mentions: list[dict],
@@ -310,10 +305,8 @@ async def run(generation_id: str):
     lines, rstats = await read_lines(llm, C.story_pages(pages), chars)
     findings, stats = await check(lines, pages, llm, evs, mentions, chars)
     stats["reader"] = rstats
-    findings.append({"page": None, "severity": "INFO",
-                     "message": (f"Diyalog: {stats['lines']} replik okundu ({stats['lines_resolved']} konuşanı çözülmüş), "
-                                 f"{stats['pages_with_presence']} sayfada katılımcı bilgisi; atıf adayı "
-                                 f"{stats['candidates_attribution']} ({stats['confirmed_attribution']} bulgu), hitap adayı "
-                                 f"{stats['candidates_address']} ({stats['confirmed_address']} bulgu). "
-                                 "Eşikler henüz gerçek kitapta ölçülmedi.")})
+    findings.append(M.put(NAME, {"page": None, "severity": "INFO",
+                                 "details": {"summary": {k: stats[k] for k in (
+                                     "lines", "lines_resolved", "pages_with_presence", "candidates_attribution",
+                                     "confirmed_attribution", "candidates_address", "confirmed_address")}}}))
     return findings, stats

@@ -22,13 +22,14 @@ import collections
 from .. import book_type, db
 from ..llm import Llm
 from . import _continuity as C
+from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "phrase_repeats"
 VERSION = "1"
-LABEL = "Kalıp ifade tekrarı"
+LABEL = "Tekrarlanan söz öbeği"
 
 CONTEXT_CHARS = C.setting("word_context_chars", 70)         # EDITOR_WORD_CONTEXT_CHARS
 PARALLEL = C.setting("word_variety_parallel", 4)            # EDITOR_WORD_VARIETY_PARALLEL
@@ -94,14 +95,12 @@ async def run(generation_id: str):
         here = occs[pos[1]].page
         pages = [occs[i].page for i in pos]
         marks = [boxes[occs[pos[1] + k].idx] for k in range(n) if occs[pos[1] + k].idx in boxes]
-        findings.append({
+        findings.append(M.put(NAME, {
             "page": here, "severity": "WARN", "quote": shown[1][0], "bbox": marks[0] if marks else None,
-            "message": f"«{shown[0][0]}» söz öbeği kitapta {len(pos)} kez geçiyor: "
-                       + ", ".join(f"s.{pg}" for pg in pages) + ".",
             "details": {"phrase": [occs[pos[0] + k].lemma for k in range(n)], "count": len(pos), "pages": pages,
                         "occurrences": [{"page": occs[i].page, "text": t, "context": m} for i, (t, m) in zip(pos, shown)],
                         "p_cliche": round(p, 3), "group": "kalıp · " + " ".join(occs[pos[0] + k].lemma for k in range(n)),
-                        "confidence": round(p, 3), "marks": marks}})
+                        "confidence": round(p, 3), "marks": marks}}))
         stats["kept"] += 1
     findings.sort(key=lambda f: f["page"])
     return findings, dict(stats)

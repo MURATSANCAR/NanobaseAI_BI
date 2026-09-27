@@ -1,5 +1,30 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (gece, 2) — Son okuma bulgu metinleri sade dile çevrildi (ekran + Word)
+
+- **Neden:** kullanıcı Word'e aktarılan raporda «Metin rengi (#f38aa5) ile zeminin arasında kontrast düşük: 2.4:1
+  (WCAG en az 3:1, küçük metinde 4.5:1); 3 satır.» gördü, anlaşılmaz buldu. Okuyucu editör ve yazar.
+- **Tek yer:** `apps/editor/src/editor/proofing/_messages.py` — 19 denetimin ~100 bulgu türü, kalıp: ne sorun + nerede
+  + neden önemli + ne yapılabilir; sayısal ayrıntı ayrı (`detail`, sade dille: «Okunurluk oranı 2,4; en az 3, küçük
+  yazıda en az 4,5 olmalı.»). Renk kodu → genel Türkçe renk adı eşlemesi, Türkçe sayı, «CRM» yerine «yayınevi kaydı».
+  Denetimler metni `M.put` ile şablondan doldurur (f-string'ler kaldırıldı); denetim adları sadeleşti (`LABEL`).
+- **Eski raporlar:** metin rapor okunurken kayıtlı alanlardan kurulur (kart servisi `/proofing` ve `export.docx`);
+  DB'deki eski metne dokunulmadı. GPU'daki 38.779 kayıtlı bulgunun hepsi yeni şablondan üretildi (özet bulgularda,
+  künye/dizi türünde ve hassas içerik gerekçesinde eksik alan eski metnin kendi kalıbından okunuyor).
+- **Kimlik değişmedi:** tür anahtarı `kind_of` metinden bağımsız (künye ve dizi bulgularına `details.issue`); eklenen
+  details alanları yalnız ek (folio yüksekliği `mm`, merdiven `lines`, hassas içerik `reason`, özetlerde `summary`,
+  silinen sayfa `start`, dizi değerleri). 5 gerçek kitapta deterministik 5 denetim eski/yeni kodla kuru koşuldu (salt
+  okuma): 314 bulgu, sayı/sıra/sayfa/önem/alıntı/kutu/eski details farkı 0. `word_variety` ve `word_choice` sırası artık
+  metne değil alanlara bağlı.
+- **Word:** yorum başında «Mutlaka düzeltin / Bakmanız önerilir / Bilginize — <denetim>», sonra «s. N — metin», öneri,
+  sonda parantez içinde ayrıntı; yazar «Zeki AI». **Ekran:** kanıt panelinde «Ayrıntı» katlı (animasyonsuz); köprü
+  `detail`'i geçirir. Önem adları ekranda hata/uyarı/bilgi.
+- **Bilerek dokunulmayan:** `age_fit.readability/sensitive` kendi metni (stüdyo yaş raporu `age_report._fid` bulgu
+  kimliğini metinle kuruyor; değişse eski kararlar kopardı) — son okuma metni `age_fit.run()`'da şablondan.
+- **Doğrulama:** GPU geçici kap (`editor-py:0.15.9-87232e97`): tam set 531 geçti + bilinen `test_proofing_contract`
+  sıra bağımlılığı (tek başına 3/3); yeni `test_proof_messages.py`. Örnek Word ve önce/sonra tablosu oturum
+  karalamasında (`son-okuma-word/`). Kurulmadı.
+
 ## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
 
 - Bağlayıcının zamanlayıcısı yoktu; yeni okunan kitaplar okur kitlesini/yaşı/türü almıyor, yaş denetimleri koşmuyordu. Nerede koşmalı: CRM (.28) test sunucusundan erişiliyor; editöre test sunucusundan yalnız TT GPU'nun açtığı ters tüneller var (kart 18889, stüdyo 18890). `editor-mcp` dışarı açık değil ve açmak bütün MCP araçlarını açardı.

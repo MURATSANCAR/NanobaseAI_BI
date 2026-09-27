@@ -27,10 +27,11 @@ from .. import schemas, source
 from ..llm import Llm
 from . import _attributes as A
 from . import _continuity as C
+from . import _messages as M
 
 NAME = "setting"
 VERSION = "1"
-LABEL = "Mekân tutarlılığı"
+LABEL = "Mekân"
 
 JUDGE_MIN = C.setting("setting_judge_min", 0.5)    # EDITOR_SETTING_JUDGE_MIN
 IMAGE_MIN = C.setting("setting_image_min", 0.7)    # EDITOR_SETTING_IMAGE_MIN: resmin "ters" olasılığı
@@ -52,8 +53,6 @@ VISUAL = {
              "question": "Bu resimde hava nasıl görünüyor?",
              "hint": "G = güneşli/açık, Y = yağmurlu, K = karlı, B = belli değil (kapalı mekân, ipucu yok)"},
 }
-VALUE_TR = {"IC": "içeride", "DIS": "dışarıda", "GUNDUZ": "gündüz", "GECE": "gece", "GUNESLI": "güneşli",
-            "YAGMURLU": "yağmurlu", "KARLI": "karlı"}
 
 FACT_SCHEMA = schemas.obj({"facts": schemas.arr(schemas.obj({
     "place": schemas.STR, "aspect": {"type": "string", "enum": ASPECTS}, "value": schemas.STR,
@@ -180,23 +179,19 @@ def _ev(f: dict) -> dict:
 
 def finding_text(c: dict, v: dict) -> dict:
     a, b = c["a"], c["b"]
-    return {"page": b["page"], "severity": "WARN", "quote": b["quote"],
-            "message": (f"Mekân tutarlılığı ({ASPECT_TR[c['aspect']]}) — «{c['place']}»: s.{a['page']} “{a['quote']}” "
-                        f"({a['value']}); s.{b['page']} “{b['quote']}” ({b['value']}). Hikâye bu farkı açıklamıyor."),
-            "suggestion": "İki tarifi karşılaştırıp birini düzeltin ya da değişimi açıklayan bir cümle ekleyin.",
+    # metin ve öneri tek yerde: _messages (details'ten kurulur)
+    return M.put(NAME, {"page": b["page"], "severity": "WARN", "quote": b["quote"],
             "details": {"kind": "TEXT_TEXT", "place": c["place"], "aspect": c["aspect"], "a": _ev(a), "b": _ev(b),
-                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(v["p"], 3)}}
+                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(v["p"], 3)}},
+                 advice=True)
 
 
 def finding_image(f: dict, verdict: dict) -> dict:
-    return {"page": f["page"], "severity": "WARN", "quote": f["quote"], "bbox": [0, 0, 1000, 1000],
-            "message": (f"Mekân tutarlılığı ({ASPECT_TR[f['aspect']]}) — s.{f['page']} metin “{f['quote']}” "
-                        f"({VALUE_TR[f['value']]}) derken resim {VALUE_TR[verdict['seen']]} gösteriyor "
-                        f"(olasılık {verdict['p_against']:.2f})."),
-            "suggestion": "Sayfanın resmiyle metnini karşılaştırın; çizimi ya da cümleyi düzeltin.",
+    return M.put(NAME, {"page": f["page"], "severity": "WARN", "quote": f["quote"], "bbox": [0, 0, 1000, 1000],
             "details": {"kind": "TEXT_IMAGE", "aspect": f["aspect"], "a": _ev(f),
                         "b": {"page": f["page"], "source": "IMAGE", "bbox": [0, 0, 1000, 1000], "seen": verdict["seen"]},
-                        "image": {k: round(verdict[k], 3) for k in ("p_against", "p_agree", "p_unclear")}}}
+                        "image": {k: round(verdict[k], 3) for k in ("p_against", "p_agree", "p_unclear")}}},
+                 advice=True)
 
 
 async def check(facts: list[dict], pages: list[dict], llm, illustrated: set | None = None,
@@ -266,10 +261,7 @@ async def run(generation_id: str):
         return Path(render_page(bv, page_no)["path"]).read_bytes()
     findings, stats = await check(facts, pages, llm, illustrated, png_of)
     stats["reader"] = rstats
-    findings.append({"page": None, "severity": "INFO",
-                     "message": (f"Mekân tutarlılığı: {stats['facts']} mekân bilgisi okundu; {stats['candidates']} "
-                                 f"metin–metin adayı yargılandı ({stats['confirmed_text']} bulgu), "
-                                 f"{stats['visual_facts']} bilgi resimle karşılaştırıldı ({stats['confirmed_image']} "
-                                 "bulgu). Oda düzeni, kapı/pencere yönü, kat ve şehir resimden ölçülmez. "
-                                 "Eşikler henüz gerçek kitapta ölçülmedi.")})
+    findings.append(M.put(NAME, {"page": None, "severity": "INFO",
+                                 "details": {"summary": {k: stats[k] for k in ("facts", "candidates", "confirmed_text",
+                                                                               "visual_facts", "confirmed_image")}}}))
     return findings, stats

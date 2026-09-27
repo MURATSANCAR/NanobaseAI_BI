@@ -28,11 +28,12 @@ import re
 from .. import db, ledger, source
 from ..llm import Llm, PromptRef
 from . import _age_fit_text as T
+from . import _messages as M
 from ._age_fit_ref import REFERENCE, reference_for
 
 NAME = "age_fit"
 VERSION = "2"      # 2: the publisher's CRM target age range is a declared band (2026-09-24)
-LABEL = "Yaş uygunluğu"
+LABEL = "Yaşa uygunluk"
 
 # --------------------------------------------------------------------------- band ---
 
@@ -286,7 +287,7 @@ async def sensitive(generation_id: str, pages: list[dict], band: tuple[int, int]
             "quote": r["second"]["quote"].strip(),
             "message": f"{band_txt} için hassas içerik adayı ({desc}): {r['second']['reason']}",
             "details": {"kind": "SENSITIVE", "category": name, "probability": r["p"], "probs": r["probs"],
-                        "lexicon": r["lexicon"], "band": band}})
+                        "lexicon": r["lexicon"], "band": band, "reason": r["second"]["reason"]}})
     stats["confirmed"] = len(findings)
     stats["by_category"] = {n: sum(f["details"]["category"] == n for f in findings) for n, _ in CATEGORIES.values()
                             if n != "NONE"}
@@ -300,10 +301,9 @@ async def run(generation_id: str):
     band, band_source = declared_band(generation_id, pages)
     findings, stats = readability(pages, band)
     if band is None:
-        findings.insert(0, {"page": None, "severity": "INFO",
-                            "message": "Kitapta beyan edilmiş yaş bandı bulunamadı (künye, üst veri); "
-                                       "okunabilirlik yalnız ölçüldü, banda göre uyarı üretilmedi.",
-                            "details": {"kind": "NO_BAND"}})
+        findings.insert(0, {"page": None, "severity": "INFO", "details": {"kind": "NO_BAND"}})
     sens, sstats = await sensitive(generation_id, pages, band)
     stats.update(band_source=band_source, sensitive=sstats)
-    return findings + sens, stats
+    # Son okumaya giden metin ve öneri tek yerden (_messages). readability/sensitive'in kendi metni stüdyonun
+    # yaş raporu içindir (production/age_report: bulgu kimliği orada o metne bağlı), burada değiştirilmez.
+    return [M.put(NAME, f, advice=True) for f in findings + sens], stats

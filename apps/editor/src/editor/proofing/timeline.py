@@ -36,10 +36,11 @@ from .. import source
 from ..llm import Llm
 from . import _attributes as A
 from . import _continuity as C
+from . import _messages as M
 
 NAME = "timeline"
 VERSION = "1"
-LABEL = "Zaman çizelgesi"
+LABEL = "Zaman sırası"
 
 JUDGE_MIN = C.setting("timeline_judge_min", 0.5)   # EDITOR_TIMELINE_JUDGE_MIN
 ERROR_MIN = C.setting("timeline_error_min", 0.8)   # EDITOR_TIMELINE_ERROR_MIN
@@ -203,9 +204,6 @@ JUDGE = (
     "Cevap tek harf: C = zaman çelişkisi (metin açıklamıyor); U = çelişki yok (bağdaşıyor ya da metin "
     "açıklıyor); B = karar verilemiyor.")
 
-KIND_TR = {"GUN_VAKTI": "gün vakti", "MEVSIM": "mevsim", "YAS": "yaş", "TARIH": "yaş/tarih"}
-
-
 def _ev(e: dict) -> dict:
     return {"page": e["page"], "paragraph": e.get("idx"), "kind": e["kind"], "value": e["value"], "quote": e["quote"]}
 
@@ -214,13 +212,11 @@ def finding_of(c: dict, v: dict) -> dict:
     a, b = c["a"], c["b"]
     p = v["p"]
     sev = "ERROR" if c["kind"] in ("YAS", "TARIH") and p >= ERROR_MIN else "WARN"
-    return {"page": b["page"], "severity": sev, "quote": b["quote"],
-            "message": (f"Zaman çizelgesi ({KIND_TR[c['kind']]}): s.{a['page']} “{a['quote']}” sonra "
-                        f"s.{b['page']} “{b['quote']}” — {c['why']}; metin geri dönüşü açıklamıyor."),
-            "suggestion": "İki yeri karşılaştırın; zaman ifadesini düzeltin ya da geçişi (ertesi gün, o sırada, "
-                          "anımsadı) açıkça yazın.",
+    # metin ve öneri tek yerde: _messages (details'ten kurulur)
+    return M.put(NAME, {"page": b["page"], "severity": sev, "quote": b["quote"],
             "details": {"kind": c["kind"], "a": _ev(a), "b": _ev(b), "why": c["why"],
-                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(p, 3)}}
+                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(p, 3)}},
+                 advice=True)
 
 
 async def check(pages: list[dict], llm, evs: list[dict] | None = None,
@@ -262,10 +258,9 @@ async def run(generation_id: str):
     evs = await asyncio.to_thread(C.events, generation_id)
     chars = await asyncio.to_thread(A.characters, generation_id)
     findings, stats = await check(pages, Llm(generation_id), evs, A.name_index(chars))
-    findings.append({"page": None, "severity": "INFO",
-                     "message": (f"Zaman çizelgesi: {stats['expressions']} zaman ifadesi okundu "
-                                 f"({', '.join(f'{k.lower()} {n}' for k, n in stats['by_kind'].items() if n)}), "
-                                 f"{len(stats['unreal_pages'])} sayfa anı/rüya diye sıraya girmedi; "
-                                 f"{stats['candidates']} aday yargılandı, {stats['confirmed']} bulgu. "
-                                 "Eşikler henüz gerçek kitapta ölçülmedi.")})
+    findings.append(M.put(NAME, {"page": None, "severity": "INFO",
+                                 "details": {"summary": {"expressions": stats["expressions"],
+                                                         "unreal": len(stats["unreal_pages"]),
+                                                         "candidates": stats["candidates"],
+                                                         "confirmed": stats["confirmed"]}}}))
     return findings, stats

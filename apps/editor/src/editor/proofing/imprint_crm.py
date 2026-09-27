@@ -37,10 +37,11 @@ import unicodedata
 from datetime import datetime, timedelta, timezone
 
 from .. import db, source
+from . import _messages as M
 
 NAME = "imprint_crm"
 VERSION = "1"
-LABEL = "Künye — CRM karşılaştırması"
+LABEL = "Künye"
 
 MONTHS = ["ocak", "subat", "mart", "nisan", "mayis", "haziran", "temmuz", "agustos", "eylul", "ekim",
           "kasim", "aralik"]
@@ -64,8 +65,6 @@ ROLE_LABELS = {
     "PROJECT_EDITOR": r"Proje Editörü",
     "DIRECTOR": r"Yayın Yönetmeni",
 }
-ROLE_TR = {"AUTHOR": "yazar", "ILLUSTRATOR": "çizer", "TRANSLATOR": "çevirmen", "EDITOR": "editör",
-           "PROJECT_EDITOR": "proje editörü", "DIRECTOR": "yayın yönetmeni"}
 CRM_ROLE = {"Yazar": "AUTHOR", "Çizer": "ILLUSTRATOR", "Tercüme": "TRANSLATOR"}
 
 
@@ -265,12 +264,13 @@ def load_crm(generation_id: str) -> tuple[dict | None, int]:
 def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dict], dict]:
     F: list[dict] = []
 
-    def add(sev, page, msg, quote=None, sugg=None, **details):
-        F.append({"page": page, "severity": sev, "message": msg, "quote": quote, "suggestion": sugg,
-                  "details": details})
+    def add(sev, page, issue, quote=None, **details):
+        # metin ve öneri tek yerde: _messages; `issue` bulgunun türü (tür anahtarı, metinden bağımsız)
+        F.append(M.put(NAME, {"page": page, "severity": sev, "quote": quote,
+                              "details": {"issue": issue, **details}}, advice=True))
 
     if not rec:
-        add("INFO", None, "Kitabın CRM kaydı yok (CRM bağlayıcısı bu kitabı eşleştiremedi); künye karşılaştırılamadı.")
+        add("INFO", None, "no_record")
         return F, {"crm": False}
     imp = rec.get("imprint") or {}
     ipages = imprint_pages(pages)
@@ -294,21 +294,18 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
     book_isbns = printed_isbns(itext)
     stats["compared"].append("isbn")
     if crm_isbn and not isbn_valid(crm_isbn):
-        add("WARN", None, f"CRM'deki ISBN'in denetim hanesi tutmuyor: {rec.get('isbn')}.",
-            sugg="CRM kaydındaki ISBN'i düzeltin.", crm_isbn=rec.get("isbn"))
+        add("WARN", None, "record_isbn_invalid", crm_isbn=rec.get("isbn"))
     if not book_isbns:
-        add("WARN", ipage_no, "Künyede ISBN bulunamadı.", sugg="Künyeye ISBN'i ekleyin.", crm_isbn=rec.get("isbn"))
+        add("WARN", ipage_no, "isbn_missing", crm_isbn=rec.get("isbn"))
     for printed in book_isbns:
         d = isbn_digits(printed)
         pg, line, _ = line_of(re.escape(printed))
         if not isbn_valid(d):
-            add("ERROR", pg, f"Künyedeki ISBN'in denetim hanesi tutmuyor: {printed}.", quote=printed,
-                sugg=f"CRM'deki ISBN: {rec.get('isbn')}" if crm_isbn else None, printed=printed)
+            add("ERROR", pg, "printed_isbn_invalid", quote=printed, printed=printed,
+                record_isbn=rec.get("isbn") if crm_isbn else None)
         if crm_isbn and d != crm_isbn:
             sev = "INFO" if d in other_crm else "ERROR"
-            add(sev, pg, f"Künyedeki ISBN ({printed}) CRM'deki ISBN'den ({rec.get('isbn')}) farklı"
-                + (" — CRM'de bu kitabın başka bir ISBN alanında kayıtlı." if sev == "INFO" else "."),
-                quote=printed, sugg=f"ISBN: {rec.get('isbn')}", printed=printed, crm=rec.get("isbn"),
+            add(sev, pg, "isbn_differs", quote=printed, printed=printed, crm=rec.get("isbn"),
                 matched_by=rec.get("matched_by"))
 
     # ---- title
@@ -319,8 +316,7 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
         where = next(((p["page_no"], t) for t in titles for p in pages
                       if squash(t) and squash(t) in squash(page_text(p))), None)
         if where is None:
-            add("INFO", None, f"CRM'deki kitap adı («{titles[0]}») kitabın metninde bulunamadı; ad kapakta "
-                "çizim olarak basılmış olabilir, karşılaştırılamadı.", crm_title=titles[0])
+            add("INFO", None, "title_not_found", crm_title=titles[0])
 
     # ---- people
     people = crm_people(rec)
@@ -328,13 +324,11 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
     for role, name in people:
         hit = find_person(name, pages)
         if hit["status"] == "DIFFERENT":
-            add("WARN", hit["page"], f"{ROLE_TR[role].capitalize()} adı kitapta «{hit['printed']}», CRM'de "
-                f"«{name}» olarak yazılmış.", quote=hit["printed"],
-                sugg="Adın doğru yazımını yazarla/CRM ile teyit edin.", role=role, crm=name, printed=hit["printed"])
+            add("WARN", hit["page"], "person_differs", quote=hit["printed"], role=role, crm=name,
+                printed=hit["printed"])
         elif hit["status"] == "ABSENT":
             sev = "WARN" if role in ("AUTHOR", "ILLUSTRATOR", "TRANSLATOR") else "INFO"
-            add(sev, ipage_no, f"CRM'de {ROLE_TR[role]} olarak kayıtlı «{name}» kitapta bulunamadı.",
-                sugg="Künyeyi ya da CRM kaydını kontrol edin.", role=role, crm=name)
+            add(sev, ipage_no, "person_absent", role=role, crm=name)
     crm_sq = {squash(n) for _, n in people}
     for p in ipages + [p for p in pages[:6] if p not in ipages]:
         for role, printed, line in labelled_people(page_text(p)):
@@ -343,8 +337,7 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
                     and not any(sq == c or (len(c) > 5 and (c in sq or sq in c)) for c in crm_sq):
                 known = role in ("AUTHOR", "ILLUSTRATOR") or imp
                 if known:
-                    add("WARN", p["page_no"], f"Künyede {ROLE_TR[role]} olarak «{printed}» yazıyor; CRM'de bu "
-                        "rolde böyle biri yok.", quote=line, sugg="CRM kaydını ya da künyeyi kontrol edin.",
+                    add("WARN", p["page_no"], "person_not_in_record", quote=line,
                         role=role, printed=printed, crm=[n for r, n in people if r == role])
 
     # ---- edition
@@ -353,18 +346,14 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
         stats["compared"].append("edition")
         printed_no, crm_no = int(m.group(1)), int(imp["edition_no"])
         if printed_no != crm_no:
-            add("WARN", pg, f"Künyede {printed_no}. baskı yazıyor; CRM'de kayıtlı son baskı {crm_no}."
-                + (" Bu dosya daha eski bir baskıya ait olabilir." if printed_no < crm_no else ""),
-                quote=line, sugg=f"Yeni baskıysa künyeyi «{crm_no}. Baskı» yapın; değilse CRM'i düzeltin.",
-                printed=printed_no, crm=crm_no)
+            add("WARN", pg, "edition_differs", quote=line, printed=printed_no, crm=crm_no)
         else:
             mm = re.search(r"Bask[ıi]\W{0,4}(" + "|".join(MONTHS_TR) + r")\W{0,3}(\d{4})", line, re.I)
             when = local_date(imp.get("edition_date"))
             if mm and when:
                 pm = MONTHS.index(fold(mm.group(1))) + 1
                 if (int(mm.group(2)), pm) != (when.year, when.month):
-                    add("INFO", pg, f"Künyede baskı tarihi {mm.group(1)} {mm.group(2)}; CRM'de "
-                        f"{MONTHS_TR[when.month - 1]} {when.year}.", quote=line,
+                    add("INFO", pg, "edition_date", quote=line,
                         printed=f"{mm.group(1)} {mm.group(2)}", crm=when.date().isoformat())
 
     # ---- age
@@ -374,17 +363,13 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
         printed = (int(m.group(1)), int(m.group(2)))
         shelf = age_range(imp.get("shelf_text"))
         if shelf and shelf != printed:
-            add("WARN", pg, f"Künyedeki raf yaşı {printed[0]}-{printed[1]}; CRM'deki raf «{imp['shelf_text']}».",
-                quote=line, printed=list(printed), crm=imp.get("shelf_text"))
+            add("WARN", pg, "shelf_age", quote=line, printed=list(printed), crm=imp.get("shelf_text"))
         lo, hi = imp.get("age_from"), imp.get("age_to")
         if lo is not None and hi is not None and not (printed[0] <= int(lo) and int(hi) <= printed[1]):
-            add("WARN", pg, f"Künyede {printed[0]}-{printed[1]} yaş yazıyor; CRM'deki hedef yaş {lo}-{hi} bu "
-                "aralığın dışına taşıyor.", quote=line, sugg="Hedef yaşı CRM'de ya da künyede düzeltin.",
-                printed=list(printed), crm=[lo, hi])
+            add("WARN", pg, "target_age", quote=line, printed=list(printed), crm=[lo, hi])
         ages = [int(x) for x in re.findall(r"\d{1,2}", imp.get("ages_text") or "")]
         if ages and lo is not None and hi is not None and not any(int(lo) <= a <= int(hi) for a in ages):
-            add("INFO", None, f"CRM kendi içinde tutarsız: hedef yaş {lo}-{hi}, yaş etiketleri "
-                f"«{imp['ages_text']}».", crm_target=[lo, hi], crm_ages=imp.get("ages_text"))
+            add("INFO", None, "record_ages_inconsistent", crm_target=[lo, hi], crm_ages=imp.get("ages_text"))
 
     # ---- series
     series_name = imp.get("imprint_series") or imp.get("series")
@@ -399,20 +384,16 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
         key = lambda n: {w for w in fold(n).split() if w not in SERIES_GENERIC}  # noqa: E731
         crm_names = [n for n in (imp.get("imprint_series"), imp.get("series")) if n]
         if not cands:
-            add("INFO", ipage_no, f"CRM'de kitap «{series_name}» dizisinde"
-                + (f" ({imp['imprint_series_no']}. kitap)" if imp.get("imprint_series_no") else "")
-                + "; künyede dizi adı bulunamadı.", crm=series_name)
+            add("INFO", ipage_no, "series_missing", crm=series_name, crm_no=imp.get("imprint_series_no"))
         else:
             pgc, linec, printed, num = cands[0]
             if not same_series(key(printed), key(imp.get("imprint_series") or series_name)):
                 also = [n for n in crm_names if same_series(key(printed), key(n))]
-                add("WARN", pgc, f"Künyede dizi «{printed}»; CRM'in künye dizisi alanında «{series_name}»"
-                    + (f" (CRM'in dizi alanında ise «{also[0]}»: CRM'in iki alanı birbirini tutmuyor)" if also else "")
-                    + ".", quote=linec, sugg="Dizi adını CRM ile künyede aynı yapın.", printed=printed,
-                    crm=crm_names)
+                add("WARN", pgc, "series_differs", quote=linec, printed=printed, crm=crm_names,
+                    record_other=also[0] if also else None)
             no = imp.get("imprint_series_no")
             if num and no and str(no).strip() != num:
-                add("WARN", pgc, f"Künyede dizi numarası {num}; CRM'de {no}.", quote=linec, printed=num, crm=no)
+                add("WARN", pgc, "series_no_differs", quote=linec, printed=num, crm=no)
 
     # ---- publication number
     pub = imp.get("publication_no")
@@ -422,17 +403,14 @@ def compare(pages: list[dict], rec: dict | None, n_pages: int) -> tuple[list[dic
             stats["compared"].append("publication_no")
             if m.group(1) != str(pub).strip():
                 same_as_series = str(imp.get("imprint_series_no") or "").strip() == m.group(1)
-                add("WARN", pg, f"Künyedeki yayın numarası {m.group(1)}; CRM'de {pub}."
-                    + (" Basılı sayı dizi numarasıyla aynı: dizi numarası yayın numarası yerine yazılmış olabilir."
-                       if same_as_series else ""), quote=line, sugg=f"Yayın No: {pub}",
-                    printed=m.group(1), crm=pub)
+                add("WARN", pg, "publication_no_differs", quote=line, printed=m.group(1), crm=pub,
+                    same_as_series=same_as_series)
 
     # ---- page count
     if imp.get("page_count"):
         stats["compared"].append("pages")
         if int(imp["page_count"]) != n_pages:
-            add("WARN", None, f"PDF {n_pages} sayfa; CRM'de sayfa sayısı {imp['page_count']}.",
-                printed=n_pages, crm=imp["page_count"])
+            add("WARN", None, "page_count", printed=n_pages, crm=imp["page_count"])
     return F, stats
 
 

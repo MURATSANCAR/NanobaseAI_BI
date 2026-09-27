@@ -33,10 +33,11 @@ import numpy as np
 import pymupdf
 
 from .. import db, source
+from . import _messages as M
 
 NAME = "edition_diff"
 VERSION = "1"
-LABEL = "Baskılar arası fark"
+LABEL = "Baskı farkı"
 
 ISBN_RE = re.compile(r"97[89][-\s]?\d{1,5}[-\s]?\d{1,7}[-\s]?\d{1,7}[-\s]?\d")
 EDITION_RE = re.compile(r"(\d{1,3})\s*\.\s*Bask[ıi]", re.I)
@@ -227,48 +228,35 @@ def compare(old_doc, new_doc, old_texts, new_texts) -> tuple[list[dict], dict]:
             stats["aligned"] += 1
             stats["shifted"] += a["page"] != b["page"]
             sev = "INFO" if (a["imprint"] or b["imprint"]) else "WARN"
-            moved = f" (önceki baskıda s.{a['page']})" if a["page"] != b["page"] else ""
-            srcnote = (f" Metin kaynakları farklı ({a['source']} / {b['source']}): okuma farkı olabilir."
-                       if a["source"] != b["source"] else "")
             ch = text_changes(a, b) if a["keys"] != b["keys"] else []
             stats["text_changed_pages"] += bool(ch)
+            # metin tek yerde: _messages (details'ten kurulur)
             for c in ch:
-                what = {"replace": f"«{c['old']}» → «{c['new']}»", "delete": f"çıkarıldı: «{c['old']}»",
-                        "insert": f"eklendi: «{c['new']}»"}[c["op"]]
-                findings.append({"page": b["page"], "severity": sev, "quote": c["new"] or None,
-                                 "message": f"{'Künye' if sev == 'INFO' else 'Metin'} değişti{moved}: {what}.{srcnote}",
-                                 "suggestion": None,
-                                 "details": {**c, "old_page": a["page"], "sources": [a["source"], b["source"]]}})
+                findings.append(M.put(NAME, {"page": b["page"], "severity": sev, "quote": c["new"] or None,
+                                             "suggestion": None,
+                                             "details": {**c, "old_page": a["page"], "sources": [a["source"], b["source"]]}}))
             pic = picture_change(old_doc[a["page"] - 1], new_doc[b["page"] - 1])
             if pic:
                 stats["picture_changed_pages"] += 1
-                findings.append({"page": b["page"], "severity": "WARN", "bbox": pic["bbox"],
-                                 "message": f"Görsel değişti{moved}: sayfanın metin dışı alanının %"
-                                            f"{pic['share'] * 100:.1f}'i önceki baskıdan farklı (resim ya da resme "
-                                            f"gömülü yazı). İşaretli bölgeyi iki baskıda karşılaştırın.",
-                                 "details": {"old_page": a["page"], **pic}})
+                findings.append(M.put(NAME, {"page": b["page"], "severity": "WARN", "bbox": pic["bbox"],
+                                             "details": {"old_page": a["page"], **pic}}, advice=True))
         elif j is not None:
             b = fb[j]
             stats["added"] += 1
-            findings.append({"page": b["page"], "severity": "INFO" if b["imprint"] else "WARN",
-                             "quote": _snip(b["words"]) or None,
-                             "message": "Yeni sayfa: önceki baskıda içerikçe karşılığı yok."
-                                        + (f" Başı: «{_snip(b['words'])}»" if b["words"] else " (metinsiz sayfa)"),
-                             "details": {"new_page": b["page"]}})
+            findings.append(M.put(NAME, {"page": b["page"], "severity": "INFO" if b["imprint"] else "WARN",
+                                         "quote": _snip(b["words"]) or None,
+                                         "details": {"new_page": b["page"]}}, advice=True))
         else:
             a = fa[i]
             stats["removed"] += 1
-            findings.append({"page": None, "severity": "INFO" if a["imprint"] else "WARN",
-                             "message": f"Önceki baskının s.{a['page']} sayfası bu baskıda yok."
-                                        + (f" Başı: «{_snip(a['words'])}»" if a["words"] else " (metinsiz sayfa)"),
-                             "details": {"old_page": a["page"]}})
+            findings.append(M.put(NAME, {"page": None, "severity": "INFO" if a["imprint"] else "WARN",
+                                         "details": {"old_page": a["page"], "start": _snip(a["words"]) or None}},
+                                  advice=True))
     ia, ib = imprint(fa), imprint(fb)
-    for field, tr in (("isbn", "ISBN"), ("edition", "Baskı numarası"), ("date", "Baskı tarihi")):
+    for field in ("isbn", "edition", "date"):
         if ia[field] and ib[field] and ia[field] != ib[field]:
-            extra = " (ISBN değişmesi yeni bir basım/sürüm kaydı demektir)" if field == "isbn" else ""
-            findings.append({"page": ib["page"], "severity": "INFO",
-                             "message": f"{tr}: {', '.join(map(str, ia[field]))} → {', '.join(map(str, ib[field]))}{extra}.",
-                             "details": {"field": field, "old": ia[field], "new": ib[field]}})
+            findings.append(M.put(NAME, {"page": ib["page"], "severity": "INFO",
+                                         "details": {"field": field, "old": ia[field], "new": ib[field]}}, advice=True))
     stats["imprint"] = {"old": ia, "new": ib}
     return findings, stats
 
@@ -290,9 +278,7 @@ async def run(generation_id: str):
                   " AND created_at < %s ORDER BY created_at DESC LIMIT 1",
                   cur["book_id"], cur["sha256"], cur["created_at"])
     if prev is None:
-        return [{"page": None, "severity": "INFO",
-                 "message": "Bu kitabın önceki bir sürümü (farklı dosya) yok; baskı karşılaştırması yapılmadı."}], \
-               {"previous_version": None}
+        return [M.put(NAME, {"page": None, "severity": "INFO"})], {"previous_version": None}
     prev_gen = db.one("SELECT id FROM generation WHERE book_version_id=%s ORDER BY created_at DESC LIMIT 1",
                       prev["id"])
     old_doc, new_doc = pymupdf.open(prev["file_path"]), pymupdf.open(cur["file_path"])

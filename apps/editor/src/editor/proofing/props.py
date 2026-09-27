@@ -36,10 +36,11 @@ from .. import schemas, source
 from ..llm import Llm
 from . import _attributes as A
 from . import _continuity as C
+from . import _messages as M
 
 NAME = "props"
 VERSION = "1"
-LABEL = "Eşya sürekliliği"
+LABEL = "Eşyalar"
 
 JUDGE_MIN = C.setting("props_judge_min", 0.5)     # EDITOR_PROPS_JUDGE_MIN; text_contradictions'ta ölçülen başlangıç
 ERROR_MIN = C.setting("props_error_min", 0.8)     # EDITOR_PROPS_ERROR_MIN; B kuralında bu üstü ERROR
@@ -222,16 +223,14 @@ def finding_of(c: dict, v: dict) -> dict:
     a, b = c["a"], c["b"]
     p = v["p"]
     sev = "ERROR" if c["rule"] == "B" and p >= ERROR_MIN else "WARN"
-    return {"page": b["page"], "severity": sev,
+    # metin ve öneri tek yerde: _messages (details'ten kurulur)
+    return M.put(NAME, {"page": b["page"], "severity": sev,
             "quote": b["quote"] if b["source"] != "IMAGE" else None,
             "bbox": b["bbox"] if b["source"] == "IMAGE" else None,
-            "message": (f"Eşya sürekliliği — «{c['character_name']}», {c['item']}: s.{a['page']} {describe(a)}; "
-                        f"s.{b['page']} {describe(b)}. {c['why'].capitalize()}; hikâye bunu açıklamıyor."),
-            "suggestion": "İki yeri yan yana karşılaştırın; çizimi ya da metni düzeltin veya değişimi açıklayan "
-                          "bir cümle ekleyin.",
             "details": {"rule": c["rule"], "character": c["character_name"], "character_id": c["character_id"],
                         "item_key": c["key"], "a": _ev(a), "b": _ev(b),
-                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(p, 3)}}
+                        "judge": {k: v[k] for k in ("forward", "reverse")}, "p_contradiction": round(p, 3)}},
+                 advice=True)
 
 
 async def check(rows: list[dict], states: list[dict], pages: list[dict], llm) -> tuple[list[dict], dict]:
@@ -276,8 +275,7 @@ async def run(generation_id: str):
     findings, stats = await check(rows, states, pages, llm)
     stats["reader"] = rstats
     stats["ledger"] = fill
-    findings.append({"page": None, "severity": "INFO",
-                     "message": (f"Eşya sürekliliği: {stats['ledger_rows']} defter ve {stats['state_rows']} metin "
-                                 f"durum kaydı, {stats['scenes']} sahne; {stats['candidates']} aday yargılandı, "
-                                 f"{stats['confirmed']} bulgu. Eşikler henüz gerçek kitapta ölçülmedi.")})
+    findings.append(M.put(NAME, {"page": None, "severity": "INFO",
+                                 "details": {"summary": {k: stats[k] for k in ("ledger_rows", "state_rows", "scenes",
+                                                                               "candidates", "confirmed")}}}))
     return findings, stats

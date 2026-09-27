@@ -34,10 +34,11 @@ from itertools import combinations
 
 from .. import ledger, source
 from ..llm import Llm
+from . import _messages as M
 
 NAME = "text_contradictions"
 VERSION = "1"
-LABEL = "Metin içi çelişki"
+LABEL = "Çelişkiler"
 
 DIRECTOR = "book-director"
 # Probability the judge must give "contradiction" in BOTH orders. Chosen on the six books'
@@ -55,8 +56,6 @@ PARALLEL = 4          # judge calls in flight: small next to a running GPU analy
 
 KINDS = ["ZAMAN", "KARAKTER", "YER", "NESNE", "SAYI"]
 FACT_KINDS = ["YAS", "AKRABALIK", "AD", "SAYI", "OZELLIK"]
-KIND_TR = {"ZAMAN": "zaman/sıra", "KARAKTER": "karakter bilgisi", "YER": "yer", "NESNE": "nesnenin durumu",
-           "SAYI": "sayı"}
 FACT_TO_KIND = {"YAS": "KARAKTER", "AKRABALIK": "KARAKTER", "AD": "KARAKTER", "SAYI": "SAYI",
                 "OZELLIK": "KARAKTER"}
 
@@ -274,14 +273,12 @@ async def check(pages: list[dict], llm: Llm | None = None) -> tuple[list[dict], 
         if v["p_contradiction"] < JUDGE_MIN:
             continue
         a, b = c["a"], c["b"]
-        findings.append({
+        # metin ve öneri tek yerde: _messages (details'ten kurulur)
+        findings.append(M.put(NAME, {
             "page": b["page"], "severity": "WARN", "quote": b["quote"],
-            "message": (f"Metin içi çelişki ({KIND_TR[c['kind']]}): s.{a['page']} “{a['quote']}” ile "
-                        f"s.{b['page']} “{b['quote']}” birlikte doğru olamaz. {c['why']}").strip(),
-            "suggestion": "İki yeri karşılaştırıp birini düzeltin ya da değişimi açıklayan bir cümle ekleyin.",
             "details": {"kind": c["kind"], "a": a, "b": b, "why": c["why"], "proposed_by": c["by"],
                         "judge": {k: v[k] for k in ("forward", "reverse")},
-                        "p_contradiction": round(v["p_contradiction"], 3)}})
+                        "p_contradiction": round(v["p_contradiction"], 3)}}, advice=True))
     stats = {"paragraphs": len(paras), "parts": len(ps), "proposed_window": len(whole), "facts": len(facts),
              "proposed_facts": len(raw) - len(whole), "unverified_quotes": unverified,
              "candidates": len(cands), "judge_failed": judged_failed, "readers_failed": len(failed),
