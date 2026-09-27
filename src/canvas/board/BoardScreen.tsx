@@ -27,13 +27,14 @@ import {
   EngineAuthError,
   ask as askEngine,
   boardApi,
+  displayWordsApi,
   type BoardCardResult,
   type BoardRefresh,
   type SqlResult,
 } from '../engine';
 import { stamp } from '../format';
 import DbTimingBadge, { type DbTiming } from '../DbTiming';
-import Chart, { CHART_LABEL, allowedCharts, numericCols, suggestChart, type Col, type Row } from './Chart';
+import Chart, { CHART_LABEL, allowedCharts, numericCols, setDisplayWords, suggestChart, type Col, type Row } from './Chart';
 import { download, fileName, toCsv } from './export';
 import {
   fromDto,
@@ -396,6 +397,9 @@ export default function BoardScreen() {
   const [err, setErr] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed'>('idle');
   const [comparing, setComparing] = useState<string | null>(null);
+  // Kolon başlıkları katalogdaki Türkçe yazımla («Satış tutarı»); harita gelince kartlar yeniden çizilir.
+  const words = useQuery({ queryKey: ['display-words'], queryFn: displayWordsApi.get, enabled: ENGINE_ENABLED, staleTime: 30 * 60_000, retry: false });
+  setDisplayWords(words.data?.words);
   /** Excel üretilirken: 'all' ya da kart kimliği. */
   const [exporting, setExporting] = useState<string | null>(null);
   /** PDF: kartlar yazdırma için alt alta, animasyonsuz dizilir; pencere kapanınca eski düzen döner. */

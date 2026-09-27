@@ -480,6 +480,11 @@ export type BoardCardDto = {
   result: BoardCardResult | null;
 };
 
+/** Kolon başlıklarının Türkçe yazımı için sözcük haritası (bkz. board/Chart.tsx `humanize`). */
+export const displayWordsApi = {
+  get: () => get<{ words: Record<string, string>; version: string }>('/api/v1/semantic/display-words', 30_000),
+};
+
 export const boardApi = {
   load: () => send<{ user: string; cards: BoardCardDto[] }>('GET', '/api/v1/board', undefined, 30_000),
   save: (cards: unknown[]) => send<{ user: string; cards: BoardCardDto[] }>('PUT', '/api/v1/board', { cards }, 30_000),

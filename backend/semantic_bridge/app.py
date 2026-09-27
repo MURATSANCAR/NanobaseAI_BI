@@ -2310,6 +2310,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r.rebuild()
         return {"ok": True, "profiles": len(r.profiles)}
 
+    _display_words: dict[str, Any] = {}
+
+    @app.get("/api/v1/semantic/display-words")
+    def display_words_map() -> dict[str, Any]:
+        """ASCII sözcük → katalogdaki Türkçe yazım («satis» → «satış»). Ekran kolon başlıklarını bununla
+        yazar; katalog değişene kadar aynı harita döner (bkz. display_words.py)."""
+        from semantic_bridge import display_words
+        r = rt()
+        s = r.settings
+        version = r.store.catalog_fingerprint(s.tenant_id, s.datasource_id)
+        if _display_words.get("version") != version:
+            _display_words.update(version=version, words=display_words.build(
+                display_words.catalog_texts(r.store, s.tenant_id, s.datasource_id)))
+        return {"words": _display_words["words"], "version": str(version)}
+
     @app.get("/api/v1/semantic/concepts")
     def concepts(request: Request, status: str | None = None, type: str | None = None, q: str | None = None, limit: int = 500) -> dict[str, Any]:
         _admin_gate(request)

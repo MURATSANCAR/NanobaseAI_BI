@@ -26,9 +26,22 @@ import type { ChartKind } from './store';
 const Chart3D = lazy(() => import('./Chart3D'));
 const THREE_D: ChartKind[] = ['column', 'bar', 'pie', 'donut'];
 
-/** Kolon adını okunur yapar: gecen_yila_net_ciro → Gecen yila net ciro */
+/** ASCII sözcük → katalogdaki Türkçe yazım («satis» → «satış»). Köprüden gelir (`/semantic/display-words`);
+ *  gelene kadar boştur ve başlık alt çizgisiz ASCII yazılır. */
+let displayWords: Record<string, string> = {};
+export const setDisplayWords = (w: Record<string, string> | undefined) => {
+  if (w) displayWords = w;
+};
+
+/** Kolon adını okunur yapar: gecen_yila_net_ciro → Geçen yıla net ciro (harita varsa). */
 export const humanize = (s: string) => {
-  const t = s.replace(/^d(?=\d{4})/, '').replace(/_/g, ' ').trim();
+  const t = s
+    .replace(/^d(?=\d{4})/, '')
+    .replace(/_/g, ' ')
+    .trim()
+    .split(' ')
+    .map((w) => displayWords[w.toLowerCase()] ?? w)
+    .join(' ');
   return t.charAt(0).toLocaleUpperCase('tr-TR') + t.slice(1);
 };
 
