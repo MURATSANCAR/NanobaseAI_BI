@@ -264,6 +264,7 @@ function RelatedAuthors({ contactId, compact }: { contactId: string; compact?: b
       </h3>
       <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">
         E-ticaret siparişlerinde bu yazarın kitabıyla aynı sepette alınan yazarlar; ortak etkinlik, set ve tanıtım için aday.
+        Sıra, rastlantıyla beklenenden fazla ortak siparişe göre: yalnız çok satan değil, bu yazara özgü birliktelik öne çıkar.
       </p>
       {!d.run && <p className="mt-1 text-[12px] text-canvas-muted">Sipariş verisi henüz okunmadı; ilk gece turundan sonra görünür.</p>}
       {d.run && !d.items.length && (
@@ -286,7 +287,7 @@ function RelatedAuthors({ contactId, compact }: { contactId: string; compact?: b
               </div>
               <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">
                 {r.share != null ? `Bu yazarın siparişlerindeki payı %${nf.format(r.share)} · ` : ''}
-                {`beklenenden ${nf.format(r.lift)} kat sık`}
+                {`beklenenden ${nf.format(r.lift)} kat sık (${nf.format(r.excess)} fazla sipariş)`}
               </div>
               {!compact && r.books.length > 0 && (
                 <div className="mt-1 text-[11px] leading-snug">

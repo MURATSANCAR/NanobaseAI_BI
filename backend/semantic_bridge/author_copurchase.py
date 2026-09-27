@@ -328,7 +328,7 @@ def last_run(engine: sa.engine.Engine, tenant: str) -> Optional[dict[str, Any]]:
 
 
 def related(engine: sa.engine.Engine, tenant: str, contact_id: str, page: int = 0) -> dict[str, Any]:
-    """Bir yazarla birlikte alınan yazarlar: ortak sipariş sayısına göre, sayfa sayfa (toplam sayı ile)."""
+    """Bir yazarla birlikte alınan yazarlar: beklenenden fazla ortak siparişe göre, sayfa sayfa (toplam sayı ile)."""
     cid = (contact_id or "").strip().lower()
     if not re.match(r"^[0-9a-f]{8}-(?:[0-9a-f]{4}-){3}[0-9a-f]{12}$", cid):
         raise CopurchaseError("CRM kişi kimliği geçerli değil.")
@@ -336,10 +336,14 @@ def related(engine: sa.engine.Engine, tenant: str, contact_id: str, page: int = 
     with engine.connect() as c:
         where = [PAIRS.c.tenant_id == tenant, PAIRS.c.a == cid]
         total = c.execute(sa.select(sa.func.count()).select_from(PAIRS).where(*where)).scalar() or 0
-        rows = c.execute(sa.select(PAIRS).where(*where).order_by(PAIRS.c.orders.desc(), PAIRS.c.lift.desc(), PAIRS.c.b)
+        # Sıra: beklenenden fazla ortak sipariş = ortak × (1 − 1/lift). Yalnız ortak sayıya göre sıralanınca her
+        # yazarın başına aynı çok satanlar geliyordu (2026-09-28 ölçümü: lift ~1,7); bu sıra yazara özgü birlikteliği öne alır.
+        excess = PAIRS.c.orders - PAIRS.c.orders / PAIRS.c.lift
+        rows = c.execute(sa.select(PAIRS).where(*where).order_by(excess.desc(), PAIRS.c.orders.desc(), PAIRS.c.b)
                          .offset(p * PAGE_SIZE).limit(PAGE_SIZE)).fetchall()
         own = c.execute(sa.select(PAIRS.c.a_orders).where(*where).limit(1)).scalar()
     items = [{"contactId": r.b, "name": r.b_name, "orders": r.orders, "theirOrders": r.b_orders, "lift": r.lift,
+              "excess": round(r.orders - r.orders / r.lift) if r.lift else 0,
               "share": round(100 * r.orders / r.a_orders, 1) if r.a_orders else None,
               "books": json.loads(r.books_json or "[]")} for r in rows]
     return {"items": items, "total": int(total), "page": p, "pageSize": PAGE_SIZE, "authorOrders": own,

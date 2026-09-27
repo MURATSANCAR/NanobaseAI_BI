@@ -1576,6 +1576,8 @@ export type AuthorRelated = {
     orders: number;
     theirOrders: number;
     lift: number;
+    /** Beklenenden fazla ortak sipariş (sıralama buna göre). */
+    excess: number;
     share: number | null;
     books: Array<{ a: string | null; b: string | null; orders: number }>;
   }>;
