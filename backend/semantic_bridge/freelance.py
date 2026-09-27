@@ -544,10 +544,15 @@ def _magic(data: bytes, mime: str) -> bool:
 
 
 def _write(folder: str, name: str, data: bytes) -> tuple[str, str]:
-    os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, name)
-    with open(path, "wb") as fh:
-        fh.write(data)
+    try:
+        os.makedirs(folder, exist_ok=True)
+        with open(path, "wb") as fh:
+            fh.write(data)
+    except OSError as e:
+        # Klasör yazılamıyor ya da disk dolu: iz günlükte, kişiye düz cümle (kurulumda FREELANCE_DIR köprünün kullanıcısına açılmalı).
+        log.error("serbest çalışan dosyası yazılamadı (%s): %s", path, e)
+        raise FreelanceError("Dosya sunucuya kaydedilemedi; yöneticiye bildirin.", 503) from e
     return path, hashlib.sha256(data).hexdigest()
 
 

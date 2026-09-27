@@ -333,3 +333,13 @@ def test_access_rules_for_freelance():
     assert A.features_for("GET", "/api/v1/editorial/freelance/payouts/x/export.csv") == ["ozellik:veri.disa-aktar"]
     explicit = {f["key"] for f in A.catalog()["features"] if f.get("explicit")}
     assert "ozellik:serbest.hakedis-onay" in explicit
+
+
+def test_unwritable_storage_is_a_plain_error(engine, monkeypatch, tmp_path):
+    blocker = tmp_path / "dosya"
+    blocker.write_text("klasör değil")
+    monkeypatch.setenv("FREELANCE_DIR", str(blocker))
+    p = _person(engine)
+    with pytest.raises(F.FreelanceError) as e:
+        F.add_portfolio(engine, T, "u", p["id"], "kapak.png", PNG, {})
+    assert e.value.status == 503 and "kaydedilemedi" in str(e.value)
