@@ -61,6 +61,50 @@ def test_remove_deletes_the_file(engine):
     assert not path.exists() and B.listing(engine, "t", published_only=False) == []
 
 
+def test_generation_becomes_a_draft_once(engine):
+    calls = {"audio": 0}
+    states = {"b0123456789ab": {"id": "b0123456789ab", "status": "queued", "voice": "anlatici-kadin"}}
+
+    def start(body, editor):
+        assert body["text"] == "Merhaba." and editor == "admin"
+        return states["b0123456789ab"]
+
+    def state(bid):
+        return states[bid]
+
+    def audio(bid):
+        calls["audio"] += 1
+        return MP3
+
+    job = B.start_generation(engine, "t", "admin", " Merhaba. ", "anlatici-kadin", "Hafta 1", start)
+    assert job["status"] == "queued" and job["chars"] == len("Merhaba.") and B.pending(engine, "t") == 1
+    assert B.sync_jobs(engine, "t", state, audio)[0]["bulletinId"] is None       # sürüyor: ses alınmaz
+    states["b0123456789ab"] = {"status": "done", "duration": 12.5}
+    out = B.sync_jobs(engine, "t", state, audio)[0]
+    assert out["status"] == "done" and out["bulletinId"] and calls["audio"] == 1
+    B.sync_jobs(engine, "t", state, audio)                                        # ikinci eşitleme yeniden eklemez
+    assert calls["audio"] == 1 and B.pending(engine, "t") == 0
+    items = B.listing(engine, "t", published_only=False)
+    assert len(items) == 1 and items[0]["status"] == B.DRAFT and items[0]["title"] == "Hafta 1"
+    assert items[0]["voice"] == "ZEKİ AI" and items[0]["durationSec"] == 12.5 and items[0]["source"] == "sunucu"
+
+
+def test_generation_survives_an_unreachable_studio(engine):
+    B.start_generation(engine, "t", "u", "Metin.", None, None, lambda b, e: {"id": "b00000000000a", "status": "queued"})
+
+    def down(bid):
+        raise ConnectionError("stüdyo kapalı")
+
+    out = B.sync_jobs(engine, "t", down, down)[0]
+    assert out["status"] == "queued" and "yeniden denenecek" in out["error"] and B.pending(engine, "t") == 1
+
+
+def test_empty_generation_text_is_refused(engine):
+    with pytest.raises(B.BulletinError) as e:
+        B.start_generation(engine, "t", "u", "  ", None, None, lambda b, e: {})
+    assert e.value.status == 422
+
+
 def test_unwritable_folder_is_a_plain_error(engine, tmp_path, monkeypatch):
     blocker = tmp_path / "dosya"
     blocker.write_text("klasör değil")

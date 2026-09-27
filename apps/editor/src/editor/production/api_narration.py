@@ -379,3 +379,56 @@ async def voices_remove(vid: str, by: str = Depends(_editor), x_editor_admin: st
     except KeyError:
         raise HTTPException(404, "ses yok") from None
     return {"voice": voices.as_voice(rec)}
+
+
+# ------------------------------------------------------------------ Kampüs sesli bülteni (bulletin.py)
+# Kitaptan bağımsız metin → ses. Köprü (Yönetim → Sesli bülten) başlatır, durumu sorar, bitince sesi alır.
+#   POST /v1/studio/bulletins              {text, voice?, title?} → durum (iş Temporal'da BulletinNarration)
+#   GET  /v1/studio/bulletins/{id}         durum: queued | running | done | fail
+#   GET  /v1/studio/bulletins/{id}/audio   mp3 (done olunca)
+class BulletinBody(BaseModel):
+    text: str = Field(min_length=1, max_length=30000)
+    voice: str | None = Field(None, max_length=120)
+    title: str | None = Field(None, max_length=300)
+
+
+@router.post("/v1/studio/bulletins")
+@_guard
+async def bulletin_create(body: BulletinBody, by: str = Depends(_editor)) -> dict:
+    from . import bulletin as B
+    from .api import _temporal
+    from .flow import QUEUE
+    if not await N.available():
+        raise N.VoiceUnavailable("kapalı")
+    try:
+        st = await asyncio.to_thread(B.create, body.text, body.voice or N.DEFAULT_NARRATOR, by, body.title)
+    except ValueError as e:
+        raise _Err(400, "INVALID", str(e)) from None
+    try:
+        await (await _temporal()).start_workflow("BulletinNarration", st["id"], id=f"studio-bulten-{st['id']}",
+                                                 task_queue=QUEUE)
+    except Exception as e:  # noqa: BLE001
+        B.set_state(st["id"], status="fail", error=f"İş kuyruğuna ulaşılamadı: {type(e).__name__}")
+        raise HTTPException(503, f"İş kuyruğuna ulaşılamadı: {type(e).__name__}") from None
+    return st
+
+
+@router.get("/v1/studio/bulletins/{bid}")
+async def bulletin_state(bid: str) -> dict:
+    from . import bulletin as B
+    try:
+        return await asyncio.to_thread(B.state, bid)
+    except KeyError:
+        raise HTTPException(404, "bülten yok") from None
+
+
+@router.get("/v1/studio/bulletins/{bid}/audio")
+async def bulletin_audio(bid: str) -> Response:
+    from . import bulletin as B
+    try:
+        p = B.audio_path(bid)
+    except KeyError:
+        raise HTTPException(404, "bülten yok") from None
+    if not p.exists():
+        raise HTTPException(404, "Bültenin sesi henüz hazır değil")
+    return FileResponse(p, media_type="audio/mpeg", headers={"Cache-Control": "no-store"})
