@@ -13,6 +13,9 @@ bağımlılığından gelir: Bearer kart anahtarı; yazanlar X-Editor ister).
     GET  plan/versions/visual?a=&b=&pa=&pb=         sayfa çiftinin görsel farkı (değişen bölgeler, oranla)
     GET  plan/versions/report?a=&b=                 değişiklik raporu (PDF)
 
+Planı olmayan işte `GET plan/reader` ve `GET plan/versions` sayfa düzenini kendiliğinden kurar (api.auto_plan_dir:
+409 PREPARING ile ekran bekler); öteki uçlar bu iki giriş ucundan sonra gelir.
+
 Okuma modeli metin modelidir; stüdyoda GPU işi sürerken (resim modeli açıkken ana model durur) okuma başlatılmaz:
 409 BUSY. Okuma bu serviste arka planda yürür; servis yeniden başlarsa kayıt «yarıda kaldı» görünür, sürdürülür.
 """
@@ -59,8 +62,12 @@ def _plan_dir(job: str) -> Path:
 
 # ------------------------------------------------------------------ okur
 @router.get(P + "/reader")
-def reader_info(job: str) -> dict:
-    d = _plan_dir(job)
+async def reader_info(job: str, retry: bool = Query(False), x_editor: str = Header("")) -> dict:
+    d = await _api().auto_plan_dir(job, x_editor, "okur araçları", retry)
+    return await asyncio.to_thread(_reader_info, d)
+
+
+def _reader_info(d: Path) -> dict:
     plan = plan_mod.load(d)
     age = reader_mod.reader_age(d)
     return {**age, "picture_book": reader_mod.picture_book(d, plan), "rev": plan["rev"],
@@ -157,8 +164,9 @@ def _v(d: Path, spec: str):
 
 
 @router.get(P + "/versions")
-def versions(job: str) -> dict:
-    return vd.versions(_plan_dir(job))
+async def versions(job: str, retry: bool = Query(False), x_editor: str = Header("")) -> dict:
+    d = await _api().auto_plan_dir(job, x_editor, "sürüm farkı", retry)
+    return await asyncio.to_thread(vd.versions, d)
 
 
 @router.get(P + "/versions/compare")

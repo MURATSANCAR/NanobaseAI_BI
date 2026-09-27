@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3) ve ses kütüphanesi 09-27) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -186,7 +186,7 @@ if "EDITOR-STUDYO-KARAKTER" not in s:
 if "EDITOR-STUDYO-EKITAP" not in s:
     E_ = f"jobs/({JOB})/epub"
     AKEY = "kapak|[ag]_[0-9a-f]{8}"
-    EPATH = "(?:[A-Za-z0-9_-]+/){0,4}[A-Za-z0-9_-]+\\.(?:xhtml|css|jpg|png|svg|ttf|otf)"
+    EPATH = "(?:[A-Za-z0-9_-]+/){0,4}[A-Za-z0-9_-]+\\.(?:xhtml|css|jpg|png|svg|ttf|otf|smil|mp3)"
     ekitap = ("    # EDITOR-STUDYO-EKITAP  (e-kitap: api_epub.py)\n"
               + loc(E_, "GET|POST", "jobs/$1/epub", timeout=60)
               + loc(f"{E_}/(file|alt)", "GET", "jobs/$1/epub/$2", timeout=300)
@@ -197,6 +197,13 @@ if "EDITOR-STUDYO-EKITAP" not in s:
               + loc(f"{E_}/content/([0-9a-f]{{12}})/({EPATH})", "GET", "jobs/$1/epub/content/$2/$3", timeout=60))
     s = s.replace("    # EDITOR-BITTI", ekitap + "    # EDITOR-BITTI", 1)
     changes.append("e-kitap yolları")
+
+else:
+    # Sesli e-kitap (09-27): önizleme SMIL ve sayfa seslerini de içerikten ister.
+    old_ext = "\\.(?:xhtml|css|jpg|png|svg|ttf|otf))"
+    if old_ext in s:
+        s = s.replace(old_ext, "\\.(?:xhtml|css|jpg|png|svg|ttf|otf|smil|mp3))")
+        changes.append("e-kitap önizlemesine ses eşlemesi ve ses dosyaları")
 
 # 4) Boyama / etkinlik kitabı (api_coloring.py): yeni iş, yeniden dene, kısa cümle, çizgiyi yeniden çiz
 if "EDITOR-STUDYO-BOYAMA" not in s:
@@ -268,6 +275,26 @@ if "EDITOR-STUDYO-PROVA" not in s:
              + loc(f"{PR}/(cover|pages/[0-9]{{1,4}})(/report)?", "GET", "jobs/$1/proof/$2$3$is_args$args", timeout=120))
     s = s.replace("    # EDITOR-BITTI", prova + "    # EDITOR-BITTI", 1)
     changes.append("3B kitap ve baskı provası yolları")
+
+# 5) Ses kütüphanesi (yayınevi düzeyinde): liste + hak beyanlı yükleme, izin belgesi, yönetici kaldırması.
+#    Yükleme gövdesi base64 JSON (kayıt, özgün dosya, izin belgesi): 3 × (STUDIO_UPLOAD_MB + 1) × 4/3.
+if "EDITOR-STUDYO-SESKUTUPHANE" not in s:
+    VID = "yuklenen-[0-9a-f]{8}"
+    voice_mb = int(3 * body_mb * 4 / 3) + 1
+    kutup = ("    # EDITOR-STUDYO-SESKUTUPHANE  (ses kutuphanesi: voices.py)\n"
+             + f'''    location = /editor/studio/v1/studio/voices {{
+{guard}
+        if ($request_method !~ ^(GET|POST)$) {{ return 405; }}
+        client_max_body_size {voice_mb}m;
+        proxy_pass {UP}/voices;
+        proxy_set_header Host $host;
+        proxy_read_timeout 300s;
+    }}
+'''
+             + loc(f"voices/({VID})/document", "GET", "voices/$1/document", timeout=60)
+             + loc(f"voices/({VID})", "DELETE", "voices/$1", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", kutup + "    # EDITOR-BITTI", 1)
+    changes.append(f"ses kütüphanesi yolları (yükleme gövdesi {voice_mb} MB)")
 
 if s == orig:
     print("zaten var (güncel)")
