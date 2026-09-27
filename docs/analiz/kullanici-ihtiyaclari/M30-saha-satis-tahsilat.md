@@ -263,11 +263,18 @@ Kapsam denetimi uç içinde: `ozellik:saha.herkesinki` yoksa her sorgu `semantic
    WHERE u.DomainName = 'timas\<hesap>' AND a.StateCode = 0` (+ «BMT İl» carileri il tablosundan; kural ekranda yazılı).
 4. CRM tahsilat: onay bekleyen = `SELECT COUNT(*), SUM(new_tutar) FROM Timas_MSCRM.dbo.new_tahsilatBase WHERE statecode = 0 AND statuscode = 100000000
    AND OwnerId = @u`; reddedilen son 30 gün aynı şekilde `statuscode = 100000002`.
-5. Karşılıksız olay: brifingdeki bayrak = `EXISTS (SELECT 1 FROM LG_411_01_CSTRANS T JOIN LG_411_01_CSCARD C ON C.LOGICALREF = T.CSREF WHERE C.CARDREF = @ref
-   AND T.STATUS = 11 AND T.DEVIR = 0 AND T.CANCELLED = 0 AND T.DATE_ >= DATEADD(month, -12, @asof))` (CSCARD cari bağ kolonu kodlamada şemadan doğrulanır).
+5. Karşılıksız olay: brifingdeki bayrak = `EXISTS (SELECT 1 FROM LG_411_01_CSTRANS T WHERE T.STATUS = 11 AND T.DEVIR = 0 AND T.CANCELLED = 0
+   AND T.DATE_ >= DATEADD(month, -12, @asof) AND T.CSREF IN (SELECT G.CSREF FROM LG_411_01_CSTRANS G WHERE G.CARDREF = @ref AND G.STATUS = 1 AND G.CANCELLED = 0))`
+   — çekin müşterisi portföye giriş hareketinin carisidir (`CSCARD`'da cari kolonu yok; `CSTRANS.CARDREF` anlamı kodlamada `configs/schemas/logo-ldds.json`'dan doğrulanır;
+   `DOC IN (1,2)` müşteri çeki/senedi süzgeci `CSCARD` üzerinde).
 6. Risk doluluğu = `new_toplamrisk / NULLIF(new_toplamrisklimiti, 0)` CRM `AccountBase` (5 cari).
 7. Hedef açığı: kitap hedefi `/api/v1/budget/targets` ile birebir; bölge dağılımı kuralı (cari payı × kitap hedefi) ekranda yazılı ve toplamı kitap hedefine eşit.
 8. Kapsam: BMT hesabıyla başka temsilcinin carisine `GET /customers/{ref}/brief` 403.
+
+**M59 ile çakışma (kodlamadan önce karar):** M59 analizi (`M59-bayi-risk-performans.md`) aynı cari için yaşlandırma, not ve «ziyaret brifingi»
+(`/api/v1/dealers/{cari}`, `/{cari}/aging`, `POST /{cari}/brief`, `/{cari}/notes`) öneriyor. Öneri: **risk, yaşlandırma ve limit önerisi M59'un**
+(tek kaynak); M30 brifingi bu uçları okur. M59 henüz yoksa M30 kendi `semantic_field_signals` tablosuyla başlar ve M59 gelince okumayı ona çevirir
+(aynı FIFO SQL'i, sonuç değişmez). Ziyaret/görüşme notu tek tablo: `semantic_saha_ziyaret` (`tur='cari'`); M59 notları ayrı tablo açmaz, bunu okur/yazar.
 
 **Bağımlılık** — M46 bitti. M59 beklenmez (sinyallerle başlar). M29 ile paralel (yeni gelenler bölümü M29 hazır olunca açılır). M31 ile ziyaret tablosu ortak.
 Telefondan sahadan erişim BT kararı — kod bekletmez ama pilot için şart.

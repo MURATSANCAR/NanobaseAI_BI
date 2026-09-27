@@ -135,6 +135,7 @@ iade olarak geri dönüyor, ilk hafta satışını kimse sistematik izlemiyor. V
 - **CRM'e ve Logo'ya yazma yok.** İş tanımındaki «LOGO stok güncelleme» ve «dağıtıcı onay bildirimi → sipariş» adımları ilk sürümde **yapılmaz**:
   onaylı plan köprünün kendi tablolarında durur, depo CRM dağılım siparişini elle açar (Excel çıktısından). CRM Web API yazma yetkisi müşteri kararıdır.
 - T-soft'a yazma yasak (bu modülde gerek de yok). Müşteride web taraması kapalı (dış kaynak yok).
+- BMT'nin telefon görünümü sahadan erişim ister; portal müşteri ağında (`http://192.168.0.55/timas/`) — VPN/dış erişim BT kararı (bkz. M30 §8).
 - Ekranda teknoloji/model adı yok: «Zeki AI önerisi». Demo veri yok; plan boşsa «plan yok» yazar.
 - Sayı tavanı yok: müşteri listesi kesilmez; sayfalanır, süzülür.
 - Kurulum müşteri verisi silmez; plan tabloları kurulumda korunur.
@@ -269,6 +270,8 @@ girişleri okur, takip tablosunu tazeler, uyarıları açar/kapatır, özet e-po
 8. Yetki: BMT hesabıyla `/my-region` yalnız kendi carilerini döner; `ozellik:dagilim.onay` olmadan approve 403; gönderen onaylarsa 409.
 
 **Bağımlılık** — M46 bitti (main). M12 paralel kodlanabilir: M29 ilk sürümde Logo üretimden giriş ile çalışır, M12 uç sözleşmesi gelince
-`kaynak='m12'` eklenir. `satis` çalışma alanını hangi modül önce açarsa ötekiler ona ekler.
+`kaynak='m12'` eklenir. `satis` çalışma alanını hangi modül önce açarsa ötekiler ona ekler. Kardeş analizler: M43 Depo/Stok
+(`/api/v1/stock/items/{stok_kodu}` — kodlanınca stok bakiyesi oradan okunur, M29 aynı hesabı ikinci kez yazmaz), M44 Kargo
+(`/api/v1/shipping/shipments` — kodlanınca «müşteriye ulaştı» takibi oradan), M59 Bayi riski (`/api/v1/dealers/{cari}` — yüksek riskli cariye dağılım uyarısı).
 
 **Büyüklük** — L (3+ gün): öneri motoru + onay + takip + telefon görünümü + kabul.

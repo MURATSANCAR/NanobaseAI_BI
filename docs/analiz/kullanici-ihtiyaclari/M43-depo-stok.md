@@ -126,7 +126,7 @@ kararları Power BI "Yeni Baskı Öneri" raporuyla veriliyordu (artık portalda 
 
 ## 6. Veri
 
-| Gereken veri | Kaynak | Depoda bilinen durumu | Boşluk |
+| Gereken veri | Kaynak (Logo / CRM / T-soft / kullanıcı girer / dış) | Depoda bilinen durumu | Boşluk |
 |---|---|---|---|
 | Kitap stok bakiyesi | Logo `LG_411_01_STLINE` (IOCODE 1,2 giriş − 3,4 çıkış, LINETYPE 0, CANCELLED 0, tarihsiz) | Katalog tanımı var ("iş teyidi bekliyor"); `STINVTOT` boş | Power BI'ın kullandığı `EOS_DEPO_STOK_KONTROL_211` görünümüyle fark **ölçülecek**; .155 donmuş kopya (son fatura 2026-08-17) |
 | Ambar bazında stok | `STLINE.SOURCEINDEX` + `L_CAPIWHOUSE` (FIRMNR = 411) | Kural 14 tanımlı | Ambar sayısı ve adları **ölçülecek**; CRM 45 depo ↔ Logo ambar eşlemesi `new_depo.new_deponumarasi` üzerinden varsayım |

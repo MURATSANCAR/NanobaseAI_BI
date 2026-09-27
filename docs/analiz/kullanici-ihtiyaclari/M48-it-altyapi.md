@@ -122,7 +122,7 @@ bugünkü kapsamı yalnız finans sorularıdır, bellek `chat-persona-zeki-ai` �
 
 ## 6. Veri
 
-| Gereken veri | Kaynak | Depoda bilinen durumu | Boşluk |
+| Gereken veri | Kaynak (Logo / CRM / T-soft / kullanıcı girer / dış) | Depoda bilinen durumu | Boşluk |
 |---|---|---|---|
 | Servis/zamanlayıcı durumu | Sunucu (test: systemd; VM: Docker) | `admin.system_status()` test sunucusunda okuyor | VM'de systemd yok → Docker durumu okunmuyor (**ölçülecek**) |
 | Bağlantı denemeleri (Logo, CRM, model, dizin, e-posta, depo) | Köprü | `admin.run_checks()`; sonuç `semantic_audit`'e `kind=setting, action=test` olarak yazılıyor | Otomatik ve dönemsel değil (elle); zaman serisi yok |
@@ -246,7 +246,7 @@ e-posta ve ne yapılacağı; düzelince süre ve neden. Haftada bir özet, ayda 
 
 ## 13. Zeki AI (yerel model), Logo ve CRM nerede kullanılır
 
-| Adım | Logo | CRM | Yerel model (Zeki AI) ne yapar | Neden |
+| Adım | Logo (hangi tablo/görünüm/ölçü) | CRM (hangi varlık/alan) | Yerel model (Zeki AI) ne yapar | Neden |
 |---|---|---|---|---|
 | Logo bağlantı denemesi | `SELECT 1` + `SELECT MAX(DATE_) FROM LG_411_01_INVOICE WHERE CANCELLED=0` (bugünkü `admin.database_test` genişler) | — | Hiçbir şey | Sağlık ve veri sonu deterministik ölçülür |
 | CRM bağlantı denemesi | — | `SELECT MAX(ModifiedOn) FROM Timas_MSCRM.dbo.new_kitapBase` (canlı .28, `admin.crm_test` genişler) | Hiçbir şey | Aynı |

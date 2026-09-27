@@ -184,7 +184,7 @@ için gerekmiyor), `ozellik:finans.esleme` (açıkça verilir), `ozellik:finans.
 
 ## 6. Veri
 
-| Gereken veri | Kaynak | Depoda bilinen durumu | Boşluk |
+| Gereken veri | Kaynak (Logo / CRM / T-soft / kullanıcı girer / dış) | Depoda bilinen durumu | Boşluk |
 |---|---|---|---|
 | Muhasebe hareketleri (hesap, fiş, borç/alacak) | Logo EMFLINE/EMFICHE/EMUHACC | 2026 kopyası (411) finansal denetimde okunuyor: 246.404 hareket, 379 hesap, son kayıt 17.08.2026 | .155 donmuş kopya; canlı Logo (.25) okunamıyor. 2021–25 kopyası (211) finansal denetime eklenmedi → geçen yıl karşılaştırması için açılış/kapanış kuralı doğrulanmalı |
 | Satış, iade, iskonto | Logo INVOICE/STLINE | Sertifikalı: net ciro 2026 848,1 Mn ₺ (fatura seviyesi), satır seviyesi LINENET; satış = faturalı satır | Hazır |

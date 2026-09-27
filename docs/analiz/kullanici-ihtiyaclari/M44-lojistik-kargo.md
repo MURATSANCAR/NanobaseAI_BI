@@ -116,7 +116,7 @@ düşündürüyor (varsayım).
 
 ## 6. Veri
 
-| Gereken veri | Kaynak | Depoda bilinen durumu | Boşluk |
+| Gereken veri | Kaynak (Logo / CRM / T-soft / kullanıcı girer / dış) | Depoda bilinen durumu | Boşluk |
 |---|---|---|---|
 | Sipariş aşama tarihleri | CRM `new_siparisBase` (`new_siparistarihi`, `new_DepodaBekliyorDurumu`, `new_pusulaalinditarih`, `new_sipariskutulanditarihi`, `new_sevktarihi`, `new_tamamlanditarihi`, `statuscode`) | Kolonlar biliniyor | Doluluk oranı **ölçülecek** |
 | Kargo firması, takip no, etiket, entegrasyon sonucu | CRM `new_siparisBase` (`new_kargofirmasiid`, `new_kargotakipno`, `new_kargotakipurl`, `new_etiketbasildi`, `new_{aras,ups,mng,akademi}kargoentegrasyon{sonucu,mesaji}`, `new_kutuadedi`, `new_kargoodemesekli`) | Kolonlar biliniyor | Hata oranı ve firma dağılımı **ölçülecek** |
@@ -216,7 +216,7 @@ Bir iş günü:
 
 ## 13. Zeki AI (yerel model), Logo ve CRM nerede kullanılır
 
-| Adım | Logo | CRM | Yerel model (Zeki AI) ne yapar | Neden |
+| Adım | Logo (hangi tablo/görünüm/ölçü) | CRM (hangi varlık/alan) | Yerel model (Zeki AI) ne yapar | Neden |
 |---|---|---|---|---|
 | Sipariş aşama süreleri | — | `new_siparisBase` tarih kolonları, `statuscode` | — | Operasyon CRM'de |
 | Sevk gerçekleşti mi | `LG_411_01_STLINE` TRCODE 7,8 IOCODE 4, `STFICHE`, `INVOICE.FICHENO` | `new_sevkiyatBase.new_faturanumarasi`, `new_logoyaaktarildi` | — | Gerçekleşen sevk Logo'dadır |
