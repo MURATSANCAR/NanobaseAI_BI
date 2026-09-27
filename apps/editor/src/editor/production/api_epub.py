@@ -2,7 +2,8 @@
 anahtar (uygulama düzeyinde), yazanlarda X-Editor. Üretim stüdyo işçisinde (Temporal `EpubBuild`, GPU'suz; aynı sıra).
 
     GET  /v1/studio/jobs/{job}/epub                         durum: biçim, ilerleme, denetim, sayfalar, alt metin sayıları
-    POST /v1/studio/jobs/{job}/epub          {layout}       üret (auto | fixed | reflow)
+    POST /v1/studio/jobs/{job}/epub          {layout, audio} üret (auto | fixed | reflow); audio: sesli e-kitap (okurken
+                                                            dinle; yalnız bütün sayfaların sesi hazır ve güncelken)
     GET  /v1/studio/jobs/{job}/epub/file                    indir (application/epub+zip)
     PUT  /v1/studio/jobs/{job}/epub/meta     {eisbn}        e-ISBN (basılı ISBN'den ayrı)
     GET  /v1/studio/jobs/{job}/epub/alt                     alt metin listesi
@@ -11,7 +12,9 @@ anahtar (uygulama düzeyinde), yazanlarda X-Editor. Üretim stüdyo işçisinde 
     GET  /v1/studio/jobs/{job}/epub/alt/{key}/image?w=      görselin küçüğü
     GET  /v1/studio/jobs/{job}/epub/content/{build}/{path}  önizleme: e-kitabın içinden dosya
 
-`key`: kapak | a_<8 hane> (sayfa resmi) | g_<8 hane> (figür/fotoğraf). Hata gövdesi `{"code","detail"}` (NO_PLAN, BUSY).
+`key`: kapak | a_<8 hane> (sayfa resmi) | g_<8 hane> (figür/fotoğraf). Hata gövdesi `{"code","detail"}` (NO_PLAN, BUSY,
+AUDIO_INCOMPLETE: sesli e-kitap istendi ama sesi eksik ya da güncel olmayan sayfa var). Önizlemede SMIL ve MP3 de
+`content/` ucundan döner (ekran «önizlemede dinle»).
 """
 
 from __future__ import annotations
@@ -62,6 +65,7 @@ def epub_view(job: str) -> dict:
 
 class Build(BaseModel):
     layout: Literal["auto", "fixed", "reflow"] = "auto"
+    audio: bool = False
 
 
 @router.post("")
@@ -77,12 +81,16 @@ async def epub_build(job: str, body: Build, by: str = Depends(editor)):
         epub.decide(d, plan, body.layout)
     except ValueError as e:
         return _coded(409, "NO_PLAN", str(e))
+    if body.audio:
+        info = await asyncio.to_thread(epub.audio_info, d, plan)
+        if not info["ready"]:
+            return _coded(409, "AUDIO_INCOMPLETE", info["reason"] or "Sesli e-kitap için sesler hazır değil.")
     from .api import _start_plain
     wf = f"studio-{job}-ekitap-{int(time.time())}"
     epub.set_state(d, status="queued", step=None, progress=None, error=None, by=by, layout_want=body.layout,
-                   workflow=wf, queued_at=time.time())
+                   audio_want=body.audio, workflow=wf, queued_at=time.time())
     try:
-        await _start_plain("EpubBuild", [job, body.layout, by], wf)
+        await _start_plain("EpubBuild", [job, body.layout, by, body.audio], wf)
     except HTTPException:
         epub.set_state(d, status="fail", error="İş kuyruğuna ulaşılamadı.")
         raise

@@ -65,7 +65,11 @@ FOLIO_INK = "#6E6E6E"                     # plan.typ: luma(110)
 PRINT_ONLY = ("Baskı", "Baskı ve Cilt", "Matbaa Sertifika No", "Matbaa Adresi")   # basılı baskıya ait künye satırları
 MIME = {".xhtml": "application/xhtml+xml", ".css": "text/css", ".jpg": "image/jpeg", ".png": "image/png",
         ".svg": "image/svg+xml", ".ttf": "font/ttf", ".otf": "font/otf", ".ncx": "application/x-dtbncx+xml",
-        ".opf": "application/oebps-package+xml"}
+        ".opf": "application/oebps-package+xml", ".smil": "application/smil+xml", ".mp3": "audio/mpeg"}
+ACTIVE_CLASS = "-epub-media-overlay-active"   # okunan kelimenin sınıfı (OPF media:active-class; stilde vurgu)
+# Okunan kelime: yumuşak sarı zemin (metin rengi değişmez; renkli ad ve balon yazısı okunur kalır).
+ACTIVE_CSS = (f".{ACTIVE_CLASS} {{ background-color: rgba(255, 206, 84, 0.55); border-radius: 0.2em; "
+              "box-decoration-break: clone; -webkit-box-decoration-break: clone; }\n")
 OPEN_LICENSES = (("open font license", "SIL OFL 1.1"), ("openfontlicense", "SIL OFL 1.1"), ("/ofl", "SIL OFL 1.1"),
                  ("apache", "Apache 2.0"), ("ubuntu font licence", "Ubuntu Font Licence"))
 
@@ -464,7 +468,8 @@ class Pack:
         self.encrypted: list[str] = []
         self.ids: set[str] = set()
 
-    def add(self, path: str, data: bytes | str, *, id: str | None = None, props: str = "", mt: str | None = None) -> str:
+    def add(self, path: str, data: bytes | str, *, id: str | None = None, props: str = "", mt: str | None = None,
+            overlay: str | None = None) -> str:
         if isinstance(data, str):
             data = data.encode("utf-8")
         ext = Path(path).suffix.lower()
@@ -476,7 +481,8 @@ class Pack:
             k += 1
             iid = f"{base}-{k}"
         self.ids.add(iid)
-        self.files.append({"path": path, "data": data, "id": iid, "mt": mt or MIME[ext], "props": props})
+        self.files.append({"path": path, "data": data, "id": iid, "mt": mt or MIME[ext], "props": props,
+                           "overlay": overlay})
         return iid
 
     def has(self, path: str) -> bool:
@@ -653,6 +659,132 @@ def runs_text(runs: list[dict]) -> str:
     return "".join(r.get("text", "") for r in runs or [])
 
 
+# ------------------------------------------------------------------ sesli e-kitap (EPUB 3 medya kaplaması)
+def wrap_runs(runs: list[dict], words: list[dict], bid: str, fonts: dict, scale_pt, placed: dict, doc: str | None
+              ) -> str:
+    """Bloğun yazısı, her kelime kendi `<span id="w-<blok>-<i>">`'i içinde (medya kaplamasının hedefi). Kelimenin yeri
+    sesli okumanın `char` aralığıdır (bloğun düz metninde); biçim parçası (renkli ad, kalın) kelimenin ortasından
+    geçse de kelime tek parça sarılır, biçim içeride kalır. Metin tutmazsa (boşluk farkı) kelime sıradaki yerinde
+    aranır; bulunamayan kelime sarılmaz (kaplamaya girmez). Sarılan her kelime `placed`'e yazılır (kimlik → belge)."""
+    from .narration import word_id
+    text = runs_text(runs)
+    spans: list[tuple[int, int, str]] = []
+    cur = 0
+    for w in sorted(words, key=lambda w: w["i"]):
+        s, e = (w.get("char") or [0, 0])[:2]
+        if text[s:e] != w["text"]:
+            k = text.find(w["text"], cur)
+            if k < 0:
+                continue
+            s, e = k, k + len(w["text"])
+        if s < cur or e <= s:
+            continue
+        spans.append((s, e, word_id(bid, w["i"])))
+        cur = e
+    out: list[str] = []
+    pos = k = 0
+    open_: tuple[int, int, str] | None = None
+    for r in runs:
+        t = r.get("text", "")
+        if not t:
+            continue
+        rs, re_ = pos, pos + len(t)
+        cuts = {rs, re_}
+        for s, e, _ in spans:
+            cuts.update(x for x in (s, e) if rs < x < re_)
+        cuts_l = sorted(cuts)
+        for a, b in zip(cuts_l, cuts_l[1:]):
+            if open_ is None and k < len(spans) and spans[k][0] == a:
+                open_ = spans[k]
+                out.append(f'<span id="{esc(open_[2])}">')
+            out.append(run_html({**r, "text": t[a - rs:b - rs]}, fonts, scale_pt))
+            if open_ is not None and open_[1] == b:
+                out.append("</span>")
+                placed[open_[2]] = doc
+                open_, k = None, k + 1
+        pos = re_
+    if open_ is not None:
+        out.append("</span>")
+        placed[open_[2]] = doc
+    return "".join(out)
+
+
+class Narr:
+    """Sesli e-kitap: `narration.media_overlay` → sayfa sesleri pakete (audio/<sayfa>.mp3), kelimeler XHTML'de
+    kimlikli, her içerik belgesine bir SMIL (smil/<belge>.smil, `narration.smil_doc`), OPF'e süreler ve anlatıcı."""
+
+    def __init__(self, ov: dict, pack: "Pack"):
+        self.ov = ov
+        self.words = {b["id"]: b["words"] for pg in ov["pages"] for b in pg["blocks"]}
+        self.doc: str | None = None                 # işlenen belge (OEBPS'e göre: text/s005.xhtml)
+        self.placed: dict[str, str | None] = {}     # kelime kimliği → belge
+        self.durations: dict[str, float] = {}       # SMIL kimliği → süre
+        self.smil_of: dict[str, str] = {}           # belge → SMIL yolu
+        for pg in ov["pages"]:
+            pack.add(f"audio/{pg['page']}.mp3", Path(pg["audio"]).read_bytes(), id=f"ses-{pg['page']}")
+
+    def runs(self, runs: list[dict], bid: str | None, fonts: dict, scale_pt=None) -> str | None:
+        ws = self.words.get(bid) if bid else None
+        return wrap_runs(runs, ws, bid, fonts, scale_pt, self.placed, self.doc) if ws else None
+
+    def attach(self, pack: "Pack", doc: str) -> str | None:
+        """Belgenin SMIL'i (belgede sarılmış, zamanı olan kelimeler; sayfa sırasıyla). Kelimesi yoksa None."""
+        from .narration import smil_doc, word_id
+        clips = []
+        for pg in self.ov["pages"]:
+            for b in pg["blocks"]:
+                for w in b["words"]:
+                    wid = word_id(b["id"], w["i"])
+                    if w.get("start") is not None and w.get("end") is not None and self.placed.get(wid) == doc:
+                        clips.append((wid, f"../audio/{pg['page']}.mp3", w["start"], w["end"]))
+        if not clips:
+            return None
+        stem = Path(doc).stem
+        xml, secs = smil_doc(clips, "../" + doc, f"seq-{stem}")
+        sid = pack.add(f"smil/{stem}.smil", xml, id=f"mo-{stem}")
+        self.durations[sid] = secs
+        self.smil_of[doc] = f"smil/{stem}.smil"
+        return sid
+
+    def timed_words(self) -> int:
+        return sum(1 for pg in self.ov["pages"] for b in pg["blocks"] for w in b["words"] if w.get("start") is not None)
+
+    def media(self) -> dict:
+        from .narration import clock
+        total_ms = sum(int(round(v * 1000)) for v in self.durations.values())
+        return {"durations": {k: clock(v) for k, v in self.durations.items()}, "total": clock(total_ms / 1000),
+                "narrators": self.ov.get("narrators") or [], "active_class": ACTIVE_CLASS}
+
+
+def audio_gap(ov: dict) -> str | None:
+    """Sesli e-kitap için eksik: None (bütün sayfaların sesi hazır ve güncel) ya da ekrana giden cümle."""
+    if not ov["pages"] and not ov["missing"] and not ov["stale"]:
+        return "Kitapta seslendirilecek metin yok."
+    parts = []
+    if ov["missing"]:
+        parts.append(f"{len(ov['missing'])} sayfanın sesi yok")
+    if ov["stale"]:
+        parts.append(f"{len(ov['stale'])} sayfanın metni ya da sesi seslendirmeden sonra değişti (sesi güncel değil)")
+    return None if not parts else ("Sesli e-kitap yalnız bütün sayfaların sesi hazırken üretilir: " + ", ".join(parts)
+                                   + ". Sesli okuma bölümünden seslendirin ya da sessiz e-kitap seçin.")
+
+
+def audio_info(d: Path, plan: dict | None) -> dict:
+    """Ekran için: sesli e-kitap üretilebilir mi (sesi hazır/eksik/güncel olmayan sayfa sayıları)."""
+    if plan is None:
+        return {"ready": False, "reason": "Sesli e-kitap sayfa düzeni ve sesli okumayla hazırlanır.", "pages": 0,
+                "done": 0, "missing": 0, "stale": 0, "duration": 0}
+    from . import narration as N
+    rows = [r for r in N.status(d) if r["status"] != "empty"]
+    n = {k: sum(1 for r in rows if r["status"] == k) for k in ("done", "missing", "stale")}
+    ready = bool(rows) and n["done"] == len(rows)
+    reason = None if ready else ("Kitapta seslendirilecek metin yok." if not rows else
+                                 audio_gap({"pages": [1] * n["done"], "missing": [1] * n["missing"],
+                                            "stale": [1] * n["stale"]}))
+    return {"ready": ready, "reason": reason, "pages": len(rows), **n,
+            "duration": round(sum(r["duration"] or 0 for r in rows if r["status"] == "done"), 1)}
+
+
 def _rgba(hex8: str | None) -> str:
     if not hex8:
         return "transparent"
@@ -687,8 +819,9 @@ def _isbn_fmt(s: str) -> str:
 class Fixed:
     """Sabit sayfa e-kitap: plan.render_data'nın kutularından mutlak konumlu HTML."""
 
-    def __init__(self, d: Path, plan: dict, pack: Pack, alts: dict, warn: list[str]):
+    def __init__(self, d: Path, plan: dict, pack: Pack, alts: dict, warn: list[str], narr: Narr | None = None):
         self.d, self.plan, self.pack, self.alts, self.warn = d, plan, pack, alts, warn
+        self.narr = narr
         self.spec = studio._spec(d)
         self.b = self.spec.bleed
         self.vw = int(round(self.spec.trim_w * K))
@@ -753,12 +886,17 @@ class Fixed:
         if "blocks" in t:
             inner = "".join(self.block(k) for k in t["blocks"])
         else:
-            inner = f"<p>{runs_html(t.get('runs') or [], self.fonts, self.pt)}</p>"
+            inner = f"<p>{self._runs(t.get('runs') or [], t.get('wid'))}</p>"
         cls = "tb" + (" ghost" if ghost else "") + (f" {extra_class}" if extra_class else "")
         return f'<div class="{cls}" style="{";".join(st)}">{inner}</div>'
 
+    def _runs(self, runs: list[dict], bid: str | None) -> str:
+        """Yazı; sesli e-kitapta sesi olan bloğun kelimeleri kimlikli (medya kaplamasının hedefi)."""
+        html_ = self.narr.runs(runs, bid, self.fonts, self.pt) if self.narr else None
+        return html_ if html_ is not None else runs_html(runs, self.fonts, self.pt)
+
     def block(self, k: dict) -> str:
-        body = runs_html(k["runs"], self.fonts, self.pt)
+        body = self._runs(k["runs"], k.get("id"))
         if k["kind"] == "heading":
             return f'<h2 class="bh">{body}</h2>'
         if k["kind"] == "sound":
@@ -785,7 +923,7 @@ class Fixed:
                + "".join(shapes) + "</svg>")
         t = bb["text"]
         label = f'<span class="sr">{esc(speaker)}: </span>' if speaker else ""
-        t2 = {**t, "runs": t["runs"]}
+        t2 = {**t, "runs": t["runs"], "wid": bb.get("id")}
         box = self.textbox(t2, 2, "balon")
         return svg + box.replace('<p>', f'<p>{label}', 1)
 
@@ -825,10 +963,10 @@ class Fixed:
             if svg:
                 t = {"box": it["box"], "align": it.get("align") or "center", "size": it.get("size") or it.get("text_size")
                      or self.data["body_size"], "ink": INK, "background": None, "pad": 0, "valign": "horizon",
-                     "leading": None, "runs": [{"text": words}]}
+                     "leading": None, "runs": [{"text": words}], "wid": it.get("id") if it["type"] == "text" else None}
                 out.append(self.textbox(t, it["z"], ghost=True))
             elif it["type"] == "text":                 # vektör çizim yok: efekt yazı düz yazı (baskıdaki gibi)
-                out.append(self.textbox(it, it["z"]))
+                out.append(self.textbox({**it, "wid": it.get("id")}, it["z"]))
         return "".join(out)
 
     # -- sayfalar
@@ -863,7 +1001,7 @@ class Fixed:
             if it["type"] == "figure":
                 parts.append(self.figure(it, figs.get(it["id"])))
             elif it["type"] == "text":
-                parts.append(self.textbox(it, it["z"], "serbest"))
+                parts.append(self.textbox({**it, "wid": it.get("id")}, it["z"], "serbest"))
             elif it["type"] == "shape":
                 pass                                     # çizim modülü yok: baskıda da çizilmez
         flush()
@@ -966,7 +1104,7 @@ img {{ display: block; }}
 .kunye p {{ margin: 0 0 0.25em 0; line-height: 1.3; }}
 .yayinevi {{ text-align: center; letter-spacing: 0.14em; color: #5A5A5A; margin: 0; }}
 .sr {{ position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }}
-"""
+""" + (ACTIVE_CSS if self.narr else "")
 
 
 # ------------------------------------------------------------------ akışkan
@@ -980,7 +1118,7 @@ def _note_no(m) -> str:
 
 
 def flow_docs(plan: dict, ms) -> list[dict]:
-    """Planın sayfalarından akışkan bölümler: [{title, nodes}]. Düğümler: ("pb", no) basılı sayfa başı, ("h", başlık),
+    """Planın sayfalarından akışkan bölümler: [{title, nodes}]. Düğümler: ("pb", no) basılı sayfa başı, ("h", başlık, blok, runs),
     ("img", anahtar, no), ("p", tür, parçalar); parça ("runs", runs) ya da ("pb", no). Başlık bloğu yeni bölüm açar.
     Sayfa sınırından bölünen blok (kimlik «X», «X-2») tek paragraf olur, sınır paragrafın içinde işaretlenir. Yazısız
     sayfaların (tam sayfa resim) düğümleri sonraki yazılı sayfayla aynı bölüme girer (bölüm başı resmi başlığın önünde)."""
@@ -1004,10 +1142,12 @@ def flow_docs(plan: dict, ms) -> list[dict]:
         if pg["art"]:
             media.append(("img", pg["art"].get("asset") or pg["art"].get("id"), no))
         media += [("img", f["asset"], no) for f in pg["figures"]]
-        extra = [("p", "dialogue", [("runs", [{"text": bb["text"]}])]) for bb in pg["bubbles"] if bb.get("text")]
+        # Parçanın üçüncü alanı bloğun plan kimliği: sesli e-kitapta kelimeler bu kimlikle sarılır.
+        extra = [("p", "dialogue", [("runs", [{"text": bb["text"]}], bb.get("id"))]) for bb in pg["bubbles"]
+                 if bb.get("text")]
         for x in sorted(pg["texts"] + [s for s in pg.get("shapes", []) if s.get("runs")], key=lambda x: x.get("z", 0)):
             if runs_text(x.get("runs")).strip():
-                extra.append(("p", "free", [("runs", x["runs"])]))
+                extra.append(("p", "free", [("runs", x["runs"], x.get("id"))]))
         if not blocks and not extra:
             pending += [("pb", no)] + media
             continue
@@ -1024,16 +1164,16 @@ def flow_docs(plan: dict, ms) -> list[dict]:
         carried = False
         for j, k in enumerate(blocks):
             if k["kind"] == "heading":
-                page_nodes.append(("h", runs_text(k["runs"]).strip()))
+                page_nodes.append(("h", runs_text(k["runs"]).strip(), k["id"], k["runs"]))
                 last_base = None
                 continue
             m = re.match(r"^(.*)-(\d+)$", str(k["id"]))
             base = m.group(1) if m else str(k["id"])
             if j == 0 and m and base == last_base and target and target[-1][0] == "p":
-                target[-1][2].extend([("pb", no), ("runs", [{"text": " "}] + k["runs"])])
+                target[-1][2].extend([("pb", no), ("runs", [{"text": " "}]), ("runs", k["runs"], k["id"])])
                 carried = True
             else:
-                page_nodes.append(("p", k["kind"], [("runs", k["runs"])]))
+                page_nodes.append(("p", k["kind"], [("runs", k["runs"], k["id"])]))
             last_base = base
         target += ([] if carried else [("pb", no)]) + media + page_nodes + extra
     if pending:
@@ -1064,9 +1204,10 @@ def _strip_note_head(parts: list) -> list:
     return out
 
 
-def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict) -> tuple[str, list[int]]:
+def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict, wrap=None) -> tuple[str, list[int]]:
     """Bölüm gövdesi ve içindeki basılı sayfa numaraları. Dipnot: aynı bölümde «[n] …» ya da «¹ …» ile başlayan paragraf
-    not olur (bölüm sonunda), metindeki aynı işaret ona bağlanır; işareti metinde olmayan paragraf not sayılmaz."""
+    not olur (bölüm sonunda), metindeki aynı işaret ona bağlanır; işareti metinde olmayan paragraf not sayılmaz.
+    `wrap(runs, blok_kimliği) -> html | None`: sesli e-kitapta kelimeleri kimlikli yazar (Narr.runs)."""
     def flat(n) -> str:
         return "".join(runs_text(p[1]) for p in n[2] if p[0] == "runs")
 
@@ -1098,7 +1239,7 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict) -> tu
             if p[0] == "pb":
                 buf.append(pb(p[1]))
             else:
-                h = runs_html(p[1], fonts)
+                h = (wrap(p[1], p[2]) if wrap is not None and len(p) > 2 else None) or runs_html(p[1], fonts)
                 buf.append(NOTE_MARK.sub(ref, h) if link and notes else h)
         return "".join(buf)
 
@@ -1107,7 +1248,8 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict) -> tu
         if n[0] == "pb":
             out.append(pb(n[1]))
         elif n[0] == "h":
-            out.append(f"<h1>{esc(n[1])}</h1>")
+            inner = (wrap(n[3], n[2]) if wrap is not None and len(n) > 3 else None) or esc(n[1])
+            out.append(f"<h1>{inner}</h1>")
         elif n[0] == "img":
             if n[1] in img_href:
                 out.append(f'<figure class="resim"><img src="{img_href[n[1]]}" alt="{esc(alts.get(n[1], ""))}"/></figure>')
@@ -1127,7 +1269,11 @@ def flow_html(doc: dict, di: int, img_href: dict, alts: dict, fonts: dict) -> tu
     return "\n".join(out), pages
 
 
-def flow_css(spec, faces: list[Face], accent: str) -> str:
+def flow_css(spec, faces: list[Face], accent: str, audio: bool = False) -> str:
+    return _flow_css(spec, faces, accent) + (ACTIVE_CSS if audio else "")
+
+
+def _flow_css(spec, faces: list[Face], accent: str) -> str:
     body, head = _stack(spec.body_font), _stack(spec.heading_font, False)
     return f"""{_font_css(faces, "../fonts/")}
 body {{ font-family: {body}; line-height: {_f(spec.leading)}; margin: 0 5%; }}
@@ -1173,10 +1319,11 @@ def ncx(uid: str, title: str, toc: list[tuple[str, str]]) -> str:
             f'<docTitle><text>{esc(title)}</text></docTitle><navMap>{pts}</navMap></ncx>\n')
 
 
-def a11y(fixed: bool, has_images: bool, alts_ok: bool, has_pagelist: bool) -> dict:
+def a11y(fixed: bool, has_images: bool, alts_ok: bool, has_pagelist: bool, audio: bool = False) -> dict:
     """schema.org erişilebilirlik üst verisi (EPUB Accessibility 1.1). Sabit sayfada yazı boyutu okurca değiştirilemez;
-    bu özetle söylenir ve WCAG uygunluk beyanı yalnız akışkan kitapta, bütün görsellerin alt metni varken yapılır."""
-    modes = ["textual"] + (["visual"] if has_images else [])
+    bu özetle söylenir ve WCAG uygunluk beyanı yalnız akışkan kitapta, bütün görsellerin alt metni varken yapılır.
+    Sesli e-kitapta metin sesle eşlidir (synchronizedAudioText); seslendirme ses tehlikesi sayılmaz."""
+    modes = ["textual"] + (["visual"] if has_images else []) + (["auditory"] if audio else [])
     suff = ["textual,visual"] if has_images else []
     if not has_images or alts_ok:
         suff.insert(0, "textual")
@@ -1187,7 +1334,9 @@ def a11y(fixed: bool, has_images: bool, alts_ok: bool, has_pagelist: bool) -> di
         feats.append("printPageNumbers")
     if not fixed:
         feats.append("displayTransformability")
-    summary = ("Bu e-kitap basılı kitabın sayfa düzenini korur (sabit sayfa); metin gerçek metindir, seçilebilir ve sesli "
+    if audio:
+        feats.append("synchronizedAudioText")
+    summary =("Bu e-kitap basılı kitabın sayfa düzenini korur (sabit sayfa); metin gerçek metindir, seçilebilir ve sesli "
                "okunabilir, okuma sırası ve içindekiler tanımlıdır" if fixed else
                "Bu e-kitabın metni okurun ekranına ve yazı boyutu ayarına göre akar; bölümler, içindekiler ve okuma sırası "
                "tanımlıdır")
@@ -1195,14 +1344,15 @@ def a11y(fixed: bool, has_images: bool, alts_ok: bool, has_pagelist: bool) -> di
                 "; bazı görsellerin alt metni eksiktir" if has_images else "")
     summary += ("; basılı sayfa numaraları korunmuştur" if has_pagelist else "")
     summary += (". Sabit sayfa düzeninde yazı boyutu ve renkleri okur tarafından değiştirilemez." if fixed else ".")
-    summary += " Yanıp sönen içerik, hareket ve ses yoktur."
+    summary += (" Metin Türkçe seslendirmeyle eşlidir: okurken dinlenebilir, okunan kelime vurgulanır. Yanıp sönen "
+                "içerik ve hareket yoktur." if audio else " Yanıp sönen içerik, hareket ve ses yoktur.")
     return {"accessMode": modes, "accessModeSufficient": suff, "accessibilityFeature": feats,
             "accessibilityHazard": ["none"], "accessibilitySummary": summary,
             "conformsTo": "EPUB Accessibility 1.1 - WCAG 2.1 Level AA" if (not fixed and (alts_ok or not has_images)) else None}
 
 
 def opf(pack: Pack, *, uid: str, title: str, authors: list[str], publisher: str, rights: str, source_isbn: str | None,
-        fixed: bool, access: dict, cover_id: str | None) -> str:
+        fixed: bool, access: dict, cover_id: str | None, media: dict | None = None) -> str:
     m = [f'<dc:identifier id="uid">{esc(uid)}</dc:identifier>', f"<dc:title>{esc(title)}</dc:title>",
          "<dc:language>tr</dc:language>", f'<meta property="dcterms:modified">{_now()}</meta>']
     for i, a in enumerate(authors, 1):
@@ -1226,10 +1376,18 @@ def opf(pack: Pack, *, uid: str, title: str, authors: list[str], publisher: str,
         m += ['<meta property="rendition:layout">pre-paginated</meta>', '<meta property="rendition:orientation">auto</meta>',
               '<meta property="rendition:spread">landscape</meta>']
     m.append('<meta property="ibooks:specified-fonts">true</meta>')
+    if media:                                  # EPUB 3 Media Overlays: süreler (belge başına + toplam), anlatıcı, sınıf
+        for sid, dur in media["durations"].items():
+            m.append(f'<meta property="media:duration" refines="#{sid}">{dur}</meta>')
+        m.append(f'<meta property="media:duration">{media["total"]}</meta>')
+        for name in media["narrators"]:
+            m.append(f'<meta property="media:narrator">{esc(name)}</meta>')
+        m.append(f'<meta property="media:active-class">{media["active_class"]}</meta>')
     items = []
     for f in pack.files:
         props = f' properties="{f["props"]}"' if f["props"] else ""
-        items.append(f'<item id="{f["id"]}" href="{esc(f["path"])}" media-type="{f["mt"]}"{props}/>')
+        mo = f' media-overlay="{f["overlay"]}"' if f.get("overlay") else ""
+        items.append(f'<item id="{f["id"]}" href="{esc(f["path"])}" media-type="{f["mt"]}"{props}{mo}/>')
     spine = "".join(f'<itemref idref="{s["id"]}"' + (f' properties="{s["props"]}"' if s.get("props") else "")
                     + ("" if s.get("linear", True) else ' linear="no"') + "/>" for s in pack.spine)
     toc = next((f["id"] for f in pack.files if f["path"] == "toc.ncx"), None)
@@ -1246,8 +1404,9 @@ def uid_of(d: Path, eisbn: str | None) -> str:
     return f"urn:isbn:{eisbn}" if eisbn else f"urn:uuid:{uuid.uuid5(uuid.NAMESPACE_URL, 'zeki-ai-studio:' + d.name)}"
 
 
-def inputs_hash(d: Path) -> str:
-    """E-kitabın girdileri (plan sürümü, alt metinler, e-ISBN, künye, seçili resimler, kapak): değişince «eski» olur."""
+def inputs_hash(d: Path, audio: bool = False) -> str:
+    """E-kitabın girdileri (plan sürümü, alt metinler, e-ISBN, künye, seçili resimler, kapak; sesli e-kitapta sayfa
+    sesleri ve ses ayarı): değişince «eski» olur."""
     h = hashlib.sha1()
     pl = plan_mod.load(d) or {}
     h.update(str(pl.get("rev")).encode())
@@ -1255,14 +1414,35 @@ def inputs_hash(d: Path) -> str:
         p = d / name
         h.update(p.read_bytes() if p.exists() else b"-")
     h.update(json.dumps(studio.selected_art(d), sort_keys=True).encode())
+    if audio:
+        h.update(b"ses")
+        sd = d / "ses"
+        for p in sorted((sd / "sayfa").glob("*.json")) if (sd / "sayfa").exists() else []:
+            h.update(p.name.encode() + p.read_bytes())
+        h.update((sd / "ayar.json").read_bytes() if (sd / "ayar.json").exists() else b"-")
     return h.hexdigest()[:16]
 
 
-def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
-    """E-kitabı üretir (alt metinler önceden `fill_alts` ile hazırlanır). Dönen: özet (biçim, sayfalar, uyarılar)."""
+def _audio_of(res: dict | None) -> bool:
+    return bool(((res or {}).get("audio") or {}).get("on"))
+
+
+def build(d: Path, want: str = "auto", by: str = "", progress=None, audio: bool = False) -> dict:
+    """E-kitabı üretir (alt metinler önceden `fill_alts` ile hazırlanır). Dönen: özet (biçim, sayfalar, uyarılar).
+    `audio`: sesli e-kitap (EPUB 3 medya kaplaması: okurken dinle, okunan kelime vurgulu); yalnız bütün sayfaların
+    sesi hazır ve güncelken — değilse ValueError (ekrana giden cümleyle)."""
     t0 = time.time()
     plan = plan_mod.load(d)
     layout, reason = decide(d, plan, want)
+    ov = None
+    if audio:
+        if plan is None:
+            raise ValueError("Sesli e-kitap sayfa düzeni ve sesli okumayla hazırlanır; önce sesli okumayı açın.")
+        from . import narration as N
+        ov = N.media_overlay(d)
+        gap = audio_gap(ov)
+        if gap:
+            raise ValueError(gap)
     ms, spec = studio._manuscript(d), studio._spec(d)
     front = studio.read(d, "front.json") or {}
     m = meta(d)
@@ -1286,6 +1466,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
     for x in dict.fromkeys(missing_fam):
         warn.append(f"{x} yazı tipi sunucuda bulunamadı; okuyucunun yazı tipi kullanılır.")
     pack = Pack()
+    narr = Narr(ov, pack) if ov is not None else None
     fonts_used = []
     for f in faces:
         if not f.embed:
@@ -1309,7 +1490,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
     landmarks: list[tuple[str, str, str]] = []
     img_keys: set[str] = set()
     if fixed:
-        fx = Fixed(d, plan, pack, alts, warn)
+        fx = Fixed(d, plan, pack, alts, warn, narr)
         fx.build_layers()
         pack.add("css/fxl.css", fx.css(fonts_used))
         head = fx.head()
@@ -1336,17 +1517,21 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
             if progress:
                 progress(i, len(plan["pages"]))
             no = plan_mod.FRONT + i + 1
-            body, svg = fx.page(i, rd, pg)
             fn = f"s{no:03d}.xhtml"
+            if narr:
+                narr.doc = f"text/{fn}"
+            body, svg = fx.page(i, rd, pg)
+            mo = narr.attach(pack, f"text/{fn}") if narr else None
             heading = next((runs_text(k["runs"]).strip() for k in ((pg["text"] or {}).get("blocks") or [])
                             if k["kind"] == "heading"), None)
             iid = pack.add(f"text/{fn}", xhtml(f"Sayfa {no}" + (f" — {heading}" if heading else ""), body,
                                                css=["../css/fxl.css"], head=head,
                                                body_attr=' epub:type="bodymatter"' if not started else ""),
-                           props="svg" if svg else "")
+                           props="svg" if svg else "", overlay=mo)
             side = "right" if no % 2 else "left"
             pack.spine.append({"id": iid, "props": f"page-spread-{side}"})
-            pages_meta.append({"href": f"text/{fn}", "title": f"Sayfa {no}", "side": side, "no": no})
+            pages_meta.append({"href": f"text/{fn}", "title": f"Sayfa {no}", "side": side, "no": no,
+                               "smil": narr.smil_of.get(f"text/{fn}") if narr else None})
             pagelist.append((no, f"text/{fn}#s{no}"))
             if not started:
                 landmarks.append(("bodymatter", f"text/{fn}", "Öykü"))
@@ -1362,7 +1547,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
     else:
         acc = ((studio.read(d, "pagemap.json") or {}).get("layout") or {}).get("accent") or \
             ((studio.read(d, "artplan.json") or {}).get("style") or {}).get("accent") or "#264653"
-        pack.add("css/akis.css", flow_css(spec, fonts_used, acc))
+        pack.add("css/akis.css", flow_css(spec, fonts_used, acc, audio=narr is not None))
         fonts = {"body": _stack(spec.body_font), "heading": _stack(spec.heading_font, False)}
         css = ["../css/akis.css"]
         if cov:
@@ -1408,14 +1593,19 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
         for di, doc in enumerate(docs, 1):
             if progress:
                 progress(di - 1, len(docs))
-            body, nos = flow_html(doc, di, href, alts, fonts)
             fn = f"bolum-{di:03d}.xhtml"
+            if narr:
+                narr.doc = f"text/{fn}"
+            body, nos = flow_html(doc, di, href, alts, fonts,
+                                  wrap=(lambda runs, bid: narr.runs(runs, bid, fonts)) if narr else None)
+            mo = narr.attach(pack, f"text/{fn}") if narr else None
             iid = pack.add(f"text/{fn}", xhtml(doc["title"], body, css=css,
-                                               body_attr=' epub:type="bodymatter"' if di == 1 else ""))
+                                               body_attr=' epub:type="bodymatter"' if di == 1 else ""), overlay=mo)
             pack.spine.append({"id": iid})
             toc.append((doc["title"], f"text/{fn}"))
             pagelist += [(no, f"text/{fn}#s{no}") for no in nos]
-            pages_meta.append({"href": f"text/{fn}", "title": doc["title"], "side": None, "no": nos[0] if nos else None})
+            pages_meta.append({"href": f"text/{fn}", "title": doc["title"], "side": None, "no": nos[0] if nos else None,
+                               "smil": narr.smil_of.get(f"text/{fn}") if narr else None})
             if di == 1:
                 landmarks.append(("bodymatter", f"text/{fn}", "Metin"))
         nav_css, nav_head = "css/akis.css", ""
@@ -1431,13 +1621,25 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
     lacking = sorted(k for k in shown if not alts.get(k))
     if lacking:
         warn.append(f"{len(lacking)} görselin alt metni yok (e-kitap bölümündeki listeden yazın).")
-    access = a11y(fixed, bool(shown), not lacking, bool(pagelist))
+    media = audio_res = None
+    if narr:
+        if not narr.durations:
+            raise ValueError("Sesli e-kitap üretilemedi: seslendirilmiş kelimeler e-kitabın sayfalarında bulunamadı.")
+        media = narr.media()
+        timed = narr.timed_words()
+        placed = sum(1 for v in narr.placed.values() if v)
+        if placed < timed:
+            warn.append(f"{timed - placed} kelimenin sesi e-kitap sayfasında eşlenemedi; o kelimeler okunurken "
+                        "vurgulanmaz.")
+        audio_res = {"on": True, "duration": round(sum(narr.durations.values()), 1), "pages": len(ov["pages"]),
+                     "documents": len(narr.durations), "words": placed, "narrators": media["narrators"]}
+    access = a11y(fixed, bool(shown), not lacking, bool(pagelist), audio=narr is not None)
     front_rows = dict(front.get("kunye") or [])
     authors = [a.strip() for a in (ms.author or "").split(",") if a.strip()]
     doc_opf = opf(pack, uid=uid, title=ms.title, authors=authors,
                   publisher=ms.meta.get("PUBLISHER") or front_rows.get("Yayınevi", "").replace("—", ""),
                   rights=front_rows.get("Telif", "").replace("—", ""), source_isbn=pisbn, fixed=fixed, access=access,
-                  cover_id=cover_id)
+                  cover_id=cover_id, media=media)
     out = _dir(d) / FILE
     pack.write(out, doc_opf)
     data = out.read_bytes()
@@ -1445,7 +1647,7 @@ def build(d: Path, want: str = "auto", by: str = "", progress=None) -> dict:
             "build": hashlib.sha1(data).hexdigest()[:12], "size": len(data), "pages": pages_meta,
             "viewport": [int(round(spec.trim_w * K)), int(round(spec.trim_h * K))] if fixed else None,
             "fonts": [f.report() for f in faces], "images": len(shown), "alt_missing": len(lacking),
-            "a11y": access, "warnings": warn, "seconds": round(time.time() - t0, 2), "by": by}
+            "a11y": access, "warnings": warn, "seconds": round(time.time() - t0, 2), "by": by, "audio": audio_res}
 
 
 def _image_path(d: Path, plan: dict | None, sel: dict, key: str) -> Path | None:
@@ -1465,10 +1667,11 @@ def _docs_from_manuscript(ms) -> list[dict]:
     return docs
 
 
-async def build_job(d: Path, want: str, by: str, llm=None) -> dict:
+async def build_job(d: Path, want: str, by: str, llm=None, audio: bool = False) -> dict:
     """Stüdyo işçisinde: alt metinler → e-kitap → denetim. Durum epub/state.json'da (ekran bekler)."""
     import asyncio
-    set_state(d, status="running", step="alt", progress=[0, 0], started=time.time(), error=None, by=by, layout_want=want)
+    set_state(d, status="running", step="alt", progress=[0, 0], started=time.time(), error=None, by=by, layout_want=want,
+              audio_want=audio)
     try:
         plan = plan_mod.load(d)
         if plan is not None:
@@ -1477,11 +1680,12 @@ async def build_job(d: Path, want: str, by: str, llm=None) -> dict:
                 llm = FileLlm(d / "provenance.jsonl")
             await fill_alts(d, plan, llm, lambda n, t: set_state(d, step="alt", progress=[n, t]))
         set_state(d, step="dizgi", progress=[0, 0])
-        res = await asyncio.to_thread(build, d, want, by, lambda n, t: set_state(d, step="dizgi", progress=[n, t]))
+        res = await asyncio.to_thread(build, d, want, by, lambda n, t: set_state(d, step="dizgi", progress=[n, t]),
+                                      audio)
         set_state(d, step="denetim", progress=[0, 0])
         rep = await asyncio.to_thread(check, _dir(d) / FILE)
         st = set_state(d, status="done", step=None, progress=None, finished=time.time(), result=res, check=rep,
-                       inputs=inputs_hash(d), error=None)
+                       inputs=inputs_hash(d, audio), error=None)
         from . import studio as st_mod
         try:
             st_mod.refresh_preflight(d)
@@ -1541,7 +1745,7 @@ TR = {
 }
 SEV = {"FATAL": "error", "ERROR": "error", "WARNING": "warning", "USAGE": "info", "INFO": "info", "SUPPRESSED": None}
 FAMILY_TR = {"PKG": "Paket", "OPF": "Paket belgesi", "RSC": "Kaynak", "HTM": "Sayfa", "CSS": "Stil", "NAV": "İçindekiler",
-             "NCX": "Eski içindekiler", "MED": "Görsel", "ACC": "Erişilebilirlik", "OCF": "Paket", "SCP": "Betik",
+             "NCX": "Eski içindekiler", "MED": "Görsel ve ses", "ACC": "Erişilebilirlik", "OCF": "Paket", "SCP": "Betik",
              "CHK": "Denetim", "INF": "Bilgi"}
 
 
@@ -1690,6 +1894,9 @@ def basic_check(path: Path) -> list[dict]:
                 add("error", "RSC-007", "Başvurulan görsel pakette yok.", f"{it.get('href')} → {src}")
             elif target not in listed:
                 add("error", "RSC-008", "Başvurulan görsel listede bildirilmemiş.", f"{it.get('href')} → {src}")
+        mo = it.get("media-overlay")
+        if mo:
+            _check_overlay(z, doc, items, base, name, x, mo, names, add, NS)
         if "nav" in props:
             if x.find(".//x:nav[@e:type='toc']", NS) is None:
                 add("error", "NAV-001", "İçindekiler (toc) bulunamadı.", it.get("href"))
@@ -1700,6 +1907,54 @@ def basic_check(path: Path) -> list[dict]:
                     add("error", "RSC-011", "İçindekilerdeki bir bağlantı okuma sırasında olmayan bir belgeye gidiyor.",
                         f"{it.get('href')} → {href}")
     return out
+
+
+def _check_overlay(z, doc, items: dict, base: str, name: str, x, mo: str, names: set, add, NS: dict) -> None:
+    """Medya kaplaması (yapısal): SMIL listede ve türü doğru, süresi OPF'te, her <text> bu belgedeki bir kimliğe, her
+    <audio> paketteki bir sese gidiyor, klip başı sonundan önce."""
+    from lxml import etree
+    sm = items.get(mo)
+    where = name.removeprefix(base)
+    if sm is None or sm.get("media-type") != "application/smil+xml":
+        add("error", "MED-010", "Sayfanın ses eşleme dosyası listede yok ya da türü yanlış.", where)
+        return
+    if doc.find(f".//o:meta[@property='media:duration'][@refines='#{mo}']", NS) is None:
+        add("error", "MED-016", "Ses eşleme dosyasının süresi üst veride yok.", sm.get("href"))
+    if not [m for m in doc.findall(".//o:meta[@property='media:duration']", NS) if not m.get("refines")]:
+        add("error", "MED-016", "Sesli e-kitabın toplam süresi üst veride yok.")
+    sname = base + sm.get("href")
+    if sname not in names:
+        return
+    try:
+        s = etree.fromstring(z.read(sname))
+    except etree.XMLSyntaxError as e:
+        add("error", "RSC-016", "Ses eşleme dosyası geçerli bir XML değil.", f"{sm.get('href')}, satır {e.lineno}")
+        return
+    ids = {e.get("id") for e in x.iter() if e.get("id")}
+    S = "{http://www.w3.org/ns/SMIL}"
+    for t in s.iter(S + "text"):
+        src = t.get("src") or ""
+        file_, _, frag = src.partition("#")
+        target = os.path.normpath(os.path.join(os.path.dirname(sname), file_)).replace("\\", "/")
+        if target != name or frag not in ids:
+            add("error", "RSC-012", "Ses eşlemesinin gösterdiği kelime sayfada yok.", f"{sm.get('href')} → {src}")
+            break
+    for a in s.iter(S + "audio"):
+        target = os.path.normpath(os.path.join(os.path.dirname(sname), a.get("src") or "")).replace("\\", "/")
+        if target not in names:
+            add("error", "RSC-007", "Ses eşlemesinin gösterdiği ses dosyası pakette yok.", f"{sm.get('href')} → {a.get('src')}")
+            break
+        b, e = a.get("clipBegin") or "", a.get("clipEnd") or ""
+        if _secs(b) is None or _secs(e) is None or _secs(e) <= _secs(b):
+            add("error", "MED-008", "Ses klibinin başı sonundan önce değil.", f"{sm.get('href')}")
+            break
+
+
+def _secs(v: str) -> float | None:
+    m = re.fullmatch(r"(?:(\d+):)?(\d{1,2}):(\d{2}(?:\.\d+)?)", v or "")
+    if not m:
+        return None
+    return int(m[1] or 0) * 3600 + int(m[2]) * 60 + float(m[3])
 
 
 def check(path: Path) -> dict:
@@ -1739,7 +1994,12 @@ def view(d: Path) -> dict:
         auto = ("reflow", "")
     alts = alt_list(d, plan) if plan else []
     m = meta(d)
-    fresh = st.get("status") == "done" and st.get("inputs") == inputs_hash(d)
+    fresh = st.get("status") == "done" and st.get("inputs") == inputs_hash(d, _audio_of(st.get("result")))
+    try:
+        audio = audio_info(d, plan)
+    except Exception:  # noqa: BLE001 - ses durumu okunamazsa sessiz e-kitap yine üretilir
+        audio = {"ready": False, "reason": "Sesli okuma durumu okunamadı.", "pages": 0, "done": 0, "missing": 0,
+                 "stale": 0, "duration": 0}
     return {"status": st.get("status", "none"), "step": st.get("step"), "progress": st.get("progress"),
             "error": st.get("error"), "started": st.get("started"), "finished": st.get("finished"), "by": st.get("by"),
             "result": st.get("result"), "check": st.get("check"), "stale": st.get("status") == "done" and not fresh,
@@ -1747,7 +2007,7 @@ def view(d: Path) -> dict:
             "meta": {"eisbn": m.get("eisbn"), "print_isbn": print_isbn(d) if (d / "manuscript.json").exists() else None},
             "alt": {"total": len(alts), "missing": sum(1 for a in alts if not a["text"]),
                     "review": sum(1 for a in alts if a["review"])},
-            "checker_full": full_checker() is not None}
+            "checker_full": full_checker() is not None, "audio": audio, "audio_want": bool(st.get("audio_want"))}
 
 
 def preflight_checks(d: Path) -> list[dict]:
@@ -1756,9 +2016,9 @@ def preflight_checks(d: Path) -> list[dict]:
     if st.get("status") != "done":
         return []
     rep, res = st.get("check") or {}, st.get("result") or {}
-    kind = "sabit sayfa" if res.get("layout") == "fixed" else "akışkan"
+    kind = ("sabit sayfa" if res.get("layout") == "fixed" else "akışkan") + (", sesli" if _audio_of(res) else "")
     ne, nw = len(rep.get("errors") or []), len(rep.get("warnings") or [])
-    if st.get("inputs") != inputs_hash(d):
+    if st.get("inputs") != inputs_hash(d, _audio_of(res)):
         return [{"name": "E-kitap", "status": "WARN",
                  "detail": f"e-kitap ({kind}) sonraki değişikliklerden önce üretildi; stüdyoda yeniden üretin"}]
     if ne:

@@ -252,6 +252,16 @@ direction=…)`), yönlendirme zorunlu.
 |---|---|---|---|
 | GET | `plan` | — | `plan.json` (yoksa 404 `{"code":"NO_PLAN"}`) |
 | POST | `plan/freeze` | — | `plan.json` (varsa bozmaz, aynısını döner) |
+
+**Kendiliğinden kurulum (2026-09-27, `plan.ensure`):** planı *tüketen* bölümlerin giriş uçları — `GET narration`,
+`POST narration/run`, `GET plan/reader`, `GET plan/versions` — plan yoksa dondurmayı arka planda başlatır ve 409
+`{"code":"PREPARING","state":"preparing"}` döner; ekran 2,5 sn'de bir yeniden sorar. Aynı dondurma yolu: görsel çizilmez,
+görsel okuyucu çağrılmaz (balon kuralla), kurulum düşerse göç geri alınır, kayıt `plan-auto.json` (kim, neden, süre).
+Yarış yok: süreç içinde iş başına tek iş parçacığı, süreçler arasında `plan.lock` (tutuluyorsa «hazırlanıyor»).
+Üretim hattı sürüyorsa (`busy.json` `key: hat`) kurulmaz, `state: waiting` (hat kendi sonunda kurar). Düşen kurulum
+409 `PLAN_FAILED`; `?retry=1` yeniden dener. Kitap henüz yerleşmediyse (pagemap/artplan yok) 404 `NO_PLAN`.
+`GET plan` (Sayfa düzeni ekranı ve otomatik kayıt yeniden okuması) bilinçli olarak tetiklemez: sayfa düzeninin kendi
+«Sayfa düzenini başlat» düğmesi var ve otomatik kaydın `NO_PLAN` sözleşmesi korunur.
 | PUT | `plan/pages/{pid}` | `{"rev": n, "page": sayfa nesnesi}` | `{"page": …, "rev": n+1, "warnings": […]}` |
 | POST | `plan/pages` | `{"rev": n, "after": pid\|null, "layout": "text-only"}` | yeni sayfa + rev |
 | DELETE | `plan/pages/{pid}?rev=n` | — | `{"ok":true,"rev":n+1}`; resmi silinmez, "kullanılmayan resimler"e düşer |

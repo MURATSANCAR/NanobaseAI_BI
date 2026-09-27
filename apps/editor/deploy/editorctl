@@ -3,6 +3,7 @@
 # EDITOR_ROOT (/data/editor); nothing here touches BI containers or files.
 #
 #   editorctl install        dirs, secrets (once), rendered configs, Hermes home, image build
+#   editorctl studio-image [editor-py:<etiket>]   stüdyo imajını (editor-py-studio:<etiket>) editor-py'nin üstüne kurar
 #   editorctl up             core services (Postgres, Qdrant, Temporal, gateway, MCP, worker, Hermes)
 #   editorctl pause | resume "<neden>"   bakım kilidi + analiz servisleri (worker, mcp, gateway, embed, hermes)
 #   editorctl down           stop every editor model container, then the core services
@@ -26,6 +27,18 @@ export EDITOR_ROOT=$ROOT
 _ver=$(cat "$APP/VERSION" 2>/dev/null || true)
 [ -n "$_ver" ] && export EDITOR_PY_IMAGE="${EDITOR_PY_IMAGE:-editor-py:$_ver}"
 [ -n "${EDITOR_PY_IMAGE:-}" ] && export EDITOR_CARDS_IMAGE="${EDITOR_CARDS_IMAGE:-$EDITOR_PY_IMAGE}"
+# Stüdyo (editor-studio, editor-studio-worker): aynı etiketli editor-py-studio imajı (editor-py + tam e-kitap
+# denetimi). Kurulmamışsa editor-py'ye düşer ve uyarır: stüdyo çalışır, e-kitapta yalnız yapısal denetim yapılır.
+studio_image_for() { echo "editor-py-studio:${1#editor-py:}"; }
+if [ -n "${EDITOR_PY_IMAGE:-}" ] && [ -z "${EDITOR_STUDIO_IMAGE:-}" ]; then
+  _st=$(studio_image_for "$EDITOR_PY_IMAGE")
+  if docker image inspect "$_st" >/dev/null 2>&1; then
+    export EDITOR_STUDIO_IMAGE="$_st"
+  else
+    export EDITOR_STUDIO_IMAGE="$EDITOR_PY_IMAGE"
+    case "${1:-}" in up|resume) echo "uyarı: $_st yok (editorctl studio-image); stüdyo $EDITOR_PY_IMAGE ile kalkar, tam e-kitap denetimi olmaz" >&2 ;; esac
+  fi
+fi
 
 rand() { python3 -c "import secrets; print(secrets.token_urlsafe(${1:-32}))"; }
 
@@ -107,10 +120,19 @@ EOV
   local ver; ver=$(cat "$APP/VERSION" 2>/dev/null || echo dev)
   docker build -q -t "editor-py:$ver" -t editor-py:latest --build-arg CODE_VERSION="$ver" \
     -f "$APP/images/py/Dockerfile" "$APP"
+  cmd_studio_image "editor-py:$ver"
   docker build -q -t editor-embed:latest -f "$APP/images/embed/Dockerfile" "$APP" >/dev/null
   docker build -q -t editor-upscale:1 -f "$APP/images/upscale/Dockerfile" "$APP" >/dev/null
   docker build -q -t editor-voice:1 -f "$APP/images/voice/Dockerfile" "$APP" >/dev/null
   echo "installed editor-py:$ver"
+}
+
+cmd_studio_image() {  # cmd_studio_image <editor-py:etiket>: editor-py-studio:<etiket> (images/studio/Dockerfile)
+  local base=${1:?editor-py imajı}; local out; out=$(studio_image_for "$base")
+  docker image inspect "$base" >/dev/null
+  docker build -q -t "$out" --build-arg BASE="$base" -f "$APP/images/studio/Dockerfile" "$APP/images/studio" >/dev/null
+  docker run --rm --entrypoint sh "$out" -c 'java -jar "$EDITOR_EPUBCHECK_JAR" --version' | head -1
+  echo "installed $out"
 }
 
 cmd_up() {
@@ -143,6 +165,7 @@ cmd_status() {
 
 case "${1:-}" in
   install) cmd_install ;;
+  studio-image) cmd_studio_image "${2:-${EDITOR_PY_IMAGE:?EDITOR_PY_IMAGE ya da editor-py:<etiket> verin}}" ;;
   up) cmd_up ;;
   down) cmd_down ;;
   status) cmd_status ;;
@@ -174,5 +197,5 @@ case "${1:-}" in
   cli) shift; docker exec -i editor-mcp python -m editor.cli "$@" ;;
   hermes) shift; docker exec -it editor-hermes hermes "$@" ;;
   gw) shift; gw "$@" ;;
-  *) sed -n '2,16p' "$0"; exit 2 ;;
+  *) sed -n '2,17p' "$0"; exit 2 ;;
 esac

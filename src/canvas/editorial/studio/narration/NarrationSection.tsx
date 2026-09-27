@@ -7,14 +7,17 @@ import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
+import VoicePicker from './VoicePicker';
+import VoiceUpload from './VoiceUpload';
 import {
   NarrationError, narrationApi, useNarration, useNarrationPage,
-  type NarrationOverview, type NarrationPageRow, type NarrationVoice,
+  type NarrationOverview, type NarrationPageRow,
 } from './api';
 
 /** Stüdyoda «Sesli okuma»: kitap Türkçe seslendirilir, e-kitapta okunan kelime vurgulanır. Sayfa sayfa dinleme ve
  *  okunan kelime vurgulu önizleme, anlatıcı ve karakter sesleri, telaffuz sözlüğü, yeniden üretim. Sayfalar sayfa
- *  düzeninden (plan) okunur; metin, ses ya da sözlük değişen sayfa «güncel değil» görünür ve yeniden seslendirilir. */
+ *  düzeninden (plan) okunur; metin, ses ya da sözlük değişen sayfa «güncel değil» görünür ve yeniden seslendirilir.
+ *  Sayfa düzeni hiç açılmamış işte bölüm açılınca düzen kendiliğinden kurulur; o sırada «hazırlanıyor» görünür. */
 
 const STATUS: Record<NarrationPageRow['status'], { dot: string; text: string }> = {
   done: { dot: 'bg-emerald-500', text: 'Hazır' },
@@ -39,7 +42,14 @@ export default function NarrationSection({ jobId }: { jobId: string }) {
   const qc = useQueryClient();
   const q = useNarration(jobId);
   const d = q.data;
-  const noPlan = q.error instanceof NarrationError && q.error.code === 'NO_PLAN';
+  const err = q.error instanceof NarrationError ? q.error : null;
+  const [retrying, setRetrying] = useState(false);
+  const retry = async () => {
+    setRetrying(true);
+    try { await narrationApi.overview(jobId, true); } catch { /* sonuç aşağıdaki sorguyla okunur */ }
+    setRetrying(false);
+    void qc.invalidateQueries({ queryKey: ['studio', 'narration', jobId] });
+  };
 
   return (
     <Panel>
@@ -53,13 +63,26 @@ export default function NarrationSection({ jobId }: { jobId: string }) {
         </div>
         {d && <Summary d={d} />}
       </div>
-      {noPlan ? (
-        <div className="mt-3">
-          <Note tone="info">
-            Sesli okuma sayfa düzeni üzerinden yapılır.{' '}
-            <Link className="font-bold underline" to={`/kitap-tasarim/${jobId}/sayfalar`}>Sayfa düzenini açın</Link>, sonra buraya dönün.
-          </Note>
+      {err?.code === 'PREPARING' ? (
+        <div className="mt-3 flex items-start gap-2.5 rounded-2xl border border-violet-100 bg-violet-50/60 p-3" role="status" aria-live="polite">
+          <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-canvas-violet motion-reduce:animate-none" aria-hidden />
+          <div className="min-w-0">
+            <p className="text-[13px] font-bold">{err.state === 'waiting' ? 'Kitap üretiliyor' : 'Sayfa düzeni hazırlanıyor…'}</p>
+            <p className="mt-0.5 text-[12px] leading-snug text-canvas-muted">
+              {err.message} Sesli okuma sayfa düzeni üzerinden yapılır; hazır olunca bu bölüm kendiliğinden açılır.
+            </p>
+          </div>
         </div>
+      ) : err?.code === 'PLAN_FAILED' ? (
+        <div className="mt-3 flex flex-col items-start gap-2">
+          <Note tone="err">{err.message}</Note>
+          <button type="button" className={ghostBtn} disabled={retrying} onClick={retry}>
+            {retrying ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <RefreshCw className="h-4 w-4" aria-hidden />}
+            Yeniden dene
+          </button>
+        </div>
+      ) : err?.code === 'NO_PLAN' ? (
+        <div className="mt-3"><Note tone="info">{err.message}</Note></div>
       ) : !d ? (
         q.error ? <div className="mt-3"><Note tone="err">{errText(q.error, 'Sesli okuma okunamadı.')}</Note></div>
           : <div className="py-6 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>
@@ -112,8 +135,17 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
   });
   const play = (text: string, voice: string, key: string) => sample.mutate({ text, voice, key });
 
+  const auto = d.plan_auto;
+  const justBuilt = auto?.status === 'done' && !!auto.finished && Date.now() / 1000 - auto.finished < 15 * 60;
+
   return (
     <div className="mt-3 flex flex-col gap-3">
+      {justBuilt && (
+        <Note tone="info">
+          Sayfa düzeni sesli okuma için kendiliğinden kuruldu; dizgi ve resimler aynı kaldı.{' '}
+          <Link className="font-bold underline" to={`/kitap-tasarim/${jobId}/sayfalar`}>Sayfa düzeninde</Link> düzenleyebilirsiniz.
+        </Note>
+      )}
       {!d.available && (
         <Note tone="info">Seslendirme bu kurulumda henüz açık değil. Sesleri ve telaffuz sözlüğünü şimdiden hazırlayabilirsiniz; açıldığında «Seslendir» ile üretilir.</Note>
       )}
@@ -267,26 +299,6 @@ function Listen({ jobId, d, running, onRegen, regenBusy }: {
 }
 
 // ---------------------------------------------------------------- sesler
-function VoiceSelect({ id, value, voices, onChange, allowNarrator }: {
-  id: string; value: string; voices: NarrationVoice[]; onChange: (v: string) => void; allowNarrator?: boolean;
-}) {
-  const groups: [string, NarrationVoice[]][] = [
-    ['Anlatıcı sesleri', voices.filter((v) => v.group === 'anlatici')],
-    ['Karakter sesleri', voices.filter((v) => v.group !== 'anlatici')],
-  ];
-  return (
-    <select id={id} value={value} onChange={(e) => onChange(e.target.value)}
-      className="min-h-10 w-full min-w-0 rounded-xl border border-slate-200 bg-white/90 px-2.5 text-[13px] outline-none focus:border-canvas-violet">
-      {allowNarrator && <option value="">Anlatıcının sesi</option>}
-      {groups.map(([g, list]) => (
-        <optgroup key={g} label={g}>
-          {list.map((v) => <option key={v.id} value={v.id}>{v.label} · {v.note}</option>)}
-        </optgroup>
-      ))}
-    </select>
-  );
-}
-
 function Voices({ jobId, d, onPlay, playing, onSaved }: {
   jobId: string; d: NarrationOverview; onPlay: (text: string, voice: string, key: string) => void; playing: string | null; onSaved: () => void;
 }) {
@@ -301,32 +313,26 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
   const dirty = JSON.stringify([narrator, clean]) !== JSON.stringify([d.settings.narrator, Object.fromEntries(Object.entries(d.settings.characters ?? {}).filter(([, v]) => v))]);
   const save = useMutation({ mutationFn: () => narrationApi.saveSettings(jobId, { narrator, characters: clean }), onSuccess: onSaved });
 
-  const PlayBtn = ({ text, voice, k }: { text: string; voice: string; k: string }) => (
-    <button type="button" aria-label="Sesi dinle" title="Dinle" disabled={!d.available || !!playing} onClick={() => onPlay(text, voice, k)}
-      className={`inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white/80 text-canvas-violet disabled:opacity-40 ${press}`}>
-      {playing === k ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Play className="h-4 w-4" aria-hidden />}
-    </button>
-  );
+  // Kütüphanedeki «dinle»: her ses aynı kısa cümleyi okur (sunucu ses başına bir kez üretir).
+  const listen = (voice: string, key: string) => onPlay(SAMPLE, voice, key);
 
   return (
     <div className="flex flex-col gap-2.5">
       <h3 className="text-[13px] font-extrabold">Sesler</h3>
       <div className="flex flex-col gap-1">
         <label htmlFor="narration-narrator" className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Anlatıcı</label>
-        <div className="flex gap-1.5">
-          <VoiceSelect id="narration-narrator" value={narrator} voices={d.voices} onChange={setNarrator} />
-          <PlayBtn text="Merhaba, bu kitabı sizin için ben okuyacağım." voice={narrator} k="v-narrator" />
-        </div>
+        <VoicePicker id="narration-narrator" label="Anlatıcı" value={narrator} voices={d.voices} groups={d.groups}
+          onChange={setNarrator} onPlay={listen} playing={playing} canPlay={d.available} />
       </div>
       {d.speakers.length > 0 && (
         <div className="flex flex-col gap-1.5">
           <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Konuşan karakterler</span>
           {d.speakers.map((name, i) => (
-            <div key={name} className="grid grid-cols-[minmax(0,88px)_1fr_auto] items-center gap-1.5">
-              <label htmlFor={`narration-char-${i}`} className="truncate text-[12.5px] font-bold" title={name}>{name}</label>
-              <VoiceSelect id={`narration-char-${i}`} value={chars[name] ?? ''} voices={d.voices} allowNarrator
-                onChange={(v) => setChars((c) => ({ ...c, [name]: v }))} />
-              <PlayBtn text={`Merhaba, ben ${name}.`} voice={chars[name] || narrator} k={`v-${name}`} />
+            <div key={name} className="grid grid-cols-[minmax(0,88px)_1fr] items-start gap-1.5">
+              <label htmlFor={`narration-char-${i}`} className="flex min-h-10 items-center truncate text-[12.5px] font-bold" title={name}>{name}</label>
+              <VoicePicker id={`narration-char-${i}`} label={`${name} sesi`} value={chars[name] ?? ''} voices={d.voices} groups={d.groups}
+                allowNarrator onChange={(v) => setChars((c) => ({ ...c, [name]: v }))}
+                onPlay={(voice, key) => onPlay(`Merhaba, ben ${name}.`, voice, key)} playing={playing} canPlay={d.available} />
             </div>
           ))}
           {d.settings.source === 'auto' && Object.keys(d.settings.characters ?? {}).length > 0 && (
@@ -342,6 +348,9 @@ function Voices({ jobId, d, onPlay, playing, onSaved }: {
         {dirty && <span className="text-[11px] text-canvas-muted">Ses değişen sayfalar yeniden seslendirilir.</span>}
       </div>
       {save.error && <p className="text-[12px] text-rose-700">{errText(save.error, 'Kaydedilemedi.')}</p>}
+      <VoiceUpload onChanged={onSaved} />
     </div>
   );
 }
+
+const SAMPLE = 'Merhaba, bu kitabı sizin için ben okuyacağım.';

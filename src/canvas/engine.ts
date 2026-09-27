@@ -2047,6 +2047,11 @@ const pid = (id: string) => encodeURIComponent(id);
 export const studioPlanApi = {
   get: (job: string) => planSend<Plan>('GET', planBase(job), undefined, 30_000),
   freeze: (job: string) => planSend<Plan>('POST', `${planBase(job)}/freeze`, {}, 300_000),
+  /** Sayfa düzeni ekranının açılışı: plan yoksa sunucu kendiliğinden kurar. Hazırsa `{status: 'ready'}`; kurulurken
+   *  409 PREPARING (`body.state`: preparing | waiting), düştüyse 409 PLAN_FAILED (`retry` ile yeniden), kitap
+   *  yerleşmediyse 404 NO_PLAN — hepsi `StudioPlanError`. */
+  prepare: (job: string, retry = false) =>
+    planSend<{ status: 'ready' }>('POST', `${planBase(job)}/prepare${retry ? '?retry=1' : ''}`, {}, 60_000),
   putPage: (job: string, rev: number, page: PlanPage) =>
     planSend<{ page: PlanPage; rev: number; warnings?: string[] }>('PUT', `${planBase(job)}/pages/${pid(page.id)}`, { rev, page }, 180_000),
   addPage: (job: string, rev: number, after: string | null, layout: PlanLayout) =>

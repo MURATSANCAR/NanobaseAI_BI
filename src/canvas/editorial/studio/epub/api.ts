@@ -10,12 +10,17 @@ export type EpubLayout = 'fixed' | 'reflow';
 export type EpubWant = 'auto' | EpubLayout;
 export type EpubIssue = { severity: 'error' | 'warning' | 'info'; code: string; message: string; where: string; count: number };
 export type EpubCheck = { status: 'OK' | 'WARN' | 'FAIL'; full: boolean; note: string; errors: EpubIssue[]; warnings: EpubIssue[]; at: string };
-export type EpubPage = { href: string; title: string; side: 'left' | 'right' | 'center' | null; no: number | null };
+/** `smil`: sesli e-kitapta sayfanın (akışkanda bölümün) ses eşlemesi; önizlemede dinlemek için. */
+export type EpubPage = { href: string; title: string; side: 'left' | 'right' | 'center' | null; no: number | null; smil?: string | null };
+/** Sesli e-kitabın özeti (EPUB 3 medya kaplaması). */
+export type EpubAudio = { on: boolean; duration: number; pages: number; documents: number; words: number; narrators: string[] };
+/** Sesli e-kitap üretilebilir mi: okunacak sayfaların kaçının sesi hazır, eksik, güncel değil. */
+export type EpubAudioInfo = { ready: boolean; reason: string | null; pages: number; done: number; missing: number; stale: number; duration: number };
 export type EpubFont = { family: string; file: string; license: string; embedded: boolean; obfuscated: boolean; note: string };
 export type EpubResult = {
   layout: EpubLayout; reason: string; eisbn: string | null; print_isbn: string | null; build: string; size: number;
   pages: EpubPage[]; viewport: [number, number] | null; fonts: EpubFont[]; images: number; alt_missing: number;
-  warnings: string[]; seconds: number; a11y: { accessibilitySummary: string };
+  warnings: string[]; seconds: number; a11y: { accessibilitySummary: string }; audio?: EpubAudio | null;
 };
 export type EpubView = {
   status: 'none' | 'queued' | 'running' | 'done' | 'fail';
@@ -32,12 +37,23 @@ export type EpubView = {
   meta: { eisbn: string | null; print_isbn: string | null };
   alt: { total: number; missing: number; review: number };
   checker_full: boolean;
+  audio: EpubAudioInfo;
+  audio_want: boolean;
 };
 export type AltSource = 'editor' | 'sahne' | 'model' | 'tarif' | 'an' | 'kapak' | '';
 export type AltItem = {
   key: string; kind: 'kapak' | 'resim' | 'figür' | 'fotoğraf'; pages: number[]; text: string; source: AltSource;
   by: string | null; review: boolean; stale: boolean; has_image: boolean;
 };
+
+export class EpubError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'EpubError';
+    this.status = status;
+  }
+}
 
 const base = (job: string) => `/api/v1/editorial/studio/jobs/${encodeURIComponent(job)}/epub`;
 
@@ -53,14 +69,15 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
   if (!res.ok) {
     const j = (await res.json().catch(() => null)) as { detail?: { message?: string; detail?: string } | string } | null;
     const msg = typeof j?.detail === 'string' ? j.detail : j?.detail?.detail ?? j?.detail?.message;
-    throw new Error(msg || httpErrorText(res.status));
+    throw new EpubError(msg || httpErrorText(res.status), res.status);
   }
   return (await res.json()) as T;
 }
 
 export const epubApi = {
   view: (job: string) => send<EpubView>('GET', base(job), undefined, 30_000),
-  build: (job: string, layout: EpubWant) => send<EpubView>('POST', base(job), { layout }),
+  /** `audio`: sesli e-kitap (okurken dinle; bütün sayfaların sesi hazırken). */
+  build: (job: string, layout: EpubWant, audio = false) => send<EpubView>('POST', base(job), { layout, audio }),
   setEisbn: (job: string, eisbn: string) => send<{ eisbn: string | null; print_isbn: string | null }>('PUT', `${base(job)}/meta`, { eisbn }),
   alts: (job: string) => send<{ items: AltItem[] }>('GET', `${base(job)}/alt`, undefined, 30_000),
   setAlt: (job: string, key: string, text: string) => send<AltItem>('PUT', `${base(job)}/alt/${encodeURIComponent(key)}`, { text }),
