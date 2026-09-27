@@ -5489,6 +5489,83 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
             raise HTTPException(502, "Son okuma raporu motordan alınamadı.") from e
 
+    # ---------------------------------------------------------- belge incelemesi (Son Okuma → «Belge incele»)
+    def _doc_error(e: Exception, what: str):
+        import httpx
+        if isinstance(e, httpx.HTTPStatusError):
+            code = e.response.status_code
+            if code in (404, 422):
+                try:
+                    detail = e.response.json().get("detail") or what
+                except ValueError:
+                    detail = what
+                raise HTTPException(code, detail) from e
+            raise HTTPException(503 if code == 503 else 502, what) from e
+        raise HTTPException(502, what) from e
+
+    def _doc_owned(doc_id: str, user: str, is_admin: bool) -> dict:
+        """Belgeyi yalnız yükleyen ve yönetici görür; başkasının belgesi 404 (var olduğu da söylenmez)."""
+        from semantic_bridge import editorial_cards
+        try:
+            r = editorial_cards.document(doc_id)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Belge incelemesi motordan alınamadı.")
+        if not is_admin and (r.get("document") or {}).get("uploaded_by") != user:
+            raise HTTPException(404, "Belge bulunamadı.")
+        return r
+
+    @app.put("/api/v1/editorial/documents")
+    async def editorial_document_upload(request: Request, filename: str = "", title: str = "", audience: str = "",
+                                        ageFrom: str = "", ageTo: str = "") -> dict[str, Any]:
+        """Belge yükle (doc, docx, pdf, odt, rtf, txt, md; gövde ham dosya): metni Zeki AI'ın metin denetimlerine
+        girer (kelime tekrarı, tik sözcük, cümle başı, kalıp ifade, yabancı/yaşa ağır sözcük). Yükleyen = oturum."""
+        engine, _tenant, user, _admin = await run_in_threadpool(_books, request)
+        from semantic_bridge import editorial_cards
+        data = await request.body()
+        try:
+            out = await run_in_threadpool(editorial_cards.document_upload, data, filename, title, audience,
+                                          ageFrom or None, ageTo or None, user)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Belge yüklenemedi.")
+        admin_mod.audit(engine, user, "upload", "editorial_document", out.get("id"), filename, {"bytes": len(data)})
+        return out
+
+    @app.get("/api/v1/editorial/documents")
+    def editorial_documents(request: Request) -> dict[str, Any]:
+        _engine, _tenant, user, is_admin = _books(request)
+        from semantic_bridge import editorial_cards
+        try:
+            return editorial_cards.documents(user, is_admin)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Belgeler motordan alınamadı.")
+
+    @app.get("/api/v1/editorial/documents/{doc_id}")
+    def editorial_document(doc_id: str, request: Request) -> dict[str, Any]:
+        _engine, _tenant, user, is_admin = _books(request)
+        return _doc_owned(doc_id, user, is_admin)
+
+    @app.get("/api/v1/editorial/documents/{doc_id}/word-map")
+    def editorial_document_word_map(doc_id: str, request: Request) -> dict[str, Any]:
+        _engine, _tenant, user, is_admin = _books(request)
+        _doc_owned(doc_id, user, is_admin)
+        from semantic_bridge import editorial_cards
+        try:
+            return editorial_cards.document_word_map(doc_id)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Kelime haritası motordan alınamadı.")
+
+    @app.get("/api/v1/editorial/documents/{doc_id}/export.docx")
+    def editorial_document_docx(doc_id: str, request: Request) -> Response:
+        _engine, _tenant, user, is_admin = _books(request)
+        _doc_owned(doc_id, user, is_admin)
+        from semantic_bridge import editorial_cards
+        try:
+            body, disposition = editorial_cards.document_docx(doc_id)
+        except Exception as e:  # noqa: BLE001
+            _doc_error(e, "Word dosyası motordan alınamadı.")
+        return Response(body, media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        headers={"Content-Disposition": disposition})
+
     @app.get("/api/v1/editorial/proofing/export.docx")
     def editorial_proofing_docx(request: Request, bookId: str = "") -> Response:
         """Son okuma bulguları kitabın metnine Word yorumu olarak işlenmiş .docx (redaksiyon Word'de yapılır).
