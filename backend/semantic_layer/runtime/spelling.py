@@ -48,6 +48,17 @@ def _closest(word: str, pool: dict[int, list[str]], limit: int) -> Optional[str]
     return best[0] if top <= limit and len(best) == 1 else None
 
 
+def _slip(word: str, fixed: str) -> bool:
+    """A typing slip, not a different word. Tam set 2026-09-28: "yazarların" became "yazarlar" (a customer-group
+    label, a filter nobody asked for), "zararına" "kararı", "illere" and "tahsilatını" lost their endings — correct
+    words the catalog does not carry, read as misspellings. A slip keeps the first letter and falls inside the word:
+    one word being the start of the other is an ending, not a typo."""
+    if not fixed or word[0] != fixed[0] or word.startswith(fixed) or fixed.startswith(word):
+        return False
+    common = next((i for i, (a, b) in enumerate(zip(word, fixed)) if a != b), min(len(word), len(fixed)))
+    return common < min(len(word), len(fixed)) - 1
+
+
 class Speller:
     """`stems`: bilinen kelimelerin kökleri (katalog adları, ay adları, dönem ve ölçü kelimeleri); `words`: aynı
     adların yazıldığı biçimler ("sayısı", "tutarı") — kısa bir kökün birden çok komşusu olduğunda kelimenin
@@ -82,17 +93,20 @@ class Speller:
 
     def near(self, word: str) -> Optional[str]:
         """"suabt" → "subat", "tutatrlari" → "tutarlari", "saysii" → "sayisi": the one known word, or the one known
-        root with the ending kept, within reach."""
+        root with the ending kept, one letter away — and only a slip, not another word (`_slip`)."""
         if len(word) < 5 or not word.isalpha():
             return None
-        whole = _closest(word, self._words_by_len, 2 if len(word) >= 8 else 1)
-        if whole is not None:
+        whole = _closest(word, self._words_by_len, 1)
+        if whole is not None and _slip(word, whole):
             return whole
         root = stem(word)
         if len(root) < 4:
             return None
-        found = _closest(root, self._stems_by_len, 2 if len(root) >= 8 else 1)
-        return found + word[len(root):] if found is not None else None
+        found = _closest(root, self._stems_by_len, 1)
+        if found is None:
+            return None
+        fixed = found + word[len(root):]
+        return fixed if _slip(word, fixed) else None
 
     def correct(self, word: str) -> Optional[str]:
         """Only called for a word the resolver could not place, so a root it shares with a known word ("saysii" →
