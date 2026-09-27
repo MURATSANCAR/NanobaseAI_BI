@@ -44,6 +44,8 @@ const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudi
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
+const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
+const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
 const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'));
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
@@ -119,6 +121,9 @@ export default function App() {
             <Route path="ilk-baski" element={<FirstPrintScreen />} />
             <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />
             <Route path="ilk-baski/yeni" element={<FreeForecastPage />} />
+            {/* M29 İlk dağılım (Satış ve saha): dağılım bekleyenler, plan, takip, Bölgem (/api/v1/distribution). */}
+            <Route path="ilk-dagilim" element={<DistributionScreen />} />
+            <Route path="ilk-dagilim/:stok" element={<DistributionPlan />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />

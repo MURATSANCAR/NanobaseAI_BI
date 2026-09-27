@@ -27,6 +27,10 @@
       "label": "Kayıtlar"
     },
     {
+      "id": "satis",
+      "label": "Satış ve saha"
+    },
+    {
       "id": "pazarlama",
       "label": "Pazarlama"
     }
@@ -161,6 +165,11 @@
       "key": "sayfa:editor-atama",
       "area": "kayitlar",
       "label": "Editör atama"
+    },
+    {
+      "key": "sayfa:ilk-dagilim",
+      "area": "satis",
+      "label": "İlk dağılım"
     },
     {
       "key": "sayfa:seo-geo",
@@ -406,6 +415,29 @@
       "page": "sayfa:butce",
       "label": "Bütçe onayı",
       "hint": "Onaya gönderilen planı yürürlüğe alma ya da geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:dagilim.plan",
+      "area": "satis",
+      "page": "sayfa:ilk-dagilim",
+      "label": "Dağılım planı hazırlama",
+      "hint": "ZEKİ AI önerisi, bölge/kanal/müşteri adedini ve rezervi düzeltme, onaya gönderme, revizyon, listeyi ve takibi yenileme"
+    },
+    {
+      "key": "ozellik:dagilim.onay",
+      "area": "satis",
+      "page": "sayfa:ilk-dagilim",
+      "label": "Dağılım onayı (lojistik)",
+      "hint": "Onaya gönderilen planı onaylama ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:dagilim.herkesinki",
+      "area": "satis",
+      "page": "sayfa:ilk-dagilim",
+      "label": "İlk dağılım: bütün bölgeler",
+      "hint": "Bütün carilerin dağılım satırlarını görme; yoksa BMT yalnız CRM'de sahibi olduğu carileri görür",
       "explicit": true
     },
     {

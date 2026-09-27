@@ -1,5 +1,66 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M29 İlk dağılım yönetimi: benzer kitaptan bölge × kanal × müşteri önerisi, iki göz onayı, sevk listesi, 8 hafta takip
+
+- **Neden:** yol haritası satış bloku. Depoya giren kitabın dağılımı deneyimle ve Excel'de yapılıyor; bir bölgede tükenip
+  ötekinde iade dönüyor, ilk hafta satışı izlenmiyor. Analiz `docs/analiz/kullanici-ihtiyaclari/M29-ilk-dagilim.md` (14. bölüm).
+- **DOĞRULANAMADI — sunucu kapalı** (kullanıcı kararı: sunucuya bağlanılmadı). Mac'te yalnız `py_compile`, JSON ve
+  AST'de tanımsız ad denetimi yapıldı; pytest, tsc, vitest ve gerçek DB kabulü **koşulmadı**. Aşağıdaki sayı/kararların
+  «ölçülecek» olanları kabul betiğinde (`scripts/acceptance/M29/`).
+- **Kararlar (bölüm 10'daki açık sorular; veri ölçülemedi, parametreli):**
+  1. *Bölge:* Logo `CLCARD.CITY` → Türkiye'nin 7 coğrafi bölgesi, İstanbul ayrı (iş günü örneğindeki dil), yurt dışı kanal
+     ayrı, tanınmayan il «İli belirsiz» (gizlenmez). CRM Satış Hedefleri'nin 15 «bölgesi» kanal ve bölge karışık; BMT il
+     ataması (`new_illerBase`) BMT'yi verir, bölgeyi değil. BMT satırda ayrıca (CRM sahibi) tutulur.
+  2. *Depo girişi:* analizdeki R1 sorgusu `PRODSTAT` süzmüyordu; M12 ölçümüne göre planlanan fiş (1) adedi ikiye katlar →
+     `STFICHE.PRODSTAT = 0`. Stok bakiyesinde de planlanan üretim girişi fişi hariç (`DIST_STOCK_EXCLUDE_PLANNED`); iki
+     tanımın farkı kabulde ölçülecek.
+  3. *Rezerv:* kural yok (soru 5) → %20 varsayılan, plan başlığında düzeltilir; R7 sorgusu son ilk baskılarda 56 günde
+     sevk edilen/basılan oranını ölçer, varsayılan buna göre güncellenecek.
+  4. *Toplam:* M46 onaylı hedefin depo girişinden itibaren ilk iki ayı (hedef yıllık, aylara M46'nın dağılımıyla); hedef
+     yoksa benzer kitapların ilk 56 gün net adedinin ortancası; üst sınır stok − rezerv. Stok Logo'da yoksa (girişi yalnız
+     CRM'de) baskı adedi.
+  5. *Pay:* her benzer kitabın cari dağılımı kendi toplamına göre paya çevrilip puanla ağırlıklı ortalanır (çok satan tek
+     kitap öneriyi ele geçirmesin); yuvarlama en büyük kalan (toplam tam tutar). CRM «Dağılım Durumu Göster» carileri payı
+     sıfırsa da listede; Logo kodu olmayan dağılım carisi «Logo kodu yok» satırı (Excel'deki listeyle aynı kalsın).
+  6. *Benzer kitap:* M10'un emsal veri kümesi ve puanı yeniden kullanıldı (CRM emsali, yazar, dizi, kitaplık, yayınevi,
+     fiyat, sayfa; yakın çıkış ağırlıklı); pencere Logo'nun okunabilen ilk yılına (2021) yapışıksa aday atlanır. M10 hazır
+     değilse bütçenin kitap kartı (yazar/kitaplık/yayınevi). ZEKİ AI adayları «benzer / az / değil» diye ayıklar («az» yarım
+     ağırlık); ikiden az aday kalırsa ayıklama yok sayılır. Köprünün model istemcisi olasılık (logprobs) vermiyor —
+     `benzerlik_olasiligi` kolonu puanın 0–1 ölçeği; LLM kapısındaki `choose` (seçim + olasılık, dalda) main'e girince
+     bağlanabilir. Baskı tekrarında benzer kitap yerine kitabın kendi son 56 günü.
+  7. *Gerekçe metni:* ZEKİ AI 3–5 cümle yazar; metinde olgularda geçmeyen bir sayı varsa atılır, kural metni yazılır
+     (rakamı model üretmez).
+  8. *Takip ve uyarı zamanı:* süreler bugüne değil **Logo verisinin bittiği güne** göre (donmuş .155 kopyasında her onaylı
+     satır «sevk edilmedi» olurdu). Sevk = TRCODE 7/8 IOCODE 4 (faturasız irsaliye dahil; analizdeki yalnız 8 değil, Logo
+     kuralındaki sevkiyat tanımı), faturalanan = `INVOICEREF <> 0`, iade = TRCODE 2/3 (fiziksel dönüş).
+  9. *Kapsam:* `dagilim.herkesinki` açıkça verilir; plan/onay yetkisi olan da bütün carileri görür (planlayıcı başka türlü
+     plan kuramaz). Diğerleri (BMT) CRM'de sahibi oldukları carilerin satırlarını, matrisini, uyarısını görür; sevk
+     listesini indiremez. Sahiplik onaylı planlarda her `run-due`'da CRM'den tazelenir.
+  10. *Durum:* M46 gibi geri gönderilen plan taslağa döner (ayrı «reddedildi» yok); kitap başına tek açık plan, onaylı plan
+      revizyonla değişir, yeni sürüm onaylanınca eskisi arşivlenir.
+  11. *Gönderim yok:* kullanıcı kararı (2026-09-28) gereği müşteriye e-posta/SMS yok; uyarı özeti yalnız iç ekibe
+      (`DIST_ALERT_RECIPIENTS`, Yönetim ekranında). CRM'e ve Logo'ya yazılmaz; sevk listesi Excel'i depo elle işler.
+- **Köprü:** `distribution.py`, `distribution_sources.py`, `distribution_api.py` (uçlar: meta, books, books/refresh,
+  plans (?stok=), plans/generate, plans/{id} [GET/PATCH/DELETE], lines, lines/{no}, cells, submit, withdraw, approve,
+  reject, revise, track, export.xlsx, tracking, my-region, alerts, run-due). `app.py`'ye iki satır; M12 servisi ve M10
+  emsal deposu `app.state` üzerinden süreç içinden okunur. Ayar: `admin.py`'ye `DIST_ALERT_RECIPIENTS`. Zamanlayıcı
+  `scripts/server/timas-distribution.{service,timer}` (07:30, 13:30; ilk kez elle).
+- **Ön yüz:** `src/canvas/distribution/` (DistributionScreen, PlanEditor, TrackingTab, MyRegion, AlertsTab, api, parts);
+  bütçenin `Tabs`/`AskSheet`/`NumField` parçaları yeniden kullanıldı. Menü: yeni **Satış ve saha** alanı (M29–M33 ortak,
+  editör rolünde kapalı gelir), öğe «İlk dağılım» (Planlama). Telefonda liste, matris ve müşteriler kart düzeninde;
+  tablolar kendi kabında kayar. Yeni animasyon yok. ZEKİ AI örnek soruları Genel bakış soru kutusuna bağlantı.
+- **Testler (yazıldı, koşulmadı):** `backend/semantic_layer/tests/test_distribution.py` (yuvarlama, pay, bölge, olgu dışı
+  sayı, öneri hedef/benzer/tekrar, ayıklama, hücre ve satır düzeltmesi, iki göz + stok değişmezi + revizyon, Excel, takip ve
+  veri sonu, plansız uyarı + bildirim, BMT kapsamı, yetki kuralları); `test_budget.py` targets kuralı güncellendi;
+  `navModel.test.ts` yeni alan.
+- **Sunucuda kalan adımlar:** main'e taşıma → test sunucusunda `git archive` kopyası → `check.sh` (pytest, tsc, vitest,
+  build) → yan port köprüsüyle `kabul.py` (R1 depo girişi, R2 stok, hedef = M46, R3 benzer kitap 56 gün net ve müşteri,
+  R4 CRM geçmiş dağılım, R5 takip, R6 dağılım carileri, değişmez 409, iki göz 409) → `cleanup.py` (plan + değişiklik
+  kaydı; oturum satırı) → kurulum (köprü yeniden başlatılır; ön yüz `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas`) →
+  `timas-distribution.service` elle bir kez → zamanlayıcı → 320/390/768/masaüstü. VM'e ancak bundan sonra.
+- **Açık:** rezerv kuralı ve CRM dağılım listesinin tamlığı (soru 1–3, 5) iş tarafına; yeniden sipariş önerisi, M12
+  planlanan çıkışla ön plan, CRM'e aktarım sonraki sürüm; canlı Logo (.25) yokken takip 17.08.2026'da durur.
+
 ## 2026-09-28 — NanobaseAI Destek: Helpdesk + Flow ayrı modül, marka, tema, Türkçe, test sunucusu kurulumu
 
 - **Neden:** kullanıcı frappe/helpdesk ve frappe/flow_client'ı kendi kodumuzda ayrı çalışan bir modül olarak istedi; ekranda, hata/bilgi mesajlarında ve e-postada ürün/marka adı NanobaseAI, logo ve renkler portal şablonuyla uyumlu; eksik Türkçe çeviriler tamamlanacak (kullanıcı ek talebi).

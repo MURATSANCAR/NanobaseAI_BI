@@ -36,6 +36,7 @@ export const LIVE: Record<string, string> = {
   M14: '/kitap-tasarim',
   M25: '/seo-geo',
   M26: '/seo-geo/ai-gorunurluk',
+  M29: '/ilk-dagilim',
   M46: '/butce',
 };
 

@@ -17,6 +17,8 @@ import {
   TrendingUp,
   Swords,
   Target,
+  Truck,
+  Waypoints,
   Library,
   Radar,
   Bell,
@@ -70,7 +72,7 @@ import {
  * öğe olarak girmez, `also` ile en yakın menü öğesine bağlanır ki doğru öğe etkin görünsün.
  */
 
-export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'pazarlama' | 'yonetim';
+export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts';
 
@@ -199,6 +201,24 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    // M29–M33 ortak çalışma alanı (ilk dağılım, saha, okul tanıtım, kurumsal satış, ihale); ilk açan M29.
+    id: 'satis',
+    label: 'Satış ve saha',
+    hint: 'İlk dağılım, saha satışı ve kurumsal satış',
+    icon: Waypoints,
+    items: [
+      {
+        id: 'ilk-dagilim',
+        label: 'İlk dağılım',
+        to: '/ilk-dagilim',
+        icon: Truck,
+        section: 'Planlama',
+        hint: 'Yeni kitabın bölge, kanal ve müşteri dağılımı; sevk listesi ve ilk 8 hafta takibi',
+        keywords: ['dağılım', 'sevk', 'sevk listesi', 'bölge', 'bmt', 'bölgem', 'depo girişi', 'yeni kitap', 'iade'],
+      },
+    ],
+  },
+  {
     id: 'pazarlama',
     label: 'Pazarlama',
     hint: 'SEO & GEO',
@@ -282,8 +302,8 @@ export function visibleNav(
     .map((g) => ({ ...g, items: g.items.filter(keep(g)), defaultOpen: true } as VisibleGroup))
     .filter((g) => g.items.length > 0);
   if (!role.isEditor || role.isAdmin) return groups;
-  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'pazarlama'];
-  const closed = new Set<NavGroupId>(['analiz', 'finans', 'pazarlama']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)
