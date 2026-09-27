@@ -692,7 +692,7 @@ function Row({ s, active, onOpen, srcDir, tgtDir, children }: { s: SegmentRow; a
 
 function Desk({ jobId, me }: { jobId: string; me: string }) {
   const qc = useQueryClient();
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   const canTerm = useCan('ceviri.terim');
   const wide = useWide();
   const job = useQuery({

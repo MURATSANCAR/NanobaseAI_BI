@@ -530,7 +530,8 @@ def _norm_src(s: str) -> str:
 
 def job_checks(rows: list[Any]) -> dict[str, list[dict[str, str]]]:
     """İş düzeyindeki denetimler: aynı kaynak cümlesinin farklı çevirisi ve uzunluk oranı uç değeri.
-    Uç değer Tukey'in 'çok uzak' sınırıdır (Q1 − 3·IQR, Q3 + 3·IQR); en az 20 çevrilmiş segment ister."""
+    Uç değer Tukey'in 'çok uzak' sınırıdır (Q1 − 3·IQR, Q3 + 3·IQR; IQR tabanı medyanın %10'u); en az 20 çevrilmiş
+    segment ister."""
     out: dict[str, list[dict[str, str]]] = defaultdict(list)
     done = [r for r in rows if r.status in DONE and (r.target or "").strip()]
     by_src: dict[str, set[str]] = defaultdict(set)
@@ -544,7 +545,10 @@ def job_checks(rows: list[Any]) -> dict[str, list[dict[str, str]]]:
     ratios = sorted(len(r.target) / len(r.source) for r in done if len(r.source) >= 20)
     if len(ratios) >= 20:
         q1, q3 = ratios[len(ratios) // 4], ratios[(3 * len(ratios)) // 4]
-        lo, hi = q1 - 3 * (q3 - q1), q3 + 3 * (q3 - q1)
+        # Açıklık en az medyanın %10'u sayılır: bütün cümleler hemen aynı oranda çevrildiyse (IQR ≈ 0) her küçük
+        # sapma uyarıya dönmesin.
+        iqr = max(q3 - q1, 0.1 * ratios[len(ratios) // 2])
+        lo, hi = q1 - 3 * iqr, q3 + 3 * iqr
         for r in done:
             if len(r.source) >= 20:
                 x = len(r.target) / len(r.source)
