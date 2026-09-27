@@ -46,6 +46,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LayoutGrid,
+  MapPinned,
   Megaphone,
   Newspaper,
   NotebookPen,
@@ -216,6 +217,7 @@ export const NAV: NavGroup[] = [
         hint: 'Yeni kitabın bölge, kanal ve müşteri dağılımı; sevk listesi ve ilk 8 hafta takibi',
         keywords: ['dağılım', 'sevk', 'sevk listesi', 'bölge', 'bmt', 'bölgem', 'depo girişi', 'yeni kitap', 'iade'],
       },
+      { id: 'saha', label: 'Saha ve tahsilat', to: '/saha', icon: MapPinned, section: 'Saha', hint: 'Bugünün ziyaret sırası, müşteri brifingi, vadesi geçmiş alacak ve CRM tahsilat onayı', keywords: ['bmt', 'ziyaret', 'tahsilat', 'vadesi geçmiş', 'yaşlandırma', 'brifing', 'ödeme planı', 'saha satış', 'bayi', 'kitapçı'] },
     ],
   },
   {

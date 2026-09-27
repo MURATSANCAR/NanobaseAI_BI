@@ -462,13 +462,17 @@ RULES: list[tuple[str, Any]] = [
     # M46 Bütçe. Onaylı hedefleri okuyacak modül (M15/M17/M18/M29/M30) kendi sayfa anahtarını targets/deviations
     # satırlarına ekler; yazma uçları butce sayfasında kalır.
     ("/api/v1/budget/run-due", SYSTEM),
-    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim")})),
-    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim")})),
+    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
+    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha")})),
     ("/api/v1/budget/", frozenset({page("butce")})),
     ("/api/v1/management/first-print/", frozenset({page("ilk-baski")})),
     # M29 İlk dağılım (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/distribution/run-due", SYSTEM),
     ("/api/v1/distribution/", frozenset({page("ilk-dagilim")})),
+    # M30 Saha satış ve tahsilat. Ziyaret kaydı M30/M31 ortak (semantic_saha_ziyaret): okul tanıtım sayfası da okur/yazar.
+    ("/api/v1/field/run-due", SYSTEM),
+    ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
+    ("/api/v1/field/", frozenset({page("saha")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -556,6 +560,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # Üretim kartına tarih/not/kalite/teklif yazma; matbaa onayı açıkça verilen `uretim.matbaa-onay` ile ucun içinde.
     (frozenset({"POST", "DELETE"}), r"^/api/v1/editorial/production/(cards/[^/]+/(entries|quotes)|entries/[^/]+|quotes/[^/]+)$",
      "ozellik:uretim.yaz"),
+    # Saha: ziyaret notu, takip taslağı ve ödeme planı taslağı; müdür önceliği. Plan onayı/reddi, bütün temsilcileri görme
+    # ve temsilci karşılaştırması açıkça verilen anahtarlarla ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/field/(visits(/[^/]+(/followup-draft)?)?|payment-plans(/[^/]+(/submit)?)?)$",
+     "ozellik:saha.not"),
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/field/overrides(/[^/]+)?$", "ozellik:saha.oncelik-duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/field/report/weekly\.xlsx$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
     (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),

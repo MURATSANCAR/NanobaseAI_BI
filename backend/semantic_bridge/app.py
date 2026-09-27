@@ -6634,6 +6634,17 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "logo_connect": _production_connect(lambda: rt().settings.connection_file),
         "studio_jobs": _production_studio.jobs,
     })
+
+    # M30 Saha satış ve tahsilat (BMT): CRM atama/risk/tahsilat + Logo bakiye/yaşlandırma/satış; uçlar /api/v1/field/*.
+    from semantic_bridge import field_sales_api
+    app.state.field_sales = field_sales_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda: rt().llm_for("saha"), "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
     return app
 
 

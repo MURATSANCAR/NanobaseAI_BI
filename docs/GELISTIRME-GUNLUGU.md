@@ -1,5 +1,71 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M30 Saha satış ve tahsilat (BMT): bugünün ziyaret sırası, müşteri brifingi, FIFO tahsilat kovaları, CRM tahsilat onayı, ödeme planı, haftalık saha raporu
+
+- **Neden:** yol haritası, satış ve saha bloku. Saha temsilcisi (CRM'de «BMT») ziyaret öncesi Logo ekstresini, CRM kartını ve
+  tahsilat durumunu ayrı ayrı açıyordu; «hangi müşteriye önce» sorusunun cevabı yoktu. Analiz
+  `docs/analiz/kullanici-ihtiyaclari/M30-saha-satis-tahsilat.md` (§14 kodlama planı).
+- **DOĞRULANAMADI — sunucu kapalı.** Kod yalnız `python3 -m py_compile` ve JSON doğrulamasından geçti; pytest, tsc, vitest ve
+  gerçek DB kabulü koşulmadı (kullanıcı kararı: test sunucusuna bağlanılmıyor, Mac'te test yok). Başarı iddiası yok.
+- **Köprü:** `field_sales.py` (tablolar, atama, eşleşme, öncelik kuralı, hedef dağıtımı, ziyaret/plan/öncelik/bildirim deposu,
+  haftalık rapor, Excel), `field_sales_sources.py` (Logo/CRM SQL, yalnız okuma), `field_sales_api.py` (uçlar `/api/v1/field/*`:
+  meta, today, portfolio, customers/{kod}/brief (+ `/summary`), collections, collections/crm, events (+ `/seen`), visits (GET/POST/
+  PATCH, `/{id}/followup-draft`), payment-plans (GET/POST/PATCH, `/{id}/submit|approve|reject`), overrides (GET/POST/DELETE),
+  report/weekly (+ `.xlsx`), refresh (yönetici), run-due (SYSTEM, `tur=gece|hafif|haftalik`)). `app.py`'de tek `register` bağı,
+  CRM/Logo bağlantısı M12'nin `_production_connect` deseniyle. `Request` modül düzeyinde (M12'nin 422 hatası tekrar etmesin).
+- **Tablolar:** `semantic_field_portfolio`, `semantic_field_signals` (gece turu tam değiştirir, tek işlemde), `semantic_field_briefs`
+  (özet önbelleği; girdi özeti değişince geçersiz), **`semantic_saha_ziyaret` (M30/M31 ortak; M30 açtı)**, `semantic_field_payment_plans`,
+  `semantic_field_overrides` (müdür önceliği), `semantic_field_events` (portal içi bildirim, kişi+tür+anahtar tekil),
+  `semantic_field_reason_labels`, `semantic_field_meta`. Plandan sapma: ziyaret tablosunda not kolonu `notu` (SQL'de `not`
+  ayrılmış sözcük); bildirim, öncelik ve red etiketi tabloları plana eklendi (ihtiyaç §5 «Bildirim» ve K2 öncelik).
+- **Kararlar (analiz §10 soruları; veriye/koda bakılarak, gerekçeli):**
+  1. *Atama:* CRM (analiz §13 «Atama CRM'de»): cari sahibi = BMT; `new_BMTilveyaCari = 0` («BMT İl») ise il tablosunun
+     `new_musteritemsilcisi`'i. Logo satış elemanı (`SALESMANREF`) kullanılmadı; `atama_kaynagi` `slsman` değeri ileride için
+     ayrıldı. Takıma atanmış ve «Timas CRM» servis hesabına ait cari temsilcisiz kalır (`FIELD_EXCLUDED_OWNERS`).
+  2. *Müşteri kimliği:* Logo **cari kodu** (`CLCARD.CODE`, `120%`). Ref her yıl firmasında farklı; kod sabit. Rota
+     `/saha/musteri/:cariKodu` (planda clientref idi). CRM ↔ Logo önce `new_CariKodu`, yoksa `new_logicalref`.
+  3. *Saha uygulaması (`VW_MMX_*`):* kullanılıp kullanılmadığı ölçülmedi → varsayılan kapalı seçenekli kaynak
+     (`FIELD_MMX_ENABLED`); açılırsa yalnız cari kodu, tarih, tutar, tür okunur, konum/görüşülen kişi/telefon asla.
+     Tahsilatın ana kaynağı CRM onay akışı; portalda yeniden girilmez.
+  4. *Risk ve limit:* CRM `AccountBase` alanları okunur (Logo `ACCRISKLIMIT` boş). Limit 0/boşsa doluluk yok.
+     Güncelleme sıklığı ölçülecek. Puan değil, sinyal (M59 gelince puanı o verir; fonksiyonlar `field_sales_sources`'ta ortak).
+  5. *Ödeme planı:* tek basamaklı onay (açıkça verilen `saha.odeme-plani-onay`; öneren ve gönderen onaylayamaz, red gerekçe
+     ister). Tutar = vadesi geçmiş (FIFO), taksit = vadesi geçmiş ÷ son 12 ayın aylık ortalama ödemesi (1…ayar), 100 ₺'ye
+     yuvarlı, kalan son taksitte; rakamı model üretmez. Çok basamaklı yetki (`new_EkVade` vb.) sonraki sürüm.
+  6. *Performans:* temsilci karşılaştırması açıkça verilen `saha.performans`; yetkisiz kişi haftalık raporda yalnız kendi satırını görür.
+  7. *Hedef:* M46'da temsilci/cari hedefi yok → yürürlükteki planın toplam cirosu carilere önceki yıl net alım payıyla
+     dağıtılır (payların toplamı 1: cari hedefleri toplamı = plan). Beklenen = planın aylık dağılımıyla geçen pay. Kitap
+     düzeyinde açık: carinin önceki yıl o kitaptaki adet payı × kitap hedefi. Plan yoksa CRM `new_CariYilHedef`.
+  8. *Öncelik:* kural, ağırlıklar ekranda. Tutar eşiği yok (statik çözüm yok): vadesi geçmiş, yaşa göre ağırlıklanıp
+     temsilcinin portföyü içindeki yüzdelik sırasıyla puanlanır. Tutulmayan ödeme sözü (tarih geçti, sonrasında Logo'da ödeme
+     yok) ertesi gün üste çıkar.
+  9. *Dış gönderim yok (kullanıcı kararı 2026-09-28):* takip e-postası taslaktır; haftalık rapor ve finans özeti yalnız
+     ayardaki iç alıcılara, `ALERT_RECIPIENT_DOMAINS` doluysa dışındaki adrese gitmez. Sahadan erişim VPN ile (kullanıcı
+     kararı); ekranlar telefon düzeninde.
+- **Zeki AI:** `rt.llm_for("saha")`; özet 3 cümle, olgulardaki her rakam dizisi dışında sayı yazarsa kural özeti gösterilir;
+  gizli not özete girmez. Red nedeni sınıflama `QueuedLlm.choose` (main'deki ortak parça). Ekranda «Zeki AI'ya sorun» örnekleri
+  Genel bakış soru kutusuna gider (sohbet kapsamı genişledi kararı).
+- **Ön yüz:** `src/canvas/field/` (FieldScreen, TodayScreen, CustomerBrief, CollectionsTab, PlansTab, ManagerReport,
+  VisitNoteSheet, parts, api). Menüye yeni alan `satis` «Satış ve saha» (`navModel.ts`; editör sırasına da eklendi), katalogda
+  alan + sayfa + 5 özellik; `navModel.test.ts` beklenen alan listeleri güncellendi. Yeni animasyon yok (mevcut `Sheet` ve
+  basma geri bildirimi). Listeler kart; tablo yalnız masaüstündeki haftalık raporda, kendi kabında.
+- **Kabul (sunucuda koşulacak, `scripts/acceptance/M30/`):** `run_tests.sh` (pytest `test_field_sales.py` + `test_access.py`,
+  tsc, vitest), `reference_check.py` (8 kontrol: FIFO kovaları sertifikalı SQL'le kuruşu kuruşuna, YTD net ciro, portföy sayısı,
+  CRM onay bekleyen, karşılıksız olay, risk doluluğu, hedef toplamı = plan, kapsam 403), `write_check.py` (yazma uçları
+  geçersiz gövdeyle; isteğe bağlı tek not), `cleanup.py` (yazılan kimlikler + `semantic_audit` satırları).
+- **Ölçülecek (kod parametreli):** `SystemUserBase.new_bmt`/`new_KullancTipi` kolonları; `new_siparisBase.new_firmaid`'in
+  AccountId olduğu ve 100000016 «Risk Bilgisi Bekleniyor» durumu; `CSTRANS.CARDREF`'in portföy giriş hareketinde cari
+  (`CARDMD`) ve yıl başı devir satırında dolu olup olmadığı; ödeme TRCODE listesi; `VW_MMX_*` kullanımı; CLCARD `CITY`/`SPECODE2`
+  doluluğu (benzer cari önerisi); CRM etkinliğini cariye bağlayan kolon (`FIELD_CRM_VISIT_ACCOUNT_COLUMN`); BMT sayısı; CRM
+  sahipliği ile Logo satış elemanı uyumu.
+- **Açık:** telefon bildirimi, rota/harita sıralaması, çevrimdışı brifing, CRM'e ziyaret aktarımı (yazma yetkisi yok), M59
+  risk puanı (gelince sinyallerin yerini alır), M29 «bölgeye gelen yeni kitaplar» (şimdilik Logo'da ilk satışı son 90 gün olan
+  kitaplar), Kampüs selam çipi «bugünkü ziyaretlerim». Gece özetleri LLM kapısında etkileşimli öncelikle gidiyor (toplu öncelik
+  sonraki iş).
+- **Durum:** dal `worktree-agent-aa21533126b9d2b2e`, `main` (`dfcdebe8`) üstüne rebase'li. main'e taşınmadı, kurulmadı.
+  Ortak dosyalar: `app.py`, `access.py`, `access_catalog.json` (yeni `satis` alanı), `navModel.ts` (+ test), `App.tsx`,
+  `ModulesMenu.tsx`. M29/M31/M32 aynı `satis` alanını açıyor: birleştirmede alan tek kalmalı, öğeler yan yana.
+
 ## 2026-09-28 — Zeki AI sohbet kapsamı genişledi: bütün modüller; ret yalnız kimlik ve şirket dışı sohbette
 
 **DOĞRULANAMADI — sunucu kapalı.** Yalnız `py_compile` ve JSON doğrulaması yapıldı; pytest, gerçek model ve gerçek

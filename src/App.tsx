@@ -47,6 +47,8 @@ const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
+const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
+const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
 const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'));
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
@@ -124,6 +126,9 @@ export default function App() {
             {/* M29 İlk dağılım (Satış ve saha): dağılım bekleyenler, plan, takip, Bölgem (/api/v1/distribution). */}
             <Route path="ilk-dagilim" element={<DistributionScreen />} />
             <Route path="ilk-dagilim/:stok" element={<DistributionPlan />} />
+            {/* M30 Saha satış ve tahsilat (BMT): telefon önce; müşteri brifingi cari koduyla (/api/v1/field). */}
+            <Route path="saha" element={<FieldScreen />} />
+            <Route path="saha/musteri/:code" element={<CustomerBrief />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />

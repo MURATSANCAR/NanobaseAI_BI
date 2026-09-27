@@ -172,6 +172,11 @@
       "label": "İlk dağılım"
     },
     {
+      "key": "sayfa:saha",
+      "area": "satis",
+      "label": "Saha ve tahsilat"
+    },
+    {
       "key": "sayfa:seo-geo",
       "area": "pazarlama",
       "label": "SEO özeti"
@@ -558,6 +563,44 @@
       "page": "sayfa:uretim",
       "label": "Matbaa seçimini onaylama",
       "hint": "Prodüksiyon müdürünün matbaa onayı; onay kaydı sipariş talebine esas olur",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:saha.not",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Ziyaret notu ve ödeme planı taslağı",
+      "hint": "Ziyaret planlama, görüşme notu, ödeme sözü, takip e-postası taslağı, ödeme planı önerisi ve onaya gönderme"
+    },
+    {
+      "key": "ozellik:saha.oncelik-duzenle",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Ziyaret önceliğini değiştirme",
+      "hint": "Bir müşteriyi gerekçeyle öne alma (müdür önceliği); listede gerekçe çipi olarak görünür"
+    },
+    {
+      "key": "ozellik:saha.herkesinki",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Bütün temsilcilerin carileri",
+      "hint": "Saha ekranında yalnız kendi carileri yerine bütün temsilcilerin portföyü, tahsilatı ve ziyaretleri (müdür, finans, yönetim)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:saha.odeme-plani-onay",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Ödeme planı onayı",
+      "hint": "Onaya gönderilen ödeme planını onaylama ya da gerekçeyle geri çevirme (öneren/gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:saha.performans",
+      "area": "satis",
+      "page": "sayfa:saha",
+      "label": "Temsilci karşılaştırması",
+      "hint": "Haftalık saha raporunda bütün temsilcilerin satırları (kişisel performans verisi)",
       "explicit": true
     },
     {
