@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Kural: test kullanıcısı ve test verisi bırakılmaz
+
+- Portal Yönetim → Kişiler'de test sırasında yazılmış `claude` adlı hesap kalmıştı. Kişi listesi pano kartı, planlı rapor, `semantic_audit.actor` ve yönetici listesinden derlenir; testte kullanılan ad kalıcı görünür.
+- AGENTS.md'ye kural eklendi: test için açılan hesap/oturum/kayıt aynı iş içinde silinir, yeni kullanıcı adı uydurulmaz (yalnız `timasai` kısa oturumu), yazma uçları önce geçersiz gövdeyle denenir, kabul sonunda Kişiler listesi kontrol edilir.
+- Mevcut `claude` kaydının hangi tablodan geldiği ve silinmesi: test sunucusuna SSH erişimi o anda kapalıydı (IP geçici engelli); açık iş.
+
 ## 2026-09-27 (gece) — M6 Sözleşmeler: düzenleme, yeni taslak, zeyilname, ödeme takvimi, hakediş, şablon kütüphanesi
 
 - **Neden:** M6 yalnız okunuyordu. Sözleşme düzenleme, yeni taslak, zeyilname, ödeme takvimi, hakediş ve şablon kütüphanesi eksikti.

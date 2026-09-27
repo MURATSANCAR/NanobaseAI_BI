@@ -67,6 +67,21 @@ git branch -d <dal-adı>
 - Merge, dağıtımın yerine geçmez: sunucuya kurulan sürüm neyse `main` de o olmalıdır. Sunucuya yama atılıp `main`e girmemiş kod bırakılmaz.
 - Bu kural bir talimattır, hook değil — CI/branch-protection ile zorlanmıyor; oturumdaki Claude'un ve kullanıcının uygulamasına bağlıdır.
 
+## Test kullanıcısı ve test verisi bırakılmaz (kullanıcı kuralı 2026-09-28)
+
+Portal Yönetim → Kişiler'de `claude` adlı bir hesap kalmıştı. Kişi listesi pano kartı, planlı rapor, değişiklik kaydı
+(`semantic_audit.actor`) ve yönetici listesinden derlenir; testte hangi adla yazılırsa o ad kalıcı görünür.
+
+- **Test biter bitmez silinir.** Test için açılan her hesap, oturum ve kayıt (giriş servisindeki oturum satırı, pano kartı,
+  planlı rapor, uyarı kuralı, yazar kartı / görüşme, değişiklik kaydı satırı, yetki bağı, yönetici listesine eklenen ad)
+  aynı iş içinde silinir; «sonra temizlerim» yoktur. Silinen kayıtların sayısı günlüğe yazılır.
+- **Yeni kullanıcı adı uydurulmaz** (`claude`, `test`, `deneme`…). Giriş isteyen doğrulama mevcut `timasai` hesabının
+  kısa ömürlü (15 dk) oturumuyla yapılır ve oturum satırı bitince silinir.
+- **Yazma uçları gerçek veriyle denenmez;** önce boş/geçersiz gövdeyle (400/422) denenir. Yazma şartsa kaydın kimliği
+  not edilir ve test sonunda o kimlikle silinir (değişiklik kaydındaki satırı dahil).
+- **Yan port / geçici köprü kopyası** canlı katalog veritabanına yazıyorsa aynı kural geçerlidir.
+- **Kabul sonunda kontrol:** Yönetim → Kişiler listesinde gerçek olmayan hesap yok; varsa silinip günlüğe yazılır.
+
 ## Dağıtım sırası: main → test sunucusu → müşteri VM'i (zorunlu)
 
 Kullanıcının 2026-09-23 kararı bağlayıcıdır. Bir değişiklik müşteri ortamına ancak şu üç adım bu sırayla
