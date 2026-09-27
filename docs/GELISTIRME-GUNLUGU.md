@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (00:40) — M7 Yazar ilişkileri test sunucusunda: dar kapsamlı kurulum, gerçek CRM'de yakalanan 2 hata
+
+- **Kurulum (main `6fc75356`):** sunucu kaynağı hiçbir `main` commit'ine denk gelmiyordu: M8 kurulu, M2 Editör atama ve K4 sohbet motoru değişiklikleri kurulu değil (sahipleri «canlıya dokunmadan» doğrulamış). `main`in tamamı basılsaydı M2 ve K4 kendiliğinden canlıya çıkacak, `app.py` sunucuda olmayan `editorial_assign`'ı arayıp köprüyü düşürecekti. Bu yüzden sunucu hâli + yalnız M7: 6 paylaşılan dosyaya (access.py, access_catalog.json, app.py, App.tsx, engine.ts, navModel.ts) M7 yaması, 15 M7 dosyası `main`den. Önce `/tmp/m7/cand` aday ağaçta tsc 0, vitest 40/40, köprü testleri 35/35, `vite build`; canlı ağacın aday kurulduktan sonra değişmediği karşılaştırıldı; kopya eşitliği ve `._*` 0 denetlendi; köprü yeniden başladı (sağlıklı), derleme `cockpit/dist`e kondu (`index-s2aiLXCz.js`).
+- **Gerçek kabul (portal üzerinden, geçici `timasai` oturumu, iş sonunda silindi):** aday havuzu CRM'den 72 olası yazar (2024-01-01 sonrası; ilk sıradakiler 21 Eylül projeleri), benzer ad araması 924 CRM eşleşmesinden 20'sini gösterip toplamı veriyor; yazma akışı uçtan uca: boş ad 400, kart → randevu (2 gün sonra) → dünkü görüşme notu (olumlu, adım) → ısı 80 «sıcak», ay hücresinde 1 → ajandada randevu + gecikmiş adım → adım kapandı → aşama «Teklif verildi» → randevu iptal → not silindi → kart arşivlendi. Deneme kartı arşivde duruyor (`ZZ Kabul Deneme Yazarı`, portal kaydı, CRM'e yazılmadı).
+- **Hata 1 (gerçek CRM'de yakalandı, birim testi yakalayamazdı):** ısı haritası sözleşmeli yazarlarda 0 döndü — `SQL Server 207 Invalid column name 'new_kisi'`. «Yazar mı» alt sorgusunun `t` takma adı dış sorgudaki sözleşme tarafı `t`'sini gölgeliyordu. Takma adlar `ya_e/ya_t`; test alt sorguda dış takma adların kullanılmadığını denetler. Yan portta (8798) aday köprüyle gerçek CRM: **548 yürürlükte sözleşmeli yazar**, ilk okuma 7,3 sn, sonraki sayfa 0,4 sn; CRM olayları aylara dağılıyor (ör. bir yazarda 23 sözleşme, son 12 ayda 2 eser + 2 sözleşme).
+- **Hata 2:** CRM tarihleri UTC geliyor (`2026-09-28T21:00:00` = 29 Eylül); ekran ilk 10 karakteri aldığı için bitişi bir gün erken yazıyordu. `fmtDay` saatli değeri İstanbul gününe çevirir.
+- **Gözlem:** «Reddedilen ve iptal projeler de» seçilince havuz yine 72 — Red/İptal projeler CRM'de etkin değil (`statecode=1`) olduğundan zaten dışarıda kalıyor; seçenek zararsız, veri böyle.
+- İki düzeltme `main`e girince aynı dar yolla kurulacak (yalnız `author_relations.py` + 3 ön yüz dosyası). Müşteri VM'ine kurulmadı.
+
 ## 2026-09-27 (gece) — Son okuma: aynı kitapta hatırlama (editör kararı yeniden okumaya taşınır)
 
 - **Neden:** kullanıcı kararı — yeniden okumada aynı bulgu (aynı denetim, aynı sayfa ya da aynı alıntı) önceki kararı
