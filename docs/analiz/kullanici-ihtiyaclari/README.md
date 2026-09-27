@@ -64,12 +64,14 @@ Büyüklük: S ≤1 gün, M 1–2 gün, L 3+ gün (belgenin kendi tahmini).
 - Platform kanalı paketi `backend/semantic_bridge/channels/` (M40–M42) — M42 §14.
 - M7 ilişki çekirdeğinin `relations_core.py`'ye çıkarılması (M28, M15, M16, M30, M31, M32, M37, M38) — M28 §14.
 
-## Kullanıcı kararı bekleyenler
+## Kullanıcı kararları (2026-09-28)
 
-- Zeki AI sohbet kapsamı bugün yalnız finans (`chat_scope.py`); pazarlama/e-ticaret/İK soruları için genişletme.
-- İlk sürümde otomatik dış gönderim yok (sosyal medya yayını, reklam bütçesi, toplu e-posta, pazar yerine yazma).
-- İK verisinin test sunucusunda doğrulanması (KVKK) ve anket için oturumsuz form istisnası.
-- M51: `apps/destek` (helpdesk) TİMAŞ'ın okur/bayi masası mı, NanobaseAI'nin kendi masası mı.
-- Trendyol/Amazon satış modeli (kendi mağaza / konsinye / satıcı hesabı) ve API erişimi.
-- Sahadan telefonla portala erişim (VPN mi, dışa açık adres mi) — M29–M31 pilotu buna bağlı.
-- Güvenlik: CRM `new_kargofirmasi` kargo firması parolalarını/anahtarlarını tutuyor — BT'ye iletilmeli.
+| Konu | Karar |
+|---|---|
+| Zeki AI sohbet kapsamı | **Genişler:** pazarlama, e-ticaret, İK ve diğer modül soruları da cevaplanır (`chat_scope.py`); kimlik/model sorusuna ret kalır. |
+| Otomatik dış gönderim | **İlk sürümde yok:** sosyal medya yayını, reklam bütçesi, toplu e-posta, pazar yerine yazma — taslak + onay, gönderimi insan yapar. |
+| İK verisi (KVKK) | **Test sunucusunda doğrulanabilir;** test verisi bırakılmaz. |
+| M51 destek masası (`apps/destek`) | **TİMAŞ'ın destek masası;** ürün adı NanobaseAI. M51 onu entegre eder, ikinci talep sistemi yazılmaz. |
+| Trendyol / Amazon satış modeli | **Sonraya.** M40–M42 yalnız okuma + Excel yükleme ile başlar; açık sorular [YOL-HARITASI.md](YOL-HARITASI.md)'de. |
+| Sahadan telefonla erişim | **VPN.** M29–M31 telefon düzeni VPN üzerinden. |
+| CRM `new_kargofirmasi` parolaları | Karar bekliyor — BT'ye iletilecek; kodda bu kolonlar hiç seçilmez. |
