@@ -112,6 +112,11 @@ class SeoGeo:
     def can_approve(self, user: str) -> bool:
         from semantic_bridge import admin as admin_mod
 
+        from semantic_bridge import access as access_mod
+
+        # Rolünde «SEO önerisi onaylama» açıkça verilmiş kişi de onaylar (yöneticiyi de kapsar); ayar listesi sürer.
+        if access_mod.user_can(user, "ozellik:seo.onay"):
+            return True
         listed = [u.strip().lower() for u in self.conf("SEO_APPROVERS").split(",") if u.strip()]
         return user.lower() in listed if listed else admin_mod.is_admin(user)
 

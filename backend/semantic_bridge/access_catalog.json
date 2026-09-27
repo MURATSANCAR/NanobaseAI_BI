@@ -1,48 +1,354 @@
 {
-  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler.",
-  "version": 1,
+  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler. Özellik = sayfa içindeki işlem; 'explicit' olanlar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
+  "version": 2,
   "areas": [
-    {"id": "analiz", "label": "Analiz"},
-    {"id": "finans", "label": "Finans"},
-    {"id": "editoryal", "label": "Editoryal"},
-    {"id": "kayitlar", "label": "Kayıtlar"},
-    {"id": "pazarlama", "label": "Pazarlama"}
+    {
+      "id": "ortak",
+      "label": "Her sayfada"
+    },
+    {
+      "id": "kampus",
+      "label": "Kampüs"
+    },
+    {
+      "id": "analiz",
+      "label": "Analiz"
+    },
+    {
+      "id": "finans",
+      "label": "Finans"
+    },
+    {
+      "id": "editoryal",
+      "label": "Editoryal"
+    },
+    {
+      "id": "kayitlar",
+      "label": "Kayıtlar"
+    },
+    {
+      "id": "pazarlama",
+      "label": "Pazarlama"
+    }
   ],
   "pages": [
-    {"key": "sayfa:genel-bakis", "area": "analiz", "label": "Genel bakış"},
-    {"key": "sayfa:panolar", "area": "analiz", "label": "Panolar"},
-    {"key": "sayfa:planli-raporlar", "area": "analiz", "label": "Planlı raporlar"},
-    {"key": "sayfa:uyarilar", "area": "analiz", "label": "Uyarılar"},
-    {"key": "sayfa:finansal-denetim", "area": "finans", "label": "Finansal denetim"},
-    {"key": "sayfa:yonetim-raporlari", "area": "finans", "label": "Yönetim raporları"},
-    {"key": "sayfa:baski-oneri", "area": "finans", "label": "Baskı önerisi"},
-    {"key": "sayfa:editoryal", "area": "editoryal", "label": "Masam"},
-    {"key": "sayfa:yazar-giris", "area": "editoryal", "label": "Yazar giriş süreci"},
-    {"key": "sayfa:yayin-kurulu", "area": "editoryal", "label": "Yayın kurulu"},
-    {"key": "sayfa:redaksiyon", "area": "editoryal", "label": "Redaksiyon"},
-    {"key": "sayfa:cevirmenler", "area": "editoryal", "label": "Çevirmenler"},
-    {"key": "sayfa:son-okuma", "area": "editoryal", "label": "Son okuma"},
-    {"key": "sayfa:kitap-tasarim", "area": "editoryal", "label": "Kitap tasarım"},
-    {"key": "sayfa:kisiler", "area": "kayitlar", "label": "Kişiler"},
-    {"key": "sayfa:basin-web", "area": "kayitlar", "label": "Basın ve web"},
-    {"key": "sayfa:telif-sozlesme", "area": "kayitlar", "label": "Sözleşmeler"},
-    {"key": "sayfa:editor-atama", "area": "kayitlar", "label": "Editör atama"},
-    {"key": "sayfa:seo-geo", "area": "pazarlama", "label": "SEO özeti"},
-    {"key": "sayfa:seo-arama", "area": "pazarlama", "label": "Arama ve kelimeler"},
-    {"key": "sayfa:seo-firsat", "area": "pazarlama", "label": "Fırsatlar ve etki"},
-    {"key": "sayfa:seo-bing", "area": "pazarlama", "label": "Bing ve IndexNow"},
-    {"key": "sayfa:seo-rakip", "area": "pazarlama", "label": "Rakipler"},
-    {"key": "sayfa:seo-ai", "area": "pazarlama", "label": "Yapay zekâ görünürlüğü"},
-    {"key": "sayfa:seo-sayfalar", "area": "pazarlama", "label": "Yazar ve kategori"},
-    {"key": "sayfa:seo-yonlendirme", "area": "pazarlama", "label": "Yönlendirmeler"},
-    {"key": "sayfa:seo-teknik", "area": "pazarlama", "label": "Teknik sağlık"},
-    {"key": "sayfa:seo-kimlik", "area": "pazarlama", "label": "Kimlik ve bilgi paneli"},
-    {"key": "sayfa:seo-rehber", "area": "pazarlama", "label": "Rehber içerikler"},
-    {"key": "sayfa:seo-sema", "area": "pazarlama", "label": "Şema denetimi"},
-    {"key": "sayfa:seo-llms", "area": "pazarlama", "label": "Yapay zekâ tarama dosyası"},
-    {"key": "sayfa:seo-crm", "area": "pazarlama", "label": "Haklar ve CRM"},
-    {"key": "sayfa:seo-urun", "area": "pazarlama", "label": "Ürün denetimi"},
-    {"key": "sayfa:seo-gecmis", "area": "pazarlama", "label": "Karar geçmişi"},
-    {"key": "sayfa:seo-baglanti", "area": "pazarlama", "label": "Bağlantılar"}
+    {
+      "key": "sayfa:genel-bakis",
+      "area": "analiz",
+      "label": "Genel bakış"
+    },
+    {
+      "key": "sayfa:panolar",
+      "area": "analiz",
+      "label": "Panolar"
+    },
+    {
+      "key": "sayfa:planli-raporlar",
+      "area": "analiz",
+      "label": "Planlı raporlar"
+    },
+    {
+      "key": "sayfa:uyarilar",
+      "area": "analiz",
+      "label": "Uyarılar"
+    },
+    {
+      "key": "sayfa:finansal-denetim",
+      "area": "finans",
+      "label": "Finansal denetim"
+    },
+    {
+      "key": "sayfa:yonetim-raporlari",
+      "area": "finans",
+      "label": "Yönetim raporları"
+    },
+    {
+      "key": "sayfa:baski-oneri",
+      "area": "finans",
+      "label": "Baskı önerisi"
+    },
+    {
+      "key": "sayfa:editoryal",
+      "area": "editoryal",
+      "label": "Masam"
+    },
+    {
+      "key": "sayfa:yazar-giris",
+      "area": "editoryal",
+      "label": "Yazar giriş süreci"
+    },
+    {
+      "key": "sayfa:yayin-kurulu",
+      "area": "editoryal",
+      "label": "Yayın kurulu"
+    },
+    {
+      "key": "sayfa:redaksiyon",
+      "area": "editoryal",
+      "label": "Redaksiyon"
+    },
+    {
+      "key": "sayfa:cevirmenler",
+      "area": "editoryal",
+      "label": "Çevirmenler"
+    },
+    {
+      "key": "sayfa:son-okuma",
+      "area": "editoryal",
+      "label": "Son okuma"
+    },
+    {
+      "key": "sayfa:kitap-tasarim",
+      "area": "editoryal",
+      "label": "Kitap tasarım"
+    },
+    {
+      "key": "sayfa:kisiler",
+      "area": "kayitlar",
+      "label": "Kişiler"
+    },
+    {
+      "key": "sayfa:basin-web",
+      "area": "kayitlar",
+      "label": "Basın ve web"
+    },
+    {
+      "key": "sayfa:telif-sozlesme",
+      "area": "kayitlar",
+      "label": "Sözleşmeler"
+    },
+    {
+      "key": "sayfa:editor-atama",
+      "area": "kayitlar",
+      "label": "Editör atama"
+    },
+    {
+      "key": "sayfa:seo-geo",
+      "area": "pazarlama",
+      "label": "SEO özeti"
+    },
+    {
+      "key": "sayfa:seo-arama",
+      "area": "pazarlama",
+      "label": "Arama ve kelimeler"
+    },
+    {
+      "key": "sayfa:seo-firsat",
+      "area": "pazarlama",
+      "label": "Fırsatlar ve etki"
+    },
+    {
+      "key": "sayfa:seo-bing",
+      "area": "pazarlama",
+      "label": "Bing ve IndexNow"
+    },
+    {
+      "key": "sayfa:seo-rakip",
+      "area": "pazarlama",
+      "label": "Rakipler"
+    },
+    {
+      "key": "sayfa:seo-ai",
+      "area": "pazarlama",
+      "label": "Yapay zekâ görünürlüğü"
+    },
+    {
+      "key": "sayfa:seo-sayfalar",
+      "area": "pazarlama",
+      "label": "Yazar ve kategori"
+    },
+    {
+      "key": "sayfa:seo-yonlendirme",
+      "area": "pazarlama",
+      "label": "Yönlendirmeler"
+    },
+    {
+      "key": "sayfa:seo-teknik",
+      "area": "pazarlama",
+      "label": "Teknik sağlık"
+    },
+    {
+      "key": "sayfa:seo-kimlik",
+      "area": "pazarlama",
+      "label": "Kimlik ve bilgi paneli"
+    },
+    {
+      "key": "sayfa:seo-rehber",
+      "area": "pazarlama",
+      "label": "Rehber içerikler"
+    },
+    {
+      "key": "sayfa:seo-sema",
+      "area": "pazarlama",
+      "label": "Şema denetimi"
+    },
+    {
+      "key": "sayfa:seo-llms",
+      "area": "pazarlama",
+      "label": "Yapay zekâ tarama dosyası"
+    },
+    {
+      "key": "sayfa:seo-crm",
+      "area": "pazarlama",
+      "label": "Haklar ve CRM"
+    },
+    {
+      "key": "sayfa:seo-urun",
+      "area": "pazarlama",
+      "label": "Ürün denetimi"
+    },
+    {
+      "key": "sayfa:seo-gecmis",
+      "area": "pazarlama",
+      "label": "Karar geçmişi"
+    },
+    {
+      "key": "sayfa:seo-baglanti",
+      "area": "pazarlama",
+      "label": "Bağlantılar"
+    }
+  ],
+  "features": [
+    {
+      "key": "ozellik:zeki.soru",
+      "area": "ortak",
+      "label": "Zeki AI'a soru sorma",
+      "hint": "Genel bakış, Kampüs soru kutusu, panoya soruyla kart, uyarıda anlık ölçüm"
+    },
+    {
+      "key": "ozellik:kart.sql-goster",
+      "area": "ortak",
+      "label": "SQL'i göster ve kopyala",
+      "hint": "Kartların, raporların ve denetim bulgularının SQL'i"
+    },
+    {
+      "key": "ozellik:veri.disa-aktar",
+      "area": "ortak",
+      "label": "Dışa aktarma",
+      "hint": "Excel, CSV, PDF ve Word indirme"
+    },
+    {
+      "key": "ozellik:oda.yonet",
+      "area": "kampus",
+      "label": "Toplantı odalarını yönetme",
+      "hint": "Oda ekleme/kaldırma, başkasının rezervasyonunu iptal",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pano.duzenle",
+      "area": "analiz",
+      "page": "sayfa:panolar",
+      "label": "Panoya kart ekleme ve düzenleme",
+      "hint": "Kart ekle, çıkar, boyut, grafik, tazeleme saati"
+    },
+    {
+      "key": "ozellik:rapor.planla",
+      "area": "analiz",
+      "page": "sayfa:planli-raporlar",
+      "label": "Planlı rapor oluşturma ve yönetme",
+      "hint": "Oluştur, düzenle, şimdi çalıştır (e-posta gider), duraklat, sil"
+    },
+    {
+      "key": "ozellik:uyari.kural",
+      "area": "analiz",
+      "page": "sayfa:uyarilar",
+      "label": "Uyarı kuralı yazma",
+      "hint": "Kural kaydet, duraklat, sil, şimdi kontrol et"
+    },
+    {
+      "key": "ozellik:denetim.detay",
+      "area": "finans",
+      "page": "sayfa:finansal-denetim",
+      "label": "Denetim ayrıntısı",
+      "hint": "Logo hareket satırları, e-defter belgeleri, istisnalar"
+    },
+    {
+      "key": "ozellik:denetim.inceleme",
+      "area": "finans",
+      "page": "sayfa:finansal-denetim",
+      "label": "Denetim inceleme notu",
+      "hint": "İncelemeyi not ve kanıtla kaydetme"
+    },
+    {
+      "key": "ozellik:denetim.yenile",
+      "area": "finans",
+      "page": "sayfa:finansal-denetim",
+      "label": "Denetim verisini yenileme",
+      "hint": "Logo'dan yeniden okuma"
+    },
+    {
+      "key": "ozellik:yonetim-raporu.yenile",
+      "area": "finans",
+      "page": "sayfa:yonetim-raporlari",
+      "label": "Yönetim raporunu yenileme",
+      "hint": "Baskı önerisi «Verileri yenile»"
+    },
+    {
+      "key": "ozellik:masa.herkesinki",
+      "area": "editoryal",
+      "page": "sayfa:editoryal",
+      "label": "Masam: herkesin işi",
+      "hint": "Başkalarının eserlerini ve bekleyen işlerini görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kitap.inceleme-karar",
+      "area": "editoryal",
+      "page": "sayfa:editoryal",
+      "label": "Kitap inceleme kararı",
+      "hint": "İnceleme kuyruğunda onay, ret, düzeltme"
+    },
+    {
+      "key": "ozellik:yazar-giris.herkesinki",
+      "area": "editoryal",
+      "page": "sayfa:yazar-giris",
+      "label": "Yazar giriş: herkesin projesi",
+      "hint": "Bütün projeleri görme ve her projede adım işaretleme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:yayin-kurulu.gorusler",
+      "area": "editoryal",
+      "page": "sayfa:yayin-kurulu",
+      "label": "Yayın kurulu: üye görüşleri",
+      "hint": "Kurul üyelerinin görüşlerini adıyla görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:son-okuma.karar",
+      "area": "editoryal",
+      "page": "sayfa:son-okuma",
+      "label": "Son okuma bulgusuna karar",
+      "hint": "Doğru / yanlış alarm"
+    },
+    {
+      "key": "ozellik:tasarim.uret",
+      "area": "editoryal",
+      "page": "sayfa:kitap-tasarim",
+      "label": "Kitap tasarımında üretim",
+      "hint": "Üretim başlatma, yeniden başlatma, görsel/figür/boyama/seslendirme üretme (GPU harcar)"
+    },
+    {
+      "key": "ozellik:seo.oneri-uret",
+      "area": "pazarlama",
+      "page": "sayfa:seo-urun",
+      "label": "SEO önerisi üretme",
+      "hint": "Ürün ve sayfa önerisi, toplu öneri (model harcar)"
+    },
+    {
+      "key": "ozellik:seo.calistir",
+      "area": "pazarlama",
+      "page": "sayfa:seo-geo",
+      "label": "SEO eşitleme ve ölçüm",
+      "hint": "T-soft/CRM eşitleme, şema taraması, arama verisi, yapay zekâ görünürlüğü soruları"
+    },
+    {
+      "key": "ozellik:seo.onay",
+      "area": "pazarlama",
+      "page": "sayfa:seo-urun",
+      "label": "SEO önerisi onaylama",
+      "hint": "Ürün, sayfa ve yönlendirme önerilerini onaylama/reddetme (Onay verebilenler listesine ek)",
+      "explicit": true
+    }
   ]
 }
