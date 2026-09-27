@@ -36,7 +36,8 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
   canVoice: boolean;
   /** Seslendirme sürüyor ya da başlatılıyor. */
   busy: boolean;
-  onRegen: (pid: string) => void;
+  /** Rolde üretim yetkisi yoksa verilmez; «yeniden seslendir» düğmesi çıkmaz. */
+  onRegen?: (pid: string) => void;
 }) {
   const qc = useQueryClient();
   const q = useExpression(jobId, pid);
@@ -81,9 +82,11 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
       {stale && marked > 0 && (
         <div className="flex flex-wrap items-center gap-2 rounded-xl border border-amber-200 bg-amber-50/70 px-2.5 py-2" role="status">
           <span className="min-w-0 flex-1 text-[12px] leading-snug text-amber-900">İfade değişti; bu sayfanın sesi güncel değil.</span>
-          <button type="button" className={ghostBtn} disabled={!canVoice || busy} onClick={() => onRegen(pid)}>
-            <RefreshCw className="h-4 w-4" aria-hidden />Bu sayfayı yeniden seslendir
-          </button>
+          {onRegen && (
+            <button type="button" className={ghostBtn} disabled={!canVoice || busy} onClick={() => onRegen(pid)}>
+              <RefreshCw className="h-4 w-4" aria-hidden />Bu sayfayı yeniden seslendir
+            </button>
+          )}
         </div>
       )}
 
