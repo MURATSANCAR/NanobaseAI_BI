@@ -62,7 +62,14 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
             head = (run(head_sql).get("records") or [])
             if not head:
                 return None
-            return C.crm_contract(head[0], run(books_sql).get("records") or [], run(parties_sql).get("records") or [])
+            out = C.crm_contract(head[0], run(books_sql).get("records") or [], run(parties_sql).get("records") or [])
+            parent = C.parent_of(head[0])
+            try:
+                out["related"] = C.related(run(C.related_sql(crm_prefix(schema), crm_id, parent)).get("records") or [], parent)
+            except Exception as e:  # noqa: BLE001 — bağlı kayıtlar okunamazsa sözleşme yine açılır
+                log.warning("contracts: bağlı CRM sözleşmeleri okunamadı (%s): %s", crm_id, e)
+                out["related"] = []
+            return out
 
         return load
 
@@ -114,9 +121,7 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
         session(request)
         schema, run = editorial(request)
         rows = run(call(C.book_lookup_sql, crm_prefix(schema), q)).get("records") or []
-        return {"items": [{"id": str(r.get("new_kitapId") or ""), "title": str(r.get("new_name") or ""),
-                           "stockCode": (str(r.get("new_StokKodu") or "").strip() or None),
-                           "isbn": (str(r.get("new_isbn13") or "").strip() or None)} for r in rows if r.get("new_name")]}
+        return {"items": C._crm_books(rows)}
 
     @app.get("/api/v1/editorial/contracts/lookup/parties")
     def lookup_parties(request: Request, q: str = "") -> dict[str, Any]:
@@ -298,6 +303,15 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
         sql, missing = expand_sales(R.sales_sql(codes, a, b), date.today(), present)
         return R.fold_sales(logo_rows(conn, sql)), missing
 
+    def tcmb_get(url: str) -> tuple[int, str]:
+        import httpx
+        try:
+            r = httpx.get(url, timeout=10)
+            return r.status_code, r.text
+        except Exception as e:  # noqa: BLE001 — ağ yoksa kur elle girilir
+            log.warning("contracts: TCMB kuru okunamadı (%s): %s", url, e)
+            return 0, ""
+
     def calculate(engine, tenant, request: Request, key: str, body: dict[str, Any]) -> dict[str, Any]:
         rec = C.find(engine, tenant, key)
         if rec:
@@ -319,7 +333,7 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
         data_end = None
         fx = None
         notes: list[str] = []
-        need_logo = (pt in T.SALES_BASED and codes) or (terms.get("currency") not in (None, "TRY"))
+        need_logo = pt in T.SALES_BASED and bool(codes)
         if need_logo:
             with logo_lock:  # Logo'yu aynı anda tek hakediş okur (ağır sorgu, tek bağlantı)
                 conn = logo()
@@ -338,11 +352,15 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
                     if last_year:
                         rows = logo_rows(conn, R.data_end_sql(last_year))
                         data_end = str(rows[0]["son"])[:10] if rows and rows[0].get("son") else None
-                if terms.get("currency") not in (None, "TRY"):
-                    sql = R.fx_sql(terms["currency"], b)
-                    rows = logo_rows(conn, sql) if sql else []
-                    if rows and rows[0].get("kur"):
-                        fx = {"rate": float(rows[0]["kur"]), "on": str(rows[0].get("gun"))[:10]}
+        if terms.get("currency") not in (None, "TRY"):
+            manual = body.get("fxRate")
+            if manual not in (None, ""):
+                rate = T._num(manual, "Kur")
+                if not rate:
+                    raise T.ContractError("Kur sıfırdan büyük olmalı.")
+                fx = {"rate": rate, "on": b.isoformat(), "source": "elle girildi"}
+            else:
+                fx = R.tcmb_rate(terms["currency"], b, tcmb_get)
         ctx = C.statement_context(engine, tenant, rec["id"], a.isoformat()) if rec else {"advanceUsed": 0.0, "carryIn": 0.0}
         out = R.compute(terms, period_start=a.isoformat(), period_end=b.isoformat(), sales=sales, prior_qty=prior,
                         prints=prints, list_prices=prices, advance_used=ctx["advanceUsed"], carry_in=ctx["carryIn"],

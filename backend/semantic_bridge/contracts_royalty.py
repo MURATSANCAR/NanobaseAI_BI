@@ -11,7 +11,8 @@ stopaj → ödenecek net. Kaynak:
 Matrah: net esasta dönemin net satış tutarı; brüt esasta adet × kapak (liste) fiyatı. İskonto verilmişse matrah
 o oranda azalır. Kademeli ödemede oran, sözleşme başından bu yana birikmiş adede göre dilim dilim uygulanır.
 Taraflara pay oranında bölünür. Sözleşme yabancı para birimindeyse dönem sonundaki Logo kuru ile çevrilir;
-kur okunamazsa tutar TL kalır ve uyarı yazılır (avans mahsubu yapılmaz).
+kur ekranda girilir ya da TCMB'nin o günkü döviz alış kurundan okunur; kur yoksa tutar TL kalır ve
+uyarı yazılır (avans mahsubu yapılmaz).
 
 Buradaki `compute` saf bir işlevdir: veritabanına dokunmaz, girdiyi aynı verince aynı sonucu verir.
 """
@@ -95,16 +96,30 @@ def data_end_sql(year: int) -> str:
     return f"SELECT TOP 1 [Fatura Tarihi] AS son FROM dbo.V_SatisRaporu_{int(year)} ORDER BY [Fatura Tarihi] DESC"
 
 
-#: Logo döviz türü (L_CURRENCYLIST.CURTYPE); kur L_DAILYEXCHANGES.RATES1 (alış).
-LOGO_CURTYPE = {"USD": 1, "EUR": 20, "GBP": 17, "CNY": 40}
+#: Döviz kuru TCMB'nin açık günlük kur dosyasından (döviz alış) okunur. 2026-09-27 ölçümü: Logo'nun kur tabloları
+#: seyrek (`LG_EXCHANGE_211`: 2021–2025 arasında USD için 29 gün, `L_DAILYEXCHANGES` yalnız bir tür), hakediş
+#: kuru için güvenilir değil. Hafta sonu ve tatilde dosya yok (404); en çok 10 gün geriye gidilir.
+TCMB_URL = "https://www.tcmb.gov.tr/kurlar/{ym}/{dmy}.xml"
 
 
-def fx_sql(currency: str, on: date) -> Optional[str]:
-    ct = LOGO_CURTYPE.get(currency)
-    if ct is None:
-        return None
-    return (f"SELECT TOP 1 CAST(EDATE AS date) AS gun, RATES1 AS kur FROM dbo.L_DAILYEXCHANGES"
-            f" WHERE CRTYPE = {ct} AND RATES1 > 0 AND EDATE <= '{on.isoformat()}' ORDER BY EDATE DESC")
+def tcmb_rate(currency: str, on: date, fetch) -> Optional[dict[str, Any]]:
+    """`on` gününe ya da önceki son iş gününe ait döviz alış kuru. `fetch(url) -> (durum, metin)`."""
+    import re as _re
+    for back in range(0, 11):
+        d = date.fromordinal(on.toordinal() - back)
+        status, text = fetch(TCMB_URL.format(ym=d.strftime("%Y%m"), dmy=d.strftime("%d%m%Y")))
+        if status != 200 or not text:
+            continue
+        m = _re.search(r'CurrencyCode="%s">(.*?)</Currency>' % _re.escape(currency), text, _re.S)
+        if not m:
+            return None
+        unit = _re.search(r"<Unit>([\d.]+)</Unit>", m.group(1))
+        buy = _re.search(r"<ForexBuying>([\d.]+)</ForexBuying>", m.group(1))
+        if not buy:
+            return None
+        rate = float(buy.group(1)) / float(unit.group(1) if unit else 1)
+        return {"rate": rate, "on": d.isoformat(), "source": "TCMB döviz alış"}
+    return None
 
 
 def fold_sales(rows: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
@@ -257,11 +272,11 @@ def compute(terms: dict[str, Any], *, period_start: str, period_end: str,
             rate = float(fx["rate"])
             gross = round(gross_try / rate, 2)
             out_cur = cur
-            fx_info = {"currency": cur, "rate": rate, "on": fx.get("on")}
+            fx_info = {"currency": cur, "rate": rate, "on": fx.get("on"), "source": fx.get("source")}
             for ln in lines:
                 ln["royaltyCurrency"] = round(ln["royalty"] / rate, 2)
         else:
-            warns.append(f"Sözleşme {T.CURRENCIES.get(cur, cur)}; dönem sonu kuru okunamadı, tutar TL bırakıldı ve avans mahsubu yapılmadı.")
+            warns.append(f"Sözleşme {T.CURRENCIES.get(cur, cur)}; dönem sonu kuru girilmedi ve TCMB'den okunamadı, tutar TL bırakıldı ve avans mahsubu yapılmadı.")
 
     advance = float(terms.get("advance") or 0)
     offset = 0.0

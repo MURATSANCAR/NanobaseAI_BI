@@ -56,6 +56,21 @@ function TermsView({ d, meta }: { d: Detail; meta: Meta }) {
           </Row>
           <Row label="Bölge / dil">{[t.territory, t.language].filter(Boolean).join(' · ') || '—'}</Row>
           <Row label="Haklar">{rights.length ? rights.join(', ') : '—'}</Row>
+          {d.crm?.related && d.crm.related.length > 0 && (
+            <Row label="Grup sözleşmesi">
+              <ul className="space-y-0.5">
+                {d.crm.related.map((r) => (
+                  <li key={r.id}>
+                    <Link to={`/telif-sozlesme/${r.id}`} className="text-canvas-violet hover:underline">{r.no || r.id.slice(0, 8)}</Link>{' '}
+                    <span className="font-normal text-canvas-muted">
+                      · {r.relation === 'ana' ? 'grup sözleşmesinin ana kaydı' : 'aynı grup sözleşmesinde'} · {meta.statuses[r.status] ?? r.status}
+                      {r.start ? ` · ${day(r.start)} – ${day(r.end)}` : ''}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </Row>
+          )}
         </dl>
       </Panel>
       <Panel>

@@ -43,7 +43,7 @@ function CalcView({ c }: { c: Calc }) {
         ))}
       </div>
       <div className="text-[11.5px] leading-relaxed text-canvas-muted">
-        Matrah {money(c.base, 'TRY')}{c.fx ? ` · kur ${num(c.fx.rate, 4)} (${day(c.fx.on)}) · TL karşılığı ${money(c.grossTry, 'TRY')}` : ''}
+        Matrah {money(c.base, 'TRY')}{c.fx ? ` · kur ${num(c.fx.rate, 4)} (${day(c.fx.on)}${c.fx.source ? `, ${c.fx.source}` : ''}) · TL karşılığı ${money(c.grossTry, 'TRY')}` : ''}
         {c.advance ? ` · avans ${money(c.advance, c.contractCurrency)}, önceki dönemlerde düşülen ${money(c.advanceUsedBefore, cur)}, kalan ${money(c.advanceRemaining, cur)}` : ''}
         {c.withholdingPct ? ` · stopaj %${num(c.withholdingPct)} = ${money(c.withholding, cur)}` : ''}
         {c.carryOut ? ` · sonraki döneme devreden ${money(c.carryOut, cur)}` : ''}
@@ -167,9 +167,10 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
   const [prices, setPrices] = useState<Record<string, number | null>>(() =>
     Object.fromEntries(t.books.filter((b) => b.stockCode && b.listPrice != null).map((b) => [b.stockCode as string, b.listPrice ?? null])),
   );
+  const [fxRate, setFxRate] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [calc, setCalc] = useState<Calc | null>(null);
-  const input = () => ({ periodStart: monthStart(from), periodEnd: monthEnd(to), prints, listPrices: prices });
+  const input = () => ({ periodStart: monthStart(from), periodEnd: monthEnd(to), prints, listPrices: prices, fxRate });
   const preview = useMutation({ mutationFn: () => contractApi.preview(d.key, input()), onSuccess: setCalc });
   const save = useMutation({
     mutationFn: () => contractApi.statementSave(d.key, { ...input(), note }),
@@ -231,6 +232,13 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
               </Field>
             )}
           </div>
+          {t.currency !== 'TRY' && (
+            <div className="mt-3 max-w-xs">
+              <Field label={`Kur (1 ${meta.currencies[t.currency] ?? t.currency} = ? TL)`} hint="Boş bırakılırsa dönem sonundaki TCMB döviz alış kuru kullanılır.">
+                <NumInput value={fxRate} onChange={setFxRate} suffix="₺" />
+              </Field>
+            </div>
+          )}
           {(needPrice || printBased) && books.length > 0 && (
             <ul className="mt-3 space-y-2">
               {books.map((b) => (

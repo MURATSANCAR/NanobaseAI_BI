@@ -155,6 +155,25 @@ def test_foreign_currency_needs_rate():
     assert fx["currency"] == "USD" and fx["gross"] == 10.0 and fx["advanceOffset"] == 10.0
 
 
+def test_tcmb_rate_walks_back_over_weekend():
+    from datetime import date
+    xml = ('<Tarih_Date><Currency CrossOrder="0" Kod="USD" CurrencyCode="USD"><Unit>1</Unit>'
+           '<ForexBuying>46.5747</ForexBuying></Currency><Currency Kod="JPY" CurrencyCode="JPY"><Unit>100</Unit>'
+           '<ForexBuying>30.00</ForexBuying></Currency></Tarih_Date>')
+    seen = []
+
+    def fetch(url):
+        seen.append(url)
+        return (200, xml) if url.endswith("26062026.xml") else (404, "")
+
+    r = R.tcmb_rate("USD", date(2026, 6, 28), fetch)   # pazar → cuma
+    assert r == {"rate": 46.5747, "on": "2026-06-26", "source": "TCMB döviz alış"}
+    assert seen[0].endswith("/202606/28062026.xml")
+    assert R.tcmb_rate("JPY", date(2026, 6, 26), fetch)["rate"] == 0.3
+    assert R.tcmb_rate("CNY", date(2026, 6, 26), fetch) is None
+    assert R.tcmb_rate("USD", date(2026, 7, 20), lambda u: (404, "")) is None
+
+
 def test_print_based_needs_price_and_quantity():
     t = _terms(paymentType="baski", advance=None)
     with pytest.raises(T.ContractError):
@@ -277,11 +296,15 @@ def test_adopt_crm_once_and_diff(engine):
         {"new_name": "S-1", "tip_kod": 5, "odeme_kod": 2, "esas_kod": 2, "para_kod": 1, "durum_kod": 100000000,
          "new_Telif": 8, "new_SozlesmeBaslangicTarihi": "2020-01-01 00:00:00", "new_SozlesmeBitisTarihi": "2025-01-01",
          "new_yazar_text": "Ali Veli", "new_cogaltmahakki": 1, "sirket": "TİMAŞ"},
-        [{"new_kitapId": "b1", "new_name": "Kitap", "new_StokKodu": " K9 "}],
+        [{"new_kitapId": "b1", "new_name": "Kitap", "new_StokKodu": " K9 ", "new_kdvdahilfiyat": 340, "new_EKitapStokKodu": "E9"}],
         [{"kisi": "Ali Veli", "new_Odeme": 100, "new_kisi": "c1"}],
     )
     assert crm["status"] == "yururlukte" and crm["terms"]["parties"][0]["role"] == "yazar"
     assert crm["terms"]["books"][0]["stockCode"] == "K9" and crm["terms"]["rights"]["cogaltma"] is True
+    assert crm["terms"]["books"][0]["listPrice"] == 340
+    assert crm["terms"]["books"][1] == {"id": "b1", "title": "Kitap (e-kitap)", "stockCode": "E9", "isbn": None,
+                                        "format": "ekitap", "listPrice": None}
+    assert C.parent_of({"new_anasozlesmeid": "{DA38602B-3052-E811-80F2-00155D000C5B}"}) == "da38602b-3052-e811-80f2-00155d000c5b"
     gid = "11111111-2222-3333-4444-555555555555"
     r1 = C.adopt_crm(engine, TEN, "a", gid, crm)
     r2 = C.adopt_crm(engine, TEN, "b", gid.upper(), crm)

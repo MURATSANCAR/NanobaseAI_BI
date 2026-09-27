@@ -1180,12 +1180,12 @@ def crm_contract_sql(p: str, crm_id: str) -> list[str]:
         " s.new_sozlesmeavanstutari, s.new_tekodemetutari, s.new_telifhesaplamaiskontosu,"
         " s.new_SozlesmeBaslangicTarihi, s.new_SozlesmeBitisTarihi, s.new_SozlesmeSuresiYil,"
         " CAST(ISNULL(s.new_suresizsozlesme, 0) AS int) AS suresiz, s.new_yazar_text, s.new_mutercim_text,"
-        f" s.new_cizer_text, s.new_haklaraciklama, a.Name AS sirket, {rights}"
+        f" s.new_cizer_text, s.new_haklaraciklama, s.new_hesaplamatutari, s.new_anasozlesmeid, a.Name AS sirket, {rights}"
         f" FROM {p}new_sozlesmeBase s LEFT JOIN {p}AccountBase a ON a.AccountId = s.new_SozlemeninSahibi"
         f" WHERE s.new_sozlesmeId = '{g}'"
     )
     books = (
-        "SELECT k.new_kitapId, k.new_name, k.new_StokKodu, k.new_isbn13"
+        "SELECT k.new_kitapId, k.new_name, k.new_StokKodu, k.new_isbn13, k.new_kdvdahilfiyat, k.new_EKitapStokKodu"
         f" FROM {p}new_new_sozlesme_new_kitapBase sk JOIN {p}new_kitapBase k ON k.new_kitapId = sk.new_kitapid"
         f" WHERE sk.new_sozlesmeid = '{g}' ORDER BY k.new_name"
     )
@@ -1199,6 +1199,39 @@ def crm_contract_sql(p: str, crm_id: str) -> list[str]:
     return [head, books, parties]
 
 
+def related_sql(p: str, crm_id: str, parent: Optional[str]) -> str:
+    """CRM'de sözleşmenin ana sözleşmesi ve ona bağlı alt kayıtlar (`new_anasozlesmeid` = '{GUID}' metni).
+    2026-09-27 ölçümü: 8.814 etkin sözleşmede dolu; grup sözleşmesi (`new_grupsozlesmesimi`, 8.763) kitap başına
+    bir kayda bölünür, «2026009059-1/-2/-3» hepsi «-1»i ana gösterir."""
+    g = crm_id.upper()
+    ids = [f"UPPER(r.new_anasozlesmeid) = '{{{g}}}'"]
+    if parent and is_crm_id(parent):
+        pg = parent.upper()
+        ids += [f"r.new_sozlesmeId = '{pg}'", f"UPPER(r.new_anasozlesmeid) = '{{{pg}}}'"]
+    return ("SELECT TOP 200 r.new_sozlesmeId, r.new_name, CAST(r.statuscode AS int) AS durum_kod, r.new_SozlesmeBaslangicTarihi,"
+            " r.new_SozlesmeBitisTarihi, r.new_anasozlesmeid"
+            f" FROM {p}new_sozlesmeBase r WHERE r.statecode = 0 AND r.new_sozlesmeId <> '{g}' AND ({' OR '.join(ids)})"
+            " ORDER BY r.new_name")
+
+
+def parent_of(head: dict[str, Any]) -> Optional[str]:
+    t = str(head.get("new_anasozlesmeid") or "").strip().strip("{}").lower()
+    return t if is_crm_id(t) else None
+
+
+def related(rows: list[dict[str, Any]], parent: Optional[str]) -> list[dict[str, Any]]:
+    out = []
+    for r in rows:
+        rid = str(r.get("new_sozlesmeId") or "").lower()
+        out.append({"id": rid, "no": str(r.get("new_name") or "").strip() or None,
+                    "relation": "ana" if parent and rid == parent else "bagli",
+                    "status": T.STATUS_FROM_CRM.get(_i(r.get("durum_kod")), "sona-erdi"),
+                    "start": str(r.get("new_SozlesmeBaslangicTarihi") or "")[:10] or None,
+                    "end": str(r.get("new_SozlesmeBitisTarihi") or "")[:10] or None})
+    out.sort(key=lambda x: (x["relation"] != "ana", x["no"] or ""))
+    return out
+
+
 def _f(v: Any) -> Optional[float]:
     try:
         return None if v is None or v == "" else float(v)
@@ -1209,6 +1242,23 @@ def _f(v: Any) -> Optional[float]:
 def _i(v: Any) -> Optional[int]:
     x = _f(v)
     return None if x is None else int(x)
+
+
+def _crm_books(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Kitap kartı → şarttaki kitaplar. Kapak fiyatı `new_kdvdahilfiyat` (Logo satış satırındaki birim fiyatla aynı,
+    2026-09-27'de örneklerde birebir); e-kitabın ayrı stok kodu varsa ayrı satır (e-kitap oranıyla hesaplanır)."""
+    out = []
+    for b in rows:
+        if not b.get("new_name"):
+            continue
+        base = {"id": str(b.get("new_kitapId") or "") or None, "title": str(b.get("new_name")),
+                "isbn": str(b.get("new_isbn13") or "").strip() or None}
+        out.append({**base, "stockCode": str(b.get("new_StokKodu") or "").strip() or None, "format": "karton",
+                    "listPrice": _f(b.get("new_kdvdahilfiyat")) or None})
+        ebook = str(b.get("new_EKitapStokKodu") or "").strip()
+        if ebook:
+            out.append({**base, "title": f"{base['title']} (e-kitap)", "stockCode": ebook, "format": "ekitap", "listPrice": None})
+    return out
 
 
 def crm_contract(head: dict[str, Any], books: list[dict[str, Any]], parties: list[dict[str, Any]]) -> dict[str, Any]:
@@ -1235,9 +1285,7 @@ def crm_contract(head: dict[str, Any], books: list[dict[str, Any]], parties: lis
         "kind": T.KIND_FROM_CRM.get(_i(head.get("tip_kod")), "telif-alis"),
         "company": str(head.get("sirket") or ""),
         "parties": ps,
-        "books": [{"id": str(b.get("new_kitapId") or "") or None, "title": str(b.get("new_name")),
-                   "stockCode": str(b.get("new_StokKodu") or "").strip() or None, "isbn": str(b.get("new_isbn13") or "").strip() or None}
-                  for b in books if b.get("new_name")],
+        "books": _crm_books(books),
         "paymentType": T.PAYMENT_FROM_CRM.get(_i(head.get("odeme_kod")), "diger"),
         "basis": T.BASIS_FROM_CRM.get(_i(head.get("esas_kod")), "net"),
         "rates": {k: v for k, v in rates.items() if v},
@@ -1250,7 +1298,9 @@ def crm_contract(head: dict[str, Any], books: list[dict[str, Any]], parties: lis
         "openEnded": bool(_i(head.get("suresiz"))),
         "years": _f(head.get("new_SozlesmeSuresiYil")) or None,
         "rights": {k: bool(_i(head.get(col))) for col, k in T.RIGHT_FROM_CRM.items()},
-        "notes": str(head.get("new_haklaraciklama") or "").strip(),
+        # Çeviri/hizmet sözleşmelerinde ücret serbest metindir («Sayfa başı (200 kelime) 250 TL»).
+        "notes": "\n".join(x for x in (str(head.get("new_haklaraciklama") or "").strip(),
+                                         ("Hesaplama: " + str(head.get("new_hesaplamatutari")).strip()) if head.get("new_hesaplamatutari") else "") if x),
     }
     if raw["start"] and raw["end"] and raw["end"] < raw["start"]:
         raw["end"] = None  # CRM'de ters girilmiş tarih; portal kaydı bitişi boş açar, ekran uyarır
@@ -1306,7 +1356,7 @@ def book_lookup_sql(p: str, q: str) -> str:
     match = [f"b.new_name LIKE N'%{k}%'", f"b.new_StokKodu LIKE N'%{k}%'"]
     if len(d) >= 5:
         match.append(f"REPLACE(REPLACE(ISNULL(b.new_isbn13, ''), '-', ''), ' ', '') LIKE '%{d}%'")
-    return ("SELECT TOP 20 b.new_kitapId, b.new_name, b.new_StokKodu, b.new_isbn13"
+    return ("SELECT TOP 20 b.new_kitapId, b.new_name, b.new_StokKodu, b.new_isbn13, b.new_kdvdahilfiyat, b.new_EKitapStokKodu"
             f" FROM {p}new_kitapBase b WHERE b.statecode = 0 AND ({' OR '.join(match)}) ORDER BY b.new_name")
 
 

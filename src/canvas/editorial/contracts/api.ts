@@ -121,7 +121,7 @@ export type Calc = {
   basis: string;
   currency: string;
   contractCurrency: string;
-  fx: { currency: string; rate: number; on: string } | null;
+  fx: { currency: string; rate: number; on: string; source?: string } | null;
   quantity: number;
   base: number;
   grossTry: number;
@@ -171,7 +171,13 @@ export type Detail = {
   status: Status;
   statusLabel: string;
   terms: Terms;
-  crm: { no: string | null; status: Status; terms: Terms } | null;
+  crm: {
+    no: string | null;
+    status: Status;
+    terms: Terms;
+    /** CRM'deki ana sözleşme ve ona bağlı kayıtlar (`new_anasozlesmeid`). */
+    related?: Array<{ id: string; no: string | null; relation: 'ana' | 'bagli'; status: Status; start: string | null; end: string | null }>;
+  } | null;
   diff: Change[];
   crmChangedSinceAdopt?: boolean;
   crmError?: string | null;
@@ -296,7 +302,7 @@ export const contractApi = {
   templateDocx: (id: string, file: File) =>
     call<Template>(`/templates/${enc(id)}/docx${qs({ filename: file.name })}`, { method: 'PUT', raw: file, timeout: 120_000 }),
   templateDocxRemove: (id: string) => call<Template>(`/templates/${enc(id)}/docx`, { method: 'DELETE' }),
-  lookupBooks: (q: string) => call<{ items: Array<{ id: string; title: string; stockCode: string | null; isbn: string | null }> }>(`/lookup/books${qs({ q })}`),
+  lookupBooks: (q: string) => call<{ items: Array<{ id: string; title: string; stockCode: string | null; isbn: string | null; format: string; listPrice: number | null }> }>(`/lookup/books${qs({ q })}`),
   lookupParties: (q: string) => call<{ items: Array<{ type: 'kisi' | 'firma'; id: string; name: string }> }>(`/lookup/parties${qs({ q })}`),
 };
 
@@ -308,6 +314,8 @@ export type StatementInput = {
   periodEnd: string;
   prints?: Record<string, number | null>;
   listPrices?: Record<string, number | null>;
+  /** Yabancı para sözleşmede elle kur; boşsa TCMB döviz alış kuru okunur. */
+  fxRate?: number | null;
 };
 
 /** Word belgesini indirir. Doldurulamayan alanları döndürür (ekranda uyarı). */

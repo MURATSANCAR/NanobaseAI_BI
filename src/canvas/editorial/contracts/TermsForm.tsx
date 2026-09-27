@@ -177,7 +177,7 @@ export default function TermsForm({ value, onChange, meta, lock }: { value: Term
                 <span className="font-mono text-[11px] text-canvas-muted">{b.stockCode || 'stok kodu yok'}</span>
               </>
             )}
-            onPick={(b) => set('books', [...value.books, { id: b.id, title: b.title, stockCode: b.stockCode, isbn: b.isbn, format: 'karton', listPrice: null }])}
+            onPick={(b) => set('books', [...value.books, { id: b.id, title: b.title, stockCode: b.stockCode, isbn: b.isbn, format: b.format, listPrice: b.listPrice }])}
           />
         )}
         <ul className="space-y-2 sm:col-span-2">
