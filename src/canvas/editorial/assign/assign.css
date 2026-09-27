@@ -1,0 +1,25 @@
+/* M2 editör atama: yan pencere (masaüstü sağdan, telefonda alttan). Açılış 280 ms çekmece eğrisi,
+   kapanış 200 ms — karar anı değil, sistem cevabı. Azaltılmış harekette yalnız saydamlık. */
+.as-scrim { position: fixed; inset: 0; z-index: 80; background: #1b1f2a52; transition: opacity 200ms ease }
+.as-scrim[data-starting-style], .as-scrim[data-ending-style] { opacity: 0 }
+.as-sheet {
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+  position: fixed; z-index: 81; top: 12px; right: 12px; bottom: 12px; width: min(640px, calc(100vw - 24px));
+  display: flex; flex-direction: column; border-radius: 24px; background: #fff; box-shadow: 0 24px 80px #2a1f4a38;
+  outline: none;
+  transition: transform 280ms var(--ease-drawer), opacity 200ms ease;
+}
+.as-sheet[data-starting-style] { transform: translateX(calc(100% + 24px)) }
+.as-sheet[data-ending-style] { transform: translateX(calc(100% + 24px)); transition-duration: 200ms }
+.as-sheet-body { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 4px 20px 20px }
+
+@media (max-width: 640px) {
+  .as-sheet { top: auto; left: 0; right: 0; bottom: 0; width: 100%; max-height: 90dvh; border-radius: 22px 22px 0 0;
+    padding-bottom: env(safe-area-inset-bottom) }
+  .as-sheet[data-starting-style], .as-sheet[data-ending-style] { transform: translateY(100%) }
+  .as-sheet-body { padding: 4px 16px 16px }
+}
+@media (prefers-reduced-motion: reduce) {
+  .as-sheet { transition: opacity 180ms ease }
+  .as-sheet[data-starting-style], .as-sheet[data-ending-style] { transform: none; opacity: 0 }
+}
