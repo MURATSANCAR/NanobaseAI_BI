@@ -227,6 +227,11 @@ def book_map(rows: Iterable[dict[str, Any]]) -> tuple[dict[str, set[str]], dict[
 
 # ------------------------------------------------------------------------------------------ hesap
 
+def _same_name(x: Optional[str], y: Optional[str]) -> bool:
+    fold = lambda v: re.sub(r"\s+", " ", (v or "").replace("İ", "i").replace("I", "ı").lower()).strip()  # noqa: E731
+    return bool(x) and fold(x) == fold(y)
+
+
 def counted(status: Optional[str], deleted: bool) -> bool:
     # Türkçe küçük harf: «İptal».casefold() «i̇ptal» (ek noktalı) verir ve «iptal» ile eşleşmez.
     s = (status or "").replace("İ", "i").replace("I", "ı").lower()
@@ -272,6 +277,9 @@ def compute(engine: sa.engine.Engine, tenant: str, authors: dict[str, set[str]],
     for (a, b), k in pair.items():
         if k < MIN_ORDERS:
             continue
+        # CRM'de aynı yazar için mükerrer kişi kaydı var (2026-09-28: «Metin Özdamarlar» kendine öneriliyordu).
+        if _same_name(names.get(a), names.get(b)):
+            continue
         lift = (k * total) / (n[a] * n[b]) if n[a] and n[b] else 0.0
         if lift < MIN_LIFT:
             continue
@@ -279,9 +287,9 @@ def compute(engine: sa.engine.Engine, tenant: str, authors: dict[str, set[str]],
         ab = [{"a": titles.get(x), "b": titles.get(y), "orders": c_} for (x, y), c_ in top]
         ba = [{"a": titles.get(y), "b": titles.get(x), "orders": c_} for (x, y), c_ in top]
         out.append({"tenant_id": tenant, "a": a, "b": b, "b_name": names.get(b), "orders": k, "a_orders": n[a],
-                    "b_orders": n[b], "lift": round(lift, 2), "books_json": json.dumps(ab, ensure_ascii=False)})
+                    "b_orders": n[b], "lift": lift, "books_json": json.dumps(ab, ensure_ascii=False)})
         out.append({"tenant_id": tenant, "a": b, "b": a, "b_name": names.get(a), "orders": k, "a_orders": n[b],
-                    "b_orders": n[a], "lift": round(lift, 2), "books_json": json.dumps(ba, ensure_ascii=False)})
+                    "b_orders": n[a], "lift": lift, "books_json": json.dumps(ba, ensure_ascii=False)})
     with engine.begin() as c:
         c.execute(PAIRS.delete().where(PAIRS.c.tenant_id == tenant))
         for i in range(0, len(out), 1000):
@@ -342,7 +350,7 @@ def related(engine: sa.engine.Engine, tenant: str, contact_id: str, page: int = 
         rows = c.execute(sa.select(PAIRS).where(*where).order_by(excess.desc(), PAIRS.c.orders.desc(), PAIRS.c.b)
                          .offset(p * PAGE_SIZE).limit(PAGE_SIZE)).fetchall()
         own = c.execute(sa.select(PAIRS.c.a_orders).where(*where).limit(1)).scalar()
-    items = [{"contactId": r.b, "name": r.b_name, "orders": r.orders, "theirOrders": r.b_orders, "lift": r.lift,
+    items = [{"contactId": r.b, "name": r.b_name, "orders": r.orders, "theirOrders": r.b_orders, "lift": round(r.lift, 2),
               "excess": round(r.orders - r.orders / r.lift) if r.lift else 0,
               "share": round(100 * r.orders / r.a_orders, 1) if r.a_orders else None,
               "books": json.loads(r.books_json or "[]")} for r in rows]

@@ -93,3 +93,12 @@ def test_run_due_is_system_only():
 def test_turkish_status_names():
     assert not C.counted("İptal Edildi", False) and not C.counted("İADE", False) and not C.counted("Kısmi İade", False)
     assert C.counted("Teslim Edildi", False) and C.counted("Ödeme Bekleniyor", False) and not C.counted("Teslim Edildi", True)
+
+
+def test_same_name_duplicate_contacts_are_not_paired():
+    e = _engine()
+    authors = {"1": {X}, "2": {Y}}
+    names = {X: "Metin Özdamarlar", Y: "METİN  ÖZDAMARLAR"}
+    orders = [_order(f"o{i}", "2026-09-01", ["1", "2"]) for i in range(5)] + [_order(f"p{i}", "2026-09-02", ["1"]) for i in range(20)]
+    C.sync(e, T, lambda p, q: {"data": orders[q["start"]:q["start"] + q["limit"]]}, since=date(2026, 9, 1))
+    assert C.compute(e, T, authors, {"1": "A", "2": "B"}, names)["pairs"] == 0
