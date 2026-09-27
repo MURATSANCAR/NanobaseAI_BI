@@ -181,11 +181,17 @@ SPEC: list[dict[str, Any]] = [
      "help": "8–128 harf/rakam. Aynı adla bir metin dosyası sitenin köküne konmalı (https://timas.com.tr/<anahtar>.txt, "
              "içinde yalnız anahtar); dosyayı site yöneticisi koyar. Dosya doğrulanınca değişen sayfalar Bing ve "
              "Yandex'e bildirilir. T-soft'a yazılmaz"},
-    {"key": "SERPAPI_KEY", "group": "seo", "label": "SerpApi anahtarı (rakip sırası)", "type": "secret", "default": "",
-     "help": "serpapi.com ücretsiz katman ayda 250 arama. Boşsa rakip karşılaştırması yapılmaz"},
+    {"key": "SERPAPI_KEY", "group": "seo", "label": "Google arama sonucu anahtarı (rakip sırası)", "type": "secret", "default": "",
+     "help": "Anahtar serpapi.com hesabından alınır; ücretsiz katman ayda 250 arama. Boşsa rakip karşılaştırması yapılmaz"},
     {"key": "SEO_SERP_MONTHLY", "group": "seo", "label": "Rakip araması aylık sınır", "type": "int", "default": "240",
      "help": "Ücretsiz kota aşılmasın diye bir ayda en çok bu kadar Google araması yapılır"},
-    {"key": "SEO_COMPETITORS", "group": "seo", "label": "İzlenen rakip alan adları", "type": "text",
+    {"key": "SEO_GUIDE_BOOKS", "group": "seo", "label": "Rehber taslağında önceden seçili kitap", "type": "int", "default": "10",
+     "help": "Rehber içerik taslağı üretilirken en uygun bu kadar kitap işaretli gelir; kullanıcı ekler, çıkarır"},
+    {"key": "SEO_GUIDE_MIN_BOOKS", "group": "seo", "label": "Rehber için en az kitap", "type": "int", "default": "3",
+     "help": "Gece ön üretiminde bundan az uygun kitabı olan konu için taslak yazılmaz"},
+    {"key": "SEO_GUIDES_BUDGET", "group": "seo", "label": "Gece rehber üretimi süresi (sn)", "type": "int", "default": "1800",
+     "help": "Gece işinde rehber taslağı yazmaya ayrılan en uzun süre; dolunca kalan konular ertesi geceye kalır"},
+    {"key": "SEO_COMPETITORS", "group": "seo", "label": "Rakip siteler", "type": "text",
      "default": "dr.com.tr,kitapyurdu.com,idefix.com,amazon.com.tr,bkmkitap.com,hepsiburada.com,trendyol.com",
      "help": "Virgülle. Aynı kitap aramasında bu sitelerin Google sırası timas.com.tr ile karşılaştırılır"},
     # Kitap Tasarım Stüdyosu

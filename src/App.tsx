@@ -43,6 +43,12 @@ const SeoRedirects = lazy(() => import('@/canvas/seo-geo/SeoRedirects'));
 const SeoPages = lazy(() => import('@/canvas/seo-geo/SeoPages'));
 const SeoSchema = lazy(() => import('@/canvas/seo-geo/SeoSchema'));
 const SeoRights = lazy(() => import('@/canvas/seo-geo/SeoRights'));
+const SeoOpportunities = lazy(() => import('@/canvas/seo-geo/SeoOpportunities'));
+const SeoBing = lazy(() => import('@/canvas/seo-geo/SeoBing'));
+const SeoTech = lazy(() => import('@/canvas/seo-geo/SeoTech'));
+const SeoCompetitors = lazy(() => import('@/canvas/seo-geo/SeoCompetitors'));
+const SeoEntity = lazy(() => import('@/canvas/seo-geo/SeoEntity'));
+const SeoGuides = lazy(() => import('@/canvas/seo-geo/SeoGuides'));
 
 function RouteFallback() {
   return (
@@ -93,6 +99,12 @@ export default function App() {
             <Route path="seo-geo/sayfalar" element={<SeoPages />} />
             <Route path="seo-geo/sema" element={<SeoSchema />} />
             <Route path="seo-geo/crm-haklar" element={<SeoRights />} />
+            <Route path="seo-geo/firsatlar" element={<SeoOpportunities />} />
+            <Route path="seo-geo/bing" element={<SeoBing />} />
+            <Route path="seo-geo/teknik" element={<SeoTech />} />
+            <Route path="seo-geo/rakipler" element={<SeoCompetitors />} />
+            <Route path="seo-geo/kimlik" element={<SeoEntity />} />
+            <Route path="seo-geo/rehberler" element={<SeoGuides />} />
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />
