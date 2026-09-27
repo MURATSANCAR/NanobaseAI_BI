@@ -103,6 +103,10 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/yonetim-raporlari')).toBe('yonetim-raporlari');
     expect(at('/seo-geo/llms')).toBe('seo-llms');
     expect(at('/seo-geo')).toBe('seo-geo');
+    expect(at('/ceviri')).toBe('ceviri');
+    expect(at('/ceviri/abc/kalite')).toBe('ceviri');
+    expect(at('/ceviri/masam')).toBe('ceviri-masam');
+    expect(at('/ceviri/masam/abc')).toBe('ceviri-masam');
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

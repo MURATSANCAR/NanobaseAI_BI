@@ -24,7 +24,7 @@ export const LIVE: Record<string, string> = {
   M1: '/yayin-kurulu',
   M2: '/editor-atama',
   M3: '/redaksiyon',
-  M4: '/kisiler?rol=cevirmen',
+  M4: '/ceviri',
   M5: '/son-okuma',
   M6: '/telif-sozlesme',
   M7: '/kisiler?rol=yazar',

@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowRight, CalendarClock, ChevronRight } from 'lucide-react';
-import { ENGINE_ENABLED, type Work, type ContractPage, type IntakeCard } from '../engine';
+import { ENGINE_ENABLED, translationApi, type Work, type ContractPage, type IntakeCard } from '../engine';
 import { useTimasSession } from '../TimasSession';
-import { useAdminMe } from '../useAdmin';
+import { canSeePage, useAdminMe, usePageAccess } from '../useAdmin';
 import { editorialHomeOptions } from './homeQuery';
 import { intakeBoardOptions } from './queries';
 import { MARK_LABEL, MarkButton, Progress, waitingSentence, waitingText } from './intake/parts';
@@ -59,6 +59,52 @@ function Desk({ works, user }: { works: Work[]; user: string }) {
           {waitingProofs.length ? `, ${nf.format(waitingProofs.length)} prova imza bekliyor` : ''}.
         </p>
       )}
+    </Panel>
+  );
+}
+
+/** Kişinin çeviri ve inceleme işleri (M4); «Çeviri masam» sayfası rolünde yoksa hiç okunmaz. */
+function TranslationDesk() {
+  const pages = usePageAccess();
+  const allowed = pages !== null && canSeePage(pages, 'ceviri-masam');
+  const q = useQuery({ queryKey: ['translation', 'jobs', 'mine'], queryFn: () => translationApi.jobs(true), enabled: ENGINE_ENABLED && allowed });
+  const items = (q.data?.items ?? []).filter((j) => j.stage === 'ceviri' || j.stage === 'inceleme');
+  if (!allowed || !items.length) return null;
+  const me = (q.data?.user ?? '').toLowerCase();
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+        <h2 className="text-[13px] font-extrabold">Çeviri işleriniz</h2>
+        <Link to="/ceviri/masam" className="text-[11.5px] font-bold text-canvas-violet underline">
+          Çeviri masam
+        </Link>
+      </div>
+      <ul className="mt-2 space-y-1.5">
+        {items.map((j) => {
+          const translator = j.translator === me;
+          const left = translator ? j.segments.bos + j.segments.taslak : j.segments.cevrildi;
+          return (
+            <li key={j.id}>
+              <Link
+                to={`/ceviri/masam/${j.id}`}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px] transition-colors duration-150 hover:bg-white"
+              >
+                <span className="min-w-0">
+                  <span className="block break-words font-semibold leading-snug">{j.title}</span>
+                  <span className="block text-[11px] text-canvas-muted">
+                    {translator ? 'Çevirmen' : 'İnceleyen'} · %{j.words.total ? Math.round((j.words.done / j.words.total) * 100) : 0} çevrildi
+                    {j.dueDate ? ` · teslim ${fmtDate(j.dueDate)}` : ''}
+                  </span>
+                </span>
+                <span className="flex shrink-0 gap-1.5">
+                  {left > 0 && <Pill tone="warn">{nf.format(left)} segment {translator ? 'bekliyor' : 'onay bekliyor'}</Pill>}
+                  {j.pace.overdue ? <Pill tone="err">Teslim geçti</Pill> : j.pace.late ? <Pill tone="warn">Gecikme riski</Pill> : null}
+                </span>
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
     </Panel>
   );
 }
@@ -380,6 +426,7 @@ export default function EditorialHome() {
             {d && <EditorTable items={d.items} todo={todo} />}
             {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} />}
             {works.data && <Desk works={desk} user={works.data.user} />}
+            <TranslationDesk />
           </div>
           <div className="space-y-3">
             <AskBox />
@@ -406,6 +453,7 @@ export default function EditorialHome() {
             <div className="space-y-3">
               {(running.length > 0 || completed.length > 0) && <MyFiles running={running} todo={todo} completed={completed} />}
               {works.data && <Desk works={desk} user={works.data.user} />}
+              <TranslationDesk />
             </div>
             {side}
           </div>
