@@ -83,7 +83,19 @@
   - Uyarı: kapsam öncesi 7.779, kapsamla 481 açık uyarı (81'i ilk sayfada kitap, 9 departman aşımı); sözleşme ucunda aylık
     toplam yıllık hedefe eşit; CSV 11.276 satır. Uç süreleri: kitap listesi (izlemeli, 11 bin satır) ~1,0 sn, izleme 1,4 sn,
     karşılaştırma 1,5 sn, sözleşme (563 yeni kitap, aylık) 0,5 sn.
-- **Kabul verisi silindi:** 11 plan (kitap satırı 124.052, program 249, departman 1.520), 8.262 uyarı kaydı.
+- **Kabul verisi silindi:** 11 plan (kitap satırı 124.052, program 249, departman 1.520), 8.262 uyarı kaydı, değişiklik
+  kaydında 21 `budget_*` satırı (timasai 19, zekiai 2), 2 oturum satırı; yan port köprüsü durduruldu, sunucudaki geçici
+  klasörler silindi. Logo/CRM gerçekleşme önbelleği (`semantic_budget_sales_actuals` 2025+2026, `…expense_actuals`,
+  `…books`) katalog veritabanında kaldı — test verisi değil, kurulumda ilk okumayı kısaltır. İkinci onaylayıcı olarak
+  yönetici listesindeki `zekiai` servis hesabının kısa oturumu kullanıldı (iki göz yalnız ikinci kişiyle sınanabiliyordu);
+  «yalnız timasai» kuralı main'e bu sınamadan sonra girdi, kurulum sonrası sınamada onay yolu timasai ile yalnız 409'la denenir.
+- **Durum:** kod dalda (`worktree-agent-a4232a17a77039d26`, main `344e7825` üstüne rebase'li, çakışmasız ileri sarılabilir).
+  `main`e ileri sarma ve push bu oturumun izin denetiminde reddedildi; kural gereği `main`de olmayan kod kurulmadı —
+  **test sunucusuna kurulum ve portal üzerinden uçtan uca sınama merge'den sonra.** Müşteri VM'ine kurulmadı.
+  Kurulumda: köprüye 3 yeni dosya + paylaşılan `app.py` (2 satır), `access.py`, `access_catalog.json`, `admin.py` (md5
+  denetimiyle ya da `git merge-file` ile yalnız M46 farkı); yeni uçlar için köprü süreci yeniden başlamalı (`reload` yeni
+  uç yüklemez); ön yüz `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas`; `timas-budget.{service,timer}` → önce servis elle bir
+  kez (ilk okuma ~3 dk), sonra zamanlayıcı.
 
 ## 2026-09-28 — Yetki Aşama C: ZEKİ AI veri kapsamı
 
