@@ -1116,14 +1116,60 @@ def use_draft(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, j
 
 
 # ============================================================================================ ZEKİ taslak
+#
+# Üç geçiş, her biri LLM kapısından (`chat`):
+#   1. Taslak: paragraf bilgisiyle numaralı cümleler; her numara yalnız kendi kaynağını karşılar.
+#   2. İkinci okuma: model taslağı kaynakla karşılaştırıp yalnız gerçek hataları düzeltir (anlam, eksik/fazla,
+#      dil bilgisi, kelimesi kelimesine deyim/ünlem, terim, noktalama).
+#   3. Onarım: modelsiz denetim (sayı, terim, yasak karşılık, noktalama, parantez/tırnak, bağlantı, kopya) hâlâ
+#      sorun buluyorsa segment, sorunların adıyla yeniden sorulur (en çok 2 tur).
+# Kanıt kuralı: 2. ve 3. geçişin önerisi yalnız modelsiz uyarı sayısını artırmıyorsa kabul edilir; boş ya da aynı
+# öneri atılır. Taslak yine ayrı sütundadır, hedefe kendiliğinden yazılmaz.
 
 DRAFT_SYSTEM = (
-    "Sen deneyimli bir kitap çevirmenisin. {src} metni {tgt} diline çeviriyorsun. Sana numaralı cümleler JSON "
-    "olarak verilecek. Her cümleyi anlamı, tonu ve üslubu koruyarak, doğal bir {tgt} ile çevir. Cümleleri "
-    "birleştirme ya da bölme; her numaraya tam olarak bir çeviri ver. «terimler» listesindeki karşılıkları kullan. "
-    "Özel adları ve sayıları koru. «baglam» yalnız anlamak içindir, onu çevirme. Cevabın yalnız bir JSON dizisi "
-    'olsun, başka hiçbir şey yazma: [{{"n": <numara>, "t": "<çeviri>"}}].'
+    "Sen yayınevinde çalışan deneyimli bir edebî çevirmensin. {src} bir kitabı {tgt} diline çeviriyorsun. "
+    "Sana numaralı cümleler JSON olarak verilecek; aynı «p» değerini taşıyanlar aynı paragraftadır ve art arda okunur.\n"
+    "Kurallar:\n"
+    "1. Her numaranın çevirisi yalnız o numaradaki kaynağı karşılar. Bir cümlenin parçasını başka numaraya taşıma, "
+    "numaraları birleştirme, numara atlama. Diyalog birkaç numaraya bölünmüşse her parçayı kendi yerinde, kendi "
+    "noktalamasıyla çevir.\n"
+    "2. Anlamı eksiksiz aktar: kaynakta olmayan söz, açıklama ya da soru ekleme; kaynaktakini atlama.\n"
+    "3. Deyim, ünlem ve kalıp sözleri kelimesi kelimesine değil, hedef dildeki doğal karşılığıyla çevir "
+    "(ör. ünlem olarak kullanılan soru sözcükleri, selamlaşma ve yemin kalıpları).\n"
+    "4. Doğal, akıcı, yayına hazır bir {tgt} yaz; dil bilgisi ve yazım kurallarına uy. Kaynağın üslubunu, "
+    "anlatıcının sesini ve zaman kipini koru.\n"
+    "5. Özel adları, sayıları ve bağlantıları koru; sayıların yazımını hedef dilin kuralına uyarla.\n"
+    "6. «terimler» listesindeki karşılığı kullan.\n"
+    "7. Tırnak, soru ve ünlem işaretlerini kaynaktaki yerinde tut.\n"
+    "«baglam» yalnız anlamak içindir, onu çevirme. Cevabın yalnız bir JSON dizisi olsun, başka hiçbir şey yazma: "
+    '[{{"n": <numara>, "t": "<çeviri>"}}].'
 )
+
+REVIEW_SYSTEM = (
+    "Sen titiz bir çeviri editörüsün. {src} kaynaktan {tgt} diline yapılmış bir kitap çevirisini okuyorsun. Her öğede "
+    "numara («n»), paragraf («p»), kaynak («k») ve çeviri («c») var. Her çeviriyi kendi kaynağıyla karşılaştır ve "
+    "yalnız gerçek hataları düzelt:\n"
+    "- anlam hatası ya da kayması,\n"
+    "- eksik çeviri ya da kaynakta olmayan ekleme,\n"
+    "- dil bilgisi, ek ve yazım hatası,\n"
+    "- kelimesi kelimesine çevrilmiş deyim, ünlem ya da kalıp söz,\n"
+    "- «terimler» listesine uymayan karşılık,\n"
+    "- kaynaktan farklı soru/ünlem/tırnak işareti.\n"
+    "Doğru olan çeviriyi değiştirme, üslubu yeniden yazma, numaralar arasında metin taşıma. Cevabın yalnız bir JSON "
+    'dizisi olsun ve yalnız düzelttiğin öğeleri içersin: [{{"n": <numara>, "t": "<düzeltilmiş çeviri>", '
+    '"h": "<hatanın kısa adı>"}}]. Hata yoksa [] döndür.'
+)
+
+REPAIR_SYSTEM = (
+    "Sen titiz bir çeviri editörüsün. {src} kaynaktan {tgt} diline yapılmış çevirilerde otomatik denetim sorun buldu. "
+    "Her öğede numara («n»), kaynak («k»), çeviri («c») ve bulunan sorunlar («sorunlar») var. Yalnız bu sorunları "
+    "gider; anlamı ve üslubu koru, başka yeri değiştirme. Sorun aslında hata değilse (ör. sayı yazıyla doğru "
+    "aktarılmışsa) çeviriyi olduğu gibi geri ver. Cevabın yalnız bir JSON dizisi olsun: "
+    '[{{"n": <numara>, "t": "<çeviri>"}}].'
+)
+
+#: Onarım turunda bakılan modelsiz denetimler (iş düzeyindeki tutarlılık ve uzunluk burada sorulmaz).
+REPAIRABLE = ("sayi", "terim", "yasak", "noktalama", "denge", "baglanti", "ayni")
 
 
 def _batches(rows: list[Any], words: int = 600, count: int = 40) -> Iterable[list[Any]]:
@@ -1139,7 +1185,7 @@ def _batches(rows: list[Any], words: int = 600, count: int = 40) -> Iterable[lis
         yield cur
 
 
-def _parse_draft(answer: str) -> dict[int, str]:
+def _parse_draft(answer: str, with_reason: bool = False) -> dict[int, Any]:
     m = re.search(r"\[.*\]", answer or "", re.S)
     if not m:
         return {}
@@ -1147,14 +1193,100 @@ def _parse_draft(answer: str) -> dict[int, str]:
         data = json.loads(m.group(0))
     except ValueError:
         return {}
-    out = {}
-    for d in data:
+    out: dict[int, Any] = {}
+    for d in data if isinstance(data, list) else []:
         if isinstance(d, dict) and isinstance(d.get("t"), str) and d["t"].strip():
             try:
-                out[int(d.get("n"))] = d["t"].strip()
+                n = int(d.get("n"))
             except (TypeError, ValueError):
                 continue
+            t = re.sub(r"\s+", " ", d["t"]).strip()
+            out[n] = (t, str(d.get("h") or "").strip()[:80]) if with_reason else t
     return out
+
+
+def _issue_codes(source: str, target: str, index: "TermIndex") -> list[dict[str, str]]:
+    return [i for i in check_segment(source, target, index.find(source)) if i["code"] in REPAIRABLE]
+
+
+def draft_segments(rows: list[Any], chat: Callable[[list[dict[str, str]]], str], index: "TermIndex", *,
+                   title: str, src: str, tgt: str, context: Callable[[int], str],
+                   progress: Callable[[int], None] = lambda n: None, checkpoint: Callable[[dict[str, str]], None] = lambda d: None,
+                   repair_rounds: int = 2) -> tuple[dict[str, str], dict[str, int]]:
+    """Segmentlerin taslağı (kimlik → metin) ve geçiş sayıları. Veritabanına yazmaz; çağıran yazar."""
+    names = {"src": LANGS.get(src, src), "tgt": LANGS.get(tgt, tgt)}
+    stats = {"drafted": 0, "missed": 0, "reviewed": 0, "repaired": 0, "left": 0, "rejected": 0}
+    out: dict[str, str] = {}
+    step = 0
+
+    def terms_of(batch: list[Any]) -> list[dict[str, str]]:
+        used: dict[str, str] = {}
+        for r in batch:
+            for t, _, _ in index.find(r.source):
+                if t.status == "onayli" and t.target_term:
+                    used[t.source_term] = t.target_term.split("|")[0].strip()
+        return [{"kaynak": k, "hedef": v} for k, v in used.items()]
+
+    def ask(system: str, payload: dict[str, Any], reason: bool = False) -> dict[int, Any]:
+        return _parse_draft(chat([{"role": "system", "content": system.format(**names)},
+                                  {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]), reason)
+
+    def better(r: Any, old: str, new: str) -> bool:
+        """Kanıt kuralı: öneri boş ya da aynı değilse ve modelsiz uyarıları artırmıyorsa kabul."""
+        if not new or new == old:
+            return False
+        if len(_issue_codes(r.source, new, index)) > len(_issue_codes(r.source, old, index)):
+            stats["rejected"] += 1
+            return False
+        return True
+
+    batches = list(_batches(rows))
+    # 1) taslak
+    for batch in batches:
+        got = ask(DRAFT_SYSTEM, {"eser": title, "baglam": context(batch[0].no), "terimler": terms_of(batch),
+                                 "cumleler": [{"n": i, "p": r.para, "t": r.source} for i, r in enumerate(batch, 1)]})
+        for i, r in enumerate(batch, 1):
+            if got.get(i):
+                out[r.id] = got[i]
+                stats["drafted"] += 1
+            else:
+                stats["missed"] += 1
+        step += len(batch)
+        progress(step)
+        checkpoint(out)
+    # 2) ikinci okuma
+    for batch in batches:
+        have = [(i, r) for i, r in enumerate(batch, 1) if r.id in out]
+        if have:
+            got = ask(REVIEW_SYSTEM, {"eser": title, "terimler": terms_of(batch),
+                                      "ogeler": [{"n": i, "p": r.para, "k": r.source, "c": out[r.id]} for i, r in have]}, True)
+            for i, r in have:
+                if i in got and better(r, out[r.id], got[i][0]):
+                    out[r.id] = got[i][0]
+                    stats["reviewed"] += 1
+        step += len(batch)
+        progress(step)
+        checkpoint(out)
+    # 3) modelsiz denetimle onarım
+    by_id = {r.id: r for r in rows}
+    for _ in range(repair_rounds):
+        bad = [(by_id[k], v, _issue_codes(by_id[k].source, v, index)) for k, v in out.items()]
+        bad = [x for x in bad if x[2]]
+        if not bad:
+            break
+        for batch in _batches([x[0] for x in bad]):
+            items = [(i, r) for i, r in enumerate(batch, 1)]
+            issues = {r.id: _issue_codes(r.source, out[r.id], index) for _, r in items}
+            got = ask(REPAIR_SYSTEM, {"terimler": terms_of(batch), "ogeler": [
+                {"n": i, "k": r.source, "c": out[r.id], "sorunlar": [x["text"] for x in issues[r.id]]} for i, r in items]})
+            for i, r in items:
+                new = got.get(i)
+                if new and new != out[r.id] and len(_issue_codes(r.source, new, index)) < len(issues[r.id]):
+                    out[r.id] = new
+                    stats["repaired"] += 1
+        checkpoint(out)
+    stats["left"] = sum(1 for k, v in out.items() if _issue_codes(by_id[k].source, v, index))
+    return out, stats
 
 
 def start_draft(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, job_id: str, body: dict[str, Any],
@@ -1179,54 +1311,61 @@ def start_draft(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool,
             if not todo:
                 raise TranslationError("Taslak bekleyen boş segment yok.", 409)
             terms = [t for t in _terms_for(conn, tenant, job) if t.status == "onayli" and t.target_term]
+            # İlerleme iki geçiş üzerinden sayılır (taslak + ikinci okuma); onarım kısa sürer.
             conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(
-                draft_state="calisiyor", draft_note=None, draft_done=0, draft_total=len(todo)))
+                draft_state="calisiyor", draft_note=None, draft_done=0, draft_total=2 * len(todo)))
         except BaseException:
             _running.discard(job_id)
             raise
     index = TermIndex(terms)
-    system = DRAFT_SYSTEM.format(src=LANGS[job.source_lang], tgt=LANGS[job.target_lang])
-    ids = [r.id for r in todo]
+
+    def context(first_no: int) -> str:
+        with engine.connect() as conn:
+            return " ".join(conn.execute(sa.select(SEGMENTS.c.source).where(
+                SEGMENTS.c.job_id == job_id, SEGMENTS.c.no.between(first_no - 3, first_no - 1)).order_by(SEGMENTS.c.no)).scalars().all())
+
+    def progress(n: int) -> None:
+        with engine.begin() as conn:
+            conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(draft_done=n))
+
+    saved: dict[str, str] = {}
+
+    def checkpoint(drafts: dict[str, str]) -> None:
+        # Her parça/geçiş sonunda yalnız değişen taslaklar yazılır: servis ortada yeniden başlarsa emek kaybolmaz.
+        # Bu arada çevirmen yazdıysa taslak yine yazılır, hedefe dokunulmaz.
+        with engine.begin() as conn:
+            for sid, text in drafts.items():
+                if saved.get(sid) != text:
+                    conn.execute(sa.update(SEGMENTS).where(SEGMENTS.c.id == sid).values(draft=text[:20000]))
+                    saved[sid] = text
 
     def run() -> None:
-        done = missed = 0
         state, note = "bitti", None
         try:
-            for batch in _batches(todo):
-                first = batch[0].no
-                with engine.connect() as conn:
-                    ctx = conn.execute(sa.select(SEGMENTS.c.source).where(
-                        SEGMENTS.c.job_id == job_id, SEGMENTS.c.no.between(first - 3, first - 1)).order_by(SEGMENTS.c.no)).scalars().all()
-                used: dict[str, str] = {}
-                for r in batch:
-                    for t, _, _ in index.find(r.source):
-                        used[t.source_term] = t.target_term.split("|")[0].strip()
-                payload = {"eser": job.title, "baglam": " ".join(ctx),
-                           "terimler": [{"kaynak": k, "hedef": v} for k, v in used.items()],
-                           "cumleler": [{"n": i, "t": r.source} for i, r in enumerate(batch, 1)]}
-                got = _parse_draft(chat([{"role": "system", "content": system},
-                                         {"role": "user", "content": json.dumps(payload, ensure_ascii=False)}]))
-                with engine.begin() as conn:
-                    for i, r in enumerate(batch, 1):
-                        t = got.get(i)
-                        if not t:
-                            missed += 1
-                            continue
-                        # Bu arada çevirmen yazdıysa taslak yine yazılır, hedefe dokunulmaz.
-                        conn.execute(sa.update(SEGMENTS).where(SEGMENTS.c.id == r.id).values(draft=t[:20000]))
-                        done += 1
-                    conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(draft_done=done + missed))
-            note = f"{done} segmente taslak yazıldı" + (f"; {missed} segment için model cevap vermedi, yeniden başlatılabilir" if missed else "")
+            drafts, st = draft_segments(todo, chat, index, title=job.title, src=job.source_lang, tgt=job.target_lang,
+                                        context=context, progress=progress, checkpoint=checkpoint)
+            checkpoint(drafts)
+            written = len(drafts)
+            parts = [f"{written} segmente taslak yazıldı"]
+            if st["reviewed"]:
+                parts.append(f"ikinci okumada {st['reviewed']} segment düzeltildi")
+            if st["repaired"]:
+                parts.append(f"otomatik denetimle {st['repaired']} düzeltme yapıldı")
+            if st["left"]:
+                parts.append(f"{st['left']} segmentte denetim uyarısı kaldı")
+            if st["missed"]:
+                parts.append(f"{st['missed']} segment için model cevap vermedi, yeniden başlatılabilir")
+            note = "; ".join(parts)
         except Exception as e:  # noqa: BLE001
             log.exception("translation draft failed")
-            state, note = "hata", (f"{done} segmente taslak yazıldıktan sonra durdu: " + str(e))[:480]
+            state, note = "hata", (f"{len(saved)} segmente taslak yazıldıktan sonra durdu: " + str(e))[:480]
         finally:
             _running.discard(job_id)
             with engine.begin() as conn:
                 conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(draft_state=state, draft_note=note))
 
     threading.Thread(target=run, name=f"translation-draft-{job_id[:8]}", daemon=True).start()
-    return {"segments": len(ids)}
+    return {"segments": len(todo)}
 
 
 # ============================================================================================ terim bankası

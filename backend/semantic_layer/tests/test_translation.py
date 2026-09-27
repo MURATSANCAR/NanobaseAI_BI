@@ -207,3 +207,36 @@ def test_access_rules_for_translation():
     assert A.features_for("DELETE", "/api/v1/editorial/translation/terms/x") == ["ozellik:ceviri.terim"]
     assert A.features_for("GET", "/api/v1/editorial/translation/jobs/x/export.docx") == ["ozellik:veri.disa-aktar"]
     assert A.features_for("GET", "/api/v1/editorial/translation/jobs/x/export.xlf") == []
+
+
+class _Seg:
+    def __init__(self, i, no, para, src):
+        self.id, self.no, self.para, self.source, self.words = i, no, para, src, T.word_count(src)
+
+
+def test_draft_review_and_repair_passes_with_evidence_rule():
+    """Taslak → ikinci okuma → modelsiz denetimle onarım. İkinci okumanın uyarıyı artıran önerisi atılır; onarım
+    yalnız uyarıyı azaltıyorsa kabul edilir. Sahte model: gerçek modelin cevap biçimi (JSON dizisi)."""
+    import json as _json
+    rows = [_Seg("a", 1, 1, "He paid 1,000 coins."), _Seg("b", 2, 1, "Why, it was the White Rabbit!"),
+            _Seg("c", 3, 2, "Nobody came.")]
+    idx = T.TermIndex([_Term("White Rabbit", "Beyaz Tavşan", id_="w")])
+    calls = []
+
+    def chat(messages):
+        system, payload = messages[0]["content"], _json.loads(messages[1]["content"])
+        calls.append(system[:30])
+        if "cumleler" in payload:                      # 1) taslak: sayı yanlış, deyim kelimesi kelimesine, terim yok
+            assert [c["p"] for c in payload["cumleler"]] == [1, 1, 2]
+            assert payload["terimler"] == [{"kaynak": "White Rabbit", "hedef": "Beyaz Tavşan"}]
+            return _json.dumps([{"n": 1, "t": "2.000 sikke ödedi."}, {"n": 2, "t": "Neden, Ak Tavşan'dı!"},
+                                {"n": 3, "t": "Kimse gelmedi."}])
+        if "sorunlar" in _json.dumps(payload, ensure_ascii=False):   # 3) onarım: sayıyı düzeltir
+            return _json.dumps([{"n": o["n"], "t": "1.000 sikke ödedi."} for o in payload["ogeler"]])
+        # 2) ikinci okuma: 2'yi düzeltir; 3'ü bozar (noktalamayı siler) → kanıt kuralı reddeder
+        return _json.dumps([{"n": 2, "t": "Aa, Beyaz Tavşan'dı!", "h": "deyim"}, {"n": 3, "t": "Kimse gelmedi", "h": "x"}])
+
+    out, st = T.draft_segments(rows, chat, idx, title="t", src="en", tgt="tr", context=lambda n: "")
+    assert out == {"a": "1.000 sikke ödedi.", "b": "Aa, Beyaz Tavşan'dı!", "c": "Kimse gelmedi."}
+    assert st["drafted"] == 3 and st["reviewed"] == 1 and st["rejected"] == 1 and st["repaired"] == 1 and st["left"] == 0
+    assert len(calls) == 3
