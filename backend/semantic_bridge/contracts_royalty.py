@@ -130,7 +130,7 @@ def fold_sales(rows: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
         code = str(r.get("kod") or "").strip()
         if not code:
             continue
-        ret = str(r.get("tur") or "").strip().lower().startswith("iade")
+        ret = str(r.get("tur") or "").strip().replace("İ", "i").lower().startswith("iade")  # "İade".lower() = "i̇ade"
         acc = out.setdefault(code, {"qty": 0.0, "net": 0.0, "list": 0.0, "retQty": 0.0})
         q, n, l = (float(r.get(k) or 0) for k in ("miktar", "net", "liste"))
         if ret:
