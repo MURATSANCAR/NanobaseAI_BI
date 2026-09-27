@@ -111,7 +111,7 @@ sayımdan düşer, yalnız yenisi sayılır (sürüm farklıysa ikisi kendi sür
 
 **Ekran:** taşınan «yanlış alarm» varsayılan listede yok, sayaçlara (hata/uyarı/bilgi, denetim çipleri, KPI) girmez;
 «N bulgu önceki okumadaki yanlış alarm kararıyla gizlendi» notu; «karar verilenler» süzgecinde «önceki okumada yanlış alarm»
-rozetiyle ve satırdaki «Geri al» ile. Taşınan «doğru» listede kalır («önceki okumada doğru»). Word'e aktarımda taşınan
+rozetiyle ve satırın altındaki «Geri al» ile. Taşınan «doğru» listede kalır («önceki okumada doğru»). Word'e aktarımda taşınan
 yanlış alarm da hariç. Denetim çipinde `hidden` = gizlenen sayısı.
 
 **Kuru koşu (2026-09-27, canlı veritabanı, yalnız okuma):**

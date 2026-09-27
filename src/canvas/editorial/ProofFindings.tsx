@@ -101,13 +101,13 @@ function FindingRow({ r, active, onPick, rowRef, onUndo, busy }: { r: Row; activ
   // Önceki okumada «doğru» denmiş bulgu bekleyen iş gibi durur (soluklaşmaz); öbür kararlılar soluk.
   const dim = d && !(d.inherited && d.verdict === 'ACCEPT');
   return (
-    <li className="flex flex-col gap-1 sm:flex-row sm:items-stretch sm:gap-1.5">
+    <li className="flex flex-col gap-1">
       <button
         ref={rowRef}
         type="button"
         aria-current={active ? 'true' : undefined}
         onClick={onPick}
-        className={`grid min-w-0 flex-1 grid-cols-[auto_minmax(0,1fr)] gap-x-2 rounded-xl border px-2.5 py-2 text-left text-[12.5px] transition-[background-color,box-shadow] duration-150 ease-out ${
+        className={`grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2 rounded-xl border px-2.5 py-2 text-left text-[12.5px] transition-[background-color,box-shadow] duration-150 ease-out ${
           active ? 'border-canvas-violet/50 bg-canvas-violet/[0.06] shadow-[inset_2px_0_0_0_#7C5CFF]' : `border-slate-100 bg-white/85 [@media(hover:hover)]:hover:bg-slate-50 ${dim ? 'opacity-70' : ''}`
         }`}
       >
@@ -130,7 +130,7 @@ function FindingRow({ r, active, onPick, rowRef, onUndo, busy }: { r: Row; activ
           onClick={onUndo}
           disabled={busy}
           title={`Önceki okumanın kararı bu bulguya uygulanmaz; bulgu yeniden listeye girer (${inheritedLabel(f)}).`}
-          className={`${btnGhost} shrink-0 self-end px-3 text-[11.5px] sm:self-auto`}
+          className={`${btnGhost} self-end px-3 text-[11.5px]`}
         >
           Geri al
         </button>
