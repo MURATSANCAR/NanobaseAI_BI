@@ -1,5 +1,29 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (01:20) — Sesli okuma yenilikleri + son okuma (sade metin, karar taşıma) kuruldu: GPU ve test sunucusu (main `3e1a408c`)
+
+- **GPU:** `releases/3e1a408c` (`._*` 0); `editor-py:0.15.9-3e1a408c`, stüdyo `editor-py-studio:0.15.9-3e1a408c` (tam
+  e-kitap denetimi, sabit «sıcak masalcı» referansı), ses `editor-voice:2` (ifade katmanı). Sekiz Python servisi bu
+  sürümde; önceki kurulum `fc63d52d` main'in içinde (geriye sarma yok). `028_proof_decision_carry` zaten uygulanmıştı.
+  Giriş kapısı: sesli e-kitap önizleme (SMIL/MP3), ses kütüphanesi (245 MB), `plan/prepare`, ifade yolları; kopyada
+  `nginx -t` geçti, ikinci koşu «zaten var». Gateway yenilenirken başka oturumun toplu işi (`rt-all-books3`) ve efekt
+  hattının taramaları sürüyordu; taramalar yeniden deniyor, toplu iş kitap kitap devam etti.
+- **Test sunucusu:** Mac'ten SSH ve portal kesik kesik zaman aşımına düştü (sunucu GPU'dan erişilebilirdi); kullanıcı
+  onayıyla GPU üzerinden tek kalıcı bağlantı (ControlMaster) kullanıldı. Sunucuda başka oturumun main'de olmayan canlı
+  işi vardı (portalda CRM sözleşme düzenleme: `app.py`, `access.py`, `access_catalog.json`, `App.tsx`, `engine.ts`,
+  `navModel.ts`, `contracts/*`); main'deki editör atama henüz kurulmamış. Bu yüzden yalnız bu işin dosyaları kuruldu:
+  köprüde 4 dosya (`editorial_cards`, `editorial_studio_{epub,narration,reader}`; canlıdaki hâlleri eski main sürümü),
+  ön yüzde 21 dosya + `engine.ts` (canlı hâl ile main üç yönlü birleştirildi: sözleşme alanları + karar taşıma ve
+  `plan.prepare`; editör atama tipleri girmedi — sahibi kuracak). Önce canlı kaynağın kopyasında tsc + 47/47 test,
+  sonra canlı derleme; `cockpit/dist` yedeği `dist.bak-20260928-011457`, portal `index-DKT_lr9f.js`. Portal nginx'e ses
+  yükleme ucu için 250 MB (oturum denetimi iç isteğinde `client_max_body_size 0` zaten vardı).
+- **Doğrulama (köprü → GPU):** ses kütüphanesi 31 ses (sıcak masalcı + 6 canlı), deneme işinde sesli okuma 4/4 sayfa
+  hazır, ifade ucu cümle cümle dönüyor, eski Etimesgutlu işinde `plan/prepare` önce 409 PREPARING sonra ready (plan
+  kuruldu), sesli e-kitap seçeneği hazır (4 sayfa, 80 sn). Son okuma: Levent'te önceki okumadaki «doğru» kararı
+  taşınıyor (418 bulgu, 1 taşınan), bulgu metinleri sade dille («Bu sayfada metnin yazısı kitabın geri kalanından
+  küçük…», ayrıntı ayrı).
+- **Kalan:** müşteri VM'i (onayla); yeni stüdyo işlemlerinin rol kapısına bağlanması; efekt sesi havuzu (sürüyor).
+
 ## 2026-09-27 (gece) — Son okuma: aynı kitapta hatırlama (editör kararı yeniden okumaya taşınır)
 
 - **Neden:** kullanıcı kararı — yeniden okumada aynı bulgu (aynı denetim, aynı sayfa ya da aynı alıntı) önceki kararı
