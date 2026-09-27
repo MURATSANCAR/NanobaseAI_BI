@@ -6,9 +6,11 @@ import { ENGINE_BASE, EngineAuthError, freshHeaders } from '../../../engine';
  *  (NO_PLAN, PREPARING, PLAN_FAILED, NO_VOICE, BUSY, NOTHING) `NarrationError.code` ile ekrana taşınır. Planı olmayan
  *  işte ilk açılış sayfa düzenini kendiliğinden kurar: kurulum sürerken 409 PREPARING (`state`: preparing | waiting). */
 
-/** Ses: tarifle tasarlanmış (gerçek kişi kaydı yok) ya da ses kütüphanesine hak beyanıyla yüklenmiş (`uploaded`). */
+/** Ses: tarifle tasarlanmış (gerçek kişi kaydı yok) ya da ses kütüphanesine hak beyanıyla yüklenmiş (`uploaded`).
+ *  `recommended`: grubunda önerilen ses (erkek anlatıcıların en üstünde; sunucu sırayı verir). */
 export type NarrationVoice = {
   id: string; label: string; note: string; group: 'anlatici' | 'cocuk' | 'yetiskin' | 'karakter' | string;
+  recommended?: boolean;
   uploaded?: boolean; owner?: string | null; by?: string | null; at?: string | null; document?: boolean;
   reference?: string | null; duration?: number | null; removed?: { by: string; at: string } | null;
 };

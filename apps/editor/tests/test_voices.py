@@ -186,3 +186,39 @@ def test_voice_endpoints(root, monkeypatch):
     assert r.status_code == 200 and r.json()["voice"]["removed"]
     lib = c.get("/v1/studio/voices", headers=h).json()
     assert vid not in {v["id"] for v in lib["voices"]} and vid in {v["id"] for v in lib["removed"]}
+
+
+def test_default_male_narrator_uses_pinned_reference(root, monkeypatch, tmp_path_factory):
+    """Önerilen erkek anlatıcı tariften yeniden üretilmez: kullanıcının dinlediği referans kayıt pakette sabit (sha256
+    kodda). Eski kimlik aynı kayda gider; kayıt yoksa ya da değişmişse ses üretilmez (başka ses sessizce gelmez)."""
+    import hashlib
+    vid = N.DEFAULT_MALE_NARRATOR
+    meta = N.PINNED[vid]
+    data = (N.PINNED_DIR / meta["file"]).read_bytes()
+    assert hashlib.sha256(data).hexdigest() == meta["sha256"]
+    w = wave.open(io.BytesIO(data))
+    assert w.getnchannels() == 1 and 7.0 < w.getnframes() / w.getframerate() < 10.0
+    assert meta["text"] == N.REF_TEXT
+    calls = []
+    monkeypatch.setattr(N, "_call", _fake_service(calls))
+    for v in (vid, "anlatici-erkek"):
+        ref = asyncio.run(N.voice_ref(v))
+        assert base64.b64decode(ref["ref_audio"]) == data and ref["ref_text"] == N.REF_TEXT
+    assert calls == [] and not (N._root() / "sesler" / f"{vid}.wav").exists()   # model çağrılmadı, klasöre yazılmadı
+    # sayfa bu referansla okunur
+    job = root / "20260927000000abcdef"
+    N.set_settings(job, "anlatici-erkek", {}, "editör")
+    asyncio.run(N.narrate_page(job, "p_1", "editör"))
+    assert calls and all(s["voice"]["ref_audio"] == base64.b64encode(data).decode()
+                         for s in calls[-1]["segments"])
+    # kayıt bozuk / eksik: üretim durur
+    bad = tmp_path_factory.mktemp("sesler")
+    (bad / meta["file"]).write_bytes(data[:-10] + b"0123456789")
+    monkeypatch.setattr(N, "PINNED_DIR", bad)
+    N._pinned_ok.clear()
+    with pytest.raises(N.PinnedVoiceMissing, match="beklenen kayıt değil"):
+        asyncio.run(N.voice_ref(vid))
+    (bad / meta["file"]).unlink()
+    with pytest.raises(N.PinnedVoiceMissing, match="yok"):
+        asyncio.run(N.voice_ref(vid))
+    N._pinned_ok.clear()

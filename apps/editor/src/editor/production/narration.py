@@ -21,7 +21,8 @@ arasından harf sayısıyla orantılı tahmin edilir (`estimated`).
     sayfa/<pid>.json    zamanlar (media_overlay'deki sayfa kaydı) + girdinin özeti (hash): metin, ses ya da sözlük
                         değişince sayfa «güncel değil» görünür
 Yayınevi düzeyinde (`<storage>/production/_ses/`): sozluk.json (yayınevi sözlüğü), sesler/<ses>.wav|json (her ses bir
-kez tarifle üretilen referans; sonra hep o referansla okunur, kitap boyunca aynı ses kalır).
+kez tarifle üretilen referans; sonra hep o referansla okunur, kitap boyunca aynı ses kalır). Önerilen erkek anlatıcının
+referansı pakette sabittir (`production/sesler/`, PINNED; sha256 kodda), yayınevi klasörüne yazılmaz.
 
 EPUB bağlantısı: `media_overlay(job)` bütün kitabın kelime zamanlarını verir, `smil(...)` bir sayfanın SMIL 3.0
 belgesini yazar (EPUB 3 Media Overlays). Biçim `media_overlay`'in belgesinde.
@@ -61,8 +62,11 @@ def _v(vid: str, label: str, note: str, group: str, design: str) -> dict:
 VOICES: list[dict] = [
     _v("anlatici-kadin", "Kadın anlatıcı", "sıcak, sakin", "anlatici",
        "A warm, calm middle-aged woman storyteller, clear gentle diction, unhurried pace"),
-    _v("anlatici-erkek", "Erkek anlatıcı", "derin, yumuşak", "anlatici",
-       "A calm middle-aged man storyteller with a deep, soft and friendly voice, clear diction, unhurried pace"),
+    # Önerilen erkek anlatıcı (DEFAULT_MALE_NARRATOR): referansı sabit kayıttır (PINNED), tariften yeniden üretilmez.
+    _v("anlatici-erkek-masalci", "Erkek anlatıcı · sıcak masalcı", "olgun, kadifemsi, yavaş", "anlatici",
+       "A warm, mature man in his late forties telling a bedtime story to small children: deep, velvety, gentle voice "
+       "with a soft smile in it, slow calm pace, very clear Turkish diction, natural pauses at commas and full stops, "
+       "tender emphasis on key words"),
     _v("anlatici-kadin-berrak", "Kadın · berrak anlatıcı", "net, dengeli, her kitaba", "anlatici",
        "A clear, confident female narrator in her early forties with a warm mid-range voice, even steady pace, "
        "precise Turkish diction, friendly neutral tone that suits any book"),
@@ -72,10 +76,6 @@ VOICES: list[dict] = [
     _v("anlatici-kadin-canli", "Kadın · canlı anlatıcı", "ifadeli, ölçülü", "anlatici",
        "An expressive woman in her thirties with a bright, engaging female voice, lively yet controlled pace, clear "
        "Turkish diction, natural storytelling intonation with light emphasis"),
-    _v("anlatici-erkek-masalci", "Erkek · sıcak masalcı", "olgun, kadifemsi, yavaş", "anlatici",
-       "A warm, mature man in his late forties telling a bedtime story to small children: deep, velvety, gentle voice "
-       "with a soft smile in it, slow calm pace, very clear Turkish diction, natural pauses at commas and full stops, "
-       "tender emphasis on key words"),
     _v("anlatici-erkek-abi", "Erkek · anlatıcı ağabey", "genç, içten, sakin", "anlatici",
        "A young man in his early thirties with a soft low male voice reading a bedtime story, warm big-brother tone, "
        "calm measured pace, clear Turkish diction"),
@@ -130,13 +130,56 @@ VOICES: list[dict] = [
 ]
 VOICE_IDS = {v["id"] for v in VOICES}
 DEFAULT_NARRATOR = "anlatici-kadin"
+# Erkek anlatıcı istendiğinde kullanılan ses (kullanıcı kararı 2026-09-27: «sıcak masalcı»). Eski «Erkek anlatıcı»
+# (`anlatici-erkek`) bu sese yönlenir: kayıtlı ayar ve API isteği çalışır, ekranda ayrı satır olarak görünmez.
+DEFAULT_MALE_NARRATOR = "anlatici-erkek-masalci"
+ALIASES = {"anlatici-erkek": DEFAULT_MALE_NARRATOR}
+RECOMMENDED = {DEFAULT_MALE_NARRATOR}
 # Referans cümle: Türkçe seslerin hepsini (ı, ğ, ş, ç, ö, ü) taşır; ses bir kez bununla üretilir, sonra klonlanır.
 REF_TEXT = "Bir varmış bir yokmuş; dağların eteğinde, şirin bir köyde, meraklı ve güler yüzlü bir çocuk yaşarmış."
 REF_SEED = 20260925
+# Sabit referanslar: aynı tarif ve tohum çalıştırmadan çalıştırmaya biraz farklı ses verebildiği için, kullanıcının
+# dinleyip seçtiği referans kaydın kendisi pakette durur (`production/sesler/<ses>.wav`, imajla gelir) ve sha256'sı
+# burada sabittir. Kayıt modelin tariften ürettiği sestir (REF_TEXT, REF_SEED; 48 kHz tek kanal, 8,5 sn, temel frekans
+# 87 Hz), gerçek kişi kaydı değildir. Dosya yoksa ya da özeti tutmazsa ses üretilmez (tariften sessizce başka bir ses
+# üretilmez). Seçim ve ölçüm: docs/analiz/sesli-okuma-model-secimi.md «Ses kütüphanesi».
+PINNED_DIR = Path(__file__).with_name("sesler")
+PINNED = {
+    "anlatici-erkek-masalci": {"file": "anlatici-erkek-masalci.wav", "text": REF_TEXT,
+                               "sha256": "41c9a3b283e3ceaed33a5e93ce8ef7b21ef3ae12210ff007399ceeecdcffc785"},
+}
+_pinned_ok: dict[str, tuple[float, int]] = {}
+
+
+class PinnedVoiceMissing(ValueError):
+    """Sabit referans kaydı kurulumda yok ya da bozuk (ekrana Türkçe cümleyle gider)."""
+
+
+def canonical(vid: str | None) -> str | None:
+    """Eski ses kimliklerini (ALIASES) güncel sese çevirir; bilinmeyeni olduğu gibi bırakır."""
+    return ALIASES.get(vid, vid) if vid else vid
+
+
+def pinned_ref(vid: str) -> bytes:
+    """Sabit referans kaydının baytları; sha256 tutmazsa PinnedVoiceMissing. Özet dosya değişmedikçe bir kez hesaplanır."""
+    meta = PINNED[vid]
+    p = PINNED_DIR / meta["file"]
+    try:
+        st = p.stat()
+        data = p.read_bytes()
+    except OSError:
+        raise PinnedVoiceMissing("Önerilen erkek anlatıcının ses kaydı bu kurulumda yok; kurulum denetlenmeli.") from None
+    key = (st.st_mtime, st.st_size)
+    if _pinned_ok.get(vid) != key:
+        if hashlib.sha256(data).hexdigest() != meta["sha256"]:
+            raise PinnedVoiceMissing("Önerilen erkek anlatıcının ses kaydı beklenen kayıt değil; kurulum denetlenmeli.")
+        _pinned_ok[vid] = key
+    return data
 
 
 def voice(vid: str) -> dict:
-    """Tarifli ses ya da kütüphaneye yüklenmiş ses (kaldırılmış olsa da; `removed` alanıyla)."""
+    """Tarifli ses ya da kütüphaneye yüklenmiş ses (kaldırılmış olsa da; `removed` alanıyla). Eski kimlik güncel sese."""
+    vid = canonical(vid)
     for v in VOICES:
         if v["id"] == vid:
             return v
@@ -151,16 +194,18 @@ def is_voice(vid: str | None) -> bool:
     """Seçilebilir ses mi (tarifli ya da kütüphanede kaldırılmamış yüklenmiş ses)."""
     if not vid:
         return False
-    if vid in VOICE_IDS:
+    if vid in VOICE_IDS or vid in ALIASES:
         return True
     from . import voices
     return bool(voices.VID.match(vid)) and vid in voices.active_ids()
 
 
 def all_voices() -> list[dict]:
-    """Ekrandaki ses listesi: tarifli sesler + kütüphanede kaldırılmamış yüklenmiş sesler (grup sırasıyla)."""
+    """Ekrandaki ses listesi: tarifli sesler + kütüphanede kaldırılmamış yüklenmiş sesler (grup sırasıyla). Önerilen
+    ses (`recommended`) grubunda varsayılan anlatıcının hemen ardından, erkek anlatıcıların en üstünde gelir."""
     from . import voices
-    out = [{k: v[k] for k in ("id", "label", "note", "group")} for v in VOICES]
+    out = [{**{k: v[k] for k in ("id", "label", "note", "group")},
+            **({"recommended": True} if v["id"] in RECOMMENDED else {})} for v in VOICES]
     out += [voices.as_voice(r) for r in voices.entries()]
     order = list(GROUPS)
     return sorted(out, key=lambda v: order.index(v["group"]) if v["group"] in order else len(order))
@@ -583,8 +628,8 @@ def page_units(pg: dict, cfg: dict, lex: Lexicon) -> list[Unit]:
     """Sayfanın okunacak birimleri, okuma sırasıyla: kutular yukarıdan aşağı, soldan sağa (resmin üstündeki
     balonlar metinden önce okunur); yazı kutusundaki bloklar kendi sırasıyla. Şekil yazısı (tabela, rozet) süstür,
     okunmaz."""
-    narrator = cfg.get("narrator") or DEFAULT_NARRATOR
-    chars = cfg.get("characters") or {}
+    narrator = canonical(cfg.get("narrator")) or DEFAULT_NARRATOR
+    chars = {k: canonical(v) for k, v in (cfg.get("characters") or {}).items()}
     items: list[tuple[float, float, int, list[Unit]]] = []
     order = 0
 
@@ -779,7 +824,9 @@ def settings_of(d: Path) -> dict:
     """Sesler: anlatıcı + konuşan → ses. Kayıt yoksa karakter tariflerinden öneri (source: auto)."""
     cfg = _read(d / DIR / "ayar.json")
     if cfg:
-        return cfg
+        # eski kimlik (anlatici-erkek) güncel sese: ekran seçili sesi listede bulur, sayfalar yeni sesle «güncel değil»
+        return {**cfg, "narrator": canonical(cfg.get("narrator")) or DEFAULT_NARRATOR,
+                "characters": {k: canonical(v) for k, v in (cfg.get("characters") or {}).items()}}
     from . import studio
     chars = {}
     ap = studio.read(d, "artplan.json") or {}
@@ -796,7 +843,7 @@ def set_settings(d: Path, narrator: str, characters: dict, by: str) -> dict:
     bad = [v for v in characters.values() if not is_voice(v)]
     if bad:
         raise ValueError("Bilinmeyen ses: " + ", ".join(bad))
-    cfg = {"narrator": narrator, "characters": {str(k)[:120]: v for k, v in characters.items()},
+    cfg = {"narrator": canonical(narrator), "characters": {str(k)[:120]: canonical(v) for k, v in characters.items()},
            "source": "editor", "updated_by": by, "updated_at": _now()}
     _write(ses_dir(d) / "ayar.json", cfg)
     return cfg
@@ -930,9 +977,14 @@ async def available() -> bool:
 
 
 async def voice_ref(vid: str) -> dict:
-    """Sesin referansı (yayınevi düzeyinde, bir kez): tarifle üretilir, sonra hep bununla klonlanır. Kütüphaneye
+    """Sesin referansı (yayınevi düzeyinde, bir kez): tarifle üretilir, sonra hep bununla klonlanır. Sabit referanslı
+    seste (PINNED) paketteki seçilmiş kayıttır. Kütüphaneye
     yüklenmiş seste referans kaydın kendisidir (metinsiz: model yalnız sesi örnek alır); kaldırılmış ses kullanılmaz."""
+    vid = canonical(vid)
     v = voice(vid)
+    if vid in PINNED:
+        # seçilmiş sabit kayıt: tariften yeniden üretilmez (üretim her seferinde biraz farklı ses verebilir)
+        return {"ref_audio": base64.b64encode(pinned_ref(vid)).decode(), "ref_text": PINNED[vid]["text"]}
     if v.get("uploaded"):
         if v.get("removed"):
             raise ValueError(f"«{v['label']}» sesi kütüphaneden kaldırıldı; başka bir ses seçin.")
@@ -991,6 +1043,7 @@ async def sample(text: str, vid: str, lex: Lexicon) -> bytes:
     spoken = spoken_text(words)
     if not spoken.strip():
         raise ValueError("Okunacak metin yok")
+    vid = canonical(vid)
     ref = await voice_ref(vid)
     key = _hash({"v": VERSION, "voice": vid, "ref": hashlib.sha256(ref["ref_audio"].encode()).hexdigest(),
                  "text": spoken})
@@ -1058,7 +1111,7 @@ def media_overlay(job) -> dict:
                       "duration": rec["duration"], "blocks": rec["blocks"]})
         total += float(rec["duration"] or 0)
     cfg = settings_of(d)
-    used = {cfg.get("narrator") or DEFAULT_NARRATOR} | set((cfg.get("characters") or {}).values())
+    used = {cfg.get("narrator") or DEFAULT_NARRATOR} | set((cfg.get("characters") or {}).values())  # settings_of: güncel kimlik
     return {"version": VERSION, "job": d.name, "format": "mp3", "complete": not missing and not stale,
             "duration": round(total, 3), "missing": missing, "stale": stale,
             "narrator": cfg.get("narrator") or DEFAULT_NARRATOR,

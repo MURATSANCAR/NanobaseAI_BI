@@ -4,7 +4,7 @@ import { press } from '../shared';
 import { voicesApi, type NarrationVoice } from './api';
 
 /** Ses seçimi: kütüphane grup başlıklarıyla (Anlatıcı, Çocuk kitabı anlatıcısı, Yetişkin kitap okuyucusu, Karakter
- *  sesleri) ve her sesin yanında «dinle» (kısa örnek; sunucu ses başına bir kez üretir, sonra hemen çalar). Yüklenmiş
+ *  sesleri; önerilen ses rozetli, sunucunun verdiği sırayla erkek anlatıcıların en üstünde) ve her sesin yanında «dinle» (kısa örnek; sunucu ses başına bir kez üretir, sonra hemen çalar). Yüklenmiş
  *  seste sahibinin adı ve izin belgesi bağlantısı. Liste yerinde açılır (telefonda da tam genişlik), açılış hareketsiz:
  *  gün içinde defalarca açılan bir seçici. Seçince kapanır; Esc kapatır ve odağı düğmeye döndürür. */
 
@@ -66,7 +66,7 @@ export default function VoicePicker({ id, value, voices, groups, onChange, onPla
             <div key={g} className="mt-1 first:mt-0">
               <p className="px-2 pb-1 pt-2 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{groups[g]}</p>
               {list.map((v) => (
-                <Row key={v.id} selected={v.id === value} onPick={() => pick(v.id)} title={v.label}
+                <Row key={v.id} selected={v.id === value} onPick={() => pick(v.id)} title={v.label} recommended={v.recommended}
                   note={v.uploaded ? `yüklenen ses · ${v.owner ?? ''}` : v.note}
                   extra={v.uploaded && v.document ? (
                     <a href={voicesApi.documentUrl(v.id)} target="_blank" rel="noopener noreferrer"
@@ -90,8 +90,8 @@ export default function VoicePicker({ id, value, voices, groups, onChange, onPla
   );
 }
 
-function Row({ selected, onPick, title, note, extra, play }: {
-  selected: boolean; onPick: () => void; title: string; note: string; extra?: ReactNode; play?: ReactNode;
+function Row({ selected, onPick, title, note, extra, play, recommended }: {
+  selected: boolean; onPick: () => void; title: string; note: string; extra?: ReactNode; play?: ReactNode; recommended?: boolean;
 }) {
   return (
     <div className={`flex items-center gap-1.5 rounded-xl px-1 ${selected ? 'bg-violet-50/80' : ''}`}>
@@ -101,7 +101,10 @@ function Row({ selected, onPick, title, note, extra, play }: {
           {selected && <Check className="h-3 w-3" aria-hidden />}
         </span>
         <span className="min-w-0">
-          <span className="block truncate text-[13px] font-bold">{title}</span>
+          <span className="flex min-w-0 items-center gap-1.5">
+            <span className="truncate text-[13px] font-bold">{title}</span>
+            {recommended && <span className="shrink-0 rounded-full bg-violet-100 px-1.5 py-0.5 text-[10px] font-bold text-canvas-violet">önerilen</span>}
+          </span>
           {note && <span className="block truncate text-[11px] text-canvas-muted">{note}</span>}
         </span>
       </button>
