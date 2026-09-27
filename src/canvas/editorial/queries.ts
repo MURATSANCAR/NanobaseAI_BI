@@ -152,7 +152,7 @@ export const assignPendingOptions = (q: string, status: string, category: string
   queryOptions({
     queryKey: assignKeys.pending(q, status, category, page),
     queryFn: () =>
-      assignApi.pending({ q, status: status ? status.split('|').map(Number) : undefined, category: category || undefined, page }),
+      assignApi.pending({ q, status: status || undefined, category: category || undefined, page }),
     enabled: ENGINE_ENABLED,
     placeholderData: keepPreviousData,
   });

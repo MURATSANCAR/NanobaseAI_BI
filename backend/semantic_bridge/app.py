@@ -4133,12 +4133,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                        page: int = 0) -> dict[str, Any]:
         engine, tenant, user, schema, run = _asg(request)
         year = _asg_since(since)
-        codes = [int(c) for c in status.split("|") if c.strip().lstrip("-").isdigit()] if status else list(assign_mod.WORK_STATUSES)
+        # Boş = ilk açılış süzgeci (iş durumları); «hepsi» = durum süzgeci yok.
+        codes = ([] if status == "hepsi" else [int(c) for c in status.split("|") if c.strip().isdigit()]) if status \
+            else list(assign_mod.WORK_STATUSES)
         flt = {"statuses": codes, "since_year": year, "exclude": assign_mod.open_project_ids(engine, tenant), "q": q,
                "category": category}
         total = int(editorial_mod._n((run(_asg_call(assign_mod.pending_count_sql, schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
         res = run(_asg_call(assign_mod.pending_list_sql, schema, page, **flt))
-        facets = run(assign_mod.pending_facets_sql(schema, year))
+        facets = run(assign_mod.pending_facets_sql(schema, year, flt["exclude"]))
         return {"items": [assign_mod.project_row(r) for r in res.get("records") or []], "total": total,
                 "page": max(0, int(page)), "pageSize": editorial_mod.PAGE_SIZE, "sinceYear": year, "statuses": codes,
                 "defaultStatuses": list(assign_mod.WORK_STATUSES),

@@ -1484,7 +1484,8 @@ export type CalendarRow = {
 export type CrmMe = { id: string; name: string | null; disabled: boolean };
 
 export const assignApi = {
-  pending: (p: { q?: string; status?: number[]; category?: string; page?: number }) =>
+  /** status: '100000019|100000020' gibi kodlar, 'hepsi' ya da boş (ilk açılış süzgeci). */
+  pending: (p: { q?: string; status?: string; category?: string; page?: number }) =>
     send<{
       items: AssignProject[];
       total: number;
@@ -1496,7 +1497,7 @@ export const assignApi = {
       statusFacets: ContractFacet[];
       onBoard: number;
       db?: DbTiming | null;
-    }>('GET', `/api/v1/editorial/assignments/pending${qs({ q: p.q, status: p.status?.join('|'), category: p.category, page: p.page })}`, undefined, 60_000),
+    }>('GET', `/api/v1/editorial/assignments/pending${qs({ q: p.q, status: p.status, category: p.category, page: p.page })}`, undefined, 60_000),
   suggest: (project: string, start?: string, due?: string) =>
     send<{
       project: AssignProject;

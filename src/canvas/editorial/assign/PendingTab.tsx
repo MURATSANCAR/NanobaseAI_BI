@@ -19,12 +19,14 @@ export default function PendingTab() {
   const [page, setPage] = useState(0);
   const [open, setOpen] = useState<AssignProject | null>(null);
   const q = useDebounced(text.trim(), 350);
-  const statusKey = status ? status.join('|') : '';
+  // null: ilk açılış (köprünün iş durumu süzgeci); boş seçim: bütün durumlar.
+  const statusKey = status === null ? '' : status.length ? status.join('|') : 'hepsi';
   useEffect(() => setPage(0), [q, statusKey]);
 
   const list = useQuery(assignPendingOptions(q, statusKey, '', page));
   const d = list.data;
   const selected = new Set(status ?? d?.defaultStatuses ?? []);
+  const allStatuses = status !== null && status.length === 0;
   const toggle = (code: number) => {
     const next = new Set(selected);
     if (next.has(code)) next.delete(code);
@@ -56,6 +58,7 @@ export default function PendingTab() {
               {crmLabel(s.label)} <span className="font-mono tabular-nums">{nf.format(s.count)}</span>
             </button>
           ))}
+          {allStatuses && <span className="self-center text-[11.5px] font-semibold text-canvas-muted">Durum seçilmedi: bütün durumlar</span>}
         </div>
       )}
       <label className="relative mt-2 block">

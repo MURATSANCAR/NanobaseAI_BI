@@ -254,13 +254,16 @@ def pending_list_sql(schema: str, page: int, **flt: Any) -> str:
     )
 
 
-def pending_facets_sql(schema: str, since_year: int) -> str:
-    """Editörsüz etkin projeler durum başına (ekrandaki durum süzgeci)."""
+def pending_facets_sql(schema: str, since_year: int, exclude: Iterable[str] = ()) -> str:
+    """Editörsüz etkin projeler durum başına (ekrandaki durum süzgeci); açık görevi olanlar sayılmaz."""
     p = _prefix(schema)
+    ex = list(exclude)
     return (
         "SELECT j.statuscode, CAST(j.statuscode AS int) AS kod, COUNT(*) AS n"
         f" FROM {p}new_projeBase j WHERE j.statecode = 0 AND j.new_editoru IS NULL"
-        f" AND j.CreatedOn >= '{int(since_year):04d}-01-01' GROUP BY j.statuscode ORDER BY COUNT(*) DESC"
+        f" AND j.CreatedOn >= '{int(since_year):04d}-01-01'"
+        + (f" AND j.new_projeId NOT IN ({_in(ex)})" if ex else "")
+        + " GROUP BY j.statuscode ORDER BY COUNT(*) DESC"
     )
 
 
