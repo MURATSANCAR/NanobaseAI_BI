@@ -733,9 +733,11 @@ def _since(value: str) -> str:
 
 
 def _is_author(p: str, col: str) -> str:
-    return (f"EXISTS (SELECT 1 FROM {p}new_eserkatilimBase e JOIN {p}new_katilimcitipiBase t"
-            f" ON t.new_katilimcitipiId = e.new_katilimciTipi WHERE e.statecode = 0 AND t.new_name = N'Yazar'"
-            f" AND e.new_Katilimsaglayan = {col})")
+    # Alt sorgunun takma adları (ya_e, ya_t) dış sorguda kullanılmaz: dıştaki `t`/`e` ile çakışınca SQL Server
+    # içteki tabloyu seçer ve `t.new_kisi` «Invalid column name» verir (2026-09-28, canlı CRM'de yakalandı).
+    return (f"EXISTS (SELECT 1 FROM {p}new_eserkatilimBase ya_e JOIN {p}new_katilimcitipiBase ya_t"
+            f" ON ya_t.new_katilimcitipiId = ya_e.new_katilimciTipi WHERE ya_e.statecode = 0 AND ya_t.new_name = N'Yazar'"
+            f" AND ya_e.new_Katilimsaglayan = {col})")
 
 
 def _pool_from(p: str, since: str, q: str, closed: bool) -> str:
