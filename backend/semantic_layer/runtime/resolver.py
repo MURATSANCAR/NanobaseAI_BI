@@ -437,8 +437,10 @@ class SemanticResolver:
         from semantic_layer.runtime.temporal import MONTHS
         index = self.store.certified_index(self.tenant_id, self.datasource_id)
         if getattr(self, "_speller_for", None) is not index:
-            words = {w for key in index for w in key.split()} | set(MONTHS) | set(_TIME_WORDS) | set(METRIC_VOCAB_S)
-            self._speller, self._speller_for = Speller(words), index
+            roots = {w for key in index for w in key.split()} | set(MONTHS) | set(_TIME_WORDS) | set(METRIC_VOCAB_S)
+            written = {w for senses in index.values() for c, _ in senses for t in [c.term, *(c.synonyms or [])]
+                       for w in tokenize(t)} | set(MONTHS)
+            self._speller, self._speller_for = Speller(roots, written), index
         wanted = {fold(u) for u in unresolved}
         notes: list[tuple[str, str]] = []
 

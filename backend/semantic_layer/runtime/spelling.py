@@ -33,47 +33,71 @@ def distance(a: str, b: str, limit: int = 2) -> int:
     return prev[-1]
 
 
-class Speller:
-    """`stems`: bilinen kelimelerin kökleri (katalog adları, ay adları, dönem ve ölçü kelimeleri)."""
+def _closest(word: str, pool: dict[int, list[str]], limit: int) -> Optional[str]:
+    best: list[str] = []
+    top = limit + 1
+    for n in range(len(word) - limit, len(word) + limit + 1):
+        for s in pool.get(n, ()):
+            if len(s) < 4:
+                continue
+            d = distance(word, s, limit)
+            if d < top:
+                best, top = [s], d
+            elif d == top and s not in best:
+                best.append(s)
+    return best[0] if top <= limit and len(best) == 1 else None
 
-    def __init__(self, stems: Iterable[str]):
+
+class Speller:
+    """`stems`: bilinen kelimelerin kökleri (katalog adları, ay adları, dönem ve ölçü kelimeleri); `words`: aynı
+    adların yazıldığı biçimler ("sayısı", "tutarı") — kısa bir kökün birden çok komşusu olduğunda kelimenin
+    tamamı bunlarla karşılaştırılır ("saysıı": kök "say" hem "sayf" hem "sayi"ye bir harf; kelime "sayisi"ne)."""
+
+    def __init__(self, stems: Iterable[str], words: Iterable[str] = ()):
         self.stems = frozenset(s for s in stems if s and s.isalpha() and len(s) >= 3)
-        self._by_len: dict[int, list[str]] = {}
+        self.words = frozenset(w for w in words if w and w.isalpha() and len(w) >= 3)
+        self._stems_by_len: dict[int, list[str]] = {}
         for s in self.stems:
-            self._by_len.setdefault(len(s), []).append(s)
+            self._stems_by_len.setdefault(len(s), []).append(s)
+        self._words_by_len: dict[int, list[str]] = {}
+        for w in self.words:
+            self._words_by_len.setdefault(len(w), []).append(w)
+
+    def _exact(self, word: str) -> bool:
+        return word in STOPWORDS_S or word in self.words or word in self.stems
 
     def _known(self, word: str) -> bool:
-        return word in STOPWORDS_S or word in self.stems or stem(word) in self.stems
+        return self._exact(word) or stem(word) in self.stems
 
     def split(self, word: str) -> Optional[str]:
-        """"toplamkac" → "toplam kac": the one cut where both halves are known words."""
-        cuts = [f"{word[:k]} {word[k:]}" for k in range(3, len(word) - 2)
-                if self._known(word[:k]) and self._known(word[k:])]
-        return cuts[0] if len(cuts) == 1 else None
+        """"toplamkac" → "toplam kac", "tutarinedir" → "tutari nedir": the one cut where both halves are words
+        as written; failing that, the one cut where both are known by their root."""
+        for known in (self._exact, self._known):
+            cuts = [f"{word[:k]} {word[k:]}" for k in range(3, len(word) - 2) if known(word[:k]) and known(word[k:])]
+            if len(cuts) == 1:
+                return cuts[0]
+            if cuts:
+                return None
+        return None
 
     def near(self, word: str) -> Optional[str]:
-        """"suabt" → "subat", "tutatrlari" → "tutarlari": the one known root within reach; the ending is kept."""
+        """"suabt" → "subat", "tutatrlari" → "tutarlari", "saysii" → "sayisi": the one known word, or the one known
+        root with the ending kept, within reach."""
         if len(word) < 5 or not word.isalpha():
             return None
+        whole = _closest(word, self._words_by_len, 2 if len(word) >= 8 else 1)
+        if whole is not None:
+            return whole
         root = stem(word)
-        limit = 2 if len(root) >= 8 else 1
-        best: list[str] = []
-        top = limit + 1
-        for n in range(len(root) - limit, len(root) + limit + 1):
-            for s in self._by_len.get(n, ()):
-                if len(s) < 4:
-                    continue
-                d = distance(root, s, limit)
-                if d < top:
-                    best, top = [s], d
-                elif d == top and s not in best:
-                    best.append(s)
-        if top > limit or len(best) != 1:
+        if len(root) < 4:
             return None
-        return best[0] + word[len(root):]
+        found = _closest(root, self._stems_by_len, 2 if len(root) >= 8 else 1)
+        return found + word[len(root):] if found is not None else None
 
     def correct(self, word: str) -> Optional[str]:
+        """Only called for a word the resolver could not place, so a root it shares with a known word ("saysii" →
+        "say") does not make it known."""
         w = fold(word)
-        if self._known(w):
+        if self._exact(w):
             return None
         return self.split(w) or self.near(w)

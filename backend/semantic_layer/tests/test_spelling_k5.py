@@ -27,6 +27,9 @@ def test_speller_splits_glued_words_and_fixes_one_letter_but_never_guesses_betwe
     assert sp.correct("tutatrları") == "tutarlari"
     assert sp.correct("toplamkaç") == "toplam kac"
     assert sp.correct("tutar") is None                       # known: nothing to correct
+    sp = Speller(["say", "sayf", "sayi", "tutar"], ["sayisi", "tutari", "nedir"])
+    assert sp.correct("saysıı") == "sayisi"                   # short root, two neighbours: the written word decides
+    assert sp.correct("tutarınedir") == "tutari nedir"
     assert Speller(["kalem", "kalen"]).correct("kalex") is None   # two candidates: no guess
 
 
