@@ -73,7 +73,7 @@ export function HeatBreakdown({ heat, months }: { heat: AuthorHeat; months?: str
       )}
       <p className="mt-2 text-[11px] leading-snug text-canvas-muted">
         Son görüşme {daysAgo(heat.daysSince)}; son 12 ayda {heat.contactsYear} görüşme.
-        {heat.next ? ` Sıradaki randevu ${fmtDay(heat.next.slice(0, 10))}.` : ''}
+        {heat.next ? ` Sıradaki randevu ${fmtDay(heat.next)}.` : ''}
       </p>
     </div>
   );
@@ -362,8 +362,8 @@ export function RelationBody({ target, months, onOpenCard, compact }: { target: 
       )}
       {detail && !compact && (
         <p className="text-[11px] text-canvas-muted">
-          Kartı açan {detail.createdBy}, {fmtDay(detail.createdAt.slice(0, 10))}
-          {detail.updatedBy && detail.updatedAt ? `; son değişiklik ${detail.updatedBy}, ${fmtDay(detail.updatedAt.slice(0, 10))}` : ''}.
+          Kartı açan {detail.createdBy}, {fmtDay(detail.createdAt)}
+          {detail.updatedBy && detail.updatedAt ? `; son değişiklik ${detail.updatedBy}, ${fmtDay(detail.updatedAt)}` : ''}.
         </p>
       )}
 
