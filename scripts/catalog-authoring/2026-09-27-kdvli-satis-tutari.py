@@ -21,14 +21,20 @@ from semantic_layer.normalize import normalize_term
 WHO = "operator:claude (K4 müşteri sohbeti, 2026-09-27)"
 INVOICE_SALES, LINE_SALES = "sem_67d025bf42fb", "sem_b62a0c853395"
 TERM = "kdvli satış tutarı"
-SYNONYMS = ["kdv dahil satış tutarı", "kdvli satış", "kdv dahil satış", "kdvli ciro", "kdv dahil ciro",
-            "vergiler dahil satış tutarı"]
+SYNONYMS = ["kdv dahil satış tutarı", "kdvli satış", "kdv dahil satış", "kdvli ciro", "kdv dahil ciro"]
+# İlk uygulamada "vergiler dahil satış tutarı" da vardı; kökü "ver" olduğundan "veren/verdik/verdiğimiz" ile
+# eşleşti (tam set: 14 soru). Kaldırılır.
+DROPPED = ["vergiler dahil satış tutarı"]
 EXCLUSIVE = ["kdvsiz satış tutarı", "kdv hariç satış tutarı", "kdvsiz ciro", "kdv hariç ciro"]
 
 st = open_store(os.environ["SEMANTIC_STORE_DSN"])
 base = st.list_mappings(INVOICE_SALES)[0]
 extra = dict(base.extra or {})
 extra["aliases"] = ["kdvli_satis_tutari"]
+# Tam set 2026-09-27: "vergiler dahil …" eş anlamlısı "ver" ile başladığından fiil köprüsü (4a) "veren", "verdik",
+# "verdiğimiz" fiillerini bu ölçüye bağladı (14 soru: "sipariş veren müşteriler", "kâğıda ne kadar para verdik").
+# Ad sabit bir ölçü adıdır, bir fiilin ismi değil.
+extra["verb_bridge"] = False
 mapping = Mapping(concept_id="", entity=base.entity, table_pattern=base.table_pattern, formula=base.formula, extra=extra)
 print("YENİ  :", TERM, "|", mapping.entity, mapping.formula, mapping.extra)
 print("  eş  :", SYNONYMS)
@@ -61,6 +67,10 @@ c, created = st.upsert_concept("default", "logo", TERM, SemanticType.METRIC, map
 if not created:
     st.replace_mappings(c.id, [mapping])
 synonyms(c.id, SYNONYMS, "K4: kdvli satış tutarı modele gidiyor, üç ayrı cevap")
+drop = {normalize_term(t) for t in DROPPED}
+cur = st.get_concept(c.id)
+st.update_concept(c.id, synonyms=[x for x in cur.synonyms if normalize_term(x) not in drop],
+                  explain={"declared_synonyms": sorted(set((cur.explain or {}).get("declared_synonyms") or []) - drop)})
 note(c.id, "KDV dahil satış tutarı = fatura NETTOTAL (7-8-9); Ağustos 2026 87.893.832,55 = satır VATMATRAH+VATAMNT")
 eng.human_certify(c.id, WHO, reason="K4: KDV'li satış ölçüsü, .155 üzerinde iki bağımsız yoldan aynı tutar")
 synonyms(LINE_SALES, EXCLUSIVE, "K4: KDV hariç satış tutarı satır LINENET'tir")
