@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import zipfile
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -256,6 +257,62 @@ def test_payments_plan_paid_and_cancel(engine):
     assert C.cancel_payment(engine, TEN, "a", p["id"], {"note": "Hatalı giriş"})["status"] == "iptal"
     due = C.due_list(engine, TEN, status="")
     assert due["items"][0]["contractNo"] == rec["no"]
+
+
+# ---------------------------------------------------------------- satır tavanı yok (no-silent-limits)
+
+
+def _bulk_records(engine, n):
+    """Doğrudan tabloya n sözleşme; en eskisi (updated_at en küçük) «Kayıp Kitap» adını taşır."""
+    base = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    rows = [{"id": f"{i:032x}", "tenant_id": TEN, "crm_id": None, "no": f"TS-2020-{i:05d}", "status": "taslak",
+             "terms": _terms(title="Kayıp Kitap" if i == 0 else f"Sözleşme {i}"), "version": 1, "body_edited": False,
+             "created_by": "a", "created_at": base, "updated_by": "a", "updated_at": base + timedelta(minutes=i)}
+            for i in range(n)]
+    with engine.begin() as c:
+        c.execute(C.RECORDS.insert(), rows)
+    return rows
+
+
+def test_list_records_returns_every_row_and_searches_the_oldest(engine):
+    rows = _bulk_records(engine, 1201)  # eski tavan 1000'di
+    now = datetime.now(timezone.utc)
+    with engine.begin() as c:  # en eski sözleşmeye bir bekleyen ödeme: özet alt sorguyla hesaplanmalı
+        c.execute(C.PAYMENTS.insert().values(id="p" * 32, tenant_id=TEN, contract_id=rows[0]["id"], kind="avans",
+                                             due_on="2099-01-01", amount=10, currency="TRY", status="planlandi",
+                                             created_by="a", created_at=now, updated_by="a", updated_at=now))
+    out = C.list_records(engine, TEN)
+    assert len(out) == 1201
+    assert out[-1]["no"] == "TS-2020-00000"  # yeniden eskiye; en eski de listede
+    assert out[-1]["payments"] == {"planned": 1, "overdue": 0, "next": "2099-01-01"}
+    hit = C.list_records(engine, TEN, q="kayıp kitap")
+    assert [r["no"] for r in hit] == ["TS-2020-00000"]
+
+
+def test_events_returns_full_history(engine):
+    rec = C.create_draft(engine, TEN, "a", {"terms": {"title": "Uzun geçmiş", "parties": [{"name": "Y"}]}})
+    t0 = datetime(2021, 1, 1, tzinfo=timezone.utc)
+    with engine.begin() as c:  # eski tavan 500'dü
+        c.execute(C.EVENTS.insert(), [{"tenant_id": TEN, "contract_id": rec["id"], "at": t0 + timedelta(minutes=i),
+                                       "actor": "a", "action": "duzenle", "summary": f"Değişiklik {i}"} for i in range(700)])
+    ev = C.events(engine, TEN, rec["id"])
+    assert len(ev) == 701  # 700 + taslağın açılış kaydı
+    assert ev[-1]["summary"] == "Değişiklik 0"  # en eski değişiklik kesilmedi
+
+
+def test_due_list_returns_every_payment_and_totals_match(engine):
+    rows = _bulk_records(engine, 1)
+    now = datetime.now(timezone.utc)
+    n = 2301  # eski tavan 2000'di
+    with engine.begin() as c:
+        c.execute(C.PAYMENTS.insert(), [{"id": f"{i:032x}", "tenant_id": TEN, "contract_id": rows[0]["id"], "kind": "hakedis",
+                                         "due_on": f"{2000 + i // 365:04d}-01-01", "amount": 1, "currency": "TRY",
+                                         "status": "planlandi", "created_by": "a", "created_at": now, "updated_by": "a",
+                                         "updated_at": now} for i in range(n)])
+    due = C.due_list(engine, TEN)
+    assert len(due["items"]) == n
+    assert due["totals"]["TRY"]["amount"] == n
+    assert due["items"][-1]["dueOn"] == f"{2000 + (n - 1) // 365:04d}-01-01"  # en geç vade de listede
 
 
 def test_statement_approval_order_and_double_payment_guard(engine):

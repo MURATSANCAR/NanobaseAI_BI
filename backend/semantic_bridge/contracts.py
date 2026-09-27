@@ -259,9 +259,10 @@ def _event(c: sa.engine.Connection, tenant: str, contract_id: str, actor: str, a
 
 
 def events(engine: sa.engine.Engine, tenant: str, contract_id: str) -> list[dict[str, Any]]:
+    """Sözleşmenin bütün geçmişi, yeniden eskiye. Satır tavanı yok: eski kayıt kesilirse geçmiş eksik görünür."""
     with engine.connect() as c:
         rows = c.execute(sa.select(EVENTS).where(EVENTS.c.tenant_id == tenant, EVENTS.c.contract_id == contract_id)
-                         .order_by(EVENTS.c.at.desc(), EVENTS.c.id.desc()).limit(500)).all()
+                         .order_by(EVENTS.c.at.desc(), EVENTS.c.id.desc())).all()
     return [{"at": _iso(r.at), "actor": r.actor, "action": r.action, "summary": r.summary, "changes": r.changes} for r in rows]
 
 
@@ -425,6 +426,8 @@ def render_body(engine: sa.engine.Engine, tenant: str, user: str, key: str, temp
 
 
 def list_records(engine: sa.engine.Engine, tenant: str, *, q: str = "", status: str = "", source: str = "") -> list[dict[str, Any]]:
+    """Portal kayıtlarının hepsi. Satır tavanı yok: arama süzgeci satırlar okunduktan sonra uygulandığı için tavan,
+    eski bir sözleşmeyi aramada da bulunmaz yapıyordu."""
     ensure(engine)
     stmt = sa.select(RECORDS).where(RECORDS.c.tenant_id == tenant)
     if status:
@@ -434,8 +437,8 @@ def list_records(engine: sa.engine.Engine, tenant: str, *, q: str = "", status: 
     elif source == "crm":
         stmt = stmt.where(RECORDS.c.crm_id.is_not(None))
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(RECORDS.c.updated_at.desc()).limit(1000)).all()
-        pay = _payment_totals(c, tenant, [r.id for r in rows])
+        rows = c.execute(stmt.order_by(RECORDS.c.updated_at.desc())).all()
+        pay = _payment_totals(c, tenant, stmt.with_only_columns(RECORDS.c.id))
     out = []
     needle = q.strip().lower()
     for r in rows:
@@ -595,9 +598,8 @@ def payments(engine: sa.engine.Engine, tenant: str, contract_id: str) -> list[di
     return [_payment(r) for r in rows]
 
 
-def _payment_totals(c: sa.engine.Connection, tenant: str, ids: list[str]) -> dict[str, dict[str, Any]]:
-    if not ids:
-        return {}
+def _payment_totals(c: sa.engine.Connection, tenant: str, ids: sa.Select) -> dict[str, dict[str, Any]]:
+    """`ids`: sözleşme kimliği seçen alt sorgu (kimlik listesi değil; binlerce bağ değişkeni sürücü sınırına takılır)."""
     rows = c.execute(sa.select(PAYMENTS.c.contract_id, PAYMENTS.c.status, PAYMENTS.c.due_on)
                      .where(PAYMENTS.c.tenant_id == tenant, PAYMENTS.c.contract_id.in_(ids), PAYMENTS.c.status == "planlandi")).all()
     out: dict[str, dict[str, Any]] = {}
@@ -763,7 +765,8 @@ def schedule_periods(t: dict[str, Any]) -> list[dict[str, Any]]:
 
 def due_list(engine: sa.engine.Engine, tenant: str, *, status: str = "planlandi", within: Optional[int] = None,
              kind: str = "") -> dict[str, Any]:
-    """Bütün sözleşmelerin ödeme takvimi (vadeye göre)."""
+    """Bütün sözleşmelerin ödeme takvimi (vadeye göre). Satır tavanı yok: toplamlar ve vadesi geçen sayısı
+    ekrandaki listeyle aynı, eksiksiz kümeden hesaplanır."""
     ensure(engine)
     stmt = (sa.select(PAYMENTS, RECORDS.c.no, RECORDS.c.terms, RECORDS.c.crm_id)
             .join(RECORDS, RECORDS.c.id == PAYMENTS.c.contract_id)
@@ -775,7 +778,7 @@ def due_list(engine: sa.engine.Engine, tenant: str, *, status: str = "planlandi"
     if within is not None and status == "planlandi":
         stmt = stmt.where(sa.or_(PAYMENTS.c.due_on.is_(None), PAYMENTS.c.due_on <= (_today() + timedelta(days=int(within))).isoformat()))
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(sa.func.coalesce(PAYMENTS.c.due_on, "9999"), PAYMENTS.c.created_at).limit(2000)).all()
+        rows = c.execute(stmt.order_by(sa.func.coalesce(PAYMENTS.c.due_on, "9999"), PAYMENTS.c.created_at)).all()
     items = []
     totals: dict[str, dict[str, float]] = {}
     for r in rows:
