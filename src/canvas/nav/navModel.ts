@@ -16,6 +16,7 @@ import {
   Stethoscope,
   TrendingUp,
   Swords,
+  Target,
   Library,
   Radar,
   Bell,
@@ -129,7 +130,7 @@ export const NAV: NavGroup[] = [
   {
     id: 'finans',
     label: 'Finans',
-    hint: 'Denetim ve yönetim raporları',
+    hint: 'Denetim, yönetim raporları ve bütçe',
     icon: Landmark,
     items: [
       { id: 'finansal-denetim', label: 'Finansal denetim', to: '/finansal-denetim', icon: ShieldCheck, hint: 'Logo kayıtlarının denetimi', keywords: ['denetim', 'muhasebe', 'risk'] },
@@ -142,6 +143,14 @@ export const NAV: NavGroup[] = [
         parent: 'yonetim-raporlari',
         hint: 'Yeniden basılacak kitap önerileri',
         keywords: ['yeni baskı öneri', 'baskı', 'tahmin'],
+      },
+      {
+        id: 'butce',
+        label: 'Bütçe ve hedefler',
+        to: '/butce',
+        icon: Target,
+        hint: 'Kitap bazlı satış hedefleri, departman bütçesi, senaryolar ve sapma uyarısı',
+        keywords: ['bütçe', 'hedef', 'satış hedefi', 'senaryo', 'sapma', 'departman'],
       },
     ],
   },

@@ -83,6 +83,8 @@ SPEC: list[dict[str, Any]] = [
      "help": "Eşik aşılmaya devam ederse kaç saat sonra yeniden bildirilir"},
     {"key": "REPORT_KEEP_FILES", "group": "delivery", "label": "Rapor başına saklanan dosya", "type": "int", "default": "10",
      "help": "Eski dosyalar bu sayıdan sonra silinir"},
+    {"key": "BUDGET_ALERT_RECIPIENTS", "group": "delivery", "label": "Bütçe uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri. Satış hedefinin eşik altına düşmesi ve departman bütçesi aşımı özetle gider"},
     # Toplantı odaları
     {"key": "ROOM_DAY_START", "group": "rooms", "label": "Takvim başlangıcı", "type": "time", "default": "08:00",
      "help": "Oda takviminin ilk saati, SS:DD"},

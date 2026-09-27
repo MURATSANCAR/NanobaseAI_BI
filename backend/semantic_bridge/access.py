@@ -459,6 +459,12 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/admin/", OWN),
     ("/api/v1/financial-audit/", frozenset({page("finansal-denetim")})),
     ("/api/v1/management/", frozenset({page("yonetim-raporlari"), page("baski-oneri")})),
+    # M46 Bütçe. Onaylı hedefleri okuyacak modül (M15/M17/M18/M29/M30) kendi sayfa anahtarını targets/deviations
+    # satırlarına ekler; yazma uçları butce sayfasında kalır.
+    ("/api/v1/budget/run-due", SYSTEM),
+    ("/api/v1/budget/targets", frozenset({page("butce")})),
+    ("/api/v1/budget/deviations", frozenset({page("butce")})),
+    ("/api/v1/budget/", frozenset({page("butce")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -513,6 +519,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/financial-audit/runs/[^/]+/reviews/.+$", "ozellik:denetim.inceleme"),
     (frozenset({"POST"}), r"^/api/v1/financial-audit/refresh$", "ozellik:denetim.yenile"),
     (frozenset({"POST"}), r"^/api/v1/management/reports/[^/]+/refresh$", "ozellik:yonetim-raporu.yenile"),
+    # Bütçe taslağı: öneri, düzeltme, onaya gönderme, revizyon, gerçekleşmeyi yenileme. Onay/geri gönderme açıkça
+    # verilen `butce.onay` ile ucun içinde denetlenir; bu kural onlara uygulanmaz.
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/budget/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|refresh)$",
+     "ozellik:butce.duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/budget/plans/[^/]+/export\.csv$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi

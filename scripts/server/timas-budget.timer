@@ -1,0 +1,10 @@
+[Unit]
+Description=Bütçe gerçekleşmesi ve sapma uyarısı, saatte bir
+
+[Timer]
+OnBootSec=7min
+OnUnitActiveSec=1h
+Unit=timas-budget.service
+
+[Install]
+WantedBy=timers.target
