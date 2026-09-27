@@ -84,7 +84,7 @@ CATALOG_FILE = Path(__file__).with_name("access_catalog.json")
 _ready: set[int] = set()
 _lock = threading.Lock()
 _TTL = 30.0
-_state: dict[str, Any] = {"at": 0.0, "tenant": None, "roles": {}, "bindings": [], "members": {}}
+_state: dict[str, Any] = {"at": 0.0, "key": None, "roles": {}, "bindings": [], "members": {}}
 
 
 class AccessError(ValueError):
@@ -165,7 +165,10 @@ def invalidate() -> None:
 
 
 def _load(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
-    if _state["tenant"] == tenant and time.monotonic() - _state["at"] < _TTL:
+    # Anahtar veritabanı + tenant: aynı süreçte iki veritabanı (testler, yönetim ekranının denemesi) birbirinin
+    # rollerini görmesin.
+    key = (id(engine), tenant)
+    if _state["key"] == key and time.monotonic() - _state["at"] < _TTL:
         return _state
     with engine.connect() as c:
         roles = {r["id"]: {**dict(r), "perms": set()} for r in
@@ -180,7 +183,7 @@ def _load(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
                 members[(t, s)] = frozenset(str(x).strip().lower() for x in json.loads(m or "[]") if str(x).strip())
             except ValueError:
                 members[(t, s)] = frozenset()
-    _state.update(at=time.monotonic(), tenant=tenant, roles=roles, bindings=bindings, members=members)
+    _state.update(at=time.monotonic(), key=key, roles=roles, bindings=bindings, members=members)
     return _state
 
 
