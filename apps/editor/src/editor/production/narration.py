@@ -840,8 +840,8 @@ def page_input(d: Path, pg: dict, cfg: dict | None = None, lex: Lexicon | None =
     lex = lex or lexicon(d)
     units = page_units(pg, cfg, lex)
     plist = pieces(units)
-    # İFADE KATMANI kancası (expression.py): cümlenin ifadesi parçaya işlenir (p.extra → servise style/clone/rate/
-    # pause_before_ms; cümle sonu duraklaması; vurgu). İşaretsiz sayfada x None: özet eskisiyle aynı kalır.
+    # İFADE KATMANI kancası (expression.py): cümlenin ifadesi parçaya işlenir (p.extra; cümle sonu duraklaması; vurgu),
+    # servis gövdesine narrate_page'deki `expression.prepare` çevirir. İşaretsiz sayfada x None: özet eskisiyle aynı.
     from . import expression
     plist, x = expression.apply(d, pg, units, plist)
     h = _hash({"v": VERSION, "p": [(p.text, p.voice, p.pause_ms) for p in plist],
@@ -972,10 +972,11 @@ async def narrate_page(d: Path, pid: str, by: str) -> dict:
         return {"page": pid, "status": "empty"}
     refs = {vid: await voice_ref(vid) for vid in {p.voice for p in plist}}
     body = {"segments": [{"text": p.text, "voice": refs[p.voice], "pause_ms": p.pause_ms,
-                          "words": [s for k in p.words for s in units[p.unit].words[k].say],
-                          **getattr(p, "extra", {})} for p in plist],       # İFADE KATMANI (expression.apply)
+                          "words": [s for k in p.words for s in units[p.unit].words[k].say]} for p in plist],
             "format": "mp3", "align": True}
     t0 = time.time()
+    from . import expression
+    await expression.prepare(body, plist)          # İFADE KATMANI kancası: ifade örneği / talimat, hız, önceki durak
     out = await _call(body)
     blocks = word_times(units, plist, out["segments"])
     est = any(w.get("estimated") for b in blocks for w in b["words"])

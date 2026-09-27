@@ -8,6 +8,7 @@ servis ve sahte model). Çalıştır:
 from __future__ import annotations
 
 import asyncio
+import json
 import sys
 import types
 from pathlib import Path
@@ -36,7 +37,8 @@ PAGE = {
     "id": "p_1", "layout": "art-top",
     "text": {"box": {"x": 14, "y": 126, "w": 141, "h": 88}, "blocks": [
         {"id": "c1", "kind": "para", "runs": [{"text": "Aslan topu ona uzattı. “Buyur! Birlikte oynayalım mı?”"}]},
-        {"id": "c2", "kind": "para", "runs": [{"text": "Güneş batarken annesi, “Eve dönme zamanı,” dedi."}]}]},
+        {"id": "c2", "kind": "para", "runs": [{"text": "Güneş batarken annesi, “Eve dönme zamanı,” dedi."}]},
+        {"id": "c3", "kind": "para", "runs": [{"text": "Hep birlikte koşarak büyük parka gittiler!"}]}]},
     "bubbles": [], "texts": [],
 }
 
@@ -52,6 +54,25 @@ def job(tmp_path, monkeypatch):
     return d
 
 
+def _wav(sec: float, sr: int = 8000) -> bytes:
+    import io
+    import wave
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(sr)
+        w.writeframes(b"\x01\x00" * int(sec * sr))
+    return buf.getvalue()
+
+
+# ifade örneği adaylarının ölçüsü (tohum → ölçü); taban 200 Hz
+MEASURE = {None: {"f0": 200.0, "energy_db": -21.0, "voiced_ratio": 0.85, "cer": 0.0},
+           11: {"f0": 262.0, "energy_db": -19.0, "voiced_ratio": 0.8, "cer": 0.02},     # +%31: kimlik sınırı dışı
+           22: {"f0": 228.0, "energy_db": -20.0, "voiced_ratio": 0.82, "cer": 0.01},    # +%14: seçilir
+           33: {"f0": 232.0, "energy_db": -20.5, "voiced_ratio": 0.8, "cer": 0.2}}      # anlaşılmıyor
+
+
 def _fake_service(calls):
     async def call(body, timeout=1800.0):
         import base64
@@ -59,20 +80,24 @@ def _fake_service(calls):
         segs, pos = [], 0.0
         for s in body["segments"]:
             n = max(1, len(s.get("words") or []))
-            segs.append({"start": pos, "end": pos + n * 0.4, "aligned": True,
-                         "words": [{"start": round(pos + i * 0.4, 3), "end": round(pos + i * 0.4 + 0.3, 3), "score": 0.9}
-                                   for i in range(len(s.get("words") or []))]})
-            pos = segs[-1]["end"] + s["pause_ms"] / 1000
-        return {"audio": base64.b64encode(b"ID3fake").decode(), "format": body["format"], "sample_rate": 48000,
+            seg = {"start": pos, "end": pos + n * 0.4, "aligned": True,
+                   "words": [{"start": round(pos + i * 0.4, 3), "end": round(pos + i * 0.4 + 0.3, 3), "score": 0.9}
+                             for i in range(len(s.get("words") or []))]}
+            if body.get("measure"):
+                seg["measure"] = MEASURE[s.get("seed") if s.get("style") else None]
+            segs.append(seg)
+            pos = seg["end"] + s["pause_ms"] / 1000
+        audio = _wav(pos) if body["format"] == "wav" else b"ID3fake"
+        return {"audio": base64.b64encode(audio).decode(), "format": body["format"], "sample_rate": 8000,
                 "duration": round(pos, 3), "seconds": 0.1, "segments": segs}
     return call
 
 
 def test_sentences_follow_piece_boundaries(job):
     rows = X.sentences(job, PAGE)
-    assert [r["key"] for r in rows] == ["c1:0", "c1:1", "c1:2", "c2:0"]
-    assert [r["text"] for r in rows] == ["Aslan topu ona uzattı.", "“Buyur!", "Birlikte oynayalım mı?”",
-                                         "Güneş batarken annesi, “Eve dönme zamanı,” dedi."]
+    assert [r["key"] for r in rows] == ["c1:0", "c1:1", "c1:2", "c2:0", "c3:0"]
+    assert [r["text"] for r in rows][:4] == ["Aslan topu ona uzattı.", "“Buyur!", "Birlikte oynayalım mı?”",
+                                             "Güneş batarken annesi, “Eve dönme zamanı,” dedi."]
     assert rows[2]["words"] == ["Birlikte", "oynayalım", "mı"]
     # her parça tam olarak bir cümlenin içinde
     units = N.page_units(PAGE, N.settings_of(job), N.lexicon(job))
@@ -102,25 +127,51 @@ def test_marks_reach_the_voice_service_and_make_page_stale(job, monkeypatch):
     assert {r["id"]: r["status"] for r in N.status(job)}["p_1"] == "done"
     first = calls[-1]["segments"]
     assert not any(k in s for s in first for k in ("style", "clone", "rate", "pause_before_ms"))   # işaretsiz: eski gövde
+    assert not any(s["voice"].get("prompt_audio") for s in first)
 
     X.set_marks(job, "p_1", [{"key": "c1:2", "label": "heyecan", "emphasis": ["oynayalım"]},
-                             {"key": "c2:0", "label": "fisilti"}], "editör")
+                             {"key": "c2:0", "label": "fisilti"}, {"key": "c3:0", "label": "uzuntu"}], "editör")
     assert {r["id"]: r["status"] for r in N.status(job)}["p_1"] == "stale"
     _u, plist, h1 = N.page_input(job, PAGE)
     assert h1 != h0
     asyncio.run(N.narrate_page(job, "p_1", "editör"))
     segs = calls[-1]["segments"]
     by_text = {s["text"]: s for s in segs}
-    ex = by_text["Birlikte... oynayalım mı?"]                     # vurgu: kelimeden önce kısa durak
-    assert ex["style"] == X.TABLE["heyecan"]["style"] and ex["clone"] == "ref" and ex["rate"] == X.TABLE["heyecan"]["rate"]
-    assert ex["words"] == ["Birlikte", "oynayalım", "mı"]           # hizalanan kelimeler değişmez
-    fis = [s for s in segs if s.get("style") == X.TABLE["fisilti"]["style"]]
-    assert fis and fis[0]["pause_before_ms"] == X.TABLE["fisilti"]["before_ms"]
-    plain_last = [p for p in plain if p.text.startswith("Güneş")][0]
-    assert fis[-1]["pause_ms"] == int(round(plain_last.pause_ms * X.TABLE["fisilti"]["after"]))
+    # heyecan: ton yok (yükselen tonlar ölçümde aştı), hız ve duraklama; vurgu kelimeden önce kısa durak,
+    # hizalanan kelimeler değişmez
+    short = by_text["Birlikte... oynayalım mı?"]
+    assert short["rate"] == X.TABLE["heyecan"]["rate"] and "style" not in short
+    assert not short["voice"].get("prompt_audio") and short["words"] == ["Birlikte", "oynayalım", "mı"]
+    # uzun üzüntü cümlesi: ifade örneğinin devamı (tam klon, talimat metne girmez), önce durak
+    long = by_text["Hep birlikte koşarak büyük parka gittiler!"]
+    assert long["voice"].get("prompt_audio") and long["voice"].get("ref_text") and "style" not in long
+    assert long["pause_before_ms"] == X.TABLE["uzuntu"]["before_ms"]
+    # örnek bir kez üretildi: taban + üç aday ölçüldü, kimlik sınırında olan (+%14) seçildi
+    ex_calls = [c for c in calls if c.get("measure")]
+    assert len(ex_calls) == 1 and len(ex_calls[0]["segments"]) == 4
+    meta = json.loads((N._root() / "ifade" / "anlatici-kadin" / "uzuntu.json").read_text())
+    assert meta["chosen"]["seed"] == 22 and meta["chosen"]["shift"] == 14.0
+    # fısıltı: talimat yolu (referans-yalnız), önce durak, sonu uzar
+    fis = by_text["Güneş batarken annesi, Eve dönme zamanı, dedi."]
+    assert fis["style"] == X.TABLE["fisilti"]["style"] and fis["clone"] == "ref"
+    assert fis["pause_before_ms"] == X.TABLE["fisilti"]["before_ms"]
+    plain_fis = [p for p in plain if p.text.startswith("Güneş")][0]
+    assert fis["pause_ms"] == int(round(plain_fis.pause_ms * X.TABLE["fisilti"]["after"]))
     neutral = by_text["Aslan topu ona uzattı."]
-    assert "style" not in neutral and "clone" not in neutral        # nötr cümle tam klonla, eskisi gibi
+    assert "style" not in neutral and "clone" not in neutral and not neutral["voice"].get("prompt_audio")
     assert {r["id"]: r["status"] for r in N.status(job)}["p_1"] == "done"
+    # ikinci seslendirme örneği yeniden üretmez
+    asyncio.run(N.narrate_page(job, "p_1", "editör"))
+    assert len([c for c in calls if c.get("measure")]) == 1
+
+
+def test_pick_example_rules():
+    base = MEASURE[None]
+    cands = [{"seed": s, "measure": MEASURE[s]} for s in (11, 22, 33)]
+    assert X.pick_example("uzuntu", base, cands)["seed"] == 22
+    assert X.pick_example("uzuntu", base, [cands[0], cands[2]]) is None
+    # tonu yükselten ifadelerin yolu yok (hız/duraklama); tabloda örnek hedefi yalnız ton verilenlerde
+    assert {k for k, r in X.TABLE.items() if r["method"]} == {"fisilti", "uzuntu"}      # biri kimlik, biri anlaşılırlık dışı
 
 
 def test_text_change_drops_only_that_mark(job):
@@ -176,7 +227,7 @@ def test_suggest_votes_and_keeps_editor_marks(job):
     llm = FakeLlm(reads)
     v = asyncio.run(X.suggest(job, "p_1", llm, "editör"))
     rows = {s["key"]: s for s in v["sentences"]}
-    assert llm.choose_calls == 8                                    # 4 cümle × 2 okuma (seçenek sırası düz/ters)
+    assert llm.choose_calls == 10                                   # 5 cümle × 2 okuma (seçenek sırası düz/ters)
     assert rows["c1:0"]["label"] == "korku" and rows["c1:0"]["source"] == "editor"   # editörünkine dokunulmaz
     assert rows["c1:2"]["label"] == "heyecan" and rows["c1:2"]["source"] == "ai"
     assert rows["c1:2"]["emphasis"] == ["Birlikte"]                  # 2/3 okuma; «hiç» cümlede yok, «oynayalım» 1/3
@@ -194,6 +245,7 @@ def test_sample_sentence_only_that_sentence(job, monkeypatch):
     body = calls[-1]
     assert [s["text"] for s in body["segments"]] == ["Güneş batarken annesi, Eve dönme... zamanı, dedi."]
     assert body["segments"][0]["style"] == X.TABLE["fisilti"]["style"] and body["align"] is False
+    assert body["segments"][0]["pause_ms"] == 0
     n = len(calls)
     asyncio.run(X.sample_sentence(job, "p_1", "c2:0", "fisilti", ["zamanı"]))
     assert len(calls) == n                                          # aynı örnek önbellekten

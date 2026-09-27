@@ -4,10 +4,21 @@ Kullanıcı kararı (2026-09-27): «Zeki AI metni önceden okuyup her cümleyi i
 fısıltı, üzüntü, ya da vurgulanacak kelime. Ses bu işaretle o cümleyi farklı tonda, hızda ve duraklamayla okur.
 Editör işareti ekranda cümle cümle değiştirebilir.»
 
-Ölçüm ve seçim: docs/analiz/sesli-okuma-ifade-katmani.md. Özet: seslendirme modeli ton talimatını yalnız
-**referans-yalnız klonda** dinler (tam klonda — referans sesi + metni, devam kipi — talimatı sesli okuyor, harf
-hatası %45–111); hızı talimatla değiştirmiyor (±%6), hız üretim sonrası perdeyi koruyan zaman esnetmeyle verilir;
-vurgu talimatı kelimeyi öne çıkarmıyor (bkz. `EMPHASIS`).
+Ölçüm ve seçim: docs/analiz/sesli-okuma-ifade-katmani.md. Özet:
+- Tam klonda (referans sesi + metni, devam kipi; kitabın bugünkü okuması) ton talimatı metne girerse model talimatı
+  **sesli okuyor** (harf hatası %45–111): bu yol kullanılmaz.
+- Referans-yalnız klonda talimat dinleniyor ama ses kimliği kayıyor (talimatsız bile perde +%16, «aynı ses» dense de
+  +%13–43) ve kısa parçada anlaşılırlık düşüyor. Yalnız fısıltıda kullanılır (gerçek fısıltı: enerji −15 dB, sesli
+  oranı 0,89 → 0,68, uzun cümlede harf hatası 0).
+- **İfade örneği**: aynı sesin referans cümlesi bir kez talimatla okunur (üç aday, ölçülüp seçilir; yayınevi düzeyinde
+  saklanır), cümle tam klonla bu örneğin devamı olarak üretilir; kimlik referanstan, ton örnekten, talimat metne girmez.
+  Uzun nötr cümlede ölçülü (heyecan perde +%15, merak/neşe +%12, üzüntü −9 dB hız −%22; harf hatası tabanla aynı) ama
+  gerçek sayfanın ünlemli cümlesinde yükselen tonlar aştı (canlı erkek seslerde +%48–65, harf hatası %10–12). Üründe
+  yalnız **üzüntü** bu yolla (alçalan ton, kısa cümlede de harf hatası tabanla aynı); yükselen tonlar hız ve duraklamayla.
+- Kısa parçada (5 kelimeden az; «Yaşasın!», «Vak vak!») hiçbir yol güvenilir değil (perde ortalama +%40–50, en çok
+  +%120; harf hatası 2–4 kat): orada ifade yalnız hız ve duraklamayla verilir, tonu metnin kendi noktalaması taşır.
+- Hız talimatla değişmiyor (±%6): hız üretimden sonra perdeyi koruyan zaman esnetmeyle verilir.
+- Vurgu talimatı kelimeyi öne çıkarmıyor; kelimeden önce kısa durak («...») çıkarıyor (bkz. `EMPHASIS`).
 
 Cümle: sayfa planındaki okuma biriminin (yazı bloğu, balon, serbest yazı) cümlesi; sınır sesli okumanın parça
 sınırıyla aynıdır (okunuşu . ! ? … ile biten kelime; `narration.pieces`). Kimlik `<blok id>:<cümle sırası>`; kayıt
@@ -41,27 +52,41 @@ VERSION = 1
 LABELS = ("notr", "heyecan", "merak", "korku", "nese", "fisilti", "uzuntu", "ofke", "saskinlik")
 LABEL_TR = {"notr": "Nötr", "heyecan": "Heyecan", "merak": "Merak", "korku": "Korku", "nese": "Neşe",
             "fisilti": "Fısıltı", "uzuntu": "Üzüntü", "ofke": "Öfke", "saskinlik": "Şaşkınlık"}
-LABEL_NOTE = {"notr": "düz anlatım", "heyecan": "canlı, hızlı, yükselen", "merak": "soru tonu, düşünceli",
-              "korku": "gergin, kısık", "nese": "gülümseyen, sıcak", "fisilti": "alçak, yumuşak, yavaş",
-              "uzuntu": "alçak, yavaş, ağır", "ofke": "sert, kararlı", "saskinlik": "şaşıran, yükselen"}
+# Ekrandaki açıklama, sesin gerçekte ne yaptığını söyler (TABLE).
+LABEL_NOTE = {"notr": "düz anlatım", "heyecan": "daha hızlı, kısa duraklar", "merak": "biraz yavaş, önce ve sonra durak",
+              "korku": "yavaş, uzun duraklar", "nese": "biraz hızlı", "fisilti": "fısıltı: alçak, nefesli",
+              "uzuntu": "alçak, ağır, yavaş", "ofke": "hızlı, kısa duraklar", "saskinlik": "önce durak, sonra uzun durak"}
 
 # ------------------------------------------------------------------ etiket → üretim (tek tablo; ölçümle ayarlandı)
-# style: modele giden ton talimatı (İngilizce; referans-yalnız klonda metnin başına «(…)»). rate: konuşma hızı
-# (üretim sonrası zaman esnetme; > 1 hızlı). before_ms: cümleden önce sessizlik. after: cümle sonu duraklamasının
-# çarpanı (noktalamaya göre olan `narration.PAUSE` üzerinden). Değerler ve ölçüm tablosu
-# docs/analiz/sesli-okuma-ifade-katmani.md; kitaba özel değil.
+# method: ornek (ifade örneğinin devamı, tam klon) | talimat (referans-yalnız klon + talimat) | None (yalnız hız ve
+# duraklama). style: talimat (İngilizce; örnek üretiminde ya da talimat yolunda metnin başına «(…)»). target: ifade
+# örneği adayı seçiminde referansa göre hedef perde kayması (%) ve enerji farkı (dB). rate: konuşma hızı (sonradan
+# zaman esnetme; > 1 hızlı). before_ms: cümleden önce sessizlik. after: cümle sonu duraklamasının çarpanı
+# (noktalamaya göre olan `narration.PAUSE` üzerinden). Kitaba özel değil; ölçüm tablosu analiz belgesinde.
+# Tonu yükselten ifadelerde (heyecan, neşe, şaşkınlık, merak, korku, öfke) ton verilmez: ifade örneği uzun nötr
+# cümlede ölçülü çalıştı (perde +%11–15) ama gerçek sayfada ünlemli cümlede aştı (canlı erkek seslerde +%48–65,
+# harf hatası %10–12; talimat yolu da kısa ünlemde +%40–50, en çok +%120). Bu ifadeler hız ve duraklamayla verilir.
 TABLE: dict[str, dict] = {
-    "notr":      {"style": None, "rate": 1.0, "before_ms": 0, "after": 1.0},
-    "heyecan":   {"style": "excited and energetic, rising pitch", "rate": 1.08, "before_ms": 0, "after": 0.8},
-    "merak":     {"style": "curious and wondering, questioning intonation", "rate": 0.96, "before_ms": 120, "after": 1.3},
-    "korku":     {"style": "scared, trembling, tense hushed voice", "rate": 0.94, "before_ms": 250, "after": 1.3},
-    "nese":      {"style": "cheerful and happy, smiling voice", "rate": 1.04, "before_ms": 0, "after": 0.9},
-    "fisilti":   {"style": "whispering, very soft and breathy", "rate": 0.9, "before_ms": 300, "after": 1.4},
-    "uzuntu":    {"style": "sad, slow, low and soft voice", "rate": 0.88, "before_ms": 150, "after": 1.5},
-    "ofke":      {"style": "angry, stern and firm voice", "rate": 1.04, "before_ms": 0, "after": 0.9},
-    "saskinlik": {"style": "surprised and astonished", "rate": 1.0, "before_ms": 200, "after": 1.2},
+    "notr":      {"method": None, "style": None, "rate": 1.0, "before_ms": 0, "after": 1.0},
+    "heyecan":   {"method": None, "style": None, "rate": 1.08, "before_ms": 0, "after": 0.75},
+    "merak":     {"method": None, "style": None, "rate": 0.96, "before_ms": 150, "after": 1.35},
+    "korku":     {"method": None, "style": None, "rate": 0.94, "before_ms": 250, "after": 1.35},
+    "nese":      {"method": None, "style": None, "rate": 1.04, "before_ms": 0, "after": 0.9},
+    "fisilti":   {"method": "talimat", "style": "whispering, very soft and breathy",
+                  "rate": 1.15, "before_ms": 300, "after": 1.4},
+    "uzuntu":    {"method": "ornek", "style": "sad, slow, low and soft voice",
+                  "target": (-3, -5.0), "rate": 1.0, "before_ms": 200, "after": 1.5},
+    "ofke":      {"method": None, "style": None, "rate": 1.05, "before_ms": 0, "after": 0.85},
+    "saskinlik": {"method": None, "style": None, "rate": 1.0, "before_ms": 250, "after": 1.2},
 }
-# Vurgu: hedef kelimeden önce kısa duraklama (okunuş metninde «…»); talimatla vurgu ölçümde kelimeyi öne çıkarmadı.
+MIN_STYLE_WORDS = 5       # bundan kısa parçada ton yok (yalnız hız/duraklama): kısa ünlemde ton güvenilmez
+# İfade örneği adayları: üç tohum; kabul: harf hatası ≤ %6, perde kayması ±%30 içinde (ses kimliği). Hiçbiri tutmazsa
+# o ses+ifade için ton verilmez (yalnız hız/duraklama) ve kayıtta nedeni yazar.
+EXAMPLE_SEEDS = (11, 22, 33)
+EXAMPLE_MAX_CER = 0.06
+EXAMPLE_MAX_SHIFT = 30.0
+# Vurgu: hedef kelimeden önce kısa durak (okunuş metninde «...»); talimatla vurgu ölçümde kelimeyi öne çıkarmadı
+# (enerji +0,8 dB, taban +1,1), duraklama çıkardı (+3,0 dB, perde +1,6 yarım ton, harf hatası %0,3).
 EMPHASIS = {"method": "pause", "mark": "..."}
 
 MIN_PROB = 0.5            # en olası ifade bundan düşükse nötr
@@ -211,47 +236,148 @@ def _emphasize(text: str, words: list[str]) -> str:
 
 
 def apply(d: Path, pg: dict, units: list, plist: list) -> tuple[list, list | None]:
-    """Parçalara cümlenin ifadesini işler: `p.extra` (style, clone, rate, pause_before_ms), cümle sonu duraklaması ve
-    vurgu. Dönen ikinci değer sayfa özetine (hash) girer; işaret yoksa None (eski sayfaların özeti değişmez)."""
+    """Parçalara cümlenin ifadesini işler (senkron; `narration.page_input` kancası): `p.extra` = {label, tone, rate,
+    pause_before_ms} (tonu `prepare` servis gövdesine çevirir), cümle sonu duraklaması ve vurgu. Dönen ikinci değer
+    sayfa özetine (hash) girer; işaret yoksa None (eski sayfaların özeti değişmez)."""
     marks = page_marks(d, pg["id"])
     if not marks:
         return plist, None
-    # birim → kelime → cümle sırası
-    sent_of: dict[tuple[int, int], tuple[str, str, list[str]]] = {}
+    sent_of: dict[tuple[int, int], tuple[str, str]] = {}          # (birim, kelime) → (cümle anahtarı, parmak izi)
     for ui, u in enumerate(units):
         for i, ks in enumerate(unit_sentences(u)):
             a, b = u.words[ks[0]].start, u.words[ks[-1]].end
-            info = (f"{u.id}:{i}", fp(u.text[a:b]), [core(u.words[k].text) for k in ks])
             for k in ks:
-                sent_of[(ui, k)] = info
+                sent_of[(ui, k)] = (f"{u.id}:{i}", fp(u.text[a:b]))
+
+    def key_of(p):
+        return sent_of.get((p.unit, p.words[0]), (None, None)) if p.words else (None, None)
+
     sig, prev_key = [], None
     for j, p in enumerate(plist):
-        info = sent_of.get((p.unit, p.words[0])) if p.words else None
-        key, sfp, _ = info or (None, None, [])
+        key, sfp = key_of(p)
         m = marks.get(key) if key else None
         if not m or m.get("fp") != sfp:
             sig.append(None)
             prev_key = key
             continue
-        row = TABLE[m.get("label", "notr")] if m.get("label") in TABLE else TABLE["notr"]
+        label = m.get("label") if m.get("label") in TABLE else "notr"
+        row = TABLE[label]
         extra: dict = {}
-        if row["style"]:
-            extra.update(style=row["style"], clone="ref")
+        if label != "notr":
+            words = sum(len(units[p.unit].words[k].say) for k in p.words)
+            extra["label"] = label
+            extra["tone"] = bool(row["method"]) and words >= MIN_STYLE_WORDS
             if row["rate"] != 1.0:
                 extra["rate"] = row["rate"]
             if row["before_ms"] and key != prev_key:
                 extra["pause_before_ms"] = row["before_ms"]
         nxt = plist[j + 1] if j + 1 < len(plist) else None
-        last_of_sentence = nxt is None or (sent_of.get((nxt.unit, nxt.words[0]))[0] if nxt.words else None) != key
-        if last_of_sentence and row["after"] != 1.0:
+        if (nxt is None or key_of(nxt)[0] != key) and row["after"] != 1.0:
             p.pause_ms = int(round(p.pause_ms * row["after"]))
         emph = [w for w in m.get("emphasis", []) if w]
         if emph:
             p.text = _emphasize(p.text, emph)
         p.extra = extra
-        sig.append([m.get("label"), emph, extra, p.pause_ms])
+        sig.append([label, emph, extra, p.pause_ms, row.get("method"), row.get("style")])
         prev_key = key
     return plist, (sig if any(sig) else None)
+
+
+async def prepare(body: dict, plist: list) -> None:
+    """Servis gövdesine ifadeyi yazar (`narration.narrate_page` kancası; `apply`'dan sonra): tonlu parçada ifade örneği
+    (`voice.prompt_audio`) ya da fısıltıda talimat (`style` + `clone: ref`); hız ve önceki duraklama her ifadeli
+    parçada. Gövdedeki parçalar `plist` ile aynı sıradadır."""
+    for p, seg in zip(plist, body["segments"]):
+        ex = getattr(p, "extra", None)
+        if not ex:
+            continue
+        row = TABLE[ex["label"]]
+        if ex.get("tone"):
+            voice = seg["voice"]
+            if row["method"] == "ornek" and voice.get("ref_text"):
+                ex_audio = await example(p.voice, ex["label"], voice)
+                if ex_audio:
+                    seg["voice"] = {**voice, "prompt_audio": ex_audio}
+            elif row["style"]:
+                # talimat yolu; metinsiz referanslı (yüklenmiş) ses zaten referans-yalnız klonla okunur
+                seg.update(style=row["style"], clone="ref")
+        for k in ("rate", "pause_before_ms"):
+            if k in ex:
+                seg[k] = ex[k]
+
+
+def _example_dir(vid: str) -> Path:
+    return N._root() / "ifade" / vid
+
+
+def _wav_slices(data: bytes, spans: list[tuple[float, float]]) -> list[bytes]:
+    import io
+    import wave
+    with wave.open(io.BytesIO(data)) as w:
+        sr, sw, ch = w.getframerate(), w.getsampwidth(), w.getnchannels()
+        frames = w.readframes(w.getnframes())
+    out = []
+    for a, b in spans:
+        buf = io.BytesIO()
+        with wave.open(buf, "wb") as o:
+            o.setnchannels(ch)
+            o.setsampwidth(sw)
+            o.setframerate(sr)
+            o.writeframes(frames[int(a * sr) * sw * ch:int(b * sr) * sw * ch])
+        out.append(buf.getvalue())
+    return out
+
+
+def pick_example(label: str, base: dict, cands: list[dict]) -> dict | None:
+    """Adaylardan hedefe en yakını: harf hatası ≤ EXAMPLE_MAX_CER ve perde kayması ±EXAMPLE_MAX_SHIFT içinde."""
+    tf0, tdb = TABLE[label]["target"]
+    ok = []
+    for c in cands:
+        m = c["measure"]
+        if not m.get("f0") or not base.get("f0") or m.get("cer", 1) > EXAMPLE_MAX_CER:
+            continue
+        shift = 100 * (m["f0"] / base["f0"] - 1)
+        if abs(shift) > EXAMPLE_MAX_SHIFT:
+            continue
+        ddb = (m.get("energy_db") or 0) - (base.get("energy_db") or 0)
+        ok.append((abs(shift - tf0) / 10 + abs(ddb - tdb) / 3, {**c, "shift": round(shift, 1), "ddb": round(ddb, 2)}))
+    return min(ok, key=lambda t: t[0])[1] if ok else None
+
+
+async def example(vid: str, label: str, ref: dict) -> str | None:
+    """Sesin bu ifadedeki örneği (base64 WAV; yoksa None). Yayınevi düzeyinde bir kez: referans cümlesi talimatla üç
+    tohumda okunur, ölçülür (servisin `measure`'ı), `pick_example` seçer; referans ya da talimat değişince yenilenir."""
+    import base64
+    row = TABLE[label]
+    ref_sha = hashlib.sha256(ref["ref_audio"].encode()).hexdigest()[:16]
+    dd = _example_dir(vid)
+    meta_p, wav_p = dd / f"{label}.json", dd / f"{label}.wav"
+    meta = json.loads(meta_p.read_text()) if meta_p.exists() else None
+    if meta and meta.get("ref") == ref_sha and meta.get("style") == row["style"] and meta.get("version") == VERSION:
+        return base64.b64encode(wav_p.read_bytes()).decode() if meta.get("chosen") and wav_p.exists() else None
+    text = ref["ref_text"]
+    segs = [{"text": text, "voice": ref, "pause_ms": 0, "clone": "full", "seed": N.REF_SEED}]
+    segs += [{"text": text, "voice": {"ref_audio": ref["ref_audio"], "ref_text": text}, "pause_ms": 0, "clone": "ref",
+              "style": row["style"], "seed": s} for s in EXAMPLE_SEEDS]
+    out = await N._call({"segments": segs, "format": "wav", "align": False, "measure": True})
+    parts = out["segments"]
+    base = parts[0].get("measure") or {}
+    cands = [{"seed": s, "measure": parts[i + 1].get("measure") or {}, "span": (parts[i + 1]["start"], parts[i + 1]["end"])}
+             for i, s in enumerate(EXAMPLE_SEEDS)]
+    best = pick_example(label, base, cands)
+    dd.mkdir(parents=True, exist_ok=True)
+    rec = {"version": VERSION, "voice": vid, "label": label, "style": row["style"], "ref": ref_sha, "base": base,
+           "candidates": [{k: c[k] for k in ("seed", "measure")} for c in cands], "at": _now(),
+           "chosen": {k: best[k] for k in ("seed", "shift", "ddb")} if best else None}
+    if best:
+        wav = _wav_slices(base64.b64decode(out["audio"]), [best["span"]])[0]
+        tmp = wav_p.with_suffix(".tmp")
+        tmp.write_bytes(wav)
+        tmp.replace(wav_p)
+    else:
+        rec["reason"] = "Adayların hiçbiri anlaşılırlık ve ses kimliği sınırına uymadı; bu ifade yalnız hız ve duraklamayla."
+    N._write(meta_p, rec)
+    return base64.b64encode(wav_p.read_bytes()).decode() if best else None
 
 
 # ------------------------------------------------------------------ Zeki AI önerisi
@@ -395,21 +521,28 @@ async def sample_sentence(d: Path, pid: str, key: str, label: str, emphasis: lis
     if not mine:
         raise ValueError("Okunacak metin yok")
     row = TABLE[label]
-    segs = []
     for j, p in enumerate(mine):
-        seg = {"text": _emphasize(p.text, emph) if emph else p.text, "voice": None,
-               "pause_ms": 0 if j == len(mine) - 1 else p.pause_ms}
-        if row["style"]:
-            seg.update(style=row["style"], clone="ref", rate=row["rate"])
-        segs.append((p.voice, seg))
-    refs = {v: await N.voice_ref(v) for v in {v for v, _ in segs}}
-    body = [{**seg, "voice": refs[v]} for v, seg in segs]
-    k = N._hash({"v": N.VERSION, "x": VERSION, "seg": [{**b, "voice": hashlib.sha256(b["voice"]["ref_audio"].encode()).hexdigest()}
-                                                         for b in body]})
+        if emph:
+            p.text = _emphasize(p.text, emph)
+        if j == len(mine) - 1:
+            p.pause_ms = 0
+        extra: dict = {}
+        if label != "notr":
+            extra = {"label": label, "tone": bool(row["method"])
+                     and sum(len(units[p.unit].words[k].say) for k in p.words) >= MIN_STYLE_WORDS}
+            if row["rate"] != 1.0:
+                extra["rate"] = row["rate"]
+        p.extra = extra
+    refs = {v: await N.voice_ref(v) for v in {p.voice for p in mine}}
+    body = {"segments": [{"text": p.text, "voice": refs[p.voice], "pause_ms": p.pause_ms} for p in mine],
+            "format": "mp3", "align": False}
+    await prepare(body, mine)
+    k = N._hash({"v": N.VERSION, "x": VERSION, "seg": [
+        {**sg, "voice": hashlib.sha256(json.dumps(sg["voice"], sort_keys=True).encode()).hexdigest()} for sg in body["segments"]]})
     cache = N._root() / "ornek" / f"ifade-{k}.mp3"
     if cache.exists():
         return cache.read_bytes()
-    out = await N._call({"segments": body, "format": "mp3", "align": False}, timeout=600)
+    out = await N._call(body, timeout=600)
     data = base64.b64decode(out["audio"])
     cache.parent.mkdir(parents=True, exist_ok=True)
     tmp = cache.with_suffix(".tmp")

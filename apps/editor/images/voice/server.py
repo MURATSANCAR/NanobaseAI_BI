@@ -14,8 +14,8 @@ Ses: tarifle tasarım (`voice.design`, gerçek kişi sesi gerekmez) ya da refera
 `voice.ref_text`; referans genellikle bir kez tarifle üretilmiş model çıktısıdır, kitap boyunca aynı ses kalır).
 
     GET  /health
-    POST /v1/audio/narrate {model, segments: [{text, voice, pause_ms, words, style?, rate?, pause_before_ms?, clone?}],
-                            format: mp3|wav, align: bool}
+    POST /v1/audio/narrate {model, segments: [{text, voice, pause_ms, words, style?, rate?, pause_before_ms?, clone?,
+                            cfg?}], format: mp3|wav, align: bool, measure?: bool}
          → {audio: base64, format, sample_rate, duration, seconds,
             segments: [{start, end, aligned, words: [{start, end, score} | null, …]}]}
 
@@ -28,6 +28,10 @@ kelime null döner (çağıran tahminle doldurur). Zamanlar saniye, bütün sesi
 referans sesi (talimat bu kipte etkili); boşsa `style` varken `ref`, yokken `full`. `rate` konuşma hızıdır: üretimden
 sonra perdeyi koruyan zaman esnetme (rubberband; yoksa atempo), kelime zamanları esnetilmiş sesten hizalanır.
 `pause_before_ms` parçadan önce sessizliktir; `cfg` parçanın yönlendirme gücüdür (boşsa `--cfg`).
+Tam klonda talimat metne girerse model onu sesli okur (ölçüm: harf hatası %45–111); tam klonda ton, `voice.prompt_audio`
+ile verilir: aynı sesin referans cümlesini ifadeyle okuyan örnek, devam kipi onun tonunu sürdürür, kimlik referanstan.
+`measure: true` her parçaya `measure` ekler (ortanca perde, enerji, sesli oranı, tanıyıcıyla harf hatası oranı):
+ifade örneği adayları bununla seçilir.
 """
 
 from __future__ import annotations
@@ -130,6 +134,8 @@ class Narrate(BaseModel):
     segments: list[Segment] = Field(min_length=1)
     format: str = "mp3"
     align: bool = True
+    measure: bool = False              # parça başına ölçü: perde, enerji, sesli oranı, tanıyıcıyla harf hatası
+
 
 
 # ------------------------------------------------------------------ seslendirme
@@ -260,6 +266,47 @@ def _align(wav: np.ndarray, words: list[str]) -> list[dict | None]:
     return out
 
 
+# ------------------------------------------------------------------ ölçü (ifade örneği seçimi)
+def _heard(wav: np.ndarray) -> str:
+    """Hizalayıcı modelin açgözlü CTC çözümü (tanıyıcı olarak): anlaşılırlık denetimi için."""
+    proc, model = ALIGNER
+    x = _resample16(wav)
+    feats = proc(x.numpy(), sampling_rate=16000, return_tensors="pt").input_values.to(DEVICE)
+    with torch.inference_mode():
+        ids = model(feats).logits.argmax(-1)
+    return proc.batch_decode(ids)[0]
+
+
+def _lev(a: str, b: str) -> int:
+    prev = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        cur = [i]
+        for j, cb in enumerate(b, 1):
+            cur.append(min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (ca != cb)))
+        prev = cur
+    return prev[-1]
+
+
+def _measure(wav: np.ndarray, text: str) -> dict:
+    """Ortanca perde (Hz), etkin konuşmada ortalama enerji (dBFS), sesli kare oranı, harf hatası oranı."""
+    import librosa
+    y = _resample16(wav).numpy()
+    rms = librosa.feature.rms(y=y, frame_length=400, hop_length=160)[0]
+    db = 20 * np.log10(rms + 1e-9)
+    active = db > db.max() - 35
+    f0, vflag, _ = librosa.pyin(y, fmin=60, fmax=600, sr=16000, frame_length=1024, hop_length=160)
+    n = min(len(f0), len(active))
+    voiced = vflag[:n] & active[:n] & ~np.isnan(f0[:n])
+    out = {"f0": round(float(np.median(f0[:n][voiced])), 1) if voiced.sum() > 5 else None,
+           "energy_db": round(float(db[:n][active[:n]].mean()), 2) if active.any() else None,
+           "voiced_ratio": round(float(voiced.sum() / max(1, active[:n].sum())), 3)}
+    if ALIGNER is not None:
+        clean = lambda t: re.sub(r"[^a-zçğıöşüâîû]", "", t.translate(_LOWER).lower())   # noqa: E731
+        want, got = clean(text), clean(_heard(wav))
+        out["cer"] = round(_lev(want, got) / max(1, len(want)), 3)
+    return out
+
+
 # ------------------------------------------------------------------ çıktı
 def _encode(wav: np.ndarray, fmt: str) -> bytes:
     pcm = (np.clip(wav, -1, 1) * 32767).astype("<i2").tobytes()
@@ -298,7 +345,8 @@ def narrate(req: Narrate) -> dict:
             start = pos / SR
             out.append({"start": round(start, 3), "end": round((pos + len(wav)) / SR, 3), "aligned": ALIGNER is not None,
                         "words": [None if w is None else {**w, "start": round(w["start"] + start, 3),
-                                                          "end": round(w["end"] + start, 3)} for w in words]})
+                                                          "end": round(w["end"] + start, 3)} for w in words],
+                        **({"measure": _measure(wav, seg.text)} if req.measure else {})})
             gap = np.zeros(int(SR * seg.pause_ms / 1000), dtype=np.float32)
             parts += [wav, gap]
             pos += len(wav) + len(gap)
