@@ -29,7 +29,7 @@ from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_choice"
-VERSION = "2"
+VERSION = "3"
 LABEL = "Yabancı ve yaşa ağır sözcükler"
 
 DIRECTOR = "book-director"
@@ -125,14 +125,14 @@ async def run(generation_id: str):
     for o in occs:
         if o.pos in W.CONTENT_POS:
             by[o.lemma].append(o)
-    # üç harften kısa kök (bozuk çözümleme: «re», «kv») ve kitapta hep büyük harfle geçen biçim (kısaltma ya da
+    # dört harften kısa kök (bozuk çözümleme: «re», «nim», «cağ») ve kitapta hep büyük harfle geçen biçim (kısaltma ya da
     # başlık: «ISBN», «TSE») sözcük seçimi konusu değildir
-    short = [lem for lem in by if len(lem) < 3]
+    short = [lem for lem in by if len(lem) < 4]
     caps = [lem for lem, os_ in by.items() if all(len(o.word) > 1 and o.word.isupper() for o in os_)]
     for lem in set(short) | set(caps):
         del by[lem]
     stats["skip_short_lemma"], stats["skip_all_caps_lemma"] = len(short), len(caps)
-    unknown = {f: ps for f, ps in rd["unknown"].items() if f.isalpha() and len(f) >= 3}
+    unknown = {f: ps for f, ps in rd["unknown"].items() if f.isalpha() and len(f) >= 4}
     prof = await book_type.profile(generation_id)
     what, reader = book_type.describe(prof), reader_of(prof)
     llm = Llm(generation_id)
@@ -196,11 +196,30 @@ async def run(generation_id: str):
         msg = (f"«{w}» yabancı sözcük; Türkçe karşılığı «{alt}» ({where})." if kind == "foreign" else
                f"«{w}» {reader} için ağır olabilir; daha basit: «{alt}» ({where}).")
         findings.append({
-            "page": page, "severity": "WARN", "quote": marked.replace("[[", "").replace("]]", ""),
+            # yaşa ağır sözcük tek tek bilgi düzeyinde; editörün uyarısı kitap geneli özettir (aşağıda)
+            "page": page, "severity": "WARN" if kind == "foreign" else "INFO",
+            "quote": marked.replace("[[", "").replace("]]", ""),
             "bbox": boxes.get(o.idx) if o is not None else None, "message": msg, "suggestion": alt,
             "details": {"kind": kind, "word": w, "alternative": alt, "count": count, "pages": pages, "p": round(p, 3),
                         "context": marked, "group": "yabancı sözcük" if kind == "foreign" else "yaşa ağır sözcük",
                         "confidence": round(p, 3)}})
         stats["kept_" + kind] += 1
+    heavy_rows = sorted((f for f in findings if f["details"]["kind"] == "age"), key=lambda f: -f["details"]["p"])
+    if heavy_rows:
+        # Tek tek yüzlerce uyarı yerine kitap geneli tek uyarı: çok sayıda ağır sözcük, kitabın beyan edilen yaşla
+        # uyumsuzluğunu (ya da CRM yaş aralığının yanlışlığını) gösterir. Tam liste ayrıntıda, güven sırasıyla.
+        words_in_book = max(len(occs), 1)
+        per1k = round(sum(f["details"]["count"] for f in heavy_rows) / words_in_book * 1000, 1)
+        shown = ", ".join(f"{f['details']['word']} → {f['details']['alternative']}" for f in heavy_rows[:15])
+        more = f" … ve {len(heavy_rows) - 15} sözcük daha (tamamı ayrıntıda)" if len(heavy_rows) > 15 else ""
+        findings.append({
+            "page": None, "severity": "WARN", "quote": None,
+            "message": f"{reader} için ağır olabilecek {len(heavy_rows)} sözcük (1.000 sözcükte {per1k}): {shown}{more}.",
+            "details": {"kind": "age_summary", "reader": reader, "count": len(heavy_rows), "per1000": per1k,
+                        "age_from": prof.get("age_from"), "age_to": prof.get("age_to"),
+                        "words": [{"word": f["details"]["word"], "alternative": f["details"]["alternative"],
+                                   "count": f["details"]["count"], "pages": f["details"]["pages"], "p": f["details"]["p"]}
+                                  for f in heavy_rows],
+                        "group": "yaşa ağır sözcük", "confidence": heavy_rows[0]["details"]["p"]}})
     findings.sort(key=lambda f: (f["page"] or 0, f["message"]))
     return findings, dict(stats)
