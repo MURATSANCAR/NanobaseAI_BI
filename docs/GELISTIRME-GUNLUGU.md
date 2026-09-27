@@ -23,6 +23,24 @@
   taşınıyor (418 bulgu, 1 taşınan), bulgu metinleri sade dille («Bu sayfada metnin yazısı kitabın geri kalanından
   küçük…», ayrıntı ayrı).
 - **Kalan:** müşteri VM'i (onayla); yeni stüdyo işlemlerinin rol kapısına bağlanması; efekt sesi havuzu (sürüyor).
+## 2026-09-28 — M6 Sözleşmeler: listelerdeki sessiz satır tavanı kaldırıldı
+
+- **Neden:** `backend/semantic_bridge/contracts.py` üç yerde `.limit()` ile ekrana söylemeden kesiyordu — sözleşme
+  geçmişi (`events`, 500), portal kayıtları (`list_records`, 1000), ödeme takvimi (`due_list`, 2000). Kullanıcının
+  kuralı: sayı tavanı yok. Kesmenin görünür yan etkileri de vardı: `list_records` aramayı satırlar okunduktan sonra
+  süzdüğü için 1000'den eski sözleşme aramada da bulunamıyordu; «Ödeme takvimi» ekranındaki «Bekleyen ödeme» sayısı ve
+  para birimi toplamları kesilmiş kümeden hesaplanıyordu.
+- **Ne yapıldı:** üç tavan kaldırıldı (sayfalama eklenmedi — tavan gerekmiyor; kayıtlar portalın kendi tabloları).
+  `list_records`'un ödeme özeti (`_payment_totals`) artık kimlik listesi değil alt sorgu alır; binlerce kimlik tek
+  `IN (...)` listesine dökülüp sürücünün bağ değişkeni sınırına takılmaz. Arayüzde değişiklik gerekmedi: sayılar
+  zaten `items.length`'ten okunuyor, artık eksiksiz.
+- **Test:** `test_contracts.py`'ye eski tavanın üstünde satır üreten üç test (1201 kayıt + en eskisini aramada bulma +
+  ödeme özeti; 701 geçmiş kaydı; 2301 ödeme + toplam). Test sunucusunda (`/tmp/claude-lehmann`, semantic-venv):
+  sözleşme/yetki/SEO-CRM testleri 47/47. Eski `contracts.py` ile aynı üç test 1000 / 500 / 2000'de düşüyor.
+- **Açık kalan (ayrı iş):** aynı modülde başka tavanlar var — CRM bağlı sözleşmeler `TOP 200` (`related_sql`),
+  kitap/taraf aramada `TOP 20`, `contracts_terms.py`'de taraf/kitap/kademe `[:50]/[:200]/[:20]`, hakediş dönemi 400.
+  Bunlara bu işte dokunulmadı. Dal `main`e taşınmadı, kurulum yapılmadı.
+
 ## 2026-09-28 — Yetkiler ekranında alan kutuları birbirine taşıyordu (düzeltildi, test sunucusunda)
 
 - Kullanıcı ekran görüntüsü: rol düzenleyicide Analiz/Finans/Editoryal/Kayıtlar kutularının metinleri komşu kutuya ve alttaki satıra biniyordu. Sebep: kutular `fieldset` (tarayıcı varsayılanı `min-inline-size: min-content` — en uzun satır kadar genişler) ve sütun sayısı ekran genişliğinden (`xl:grid-cols-3`); dar yönetim panelinde uzun işlem açıklamaları taşıyordu.
