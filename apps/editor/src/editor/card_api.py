@@ -168,6 +168,28 @@ def book_proofing(book_id: UUID):
                          'group':r['grp'],'confidence':_num(r['confidence']),'marks':r['marks'],
                          'decision':decisions.get(str(r['id']))} for r in rows]}
 
+@app.get('/v1/catalog/cover-requests')
+def catalog_cover_requests():
+    """CRM bağlayıcısı için editörün bütün kitapları (başlık, doğrulanmış ISBN ve yazar). Bağlayıcı CRM'e erişen
+    test sunucusunda zamanlayıcıyla koşar ve kart servisine yalnız o sunucunun tüneliyle ulaşır (köprü ve VM
+    nginx'i bu yolları geçirmez). Salt okuma."""
+    from . import catalog
+    return {'books':catalog.cover_requests()}
+
+@app.post('/v1/catalog/crm-lookups')
+def catalog_crm_lookup(body: dict = Body(...)):
+    """Bağlayıcının bir kitap için CRM eşleşmesi: yayınevi kaydı (yazar, özet, okur kitlesi, yaş, tür) ve kapak
+    sonucu. Kart servisinin ikinci yazma ucudur; yazdığı kitabın metni değil, yayınevinin kendi kaydıdır
+    (editor.catalog.store_crm_lookup — MCP'deki /catalog/covers ile aynı işlev)."""
+    from . import catalog
+    if not isinstance(body,dict) or not body.get('book_id') or not body.get('outcome'):
+        raise HTTPException(422,'book_id ve outcome gerekli')
+    try:
+        UUID(str(body['book_id']))
+    except ValueError:
+        raise HTTPException(422,'book_id geçersiz') from None
+    return catalog.store_crm_lookup(body)
+
 @app.get('/v1/books/{book_id}/proofing/export.docx')
 def book_proofing_docx(book_id: UUID, info: bool = Query(default=False)):
     """Son okuma bulguları kitabın metnine Word yorumu olarak işlenmiş .docx (redaksiyon Word'de yapılır).

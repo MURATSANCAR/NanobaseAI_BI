@@ -1,0 +1,10 @@
+[Unit]
+Description=Editör CRM bağlayıcısı, her gece 03:10 (yeni okunan kitaplar okur kitlesini, yaşı, türü alır)
+
+[Timer]
+OnCalendar=*-*-* 03:10:00
+Persistent=true
+Unit=editor-crm-connector.service
+
+[Install]
+WantedBy=timers.target
