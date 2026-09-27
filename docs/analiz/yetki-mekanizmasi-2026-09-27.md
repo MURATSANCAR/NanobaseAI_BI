@@ -5,8 +5,8 @@ kullanıcı bir gruba eklenince o grubun gördüğü her şeyi görür. (2) Ekra
 açılır/kapanır.
 
 Kararlar bölüm 10'da. **Durum (2026-09-27):** Aşama A'nın sayfa/menü kısmı kodlandı (`backend/semantic_bridge/access.py`,
-köprüde `page_gate`, `/api/v1/access/*`, ön yüzde `PageGate` + menü + Yönetim → Yetkiler). Ekran özellikleri (Aşama B) ve
-Zeki AI veri kapsamı (Aşama C) sırada.
+köprüde `page_gate`, `/api/v1/access/*`, ön yüzde `PageGate` + menü + Yönetim → Yetkiler). Ekran özellikleri (Aşama B) kodlandı
+(20 özellik anahtarı; bölüm 7'deki öneriden farkları günlükte). Zeki AI veri kapsamı (Aşama C) sırada.
 
 ---
 

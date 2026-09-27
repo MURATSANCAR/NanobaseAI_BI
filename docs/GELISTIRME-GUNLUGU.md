@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 — Yetki Aşama B: ekran içi işlemler role bağlı
+
+- **20 özellik anahtarı** (`access_catalog.json` → `features`): Zeki AI'a soru, SQL'i göster, dışa aktarma (her sayfada); pano düzenleme, planlı rapor, uyarı kuralı; denetim ayrıntısı/inceleme notu/yenileme, yönetim raporu yenileme; kitap inceleme kararı, son okuma kararı, kitap tasarımında GPU'lu üretim; SEO öneri üretme, eşitleme/ölçüm; ve **açıkça verilen 5 işlem** (Masam'da herkesin işi, yazar girişte herkesin projesi, yayın kurulu üye görüşleri, SEO onayı, toplantı odası yönetimi).
+- **Açıkça verilen işlemler** «Bütün sayfalar ve işlemler» ile gelmez; bugüne kadar yalnız yöneticinin yaptığı işlerdir. Böylece «Herkes» rolü bütün yetkilerle açılırken kimsenin eski yetkisi genişlemedi. Köprüde `is_admin` yerine `_can(user, anahtar)` (yönetici ya da rolünde açıkça verilmiş); SEO onayı rol **ya da** «Onay verebilenler» listesi.
+- **Köprü**: `FEATURE_RULES` (yöntem + yol deseni → anahtar) sayfa kapısından sonra bakılır; eşleşen her işlem için yetki istenir, yoksa 403 «Bu işlem rolünüzde yok.». Okumalar (GET) yalnız sayfa ister; dışa aktarma ve denetim ayrıntısı ayrıca işlem ister. Seslendirme önizlemesi ve sosyal görsel kompozisyonu üretim sayılmadı (kısa, GPU dışı iş).
+- **Ön yüz**: `useCan('<anahtar>')`; yetkisiz düğme/panel hiç çizilmez (karar: gizle). Panolar düzenleme yoksa salt okunur (taşıma, boyut, silme, başlık, kart ekleme yok); Planlı raporlar yalnız liste + (izinle) indirme; Uyarılar yalnız liste; Finansal denetimde «Dayanak veriler» sekmesi ve Logo satır ayrıntısı ayrıntı yetkisiyle; kitap tasarımında üretim düğmeleri; SEO'da öneri/eşitleme/tarama/ölçüm düğmeleri; ⌘K'da «Zeki AI'a sor» satırı. Yetki ekranı alan başına sayfalar + «İşlemler» listesi, açıkça verilenlerde «ayrıca verilir» etiketi; «Kişi gözüyle» işlemleri de gösterir.
+- **Hata düzeltme**: yetki önbelleğinin anahtarı yalnız tenant'tı; aynı süreçte ikinci veritabanı (testler) öncekinin rollerini görüyordu → anahtar veritabanı + tenant.
+- **Doğrulama (sunucuda)**: yetki testleri 12/12; tam paket 986 geçti, kalan 13 + 10 hata `main`de de aynı; `test_llm_queue` `main`de de ara ara düşüyor (yük 44). Ön yüz `tsc` temiz, vitest 36/36.
+
 ## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
 
 - Bağlayıcının zamanlayıcısı yoktu; yeni okunan kitaplar okur kitlesini/yaşı/türü almıyor, yaş denetimleri koşmuyordu. Nerede koşmalı: CRM (.28) test sunucusundan erişiliyor; editöre test sunucusundan yalnız TT GPU'nun açtığı ters tüneller var (kart 18889, stüdyo 18890). `editor-mcp` dışarı açık değil ve açmak bütün MCP araçlarını açardı.
