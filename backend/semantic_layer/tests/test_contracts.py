@@ -90,12 +90,14 @@ def test_month_bounds():
         R.month_bounds("2026-01-01", "2026-06-29")
 
 
-def test_fold_sales_subtracts_returns_whatever_the_sign():
-    rows = [{"kod": "K1", "tur": "Satış", "miktar": 100, "net": 5000, "liste": 8000},
-            {"kod": "K1", "tur": "İade", "miktar": 10, "net": 500, "liste": 800},
-            {"kod": "K1", "tur": "İade", "miktar": -5, "net": -250, "liste": -400}]
+def test_fold_sales_subtracts_returns_and_prices_each_month():
+    rows = [{"kod": "K1", "yil": 2026, "ay": 1, "tur": "Satış", "miktar": 100, "net": 5000, "kapak": 90},
+            {"kod": "K1", "yil": 2026, "ay": 1, "tur": "İade", "miktar": -10, "net": -500, "kapak": 90},
+            {"kod": "K1", "yil": 2026, "ay": 2, "tur": "Satış", "miktar": 10, "net": 700, "kapak": 120},
+            {"kod": "K1", "yil": 2026, "ay": 2, "tur": "İade", "miktar": 5, "net": 250, "kapak": -120}]
     s = R.fold_sales(rows)["K1"]
-    assert s["qty"] == 85 and s["net"] == 4250 and s["retQty"] == 15
+    assert s["qty"] == 95 and s["net"] == 4950 and s["retQty"] == 15
+    assert s["list"] == 90 * 90 + 5 * 120  # her ay kendi kapak fiyatıyla
 
 
 def test_net_royalty_with_advance_and_withholding():
@@ -113,10 +115,14 @@ def test_net_royalty_with_advance_and_withholding():
 
 
 def test_gross_basis_uses_list_price_and_discount():
-    t = _terms(basis="brut", discountPct=10, advance=None)
-    r = R.compute(t, period_start="2026-01-01", period_end="2026-01-31", sales={"K1": {"qty": 100, "net": 1, "list": 0, "retQty": 0}},
-                  list_prices={"K1": 50})
-    assert r["base"] == 4500.0 and r["gross"] == 450.0
+    t = _terms(basis="brut", discountPct=10, advance=None, books=[{"title": "B", "stockCode": "K1", "listPrice": 999}])
+    sales = {"K1": {"qty": 100, "net": 1, "list": 6000, "retQty": 0}}
+    r = R.compute(t, period_start="2026-01-01", period_end="2026-01-31", sales=sales, list_prices={"K1": 50})
+    assert r["base"] == 4500.0 and r["gross"] == 450.0          # elle girilen fiyat önce gelir
+    r = R.compute(t, period_start="2026-01-01", period_end="2026-01-31", sales=sales)
+    assert r["base"] == 5400.0 and not r["warnings"]             # Logo'daki aylık kapak fiyatı, CRM fiyatı değil
+    r = R.compute(t, period_start="2026-01-01", period_end="2026-01-31", sales={"K1": {"qty": 10, "net": 1, "list": 0, "retQty": 0}})
+    assert r["base"] == 8991.0 and "CRM" in r["warnings"][0]     # Logo fiyatı yoksa CRM'deki
 
 
 def test_tiers_split_across_boundary():

@@ -78,16 +78,21 @@ def _values(codes: list[str]) -> str:
 
 
 def sales_sql(codes: list[str], a: date, b: date) -> str:
-    """Stok kodu × satış/iade: adet, net tutar, adet × birim fiyat. `{satis:Y-Y}` yer tutucusu köprüde açılır."""
+    """Stok kodu × ay × satış/iade: adet, net tutar ve o ayın kapak fiyatı. `{satis:Y-Y}` köprüde açılır.
+
+    Kapak fiyatı = ayın en yüksek satır birim fiyatı (iade satırında fiyat eksi yazılır, mutlak değeri alınır).
+    2026-09-27 ölçümü: `Birim Fiyat` kanala göre değişir (aynı ay aynı kitapta 63 ve 90; 90'lı satırda indirim
+    ayrı yazılmış), en yükseği kapak fiyatıdır; Power BI'daki güncel fiyat da ayın en yüksek birim fiyatıdır
+    (`management/sql/baski_oneri/logo_fiyat.sql`). Kitapta KDV sıfır (KDV'li tutar = net tutar)."""
     if not codes:
         raise T.ContractError("Stok kodu olmadan satış okunamaz.")
     return (
-        "SELECT s.[Malzeme/Hizmet Kodu] AS kod, s.[Satis_Iade] AS tur, SUM(s.[Miktar]) AS miktar,"
-        " SUM(s.[Net Tutar]) AS net, SUM(s.[Miktar] * s.[Birim Fiyat]) AS liste"
+        "SELECT s.[Malzeme/Hizmet Kodu] AS kod, s.[Yıl] AS yil, s.[Ay] AS ay, s.[Satis_Iade] AS tur,"
+        " SUM(s.[Miktar]) AS miktar, SUM(s.[Net Tutar]) AS net, MAX(ABS(s.[Birim Fiyat])) AS kapak"
         f" FROM {{satis:{a.year}-{b.year}}} AS s"
         f" JOIN (VALUES {_values(codes)}) AS kod(k) ON kod.k = s.[Malzeme/Hizmet Kodu]"
         f" WHERE s.[Yıl] * 12 + s.[Ay] BETWEEN {ym(a)} AND {ym(b)} AND {SALES_FILTER}"
-        " GROUP BY s.[Malzeme/Hizmet Kodu], s.[Satis_Iade]"
+        " GROUP BY s.[Malzeme/Hizmet Kodu], s.[Yıl], s.[Ay], s.[Satis_Iade]"
     )
 
 
@@ -123,22 +128,29 @@ def tcmb_rate(currency: str, on: date, fetch) -> Optional[dict[str, Any]]:
 
 
 def fold_sales(rows: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
-    """Satış/iade satırlarını kitap başına toplar. İade adet ve tutarı düşer (görünüm işaretiyle ya da
-    işaretsiz tutsa da)."""
-    out: dict[str, dict[str, float]] = {}
+    """Kitap başına: net adet, net tutar, `list` = Σ ay (net adet × ayın kapak fiyatı), iade adedi.
+    İade adet ve tutarı düşer (görünüm eksi yazsa da artı yazsa da)."""
+    months: dict[tuple[str, Any, Any], dict[str, float]] = {}
     for r in rows:
         code = str(r.get("kod") or "").strip()
         if not code:
             continue
         ret = str(r.get("tur") or "").strip().replace("İ", "i").lower().startswith("iade")  # "İade".lower() = "i̇ade"
-        acc = out.setdefault(code, {"qty": 0.0, "net": 0.0, "list": 0.0, "retQty": 0.0})
-        q, n, l = (float(r.get(k) or 0) for k in ("miktar", "net", "liste"))
+        m = months.setdefault((code, r.get("yil"), r.get("ay")), {"qty": 0.0, "net": 0.0, "price": 0.0, "retQty": 0.0})
+        q, n = float(r.get("miktar") or 0), float(r.get("net") or 0)
         if ret:
-            q, n, l = -abs(q), -abs(n), -abs(l)
-            acc["retQty"] += -q
-        acc["qty"] += q
-        acc["net"] += n
-        acc["list"] += l
+            q, n = -abs(q), -abs(n)
+            m["retQty"] += -q
+        m["qty"] += q
+        m["net"] += n
+        m["price"] = max(m["price"], abs(float(r.get("kapak") or 0)))
+    out: dict[str, dict[str, float]] = {}
+    for (code, _, _), m in months.items():
+        acc = out.setdefault(code, {"qty": 0.0, "net": 0.0, "list": 0.0, "retQty": 0.0})
+        acc["qty"] += m["qty"]
+        acc["net"] += m["net"]
+        acc["list"] += m["qty"] * m["price"]
+        acc["retQty"] += m["retQty"]
     return out
 
 
@@ -230,12 +242,15 @@ def compute(terms: dict[str, Any], *, period_start: str, period_end: str,
             s = sales.get(code) or {"qty": 0.0, "net": 0.0, "list": 0.0, "retQty": 0.0}
             qty = s["qty"]
             if basis == "brut":
-                price = list_prices.get(code) or bk.get("listPrice")
-                if price is None:
-                    price = (s["list"] / qty) if qty else 0.0
-                    if qty:
-                        warns.append(f"«{title}» kapak fiyatı girilmemiş; Logo satış satırlarındaki birim fiyatın ortalaması ({T.fmt_num(price)}) kullanıldı.")
-                base_amt = qty * float(price)
+                # Elle girilen kapak fiyatı > Logo'da satış ayının kapak fiyatı > CRM'deki bugünkü fiyat.
+                if list_prices.get(code):
+                    base_amt = qty * float(list_prices[code])
+                elif s["list"] or not qty:
+                    base_amt = s["list"]
+                else:
+                    price = bk.get("listPrice") or 0.0
+                    base_amt = qty * float(price)
+                    warns.append(f"«{title}» için Logo'da kapak fiyatı okunamadı; CRM'deki fiyat ({T.fmt_num(price)}) kullanıldı.")
             else:
                 base_amt = s["net"]
             comps.append(("satış", qty, base_amt))

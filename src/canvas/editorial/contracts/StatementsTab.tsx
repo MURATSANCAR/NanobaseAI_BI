@@ -164,9 +164,8 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
   const [from, setFrom] = useState(next?.periodStart.slice(0, 7) ?? '');
   const [to, setTo] = useState(next?.periodEnd.slice(0, 7) ?? '');
   const [prints, setPrints] = useState<Record<string, number | null>>({});
-  const [prices, setPrices] = useState<Record<string, number | null>>(() =>
-    Object.fromEntries(t.books.filter((b) => b.stockCode && b.listPrice != null).map((b) => [b.stockCode as string, b.listPrice ?? null])),
-  );
+  // Boş: brüt satışta kapak fiyatı Logo'dan (satış ayının en yüksek satır fiyatı) okunur; alan yalnız elle düzeltme içindir.
+  const [prices, setPrices] = useState<Record<string, number | null>>({});
   const [fxRate, setFxRate] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [calc, setCalc] = useState<Calc | null>(null);
@@ -199,7 +198,8 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
           <h3 className="text-[13px] font-extrabold">Hakediş hesapla</h3>
           <p className="mt-0.5 text-[11.5px] text-canvas-muted">
             {meta.salesBased.includes(t.paymentType) ? 'Satış Logo\'dan kitabın stok koduyla, faturalı satırlardan okunur; iadeler düşülür. ' : ''}
-            {printBased ? 'Baskı adedi kaynakta tutulmuyor; dönemde basılan adedi girin. ' : ''}
+            {printBased ? 'Baskı adedi kaynakta tutulmuyor; dönemde basılan adedi ve kapak fiyatını girin. ' : ''}
+            {t.basis === 'brut' && !printBased ? 'Brüt matrah: her ayın net adedi × o ayın kapak fiyatı (Logo\'da ayın en yüksek satır fiyatı). ' : ''}
             Dönem ay başında başlar, ay sonunda biter.
           </p>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -247,7 +247,14 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
                     {b.title} <span className="font-mono text-[11px] font-normal text-canvas-muted">{b.stockCode}</span>
                   </div>
                   {printBased ? <NumInput value={prints[b.stockCode!] ?? null} onChange={(v) => setPrints({ ...prints, [b.stockCode!]: v })} placeholder="Basılan adet" suffix="ad." /> : <span className="hidden sm:block" />}
-                  {needPrice && <NumInput value={prices[b.stockCode!] ?? null} onChange={(v) => setPrices({ ...prices, [b.stockCode!]: v })} placeholder="Kapak fiyatı" suffix="₺" />}
+                  {needPrice && (
+                    <NumInput
+                      value={prices[b.stockCode!] ?? null}
+                      onChange={(v) => setPrices({ ...prices, [b.stockCode!]: v })}
+                      placeholder={printBased ? `Kapak fiyatı${b.listPrice ? ` (CRM ${num(b.listPrice)})` : ''}` : "Logo'dan; düzeltmek için yazın"}
+                      suffix="₺"
+                    />
+                  )}
                 </li>
               ))}
             </ul>
