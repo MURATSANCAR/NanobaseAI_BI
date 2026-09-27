@@ -185,6 +185,21 @@ SPEC: list[dict[str, Any]] = [
      "help": "Anahtar serpapi.com hesabından alınır; ücretsiz katman ayda 250 arama. Boşsa rakip karşılaştırması yapılmaz"},
     {"key": "SEO_SERP_MONTHLY", "group": "seo", "label": "Rakip araması aylık sınır", "type": "int", "default": "240",
      "help": "Ücretsiz kota aşılmasın diye bir ayda en çok bu kadar Google araması yapılır"},
+    {"key": "SEO_INSPECT_DAILY", "group": "seo", "label": "Google URL denetimi günlük sınır", "type": "int", "default": "1800",
+     "help": "Search Console URL Denetimi günde 2.000 adresle sınırlı; Googlebot'un sayfayı en son ne zaman taradığı ve "
+             "dizinde olup olmadığı her gece bu kadar adres için sorulur, kalan ertesi güne kalır"},
+    {"key": "CLOUDFLARE_API_TOKEN", "group": "seo", "label": "Cloudflare API anahtarı (yalnız okuma)", "type": "secret",
+     "default": "", "help": "timas.com.tr Cloudflare arkasında. «Analytics: Read» yetkili anahtarla Googlebot ve yapay zekâ "
+                            "botlarının istekleri, taradığı sayfalar ve aldığı hata kodları okunur (sunucu günlüğü yerine). Boşsa bu bölüm kapalı"},
+    {"key": "CLOUDFLARE_ZONE_ID", "group": "seo", "label": "Cloudflare bölge kimliği (Zone ID)", "type": "text", "default": "",
+     "help": "Cloudflare panelinde timas.com.tr → Genel bakış sağ altta"},
+    {"key": "SEO_ALERT_RECIPIENTS", "group": "seo", "label": "SEO uyarı alıcıları", "type": "text", "default": "",
+     "help": "E-posta adresleri, virgülle. Tıklama düşüşü, 404 artışı, robots.txt/sitemap değişikliği, yapay zekâ "
+             "cevaplarından düşme gibi olaylarda gider. E-posta sunucusu Uyarılar ayarlarındaki ile aynı"},
+    {"key": "SEO_WEEKLY_REPORT_TO", "group": "seo", "label": "Haftalık SEO/GEO raporu alıcıları", "type": "text", "default": "",
+     "help": "E-posta adresleri, virgülle. Boşsa haftalık rapor yalnız ekranda durur"},
+    {"key": "SEO_WEEKLY_REPORT_DAY", "group": "seo", "label": "Haftalık rapor günü (1=Pazartesi … 7=Pazar)", "type": "int",
+     "default": "1", "help": "Rapor o günün gece işinde hazırlanır ve gönderilir"},
     {"key": "SEO_GUIDE_BOOKS", "group": "seo", "label": "Rehber taslağında önceden seçili kitap", "type": "int", "default": "10",
      "help": "Rehber içerik taslağı üretilirken en uygun bu kadar kitap işaretli gelir; kullanıcı ekler, çıkarır"},
     {"key": "SEO_GUIDE_MIN_BOOKS", "group": "seo", "label": "Rehber için en az kitap", "type": "int", "default": "3",
