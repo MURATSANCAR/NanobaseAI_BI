@@ -100,24 +100,35 @@ body[data-path="login"] .login-content {
 	box-shadow: 0 28px 70px -12px rgba(20, 30, 60, 0.18);
 }
 
-/* Giriş düğmesi btn-primary değil btn-login taşır ve giriş paketi bu dosyadan sonra
-   yüklenir; seçici gövdeden başlar ki sıraya bağlı kalmasın. */
-body[data-path="login"] .btn.btn-login,
+/* Giriş düğmesi btn-primary değil btn-login taşır; giriş paketi onu
+   `.for-login .page-card .page-card-actions .btn-login` (4 sınıf) ile gri-900'e boyar
+   ve bu dosyadan sonra yüklenir. Aynı zincir gövde öznitelikleriyle öneklenir ki
+   yükleme sırasından bağımsız kazansın. */
+body[data-path] .page-card .page-card-actions .btn-login,
+body[data-path] .page-card .page-card-actions .btn-ldap-login,
 body[data-path="update-password"] .btn.btn-primary {
-	background-color: var(--nb-violet);
+	background: var(--nb-violet);
 	border-color: var(--nb-violet);
 	color: #fff;
 }
 
-body[data-path="login"] .btn.btn-login:hover,
+body[data-path] .page-card .page-card-actions .btn-login:hover,
+body[data-path] .page-card .page-card-actions .btn-login:focus,
+body[data-path] .page-card .page-card-actions .btn-ldap-login:hover,
 body[data-path="update-password"] .btn.btn-primary:hover {
-	background-color: var(--nb-violet-hover);
+	background: var(--nb-violet-hover);
 	border-color: var(--nb-violet-hover);
 }
 
-body[data-path="login"] .btn.btn-login:active,
+body[data-path] .page-card .page-card-actions .btn-login:active,
+body[data-path] .page-card .page-card-actions .btn-ldap-login:active,
 body[data-path="update-password"] .btn.btn-primary:active {
-	background-color: var(--nb-violet-press);
+	background: var(--nb-violet-press);
+}
+
+body[data-path] .page-card .page-card-actions .btn-login:disabled {
+	background: var(--nb-violet);
+	opacity: 0.6;
 }
 
 body[data-path="login"] .app-logo {
