@@ -77,6 +77,10 @@ def _grain_hint(text: str) -> Optional[str]:
 _RANGE_GAP = re.compile(r"^[\s\-]*(?:ile|ila|arasi\w*)?[\s\-]*\d{0,2}\.?[\s\-]*(?:ile|ila|arasi\w*)?[\s\-]*$")
 _RANGE_WORD = re.compile(r"(?:^|\s)(?:ile|ila|aras\w*)")
 _RANGE_AFTER = re.compile(r"^\s*(?:\w{1,4}\s+)?aras\w*")
+#: "20 ağustos ve 21 ağustos arasındaki": "ve" joins two ends only when "aras…" follows the second.
+_VE_GAP = re.compile(r"^[\s\-]*ve[\s\-]*$")
+#: A time of day written after a date ("20.08.2026 03:00:00", "20 ağustos 2026 saat 03:00").
+_TIME = r"(?:\s+(?:saat\s+)?(\d{1,2})[:.](\d{2})(?:[:.](\d{2}))?(?![\d.]))?"
 
 
 def _join_ranges(found: list, text: str) -> list:
@@ -98,10 +102,14 @@ def _join_ranges(found: list, text: str) -> list:
         (a_start, a_end, a), (b_start, b_end, b) = out[i], out[i + 1]
         gap = text[a_end:b_start]
         after = text[b_end:b_end + 24]
-        joined = _RANGE_GAP.match(gap) and (_RANGE_WORD.search(gap) or _RANGE_AFTER.match(after))
+        joined = (_RANGE_GAP.match(gap) and (_RANGE_WORD.search(gap) or _RANGE_AFTER.match(after))) \
+            or (_VE_GAP.match(gap) and _RANGE_AFTER.match(after))
         if joined and a.start and b.end and a.start < b.end:
-            span = TemporalSlot(text[a_start:b_end].strip(), "RANGE", a.start, b.end, None,
-                                params={"from": a.text, "to": b.text})
+            params = {"from": a.text, "to": b.text}
+            for side, slot in (("from_time", a), ("to_time", b)):
+                if (slot.params or {}).get("time"):
+                    params[side] = slot.params["time"]
+            span = TemporalSlot(text[a_start:b_end].strip(), "RANGE", a.start, b.end, None, params=params)
             out[i:i + 2] = [(a_start, b_end, span)]
             continue
         i += 1
@@ -172,21 +180,38 @@ def parse_temporal(question: str, today: Optional[date] = None) -> tuple[list[Te
     # takes the year written elsewhere in the question, else the current one (same as a bare month).
     # "10 ocak ayında" is a count before a month, not a day: a following "ay…" leaves it to the month.
     y_any = re.findall(_YEAR, text)
-    for m in re.finditer(rf"\b(\d{{1,2}})\s+({_MONTH_RE})\w*(?:\s+{_YEAR})?\b(?!\s+ay)", text):
+    # The time of day written after it ("… 03:00", "saat 03:00") is part of the date phrase: kept in params
+    # so the question can be asked about it, never read as a word nobody defined.
+    def timed(params: dict, hh, mm, ss) -> dict:
+        if hh is not None and int(hh) < 24 and int(mm) < 60:
+            params["time"] = f"{int(hh):02d}:{int(mm):02d}" + (f":{int(ss):02d}" if ss else "")
+        return params
+
+    for m in re.finditer(rf"\b(\d{{1,2}})\s+({_MONTH_RE})\w*(?:\s+{_YEAR})?{_TIME}\b(?!\s+ay)", text):
         y = int(m.group(3)) if m.group(3) else (int(y_any[0]) if y_any else today.year)
         try:
             day = date(y, MONTHS[m.group(2)], int(m.group(1)))
         except ValueError:
             continue
         add(m, TemporalSlot(m.group(0).strip(), "DATE", day, day + timedelta(days=1), "DAY",
-                            params={"date": day.isoformat(), "year_assumed": not m.group(3) and not y_any}))
-    for m in re.finditer(rf"\b(\d{{1,2}})[./](\d{{1,2}})[./]{_YEAR}\b", text):
+                            params=timed({"date": day.isoformat(), "year_assumed": not m.group(3) and not y_any},
+                                         m.group(4), m.group(5), m.group(6))))
+    # "17.08.2026", "17/08/2026", and a slip of the keyboard "21.008.2026" (a zero too many is still August).
+    for m in re.finditer(rf"\b(\d{{1,2}})[./](0?\d{{1,2}})[./]{_YEAR}{_TIME}", text):
         try:
             day = date(int(m.group(3)), int(m.group(2)), int(m.group(1)))
         except ValueError:
             continue
         add(m, TemporalSlot(m.group(0).strip(), "DATE", day, day + timedelta(days=1), "DAY",
-                            params={"date": day.isoformat()}))
+                            params=timed({"date": day.isoformat()}, m.group(4), m.group(5), m.group(6))))
+    # ISO: "2026-08-20", "2026-08-20 03:00:00" (dashes were folded to "-" above).
+    for m in re.finditer(rf"\b{_YEAR}-(\d{{1,2}})-(\d{{1,2}}){_TIME}", text):
+        try:
+            day = date(int(m.group(1)), int(m.group(2)), int(m.group(3)))
+        except ValueError:
+            continue
+        add(m, TemporalSlot(m.group(0).strip(), "DATE", day, day + timedelta(days=1), "DAY",
+                            params=timed({"date": day.isoformat()}, m.group(4), m.group(5), m.group(6))))
 
     # --- explicit month ranges: "2026 ocak-agustos", "ocak-agustos 2026"
     for m in re.finditer(rf"{_YEAR}\s+({_MONTH_RE})\s*-\s*({_MONTH_RE})", text):
