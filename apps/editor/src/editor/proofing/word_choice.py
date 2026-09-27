@@ -29,7 +29,7 @@ from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_choice"
-VERSION = "1"
+VERSION = "2"
 LABEL = "Yabancı ve yaşa ağır sözcükler"
 
 DIRECTOR = "book-director"
@@ -42,9 +42,10 @@ YOUNG_READERS = ("CHILD", "YOUNG")
 
 BETTER = "Evet: sözcük Türkçeye yerleşmemiş; önerilen karşılık bu cümlede AYNI anlamı verir ve daha uygun."
 KEEP_AS_IS = ("Hayır: sözcük Türkçeye yerleşmiş, ya da burada gerekli (terim, ad, alıntı), ya da karşılık "
-              "anlamı tam vermiyor.")
+              "anlamı tam vermiyor, ya da bu cümle kitabın anlatısı değil (künye, yazar/çizer tanıtımı, arka kapak).")
 HEAVY = "Evet: bu yaştaki okur bu sözcüğün anlamını büyük olasılıkla bilmez; daha basit sözcük gerekir."
-FINE = "Hayır: bu yaştaki okur anlar ya da bağlamdan çıkarır; ya da sözcük öğretmek için bilerek seçilmiş."
+FINE = ("Hayır: bu yaştaki okur anlar ya da bağlamdan çıkarır; ya da sözcük öğretmek için bilerek seçilmiş; ya da "
+        "bu cümle çocuğun okuyacağı anlatı değil (künye, yazar/çizer tanıtımı, arka kapak, yetişkine not).")
 
 
 def list_prompt(kind: str, words: list[str], reader: str) -> str:
@@ -124,7 +125,14 @@ async def run(generation_id: str):
     for o in occs:
         if o.pos in W.CONTENT_POS:
             by[o.lemma].append(o)
-    unknown = {f: ps for f, ps in rd["unknown"].items() if f.isalpha() and len(f) > 1}
+    # üç harften kısa kök (bozuk çözümleme: «re», «kv») ve kitapta hep büyük harfle geçen biçim (kısaltma ya da
+    # başlık: «ISBN», «TSE») sözcük seçimi konusu değildir
+    short = [lem for lem in by if len(lem) < 3]
+    caps = [lem for lem, os_ in by.items() if all(len(o.word) > 1 and o.word.isupper() for o in os_)]
+    for lem in set(short) | set(caps):
+        del by[lem]
+    stats["skip_short_lemma"], stats["skip_all_caps_lemma"] = len(short), len(caps)
+    unknown = {f: ps for f, ps in rd["unknown"].items() if f.isalpha() and len(f) >= 3}
     prof = await book_type.profile(generation_id)
     what, reader = book_type.describe(prof), reader_of(prof)
     llm = Llm(generation_id)
