@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3) ve ses kütüphanesi 09-27) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi ve sayfa düzeninin kendiliğinden kurulumu 09-27) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -275,6 +275,13 @@ if "EDITOR-STUDYO-PROVA" not in s:
              + loc(f"{PR}/(cover|pages/[0-9]{{1,4}})(/report)?", "GET", "jobs/$1/proof/$2$3$is_args$args", timeout=120))
     s = s.replace("    # EDITOR-BITTI", prova + "    # EDITOR-BITTI", 1)
     changes.append("3B kitap ve baskı provası yolları")
+
+# 4) Sayfa düzeni ekranının açılışı (09-27): plan yoksa kendiliğinden kurulur; `?retry=1` son düşen kurulumu yeniler.
+if "EDITOR-STUDYO-PLANHAZIR" not in s:
+    hazir = ("    # EDITOR-STUDYO-PLANHAZIR  (sayfa duzeni acilisinda kendiliginden plan: api.py plan_prepare)\n"
+             + loc(f"{P_}/prepare", "POST", "jobs/$1/plan/prepare$is_args$args", timeout=60))
+    s = s.replace("    # EDITOR-BITTI", hazir + "    # EDITOR-BITTI", 1)
+    changes.append("sayfa düzeni kendiliğinden kurulum yolu")
 
 # 5) Ses kütüphanesi (yayınevi düzeyinde): liste + hak beyanlı yükleme, izin belgesi, yönetici kaldırması.
 #    Yükleme gövdesi base64 JSON (kayıt, özgün dosya, izin belgesi): 3 × (STUDIO_UPLOAD_MB + 1) × 4/3.

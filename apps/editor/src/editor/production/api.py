@@ -622,6 +622,16 @@ def plan_get(job: str) -> Response:
     return JSONResponse(plan_mod.load(d), headers={"Cache-Control": "no-store"})
 
 
+@app.post(P + "/prepare")
+async def plan_prepare(job: str, retry: bool = Query(False), by: str = Depends(editor)) -> dict:
+    """Sayfa düzeni ekranının açılışı (2026-09-27): plan yoksa sesli okuma/okur uçlarıyla aynı kendiliğinden kurulum
+    (auto_plan_dir → plan.ensure, arka planda). Hazırsa 200 `{status: ready}`; kurulum sürüyorsa 409 PREPARING
+    (`state` preparing | waiting), düştüyse 409 PLAN_FAILED (`?retry=1` ile yeniden), kitap yerleşmediyse 404 NO_PLAN.
+    `GET plan` bilinçli olarak tetiklemez: otomatik kayıt «plan yok» cevabına dayanır; ekran bu ucu ayrıca çağırır."""
+    await auto_plan_dir(job, by, "sayfa düzeni", retry)
+    return {"status": "ready"}
+
+
 @app.post(P + "/freeze")
 async def plan_freeze(job: str, by: str = Depends(editor)) -> Response:
     """Sayfa planını kurar (varsa bozmaz, aynısını döner). Balon yerleşimi burada görsel okuyucusuz (kuralla)."""

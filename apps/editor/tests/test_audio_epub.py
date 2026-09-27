@@ -84,9 +84,35 @@ def test_male_narrator_candidates_are_selectable_not_default():
     cand = [v for v in N.VOICES if v["id"].startswith("anlatici-erkek-")]
     assert len(cand) == 3 and all(v["group"] == "anlatici" and v["design"] for v in cand)
     assert len({v["design"] for v in cand}) == 3
-    assert N.DEFAULT_NARRATOR == "anlatici-kadin"
+    assert N.DEFAULT_NARRATOR == "anlatici-kadin"                    # genel varsayılan değişmedi
     for v in cand:
         assert not re.search(r"\b(clone|voice of|sounds like|imitat)", v["design"], re.I)   # tarif, kişi değil
+
+
+def test_default_male_narrator_is_the_warm_storyteller(tmp_path, monkeypatch):
+    """Kullanıcı kararı 2026-09-27: erkek anlatıcı = «sıcak masalcı». Eski «Erkek anlatıcı» kimliği ona yönlenir,
+    listede ayrı satır yoktur; ekranda anlatıcı grubunda erkeklerin en üstünde, «önerilen»."""
+    assert N.DEFAULT_MALE_NARRATOR == "anlatici-erkek-masalci"
+    assert N.canonical("anlatici-erkek") == N.DEFAULT_MALE_NARRATOR and N.canonical("anlatici-kadin") == "anlatici-kadin"
+    assert N.is_voice("anlatici-erkek") and N.voice("anlatici-erkek")["id"] == N.DEFAULT_MALE_NARRATOR
+    listed = N.all_voices()
+    assert "anlatici-erkek" not in {v["id"] for v in listed}
+    grp = [v for v in listed if v["group"] == "anlatici"]
+    males = [v for v in grp if "Erkek" in v["label"]]
+    assert males[0]["id"] == N.DEFAULT_MALE_NARRATOR and males[0]["recommended"] is True
+    assert grp[0]["id"] == N.DEFAULT_NARRATOR and grp[1]["id"] == N.DEFAULT_MALE_NARRATOR
+    assert sum(bool(v.get("recommended")) for v in listed) == 1
+    # kayıtlı ayar ve API isteği: eski kimlik güncel sese çevrilir
+    monkeypatch.setattr(studio, "root", lambda: tmp_path)
+    d = tmp_path / "20260927000000abcdef"
+    d.mkdir()
+    assert N.set_settings(d, "anlatici-erkek", {"Ali": "anlatici-erkek"}, "e")["narrator"] == N.DEFAULT_MALE_NARRATOR
+    N._write(d / "ses" / "ayar.json", {"narrator": "anlatici-erkek", "characters": {"Ali": "anlatici-erkek"}})
+    cfg = N.settings_of(d)
+    assert cfg["narrator"] == N.DEFAULT_MALE_NARRATOR and cfg["characters"] == {"Ali": N.DEFAULT_MALE_NARRATOR}
+    us = N.page_units({"text": {"blocks": [{"id": "b", "kind": "para", "text": "Bir varmış."}]}},
+                      {"narrator": "anlatici-erkek"}, N.Lexicon())
+    assert us[0].voice == N.DEFAULT_MALE_NARRATOR
 
 
 # ------------------------------------------------------------------ planın kendiliğinden kurulumu
@@ -181,6 +207,54 @@ def test_auto_plan_failure_is_reported_and_retried(tmp_path, monkeypatch):
     (tmp_path / "bos").mkdir()
     studio.write(tmp_path / "bos", "job.json", {"id": "bos", "source": {}})
     r = c.get("/v1/studio/jobs/bos/narration", headers=h)
+    assert r.status_code == 404 and r.json()["code"] == "NO_PLAN"
+
+
+@typeset_only
+def test_plan_screen_prepares_missing_plan(tmp_path, monkeypatch):
+    """Sayfa düzeni ekranının akışı: `GET plan` «plan yok» der (otomatik kayıt bu cevaba dayanır, tetiklemez), ekran
+    `POST plan/prepare` çağırır → 409 PREPARING, kurulum bitince 200 ready ve `GET plan` planı verir. Üretim hattı
+    sürerken bekler; düşen kurulum PLAN_FAILED, `?retry=1` yeniler; yerleşmemiş kitapta NO_PLAN."""
+    d, ms = _job(tmp_path, child=True)
+    c, h = _client(tmp_path, monkeypatch)
+    base = f"/v1/studio/jobs/{d.name}/plan"
+    r = c.get(base, headers=h)
+    assert r.status_code == 404 and r.json()["code"] == "NO_PLAN" and P.auto_state(d) is None   # GET tetiklemez
+    assert c.post(base + "/prepare", headers={"Authorization": "Bearer k"}).status_code == 400    # X-Editor şart
+
+    studio.set_busy(d, {"key": "hat", "mode": "run", "workflow_id": "w"})
+    r = c.post(base + "/prepare", headers=h)
+    assert r.status_code == 409 and r.json()["code"] == "PREPARING" and r.json()["state"] == "waiting"
+    assert not P.exists(d)
+    studio.set_busy(d, None)
+
+    real = P.freeze
+
+    def boom(*a, **k):
+        raise ValueError("dizgi okunamadı")
+    monkeypatch.setattr(P, "freeze", boom)
+    r = c.post(base + "/prepare", headers=h)
+    assert r.status_code == 409 and r.json()["code"] == "PREPARING" and r.json()["state"] == "preparing"
+    assert not P.wait_auto(d, 60)
+    r = c.post(base + "/prepare", headers=h)
+    assert r.status_code == 409 and r.json()["code"] == "PLAN_FAILED" and "dizgi okunamadı" in r.json()["detail"]
+    monkeypatch.setattr(P, "freeze", real)
+
+    r = c.post(base + "/prepare?retry=1", headers=h)
+    assert r.status_code == 409 and r.json()["code"] == "PREPARING"
+    assert P.wait_auto(d, 300)
+    r = c.post(base + "/prepare", headers=h)
+    assert r.status_code == 200 and r.json() == {"status": "ready"}
+    rec = P.auto_state(d)
+    assert rec["status"] == "done" and rec["by"] == "sinama" and rec["reason"] == "sayfa düzeni"
+    pl = c.get(base, headers=h).json()
+    assert pl["rev"] == 1 and pl["pages"] and [x["rev"] for x in P.history(d)] == [1]   # tek kurulum
+    # plan hazırken yeniden çağrı planı bozmaz (yeni sürüm yazılmaz)
+    assert c.post(base + "/prepare", headers=h).status_code == 200 and P.load(d)["rev"] == 1
+
+    (tmp_path / "bos").mkdir()
+    studio.write(tmp_path / "bos", "job.json", {"id": "bos", "source": {}})
+    r = c.post("/v1/studio/jobs/bos/plan/prepare", headers=h)
     assert r.status_code == 404 and r.json()["code"] == "NO_PLAN"
 
 

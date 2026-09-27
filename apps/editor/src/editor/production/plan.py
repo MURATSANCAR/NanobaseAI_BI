@@ -1259,7 +1259,8 @@ def auto_state(d: Path) -> dict | None:
 
 
 def ensure(d: Path, by: str, reason: str, *, busy: dict | None = None, retry: bool = False) -> dict:
-    """Planı isteyen bölüm (sesli okuma, okur, sürüm farkı) planı olmayan işte açılınca planı kendiliğinden kurar:
+    """Planı isteyen bölüm (sayfa düzeni ekranı `POST plan/prepare`, sesli okuma, okur, sürüm farkı) planı olmayan işte
+    açılınca planı kendiliğinden kurar:
     `freeze` ile aynı yol (dizgi kelime işaretli yeniden okunur, balonlar kuralla; görsel çizilmez, görsel okuyucu
     çağrılmaz), arka planda; ekran «sayfa düzeni hazırlanıyor» görür ve bekler.
 
