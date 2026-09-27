@@ -576,6 +576,38 @@ export default function BoardScreen() {
     }
   };
 
+  /** Kart kaydedildiği günün SQL'ini tekrarlar; motor o soruyu sonradan daha doğru cevaplamaya başlasa da
+   *  (ör. «… 5 tane» sınırı) kart eskisini koşmaya devam eder. Kişi isteyince soru bugünkü motora yeniden
+   *  sorulur, kartın SQL'i ve sonucu yenisiyle değişir; başlık, grafik ve yer aynı kalır. */
+  const reask = async (card: BoardCard) => {
+    if (!ENGINE_ENABLED) return;
+    setComparing(card.id);
+    setErr(null);
+    try {
+      const a = await askEngine(card.question || card.title);
+      const cols = (a.columns ?? []) as Col[];
+      const rows = (a.records ?? []) as Row[];
+      const sql = a.sql;
+      if (!sql || !cols.length) {
+        setErr(a.summary || 'ZEKİ AI bu soruya şu an tablo olarak cevap veremedi; kart değişmedi.');
+        return;
+      }
+      const next = cards.map((c) => (c.id === card.id ? { ...c, sql } : c));
+      setCards(next);
+      saveBoard(user, next);
+      const seed = { columns: cols, records: rows, ...timingOf(a) } as SqlResult<Row>;
+      qc.setQueryData(['pano', card.id, sql], seed, { updatedAt: Date.now() });
+      saveResult(user, card.id, { ...(seed as unknown as CardResult), at: Date.now() });
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      await pushToServer(next);
+      void qc.invalidateQueries({ queryKey: ['pano', card.id, sql] });
+    } catch (e) {
+      setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi; kart değişmedi.');
+    } finally {
+      setComparing(null);
+    }
+  };
+
   /** Excel sunucuda üretilir: SQL tam koşar, her kart bir sayfa, grafik Excel'in kendi grafiği. */
   const exportExcel = async (ids: string[], key: string) => {
     if (!ENGINE_ENABLED || exporting) return;
@@ -777,6 +809,15 @@ export default function BoardScreen() {
                           3B
                         </button>
                       )}
+                      <button
+                        type="button"
+                        onClick={() => void reask(c)}
+                        disabled={comparing === c.id}
+                        title="Soruyu bugünkü ZEKİ AI'a yeniden sor; kartın sorgusu yenisiyle değişir"
+                        className="pano-press h-7 rounded-md border border-slate-200 bg-white px-2 text-[11px] font-semibold text-canvas-muted transition-colors hover:border-slate-300 disabled:opacity-60"
+                      >
+                        {comparing === c.id ? 'Soruluyor…' : 'Yeniden sor'}
+                      </button>
                       {isKpi && !compared && (
                         <ToolSelect
                           value=""
