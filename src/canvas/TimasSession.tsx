@@ -6,6 +6,7 @@ import { Outlet } from 'react-router-dom';
 import SessionGate from './stitch/SessionGate';
 import GreetingsInbox from './kampus/GreetingsInbox';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, clearAuthBlock } from './engine';
+import { canSeePage, usePageAccess } from './useAdmin';
 
 /**
  * Timaş oturum kapısı. Giriş yalnız Timaş giriş servisindedir (`/timas/auth/`); eski portal servisi
@@ -33,13 +34,16 @@ export function useTimasSession() {
 export default function RequireTimasSession() {
   const qc = useQueryClient();
   const q = useTimasSession();
+  const pages = usePageAccess();
+  // Editoryal ön yüklemesi yalnız Masam'ı görebilen kişi için: ötekinde köprü 403 verir.
+  const editorial = canSeePage(pages, 'editoryal');
   useEffect(() => {
-    if (q.data?.username && !q.error) {
+    if (q.data?.username && !q.error && editorial) {
       void qc.prefetchQuery(editorialHomeOptions(q.data.username));
       void prefetchEditorialLists(qc);
       void import('./editorial/EditorialHome').catch(() => undefined);
     }
-  }, [qc, q.data?.username, q.error]);
+  }, [qc, q.data?.username, q.error, editorial]);
   if (!ENGINE_ENABLED) return <Outlet />;
   if (q.isLoading) {
     return <div className="flex min-h-[40vh] items-center justify-center text-slate-500">Yükleniyor…</div>;

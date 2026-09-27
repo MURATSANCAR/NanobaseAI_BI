@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Command } from 'cmdk';
 import { BookOpen, Clock3, CornerDownLeft, FolderOpen, Loader2, Search, Sparkles, User } from 'lucide-react';
 import { ENGINE_ENABLED, editorialSearchApi, type SearchHit, type SearchKind } from '../engine';
-import { flatItems, scoreText } from './navModel';
+import { flatItems, permissionItemFor, scoreText } from './navModel';
 import { RECENT_KEEP } from './navState';
 import { ago, type NavData } from './useNav';
 
@@ -79,7 +79,12 @@ export default function CommandPalette({ open, onOpenChange, nav }: { open: bool
     }
   };
 
-  const recent = nav.state.recent ?? [];
+  // Son açılanlardan rolde artık olmayan sayfa düşer (menüden kalkan sayfa burada da görünmesin).
+  const visibleIds = new Set(flatItems(nav.groups).map((x) => x.item.id));
+  const recent = (nav.state.recent ?? []).filter((r) => {
+    const item = permissionItemFor(r.to);
+    return !item || visibleIds.has(item.id);
+  });
   const d = search.data;
   const serverWaiting = dq.length >= 2 && (search.isFetching || dq !== text);
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { NAV, flatItems, homeGroup, matchActive, scoreText, visibleNav } from './navModel';
+import { readFileSync } from 'node:fs';
+import { NAV, flatItems, homeGroup, matchActive, needsPagePermission, scoreText, visibleNav } from './navModel';
 import { RECENT_KEEP, pushRecent } from './navState';
 
 const user = { isAdmin: false, isEditor: false };
@@ -7,6 +8,26 @@ const admin = { isAdmin: true, isEditor: false };
 const editor = { isAdmin: false, isEditor: true };
 const ids = (gs: { id: string }[]) => gs.map((g) => g.id);
 const itemIds = (gs: ReturnType<typeof visibleNav>) => flatItems(gs).map((x) => x.item.id);
+
+describe('sayfa yetkisi', () => {
+  it('yalnız izin verilen sayfalar görünür; boş kalan alan raydan kalkar; Kampüs hep açık', () => {
+    const g = visibleNav(user, { webWatch: true }, new Set(['sayfa:finansal-denetim', 'sayfa:seo-geo']));
+    expect(ids(g)).toEqual(['kampus', 'finans', 'pazarlama']);
+    expect(itemIds(g)).toEqual(['kampus', 'finansal-denetim', 'seo-geo']);
+  });
+
+  it('yetki henüz bilinmiyorken rol sayfaları gizli, yönetici ekranları yine role bağlı', () => {
+    expect(ids(visibleNav(user, {}, null))).toEqual(['kampus']);
+    expect(ids(visibleNav(admin, {}, null))).toEqual(['kampus', 'yonetim']);
+  });
+
+  it('menüdeki her rol sayfasının köprü kataloğunda anahtarı var (ve fazlası yok)', () => {
+    const url = new URL('../../../backend/semantic_bridge/access_catalog.json', import.meta.url);
+    const catalog = JSON.parse(readFileSync(url, 'utf-8')) as { pages: Array<{ key: string }> };
+    const menu = NAV.flatMap((g) => g.items.filter((i) => needsPagePermission(g, i)).map((i) => `sayfa:${i.id}`));
+    expect(catalog.pages.map((p) => p.key).sort()).toEqual([...new Set(menu)].sort());
+  });
+});
 
 describe('rol görünürlüğü', () => {
   it('yönetici bütün grupları ve Yönetim grubunu görür', () => {

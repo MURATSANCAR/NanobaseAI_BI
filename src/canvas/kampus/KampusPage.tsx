@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { GROUP_HOME } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
+import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
@@ -83,6 +84,9 @@ function Card({ id, className = '', children }: { id?: string; className?: strin
 
 export default function KampusPage() {
   const navigate = useNavigate();
+  // Ana modül kutuları kişinin rolündeki sayfalara göre: açamayacağı modül gösterilmez.
+  const pages = usePageAccess();
+  const tiles = MODULE_TILES.filter((m) => canOpenRoute(pages, m.to));
   const session = useTimasSession();
   const fullName = session.data?.displayName || session.data?.username || '';
   const firstName = fullName.split(/[\s._@]/)[0] || fullName;
@@ -494,7 +498,7 @@ export default function KampusPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="kp-display text-base font-bold text-ink">Ana Modüller</h2>
                     <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">
-                      {MODULE_TILES.length} modül
+                      {tiles.length} modül
                     </span>
                   </div>
                   <p className="text-xs text-muted">Modülünüzü seçin, kendi ana sayfasından devam edin</p>
@@ -505,7 +509,7 @@ export default function KampusPage() {
             {/* Modül adı kesilmez: ad iki satıra kadar sarar, kutular min-h ile aynı yükseklikte kalır.
                 Üçüncü sütun yalnız 2xl'de açılır; altında iki sütun ada yetecek genişliği verir. */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-3">
-              {MODULE_TILES.map((m) => (
+              {tiles.map((m) => (
                 <Link
                   key={m.to}
                   to={m.to}

@@ -1,0 +1,658 @@
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Check, Loader2, Plus, RefreshCw, Search, Trash2, UserRound, X } from 'lucide-react';
+import {
+  accessApi,
+  type AccessBinding,
+  type AccessCatalog,
+  type AccessRole,
+  type AccessRoleInput,
+  type AccessSubjectType,
+} from '../engine';
+import { trFold } from '../nav/navModel';
+import { Card, Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate, label, nf } from './ui';
+
+/**
+ * Yetkiler: rol = görünen sayfalar; rol bir AD grubuna, AD birimine (OU), CRM rolüne ya da tek kişiye
+ * bağlanır. Kişi bağlı olduğu rollerin birleşimini görür, yönetici her şeyi. Karar köprüde verilir; bu ekran
+ * yalnız tanımı düzenler. Analiz: docs/analiz/yetki-mekanizmasi-2026-09-27.md
+ */
+
+const TYPES: Array<{ id: AccessSubjectType; label: string; hint: string }> = [
+  { id: 'ad_group', label: 'AD grubu', hint: 'Gruba eklenen kişi rolü en geç 15 dakikada alır' },
+  { id: 'ou', label: 'AD birimi', hint: 'Birimdeki (OU) herkes; kişi birim değiştirince rolü de değişir' },
+  { id: 'crm_role', label: 'CRM rolü', hint: 'CRM güvenlik rolünü taşıyan etkin kullanıcılar' },
+  { id: 'user', label: 'Kişi', hint: 'Tek bir AD hesabı; grup açmadan istisna vermek için' },
+];
+
+const invalidateAccess = (qc: ReturnType<typeof useQueryClient>) => qc.invalidateQueries({ queryKey: ['access'] });
+
+export default function AccessAdmin() {
+  const qc = useQueryClient();
+  const [view, setView] = useState<'roles' | 'person'>('roles');
+  const refresh = useMutation({ mutationFn: accessApi.refresh, onSuccess: () => void invalidateAccess(qc) });
+
+  return (
+    <Section
+      title="Yetkiler"
+      help="Kim hangi sayfayı görür. Rolü bir AD grubuna, AD birimine, CRM rolüne ya da tek kişiye bağlayın; kişi bağlı olduğu bütün rollerin sayfalarını görür. Yöneticiler her şeyi görür."
+      action={
+        <button type="button" onClick={() => refresh.mutate()} disabled={refresh.isPending} className={btnGhost}>
+          {refresh.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+          Üyeleri şimdi oku
+        </button>
+      }
+    >
+      {refresh.data && (
+        <Note tone={refresh.data.ok ? 'ok' : 'warn'}>
+          {refresh.data.ok
+            ? `${nf.format(refresh.data.refreshed)} bağın üyeleri AD ve CRM'den okundu.`
+            : `${nf.format(refresh.data.failed.length)} bağ okunamadı, eski üyeleri geçerli: ${refresh.data.failed.map((f) => f.subject).join(', ')}`}
+        </Note>
+      )}
+      {refresh.error && <Note tone="err">{errText(refresh.error, 'Üyeler okunamadı.')}</Note>}
+
+      <div role="tablist" aria-label="Yetki görünümü" className="inline-flex rounded-xl bg-slate-100 p-1">
+        {(
+          [
+            ['roles', 'Roller'],
+            ['person', 'Kişi gözüyle'],
+          ] as const
+        ).map(([id, text]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={view === id}
+            onClick={() => setView(id)}
+            className={`min-h-11 rounded-lg px-3.5 text-[12.5px] font-extrabold transition-colors sm:min-h-9 ${
+              view === id ? 'bg-white text-canvas-ink shadow-sm' : 'text-canvas-muted hover:text-canvas-ink'
+            }`}
+          >
+            {text}
+          </button>
+        ))}
+      </div>
+
+      {view === 'roles' ? <Roles /> : <PersonView />}
+    </Section>
+  );
+}
+
+/* ------------------------------------------------------------------ roller */
+
+function Roles() {
+  const roles = useQuery({ queryKey: ['access', 'roles'], queryFn: accessApi.roles, retry: false });
+  const catalog = useQuery({ queryKey: ['access', 'catalog'], queryFn: accessApi.catalog, retry: false, staleTime: 10 * 60_000 });
+  const [selected, setSelected] = useState<string | 'new' | null>(null);
+  const items = roles.data?.items ?? [];
+  // Yeni oluşturulan rol liste tazelenene kadar bulunmaz: o arada başka rolü değil yükleniyor göster.
+  const current = selected === 'new' ? null : selected ? items.find((r) => r.id === selected) : items[0] ?? null;
+
+  if (roles.isLoading || catalog.isLoading) return <Loading />;
+  if (roles.error || catalog.error) return <Note tone="err">{errText(roles.error ?? catalog.error, 'Yetkiler okunamadı.')}</Note>;
+  const total = catalog.data?.pages.length ?? 0;
+
+  return (
+    <div className="grid gap-3 md:grid-cols-[280px_minmax(0,1fr)] md:gap-4">
+      <div className="space-y-2">
+        <button type="button" onClick={() => setSelected('new')} className={`${btnPrimary} w-full`}>
+          <Plus className="h-4 w-4" />
+          Yeni rol
+        </button>
+        <ul className="space-y-1.5">
+          {items.map((r) => {
+            const on = selected !== 'new' && current?.id === r.id;
+            const people = r.bindings.reduce((a, b) => a + (b.members ?? 0), 0);
+            return (
+              <li key={r.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelected(r.id)}
+                  aria-current={on ? 'true' : undefined}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+                    on ? 'border-canvas-violet/40 bg-white shadow-sm' : 'border-slate-100 bg-white/60 hover:bg-white'
+                  }`}
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-extrabold">{r.name}</span>
+                    <Pill tone={r.allPerms ? 'violet' : 'muted'}>{r.allPerms ? 'Bütün sayfalar' : `${r.perms.length}/${total} sayfa`}</Pill>
+                  </span>
+                  <span className="mt-0.5 block text-[11.5px] text-canvas-muted">
+                    {r.system
+                      ? 'Giriş yapan herkes'
+                      : r.bindings.length
+                        ? `${nf.format(r.bindings.length)} bağ · ${nf.format(people)} kişi`
+                        : 'Henüz kimseye bağlı değil'}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+      {current === undefined ? (
+        <Loading />
+      ) : catalog.data && (
+        <RoleEditor
+          key={selected === 'new' ? 'new' : current?.id ?? 'none'}
+          role={selected === 'new' ? null : current}
+          catalog={catalog.data}
+          onSaved={(id) => setSelected(id)}
+          onDeleted={() => setSelected(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function RoleEditor({
+  role,
+  catalog,
+  onSaved,
+  onDeleted,
+}: {
+  role: AccessRole | null;
+  catalog: AccessCatalog;
+  onSaved: (id: string) => void;
+  onDeleted: () => void;
+}) {
+  const qc = useQueryClient();
+  const initial: AccessRoleInput = useMemo(
+    () => ({ name: role?.name ?? '', description: role?.description ?? '', allPerms: role?.allPerms ?? false, perms: role?.perms ?? [] }),
+    [role],
+  );
+  const [draft, setDraft] = useState<AccessRoleInput>(initial);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const perms = useMemo(() => new Set(draft.perms), [draft.perms]);
+  const dirty =
+    draft.name !== initial.name ||
+    draft.description !== initial.description ||
+    draft.allPerms !== initial.allPerms ||
+    [...perms].sort().join() !== [...initial.perms].sort().join();
+
+  const save = useMutation({
+    mutationFn: () => (role ? accessApi.updateRole(role.id, draft) : accessApi.createRole(draft)),
+    onSuccess: (r) => {
+      void invalidateAccess(qc);
+      onSaved(r.id);
+    },
+  });
+  const remove = useMutation({
+    mutationFn: () => accessApi.deleteRole(role!.id),
+    onSuccess: () => {
+      void invalidateAccess(qc);
+      onDeleted();
+    },
+  });
+
+  const toggle = (keys: string[], on: boolean) =>
+    setDraft((d) => {
+      const next = new Set(d.perms);
+      keys.forEach((k) => (on ? next.add(k) : next.delete(k)));
+      return { ...d, perms: [...next] };
+    });
+
+  return (
+    <div className="min-w-0 space-y-3">
+      <Card className="space-y-3">
+        {role?.system && (
+          <Note tone="info">
+            «Herkes» giriş yapan herkese uygulanır. Roller atanana kadar bütün sayfalar açık; prod öncesi burada
+            daraltılır.
+          </Note>
+        )}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="space-y-1">
+            <span className={label}>Rol adı</span>
+            <input
+              value={draft.name}
+              onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+              disabled={role?.system}
+              placeholder="örn. Finans okuyucu"
+              className={field}
+            />
+          </label>
+          <label className="space-y-1">
+            <span className={label}>Açıklama</span>
+            <input
+              value={draft.description}
+              onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+              placeholder="Bu rol kimin için"
+              className={field}
+            />
+          </label>
+        </div>
+
+        <label className="flex min-h-11 cursor-pointer items-center gap-2.5 rounded-xl bg-slate-50 px-3 py-2 sm:min-h-0">
+          <input
+            type="checkbox"
+            checked={draft.allPerms}
+            onChange={(e) => setDraft({ ...draft, allPerms: e.target.checked })}
+            className="h-4 w-4 accent-canvas-violet"
+          />
+          <span className="text-[12.5px] font-bold">Bütün sayfalar</span>
+          <span className="text-[11.5px] text-canvas-muted">sonradan eklenen sayfalar dahil</span>
+        </label>
+
+        <div className={`grid gap-2 sm:grid-cols-2 xl:grid-cols-3 ${draft.allPerms ? 'pointer-events-none opacity-45' : ''}`} aria-disabled={draft.allPerms}>
+          {catalog.areas.map((area) => {
+            const pages = catalog.pages.filter((p) => p.area === area.id);
+            const keys = pages.map((p) => p.key);
+            const n = keys.filter((k) => perms.has(k)).length;
+            return (
+              <fieldset key={area.id} className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
+                <legend className="sr-only">{area.label}</legend>
+                <TriCheck
+                  checked={n === keys.length}
+                  mixed={n > 0 && n < keys.length}
+                  onChange={(on) => toggle(keys, on)}
+                  className="border-b border-slate-100 pb-1.5"
+                >
+                  <span className="flex-1 text-[12.5px] font-extrabold">{area.label}</span>
+                  <span className="text-[11px] font-bold tabular-nums text-canvas-muted">
+                    {n}/{keys.length}
+                  </span>
+                </TriCheck>
+                <div className="mt-1 space-y-0.5">
+                  {pages.map((p) => (
+                    <TriCheck key={p.key} checked={perms.has(p.key)} onChange={(on) => toggle([p.key], on)}>
+                      <span className="text-[12.5px] font-semibold">{p.label}</span>
+                    </TriCheck>
+                  ))}
+                </div>
+              </fieldset>
+            );
+          })}
+        </div>
+
+        {save.error && <Note tone="err">{errText(save.error, 'Rol kaydedilemedi.')}</Note>}
+        {remove.error && <Note tone="err">{errText(remove.error, 'Rol silinemedi.')}</Note>}
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => save.mutate()} disabled={!dirty || !draft.name.trim() || save.isPending} className={btnPrimary}>
+            {save.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
+            {role ? 'Kaydet' : 'Rolü oluştur'}
+          </button>
+          {dirty && role && (
+            <button type="button" onClick={() => setDraft(initial)} className={btnGhost}>
+              Vazgeç
+            </button>
+          )}
+          {role && !role.system && (
+            <span className="ml-auto">
+              {confirmDelete ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="text-[12px] font-semibold text-canvas-muted">Bağlarıyla birlikte silinsin mi?</span>
+                  <button type="button" onClick={() => remove.mutate()} disabled={remove.isPending} className={`${btnGhost} text-red-700`}>
+                    {remove.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                    Sil
+                  </button>
+                  <button type="button" onClick={() => setConfirmDelete(false)} className={btnGhost}>
+                    Vazgeç
+                  </button>
+                </span>
+              ) : (
+                <button type="button" onClick={() => setConfirmDelete(true)} className={`${btnGhost} text-red-700`}>
+                  <Trash2 className="h-4 w-4" />
+                  Rolü sil
+                </button>
+              )}
+            </span>
+          )}
+        </div>
+        {role && (
+          <p className="text-[11px] text-canvas-muted">
+            Son değişiklik {fmtDate(role.updatedAt)}
+            {role.updatedBy ? ` · ${role.updatedBy}` : ''}
+          </p>
+        )}
+      </Card>
+
+      {role && !role.system && <Bindings role={role} />}
+      {!role && <Note tone="info">Rol oluşturulunca AD grubu, AD birimi, CRM rolü ya da kişi bağlayabilirsiniz.</Note>}
+    </div>
+  );
+}
+
+/** Onay kutusu; `mixed` alanın bir kısmı seçiliyken gösterilir. */
+function TriCheck({
+  checked,
+  mixed = false,
+  onChange,
+  className = '',
+  children,
+}: {
+  checked: boolean;
+  mixed?: boolean;
+  onChange: (on: boolean) => void;
+  className?: string;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = mixed;
+  }, [mixed]);
+  return (
+    <label className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg px-1 sm:min-h-8 ${className}`}>
+      <input ref={ref} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="h-4 w-4 shrink-0 accent-canvas-violet" />
+      {children}
+    </label>
+  );
+}
+
+/* ------------------------------------------------------------------ bağlar */
+
+function Bindings({ role }: { role: AccessRole }) {
+  const qc = useQueryClient();
+  const [adding, setAdding] = useState(false);
+  const [confirm, setConfirm] = useState<string | null>(null);
+  const remove = useMutation({
+    mutationFn: (id: string) => accessApi.deleteBinding(id),
+    onSuccess: () => {
+      setConfirm(null);
+      void invalidateAccess(qc);
+    },
+  });
+
+  return (
+    <Card className="space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-[14px] font-extrabold">Bu rolü kimler alır</h3>
+          <p className="text-[12px] text-canvas-muted">Bağdaki herkes rolün sayfalarını görür. Kaldırınca en geç bir dakikada düşer.</p>
+        </div>
+        {!adding && (
+          <button type="button" onClick={() => setAdding(true)} className={btnGhost}>
+            <Plus className="h-4 w-4" />
+            Bağ ekle
+          </button>
+        )}
+      </div>
+
+      {role.bindings.length === 0 && !adding && <Note tone="warn">Bu rol henüz kimseye bağlı değil; kimse bu rolden sayfa almıyor.</Note>}
+
+      {role.bindings.length > 0 && (
+        <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100 bg-white/80">
+          {role.bindings.map((b) => (
+            <li key={b.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2.5">
+              <Pill tone={b.type === 'crm_role' ? 'ok' : b.type === 'user' ? 'muted' : 'violet'}>{b.typeLabel}</Pill>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12.5px] font-bold">{b.label}</span>
+                <BindingMeta b={b} />
+              </span>
+              {confirm === b.id ? (
+                <span className="inline-flex items-center gap-1.5">
+                  <button type="button" onClick={() => remove.mutate(b.id)} disabled={remove.isPending} className={`${btnGhost} text-red-700`}>
+                    {remove.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                    Evet, kaldır
+                  </button>
+                  <button type="button" onClick={() => setConfirm(null)} className={btnGhost} aria-label="Vazgeç">
+                    <X className="h-4 w-4" />
+                  </button>
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConfirm(b.id)}
+                  className="min-h-11 rounded-lg px-2 text-[12px] font-bold text-canvas-muted hover:text-red-700 sm:min-h-0"
+                >
+                  Kaldır
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {remove.error && <Note tone="err">{errText(remove.error, 'Bağ kaldırılamadı.')}</Note>}
+
+      {adding && <BindingPicker role={role} onClose={() => setAdding(false)} />}
+    </Card>
+  );
+}
+
+function BindingMeta({ b }: { b: AccessBinding }) {
+  if (b.type === 'user') return <span className="block text-[11.5px] text-canvas-muted">{b.subject}</span>;
+  return (
+    <span className="block text-[11.5px] text-canvas-muted">
+      {b.members === null ? 'Üyeler henüz okunmadı' : `${nf.format(b.members)} kişi`}
+      {b.updatedAt ? ` · ${fmtDate(b.updatedAt)} itibarıyla` : ''}
+      {b.error && <span className="ml-1 font-semibold text-amber-700">· son okuma başarısız, eski üyeler geçerli</span>}
+    </span>
+  );
+}
+
+function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => void }) {
+  const qc = useQueryClient();
+  const [type, setType] = useState<AccessSubjectType>('ad_group');
+  const [q, setQ] = useState('');
+  const list = useQuery({ queryKey: ['access', 'subjects', type], queryFn: () => accessApi.subjects(type), retry: false, staleTime: 5 * 60_000 });
+  const bound = new Set(role.bindings.filter((b) => b.type === type).map((b) => b.subject.toLowerCase()));
+  const add = useMutation({
+    mutationFn: (c: { subject: string; label: string }) => accessApi.addBinding(role.id, { type, ...c }),
+    onSuccess: () => void invalidateAccess(qc),
+  });
+  const needle = trFold(q.trim());
+  const shown = (list.data?.items ?? []).filter(
+    (c) => !needle || trFold(`${c.label} ${c.hint ?? ''} ${c.detail ?? ''} ${c.subject}`).includes(needle),
+  );
+  const meta = TYPES.find((t) => t.id === type)!;
+
+  return (
+    <div className="space-y-2.5 rounded-xl border border-canvas-violet/20 bg-canvas-violet/[0.03] p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[12.5px] font-extrabold">Bağ ekle</span>
+        <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-lg text-canvas-muted hover:bg-white sm:h-8 sm:w-8" aria-label="Kapat">
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
+        {TYPES.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => {
+              setType(t.id);
+              setQ('');
+            }}
+            aria-pressed={type === t.id}
+            className={`min-h-11 shrink-0 rounded-lg px-3 text-[12px] font-extrabold transition-colors sm:min-h-8 ${
+              type === t.id ? 'bg-white text-canvas-ink shadow-sm ring-1 ring-canvas-violet/30' : 'text-canvas-muted hover:bg-white/70'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      <p className="text-[11.5px] text-canvas-muted">{meta.hint}</p>
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`${meta.label} ara`} className={`${field} pl-9`} autoFocus />
+      </div>
+      {add.error && <Note tone="err">{errText(add.error, 'Bağ eklenemedi.')}</Note>}
+      {add.data?.refresh && !add.data.refresh.ok && (
+        <Note tone="warn">Bağ eklendi ama üyeler okunamadı; zamanlayıcı 15 dakika içinde yeniden dener.</Note>
+      )}
+      {list.isLoading ? (
+        <Loading />
+      ) : list.error ? (
+        <Note tone="err">{errText(list.error, 'Liste okunamadı.')}</Note>
+      ) : shown.length === 0 ? (
+        <p className="py-4 text-center text-[12px] text-canvas-muted">Eşleşen yok.</p>
+      ) : (
+        <ul className="max-h-80 divide-y divide-slate-100 overflow-y-auto overscroll-contain rounded-xl border border-slate-100 bg-white">
+          {shown.map((c) => {
+            const already = bound.has(c.subject.toLowerCase());
+            const busy = add.isPending && add.variables?.subject === c.subject;
+            return (
+              <li key={c.subject} className="flex items-center gap-3 px-3 py-2">
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[12.5px] font-bold">{c.label}</span>
+                  {(c.hint || c.detail) && (
+                    <span className="block truncate text-[11px] text-canvas-muted">{[c.hint, c.detail].filter(Boolean).join(' · ')}</span>
+                  )}
+                </span>
+                {typeof c.count === 'number' && (
+                  <span className="shrink-0 text-[11.5px] font-bold tabular-nums text-canvas-muted">{nf.format(c.count)} kişi</span>
+                )}
+                {already ? (
+                  <Pill tone="ok">Bağlı</Pill>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => add.mutate({ subject: c.subject, label: c.label })}
+                    disabled={add.isPending}
+                    className="min-h-11 shrink-0 rounded-lg px-2.5 text-[12px] font-extrabold text-canvas-violet hover:bg-canvas-violet/10 disabled:opacity-50 sm:min-h-8"
+                  >
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ekle'}
+                  </button>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ kişi gözüyle */
+
+function PersonView() {
+  const [q, setQ] = useState('');
+  const [who, setWho] = useState<{ subject: string; label: string } | null>(null);
+  const people = useQuery({ queryKey: ['access', 'subjects', 'user'], queryFn: () => accessApi.subjects('user'), retry: false, staleTime: 5 * 60_000 });
+  const explain = useQuery({
+    queryKey: ['access', 'explain', who?.subject],
+    queryFn: () => accessApi.explain(who!.subject),
+    enabled: !!who,
+    retry: false,
+  });
+  const needle = trFold(q.trim());
+  const shown = needle
+    ? (people.data?.items ?? []).filter((c) => trFold(`${c.label} ${c.subject} ${c.detail ?? ''}`).includes(needle))
+    : [];
+  const areas = useQuery({ queryKey: ['access', 'catalog'], queryFn: accessApi.catalog, retry: false, staleTime: 10 * 60_000 }).data?.areas ?? [];
+  const e = explain.data;
+
+  return (
+    <div className="grid gap-3 md:grid-cols-[280px_minmax(0,1fr)] md:gap-4">
+      <div className="space-y-2">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-canvas-muted" />
+          <input value={q} onChange={(ev) => setQ(ev.target.value)} placeholder="Ad ya da AD hesabı" className={`${field} pl-9`} />
+        </div>
+        {people.isLoading ? (
+          <Loading />
+        ) : people.error ? (
+          <Note tone="err">{errText(people.error, 'Kişiler okunamadı.')}</Note>
+        ) : !needle ? (
+          <p className="px-1 text-[12px] text-canvas-muted">Kimin neyi neden gördüğüne bakmak için bir kişi arayın.</p>
+        ) : shown.length === 0 ? (
+          <p className="px-1 text-[12px] text-canvas-muted">Eşleşen kişi yok.</p>
+        ) : (
+          <ul className="max-h-[420px] space-y-1 overflow-y-auto overscroll-contain">
+            {shown.map((c) => (
+              <li key={c.subject}>
+                <button
+                  type="button"
+                  onClick={() => setWho({ subject: c.subject, label: c.label })}
+                  aria-current={who?.subject === c.subject ? 'true' : undefined}
+                  className={`w-full rounded-xl border px-3 py-2 text-left transition-colors ${
+                    who?.subject === c.subject ? 'border-canvas-violet/40 bg-white shadow-sm' : 'border-slate-100 bg-white/60 hover:bg-white'
+                  }`}
+                >
+                  <span className="block truncate text-[12.5px] font-bold">{c.label}</span>
+                  <span className="block truncate text-[11px] text-canvas-muted">{[c.subject, c.detail].filter(Boolean).join(' · ')}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      <div className="min-w-0">
+        {!who ? (
+          <Card className="grid min-h-[200px] place-items-center text-center">
+            <span className="text-[12.5px] text-canvas-muted">
+              <UserRound className="mx-auto mb-2 h-6 w-6" />
+              Kişi seçilince rolleri, nereden aldığı ve gördüğü sayfalar burada görünür.
+            </span>
+          </Card>
+        ) : explain.isLoading ? (
+          <Loading />
+        ) : explain.error ? (
+          <Note tone="err">{errText(explain.error, 'Kişinin yetkisi okunamadı.')}</Note>
+        ) : e ? (
+          <div className="space-y-3">
+            <Card className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-[15px] font-extrabold">{who.label}</h3>
+                <span className="text-[12px] text-canvas-muted">{e.user}</span>
+                {e.isAdmin && <Pill tone="violet">Yönetici · her şeyi görür</Pill>}
+              </div>
+              {e.notes.map((n) => (
+                <Note key={n} tone="warn">
+                  {n}
+                </Note>
+              ))}
+              <div>
+                <div className={label}>Roller ve nereden geldiği</div>
+                <ul className="mt-1.5 space-y-1.5">
+                  {e.roles.map((r) => (
+                    <li key={r.id} className="rounded-xl bg-slate-50 px-3 py-2">
+                      <span className="text-[12.5px] font-extrabold">{r.name}</span>
+                      <span className="block text-[11.5px] text-canvas-muted">{r.via.join(' · ')}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Chips title="AD grupları" items={e.adGroups} empty="Grubu yok" />
+                <Chips title="CRM rolleri" items={e.crmRoles} empty="CRM rolü yok" />
+              </div>
+            </Card>
+            <Card className="space-y-2">
+              <div className={label}>Gördüğü sayfalar</div>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                {areas.map((a) => (
+                  <div key={a.id} className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
+                    <div className="border-b border-slate-100 pb-1 text-[12.5px] font-extrabold">{a.label}</div>
+                    <ul className="mt-1 space-y-0.5">
+                      {e.pages
+                        .filter((p) => p.area === a.id)
+                        .map((p) => (
+                          <li key={p.key} className={`flex items-center gap-2 text-[12.5px] ${p.allowed ? 'font-semibold' : 'text-canvas-muted/70'}`}>
+                            {p.allowed ? <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> : <X className="h-3.5 w-3.5 shrink-0" />}
+                            {p.label}
+                          </li>
+                        ))}
+                    </ul>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function Chips({ title, items, empty }: { title: string; items: string[]; empty: string }) {
+  return (
+    <div>
+      <div className={label}>{title}</div>
+      {items.length ? (
+        <div className="mt-1.5 flex flex-wrap gap-1">
+          {items.map((i) => (
+            <Pill key={i} tone="muted">
+              {i}
+            </Pill>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-1 text-[12px] text-canvas-muted">{empty}</p>
+      )}
+    </div>
+  );
+}

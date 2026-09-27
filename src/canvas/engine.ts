@@ -30,9 +30,18 @@ export const requestFreshData = (ms = 3000): void => {
 export const freshHeaders = (): Record<string, string> => (Date.now() < freshUntil ? { 'X-Data-Refresh': '1' } : {});
 
 export class EngineAuthError extends Error {
-  constructor() {
-    super('Zeki AI oturumu gerekli');
+  constructor(message = 'Zeki AI oturumu gerekli') {
+    super(message);
     this.name = 'EngineAuthError';
+  }
+}
+
+/** Oturum var ama bu sayfa/işlem kişinin rolünde yok (köprünün sayfa kapısı, 403 FORBIDDEN). Oturum
+ *  düşmediği için yoklamalar durdurulmaz; EngineAuthError'dan türediği için eski denetimler aynı davranır. */
+export class EngineForbiddenError extends EngineAuthError {
+  constructor(message = 'Bu sayfaya yetkiniz yok.') {
+    super(message);
+    this.name = 'EngineForbiddenError';
   }
 }
 
@@ -408,7 +417,13 @@ async function send<T>(method: string, path: string, body?: unknown, timeoutMs =
     body: body === undefined ? undefined : JSON.stringify(body),
     signal: AbortSignal.timeout(timeoutMs),
   });
-  if (res.status === 401 || res.status === 403) {
+  if (res.status === 403) {
+    const j = (await res.json().catch(() => null)) as { detail?: { code?: string; message?: string } } | null;
+    if (j?.detail?.code === 'FORBIDDEN') throw new EngineForbiddenError(j.detail.message);
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (res.status === 401) {
     authBlocked = true;
     throw new EngineAuthError();
   }
@@ -790,6 +805,96 @@ export const adminApi = {
     send<PromptDetail>('PATCH', `/api/v1/admin/prompts/${encodeURIComponent(id)}`, b, 30_000),
   /** CSV indirme adresi (aynı köken, oturum çerezi taşınır). */
   promptsExportUrl: (q: PromptQuery) => `${ENGINE_BASE}/api/v1/admin/prompts/export.csv${qs(q)}`,
+};
+
+/* ------------------------------------------------------------------ yetki */
+
+/** Bağ türü: AD grubu, AD birimi (OU), CRM güvenlik rolü ya da tek kişi. */
+export type AccessSubjectType = 'ad_group' | 'ou' | 'crm_role' | 'user';
+
+/** Oturumdaki kişinin görebildiği sayfalar. `all`: yönetici ya da «bütün sayfalar» açık bir rol. */
+export type AccessMe = {
+  user: string;
+  isAdmin: boolean;
+  isEditor?: boolean;
+  all: boolean;
+  perms: string[];
+  roles: Array<{ id: string; name: string; via: string[] }>;
+};
+
+export type AccessPage = { key: string; area: string; label: string };
+export type AccessCatalog = {
+  version: number;
+  areas: Array<{ id: string; label: string }>;
+  pages: AccessPage[];
+  subjectTypes: Record<AccessSubjectType, string>;
+};
+
+export type AccessBinding = {
+  id: string;
+  type: AccessSubjectType;
+  typeLabel: string;
+  subject: string;
+  label: string;
+  /** Görüntüdeki üye sayısı; henüz okunmadıysa null. Kişi bağında 1. */
+  members: number | null;
+  updatedAt: string | null;
+  error: string | null;
+  createdBy: string | null;
+  createdAt: string | null;
+};
+
+export type AccessRole = {
+  id: string;
+  name: string;
+  description: string;
+  allPerms: boolean;
+  system: boolean;
+  perms: string[];
+  bindings: AccessBinding[];
+  updatedBy: string | null;
+  updatedAt: string | null;
+};
+
+export type AccessRoleInput = { name: string; description: string; allPerms: boolean; perms: string[] };
+
+/** Bağlanabilecek aday: AD grubu, OU, CRM rolü ya da kişi. `count`: üye sayısı (kişide yok). */
+export type AccessCandidate = { subject: string; label: string; hint?: string; detail?: string; count?: number };
+
+export type AccessExplain = AccessMe & {
+  adGroups: string[];
+  crmRoles: string[];
+  pages: Array<AccessPage & { allowed: boolean }>;
+  notes: string[];
+};
+
+export const accessApi = {
+  me: () => send<AccessMe>('GET', '/api/v1/access/me', undefined, 15_000),
+  catalog: () => send<AccessCatalog>('GET', '/api/v1/access/catalog', undefined, 15_000),
+  roles: () => send<{ items: AccessRole[] }>('GET', '/api/v1/access/roles', undefined, 30_000),
+  createRole: (b: AccessRoleInput) => send<{ id: string }>('POST', '/api/v1/access/roles', b, 30_000),
+  updateRole: (id: string, b: AccessRoleInput) =>
+    send<{ id: string }>('PUT', `/api/v1/access/roles/${encodeURIComponent(id)}`, b, 30_000),
+  deleteRole: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/access/roles/${encodeURIComponent(id)}`, undefined, 30_000),
+  /** Bağı ekler; köprü üyeleri hemen okur (AD/CRM), bu yüzden süre uzun tutuldu. */
+  addBinding: (roleId: string, b: { type: AccessSubjectType; subject: string; label: string }) =>
+    send<{ id: string; refresh?: { ok: boolean; failed: Array<{ error: string }> } }>(
+      'POST',
+      `/api/v1/access/roles/${encodeURIComponent(roleId)}/bindings`,
+      b,
+      120_000,
+    ),
+  deleteBinding: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/access/bindings/${encodeURIComponent(id)}`, undefined, 30_000),
+  subjects: (type: AccessSubjectType) =>
+    send<{ type: AccessSubjectType; items: AccessCandidate[] }>('GET', `/api/v1/access/subjects${qs({ type })}`, undefined, 120_000),
+  explain: (user: string) => send<AccessExplain>('GET', `/api/v1/access/explain${qs({ user })}`, undefined, 120_000),
+  refresh: () =>
+    send<{ ok: boolean; refreshed: number; failed: Array<{ type: string; subject: string; error: string }> }>(
+      'POST',
+      '/api/v1/access/refresh',
+      undefined,
+      300_000,
+    ),
 };
 
 /* ------------------------------------------------------------------ kişi tercihleri */

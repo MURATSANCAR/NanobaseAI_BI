@@ -2,6 +2,7 @@ import { Suspense, lazy, type ReactNode } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import RequireTimasSession from '@/canvas/TimasSession';
+import PageGate from '@/canvas/PageGate';
 import { t } from '@/i18n';
 
 const KampusPage = lazy(() => import('@/canvas/kampus/KampusPage'));
@@ -69,6 +70,8 @@ export default function App() {
               yol parçası girmiyor. Kanvas ekranları kısa slug taşır. */}
 
           <Route element={<RequireTimasSession />}>
+          {/* Rota kapısı: menüdeki karşılığı kişinin rolünde olmayan sayfa yüklenmez (canvas/PageGate). */}
+          <Route element={<PageGate />}>
             {/* Kanvas kendi rayını ve dock'unu taşır; uygulama kabuğu (Layout)
                 sarmalanırsa iki menü olur, o yüzden tam ekran açılır. */}
             {/* Girişten sonra ilk ekran Kampüs; modüllere oradan geçilir. */}
@@ -118,6 +121,7 @@ export default function App() {
             <Route path="kitap-tasarim/:jobId/sayfalar" element={<PlanEditor />} />
             <Route path="kitap-tasarim/:jobId/kapak" element={<CoverScreen />} />
             <Route path="telif-sozlesme" element={<ContractsScreen />} />
+          </Route>
           </Route>
 
           <Route path="*" element={<Navigate to="/" replace />} />
