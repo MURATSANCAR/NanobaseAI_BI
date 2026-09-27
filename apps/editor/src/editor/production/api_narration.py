@@ -8,11 +8,25 @@
     GET  narration/pages/{pid}           sayfanın blokları, kelimeleri ve (güncelse) zamanları
     GET  narration/pages/{pid}/audio     sayfanın sesi (audio/mpeg, Range destekli)
     POST narration/read                  {text} → okunuş (sözlük ve Türkçe kurallarıyla; model yok)
-    POST narration/sample                {text, voice} → kısa deneme sesi (audio/mpeg; kaydedilmez)
+    POST narration/sample                {text, voice} → kısa deneme sesi (audio/mpeg; ses+okunuş başına bir kez üretilir)
     GET  narration/overlay               media_overlay(job): EPUB medya kaplaması için bütün kitabın zamanları
 
-Hatalar gövdede `code` taşır: NO_PLAN (404), NO_VOICE (503: seslendirme bu kurulumda açık değil), BUSY (409:
-bu kitapta seslendirme sürüyor), NOTHING (400: seslendirilecek sayfa yok).
+Ses kütüphanesi (yayınevi düzeyinde; voices.py), /v1/studio/voices altında:
+    GET    voices                        gruplar, bütün sesler (tarifli + yüklenmiş), hak beyanı metni, süre sınırları
+    POST   voices                        {label, group, note, owner, confirm, reference, audio(b64 WAV),
+                                          document?: {name, data(b64)}, original?: {name, data(b64)}}  (X-Editor)
+    GET    voices/{ses}/document         izin belgesi (PDF/PNG/JPEG)
+    DELETE voices/{ses}                  kütüphaneden kaldır (X-Editor + X-Editor-Admin: 1; yetkiyi köprü verir)
+Yükleme reddi 400 `{"code": "VOICE_REJECTED", "detail": <Türkçe neden>}`; dosya sınırı STUDIO_UPLOAD_MB (413 TOO_LARGE).
+
+Hatalar gövdede `code` taşır: NO_PLAN (404: kitap henüz sayfalara yerleşmedi), PREPARING (409: sayfa düzeni
+kendiliğinden kuruluyor, `state` preparing | waiting; ekran bekler), PLAN_FAILED (409: kurulum düştü; GET `?retry=1`),
+NO_VOICE (503: seslendirme bu kurulumda açık değil), BUSY (409: bu kitapta seslendirme sürüyor), NOTHING (400:
+seslendirilecek sayfa yok).
+
+Planı olmayan iş (sayfa düzeni hiç açılmamış eski iş): `GET narration` ve `POST narration/run` planı kendiliğinden
+kurar (`plan.ensure`: dondurmanın aynısı, görsel çizilmez, balonlar kuralla). Öteki uçlar ekranın ilk çağrısından
+sonra gelir; plan yokken kurulmaz, kurulum sürüyorsa PREPARING döner.
 """
 
 from __future__ import annotations
@@ -22,7 +36,7 @@ import re
 import time
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Header, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException, Query
 from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel, Field
 
@@ -56,8 +70,16 @@ def _dir(job: str) -> Path:
     except (ValueError, FileNotFoundError):
         raise HTTPException(404, "iş yok") from None
     if not plan_mod.exists(d):
-        raise _Err(404, "NO_PLAN", "Sesli okuma sayfa düzeni üzerinden yapılır; önce sayfa düzenini açın.")
+        if (plan_mod.auto_state(d) or {}).get("status") == "running":
+            raise _Err(409, "PREPARING", "Sayfa düzeni hazırlanıyor; birkaç saniye sürer.")
+        raise _Err(404, "NO_PLAN", "Kitap henüz sayfalara yerleşmedi; üretim bitince açılır.")
     return d
+
+
+async def _ready(job: str, by: str | None, retry: bool = False) -> Path:
+    """Giriş uçları: plan yoksa kendiliğinden kurulur (api.auto_plan_dir; 409 PREPARING ile ekran bekler)."""
+    from .api import auto_plan_dir
+    return await auto_plan_dir(job, by, "sesli okuma", retry)
 
 
 def _guard(fn):
@@ -103,20 +125,22 @@ def _overview(d: Path) -> dict:
     rows = N.status(d)
     count = {k: sum(1 for r in rows if r["status"] == k) for k in ("done", "stale", "missing", "empty")}
     return {
-        "voices": [{k: v[k] for k in ("id", "label", "note", "group")} for v in N.VOICES],
+        "voices": N.all_voices(),
+        "groups": N.GROUPS,
         "settings": N.settings_of(d),
         "speakers": _speakers(d),
         "pages": rows,
         "summary": {**count, "duration": round(sum(r["duration"] or 0 for r in rows if r["status"] == "done"), 1)},
         "job": _latest(d),
         "lexicon": {"job": N.lexicon_entries(d, "job"), "publisher": N.lexicon_entries(None, "publisher")},
+        "plan_auto": plan_mod.auto_state(d),              # sayfa düzeni kendiliğinden kurulduysa kaydı
     }
 
 
 @router.get(P)
 @_guard
-async def narration_view(job: str) -> dict:
-    d = _dir(job)
+async def narration_view(job: str, retry: bool = Query(False), x_editor: str = Header("")) -> dict:
+    d = await _ready(job, x_editor, retry)
     view, ok = await asyncio.gather(asyncio.to_thread(_overview, d), N.available())
     return {**view, "available": ok}
 
@@ -169,7 +193,7 @@ async def narration_run(job: str, body: Run, by: str = Depends(_editor)) -> dict
     okunacak metni olan bütün sayfalar (verilen sayfalar her durumda yeniden üretilir)."""
     from .api import _temporal
     from .flow import QUEUE
-    d = _dir(job)
+    d = await _ready(job, by)
     if _running(d):
         raise _Err(409, "BUSY", "Bu kitapta seslendirme sürüyor.")
     rows = await asyncio.to_thread(N.status, d)
@@ -243,7 +267,7 @@ class Sample(BaseModel):
 @_guard
 async def narration_sample(job: str, body: Sample, _by: str = Depends(_editor)) -> Response:
     d = _dir(job)
-    if body.voice not in N.VOICE_IDS:
+    if not N.is_voice(body.voice):
         raise HTTPException(400, "Bilinmeyen ses")
     try:
         data = await N.sample(body.text, body.voice, N.lexicon(d))
@@ -259,3 +283,99 @@ async def narration_overlay(job: str) -> dict:
     t = time.time()
     out = await asyncio.to_thread(N.media_overlay, d)
     return {**out, "built_seconds": round(time.time() - t, 2)}
+
+
+# ------------------------------------------------------------------ ses kütüphanesi (yayınevi düzeyinde)
+V = "/v1/studio/voices"
+
+
+class FileIn(BaseModel):
+    name: str = Field(default="", max_length=300)
+    data: str                                        # base64
+
+
+class VoiceIn(BaseModel):
+    label: str = Field(max_length=120)
+    group: str = Field(max_length=40)
+    note: str = Field(default="", max_length=200)
+    owner: str = Field(max_length=200)
+    confirm: bool = False
+    reference: str = Field(default="", max_length=400)
+    audio: str                                       # base64 WAV (tarayıcı tek kanal 16 bit'e çevirir)
+    document: FileIn | None = None
+    original: FileIn | None = None
+
+
+def _b64(v: str, what: str) -> bytes:
+    import base64
+    import binascii
+    from .api import upload_mb
+    try:
+        data = base64.b64decode(v, validate=True)
+    except (binascii.Error, ValueError):
+        raise _Err(400, "VOICE_REJECTED", f"{what} okunamadı.") from None
+    if len(data) > upload_mb() * 1024 * 1024:
+        raise _Err(413, "TOO_LARGE", f"{what} {upload_mb()} MB sınırını aşıyor.")
+    return data
+
+
+def _library() -> dict:
+    from . import voices
+    return {"groups": N.GROUPS, "voices": N.all_voices(), "rights_text": voices.RIGHTS_TEXT,
+            "limits": {"min_sec": voices.MIN_SEC, "max_sec": voices.MAX_SEC, "upload_mb": _upload_mb()},
+            "removed": [voices.as_voice(r) for r in voices.entries(True) if r.get("removed")]}
+
+
+def _upload_mb() -> int:
+    from .api import upload_mb
+    return upload_mb()
+
+
+@router.get(V)
+@_guard
+async def voices_list() -> dict:
+    return await asyncio.to_thread(_library)
+
+
+@router.post(V)
+@_guard
+async def voices_add(body: VoiceIn, by: str = Depends(_editor)) -> dict:
+    from . import voices
+    audio = _b64(body.audio, "Ses kaydı")
+    doc = (_b64(body.document.data, "İzin belgesi"), body.document.name) if body.document else None
+    orig = (_b64(body.original.data, "Özgün ses dosyası"), body.original.name) if body.original else None
+    try:
+        rec = await asyncio.to_thread(voices.add, audio, label=body.label, group=body.group, note=body.note,
+                                      owner=body.owner, confirm=body.confirm, by=by, document=doc,
+                                      reference=body.reference, original=orig)
+    except voices.VoiceError as e:
+        raise _Err(400, "VOICE_REJECTED", str(e)) from None
+    return {"voice": voices.as_voice(rec), "stats": rec["stats"], "rights": rec["rights"]}
+
+
+@router.get(V + "/{vid}/document")
+@_guard
+async def voices_document(vid: str) -> Response:
+    from . import voices
+    if not voices.VID.match(vid):
+        raise HTTPException(404, "ses yok")
+    try:
+        path, mime, name = voices.document(vid)
+    except FileNotFoundError:
+        raise HTTPException(404, "Bu sesin izin belgesi dosya olarak yüklenmedi") from None
+    return FileResponse(path, media_type=mime, filename=name, headers={"Cache-Control": "private, no-store"})
+
+
+@router.delete(V + "/{vid}")
+@_guard
+async def voices_remove(vid: str, by: str = Depends(_editor), x_editor_admin: str = Header("")) -> dict:
+    from . import voices
+    if x_editor_admin != "1":
+        raise HTTPException(403, "Sesi kütüphaneden yalnız yönetici kaldırabilir")
+    if not voices.VID.match(vid):
+        raise HTTPException(404, "ses yok")
+    try:
+        rec = await asyncio.to_thread(voices.remove, vid, by)
+    except KeyError:
+        raise HTTPException(404, "ses yok") from None
+    return {"voice": voices.as_voice(rec)}

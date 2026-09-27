@@ -122,6 +122,9 @@ services:
   # Depoya yazar (production/), görsel modeli gateway'deki book-image takma adıyla çağırır.
   studio:
     <<: *py
+    # Stüdyo imajı = editor-py + tam e-kitap denetimi (images/studio; editorctl EDITOR_STUDIO_IMAGE'i ayarlar).
+    # İmaj yoksa editor-py'ye düşer: stüdyo çalışır, e-kitapta yalnız yapısal denetim yapılır.
+    image: ${EDITOR_STUDIO_IMAGE:-${EDITOR_PY_IMAGE:?EDITOR_PY_IMAGE ayarlanmadı - editorctl ile kurun}}
     env_file:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env
@@ -138,6 +141,7 @@ services:
   # etkinlik. Stüdyo API'si yalnız iş akışını başlatır; API yeniden başlasa da iş sürer.
   studio-worker:
     <<: *py
+    image: ${EDITOR_STUDIO_IMAGE:-${EDITOR_PY_IMAGE:?EDITOR_PY_IMAGE ayarlanmadı - editorctl ile kurun}}
     env_file:
       - ${EDITOR_ROOT:-/data/editor}/secrets/editor.env
       - ${EDITOR_ROOT:-/data/editor}/secrets/cards.env

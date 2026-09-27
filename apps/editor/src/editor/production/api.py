@@ -563,6 +563,31 @@ def _plan_dir(job: str) -> Path:
     return d
 
 
+AUTO_TEXT = {
+    "preparing": "Sayfa düzeni hazırlanıyor; birkaç saniye sürer.",
+    "waiting": "Kitabın üretimi sürüyor; sayfa düzeni üretim bitince kendiliğinden kurulur.",
+}
+
+
+async def auto_plan_dir(job: str, by: str | None, reason: str, retry: bool = False) -> Path:
+    """Planı isteyen bölümün giriş ucu: plan yoksa kendiliğinden kurulumu başlatır (plan.ensure) ve ekran beklesin
+    diye 409 PREPARING döner (`state`: preparing | waiting). Kitap henüz yerleşmediyse 404 NO_PLAN; son kurulum
+    düştüyse 409 PLAN_FAILED (`retry` ile yeniden)."""
+    d = _dir(job)
+    if plan_mod.exists(d):
+        return d
+    r = await asyncio.to_thread(plan_mod.ensure, d, (by or "").strip()[:200] or "Zeki AI", reason, busy=await _busy(d),
+                                retry=retry)
+    if r["status"] == "ready":
+        return d
+    if r["status"] in AUTO_TEXT:
+        raise Coded(409, "PREPARING", AUTO_TEXT[r["status"]], state=r["status"], since=r.get("since"))
+    if r["status"] == "failed":
+        raise Coded(409, "PLAN_FAILED", "Sayfa düzeni kurulamadı" + (f" ({r['error']})" if r.get("error") else "")
+                    + "; yeniden deneyin.")
+    raise Coded(404, "NO_PLAN", "Kitap henüz sayfalara yerleşmedi; üretim bitince açılır.")
+
+
 async def _write(fn, *args, **kw):
     """Plan yazımı iş parçacığında; plan hataları sözleşmedeki kodlarla döner."""
     try:
@@ -595,6 +620,16 @@ def _saved(plan: dict, **extra) -> dict:
 def plan_get(job: str) -> Response:
     d = _plan_dir(job)
     return JSONResponse(plan_mod.load(d), headers={"Cache-Control": "no-store"})
+
+
+@app.post(P + "/prepare")
+async def plan_prepare(job: str, retry: bool = Query(False), by: str = Depends(editor)) -> dict:
+    """Sayfa düzeni ekranının açılışı (2026-09-27): plan yoksa sesli okuma/okur uçlarıyla aynı kendiliğinden kurulum
+    (auto_plan_dir → plan.ensure, arka planda). Hazırsa 200 `{status: ready}`; kurulum sürüyorsa 409 PREPARING
+    (`state` preparing | waiting), düştüyse 409 PLAN_FAILED (`?retry=1` ile yeniden), kitap yerleşmediyse 404 NO_PLAN.
+    `GET plan` bilinçli olarak tetiklemez: otomatik kayıt «plan yok» cevabına dayanır; ekran bu ucu ayrıca çağırır."""
+    await auto_plan_dir(job, by, "sayfa düzeni", retry)
+    return {"status": "ready"}
 
 
 @app.post(P + "/freeze")
