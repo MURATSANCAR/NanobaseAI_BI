@@ -4,8 +4,8 @@ Ses dosyası diskte durur (`KAMPUS_BULLETIN_DIR`, varsayılan `/data/nanobaseai/
 `semantic_kampus_bulletins` tablosunda. İki giriş yolu var, ikisi de aynı `add`'e varır:
 
 - Yönetim → Sesli bülten: yönetici dosyayı yükler (ham gövde, `POST /api/v1/admin/bulletins`).
-- Sunucuda üretilen ses: `python -m semantic_bridge.bulletins add dosya.mp3 --title "…" --publish`
-  (köprünün ortamıyla; bkz. `main`).
+- Sunucuda üretilen ses: `sudo scripts/server/kampus-bulletin.sh add dosya.mp3 --title "…" --publish`
+  (köprünün kullanıcısı ve ortamıyla `python -m semantic_bridge.bulletins`; bkz. `main`).
 
 Eklenen bülten taslaktır; yayınlanınca Kampüs'te görünür. Kampüs en son yayınlananı çalar. Ses Range ile
 verilir: iOS Safari aralık desteklemeyen adresteki sesi çalmaz, uzun bültende ileri sarmak da buna bağlı.
@@ -154,11 +154,16 @@ def add(engine: sa.engine.Engine, tenant: str, user: str, data: bytes, *, origin
     mime, ext = kind
     bid = uuid.uuid4().hex[:16]
     folder = root()
-    folder.mkdir(parents=True, exist_ok=True)
     fname = f"{bid}.{ext}"
-    tmp = folder / f".{fname}.yaziliyor"
-    tmp.write_bytes(data)
-    tmp.replace(folder / fname)
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        tmp = folder / f".{fname}.yaziliyor"
+        tmp.write_bytes(data)
+        tmp.replace(folder / fname)
+    except OSError as e:
+        # Kurulumda klasör köprü kullanıcısına açılmamışsa (var/ root'a ait) kişi Python hatası görmesin.
+        raise BulletinError(500, f"Ses klasörü yazılamıyor ({folder}): {e.strerror}. Kurulumda klasör köprü "
+                                 "kullanıcısına açılmalı.") from None
     now = _now()
     row = {
         "id": bid, "tenant_id": tenant, "title": _clean(title, 300) or _title_from(original_name),
@@ -274,12 +279,11 @@ def audio(engine: sa.engine.Engine, tenant: str, bid: str, range_header: Optiona
 # ------------------------------------------------------------------ komut satırı (sunucuda üretilen ses)
 
 def main(argv: Optional[list[str]] = None) -> int:
-    """Sunucuda üretilen sesi bülten olarak ekler ya da listeler. Köprünün ortamıyla koşar:
+    """Sunucuda üretilen sesi bülten olarak ekler ya da listeler. Köprünün kullanıcısı ve ortamıyla koşmalı
+    (ortam dosyasını yalnız root okur, ses klasörü köprü kullanıcısınındır); sarmalayıcı bunu yapar:
 
-        set -a; . /etc/nanobase/semantic-bridge.env; set +a
-        cd /data/nanobaseai/bi/frontend/backend
-        /data/nanobaseai/bi/semantic-venv/bin/python -m semantic_bridge.bulletins add bulten.mp3 \\
-            --title "…" --duration 842 --publish
+        sudo scripts/server/kampus-bulletin.sh add /yol/bulten.mp3 --title "…" --duration 842 --publish
+        sudo scripts/server/kampus-bulletin.sh list
     """
     from semantic_layer.config import SemanticSettings
     from semantic_layer.store.catalog_store import open_store

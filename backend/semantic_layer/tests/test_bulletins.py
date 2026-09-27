@@ -59,3 +59,13 @@ def test_remove_deletes_the_file(engine):
     assert path.is_file()
     B.remove(engine, "t", b["id"])
     assert not path.exists() and B.listing(engine, "t", published_only=False) == []
+
+
+def test_unwritable_folder_is_a_plain_error(engine, tmp_path, monkeypatch):
+    blocker = tmp_path / "dosya"
+    blocker.write_text("klasör değil")
+    monkeypatch.setenv("KAMPUS_BULLETIN_DIR", str(blocker / "ses"))
+    with pytest.raises(B.BulletinError) as e:
+        B.add(engine, "t", "u", MP3)
+    assert e.value.status == 500 and "yazılamıyor" in str(e.value)
+    assert B.listing(engine, "t", published_only=False) == []

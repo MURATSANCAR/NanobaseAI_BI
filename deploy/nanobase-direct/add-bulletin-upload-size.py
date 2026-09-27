@@ -14,8 +14,26 @@ import sys
 
 P = os.path.realpath("/etc/nginx/sites-enabled/portal.nanobase.ai")
 s = open(P, encoding="utf-8").read()
+orig = s
+
+# Oturum denetimi iç isteği gövdeyi geçirmez, ama kendi gövde sınırı varsayılan 1 MB'tır: büyük yüklemede
+# 413 alır ve auth_request bunu 500'e çevirir (VM şablonunda bu satır var, test sunucusunda yoktu).
+check_anchor = "    location = /_timas_session_check {\n        internal;\n"
+if check_anchor in s and "client_max_body_size 0;" not in s.split(check_anchor, 1)[1].split("}", 1)[0]:
+    s = s.replace(check_anchor, check_anchor + "        client_max_body_size 0;\n", 1)
+
 if "api/v1/admin/bulletins" in s:
-    print("zaten var")
+    if s != orig:
+        open(P, "w", encoding="utf-8").write(s)
+        t = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
+        if t.returncode != 0:
+            open(P, "w", encoding="utf-8").write(orig)
+            print("nginx -t DÜŞTÜ, dosya eski hâline döndü:\n", t.stderr)
+            sys.exit(1)
+        subprocess.run(["systemctl", "reload", "nginx"], check=True)
+        print("oturum denetimine gövde sınırı eklendi, nginx reload tamam")
+    else:
+        print("zaten var")
     sys.exit(0)
 loc_anchor = "    location /timas/api/ {\n"
 if loc_anchor not in s:
@@ -43,7 +61,7 @@ new = s.replace(loc_anchor, loc + loc_anchor, 1)
 open(P, "w", encoding="utf-8").write(new)
 t = subprocess.run(["nginx", "-t"], capture_output=True, text=True)
 if t.returncode != 0:
-    open(P, "w", encoding="utf-8").write(s)
+    open(P, "w", encoding="utf-8").write(orig)
     print("nginx -t DÜŞTÜ, dosya eski hâline döndü:\n", t.stderr)
     sys.exit(1)
 subprocess.run(["systemctl", "reload", "nginx"], check=True)

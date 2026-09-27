@@ -4187,6 +4187,237 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         path, name = _desk_call(desk_mod.file_path, engine, tenant, user, is_admin, file_id)
         return FileResponse(path, filename=name)
 
+    # ------------------------------------------------------------------ M4 çeviri
+    # İş, segment, terim bankası, inceleme hatası ve ilerleme olayları köprünün kendi tablolarında
+    # (editorial_translation.py). Satır erişimi işin açanı / çevirmeni / inceleyeni; «Masam: herkesin işi»
+    # yetkisi bütün işleri gösterir. İş açma/atama «ceviri.yonet», onaylı terim «ceviri.terim» (access.py).
+    from semantic_bridge import editorial_translation as tr_mod
+    from urllib.parse import quote as _url_quote
+
+    def _tr(request: Request) -> tuple[Any, str, str, bool]:
+        engine, tenant, user, _ = _greetings(request)
+        first = id(engine) not in tr_mod._ready
+        tr_mod.ensure(engine)
+        desk_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        if first:
+            tr_mod.reset_stale(engine)
+        return engine, tenant, user, _can(user, "ozellik:masa.herkesinki")
+
+    def _tr_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except tr_mod.TranslationError as e:
+            # 403 = işteki rol yetmiyor (oturum geçerli): ön yüz bunu oturum düşmesi sanmasın diye FORBIDDEN.
+            code = "FORBIDDEN" if e.status == 403 else "TRANSLATION"
+            raise HTTPException(status_code=e.status, detail={"code": code, "message": str(e)}) from e
+
+    def _attachment(body: bytes, name: str, media: str) -> Response:
+        ascii_name = name.encode("ascii", "ignore").decode() or "dosya"
+        return Response(body, media_type=media, headers={
+            "Content-Disposition": f"attachment; filename=\"{ascii_name}\"; filename*=UTF-8''{_url_quote(name)}"})
+
+    @app.get("/api/v1/editorial/translation/jobs")
+    def tr_jobs(request: Request, mine: int = 0) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return {"items": _tr_call(tr_mod.list_jobs, engine, tenant, user, see_all, bool(mine)), "user": user,
+                "languages": tr_mod.LANGS, "seeAll": see_all}
+
+    @app.post("/api/v1/editorial/translation/jobs")
+    def tr_job_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _tr(request)
+        out = _tr_call(tr_mod.create_job, engine, tenant, user, body)
+        admin_mod.audit(engine, user, "create", "translation_job", out["id"], out["title"],
+                        {k: body.get(k) for k in ("sourceLang", "targetLang", "translator", "reviewer", "dueDate")})
+        return out
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}")
+    def tr_job(job_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.job_detail, engine, tenant, user, see_all, job_id)
+
+    @app.patch("/api/v1/editorial/translation/jobs/{job_id}")
+    def tr_job_update(job_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        changed = _tr_call(tr_mod.update_job, engine, tenant, user, see_all, job_id, body)
+        admin_mod.audit(engine, user, "update", "translation_job", job_id, None, changed)
+        return {"ok": True}
+
+    @app.delete("/api/v1/editorial/translation/jobs/{job_id}")
+    def tr_job_delete(job_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        title = _tr_call(tr_mod.delete_job, engine, tenant, user, see_all, job_id)
+        admin_mod.audit(engine, user, "delete", "translation_job", job_id, title, None)
+        return {"ok": True}
+
+    async def _tr_body(request: Request, limit: int) -> bytes:
+        length = int(request.headers.get("content-length") or 0)
+        if length > limit:
+            raise HTTPException(status_code=413, detail={"code": "TRANSLATION", "message": "Dosya 120 MB sınırını aşıyor."})
+        return await request.body()
+
+    @app.put("/api/v1/editorial/translation/jobs/{job_id}/source")
+    async def tr_job_source(job_id: str, request: Request, filename: str = "") -> dict[str, Any]:
+        engine, tenant, user, see_all = await run_in_threadpool(_tr, request)
+        data = await _tr_body(request, tr_mod.MAX_BYTES)
+        out = await run_in_threadpool(_tr_call, tr_mod.upload_source, engine, tenant, user, see_all, job_id, filename, data)
+        admin_mod.audit(engine, user, "upload", "translation_source", job_id, filename, {**out, "bytes": len(data)})
+        return out
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/source")
+    def tr_job_source_file(job_id: str, request: Request):
+        from fastapi.responses import FileResponse
+        engine, tenant, user, see_all = _tr(request)
+        path, name = _tr_call(tr_mod.source_path, engine, tenant, user, see_all, job_id)
+        return FileResponse(path, filename=name)
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/segments")
+    def tr_segments(job_id: str, request: Request, chapter: Optional[int] = None, filter: str = "hepsi", q: str = "") -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.segments, engine, tenant, user, see_all, job_id, chapter, filter, q)
+
+    @app.get("/api/v1/editorial/translation/segments/{seg_id}")
+    def tr_segment(seg_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.segment_detail, engine, tenant, user, see_all, seg_id)
+
+    @app.put("/api/v1/editorial/translation/segments/{seg_id}")
+    def tr_segment_save(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.save_segment, engine, tenant, user, see_all, seg_id, body)
+
+    @app.post("/api/v1/editorial/translation/segments/{seg_id}/review")
+    def tr_segment_review(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.review_segment, engine, tenant, user, see_all, seg_id, body)
+
+    @app.post("/api/v1/editorial/translation/segments/{seg_id}/errors")
+    def tr_error_add(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.add_error, engine, tenant, user, see_all, seg_id, body)
+
+    @app.delete("/api/v1/editorial/translation/errors/{error_id}")
+    def tr_error_delete(error_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        _tr_call(tr_mod.delete_error, engine, tenant, user, see_all, error_id)
+        return {"ok": True}
+
+    @app.post("/api/v1/editorial/translation/jobs/{job_id}/approve")
+    def tr_approve_many(job_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_mod.approve_many, engine, tenant, user, see_all, job_id, body)
+        admin_mod.audit(engine, user, "update", "translation_approve", job_id, None, {"chapter": body.get("chapter"), **out})
+        return out
+
+    @app.post("/api/v1/editorial/translation/jobs/{job_id}/use-draft")
+    def tr_use_draft(job_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.use_draft, engine, tenant, user, see_all, job_id, body)
+
+    @app.post("/api/v1/editorial/translation/jobs/{job_id}/draft")
+    def tr_draft(job_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        llm = rt().llm_for("editorial", priority=1)
+        chat = (lambda messages: llm.chat(messages, max_tokens=4096, temperature=0.2)) if llm is not None else None
+        out = _tr_call(tr_mod.start_draft, engine, tenant, user, see_all, job_id, body, chat)
+        admin_mod.audit(engine, user, "run", "translation_draft", job_id, None, {"chapter": body.get("chapter"), **out})
+        return out
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/candidates")
+    def tr_candidates(job_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return {"items": _tr_call(tr_mod.term_candidates, engine, tenant, user, see_all, job_id)}
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/quality")
+    def tr_quality(job_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_mod.quality, engine, tenant, user, see_all, job_id)
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/quality.csv")
+    def tr_quality_csv(job_id: str, request: Request) -> Response:
+        engine, tenant, user, see_all = _tr(request)
+        rep = _tr_call(tr_mod.quality, engine, tenant, user, see_all, job_id)
+        return _attachment(tr_mod.quality_csv(rep), f"{tr_mod._safe(rep['title'])}-kalite.csv", "text/csv; charset=utf-8")
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/export.docx")
+    def tr_export_docx(job_id: str, request: Request) -> Response:
+        engine, tenant, user, see_all = _tr(request)
+        body, name, _missing = _tr_call(tr_mod.export_docx, engine, tenant, user, see_all, job_id)
+        return _attachment(body, name, "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+
+    @app.get("/api/v1/editorial/translation/jobs/{job_id}/export.xlf")
+    def tr_export_xliff(job_id: str, request: Request) -> Response:
+        engine, tenant, user, see_all = _tr(request)
+        body, name = _tr_call(tr_mod.export_xliff, engine, tenant, user, see_all, job_id)
+        return _attachment(body, name, "application/xliff+xml")
+
+    @app.put("/api/v1/editorial/translation/jobs/{job_id}/xliff")
+    async def tr_import_xliff(job_id: str, request: Request, filename: str = "") -> dict[str, Any]:
+        engine, tenant, user, see_all = await run_in_threadpool(_tr, request)
+        data = await _tr_body(request, tr_mod.MAX_BYTES)
+        out = await run_in_threadpool(_tr_call, tr_mod.import_xliff, engine, tenant, user, see_all, job_id, data)
+        admin_mod.audit(engine, user, "upload", "translation_xliff", job_id, filename, out)
+        return out
+
+    @app.post("/api/v1/editorial/translation/jobs/{job_id}/to-redaction")
+    def tr_to_redaction(job_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_mod.to_redaction, engine, tenant, user, see_all, job_id, _can(user, "ozellik:masa.herkesinki"))
+        admin_mod.audit(engine, user, "create", "translation_to_redaction", job_id, None, out)
+        return out
+
+    @app.get("/api/v1/editorial/translation/translators")
+    def tr_translators(request: Request) -> dict[str, Any]:
+        engine, tenant, _user, _ = _tr(request)
+        return {"items": tr_mod.translators(engine, tenant)}
+
+    @app.get("/api/v1/editorial/translation/terms")
+    def tr_terms(request: Request, src: str = "", tgt: str = "", q: str = "", status: str = "", job: str = "") -> dict[str, Any]:
+        engine, tenant, _user, _ = _tr(request)
+        return tr_mod.list_terms(engine, tenant, src or None, tgt or None, q, status or None, job or None)
+
+    @app.get("/api/v1/editorial/translation/terms/export.csv")
+    def tr_terms_csv(request: Request, src: str = "", tgt: str = "") -> Response:
+        engine, tenant, _user, _ = _tr(request)
+        return _attachment(tr_mod.export_terms(engine, tenant, src or None, tgt or None),
+                           f"terim-bankasi{'-' + src if src else ''}{'-' + tgt if tgt else ''}.csv", "text/csv; charset=utf-8")
+
+    @app.post("/api/v1/editorial/translation/terms")
+    def tr_term_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_mod.create_term, engine, tenant, user, see_all, body, False)
+        admin_mod.audit(engine, user, "create", "translation_term", out["id"], str(body.get("source") or "")[:200], None)
+        return out
+
+    @app.post("/api/v1/editorial/translation/terms/propose")
+    def tr_term_propose(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_mod.create_term, engine, tenant, user, see_all, body, True)
+        admin_mod.audit(engine, user, "create", "translation_term_proposal", out["id"], str(body.get("source") or "")[:200], None)
+        return out
+
+    @app.patch("/api/v1/editorial/translation/terms/{term_id}")
+    def tr_term_update(term_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _tr(request)
+        _tr_call(tr_mod.update_term, engine, tenant, user, term_id, body)
+        admin_mod.audit(engine, user, "update", "translation_term", term_id, None, body)
+        return {"ok": True}
+
+    @app.delete("/api/v1/editorial/translation/terms/{term_id}")
+    def tr_term_delete(term_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _tr(request)
+        name = _tr_call(tr_mod.delete_term, engine, tenant, term_id)
+        admin_mod.audit(engine, user, "delete", "translation_term", term_id, name, None)
+        return {"ok": True}
+
+    @app.put("/api/v1/editorial/translation/terms/import")
+    async def tr_terms_import(request: Request, src: str = "", tgt: str = "", filename: str = "") -> dict[str, Any]:
+        engine, tenant, user, _ = await run_in_threadpool(_tr, request)
+        data = await _tr_body(request, 20 * 1024 * 1024)
+        out = await run_in_threadpool(_tr_call, tr_mod.import_terms, engine, tenant, user, src, tgt, data)
+        admin_mod.audit(engine, user, "upload", "translation_terms", None, filename, {"src": src, "tgt": tgt, **out})
+        return out
+
     # ------------------------------------------------------------------ kitaba soru (editör motoru)
     # Köprü editörün veritabanına dokunmaz; yalnız editör motorunun OpenAI uyumlu API'sinden sorar (ters tünel).
     from semantic_bridge import editorial_books as books_mod

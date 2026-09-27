@@ -93,6 +93,16 @@
       "label": "Çevirmenler"
     },
     {
+      "key": "sayfa:ceviri",
+      "area": "editoryal",
+      "label": "Çeviri"
+    },
+    {
+      "key": "sayfa:ceviri-masam",
+      "area": "editoryal",
+      "label": "Çeviri masam"
+    },
+    {
       "key": "sayfa:son-okuma",
       "area": "editoryal",
       "label": "Son okuma"
@@ -368,6 +378,20 @@
       "label": "Yayın kurulu: üye görüşleri",
       "hint": "Kurul üyelerinin görüşlerini adıyla görme",
       "explicit": true
+    },
+    {
+      "key": "ozellik:ceviri.yonet",
+      "area": "editoryal",
+      "page": "sayfa:ceviri",
+      "label": "Çeviri işi yönetme",
+      "hint": "İş açma, çevirmen/inceleyen atama, kaynak yükleme, ZEKİ ham taslağı (model harcar), redaksiyona aktarma, silme"
+    },
+    {
+      "key": "ozellik:ceviri.terim",
+      "area": "editoryal",
+      "page": "sayfa:ceviri",
+      "label": "Terim bankası düzenleme",
+      "hint": "Onaylı terim ekleme, düzeltme, silme, CSV içe aktarma; çevirmen önerilerini onaylama"
     },
     {
       "key": "ozellik:son-okuma.karar",

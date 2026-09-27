@@ -1525,6 +1525,206 @@ export const deskApi = {
   fileUrl: (id: string) => `${ENGINE_BASE}/api/v1/editorial/files/${encodeURIComponent(id)}`,
 };
 
+// -------------------------------------------------------------------- M4 çeviri
+
+export type SegmentStatus = 'bos' | 'taslak' | 'cevrildi' | 'onaylandi';
+export type JobStage = 'kaynak' | 'ceviri' | 'inceleme' | 'tamamlandi';
+export type QaIssue = { code: string; text: string };
+export type TranslationPace = {
+  wordsLast14: number;
+  activeDays: number;
+  windowDays: number;
+  perDay: number;
+  finish: string | null;
+  daysLeft: number | null;
+  needPerDay: number | null;
+  late: boolean;
+  overdue: boolean;
+};
+export type TranslationJob = {
+  id: string;
+  title: string;
+  author: string | null;
+  sourceLang: string;
+  targetLang: string;
+  translator: string | null;
+  translatorName: string | null;
+  reviewer: string | null;
+  reviewerName: string | null;
+  dueDate: string | null;
+  note: string | null;
+  createdBy: string;
+  createdAt: string;
+  completedAt: string | null;
+  workId: string | null;
+  source: { version: number; filename: string | null; bytes: number; sha256: string | null } | null;
+  draft: { state: 'yok' | 'calisiyor' | 'bitti' | 'hata'; note: string | null; done: number; total: number };
+  stage: JobStage;
+  segments: { total: number } & Record<SegmentStatus, number>;
+  words: { total: number; done: number; approved: number };
+  pace: TranslationPace;
+  roles: { translate: boolean; review: boolean; manage: boolean };
+};
+export type TranslationChapter = { no: number; title: string; segments: number; words: number; wordsDone: number } & Record<SegmentStatus, number>;
+export type TranslationJobDetail = TranslationJob & { chapters: TranslationChapter[]; languages: { source: string | null; target: string | null } };
+export type SegmentRow = {
+  id: string;
+  no: number;
+  para: number;
+  chapter: number;
+  heading: boolean;
+  source: string;
+  target: string;
+  status: SegmentStatus;
+  words: number;
+  hasDraft: boolean;
+  issues: QaIssue[];
+  errors: number;
+  note: string | null;
+  edited: boolean;
+  updatedBy: string | null;
+  updatedAt: string | null;
+};
+export type SegmentTerm = { id: string; source: string; target: string; forbidden: string[]; note: string | null; status: 'onayli' | 'aday'; jobOnly: boolean; at: [number, number]; ok: boolean };
+export type MemoryMatch = { source: string; target: string; score: number; status: SegmentStatus; job: string; sameJob: boolean };
+export type SegmentError = { id: string; category: string; severity: 'kucuk' | 'buyuk' | 'kritik'; note: string | null; by: string; at: string };
+export type SegmentDetail = SegmentRow & {
+  chapterTitle: string;
+  draft: string | null;
+  submitted: string | null;
+  translatedBy: string | null;
+  translatedAt: string | null;
+  approvedBy: string | null;
+  approvedAt: string | null;
+  diff: Array<{ op: 'eq' | 'del' | 'ins'; text: string }>;
+  terms: SegmentTerm[];
+  memory: MemoryMatch[];
+  context: Array<{ no: number; source: string; target: string }>;
+  errorList: SegmentError[];
+  roles: TranslationJob['roles'];
+  jobId: string;
+};
+export type Term = {
+  id: string;
+  sourceLang: string;
+  targetLang: string;
+  source: string;
+  target: string;
+  forbidden: string[];
+  note: string | null;
+  jobId: string | null;
+  jobTitle?: string | null;
+  status: 'onayli' | 'aday';
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
+};
+export type TermCandidate = { term: string; count: number; example: string };
+export type TranslatorCard = {
+  username: string;
+  name: string | null;
+  jobs: number;
+  active: number;
+  completed: number;
+  onTime: number;
+  late: number;
+  words: number;
+  wordsDone: number;
+  reviewedWords: number;
+  penalty: number;
+  mqm: number | null;
+  pairs: string[];
+};
+export type QualityReport = TranslationJob & {
+  mqm: { score: number | null; penalty: number; reviewedWords: number; weights: Record<string, number>; categories: Record<string, Record<string, number>>; errors: number };
+  edits: { segments: number; reviewed: number; rate: number | null };
+  checks: { byCode: Record<string, number>; segments: number; labels: Record<string, string>; items: Array<{ id: string; no: number; chapter: number; source: string; target: string; status: SegmentStatus; issues: QaIssue[] }> };
+  terms: { uses: number; ok: number; items: Array<{ source: string; target: string; uses: number; ok: number }> };
+  chapters: Array<{ no: number; title: string; words: number; done: number; approved: number; issues: number; errors: number; penalty: number; reviewedWords: number; mqm: number | null }>;
+  daily: Array<{ date: string; cevrildi: number; onaylandi: number; geri: number }>;
+  people: Array<{ username: string; cevrildi: number; onaylandi: number; geri: number }>;
+  errorList: Array<{ id: string; segmentNo: number | null; segmentId: string; category: string; severity: string; note: string | null; by: string; at: string; source: string; target: string }>;
+  categoryLabels: Record<string, string>;
+  severityLabels: Record<string, string>;
+};
+
+async function putFile<T>(path: string, file: File): Promise<T> {
+  const res = await fetch(`${ENGINE_BASE}${path}${path.includes('?') ? '&' : '?'}filename=${encodeURIComponent(file.name)}`, {
+    method: 'PUT',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/octet-stream' },
+    body: file,
+    signal: AbortSignal.timeout(600_000),
+  });
+  if (res.status === 403) {
+    const j = (await res.json().catch(() => null)) as { detail?: { code?: string; message?: string } } | null;
+    if (j?.detail?.code === 'FORBIDDEN') throw new EngineForbiddenError(j.detail.message);
+    if (j?.detail?.message) throw new Error(j.detail.message);
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (res.status === 401) {
+    authBlocked = true;
+    throw new EngineAuthError();
+  }
+  if (!res.ok) {
+    const j = (await res.json().catch(() => null)) as { detail?: { message?: string } } | null;
+    throw new Error(j?.detail?.message || httpErrorText(res.status));
+  }
+  return (await res.json()) as T;
+}
+
+const TR = '/api/v1/editorial/translation';
+const enc = encodeURIComponent;
+
+export const translationApi = {
+  jobs: (mine = false) =>
+    send<{ items: TranslationJob[]; user: string; languages: Record<string, string>; seeAll: boolean }>('GET', `${TR}/jobs${mine ? '?mine=1' : ''}`, undefined, 60_000),
+  job: (id: string) => send<TranslationJobDetail>('GET', `${TR}/jobs/${enc(id)}`, undefined, 60_000),
+  createJob: (b: Record<string, unknown>) => send<{ id: string; title: string }>('POST', `${TR}/jobs`, b, 30_000),
+  updateJob: (id: string, b: Record<string, unknown>) => send<{ ok: boolean }>('PATCH', `${TR}/jobs/${enc(id)}`, b, 30_000),
+  deleteJob: (id: string) => send<{ ok: boolean }>('DELETE', `${TR}/jobs/${enc(id)}`, undefined, 60_000),
+  uploadSource: (id: string, file: File) =>
+    putFile<{ version: number; segments: number; chapters: number; words: number; carried: number }>(`${TR}/jobs/${enc(id)}/source`, file),
+  sourceUrl: (id: string) => `${ENGINE_BASE}${TR}/jobs/${enc(id)}/source`,
+  segments: (id: string, p: { chapter?: number | null; filter?: string; q?: string }) =>
+    send<{ items: SegmentRow[]; total: number; roles: TranslationJob['roles'] }>(
+      'GET',
+      `${TR}/jobs/${enc(id)}/segments${qs({ chapter: p.chapter ?? undefined, filter: p.filter, q: p.q || undefined })}`,
+      undefined,
+      60_000,
+    ),
+  segment: (id: string) => send<SegmentDetail>('GET', `${TR}/segments/${enc(id)}`, undefined, 30_000),
+  save: (id: string, b: { target: string; status: 'taslak' | 'cevrildi'; updatedAt?: string | null; note?: string }) =>
+    send<{ status: SegmentStatus; updatedAt: string; repeatsFilled: number }>('PUT', `${TR}/segments/${enc(id)}`, b, 30_000),
+  review: (id: string, b: { action: 'onayla' | 'geri'; target?: string; toTranslator?: boolean; note?: string }) =>
+    send<{ updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/review`, b, 30_000),
+  addError: (id: string, b: { category: string; severity: string; note?: string }) => send<{ id: string }>('POST', `${TR}/segments/${enc(id)}/errors`, b, 30_000),
+  deleteError: (id: string) => send<{ ok: boolean }>('DELETE', `${TR}/errors/${enc(id)}`, undefined, 30_000),
+  approveMany: (id: string, chapter: number | null) => send<{ approved: number }>('POST', `${TR}/jobs/${enc(id)}/approve`, { chapter }, 60_000),
+  useDraft: (id: string, chapter: number | null) => send<{ filled: number }>('POST', `${TR}/jobs/${enc(id)}/use-draft`, { chapter }, 60_000),
+  draft: (id: string, chapter: number | null) => send<{ segments: number }>('POST', `${TR}/jobs/${enc(id)}/draft`, { chapter }, 60_000),
+  candidates: (id: string) => send<{ items: TermCandidate[] }>('GET', `${TR}/jobs/${enc(id)}/candidates`, undefined, 60_000),
+  quality: (id: string) => send<QualityReport>('GET', `${TR}/jobs/${enc(id)}/quality`, undefined, 120_000),
+  qualityCsvUrl: (id: string) => `${ENGINE_BASE}${TR}/jobs/${enc(id)}/quality.csv`,
+  docxUrl: (id: string) => `${ENGINE_BASE}${TR}/jobs/${enc(id)}/export.docx`,
+  xliffUrl: (id: string) => `${ENGINE_BASE}${TR}/jobs/${enc(id)}/export.xlf`,
+  importXliff: (id: string, file: File) =>
+    putFile<{ updated: number; confirmed: number; locked: number; unknown: number; unchanged: number }>(`${TR}/jobs/${enc(id)}/xliff`, file),
+  toRedaction: (id: string) => send<{ workId: string; version: number; chapters: number }>('POST', `${TR}/jobs/${enc(id)}/to-redaction`, {}, 120_000),
+  translators: () => send<{ items: TranslatorCard[] }>('GET', `${TR}/translators`, undefined, 60_000),
+  terms: (p: { src?: string; tgt?: string; q?: string; status?: string; job?: string }) =>
+    send<{ items: Term[]; languages: Record<string, string> }>('GET', `${TR}/terms${qs({ src: p.src || undefined, tgt: p.tgt || undefined, q: p.q || undefined, status: p.status || undefined, job: p.job || undefined })}`, undefined, 60_000),
+  createTerm: (b: Record<string, unknown>) => send<{ id: string }>('POST', `${TR}/terms`, b, 30_000),
+  proposeTerm: (b: Record<string, unknown>) => send<{ id: string }>('POST', `${TR}/terms/propose`, b, 30_000),
+  updateTerm: (id: string, b: Record<string, unknown>) => send<{ ok: boolean }>('PATCH', `${TR}/terms/${enc(id)}`, b, 30_000),
+  deleteTerm: (id: string) => send<{ ok: boolean }>('DELETE', `${TR}/terms/${enc(id)}`, undefined, 30_000),
+  importTerms: (src: string, tgt: string, file: File) =>
+    putFile<{ added: number; updated: number; skipped: number }>(`${TR}/terms/import?src=${enc(src)}&tgt=${enc(tgt)}`, file),
+  termsCsvUrl: (src?: string, tgt?: string) => `${ENGINE_BASE}${TR}/terms/export.csv${qs({ src: src || undefined, tgt: tgt || undefined })}`,
+};
+
 // ------------------------------------------------------ editoryal arama ve kitap 360 (ana ekran)
 
 export type SearchHit = { kind: 'kitap' | 'proje' | 'kisi'; id: string; title: string | null; note: string | null; extra: string | null; status: string | null; date: string | null };
