@@ -1,0 +1,42 @@
+{
+  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler.",
+  "version": 1,
+  "areas": [
+    {"id": "analiz", "label": "Analiz"},
+    {"id": "finans", "label": "Finans"},
+    {"id": "editoryal", "label": "Editoryal"},
+    {"id": "kayitlar", "label": "Kayıtlar"},
+    {"id": "pazarlama", "label": "Pazarlama"}
+  ],
+  "pages": [
+    {"key": "sayfa:genel-bakis", "area": "analiz", "label": "Genel bakış"},
+    {"key": "sayfa:panolar", "area": "analiz", "label": "Panolar"},
+    {"key": "sayfa:planli-raporlar", "area": "analiz", "label": "Planlı raporlar"},
+    {"key": "sayfa:uyarilar", "area": "analiz", "label": "Uyarılar"},
+    {"key": "sayfa:finansal-denetim", "area": "finans", "label": "Finansal denetim"},
+    {"key": "sayfa:yonetim-raporlari", "area": "finans", "label": "Yönetim raporları"},
+    {"key": "sayfa:baski-oneri", "area": "finans", "label": "Baskı önerisi"},
+    {"key": "sayfa:editoryal", "area": "editoryal", "label": "Masam"},
+    {"key": "sayfa:yazar-giris", "area": "editoryal", "label": "Yazar giriş süreci"},
+    {"key": "sayfa:yayin-kurulu", "area": "editoryal", "label": "Yayın kurulu"},
+    {"key": "sayfa:redaksiyon", "area": "editoryal", "label": "Redaksiyon"},
+    {"key": "sayfa:cevirmenler", "area": "editoryal", "label": "Çevirmenler"},
+    {"key": "sayfa:son-okuma", "area": "editoryal", "label": "Son okuma"},
+    {"key": "sayfa:kitap-tasarim", "area": "editoryal", "label": "Kitap tasarım"},
+    {"key": "sayfa:kisiler", "area": "kayitlar", "label": "Kişiler"},
+    {"key": "sayfa:basin-web", "area": "kayitlar", "label": "Basın ve web"},
+    {"key": "sayfa:telif-sozlesme", "area": "kayitlar", "label": "Sözleşmeler"},
+    {"key": "sayfa:editor-atama", "area": "kayitlar", "label": "Editör atama"},
+    {"key": "sayfa:seo-geo", "area": "pazarlama", "label": "SEO özeti"},
+    {"key": "sayfa:seo-arama", "area": "pazarlama", "label": "Arama ve kelimeler"},
+    {"key": "sayfa:seo-ai", "area": "pazarlama", "label": "Yapay zekâ görünürlüğü"},
+    {"key": "sayfa:seo-sayfalar", "area": "pazarlama", "label": "Yazar ve kategori"},
+    {"key": "sayfa:seo-yonlendirme", "area": "pazarlama", "label": "Yönlendirmeler"},
+    {"key": "sayfa:seo-sema", "area": "pazarlama", "label": "Şema denetimi"},
+    {"key": "sayfa:seo-llms", "area": "pazarlama", "label": "Yapay zekâ tarama dosyası"},
+    {"key": "sayfa:seo-crm", "area": "pazarlama", "label": "Haklar ve CRM"},
+    {"key": "sayfa:seo-urun", "area": "pazarlama", "label": "Ürün denetimi"},
+    {"key": "sayfa:seo-gecmis", "area": "pazarlama", "label": "Karar geçmişi"},
+    {"key": "sayfa:seo-baglanti", "area": "pazarlama", "label": "Bağlantılar"}
+  ]
+}

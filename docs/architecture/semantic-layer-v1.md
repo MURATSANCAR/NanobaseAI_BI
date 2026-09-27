@@ -94,7 +94,7 @@ profilde yoksa) → `DEPRECATED` (drift).
 | 5 Evidence Engine | gate + score + counter + sense split + drift + version snapshot | `semantic_layer/evidence/engine.py` |
 | 6 Resolver | term extraction, temporal, explain | `semantic_layer/runtime/resolver.py`, `temporal.py` |
 | 7 Compiler | Deterministic + Existing(LLM) + router + guardrails | `semantic_layer/runtime/compiler.py` |
-| 8 Bridge | `backend/semantic_bridge` (:8795) cockpit sözleşmesi (`/api/v1/ask`, `/run_sql`, `/engine`, `/generate_summary`) + `/api/v1/semantic/*` | pyodbc/FreeTDS |
+| 8 Bridge | `backend/semantic_bridge` (:8795) cockpit sözleşmesi (`/api/v1/ask`, `/run_sql`, `/engine`) + `/api/v1/semantic/*` | pyodbc/FreeTDS |
 | 9 Portal | `/bi/semantic-layer`: tespit edilen tablo/kolonlar, katalog durumu, kullanıcı açıklama girişi | `nanobase_api/semantic_layer_api.py`, `src/pages/BiSemanticLayerPage.tsx` |
 | 10 Bench | cold-start 6 dilim (Schema/Value/Metric/Temporal/SQL/Result) | `tests/text2sql/semantic-coldstart-eval.py` |
 | 11 Ops | worker (gece 02:00: profile → mine → candidates → certify → version), deploy script | `infra/systemd/nanobase-semantic-worker.*`, `scripts/server/deploy-semantic-bridge.sh` |

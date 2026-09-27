@@ -10,11 +10,13 @@ Kullanıcı kimliği giriş servisinden (:8796 `/session`) çerezle çözülür;
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import os
 import re
 import threading
+import time
 import urllib.request
 from datetime import datetime, timedelta, timezone
 from typing import Any, Callable, Optional
@@ -131,7 +133,20 @@ def session_of(cookie_header: str, *, fetch: Optional[Callable[[str], Optional[d
     return user[:120], display[:200]
 
 
+#: Çerez özeti → (zaman, oturum). Sayfa kapısı ve uç aynı istekte giriş servisine iki kez sormasın; kısa tutulur ki
+#: çıkış yapan kişinin oturumu en geç bu kadar sonra düşsün.
+_SESSION_TTL = 10.0
+_sessions: dict[str, tuple[float, dict]] = {}
+_sessions_lock = threading.Lock()
+
+
 def _fetch_session(cookie: str) -> Optional[dict]:
+    key = hashlib.sha256(cookie.encode("utf-8")).hexdigest()
+    now = time.monotonic()
+    with _sessions_lock:
+        hit = _sessions.get(key)
+        if hit and now - hit[0] < _SESSION_TTL:
+            return hit[1]
     req = urllib.request.Request(f"{LOGIN_URL}/session", headers={"Cookie": cookie})
     try:
         with urllib.request.urlopen(req, timeout=5) as res:  # noqa: S310 - loopback servis
@@ -139,7 +154,14 @@ def _fetch_session(cookie: str) -> Optional[dict]:
     except Exception as e:  # noqa: BLE001
         log.warning("board: giriş servisi yanıt vermedi: %s", e)
         return None
-    return data if isinstance(data, dict) else None
+    if not isinstance(data, dict):
+        return None
+    if data.get("username"):
+        with _sessions_lock:
+            if len(_sessions) > 5000:
+                _sessions.clear()
+            _sessions[key] = (now, data)
+    return data
 
 
 def _fetch_user(cookie: str) -> Optional[str]:
