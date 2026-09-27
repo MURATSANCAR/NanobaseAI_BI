@@ -297,7 +297,9 @@ def warnings(t: dict[str, Any]) -> list[str]:
     """Kaydı durdurmayan ama hakedişi ya da metni eksik bırakacak durumlar."""
     out = []
     shares = [p["share"] for p in t.get("parties") or [] if p.get("share") is not None]
-    if shares and abs(sum(shares) - 100) > 0.01:
+    if shares and not sum(shares):
+        out.append("Taraf payları 0 girilmiş; hakediş taraflara eşit bölünür.")
+    elif shares and abs(sum(shares) - 100) > 0.01:
         out.append(f"Tarafların payları toplamı %{sum(shares):g}; hakediş paylara bölünürken 100'e tamamlanmaz.")
     if t.get("paymentType") in SALES_BASED + PRINT_BASED:
         if not t.get("rates") and not t.get("tiers"):

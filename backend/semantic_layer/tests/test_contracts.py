@@ -141,6 +141,9 @@ def test_parties_split_and_equal_split_warning():
     t2 = _terms(parties=[{"name": "A"}, {"name": "B"}], advance=None)
     r2 = R.compute(t2, period_start="2026-01-01", period_end="2026-01-31", sales={"K1": {"qty": 10, "net": 1000, "list": 0, "retQty": 0}})
     assert any("eşit" in w for w in r2["warnings"])
+    t3 = _terms(parties=[{"name": "A", "share": 0}, {"name": "B", "share": 0}], advance=None)
+    r3 = R.compute(t3, period_start="2026-01-01", period_end="2026-01-31", sales={"K1": {"qty": 10, "net": 1000, "list": 0, "retQty": 0}})
+    assert r3["gross"] == 100.0 and [ln["royalty"] for ln in r3["lines"]] == [50.0, 50.0]
 
 
 def test_negative_period_carries_forward():

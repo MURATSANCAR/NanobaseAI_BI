@@ -201,10 +201,11 @@ def compute(terms: dict[str, Any], *, period_start: str, period_end: str,
     shares = [p.get("share") for p in parties]
     if not parties:
         payees = [("Hak sahibi", 1.0)]
-    elif all(s is None for s in shares):
+    elif not sum(float(s or 0) for s in shares):
+        # CRM'de pay çoğu zaman boş ya da 0 girilmiş (2026-09-28: 2024007432'de iki taraf da 0); 0 pay telifi siler.
         payees = [(p["name"], 1 / len(parties)) for p in parties]
         if len(parties) > 1:
-            warns.append("Taraf payları girilmemiş; telif taraflara eşit bölündü.")
+            warns.append("Taraf payları girilmemiş (boş ya da 0); telif taraflara eşit bölündü.")
     else:
         payees = [(p["name"], float(p.get("share") or 0) / 100) for p in parties]
         tot = sum(s for _, s in payees)
