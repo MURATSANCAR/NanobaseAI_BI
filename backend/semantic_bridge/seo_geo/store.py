@@ -134,6 +134,17 @@ GEO_RESULTS = sa.Table(
     sa.Column("answer", sa.Text),
     sa.Column("error", sa.String(500)),
 )
+CRM_BOOKS = sa.Table(
+    "semantic_seo_crm_books", _md,  # CRM kitap kartı + hak özeti; T-soft ürününe barkodla (EAN-13) bağlanır. Yalnız okunur.
+    sa.Column("tenant_id", sa.String(80), primary_key=True),
+    sa.Column("ean", sa.String(20), primary_key=True),
+    sa.Column("book_id", sa.String(40), nullable=False),
+    sa.Column("name", sa.String(500)),
+    sa.Column("rights", sa.String(16), nullable=False),      # var | eksik | yok | incele | koruma_disi
+    sa.Column("status_flag", sa.String(16)),                  # bizim_degil | cekildi | geri_istendi | devredildi | iptal | None
+    sa.Column("data_json", sa.Text, nullable=False),
+    sa.Column("synced_at", sa.DateTime(timezone=True), nullable=False),
+)
 _lock = threading.Lock()
 _ready: set[int] = set()
 

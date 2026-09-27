@@ -13,6 +13,7 @@ Uçlar `/api/v1/seo-geo/*`; oturum şart. `run-due` gece zamanlayıcısının uc
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import uuid
 from datetime import date, timedelta
@@ -22,10 +23,10 @@ import sqlalchemy as sa
 from fastapi import HTTPException, Request
 from pydantic import BaseModel, Field
 
-from . import connections, geo, llms, pages, propose, redirects, rules, schema
+from . import connections, crm, geo, llms, pages, propose, redirects, rules, schema
 import hashlib
 
-from .store import GEO_RESULTS, GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, dumps, ensure, iso, loads, now
+from .store import CRM_BOOKS, GEO_RESULTS, GSC, LINKS, PRODUCTS, PROPOSALS, QUESTIONS, REDIRECTS, RUNS, SCHEMA, dumps, ensure, iso, loads, now
 
 log = logging.getLogger("semantic.seo_geo")
 
@@ -37,6 +38,8 @@ def _json_num(key: str) -> Any:
 
 
 SALES, VIEWS = _json_num("CountTotalSales"), _json_num("StatViews")
+#: T-soft barkodu yalnız rakamlarıyla: CRM kitap kartına (EAN-13) bağlanır.
+EAN = sa.func.regexp_replace(sa.func.coalesce(sa.cast(PRODUCTS.c.data_json, sa.JSON)["Barcode"].as_string(), ""), "[^0-9]", "", "g")
 
 
 class Decision(BaseModel):
@@ -75,6 +78,8 @@ class SeoGeo:
         self.geo_state: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "startedAt": None, "finishedAt": None, "error": None}
         self._crawl_lock = threading.Lock()
         self.crawl: dict[str, Any] = {"running": False, "done": 0, "queue": None, "startedAt": None, "finishedAt": None, "error": None}
+        self._crm_lock = threading.Lock()
+        self.crm_state: dict[str, Any] = {"running": False, "count": None, "startedAt": None, "finishedAt": None, "error": None}
         # Sayfa önerisi uçlarla birlikte `register` içinde kurulur; ön üretim buradan çağırır.
         self.page_queue: Any = None
         self.make_page_proposal: Any = None
@@ -337,10 +342,12 @@ class SeoGeo:
         try:
             tenant = self.tenant()
             has = sa.select(PROPOSALS.c.product_id).where(PROPOSALS.c.tenant_id == tenant)
+            # CRM'de "artık bizim ürünümüz değil / satıştan çekildi / geri istendi" olan kitaba emek harcanmaz.
+            gone = sa.select(CRM_BOOKS.c.ean).where(CRM_BOOKS.c.tenant_id == tenant, CRM_BOOKS.c.status_flag.isnot(None))
             with self.engine().connect() as c:
                 rows = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.issues_json).where(
                     PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True), PRODUCTS.c.rules != ",,",
-                    PRODUCTS.c.product_id.not_in(has)).order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc(),
+                    PRODUCTS.c.product_id.not_in(has), EAN.not_in(gone)).order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.score.asc(),
                                                                  PRODUCTS.c.product_id)).all()
             queue = [pid for pid, issues in rows if propose.fixable(loads(issues, []))]
             # Sayfalar (yazar/kategori/yayınevi) ürünlerle karışık: her 3 üründen sonra 1 sayfa; ikisi de çok satandan.
@@ -547,6 +554,67 @@ class SeoGeo:
         self.audit(user, "approve", prop["product_id"], row["name"], {"proposal": prop["id"], "fields": list(change)})
         return self.proposal(prop["id"])
 
+    # ---------------------------------------------------------------- CRM kitap kartı ve haklar (yalnız okuma)
+    def start_crm(self, user: str) -> bool:
+        from semantic_bridge import admin as admin_mod
+
+        if not admin_mod.conf("CRM_SCHEMA") or not crm.CONNECTION_FILE or not os.path.exists(crm.CONNECTION_FILE):
+            raise _err(409, "CRM bağlantısı tanımlı değil.")
+        if not self._crm_lock.acquire(blocking=False):
+            return False
+        self.crm_state.update(running=True, startedAt=iso(now()), finishedAt=None, error=None)
+        threading.Thread(target=self._crm, args=(user,), name="seo-crm", daemon=True).start()
+        return True
+
+    def _crm(self, user: str) -> None:
+        from semantic_bridge import admin as admin_mod
+
+        eng, tenant = self.engine(), self.tenant()
+        run_id = uuid.uuid4().hex
+        with eng.begin() as c:
+            c.execute(RUNS.insert().values(id=run_id, tenant_id=tenant, kind="crm", started_at=now(), started_by=user))
+        error, books = None, []
+        try:
+            con = crm.connector()  # köprünün ortak bağlantısı sohbetle paylaşılmasın diye ayrı bağlantı
+            try:
+                books = crm.read(admin_mod.conf("CRM_SCHEMA"), con.execute)
+            finally:
+                try:
+                    con.close()
+                except Exception:  # noqa: BLE001
+                    pass
+            stamp = now()
+            rows = {}
+            for b in books:  # aynı EAN iki kartta olabilir: T-soft'ta aktif olan, sonra yürürlükte sözleşmesi olan önde
+                prev = rows.get(b["ean"])
+                if prev is None or (b["tsoftActive"], b["inForce"]) > (prev["tsoftActive"], prev["inForce"]):
+                    rows[b["ean"]] = b
+            with eng.begin() as c:
+                c.execute(CRM_BOOKS.delete().where(CRM_BOOKS.c.tenant_id == tenant))
+                vals = [dict(tenant_id=tenant, ean=b["ean"][:20], book_id=b["bookId"], name=(b["name"] or "")[:500],
+                             rights=b["rights"], status_flag=b["statusFlag"], data_json=dumps(b), synced_at=stamp)
+                        for b in rows.values()]
+                for i in range(0, len(vals), 1000):
+                    c.execute(CRM_BOOKS.insert(), vals[i:i + 1000])
+            self.crm_state["count"] = len(rows)
+        except Exception as e:  # noqa: BLE001
+            error = str(e)[:1000]
+            log.warning("CRM okuması başarısız: %s", error)
+        finally:
+            with eng.begin() as c:
+                c.execute(RUNS.update().where(RUNS.c.id == run_id).values(finished_at=now(), count=len(books), error=error))
+            self.crm_state.update(running=False, finishedAt=iso(now()), error=error)
+            self._crm_lock.release()
+
+    def crm_book(self, p: dict[str, Any]) -> Optional[dict[str, Any]]:
+        key = crm.ean_key(p.get("Barcode"))
+        if not key:
+            return None
+        with self.engine().connect() as c:
+            raw = c.execute(sa.select(CRM_BOOKS.c.data_json).where(CRM_BOOKS.c.tenant_id == self.tenant(),
+                                                                   CRM_BOOKS.c.ean == key)).scalar()
+        return loads(raw, None) if raw else None
+
     def _store_one(self, p: dict[str, Any]) -> None:
         """Gönderilen ürünün yeni hâli tek başına yeniden puanlanır (yinelenen başlık kontrolü gece turunda)."""
         pid = str(p.get("ProductId") or "")
@@ -645,7 +713,7 @@ def register(app, runtime, authorize, session_user):
             "priority": [{"id": r[0], "name": r[1], "score": r[2], "sales": int(r[3]), "views": int(r[4])} for r in top],
             "lastSync": ({"startedAt": iso(last["started_at"]), "finishedAt": iso(last["finished_at"]),
                           "count": last["count"], "error": last["error"]} if last else None),
-            "sync": seo.state, "batch": seo.batch, "search": daily,
+            "sync": seo.state, "batch": seo.batch, "search": daily, "crm": _crm_summary(),
             "connections": {"tsoft": connections.tsoft.configured(),
                             "google": bool(connections.service_account_email()),
                             "serviceAccount": connections.service_account_email(),
@@ -710,6 +778,7 @@ def register(app, runtime, authorize, session_user):
                 "current": {k: str(p.get(k) or "") for k in propose.FIELDS},
                 "details": {"words": rules.words(p.get("Details")), "shortDescription": rules.text_of(p.get("ShortDescription"))},
                 "limits": rules.thresholds(seo.conf),
+                "crm": seo.crm_book(p),
                 "proposals": [{**_proposal_view(dict(r)),
                                "unsupported": propose.unsupported(p, loads(r["fields_json"], {}))} for r in props]}
 
@@ -1177,6 +1246,81 @@ def register(app, runtime, authorize, session_user):
             seo.audit(user, "delete", qid, "GEO sorusu", {"kind": "geo_question"})
         return {"deleted": bool(n)}
 
+    # ------------------------------------------------------------------ CRM kitap kartı ve haklar
+    CRM_FILTERS = {"eksik", "yok", "incele", "var", "koruma_disi", "durum", "eslesmedi", "onizleme", "video"}
+
+    def _crm_join():
+        return PRODUCTS.outerjoin(CRM_BOOKS, sa.and_(CRM_BOOKS.c.tenant_id == PRODUCTS.c.tenant_id, CRM_BOOKS.c.ean == EAN))
+
+    def _crm_summary() -> dict[str, Any]:
+        tenant = seo.tenant()
+        active = sa.and_(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True))
+        with seo.engine().connect() as c:
+            books = c.execute(sa.select(sa.func.count()).select_from(CRM_BOOKS).where(CRM_BOOKS.c.tenant_id == tenant)).scalar() or 0
+            if not books:
+                return {"books": 0, "state": seo.crm_state}
+            j = _crm_join()
+            total = c.execute(sa.select(sa.func.count()).select_from(j).where(active)).scalar() or 0
+            unmatched = c.execute(sa.select(sa.func.count()).select_from(j).where(active, CRM_BOOKS.c.ean.is_(None))).scalar() or 0
+            rights = dict(c.execute(sa.select(CRM_BOOKS.c.rights, sa.func.count()).select_from(j).where(
+                active, CRM_BOOKS.c.ean.isnot(None)).group_by(CRM_BOOKS.c.rights)).all())
+            flags = dict(c.execute(sa.select(CRM_BOOKS.c.status_flag, sa.func.count()).select_from(j).where(
+                active, CRM_BOOKS.c.status_flag.isnot(None)).group_by(CRM_BOOKS.c.status_flag)).all())
+            data = sa.cast(CRM_BOOKS.c.data_json, sa.JSON)
+            preview = c.execute(sa.select(sa.func.count()).select_from(j).where(
+                active, data["previewPdf"].as_string().isnot(None))).scalar() or 0
+            video = c.execute(sa.select(sa.func.count()).select_from(j).where(
+                active, data["video"].as_string().isnot(None))).scalar() or 0
+            last = c.execute(sa.select(RUNS.c.finished_at).where(RUNS.c.tenant_id == tenant, RUNS.c.kind == "crm",
+                                                                  RUNS.c.error.is_(None))
+                             .order_by(RUNS.c.started_at.desc()).limit(1)).scalar()
+        return {"books": books, "products": total, "unmatched": unmatched,
+                "rights": {k: rights.get(k, 0) for k in crm.RIGHTS}, "flags": flags,
+                "preview": preview, "video": video, "lastRead": iso(last), "state": seo.crm_state}
+
+    @app.get("/api/v1/seo-geo/crm")
+    def seo_crm(request: Request, filter: str = "", q: str = "", start: int = 0, limit: int = 50) -> dict[str, Any]:
+        """T-soft'ta aktif ürünler, CRM kitap kartı ve hak özetiyle; çok satandan aza."""
+        gate(request)
+        if filter and filter not in CRM_FILTERS:
+            raise _err(422, "Bilinmeyen süzgeç.")
+        tenant, site = seo.tenant(), seo.conf("SEO_SITE_URL")
+        data = sa.cast(CRM_BOOKS.c.data_json, sa.JSON)
+        cond = [PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True)]
+        if filter in crm.RIGHTS:
+            cond.append(CRM_BOOKS.c.rights == filter)
+        elif filter == "durum":
+            cond.append(CRM_BOOKS.c.status_flag.isnot(None))
+        elif filter == "eslesmedi":
+            cond.append(CRM_BOOKS.c.ean.is_(None))
+        elif filter == "onizleme":
+            cond.append(data["previewPdf"].as_string().isnot(None))
+        elif filter == "video":
+            cond.append(data["video"].as_string().isnot(None))
+        if q.strip():
+            like = f"%{q.strip()}%"
+            cond.append(sa.or_(PRODUCTS.c.name.ilike(like), PRODUCTS.c.code.ilike(like), PRODUCTS.c.brand.ilike(like)))
+        j = _crm_join()
+        with seo.engine().connect() as c:
+            total = c.execute(sa.select(sa.func.count()).select_from(j).where(*cond)).scalar() or 0
+            rows = c.execute(sa.select(PRODUCTS, CRM_BOOKS.c.data_json.label("crm_json")).select_from(j).where(*cond)
+                             .order_by(SALES.desc(), VIEWS.desc(), PRODUCTS.c.product_id)
+                             .offset(max(0, start)).limit(max(1, min(limit, 200)))).mappings().all()
+        items = []
+        for r in rows:
+            b = loads(r["crm_json"], None) if r["crm_json"] else None
+            items.append({**{k: v for k, v in _product_view(dict(r), site).items() if k != "issues"},
+                          "crm": ({k: b.get(k) for k in ("bookId", "name", "rights", "rightsWhy", "statusLabel", "statusFlag",
+                                                         "previewPdf", "video", "originalTitle", "inForce")} if b else None)})
+        return {"total": total, "start": start, "items": items, "summary": _crm_summary()}
+
+    @app.post("/api/v1/seo-geo/crm/sync")
+    def seo_crm_sync(request: Request) -> dict[str, Any]:
+        user = gate(request)
+        started = seo.start_crm(user)
+        seo.audit(user, "run", "crm", "CRM kitap kartı okuması", {"started": started})
+        return {"started": started, "state": seo.crm_state}
+
     @app.post("/api/v1/seo-geo/run-due")
     def seo_run_due(request: Request, budget: int = 18000) -> dict[str, Any]:
         """Gece zamanlayıcısı: T-soft eşitlemesi (arka planda) ve Search Console okuması. Bağlı olmayan atlanır."""
@@ -1184,6 +1328,10 @@ def register(app, runtime, authorize, session_user):
         seo.engine()
         out: dict[str, Any] = {}
         out["tsoft"] = seo.start_sync("zamanlayıcı") if connections.tsoft.configured() else "tanımlı değil"
+        try:
+            out["crm"] = seo.start_crm("zamanlayıcı")
+        except HTTPException as e:
+            out["crm"] = e.detail.get("message") if isinstance(e.detail, dict) else str(e.detail)
         if connections.service_account_email():
             try:
                 out["gsc"] = seo.refresh_gsc()

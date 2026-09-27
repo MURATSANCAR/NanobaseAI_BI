@@ -68,6 +68,14 @@
 .sg-chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px; border-radius: 999px; font-size: 11px; font-weight: 750; background: #f1edf6; color: #5b4f6b; white-space: nowrap }
 .sg-chip.good { background: #e3f8ee; color: #0f7a51 } .sg-chip.mid { background: #fff3dc; color: #9a5b00 } .sg-chip.bad { background: #ffe8e3; color: #c2361b }
 .sg-chip.violet { background: #efeaff; color: #5b3fd6 }
+.sg-facts { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px 20px; margin: 8px 0 0 }
+.sg-facts > div { min-width: 0 }
+.sg-facts dt { font-size: 11px; font-weight: 750; color: var(--sg-muted); text-transform: uppercase; letter-spacing: .4px }
+.sg-facts dd { margin: 2px 0 0; font-size: 13px; color: var(--sg-text); overflow-wrap: anywhere }
+.sg-more { border: 1px solid #ece7f3; border-radius: 12px; padding: 8px 12px; background: #fcfbfe }
+.sg-more summary { cursor: pointer; font-size: 12.5px; font-weight: 750; color: var(--sg-ink) }
+.sg-more p { margin: 8px 0 2px; font-size: 13px; line-height: 1.55; white-space: pre-wrap }
+.sg-hints { margin: 12px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.55; color: var(--sg-text) }
 .sg-dot { width: 8px; height: 8px; border-radius: 999px; flex: none; background: #c9c3d3 }
 .sg-dot.kritik { background: #e5484d } .sg-dot.yüksek { background: var(--sg-coral) } .sg-dot.orta { background: var(--sg-amber) } .sg-dot.düşük { background: #a6a1b0 }
 

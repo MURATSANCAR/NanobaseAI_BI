@@ -164,6 +164,7 @@ export const NAV: NavGroup[] = [
       { id: 'seo-yonlendirme', label: 'Yönlendirmeler', to: '/seo-geo/yonlendirmeler', icon: CornerDownRight, section: 'İş', hint: 'Kırık adres yönlendirmeleri', keywords: ['301', 'yönlendirme'] },
       { id: 'seo-sema', label: 'Şema denetimi', to: '/seo-geo/sema', icon: Braces, section: 'İş', hint: 'Ürün sayfalarının yapısal verisi', keywords: ['şema'] },
       { id: 'seo-llms', label: 'Yapay zekâ tarama dosyası', to: '/seo-geo/llms', icon: FileText, section: 'İş', hint: 'Yapay zekâ motorlarına siteyi anlatan dosya', keywords: ['llms.txt', 'llms'] },
+      { id: 'seo-crm', label: 'Haklar ve CRM', to: '/seo-geo/crm-haklar', icon: ShieldCheck, section: 'İş', hint: 'Kitabın CRM kartı, internette gösterim hakkı ve yayın durumu', keywords: ['telif', 'hak', 'crm', 'sözleşme', 'google kitaplar'] },
       { id: 'seo-urun', label: 'Ürün denetimi', to: '/seo-geo/urun-denetimi', icon: ClipboardCheck, section: 'İş', hint: 'Ürün açıklaması ve başlık önerileri', keywords: ['ürün'] },
       { id: 'seo-gecmis', label: 'Karar geçmişi', to: '/seo-geo/gecmis', icon: History, section: 'İş', hint: 'Onaylanan ve reddedilen öneriler', keywords: ['geçmiş'] },
       { id: 'seo-baglanti', label: 'Bağlantılar', to: '/seo-geo/baglantilar', icon: Plug, section: 'Ayar', hint: 'Site ve arama hesabı bağlantıları', keywords: ['bağlantı'] },

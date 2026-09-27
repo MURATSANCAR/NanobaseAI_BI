@@ -31,7 +31,77 @@ export type Overview = {
   batch: { running: boolean; done: number; failed: number; queue: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
   search: SearchReport | null;
   connections: { tsoft: boolean; google: boolean; serviceAccount: string | null; gscSite: string | null; ga4: boolean; merchant: boolean };
+  crm: CrmSummary;
 };
+
+/** CRM hak kararı: bütün telif alış sözleşmelerinde internette gösterim hakkı var mı. Ön süzgeçtir; kesin söz telif biriminin. */
+export type CrmRights = 'var' | 'incele' | 'eksik' | 'yok' | 'koruma_disi';
+export type CrmFlag = 'bizim_degil' | 'cekildi' | 'geri_istendi' | 'devredildi' | 'iptal';
+export type CrmContract = {
+  name: string | null;
+  parties: string[];
+  inForce: boolean;
+  ends: string | null;
+  openEnded: boolean;
+  internet: boolean;
+  ebook: boolean;
+  zbook: boolean;
+  audiobook: boolean;
+  publicDomain: boolean;
+  note: string | null;
+};
+export type CrmBook = {
+  ean: string;
+  bookId: string;
+  name: string | null;
+  rights: CrmRights;
+  rightsWhy: string;
+  statusLabel: string | null;
+  statusFlag: CrmFlag | null;
+  tsoftActive: boolean;
+  isbn: string | null;
+  ebookIsbn: string | null;
+  originalTitle: string | null;
+  originalLanguage: string | null;
+  firstPublished: string | null;
+  firstCountry: string | null;
+  audience: string | null;
+  ageFrom: number | null;
+  ageTo: number | null;
+  authors: string | null;
+  illustrators: string | null;
+  translators: string | null;
+  previousPublisher: string | null;
+  previewPdf: string | null;
+  video: string | null;
+  genres: string | null;
+  webCategories: string | null;
+  keywords: string | null;
+  hashtags: string | null;
+  pages: number | null;
+  spot: string | null;
+  summary: string | null;
+  promo: string | null;
+  highlights: string | null;
+  quotes: string | null;
+  contracts: CrmContract[];
+  inForce: number;
+};
+export type CrmSummary = {
+  books: number;
+  products?: number;
+  unmatched?: number;
+  rights?: Record<CrmRights, number>;
+  flags?: Partial<Record<CrmFlag, number>>;
+  preview?: number;
+  video?: number;
+  lastRead?: string | null;
+  state: { running: boolean; count: number | null; startedAt: string | null; finishedAt: string | null; error: string | null };
+};
+export type CrmRow = Omit<ProductRow, 'issues'> & {
+  crm: Pick<CrmBook, 'bookId' | 'name' | 'rights' | 'rightsWhy' | 'statusLabel' | 'statusFlag' | 'previewPdf' | 'video' | 'originalTitle' | 'inForce'> | null;
+};
+export type CrmFilter = CrmRights | 'durum' | 'eslesmedi' | 'onizleme' | 'video';
 
 export type ProductRow = {
   id: string;
@@ -77,6 +147,8 @@ export type ProductDetail = ProductRow & {
   details: { words: number; shortDescription: string };
   /** Yönetim ekranındaki eşikler; sayaçlar bunlarla renklenir. */
   limits: { title_min: number; title_max: number; meta_min: number; meta_max: number; desc_min_words: number };
+  /** CRM kitap kartı (barkodla eşleşirse). */
+  crm: CrmBook | null;
   proposals: Proposal[];
 };
 
@@ -201,6 +273,31 @@ export const seoApi = {
   measure: () => call<{ started: boolean }>('questions/measure', { method: 'POST' }),
   addQuestion: (text: string, category: string) => call<{ id: string }>('questions', { method: 'POST', body: { text, category } }),
   deleteQuestion: (id: string) => call<{ deleted: boolean }>(`questions/${id}`, { method: 'DELETE' }),
+  crm: (p: { filter?: CrmFilter | ''; q?: string; start?: number; limit?: number }) =>
+    call<{ total: number; start: number; items: CrmRow[]; summary: CrmSummary }>(`crm?${qs(p)}`),
+  crmSync: () => call<{ started: boolean; state: CrmSummary['state'] }>('crm/sync', { method: 'POST' }),
+};
+
+export const RIGHTS_LABEL: Record<CrmRights, string> = {
+  var: 'Hak var',
+  incele: 'İncelenmeli',
+  eksik: 'Hak eksik',
+  yok: 'Sözleşme kaydı yok',
+  koruma_disi: 'Koruma dışı eser',
+};
+export const RIGHTS_TONE: Record<CrmRights, 'good' | 'mid' | 'bad' | 'violet'> = {
+  var: 'good',
+  incele: 'mid',
+  eksik: 'bad',
+  yok: 'mid',
+  koruma_disi: 'violet',
+};
+export const FLAG_LABEL: Record<CrmFlag, string> = {
+  bizim_degil: 'Artık bizim ürünümüz değil',
+  cekildi: 'Satıştan çekildi',
+  geri_istendi: 'Geri istendi',
+  devredildi: 'Hakları devredildi',
+  iptal: 'İptal edilmiş',
 };
 
 export const FIELD_LABEL: Record<SeoField, string> = {

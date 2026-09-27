@@ -4,9 +4,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronLeft, ChevronRight, ExternalLink, Loader2, Search, Sparkles, X } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import {
-  FIELD_LABEL, SEO_FIELDS, STATUS_LABEL, dateTime, fmt, scoreTone, seoApi,
+  FIELD_LABEL, FLAG_LABEL, SEO_FIELDS, STATUS_LABEL, dateTime, fmt, scoreTone, seoApi,
   type Fields, type ProductDetail, type Proposal, type SeoField,
 } from './api';
+import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
 
 const PAGE = 30;
@@ -205,6 +206,12 @@ function Detail({ id }: { id: string }) {
         </div>
       </div>
 
+      {p.crm?.statusFlag && (
+        <div className="sg-banner err">
+          CRM: <b>{FLAG_LABEL[p.crm.statusFlag]}</b> ({p.crm.statusLabel}). Ayrıntı aşağıda, CRM kitap kartında.
+        </div>
+      )}
+
       {p.issues.length === 0 ? (
         <div className="sg-banner ok">Bu ürün kurallara uyuyor.</div>
       ) : (
@@ -221,6 +228,8 @@ function Detail({ id }: { id: string }) {
       )}
 
       {last && <LastDecision proposal={last} canApprove={!!me.data?.canApprove} onDone={refresh} />}
+
+      <CrmPanel book={p.crm} tsoft={{ words: p.details.words, hasMeta: !!p.current.SeoDescription }} />
     </div>
   );
 }

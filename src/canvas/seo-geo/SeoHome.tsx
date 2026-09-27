@@ -171,6 +171,12 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; 
             <Todo to="/seo-geo/urun-denetimi?durum=hazir" label="Onay bekleyen model önerisi" n={waiting} />
             <Todo to="/seo-geo/urun-denetimi" label={`Puanı ${o.failingThreshold}’in altındaki ürün`} n={o.failing} />
             <Todo to="/seo-geo/gecmis" label="Onaylanan öneri (CRM bağlantısını bekliyor)" n={o.proposals.onaylandi ?? 0} />
+            {o.crm.books > 0 && (
+              <>
+                <Todo to="/seo-geo/crm-haklar?suzgec=durum" label="CRM’de artık bizim değil / çekildi, sitede satışta" n={Object.values(o.crm.flags ?? {}).reduce((a, n) => a + (n ?? 0), 0)} />
+                <Todo to="/seo-geo/crm-haklar?suzgec=eksik" label="İnternette gösterim hakkı eksik" n={o.crm.rights?.eksik ?? 0} />
+              </>
+            )}
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginTop: 14 }}>
             <button className="sg-button" onClick={onBatch} disabled={batchPending || o.batch.running || !o.products}>
@@ -193,6 +199,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch: () => void; 
             <Conn label="Search Console" ok={o.connections.google} extra={o.connections.gscSite ?? undefined} />
             <Conn label="Google Analytics 4" ok={o.connections.google && o.connections.ga4} />
             <Conn label="Merchant Center" ok={o.connections.google && o.connections.merchant} />
+            <Conn label="CRM kitap kartı (yalnız okuma)" ok={o.crm.books > 0} extra={o.crm.lastRead ? `Son okuma ${dateTime(o.crm.lastRead)}` : undefined} />
           </div>
         </section>
       </div>
