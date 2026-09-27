@@ -1,5 +1,58 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M1 Başvuru ve yayın kurulu: kuyruk, editör raporu, kurul oturumu ve üye oyu, Yayın Kurulu Raporu, arşiv
+
+- **Neden:** M1 ekranları yalnız CRM'den okuyordu (yazar giriş süreci, geçmiş kurul kararları). Eksik beş parça
+  (`docs/analiz/editoryal-m1-m8-eksikler-2026-09-20.md` → «M1»): başvuru formu/yükleme, başvuru kuyruğu, Yayın Kurulu
+  Raporu, kurul oturumu (üyenin kendi puanı ve oyu), arşiv. Kullanıcı kararı (yol haritası adım 2): editoryal zinciri kapat.
+- **Veri kararı (CRM .28 ölçümü):** CRM'de canlı başvuru kaydı yok — `new_dosyabasvuruBase` 19 satır, son 2024-05;
+  2024'ten beri 2.751 projenin 1'inde kanal «Web Başvurusu», 70'inde «Dosya Başvurusu». Yazar/ajans web formu yok;
+  portal girişi yalnız AD olduğu (demo/davet yok) için dışa açık form kurulmadı → başvuruyu iç kullanıcı girer.
+  Kayıtlar köprünün tablolarında (`semantic_editorial_applications|application_files|application_evals|application_log|
+  application_letters|application_reports|board_sessions|board_agenda|board_votes|market_cache`); CRM ve Logo yalnız okunur.
+- **Akış:** yeni → editör atanır (kendine al / yönetici atar) → editör raporu (içerik skoru, misyon/yayıncılık/ticari
+  0–100, konu/tür/yaş, katalog örtüşmesi, yayın ilkeleri kontrolü, öneri, rapor; tamamlanmadan karar yok) → kurula çıkar
+  (Yayın Kurulu Raporu kendiliğinden üretilir) / revizyon iste / reddet (arşiv) / yazar geri çekti → kurul gündemi →
+  üyeler oy verir → başkan kararı kaydeder (kabul/revizyon/red/ertele; kabulde ilk baskı, fiyat, telif, yayın tarihi) →
+  oturum kapanınca kararsız kalan «ertelendi» ve sıraya döner. Red/revizyon gerekçe ister. Revizyondan ya da arşivden
+  «yeniden aç» yeni tur açar (önceki turun raporu saklı).
+- **Kurul oyu:** üye yalnız kendi oyunu girer; oy vermeden dağılımı görmez; adıyla oylar başkana, `yayin-kurulu.yonet`
+  ve `yayin-kurulu.gorusler` yetkisi olana açık. Toplam karar skoru = üç eksenin eşit ağırlıklı ortalaması; öneri iki
+  türlü: oy çoğunluğu (eşitse «karar başkanda») ve skor eşiği (yönetim ekranı `EDITORIAL_BOARD_ACCEPT_SCORE` 70 /
+  `EDITORIAL_BOARD_REVISE_SCORE` 50). Karar insanındır. Değişiklik kaydına oyun kendisi değil, verildiği yazılır.
+- **Yayın Kurulu Raporu** (dondurulmuş, `editorial_applications_market.py`): YAZAR (başvurudaki biyografi/uzmanlık/geçmiş
+  + CRM'e bağlıysa eserleri, sözleşme ve proje sayısı), KİTAP, KATEGORİ (CRM kitaplık; seri önerisi = ilk yıl satışı üst
+  çeyrekteki kitapların en sık dizisi; ilk baskı = baz senaryonun 500'lük üst yuvarlaması), 1 yıllık satış tahmini: aynı
+  kitaplıkta ilk yayını 48–12 ay önce olan kitapların ilk 12 ay net satışının (iade düşülür) çeyrekleri — kötümser P25 /
+  baz P50 / iyimser P75; satışı hiç görülmeyen kitap sayılır ama senaryoya girmez (kod Logo'da farklı açılmış ya da
+  dağıtıma çıkmamış olabilir; sıfır saymak bazı yanıltır). Kanal kırılımı bu kitapların son 36 ayı (Logo `KANAL`).
+  Kaynak `V_SatisRaporu_<yıl>` (Baskı Öneri'yle aynı süzgeç), sabit SQL, ayrı salt okunur bağlantı; kategori sonucu
+  24 saat önbellekte; hazırlık arka planda ve sırayla. Model kullanılmaz.
+- **Yazışma:** karar kaydedilince kabul/red/revizyon yazısı taslağı hazırlanır; editör düzeltir, onaylayan kaydedilir;
+  portal göndermez (e-posta programında açılır ya da kopyalanır), «gönderildi» tarih + kanalla işaretlenir. Kararı geri
+  almak taslağı da siler; onaylı yazı varken karar değişmez.
+- **Kabulden sonra:** CRM'e yazılamadığı için ekran proje kartına girilecek alanları verir, CRM'de açılan proje aramayla
+  bağlanır (proje CRM'de doğrulanır) → Yazar giriş süreci ve Editör atama oradan yürür.
+- **Ekranlar:** `/basvurular` (Kuyruk · Kabul edilenler · Arşiv; menü Editoryal › Günlük «Başvurular», Kampüs M1 kutusu),
+  `/basvurular/:id`, `/yayin-kurulu` (kurul oturumları; CRM geçmişi `?gorunum=crm`, Masam ve Kitap 360 bağlantıları
+  oraya), `/yayin-kurulu/oturum/:id`. Kod `src/canvas/editorial/applications/`; `engine.ts`'te `send`/`putFile` dışa açıldı.
+  Yetki: `sayfa:basvurular`, `ozellik:basvuru.yaz` (bütün başvuru yazmaları, FEATURE_RULES), açıkça verilen
+  `ozellik:basvuru.yonet` ve `ozellik:yayin-kurulu.yonet`; başkan kendi oturumunu yetkisiz yönetir.
+- **Ölçümler (test sunucusu, doğrudan DB, salt okuma):** Logo `V_SatisRaporu_2026`'da `Satis_Iade` «Satış»/«İade», iade
+  adedi zaten eksi (kod `-abs` alır; «İade».lower() noktalı i tuzağına düşmemek için büyük harfle bakar); `KANAL` kodları
+  KITAPCI, E-TICARET, ZINCIR, DAGITICI, MAGAZA… (ekranda Türkçe adla; boş kod «Kanal girilmemiş»). Kohort (48–12 ay):
+  Çocuk Kitaplığı 718, Okul Öncesi 150, Gençlik 95, Tarih 81 …; 2.147 kitabın 604'ünde kitaplık boş. `new_diziBase` var;
+  bu penceredeki 2.116 kitabın 1.405'inde dizi dolu.
+- **Doğrulama durumu: DOĞRULANAMADI.** Test sunucusu 00:47–01:43 arasında Mac'in IP'sini ağ katmanında düşürdü (çok sayıda
+  paralel ssh); kullanıcı kararıyla sunucu beklenmedi. Yalnız statik denetim yapıldı (`py_compile`, katalog JSON'u).
+  pytest (`test_editorial_applications.py` 10 test + `test_access.py`), `tsc -b`, vitest, `vite build`, kurulum ve
+  gerçek oturumla kabul erişim dönünce yapılacak; `main`e taşınmadı, VM'e kurulmadı. Test sunucusunun `/tmp`'sinde bu
+  işten kalan salt okuma betikleri (`probe.py`, `q1–q4.sql`, `l1–l2.sql`, `cohort_probe.py`, `market_ref.py`,
+  `cleanup.py`, yarım `m1src.tgz`) silinecek.
+- **Açık:** model tabanlı ön değerlendirme (sınıflandırma, kırmızı çizgi, benzer eser içerik taraması) yok — kaynakları
+  (PDF arşivi dizini, yayın ilkeleri metni) hazır değil; yazı e-postayla gönderilmiyor (onay + işaret); yazar/ajans web
+  formu yok (dışa açık giriş kararı gerekir); CRM proje kartı elle açılıyor (Web API yetkisi yok).
+
 ## 2026-09-28 (02:00) — M9 Fiyatlama ve maliyet: kitap maliyeti, başabaş, kapak fiyatı önerisi, onay akışı, gerçekleşen marj, backlist revizyonu (dalda; sunucuda doğrulanmadı)
 
 - **Neden:** Yol haritası B bloku adım 3. Kitap bazlı maliyet (kâğıt, baskı, telif, çeviri, grafik…), baskı adedi senaryoları, başabaş, kapak fiyatı önerisi ve senaryoları hiçbir ekranda yoktu; gerçekleşen maliyet/marj Logo'dan okunmuyordu.

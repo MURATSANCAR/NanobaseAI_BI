@@ -108,7 +108,7 @@ function DecisionForm({ s, it }: { s: SessionDetail; it: AgendaItem }) {
   const qc = useQueryClient();
   const meta = useAppMeta();
   const suggestion = it.tally.majority ?? it.tally.byScore ?? '';
-  const [decision, setDecision] = useState(it.decision ?? '');
+  const [decision, setDecision] = useState<string>(it.decision ?? '');
   const [note, setNote] = useState(it.decisionNote ?? '');
   const [printRun, setPrintRun] = useState(it.printRun ? String(it.printRun) : '');
   const [price, setPrice] = useState(it.price ? String(it.price) : '');
