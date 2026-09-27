@@ -58,7 +58,9 @@ export function LicenseInfo({ s }: { s: SfxSound }) {
         <Info className="h-4 w-4" aria-hidden />
       </button>
       {open && (
-        <span role="note" className="absolute right-0 top-9 z-20 w-[min(280px,80vw)] rounded-xl border border-slate-200 bg-white p-2.5 text-[11.5px] leading-snug shadow-lg">
+        // telefonda ekranın altına tam genişlik (satır solda kalsa da taşmaz), geniş ekranda düğmenin altında
+        <span role="note" onClick={() => setOpen(false)}
+          className="fixed inset-x-4 bottom-4 z-30 rounded-xl border border-slate-200 bg-white p-3 text-[12px] leading-snug shadow-lg sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-0 sm:top-9 sm:w-[280px] sm:p-2.5 sm:text-[11.5px]">
           <b className="block">{s.source}</b>
           <span className="block">{s.license}</span>
           {s.credit && <span className="mt-1 block text-canvas-muted">Kaynakçaya girer: {s.credit}</span>}
