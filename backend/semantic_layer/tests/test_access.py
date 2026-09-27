@@ -142,6 +142,7 @@ def test_invalid_changes_are_refused(engine):
 def test_rules_cover_the_shared_endpoints():
     assert A.rule_for("/api/v1/financial-audit/overview") == {"sayfa:finansal-denetim"}
     assert A.rule_for("/api/v1/editorial/studio/jobs/abc/pdf/ic") == {"sayfa:kitap-tasarim"}
+    assert A.rule_for("/api/v1/editorial/studio/library/covers") == {"sayfa:kapak-arsivi", "sayfa:kitap-tasarim"}
     assert "sayfa:kisiler" in A.rule_for("/api/v1/editorial/contributors")
     assert A.rule_for("/api/v1/editorial/web/status") == A.OPEN
     assert A.rule_for("/api/v1/board/run-due") == A.SYSTEM

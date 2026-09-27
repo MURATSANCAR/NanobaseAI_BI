@@ -31,6 +31,7 @@ const StudioFlow = lazy(() => import('@/canvas/editorial/studio/StudioFlow'));
 const StudioEditor = lazy(() => import('@/canvas/editorial/studio/StudioEditor'));
 const PlanEditor = lazy(() => import('@/canvas/editorial/studio/PlanEditor'));
 const CoverScreen = lazy(() => import('@/canvas/editorial/studio/collage/CoverScreen'));
+const CoverLibraryScreen = lazy(() => import('@/canvas/editorial/studio/library/CoverLibraryScreen'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
 const MyTasksScreen = lazy(() => import('@/canvas/editorial/MyTasksScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
@@ -236,6 +237,7 @@ export default function App() {
             <Route path="ceviri/masam/:jobId" element={<TranslationWorkbench />} />
             <Route path="ceviri/:jobId/kalite" element={<TranslationQuality />} />
             <Route path="kitap-tasarim" element={<StudioHome />} />
+            <Route path="kitap-tasarim/kapak-arsivi" element={<CoverLibraryScreen />} />
             <Route path="kitap-tasarim/:jobId" element={<StudioFlow />} />
             <Route path="kitap-tasarim/:jobId/studyo" element={<StudioEditor />} />
             <Route path="kitap-tasarim/:jobId/sayfalar" element={<PlanEditor />} />

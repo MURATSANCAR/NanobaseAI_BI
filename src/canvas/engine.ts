@@ -3189,3 +3189,43 @@ export const freelanceApi = {
   logoCards: (q: string) => send<{ items: FlLogoCard[]; year: number; db?: DbTiming | null }>('GET', `${FL}/logo/cards${qs({ q })}`, undefined, 60_000),
   logo: (personId: string) => send<FlLogoMovements>('GET', `${FL}/people/${enc(personId)}/logo`, undefined, 60_000),
 };
+
+// ------------------------------------------------------------------ kapak arşivi (stüdyo)
+export type LibraryAudience = 'CHILD' | 'YOUNG' | 'ADULT';
+export type LibraryCategory = { name: string; path: string; count: number; children: LibraryCategory[] };
+export type LibraryTree = {
+  categories: LibraryCategory[];
+  uncategorized: number;
+  total: number;
+  audiences: Record<LibraryAudience, number>;
+};
+export type LibraryCover = {
+  id: string; title: string; authors: string[]; illustrators: string[]; isbn: string | null; brand: string | null;
+  category: string[]; audience: LibraryAudience | null; ageFrom: number | null; ageTo: number | null; genres: string[];
+  onSale: boolean; pageUrl: string | null; w: number | null; h: number | null;
+};
+export type LibraryPage = { total: number; page: number; size: number; pages: number; items: LibraryCover[] };
+export type LibraryStats = {
+  total: number; ok: number; pending: number; failed: number; none: number; lastFeed: string | null;
+  fetch: { running: boolean; done: number; failed: number };
+  feed: { running: boolean; sent: number; error: string | null; result: Record<string, number | string> | null };
+};
+/** `cat`: null = bütün kapaklar, '' = kategorisiz, «Kök > Alt» = o kategori ve altı. */
+export type LibraryQuery = { cat: string | null; q: string; audience: LibraryAudience | null; sort: 'sales' | 'title'; page: number; size: number };
+
+const libraryBase = '/api/v1/editorial/studio/library';
+export const coverLibraryApi = {
+  stats: () => send<LibraryStats>('GET', libraryBase, undefined, 30_000),
+  categories: (audience: LibraryAudience | null) =>
+    send<LibraryTree>('GET', `${libraryBase}/categories${audience ? `?audience=${audience}` : ''}`, undefined, 30_000),
+  covers: (x: LibraryQuery) => {
+    const p = new URLSearchParams({ sort: x.sort, page: String(x.page), size: String(x.size) });
+    if (x.cat !== null) p.set('cat', x.cat);
+    if (x.q.trim()) p.set('q', x.q.trim());
+    if (x.audience) p.set('audience', x.audience);
+    return send<LibraryPage>('GET', `${libraryBase}/covers?${p}`, undefined, 30_000);
+  },
+  /** Beslemeyi elle başlatır (yalnız yönetici); görseller arka planda iner. */
+  refresh: () => send<{ started: boolean }>('POST', `${libraryBase}/refresh`, {}, 30_000),
+  imageUrl: (id: string, width = 360) => `${ENGINE_BASE}${libraryBase}/covers/${encodeURIComponent(id)}/image?w=${width}`,
+};

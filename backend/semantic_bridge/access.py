@@ -448,7 +448,7 @@ _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bi
                                    "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
                                    "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular", "yayin-kurulu", "redaksiyon", "cevirmenler",
-                                         "son-okuma", "kitap-tasarim", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
+                                         "son-okuma", "kitap-tasarim", "kapak-arsivi", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
@@ -508,6 +508,8 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/alerts", frozenset({page("uyarilar"), page("genel-bakis")})),
     ("/api/v1/board/run-due", SYSTEM),
     ("/api/v1/board", frozenset({page("panolar"), page("genel-bakis")})),
+    # Kapak arşivi kendi sayfasıdır; stüdyoda kapak tarzı seçen de örneklere bakabilsin diye ikisi.
+    ("/api/v1/editorial/studio/library", frozenset({page("kapak-arsivi"), page("kitap-tasarim")})),
     ("/api/v1/editorial/studio", frozenset({page("kitap-tasarim")})),
     ("/api/v1/editorial/translation", frozenset({page("ceviri"), page("ceviri-masam")})),
     # Kişiler ekranı CRM kişisinin serbest çalışan kaydını sorar; geri kalan her şey Serbest çalışanlar sayfasının.

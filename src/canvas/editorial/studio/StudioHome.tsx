@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { BookOpen, FileUp, Play, Search, X } from 'lucide-react';
+import { BookOpen, FileUp, Images, Play, Search, X } from 'lucide-react';
 import { ENGINE_ENABLED, bookCatalogApi, bookCoverUrl, studioApi, type StudioArtMode } from '../../engine';
 import { ART_MODES, ArtModePicker, artModeDuration } from './ArtMode';
 import { Loading, Note, errText } from '../../admin/ui';
@@ -42,6 +42,13 @@ export default function StudioHome() {
       title="Kitap Tasarım Stüdyosu"
       lead="Kitabın metninden baskıya hazır iç sayfa ve kapak: CRM bilgisi, yaş ve tür, sayfa yerleşimi, resimler, dizgi ve ön baskı denetimi. Her sayfanın resmini düzeltebilir ya da yeniden ürettirebilirsiniz."
       source="Editör · ZEKİ AI"
+      aside={
+        <div className="flex lg:justify-end">
+          <Link to="/kitap-tasarim/kapak-arsivi" className={ghostBtn}>
+            <Images className="h-4 w-4" aria-hidden /> Kapak arşivi
+          </Link>
+        </div>
+      }
     >
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}

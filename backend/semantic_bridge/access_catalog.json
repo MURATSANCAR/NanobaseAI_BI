@@ -152,6 +152,11 @@
       "label": "Üretim yönetimi"
     },
     {
+      "key": "sayfa:kapak-arsivi",
+      "area": "editoryal",
+      "label": "Kapak arşivi"
+    },
+    {
       "key": "sayfa:kisiler",
       "area": "kayitlar",
       "label": "Kişiler"

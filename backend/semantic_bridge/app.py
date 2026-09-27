@@ -6784,6 +6784,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "runtime": lambda: (rt().store.engine, rt().settings.tenant_id), "send_mail": _mkt_send_mail,
         "crm_system": lambda: (admin_mod.conf("CRM_SCHEMA"), lambda sql: rt().run_sql(sql, rt().settings.max_rows)),
     })
+
+    from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı
+    editorial_studio_library.register(app, {"auth": _books, "audit": admin_mod.audit, "seo": app.state.seo_geo})
     return app
 
 
