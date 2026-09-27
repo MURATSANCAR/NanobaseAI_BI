@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M7 çapraz yazar önerisi: e-ticarette birlikte alınan yazarlar (dalda, kurulmadı)
+
+- **Neden sipariş:** CRM sınıflandırması yetmedi — kitaplık %96 dolu ama çok geniş («Çocuk Kitaplığı» 3.084 kitap; öneride en çok kitabı olanlar ve «Komisyon»/«Anonim» öne çıktı), dizi %93 dolu ama tek yazarın serisi, tür metni %44. Kullanıcı «çapraz öneriyi başlat» dedi.
+- **Veri:** T-soft `order/get` + `FetchProductData` (yalnız okuma; `order/getOrders` yok, katalog yöntemi 500 veriyor). 63.118 sipariş (2022-12-07'den), `OrderDateTimeStart` süzgeci çalışıyor. Saklanan: sipariş no, gün, durum, silindi mi; satırda ürün no, barkod, adet. **Müşteri adı/telefonu/adresi/e-postası/müşteri no okunmaz, saklanmaz.** Gece turu son 60 günü yeniden okur (durum değişimi).
+- **Hesap:** barkod = CRM kitap `new_ean13` → eser katılımı «Yazar». Bir siparişte farklı kitaplarıyla geçen iki yazar bir kez (ortak yazılmış tek kitap çift üretmez); iptal/iade durumu sayılmaz. Eşik ≥3 ortak sipariş, lift ≥1,5; sıra beklenenden fazla ortak sipariş = ortak×(1−1/lift) — ortak sayıya göre sıralayınca her yazarın başına aynı çok satanlar geliyordu (lift ~1,7). Her çiftte en sık birlikte alınan kitaplar.
+- **Ölçüm (test sunucusu, gerçek T-soft + CRM .28, bellek içi veritabanı — canlıya yazılmadı):** 63.118 sipariş / 375.756 satır, eşitleme ~255 sn; CRM'de yazarlı barkod 10.573, satırların %93,6'sı yazara bağlandı; sayılan sipariş 60.671; 33.249 çift. Bağımsız sayım Anıl Basılı × Mert Arık: ortak 3.247 = 3.247. Örnek: Metin Özdamarlar için ilk öneri Yaşar Bayraktar (742 ortak, lift 3,3), çok satanlar altta.
+- **Ölçümde bulunan üç hata, düzeltildi:** «İptal Edildi» büyük İ yüzünden `casefold` ile «iptal» olmuyordu (iptal sayılacaktı); CRM'de mükerrer kişi kaydı yazarı kendine öneriyordu (aynı adlı çift elendi); lift iki haneye yuvarlanıp saklandığı için fazla sipariş 1 sapıyordu (tam saklanıyor).
+- **Ekran:** yazar panelinde «Birlikte alınan yazarlar» (ortak sipariş, pay, kaç kat sık, birlikte alınan kitaplar, sayfalı; bağlantı `/yazar-iliskileri?kisi=`). Ekranda sağlayıcı adı yok, «e-ticaret siparişleri».
+- **Zamanlayıcı:** `scripts/server/timas-copurchase.{service,timer}` her gece 04:30 → `POST /api/v1/editorial/authors/copurchase/run-due` (yetki kataloğunda SYSTEM; T-soft tanımlı değilse atlar). Testler 29/29 (sunucuda), `tsc -b` temiz.
+
 ## 2026-09-28 — M32 B2B web sitesi ve kurumsal satış yönetimi (dalda; DOĞRULANAMADI — sunucu kapalı)
 
 - **Neden:** kurumsal teklifler bugün sistem dışında (CRM `OpportunityBase` 12, `QuoteBase` 1 kayıt), paket her seferinde
