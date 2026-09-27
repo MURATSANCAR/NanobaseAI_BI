@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Yetkiler ekranında alan kutuları birbirine taşıyordu (düzeltildi, test sunucusunda)
+
+- Kullanıcı ekran görüntüsü: rol düzenleyicide Analiz/Finans/Editoryal/Kayıtlar kutularının metinleri komşu kutuya ve alttaki satıra biniyordu. Sebep: kutular `fieldset` (tarayıcı varsayılanı `min-inline-size: min-content` — en uzun satır kadar genişler) ve sütun sayısı ekran genişliğinden (`xl:grid-cols-3`); dar yönetim panelinde uzun işlem açıklamaları taşıyordu.
+- Düzeltme (`a75e9347`, `AccessAdmin.tsx`): kutular `div role="group"`, sütunlar panel genişliğinden (`repeat(auto-fill, minmax(min(100%,260px),1fr))`), açıklamalar iki satıra kadar sarar; veri alanları ve «Kişi gözüyle» aynı düzenle.
+- Test sunucusunda: yalnız bu dosya (sunucudaki hâl değişiklik öncesi main ile md5 eşti), ön yüz derlendi (`index-DbyzNEhC.js`), `._*` 0. Görsel doğrulama kullanıcıda (oturum çerezi tarayıcı panesine konamıyor).
+
 ## 2026-09-28 — M1 Başvuru ve yayın kurulu: kuyruk, editör raporu, kurul oturumu ve üye oyu, Yayın Kurulu Raporu, arşiv
 
 - **Neden:** M1 ekranları yalnız CRM'den okuyordu (yazar giriş süreci, geçmiş kurul kararları). Eksik beş parça
