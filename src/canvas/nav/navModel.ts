@@ -23,6 +23,7 @@ import {
   BookA,
   BookImage,
   BookOpen,
+  BookPlus,
   BookUser,
   BriefcaseBusiness,
   Braces,
@@ -143,6 +144,14 @@ export const NAV: NavGroup[] = [
         parent: 'yonetim-raporlari',
         hint: 'Yeniden basılacak kitap önerileri',
         keywords: ['yeni baskı öneri', 'baskı', 'tahmin'],
+      },
+      {
+        id: 'ilk-baski',
+        label: 'İlk baskı tahmini',
+        to: '/ilk-baski',
+        icon: BookPlus,
+        hint: 'Yeni kitabın satış senaryoları ve ilk baskı adedi',
+        keywords: ['ilk baskı', 'satış tahmini', 'yeni kitap', 'emsal', 'senaryo', 'üretim adedi'],
       },
       {
         id: 'butce',

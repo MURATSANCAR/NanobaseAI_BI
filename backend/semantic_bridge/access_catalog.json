@@ -68,6 +68,11 @@
       "label": "Baskı önerisi"
     },
     {
+      "key": "sayfa:ilk-baski",
+      "area": "finans",
+      "label": "İlk baskı tahmini"
+    },
+    {
       "key": "sayfa:butce",
       "area": "finans",
       "label": "Bütçe ve hedefler"
@@ -367,6 +372,21 @@
       "page": "sayfa:yonetim-raporlari",
       "label": "Yönetim raporunu yenileme",
       "hint": "Baskı önerisi «Verileri yenile»"
+    },
+    {
+      "key": "ozellik:ilk-baski.karar",
+      "area": "finans",
+      "page": "sayfa:ilk-baski",
+      "label": "İlk baskı kararı",
+      "hint": "Yeni kitap için ilk baskı adedini karar olarak kaydetme ve onaya gönderme"
+    },
+    {
+      "key": "ozellik:ilk-baski.onay",
+      "area": "finans",
+      "page": "sayfa:ilk-baski",
+      "label": "İlk baskı onayı (satış / üretim)",
+      "hint": "İlk baskı kararına satış ya da üretim onayı verme; iki onay iki ayrı kişiden gelir",
+      "explicit": true
     },
     {
       "key": "ozellik:butce.duzenle",

@@ -43,6 +43,9 @@ const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudi
 const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
+const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
+const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'));
+const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -111,6 +114,10 @@ export default function App() {
             <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
             {/* M46 Bütçe planlama ve kontrolü (/api/v1/budget). */}
             <Route path="butce" element={<BudgetScreen />} />
+            {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
+            <Route path="ilk-baski" element={<FirstPrintScreen />} />
+            <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />
+            <Route path="ilk-baski/yeni" element={<FreeForecastPage />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />

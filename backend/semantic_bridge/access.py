@@ -465,6 +465,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/budget/targets", frozenset({page("butce")})),
     ("/api/v1/budget/deviations", frozenset({page("butce")})),
     ("/api/v1/budget/", frozenset({page("butce")})),
+    ("/api/v1/management/first-print/", frozenset({page("ilk-baski")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -524,6 +525,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/budget/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|refresh)$",
      "ozellik:butce.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/budget/plans/[^/]+/export\.csv$", "ozellik:veri.disa-aktar"),
+    # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
+    (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     # Çeviri: iş açma, atama, kaynak, ZEKİ taslağı, redaksiyona aktarma; onaylı terim bankası. Çevirmenin kendi
