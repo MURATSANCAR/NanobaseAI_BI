@@ -32,6 +32,8 @@ COPY --chown=frappe:frappe frappe-apps/flow apps/flow
 COPY --chown=frappe:frappe frappe-apps/nanobase_brand apps/nanobase_brand
 
 # Kurulum sırası önemli: nanobase_brand en sonda — şablon ve çeviri önceliği ondadır.
+# Yalnız ön yüz derleme bağımlılıkları silinir; çatının node_modules'u canlı bildirim
+# servisi (socketio.js) için çalışma anında gerekir.
 # compile-po-to-mo çevirileri derledikten sonra site önbelleğini temizlemek için --site ister;
 # o son adım imajda anlamsız, derlendiği .mo dosyasından denetlenir.
 # bench build, package.json'unda build betiği olan uygulamaları da derler (destek ekranı, yapay zekâ paneli).
@@ -45,7 +47,7 @@ RUN printf 'frappe\ntelephony\nhelpdesk\nflow\nnanobase_brand\n' > sites/apps.tx
  && test -s sites/assets/locale/tr/LC_MESSAGES/nanobase_brand.mo \
  && echo "{}" > sites/common_site_config.json \
  && find apps -mindepth 1 -path "*/.git" -prune -exec rm -rf {} + \
- && find apps -name node_modules -type d -prune -exec rm -rf {} + \
+ && rm -rf apps/helpdesk/desk/node_modules apps/flow/node_modules \
  && find apps -name '._*' -type f -delete
 
 FROM frappe/base:${IMAGE_BRANCH} AS backend
