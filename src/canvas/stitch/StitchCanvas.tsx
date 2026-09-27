@@ -197,9 +197,6 @@ export default function StitchCanvas(props: {
 }) {
   const stageRef = useRef<HTMLDivElement | null>(null);
   const [stageW, setStageW] = useState(0);
-  // Rol: soru kutusu «Zeki AI'a soru sorma», panoya ekleme «Panoya kart ekleme» ister; yoksa hiç görünmez.
-  const canAsk = useCan('zeki.soru');
-  const canPin = useCan('pano.duzenle');
   useLayoutEffect(() => {
     const el = stageRef.current;
     if (!el) return;
@@ -230,6 +227,9 @@ function CanvasBody({
   screen?: string;
   stageRef: React.MutableRefObject<HTMLDivElement | null>;
 }) {
+  // Rol: soru kutusu «Zeki AI'a soru sorma», panoya ekleme «Panoya kart ekleme» ister; yoksa hiç görünmez.
+  const canAsk = useCan('zeki.soru');
+  const canPin = useCan('pano.duzenle');
   const { reset, dirty, stacked } = useLayout();
 
   /**

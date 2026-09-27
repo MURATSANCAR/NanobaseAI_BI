@@ -7,8 +7,8 @@ import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
-import {
 import { useCan } from '../../../useAdmin';
+import {
   NarrationError, narrationApi, useNarration, useNarrationPage,
   type NarrationOverview, type NarrationPageRow, type NarrationVoice,
 } from './api';
@@ -37,8 +37,6 @@ function usePlayer() {
 }
 
 export default function NarrationSection({ jobId }: { jobId: string }) {
-  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
-  const canProduce = useCan('tasarim.uret');
   const qc = useQueryClient();
   const q = useNarration(jobId);
   const d = q.data;
@@ -85,6 +83,8 @@ function Summary({ d }: { d: NarrationOverview }) {
 }
 
 function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refresh: () => void }) {
+  // GPU harcayan üretim «Kitap tasarımında üretim» ister; rolde yoksa düğme çıkmaz.
+  const canProduce = useCan('tasarim.uret');
   const job = d.job;
   const running = !!job && (job.status === 'queued' || job.status === 'running');
   const todo = d.summary.missing + d.summary.stale;
