@@ -1,5 +1,15 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (01:10) — Sesli bülten: «Metinden üret» (ZEKİ AI seslendirir, taslak düşer) — kod hazır, GPU'ya kurulmadı
+
+- **Neden:** Kampüs bülteni altyapısı hazırdı ama sunucuda üretilmiş ses yoktu; seslendirme modeli (`book-voice`) GPU'da hazır, kapıya bağlı değil (09-26'dan beri bekliyor). Kullanıcı kararı: üretim otomatik olsun.
+- **Stüdyo (`apps/editor`):** `production/bulletin.py` — metin paragraflara, paragraf cümlelere; cümleler `SEG_CHARS`'a kadar parçada toplanır (tek cümle 1.800'ü aşarsa kelime sınırından bölünür; sunucu parça başına 2.000 alır), okunuş yayınevi sözlüğüyle, bütün parçalar tek `/v1/audio/narrate` çağrısında → `ses.mp3`. Depo `<stüdyo>/_ses/bulten/<b…>/` (`istek.json`, `durum.json`). Temporal `BulletinNarration` (etkinlik `production_bulletin`, sayfa seslendirmesiyle aynı yeniden deneme kuralı) — GPU sırasına kitap işleriyle birlikte girer. Uçlar `POST /v1/studio/bulletins`, `GET …/{id}`, `GET …/{id}/audio`. Test `apps/editor/tests/test_bulletin.py`.
+- **Köprü:** tablo `semantic_kampus_bulletin_jobs`; `POST /api/v1/admin/bulletins/generate` (yönetici, denetim), `GET …/jobs` (stüdyodan eşitler), `GET …/voices` (ses kütüphanesi, kaldırılmışlar hariç). Biten işin sesi **bir kez** taslak bülten olur (seslendiren «ZEKİ AI», kaynak sunucu); bekleyen iş varken 20 sn'lik takipçi iş parçacığı (ekran kapalı olsa da taslak düşer); stüdyoya ulaşılamazsa iş korunur, sonra yeniden denenir. Test `test_bulletins.py` (+3).
+- **Ekran:** Yönetim → Sesli bülten → «Metinden üret»: başlık, ses (gruplu, önerilen işaretli), metin (30.000 karakter, yaklaşık süre), «ZEKİ AI ile seslendir», iş listesi (Sırada / Seslendiriliyor / Hazır · taslaklarda / Olmadı + neden), süren iş varken 10 sn'de bir yenilenir.
+- **GPU nginx:** `add-studio-routes.py` 7. bölüm `EDITOR-STUDYO-BULTEN` (POST oluşturma 1 MB; GET durum ve ses). Kapı (`gateway`) `book-voice` takma adıyla yeni imaja alınmadıkça stüdyo 503 `NO_VOICE` döner, ekran «ZEKİ AI seslendirme bu kurulumda henüz açık değil» der.
+- **Kurulum sırası (bekliyor):** main → GPU: `editor-py` imajı (bu main) ile `gateway` + `editor-studio` + `editor-studio-worker` yeniden kurulur (kitap kuyruğu boşken; kullanıcı onayı), `add-studio-routes.py` → test sunucusu: köprü + arayüz → Yönetim'den kısa bir metin seslendirilip Kampüs'te çalınır. GPU'ya bu oturumdan erişilemedi (Mac VPN kapalı).
+- **Bağlantı olayı:** bu oturumun art arda ssh/scp ve port yoklamaları Mac'in IP'sinin test sunucusunda düşürülmesine katkı verdi; kullanıcı kuralı (AGENTS.md «Test sunucusuna tek ssh bağlantısı») bundan sonra uygulanıyor: tek kalıcı bağlantı (ControlMaster), tek akışla dosya, port yoklaması yok.
+
 ## 2026-09-28 — M7: ısıya CRM izi, «ilgi bekleyen» nedenleri (dalda, kurulmadı)
 
 - **Neden:** portala henüz görüşme yazılmadığı için ısı haritasındaki 549 yazarın hepsi «temas yok»tu; sözleşmesi bitmek üzere olup kimsenin aramadığı yazar ayrıca görünmüyordu.

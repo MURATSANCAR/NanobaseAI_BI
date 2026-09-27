@@ -1,7 +1,7 @@
 """Stüdyonun GPU işleri Temporal'da: kitabın hattı (BookProduction), tek resmin yeniden üretimi
 (ArtRegenerate) ve sayfa planının işleri: serbest figür (FigureGenerate), kaliteyi artırma (AssetUpscale) ve
 GPU'suz zemin ayıklama (AssetCutout; aynı sırada yürür, busy tutmaz); boyama kitabı (ColoringBook, modelsiz) ve
-çizgiyi görsel modelle yeniden çizme (ColoringRedraw); kolaj kapağın fotoğraf adayları (CollagePhotos). Kendi kuyruğu
+çizgiyi görsel modelle yeniden çizme (ColoringRedraw); kolaj kapağın fotoğraf adayları (CollagePhotos); Kampüs sesli bülteni (BulletinNarration). Kendi kuyruğu
 `editor-production` (analiz kuyruğundan ayrı: dizgi Typst, Ghostscript ve
 fontlar ister, bunlar stüdyo imajında) ve kendi işçisi (worker.py, aynı anda tek etkinlik: görsel model
 tek sırada). API yalnız başlatır ve iş klasörünü okur.
@@ -221,6 +221,18 @@ async def narration_done_activity(job: str, jid: str) -> None:
     plan_mod.job_record(studio.job_dir(job), jid, status="done")
 
 
+@activity.defn(name="production_bulletin")
+async def bulletin_activity(bid: str) -> None:
+    """Kampüs sesli bülteni (bulletin.py): kitaptan bağımsız metin → mp3. Sayfa seslendirmesiyle aynı kurallar."""
+    from . import bulletin
+    try:
+        await _beating(bulletin.narrate(bid))
+    except Exception as e:
+        if _last(NARRATION_RETRY) or type(e).__name__ in NARRATION_RETRY.non_retryable_error_types:
+            bulletin.set_state(bid, status="fail", error=str(e)[:300])
+        raise
+
+
 @activity.defn(name="production_collage_photos")
 async def collage_photos_activity(job: str, count: int, direction: str, by: str) -> None:
     """Kolaj kapak fotoğraf adayları (GPU): sahne istemi → `count` tohumla fotoğraf → büyütme (collage.generate).
@@ -246,7 +258,7 @@ async def collage_photos_activity(job: str, count: int, direction: str, by: str)
 
 ACTIVITIES = [plan_activity, finish_activity, regenerate_activity, figure_activity, cutout_activity,
               upscale_activity, epub_activity, coloring_activity, coloring_redraw_activity, narrate_page_activity,
-              narration_done_activity, collage_photos_activity]
+              narration_done_activity, collage_photos_activity, bulletin_activity]
 
 
 # ------------------------------------------------------------------ iş akışları
@@ -346,8 +358,16 @@ class BookNarration:
                                         start_to_close_timeout=timedelta(minutes=2))
 
 
+@workflow.defn(name="BulletinNarration")
+class BulletinNarration:
+    @workflow.run
+    async def run(self, bid: str) -> None:
+        await workflow.execute_activity("production_bulletin", bid, start_to_close_timeout=timedelta(minutes=60),
+                                        heartbeat_timeout=BEAT, retry_policy=NARRATION_RETRY)
+
+
 WORKFLOWS = [BookProduction, ArtRegenerate, FigureGenerate, AssetCutout, AssetUpscale, EpubBuild, ColoringBook,
-             ColoringRedraw, BookNarration, CollagePhotos]
+             ColoringRedraw, BookNarration, CollagePhotos, BulletinNarration]
 
 # Seri karakter kartı (characters.py): denetim (CharacterCheck) ve öneri/çeviri (CharacterCards) aynı kuyrukta.
 from .characters import ACTIVITIES as _CARD_ACTIVITIES, WORKFLOWS as _CARD_WORKFLOWS  # noqa: E402

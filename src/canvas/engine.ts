@@ -1011,12 +1011,30 @@ export type BulletinPatch = Partial<Pick<Bulletin, 'title' | 'summary' | 'episod
 
 export const bulletinAudioUrl = (b: Pick<Bulletin, 'audioPath'>) => `${ENGINE_BASE}${b.audioPath}`;
 
+/** Metinden üretim işi: ZEKİ AI seslendirir (GPU sırası); bitince ses taslak bülten olur (`bulletinId`). */
+export type BulletinJob = {
+  id: string;
+  title: string | null;
+  voice: string | null;
+  chars: number;
+  status: 'queued' | 'running' | 'done' | 'fail';
+  error: string | null;
+  bulletinId: string | null;
+  createdBy: string;
+  createdAt: string | null;
+};
+export type BulletinVoice = { id: string; label: string; note: string; group: string; recommended?: boolean };
+
 /** Kampüs'te en son yayınlanan bülten çalar; Yönetim → Sesli bülten taslakları da görür, ekler, yayınlar. */
 export const bulletinsApi = {
   current: () => roomsSend<{ item: Bulletin | null }>('GET', '/api/v1/bulletins/current'),
   adminList: () => roomsSend<{ items: Bulletin[]; maxMb: number }>('GET', '/api/v1/admin/bulletins'),
   update: (id: string, patch: BulletinPatch) => roomsSend<Bulletin>('PATCH', `/api/v1/admin/bulletins/${encodeURIComponent(id)}`, patch),
   remove: (id: string) => roomsSend<{ ok: boolean }>('DELETE', `/api/v1/admin/bulletins/${encodeURIComponent(id)}`),
+  voices: () => roomsSend<{ voices: BulletinVoice[]; groups: Record<string, string>; error?: string }>('GET', '/api/v1/admin/bulletins/voices'),
+  jobs: () => roomsSend<{ items: BulletinJob[] }>('GET', '/api/v1/admin/bulletins/jobs'),
+  generate: (b: { text: string; voice: string | null; title: string | null }) =>
+    roomsSend<BulletinJob>('POST', '/api/v1/admin/bulletins/generate', b),
   /** Ham gövdeyle yükleme; süre tarayıcıda ölçülüp gönderilir (sunucuda ses çözümleyici yok). */
   upload: (file: File, durationSec: number | null, onProgress: (sent: number, total: number) => void) =>
     new Promise<Bulletin>((resolve, reject) => {

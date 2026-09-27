@@ -3538,6 +3538,89 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(r.store.engine, user, "delete", "bulletin", bulletin_id, out["title"], {"bytes": out["size"]})
         return {"ok": True}
 
+    # Metinden üretim: stüdyo (GPU sırası) ZEKİ AI sesiyle seslendirir, köprü bitince sesi taslak bülten yapar.
+    from semantic_bridge import editorial_studio as studio_mod
+
+    def _studio_bulletin_start(body: dict[str, Any], editor: str) -> dict[str, Any]:
+        import httpx
+        try:
+            return studio_mod.post_json("/v1/studio/bulletins", body, editor, timeout=60)
+        except studio_mod.StudioError as e:
+            raise bulletins_mod.BulletinError(422 if e.status == 400 else e.status, str(e)) from None
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 503:
+                raise bulletins_mod.BulletinError(503, "ZEKİ AI seslendirme bu kurulumda henüz açık değil.") from None
+            raise bulletins_mod.BulletinError(502, "Stüdyo şu an yanıt vermiyor.") from None
+        except httpx.HTTPError:
+            raise bulletins_mod.BulletinError(502, "Stüdyoya ulaşılamadı.") from None
+
+    def _studio_bulletin_state(bid: str) -> dict[str, Any]:
+        return studio_mod.get_json(f"/v1/studio/bulletins/{bid}")
+
+    def _studio_bulletin_audio(bid: str) -> bytes:
+        data, _mime = studio_mod.get_bytes(f"/v1/studio/bulletins/{bid}/audio", {"audio/mpeg"},
+                                           limit=bulletins_mod.max_bytes())
+        return data
+
+    _bulletin_poller = {"on": False}
+    _bulletin_poller_lock = threading.Lock()
+
+    def _poll_bulletins() -> None:
+        """Bekleyen üretim varken 20 sn'de bir eşitler; biten ses taslak bülten olur. Bekleyen kalmayınca durur."""
+        try:
+            while True:
+                time.sleep(20)
+                r = rt()
+                try:
+                    bulletins_mod.sync_jobs(r.store.engine, r.settings.tenant_id, _studio_bulletin_state, _studio_bulletin_audio)
+                    if bulletins_mod.pending(r.store.engine, r.settings.tenant_id) == 0:
+                        return
+                except Exception:  # noqa: BLE001
+                    log.exception("bulletin poller")
+        finally:
+            _bulletin_poller["on"] = False
+
+    def _ensure_bulletin_poller() -> None:
+        with _bulletin_poller_lock:
+            if not _bulletin_poller["on"]:
+                _bulletin_poller["on"] = True
+                threading.Thread(target=_poll_bulletins, name="bulletin-poller", daemon=True).start()
+
+    @app.get("/api/v1/admin/bulletins/jobs")
+    def bulletin_jobs(request: Request) -> dict[str, Any]:
+        _admin_gate(request)
+        r = rt()
+        items = bulletins_mod.sync_jobs(r.store.engine, r.settings.tenant_id, _studio_bulletin_state, _studio_bulletin_audio)
+        if bulletins_mod.pending(r.store.engine, r.settings.tenant_id):
+            _ensure_bulletin_poller()
+        return {"items": items}
+
+    @app.get("/api/v1/admin/bulletins/voices")
+    def bulletin_voices(request: Request) -> dict[str, Any]:
+        """Stüdyonun ses kütüphanesi (kaldırılmışlar hariç). Stüdyo kapalıysa boş liste ve neden."""
+        _admin_gate(request)
+        try:
+            out = studio_mod.get_json("/v1/studio/voices")
+        except Exception:  # noqa: BLE001
+            log.exception("bulletin voices")
+            return {"voices": [], "groups": {}, "error": "Ses listesi şu an alınamadı."}
+        voices = [v for v in (out.get("voices") or []) if not v.get("removed")]
+        return {"voices": voices, "groups": out.get("groups") or {}}
+
+    @app.post("/api/v1/admin/bulletins/generate", status_code=202)
+    def bulletin_generate(request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        user = _admin_gate(request)
+        r = rt()
+        try:
+            job = bulletins_mod.start_generation(r.store.engine, r.settings.tenant_id, user, str(body.get("text") or ""),
+                                                 body.get("voice"), body.get("title"), _studio_bulletin_start)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        admin_mod.audit(r.store.engine, user, "create", "bulletin", job["id"], job["title"] or "Metinden bülten",
+                        {"chars": job["chars"], "voice": job["voice"]})
+        _ensure_bulletin_poller()
+        return job
+
     # ------------------------------------------------------------------ kişi rehberi ve profil
     # Rehber CRM'den gelir (yalnız gerçek, etkin kullanıcılar). Kişinin eklediği dahili/kat/fotoğraf sunucuda.
     from semantic_bridge import people as people_mod
