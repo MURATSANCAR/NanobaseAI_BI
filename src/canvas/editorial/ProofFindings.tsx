@@ -3,9 +3,10 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { FileText, Loader2 } from 'lucide-react';
 import { download } from '../board/export';
 import { EngineAuthError, proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingCheck, type ProofingFinding, type ProofingReport, type ProofingSeverity } from '../engine';
-import { Loading, Note, Pill, nf } from '../admin/ui';
+import { Loading, Note, Pill, btnGhost, nf } from '../admin/ui';
 import { Panel } from './kit';
-import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, sevOf, type Decide, type ScrollCue } from './ProofEvidence';
+import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey, inheritedLabel, sevOf, type Decide, type ScrollCue } from './ProofEvidence';
+import { carriedFromOf, isCarriedReject, isPending, severityCounts } from './proofCarry';
 
 /** M5: ZEKİ AI'ın kitabın metninde koştuğu otomatik son okuma denetimleri ve bulguları.
  *  Rapor köprüden kitap adıyla gelir; burada gösterim, yerel süzme ve editörün bulguya kararı vardır.
@@ -14,7 +15,12 @@ import { ProofEvidence, ProofEvidenceSheet, SEVERITY, SEVERITY_ORDER, findingKey
  *  görseli, işaretli yer, alıntı, öneri ve karar düğmeleri oradadır. Karar («Doğru» / «Yanlış alarm» +
  *  gerekçe) insanın veri kaydıdır: kitabı düzeltmez, yalnız bulguya iliştirilir ve kuralın isabetini besler.
  *
- *  Varsayılan süzgeç: yalnız uyarı + hata, karar verilmişler gizli — editör açılışta bekleyen işi görür. */
+ *  Varsayılan süzgeç: yalnız uyarı + hata, karar verilmişler gizli — editör açılışta bekleyen işi görür.
+ *
+ *  Aynı kitapta hatırlama: yeniden okumada aynı bulgu önceki okumadaki kararı alır (kart servisi eşler, yazmaz).
+ *  Önceki okumada «yanlış alarm» denmiş bulgu listede görünmez ve sayaçlara girmez («N bulgu … gizlendi» notu);
+ *  «karar verilenler» süzgecinde «önceki okumada yanlış alarm» rozetiyle durur ve «Geri al» ile tek dokunuşta listeye döner.
+ *  «Doğru» denmiş olan listede kalır, «önceki okumada doğru» işaretiyle. */
 
 /** WARN + ERROR: KPI ve özet satırındaki "ciddi" sayısı. */
 export const seriousCount = (r: ProofingReport | undefined) => (r ? r.checks.reduce((n, c) => n + c.serious, 0) : 0);
@@ -63,7 +69,10 @@ function CheckChip({ c, active, onClick }: { c: ProofingCheck; active: boolean; 
       aria-pressed={active}
       disabled={failed && c.findings === 0}
       onClick={onClick}
-      title={failed ? `Denetim koşamadı${c.error ? `: ${c.error}` : ''}` : p ? `İsabet: ${nf.format(p.accepted)} doğru / ${nf.format(p.accepted + p.rejected)} karar` : 'Henüz karar yok'}
+      title={
+        (failed ? `Denetim koşamadı${c.error ? `: ${c.error}` : ''}` : p ? `İsabet: ${nf.format(p.accepted)} doğru / ${nf.format(p.accepted + p.rejected)} karar` : 'Henüz karar yok') +
+        (c.hidden ? ` · ${nf.format(c.hidden)} bulgu önceki okumadaki kararla gizli` : '')
+      }
       className={`inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-lg border px-2 py-1 text-[11.5px] transition-transform duration-150 ease-out active:scale-[0.97] disabled:opacity-60 disabled:active:scale-100 ${
         active ? 'border-canvas-ink bg-canvas-ink text-white' : `border-slate-200 bg-white/85 text-canvas-ink ${hoverable}`
       }`}
@@ -82,21 +91,24 @@ function CheckChip({ c, active, onClick }: { c: ProofingCheck; active: boolean; 
 }
 
 type Row = { key: string; n: number; f: ProofingFinding };
+
 type Group = { page: number | null; rows: Row[] };
 
-function FindingRow({ r, active, onPick, rowRef }: { r: Row; active: boolean; onPick: () => void; rowRef?: (el: HTMLButtonElement | null) => void }) {
+function FindingRow({ r, active, onPick, rowRef, onUndo, busy }: { r: Row; active: boolean; onPick: () => void; rowRef?: (el: HTMLButtonElement | null) => void; onUndo?: () => void; busy?: boolean }) {
   const { f, n } = r;
   const sev = sevOf(f);
   const d = f.decision;
+  // Önceki okumada «doğru» denmiş bulgu bekleyen iş gibi durur (soluklaşmaz); öbür kararlılar soluk.
+  const dim = d && !(d.inherited && d.verdict === 'ACCEPT');
   return (
-    <li>
+    <li className="flex flex-col gap-1">
       <button
         ref={rowRef}
         type="button"
         aria-current={active ? 'true' : undefined}
         onClick={onPick}
-        className={`grid w-full grid-cols-[auto_minmax(0,1fr)] gap-x-2 rounded-xl border px-2.5 py-2 text-left text-[12.5px] transition-[background-color,box-shadow] duration-150 ease-out ${
-          active ? 'border-canvas-violet/50 bg-canvas-violet/[0.06] shadow-[inset_2px_0_0_0_#7C5CFF]' : `border-slate-100 bg-white/85 [@media(hover:hover)]:hover:bg-slate-50 ${d ? 'opacity-70' : ''}`
+        className={`grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] gap-x-2 rounded-xl border px-2.5 py-2 text-left text-[12.5px] transition-[background-color,box-shadow] duration-150 ease-out ${
+          active ? 'border-canvas-violet/50 bg-canvas-violet/[0.06] shadow-[inset_2px_0_0_0_#7C5CFF]' : `border-slate-100 bg-white/85 [@media(hover:hover)]:hover:bg-slate-50 ${dim ? 'opacity-70' : ''}`
         }`}
       >
         <span className={`mt-0.5 font-mono text-[11px] font-extrabold tabular-nums ${active ? 'text-canvas-violet' : 'text-canvas-muted'}`}>{n}</span>
@@ -104,12 +116,25 @@ function FindingRow({ r, active, onPick, rowRef }: { r: Row; active: boolean; on
           <span className="flex flex-wrap items-center gap-1.5">
             <Pill tone={sev.tone}>{sev.label}</Pill>
             <span className="min-w-0 truncate text-[11px] text-canvas-muted">{f.label}</span>
-            {d && <Pill tone={d.verdict === 'ACCEPT' ? 'ok' : 'muted'}>{d.verdict === 'ACCEPT' ? 'Doğru' : 'Yanlış alarm'}</Pill>}
+            {d && !d.inherited && <Pill tone={d.verdict === 'ACCEPT' ? 'ok' : 'muted'}>{d.verdict === 'ACCEPT' ? 'Doğru' : 'Yanlış alarm'}</Pill>}
+            {d?.inherited && d.verdict === 'ACCEPT' && <Pill tone="ok">önceki okumada doğru</Pill>}
+            {d?.inherited && d.verdict === 'REJECT' && <Pill tone="violet">önceki okumada yanlış alarm</Pill>}
           </span>
           <span className="mt-0.5 line-clamp-2 break-words font-semibold leading-snug">{f.message}</span>
           {f.quote && <span className="mt-0.5 block truncate text-[11.5px] text-canvas-ink/70">“{f.quote}”</span>}
         </span>
       </button>
+      {onUndo && (
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={busy}
+          title={`Önceki okumanın kararı bu bulguya uygulanmaz; bulgu yeniden listeye girer (${inheritedLabel(f)}).`}
+          className={`${btnGhost} self-end px-3 text-[11.5px]`}
+        >
+          Geri al
+        </button>
+      )}
     </li>
   );
 }
@@ -144,23 +169,30 @@ export function ProofFindings({
 
   // Karar yazma: kim olduğu oturumdan gelir; tekrar basmak yeni karar yazar. Kaydedilince rapor yeniden okunur (karar + isabet birlikte gelir).
   const decideM = useMutation({
-    mutationFn: (v: { findingId: string; verdict: ProofVerdict; reasonCode?: ProofReasonCode; note?: string }) =>
+    mutationFn: (v: { findingId: string; verdict: ProofVerdict | 'CLEAR'; reasonCode?: ProofReasonCode; note?: string; carriedFrom?: string }) =>
       proofingApi.decide({ bookId: bookId as string, ...v }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['editorial', 'proofing'] }),
   });
-  const decide: Decide | null = bookId ? (findingId, verdict, reasonCode, note) => decideM.mutateAsync({ findingId, verdict, reasonCode, note }) : null;
+  const decide: Decide | null = bookId ? (findingId, verdict, reasonCode, note, carriedFrom) => decideM.mutateAsync({ findingId, verdict, reasonCode, note, carriedFrom }) : null;
+  const [undoErr, setUndoErr] = useState<string | null>(null);
+  /** Taşınan «yanlış alarm»ı geri al: bulgu kararsız kalır ve listeye döner. */
+  const undo = (f: ProofingFinding) => {
+    if (!decide || !f.id) return;
+    setUndoErr(null);
+    decide(f.id, 'CLEAR', undefined, undefined, carriedFromOf(f)).catch((e: unknown) =>
+      setUndoErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : e instanceof Error ? e.message : 'Geri alınamadı.'),
+    );
+  };
 
   const findings = report?.findings ?? [];
   const keyed = useMemo(() => findings.map((f, i) => ({ key: findingKey(f, i), f })), [findings]);
-  const sevCounts = useMemo(() => {
-    const m: Record<ProofingSeverity, number> = { ERROR: 0, WARN: 0, INFO: 0 };
-    for (const f of findings) m[f.severity] = (m[f.severity] ?? 0) + 1;
-    return m;
-  }, [findings]);
-  const decidedCount = useMemo(() => findings.filter((f) => f.decision).length, [findings]);
+  // Sayaçlar önceki okumada «yanlış alarm» denmiş (taşınan) bulguları saymaz; kaçının gizlendiği ayrıca yazılır.
+  const sevCounts = useMemo(() => severityCounts(findings), [findings]);
+  const hiddenCount = useMemo(() => findings.filter(isCarriedReject).length, [findings]);
+  const decidedCount = useMemo(() => findings.filter((f) => !isPending(f)).length, [findings]);
 
   const shown = useMemo(
-    () => keyed.filter(({ f }) => (!check || f.check === check) && sev.has(f.severity) && (showDecided || !f.decision)),
+    () => keyed.filter(({ f }) => (!check || f.check === check) && sev.has(f.severity) && (showDecided || isPending(f))),
     [keyed, check, sev, showDecided],
   );
 
@@ -328,6 +360,24 @@ export function ProofFindings({
                 </span>
               </div>
 
+              {hiddenCount > 0 && (
+                <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11.5px] leading-snug text-canvas-muted">
+                  <span>
+                    {nf.format(hiddenCount)} bulgu önceki okumadaki «yanlış alarm» kararıyla gizlendi; sayılara girmez.
+                  </span>
+                  {!showDecided && (
+                    <button type="button" onClick={() => setShowDecided(true)} className="font-bold text-canvas-violet underline-offset-2 [@media(hover:hover)]:hover:underline">
+                      göster
+                    </button>
+                  )}
+                </p>
+              )}
+              {undoErr && (
+                <div className="mt-1.5">
+                  <Note tone="err">{undoErr}</Note>
+                </div>
+              )}
+
               {flat.length === 0 ? (
                 <p className="py-6 text-center text-[12.5px] leading-snug text-canvas-muted">
                   Bu süzgeçte bulgu yok.
@@ -360,6 +410,8 @@ export function ProofFindings({
                               key={r.key}
                               r={r}
                               active={activeRow?.key === r.key}
+                              onUndo={isCarriedReject(r.f) && decide ? () => undo(r.f) : undefined}
+                              busy={decideM.isPending}
                               rowRef={(el) => {
                                 if (el) rowEls.current.set(r.key, el);
                                 else rowEls.current.delete(r.key);

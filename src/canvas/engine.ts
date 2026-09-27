@@ -1693,13 +1693,38 @@ export type ProofingCheck = {
   error: string | null;
   /** Kuralın (ad+sürüm) isabeti: bütün kitaplardaki geçerli editör kararlarından; hiç karar yoksa null. */
   precision: ProofingPrecision | null;
+  /** Önceki okumada «yanlış alarm» denip taşındığı için `findings`/`serious` sayılarına girmeyen bulgular. */
+  hidden?: number;
 };
 export type ProofingPrecision = { accepted: number; rejected: number; rate: number };
 export type ProofVerdict = 'ACCEPT' | 'REJECT';
 /** Yanlış alarm gerekçesi (kapalı küme; kart servisiyle aynı). */
 export type ProofReasonCode = 'TEXT_CORRECT' | 'INTENDED_STYLE' | 'DICTIONARY_GAP' | 'WRONG_PAGE' | 'EXPLAINED_IN_TEXT' | 'NOT_AN_ISSUE' | 'OTHER';
-/** Editörün bulguya geçerli (en yeni) kararı; salt eklemedir, yeni karar eskisini geçersiz kılar. */
-export type ProofDecision = { verdict: ProofVerdict; reasonCode: ProofReasonCode | null; note: string | null; decidedBy: string; at: string | null };
+/** Taşınan kararın kaynağı: aynı kitabın önceki okumasında (ya da aynı okumanın önceki koşusunda) verilen karar. */
+export type ProofDecisionSource = {
+  decisionId: string;
+  findingId: string;
+  generationId: string;
+  /** Kaynak aynı okumanın (nesil) eski bir koşusu mu. */
+  sameReading: boolean;
+  page: number | null;
+  /** Kararın verildiği kural sürümü (bugünkü sürümden farklı olabilir). */
+  checkVersion: string | null;
+  /** Kaynak okumanın (denetim koşusunun) zamanı. */
+  readAt: string | null;
+};
+/** Editörün bulguya geçerli (en yeni) kararı; salt eklemedir, yeni karar eskisini geçersiz kılar.
+ *  `inherited`: bu bulgunun kendi kararı yok, aynı kitabın önceki okumasındaki aynı bulgunun kararı gösteriliyor
+ *  (veritabanına yazılmamıştır; editör onaylar/değiştirir/geri alırsa `carriedFrom` ile yazılır). */
+export type ProofDecision = {
+  verdict: ProofVerdict;
+  reasonCode: ProofReasonCode | null;
+  note: string | null;
+  decidedBy: string;
+  at: string | null;
+  inherited?: boolean;
+  source?: ProofDecisionSource;
+};
 export type ProofingFinding = {
   /** proof_finding kimliği; karar bu kimliğe iliştirilir. Eski kart servisi göndermezse null. */
   id: string | null;
@@ -1780,9 +1805,11 @@ export type WordMap = {
 
 export const proofingApi = {
   get: (bookTitle: string) => send<ProofingReport>('GET', `/api/v1/editorial/proofing${qs({ book: bookTitle })}`, undefined, 30_000),
-  /** Editörün bulguya kararı; kararı veren oturumdaki kullanıcıdır, gövdede gönderilmez. */
-  decide: (b: { bookId: string; findingId: string; verdict: ProofVerdict; reasonCode?: ProofReasonCode; note?: string }) =>
-    send<{ finding_id: string; decision: ProofDecision }>('POST', '/api/v1/editorial/proofing/decision', b, 30_000),
+  /** Editörün bulguya kararı; kararı veren oturumdaki kullanıcıdır, gövdede gönderilmez. `CLEAR` = «geri al»
+   *  (bulgunun kararı yok; önceki okumadan taşınan karar bu bulguya uygulanmaz). `carriedFrom`: editör önceki
+   *  okumadan taşınan kararı görürken karar verdiyse o kararın kimliği (isabet ikinci kez saymaz). */
+  decide: (b: { bookId: string; findingId: string; verdict: ProofVerdict | 'CLEAR'; reasonCode?: ProofReasonCode; note?: string; carriedFrom?: string }) =>
+    send<{ finding_id: string; decision: ProofDecision | null }>('POST', '/api/v1/editorial/proofing/decision', b, 30_000),
   /** Bulgular kitabın metnine Word yorumu olarak işlenmiş .docx (yanlış alarm denenler hariç). */
   exportDocx: async (bookId: string): Promise<{ blob: Blob; name: string }> => {
     const res = await fetch(`${ENGINE_BASE}/api/v1/editorial/proofing/export.docx${qs({ bookId })}`, {

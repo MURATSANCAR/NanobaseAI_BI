@@ -175,7 +175,8 @@ function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFindi
     setBusy({ key: g.key, done: 0, total: todo.length });
     try {
       for (let i = 0; i < todo.length; i++) {
-        await proofingApi.decide({ bookId, findingId: todo[i].id as string, verdict, reasonCode, note: note || undefined });
+        const prev = todo[i].decision;
+        await proofingApi.decide({ bookId, findingId: todo[i].id as string, verdict, reasonCode, note: note || undefined, carriedFrom: prev?.inherited ? prev.source?.decisionId : undefined });
         setBusy({ key: g.key, done: i + 1, total: todo.length });
       }
       setRejecting(null);
@@ -257,6 +258,7 @@ function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFindi
                       <div className="flex flex-wrap items-center gap-1.5">
                         <span className="font-mono text-[11px] font-bold tabular-nums">s. {f.page ?? '—'}</span>
                         {f.decision && <Pill tone={f.decision.verdict === 'ACCEPT' ? 'ok' : 'muted'}>{f.decision.verdict === 'ACCEPT' ? 'Doğru' : 'Yanlış alarm'}</Pill>}
+                        {f.decision?.inherited && <Pill tone="violet">önceki okumadan</Pill>}
                         {f.confidence != null && <span className="ml-auto font-mono text-[10.5px] tabular-nums text-canvas-muted">%{Math.round(f.confidence * 100)}</span>}
                       </div>
                       {f.quote && <p className="mt-0.5 break-words leading-snug">“{f.quote}”</p>}
