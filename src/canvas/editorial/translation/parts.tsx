@@ -62,7 +62,8 @@ export const CATEGORY: Record<string, string> = {
 
 export const pct = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 
-/** Çevrilen (mor) ve onaylanan (yeşil) kelimeler aynı çubukta. Genişlik yerine scaleX: yerleşimi tetiklemez. */
+/** Çevrilen (mor) ve onaylanan (yeşil) kelimeler aynı çubukta. Geçiş yok: çubuk her ⌘+Enter onayında değişir,
+ *  klavyeyle sık tetiklenen değişim anında görünmeli. */
 export function ProgressBar({ done, approved, total, label }: { done: number; approved: number; total: number; label: string }) {
   const d = total ? Math.min(1, done / total) : 0;
   const a = total ? Math.min(1, approved / total) : 0;
@@ -75,8 +76,8 @@ export function ProgressBar({ done, approved, total, label }: { done: number; ap
       aria-valuenow={Math.round(d * 100)}
       className="relative h-2 w-full overflow-hidden rounded-full bg-slate-100"
     >
-      <span className="absolute inset-0 origin-left bg-canvas-violet/70 transition-transform duration-200 ease-out" style={{ transform: `scaleX(${d})` }} />
-      <span className="absolute inset-0 origin-left bg-emerald-500 transition-transform duration-200 ease-out" style={{ transform: `scaleX(${a})` }} />
+      <span className="absolute inset-0 origin-left bg-canvas-violet/70" style={{ transform: `scaleX(${d})` }} />
+      <span className="absolute inset-0 origin-left bg-emerald-500" style={{ transform: `scaleX(${a})` }} />
     </div>
   );
 }
