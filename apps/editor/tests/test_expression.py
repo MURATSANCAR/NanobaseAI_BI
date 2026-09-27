@@ -1,5 +1,5 @@
 """Sesli okumada ifade katmanı (editor.production.expression): cümleler, editör işareti, üretime yansıma (narration
-kancası), metin değişince işaretin düşmesi, Zeki AI önerisinin karar kuralı ve vurgu oylaması. Model yok (sahte
+kancası), metin değişince işaretin düşmesi, ZEKİ AI önerisinin karar kuralı ve vurgu oylaması. Model yok (sahte
 servis ve sahte model). Çalıştır:
 
     pytest apps/editor/tests/test_expression.py

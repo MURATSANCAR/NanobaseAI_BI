@@ -402,6 +402,6 @@ def test_pdf_properties_name_no_tool(tmp_path):
     p = tmp_path / "a.pdf"
     doc.save(p)
     back = pymupdf.open(p)
-    assert back.metadata["producer"] == back.metadata["creator"] == "Zeki AI" and back.metadata["title"] == "Kitap"
+    assert back.metadata["producer"] == back.metadata["creator"] == "ZEKİ AI" and back.metadata["title"] == "Kitap"
     xmp = back.get_xml_metadata()
-    assert "Typst" not in xmp and "Ghostscript" not in xmp and xmp.count("Zeki AI") == 2
+    assert "Typst" not in xmp and "Ghostscript" not in xmp and xmp.count("ZEKİ AI") == 2

@@ -2,7 +2,7 @@
 
 Redaksiyon Word'de yapılır: editör bulguları ayrı bir listede değil, metnin kenarında görmek ister.
 Belge kitabın okunan metnidir (`source.read`; sayfa başlığı + her span bir paragraf), bulgular metnin
-ilgili yerine Word yorumu olarak bağlanır (yazar «Zeki AI»). Yorumun metni ekrandakiyle aynıdır (`_messages`):
+ilgili yerine Word yorumu olarak bağlanır (yazar «ZEKİ AI»). Yorumun metni ekrandakiyle aynıdır (`_messages`):
 başta önem («Mutlaka düzeltin / Bakmanız önerilir / Bilginize») ve denetimin sade adı, sonra «s. N — sade metin»,
 öneri ve en sonda parantez içinde tek satır sayısal ayrıntı. Kitap geneli bulgular (sayfasız) belgenin
 başında kendi paragraflarına bağlanır. HİÇBİR bulgu düşmez: metinde yeri bulunamayan bulgu o sayfanın
@@ -18,7 +18,7 @@ import unicodedata
 
 from . import _messages as M
 
-AUTHOR = "Zeki AI"
+AUTHOR = "ZEKİ AI"
 INITIALS = "ZA"
 
 
@@ -93,7 +93,7 @@ def build(title: str, pages: list[dict], findings: list[dict]) -> bytes:
     from docx import Document
     doc = Document()
     doc.add_heading(xml_safe(f"{title} — son okuma"), level=1)
-    doc.add_paragraph(f"Zeki AI son okuma bulguları yorum olarak metne işlendi ({len(findings)} bulgu). "
+    doc.add_paragraph(f"ZEKİ AI son okuma bulguları yorum olarak metne işlendi ({len(findings)} bulgu). "
                       "Metin, kitabın okunan hâlidir; sayfa numaraları basılı kitaba göredir.")
 
     book_wide = [f for f in findings if f.get("page") is None]

@@ -303,7 +303,7 @@ if "EDITOR-STUDYO-SESKUTUPHANE" not in s:
     s = s.replace("    # EDITOR-BITTI", kutup + "    # EDITOR-BITTI", 1)
     changes.append(f"ses kütüphanesi yolları (yükleme gövdesi {voice_mb} MB)")
 
-# 6) Sesli okumada ifade katmanı (api_expression.py): cümle başına ifade/vurgu, Zeki AI önerisi, bu cümleyi dinle.
+# 6) Sesli okumada ifade katmanı (api_expression.py): cümle başına ifade/vurgu, ZEKİ AI önerisi, bu cümleyi dinle.
 #    Düzenli ifadeli location'da proxy_pass yolu değişkenlerle kurulur ($1/$2/$3), sabit yol yazılamaz.
 if "EDITOR-STUDYO-IFADE" not in s:
     X_ = f"jobs/({JOB})/narration/pages/({ID})/expression"

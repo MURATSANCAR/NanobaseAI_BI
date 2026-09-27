@@ -1,6 +1,6 @@
 """Sesli okumada ifade katmanı: cümle başına ifade (ton, hız, duraklama) ve vurgulanacak kelime.
 
-Kullanıcı kararı (2026-09-27): «Zeki AI metni önceden okuyup her cümleyi işaretler: heyecan, merak, korku, neşe,
+Kullanıcı kararı (2026-09-27): «ZEKİ AI metni önceden okuyup her cümleyi işaretler: heyecan, merak, korku, neşe,
 fısıltı, üzüntü, ya da vurgulanacak kelime. Ses bu işaretle o cümleyi farklı tonda, hızda ve duraklamayla okur.
 Editör işareti ekranda cümle cümle değiştirebilir.»
 
@@ -30,7 +30,7 @@ Kayıt iş klasöründe `ses/ifade.json`:
 Sayfa sesi `narration.page_input`'taki kancayla ifadeyi okur: ifade değişen sayfanın sesi «güncel değil» olur, yalnız o
 sayfa yeniden seslendirilir. Kelime zamanları yine hizalayıcıdan gelir (değişmez).
 
-Zeki AI önerisi (`suggest`): ana model (`book-director`, `FileLlm` → işin `provenance.jsonl`'u), kitaba özel istem
+ZEKİ AI önerisi (`suggest`): ana model (`book-director`, `FileLlm` → işin `provenance.jsonl`'u), kitaba özel istem
 yok. Etiket kapalı küme: cümle başına tek harf (A–I) + harflerin olasılığı (`Llm.choose`, vLLM structured choice +
 logprobs); seçeneklerin sırası değiştirilerek iki okuma, olasılıklar ortalanır. En olası etiket `MIN_PROB`'un altında
 ya da nötrün önünde `MARGIN`'dan az ise nötr. Vurgu: üç bağımsız okuma (yapılandırılmış çıktı), en az ikisinde geçen
@@ -380,7 +380,7 @@ async def example(vid: str, label: str, ref: dict) -> str | None:
     return base64.b64encode(wav_p.read_bytes()).decode() if best else None
 
 
-# ------------------------------------------------------------------ Zeki AI önerisi
+# ------------------------------------------------------------------ ZEKİ AI önerisi
 def _page_listing(rows: list[dict]) -> str:
     out = []
     for n, s in enumerate(rows, 1):
@@ -460,7 +460,7 @@ async def emphasis_votes(llm, listing: str, rows: list[dict], page_no: int | Non
 
 
 async def suggest(d: Path, pid: str, llm, by: str, replace_editor: bool = False) -> dict:
-    """Zeki AI önerisi: sayfanın her cümlesine ifade + vurgu. Editörün işaretine dokunmaz (`replace_editor` hariç)."""
+    """ZEKİ AI önerisi: sayfanın her cümlesine ifade + vurgu. Editörün işaretine dokunmaz (`replace_editor` hariç)."""
     from . import plan as plan_mod
     t0 = time.time()
     pl = plan_mod.load(d)
@@ -484,7 +484,7 @@ async def suggest(d: Path, pid: str, llm, by: str, replace_editor: bool = False)
         old = marks.get(row["key"])
         if old and old.get("source") == "editor" and old.get("fp") == row["fp"] and not replace_editor:
             continue
-        marks[row["key"]] = {"label": lab, "emphasis": emph.get(n, []), "source": "ai", "by": "Zeki AI", "at": _now(),
+        marks[row["key"]] = {"label": lab, "emphasis": emph.get(n, []), "source": "ai", "by": "ZEKİ AI", "at": _now(),
                              "fp": row["fp"], "probs": probs}
     keys = {r["key"]: r["fp"] for r in rows}
     for k in [k for k, m in marks.items() if keys.get(k) != m.get("fp")]:

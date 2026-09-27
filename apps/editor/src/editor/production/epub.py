@@ -356,7 +356,7 @@ async def fill_alts(d: Path, plan: dict, llm, progress=None) -> dict:
         store = alt_store(d)                         # bu arada editör yazdıysa onunki kalır
         if (store.get(it["key"]) or {}).get("source") == "editor":
             continue
-        store[it["key"]] = {**rec, "basis": _basis_hash(it), "by": "Zeki AI", "at": _now()}
+        store[it["key"]] = {**rec, "basis": _basis_hash(it), "by": "ZEKİ AI", "at": _now()}
         studio.write(_dir(d), ALT, store)
         made += 1
         fell += rec.get("source") in ("an", "")
@@ -372,7 +372,7 @@ async def suggest_one(d: Path, key: str, llm) -> dict:
         raise KeyError(key)
     rec = await suggest(d, it, llm)
     store = alt_store(d)
-    store[key] = {**rec, "basis": _basis_hash(it), "by": "Zeki AI", "at": _now()}
+    store[key] = {**rec, "basis": _basis_hash(it), "by": "ZEKİ AI", "at": _now()}
     studio.write(_dir(d), ALT, store)
     return store[key]
 

@@ -4,11 +4,11 @@
     GET  …/expression                  cümleler (okuma sırasıyla), her cümlenin ifadesi + vurgusu + kaynağı, etiketler,
                                        sayfanın ses durumu (ifade değişince «stale»)
     PUT  …/expression                  {items: [{key, label, emphasis: [kelime]}]}  editörün işareti (yalnız verilenler)
-    POST …/expression/suggest          {replace_editor?: bool} Zeki AI önerisi (editörün işaretine dokunmaz)
+    POST …/expression/suggest          {replace_editor?: bool} ZEKİ AI önerisi (editörün işaretine dokunmaz)
     POST …/expression/sample           {key, label, emphasis} bu cümleyi dinle (audio/mpeg; kaydedilmez)
 
 Hatalar gövdede `code`: NO_PLAN (404), PREPARING (409), BUSY (409: bu kitapta GPU işi sürüyor, ana model kapalı),
-MODEL_BUSY (503: Zeki AI şu an yanıt veremiyor), NO_VOICE (503), INVALID (400: bilinmeyen ifade / cümlede olmayan kelime).
+MODEL_BUSY (503: ZEKİ AI şu an yanıt veremiyor), NO_VOICE (503), INVALID (400: bilinmeyen ifade / cümlede olmayan kelime).
 """
 
 from __future__ import annotations
@@ -84,11 +84,11 @@ async def expression_suggest(job: str, pid: str, body: Suggest | None = None, by
     d = _page(job, pid)
     b = await _busy(d)
     if b and not b.get("error"):
-        return _coded(409, "BUSY", "Bu kitapta süren bir üretim var; bitince Zeki AI önerisini isteyin.")
+        return _coded(409, "BUSY", "Bu kitapta süren bir üretim var; bitince ZEKİ AI önerisini isteyin.")
     try:
         return await X.suggest(d, pid, FileLlm(d / "provenance.jsonl"), by, bool(body and body.replace_editor))
     except ModelError:
-        return _coded(503, "MODEL_BUSY", "Zeki AI şu an yanıt veremiyor; biraz sonra yeniden deneyin.")
+        return _coded(503, "MODEL_BUSY", "ZEKİ AI şu an yanıt veremiyor; biraz sonra yeniden deneyin.")
 
 
 class SampleBody(BaseModel):

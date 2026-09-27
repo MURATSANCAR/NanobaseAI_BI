@@ -576,7 +576,7 @@ async def auto_plan_dir(job: str, by: str | None, reason: str, retry: bool = Fal
     d = _dir(job)
     if plan_mod.exists(d):
         return d
-    r = await asyncio.to_thread(plan_mod.ensure, d, (by or "").strip()[:200] or "Zeki AI", reason, busy=await _busy(d),
+    r = await asyncio.to_thread(plan_mod.ensure, d, (by or "").strip()[:200] or "ZEKİ AI", reason, busy=await _busy(d),
                                 retry=retry)
     if r["status"] == "ready":
         return d

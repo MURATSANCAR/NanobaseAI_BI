@@ -9,7 +9,7 @@ Ses dosyası: servis bütün dosyayı verir, köprü tarayıcının `Range` iste
 iOS Safari sesi yalnız aralık desteği olan adresten çalar, ileri/geri sarma da buna bağlı.
 
 İfade katmanı (cümle başına ifade ve vurgu; editörde `production/expression.py`):
-`GET/PUT …/narration/pages/{sayfa}/expression`, `POST …/expression/suggest` (Zeki AI önerisi, 300 sn),
+`GET/PUT …/narration/pages/{sayfa}/expression`, `POST …/expression/suggest` (ZEKİ AI önerisi, 300 sn),
 `POST …/expression/sample` (bu cümleyi dinle, audio/mpeg). Yazanlar (PUT, suggest) denetim kaydına düşer.
 
 Ses kütüphanesi (yayınevi düzeyinde): `GET/POST /api/v1/editorial/studio/voices`, `GET …/voices/{ses}/document`
@@ -264,7 +264,7 @@ def register(app, deps: dict[str, Any] | Any) -> None:
     @app.post("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}/expression/suggest")
     def editorial_narration_expression_suggest(job: str, page: str, request: Request, body: dict[str, Any] | None = None):
         b = obj(body or {})
-        return write(request, "POST", job, f"/pages/{pid(page)}/expression/suggest", "sesli okuma ifadesi: Zeki AI önerisi",
+        return write(request, "POST", job, f"/pages/{pid(page)}/expression/suggest", "sesli okuma ifadesi: ZEKİ AI önerisi",
                      {"replace_editor": b.get("replace_editor") is True}, timeout=300)
 
     @app.post("/api/v1/editorial/studio/jobs/{job}/narration/pages/{page}/expression/sample")

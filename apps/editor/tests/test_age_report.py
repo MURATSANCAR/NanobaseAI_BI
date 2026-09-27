@@ -155,7 +155,7 @@ def test_job_pages_from_plan(job):
 def test_band_from_profile(job, tmp_path):
     assert A.band_of(job) == ((6, 10), "yayınevi beyanı (künye/CRM)")
     studio.write(job, "profile.json", {**_prof().to_json(), "age_source": "model okuması"})
-    assert A.band_of(job)[1].startswith("Zeki AI okuması")
+    assert A.band_of(job)[1].startswith("ZEKİ AI okuması")
     (job / "profile.json").unlink()
     assert A.band_of(job) == (None, "yok")
 
@@ -308,7 +308,7 @@ def test_failed_model_marks_run_failed(job, monkeypatch):
     with pytest.raises(RuntimeError):
         _run(job, Broken())
     st = A.view(job)["status"]
-    assert st["state"] == "failed" and "Zeki AI" in st["error"] and A.claim(job, "x")      # hak geri verildi
+    assert st["state"] == "failed" and "ZEKİ AI" in st["error"] and A.claim(job, "x")      # hak geri verildi
     A._running.discard(job.name)
 
 
@@ -324,7 +324,7 @@ def test_pdf(job, monkeypatch):
     text = "".join(pg.get_text() for pg in doc)
     assert doc.page_count >= 2 and "Yaş uygunluğu raporu" in text and "Uyumsuz" in text and "editor1" in text
     assert "ihtişamlı" in text and "Okul Kütüphaneleri Yönetmeliği" in text
-    assert doc.metadata["producer"] == "Zeki AI"
+    assert doc.metadata["producer"] == "ZEKİ AI"
     assert A.pdf(job) == p                                           # değişmediyse aynı dosya
 
 

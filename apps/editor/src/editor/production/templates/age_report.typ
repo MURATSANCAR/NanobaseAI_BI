@@ -16,7 +16,7 @@
 #let status-c = (ok: rgb("#1F7A4D"), warn: rgb("#9A6200"), info: rgb("#4B4A8C"))
 #let status-t = (ok: "Uygun", warn: "Dikkat", info: "Bilgi")
 
-#set document(title: "Yaş uygunluğu raporu — " + d.title, author: "Zeki AI")
+#set document(title: "Yaş uygunluğu raporu — " + d.title, author: "ZEKİ AI")
 #set page(paper: "a4", margin: (x: 18mm, top: 20mm, bottom: 18mm),
   footer: context [
     #set text(size: 8pt, fill: muted)

@@ -464,7 +464,7 @@ async def _build(d: Path, src: Path, job: dict, opts: dict, by: str, st: _State)
         cz["captions"] = [{**c, "aid": have[a["key"]]["aid"]} for c, a in zip(caps, arts)]
         studio.write(d, FILE, cz)
     by_model = sum(c["source"] == "model" for c in cz["captions"])
-    st.done("cumleler", f"{len(cz['captions'])} cümle · {by_model} Zeki AI önerisi · editör onayı bekliyor")
+    st.done("cumleler", f"{len(cz['captions'])} cümle · {by_model} ZEKİ AI önerisi · editör onayı bekliyor")
 
     # 4) etkinlikler
     st.start("etkinlik")
@@ -785,7 +785,7 @@ async def redraw(d: Path, aid: str, by: str) -> dict:
     path = d / "resim" / f"cizgi-{aid}.v{v}.png"
     await asyncio.to_thread(_write_png, path, res.image)
     (d / "resim" / f"cizgi-{aid}.v{v}.ham.png").write_bytes(png)
-    studio.add_version(d, aid, str(path), mode="lineart-model", prompt="Zeki AI ile yeniden çizildi (taslak)",
+    studio.add_version(d, aid, str(path), mode="lineart-model", prompt="ZEKİ AI ile yeniden çizildi (taslak)",
                        seed=seed, by=by, dpi=res.info["dpi"])
     await asyncio.to_thread(studio.rebuild, d)
     return {"aid": aid, "v": v, "info": res.info}

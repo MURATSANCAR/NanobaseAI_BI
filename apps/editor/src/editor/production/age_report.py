@@ -5,7 +5,7 @@ Yeni ölçü yazılmaz; son okumanın yaş uygunluğu denetimi (`proofing/age_fi
 `docs/son-okuma/age_fit.md`) stüdyo işinin GÜNCEL metnine uygulanır:
 - metin: sayfa planı varsa planın sayfaları (sayfa kimliğiyle; ekran bulgudan o sayfayı açar), yoksa dizginin sayfa
   haritası, o da yoksa el yazmasının bölümleri;
-- hedef yaş: işin profili (yayınevi beyanı/CRM, yoksa Zeki AI okuması; kaynağı raporda yazılı);
+- hedef yaş: işin profili (yayınevi beyanı/CRM, yoksa ZEKİ AI okuması; kaynağı raporda yazılı);
 - okunabilirlik (Ateşman, Çetinkaya–Uzun, Bezirci–Yılmaz; bant derleminin yüzdelikleriyle) ve hassas içerik
   (genel sözlük + model sınıflaması + harfi harfine alıntı) `age_fit.readability` / `age_fit.sensitive`.
 
@@ -14,7 +14,7 @@ Eklenen tek ölçü kelime düzeyidir ve o da derlemden ölçülür (uydurma lis
 Zemberek köküne indirilir; bir kökün kaç bant kitabında geçtiği (`df`) `data/age_vocab.json.gz`'dedir. «Seyrek»
 eşiği de ölçüdür: bant kitaplarının kendi kelime kullanımlarının (kitap ağırlıklı, kitap kendisi hariç) en çok
 %1'inin kaldığı en büyük `df` (`K`). Kitap derlemin içindeyse (aynı kitabın seyrek kökleri) kendisi sayılmaz.
-Seyrek her kök sayfalarıyla listelenir (tavan yok); her birine Zeki AI sade karşılık önerir, öneri editör onayına
+Seyrek her kök sayfalarıyla listelenir (tavan yok); her birine ZEKİ AI sade karşılık önerir, öneri editör onayına
 gider, onaylanan metne ancak editör «uygula» deyince girer.
 
 MEB/okul ölçütleri `docs/analiz/meb-uygunluk-olcutleri.md`'dedir (kaynak bağlantılarıyla). Otomatik denetlenebilenler
@@ -119,7 +119,7 @@ def band_of(d: Path) -> tuple[tuple[int, int] | None, str]:
     lo, hi = prof.get("age_min"), prof.get("age_max")
     if isinstance(lo, int) and isinstance(hi, int) and 0 <= lo <= hi:
         src = prof.get("age_source") or "profil"
-        return (lo, hi), ("Zeki AI okuması (yayınevi beyanı yok)" if src == "model okuması" else src)
+        return (lo, hi), ("ZEKİ AI okuması (yayınevi beyanı yok)" if src == "model okuması" else src)
     return None, "yok"
 
 
@@ -407,7 +407,7 @@ def _clean_syn(g: dict, out: dict) -> dict:
 
 
 async def suggest(words: list[dict], band: tuple[int, int] | None, llm, progress=None) -> dict:
-    """Her seyrek köke sade karşılık (Zeki AI). Bir kökün çağrısı düşerse o kökte `suggestion_error` yazılır, kalanlar
+    """Her seyrek köke sade karşılık (ZEKİ AI). Bir kökün çağrısı düşerse o kökte `suggestion_error` yazılır, kalanlar
     sürer; hiçbir öneri metne kendiliğinden girmez."""
     from ..llm import PromptRef
     band_txt = f"{band[0]}-{band[1]} yaş" if band else "belirtilmemiş"
@@ -547,7 +547,7 @@ def auto_checks(d: Path, pages: list[dict], band, findings: list[dict], words: l
                 "source": "KRT 1.5.1; TDP madde 9; MUZ m.1", "kinds": ["SENSITIVE"],
                 "status": "warn" if warn_s else ("info" if sens else "ok"),
                 "detail": (f"{len(sens)} pasaj editörün dikkatine ({warn_s} yüksek olasılıklı)." if sens
-                           else "Hassas içerik adayı bulunmadı (sözlük + Zeki AI sınıflaması).")})
+                           else "Hassas içerik adayı bulunmadı (sözlük + ZEKİ AI sınıflaması).")})
     # punto (ders kitabı kuralı; bilgi)
     body = (pl or {}).get("page", {}).get("body_size") or spec.get("body_size")
     sizes = [x for pg in (pl or {}).get("pages", []) for x in [((pg.get("text") or {}).get("size"))] if x]
@@ -613,9 +613,9 @@ def auto_checks(d: Path, pages: list[dict], band, findings: list[dict], words: l
     figs = sum(1 for a in ((pl or {}).get("assets") or {}).values() if a.get("kind") == "figure")
     out.append({"id": "yz_beyan", "title": "Yapay zekâ ile üretilen içerik beyan edilmiş (ders kitabı ölçütü)",
                 "source": "KRT 1.8.3", "kinds": [], "status": "info" if (made or figs) else "ok",
-                "detail": (f"Kitapta Zeki AI ile üretilmiş {made} resim ve {figs} figür var; ders kitabında kaynakçada "
+                "detail": (f"Kitapta ZEKİ AI ile üretilmiş {made} resim ve {figs} figür var; ders kitabında kaynakçada "
                            "«Yapay zekâ tarafından üretilmiştir.» ibaresi istenir." if (made or figs)
-                           else "Zeki AI ile üretilmiş görsel yok.")})
+                           else "ZEKİ AI ile üretilmiş görsel yok.")})
     return out
 
 
@@ -671,7 +671,7 @@ async def run(d: Path, by: str, llm=None) -> dict:
         import traceback
         (d / "hata-yas-raporu.txt").write_text(traceback.format_exc())
         studio.write(d, STATUS, {"state": "failed", "by": by, "finished": time.time(),
-                                 "error": "Rapor çıkarılamadı; Zeki AI'ye ulaşılamamış olabilir. Tekrar deneyin."})
+                                 "error": "Rapor çıkarılamadı; ZEKİ AI'ye ulaşılamamış olabilir. Tekrar deneyin."})
         raise
     finally:
         with _run_lock:

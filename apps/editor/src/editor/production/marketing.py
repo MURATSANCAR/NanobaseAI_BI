@@ -280,7 +280,7 @@ def tasks(d: Path) -> dict:
 def _public_error(e: Exception) -> str:
     if isinstance(e, (ValueError, KeyError, FileNotFoundError)) and str(e):
         return str(e)[:300]
-    return "Zeki AI şu an yanıt vermiyor; birazdan yeniden deneyin."
+    return "ZEKİ AI şu an yanıt vermiyor; birazdan yeniden deneyin."
 
 
 def start(d: Path, kind: str, by: str, work) -> dict:
@@ -444,7 +444,7 @@ async def gen_back(d: Path, llm, by: str, progress=lambda n, t, w="": None) -> d
     opts = [{"id": f"o{i + 1}", "angle": o["angle"].strip(), "text": "\n\n".join(paragraphs(o["text"]))}
             for i, o in enumerate(out["options"]) if o["text"].strip()]
     if not opts:
-        raise ValueError("Zeki AI arka kapak yazısı üretemedi; yeniden deneyin.")
+        raise ValueError("ZEKİ AI arka kapak yazısı üretemedi; yeniden deneyin.")
     # Alana sığmayan seçenek bir kez kısaltılır (ölçülen taşma oranıyla); yine sığmazsa işaretli kalır.
     for o, f in zip(opts, _fit_info(d, [o["text"] for o in opts])):
         if not f["fits"]:
@@ -882,7 +882,7 @@ def build_guide_pdf(d: Path) -> Path:
             "label": ct.tr_upper("Öğretmen okuma kılavuzu"), "chips": chips, "cover_image": cover,
             "reading": read_rows, **{k: g[k] for k in ("summary", "values", "outcomes", "vocabulary", "activities",
                                                         "sections")},
-            "approval": f"Hazırlayan: Zeki AI · Editör onayı: {ap['by']}, {_tr_time(ap['at'])}"}
+            "approval": f"Hazırlayan: ZEKİ AI · Editör onayı: {ap['by']}, {_tr_time(ap['at'])}"}
     (wd / "kilavuz.json").write_text(json.dumps(data, ensure_ascii=False))
     out = wd / "kilavuz.pdf"
     typst.compile(str(wd / "guide.typ"), output=str(out), root=str(wd), font_paths=[str(studio.fonts())],

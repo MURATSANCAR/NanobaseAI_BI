@@ -30,14 +30,14 @@ def _words(s: str) -> list[str]:
     return [w.casefold() for w in WORD.findall(s)]
 
 
-BRAND = "Zeki AI"
+BRAND = "ZEKİ AI"
 _TOOL_TAGS = re.compile(r"(<(?:xmp:CreatorTool|pdf:Producer)>)[^<]*(</)")
 _TOOL_ATTRS = re.compile(r'((?:xmp:CreatorTool|pdf:Producer)=")[^"]*(")')
 _META_KEYS = ("title", "author", "subject", "keywords", "creationDate", "modDate", "trapped")
 
 
 def brand(doc) -> None:
-    """Belge özelliklerinde üretici «Zeki AI»: dizgi ve dönüştürücü yazılımın adı PDF'te görünmez
+    """Belge özelliklerinde üretici «ZEKİ AI»: dizgi ve dönüştürücü yazılımın adı PDF'te görünmez
     (kullanıcı kuralı 2026-09-25: kullandığımız model/ürün/teknoloji adı müşteriye gösterilmez)."""
     meta = {k: v for k, v in (doc.metadata or {}).items() if k in _META_KEYS and v}
     doc.set_metadata({**meta, "producer": BRAND, "creator": BRAND})

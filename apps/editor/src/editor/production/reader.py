@@ -1,6 +1,6 @@
 """Okur araçları (Kitap Tasarım Stüdyosu): çocuk gözüyle okuma ve sayfa çevirme merakı.
 
-**Çocuk gözüyle okuma.** Zeki AI sayfa planının metnini kitabın hedef okur yaşındaki (profildeki bandın alt ucu:
+**Çocuk gözüyle okuma.** ZEKİ AI sayfa planının metnini kitabın hedef okur yaşındaki (profildeki bandın alt ucu:
 bandın en zorlanacak okuru) bir okur gibi sayfa sayfa okur ve takıldığı yerleri işaretler: anlaşılmayan
 kelime/deyim, uzun ya da karışık cümle, kimin konuştuğu belirsiz konuşma, resimle (sahne tarifiyle) çelişen metin,
 sıkıcı/tekrarlı yer, merak kaybı. Her işaretin alıntısı o metin parçasında (paragraf, balon, serbest yazı) birebir

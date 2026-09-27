@@ -4,7 +4,7 @@ import { httpErrorText } from '../../../httpError';
 import { NarrationError, type NarrationPageRow } from './api';
 
 /** Sesli okumada ifade katmanı uçları (köprü: /api/v1/editorial/studio/jobs/{job}/narration/pages/{pid}/expression…).
- *  Cümle başına ifade (nötr, heyecan, merak …) ve vurgulanacak kelime; Zeki AI önerisi; «bu cümleyi dinle».
+ *  Cümle başına ifade (nötr, heyecan, merak …) ve vurgulanacak kelime; ZEKİ AI önerisi; «bu cümleyi dinle».
  *  Kodlu hatalar (BUSY, MODEL_BUSY, INVALID, NO_VOICE) `NarrationError.code` ile ekrana gelir. */
 
 export type ExpressionLabel = 'notr' | 'heyecan' | 'merak' | 'korku' | 'nese' | 'fisilti' | 'uzuntu' | 'ofke' | 'saskinlik';
@@ -55,7 +55,7 @@ export const expressionApi = {
   view: async (job: string, pid: string) => (await send('GET', base(job, pid))).json() as Promise<ExpressionView>,
   set: async (job: string, pid: string, items: ExpressionItem[]) =>
     (await send('PUT', base(job, pid), { items })).json() as Promise<ExpressionView>,
-  /** Zeki AI sayfayı okur; cümle başına birkaç kısa okuma yapar, bir dakikayı bulabilir. */
+  /** ZEKİ AI sayfayı okur; cümle başına birkaç kısa okuma yapar, bir dakikayı bulabilir. */
   suggest: async (job: string, pid: string, replaceEditor = false) =>
     (await send('POST', `${base(job, pid)}/suggest`, { replace_editor: replaceEditor }, 300_000)).json() as Promise<ExpressionView>,
   /** Cümlenin kısa örneği (kaydedilmez); model kapalıysa açılması bir dakikayı bulabilir. */

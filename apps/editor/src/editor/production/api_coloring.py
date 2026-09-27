@@ -114,7 +114,7 @@ async def coloring_redraw(job: str, aid: str, by: str = Depends(api.editor)) -> 
     jid = plan_mod.new_id("j")
     wf = f"studio-{job}-cizgi-{aid}-{int(time.time())}"
     plan_mod.job_record(d, jid, kind="art", status="queued", source=aid, page=None, by=by, workflow=wf,
-                        note="Zeki AI ile çizgi")
+                        note="ZEKİ AI ile çizgi")
     await api._start(d, "ColoringRedraw", [job, jid, aid, by], wf,
                      {"key": aid, "mode": "lineart-model", "job": jid})
     return {"workflow": wf, "job": jid}

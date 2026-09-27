@@ -76,7 +76,7 @@ HEX = re.compile(r"^#[0-9A-Fa-f]{6}$")
 KINDS = ("çocuk", "genç", "yetişkin", "yaşlı", "bebek", "hayvan", "fantastik", "nesne", "diğer")
 PARTS = {"hair": ("Saç", "hair"), "fur": ("Tüy / post", "fur"), "eyes": ("Göz", "eyes"), "skin": ("Ten", "skin"),
          "outfit": ("Kıyafet", "main clothing"), "accent": ("Ayırt edici ayrıntı", "distinctive detail")}
-BY_SYSTEM = "Zeki AI"
+BY_SYSTEM = "ZEKİ AI"
 MAX_REFS_IN_PROMPT = 4                  # images.MAX_REFS ile aynı: düzenleme ucu en çok 4 görsel alır
 
 

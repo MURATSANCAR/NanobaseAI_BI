@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Zeki AI sohbet ↔ portal SSO kurulumu. nanobase-direct üzerinde çalıştırılır.
+# ZEKİ AI sohbet ↔ portal SSO kurulumu. nanobase-direct üzerinde çalıştırılır.
 # Üç adım: (1) nginx yolu, (2) giriş servisini güncelle, (3) chat servis hesabı + config.
 # Her adım idempotent; nginx yalnız `nginx -t` geçerse yeniden yüklenir.
 set -euo pipefail
@@ -70,7 +70,7 @@ block = """    # ZEKI-CHAT-BASLA
 
 """
 s = re.sub(r"    # ZEKI-CHAT-BASLA.*?    # ZEKI-CHAT-BITTI\n\n", "", s, flags=re.S)
-s = re.sub(r"    # Zeki AI sohbet \(ayri Docker.*?    location @zeki_chat_login \{\n        return 302 /timas/;\n    \}\n\n", "", s, flags=re.S)
+s = re.sub(r"    # ZEKİ AI sohbet \(ayri Docker.*?    location @zeki_chat_login \{\n        return 302 /timas/;\n    \}\n\n", "", s, flags=re.S)
 anchor = "    location /timas/ {\n        alias /data/nanobaseai/bi/cockpit/dist/;"
 assert anchor in s, "nginx: /timas/ blogu bulunamadi, elle bakin"
 s = s.replace(anchor, block + anchor, 1)

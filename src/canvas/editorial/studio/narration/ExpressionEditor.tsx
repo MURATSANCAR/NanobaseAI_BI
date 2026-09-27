@@ -10,7 +10,7 @@ import {
 } from './expressionApi';
 
 /** Sesli okumada ifade: sayfanın metni cümle cümle; her cümlenin yanında ifade etiketi (nötr, heyecan, merak, korku,
- *  neşe, fısıltı, üzüntü, öfke, şaşkınlık) ve vurgulanacak kelime. Zeki AI önerir, editör cümle cümle değiştirir;
+ *  neşe, fısıltı, üzüntü, öfke, şaşkınlık) ve vurgulanacak kelime. ZEKİ AI önerir, editör cümle cümle değiştirir;
  *  değişiklik anında kaydedilir, sayfanın sesi «güncel değil» olur ve yalnız o sayfa yeniden seslendirilir.
  *  Satıra dokununca açılır: etiketler, kelimeler (dokun → vurgula) ve «bu cümleyi dinle». Sık kullanılan bir düzenleme
  *  ekranı olduğu için açılma/kapanma animasyonu yok; yalnız basma geri bildirimi (`press`). */
@@ -67,13 +67,13 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
         <div className="min-w-0 flex-1">
           <h3 id={`ifade-${pid}`} className="text-[13px] font-extrabold">İfade</h3>
           <p className="text-[11.5px] leading-snug text-canvas-muted">
-            Her cümlenin tonu ve vurgusu. Zeki AI önerir; cümleye dokunup değiştirebilirsiniz.
+            Her cümlenin tonu ve vurgusu. ZEKİ AI önerir; cümleye dokunup değiştirebilirsiniz.
           </p>
         </div>
         <button type="button" className={ghostBtn} disabled={suggest.isPending || !d} onClick={() => suggest.mutate()}
-          title="Zeki AI sayfayı okuyup cümleleri işaretler; sizin değiştirdiğiniz cümlelere dokunmaz">
+          title="ZEKİ AI sayfayı okuyup cümleleri işaretler; sizin değiştirdiğiniz cümlelere dokunmaz">
           {suggest.isPending ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-          {suggest.isPending ? 'Zeki AI okuyor…' : d?.suggested ? 'Yeniden öner' : 'Zeki AI önerisi'}
+          {suggest.isPending ? 'ZEKİ AI okuyor…' : d?.suggested ? 'Yeniden öner' : 'ZEKİ AI önerisi'}
         </button>
       </div>
 
@@ -103,7 +103,7 @@ export default function ExpressionEditor({ jobId, pid, canVoice, busy, onRegen }
             )}
       {d?.suggested && (
         <p className="text-[11px] text-canvas-muted">
-          Zeki AI önerisi {new Intl.DateTimeFormat('tr-TR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(d.suggested.at))}.
+          ZEKİ AI önerisi {new Intl.DateTimeFormat('tr-TR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(d.suggested.at))}.
           {' '}Sizin değiştirdiğiniz cümleler «Editör» olarak kalır.
         </p>
       )}
@@ -146,8 +146,8 @@ function Sentence({ s, labels, open, onToggle, onChange, saving, canVoice, playi
           {saving && <Loader2 className="h-3.5 w-3.5 animate-spin text-canvas-muted motion-reduce:animate-none" aria-label="Kaydediliyor" />}
           {s.source && (
             <span className="hidden rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-bold text-slate-500 sm:inline"
-              title={s.source === 'editor' ? `Editör: ${s.by ?? ''}` : 'Zeki AI önerisi'}>
-              {s.source === 'editor' ? 'Editör' : 'Zeki AI'}
+              title={s.source === 'editor' ? `Editör: ${s.by ?? ''}` : 'ZEKİ AI önerisi'}>
+              {s.source === 'editor' ? 'Editör' : 'ZEKİ AI'}
             </span>
           )}
           <ChevronDown className={`h-4 w-4 text-canvas-muted ${open ? 'rotate-180' : ''}`} aria-hidden />
