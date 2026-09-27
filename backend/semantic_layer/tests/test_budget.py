@@ -54,7 +54,11 @@ def _seed(engine, end: date = date(2026, 8, 17)):
         dict(stok_kodu="N26A", ad="Bu Yılın Yenisi", yayinevi="Timaş Yayınları", kitaplik="Roman", ilk_yayin="2026-03-01"),
         dict(stok_kodu="N26B", ad="Gelecek Ay", yayinevi="Timaş Yayınları", kitaplik="Roman", ilk_yayin="2026-10-01"),
         dict(stok_kodu="N27", ad="Seneye", yayinevi="Timaş Çocuk", kitaplik="Masal", ilk_yayin="2027-04-01"),
+        # yayın tarihi geçmiş ama Logo'da kartı yok: o kodla yayımlanmamış, hedef almaz
+        dict(stok_kodu="E26", ad="Yalnız e-kitap", yayinevi="Timaş Yayınları", kitaplik="Roman", ilk_yayin="2026-05-01"),
     ]
+    for b in books:
+        b["in_logo"] = b["stok_kodu"] in {"K1", "K2", "N25", "N26A"}
     with engine.begin() as c:
         c.execute(B.SALES.insert(), rows)
         c.execute(B.EXPENSES.insert(), exp)
@@ -113,8 +117,8 @@ def test_generate_builds_three_scenarios_from_the_2025_base(engine):
     # 2026'da çıkanlar yeni kitap: kohort (N25) ay başına 60 adet × satış ayı
     assert b["N26A"]["segment"] == "yeni" and b["N26A"]["oneri"]["satisAyi"] == 10
     assert b["N26A"]["adet"] == round(60 * 10 * 1.1)
-    assert b["N26B"]["oneri"]["satisAyi"] == 3
-    assert "N27" not in b
+    assert b["N26B"]["oneri"]["satisAyi"] == 3  # kartı yok ama yayın tarihi henüz gelmedi
+    assert "N27" not in b and "E26" not in b
     iyimser = _books(engine, _plan(items, "iyimser")["id"])
     assert iyimser["K1"]["adet"] == 1380
     # departman: 2025 aynı ay × (1 + gider artışı ölçüsü)

@@ -51,7 +51,8 @@ export default function BudgetScreen() {
   const plans = useQuery({ queryKey: ['budget', 'plans', year], queryFn: () => budgetApi.plans(year), enabled: ENGINE_ENABLED && !!meta.data });
   const list = useMemo(() => (plans.data?.items ?? []).filter((p) => p.year === year), [plans.data, year]);
   const plan = list.find((p) => p.id === params.get('plan')) ?? pickDefault(list);
-  const trackable = !!plan && !!meta.data?.data.dataEnd && Number(meta.data.data.dataEnd.slice(0, 4)) >= plan.year;
+  const dataEnd = meta.data?.data.dataEnd ?? null;
+  const trackable = !!plan && !!dataEnd && Number(dataEnd.slice(0, 4)) >= plan.year;
   const tab: Tab = (TABS.find((t) => t.key === params.get('sekme'))?.key ?? (plan?.status === 'onayli' && trackable ? 'izleme' : 'hedefler')) as Tab;
 
   const update = useCallback(

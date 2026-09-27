@@ -151,6 +151,18 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.post("/api/v1/budget/plans/generate", status_code=201)
     async def budget_generate(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
+        # Taban penceresinin yılları henüz okunmadıysa önce onlar okunur (ör. 2025 planı → 2024 satışları).
+        end = B.data_end(engine)
+        if end is not None:
+            year = int(call(B._check_year, body.get("year")))
+            need = sorted({*call(B.window, year, end)["years"], *([year] if year <= end.year else [])})
+            missing = [y for y in need if not B.meta_get(engine, f"sales:{y}")]
+            if missing:
+                if refresher.running():
+                    raise HTTPException(status_code=409, detail={"code": "BUDGET", "message": "Logo okuması sürüyor; bitince yeniden deneyin."})
+                res = await run_in_threadpool(refresher.run, missing)
+                if not res.get("ok"):
+                    raise HTTPException(status_code=503, detail={"code": "BUDGET_SOURCE", "message": res.get("error") or "Logo okunamadı."})
         items = await run_in_threadpool(call, B.generate, engine, tenant, user, body, src.read_forecast())
         for p in items:
             audit(engine, user, "create", p, {"senaryo": p["scenario"], "kitap": p["totals"]["kitap"],

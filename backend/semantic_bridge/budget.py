@@ -46,7 +46,7 @@ import os
 import threading
 import time
 import uuid
-from datetime import date, datetime, timedelta, timezone
+from datetime import date, datetime, timezone
 from typing import Any, Callable, Iterable, Optional
 from zoneinfo import ZoneInfo
 
@@ -158,6 +158,7 @@ BOOKINFO = sa.Table(
     sa.Column("ilk_yayin", sa.String(10)),
     sa.Column("liste_fiyati", sa.Float),
     sa.Column("statu", sa.String(200)),
+    sa.Column("in_logo", sa.Boolean, nullable=False, default=False),   # Logo'da stok kartı açılmış
 )
 META = sa.Table(
     "semantic_budget_meta", _md,
@@ -587,6 +588,10 @@ def build_suggestion(engine: sa.engine.Engine, year: int, scenario: str, params:
             continue
         dd = date.fromisoformat(d0)
         if not (w_end_day <= dd < y_end):
+            continue
+        # Yayın tarihi geçmiş ama Logo'da stok kartı hiç açılmamış kayıt o kodla yayımlanmamıştır (e-kitap, hak
+        # kaydı, iptal); hedef yalnız kartı olan ya da yayın tarihi henüz gelmemiş kitaba konur.
+        if not b.get("in_logo") and end and dd <= end:
             continue
         yv = b.get("yayinevi") or "Yayınevi belirsiz"
         first = 1 if dd.year < year else dd.month
@@ -1612,7 +1617,8 @@ class Refresher:
                         rows.append({"stok_kodu": code[:60], "ad": ((b.get("ad") or names.get(code) or "")[:400]) or None,
                                      "yazar": (b.get("yazar") or "")[:300] or None, "yayinevi": (b.get("yayinevi") or "")[:200] or None,
                                      "kitaplik": (b.get("kitaplik") or "")[:200] or None, "ilk_yayin": b.get("ilk_yayin"),
-                                     "liste_fiyati": b.get("liste_fiyati"), "statu": (b.get("statu") or "")[:200] or None})
+                                     "liste_fiyati": b.get("liste_fiyati"), "statu": (b.get("statu") or "")[:200] or None,
+                                     "in_logo": code in names or code in codes})
                     with engine.begin() as c:
                         c.execute(BOOKINFO.delete())
                         for i in range(0, len(rows), 5000):
