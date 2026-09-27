@@ -9,6 +9,13 @@
 - **Hata düzeltme**: yetki önbelleğinin anahtarı yalnız tenant'tı; aynı süreçte ikinci veritabanı (testler) öncekinin rollerini görüyordu → anahtar veritabanı + tenant.
 - **Doğrulama (sunucuda)**: yetki testleri 12/12; tam paket 986 geçti, kalan 13 + 10 hata `main`de de aynı; `test_llm_queue` `main`de de ara ara düşüyor (yük 44). Ön yüz `tsc` temiz, vitest 36/36.
 
+## 2026-09-27 (22:00) — SEO & GEO uzman özellikleri test sunucusunda: kurulum, bulunan 3 hata, ilk gerçek bulgular
+
+- **Kurulum:** main 4c4a9a91 + 30354d26 → yalnız değişen dosyalar (git archive, önce sunucu hâli önceki main'le karşılaştırıldı); köprü yeniden başladı, ön yüz ayrı klasöre derlenip `cockpit/dist`'e kopyalandı (`frontend/dist` içinde root'a ait eski dosyalar derlemeyi durduruyordu). Kullanıcının `BoardScreen.tsx` commit'i (c6325744) kurulmadı, sahibi kurar.
+- **Kurulumda bulunan hatalar:** (1) rehber uçları her istekte 422 — `from __future__ import annotations` + fonksiyon içinde içe aktarılan `Request`/gövde modelleri; bütün özellik uçlarını tarayan test eklendi. (2) Ticari ürün ve setler "sözleşme kaydı yok" — CRM `new_Tip` (Pazarlama Materyalleri, Promosyon) ve «Ticari Ürün» → `kitap_degil`, sözleşmesiz set → `set`. (3) Şablon görselleri (logo, simge) 66/70 sayfada görsel uyarısı üretiyordu — taranan sayfaların %30'unda geçen görsel sayfa uyarısı sayılmaz.
+- **İlk gerçek bulgular:** satışta 5.656 ürün; hak var 3.142, eksik 178, incele 219, sözleşme kaydı yok 1.485, set 402, kitap değil 31; 104 ürün CRM'de bizim değil/iptal/çekildi ama satışta. 141 sayfalık taramada 5 adet 404, 92 sayfada kapak alt metni kitap adını taşımıyor, 124'ünde görsel boyutu yok (kayma). Wikidata'da Timaş'ın resmî sitesi `timaspublishing.com`; anasayfa şemasında ad «Timaş Yayınları» değil, sameAs yok. robots.txt bütün arama ve yapay zekâ arama botlarına açık. Google Kitaplar'a hazır görünen 2.428 kitap. İlk 20 yazarın 17'sinin Wikidata kaydı yok. CRM'de bazı ticari ürünlerin türü «Kitap» girilmiş (ör. oyun hamuru).
+- **Bekleyen:** Search Console servis hesabı (fırsatlar, etki, rehber konuları buna bağlı), Google API / Bing / IndexNow / arama sonucu anahtarları, onay verebilenler.
+
 ## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
 
 - Bağlayıcının zamanlayıcısı yoktu; yeni okunan kitaplar okur kitlesini/yaşı/türü almıyor, yaş denetimleri koşmuyordu. Nerede koşmalı: CRM (.28) test sunucusundan erişiliyor; editöre test sunucusundan yalnız TT GPU'nun açtığı ters tüneller var (kart 18889, stüdyo 18890). `editor-mcp` dışarı açık değil ve açmak bütün MCP araçlarını açardı.
