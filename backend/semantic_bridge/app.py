@@ -24,7 +24,7 @@ import uuid
 from collections import OrderedDict
 from contextlib import asynccontextmanager
 from contextvars import ContextVar
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Optional
 
@@ -4062,6 +4062,329 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _remember_view("projects", page, q, editor=editor or None, status=status, since_year=since)
         return _editorial_call(editorial_mod.projects_page, schema, run, page, q=q, editor=editor or None,
                                status=status, since_year=since)
+
+    # ------------------------------------------------------------------ M2 editör atama (yazma)
+    # CRM'e yazılmaz: atama, termin, kapasite, izin ve kural tablosu köprünün kendi tablolarında durur ve CRM
+    # projesinin üstüne bindirilir (editorial_assign.py). Atama/profil «editor-atama.ata», kural taslağı
+    # «editor-atama.kural», kural onayı «editor-atama.kural-onay» ister (açıkça verilir). Editör kendi görevini
+    # ve kendi izin kaydını yetkisiz de günceller.
+    from semantic_bridge import editorial_assign as assign_mod
+
+    def _asg(request: Request) -> tuple[Any, str, str, str, Any]:
+        engine, tenant, user, _ = _greetings(request)
+        assign_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        schema, run = _editorial(request)
+        return engine, tenant, user, schema, run
+
+    def _asg_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except assign_mod.AssignError as e:
+            detail: dict[str, Any] = {"code": "EDITOR_ASSIGN", "message": str(e)}
+            if e.data:
+                detail.update(e.data)
+            raise HTTPException(status_code=e.status, detail=detail) from e
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
+    def _asg_need(user: str, key: str, what: str) -> None:
+        if not _can(user, key):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": f"{what} rolünüzde yok."})
+
+    def _asg_since(since: Optional[int]) -> int:
+        return since or (datetime.now(timezone.utc).year - 2)
+
+    def _asg_project(schema: str, run, project_id: str) -> dict[str, Any]:
+        pid = _asg_call(assign_mod._id, project_id, "Proje")
+        rows = run(assign_mod.projects_sql(schema, [pid])).get("records") or []
+        if not rows:
+            raise HTTPException(status_code=404, detail={"code": "EDITOR_ASSIGN", "message": "Proje CRM'de bulunamadı."})
+        return assign_mod.project_row(rows[0])
+
+    def _asg_me(schema: str, run, user: str) -> Optional[dict[str, Any]]:
+        return _asg_call(assign_mod.crm_me, schema, run, user)
+
+    def _asg_editors(engine, tenant: str, schema: str, run, since: int) -> tuple[dict[str, Any], dict[str, Any]]:
+        """Aday evreni: dönemde CRM'de projesi olan editörler + profili, görevi ya da kuralı olanlar."""
+        exp = _asg_call(assign_mod.experience, schema, run, since)
+        ids = set(exp["byEditor"]) | set(assign_mod.profiles(engine, tenant))
+        ids |= {t["editorId"] for t in assign_mod.tasks(engine, tenant, open_only=True)}
+        versions = assign_mod.rule_versions(engine, tenant)
+        for v in (versions["active"], versions["draft"]):
+            for r in (v or {}).get("rules", []):
+                ids |= set(r["primary"]) | set(r["backup"])
+        return _asg_call(assign_mod.crm_users, schema, run, ids), exp
+
+    def _asg_open_by_editor(engine, tenant: str) -> dict[str, list[dict[str, Any]]]:
+        out: dict[str, list[dict[str, Any]]] = {}
+        for t in assign_mod.tasks(engine, tenant, open_only=True):
+            out.setdefault(t["editorId"], []).append(t)
+        return out
+
+    def _asg_leave_by_editor(engine, tenant: str, start=None, end=None) -> dict[str, list[dict[str, Any]]]:
+        out: dict[str, list[dict[str, Any]]] = {}
+        for a in assign_mod.absences(engine, tenant, start=start, end=end):
+            out.setdefault(a["editorId"], []).append(a)
+        return out
+
+    @app.get("/api/v1/editorial/assignments/pending")
+    def assign_pending(request: Request, q: str = "", status: str = "", category: str = "", since: Optional[int] = None,
+                       page: int = 0) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        year = _asg_since(since)
+        codes = [int(c) for c in status.split("|") if c.strip().lstrip("-").isdigit()] if status else list(assign_mod.WORK_STATUSES)
+        flt = {"statuses": codes, "since_year": year, "exclude": assign_mod.open_project_ids(engine, tenant), "q": q,
+               "category": category}
+        total = int(editorial_mod._n((run(_asg_call(assign_mod.pending_count_sql, schema, **flt)).get("records") or [{}])[0].get("n")) or 0)
+        res = run(_asg_call(assign_mod.pending_list_sql, schema, page, **flt))
+        facets = run(assign_mod.pending_facets_sql(schema, year))
+        return {"items": [assign_mod.project_row(r) for r in res.get("records") or []], "total": total,
+                "page": max(0, int(page)), "pageSize": editorial_mod.PAGE_SIZE, "sinceYear": year, "statuses": codes,
+                "defaultStatuses": list(assign_mod.WORK_STATUSES),
+                "statusFacets": editorial_mod._facet(facets, "statuscode"), "onBoard": len(flt["exclude"]),
+                "db": editorial_mod._timing(res)}
+
+    @app.get("/api/v1/editorial/assignments/suggest")
+    def assign_suggest(request: Request, project: str, start: str = "", due: str = "", since: Optional[int] = None) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        proj = _asg_project(schema, run, project)
+        s = _asg_call(assign_mod.parse_day, start, "Başlangıç") or datetime.now(timezone.utc).date()
+        d = _asg_call(assign_mod.parse_day, due, "Termin")
+        users, exp = _asg_editors(engine, tenant, schema, run, _asg_since(since))
+        active = assign_mod.rule_versions(engine, tenant)["active"]
+        out = assign_mod.candidates(
+            proj, editors=users, exp=exp, rules=(active or {}).get("rules", []), prof=assign_mod.profiles(engine, tenant),
+            open_by_editor=_asg_open_by_editor(engine, tenant), leave_by_editor=_asg_leave_by_editor(engine, tenant),
+            start=s, due=d or s)
+        out.update(project=proj, start=s.isoformat(), due=(d or s).isoformat(), dueGiven=bool(d),
+                   ruleVersion=(active or {}).get("version"),
+                   tasks=assign_mod.tasks(engine, tenant, project_ids=[proj["id"]]))
+        return out
+
+    @app.post("/api/v1/editorial/assignments")
+    def assign_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        _asg_need(user, "ozellik:editor-atama.ata", "Editör atama")
+        proj = _asg_project(schema, run, str(body.get("projectId") or ""))
+        eid = _asg_call(assign_mod._id, body.get("editorId"), "Editör")
+        editor = _asg_call(assign_mod.crm_users, schema, run, [eid]).get(eid)
+        if not editor:
+            raise HTTPException(status_code=404, detail={"code": "EDITOR_ASSIGN", "message": "Editör CRM'de bulunamadı."})
+        s = _asg_call(assign_mod.parse_day, body.get("start"), "Başlangıç") or datetime.now(timezone.utc).date()
+        d = _asg_call(assign_mod.parse_day, body.get("due"), "Termin")
+        if not d:
+            raise HTTPException(status_code=400, detail={"code": "EDITOR_ASSIGN", "message": "Termin gerekli."})
+        prof = assign_mod.profiles(engine, tenant).get(eid) or {}
+        if prof and not prof.get("available", True):
+            raise HTTPException(status_code=409, detail={"code": "EDITOR_ASSIGN", "message": "Bu editör atamaya kapalı (profil)."})
+        found = assign_mod.conflicts(_asg_open_by_editor(engine, tenant).get(eid, []),
+                                     assign_mod.absences(engine, tenant, editor_id=eid), prof.get("capacity"), s, d) if d >= s else []
+        out = _asg_call(assign_mod.assign, engine, tenant, user, project=proj, editor=editor,
+                        role=str(body.get("role") or "editor"), start=s, due=d,
+                        pages=_asg_call(assign_mod._pages, body.get("pages")), note=body.get("note"), found=found,
+                        force=bool(body.get("force")))
+        admin_mod.audit(engine, user, "create", "editor_assignment", out["id"], proj.get("name"),
+                        {"project": proj["id"], "editor": editor.get("name"), "role": out["role"], "due": out["due"],
+                         "conflicts": found or None})
+        return out
+
+    @app.get("/api/v1/editorial/assignments/editors")
+    def assign_editors(request: Request, since: Optional[int] = None) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        year = _asg_since(since)
+        users, exp = _asg_editors(engine, tenant, schema, run, year)
+        crm_open = {(editorial_mod._s(r.get("new_editoru")) or "").upper(): int(editorial_mod._n(r.get("n")) or 0)
+                    for r in run(assign_mod.crm_open_sql(schema, assign_mod.WORK_STATUSES, year)).get("records") or []}
+        prof = assign_mod.profiles(engine, tenant)
+        open_by = _asg_open_by_editor(engine, tenant)
+        today = datetime.now(timezone.utc).date()
+        leave = _asg_leave_by_editor(engine, tenant, start=today)
+        items = []
+        for eid, ed in users.items():
+            p = prof.get(eid) or {}
+            mine = open_by.get(eid, [])
+            items.append({**ed, "profile": p or None, "load": assign_mod.load_of(mine, p.get("capacity")),
+                          "crmOpen": crm_open.get(eid, 0), "crmTotal": exp["byEditor"].get(eid, {}).get("total", 0),
+                          "absences": leave.get(eid, []), "tasks": mine})
+        items.sort(key=lambda e: (e["disabled"], -(e["load"]["open"]), -e["crmOpen"], (e["name"] or "").lower()))
+        return {"items": items, "sinceYear": year, "workStatuses": list(assign_mod.WORK_STATUSES), "me": _asg_me(schema, run, user)}
+
+    @app.put("/api/v1/editorial/assignments/editors/{editor_id}/profile")
+    def assign_profile(editor_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        _asg_need(user, "ozellik:editor-atama.ata", "Editör profili düzenleme")
+        eid = _asg_call(assign_mod._id, editor_id, "Editör")
+        ed = _asg_call(assign_mod.crm_users, schema, run, [eid]).get(eid)
+        if not ed:
+            raise HTTPException(status_code=404, detail={"code": "EDITOR_ASSIGN", "message": "Editör CRM'de bulunamadı."})
+        out = _asg_call(assign_mod.save_profile, engine, tenant, user, eid, ed.get("name"), body)
+        admin_mod.audit(engine, user, "update", "editor_profile", eid, ed.get("name"), out)
+        return out
+
+    def _asg_self_or(user: str, schema: str, run, editor_id: str) -> None:
+        me = _asg_me(schema, run, user)
+        if not (me and me["id"] == editor_id.upper()) and not _can(user, "ozellik:editor-atama.ata"):
+            raise HTTPException(status_code=403, detail={"code": "FORBIDDEN",
+                                                         "message": "Yalnız kendi kaydınızı değiştirebilirsiniz."})
+
+    @app.post("/api/v1/editorial/assignments/editors/{editor_id}/absences")
+    def assign_absence_add(editor_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        eid = _asg_call(assign_mod._id, editor_id, "Editör")
+        _asg_self_or(user, schema, run, eid)
+        out = _asg_call(assign_mod.add_absence, engine, tenant, user, eid, body)
+        admin_mod.audit(engine, user, "create", "editor_absence", out["id"], None, out)
+        return out
+
+    @app.delete("/api/v1/editorial/assignments/absences/{absence_id}")
+    def assign_absence_delete(absence_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        owner = assign_mod.absence_owner(engine, tenant, absence_id)
+        if not owner:
+            raise HTTPException(status_code=404, detail={"code": "EDITOR_ASSIGN", "message": "İzin kaydı bulunamadı."})
+        _asg_self_or(user, schema, run, owner)
+        _asg_call(assign_mod.delete_absence, engine, tenant, absence_id)
+        admin_mod.audit(engine, user, "delete", "editor_absence", absence_id, None, {"editor": owner})
+        return {"ok": True}
+
+    @app.get("/api/v1/editorial/assignments/calendar")
+    def assign_calendar(request: Request, start: str = "", end: str = "", since: Optional[int] = None) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        today = datetime.now(timezone.utc).date()
+        s = _asg_call(assign_mod.parse_day, start, "Başlangıç") or today - timedelta(days=today.weekday())
+        e = _asg_call(assign_mod.parse_day, end, "Bitiş") or s + timedelta(days=12 * 7 - 1)
+        if e < s:
+            raise HTTPException(status_code=400, detail={"code": "EDITOR_ASSIGN", "message": "Bitiş, başlangıçtan önce olamaz."})
+        open_by = _asg_open_by_editor(engine, tenant)
+        leave = _asg_leave_by_editor(engine, tenant, start=s, end=e)
+        prof = assign_mod.profiles(engine, tenant)
+        ids = set(open_by) | set(leave) | {k for k, v in prof.items() if v.get("capacity")}
+        users = _asg_call(assign_mod.crm_users, schema, run, ids) if ids else {}
+        rows = []
+        for eid in ids:
+            cap = (prof.get(eid) or {}).get("capacity")
+            cal = assign_mod.calendar(open_by.get(eid, []), leave.get(eid, []), cap, s, e, today=today)
+            rows.append({"id": eid, "name": (users.get(eid) or {}).get("name"), "capacity": cap,
+                         "load": assign_mod.load_of(open_by.get(eid, []), cap), **cal})
+        rows.sort(key=lambda r: (-len(r["conflicts"]), (r["name"] or "").lower()))
+        return {"start": s.isoformat(), "end": e.isoformat(), "today": today.isoformat(), "items": rows}
+
+    @app.get("/api/v1/editorial/assignments/tasks")
+    def assign_tasks(request: Request, editor: str = "", project: str = "", active: bool = True) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        eid = _asg_call(assign_mod._id, editor, "Editör") if editor else None
+        pids = [_asg_call(assign_mod._id, project, "Proje")] if project else None
+        return {"items": assign_mod.tasks(engine, tenant, editor_id=eid, project_ids=pids, open_only=active)}
+
+    def _asg_task_access(engine, tenant: str, user: str, schema: str, run, task_id: str) -> dict[str, Any]:
+        task = _asg_call(assign_mod.get_task, engine, tenant, task_id)
+        if not _can(user, "ozellik:editor-atama.ata"):
+            me = _asg_me(schema, run, user)
+            if not me or me["id"] != task["editorId"]:
+                raise HTTPException(status_code=403, detail={"code": "FORBIDDEN",
+                                                             "message": "Yalnız kendi görevinizi değiştirebilirsiniz."})
+        return task
+
+    @app.patch("/api/v1/editorial/assignments/tasks/{task_id}")
+    def assign_task_update(task_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        before = _asg_task_access(engine, tenant, user, schema, run, task_id)
+        out = _asg_call(assign_mod.update_task, engine, tenant, user, task_id, body)
+        changed = {k: [before.get(k), out.get(k)] for k in ("status", "start", "due", "pages") if before.get(k) != out.get(k)}
+        if changed:
+            admin_mod.audit(engine, user, "update", "editor_task", task_id, out.get("projectName"),
+                            {**changed, "reason": body.get("reason")})
+        return out
+
+    @app.get("/api/v1/editorial/assignments/tasks/{task_id}/history")
+    def assign_task_history(task_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        return {"items": _asg_call(assign_mod.task_history, engine, tenant, task_id)}
+
+    @app.get("/api/v1/editorial/tasks/mine")
+    def assign_mine(request: Request, since: Optional[int] = None) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        me = _asg_me(schema, run, user)
+        if not me:
+            return {"me": None, "user": user, "tasks": [], "crmOnly": [], "load": None, "absences": []}
+        year = _asg_since(since)
+        mine = assign_mod.tasks(engine, tenant, editor_id=me["id"])
+        today = datetime.now(timezone.utc).date()
+        recent = [t for t in mine if t["status"] in assign_mod.OPEN
+                  or (t["doneAt"] and t["doneAt"][:10] >= (today - timedelta(days=30)).isoformat())]
+        on_board = {t["projectId"] for t in mine if t["status"] in assign_mod.OPEN}
+        res = run(assign_mod.my_projects_sql(schema, me["id"], assign_mod.WORK_STATUSES, year))
+        crm_only = [p for p in (assign_mod.project_row(r) for r in res.get("records") or []) if p["id"] not in on_board]
+        prof = assign_mod.profiles(engine, tenant).get(me["id"]) or {}
+        return {"me": me, "user": user, "tasks": recent, "crmOnly": crm_only, "sinceYear": year,
+                "load": assign_mod.load_of([t for t in mine if t["status"] in assign_mod.OPEN], prof.get("capacity")),
+                "absences": assign_mod.absences(engine, tenant, editor_id=me["id"], start=today),
+                "db": editorial_mod._timing(res)}
+
+    @app.post("/api/v1/editorial/tasks/mine/adopt")
+    def assign_adopt(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        me = _asg_me(schema, run, user)
+        if not me:
+            raise HTTPException(status_code=403, detail={"code": "EDITOR_ASSIGN", "message": "CRM'de kullanıcı kaydınız bulunamadı."})
+        proj = _asg_project(schema, run, str(body.get("projectId") or ""))
+        out = _asg_call(assign_mod.adopt, engine, tenant, user, project=proj, editor=me)
+        admin_mod.audit(engine, user, "create", "editor_task", out["id"], proj.get("name"), {"source": "crm"})
+        return out
+
+    @app.get("/api/v1/editorial/assignments/rules")
+    def assign_rules(request: Request, since: Optional[int] = None) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        year = _asg_since(since)
+        users, exp = _asg_editors(engine, tenant, schema, run, year)
+        cats = _asg_call(assign_mod.categories, schema, run, year)
+        for c in cats:
+            key = f"{c['kind']}:{c['id']}"
+            c["editors"] = sorted(({"id": ed, "name": (users.get(ed) or {}).get("name"), "count": n[key]}
+                                   for ed, n in exp["byEditor"].items() if n.get(key)), key=lambda x: -x["count"])
+        return {**assign_mod.rule_versions(engine, tenant), "categories": cats, "sinceYear": year,
+                "editors": sorted(users.values(), key=lambda u: (u["disabled"], (u["name"] or "").lower())),
+                "canEdit": _can(user, "ozellik:editor-atama.kural"),
+                "canApprove": _can(user, "ozellik:editor-atama.kural-onay")}
+
+    @app.get("/api/v1/editorial/assignments/rules/suggest")
+    def assign_rules_suggest(request: Request, since: Optional[int] = None) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        year = _asg_since(since)
+        users, exp = _asg_editors(engine, tenant, schema, run, year)
+        cats = _asg_call(assign_mod.categories, schema, run, year)
+        return {"rules": assign_mod.suggest_rules(exp, users, cats), "sinceYear": year}
+
+    @app.put("/api/v1/editorial/assignments/rules/draft")
+    def assign_rules_draft(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        _asg_need(user, "ozellik:editor-atama.kural", "Kural tablosu düzenleme")
+        rules = _asg_call(assign_mod.clean_rules, body.get("rules"))
+        ids = {x for r in rules for x in r["primary"] + r["backup"]}
+        known = set(_asg_call(assign_mod.crm_users, schema, run, ids)) if ids else set()
+        rules = _asg_call(assign_mod.clean_rules, rules, known)
+        out = _asg_call(assign_mod.save_draft, engine, tenant, user, rules, body.get("note"))
+        admin_mod.audit(engine, user, "update", "editor_rules", (out["draft"] or {}).get("id"),
+                        f"Taslak sürüm {(out['draft'] or {}).get('version')}", {"rules": len(rules)})
+        return out
+
+    @app.delete("/api/v1/editorial/assignments/rules/draft")
+    def assign_rules_discard(request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        _asg_need(user, "ozellik:editor-atama.kural", "Kural tablosu düzenleme")
+        out = _asg_call(assign_mod.discard_draft, engine, tenant)
+        admin_mod.audit(engine, user, "delete", "editor_rules", None, "Taslak silindi", None)
+        return out
+
+    @app.post("/api/v1/editorial/assignments/rules/approve")
+    def assign_rules_approve(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, schema, run = _asg(request)
+        _asg_need(user, "ozellik:editor-atama.kural-onay", "Kural tablosunu onaylama")
+        out = _asg_call(assign_mod.approve_draft, engine, tenant, user, int(body.get("version") or 0))
+        admin_mod.audit(engine, user, "approve", "editor_rules", (out["active"] or {}).get("id"),
+                        f"Sürüm {(out['active'] or {}).get('version')} yürürlükte", None)
+        return out
 
     # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
     # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,

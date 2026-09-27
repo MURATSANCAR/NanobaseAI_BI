@@ -29,6 +29,7 @@ const StudioEditor = lazy(() => import('@/canvas/editorial/studio/StudioEditor')
 const PlanEditor = lazy(() => import('@/canvas/editorial/studio/PlanEditor'));
 const CoverScreen = lazy(() => import('@/canvas/editorial/studio/collage/CoverScreen'));
 const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
+const MyTasksScreen = lazy(() => import('@/canvas/editorial/MyTasksScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
 const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
@@ -142,6 +143,7 @@ export default function App() {
             <Route path="yazar-giris/:id" element={<IntakeProjectScreen />} />
             <Route path="yayin-kurulu" element={<MeetingScreen />} />
             <Route path="editor-atama" element={<EditorsScreen />} />
+            <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />
             <Route path="basin-web" element={<WebScreen />} />
             {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}

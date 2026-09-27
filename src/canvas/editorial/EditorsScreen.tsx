@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { ENGINE_ENABLED, type ContractFacet, type EditorLoad } from '../engine';
@@ -7,8 +8,23 @@ import { Note, Pill, errText, field, nf } from '../admin/ui';
 import { crmLabel, dateTime } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 
-/** M2 Editör Atama. CRM proje kartındaki "Editörü" alanından editör başına proje dağılımı ve proje listesi.
- *  Atama önerisi, redaksiyon takvimi ve iş yükü yüzdesi CRM'de tutulmadığı için burada yok. */
+/** M2 Editör Atama. Sekmeler: atama bekleyen projeler (öneri + atama), iş yükü (kapasite, izin, görevler),
+ *  takvim ve çakışmalar, kategori–editör kural tablosu, CRM'deki bütün projeler. Atama ve termin ZEKİ AI'da
+ *  tutulur (CRM'e yazılmaz); CRM proje kartındaki "Editörü" alanı okunur ve üstüne bindirilir. */
+
+const PendingTab = lazy(() => import('./assign/PendingTab'));
+const LoadTab = lazy(() => import('./assign/LoadTab'));
+const CalendarTab = lazy(() => import('./assign/CalendarTab'));
+const RulesTab = lazy(() => import('./assign/RulesTab'));
+
+const TABS = [
+  { id: 'bekleyen', label: 'Atama bekleyen' },
+  { id: 'yuk', label: 'İş yükü' },
+  { id: 'takvim', label: 'Takvim' },
+  { id: 'kurallar', label: 'Kural tablosu' },
+  { id: 'projeler', label: 'Bütün projeler' },
+] as const;
+type TabId = (typeof TABS)[number]['id'];
 
 const TONES = ['bg-canvas-violet', 'bg-canvas-coral', 'bg-canvas-mint', 'bg-canvas-amber', 'bg-sky-400', 'bg-slate-400', 'bg-rose-300', 'bg-teal-300'];
 
@@ -49,7 +65,7 @@ function EditorRow({ e, order, max, active, onOpen }: { e: EditorLoad; order: nu
   );
 }
 
-export default function EditorsScreen() {
+function ProjectsTab() {
   const [editor, setEditor] = useState('');
   const [status, setStatus] = useState('');
   const [text, setText] = useState('');
@@ -73,14 +89,7 @@ export default function EditorsScreen() {
   const err = errText(overview.error || list.error, 'Editör kayıtları okunamadı.');
 
   return (
-    <ModuleFrame
-      route="/editor-atama"
-      crumb="Editör atama"
-      title="Editörler ve projeleri"
-      lead="CRM proje kartındaki “Editörü” alanından editör başına proje dağılımı. Atama önerisi, redaksiyon takvimi ve iş yükü yüzdesi CRM'de tutulmadığı için burada yok."
-      source={o ? `${o.sinceYear} ve sonrası projeler` : 'CRM projeleri'}
-    >
-      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+    <>
       {err && <Note tone="err">{err}</Note>}
 
       {o && (
@@ -162,6 +171,50 @@ export default function EditorsScreen() {
           </ul>
         </Panel>
       </div>
+    </>
+  );
+}
+
+export default function EditorsScreen() {
+  const [params, setParams] = useSearchParams();
+  const raw = params.get('sekme');
+  const tab: TabId = TABS.some((t) => t.id === raw) ? (raw as TabId) : 'bekleyen';
+  const pick = (id: TabId) => {
+    const next = new URLSearchParams(params);
+    if (id === 'bekleyen') next.delete('sekme');
+    else next.set('sekme', id);
+    setParams(next, { replace: true });
+  };
+  return (
+    <ModuleFrame
+      route="/editor-atama"
+      crumb="Editör atama"
+      title="Editör atama"
+      lead="Editörsüz projeye kural, geçmiş ve müsaitliğe göre editör önerilir ve atanır; iş yükü, takvim çakışması ve kategori–editör kuralları buradan yönetilir. Atama ZEKİ AI'da tutulur, CRM'e yazılmaz."
+      source="CRM projeleri + ZEKİ AI atamaları"
+    >
+      <div role="tablist" aria-label="Editör atama bölümleri" className="-mx-1 flex gap-1 overflow-x-auto overscroll-x-contain px-1 pb-0.5">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === t.id}
+            onClick={() => pick(t.id)}
+            className={`min-h-11 shrink-0 rounded-xl px-3.5 text-[12.5px] font-extrabold transition-transform duration-150 ease-out active:scale-[0.97] sm:min-h-9 ${tab === t.id ? 'bg-canvas-ink text-white' : 'bg-white/80 text-canvas-ink hover:bg-white'}`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      <Suspense fallback={<Panel><p className="py-10 text-center text-[12.5px] text-canvas-muted">Yükleniyor…</p></Panel>}>
+        {tab === 'bekleyen' && <PendingTab />}
+        {tab === 'yuk' && <LoadTab />}
+        {tab === 'takvim' && <CalendarTab />}
+        {tab === 'kurallar' && <RulesTab />}
+        {tab === 'projeler' && <ProjectsTab />}
+      </Suspense>
     </ModuleFrame>
   );
 }
