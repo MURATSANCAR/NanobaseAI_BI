@@ -5,7 +5,7 @@ import type { PlanPage } from '../../../engine';
 import { Note, btnGhost, btnPrimary, errText } from '../../../admin/ui';
 import type { EditorCtx } from '../InspectorPanel';
 import { Progress } from '../shared';
-import { FRONT, readerApi, type ReaderDecision, type ReaderFlag, type ReaderInfo, type ReaderRun, type RunSummary, type TurnItem } from './api';
+import { FRONT, pollWhilePreparing, preparing, readerApi, type ReaderDecision, type ReaderFlag, type ReaderInfo, type ReaderRun, type RunSummary, type TurnItem } from './api';
 import { findSpan, replaceTarget, targetText } from './textEdit';
 
 /** Okur paneli: «Çocuk gözüyle» (Zeki AI metni kitabın okur yaşında okur, takıldığı yerleri işaretler) ve resimli
@@ -40,7 +40,8 @@ function useRun(job: string, summary: RunSummary | null) {
 export default function ReaderPanel({ ctx, goTo }: { ctx: EditorCtx; goTo: (pid: string) => void }) {
   const job = ctx.job;
   const qc = useQueryClient();
-  const info = useQuery({ queryKey: ['studio', 'reader', 'info', job], queryFn: () => readerApi.info(job), staleTime: 10_000, retry: false });
+  const info = useQuery({ queryKey: ['studio', 'reader', 'info', job], queryFn: () => readerApi.info(job), staleTime: 10_000, retry: false,
+    refetchInterval: pollWhilePreparing });
   const [tab, setTab] = useState<Kind>('child');
   const [err, setErr] = useState<string | null>(null);
   const [starting, setStarting] = useState<Kind | null>(null);
@@ -49,6 +50,7 @@ export default function ReaderPanel({ ctx, goTo }: { ctx: EditorCtx; goTo: (pid:
   const turn = useRun(job, d?.turn ?? null);
 
   if (info.isLoading) return <p className="text-[12.5px] text-canvas-muted">Yükleniyor…</p>;
+  if (preparing(info.error)) return <Note tone="info">{info.error.message}</Note>;
   if (info.error || !d) return <Note tone="err">{errText(info.error, 'Okur bilgisi alınamadı.')}</Note>;
 
   const start = async (kind: Kind) => {

@@ -1234,6 +1234,88 @@ def _post_run_once(d: Path, cover: bool) -> None:
         (d / "hata-plan.txt").write_text(traceback.format_exc())
 
 
+# ------------------------------------------------------------------ kendiliğinden kurulum (planı isteyen bölümler)
+AUTO = "plan-auto.json"                    # {status: running|done|fail, started, finished, by, reason, error}
+_auto: set[str] = set()
+_auto_lock = threading.Lock()
+
+
+def _lock_held(d: Path) -> bool:
+    """Plan kilidini başka biri (işçideki dondurma, başka süreç) tutuyor mu? Kilit alınmaz, yalnız denenir."""
+    p = d / "plan.lock"
+    if not p.exists():
+        return False
+    with open(p, "a") as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            return True
+        fcntl.flock(f, fcntl.LOCK_UN)
+    return False
+
+
+def auto_state(d: Path) -> dict | None:
+    return studio.read(d, AUTO)
+
+
+def ensure(d: Path, by: str, reason: str, *, busy: dict | None = None, retry: bool = False) -> dict:
+    """Planı isteyen bölüm (sesli okuma, okur, sürüm farkı) planı olmayan işte açılınca planı kendiliğinden kurar:
+    `freeze` ile aynı yol (dizgi kelime işaretli yeniden okunur, balonlar kuralla; görsel çizilmez, görsel okuyucu
+    çağrılmaz), arka planda; ekran «sayfa düzeni hazırlanıyor» görür ve bekler.
+
+    Dönen `status`: ready (plan var) | preparing (kuruluyor; bu çağrı başlattıysa `started: True`) | waiting (kitabın
+    üretim hattı sürüyor: plan hattın sonunda kurulur, araya girilmez) | unavailable (kitap henüz yerleşmedi) |
+    failed (son deneme düştü; `retry` ile yeniden). Yarış: süreç içinde iş başına tek iş parçacığı, süreçler arasında
+    plan.lock (dondurma kilidi alır ve plan varsa dokunmaz)."""
+    if exists(d):
+        return {"status": "ready"}
+    if not (studio.read(d, "pagemap.json") and studio.read(d, "artplan.json")):
+        return {"status": "unavailable"}
+    if busy and not busy.get("error") and busy.get("key") == "hat":
+        return {"status": "waiting"}
+    rec = auto_state(d) or {}
+    with _auto_lock:
+        if d.name in _auto or _lock_held(d):
+            return {"status": "preparing", "since": rec.get("started"), "started": False}
+        if rec.get("status") == "fail" and not retry:
+            return {"status": "failed", "error": rec.get("error"), "at": rec.get("finished")}
+        _auto.add(d.name)
+    rec = {"status": "running", "started": time.time(), "by": by, "reason": reason}
+    studio.write(d, AUTO, rec)
+    threading.Thread(target=_auto_run, args=(d, by, reason), daemon=True).start()
+    return {"status": "preparing", "since": rec["started"], "started": True}
+
+
+def _auto_run(d: Path, by: str, reason: str) -> None:
+    t0 = time.time()
+    try:
+        # Görsel okuyucu verilmez (locate=None): balon kuyruğu kuralla. Dondurma yarıda düşerse kendi göçünü geri alır.
+        freeze(d, by)
+        after_write(d, cover=True)
+        studio.write(d, AUTO, {"status": "done", "started": t0, "finished": time.time(), "by": by, "reason": reason,
+                               "seconds": round(time.time() - t0, 1)})
+    except Exception as e:  # noqa: BLE001 - ekrana kısa ileti, ayrıntı dosyada
+        import traceback
+        (d / "hata-plan.txt").write_text(traceback.format_exc())
+        studio.write(d, AUTO, {"status": "fail", "started": t0, "finished": time.time(), "by": by, "reason": reason,
+                               "error": (str(e) if isinstance(e, (ValueError, KeyError)) else type(e).__name__)[:300]})
+    finally:
+        with _auto_lock:
+            _auto.discard(d.name)
+
+
+def wait_auto(d: Path, timeout: float = 600.0) -> bool:
+    """Sınama ve komut satırı için: süren kendiliğinden kurulum bitene kadar bekler. Plan kurulduysa True."""
+    end = time.time() + timeout
+    while time.time() < end:
+        with _auto_lock:
+            running = d.name in _auto
+        if not running:
+            return exists(d)
+        time.sleep(0.1)
+    return exists(d)
+
+
 # ------------------------------------------------------------------ görsel okuyucu (balonun kuyruğu için)
 def locator(characters: list[dict], timeout: float = 180.0):
     """`locate(image_path, name) -> {"x","y","w","h"} | None`: karakterin başı/yüzü, resme göre 0–1 oran.

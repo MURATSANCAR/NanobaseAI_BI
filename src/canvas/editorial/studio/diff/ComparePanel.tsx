@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeftRight, ChevronDown, ChevronRight, FileDown, Loader2 } from 'lucide-react';
 import { Note, btnGhost, errText, field, label as labelCls } from '../../../admin/ui';
-import { FRONT, versionsApi, type Diff, type DiffPage, type Segment, type VersionJob } from '../reader/api';
+import { FRONT, pollWhilePreparing, preparing, versionsApi, type Diff, type DiffPage, type Segment, type VersionJob } from '../reader/api';
 import '../reader/reader.css';
 
 /** Sürüm farkı: iki sürüm sayfa sayfa yan yana. Sürümler bu işin kayıt geçmişi (her kayıt bir sürüm) ve aynı
@@ -48,7 +48,8 @@ function VersionSelect({ id, label, value, onChange, jobs }: { id: string; label
 }
 
 export default function ComparePanel({ job, goTo }: { job: string; goTo: (pid: string) => void }) {
-  const list = useQuery({ queryKey: ['studio', 'versions', job], queryFn: () => versionsApi.list(job), staleTime: 10_000, retry: false });
+  const list = useQuery({ queryKey: ['studio', 'versions', job], queryFn: () => versionsApi.list(job), staleTime: 10_000, retry: false,
+    refetchInterval: pollWhilePreparing });
   const [pair, setPair] = useState<[string, string] | null>(null);
   useEffect(() => {
     if (!pair && list.data) setPair(defaults(list.data.jobs, job));
@@ -63,6 +64,7 @@ export default function ComparePanel({ job, goTo }: { job: string; goTo: (pid: s
   const [showSame, setShowSame] = useState(false);
 
   if (list.isLoading) return <p className="text-[12.5px] text-canvas-muted">Sürümler yükleniyor…</p>;
+  if (preparing(list.error)) return <Note tone="info">{list.error.message}</Note>;
   if (list.error || !list.data) return <Note tone="err">{errText(list.error, 'Sürümler alınamadı.')}</Note>;
   if (!pair) return <Note tone="info">Karşılaştırılacak ikinci bir sürüm yok. Sayfa düzeninde her kayıt yeni bir sürüm olur.</Note>;
 

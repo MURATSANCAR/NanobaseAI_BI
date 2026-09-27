@@ -74,6 +74,10 @@ async function call<T>(method: string, path: string, body?: unknown, timeoutMs =
   return (await res.json()) as T;
 }
 
+/** Sayfa düzeni kendiliğinden kuruluyor (plan yokken okur/sürüm farkı açıldı): ekran bekler, kısa aralıkla yeniden sorar. */
+export const preparing = (e: unknown): e is StudioPlanError => e instanceof StudioPlanError && e.code === 'PREPARING';
+export const pollWhilePreparing = (q: { state: { error: unknown } }) => (preparing(q.state.error) ? 2500 : false);
+
 const base = (job: string) => `/api/v1/editorial/studio/jobs/${encodeURIComponent(job)}/plan`;
 const q = (o: Record<string, string | number | undefined | null>) =>
   Object.entries(o).filter(([, v]) => v !== undefined && v !== null && v !== '').map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
