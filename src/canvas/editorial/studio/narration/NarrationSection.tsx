@@ -7,6 +7,7 @@ import { Panel } from '../../kit';
 import { Progress, ghostBtn, gradientBtn, press, secs } from '../shared';
 import LexiconEditor from './LexiconEditor';
 import ReadAlong from './ReadAlong';
+import SoundEffects from './SoundEffects';
 import VoicePicker from './VoicePicker';
 import VoiceUpload from './VoiceUpload';
 import {
@@ -183,6 +184,7 @@ function Body({ jobId, d, refresh }: { jobId: string; d: NarrationOverview; refr
           <LexiconEditor jobId={jobId} lexicon={d.lexicon} narrator={d.settings.narrator} onPlay={play} playing={player.playing} />
         </div>
       </div>
+      <SoundEffects jobId={jobId} narrationReady={d.summary.done > 0} />
     </div>
   );
 }

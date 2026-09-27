@@ -4706,6 +4706,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     editorial_studio_epub.register(app, {"auth": _books, "audit": admin_mod.audit})
     from semantic_bridge import editorial_studio_narration  # sesli okuma (docs/analiz/sesli-okuma-model-secimi.md)
     editorial_studio_narration.register(app, {"auth": _books, "audit": admin_mod.audit})
+    from semantic_bridge import editorial_studio_sfx  # sesli okumaya efekt sesleri (docs/analiz/efekt-sesleri-kaynaklar.md)
+    editorial_studio_sfx.register(app, {"auth": _books, "audit": admin_mod.audit})
     from semantic_bridge import editorial_studio_reader  # okur araçları ve sürüm farkı
     editorial_studio_reader.register(app, {"auth": _books, "audit": admin_mod.audit, "conf": admin_mod.conf})
     from semantic_bridge import editorial_studio_age  # yaş uygunluğu raporu (/api/v1/editorial/studio/jobs/{job}/age…)
