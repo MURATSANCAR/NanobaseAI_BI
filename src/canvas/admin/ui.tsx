@@ -96,6 +96,8 @@ export const ACTION_LABEL: Record<string, { label: string; tone: 'ok' | 'warn' |
   approve: { label: 'Onayladı', tone: 'ok' },
   reject: { label: 'Reddetti', tone: 'err' },
   correct: { label: 'Düzeltti', tone: 'warn' },
+  publish: { label: 'Yayınladı', tone: 'ok' },
+  unpublish: { label: 'Yayından çekti', tone: 'warn' },
 };
 
 export const FIELD_LABEL: Record<string, string> = {
@@ -120,6 +122,11 @@ export const FIELD_LABEL: Record<string, string> = {
   ok: 'Başarılı',
   message: 'Sonuç',
   secret: 'Gizli değer',
+  episode: 'Bölüm',
+  voice: 'Seslendiren',
+  durationSec: 'Süre (sn)',
+  bytes: 'Boyut (bayt)',
+  mime: 'Ses biçimi',
 };
 
 export const show = (v: unknown): string => {

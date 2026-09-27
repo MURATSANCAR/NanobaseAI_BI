@@ -297,6 +297,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/people", OPEN),                      # Kampüs rehberi
     ("/api/v1/me/", OPEN),
     ("/api/v1/greetings", OPEN),
+    ("/api/v1/bulletins", OPEN),                   # Kampüs sesli bülteni (yazma /api/v1/admin/bulletins)
     ("/api/v1/rooms", OPEN),
     ("/api/v1/ask", OPEN),                         # veri kapsamı Aşama C'de SQL kapısında
     ("/api/v1/run_sql", OPEN),

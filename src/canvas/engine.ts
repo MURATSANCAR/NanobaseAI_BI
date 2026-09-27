@@ -985,6 +985,62 @@ export const greetingsApi = {
   seen: (ids: string[]) => roomsSend<{ marked: number }>('POST', '/api/v1/greetings/seen', { ids }),
 };
 
+/* ------------------------------------------------------------------ kampüs sesli bülteni */
+
+export type BulletinStatus = 'taslak' | 'yayinda';
+export type Bulletin = {
+  id: string;
+  title: string;
+  summary: string | null;
+  episode: number | null;
+  voice: string | null;
+  durationSec: number | null;
+  mime: string;
+  size: number;
+  source: 'yükleme' | 'sunucu';
+  status: BulletinStatus;
+  originalName: string | null;
+  createdBy: string;
+  createdAt: string;
+  publishedAt: string | null;
+  updatedAt: string;
+  /** Köprü yolu, sürüm parçasıyla; `bulletinAudioUrl` tam adrese çevirir. */
+  audioPath: string;
+};
+export type BulletinPatch = Partial<Pick<Bulletin, 'title' | 'summary' | 'episode' | 'voice' | 'durationSec' | 'status'>>;
+
+export const bulletinAudioUrl = (b: Pick<Bulletin, 'audioPath'>) => `${ENGINE_BASE}${b.audioPath}`;
+
+/** Kampüs'te en son yayınlanan bülten çalar; Yönetim → Sesli bülten taslakları da görür, ekler, yayınlar. */
+export const bulletinsApi = {
+  current: () => roomsSend<{ item: Bulletin | null }>('GET', '/api/v1/bulletins/current'),
+  adminList: () => roomsSend<{ items: Bulletin[]; maxMb: number }>('GET', '/api/v1/admin/bulletins'),
+  update: (id: string, patch: BulletinPatch) => roomsSend<Bulletin>('PATCH', `/api/v1/admin/bulletins/${encodeURIComponent(id)}`, patch),
+  remove: (id: string) => roomsSend<{ ok: boolean }>('DELETE', `/api/v1/admin/bulletins/${encodeURIComponent(id)}`),
+  /** Ham gövdeyle yükleme; süre tarayıcıda ölçülüp gönderilir (sunucuda ses çözümleyici yok). */
+  upload: (file: File, durationSec: number | null, onProgress: (sent: number, total: number) => void) =>
+    new Promise<Bulletin>((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const q = `filename=${encodeURIComponent(file.name)}${durationSec ? `&duration=${durationSec.toFixed(1)}` : ''}`;
+      xhr.open('POST', `${ENGINE_BASE}/api/v1/admin/bulletins?${q}`);
+      xhr.withCredentials = true;
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      xhr.upload.onprogress = (e) => onProgress(e.loaded, e.lengthComputable ? e.total : file.size);
+      xhr.onload = () => {
+        if (xhr.status === 401) { authBlocked = true; reject(new EngineAuthError()); return; }
+        let j: Record<string, unknown> | null = null;
+        try { j = JSON.parse(xhr.responseText) as Record<string, unknown>; } catch { /* gövdesiz (ör. nginx 413) */ }
+        if (xhr.status >= 200 && xhr.status < 300 && j) { resolve(j as unknown as Bulletin); return; }
+        const d = j?.detail as { message?: string } | string | undefined;
+        reject(new RoomsError((typeof d === 'string' ? d : d?.message) || httpErrorText(xhr.status), xhr.status));
+      };
+      xhr.onerror = () => reject(new RoomsError('Bağlantı koptu; yükleme tamamlanmadı.', 0));
+      xhr.ontimeout = () => reject(new RoomsError('Yükleme zaman aşımına uğradı.', 0));
+      xhr.timeout = 15 * 60_000;
+      xhr.send(file);
+    }),
+};
+
 /* ------------------------------------------------------------------ kişi rehberi ve profil */
 
 /** CRM'deki gerçek, etkin kullanıcı. Boş alan "". dahili/kat CRM'de yoksa kişinin profilinden gelir. */

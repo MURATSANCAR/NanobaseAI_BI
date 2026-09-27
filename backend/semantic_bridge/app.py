@@ -3458,6 +3458,86 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         ids = body.get("ids") if isinstance(body.get("ids"), list) else []
         return {"marked": greetings_mod.mark_seen(engine, tenant, user, display, ids)}
 
+    # ------------------------------------------------------------------ kampüs sesli bülteni
+    # Sunucuda üretilen ses Kampüs'te çalar. Okuma oturumla, ekleme/yayın yalnız yöneticiyle (bkz. bulletins.py).
+    from semantic_bridge import bulletins as bulletins_mod
+
+    def _bulletin_error(e: "bulletins_mod.BulletinError") -> HTTPException:
+        return HTTPException(status_code=e.status, detail={"code": "BULLETIN", "message": str(e)})
+
+    def _bulletin_reader(request: Request) -> tuple[Any, str]:
+        _require_caller(request)
+        _board_user(request)                                   # oturum yoksa 401
+        r = rt()
+        return r.store.engine, r.settings.tenant_id
+
+    @app.get("/api/v1/bulletins/current")
+    def bulletin_current(request: Request) -> dict[str, Any]:
+        engine, tenant = _bulletin_reader(request)
+        return {"item": bulletins_mod.current(engine, tenant)}
+
+    @app.get("/api/v1/bulletins")
+    def bulletin_list(request: Request) -> dict[str, Any]:
+        engine, tenant = _bulletin_reader(request)
+        return {"items": bulletins_mod.listing(engine, tenant, published_only=True)}
+
+    @app.get("/api/v1/bulletins/{bulletin_id}/audio")
+    def bulletin_audio(bulletin_id: str, request: Request) -> Response:
+        engine, tenant = _bulletin_reader(request)
+        # Taslağı yalnız yönetici dinler (Yönetim ekranında yayından önce).
+        drafts_ok = admin_mod.is_admin(_board_user(request))
+        try:
+            return bulletins_mod.audio(engine, tenant, bulletin_id, request.headers.get("range"), published_only=not drafts_ok)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+
+    @app.get("/api/v1/admin/bulletins")
+    def bulletin_admin_list(request: Request) -> dict[str, Any]:
+        _admin_gate(request)
+        r = rt()
+        return {"items": bulletins_mod.listing(r.store.engine, r.settings.tenant_id, published_only=False),
+                "maxMb": bulletins_mod.max_bytes() // (1024 * 1024)}
+
+    @app.post("/api/v1/admin/bulletins", status_code=201)
+    async def bulletin_upload(request: Request, filename: str = "", duration: str = "") -> dict[str, Any]:
+        user = await run_in_threadpool(_admin_gate, request)
+        if int(request.headers.get("content-length") or 0) > bulletins_mod.max_bytes():
+            raise HTTPException(status_code=413, detail={"code": "BULLETIN", "message":
+                                f"Ses dosyası {bulletins_mod.max_bytes() // (1024 * 1024)} MB'tan büyük olamaz."})
+        data = await request.body()
+        r = rt()
+        try:
+            out = await run_in_threadpool(lambda: bulletins_mod.add(
+                r.store.engine, r.settings.tenant_id, user, data, original_name=filename or None, duration_sec=duration or None))
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        admin_mod.audit(r.store.engine, user, "create", "bulletin", out["id"], out["title"], {"bytes": out["size"], "mime": out["mime"]})
+        return out
+
+    @app.patch("/api/v1/admin/bulletins/{bulletin_id}")
+    def bulletin_update(bulletin_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
+        user = _admin_gate(request)
+        r = rt()
+        try:
+            out = bulletins_mod.update(r.store.engine, r.settings.tenant_id, bulletin_id, body)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        action = "publish" if body.get("status") == bulletins_mod.PUBLISHED else "unpublish" if body.get("status") == bulletins_mod.DRAFT else "update"
+        admin_mod.audit(r.store.engine, user, action, "bulletin", bulletin_id, out["title"],
+                        {k: body[k] for k in body if k in ("title", "episode", "voice", "status", "durationSec")})
+        return out
+
+    @app.delete("/api/v1/admin/bulletins/{bulletin_id}")
+    def bulletin_delete(bulletin_id: str, request: Request) -> dict[str, Any]:
+        user = _admin_gate(request)
+        r = rt()
+        try:
+            out = bulletins_mod.remove(r.store.engine, r.settings.tenant_id, bulletin_id)
+        except bulletins_mod.BulletinError as e:
+            raise _bulletin_error(e) from e
+        admin_mod.audit(r.store.engine, user, "delete", "bulletin", bulletin_id, out["title"], {"bytes": out["size"]})
+        return {"ok": True}
+
     # ------------------------------------------------------------------ kişi rehberi ve profil
     # Rehber CRM'den gelir (yalnız gerçek, etkin kullanıcılar). Kişinin eklediği dahili/kat/fotoğraf sunucuda.
     from semantic_bridge import people as people_mod
