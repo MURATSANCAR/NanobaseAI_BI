@@ -129,6 +129,7 @@ etkileşim düşük.
 - `ozellik:okur.liste-disa-aktar` (explicit): onaylı segmentin izinli kişi listesini gönderim için indirir. Her indirme
   audit'e kişi sayısı, amaç ve segment kimliğiyle yazılır. İlk sürümde kapalı tutulması önerilir.
 - `ozellik:okur.yorum-taslak`: yorum cevap taslağı üretir.
+- `ozellik:okur.program-yaz`: okuma kulübü, etkinlik ve anket planı yazar.
 - Kişi adı, e-posta ve telefon hiçbir ekranda ve Zeki AI cevabında görünmez. Mevcut `ozellik:veri.disa-aktar` bu modülde
   yalnız sayı tablolarını kapsar.
 
@@ -257,7 +258,7 @@ eğilimlerini ("çocuk ve aile kitaplarına ilgi fuarda arttı") ve program öne
 segmentten, amaçla ve kayıtla çıkar. Yorum ve etkinlik geri bildirimi editörlere döner. Din/inanç gibi hassas çıkarımlar
 sistemin tasarımında baştan kapalıdır.
 
-**Uzmanın bir günü (sistemle)**
+**Uzmanın bir günü (sistemle)** — *örnek senaryo; kitap/cari adları ve sayılar temsilîdir, ölçüm değildir*
 - 09:00 Telefonda: "4 yeni cevapsız yorum, 1 segment onay bekliyor, izin çelişkisi 12 → 9."
 - 09:20 Masaüstünde *Okur kitlesi*. Fuardan gelen kayıtların KVKK onay oranı düşük. Fuar formunu güncellemek için etkinlik
   ekibine not düşer.

@@ -238,7 +238,7 @@ TİMAŞ için mükemmel sistem: Logo'nun gerçekleşmiş satışı ile CRM'in si
 Temsilci sabah telefonunda kendi riskli carilerini nedenleriyle görür, ziyaretten sonra aksiyonunu yazar. Müdür hangi
 aksiyonun işe yaradığını çeyrek sonunda veriyle görür. CRM'in veri sağlığı da her ay puanlanır.
 
-**Uzmanın bir günü (sistemle; bölge satış müdürü)**
+**Uzmanın bir günü (sistemle; bölge satış müdürü)** — *örnek senaryo; kitap/cari adları ve sayılar temsilîdir, ölçüm değildir*
 - 08:30 Telefonda pazartesi özeti: "Bölgende 7 cari yüksek riske geçti. En büyüğü X Kitabevi: alım aralığı 21 günden 58
   güne çıktı."
 - 09:00 Masaüstünde *Cariler* → bölge süzgeci. X Kitabevi ayrıntısı: son 12 ay −%34, çocuk kategorisinde düşüş, iade
@@ -246,9 +246,9 @@ aksiyonun işe yaradığını çeyrek sonunda veriyle görür. CRM'in veri sağl
 - 09:15 Temsilciye aksiyon atar: "Bu hafta ziyaret, çocuk yeni çıkanlar ve okul dönemi kampanyası." Termin cuma.
 - 11:00 Temsilcilerle haftalık toplantıda portföy tablosu açık: her temsilcinin riskli cari sayısı ve geçen hafta
   kapattığı aksiyonlar.
-- 15:00 Geçen çeyrekte aksiyon alınan 40 riskli carinin 26'sı yeniden almış, alınmayanlarda oran daha düşük. Sonucu
+- 15:00 Geçen çeyrekte aksiyon alınan riskli carilerin yeniden alım oranını, aksiyon alınmayanlarla karşılaştırmalı görür. Sonucu
   yönetim özetine ekler.
-- 17:00 CRM yöneticisi veri sağlığında Logo bağı olmayan 120 aktif cariyi temizlemiş; ertesi gün doğrulanacak.
+- 17:00 CRM yöneticisi veri sağlığında Logo bağı olmayan bir grup aktif cariyi CRM'de düzeltmiş; ertesi gece doğrulanacak.
 
 **"Bunu görürsem hemen kullanırım"**
 1. Nedeni yazılı risk listesi ("neden riskli" tek cümle).

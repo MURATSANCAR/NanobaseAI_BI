@@ -235,7 +235,7 @@ TİMAŞ için mükemmel sistem: CRM hak ve kitap kartı ile stüdyonun EPUB'u bi
 sorusu hak, dosya ve üst veri yönünden tek bakışta cevaplanır. Platform raporları yüklenince gelir ve telif aynı gün
 hazır olur. Sesli kitap için stüdyonun seslendirmesi aday listesinden beslenir.
 
-**Uzmanın bir günü (sistemle)**
+**Uzmanın bir günü (sistemle)** — *örnek senaryo; kitap/cari adları ve sayılar temsilîdir, ölçüm değildir*
 - 09:00 Telefonda haftalık özet: "2 yeni baskının e-kitabı eski, 1 kitap hak riski listesine girdi."
 - 09:30 Masaüstünde *Dijital katalog*. Hak riski satırını açar: çevirmen sözleşmesinde e-kitap hakkı yok. Telif uzmanına
   not düşer.

@@ -158,7 +158,7 @@ yöneticisi de dahil **hiç kimse** tek tek anket cevabını bir kişiye bağlay
 
 ## 6. Veri
 
-| Gereken veri | Kaynak | Depoda bilinen durumu | Boşluk |
+| Gereken veri | Kaynak (Logo / CRM / T-soft / kullanıcı girer / dış) | Depoda bilinen durumu | Boşluk |
 |---|---|---|---|
 | Anket ve nabız sonuçları | Portal anketi (yeni) | Yok. CRM anket tabloları müşteri/ürün oylaması için ve neredeyse boş | Tamamı yeni |
 | Çalışan listesi ve birimi (hedef kitle, kırılım) | İK-0 (CRM ∩ AD + İK girişi) | Rehber 130 kişi; birim AD OU / CRM departmanı | Bilgisayarsız çalışanlar İK tarafından eklenmeli |

@@ -239,7 +239,7 @@ TİMAŞ için mükemmel sistem: her kampanya önce kitap listesiyle bir simülas
 sınırları kitap kitap söyler. Onaydan sonra kampanya yürür, günlük sonuç gelir, bitince kampanya kendi öğrenim satırını
 yazar. Bir sonraki kampanyada Zeki AI "benzer kampanyada benzer kitap şu kadar sattı" diye gerekçe gösterir.
 
-**Uzmanın bir günü (sistemle)**
+**Uzmanın bir günü (sistemle)** — *örnek senaryo; kitap/cari adları ve sayılar temsilîdir, ölçüm değildir*
 - 09:00 Telefonda "Yürüyen kampanya: dün 3 kitapta satış arttı, 1 kitapta stok 6 gün içinde bitecek" bildirimi.
 - 09:15 Masaüstünde *Kampanyalar*. Takvim şeridinde 3 hafta sonra platformun kampanya dönemi ve aynı haftada Öğretmenler
   Günü. "Yeni kampanya" açar, kanal olarak pazar yerini ve tarihleri girer.

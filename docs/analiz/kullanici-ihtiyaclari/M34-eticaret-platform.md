@@ -253,7 +253,7 @@ sahibine atar, farkın kapanmasını izler. Kanallara giden içerik paketini sta
 yüklendikçe okura satış verisi sell-in ile yan yana gelir. Yazma yetkileri çözüldüğünde aynı akış onaylı düzeltmeyi kaynağa
 yazar.
 
-**Uzmanın bir günü (sistemle)**
+**Uzmanın bir günü (sistemle)** — *örnek senaryo; kitap/cari adları ve sayılar temsilîdir, ölçüm değildir*
 - 08:40 Telefonda pazartesi özeti ya da günlük uyarı: "3 kitapta fiyat farkı, 1 kitap hak yok ama satışta."
 - 09:00 Masaüstünde *Platform durumu*. Göstergelerde açık fark sayısını ve Logo kesim tarihini görür. "Bugün bakılacaklar"
   listesinde ilk satır, hakkı devredilmiş bir kitabın sitede satışta olması. Kitaba tıklar, Haklar kaydını görür, T-soft
