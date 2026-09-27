@@ -35,7 +35,7 @@ export type Overview = {
 };
 
 /** CRM hak kararı: bütün telif alış sözleşmelerinde internette gösterim hakkı var mı. Ön süzgeçtir; kesin söz telif biriminin. */
-export type CrmRights = 'var' | 'incele' | 'eksik' | 'yok' | 'koruma_disi';
+export type CrmRights = 'var' | 'incele' | 'eksik' | 'yok' | 'koruma_disi' | 'set' | 'kitap_degil';
 export type CrmFlag = 'bizim_degil' | 'cekildi' | 'geri_istendi' | 'devredildi' | 'iptal';
 export type CrmContract = {
   name: string | null;
@@ -58,6 +58,7 @@ export type CrmBook = {
   rightsWhy: string;
   statusLabel: string | null;
   statusFlag: CrmFlag | null;
+  kind: string | null;
   tsoftActive: boolean;
   isbn: string | null;
   ebookIsbn: string | null;
@@ -284,6 +285,8 @@ export const RIGHTS_LABEL: Record<CrmRights, string> = {
   eksik: 'Hak eksik',
   yok: 'Sözleşme kaydı yok',
   koruma_disi: 'Koruma dışı eser',
+  set: 'Set (içindeki kitaplar)',
+  kitap_degil: 'Kitap değil',
 };
 export const RIGHTS_TONE: Record<CrmRights, 'good' | 'mid' | 'bad' | 'violet'> = {
   var: 'good',
@@ -291,6 +294,8 @@ export const RIGHTS_TONE: Record<CrmRights, 'good' | 'mid' | 'bad' | 'violet'> =
   eksik: 'bad',
   yok: 'mid',
   koruma_disi: 'violet',
+  set: 'violet',
+  kitap_degil: 'violet',
 };
 export const FLAG_LABEL: Record<CrmFlag, string> = {
   bizim_degil: 'Artık bizim ürünümüz değil',

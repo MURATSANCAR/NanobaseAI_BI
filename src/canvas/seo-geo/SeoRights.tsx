@@ -8,7 +8,7 @@ import CrmPanel from './CrmPanel';
 import SeoLayout, { Failed, Loading } from './SeoLayout';
 
 const PAGE = 40;
-const RIGHTS_ORDER: CrmRights[] = ['eksik', 'incele', 'yok', 'var', 'koruma_disi'];
+const RIGHTS_ORDER: CrmRights[] = ['eksik', 'incele', 'yok', 'var', 'koruma_disi', 'set', 'kitap_degil'];
 
 /** Haklar ve CRM: T-soft'ta satıştaki kitapların CRM kartı, internette gösterim hakkı ve yayın durumu.
  *  Google Kitaplar önizlemesi, tadımlık PDF ve SEO önceliği bu bilgiye bağlıdır. CRM'e yazılmaz. */
