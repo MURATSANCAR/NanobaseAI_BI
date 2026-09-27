@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (02:10) — Test sunucusuna main `c6699f5d` kuruldu (M2 + M4, M6, M7, M8, SEO & GEO, Yetki A+B, sesli bülten)
+
+- **Neden şimdi:** M2 kurulumu, test sunucusundaki ortak dosyalarda `main` dışı M7/M8 kodu durduğu için bekletilmişti (kullanıcı kararı). M7, M8 ve bülten `main`'e girince `main` bütün olarak kuruldu. VM'e kurulmadı; VM toplu gidecek.
+- **Nasıl:** `main` sunucuda geçici klasöre açıldı, 1.500'e yakın dosya canlı ağaçla karşılaştırıldı. 63 dosya farklıydı: 35'i sunucuda yoktu, 28'i `main`'in eski hâliydi. Sunucuya özgü her satırın `main` geçmişinde karşılığı olduğu denetlendi; tek istisna `access.py`'deki elle birleştirilmiş bir satırdı, içeriği `main`'de var. Yalnız bu 63 dosya kopyalandı. Sonuç: kaynak ağaç `main`'le birebir (fark 0), `._*` 0. Paket dosyaları değişmediği için npm kurulumu gerekmedi.
+- **Ön yüz:** `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas` ile ayrı klasöre derlendi, `cockpit/dist`'e kopyalandı. Portal `index-CgactCpa.js` sunuyor.
+- **Köprü:** yeni modül (`editorial_assign`) ve yeni uçlar kod yüklemesi gerektirdiği için `reload` değil `restart` yapıldı. Öncesinde uzun süren iş yoktu. Health 200, açılışta hata yok, çalışan `app.py` md5'i `main`'le aynı.
+- **Doğrulama (portal, kısa ömürlü `timasai` oturumu, gerçek CRM):** 81/81. M2: bekleyen 352 = CRM, bütün durumlar 940 = CRM, 33 editör sayıları birebir, kategoriler 36/18 birebir; taslak → onay → atama → termin (gerekçe) → izin + kapasite çakışması → takvim → yük %200 akışının tamamı. Diğer ekranların okuma uçları 200: Yetki (me/catalog/roles), M4 çeviri (işler/terimler/çevirmenler), M7 (meta/kartlar/ajanda), M8 (özet/kişiler/hakediş), M6 (özet/meta), SEO & GEO (me/özet/ürünler/CRM). Sayfalar 200: `/editor-atama`, `/gorevlerim`, `/ceviri`, `/yazar-iliskileri`, `/serbest-calisanlar`, `/telif-sozlesme`, `/seo-geo`, `/yonetim`. Test verisi, denetim kaydı ve oturum satırı silindi. Görsel denetim yapılamadı: oturum çerezi tarayıcı panesine konamıyor.
+
 ## 2026-09-28 — Bütün Claude oturumları md'ye döküldü, her tur sonunda otomatik güncelleniyor
 
 - **Neden:** kullanıcı soldaki bütün oturumların ve yapılanların eksiksiz md'ye yazılmasını, bunun kod yazıldıkça /
