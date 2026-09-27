@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (22:30) — Yetki Aşama B test sunucusuna kuruldu
+
+- `main` `a25f8229`: değişen 40 dosya sunucuda değişiklik öncesi `main` ile md5 eşitti, 1 yeni dosya (`SqlGate.tsx`); `._*` 0. Köprü yeniden başlatıldı (sağlıklı), ön yüz `VITE_BASE=/timas/` ile derlendi; yayındaki derleme `index-heX0_F9q.js`.
+- Gerçek oturumla (geçici `timasai` + yönetici olmayan deneme oturumu, sonra silindi): katalog 35 sayfa, 20 işlem (5'i açıkça verilen); deneme hesabı «Herkes» ile 35 sayfa + 15 işlem görüyor, açıkça verilenler (kurul görüşleri, oda yönetimi) kapalı; oda ekleme 403. Uçtan uca: geçici rol («Deneme (silinecek)», yalnız «Yayın kurulu: üye görüşleri») kişiye bağlanınca kurul gündeminde görüşler açıldı, rol silinince 30 sn içinde kapandı; rol listesinde yalnız «Herkes» kaldı.
+- Görsel doğrulama yapılamadı (HttpOnly oturum çerezi tarayıcı panesine konamıyor). Müşteri VM'ine kurulmadı.
+- Not: bu oturumda başka bir oturum çalışma ağacında dal değiştirdi; belge commit'i yanlış dala düştü, o dal eski yerine (`fc63d52d`) geri alındı, iş `claude/yetki-asama-b` dalına taşındı.
+
 ## 2026-09-28 (00:40) — M7 Yazar ilişkileri test sunucusunda: dar kapsamlı kurulum, gerçek CRM'de yakalanan 2 hata
 
 - **Kurulum (main `6fc75356`):** sunucu kaynağı hiçbir `main` commit'ine denk gelmiyordu: M8 kurulu, M2 Editör atama ve K4 sohbet motoru değişiklikleri kurulu değil (sahipleri «canlıya dokunmadan» doğrulamış). `main`in tamamı basılsaydı M2 ve K4 kendiliğinden canlıya çıkacak, `app.py` sunucuda olmayan `editorial_assign`'ı arayıp köprüyü düşürecekti. Bu yüzden sunucu hâli + yalnız M7: 6 paylaşılan dosyaya (access.py, access_catalog.json, app.py, App.tsx, engine.ts, navModel.ts) M7 yaması, 15 M7 dosyası `main`den. Önce `/tmp/m7/cand` aday ağaçta tsc 0, vitest 40/40, köprü testleri 35/35, `vite build`; canlı ağacın aday kurulduktan sonra değişmediği karşılaştırıldı; kopya eşitliği ve `._*` 0 denetlendi; köprü yeniden başladı (sağlıklı), derleme `cockpit/dist`e kondu (`index-s2aiLXCz.js`).
