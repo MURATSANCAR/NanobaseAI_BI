@@ -124,8 +124,8 @@ export default function HeatMapTab({ onOpen, onMonths }: { onOpen: (t: PanelTarg
       {why && h && (
         <div className="mt-2 rounded-2xl bg-slate-50 p-3 text-[12px] leading-snug">
           Puan yalnız yayınevinden biriyle yapılmış görüşmelerden çıkar (100 üzerinden): son görüşme ne kadar yakınsa en çok {h.recencyMax} ({h.recencyDays} günde sıfırlanır), son 12 ayda her
-          görüşme {h.frequencyEach} (en çok {h.frequencyMax}), son üç görüşmenin tonu en çok {h.toneMax} (olumlu {h.toneMax}, nötr ya da belirtilmemiş {h.toneMax / 2}, olumsuz 0). Hiç görüşme yoksa 0.
-          Bantlar: 1–33 soğuk, 34–66 ılık, 67–100 sıcak. Yeşil nokta o ay CRM'de yazar adına yeni eser ya da sözleşme kaydı açıldığını gösterir; puana girmez.
+          görüşme {h.frequencyEach} (en çok {h.frequencyMax}), son üç görüşmenin tonu en çok {h.toneMax} (olumlu {h.toneMax}, nötr ya da belirtilmemiş {h.toneMax / 2}, olumsuz 0). Hiç görüşme yoksa «temas yok».
+          Görüşme varsa 0–33 soğuk, 34–66 ılık, 67–100 sıcak. Yeşil nokta o ay CRM'de yazar adına yeni eser ya da sözleşme kaydı açıldığını gösterir; puana girmez.
         </div>
       )}
 

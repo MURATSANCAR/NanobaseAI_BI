@@ -16,7 +16,7 @@ CRM'de yazarla temasın kaydı yok (randevu, görüşme, not tabloları köprü 
   başkasına gitmez; varlığı (tarih, kanal) ısı haritasına yine sayılır.
 - **Isı puanı** (0–100, yalnız insan temasından): son yapılan görüşmenin yakınlığı en çok 50 (180 günde sıfırlanır),
   son 12 aydaki görüşme sayısı en çok 30 (görüşme başı 10), son üç görüşmenin tonu en çok 20 (olumlu 20, nötr ya da
-  tonsuz 10, olumsuz 0). Hiç görüşme yoksa 0. Bant: 0 temas yok, 1–33 soğuk, 34–66 ılık, 67–100 sıcak. CRM olayları
+  tonsuz 10, olumsuz 0). Hiç görüşme yoksa 0 ve «temas yok»; görüşme varsa 0–33 soğuk, 34–66 ılık, 67–100 sıcak. CRM olayları
   (yeni eser kaydı, yeni sözleşme) puana girmez; haritada ayrı işaret olarak durur.
 
 CRM yalnız okunur, köprünün `run_sql` yolundan (katalog kapısı). Kullanıcıdan gelen serbest metin `_like` ile
@@ -698,7 +698,7 @@ def heat(meetings: Iterable[Any], now: Optional[datetime] = None) -> dict[str, A
         last3 = done[:3]
         tone = round(sum(TONE_POINTS.get(m.tone, 10) for m in last3) / len(last3))
         score = recency + freq + tone
-    band = "yok" if score == 0 else "soguk" if score <= 33 else "ilik" if score <= 66 else "sicak"
+    band = "yok" if not done else "soguk" if score <= 33 else "ilik" if score <= 66 else "sicak"
     return {"score": score, "band": band, "parts": {"recency": recency, "frequency": freq, "tone": tone},
             "lastContact": _iso(done[0].starts_at) if done else None, "daysSince": days,
             "contactsYear": in_year, "months": [by_month[k] for k in keys],
