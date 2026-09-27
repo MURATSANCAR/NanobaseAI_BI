@@ -1,5 +1,5 @@
 app_name = "helpdesk"
-app_title = "Helpdesk"
+app_title = "NanobaseAI"
 app_publisher = "Frappe Technologies"
 app_description = "Customer Service Software"
 app_icon = "octicon octicon-file-directory"
@@ -13,7 +13,7 @@ add_to_apps_screen = [
     {
         "name": "helpdesk",
         "logo": "/assets/helpdesk/desk/favicon.svg",
-        "title": "Helpdesk",
+        "title": "NanobaseAI",
         "route": "/helpdesk",
         "has_permission": "helpdesk.api.permission.has_app_permission",
     }

@@ -1,6 +1,6 @@
 <template>
   <SettingsLayoutBase
-    :description="__('Configure your Exotel settings for Helpdesk.')"
+    :description="__('Configure your Exotel settings for NanobaseAI.')"
     :back-label="__('Exotel')"
     :on-back="goBack"
     :dirty="isDirty.exotel"

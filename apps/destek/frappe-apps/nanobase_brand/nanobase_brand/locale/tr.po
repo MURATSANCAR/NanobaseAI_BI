@@ -1,0 +1,167 @@
+# NanobaseAI marka çevirileri. Son kurulan uygulama olduğu için aynı msgid'li
+# Helpdesk, Flow ve çatı çevirilerinin üstüne yazar.
+msgid ""
+msgstr ""
+"Project-Id-Version: nanobase_brand\n"
+"Language: tr\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+msgid "Helpdesk"
+msgstr "NanobaseAI"
+
+msgid "Helpdesk Reports"
+msgstr "NanobaseAI Raporları"
+
+msgid "<span class=\"h4\">Helpdesk Configuration<br></span>"
+msgstr "<span class=\"h4\">NanobaseAI Ayarları<br></span>"
+
+msgid "Can manage all aspects of NanobaseAI."
+msgstr "NanobaseAI'nin tüm alanlarını yönetebilir."
+
+msgid "Configure your Exotel settings for NanobaseAI."
+msgstr "NanobaseAI için Exotel ayarlarınızı yapın."
+
+msgid "Configure your Twilio settings for NanobaseAI."
+msgstr "NanobaseAI için Twilio ayarlarınızı yapın."
+
+msgid "NanobaseAI Mobile"
+msgstr "NanobaseAI Mobil"
+
+msgid "This helps us personalize your NanobaseAI experience."
+msgstr "Bu bilgi NanobaseAI deneyiminizi size göre ayarlamamıza yardımcı olur."
+
+msgid "How would you like your customers to create support tickets in NanobaseAI?"
+msgstr "Müşterileriniz NanobaseAI'de destek kaydını nasıl açsın?"
+
+msgid "What would you like to do first in NanobaseAI?"
+msgstr "NanobaseAI'de ilk ne yapmak istersiniz?"
+
+msgid "Welcome to NanobaseAI"
+msgstr "NanobaseAI'ye hoş geldiniz"
+
+msgid "How did you hear about NanobaseAI?"
+msgstr "NanobaseAI'yi nereden duydunuz?"
+
+msgid "A partner or consultant"
+msgstr "Bir iş ortağı ya da danışman"
+
+msgid "Mail site"
+msgstr "Posta sitesi"
+
+msgid "Login to Frappe Cloud"
+msgstr "Bulut hesabına giriş"
+
+msgid "Frappe Framework"
+msgstr "NanobaseAI"
+
+msgid "Frappe"
+msgstr "NanobaseAI"
+
+msgid "Flow"
+msgstr "NanobaseAI"
+
+msgid "Flow Agent"
+msgstr "NanobaseAI Ajanı"
+
+msgid "Flow Agent Tool"
+msgstr "Ajan Aracı"
+
+msgid "Flow Agent Knowledge Base"
+msgstr "Ajan Bilgi Bankası"
+
+msgid "Flow Agent Memory"
+msgstr "Ajan Belleği"
+
+msgid "Flow Model"
+msgstr "NanobaseAI Modeli"
+
+msgid "Flow Provider"
+msgstr "Model Sağlayıcısı"
+
+msgid "Flow Tool"
+msgstr "NanobaseAI Aracı"
+
+msgid "Flow Trigger"
+msgstr "NanobaseAI Tetikleyicisi"
+
+msgid "Flow Knowledge Base"
+msgstr "Bilgi Bankası"
+
+msgid "Flow Knowledge Source"
+msgstr "Bilgi Kaynağı"
+
+msgid "Flow Knowledge Chunk"
+msgstr "Bilgi Parçası"
+
+msgid "Flow Knowledge Settings"
+msgstr "Bilgi Bankası Ayarları"
+
+msgid "Flow Session"
+msgstr "Sohbet Oturumu"
+
+msgid "Flow Session Message"
+msgstr "Oturum Mesajı"
+
+msgid "Flow Session Attachment"
+msgstr "Oturum Eki"
+
+msgid "Flow Run"
+msgstr "Çalıştırma Kaydı"
+
+msgid "Toggle NanobaseAI panel"
+msgstr "NanobaseAI panelini aç/kapat"
+
+msgid "Ask about your data, draft records, or run a task."
+msgstr "Verinizi sorun, kayıt taslağı hazırlatın ya da bir iş yaptırın."
+
+msgid "Finish setup to start"
+msgstr "Başlamak için kurulumu tamamlayın"
+
+msgid "The assistant needs a few things configured first:"
+msgstr "Asistanın önce birkaç ayara ihtiyacı var:"
+
+msgid "Create and enable a Flow Model with your provider credentials."
+msgstr "Sağlayıcı bilgilerinizle bir NanobaseAI Modeli oluşturup etkinleştirin."
+
+msgid "Enable a Flow Agent (Flow Agent is created automatically once a model exists)."
+msgstr "Bir NanobaseAI Ajanı etkinleştirin (model eklenince ajan kendiliğinden oluşur)."
+
+msgid "Enable Server Scripts in your site config so the assistant can run code."
+msgstr "Asistanın kod çalıştırabilmesi için site ayarlarında sunucu betiklerini açın."
+
+msgid "New chat"
+msgstr "Yeni sohbet"
+
+msgid "Full screen"
+msgstr "Tam ekran"
+
+msgid "Exit full screen"
+msgstr "Tam ekrandan çık"
+
+msgid "Close (Ctrl+I)"
+msgstr "Kapat (Ctrl+I)"
+
+msgid "Flow failed to load. Refresh the page to retry."
+msgstr "NanobaseAI yüklenemedi. Yeniden denemek için sayfayı yenileyin."
+
+msgid "Flow Model {0} is disabled."
+msgstr "NanobaseAI Modeli {0} devre dışı."
+
+msgid "Flow Agent {0} is disabled."
+msgstr "NanobaseAI Ajanı {0} devre dışı."
+
+msgid "You are not permitted to use Flow Model {0}."
+msgstr "NanobaseAI Modeli {0} için yetkiniz yok."
+
+msgid "Set an embedding model in Flow Knowledge Settings first."
+msgstr "Önce Bilgi Bankası Ayarları'nda bir gömme modeli seçin."
+
+msgid "Knowledge store is not initialized. Configure Flow Knowledge Settings and ingest a source."
+msgstr "Bilgi deposu hazır değil. Bilgi Bankası Ayarları'nı yapın ve bir kaynak ekleyin."
+
+msgid "The {0} agent is missing. Create a Flow Model first to auto-provision it."
+msgstr "{0} ajanı yok. Kendiliğinden oluşması için önce bir NanobaseAI Modeli ekleyin."
+

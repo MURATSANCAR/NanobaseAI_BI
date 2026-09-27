@@ -1,5 +1,7 @@
 @import "frappe-ui/style.css";
 @import "frappe-ui/editor-style.css";
+@import "./nanobase-theme.css";
+@import "./nanobase-theme.css";
 
 @tailwind base;
 @tailwind components;

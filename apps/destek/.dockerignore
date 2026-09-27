@@ -1,0 +1,5 @@
+**/node_modules
+**/._*
+**/.DS_Store
+frappe-apps/helpdesk/helpdesk/public/desk
+frappe-apps/flow/flow/public/flow_panel

@@ -52,7 +52,7 @@ defineProps({
 		</template>
 
 		<template v-else>
-			<div class="text-lg font-semibold text-ink-gray-9">{{ __("Flow") }}</div>
+			<div class="text-lg font-semibold text-ink-gray-9">{{ __("NanobaseAI") }}</div>
 			<div class="max-w-[240px] text-xs leading-relaxed">
 				{{ __("Ask about your data, draft records, or run a task.") }}
 			</div>

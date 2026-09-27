@@ -5,14 +5,16 @@
     viewBox="0 0 118 118"
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
+    role="img"
+    aria-label="NanobaseAI"
   >
-    <path
-      d="M93.9278 0H23.1013C10.3428 0 0 10.3428 0 23.1013V93.9278C0 106.686 10.3428 117.029 23.1013 117.029H93.9278C106.686 117.029 117.029 106.686 117.029 93.9278V23.1013C117.029 10.3428 106.686 0 93.9278 0Z"
-      fill="#7D42FB"
-    />
-    <path
-      d="M95.9759 50.8753V27.8265L21 27.8265V38.3271H85.5278V48.3027C81.3275 49.5103 78.2824 53.3955 78.2824 57.9632C78.2824 62.531 81.3275 66.3637 85.5278 67.5713V77.5468H31.5006V50.1403H21V88.0474H96.0284V64.9986L89.7805 60.5359V55.3906L96.0284 50.9278L95.9759 50.8753Z"
-      fill="#EDF7FF"
-    />
+    <defs>
+    <linearGradient id="nb-g" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#FF6B4A"/>
+      <stop offset="1" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="118" height="118" rx="28" fill="url(#nb-g)"/>
+  <path d="M34 88V30h12l26 37V30h12v58H72L46 51v37z" fill="#fff"/>
   </svg>
 </template>

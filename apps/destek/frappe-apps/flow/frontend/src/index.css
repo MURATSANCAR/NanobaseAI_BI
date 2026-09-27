@@ -1,4 +1,6 @@
 @import "./styles/markdown.css";
+@import "./styles/nanobase.css";
+@import "./styles/nanobase.css";
 
 @tailwind base;
 @tailwind components;
@@ -17,7 +19,7 @@
    ships "Inter"/"InterVariable"), so it falls back to the system font. Point
    the panel at the desk's real fonts. */
 .flow-panel {
-	font-family: "Inter", "InterVariable", ui-sans-serif, system-ui, sans-serif;
+	font-family: "DM Sans", "Inter", "InterVariable", ui-sans-serif, system-ui, sans-serif;
 	font-weight: 400;
 }
 

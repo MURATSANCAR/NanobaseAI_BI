@@ -26,7 +26,7 @@
             {{ __("Appearance") }}
           </div>
           <ThemeSwitcher
-            :name="config.brandName || 'Helpdesk'"
+            :name="config.brandName || 'NanobaseAI'"
             :logo="config.brandLogo || HDLogo"
           />
         </div>

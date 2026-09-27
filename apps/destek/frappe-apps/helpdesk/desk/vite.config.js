@@ -57,11 +57,11 @@ export default defineConfig(async ({ mode }) => {
         },
         manifest: {
           display: "standalone",
-          name: "Frappe Helpdesk",
-          short_name: "Helpdesk",
+          name: "NanobaseAI",
+          short_name: "NanobaseAI",
           start_url: "/helpdesk",
           description:
-            "Modern, Streamlined, Free and Open Source Customer Service Software",
+            "NanobaseAI müşteri destek ekranı",
           icons: [
             {
               src: "/assets/helpdesk/desk/manifest/manifest-icon-192.maskable.png",

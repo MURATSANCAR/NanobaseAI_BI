@@ -12,7 +12,7 @@ export interface App {
 
 const deskApp: App = {
   name: "frappe",
-  logo: "/assets/helpdesk/desk/desk.png",
+  logo: "/assets/helpdesk/desk/favicon.svg",
   title: "Desk",
   route: "/desk/helpdesk",
 };

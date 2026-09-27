@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="176" height="36" viewBox="0 0 176 36" role="img" aria-label="NanobaseAI">
+  <defs>
+    <linearGradient id="nb-w" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#FF6B4A"/>
+      <stop offset="1" stop-color="#7C5CFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="36" height="36" rx="9" fill="url(#nb-w)"/>
+  <path d="M10.4 26.8V9.2h3.6l7.9 11.3V9.2h3.7v17.6H22L14.1 15.6v11.2z" fill="#fff"/>
+  <text x="46" y="25" fill="#1B1F2A" font-family="'Plus Jakarta Sans','DM Sans',Arial,sans-serif" font-size="19" font-weight="800" letter-spacing="-0.3">Nanobase<tspan fill="#7C5CFF">AI</tspan></text>
+</svg>

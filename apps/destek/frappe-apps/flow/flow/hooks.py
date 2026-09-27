@@ -1,7 +1,7 @@
 app_name = "flow"
-app_title = "Flow"
+app_title = "NanobaseAI"
 app_publisher = "Shrihari Mahabal"
-app_description = "Frappe Flow — native AI agents, tools, and triggers for Frappe"
+app_description = "NanobaseAI yapay zekâ ajanları, araçları ve tetikleyicileri"
 app_email = "shriharimahabal08@gmail.com"
 app_license = "agpl-3.0"
 

@@ -671,7 +671,7 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  document.title = "Helpdesk";
+  document.title = "NanobaseAI";
 });
 </script>
 <style scoped>

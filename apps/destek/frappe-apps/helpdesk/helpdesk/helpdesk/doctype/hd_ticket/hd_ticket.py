@@ -189,7 +189,7 @@ class HDTicket(Document):
             self.send_acknowledgement_email()
 
     def capture_ticket_created_telemetry_events(self):
-        if self.subject == "Welcome to Helpdesk":
+        if self.subject == "NanobaseAI'ye hoş geldiniz":
             return
 
         capture_event("ticket_created")

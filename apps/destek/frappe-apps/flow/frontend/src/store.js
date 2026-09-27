@@ -63,7 +63,7 @@ async function loadInitial() {
 		const [a, m] = await Promise.all([api.loadAgents(), api.loadModels(), refreshHistory()]);
 		agents.value = a;
 		models.value = m;
-		const assistant = a.find((x) => x.name === "Flow");
+		const assistant = a.find((x) => x.name === "NanobaseAI");
 		selectedAgent.value = assistant ? assistant.name : a[0]?.name ?? null;
 		loadToolApproval(selectedAgent.value);
 		loaded.value = true;

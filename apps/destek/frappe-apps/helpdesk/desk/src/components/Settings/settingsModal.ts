@@ -147,7 +147,7 @@ export const tabs = computed(() => {
           label: __("ERPNext"),
           icon: markRaw(ERPNextSettingsIcon),
           component: markRaw(ERPNextIntegrationSettings),
-          condition: () => auth.isAdmin || auth.isManager,
+          condition: () => false,
         },
       ],
     },

@@ -1,6 +1,6 @@
 <template>
   <SettingsLayoutBase
-    :description="__('Configure your Twilio settings for Helpdesk.')"
+    :description="__('Configure your Twilio settings for NanobaseAI.')"
     :back-label="__('Twilio')"
     :on-back="goBack"
     :dirty="isDirty.twilio"
