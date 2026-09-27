@@ -11,7 +11,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import httpx
 import pytest
 
-from semantic_layer.candidates.llm_client import LlmCancelled, LlmClient
+from semantic_layer.candidates.llm_client import LlmCancelled, LlmClient, LlmHttpError
 
 
 class Provider:
@@ -57,7 +57,7 @@ class Provider:
                     except (BrokenPipeError, ConnectionResetError):
                         pass
                     return
-                payload = json.dumps({"choices": [{"message": {"content": text}, "finish_reason": "stop"}]}).encode()
+                payload = json.dumps({"choices": [step.get("choice") or {"message": {"content": text}, "finish_reason": "stop"}]}).encode()
                 self.send_response(200)
                 self.send_header("Content-Length", str(len(payload)))
                 self.end_headers()
@@ -183,3 +183,26 @@ def test_an_unreachable_provider_is_said_so():
     client = LlmClient("http://127.0.0.1:9", "m", timeout=5)
     with pytest.raises(RuntimeError, match="unreachable after 3 attempts"):
         client.chat([{"role": "user", "content": "x"}])
+
+
+def test_complete_returns_the_whole_choice_and_sends_one_off_fields(provider):
+    """Kapalı küme seçimin ihtiyacı: logprobs cevapta kalır, istek alanları istemcinin extra'sının üstüne
+    yazılır, akış açık istemcide bile bu çağrı akışsız gider (akışta logprobs toplanmaz)."""
+    lp = {"content": [{"token": "B", "logprob": -0.1, "top_logprobs": [{"token": "B", "logprob": -0.1}, {"token": "A", "logprob": -2.4}]}]}
+    provider.script = [{"choice": {"message": {"content": "B"}, "finish_reason": "length", "logprobs": lp}}]
+    client = LlmClient(provider.base, "m", timeout=10, stream=True, extra={"chat_template_kwargs": {"enable_thinking": False}})
+    reply = client.complete([{"role": "user", "content": "x"}], max_tokens=1, stream=False,
+                            body={"logprobs": True, "top_logprobs": 20, "structured_outputs": {"choice": ["A", "B"]}})
+    assert reply["message"]["content"] == "B" and reply["logprobs"] == lp
+    sent = provider.requests[0]["body"]
+    assert sent["stream"] is False and sent["max_tokens"] == 1 and sent["top_logprobs"] == 20
+    assert sent["structured_outputs"] == {"choice": ["A", "B"]}
+    assert sent["chat_template_kwargs"] == {"enable_thinking": False}, "the client's own extra was dropped"
+
+
+def test_an_error_status_is_readable_by_number(provider):
+    provider.script = [{"status": 400}]
+    client = LlmClient(provider.base, "m", timeout=10)
+    with pytest.raises(LlmHttpError) as err:
+        client.complete([{"role": "user", "content": "x"}], max_tokens=1)
+    assert err.value.status == 400 and str(err.value).startswith("LLM HTTP 400")

@@ -63,6 +63,7 @@ curl -s -X DELETE localhost:8795/api/v1/llm/jobs/llmjob_…     # iptal (bekleye
 - Ret ve geçici hatalarda jitter'lı bekleme (aynı anda reddedilen çağrılar aynı anda geri gelmez), `Retry-After`'a uyar, yükü sıraya bildirir.
 - Bütün cevap için tek süre sınırı (eskisi gibi), iptal edilebilir çağrı.
 - `LLM_STREAM=1` ile akışlı çağrı (varsayılan kapalı); `LLM_STREAM_IDLE_SEC` iki parça arası en uzun sessizlik (0 = bütün süre).
+- `complete(...)` cevabın ilk seçeneğini bütünüyle döndürür (logprobs dahil); `body` tek seferlik alanlar ekler. Hata durumu `LlmHttpError` (`status` alanı; ileti eskisi gibi «LLM HTTP n»).
 
 ## Ayarlar
 
@@ -83,6 +84,9 @@ curl -s -X DELETE localhost:8795/api/v1/llm/jobs/llmjob_…     # iptal (bekleye
 2. Ayrı süreç/betikse: `QueuedLlm(LlmClient(...), LlmQueue.from_env(store.engine), purpose="bg:modul-adi")`.
 3. Ayrı servis/arayüzse: `/api/v1/llm/jobs`.
 
+Kapalı küme karar (sınıflama, eşleştirme, evet/hayır) gerekiyorsa serbest metin ayrıştırmayın: `llm.choose(prompt, choices)` —
+seçilen seçenek ve her seçeneğin olasılığı, aynı sıra ve slottan. Ayrıntı: [analiz/llm-choose.md](analiz/llm-choose.md).
+
 ## Testler
 
-`semantic_layer/tests/test_llm_queue.py`, `test_llm_gate.py`, `test_llm_jobs.py`, `test_llm_client_http.py`. `LLM_GATE_TEST_DSN` verilirse sıra ve iş testleri gerçek PostgreSQL'de, kendi şemalarında koşar (advisory lock, `SKIP LOCKED`, eşzamanlı tekilleştirme yalnız orada sınanır). Gerçek kabul kayıtları: [docs/GELISTIRME-GUNLUGU.md](GELISTIRME-GUNLUGU.md) 2026-09-17 «LLM kapısı».
+`semantic_layer/tests/test_llm_queue.py`, `test_llm_gate.py`, `test_llm_jobs.py`, `test_llm_client_http.py`, `test_llm_choose.py`. `LLM_GATE_TEST_DSN` verilirse sıra ve iş testleri gerçek PostgreSQL'de, kendi şemalarında koşar (advisory lock, `SKIP LOCKED`, eşzamanlı tekilleştirme yalnız orada sınanır). Gerçek kabul kayıtları: [docs/GELISTIRME-GUNLUGU.md](GELISTIRME-GUNLUGU.md) 2026-09-17 «LLM kapısı».

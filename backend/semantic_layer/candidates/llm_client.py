@@ -26,6 +26,16 @@ class LlmCancelled(Exception):
     """The caller withdrew the request while it was in flight."""
 
 
+class LlmHttpError(RuntimeError):
+    """The endpoint answered with an error status (after the load retries). A RuntimeError with the
+    same message as before, so callers that match on "LLM HTTP <n>" keep working; `status` lets a
+    caller tell "this request is not understood" (4xx) from "the model is not there" (5xx)."""
+
+    def __init__(self, status: int, text: str = ""):
+        super().__init__(f"LLM HTTP {status}: {(text or '')[:300]}")
+        self.status = int(status)
+
+
 @dataclass
 class _Reply:
     status_code: int
@@ -134,13 +144,27 @@ class LlmClient:
         # 4096, not 1024: a statement with its reading lines, two derived tables and a CASE per
         # measure ran past 1024 tokens; cut mid-fence it read as "no SQL" and the question was
         # refused after a correct answer had been written.
+        choice = self.complete(messages, max_tokens=max_tokens, temperature=temperature, cancel=cancel)
+        return str((choice.get("message") or {}).get("content") or "")
+
+    def complete(self, messages: list[dict[str, str]], *, max_tokens: int = 4096, temperature: float = 0.0,
+                 body: Optional[dict[str, Any]] = None, stream: Optional[bool] = None,
+                 cancel: Optional[threading.Event] = None) -> dict[str, Any]:
+        """The first choice of the answer as the endpoint sent it — message, finish_reason and, when
+        asked for in `body`, logprobs. `body` is merged last, over this client's `extra`, so a caller
+        can ask for one-off fields (structured_outputs, logprobs) without changing the client.
+        A streamed answer carries only the text: pass stream=False when the rest is needed."""
         headers = {"Content-Type": "application/json"}
         if self.key:
             headers["Authorization"] = f"Bearer {self.key}"
         payload: dict[str, Any] = {"model": self.model, "messages": messages, "max_tokens": max_tokens, "temperature": temperature, "stream": False}
         payload.update(self.extra)
-        if self.stream:
+        if body:
+            payload.update(body)
+        if self.stream if stream is None else stream:
             payload["stream"] = True
+        elif stream is False:
+            payload["stream"] = False
         last: Optional[Exception] = None
         for attempt, wait_s in enumerate((0.0, 1.0, 3.0)):
             if wait_s:
@@ -176,13 +200,14 @@ class LlmClient:
             except httpx.TransportError as e:
                 log.warning("LLM transport error while retrying: %s", e)
         if r.status_code >= 400:
-            raise RuntimeError(f"LLM HTTP {r.status_code}: {r.text[:300]}")
+            raise LlmHttpError(r.status_code, r.text)
         self._tell("success")
         choice = r.body["choices"][0]
-        if choice.get("finish_reason") == "length":
+        if choice.get("finish_reason") == "length" and max_tokens > 1:
             # Said out loud: a cut answer looks like a bad answer downstream, and the fix is a budget.
+            # (A one-token answer is cut by design: a closed-set choice asks for exactly one.)
             log.warning("LLM answer cut at max_tokens=%d (model %s); raise the budget if this repeats", max_tokens, self.model)
-        return str(choice["message"]["content"] or "")
+        return choice
 
 
 class FakeLlm:

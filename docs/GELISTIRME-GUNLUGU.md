@@ -1,5 +1,38 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — LLM kapısına kapalı küme seçim: `QueuedLlm.choose` (seçim + her seçeneğin olasılığı)
+
+- **Neden:** H1 kategori ağacı analizi (bölüm 13–14) ve H2–H4 aynı şeyi istiyor: modelin serbest metin değil, verilen
+  seçeneklerden birini seçmesi ve ne kadar emin olduğu. Köprüdeki `QueuedLlm` yalnız `chat` (metin) veriyordu; editör
+  modülündeki `choose()` deseni (vLLM `structured_outputs.choice` + `logprobs`) kapının dışındaydı. Önce ortak çağrı.
+- **Ne yapıldı:**
+  - `QueuedLlm.choose(prompt, choices, *, system, top_logprobs=20, text_max_tokens=16, user_id, cancel, on_admitted)` → `Choice`.
+    Her model çağrısı `chat` ile aynı bileti alır (ortak `_turn`); yedek yolun ikinci isteği aynı bilette kalır.
+  - Çok token'lı seçenek güvenliği: seçenekler A–Z etiketiyle soruya eklenir, model yalnız etiketi yazar (tek token);
+    olasılık o token'ın adaylarından toplanır («A» ve « A» aynı pay, üretilen token bir kez sayılır) ve etiketler
+    arasında normalize edilir. `coverage` etiket dışına kayan payı gösterir.
+  - 26'dan çok seçenek: sayı tavanı koymak yerine dengeli gruplarla eleme turu; P(c) = P(grup içinde c) × P(finalde
+    grubun galibi), toplam yine 1. Seçim finalin seçimi, marjı eksi olabilir (o zaman «emin değil»).
+  - Yedek yol: uç 400/404/405/413/415/422/501 verirse ya da cevapta etiket olasılığı yoksa metin kesin eşlenir (etiket,
+    «Cevap: B», seçeneğin tamamı Türkçe harf farkı gözetmeden; «Roman değil», «A veya B» eşlenmez), `probs=None`.
+    Model hiç cevap veremezse (5xx, 429 süresi doldu, zaman aşımı, iptal) istisna: toplu iş «emin değil» kuyruğunu
+    model kesintisiyle doldurmasın — bu «sonra dene»dir.
+  - `LlmClient.complete()` (cevabın ilk seçeneği bütünüyle; `body` istemcinin `extra`'sının üstüne; `stream=False`
+    zorlanabilir). `chat` artık bunun üstünde, davranışı aynı. Hata `LlmHttpError(status)` — `RuntimeError` alt sınıfı,
+    ileti «LLM HTTP n: …» eskisi gibi (işler ve testler bu iletiyi eşliyor). `max_tokens=1` cevabı «kesildi» uyarısı yazmaz.
+  - Eşik çağıranın (`Choice.confident(min_prob, min_margin, min_coverage)`); belgede başlangıç önerisi: otomatik kabul
+    p ≥ 0.90 ve marj ≥ 0.50, öneri p ≥ 0.70 ve marj ≥ 0.30; modül ayarına konur, golden set ile ölçülür.
+- **Kararlar (sormadan, gerekçeli):** etiket alfabesi yalnız büyük harf (küçük harf «a/A» karışır, «10» iki token);
+  `guided_choice` gönderilmiyor (bu vLLM sürümünde etkisiz, ölçüm vllm-choice-logprobs); tek seçenekte model çağrılmaz
+  (`method="single"`); `/api/v1/llm/jobs`'a seçim eklenmedi (ilk tüketiciler köprü içinde; ayrı servis isterse ayrı iş).
+- **Belgeler:** `docs/analiz/llm-choose.md` (imza, örnek, eşik, ne zaman kullanılmaz), `docs/LLM-KAPISI.md`'ye bağlantı.
+- **Testler:** `backend/semantic_layer/tests/test_llm_choose.py` (sahte uç: tek token, çok token, normalizasyon, bozuk
+  logprobs, yedek yol, model yok → istisna, bilinmeyen cevap, metin eşleme tablosu, eleme turu, dengeli gruplar, girdi
+  denetimi, SQLite kapıda sıra/slot ve bilet sayısı), `test_llm_client_http.py` (+2: `complete` alanları, `LlmHttpError.status`).
+- **Kabul (sunucuda):** `scripts/acceptance/llm-choose/accept.py` — gerçek uçta 4 vaka + eleme turu: method logprobs,
+  toplam 1, tek çağrı, iki koşu aynı, beklenen seçim, bilet sayısı = çağrı sayısı; `--cleanup` kendi biletlerini siler.
+- **Doğrulama (test sunucusu, 2026-09-28 02:20, dalın `git archive` kopyası, köprünün venv'i):** pytest `test_llm_choose` + `test_llm_client_http` + `test_llm_queue` + `test_llm_jobs` **84/84**. Gerçek model uçta kabul betiği `ok: true` — 11 bilet, hepsi DONE, `method=logprobs`; 40 seçenekli eleme turunda seçilen p=0,957, marj 0,937, coverage ≈1,0. Kabul biletleri `--cleanup` ile silindi (11), sunucudaki geçici klasör silindi. Açık: eşik önerisi golden set ile doğrulanacak.
+
 ## 2026-09-28 (02:10) — Yetki Aşama C test sunucusunda doğrulandı
 
 - Kod `main`de; test sunucusuna başka bir oturumun `main` kurulumuyla geldi (01:40 dosyalar, 01:45 ön yüz derlemesi, köprü 02:06'da yeniden başladı). Köprü + `semantic_layer` + `src` ağacı `main` ile dosya dosya eş (477/477).
