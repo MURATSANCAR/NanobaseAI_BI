@@ -1352,6 +1352,208 @@ export const contributorsApi = {
   person: (id: string) => send<PersonDetail>('GET', `/api/v1/editorial/contributors/${encodeURIComponent(id)}`, undefined, 60_000),
 };
 
+// ------------------------------------------------------------ M7 yazar ilişkileri (kendi kayıtlarımız + CRM okuma)
+
+export type Choice = { key: string; label: string };
+export type AuthorsMeta = {
+  stages: Choice[];
+  poolStages: string[];
+  sources: Choice[];
+  channels: Choice[];
+  tones: Choice[];
+  statuses: Choice[];
+  heat: { recencyMax: number; recencyDays: number; frequencyMax: number; frequencyEach: number; toneMax: number; months: number };
+  me: { username: string; display: string; admin: boolean };
+  poolSince: string;
+};
+export type HeatBand = 'yok' | 'soguk' | 'ilik' | 'sicak';
+export type AuthorHeat = {
+  score: number;
+  band: HeatBand;
+  parts: { recency: number; frequency: number; tone: number };
+  lastContact: string | null;
+  daysSince: number | null;
+  contactsYear: number;
+  months: number[];
+  next: string | null;
+};
+export type AuthorCard = {
+  id: string;
+  crmContactId: string | null;
+  name: string;
+  stage: string;
+  stageLabel: string;
+  genre: string | null;
+  source: string | null;
+  sourceLabel: string | null;
+  sourceNote: string | null;
+  email: string | null;
+  phone: string | null;
+  city: string | null;
+  links: string[];
+  bio: string | null;
+  tags: string[];
+  owner: string | null;
+  ownerDisplay: string | null;
+  createdBy: string;
+  createdAt: string;
+  updatedBy: string | null;
+  updatedAt: string | null;
+  archived: boolean;
+  archivedAt: string | null;
+};
+export type AuthorCardSummary = AuthorCard & { heat: AuthorHeat; meetings: number; openSteps: number };
+export type AuthorMeeting = {
+  id: string;
+  cardId: string;
+  status: 'planlandi' | 'yapildi' | 'iptal';
+  statusLabel: string;
+  startsAt: string;
+  date: string;
+  time: string;
+  minutes: number | null;
+  channel: string;
+  channelLabel: string;
+  location: string | null;
+  topic: string;
+  notes: string | null;
+  tone: string | null;
+  toneLabel: string | null;
+  nextStep: string | null;
+  nextDue: string | null;
+  nextDone: boolean;
+  private: boolean;
+  hidden: boolean;
+  participants: Array<{ username: string; display: string }>;
+  roomBookingId: string | null;
+  roomName: string | null;
+  createdBy: string;
+  createdDisplay: string | null;
+  createdAt: string;
+  updatedAt: string | null;
+  canEdit: boolean;
+  overdue: boolean;
+  cardName?: string | null;
+  cardStage?: string | null;
+  crmContactId?: string | null;
+  stepLate?: boolean;
+};
+export type AuthorCardDetail = AuthorCard & { heat: AuthorHeat; timeline: AuthorMeeting[] };
+export type AuthorByCrm = { card: AuthorCard | null; heat: AuthorHeat; timeline: AuthorMeeting[] };
+export type AuthorCardInput = Partial<{
+  name: string;
+  stage: string;
+  genre: string;
+  source: string;
+  sourceNote: string;
+  email: string;
+  phone: string;
+  city: string;
+  links: string[];
+  bio: string;
+  tags: string[];
+  owner: string;
+  ownerDisplay: string;
+  crmContactId: string | null;
+  archived: boolean;
+}>;
+export type AuthorMeetingInput = Partial<{
+  cardId: string;
+  crmContactId: string;
+  name: string;
+  status: string;
+  date: string;
+  time: string;
+  minutes: number | null;
+  channel: string;
+  location: string;
+  topic: string;
+  notes: string;
+  tone: string | null;
+  nextStep: string;
+  nextDue: string;
+  nextDone: boolean;
+  private: boolean;
+  participants: Array<{ username: string; display: string }>;
+  roomId: string;
+}>;
+export type AuthorPoolCrm = {
+  items: Array<{
+    crmContactId: string;
+    name: string | null;
+    projects: number;
+    last: string | null;
+    latest: { id: string; name: string | null; status: string | null; on: string | null; editor: string | null } | null;
+    cardId: string | null;
+    cardStage: string | null;
+  }>;
+  total: number;
+  page: number;
+  pageSize: number;
+  since: string;
+  db?: DbTiming | null;
+};
+export type AuthorHeatRow = {
+  key: string;
+  name: string;
+  cardId: string | null;
+  crmContactId: string | null;
+  stage: string | null;
+  stageLabel: string | null;
+  owner: string | null;
+  ownerDisplay: string | null;
+  contracts: number;
+  contractEnds: string | null;
+  heat: AuthorHeat;
+  crm: number[];
+  crmBooks: number;
+  crmContracts: number;
+};
+export type AuthorHeatmap = {
+  months: string[];
+  items: AuthorHeatRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  bands: Record<HeatBand, number>;
+  crmOk: boolean;
+  crmError: string | null;
+};
+export type AuthorAgenda = { upcoming: AuthorMeeting[]; missingNotes: AuthorMeeting[]; openSteps: AuthorMeeting[]; days: number; today: string };
+export type AuthorSimilar = {
+  cards: Array<{ id: string; name: string; stage: string; stageLabel: string | null; archived: boolean; crmContactId: string | null }>;
+  crm: Array<{ crmContactId: string; name: string | null; author: boolean; cardId: string | null }>;
+  crmTotal: number;
+  crmError?: string | null;
+};
+
+const A = '/api/v1/editorial/authors';
+export const authorsApi = {
+  meta: () => send<AuthorsMeta>('GET', `${A}/meta`, undefined, 30_000),
+  cards: (p: { stage?: string; q?: string; scope?: string; archived?: boolean } = {}) =>
+    send<{ items: AuthorCardSummary[]; total: number; stages: Record<string, number> }>(
+      'GET',
+      `${A}/cards${qs({ stage: p.stage, q: p.q, scope: p.scope, archived: p.archived ? 'true' : undefined })}`,
+      undefined,
+      30_000,
+    ),
+  card: (id: string) => send<AuthorCardDetail>('GET', `${A}/cards/${encodeURIComponent(id)}`, undefined, 30_000),
+  createCard: (b: AuthorCardInput) => send<AuthorCard>('POST', `${A}/cards`, b, 30_000),
+  updateCard: (id: string, b: AuthorCardInput) => send<AuthorCard>('PATCH', `${A}/cards/${encodeURIComponent(id)}`, b, 30_000),
+  byCrm: (contactId: string) => send<AuthorByCrm>('GET', `${A}/by-crm/${encodeURIComponent(contactId)}`, undefined, 30_000),
+  crmCard: (contactId: string, name: string, stage: string) =>
+    send<AuthorCardDetail>('POST', `${A}/by-crm/${encodeURIComponent(contactId)}/card`, { name, stage }, 30_000),
+  similar: (name: string) => send<AuthorSimilar>('GET', `${A}/similar${qs({ name })}`, undefined, 60_000),
+  poolCrm: (p: { q?: string; page?: number; closed?: boolean }) =>
+    send<AuthorPoolCrm>('GET', `${A}/pool/crm${qs({ q: p.q, page: p.page, closed: p.closed ? 'true' : undefined })}`, undefined, 120_000),
+  heatmap: (p: { scope?: string; q?: string; order?: string; page?: number }) =>
+    send<AuthorHeatmap>('GET', `${A}/heatmap${qs({ scope: p.scope, q: p.q, order: p.order, page: p.page })}`, undefined, 180_000),
+  agenda: (scope: string, days = 30) => send<AuthorAgenda>('GET', `${A}/agenda${qs({ scope, days })}`, undefined, 30_000),
+  createMeeting: (b: AuthorMeetingInput) => send<AuthorMeeting>('POST', `${A}/meetings`, b, 30_000),
+  updateMeeting: (id: string, b: AuthorMeetingInput) => send<AuthorMeeting>('PATCH', `${A}/meetings/${encodeURIComponent(id)}`, b, 30_000),
+  deleteMeeting: (id: string) => send<{ ok: boolean }>('DELETE', `${A}/meetings/${encodeURIComponent(id)}`, undefined, 30_000),
+};
+
 export type EditorLoad = { id: string; name: string | null; total: number; last: string | null; disabled: boolean; byStatus: ContractFacet[] };
 export type EditorsOverview = { items: EditorLoad[]; sinceYear: number; statuses: ContractFacet[]; unassigned: ContractFacet[]; truncated: boolean; db?: DbTiming | null };
 export type EditorialProject = {

@@ -11,9 +11,10 @@ const GROUPS: Record<string, ContributorModule & { tab: string }> = {
     route: '/kisiler',
     crumb: 'Kişiler',
     title: 'Kişiler',
-    lead: "CRM'de yazar olarak eser kaydı olan kişiler: eserleri, sözleşmeleri ve projeleri. Randevu, görüşme notu, okur yorumu ve sosyal medya verisi CRM'de tutulmadığı için burada yok.",
+    lead: "CRM'de yazar olarak eser kaydı olan kişiler: eserleri, sözleşmeleri ve projeleri. Randevu ve görüşme notları kişinin «İlişki» bölümünde; bütün yazarların ısı haritası ve aday havuzu Yazar ilişkileri ekranında.",
     roles: CONTRIBUTOR_ROLES.authors,
     people: 'yazar',
+    relations: true,
   },
   cevirmen: {
     tab: 'Çevirmenler',

@@ -1,4 +1,5 @@
 import {
+  HeartHandshake,
   ArrowLeftRight,
   Archive,
   BellRing,
@@ -171,6 +172,7 @@ export const NAV: NavGroup[] = [
     icon: BookUser,
     items: [
       { id: 'kisiler', label: 'Kişiler', to: '/kisiler', icon: Contact, hint: 'Yazar, çevirmen, çizer ve serbest çalışanlar', keywords: ['yazar', 'çizer', 'rehber'] },
+      { id: 'yazar-iliskileri', label: 'Yazar ilişkileri', to: '/yazar-iliskileri', icon: HeartHandshake, hint: 'Yazar kartı, randevu ve görüşme notu, aday havuzu, ilişki ısısı', keywords: ['randevu', 'görüşme', 'aday', 'potansiyel yazar', 'ısı haritası'] },
       { id: 'basin-web', label: 'Basın ve web', to: '/basin-web', icon: Newspaper, hint: 'Açık kaynaklarda yazar ve kitap haberleri', feature: 'webWatch', keywords: ['haber', 'basın'] },
       { id: 'telif-sozlesme', label: 'Sözleşmeler', to: '/telif-sozlesme', icon: FileSignature, hint: 'Telif ve sözleşme kayıtları', keywords: ['telif', 'sözleşme'] },
       { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, hint: 'Atama, iş yükü, takvim ve kategori kuralları', keywords: ['editörler', 'atama', 'iş yükü', 'takvim', 'kural'] },

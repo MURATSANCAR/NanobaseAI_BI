@@ -4388,6 +4388,133 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         f"Sürüm {(out['active'] or {}).get('version')} yürürlükte", None)
         return out
 
+    # ------------------------------------------------------------------ M7 yazar ilişkileri
+    # Yazar kartı, randevu ve görüşme notu, potansiyel yazar havuzu, ilişki ısı haritası. Kayıtlar bizim
+    # tablolarımızda (CRM'de temas kaydı yok); CRM yalnız okunur (olası yazar, sözleşmeli yazar, olaylar).
+    from semantic_bridge import author_relations as rel_mod
+
+    def _rel(request: Request) -> tuple[Any, str, str, str, bool]:
+        engine, tenant, user, display = _greetings(request)
+        rel_mod.ensure(engine)
+        rooms_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        return engine, tenant, user, display, admin_mod.is_admin(user)
+
+    def _rel_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except rel_mod.RelationError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "AUTHOR_RELATIONS", "message": str(e), **e.extra}) from e
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
+    def _crm_fetch_all(sql: str) -> list[dict[str, Any]]:
+        """Tam sonuç (satır sınırı yok): ısı haritası bütün sözleşmeli yazarları sayar."""
+        r = rt()
+        try:
+            out = r.run_complete(sql)
+        except Exception as e:  # noqa: BLE001
+            raise _sql_failure(e) from e
+        path = out.get("_result_file")
+        rows = r.result_files.read(path) if path else list(out.get("records") or [])
+        cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+        return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+    @app.get("/api/v1/editorial/authors/meta")
+    def authors_meta(request: Request) -> dict[str, Any]:
+        _, _, user, display, admin = _rel(request)
+        return dict(rel_mod.meta(), me={"username": user, "display": display, "admin": admin},
+                    poolSince=admin_mod.conf("AUTHOR_POOL_SINCE") or "2024-01-01")
+
+    @app.get("/api/v1/editorial/authors/cards")
+    def authors_cards(request: Request, stage: str = "", q: str = "", scope: str = "", archived: bool = False) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        return _rel_call(rel_mod.list_cards, engine, tenant, user, stage=stage, q=q, scope=scope, archived=archived)
+
+    @app.post("/api/v1/editorial/authors/cards", status_code=201)
+    def authors_card_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        out = _rel_call(rel_mod.create_card, engine, tenant, user, body)
+        admin_mod.audit(engine, user, "create", "author_card", out["id"], out["name"],
+                        {"stage": out["stage"], "crm": out["crmContactId"]})
+        return out
+
+    @app.get("/api/v1/editorial/authors/cards/{card_id}")
+    def authors_card(card_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        return _rel_call(rel_mod.card_detail, engine, tenant, user, admin, card_id)
+
+    @app.patch("/api/v1/editorial/authors/cards/{card_id}")
+    def authors_card_update(card_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        out, diff = _rel_call(rel_mod.update_card, engine, tenant, user, admin, card_id, body)
+        if diff:
+            admin_mod.audit(engine, user, "update", "author_card", out["id"], out["name"], diff)
+        return out
+
+    @app.get("/api/v1/editorial/authors/by-crm/{contact_id}")
+    def authors_by_crm(contact_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        return _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
+
+    @app.post("/api/v1/editorial/authors/by-crm/{contact_id}/card", status_code=201)
+    def authors_crm_card(contact_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """CRM kişisini havuza al (olası yazar) ya da CRM yazarına ilişki kartı aç; varsa olanı döner."""
+        engine, tenant, user, _, admin = _rel(request)
+        stage = str(body.get("stage") or "yazar")
+        row, created = _rel_call(rel_mod.card_for_crm, engine, tenant, user, contact_id, str(body.get("name") or ""), stage)
+        out = _rel_call(rel_mod.card_detail, engine, tenant, user, admin, row.id)
+        if created:
+            admin_mod.audit(engine, user, "create", "author_card", out["id"], out["name"], {"stage": out["stage"], "crm": out["crmContactId"]})
+        return out
+
+    @app.get("/api/v1/editorial/authors/similar")
+    def authors_similar(request: Request, name: str = "") -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        schema, run = _editorial(request)
+        return _rel_call(rel_mod.similar, schema, run, engine, tenant, name)
+
+    @app.get("/api/v1/editorial/authors/pool/crm")
+    def authors_pool_crm(request: Request, q: str = "", page: int = 0, closed: bool = False) -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        schema, run = _editorial(request)
+        since = admin_mod.conf("AUTHOR_POOL_SINCE") or "2024-01-01"
+        return _rel_call(rel_mod.pool_crm, schema, run, engine, tenant, since, page, q=q, closed=closed)
+
+    @app.get("/api/v1/editorial/authors/heatmap")
+    def authors_heatmap(request: Request, scope: str = "hepsi", q: str = "", order: str = "soguk", page: int = 0) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        return _rel_call(rel_mod.heatmap, admin_mod.conf("CRM_SCHEMA"), _crm_fetch_all, engine, tenant, user,
+                         scope=scope, q=q, order=order, page_no=page)
+
+    @app.get("/api/v1/editorial/authors/agenda")
+    def authors_agenda(request: Request, scope: str = "benim", days: int = 30) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        return _rel_call(rel_mod.agenda, engine, tenant, user, admin, scope=scope, days=days)
+
+    @app.post("/api/v1/editorial/authors/meetings", status_code=201)
+    def authors_meeting_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, display, admin = _rel(request)
+        out = _rel_call(rel_mod.create_meeting, engine, tenant, user, display, admin, body, rooms_mod)
+        admin_mod.audit(engine, user, "create", "author_meeting", out["id"], f"{out['cardName']}: {out['topic']}",
+                        {"status": out["status"], "date": out["date"], "room": out["roomName"]})
+        return out
+
+    @app.patch("/api/v1/editorial/authors/meetings/{meeting_id}")
+    def authors_meeting_update(meeting_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, display, admin = _rel(request)
+        out, diff = _rel_call(rel_mod.update_meeting, engine, tenant, user, display, admin, meeting_id, body, rooms_mod)
+        if diff:
+            admin_mod.audit(engine, user, "update", "author_meeting", out["id"], out["topic"], diff)
+        return out
+
+    @app.delete("/api/v1/editorial/authors/meetings/{meeting_id}")
+    def authors_meeting_delete(meeting_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        out = _rel_call(rel_mod.delete_meeting, engine, tenant, user, admin, meeting_id, rooms_mod)
+        admin_mod.audit(engine, user, "delete", "author_meeting", out["id"], out["topic"], {"date": out["date"]})
+        return {"ok": True}
+
     # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
     # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,
     # öneriler, kontrol listesi, imzalar. Dosya ham gövde olarak yüklenir (multipart bağımlılığı yok).

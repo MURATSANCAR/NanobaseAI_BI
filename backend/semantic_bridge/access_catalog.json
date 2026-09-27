@@ -128,6 +128,11 @@
       "label": "Kişiler"
     },
     {
+      "key": "sayfa:yazar-iliskileri",
+      "area": "kayitlar",
+      "label": "Yazar ilişkileri"
+    },
+    {
       "key": "sayfa:basin-web",
       "area": "kayitlar",
       "label": "Basın ve web"
@@ -409,6 +414,13 @@
       "page": "sayfa:son-okuma",
       "label": "Son okuma bulgusuna karar",
       "hint": "Doğru / yanlış alarm"
+    },
+    {
+      "key": "ozellik:yazar-iliski.yaz",
+      "area": "kayitlar",
+      "page": "sayfa:yazar-iliskileri",
+      "label": "Yazar kartı ve görüşme yazma",
+      "hint": "Yeni yazar kartı, aşama değiştirme, havuza alma, randevu ve görüşme notu"
     },
     {
       "key": "ozellik:tasarim.uret",

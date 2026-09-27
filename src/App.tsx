@@ -32,6 +32,7 @@ const EditorsScreen = lazy(() => import('@/canvas/editorial/EditorsScreen'));
 const MyTasksScreen = lazy(() => import('@/canvas/editorial/MyTasksScreen'));
 const PeopleScreen = lazy(() => import('@/canvas/editorial/modules'));
 const FreelanceScreen = lazy(() => import('@/canvas/editorial/freelance/FreelanceScreen'));
+const AuthorRelationsScreen = lazy(() => import('@/canvas/editorial/authors/AuthorRelationsScreen'));
 const WebScreen = lazy(() => import('@/canvas/editorial/web/WebScreen'));
 const ContractsScreen = lazy(() => import('@/canvas/editorial/ContractsScreen'));
 const FinancialAudit = lazy(() => import('@/canvas/financial-audit/FinancialAudit'));
@@ -147,6 +148,7 @@ export default function App() {
             <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />
             <Route path="serbest-calisanlar" element={<FreelanceScreen />} />
+            <Route path="yazar-iliskileri" element={<AuthorRelationsScreen />} />
             <Route path="basin-web" element={<WebScreen />} />
             {/* Eski adresler Kişiler ekranına ilgili seçimle gider; kaydedilmiş bağlantı kırılmaz. */}
             <Route path="yazarlar" element={<Navigate to="/kisiler?rol=yazar" replace />} />

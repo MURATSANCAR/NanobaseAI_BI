@@ -27,7 +27,7 @@ export const LIVE: Record<string, string> = {
   M4: '/ceviri',
   M5: '/son-okuma',
   M6: '/telif-sozlesme',
-  M7: '/kisiler?rol=yazar',
+  M7: '/yazar-iliskileri',
   M8: '/serbest-calisanlar',
   M13: '/kitap-tasarim',
   M14: '/kitap-tasarim',
