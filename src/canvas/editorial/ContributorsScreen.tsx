@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, contributorsApi, type Contributor, type PersonDetail } from '../engine';
+import { BriefcaseBusiness, Search, X } from 'lucide-react';
+import { ENGINE_ENABLED, contributorsApi, freelanceApi, type Contributor, type PersonDetail } from '../engine';
+import { canSeePage, usePageAccess } from '../useAdmin';
 import { contributorsListOptions, roleFacetsOptions } from './queries';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { dateTime, pct, crmLabel } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import { WebSection } from './web/parts';
+import { RelationBody } from './authors/CardPanel';
 
 /** Esere katkı verenler: yazarlar (M7), çevirmenler (M4), çizer ve serbest çalışanlar (M8). Hepsi CRM'deki
  *  eser katılım kayıtlarından, rol süzgeciyle okunur. Kapasite, puan, hız ve müsaitlik CRM'de tutulmadığı
@@ -20,6 +23,8 @@ export type ContributorModule = {
   /** Bu modülün kapsadığı CRM katılımcı tipleri. */
   roles: string[];
   people: string;
+  /** Kişi ayrıntısında M7 ilişki bölümü (randevu, görüşme notu, ısı). */
+  relations?: boolean;
 };
 
 const statusTone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
@@ -42,7 +47,54 @@ function Block({ title, count, children }: { title: string; count: number; child
   );
 }
 
-function Detail({ p, onClose }: { p: PersonDetail; onClose: () => void }) {
+/** CRM katılımcı tipi → serbest çalışan iş rolü (kayıt formunu önceden doldurmak için). */
+const FREELANCE_ROLE: Record<string, string> = {
+  Çizer: 'cizer',
+  'Kapak Tasarım': 'kapak',
+  'Mizanpaj Yapan': 'mizanpaj',
+  Redaktör: 'redaksiyon',
+  Tashih: 'tashih',
+  'Yayına Hazırlayan': 'yayina-hazirlik',
+  Danışman: 'danismanlik',
+  Tercüme: 'ceviri',
+};
+
+/** Çizer / çevirmen kartında serbest çalışan kaydına geçiş: kayıtlıysa kartı açar, değilse formu CRM'den doldurur. */
+function FreelanceLink({ p }: { p: PersonDetail }) {
+  const access = usePageAccess();
+  const allowed = canSeePage(access, 'serbest-calisanlar');
+  const role = p.works.map((w) => FREELANCE_ROLE[w.role ?? '']).find(Boolean);
+  const hit = useQuery({ queryKey: ['fl', 'lookup', p.id], queryFn: () => freelanceApi.lookup([p.id]), enabled: ENGINE_ENABLED && allowed && !!role });
+  if (!allowed || !role || !hit.data) return null;
+  const id = hit.data.items[p.id.toLowerCase()];
+  const to = id
+    ? `/serbest-calisanlar?bolum=kisiler&kisi=${encodeURIComponent(id)}`
+    : `/serbest-calisanlar?bolum=kisiler&yeni=kisi&crm=${encodeURIComponent(p.id)}&ad=${encodeURIComponent(p.name ?? '')}&rol=${role}`;
+  return (
+    <Link to={to} className={`${btnGhost} mt-2`}>
+      <BriefcaseBusiness aria-hidden className="h-4 w-4" />
+      {id ? 'Serbest çalışan kartı' : 'Serbest çalışan havuzuna ekle'}
+    </Link>
+  );
+}
+
+function Relations({ p }: { p: PersonDetail }) {
+  const navigate = useNavigate();
+  return (
+    <section className="mt-4">
+      <h3 className="text-[12px] font-extrabold">İlişki</h3>
+      <div className="mt-1.5">
+        <RelationBody
+          compact
+          target={{ crm: { id: p.id, name: p.name || 'Yazar' } }}
+          onOpenCard={(id) => navigate(`/yazar-iliskileri?kart=${encodeURIComponent(id)}`)}
+        />
+      </div>
+    </section>
+  );
+}
+
+function Detail({ p, onClose, relations }: { p: PersonDetail; onClose: () => void; relations?: boolean }) {
   return (
     <div className="text-[12.5px]">
       <div className="flex items-start justify-between gap-2">
@@ -51,7 +103,10 @@ function Detail({ p, onClose }: { p: PersonDetail; onClose: () => void }) {
           <X aria-hidden className="h-4 w-4" />
         </button>
       </div>
+      <FreelanceLink p={p} />
       {p.bio && <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-line leading-snug text-canvas-muted">{p.bio}</p>}
+
+      {relations && <Relations p={p} />}
 
       <Block title="Eserler" count={p.works.length}>
         {p.truncated && <p className="mt-1 text-[11px] text-canvas-muted">Liste sunucunun satır sınırında kesildi.</p>}
@@ -196,7 +251,7 @@ export default function ContributorsScreen({ module: m, aside, initialOpen }: { 
         {/* Telefonda ayrıntı listenin üstüne gelir; masaüstünde sağda durur. */}
         {open && (
           <div className="order-first lg:sticky lg:top-0 lg:order-none">
-            <Panel>{person.data && person.data.id === open ? <Detail p={person.data} onClose={() => setOpen(null)} /> : <Loading />}</Panel>
+            <Panel>{person.data && person.data.id === open ? <Detail p={person.data} onClose={() => setOpen(null)} relations={m.relations} /> : <Loading />}</Panel>
           </div>
         )}
       </div>

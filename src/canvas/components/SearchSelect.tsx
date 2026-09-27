@@ -97,7 +97,7 @@ export default function SearchSelect(props: SearchSelectProps) {
 
   const popup = (
     <Combobox.Portal>
-      <Combobox.Positioner className="z-[90] outline-none" sideOffset={4} collisionPadding={8}>
+      <Combobox.Positioner className="z-[100] outline-none" sideOffset={4} collisionPadding={8}>
         <Combobox.Popup className="w-[var(--anchor-width)] min-w-[12rem] max-w-[var(--available-width)] overflow-hidden rounded-xl border border-slate-200 bg-white text-canvas-ink shadow-[0_12px_32px_-12px_rgba(27,31,42,0.25)]">
           <Rows row={row} scrollRef={scrollRef} />
         </Combobox.Popup>

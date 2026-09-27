@@ -4388,6 +4388,133 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                         f"Sürüm {(out['active'] or {}).get('version')} yürürlükte", None)
         return out
 
+    # ------------------------------------------------------------------ M7 yazar ilişkileri
+    # Yazar kartı, randevu ve görüşme notu, potansiyel yazar havuzu, ilişki ısı haritası. Kayıtlar bizim
+    # tablolarımızda (CRM'de temas kaydı yok); CRM yalnız okunur (olası yazar, sözleşmeli yazar, olaylar).
+    from semantic_bridge import author_relations as rel_mod
+
+    def _rel(request: Request) -> tuple[Any, str, str, str, bool]:
+        engine, tenant, user, display = _greetings(request)
+        rel_mod.ensure(engine)
+        rooms_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        return engine, tenant, user, display, admin_mod.is_admin(user)
+
+    def _rel_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except rel_mod.RelationError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "AUTHOR_RELATIONS", "message": str(e), **e.extra}) from e
+        except editorial_mod.EditorialError as e:
+            raise _editorial_error(e) from e
+
+    def _crm_fetch_all(sql: str) -> list[dict[str, Any]]:
+        """Tam sonuç (satır sınırı yok): ısı haritası bütün sözleşmeli yazarları sayar."""
+        r = rt()
+        try:
+            out = r.run_complete(sql)
+        except Exception as e:  # noqa: BLE001
+            raise _sql_failure(e) from e
+        path = out.get("_result_file")
+        rows = r.result_files.read(path) if path else list(out.get("records") or [])
+        cols = [c.get("name") if isinstance(c, dict) else c for c in out.get("columns") or []]
+        return [row if isinstance(row, dict) else dict(zip(cols, row)) for row in rows]
+
+    @app.get("/api/v1/editorial/authors/meta")
+    def authors_meta(request: Request) -> dict[str, Any]:
+        _, _, user, display, admin = _rel(request)
+        return dict(rel_mod.meta(), me={"username": user, "display": display, "admin": admin},
+                    poolSince=admin_mod.conf("AUTHOR_POOL_SINCE") or "2024-01-01")
+
+    @app.get("/api/v1/editorial/authors/cards")
+    def authors_cards(request: Request, stage: str = "", q: str = "", scope: str = "", archived: bool = False) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        return _rel_call(rel_mod.list_cards, engine, tenant, user, stage=stage, q=q, scope=scope, archived=archived)
+
+    @app.post("/api/v1/editorial/authors/cards", status_code=201)
+    def authors_card_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        out = _rel_call(rel_mod.create_card, engine, tenant, user, body)
+        admin_mod.audit(engine, user, "create", "author_card", out["id"], out["name"],
+                        {"stage": out["stage"], "crm": out["crmContactId"]})
+        return out
+
+    @app.get("/api/v1/editorial/authors/cards/{card_id}")
+    def authors_card(card_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        return _rel_call(rel_mod.card_detail, engine, tenant, user, admin, card_id)
+
+    @app.patch("/api/v1/editorial/authors/cards/{card_id}")
+    def authors_card_update(card_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        out, diff = _rel_call(rel_mod.update_card, engine, tenant, user, admin, card_id, body)
+        if diff:
+            admin_mod.audit(engine, user, "update", "author_card", out["id"], out["name"], diff)
+        return out
+
+    @app.get("/api/v1/editorial/authors/by-crm/{contact_id}")
+    def authors_by_crm(contact_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        return _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
+
+    @app.post("/api/v1/editorial/authors/by-crm/{contact_id}/card", status_code=201)
+    def authors_crm_card(contact_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        """CRM kişisini havuza al (olası yazar) ya da CRM yazarına ilişki kartı aç; varsa olanı döner."""
+        engine, tenant, user, _, admin = _rel(request)
+        stage = str(body.get("stage") or "yazar")
+        row, created = _rel_call(rel_mod.card_for_crm, engine, tenant, user, contact_id, str(body.get("name") or ""), stage)
+        out = _rel_call(rel_mod.card_detail, engine, tenant, user, admin, row.id)
+        if created:
+            admin_mod.audit(engine, user, "create", "author_card", out["id"], out["name"], {"stage": out["stage"], "crm": out["crmContactId"]})
+        return out
+
+    @app.get("/api/v1/editorial/authors/similar")
+    def authors_similar(request: Request, name: str = "") -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        schema, run = _editorial(request)
+        return _rel_call(rel_mod.similar, schema, run, engine, tenant, name)
+
+    @app.get("/api/v1/editorial/authors/pool/crm")
+    def authors_pool_crm(request: Request, q: str = "", page: int = 0, closed: bool = False) -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        schema, run = _editorial(request)
+        since = admin_mod.conf("AUTHOR_POOL_SINCE") or "2024-01-01"
+        return _rel_call(rel_mod.pool_crm, schema, run, engine, tenant, since, page, q=q, closed=closed)
+
+    @app.get("/api/v1/editorial/authors/heatmap")
+    def authors_heatmap(request: Request, scope: str = "hepsi", q: str = "", order: str = "soguk", page: int = 0) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        return _rel_call(rel_mod.heatmap, admin_mod.conf("CRM_SCHEMA"), _crm_fetch_all, engine, tenant, user,
+                         scope=scope, q=q, order=order, page_no=page)
+
+    @app.get("/api/v1/editorial/authors/agenda")
+    def authors_agenda(request: Request, scope: str = "benim", days: int = 30) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        return _rel_call(rel_mod.agenda, engine, tenant, user, admin, scope=scope, days=days)
+
+    @app.post("/api/v1/editorial/authors/meetings", status_code=201)
+    def authors_meeting_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, display, admin = _rel(request)
+        out = _rel_call(rel_mod.create_meeting, engine, tenant, user, display, admin, body, rooms_mod)
+        admin_mod.audit(engine, user, "create", "author_meeting", out["id"], f"{out['cardName']}: {out['topic']}",
+                        {"status": out["status"], "date": out["date"], "room": out["roomName"]})
+        return out
+
+    @app.patch("/api/v1/editorial/authors/meetings/{meeting_id}")
+    def authors_meeting_update(meeting_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, display, admin = _rel(request)
+        out, diff = _rel_call(rel_mod.update_meeting, engine, tenant, user, display, admin, meeting_id, body, rooms_mod)
+        if diff:
+            admin_mod.audit(engine, user, "update", "author_meeting", out["id"], out["topic"], diff)
+        return out
+
+    @app.delete("/api/v1/editorial/authors/meetings/{meeting_id}")
+    def authors_meeting_delete(meeting_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        out = _rel_call(rel_mod.delete_meeting, engine, tenant, user, admin, meeting_id, rooms_mod)
+        admin_mod.audit(engine, user, "delete", "author_meeting", out["id"], out["topic"], {"date": out["date"]})
+        return {"ok": True}
+
     # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
     # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,
     # öneriler, kontrol listesi, imzalar. Dosya ham gövde olarak yüklenir (multipart bağımlılığı yok).
@@ -4742,6 +4869,372 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         out = await run_in_threadpool(_tr_call, tr_mod.import_terms, engine, tenant, user, src, tgt, data)
         admin_mod.audit(engine, user, "upload", "translation_terms", None, filename, {"src": src, "tgt": tgt, **out})
         return out
+
+    # ------------------------------------------------------------------ serbest çalışanlar (M8)
+    # Kayıt + portfolyo, iş paketi ve toplu dağıtım, kapasite, teslim, hakediş, yazışma. Kendi tablolarımız;
+    # CRM ve Logo yalnız okunur. Serbest çalışan portala giremez: ona yazılan ileti e-postayla gider.
+    from semantic_bridge import freelance as fl_mod
+    from semantic_bridge import freelance_logo as fl_logo
+
+    def _fl(request: Request) -> tuple[Any, str, str, str]:
+        engine, tenant, user, display = _greetings(request)
+        fl_mod.ensure(engine)
+        admin_mod.ensure(engine)
+        return engine, tenant, user, display
+
+    def _fl_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except fl_mod.FreelanceError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "FREELANCE", "message": str(e)}) from e
+
+    def _staff_email(engine: Any, tenant: str, user: str) -> Optional[str]:
+        """Yazan kişinin iş e-postası (rehberden); serbest çalışanın yanıtı ona gitsin diye."""
+        try:
+            rows, _, _ = _crm_people()
+            for p in people_mod.people(engine, tenant, rows):
+                if (p.get("username") or "").lower() == user.lower() and "@" in (p.get("email") or ""):
+                    return p["email"]
+        except Exception:  # noqa: BLE001 — rehber kapalıysa yanıt adresi gönderen hesap olur
+            log.warning("freelance: %s için rehber e-postası okunamadı", user)
+        return None
+
+    def _fl_mailer(engine: Any, tenant: str, user: str):
+        """Serbest çalışana giden ileti için e-posta gönderici; SMTP girilmemişse None (ileti yine kaydedilir)."""
+        from semantic_bridge import alerts as alerts_mod
+        import smtplib
+        import ssl
+        from email.message import EmailMessage
+        from email.utils import formataddr
+
+        cfg = alerts_mod.smtp_settings()
+        if not cfg:
+            return None
+        reply_to = _staff_email(engine, tenant, user)
+
+        def send(m: dict[str, Any]) -> str:
+            try:
+                msg = EmailMessage()
+                msg["Subject"] = f"Timaş Yayınları · {m['subject']}"
+                msg["From"] = formataddr((f"{m['from_display'] or m['from_user']} (Timaş Yayınları)", cfg["sender"]))
+                msg["To"] = formataddr((m["name"], m["to"]))
+                if reply_to:
+                    msg["Reply-To"] = formataddr((m["from_display"] or m["from_user"], reply_to))
+                who = m["from_display"] or m["from_user"]
+                foot = (f"\n\n—\n{who}\nTimaş Yayınları"
+                        + (f"\nBu iletiyi yanıtladığınızda yanıtınız {reply_to} adresine gider." if reply_to else ""))
+                msg.set_content(m["body"] + foot)
+                ctx = ssl.create_default_context()
+                server = (smtplib.SMTP_SSL(cfg["host"], cfg["port"], timeout=20, context=ctx) if cfg["ssl"]
+                          else smtplib.SMTP(cfg["host"], cfg["port"], timeout=20))
+                with server as s:
+                    if not cfg["ssl"] and cfg["starttls"]:
+                        s.starttls(context=ctx)
+                    if cfg["user"]:
+                        s.login(cfg["user"], cfg["password"])
+                    s.send_message(msg)
+                return "gonderildi"
+            except Exception as e:  # noqa: BLE001
+                log.warning("serbest çalışana e-posta gönderilemedi (%s): %s", m.get("to"), e)
+                return "gonderilemedi"
+        return send
+
+    def _fl_logo_run(sql: str) -> dict[str, Any]:
+        # Finansal denetimle aynı doğrulanmış 2026 kopyası; başka yedeğe yönlenen sorgu durdurulur.
+        from datetime import date as _date
+        r = rt()
+        scope = {"n0": fl_logo.FIRM}
+        period = (_date(fl_logo.YEAR, 1, 1), _date(fl_logo.YEAR + 1, 1, 1))
+        try:
+            out = r.run_sql(sql, r.settings.max_rows, period, scope=scope)
+        except Exception as e:  # noqa: BLE001
+            raise _sql_failure(e) from e
+        if any(code != fl_logo.FIRM for code in re.findall(r"\bLG_(\d+)_", out.get("physicalSql") or "", re.I)):
+            raise HTTPException(409, "Logo sorgusu doğrulanmış 2026 kopyasından başka bir yedeğe yönlendi.")
+        return out
+
+    @app.get("/api/v1/editorial/freelance/overview")
+    def fl_overview(request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        out = fl_mod.overview(engine, tenant, user)
+        from semantic_bridge import alerts as alerts_mod
+        out["email"] = alerts_mod.email_status()
+        out["me"] = {"username": user, "canManage": _can(user, "ozellik:serbest.yonet"),
+                     "canApprove": _can(user, "ozellik:serbest.hakedis-onay")}
+        return out
+
+    @app.get("/api/v1/editorial/freelance/people")
+    def fl_people(request: Request, q: str = "", role: str = "", status: str = "") -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return fl_mod.list_people(engine, tenant, q=q, role=role, status=status)
+
+    @app.post("/api/v1/editorial/freelance/people", status_code=201)
+    def fl_person_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        out = _fl_call(fl_mod.create_person, engine, tenant, user, body)
+        admin_mod.audit(engine, user, "create", "freelance_person", out["id"], out["name"], {"roles": out["roles"]})
+        return out
+
+    @app.get("/api/v1/editorial/freelance/people/{person_id}")
+    def fl_person(person_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return _fl_call(fl_mod.get_person, engine, tenant, person_id)
+
+    @app.patch("/api/v1/editorial/freelance/people/{person_id}")
+    def fl_person_update(person_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        out = _fl_call(fl_mod.update_person, engine, tenant, user, person_id, body)
+        admin_mod.audit(engine, user, "update", "freelance_person", person_id, out["name"], sorted(body.keys()))
+        return out
+
+    @app.get("/api/v1/editorial/freelance/lookup")
+    def fl_lookup(request: Request, crm: str = "") -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return {"items": fl_mod.lookup_crm(engine, tenant, [c for c in crm.split("|") if c])}
+
+    @app.put("/api/v1/editorial/freelance/people/{person_id}/portfolio", status_code=201)
+    async def fl_portfolio_add(person_id: str, request: Request, filename: str = "", title: str = "", tags: str = "",
+                               book: str = "") -> dict[str, Any]:
+        engine, tenant, user, _ = await run_in_threadpool(_fl, request)
+        if int(request.headers.get("content-length") or 0) > fl_mod.PORTFOLIO_MAX:
+            raise HTTPException(413, detail={"code": "FREELANCE", "message": "Portfolyo dosyası 40 MB sınırını aşıyor."})
+        data = await request.body()
+        meta = {"title": title, "tags": [t for t in tags.split(",") if t.strip()], "book": book}
+        out = await run_in_threadpool(_fl_call, fl_mod.add_portfolio, engine, tenant, user, person_id, filename, data, meta)
+        admin_mod.audit(engine, user, "upload", "freelance_portfolio", person_id, filename, {"bytes": len(data)})
+        return out
+
+    @app.patch("/api/v1/editorial/freelance/portfolio/{file_id}")
+    def fl_portfolio_update(file_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        _fl_call(fl_mod.update_portfolio, engine, tenant, file_id, body)
+        return {"ok": True}
+
+    @app.delete("/api/v1/editorial/freelance/portfolio/{file_id}")
+    def fl_portfolio_delete(file_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        out = _fl_call(fl_mod.delete_portfolio, engine, tenant, file_id)
+        admin_mod.audit(engine, user, "delete", "freelance_portfolio", out["personId"], out["filename"], None)
+        return {"ok": True}
+
+    @app.get("/api/v1/editorial/freelance/portfolio/{file_id}")
+    def fl_portfolio_file(file_id: str, request: Request):
+        from fastapi.responses import FileResponse
+        engine, tenant, _, _ = _fl(request)
+        path, name, mime = _fl_call(fl_mod.portfolio_file, engine, tenant, file_id)
+        return FileResponse(path, media_type=mime, filename=name, content_disposition_type="inline",
+                            headers={"Cache-Control": "private, max-age=86400", "X-Content-Type-Options": "nosniff"})
+
+    @app.get("/api/v1/editorial/freelance/packages")
+    def fl_packages(request: Request, q: str = "", status: str = "acik") -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        return fl_mod.list_packages(engine, tenant, user, q=q, status=status)
+
+    @app.post("/api/v1/editorial/freelance/packages", status_code=201)
+    def fl_package_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        out = _fl_call(fl_mod.create_package, engine, tenant, user, body)
+        admin_mod.audit(engine, user, "create", "freelance_package", out["id"], out["title"], {"tasks": len(body.get("tasks") or [])})
+        return out
+
+    @app.get("/api/v1/editorial/freelance/packages/{package_id}")
+    def fl_package(package_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return _fl_call(fl_mod.get_package, engine, tenant, package_id)
+
+    @app.patch("/api/v1/editorial/freelance/packages/{package_id}")
+    def fl_package_update(package_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        _fl_call(fl_mod.update_package, engine, tenant, user, package_id, body)
+        admin_mod.audit(engine, user, "update", "freelance_package", package_id, None, body)
+        return {"ok": True}
+
+    @app.post("/api/v1/editorial/freelance/packages/{package_id}/tasks", status_code=201)
+    def fl_tasks_add(package_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        n = _fl_call(fl_mod.add_tasks, engine, tenant, user, package_id, list(body.get("tasks") or []))
+        admin_mod.audit(engine, user, "create", "freelance_task", package_id, None, {"tasks": n})
+        return {"added": n}
+
+    @app.patch("/api/v1/editorial/freelance/tasks/{task_id}")
+    def fl_task_update(task_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        _fl_call(fl_mod.update_task, engine, tenant, user, task_id, body)
+        admin_mod.audit(engine, user, "update", "freelance_task", task_id, None, body)
+        return {"ok": True}
+
+    @app.delete("/api/v1/editorial/freelance/tasks/{task_id}")
+    def fl_task_delete(task_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        _fl_call(fl_mod.delete_task, engine, tenant, user, task_id)
+        admin_mod.audit(engine, user, "delete", "freelance_task", task_id, None, None)
+        return {"ok": True}
+
+    def _fl_notify_assign(engine: Any, tenant: str, user: str, display: str, done: list[dict[str, Any]]) -> dict[str, int]:
+        """Atanan her kişiye paketin yazışmasından tek e-posta: görevleri, miktarı, ücreti, termini."""
+        mailer = _fl_mailer(engine, tenant, user)
+        by: dict[tuple[str, str], list[str]] = {}
+        for d in done:
+            if d.get("personId") and d.get("packageId"):
+                by.setdefault((d["packageId"], d["personId"]), []).append(d["taskId"])
+        sent = {"gonderildi": 0, "diger": 0}
+        for (pkg_id, person_id), task_ids in by.items():
+            pkg = fl_mod.get_package(engine, tenant, pkg_id)
+            lines = []
+            for t in pkg["tasks"]:
+                if t["id"] in task_ids:
+                    money = f"{t['amount']:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+                    lines.append(f"• {t['title']}: {t['units']:g} {t['unit']}, {money} ₺ (KDV hariç)"
+                                 + (f", termin {t['due']}" if t["due"] else ""))
+            text = "\n".join([f"Merhaba,", "", f"«{pkg['title']}»" + (f" ({pkg['bookTitle']})" if pkg.get("bookTitle") else "")
+                              + " işinde size şu görevler verildi:", "", *lines]
+                             + (["", "Açıklama:", pkg["brief"]] if pkg.get("brief") else []))
+            out = fl_mod.post_message(engine, tenant, user, display, f"p:{pkg_id}",
+                                      {"kind": "giden", "body": text, "personId": person_id}, mailer)
+            sent["gonderildi" if out["emailStatus"] == "gonderildi" else "diger"] += 1
+        return sent
+
+    @app.post("/api/v1/editorial/freelance/assign")
+    def fl_assign(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _fl(request)
+        done = _fl_call(fl_mod.assign, engine, tenant, user, list(body.get("items") or []))
+        admin_mod.audit(engine, user, "update", "freelance_assign", None, None,
+                        [{"task": d["taskId"], "person": d.get("personId")} for d in done])
+        mail = _fl_notify_assign(engine, tenant, user, display, done) if body.get("notify") else None
+        return {"assigned": len(done), "mail": mail}
+
+    @app.post("/api/v1/editorial/freelance/suggest")
+    def fl_suggest(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return {"items": _fl_call(fl_mod.suggest, engine, tenant, [str(t) for t in body.get("taskIds") or []])}
+
+    @app.get("/api/v1/editorial/freelance/capacity")
+    def fl_capacity(request: Request, weeks: int = 8, role: str = "", start: str = "") -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return _fl_call(fl_mod.capacity, engine, tenant, weeks=weeks, role=role, start=start or None)
+
+    @app.put("/api/v1/editorial/freelance/tasks/{task_id}/delivery", status_code=201)
+    async def fl_delivery_file(task_id: str, request: Request, filename: str = "", note: str = "") -> dict[str, Any]:
+        engine, tenant, user, _ = await run_in_threadpool(_fl, request)
+        if int(request.headers.get("content-length") or 0) > fl_mod.DELIVERY_MAX:
+            raise HTTPException(413, detail={"code": "FREELANCE", "message": "Teslim dosyası 200 MB sınırını aşıyor; daha büyük dosya için bağlantı verin."})
+        data = await request.body()
+        out = await run_in_threadpool(_fl_call, fl_mod.add_delivery, engine, tenant, user, task_id,
+                                      filename=filename, data=data, note=note)
+        admin_mod.audit(engine, user, "upload", "freelance_delivery", task_id, filename, {"version": out["version"], "bytes": len(data)})
+        return out
+
+    @app.post("/api/v1/editorial/freelance/tasks/{task_id}/delivery-link", status_code=201)
+    def fl_delivery_link(task_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        out = _fl_call(fl_mod.add_delivery, engine, tenant, user, task_id, link=str(body.get("link") or ""),
+                       note=str(body.get("note") or ""))
+        admin_mod.audit(engine, user, "create", "freelance_delivery", task_id, str(body.get("link") or "")[:200], {"version": out["version"]})
+        return out
+
+    @app.post("/api/v1/editorial/freelance/deliveries/{delivery_id}/decision")
+    def fl_delivery_decide(delivery_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _fl(request)
+        out = _fl_call(fl_mod.decide_delivery, engine, tenant, user, delivery_id, body)
+        admin_mod.audit(engine, user, "approve" if out["decision"] == "kabul" else "reject", "freelance_delivery",
+                        delivery_id, out["title"], {"note": out["note"]})
+        mail = None
+        if body.get("notify") and out.get("personEmail"):
+            text = (f"Merhaba,\n\n«{out['title']}» teslimi kabul edildi. Teşekkürler." if out["decision"] == "kabul" else
+                    f"Merhaba,\n\n«{out['title']}» teslimi için düzeltme istiyoruz:\n\n{out['note']}")
+            pkg = fl_mod.get_package(engine, tenant, out["packageId"])
+            pid = next((t["personId"] for t in pkg["tasks"] if t["id"] == out["taskId"]), None)
+            mail = fl_mod.post_message(engine, tenant, user, display, f"p:{out['packageId']}",
+                                       {"kind": "giden", "body": text, "personId": pid, "taskId": out["taskId"]},
+                                       _fl_mailer(engine, tenant, user))["emailStatus"]
+        return {"ok": True, "mail": mail}
+
+    @app.get("/api/v1/editorial/freelance/deliveries/{delivery_id}/file")
+    def fl_delivery_download(delivery_id: str, request: Request):
+        from fastapi.responses import FileResponse
+        engine, tenant, _, _ = _fl(request)
+        path, name = _fl_call(fl_mod.delivery_file, engine, tenant, delivery_id)
+        return FileResponse(path, filename=name, headers={"Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff"})
+
+    @app.get("/api/v1/editorial/freelance/payable")
+    def fl_payable(request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return {"items": fl_mod.payable(engine, tenant)}
+
+    @app.get("/api/v1/editorial/freelance/payouts")
+    def fl_payouts(request: Request, status: str = "", person: str = "") -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return fl_mod.list_payouts(engine, tenant, status=status, person_id=person)
+
+    @app.post("/api/v1/editorial/freelance/payouts", status_code=201)
+    def fl_payout_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        out = _fl_call(fl_mod.create_payout, engine, tenant, user, body)
+        admin_mod.audit(engine, user, "create", "freelance_payout", out["id"], f"#{out['no']} {out['personName']}", {"total": out["total"]})
+        return out
+
+    @app.get("/api/v1/editorial/freelance/payouts/{payout_id}/export.csv")
+    def fl_payout_csv(payout_id: str, request: Request):
+        engine, tenant, user, _ = _fl(request)
+        name, data = _fl_call(fl_mod.payout_csv, engine, tenant, payout_id)
+        admin_mod.audit(engine, user, "export", "freelance_payout", payout_id, name, {"format": "csv"})
+        return Response(content=data, media_type="text/csv; charset=utf-8",
+                        headers={"Content-Disposition": f'attachment; filename="{name}"', "Cache-Control": "private, no-store"})
+
+    @app.get("/api/v1/editorial/freelance/payouts/{payout_id}")
+    def fl_payout(payout_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        return _fl_call(fl_mod.get_payout, engine, tenant, payout_id)
+
+    @app.post("/api/v1/editorial/freelance/payouts/{payout_id}/{action}")
+    def fl_payout_action(payout_id: str, action: str, request: Request, body: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        if action not in ("submit", "return", "approve", "pay", "delete"):
+            raise HTTPException(404, detail={"code": "FREELANCE", "message": "Bilinmeyen işlem."})
+        out = _fl_call(fl_mod.payout_action, engine, tenant, user, payout_id, action, body or {},
+                       _can(user, "ozellik:serbest.hakedis-onay"))
+        admin_mod.audit(engine, user, {"approve": "approve", "return": "reject", "delete": "delete"}.get(action, "update"),
+                        "freelance_payout", payout_id, f"#{out['no']}", {"action": action, **{k: (body or {}).get(k) for k in ("note", "paidOn", "paidRef") if (body or {}).get(k)}})
+        return out
+
+    @app.get("/api/v1/editorial/freelance/inbox")
+    def fl_inbox(request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        return fl_mod.inbox(engine, tenant, user)
+
+    @app.get("/api/v1/editorial/freelance/threads/{thread_id}")
+    def fl_thread(thread_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _ = _fl(request)
+        return _fl_call(fl_mod.thread, engine, tenant, user, thread_id)
+
+    @app.post("/api/v1/editorial/freelance/threads/{thread_id}/messages", status_code=201)
+    def fl_message(thread_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, display = _fl(request)
+        mailer = _fl_mailer(engine, tenant, user) if body.get("kind") == "giden" else None
+        out = _fl_call(fl_mod.post_message, engine, tenant, user, display, thread_id, body, mailer)
+        if body.get("kind") in ("giden", "gelen"):
+            admin_mod.audit(engine, user, "create", "freelance_message", thread_id, None,
+                            {"kind": body.get("kind"), "email": out["emailStatus"]})
+        return out
+
+    @app.get("/api/v1/editorial/freelance/logo/cards")
+    def fl_logo_cards(request: Request, q: str = "") -> dict[str, Any]:
+        _fl(request)
+        try:
+            return fl_logo.cards(_fl_logo_run, q)
+        except fl_logo.LogoError as e:
+            raise HTTPException(e.status, detail={"code": "FREELANCE", "message": str(e)}) from e
+
+    @app.get("/api/v1/editorial/freelance/people/{person_id}/logo")
+    def fl_person_logo(person_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, _, _ = _fl(request)
+        person = _fl_call(fl_mod.get_person, engine, tenant, person_id)
+        if not person.get("logoCard"):
+            return {"found": False, "code": None, "year": fl_logo.YEAR, "lines": []}
+        try:
+            return fl_logo.movements(_fl_logo_run, person["logoCard"])
+        except fl_logo.LogoError as e:
+            raise HTTPException(e.status, detail={"code": "FREELANCE", "message": str(e)}) from e
 
     # ------------------------------------------------------------------ kitaba soru (editör motoru)
     # Köprü editörün veritabanına dokunmaz; yalnız editör motorunun OpenAI uyumlu API'sinden sorar (ters tünel).

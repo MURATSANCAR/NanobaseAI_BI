@@ -118,9 +118,19 @@
       "label": "Kitap tasarım"
     },
     {
+      "key": "sayfa:serbest-calisanlar",
+      "area": "editoryal",
+      "label": "Serbest çalışanlar"
+    },
+    {
       "key": "sayfa:kisiler",
       "area": "kayitlar",
       "label": "Kişiler"
+    },
+    {
+      "key": "sayfa:yazar-iliskileri",
+      "area": "kayitlar",
+      "label": "Yazar ilişkileri"
     },
     {
       "key": "sayfa:basin-web",
@@ -406,6 +416,13 @@
       "hint": "Doğru / yanlış alarm"
     },
     {
+      "key": "ozellik:yazar-iliski.yaz",
+      "area": "kayitlar",
+      "page": "sayfa:yazar-iliskileri",
+      "label": "Yazar kartı ve görüşme yazma",
+      "hint": "Yeni yazar kartı, aşama değiştirme, havuza alma, randevu ve görüşme notu"
+    },
+    {
       "key": "ozellik:tasarim.uret",
       "area": "editoryal",
       "page": "sayfa:kitap-tasarim",
@@ -434,6 +451,21 @@
       "page": "sayfa:editor-atama",
       "label": "Kural tablosunu onaylama",
       "hint": "Taslağı yürürlüğe alma; önceki sürüm arşive geçer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:serbest.yonet",
+      "area": "editoryal",
+      "page": "sayfa:serbest-calisanlar",
+      "label": "Serbest çalışan kaydı ve iş dağıtımı",
+      "hint": "Kişi kaydı ve portfolyo, iş paketi, atama, teslim kararı, hakediş taslağı"
+    },
+    {
+      "key": "ozellik:serbest.hakedis-onay",
+      "area": "editoryal",
+      "page": "sayfa:serbest-calisanlar",
+      "label": "Hakediş onayı ve ödeme kaydı",
+      "hint": "Onay bekleyen hakedişi onaylama, geri gönderme, ödendi işaretleme (hazırlayan onaylayamaz)",
       "explicit": true
     },
     {
