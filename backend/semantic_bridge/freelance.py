@@ -50,6 +50,8 @@ TASK_STATES = ("atanmadi", "atandi", "calisiyor", "teslim", "revizyon", "onaylan
 #: Kapasiteyi dolduran durumlar (kişinin elinde olan iş).
 ACTIVE = ("atandi", "calisiyor", "revizyon")
 PAYOUT_STATES = ("taslak", "onay", "onaylandi", "odendi")
+#: Silinen taslak: listelerde görünmez, numarası yeniden verilmez.
+DELETED = "silindi"
 
 PORTFOLIO_EXT = {"jpg": "image/jpeg", "jpeg": "image/jpeg", "png": "image/png", "webp": "image/webp",
                  "gif": "image/gif", "pdf": "application/pdf"}
@@ -503,7 +505,7 @@ def get_person(engine: sa.engine.Engine, tenant: str, person_id: str) -> dict[st
                              .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
                              .where(TASKS.c.person_id == person_id, TASKS.c.status != "iptal")
                              .order_by(TASKS.c.due.desc().nulls_last(), TASKS.c.created_at.desc())).all()
-        payouts = conn.execute(sa.select(PAYOUTS).where(PAYOUTS.c.person_id == person_id)
+        payouts = conn.execute(sa.select(PAYOUTS).where(PAYOUTS.c.person_id == person_id, PAYOUTS.c.status != DELETED)
                                .order_by(PAYOUTS.c.created_at.desc())).all()
     out = _person_out(row)
     out["stats"] = _stats(list(tasks), _today())
@@ -1191,6 +1193,8 @@ def list_payouts(engine: sa.engine.Engine, tenant: str, *, status: str = "", per
         PAYOUTS.c.tenant_id == tenant)
     if status in PAYOUT_STATES:
         stmt = stmt.where(PAYOUTS.c.status == status)
+    else:
+        stmt = stmt.where(PAYOUTS.c.status != DELETED)
     if person_id:
         stmt = stmt.where(PAYOUTS.c.person_id == person_id)
     with engine.connect() as conn:
@@ -1266,9 +1270,9 @@ def payout_action(engine: sa.engine.Engine, tenant: str, user: str, payout_id: s
         elif action == "delete":
             if p.status != "taslak":
                 raise FreelanceError("Yalnız taslak hakediş silinir.", 409)
+            # Belge silinmez, «silindi» olur: numarası tekrar verilmez, satırları iz olarak kalır; işler serbest kalır.
             conn.execute(sa.update(TASKS).where(TASKS.c.payout_id == payout_id).values(payout_id=None))
-            conn.execute(sa.delete(PAYOUT_LINES).where(PAYOUT_LINES.c.payout_id == payout_id))
-            conn.execute(sa.delete(PAYOUTS).where(PAYOUTS.c.id == payout_id))
+            conn.execute(sa.update(PAYOUTS).where(PAYOUTS.c.id == payout_id).values(status="silindi"))
             _system(conn, tenant, thread, user, f"Hakediş #{p.no} taslağı silindi; işler ödenecekler listesine döndü.")
         else:
             raise FreelanceError("Bilinmeyen işlem.")
@@ -1283,7 +1287,7 @@ def payout_csv(engine: sa.engine.Engine, tenant: str, payout_id: str) -> tuple[s
         return '"' + s.replace('"', '""') + '"' if any(c in s for c in ';"\n') else s
 
     rows = [["Hakediş", f"#{p['no']}"], ["Kişi", p["personName"]], ["Logo cari kodu", p["person"]["logoCard"] or ""],
-            ["Durum", {"taslak": "Taslak", "onay": "Onay bekliyor", "onaylandi": "Onaylandı", "odendi": "Ödendi"}[p["status"]]],
+            ["Durum", {"taslak": "Taslak", "onay": "Onay bekliyor", "onaylandi": "Onaylandı", "odendi": "Ödendi", DELETED: "Silindi"}[p["status"]]],
             [], ["Açıklama", "Miktar", "Birim", "Birim ücret (₺)", "Tutar (₺)"]]
     rows += [[ln["description"], ln["units"], ln["unit"], ln["unitPrice"], ln["amount"]] for ln in p["lines"]]
     rows += [[], ["Toplam (KDV hariç)", "", "", "", p["total"]]]
@@ -1448,7 +1452,8 @@ def overview(engine: sa.engine.Engine, tenant: str, user: str) -> dict[str, Any]
                              .join(PACKAGES, PACKAGES.c.id == TASKS.c.package_id)
                              .where(TASKS.c.tenant_id == tenant, PACKAGES.c.status != "iptal")).all()
         pays = conn.execute(sa.select(PAYOUTS.c.status, sa.func.count(), sa.func.coalesce(sa.func.sum(PAYOUTS.c.total), 0))
-                            .where(PAYOUTS.c.tenant_id == tenant).group_by(PAYOUTS.c.status)).all()
+                            .where(PAYOUTS.c.tenant_id == tenant, PAYOUTS.c.status != DELETED)
+                            .group_by(PAYOUTS.c.status)).all()
         threads = [r[0] for r in conn.execute(sa.select(MESSAGES.c.thread).distinct().where(MESSAGES.c.tenant_id == tenant))]
         unread = sum(_unread(conn, tenant, user, threads).values())
     pc = dict(people)

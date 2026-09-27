@@ -16,7 +16,7 @@ import { ConfirmButton, Empty, FieldBox, PAYOUT_STATUS, day, q2, stamp, tl, toda
  * kaydı ayrıca verilen yetkiyle yapılır. Ödeme Logo'da yapılır; burada tarih ve belge/açıklama tutulur.
  */
 
-const FILTERS: Array<{ key: '' | FlPayoutHead['status']; label: string }> = [
+const FILTERS: Array<{ key: '' | Exclude<FlPayoutHead['status'], 'silindi'>; label: string }> = [
   { key: '', label: 'Hepsi' },
   { key: 'taslak', label: 'Taslak' },
   { key: 'onay', label: 'Onay bekliyor' },
@@ -27,7 +27,7 @@ const FILTERS: Array<{ key: '' | FlPayoutHead['status']; label: string }> = [
 export default function PayoutsPane({ ctx }: { ctx: FlCtx }) {
   const [params, setParams] = useSearchParams();
   const open = params.get('hakedis');
-  const [status, setStatus] = useState<'' | FlPayoutHead['status']>(ctx.canApprove && (ctx.ov.payouts.onay?.count ?? 0) > 0 ? 'onay' : '');
+  const [status, setStatus] = useState<'' | Exclude<FlPayoutHead['status'], 'silindi'>>(ctx.canApprove && (ctx.ov.payouts.onay?.count ?? 0) > 0 ? 'onay' : '');
   const payable = useQuery({ queryKey: ['fl', 'payable'], queryFn: freelanceApi.payable });
   const list = useQuery({ queryKey: ['fl', 'payouts', status], queryFn: () => freelanceApi.payouts({ status }), placeholderData: (p) => p });
   const setOpen = (id: string | null) => {

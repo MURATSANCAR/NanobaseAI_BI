@@ -61,6 +61,7 @@ export const PAYOUT_STATUS: Record<FlPayoutHead['status'], { label: string; tone
   onay: { label: 'Onay bekliyor', tone: 'warn' },
   onaylandi: { label: 'Onaylandı', tone: 'violet' },
   odendi: { label: 'Ödendi', tone: 'ok' },
+  silindi: { label: 'Silindi', tone: 'err' },
 };
 
 export const roleLabel = (roles: FlRole[] | undefined, key: string) => roles?.find((r) => r.key === key)?.label ?? key;

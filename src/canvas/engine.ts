@@ -2623,7 +2623,7 @@ export type FlPayoutHead = {
   no: number;
   personId: string;
   personName: string | null;
-  status: 'taslak' | 'onay' | 'onaylandi' | 'odendi';
+  status: 'taslak' | 'onay' | 'onaylandi' | 'odendi' | 'silindi';
   total: number;
   note: string | null;
   returnNote: string | null;
@@ -2718,7 +2718,7 @@ export type FlOverview = {
   people: { active: number; passive: number };
   tasks: { unassigned: number; active: number; late: number; review: number };
   payable: number;
-  payouts: Partial<Record<FlPayoutHead['status'], { count: number; total: number }>>;
+  payouts: Partial<Record<Exclude<FlPayoutHead['status'], 'silindi'>, { count: number; total: number }>>;
   unread: number;
   roles: FlRole[];
   units: string[];
@@ -2800,7 +2800,7 @@ export const freelanceApi = {
   deliveryUrl: (id: string) => `${ENGINE_BASE}${FL}/deliveries/${enc(id)}/file`,
   payable: () => send<{ items: FlPayable[] }>('GET', `${FL}/payable`, undefined, 30_000),
   payouts: (p: { status?: string; person?: string } = {}) =>
-    send<{ items: FlPayoutHead[]; totals: Record<FlPayoutHead['status'], number> }>('GET', `${FL}/payouts${qs(p)}`, undefined, 30_000),
+    send<{ items: FlPayoutHead[]; totals: Record<Exclude<FlPayoutHead['status'], 'silindi'>, number> }>('GET', `${FL}/payouts${qs(p)}`, undefined, 30_000),
   payout: (id: string) => send<FlPayout>('GET', `${FL}/payouts/${enc(id)}`, undefined, 30_000),
   createPayout: (b: { personId: string; taskIds?: string[]; note?: string }) =>
     send<{ id: string; no: number; total: number; personName: string }>('POST', `${FL}/payouts`, b, 30_000),
