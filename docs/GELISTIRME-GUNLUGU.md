@@ -1,5 +1,20 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Bütün Claude oturumları md'ye döküldü, her tur sonunda otomatik güncelleniyor
+
+- **Neden:** kullanıcı soldaki bütün oturumların ve yapılanların eksiksiz md'ye yazılmasını, bunun kod yazıldıkça /
+  analiz yapıldıkça / konuşuldukça sürekli sürmesini istedi.
+- **Ne yapıldı:** `~/.claude/scripts/oturum-kaydi/oturum_md.py` konuşma kaydını (JSONL) okuyup oturum başına bir md
+  yazar: başlık, proje, dal, tarih, istek listesi, değiştirilen dosyalar, commitler, Claude'un son mesajı ve tam akış
+  (kullanıcı mesajları, Claude'un metinleri, her araç çağrısı, hatalar, alt ajan raporları, başka oturum bildirimleri).
+  Genel `~/.claude/settings.json`'a Stop / PreCompact / SessionEnd kancası eklendi (arka planda, turu bekletmez).
+  Çıktı `~/Documents/Oturum-Kayitlari/`: 220 oturum (147 kenar çubuğunda + 73 arşiv), 8 proje, 31 MB; `README.md` dizini.
+- **Kayıp:** 6 Eylül öncesi 47 oturumun konuşma kaydını Claude Code'un 30 günlük temizliği silmiş; onlar için yalnız
+  başlık/tarih/dal ve git izi yazıldı. Tekrar olmasın diye `cleanupPeriodDays` 36500 yapıldı.
+- **Gizli değer:** şifre/jeton kalıpları (password=, tsql/sqlcmd -P, sshpass -p, Bearer, sk-/ghp_/hf_, JWT, URL içi
+  kullanıcı:şifre) `***` ile maskelenir; ek değerler `~/.claude/scripts/oturum-kaydi/gizli-degerler.txt`'e yazılabilir.
+- **Neden depo dışı:** kanca her turda dosyayı değiştirir (worktree hiç temizlenmezdi) ve bu depo git archive ile
+  müşteri VM'ine gidiyor; diğer projelerin oturumları oraya girmemeli.
 ## 2026-09-28 (02:00) — Müşteri VM'ine `c6699f5d` kuruldu (M2, M6, M7, M46, bülten, Yetki Aşama C, çeviri düzeltmeleri)
 
 - **Karar (kullanıcı onayıyla):** VM `cec2bbe3`'teydi (Aşama B; M8 ve M4 dünkü 00:21 kurulumuyla zaten oradaydı). Test sunucusundaki kaynak `c6699f5d` ile md5 birebir eşti. Test köprüsü 01:31'de başlamıştı, 01:40'ta gelen dosyaları yüklememişti; yeniden başlatıldı. `main`in sonraki hâli (`b132f836`: M10 İlk baskı, M12 Üretim) test sunucusunda kurulu değil → VM'e **gitmedi**; VM'deki sürüm `c6699f5d`.

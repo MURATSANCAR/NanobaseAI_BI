@@ -256,6 +256,7 @@ Ayrıntı proje belleklerinde: `semantic-production-deployment`, `bi-app-vm-55`,
 - **Kokpit yayını:** kaynak sunucuda derlenir. `rsync -a --delete src/ nanobase-direct:/data/nanobaseai/bi/frontend/src/`, sunucuda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas npm run build`, sonra `sudo rsync -a --delete --no-o --no-g dist/ /data/nanobaseai/bi/cockpit/dist/`. Commit etmek yayınlamak değildir; canlıdaki `index.html` tarihine bak.
 
 - Bu proje için ayrıca kalıcı bellek kayıtları `~/.claude/projects/.../memory/MEMORY.md` altında tutulur (semantic layer kararları, sertifikalama, kalite kapısı, vb.) — kod tabanından türetilemeyen proje bağlamı orada.
+- **Oturum kayıtları (2026-09-28):** bütün Claude oturumları (bu depo ve diğer projeler) her tur sonunda `~/Documents/Oturum-Kayitlari/<Proje>/` altına md olarak yazılır; dizin `README.md`. Depo dışında tutulur (kanca her turda yazar, worktree kirlenmez; VM paketine girmez). Betik `~/.claude/scripts/oturum-kaydi/oturum_md.py`, kanca genel `~/.claude/settings.json`. «Başka oturumda ne yapıldı» sorusunun ilk kaynağı burası.
 - Bu dosya + `docs/GELISTIRME-GUNLUGU.md` çifti bir **talimat**tır, hook değildir: oturumdaki Claude'un CLAUDE.md'yi okuyup uygulamasına bağlıdır, zorlayıcı değildir. Gerçek zorlama istenirse `.claude/settings.json`'a bir hook eklenebilir (örn. commit sonrası günlük güncellendi mi kontrolü) — bu ayrı bir iş, henüz yapılmadı.
 
 
