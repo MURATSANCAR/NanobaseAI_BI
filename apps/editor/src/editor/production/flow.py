@@ -166,10 +166,11 @@ async def upscale_activity(job: str, jid: str, gid: str, new_gid: str, page: str
 
 
 @activity.defn(name="production_epub")
-async def epub_activity(job: str, layout: str, by: str) -> None:
-    """E-kitap (GPU'suz; alt metin önerisi model gateway'inden): durum epub/state.json'da (epub.build_job yazar)."""
+async def epub_activity(job: str, layout: str, by: str, audio: bool = False) -> None:
+    """E-kitap (GPU'suz; alt metin önerisi model gateway'inden): durum epub/state.json'da (epub.build_job yazar).
+    `audio`: sesli e-kitap (sayfa sesleri önceden üretilmiş olmalı; model çağrılmaz)."""
     from . import epub, studio
-    await _beating(epub.build_job(studio.job_dir(job), layout, by))
+    await _beating(epub.build_job(studio.job_dir(job), layout, by, audio=audio))
 
 
 @activity.defn(name="production_coloring")
@@ -301,8 +302,8 @@ class AssetUpscale:
 @workflow.defn(name="EpubBuild")
 class EpubBuild:
     @workflow.run
-    async def run(self, job: str, layout: str, by: str) -> None:
-        await workflow.execute_activity("production_epub", args=[job, layout, by],
+    async def run(self, job: str, layout: str, by: str, audio: bool = False) -> None:
+        await workflow.execute_activity("production_epub", args=[job, layout, by, audio],
                                         start_to_close_timeout=timedelta(minutes=60),
                                         heartbeat_timeout=BEAT, retry_policy=ART_RETRY)
 

@@ -25,8 +25,9 @@ log = logging.getLogger(__name__)
 KEY = re.compile(r"^(kapak|a_[0-9a-f]{8}|g_[0-9a-f]{8})$")          # kapak, sayfa resmi, figür/fotoğraf
 BUILD = re.compile(r"^[0-9a-f]{12}$")
 # E-kitabın içindeki yol: harf/rakam/_/- klasörler, tek noktalı dosya adı; «..» ve mutlak yol olamaz.
-PATH = re.compile(r"^(?:[A-Za-z0-9_-]+/){0,4}[A-Za-z0-9_-]+\.(xhtml|css|jpg|png|svg|ttf|otf)$")
-CONTENT_MIME = {"application/xhtml+xml", "text/css", "image/jpeg", "image/png", "image/svg+xml", "font/ttf", "font/otf"}
+PATH = re.compile(r"^(?:[A-Za-z0-9_-]+/){0,4}[A-Za-z0-9_-]+\.(xhtml|css|jpg|png|svg|ttf|otf|smil|mp3)$")
+CONTENT_MIME = {"application/xhtml+xml", "text/css", "image/jpeg", "image/png", "image/svg+xml", "font/ttf", "font/otf",
+                "application/smil+xml", "audio/mpeg"}          # sesli e-kitap: ses eşlemesi ve sayfa sesleri
 IMAGE_MIME = {"image/png", "image/jpeg"}
 LAYOUTS = {"auto", "fixed", "reflow"}
 EPUB_MAX = 800 * 1024 * 1024
@@ -49,10 +50,11 @@ def view(job_id: str) -> dict:
     return editorial_studio.get_json(_base(job_id))
 
 
-def build(job_id: str, layout: str, editor: str) -> dict:
+def build(job_id: str, layout: str, audio: bool, editor: str) -> dict:
+    """`audio`: sesli e-kitap (okurken dinle). Sesi eksik sayfa varsa servis 409 AUDIO_INCOMPLETE döner."""
     if layout not in LAYOUTS:
         raise editorial_studio.StudioError(400, "E-kitap biçimi geçersiz.")
-    return editorial_studio.post_json(_base(job_id), {"layout": layout}, editor)
+    return editorial_studio.post_json(_base(job_id), {"layout": layout, "audio": bool(audio)}, editor)
 
 
 def _put(path: str, body: dict, editor: str) -> dict:
@@ -146,8 +148,9 @@ def register(app, deps: dict[str, Any] | Any) -> None:
     async def editorial_studio_epub_build(job: str, request: Request):
         b = await body(request)
         layout = str(b.get("layout") or "auto")
-        return write(request, build, job, layout, action="create", obj=job, what=f"e-kitap üretimi ({layout})",
-                     detail={"layout": layout})
+        audio = bool(b.get("audio"))
+        return write(request, build, job, layout, audio, action="create", obj=job,
+                     what=f"e-kitap üretimi ({layout}{', sesli' if audio else ''})", detail={"layout": layout, "audio": audio})
 
     @app.get(P + "/file")
     def editorial_studio_epub_file(job: str, request: Request):
@@ -193,4 +196,8 @@ def register(app, deps: dict[str, Any] | Any) -> None:
     def editorial_studio_epub_content(job: str, build_id: str, path: str, request: Request):
         auth(request)
         data, mime = call(content, job, build_id, path)
+        if mime == "audio/mpeg":                 # önizlemede dinle: iOS Safari sesi yalnız aralık desteğiyle çalar
+            from semantic_bridge.editorial_studio_narration import ranged
+            return ranged(data, request.headers.get("range"), {"Cache-Control": "private, max-age=3600",
+                                                              "X-Content-Type-Options": "nosniff"})
         return Response(content=data, media_type=mime, headers=PREVIEW_HEADERS)
