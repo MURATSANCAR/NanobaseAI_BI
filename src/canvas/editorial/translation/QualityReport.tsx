@@ -2,11 +2,11 @@ import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Download, NotebookPen } from 'lucide-react';
 import { ENGINE_ENABLED, translationApi, type QualityReport as Report } from '../../engine';
-import { Loading, Note, Pill, TableWrap, btnGhost, errText, fmtDate, nf, td, th } from '../../admin/ui';
+import { Loading, Note, Pill, TableWrap, btnGhost, errText, nf, td, th } from '../../admin/ui';
 import { dateTime, num } from '../../format';
 import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
-import { CATEGORY, ProgressBar, SEVERITY, StagePill, pair, paceText, pct } from './parts';
+import { CATEGORY, ProgressBar, SEVERITY, StagePill, fmtDay, pair, paceText, pct } from './parts';
 
 /** Kalite raporu (M4): işin gerçek kayıtlarından. MQM inceleme puanı (onaylanan kelimelere göre hata ağırlığı),
  *  inceleyenin düzeltme oranı, otomatik denetim bulguları, terim uyumu, bölüm ve gün gün ilerleme. */
@@ -230,7 +230,7 @@ function Daily({ r }: { r: Report }) {
             <tbody>
               {[...r.daily].reverse().map((d) => (
                 <tr key={d.date} className="border-t border-slate-100">
-                  <td className={td}>{fmtDate(d.date)}</td>
+                  <td className={td}>{fmtDay(d.date)}</td>
                   <td className={`${td} text-right font-mono tabular-nums`}>{nf.format(d.cevrildi)}</td>
                   <td className={`${td} text-right font-mono tabular-nums`}>{nf.format(d.onaylandi)}</td>
                   <td className={`${td} text-right font-mono tabular-nums`}>{nf.format(d.geri)}</td>
@@ -315,7 +315,7 @@ export default function QualityReport() {
             />
             <Kpi
               label="İnceleyen düzeltmesi"
-              value={r.edits.rate == null ? '—' : `%${num(r.edits.rate, 1)}`}
+              value={r.edits.rate == null ? '—' : `%${num(r.edits.rate, r.edits.rate < 1 ? 2 : 1)}`}
               help={r.edits.reviewed ? `${nf.format(r.edits.segments)} / ${nf.format(r.edits.reviewed)} onaylı segment değişti` : 'Henüz onaylanan segment yok'}
             />
             <Kpi label="Otomatik uyarı" value={nf.format(r.checks.segments)} help={`${nf.format(r.segments.cevrildi + r.segments.onaylandi + r.segments.taslak)} yazılı segmentte`} />
@@ -328,8 +328,8 @@ export default function QualityReport() {
                 {r.author ? `${r.author} · ` : ''}
                 {r.translator ? `çevirmen ${r.translatorName || r.translator}` : 'çevirmen atanmadı'}
                 {r.reviewer ? ` · inceleyen ${r.reviewerName || r.reviewer}` : ''}
-                {r.dueDate ? ` · teslim ${fmtDate(r.dueDate)}` : ''}
-                {r.completedAt ? ` · bitti ${fmtDate(r.completedAt)}` : ''}
+                {r.dueDate ? ` · teslim ${fmtDay(r.dueDate)}` : ''}
+                {r.completedAt ? ` · bitti ${fmtDay(r.completedAt)}` : ''}
               </p>
               <StagePill stage={r.stage} />
             </div>

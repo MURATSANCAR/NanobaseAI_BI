@@ -3,11 +3,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { BarChart3, Download, Loader2, NotebookPen, Plus, Send, Sparkles, Trash2, Wand2 } from 'lucide-react';
 import { ENGINE_ENABLED, translationApi, type TranslationJob, type TranslationJobDetail } from '../../engine';
-import { Loading, Note, Pill, btn, btnGhost, errText, field, fmtDate, label, nf } from '../../admin/ui';
+import { Loading, Note, Pill, btn, btnGhost, errText, field, label, nf } from '../../admin/ui';
 import { dateTime } from '../../format';
 import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
-import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, pair, paceText, pct, type PersonPick } from './parts';
+import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
 import TermBank from './TermBank';
 import Translators from './Translators';
 
@@ -167,7 +167,7 @@ function JobList({ jobs, selected, onSelect, canManage }: { jobs: TranslationJob
                     %{pct(j.words.done, j.words.total)} çevrildi · %{pct(j.words.approved, j.words.total)} onaylı
                   </span>
                 )}
-                {j.dueDate && <span className="text-canvas-muted">teslim {fmtDate(j.dueDate)}</span>}
+                {j.dueDate && <span className="text-canvas-muted">teslim {fmtDay(j.dueDate)}</span>}
                 {j.pace.overdue ? <Pill tone="err">Teslim geçti</Pill> : j.pace.late ? <Pill tone="warn">Gecikme riski</Pill> : null}
               </span>
             </button>

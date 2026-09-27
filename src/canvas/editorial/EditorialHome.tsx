@@ -12,6 +12,7 @@ import { Note, Pill, errText, nf, fmtDate } from '../admin/ui';
 import { dateTime } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import SearchBox from './SearchBox';
+import { fmtDay } from './translation/parts';
 import AskBox from './AskBox';
 
 /** Masam: editörün ana ekranı. En üstte bugün yapacağı iş, altında kendisine atanmış bütün dosyalar.
@@ -93,7 +94,7 @@ function TranslationDesk() {
                   <span className="block break-words font-semibold leading-snug">{j.title}</span>
                   <span className="block text-[11px] text-canvas-muted">
                     {translator ? 'Çevirmen' : 'İnceleyen'} · %{j.words.total ? Math.round((j.words.done / j.words.total) * 100) : 0} çevrildi
-                    {j.dueDate ? ` · teslim ${fmtDate(j.dueDate)}` : ''}
+                    {j.dueDate ? ` · teslim ${fmtDay(j.dueDate)}` : ''}
                   </span>
                 </span>
                 <span className="flex shrink-0 gap-1.5">
