@@ -147,6 +147,15 @@ def test_duplicate_ocr_supplement_is_detected_by_page_layer_text():
     assert W.duplicate_supplements(spans) == {(22, 8)}     # katmanda olan ek; yeni metin taşıyan ek kalır
 
 
+def test_spread_tells_scattered_habit_from_clustered_plot_word():
+    from editor.proofing import word_overuse as O
+    scattered = O.spread_of(list(range(1, 64, 6)), 64)
+    clustered = O.spread_of([37, 37, 38, 41, 41], 64)
+    assert "64 sayfasının 11 sayfasında" in scattered and "10/10" in scattered
+    assert "5 sayfasında" not in clustered and "3 sayfasında" in clustered
+    assert O.spread_of([], 64) == ""
+
+
 if __name__ == "__main__":
     for name, fn in list(globals().items()):
         if name.startswith("test_") and callable(fn):

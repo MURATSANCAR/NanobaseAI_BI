@@ -39,8 +39,8 @@ PARALLEL = C.setting("word_variety_parallel", 4)            # EDITOR_WORD_VARIET
 # Tik adayı türler: zarf, sıfat, fiil. Ad çoğunlukla konudur.
 TIC_POS = ("Adv", "Adj", "Verb")
 
-HABIT = "Evet: yazarın dil alışkanlığı; okur fark eder, redaksiyonda azaltılmalı."
-NATURAL = "Hayır: kitabın konusu ya da türü gereği, terim ya da bu kitapta doğal kullanım."
+HABIT = "Evet: yazarın dil alışkanlığı; kitaba yayılmış, okur fark eder, azaltılmalı."
+NATURAL = "Hayır: olay örgüsü ya da konu gereği, terim, ya da bu türde doğal kullanım."
 
 
 def _corpus(generation_id: str, form: str | None) -> tuple[dict[str, int], int, int, str]:
@@ -66,13 +66,27 @@ def _corpus(generation_id: str, form: str | None) -> tuple[dict[str, int], int, 
     return dict(counts), total, len(rows), scope
 
 
-def prompt(what: str, lemma: str, row: dict, books: int, examples: list[str], x: str, y: str, scope: str = "bütün") -> str:
+def prompt(what: str, lemma: str, row: dict, books: int, examples: list[str], x: str, y: str, scope: str = "bütün",
+           spread: str = "") -> str:
     other = (f"yayınevinin {scope} öbür {books} kitabında 10.000 sözcükte {row['corpus_per10k']}" if row["corpus_count"]
              else f"yayınevinin {scope} öbür {books} kitabında hiç geçmiyor")
     return (f"Okuduğun metin {what}; redaksiyonunu yapan deneyimli bir editörsün. «{lemma}» sözcüğü bu kitapta {row['count']} kez "
-            f"geçiyor (10.000 sözcükte {row['per10k']}); {other}. Kitaptan örnekler ([[ ]] içinde):\n"
+            f"geçiyor (10.000 sözcükte {row['per10k']}); {other}. {spread} Kitaptan örnekler ([[ ]] içinde):\n"
             + "\n".join(f"- {e}" for e in examples)
-            + f"\n\nBu sık kullanım yazarın bir dil alışkanlığı (tik) mı?\nA) {x}\nB) {y}\nYalnız A ya da B yaz.")
+            + "\n\nYazarın dil alışkanlığı (tik) kitabın her yerine dağılır ve anlatımın rengidir («aslında», «sanki», "
+              "«birden»); hikâyenin olay örgüsü ya da konusu gereği geçen sözcük (bir sahnede ya da konuda toplanan) tik "
+              "değildir. Bu sözcüğü redaksiyonda yazara «bunu çok kullanıyorsun, azalt» diye işaretler miydin?"
+            + f"\nA) {x}\nB) {y}\nYalnız A ya da B yaz.")
+
+
+def spread_of(pages: list[int], book_pages: int) -> str:
+    """Sözcüğün kitaba dağılımı, model için düz cümle: kaç sayfada, kitabın kaç onda birinde."""
+    if not pages or book_pages <= 0:
+        return ""
+    lo, hi = min(pages), max(pages)
+    tenths = len({min(9, int((p - lo) / max(hi - lo + 1, 1) * 10)) for p in pages}) if hi > lo else 1
+    return (f"Kitabın {book_pages} sayfasının {len(set(pages))} sayfasında geçiyor; geçtiği bölümün {tenths}/10 "
+            f"diliminde görünüyor.")
 
 
 async def run(generation_id: str):
@@ -97,6 +111,7 @@ async def run(generation_id: str):
     stats["candidates"] = len(rows)
 
     what = book_type.describe(prof)          # «yetişkinler için kurgu bir kitap»
+    book_pages = len({o.page for o in occs})
     span_text = rd["span_text"]
     llm = Llm(generation_id)
     sem = asyncio.Semaphore(PARALLEL)
@@ -109,8 +124,9 @@ async def run(generation_id: str):
     async def judge(row):
         os_ = by[row["lemma"]]
         ex = [W.marked_context(span_text[(o.page, o.span)], o.start, o.end, CONTEXT_CHARS) for o in examples(os_)]
+        spread = spread_of([o.page for o in os_], book_pages)
         async with sem:
-            p, _ = await J._ab(llm, lambda x, y: prompt(what, row["lemma"], row, books, ex, x, y, scope), HABIT, NATURAL,
+            p, _ = await J._ab(llm, lambda x, y: prompt(what, row["lemma"], row, books, ex, x, y, scope, spread), HABIT, NATURAL,
                                sorted({o.page for o in examples(os_)}))
         return row, ex, p
 
