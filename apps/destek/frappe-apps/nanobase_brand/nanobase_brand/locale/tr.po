@@ -165,3 +165,2042 @@ msgstr "Bilgi deposu hazır değil. Bilgi Bankası Ayarları'nı yapın ve bir k
 msgid "The {0} agent is missing. Create a Flow Model first to auto-provision it."
 msgstr "{0} ajanı yok. Kendiliğinden oluşması için önce bir NanobaseAI Modeli ekleyin."
 
+msgid ""
+"<a href=\"https://docs.frappe.io/framework/user/en/api/rest#1-token-based-authentication\" target=\"_blank\">\n"
+"  Click here to learn about token-based authentication\n"
+"</a>"
+msgstr ""
+"<a href=\"https://docs.frappe.io/framework/user/en/api/rest#1-token-based-authentication\" target=\"_blank\">\n"
+"  Token tabanlı kimlik doğrulama hakkında bilgi almak için buraya tıklayın\n"
+"</a>"
+
+msgid ""
+"<p><strong>{{ __(\"Condition Examples\") }}:</strong></p>\n"
+"<pre><code class=\"language-python\">doc.status==\"Open\"<br>doc.due_date==nowdate()<br>doc.total &gt; 40000\n"
+"</code></pre>\n"
+msgstr ""
+"<p><strong>{{ __(\"Koşul Örnekleri\") }}:</strong></p>\n"
+"<pre><code class=\"language-python\">doc.status==\"Open\"<br>doc.due_date==nowdate()<br>doc.total &gt; 40000\n"
+"</code></pre>\n"
+
+msgid ""
+"<p><strong>{{ __(\"Condition Examples\") }}:</strong></p>\n"
+"<pre>doc.status==\"Open\"<br>doc.due_date==nowdate()<br>doc.total &gt; 40000\n"
+"</pre>"
+msgstr ""
+"<p><strong>{{ __(\"Koşul Örnekleri\") }}:</strong></p>\n"
+"<pre>doc.status==\"Open\"<br>doc.due_date==nowdate()<br>doc.total &gt; 40000\n"
+"</pre>"
+
+msgid "A folder cannot have a File URL"
+msgstr "Bir klasörün Dosya URL'si olamaz"
+
+msgid "A0"
+msgstr "A0"
+
+msgid "A1"
+msgstr "A1"
+
+msgid "A2"
+msgstr "A2"
+
+msgid "A3"
+msgstr "A3"
+
+msgid "A4"
+msgstr "A4"
+
+msgid "A5"
+msgstr "A5"
+
+msgid "A6"
+msgstr "A6"
+
+msgid "A7"
+msgstr "A7"
+
+msgid "A8"
+msgstr "A8"
+
+msgid "A9"
+msgstr "A9"
+
+msgid "API"
+msgstr "API"
+
+msgid "Add Series Prefix"
+msgstr "Seri Öneki Ekle"
+
+msgid "Add attachment"
+msgstr "Ek ekle"
+
+msgid "Add page break"
+msgstr "Sayfa sonu ekle"
+
+msgid "Add section above"
+msgstr "Üstte bölüm ekle"
+
+msgid "Administrator accessed {0} on {1} via IP Address {2}."
+msgstr "Yönetici, {2} IP adresi üzerinden {1} tarihinde {0} kaydına erişti."
+
+msgid "Align Value"
+msgstr "Değeri Hizala"
+
+msgid "Allowed Doctypes for Guest Uploads"
+msgstr "Misafir Yüklemeleri için İzin Verilen Belge Türleri"
+
+msgid "Allowed special characters are '/' and '-'"
+msgstr "İzin verilen özel karakterler '/' ve '-'dir"
+
+msgid "Allows printing or PDF download of documents."
+msgstr "Belgelerin yazdırılmasına veya PDF olarak indirilmesine izin verir."
+
+msgid "Allows sharing document access with other users."
+msgstr "Belge erişimini diğer kullanıcılarla paylaşmaya izin verir."
+
+msgid "Allows the user to access reports related to the document."
+msgstr "Kullanıcının belgeyle ilgili raporlara erişmesine izin verir."
+
+msgid "Allows the user to create new documents."
+msgstr "Kullanıcının yeni belgeler oluşturmasına izin verir."
+
+msgid "Allows the user to delete documents."
+msgstr "Kullanıcının belgeleri silmesine izin verir."
+
+msgid "Allows the user to edit existing records they have access to."
+msgstr "Kullanıcının erişebildiği mevcut kayıtları düzenlemesine izin verir."
+
+msgid "Allows the user to email from the document."
+msgstr "Kullanıcının belgeden e-posta göndermesine izin verir."
+
+msgid "Allows the user to export data from the Report view."
+msgstr "Kullanıcının Rapor görünümünden veri dışa aktarmasına izin verir."
+
+msgid "Allows the user to search and see records."
+msgstr "Kullanıcının kayıtları aramasına ve görmesine izin verir."
+
+msgid "Allows the user to use Data Import tool to create / update records."
+msgstr "Kullanıcının Veri İçe Aktarma aracını kullanarak kayıt oluşturma/güncelleme yapmasına izin verir."
+
+msgid "Allows the user to view the document."
+msgstr "Kullanıcının belgeyi görüntülemesine izin verir."
+
+msgid "Allows users to enable the mask property for any field of the respective doctype."
+msgstr "Kullanıcıların ilgili belge türünün herhangi bir alanı için maske özelliğini etkinleştirmesine izin verir."
+
+msgid "App name is required."
+msgstr "Uygulama adı zorunludur."
+
+msgid "App that produced this notification; used to scope app-specific panels. Derived from the reference document when not set explicitly."
+msgstr "Bu bildirimi üreten uygulama; uygulama özelinde panoları kapsamak için kullanılır. Açıkça ayarlanmadığında referans belgeden türetilir."
+
+msgid "App {} is not installed"
+msgstr "{} uygulaması yüklü değil"
+
+msgid "Apps Involved"
+msgstr "İlgili Uygulamalar"
+
+msgid "Are you sure you want to log out?"
+msgstr "Çıkış yapmak istediğinize emin misiniz?"
+
+msgid "Are you sure you want to relink this communication?"
+msgstr "Bu iletişimi yeniden bağlamak istediğinizden emin misiniz?"
+
+msgid "Are you sure you want to resend the invitation?"
+msgstr "Daveti yeniden göndermek istediğinizden emin misiniz?"
+
+msgid "Arial"
+msgstr "Arial"
+
+msgid "Attachment Gallery"
+msgstr "Ek Galerisi"
+
+msgid "Attachment Gallery filters must target File."
+msgstr "Ek Galerisi filtreleri Dosya hedeflemelidir."
+
+msgid "Attendee not found in this event."
+msgstr "Bu etkinlikte katılımcı bulunamadı."
+
+msgid "Attending"
+msgstr "Katılıyor"
+
+msgid "Authorization POST requests must use application/x-www-form-urlencoded"
+msgstr "Yetkilendirme POST istekleri application/x-www-form-urlencoded kullanmalıdır"
+
+msgid "Auto repeat skipped. The owner cannot access the reference document."
+msgstr "Otomatik tekrarı atlandı. Sahip, referans belgeye erişemez."
+
+msgid "B0"
+msgstr "B0"
+
+msgid "B1"
+msgstr "B1"
+
+msgid "B10"
+msgstr "B10"
+
+msgid "B6"
+msgstr "B6"
+
+msgid "B7"
+msgstr "B7"
+
+msgid "B8"
+msgstr "B8"
+
+msgid "B9"
+msgstr "B9"
+
+msgid "Back to sign in"
+msgstr "Girişe geri dön"
+
+msgid "Begin typing for results."
+msgstr "Sonuçlar için yazmaya başlayın."
+
+msgid "Beta"
+msgstr "Beta"
+
+msgid "Billing Contact"
+msgstr "Faturalandırma Kişisi"
+
+msgid "Both DocType and Name required"
+msgstr "Hem Belge Türü hem de Ad gerekli"
+
+msgid "CC"
+msgstr "BCC"
+
+msgctxt "Email Recipients"
+msgid "CC"
+msgstr "BCC"
+
+msgid "CMD"
+msgstr "CMD"
+
+msgid "Cannot change field type in {0}: some existing values cannot be converted to the new type"
+msgstr "{0} içinde alan türü değiştirilemez: bazı mevcut değerler yeni türe dönüştürülemez"
+
+msgid "Cannot configure Core DocTypes for Global Search."
+msgstr "Küresel Arama için Çekirdek Belge Türleri yapılandırılamaz."
+
+msgid "Cannot register an empty XLSX style"
+msgstr "Boş bir XLSX stili kaydedilemez"
+
+msgid "Category for the in-app notification. Used for filtering and per-user email preferences."
+msgstr "Uygulama içi bildirim için kategori. Filtreleme ve kullanıcı başına e-posta tercihleri için kullanılır."
+
+msgid "Change Letter Head"
+msgstr "Mektup Başlığını Değiştir"
+
+msgid "Change Print Format"
+msgstr "Yazdırma Biçimini Değiştir"
+
+msgid "Check columns to select, drag to set order."
+msgstr "Seçmek için sütunları işaretleyin, sıralamayı ayarlamak için sürükleyin."
+
+msgid "Check the Error Log for details."
+msgstr "Ayrıntılar için Hata Kaydını kontrol edin."
+
+msgid "Choose which notification types are emailed to you. Unchecked types still show as in-app notifications."
+msgstr "Size e-posta ile gönderilecek bildirim türlerini seçin. İşaretlenmeyen türler yine de uygulama içi bildirim olarak görünür."
+
+msgid "Clear Link"
+msgstr "Bağlantıyı Temizle"
+
+msgid "Clear all filters"
+msgstr "Tüm filtreleri temizle"
+
+msgid "Clear cache and reload"
+msgstr "Önbelleği temizle ve yeniden yükle"
+
+msgid "Click below to accept your invitation and get started."
+msgstr "Davetiyenizi kabul etmek ve başlamak için aşağıya tıklayın."
+
+msgid "Click the button below to complete your registration and set a new password."
+msgstr "Kaydınızı tamamlamak ve yeni bir şifre belirlemek için aşağıdaki düğmeye tıklayın."
+
+msgid "Click the button below to sign in to your account. This link will expire in {0} minutes."
+msgstr "Hesabınıza giriş yapmak için aşağıdaki düğmeye tıklayın. Bu bağlantı {0} dakika içinde sona erecektir."
+
+msgid "Client Secret Basic"
+msgstr "İstemci Gizli Temel"
+
+msgid "Client Secret Post"
+msgstr "İstemci Gizli Anahtarı Gönder"
+
+msgid "Cloud settings"
+msgstr "Bulut ayarları"
+
+msgid "Column width cannot be zero."
+msgstr "Sütun genişliği sıfır olamaz."
+
+msgid "Company Abbreviation (requires ERPNext to be installed)"
+msgstr "Şirket Kısaltması (ERPNext'in yüklü olması gerekir)"
+
+msgid "Complete your registration"
+msgstr "Kayıt oluşturma işleminizi tamamlayın"
+
+msgid "Configure"
+msgstr "Yapılandır"
+
+msgid "Configure columns for {0}"
+msgstr "{0} için sütunları yapılandırın"
+
+msgid "Configure search fields"
+msgstr "Arama alanlarını yapılandırın"
+
+msgid "Configure search settings"
+msgstr "Arama ayarlarını yapılandırın"
+
+msgid "Could not generate PDF"
+msgstr "PDF oluşturulamadı"
+
+msgid "Could not reach your server: {0}"
+msgstr "Sunucunuza ulaşılamadı: {0}"
+
+msgid "Couldn't open Cloud settings. Please try again."
+msgstr "Bulut ayarları açılamadı. Lütfen tekrar deneyin."
+
+msgid "Create Account"
+msgstr "Hesap Oluştur"
+
+msgid "Create Letter Head"
+msgstr "Mektup Başlığı Oluştur"
+
+msgctxt "Description of a list view shortcut"
+msgid "Create a new document"
+msgstr "Yeni bir belge oluşturun"
+
+msgid "Cron"
+msgstr "Cron"
+
+msgid "Current Series"
+msgstr "Mevcut Seri"
+
+msgid "DB Tables"
+msgstr "DB Tabloları"
+
+msgid "DELETE"
+msgstr "SİL"
+
+msgid "DLE"
+msgstr "DLE"
+
+msgid "Day of month"
+msgstr "Ayın günü"
+
+msgid "DefaultValue"
+msgstr "VarsayılanDeğer"
+
+msgid "Delete Gravatar URLs"
+msgstr "Gravatar URL'lerini Sil"
+
+msgid "Delete Row"
+msgstr "Satırı Sil"
+
+msgid "Delete Table"
+msgstr "Tabloyu Sil"
+
+msgid "Deleted all documents successfully"
+msgstr "Tüm belgeler başarıyla silindi"
+
+msgid "Depth"
+msgstr "Derinlik"
+
+msgid "Didn't receive the link?"
+msgstr "Bağlantıyı almadınız mı?"
+
+msgid "Disable Prepared Report Automation"
+msgstr "Hazırlanmış Rapor Otomasyonunu Devre Dışı Bırak"
+
+msgid "Doc Values"
+msgstr "Belge Değerleri"
+
+msgid "DocPerm"
+msgstr "DocPerm"
+
+msgid "DocShare"
+msgstr "DocShare"
+
+msgid "Doctype To Sync"
+msgstr "Eşitleme Yapılacak Belge Türü"
+
+msgid "Document Name (ID)"
+msgstr "Belge Adı (Kimlik)"
+
+msgid "Document Naming"
+msgstr "Belge Adlandırma"
+
+msgid "Document Type is required"
+msgstr "Belge Türü zorunludur"
+
+msgid "Domain is required."
+msgstr "Alan zorunludur."
+
+msgid "Drag columns to set order. Column width is set in percentage. The total width should not be more than 100. Columns marked in red will be removed."
+msgstr "Sıralamayı ayarlamak için sütunları sürükleyin. Sütun genişliği yüzde olarak ayarlanır. Toplam genişlik 100'ü geçmemelidir. Kırmızıyla işaretlenen sütunlar kaldırılacaktır."
+
+msgid "Drag elements from the sidebar to add. Drag them back to trash."
+msgstr "Ekleme için öğeleri kenar çubuğundan sürükleyin. Geri çöpe sürükleyin."
+
+msgid "DuckDB Sync"
+msgstr "DuckDB Eşitleme"
+
+msgid "DuckDB Sync Item"
+msgstr "DuckDB Senkronizasyon Öğesi"
+
+msgid "Duplicate Filter Name"
+msgstr "Yinelenen Filtre Adı"
+
+msgid "Duration (ms)"
+msgstr "Süre (ms)"
+
+msgid "Edit Filter"
+msgstr "Filtreyi Düzenle"
+
+msgid "Edit Footer"
+msgstr "Alt Bilgiyi Düzenle"
+
+msgid "Edit Header"
+msgstr "Üst Bilgiyi Düzenle"
+
+msgid "Edit Letter Head"
+msgstr "Mektup Başlığını Düzenle"
+
+msgid "Edit Section"
+msgstr "Bölümü Düzenle"
+
+msgid "Edit {0} rows"
+msgstr "{0} satırı düzenle"
+
+msgid "Email everyone for <b>{0}</b> notifications? This adds it to every user's email preferences. Users can still opt out individually afterwards."
+msgstr "<b>{0}</b> bildirimleri için herkese e-posta gönderilsin mi? Bu, her kullanıcının e-posta tercihlerine eklenir. Kullanıcılar sonrasında bireysel olarak vazgeçebilir."
+
+msgid "Email is required."
+msgstr "E-posta zorunludur."
+
+msgid "Email me for these notification types"
+msgstr "Bu bildirim türleri için bana e-posta gönder"
+
+msgid "Enable Email Notifications for All Users"
+msgstr "Tüm Kullanıcılar için E-posta Bildirimlerini Etkinleştir"
+
+msgid "Enable Rate Limit"
+msgstr "Hız Sınırını Etkinleştir"
+
+msgid "Enable Snapshot Reports"
+msgstr "Anlık Görüntü Raporlarını Etkinleştir"
+
+msgid "Enable bulk edit for child table fields in Form view."
+msgstr "Form görünümünde alt tablo alanları için toplu düzenlemeyi etkinleştir."
+
+msgid "Enable bulk update of this field across child table rows."
+msgstr "Bu alanın alt tablo satırları arasında toplu güncellenmesini etkinleştir."
+
+msgid "Enable the notification type before emailing it to users."
+msgstr "Kullanıcılara e-posta göndermeden önce bildirim türünü etkinleştirin."
+
+msgid "Enabling email for {0} across all users in the background."
+msgstr "{0} için e-posta, arka planda tüm kullanıcılar için etkinleştiriliyor."
+
+msgid "Error validating \"Ignore User Permissions\""
+msgstr "\"Kullanıcı İzinlerini Yoksay\" doğrulama hatası"
+
+msgid "Event Notifications"
+msgstr "Etkinlik Bildirimleri"
+
+msgid "Examples:"
+msgstr "Örnekler:"
+
+msgid "Existing Gravatar URLs may still be stored on User and Contact records. Do you want to delete these URLs now?"
+msgstr "Mevcut Gravatar URL'leri hâlâ Kullanıcı ve Kişi kayıtlarında saklanıyor olabilir. Bu URL'leri şimdi silmek istiyor musunuz?"
+
+msgid "Existing Gravatar URLs may still be stored on User, Contact, and Lead records. Do you want to delete these URLs now?"
+msgstr "Mevcut Gravatar URL'leri hâlâ Kullanıcı, Kişi ve Potansiyel Müşteri kayıtlarında saklanıyor olabilir. Bu URL'leri şimdi silmek istiyor musunuz?"
+
+msgid "Fieldtype of {0} in {1} cannot be changed from {2} to {3}"
+msgstr "{1} içindeki {0} alan türü {2}'den {3}'e değiştirilemez"
+
+msgid "Filename"
+msgstr "Dosya Adı"
+
+msgid "Filters applied to Link queries and Attachment Gallery files."
+msgstr "Bağlantı sorgularına ve Ek Galerisi dosyalarına uygulanan filtreler."
+
+msgid "Filters must be four-value rows with string doctypes, fields, and operators."
+msgstr "Filtreler, dize belge türleri, alanlar ve operatörler içeren dört değerli satırlar olmalıdır."
+
+msgid "Fingerprint"
+msgstr "Parmak İzi"
+
+msgid "Fingerprint Stats"
+msgstr "Parmak İzi İstatistikleri"
+
+msgid "First Seen"
+msgstr "İlk Görülme"
+
+msgid "First Used On"
+msgstr "İlk Kullanım Tarihi"
+
+msgid "Fiscal Year (requires ERPNext to be installed)"
+msgstr "Mali Yıl (ERPNext'in yüklü olması gerekir)"
+
+msgid "Followed by"
+msgstr "Sonraki"
+
+msgid "For example: If you want to include the document ID, use {0}"
+msgstr "Örneğin: Belge kimliğini dahil etmek istiyorsanız {0} kullanın"
+
+msgid "Forgot password?"
+msgstr "Şifrenizi mi unuttunuz?"
+
+msgid "Forum"
+msgstr "Forum"
+
+msgid "Frappe Framework Version"
+msgstr "NanobaseAI Çerçeve Sürümü"
+
+msgid "Frappe no longer uses Gravatar because it can disclose hashed email addresses to a third-party service. To fully stop this behavior, existing Gravatar image URLs must be deleted."
+msgstr "NanobaseAI, hash'lenmiş e-posta adreslerini üçüncü taraf bir hizmete ifşa edebileceği için artık Gravatar kullanmıyor. Bu davranışı tamamen durdurmak için mevcut Gravatar görüntü URL'lerinin silinmesi gerekir."
+
+msgid "Full name is required."
+msgstr "Ad soyad zorunludur."
+
+msgid "GET"
+msgstr "GET"
+
+msgid "Genderqueer"
+msgstr "Genderqueer"
+
+msgid "Generating PDF..."
+msgstr "PDF oluşturuluyor..."
+
+msgid "Go to Access Control section"
+msgstr "Erişim Denetimi bölümüne gidin"
+
+msgid "Good"
+msgstr "İyi"
+
+msgid "Google"
+msgstr "Google"
+
+msgid "Google Calendar - Could not find Calendar for {0}, error code {1}."
+msgstr "Google Takvim - {0} için Takvim bulunamadı, hata kodu {1}."
+
+msgid "Google Calender"
+msgstr "Google Takvim"
+
+msgid "Gravatar URL deletion has been queued."
+msgstr "Gravatar URL silme işlemi kuyruğa alındı."
+
+msgid "Gravatar URLs will not be deleted."
+msgstr "Gravatar URL'leri silinmeyecek."
+
+msgid "Great!"
+msgstr "Harika!"
+
+msgid "Guests are not allowed to upload files for {0} Doctype"
+msgstr "Misafirler, {0} Belge Türü için dosya yükleyemez"
+
+msgid "HEAD"
+msgstr "HEAD"
+
+msgid "HERE"
+msgstr "BURADA"
+
+msgid "Handlers"
+msgstr "İşleyiciler"
+
+msgid "Heading 1"
+msgstr "Başlık 1"
+
+msgid "Heading 2"
+msgstr "Başlık 2"
+
+msgid "Heading 3"
+msgstr "Başlık 3"
+
+msgid "Heading 4"
+msgstr "Başlık 4"
+
+msgid "Heading 5"
+msgstr "Başlık 5"
+
+msgid "Heading 6"
+msgstr "Başlık 6"
+
+msgid "Headline of the in-app notification. Falls back to Subject if left blank. Supports Jinja."
+msgstr "Uygulama içi bildirim başlığı. Boş bırakılırsa Konu alanına geri döner. Jinja destekler."
+
+msgid "Hello"
+msgstr "Merhaba"
+
+msgid "Hourly rate limit for generating password reset links"
+msgstr "Şifre sıfırlama bağlantıları oluşturmak için saatlik hız sınırı"
+
+msgid "I guess you don't have access to any workspace yet, but you can create one just for yourself. Click on the <b>Create Workspace</b> button to create one.<br>"
+msgstr "Henüz herhangi bir Çalışma Alanına erişiminiz yok gibi görünüyor, ancak sadece kendiniz için bir tane oluşturabilirsiniz. Oluşturmak için <b>Çalışma Alanı Oluştur</b> düğmesine tıklayın.<br>"
+
+msgid "Idx"
+msgstr "Idx"
+
+msgid "If checked, <i>Prepared Report</i> will not be enabled automatically on slow runs."
+msgstr "İşaretlenirse, <i>Hazırlanmış Rapor</i> yavaş çalıştırmalarda otomatik olarak etkinleştirilmez."
+
+msgid "If enabled, the web form can only be used with a <i>Key</i> from a corresponding <b>Web Form Request</b>."
+msgstr "Etkinleştirilirse, web formu yalnızca ilgili <b>Web Form Talebi</b>'nden bir <i>Anahtar</i> ile kullanılabilir."
+
+msgid "If the user enables the mask property for the phone number field, the value will be displayed in a masked format (e.g., 811XXXXXXX)."
+msgstr "Kullanıcı telefon numarası alanı için maskeleme özelliğini etkinleştirirse, değer maskeli formatta görüntülenir (ör. 811XXXXXXX)."
+
+msgid "If the user has access to Employee and Report is enabled, they can view Employee-based reports."
+msgstr "Kullanıcının Çalışan erişimi varsa ve Rapor etkinse, Çalışan tabanlı raporları görüntüleyebilir."
+
+msgid "If this email is registered with us, a download link will be sent to it."
+msgstr "Bu e-posta adresi sistemimizde kayıtlıysa, bir indirme bağlantısı gönderilecektir."
+
+msgid "If you did not request a password reset, please ignore this email. Your password will remain unchanged."
+msgstr "Şifre sıfırlama talep etmediyseniz, lütfen bu e-postayı yok sayın. Şifreniz değiştirilmeyecektir."
+
+msgid "If you did not request this code, you can safely ignore this email."
+msgstr "Bu kodu talep etmediyseniz, bu e-postayı güvenle yok sayabilirsiniz."
+
+msgid "If you didn't request this link, you can ignore this email. Someone may have entered your email address by mistake."
+msgstr "Bu bağlantıyı talep etmediyseniz, bu e-postayı yok sayabilirsiniz. Birisi e-posta adresinizi yanlışlıkla girmiş olabilir."
+
+msgid "Impersonating {0}"
+msgstr "{0} adına hareket ediliyor"
+
+msgid "In {0}, {1} is required in every row."
+msgstr "{0} içinde, {1} her satırda zorunludur."
+
+msgid "In {0}, {1} is required in row {2}."
+msgstr "{0} içinde, {1} {2}. satırda zorunludur."
+
+msgid "In {0}, {1} is required in rows {2}."
+msgstr "{0} içinde, {1} {2}. satırlarda zorunludur."
+
+msgid "In {0}, {1} is required in {2} rows."
+msgstr "{0} içinde, {1} {2} satırda zorunludur."
+
+msgid "Incompatible Values"
+msgstr "Uyumsuz Değerler"
+
+msgid "Insert Column Left"
+msgstr "Sola Sütun Ekle"
+
+msgid "Insert Column Right"
+msgstr "Sağa Sütun Ekle"
+
+msgid "Insert Row Above"
+msgstr "Yukarıya Satır Ekle"
+
+msgid "Insert Row Below"
+msgstr "Aşağıya Satır Ekle"
+
+msgid "Insert Table"
+msgstr "Tablo Ekle"
+
+msgid "Install {0} from Marketplace"
+msgstr "{0} Uygulama Pazarından Yükle"
+
+msgid "Int"
+msgstr "Int"
+
+msgid "Inter"
+msgstr "Inter"
+
+msgid "Interval"
+msgstr "Aralık"
+
+msgid "Invalid Filters for field {0}. Filters must be a list of filters, where each filter is a list with four values: doctype, fieldname, operator, and value."
+msgstr "{0} alanı için geçersiz filtreler. Filtreler, her biri dört değerden oluşan bir liste olan filtre listesi olmalıdır: belge türü, alan adı, operatör ve değer."
+
+msgid "Invalid Filters for field {0}. Filters must be valid JSON."
+msgstr "{0} alanı için geçersiz filtreler. Filtreler geçerli JSON olmalıdır."
+
+msgid "Invalid JSON"
+msgstr "Geçersiz JSON"
+
+msgid "Invalid Package Name"
+msgstr "Geçersiz Paket Adı"
+
+msgid "Invalid Upload"
+msgstr "Geçersiz Yükleme"
+
+msgid "Invalid Web Form Request"
+msgstr "Geçersiz Web Formu İsteği"
+
+msgid "Invalid action"
+msgstr "Geçersiz işlem"
+
+msgid "Invalid aggregate function: {0}"
+msgstr "Geçersiz toplama işlevi: {0}"
+
+msgid "Invalid backup path"
+msgstr "Geçersiz yedekleme yolu"
+
+msgid "Invalid credentials, try again."
+msgstr "Geçersiz kimlik bilgileri, tekrar deneyin."
+
+msgid "Invalid file name"
+msgstr "Geçersiz dosya adı"
+
+msgid "Invalid format. Supported formats are {0}"
+msgstr "Geçersiz biçim. Desteklenen biçimler: {0}"
+
+msgid "Invalid or expired key"
+msgstr "Geçersiz veya süresi dolmuş anahtar"
+
+msgid "Invitation cancelled"
+msgstr "Davet iptal edildi"
+
+msgid "Invitation expired"
+msgstr "Davet süresi doldu"
+
+msgid "Invitation resent"
+msgstr "Davet yeniden gönderildi"
+
+msgid "Invited By"
+msgstr "Davet Eden"
+
+msgid "JSON value must be an object"
+msgstr "JSON değeri bir nesne olmalıdır"
+
+msgid "Keep Gravatar URLs"
+msgstr "Gravatar URL'lerini Koru"
+
+msgid "Key Required"
+msgstr "Anahtar Gerekli"
+
+msgid "Key required"
+msgstr "Anahtar gerekli"
+
+msgid "Last"
+msgstr "Son"
+
+msgid "Last 6 Months"
+msgstr "Son 6 Ay"
+
+msgid "Last Edited By You"
+msgstr "Sizin Tarafınızdan Son Düzenlenen"
+
+msgid "Last Edited By {0}"
+msgstr "{0} Tarafından Son Düzenlenen"
+
+msgid "Last Seen"
+msgstr "Son Görülme"
+
+msgid "Layout"
+msgstr "Düzen"
+
+msgid "Legal"
+msgstr "Yasal"
+
+msgid "Let's setup your account."
+msgstr "Hesabınızı yapılandıralım."
+
+msgid "Letter"
+msgstr "Mektup"
+
+msgid "Loading error stats..."
+msgstr "Hata istatistikleri yükleniyor..."
+
+msgid "Log In to {0}"
+msgstr "{0} oturum açın"
+
+msgid "Log in to {0}"
+msgstr "{0} oturum açın"
+
+msgid "Login or a request key is required to see web form list view. Enable {0} to see list settings"
+msgstr "Web form listesi görünümünü görmek için oturum açma veya istek anahtarı gereklidir. Liste ayarlarını görmek için {0} etkinleştirin"
+
+msgid "Login with password"
+msgstr "Şifreyle oturum açın"
+
+msgid "Logo URI"
+msgstr "Logo URI"
+
+msgid "Logo URL"
+msgstr "Logo URL"
+
+msgid "Malformed Address Header"
+msgstr "Bozuk Adres Başlığı"
+
+msgid "Master"
+msgstr "Ana"
+
+msgid "Max Zip Extract Size (MB)"
+msgstr "Maksimum ZIP Çıkarma Boyutu (MB)"
+
+msgid "Maximum total size a ZIP archive is allowed to expand to when extracted."
+msgstr "Bir ZIP arşivinin çıkarıldığında genişleyebileceği maksimum toplam boyut."
+
+msgid "Maybe"
+msgstr "Belki"
+
+msgid "Meaning of Different Permission Types"
+msgstr "Farklı İzin Türlerinin Anlamı"
+
+msgid "Missing Value"
+msgstr "Eksik Değer"
+
+msgid "Module changed to {0}. Files in the previous module were not moved and remain at {1}, remove or relocate them manually."
+msgstr "Modül {0} olarak değiştirildi. Önceki modüldeki dosyalar taşınmadı ve {1} konumunda kaldı; bunları manuel olarak kaldırın veya taşıyın."
+
+msgid "Monospace"
+msgstr "Monospace"
+
+msgid "More Options"
+msgstr "Daha Fazla Seçenek"
+
+msgid "Mx"
+msgstr "Mx"
+
+msgid "MyISAM"
+msgstr "MyISAM"
+
+msgid "Naming Series"
+msgstr "Adlandırma Serisi"
+
+msgid "Naming Series updated"
+msgstr "Adlandırma Serisi güncellendi"
+
+msgid "Navigation Buttons"
+msgstr "Gezinme Düğmeleri"
+
+msgid "Need Workspace Manager role to edit private workspace of other users."
+msgstr "Diğer kullanıcıların özel çalışma alanlarını düzenlemek için Çalışma Alanı Yöneticisi rolü gereklidir."
+
+msgid "Need Workspace Manager role to edit public workspaces."
+msgstr "Herkese açık çalışma alanlarını düzenlemek için Çalışma Alanı Yöneticisi rolü gereklidir."
+
+msgid "Next 6 Months"
+msgstr "Sonraki 6 Ay"
+
+msgid "Next Month"
+msgstr "Sonraki Ay"
+
+msgid "Next Quarter"
+msgstr "Sonraki Çeyrek"
+
+msgid "Next Week"
+msgstr "Sonraki Hafta"
+
+msgid "Next Year"
+msgstr "Sonraki Yıl"
+
+msgid "No attachments"
+msgstr "Ek yok"
+
+msgid "No editable fields available for bulk edit."
+msgstr "Toplu düzenleme için düzenlenebilir alan yok."
+
+msgid "No email account associated with the User. Please add an account under User > Email Inbox."
+msgstr "Kullanıcıyla ilişkili bir e-posta hesabı yok. Lütfen Kullanıcı > E-posta Gelen Kutusu altında bir hesap ekleyin."
+
+msgid "No naming series defined"
+msgstr "Adlandırma serisi tanımlanmadı"
+
+msgid "No of Columns"
+msgstr "Sütun Sayısı"
+
+msgid "No other document types."
+msgstr "Başka belge türü yok."
+
+msgid "No pinned document types."
+msgstr "Sabitlenmiş belge türü yok."
+
+msgid "No results found"
+msgstr "Sonuç bulunamadı"
+
+msgctxt "Title of the 'row number' column"
+msgid "No."
+msgstr "Hayır."
+
+msgid "Nomatim"
+msgstr "Nomatim"
+
+msgid "Noop Source"
+msgstr "Noop Kaynağı"
+
+msgid "Normal"
+msgstr "Normal"
+
+msgid "Not Used"
+msgstr "Kullanılmadı"
+
+msgid "Not configured"
+msgstr "Yapılandırılmadı"
+
+msgid "Notification Message"
+msgstr "Bildirim Mesajı"
+
+msgid "Notification Title"
+msgstr "Bildirim Başlığı"
+
+msgid "Notification Type"
+msgstr "Bildirim Türü"
+
+msgid "Notification Type Preference"
+msgstr "Bildirim Türü Tercihi"
+
+msgid "Number of Events"
+msgstr "Olay Sayısı"
+
+msgid "OPTIONS"
+msgstr "SEÇENEKLER"
+
+msgid "Occurrences (last 30 days)"
+msgstr "Olaylar (son 30 gün)"
+
+msgid "Only CSV and Excel formats are supported for export"
+msgstr "Dışa aktarma için yalnızca CSV ve Excel biçimleri desteklenir"
+
+msgid "Only pending invitations can be resent"
+msgstr "Yalnızca bekleyen davetler yeniden gönderilebilir"
+
+msgid "Only users with one of these roles can send SMS. Leave empty to allow only System Manager."
+msgstr "SMS gönderme yetkisi yalnızca bu rollerden birine sahip kullanıcılarda bulunur. Yalnızca Sistem Yöneticisi'ne izin vermek için boş bırakın."
+
+msgid "Open Frappe CRM"
+msgstr "NanobaseAI CRM'yi Aç"
+
+msgid "Open Frappe Helpdesk"
+msgstr "NanobaseAI Masaüstü Yardımını Aç"
+
+msgid "Open Global Search"
+msgstr "Genel Aramayı Aç"
+
+msgid "Open Source applications for the web."
+msgstr "Web için açık kaynak uygulamalar."
+
+msgid "Open in a new tab"
+msgstr "Yeni sekmede aç"
+
+msgid "Optional body of the in-app notification. Supports Jinja."
+msgstr "Uygulama içi bildiriminin isteğe bağlı gövdesi. Jinja destekler."
+
+msgid "Optionally, set the number of digits in the series using dot (.) followed by hashes (#). For example, '.####' means that the series will have four digits. Default is five digits."
+msgstr "İsteğe bağlı olarak, serideki basamak sayısını nokta (.) ve ardından hash (#) kullanarak ayarlayın. Örneğin, '.####' serinin dört basamaklı olacağı anlamına gelir. Varsayılan beş basamaktır."
+
+msgid "Or copy and paste this link:"
+msgstr "Veya bu bağlantıyı kopyalayıp yapıştırın:"
+
+msgid "Ordered timeline of document lifecycle methods and doc_events handlers that ran during this request, attributed to the app(s) that hook them."
+msgstr "Bu istek sırasında çalışan belge yaşam döngüsü yöntemlerinin ve doc_events işleyicilerinin, onları kancalayan uygulama(lar) tarafından atfedilen sıralı zaman çizelgesi."
+
+msgid "PATCH"
+msgstr "PATCH"
+
+msgid "PID"
+msgstr "PID"
+
+msgid "POST"
+msgstr "POST"
+
+msgid "PUT"
+msgstr "PUT"
+
+msgid "Package contains disallowed path entry"
+msgstr "Paket, izin verilmeyen bir yol girişi içeriyor"
+
+msgid "Page Margins"
+msgstr "Sayfa Kenar Boşlukları"
+
+msgid "Password set"
+msgstr "Şifre ayarlandı"
+
+msgid "Permission"
+msgstr "İzin"
+
+msgid "Pin"
+msgstr "Sabitlen"
+
+msgid "Pinned"
+msgstr "Sabitlendi"
+
+msgid "Please add at least one naming series."
+msgstr "Lütfen en az bir adlandırma serisi ekleyin."
+
+msgid "Please check your email."
+msgstr "Lütfen e-postanızı kontrol edin."
+
+msgid "Please enter a valid email."
+msgstr "Lütfen geçerli bir e-posta girin."
+
+msgid "Please enter the password"
+msgstr "Lütfen şifreyi girin"
+
+msgid "Please enter your email, we'll send you password reset link"
+msgstr "Lütfen e-postanızı girin, size şifre sıfırlama bağlantısı göndereceğiz"
+
+msgid "Please fill the following mandatory fields before saving:"
+msgstr "Kaydetmeden önce lütfen aşağıdaki zorunlu alanları doldurun:"
+
+msgid "Please select Document Type first."
+msgstr "Lütfen önce Belge Türü'nü seçin."
+
+msgid "Please select a transaction."
+msgstr "Lütfen bir işlem seçin."
+
+msgid "Poor!"
+msgstr "Zayıf!"
+
+msgid "Prefer not to say"
+msgstr "Tercih etmiyorum"
+
+msgid "Printing"
+msgstr "Yazdırma"
+
+msgid "Prof"
+msgstr "Prof."
+
+msgid "Provide a list of allowed Doctypes for file uploads. Each line should contain one allowed Doctype. If unset, uploads to all doctypes are allowed. Example: <br>User<br>Item<br>Quotation"
+msgstr "Dosya yüklemeleri için izin verilen Belge Türleri listesini sağlayın. Her satırda bir izin verilen Belge Türü bulunmalıdır. Ayarlanmazsa, tüm belge türlerine yükleme yapılabilir. Örnek: <br>User<br>Item<br>Quotation"
+
+msgid "Python"
+msgstr "Python"
+
+msgid "Queries"
+msgstr "Sorgular"
+
+msgid "Queued for Submission. You can track the progress over {0}."
+msgstr "Gönderim için kuyruğa alındı. İlerlemeyi {0} üzerinden takip edebilirsiniz."
+
+msgid "RQ Worker"
+msgstr "RQ İşçisi"
+
+msgid "Rate Limiting"
+msgstr "Hız Sınırlandırma"
+
+msgid "Rate limit for email link login"
+msgstr "E-posta bağlantısı ile giriş için hız sınırı"
+
+msgid "Raw HTML can be used only with Email Templates having 'Use HTML' checked. Proceeding with plain text email."
+msgstr "Ham HTML yalnızca 'HTML Kullan' seçeneği işaretlenmiş E-posta Şablonları ile kullanılabilir. Düz metin e-postası ile devam ediliyor."
+
+msgid "Raw Method"
+msgstr "Ham Yöntem"
+
+msgid "Receive an email for notifications of these types. Remove a type to stop its emails (in-app notifications are unaffected)."
+msgstr "Bu tür bildirimler için e-posta alın. E-postaları durdurmak için bir türü kaldırın (uygulama içi bildirimler etkilenmez)."
+
+msgid "Recipient & Status"
+msgstr "Alıcı ve Durum"
+
+msgid "Recorder Event"
+msgstr "Kaydedici Olayı"
+
+msgid "Redact Message After Send"
+msgstr "Gönderim Sonrası Mesajı Karart"
+
+msgid "Ref DocType"
+msgstr "Referans Belge Türü"
+
+msgid "Reference Doc"
+msgstr "Referans Belge"
+
+msgid "Rejected malformed encoded address header with synthesized '@': {0}"
+msgstr "Sentezlenmiş '@' içeren biçimsiz kodlanmış adres başlığı reddedildi: {0}"
+
+msgid "Replace the message body with a placeholder once the email has been sent, so that sensitive content like password reset links is not retained in the queue."
+msgstr "E-posta gönderildikten sonra hassas içeriklerin (şifre sıfırlama bağlantıları gibi) kuyrukta tutulmaması için mesaj gövdesini bir yer tutucuyla değiştirin."
+
+msgid "Report cannot be set for Single types"
+msgstr "Rapor, Tekil türler için ayarlanamaz"
+
+msgid "Request to your server failed."
+msgstr "Sunucuya istek başarısız oldu."
+
+msgid "Resend"
+msgstr "Yeniden Gönder"
+
+msgid "Row # {0}: Non administrator user can not set the role {1} to the custom doctype"
+msgstr "Satır # {0}: Yönetici olmayan kullanıcı, özel belge türüne {1} rolünü atayamaz"
+
+msgid "Rules for configuring series"
+msgstr "Serileri yapılandırmak için kurallar"
+
+msgid "SMS"
+msgstr "SMS"
+
+msgid "SQL"
+msgstr "SQL"
+
+msgid "Salesforce"
+msgstr "Salesforce"
+
+msgid "Save the document to attach files."
+msgstr "Dosyaları eklemek için belgeyi kaydedin."
+
+msgid "Script"
+msgstr "Betik"
+
+msgid "Search fields updated."
+msgstr "Arama alanları güncellendi."
+
+msgid "Section Heading"
+msgstr "Bölüm Başlığı"
+
+msgid "Security.txt"
+msgstr "Security.txt"
+
+msgid "Send Acknowledgement Email"
+msgstr "Onay E-postası Gönder"
+
+msgid "Send Link"
+msgstr "Bağlantı Gönder"
+
+msgid "Send an acknowledgement email to the email address entered in the contact form."
+msgstr "İletişim formunda girilen e-posta adresine bir onay e-postası gönderin."
+
+msgid "Sendgrid"
+msgstr "Sendgrid"
+
+msgid "Sequence"
+msgstr "Sıra"
+
+msgid "Server is busy. Please try again in a few seconds."
+msgstr "Sunucu meşgul. Lütfen birkaç saniye sonra tekrar deneyin."
+
+msgid "Show Board"
+msgstr "Panoyu Göster"
+
+msgid "Show Similar Errors"
+msgstr "Benzer Hataları Göster"
+
+msgid "Show keyboard shortcuts"
+msgstr "Klavye kısayollarını göster"
+
+msgid "Show more"
+msgstr "Daha fazla göster"
+
+msgid "Sign In"
+msgstr "Giriş Yap"
+
+msgid "Sign Up"
+msgstr "Kayıt Ol"
+
+msgid "Site"
+msgstr "Site"
+
+msgid "Slug"
+msgstr "Slug"
+
+msgid "Snapshot Report"
+msgstr "Anlık Görüntü Raporu"
+
+msgid "Snapshot Reports"
+msgstr "Anlık Görüntü Raporları"
+
+msgid "Stack Trace"
+msgstr "Yığın İzleme"
+
+msgid "Standard reports can only be created in developer mode."
+msgstr "Standart raporlar yalnızca geliştirici modunda oluşturulabilir."
+
+msgid "Start new Format"
+msgstr "Yeni Biçim Başlat"
+
+msgid "Supported Variables:"
+msgstr "Desteklenen Değişkenler:"
+
+msgid "Switch theme"
+msgstr "Tema değiştir"
+
+msgid "Switch to CRM"
+msgstr "CRM'ye Geç"
+
+msgid "Sync Data"
+msgstr "Verileri Eşitle"
+
+msgid "Sync In Batches"
+msgstr "Partiler Halinde Eşitle"
+
+msgid "Sync Timeout (Seconds)"
+msgstr "Eşitleme Zaman Aşımı (Saniye)"
+
+msgid "Sync {0} Fields"
+msgstr "{0} Alanını Eşitle"
+
+msgid "Synced"
+msgstr "Eşitlendi"
+
+msgid "TOS URI"
+msgstr "TOS URI"
+
+msgid "Tabloid"
+msgstr "Tabloid"
+
+msgid "Task id is required."
+msgstr "Görev kimliği gereklidir."
+
+msgid "Thank you for reaching out to us. We will get back to you at the earliest."
+msgstr "Bize ulaştığınız için teşekkür ederiz. En kısa sürede size geri döneceğiz."
+
+msgid "The default value for the Check field {0} must be either '0' or '1'"
+msgstr "{0} Onay alanının varsayılan değeri '0' veya '1' olmalıdır"
+
+msgid "The email button is enabled for the user in the document."
+msgstr "Belgede kullanıcı için e-posta düğmesi etkinleştirilmiştir."
+
+msgid "The following values are invalid: {0}. Values must be one of {1}"
+msgstr "Aşağıdaki değerler geçersizdir: {0}. Değerler {1} değerlerinden biri olmalıdır"
+
+msgid "The print button is enabled for the user in the document."
+msgstr "Belgede kullanıcı için yazdırma düğmesi etkinleştirilmiştir."
+
+msgid "The report may be too large to render in a single request. Narrow the filters and try again, or use Print and save as PDF from your browser."
+msgstr "Rapor, tek bir istekte görüntülenmek için çok büyük olabilir. Filtreleri daraltıp tekrar deneyin veya tarayıcınızdan Yazdır ve PDF olarak kaydet seçeneğini kullanın."
+
+msgid "The request could not be completed. Check your connection and try again."
+msgstr "İstek tamamlanamadı. Bağlantınızı kontrol edin ve tekrar deneyin."
+
+msgid "The user can create a new Item but cannot edit existing items."
+msgstr "Kullanıcı yeni bir Ürün oluşturabilir ancak mevcut ürünleri düzenleyemez."
+
+msgid "The user can delete Draft / Cancelled documents."
+msgstr "Kullanıcı Taslak / İptal Edilmiş belgeleri silebilir."
+
+msgid "The user can export report data."
+msgstr "Kullanıcı rapor verilerini dışa aktarabilir."
+
+msgid "The user can import new records or update existing data for the document."
+msgstr "Kullanıcı belge için yeni kayıtlar içe aktarabilir veya mevcut verileri güncelleyebilir."
+
+msgid "The user can select a Customer in Sales Order but cannot open the Customer master."
+msgstr "Kullanıcı Satış Siparişi'nde bir Müşteri seçebilir ancak Müşteri ana verisini açamaz."
+
+msgid "The user can share document access with another user."
+msgstr "Kullanıcı belge erişimini başka bir kullanıcıyla paylaşabilir."
+
+msgid "The user can update a customer or any other fields in an existing Sales Order but cannot create a new Sales Order."
+msgstr "Kullanıcı mevcut bir Satış Siparişi'nde müşteri veya diğer alanları güncelleyebilir ancak yeni bir Satış Siparişi oluşturamaz."
+
+msgid "The user can view Sales Invoices but cannot modify any field values in them."
+msgstr "Kullanıcı Satış Faturalarını görüntüleyebilir ancak bunlardaki alan değerlerini değiştiremez."
+
+msgid "This Month"
+msgstr "Bu Ay"
+
+msgid "This Quarter"
+msgstr "Bu Çeyrek"
+
+msgid "This Web Form Request has already been used"
+msgstr "Bu Web Formu İsteği zaten kullanıldı"
+
+msgid "This Web Form Request has expired"
+msgstr "Bu Web Formu İsteği süresi doldu"
+
+msgid "This Week"
+msgstr "Bu Hafta"
+
+msgid "This Year"
+msgstr "Bu Yıl"
+
+msgid "This document has already been queued for submission. You can track the progress over {0}."
+msgstr "Bu belge zaten gönderim için kuyruğa alındı. İlerlemeyi {0} üzerinden takip edebilirsiniz."
+
+msgid "This is a snapshot report generated {0}."
+msgstr "Bu, {0} tarihinde oluşturulan bir anlık görüntü raporudur."
+
+msgid "Timeless Night"
+msgstr "Sonsuz Gece"
+
+msgid "Toggle Sidebar"
+msgstr "Kenar Çubuğunu Aç/Kapat"
+
+msgid "Toggle Theme"
+msgstr "Temayı Aç/Kapat"
+
+msgid "Token"
+msgstr "Jeton"
+
+msgid "Tomorrow"
+msgstr "Yarın"
+
+msgid "Too many requests. Please try again later."
+msgstr "Çok fazla istek. Lütfen daha sonra tekrar deneyin."
+
+msgid "Total:"
+msgstr "Toplam:"
+
+msgid "Transgender"
+msgstr "Transgender"
+
+msgid "Trigger primary action"
+msgstr "Birincil işlemi tetikle"
+
+msgid "Type Name"
+msgstr "Tür Adı"
+
+msgid "Type {0} or more characters for results."
+msgstr "Sonuçlar için {0} veya daha fazla karakter girin."
+
+msgid "UID"
+msgstr "UID"
+
+msgid "UIDNEXT"
+msgstr "UIDNEXT"
+
+msgid "UIDVALIDITY"
+msgstr "UIDVALIDITY"
+
+msgid "URL"
+msgstr "URL"
+
+msgid "UUID"
+msgstr "UUID"
+
+msgid "Unable to load attachments."
+msgstr "Ekler yüklenemedi."
+
+msgid "Unpin"
+msgstr "Sabitlemeyi Kaldır"
+
+msgid "Unsupported file format: {0}"
+msgstr "Desteklenmeyen dosya biçimi: {0}"
+
+msgid "Update Available"
+msgstr "Güncelleme Mevcut"
+
+msgid "Update {0} rows"
+msgstr "{0} satırı güncelle"
+
+msgid "Updated {0} selected {1}. Save the form to keep changes."
+msgstr "Seçili {1} güncellendi: {0}. Değişiklikleri korumak için formu kaydedin."
+
+msgid "Updating search index"
+msgstr "Arama dizini güncelleniyor"
+
+msgid "Use ampersand to match multiple terms"
+msgstr "Birden fazla terimi eşleştirmek için ve işareti kullanın"
+
+msgid "Use minimum of 8 characters(case sensitive) with at least one number or special character."
+msgstr "En az 8 karakter (büyük/küçük harf duyarlı) ve en az bir rakam veya özel karakter kullanın."
+
+msgid "Use strong passwords."
+msgstr "Güçlü şifreler kullanın."
+
+msgid "Use the code below to complete your sign-in."
+msgstr "Girişinizi tamamlamak için aşağıdaki kodu kullanın."
+
+msgid "User with email address {0} does not exist"
+msgstr "{0} e-posta adresine sahip kullanıcı bulunamadı"
+
+msgid "Userinfo URI"
+msgstr "Kullanıcı Bilgisi URI"
+
+msgid "Verification code"
+msgstr "Doğrulama kodu"
+
+msgid "View Documentation"
+msgstr "Belgelendirmeyi Görüntüle"
+
+msgid "Visit Frappe Support Portal"
+msgstr "NanobaseAI Destek Portalını Ziyaret Et"
+
+msgid "Wait for it to finish. Deleting the lock file {} will not release the lock."
+msgstr "Tamamlanmasını bekleyin. Kilit dosyasını {} silmek kilidi kaldırmaz."
+
+msgid "We received a request to reset the password for your account. Click the button below to set a new password."
+msgstr "Hesabınız için şifre sıfırlama isteği aldık. Yeni bir şifre belirlemek için aşağıdaki düğmeye tıklayın."
+
+msgid "Web Form Request"
+msgstr "Web Form Talebi"
+
+msgid "Web Form Request key is required"
+msgstr "Web Form Talebi anahtarı zorunludur"
+
+msgid "Web Form Request link copied"
+msgstr "Web Form Talebi bağlantısı kopyalandı"
+
+msgid "Web Form Values"
+msgstr "Web Form Değerleri"
+
+msgid "Week of the year"
+msgstr "Yılın haftası"
+
+msgid "Welcome! Please sign in to continue."
+msgstr "Merhaba! Devam etmek için lütfen oturum açın."
+
+msgid "What the recipient receives by email when this notification fires. Mirrors Title/Description by default; set these to make the email differ from the in-app text."
+msgstr "Bu bildirim tetiklendiğinde alıcının e-postayla alacağı içerik. Varsayılan olarak Başlık/Açıklama'yı yansıtır; e-postanın uygulama içi metinden farklı olmasını istiyorsanız bunları ayarlayın."
+
+msgid "Widths can be set in px or %."
+msgstr "Genişlikler px veya % olarak ayarlanabilir."
+
+msgid "Workflow State"
+msgstr "İş Akışı Durumu"
+
+msgid "Year in 2 digits"
+msgstr "2 haneli yıl"
+
+msgid "Year in 4 digits"
+msgstr "4 haneli yıl"
+
+msgid "Yesterday"
+msgstr "Dün"
+
+msgid "You are not allowed to update attendance for another user."
+msgstr "Başka bir kullanıcının devamsızlığını güncelleme yetkiniz yok."
+
+msgid "You are not permitted to send SMS"
+msgstr "SMS gönderme yetkiniz yok"
+
+msgid "You are now following this document. You will receive daily updates via email. You can change this in User Settings."
+msgstr "Bu belgeyi takip ediyorsunuz. Günlük güncellemeleri e-posta ile alacaksınız. Bunu Kullanıcı Ayarları'nda değiştirebilirsiniz."
+
+msgid "You can also use variables in the series name by putting them between (.) dots"
+msgstr "Seri adında değişken kullanmak için (.) noktaları arasına koyabilirsiniz"
+
+msgid "You can only edit your own replies."
+msgstr "Sadece kendi yanıtlarınızı düzenleyebilirsiniz."
+
+msgid "You created this document"
+msgstr "Bu belgeyi siz oluşturdunuz"
+
+msgid "You do not have access to Cloud Settings for this site."
+msgstr "Bu site için Bulut Ayarlarına erişim yetkiniz yok."
+
+msgid "You do not have permission to access this file"
+msgstr "Bu dosyaya erişim yetkiniz yok"
+
+msgid "You do not have permission to create or restore documents of type {0}."
+msgstr "{0} türünde belge oluşturma veya geri yükleme yetkiniz yok."
+
+msgid "You do not have permission to restore this document."
+msgstr "Bu belgeyi geri yükleme yetkiniz yok."
+
+msgid "You don't have permission to create Report records."
+msgstr "Rapor kayıtları oluşturma yetkiniz yok."
+
+msgid "You don't have permission to create report for {0}"
+msgstr "{0} için rapor oluşturma yetkiniz yok"
+
+msgid "You don't have permission to print: {0}"
+msgstr "Yazdırma yetkiniz yok: {0}"
+
+msgid "You don't have permission to read/attach the file {0}."
+msgstr "{0} dosyasını okuma/ekleme yetkiniz yok."
+
+msgid "You haven't created a {0} yet"
+msgstr "Henüz bir {0} oluşturmadınız"
+
+msgid "You last edited this document"
+msgstr "Bu belgeyi son düzenleyen sizsiniz"
+
+msgid "You must login to use this form"
+msgstr "Bu formu kullanmak için oturum açmanız gerekir"
+
+msgid "You need the Workspace Manager role to edit this workspace."
+msgstr "Bu çalışma alanını düzenlemek için Çalışma Alanı Yöneticisi rolüne ihtiyacınız var."
+
+msgid "You need write permissions to add attachments to this record."
+msgstr "Bu kayda ekler eklemek için yazma yetkisine ihtiyacınız var."
+
+msgid "You've been invited"
+msgstr "Davet edildiniz"
+
+msgid "Your authorization attempt is invalid or has expired. Please try again."
+msgstr "Yetkilendirme denemeniz geçersiz veya süresi dolmuş. Lütfen tekrar deneyin."
+
+msgid "Your login ID is:"
+msgstr "Giriş kimliğiniz:"
+
+msgid "Your login attempt is invalid or has expired. Please try again."
+msgstr "Giriş denemeniz geçersiz veya süresi dolmuş. Lütfen tekrar deneyin."
+
+msgid "Your password has expired. Please set a new password."
+msgstr "Şifrenizin süresi doldu. Lütfen yeni bir şifre belirleyin."
+
+msgid "Zip file extracts to more than the maximum allowed size of {0} MB"
+msgstr "Zip dosyası, izin verilen maksimum boyut olan {0} MB'dan fazla çıkarılıyor"
+
+msgid "`doctype` and `fieldname` are required for deleting property setters."
+msgstr "Özellik ayarlayıcılarını silmek için `doctype` ve `fieldname` zorunludur."
+
+msgid "added {0} row(s) to {1}"
+msgstr "{1} içine {0} satır eklendi"
+
+msgid "after_insert"
+msgstr "after_insert"
+
+msgid "and {0} more"
+msgstr "ve {0} daha"
+
+msgid "changed {0}"
+msgstr "{0} değiştirildi"
+
+msgid "chrome"
+msgstr "chrome"
+
+msgid "cleared {0}"
+msgstr "{0} temizlendi"
+
+msgid "emacs"
+msgstr "emacs"
+
+msgid "fairlogin"
+msgstr "fairlogin"
+
+msgid "fieldname on the document e.g."
+msgstr "belgedeki alan adı örn."
+
+msgid "found"
+msgstr "bulundu"
+
+msgid "hub"
+msgstr "hub"
+
+msgid "nonce"
+msgstr "nonce"
+
+msgid "on_cancel"
+msgstr "on_cancel"
+
+msgid "on_change"
+msgstr "on_change"
+
+msgid "on_submit"
+msgstr "on_submit"
+
+msgid "on_trash"
+msgstr "on_trash"
+
+msgid "on_update"
+msgstr "on_update"
+
+msgid "on_update_after_submit"
+msgstr "on_update_after_submit"
+
+msgid "plain"
+msgstr "plain"
+
+msgid "removed {0} row(s) from {1}"
+msgstr "{1} içinden {0} satır(sı) kaldırıldı"
+
+msgid "s256"
+msgstr "s256"
+
+msgid "set {0} to"
+msgstr "{0} şu değere ayarlandı:"
+
+msgid "set {0} to {1} in row #{2}"
+msgstr "{0}, #{2} satırında {1} olarak ayarlandı"
+
+msgid "submitted this document"
+msgstr "bu belgeyi gönderdi"
+
+msgid "to open Awesome Bar"
+msgstr "Harika Çubuğu açmak için"
+
+msgid "to open Global Search"
+msgstr "Küresel Arama'yı açmak için"
+
+msgid "updated {0}"
+msgstr "{0} güncellendi"
+
+msgid "version_table"
+msgstr "version_table"
+
+msgid "visible_types entries must be strings or {type: [fields]} maps"
+msgstr "visible_types girdileri dizeler veya {type: [fields]} haritaları olmalıdır"
+
+msgid "visible_types fields for {0} must be a list"
+msgstr "{0} için visible_types alanları bir liste olmalıdır"
+
+msgid "visible_types is not valid JSON: {0}"
+msgstr "visible_types geçerli JSON değil: {0}"
+
+msgid "visible_types must be a list"
+msgstr "visible_types bir liste olmalıdır"
+
+msgid "wkhtmltopdf"
+msgstr "wkhtmltopdf"
+
+msgid "workflow_transition"
+msgstr "workflow_transition"
+
+msgid "{0} ${skip_list ? \"\" : type}"
+msgstr "{0} ${skip_list ? \"\" : type}"
+
+msgid "{0} Naming Series"
+msgstr "{0} Adlandırma Serisi"
+
+msgid "{0} contains invalid field(s): {1}"
+msgstr "{0} geçersiz alan(lar) içeriyor: {1}"
+
+msgid "{0} does not exist"
+msgstr "{0} mevcut değil"
+
+msgid "{0} is a Virtual DocType and must implement its own delete() method."
+msgstr "{0} Sanal Belge Türüdür ve kendi delete() yöntemini uygulamalıdır."
+
+msgid "{0} is a built-in Notification Type and cannot be deleted. Disable it instead."
+msgstr "{0} yerleşik Bildirim Türüdür ve silinemez. Bunun yerine devre dışı bırakın."
+
+msgid "{0} is not a valid field of {1}"
+msgstr "{0}, {1} için geçerli bir alan değil"
+
+msgid "{0} is not an enabled Print Format for a Report"
+msgstr "{0}, bir Rapor için etkinleştirilmiş bir Yazdırma Biçimi değil"
+
+msgid "{0} last edited this document"
+msgstr "{0} bu belgeyi son düzenleyen"
+
+msgid "{0} must be beginning with '{1}'"
+msgstr "{0} '{1}' ile başlamalıdır"
+
+msgid "{0} must be equal to '{1}'"
+msgstr "{0} '{1}' ile eşit olmalıdır"
+
+msgid "{0} must be {1} {2}"
+msgstr "{0} {1} {2} olmalıdır"
+
+msgid "{0} never sends email, so it cannot be enabled for users."
+msgstr "{0} asla e-posta göndermez, bu nedenle kullanıcılar için etkinleştirilemez."
+
+msgid "{0} results found"
+msgstr "{0} sonuç bulundu"
+
+msgid "{0}, list item {1} of {2}"
+msgstr "{0}, {2} listeden {1}. öğe"
+
+msgid "{0}: Cannot set Amend without Cancel"
+msgstr "{0}: İptal olmadan Düzeltme ayarlanamaz"
+
+msgid "{0}: Cannot set Assign Amend if not Submittable"
+msgstr "{0}: Sunulabilir değilse Atama Düzeltme ayarlanamaz"
+
+msgid "{0}: Cannot set Assign Submit if not Submittable"
+msgstr "{0}: Sunulabilir değilse Atama Sunum ayarlanamaz"
+
+msgid "{0}: Cannot set Cancel without Submit"
+msgstr "{0}: Sunum olmadan İptal ayarlanamaz"
+
+msgid "{0}: Cannot set Import without Create"
+msgstr "{0}: Oluşturma olmadan İçe Aktarma ayarlanamaz"
+
+msgid "{0}: Cannot set Submit, Cancel, Amend without Write"
+msgstr "{0}: Yazma olmadan Sunum, İptal, Düzeltme ayarlanamaz"
+
+msgid "{0}: Cannot set import as {1} is not importable"
+msgstr "{0}: {1} içe aktarılamadığı için içe aktarma olarak ayarlanamaz"
+
+msgid "{0}: Link field cannot reference DocType {1} without Guest read permission"
+msgstr "{0}: Bağlantı alanı, Misafir okuma izni olmadan {1} Belge Türüne referans veremez"
+
+msgid " App Name"
+msgstr " Uygulama Adı"
+
+msgid "API Key"
+msgstr "API Anahtarı"
+
+msgid "API Secret"
+msgstr "API Gizli Anahtarı"
+
+msgid "API Token"
+msgstr "API Belirteci"
+
+msgid "Account SID"
+msgstr "Hesap SID"
+
+msgid "Agent is unavailable to take the call, please call after some time."
+msgstr "Temsilci aramayı almak için müsait değil, lütfen biraz sonra tekrar arayın."
+
+msgid "All"
+msgstr "Tümü"
+
+msgid "Attempts"
+msgstr "Denemeler"
+
+msgid "Auth Token"
+msgstr "Kimlik Doğrulama Belirteci"
+
+msgid "Busy"
+msgstr "Meşgul"
+
+msgid "Call Received By"
+msgstr "Çağrı Alındı"
+
+msgid "Call duration in seconds"
+msgstr "Saniye cinsinden çağrı süresi"
+
+msgid "Caller"
+msgstr "Arayan"
+
+msgid "Canceled"
+msgstr "İptal Edildi"
+
+msgid "Cannot send an empty SMS."
+msgstr "Boş bir SMS gönderilemez."
+
+msgid "Channel"
+msgstr "Kanal"
+
+msgid "Completed"
+msgstr "Tamamlandı"
+
+msgid "Computer"
+msgstr "Bilgisayar"
+
+msgid "Could not reach Twilio to confirm {0}. Check the Twilio credentials and connectivity, or disable SMS to save."
+msgstr "Twilio'ya {0} onayı için ulaşılamadı. Twilio kimlik bilgilerini ve bağlantıyı kontrol edin veya kaydetmek için SMS'i devre dışı bırakın."
+
+msgid "Could not send the SMS. Please try again later."
+msgstr "SMS gönderilemedi. Lütfen daha sonra tekrar deneyin."
+
+msgid "Default Medium"
+msgstr "Varsayılan Medya"
+
+msgid "Delivered"
+msgstr "Teslim Edildi"
+
+msgid "Device"
+msgstr "Cihaz"
+
+msgid "Duration"
+msgstr "Süre"
+
+msgid "Email"
+msgstr "E-posta"
+
+msgid "Email OTP Subject"
+msgstr "E-posta OTP Konusu"
+
+msgid "Enable Email OTP"
+msgstr "E-posta OTP'yi Etkinleştir"
+
+msgid "Enable SMS (Twilio)"
+msgstr "SMS (Twilio) Etkinleştir"
+
+msgid "Enabled"
+msgstr "Etkin"
+
+msgid "End Time"
+msgstr "Bitiş Zamanı"
+
+msgid "Error"
+msgstr "Hata"
+
+msgid "Exotel"
+msgstr "Exotel"
+
+msgid "Exotel Exception"
+msgstr "Exotel İstisnası"
+
+msgid "Exotel Number"
+msgstr "Exotel Numarası"
+
+msgid "Exotel Number Missing"
+msgstr "Exotel Numarası Eksik"
+
+msgid "Exotel Number {0} is not valid"
+msgstr "Exotel Numarası {0} geçerli değil"
+
+msgid "Expires At"
+msgstr "Geçerlilik Süresi"
+
+msgid "Failed"
+msgstr "Başarısız"
+
+msgid "Failed to capture Twilio recording"
+msgstr "Twilio kaydı alınamadı"
+
+msgid "Failed to update Twilio call status"
+msgstr "Twilio çağrı durumu güncellenemedi"
+
+msgid "From"
+msgstr "Gönderen"
+
+msgid "General"
+msgstr "Genel"
+
+msgid "ID"
+msgstr "Kimlik"
+
+msgid "In Progress"
+msgstr "Devam Ediyor"
+
+msgid "Incoming"
+msgstr "Gelen"
+
+msgid "Initiated"
+msgstr "Başlatıldı"
+
+msgid "Integration Not Enabled"
+msgstr "Entegrasyon Etkin Değil"
+
+msgid "Invalid Account SID or Auth Token."
+msgstr "Geçersiz Hesap SID veya Kimlik Doğrulama Belirteci."
+
+msgid "Invalid Exotel Number"
+msgstr "Geçersiz Exotel Numarası"
+
+msgid "Invalid credentials"
+msgstr "Geçersiz kimlik bilgileri"
+
+msgid "Is Primary"
+msgstr "Birincil"
+
+msgid "Is Verified"
+msgstr "Doğrulandı"
+
+msgid "Links"
+msgstr "Bağlantılar"
+
+msgid "Manual"
+msgstr "Manuel"
+
+msgid "Maximum plain SMS one client may send per hour via send_sms. Set to 0 for no limit — do that only when a trusted backend does the sending. OTP endpoints are limited separately, per recipient."
+msgstr "Bir istemcinin send_sms üzerinden saat başına gönderebileceği maksimum düz SMS sayısı. Sınırsız olması için 0 olarak ayarlayın — bunu yalnızca gönderimi güvenilir bir arka uç yapıyorsa yapın. OTP uç noktaları, alıcı başına ayrı olarak sınırlanır."
+
+msgid "Medium"
+msgstr "Orta"
+
+msgid "Message"
+msgstr "Mesaj"
+
+msgid "Mobile No."
+msgstr "Cep No."
+
+msgid "Mobile Number Missing"
+msgstr "Cep Numarası Eksik"
+
+msgid "No Answer"
+msgstr "Yanıt Yok"
+
+msgid "Notification Log"
+msgstr "Bildirim Kaydı"
+
+msgid "Number"
+msgstr "Numara"
+
+msgid "Number of incorrect attempts allowed before an OTP is invalidated."
+msgstr "Bir OTP'nin geçersiz sayılmasına izin verilen hatalı deneme sayısı."
+
+msgid "OTP"
+msgstr "OTP"
+
+msgid "OTP Expiry (In Seconds)"
+msgstr "OTP Geçerlilik Süresi (Saniye)"
+
+msgid "OTP Expiry (in seconds) must be at least 1."
+msgstr "OTP Süresi (saniye cinsinden) en az 1 olmalıdır."
+
+msgid "OTP Hash"
+msgstr "OTP Hash"
+
+msgid "OTP Length"
+msgstr "OTP Uzunluğu"
+
+msgid "OTP Length must be at least {0}."
+msgstr "OTP Uzunluğu en az {0} olmalıdır."
+
+msgid "OTP Max Attempts"
+msgstr "OTP Maksimum Deneme"
+
+msgid "OTP Max Attempts must be at least 1."
+msgstr "OTP Maksimum Deneme en az 1 olmalıdır."
+
+msgid "OTP Message Template"
+msgstr "OTP Mesaj Şablonu"
+
+msgid "OTP Message Template has an unknown placeholder: {0}."
+msgstr "OTP Mesaj Şablonu bilinmeyen bir yer tutucu içeriyor: {0}."
+
+msgid "OTP Message Template is malformed: {0}."
+msgstr "OTP Mesaj Şablonu biçimsiz: {0}."
+
+msgid "OTP Message Template must contain the {otp} placeholder."
+msgstr "OTP Mesaj Şablonu {otp} yer tutucusunu içermelidir."
+
+msgid "Outgoing"
+msgstr "Giden"
+
+msgid "Phone"
+msgstr "Telefon"
+
+msgid "Please enable Email OTP in TP OTP Settings."
+msgstr "Lütfen TP OTP Ayarlarında E-posta OTP'yi etkinleştirin."
+
+msgid "Please enable SMS in TP OTP Settings to send SMS."
+msgstr "SMS göndermek için lütfen TP OTP Ayarlarında SMS'i etkinleştirin."
+
+msgid "Please enable and configure TP Twilio Settings first."
+msgstr "Lütfen önce TP Twilio Ayarlarını etkinleştirin ve yapılandırın."
+
+msgid "Please enable and configure TP Twilio Settings to send SMS."
+msgstr "SMS göndermek için lütfen TP Twilio Ayarlarını etkinleştirin ve yapılandırın."
+
+msgid "Please enable twilio to proceed."
+msgstr "Devam etmek için lütfen twilio'yu etkinleştirin."
+
+msgid "Please provide a single email address."
+msgstr "Lütfen tek bir e-posta adresi sağlayın."
+
+msgid "Please provide a valid email address."
+msgstr "Lütfen geçerli bir e-posta adresi sağlayın."
+
+msgid "Please provide a valid phone number."
+msgstr "Lütfen geçerli bir telefon numarası sağlayın."
+
+msgid "Please setup Exotel intergration"
+msgstr "Lütfen Exotel entegrasyonunu kurun"
+
+msgid "Purpose"
+msgstr "Amaç"
+
+msgid "Purpose cannot be longer than {0} characters."
+msgstr "Amaç {0} karakterden uzun olamaz."
+
+msgid "Queued"
+msgstr "Sırada"
+
+msgid "Recipient"
+msgstr "Alıcı"
+
+msgid "Record Calls"
+msgstr "Aramaları Kaydet"
+
+msgid "Record Outgoing Calls"
+msgstr "Giden Aramaları Kaydet"
+
+msgid "Recording URL"
+msgstr "Kayıt URL"
+
+msgid "Ringing"
+msgstr "Çalıyor"
+
+msgid "SMS From Number"
+msgstr "SMS Gönderen Numara"
+
+msgid "Send SMS Rate Limit (per hour)"
+msgstr "SMS Gönderme Hız Sınırı (saat başına)"
+
+msgid "Sends OTPs over email using Frappe's configured outgoing Email Account, independent of Twilio."
+msgstr "Twilio'dan bağımsız olarak, NanobaseAI'nin yapılandırılmış giden E-posta Hesabı üzerinden e-posta ile OTP gönderir."
+
+msgid "Sent"
+msgstr "Gönderildi"
+
+msgid "Sent At"
+msgstr "Gönderim Zamanı"
+
+msgid "Sent By"
+msgstr "Gönderen"
+
+msgid "Start Time"
+msgstr "Başlangıç Zamanı"
+
+msgid "Status"
+msgstr "Durum"
+
+msgid "Subdomain"
+msgstr "Alt Alan Adı"
+
+msgid "System Manager"
+msgstr "Sistem Yöneticisi"
+
+msgid "TP Agent"
+msgstr "TP Temsilci"
+
+msgid "TP Call Log"
+msgstr "TP Arama Kaydı"
+
+msgid "TP Exotel Settings"
+msgstr "TP Exotel Ayarları"
+
+msgid "TP Manager"
+msgstr "TP Yönetici"
+
+msgid "TP OTP"
+msgstr "TP OTP"
+
+msgid "TP OTP Settings"
+msgstr "TP OTP Ayarları"
+
+msgid "TP SMS Log"
+msgstr "TP SMS Kaydı"
+
+msgid "TP Telephony Agent"
+msgstr "TP Telefon Ajanı"
+
+msgid "TP Telephony Phone"
+msgstr "TP Telefon Numarası"
+
+msgid "TP Twilio Settings"
+msgstr "TP Twilio Ayarları"
+
+msgid "Telephony Medium"
+msgstr "Telefon Ortamı"
+
+msgid "Time in seconds before a generated OTP expires."
+msgstr "Oluşturulan OTP'nin süresinin dolmadan önceki saniye cinsinden süresi."
+
+msgid "To"
+msgstr "Konu"
+
+msgid "Too many incorrect attempts. Please try again later."
+msgstr "Çok fazla hatalı deneme. Lütfen daha sonra tekrar deneyin."
+
+msgid "TwiML SID"
+msgstr "TwiML SID"
+
+msgid "Twilio"
+msgstr "Twilio"
+
+msgid "Twilio API credential creation error."
+msgstr "Twilio API kimlik bilgisi oluşturma hatası."
+
+msgid "Twilio Apps"
+msgstr "Twilio Uygulamaları"
+
+msgid "Twilio Number"
+msgstr "Twilio Numarası"
+
+msgid "Twilio SID"
+msgstr "Twilio SID"
+
+msgid "Twilio phone number (with country code) that SMS messages are sent from. Must be an SMS-capable number on the connected Twilio account."
+msgstr "SMS mesajlarının gönderildiği Twilio telefon numarası (ülke koduyla). Bağlı Twilio hesabında SMS yeteneğine sahip bir numara olmalıdır."
+
+msgid "Type"
+msgstr "Tür"
+
+msgid "Unauthorized request"
+msgstr "Yetkisiz istek"
+
+msgid "Undelivered"
+msgstr "Teslim Edilemedi"
+
+msgid "Use {otp} and {expiry_minutes} as placeholders. Used for both SMS and Email."
+msgstr "{otp} ve {expiry_minutes} yer tutucuları olarak kullanın. Hem SMS hem de E-posta için kullanılır."
+
+msgid "User"
+msgstr "Kullanıcı"
+
+msgid "User Name"
+msgstr "Kullanıcı Adı"
+
+msgid "Verified At"
+msgstr "Doğrulama Zamanı"
+
+msgid "Webhook Verify Token"
+msgstr "Webhook Doğrulama Belirteci"
+
+msgid "You do not have Exotel Number set in your Telephony Agent"
+msgstr "Telefon Ajanınızda Exotel Numarası ayarlanmamış"
+
+msgid "You do not have mobile number set in your Telephony Agent"
+msgstr "Telefon Ajanınızda mobil numara ayarlanmamış"
+
+msgid "You hit the rate limit because of too many requests. Please try after sometime."
+msgstr "Çok fazla istek nedeniyle hız sınırına ulaştınız. Lütfen biraz sonra tekrar deneyin."
+
+msgid "{0} is not a phone number on the connected Twilio account."
+msgstr "{0}, bağlı Twilio hesabında bir telefon numarası değil."
+
+msgid "{0} is not a supported OTP channel. Use one of: {1}."
+msgstr "{0}, desteklenen bir OTP kanalı değil. Şunlardan birini kullanın: {1}."
