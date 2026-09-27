@@ -54,6 +54,7 @@ import {
   Plug,
   Printer,
   Route,
+  School,
   Search,
   Settings,
   ShieldCheck,
@@ -218,6 +219,15 @@ export const NAV: NavGroup[] = [
         keywords: ['dağılım', 'sevk', 'sevk listesi', 'bölge', 'bmt', 'bölgem', 'depo girişi', 'yeni kitap', 'iade'],
       },
       { id: 'saha', label: 'Saha ve tahsilat', to: '/saha', icon: MapPinned, section: 'Saha', hint: 'Bugünün ziyaret sırası, müşteri brifingi, vadesi geçmiş alacak ve CRM tahsilat onayı', keywords: ['bmt', 'ziyaret', 'tahsilat', 'vadesi geçmiş', 'yaşlandırma', 'brifing', 'ödeme planı', 'saha satış', 'bayi', 'kitapçı'] },
+      {
+        id: 'okul-tanitim',
+        label: 'Okul tanıtım',
+        to: '/okul-tanitim',
+        icon: School,
+        section: 'Saha',
+        hint: 'Okul ziyaret planı, okul kartı, kademeye uygun katalog, bayi eşleştirme ve ziyaret raporu',
+        keywords: ['okul', 'ziyaret', 'öğretmen', 'katalog', 'bayi eşleştirme', 'okul örneği', 'akademik takvim'],
+      },
     ],
   },
   {

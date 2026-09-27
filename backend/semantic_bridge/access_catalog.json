@@ -315,6 +315,11 @@
       "key": "sayfa:seo-baglanti",
       "area": "pazarlama",
       "label": "Bağlantılar"
+    },
+    {
+      "key": "sayfa:okul-tanitim",
+      "area": "satis",
+      "label": "Okul tanıtım"
     }
   ],
   "features": [
@@ -648,6 +653,43 @@
       "label": "Sözleşme şablonları",
       "hint": "Şablon kütüphanesine ekleme, düzenleme, Word şablonu yükleme, arşivleme",
       "explicit": true
+    },
+    {
+      "key": "ozellik:okul.ziyaret",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Okul ziyareti ve plan yazma",
+      "hint": "Ziyaret raporu, haftalık plan önerisi ve düzeltmesi, katalog hazırlama, bayi önerme"
+    },
+    {
+      "key": "ozellik:okul.plan",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Ziyaret planı onayı",
+      "hint": "Haftalık ziyaret planındaki okulları onaylama"
+    },
+    {
+      "key": "ozellik:okul.herkesinki",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Okul tanıtım: bütün ekip",
+      "hint": "Bütün okulları, bütün temsilcilerin planını ve ziyaret raporlarını görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okul.bayi-onay",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "Okul–bayi eşleştirme onayı",
+      "hint": "Zeki AI'ın ya da temsilcinin önerdiği okul–bayi eşleşmesini onaylama ya da reddetme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okul.baglam-yukle",
+      "area": "satis",
+      "page": "sayfa:okul-tanitim",
+      "label": "İlçe endeksi ve akademik takvim yükleme",
+      "hint": "Dış veriyi (ilçe gelişmişlik endeksi, tatil ve sınav haftaları) CSV/Excel ile yükleme"
     }
   ]
 }

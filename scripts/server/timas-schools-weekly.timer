@@ -1,0 +1,10 @@
+[Unit]
+Description=Okul tanıtım haftalık plan önerisi, pazartesi 07:30
+
+[Timer]
+OnCalendar=Mon *-*-* 07:30:00
+Persistent=true
+Unit=timas-schools-weekly.service
+
+[Install]
+WantedBy=timers.target

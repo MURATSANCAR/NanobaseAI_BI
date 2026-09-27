@@ -488,6 +488,10 @@ RULES: list[tuple[str, Any]] = [
     # M12 Üretim yönetimi; baskı çıkış tarihi (M29/M16 tüketir) editoryal sayfalardan da okunur.
     ("/api/v1/editorial/production/print-exit", _EDITORIAL),
     ("/api/v1/editorial/production/", frozenset({page("uretim")})),
+    # M31 Okul tanıtım ve ziyaret. Ortak ziyaret tablosunun saha uçları (M30, /api/v1/field/) da okul-tanitim
+    # sayfasına açılır; o satır M30'da yazılır.
+    ("/api/v1/schools/run-due", SYSTEM),
+    ("/api/v1/schools/", frozenset({page("okul-tanitim")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
@@ -568,6 +572,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/field/report/weekly\.xlsx$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
+    # M31: ziyaret raporu, plan önerisi/düzeltmesi, katalog, bayi önerme; bağlam (ilçe endeksi, takvim) yükleme.
+    # Plan onayı (`okul.plan`), bayi eşleştirme onayı (açıkça verilen `okul.bayi-onay`) ve bütün ekibi görme
+    # (`okul.herkesinki`) ucun içinde denetlenir.
+    (frozenset({"POST", "PATCH"}),
+     r"^/api/v1/schools/((?!run-due$|context/)[^/]+/(visits(/suggest)?|plan|catalog|dealers)|plan/generate|plan/[^/]+"
+     r"|visits/[^/]+/next-done)$", "ozellik:okul.ziyaret"),
+    (frozenset({"POST"}), r"^/api/v1/schools/context/upload$", "ozellik:okul.baglam-yukle"),
+    (frozenset({"GET"}), r"^/api/v1/schools/catalogs/[^/]+\.pdf$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),
     (frozenset({"POST"}), _S + r"/[^/]+/(restart|resume|art/[^/]+/regenerate|plan/figures|plan/assets/[^/]+/(cutout|upscale)"
                                r"|coloring|coloring/retry|coloring/art/[^/]+/redraw|narration/run"

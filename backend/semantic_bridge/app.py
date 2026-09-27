@@ -6645,6 +6645,22 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "logo_connect": _production_connect(lambda: rt().settings.connection_file),
         "llm": lambda: rt().llm_for("saha"), "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
     })
+
+    # M31 Okul tanıtım ve ziyaret: CRM ziyaret yerleri/etkinlik/sipariş + Logo stok/fiyat/bayi satışı (salt okunur) +
+    # portal kayıtları (plan, bayi eşleşmesi, katalog, ortak ziyaret tablosu). Uçlar /api/v1/schools/*.
+    from semantic_bridge import school_visits_api
+    from semantic_layer.runtime.llm_queue import BATCH as _SCHOOLS_BATCH
+
+    app.state.schools = school_visits_api.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority: rt().llm_for("okul", _SCHOOLS_BATCH if priority else None),
+        "system": lambda: (rt().store.engine, rt().settings.tenant_id),
+        "require_caller": _require_caller,
+    })
     return app
 
 

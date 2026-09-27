@@ -51,6 +51,8 @@ const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
 const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'));
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
+const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
+const SchoolCard = lazy(() => import('@/canvas/schools/SchoolCard'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -129,6 +131,9 @@ export default function App() {
             {/* M30 Saha satış ve tahsilat (BMT): telefon önce; müşteri brifingi cari koduyla (/api/v1/field). */}
             <Route path="saha" element={<FieldScreen />} />
             <Route path="saha/musteri/:code" element={<CustomerBrief />} />
+            {/* M31 Okul tanıtım ve ziyaret (/api/v1/schools): telefon öncelikli «Bu hafta», okul kartı, bayi kuyruğu, dönem raporu. */}
+            <Route path="okul-tanitim" element={<SchoolsScreen />} />
+            <Route path="okul-tanitim/:id" element={<SchoolCard />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />

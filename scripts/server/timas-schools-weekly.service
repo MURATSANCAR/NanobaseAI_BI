@@ -1,0 +1,9 @@
+[Unit]
+Description=Okul tanıtım (M31): pazartesi haftalık ziyaret planı önerisi (planı olmayan temsilcilere)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Dış gönderim yok (kullanıcı kararı 2026-09-28): öneri yalnız ekranda «Bu hafta»da görünür, e-posta atılmaz.
+ExecStart=/bin/sh -c 'curl -fsS -m 1790 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/schools/run-due?kind=weekly"'

@@ -1,5 +1,61 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M31 Okul tanıtım ve ziyaret yönetimi (bayi eşleştirme dahil) — DOĞRULANAMADI, sunucu kapalı
+
+- **Neden:** yol haritası «Satış ve saha» bloğu. Okul tanıtım ekibinin hangi okula, ne zaman, hangi kitaplarla gideceği;
+  okulun bağlı bayisi; ziyaret raporu ve ziyaretin satışa dönüşü hiçbir ekranda izlenmiyordu. Analiz
+  `docs/analiz/kullanici-ihtiyaclari/M31-okul-tanitim-ziyaret.md` (§14 kodlama planı).
+- **Ne yapıldı:** köprü `school_visits_sources.py` (CRM + Logo salt okunur SQL, 10 dk bellek), `school_visits.py` (tablolar,
+  kademe↔sınıf, kitap sınıfları, ad eşleştirme, öncelik puanı, dış veri ayrıştırma, katalog + PDF, bayi adayları, Zeki AI
+  çağrıları), `school_visits_api.py` (servis + `/api/v1/schools/*`); `app.py`'de yalnız `register`; `access.py` RULES +
+  FEATURE_RULES, `access_catalog.json` yeni alan `satis` + sayfa ve 5 özellik; menüde yeni **«Satış ve saha»** alanı
+  (M29/M30/M32 aynı alanı kullanacak; birleştirmede tek tanıma inecek); Kampüs `M31`; rota `/okul-tanitim(/:id)`; ön yüz
+  `src/canvas/schools/` (SchoolsScreen, SchoolsWeek, SchoolsList, SchoolCard, VisitReportSheet, DealerPanel, DealerQueue,
+  TermReport, ContextUpload, parts, api); zamanlayıcı `timas-schools(.timer|-weekly.timer)`; testler
+  `test_school_visits.py`; kabul `scripts/acceptance/m31/` (check.sh, reference.sql, compare.py 7 kontrol, cleanup.py).
+- **Ortak ziyaret tablosu:** `semantic_saha_ziyaret` M30 analizindeki kolonlarla birebir (id, tenant_id, tur, hedef_kimlik,
+  sahip, planlanan, gerceklesen, durum, not, ton, sonraki_adim, sonraki_tarih, soz_odeme_tarihi, soz_odeme_tutari, gizli,
+  eslik_eden_bayi, olusturma, guncelleme); kendi MetaData'sında `create_all(checkfirst)` = CREATE TABLE IF NOT EXISTS.
+  Okul ziyaretine özgü alanlar (kişi rolü, ilgi, istenen kitaplar, bayiye yönlendirildi) `semantic_school_visit_details`'ta;
+  `ton` ilgiden türetilir (yüksek → olumlu) ki M30 okuyabilsin. M30 birleştirmesinde tablo tek tanıma indirgenecek.
+- **Açık sorulara verilen kararlar (§10, veriden/koddan; ölçülecek olanlar ayarda):**
+  1. *Okul tanıtımını kim yapıyor:* temsilcinin okulları = CRM ziyaret yerinin sahibi ∪ ilin müşteri temsilcisi
+     (`new_illerBase.new_musteritemsilcisi`) ∪ okuldaki CRM ziyaretinin sorumlusu ∪ portalda o okula ziyaret/plan yazan
+     (`SCHOOLS_OWNER_RULES=sahip,il,ziyaret`). 68.713 kaydın sahibi büyük olasılıkla tek içe aktarım hesabı —
+     **ölçülecek**; öyleyse `sahip` kuraldan çıkarılır.
+  2. *Liste nereden, ne zaman:* ekranda okuma tarihi ve kaydın CRM'deki son değişikliği yazılır; öğrenci sayısı SQL'de
+     `TRY_CAST(... AS int)` (kabul testi aynı ifade), çevrilemeyen «bilinmiyor» (0 değil). MEB listesiyle kıyas (yükleme)
+     ikinci sürüm.
+  3. *Okul → bayi kuralı:* aday okulun ilindeki bayi/kitapçılar; puan aynı ilçe 40 + bu kademeye uygun kitap satışı 40
+     (24 ay, adaylar arasında göreli) + ortak ziyaret (bu okul 10 / ilçe 5) + ağ dengesi 10. CRM'deki «cari ile ziyaret»
+     çifti kanıtlanmış bağdır → **onaylı** açılır (yönetici reddedebilir). M59 yok; M30'un `semantic_field_signals`
+     tablosu varsa risk uyarısı gösterilir (puandan düşülmez).
+  4. *Örnek bütçesi:* dokunulmadı; dönem raporu örnek (10/11) → okul satışı (13) geçişini sayar.
+  5. *MEB/okul idaresi:* katalog PDF'i tanıtım/okuma kültürü dilinde, «MEB tavsiyeli» yok, seçimin okulun seçim
+     komisyonunda olduğu yazılı; öğrenci verisi alınmaz, not alanı «öğrenci adı yazmayın» der.
+  - *Siparişin okula bağı:* CRM `new_siparisBase`'de okul kolonu yok → firma adı aynı ildeki okul adıyla eşleşen
+    siparişler okula sayılır (ekranda yazılı). Doğruluğu **ölçülecek**.
+  - *Ad eşleştirme:* etkinlikte `new_ZiyaretYeri` boş, `new_Okul` metni dolu kayıtlar kural (sade kelime Jaccard ≥ 0,85, ikinci
+    adaydan ≥ 0,1 önde) ile; kalanlar gece `QueuedLlm.choose` (aday okullar + «Hiçbiri»; otomatik kabul p ≥ 0,90, marj
+    ≥ 0,50 — `SCHOOLS_AUTO_MIN_P/MARGIN`), karar kalıcı (evet/hayır/belirsiz). Kart «ziyaret yeri bağlı» ve «ad eşleşmesiyle»
+    sayıları ayrı gösterir (kabul 3 yalnız birincisiyle karşılaştırır).
+  - *Bayi önerisi ve nottan alan:* bayi için kuralın ilk 5 adayı arasında `choose` (öneri eşiği p ≥ 0,70, marj ≥ 0,30),
+    emin değilse kuralın birincisi; nottan ilgi ve kişi rolü `choose`, kitap/sıradaki adım JSON; hepsi temsilci/yönetici
+    onayıyla. Rakam modelden gelmez; ziyaret önerisi metnindeki her sayı verilen bilgide olmalı, yoksa kural metni.
+  - `okul.herkesinki` açıkça verilen yetki yapıldı (diğer «herkesinki» anahtarlarıyla tutarlı); analizde yalnız
+    `okul.bayi-onay` açık yazılıydı.
+  - *Kullanıcı kararı (2026-09-28):* ilk sürümde otomatik dış gönderim yok → e-posta/SMS atılmaz; hatırlatma «Sıradaki
+    adımlar»da, onay kuyruğu sekmede. Saha erişimi VPN ile; ekranlar 320/390 px öncelikli.
+  - *MEB uygunluk rozeti* (stüdyo yaş raporu) bu sürümde yok: rapor yalnız stüdyoda işlenen kitaplar için var ve iş başına
+    ağ çağrısı ister; ikinci sürüm.
+- **Tasarım:** yeni animasyon yok; basma geri bildirimi projedeki düğmelerle aynı (`scale(0.97)`, 150 ms ease-out), liste
+  kartında 0,99. Yan sayfa mevcut `Sheet`. Okul kartında sık işlemler kaydırılan alanın altına yapışık (telefon menü
+  çubuğunun üstünde). review-animations ölçütüyle gözden geçirildi: `transition: all` yok, yalnız transform/renk.
+- **Doğrulama:** DOĞRULANAMADI — test sunucusu kapalı (kullanıcı kararı). Yerelde yalnız `py_compile` ve JSON doğrulaması;
+  pytest/vitest/tsc/build ve gerçek DB kabulü `scripts/acceptance/m31/check.sh` + `compare.py` ile sunucuda koşulacak.
+  Ölçülecekler: öğrenci sayısı doluluğu, ziyaret yeri sahibinin anlamı, ad eşleşmesi eşikleri (golden set), sipariş–okul
+  ad eşleşmesinin isabeti, `PRCLIST.CURRENCY` 0/160, okul tanıtım ziyaret payı, ilk gece işinin süresi.
+
 ## 2026-09-28 — M30 Saha satış ve tahsilat (BMT): bugünün ziyaret sırası, müşteri brifingi, FIFO tahsilat kovaları, CRM tahsilat onayı, ödeme planı, haftalık saha raporu
 
 - **Neden:** yol haritası, satış ve saha bloku. Saha temsilcisi (CRM'de «BMT») ziyaret öncesi Logo ekstresini, CRM kartını ve
