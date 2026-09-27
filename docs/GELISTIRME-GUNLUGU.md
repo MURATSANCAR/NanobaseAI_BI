@@ -1,5 +1,14 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Yol haritası: kalan 47 modülün kullanıcı ihtiyaç analizi, kodlama kuyruğu, kullanıcı kararları
+
+- **Neden:** ZEKİ_Moduller3.html'deki 58 modülün ~15'i başlamıştı ve sunumdaki «Proje Planı» sayfası boştu. Kullanıcı sırayı onayladı (yarım kalanlar → editoryal zincir → B bloku → M46) ve kalan modüllerin kodlamadan önce, kullanacak uzmanın gözüyle analiz edilmesini istedi.
+- **Analiz:** 9 paralel ajan, sunucuya bağlanmadan depodaki bilgi paketi ve tarihli ölçümlerle 47 belge yazdı (`docs/analiz/kullanici-ihtiyaclari/`). Her belgede 14 bölüm: 1–11 ihtiyaç, 12 uzman gözüyle en iyi sistem, 13 Zeki AI (yerel model) + Logo + CRM tablosu, 14 kodlama planı (dosya, tablo, uç, yetki, kabul SQL'i, büyüklük). Ölçülmemiş her sayı «ölçülecek», kanıtsız iddia «varsayım».
+- **Ortak işler öne alındı:** `QueuedLlm.choose` (bu turda main'e girdi; sunucuda 84/84 + gerçek model kabulü), Zeki AI sohbet kapsamının genişletilmesi, pazarlama çekirdeği, sayfa düzeyinde açık yetki (İK).
+- **Kullanıcı kararları:** README'deki tablo; Trendyol/Amazon açık soruları `YOL-HARITASI.md`'de.
+- **Bulunan sorunlar:** CRM `new_kargofirmasi` kargo firması parolalarını tutuyor (BT'ye); `contracts.py` sessiz satır tavanları (ayrı iş başlatıldı); İK ekranları «Herkes» rolüne açık olurdu (sayfa `explicit` desteği İK kodlamasının ilk adımı); model kuyruğu mesaj başlarını saklıyor.
+- **Süreç notu:** ana depo klasöründe çalışan oturumlar dal değiştirdiği için kullanıcıya verilen merge komutları «main'de mi» denetimli; paralel dallar birbirinin üstüne dizilip tek ileri sarmayla taşındı.
+
 ## 2026-09-28 — LLM kapısına kapalı küme seçim: `QueuedLlm.choose` (seçim + her seçeneğin olasılığı)
 
 - **Neden:** H1 kategori ağacı analizi (bölüm 13–14) ve H2–H4 aynı şeyi istiyor: modelin serbest metin değil, verilen
