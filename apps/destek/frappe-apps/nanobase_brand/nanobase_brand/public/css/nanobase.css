@@ -100,6 +100,26 @@ body[data-path="login"] .login-content {
 	box-shadow: 0 28px 70px -12px rgba(20, 30, 60, 0.18);
 }
 
+/* Giriş düğmesi btn-primary değil btn-login taşır ve giriş paketi bu dosyadan sonra
+   yüklenir; seçici gövdeden başlar ki sıraya bağlı kalmasın. */
+body[data-path="login"] .btn.btn-login,
+body[data-path="update-password"] .btn.btn-primary {
+	background-color: var(--nb-violet);
+	border-color: var(--nb-violet);
+	color: #fff;
+}
+
+body[data-path="login"] .btn.btn-login:hover,
+body[data-path="update-password"] .btn.btn-primary:hover {
+	background-color: var(--nb-violet-hover);
+	border-color: var(--nb-violet-hover);
+}
+
+body[data-path="login"] .btn.btn-login:active,
+body[data-path="update-password"] .btn.btn-primary:active {
+	background-color: var(--nb-violet-press);
+}
+
 body[data-path="login"] .app-logo {
 	border-radius: 14px;
 }

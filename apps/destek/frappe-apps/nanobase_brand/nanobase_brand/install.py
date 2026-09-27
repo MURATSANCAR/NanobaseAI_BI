@@ -11,8 +11,8 @@ MARK = "/assets/nanobase_brand/images/logo-mark.svg"
 LOGO = "/assets/nanobase_brand/images/logo.svg"
 FAVICON = "/assets/nanobase_brand/images/favicon.svg"
 
-SETTINGS = {
-	"System Settings": {
+SETTINGS = [
+	("System Settings", {
 		"app_name": BRAND,
 		"country": "Turkey",
 		"language": "tr",
@@ -25,8 +25,11 @@ SETTINGS = {
 		"enable_telemetry": 0,
 		"disable_standard_email_footer": 1,
 		"email_footer_address": BRAND,
-	},
-	"Website Settings": {
+	}),
+	# Ayrı adım: seçenek listesi çalışma anında dolar; tutmazsa öteki ayarları düşürmesin.
+	# Girişten sonra doğrudan destek ekranı açılır.
+	("System Settings", {"default_app": "helpdesk"}),
+	("Website Settings", {
 		"app_name": BRAND,
 		"app_logo": MARK,
 		"favicon": FAVICON,
@@ -34,24 +37,30 @@ SETTINGS = {
 		"brand_html": f'<img src="{LOGO}" alt="{BRAND}" style="height:28px">',
 		"footer_powered": BRAND,
 		"hide_footer_signup": 1,
-	},
-	"Navbar Settings": {
+	}),
+	("Navbar Settings", {
 		"app_logo": MARK,
-	},
-	"HD Settings": {
+	}),
+	("HD Settings", {
 		"brand_name": BRAND,
 		"brand_logo": MARK,
 		"favicon": FAVICON,
-	},
-}
+	}),
+]
 
 
 def apply():
-	for doctype, values in SETTINGS.items():
+	for doctype, values in SETTINGS:
 		if not frappe.db.exists("DocType", doctype):
 			continue
-		_write_single(doctype, values)
-	frappe.db.commit()
+		# Bir ayarın doğrulaması göçü düşürmesin: hata kaydedilir, diğer ayarlar yazılır.
+		try:
+			_write_single(doctype, values)
+			frappe.db.commit()
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error(title=f"NanobaseAI marka ayarı yazılamadı: {doctype}")
+			frappe.db.commit()
 
 
 def _write_single(doctype, values):

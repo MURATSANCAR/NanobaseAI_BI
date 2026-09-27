@@ -32,6 +32,7 @@ COPY --chown=frappe:frappe frappe-apps/flow apps/flow
 COPY --chown=frappe:frappe frappe-apps/nanobase_brand apps/nanobase_brand
 
 # Kurulum sırası önemli: nanobase_brand en sonda — şablon ve çeviri önceliği ondadır.
+# simge.py çatının ve Helpdesk'in logo/simge/açılış görsellerini NanobaseAI simgesiyle değiştirir.
 # Yalnız ön yüz derleme bağımlılıkları silinir; çatının node_modules'u canlı bildirim
 # servisi (socketio.js) için çalışma anında gerekir.
 # compile-po-to-mo çevirileri derledikten sonra site önbelleğini temizlemek için --site ister;
@@ -42,6 +43,7 @@ RUN printf 'frappe\ntelephony\nhelpdesk\nflow\nnanobase_brand\n' > sites/apps.tx
       ./env/bin/pip install --no-cache-dir -e apps/$app || exit 1; \
     done \
  && bench setup requirements --node \
+ && ./env/bin/python apps/nanobase_brand/nanobase_brand/simge.py apps \
  && bench build --production \
  && (bench compile-po-to-mo --force || true) \
  && test -s sites/assets/locale/tr/LC_MESSAGES/nanobase_brand.mo \
