@@ -116,3 +116,23 @@ aramasından ("timaş" %43,8 TO). En büyük fırsat örneği: "halis aydemir" 4
 
 Sağlam olanlar: HTTPS 6.656/6.656, ürün snippet'i ve satıcı girişi 4.872 geçerli (0 hata), içerik haritası 4.987, yorum snippet'i 137,
 masaüstü Core Web Vitals hepsi iyi.
+
+
+## CRM kitap kartı ve dijital haklar (2026-09-27, canlı CRM .28, yalnız okuma)
+
+**Hangi alan ne demek**
+- `new_sozlesmeBase.new_iletimhakki` — umuma iletim: eserin internette gösterilmesi. Google Kitaplar önizlemesi ve tadımlık PDF buna bağlı.
+- `new_EKitap`, `new_ZKitapHakki`, `new_SesliKitapHakki` — e-kitap, Z-kitap, sesli kitap hakları; `new_e_kitap_telif` oranı.
+- `new_SozlesmeTipi`: 1 Telif Satış, 2 Taahhüt, 5 Telif Alış, 100000000 Hizmet. Hak kontrolünde yalnız 5.
+- `new_KorumaDEser` koruma dışı eser; `new_haklaraciklama` serbest metinli hak notu (738 sözleşme; "özel maddeler var" gibi).
+- Yürürlük: statuscode Aktif/Aktif (Proje)/Aktif-Yenileme, bitiş bugünden sonra ya da süresiz, fesih tarihi yok.
+- Kitap ↔ sözleşme `new_new_sozlesme_new_kitapBase`; taraf `new_sozlesmetarafiBase.new_kisi`/`new_Firma`.
+- Kitap kartı yayın durumu `new_kitap_yayincilikstatusu` (etiket CRM'den): YS05 bizim değil, YS06 hakları devredildi, YS11 satıştan çekildi, YS12 geri istendi, YS01 iptal.
+
+**Hak kararı (kitap başına):** yürürlükteki bütün Telif Alış sözleşmelerinde iletim → *var*; biri eksik → *eksik* (taraf adıyla); hak notu var → *incele*; yürürlükte yok → *yok*; koruma dışı → *koruma_disi*. Ön süzgeçtir; kesin karar telif biriminin.
+
+**SEO/GEO'ya kaynak olabilecek CRM alanları:** özgün ad/dil, ilk yayın tarihi/ülkesi, önceki yayınevi, hedef kitle ve yaş, yazar/çizer/çevirmen, tür ve web kategorisi, anahtar kelime ve etiketler (`new_new_anahtarkelime_new_kitapBase` 52 bin bağ), spot, özet, tanıtım metni, öne çıkan yanları, alıntılar, tadımlık PDF (`new_okumalink`), video (`new_ProductWebsite`/`new_youtubelink`, YouTube). İç yazışma alanları (editör görüşü, baskı adedi önerisi) okunmaz ve gösterilmez.
+
+**Kullanılmayacaklar:** `new_kitapsorusu` okuma-anlama test sorusudur (SSS değildir); `new_pdfonizle` boş; yazar kişi kartında (ContactBase) SEO'ya yarar özel alan dolu değil.
+
+**Sayılar (T-soft'ta aktif 6.578 kitap):** hak var 3.521 · sözleşme kaydı yok 2.575 · incele 294 · eksik 184 · koruma dışı 4. Yayın durumu işaretli ama satışta: bizim değil 247, iptal 55, çekildi 9, devredildi 1.

@@ -1,5 +1,12 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 — SEO & GEO: CRM kitap kartı ve dijital haklar
+
+- **Neden:** Google Kitaplar'a önizleme yüklemeden önce "bu kitabı internette gösterme hakkımız var mı" sorusu. Canlı CRM'de (yalnız okuma) kitap ve sözleşme tablolarının bütün alanları doluluk oranıyla tarandı.
+- **Bulgular:** internette gösterim = sözleşmede `new_iletimhakki` (umuma iletim); yalnız **Telif Alış** (tip 5) sayılır, Telif Satış (1) Timaş'ın hakkı yurtdışına sattığı sözleşmedir. T-soft'ta aktif 6.578 kitap: hak var 3.521, sözleşme kaydı yok 2.575, hak notu var (incele) 294, bir tarafta hak eksik 184, koruma dışı 4. Yayın durumu: 247 "YS05 Artık bizim ürünümüz değil", 55 iptal, 9 satıştan çekildi, 1 hakları devredildi — hepsi sitede satışta. Tadımlık PDF 3.864, video 265. `new_kitapsorusu` okuma-anlama test sorusu (107 kitap) → SSS şeması için kullanılmaz. `new_pdfonizle` hiç dolu değil.
+- **Yapılan:** `seo_geo/crm.py` (kitap kartı + sözleşme + taraf okuması, hak kararı, etiketler CRM StringMap'ten), tablo `semantic_seo_crm_books`, uçlar `GET /crm`, `POST /crm/sync`, ürün ayrıntısında `crm`, özet `overview.crm`; gece işinde CRM okuması; yayın durumu işaretli kitap ön üretimden çıkar. Ekran: ürün denetiminde «CRM kitap kartı ve haklar» paneli (sözleşme tablosu, SEO'ya kaynak alanlar, öneriler), yeni «Haklar ve CRM» ekranı, SEO özetinde iki iş satırı + bağlantı satırı.
+- **Doğrulama:** `test_seo_crm.py` 10/10; `crm.read` canlı CRM'de 65 sn, 12.491 kart; İyilik Timi → hak var (yazar + çizer sözleşmesinde iletim ve e-kitap). Ön yüz tip denetimi test sunucusunda temiz. Ekran doğrulaması main'e alınıp test sunucusuna kurulunca.
+
 ## 2026-09-26 (12:30) — Sohbet K3: tarih aralığı, saat, ISO ve kısmi tarih; soru sonu fiilleri
 
 - Müşteri VM'inin sorgu kaydından tarihli 26 gerçek soru çekildi (yalnız okuma). "20.08.2026 03:00:00 ve 21.08.2026 03:00:00 arasındaki toplam net sipariş tutarı" (3 yazımla) iki günün kıyası (iki kolon) olarak derleniyordu; ISO "2026-08-20 03:00:00" yıl, "21.008.2026" yıl sanılıyordu; "saat 03:00" tanımsız niteleyici reddi alıyordu. "1 şubat 2026 tarihinde … gerçekleşmiştir", "… sipariş mevcut", "… listesini hazırlar mısın" tarih doğru okunduğu hâlde son fiil yüzünden reddediliyordu.
