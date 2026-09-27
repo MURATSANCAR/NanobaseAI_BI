@@ -206,7 +206,7 @@ export default function CharactersPanel({ jobId }: { jobId: string }) {
                 {suggesting ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
                 {suggesting ? `Öneriler hazırlanıyor (${TASK_TEXT[suggest!.status]})…` : `Kartı olmayan ${missing.length} karakter için öneri hazırla`}
               </button>
-              <p className="text-[11.5px] text-canvas-muted">Zeki AI bu kitabın karakter tariflerinden ve karakter çizimlerinden taslak kart hazırlar; siz düzeltip onaylarsınız.</p>
+              <p className="text-[11.5px] text-canvas-muted">ZEKİ AI bu kitabın karakter tariflerinden ve karakter çizimlerinden taslak kart hazırlar; siz düzeltip onaylarsınız.</p>
             </div>
           )}
           {suggest?.status === 'fail' && <Note tone="err">Öneri hazırlanamadı; biraz sonra yeniden deneyin.</Note>}

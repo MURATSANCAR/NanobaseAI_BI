@@ -126,7 +126,7 @@ export default function ContractsScreen() {
       lead="CRM'deki sözleşme kayıtları: kitap, hak sahibi, telif oranları, süre ve durum. Hakediş ve ödeme takvimi CRM'de tutulmadığı için burada yok."
       source={s ? `${nf.format(s.active)} yürürlükte sözleşme` : 'CRM sözleşmeleri'}
     >
-            {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+            {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
             {err && <Note tone="err">{err}</Note>}
             {s && <Kpis s={s} expiring={expiring} onExpiring={() => setExpiring((v) => !v)} />}
 

@@ -229,8 +229,9 @@ OPEN = "open"        # oturum yeter (ortak uçlar; kendi kontrolü varsa o da ge
 OWN = "own"          # uç kendi yetkisini denetler (yönetim, yetki)
 SYSTEM = "system"    # yalnız zamanlayıcı/betik (çerezsiz) ya da yönetici
 
-_SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-ai", "seo-sayfalar", "seo-yonlendirme", "seo-sema",
-                                   "seo-llms", "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti"))
+_SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-rakip", "seo-ai", "seo-sayfalar",
+                                   "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
+                                   "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kisiler", "basin-web", "telif-sozlesme",
                                          "editor-atama"))

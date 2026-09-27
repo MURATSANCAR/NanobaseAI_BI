@@ -3,6 +3,8 @@
 2026-09-21: portal cevapları kapak, başlık, yazar, sayfa kaynaklı kısa özet ve kitap seçme düğmesi içerir.
 `editor.card_api` salt okunur ayrı servistir (:19141); modelleri/işçileri başlatmaz ve bakım kilidini kaldırmaz. Uçlar: `/v1/books/cards`, `/v1/books/{id}/cover`, `/v1/books/{id}/graph`, `/v1/books/{id}/proofing` (son okuma: son neslin her denetim için en yeni koşusu + bulguları; koşu yoksa boş listeler), `/v1/books/{id}/proofing/export.docx` (bulgular metne Word yorumu olarak; yanlış alarm hariç), `/v1/books/{id}/proofing/word-map` (kelime haritası: `word_variety` denetiminin en yeni başarılı koşusunun `stats`'ı — kökler, biçimler, sayfalar, anlamlar/deyimler, MTLD; koşu yoksa `stats: null`).
 
+**CRM bağlayıcısı (2026-09-27):** `GET /v1/catalog/cover-requests`, `POST /v1/catalog/crm-lookups` — yalnız test sunucusundaki gece zamanlayıcısı (`scripts/server/editor-crm-connector.*`, kart servisi tüneli 127.0.0.1:18889) kullanır; köprü ve VM nginx'i geçirmez. Yazılan: yayınevi kaydı (`book_crm_record`) ve kapak sonucu.
+
 **Tek yazma ucu (2026-09-23):** `POST /v1/books/{id}/proofing/findings/{finding_id}/decision` — editörün son okuma
 bulgusuna kararı («Doğru» / «Yanlış alarm» + gerekçe [+ not]), `ed.proof_decision` tablosuna salt ekleme. Yazılan
 şey kitap verisi değil, editörün (insanın) kaydıdır; kitap içeriğine, kataloğa, denetimlere dokunmaz. Bunun dışında

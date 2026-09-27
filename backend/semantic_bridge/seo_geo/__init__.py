@@ -78,6 +78,8 @@ class SeoGeo:
         self.geo_state: dict[str, Any] = {"running": False, "done": 0, "failed": 0, "startedAt": None, "finishedAt": None, "error": None}
         self._crawl_lock = threading.Lock()
         self.crawl: dict[str, Any] = {"running": False, "done": 0, "queue": None, "startedAt": None, "finishedAt": None, "error": None}
+        # Uzman özellikleri (features.py) gece işine buradan eklenir: T-soft eşitlemesi bittikten sonra sırayla koşar.
+        self.nightly: list[tuple[str, Any]] = []
         self._crm_lock = threading.Lock()
         self.crm_state: dict[str, Any] = {"running": False, "count": None, "startedAt": None, "finishedAt": None, "error": None}
         # Sayfa önerisi uçlarla birlikte `register` içinde kurulur; ön üretim buradan çağırır.
@@ -1344,6 +1346,11 @@ def register(app, runtime, authorize, session_user):
             import time as _t
             while seo.state.get("running"):
                 _t.sleep(10)
+            for name, job in seo.nightly:
+                try:
+                    job()
+                except Exception:  # noqa: BLE001 — bir özellik düşerse diğerleri sürer
+                    log.exception("seo nightly %s failed", name)
             seo.start_batch("zamanlayıcı", budget)
             seo.start_crawl(min(budget, 7200))
             if any(e["configured"] for e in seo.geo_engines()):
@@ -1352,4 +1359,7 @@ def register(app, runtime, authorize, session_user):
         out["batch"] = f"başlayacak (bütçe {budget} sn)"
         return out
 
+    from . import features
+
+    features.register(app, features.Ctx(seo=seo, gate=gate, approver=approver, authorize=authorize))
     return seo

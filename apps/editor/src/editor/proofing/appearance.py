@@ -29,10 +29,11 @@ import asyncio
 from .. import source
 from ..llm import Llm
 from . import _attributes as A
+from . import _messages as M
 
 NAME = "appearance"
 VERSION = "1"
-LABEL = "Görünüş sürekliliği"
+LABEL = "Karakter görünüşü"
 
 DIRECTOR = "book-director"
 # Yargının iki sırada da "çelişki" demesi gereken en düşük olasılık. text_contradictions'ta
@@ -70,23 +71,17 @@ def severity(kind: str, p: float) -> str:
 def finding_of(c: dict, verdict: dict) -> dict:
     """Bir yargılanmış çiftten bulgu: sayfa ve kanıt ikinci (sonraki) gözlemin, ilki mesajda."""
     a, b = c["a"], c["b"]
-    label = A.KINDS[c["kind"]]["label"]
     p = verdict["p_contradiction"]
-    return {
+    # metin ve öneri tek yerde: _messages (details'ten kurulur)
+    return M.put(NAME, {
         "page": b["page_no"], "severity": severity(c["kind"], p),
         "quote": b["quote"] if b["source"] == "TEXT" else None,
         "bbox": b["bbox"] if b["source"] == "IMAGE" else None,
-        "message": (f"Görünüş sürekliliği ({label}) — «{c['character_name']}»: s.{a['page_no']} {A.describe(a)}; "
-                    f"s.{b['page_no']} {A.describe(b)}. Hikâye bu değişikliği açıklamıyor."
-                    + (f" (Aynı değer s.{', s.'.join(map(str, c['pages_a']))} sayfalarında da okundu.)"
-                       if len(c["pages_a"]) > 1 else "")),
-        "suggestion": "İki sayfayı yan yana karşılaştırın; çizimi ya da metni düzeltin veya değişimi açıklayan "
-                      "bir cümle ekleyin.",
         "details": {"character": c["character_name"], "character_id": c["character_id"], "kind": c["kind"],
                     "stable": A.KINDS[c["kind"]]["stable"],
                     "a": _ev(a), "b": _ev(b), "pages_a": c["pages_a"], "pages_b": c["pages_b"],
                     "judge": {k: verdict[k] for k in ("forward", "reverse")},
-                    "p_contradiction": round(p, 3)}}
+                    "p_contradiction": round(p, 3)}}, advice=True)
 
 
 def _ev(r: dict) -> dict:
@@ -145,11 +140,10 @@ async def run(generation_id: str):
     findings, stats = await check(rows, pages, llm)
     stats["ledger"] = fill
     img = fill["image"]
-    findings.append({
+    findings.append(M.put(NAME, {
         "page": None, "severity": "INFO",
-        "message": (f"Özellik defteri: {stats['characters']} karakter, {stats['rows_text']} metin ve "
-                    f"{stats['rows_image']} resim kaydı ({img['figures']} çözülmüş figür, "
-                    f"{img.get('not_visible', 0)} kırpım okunamadı), {stats['uncertain']} değer belirsiz; "
-                    f"{stats['candidates']} aday çift yargılandı, {stats['confirmed']} bulgu. "
-                    "Eşikler henüz gerçek kitapta ölçülmedi.")})
+        "details": {"summary": {"characters": stats["characters"], "rows_text": stats["rows_text"],
+                                "rows_image": stats["rows_image"], "figures": img["figures"],
+                                "not_visible": img.get("not_visible", 0), "uncertain": stats["uncertain"],
+                                "candidates": stats["candidates"], "confirmed": stats["confirmed"]}}}))
     return findings, stats

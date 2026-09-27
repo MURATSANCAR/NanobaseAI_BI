@@ -218,7 +218,7 @@ function sqlParts(all: string | null | undefined): (...names: string[]) => strin
 }
 
 export function cfoData(c: CfoData, source: string): StitchCanvasData {
-  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'Zeki AI yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
+  const durum = c.authRequired ? 'Oturum gerekli' : c.failed ? 'ZEKİ AI yanıt vermedi' : !c.ready ? 'Yükleniyor' : '';
   const yok = (v: string) => (durum ? '—' : v);
   const son = c.totals?.son_fatura?.slice(0, 10);
   const sonTR = son ? `${son.slice(8, 10)}.${son.slice(5, 7)}` : '—';

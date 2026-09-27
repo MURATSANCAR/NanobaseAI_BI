@@ -20,6 +20,7 @@ from . import db, foundation, graph, read_model
 from . import review as review_mod
 from .proofing._labels import label_of   # etiketler kaynak dosyadan; denetim modülleri yüklenmez
 from .proofing import _decision            # editör kararı: saf doğrulama + isabet formülü
+from .proofing import _messages as proof_text  # bulgu metni: kayıtlı alanlardan, okunurken (eski raporlar da yeni dille)
 
 def authorize(authorization: str = Header(default='')):
     expected=os.environ.get('EDITOR_CARDS_KEY','')
@@ -138,7 +139,7 @@ def book_proofing(book_id: UUID):
                 'SELECT DISTINCT ON (check_name) id, check_name, check_version, status, error, started_at, finished_at'
                 ' FROM ed.proof_run WHERE generation_id=%s ORDER BY check_name, started_at DESC',(gid,)).fetchall()
             rows=c.execute(
-                "SELECT id, check_name, page_no, severity, message, quote, suggestion, bbox,"
+                "SELECT id, check_name, page_no, severity, message, quote, suggestion, bbox, details,"
                 " details->>'advisory' AS advisory, details->>'group' AS grp, details->>'confidence' AS confidence,"
                 " details->'marks' AS marks FROM ed.proof_finding"
                 ' WHERE run_id = ANY(%s) ORDER BY page_no NULLS FIRST, severity DESC, created_at',
@@ -152,6 +153,9 @@ def book_proofing(book_id: UUID):
         n[0]+=1
         n[1]+=r['severity']!='INFO'
     iso=lambda t: t.isoformat() if t else None
+    # sade metin (ne sorun + nerede + neden + öneri; sayısal ayrıntı ayrı): kayıtlı alanlardan okunurken üretilir
+    plain={str(r['id']):proof_text.render(r['check_name'],{'page':r['page_no'],'severity':r['severity'],'quote':r['quote'],
+           'suggestion':r['suggestion'],'message':r['message'],'details':r['details'] or {}}) for r in rows}
     return {'book_id':str(book_id),'generation_id':gid,
             'checks':[{'name':r['check_name'],'label':label_of(r['check_name']),'version':r['check_version'],
                        'status':r['status'],'started_at':iso(r['started_at']),'finished_at':iso(r['finished_at']),
@@ -159,14 +163,43 @@ def book_proofing(book_id: UUID):
                        'serious':by_check.get(r['check_name'],[0,0])[1],'error':r['error'],
                        'precision':_decision.precision(*counts.get((r['check_name'],r['check_version']),(0,0)))} for r in runs],
             'findings':[{'id':str(r['id']),'check':r['check_name'],'label':label_of(r['check_name']),'page':r['page_no'],
-                         'severity':r['severity'],'message':r['message'],'quote':r['quote'],
-                         'suggestion':r['suggestion'],'bbox':r['bbox'],
+                         'severity':r['severity'],'message':plain[str(r['id'])]['text'],'quote':r['quote'],
+                         'suggestion':plain[str(r['id'])]['suggestion'],'detail':plain[str(r['id'])]['detail'],
+                         'bbox':r['bbox'],
                          # set when the check's premise does not hold for this kind of book (proofing.as_advice)
                          'advisory':r['advisory'],
                          # optional, set by checks that need them (word_variety): a group key for deciding
                          # related findings together, the model's confidence, extra boxes on the same page
                          'group':r['grp'],'confidence':_num(r['confidence']),'marks':r['marks'],
                          'decision':decisions.get(str(r['id']))} for r in rows]}
+
+@app.get('/v1/catalog/cover-requests')
+def catalog_cover_requests():
+    """CRM bağlayıcısı için editörün bütün kitapları (başlık, doğrulanmış ISBN ve yazar). Bağlayıcı CRM'e erişen
+    test sunucusunda zamanlayıcıyla koşar ve kart servisine yalnız o sunucunun tüneliyle ulaşır (köprü ve VM
+    nginx'i bu yolları geçirmez). Salt okuma."""
+    from . import catalog
+    return {'books':catalog.cover_requests()}
+
+@app.post('/v1/catalog/crm-lookups')
+def catalog_crm_lookup(body: dict = Body(...)):
+    """Bağlayıcının bir kitap için CRM eşleşmesi: yayınevi kaydı (yazar, özet, okur kitlesi, yaş, tür) ve kapak
+    sonucu. Kart servisinin ikinci yazma ucudur; yazdığı kitabın metni değil, yayınevinin kendi kaydıdır
+    (editor.catalog.store_crm_lookup — MCP'deki /catalog/covers ile aynı işlev)."""
+    from . import catalog
+    if not isinstance(body,dict) or not body.get('book_id') or not body.get('outcome'):
+        raise HTTPException(422,'book_id ve outcome gerekli')
+    try:
+        UUID(str(body['book_id']))
+    except ValueError:
+        raise HTTPException(422,'book_id geçersiz') from None
+    return catalog.store_crm_lookup(body)
+
+def _plain_for_word(r):
+    """Word yorumunun metni: ekrandakiyle aynı sade metin, öneri ve ayrıntı (kayıtlı alanlardan)."""
+    p=proof_text.render(r['check_name'],{'page':r['page_no'],'severity':r['severity'],'quote':r['quote'],
+                        'suggestion':r['suggestion'],'message':r['message'],'details':r['details'] or {}})
+    return {'message':p['text'],'suggestion':p['suggestion'],'detail':p['detail']}
 
 @app.get('/v1/books/{book_id}/proofing/export.docx')
 def book_proofing_docx(book_id: UUID, info: bool = Query(default=False)):
@@ -191,8 +224,9 @@ def book_proofing_docx(book_id: UUID, info: bool = Query(default=False)):
         except psycopg.errors.UndefinedTable:
             raise HTTPException(503,'proofing tables missing (db migration 023_proofing not applied)') from None
         decisions,_=_decisions(c,gid,[r['id'] for r in runs]) if runs else ({},{})
-    findings=[{'page':r['page_no'],'check':r['check_name'],'label':label_of(r['check_name']),'message':r['message'],
-               'quote':r['quote'],'suggestion':r['suggestion'],'details':r['details'] or {}} for r in rows
+    findings=[{'page':r['page_no'],'check':r['check_name'],'label':label_of(r['check_name']),'severity':r['severity'],
+               'quote':r['quote'],'details':r['details'] or {},
+               **_plain_for_word(r)} for r in rows
               if (decisions.get(str(r['id'])) or {}).get('verdict')!='REJECT' and (info or r['severity']!='INFO')]
     body=_export_docx.build(title,source.read(gid),findings)
     safe=''.join(ch if ch.isascii() and (ch.isalnum() or ch in '-_') else '-' for ch in title).strip('-') or 'kitap'

@@ -363,6 +363,16 @@ function EvidenceBody({ bookId, bookTitle, page, marks, activeKey, onPick, onClo
               <span className="font-bold text-canvas-ink">Öneri:</span> {f.suggestion}
             </p>
           )}
+          {/* Sayısal ayrıntı katlı: çoğu editör okumaz, isteyen açar. Bulgu değişince kapalı başlar (key). Animasyon yok: sık açılır. */}
+          {f.detail && (
+            <details key={findingKey(f, active.n)} className="group mt-1 text-[11px] leading-snug text-canvas-muted">
+              <summary className="inline-flex min-h-6 cursor-pointer list-none items-center gap-1 rounded font-bold text-canvas-ink/80 [@media(hover:hover)]:hover:text-canvas-ink [&::-webkit-details-marker]:hidden">
+                <span aria-hidden className="inline-block text-[9px] group-open:rotate-90">▶</span>
+                Ayrıntı
+              </summary>
+              <p className="mt-0.5 break-words pl-3.5">{f.detail}</p>
+            </details>
+          )}
           <div className="mt-2.5">
             <DecisionControls f={f} decide={decide} busy={busy} />
           </div>

@@ -130,7 +130,7 @@ function Sheet({ jobId, view, error, onNavigate }: { jobId: string; view: AgeVie
           <div className="mt-3 rounded-2xl border border-violet-100 bg-white/80 p-3" role="status" aria-live="polite">
             <div className="text-[12.5px] font-bold">{st?.step || 'Hazırlanıyor'}{st?.total ? ` · ${st.done}/${st.total}` : ''}</div>
             {!!st?.total && <div className="mt-2"><Progress value={st.done ?? 0} total={st.total} /></div>}
-            <p className="mt-1.5 text-[11.5px] text-canvas-muted">Zeki AI her pasajı ve seyrek kelimeyi tek tek okuyor; ekranı kapatabilirsiniz, rapor çıkınca burada olur.</p>
+            <p className="mt-1.5 text-[11.5px] text-canvas-muted">ZEKİ AI her pasajı ve seyrek kelimeyi tek tek okuyor; ekranı kapatabilirsiniz, rapor çıkınca burada olur.</p>
           </div>
         )}
         {st?.state === 'failed' && <div className="mt-3"><Note tone="err">{st.error}</Note></div>}

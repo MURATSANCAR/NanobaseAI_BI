@@ -10,7 +10,7 @@ import { ago, type NavData } from './useNav';
 
 /**
  * «Ara veya git» (⌘K / Ctrl K): ekranlar menü tanımından, kitaplar/kişiler/projeler Editoryal aramasından
- * (CRM), «Zeki AI'a sor» satırı ve son açılanlar. ↑/↓ gezer, Enter açar, Esc kapatır. Klavyeyle günde
+ * (CRM), «ZEKİ AI'a sor» satırı ve son açılanlar. ↑/↓ gezer, Enter açar, Esc kapatır. Klavyeyle günde
  * defalarca açıldığı için hiç hareket etmez. Sunucu sonuçları ilk sayfayla gelir, türün gerçek toplamı
  * başlıkta yazar; fazlası «Daha fazla göster» ile sayfa sayfa eklenir — sessizce kesilen sonuç yok.
  */
@@ -104,7 +104,7 @@ export default function CommandPalette({ open, onOpenChange, nav }: { open: bool
         <Command.Input
           value={q}
           onValueChange={setQ}
-          placeholder="Ekran, kitap veya kişi ara ya da Zeki AI'a sor…"
+          placeholder="Ekran, kitap veya kişi ara ya da ZEKİ AI'a sor…"
           className="min-h-14 min-w-0 flex-1 bg-transparent text-[16px] font-medium outline-none placeholder:text-muted/70 md:text-[17px]"
         />
         {serverWaiting && <Loader2 aria-label="Aranıyor" className="h-4 w-4 shrink-0 animate-spin text-muted" />}
@@ -193,14 +193,14 @@ export default function CommandPalette({ open, onOpenChange, nav }: { open: bool
         {search.error && dq === text && <p className="px-3 py-2 text-[12px] text-rose-700">Kitap ve kişi araması yapılamadı.</p>}
 
         {text && (
-          <Command.Group heading="Zeki AI">
+          <Command.Group heading="ZEKİ AI">
             <Command.Item value="zeki" onSelect={() => go(`/genel-bakis?soru=${encodeURIComponent(text)}`)} className="!border !border-dashed !border-violet/30">
               <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-tr from-coral to-violet text-white">
                 <Sparkles aria-hidden className="h-4 w-4" />
               </span>
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[14px] font-semibold">
-                  Zeki AI'a sor: <span className="text-violet">“{text}”</span>
+                  ZEKİ AI'a sor: <span className="text-violet">“{text}”</span>
                 </span>
                 <span className="block truncate text-[11.5px] text-muted">Cevap Genel bakış ekranında açılır</span>
               </span>

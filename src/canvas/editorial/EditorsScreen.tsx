@@ -80,7 +80,7 @@ export default function EditorsScreen() {
       lead="CRM proje kartındaki “Editörü” alanından editör başına proje dağılımı. Atama önerisi, redaksiyon takvimi ve iş yükü yüzdesi CRM'de tutulmadığı için burada yok."
       source={o ? `${o.sinceYear} ve sonrası projeler` : 'CRM projeleri'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {o && (

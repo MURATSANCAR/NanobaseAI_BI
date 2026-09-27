@@ -1,4 +1,4 @@
-"""ZEKI AI Tahminleme — Baskı Öneri raporunun "ZEKI AI Tahminleme" sekmesinin gecelik girdisi.
+"""ZEKİ AI Tahminleme — Baskı Öneri raporunun "ZEKİ AI Tahminleme" sekmesinin gecelik girdisi.
 
 Gizli rapor: listede görünmez, Baskı Öneri raporu son sonucunu okuyup sekmeyi kurar. Günde bir kez
 Logo'dan 2015'ten bu yana kitap başına aylık satışı okur ve tahmin servisine (TimesFM 3.0, POST /forecast/batch)
@@ -18,8 +18,8 @@ from datetime import date, datetime, timedelta
 from typing import Any, Callable
 
 REPORT_ID = "baski-oneri-tahmin"
-TITLE = "ZEKI AI Tahminleme (girdi)"
-DESCRIPTION = "Baskı Öneri raporundaki kitapların 12 aylık satış tahmini (ZEKI AI tahmin modeli)."
+TITLE = "ZEKİ AI Tahminleme (girdi)"
+DESCRIPTION = "Baskı Öneri raporundaki kitapların 12 aylık satış tahmini (ZEKİ AI tahmin modeli)."
 HIDDEN = True
 REFRESH_SECONDS = int(os.environ.get("ZEKI_FORECAST_REFRESH_SECONDS", str(24 * 3600)))
 HORIZON = 12
@@ -41,7 +41,7 @@ SOURCES = [
     ("logo_son_fatura", "logo", "Son fatura tarihi", "Logo'daki en son fatura günü; tahminin başladığı ayı belirler."),
 ]
 FORMULAS = [
-    ("Aylık tahmin", "ZEKI AI tahmin modeli, kitabın aylık satış geçmişi + takvim (ay, okul dönemi) + portföy büyümesi"),
+    ("Aylık tahmin", "ZEKİ AI tahmin modeli, kitabın aylık satış geçmişi + takvim (ay, okul dönemi) + portföy büyümesi"),
 ]
 NOTES: list[str] = []
 
@@ -127,9 +127,9 @@ def post_batch(payload: dict) -> dict:
         with _open(req, FORECAST_TIMEOUT) as r:
             return json.loads(r.read())
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"ZEKI AI tahmin servisi hata verdi ({e.code}): {e.read()[:200]!r}") from None
+        raise RuntimeError(f"ZEKİ AI tahmin servisi hata verdi ({e.code}): {e.read()[:200]!r}") from None
     except (urllib.error.URLError, TimeoutError, ConnectionError) as e:
-        raise RuntimeError(f"ZEKI AI tahmin servisine ulaşılamıyor ({FORECAST_API_BASE}); bu kurulumda tahmin servisi "
+        raise RuntimeError(f"ZEKİ AI tahmin servisine ulaşılamıyor ({FORECAST_API_BASE}); bu kurulumda tahmin servisi "
                            f"olmayabilir. Ayrıntı: {e}") from None
 
 
@@ -138,11 +138,11 @@ def service_ready() -> None:
     try:
         with _open(urllib.request.Request(f"{FORECAST_API_BASE}/health", headers=_headers()), 10) as r:
             if not json.loads(r.read()).get("ready"):
-                raise RuntimeError("ZEKI AI tahmin servisi henüz hazır değil (model yükleniyor).")
+                raise RuntimeError("ZEKİ AI tahmin servisi henüz hazır değil (model yükleniyor).")
     except (urllib.error.URLError, TimeoutError, ConnectionError, ValueError) as e:
         if FORECAST_LOCAL:  # uzak servis tanımlı değil ve yerelde de yok: bu kurulumda tahmin kapalı
-            raise RuntimeError(f"ZEKI AI tahmin servisi bu kurulumda yok ya da ulaşılamıyor ({FORECAST_API_BASE}).") from e
-        raise RuntimeError(f"ZEKI AI tahmin servisine (GPU) ulaşılamıyor ({FORECAST_API_BASE}): {e}") from e
+            raise RuntimeError(f"ZEKİ AI tahmin servisi bu kurulumda yok ya da ulaşılamıyor ({FORECAST_API_BASE}).") from e
+        raise RuntimeError(f"ZEKİ AI tahmin servisine (GPU) ulaşılamıyor ({FORECAST_API_BASE}): {e}") from e
 
 
 def build(run: Callable[[str, dict | None], dict], today: date | None = None, inputs: dict | None = None,
@@ -235,11 +235,11 @@ def explanation(meta: dict) -> dict:
     return {
         "title": "Bu tahmin nasıl hesaplandı?",
         "intro": [
-            "ZEKI AI her kitabın aylık satış geçmişine bakar ve önümüzdeki 12 ayın satışını ay ay tahmin eder. Bunu "
+            "ZEKİ AI her kitabın aylık satış geçmişine bakar ve önümüzdeki 12 ayın satışını ay ay tahmin eder. Bunu "
             "zaman serisi tahmin modeliyle yapar: model, çok sayıda farklı satış serisinden öğrendiği "
             "kalıpları (mevsim, büyüme, yavaşlama) bu kitabın geçmişine uygular.",
             "Baskı Tekrar sekmesindeki hız son 12 ayın ağırlıklı ortalamasıdır ve her ayı aynı sayar. Oysa satışınız eylülde "
-            "ortalamanın yaklaşık 1,5, ekimde 1,8 katına çıkıyor; mayıs-haziranda 0,7'ye iniyor. ZEKI AI tahmini ay ay "
+            "ortalamanın yaklaşık 1,5, ekimde 1,8 katına çıkıyor; mayıs-haziranda 0,7'ye iniyor. ZEKİ AI tahmini ay ay "
             "verdiği için stokun hangi ayda biteceğini daha doğru söyler. Baskı Tekrar ve Yeni Kitap sekmeleri değişmez; bu sekme yanında "
             "ikinci bir görüştür.",
         ],
@@ -251,21 +251,21 @@ def explanation(meta: dict) -> dict:
                 "Stok ve bekleyen sipariş: Baskı Tekrar sekmesindeki CRM değerleri, 5 dakikada bir güncel.",
             ]},
             {"title": "Mevcut rapor önerisiyle neden farklı olabilir", "items": [
-                "Stok 0 ve talep varsa ZEKI \"Risk/Acil\" der; talep yoksa (son 12 ayda ve tahminde ayda 1 adetten az ya da temkinli tahminle bile ayda 1'in altında) "
+                "Stok 0 ve talep varsa ZEKİ \"Risk/Acil\" der; talep yoksa (son 12 ayda ve tahminde ayda 1 adetten az ya da temkinli tahminle bile ayda 1'in altında) "
                 "\"Talep yok\" der, basım gerekmez. Mevcut rapor bu ayrımı yapamaz: hız da 0 olunca 0 ÷ 0 tanımsız çıkar ve "
                 "öneri \"Yeterli Stok\" görünür, talebi olan stoksuz kitapta bile.",
-                "İadesi satışından fazla olan kitapta mevcut rapor hızı eksi çıkar ve öneri \"Risk/Acil\" olur; ZEKI talebi "
+                "İadesi satışından fazla olan kitapta mevcut rapor hızı eksi çıkar ve öneri \"Risk/Acil\" olur; ZEKİ talebi "
                 "sıfırın altına indirmez, stok yeterliyse \"Yeterli Stok\" der (ayrışmaların beşte biri).",
-                "Okul dönemi yaklaşırken ZEKI aylık talebi yükseltir ve stoku daha erken bitirir; mevcut rapor her ayı aynı sayar.",
-                "Gerçek tahmin ayrışmalarında geçmiş sınama (4 kesim, 993 kitap): ZEKI %36, mevcut rapor %25 haklı çıktı; "
-                "%39'unda ikisi de tutmadı ve bunların çoğunda ZEKI gerçeğe daha yakındı.",
+                "Okul dönemi yaklaşırken ZEKİ aylık talebi yükseltir ve stoku daha erken bitirir; mevcut rapor her ayı aynı sayar.",
+                "Gerçek tahmin ayrışmalarında geçmiş sınama (4 kesim, 993 kitap): ZEKİ %36, mevcut rapor %25 haklı çıktı; "
+                "%39'unda ikisi de tutmadı ve bunların çoğunda ZEKİ gerçeğe daha yakındı.",
             ]},
             {"title": "Kolonlar nasıl okunur", "items": [
                 "Tahmin (12 ay): beklenen satış. Gerçekleşenin bundan az ya da çok olma ihtimali eşittir.",
                 "Temkinli (12 ay): gerçekleşenin %80 ihtimalle altında kalacağı satış. \"Tükenmesin\" senaryosu.",
                 "Tükenme / Temkinli tükenme: bugünkü CRM stokunun tahmine göre bittiği ay (temkinli olan daha erken).",
                 "Baskı ihtiyacı: 12 aylık tahmin + bekleyen sipariş − stok; eksi çıkarsa 0.",
-                "Öneri (ZEKI): Mevcut raporla aynı eşikler (Risk/Acil … Yeterli Stok), ama ZEKI'nin tükenme süresiyle. "
+                "Öneri (ZEKİ): Mevcut raporla aynı eşikler (Risk/Acil … Yeterli Stok), ama ZEKİ'nin tükenme süresiyle. "
                 "Ek düzey \"Talep yok\": stok yok ve satış fiilen durmuş — son 12 ayda da, beklenen tahminde de ayda 1 adetten "
                 "az (ya da temkinli tahminle bile ayda 1'in altında).",
                 "Güven: Yüksek = son 12 ayda en çok satan %20, Orta = sonraki %30, Düşük = az satan yarı. Düşük "
@@ -274,9 +274,9 @@ def explanation(meta: dict) -> dict:
         ],
         "table": {"caption": f"Geriye dönük sınama: geçmişteki {BACKTEST['kesimler']} kesimlerinde, o güne kadarki "
                              "veriyle tahmin edilip gerçekleşen satışla karşılaştırıldı (Baskı Tekrar kitapları).",
-                  "head": ["Ölçü", "Mevcut rapor hızı", "ZEKI AI"], "rows": BACKTEST["rows"]},
+                  "head": ["Ölçü", "Mevcut rapor hızı", "ZEKİ AI"], "rows": BACKTEST["rows"]},
         "notes": [
-            "Okul dönemi zirvesini ZEKI AI da eksik tahmin ediyor (zirve her yıl büyüyor). Zirve öncesi baskı kararında "
+            "Okul dönemi zirvesini ZEKİ AI da eksik tahmin ediyor (zirve her yıl büyüyor). Zirve öncesi baskı kararında "
             "\"Temkinli\" kolonlarına bakın.",
             f"Tahmin, Logo'daki son tam aya kadarki satışı kullanır: {ay_adi(meta.get('lastFullMonth'))} "
             f"(Logo'daki son fatura: {son_txt}). Sonraki aylar tahmin edilen aylardır.",
@@ -286,7 +286,7 @@ def explanation(meta: dict) -> dict:
     }
 
 
-# ---- Baskı Öneri'deki "ZEKI AI Tahminleme" sekmesi -----------------------------------------------------------
+# ---- Baskı Öneri'deki "ZEKİ AI Tahminleme" sekmesi -----------------------------------------------------------
 
 AY_KISA = ["Oca", "Şub", "Mar", "Nis", "May", "Haz", "Tem", "Ağu", "Eyl", "Eki", "Kas", "Ara"]
 ONERI_ESIK = ((1.0, "Risk/Acil"), (1.5, "Kritik"), (2.0, "Karar Ver"), (2.5, "Takip Et"))
@@ -366,29 +366,29 @@ TAB_COLUMNS = [
     ("yazar", "Yazar", "Kitap", "text", "crm_kitap", None),
     ("statu", "Statü", "Kitap", "text", "crm_kitap", None),
     ("liste", "Liste", "Kitap", "text", "hesap:Liste", None),
-    ("guven", "Güven", "ZEKI AI", "text", "hesap:Güven", None),
+    ("guven", "Güven", "ZEKİ AI", "text", "hesap:Güven", None),
     ("stok_adedi", "Stok (CRM)", "Stok ve talep", "n0", "crm_kitap", "sum"),
     ("bekleyen_siparis", "Bekleyen sipariş", "Stok ve talep", "n0", "crm_bekleyen_siparis", "sum"),
     ("son12", "Son 12 tam ay satış", "Stok ve talep", "n0", "zeki:logo_aylik_gecmis", "sum"),
-    ("ai_tahmin", "Tahmin", "ZEKI AI", "n0", "hesap:ZEKI tahmin", "sum"),
-    ("ai_temkinli", "Temkinli tahmin", "ZEKI AI", "n0", "hesap:ZEKI tahmin", "sum"),
-    ("ai_3ay", "Önümüzdeki 3 ay", "ZEKI AI", "n0", "hesap:ZEKI tahmin", "sum"),
-    ("ai_tukenme_ay", "Tükenme (ay)", "ZEKI AI", "dec", "hesap:ZEKI tükenme", None),
-    ("ai_tukenme", "Tükenme ayı", "ZEKI AI", "text", "hesap:ZEKI tükenme", None),
-    ("ai_tukenme_temkinli", "Temkinli tükenme ayı", "ZEKI AI", "text", "hesap:ZEKI tükenme", None),
-    ("ai_baski", "Baskı ihtiyacı", "ZEKI AI", "n0", "hesap:ZEKI baskı ihtiyacı", "sum"),
-    ("ai_baski_temkinli", "Temkinli baskı ihtiyacı", "ZEKI AI", "n0", "hesap:ZEKI baskı ihtiyacı", "sum"),
-    ("oneri", "Öneri (ZEKI)", "ZEKI AI", "oneri", "hesap:ZEKI öneri", None),
+    ("ai_tahmin", "Tahmin", "ZEKİ AI", "n0", "hesap:ZEKİ tahmin", "sum"),
+    ("ai_temkinli", "Temkinli tahmin", "ZEKİ AI", "n0", "hesap:ZEKİ tahmin", "sum"),
+    ("ai_3ay", "Önümüzdeki 3 ay", "ZEKİ AI", "n0", "hesap:ZEKİ tahmin", "sum"),
+    ("ai_tukenme_ay", "Tükenme (ay)", "ZEKİ AI", "dec", "hesap:ZEKİ tükenme", None),
+    ("ai_tukenme", "Tükenme ayı", "ZEKİ AI", "text", "hesap:ZEKİ tükenme", None),
+    ("ai_tukenme_temkinli", "Temkinli tükenme ayı", "ZEKİ AI", "text", "hesap:ZEKİ tükenme", None),
+    ("ai_baski", "Baskı ihtiyacı", "ZEKİ AI", "n0", "hesap:ZEKİ baskı ihtiyacı", "sum"),
+    ("ai_baski_temkinli", "Temkinli baskı ihtiyacı", "ZEKİ AI", "n0", "hesap:ZEKİ baskı ihtiyacı", "sum"),
+    ("oneri", "Öneri (ZEKİ)", "ZEKİ AI", "oneri", "hesap:ZEKİ öneri", None),
     ("pbi_oneri", "Öneri (mevcut rapor)", "Mevcut rapor", "oneri", "hesap:Öneri", None),
     ("pbi_hiz", "Mevcut rapor hızı (aylık)", "Mevcut rapor", "n0", "hesap:Ort. satış hızı", None),
     ("pbi_tukenme", "Mevcut rapor tükenme (ay)", "Mevcut rapor", "dec", "hesap:Tükenme süresi", None),
 ]
 TAB_FORMULAS = [
-    ("ZEKI tahmin", "ZEKI AI tahmininin aylık beklenen satışının (p50) bugünden tahmin ufkunun sonuna toplamı; temkinli = %80 "
+    ("ZEKİ tahmin", "ZEKİ AI tahmininin aylık beklenen satışının (p50) bugünden tahmin ufkunun sonuna toplamı; temkinli = %80 "
                     "kantil (p80). İçinde bulunulan ay kalan günlere göre sayılır."),
-    ("ZEKI tükenme", "CRM stoku, aylık tahmin birikimini hangi ayda aşarsa o ay (temkinli: p80 yolu)."),
-    ("ZEKI baskı ihtiyacı", "Tahmin + bekleyen sipariş − CRM stoku; eksiyse 0."),
-    ("ZEKI öneri", "Mevcut rapor eşikleri ZEKI tükenme süresiyle: ≤1 ay Risk/Acil · ≤1,5 Kritik · ≤2 Karar Ver · ≤2,5 Takip Et. "
+    ("ZEKİ tükenme", "CRM stoku, aylık tahmin birikimini hangi ayda aşarsa o ay (temkinli: p80 yolu)."),
+    ("ZEKİ baskı ihtiyacı", "Tahmin + bekleyen sipariş − CRM stoku; eksiyse 0."),
+    ("ZEKİ öneri", "Mevcut rapor eşikleri ZEKİ tükenme süresiyle: ≤1 ay Risk/Acil · ≤1,5 Kritik · ≤2 Karar Ver · ≤2,5 Takip Et. "
                    "Stok yok ve (son 12 tam ay satışı < 12 ve tahmin ufuk boyunca ayda 1'in altında) ya da temkinli tahmin "
                    "ayda 1'in altındaysa Talep yok."),
     ("Güven", "Son 12 tam ay satışına göre: en çok satan %20 Yüksek, sonraki %30 Orta, kalan Düşük."),
@@ -399,11 +399,11 @@ TAB_FORMULAS = [
 def empty_text(error: str | None) -> str:
     """Tahmin yokken sekmenin söylediği: servis bu kurulumda yoksa kalıcı durum, okuma hatasıysa neden, yoksa hazırlanıyor."""
     if error and "bu kurulumda yok" in error:
-        return ("ZEKI AI tahmini bu kurulumda kapalı: tahmin servisi tanımlı değil. "
+        return ("ZEKİ AI tahmini bu kurulumda kapalı: tahmin servisi tanımlı değil. "
                 "Baskı Tekrar ve Yeni Kitap sekmeleri bundan etkilenmez.")
     if error:
-        return f"ZEKI AI tahmini şu an kurulamadı. {error}"
-    return ("ZEKI AI tahmini hazırlanıyor. Tahmin günde bir kez kurulur; Logo'dan 2015'ten bu yana satışı okuduğu için "
+        return f"ZEKİ AI tahmini şu an kurulamadı. {error}"
+    return ("ZEKİ AI tahmini hazırlanıyor. Tahmin günde bir kez kurulur; Logo'dan 2015'ten bu yana satışı okuduğu için "
             "yaklaşık yarım saat sürer.")
 
 
@@ -473,8 +473,8 @@ def tab(tekrar: list[dict], yeni: list[dict], bekleyen: dict[str, float], foreca
         if key in ("ai_tahmin", "ai_temkinli") and rng:
             label = f"{label} ({rng})"
         cols.append({"key": key, "label": label, "group": group, "format": fmt, "source": src, "total": total})
-    cols += [{"key": k, "label": l, "group": "Aylık tahmin (ZEKI, beklenen)", "format": "n0",
-              "source": "hesap:ZEKI tahmin", "total": "sum"} for k, l in month_keys]
+    cols += [{"key": k, "label": l, "group": "Aylık tahmin (ZEKİ, beklenen)", "format": "n0",
+              "source": "hesap:ZEKİ tahmin", "total": "sum"} for k, l in month_keys]
     meta = dict(forecast or {})
     return {
         "columns": cols,

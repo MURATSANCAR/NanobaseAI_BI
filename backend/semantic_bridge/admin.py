@@ -174,6 +174,26 @@ SPEC: list[dict[str, Any]] = [
     {"key": "MERCHANT_ACCOUNT_ID", "group": "seo", "label": "Merchant Center kimliği", "type": "text", "default": "", "help": ""},
     {"key": "GOOGLE_API_KEY", "group": "seo", "label": "Google API anahtarı", "type": "secret", "default": "",
      "help": "PageSpeed ve CrUX için; yalnız bu iki API ile kısıtlı olmalı"},
+    {"key": "BING_WEBMASTER_API_KEY", "group": "seo", "label": "Bing Webmaster API anahtarı", "type": "secret", "default": "",
+     "help": "bing.com/webmasters → Ayarlar → API erişimi. ChatGPT'nin web araması büyük ölçüde Bing dizinine dayanır; "
+             "Bing'deki sorgu, tıklama ve tarama sorunları buradan okunur. Yalnız okuma"},
+    {"key": "INDEXNOW_KEY", "group": "seo", "label": "IndexNow anahtarı", "type": "secret", "default": "",
+     "help": "8–128 harf/rakam. Aynı adla bir metin dosyası sitenin köküne konmalı (https://timas.com.tr/<anahtar>.txt, "
+             "içinde yalnız anahtar); dosyayı site yöneticisi koyar. Dosya doğrulanınca değişen sayfalar Bing ve "
+             "Yandex'e bildirilir. T-soft'a yazılmaz"},
+    {"key": "SERPAPI_KEY", "group": "seo", "label": "Google arama sonucu anahtarı (rakip sırası)", "type": "secret", "default": "",
+     "help": "Anahtar serpapi.com hesabından alınır; ücretsiz katman ayda 250 arama. Boşsa rakip karşılaştırması yapılmaz"},
+    {"key": "SEO_SERP_MONTHLY", "group": "seo", "label": "Rakip araması aylık sınır", "type": "int", "default": "240",
+     "help": "Ücretsiz kota aşılmasın diye bir ayda en çok bu kadar Google araması yapılır"},
+    {"key": "SEO_GUIDE_BOOKS", "group": "seo", "label": "Rehber taslağında önceden seçili kitap", "type": "int", "default": "10",
+     "help": "Rehber içerik taslağı üretilirken en uygun bu kadar kitap işaretli gelir; kullanıcı ekler, çıkarır"},
+    {"key": "SEO_GUIDE_MIN_BOOKS", "group": "seo", "label": "Rehber için en az kitap", "type": "int", "default": "3",
+     "help": "Gece ön üretiminde bundan az uygun kitabı olan konu için taslak yazılmaz"},
+    {"key": "SEO_GUIDES_BUDGET", "group": "seo", "label": "Gece rehber üretimi süresi (sn)", "type": "int", "default": "1800",
+     "help": "Gece işinde rehber taslağı yazmaya ayrılan en uzun süre; dolunca kalan konular ertesi geceye kalır"},
+    {"key": "SEO_COMPETITORS", "group": "seo", "label": "Rakip siteler", "type": "text",
+     "default": "dr.com.tr,kitapyurdu.com,idefix.com,amazon.com.tr,bkmkitap.com,hepsiburada.com,trendyol.com",
+     "help": "Virgülle. Aynı kitap aramasında bu sitelerin Google sırası timas.com.tr ile karşılaştırılır"},
     # Kitap Tasarım Stüdyosu
     {"key": "STUDIO_UPLOAD_MB", "group": "studio", "label": "Fotoğraf yükleme sınırı (MB)", "type": "int", "default": "60",
      "help": "Sayfa düzeninde tek fotoğrafın en büyük boyutu; ekranda yükleme alanında yazılır. Giriş kapısı ve portal "
@@ -185,7 +205,7 @@ SPEC: list[dict[str, Any]] = [
              "stüdyoya hemen iletilir"},
     {"key": "STUDIO_READER_PASSES", "group": "studio", "label": "Okur okuması: sayfa başına okuma sayısı", "type": "int",
      "default": "3",
-     "help": "«Çocuk gözüyle okuma»da Zeki AI her sayfayı bu kadar kez birbirinden bağımsız okur; yalnız okumaların "
+     "help": "«Çocuk gözüyle okuma»da ZEKİ AI her sayfayı bu kadar kez birbirinden bağımsız okur; yalnız okumaların "
              "yarısından fazlasında geçen işaret gösterilir. Sayı arttıkça sonuç tutarlılaşır, süre uzar"},
     # Yapay zekâ görünürlüğü (GEO): izlenen sorular bu motorlara resmî API'leriyle sorulur. Anahtarsız motor ölçülmez.
     {"key": "GEMINI_API_KEY", "group": "geo", "label": "Gemini API anahtarı (ücretsiz)", "type": "secret", "default": "",
@@ -270,7 +290,7 @@ def store_keys(store: str) -> list[str]:
 #: Ayarı kaydedilince neyin yeniden kurulacağı; köprü (app.py) bu listelere bakar.
 LLM_KEYS = ("OPENAI_API_BASE", "LLM_MODEL_NAME", "OPENAI_API_KEY", "LLM_TIMEOUT_SEC")
 #: Modelin ürün içindeki adı. Hangi sağlayıcının hangi modeli olduğu bir kurulum ayrıntısıdır ve
-#: yerine başkası konabilir; ekranda ürünün kendi adı yazar (sohbetteki "Zeki AI" kimliğiyle aynı
+#: yerine başkası konabilir; ekranda ürünün kendi adı yazar (sohbetteki "ZEKİ AI" kimliğiyle aynı
 #: kural). Teknik ad, düzeltilecek yerde — «Model» ayarının kendisinde — duruyor.
 LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 

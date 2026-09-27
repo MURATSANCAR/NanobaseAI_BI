@@ -23,13 +23,14 @@ import collections
 
 from .. import db
 from ..llm import Llm
+from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
 from ._spelling_rules import FOREIGN, SUFFIX_START
 
 NAME = "name_spelling"
 VERSION = "1"
-LABEL = "Ad yazımı tutarlılığı"
+LABEL = "Ad tutarlılığı"
 
 # a variant must be close: one edit for names of 4-7 letters, two from 8 letters on
 # (measured: docs, "Uzaklık"); names under 4 letters are too dense to compare (Can/Cem/Ece)
@@ -156,12 +157,10 @@ async def run(generation_id: str):
         if v["p_error"] < J.KEEP:
             stats["dropped_as_intentional"] += 1
             continue
-        msg = (f"«{t.word}»: kitapta bu ad {c['major_count']} kez «{c['major']}» diye yazılıyor."
-               if c["kind"] == "ad_varyantı" else
-               f"«{t.word}» küçük harfle yazılmış; kitapta özel ad olarak «{c['major']}».")
-        findings.append({"page": t.page, "severity": "WARN", "quote": t.printed, "message": msg,
-                         "suggestion": fixed_word if c["kind"] == "ad_varyantı" else
-                         c["major"] + t.word[len(c["rare"]):], "details": det})
+        # metin tek yerde: _messages; ham öneri (doğru yazım) suggestion'da kalır
+        findings.append(M.put(NAME, {"page": t.page, "severity": "WARN", "quote": t.printed,
+                                     "suggestion": fixed_word if c["kind"] == "ad_varyantı" else
+                                     c["major"] + t.word[len(c["rare"]):], "details": det}))
         stats["kept:" + c["kind"]] += 1
     findings.sort(key=lambda f: f["page"])
     return findings, dict(stats)

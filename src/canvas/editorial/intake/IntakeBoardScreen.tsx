@@ -159,7 +159,7 @@ export default function IntakeBoardScreen() {
       source={d?.updatedAt ? `Son okuma ${stamp(d.updatedAt * 1000)}` : 'Kaynak: CRM projeleri'}
       aside={search}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {d?.error && <Note tone="warn">{d.error}</Note>}
       {d?.loading && <Note tone="info">CRM ilk kez okunuyor; birkaç dakika sürebilir. Ekran kendiliğinden yenilenecek.</Note>}

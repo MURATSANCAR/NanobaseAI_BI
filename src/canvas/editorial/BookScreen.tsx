@@ -22,17 +22,17 @@ const tone = (s: string | null): 'ok' | 'warn' | 'err' | 'muted' => {
   return 'muted';
 };
 
-/** Künyedeki tür: CRM'in türü; CRM'de yoksa Zeki AI'nın kitabın metninden belirlediği tür, kaynağıyla. */
+/** Künyedeki tür: CRM'in türü; CRM'de yoksa ZEKİ AI'nın kitabın metninden belirlediği tür, kaynağıyla. */
 function genreFact(b: BookDetail, card: BookCard | null): { value: string | null; note?: string } {
   const crm = b.genres || b.shelf;
   const p = card?.profile;
   const pct = p?.probability != null ? ` (%${Math.round(p.probability * 100)} güven)` : '';
   if (crm) {
     // CRM'deki tür iki ayrı türe işaret ediyordu («Bilim Tarihi, İnceleme-Araştırma»): hangisi olarak okunduğu
-    return p?.source === 'MODEL' ? { value: crm, note: `Zeki AI: ${BOOK_FORM_TR[p.form].toLocaleLowerCase('tr')} olarak okudu${pct}` } : { value: crm };
+    return p?.source === 'MODEL' ? { value: crm, note: `ZEKİ AI: ${BOOK_FORM_TR[p.form].toLocaleLowerCase('tr')} olarak okudu${pct}` } : { value: crm };
   }
-  if (p?.source === 'MODEL') return { value: BOOK_FORM_TR[p.form], note: `Zeki AI belirledi · CRM'de tür kaydı yok${pct}` };
-  if (p?.source === 'NONE') return { value: BOOK_FORM_TR.UNKNOWN, note: "CRM'de tür kaydı yok; Zeki AI kitabın metninden kesin karar veremedi" };
+  if (p?.source === 'MODEL') return { value: BOOK_FORM_TR[p.form], note: `ZEKİ AI belirledi · CRM'de tür kaydı yok${pct}` };
+  if (p?.source === 'NONE') return { value: BOOK_FORM_TR.UNKNOWN, note: "CRM'de tür kaydı yok; ZEKİ AI kitabın metninden kesin karar veremedi" };
   return { value: null };
 }
 
@@ -285,7 +285,7 @@ export default function BookScreen() {
       lead="Bu kitabın CRM'deki ve editoryal masadaki bütün kayıtları: künye, emeği geçenler, sözleşmeler, proje ve kurul kararı, üretim, metin ve prova."
       source={b?.isbn ? `ISBN ${b.isbn}` : 'Kitap kartı'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {q.isLoading && <Panel><Loading /></Panel>}
 

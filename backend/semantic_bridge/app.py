@@ -1337,10 +1337,12 @@ class Runtime:
         for a in anns:
             by_key.setdefault((a.table_pattern, (a.column or "").upper() or None), []).append(a)
         concepts_by_col: dict[tuple[str, str], list[dict[str, Any]]] = {}
-        for c in self.store.find_concepts(s.tenant_id, s.datasource_id, limit=100000):
-            if c.status in (ConceptStatus.REJECTED,):
-                continue
-            for m in self.store.list_mappings(c.id):
+        live = [c for c in self.store.find_concepts(s.tenant_id, s.datasource_id, limit=100000)
+                if c.status not in (ConceptStatus.REJECTED,)]
+        # Terim başına ayrı sorgu yerine toplu okuma (Veri sözlüğünün ilk açılışı 22 sn sürüyordu).
+        maps = self.store.list_mappings_many([c.id for c in live])
+        for c in live:
+            for m in maps.get(c.id, []):
                 if m.column:
                     concepts_by_col.setdefault((m.entity, m.column.upper()), []).append({"id": c.id, "term": c.term, "type": c.semantic_type, "status": c.status, "operator": m.operator, "values": m.values, "confidence": round(c.confidence, 2)})
                 elif m.formula:
@@ -2315,7 +2317,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         s = r.settings
         rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
         src = source_by_entity(r.profiles)
-        return {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in r.store.list_mappings(c.id)]} for c in rows]}
+        # Terim başına ayrı eşleme sorgusu 5.000 terimde 13–15 sn sürüyordu (Veri sözlüğü açılışı); toplu okunur.
+        maps = r.store.list_mappings_many([c.id for c in rows])
+        return {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in maps.get(c.id, [])]} for c in rows]}
 
     @app.post("/api/v1/semantic/concepts/{concept_id}/review")
     def review_concept(concept_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -2433,8 +2437,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         if entities is None:
             # by default the entities the certified catalog already reaches: those are the fields a
             # question can land on today, and a gap there costs an answer
-            entities = sorted({m.entity for c in r.store.find_concepts(r.settings.tenant_id, r.settings.datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
-                               for m in r.store.list_mappings(c.id)})
+            certified = r.store.find_concepts(r.settings.tenant_id, r.settings.datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
+            entities = sorted({m.entity for ms in r.store.list_mappings_many([c.id for c in certified]).values() for m in ms})
         src = source_by_entity(r.profiles)
         return {"items": [{**g, "source": src.get(g["entity"])} for g in vocabulary.gaps(r.store, r.settings, r.profiles, entities=entities)]}
 

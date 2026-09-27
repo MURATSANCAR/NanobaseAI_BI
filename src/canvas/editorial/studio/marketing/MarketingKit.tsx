@@ -10,7 +10,7 @@ import SocialTab from './SocialTab';
 import { useMarketing, useMarketingRefresh, type MarketingView } from './api';
 
 /** Stüdyonun «Pazarlama» bölümü: arka kapak yazısı, e-ticaret ürün sayfası, sosyal medya görselleri, öğretmen okuma
- *  kılavuzu. Metinleri Zeki AI kitabın kendi metninden yazar; her çıktı editör onayı ister (kim onayladı kaydedilir),
+ *  kılavuzu. Metinleri ZEKİ AI kitabın kendi metninden yazar; her çıktı editör onayı ister (kim onayladı kaydedilir),
  *  onaysız çıktı indirilemez, kapağa uygulanamaz, SEO'ya gitmez. Sekme değişimi anlıktır (hareket yok). */
 
 type Tab = 'back' | 'product' | 'social' | 'guide';

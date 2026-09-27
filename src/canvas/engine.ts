@@ -31,7 +31,7 @@ export const requestFreshData = (ms = 3000): void => {
 export const freshHeaders = (): Record<string, string> => (Date.now() < freshUntil ? { 'X-Data-Refresh': '1' } : {});
 
 export class EngineAuthError extends Error {
-  constructor(message = 'Zeki AI oturumu gerekli') {
+  constructor(message = 'ZEKİ AI oturumu gerekli') {
     super(message);
     this.name = 'EngineAuthError';
   }
@@ -1600,7 +1600,7 @@ export type BookCard = {
     firstPublishDate: string | null;
   } | null;
   /** Kitabın hangi türden okunduğu (motorun book_type'ı). `source`: CRM türü belirledi, ya da CRM'de tür
-   *  yok/iki türe işaret ediyor ve Zeki AI kitabın metninden belirledi (MODEL); NONE ise belirlenemedi. */
+   *  yok/iki türe işaret ediyor ve ZEKİ AI kitabın metninden belirledi (MODEL); NONE ise belirlenemedi. */
   profile?: {
     form: BookForm;
     source: 'CRM' | 'MODEL' | 'EDITOR' | 'NONE';
@@ -1708,9 +1708,13 @@ export type ProofingFinding = {
   label: string;
   page: number | null;
   severity: ProofingSeverity;
+  /** Sade bulgu metni: ne sorun, nerede, neden önemli (kart servisi kayıtlı alanlardan üretir; Word'deki yorumla aynı). */
   message: string;
   quote: string | null;
+  /** Ne yapılabilir: somut öneri cümlesi. */
   suggestion: string | null;
+  /** Sayısal ayrıntı, sade dille («Okunurluk oranı 2,4; en az 4,5 olmalı.»); ekranda katlanır. Eski servis göndermez. */
+  detail?: string | null;
   bbox: [number, number, number, number] | null;
   /** Denetimin varsayımı bu tür kitapta geçerli değilse (ör. kişisel gelişim kitabında eşya sürekliliği)
    *  bulgu öneri olarak gelir: seviye INFO, burada nedeni. Eski kart servisi göndermez. */

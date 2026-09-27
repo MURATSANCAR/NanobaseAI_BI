@@ -1,5 +1,55 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (gece, 2) — Son okuma bulgu metinleri sade dile çevrildi (ekran + Word)
+
+- **Neden:** kullanıcı Word'e aktarılan raporda «Metin rengi (#f38aa5) ile zeminin arasında kontrast düşük: 2.4:1
+  (WCAG en az 3:1, küçük metinde 4.5:1); 3 satır.» gördü, anlaşılmaz buldu. Okuyucu editör ve yazar.
+- **Tek yer:** `apps/editor/src/editor/proofing/_messages.py` — 19 denetimin ~100 bulgu türü, kalıp: ne sorun + nerede
+  + neden önemli + ne yapılabilir; sayısal ayrıntı ayrı (`detail`, sade dille: «Okunurluk oranı 2,4; en az 3, küçük
+  yazıda en az 4,5 olmalı.»). Renk kodu → genel Türkçe renk adı eşlemesi, Türkçe sayı, «CRM» yerine «yayınevi kaydı».
+  Denetimler metni `M.put` ile şablondan doldurur (f-string'ler kaldırıldı); denetim adları sadeleşti (`LABEL`).
+- **Eski raporlar:** metin rapor okunurken kayıtlı alanlardan kurulur (kart servisi `/proofing` ve `export.docx`);
+  DB'deki eski metne dokunulmadı. GPU'daki 38.779 kayıtlı bulgunun hepsi yeni şablondan üretildi (özet bulgularda,
+  künye/dizi türünde ve hassas içerik gerekçesinde eksik alan eski metnin kendi kalıbından okunuyor).
+- **Kimlik değişmedi:** tür anahtarı `kind_of` metinden bağımsız (künye ve dizi bulgularına `details.issue`); eklenen
+  details alanları yalnız ek (folio yüksekliği `mm`, merdiven `lines`, hassas içerik `reason`, özetlerde `summary`,
+  silinen sayfa `start`, dizi değerleri). 5 gerçek kitapta deterministik 5 denetim eski/yeni kodla kuru koşuldu (salt
+  okuma): 314 bulgu, sayı/sıra/sayfa/önem/alıntı/kutu/eski details farkı 0. `word_variety` ve `word_choice` sırası artık
+  metne değil alanlara bağlı.
+- **Word:** yorum başında «Mutlaka düzeltin / Bakmanız önerilir / Bilginize — <denetim>», sonra «s. N — metin», öneri,
+  sonda parantez içinde ayrıntı; yazar «Zeki AI». **Ekran:** kanıt panelinde «Ayrıntı» katlı (animasyonsuz); köprü
+  `detail`'i geçirir. Önem adları ekranda hata/uyarı/bilgi.
+- **Bilerek dokunulmayan:** `age_fit.readability/sensitive` kendi metni (stüdyo yaş raporu `age_report._fid` bulgu
+  kimliğini metinle kuruyor; değişse eski kararlar kopardı) — son okuma metni `age_fit.run()`'da şablondan.
+- **Doğrulama:** GPU geçici kap (`editor-py:0.15.9-87232e97`): tam set 531 geçti + bilinen `test_proofing_contract`
+  sıra bağımlılığı (tek başına 3/3); yeni `test_proof_messages.py`. Ön yüz test sunucusunda geçici dizinde: tsc
+  temiz, vitest 38/38, vite build tamam. Örnek Word ve önce/sonra tablosu oturum karalamasında (`son-okuma-word/`).
+  Geçici dizinler silindi. Kurulmadı.
+
+## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
+
+- Bağlayıcının zamanlayıcısı yoktu; yeni okunan kitaplar okur kitlesini/yaşı/türü almıyor, yaş denetimleri koşmuyordu. Nerede koşmalı: CRM (.28) test sunucusundan erişiliyor; editöre test sunucusundan yalnız TT GPU'nun açtığı ters tüneller var (kart 18889, stüdyo 18890). `editor-mcp` dışarı açık değil ve açmak bütün MCP araçlarını açardı.
+- Kart servisine iki uç: `GET /v1/catalog/cover-requests`, `POST /v1/catalog/crm-lookups` (aynı `catalog` işlevleri). Bağlayıcı `EDITOR_CATALOG_BASE/KEY` verilince kart servisine gider — köprünün zaten tuttuğu anahtar, yeni anahtar taşınmadı; uçlar köprüden ve VM nginx'inden geçmez.
+- `scripts/server/editor-crm-connector.{service,timer}` → test sunucusu `/etc/systemd/system`, bağlayıcı `/data/nanobaseai/bi/connectors/crm_covers.py` (main), her gece 03:10 (`Persistent=true`). İlk elle koşu: 25 kitap ~1 dk, 22 eşleşme, başarı.
+- Editör `fc63d52d` (sekiz servis, koşan iş akışı 0, kod sürümü doğru, `._*` 0).
+
+## 2026-09-27 (akşam) — Word'e aktarım VM'de; CRM okur kitlesi/yaş editöre geldi; yaş parçası kitap geneli uyarı
+
+- **VM Word'e aktarım:** kullanıcı onayıyla TT GPU nginx'ine (`kitap-eczanesi`) `…/proofing/export.docx` yolu (aynı IP kısıtı + geçit başlığı, GET, 300 sn okuma süresi). VM portalından geçici oturumla indirildi: 200, 60 KB `.docx`, dosya adı doğru.
+- **Yaş parçası neden hiç koşmuyordu:** `book_crm_record` 25 kitabın 6'sında ve okur kitlesi/yaş alanları boştu — CRM bağlayıcısı 22 Eylül'den beri (sınıflandırma alanlarından önceki sürümle) bir kez elle koşmuş, zamanlayıcı yok. Bağlayıcı main sürümüyle, uygulamanın kendi fonksiyonlarıyla koşturuldu (GPU `cover_requests` → test sunucusunda CRM eşleşmesi → GPU `store_crm_lookup`; görsel yok): 22/25 eşleşti — 15 yetişkin, 6 çocuk, 1 genç; yaş aralığı 4 çocuk kitabında. Eşleşmeyen 3 kitap (Dilek Ağacı, Dijital Dünyada Ebeveyn Olmak, Babam Sultan Abdülhamid arşiv) CRM'de yok.
+- **Düzeltmeler:** `book_type.profile` — profil CRM kaydı gelmeden kararlaştırılmışsa sonradan gelen CRM'e göre okur kitlesi, yaş ve (tek türse) tür güncellenir, editör kararı ezilmez (bütün profiller UNKNOWN kalmıştı); `crm_covers.fold` dosya uzantısını atar («Dilek Agaci.indd»).
+- **word_choice v2–v3:** Anne Terliği (4–6) ilk koşuda 167 bulgu — künye/tanıtım sözcükleri (ISBN, TSE, «takdim») ve bozuk kökler → kısa kök (<4) ve hep büyük harfli biçim dışarıda, doğrulama sorusu «anlatı değil» seçeneğini taşır. Sonrasında 164: «bijon», «ardiye», «hazırcevap» 4–6 yaş için gerçekten ağır → yaşa ağır sözcük tek tek INFO, kitap geneli tek WARN (sayı, 1.000 sözcükte oran, tam liste). Levent (9–11) 35.
+- **Kurulum:** main `9385d972` → GPU editör sekiz servis (Temporal'da koşan iş 0, kod sürümü doğru, `._*` 0). Toplu iş `rt-all-books3` sürüm farkındalıklı (güncel sürümle koşmuş denetim atlanır) 16 kitapta sürüyor.
+- **Açık:** CRM bağlayıcısı için zamanlayıcı yok (yeni kitaplar okur kitlesini almaz) — ayrı iş.
+
+## 2026-09-27 (21:30) — Uçtan uca gezinti: 34 menü ekranı son kullanıcı gibi denendi, bulunanlar düzeltildi
+
+- **Nasıl:** test sunucusunda Playwright (görünmez Chrome) + geçici `timasai` oturumu (iş bitince silindi); her menü ekranı açıldı, konsol/ağ hataları, ekran metni ve görüntüsü toplandı, sekmeler ve açılır parçalar tıklandı (kaydet/gönder/onayla/sil gibi yazan düğmelere dokunulmadı), telefon genişliğinde (390) yatay taşma ölçüldü: 34/34 taşma yok. Betikler `/tmp/e2e-menu/` (sunucu).
+- **İlk turdaki toplu 429/502 uygulama hatası değildi:** köprü 20:35'te başka bir oturumca yeniden başlatıldı (45 sn kapalı), ardından yeniden denemeler nginx `timas_api` sınırına (120/dk) takıldı. Ekranlar arası 30 sn ile yeniden koşulunca temiz.
+- **Düzeltilen (main `4912aa24`, test sunucusunda doğrulandı):** çıplak «Zeki AI 502» yerine durum koduna göre cümle (`src/canvas/httpError.ts`, 13 dosya; 502 benzetimiyle görüldü); sorgu süresi dökümünde iç sorgu adları (months/prevMonths…) yok, yalnız kaynak toplamı (`DbTiming.tsx`); CRM etiketi `crmLabel` (`format.ts`): adı olmayan kod «Adı tanımsız (100000001)», «( Yeni Proje )Proje» → «(Yeni Proje) Proje» (Sözleşmeler, Editör atama, Kitap 360, Kişiler, arama); Son okuma kitap çipleri dosya adı yerine katalogdaki başlık; kanvas sol payı 92 → 16 px (sahne artık menünün yanında başlıyor, `stitch/layout.tsx`); sekme simgesi (favicon 404); «kurun :»; «Promt izleme» → «Soru izleme»; «Motor,» → «ZEKİ AI,»; «SELECT’tir»; SEO'da TİMAS.COM.TR / GEMİNİ noktalı İ; Basın ve web kapalıyken «kapalı» deyip haber listeleyen çelişki (son tarama tarihi yazılır).
+- **Hata olmayanlar:** kapak 404'leri (kapağı olmayan kitap, ekran gizliyor); bazı tıklanamayan sekmeler (önceki tıkta açık kalan süzgeç listesi; tek başına denenince çalışıyor); Genel bakış'ta kart çakışması (timasai'nin kaydedilmiş düzeni).
+- **Açık, karar bekleyen:** Kampüs'te «Haftanın Sesli Bülteni» (çalmayan oynatıcı «Çalıyor» der) ve «Önemli Günler & Ajanda» (22 Nisan, «TÜYAP Fuarı 2024 · 18 Gün») sabit örnek içerik; «ZEKI AI» (Baskı önerisi, köprü) / «ZEKİ AI» (Kampüs) / «Zeki AI» yazımı karışık; Baskı önerisi kolon adları Power BI'daki ham adlar (Mayis, Agustos, OrtSatisHizi); pano kartı «… 5 tane» sorusu 15 satır getiriyor (motor adet sınırını uygulamadı); katalog terimi «Satis tutari» grafikte Türkçe harfsiz; Editör atama 29 sn, Veri sözlüğü 22 sn açılıyor.
+
 ## 2026-09-27 (22:30) — Sesli okumada ifade katmanı ve «Canlı masal anlatıcısı» (dalda; kurulmadı)
 
 - **Neden:** kullanıcı onayı — Zeki AI her cümleyi işaretler (heyecan, merak, korku, neşe, fısıltı, üzüntü, vurgu), ses o
@@ -43,6 +93,13 @@
 - **Ön yüz**: `/api/v1/access/me` → menü (`visibleNav`), rota kapısı (`PageGate`: adrese elle gidilince «Bu sayfa rolünüzde yok»), Kampüs modül kutuları, «Tüm modüller», ⌘K son açılanlar, uyarı rozeti ve editoryal ön yükleme yalnız yetkili kişide. Köprünün 403 `FORBIDDEN`'ı oturumu düşmüş saymaz (`EngineForbiddenError`).
 - **Yönetim → Yetkiler**: roller (alan → sayfa onay kutuları, «bütün sayfalar»), bağlar (AD grubu / AD birimi / CRM rolü / kişi seç, üye sayısıyla; kaldır), «Kişi gözüyle» (roller ve nereden geldiği, AD grupları, CRM rolleri, gördüğü sayfalar). Her değişiklik değişiklik kaydında «Yetki».
 - **Doğrulama**: köprü testleri `test_access.py` 9/9 (sunucuda); tam paket 984 geçti, kalan 13 + 10 hata `main`de de aynı. Ön yüz `tsc` temiz, vitest 36/36 (menü–katalog eşleşmesi dahil). Gerçek AD/CRM okumaları test sunucusunda salt okuma ile denendi. Tarayıcıda uçtan uca doğrulama `main`e taşındıktan sonra test sunucusunda.
+
+## 2026-09-27 — SEO & GEO: uzman özellikleri ve CRM→e-ticaret entegrasyon araştırması
+
+- **Neden:** "SEO/GEO uzmanı gözüyle eksik ne kaldı" sorusuna çıkan 10 madde kodlandı; ayrıca önerileri CRM'e yazıp CRM'in T-soft'a taşıması planı için entegrasyon incelendi.
+- **Yeni (dal `seo-uzman`):** `seo_geo/features.py` kayıt noktası + gece kancası; `impact.py` (onaylı metnin sitede yayına girdiği gün, 28/28 gün Search Console, site geneli kontrol, yenilenen öneri ölçülmez), `opportunities.py` (sitenin kendi tıklama eğrisiyle 4–15. sıra ve düşük tıklama), `bing.py` (Bing Webmaster yalnız okuma, IndexNow: anahtar dosyası doğrulanmadan gönderim yok, ilk tur yalnız taban), `tech.py` (canonical/noindex/yönlendirme zinciri/izleme parametresi/görsel alt metni, sitemap, robots.txt yapay zekâ botları), `speed.py` (PageSpeed + CrUX), `competitors.py` (aynı kitap aramasında rakip sırası, aylık kota), `entity.py` (Wikidata, kurum sameAs, yazar kimliği, Google Kitaplar hazırlığı), `guides.py` (arama sorgularından rehber konusu, CRM+T-soft'tan kitap, Zeki AI taslağı, kodla ItemList/FAQPage, gerçeklik denetimi, onay). 6 ekran: Fırsatlar ve etki, Bing ve IndexNow, Teknik sağlık, Rakipler, Kimlik ve bilgi paneli, Rehber içerikler. Yönetim'e Bing, IndexNow, arama sonucu anahtarı, rakip siteler, rehber ayarları.
+- **CRM→T-soft (belge `docs/analiz/crm-eticaret-entegrasyon-2026-09-27.md`):** CRM'den T-soft'a veri **gönderen** plugin/iş akışı/uç yok (ServiceEndpoint 0). `new_webservicelog` B2B bayi API'sinin günlüğü (T-soft değil; istek gövdesinde bayi şifresi düz metin — Timaş BT'ye bildirilmeli). Olası çekme modeli: `Tsoft_KitapDetay` / `NY_WEB_StokKarti` görünümleri (tanımı okunamadı, yetki yok). Spot, arka kapak, föy, resim, ürün adı, barkod CRM'den geliyor gibi (değer eşleşmesi); **SeoTitle/SeoDescription/SeoLink için CRM'de alan yok**. `new_tsoftaktif` T-soft'tan CRM'e doğrudan SQL ile doldurulmuş. Pazar yeri API entegrasyonu yok. Takip için `new_kitapgecmisi` değil `AuditBase`.
+- **Doğrulama:** 89 SEO testi test sunucusunda geçti; 35 yeni uç çakışmasız, 9 gece işi kayıtlı; ön yüz tsc temiz. Ekranlar main'e alınıp kurulunca gerçek veriyle doğrulanacak.
 
 ## 2026-09-27 (22:00) — Stüdyo: erkek anlatıcı «sıcak masalcı», sayfa düzeni kendiliğinden, tam e-kitap denetimi kalıcı
 

@@ -441,7 +441,7 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
                 "defaultFilters": DEFAULT_FILTERS.get(view_id, []),
                 "rows": [[r.get(c["key"]) for c in columns] for r in data]}
 
-    # ---- ZEKI AI Tahminleme: Power BI sekmelerinin yanında ikinci görüş. Satırlar yukarıdaki listelerden okunur,
+    # ---- ZEKİ AI Tahminleme: Power BI sekmelerinin yanında ikinci görüş. Satırlar yukarıdaki listelerden okunur,
     # onlar değiştirilmez. Talep tahmini gecelik (baski-oneri-tahmin), stok ve sipariş bu okumadan (5 dk).
     from semantic_bridge.management import zeki_tahmin
 
@@ -457,8 +457,8 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None, in
         if meta and (res.get(sid) or {}).get("sql"):
             sql_list.append({"id": sid, "title": meta[2], "description": meta[3], "sql": res[sid]["sql"]})
     tab = zeki_tahmin.tab(tekrar, yeni_rows, bekleyen, forecast, today, sql_list, error=forecast_error)
-    tab_view = {"id": "tahmin", "title": "ZEKI AI Tahminleme",
-                "hint": "Stoku en önce bitecek kitap üstte (ZEKI AI tahminine göre)",
+    tab_view = {"id": "tahmin", "title": "ZEKİ AI Tahminleme",
+                "hint": "Stoku en önce bitecek kitap üstte (ZEKİ AI tahminine göre)",
                 "columns": tab["columns"], "filters": ["oneri", "guven", "liste", "yayinevi", "yazar", "statu", "urun_adi"],
                 "defaultFilters": [], "explain": tab["explain"], "emptyText": tab["emptyText"],
                 "oneriLevels": zeki_tahmin.ONERI_LEVELS,

@@ -21,13 +21,14 @@ import collections
 from .. import book_type, db
 from ..llm import Llm
 from . import _continuity as C
+from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "sentence_starts"
 VERSION = "1"
-LABEL = "Cümle başı tekdüzeliği"
+LABEL = "Cümle başları"
 
 ALPHA = C.setting("word_echo_alpha", 0.05)                  # EDITOR_WORD_ECHO_ALPHA
 PARALLEL = C.setting("word_variety_parallel", 4)            # EDITOR_WORD_VARIETY_PARALLEL
@@ -114,13 +115,12 @@ async def run(generation_id: str):
     findings = []
     for run_, plain, marked, chance, p in kept:
         here = run_[1].page
-        findings.append({
+        findings.append(M.put(NAME, {
             "page": here, "severity": "WARN", "quote": plain, "bbox": boxes.get(run_[1].idx),
-            "message": f"Art arda {len(run_)} cümle «{run_[0].word}» ile başlıyor.",
             "details": {"lemma": run_[0].lemma, "count": len(run_), "chance": round(chance, 4), "p_monotone": round(p, 3),
                         "passage_marked": marked, "pages": sorted({o.page for o in run_}),
                         "group": f"cümle başı · {run_[0].lemma}", "confidence": round(p, 3),
-                        "marks": [boxes[o.idx] for o in run_ if o.page == here and o.idx in boxes]}})
+                        "marks": [boxes[o.idx] for o in run_ if o.page == here and o.idx in boxes]}}))
         stats["kept"] += 1
     findings.sort(key=lambda f: f["page"])
     return findings, dict(stats)

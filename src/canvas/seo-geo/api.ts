@@ -210,7 +210,7 @@ export type GeoResult = { ok: boolean; mentioned: boolean | null; cited: boolean
 export type GeoEngine = { id: string; label: string; configured: boolean; free: boolean; daily: number; usedToday: number; model: string };
 export type Question = { id: string; text: string; category: string | null; createdBy: string | null; createdAt: string; results?: Record<string, GeoResult> };
 
-async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T> {
+export async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE'; body?: unknown; timeout?: number } = {}): Promise<T> {
   if (!ENGINE_ENABLED) throw new Error('Bu kurulumda veri bağlantısı tanımlı değil.');
   const method = init.method ?? 'GET';
   const response = await fetch(`${ENGINE_BASE}/api/v1/seo-geo/${path}`, {
@@ -229,7 +229,7 @@ async function call<T>(path: string, init: { method?: 'GET' | 'POST' | 'DELETE';
   return response.json();
 }
 
-const qs = (o: Record<string, string | number | undefined>) =>
+export const qs = (o: Record<string, string | number | undefined>) =>
   Object.entries(o)
     .filter(([, v]) => v !== undefined && v !== '')
     .map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`)

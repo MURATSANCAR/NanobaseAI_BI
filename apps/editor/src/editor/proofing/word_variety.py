@@ -34,13 +34,14 @@ import collections
 from .. import db
 from ..llm import ContextOverflow, Llm, ModelError, PromptRef
 from . import _continuity as C
+from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_variety"
 VERSION = "5"
-LABEL = "Kelime çeşitliliği ve yakın tekrar"
+LABEL = "Yakın tekrar"
 
 DIRECTOR = "book-director"
 SENSES = PromptRef("proof_word_senses", "2")
@@ -317,10 +318,8 @@ async def run(generation_id: str):
         here = cl[1].page
         marks = [boxes[o.idx] for o in cl if o.page == here and o.idx in boxes]
         stats["marked"] += bool(marks)
-        where = ", ".join(f"s.{o.page} «{o.word}»" for o in cl)
-        findings.append({
+        findings.append(M.put(NAME, {
             "page": here, "severity": "WARN", "quote": plain, "bbox": boxes.get(cl[1].idx),
-            "message": f"«{lem}» aynı anlamda ({sense['label']}) {len(cl)} kez yakın geçiyor: {where}.",
             "suggestion": ", ".join(alts) or None,
             "details": {"lemma": lem, "sense": sense["label"], "idiom": sense["idiom"], "count": len(cl),
                         "pages": pages, "forms": [o.word for o in cl], "p_flaw": round(p, 3),
@@ -330,9 +329,10 @@ async def run(generation_id: str):
                         "chance": round(min(W.chance_near(b.idx - a.idx, rate_of[(lem, cl[0].sense)])
                                             for a, b in zip(cl, cl[1:])), 4),
                         # ekran için genel alanlar: grup (topluca karar), güven (sıralama), sayfadaki bütün geçişler
-                        "group": f"{lem} · {sense['label']}", "confidence": round(p, 3), "marks": marks}})
+                        "group": f"{lem} · {sense['label']}", "confidence": round(p, 3), "marks": marks}}))
         stats["kept"] += 1
-    findings.sort(key=lambda f: (f["page"], f["message"]))
+    # sıra metne değil kayıtlı alanlara bağlı (metin değişince bulguların sırası oynamasın)
+    findings.sort(key=lambda f: (f["page"], f["details"]["lemma"], f["details"]["sense"], f["details"]["forms"]))
 
     # harita ve çeşitlilik
     seq = [o.lemma for o in occs]

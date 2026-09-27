@@ -10,8 +10,8 @@ import { revision, useStudioJob } from '../StudioFlow';
 import { collageApi, collageKey, useCollage, type CollageView, type CoverStyle } from './api';
 
 /** Kapak ekranı: kapak tarzı seçimi (resimli / kolaj / tipografik) ve kolaj kapağın ayarları. Kolajda fotoğraf
- *  adayları (Zeki AI üretir ya da editör yükler), «başka düzen», etiket şeritleri ve ön kapak önizlemesi.
- *  Zeki AI'ın ürettiği fotoğrafla kurulan kolaj ticari kullanım izni gelene kadar taslaktır; ekranda yazılır.
+ *  adayları (ZEKİ AI üretir ya da editör yükler), «başka düzen», etiket şeritleri ve ön kapak önizlemesi.
+ *  ZEKİ AI'ın ürettiği fotoğrafla kurulan kolaj ticari kullanım izni gelene kadar taslaktır; ekranda yazılır.
  *  Hareket yalnız basış geri bildirimi (ortak `press`); yeni animasyon yok. */
 
 const DRAFT = 'Taslak — ticari kullanım izni bekleniyor';
@@ -90,7 +90,7 @@ export default function CoverScreen() {
               </p>
             )}
             {current === 'collage' && !v.selected && (
-              <p className="mt-2 text-[12px] text-canvas-muted">Kolaj için bir fotoğraf seçin: Zeki AI'dan aday isteyin ya da kendi fotoğrafınızı yükleyin.</p>
+              <p className="mt-2 text-[12px] text-canvas-muted">Kolaj için bir fotoğraf seçin: ZEKİ AI'dan aday isteyin ya da kendi fotoğrafınızı yükleyin.</p>
             )}
           </Panel>
 

@@ -1,5 +1,4 @@
 import { useEffect } from 'react';
-import { editorialHomeOptions } from './editorial/homeQuery';
 import { prefetchEditorialLists } from './editorial/queries';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
@@ -40,8 +39,7 @@ export default function RequireTimasSession() {
   const editorial = canSeePage(pages, 'editoryal');
   useEffect(() => {
     if (q.data?.username && !q.error && editorial) {
-      void qc.prefetchQuery(editorialHomeOptions(q.data.username));
-      void prefetchEditorialLists(qc);
+      void prefetchEditorialLists(qc, q.data.username);
       void import('./editorial/EditorialHome').catch(() => undefined);
     }
   }, [qc, q.data?.username, q.error, editorial]);

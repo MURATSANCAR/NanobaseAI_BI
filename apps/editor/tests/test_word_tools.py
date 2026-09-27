@@ -124,9 +124,13 @@ def test_cuts_split_text_for_overlapping_comments():
 
 
 def test_comment_text_mentions_suggestion_and_unplaced():
-    f = {"label": "Yakın tekrar", "message": "«göz» iki kez.", "suggestion": "bakış"}
+    f = {"label": "Yakın tekrar", "severity": "WARN", "page": 12, "message": "«göz» iki kez geçiyor.",
+         "suggestion": "Birini değiştirin.", "detail": "Okunurluk oranı 2,4."}
     t = X.comment_text(f, False)
-    assert t.startswith("Yakın tekrar: «göz» iki kez.") and "Öneri: bakış" in t and "bulunamadı" in t
+    assert t.startswith("Bakmanız önerilir — Yakın tekrar\ns. 12 — «göz» iki kez geçiyor.")
+    assert "Öneri: Birini değiştirin." in t and "(Okunurluk oranı 2,4.)" in t and "bulunamadı" in t
+    assert X.comment_text({**f, "severity": "ERROR", "page": None, "detail": None}, True).startswith(
+        "Mutlaka düzeltin — Yakın tekrar\n«göz»")
 
 
 def test_xml_safe_drops_control_characters_from_pdf_text():

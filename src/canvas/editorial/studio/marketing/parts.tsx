@@ -39,7 +39,7 @@ export function Generate({ task, has, onRun, pending, what }: {
       <div className="flex flex-wrap items-center gap-2">
         <button type="button" className={has ? ghostBtn : gradientBtn} disabled={running} onClick={onRun}>
           {running ? <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden /> : <Sparkles className="h-4 w-4" aria-hidden />}
-          {running ? 'Zeki AI yazıyor…' : has ? 'Yeniden üret' : `${what} üret`}
+          {running ? 'ZEKİ AI yazıyor…' : has ? 'Yeniden üret' : `${what} üret`}
         </button>
         {running && task?.step && <span className="text-[12px] text-canvas-muted">{task.step}{t ? ` · ${n}/${t}` : ''}</span>}
       </div>

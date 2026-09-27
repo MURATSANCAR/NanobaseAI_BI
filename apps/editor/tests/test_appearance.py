@@ -165,7 +165,9 @@ def test_severity_and_finding_shape():
          "p_contradiction": 0.85}
     f = appearance.finding_of(c, v)
     assert f["severity"] == "ERROR" and f["page"] == 28 and f["bbox"] == [100, 100, 400, 800] and f["quote"] is None
-    assert "s.12" in f["message"] and "s.28" in f["message"] and "sarı saçları" in f["message"]
+    # sade metin (_messages): önceki sayfa ve değeri metinde, bulgunun kendi sayfası (28) konumdan gelir
+    assert "12. sayfada" in f["message"] and "sarı saçları" in f["message"] and "«kızıl»" in f["message"]
+    assert f["suggestion"] and "SAC_RENGI" not in f["message"]
     assert f["details"]["a"]["quote"] == "sarı saçları" and f["details"]["b"]["bbox"]
     assert f["details"]["p_contradiction"] == 0.85
     # kıyafet kalıcı değil: aynı olasılıkta WARN

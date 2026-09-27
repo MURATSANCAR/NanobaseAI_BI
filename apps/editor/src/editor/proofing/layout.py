@@ -27,6 +27,7 @@ import numpy as np
 import pymupdf
 
 from .. import db
+from . import _messages as M
 from ._layout_lines import Line, body_style, book, norm_bbox, page_lines, unreliable
 
 NAME = "layout"
@@ -125,25 +126,21 @@ def check_folios(doc, LP, add) -> dict:
     seen: dict[int, int] = {}
     for p, (n, l) in sorted(fol.items()):
         if n in seen:
-            add(p, "ERROR", f"Sayfa numarası {n} iki kez basılmış (s.{seen[n]} ve s.{p}).", str(n), l.bbox,
-                rule="folio_duplicate", printed=n, other_page=seen[n])
+            add(p, "ERROR", str(n), l.bbox, rule="folio_duplicate", printed=n, other_page=seen[n])
         elif n - p != mode:
-            add(p, "ERROR", f"Sayfa numarası sırası bozuk: bu fiziksel sayfada {p + mode} beklenirken"
-                f" {n} basılmış.", str(n), l.bbox, suggestion=str(p + mode), rule="folio_sequence",
+            add(p, "ERROR", str(n), l.bbox, suggestion=str(p + mode), rule="folio_sequence",
                 printed=n, expected=p + mode)
         seen.setdefault(n, p)
     # odd folios belong on right-hand (recto) pages; PDF page 1 is a recto
     if mode % 2 == 1:
         p0 = min(fol)
-        add(p0, "WARN", "Tek sayfa numaraları sol (çift) sayfalara düşüyor; kitapta tek numaralar"
-            " sağ sayfada olur.", str(fol[p0][0]), fol[p0][1].bbox, rule="folio_parity", offset=mode)
+        add(p0, "WARN", str(fol[p0][0]), fol[p0][1].bbox, rule="folio_parity", offset=mode)
     # position: the same height on every page, mirrored or centred horizontally
     ys = [l.baseline for _, l in fol.values()]
     ymode = st.median(ys)
     for p, (n, l) in fol.items():
         if abs(l.baseline - ymode) > 2.0:
-            add(p, "INFO", f"Sayfa numarası diğer sayfalardan farklı yükseklikte"
-                f" ({abs(l.baseline - ymode) / MM:.1f} mm).", str(n), l.bbox, rule="folio_position")
+            add(p, "INFO", str(n), l.bbox, rule="folio_position", mm=round(abs(l.baseline - ymode) / MM, 1))
     return {"folios": len(fol), "folio_offset": mode, "folio_style": style}
 
 
@@ -163,19 +160,13 @@ def check_margins(doc, LP, add) -> dict:
             closest.append(mm)
             limit = GUTTER_MM if side == "gutter" else SAFE_MM
             if mm < 0:
-                add(p, "ERROR", f"Metin kesim çizgisinin dışına taşıyor ({side_tr(side)}, {mm:.1f} mm).",
-                    l.text[:60], l.bbox, rule="margin_outside_trim", side=side, mm=round(mm, 1))
+                add(p, "ERROR", l.text[:60], l.bbox, rule="margin_outside_trim", side=side, mm=round(mm, 1))
             elif mm < limit:
-                add(p, "WARN", f"Metin kesim çizgisine {mm:.1f} mm yakın ({side_tr(side)}; güvenli alan"
-                    f" {limit:.0f} mm).", l.text[:60], l.bbox, rule="margin_safe_zone", side=side,
+                add(p, "WARN", l.text[:60], l.bbox, rule="margin_safe_zone", side=side,
                     mm=round(mm, 1), limit_mm=limit)
     closest.sort()
     return {"margin_mm_min": round(closest[0], 1) if closest else None,
             "margin_mm_p05": round(closest[len(closest) // 20], 1) if closest else None}
-
-
-def side_tr(side: str) -> str:
-    return {"top": "üst", "bottom": "alt", "gutter": "cilt payı tarafı", "outer": "dış kenar"}[side]
 
 
 # ------------------------------------------------------------------ body text consistency
@@ -203,12 +194,10 @@ def check_body(doc, LP, font, size, add) -> dict:
         bb = (min(l.x0 for l in main), min(l.y0 for l in main), max(l.x1 for l in main),
               max(l.y1 for l in main))
         if abs(psize - size) >= SIZE_TOL_PT:
-            add(p, "WARN", f"Gövde metni bu sayfada {psize:g} pt; kitabın geri kalanında {size:g} pt.",
-                main[0].text[:60], bb, rule="body_size", size=psize, book_size=size)
+            add(p, "WARN", main[0].text[:60], bb, rule="body_size", size=psize, book_size=size)
         ref = book_lead.get(round(psize))
         if lead and ref and abs(lead - ref) / ref > LEAD_TOL:
-            add(p, "WARN", f"Satır aralığı bu sayfada {lead:.1f} pt; kitapta aynı puntoda {ref:.1f} pt"
-                f" (%{abs(lead - ref) / ref * 100:.0f} fark).", main[0].text[:60], bb, rule="leading",
+            add(p, "WARN", main[0].text[:60], bb, rule="leading",
                 leading=round(lead, 1), book_leading=round(ref, 1))
     return {"body_font": font, "body_size": size, "body_pages": len(per_page),
             "book_leading": {str(k): round(v, 2) for k, v in book_lead.items()}}
@@ -252,8 +241,7 @@ def check_age(generation_id, doc, LP, font, size, add) -> dict:
     if xh < need * 0.9:
         first = min(p for p, ls in LP.items() if any(l.font == font for l in ls))
         l0 = next(l for l in LP[first] if l.font == font)
-        add(first, "WARN", f"Gövde metninin x-yüksekliği {xh:.1f} mm ({size:g} pt); {band} için en küçük"
-            f" okur ({lo} yaş) kitaplarında alışılan yaklaşık {need:.1f} mm.", l0.text[:60], l0.bbox,
+        add(first, "WARN", l0.text[:60], l0.bbox,
             rule="age_type_size", xheight_mm=xh, conventional_mm=round(need, 2), age_min=lo)
     return out
 
@@ -292,13 +280,10 @@ def check_widows(doc, LP, font, size, add) -> dict:
             continue                                   # the paragraph does not run over the break
         if para_end(cur[-2], last, size):
             n_o += 1
-            add(p, "WARN", "Öksüz satır: paragrafın ilk satırı sayfanın sonunda tek başına kalmış"
-                f" (paragraf s.{p + 1}'de devam ediyor).", last.text[:60], last.bbox, rule="orphan",
-                next_page=p + 1)
+            add(p, "WARN", last.text[:60], last.bbox, rule="orphan", next_page=p + 1)
         if para_end(first, nxt[1], size):
             n_w += 1
-            add(p + 1, "WARN", "Dul satır: paragrafın son satırı sayfanın başında tek başına kalmış"
-                f" (paragraf s.{p}'de başlıyor).", first.text[:60], first.bbox, rule="widow", prev_page=p)
+            add(p + 1, "WARN", first.text[:60], first.bbox, rule="widow", prev_page=p)
     return {"widows": n_w, "orphans": n_o}
 
 
@@ -381,8 +366,7 @@ def check_contrast(doc, bv, LP, add) -> dict:
         p = m["page"]
         if m["hidden"]:
             n_hidden += 1
-            add(p, "WARN", "Metin sayfada görünmüyor: resmin ya da başka bir nesnenin altında kalmış olabilir.",
-                m["text"][:60], m["bbox"], rule="text_hidden")
+            add(p, "WARN", m["text"][:60], m["bbox"], rule="text_hidden")
             continue
         if m["line"].outlined:
             continue                                   # an outline around the letters carries the contrast
@@ -404,14 +388,7 @@ def check_contrast(doc, bv, LP, add) -> dict:
         det = {k: worst[k] for k in ("text_lum", "bg_lum_med", "bg_lum_sd", "c_med", "c_p10")}
         det.update(color=color, lines=len(g), over_picture=worst["bg_lum_sd"] >= 0.02)
         n_warn += sev == "WARN"
-        if rule == "contrast_low":
-            where = "resmin" if det["over_picture"] else "zeminin"
-            msg = (f"Metin rengi ({color}) ile {where} arasında kontrast düşük: {worst['c_med']:.1f}:1"
-                   f" (WCAG en az {WCAG_LARGE:g}:1, küçük metinde {WCAG_NORMAL:g}:1); {len(g)} satır.")
-        else:
-            msg = (f"Metnin bir kısmı resmin kontrastı düşük bölgesine denk geliyor: en kötü %10'luk"
-                   f" kısımda {worst['c_p10']:.1f}:1; {len(g)} satır.")
-        add(p, sev, msg, worst["text"][:60], bb, rule=rule, **det)
+        add(p, sev, worst["text"][:60], bb, rule=rule, **det)
     return {"contrast_runs": len(ms), "contrast_groups": len(groups), "contrast_warn": n_warn,
             "hidden": n_hidden}
 
@@ -423,9 +400,11 @@ async def run(generation_id: str):
     font, size = body_style(LP)
     findings: list[dict] = []
 
-    def add(page, sev, msg, quote, bb, suggestion=None, **details):
-        findings.append({"page": page, "severity": sev, "message": msg, "quote": quote,
-                         "bbox": norm_bbox(doc[page - 1], bb), "suggestion": suggestion, "details": details})
+    def add(page, sev, quote, bb, suggestion=None, **details):
+        # metin tek yerde: _messages (ne sorun + nerede + neden + öneri); burada yalnız ölçü ve kanıt
+        findings.append(M.put(NAME, {"page": page, "severity": sev, "quote": quote,
+                                     "bbox": norm_bbox(doc[page - 1], bb), "suggestion": suggestion,
+                                     "details": details}))
 
     stats = {"pages": doc.page_count, "pages_skipped_unreliable_layer": sorted(set(range(1, doc.page_count + 1)) - set(LP)),
              "has_trimbox": doc[0].trimbox != doc[0].rect}

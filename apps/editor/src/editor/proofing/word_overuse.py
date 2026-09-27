@@ -24,13 +24,14 @@ import collections
 from .. import book_type, db
 from ..llm import Llm
 from . import _continuity as C
+from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_overuse"
 VERSION = "1"
-LABEL = "Sık kullanılan sözcükler (yazar tikleri)"
+LABEL = "Sık kullanılan sözcük"
 
 # Karşılaştırma için en az bu kadar başka kitap (daha azıyla «olağan sıklık» bilinmez).
 MIN_BOOKS = C.setting("word_overuse_min_books", 3)           # EDITOR_WORD_OVERUSE_MIN_BOOKS
@@ -136,15 +137,11 @@ async def run(generation_id: str):
             stats["dropped_as_natural"] += 1
             continue
         os_ = by[row["lemma"]]
-        other = (f"yayınevinin {scope} öbür {books} kitabında 10.000 sözcükte {row['corpus_per10k']}"
-                 + (f" — {row['ratio']} kat" if row["ratio"] else "")
-                 if row["corpus_count"] else f"yayınevinin {scope} öbür {books} kitabında hiç geçmiyor")
-        findings.append({
+        findings.append(M.put(NAME, {
             "page": None, "severity": "WARN", "quote": ex[0].replace("[[", "").replace("]]", ""),
-            "message": f"«{row['lemma']}» kitapta {row['count']} kez geçiyor (10.000 sözcükte {row['per10k']}); {other}.",
             "details": {**row, "pages": sorted({o.page for o in os_}), "forms": dict(collections.Counter(o.form for o in os_)),
                         "examples": ex, "corpus_books": books, "corpus_scope": scope, "p_habit": round(p, 3),
-                        "group": "yazar tikleri", "confidence": round(p, 3)}})
+                        "group": "yazar tikleri", "confidence": round(p, 3)}}))
         stats["kept"] += 1
     findings.sort(key=lambda f: -f["details"]["g2"])
     return findings, dict(stats)

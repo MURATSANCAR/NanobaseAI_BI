@@ -2,7 +2,9 @@
 
 Redaksiyon Word'de yapılır: editör bulguları ayrı bir listede değil, metnin kenarında görmek ister.
 Belge kitabın okunan metnidir (`source.read`; sayfa başlığı + her span bir paragraf), bulgular metnin
-ilgili yerine Word yorumu olarak bağlanır (yazar «Zeki AI»). Kitap geneli bulgular (sayfasız) belgenin
+ilgili yerine Word yorumu olarak bağlanır (yazar «Zeki AI»). Yorumun metni ekrandakiyle aynıdır (`_messages`):
+başta önem («Mutlaka düzeltin / Bakmanız önerilir / Bilginize») ve denetimin sade adı, sonra «s. N — sade metin»,
+öneri ve en sonda parantez içinde tek satır sayısal ayrıntı. Kitap geneli bulgular (sayfasız) belgenin
 başında kendi paragraflarına bağlanır. HİÇBİR bulgu düşmez: metinde yeri bulunamayan bulgu o sayfanın
 başlığına bağlanır ve yorumda «yer bulunamadı» yazar. Editörün «yanlış alarm» dediği bulgu aktarılmaz.
 
@@ -13,6 +15,8 @@ from __future__ import annotations
 
 import io
 import unicodedata
+
+from . import _messages as M
 
 AUTHOR = "Zeki AI"
 INITIALS = "ZA"
@@ -78,17 +82,14 @@ def cuts(text: str, spans: list[tuple[int, int, int]]) -> list[tuple[str, list[i
 
 
 def comment_text(f: dict, placed: bool) -> str:
-    t = xml_safe(f"{f.get('label') or f.get('check')}: {f['message']}")
-    if f.get("suggestion"):
-        t += "\nÖneri: " + xml_safe(f["suggestion"])
-    if not placed:
-        t += "\n(Metinde tam yeri bulunamadı; sayfaya bağlandı.)"
-    return t
+    """f: {label|check, severity, page, message (sade metin), suggestion, detail}."""
+    return xml_safe(M.word_comment(f, f.get("label") or f.get("check"), placed))
 
 
 def build(title: str, pages: list[dict], findings: list[dict]) -> bytes:
     """pages: source.read çıktısı ({page_no, spans:[{text}]}); findings: kart servisi satırları
-    ({page, check, label, message, suggestion, quote, details}). Word belgesinin baytları."""
+    ({page, check, label, severity, message, suggestion, detail, quote, details}; message/suggestion/detail
+    `_messages.render`'ın sade metni). Word belgesinin baytları."""
     from docx import Document
     doc = Document()
     doc.add_heading(xml_safe(f"{title} — son okuma"), level=1)

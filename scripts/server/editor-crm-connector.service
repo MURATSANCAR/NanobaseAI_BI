@@ -1,0 +1,13 @@
+[Unit]
+Description=Editör CRM bağlayıcısı: kitapların yayınevi kaydı (yazar, özet, okur kitlesi, yaş, tür) ve kapağı
+After=network-online.target nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+# EDITOR_CATALOG_BASE / EDITOR_CATALOG_KEY köprünün ortamından: kart servisi TT GPU'dan gelen tünelle 127.0.0.1'de.
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+Environment=CRM_CONNECTION_JSON=/data/nanobaseai/bi/secrets/crm-mssql-connection.json
+Environment=PYTHONDONTWRITEBYTECODE=1
+# CRM'e salt okuma; editöre kitap başına bir eşleşme yazar. Kaynak: apps/editor/connectors/crm_covers.py (main).
+ExecStart=/data/nanobaseai/bi/semantic-venv/bin/python /data/nanobaseai/bi/connectors/crm_covers.py
+TimeoutStartSec=30min

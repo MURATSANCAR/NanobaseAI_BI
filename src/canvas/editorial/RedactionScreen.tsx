@@ -243,7 +243,7 @@ export default function RedactionScreen() {
       lead="Metin dosyası yüklenir, bölümlere ayrılır ve ölçülür; ZEKİ yazım ve üslup önerisi çıkarır, kararı editör verir. Kabul edilen öneri metne işlenir; ilk hâl saklanır."
       source={w ? w.title : 'Editoryal masa'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {w && chapters.length > 0 && (

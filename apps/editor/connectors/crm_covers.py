@@ -31,7 +31,8 @@
   5. posts the result, with or without an image                POST /catalog/covers
 
 Read-only on the CRM. Configuration comes from the environment:
-  EDITOR_API, EDITOR_MCP_KEY      editor endpoint + key
+  EDITOR_API, EDITOR_MCP_KEY      editor MCP endpoint + key, or
+  EDITOR_CATALOG_BASE, EDITOR_CATALOG_KEY   the card service (test host timer: scripts/server/editor-crm-connector.*)
   CRM_CONNECTION_JSON             path of {host, port, user, password, database}
   CRM_IMAGE_ROOTS                 JSON: how a stored path becomes a readable location,
                                   e.g. {"resimurl": "/mnt/crm-web/kitap", "C:\\\\cube\\\\Timas_Folder_Entegrasyon": "/mnt/crm-cube"}
@@ -82,11 +83,21 @@ def names(s: str | None) -> list[str]:
     return [x.strip() for x in re.split(r"\s*[,;/&]\s*|\s+ve\s+", s or "") if x.strip()]
 
 
+# İki yoldan biri: editörün MCP'si (EDITOR_API + EDITOR_MCP_KEY; /catalog/...) ya da kart servisi
+# (EDITOR_CATALOG_BASE + EDITOR_CATALOG_KEY; /v1/catalog/...) — test sunucusundaki zamanlayıcı kart servisi
+# tünelini ve köprünün zaten tuttuğu anahtarı kullanır, yeni anahtar taşınmaz.
+PATHS = {"requests": ("/catalog/cover-requests", "/v1/catalog/cover-requests"),
+         "store": ("/catalog/covers", "/v1/catalog/crm-lookups")}
+
+
 def api(path: str, payload: dict | None = None) -> dict:
-    req = urllib.request.Request(os.environ["EDITOR_API"].rstrip("/") + path,
+    via_cards = not os.environ.get("EDITOR_API") and bool(os.environ.get("EDITOR_CATALOG_BASE"))
+    base = (os.environ["EDITOR_CATALOG_BASE"] if via_cards else os.environ["EDITOR_API"]).rstrip("/")
+    key = os.environ["EDITOR_CATALOG_KEY"] if via_cards else os.environ["EDITOR_MCP_KEY"]
+    path = PATHS[path][1 if via_cards else 0] if path in PATHS else path
+    req = urllib.request.Request(base + path,
                                  data=json.dumps(payload).encode() if payload is not None else None,
-                                 headers={"authorization": "Bearer " + os.environ["EDITOR_MCP_KEY"],
-                                          "content-type": "application/json"})
+                                 headers={"authorization": "Bearer " + key, "content-type": "application/json"})
     with urllib.request.urlopen(req, timeout=120) as r:
         return json.loads(r.read())
 
@@ -258,10 +269,11 @@ def main(argv: list[str]) -> int:
                               "summary": (crm_rec.get("summary") or "")[:80], "images": len(rep["candidates"])},
                              ensure_ascii=False), flush=True)
         return 0
-    for b in api("/catalog/cover-requests")["books"]:
+    for b in api("requests")["books"]:
         rep = report(cur, books, b)
-        print(b["title"], "→", rep["matched_by"], rep["outcome"], (rep.get("chosen") or {}).get("name", ""), flush=True)
-        api("/catalog/covers", rep)
+        print(b["title"], "→", rep["matched_by"], rep["outcome"], (rep.get("crm") or {}).get("audience") or "",
+              (rep.get("chosen") or {}).get("name", ""), flush=True)
+        api("store", rep)
     return 0
 
 

@@ -24,13 +24,14 @@ import collections
 from .. import book_type, db, schemas
 from ..llm import Llm, PromptRef
 from . import _continuity as C
+from . import _messages as M
 from . import _spelling_judge as J
 from . import _spelling_text as T
 from . import _word_variety as W
 
 NAME = "word_choice"
 VERSION = "3"
-LABEL = "Yabancı ve yaşa ağır sözcükler"
+LABEL = "Sözcük seçimi"
 
 DIRECTOR = "book-director"
 FOREIGN_LIST = PromptRef("proof_word_foreign", "2")
@@ -192,17 +193,14 @@ async def run(generation_id: str):
         os_ = tokens_of.get(w) or []
         pages = sorted({x.page for x in os_}) or sorted(set(unknown.get(w, [])))
         count = len(os_) or len(unknown.get(w, []))
-        where = f"kitapta {count} kez" + (f": {', '.join(f's.{pg}' for pg in pages)}" if pages else "")
-        msg = (f"«{w}» yabancı sözcük; Türkçe karşılığı «{alt}» ({where})." if kind == "foreign" else
-               f"«{w}» {reader} için ağır olabilir; daha basit: «{alt}» ({where}).")
-        findings.append({
+        findings.append(M.put(NAME, {
             # yaşa ağır sözcük tek tek bilgi düzeyinde; editörün uyarısı kitap geneli özettir (aşağıda)
             "page": page, "severity": "WARN" if kind == "foreign" else "INFO",
             "quote": marked.replace("[[", "").replace("]]", ""),
-            "bbox": boxes.get(o.idx) if o is not None else None, "message": msg, "suggestion": alt,
+            "bbox": boxes.get(o.idx) if o is not None else None, "suggestion": alt,
             "details": {"kind": kind, "word": w, "alternative": alt, "count": count, "pages": pages, "p": round(p, 3),
                         "context": marked, "group": "yabancı sözcük" if kind == "foreign" else "yaşa ağır sözcük",
-                        "confidence": round(p, 3)}})
+                        "confidence": round(p, 3)}}))
         stats["kept_" + kind] += 1
     heavy_rows = sorted((f for f in findings if f["details"]["kind"] == "age"), key=lambda f: -f["details"]["p"])
     if heavy_rows:
@@ -210,16 +208,14 @@ async def run(generation_id: str):
         # uyumsuzluğunu (ya da CRM yaş aralığının yanlışlığını) gösterir. Tam liste ayrıntıda, güven sırasıyla.
         words_in_book = max(len(occs), 1)
         per1k = round(sum(f["details"]["count"] for f in heavy_rows) / words_in_book * 1000, 1)
-        shown = ", ".join(f"{f['details']['word']} → {f['details']['alternative']}" for f in heavy_rows[:15])
-        more = f" … ve {len(heavy_rows) - 15} sözcük daha (tamamı ayrıntıda)" if len(heavy_rows) > 15 else ""
-        findings.append({
+        findings.append(M.put(NAME, {
             "page": None, "severity": "WARN", "quote": None,
-            "message": f"{reader} için ağır olabilecek {len(heavy_rows)} sözcük (1.000 sözcükte {per1k}): {shown}{more}.",
             "details": {"kind": "age_summary", "reader": reader, "count": len(heavy_rows), "per1000": per1k,
                         "age_from": prof.get("age_from"), "age_to": prof.get("age_to"),
                         "words": [{"word": f["details"]["word"], "alternative": f["details"]["alternative"],
                                    "count": f["details"]["count"], "pages": f["details"]["pages"], "p": f["details"]["p"]}
                                   for f in heavy_rows],
-                        "group": "yaşa ağır sözcük", "confidence": heavy_rows[0]["details"]["p"]}})
-    findings.sort(key=lambda f: (f["page"] or 0, f["message"]))
+                        "group": "yaşa ağır sözcük", "confidence": heavy_rows[0]["details"]["p"]}}))
+    # sıra metne değil kayıtlı alanlara bağlı (metin değişince bulguların sırası oynamasın)
+    findings.sort(key=lambda f: (f["page"] or 0, f["details"]["kind"], f["details"].get("word") or ""))
     return findings, dict(stats)

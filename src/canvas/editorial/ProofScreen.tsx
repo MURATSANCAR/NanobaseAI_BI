@@ -246,7 +246,7 @@ export default function ProofScreen() {
       lead="Prova PDF'inden sayfa, ebat, gömülü yazı tipi, renk uzayı, ISBN ve forma ölçülür; elle işaretlenen maddeler ve imzalar tamamlanınca onay oluşur. Matbaaya gönderim ve ERP tetikleme yoktur."
       source={s ? s.work.title : noWork && picked ? findCatalogCard(catalog.data?.items, picked)?.publisher?.title || picked : 'Editoryal masa'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
 
       {((s?.versions.length ?? 0) > 0 || hasProofing) && (
@@ -320,7 +320,7 @@ export default function ProofScreen() {
                 key={picked ?? ''}
                 report={picked ? pr : undefined}
                 loading={!!picked && proofing.isLoading}
-                error={picked ? errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.') : null}
+                error={picked ? errText(proofing.error, 'ZEKİ AI son okuma raporu okunamadı.') : null}
                 picker={
                   engineOff ? null : books.isLoading ? (
                     <Loading />
@@ -332,7 +332,7 @@ export default function ProofScreen() {
                 }
                 idle={
                   engineOff
-                    ? 'Zeki AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.'
+                    ? 'ZEKİ AI motor bağlantısı tanımlı değil; otomatik son okuma bu kurulumda kapalı.'
                     : books.isLoading || books.error
                       ? null
                       : !chips.length
@@ -370,7 +370,7 @@ export default function ProofScreen() {
               <Signers s={s} onChanged={refresh} />
             </>
           )}
-          {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'Zeki AI son okuma raporu okunamadı.')} />}
+          {s && <ProofFindings report={pr} loading={proofing.isLoading} error={errText(proofing.error, 'ZEKİ AI son okuma raporu okunamadı.')} />}
           {/* Kelime haritası: aynı kitabın motordaki kaydıyla (eser dosyası ya da seçilen kitap). */}
           {pr?.configured && pr.bookId && (s || picked) ? <WordMapPanel key={pr.bookId} bookId={pr.bookId} findings={pr.findings.filter((f) => f.check === 'word_variety')} /> : null}
         </div>

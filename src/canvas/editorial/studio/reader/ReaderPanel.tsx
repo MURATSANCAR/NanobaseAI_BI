@@ -8,7 +8,7 @@ import { Progress } from '../shared';
 import { FRONT, pollWhilePreparing, preparing, readerApi, type ReaderDecision, type ReaderFlag, type ReaderInfo, type ReaderRun, type RunSummary, type TurnItem } from './api';
 import { findSpan, replaceTarget, targetText } from './textEdit';
 
-/** Okur paneli: «Çocuk gözüyle» (Zeki AI metni kitabın okur yaşında okur, takıldığı yerleri işaretler) ve resimli
+/** Okur paneli: «Çocuk gözüyle» (ZEKİ AI metni kitabın okur yaşında okur, takıldığı yerleri işaretler) ve resimli
  *  kitapta «Sayfa çevirme» (çift sayfanın son cümlesi merak uyandırıyor mu). Öneriyi uygulamak metni değiştirir ve
  *  sayfa düzeninin otomatik kayıt sırasından gider (Ctrl/Cmd+Z ile ve sürüm geçmişinden geri alınır). */
 
@@ -56,7 +56,7 @@ export default function ReaderPanel({ ctx, goTo }: { ctx: EditorCtx; goTo: (pid:
   const start = async (kind: Kind) => {
     setErr(null); setStarting(kind);
     try {
-      // Bekleyen düzenlemeler önce kaydedilir: Zeki AI sunucudaki son metni okur.
+      // Bekleyen düzenlemeler önce kaydedilir: ZEKİ AI sunucudaki son metni okur.
       await ctx.online(async () => (kind === 'child' ? readerApi.startChild(job) : readerApi.startTurn(job)));
       await qc.invalidateQueries({ queryKey: ['studio', 'reader', 'info', job] });
     } catch (e) { setErr(errText(e, 'Okuma başlatılamadı.')); } finally { setStarting(null); }
@@ -190,7 +190,7 @@ function ChildView({ ctx, info, run, summary, starting, onStart, onResume, goTo 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12.5px] leading-snug text-canvas-muted">
-        Zeki AI metni <b className="text-canvas-ink">{age ?? '?'} yaşındaki bir okur</b> gibi okur ve takıldığı yerleri işaretler
+        ZEKİ AI metni <b className="text-canvas-ink">{age ?? '?'} yaşındaki bir okur</b> gibi okur ve takıldığı yerleri işaretler
         {info.band ? ` (kitabın okur yaşı ${band(info.band)}; en küçüğüne göre)` : ''}. Her sayfa {info.passes} kez birbirinden bağımsız okunur;
         yalnız okumaların çoğunluğunda geçen işaret gösterilir.
       </p>
@@ -387,7 +387,7 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
   return (
     <div className="flex flex-col gap-3">
       <p className="text-[12.5px] leading-snug text-canvas-muted">
-        Resimli kitapta okur her çift sayfanın sonunda sayfayı çevirir. Zeki AI her çift sayfanın son cümlesinin
+        Resimli kitapta okur her çift sayfanın sonunda sayfayı çevirir. ZEKİ AI her çift sayfanın son cümlesinin
         «sonra ne oldu?» merakı uyandırıp uyandırmadığına bakar; güçlü değilse soru, yarım kalan eylem, ses sözcüğü ya da
         «ama…» gibi bir kalıpla yeni cümle önerir. Güçlü sayfa sonuna öneri yapılmaz.
       </p>
@@ -417,7 +417,7 @@ function TurnView({ ctx, info, run, summary, starting, onStart, onResume, goTo }
                   <p className="mt-1.5"><span className="font-bold">{x.technique_label ?? 'Öneri'}: </span><Suggest from={x.quote} to={x.replacement} /></p>
                   {x.reason && <p className="mt-1 leading-snug text-canvas-muted">{x.reason}</p>}
                 </>
-              ) : <p className="mt-1.5 text-canvas-muted">Zeki AI bu sayfa sonu için anlamı koruyan bir cümle öneremedi.</p>}
+              ) : <p className="mt-1.5 text-canvas-muted">ZEKİ AI bu sayfa sonu için anlamı koruyan bir cümle öneremedi.</p>}
               <div className="mt-2 flex flex-wrap items-center gap-1.5">
                 {dec === 'accepted' && (
                   <>

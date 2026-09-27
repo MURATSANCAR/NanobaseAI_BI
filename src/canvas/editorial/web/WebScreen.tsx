@@ -92,7 +92,7 @@ export default function WebScreen() {
       lead="Yazarlarımız ve kitapları hakkında haber sitelerinde ve sözlüklerde çıkanlar. Her gece taranır; yalnız gerçekten ilgili bulunanlar gösterilir, her kaydın yanında kanalı yazar."
       source={d?.lastRun?.at ? `Son tarama ${dateTime(d.lastRun.at)}` : 'Kaynak: haber akışları, açık bilgi tabanı'}
     >
-      {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}
+      {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
       {d && !d.enabled && (
         <Note tone="info">
