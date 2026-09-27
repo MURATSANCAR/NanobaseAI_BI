@@ -1,10 +1,19 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M6 Sözleşmeler test sunucusuna kuruldu; gerçek oturumla uçtan uca 29/29; kural: CRM'e yazma yok
+
+- **Kurulum (main `a65d9a9d`):** sunucudaki ortak dosyalar (`app.py`, `access.py`, `access_catalog.json`, `App.tsx`, `engine.ts`) hiçbir commit'le birebir eşleşmedi; sunucu `main`in gerisinde (ör. M2 editör atama kurulmamış), fazlası yok. Tam dosya kopyası o işleri habersizce kurardı → yalnız M6 farkı (`f605e7be..a65d9a9d`) yama olarak uygulandı (kuru deneme temiz), 19 yeni dosya eklendi. Önce sunucu ağacının kopyasında test 38/38 ve `tsc` temiz; kopyalanan dosyalar md5 ile eş, `._*` 0. Köprü yeniden başladı (sağlıklı), arayüz `/timas/` ayarlarıyla ayrı klasöre derlenip `cockpit/dist`e kondu: `index-Bn-oS5mh.js`.
+- **Uçtan uca (portal.nanobase.ai/timas, geçici `timasai` + yönetici olmayan deneme oturumu):** CRM sözleşme sayfası salt okunur açılıyor (grup kaydıyla); CRM sözleşmesinde hakediş önizlemesi gerçek Logo'dan 19,5 sn, TL telif kabul referansıyla eşit (59.278,86), kur TCMB; önizleme CRM kaydını portala almıyor. Taslak (`TS-2026-0001`, metin şablondan) → Word → düzenleme → eski sürümle yazma 409 → yürürlük → gerekçesiz şart değişikliği 400 → zeyilname imza → şarta işlendi → Word → ödeme planı (avans) → hakediş (brüt 1.272,77 USD, avans 1.000 mahsup, net 272,77) → onay → ödeme takviminde vade 30.07.2026 → çakışan dönem 409 → hakediş bildirimi Word → ödendi → ödenmiş hakediş iptal edilemez. Yetkisiz kişi okuyabiliyor, taslak açamıyor ve ödendi işaretleyemiyor (403 FORBIDDEN). Seçiciler (kitap stok kodu, taraf) CRM'den geliyor. **29/29.** Deneme kayıtları (1 sözleşme, 10 olay, 1 zeyilname, 2 ödeme, 1 hakediş) ve oturumlar silindi.
+- **Görsel denetim yapılamadı:** oturum çerezi HttpOnly, tarayıcı panesine konamıyor. Ekran: `https://portal.nanobase.ai/timas/telif-sozlesme`.
+- **Kural (kullanıcı, 2026-09-28):** müşteri CRM'ine yazma yetkimiz yok → `AGENTS.md` «CRM'e yazma yok». M6 buna uyuyor: CRM'e yalnız `run_sql` (SELECT) ile okuyor, yazmalar `semantic_contract*` tablolarında.
+- **Müşteri VM'ine kurulmadı:** VM'e `main` gidince VM'de olmayan Yetki, SEO ve diğer modüller de gider; kullanıcı kararı bekliyor.
+
 ## 2026-09-28 — Kural: test kullanıcısı ve test verisi bırakılmaz
 
 - Portal Yönetim → Kişiler'de test sırasında yazılmış `claude` adlı hesap kalmıştı. Kişi listesi pano kartı, planlı rapor, `semantic_audit.actor` ve yönetici listesinden derlenir; testte kullanılan ad kalıcı görünür.
 - AGENTS.md'ye kural eklendi: test için açılan hesap/oturum/kayıt aynı iş içinde silinir, yeni kullanıcı adı uydurulmaz (yalnız `timasai` kısa oturumu), yazma uçları önce geçersiz gövdeyle denenir, kabul sonunda Kişiler listesi kontrol edilir.
 - Mevcut `claude` kaydının hangi tablodan geldiği ve silinmesi: test sunucusuna SSH erişimi o anda kapalıydı (IP geçici engelli); açık iş.
+
 
 ## 2026-09-27 (gece) — M6 Sözleşmeler: düzenleme, yeni taslak, zeyilname, ödeme takvimi, hakediş, şablon kütüphanesi
 
