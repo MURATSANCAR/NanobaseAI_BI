@@ -8,8 +8,10 @@ istem yok. Çıktılar /data/editor/sfx/_olcum/ altında.
     kapsama.py metin                 derlemden çocuk kitaplarının sayfa metni → sayfalar.jsonl
     kapsama.py ipucu [--ornek N]     sayfalar → ipuclari.jsonl (N verilirse kitaplardan eşit aralıklı N kitap)
     kapsama.py esle                  benzersiz ipuçları → havuzda en iyi 3 aday → esleme.jsonl
-    kapsama.py ayar                  eşik ayarı: kategorisi belli ipuçlarında ilk adayın kategorisi tutuyor mu
-    kapsama.py rapor [--esik X]      karşılanan %, karşılanmayanların en sık 50'si → rapor.json
+    kapsama.py secim                 stüdyonun seçim yolu: ilk 8 aday → Zeki AI tek harf ya da «hiçbiri» → secim.jsonl
+    kapsama.py yargi                 her ipucu × ilk 3 aday: Zeki AI «bu dosya istenen ses mi» (E/H olasılığı)
+    kapsama.py ayar                  benzerlik eşiği ↔ yargı doğruluğu tablosu, önerilen eşik → esik.json
+    kapsama.py rapor [--esik X]      karşılanan %, karşılanmayanların en sık 50'si → rapor.json, karsilanmayan.json
 
 Derlem: /data/organized/cocuk altındaki bütün PDF'ler + öteki klasörlerde künyesinde CHILD_MAX yaşın altında başlayan
 bant yazan kitaplar (nonbook hariç); aynı metin tek sayılır. Sayfa metni okumadaki paragraf kurucuyla
@@ -197,42 +199,199 @@ def _rows():
 
 
 def step_ayar():
-    """Eşik ayarı (vekil ölçü): kategorisi belli ipuçlarında ilk adayın kategorileri ipucunun kategorisini içeriyor
-    mu. Eşik yükseldikçe «karşılandı» sayılanların doğruluğu artar, kapsama düşer; tablo her iki eğriyi verir.
-    Dinleyerek ayar için her eşik bandından örnek ipucu-aday çiftleri ayrıca yazılır (dinleme-ornekleri.json)."""
+    """Eşik ayarı: benzerlik puanı eşiği yükseldikçe «karşılandı» sayılan ilk adayların kaçı yargıda (step_yargi)
+    «evet» (p ≥ 0,5) alıyor (doğruluk), kaçı eşiği geçiyor (kapsama). Önerilen eşik: doğruluğun %90'ı geçtiği en düşük
+    eşik. Dinleyerek doğrulama için her puan bandından ipucu-aday çiftleri yazılır (dinleme-ornekleri.json; aday
+    kimliğiyle önizleme stüdyoda dinlenir)."""
     rows = [r for r in _rows() if r["top"]]
-    lab = [r for r in rows if r.get("category")]
-    table = []
-    for t in [x / 100 for x in range(0, 41, 2)]:
+    jd = _judged()
+    lab = [r for r in rows if any(j["rank"] == 0 for j in jd.get(r["key"], []))]
+    p0 = {r["key"]: next(j["p"] for j in jd[r["key"]] if j["rank"] == 0) for r in lab}
+    table, pick = [], None
+    for t in [x / 100 for x in range(0, 51, 2)]:
         cov = [r for r in rows if r["top"][0]["score"] >= t]
         ok = [r for r in lab if r["top"][0]["score"] >= t]
-        hit = [r for r in ok if r["category"] in (r["top"][0]["cats"] or [])]
-        table.append({"esik": t, "kapsama": round(len(cov) / max(1, len(rows)), 4),
-                      "kategori_tutma": round(len(hit) / max(1, len(ok)), 4), "n": len(ok)})
+        hit = [r for r in ok if p0[r["key"]] >= 0.5]
+        prec = len(hit) / max(1, len(ok))
+        table.append({"esik": t, "kapsama": round(len(cov) / max(1, len(rows)), 4), "dogruluk": round(prec, 4),
+                      "n": len(ok)})
+        if pick is None and prec >= 0.9 and len(ok) >= 20:
+            pick = t
     bands = collections.defaultdict(list)
     for r in lab:
         s = r["top"][0]["score"]
-        bands[round(s * 20) / 20].append({"query": r["query"], "query_en": r["query_en"], "top": r["top"][0]})
-    (OUT / "dinleme-ornekleri.json").write_text(json.dumps({str(k): v[:8] for k, v in sorted(bands.items())},
+        bands[round(s * 20) / 20].append({"tarif": r["query"], "en": r["query_en"], "aday": r["top"][0]["title"],
+                                          "aday_id": r["top"][0]["id"], "yargi_p": p0[r["key"]]})
+    (OUT / "dinleme-ornekleri.json").write_text(json.dumps({str(k): v[:10] for k, v in sorted(bands.items())},
                                                            ensure_ascii=False, indent=1))
-    print(json.dumps(table, ensure_ascii=False, indent=1))
+    (OUT / "esik.json").write_text(json.dumps({"onerilen": pick, "tablo": table}, ensure_ascii=False, indent=1))
+    print(json.dumps({"onerilen_esik": pick, "tablo": table}, ensure_ascii=False))
 
 
-def step_rapor(esik: float):
+JUDGE = """Bir çocuk kitabının sesli okumasına efekt konacak. İstenen ses: «{q}» ({en}).
+Kütüphanedeki aday dosyanın bilgileri:
+- başlık: {title}
+- klasör/koleksiyon: {group}
+- etiketler: {tags}
+Bu dosya büyük olasılıkla istenen sesi içeriyor mu (aynı ses kaynağı ve olay)? Yalnız E (evet) ya da H (hayır)."""
+
+
+async def step_yargi():
+    """Eşik ayarı ve kapsama için bağımsız yargı: her benzersiz ipucunun ilk 3 adayı için Zeki AI «bu dosya istenen
+    sesi içeriyor mu» sorusunu kapalı kümede (E/H, belirteç olasılığı) cevaplar. Yalnız dosyanın adı/klasörü/etiketi
+    görülür (ses dinlenmez): üst verisi zayıf dosyada «hayır» çıkar, yani ölçüm kapsamayı olduğundan DÜŞÜK gösterir."""
+    from editor.llm import PromptRef
+    from editor.production import sfx_library as L
+    from editor.production.run import FileLlm
     rows = _rows()
+    outp = OUT / "yargi.jsonl"
+    done = set()
+    if outp.exists():
+        done = {(json.loads(x)["key"], json.loads(x)["id"]) for x in outp.read_text().splitlines() if x.strip()}
+    llm = FileLlm(OUT / "provenance.jsonl")
+    sem = asyncio.Semaphore(CONCURRENCY * 2)
+
+    async def one(r, c):
+        full = L.get(c["id"]) or {}
+        msg = JUDGE.format(q=r["query"], en=r["query_en"], title=full.get("title") or c["title"],
+                           group=full.get("group") or c.get("source"), tags=", ".join((full.get("tags_en") or [])[:25]))
+        async with sem:
+            try:
+                p, _ = await llm.choose("book-director", [{"role": "user", "content": msg}], ["E", "H"],
+                                        prompt=PromptRef("sfx.judge", "1"))
+                return {"key": r["key"], "id": c["id"], "rank": c["rank"], "score": c["score"], "p": round(p["E"], 4)}
+            except Exception as e:  # noqa: BLE001
+                return {"key": r["key"], "id": c["id"], "rank": c["rank"], "score": c["score"], "error": str(e)[:200]}
+
+    jobs = [one(r, {**c, "rank": k}) for r in rows for k, c in enumerate(r["top"][:3]) if (r["key"], c["id"]) not in done]
+    log("yargı", len(jobs))
+    n = 0
+    with outp.open("a") as f:
+        for coro in asyncio.as_completed(jobs):
+            res = await coro
+            if "error" not in res:
+                f.write(json.dumps(res) + "\n")
+            n += 1
+            if n % 500 == 0:
+                f.flush()
+                log(n, "/", len(jobs))
+    log("yargı bitti")
+
+
+async def step_secim():
+    """Stüdyonun seçimiyle aynı yol (sfx.match + sfx.rerank): her benzersiz ipucu için aramanın ilk 8 adayı Zeki AI'ye
+    gösterilir, tek harfle en uygunu ya da «hiçbiri» (X) seçilir. KARŞILANDI = P(uygun ses var) ≥ 0,5. Model yalnız
+    ad/klasör/etiket görür: üst verisi zayıf ama sesi doğru dosyaya «hiçbiri» diyebilir (ölçüm kapsamayı düşük gösterir)."""
+    from editor.production import sfx
+    from editor.production.run import FileLlm
+    rows = _rows()
+    outp = OUT / "secim.jsonl"
+    done = {}
+    if outp.exists():
+        for x in outp.read_text().splitlines():
+            if x.strip():
+                r = json.loads(x)
+                done[r["key"]] = r
+    stamp = (Path("/data/editor/sfx/_dizin/katalog.jsonl").stat().st_mtime)
+    todo = [r for r in rows if r["key"] not in done or done[r["key"]].get("stamp") != stamp]
+    llm = FileLlm(OUT / "provenance.jsonl")
+    sem = asyncio.Semaphore(CONCURRENCY * 2)
+
+    async def one(r):
+        cue = {"kind": r["kind"], "query": r["query"], "query_en": r["query_en"],
+               "quote": (r.get("quotes") or [[""]])[0][0]}
+        async with sem:
+            cands = await asyncio.to_thread(sfx.match, cue, None, sfx.POOL_K)
+            ranked, fit = await sfx.rerank(llm, cue, cands)
+        return {"key": r["key"], "stamp": stamp, "fit": fit, "best": ranked[0]["id"] if ranked else None,
+                "best_title": ranked[0]["title"] if ranked else None, "best_source": ranked[0]["source"] if ranked else None,
+                "n": len(cands)}
+
+    log("seçim", len(todo), "önceden", len(rows) - len(todo))
+    n = 0
+    with outp.open("a") as f:
+        for coro in asyncio.as_completed([one(r) for r in todo]):
+            res = await coro
+            f.write(json.dumps(res, ensure_ascii=False) + "\n")
+            n += 1
+            if n % 500 == 0:
+                f.flush()
+                log(n, "/", len(todo))
+    log("seçim bitti")
+
+
+def _selected() -> dict[str, dict]:
+    p = OUT / "secim.jsonl"
+    out: dict[str, dict] = {}
+    if p.exists():
+        for x in p.read_text().splitlines():
+            if x.strip():
+                r = json.loads(x)
+                out[r["key"]] = r                 # sonraki satır öncekini ezer (havuz değişince yeniden seçilir)
+    return out
+
+
+def _judged() -> dict[str, list[dict]]:
+    """İpucu → ŞU ANKİ ilk 3 adayın yargısı (sırasıyla). Havuz değişince eski adayların yargısı sayılmaz."""
+    p = OUT / "yargi.jsonl"
+    pk: dict[tuple[str, str], float] = {}
+    if p.exists():
+        for x in p.read_text().splitlines():
+            if x.strip():
+                r = json.loads(x)
+                pk[(r["key"], r["id"])] = r["p"]
+    out: dict[str, list[dict]] = {}
+    for r in _rows():
+        js = [{"rank": k, "id": c["id"], "p": pk[(r["key"], c["id"])]} for k, c in enumerate(r["top"][:3])
+              if (r["key"], c["id"]) in pk]
+        if js:
+            out[r["key"]] = js
+    return out
+
+
+def step_rapor(esik: float | None):
+    """Kapsama: bir ipucu KARŞILANDI = ilk 3 adaydan en az biri yargıda «evet» (p ≥ 0,5; editör adaylardan seçer).
+    Ayrıca: varsayılan (1.) aday doğru mu, ve yalnız benzerlik eşiğiyle (esik.json'daki önerilen ya da --esik) kapsama."""
+    rows = _rows()
+    jd = _judged()
+    if esik is None:
+        e = OUT / "esik.json"
+        esik = (json.loads(e.read_text()).get("onerilen") if e.exists() else None) or 0.2
+
+    sel = _selected()
+
+    def judged_ok(r, first_only=False):
+        js = [j for j in jd.get(r["key"], []) if not first_only or j["rank"] == 0]
+        return any(j["p"] >= 0.5 for j in js)
+
+    def ok(r):
+        s = sel.get(r["key"])
+        return bool(s and s.get("fit") is not None and s["fit"] >= 0.5) if sel else judged_ok(r)
     total_occ = sum(r["count"] for r in rows)
-    covered = [r for r in rows if r["top"] and r["top"][0]["score"] >= esik]
-    miss = [r for r in rows if not (r["top"] and r["top"][0]["score"] >= esik)]
+    covered = [r for r in rows if ok(r)]
+    miss = [r for r in rows if not ok(r)]
+    first = [r for r in rows if judged_ok(r, True)]
+    by_src = collections.Counter((sel.get(r["key"]) or {}).get("best_source") for r in covered)
+    by_score = [r for r in rows if r["top"] and r["top"][0]["score"] >= esik]
     occ_cov = sum(r["count"] for r in covered)
     by_kind = collections.Counter(r["kind"] for r in rows)
     cats = collections.Counter(r.get("category") or "diger" for r in rows)
-    rep = {"esik": esik, "benzersiz": len(rows), "gecis": total_occ,
+    rep = {"benzersiz": len(rows), "gecis": total_occ, "yargilanan": sum(1 for r in rows if jd.get(r["key"])),
            "karsilanan_benzersiz": len(covered), "karsilanan_yuzde": round(100 * len(covered) / max(1, len(rows)), 2),
-           "karsilanan_gecis_yuzde": round(100 * occ_cov / max(1, total_occ), 2), "tur": dict(by_kind),
-           "kategori": dict(cats.most_common()),
+           "karsilanan_gecis_yuzde": round(100 * occ_cov / max(1, total_occ), 2),
+           "olcu": (f"Zeki AI seçimi (ilk {max((s.get('n') or 0) for s in sel.values())} aday, P(uygun) ≥ 0,5)"
+                    if sel else "aday yargısı (ilk 3)"),
+           "karsilayan_kaynak": dict(by_src.most_common()),
+           "ilk_3_yargi_yuzde": round(100 * sum(1 for r in rows if judged_ok(r)) / max(1, len(rows)), 2),
+           "ilk_aday_dogru_yuzde": round(100 * len(first) / max(1, len(rows)), 2),
+           "esik": esik, "esikle_kapsama_yuzde": round(100 * len(by_score) / max(1, len(rows)), 2),
+           "tur": dict(by_kind), "kategori": dict(cats.most_common()),
            "karsilanmayan_en_sik_50": [{"tarif": r["query"], "en": r["query_en"], "kez": r["count"], "kitap": r["books"],
                                         "tur": r["kind"], "ilk_aday": r["top"][0] if r["top"] else None}
                                        for r in sorted(miss, key=lambda r: -r["count"])[:50]]}
+    (OUT / "karsilanmayan.json").write_text(json.dumps(
+        [{"query": r["query"], "query_en": r["query_en"], "kind": r["kind"], "category": r.get("category"),
+          "count": r["count"]} for r in miss], ensure_ascii=False, indent=1))
     (OUT / "rapor.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1))
     print(json.dumps({k: v for k, v in rep.items() if k != "karsilanmayan_en_sik_50"}, ensure_ascii=False, indent=1))
     for m in rep["karsilanmayan_en_sik_50"][:50]:
@@ -245,7 +404,7 @@ if __name__ == "__main__":
     ap.add_argument("adim")
     ap.add_argument("--ornek", type=int, default=None)
     ap.add_argument("--etiket", default="")          # ek okuma turu: ipuclari-<etiket>.jsonl (eşleştirme hepsini birleştirir)
-    ap.add_argument("--esik", type=float, default=0.2)
+    ap.add_argument("--esik", type=float, default=None)
     a = ap.parse_args()
     if a.adim == "metin":
         step_metin()
@@ -253,6 +412,10 @@ if __name__ == "__main__":
         asyncio.run(step_ipucu(a.ornek, a.etiket))
     elif a.adim == "esle":
         step_esle()
+    elif a.adim == "yargi":
+        asyncio.run(step_yargi())
+    elif a.adim == "secim":
+        asyncio.run(step_secim())
     elif a.adim == "ayar":
         step_ayar()
     elif a.adim == "rapor":

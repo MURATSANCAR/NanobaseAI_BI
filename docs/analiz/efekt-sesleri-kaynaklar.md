@@ -52,10 +52,46 @@ SONUÇ_HAVUZ
   kayıtlar geri düşer). Türkçe tarif Zeki AI ile İngilizceye çevrilir (yayınevi düzeyinde önbellek); model yoksa
   kategori ağacındaki Türkçe anahtar kelimelerle.
 - Kategori ağacı `sfx_library.CATEGORIES`: 11 grup, 100+ kategori, her kategoride İngilizce ve Türkçe anahtar kelime.
+- Seçim (`sfx.rerank`): aramanın ilk 16 adayı Zeki AI'ye adı/klasörü/etiketi/süresiyle gösterilir; tek harf (A…P) ya
+  da X (hiçbiri) kapalı kümede, olasılıklar belirteç olasılığından. Adaylar bu olasılıkla sıralanır; varsayılan birincisi,
+  ekranda ilk 3'ü. İpucu kaydında `fit` = 1 − P(X).
+- Hata ve düzeltme (2026-09-28): kaydedilen tokenizer dolgu ayarını taşıyordu, stüdyonun metin kodlayıcısı dolgu
+  belirteçlerine de dikkat ediyordu → bütün sorgular aynı birkaç «göbek» dosyaya gidiyordu. Kodlayıcı dolguyu kendisi
+  yapar ve maskeler; `havuz.py metin` uçtan uca eşdeğerliği (stüdyo kodlayıcısı ↔ torch, kosinüs 1,0) denetler.
 
 ## 4. Kapsama ölçümü (yayınevinin çocuk kitapları)
 
-SONUÇ_KAPSAMA
+Derlem: GPU `/data/organized` (yalnız okuma) — `cocuk/` altındaki bütün PDF'ler + künyesinde 12 yaşın altında
+başlayan bant yazan öteki kitaplar; aynı metin tek sayılır → **390 kitap, 21.120 sayfa, 1,83 M kelime**
+(`deploy/sfx/kapsama.py metin`). Metin okumadaki paragraf kurucuyla.
+
+İpucu çıkarımı: stüdyonun istemiyle (sfx.PROMPT, kitaba özel değil), Zeki AI gateway üzerinden, 4 sayfa bir çağrıda,
+**üç tur** (1 × sıcaklık 0,2 + 2 × 0,7; turların birleşimi). 0,2'de model çok sayfalı parçada çoğunlukla boş liste
+verdi (dere sayfası: 0,2 → 0 ipucu, 0,7 → «şırıl şırıl akan»); stüdyo bu yüzden 3 × 0,7 okuyup 2/3 oylar.
+Alıntısı metinde birebir geçmeyen ipucu atıldı (tur başına ~%6). Sonuç: **3.596 ipucu geçişi, 2.647 benzersiz tarif**
+(anlık 2.497, ortam 150). En sık kategoriler: su 192, çarpma 164, koşma 125, rüzgâr 125, araba 96, düşme 93,
+kalabalık 88, kapı 80, gülme 75, ateş 59, kırılma 59 …
+
+Karşılandı ölçüsü (stüdyonun seçim yolu, `kapsama.py secim`): aramanın ilk N adayı Zeki AI'ye adı/klasörü/etiketiyle
+gösterilir, tek harfle en uygunu ya da «hiçbiri» seçilir (belirteç olasılığı); **P(uygun ses var) ≥ 0,5 → karşılandı**.
+Ses dinlenmediği için ölçü tutucudur: sesi doğru ama adı «20090610 0 ambience.ogg» olan dosyaya «hiçbiri» diyebilir.
+Dinleyerek doğrulamak için her puan bandından çiftler `_olcum/dinleme-ornekleri.json`'da.
+
+| Durum (havuz) | Benzersiz tarif karşılanan | Geçiş (kitaptaki her kullanım) |
+|---|---|---|
+| 40.212 dosya, ilk 8 aday | %71,4 (1.889 / 2.647) | %76,5 |
+| 40.212 dosya, ilk 16 aday (stüdyo varsayılanı) | **%79,4** (2.101) | **%83,2** |
+| + 38 yerel üretim (en az 2 kez geçen karşılanmayanlar) | %79,1 (seçim yeniden koşuldu; model seçiminde ±%0,5 oynama) | %83,9 |
+
+Karşılayan kaynak (16 aday): Freesound/FSD50K 1.835–1.915, Sonniss 88–92, Commons 69–81, OpenGameArt 13, Kenney 2–3,
+üretim 82. Benzerlik puanı eşiğiyle (0,2) kapsama %98,1 görünür ama bu puan tek başına doğruluk göstermez (yargıda ilk
+adayın doğru çıkma oranı %42) — rapor bunu değil Zeki AI seçimini esas alır.
+
+Hedef ≥ %98'e ulaşılmadı. Karşılanmayanlar çoğunlukla tek kez geçen, çok özgül tarifler (ör. «filin ağır adımları»,
+«simit yeme sesi», «koltuğa oturma», «deprem sarsıntısı», «ud tellerinin tınlaması», «tablet bildirim sesi», «ezan»);
+listenin tamamı `_olcum/karsilanmayan.json`, en sık 50'si `_olcum/rapor.json`. Kapatma yolu (sürüyor, §5):
+karşılanmayan her tarif için yerel üretim + Sonniss 2017–2020'nin kalan arşivleri; ölçüm zinciri (`tamamla.sh`)
+indirme ve üretim bitince havuzu genişletip ölçümü kendiliğinden yeniden koşar.
 
 ## 5. Boşluk doldurma: yerelde efekt üretimi
 
@@ -68,7 +104,18 @@ SONUÇ_KAPSAMA
 | AudioGen (AudioCraft), MMAudio | CC BY-NC 4.0 | ELENDİ (NC) |
 | Woosh (Sony) | Ticari olmayan | ELENDİ |
 
-SONUÇ_URETIM
+Kurulum: ağırlıklar `/data/editor/models/sfx-uretim/MOSS-SoundEffect-v2.0` (HF rev `e35df4d8…`, 11 GB, SHA256SUMS +
+MANIFEST.json kaydı, LICENSE), kod `github.com/OpenMOSS/MOSS-TTS @ 934d6826…`, kendi Python ortamı
+`/data/editor/sfx/_ops/moss-venv` (torch 2.9 cu128; paket torch 2.9/transformers 4.57 istiyor). Betikler `uret.sh`
+(agirlik | ortam | uret) ve `uret.py`. Ölçülen: GPU'da ~15 sn/ses (100 adım, 4 sn anlık / 12 sn ortam), bellek ~17 GB;
+işlemcide ~2,5 dk/ses. GPU 0 (BI modeli) doluydu (12 GB payda bellek yetmedi); editörün kartı 1'de yalnız kartta
+başkalarına en az 8–12 GB kalıyorken ve stüdyoda süren iş yokken üretilir, yer kalmazsa model bellekten çıkar.
+
+Yapılan: en az iki kez geçen 38 karşılanmayan tarif GPU 1'de üretildi (9,6 dk) ve havuza «Zeki AI üretimi» olarak
+girdi. Kalan ~508 tek geçişli tarif işlemcide gözetimsiz üretiliyor (kartlara dokunmaz; ~20 saat), ardından
+`tamamla.sh` kataloğu/gömmeyi/ölçümü yeniler. Üretilen seslerin kalitesi DİNLENMEDİ; ölçüm bunları kendi tarifleriyle
+eşleştirdiği için «karşılandı» saymaya yatkındır — editörün dinleyerek elemesi gerekir (kütüphanede kaynak adı «Zeki AI
+üretimi»). Canlıda «bulunamadı → o anda üret» için gateway'e takma ad eklenmedi (ayrı iş).
 
 ## 6. Karışım kuralları (sfx.py)
 

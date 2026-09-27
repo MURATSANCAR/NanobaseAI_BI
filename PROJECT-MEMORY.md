@@ -12,6 +12,29 @@
 
 **Stüdyo: erkek anlatıcı, sayfa düzeninin kendiliğinden kurulumu, kalıcı tam e-kitap denetimi (2026-09-27 akşam, dalda; kurulmadı):** (1) Erkek anlatıcı istendiğinde «sıcak masalcı» (`narration.DEFAULT_MALE_NARRATOR = anlatici-erkek-masalci`); eski `anlatici-erkek` kimliği `ALIASES` ile ona yönlenir (ayar, API, sayfa birimleri; listede ayrı satır yok). Referansı kullanıcının dinlediği kaydın kendisi: `apps/editor/src/editor/production/sesler/anlatici-erkek-masalci.wav` (820 kB, 48 kHz, 8,54 sn, modelin tariften ürettiği ses, gerçek kişi değil; hizalayıcı transkripti `REF_TEXT` ile aynı), sha256 kodda (`narration.PINNED`); imajla gelir, GPU'ya ayrı dosya kopyalanmaz; `voice_ref` modeli çağırmaz, dosya yok/özet tutmazsa üretim durur. Ekranda anlatıcı grubunda kadın anlatıcının ardından «önerilen» rozetli. (2) Sayfa düzeni ekranı açılınca plan kendiliğinden kurulur: servis `POST /v1/studio/jobs/{iş}/plan/prepare[?retry=1]` (`auto_plan_dir` → `plan.ensure`; 200 `{status: ready}` / 409 PREPARING / 409 PLAN_FAILED / 404 NO_PLAN), köprü `/api/v1/editorial/studio/jobs/{iş}/plan/prepare`, GPU giriş kapısı `EDITOR-STUDYO-PLANHAZIR` bloğu; ekranda «Sayfa düzenini başlat» düğmesi yok, «Sayfa düzeni hazırlanıyor…» + düşerse «Yeniden dene» (`PlanEditor.tsx` `PlanPreparing`). `GET plan` yine tetiklemez (otomatik kayıt `NO_PLAN`'a dayanır). (3) Stüdyo imajı `editor-py-studio:<etiket>` (`apps/editor/images/studio/Dockerfile`, `FROM editor-py:<etiket>`): `openjdk-21-jre-headless` + EPUBCheck 5.4.0 (yalnız W3C GitHub sürümü, zip sha256 `33350c61…15a28c`, `/opt/epubcheck-5.4.0/` LICENSE.txt + THIRD-PARTY.txt ile), `EDITOR_EPUBCHECK_JAR` imajda; yalnız `editor-studio` ve `editor-studio-worker` bu imajla kalkar (`EDITOR_STUDIO_IMAGE`; editorctl aynı etiketli stüdyo imajı yoksa editor-py'ye düşer ve uyarır, `editorctl studio-image editor-py:<etiket>` kurar). Boyut: katmanlar +246 MB (JRE 210 + denetim 36), liste boyutu 1,21 → 1,56 GB. Ekranda sonuç yanında «Tam denetim» / «Yapısal denetim».
 
+**Stüdyo sesli okumaya efekt sesleri (2026-09-28, dalda; kurulmadı; GPU'da havuz hazır):** her şey yerel. Havuz GPU
+`/data/editor/sfx` (stüdyo kaplarına SALT OKUNUR birim; imaja girmez): Sonniss #GameAudioGDC 2015–2020 (resmî ayna
+ftpmirror.your.org; 2021–24 Cloudflare/erişilemeyen ayna yüzünden yok), FSD50K'nın yalnız CC0 + CC BY klipleri
+(34.976), Kenney (CC0, 8 paket), OpenGameArt CC0 (11 sayfa), Wikimedia Commons PD/CC0/CC BY (resmî API), «Zeki AI
+üretimi». Ölçüm anında 40.250 dosya / 76 GB / 144,6 saat; indirmeler sürüyor (`_ops/tamamla.sh` bitince açar,
+katalog + gömme + ölçüm). Katalog `<kaynak>/katalog.jsonl` (lisans+bağlantı, süre, sr, LUFS, tepe, kırpılma, sha256,
+atıf, işaretler), dizin `_dizin/` (`katalog.jsonl`, `gomme.npy` LAION CLAP `larger_clap_general` Apache-2.0 ses kolu,
+`gobek.npy` CSLS düzeltmesi, `metin/metin.onnx` metin kolu). Arama: kosinüs − 0,5·göbek + 0,25·etiket; Türkçe sorgu
+Zeki AI ile İngilizceye (önbellek `production/_sfx/ceviri.json`); seçim `sfx.rerank` (ilk 16 aday → Zeki AI tek harf ya
+da «hiçbiri», `fit`). Kod `production/sfx_library.py` (havuz), `sfx.py` (ipucu: 3 × 0,7 okuma, 2/3 oylama, alıntı metinde
+birebir; karışım ffmpeg: kelime zamanı sabit, efekt −23 LUFS + editör dB, sidechain kısma, ortam −38 LUFS döngü,
+son −16 LUFS / −1,5 dBTP; varsayılan açık: yaş bandı 12'nin altında başlıyorsa), `api_sfx.py` (uçlar `…/jobs/{iş}/sfx…`,
+`/v1/studio/sfx/library…`), narration.py'de tek kanca `_efekt_kancasi` (sayfa sesi yazılınca öneri + karışım; hata
+anlatımı düşürmez), e-kitap efektli sesi `sfx.page_audio` ile alır, künyeye `sfx.kunye_rows` (kaynaklar + CC BY
+atıfları). İş klasöründe `ses/efekt/{ayar.json, sayfa/<pid>.json, karisim/<pid>.mp3|json, oneri.json}`. Köprü
+`editorial_studio_sfx.py` (denetim kaydı, Range'li ses), giriş kapısı `EDITOR-STUDYO-EFEKT`, ekran
+`studio/narration/SoundEffects.tsx` + `SoundEffectsLibrary.tsx` + `sfxApi.ts` (Sesli okuma bölümünün altında). Stüdyo
+imajına ffmpeg + onnxruntime 1.30 + tokenizers 0.23 (images/studio; 1,56 → 2,29 GB). Havuz kurma/ölçüm/üretim betikleri
+`apps/editor/deploy/sfx/` (indir_*, havuz.py + calistir.sh, kapsama.py, uret.py + uret.sh, bosluk_doldur.sh,
+tamamla.sh). Kapsama (390 çocuk kitabı, 2.647 benzersiz ipucu): Zeki AI seçimiyle %79,4 benzersiz / %83,2 geçiş
+(hedef %98 değil); üretim modeli MOSS-SoundEffect v2.0 (Apache-2.0, `/data/editor/models/sfx-uretim`, gateway'de
+takma adı yok, GPU 1'de yer denetimli ya da işlemcide). Kaynaklar/lisanslar/ölçüm: `docs/analiz/efekt-sesleri-kaynaklar.md`.
+
 **"Geçen yılın aynı dönemi" (2026-09-25):** yanındaki dönemin bir yıl/ay/çeyrek/hafta öncesi (`temporal.anchor_same_period`). Kuruldu (test + VM, 25.09).
 
 **Eş dönem kapanmış dönemde de (2026-09-25):** karşılaştırmada güncel dönem kapanmış olsa da veri sonu ölçülür, ortada bittiyse iki taraf kırpılır; veri sonu ölçümü ölçü başına `TOP 1 … ORDER BY tarih DESC` (`same_period._last_day_sql`), tam tarama yok. Kuruldu (test + VM, 25.09).

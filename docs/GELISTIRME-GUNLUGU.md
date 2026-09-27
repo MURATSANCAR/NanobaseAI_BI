@@ -1,5 +1,33 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Stüdyo: sesli okumaya efekt sesleri (havuz, Zeki AI ipucu, karışım, ekran)
+
+- **Neden:** kullanıcı: «çocuk kitapları için patlama, vak vak, rüzgâr, ateş gibi efekt sesleri; ücretsiz kaynaklardan
+  devasa bir havuz» + «her kitabı sorunsuz ve eksiksiz karşılamalı». Karar: her şey yerel, kitap metni dışarı gitmez.
+- **Kaynaklar (lisans kaynak sayfasından):** Sonniss GDC 2015–2020 (resmî ayna; telifsiz, atıfsız, dağıtım ve yapay
+  zekâ eğitimi yasak), FSD50K'dan yalnız CC0 + CC BY, Kenney CC0, OpenGameArt CC0 (elle seçilmiş 11 sayfa), Commons
+  PD/CC0/CC BY (resmî API). Elenen: BBC (ticari değil), NC/SA'lı kümeler, Pixabay/Mixkit/Zapsplat (kazıma/hesap),
+  Sonniss 2021–24 (Cloudflare; ayna yanıt vermiyor), Freesound API (anahtar gerekir). Tablo:
+  `docs/analiz/efekt-sesleri-kaynaklar.md`.
+- **Havuz (GPU `/data/editor/sfx`):** yer kuralı (≥%20 ve ≥500 GB boş kalsın) ≈ 2,3 TB tavan verdi; sınır yer değil
+  lisans/erişim oldu. Ölçüm anında 40.250 dosya / 76 GB / 144,6 saat; Sonniss aynası yavaşladığı için indirme sürüyor,
+  `tamamla.sh` bitince kendiliğinden ekler. Gömme LAION CLAP (Apache-2.0) GPU 0'da %5 payla geçici kapta.
+- **Hata bulundu ve düzeltildi:** stüdyonun metin kodlayıcısı dolgu belirteçlerine dikkat ediyordu (kaydedilen
+  tokenizer dolgu ayarı taşıyor) → her sorgu aynı «göbek» dosyalara gidiyordu. Dolgu maskelendi, uçtan uca eşdeğerlik
+  denetimi eklendi. İpucu okumasında 0,2 sıcaklık boş liste eğilimi gösterdi → 3 × 0,7 + 2/3 oylama.
+- **Kapsama:** 390 çocuk kitabı / 21.120 sayfa, üç okuma turu → 2.647 benzersiz ipucu; Zeki AI seçimiyle (ilk 16 aday,
+  P ≥ 0,5) %79,4 benzersiz / %83,2 geçiş. Hedef %98'e ulaşılmadı; boşluk için MOSS-SoundEffect v2.0 (Apache-2.0)
+  kuruldu, en sık 38 karşılanmayan tarif üretildi, kalanlar gözetimsiz üretiliyor. Stable Audio Open «koşullu» (gelir
+  sınırı) diye kullanıcıya bırakıldı; AudioLDM2/AudioGen/MMAudio/Tango NC olduğu için elendi.
+- **Ürün:** `sfx.py` (ipucu, 3 aday + Zeki AI seçimi, karışım: kelime zamanı sabit, sidechain kısma, −16 LUFS),
+  `sfx_library.py`, `api_sfx.py`; narration.py'de tek kanca; e-kitap efektli sesi ve künyeye kaynakçayı alır. Ekran
+  «Efekt sesleri» (aç/kapa, öner, işaretli metin, 3 aday + dinle, kütüphane, ses düzeyi, yer, kaldır, kelime seçip ekle,
+  ortam sayfa/bölüm, yalnız o sayfayı karıştır, efektli dinle, kaynakça). Köprü + giriş kapısı yolları.
+- **Deneme:** `2026092716271423aee2` kopyası `202609280000005f0e01`, 5. ve 7. sayfa iki anlatıcıyla (sıcak masalcı,
+  kadın anlatıcı); 7. sayfada «Vak vak» ve «Pıt pıt pıt» otomatik yerleşti.
+- **Doğrulama:** motor testleri stüdyo imajının geçici derlemesinde (`editor-py-studio:sfx-deneme`, ffmpeg'li);
+  ön yüz tsc/vitest/build test sunucusunda geçici dizinde; köprü uçları sahte stüdyoyla. Kurulmadı, main'e alınmadı.
+
 ## 2026-09-27 (gece) — Editör CRM bağlayıcısı gece zamanlayıcısı (test sunucusu)
 
 - Bağlayıcının zamanlayıcısı yoktu; yeni okunan kitaplar okur kitlesini/yaşı/türü almıyor, yaş denetimleri koşmuyordu. Nerede koşmalı: CRM (.28) test sunucusundan erişiliyor; editöre test sunucusundan yalnız TT GPU'nun açtığı ters tüneller var (kart 18889, stüdyo 18890). `editor-mcp` dışarı açık değil ve açmak bütün MCP araçlarını açardı.

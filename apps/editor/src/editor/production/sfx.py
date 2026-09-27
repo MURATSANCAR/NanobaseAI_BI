@@ -226,7 +226,7 @@ def _clean_cue(c: dict, units) -> dict:
            "gain_db": max(GAIN_RANGE[0], min(GAIN_RANGE[1], float(c.get("gain_db") or 0.0))),
            "place": c.get("place") if c.get("place") in PLACES else "birlikte",
            "source": c.get("source") if c.get("source") in ("zeki", "editor") else "editor",
-           "confidence": c.get("confidence")}
+           "confidence": c.get("confidence"), "fit": c.get("fit")}
     where = None
     if isinstance(c.get("words"), list) and len(c["words"]) == 2 and c.get("block"):
         out["block"], out["words"] = str(c["block"]), [int(c["words"][0]), int(c["words"][1])]
@@ -406,12 +406,46 @@ def _vote(reads: list[list[dict]], units, min_votes: int = VOTE_MIN) -> tuple[li
     return out, stats
 
 
-def match(cue: dict, exclude: set[str] | None = None) -> list[dict]:
-    """İpucunun havuzdaki adayları (CANDIDATES adet)."""
+def match(cue: dict, exclude: set[str] | None = None, k: int = CANDIDATES) -> list[dict]:
+    """İpucunun havuzdaki adayları (anlam + etiket araması; `k` adet)."""
     kind = "ortam" if cue.get("kind") == "ortam" else "anlik"
     res = L.search(cue.get("query") or cue.get("quote") or "", en=cue.get("query_en") or None,
-                   category=None, kind=kind, k=CANDIDATES, exclude=exclude)
+                   category=None, kind=kind, k=k, exclude=exclude)
     return res
+
+
+POOL_K = 16                       # aramanın Zeki AI'ye gösterdiği aday sayısı (seçim tek harf: A…P, X = hiçbiri);
+#                                   kapsama ölçümü docs/analiz/efekt-sesleri-kaynaklar.md §4 (8 ve 16 aday)
+_LETTERS = "ABCDEFGHIJKLMNOP"
+PICK = """Bir çocuk kitabının sesli okumasına efekt konacak. Metindeki yer: «{quote}». İstenen ses: «{q}» ({en}).
+Ses kütüphanesinde aramanın bulduğu adaylar (ad, klasör, etiketler, süre):
+{rows}
+İstenen sese en uygun adayın harfini yaz. Hiçbiri o sesi içermiyorsa X yaz. Yalnız tek harf."""
+
+
+def _cand_line(letter: str, r: dict) -> str:
+    full = L.get(r["id"]) or {}
+    tags = ", ".join((full.get("tags_en") or [])[:14])
+    return f"{letter}) {r['title']} | {full.get('group') or r.get('source')} | {tags} | {float(r.get('dur') or 0):.1f} sn"
+
+
+async def rerank(llm, cue: dict, cands: list[dict]) -> tuple[list[dict], float | None]:
+    """Aramanın ilk POOL_K adayını Zeki AI sıralar: kapalı kümede tek harf (A…P ya da X = hiçbiri), olasılıklar
+    belirteç olasılığından (tek çağrı). Dönen: olasılığa göre sıralı adaylar ve «uygun ses var» olasılığı (1 − P(X)).
+    Model yoksa aramanın sırası korunur. Yalnız adın/klasörün/etiketin görüldüğü, sesin dinlenmediği bir seçimdir."""
+    if not cands:
+        return [], 0.0
+    from ..llm import PromptRef
+    letters = _LETTERS[:len(cands)]
+    msg = PICK.format(quote=cue.get("quote", ""), q=cue.get("query", ""), en=cue.get("query_en", ""),
+                      rows="\n".join(_cand_line(a, r) for a, r in zip(letters, cands)))
+    try:
+        probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": msg}], list(letters) + ["X"],
+                                    prompt=PromptRef("sfx.pick", "1"))
+    except Exception:  # noqa: BLE001 — model yoksa aramanın sırası
+        return cands, None
+    order = sorted(range(len(cands)), key=lambda i: (-probs.get(letters[i], 0.0), i))
+    return [cands[i] for i in order], round(1.0 - probs.get("X", 0.0), 3)
 
 
 async def suggest_page(d: Path, pid: str, by: str, llm=None, keep_editor: bool = True) -> dict:
@@ -443,9 +477,11 @@ async def suggest_page(d: Path, pid: str, by: str, llm=None, keep_editor: bool =
         if (c["block"], tuple(c["words"])) in taken:
             continue
         if lib_ok:
-            cands = await asyncio.to_thread(match, c)
-            c["candidates"] = [x["id"] for x in cands]
-            c["chosen"] = cands[0]["id"] if cands else None
+            cands = await asyncio.to_thread(match, c, None, POOL_K)
+            ranked, fit = await rerank(llm, c, cands)
+            c["candidates"] = [x["id"] for x in ranked[:CANDIDATES]]
+            c["chosen"] = ranked[0]["id"] if ranked else None
+            c["fit"] = fit                           # Zeki AI'ye göre havuzda uygun ses olma olasılığı
         else:
             c["candidates"], c["chosen"] = [], None
         if c["kind"] == "ortam":

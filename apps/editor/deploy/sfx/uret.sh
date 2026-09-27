@@ -35,9 +35,17 @@ case "${1:-}" in
     ;;
   uret)
     shift
-    exec docker run --rm --name sfx-uretim --gpus '"device=0"' -u "$(id -u):$(id -g)" -e HOME=/tmp \
-      -e TORCHDYNAMO_DISABLE=1 -e SFX_GPU_FRACTION="${SFX_GPU_FRACTION:-0.12}" \
+    # Kart: SFX_GPU (varsayılan 0). GPU 0 BI modeliyle doluysa (2026-09-28: 12 GB payda bellek yetmedi) editörün
+    # kartı 1 seçilir; yalnız kartta yeterli boş bellek varken ve stüdyoda süren iş yokken çalıştırılır.
+    # SFX_URETIM_CIHAZ=cpu: kartsız (yavaş ama hiçbir GPU işini etkilemez; gözetimsiz uzun koşu için).
+    GPU=(--gpus "\"device=${SFX_GPU:-0}\"")
+    [ "${SFX_URETIM_CIHAZ:-cuda}" = "cpu" ] && GPU=()
+    exec docker run --rm --name "sfx-uretim-${SFX_URETIM_CIHAZ:-cuda}" "${GPU[@]}" -u "$(id -u):$(id -g)" -e HOME=/tmp \
+      -e SFX_URETIM_CIHAZ="${SFX_URETIM_CIHAZ:-cuda}" -e SFX_THREADS="${SFX_THREADS:-32}" \
+      -e SFX_URETIM_BOS_GB="${SFX_URETIM_BOS_GB:-12}" \
+      -e TORCHDYNAMO_DISABLE=1 -e TQDM_DISABLE=1 -e SFX_GPU_FRACTION="${SFX_GPU_FRACTION:-0.12}" \
       -v /data/editor/sfx:/data/editor/sfx -v /data/editor/sfx/_ops:/ops -v "$M":/model/MOSS-SoundEffect-v2.0:ro \
+      -v /data/editor/storage/production:/busy:ro \
       -v "$HERE":/src:ro --entrypoint bash editor-voice:1 -c '. /ops/moss-venv/bin/activate && python /src/deploy/sfx/uret.py "$@"' _ "$@"
     ;;
   *) echo "kullanım: uret.sh agirlik | ortam | uret [--esik X | --liste dosya]"; exit 2 ;;
