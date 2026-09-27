@@ -212,13 +212,25 @@ function Journey({ b }: { b: BookDetail }) {
 
       {b.production.length > 0 && (
         <section className="mt-3">
-          <h3 className="px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Üretim</h3>
+          <h3 className="flex items-baseline gap-2 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            Üretim
+            <Link to="/uretim" className="font-bold normal-case tracking-normal text-canvas-violet underline">
+              Üretim yönetimi
+            </Link>
+          </h3>
           <ul className="mt-1 space-y-1.5">
             {b.production.map((p) => (
               <li key={p.id} className="rounded-xl border border-slate-100 bg-white/85 px-3 py-2 text-[12.5px]">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="font-mono text-[11.5px] tabular-nums">{dateTime(p.on)}</span>
-                  {p.status && <Pill tone={tone(p.status)}>{crmLabel(p.status)}</Pill>}
+                  <span className="flex items-center gap-2">
+                    {p.status && <Pill tone={tone(p.status)}>{crmLabel(p.status)}</Pill>}
+                    {p.id && (
+                      <Link to={`/uretim?kart=${encodeURIComponent(p.id)}`} className="text-[11.5px] font-bold text-canvas-violet underline">
+                        Takvim
+                      </Link>
+                    )}
+                  </span>
                 </div>
                 <div className="mt-0.5 text-[11px] text-canvas-muted">
                   {[p.editor && `Sorumlu editör: ${p.editor}`, p.designer && `Grafiker: ${p.designer}`, p.firstText && `ilk metin ${dateTime(p.firstText)}`, p.delivery && `teslim ${dateTime(p.delivery)}`]

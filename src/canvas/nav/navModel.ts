@@ -30,6 +30,7 @@ import {
   CalendarClock,
   ChartColumn,
   ClipboardCheck,
+  Factory,
   Contact,
   CornerDownRight,
   FileChartColumn,
@@ -181,6 +182,7 @@ export const NAV: NavGroup[] = [
       { id: 'son-okuma', label: 'Son okuma', to: '/son-okuma', icon: SpellCheck, section: 'Yayına hazırlık', hint: 'Baskı öncesi son denetim', keywords: ['yazım', 'denetim', 'okuma'] },
       { id: 'kitap-tasarim', label: 'Kitap tasarım', to: '/kitap-tasarim', icon: BookImage, section: 'Yayına hazırlık', hint: 'Sayfa, kapak ve baskı provası', keywords: ['stüdyo', 'kapak', 'mizanpaj', 'resim'] },
       { id: 'serbest-calisanlar', label: 'Serbest çalışanlar', to: '/serbest-calisanlar', icon: BriefcaseBusiness, section: 'Yayına hazırlık', hint: 'Çizer ve serbest çalışan havuzu, iş paketleri, kapasite, hakediş', keywords: ['çizer', 'freelancer', 'illüstratör', 'hakediş', 'iş paketi', 'kapasite'] },
+      { id: 'uretim', label: 'Üretim yönetimi', to: '/uretim', icon: Factory, section: 'Üretim', hint: 'Baskı takvimi, matbaa takibi ve gecikmeler; depo girişi Logo\'dan', keywords: ['üretim', 'matbaa', 'baskı takvimi', 'depo girişi', 'gecikme', 'bandrol', 'baskı çıkışı'] },
     ],
   },
   {

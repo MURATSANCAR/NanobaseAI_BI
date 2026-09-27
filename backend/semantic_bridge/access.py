@@ -449,7 +449,7 @@ _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bi
                                    "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
-                                         "editor-atama", "gorevlerim", "serbest-calisanlar"))
+                                         "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
 #: En uzun eşleşen önek kazanır. Yeni bir uç eklenince burada bir öneke düşmeli; düşmezse test kırılır
 #: (test_access.py → köprünün bütün yolları). Ortak uçlar geniş tutuldu (bir sayfanın çağırdığı uç
@@ -478,6 +478,9 @@ RULES: list[tuple[str, Any]] = [
     # Kişiler ekranı CRM kişisinin serbest çalışan kaydını sorar; geri kalan her şey Serbest çalışanlar sayfasının.
     ("/api/v1/editorial/freelance/lookup", frozenset({page("kisiler"), page("serbest-calisanlar")})),
     ("/api/v1/editorial/freelance/", frozenset({page("serbest-calisanlar")})),
+    # M12 Üretim yönetimi; baskı çıkış tarihi (M29/M16 tüketir) editoryal sayfalardan da okunur.
+    ("/api/v1/editorial/production/print-exit", _EDITORIAL),
+    ("/api/v1/editorial/production/", frozenset({page("uretim")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
@@ -542,6 +545,9 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/freelance/((people|portfolio|packages|tasks|assign|deliveries)(/.*)?|payouts(/[^/]+/(submit|delete))?)$",
      "ozellik:serbest.yonet"),
+    # Üretim kartına tarih/not/kalite/teklif yazma; matbaa onayı açıkça verilen `uretim.matbaa-onay` ile ucun içinde.
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/editorial/production/(cards/[^/]+/(entries|quotes)|entries/[^/]+|quotes/[^/]+)$",
+     "ozellik:uretim.yaz"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
     (frozenset({"POST"}), _S + r"(/docx)?$", "ozellik:tasarim.uret"),

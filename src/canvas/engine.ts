@@ -410,7 +410,7 @@ export type AlertInput = {
 };
 
 /** GET dışı istekler; motorun düz Türkçe hata mesajını olduğu gibi taşır. */
-async function send<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T> {
+export async function send<T>(method: string, path: string, body?: unknown, timeoutMs = 180_000): Promise<T> {
   const res = await fetch(`${ENGINE_BASE}${path}`, {
     method,
     credentials: 'include',

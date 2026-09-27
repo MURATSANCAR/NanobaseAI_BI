@@ -1,5 +1,73 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M12 Üretim yönetimi: üretim takvimi, matbaa takibi, gecikme uyarıları (CRM üretim kartı + Logo)
+
+- **Neden:** yol haritası B bloku adım 3. Baskı kararı verilen kitabın dosya teslimi → matbaa → baskı çıkışı → depo
+  girişi hiçbir ekranda izlenmiyordu; M29 (ilk dağılım) ve M16 «baskı çıkış tarihi»ne ihtiyaç duyuyor.
+- **Veri ölçümü (canlı CRM .28 + Logo .155, doğrudan sorgu):**
+  - CRM'de üretim kartı zaten var: `new_UretimBase` (kitap + baskı no başına; 2024 sonrası etkin, e-kitap hariç
+    **5.599** kart, 2026'da 1.706). Kart türü (yeni baskı / baskı tekrarı / yenileme), aşama (`statuscode`: (0) Baskı
+    hazırlık … (5) Matbaa belirleme … Matbaada → Depo girişi yapıldı), matbaa (40 matbaalı seçenek listesi), kesin adet,
+    öncelik, bekleme nedeni, bandrol. **Tarihlerin bir kısmı plan:** gün dağılımı tek güne yığılı — baskı tarihi %99
+    ayın 1'i, üretime teslim ayın 15'i (iş tanımındaki «15'inde baskı dokümanları matbaada» kuralı CRM'de zaten
+    işliyor), grafik teslim 25'i, son tarih 5'i; **bir kısmı gerçekleşen:** matbaa belirleme, baskıya hazır, depo girişi
+    (bütün günlere yayılı). Yeni kitap kartlarında ölçülen CRM takvimi (baskı ayının 1'ine göre): grafik −37, son tarih
+    −27, üretime teslim −17, dağılım +5 gün (1.285 kart).
+  - «Kesinleşen baskı fiyatı» baskı maliyeti değil, kitabın **satış fiyatı** (195–450 ₺, sayfa sayısıyla artıyor).
+  - Baskı tekrarı kartı önceki karttan kopyalanıyor: gerçekleşen tarih kolonlarında önceki baskının tarihi kalıyor
+    (2.393 tekrar kartının 33'ünde depo, 100'ünde baskıya hazır tarihi kart açılışından 30+ gün eski) → bu karta sayılmaz.
+  - Logo: üretim emri `LG_<firma>_PRODORD` (2024 sonrası **4.593**; 1. açıklama CRM'in üretim no'su `URTN-…`, 2026'da
+    emirlerin %55'inde dolu, `URTM` yazım hatası dahil) ve emre bağlı üretimden giriş fişi (TRCODE 13, `PRODORDERREF`;
+    ana ürün satırı **11.010**). `PRODSTAT` 1 = **planlanan** giriş (emir başına tek fiş, ileri tarihli), 0 = gerçek giriş
+    (emir başına ortalama 1,5 fiş, planlananın %103'ü). İkisi toplanırsa adet iki katına çıkıyor (ilk ölçümde görüldü).
+  - Matbaa baskı faturası: alınan hizmet faturası (TRCODE 4), hizmet kartı `730.38.381` «Komple Baskı Giderleri»;
+    satır özel kodu = kitabın stok kodu, miktar = basılan adet, fiyat = adet başı baskı bedeli (2024–25 4.406 + 2026
+    1.638 = **6.044** satır). Faturayı kesen cari CRM'deki matbaa ile örtüşüyor (WPC→WPC 895 kart, Çınar→Çınar 555…).
+  - Logo kopyası: son gerçek depo girişi **14.08.2026** (`.155` donmuş kopya); sonrası CRM aşamasından gösterilir, ekran söyler.
+- **Kararlar (gerekçeli, veriden):** (1) Dört nokta gerçekleştiği sırayla: matbaa belirlendi → baskı dosyası matbaada
+  (CRM baskıya hazır) → baskı çıkışı (Logo'da matbaadan gelen ilk gerçek giriş) → depo girişi (gerçek girişler emrin
+  adedine ulaştığı gün). İş tanımındaki sıra «dosya → matbaa»; CRM aşama sırası matbaa seçimini dosyadan önce koyuyor,
+  ekran veriyi izler. (2) Plan: CRM'in kendi takvimi (üretime teslim; baskı tarihi **ay düzeyinde**, ayın son gününe
+  kadar), depo için Logo'nun planlanan girişi; portalda hedef yayın tarihi girilirse geriye doğru takvim (15 kuralı +
+  ölçülen uzaklıklar). (3) Süreler sabit yazılmaz, gerçekleşmiş kartlarda ölçülür: matbaa → dosya ortanca 6 gün (852),
+  dosya → baskı çıkışı **27 gün** (çoğu 15–38; 945 kart; CRM takvimi 16–17 gün bırakıyor), baskı çıkışı → depo 0 gün;
+  20 örnekten azsa plana yazılmaz. (4) Eşleşme: CRM kartı ↔ emir önce üretim no ile, açıklaması boş emir stok koduyla
+  kartın zaman penceresinde (aynı kitabın bir sonraki kartına kadar); 5.599 kartın 3.946'sı. (5) Gecikme: planı geçmiş
+  adım; 7 günü aşınca yöneticiye (ayar `PRODUCTION_ESCALATE_DAYS`). Son planı 180 günden eski, depoya girmemiş kart
+  «kapanmamış eski kart» (177), gecikme listesini doldurmaz. (6) Matbaa puanı: zamanında teslim 50 (az işi olanın oranı
+  10 iş ağırlığıyla genel orana çekilir: 2 işte %100 900 işte %55'i geçmesin), adet başı baskı bedeli 30, kalite 20;
+  ölçülemeyen parça yarım puan + «ölçülemedi». (7) CRM'e yazma yok: gerçekleşen tarih (yalnız boşu doldurur), hedef
+  yayın tarihi, kalite, not, matbaa teklifi, prodüksiyon onayı portal tablolarında.
+- **Köprü:** `production.py` (kaynak okuması, eşleşme, servis, uçlar `/api/v1/editorial/production/*`: meta, overview,
+  cards, cards/{id}, entries, quotes, approve, delays, printers, calendar, **print-exit** — M29/M16 için kitabın baskı
+  başına plan/gerçek baskı çıkışı ve depo girişi), `production_plan.py` (saf hesaplar), `production_store.py` (tablolar
+  `semantic_production_entries`, `semantic_production_quotes`). CRM ve Logo'ya köprünün kendi salt okunur bağlantısıyla
+  (yönetim raporları gibi), 5 dk bellekte; okuma ~20 sn (CRM 6 sn, Logo 10–15 sn). `app.py`'ye yalnız `register` bağı.
+- **Yetki:** `sayfa:uretim`; yazma `ozellik:uretim.yaz` (tarih/not/kalite/teklif); matbaa onayı açıkça verilen
+  `ozellik:uretim.matbaa-onay`. `print-exit` editoryal sayfalardan da okunur.
+- **Ön yüz** `src/canvas/editorial/production/`: `/uretim` (menü Editoryal › Üretim › Üretim yönetimi; Kampüs M12 kutusu),
+  sekmeler Üretim takvimi (süren / gecikmede / depoya girdi / eski; matbaa, baskı türü, ürün süzgeci; dört noktalı
+  zincir) · Gecikmeler (yöneticiye çıkan / sorumluda) · Matbaalar (puan, zamanında %, dosya→depo, adet başı bedel ve
+  12 ay eğilimi, kalite) · Geriye takvim (yayın tarihinden en geç tarihler, CRM takviminin ara tarihleri, ölçülen
+  sürelerle beklenen çıkış, risk). Kart paneli: takvim (plan / gerçekleşen / kaynak), matbaa seçim raporu (2–3 öneri,
+  teklif, onay), Logo'da gerçekleşen (emir, planlanan ve gerçek girişler, baskı faturası), baskı dosyaları (Kitap
+  Tasarım Stüdyosu işleri, CRM kitabı ya da adla), kalite, notlar, CRM'deki bütün tarihler. Kitap 360'ın «Üretim»
+  bölümünden karta bağlantı. Yeni animasyon yok (yan panel mevcut `Sheet`).
+- **Gerçek DB kabulü (test sunucusunda, dal kodu geçici klasörde, salt okuma):** servis katmanı canlı CRM + Logo ile:
+  5.599 kart (doğrudan sayım 5.599), iptal 5 (5), emir 4.593 (4.593), giriş satırı 11.010 (11.010), baskı faturası satırı
+  6.044 (6.044). Örnek kart «Koala Olmanın Sırrı» 4. baskı: CRM baskı tarihi 1 Temmuz (plan 31 Temmuz), baskıya hazır
+  10 Temmuz, matbaa 30 Haziran; Logo ilk gerçek giriş 14 Ağustos 10.060 adet, planlanan giriş 4 Eylül — modül aynısını
+  verdi (gecikmeli çıkış, planlanan fiş gerçek sayılmadı). Özet: süren 589, gecikmede 186, 14 gün içinde 145, son 30
+  günde depoya giren 155. İlk koşuda bulunan hata: bağlayıcı tarihleri ISO metni verdiği için CRM'in UTC 21:00'i bir
+  gün önceye düşüyordu (ay başı «baskı tarihi» ayın sonu sanılıyordu) → düzeltildi, test eklendi.
+- **Testler (test sunucusunda, git archive kopyası):** `test_production.py` 19 + `test_access.py` → 30/30; tam köprü
+  paketi 1.325 geçti, 13 başarısız + 10 hata — hepsi bu işten önce de olan motor/kalite kapısı testleri
+  (`test_default_period`, `test_cross_source_compile`, `test_dynamic_schema`, `test_quality_gate` dosya eksik…).
+  Ön yüz: `tsc -b` 0, vitest 49/49 (menü ↔ yetki kataloğu dahil).
+- **Açık:** matbaa kapasitesi ve teklif listesi CRM/Logo'da yok, portalda teklif olarak girilir; YAYFED/bakanlık uyum
+  listesi yok (CRM'de yalnız bandrol durumu, ekranda gösteriliyor); gecikme bildirimi ekranda, e-posta ile gitmiyor
+  (SMTP kurulunca uyarılar modülüne bağlanabilir); kalite sorunu oranı ancak portalda işaretlendikçe ölçülür.
+
 ## 2026-09-28 — M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk baskı önerisi, ilk satış takibi, dürüst geçmiş sınama
 
 - **Neden:** yol haritası B bloku adım 3. Yeni çıkacak kitabın ilk 6 / 12 ay satışı (kötümser / baz / iyimser + %80 aralık), ilk baskı adedi, kanal dağılımı, gerekçe; çıktıktan sonra tahmin–gerçekleşen ve revize.

@@ -133,6 +133,11 @@
       "label": "Serbest çalışanlar"
     },
     {
+      "key": "sayfa:uretim",
+      "area": "editoryal",
+      "label": "Üretim yönetimi"
+    },
+    {
       "key": "sayfa:kisiler",
       "area": "kayitlar",
       "label": "Kişiler"
@@ -506,6 +511,21 @@
       "page": "sayfa:serbest-calisanlar",
       "label": "Hakediş onayı ve ödeme kaydı",
       "hint": "Onay bekleyen hakedişi onaylama, geri gönderme, ödendi işaretleme (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:uretim.yaz",
+      "area": "editoryal",
+      "page": "sayfa:uretim",
+      "label": "Üretim kartına kayıt",
+      "hint": "Gerçekleşen tarih, hedef yayın tarihi, kalite sonucu, not ve matbaa teklifi girme"
+    },
+    {
+      "key": "ozellik:uretim.matbaa-onay",
+      "area": "editoryal",
+      "page": "sayfa:uretim",
+      "label": "Matbaa seçimini onaylama",
+      "hint": "Prodüksiyon müdürünün matbaa onayı; onay kaydı sipariş talebine esas olur",
       "explicit": true
     },
     {

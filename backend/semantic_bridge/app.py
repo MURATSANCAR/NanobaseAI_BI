@@ -6596,6 +6596,26 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     editorial_studio_marketing.register(app, {"auth": _books, "seo": app.state.seo_geo})
     from semantic_bridge import editorial_studio_coloring
     editorial_studio_coloring.register(app, {"auth": _books, "audit": admin_mod.audit})
+
+    # M12 Üretim Yönetimi: CRM üretim kartı + Logo üretim emri/depo girişi (kendi salt okunur bağlantılarıyla) +
+    # portal kayıtları. Uçlar /api/v1/editorial/production/*.
+    from semantic_bridge import production as production_mod
+    from semantic_bridge import editorial_studio as _production_studio
+
+    def _production_connect(path_of):
+        def connect():
+            from semantic_layer.profiler.connectors import connector_from_file
+            return connector_from_file(path_of())
+        return connect
+
+    app.state.production = production_mod.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "studio_jobs": _production_studio.jobs,
+    })
     return app
 
 
