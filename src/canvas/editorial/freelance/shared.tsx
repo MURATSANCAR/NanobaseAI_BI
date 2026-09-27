@@ -18,11 +18,13 @@ export function useFlRefresh() {
 const money2 = new Intl.NumberFormat('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const qty = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
 export const tl = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? '—' : `${money2.format(v)} ₺`);
-/** Kullanıcının yazdığı sayı: virgül varsa Türkçe yazım (1.250,50), yoksa düz (1250.5). Boşsa NaN. */
+/** Kullanıcının yazdığı sayı: virgül varsa Türkçe yazım (1.250,50); virgül yoksa «4.000» gibi üçlü gruplar binliktir,
+ *  diğer nokta ondalıktır (1250.5). Boşsa NaN. */
 export const parseNum = (raw: string | number | null | undefined): number => {
   const s = String(raw ?? '').trim().replace(/\s|₺/g, '');
   if (!s) return NaN;
-  return Number(s.includes(',') ? s.replace(/\./g, '').replace(',', '.') : s);
+  if (s.includes(',')) return Number(s.replace(/\./g, '').replace(',', '.'));
+  return Number(/^\d{1,3}(\.\d{3})+$/.test(s) ? s.replace(/\./g, '') : s);
 };
 /** Sayıyı düzenleme kutusuna Türkçe ondalıkla koyar (1250,5). */
 export const editNum = (v: number | null | undefined) => (v == null || !Number.isFinite(v) ? '' : String(v).replace('.', ','));
