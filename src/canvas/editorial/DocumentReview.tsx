@@ -221,7 +221,7 @@ export function DocumentResult({ id }: { id: string }) {
         loading={q.isLoading}
         error={q.error ? errText(q.error, 'Belge incelemesi okunamadı.') : null}
         idle={null}
-        document={{ title: d ? `Belge: ${d.title}` : 'Belge incelemesi', lead, action }}
+        docMode={{ title: d ? `Belge: ${d.title}` : 'Belge incelemesi', lead, action }}
       />
       {ready && <WordMapPanel key={id} bookId="" docId={id} findings={(q.data?.findings ?? []).filter((f) => f.check === 'word_variety')} />}
     </>

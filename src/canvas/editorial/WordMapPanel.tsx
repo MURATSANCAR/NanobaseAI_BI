@@ -1,7 +1,7 @@
 import { useDeferredValue, useMemo, useState, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, ChevronRight, Loader2, Search, X } from 'lucide-react';
-import { ENGINE_ENABLED, proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingFinding, type WordMap, type WordMapEntry } from '../engine';
+import { ENGINE_ENABLED, documentApi, proofingApi, type ProofReasonCode, type ProofVerdict, type ProofingFinding, type WordMap, type WordMapEntry } from '../engine';
 import { Loading, Note, Pill, btnGhost, errText, field, nf } from '../admin/ui';
 import { Panel } from './kit';
 import { RejectForm } from './ProofEvidence';
@@ -146,9 +146,10 @@ type RepeatGroup = { key: string; rows: ProofingFinding[]; top: number; pages: n
 /** Aynı kök + aynı anlamın yakın tekrar bulguları tek satırda: modelin güveni yüksek olan üstte,
  *  karar verilmişler en altta. Topluca «Doğru» ya da «Yanlış alarm» (gerekçeyle) her bulguya ayrı
  *  karar olarak yazılır (kuralın isabeti bulgu başına sayılır); tek tek karar üstteki listededir. */
-function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFinding[] }) {
+function Repeats({ bookId, findings, document = false }: { bookId: string; findings: ProofingFinding[]; document?: boolean }) {
   // Toplu karar «Son okuma bulgusuna karar» ister; yoksa yalnız liste görünür.
-  const canDecide = useCan('son-okuma.karar');
+  // belge incelemesinde editör kararı (doğru/yanlış alarm) yok: kural isabeti kitap bulgusundan ölçülür
+  const canDecide = useCan('son-okuma.karar') && !document;
   const qc = useQueryClient();
   const [openKey, setOpenKey] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<string | null>(null);
@@ -282,7 +283,7 @@ function Repeats({ bookId, findings }: { bookId: string; findings: ProofingFindi
   );
 }
 
-function Body({ m, bookId, findings }: { m: WordMap; bookId: string; findings: ProofingFinding[] }) {
+function Body({ m, bookId, findings, document = false }: { m: WordMap; bookId: string; findings: ProofingFinding[]; document?: boolean }) {
   const [tab, setTab] = useState<Tab>(findings.length ? 'repeats' : 'all');
   const [q, setQ] = useState('');
   const query = lower(useDeferredValue(q).trim());
@@ -379,7 +380,7 @@ function Body({ m, bookId, findings }: { m: WordMap; bookId: string; findings: P
       )}
 
       {tab === 'repeats' ? (
-        <Repeats bookId={bookId} findings={findings} />
+        <Repeats bookId={bookId} findings={findings} document={document} />
       ) : tab === 'near' ? (
         near.length === 0 ? (
           <Empty>Yan yana geçip farklı anlamda kullanılan kök yok.</Empty>
@@ -445,11 +446,12 @@ function Empty({ children }: { children: ReactNode }) {
 }
 
 /** `findings`: aynı kitabın son okuma raporundaki kelime tekrarı bulguları (gruplu karar için). */
-export function WordMapPanel({ bookId, findings = [] }: { bookId: string; findings?: ProofingFinding[] }) {
+/** `docId`: belge incelemesinde aynı panel — harita belgenin, karar düğmesi yok. */
+export function WordMapPanel({ bookId, findings = [], docId }: { bookId: string; findings?: ProofingFinding[]; docId?: string }) {
   const q = useQuery({
-    queryKey: ['editorial', 'wordMap', bookId],
-    queryFn: () => proofingApi.wordMap(bookId),
-    enabled: ENGINE_ENABLED && !!bookId,
+    queryKey: docId ? ['editorial', 'docWordMap', docId] : ['editorial', 'wordMap', bookId],
+    queryFn: () => (docId ? documentApi.wordMap(docId) : proofingApi.wordMap(bookId)),
+    enabled: ENGINE_ENABLED && !!(docId || bookId),
     staleTime: 5 * 60_000,
   });
   const m = q.data;
@@ -465,9 +467,9 @@ export function WordMapPanel({ bookId, findings = [] }: { bookId: string; findin
         ) : q.error ? (
           <Note tone="err">{errText(q.error, 'Kelime haritası okunamadı.')}</Note>
         ) : !m?.ready ? (
-          <Note tone="info">Bu kitabın kelime haritası henüz çıkarılmadı. Son okuma denetimleri yeniden koşunca burada görünür.</Note>
+          <Note tone="info">{docId ? 'Belgenin kelime haritası henüz hazır değil; inceleme bitince burada görünür.' : 'Bu kitabın kelime haritası henüz çıkarılmadı. Son okuma denetimleri yeniden koşunca burada görünür.'}</Note>
         ) : (
-          <Body m={m} bookId={bookId} findings={findings} />
+          <Body m={m} bookId={bookId} findings={findings} document={!!docId} />
         )}
       </div>
     </Panel>

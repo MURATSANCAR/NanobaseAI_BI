@@ -541,6 +541,13 @@
       "hint": "Doğru / yanlış alarm"
     },
     {
+      "key": "ozellik:son-okuma.belge",
+      "area": "editoryal",
+      "page": "sayfa:son-okuma",
+      "label": "Belge yükleyip inceletme",
+      "hint": "doc, docx, pdf, odt, rtf, txt, md — metin denetimleri"
+    },
+    {
       "key": "ozellik:yazar-iliski.yaz",
       "area": "kayitlar",
       "page": "sayfa:yazar-iliskileri",
