@@ -347,6 +347,8 @@ def proofing_report(book_title):
         'checks':[{'name':c['name'],'label':c['label'],'version':c['version'],'status':c['status'],
                    'startedAt':c.get('started_at'),'finishedAt':c.get('finished_at'),
                    'findings':c['findings'],'serious':c['serious'],'error':c.get('error'),
+                   # önceki okumada «yanlış alarm» denip taşındığı için sayılmayan (gizlenen) bulgular
+                   'hidden':c.get('hidden') or 0,
                    # Kuralın (ad+sürüm) isabeti: bütün kitaplardaki geçerli editör kararlarından; karar yoksa None.
                    'precision':c.get('precision')} for c in r.get('checks',[])],
         'findings':[{'id':f.get('id'),'check':f['check'],'label':f['label'],'page':f.get('page'),'severity':f['severity'],
@@ -391,10 +393,12 @@ def proofing_docx(book_id):
     return r.content, r.headers.get('content-disposition') or 'attachment; filename="son-okuma.docx"'
 
 
-def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by):
+def proofing_decide(book_id, finding_id, verdict, reason_code, note, decided_by, carried_from=None):
     """Editörün bulguya kararını kart servisine iletir; kart servisinin döndürdüğü geçerli kararı verir.
-    Köprü editör veritabanına dokunmaz; doğrulama (gerekçe, nesil, not uzunluğu) kart servisindedir."""
+    Köprü editör veritabanına dokunmaz; doğrulama (gerekçe, nesil, not uzunluğu, taşınan kararın kitabı)
+    kart servisindedir. `carried_from`: editör önceki okumadan taşınan kararı görürken karar verdiyse onun kimliği."""
     body={'verdict':verdict,'decidedBy':decided_by}
     if reason_code: body['reasonCode']=reason_code
     if note: body['note']=note
+    if carried_from: body['carriedFrom']=carried_from
     return request_json('POST','/v1/books/'+str(uuid.UUID(book_id))+'/proofing/findings/'+str(uuid.UUID(finding_id))+'/decision',json=body)

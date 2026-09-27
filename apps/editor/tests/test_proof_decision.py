@@ -37,7 +37,7 @@ from editor.proofing import _decision as D  # noqa: E402
 # ------------------------------------------------------------------ doğrulama
 def test_accept_has_no_reason():
     out = D.validate({"verdict": "accept", "decidedBy": "editor1"})
-    assert out == {"verdict": "ACCEPT", "reason_code": None, "note": None, "decided_by": "editor1"}
+    assert out == {"verdict": "ACCEPT", "reason_code": None, "note": None, "decided_by": "editor1", "carried_from": None}
     with pytest.raises(D.DecisionError):
         D.validate({"verdict": "ACCEPT", "reasonCode": "OTHER", "decidedBy": "editor1"})
 
@@ -69,6 +69,17 @@ def test_reason_codes_match_migration():
     for code in D.REASON_CODES:
         assert f"'{code}'" in sql
     assert "forbid_change()" in sql  # salt ekleme
+
+
+def test_clear_and_carried_from():
+    """«Geri al» (CLEAR) gerekçe taşımaz; carriedFrom bir karar kimliğidir (028)."""
+    out = D.validate({"verdict": "clear", "carriedFrom": "6f1c2d4e-0000-4000-8000-000000000001", "decidedBy": "e"})
+    assert out["verdict"] == "CLEAR" and out["carried_from"] == "6f1c2d4e-0000-4000-8000-000000000001"
+    with pytest.raises(D.DecisionError):
+        D.validate({"verdict": "CLEAR", "reasonCode": "OTHER", "decidedBy": "e"})
+    with pytest.raises(D.DecisionError):
+        D.validate({"verdict": "ACCEPT", "carriedFrom": "önceki", "decidedBy": "e"})
+    assert D.public({"verdict": "CLEAR", "reason_code": None, "note": None, "decided_by": "e", "created_at": None}) is None
 
 
 # ------------------------------------------------------------------ isabet

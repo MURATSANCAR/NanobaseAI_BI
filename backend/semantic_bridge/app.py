@@ -4216,7 +4216,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.post("/api/v1/editorial/proofing/decision")
     def editorial_proofing_decision(body: dict[str, Any], request: Request) -> dict[str, Any]:
-        """Editörün son okuma bulgusuna kararı: «Doğru» (ACCEPT) ya da «Yanlış alarm» (REJECT + gerekçe [+ not]).
+        """Editörün son okuma bulgusuna kararı: «Doğru» (ACCEPT), «Yanlış alarm» (REJECT + gerekçe [+ not]) ya da
+        «Geri al» (CLEAR; önceki okumadan taşınan karar bu bulguya uygulanmaz, `carriedFrom` o kararın kimliği).
         İnsanın veri kaydıdır; kitabı düzeltmez. Kararı veren = oturumdaki kullanıcı (gövdeden alınmaz).
         Kart servisine iletilir; 422 (geçersiz gövde) ve 404 (bulgu son nesilde değil) olduğu gibi geçer,
         motor ulaşılamazsa 502."""
@@ -4228,10 +4229,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         verdict = str(body.get("verdict") or "").strip().upper()
         reason_code = (str(body.get("reasonCode") or "").strip().upper() or None)
         note = (str(body.get("note") or "").strip() or None)
+        carried_from = (str(body.get("carriedFrom") or "").strip() or None)
         if not book_id or not finding_id:
             raise HTTPException(422, "Kitap ve bulgu kimliği gerekli.")
         try:
-            out = editorial_cards.proofing_decide(book_id, finding_id, verdict, reason_code, note, user)
+            out = editorial_cards.proofing_decide(book_id, finding_id, verdict, reason_code, note, user, carried_from)
         except httpx.HTTPStatusError as e:
             code = e.response.status_code
             if code in (404, 422):
@@ -4244,7 +4246,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         except (ValueError, KeyError, TypeError, httpx.HTTPError) as e:
             raise HTTPException(502, "Karar motora iletilemedi.") from e
         admin_mod.audit(engine, user, "decide", "proof_finding", finding_id, book_id,
-                        {"verdict": verdict, "reasonCode": reason_code, "note": note, "generationId": out.get("generation_id")})
+                        {"verdict": verdict, "reasonCode": reason_code, "note": note, "generationId": out.get("generation_id"),
+                         "carriedFrom": carried_from})
         return out
 
     @app.get("/api/v1/editorial/ask/covers/{book_id}")

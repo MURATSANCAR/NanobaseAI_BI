@@ -20,6 +20,7 @@ from . import db, foundation, graph, read_model
 from . import review as review_mod
 from .proofing._labels import label_of   # etiketler kaynak dosyadan; denetim modülleri yüklenmez
 from .proofing import _decision            # editör kararı: saf doğrulama + isabet formülü
+from .proofing import _carry               # aynı kitabın önceki okumasındaki kararı taşıma (saf eşleme)
 
 def authorize(authorization: str = Header(default='')):
     expected=os.environ.get('EDITOR_CARDS_KEY','')
@@ -85,18 +86,35 @@ def book_graph(book_id: UUID):
         raise HTTPException(404,'book not found')
     return {'book_id':str(book_id),**graph.network(str(gen['id']))}
 
+def _has_carry(c) -> bool:
+    """028 uygulandı mı (proof_decision.carried_from + CLEAR)? Uygulanmadıysa isabet eski sorguyla sayılır."""
+    return c.execute("SELECT 1 FROM information_schema.columns WHERE table_schema='ed'"
+                     " AND table_name='proof_decision' AND column_name='carried_from'").fetchone() is not None
+
 def _decisions(c, gid: str, run_ids: list[str]):
     """Her bulgunun GEÇERLİ (en yeni) kararı ve her kuralın (ad+sürüm) BÜTÜN kitaplardaki isabeti.
+    Karar sözlüğünde «geri al» (CLEAR) denmiş bulgu None ile durur: kararı yok ve önceki okumadan karar almaz.
+    İsabet: CLEAR sayılmaz; editörün taşınan kararı onaylayan/değiştiren kararı varken aynı kuralın (ad+sürüm)
+    kaynak kararı ikinci kez sayılmaz (028; docs/son-okuma/README.md).
     proof_decision tablosu yoksa (025 uygulanmadı) boş sözlükler: rapor yine gelir, karar alanı null."""
     try:
         cur=c.execute(
             'SELECT DISTINCT ON (finding_id) finding_id, verdict, reason_code, note, decided_by, created_at'
             ' FROM ed.proof_decision WHERE generation_id=%s ORDER BY finding_id, created_at DESC',(gid,)).fetchall()
-        rules=c.execute(
-            'SELECT check_name, check_version, verdict, count(*) AS n FROM ('
-            '  SELECT DISTINCT ON (finding_id) check_name, check_version, verdict FROM ed.proof_decision'
-            '  WHERE (check_name, check_version) IN (SELECT check_name, check_version FROM ed.proof_run WHERE id = ANY(%s))'
-            '  ORDER BY finding_id, created_at DESC) d GROUP BY check_name, check_version, verdict',(run_ids,)).fetchall()
+        rule_scope=('SELECT DISTINCT ON (finding_id) id, check_name, check_version, verdict{cf} FROM ed.proof_decision'
+                    ' WHERE (check_name, check_version) IN (SELECT check_name, check_version FROM ed.proof_run WHERE id = ANY(%s))'
+                    ' ORDER BY finding_id, created_at DESC')
+        if _has_carry(c):
+            rules=c.execute(
+                'WITH d AS (' + rule_scope.format(cf=', carried_from') + ')'
+                " SELECT check_name, check_version, verdict, count(*) AS n FROM d x WHERE verdict IN ('ACCEPT','REJECT')"
+                ' AND NOT EXISTS (SELECT 1 FROM d y WHERE y.carried_from = x.id AND y.check_name = x.check_name'
+                "   AND y.check_version = x.check_version AND y.verdict IN ('ACCEPT','REJECT'))"
+                ' GROUP BY check_name, check_version, verdict',(run_ids,)).fetchall()
+        else:
+            rules=c.execute(
+                'SELECT check_name, check_version, verdict, count(*) AS n FROM (' + rule_scope.format(cf='') + ') d'
+                ' GROUP BY check_name, check_version, verdict',(run_ids,)).fetchall()
     except psycopg.errors.UndefinedTable:
         return {},{}
     counts={}
@@ -104,6 +122,47 @@ def _decisions(c, gid: str, run_ids: list[str]):
         k=counts.setdefault((r['check_name'],r['check_version']),[0,0])
         k[0 if r['verdict']=='ACCEPT' else 1]+=r['n']
     return {str(r['finding_id']):_decision.public(r) for r in cur},counts
+
+_IDENT_SQL='jsonb_build_object(' + ','.join(f"'{k}',details->'{k}'" for k in _carry.ID_FIELDS) + ')'
+
+def _carried(c, book_id: str, gid: str, run_ids: list[str], rows: list[dict], own: dict) -> dict:
+    """Aynı kitabın ÖNCEKİ okumalarındaki (eski nesiller ve aynı nesilde eski koşular) geçerli kararların bugünkü
+    bulgulara taşınması — {bulgu_id: ekrana giden karar (inherited)}. Yalnız okur, hiçbir şey yazmaz: taşınan karar
+    editör onaylayana ya da değiştirene kadar bir gösterimdir ve isabete girmez. Kendi kararı (CLEAR dahil) olan
+    bulgu karar almaz. `rows`: bugünkü bulgular (id, check_name, page_no, quote, bbox, ident)."""
+    try:
+        dec=c.execute(
+            'SELECT DISTINCT ON (d.finding_id) d.id, d.finding_id, d.verdict, d.reason_code, d.note, d.decided_by,'
+            ' d.created_at, d.check_version, f.run_id FROM ed.proof_decision d JOIN ed.proof_finding f ON f.id=d.finding_id'
+            ' JOIN ed.generation g ON g.id=f.generation_id JOIN ed.book_version v ON v.id=g.book_version_id'
+            ' WHERE v.book_id=%s AND NOT (f.run_id = ANY(%s)) ORDER BY d.finding_id, d.created_at DESC',
+            (book_id,run_ids)).fetchall()
+    except psycopg.errors.UndefinedTable:
+        return {}
+    checks={r['check_name'] for r in rows}
+    if not dec or not checks:
+        return {}
+    by_finding={str(d['finding_id']):d for d in dec}
+    src=c.execute(
+        'SELECT f.id, f.run_id, f.generation_id, f.check_name, f.page_no, f.quote, f.bbox, '+_IDENT_SQL+' AS ident,'
+        ' r.started_at FROM ed.proof_finding f JOIN ed.proof_run r ON r.id=f.run_id'
+        ' WHERE f.run_id = ANY(%s) AND f.check_name = ANY(%s)',
+        (list({d['run_id'] for d in dec}),list(checks))).fetchall()
+    sources=[]
+    for r in src:
+        d=by_finding.get(str(r['id']))
+        sources.append({'id':str(r['id']),'run_id':str(r['run_id']),'generation_id':str(r['generation_id']),
+                        'check':r['check_name'],'page':r['page_no'],'quote':r['quote'],'bbox':r['bbox'],'ident':r['ident'],
+                        'decision':{**d,'read_at':r['started_at']} if d else None})
+    current=[{'id':str(r['id']),'check':r['check_name'],'page':r['page_no'],'quote':r['quote'],'bbox':r['bbox'],
+              'ident':r['ident'],'blocked':str(r['id']) in own} for r in rows]
+    out,_=_carry.carry(current,sources,gid)
+    return {fid:_carry.public(v,gid) for fid,v in out.items()}
+
+def _with_carried(c, book_id: str, gid: str, run_ids: list[str], rows: list[dict], own: dict) -> dict:
+    """Bulgunun ekrandaki kararı: kendi kararı; yoksa önceki okumadan taşınan (CLEAR denmiş bulgu karar almaz)."""
+    carried=_carried(c,book_id,gid,run_ids,rows,own) if run_ids else {}
+    return {**carried,**{k:v for k,v in own.items() if v is not None}}
 
 def _num(v):
     try:
@@ -140,23 +199,31 @@ def book_proofing(book_id: UUID):
             rows=c.execute(
                 "SELECT id, check_name, page_no, severity, message, quote, suggestion, bbox,"
                 " details->>'advisory' AS advisory, details->>'group' AS grp, details->>'confidence' AS confidence,"
-                " details->'marks' AS marks FROM ed.proof_finding"
+                " details->'marks' AS marks, "+_IDENT_SQL+" AS ident FROM ed.proof_finding"
                 ' WHERE run_id = ANY(%s) ORDER BY page_no NULLS FIRST, severity DESC, created_at',
                 ([r['id'] for r in runs],)).fetchall() if runs else []
         except psycopg.errors.UndefinedTable:
             raise HTTPException(503,'proofing tables missing (db migration 023_proofing not applied)') from None
         decisions,counts=_decisions(c,gid,[r['id'] for r in runs]) if runs else ({},{})
+        decisions=_with_carried(c,str(book_id),gid,[r['id'] for r in runs],rows,decisions)
+    # Sayaçlar önceki okumada «yanlış alarm» denmiş (taşınan) bulguları saymaz; kaçı gizlendi ayrıca verilir.
     by_check={}
     for r in rows:
-        n=by_check.setdefault(r['check_name'],[0,0])
+        n=by_check.setdefault(r['check_name'],[0,0,0])
+        d=decisions.get(str(r['id']))
+        if d and d.get('inherited') and d['verdict']=='REJECT':
+            n[2]+=1
+            continue
         n[0]+=1
         n[1]+=r['severity']!='INFO'
     iso=lambda t: t.isoformat() if t else None
     return {'book_id':str(book_id),'generation_id':gid,
             'checks':[{'name':r['check_name'],'label':label_of(r['check_name']),'version':r['check_version'],
                        'status':r['status'],'started_at':iso(r['started_at']),'finished_at':iso(r['finished_at']),
-                       'findings':by_check.get(r['check_name'],[0,0])[0],
-                       'serious':by_check.get(r['check_name'],[0,0])[1],'error':r['error'],
+                       'findings':by_check.get(r['check_name'],[0,0,0])[0],
+                       'serious':by_check.get(r['check_name'],[0,0,0])[1],
+                       # önceki okumada «yanlış alarm» denip taşındığı için sayılmayan bulgular
+                       'hidden':by_check.get(r['check_name'],[0,0,0])[2],'error':r['error'],
                        'precision':_decision.precision(*counts.get((r['check_name'],r['check_version']),(0,0)))} for r in runs],
             'findings':[{'id':str(r['id']),'check':r['check_name'],'label':label_of(r['check_name']),'page':r['page_no'],
                          'severity':r['severity'],'message':r['message'],'quote':r['quote'],
@@ -195,7 +262,8 @@ def book_proofing_docx(book_id: UUID, info: bool = Query(default=False)):
     """Son okuma bulguları kitabın metnine Word yorumu olarak işlenmiş .docx (redaksiyon Word'de yapılır).
     Son okunan neslin her denetiminin en yeni koşusu; uyarı ve hata düzeyi (`info=true` ile bilgi düzeyi de —
     denetimlerin özet satırları ve öneri olarak gelenler); editörün «yanlış alarm» dediği bulgu hariç, geri
-    kalan hiçbir bulgu düşmez (yeri bulunamayan sayfa başlığına bağlanır). Salt okuma."""
+    kalan hiçbir bulgu düşmez (yeri bulunamayan sayfa başlığına bağlanır). Önceki okumadan taşınan «yanlış alarm»
+    da hariç (ekranda gizlenen bulgu Word'e de gitmez). Salt okuma."""
     from . import source
     from .proofing import _export_docx
     with foundation.read_snapshot() as c:
@@ -207,12 +275,15 @@ def book_proofing_docx(book_id: UUID, info: bool = Query(default=False)):
         try:
             runs=c.execute('SELECT DISTINCT ON (check_name) id FROM ed.proof_run WHERE generation_id=%s'
                            ' ORDER BY check_name, started_at DESC',(gid,)).fetchall()
-            rows=c.execute('SELECT id, check_name, page_no, severity, message, quote, suggestion, details FROM ed.proof_finding'
+            rows=c.execute('SELECT id, check_name, page_no, severity, message, quote, suggestion, details, bbox,'
+                           ' '+_IDENT_SQL+' AS ident FROM ed.proof_finding'
                            ' WHERE run_id = ANY(%s) ORDER BY page_no NULLS FIRST, severity DESC, created_at',
                            ([r['id'] for r in runs],)).fetchall() if runs else []
         except psycopg.errors.UndefinedTable:
             raise HTTPException(503,'proofing tables missing (db migration 023_proofing not applied)') from None
         decisions,_=_decisions(c,gid,[r['id'] for r in runs]) if runs else ({},{})
+        # önceki okumada «yanlış alarm» denmiş (taşınan) bulgu da aktarılmaz
+        decisions=_with_carried(c,str(book_id),gid,[r['id'] for r in runs],rows,decisions)
     findings=[{'page':r['page_no'],'check':r['check_name'],'label':label_of(r['check_name']),'message':r['message'],
                'quote':r['quote'],'suggestion':r['suggestion'],'details':r['details'] or {}} for r in rows
               if (decisions.get(str(r['id'])) or {}).get('verdict')!='REJECT' and (info or r['severity']!='INFO')]
@@ -247,10 +318,13 @@ def book_word_map(book_id: UUID):
 
 @app.post('/v1/books/{book_id}/proofing/findings/{finding_id}/decision')
 def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(...)):
-    """Editörün bulguya kararı: «Doğru» (ACCEPT) ya da «Yanlış alarm» (REJECT + gerekçe [+ not]).
+    """Editörün bulguya kararı: «Doğru» (ACCEPT), «Yanlış alarm» (REJECT + gerekçe [+ not]) ya da «Geri al»
+    (CLEAR: bulgunun kararı yok, önceki okumadan taşınan karar bu bulguya uygulanmaz).
     Servisin TEK yazma ucudur ve yazdığı şey kitap verisi değil, editörün (insanın) kaydıdır (docs/PORTAL-CARDS.md).
-    Bulgu o kitabın SON nesline ait olmalı (eski nesle karar 404). Salt ekleme: yeni karar eskisini geçersiz
-    kılar; geçerli karar döner. Kitabı düzeltmez, denetim koşturmaz."""
+    Bulgu o kitabın SON nesline ait olmalı (eski nesle karar 404). `carriedFrom`: editör ekranda önceki okumadan
+    gelen kararı görürken yazdıysa o kararın kimliği — aynı kitabın aynı denetiminin başka bir bulgusuna ait olmalı
+    (422). Salt ekleme: yeni karar eskisini geçersiz kılar; geçerli karar döner (CLEAR'da null). Kitabı düzeltmez,
+    denetim koşturmaz."""
     try:
         v=_decision.validate(body)
     except _decision.DecisionError as e:
@@ -267,12 +341,28 @@ def book_proofing_decision(book_id: UUID, finding_id: UUID, body: dict = Body(..
                 ' WHERE f.id=%s AND f.generation_id=%s',(str(finding_id),gid)).fetchone()
             if f is None:
                 raise HTTPException(404,'finding not found in the proofed generation of this book')
-            row=c.execute(
-                'INSERT INTO ed.proof_decision(finding_id, generation_id, check_name, check_version, verdict, reason_code,'
-                ' note, decided_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
-                ' RETURNING verdict, reason_code, note, decided_by, created_at',
-                (str(finding_id),gid,f['check_name'],f['check_version'],v['verdict'],v['reason_code'],v['note'],
-                 v['decided_by'])).fetchone()
+            if v['carried_from'] or v['verdict']=='CLEAR':
+                if not _has_carry(c):
+                    raise HTTPException(503,'proof_decision.carried_from missing (db migration 028_proof_decision_carry not applied)')
+                if v['carried_from'] and c.execute(
+                        'SELECT 1 FROM ed.proof_decision d JOIN ed.proof_finding f ON f.id=d.finding_id'
+                        ' JOIN ed.generation g ON g.id=f.generation_id JOIN ed.book_version bv ON bv.id=g.book_version_id'
+                        ' WHERE d.id=%s AND bv.book_id=%s AND d.check_name=%s AND d.finding_id<>%s',
+                        (v['carried_from'],str(book_id),f['check_name'],str(finding_id))).fetchone() is None:
+                    raise HTTPException(422,'Taşınan karar bu kitabın bu denetimine ait değil.')
+                row=c.execute(
+                    'INSERT INTO ed.proof_decision(finding_id, generation_id, check_name, check_version, verdict, reason_code,'
+                    ' note, decided_by, carried_from) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)'
+                    ' RETURNING verdict, reason_code, note, decided_by, created_at',
+                    (str(finding_id),gid,f['check_name'],f['check_version'],v['verdict'],v['reason_code'],v['note'],
+                     v['decided_by'],v['carried_from'])).fetchone()
+            else:
+                row=c.execute(
+                    'INSERT INTO ed.proof_decision(finding_id, generation_id, check_name, check_version, verdict, reason_code,'
+                    ' note, decided_by) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)'
+                    ' RETURNING verdict, reason_code, note, decided_by, created_at',
+                    (str(finding_id),gid,f['check_name'],f['check_version'],v['verdict'],v['reason_code'],v['note'],
+                     v['decided_by'])).fetchone()
     except psycopg.errors.UndefinedTable:
         raise HTTPException(503,'proof_decision table missing (db migration 025_proof_decision not applied)') from None
     return {'book_id':str(book_id),'generation_id':gid,'finding_id':str(finding_id),'decision':_decision.public(row)}
