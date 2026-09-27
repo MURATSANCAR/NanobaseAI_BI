@@ -72,6 +72,21 @@ class Question(BaseModel):
     category: str = Field(default="", max_length=80)
 
 
+# Gövde modelleri modül düzeyinde durmalı: `from __future__ import annotations` ile FastAPI uç imzasındaki adı
+# modülün globallerinde arar; `register()` içinde tanımlı model ForwardRef kalır, `/openapi.json` ve karar ucu
+# 500 verir (2026-09-28, yönlendirme kararı canlıda böyle bozuk çıktı).
+class RedirectDecision(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+    target: str = Field(default="", max_length=600)
+    note: str = Field(default="", max_length=1000)
+
+
+class PageDecision(BaseModel):
+    action: str = Field(pattern="^(approve|reject)$")
+    fields: dict[str, str] = Field(default_factory=dict)
+    note: str = Field(default="", max_length=1000)
+
+
 def _err(status: int, message: str) -> HTTPException:
     return HTTPException(status, {"code": "SEO", "message": message})
 
