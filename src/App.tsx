@@ -49,6 +49,17 @@ const SeoTech = lazy(() => import('@/canvas/seo-geo/SeoTech'));
 const SeoCompetitors = lazy(() => import('@/canvas/seo-geo/SeoCompetitors'));
 const SeoEntity = lazy(() => import('@/canvas/seo-geo/SeoEntity'));
 const SeoGuides = lazy(() => import('@/canvas/seo-geo/SeoGuides'));
+const SeoWatch = lazy(() => import('@/canvas/seo-geo/SeoWatch'));
+const SeoSources = lazy(() => import('@/canvas/seo-geo/SeoSources'));
+const SeoCannibal = lazy(() => import('@/canvas/seo-geo/SeoCannibal'));
+const SeoCrawlbot = lazy(() => import('@/canvas/seo-geo/SeoCrawlbot'));
+const SeoBacklinks = lazy(() => import('@/canvas/seo-geo/SeoBacklinks'));
+const SeoSeasons = lazy(() => import('@/canvas/seo-geo/SeoSeasons'));
+const SeoLinks = lazy(() => import('@/canvas/seo-geo/SeoLinks'));
+const SeoReviews = lazy(() => import('@/canvas/seo-geo/SeoReviews'));
+const SeoVideo = lazy(() => import('@/canvas/seo-geo/SeoVideo'));
+const SeoSunset = lazy(() => import('@/canvas/seo-geo/SeoSunset'));
+const SeoAuthors = lazy(() => import('@/canvas/seo-geo/SeoAuthors'));
 
 function RouteFallback() {
   return (
@@ -105,6 +116,17 @@ export default function App() {
             <Route path="seo-geo/rakipler" element={<SeoCompetitors />} />
             <Route path="seo-geo/kimlik" element={<SeoEntity />} />
             <Route path="seo-geo/rehberler" element={<SeoGuides />} />
+            <Route path="seo-geo/izleme" element={<SeoWatch />} />
+            <Route path="seo-geo/kaynaklar" element={<SeoSources />} />
+            <Route path="seo-geo/yarisan" element={<SeoCannibal />} />
+            <Route path="seo-geo/google-taramasi" element={<SeoCrawlbot />} />
+            <Route path="seo-geo/geri-baglantilar" element={<SeoBacklinks />} />
+            <Route path="seo-geo/takvim" element={<SeoSeasons />} />
+            <Route path="seo-geo/ic-baglantilar" element={<SeoLinks />} />
+            <Route path="seo-geo/yorumlar" element={<SeoReviews />} />
+            <Route path="seo-geo/video" element={<SeoVideo />} />
+            <Route path="seo-geo/satistan-kalkan" element={<SeoSunset />} />
+            <Route path="seo-geo/yazar-sayfalari" element={<SeoAuthors />} />
             <Route path="panolar" element={<BoardScreen />} />
             <Route path="veri-sozlugu" element={<GlossaryScreen />} />
             <Route path="onaylar" element={<ApprovalsScreen />} />

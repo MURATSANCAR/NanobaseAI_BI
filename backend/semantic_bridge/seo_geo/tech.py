@@ -9,6 +9,7 @@ süre bütçesi. `/rest` yollarına hiç gidilmez. T-soft'a ve CRM'e hiçbir şe
     X-Robots-Tag, hreflang, başlık uzunluğu, h1 sayısı, taranan sayfalarda yinelenen başlık, izleme parametreleri
     (canonical ve site içi bağlantılarda), görseller (alt metni, anlamsız dosya adı, boyut), kapak görselinin alt metni.
     Sıra: hiç bakılmamış ya da en eski bakılan önce; bütçe dolunca durur, sonraki tur kaldığı yerden sürer (tavan yok).
+    Sayfanın site içi bağlantıları (hedef + bağlantı metni) `links.py`nin tablosuna yazılır; analiz orada.
 (b) Sitemap — robots.txt'teki `Sitemap:` satırları (yoksa /sitemap.xml), dizin dosyaları iç içe (gzip dahil), sitemap
     başına adres sayısı ve en yeni lastmod (30 günden eski ya da açılmayan işaretlenir), sitemaplerden örneklem
     denetimi (örneklem büyüklüğü parametre; sonuç "örneklem" diye raporlanır), aktif ürünlerden sitemapte olmayanlar.
@@ -191,6 +192,10 @@ class _Page(HTMLParser):
         self.h1 = 0
         self.images: list[dict[str, Any]] = []
         self.links: list[str] = []
+        #: Site içi bağlantı analizi (links.py) için bağlantı + görünen metin: metin yoksa içindeki görselin alt metni,
+        #: o da yoksa aria-label/title.
+        self.anchors: list[dict[str, str]] = []
+        self._a: Optional[dict[str, Any]] = None
         self.og_image: Optional[str] = None
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, Optional[str]]]) -> None:
@@ -215,10 +220,26 @@ class _Page(HTMLParser):
             src = a.get("data-src") or a.get("data-original") or a.get("data-lazy") or a.get("src") or ""
             self.images.append({"src": src.strip(), "alt": a["alt"] if "alt" in a else None,
                                 "width": a.get("width") or None, "height": a.get("height") or None})
-        elif tag == "a" and a.get("href"):
-            self.links.append(a["href"].strip())
+            if self._a is not None and a.get("alt", "").strip():
+                self._a["alt"].append(a["alt"])
+        elif tag == "a":
+            self._close_anchor()
+            if a.get("href"):
+                self.links.append(a["href"].strip())
+                self._a = {"href": a["href"].strip(), "text": [], "alt": [], "rel": a.get("rel", "").lower(),
+                           "label": a.get("aria-label") or a.get("title") or ""}
+
+    def _close_anchor(self) -> None:
+        if self._a is None:
+            return
+        a, self._a = self._a, None
+        text = re.sub(r"\s+", " ", "".join(a["text"])).strip() or re.sub(r"\s+", " ", " ".join(a["alt"])).strip() \
+            or re.sub(r"\s+", " ", a["label"]).strip()
+        self.anchors.append({"href": a["href"], "text": text[:300], "rel": a["rel"]})
 
     def handle_endtag(self, tag: str) -> None:
+        if tag == "a":
+            self._close_anchor()
         if tag == "title" and self._title is not None and self.title is None:
             self.title = re.sub(r"\s+", " ", "".join(self._title)).strip()
             self._title = None
@@ -226,6 +247,8 @@ class _Page(HTMLParser):
     def handle_data(self, data: str) -> None:
         if self._title is not None:
             self._title.append(data)
+        if self._a is not None:
+            self._a["text"].append(data)
 
 
 def parse_page(html: str) -> dict[str, Any]:
@@ -237,8 +260,9 @@ def parse_page(html: str) -> dict[str, Any]:
         pass
     if p.title is None and p._title is not None:
         p.title = re.sub(r"\s+", " ", "".join(p._title)).strip()
+    p._close_anchor()
     return {"title": p.title, "robots": [r for r in p.robots if r], "canonicals": p.canonicals, "hreflang": p.hreflang,
-            "h1": p.h1, "images": p.images, "links": p.links, "ogImage": p.og_image}
+            "h1": p.h1, "images": p.images, "links": p.links, "anchors": p.anchors, "ogImage": p.og_image}
 
 
 def canonical_kind(canonical: Optional[str], final_url: str) -> str:
@@ -705,6 +729,11 @@ class Tech:
                                          "final": cchain[-1]["url"]}
                         if cchain[-1]["status"] != 200 or len(cchain) > 1:
                             issues.append("canonical_broken")
+                n = self._save_links(t["url"], final, page)
+                if n is not None:
+                    data["internalLinks"] = n  # bağlantıları kaydedildi (site içi bağlantı analizi bunu "taranmış" sayar)
+        if "internalLinks" not in data:
+            self._save_links(t["url"], None, None)  # açılmayan sayfanın eski bağlantıları silinir
         issues = list(dict.fromkeys(issues))
         row = dict(kind=t["kind"], product_id=t["productId"], status=chain[-1]["status"] if chain else 0,
                    chain_json=dumps(chain), issues="," + ",".join(issues) + ",", title=(title or None) and title[:500],
@@ -716,6 +745,16 @@ class Tech:
             if not n:
                 c.execute(TECH.insert().values(tenant_id=tenant, url=t["url"][:800], **row))
         return row
+
+    def _save_links(self, page_url: str, final: Optional[str], page: Optional[dict[str, Any]]) -> Optional[int]:
+        """Sayfanın site içi bağlantılarını `semantic_seo_links_edges`e yazar (links.py). Hata taramayı durdurmaz."""
+        try:
+            from . import links as _links
+
+            return _links.record(self.engine(), self.seo.tenant(), self.site(), page_url, final, page)
+        except Exception:  # noqa: BLE001
+            log.exception("seo internal links save failed: %s", page_url)
+            return None
 
     def mark_images(self) -> int:
         """Şablon görsellerini sayfa uyarılarından çıkarır; tarama sonunda bütün kayıt üzerinden yeniden hesaplanır."""

@@ -178,6 +178,61 @@
       "label": "Rehber içerikler"
     },
     {
+      "key": "sayfa:seo-izleme",
+      "area": "pazarlama",
+      "label": "İzleme ve rapor"
+    },
+    {
+      "key": "sayfa:seo-kaynak",
+      "area": "pazarlama",
+      "label": "Yapay zekânın kaynakları"
+    },
+    {
+      "key": "sayfa:seo-yarisan",
+      "area": "pazarlama",
+      "label": "Yarışan sayfalar"
+    },
+    {
+      "key": "sayfa:seo-tarama",
+      "area": "pazarlama",
+      "label": "Google taraması"
+    },
+    {
+      "key": "sayfa:seo-geri-baglanti",
+      "area": "pazarlama",
+      "label": "Gelen bağlantılar"
+    },
+    {
+      "key": "sayfa:seo-takvim",
+      "area": "pazarlama",
+      "label": "Sezon takvimi"
+    },
+    {
+      "key": "sayfa:seo-ic-baglanti",
+      "area": "pazarlama",
+      "label": "Site içi bağlantılar"
+    },
+    {
+      "key": "sayfa:seo-yorum",
+      "area": "pazarlama",
+      "label": "Okur yorumları"
+    },
+    {
+      "key": "sayfa:seo-video",
+      "area": "pazarlama",
+      "label": "Video"
+    },
+    {
+      "key": "sayfa:seo-kalkan",
+      "area": "pazarlama",
+      "label": "Satıştan kalkan kitaplar"
+    },
+    {
+      "key": "sayfa:seo-yazar-sayfa",
+      "area": "pazarlama",
+      "label": "Yazar sayfaları"
+    },
+    {
       "key": "sayfa:seo-sema",
       "area": "pazarlama",
       "label": "Şema denetimi"

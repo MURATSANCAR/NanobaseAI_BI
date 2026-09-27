@@ -269,7 +269,8 @@ SYSTEM = "system"    # yalnız zamanlayıcı/betik (çerezsiz) ya da yönetici
 
 _SEO = frozenset(page(x) for x in ("seo-geo", "seo-arama", "seo-firsat", "seo-bing", "seo-rakip", "seo-ai", "seo-sayfalar",
                                    "seo-yonlendirme", "seo-teknik", "seo-kimlik", "seo-rehber", "seo-sema", "seo-llms",
-                                   "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti"))
+                                   "seo-crm", "seo-urun", "seo-gecmis", "seo-baglanti",
+                                   "seo-izleme", "seo-kaynak", "seo-yarisan", "seo-tarama", "seo-geri-baglanti", "seo-takvim", "seo-ic-baglanti", "seo-yorum", "seo-video", "seo-kalkan", "seo-yazar-sayfa"))
 _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "yayin-kurulu", "redaksiyon", "cevirmenler",
                                          "son-okuma", "kitap-tasarim", "kisiler", "basin-web", "telif-sozlesme",
                                          "editor-atama"))
