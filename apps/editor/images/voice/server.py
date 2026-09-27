@@ -109,6 +109,7 @@ class Voice(BaseModel):
     design: str | None = None          # tarif: "orta yaşlı, sıcak sesli kadın anlatıcı" (İngilizce de olur)
     ref_audio: str | None = None       # base64 WAV (klon)
     ref_text: str | None = None
+    prompt_audio: str | None = None    # base64 WAV: devam kipinin örnek sesi (ifade örneği; metni ref_text), kimlik ref_audio'dan
 
 
 class Segment(BaseModel):
@@ -185,8 +186,15 @@ def _speak(seg: Segment, tmp: str) -> np.ndarray:
           "denoise": False}
     clone = seg.clone or ("ref" if style else "full")
     if ref and v.ref_text and clone == "full":
-        # Referans hem ses hem metinle verilir: en tutarlı klon (VoxCPM2 "ultimate cloning").
-        kw.update(prompt_wav_path=ref, prompt_text=v.ref_text, reference_wav_path=ref)
+        # Referans hem ses hem metinle verilir: en tutarlı klon (VoxCPM2 "ultimate cloning"). `prompt_audio` varsa devam
+        # kipi onun tonunu sürdürür (aynı sesin ifadeli örneği), kimlik yine referanstan.
+        prompt = ref
+        if v.prompt_audio:
+            prompt = os.path.join(tmp, f"prompt-{abs(hash(v.prompt_audio)) % 10**9}.wav")
+            if not os.path.exists(prompt):
+                with open(prompt, "wb") as f:
+                    f.write(base64.b64decode(v.prompt_audio))
+        kw.update(prompt_wav_path=prompt, prompt_text=v.ref_text, reference_wav_path=ref)
     elif ref:
         # Yalnız referans sesi (VoxCPM2 "controllable cloning"): ses referanstan, ton talimattan.
         kw.update(reference_wav_path=ref)
