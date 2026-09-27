@@ -4726,6 +4726,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.audit(engine, user, "delete", "author_meeting", out["id"], out["topic"], {"date": out["date"]})
         return {"ok": True}
 
+    # ------------------------------------------------------------------ M1 başvuru, editör değerlendirmesi, yayın kurulu
+    # Başvuru, editör raporu, kurul oturumu, üye oyları, karar ve yazışma köprünün tablolarında
+    # (editorial_applications.py); CRM ve Logo yalnız okunur (kategori, benzer kitap satışı, yazar geçmişi).
+    from semantic_bridge import editorial_applications_api
+
+    editorial_applications_api.register(app, {
+        "session": _greetings, "can": _can, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "connection_files": lambda: {
+            "logo": rt().settings.connection_file,
+            "crm": os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")},
+        "run": lambda sql: rt().run_sql(sql, rt().settings.max_rows),
+        "person": editorial_mod.person,
+    })
+
     # ------------------------------------------------------------------ editoryal masa (M3 redaksiyon, M5 son okuma)
     # CRM'de karşılığı olmayan iki modülün kendi kayıtları: eser dosyası, metin/prova sürümleri, bölümler,
     # öneriler, kontrol listesi, imzalar. Dosya ham gövde olarak yüklenir (multipart bağımlılığı yok).

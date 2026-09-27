@@ -187,7 +187,7 @@ function Journey({ b }: { b: BookDetail }) {
         <section className="mt-3">
           <h3 className="flex items-baseline gap-2 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
             Yayın kurulu
-            <Link to="/yayin-kurulu" className="font-bold normal-case tracking-normal text-canvas-violet underline">
+            <Link to="/yayin-kurulu?gorunum=crm" className="font-bold normal-case tracking-normal text-canvas-violet underline">
               Yayın kurulu ekranı
             </Link>
           </h3>

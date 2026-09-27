@@ -21,7 +21,7 @@ export const LIVE: Record<string, string> = {
   'catalog-explorer': '/veri-sozlugu',
   review: '/onaylar',
   board: '/panolar',
-  M1: '/yayin-kurulu',
+  M1: '/basvurular',
   M2: '/editor-atama',
   M3: '/redaksiyon',
   M4: '/ceviri',

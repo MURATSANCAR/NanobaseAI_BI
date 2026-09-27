@@ -13,7 +13,10 @@ const AdminScreen = lazy(() => import('@/canvas/admin/AdminScreen'));
 const GlossaryScreen = lazy(() => import('@/canvas/dictionary/GlossaryScreen'));
 const ApprovalsScreen = lazy(() => import('@/canvas/dictionary/ApprovalsScreen'));
 const VocabularyScreen = lazy(() => import('@/canvas/dictionary/VocabularyScreen'));
-const MeetingScreen = lazy(() => import('@/canvas/editorial/intake/MeetingScreen'));
+const BoardSessionsScreen = lazy(() => import('@/canvas/editorial/applications/BoardSessionsScreen'));
+const SessionScreen = lazy(() => import('@/canvas/editorial/applications/SessionScreen'));
+const ApplicationsScreen = lazy(() => import('@/canvas/editorial/applications/ApplicationsScreen'));
+const ApplicationScreen = lazy(() => import('@/canvas/editorial/applications/ApplicationScreen'));
 const IntakeBoardScreen = lazy(() => import('@/canvas/editorial/intake/IntakeBoardScreen'));
 const IntakeProjectScreen = lazy(() => import('@/canvas/editorial/intake/IntakeProjectScreen'));
 const BookScreen = lazy(() => import('@/canvas/editorial/BookScreen'));
@@ -175,10 +178,14 @@ export default function App() {
             <Route path="planli-raporlar" element={<ReportsScreen />} />
             <Route path="yonetim" element={<AdminScreen />} />
             <Route path="uyarilar" element={<BiCanvasPage />} />
-            {/* Editoryal Süreç: Günlük (Masam, Yazar giriş süreci, Yayın kurulu) · Yayına hazırlık · Kayıtlar. */}
+            {/* Editoryal Süreç: Günlük (Masam, Başvurular, Yazar giriş süreci, Yayın kurulu) · Yayına hazırlık · Kayıtlar. */}
             <Route path="yazar-giris" element={<IntakeBoardScreen />} />
             <Route path="yazar-giris/:id" element={<IntakeProjectScreen />} />
-            <Route path="yayin-kurulu" element={<MeetingScreen />} />
+            {/* M1: başvuru kuyruğu ve dosyası; yayın kurulu oturumları (CRM geçmişi ?gorunum=crm). */}
+            <Route path="basvurular" element={<ApplicationsScreen />} />
+            <Route path="basvurular/:id" element={<ApplicationScreen />} />
+            <Route path="yayin-kurulu" element={<BoardSessionsScreen />} />
+            <Route path="yayin-kurulu/oturum/:id" element={<SessionScreen />} />
             <Route path="editor-atama" element={<EditorsScreen />} />
             <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />

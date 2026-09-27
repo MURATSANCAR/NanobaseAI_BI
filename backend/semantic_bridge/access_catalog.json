@@ -97,6 +97,11 @@
       "label": "Yazar giriş süreci"
     },
     {
+      "key": "sayfa:basvurular",
+      "area": "editoryal",
+      "label": "Başvurular"
+    },
+    {
       "key": "sayfa:yayin-kurulu",
       "area": "editoryal",
       "label": "Yayın kurulu"
@@ -488,7 +493,30 @@
       "area": "editoryal",
       "page": "sayfa:yayin-kurulu",
       "label": "Yayın kurulu: üye görüşleri",
-      "hint": "Kurul üyelerinin görüşlerini adıyla görme",
+      "hint": "Kurul üyelerinin görüşlerini ve oylarını adıyla görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:basvuru.yaz",
+      "area": "editoryal",
+      "page": "sayfa:basvurular",
+      "label": "Başvuru kaydı ve editör raporu",
+      "hint": "Yeni başvuru, dosya yükleme, başvuruyu kendine alma, editör raporu ve kararı, kurul raporu üretme, yazışma"
+    },
+    {
+      "key": "ozellik:basvuru.yonet",
+      "area": "editoryal",
+      "page": "sayfa:basvurular",
+      "label": "Başvuru yönetimi",
+      "hint": "Başvuruyu editöre atama, başkasının başvurusunda rapor ve karar, arşivdeki başvuruyu yeniden açma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:yayin-kurulu.yonet",
+      "area": "editoryal",
+      "page": "sayfa:yayin-kurulu",
+      "label": "Yayın kurulu yönetimi",
+      "hint": "Kurul oturumu açma, üyeleri ve gündemi belirleme, kurul kararını kaydetme, oturumu kapatma (başkan kendi oturumunu yetkisiz yönetir)",
       "explicit": true
     },
     {

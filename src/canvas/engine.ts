@@ -2098,7 +2098,7 @@ export type QualityReport = TranslationJob & {
   severityLabels: Record<string, string>;
 };
 
-async function putFile<T>(path: string, file: File): Promise<T> {
+export async function putFile<T>(path: string, file: File): Promise<T> {
   const res = await fetch(`${ENGINE_BASE}${path}${path.includes('?') ? '&' : '?'}filename=${encodeURIComponent(file.name)}`, {
     method: 'PUT',
     credentials: 'include',
