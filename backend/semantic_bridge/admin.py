@@ -249,6 +249,12 @@ SPEC: list[dict[str, Any]] = [
     {"key": "GEO_CLAUDE_MODEL", "group": "geo", "label": "Claude modeli", "type": "text", "default": "claude-sonnet-5", "help": ""},
     {"key": "GEO_EVERY_DAYS", "group": "geo", "label": "Aynı soru kaç günde bir sorulur", "type": "int", "default": "7",
      "help": "Bir soru bir motorda bu kadar gün geçmeden yeniden sorulmaz"},
+    # Zeki AI sohbeti (chat_scope.py, chat_topics.json)
+    {"key": "CHAT_CONNECTED_TOPICS", "group": "chat", "label": "Verisi bağlı sohbet konuları", "type": "text",
+     "default": "",
+     "help": "Virgülle konu kimlikleri, örn. finans,satis,stok,yayin,telif,tedarik,lojistik,basin,kurumsal,ik. "
+             "Boşsa Logo ve CRM kataloğunda verisi olan konular bağlı sayılır. Bağlı olmayan konudaki soruya "
+             "Zeki AI tahmin yerine «henüz veri bağlı değil» der"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -279,6 +285,9 @@ GROUPS = [
              "süre içinde giriş yapmamış hesaplar girmez."},
     {"id": "llm", "label": "Yapay zekâ modeli (LLM)",
      "help": "Soruyu SQL'e çeviren model. Kaydedilen değer hemen geçerli olur, servis yeniden başlatılmaz."},
+    {"id": "chat", "label": "Zeki AI sohbeti",
+     "help": "Sohbet şirketin bütün modüllerinin sorularını cevaplar; kimlik ve şirket dışı sorulara kısa tanıtım "
+             "verir. Burada hangi konuların verisinin sohbete bağlı olduğu seçilir."},
     {"id": "seo", "label": "SEO & GEO (T-soft, Google)",
      "help": "Ürünler T-soft'tan yalnız okunur; T-soft'a hiçbir şey yazılmaz. Onaylanan öneriler kayıt altında "
              "durur (hedef CRM). Google verisi servis hesabıyla okunur."},

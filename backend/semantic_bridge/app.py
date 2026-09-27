@@ -899,12 +899,14 @@ class Runtime:
             for stale in list(self.threads)[:-100]:
                 self.threads.pop(stale, None)
                 self.thread_plans.pop(stale, None)
-        from semantic_bridge.chat_scope import BI_INTRO, is_intro
-        if is_intro(question):
+        from semantic_bridge import chat_scope
+        # Kimlik/model sorusu ve selam modelsiz ayrılır: cevap sabit metindir, model adı sızmaz.
+        scope = chat_scope.classify(question)
+        if scope.is_intro:
             qid = _log(sql=None, compiler="intro", catalog_version=None, executed=False,
-                       answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
+                       answer_type="MODULE_INTRO", answer_summary=scope.reply, gate={"chatScope": scope.to_dict()})
             return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
+                    "explanation": scope.reply, "threadId": thread_id, "timings": timings, "queryId": qid}
         self.ensure_fresh()
         t = time.perf_counter()
         from semantic_layer.runtime.conversation import compose_followup, bind_followup_value
@@ -923,12 +925,26 @@ class Runtime:
         scope_args = {"scope": sq.context_scope} if sq.context_scope else {}
         # Certified data concepts are positive evidence of a BI request. Only unplaced
         # questions need the conversational classifier; unknown terms remain eligible.
-        if not any(slot.mapping is not None for slot in sq.slots) and is_intro(
-                question, self.llm_for("chat"), has_context=bool(self.thread_plans.get(thread_id))):
-            qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
-                       resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=BI_INTRO)
-            return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
-                    "explanation": BI_INTRO, "threadId": thread_id, "timings": timings, "queryId": qid}
+        # 2026-09-28: kapsam şirketin bütün modülleri. Sınıflandırıcı ret yalnız kimlik ve şirket dışı
+        # sohbette verir; şirket sorusunun konusu sohbete verisi bağlanmamış bir alansa tahmin yerine
+        # «henüz veri bağlı değil» denir (chat_topics.json, yönetim ayarı CHAT_CONNECTED_TOPICS).
+        if not any(slot.mapping is not None for slot in sq.slots):
+            scope = chat_scope.classify(question, self.llm_for("chat"),
+                                        has_context=bool(self.thread_plans.get(thread_id)))
+            if scope.is_intro:
+                qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
+                           resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=scope.reply,
+                           gate={"chatScope": scope.to_dict()})
+                return {"id": uuid.uuid4().hex, "type": "MODULE_INTRO", "module": "bi",
+                        "explanation": scope.reply, "threadId": thread_id, "timings": timings, "queryId": qid}
+            if scope.not_connected:
+                reason = scope.reply
+                qid = _log(sql=None, compiler="topic", catalog_version=sq.catalog_version, executed=False,
+                           resolved=sq.to_dict(), error=reason, answer_type="DATA_UNAVAILABLE",
+                           answer_summary=reason, gate={"chatScope": scope.to_dict()})
+                return {"id": uuid.uuid4().hex, "type": "DATA_UNAVAILABLE", "explanation": reason,
+                        "chatScope": scope.to_dict(), "threadId": thread_id, "timings": timings,
+                        "semantic": {"query": sq.to_dict(), "chatScope": scope.to_dict()}, "queryId": qid}
         if self.thread_plans.get(thread_id) is not None and getattr(self, "existing", None) is not None:
             bind_followup_value(question, sq, self.thread_plans[thread_id], self.existing.probe,
                                 self.existing.columns, self.conventions)

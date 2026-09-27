@@ -1,5 +1,64 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Zeki AI sohbet kapsamı genişledi: bütün modüller; ret yalnız kimlik ve şirket dışı sohbette
+
+**DOĞRULANAMADI — sunucu kapalı.** Yalnız `py_compile` ve JSON doğrulaması yapıldı; pytest, gerçek model ve gerçek
+Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktree-agent-a24bdf83fedbf9b56`), main'e taşınmadı.
+
+- **Neden:** kullanıcı kararı (2026-09-28, 47 modül analizi): sohbet yalnız finans sorusuna cevap veriyor, geri kalan
+  her şeye «Ben Zeki AI, size sadece finansal sorulara cevap verebilirim.» diyordu. Yeni kural: pazarlama, e-ticaret, İK,
+  editoryal, satış/saha, üretim, lojistik… soruları da cevaplanır; kimlik/model sorusuna ret aynen kalır; şirketle
+  ilgisiz sohbet kibarca yönlendirilir.
+- **Ne değişti (`backend/semantic_bridge/chat_scope.py`):**
+  - Niyet dört sınıf: IDENTITY, OFFTOPIC, DATA, UNKNOWN (`classify()` → `Scope`; eski `is_intro()` geriye uyumlu duruyor).
+  - IDENTITY modelsiz: eski selam/kimlik listesi + asistana yönelik kalıplar («hangi modelle çalışıyorsun»,
+    «seni kim geliştirdi», «ChatGPT misin», «arkada hangi model var»). Kalıplar ikinci kişiye bağlı: «Model kuyruğunda en
+    çok bekleyen modül hangisi?» (M48) ya da «Model değişikliğinden sonra ortalama cevap süresi» (M50) şirket sorusudur,
+    reddedilmez. Türkçe harf katlama (İ/ı/I, şapkalı harf) tek yerde.
+  - `BI_INTRO` = «Ben Zeki AI; şirketinizin verileri ve modülleri hakkındaki sorulara cevap verebilirim.» — yalnız
+    kimlik/selam. Şirket dışı sohbet `BI_REDIRECT` (aynı cümle + «örneğin satış, stok, yayın programı ya da bütçe
+    hakkında sorabilirsiniz»). İkisi de sabit metin, modele gitmez.
+  - Sınıflandırıcı istemi DATA'yı şirketin her işine genişletti ve kapalı konu listesinden `topic` istiyor. Konu listesi
+    yeni `chat_topics.json` (19 konu, her biri analiz belgelerindeki modül kodları ve `data_domains.json` veri alanlarıyla).
+    Konu «cevabın dayandığı kayıt»tır, soranın birimi değil (karşılıksız çek sorusu M47'den gelse de finanstır).
+  - Verisi bağlı olmayan konu → `DATA_UNAVAILABLE` + «Bu konuda henüz veri bağlı değil: <konu> verisi Zeki AI sohbetine
+    bağlanmadı. Tahmini bir cevap vermiyorum…». Uydurma cevap yok. Promt izleyicide «Veri kapsam dışı» olarak görünür
+    (başarısız sayılır) → hangi konunun önce bağlanacağını bu sayı gösterir.
+- **Karar (veriden, gerekçeli):** «bağlı» varsayılanı = konunun katalogda veri alanı var mı (`data` dolu). Logo/CRM'den
+  okunan finans, satış, stok, yayın, telif, tedarik, lojistik, basın (CRM haber), kurumsal (CRM etkinlik/ziyaret) bağlı;
+  pazarlama planı, sosyal medya/reklam, e-ticaret sitesi ve pazar yeri panelleri, okur izinleri, destek talepleri, İK,
+  risk, kurul, rakip verisi, sistem işletimi bağlı değil (verileri modül tablolarında ya da hiç yok). Ölçülmediği için
+  yönetim ayarı yapıldı: `CHAT_CONNECTED_TOPICS` (ekran > env), doluysa bağlı konuların tam listesi.
+- **Neyi değiştirmedi:** çözücü kataloğa bir slot yerleştirdiyse sınıflandırıcı hiç çağrılmaz (eski davranış); SQL hattı,
+  kapı, derleyici aynı. Bağlı olmayan konuda bile slot yerleşirse soru veri hattına gider — kabulde «incelenecek» sayılır.
+  Taslak metin istekleri («üç Instagram metni yaz») bağlı olmayan konuda dürüst cevap alır; bağlı konuda veri hattına
+  gider ve metin üretmez (açık kalan).
+- **Dosyalar:** `chat_scope.py`, yeni `chat_topics.json`, `app.py` (`ask` içindeki iki dal; kimlik dalı ve konu dalı
+  `gate.chatScope` ile loglanır), `admin.py` (grup «Zeki AI sohbeti», `CHAT_CONNECTED_TOPICS`), `KampusPage.tsx` yorum
+  satırı, test `semantic_layer/tests/test_chat_scope.py` (26 kimlik sorusu modelsiz ret; analiz belgelerinin 5.
+  bölümünden 47 modül sorusu, 19 konunun hepsi, modelsiz asla ret yok + sınıflandırıcıyla DATA ya da dürüst «veri bağlı
+  değil»; 6 şirket dışı soru yönlendirme; bozuk/sarılı model cevabı; ayar; ekran metninde teknoloji adı yok; eski 3 test
+  aynen), kabul `scripts/acceptance/chat_scope/`.
+- **Sunucuda kabul listesi (sırayla; tek kalıcı ssh bağlantısı, `git archive` ile oturum klasörüne):**
+  1. `cd <kaynak>/backend && python3 -m pytest semantic_layer/tests/test_chat_scope.py -q` — hepsi geçmeli.
+  2. Hızlı kapı `tests/text2sql/resolver-gate.py set100.jsonl` — çözücü değişmedi, fark 0.
+  3. Yalnız değişen 5 dosyayı kur (md5 karşılaştır): `chat_scope.py`, `chat_topics.json`, `app.py`, `admin.py`,
+     `test_chat_scope.py`; köprü `reload` (uç eklenmedi; `chat_topics.json` ilk soruda okunur). Çalışan `chat_scope.py`
+     eski metni veriyorsa, uzun süren iş yokken `restart`. Kurulum öncesi/sonrası başka oturumun kurulumu araya girdiyse
+     önce/sonra karşılaştırması eski dosyayla yan yana yapılır.
+  4. `sudo systemd-run --wait --pipe -p EnvironmentFile=/etc/nanobase/semantic-bridge.env -p WorkingDirectory=<kaynak>/backend
+     python3 <kaynak>/scripts/acceptance/chat_scope/run_acceptance.py --out /tmp/claude-<oturum>/chat-scope-evidence.json`
+     — 26 kimlik (birebir `BI_INTRO`, SQL yok), 6 şirket dışı (`BI_REDIRECT`), 47 modül sorusu (hiçbiri MODULE_INTRO
+     değil; konu uyumu `topicAgreement` raporlanır), teknoloji adı sızıntısı 0, **6 doğrudan-SQL referansı** (2026 toptan
+     ve perakende tutar, fatura sayısı 73.660, toptan/perakende fatura sayısı, net ciro 848.110.178,82 — referans önce
+     2026-09-10 ölçümüyle tutmalı; köprünün tam sonucu referansla eşit).
+  5. `cleanup.py --evidence <aynı dosya>` — kabulün `sl_query_log` satırları silinir, `left` 0.
+  6. Tam kapı `tests/text2sql/answer-gate.py --repeat 3` — bozulan 0 değilse iş bitmedi.
+  7. Portalda (kısa ömürlü `timasai` oturumu) Yönetim → Ayarlar'da «Zeki AI sohbeti» grubu görünür; oturum silinir.
+- **Ölçülecek / açık:** sınıflandırıcının 47 soruda konu uyumu (model kararı; tutmayan konu `hint` metniyle düzeltilir,
+  soru başına kural yazılmaz); bağlı sayılan basın/kurumsal/lojistik konularında katalog gerçekten cevap veriyor mu;
+  bağlı konuda taslak metin isteği (şimdilik veri hattı).
+
 ## 2026-09-28 — M29 İlk dağılım yönetimi: benzer kitaptan bölge × kanal × müşteri önerisi, iki göz onayı, sevk listesi, 8 hafta takip
 
 - **Neden:** yol haritası satış bloku. Depoya giren kitabın dağılımı deneyimle ve Excel'de yapılıyor; bir bölgede tükenip
