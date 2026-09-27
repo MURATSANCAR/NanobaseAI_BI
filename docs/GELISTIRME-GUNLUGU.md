@@ -1,5 +1,32 @@
 # Geliştirme Günlüğü
 
+## 2026-09-27 (22:30) — Sesli okumada ifade katmanı ve «Canlı masal anlatıcısı» (dalda; kurulmadı)
+
+- **Neden:** kullanıcı onayı — Zeki AI her cümleyi işaretler (heyecan, merak, korku, neşe, fısıltı, üzüntü, vurgu), ses o
+  cümleyi farklı ton/hız/duraklamayla okur, editör cümle cümle değiştirir. Ayrıca dramatik, geniş perdeli masal
+  anlatıcıları için yeni ses grubu.
+- **Önce ölçüldü** (GPU 1, geçici ses kabı, deneme işinin kopyası; `docs/analiz/sesli-okuma-ifade-katmani.md`):
+  tam klonda talimat metne girince model talimatı sesli okuyor (harf hatası %45–111); referans-yalnız klonda talimat
+  dinleniyor ama ses kimliği kayıyor (talimatsız +%16 perde, kısa ünlemde 474–522 Hz, harf hatası %10–20); hız
+  talimatla değişmiyor; vurgu talimatı işe yaramıyor, kelimeden önce kısa durak yarıyor (+3 dB). Üçüncü yol «ifade
+  örneği» (aynı sesin talimatla okunmuş referans cümlesinin devamı, tam klon) uzun cümlede ölçülü ama gerçek sayfanın
+  ünlemli cümlesinde yükselen tonlarda aştı. **Ürüne yalnız işe yarayan kondu:** fısıltı (talimat) ve üzüntü (ifade
+  örneği) tonlu; öteki ifadeler hız + duraklama; vurgu kısa durak. Uçtan uca 7 ses × 2 sayfa: üzüntü −3…−10 dB, harf
+  hatası aynı; fısıltı −4…−13 dB, erkek seslerde sesli oranı −0,36…−0,75, harf hatası %1,2 → %5,0.
+- **Kod:** `production/expression.py` + `api_expression.py`, narration.py'de iki kanca (`page_input`, `narrate_page`) ve
+  ses grubu için bir satır, `voices_lively.py`, ses servisi yeni alanlar (`editor-voice:2` GPU'da derlendi; models.yaml
+  ve editorctl :2), köprü uçları (+ denetim), giriş kapısı `EDITOR-STUDYO-IFADE`, ekran `ExpressionEditor.tsx`.
+- **Zeki AI önerisi** deneme işinde: 5. sayfa 9 cümle 19 sn, 7. sayfa 12 cümle 46 sn; ünlemler neşe/heyecan %67–91,
+  anlatım ve «dedi» nötr.
+- **Canlı masal anlatıcısı:** 12 tarif × 2 tohum; erkek «theatrical … baritone» 168–193 Hz ile elendi; seçilen kadın
+  259/207/265 Hz, erkek 103/120/105 Hz (varsayılan kadın 6,3 yt'ye karşı 7,3–11,5 yt). Dinlenen referanslar GPU'da
+  `_ses/sesler/canli-*.wav|json` olarak sabitlendi (yeni dosya; var olan ses değişmedi). Varsayılan anlatıcı aynı.
+- **Doğrulama:** editör testleri GPU geçici kapta (`editor-py:0.15.9-87232e97`): 481 geçti, 47 atlandı, 1 bilinen sıra
+  bağımlılığı (`test_proofing_contract`, tek başına 3/3); yeni `test_expression.py` 10/10. Köprü ifade uçları sahte
+  servisle 8/8. Ön yüz test sunucusunda geçici dizinde: `tsc` temiz, vitest 38/38, vite build tamam. Giriş kapısı betiği
+  canlı nginx dosyasının kopyasında koşuldu, `nginx -t` geçti. Kurulmadı (push/merge/dağıtım yok); ekranın görsel
+  denetimi yapılamadı (test sunucusuna SSH zaman aşımı).
+
 ## 2026-09-27 (21:20) — Yetki Aşama A test sunucusuna kuruldu
 
 - `main` `7220ffae`: değişen 14 dosya sunucuda değişiklik öncesi `main` ile md5 eşitti (başka oturumun işi yoktu), 4 yeni dosya eklendi; `._*` 0. Köprü yeniden başlatıldı (sağlıklı), ön yüz sunucuda `VITE_BASE=/timas/ VITE_ENGINE_BASE=/timas` ile derlendi, `cockpit/dist`e kondu; yayındaki derleme `index-DzEIButO.js`.

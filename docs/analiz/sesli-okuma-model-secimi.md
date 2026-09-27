@@ -245,3 +245,5 @@ F0'ı referansınkiyle aynı aralıkta: 195 → 195–210 Hz), kaldırıldıktan
 - CosyVoice: <https://github.com/QwenAudio/CosyVoice>
 - Türkçe hizalayıcılar: <https://huggingface.co/Baybars/wav2vec2-xls-r-300m-cv8-turkish>,
   <https://huggingface.co/mpoyraz/wav2vec2-xls-r-300m-cv7-turkish>, WhisperX: <https://github.com/m-bain/whisperx>
+
+İfade katmanı (cümle başına ton, hız, duraklama, vurgu) ve «Canlı masal anlatıcısı» grubu: [sesli-okuma-ifade-katmani.md](sesli-okuma-ifade-katmani.md).
