@@ -236,7 +236,8 @@ function RoleEditor({
           <span className="text-[11.5px] text-canvas-muted">sonradan eklenenler dahil; «ayrıca verilir» işaretliler hariç</span>
         </label>
 
-        <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+        {/* Sütun sayısı panelin genişliğinden: ekran genişliğine bağlı sütun, dar yönetim panelinde metni komşu kutuya taşırıyordu. */}
+        <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))]">
           {catalog.areas.map((area) => {
             const pages = catalog.pages.filter((p) => p.area === area.id);
             const features = catalog.features.filter((f) => f.area === area.id);
@@ -245,8 +246,7 @@ function RoleEditor({
             const n = bulk.filter((k) => perms.has(k)).length;
             const covered = draft.allPerms;
             return (
-              <fieldset key={area.id} className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
-                <legend className="sr-only">{area.label}</legend>
+              <div key={area.id} role="group" aria-label={area.label} className="min-w-0 rounded-xl border border-slate-100 bg-white/70 p-2.5">
                 {bulk.length > 0 && (
                   <TriCheck
                     checked={covered || n === bulk.length}
@@ -263,7 +263,7 @@ function RoleEditor({
                 <div className="mt-1 space-y-0.5">
                   {pages.map((p) => (
                     <TriCheck key={p.key} checked={covered || perms.has(p.key)} disabled={covered} onChange={(on) => toggle([p.key], on)}>
-                      <span className="text-[12.5px] font-semibold">{p.label}</span>
+                      <span className="min-w-0 break-words text-[12.5px] font-semibold">{p.label}</span>
                     </TriCheck>
                   ))}
                 </div>
@@ -275,8 +275,8 @@ function RoleEditor({
                       return (
                         <TriCheck key={f.key} checked={on} disabled={covered && !f.explicit} onChange={(v) => toggle([f.key], v)}>
                           <span className="min-w-0 flex-1" title={f.hint}>
-                            <span className="block text-[12.5px] font-semibold leading-snug">{f.label}</span>
-                            <span className="block truncate text-[11px] leading-snug text-canvas-muted">{f.hint}</span>
+                            <span className="block break-words text-[12.5px] font-semibold leading-snug">{f.label}</span>
+                            <span className="line-clamp-2 break-words text-[11px] leading-snug text-canvas-muted">{f.hint}</span>
                           </span>
                           {f.explicit && <Pill tone="warn">ayrıca verilir</Pill>}
                         </TriCheck>
@@ -284,18 +284,18 @@ function RoleEditor({
                     })}
                   </div>
                 )}
-              </fieldset>
+              </div>
             );
           })}
         </div>
 
-        <fieldset className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
-          <legend className="px-1 text-[12.5px] font-extrabold">ZEKİ AI veri alanları</legend>
+        <div role="group" aria-labelledby="zeki-veri" className="min-w-0 rounded-xl border border-slate-100 bg-white/70 p-2.5">
+          <div id="zeki-veri" className="px-1 pb-1 text-[12.5px] font-extrabold">ZEKİ AI veri alanları</div>
           <p className="px-1 pb-1.5 text-[11.5px] text-canvas-muted">
             ZEKİ AI'a sorulan soruların, panoların, planlı raporların ve uyarıların hangi verileri okuyabileceği. Kapsam dışı
             soru açık bir retle cevaplanır.
           </p>
-          <div className="grid gap-0.5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-0.5 [grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr))]">
             {catalog.data.map((d) =>
               d.always ? (
                 <div key={d.key} className="flex min-h-11 items-center gap-2 px-1 text-[12.5px] font-semibold text-canvas-muted sm:min-h-8" title={d.hint}>
@@ -305,14 +305,14 @@ function RoleEditor({
               ) : (
                 <TriCheck key={d.key} checked={draft.allPerms || perms.has(d.key)} disabled={draft.allPerms} onChange={(on) => toggle([d.key], on)}>
                   <span className="min-w-0 flex-1" title={d.hint}>
-                    <span className="block text-[12.5px] font-semibold leading-snug">{d.label}</span>
-                    <span className="block truncate text-[11px] leading-snug text-canvas-muted">{d.hint}</span>
+                    <span className="block break-words text-[12.5px] font-semibold leading-snug">{d.label}</span>
+                    <span className="line-clamp-2 break-words text-[11px] leading-snug text-canvas-muted">{d.hint}</span>
                   </span>
                 </TriCheck>
               ),
             )}
           </div>
-        </fieldset>
+        </div>
 
         {save.error && <Note tone="err">{errText(save.error, 'Rol kaydedilemedi.')}</Note>}
         {remove.error && <Note tone="err">{errText(remove.error, 'Rol silinemedi.')}</Note>}
@@ -383,7 +383,7 @@ function TriCheck({
     if (ref.current) ref.current.indeterminate = mixed;
   }, [mixed]);
   return (
-    <label className={`flex min-h-11 items-center gap-2 rounded-lg px-1 sm:min-h-8 ${disabled ? 'opacity-45' : 'cursor-pointer'} ${className}`}>
+    <label className={`flex min-h-11 min-w-0 items-center gap-2 rounded-lg px-1 sm:min-h-8 ${disabled ? 'opacity-45' : 'cursor-pointer'} ${className}`}>
       <input
         ref={ref}
         type="checkbox"
@@ -670,7 +670,7 @@ function PersonView() {
             </Card>
             <Card className="space-y-2">
               <div className={label}>Gördüğü sayfalar ve yapabildiği işlemler (italik)</div>
-              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-2 [grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr))]">
                 {areas.map((a) => (
                   <div key={a.id} className="rounded-xl border border-slate-100 bg-white/70 p-2.5">
                     <div className="border-b border-slate-100 pb-1 text-[12.5px] font-extrabold">{a.label}</div>
@@ -698,7 +698,7 @@ function PersonView() {
             </Card>
             <Card className="space-y-2">
               <div className={label}>ZEKİ AI'ın bu kişi için okuyabildiği veri</div>
-              <ul className="grid gap-1 sm:grid-cols-2 xl:grid-cols-3">
+              <ul className="grid gap-1 [grid-template-columns:repeat(auto-fill,minmax(min(100%,220px),1fr))]">
                 {e.data.map((d) => (
                   <li key={d.id} className={`flex items-center gap-2 text-[12.5px] ${d.allowed ? 'font-semibold' : 'text-canvas-muted/70'}`} title={d.hint}>
                     {d.allowed ? <Check className="h-3.5 w-3.5 shrink-0 text-emerald-600" /> : <X className="h-3.5 w-3.5 shrink-0" />}
