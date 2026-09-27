@@ -3615,6 +3615,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         try:
             return studio_mod.post_json("/v1/studio/bulletins", body, editor, timeout=60)
         except studio_mod.StudioError as e:
+            if e.status == 404:
+                # Stüdyo ya da GPU girişi bu ucu henüz tanımıyor (yeni imaj/yol kurulmadı): ekranda «Not Found» çıkmasın.
+                raise bulletins_mod.BulletinError(503, "ZEKİ AI seslendirme bu kurulumda henüz açık değil.") from None
             raise bulletins_mod.BulletinError(422 if e.status == 400 else e.status, str(e)) from None
         except httpx.HTTPStatusError as e:
             if e.response.status_code == 503:
