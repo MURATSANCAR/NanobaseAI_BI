@@ -59,11 +59,17 @@
   yurt dışı dağıtıcılar dahil, riski milyonlarca ₺), 22'sinde 2–10 ₺, 10–1.000 ₺ arası yalnız 15. Karar: 10 ₺'ye kadar limit
   «tanımlanmamış», doluluk hesaplanmaz (`field_sales_sources.MIN_REAL_LIMIT`; M59 bayi de aynı `risk_of`'u kullanır).
   Yüzdeler binlik ayraçlı (`_pct`). Gerçek aşımlar (%570, %411) aynen kalır.
+  **Kurulum (main `f26e11d6`, 08:36) sonrası** gece turu elle koşturuldu (`timas-field@gece`, 169 sn): 1 ₺'lik cariler
+  doluluksuz, ama 291 caride hâlâ > %200 (en yüksek %1.447.415: limit **12 ₺**). Portföyde 10 ₺'den büyük limitli 3.094
+  carinin yalnız 15'i 1.000 ₺ altında; gerçek limitler 2.501/5.000/15.000'den başlıyor (15.000 ₺: 1.751 cari). Eşik
+  **1.000 ₺**'ye çekildi. 15.000 ₺ limitli, riski 9,1 Mn ₺ olan cari gerçek aşım (CRM değeri) — doluluk iki katı
+  geçince çip yüzde yerine tutar yazar: «Risk limiti aşıldı: 9,1 Mn ₺ / 15 bin ₺» (`risk_label`, brifing de).
 - **Hedef oranı %675:** CRM `new_CariYilHedef` (CRM'de float; limit/risk money). 512 caride hedef ÷ 2025 cirosu medyan
   0,18, çeyrekler 0,08–0,40; hedef ÷ 2025 adedi medyan 18 (adet de değil); hedef toplamı 131,7 Mn ₺, aynı carilerin 2025
   cirosu 760 Mn ₺ — kimi TL, kimi bin TL girilmiş. Karar: hedef toplamı ÷ önceki yıl cirosu 0,5–2 dışındaysa CRM hedefi
   tutarsız; `auto`da kullanılmaz (oran «—», hedef açığı çipi ve puanı yok, ekranda nedeni yazılı), açıkça `crm` seçildiyse
   kullanılır ama uyarı yazılır. Onaylı M46 bütçe planı varsa hedef oradan (değişmedi).
+  Gece turunda canlı ölçek **0,111** → `crm-tutarsiz`; 248.351 carinin hiçbirinde hedef/hedef açığı yok.
 
 ## 2026-09-28 — M4 kaynak okuma gerçek PDF/DOCX ile sınandı; PDF'te 5 kusur düzeltildi
 
