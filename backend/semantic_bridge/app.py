@@ -6997,6 +6997,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.unit_cost = app.state.pricing_costs.labelled()                        # M33 (tenders_api okur)
     from semantic_bridge import sets_sources
     sets_sources.register_cost_provider(app.state.pricing_costs.birim)              # M53 (SETS_COST_SOURCE=m9)
+    # M45 Finansal raporlama (/api/v1/finance/*): M46 bütçesini ve M9 maliyetini okur, bu yüzden ikisinden sonra.
+    from semantic_bridge import finance_api
+    app.state.finance = finance_api.register(app, rt, _require_caller, _can)
 
     # M33 İhale takibi (Satış ve saha): /api/v1/tenders/*.
     from semantic_bridge import tenders_api

@@ -45,6 +45,7 @@ export const LIVE: Record<string, string> = {
   M31: '/okul-tanitim',
   M32: '/kurumsal-satis',
   M33: '/ihale',
+  M45: '/finansal-raporlar',
   M46: '/butce',
   M59: '/bayi-risk',
   M50: '/zeki-kalite',
@@ -58,7 +59,7 @@ export const LIVE: Record<string, string> = {
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */
 export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
-  'Finans & Risk': { to: '/finansal-denetim', hint: 'Finansal denetim ve Logo kayıtları' },
+  'Finans & Risk': { to: '/finansal-raporlar', hint: 'Gelir tablosu, kârlılık, nakit ve finansal denetim' },
   'Yönetim Raporları': { to: '/yonetim-raporlari', hint: 'Baskı önerisi ve karar raporları' },
   'Editoryal Süreç': { to: '/editoryal', hint: 'Masam, yazar giriş süreci, yayın kurulu' },
   'Genel Bakış': { to: '/genel-bakis', hint: 'Finansal göstergeler ve soru sorma' },

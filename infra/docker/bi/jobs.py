@@ -70,6 +70,8 @@ JOBS = [
     # açığı listesi (timas-support-gece.timer). Masa bağlantısı ayarlanmamışsa uç «atlandı» döner.
     ("müşteri hizmetleri sınıflama", "/api/v1/support/classify/run-due", int(os.environ.get("SUPPORT_EVERY_SEC", "300")), 290),
     ("müşteri hizmetleri gece", "/api/v1/support/run-due", int(os.environ.get("SUPPORT_NIGHT_EVERY_SEC", "86400")), 1700),
+    # M45 finansal raporlar: Logo okuması, pazartesi nakit tablosu, vergi hatırlatması, sabah özeti (sunucuda timas-finance.timer).
+    ("finansal raporlar", "/api/v1/finance/run-due", int(os.environ.get("FINANCE_EVERY_SEC", "3600")), 1790),
 ]
 
 

@@ -486,6 +486,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/dealers/run-due", SYSTEM),
     ("/api/v1/dealers/", frozenset({page("bayi-risk")})),
     ("/api/v1/pricing/", frozenset({page("fiyatlama")})),
+    # M45 Finansal raporlar. Bütçe sekmesi M46'yı köprü içinde okur (ayrı bütçe ucu açılmaz). Zamanlayıcı yalnız run-due.
+    ("/api/v1/finance/run-due", SYSTEM),
+    ("/api/v1/finance/", frozenset({page("finansal-raporlar")})),
     # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/tenders/run-due", SYSTEM),
     ("/api/v1/tenders/", frozenset({page("ihale")})),
@@ -628,6 +631,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/budget/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|refresh)$",
      "ozellik:butce.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/budget/plans/[^/]+/export\.csv$", "ozellik:veri.disa-aktar"),
+    # M45 Finansal raporlar: nakit sekmesi ve uçları, vergi takvimi yazma, sapma notu, dışa aktarma. Hesap eşlemesi kararı
+    # (`finans.esleme`) ve ay kapanışı (`finans.kapanis`) açıkça verilir, ucun içinde denetlenir.
+    (frozenset({"GET", "POST"}), r"^/api/v1/finance/cash(/.*)?$", "ozellik:finans.nakit"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/finance/tax-calendar(/.*)?$", "ozellik:finans.vergi-takvimi"),
+    (frozenset({"POST"}), r"^/api/v1/finance/notes$", "ozellik:finans.sapma-notu"),
+    (frozenset({"GET"}), r"^/api/v1/finance/(pnl/export\.xlsx|profitability/export\.csv)$", "ozellik:veri.disa-aktar"),
     # İlk dağılım: öneri, düzeltme, onaya gönderme, revizyon, takip ve liste yenileme. Onay/geri gönderme açıkça
     # verilen `dagilim.onay` ile ucun içinde; sevk listesi (Excel) dışa aktarma yetkisiyle.
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/distribution/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|books/refresh)$",

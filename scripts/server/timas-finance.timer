@@ -1,0 +1,10 @@
+[Unit]
+Description=Finansal raporlar: Logo okuması, pazartesi nakit tablosu, vergi hatırlatması, sabah özeti — saatte bir
+
+[Timer]
+OnCalendar=*-*-* *:35:00
+Persistent=true
+Unit=timas-finance.service
+
+[Install]
+WantedBy=timers.target

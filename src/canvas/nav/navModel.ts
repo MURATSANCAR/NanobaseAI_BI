@@ -85,6 +85,7 @@ import {
   UserCog,
   UserPen,
   UsersRound,
+  Wallet,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -169,6 +170,14 @@ export const NAV: NavGroup[] = [
     hint: 'Denetim, yönetim raporları ve bütçe',
     icon: Landmark,
     items: [
+      {
+        id: 'finansal-raporlar',
+        label: 'Finansal raporlar',
+        to: '/finansal-raporlar',
+        icon: Wallet,
+        hint: 'Gelir tablosu, bütçe–gerçekleşme, kârlılık, 13 haftalık nakit ve vergi takvimi',
+        keywords: ['gelir tablosu', 'kâr zarar', 'kârlılık', 'nakit', 'nakit akışı', 'vergi takvimi', 'beyanname', 'katkı payı', 'mutabakat'],
+      },
       { id: 'finansal-denetim', label: 'Finansal denetim', to: '/finansal-denetim', icon: ShieldCheck, hint: 'Logo kayıtlarının denetimi', keywords: ['denetim', 'muhasebe', 'risk'] },
       { id: 'yonetim-raporlari', label: 'Yönetim raporları', to: '/yonetim-raporlari', icon: FileChartColumn, hint: 'Karar raporları', keywords: ['rapor'] },
       {

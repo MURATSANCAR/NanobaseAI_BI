@@ -48,19 +48,21 @@ class SourceError(RuntimeError):
 Runner = Callable[[str], list[dict[str, Any]]]
 
 
-def _connector(path: str):
+def _connector(path: str, timeout: Optional[int] = None):
     from semantic_layer.profiler.connectors import connector_from_file
 
     if not path or not Path(path).exists():
         raise SourceError("Veri bağlantısı bu kurulumda tanımlı değil.")
     conn = connector_from_file(path)
-    conn.query_timeout = QUERY_TIMEOUT
+    conn.query_timeout = timeout or QUERY_TIMEOUT
     return conn
 
 
-def runner(path: str) -> Runner:
-    """Bir bağlantı dosyası için sorgu çalıştırıcı. Her çağrıda yeni bağlantı: arka plan iş parçacığında da güvenli."""
-    conn = _connector(path)
+def runner(path: str, timeout: Optional[int] = None) -> Runner:
+    """Bir bağlantı dosyası için sorgu çalıştırıcı. Her çağrıda yeni bağlantı: arka plan iş parçacığında da güvenli.
+    `timeout` verilmezse bütçenin süresi (`BUDGET_QUERY_TIMEOUT_SEC`); M45 kendi süresini verir (ortak yardımcı)."""
+    limit = timeout or QUERY_TIMEOUT
+    conn = _connector(path, limit)
 
     def run(sql: str) -> list[dict[str, Any]]:
         try:
@@ -69,7 +71,7 @@ def runner(path: str) -> Runner:
             state = str(getattr(e, "args", [""])[0])
             log.warning("budget source failed (%s): %s", state, str(e)[:300])
             if state in ("HYT00", "HYT01"):
-                raise SourceError(f"Sorgu {QUERY_TIMEOUT} saniyede bitmedi.") from None
+                raise SourceError(f"Sorgu {limit} saniyede bitmedi.") from None
             if state in ("08S01", "08001"):
                 raise SourceError("Veritabanına şu an ulaşılamıyor.") from None
             raise SourceError(f"Sorgu hata verdi: {str(e)[:200]}") from None

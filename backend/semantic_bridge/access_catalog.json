@@ -61,6 +61,12 @@
       "label": "Uyarılar"
     },
     {
+      "key": "sayfa:finansal-raporlar",
+      "area": "finans",
+      "label": "Finansal raporlar",
+      "explicit": true
+    },
+    {
       "key": "sayfa:finansal-denetim",
       "area": "finans",
       "label": "Finansal denetim"
@@ -574,6 +580,43 @@
       "label": "Bütçe onayı",
       "hint": "Onaya gönderilen planı yürürlüğe alma ya da geri gönderme (gönderen onaylayamaz)",
       "explicit": true
+    },
+    {
+      "key": "ozellik:finans.nakit",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Nakit ve banka",
+      "hint": "Kasa-banka bakiyesi, 13 haftalık nakit tablosu, vadesi geçmiş alacak; satış ve editörya için gerekmez"
+    },
+    {
+      "key": "ozellik:finans.esleme",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Hesap eşlemesi kararı",
+      "hint": "Muhasebe hesabını gelir tablosu satırına onaylama, dışlama, Zeki AI önerisi isteme (muhasebe)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:finans.kapanis",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Ay kapanışı",
+      "hint": "Ayın gelir tablosunu «kapandı» işaretleme ve gerekçeyle yeniden açma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:finans.vergi-takvimi",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Vergi takvimi düzenleme",
+      "hint": "Beyan ekleme, son gün, sorumlu, durum ve tahmini ödeme"
+    },
+    {
+      "key": "ozellik:finans.sapma-notu",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Sapma açıklaması",
+      "hint": "Bütçe sapmasına neden cümlesi yazma"
     },
     {
       "key": "ozellik:dagilim.plan",

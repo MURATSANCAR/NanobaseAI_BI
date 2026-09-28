@@ -329,6 +329,53 @@
   gerçek DB kabulü koşulmadı. Sunucuda kalan: `scripts/acceptance/M50/check.sh` (pytest + tsc + vitest + derleme),
   yan port köprüsüyle `kabul.py --gate` (R1–R9 doğrudan SQL, geri bildirim yazımı) + `cleanup.py`, okuma kapısının
   `--report`'suz farksız çıkması, birimlerin elle ilk koşusu. Dal `main`e taşınmadı, kurulum yapılmadı.
+## 2026-09-28 — M45 Finansal raporlama ve analiz: gelir tablosu, bütçe–gerçekleşme, kârlılık, 13 haftalık nakit, vergi takvimi
+
+**DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-a0b2da6a02d5857a7`, main `7aa83b6a` üstüne); yalnız
+`py_compile` ve JSON denetimi yapıldı. pytest, tsc, vitest ve gerçek Logo/CRM kabulü test sunucusunda koşulacak
+(`scripts/acceptance/M45/check.sh`, `kabul.py` R1–R8, `temizlik.py`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** analiz `docs/analiz/kullanici-ihtiyaclari/M45-finansal-raporlama.md` §14. Portalda satış tarafı vardı; gelir
+  tablosu, gider, nakit ve kârlılık tarafı yoktu. Genel bakış, Finansal denetim, Yönetim raporları ve soru-cevap yeniden
+  yazılmadı.
+- **Ekran** `/timas/finansal-raporlar` (Finans alanının ilk öğesi; Kampüs M45 ve «Finans & Risk» grubu buraya):
+  Özet (net satış yıl başından + geçen yıl aynı gün aralığı, brüt kâr maliyetli satırlardan + kapsam, faaliyet gideri,
+  kasa-banka, vadesi geçmiş alacak, bütçe durumu; «bu ay dikkat»), Gelir tablosu (dönem/önceki/geçen yıl/bütçe; satır →
+  hesaplar → Logo fiş satırları, iki dokunuş; mizan rozeti; mutabakat; ay kapanışı; hesap eşlemesi paneli; Excel),
+  Bütçe–gerçekleşme (M46 okunur, yeniden hesap yok; departman × hesap sapması, açık uyarılar, sapma açıklaması),
+  Kârlılık (kitap/seri/yayınevi/kanal/cari; kesin ve yaklaşık katkı ayrı; CSV), Nakit (13 hafta; açık hafta en üstte
+  kırmızı; kaynak başına «okunamadı» nedeni; geçmiş tahmin ↔ gerçekleşen), Vergi takvimi. Telefonda gelir tablosu ve
+  nakit kart listesine döner; geniş tablolar kendi kapsayıcısında kayar. Her sekmede veri son günü; animasyon eklenmedi
+  (panoda sık görülen geçişler: yalnız mevcut basış geri bildirimi).
+- **Kararlar (uzman soruları yerine veri/kod; gerekçeli):**
+  - *7/A mı 7/B mi, yansıtma aylık mı (soru 1):* M46 7xx'te hareket okudu (2025: 990 gider satırı) → 7/A. Yansıtmanın
+    ne zaman yapıldığına bakılmadan doğru kalan kural seçildi: gider 7xx'te bir kez sayılır, 7x1 hesapları ve
+    yansıtma fişindeki 6xx karşılıkları (`yansitma`) ile 690/692 kapanış fişleri (`kapanis`) rapora girmez; 7xx'te M46'nın
+    kapanış tanımı aynen (iki modül aynı gideri söylesin; kabul R7). Dışarıda kalan tutar ekranda yazılır.
+  - *710/720/730:* üretim giderleri stoka gider (151/152), gelir tablosuna satılan malın maliyetiyle gelir → hesap planı
+    kuralında «dışla» (muhasebe değiştirebilir). 740 → satışların maliyeti, 750/760/770/780 → Ar-Ge/PSD/GYG/finansman.
+  - *Eşlenmemiş hesap:* net kâra katılır, ayrı satırda durur (para sessizce kaybolmaz); onaysız eşlemeli tutar taslak
+    uyarısıyla gösterilir.
+  - *Maliyetlendirme gecikmesi (soru 2):* sayı uydurulmaz. Logo maliyeti yalnız `OUTCOST ≠ 0` satırlarda; maliyetsiz satış
+    M9 birim maliyetiyle (onaylı analiz → son maliyetli yıl) «yaklaşık» doldurulur, o da yoksa «maliyet bilinmiyor»
+    kalır ve kapsam düşer. Maliyeti işlenmiş son satış günü ekranda (`son_maliyetli`).
+  - *Kitaba yüklenecek maliyet (soru 3):* ilk sürümde Logo maliyeti + telif. Telif CRM'deki yürürlükteki sözleşmenin
+    oranından (M9 görüntüsü: brüt/net taban, satıştan/baskıdan) tahakkuk, «yaklaşık»; oranı olmayan kitapta «telif verisi
+    yok». OUTCOST'un telif içerip içermediği ölçülecek (kabul listesinde).
+  - *Seri:* CRM «Kitaplık» (M46'nın kitap kartı önbelleği `semantic_budget_books`; ikinci Logo/CRM okuması yok).
+  - *Bütçe sekmesi:* M46 uçlarını HTTP ile değil köprü içinde okur (`budget.tracking/departments/deviations`); M46'nın
+    erişim satırlarına dokunulmadı, tek istek.
+  - *Nakit «bugün»ü:* Logo .155 donmuş (17.08.2026) → tablo veri son gününün haftasından başlar, ekranda yazar. Vadesi
+    geçmiş alacak/borç haftalara dağıtılmaz (tahsil günü belirsiz), ayrı gösterilir. Bütçe gider temposu satıcı borcuyla
+    örtüştüğü için varsayılan bilgi satırıdır, isteğe bağlı çıkışa katılır. Döviz sözleşme ödemeleri çevrilmez, ayrı yazılır.
+  - *Vergi takvimi:* dış veri, elle; «geçen yılın takvimini kopyala» günleri aynen taşır, mevzuat üretmez.
+  - *Zeki AI aylık özet metni:* §9'a göre sonraki sürüm (not tablosu ve sapma açıklaması hazır, model çağrısı yok).
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (kayıt, M9'dan sonra), `access.py` (2 RULES + 4 FEATURE_RULES),
+  `access_catalog.json` (sayfa `explicit` + 5 özellik), `admin.py` (2 alıcı ayarı), `budget_sources.py` (`runner(path,
+  timeout)` isteğe bağlı parametre, davranış aynı), `App.tsx`, `navModel.ts`, `ModulesMenu.tsx`, `infra/docker/bi/jobs.py`.
+- **Ölçülecek (parametre/kabul):** CSCARD belge türü × durum kodları (`FINANCE_CS_*`), CRM tahsilat statü etiketi
+  (`FINANCE_CRM_PENDING_LABEL`), kapanış hesapları (`FINANCE_CLOSE_ACCOUNTS`), EMFLINE bütçe satırı (BDGTLINETYPE),
+  EMFICHE/EMFLINE açıklama kolonları, OUTCOST'un telifi içerip içermediği.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
