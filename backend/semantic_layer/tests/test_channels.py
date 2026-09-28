@@ -239,7 +239,7 @@ def test_partial_last_month_is_compared_with_the_same_share_of_last_year(engine)
     p = card["period"]
     assert p["ay"] == 8 and p["kismiAy"] and p["gunPayi"] == pytest.approx(17 / 31, abs=1e-4)
     ky = next(x for x in card["platforms"] if x["platform"] == "kitapyurdu")
-    assert ky["gecenYil"]["netCiro"] == pytest.approx(1600 * (7 + 17 / 31))
+    assert ky["gecenYil"]["netCiro"] == pytest.approx(1600 * (7 + 17 / 31), abs=0.05)   # gün payı 4 hanede yuvarlanır
     assert ky["donem"]["netCiro"] == pytest.approx(1600 * 8)
 
 
