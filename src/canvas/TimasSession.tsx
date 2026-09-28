@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { prefetchEditorialLists } from './editorial/queries';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Outlet } from 'react-router-dom';
@@ -43,11 +43,17 @@ export default function RequireTimasSession() {
       void import('./editorial/EditorialHome').catch(() => undefined);
     }
   }, [qc, q.data?.username, q.error, editorial]);
+  // Son sonuç akılda tutulur: hata almış sorgu yeniden sorulurken «bekliyor»a döner ve hatası silinir.
+  // Kapı o an «Yükleniyor»a geçerse ekran sökülür, yeniden kurulan kabuk sorguyu tekrar sordurur ve
+  // döngü saniyede onlarca istek atar. «Yükleniyor» yalnız ilk cevaptan önce gösterilir.
+  const authFailed = useRef(false);
+  if (q.status === 'error') authFailed.current = q.error instanceof EngineAuthError;
+  else if (q.status === 'success') authFailed.current = false;
   if (!ENGINE_ENABLED) return <Outlet />;
-  if (q.isLoading) {
+  if (q.isPending && q.errorUpdateCount === 0) {
     return <div className="flex min-h-[40vh] items-center justify-center text-slate-500">Yükleniyor…</div>;
   }
-  if (q.error instanceof EngineAuthError) {
+  if (authFailed.current) {
     return <SessionGate onDone={() => void qc.invalidateQueries()} />;
   }
   return (
