@@ -534,7 +534,7 @@ export const displayWordsApi = {
 };
 
 export const boardApi = {
-  load: () => send<{ user: string; cards: BoardCardDto[] }>('GET', '/api/v1/board', undefined, 30_000),
+  load: () => send<{ user: string; cards: BoardCardDto[]; kaynaklar?: Kaynaklar }>('GET', '/api/v1/board', undefined, 30_000),
   save: (cards: unknown[]) => send<{ user: string; cards: BoardCardDto[] }>('PUT', '/api/v1/board', { cards }, 30_000),
   run: (id: string) => send<BoardCardResult>('POST', `/api/v1/board/cards/${encodeURIComponent(id)}/run`, {}),
   /** Sunucuda üretilen Excel kitabı: özet + kart başına sayfa, tam veri, Excel grafiği. Boş liste = bütün kartlar. */
@@ -589,9 +589,12 @@ export type ReportDto = {
   lastStatus: ReportLastStatus;
   lastError: string | null;
   lastRows: number | null;
-  /** Son çalışmada verinin veritabanından gelme süresi; hiç çalışmadıysa null. */
-  lastDb: DbTiming | null;
+  /** Son çalışmada verinin veritabanından gelme süresi; hiç çalışmadıysa null. `physicalSql`: o çalışmada
+   *  veritabanında koşan metin (Son kullanılan SQL bu). */
+  lastDb: (DbTiming & { physicalSql?: string | null; rows?: number | null }) | null;
   hasFile: boolean;
+  /** Tek plan cevabında (çalıştır) sorgu bilgisi. */
+  kaynaklar?: Kaynaklar;
   columns: ReportColumn[];
   /** "Her gün 08:00" gibi okunur plan. */
   when: string;
@@ -609,11 +612,14 @@ export type ReportDraft = DbTiming & {
   recipients: string[];
   fmt: ReportFormat;
   sql: string;
+  /** Önizlemede koşan fiziksel SQL (gösterilen ve kopyalanan). */
+  physicalSql?: string;
   columns: Array<{ name: string; type: string }>;
   records: Array<Record<string, unknown>>;
   rowCount?: number | null;
   summary?: string;
   layout: ReportColumn[];
+  kaynaklar?: Kaynaklar;
 };
 
 /** Önizlemede düzeltme sonucu. `requery` ise veri yeniden çekildi ve sql/columns/records geldi. */
@@ -626,10 +632,12 @@ export type ReportRefinement = DbTiming & {
   added: string[];
   dropped: string[];
   sql?: string;
+  physicalSql?: string;
   columns?: Array<{ name: string; type: string }>;
   records?: Array<Record<string, unknown>>;
   rowCount?: number | null;
   summary?: string;
+  kaynaklar?: Kaynaklar;
 };
 
 export type ReportInput = {
@@ -649,7 +657,8 @@ export type ReportInput = {
 };
 
 export const reportsApi = {
-  list: () => send<{ user: string; reports: ReportDto[]; email: AlertEmail }>('GET', '/api/v1/reports', undefined, 30_000),
+  list: () =>
+    send<{ user: string; reports: ReportDto[]; email: AlertEmail; kaynaklar?: Kaynaklar }>('GET', '/api/v1/reports', undefined, 30_000),
   parse: (text: string) => send<ReportDraft>('POST', '/api/v1/reports/parse', { text }, 600_000),
   refine: (b: { question: string; instruction: string; columns: ReportColumn[] }) =>
     send<ReportRefinement>('POST', '/api/v1/reports/refine', b, 600_000),

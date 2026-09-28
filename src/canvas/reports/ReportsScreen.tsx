@@ -17,6 +17,7 @@ import {
 import ExcelDraft, { duplicateLabels } from './ExcelDraft';
 import DbTimingBadge from '../DbTiming';
 import { useCan } from '../useAdmin';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const dtf = new Intl.DateTimeFormat('tr-TR', {
@@ -304,7 +305,7 @@ export default function ReportsScreen() {
     mutationFn: ({ question, columns }: { question: string; columns: ReportColumn[] }) => reportsApi.preview({ question, columns }),
     onSuccess: (res) => {
       if (!draft) return;
-      setDraft({ ...draft, question: res.question, sql: res.sql ?? '', columns: res.columns ?? [], records: res.records ?? [], rowCount: res.rowCount, summary: res.summary ?? '', layout: res.layout, dbMs: res.dbMs, cached: res.cached, computedAt: res.computedAt, dbParts: res.dbParts });
+      setDraft({ ...draft, question: res.question, sql: res.sql ?? '', physicalSql: res.physicalSql, kaynaklar: res.kaynaklar, columns: res.columns ?? [], records: res.records ?? [], rowCount: res.rowCount, summary: res.summary ?? '', layout: res.layout, dbMs: res.dbMs, cached: res.cached, computedAt: res.computedAt, dbParts: res.dbParts });
       setLayout(res.layout);
     },
   });
@@ -392,7 +393,9 @@ export default function ReportsScreen() {
           <div className="glass-panel flex max-h-[38vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 lg:max-h-none lg:w-[360px]">
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-extrabold">Planlı raporlar</span>
-              <span className="text-[11px] font-bold text-canvas-muted">{reports.length} plan</span>
+              <span className="text-[11px] font-bold text-canvas-muted">
+                <InfoLabel k={list.data?.kaynaklar} alan="reports" label="Plan sayıları">{`${reports.length} plan · ${nf.format(active)} etkin`}</InfoLabel>
+              </span>
             </div>
             {canPlan && (
               <button type="button" onClick={startNew} className={`${btn} mt-2.5 justify-center bg-gradient-to-r from-canvas-coral to-canvas-violet text-white shadow-md`}>
@@ -596,6 +599,7 @@ export default function ReportsScreen() {
                     <div className={`rounded-xl px-3 py-2 text-[12px] font-semibold ${LAST[cur.lastStatus].tone}`}>
                       {LAST[cur.lastStatus].label}
                       {cur.lastRows != null && cur.lastStatus !== 'failed' ? ` · ${nf.format(cur.lastRows)} satır` : ''}
+                      <SqlInfo k={list.data?.kaynaklar} alan="reports[]" row={cur.id} label={cur.title} className="ml-1" />
                       {cur.lastError && <div className="mt-0.5 font-normal">{cur.lastError}</div>}
                       {cur.lastDb && cur.lastStatus !== 'failed' && <DbTimingBadge timing={cur.lastDb} className="mt-0.5 block" />}
                     </div>
@@ -636,10 +640,12 @@ export default function ReportsScreen() {
                     </div>
                   )}
 
-                  {cur.sql && canSql && (
+                  {cur.lastDb?.physicalSql && canSql && (
+                    // Son çalışmada veritabanında koşan fiziksel metin: kopyala-çalıştır aynı satırları verir.
                     <details>
                       <summary className="cursor-pointer text-[11px] font-bold text-canvas-muted">Son kullanılan SQL</summary>
-                      <pre className="mt-1 max-h-48 overflow-auto rounded-xl bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">{cur.sql}</pre>
+                      <pre className="mt-1 max-h-48 overflow-auto rounded-xl bg-slate-900 p-3 text-[11px] leading-relaxed text-slate-100">{cur.lastDb.physicalSql}</pre>
+                      <div className="mt-1 text-[11px] text-canvas-muted">Kopyalamak için «i» penceresindeki «Kopyala» düğmesini kullanın.</div>
                     </details>
                   )}
 

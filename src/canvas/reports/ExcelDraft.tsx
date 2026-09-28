@@ -15,6 +15,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { ArrowUp, Eye, EyeOff, FileSpreadsheet, GripVertical, Info, Loader2, RotateCcw, Sparkles, Zap } from 'lucide-react';
 import { EngineAuthError, reportsApi, type ColumnFormat, type ReportColumn, type ReportDraft } from '../engine';
 import DbTimingBadge from '../DbTiming';
+import SqlInfo from '../components/SqlInfo';
 
 /** Önizlemede gösterilen satır sayısı; köprüdeki PREVIEW_ROWS ile aynı. Dosyaya tamamı yazılır. */
 export const PREVIEW_ROWS = 50;
@@ -247,6 +248,8 @@ export default function ExcelDraft({
             cached: res.cached,
             computedAt: res.computedAt,
             dbParts: res.dbParts,
+            physicalSql: res.physicalSql,
+            kaynaklar: res.kaynaklar,
           }
         : { ...draft, layout: res.layout };
       const before = new Map(layout.map((c) => [c.key, c]));
@@ -302,8 +305,10 @@ export default function ExcelDraft({
           </span>
           <div className="min-w-0">
             <div className="text-[13.5px] font-extrabold leading-tight">Excel önizlemesi</div>
-            <div className="text-[11.5px] tabular-nums text-canvas-muted">
+            <div className="flex items-center gap-1 text-[11.5px] tabular-nums text-canvas-muted">
               {nf.format(total)} satır · {visible.length} kolon{hiddenCount ? ` · ${hiddenCount} gizli` : ''}
+              {/* Satır sayısı ve tablodaki her değer sorunun cevabından: köprünün koşturduğu fiziksel SQL. */}
+              <SqlInfo k={draft.kaynaklar} alan="records" label="Excel önizlemesi" />
             </div>
             <DbTimingBadge timing={draft} />
           </div>

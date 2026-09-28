@@ -3313,14 +3313,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def board_get(request: Request) -> dict[str, Any]:
         _require_caller(request)
         user = _board_user(request)
-        _, engine, tenant, ds = _board()
-        return {"user": user, "cards": board_mod.list_cards(engine, tenant, ds, user)}
+        r, engine, tenant, ds = _board()
+        from semantic_bridge import board_kaynak as BK
+
+        out = {"user": user, "cards": board_mod.list_cards(engine, tenant, ds, user)}
+        return P.bagla(out, lambda: BK.for_cards(engine, tenant, ds, user, out["cards"],
+                                                 *SK.databases(r.settings.connection_file)))
 
     @app.put("/api/v1/board")
     def board_put(request: Request, body: dict[str, Any]) -> dict[str, Any]:
         _require_caller(request)
         user = _board_user(request)
-        _, engine, tenant, ds = _board()
+        r, engine, tenant, ds = _board()
         before = {c["id"]: c for c in board_mod.list_cards(engine, tenant, ds, user)}
         try:
             cards = board_mod.save_cards(engine, tenant, ds, user, list(body.get("cards") or []))
@@ -3338,7 +3342,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         for cid, c in before.items():
             if cid not in after:
                 admin_mod.audit(engine, user, "delete", "board", cid, c["title"], {"question": c["question"]})
-        return {"user": user, "cards": cards}
+        from semantic_bridge import board_kaynak as BK
+
+        out = {"user": user, "cards": cards}
+        return P.bagla(out, lambda: BK.for_cards(engine, tenant, ds, user, cards, *SK.databases(r.settings.connection_file)))
 
     @app.post("/api/v1/board/cards/{card_id}/run")
     def board_run(card_id: str, request: Request) -> dict[str, Any]:
@@ -3351,7 +3358,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             raise _sql_failure(e) from e
         if out is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Kart bulunamadı."})
-        return out
+        from semantic_bridge import board_kaynak as BK
+
+        return P.bagla(out, lambda: BK.for_run(card_id, out, *SK.databases(r.settings.connection_file)))
 
     @app.post("/api/v1/board/cards/{card_id}/change-note")
     def board_change_note(card_id: str, request: Request) -> dict[str, Any]:
@@ -3431,7 +3440,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             out = r.run_complete(sql)
             path = out.get("_result_file")
             rows = r.result_files.read(path) if path else list(out.get("records") or [])
-            return list(out.get("columns") or []), rows, db_timing(out)
+            # Sorgu bilgisi: raporu üreten fiziksel SQL ve satır sayısı son çalışmayla saklanır (last_db_json).
+            return list(out.get("columns") or []), rows, {**db_timing(out), "physicalSql": out.get("physicalSql"),
+                                                          "rows": len(rows)}
         return fetch
 
     _REPORT_FIELDS = ["title", "question", "when", "recipients", "fmt", "status", "columns"]
@@ -3452,8 +3463,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def reports_list(request: Request) -> dict[str, Any]:
         _require_caller(request)
         user = _board_user(request)
-        _, engine, tenant, ds = _reports()
-        return {"user": user, "reports": reports_mod.list_reports(engine, tenant, ds, user), "email": alerts_mod.email_status()}
+        r, engine, tenant, ds = _reports()
+        from semantic_bridge import reports_kaynak as RK
+
+        out = {"user": user, "reports": reports_mod.list_reports(engine, tenant, ds, user), "email": alerts_mod.email_status()}
+        return P.bagla(out, lambda: RK.for_list(engine, tenant, ds, user, out["reports"],
+                                                *SK.databases(r.settings.connection_file)))
 
     @app.post("/api/v1/reports/parse")
     def reports_parse(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -3480,10 +3495,13 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                 "message": a.get("explanation") or "Bu soruya cevap üretilemedi; soruyu biraz daha belirginleştirin."})
         source = list(a.get("columns") or [])
         layout, added, dropped = reports_mod.merge_columns(spec, source)
-        return {"question": question, "sql": a.get("sql") or "", "columns": source,
-                "records": list(a.get("records") or [])[: reports_mod.PREVIEW_ROWS],
-                "rowCount": a.get("rowCount"), "summary": a.get("summary") or a.get("explanation") or "",
-                "layout": layout, "added": added, "dropped": dropped, **db_timing(a)}
+        out = {"question": question, "sql": a.get("sql") or "", "physicalSql": a.get("physicalSql") or "",
+               "columns": source, "records": list(a.get("records") or [])[: reports_mod.PREVIEW_ROWS],
+               "rowCount": a.get("rowCount"), "summary": a.get("summary") or a.get("explanation") or "",
+               "layout": layout, "added": added, "dropped": dropped, **db_timing(a)}
+        from semantic_bridge import reports_kaynak as RK
+
+        return P.bagla(out, lambda: RK.for_preview(out, a, *SK.databases(r.settings.connection_file)))
 
     @app.post("/api/v1/reports/preview")
     def reports_preview(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -3582,7 +3600,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                      link=admin_mod.conf("ALERT_LINK"), explain=_report_explainer(r))
         admin_mod.audit(engine, user, "run", "report", rid, out.get("title"),
                         {"status": out.get("lastStatus"), "rows": out.get("lastRows"), "error": out.get("lastError")})
-        return out
+        from semantic_bridge import reports_kaynak as RK
+
+        return P.bagla(out, lambda: RK.for_report(engine, tenant, ds, user, out, *SK.databases(r.settings.connection_file)))
 
     @app.get("/api/v1/reports/{rid}/file")
     def reports_file(rid: str, request: Request):

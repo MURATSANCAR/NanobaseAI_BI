@@ -245,11 +245,15 @@ def to_dict(row: Any) -> dict[str, Any]:
     }
 
 
+def list_stmt(tenant: str, ds: str, user: str) -> Any:
+    """Kişinin kartları ve son sonuçları (sorgu bilgisi aynı ifadeyi gösterir)."""
+    return (sa.select(CARDS).where(CARDS.c.tenant_id == tenant, CARDS.c.datasource_id == ds, CARDS.c.username == user)
+            .order_by(CARDS.c.position, CARDS.c.created_at))
+
+
 def list_cards(engine: sa.engine.Engine, tenant: str, ds: str, user: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(CARDS).where(CARDS.c.tenant_id == tenant, CARDS.c.datasource_id == ds,
-                                                CARDS.c.username == user)
-                         .order_by(CARDS.c.position, CARDS.c.created_at)).mappings().all()
+        rows = c.execute(list_stmt(tenant, ds, user)).mappings().all()
     return [to_dict(r) for r in rows]
 
 
@@ -317,6 +321,9 @@ def _store_result(engine: sa.engine.Engine, card_id: str, result: dict[str, Any]
         "dbMs": result.get("dbMs"),
         "cached": bool(result.get("cached")),
         "computedAt": result.get("computedAt"),
+        # Sorgu bilgisi: köprünün veritabanında koşturduğu fiziksel metin (kartın saklı SQL'i mantıksaldır; dönem ve
+        # yıl kopyaları her koşuda çözülür). Ekrandaki «Çalışan SQL» ve «i» bunu gösterir.
+        "physicalSql": result.get("physicalSql"),
     }
     # «Ne değişti»: önceki sonuçla fark kodla bulunur ve sonuçla birlikte saklanır; anlatım ayrı istekle gelir
     # (`change_note`). Aynı sonuç yeniden geldiyse önceki farkı ezmemek için önceki sonucun farkı taşınır.

@@ -38,6 +38,8 @@ import { download, fileName, toCsv } from './export';
 import { useCan } from '../useAdmin';
 import { useTimasSession } from '../TimasSession';
 import AnswerFeedback from '../components/AnswerFeedback';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import CardInsight, { cardChange } from './CardInsight';
 import {
   fromDto,
@@ -389,7 +391,20 @@ function CardFrame({
   );
 }
 
-type Pending = { title: string; sql: string; cols: Col[]; rows: Row[]; chart: ChartKind; at: number; timing: DbTiming; queryId?: string };
+type Pending = {
+  title: string;
+  /** Mantıksal SQL: kart bununla kaydedilir (her koşuda dönemi yeniden çözülsün). */
+  sql: string;
+  /** Köprünün koşturduğu fiziksel SQL: ekranda gösterilen ve kopyalanan budur. */
+  physicalSql?: string;
+  kaynaklar?: Kaynaklar;
+  cols: Col[];
+  rows: Row[];
+  chart: ChartKind;
+  at: number;
+  timing: DbTiming;
+  queryId?: string;
+};
 
 const timingOf = (a: DbTiming): DbTiming => ({ dbMs: a.dbMs, cached: a.cached, computedAt: a.computedAt, dbParts: a.dbParts });
 
@@ -522,7 +537,18 @@ export default function BoardScreen() {
         setErr(a.summary || a.explanation || 'ZEKİ AI bu soruya tablo döndürmedi.');
         setErrQueryId(a.queryId ?? null);
       } else {
-        setPending({ title: q, sql: a.sql, cols, rows, chart: suggestChart(cols, rows), at: Date.now(), timing: timingOf(a), queryId: a.queryId });
+        setPending({
+          title: q,
+          sql: a.sql,
+          physicalSql: a.physicalSql,
+          kaynaklar: a.kaynaklar,
+          cols,
+          rows,
+          chart: suggestChart(cols, rows),
+          at: Date.now(),
+          timing: timingOf(a),
+          queryId: a.queryId,
+        });
       }
     } catch (e) {
       setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
@@ -741,6 +767,10 @@ export default function BoardScreen() {
               PDF
             </button>
             </>)}
+            {/* Kart sayısı ve kartların saklı sonuçları: panonun okuması. */}
+            <span className="flex items-center border-l border-slate-200/80 pl-1.5 text-[11px] font-semibold text-canvas-muted">
+              <InfoLabel k={board.data?.kaynaklar} alan="cards" label="Kart sayısı">{`${cards.length} kart`}</InfoLabel>
+            </span>
             <span className="hidden items-center gap-1 border-l border-slate-200/80 pl-2 pr-1 text-[11px] font-semibold text-canvas-muted sm:flex">
               {saveState === 'saving' ? (
                 <>
@@ -815,6 +845,13 @@ export default function BoardScreen() {
                 locked={!canEdit}
                 head={canEdit ? <EditableHead card={c} onChange={(p) => patch(c.id, p)} /> : <ReadOnlyHead card={c} />}
                 actions={
+                  <>
+                  {/* Kartın rakamları: son koşunun fiziksel SQL'i (yeni koşu varsa onun, yoksa panoda saklı sonucun). */}
+                  {r?.data?.kaynaklar ? (
+                    <SqlInfo k={r.data.kaynaklar} alan="records" label={c.title || 'Kart'} />
+                  ) : (
+                    <SqlInfo k={board.data?.kaynaklar} alan="cards[]" row={c.id} label={c.title || 'Kart'} />
+                  )}
                   <button
                     type="button"
                     onClick={() => void r?.refetch()}
@@ -823,6 +860,7 @@ export default function BoardScreen() {
                   >
                     <RotateCw className={['h-3.5 w-3.5', r?.isFetching ? 'animate-spin' : ''].join(' ')} />
                   </button>
+                  </>
                 }
                 toolbar={
                   !canEdit ? undefined : <>
@@ -1005,7 +1043,16 @@ export default function BoardScreen() {
                   )}
                 </div>
                 {r?.data && !r.isFetching && <DbTimingBadge timing={r.data} className="mt-1 shrink-0" />}
-                {sqlOpen && canSql && !printing && <SqlPanel sql={c.sql} className="pano-noprint mt-2 h-[152px] shrink-0" />}
+                {sqlOpen && canSql && !printing && (
+                  // Çalışan SQL = köprünün son koşuda veritabanında koşturduğu fiziksel metin (kopyala-çalıştır aynı sonuç).
+                  <SqlPanel
+                    sql={
+                      r?.data?.physicalSql ||
+                      '-- Bu kartın son sonucu çalışan SQL kaydedilmeden önce alındı; kartı bir kez yenileyin.'
+                    }
+                    className="pano-noprint mt-2 h-[152px] shrink-0"
+                  />
+                )}
               </CardFrame>
             );
           })}
@@ -1028,8 +1075,9 @@ export default function BoardScreen() {
                     <div className="truncate text-[13px] font-extrabold" title={pending.title}>
                       {pending.title}
                     </div>
-                    <div className="text-[11px] text-canvas-muted">
+                    <div className="flex items-center gap-1 text-[11px] text-canvas-muted">
                       {pending.rows.length} satır · {pending.cols.length} kolon · önizleme · {stamp(pending.at)}
+                      <SqlInfo k={pending.kaynaklar} alan="records" label={pending.title} />
                     </div>
                     <DbTimingBadge timing={pending.timing} />
                   </div>
@@ -1080,7 +1128,12 @@ export default function BoardScreen() {
                     className={['h-3 w-3 transition-transform duration-200 ease-[cubic-bezier(0.77,0,0.175,1)]', pendingSql ? 'rotate-180' : ''].join(' ')}
                   />
                 </button>
-                {pendingSql && <SqlPanel sql={pending.sql} className="mt-1 h-[160px]" />}
+                {pendingSql && (
+                  <SqlPanel
+                    sql={pending.physicalSql || '-- Bu cevap için çalışan SQL gelmedi; soruyu yeniden sorun.'}
+                    className="mt-1 h-[160px]"
+                  />
+                )}
                 </>)}
               </div>
 

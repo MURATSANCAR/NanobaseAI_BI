@@ -653,9 +653,14 @@ def _scope(tenant: str, ds: str, user: Optional[str]):
     return conds
 
 
+def list_stmt(tenant: str, ds: str, user: Optional[str]) -> Any:
+    """Plan listesi okuması (sorgu bilgisi aynı ifadeyi gösterir)."""
+    return sa.select(REPORTS).where(*_scope(tenant, ds, user)).order_by(REPORTS.c.created_at.desc())
+
+
 def list_reports(engine: sa.engine.Engine, tenant: str, ds: str, user: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(REPORTS).where(*_scope(tenant, ds, user)).order_by(REPORTS.c.created_at.desc())).mappings().all()
+        rows = c.execute(list_stmt(tenant, ds, user)).mappings().all()
     return [to_dict(r) for r in rows]
 
 
