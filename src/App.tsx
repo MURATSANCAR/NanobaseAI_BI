@@ -89,6 +89,13 @@ const ShippingErrors = lazy(() => import('@/canvas/shipping/Errors'));
 const ShippingWaiting = lazy(() => import('@/canvas/shipping/Waiting'));
 const ShippingCarriers = lazy(() => import('@/canvas/shipping/Carriers'));
 const ShippingReconcile = lazy(() => import('@/canvas/shipping/Reconcile'));
+const SupplyHome = lazy(() => import('@/canvas/supply/SupplyHome'));
+const SupplyLoad = lazy(() => import('@/canvas/supply/Load'));
+const SupplyPaper = lazy(() => import('@/canvas/supply/Paper'));
+const SupplySuppliers = lazy(() => import('@/canvas/supply/Suppliers'));
+const SupplySupplier = lazy(() => import('@/canvas/supply/Supplier'));
+const SupplyCost = lazy(() => import('@/canvas/supply/CostTrend'));
+const SupplyCapacity = lazy(() => import('@/canvas/supply/Capacity'));
 const CategoriesScreen = lazy(() => import('@/canvas/categories/CategoriesScreen'));
 const ReadersScreen = lazy(() => import('@/canvas/readers/ReadersScreen'));
 const ReaderCard = lazy(() => import('@/canvas/readers/ReaderCard'));
@@ -285,6 +292,14 @@ export default function App() {
             <Route path="kargo/bekleyen" element={<ShippingWaiting />} />
             <Route path="kargo/firmalar" element={<ShippingCarriers />} />
             <Route path="kargo/mutabakat" element={<ShippingReconcile />} />
+            {/* M52 Tedarik ve baskı (Lojistik) */}
+            <Route path="tedarik" element={<SupplyHome />} />
+            <Route path="tedarik/yuk" element={<SupplyLoad />} />
+            <Route path="tedarik/kapasite" element={<SupplyCapacity />} />
+            <Route path="tedarik/kagit" element={<SupplyPaper />} />
+            <Route path="tedarik/tedarikciler" element={<SupplySuppliers />} />
+            <Route path="tedarik/tedarikci/:cari" element={<SupplySupplier />} />
+            <Route path="tedarik/maliyet" element={<SupplyCost />} />
             {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
             <Route path="ilk-baski" element={<FirstPrintScreen />} />
             <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />

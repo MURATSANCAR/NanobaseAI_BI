@@ -1,0 +1,10 @@
+[Unit]
+Description=Tedarik ve baskı gece işi; her gün 03:30
+
+[Timer]
+OnCalendar=*-*-* 03:30:00
+Persistent=true
+Unit=timas-supply.service
+
+[Install]
+WantedBy=timers.target

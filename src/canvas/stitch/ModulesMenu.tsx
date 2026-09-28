@@ -79,6 +79,7 @@ export const LIVE: Record<string, string> = {
   readers: '/okurlar',
   M34: '/e-ticaret',
   'commerce-integration': '/eticaret-musteri',
+  M52: '/tedarik',
 };
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */
@@ -97,6 +98,8 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   Lojistik: { to: '/stok', hint: 'Depo ve stok, bitecekler, kargo hattı, firma karnesi ve mutabakat' },
   // M38 müşteri ekranı gelince grubun girişi o olabilir; M39 grubun ikinci bağlantısı olarak kalır.
   // M43 depo ekranı gelince grubun girişi ona dönebilir; bugün çalışan tek lojistik ekranı kargo (M44).
+  // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
+  // M43 depo/stok ve M44 kargo gelince giriş yine burası kalabilir ya da ortak lojistik özetine taşınır.
 };
 
 /** Kullanıcıya teknik görünen grup adlarının sade karşılığı (kaynak dosyadaki ad değişmez). */

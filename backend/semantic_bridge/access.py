@@ -465,6 +465,7 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
 
 _OKUR = frozenset(page(x) for x in ("okur-toplulugu", "okur-segmentler", "okur-programlar", "okur-yorumlar"))
 _CHANNELS = frozenset(page(x) for x in ("kanallar", "kanal-matris", "kanal-d2c", "kanal-eslesme"))
+_SUPPLY = frozenset(page(x) for x in ("tedarik", "tedarik-yuk", "tedarik-kagit", "tedarik-tedarikciler", "tedarik-maliyet"))
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
                                page("yazar-giris")}) | _SEO
@@ -685,6 +686,11 @@ RULES: list[tuple[str, Any]] = [
     # M12 Üretim yönetimi; baskı çıkış tarihi (M29/M16 tüketir) editoryal sayfalardan da okunur.
     ("/api/v1/editorial/production/print-exit", _EDITORIAL),
     ("/api/v1/editorial/production/", frozenset({page("uretim")})),
+    # M52 Tedarik ve baskı (Lojistik). Gelecek depo girişlerini (incoming) M43 depo ve stok da okur; sayfa anahtarını
+    # o satıra ekler. Borç/maliyet/eşleşme açıkça verilen özelliklerle ucun içinde denetlenir.
+    ("/api/v1/supply/run-due", SYSTEM),
+    ("/api/v1/supply/incoming", _SUPPLY),
+    ("/api/v1/supply/", _SUPPLY),
     # M31 Okul tanıtım ve ziyaret. Ortak ziyaret tablosunun saha uçları (M30, /api/v1/field/) da okul-tanitim
     # sayfasına açılır; o satır M30'da yazılır.
     ("/api/v1/schools/run-due", SYSTEM),
@@ -989,6 +995,11 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     # Üretim kartına tarih/not/kalite/teklif yazma; matbaa onayı açıkça verilen `uretim.matbaa-onay` ile ucun içinde.
     (frozenset({"POST", "DELETE"}), r"^/api/v1/editorial/production/(cards/[^/]+/(entries|quotes)|entries/[^/]+|quotes/[^/]+)$",
      "ozellik:uretim.yaz"),
+    # M52 Tedarik: matbaa kapasitesi; yük dengeleme / kağıt önerisi kararı ve taslak (şartname, gecikme yazısı). Borç,
+    # maliyet ve fatura/cari eşleşmesi açıkça verilen `tedarik.borc|maliyet|eslesme` ile ucun içinde denetlenir.
+    (frozenset({"PUT", "DELETE"}), r"^/api/v1/supply/capacity(/[^/]+)?$", "ozellik:tedarik.kapasite"),
+    (frozenset({"POST"}), r"^/api/v1/supply/(suggestions/[^/]+/decision|drafts)$", "ozellik:tedarik.oneri-karar"),
+    (frozenset({"GET"}), r"^/api/v1/supply/export/[^/]+\.xlsx$", "ozellik:veri.disa-aktar"),
     # Saha: ziyaret notu, takip taslağı ve ödeme planı taslağı; müdür önceliği. Plan onayı/reddi, bütün temsilcileri görme
     # ve temsilci karşılaştırması açıkça verilen anahtarlarla ucun içinde denetlenir.
     (frozenset({"POST", "PATCH"}), r"^/api/v1/field/(visits(/[^/]+(/followup-draft)?)?|payment-plans(/[^/]+(/submit)?)?)$",

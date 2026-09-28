@@ -54,6 +54,8 @@ import {
   Library,
   Radar,
   Bell,
+  Boxes,
+  Layers,
   BookA,
   Calculator,
   BookImage,
@@ -127,6 +129,7 @@ import {
 
 export type NavGroupId =
   | 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'lojistik' | 'pazarlama' | 'platform' | 'ik' | 'altyapi' | 'yonetim';
+export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'lojistik' | 'pazarlama' | 'yonetim';
 export type NavFeature = 'webWatch';
 export type NavBadge = 'alerts' | 'mailbox';
 
@@ -425,6 +428,19 @@ export const NAV: NavGroup[] = [
       { id: 'kargo-firmalar', label: 'Firma karnesi', to: '/kargo/firmalar', icon: Scale, section: 'Kargo', hint: 'Kargo firmalarının gönderi, teslim süresi, iade ve desi başı maliyeti; şehir kırılımı ve karar kaydı', keywords: ['kargo firması', 'karne', 'desi', 'teslim süresi', 'iade oranı', 'kurye', 'bölge'] },
       { id: 'kargo-mutabakat', label: 'Kargo mutabakatı', to: '/kargo/mutabakat', icon: ReceiptText, section: 'Kargo', hint: 'Logo kargo faturası ile kargo kaydı toplamı, mükerrer takip no, Logo sevk ↔ CRM sevkiyat eşleşmesi', keywords: ['mutabakat', 'kargo faturası', 'fark', 'mükerrer'] },
     ],
+
+    // M43 depo/stok, M44 kargo ve M52 tedarik ortak çalışma alanı; ilk açan M52 (bölüm «Tedarik»).
+    id: 'lojistik',
+    label: 'Lojistik',
+    hint: 'Tedarik ve baskı: matbaa yükü, kağıt, tedarikçi borcu',
+    icon: Boxes,
+    items: [
+      { id: 'tedarik', label: 'Tedarik özeti', to: '/tedarik', icon: Gauge, section: 'Tedarik', hint: 'Ay × matbaa yükü, eşik aşımı, kağıt, ödeme ve maliyet özeti', keywords: ['tedarik', 'baskı planı', 'matbaa', 'tedarik zinciri'] },
+      { id: 'tedarik-yuk', label: 'Baskı yükü', to: '/tedarik/yuk', icon: Factory, section: 'Tedarik', hint: 'Ay × matbaa yükü, kapasite, çakışma ve yük dengeleme önerisi', also: ['/tedarik/kapasite'], keywords: ['matbaa yükü', 'kapasite', 'çakışma', 'yığılma', 'dengeleme', 'forma'] },
+      { id: 'tedarik-kagit', label: 'Kağıt ve malzeme', to: '/tedarik/kagit', icon: Layers, section: 'Tedarik', hint: 'Açık kartların aylık kağıt ihtiyacı, alım zamanı ve alış fiyatı', keywords: ['kağıt', 'kağıt ihtiyacı', 'ton', 'gramaj', 'kağıtçı', 'bristol'] },
+      { id: 'tedarik-tedarikciler', label: 'Tedarikçiler', to: '/tedarik/tedarikciler', icon: Building2, section: 'Tedarik', hint: 'Matbaa ve kağıtçı: iş, borç, ödeme planı, fatura eşleşmesi', also: ['/tedarik/tedarikci'], keywords: ['matbaa borcu', 'ödeme', 'vade', 'fatura', 'kağıtçı', 'faturası gelmemiş'] },
+      { id: 'tedarik-maliyet', label: 'Baskı maliyeti eğilimi', to: '/tedarik/maliyet', icon: TrendingUp, section: 'Tedarik', hint: 'Adet başı baskı bedeli: cilt, sayfa, baskı tipi ve matbaa kırılımı', keywords: ['birim maliyet', 'baskı maliyeti', 'baskı fiyatı', 'eğilim'] },
+    ],
   },
   {
     id: 'pazarlama',
@@ -645,6 +661,8 @@ export function visibleNav(
   if (!role.isEditor || role.isAdmin) return groups;
   const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'ik', 'platform'];
   const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'ik', 'platform']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'lojistik', 'pazarlama']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)

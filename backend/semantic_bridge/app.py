@@ -7043,6 +7043,28 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "studio_jobs": _production_studio.jobs,
     })
 
+    # M52 Tedarik ve baskı: M12 kartları (production.Service) + CRM kağıt/teknik alanları + Logo tedarikçi borç, ödeme
+    # planı ve baskı faturası (salt okunur); plan girdisi Baskı Öneri (M11) ve M10 onaylı ilk baskı, maliyet M9.
+    # Uçlar /api/v1/supply/*; CRM'e, Logo'ya, matbaaya yazma/gönderim yok.
+    from semantic_bridge import supply_api
+    from semantic_bridge.budget_api import _send_mail as _supply_send_mail
+    from semantic_bridge.management import ilk_baski_api as _supply_fp
+
+    def _supply_decisions(engine, tenant):
+        _supply_fp.ensure(engine)
+        return _supply_fp.list_decisions(engine, tenant, status="onaylandi")
+
+    app.state.supply = supply_api.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get, "require_caller": _require_caller,
+        "runtime": lambda: (rt().store.engine, rt().settings.tenant_id), "production": app.state.production,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("tedarik", priority), "send_mail": _supply_send_mail,
+        "report_data": lambda: app.state.management_reports.read("baski-oneri").get("data"),
+        "decisions": _supply_decisions, "unit_costs": lambda codes: app.state.unit_cost.unit_costs(codes),
+    })
+
     # M30 Saha satış ve tahsilat (BMT): CRM atama/risk/tahsilat + Logo bakiye/yaşlandırma/satış; uçlar /api/v1/field/*.
     from semantic_bridge import field_sales_api
     app.state.field_sales = field_sales_api.register(app, {

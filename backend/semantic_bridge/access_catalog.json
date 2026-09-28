@@ -49,6 +49,10 @@
     {
       "id": "platform",
       "label": "Platform"
+    },
+    {
+      "id": "lojistik",
+      "label": "Lojistik"
     }
   ],
   "pages": [
@@ -744,6 +748,33 @@
       "key": "sayfa:eticaret-musteri",
       "area": "pazarlama",
       "label": "E-ticaret müşterileri",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:tedarik",
+      "area": "lojistik",
+      "label": "Tedarik özeti"
+    },
+    {
+      "key": "sayfa:tedarik-yuk",
+      "area": "lojistik",
+      "label": "Baskı yükü"
+    },
+    {
+      "key": "sayfa:tedarik-kagit",
+      "area": "lojistik",
+      "label": "Kağıt ve malzeme"
+    },
+    {
+      "key": "sayfa:tedarik-tedarikciler",
+      "area": "lojistik",
+      "label": "Tedarikçiler",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:tedarik-maliyet",
+      "area": "lojistik",
+      "label": "Baskı maliyeti eğilimi",
       "explicit": true
     }
   ],
@@ -2429,6 +2460,44 @@
       "page": "sayfa:eticaret-musteri",
       "label": "E-ticaret: tetik listesi onayı",
       "hint": "Çalıştırılan tetik listesini onaylama ya da gerekçeyle geri gönderme (tetiği yazan ve listeyi çalıştıran onaylayamaz); onaysız liste dışa aktarılamaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:tedarik.borc",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-tedarikciler",
+      "label": "Tedarikçi borç, ödeme ve fatura tutarı",
+      "hint": "Matbaa ve kağıtçı bakiyesi, vadesi geçmiş (FIFO yaklaşımı), 30/60/90 gün ödeme listesi, fatura tutarları ve dışa aktarımı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:tedarik.maliyet",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-maliyet",
+      "label": "Birim baskı maliyeti ve fiyatlar",
+      "hint": "Adet başı baskı bedeli eğilimi, kağıt alış fiyatı, kartlardaki birim fiyat ve fiyatlama maliyeti",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:tedarik.kapasite",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-yuk",
+      "label": "Matbaa kapasitesi tanımlama",
+      "hint": "Matbaanın aylık kapasitesini (adet / forma) girme ve silme; eşik uyarıları buna göre"
+    },
+    {
+      "key": "ozellik:tedarik.oneri-karar",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-yuk",
+      "label": "Yük ve kağıt önerisi kararı, taslak",
+      "hint": "Yük dengeleme ve kağıt alım önerisini kabul/ret (CRM kartı değişmez), sipariş formu ve matbaaya gecikme yazısı taslağı"
+    },
+    {
+      "key": "ozellik:tedarik.eslesme",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-tedarikciler",
+      "label": "Fatura–kart ve matbaa–cari eşleşmesi",
+      "hint": "Kuralın bağlayamadığı baskı faturasını karta bağlama/onaylama, CRM matbaasını Logo carisine eşleme",
       "explicit": true
     }
   ]

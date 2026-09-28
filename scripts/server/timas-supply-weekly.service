@@ -1,0 +1,9 @@
+[Unit]
+Description=Tedarik ve baskı (M52): önümüzdeki 30 günün matbaa ve kağıtçı ödeme listesi (FIFO yaklaşımı)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Liste iç ekibe (SUPPLY_PAYMENT_RECIPIENTS) e-postayla gider; ödeme yapılmaz, Logo'ya yazılmaz.
+ExecStart=/bin/sh -c 'curl -fsS -m 1790 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/supply/run-due?haftalik=1"'
