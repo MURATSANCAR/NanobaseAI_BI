@@ -5,6 +5,50 @@
 - Kurulum: imaj `nanobase-destek:0.1.0-e9fa4a3f`, kod sürümü e9fa4a3f, `._*` hedef/kapsayıcı 0, «canlı bildirim ayarı: tamam».
 - Tarayıcıda: portal oturumuyla otomatik giriş, hedef sayfa (`/helpdesk/tickets`) korundu; bildirim bağlantısı websocket ile bağlı, `:9000` isteği 0; sunucudan gönderilen sınama bildirimi tarayıcıya ulaştı. Masaüstü: yardım menüsündeki dış bağlantı gizli, «Hakkında» yalnız NanobaseAI + e9fa4a3f, kenar çubuğunda N simgesi, durum «Açık», panel etiketleri Türkçe.
 - Test kullanıcısı (SSO'nun yeniden oluşturduğu timasai) silindi. VM'e kurulmadı (onay bekliyor); dış vhost'taki socket kaynak denetimi ve giriş sınırı nginx tam restart'ını bekliyor.
+## 2026-09-28 (12:10) — Test sunucusu kabulünde bulunan 5 hata: M15 PDF, M1 referans, M30 saha, M33 ad eşleştirme, H2 İYS
+
+**DOĞRULANAMADI — testler koordinatörde** (Mac'te yalnız `py_compile`). Dal `worktree-agent-a2c7f5145c0bbe7b2`, main `8c592d3d` üstünde.
+
+- **M15 plan PDF'i 500:** `marketing/core.card_get` önbellekten okunan karnenin `veriSonu` sözlüğünü (`{logo, emsalAy}`) kolondaki
+  düz tarih metniyle eziyordu; canlı karne okunamayıp önbelleğe düşülünce `export.py` `vs.get('logo')` → «'str' object has
+  no attribute 'get'». Karne sekmesi de veri sonunu boş gösteriyordu. Düzeltme: sözlük korunur, kolon yalnız yedek; `plan_pdf`
+  hedef/zeki/kitap/emsal/veriSonu JSON metni ya da düz metin, sayılar metin gelse de PDF üretir. Test: çift kodlanmış JSON
+  kolonları ve eski biçim önbellekle PDF.
+- **M1 `market_ref.py`:** `SET NOCOUNT ON` eklendi; tarih date/datetime/ISO metin/gg.aa.yyyy okunur, okunamayan sayılıp yazılır;
+  bağlantı yalnız `main`'de (yardımcılar test edilir).
+- **M30 (a) 422/400:** kalıp köprüde bozuk gövde = 422 (M30'daki 14 doğrulama da 422). 400'ün nedeni gövde değil sıraydı:
+  `create_plan` önce öneriyi hesaplıyor, vadesi geçmişi olmayan caride «alacak yok» (varsayılan 400) dönüyordu. Uç düzeltildi,
+  betik değil: gövde önce (422; taksit 1…24 dışı artık sessizce kırpılmaz, 422), carinin durumu sonra (409).
+  **(b) 120 sn not yazımı:** yazma yolu tarandı — CRM/Logo okuması, model çağrısı, bugün sırası hesabı yok; üç kısa yerel sorgu
+  (portföy birincil anahtarı, ekleme, değişiklik kaydı). Aynı turda geçersiz gövdeler (kapsam sorgusu dahil) hızlı döndüğü için
+  bekleme eklemede (veritabanı kilidi) ya da o saatte süreçteydi (kabul 06:40'ta; `field/today` o sırada 248.351 cariyi tek
+  JSON'da 22 sn'de üretiyordu, 72 ekran taraması ve köprü yeniden başlatmaları aynı saatte). Kod tarafı: ekleme/güncelleme
+  `short_write` ile PostgreSQL `lock_timeout` (`FIELD_WRITE_LOCK_TIMEOUT_MS`, vars. 5000; 0 = eski davranış) → asılı kalmaz,
+  503 «tekrar deneyin»; 2 sn'yi geçen yazma adım adım günlüğe yazılır. `write_check.py` süreyi yazar, zaman aşımında kaydı
+  arayıp temizlik listesine ekler, 403 kodunu denetler, caller başlığını gönderir.
+  **(c) 403 kodu:** M30 `call()` M38 kalıbına geçti; tarama ~40 modülde aynı kalıbı buldu (`FieldError/HrError/… (…, 403)` →
+  modül kodu) ve düz metinli 403'ler (ör. seslendirme kütüphanesi). Tek tek yamamak yerine `http_forbidden.install(app)`:
+  köprüdeki her 403 `FORBIDDEN` koduyla, modül kodu `module`'de; 401/404/422 dokunulmaz.
+- **M33 adla eşleştirme (4'te 1 yanlış):** zayıf noktalar kodda: yazar denetimi tek ortak sözcükle geçiyordu («Ahmet Ümit» =
+  «Ahmet Hamdi Tanpınar»); yazarı boş Logo malzeme kartı aynı adlı CRM kaydıyla eşit yarışıyordu; tek haneli cilt no sözcük
+  listesinden düşüyordu (cilt 1/2 aynı görünüyordu); aynı ad+yazarlı iki kayıt (baskı) arasında model «otomatik» seçebiliyordu;
+  serbest satırda «- 2» yazar sanılıyordu. Düzeltme genel (kitaba özel değil): `title_key`, `author_compat`, yazarı doğrulanan
+  kayıt öncelikli, kesin farklı ürün (başka cilt, set/tek, e-kitap/basılı, başka yazar) modele aday gitmez ve otomatik
+  eşleşmez (insan listede görür, «Emin değil»), ikiz kayıt ya da tek taraflı cilt/baskı ifadesi en çok «öneri». `fold` sözcük
+  içi kesme işaretini sözcükten ayırmaz. Hangi kalemin yanlış gittiği kabul çıktısında yok; sunucuda `kabul.py` yeniden koşunca
+  «ad: … → …» satırları hangisinin düzeldiğini gösterir.
+- **H2 İYS (6 alanın 4'ünde 1'er fark):** portal müşterisi boş satırı atlıyor, eski R5 ise `ROW_NUMBER` ile bütün NULL
+  müşterileri alan başına tek bölmede sayıp +1 ekliyordu (4 alanda tam 1 fark bu şekle uyuyor). Doğru olan portal: müşterisi
+  olmayan satır kimsenin son durumu değil. Referans (`referans.sql`, `kabul.py`) düzeltildi; ayrıca izin tarihi + oluşturma
+  eşit ve durumu farklı kayıtta iki taraf da keyfîydi → ikisinde de ret kazanır; alansız satır iki tarafta kanalla gruplanır.
+  Tarih sınırı yok (iki tarafta bütün geçmiş), durum 1 = onay, geri kalanı ret. Teşhis: `scripts/acceptance/H2/iys-fark.sql`
+  (F1 NULL müşteri, F2 eş zamanlı çelişki, F3 alansız, F4 tarihsiz, F5 alan başına eski/yeni R5).
+- **M30 test (koordinatör notu):** `test_customer_targets_sum_to_plan_and_expected_share` main'de düşüyordu: veri (hedef 730 ÷
+  geçen yıl 300 = 2,43) f26e11d6'nın bilerek eklediği 0,5–2 ölçek bandının dışında; kural doğru tetikleniyor, beklenti eskimiş.
+  CRM yolu ölçek içi veriyle, ölçek dışı (auto'da boş + uyarı, açık `crm`'de uyarıyla kullanım, 2,0 sınırı, 0,5 altı) ayrı sınanır.
+- **Sunucuda kalan:** pytest `test_marketing.py test_editorial_applications.py test_field_sales.py test_http_forbidden.py
+  test_tenders.py test_readers.py test_access.py`; M15 PDF ucu, `M30/write_check.py --write-one` (+ cleanup), `M33/kabul.py`,
+  `H2/iys-fark.sql` sonra `H2/kabul.py` R5, `m1/market_ref.py "Tarih Kitaplığı"`.
 
 ## 2026-09-28 (11:55) — NanobaseAI Destek son gözden geçirme: canlı bildirim hiç çalışmıyordu, masaüstünde marka artıkları
 
