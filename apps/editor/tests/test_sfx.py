@@ -233,9 +233,15 @@ def test_suggest_page_with_fake_model(job, pool, monkeypatch):
                  "tarif_en": "forest ambience", "yer": "birlikte"}]
     sfx.set_page(job, "p_1", {"cues": [{"quote": "rüzgâr uğuldamaya", "chosen": pool["ruzgar"]}]}, "editör")
     monkeypatch.setattr(sfx, "_read_page", fake_read)
+
+    async def no_translate(text):
+        return None
+    monkeypatch.setattr(sfx, "translate", no_translate)
     rec = asyncio.run(sfx.suggest_page(job, "p_1", "editör", llm=object()))
     quotes = {c["quote"]: c for c in rec["cues"]}
-    assert set(quotes) == {"rüzgâr uğuldamaya", "vak vak"}               # editörün eklediği korunur
+    # editörün eklediği korunur; modelin atladığı güçlü ses fiili («gıcırdadı») kural ipucu olur
+    assert set(quotes) == {"rüzgâr uğuldamaya", "vak vak", "gıcırdadı"}
+    assert quotes["gıcırdadı"]["rule_only"] is True and rec["suggested"]["stats"]["rule_only"] == 1
     assert quotes["vak vak"]["chosen"] == pool["ordek"] and len(quotes["vak vak"]["candidates"]) == sfx.CANDIDATES
     assert rec["ambience"]["chosen"] == pool["orman"]
 
@@ -337,3 +343,16 @@ def test_render_keeps_effect_tail_after_narration_ends(tmp_path):
     got = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(out)],
                                capture_output=True, text=True, check=True).stdout)
     assert r["duration"] == 4.5 and got >= 4.4                         # efekt anlatımdan sonra 2,5 sn daha çalar
+
+
+def test_rule_cue_when_model_misses_strong_sound(job):
+    t = "Aslan kahkahalarla güldü. Sonra herkes eve döndü."
+    u = [N.Unit("b1", "para", None, "anlatici-kadin", t, N.read(t))]
+    hints = sfx.strong_hints(u)
+    assert hints == ["kahkahalarla"]
+    rc = sfx._rule_cues(u, [], hints, 3)
+    assert [(c["quote"], c["rule_only"], c["confidence"]) for c in rc] == [("kahkahalarla", True, 0.33)]
+    model = [{"block": "b1", "words": [1, 2]}]
+    assert sfx._rule_cues(u, model, hints, 3) == []                   # model aynı yeri bulduysa kural açmaz
+    assert sfx.strong_hints([N.Unit("b2", "para", None, "anlatici-kadin", "Top yere düştü.",
+                                    N.read("Top yere düştü."))]) == []

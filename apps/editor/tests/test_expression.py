@@ -270,7 +270,11 @@ def test_lively_group_is_placed_after_children_group():
 def test_emphasis_is_short_and_skips_aux_verbs_and_caps():
     assert X._emphasize("Kimse yardım etmedi ona", ["etmedi"]) == "Kimse yardım etmedi ona"
     assert X._emphasize("BİLİM VOMBATI AŞKINA", ["AŞKINA"]) == "BİLİM VOMBATI AŞKINA"
-    assert X._emphasize("Bu çok eğlenceli bir oyun", ["eğlenceli"]) == "Bu çok, eğlenceli bir oyun"
+    assert X._emphasize("Aslan birden kükredi", ["kükredi"]) == "Aslan birden, kükredi"
+    # öbek bölünmez: niteleyici, tamlayan, ilgeç
+    assert X._emphasize("Bu çok eğlenceli bir oyun", ["eğlenceli"]) == "Bu çok eğlenceli bir oyun"
+    assert X._emphasize("aslanın kükremesiydi", ["kükremesiydi"]) == "aslanın kükremesiydi"
+    assert X._emphasize("dönmüştü bile", ["bile"]) == "dönmüştü bile"
 
 
 def test_narrator_lead_in_is_neutral_when_sentence_has_speech(job):

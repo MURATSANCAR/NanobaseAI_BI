@@ -352,6 +352,54 @@ _SAID = re.compile(r"[“\"«‘']([^”\"»’']{1,24}?)[!?.…,]*[”\"»’']
 _STRETCH = re.compile(r"(\w)\1{2,}")          # harf uzatması: «Güüüümmmm», «Happppşuuuu»
 
 
+# Model hiç önermese de ipucu olarak kalan güçlü ses ifadeleri: hayvan/insan sesi ve belirgin yansıma fiilleri. Model
+# üç okumada da boş liste verebiliyor (2026-09-28: kükreme ve kahkahalı iki sayfa 3/3 boş); o zaman kural ipucu açar,
+# ses yine Zeki AI'nin aday seçiminden (X = hiçbiri, FIT_MIN) geçer. «düştü», «zil» gibi genel fiiller burada yok.
+STRONG_STEMS = ("havla", "miyavla", "mırla", "kükre", "gıdakla", "vakla", "kişne", "anır", "böğür", "mele", "horla",
+                "hapşır", "öksür", "hıçkır", "kahkaha", "alkış", "ıslık", "gümbürde", "gürle", "vızılda", "cıvılda",
+                "çınla", "şangırda", "fokurda", "tıkırda", "çatırda", "takırda", "gıcırda", "çıtırda", "şırılda",
+                "uğulda", "patla")
+
+
+def strong_hints(units) -> list[str]:
+    """`sound_hints`'in kural ipucu açacak kadar güçlü olanları: ikileme, tırnak + «diye», harf uzatması, güçlü ses
+    fiili."""
+    out: list[str] = []
+    for u in units:
+        for m in _REDUP.finditer(u.text):
+            if len(m.group(1)) >= 2 and not m.group(1).isdigit():
+                out.append(m.group(0))
+        for m in _SAID.finditer(u.text):
+            if len(m.group(1).split()) <= 3:
+                out.append(m.group(1).strip(" ,.;:!?…"))
+        for w in u.words:
+            raw = w.text.strip(" ,.;:!?…\"'«»“”‘’()")
+            f = L.tr_lower(raw)
+            if _STRETCH.search(f) or any(f.startswith(s) for s in STRONG_STEMS):
+                out.append(raw)
+    return list(dict.fromkeys(x for x in out if x))
+
+
+def _rule_cues(units, cues: list[dict], hints: list[str], reads: int) -> list[dict]:
+    """Modelin önermediği güçlü ipuçları için kural ipucu (tek destek: kural). Aynı yerde model ipucu varsa açılmaz."""
+    out = []
+    for h in hints:
+        where = locate(units, h)
+        if where is None:
+            continue
+        b, a, z = where
+        if any(c["block"] == b and not (z < c["words"][0] or a > c["words"][1]) for c in cues + out):
+            continue
+        u = next(u for u in units if u.id == b)
+        quote = " ".join(w.text for w in u.words[a:z + 1]).strip(" ,.;:!?…\"'«»“”")
+        typ = "yansima" if (_REDUP.search(quote) or _STRETCH.search(L.tr_lower(quote)) or len(quote.split()) == 1
+                            and not any(L.tr_lower(quote).startswith(s) for s in STRONG_STEMS)) else "olay"
+        out.append({"id": new_id(), "kind": "anlik", "type": typ, "block": b, "words": [a, z], "quote": quote,
+                    "query": quote[:200], "query_en": "", "category": None, "place": "birlikte", "source": "zeki",
+                    "confidence": round(1 / max(1, reads), 2), "gain_db": 0.0, "ruled": True, "rule_only": True})
+    return out
+
+
 def sound_hints(units) -> list[str]:
     """Sayfada ses olabilecek ifadeler: ikilemeler («vak vak», «pıt pıt pıt», «şırıl şırıl») ve ses fiilleri."""
     out: list[str] = []
@@ -469,9 +517,10 @@ _LETTERS = "ABCDEFGHIJKLMNOP"
 PICK = """Bir çocuk kitabının sesli okumasına efekt konacak. Metindeki yer: «{quote}». İstenen ses: «{q}» ({en}).
 Ses kütüphanesinde aramanın bulduğu adaylar (ad, klasör, etiketler, süre):
 {rows}
-İstenen sese en uygun adayın harfini yaz. Sesi kimin/neyin çıkardığı ve eylem ikisi de tutmalı: gülme için gülüş,
-hapşırma için hapşırık; başka bir hayvanın sesi ya da benzer ama başka bir eylem (gülen aslana kedi mırlaması gibi) uygun
-değildir. Hiçbiri o sesi içermiyorsa X yaz. Yalnız tek harf."""
+İstenen sese en uygun adayın harfini yaz. Eylem tutmalı: gülme için gülüş, hapşırma için hapşırık, düşme için düşme sesi;
+benzer ama başka bir eylem uygun değildir (gülen aslana kedi mırlaması gibi). Gülüş, hapşırık, öksürük, düşme gibi
+seslerde kaynağın birebir aynı olması gerekmez (filin hapşırığına bir hapşırık sesi uyar); ama bir hayvanın kendine özgü
+sesi (kükreme, havlama, miyav, vaklama) başka hayvanın sesiyle değiştirilemez. Hiçbiri uygun değilse X yaz. Yalnız tek harf."""
 
 
 def _cand_line(letter: str, r: dict) -> str:
@@ -492,7 +541,7 @@ async def rerank(llm, cue: dict, cands: list[dict]) -> tuple[list[dict], float |
                       rows="\n".join(_cand_line(a, r) for a, r in zip(letters, cands)))
     try:
         probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": msg}], list(letters) + ["X"],
-                                    prompt=PromptRef("sfx.pick", "2"))
+                                    prompt=PromptRef("sfx.pick", "3"))
     except Exception:  # noqa: BLE001 — model yoksa aramanın sırası
         return cands, None
     order = sorted(range(len(cands)), key=lambda i: (-probs.get(letters[i], 0.0), i))
@@ -520,6 +569,17 @@ async def suggest_page(d: Path, pid: str, by: str, llm=None, keep_editor: bool =
     cues, stats = _vote(list(reads), units, hints=sound_hints(units))
     old = _read(page_file(d, pid)) or {}
     kept = [c for c in old.get("cues", []) if keep_editor and c.get("source") == "editor"]
+    extra = _rule_cues(units, cues + kept, strong_hints(units), len(reads)) if reads else []
+    for c in extra:
+        # tarif: ipucunun geçtiği cümle (arama anlamı cümleden alır); İngilizcesi önbellekli çeviriden
+        u = next(u for u in units if u.id == c["block"])
+        c["query"] = f"{c['quote']} ({u.text.strip()[:160]})"
+        try:
+            c["query_en"] = await asyncio.wait_for(translate(c["quote"]), 30) or ""
+        except Exception:  # noqa: BLE001 — çeviri yoksa Türkçe arama
+            c["query_en"] = ""
+    stats["rule_only"] = len(extra)
+    cues = cues + extra
     taken = {(c["block"], tuple(c["words"])) for c in kept}
     ambience = old.get("ambience") if (old.get("ambience") or {}).get("source") == "editor" else None
     final = list(kept)

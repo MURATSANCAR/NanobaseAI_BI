@@ -93,6 +93,13 @@ EXAMPLE_MAX_SHIFT = 30.0
 EMPHASIS = {"method": "pause", "mark": ","}
 _AUX = re.compile(r"^(et|ed|eyle|ol|yap|kıl)(me|mi|mı|mek|mak|ti|tı|di|du|dı|ip|up|ıp|er|ar|ur|en|an|ecek|acak|eceğ|"
                   r"acağ|iyor|ıyor|uyor|ince|unca|ınca|erek|arak|il|ebil|abil|mez|maz|miş|mış|muş|sun|sın|se|sa)")
+# Durak öbeği bölmesin (2026-09-28 ikinci dinleme: erkek seste virgül 0,7–0,8 sn; «en, korkak», «aslanın, kükremesiydi»,
+# «dönmüştü, bile»): önündeki kelime niteleyici ya da tamlayan (-ın/-in…) ise, ya da kelimenin kendisi ilgeç/ek-kelimeyse
+# vurgu durağı konmaz. Dil bilgisi; kitaptan bağımsız.
+_MODIFIERS = {"en", "çok", "pek", "daha", "biraz", "hiç", "az", "ya", "o", "bu", "şu", "bir", "her", "hep", "ne", "tam",
+              "gayet", "bayağı", "epey", "oldukça", "fazla", "kocaman", "küçücük", "bütün", "tüm"}
+_PARTICLES = {"bile", "de", "da", "dahi", "mi", "mı", "mu", "mü", "ki", "gibi", "kadar", "için", "ile", "diye", "dek"}
+_GENITIVE = re.compile(r"\w{2,}(ın|in|un|ün)$")
 EMPH_AI_MAX = 1
 RATE_MIN_WORDS = 5        # bundan kısa parçada hızlandırma yok: «O da ne!» 0,46 sn'de bitiyordu
 
@@ -232,16 +239,33 @@ def set_marks(d: Path, pid: str, items: list[dict], by: str) -> dict:
 
 
 # ------------------------------------------------------------------ üretime yansıma (narration.page_input kancası)
+def emph_ok(prev: str | None, word: str) -> bool:
+    """Kelimeden önce vurgu durağı konabilir mi (öbeği bölmeden). `prev`: önceki kelimenin çekirdeği (yoksa None)."""
+    c = N.tr_lower(word)
+    if _AUX.match(c) or (len(word) > 1 and word.isupper()) or c in _PARTICLES:
+        return False
+    if prev is None:
+        return True
+    pv = N.tr_lower(prev)
+    return pv not in _MODIFIERS and not _GENITIVE.match(pv)
+
+
 def _emphasize(text: str, words: list[str]) -> str:
     """Vurgulanacak kelimeden önce kısa duraklama işareti (okunuş metninde; hizalanan kelimeler değişmez). Kelime
-    parçanın ilk kelimesiyse ya da önünde zaten duraklama (noktalama) varsa işaret eklenmez."""
+    parçanın ilk kelimesiyse, önünde zaten duraklama (noktalama) varsa ya da durak öbeği bölecekse (`emph_ok`)
+    işaret eklenmez."""
     mark = EMPHASIS["mark"]
+    toks = text.split(" ")
     for w in words:
-        c = core(w)
-        if _AUX.match(N.tr_lower(c)) or (len(c) > 1 and c.isupper()):
-            continue
-        text = re.sub(rf"(?<=[^\s,;:.!?…])(\s+)({re.escape(w)})(?=[\s,;:.!?…'’]|$)", rf"{mark}\1\2", text, count=1)
-    return text
+        for i in range(1, len(toks)):
+            if core(toks[i]) != core(w) or not toks[i].startswith(w):
+                continue
+            if toks[i - 1][-1:] in ",;:.!?…" or not toks[i - 1]:
+                break
+            if emph_ok(core(toks[i - 1]), core(w)):
+                toks[i - 1] += mark
+            break
+    return " ".join(toks)
 
 
 def _quoted(u) -> set[int]:
@@ -485,7 +509,11 @@ async def emphasis_votes(llm, listing: str, rows: list[dict], page_no: int | Non
             n = int(it.get("n") or 0)
             if not 1 <= n <= len(rows):
                 continue
-            for w in clean_emphasis(it.get("words") or [], rows[n - 1]["words"]):
+            sw = rows[n - 1]["words"]
+            for w in clean_emphasis(it.get("words") or [], sw):
+                k = sw.index(w)
+                if not emph_ok(sw[k - 1] if k else None, w):     # üretimde uygulanmayacak vurgu kayda da girmez
+                    continue
                 if (n, w) not in seen:
                     seen.add((n, w))
                     votes.setdefault(n, {})[w] = votes.setdefault(n, {}).get(w, 0) + 1
