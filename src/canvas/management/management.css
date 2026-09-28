@@ -134,6 +134,11 @@
 .mg-card-views strong { color: var(--mg-ink); font-variant-numeric: tabular-nums }
 .mg-card-meta { display: flex; flex-wrap: wrap; gap: 12px; font-size: 11px; color: #9a8bab }
 .mg-card-meta span { display: inline-flex; align-items: center; gap: 4px }
+/* Sorgu bilgisi «i»'si kartın bağlantısının dışında (iç içe etkileşim yok): sağ alt köşe. */
+.mg-card-wrap { position: relative; display: flex; flex-direction: column }
+.mg-card-wrap > .mg-card { flex: 1; padding-bottom: 44px }
+.mg-card-info { position: absolute; right: 16px; bottom: 16px }
+.mg-src-empty { margin: 8px 0 0; font-size: 12px; color: var(--mg-muted) }
 
 /* Kaynak paneli: masaüstünde sağdan, telefonda alttan. Arada sık açılmaz; standart geçiş. */
 .mg-scrim { position: fixed; inset: 0; z-index: 80; background: #1b1f2a52; transition: opacity 200ms ease }

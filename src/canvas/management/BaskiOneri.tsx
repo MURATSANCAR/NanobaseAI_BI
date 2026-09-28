@@ -10,6 +10,8 @@ import LiveStatus from './LiveStatus';
 import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
 import SearchSelect from '../components/SearchSelect';
 import { useCan } from '../useAdmin';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import './management.css';
 import { notifyExport } from '../data-security/notify';
 
@@ -286,6 +288,7 @@ export default function BaskiOneri() {
                     </button>
                   ))}
                 </div>
+                <SqlInfo k={snap?.kaynaklar} alan="data.views[]" row={view.id} label={`${view.title}: sekme ve öneri düzeyi sayıları`} />
                 <label className="mg-search">
                   <Search size={15} aria-hidden />
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Kitap, yazar, stok kodu" aria-label="Rapor içinde ara" />
@@ -368,6 +371,7 @@ export default function BaskiOneri() {
                 ))}
                 <p className="mg-count" aria-live="polite">
                   <strong>{rows.length.toLocaleString('tr-TR')}</strong> kitap · {view.hint.toLocaleLowerCase('tr')}
+                  <SqlInfo k={snap?.kaynaklar} alan="data.views[]" row={view.id} label="Süzgeçten geçen kitap sayısı" className="ml-0.5" />
                   {activeFilters > 0 && (
                     <button
                       type="button"
@@ -385,7 +389,7 @@ export default function BaskiOneri() {
                 </p>
               </div>
 
-              <ReportTable view={view} rows={rows} sort={sort} onSort={toggleSort} onSource={openSheet} />
+              <ReportTable view={view} rows={rows} sort={sort} onSort={toggleSort} onSource={openSheet} k={snap?.kaynaklar} />
               {view.explain && <ExplainPanel explain={view.explain} />}
             </>
           )}
@@ -415,12 +419,15 @@ function ReportTable({
   sort,
   onSort,
   onSource,
+  k,
 }: {
   view: ReportView;
   rows: Row[];
   sort: Sort;
   onSort: (index: number) => void;
   onSource: (f: SheetFocus) => void;
+  /** Sorgu bilgisi: toplam satırının hesabı. */
+  k?: Kaynaklar;
 }) {
   const cols = view.columns;
   // Şablondaki gibi toplam satırı; Power BI görselinde kolon grup başlığı yoktur.
@@ -476,7 +483,7 @@ function ReportTable({
                     const v = totals[i];
                     return (
                       <td key={c.key} style={{ left }} className={(left !== undefined ? `mg-sticky mg-sticky-${i}` : '') + (isNum(c) ? ' is-num' : '')}>
-                        {i === 0 ? 'Toplam' : v === null ? '' : formatCell(v, c.format)}
+                        {i === 0 ? <span className="inline-flex items-center gap-1">Toplam<SqlInfo k={k} alan="toplam" row={view.id} label={`${view.title}: toplam satırı`} /></span> : v === null ? '' : formatCell(v, c.format)}
                       </td>
                     );
                   })}

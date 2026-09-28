@@ -26,6 +26,8 @@ from fastapi import HTTPException, Request
 import inspect
 
 from semantic_bridge.management import baski_oneri, ilk_baski, zeki_tahmin
+from semantic_bridge.management import kaynak as K
+from semantic_bridge import provenance as PV
 
 log = logging.getLogger(__name__)
 
@@ -213,9 +215,11 @@ class Reports:
             chunks = [codes[i:i + size] for i in range(0, len(codes), size)] or [[]]
         records, columns, started = [], [], time.monotonic()
         title = next(t for s, _, t, *_ in report.SOURCES if s == source_id)
+        executed: list[str] = []  # sorgu bilgisi: çalışan metin (kod listesi yerinde), şablon değil
         for chunk in chunks:
             sql = text if chunk is None else (text.replace("{stok_kodlari}", _quoted_list(chunk))
                                               .replace("{stok_kodlari_satirlari}", _values_rows(chunk)))
+            executed.append(sql)
             try:
                 cols, rows, truncated = conn.execute(sql, MAX_ROWS)
             except Exception as exc:  # noqa: BLE001 — sürücü metni ekrana değil loga
@@ -229,7 +233,8 @@ class Reports:
             if truncated:
                 raise RuntimeError(f"{source_id}: sonuç {MAX_ROWS} satırı aştı; rapor eksik kalırdı.")
             columns, records = cols, records + rows
-        out = {"columns": columns, "records": records, "dbMs": int((time.monotonic() - started) * 1000), "sql": text}
+        out = {"columns": columns, "records": records, "dbMs": int((time.monotonic() - started) * 1000),
+               "sql": executed[0] if len(executed) == 1 else ";\n\n".join(executed)}
         if missing:
             out["warning"] = f"Logo'da {', '.join(map(str, missing))} satış görünümü yok; bu yıllar okunmadı."
         return out
@@ -330,18 +335,24 @@ def register(app, runtime, authorize, session_user):
         authorize(request)
         return session_user(request)
 
+    def dbs() -> dict[str, str | None]:
+        """Bağlantı dosyalarından YALNIZ veritabanı adı (SQL'in başına USE satırı için)."""
+        files = reports._connection_files()
+        return {name: PV.connection_database(files.get(name)) for name in ("logo", "crm")}
+
     @app.get("/api/v1/management/reports")
     def management_reports(request: Request) -> dict[str, Any]:
         gate(request)
-        out = []
+        out, snaps = [], {}
         for rid, m in VISIBLE.items():
-            snap = _load(reports.path(rid))
+            snap = snaps[rid] = _load(reports.path(rid))
             out.append({"id": rid, "title": m.TITLE, "description": m.DESCRIPTION,
                         "updatedAt": snap.get("updatedAt"), "sources": len(m.SOURCES),
                         "refreshIntervalSeconds": interval_of(m),
                         "views": [{"id": v["id"], "title": v["title"], "rows": len(v["rows"])}
                                   for v in (snap.get("data") or {}).get("views", [])]})
-        return {"reports": out}
+        body = {"reports": out}
+        return PV.bagla(body, lambda: K.for_list(out, VISIBLE, snaps, dbs()))
 
     @app.get("/api/v1/management/reports/{report_id}")
     def management_report(report_id: str, request: Request, since: float | None = None) -> dict[str, Any]:
@@ -353,18 +364,25 @@ def register(app, runtime, authorize, session_user):
             reports.start_refresh(report_id)
         unchanged = since is not None and snap.get("updatedAt") is not None and abs(float(since) - snap["updatedAt"]) < 1e-3
         snap = reports.read(report_id, with_data=not unchanged)
-        return {"id": report_id, "refreshIntervalSeconds": interval_of(REPORTS[report_id]), "serverTime": time.time(),
-                "unchanged": unchanged, **snap}
+        out = {"id": report_id, "refreshIntervalSeconds": interval_of(REPORTS[report_id]), "serverTime": time.time(),
+               "unchanged": unchanged, **snap}
+        if not out.get("data"):
+            return out  # veri gitmiyorsa (değişmedi / henüz yok) sorgu bilgisi de gitmez; ekran öncekini tutar
+        return PV.bagla(out, lambda: K.for_report(REPORTS[report_id], out, dbs()))
 
     @app.get("/api/v1/management/reports/{report_id}/sources")
     def management_report_sources(report_id: str, request: Request) -> dict[str, Any]:
         gate(request)
         report = report_of(report_id)
         stats = (_load(reports.path(report_id)).get("data") or {}).get("sourceStats", {})
+
+        def executed(sid: str) -> str | None:
+            """Son okumada çalışan metin; yoksa ya da yer tutucu kalmışsa (eski önbellek) yok — şablon gösterilmez."""
+            text = (stats.get(sid) or {}).get("sql")
+            return text if text and not PV.placeholders_left(text) else None
         return {
             "sources": [{"id": sid, "connection": conn, "database": reports.database_label(conn), "title": title,
-                         "description": desc, "sql": (stats.get(sid) or {}).get("sql") or sql_text(report_id, sid),
-                         "stats": stats.get(sid)}
+                         "description": desc, "sql": executed(sid), "stats": stats.get(sid)}
                         for sid, conn, title, desc in report.SOURCES],
             "formulas": [{"name": n, "text": t} for n, t in report.FORMULAS],
             "notes": list(report.NOTES),

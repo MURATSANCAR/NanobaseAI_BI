@@ -1,4 +1,5 @@
 import { ENGINE_BASE, ENGINE_ENABLED, freshHeaders } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Yönetim raporları modülünün köprü uçları: /api/v1/management/*. */
 
@@ -60,6 +61,8 @@ export type ReportSnapshot = {
   updatedAt?: number;
   durationMs?: number;
   error?: string | null;
+  /** Sorgu bilgisi (sekme sayaçları, öneri düzeyleri, toplam satırı): yalnız `data` ile gelir. */
+  kaynaklar?: Kaynaklar;
   data?: {
     views: ReportView[];
     oneriLevels: string[];
@@ -76,7 +79,8 @@ export type ReportSource = {
   database: string;
   title: string;
   description: string;
-  sql: string;
+  /** Son okumada çalışan metin; rapor henüz okunmadıysa yok (şablon gösterilmez). */
+  sql: string | null;
   stats?: { rows: number; dbMs: number | null; skipped?: string | null } | null;
 };
 
@@ -114,7 +118,7 @@ async function call<T>(path: string, method: 'GET' | 'POST' = 'GET'): Promise<T>
 }
 
 export const managementApi = {
-  list: () => call<{ reports: ReportSummary[] }>('reports'),
+  list: () => call<{ reports: ReportSummary[]; kaynaklar?: Kaynaklar }>('reports'),
   report: (id: string, since?: number) => call<ReportSnapshot>(`reports/${id}${since ? `?since=${since}` : ''}`),
   sources: (id: string) => call<ReportSources>(`reports/${id}/sources`),
   refresh: (id: string) => call<ReportSnapshot & { started: boolean }>(`reports/${id}/refresh`, 'POST'),
@@ -123,7 +127,7 @@ export const managementApi = {
 /** Ekrandaki veriyi koruyarak durumu tazeler: değişmeyen veri yeniden indirilmez. */
 export function mergeSnapshot(prev: ReportSnapshot | undefined, next: ReportSnapshot): ReportSnapshot {
   if (next.data || !prev?.data) return next;
-  return { ...next, data: prev.data };
+  return { ...next, data: prev.data, kaynaklar: prev.kaynaklar };
 }
 
 export const clockOffset = (snap?: ReportSnapshot, receivedAt?: number) =>

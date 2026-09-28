@@ -21,6 +21,8 @@ from .financial_audit_rules import extend_ratios, evaluate, pair_sql, pair_resul
 from .financial_audit_evidence import read_evidence, document_sql
 from .financial_audit_deep import read_deep, exception_sql, DEFINITIONS
 from .financial_audit_snapshot import AuditSnapshots, atomic_json
+from . import financial_audit_kaynak as K
+from . import provenance as PV
 
 log = logging.getLogger(__name__)
 REVISION = hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
@@ -42,9 +44,58 @@ def dec(value):
     return Decimal(str(value or 0))
 
 
+#: SQL kurucuları tabloları 2026 kopyasının adıyla (LG_411_…) yazar; çalıştırmadan önce denetlenen yılın Logo firma
+#: kopyasına çevrilir (her yıl ayrı firma numarasındadır: ör. 2021–2025 LG_211, 2026 LG_411). Sabit firma kodu yok.
+CANONICAL_FIRM = '411'
+
+
+def audit_years():
+    """Denetimi açılan yıllar (kaynak kopyası mutabık kılınmış olanlar). Ayar: FINANCIAL_AUDIT_YEARS (virgüllü)."""
+    years = sorted({int(y) for y in re.findall(r'\d{4}', os.getenv('FINANCIAL_AUDIT_YEARS', '2026'))})
+    return years or [2026]
+
+
+def firm_sql(sql, firm):
+    """Kurucunun yazdığı kopya adlarını (LG_411_) denetlenen yılın firma kopyasına çevirir."""
+    if not re.fullmatch(r'\d{3}', str(firm or '')):
+        raise ValueError('Logo firma numarası üç haneli olmalı.')
+    return re.sub(rf'\bLG_{CANONICAL_FIRM}_', f'LG_{firm}_', sql)
+
+
+def resolve_firm(run, year):
+    """Yıl → Logo firma kopyası (`L_CAPIPERIOD`, bütçe/finans modüllerinin ortak kuralı). Yoksa hata."""
+    from .budget_sources import firms_by_year
+    firms = firms_by_year(run)
+    if year not in firms:
+        raise HTTPException(409, f"Logo'da {year} yılının firma kopyası (dönemi) bulunamadı; denetim doğrulanamadı.")
+    return firms[year]
+
+
 def register(app, runtime, authorize):
     lock = threading.Lock()
     review_lock = threading.Lock()
+    firms = {}
+    firm_lock = threading.Lock()
+
+    def firm_for(year):
+        """Denetlenen yılın firma kopyası; Logo'dan bir kez okunur (süreç ömrü boyunca)."""
+        with firm_lock:
+            if year not in firms:
+                r = runtime()
+
+                def run(sql):
+                    with getattr(r, '_engine_lock', None) or threading.Lock():
+                        _cols, rows, _truncated = r.connector.execute(sql, 10000)
+                    return rows
+                firms[year] = resolve_firm(run, year)
+            return firms[year]
+
+    def logo_db():
+        from . import provenance as PV
+        try:
+            return PV.connection_database(runtime().settings.connection_file)
+        except Exception:  # noqa: BLE001 — veritabanı adı yoksa USE satırı yazılmaz
+            return None
 
     @app.get("/api/v1/financial-audit/catalog")
     def catalog(request: Request):
@@ -55,23 +106,26 @@ def register(app, runtime, authorize):
         return json.loads(path.read_text(encoding='utf-8'))
 
     def context(year):
-        # Only the declared, inspected current backup is enabled for this first version.
-        # Older copies require opening/closing and source reconciliation before activation.
-        if year != 2026:
-            raise HTTPException(422, "Bu sürümde doğrulanan kaynak dönemi 2026'dır.")
+        # Only declared, inspected backups are enabled (FINANCIAL_AUDIT_YEARS). Older copies require
+        # opening/closing and source reconciliation before activation.
+        if year not in audit_years():
+            raise HTTPException(422, f"Bu kurulumda doğrulanan kaynak dönemi: {', '.join(map(str, audit_years()))}.")
         return (date(year, 1, 1), date(year + 1, 1, 1))
 
     def query(sql, year):
         r = runtime()
-        # A physical backup identity, not a company selector. A dated predicate
+        # The year's own Logo company copy (L_CAPIPERIOD), never a fixed number. A dated predicate
         # alone does not pin master tables such as FAYEAR to the declared copy.
-        scope = {'n0':'411'}
+        firm = firm_for(year)
+        sql = firm_sql(sql, firm)
+        scope = {'n0': firm}
         physical = r._physical(sql, context(year), scope=scope)
-        if any(code != '411' for code in re.findall(r'\bLG_(\d+)_', physical, re.I)):
-            raise HTTPException(409, 'Sorgu doğrulanmış 2026 kaynak kopyasından başka bir yedeğe yönlendi.')
+        if any(code != firm for code in re.findall(r'\bLG_(\d+)_', physical, re.I)):
+            raise HTTPException(409, f'Sorgu {year} yılının kaynak kopyasından (firma {firm}) başka bir yedeğe yönlendi.')
         result = r.run_sql(sql, 10000, context(year), scope=scope, use_cache=False)
-        if any(code != '411' for code in re.findall(r'\bLG_(\d+)_', result.get('physicalSql',''), re.I)):
+        if any(code != firm for code in re.findall(r'\bLG_(\d+)_', result.get('physicalSql',''), re.I)):
             raise HTTPException(409, 'Yanıtın kaynak kopyası doğrulanamadı.')
+        result['firm'] = firm
         if result.get("truncated"):
             raise HTTPException(409, "Sonuç kesildi; denetim tamamlanamadı.")
         return result
@@ -85,13 +139,14 @@ def register(app, runtime, authorize):
       LEFT JOIN dbo.LG_411_01_EMFICHE F ON F.LOGICALREF=L.ACCFICHEREF"""
 
     @app.get("/api/v1/financial-audit/overview")
-    def overview(request: Request, year: int = 2026):
+    def overview(request: Request, year: int | None = None):
         authorize(request)
-        context(year)
+        context(year or snapshots.year)
         report = snapshots.load()
         if report is None:
             raise HTTPException(503, 'İlk denetim raporu arka planda hazırlanıyor. Hazır olduğunda otomatik gösterilecek.')
-        return dict(report, cached=True, refresh=snapshots.status())
+        out = dict(report, cached=True, refresh=snapshots.status())
+        return PV.bagla(out, lambda: K.for_report(out, logo_db()))
 
     @app.get('/api/v1/financial-audit/refresh-status')
     def refresh_status(request: Request):
@@ -107,7 +162,15 @@ def register(app, runtime, authorize):
         # Only the background snapshot publisher invokes this expensive calculation.
         with lock:
             started_at = datetime.now(timezone.utc).isoformat()
+            # Sorgu bilgisi: rapordaki her rakamın çalışan SQL'i (fiziksel metin), satır, süre ve an; kimliğiyle.
+            queries = {}
+
+            def rec(qid, title, res):
+                queries[qid] = {'title': title, 'sql': res.get('physicalSql'), 'rows': len(res.get('records') or []),
+                                'dbMs': res.get('dbMs'), 'at': datetime.now(timezone.utc).isoformat()}
+                return res
             try:
+                firm = firm_for(year)
                 sql = f"""SELECT A.LOGICALREF AS accountRef,A.CODE AS code,A.DEFINITION_ AS name,
                   A.ACCTYPE AS accountType, COUNT(*) AS lineCount,
                   SUM(CAST(L.DEBIT AS decimal(28,4))) AS debit,
@@ -117,7 +180,7 @@ def register(app, runtime, authorize):
                   MIN(L.DATE_) AS firstDate,MAX(L.DATE_) AS lastDate
                   {joins} WHERE {where(year)}
                   GROUP BY A.LOGICALREF,A.CODE,A.DEFINITION_,A.ACCTYPE ORDER BY A.CODE"""
-                result = query(sql, year)
+                result = rec('hesaplar', 'Hesap bakiyeleri ve hareket sayıları', query(sql, year))
                 accounts = []
                 for a in result["records"]:
                     a = dict(a)
@@ -140,13 +203,13 @@ def register(app, runtime, authorize):
                   SELECT L.ACCFICHEREF, SUM(CAST(L.DEBIT AS decimal(28,4)) - CAST(L.CREDIT AS decimal(28,4))) AS difference
                   {joins} WHERE {where(year)} GROUP BY L.ACCFICHEREF
                   HAVING ABS(SUM(CAST(L.DEBIT AS decimal(28,4)) - CAST(L.CREDIT AS decimal(28,4)))) > 0.01) X"""
-                slips = query(slip_sql, year)
+                slips = rec('fisDenge', 'Fiş bazında borç–alacak eşitliği', query(slip_sql, year))
                 imbalance = slips["records"][0]
-                integrity = query(f"""SELECT COUNT(*) AS sourceRows,
+                integrity = rec('butunluk', 'Hareket–fiş bağlantısı ve iptal', query(f"""SELECT COUNT(*) AS sourceRows,
                   SUM(CASE WHEN F.LOGICALREF IS NULL THEN 1 ELSE 0 END) AS missingSlip,
                   SUM(CASE WHEN F.CANCELLED<>0 THEN 1 ELSE 0 END) AS cancelledSlip
                   FROM dbo.LG_411_01_EMFLINE L LEFT JOIN dbo.LG_411_01_EMFICHE F ON F.LOGICALREF=L.ACCFICHEREF
-                  WHERE L.DATE_ >= '{year}0101' AND L.DATE_ < '{year+1}0101' AND L.CANCELLED=0""", year)
+                  WHERE L.DATE_ >= '{year}0101' AND L.DATE_ < '{year+1}0101' AND L.CANCELLED=0""", year))
                 source_integrity = integrity['records'][0]
                 checks = [
                     {"id": "trial-balance", "title": "Mizan borç–alacak eşitliği", "affected": int(abs(debit-credit) > Decimal('.01')),
@@ -206,7 +269,7 @@ def register(app, runtime, authorize):
                            "reason": "Özkaynak / bilanço kapanış uyumu doğrulanmadı." if n in closing_required and abs(closing_gap) > Decimal('.01') else "Payda sıfır/negatif veya veri eksik." if not calculable(n, den) else None}
                           for n, title, num, den, formula in specs]
                 out = {"year": year, "revision": REVISION, "computedAt": datetime.now(timezone.utc).isoformat(),
-                       "source": "Logo · 2026 işlem dönemi · 17.08.2026 yedeği", "currency": "TRY",
+                       "source": f"Logo · {year} işlem dönemi · firma {firm}", "firm": firm, "currency": "TRY",
                        "firstDate": min((a['firstDate'] for a in accounts), default=None),
                        "lastDate": max((a['lastDate'] for a in accounts), default=None),
                        "lineCount": total_lines, "debit": str(debit), "credit": str(credit),
@@ -222,7 +285,7 @@ def register(app, runtime, authorize):
                                         "Fiş kontrolü ve mizan ayrı sorgulardır. Kaynak yedek değişirse yeniden çalıştırılmalıdır.",
                                         "Eksik/iptal fiş başlıklarına ait hareketler bu mali kapsama dahil değildir.",
                                         "Belge, beyanname, mutabakat ve mevzuat gerektiren kontroller otomatik geçmez."]}
-                profile = query(f"""SELECT A.CODE AS code,A.LOGICALREF AS accountRef,
+                profile = rec('profil', 'Hesap profili: açılış, dönem, döviz, eksik belge alanları', query(f"""SELECT A.CODE AS code,A.LOGICALREF AS accountRef,
                     SUM(CASE WHEN F.TRCODE=1 THEN CAST(L.DEBIT AS decimal(28,4)) ELSE 0 END) AS openingDebit,
                     SUM(CASE WHEN F.TRCODE=1 THEN CAST(L.CREDIT AS decimal(28,4)) ELSE 0 END) AS openingCredit,
                     SUM(CASE WHEN F.TRCODE<>1 THEN CAST(L.DEBIT AS decimal(28,4)) ELSE 0 END) AS periodDebit,
@@ -230,14 +293,14 @@ def register(app, runtime, authorize):
                     SUM(CASE WHEN L.TRCURR IS NOT NULL AND L.TRCURR NOT IN (0,160) THEN 1 ELSE 0 END) AS foreignRows,
                     SUM(CASE WHEN NULLIF(LTRIM(RTRIM(L.INVOICENO)),'') IS NULL THEN 1 ELSE 0 END) AS missingInvoiceNumber,
                     SUM(CASE WHEN L.DOCDATE IS NULL OR L.DOCDATE<'19010101' THEN 1 ELSE 0 END) AS missingDocumentDate
-                    {joins} WHERE {where(year)} GROUP BY A.CODE,A.LOGICALREF ORDER BY A.CODE""", year)
+                    {joins} WHERE {where(year)} GROUP BY A.CODE,A.LOGICALREF ORDER BY A.CODE""", year))
                 out['profiles'] = profile['records']
-                pair_read = query(pair_sql(joins, where(year)), year)
+                pair_read = rec('karsiHesap', 'Fiş karşı hesap kontrolleri', query(pair_sql(joins, where(year)), year))
                 out['pairChecks'] = pair_results(pair_read['records'][0])
-                vat = query(f"""SELECT MONTH(L.DATE_) AS month,LEFT(A.CODE,3) AS code,
+                vat = rec('kdv', 'KDV hesapları (190, 191, 391) ay ay hareket', query(f"""SELECT MONTH(L.DATE_) AS month,LEFT(A.CODE,3) AS code,
                     SUM(CAST(L.DEBIT AS decimal(28,4))-CAST(L.CREDIT AS decimal(28,4))) AS movement
                     {joins} WHERE {where(year)} AND LEFT(A.CODE,3) IN ('190','191','391')
-                    GROUP BY MONTH(L.DATE_),LEFT(A.CODE,3) ORDER BY month,code""", year)
+                    GROUP BY MONTH(L.DATE_),LEFT(A.CODE,3) ORDER BY month,code""", year))
                 balances = {k:Decimal(0) for k in ['190','191','391']}
                 out['vatMonths'] = []
                 last_month = int(str(out['lastDate'])[5:7]) if out['lastDate'] else 0
@@ -272,6 +335,10 @@ def register(app, runtime, authorize):
                 out['dbMs'] += out['supportingEvidence']['dbMs']
                 out['sql'].extend(out['deepAudit']['sql'])
                 out['dbMs'] += out['deepAudit']['dbMs']
+                for prefix, block in (('belge', out['supportingEvidence']), ('derin', out['deepAudit'])):
+                    for key, q in (block.get('executed') or {}).items():
+                        queries[f'{prefix}.{key}'] = q
+                out['queries'] = queries
                 out['runId'] = uuid.uuid4().hex
                 out['sourceReadStartedAt'] = started_at
                 out['computedAt'] = datetime.now(timezone.utc).isoformat()
@@ -315,7 +382,8 @@ def register(app, runtime, authorize):
     @app.get('/api/v1/financial-audit/runs/{run_id}')
     def saved_run(request: Request, run_id: str):
         authorize(request)
-        return load_run(run_id)
+        out = load_run(run_id)
+        return PV.bagla(out, lambda: K.for_report(out, logo_db()))
 
     @app.get('/api/v1/financial-audit/runs/{run_id}/export')
     def export_run(request: Request, run_id: str):
@@ -345,9 +413,11 @@ def register(app, runtime, authorize):
             definition=DEFINITIONS[check_id]
             count=query(f"SELECT COUNT(*) AS totalRows FROM ({source_sql(definition[1],run['year'],run['lastDate'])}) S WHERE {definition[2]}",run['year'])
             total=int(count['records'][0]['totalRows'])
-        return {'items':records,'total':total,'page':page,'checkId':check_id,'runId':run_id,
-                'asOf':str(run['lastDate'])[:10],'separateRead':True,'readAt':datetime.now(timezone.utc).isoformat(),
-                'truncated':False,'sql':result.get('physicalSql')}
+        out = {'items':records,'total':total,'page':page,'checkId':check_id,'runId':run_id,
+               'asOf':str(run['lastDate'])[:10],'separateRead':True,'readAt':datetime.now(timezone.utc).isoformat(),
+               'truncated':False,'sql':result.get('physicalSql'),'dbMs':result.get('dbMs'),'firm':result.get('firm')}
+        return PV.bagla(out, lambda: K.for_live(out, 'denetim.bulgu', f"Bulgu kayıtları · {DEFINITIONS[check_id][0]}",
+                                                 int(run['year']), logo_db(), DEFINITIONS[check_id][3]))
 
     def review_path(run_id, control_id):
         run = load_run(run_id)
@@ -398,15 +468,20 @@ def register(app, runtime, authorize):
                 'message':'İnceleme notu kaydedildi. Otomatik kontrol sonucu değiştirilmedi; kanıt kabulü ayrıca gerekir.'}
 
     @app.get('/api/v1/financial-audit/documents')
-    def documents(request: Request, year: int = 2026, page: int = Query(0,ge=0,le=100000),
+    def documents(request: Request, year: int | None = None, page: int = Query(0,ge=0,le=100000),
                   main_account: int | None = Query(None,ge=100,le=999)):
         authorize(request)
+        year = year or snapshots.year
         context(year)
         try:
             result = query(document_sql(year,page,main_account),year)
-            return {'items':result['records'],'total':result['records'][0]['totalRows'] if result['records'] else 0,
-                    'page':page,'readAt':datetime.now(timezone.utc).isoformat(),'separateRead':True,
-                    'sql':result.get('physicalSql')}
+            out = {'items':result['records'],'total':result['records'][0]['totalRows'] if result['records'] else 0,
+                   'page':page,'readAt':datetime.now(timezone.utc).isoformat(),'separateRead':True,
+                   'sql':result.get('physicalSql'),'dbMs':result.get('dbMs'),'firm':result.get('firm')}
+            return PV.bagla(out, lambda: K.for_live(out, 'denetim.belge', 'E-defter belge kayıtları', year, logo_db(),
+                                                     'Belge türü, no, tarih, ödeme şekli ve kaynak bayrakları (belge yok, '
+                                                     'ödeme yok) Logo\'da saklandığı gibi; sayfa başına 50 kayıt, toplam '
+                                                     'sayfalamadaki sayıdır.'))
         except HTTPException:
             raise
         except Exception:
@@ -414,8 +489,9 @@ def register(app, runtime, authorize):
             raise HTTPException(503,'Logo e-defter belge detayları okunamadı.')
 
     @app.get("/api/v1/financial-audit/lines")
-    def lines(request: Request, year: int = 2026, account: int = Query(..., ge=1), page: int = Query(0, ge=0, le=100000)):
+    def lines(request: Request, year: int | None = None, account: int = Query(..., ge=1), page: int = Query(0, ge=0, le=100000)):
         authorize(request)
+        year = year or snapshots.year
         context(year)
         # Separate live read is explicit; never advertised as the overview snapshot.
         sql = f"""SELECT L.LOGICALREF AS lineRef,F.LOGICALREF AS slipRef,F.FICHENO AS slipNo,
@@ -426,9 +502,12 @@ def register(app, runtime, authorize):
           ORDER BY L.DATE_,L.LOGICALREF OFFSET {page*50} ROWS FETCH NEXT 50 ROWS ONLY"""
         try:
             result = query(sql, year)
-            return {"items": result['records'], "total": result['records'][0]['totalRows'] if result['records'] else 0,
-                    "page": page, "readAt": datetime.now(timezone.utc).isoformat(), "dbMs": result.get('dbMs'),
-                    "sql": result.get('physicalSql'), "separateRead": True}
+            out = {"items": result['records'], "total": result['records'][0]['totalRows'] if result['records'] else 0,
+                   "page": page, "readAt": datetime.now(timezone.utc).isoformat(), "dbMs": result.get('dbMs'),
+                   "sql": result.get('physicalSql'), "separateRead": True, "firm": result.get('firm')}
+            return PV.bagla(out, lambda: K.for_live(out, 'denetim.hareket', 'Logo muhasebe hareketleri (hesap)', year,
+                                                     logo_db(), 'Hesabın dönem içindeki iptal edilmemiş hareketleri: '
+                                                     'borç ve alacak Logo\'daki tutardır; sayfa başına 50 satır.'))
         except HTTPException:
             raise
         except Exception:
@@ -440,4 +519,5 @@ def register(app, runtime, authorize):
     register_explain(app, runtime, authorize, query, load_run, archive_root)
 
     snapshots = AuditSnapshots(archive_root, build_report)
+    snapshots.year = audit_years()[-1]  # arka plan raporu açılan en son yılın kopyasından
     return snapshots

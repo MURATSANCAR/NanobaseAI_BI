@@ -4,6 +4,7 @@ import { ArrowRight, Database, Loader2 } from 'lucide-react';
 import Shell from '../stitch/Shell';
 import { ENGINE_ENABLED } from '../engine';
 import { managementApi, sinceText } from './api';
+import SqlInfo from '../components/SqlInfo';
 import './management.css';
 
 /** Rapor kimliği → ekran yolu. Yeni rapor: backend'e modül, buraya satır, App.tsx'e rota. */
@@ -49,7 +50,8 @@ export default function ManagementHome() {
               const to = REPORT_ROUTES[r.id];
               if (!to) return null;
               return (
-                <Link key={r.id} to={to} className="mg-card">
+                <div key={r.id} className="mg-card-wrap">
+                <Link to={to} className="mg-card">
                   <div className="mg-card-top">
                     <h2>{r.title}</h2>
                     <ArrowRight size={18} aria-hidden className="mg-card-arrow" />
@@ -71,6 +73,8 @@ export default function ManagementHome() {
                     <span>Güncelleme: {sinceText(r.updatedAt)} · {Math.round(r.refreshIntervalSeconds / 60)} dk’da bir</span>
                   </div>
                 </Link>
+                <span className="mg-card-info"><SqlInfo k={list.data?.kaynaklar} alan="reports[]" row={r.id} label={`${r.title}: satır ve sorgu sayıları`} /></span>
+                </div>
               );
             })}
           </div>

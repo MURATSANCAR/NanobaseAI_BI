@@ -66,6 +66,11 @@ def read_evidence(query, year):
                        'Sabit kıymet grupları ayrı hesaplama tabloları olabilir; gruplar veya aylık birikimli tutarlar toplanmaz.',
                        'Varlık türü, yöntem, kullanıma başlama, istisna ve muhasebe hesabı eşlemesi doğrulanmadan amortisman uygunluğu verilmez.'],
         'sql':[r.get('physicalSql') for r in [doc,mixed,account_doc,assets]],
+        # Sorgu bilgisi: kimlikli çalışan SQL (okunamayan veri kümesi kayda girmez).
+        'executed':{key:{'title':title,'sql':r.get('physicalSql'),'rows':len(r.get('records') or []),'dbMs':r.get('dbMs')}
+                    for key,title,r in [('belgeler','E-defter belge profili',doc),('belgeFis','Fiş başına belge ve ödeme türü',mixed),
+                                        ('hesapBelge','Ana hesaba göre belge profili',account_doc),('sabitKiymet','Sabit kıymet hesap cetveli',assets)]
+                    if r.get('physicalSql')},
         'dbMs':sum(r.get('dbMs',0) for r in [doc,mixed,account_doc,assets])}
 
 

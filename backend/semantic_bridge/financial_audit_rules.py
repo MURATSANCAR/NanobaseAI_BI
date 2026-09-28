@@ -362,7 +362,7 @@ def evaluate(out, extra):
                 profiles=out.get('supportingEvidence',{}).get('assetProfiles',[])
                 components.append({'id':'asset-source','title':'Sabit kıymet hesap cetveli kapsamı','status':'observed' if profiles else 'unverified',
                     'lineCount':sum(p['rows'] for p in profiles),
-                    'formula':'2026 FAYEAR kayıtlarının tamamı; varlık–muhasebe hesabı bağlantısı doğrulanmadığından bu notun varlıkları olarak sunulmaz. Hesaplama grupları birbirine eklenmez.'})
+                    'formula':f"{out['year']} FAYEAR kayıtlarının tamamı; varlık–muhasebe hesabı bağlantısı doğrulanmadığından bu notun varlıkları olarak sunulmaz. Hesaplama grupları birbirine eklenmez."})
             if n == 51:
                 reason = '30.000 TL eşiği tek kasa satırına uygulanıp ceza üretilmez; taraf, işlem bütünlüğü, taksitler, aracı kurum ve istisnalar birlikte gerekir.'
             if prefixes and not chosen and status != 'not_due':

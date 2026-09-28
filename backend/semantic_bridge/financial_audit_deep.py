@@ -167,6 +167,15 @@ DEFINITIONS = {
 }
 
 
+#: Sorgu bilgisinde veri kümesinin adı (karşılaştırma türleri ve kapsam tabloları).
+DATASET_TITLES = {'invoice':'Faturalar ↔ muhasebe fişi','invoice-match':'Fatura tutarı ↔ muhasebe hesabı',
+    'bank':'Banka hareketleri ↔ muhasebe','cash':'Gün sonu kasa bakiyeleri','vat-match':'Fatura KDV ↔ muhasebe KDV',
+    'invoice-lines':'Fatura başlığı ↔ satır KDV','bank-match':'Banka alt modülü ↔ muhasebe tutarı',
+    'invoiceTypes':'Fatura türleri ve aktarım durumu','taxPeriods':'Beyanname dönemleri','loanSchedule':'Kredi planı',
+    'chequeStates':'Çek/senet son durum','stockSlips':'Stok fişleri','ebookPeriods':'E-defter dönemleri',
+    'exportDocuments':'Dış ticaret belgeleri','attachments':'Belge deposu'}
+
+
 def source_sql(kind,year,as_of):
     return {'invoice':invoice_base,'invoice-match':invoice_match_base,'bank':bank_base,'cash':daily_cash_base,
             'vat-match':vat_match_base,'invoice-lines':invoice_line_base,'bank-match':bank_match_base}[kind](year,as_of)
@@ -174,12 +183,13 @@ def source_sql(kind,year,as_of):
 
 def read_deep(query, year, as_of):
     start,end=bounds(year,as_of)
-    results={}; errors={}; sqls=[]; executed={}; elapsed=0
+    results={}; errors={}; sqls=[]; executed={}; stats={}; elapsed=0
     def read(key, sql):
         nonlocal elapsed
         try:
             result=query(sql,year)
             results[key]=result['records'];sqls.append(result.get('physicalSql'));executed[key]=result.get('physicalSql');elapsed+=result.get('dbMs',0)
+            stats[key]={'rows':len(result['records']),'dbMs':result.get('dbMs')}
         except Exception:
             logging.getLogger(__name__).exception('Deep audit source unavailable: %s',key)
             errors[key]='Kaynak sorgusu tamamlanamadı; boş veri veya olumlu sonuç sayılmaz.'
@@ -301,8 +311,10 @@ def read_deep(query, year, as_of):
     ]
     return {'revision':REVISION,'asOf':str(as_of)[:10],'checks':checks,'datasets':results,'sources':cards,
         'errors':errors,'status':'unverified' if errors else 'observed','sql':sqls,'dbMs':elapsed,
-        'limitations':['Tarama tek şirketin doğrulanmış 2026 kopyasındadır; diğer yılların yedekleri birleştirilmez.',
-            'Hareket kontrolleri muhasebenin son veri tarihine kadar çalışır; kredi planı 2026 vadelerini ayrıca gösterir.',
+        # Sorgu bilgisi: veri kümesi / karşılaştırma türü başına çalışan SQL, satır ve süre.
+        'executed':{key:{'title':DATASET_TITLES.get(key,key),'sql':sql,**stats.get(key,{})} for key,sql in executed.items() if sql},
+        'limitations':[f'Tarama tek şirketin doğrulanmış {year} kopyasındadır; diğer yılların yedekleri birleştirilmez.',
+            f'Hareket kontrolleri muhasebenin son veri tarihine kadar çalışır; kredi planı {year} vadelerini ayrıca gösterir.',
             'Beyanname başlıkları ve belge ekleri bulunması, içeriklerinin bu döneme ait onaylı dış kanıt olduğunu göstermez.',
             'Aynı günün çek/senet hareketleri kaynak kayıt numarasına göre sıralanır; hukuki durum veya kesin işlem sırası kabulü değildir.']}
 

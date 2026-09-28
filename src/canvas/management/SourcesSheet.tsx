@@ -3,6 +3,7 @@ import { Dialog } from '@base-ui/react/dialog';
 import { useQuery } from '@tanstack/react-query';
 import { Database, Sigma, X } from 'lucide-react';
 import { managementApi, type ReportColumn, type ReportSource } from './api';
+import SqlGate from './SqlGate';
 
 const SqlCode = lazy(() => import('./SqlCode'));
 
@@ -189,11 +190,13 @@ function SourceCard({
           ))}
         </div>
       )}
-      {open && (
-        <Suspense fallback={<pre className="mg-sql-code"><code>{source.sql}</code></pre>}>
+      {open && (source.sql ? (
+        <Suspense fallback={<SqlGate><pre className="mg-sql-code"><code>{source.sql}</code></pre></SqlGate>}>
           <SqlCode sql={source.sql} label={source.title} />
         </Suspense>
-      )}
+      ) : (
+        <p className="mg-src-empty">Sorgu, raporun ilk okumasından sonra çalışan hâliyle (yıllar ve stok kodları yerinde) görünür.</p>
+      ))}
     </article>
   );
 }
