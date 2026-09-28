@@ -659,6 +659,28 @@ SPEC: list[dict[str, Any]] = [
     {"key": "ROYALTY_ALERT_RECIPIENTS", "group": "royalty", "label": "Telif bildirim alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (telif birimi, muhasebe). Koşu hatırlatması, yenileme özeti ve «ödeme listesi "
              "hazır» gider; yazara gönderim yok"},
+    # H2 Okur veri tabanı
+    {"key": "READERS_EXPORT_ENABLED", "group": "readers", "label": "Liste dışa aktarımı açık", "type": "bool", "default": "0",
+     "help": "Rıza metni ve çocuk kayıtları için hukuk teyidi gelince açılır. Kapalıyken segmentler sayılır, liste alınamaz"},
+    {"key": "READERS_REQUIRE_KVKK", "group": "readers", "label": "Listede KVKK açık rızası şart", "type": "bool", "default": "1",
+     "help": "Açıkken İYS izni olsa da KVKK açık rızası CRM'de işaretli olmayan okur listeye girmez"},
+    {"key": "READERS_MINOR_EXPORT", "group": "readers", "label": "18 yaş altı listeye girebilir", "type": "bool", "default": "0",
+     "help": "Ebeveyn rızası CRM'de ayrı tutulmuyor; hukuk teyidi olmadan açılmaz"},
+    {"key": "READERS_MINOR_AGE", "group": "readers", "label": "Çocuk yaş sınırı", "type": "int", "default": "18", "help": ""},
+    {"key": "READERS_IMPORT_RETENTION_DAYS", "group": "readers", "label": "Yükleme satırlarının saklama süresi (gün)",
+     "type": "int", "default": "30", "help": "Etkinlik dosyasındaki kişi satırları bu süre sonunda silinir; sayılar kalır"},
+    {"key": "READERS_ALERT_RECIPIENTS", "group": "readers", "label": "Okur uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle. Kaynak okunamadı / eskidi ya da birleştirme kuyruğu eşiği aştığında gece özeti"},
+    {"key": "READERS_KVKK_RECIPIENTS", "group": "readers", "label": "KVKK irtibat alıcıları", "type": "text", "default": "",
+     "help": "Virgülle. Son 24 saatte dışa aktarılan okur listelerinin günlük özeti"},
+    {"key": "READERS_CRM_FLAG_RULES", "group": "readers", "label": "CRM izin bayraklarının anlamı (JSON)", "type": "text",
+     "default": "", "help": "Boşsa varsayılan: DoNot* = 1 ret, new_kvkkonayi = 1 KVKK onayı, adayda obs_donotkvkk = 1 KVKK ret. "
+                           "Biçim: [{\"source\": \"crm_contact\", \"field\": …, \"value\": 1, \"channel\": email|sms|call|kvkk, "
+                           "\"status\": ret|izinli}]"},
+    {"key": "READERS_IYS_FIELD_CHANNELS", "group": "readers", "label": "İYS alanı → kanal (JSON)", "type": "text", "default": "",
+     "help": "Boşsa alan adından (E-POSTA / MESAJ / ARAMA). Biçim: {\"alan kimliği\": \"email|sms|call\"}"},
+    {"key": "READERS_CANDIDATE_GROUP_MAX", "group": "readers", "label": "Aynı ad + il grubunda en çok okur", "type": "int",
+     "default": "5", "help": "Daha kalabalık gruplar (yaygın ad) birleştirme adayı üretmez; sayısı özet ekranında yazılır"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -728,6 +750,9 @@ GROUPS = [
     {"id": "royalty", "label": "Telif dönemi",
      "help": "Dönem koşusunun kapsamı, stopaj varsayılanı ve hatırlatmalar. CRM'e, Logo'ya ve bankaya hiçbir şey yazılmaz; "
              "beyannameyi yazara insan gönderir."},
+    {"id": "readers", "label": "Okur veri tabanı",
+     "help": "Tekil okur, izin ve segment kuralları. CRM'e yazılmaz, portal ileti göndermez; liste dışa aktarımı izin "
+             "denetimli ve kayıt altındadır."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},

@@ -29,6 +29,7 @@ import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
 import { relative } from '../format';
 import { categoriesApi } from '../categories/api';
+import { readersApi } from '../readers/api';
 import PersonAvatar from './PersonAvatar';
 import BulletinCard from './BulletinCard';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
@@ -161,6 +162,17 @@ export default function KampusPage() {
     refetchInterval: 5 * 60_000,
   });
   const profilesWaiting = categoryPending.data?.pending ?? 0;
+  // Okur veri tabanı: onayınızı bekleyen segment ve okunamayan/eskiyen kaynak (sayfa rolde varsa).
+  const readersMine = useQuery({
+    queryKey: ['readers', 'mine'],
+    queryFn: readersApi.mine,
+    enabled: ENGINE_ENABLED && canOpenRoute(pages, '/okurlar') && pages !== null,
+    retry: false,
+    refetchInterval: 5 * 60_000,
+  });
+  const segmentsWaiting = readersMine.data?.segmentsAwaiting ?? 0;
+  const readerSourceProblems = readersMine.data?.sourceProblems ?? [];
+  const readerNotes = (segmentsWaiting ? 1 : 0) + (readerSourceProblems.length ? 1 : 0);
   const [notifOpen, setNotifOpen] = useState(false);
   useEffect(() => {
     if (!notifOpen) return;
@@ -272,14 +284,14 @@ export default function KampusPage() {
             <button
               type="button"
               title="Bildirimler"
-              aria-label={unseen || profilesWaiting ? `Bildirimler (${unseen + (profilesWaiting ? 1 : 0)} yeni)` : 'Bildirimler'}
+              aria-label={unseen || profilesWaiting || readerNotes ? `Bildirimler (${unseen + (profilesWaiting ? 1 : 0) + readerNotes} yeni)` : 'Bildirimler'}
               aria-haspopup="dialog"
               aria-expanded={notifOpen}
               onClick={() => setNotifOpen((v) => !v)}
               className="kp-press relative flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-white hover:text-ink sm:h-9 sm:w-9"
             >
               <Bell className="h-4 w-4" />
-              {(unseen > 0 || profilesWaiting > 0) && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />}
+              {(unseen > 0 || profilesWaiting > 0 || readerNotes > 0) && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />}
             </button>
             {notifOpen && (
               <>
@@ -292,6 +304,26 @@ export default function KampusPage() {
                       className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
                     >
                       <span>Kategori ağacı: {profilesWaiting} kitap profili onayınızı bekliyor</span>
+                      <span className="text-violet">Aç</span>
+                    </Link>
+                  )}
+                  {segmentsWaiting > 0 && (
+                    <Link
+                      to="/okurlar/segmentler"
+                      onClick={() => setNotifOpen(false)}
+                      className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
+                    >
+                      <span>Okurlar: {segmentsWaiting} segment onayınızı bekliyor</span>
+                      <span className="text-violet">Aç</span>
+                    </Link>
+                  )}
+                  {readerSourceProblems.length > 0 && (
+                    <Link
+                      to="/okurlar"
+                      onClick={() => setNotifOpen(false)}
+                      className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-coral/30 bg-white/90 p-2 text-xs font-bold text-ink"
+                    >
+                      <span>Okurlar: {readerSourceProblems.join(', ')} okunamadı ya da eski</span>
                       <span className="text-violet">Aç</span>
                     </Link>
                   )}

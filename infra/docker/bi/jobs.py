@@ -76,6 +76,8 @@ JOBS = [
     ("telif dönemi", "/api/v1/royalty/run-due", int(os.environ.get("ROYALTY_EVERY_SEC", "86400")), 600),
     # M47 risk ve uyum (sunucuda timas-risk.timer 06:15): yalnız sıklığı gelen göstergeyi ölçer, hatırlatma bir kez gider.
     ("risk ve uyum", "/api/v1/risk/run-due", int(os.environ.get("RISK_EVERY_SEC", "3600")), 3590),
+    # H2 okur veri tabanı: CRM kişi/aday/İYS okuması ve gece işleri (sunucuda timas-readers.timer, gece 03:20).
+    ("okur veri tabanı", "/api/v1/readers/run-due", int(os.environ.get("READERS_EVERY_SEC", "86400")), 3590),
 ]
 
 

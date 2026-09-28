@@ -537,6 +537,11 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/support/run-due", SYSTEM),
     ("/api/v1/support/panel/", SYSTEM),
     ("/api/v1/support/", frozenset({page("musteri-destek")})),
+    # H2 Okuyucu veri tabanı. Sözleşme uçlarını (onaylı segment listesi ve sayıları) pazarlama sayfaları da okur
+    # (M24/M37/M35 gelince kendi sayfa anahtarını buraya ekler).
+    ("/api/v1/readers/run-due", SYSTEM),
+    ("/api/v1/readers/contract/", frozenset({page("okurlar"), page("pazarlama-yeni-kitap")})),
+    ("/api/v1/readers/", frozenset({page("okurlar")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -716,6 +721,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/rights/(grants(/[^/]+)?|notes/classify|notes/[^/]+/approve)$",
      "ozellik:haklar.duzenle"),
     (frozenset({"POST", "PATCH"}), r"^/api/v1/rights/licenses-out(/[^/]+)?$", "ozellik:haklar.lisans"),
+    # Okur veri tabanı: birleştirme kararı ve kaynak yenileme; segment taslağı/düzenleme/onaya gönderme/arşiv ve Zeki
+    # önerisi; etkinlik dosyası. Kişisel veri, segment onayı ve liste dışa aktarımı açıkça verilen yetkilerle ucun içinde.
+    (frozenset({"POST"}), r"^/api/v1/readers/(refresh|merge-candidates/[^/]+/decision)$", "ozellik:okur.birlestir"),
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/readers/segments(/(draft-from-text|[^/]+(/(submit|archive))?))?$",
+     "ozellik:okur.segment"),
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/readers/imports(/[^/]+(/confirm)?)?$", "ozellik:okur.ice-aktar"),
+    (frozenset({"POST"}), r"^/api/v1/readers/segments/[^/]+/export$", "ozellik:veri.disa-aktar"),
+    (frozenset({"GET"}), r"^/api/v1/readers/imports/[^/]+/crm\.csv$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

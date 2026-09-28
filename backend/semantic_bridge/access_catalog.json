@@ -239,6 +239,12 @@
       "label": "Görsel ve metin"
     },
     {
+      "key": "sayfa:okurlar",
+      "area": "pazarlama",
+      "label": "Okurlar",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1552,6 +1558,51 @@
       "label": "Geri bildirim ve hata sınıfı kararı",
       "hint": "Kullanıcı bildirimlerini sınıflama, kapatma ve hata sınıfı kurallarını düzenleme",
       "explicit": true
+    },
+    {
+      "key": "ozellik:okur.kisisel-veri",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: kişisel veriyi görme",
+      "hint": "Okur kartında ad, e-posta ve telefonu açık görme, ada göre arama, KVKK başvurusu araması, başkasının yüklemesindeki yeni kişiler. Her görüntüleme kayda geçer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okur.birlestir",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: birleştirme kararı",
+      "hint": "Belirsiz eşleşme kuyruğunda «aynı kişi / farklı kişi» kararı ve kaynakları yeniden okuma"
+    },
+    {
+      "key": "ozellik:okur.segment",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: segment taslağı",
+      "hint": "Kural tabanlı segment kurma, düzenleme, Zeki AI önerisi, onaya gönderme, arşivleme"
+    },
+    {
+      "key": "ozellik:okur.segment-onay",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: segment onayı",
+      "hint": "Onaya gönderilen segmenti onaylama ya da gerekçeyle geri gönderme (yazan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okur.liste-aktar",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: liste dışa aktarımı",
+      "hint": "Onaylı segmentten izin denetimli iletişim listesi alma (amaç zorunlu, kayda geçer; ayrıca veri dışa aktarma yetkisi ister)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okur.ice-aktar",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: etkinlik dosyası yükleme",
+      "hint": "Fuar/etkinlik katılımcı dosyasını yükleme, kolon eşleme, eşleştirme ve yüklemeyi silme"
     }
   ]
 }

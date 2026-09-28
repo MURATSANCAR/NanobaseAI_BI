@@ -7010,6 +7010,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M49 Veri güvenliği (Altyapı ve destek): /api/v1/data-security/*. Giriş olayları giriş servisinden çekilir.
     from semantic_bridge import data_security_api
     app.state.data_security = data_security_api.register(app, rt, _require_caller, _can, access_dir)
+    # H2 Okuyucu veri tabanı (Pazarlama › Okur ve müşteri): /api/v1/readers/*.
+    from semantic_bridge import readers_api
+    app.state.readers = readers_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing

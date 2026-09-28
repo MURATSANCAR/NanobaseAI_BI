@@ -58,6 +58,7 @@ export const LIVE: Record<string, string> = {
   M48: '/sistem-durumu',
   M49: '/veri-guvenligi',
   M51: '/musteri-destek',
+  readers: '/okurlar',
 };
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */

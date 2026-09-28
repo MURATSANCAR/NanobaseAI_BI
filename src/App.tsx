@@ -69,6 +69,8 @@ const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
 const TenderDetail = lazy(() => import('@/canvas/tenders/TenderDetail'));
 const CategoriesScreen = lazy(() => import('@/canvas/categories/CategoriesScreen'));
+const ReadersScreen = lazy(() => import('@/canvas/readers/ReadersScreen'));
+const ReaderCard = lazy(() => import('@/canvas/readers/ReaderCard'));
 const CategoryBookProfile = lazy(() => import('@/canvas/categories/BookProfile'));
 const DataSecurityScreen = lazy(() => import('@/canvas/data-security/DataSecurityScreen'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
@@ -219,6 +221,10 @@ export default function App() {
             <Route path="pazarlama/aylik-plan/:ay" element={<MarketingMonth />} />
             <Route path="pazarlama/foy" element={<MarketingFoyList />} />
             <Route path="pazarlama/foy/:stok" element={<MarketingFoy />} />
+            {/* Pazarlama › Okur ve müşteri: H2 okuyucu veri tabanı (/api/v1/readers). */}
+            <Route path="okurlar" element={<ReadersScreen />} />
+            <Route path="okurlar/kisi/:id" element={<ReaderCard />} />
+            <Route path="okurlar/:section/*" element={<ReadersScreen />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

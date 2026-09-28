@@ -358,6 +358,8 @@ export const NAV: NavGroup[] = [
         keywords: ['set', 'hediye', 'promosyon', 'kurumsal hediye', 'ajanda', 'defter', 'toplama set', 'birlikte alınan'],
       },
       { id: 'pazarlama-icerik', label: 'Görsel ve metin', to: '/pazarlama/icerik', icon: Palette, section: 'Üretim', hint: 'Sosyal medya, reklam ve site görselleri; Zeki AI metin varyantları, onay ve arşiv', keywords: ['görsel', 'banner', 'sosyal medya', 'reklam metni', 'hashtag', 'video senaryosu', 'influencer'] },
+      // H2 Okuyucu veri tabanı: kart (/okurlar/kisi/:id), segmentler, yüklemeler aynı öğenin altında.
+      { id: 'okurlar', label: 'Okurlar', to: '/okurlar', icon: Contact, section: 'Okur ve müşteri', hint: 'Tekil okur, izinler ve segmentler', keywords: ['okur', 'müşteri', 'segment', 'izin', 'iys', 'kvkk', 'bülten listesi', 'etkinlik katılımcı', 'fuar listesi', 'kopya kayıt'] },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },
