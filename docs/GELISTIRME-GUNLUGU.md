@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 (08:30) — Hazır cevap katmanı test sunucusunda; köprü yeniden başlamalarına karşı diske yazılıyor
+
+- **Kurulum (main `204ef246`, 07:32):** dar kapsam — `admin.py`, `app.py`, `engine.ts` sunucu hâlinin üstüne yama (sunucuda M2 ve başka oturumların ara hâlleri duruyor), 9 dosya `main`den; aday ağaçta tsc 0, vitest 71/71, köprü testleri 38/38, derleme; arada canlı değişmedi; `._*` 0; derleme `index-LTWIrNUo.js`. Sabah özeti servisi elle koşturuldu: 08:15'ten önce olduğu için göndermeden döndü (beklenen).
+- **Kendi hatam, düzeltildi:** yan port köprü kopyaları root ile koşmuştu; M7 hazırlık klasörü (`var/editorial-home/c4244…`) root'a geçti, canlı köprü `PermissionError` ile yazamadı. `chown administrator` ile 07:34'te düzeldi; Masam ve diğerleri etkilenmedi. Kural hafızada: yan port `--uid=administrator`.
+- **Önce/sonra ölçümü (72 ekran, iki tur):** kendi çağrısı 2 sn üstü ekran 28 → 19; anında açılanlar: SEO iş listesi 17 → 0,1 sn, SEO özeti 12 → 0,1, üretim 25 → 0,1, kişi rehberli ekranlar 8–10 → 0,1–0,3, editör atama 9 → 1,1, finansal denetim 6 → 0,4, yeni kitap 53 → 3,5 (ilk turda 0,1). Ölçüm kararlı durumu gösteremedi: ölçüm sürerken köprü başka oturumların kurulumlarıyla **35 dakikada 6 kez** yeniden başladı (07:34–08:04) — bellekteki hazır cevaplar her seferinde silindi, başlatma anlarında 243 adet 502; ayrıca «Benzer kitaplar» ekranı 8.738 istekle nginx sınırını doldurdu (8.678 adet 429) ve sonraki ekranları bozdu (ayrı iş olarak önerildi; «Geri bağlantılar» ve «Panolar» fırtınası ile «Saha»/«Üretim» düşen çağrıları için açılan işler sürüyor).
+- **Düzeltme:** hazır cevaplar artık diske de yazılır (`RESPONSE_CACHE_DIR`, varsayılan `/data/nanobaseai/bi/var/response-cache`, klasör 0700, dosya 0600; VM'de aynı yol `bi_var` hacminde). Diske yalnız gövde + başlık gider, çerez gitmez; yeniden başlatmadan sonra bayat kayıt kişinin ilk açılışında hazır döner ve arkada o isteğin çereziyle tazelenir. Test: yeniden başlatmada kayıt geri gelir, çerez dosyada yok, yazma dosyaları siler.
+- Sabah özetinin «erken» mesajı ekten bağımsız («özet saati (08:15) gelmedi»).
+
 ## 2026-09-28 — M4 kaynak okuma gerçek PDF/DOCX ile sınandı; PDF'te 5 kusur düzeltildi
 
 - **Neden:** kullanıcı «çeviri için PDF, DOCX yükleyebilecek miyim» diye sordu; gerçek sunucuda yalnız TXT denenmişti. Test sunucusundaki gerçek belgelerle (Timaş kitabı yok; kitap PDF'leri yalnız GPU'daki editör deposunda) okuyucu bellekte koşturuldu, DB'ye yazılmadı.
