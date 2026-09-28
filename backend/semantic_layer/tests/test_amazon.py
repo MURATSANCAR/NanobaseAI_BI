@@ -100,9 +100,9 @@ def fake_logo(sql):
     if "COUNT(*) AS toplam" in sql:
         return [{"toplam": 5, "satis": 3, "satis_tl": 1200}] if "'2026-01-01'" in sql else [{"toplam": 1, "satis": 1, "satis_tl": 10}]
     if "doviz_net" in sql:
-        return LOGO[2026] if ">= '2026-01-01'" in sql   # 2025 sorgusunun üst sınırı da 2026-01-01 else LOGO[2025]
+        return LOGO[2026] if ">= '2026-01-01'" in sql else LOGO[2025]   # 2025 sorgusunun üst sınırı da 2026-01-01
     if "C.COUNTRY AS ulke, I.CODE" in sql:
-        return LOGO["kitap2026"] if ">= '2026-01-01'" in sql   # 2025 sorgusunun üst sınırı da 2026-01-01 else []
+        return LOGO["kitap2026"] if ">= '2026-01-01'" in sql else []
     raise AssertionError("beklenmeyen Logo sorgusu: " + sql[:80])
 
 
