@@ -1,5 +1,13 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M4 kaynak okuma gerçek PDF/DOCX ile sınandı; PDF'te 5 kusur düzeltildi
+
+- **Neden:** kullanıcı «çeviri için PDF, DOCX yükleyebilecek miyim» diye sordu; gerçek sunucuda yalnız TXT denenmişti. Test sunucusundaki gerçek belgelerle (Timaş kitabı yok; kitap PDF'leri yalnız GPU'daki editör deposunda) okuyucu bellekte koşturuldu, DB'ye yazılmadı.
+- **DOCX** (İngilizce iş analizi, 39 KB): Word başlık stilleri 33 bölüm, 230 segment, sorun yok.
+- **Metin PDF'i** (Türkçe teknik şartname, 115 sayfa): (1) her sayfadaki uzun üst bilgi («… Şartnamesi / 2025 23/115») ve belge kimliği şeridi 60 karakterden uzun olduğu için tekrar süzgecine girmiyor, 377 kelimelik anlamsız segment oluşuyordu → sayfaların %30'undan fazlasında geçen satır uzunluğundan bağımsız atılır; (2) sayfa sonunda yarım kalan paragraf sonraki sayfanın numaralı başlığını yutuyordu (1–4, 9, 10, 12, 13. başlıklar kaçıyordu) → başlık satırı yarım paragrafı kapatır; (3) içindekiler satırları nokta dizisiyle (çoğu kez sayfa numarası düşmüş) birbirine bağlanıyordu → içindekiler satırı tek başına kalır, nokta dizisi ve numara atılır, ardından gelen «METİN 66» satırı da içindekiler sayılır; (4) cümle bölücü «1. KISALTMALAR»daki «1.»i cümle sonu sanıyordu (58 tek kelimelik segment) → cümle başındaki liste numarası bölünmez; tek başına satıra düşmüş numara sonraki satırla birleşir; (5) sonu cümle noktalamasıyla biten numaralı madde başlık sayılmaz.
+- **Taranmış PDF** (235 sayfa, metin katmanı yok): artık «Bu PDF'te seçilebilir metin yok (taranmış sayfa görüntüsü)…» — karakter tanıma yok.
+- **Sonuç (aynı PDF):** tek kelimelik segment 58 → 2, üst bilgi/kimlik şeridi 0, içindekiler tek satırlı. Kurallar genel (belgeye özel kural yok); testlere gerçek kalıplar eklendi. Sunucu sahnesinde çeviri testleri 46/46. Gerçek bir Timaş kitabı PDF'iyle henüz denenmedi.
+
 ## 2026-09-28 (08:10) — Sesli okuma: tam kitap dinlemesindeki robotik yerler ve efekt hataları düzeltildi
 
 - **Neden:** «Dünyanın En Korkak Hayvanı» (iş `2026092803385843f032`, 17 sayfa, 1.392 kelime) iki sesle baştan sona
