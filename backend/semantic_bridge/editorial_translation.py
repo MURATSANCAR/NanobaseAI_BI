@@ -801,6 +801,9 @@ def upload_source(engine: sa.engine.Engine, tenant: str, user: str, see_all: boo
             raise TranslationError("ZEKİ taslağı sürerken kaynak değiştirilemez.", 409)
         if job.source_sha256 == sha:
             raise TranslationError("Bu dosya son yüklenen kaynakla aynı; yeni sürüm açılmadı.", 409)
+        # Metni değişmeyen paragrafta çevirmenin elle birleştirdiği/böldüğü segmentler korunur (çeviri taşınsın).
+        from semantic_bridge import editorial_translation_segments as seg_edit
+        segs = seg_edit.reuse_segmentation(conn, job_id, segs)
         # Önceki sürümdeki çeviriler aynı kaynak cümlesine taşınır (ilk eşleşen); onay çevrildi'ye iner.
         # Aynı cümle birden çok kez geçiyorsa sırayla eşleşir (ilk geçiş ilk geçişe).
         carry: dict[str, list[Any]] = defaultdict(list)

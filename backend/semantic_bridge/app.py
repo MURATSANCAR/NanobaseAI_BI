@@ -5103,6 +5103,30 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, user, see_all = _tr(request)
         return _tr_call(tr_mod.review_segment, engine, tenant, user, see_all, seg_id, body)
 
+    # Segment birleştir / böl (editorial_translation_segments.py); çevirmen ya da işi yöneten.
+    from semantic_bridge import editorial_translation_segments as tr_seg
+
+    @app.get("/api/v1/editorial/translation/segments/{seg_id}/next")
+    def tr_segment_next(seg_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        return _tr_call(tr_seg.next_segment, engine, tenant, user, see_all, seg_id)
+
+    @app.post("/api/v1/editorial/translation/segments/{seg_id}/merge")
+    def tr_segment_merge(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_seg.merge_next, engine, tenant, user, see_all, seg_id, body)
+        admin_mod.audit(engine, user, "update", "translation_segment_merge", seg_id, None,
+                        {k: out[k] for k in ("jobId", "removed", "status", "errorsMoved", "demoted")})
+        return out
+
+    @app.post("/api/v1/editorial/translation/segments/{seg_id}/split")
+    def tr_segment_split(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, see_all = _tr(request)
+        out = _tr_call(tr_seg.split_segment, engine, tenant, user, see_all, seg_id, body)
+        admin_mod.audit(engine, user, "update", "translation_segment_split", seg_id, None,
+                        {**{k: out[k] for k in ("jobId", "newId", "status", "demoted")}, "at": body.get("at")})
+        return out
+
     @app.post("/api/v1/editorial/translation/segments/{seg_id}/errors")
     def tr_error_add(seg_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, see_all = _tr(request)

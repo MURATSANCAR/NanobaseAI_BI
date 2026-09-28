@@ -2211,6 +2211,13 @@ export const translationApi = {
     send<{ status: SegmentStatus; updatedAt: string; repeatsFilled: number }>('PUT', `${TR}/segments/${enc(id)}`, b, 30_000),
   review: (id: string, b: { action: 'onayla' | 'geri'; target?: string; toTranslator?: boolean; note?: string }) =>
     send<{ updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/review`, b, 30_000),
+  /** İşteki bir sonraki segment (süzgeçten bağımsız) ve birleştirilebilir mi; birleştir/böl: çevirmen ya da işi yöneten. */
+  segmentNext: (id: string) =>
+    send<{ next: { id: string; no: number; para: number; source: string; target: string; status: SegmentStatus; updatedAt: string | null } | null; mergeable: boolean; reason: string | null }>('GET', `${TR}/segments/${enc(id)}/next`, undefined, 30_000),
+  mergeNext: (id: string, b: { nextId: string; updatedAt?: string | null; nextUpdatedAt?: string | null }) =>
+    send<{ id: string; removed: string; source: string; target: string; status: SegmentStatus; words: number; demoted: boolean; updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/merge`, b, 30_000),
+  split: (id: string, b: { at: number; source: string; updatedAt?: string | null }) =>
+    send<{ id: string; newId: string; source: string; newSource: string; status: SegmentStatus; words: number; demoted: boolean; updatedAt: string }>('POST', `${TR}/segments/${enc(id)}/split`, b, 30_000),
   addError: (id: string, b: { category: string; severity: string; note?: string }) => send<{ id: string }>('POST', `${TR}/segments/${enc(id)}/errors`, b, 30_000),
   deleteError: (id: string) => send<{ ok: boolean }>('DELETE', `${TR}/errors/${enc(id)}`, undefined, 30_000),
   approveMany: (id: string, chapter: number | null) => send<{ approved: number }>('POST', `${TR}/jobs/${enc(id)}/approve`, { chapter }, 60_000),

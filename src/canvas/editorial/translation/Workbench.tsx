@@ -32,6 +32,7 @@ import { dateTime } from '../../format';
 import { useCan } from '../../useAdmin';
 import { useTimasSession } from '../../TimasSession';
 import { ModuleFrame, Panel, useDebounced } from '../kit';
+import SegmentTools from './SegmentTools';
 import { CATEGORY, FileButton, ProgressBar, SEG, SEVERITY, StagePill, dirOf, fmtDay, langName, pair, paceText, pct, useWide } from './parts';
 
 /** Çeviri masam: çevirmenin ve inceleyenin kendi ekranı. Sol: bölümün segmentleri (kaynak | hedef); etkin
@@ -502,6 +503,20 @@ function Editor({
     onNext();
   }, [translating, persist, decide, onNext]);
 
+  // Birleştir/böl: önce yazılmış taslak kaydedilir, işlem aynı kayıt sırasında son sürüm damgasıyla gider.
+  const segRun = useCallback(
+    async <R,>(fn: (updatedAt: string | null) => Promise<R>): Promise<R> => {
+      if (canWrite && latest.current !== base.current.target) await persist('taslak', latest.current);
+      return enqueue(() => fn(base.current.updatedAt));
+    },
+    [canWrite, persist, enqueue],
+  );
+  const afterSegEdit = useCallback(() => {
+    void qc.invalidateQueries({ queryKey: ['translation', 'segments', job.id] });
+    afterWrite();
+    requestAnimationFrame(() => area.current?.focus());
+  }, [qc, job.id, afterWrite]);
+
   const insert = (t: string) => {
     const el = area.current;
     if (!el) {
@@ -636,6 +651,25 @@ function Editor({
           </button>
         </span>
       </div>
+      {translating && d?.roles.translate && (
+        <SegmentTools
+          row={row}
+          srcDir={srcDir}
+          busy={busy}
+          run={segRun}
+          onMerged={(r) => {
+            base.current = { target: r.target, updatedAt: r.updatedAt };
+            setText(r.target);
+            onPatch({ source: r.source, target: r.target, status: r.status, words: r.words, updatedAt: r.updatedAt });
+            afterSegEdit();
+          }}
+          onSplit={(r) => {
+            base.current = { ...base.current, updatedAt: r.updatedAt };
+            onPatch({ source: r.source, status: r.status, words: r.words, updatedAt: r.updatedAt });
+            afterSegEdit();
+          }}
+        />
+      )}
       <p className="text-[11px] leading-snug text-canvas-muted">
         {translating
           ? `${MOD}+Enter onayla ve sonrakine geç · Alt+↓/↑ gezin · yazdıkça taslak kaydedilir${busy ? ' · kaydediliyor…' : dirty ? '' : row.updatedAt ? ' · kaydedildi' : ''}`
