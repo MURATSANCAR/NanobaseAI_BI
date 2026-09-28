@@ -954,6 +954,8 @@ from .api_narration import router as _narration  # noqa: E402  (sesli okuma; doc
 app.include_router(_narration)
 from .api_expression import router as _expression  # noqa: E402  (sesli okumada ifade katmanı: expression.py)
 app.include_router(_expression)
+from .api_sfx import router as _sfx_router  # noqa: E402  (efekt sesleri; docs/analiz/efekt-sesleri-kaynaklar.md)
+app.include_router(_sfx_router)
 # ------------------------------------------------------------------ okur araçları ve sürüm farkı (api_reader.py)
 from .api_reader import router as _reader_router  # noqa: E402
 

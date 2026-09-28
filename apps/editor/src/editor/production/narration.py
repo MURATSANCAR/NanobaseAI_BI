@@ -1040,7 +1040,21 @@ async def narrate_page(d: Path, pid: str, by: str) -> dict:
     tmp.write_bytes(base64.b64decode(out["audio"]))
     tmp.replace(sd / f"{pid}.mp3")
     _write(sd / f"{pid}.json", rec)
+    await _efekt_kancasi(d, pid, by)
     return {"page": pid, "status": "done", "duration": out["duration"]}
+
+
+async def _efekt_kancasi(d: Path, pid: str, by: str) -> None:
+    """EFEKT SESLERİ KANCASI (production/sfx.py) — sesli okumadaki tek bağlantı noktası. Sayfa sesi yazıldıktan sonra
+    efektler açıksa sayfanın efekt önerisi (hiç yoksa) çıkarılır ve efektli karışım yenilenir. Anlatım dosyasına ve
+    kelime zamanlarına dokunulmaz (karışım ayrı dosya: ses/efekt/karisim/). Efekt tarafındaki hiçbir hata seslendirmeyi
+    düşürmez: günlüğe yazılır, sayfa anlatımla hazırdır."""
+    try:
+        from . import sfx
+        await sfx.after_narration(d, pid, by)
+    except Exception:  # noqa: BLE001
+        import logging
+        logging.getLogger(__name__).exception("efekt karışımı yapılamadı (%s %s)", d.name, pid)
 
 
 async def sample(text: str, vid: str, lex: Lexicon) -> bytes:

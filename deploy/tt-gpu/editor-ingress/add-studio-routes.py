@@ -9,7 +9,7 @@ planında sayfa düzenler, sıralar, siler, figür/fotoğraf işler. Her yolun y
 serbest yol parçası proxy'ye geçmez. Word yükleme yolunda gövde sınırı 25 MB; fotoğraf yüklemede
 STUDIO_UPLOAD_MB + 1 MB (ortamdan, varsayılan 60 → 61 MB; köprünün yönetim ayarıyla aynı tutulmalı).
 
-Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu ve sesli okumada ifade katmanı 09-27) eski bloğu yerinde genişletir:
+Sonradan eklenen uçlar (resume, kunye, art-mode, baskı PDF'leri; sayfa planı, süs/şekil, pazarlama kiti, seri karakter kartı, e-kitap, boyama kitabı, sesli okuma, okur araçları ve sürüm farkı, yaş uygunluğu raporu, kolaj kapak, 3B ve baskı provası 09-25; sesli e-kitap önizlemesi (SMIL/MP3), ses kütüphanesi, sayfa düzeninin kendiliğinden kurulumu, sesli okumada ifade katmanı ve efekt sesleri 09-27/28; Kampüs sesli bülteni 09-28) eski bloğu yerinde genişletir:
 betik her koşuda eksik olanı ekler, var olana dokunmaz; değişiklik yoksa nginx'e dokunmaz.
 
 Düzenleyen kişi köprünün `X-Editor` başlığından okunur; nginx başlığı olduğu gibi geçirir. Gizli başlık
@@ -332,6 +332,26 @@ if "EDITOR-STUDYO-BULTEN" not in s:
               + loc(f"bulletins/({BIDP})/audio", "GET", "bulletins/$1/audio", timeout=120))
     s = s.replace("    # EDITOR-BITTI", bulten + "    # EDITOR-BITTI", 1)
     changes.append("Kampüs sesli bülteni yolları")
+
+# 6) Sesli okumaya efekt sesleri (api_sfx.py): kitap başına ipucu/seçim/karışım + yayınevi düzeyinde efekt havuzu.
+#    Düzenli ifadeli location'da proxy_pass yolu yakalanan parçayla (değişkenle) verilir; sorgu dizesi $is_args$args.
+if "EDITOR-STUDYO-EFEKT" not in s:
+    E_ = f"jobs/({JOB})/sfx"
+    SID = "[0-9a-f]{16}"
+    efekt = ("    # EDITOR-STUDYO-EFEKT  (efekt sesleri: api_sfx.py)\n"
+             + loc(E_, "GET", "jobs/$1/sfx$is_args$args", timeout=60)
+             + loc(f"{E_}/settings", "PUT", "jobs/$1/sfx/settings$is_args$args")
+             + loc(f"{E_}/(suggest|mix)", "POST", "jobs/$1/sfx/$2$is_args$args")
+             + loc(f"{E_}/credits", "GET", "jobs/$1/sfx/credits$is_args$args", timeout=60)
+             + loc(f"{E_}/pages/({ID})", "GET|PUT", "jobs/$1/sfx/pages/$2$is_args$args", timeout=60)
+             + loc(f"{E_}/pages/({ID})/mix", "POST", "jobs/$1/sfx/pages/$2/mix$is_args$args", timeout=300)
+             + loc(f"{E_}/pages/({ID})/audio", "GET", "jobs/$1/sfx/pages/$2/audio$is_args$args", timeout=120)
+             + loc("sfx/(library)", "GET", "sfx/$1$is_args$args", timeout=90)
+             + loc("sfx/library/(categories|browse)", "GET", "sfx/library/$1$is_args$args", timeout=60)
+             + loc(f"sfx/library/({SID})", "GET", "sfx/library/$1$is_args$args", timeout=30)
+             + loc(f"sfx/library/({SID})/preview", "GET", "sfx/library/$1/preview$is_args$args", timeout=120))
+    s = s.replace("    # EDITOR-BITTI", efekt + "    # EDITOR-BITTI", 1)
+    changes.append("efekt sesleri yolları")
 
 if s == orig:
     print("zaten var (güncel)")
