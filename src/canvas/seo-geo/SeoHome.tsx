@@ -190,7 +190,7 @@ function Body({ o, onBatch, batchPending }: { o: Overview; onBatch?: () => void;
             <span style={{ fontSize: 12, color: 'var(--sg-muted)' }}>
               {o.batch.startedAt
                 ? `${o.batch.running ? 'Sürüyor' : 'Son tur'}: ${fmt(o.batch.done)} öneri${o.batch.queue != null ? ` / ${fmt(o.batch.queue)} sırada` : ''}${o.batch.failed ? ` · ${fmt(o.batch.failed)} üretilemedi` : ''}${o.batch.error ? ` · ${o.batch.error}` : ''}`
-                : 'Her gece eşitlemeden sonra puanı en düşük üründen başlayarak öneriler hazırlanır.'}
+                : 'Her gece eşitlemeden sonra önerisi olmayan sorunlu ürünler için, en çok satandan başlayarak öneriler hazırlanır.'}
             </span>
           </div>
         </section>

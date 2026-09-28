@@ -13,6 +13,9 @@
 - **Menü (0efb7997):** 45 kod dosyası sunucuda önceki main hâlindeydi (md5), tek tek yerleştirildi (45/45 yeni md5); belgeler gönderilmedi. Sunucu ağacında `tsc -b` 0 hata, menü+ayar vitest 44/44, derleme geçici klasöre; `cockpit/dist`'e önce parçalar sonra `index.html` kopyalandı (eski parçalar silinmedi), dışarıdan `index-BnRVM6Di.js`. Köprü yeniden başlatıldı (5 sn'de 200), 41 ayar grubu 10 kategoride, kategorisiz yok.
 - **Ekran (görünmez tarayıcı, timasai 15 dk oturum, iş sonunda silindi):** Genel bakış'ta sol ray yalnız Finans ve risk (Raporlar · Denetim ve bütçe · Risk · Telif ve kurul) + «‹ Ana menü»; Kampüs'te 14 ana modül; Yönetim → Ayarlar'da 10 kategori alt menü + arama; telefon (390) çekmecede aynı süzme, yatay taşma 0, sayfa hatası 0.
 - VM'e kurulmadı (onay bekliyor).
+## 2026-09-28 (14:20) — SEO özet ekranı: gece öneri turunun sırası doğru anlatılıyor
+
+- Ekran «puanı en düşük üründen başlar» diyordu; kod (`seo_geo/__init__.py` öneri turu) önerisi olmayan sorunlu aktif ürünleri satış, sonra görüntülenme sırasıyla ele alıyor (puan yalnız eşitlikte). Cümle koda göre düzeltildi. Bilgi kutusu metinlerini yazan ajan fark etti.
 
 ## 2026-09-28 (13:55) — NanobaseAI Destek: talep edenin AD birimi otomatik; kayıt türü bağlantısı sunucuda bekliyor
 
