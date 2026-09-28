@@ -268,6 +268,7 @@ export const NAV: NavGroup[] = [
         keywords: ['dağılım', 'sevk', 'sevk listesi', 'bölge', 'bmt', 'bölgem', 'depo girişi', 'yeni kitap', 'iade'],
       },
       { id: 'saha', label: 'Saha ve tahsilat', to: '/saha', icon: MapPinned, section: 'Saha', hint: 'Bugünün ziyaret sırası, müşteri brifingi, vadesi geçmiş alacak ve CRM tahsilat onayı', keywords: ['bmt', 'ziyaret', 'tahsilat', 'vadesi geçmiş', 'yaşlandırma', 'brifing', 'ödeme planı', 'saha satış', 'bayi', 'kitapçı'] },
+      { id: 'bayi-risk', label: 'Bayi riski', to: '/bayi-risk', icon: ShieldCheck, section: 'Saha', hint: 'Bayi ve kitapçı risk skoru (A/B/C/D), alacak yaşlandırması, limit önerisi ve ziyaret öncesi risk brifi', keywords: ['bayi', 'kitapçı', 'alacak', 'vade', 'limit', 'tahsilat', 'risk', 'segment', 'yaşlandırma', 'karşılıksız çek'] },
       {
         id: 'okul-tanitim',
         label: 'Okul tanıtım',

@@ -866,6 +866,7 @@ def summary(rows: list[dict[str, Any]], month_ago: list[dict[str, Any]], rule: d
         "kovalar": {k: round(sum(num(r.get(k)) for r in rows), 2) for k, _ in F.BUCKETS},
         "kovaCari": {k: sum(1 for r in rows if num(r.get(k)) > 0) for k, _ in F.BUCKETS},
         "plansiz": round(sum(num(r.get("plansiz")) for r in rows), 2),
+        "gelmemis": round(sum(num(r.get("gelmemis")) for r in rows), 2),
         "yogunlasma10": round(sum(pos[:10]) / tot, 4) if tot > 0 else None,
         "siparisRiskte": sum(int(num(r.get("siparis_riskte"))) for r in rows),
         "sorunlu": sum(1 for r in rows if r.get("sorunlu")),

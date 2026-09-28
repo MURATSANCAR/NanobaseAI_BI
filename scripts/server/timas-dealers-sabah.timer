@@ -1,0 +1,10 @@
+[Unit]
+Description=Bayi riski (M59) sabah özeti: her gün 08:00 (alıcı ayarı DEALERS_MORNING_RECIPIENTS boşsa e-posta gitmez)
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+Unit=timas-dealers@sabah.service
+
+[Install]
+WantedBy=timers.target

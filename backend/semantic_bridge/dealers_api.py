@@ -236,7 +236,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         return {r["logo_code"] for r in D.day_rows(engine, tenant, D.latest_day(engine, tenant), user)}
 
     def rule_now(engine, tenant) -> dict[str, Any]:
-        return D.rule_body(D.active_rule(engine, tenant, settings()))
+        return D.rule_body(call(D.active_rule, engine, tenant, settings()))
 
     # -------------------------------------------------------------- genel
 
@@ -246,7 +246,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         gun = D.latest_day(engine, tenant)
         mine = len(D.day_rows(engine, tenant, gun, user)) if gun else 0
         run = D.meta_get(engine, tenant, "run")
-        rule = D.active_rule(engine, tenant, settings())
+        rule = call(D.active_rule, engine, tenant, settings())
         rows = D.day_rows(engine, tenant, gun, None) if (gun and all_scope(user)) else []
         return {
             "me": {"username": user, "display": display, "admin": is_admin(user), "cari": mine, "canAll": all_scope(user),
@@ -384,7 +384,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/rules")
     def dealers_rules(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        D.active_rule(engine, tenant, settings())
+        call(D.active_rule, engine, tenant, settings())
         return {"items": D.list_rules(engine, tenant), "components": [{"key": k, "label": lab, "help": h} for k, lab, h in D.COMPONENTS]}
 
     @app.post(f"{P}/rules", status_code=201)

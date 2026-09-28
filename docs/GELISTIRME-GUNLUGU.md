@@ -227,6 +227,46 @@
 - **Akış:** «İş paketi aç» M8'de kitaba çeviri paketi + kişiye atanmış tek görev (birim kelime, miktar = kaynak kelimesi − aktarılan, termin = işin teslim tarihi, saat = kelime/250 × M8 çeviri saati); yeniden basılınca ikinci görev açılmaz, açık görev eşitlenir. «Hakedişe aktar» yalnız son aktarımdan sonraki esas kelimeyi gönderir: açık görev bölünür, aktarılan kelime ayrı görev olur ve M8'in kendi `add_tasks → assign → add_delivery (teslim tutanağı) → decide_delivery(kabul)` yoluyla ödenecek işe düşer; kalan asıl görevi karşılıyorsa asıl görev kabul edilir. Kelime önce koşullu güncellemeyle ayrılır, M8 adımı düşerse görev ve ayrılan kelime geri alınır. Hakediş hesabı M8'de kaldı.
 - **Ekran:** Çeviri › iş paneli «Serbest çalışan ve hakediş» (`translation/PayoutPanel.tsx`; yöneten + `serbest.yonet`): kişi, kelime ücreti, esas, esas/aktarılan/aktarılacak kelime ve tutar, M8 görev durumu, aktarımlar ve hangi hakedişe girdikleri, M8 paketine/hakedişe bağlantı.
 - **Test:** `test_translation_payout.py` yazıldı, yerelde koşturulmadı (kural). Sunucuda gerçek akışla denenmedi: **DOĞRULANAMADI**.
+## 2026-09-28 — M59 Kitapçı/bayi risk ve performans kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Ne:** `/timas/bayi-risk` (Pano · Bayiler · Limit önerileri · Aksiyonlar · Kurallar) ve bayi kartı `/bayi-risk/:code`
+  (telefonda Risk brifi · Not bırak · Aksiyon alt çubuğu). Köprü `dealers.py`, `dealers_sources.py`, `dealers_api.py`
+  (`/api/v1/dealers/*`); tablolar `semantic_dealer_rules|scores|series|limit_proposals|actions|briefs|meta`; zamanlayıcı
+  `timas-dealers@{gunluk,sabah}` (06:00 / 08:00). Ayrıntı PROJECT-MEMORY.md.
+- **M30 ile bağ (görev notu):** M30'un salt okunur yazdığı risk/yaşlandırma/çek/limit fonksiyonları yeniden yazılmadı,
+  `field_sales_sources`/`field_sales`'tan çağrıldı; ortak `dealer_risk_sources.py`'ye taşımaya gerek çıkmadı (M30 dosyası
+  değişmedi, M30 davranışı ve testleri aynı). Atama da M30'un `assign`/`match_clients`'i: bir cari iki ekranda aynı
+  temsilcide. M59'a özgü okumalar (aylık seri, CRM bayrakları, risk onay geçmişi) `dealers_sources.py`'de.
+- **Plandan sapmalar (gerekçeli):** (1) `semantic_dealer_notes` açılmadı — M30 analizi §14 kararı: not tek tablo
+  `semantic_saha_ziyaret` (`tur='cari'`). (2) `semantic_dealer_school_links` açılmadı — okul↔bayi M31'in tablosunda
+  (`semantic_school_dealer_links`, «M59 gelirse aynı tabloya yazar»); okul önerisi uçları sonraki sürüm. (3) Kapsama
+  sekmesi, dış potansiyel CSV yükleme, not tema etiketi ve M46 bayi hedefi analiz §9'daki «sonraki sürüm»de bırakıldı.
+  (4) Tablo listesine `semantic_dealer_series` eklendi: 12 aylık seri günlük skor satırına yazılsaydı her gün bütün
+  cariler için kopyalanırdı; son seri tek satır. (5) Liste sayfalı ama toplam her zaman döner, `size=0` hepsini verir
+  (sessiz tavan yok).
+- **Açık sorulara kararlar (§10; veriye/koda bakılarak, kullanıcıya sorulmadı):**
+  - *Kapsam kanalları:* KITAPCI, BAYI, DAGITICI, ZINCIR, E-TICARET (Logo `SPECODE2`; ayar `DEALERS_CHANNELS`, kural
+    sürümünde değişir). KURUM/MAGAZA/FUAR dışarıda: kurum M32'nin, mağaza/fuar perakende. Zincir, e-ticaret, dağıtıcı ve
+    kapsam cirosunun %2'sinden büyük cari **anahtar hesap**: aynı bileşenler, gevşek eşik (uzman: «Kitapyurdu'nu mahalle
+    kitapçısıyla aynı ölçüyle kırmızı göstermek» kullanılmaz). Kanal yazımı ölçülecek.
+  - *CRM limit alanları:* yalnız okunur, kim güncellerse güncellesin kart CRM'in anlık değerini gösterir; boş limit
+    «girilmemiş» (limit bileşeni 0 puan, açıklamada yazılı), `new_toplamrisk` kaynağı ölçülecek.
+  - *Vade şablonu:* skora girmedi (Logo PAYTRANS vadesi esas); CRM `new_vadegun` kartta bilgi olarak.
+  - *Onaylayıcılar:* rol değil yetki — açık `ozellik:bayi.limit-onay`; kimlere verileceği Yönetim › Yetki'de.
+  - *Bölge:* 15 bölge ↔ il eşlemesi zayıf (ölçüldü); süzgeç il (M30 ile aynı: CRM il, yoksa Logo şehir). Bölge sonraki sürüm.
+  - *Sipariş düzensizliği:* Logo faturalı satışın 12 aylık değişim katsayısı (CRM sipariş kaynağı ölçülecek; ORFICHE bütün
+    satışı kapsamıyor).
+  - *Limit önerisi D segmentinde:* mevcut riske **yukarı** yuvarlanır (limit riskin altına inmez; yeni açık hesap açılmaz).
+- **Ölçülecek (kabul listesinde):** SPECODE2 değerleri ve kapsam sayısı; CRM `StatusCode`/`CreditOnHold`/`new_vadegun`
+  doluluğu; `new_onaylanmatarihi`/`new_reddedilmetarihi`'nin risk onayına mı genel onaya mı ait olduğu; CSTRANS portföy
+  giriş `CARDREF`'inin cari olduğu (M30 ile ortak); ödeme TRCODE listesi (M30 ayarı).
+- **Ortak dosyalarda en küçük ekleme:** `app.py` (register bloğu), `access.py` (2 RULES + 4 FEATURE_RULES satırı),
+  `access_catalog.json` (1 sayfa + 6 özellik), `admin.py` (`DEALERS_MORNING_RECIPIENTS`), `App.tsx` (2 rota),
+  `navModel.ts` (1 öğe), `ModulesMenu.tsx` (LIVE.M59 + GROUP_HOME).
+- **Doğrulama:** yalnız `py_compile` ve JSON (kural: Mac'te test koşusu yok, sunucu kapalı). pytest
+  `test_dealers.py` ve vitest `src/canvas/dealers/api.test.ts` yazıldı, **koşturulmadı**; tsc koşturulmadı.
+  **DOĞRULANAMADI** — test sunucusunda: `scripts/acceptance/M59/run_tests.sh`, ilk günlük tur elle, `reference_check.py
+  --rerun`, `write_check.py --write` + `cleanup.py`, 320/390/768 px ekran kontrolü.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

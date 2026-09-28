@@ -67,6 +67,8 @@ const DataSecurityScreen = lazy(() => import('@/canvas/data-security/DataSecurit
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
 const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
+const DealersScreen = lazy(() => import('@/canvas/dealers/DealersScreen'));
+const DealerCard = lazy(() => import('@/canvas/dealers/DealerCard'));
 const BookForecastPage = lazy(() => import('@/canvas/first-print/BookForecast'));
 const FreeForecastPage = lazy(() => import('@/canvas/first-print/FreeForecast'));
 const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
@@ -176,6 +178,9 @@ export default function App() {
             {/* M30 Saha satış ve tahsilat (BMT): telefon önce; müşteri brifingi cari koduyla (/api/v1/field). */}
             <Route path="saha" element={<FieldScreen />} />
             <Route path="saha/musteri/:code" element={<CustomerBrief />} />
+            {/* M59 Bayi riski (Satış ve saha): pano, bayiler, limit önerileri, aksiyonlar, kurallar; bayi kartı cari koduyla (/api/v1/dealers). */}
+            <Route path="bayi-risk" element={<DealersScreen />} />
+            <Route path="bayi-risk/:code" element={<DealerCard />} />
             {/* M31 Okul tanıtım ve ziyaret (/api/v1/schools): telefon öncelikli «Bu hafta», okul kartı, bayi kuyruğu, dönem raporu. */}
             <Route path="okul-tanitim" element={<SchoolsScreen />} />
             <Route path="okul-tanitim/:id" element={<SchoolCard />} />
