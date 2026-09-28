@@ -1379,6 +1379,7 @@ def list_offers(engine: sa.engine.Engine, tenant: str, *, durum: str = "", q: st
     with engine.connect() as c:
         rows = c.execute(sa.select(OFFERS).where(OFFERS.c.tenant_id == tenant).order_by(OFFERS.c.created_at.desc())).all()
     f = fold(q)
+    counts = {k: sum(1 for r in rows if r.durum == k) for k in OFFER_STATUS}
     out = [_offer_dict(r) for r in rows if (not durum or r.durum == durum) and (not f or f in fold(r.firma_adi) or f in fold(r.id))]
     ref = today()
     for o in out:
@@ -1386,7 +1387,7 @@ def list_offers(engine: sa.engine.Engine, tenant: str, *, durum: str = "", q: st
         o["secenekler"] = [{k: v for k, v in s.items() if k != "kalemler"} for s in o["secenekler"]]
     page = max(0, page)
     return {"items": out[page * PAGE_SIZE:(page + 1) * PAGE_SIZE], "total": len(out), "page": page, "pageSize": PAGE_SIZE,
-            "summary": {k: sum(1 for o in out if o["durum"] == k) for k in OFFER_STATUS}}
+            "summary": counts}
 
 
 def get_offer(engine: sa.engine.Engine, tenant: str, oid: str) -> dict[str, Any]:
@@ -1441,7 +1442,7 @@ def update_offer(engine: sa.engine.Engine, st: dict[str, Any], tenant: str, user
         vals["mektup"] = _longtext(body["mektup"], 8000)
     if "gecerlilik" in body:
         try:
-            vals["gecerlilik"] = date.fromisoformat(str(body["gecerlilik"])[:10]).isoformat()
+            vals["gecerlilik"] = date.fromisoformat(str(body["gecerlilik"])[:10]).isoformat() if body["gecerlilik"] else None
         except ValueError:
             raise SetsError("Geçerlilik YYYY-AA-GG biçiminde olmalı.") from None
     if "notlar" in body:

@@ -65,6 +65,9 @@ const SchoolsScreen = lazy(() => import('@/canvas/schools/SchoolsScreen'));
 const SchoolCard = lazy(() => import('@/canvas/schools/SchoolCard'));
 const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
 const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
+const SetsScreen = lazy(() => import('@/canvas/marketing/sets/SetsScreen'));
+const SetEditor = lazy(() => import('@/canvas/marketing/sets/SetEditor'));
+const GiftOfferEditor = lazy(() => import('@/canvas/marketing/sets/GiftOfferEditor'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -155,6 +158,10 @@ export default function App() {
             <Route path="pazarlama/yeni-kitap" element={<MarketingHome />} />
             <Route path="pazarlama/plan/:id" element={<MarketingPlan />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
+            {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
+            <Route path="pazarlama/set-hediye" element={<SetsScreen />} />
+            <Route path="pazarlama/set-hediye/set/:id" element={<SetEditor />} />
+            <Route path="pazarlama/set-hediye/teklif/:id" element={<GiftOfferEditor />} />
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
             <Route path="seo-geo/anahtar-kelimeler" element={<SeoSearch />} />

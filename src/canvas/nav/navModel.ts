@@ -45,6 +45,7 @@ import {
   FileText,
   FolderTree,
   Gauge,
+  Gift,
   History,
   House,
   Landmark,
@@ -267,11 +268,20 @@ export const NAV: NavGroup[] = [
   {
     id: 'pazarlama',
     label: 'Pazarlama',
-    hint: 'Plan, içerik, SEO & GEO',
+    hint: 'Plan, içerik, SEO & GEO, set ve hediye',
     icon: Megaphone,
     items: [
       // Plan ekranı (/pazarlama/plan/:id) menüde yok; açıkken «Yeni kitap planı» etkin görünür.
       { id: 'pazarlama-yeni-kitap', label: 'Yeni kitap planı', to: '/pazarlama/yeni-kitap', icon: ClipboardList, section: 'Planlama', hint: 'Yayına hazırlanan kitapların pazarlama planı, bütçe, takvim ve materyalleri', also: ['/pazarlama/plan'], keywords: ['pazarlama planı', 'yeni kitap', 'lansman', 'föy', 'basın bülteni', 'emsal', 'bütçe'] },
+      {
+        id: 'pazarlama-set-hediye',
+        label: 'Set ve hediye',
+        to: '/pazarlama/set-hediye',
+        icon: Gift,
+        section: 'Üretim',
+        hint: 'Setler (satış, stok, marj), set önerisi, açılacak kart listesi, kurumsal hediye teklifi, promosyon ürünleri',
+        keywords: ['set', 'hediye', 'promosyon', 'kurumsal hediye', 'ajanda', 'defter', 'toplama set', 'birlikte alınan'],
+      },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },

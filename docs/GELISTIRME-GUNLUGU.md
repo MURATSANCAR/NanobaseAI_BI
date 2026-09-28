@@ -664,6 +664,20 @@ Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktr
   `timas-distribution.service` elle bir kez → zamanlayıcı → 320/390/768/masaüstü. VM'e ancak bundan sonra.
 - **Açık:** rezerv kuralı ve CRM dağılım listesinin tamlığı (soru 1–3, 5) iş tarafına; yeniden sipariş önerisi, M12
   planlanan çıkışla ön plan, CRM'e aktarım sonraki sürüm; canlı Logo (.25) yokken takip 17.08.2026'da durur.
+## 2026-09-28 — M53 Hediye, set ve promosyon ürün yönetimi (dal; DOĞRULANAMADI — sunucu kapalı)
+
+- **Neden:** setlerin performansı hiçbir yerde ölçülmüyordu (Power BI «Set Kitaplar» sayfası kırık), set önerisi ve fiyat/marj elle, kurumsal hediye teklifi her seferinde sıfırdan, 157 ticari ürünlerin kendi raporu yok. Analiz: `docs/analiz/kullanici-ihtiyaclari/M53-set-hediye-promosyon.md` (§14 plan, §15 kodlama notu).
+- **Ne yapıldı:** köprü `sets*.py` (tablolar `semantic_mkt_*`, uçlar `/api/v1/marketing/sets*`, `/gift-offers*`, `/promo-items`), ekran `src/canvas/marketing/sets/` (Setler, Öneriler, Kurumsal teklifler, Promosyon ürünleri; set ve teklif ekranı), menü Pazarlama → «Üretim» bölümü, Kampüs M53, yetki kataloğu (`sayfa:pazarlama-set-hediye`, `ozellik:set.yaz|set.onay|set.teklif-onay|set.maliyet-gor`), yönetim ayarları (`SETS_*`), zamanlayıcı `timas-marketing-sets` (04:30), pytest `test_sets.py`, vitest `api.test.ts` + menü testi, kabul `scripts/acceptance/M53/` (kabul.py, referans.sql, temizlik.py).
+- **Kararlar (veriye/koda bakılarak, sorulmadan):**
+  - *Çift sayım:* katalog profilinde Logo `ITEMS.CARDTYPE` değerlerinde Karma Koli (2) yok → set ayrı stok kartı, bileşenler set yapma fişinde düşer. Varsayılan: set satışı yalnız set kodu, bileşenin tek satışı ayrı, hiçbir toplamda birleşmez; satır türü `SETS_SALES_LINETYPES=0` (bütçe/kokpitle aynı). Ölçüm: aynı faturada set + kendi bileşeni (Ö3b), set faturalarının satır türleri (Ö3a); aksi çıkarsa ayar değişir.
+  - *Bileşen kaynağı:* `auto` = CRM en son etkin «Set Yapma», yoksa Logo reçetesi (geçerli revizyon, ana ürün satırı hariç). Hangisinin kapsadığı Ö2.
+  - *Maliyet:* `register_cost_provider` (M32 deseni, bu modülün kendi kaynağı; M9 main'de değil) → «maliyet bilinmiyor»; maliyet uydurulmaz.
+  - *Önerilen indirim:* mevcut CRM setlerinin gerçekleşen indiriminin medyanı (≥3 set), yoksa liste toplamı; karar insanda.
+  - *Birlikte alım:* yalnız B2C; promosyon/kesin hediye/bedelsiz satırlar sepet sayılmaz (hediye bir satın alma kararı değil); lift < 1 çift öneri gerekçesi değil; en az 2 sipariş (ayar, ekranda yazılı).
+  - *Durum:* «onaylı» ve «kart bekliyor» birleşti; kart eşlenince «satışta». CRM'deki kart bileşenleri birebir tutarsa gece kendiliğinden eşlenir, birden çok aday varsa insan seçer.
+  - *M32:* teklif belgesi yeniden yazılmadı; M53 set/hediye kataloğu + fiyat–marj + kurumsal hediye seçenekleri; `handoff` M32 teklif satırı biçiminde, `m32FirsatId` bağ alanı.
+- **DOĞRULANAMADI — sunucu kapalı:** hiçbir gerçek DB/API kabulü yapılmadı; yerelde yalnız `py_compile` ve JSON doğrulaması. pytest/vitest ve TypeScript derlemesi koşturulmadı. Sunucuda sıra: main'e taşıma → kurulum → `run-due?basket=1&history=1` elle (süre günlüğe) → `kabul.py --olcum` (Ö1–Ö7 sonucu analiz §15'e) → `kabul.py --api --yazma` → `temizlik.py` → pytest `test_sets.py`, `test_access.py`; vitest.
+- **Açık:** Zeki AI sohbetinin `semantic_mkt_*` tablolarını okuması (modül soruları şimdilik ekrandan), bedelsiz promosyon çıkışının ölçüm yöntemi, set–bileşen yamyamlığı yorumu (sonraki sürüm; `effect` ucu yalnız seriler), sezon sonu raporu, ambalaj birim maliyetlerinin güncelliği (CRM'de 11 kayıt).
 
 ## 2026-09-28 — NanobaseAI Destek: Helpdesk + Flow ayrı modül, marka, tema, Türkçe, test sunucusu kurulumu
 
