@@ -32,6 +32,9 @@ TABLOLAR: dict[str, tuple[str, str]] = {
     "semantic_seo_products": ("Site ürünleri", "T-soft ürün kaydı (gece eşitlemesi): ad, alanlar, puan, kurallar, satış ve görüntülenme sayaçları."),
     "semantic_seo_proposals": ("Öneriler", "Ürün ve sayfa önerileri: durum, puan önce/sonra, karar."),
     "semantic_seo_runs": ("Eşitleme turları", "T-soft/CRM/Search Console turları: başlangıç, bitiş, okunan kayıt."),
+    "semantic_seo_merchant_items": ("Merchant ürünleri", "Son okumada Google Merchant'taki her ürün ve durumu."),
+    "semantic_seo_merchant": ("Merchant okuması", "Son Merchant okumasının özeti."),
+    "semantic_seo_merchant_hist": ("Merchant geçmişi", "Her okumada durum sayıları (eğilim için)."),
     "semantic_seo_gsc_sitemaps": ("Site haritası okuması", "Search Console'dan okunan site haritaları ve özet (son okuma)."),
     "semantic_seo_gsc_sitemaps_hist": ("Site haritası geçmişi", "Her okumada harita başına sayılar (artışı görmek için)."),
     "semantic_seo_gsc": ("Search Console verisi", "Search Console'dan gece okunan günlük/sorgu/sayfa raporu (son 28 gün)."),
@@ -181,6 +184,8 @@ SPECS: list[tuple[str, str, str]] = [
     (r"shopping", "alisveris", f"Alışveriş hazırlığı: ürün verisi kurallarına göre sorun sayıları; ürünler {TSOFT}ndan."),
     (r"gsc-sitemaps", "siteHaritasi", "Search Console site haritaları (gece okuması): harita başına gönderilen/dizine "
                                      "eklenen adres, hata ve uyarı sayısı; artış = son iki okumanın farkı."),
+    (r"merchant", "merchant", f"Google Merchant ürün durumu (6 saatte bir okunur): onaylı/onaylanmayan/sınırlı/bekleyen ve "
+                              f"sorun türü başına ürün sayısı; ürün eşlemesi {TSOFT}ndan barkodla."),
     (r"monthly", "aylik", "Aylık rapor: ayın Search Console tıklama, gösterim, oran, sıra; önceki ay ve geçen yıl aynı ayla "
                           "fark; puanı ≥ 80 olan çok satanların payı; karar, teknik sorun ve anılma sayıları."),
 ]
