@@ -779,6 +779,29 @@ SPEC: list[dict[str, Any]] = [
      "help": "Zeki AI kampanya adından kitap önerirken bu olasılığın altındaysa öneri yazılmaz; aday listesi elle seçilir"},
     {"key": "ADS_LINK_MIN_MARGIN", "group": "ads", "label": "Kitap önerisi en az fark", "type": "text", "default": "0.30",
      "help": "Seçilen kitabın olasılığı ikinci adaydan en az bu kadar yüksek olmalı"},
+    # Sosyal medya (M22). Otomatik yayın yok; platformlara hiçbir istek gitmez.
+    {"key": "SOCIAL_ALERT_RECIPIENTS", "group": "social", "label": "Sosyal medya bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (pazarlama müdürü, onaycılar). Onaya gönderilen gönderi ve her sabah 07:00 özeti "
+             "(yarın hazır olmayan gönderi, yaklaşan özel gün, onay bekleyen) buraya gider. Boşsa gönderilmez"},
+    {"key": "SOCIAL_OPPORTUNITY_DAYS", "group": "social", "label": "Fırsat penceresi (gün)", "type": "int", "default": "30",
+     "help": "«Fırsatlar» ekranı bugünden bu kadar gün ilerideki özel günleri ve yeni çıkan kitapları gösterir (ekranda değişir)"},
+    {"key": "SOCIAL_OCCASION_LEAD_DAYS", "group": "social", "label": "Özel gün uyarısı (gün)", "type": "int", "default": "14",
+     "help": "Özel güne bu kadar gün ya da daha az kalmışken bağlı kitaplardan hiçbiri takvimde değilse uyarı verilir"},
+    {"key": "SOCIAL_BACKLIST_MIN_AGE_DAYS", "group": "social", "label": "Backlist sayılma (gün)", "type": "int", "default": "365",
+     "help": "İlk yayını bu kadar günden eski kitap backlist sayılır"},
+    {"key": "SOCIAL_BACKLIST_QUIET_DAYS", "group": "social", "label": "Uzun süredir paylaşılmayan (gün)", "type": "int",
+     "default": "90", "help": "Son 12 ayda çok satan backlist kitaplardan bu kadar gündür takvimde gönderisi olmayanlar önerilir"},
+    {"key": "SOCIAL_BACKLIST_EXCLUDE_STATUS", "group": "social", "label": "Önerilmeyecek kitap statüleri", "type": "text",
+     "default": "", "help": "Virgülle CRM kitap statüleri (ör. baskısı tükenmiş). Bu statüdeki kitaplar backlist önerisine girmez"},
+    {"key": "SOCIAL_PLATFORM_LIMITS", "group": "social", "label": "Platform sınırları (JSON)", "type": "text", "default": "",
+     "help": "Boşsa: Instagram 2200, Facebook 63206, X 280, LinkedIn 3000, TikTok 2200, YouTube 5000 karakter; Instagram 30 "
+             "etiket. Değiştirmek için ör. {\"x\": 280, \"instagram:etiket\": 30}"},
+    {"key": "SOCIAL_DEFAULT_HOUR", "group": "social", "label": "Varsayılan paylaşım saati", "type": "time", "default": "10:00",
+     "help": "Yalnız gün seçilen gönderinin saati (SS:DD)"},
+    {"key": "SOCIAL_BANNED_CLAIMS", "group": "social", "label": "Ek yasaklı ifadeler", "type": "text", "default": "",
+     "help": "Zeki AI taslağında geçerse cümlenin düşeceği ek ifadeler (virgülle). Kanıtsız üstünlük iddiaları zaten yasak"},
+    {"key": "SOCIAL_STUDIO_LICENSE_PENDING", "group": "social", "label": "Stüdyo görseli lisans uyarısı", "type": "bool",
+     "default": "1", "help": "Açıkken stüdyo görseli eklenen gönderide ve pakette «ticari kullanım lisansı bekleniyor» uyarısı durur"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -854,6 +877,9 @@ GROUPS = [
     {"id": "ads", "label": "Dijital pazarlama ve reklam",
      "help": "Reklam harcaması platformun dışa aktarım dosyasıyla gelir; platformlara hiçbir şey gönderilmez (bütçe, teklif, "
              "durdurma yok). Eşiği boş bırakılan öneri kuralı çalışmaz."},
+    {"id": "social", "label": "Sosyal medya",
+     "help": "Takvim uyarıları, fırsat kuralları ve platform sınırları. Portal hiçbir sosyal medya hesabına paylaşım yapmaz; "
+             "onaylı gönderi yayına hazır paket olarak iner."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -894,7 +920,10 @@ KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kart�
               "support_class": "Talep sınıfı", "support_class_def": "Destek sınıfı", "support_faq": "SSS maddesi",
               "ads_account": "Reklam hesabı", "ads_import": "Reklam dosyası", "ads_campaign": "Reklam kampanyası",
               "ads_budget": "Reklam bütçesi", "ads_suggestion": "Reklam önerisi", "ads_brief": "Reklam brief'i",
-              "ads_report": "Reklam raporu", "ads_refresh": "Reklam satış verisi", "ads_run_due": "Reklam günlük işi"}
+              "ads_report": "Reklam raporu", "ads_refresh": "Reklam satış verisi", "ads_run_due": "Reklam günlük işi",
+              "social_post": "Sosyal medya gönderisi", "social_account": "Sosyal medya hesabı",
+              "social_import": "Sosyal medya içe aktarma", "social_metric": "Sosyal medya içgörüsü",
+              "social_report": "Sosyal medya raporu"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -1228,6 +1257,15 @@ def _validate(spec: dict[str, Any], raw: Any) -> str:
             ok = False
         if not ok:
             raise AdminError("«Takvim şablonu» [[gün, \"iş\", \"kanal\", \"materyal\"], …] biçiminde JSON olmalı.")
+        return v
+    if spec["key"] == "SOCIAL_PLATFORM_LIMITS" and v:
+        try:
+            lim = json.loads(v)
+            ok = isinstance(lim, dict) and all(isinstance(n, int) and n > 0 for n in lim.values())
+        except ValueError:
+            ok = False
+        if not ok:
+            raise AdminError("«Platform sınırları» {\"x\": 280, \"instagram:etiket\": 30} biçiminde JSON olmalı.")
         return v
     if t == "bool":
         return "1" if v in ("1", "true", "True", "on", "evet") else "0"

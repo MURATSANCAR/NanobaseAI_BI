@@ -78,6 +78,8 @@ JOBS = [
     ("risk ve uyum", "/api/v1/risk/run-due", int(os.environ.get("RISK_EVERY_SEC", "3600")), 3590),
     # H2 okur veri tabanı: CRM kişi/aday/İYS okuması ve gece işleri (sunucuda timas-readers.timer, gece 03:20).
     ("okur veri tabanı", "/api/v1/readers/run-due", int(os.environ.get("READERS_EVERY_SEC", "86400")), 3590),
+    # M22 sosyal medya günlük özeti (sunucuda timas-social.timer 07:00; e-posta günde bir kez gider, paylaşım yapılmaz).
+    ("sosyal medya", "/api/v1/social/run-due", int(os.environ.get("SOCIAL_EVERY_SEC", "86400")), 1790),
 ]
 
 

@@ -7210,6 +7210,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M21 Dijital pazarlama ve reklam: harcama dosyası, kampanya ↔ kitap, Logo e-ticaret cirosu. Uçlar /api/v1/ads/*.
     from semantic_bridge import ads_api
     app.state.ads = ads_api.register(app, rt, _require_caller, _can)
+    # M22 Sosyal medya: tek takvim, onay, yayına hazır paket, performans içe aktarma (otomatik yayın yok). /api/v1/social/*.
+    from semantic_bridge import social_api
+    app.state.social = social_api.register(app, rt, _require_caller, _can)
     return app
 
 

@@ -538,6 +538,9 @@ RULES: list[tuple[str, Any]] = [
     # M21 Dijital pazarlama ve reklam. Zamanlayıcı yalnız run-due'yu çağırır.
     ("/api/v1/ads/run-due", SYSTEM),
     ("/api/v1/ads/", frozenset({page("reklam")})),
+    # M22 Sosyal medya. Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/social/run-due", SYSTEM),
+    ("/api/v1/social/", frozenset({page("sosyal-medya")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
     # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
     ("/api/v1/categories/run-due", SYSTEM),
@@ -779,6 +782,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"^/api/v1/ads/(accounts(/[^/]+)?|imports(/preview|/[^/]+)?|campaigns/[^/]+(/match)?|budget|briefs(/[^/]+)?|refresh)$",
      "ozellik:reklam.duzenle"),
     (frozenset({"GET"}), r"^/api/v1/ads/report/export\.(pdf|xlsx)$", "ozellik:veri.disa-aktar"),
+    # M22 Sosyal medya: taslak, takvim, hesap, içe aktarma, Zeki AI taslağı/yorumu. Onay ve geri gönderme açıkça verilen
+    # `sosyal.onay` ile ucun içinde denetlenir; bu kural onlara uymaz.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/social/(posts(/[^/]+(/(submit|withdraw|published|cancel|reopen|draft|metrics))?)?|accounts(/[^/]+)?"
+     r"|imports(/[^/]+)?|report/commentary)$",
+     "ozellik:sosyal.duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/social/(posts/[^/]+/package\.zip|report/export\.pdf)$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

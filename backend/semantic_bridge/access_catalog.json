@@ -286,6 +286,11 @@
       "label": "Reklam"
     },
     {
+      "key": "sayfa:sosyal-medya",
+      "area": "pazarlama",
+      "label": "Sosyal medya"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1733,6 +1738,29 @@
       "page": "sayfa:reklam",
       "label": "Reklam önerisi onayı",
       "hint": "Durdurma ve bütçe kaydırma önerisini onaylama ya da gerekçeyle reddetme (platformda uygulamayı ekip yapar)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sosyal.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:sosyal-medya",
+      "label": "Sosyal medya takvimi düzenleme",
+      "hint": "Gönderi taslağı, takvim, hesaplar, Zeki AI taslağı, onaya gönderme, «yayınlandı» işareti, içgörü içe aktarma"
+    },
+    {
+      "key": "ozellik:sosyal.onay",
+      "area": "pazarlama",
+      "page": "sayfa:sosyal-medya",
+      "label": "Sosyal medya gönderisi onayı",
+      "hint": "Onaya gönderilen gönderiyi onaylama ya da gerekçeyle geri gönderme (gönderen onaylayamaz). Paylaşımı yine ekip yapar",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sosyal.topluluk",
+      "area": "pazarlama",
+      "page": "sayfa:sosyal-medya",
+      "label": "Sosyal medya yorum ve mesajları",
+      "hint": "Kendi hesaplarımıza gelen yorum ve mesajları görme (yorumcu kişisel verisi). Resmî bağlantı kurulunca açılır",
       "explicit": true
     }
   ]
