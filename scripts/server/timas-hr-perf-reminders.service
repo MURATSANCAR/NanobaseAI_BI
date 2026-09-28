@@ -1,0 +1,11 @@
+[Unit]
+Description=Performans (M56): açık değerlendirme döneminde son tarihe HR_PERF_REMIND_DAYS gün kala İK alıcılarına eksik sayıları (kişi adı yok)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/hr/performance/reminders/run-due). Eşik (HR_PERF_REMIND_DAYS) ya da alıcı (HR_ALERT_RECIPIENTS)
+# yoksa gönderim yok; dönem başına günde bir. Çalışana otomatik e-posta gitmez (kişiye hatırlatmayı İK düğmeyle yapar).
+# İlk kez elle koşturulur: systemctl start timas-hr-perf-reminders.service
+ExecStart=/bin/sh -c 'curl -fsS -m 290 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/hr/performance/reminders/run-due'

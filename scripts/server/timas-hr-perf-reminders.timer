@@ -1,0 +1,10 @@
+[Unit]
+Description=Performans değerlendirme dönemi hatırlatması; her gün 08:30
+
+[Timer]
+OnCalendar=*-*-* 08:30:00
+Persistent=true
+Unit=timas-hr-perf-reminders.service
+
+[Install]
+WantedBy=timers.target

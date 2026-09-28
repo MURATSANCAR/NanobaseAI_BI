@@ -905,9 +905,13 @@ def sync_participants(engine: sa.engine.Engine, tenant: str, sc: Scope, cid: str
         cy = _cycle_row(c, tenant, cid)
         if cy.state not in ("acik",):
             raise HrError("Katılımcılar yalnız açık dönemde eşitlenir.", 409)
-        have = {r[0] for r in c.execute(sa.select(REVIEWS.c.employee_id).where(REVIEWS.c.cycle_id == cid)).all()}
+        have = {r.employee_id: r for r in c.execute(sa.select(REVIEWS).where(REVIEWS.c.cycle_id == cid)).all()}
         for e in _audience(sc, load(cy.audience_json, {})):
-            if e.id in have:
+            old = have.get(e.id)
+            if old is not None:
+                # Yöneticisi sonradan girilen kişinin değerlendirmesi yeni yöneticiye bağlanır (henüz yazılmadıysa).
+                if not old.manager_id and e.manager_id and not old.manager_submitted_at:
+                    c.execute(REVIEWS.update().where(REVIEWS.c.id == old.id).values(manager_id=e.manager_id, updated_at=now()))
                 continue
             c.execute(REVIEWS.insert().values(id=new_id("dgr"), tenant_id=tenant, cycle_id=cid, employee_id=e.id,
                                               manager_id=e.manager_id, objection=False, updated_at=now()))

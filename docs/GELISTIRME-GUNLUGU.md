@@ -249,6 +249,47 @@
   değişiklik kaydını, yüklemeyi, taslağı ve kartı kimlikle siler.
 - **Sunucuda kalan:** köprü + arayüz kurulumu, pytest/vitest/tsc, M42 kabulünden sonra M40/M41 kabulü ve temizlik,
   `timas-channels.service` bir kez elle; Trendyol panel dosyası örneği ve Amazon carilerinin onayı iş biriminden.
+## 2026-09-28 — M56 Performans yönetimi ve M58 Çalışan deneyimi ve bağlılık kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-af1a77eaacce7cba1`, İK-0 + M55 dalı `worktree-agent-ad24fa5ef7c8ee6a7` (`6a2087ea`) üstünde. Sunucuya
+  bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması. pytest (`test_hr_performance.py`, `test_hr_engagement.py`, `test_hr_core.py`,
+  `test_access.py`), vitest (`navModel.test.ts` menü–katalog eşliği), tsc ve kabul (`scripts/acceptance/M56|M58/kabul.py` +
+  `temizlik.py`) test sunucusunda koşturulacak.
+- **M56:** hedef ağacı (şirket → birim → kişi, ağırlık, dönem `2026` / `2026-Q4`), onaya gönderme ve onay (gönderen onaylayamaz; kişi
+  hedefini yalnız zincirdeki yönetici; şirket hedefi üst yönetimin kararı olarak tek adım), check-in, revizyon talebi/kararı, Zeki AI
+  OKR taslağı (kişi adı gitmez) ve hizalama önerisi (`QueuedLlm.choose`, olasılıkla), form şablonu (sürümlü; açık dönem kendi kopyasını
+  taşır), dönem (hazırlık → açık → kalibrasyon → kapandı; katılımcı eşitleme sonradan girilen yöneticiyi de bağlar), değerlendirme akışı,
+  tamamlanma panosu, İK'nın tek tıkla hatırlatması (içeriksiz, bağlantılı e-posta AD iş adresine — düğmeyle, otomatik değil),
+  kalibrasyon, iş kayıtları özeti, dışa aktarma (CSV, yorum metni yok), imha (`performans_kaydi`, ayrılış tarihinden).
+- **M58:** anket şablonu (ikinci kişi onaylar), anket (taslak → planlı → açık → kapandı), davet jetonu, basılı kod, oturumsuz form,
+  sonuç (eNPS, endeks, madde, seçenek), eşik ve birim kırılımı, eğilim, tema sınıflama ve alıntısız tema özeti, maskeli yorum
+  (yalnız `ik.anket-yorum`), oryantasyon 30./90. gün davetleri (İK-0 `start_date`), öneri kutusu, aksiyon planı, imha
+  (`anket_yorum`, `oneri`).
+- **§10 açık sorularında verilen kararlar (iş kararları Claude'a bırakıldı):**
+  - *Gösterim eşiği:* kullanıcı kuralı gereği kendiliğinden sayı konmadı. Karar: eşik anket başına İK'nın girdiği alan; **girilmeden
+    hiçbir kapsamda sonuç gösterilmez** (koordinatör kuralı «eşik altında gösterilmez» ile «varsayılan konmaz»ın ikisini de sağlar).
+    Eşik yalnız yükseltilir (düşürmek önceki gizlemeyi deler). Birim kırılımı eşik şart ve açılıştan sonra değişmez (birim cevaba
+    açılışta yazılır).
+  - *Fark saldırısı:* analizde yoktu; üst birimde gösterilen alt birimlerin dışında kalan yanıt 0 ya da ≥ eşik değilse en küçük alt
+    birim de gizlenir. Eşik altı birimin yanıt sayısı da gösterilmez (katılım izi).
+  - *Açık ankette sonuç:* gösterilmez (tek tek değişimi izleyip kişiyi bulmayı engeller); açıkken yalnız toplam katılım.
+  - *Katılım izi:* kapanışta davet ve kod satırları silinir, sayılar ankette kalır. Anket cevabı ve bağlantı alma değişiklik kaydına
+    yazılmaz; adsız öneride kayıtta yazan «anonim».
+  - *Ayrılma niyeti:* kişi bazında sinyal yok (analiz §8 önerisi); yalnız «bir yıl sonra burada olacağım» maddesinin toplu sonucu.
+  - *Değerlendirme ücret/terfiye bağlı mı:* bilinmiyor; itiraz akışı her durumda var, karar kaydı tutulmaz.
+  - *Kim kimin yöneticisi:* `manager_id` (İK-0 kaydı); boş olanlar Ekibim'de İK'ya listelenir, dönem yöneticisiz açılır, İK sonradan
+    bağlar ve «katılımcıları eşitle» değerlendirmeyi yeni yöneticiye bağlar.
+  - *İş kayıtlarının değerlendirmede gösterilmesi (hukuk onayı):* bilgi amaçlı, çalışan da görür, puan değil; özetin ilk
+    görüntülenme anı yazılır. Hukuk onayı açık kalan.
+  - *Satış temsilcisi alanı:* ölçülmeden sistem ölçüsü kapalı (`HR_PERF_LOGO_SALES=0`); Değerlendirme dönemi ekranında «Ölç» düğmesi.
+- **Sapma (analizden):** sayfa anahtarı eklenenler `sayfa:ik-birimim`, `sayfa:ik-aksiyonlar` (analiz rotaları vardı, anahtarı yoktu;
+  yönetici bu ekranlara bağlılık panosu olmadan girebilmeli). `OPEN_NO_SESSION` yeni türü yerine `OPEN`: çerezsiz istek kapıdan zaten
+  geçiyor, uç jetonu doğruluyor — kapı kodunda değişiklik gerekmedi. Kampüs «Açık anketiniz var / Performansım» kartları eklenmedi
+  (Kampüs düzeni kullanıcı onayıyla; nabız kartı 09-18'de kullanıcı isteğiyle kaldırılmıştı). Anket davetleri ve çalışan hatırlatmaları
+  otomatik e-postayla gitmez (dış/toplu gönderim yok kararı); çalışan Anketlerim/Performansım'da görür.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (RULES 5 satır), `access_catalog.json` (10 sayfa, 13 özellik), `admin.py` (5 ayar),
+  `app.py` (4 satır), `App.tsx` (12 lazy + 16 rota), `navModel.ts` (3 ikon, 10 öğe, grup ipucu), `ModulesMenu.tsx` (M56, M58, İK kutusu
+  `/ik/performansim`), `test_hr_core.py` (İK sayfa kümesi eşitlik yerine kapsama — M56–M58 ekledikçe kırılmasın).
 
 ## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
 

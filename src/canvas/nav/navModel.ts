@@ -117,6 +117,9 @@ import {
   FileSpreadsheet,
   TabletSmartphone,
   ShoppingCart,
+  HeartPulse,
+  UserRound,
+  MessageSquareHeart,
 } from 'lucide-react';
 
 /**
@@ -575,6 +578,7 @@ export const NAV: NavGroup[] = [
     id: 'ik',
     label: 'İnsan Kaynakları',
     hint: 'İşe alım, eğitim ve gelişim, İK belgeleri ve KVKK kayıtları',
+    hint: 'İşe alım, performans, çalışan deneyimi, İK belgeleri ve KVKK kayıtları',
     icon: Contact,
     explicit: true,
     items: [
@@ -583,6 +587,18 @@ export const NAV: NavGroup[] = [
       { id: 'ik-belgeler', label: 'Belgeler', to: '/ik/belgeler', icon: FileText, section: 'İşe alım', hint: 'İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları', keywords: ['şablon', 'teklif mektubu', 'ret mektubu'] },
       { id: 'ik-egitimlerim', label: 'Eğitimlerim', to: '/ik/egitimlerim', icon: BookOpenCheck, section: 'Eğitim', hint: 'Zorunlu eğitimlerim, oturumlarım, sertifikalarım, anketlerim ve ekibimin eğitim onayları', keywords: ['eğitim', 'sertifika', 'anket', 'iş güvenliği', 'isg', 'kurs', 'seminer'] },
       { id: 'ik-egitim', label: 'Eğitim ve gelişim', to: '/ik/egitim', icon: GraduationCap, section: 'Eğitim', hint: 'Eğitim panosu, katalog ve oturumlar, yoklama, ihtiyaçlar, portal kullanım haritası, modül rehberleri ve eğitim gideri', keywords: ['eğitim', 'oturum', 'yoklama', 'zorunlu eğitim', 'katalog', 'rehber', 'kullanım', 'lms'] },
+      // M56 Performans: Performansım bütün çalışanlara bağlanır; değerlendirme formu /ik/performansim|ekibim|degerlendirme/degerlendirme/:id.
+      { id: 'ik-performansim', label: 'Performansım', to: '/ik/performansim', icon: UserRound, section: 'Performans', hint: 'Hedeflerim, check-in, değerlendirmelerim ve hakkımdaki iş kayıtları özeti', keywords: ['hedef', 'okr', 'performans', 'öz değerlendirme', 'check-in'] },
+      { id: 'ik-ekibim', label: 'Ekibim', to: '/ik/ekibim', icon: UsersRound, section: 'Performans', hint: 'Ekibimin hedef ilerlemesi, eksik check-in ve değerlendirme durumu', keywords: ['ekip', 'yönetici', 'değerlendirme', 'hedef onayı'] },
+      { id: 'ik-hedefler', label: 'Hedef ağacı', to: '/ik/hedefler', icon: Target, section: 'Performans', hint: 'Şirket → birim → kişi hedefleri ve hizalanmamış hedefler', keywords: ['okr', 'hedef', 'hizalama', 'şirket hedefi'] },
+      { id: 'ik-degerlendirme', label: 'Değerlendirme dönemi', to: '/ik/degerlendirme', icon: ClipboardCheck, section: 'Performans', hint: 'Dönem, form, tamamlanma panosu, hatırlatma ve kalibrasyon', keywords: ['değerlendirme', 'dönem', 'kalibrasyon', '360', 'form'] },
+      // M58 Çalışan deneyimi: Anketlerim ve Öneri kutusu bütün çalışanlara bağlanır; anket formu oturumsuz /ik/anket/*.
+      { id: 'ik-anketlerim', label: 'Anketlerim', to: '/ik/anketlerim', icon: MessageSquareHeart, section: 'Çalışan deneyimi', hint: 'Açık çalışan anketlerim (anonim)', keywords: ['anket', 'nabız', 'bağlılık', 'enps'] },
+      { id: 'ik-oneriler', label: 'Öneri kutusu', to: '/ik/oneriler', icon: Lightbulb, section: 'Çalışan deneyimi', hint: 'Adlı ya da adsız öneri ver, durumunu izle; İK yönlendirir ve cevaplar', keywords: ['öneri', 'şikâyet', 'fikir', 'adsız'] },
+      { id: 'ik-baglilik', label: 'Bağlılık panosu', to: '/ik/baglilik', icon: HeartPulse, section: 'Çalışan deneyimi', hint: 'eNPS, bağlılık endeksi, madde sonuçları, tema özeti ve eğilim', keywords: ['enps', 'bağlılık', 'memnuniyet', 'anket sonucu', 'tema'] },
+      { id: 'ik-birimim', label: 'Birimimin sonucu', to: '/ik/birimim', icon: Gauge, section: 'Çalışan deneyimi', hint: 'Yöneticisi olduğum birimin paylaşılmış anket sonucu', keywords: ['birim sonucu', 'anket', 'yönetici'] },
+      { id: 'ik-anket-yonetimi', label: 'Anket yönetimi', to: '/ik/anket-yonetimi', icon: ClipboardList, section: 'Çalışan deneyimi', hint: 'Şablon, anket açma, gösterim eşiği, basılı kod, birim sonucunu paylaşma', keywords: ['anket şablonu', 'basılı kod', 'eşik'] },
+      { id: 'ik-aksiyonlar', label: 'Aksiyon planı', to: '/ik/aksiyonlar', icon: ListChecks, section: 'Çalışan deneyimi', hint: 'Anket sonrası aksiyonlar: sorumlu, son tarih, durum', keywords: ['aksiyon', 'iyileştirme', 'eylem planı'] },
       { id: 'ik-kayitlar', label: 'Çalışan ve KVKK kayıtları', to: '/ik/kayitlar', icon: ShieldCheck, section: 'Temel', hint: 'Çalışan ve birim kaydı, aydınlatma metni, açık rıza, saklama süresi, imha tutanağı, erişim kaydı', keywords: ['kvkk', 'çalışan', 'birim', 'rıza', 'imha', 'saklama'] },
     ],
   },

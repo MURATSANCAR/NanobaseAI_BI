@@ -130,6 +130,18 @@ const LearningSession = lazy(() => import('@/canvas/hr/learning/SessionScreen'))
 const LearningNeeds = lazy(() => import('@/canvas/hr/learning/NeedsScreen'));
 const LearningUsage = lazy(() => import('@/canvas/hr/learning/UsageMap'));
 const LearningGuides = lazy(() => import('@/canvas/hr/learning/GuidesScreen'));
+const MyPerformance = lazy(() => import('@/canvas/hr/performance/MyPerformance'));
+const MyTeam = lazy(() => import('@/canvas/hr/performance/MyTeam'));
+const GoalTree = lazy(() => import('@/canvas/hr/performance/GoalTree'));
+const ReviewCycle = lazy(() => import('@/canvas/hr/performance/ReviewCycle'));
+const ReviewForm = lazy(() => import('@/canvas/hr/performance/ReviewForm'));
+const SurveyForm = lazy(() => import('@/canvas/hr/engagement/SurveyForm'));
+const MySurveys = lazy(() => import('@/canvas/hr/engagement/MySurveys'));
+const EngagementDashboard = lazy(() => import('@/canvas/hr/engagement/EngagementDashboard'));
+const MyUnitResults = lazy(() => import('@/canvas/hr/engagement/MyUnitResults'));
+const SurveyAdmin = lazy(() => import('@/canvas/hr/engagement/SurveyAdmin'));
+const SuggestionsScreen = lazy(() => import('@/canvas/hr/engagement/SuggestionsScreen'));
+const HrActionsScreen = lazy(() => import('@/canvas/hr/engagement/ActionsScreen'));
 const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
 const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
 const SetsScreen = lazy(() => import('@/canvas/marketing/sets/SetsScreen'));
@@ -270,6 +282,11 @@ export default function App() {
           {/* Kök doğrudan kanvas: /timas/ ve /bi/ adreslerinde araya ikinci bir
               yol parçası girmiyor. Kanvas ekranları kısa slug taşır. */}
 
+          {/* M58 anket formu oturumsuz: davet jetonu ya da basılı kod yeter (bilgisayarsız çalışan). Kabuk ve menü yüklenmez. */}
+          <Route path="ik/anket/k" element={<SurveyForm />} />
+          <Route path="ik/anket/k/:kod" element={<SurveyForm />} />
+          <Route path="ik/anket/:token" element={<SurveyForm />} />
+
           <Route element={<RequireTimasSession />}>
           {/* Rota kapısı: menüdeki karşılığı kişinin rolünde olmayan sayfa yüklenmez (canvas/PageGate). */}
           <Route element={<PageGate />}>
@@ -359,6 +376,20 @@ export default function App() {
             <Route path="ik/egitim/ihtiyaclar" element={<LearningNeeds />} />
             <Route path="ik/egitim/kullanim" element={<LearningUsage />} />
             <Route path="ik/egitim/rehberler" element={<LearningGuides />} />
+            {/* M56 performans (/api/v1/hr/performance) ve M58 bağlılık (/api/v1/hr/engagement). */}
+            <Route path="ik/performansim" element={<MyPerformance />} />
+            <Route path="ik/performansim/degerlendirme/:id" element={<ReviewForm />} />
+            <Route path="ik/ekibim" element={<MyTeam />} />
+            <Route path="ik/ekibim/degerlendirme/:id" element={<ReviewForm />} />
+            <Route path="ik/hedefler" element={<GoalTree />} />
+            <Route path="ik/degerlendirme" element={<ReviewCycle />} />
+            <Route path="ik/degerlendirme/:id" element={<ReviewForm />} />
+            <Route path="ik/anketlerim" element={<MySurveys />} />
+            <Route path="ik/oneriler" element={<SuggestionsScreen />} />
+            <Route path="ik/baglilik" element={<EngagementDashboard />} />
+            <Route path="ik/birimim" element={<MyUnitResults />} />
+            <Route path="ik/anket-yonetimi" element={<SurveyAdmin />} />
+            <Route path="ik/aksiyonlar" element={<HrActionsScreen />} />
             {/* Fiyatlama ve maliyet (M9): kitap maliyeti, başabaş, kapak fiyatı, onay; uçlar /api/v1/pricing. */}
             <Route path="fiyatlama" element={<PricingScreen />} />
             {/* Pazarlama › Planlama: M15 yeni kitap pazarlama planı (/api/v1/marketing). */}
