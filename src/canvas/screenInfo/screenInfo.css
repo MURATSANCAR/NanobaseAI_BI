@@ -1,0 +1,68 @@
+/* Ekran bilgi kutusu. Ekran başına ilk girişte bir kez ya da elle açılır (ara sıra): 200 ms giriş, 150 ms çıkış,
+   yalnız opacity + transform. Kapanınca visibility geçiş bitiminde gizlenir ki odak ve tıklama almasın. */
+.si-panel {
+  opacity: 0;
+  transform: translateY(-6px) scale(0.985);
+  transform-origin: top left;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 150ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s linear 150ms;
+}
+.si-panel[data-open='true'] {
+  opacity: 1;
+  transform: none;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    opacity 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    transform 200ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s linear 0s;
+}
+
+/* Geri sayım çubuğu: sabit hızla boşalır (linear); okurken durur. */
+.si-countdown {
+  transform-origin: left center;
+  animation-name: si-countdown;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+}
+.si-panel:focus-within .si-countdown {
+  animation-play-state: paused;
+}
+/* Dokunmatikte dokunuş :hover'ı takılı bırakır; sayım sonsuza kadar durmasın diye yalnız gerçek fare. */
+@media (hover: hover) and (pointer: fine) {
+  .si-panel:hover .si-countdown {
+    animation-play-state: paused;
+  }
+}
+@keyframes si-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.si-trigger,
+.si-close {
+  transition:
+    transform 160ms cubic-bezier(0.23, 1, 0.32, 1),
+    background-color 160ms ease,
+    color 160ms ease;
+}
+.si-trigger:active,
+.si-close:active {
+  transform: scale(0.97);
+}
+
+/* Az hareket: kaydırma/ölçek yok, yalnız solma. Geri sayım bilgi taşıdığı için kalır. */
+@media (prefers-reduced-motion: reduce) {
+  .si-panel,
+  .si-panel[data-open='true'] {
+    transform: none;
+  }
+  .si-trigger:active,
+  .si-close:active {
+    transform: none;
+  }
+}

@@ -8,6 +8,7 @@ import DesktopNav from '../nav/DesktopNav';
 import PhoneNav from '../nav/PhoneNav';
 import CommandPalette from '../nav/CommandPalette';
 import GuideLink from '../hr/learning/GuideLink';
+import { ScreenInfoButton, ScreenInfoPanel, useScreenInfo } from '../screenInfo/ScreenInfo';
 import { pushRecent } from '../nav/navState';
 import { NavUiContext, initials, paletteKey, useNavData, type NavUi } from '../nav/useNav';
 import '../nav/nav.css';
@@ -96,6 +97,9 @@ export default function Shell({
   const detail = head.detail ?? (active && onDetail && head.crumb && head.crumb !== active.item.label ? head.crumb : undefined);
   const crumbGroup = active ? (active.group.id === 'kampus' ? null : active.group.label) : head.section;
   const crumbItem = active ? active.item.label : head.crumb;
+
+  // Ekran bilgi kutusu: ilk girişte başlığın altında açılır, 15 sn sonra kapanır; «Bu ekran» düğmesi yeniden açar.
+  const screenInfo = useScreenInfo(active?.item.id, loc.pathname);
 
   // Son açılanlar: menüdeki her ekran ve detay sayfası (Kampüs hariç — rayda hep var).
   const { update } = nav;
@@ -231,6 +235,8 @@ export default function Shell({
           </button>
         )}
 
+        <ScreenInfoButton s={screenInfo} />
+
         {/* M57: ekranın yayımlı rehberi varsa «Nasıl kullanılır»; ekran ziyaret sayacını da besler. */}
         <GuideLink item={active?.item} />
 
@@ -251,6 +257,8 @@ export default function Shell({
         </div>
       </div>
     </header>
+
+      <ScreenInfoPanel s={screenInfo} title={detail ?? crumbItem} />
 
       {/* ================= INFINITE CANVAS STAGE ================= */}
       {children}
