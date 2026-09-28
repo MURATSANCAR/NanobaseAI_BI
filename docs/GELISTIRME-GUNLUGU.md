@@ -46,6 +46,45 @@
   vitest + tsc; destek masası imajının yeniden kurulumu; canlıda `new-prints` ucunun gerçek M12 verisiyle sayısı
   (üretim ekranındaki «Tamamlanan» son 30 gün ile karşılaştırma); bir destek kaydında taslak/özetin maskeyle
   anlamını koruduğunun elle denetimi.
+## 2026-09-28 — Eksik tamamlama: hemen düzeltilecekler 6–10, M37 okur çekirdeği, M16 depo stoku (dal; DOĞRULANAMADI — testler koordinatörde)
+
+Dal `worktree-agent-a72f5b0e1fbf9d216` (main `b625a387` üstü). Sunucuya bağlanılmadı; Mac'te yalnız `py_compile`.
+
+- **6 — Hak açıklaması tek sınıflama** (`rights_notes.py`): aynı `new_haklaraciklama` M54 ve M36'da ayrı sorularla modele
+  soruluyordu. Soru telifinki (bölge/format/süre/onay/ücret/diğer), tablo `semantic_royalty_notes`, anahtar sözleşme kimliği
+  (küçük harf); metin iki modülde aynı temizlenir (`seo_crm.clean`), özet değişince yeniden sorulur, insan onayı iki
+  modülde geçerli. M36 okuması türetilir: bölge/format/süre/onay → kısıtlıyor, diğer → kısıtlamıyor, **ücret ve eşik altı →
+  belirsiz** (karar: ücret şartı dağıtımı yasaklamaz ama telif birimi bakmalı; sessizce «kısıtlamıyor» denmez). M36 yalnız
+  yürürlükteki sözleşmelerin notunu gönderir. `semantic_dijital_note_reads` artık okunmaz (eski ön okumalar bir kez yeniden
+  sorulur). Test `test_rights_notes.py`, `test_dijital.py` güncel.
+- **7 — Tek destek sınıflayıcısı:** masa (`yz/kayit.py`) serbest JSON'la olasılıksız sınıflıyordu. Konu artık köprüde bir kez:
+  `POST /api/v1/support/panel/classify` (panel anahtarı, temsilcisiz; M51 kapalı kümesi, maskeli metin, sonuç kaydedilir,
+  5 dk'lık tur yeniden sormaz). Masa `yz/sinif.py`: türü M51 sınıf adıyla eşler, o adda tür yoksa ekler (liste ortak);
+  eşik altı ya da köprü yoksa tür boş (masada ayrı konu tahmini yok). Öncelik/ekip/duygu masaya özgü: `yz/secim.py`
+  (tek token + logprobs + eleme turu; `/destek-llm/v1` kapısından) ve eşik 0,70/0,30. `kayit.py`'de yalnız istem/çağrı
+  bloğu değişti (maskeleme işiyle çakışma en az). Test `test_destek_siniflama.py` (masa modülü sahte frappe ile).
+- **8 — Basın-web etiketi:** `web_watch.ask` → `choose` (olumlu/olumsuz/nötr/ilgisiz) + `WEB_WATCH_MIN_PROB` (0,70) /
+  `WEB_WATCH_MIN_MARGIN` (0,30); eşik altı, olasılıksız ya da eşlenemeyen → `emin_degil` (saklanır, yeniden sorulmaz,
+  ekranda yok), olasılık özeti `label_note`. Test `test_web_watch_choose.py`.
+- **9 — Tek huni ekranı:** `/e-ticaret/huni` iki sekme (Ürün sayaçları · Sipariş hunisi); `/eticaret-musteri/huni` →
+  `?sekme=siparis`; o sayfa rolde yoksa H3 hunisi yerinde açılır (erişim kaybolmaz). Köprü: `/api/v1/commerce/products/funnel`
+  `sayfa:eticaret-huni` ile de. Menü/katalog değişmedi. Test `funnelTabs.test.ts`, `test_commerce.py`.
+- **10 — İhtiyaç belgeleri:** 47 belgenin durum satırı «kod var (main) — kabul durumu» (M15 10/11, M29 34/34, M30 okuma
+  6/6, M31 5+2, M32 38/40, M33 1 kalan; diğerleri kabul bekliyor).
+- **11 — M37 ↔ H2:** `readers_core.Provider` (`readers_api.register` → `app.state.readers_core`): envanter, izin sağlığı
+  (aynı kanalda izin+ret çelişkisi, ortak iletişim), segment sayımı (H2 motoru), ilgi alanları, kural cümlesi/alanları —
+  hepsi H2 işlevlerinden. Test `test_readers_core.py`.
+- **12 — M16 depo stoku boş:** (a) görünüm `IN (...)` ile sarılıp kod birebir aranıyordu → süzgeçsiz okunur, `stock_key`
+  (boşluksuz, büyük harf) ile seçilir; (b) bugünün anlık okuması yalnız 30 günlük pencere içinde yazılıyordu, kabuldeki
+  kitap pencere dışındaydı → pencere bitmiş açık lansmanda da yazılır (toplamlar değişmez); sinyal `depo.logo`/`logoGun`,
+  `bekleyenUrun` taşır, ekran bunları okur. Kabul 5 `depo.logo` ile karşılaştırır. Test `test_marketing_launch.py`.
+- **Sunucuda kalan:** pytest (`test_rights_notes`, `test_dijital`, `test_royalty`, `test_destek_siniflama`, `test_support`,
+  `test_web_watch_choose`, `test_commerce`, `test_readers_core`, `test_readers`, `test_okur`, `test_marketing_launch`) +
+  vitest (`funnelTabs`, `navModel`); köprü kurulumu; destek masası `nanobase_brand` güncellemesi (bench migrate gerekmez,
+  yeni doctype yok) ve bir deneme talebiyle konu → tür eşlemesi; M16 `scripts/acceptance/M16` (kitap 15201.01.6715), M37
+  `scripts/acceptance/M37` yeniden; hak notu için `POST /api/v1/rights/notes/classify` + M36 gece işi bir tur.
+- **Açık:** masa önceliği M51 aciliyetinden ayrı kalır (masanın öncelik listesi kendi SLA'sına bağlı); yönetim ekranına
+  `WEB_WATCH_MIN_*` alanı eklenmedi (ortam/ayar dosyasıyla).
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 
