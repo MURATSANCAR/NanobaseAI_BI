@@ -119,7 +119,7 @@ def classify(ticket: str) -> dict:
 	names = {"ticket_type": "tür", "priority": "öncelik", "agent_group": "ekip"}
 	parts = [f"{names[k]}: {v}" for k, v in applied.items()]
 	if duygu:
-		parts.append(f"Duygu: {duygu}")
+		parts.append(f"duygu: {duygu}")
 	if parts:
 		_activity(ticket, "NanobaseAI sınıflandırdı — " + ", ".join(parts))
 	frappe.db.commit()
@@ -147,10 +147,13 @@ def panel(ticket: str) -> dict:
 def summarize(ticket: str) -> dict:
 	doc = _check(ticket)
 	conv = _conversation(ticket)
+	replies = conv.count("[Temsilci]")
 	prompt = (
 		"Bu destek kaydını devralacak temsilci için en çok 3 satırlık Türkçe özet yaz:\n"
 		"1) Müşteri ne istiyor / sorun ne, 2) şu ana kadar ne yapıldı, 3) sıradaki adım ne.\n"
-		"Her satır tek cümle. Başlık ya da giriş cümlesi yazma.\n\n"
+		"Her satır tek cümle. Başlık ya da giriş cümlesi yazma.\n"
+		f"Temsilci yanıtı sayısı: {replies}. Yalnız yazışmada geçen işlemi yaz; "
+		"temsilci yanıtı yoksa 2. satır «Henüz yanıt verilmedi.» olsun, yapılmamış işlemi yapılmış gibi yazma.\n\n"
 		f"Konu: {doc.subject}\nİlk mesaj: {_text(doc.description, 3000)}\n\nYazışma:\n{conv or '(yok)'}"
 	)
 	try:

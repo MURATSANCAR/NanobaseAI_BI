@@ -40,6 +40,24 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
   `/api/v1/llm/openai/v1/chat/completions` (`backend/semantic_bridge/llm_openai.py`). Her çağrı `sl_llm_queue`
   sırasından kiralık alır (modül `destek`, etkileşimli öncelik); BI soruları ve gece işleriyle aynı slotları paylaşır.
 
+## Yapay zekâ özellikleri (`nanobase_brand/yz/`)
+
+Model çağrılarının hepsi LLM kapısından (`/destek-llm/v1`, modül `destek`); model hiçbir şeyi müşteriye göndermez.
+
+| Özellik | Nerede | Davranış |
+|---|---|---|
+| Sınıflama | yeni kayıt (arka plan, `yz/kanca.py` → `kayit.classify`) | tür, öncelik, ekip, müşteri duygusu; yalnız boş ya da sistem varsayılanındaki alan, yalnız tanımlı değer; kayıt geçmişine not. Atama kuralı çalışamazsa alanlar yine yazılır |
+| Özet | temsilci ekranı → «NanobaseAI» → Özetle | 3 satır: istek, yapılan, sıradaki adım |
+| Yanıt taslağı | «Yanıt taslağı hazırla» | bilgi bankası + çözülen kayıtlardan; yanıt kutusuna eklenir, temsilci gönderir; dayanak bağlantıları |
+| Makale taslağı | çözülen kayıtta | kişisel verisiz taslak makale (`HD Article`, Taslak, `nb_kaynak_kayit`) |
+| SLA riski | hafta içi 08:30 | riskteki açık kayıtlar → Not + «Agent Manager» e-postası |
+| Haftalık rapor | pazartesi 08:00 (elle `yz.rapor.weekly_now`) | sayılar veritabanından, 5 maddelik yorum modelden |
+
+Bilgi bankası «NanobaseAI Destek Bilgisi»: yayımlanmış makaleler + çözülen kayıtlar (Flow günlük eşitleme); gömme BI'ın
+gömme servisi (`bge-m3`, 1024 boyut) — kapının `/embeddings` aktarıcısı. Temsilci paneli
+`helpdesk/desk/src/components/ticket-agent/NanobaseAIPanel.vue` (marka.py ile kenar çubuğuna eklenir).
+Giden e-posta hesabı tanımlı değilse raporlar yalnız Not olarak kalır.
+
 ## Kurulum / güncelleme
 
 Sıra AGENTS.md'deki gibi: main'e merge → test sunucusu → müşteri VM'i. Kaynak her zaman `git archive main`:
