@@ -324,6 +324,19 @@ SPEC: list[dict[str, Any]] = [
      "help": "Virgülle konu kimlikleri, örn. finans,satis,stok,yayin,telif,tedarik,lojistik,basin,kurumsal,ik. "
              "Boşsa Logo ve CRM kataloğunda verisi olan konular bağlı sayılır. Bağlı olmayan konudaki soruya "
              "Zeki AI tahmin yerine «henüz veri bağlı değil» der"},
+    # Sohbete modül verisi (chat_portal.py, chat_portal_areas.json)
+    {"key": "CHAT_PORTAL_REQUIRE_CERTIFIED", "group": "chat", "label": "Modül verisinde yalnız onaylı tablolar", "type": "bool",
+     "default": "1",
+     "help": "Açıkken sohbet, modül tablolarından yalnız sohbet kataloğunda onaylananları kullanır. Kapatmak adayları da açar; "
+             "yalnız deneme için"},
+    {"key": "CHAT_PORTAL_MIN_PROB", "group": "chat", "label": "Modül verisi: seçim eşiği (olasılık)", "type": "text",
+     "default": "0.5",
+     "help": "Tablo, ölçü, kırılım ve tarih seçiminde en az bu olasılık istenir; altında soru netleştirilir. Kabulde ölçülür"},
+    {"key": "CHAT_PORTAL_MIN_MARGIN", "group": "chat", "label": "Modül verisi: seçim eşiği (marj)", "type": "text",
+     "default": "0.15",
+     "help": "Seçilen seçenek ile ikinci arasındaki en az olasılık farkı. Kabulde ölçülür"},
+    {"key": "CHAT_PORTAL_TIMEOUT_MS", "group": "chat", "label": "Modül verisi: sorgu süre sınırı (ms)", "type": "int",
+     "default": "20000", "help": "Portal tablosuna giden tek sorgunun en uzun süresi"},
     # M32 Kurumsal satış ve B2B
     {"key": "CORP_CHANNEL", "group": "corporate", "label": "Kurum kanalı (Logo özel kod 2)", "type": "text", "default": "KURUM",
      "help": "Kurum carileri Logo'da bu özel kod 2 değeriyle ayrılır; alım geçmişi ve hacim indirimi geçmişi bu kanaldan okunur"},

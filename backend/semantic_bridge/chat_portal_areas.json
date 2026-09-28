@@ -1,0 +1,430 @@
+{
+  "_note": "Zeki AI sohbetinin portal veri alanları (2026-09-28). Modüllerin kendi sonuç tabloları (semantic_*, sl_*) Logo/CRM kataloğunun dışındadır; burada alan alan tanımlanır. Her alan: sohbet konusu (chat_topics.json `portal`), kişinin görmesi için gereken sayfa/özellik anahtarlarından BİRİ (`pages`, access_catalog.json), tablo deseni (`tables`, düzenli ifade, tam ad), tabloların model-yüzü adları (`labels`), sohbetin sınıflandırıcıya uğraması gereken ayırt edici kelimeler (`keywords`), satır kapsamı (`row_scope`: kişi yalnız bu kolonlardan birinde kendi hesabı olan satırı görür; `unless` anahtarlarından biri varsa hepsini; kolonu olmayan tablo o alanda yalnız `unless` sahibine açıktır) ve sabit satır süzgeci (`row_filters`; süzülen kolon seçenek olmaz), anlık görüntü tabloları (`snapshots`: her gün yeniden yazılan sayım tablosu; dönem sorulmadıkça yalnız en son günün satırları sayılır ki günler üst üste toplanmasın). Kolonlar tabloya bakılarak sınıflanır (chat_portal.profile); kişisel veri, gizli bilgi, serbest metin ve yapısal kolonlar HİÇBİR ZAMAN seçenek olmaz. `never_tables` alan deseninden önce gelir: İK ve kişi kayıtları hiçbir alanla açılmaz. Yalnız onaylı (certify) tablo sohbette kullanılır; profil ve onay: scripts/catalog-authoring/2026-09-28-sohbet-portal-verisi.py.",
+  "version": 1,
+  "settings": {
+    "dimension_max_distinct": 40,
+    "join_depth": 2,
+    "join_min_coverage": 0.95,
+    "label_max_length": 500,
+    "tenant_column": "tenant_id",
+    "soft_delete_columns": ["deleted_at", "silinme", "silindi_at"]
+  },
+  "never_tables": [
+    "^semantic_hr_",
+    "^semantic_people_profiles$",
+    "^semantic_readers?$",
+    "^semantic_reader_",
+    "^semantic_pr_contacts$",
+    "^semantic_infl_(people|accounts|payouts|drafts)$",
+    "^semantic_rel_people$",
+    "^semantic_freelance_(people|payouts|payout_lines|messages|portfolio)$",
+    "^semantic_commerce_(customers|run_members)$",
+    "^semantic_kurul_(members|comments|distribution)$",
+    "^semantic_editorial_(board_votes|application_files|application_letters|application_evals|signatures)$",
+    "^semantic_security_",
+    "^semantic_access_",
+    "^semantic_(audit|settings|admin_group|user_prefs|greetings|board_cards|alert_rules|alert_events)$",
+    "^semantic_chat_portal_catalog$",
+    "_(meta|state|settings|keys|tokens?)$"
+  ],
+  "columns": {
+    "secret": "(^|_)(parola|sifre|password|passwd|token|secret|api_?key|anahtar|credential|cookie)(_|$)",
+    "person": "(^|_)(by|eposta|email|e_?mail|mail_?addr|telefon|tel|phone|gsm|cep|tckn|tc_?no|tc_?kimlik|kimlik|vergi_?no|adres|address|iban|hesap_?no|dogum|birth|username|user|user_?id|kullanici|assignee|atanan|owner|sahip|sorumlu|olusturan|guncelleyen|onaylayan|ust_onaylayan|tamamlayan|gozden_geciren|olcen|yazan|yukleyen|kapatan|baslatan|derleyen|donduran|duzenleyen|isaretleyen|hazirlayan|gonderen|isteyen|sunan|alici|alicilar|recipients?|sender|display|masked|maskeli|hash|ip|chair|evaluator|editor|reviewer|translator|cevirmen|redaktor|author|yazar|agency|contact|person|kisi|customer|musteri|member|uye|aday|candidate|katilimcilar|members|decided_name)(_|$)",
+    "free_text": "(^|_)(subject|metin|aciklama|not|note|notlar|notu|ozet|summary|gerekce|yorum|comment|body|icerik|taslak|draft|brief|reason|neden_metni|hata|error|detail|detay|evidence|kanit)(_|$)",
+    "key": "(^id$|_id$|_ref$|_key$|_no$|^no$|_sha256$|_sha$|sha256|_hash$|_yolu$|_path$|^path$|url$|_url$|^link$|_imza$|^imza$|dosya$|filename$|^mime|_mime$|_bytes$|^bytes$|^sira$|^position$|^sort$|^surum$|^version$|^round$)",
+    "label": "(^|_)(baslik|title|ad|adi|name|label|madde|surec|eser|kitap_adi|book_title|book_name|urun_adi|kitap_ad|job)$",
+    "structured": "(_json$|^json$)"
+  },
+  "areas": [
+    {
+      "id": "pazarlama-plan",
+      "topic": "pazarlama",
+      "label": "Yeni kitap pazarlama planları",
+      "pages": ["sayfa:pazarlama-yeni-kitap"],
+      "tables": "^semantic_mkt_(plans|plan_books|plan_lines|materials|tasks)$",
+      "labels": {
+        "semantic_mkt_plans": "pazarlama planı",
+        "semantic_mkt_plan_lines": "pazarlama planı bütçe kalemi (kanal)",
+        "semantic_mkt_plan_books": "pazarlama planındaki kitap",
+        "semantic_mkt_materials": "pazarlama materyali (metin ve görsel)",
+        "semantic_mkt_tasks": "pazarlama görevi (planlanan iş)"
+      },
+      "keywords": ["pazarlama planı", "pazarlama bütçesi", "pazarlama görevi", "pazarlama işi", "pazarlama materyali"]
+    },
+    {
+      "id": "pazarlama-lansman",
+      "topic": "pazarlama",
+      "label": "Lansman takibi",
+      "pages": ["sayfa:pazarlama-lansman"],
+      "tables": "^semantic_mkt_(launches|launch_daily)$",
+      "labels": {
+        "semantic_mkt_launches": "lansman",
+        "semantic_mkt_launch_daily": "lansman günlük sonucu (sipariş, sevk, fatura)"
+      },
+      "keywords": ["lansman"]
+    },
+    {
+      "id": "pazarlama-backlist",
+      "topic": "pazarlama",
+      "label": "Backlist pazarlama",
+      "pages": ["sayfa:pazarlama-backlist"],
+      "tables": "^semantic_mkt_(backlist|backlist_series|campaign_effect)$",
+      "labels": {
+        "semantic_mkt_backlist": "backlist kitap karnesi",
+        "semantic_mkt_backlist_series": "backlist aylık seri",
+        "semantic_mkt_campaign_effect": "kampanya etkisi"
+      },
+      "keywords": ["backlist"]
+    },
+    {
+      "id": "pazarlama-aylik",
+      "topic": "pazarlama",
+      "label": "Aylık pazarlama planı",
+      "pages": ["sayfa:pazarlama-aylik"],
+      "tables": "^semantic_mkt_month_(budget|items)$",
+      "labels": {
+        "semantic_mkt_month_items": "aylık plan kalemi",
+        "semantic_mkt_month_budget": "aylık plan kanal bütçesi"
+      },
+      "keywords": ["aylık plan", "aylık pazarlama"]
+    },
+    {
+      "id": "pazarlama-foy",
+      "topic": "pazarlama",
+      "label": "Satış föyleri",
+      "pages": ["sayfa:pazarlama-foy"],
+      "tables": "^semantic_mkt_(foy|foy_sends)$",
+      "labels": {
+        "semantic_mkt_foy": "satış föyü",
+        "semantic_mkt_foy_sends": "föy gönderimi"
+      },
+      "keywords": ["föy"]
+    },
+    {
+      "id": "pazarlama-icerik",
+      "topic": "pazarlama",
+      "label": "Görsel ve metin talepleri",
+      "pages": ["sayfa:pazarlama-icerik"],
+      "tables": "^semantic_mkt_creative_(requests|assets)$",
+      "labels": {
+        "semantic_mkt_creative_requests": "görsel/metin talebi",
+        "semantic_mkt_creative_assets": "üretilen görsel/metin"
+      },
+      "keywords": ["görsel talebi", "tasarım talebi", "metin talebi"]
+    },
+    {
+      "id": "katalog-bulten",
+      "topic": "pazarlama",
+      "label": "Katalog ve bülten",
+      "pages": ["sayfa:katalog-bulten"],
+      "tables": "^semantic_(newsletters|newsletter_items|newsletter_results|catalogs|catalog_items)$",
+      "labels": {
+        "semantic_newsletters": "e-bülten",
+        "semantic_newsletter_items": "bültendeki kitap",
+        "semantic_newsletter_results": "bülten sonucu (gönderilen, açılan, tıklanan)",
+        "semantic_catalogs": "katalog",
+        "semantic_catalog_items": "katalogdaki kitap"
+      },
+      "keywords": ["bülten", "katalog talebi", "katalog listesi"]
+    },
+    {
+      "id": "sosyal-medya",
+      "topic": "dijital",
+      "label": "Sosyal medya",
+      "pages": ["sayfa:sosyal-medya"],
+      "tables": "^semantic_social_(posts|metrics|accounts)$",
+      "labels": {
+        "semantic_social_posts": "sosyal medya paylaşımı",
+        "semantic_social_metrics": "paylaşım etkileşim ölçümü (gösterim, beğeni, yorum)",
+        "semantic_social_accounts": "sosyal medya hesabı"
+      },
+      "keywords": ["sosyal medya", "paylaşım", "etkileşim", "takipçi", "instagram"]
+    },
+    {
+      "id": "reklam",
+      "topic": "dijital",
+      "label": "Dijital reklam",
+      "pages": ["sayfa:reklam"],
+      "tables": "^semantic_ads_(accounts|campaigns|daily|budget|ecom_daily|ecom_book)$",
+      "labels": {
+        "semantic_ads_accounts": "reklam hesabı (platform)",
+        "semantic_ads_campaigns": "reklam kampanyası",
+        "semantic_ads_daily": "reklam günlük harcama ve tıklama",
+        "semantic_ads_budget": "aylık reklam bütçesi",
+        "semantic_ads_ecom_daily": "reklamla gelen site satışı (gün)",
+        "semantic_ads_ecom_book": "reklamla gelen site satışı (kitap)"
+      },
+      "keywords": ["reklam harcaması", "reklam kampanyası", "reklam bütçesi", "tıklama", "gösterim"]
+    },
+    {
+      "id": "isbirlikleri",
+      "topic": "dijital",
+      "label": "Influencer işbirlikleri",
+      "pages": ["sayfa:isbirlikleri"],
+      "tables": "^semantic_infl_(collabs|snapshots)$",
+      "labels": {
+        "semantic_infl_collabs": "influencer işbirliği",
+        "semantic_infl_snapshots": "işbirliği erişim ölçümü"
+      },
+      "keywords": ["işbirliği", "işbirlikleri", "influencer", "fenomen"]
+    },
+    {
+      "id": "eticaret-site",
+      "topic": "eticaret",
+      "label": "Site siparişleri ve huni",
+      "pages": ["sayfa:eticaret-musteri", "sayfa:eticaret-huni"],
+      "tables": "^semantic_commerce_(orders|product_stats|campaigns|segment_moves)$",
+      "labels": {
+        "semantic_commerce_orders": "site siparişi",
+        "semantic_commerce_product_stats": "site ürün görüntülenme ve satış (gün)",
+        "semantic_commerce_campaigns": "site müşteri kampanyası",
+        "semantic_commerce_segment_moves": "site müşteri segment geçişi"
+      },
+      "keywords": ["site siparişi", "sitede", "sepet", "görüntülen", "e-ticaret sitesi"]
+    },
+    {
+      "id": "eticaret-platform",
+      "topic": "eticaret",
+      "label": "E-ticaret platform durumu ve farklar",
+      "pages": ["sayfa:eticaret", "sayfa:eticaret-farklar"],
+      "tables": "^semantic_eticaret_(items|diffs)$",
+      "labels": {
+        "semantic_eticaret_items": "sitedeki kitap (ürün kartı, stok, fiyat)",
+        "semantic_eticaret_diffs": "site–Logo–CRM farkı"
+      },
+      "keywords": ["sitede aktif", "site farkı", "e-ticaret farkı"]
+    },
+    {
+      "id": "trendyol",
+      "topic": "eticaret",
+      "label": "Trendyol mağazası",
+      "pages": ["sayfa:trendyol", "sayfa:trendyol-urunler", "sayfa:trendyol-siparisler", "sayfa:trendyol-sorular"],
+      "tables": "^semantic_trendyol_(orders|products|claims|reviews|questions)$",
+      "labels": {
+        "semantic_trendyol_orders": "Trendyol siparişi",
+        "semantic_trendyol_products": "Trendyol ürünü (stok ve fiyat)",
+        "semantic_trendyol_claims": "Trendyol iadesi",
+        "semantic_trendyol_reviews": "Trendyol yorumu",
+        "semantic_trendyol_questions": "Trendyol müşteri sorusu"
+      },
+      "keywords": ["trendyol"]
+    },
+    {
+      "id": "amazon-yurtdisi",
+      "topic": "eticaret",
+      "label": "Amazon ve yurtdışı satış",
+      "pages": ["sayfa:amazon", "sayfa:amazon-konsinye", "sayfa:amazon-yurtdisi"],
+      "tables": "^semantic_intl_(sales|consignment|books|market_cards)$",
+      "labels": {
+        "semantic_intl_sales": "yurtdışı satış (ay, ülke)",
+        "semantic_intl_consignment": "Amazon konsinye sevk ve iade",
+        "semantic_intl_books": "yurtdışı kitap listesi",
+        "semantic_intl_market_cards": "yurtdışı pazar kartı"
+      },
+      "keywords": ["amazon", "yurtdışı satış", "konsinye"]
+    },
+    {
+      "id": "kampanya",
+      "topic": "eticaret",
+      "label": "İndirim kampanyaları",
+      "pages": ["sayfa:kampanya"],
+      "tables": "^semantic_kampanya_(campaigns|items|results)$",
+      "labels": {
+        "semantic_kampanya_campaigns": "indirim kampanyası",
+        "semantic_kampanya_items": "kampanyadaki kitap (fiyat, marj)",
+        "semantic_kampanya_results": "kampanya günlük sonucu"
+      },
+      "keywords": ["indirim kampanyası", "site kampanyası", "kampanya marjı"]
+    },
+    {
+      "id": "okur-kitlesi",
+      "topic": "okur",
+      "label": "Okur kitlesi ve izinler (toplu sayılar)",
+      "pages": ["sayfa:okur-toplulugu", "sayfa:okur-segmentler", "sayfa:okur-programlar", "sayfa:okur-yorumlar"],
+      "tables": "^semantic_okur_(inventory|consent_issues|segments|segment_sizes|programs|review_status)$",
+      "labels": {
+        "semantic_okur_inventory": "okur envanteri (kaynak başına toplam ve izinli sayılar)",
+        "semantic_okur_consent_issues": "izin sorunu sayımı",
+        "semantic_okur_segments": "okur segmenti",
+        "semantic_okur_segment_sizes": "okur segmenti büyüklüğü (gün)",
+        "semantic_okur_programs": "topluluk programı (etkinlik)",
+        "semantic_okur_review_status": "okur yorumu cevap durumu"
+      },
+      "snapshots": {"semantic_okur_inventory": "tarih", "semantic_okur_consent_issues": "tarih", "semantic_okur_segment_sizes": "tarih"},
+      "keywords": ["okur", "iys", "kvkk onay", "e-posta izni", "sms izni", "topluluk programı"]
+    },
+    {
+      "id": "kurumsal-eposta",
+      "topic": "destek",
+      "label": "Kurumsal gelen kutusu",
+      "pages": ["sayfa:kurumsal-eposta"],
+      "tables": "^semantic_mail_(messages|events|sla)$",
+      "labels": {
+        "semantic_mail_messages": "kurumsal gelen kutusu iletisi",
+        "semantic_mail_events": "ileti işlem kaydı",
+        "semantic_mail_sla": "ileti yanıt süresi kuralı"
+      },
+      "row_filters": [{"column": "is_hr", "not": true}],
+      "keywords": ["iletiler", "gelen kutusu", "kurumsal e-posta", "cevapsız ileti"]
+    },
+    {
+      "id": "musteri-destek",
+      "topic": "destek",
+      "label": "Müşteri hizmetleri talepleri",
+      "pages": ["sayfa:musteri-destek"],
+      "tables": "^semantic_support_(insights|faq_gaps)$",
+      "labels": {
+        "semantic_support_insights": "destek talebi sınıfı ve taslağı",
+        "semantic_support_faq_gaps": "sık sorulan soru boşluğu"
+      },
+      "keywords": ["destek talebi", "müşteri talebi", "şikâyet", "sla"]
+    },
+    {
+      "id": "risk-uyum",
+      "topic": "risk",
+      "label": "Risk ve uyum",
+      "pages": ["sayfa:risk-uyum"],
+      "tables": "^semantic_(risk_(register|indicators|indicator_values|indicator_alerts|actions|reviews|policies|bcp)|compliance_(items|events))$",
+      "labels": {
+        "semantic_risk_register": "risk kaydı",
+        "semantic_risk_indicators": "risk göstergesi tanımı",
+        "semantic_risk_indicator_values": "risk göstergesi ölçümü",
+        "semantic_risk_indicator_alerts": "risk göstergesi uyarı durumu",
+        "semantic_risk_actions": "risk aksiyonu",
+        "semantic_risk_reviews": "risk gözden geçirmesi",
+        "semantic_risk_policies": "sigorta poliçesi",
+        "semantic_risk_bcp": "iş sürekliliği planı",
+        "semantic_compliance_items": "uyum takvimi maddesi",
+        "semantic_compliance_events": "uyum takvimi dönemi"
+      },
+      "row_scope": {"columns": ["sahip", "olusturan"], "unless": ["ozellik:risk.herkesinki"]},
+      "keywords": ["risk kaydı", "risk göstergesi", "riskler", "sigorta poliçe", "poliçe", "uyum takvimi", "iş sürekliliği", "risk aksiyonu"]
+    },
+    {
+      "id": "kurul",
+      "topic": "yonetim",
+      "label": "Danışma ve yönetim kurulu",
+      "pages": ["sayfa:kurul"],
+      "tables": "^semantic_kurul_(meetings|decisions|actions|agenda|indicators|values)$",
+      "labels": {
+        "semantic_kurul_meetings": "kurul toplantısı",
+        "semantic_kurul_decisions": "kurul kararı",
+        "semantic_kurul_actions": "kurul aksiyonu",
+        "semantic_kurul_agenda": "kurul gündem maddesi",
+        "semantic_kurul_indicators": "kurul göstergesi tanımı",
+        "semantic_kurul_values": "kurul göstergesi dönem değeri"
+      },
+      "keywords": ["kurul"]
+    },
+    {
+      "id": "sistem-isletimi",
+      "topic": "isletim",
+      "label": "Sistem durumu",
+      "pages": ["sayfa:sistem-durumu"],
+      "tables": "^semantic_itops_(incidents|checks|jobs|releases)$",
+      "labels": {
+        "semantic_itops_incidents": "sistem olayı (kesinti)",
+        "semantic_itops_checks": "sistem sağlık yoklaması",
+        "semantic_itops_jobs": "zamanlanmış iş",
+        "semantic_itops_releases": "sürüm kurulumu"
+      },
+      "keywords": ["kesinti", "olay kaydı", "zamanlanmış iş", "bağlantı kesintisi", "sürüm kurulumu"]
+    },
+    {
+      "id": "zeki-kalite",
+      "topic": "isletim",
+      "label": "Zeki AI kalitesi ve kuyruk",
+      "pages": ["sayfa:zeki-kalite"],
+      "tables": "^(semantic_mq_(runs|feedback)|sl_query_log|sl_llm_job)$",
+      "labels": {
+        "semantic_mq_runs": "kalite ölçüm koşusu",
+        "semantic_mq_feedback": "cevap geri bildirimi (doğru/kısmen/yanlış)",
+        "sl_query_log": "sohbet sorusu kaydı (cevap türü, süre)",
+        "sl_llm_job": "Zeki AI iş kuyruğu (modül, bekleme ve işlem süresi)"
+      },
+      "keywords": ["cevap süresi", "kuyruk", "hatalı cevap", "geri bildirim", "kalite koşusu"]
+    },
+    {
+      "id": "planli-raporlar",
+      "topic": "isletim",
+      "label": "Planlı raporlar",
+      "pages": ["sayfa:planli-raporlar"],
+      "tables": "^semantic_reports$",
+      "labels": {"semantic_reports": "planlı rapor (son gönderim durumu)"},
+      "row_scope": {"columns": ["username"], "unless": ["sayfa:sistem-durumu"]},
+      "keywords": ["planlı rapor"]
+    },
+    {
+      "id": "editoryal-basvuru",
+      "topic": "editoryal",
+      "label": "Başvurular ve yayın kurulu",
+      "pages": ["sayfa:basvurular", "sayfa:yayin-kurulu"],
+      "tables": "^semantic_editorial_(applications|board_sessions|board_agenda)$",
+      "labels": {
+        "semantic_editorial_applications": "yazar başvurusu (dosya)",
+        "semantic_editorial_board_sessions": "yayın kurulu oturumu",
+        "semantic_editorial_board_agenda": "yayın kurulu gündemi ve kararı"
+      },
+      "keywords": ["başvuru", "yayın kurulu", "değerlendirmede"]
+    },
+    {
+      "id": "editoryal-gorev",
+      "topic": "editoryal",
+      "label": "Editör görevleri",
+      "pages": ["sayfa:editor-atama"],
+      "tables": "^semantic_editorial_tasks$",
+      "labels": {"semantic_editorial_tasks": "editör görevi (proje, rol, termin)"},
+      "keywords": ["editör görevi", "redaksiyon görevi", "editör ataması"]
+    },
+    {
+      "id": "editoryal-masa",
+      "topic": "editoryal",
+      "label": "Redaksiyon masası",
+      "pages": ["sayfa:redaksiyon"],
+      "tables": "^semantic_editorial_(works|checks)$",
+      "labels": {
+        "semantic_editorial_works": "redaksiyondaki eser",
+        "semantic_editorial_checks": "baskı öncesi denetim maddesi"
+      },
+      "keywords": ["redaksiyon", "baskı öncesi denetim"]
+    },
+    {
+      "id": "ceviri",
+      "topic": "editoryal",
+      "label": "Çeviri işleri",
+      "pages": ["sayfa:ceviri", "sayfa:ceviri-masam"],
+      "tables": "^semantic_translation_(jobs|segments|errors|qe)$",
+      "labels": {
+        "semantic_translation_jobs": "çeviri işi",
+        "semantic_translation_segments": "çeviri bölütü (paragraf)",
+        "semantic_translation_errors": "çeviri hatası (redaktör işareti)",
+        "semantic_translation_qe": "çeviri kalite puanı"
+      },
+      "keywords": ["çeviri", "çevirmen"]
+    },
+    {
+      "id": "uretim",
+      "topic": "editoryal",
+      "label": "Üretim takibi",
+      "pages": ["sayfa:uretim"],
+      "tables": "^semantic_production_(entries|quotes)$",
+      "labels": {
+        "semantic_production_entries": "üretim kilometre taşı kaydı",
+        "semantic_production_quotes": "baskı teklifi"
+      },
+      "keywords": ["üretim takvimi", "üretim aşaması", "baskı teklifi"]
+    },
+    {
+      "id": "serbest-calisan",
+      "topic": "editoryal",
+      "label": "Serbest çalışan işleri",
+      "pages": ["sayfa:serbest-calisanlar"],
+      "tables": "^semantic_freelance_(tasks|deliveries)$",
+      "labels": {
+        "semantic_freelance_tasks": "serbest çalışan işi",
+        "semantic_freelance_deliveries": "serbest çalışan teslimi"
+      },
+      "keywords": ["serbest çalışan"]
+    }
+  ]
+}

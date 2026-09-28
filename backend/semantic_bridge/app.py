@@ -873,6 +873,42 @@ class Runtime:
                  bool(hint and hint.get("suggestion")))
         return hint
 
+    def _answer_portal(self, question: str, scope: Any, sq: Any, thread_id: str, timings: dict[str, int],
+                       username: Optional[str], sample_size: int, log_query: Any) -> dict[str, Any]:
+        """Sohbete modül verisi (chat_portal): rakam portal tablosundan, model yalnız kapalı kümeden seçer.
+        Cevap biçimi Logo/CRM cevabıyla aynı (özet, kolonlar, satırlar); panoya ekleme için SQL alanı taşınmaz, çünkü
+        pano Logo/CRM bağlantısıyla yeniden koşar."""
+        from semantic_bridge import chat_portal
+
+        t = time.perf_counter()
+        out = chat_portal.answer(self.store.engine, self.settings.tenant_id, question, scope.topic, user=username,
+                                 llm=self.llm_for("chat"), sample_size=sample_size)
+        timings["portal_ms"] = int((time.perf_counter() - t) * 1000)
+        portal = {"plan": out.get("plan"), "sql": out.get("sql")}
+        records = out.get("records") or []
+        answered = out["type"] == "TEXT_TO_SQL"
+        qid = log_query(sql=out.get("sql"), compiler="portal", catalog_version=None, executed=answered,
+                        resolved=sq.to_dict(), answer_type=out["type"], answer_summary=out["text"], error=out.get("error"),
+                        row_count=len(records) if answered else None,
+                        latency_ms=timings["portal_ms"],
+                        result_json={"columns": out.get("columns") or [], "records": records, "totalRows": len(records),
+                                     "truncated": False} if answered else None,
+                        gate={"chatScope": scope.to_dict(), "portal": portal})
+        resp: dict[str, Any] = {"id": uuid.uuid4().hex, "type": out["type"], "threadId": thread_id, "timings": timings,
+                                "chatScope": scope.to_dict(), "queryId": qid,
+                                "semantic": {"query": sq.to_dict(), "chatScope": scope.to_dict(), "portal": portal}}
+        if answered:
+            shown = out.get("shown") or []
+            resp.update(summary=out["text"], explanation=out["text"], columns=out.get("columns") or [], records=shown,
+                        shownRows=len(shown), rowCount=len(records), totalRows=len(records),
+                        truncated=len(shown) < len(records))
+        else:
+            resp.update(explanation=out["text"])
+            if out["type"] == "CLARIFICATION":
+                resp["needs_clarification"] = True
+        log.info("ask portal type=%s topic=%s ms=%s q=%r", out["type"], scope.topic["id"], timings["portal_ms"], question[:80])
+        return resp
+
     def ask(self, question: str, *, thread_id: Optional[str], sample_size: int, exclude_nl: Optional[str] = None, execute: bool = True, progress=None, username: Optional[str] = None) -> dict[str, Any]:
         report = progress or (lambda stage: None)
         report("understanding")
@@ -929,9 +965,18 @@ class Runtime:
         # sohbette verir; şirket sorusunun konusu sohbete verisi bağlanmamış bir alansa tahmin yerine
         # «henüz veri bağlı değil» denir (chat_topics.json, yönetim ayarı CHAT_CONNECTED_TOPICS).
         # Güçlü kanıt = sertifikalı kavram; kelime içi tahmin ya da veride geçen bir değer tek başına iş sorusu saymaz.
-        if not chat_scope.has_business_evidence(sq.slots):
+        # 2026-09-28 (sohbete modül verisi): konusu portalın kendi modül tablolarında olan soru (chat_topics.json `portal`)
+        # chat_portal'dan cevaplanır. Portal alanının ayırt edici kelimesi geçen soru («risk kaydı», «lansman», «bülten»)
+        # Logo/CRM'de güçlü bir kavrama yerleşse de sınıflandırıcıya sorulur; o durumda yalnız portal konusu yönü değiştirir,
+        # başka her karar eskisi gibi Logo/CRM hattında kalır.
+        from semantic_bridge import chat_portal
+        evidence = chat_scope.has_business_evidence(sq.slots)
+        if not evidence or chat_portal.mentions_portal(question):
             scope = chat_scope.classify(question, self.llm_for("chat"),
                                         has_context=bool(self.thread_plans.get(thread_id)))
+            if not scope.is_intro and scope.connected and chat_portal.serves(scope.topic):
+                return self._answer_portal(question, scope, sq, thread_id, timings, username, sample_size, _log)
+        if not evidence:
             if scope.is_intro:
                 qid = _log(sql=None, compiler="intro", catalog_version=sq.catalog_version, executed=False,
                            resolved=sq.to_dict(), answer_type="MODULE_INTRO", answer_summary=scope.reply,

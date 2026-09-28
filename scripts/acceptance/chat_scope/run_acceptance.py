@@ -148,7 +148,9 @@ def main() -> int:
         status = "PASS"
         if typ == "MODULE_INTRO":
             status, note = "FAIL", "modül sorusu reddedildi"
-        elif typ == "DATA_UNAVAILABLE" and scope and not str(a.get("explanation", "")).startswith("Bu konuda henüz veri bağlı değil"):
+        elif typ == "DATA_UNAVAILABLE" and scope and not (
+                str(a.get("explanation", "")).startswith("Bu konuda henüz veri bağlı değil")
+                or a.get("explanation") == (chat_scope.topic(scope.get("topic")) or {}).get("closed")):  # İK: bilerek kapalı
             status, note = "FAIL", "veri bağlı değil metni beklenen biçimde değil"
         elif expected not in connected and typ == "TEXT_TO_SQL":
             status, note = "UNVERIFIED", "bağlı olmayan konuda SQL cevabı — elle incelenecek"

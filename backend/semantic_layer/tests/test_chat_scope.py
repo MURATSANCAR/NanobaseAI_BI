@@ -113,6 +113,9 @@ MODULE_QUESTIONS = [
     ("H1", "Tasavvuf kategorisinde kaç kitabımız var, kaçı satışta?", "yayin"),
     ("M36", "Sesli kitap hakkı olan çocuk kitaplarımız hangileri?", "yayin"),
     ("M54", "Kazanılmamış avansı en yüksek 20 sözleşme hangileri?", "telif"),
+    # Editoryal süreç ve üretim (M1–M4, M8, M12) — 2026-09-28'de ayrı konu oldu
+    ("M1", "Hangi başvurular 30 günden fazladır değerlendirmede?", "editoryal"),
+    ("M4", "Terminine bir haftadan az kalan çeviri işleri hangileri?", "editoryal"),
     # Okur, müşteri hizmetleri, kurumsal e-posta (H2, H4, M37, M51)
     ("H2", "E-posta izni olan kaç okurumuz var, geçen aya göre değişim ne?", "okur"),
     ("M37", "Fuardan gelen okur kayıtlarının kaçında KVKK onayı var?", "okur"),
@@ -158,7 +161,10 @@ def test_module_question_goes_to_data_or_honest_no_data(module, question, expect
     assert scope.intent == chat_scope.DATA and not scope.is_intro
     assert scope.topic["id"] == expected_topic
     if expected_topic in connected:
-        assert scope.reply is None and scope.answer_type is None       # veri hattına gider
+        assert scope.reply is None and scope.answer_type is None       # veri hattına gider (Logo/CRM ya da portal)
+    elif scope.topic.get("closed"):
+        assert scope.not_connected and scope.answer_type == "DATA_UNAVAILABLE"
+        assert scope.reply == scope.topic["closed"]                     # İK: bilerek kapalı, kendi metni
     else:
         assert scope.not_connected and scope.answer_type == "DATA_UNAVAILABLE"
         assert scope.reply.startswith("Bu konuda henüz veri bağlı değil")
@@ -230,15 +236,31 @@ def test_topics_registry_is_well_formed():
 
 def test_connected_topics_default_and_override():
     default = chat_scope.connected_topic_ids("")
-    assert default == {t["id"] for t in chat_scope.topics() if t["data"]}
+    assert default == {t["id"] for t in chat_scope.topics() if (t["data"] or t.get("portal")) and not t.get("closed")}
     assert {"finans", "satis", "stok"} <= default and "ik" not in default
-    assert chat_scope.connected_topic_ids(" ik , Finans, uydurma ") == {"ik", "finans"}
+    # 2026-09-28: modül verisi portal veri alanlarıyla bağlı (chat_portal)
+    assert {"pazarlama", "dijital", "eticaret", "okur", "destek", "risk", "yonetim", "isletim", "editoryal"} <= default
+    assert chat_scope.connected_topic_ids(" risk , Finans, uydurma ") == {"risk", "finans"}
+    # İK bilerek kapalı: ayarla da bağlanmaz
+    assert chat_scope.connected_topic_ids(" ik , Finans ") == {"finans"}
 
 
 def test_connected_topics_read_from_settings(monkeypatch):
-    monkeypatch.setattr(chat_scope, "_conf", lambda key: "ik" if key == "CHAT_CONNECTED_TOPICS" else "")
-    scope = classify("Bu çeyrek eNPS kaç?", Scripted({"intent": "DATA", "topic": "ik"}))
+    monkeypatch.setattr(chat_scope, "_conf", lambda key: "finans" if key == "CHAT_CONNECTED_TOPICS" else "")
+    scope = classify("Önümüzdeki 60 günde biten sigorta poliçeleri?", Scripted({"intent": "DATA", "topic": "risk"}))
+    assert scope.not_connected and scope.reply.startswith("Bu konuda henüz veri bağlı değil")
+    monkeypatch.setattr(chat_scope, "_conf", lambda key: "risk" if key == "CHAT_CONNECTED_TOPICS" else "")
+    scope = classify("Önümüzdeki 60 günde biten sigorta poliçeleri?", Scripted({"intent": "DATA", "topic": "risk"}))
     assert not scope.not_connected and scope.reply is None
+
+
+def test_hr_topic_is_closed_with_its_own_reply(monkeypatch):
+    monkeypatch.setattr(chat_scope, "_conf", lambda key: "")
+    ik = chat_scope.topic("ik")
+    assert ik["closed"] and not ik["data"] and not ik.get("portal")
+    scope = classify("Bu çeyrek eNPS kaç?", Scripted({"intent": "DATA", "topic": "ik"}))
+    assert scope.not_connected and scope.answer_type == "DATA_UNAVAILABLE" and scope.reply == ik["closed"]
+    assert "kişisel veri" in scope.reply
 
 
 # ------------------------------------------------------------------ ekrana giden metinde teknoloji adı yok

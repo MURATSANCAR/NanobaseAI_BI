@@ -118,6 +118,31 @@ Dal `worktree-agent-a72f5b0e1fbf9d216` (main `b625a387` üstü). Sunucuya bağla
   kabulü (`scripts/acceptance/zeki-15-16-17-19/check.sh`, `kabul.py --gece`, `temizlik.py`) koordinatörde.
 - **Sunucuda kalan:** kurulum; `timas-okur-sesi` ve `timas-not-sinyali` zamanlayıcıları (ilk koşu elle); kör etiketleme
   örneğiyle eşiklerin ölçülmesi; `OKUR_SESI_URETIM_ALICI` alıcısı; CRM ziyaret–cari kolonu.
+## 2026-09-28 — Zeki AI sohbetine modül verisi (öneri 11, yapı taşı 10) — DOĞRULANAMADI, testler koordinatörde
+
+- **Neden:** `chat_topics.json`'da 9 konu (pazarlama, dijital, e-ticaret, okur, destek, İK, risk, yönetim, işletim) «henüz
+  veri bağlı değil» diyordu; editoryal süreç konusu hiç yoktu. Bu kayıtlar Logo/CRM'de değil portalın kendi modül
+  tablolarında; NL→SQL hattı (MSSQL) onları göremez.
+- **Karar (genel mekanizma, örnek başına SQL yok):** ayrı bir «portal veri alanı» kataloğu. Alan tanımı JSON'da (tablo deseni,
+  sayfa, satır kapsamı); kolonlar veriye bakılarak sınıflanır; üst tablo bağı veride doğrulanır; yalnız onaylı tablo
+  kullanılır. Model yalnız kapalı kümeden seçer (`choose`), ifade kodla kurulur, cümle kuraldan. Logo/CRM kataloğuna ve
+  sertifikalarına dokunulmadı (sertifikalama geri alma tuzağı yok).
+- **İK:** kullanıcı kuralı «İK/kişisel veri tabloları hiç» → `ik` konusu `closed` (kendi metni), `semantic_hr_*` ve kişi
+  tabloları (`readers`, `people_profiles`, `pr_contacts`, `infl_people`, …) `never_tables`. Kişisel/gizli/serbest metin
+  kolonu hiçbir seçenekte ve sonuçta yok; kurumsal gelen kutusunda İK iletileri sabit süzgeçle sayılmaz.
+- **Riskli nokta ve ölçümü:** portal kelimesi («risk kaydı», «lansman», «bülten», «trendyol» …) geçen soru artık Logo/CRM'de
+  güçlü kavrama yerleşse de sınıflandırıcıya gider. Yalnız sınıflandırıcı portal konusu derse yön değişir. Altın setlerde
+  bu kelimeyi taşıyan sorular `kabul.py --scan` ile çıkarılır; tam kapı önce/sonra onlarla koşar (calistir.sh `once`/`sonra`).
+- **Kararlar (veriye bakılarak, gerekçeli):** ölçü yalnız temel tablonun sayısı (üst tablonun sayısı çoktan-bire bağda
+  tekrarlanır, toplam şişer); okur envanteri gibi günlük yeniden yazılan tablolarda dönem sorulmadıkça yalnız son gün;
+  risk kaydında satır kapsamı ekranla aynı (sahip/açan; «Bütün riskler» özelliği hepsini görür); eşik altı seçimde
+  tahmin yerine netleştirme sorusu; cevapta `sql` taşınmaz (pano Logo/CRM bağlantısıyla yeniden koşar).
+- **Sunucuda kalan:** pytest; önce/sonra kapıları; katalog kuru koşu → `--apply` → `--certify`; `kabul.py --references`
+  (R1–R10 doğrudan SQL) ve `--live` (29 soru, gerçek model; eşik ölçümü) + temizlik. Ölçülecek: `CHAT_PORTAL_MIN_PROB`
+  (0,5) ve `MIN_MARGIN` (0,15) varsayılanları; `dimension_max_distinct` (40).
+- **Açık kalanlar:** destek masası talepleri (apps/destek, ayrı veritabanı) bağlı değil — M51'in portal tabloları bağlı;
+  «ilk yanıt süresi» gibi iki tarih arası ölçü, «stok = 0» gibi sayısal koşul, «cevapsız» (boş kolon) koşulu ve
+  `kod` gibi PK dışı anahtarla bağ yok; portal cevabı panoya eklenemez.
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 

@@ -304,13 +304,20 @@ def allowed_for(user: Optional[str]) -> Optional[frozenset[str]]:
         return frozenset(always_domains())
 
 
+#: Zamanlayıcının adına koştuğu kişi (kart/rapor/uyarı sahibi). Sohbetin portal verisi (chat_portal) sayfa yetkisini
+#: bu kişiden okur; istekte oturum çerezi varsa ondaki kişi geçerlidir.
+ACTING_USER: ContextVar[Optional[str]] = ContextVar("access_acting_user", default=None)
+
+
 @contextmanager
 def acting_as(user: Optional[str]):
     """Zamanlayıcıdaki kart/rapor/uyarı sahibinin veri kapsamıyla koşar: yetkisi daralan kişinin raporu da daralır."""
     token = DATA_ALLOWED.set(allowed_for(user))
+    who = ACTING_USER.set((user or "").strip().lower() or None)
     try:
         yield
     finally:
+        ACTING_USER.reset(who)
         DATA_ALLOWED.reset(token)
 
 
