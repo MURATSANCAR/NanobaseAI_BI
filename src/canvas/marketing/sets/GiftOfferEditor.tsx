@@ -245,7 +245,7 @@ function Letter({ o, editable, onSaved }: { o: Offer; editable: boolean; onSaved
   useEffect(() => setText(o.mektup ?? ''), [o.mektup]);
   const draft = useMutation({
     mutationFn: () => setsApi.letter(o.id),
-    onSuccess: (r) => { setText(r.text); toast.success('ZEKİ AI mektup taslağı hazır; düzenleyip kaydedin.'); },
+    onSuccess: (r) => { setText(r.text); toast.success(`ZEKİ AI mektup taslağı hazır${r.dusenSayisi ? ` (denetimde ${r.dusenSayisi} cümle çıkarıldı)` : ''}; düzenleyip kaydedin.`); },
     onError: (e) => toast.error(errText(e, 'Mektup yazılamadı.') ?? ''),
   });
   const save = useMutation({

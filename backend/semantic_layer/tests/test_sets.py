@@ -334,3 +334,32 @@ def test_feature_rules_for_sets():
 def test_catalog_has_the_page():
     cat = json.loads((BRIDGE / "access_catalog.json").read_text(encoding="utf-8"))
     assert any(p["key"] == "sayfa:pazarlama-set-hediye" and p["area"] == "pazarlama" for p in cat["pages"])
+
+
+# ------------------------------------------------------------------ M15 pazarlama çekirdeğiyle bir arada
+
+
+def test_tables_do_not_collide_with_the_marketing_core():
+    from semantic_bridge.marketing import core as M
+
+    ours = set(S._md.tables)
+    assert all(t.startswith("semantic_mkt_set") for t in ours)
+    assert not ours & set(M._md.tables)
+
+
+def test_set_routes_fall_to_the_set_page_not_the_plan_page():
+    set_page = frozenset({A.page("pazarlama-set-hediye")})
+    assert A.rule_for("/api/v1/marketing/sets") == set_page
+    assert A.rule_for("/api/v1/marketing/sets/MS-2026-0001/items") == set_page
+    assert A.rule_for("/api/v1/marketing/gift-offers/KT-2026-0001") == set_page
+    assert A.rule_for("/api/v1/marketing/promo-items") == set_page
+    assert A.rule_for("/api/v1/marketing/sets/run-due") == A.SYSTEM
+    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap")})
+    assert A.features_for("POST", "/api/v1/marketing/sets") == ["ozellik:set.yaz"]            # plan yazma kuralı değil
+
+
+def test_model_names_go_through_the_marketing_guard():
+    name, pitch = S.parse_name("Ad: En çok satan set\nTanıtım: Rekor kıran bir üçleme.", ["Kitap 1"])
+    assert name is None and pitch is None                                          # kanıtsız üstünlük iddiası
+    name, pitch = S.parse_name("Ad: Yaz okumaları\nTanıtım: Tatil için seçilmiş üç kitap.", ["Kitap 1"])
+    assert name == "Yaz okumaları" and pitch == "Tatil için seçilmiş üç kitap."

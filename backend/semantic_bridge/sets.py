@@ -3,7 +3,8 @@ hediye kataloğu/teklifi, promosyon ürünleri.
 
 **Kaynaklar** (`sets_sources`): CRM (set kartları `new_Tip = 4`, «Set İşlemi» bileşenleri, kitap kartı, paketleme maliyeti,
 özel günler, B2C siparişleri) ve Logo (malzeme kartı ve KDV oranı, faturalı satış, stok bakiyesi, `PRCLIST`, reçete). İkisi
-de yalnız okunur. Gece işi (`run_due`) okumaları köprünün `semantic_mkt_*` tablolarına yazar; ekranlar bu tablolardan okur.
+de yalnız okunur. Gece işi (`run_due`) okumaları köprünün `semantic_mkt_set*` tablolarına yazar (M15 pazarlama çekirdeğinin
+`semantic_mkt_plans|…|meta` tablolarından ayrı önek); ekranlar bu tablolardan okur.
 
 **Yazma yok:** CRM'e, Logo'ya ve T-soft'a hiçbir şey gitmez. Onaylanan set için «açılacak kart» listesi verilir; kartı TİMAŞ
 kendi akışıyla açar, modül CRM'deki kartı okuyup kendi setine eşler (bileşenler birebir tutuyorsa kendiliğinden, yoksa elle
@@ -28,7 +29,7 @@ birleştirilmez (`sets_sources` başındaki gerekçe). Satış tablosunda her sa
   paketi; kademe indirimi (`SETS_GIFT_TIERS` ya da teklifte elle) sonrası kişi başı fiyatı bütçeye sığanlar, bütçeye en
   yakın olan önce.
 
-**ZEKİ AI (LLM kapısından, `llm_for("marketing")`):** öneriye ad ve kısa tanıtım (gece, rakamsız), önerinin en uygun özel
+**ZEKİ AI (LLM kapısından, `llm_for("marketing")`; metinler pazarlama çekirdeğinin `marketing.guard` denetiminden geçer):** öneriye ad ve kısa tanıtım (gece, rakamsız), önerinin en uygun özel
 günü (kapalı küme `QueuedLlm.choose`, olasılık/marj eşiği ayarda), set tanıtım metni ve ambalaj brief'i, kurumsal teklif
 mektubu (ekranda, rakamsız). Rakam modelden gelmez.
 
@@ -54,6 +55,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 
 from semantic_bridge import sets_sources as src
+from semantic_bridge.marketing import guard as mguard
 
 log = logging.getLogger("semantic.sets")
 TZ = ZoneInfo("Europe/Istanbul")
@@ -128,7 +130,7 @@ SALES = sa.Table(
     sa.Column("veri_sonu", sa.String(10)),
 )
 PAIRS = sa.Table(
-    "semantic_mkt_basket_pairs", _md,
+    "semantic_mkt_set_basket_pairs", _md,
     sa.Column("kod_a", sa.String(60), primary_key=True),
     sa.Column("kod_b", sa.String(60), primary_key=True),
     sa.Column("siparis_sayisi", sa.Integer, nullable=False),
@@ -137,7 +139,7 @@ PAIRS = sa.Table(
     sa.Column("asof", sa.DateTime(timezone=True), nullable=False),
 )
 OFFERS = sa.Table(
-    "semantic_mkt_gift_offers", _md,
+    "semantic_mkt_set_gift_offers", _md,
     sa.Column("id", sa.String(20), primary_key=True),                 # KT-<yıl>-<sıra>
     sa.Column("tenant_id", sa.String(80), nullable=False),
     sa.Column("firma_id", sa.String(40), nullable=False),            # CRM AccountId
@@ -165,7 +167,7 @@ OFFERS = sa.Table(
     sa.Column("decided_at", sa.DateTime(timezone=True)),
 )
 PROMO = sa.Table(
-    "semantic_mkt_promo_items", _md,
+    "semantic_mkt_set_promo_items", _md,
     sa.Column("stok_kodu", sa.String(60), primary_key=True),
     sa.Column("ad", sa.String(400)),
     sa.Column("tur", sa.String(30), nullable=False),                  # 157|crm-promosyon|crm-pazarlama-materyali
@@ -178,7 +180,7 @@ PROMO = sa.Table(
     sa.Column("asof", sa.DateTime(timezone=True), nullable=False),
 )
 BOOKS = sa.Table(
-    "semantic_mkt_books", _md,
+    "semantic_mkt_set_books", _md,
     sa.Column("stok_kodu", sa.String(60), primary_key=True),
     sa.Column("ad", sa.String(400)),
     sa.Column("crm_id", sa.String(40)),
@@ -233,7 +235,7 @@ SUGG = sa.Table(
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
 )
 META = sa.Table(
-    "semantic_mkt_sets_meta", _md,
+    "semantic_mkt_set_meta", _md,
     sa.Column("key", sa.String(60), primary_key=True),
     sa.Column("value_json", sa.Text, nullable=False),
     sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
@@ -1622,6 +1624,15 @@ def _no_digits(text: str) -> str:
     return re.sub(r"[^\n]*\d[^\n]*\n?", "", text or "").strip()
 
 
+def _sources(books: dict[str, Any], *extra: Any) -> list[str]:
+    """Pazarlama çekirdeğinin metin denetimine (`marketing.guard`) verilen kaynak metinler: kitap adı, yazar, dizi, tür,
+    yaş, arka kapak, spot (CRM) ve ekrandaki alanlar. Alıntı ve rakam bunlarda yoksa cümle düşer."""
+    out = [str(x) for x in extra if x]
+    for b in books.values():
+        out += [str(x) for x in (b.ad, b.yazar, b.dizi, b.turler, b.yaslar, b.ozet, b.spot) if x]
+    return out
+
+
 def _books_text(codes: list[str], books: dict[str, Any]) -> str:
     out = []
     for c in codes:
@@ -1637,14 +1648,17 @@ def _books_text(codes: list[str], books: dict[str, Any]) -> str:
     return "\n".join(out) or "-"
 
 
-def parse_name(answer: str) -> tuple[Optional[str], Optional[str]]:
+def parse_name(answer: str, sources: Iterable[str] = ()) -> tuple[Optional[str], Optional[str]]:
+    """«Ad: … / Tanıtım: …» cevabı. Adda rakam olmaz; ikisi de pazarlama çekirdeğinin denetiminden (`marketing.guard`:
+    kaynaksız rakam, bulunamayan alıntı, kanıtsız üstünlük iddiası, teknoloji adı) geçmezse atılır."""
     name = re.search(r"^\s*Ad\s*:\s*(.+)$", answer or "", re.M | re.I)
     pitch = re.search(r"^\s*Tan[ıi]t[ıi]m\s*:\s*(.+)$", answer or "", re.M | re.I)
     n = _text(name.group(1).strip(" «»\"'*"), 120) if name else None
     p = _text(pitch.group(1), 400) if pitch else None
-    if n and re.search(r"\d", n):
+    src_list = list(sources)
+    if n and (re.search(r"\d", n) or mguard.check(n, src_list)["dusenSayisi"]):
         n = None
-    if p and re.search(r"\d", p):
+    if p and mguard.check(p, src_list)["dusenSayisi"]:
         p = None
     return n, p
 
@@ -1679,7 +1693,7 @@ def run_model_tasks(engine: sa.engine.Engine, st: dict[str, Any], llm: Any, budg
         try:
             ans = llm.chat([{"role": "user", "content": NAME_PROMPT.format(books=_books_text(codes, books), reason=r.gerekce or "-")}],
                            max_tokens=200, temperature=0.3) or ""
-            name, pitch = parse_name(ans)
+            name, pitch = parse_name(ans, _sources(books))
             season = choose_season(llm, codes, books, labels, st) if labels else {"secim": None, "olasilik": None}
         except Exception as e:  # noqa: BLE001 — model düşerse kalan sonraki geceye
             log.warning("sets: öneri adı alınamadı: %s", e)
@@ -1697,7 +1711,8 @@ def run_model_tasks(engine: sa.engine.Engine, st: dict[str, Any], llm: Any, budg
     return out
 
 
-def draft_text(engine: sa.engine.Engine, llm: Any, tenant: str, set_id: str, kind: str) -> str:
+def draft_text(engine: sa.engine.Engine, llm: Any, tenant: str, set_id: str, kind: str) -> tuple[str, int]:
+    """Tanıtım / brief taslağı. Model çıktısı pazarlama çekirdeğinin denetiminden geçer; düşen cümle sayısı döner."""
     if kind not in TEXT_PROMPTS:
         raise SetsError("Metin türü geçersiz.")
     if llm is None:
@@ -1706,17 +1721,21 @@ def draft_text(engine: sa.engine.Engine, llm: Any, tenant: str, set_id: str, kin
     codes = [i["stok"] for i in s["bilesenler"] or []]
     if not codes:
         raise SetsError("Sette bileşen yok.")
-    prompt = TEXT_PROMPTS[kind].format(name=s["ad"], books=_books_text(codes, books_by_code(engine, codes)),
+    books = books_by_code(engine, codes)
+    prompt = TEXT_PROMPTS[kind].format(name=s["ad"], books=_books_text(codes, books),
                                        pack=s["ambalajTuru"] or "henüz seçilmedi", season=s["sezonAdi"] or "-")
-    text = _no_digits((llm.chat([{"role": "user", "content": prompt}], max_tokens=900, temperature=0.4) or "").strip())
+    raw = (llm.chat([{"role": "user", "content": prompt}], max_tokens=900, temperature=0.4) or "").strip()
+    g = mguard.check(raw, _sources(books, s["ad"], s["sezonAdi"], s["ambalajTuru"]))
+    text = g["metin"]
     if not text:
         raise SetsError("ZEKİ AI metin üretemedi; yeniden deneyin.", 503)
     with engine.begin() as c:
         c.execute(SETS.update().where(SETS.c.id == set_id).values(**{("tanitim" if kind == "tanitim" else "brief"): text[:8000], "updated_at": _now()}))
-    return text[:8000]
+    return text[:8000], g["dusenSayisi"]
 
 
-def draft_letter(engine: sa.engine.Engine, llm: Any, st: dict[str, Any], tenant: str, oid: str) -> str:
+def draft_letter(engine: sa.engine.Engine, llm: Any, st: dict[str, Any], tenant: str, oid: str) -> tuple[str, int]:
+    """Mektup taslağı: pazarlama çekirdeğinin denetimi + hiç rakam yok (tutar ve adet yalnız belgedeki tablodan)."""
     if llm is None:
         raise SetsError("ZEKİ AI bu kurulumda tanımlı değil.", 503)
     o = get_offer(engine, tenant, oid)
@@ -1727,12 +1746,15 @@ def draft_letter(engine: sa.engine.Engine, llm: Any, st: dict[str, Any], tenant:
                       for s in opts) or "-"
     prompt = LETTER_PROMPT.format(company=st["company"], institution=o["firmaAdi"] or "Kurum", season=o["sezon"] or "yıl sonu hediyesi",
                                   options=lines)
-    text = _no_digits((llm.chat([{"role": "user", "content": prompt}], max_tokens=700, temperature=0.3) or "").strip())[:8000]
+    raw = (llm.chat([{"role": "user", "content": prompt}], max_tokens=700, temperature=0.3) or "").strip()
+    codes = [k["stok"] for x in opts for k in x["kalemler"]]
+    g = mguard.check(raw, _sources(books_by_code(engine, codes), st["company"], o["firmaAdi"], o["sezon"], *(x["ad"] for x in opts)))
+    text = _no_digits(g["metin"])[:8000]
     if not text:
         raise SetsError("ZEKİ AI mektup yazamadı; yeniden deneyin.", 503)
     with engine.begin() as c:
         c.execute(OFFERS.update().where(OFFERS.c.id == oid).values(mektup=text, updated_at=_now()))
-    return text
+    return text, g["dusenSayisi"]
 
 
 # ------------------------------------------------------------------------------------------ okuma (Logo + CRM → köprü)

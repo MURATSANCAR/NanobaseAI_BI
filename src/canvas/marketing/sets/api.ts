@@ -257,7 +257,7 @@ export const setsApi = {
   withdraw: (id: string) => send<SetRow>('POST', `/sets/${enc(id)}/withdraw`, {}),
   approve: (id: string, note?: string) => send<SetRow>('POST', `/sets/${enc(id)}/approve`, { note }),
   reject: (id: string, note: string) => send<SetRow>('POST', `/sets/${enc(id)}/reject`, { note }),
-  text: (id: string, kind: 'tanitim' | 'brief') => send<{ text: string }>('POST', `/sets/${enc(id)}/text`, { kind }, 300_000),
+  text: (id: string, kind: 'tanitim' | 'brief') => send<{ text: string; dusenSayisi?: number }>('POST', `/sets/${enc(id)}/text`, { kind }, 300_000),
   cardTodo: (id: string) =>
     send<{ ad: string; setTipi: string; satisKanallari: string[]; onerilenFiyat: number | null; hedefAdet: number | null; ambalaj: string | null;
       sezon: string | null; barkod: string; adimlar: string[]; bilesenler: { stok: string; ad: string | null; adet: number; kdv: number | null; stokAdet: number | null }[];
@@ -280,7 +280,7 @@ export const setsApi = {
       'GET', `/gift-offers/accounts/${enc(accountId)}/history`),
   createOffer: (b: { firmaId: string; adet: number; kisiBasiButce: number; sezon?: string }) => send<Offer>('POST', '/gift-offers', b),
   updateOffer: (id: string, b: Record<string, unknown>) => send<Offer>('PATCH', `/gift-offers/${enc(id)}`, b),
-  letter: (id: string) => send<{ text: string }>('POST', `/gift-offers/${enc(id)}/letter`, {}, 300_000),
+  letter: (id: string) => send<{ text: string; dusenSayisi?: number }>('POST', `/gift-offers/${enc(id)}/letter`, {}, 300_000),
   submitOffer: (id: string) => send<Offer>('POST', `/gift-offers/${enc(id)}/submit`, {}),
   withdrawOffer: (id: string) => send<Offer>('POST', `/gift-offers/${enc(id)}/withdraw`, {}),
   approveOffer: (id: string, note?: string) => send<Offer>('POST', `/gift-offers/${enc(id)}/approve`, { note }),

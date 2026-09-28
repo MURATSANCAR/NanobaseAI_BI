@@ -269,7 +269,7 @@ Model çağrıları LLM kapısından: `rt.llm_for("marketing", NORMAL)` (ekranda
 
 ## 15. Kodlama notu (2026-09-28, dal; sunucu kapalıyken yazıldı — DOĞRULANAMADI)
 
-- **Kod:** `backend/semantic_bridge/sets.py`, `sets_sources.py`, `sets_api.py`, `sets_docs.py` (pazarlama çekirdeği main'de yok → bağımsız); ekran `src/canvas/marketing/sets/`; kabul `scripts/acceptance/M53/`.
+- **Kod:** `backend/semantic_bridge/sets.py`, `sets_sources.py`, `sets_api.py`, `sets_docs.py` (M15 pazarlama çekirdeğinin yanında; tablolar `semantic_mkt_set*`, metin denetimi `marketing.guard`); ekran `src/canvas/marketing/sets/`; kabul `scripts/acceptance/M53/`.
 - **Setin Logo temsili — varsayılan ve gerekçe (ölçülecek: `kabul.py --olcum` Ö1–Ö3):** katalog profilinde `ITEMS.CARDTYPE` değerleri 1, 4, 10, 11, 12, 13, 20, 22; Karma Koli (2) yok. Set ayrı stok kartıdır, bileşenler CRM «Set İşlemi» (set yapma) ile stoktan düşer, faturada set kodu satılır. Bu yüzden set satışı yalnız set koduyla okunur, bileşenin tek satışı ayrı gösterilir, ikisi hiçbir toplamda birleşmez. Aynı faturada set + kendi bileşeni satırı ölçülür (Ö3b); >0 çıkarsa `SETS_SALES_LINETYPES` / kural gözden geçirilir.
 - **Bileşen kaynağı:** `SETS_COMPONENT_SOURCE=auto` — CRM'deki en son etkin «Set Yapma» işleminin alt mamul satırları, yoksa Logo reçetesi (geçerli revizyon, ana ürün satırı hariç; satır türü `SETS_BOM_LINETYPES` ölçümden sonra). Ö2 hangisinin kapsadığını sayar.
 - **Liste fiyatı:** CRM kitap kartı KDV dahil fiyat (kabul 4 ile aynı); Logo `PRCLIST` fiyatı ekranda ayrıca. **KDV:** kalem başına Logo `ITEMS.SELLVAT`.

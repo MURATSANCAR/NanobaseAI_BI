@@ -289,9 +289,9 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
         """ZEKİ AI taslağı: `kind` = tanitim (e-ticaret açıklaması, SEO önerisi olarak) | brief (ambalaj ve sunum)."""
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
         kind = str(body.get("kind") or "tanitim")
-        text = await run_in_threadpool(call, S.draft_text, engine, llm("NORMAL"), tenant, set_id, kind)
-        audit(engine, user, "update", "mkt_set", set_id, None, {"zekiTaslak": kind})
-        return {"kind": kind, "text": text}
+        text, dropped = await run_in_threadpool(call, S.draft_text, engine, llm("NORMAL"), tenant, set_id, kind)
+        audit(engine, user, "update", "mkt_set", set_id, None, {"zekiTaslak": kind, "dusenCumle": dropped})
+        return {"kind": kind, "text": text, "dusenSayisi": dropped}
 
     @app.get(f"{P}/sets/{{set_id}}/card-todo")
     def sets_card_todo(set_id: str, request: Request) -> dict[str, Any]:
@@ -376,9 +376,9 @@ def register(app: Any, deps: dict[str, Any]) -> S.Refresher:
     @app.post(f"{P}/gift-offers/{{oid}}/letter")
     async def offers_letter(oid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        text = await run_in_threadpool(call, S.draft_letter, engine, llm("NORMAL"), settings(), tenant, oid)
-        audit(engine, user, "update", "mkt_gift_offer", oid, None, {"zekiTaslak": "mektup"})
-        return {"text": text}
+        text, dropped = await run_in_threadpool(call, S.draft_letter, engine, llm("NORMAL"), settings(), tenant, oid)
+        audit(engine, user, "update", "mkt_gift_offer", oid, None, {"zekiTaslak": "mektup", "dusenCumle": dropped})
+        return {"text": text, "dusenSayisi": dropped}
 
     @app.post(f"{P}/gift-offers/{{oid}}/submit")
     def offers_submit(oid: str, request: Request) -> dict[str, Any]:

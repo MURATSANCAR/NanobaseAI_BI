@@ -368,7 +368,7 @@ function TextsPanel({ s, canWrite, onSaved }: { s: SetRow; canWrite: boolean; on
   useEffect(() => { setTanitim(s.tanitim ?? ''); setBrief(s.brief ?? ''); }, [s.tanitim, s.brief]);
   const draft = useMutation({
     mutationFn: (kind: 'tanitim' | 'brief') => setsApi.text(s.id, kind),
-    onSuccess: (r, kind) => { if (kind === 'tanitim') setTanitim(r.text); else setBrief(r.text); toast.success('ZEKİ AI taslağı hazır; düzenleyip kaydedin.'); },
+    onSuccess: (r, kind) => { if (kind === 'tanitim') setTanitim(r.text); else setBrief(r.text); toast.success(`ZEKİ AI taslağı hazır${r.dusenSayisi ? ` (denetimde ${r.dusenSayisi} cümle çıkarıldı)` : ''}; düzenleyip kaydedin.`); },
     onError: (e) => toast.error(errText(e, 'Taslak yazılamadı.') ?? ''),
   });
   const save = useMutation({
