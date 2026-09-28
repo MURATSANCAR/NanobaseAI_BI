@@ -264,6 +264,8 @@ def _remove_stale(doc, ref, watermark, matched_refs) -> None:
 			pluck="deleted_name",
 		)
 	)
+	if deleted:
+		deleted -= set(frappe.get_all(ref, filters={"name": ["in", list(deleted)]}, pluck="name"))
 	to_remove = exits | deleted
 	if to_remove:
 		_purge_refs(doc.name, list(to_remove))
