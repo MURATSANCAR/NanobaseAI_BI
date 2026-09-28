@@ -43,6 +43,7 @@ import {
   FileChartColumn,
   FileSignature,
   FileText,
+  FolderTree,
   Gauge,
   History,
   House,
@@ -206,7 +207,7 @@ export const NAV: NavGroup[] = [
   {
     id: 'kayitlar',
     label: 'Kayıtlar',
-    hint: 'Kişiler, sözleşmeler, atamalar',
+    hint: 'Kişiler, sözleşmeler, atamalar, kategori ağacı',
     icon: BookUser,
     items: [
       { id: 'kisiler', label: 'Kişiler', to: '/kisiler', icon: Contact, hint: 'Yazar, çevirmen, çizer ve serbest çalışanlar', keywords: ['yazar', 'çizer', 'rehber'] },
@@ -214,6 +215,7 @@ export const NAV: NavGroup[] = [
       { id: 'basin-web', label: 'Basın ve web', to: '/basin-web', icon: Newspaper, hint: 'Açık kaynaklarda yazar ve kitap haberleri', feature: 'webWatch', keywords: ['haber', 'basın'] },
       { id: 'telif-sozlesme', label: 'Sözleşmeler', to: '/telif-sozlesme', icon: FileSignature, hint: 'Telif ve sözleşme kayıtları', keywords: ['telif', 'sözleşme'] },
       { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, hint: 'Atama, iş yükü, takvim ve kategori kuralları', keywords: ['editörler', 'atama', 'iş yükü', 'takvim', 'kural'] },
+      { id: 'kategori-agaci', label: 'Kategori ağacı', to: '/kategori-agaci', icon: FolderTree, hint: 'Kitap profili, kategori mimarisi ve tutarsızlıklar', keywords: ['kategori', 'kitaplık', 'tür', 'tema', 'etiket', 'künye', 'profil', 'web kategorisi', 'tutarsızlık'] },
     ],
   },
   {

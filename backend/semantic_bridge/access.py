@@ -451,6 +451,9 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
                                          "son-okuma", "kitap-tasarim", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
+_CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
+                               page("yazar-giris")}) | _SEO
+
 #: En uzun eşleşen önek kazanır. Yeni bir uç eklenince burada bir öneke düşmeli; düşmezse test kırılır
 #: (test_access.py → köprünün bütün yolları). Ortak uçlar geniş tutuldu (bir sayfanın çağırdığı uç
 #: başka sayfada da kullanılıyorsa ikisi de yazılır); işlem düzeyindeki daraltma Aşama B'nin işi.
@@ -481,6 +484,12 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/marketing/run-due", SYSTEM),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
+    # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
+    # değerlendirmesi, M2 editör atama ve SEO sayfaları da okur; yazma uçları kategori-agaci sayfasında kalır.
+    ("/api/v1/categories/run-due", SYSTEM),
+    ("/api/v1/categories/profile/", _CATEGORY_READERS),
+    ("/api/v1/categories/nodes", _CATEGORY_READERS),
+    ("/api/v1/categories/", frozenset({page("kategori-agaci")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -569,6 +578,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"^/api/v1/tenders(/(?!run-due$|watch/|documents(/|$)|[^/]+/decision/(approve|reject)$).*)?$", "ozellik:ihale.duzenle"),
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/tenders/documents(/[^/]+)?$", "ozellik:ihale.belge"),
     (frozenset({"GET"}), r"^/api/v1/tenders/[^/]+/pricing\.xlsx$", "ozellik:veri.disa-aktar"),
+    # Kategori ağacı: öneri üretme ve kaynak yenileme; ağaç taslağı, eşleme, kural ve etiket sözlüğü. Ağaç onayı ve
+    # profil kararı açıkça verilen `kategori.agac-onay` / `kategori.profil-onay` (+ `kategori.herkesinki`) ile ucun içinde.
+    (frozenset({"POST"}), r"^/api/v1/categories/(books/[^/]+/propose|refresh)$", "ozellik:kategori.oneri-uret"),
+    (frozenset({"PUT", "POST", "DELETE"}),
+     r"^/api/v1/categories/(tree|tree/(open|draft|suggest|submit|withdraw)|mappings|rules/[^/]+|tags/decision)$",
+     "ozellik:kategori.agac-duzenle"),
+    (frozenset({"GET"}), r"^/api/v1/categories/crm-diff/export\.xlsx$", "ozellik:veri.disa-aktar"),
     # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
     # Pazarlama planı: taslak, düzenleme, Zeki AI önerisi, materyal taslağı, onaya gönderme, revizyon. Plan onayı, üst

@@ -6670,6 +6670,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M33 İhale takibi (Satış ve saha): /api/v1/tenders/*.
     from semantic_bridge import tenders_api
     app.state.tenders = tenders_api.register(app, rt, _require_caller, _can)
+
+    from semantic_bridge import categories_api
+    app.state.categories = categories_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing

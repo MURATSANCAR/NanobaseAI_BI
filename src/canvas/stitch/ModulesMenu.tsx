@@ -44,6 +44,7 @@ export const LIVE: Record<string, string> = {
   M32: '/kurumsal-satis',
   M33: '/ihale',
   M46: '/butce',
+  categories: '/kategori-agaci',
 };
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */

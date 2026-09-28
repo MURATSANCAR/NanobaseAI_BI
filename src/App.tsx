@@ -54,6 +54,8 @@ const DistributionScreen = lazy(() => import('@/canvas/distribution/Distribution
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
 const TenderDetail = lazy(() => import('@/canvas/tenders/TenderDetail'));
+const CategoriesScreen = lazy(() => import('@/canvas/categories/CategoriesScreen'));
+const CategoryBookProfile = lazy(() => import('@/canvas/categories/BookProfile'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
 const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
@@ -197,6 +199,10 @@ export default function App() {
             <Route path="yayin-kurulu" element={<BoardSessionsScreen />} />
             <Route path="yayin-kurulu/oturum/:id" element={<SessionScreen />} />
             <Route path="editor-atama" element={<EditorsScreen />} />
+            {/* H1 Kategori ağacı: tek onaylı ağaç, kitap profili (öneri → onay), tutarsızlıklar, CRM'e işlenecek fark (/api/v1/categories). */}
+            <Route path="kategori-agaci" element={<CategoriesScreen />} />
+            <Route path="kategori-agaci/kitap/:id" element={<CategoryBookProfile />} />
+            <Route path="kategori-agaci/:section" element={<CategoriesScreen />} />
             <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />
             <Route path="serbest-calisanlar" element={<FreelanceScreen />} />

@@ -197,6 +197,11 @@
       "label": "Yeni kitap planı"
     },
     {
+      "key": "sayfa:kategori-agaci",
+      "area": "kayitlar",
+      "label": "Kategori ağacı"
+    },
+    {
       "key": "sayfa:seo-geo",
       "area": "pazarlama",
       "label": "SEO özeti"
@@ -623,6 +628,44 @@
       "page": "sayfa:editor-atama",
       "label": "Kural tablosunu onaylama",
       "hint": "Taslağı yürürlüğe alma; önceki sürüm arşive geçer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kategori.oneri-uret",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kitap profili önerisi üretme",
+      "hint": "Zeki AI ile kategori, tür, yaş, tema ve etiket önerisi üretme; CRM/Logo/T-soft kaynaklarını yenileme (model harcar)"
+    },
+    {
+      "key": "ozellik:kategori.agac-duzenle",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kategori ağacı taslağı",
+      "hint": "Ağaç taslağı ve veriden taslak önerisi, düğüm eşlemeleri, tutarsızlık kuralları, etiket sözlüğü; onaya gönderme"
+    },
+    {
+      "key": "ozellik:kategori.agac-onay",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kategori ağacını yürürlüğe alma",
+      "hint": "Onaya gönderilen ağaç sürümünü yürürlüğe alma ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kategori.profil-onay",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kitap profili onayı",
+      "hint": "Kendi kitaplarında (kartın editörü ya da yayın yönetmeni) alan alan kabul, düzeltme, ret; tutarsızlık önerisini uygulama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kategori.herkesinki",
+      "area": "kayitlar",
+      "page": "sayfa:kategori-agaci",
+      "label": "Kitap profili: herkesin kitabı",
+      "hint": "Başka editörlerin kitaplarının profiline karar verme (yayın yönetmeni)",
       "explicit": true
     },
     {

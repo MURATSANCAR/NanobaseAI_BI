@@ -152,6 +152,23 @@ SPEC: list[dict[str, Any]] = [
      "help": "Üyelerin ortalama toplam karar skoru bu değer ve üstündeyse skor önerisi «Kabul» olur (0–100)"},
     {"key": "EDITORIAL_BOARD_REVISE_SCORE", "group": "crm", "label": "Kurul: revizyon skoru", "type": "int", "default": "50",
      "help": "Kabul skorunun altında, bu değer ve üstündeyse öneri «Revizyon», altındaysa «Red» olur (0–100)"},
+    # H1 Kategori ağacı: öneri eşikleri (golden set ile ölçülecek), taslak ağaç ve öncelik ayarları.
+    {"key": "CATEGORY_SUGGEST_MIN_PROB", "group": "crm", "label": "Kategori önerisi: en düşük olasılık", "type": "text",
+     "default": "0.70", "help": "Zeki AI önerisi bu olasılığın altındaysa «emin değil» işaretlenir, toplu onayla kabul edilmez (0–1)"},
+    {"key": "CATEGORY_SUGGEST_MIN_MARGIN", "group": "crm", "label": "Kategori önerisi: en düşük fark", "type": "text",
+     "default": "0.30", "help": "Seçilen ile ikinci seçenek arasındaki olasılık farkı bunun altındaysa «emin değil» (0–1)"},
+    {"key": "CATEGORY_TREE_MIN_BOOKS", "group": "crm", "label": "Taslak ağaçta düğüm için en az kitap", "type": "int",
+     "default": "3", "help": "Veriden taslak ağaç önerisinde bir düğüm en az bu kadar aktif kitapla açılır; kalanlar profil önerisiyle yerleşir"},
+    {"key": "CATEGORY_MAP_MIN_SHARE", "group": "crm", "label": "Eşleme önerisi için ortaklık payı", "type": "text",
+     "default": "0.5", "help": "Düğümün kitaplarının en az bu payında ortak olan ürün kategorisi / T-soft kategorisi eşleme olarak önerilir (0–1)"},
+    {"key": "CATEGORY_COOCCUR_SHARE", "group": "crm", "label": "Tema/etiket adayı için kategori payı", "type": "text",
+     "default": "0.25", "help": "Aynı kategorideki kitapların en az bu payında kullanılan tema ve etiket kitaba aday olarak sorulur (0–1)"},
+    {"key": "CATEGORY_PRIORITY_MONTHS", "group": "crm", "label": "Öncelik puanı dönemi (ay)", "type": "int",
+     "default": "24", "help": "Onay kuyruğu Logo'daki son bu kadar ayın net satış adedine göre sıralanır"},
+    {"key": "CATEGORY_DIFF_STALE_DAYS", "group": "crm", "label": "CRM farkı hatırlatma (gün)", "type": "int",
+     "default": "7", "help": "Onaylanıp bu kadar gündür CRM'e işlenmemiş fark «bekliyor» diye işaretlenir"},
+    {"key": "CATEGORY_BATCH_SECONDS", "group": "crm", "label": "Gece önerisi süresi (saniye)", "type": "int",
+     "default": "3600", "help": "Gece turunda profili olmayan kitaplara öneri üretmek için ayrılan süre; biten iş sonraki geceye kalır"},
     # Kişi rehberi
     {"key": "PEOPLE_MAX_IDLE_DAYS", "group": "people", "label": "Son giriş süresi (gün)", "type": "int", "default": "365",
      "help": "Rehbere yalnız bu kadar gün içinde etki alanına giriş yapmış kişiler girer; ortak ve kullanılmayan "

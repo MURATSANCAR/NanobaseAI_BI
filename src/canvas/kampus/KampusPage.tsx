@@ -28,6 +28,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
 import { relative } from '../format';
+import { categoriesApi } from '../categories/api';
 import PersonAvatar from './PersonAvatar';
 import BulletinCard from './BulletinCard';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
@@ -149,6 +150,15 @@ export default function KampusPage() {
   const wall = greetings.data?.wall ?? [];
   const received = greetings.data?.received ?? [];
   const unseen = greetings.data?.inbox?.length ?? 0;
+  // Kategori ağacı: editörü / yayın yönetmeni olunan kitaplarda karar bekleyen profil önerisi (sayfa rolde varsa).
+  const categoryPending = useQuery({
+    queryKey: ['categories', 'mine'],
+    queryFn: categoriesApi.mine,
+    enabled: ENGINE_ENABLED && canOpenRoute(pages, '/kategori-agaci') && pages !== null,
+    retry: false,
+    refetchInterval: 5 * 60_000,
+  });
+  const profilesWaiting = categoryPending.data?.pending ?? 0;
   const [notifOpen, setNotifOpen] = useState(false);
   useEffect(() => {
     if (!notifOpen) return;
@@ -257,19 +267,29 @@ export default function KampusPage() {
             <button
               type="button"
               title="Bildirimler"
-              aria-label={unseen ? `Bildirimler (${unseen} yeni)` : 'Bildirimler'}
+              aria-label={unseen || profilesWaiting ? `Bildirimler (${unseen + (profilesWaiting ? 1 : 0)} yeni)` : 'Bildirimler'}
               aria-haspopup="dialog"
               aria-expanded={notifOpen}
               onClick={() => setNotifOpen((v) => !v)}
               className="kp-press relative flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-white hover:text-ink sm:h-9 sm:w-9"
             >
               <Bell className="h-4 w-4" />
-              {unseen > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />}
+              {(unseen > 0 || profilesWaiting > 0) && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />}
             </button>
             {notifOpen && (
               <>
                 <button type="button" aria-label="Bildirimleri kapat" onClick={() => setNotifOpen(false)} className="fixed inset-0 z-40 cursor-default" />
                 <div role="dialog" aria-label="Bildirimler" className="glass-panel absolute right-0 top-full z-50 mt-2 w-[min(92vw,360px)] rounded-2xl p-3 shadow-glass-float">
+                  {profilesWaiting > 0 && (
+                    <Link
+                      to="/kategori-agaci/kuyruk?sahip=ben&durum=taslak,kismi"
+                      onClick={() => setNotifOpen(false)}
+                      className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
+                    >
+                      <span>Kategori ağacı: {profilesWaiting} kitap profili onayınızı bekliyor</span>
+                      <span className="text-violet">Aç</span>
+                    </Link>
+                  )}
                   <div className="mb-2 flex items-center justify-between">
                     <span className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Sana gelen kutlamalar</span>
                     <span className="kp-mono text-[11px] text-muted">son 30 gün</span>

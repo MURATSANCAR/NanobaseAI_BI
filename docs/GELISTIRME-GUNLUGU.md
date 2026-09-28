@@ -625,6 +625,60 @@ Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktr
 - **Ağ:** bu gece art arda ssh/scp ve `nc` yoklamaları Mac IP'sini barındırma ağında düşürttü (AGENTS.md «Test sunucusuna tek ssh bağlantısı» kuralı bu gece eklendi); sonrası tek ControlMaster bağlantısıyla yapıldı.
 - **Dış erişim:** kullanıcı onayıyla `https://portal.nanobase.ai:8446` açıldı (vhost `deploy/nginx-destek-8446.conf` → `/etc/nginx/sites-enabled/destek-8446.conf`, `ufw allow 8446/tcp`); kök → `/helpdesk`, giriş sayfası dışarıdan doğrulandı.
 - **Açık:** panel modele `/gpu-llm/v1` ile doğrudan gidiyor (LLM kapısına OpenAI uyumlu giriş gerekli), AD ile ortak giriş yok (Frappe LDAP ayarı), müşteri VM'ine kurulmadı, ayar sekmelerindeki «daha fazla bilgi» bağlantıları üretici belge sitesine gidiyor (ad ekranda yazmıyor).
+## 2026-09-28 — H1 Kategori ağacı kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Neden:** CRM'de bir kitap yedi ayrı, birbirine bağlı olmayan sınıflamada duruyor (Kitaplık, ürün kategorisi, raf,
+  sergilenecek, tür, web kategorisi metni, tema) ve sitenin kategori ağacı ayrı (analiz
+  `docs/analiz/kullanici-ihtiyaclari/H1-kategori-agaci.md`, 14. bölümden kodlandı).
+- **Ne yapıldı:** köprü `categories.py`, `categories_sources.py`, `categories_propose.py`, `categories_api.py`
+  (`/api/v1/categories/*`, `app.py`'de iki satır); ön yüz `src/canvas/categories/` (Özet, Onay kuyruğu, Kitap profili,
+  Kategori ağacı + eşleme + etki önizlemesi, Tutarsızlıklar + kurallar, CRM'e işlenecek + Excel, Etiket sözlüğü); menü
+  Kayıtlar › Kategori ağacı, Kampüs modül kutusu ve zilde bekleyen profil; yetki kataloğu (1 sayfa, 5 özellik, 3'ü açık);
+  yönetim ekranında 8 ayar (`CATEGORY_*`, grup CRM); `timas-categories.{service,timer}` (03:40).
+- **Kararlar (sormadan, gerekçeli):**
+  - *Ağaç düzeyleri* belgede açık soruydu (10/2): yayinevi → ana → alt → altalt; hedef kitle ayrı eksen değil, veriden
+    taslakta «ana» düzeyi ve eşlemesi (`hedef_kitle`) oldu — web kategorisi metninin ilk parçası da hedef kitle adı
+    («Çocuk;…»), CRM'in kendi yapısı bunu söylüyor. Yaş ayrı profil alanı.
+  - *«Doğru kategori» hangisi* (10/1): hiçbiri terk edilmedi; hepsi düğüm eşlemesi. Kitabın yeri ağırlıklı puanla:
+    Kitaplık 3 (M2'nin fiilî kategorisi), ürün kategorisi 2, web kategorisi 2, raf/sergilenecek/T-soft 1; marka ve hedef
+    kitle ata düğümde **koşul** (çelişen düğüm aday olamaz). Eşit ve ilgisiz adaylar modele gider.
+  - *Beyan kazanır:* CRM'de dolu hedef kitle, tür, yaş ve tek düğüme düşen kategori için model çağrılmaz; öneri CRM
+    değeridir (editör tek tıkla kabul eder, emsal ölçümü de olur).
+  - *Tema/etiket adayları:* 115 tema × 9 bin kitap evet/hayır pahalı; adaylar kitaptan bağımsız iki kuralla: adı
+    metinde geçen sözlük kaydı (kanıt cümlesi deterministik aranır ve gösterilir) + aynı düğümdeki kitapların
+    ≥ `CATEGORY_COOCCUR_SHARE` payında kullanılan kayıt. Sözlük dışı etiketi model üretmez; editörün yazdığı yeni etiket
+    «oneri» durumunda sözlüğe düşer, Etiket sözlüğü sekmesinden onaylanır/birleştirilir.
+  - *`herkesinki` açıkça verilen yapıldı* (belgede yalnız profil-onay ve agac-onay açıktı): «Herkes» rolü aksi halde
+    herkesin kitabını onaylardı; `masa.herkesinki` ile aynı desen.
+  - *Gece turu yalnız yürürlükte ağaç varken öneri üretir* (kategori önerisi ağaçsız anlamsız); kaynak okuması her gece
+    **tam** (uzun metinler hariç ~9 bin satır + bağlar), bu yüzden belgedeki «Pazar tam tur» gereksiz; çoka-çok bağ
+    değişikliği kartın `ModifiedOn`'unu değiştirmediği için delta okuma bağları kaçırırdı.
+  - *«Öneriyi uygula»* (toplu): hiçbir kural için güvenli deterministik düzeltme yok (ör. yetişkin kitap çocuk web
+    kategorisinde: yanlış olan hangisi?); bu yüzden bulgunun alanındaki bekleyen **emin** Zeki AI önerisini kabul eder,
+    olmayan atlanır ve nedeni döner.
+  - *Tutarsızlık kuralı genelleştirildi:* belgedeki «yetişkin kitabı çocuk web kategorisinde» sabit kuralı yerine
+    «hedef kitle ile web kategorisi kökü çelişiyor» (etiketler CRM'den); kabul betiği (Yetişkin, Çocuk) çiftini ayrıca sayar.
+  - *M2:* editör atama koduna dokunulmadı; `categories.m2_node_for()` bağlantı noktası ve etki önizlemesinde M2 kuralı
+    etkisi; `editorial_assign.rule_for` docstring'inde not.
+- **Ölçülmemiş varsayımlar (parametre yapıldı, kabulde ölçülecek):** öneri eşikleri 0,70/0,30 (golden set yok);
+  taslak düğüm eşiği 3 kitap, eşleme payı 0,5, tema/etiket payı 0,25; öncelik 24 ay; tür metni ayracı `;`/`,`;
+  `DATALENGTH(new_ozet) > 0` HTML'i boş özet olan kartı dolu sayar; `new_yayineviid → new_markaBase` bağı; raf
+  kategorisi ve sergilenecek kategorinin güncelliği; T-soft eşlemesi SEO eşitlemesinin tazeliğine bağlı.
+- **Testler:** `backend/semantic_layer/tests/test_categories.py` (16 test: ağaç doğrulaması, iki göz, deterministik
+  yerleşme ve marka koşulu, kurallar + yoksay + kural kapatma, veriden taslak, beyan kazanır, ağaçta düzey düzey seçim,
+  emin değil işareti, tema kanıtı, sahiplik 403, uydurma kategori reddi, kısmi onay + CRM farkı + Excel, etki önizlemesi,
+  sözleşme uçları, kuyruk sırası/süzgeçleri, pasife düşen kart, yetki kuralları), `src/canvas/categories/api.test.ts`.
+  **Yerelde koşulmadı** (kural: yalnız `py_compile` + JSON); sunucuda koşulacak.
+- **Kabul (sunucuda koşulacak):** `scripts/acceptance/categories/accept.py` — 9 denetim, 6'sı doğrudan SQL referansı
+  (aktif kitap, Kitaplık doluluğu, ürün kategorisi bağlı kitap, yetişkin-çocuk web bulgusu, tema bağı, Logo'dan 10 kitabın
+  öncelik puanı), T-soft eşleşmesi, uydurma kategori yok, onay izi; `--api-cookie` ile aynı sayılar uçtan.
+  `write_check.py` geçersiz gövdelerle 4xx + okuma uçları 200 + isteğe bağlı tek kitapta gerçek öneri;
+  `cleanup.py` profili yedeğe döndürür, olay/değişiklik kaydı/LLM bileti satırlarını siler.
+- **DOĞRULANAMADI — sunucu kapalı:** test sunucusuna bağlanılmadı; pytest, vitest, tip denetimi, derleme ve gerçek veri
+  kabulü yapılmadı. Sunucuda sıra: pytest (`test_categories`, `test_access`), vitest (`navModel`, `categories/api`),
+  `npm run build`, köprü restart, `systemctl start timas-categories.service` (ilk tur elle), `accept.py`, ağaç önerisi
+  → onay (iki ayrı kişi) → bir kitapta `write_check.py --propose` → `cleanup.py`.
+
 ## 2026-09-28 (03:00) — Test sunucusuna main `0e2ad1e8` (M10 İlk baskı, M12 Üretim, M46 Bütçe zamanlayıcısı); M12 ve SEO'da 422 hatası düzeltildi
 
 - **Kurulum:** `b30360eb` kuruldu: 39 dosya (30 yeni, 9 main'in eski hâli; sunucuya özgü satırların hepsi main geçmişinde vardı), kaynak ağaç main'le fark 0, `._*` 0, ön yüz `index-CVv5-QTM.js`, köprü restart (yeni modüller kod yüklemesi ister). `apps/destek`'e dokunulmadı; VM'e kurulmadı. Ardından iki düzeltme (aşağıda) → sunucudaki köprü + ön yüz `0e2ad1e8` ile birebir.
