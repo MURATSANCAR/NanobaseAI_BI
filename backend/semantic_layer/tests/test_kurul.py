@@ -355,8 +355,9 @@ def test_kurul_access_rules():
     assert A.rule_for("/api/v1/kurul/panel") == frozenset({"sayfa:kurul"})
     assert A.features_for("GET", "/api/v1/kurul/packages/p1/document.pdf") == ["ozellik:veri.disa-aktar"]
     assert A.features_for("POST", "/api/v1/kurul/packages/p1/freeze") == []        # açıkça verilen, uçta
-    assert {"sayfa:kurul", "ozellik:kurul.hazirla", "ozellik:kurul.dondur", "ozellik:kurul.gosterge"} <= A.explicit_keys()
-    assert {"ozellik:kurul.yorum", "ozellik:kurul.aksiyon"} <= A.all_keys() - A.explicit_keys()
+    assert {"sayfa:kurul", "ozellik:kurul.hazirla", "ozellik:kurul.dondur", "ozellik:kurul.gosterge",
+            "ozellik:kurul.aksiyon"} <= A.explicit_keys()
+    assert {"ozellik:kurul.yorum"} <= A.all_keys() - A.explicit_keys()
     page = next(p for p in A.catalog()["pages"] if p["key"] == "sayfa:kurul")
     assert page["area"] == "finans" and page.get("explicit") is True
 
