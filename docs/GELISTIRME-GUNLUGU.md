@@ -71,6 +71,12 @@
 - **Karar:** ayar ya da istek parametresi olan sayılar (eşik günü, pencere, uyarı günü) «rakam değil» sayılıp atlanmadı; ayar kaydı okumasına ve formüle bağlandı.
 - **Olay:** ortak scratchpad'deki düzenleme betiğini başka bir ajan üzerine yazdı ve bu worktree'de iki dağıtım dosyasını değiştirdi; geri alındı, commit'e girmedi. G3 yardımcı betikleri artık `scratchpad/g3-a4d956/` altında.
 - **Doğrulama:** Mac'te yalnız `py_compile` ve tsc (büyük/küçük harf çakışması için kopyada; hata yok). Sunucuda: `pytest test_sorgu_bilgisi_{stock,supply,shipping,hr}.py` + ilgili modül testleri, `python scripts/analiz/sorgu_bilgisi_envanter.py`, yan port köprüsünde `cd scripts/acceptance/sorgu-bilgisi && python g3.py`.
+## 2026-09-28 — Sorgu bilgisi Grup 4 (pazarlama, 62 ekran) — DOĞRULANAMADI, testler koordinatörde
+
+- **Ne:** kullanıcı isteği «tüm hesaplama ve rakam verdiğimiz ekranlarda çalıştırdığımız sorguları info olarak her kalemde ver ve kopyalanabilir olsun ama eksiksiz hepsinde istiyorum». Pazarlama grubunda M15 yeni kitap ve karne, M16 lansman, M17 backlist, M18 aylık plan ve föy, M19 görsel/metin, M20 basın, M21 reklam, M22 sosyal medya, M23 işbirlikleri, M24 katalog ve bülten, M27 fuar ve etkinlik, M28 kurumsal ilişkiler, M37 okur topluluğu, M53 set / hediye, H2 okur veri tabanı, okur sesi ve not sinyali panelleri: her KPI, tablo kolonu, blok başlığı, sayfalama ve telefon listesi «i» ile kaynağına bağlandı (uçlarda `kaynaklar`, ön yüzde ortak `SqlInfo`).
+- **Nasıl:** okumalar `*_stmt()` işlevlerine ayrıldı (çalışan ifade ile gösterilen aynı); CRM/Logo SQL'i aynı üreticiyle değerleri yerinde; önbellekten gelen rakamda yenileme işinin kaydettiği asıl sorgu `origin`. Kişisel veride yalnız sorgu metni, sonuç satırı asla.
+- **Neden ek değişiklik:** okur sesi özet cevabındaki `kaynaklar` alanı sorgu bilgisiyle çakıştığı için `kaynakKonu` oldu; pazarlamadaki iki kopyasız `SourceNote` ortak bileşene taşındı ve silindi; kurumsal ilişkilerde kurum listesi ve notların satır içi sorguları ifade işlevine taşındı; not sinyalinde cari süzgeci SQL'e indi.
+- **Doğrulama:** yerelde yalnız `py_compile` ve `tsc` (Mac'te bilinen `SqlInfo`/`sqlInfo` harf büyüklüğü uyarısı dışında hata yok). Pytest (`test_sorgu_bilgisi_g4_*.py`, `test_reader_voice.py`) ve kabul betikleri (`pazarlama_*.py`) koordinatörün test sunucusu koşusunda.
 
 ## 2026-09-28 (13:30) — Search Console site haritası durumu sürekli okunuyor; zengin sonuç hataları iş listesinde
 
