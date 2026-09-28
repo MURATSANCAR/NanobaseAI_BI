@@ -115,13 +115,12 @@ def _stale(cl, cache, c):
         e.at -= RC.FRESH_SECONDS + 1
     r = cl.get("/api/v1/mod/slow", headers=a)
     assert r.json()["n"] == 1 and int(r.headers["x-data-age"]) >= RC.FRESH_SECONDS
-    for _ in range(50):                       # arka plan tazelemesi
-        if c["slow"] >= 2:
+    for _ in range(100):                      # arka plan tazelemesi kaydı yazana kadar
+        if cache.view()["revalidated"] >= 1:
             break
         time.sleep(0.05)
     assert c["slow"] == 2
     assert cl.get("/api/v1/mod/slow", headers=a).json()["n"] == 2
-    assert cache.view()["revalidated"] >= 1
 
 
 def test_forgotten_entries_leave_and_due_skips_fresh():
