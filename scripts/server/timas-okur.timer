@@ -1,0 +1,10 @@
+[Unit]
+Description=Okur topluluğu (M37) gece turu; her gece 03:50 (okur veri tabanının 03:20 turundan sonra)
+
+[Timer]
+OnCalendar=*-*-* 03:50:00
+Persistent=true
+Unit=timas-okur.service
+
+[Install]
+WantedBy=timers.target

@@ -455,6 +455,8 @@ _EDITORIAL = frozenset(page(x) for x in ("editoryal", "yazar-giris", "basvurular
                                          "son-okuma", "kitap-tasarim", "kapak-arsivi", "kisiler", "yazar-iliskileri", "basin-web", "telif-sozlesme",
                                          "editor-atama", "gorevlerim", "serbest-calisanlar", "uretim"))
 
+_OKUR = frozenset(page(x) for x in ("okur-toplulugu", "okur-segmentler", "okur-programlar", "okur-yorumlar"))
+
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
                                page("yazar-giris")}) | _SEO
 
@@ -542,6 +544,16 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/readers/run-due", SYSTEM),
     ("/api/v1/readers/contract/", frozenset({page("okurlar"), page("pazarlama-yeni-kitap")})),
     ("/api/v1/readers/", frozenset({page("okurlar")})),
+    # M37 Okur topluluğu. Sözleşme (onaylı segment) M24/M35 gelince kendi sayfa anahtarını contract satırına ekler.
+    ("/api/v1/okur/run-due", SYSTEM),
+    ("/api/v1/okur/segments", frozenset({page("okur-segmentler")})),
+    ("/api/v1/okur/categories", frozenset({page("okur-segmentler")})),
+    ("/api/v1/okur/contract/", frozenset({page("okur-segmentler")})),
+    ("/api/v1/okur/programs", frozenset({page("okur-programlar"), page("okur-toplulugu")})),
+    ("/api/v1/okur/books", frozenset({page("okur-programlar")})),
+    ("/api/v1/okur/events-summary", frozenset({page("okur-programlar"), page("okur-toplulugu")})),
+    ("/api/v1/okur/reviews", frozenset({page("okur-yorumlar")})),
+    ("/api/v1/okur/", _OKUR),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -819,6 +831,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/marketing/creative/(requests|from-material/[^/]+)$", "ozellik:icerik.talep"),
     (frozenset({"POST"}), r"^/api/v1/marketing/creative/requests/[^/]+/(produce|copy|headlines)$", "ozellik:icerik.uret"),
     (frozenset({"PUT"}), r"^/api/v1/marketing/creative/(requests/[^/]+/cover|assets/[^/]+)$", "ozellik:icerik.uret"),
+    # M37 Okur topluluğu: segment taslağı/ölçümü/onaya gönderme, program ve duyuru taslağı, yorum cevap taslağı. Segment
+    # onayı ve ilgi alanı KVKK kararı açıkça verilen `topluluk.segment-onay`, liste dışa aktarımı `topluluk.liste-disa-aktar`
+    # ile ucun içinde denetlenir; bu kurallar onlara uygulanmaz.
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/okur/segments(/preview-rule|/(?!preview-rule$)[^/]+(/(preview|submit|withdraw))?)?$",
+     "ozellik:topluluk.segment-yaz"),
+    (frozenset({"POST"}), r"^/api/v1/okur/categories/classify$", "ozellik:topluluk.segment-yaz"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/okur/programs(/[^/]+(/draft)?)?$", "ozellik:topluluk.program-yaz"),
+    (frozenset({"POST"}), r"^/api/v1/okur/reviews/[^/]+/(draft|mark)$", "ozellik:topluluk.yorum-taslak"),
     (frozenset({"POST"}), r"^/api/v1/seo-geo/(products/[^/]+/propose|pages/[^/]+/[^/]+/propose|proposals/batch)$",
      "ozellik:seo.oneri-uret"),
     (frozenset({"POST", "DELETE"}), r"^/api/v1/seo-geo/(sync|crm/sync|schema/crawl|search/refresh|questions(/[^/]+)?)$",

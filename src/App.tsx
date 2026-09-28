@@ -97,6 +97,10 @@ const CreativeRequest = lazy(() => import('@/canvas/marketing/creative/RequestSc
 const MarketingMonth = lazy(() => import('@/canvas/marketing/monthly/MonthScreen'));
 const MarketingFoyList = lazy(() => import('@/canvas/marketing/monthly/FoyList'));
 const MarketingFoy = lazy(() => import('@/canvas/marketing/monthly/FoyScreen'));
+const OkurAudience = lazy(() => import('@/canvas/okur/AudienceScreen'));
+const OkurSegments = lazy(() => import('@/canvas/okur/SegmentsScreen'));
+const OkurPrograms = lazy(() => import('@/canvas/okur/ProgramsScreen'));
+const OkurReviews = lazy(() => import('@/canvas/okur/ReviewsScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -225,6 +229,11 @@ export default function App() {
             <Route path="okurlar" element={<ReadersScreen />} />
             <Route path="okurlar/kisi/:id" element={<ReaderCard />} />
             <Route path="okurlar/:section/*" element={<ReadersScreen />} />
+            {/* Pazarlama › Okur ve müşteri: M37 okur topluluğu (/api/v1/okur); okur sayıları H2 çekirdeğinden, kişi adı yok. */}
+            <Route path="okur-toplulugu" element={<OkurAudience />} />
+            <Route path="okur-toplulugu/segmentler" element={<OkurSegments />} />
+            <Route path="okur-toplulugu/programlar" element={<OkurPrograms />} />
+            <Route path="okur-toplulugu/yorumlar" element={<OkurReviews />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

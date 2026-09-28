@@ -38,6 +38,7 @@ export const LIVE: Record<string, string> = {
   M15: '/pazarlama/yeni-kitap',
   M19: '/pazarlama/icerik',
   M18: '/pazarlama/aylik-plan',
+  M37: '/okur-toplulugu',
   M25: '/seo-geo',
   M26: '/seo-geo/ai-gorunurluk',
   M29: '/ilk-dagilim',

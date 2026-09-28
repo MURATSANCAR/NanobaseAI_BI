@@ -681,6 +681,14 @@ SPEC: list[dict[str, Any]] = [
      "help": "Boşsa alan adından (E-POSTA / MESAJ / ARAMA). Biçim: {\"alan kimliği\": \"email|sms|call\"}"},
     {"key": "READERS_CANDIDATE_GROUP_MAX", "group": "readers", "label": "Aynı ad + il grubunda en çok okur", "type": "int",
      "default": "5", "help": "Daha kalabalık gruplar (yaygın ad) birleştirme adayı üretmez; sayısı özet ekranında yazılır"},
+    # M37 Okur topluluğu
+    {"key": "OKUR_ALERT_RECIPIENTS", "group": "marketing", "label": "Okur topluluğu özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (KVKK sorumlusu, topluluk sorumlusu). Onay bekleyen segment, izin çelişkisi "
+             "artışı, yeni cevapsız yorum ve yaklaşan program her gece tek özetle gider; okura hiçbir ileti gitmez"},
+    {"key": "OKUR_HASSAS_SEGMENT_ACIK", "group": "marketing", "label": "Özel nitelikli ilgi alanıyla segment", "type": "bool",
+     "default": "0",
+     "help": "Kapalıyken din/inanç gibi özel nitelikli çağrışım taşıyan ilgi alanları segmentte kullanılamaz (KVKK md. 6). "
+             "Yalnız hukuk birimi yazılı karar verirse açılır; açıkken de ayrı açık rıza gerekir"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",

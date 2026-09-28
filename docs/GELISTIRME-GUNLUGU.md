@@ -458,6 +458,36 @@
   - `sayfa:okurlar` katalogda `explicit` (M49 sayfaları da kapsayınca Herkes'e açılmaz; bugünkü main'de etkisi yok).
 - **Sonraki sürüm (analiz §9):** T-soft üye/sipariş kaynağı (H3, `register_source` ile), ilgi alanının H1 ağacından satın alma geçmişiyle çıkarılması, sadakat/kayıp sinyali, bülten platformu açılma/tıklama, «aynı kişi» kararlarının CRM ekibine «CRM'e işlenecek kopyalar» listesi (M38), Zeki AI sohbetine okur ölçüleri.
 - **Doğrulama:** Mac'te yalnız `py_compile` ve JSON denetimi yapıldı. pytest (`test_readers.py`), tsc, vitest, derleme ve gerçek CRM kabulü (`scripts/acceptance/H2/check.sh`, `kabul.py` R1–R10, `cleanup.py`) **DOĞRULANAMADI — testler koordinatörde**. Sunucuda önce köprü ortamına `READERS_HASH_SALT` eklenmeli.
+## 2026-09-28 — M37 Okur topluluğu kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** okur kitlesi envanteri ve izin sağlığı (yalnız sayı), onaylı segment akışı, topluluk program takvimi ve Zeki AI
+  duyuru taslağı, cevapsız okur yorumlarına cevap taslağı, CRM geçmiş etkinlik özeti. Köprü `okur.py`, `okur_sources.py`,
+  `okur_api.py` (`/api/v1/okur/*`); ekranlar `src/canvas/okur/` (dört rota, Pazarlama › «Okur ve müşteri»); zamanlayıcı
+  `timas-okur.timer` 03:50; test `test_okur.py`; kabul `scripts/acceptance/M37/`. Dal `worktree-agent-a2c42c8cb3680351f`.
+- **H2 ile sınır:** H2 okur veri tabanı çekirdeği başka ajanca kodlanıyor; kimlik, izin, ilgi alanı ve segment sayımı
+  kopyalanmadı. M37 sayıları tek bir bağlantı noktasından (`okur_sources.ReadersCore`) ister; sözleşme dosyanın başında
+  (Türkçe yöntem adları + İngilizce eşdeğerleri). H2 kaydolmazsa ekran «Okur çekirdeği bağlı değil» der; program, etkinlik
+  özeti ve yorumlar yine çalışır. Merge'de H2'nin gerçek yöntem adlarıyla `_CONTRACT` eşlemesi hizalanmalı.
+- **Kararlar (analiz §10 açık soruları, veriye/koda bakılarak):**
+  - Yetki anahtarları `ozellik:topluluk.*` — analizdeki `okur.segment-onay` H2 analizinde de aynı adla geçiyor; iki modülün
+    onayı farklı (KVKK amaç onayı / pazarlama müdürü), çakışmasın diye ayrıldı. Sayfalar «Herkes»e açık (yalnız sayı);
+    onay ve dışa aktarım açıkça verilir.
+  - Din/inanç çağrışımı sabit sözcük listesiyle değil, her ilgi alanında Zeki AI kapalı küme seçimiyle işaretlenir; «yok»
+    ancak p ≥ 0,90 ve marj ≥ 0,50'de (`OKUR_HASSAS_ESIK/MARJ`), gerisi «bilinmiyor» ve kullanılamaz. İnsan kararı gerekçesiz
+    kaydedilmez, modelle ezilmez. Hukuk görüşü gelene kadar `OKUR_HASSAS_SEGMENT_ACIK=0`.
+  - Etkinlik özeti: `new_etkinlikBase`'in çoğu satış ziyareti (57.013 kayıt); ziyaret tipi dolu kayıtlar varsayılan olarak
+    dışarıda. Okur etkinliği tipleri (371 seçenek) ölçülmedi → tip süzgeci ayar, boşsa hepsi; ekran tipe göre kırar.
+    Katılımcı/satılan yalnız «Tamamlandı» (100000002) kayıtlarda toplanır (analiz kabul 6).
+  - Yorum «cevaplandı»: T-soft'ta yayınevi cevabı alanının adı bilinmiyor (2026-09-25'te 86 yorumun hiçbiri cevaplı
+    değildi); birkaç olası ad okunur, biri doluysa cevaplı sayılır, yoksa portal işareti geçerli. Ölçülecek.
+  - Zamanlayıcı 03:50: H2 turu 03:20, kategori ağacı 03:40.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (RULES 9 satır + FEATURE_RULES 4), `access_catalog.json` (4 sayfa,
+  5 özellik), `admin.py` (2 ayar), `app.py` (2 satır), `App.tsx` (4 rota), `navModel.ts` (4 öğe + 2 simge),
+  `ModulesMenu.tsx` (LIVE M37, GROUP_HOME «Dijital & Topluluk»).
+- **Doğrulama:** yerelde yalnız `py_compile` ve JSON denetimi; pytest, tsc, vitest, derleme ve gerçek CRM/H2/T-soft kabulü
+  test sunucusunda koordinatörde (`scripts/acceptance/M37/check.sh`, `kabul.py`, `temizlik.py`). Ölçülecekler: CRM
+  `new_contact_new_kitapilgialanBase` kolon adları (R5), H2 izin sağlığı tür anahtarı (R3, `M37_CELISKI_TUR`), T-soft yorum
+  cevap alanı, okur etkinliği tipleri.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

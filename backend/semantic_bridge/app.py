@@ -7201,6 +7201,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M47 Risk yönetimi ve uyum (Finans): risk kaydı, göstergeler, uyum takvimi, sigorta/BCP, brifing. /api/v1/risk/*.
     from semantic_bridge import risk_api
     app.state.risk = risk_api.register(app, rt, _require_caller, _can)
+    # M37 Okur topluluğu (Pazarlama › Okur ve müşteri): /api/v1/okur/*; okur sayıları H2 çekirdeğinden (okur_sources.ReadersCore).
+    from semantic_bridge import okur_api
+    app.state.okur = okur_api.register(app, rt, _require_caller, _can)
     return app
 
 

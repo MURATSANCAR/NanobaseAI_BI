@@ -245,6 +245,26 @@
       "explicit": true
     },
     {
+      "key": "sayfa:okur-toplulugu",
+      "area": "pazarlama",
+      "label": "Okur kitlesi"
+    },
+    {
+      "key": "sayfa:okur-segmentler",
+      "area": "pazarlama",
+      "label": "Okur segmentleri"
+    },
+    {
+      "key": "sayfa:okur-programlar",
+      "area": "pazarlama",
+      "label": "Topluluk programları"
+    },
+    {
+      "key": "sayfa:okur-yorumlar",
+      "area": "pazarlama",
+      "label": "Yorum cevapları"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1603,6 +1623,43 @@
       "page": "sayfa:okurlar",
       "label": "Okur: etkinlik dosyası yükleme",
       "hint": "Fuar/etkinlik katılımcı dosyasını yükleme, kolon eşleme, eşleştirme ve yüklemeyi silme"
+    },
+    {
+      "key": "ozellik:topluluk.segment-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:okur-segmentler",
+      "label": "Okur segmenti hazırlama",
+      "hint": "Segment kuralı, amaç, süre ve kanal yazma; büyüklüğü ölçme (yalnız sayı), onaya gönderme ve geri çekme, ilgi alanlarını Zeki AI'a sınıflatma"
+    },
+    {
+      "key": "ozellik:topluluk.segment-onay",
+      "area": "pazarlama",
+      "page": "sayfa:okur-segmentler",
+      "label": "Okur segmenti KVKK onayı",
+      "hint": "Onaya gönderilen segmenti amaç ve süreyle onaylama ya da gerekçeyle reddetme; ilgi alanının özel nitelikli çağrışım kararı (yazan ve gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:topluluk.liste-disa-aktar",
+      "area": "pazarlama",
+      "page": "sayfa:okur-segmentler",
+      "label": "Okur listesi dışa aktarımı",
+      "hint": "Onaylı segmentin izinli kişi listesini gönderim için indirme (ikinci sürüm; hukuk görüşünden sonra açılır, her indirme kayda geçer)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:topluluk.program-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:okur-programlar",
+      "label": "Topluluk programı yazma",
+      "hint": "Okuma kulübü, imza günü, anket ve çevrim içi etkinlik planı; Zeki AI duyuru taslağı"
+    },
+    {
+      "key": "ozellik:topluluk.yorum-taslak",
+      "area": "pazarlama",
+      "page": "sayfa:okur-yorumlar",
+      "label": "Yorum cevap taslağı",
+      "hint": "Cevapsız okur yorumuna Zeki AI cevap taslağı alma, düzenleme ve «cevaplandı» işaretleme (cevap sitede elle girilir)"
     }
   ]
 }

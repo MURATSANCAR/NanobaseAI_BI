@@ -3,6 +3,8 @@ import {
   Headset,
   Server,
   HeartHandshake,
+  CalendarHeart,
+  MessageSquareReply,
   Inbox,
   ArrowLeftRight,
   BookCopy,
@@ -360,6 +362,11 @@ export const NAV: NavGroup[] = [
       { id: 'pazarlama-icerik', label: 'Görsel ve metin', to: '/pazarlama/icerik', icon: Palette, section: 'Üretim', hint: 'Sosyal medya, reklam ve site görselleri; Zeki AI metin varyantları, onay ve arşiv', keywords: ['görsel', 'banner', 'sosyal medya', 'reklam metni', 'hashtag', 'video senaryosu', 'influencer'] },
       // H2 Okuyucu veri tabanı: kart (/okurlar/kisi/:id), segmentler, yüklemeler aynı öğenin altında.
       { id: 'okurlar', label: 'Okurlar', to: '/okurlar', icon: Contact, section: 'Okur ve müşteri', hint: 'Tekil okur, izinler ve segmentler', keywords: ['okur', 'müşteri', 'segment', 'izin', 'iys', 'kvkk', 'bülten listesi', 'etkinlik katılımcı', 'fuar listesi', 'kopya kayıt'] },
+      // M37 Okur topluluğu: yalnız sayı (kişi adı yok). H2 «Okurlar» öğesi aynı bölüme eklenir.
+      { id: 'okur-toplulugu', label: 'Okur kitlesi', to: '/okur-toplulugu', icon: UsersRound, section: 'Okur ve müşteri', hint: 'Okur kaynağı, KVKK ve İYS izin sağlığı, yaklaşan programlar (yalnız sayı)', keywords: ['okur', 'topluluk', 'kvkk', 'iys', 'izin', 'kitle', 'e-bülten'] },
+      { id: 'okur-segmentler', label: 'Okur segmentleri', to: '/okur-toplulugu/segmentler', icon: SlidersHorizontal, section: 'Okur ve müşteri', hint: 'Segment kuralı, büyüklük, amaç ve KVKK onayı', keywords: ['segment', 'hedef kitle', 'kvkk onayı', 'ilgi alanı'] },
+      { id: 'okur-programlar', label: 'Topluluk programları', to: '/okur-toplulugu/programlar', icon: CalendarHeart, section: 'Okur ve müşteri', hint: 'Okuma kulübü, imza günü, anket takvimi ve geçmiş etkinlikler', keywords: ['okuma kulübü', 'imza günü', 'etkinlik', 'anket', 'duyuru'] },
+      { id: 'okur-yorumlar', label: 'Yorum cevapları', to: '/okur-toplulugu/yorumlar', icon: MessageSquareReply, section: 'Okur ve müşteri', hint: 'Cevapsız okur yorumları ve Zeki AI cevap taslağı', keywords: ['yorum', 'cevap', 'okur yorumu', 'puan'] },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },
