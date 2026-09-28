@@ -689,6 +689,8 @@ export type AdminCheck = {
   message: string;
   ms: number;
   at: string;
+  /** Birden çok anahtarı olan gruplarda her bağlantının ayrı sonucu; off = girilmemiş. */
+  parts?: { label: string; state: 'ok' | 'err' | 'off'; message: string; ms: number }[];
 };
 
 export type AdminSystem = {

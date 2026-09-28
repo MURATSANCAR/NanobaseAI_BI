@@ -2106,16 +2106,20 @@ def email_config_test() -> tuple[bool, str]:
     return True, f"Ayarlı: {cfg['host']}:{cfg['port']} · gönderen {cfg['sender']}. Gerçek deneme için bir adrese gönderin."
 
 
-def _seo_check() -> tuple[bool, str]:
-    """T-soft'a giriş ve Search Console'a sorgu; ikisinin sonucu tek satırda. Google henüz girilmediyse
-    yalnız T-soft'un sonucu belirler."""
-    from semantic_bridge.seo_geo import connections
+def _seo_check() -> tuple[bool, str, list[dict[str, Any]]]:
+    """T-soft ve girilmiş her Google/Bing/Cloudflare anahtarı ayrı satırda (yalnız okuma)."""
+    from semantic_bridge.seo_geo import checks
 
-    t_ok, t_msg = connections.tsoft_test()
-    if not conf("GOOGLE_SERVICE_ACCOUNT_JSON"):
-        return t_ok, f"T-soft: {t_msg} · Google: servis hesabı girilmedi."
-    g_ok, g_msg = connections.gsc_test()
-    return t_ok and g_ok, f"T-soft: {t_msg} · Google: {g_msg}"
+    parts = checks.seo_parts()
+    return (*checks.summarize(parts), parts)
+
+
+def _geo_check() -> tuple[bool, str, list[dict[str, Any]]]:
+    """Yapay zekâ arama motorlarının anahtarları; soru sorulmaz, kota harcanmaz."""
+    from semantic_bridge.seo_geo import checks
+
+    parts = checks.geo_parts()
+    return (*checks.summarize(parts), parts)
 
 
 def mailbox_test() -> tuple[bool, str]:
@@ -2137,6 +2141,7 @@ CHECKS: list[dict[str, Any]] = [
     {"id": "directory", "group": "directory", "label": "Active Directory", "run": lambda: directory_test("")},
     {"id": "email", "group": "email", "label": "E-posta ayarı", "run": email_config_test},
     {"id": "seo", "group": "seo", "label": "T-soft ve Google", "run": lambda: _seo_check()},
+    {"id": "geo", "group": "geo", "label": "Yapay zekâ arama motorları", "run": lambda: _geo_check()},
     {"id": "mailbox", "group": "mailbox", "label": "Kurumsal e-posta kutusu", "run": mailbox_test},
     {"id": "store", "group": None, "label": "Meta veritabanı", "run": store_test},
 ]
@@ -2148,12 +2153,19 @@ def run_check(check_id: str) -> dict[str, Any]:
     if not c:
         raise AdminError(f"Bilinmeyen deneme: {check_id}")
     t0 = time.monotonic()
+    parts: Optional[list[dict[str, Any]]] = None
     try:
-        ok, message = c["run"]()
+        out = c["run"]()
+        ok, message = out[0], out[1]
+        if len(out) > 2:
+            parts = out[2]
     except Exception as e:  # noqa: BLE001
         ok, message = False, f"{type(e).__name__}: {e}"[:400]
-    return {"id": c["id"], "group": c["group"], "label": c["label"], "ok": ok, "message": message,
-            "ms": int((time.monotonic() - t0) * 1000), "at": _iso(_now())}
+    res = {"id": c["id"], "group": c["group"], "label": c["label"], "ok": ok, "message": message,
+           "ms": int((time.monotonic() - t0) * 1000), "at": _iso(_now())}
+    if parts is not None:
+        res["parts"] = parts
+    return res
 
 
 def run_checks() -> dict[str, Any]:

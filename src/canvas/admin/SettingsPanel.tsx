@@ -22,12 +22,47 @@ const GROUP_CHECK: Record<string, { id: string; label: string; help: string }> =
     label: 'Bağlantıyı sına',
     help: 'T-soft’a kaydedilen kullanıcıyla giriş yapar, bir ürün okur; servis hesabı girildiyse Search Console’dan son 7 günü sorar. Hiçbir şey yazmaz.',
   },
+  geo: {
+    id: 'geo',
+    label: 'Bağlantıyı sına',
+    help: 'Girilmiş her yapay zekâ anahtarını hesabın model listesini okuyarak dener. Soru sormaz, kota harcamaz.',
+  },
   mailbox: {
     id: 'mailbox',
     label: 'Kutuyu oku',
     help: 'Kaydedilmiş bağlantıyla kutunun ileti sayısını ve etiket listesini okur. Hiçbir ileti göndermez, değiştirmez.',
   },
 };
+
+/** Sınama sonucu: üstte yeşil «Başarılı» ya da kırmızı «Hata», altında varsa bağlantı bağlantı satırlar. */
+function CheckResult({ r }: { r: AdminCheck }) {
+  const tone = { ok: 'ok', err: 'err', off: 'muted' } as const;
+  const word = { ok: 'Başarılı', err: 'Hata', off: 'Girilmemiş' } as const;
+  return (
+    <div className="mt-2 space-y-1.5" aria-live="polite">
+      <div
+        className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-xl px-3 py-2 text-[12px] font-semibold ${
+          r.ok ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700'
+        }`}
+      >
+        <span className="font-extrabold">{r.ok ? '✓ Başarılı' : '✕ Hata'}</span>
+        <span className="min-w-0 flex-1 break-words">{r.message}</span>
+        <span className="shrink-0 text-[11px] font-normal opacity-80">{fmtDate(r.at)}{r.ms ? ` · ${r.ms} ms` : ''}</span>
+      </div>
+      {r.parts && (
+        <ul className="space-y-1">
+          {r.parts.map((p) => (
+            <li key={p.label} className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-xl bg-white px-3 py-1.5">
+              <Pill tone={tone[p.state]}>{word[p.state]}</Pill>
+              <span className="text-[12px] font-bold">{p.label}</span>
+              <span className="min-w-0 flex-1 break-words text-[11.5px] text-canvas-muted">{p.message}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 const SOURCE: Record<AdminSetting['source'], string> = {
   screen: 'Bu ekrandan',
@@ -141,8 +176,24 @@ export default function SettingsPanel() {
       return adminApi.test(id);
     },
     onSuccess: (d) => keep([d]),
+    // İstek hiç cevap vermezse de (ağ, yetki, zaman aşımı) sonuç kırmızı görünür; tuş sessiz kalmaz.
+    onError: (e, id) =>
+      keep([{ id, group: null, label: '', ok: false, message: errText(e, 'Deneme yapılamadı.'), ms: 0, at: new Date().toISOString() }]),
     onSettled: () => setChecking(null),
   });
+  // Kaydedilmemiş değişiklik varken tuş önce kaydeder, sonra sınar: deneme her zaman kayıtlı ayarla yapılır.
+  const saveAndCheck = async (id: string) => {
+    if (dirty.length) {
+      setChecking(id);
+      try {
+        await save.mutateAsync();
+      } catch {
+        setChecking(null);
+        return;
+      }
+    }
+    check.mutate(id);
+  };
   const checkAll = useMutation({ mutationFn: () => adminApi.testAll(), onSuccess: (d) => keep(d.items) });
   const system = useQuery({ queryKey: ['admin', 'system'], queryFn: adminApi.system, retry: false });
 
@@ -234,30 +285,26 @@ export default function SettingsPanel() {
               {dirTest.error && <div className="mt-2"><Note tone="err">{errText(dirTest.error, 'Deneme yapılamadı.')}</Note></div>}
             </div>
           )}
-          {GROUP_CHECK[g.id] && (
-            <div className="mt-2 rounded-xl bg-slate-50 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="min-w-0">
-                  <div className="text-[12.5px] font-bold">Bağlantı denemesi</div>
-                  <p className="text-[11.5px] text-canvas-muted">{GROUP_CHECK[g.id].help} Önce değişiklikleri kaydedin.</p>
+          {GROUP_CHECK[g.id] && (() => {
+            const gc = GROUP_CHECK[g.id];
+            const busy = checking === gc.id;
+            const r = result[gc.id];
+            return (
+              <div className="mt-2 rounded-xl bg-slate-50 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-[12.5px] font-bold">Bağlantı denemesi</div>
+                    <p className="text-[11.5px] text-canvas-muted">{gc.help}</p>
+                  </div>
+                  <button type="button" disabled={busy} onClick={() => void saveAndCheck(gc.id)} className={`${btnPrimary} shrink-0`}>
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
+                    {busy ? 'Sınanıyor…' : dirty.length ? 'Kaydet ve sına' : gc.label}
+                  </button>
                 </div>
-                <button
-                  type="button"
-                  disabled={dirty.length > 0 || (check.isPending && checking === GROUP_CHECK[g.id].id)}
-                  onClick={() => check.mutate(GROUP_CHECK[g.id].id)}
-                  className={`${btnGhost} shrink-0`}
-                >
-                  {check.isPending && checking === GROUP_CHECK[g.id].id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plug className="h-4 w-4" />}
-                  {GROUP_CHECK[g.id].label}
-                </button>
+                {r && !busy && <CheckResult r={r} />}
               </div>
-              {result[GROUP_CHECK[g.id].id] && (
-                <div className="mt-2">
-                  <Note tone={result[GROUP_CHECK[g.id].id].ok ? 'ok' : 'err'}>{result[GROUP_CHECK[g.id].id].message}</Note>
-                </div>
-              )}
-            </div>
-          )}
+            );
+          })()}
         </Card>
       ))}
 
