@@ -4,6 +4,7 @@ import { ExternalLink, Plus, Trash2 } from 'lucide-react';
 import { Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { day, num, parseNum, pricingApi, tl0, type Analysis } from './api';
+import { InfoLabel } from '../components/SqlInfo';
 
 /**
  * Elle girilen rakip ve pazar fiyatları. E-ticaret sitelerini taramıyoruz (bot korumasını aşan araç yok, izinli kanal
@@ -46,8 +47,8 @@ export default function MarketPrices({ analysis, canWrite }: { analysis: Analysi
               <tr>
                 <th className={th}>Kitap</th>
                 <th className={th}>Yayınevi · kanal</th>
-                <th className={`${th} text-right`}>Sayfa</th>
-                <th className={`${th} text-right`}>Fiyat</th>
+                <th className={`${th} text-right`}><InfoLabel k={analysis.kaynaklar} alan="market[]" label="Pazar fiyatı: sayfa">Sayfa</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={analysis.kaynaklar} alan="market[]" label="Pazar fiyatı">Fiyat</InfoLabel></th>
                 <th className={th}>Görüldü</th>
                 <th className={th} />
               </tr>

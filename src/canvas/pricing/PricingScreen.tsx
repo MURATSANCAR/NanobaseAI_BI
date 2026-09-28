@@ -12,6 +12,7 @@ import AnalysesPane from './AnalysesPane';
 import ActualsPane from './ActualsPane';
 import BacklistPane from './BacklistPane';
 import DataPane from './DataPane';
+import SqlInfo from '../components/SqlInfo';
 
 /**
  * Fiyatlama ve maliyet (M9). Bölüm ve açık kayıt adreste durur (?bolum=, ?kitap=, ?analiz=); bağlantı paylaşılabilir.
@@ -66,6 +67,7 @@ export default function PricingScreen() {
             help={`${nf.format(o.counts.onayda ?? 0)} analiz onayda · ${nf.format(o.counts.onaylandi ?? 0)} onaylandı`}
             active={section === 'analizler'}
             onClick={() => go('analizler', { durum: 'onayda' })}
+            info={<SqlInfo k={o.kaynaklar} alan="toApprove" label="Onayınızı bekleyen analizler" />}
           />
           <Kpi
             label="Ortalama kanal iskontosu"
@@ -73,6 +75,7 @@ export default function PricingScreen() {
             help={m ? `Son 12 ay kitap satışı, ${nf.format(m.channels.length)} müşteri grubu` : 'Ölçülüyor'}
             active={section === 'veri'}
             onClick={() => go('veri')}
+            info={<SqlInfo k={o.kaynaklar} alan="measured.discount" label="Ortalama kanal iskontosu" />}
           />
           <Kpi
             label="Baskı faturası"
@@ -80,17 +83,20 @@ export default function PricingScreen() {
             help={m ? `${nf.format(m.printedBooks)} kitabın matbaa faturası (2021'den)` : 'Ölçülüyor'}
             active={section === 'gerceklesen'}
             onClick={() => go('gerceklesen')}
+            info={<SqlInfo k={o.kaynaklar} alan="measured.printInvoices" label="Baskı faturası sayısı" />}
           />
           <Kpi
             label="Veri sonu"
             value={m ? day(m.dataEnd) : '—'}
             help={m ? `Logo'daki son fatura · ${m.copies.map((c) => `${c.from.slice(0, 4)}–${c.last.slice(0, 4)}`).join(', ')}` : 'Ölçülüyor'}
+            info={<SqlInfo k={o.kaynaklar} alan="measured.copies" label="Veri sonu ve Logo yıl kopyaları" />}
           />
         </KpiRow>
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="min-w-0 flex-1">
+        <div className="flex min-w-0 flex-1 items-center gap-1">
+          <div className="min-w-0 flex-1">
           <Tabs<Section>
             value={section}
             onChange={(s) => go(s)}
@@ -102,6 +108,8 @@ export default function PricingScreen() {
               { key: 'veri', label: 'Veri ve varsayımlar' },
             ]}
           />
+          </div>
+          {!!o?.toApprove && <SqlInfo k={o.kaynaklar} alan="toApprove" label="«Analizler ve onay» sekmesindeki sayı" />}
         </div>
         {o?.me.canWrite && (
           <button type="button" className={btnGhost} disabled={refresh.isPending || o.status.refreshing} onClick={() => refresh.mutate()}>

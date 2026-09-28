@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { InfoLabel } from '../components/SqlInfo';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { toast } from 'sonner';
 import { Copy, Plus, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
@@ -109,7 +109,12 @@ export default function TaxTab({ year, canEdit, statuses }: { year: number; canE
           </>
         )}
       </div>
-      {d.geciken.length > 0 && <Note tone="err">{d.geciken.length} beyanın son günü geçti ve «verildi» işaretlenmedi.</Note>}
+      {d.geciken.length > 0 && (
+        <Note tone="err">
+          {d.geciken.length} beyanın son günü geçti ve «verildi» işaretlenmedi.
+          <SqlInfo k={d.kaynaklar} alan="geciken[]" label="Geciken beyan sayısı" className="ml-0.5" />
+        </Note>
+      )}
       {!d.items.length ? (
         <Note tone="info">{year} için beyan girilmemiş. Takvim elle yüklenir; geçen yılın takvimi varsa kopyalanıp günleri denetlenebilir.</Note>
       ) : (
@@ -117,7 +122,7 @@ export default function TaxTab({ year, canEdit, statuses }: { year: number; canE
           <TableWrap>
             <thead>
               <tr>
-                <th className={th}>Son gün</th>
+                <th className={th}><InfoLabel k={d.kaynaklar} alan="items[].kalanGun" label="Son gün ve kalan gün">Son gün</InfoLabel></th>
                 <th className={th}>Beyan</th>
                 <th className={th}>Dönem</th>
                 <th className={th}>Sorumlu</th>

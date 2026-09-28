@@ -61,11 +61,12 @@ export default function BacklistPane({ ov }: { ov: Overview }) {
             percent
             value={target ?? d?.measuredTarget ?? null}
             onChange={setTarget}
+            info={<SqlInfo k={d?.kaynaklar} alan="measuredTarget" label="Ölçülen hedef oran" />}
             hint={d?.measuredTarget != null ? `Ölçülen: son 12 ayın ${num(d.freshBooks)} yeni kitabında ortanca ${pct(d.measuredTarget)}` : 'Ölçülemedi — elle girin'}
           />
           <NumField label="Son iki yılda en az satış" suffix="adet" digits={0} value={minSold} onChange={setMinSold} hint="Hiç satmayan kitaba zam önerilmez" />
           <Stat info={<SqlInfo k={d?.kaynaklar} alan="count" label="Fiyat revizyonu adayları" />} label="Aday" value={d ? num(d.count) : '—'} note={d ? `${num(d.candidates)} kitabın son baskısı incelendi` : undefined} />
-          <Stat label="Seçilen" value={num(picked.size)} note={pickedRows.length ? `Ortalama artış ${pct(pickedRows.reduce((s, r) => s + r.increase, 0) / pickedRows.length)}` : 'Tablodan işaretleyin'} />
+          <Stat info={<SqlInfo k={d?.kaynaklar} alan="secim" label="Seçilen kitaplar ve ortalama artış" />} label="Seçilen" value={num(picked.size)} note={pickedRows.length ? `Ortalama artış ${pct(pickedRows.reduce((s, r) => s + r.increase, 0) / pickedRows.length)}` : 'Tablodan işaretleyin'} />
         </div>
       </Panel>
       {bl.error && <Note tone="err">{errText(bl.error, 'Adaylar okunamadı.')}</Note>}
@@ -201,6 +202,7 @@ function ProposalList({ ov, items, k }: { ov: Overview; items: Proposal[]; k?: K
           <h4 className="text-[13px] font-extrabold">{p.title}</h4>
           <p className="text-[11.5px] text-canvas-muted">
             Hedef oran {pct(p.params.target)} · veri sonu {day(p.params.dataEnd)}
+            <SqlInfo k={p.kaynaklar} alan="params" label="Teklifin hedef oranı" className="ml-0.5" />
           </p>
           <div className="mt-2">
             <TableWrap>

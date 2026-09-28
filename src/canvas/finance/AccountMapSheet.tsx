@@ -81,7 +81,9 @@ export default function AccountMapSheet({ open, meta, year, onClose }: { open: b
     <span className="flex flex-wrap items-center gap-1.5">
       <Pill tone={MAP_LABEL[e.durum].tone}>{MAP_LABEL[e.durum].label}</Pill>
       {e.kaynak && <span className="text-[11px] text-canvas-muted">{SOURCE_LABEL[e.kaynak]}{e.kayit ? ` · ${e.kayit}` : ''}</span>}
-      {e.kaynak === 'zeki' && e.olasilik !== undefined && e.olasilik !== null && <span className="text-[11px] text-canvas-muted">olasılık {fmtPct(e.olasilik)}</span>}
+      {e.kaynak === 'zeki' && e.olasilik !== undefined && e.olasilik !== null && (
+        <span className="inline-flex items-center gap-0.5 text-[11px] text-canvas-muted">olasılık {fmtPct(e.olasilik)}<SqlInfo k={d?.kaynaklar} alan="items[].esleme" label="Öneri olasılığı" /></span>
+      )}
     </span>
   );
 
@@ -99,7 +101,7 @@ export default function AccountMapSheet({ open, meta, year, onClose }: { open: b
             ))}
           </div>
           {!canMap && <Note tone="info">Eşleme kararını muhasebe verir; bu rolde yalnız görüntüleme var.</Note>}
-          {d.suggest?.running && <Note tone="info">Zeki AI {d.suggest.count} hesap için öneri hazırlıyor…</Note>}
+          {d.suggest?.running && <Note tone="info">Zeki AI {d.suggest.count} hesap için öneri hazırlıyor…<SqlInfo k={d.kaynaklar} alan="suggest" label="Öneri işi" className="ml-0.5" /></Note>}
           {d.suggest?.error && <Note tone="err">Son öneri işi: {d.suggest.error}</Note>}
           <div className="flex flex-wrap items-center gap-2">
             <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="tablist" aria-label="Durum">
@@ -128,7 +130,7 @@ export default function AccountMapSheet({ open, meta, year, onClose }: { open: b
               {groups.map(([g, rows]) => (
                 <section key={g} className="rounded-2xl border border-slate-100 bg-white/80">
                   <header className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-3 py-2">
-                    <div className="text-[12.5px] font-extrabold">Grup {g} · {rows.length} hesap</div>
+                    <div className="flex items-center gap-1 text-[12.5px] font-extrabold">Grup {g} · {rows.length} hesap<SqlInfo k={d.kaynaklar} alan="gruplar" label={`Grup ${g} hesap sayısı`} /></div>
                     {canMap && rows.some((r) => r.esleme.durum === 'oneri') && (
                       <button type="button" className={btnGhost} onClick={() => approve.mutate([g])} disabled={approve.isPending}>
                         Grubu öneriyle onayla

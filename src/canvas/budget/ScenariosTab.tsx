@@ -94,13 +94,17 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
                     </div>
                   </div>
                 )}
-                <span className="text-[11px] text-canvas-muted">
-                  Hacim {fmtPct(p.params.hacim?.[p.scenario] ?? null)} · fiyat {fmtPct(p.params.fiyat)} · {p.createdBy}, {fmtDay(p.createdAt)}
-                </span>
+                <span className="text-[11px] text-canvas-muted">{p.createdBy}, {fmtDay(p.createdAt)}</span>
               </button>
-              <span className="absolute bottom-3 right-3">
-                <SqlInfo k={cmp.data?.kaynaklar} alan="items[].totals" row={p.id} label={`${p.scenarioLabel} senaryo · sürüm ${p.version}`} />
-              </span>
+              <div className="pointer-events-none absolute inset-x-3.5 bottom-3 flex items-center justify-between gap-2">
+                <span className="flex min-w-0 items-center gap-0.5 text-[11px] text-canvas-muted">
+                  <span className="truncate">Hacim {fmtPct(p.params.hacim?.[p.scenario] ?? null)} · fiyat {fmtPct(p.params.fiyat)}</span>
+                  <span className="pointer-events-auto"><SqlInfo k={cmp.data?.kaynaklar} alan="items[].params" row={p.id} label={`${p.scenarioLabel} senaryo · varsayımlar`} /></span>
+                </span>
+                <span className="pointer-events-auto">
+                  <SqlInfo k={cmp.data?.kaynaklar} alan="items[].totals" row={p.id} label={`${p.scenarioLabel} senaryo · sürüm ${p.version}`} />
+                </span>
+              </div>
               </div>
             ))}
           </div>
@@ -117,6 +121,7 @@ export default function ScenariosTab({ year, current, canEdit, onOpen, onGenerat
         <fieldset disabled={current.status !== 'taslak' || !canEdit} className="disabled:opacity-80">
           <ParamsForm value={text} onChange={setText} only={current.scenario}
             sources={{ fiyat: current.params.fiyatKaynak, gider: current.params.giderKaynak }}
+            info={(_key, l) => <SqlInfo k={history.data?.kaynaklar} alan="items[].params" row={current.id} label={`${current.scenarioLabel} · ${l}`} />}
             forecast={current.basis.tahmin?.baslangic ?? null} />
         </fieldset>
         {current.status === 'taslak' && canEdit && (

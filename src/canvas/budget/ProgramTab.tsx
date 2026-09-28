@@ -7,9 +7,10 @@ import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { budgetApi, fmtInt, fmtMoney, fmtPct, parseNum, type Plan, type ProgramLine } from './api';
 import { NumField } from './parts';
-import { InfoLabel } from '../components/SqlInfo';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
-function EditSheet({ plan, line, onClose }: { plan: Plan; line: ProgramLine | null; onClose: () => void }) {
+function EditSheet({ plan, line, onClose, k }: { plan: Plan; line: ProgramLine | null; onClose: () => void; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const [ek, setEk] = useState('');
   const [adet, setAdet] = useState('');
@@ -41,7 +42,12 @@ function EditSheet({ plan, line, onClose }: { plan: Plan; line: ProgramLine | nu
   const o = (line?.oneri ?? {}) as Record<string, number | string>;
   return (
     <Sheet open={!!line} onClose={onClose} modal title={line?.yayinevi ?? ''}
-      subtitle={line ? `Taban dönemde (${o.pencere ?? ''}) ${fmtInt(Number(o.kohortBaslik ?? 0))} yeni başlık çıktı, toplam ${fmtInt(Number(o.kohortAdet ?? 0))} adet sattı. CRM'de adıyla planlanmış ${fmtInt(line.bilinen)} kitap hedef listesinde.` : undefined}>
+      subtitle={line ? (
+        <>
+          Taban dönemde ({o.pencere ?? ''}) {fmtInt(Number(o.kohortBaslik ?? 0))} yeni başlık çıktı, toplam {fmtInt(Number(o.kohortAdet ?? 0))} adet sattı. CRM'de adıyla planlanmış {fmtInt(line.bilinen)} kitap hedef listesinde.
+          <SqlInfo k={k} alan="items[].oneri" label={`${line.yayinevi} · taban dönemi kohortu`} className="ml-0.5" />
+        </>
+      ) : undefined}>
       <div className="flex flex-col gap-3">
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <NumField id="p-ek" label="Ek başlık (adı belli olmayan)" value={ek} onChange={setEk} />
@@ -117,7 +123,7 @@ export default function ProgramTab({ plan, editable }: { plan: Plan; editable: b
           </tbody>
         </TableWrap>
       )}
-      <EditSheet plan={plan} line={open} onClose={() => setOpen(null)} />
+      <EditSheet plan={plan} line={open} onClose={() => setOpen(null)} k={q.data?.kaynaklar} />
     </Panel>
   );
 }

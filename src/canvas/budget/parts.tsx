@@ -78,12 +78,18 @@ export function StatePill({ state }: { state: TrackState }) {
 }
 
 /** Sayı alanı: Türkçe yazımı kabul eder (1.250,5). */
-export function NumField({ id, label, value, onChange, suffix, help }: {
+export function NumField({ id, label, value, onChange, suffix, help, info }: {
   id: string; label: string; value: string; onChange: (v: string) => void; suffix?: string; help?: string;
+  /** Kutudaki önerilen değerin sorgu bilgisi (`<SqlInfo …/>`); etiketin yanında. */
+  info?: ReactNode;
 }) {
   return (
     <label htmlFor={id} className="flex flex-col gap-1">
-      <span className={labelCls}>{label}</span>
+      {info ? (
+        <span className="flex items-center gap-1"><span className={labelCls}>{label}</span>{info}</span>
+      ) : (
+        <span className={labelCls}>{label}</span>
+      )}
       <span className="relative flex items-center">
         <input id={id} inputMode="decimal" autoComplete="off" className={`${field} font-mono tabular-nums ${suffix ? 'pr-9' : ''}`} value={value} onChange={(e) => onChange(e.target.value)} />
         {suffix && <span className="pointer-events-none absolute right-3 text-[12px] font-bold text-canvas-muted">{suffix}</span>}

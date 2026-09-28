@@ -116,19 +116,23 @@ def calculate(snap: Optional[dict], body: dict[str, Any]) -> dict[str, Any]:
                        "sellThrough": ci.sell_through, "qtys": qtys, "targetMargin": target}}
 
 
+def freelance_stmt(tenant: str, book_id: str):
+    """M8'de bu kitaba açılmış, iptal olmayan iş paketlerinin görevleri (sorgu bilgisi de bu ifadeyi gösterir)."""
+    import sqlalchemy as sa
+    from semantic_bridge import freelance as fl
+    return (sa.select(fl.TASKS.c.role, fl.TASKS.c.status, fl.TASKS.c.units, fl.TASKS.c.unit_price, fl.PACKAGES.c.title)
+            .join(fl.PACKAGES, fl.PACKAGES.c.id == fl.TASKS.c.package_id)
+            .where(fl.TASKS.c.tenant_id == tenant, fl.PACKAGES.c.book_id == book_id.lower(),
+                   fl.PACKAGES.c.status != "iptal", fl.TASKS.c.status != "iptal"))
+
+
 def freelance_costs(engine: Any, tenant: str, book_id: Optional[str]) -> dict[str, Any]:
     """M8'de bu kitaba açılmış iş paketlerinin tutarı (iptal hariç), maliyet kalemine göre. Tablo yoksa boş."""
     if not book_id:
         return {"items": [], "byKey": {}}
     try:
-        import sqlalchemy as sa
-        from semantic_bridge import freelance as fl
         with engine.connect() as c:
-            rows = c.execute(
-                sa.select(fl.TASKS.c.role, fl.TASKS.c.status, fl.TASKS.c.units, fl.TASKS.c.unit_price, fl.PACKAGES.c.title)
-                .join(fl.PACKAGES, fl.PACKAGES.c.id == fl.TASKS.c.package_id)
-                .where(fl.TASKS.c.tenant_id == tenant, fl.PACKAGES.c.book_id == book_id.lower(),
-                       fl.PACKAGES.c.status != "iptal", fl.TASKS.c.status != "iptal")).all()
+            rows = c.execute(freelance_stmt(tenant, book_id)).all()
     except Exception:  # noqa: BLE001 — M8 tabloları bu kurulumda yoksa kalem boş kalır
         log.info("pricing: serbest çalışan tabloları okunamadı", exc_info=True)
         return {"items": [], "byKey": {}}

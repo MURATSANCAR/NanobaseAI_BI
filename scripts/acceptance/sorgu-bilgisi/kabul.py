@@ -141,6 +141,10 @@ def main() -> None:
     year = a.year or int((meta.get("data") or {}).get("dataEnd", "2026")[:4])
     st, plans = http(f"/api/v1/budget/plans?year={year}")
     contract("bütçe /plans", plans, BK.NOT_RAKAM)
+    st, dfl = http(f"/api/v1/budget/defaults?year={year + 1}", 1800)
+    k = contract("bütçe /defaults", dfl, BK.NOT_RAKAM)
+    run_all("bütçe /defaults", {"sources": {sid: v for sid, v in (k.get("sources") or {}).items()
+                                           if v["connection"] == "portal"}}, heavy)
     plan = next((p for p in plans.get("items") or [] if p["status"] == "onayli"), (plans.get("items") or [None])[0])
     if plan:
         st, tr = http(f"/api/v1/budget/tracking?year={year}&plan={plan['id']}", 1800)

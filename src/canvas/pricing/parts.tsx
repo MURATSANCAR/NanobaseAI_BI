@@ -15,6 +15,7 @@ export function NumField({
   digits = 2,
   disabled,
   placeholder,
+  info,
 }: {
   label: string;
   value: number | null | undefined;
@@ -25,6 +26,8 @@ export function NumField({
   digits?: number;
   disabled?: boolean;
   placeholder?: string;
+  /** Kutuya gelen önerilen değerin sorgu bilgisi (`<SqlInfo …/>`); etiketin yanında. */
+  info?: ReactNode;
 }) {
   const show = (v: number | null | undefined) => (percent ? editPct(v) : editNum(v, digits));
   const [text, setText] = useState(show(value));
@@ -35,7 +38,7 @@ export function NumField({
   }, [value, focused]);
   return (
     <label className="block min-w-0">
-      <span className={labelCls}>{label}</span>
+      {info ? <span className={`${labelCls} flex items-center gap-1`}>{label}{info}</span> : <span className={labelCls}>{label}</span>}
       <div className="relative mt-1">
         <input
           inputMode="decimal"

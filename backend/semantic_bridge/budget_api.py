@@ -152,8 +152,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def budget_defaults(request: Request, year: int) -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
         fc = src.read_forecast()
-        out = call(B.default_params, engine, year)
-        return {**out, "tahminVar": bool(fc), "tahminBaslangic": fc.get("start")}
+        out = {**call(B.default_params, engine, year), "tahminVar": bool(fc), "tahminBaslangic": fc.get("start")}
+        return P.bagla(out, lambda: K.for_defaults(engine, year, logo_db()))
 
     @app.post("/api/v1/budget/plans/generate", status_code=201)
     async def budget_generate(body: dict[str, Any], request: Request) -> dict[str, Any]:

@@ -2248,18 +2248,25 @@ class Refresher:
         start = date.fromisoformat(result["baslangic"])
         h0 = start - timedelta(days=7 * BAND_HISTORY_WEEKS)
         daily: dict[date, tuple[float, float]] = {}
+        read: list[dict[str, Any]] = []  # sorgu bilgisi: hangi yıl kopyası, hangi aralık, kaç satır
         for y in range(h0.year, start.year + 1):
             if y not in firms:
                 continue
             a, b = max(h0, date(y, 1, 1)), min(start, date(y + 1, 1, 1))
             if a >= b:
                 continue
-            for r in logo(src.cash_flows_daily_sql(firms[y], a, b)):
+            t0 = time.time()
+            rows = list(logo(src.cash_flows_daily_sql(firms[y], a, b)))
+            read.append({"year": y, "firm": firms[y], "from": a.isoformat(), "to": b.isoformat(), "rows": len(rows),
+                         "dbMs": int((time.time() - t0) * 1000), "at": _now().isoformat()})
+            for r in rows:
                 d = src.day(r.get("gun"))
                 if d:
                     t, o = daily.get(d, (0.0, 0.0))
                     daily[d] = (t + src.f(r.get("tahsilat")), o + src.f(r.get("odeme")))
-        return build_band(result, daily, lambda series, h: fc.forecast_series(series, h, start=h0.strftime("%Y-%m")))
+        band = build_band(result, daily, lambda series, h: fc.forecast_series(series, h, start=h0.strftime("%Y-%m")))
+        band["sorgular"] = read
+        return band
 
     def rebuild_cash(self, user: Optional[str] = None) -> bool:
         """Yalnız nakit tablosu (muhasebe ve satış okuması olmadan)."""

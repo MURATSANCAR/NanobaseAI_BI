@@ -319,6 +319,11 @@ def for_pnl(engine: Any, tenant: str, out: dict[str, Any], logo_db: Optional[str
                 ins.append(x.portal("portal.butce.departman", "Departman bütçesi", B.depts_stmt(row.id),
                                     "Aylık gider bütçesi."))
             fields["rows[].values.butce"] = k.hesap("gelir.butce", F_BUTCE, ins)
+            if "rows[].values.donem" in fields:
+                # «Bütçeden fark» kolonu ekranda çıkarılır; kaynağı bu iki kolonun kaynağıdır.
+                fields["rows[].values.fark"] = k.hesap(
+                    "gelir.fark", "Bütçeden fark = bu dönem − bütçe (satır başına; olumlu değer kâra olumlu katkı).",
+                    [fields["rows[].values.donem"], fields["rows[].values.butce"]])
         except Exception:  # noqa: BLE001
             pass
     main_led = x.ledger("portal.fin.muhasebe.donem", months, label="Dönem") if months else None
@@ -391,7 +396,9 @@ def for_account_map(engine: Any, tenant: str, out: dict[str, Any], logo_db: Opti
                     "Son öneri işinin sayıları (hesap, öneri, belirsiz, hata).")
     esl = x.k.hesap("eslemeKaydi", "Eşleme kaydı: onaylı ya da önerilen satır, öneri olasılığı ve kaynağı (onay, kural, "
                                    "hesap planı); portal tablosunda saklanır.", x.esleme())
-    x.k.alanlar({"items[].esleme": esl, "items[].kayit": esl,
+    x.k.hesap("gruplar", "Grup = hesap kodunun ilk rakamı (6 gelir tablosu, 7 maliyet hesapları); grup başlığındaki sayı "
+                         "o gruptaki, süzgeçten geçen hesap sayısıdır (ekranda sayılır).", [led, names])
+    x.k.alanlar({"gruplar": "hesap:gruplar", "items[].esleme": esl, "items[].kayit": esl,
                  "items[].etki": etki, "counts": say, "amounts": say, "suggest": x.k.hesap("oneriIsi",
                  "Öneri işi: sınıflanan hesap sayısı, eşik üstü öneri, belirsiz, hatalı.", [meta])})
     return x.k
@@ -445,6 +452,23 @@ def for_cash(engine: Any, tenant: str, out: dict[str, Any], logo_db: Optional[st
                                                                                   cs.get("run")) if s]),
                    "dovizTelif": k.hesap("dovizTelif", "Döviz cinsinden telif ödemeleri (çevrilmeden, para birimi başına).",
                                          [s for s in (cs.get("telif"), cs.get("run")) if s])})
+    bant = out.get("bant") or {}
+    if bant:
+        reads = []
+        for r in bant.get("sorgular") or []:
+            reads.append(k.sorgu(
+                f"logo.nakit.bant.{r['year']}", f"Geçmiş günlük tahsilat ve ödeme · {r['year']}", "logo",
+                src.cash_flows_daily_sql(r["firm"], date.fromisoformat(r["from"]), date.fromisoformat(r["to"])),
+                database=x.logo_db, rows=r.get("rows"), ms=r.get("dbMs"), ran_at=r.get("at"),
+                period=f"{r['from']} – {r['to']} · Logo firma {r['firm']}",
+                description="Bandın geçmişi: kasa + banka gün gün müşteri tahsilatı ve satıcı ödemesi; haftalara toplanır."))
+        fields["bant"] = k.hesap(
+            "bant", "Olasılıklı bant: vadesi belli kalemler (çek/senet, sözleşme ödemesi, vergi) tablodaki kuraldan; "
+                    "müşteri tahsilatı ve satıcı ödemesi yerine geçmiş haftalık gerçekleşen serilerin Zeki AI tahmini "
+                    "(p10/p50/p90, tahmin servisi) konur. En kötü %10 = açılış + Σ (kesin + tahsilat p10 − ödeme p90); "
+                    "beklenen p50 ile, en iyi %10 tahsilat p90 − ödeme p10 ile. Tahmin yoksa bant gösterilmez."
+                    + ("" if reads else " Bu tablo geçmiş okuması kaydedilmeden kuruldu; yeniden kurunca sorgular görünür."),
+            [s for s in [cs.get("run"), lines] + reads if s] + [table])
     k.alanlar(fields)
     return k
 
@@ -486,7 +510,9 @@ def for_tax(engine: Any, tenant: str, year: Optional[int]) -> P.Kaynaklar:
     s = k.portal("portal.fin.vergi", "Vergi takvimi", F.tax_stmt(tenant, year), engine,
                  description="Elle girilen beyanlar (semantic_finance_tax_calendar).")
     ref = k.hesap("vergi", F_VERGI, [s])
-    k.alanlar({"items[]": ref, "yaklasan[]": ref, "geciken[]": ref})
+    gun = k.hesap("vergiGun", "Kalan gün = son gün − bugün (takvim günü); eksi ise «N gün geçti». Geciken = durumu «verildi» "
+                              "olmayan ve son günü bugünden önce olan beyanlar; sayı bu listenin uzunluğudur.", [s])
+    k.alanlar({"items[]": ref, "yaklasan[]": ref, "geciken[]": gun, "items[].kalanGun": gun, "gecikenSayi": gun})
     return k
 
 

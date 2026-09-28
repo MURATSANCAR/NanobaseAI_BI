@@ -6,8 +6,8 @@ import { Loading, Note, TableWrap, btnGhost, errText, field, label as labelCls, 
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { Tabs } from '../budget/parts';
 import { financeApi, fmtNum, fmtPct, fmtShort, type Meta, type ProfitBy, type ProfitRow } from './api';
-import { Approx, DataEnd, Money } from './parts';
-import { InfoLabel } from '../components/SqlInfo';
+import { Approx, DataEnd, Money, SumCard } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Kârlılık: kitap · seri · yayınevi · kanal · cari. Kesin katkı yalnız maliyeti işlenmiş satırlardan; yaklaşık katkı
  *  M9 birim maliyeti ve sözleşme oranından telifle, kapsamıyla birlikte. */
@@ -96,13 +96,13 @@ export default function ProfitTab({ meta, year }: { meta: Meta; year: number }) 
             <strong>Kesin katkı</strong> = maliyeti Logo'da işlenmiş satışların net tutarı − Logo maliyeti. <strong>Yaklaşık katkı</strong> = maliyeti bilinen satış − Logo maliyeti −
             maliyeti işlenmemiş satışın fiyatlama ekranındaki birim maliyetiyle tahmini{royalty ? ' − telif' : ''}; kapsam, maliyeti (tahminle de olsa) bilinen satışın payıdır. Birim maliyeti de
             bilinmeyen satış hesaba katılmaz, uydurulmaz. {d.telif.kaynak}
-            {royalty && ` Sözleşme oranı olan ${fmtNum(d.telif.sozlesmeli)} kitap, olmayan ${fmtNum(d.telif.sozlesmesiz)} kitap.`}
+            {royalty && <> Sözleşme oranı olan {fmtNum(d.telif.sozlesmeli)} kitap, olmayan {fmtNum(d.telif.sozlesmesiz)} kitap.<SqlInfo k={d.kaynaklar} alan="telif" label="Telif sözleşmesi sayıları" className="ml-0.5" /></>}
           </Note>
           <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-            <div className="rounded-2xl bg-white/80 p-3"><div className="text-[11px] font-bold uppercase text-canvas-muted">Net satış</div><div className="mt-1 font-mono text-[20px] font-bold">{fmtShort(d.toplam.net)}</div></div>
-            <div className="rounded-2xl bg-white/80 p-3"><div className="text-[11px] font-bold uppercase text-canvas-muted">Kesin marj</div><div className="mt-1 font-mono text-[20px] font-bold">{fmtPct(d.toplam.marjKesin)}</div></div>
-            <div className="rounded-2xl bg-white/80 p-3"><div className="flex items-center justify-between text-[11px] font-bold uppercase text-canvas-muted">Yaklaşık marj <Approx /></div><div className="mt-1 font-mono text-[20px] font-bold">{fmtPct(d.toplam.marjYaklasik)}</div></div>
-            <div className="rounded-2xl bg-white/80 p-3"><div className="text-[11px] font-bold uppercase text-canvas-muted">Maliyeti bilinmeyen satış</div><div className="mt-1 font-mono text-[20px] font-bold">{fmtShort(d.toplam.maliyetBilinmeyenNet)}</div></div>
+            <SumCard label="Net satış" value={fmtShort(d.toplam.net)} info={<SqlInfo k={d.kaynaklar} alan="toplam.net" label="Net satış (toplam)" />} />
+            <SumCard label="Kesin marj" value={fmtPct(d.toplam.marjKesin)} info={<SqlInfo k={d.kaynaklar} alan="toplam.marjKesin" label="Kesin marj (toplam)" />} />
+            <SumCard label={<>Yaklaşık marj <Approx /></>} value={fmtPct(d.toplam.marjYaklasik)} info={<SqlInfo k={d.kaynaklar} alan="toplam.marjYaklasik" label="Yaklaşık marj (toplam)" />} />
+            <SumCard label="Maliyeti bilinmeyen satış" value={fmtShort(d.toplam.maliyetBilinmeyenNet)} info={<SqlInfo k={d.kaynaklar} alan="toplam.maliyetBilinmeyenNet" label="Maliyeti bilinmeyen satış" />} />
           </div>
           <TableWrap>
             <thead>

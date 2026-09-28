@@ -154,7 +154,8 @@ function AnalysisDetail({ id, ov, onClose }: { id: string; ov: Overview; onClose
         </div>
       ) : (
         <Note tone="info">
-          Taslak: seçilen adet {num(a.chosenQty)}, kapak fiyatı {tl0(a.chosenPrice)}. Rakamlar onaya gönderilince dondurulur.
+          Taslak: seçilen adet {num(a.chosenQty)}, kapak fiyatı {tl0(a.chosenPrice)}.
+          <SqlInfo k={a.kaynaklar} alan="chosenPrice" label="Taslakta seçilen adet ve fiyat" className="ml-0.5" /> Rakamlar onaya gönderilince dondurulur.
         </Note>
       )}
       {a.result?.dataEnd && <p className="text-[11px] text-canvas-muted">Dondurulan hesabın Logo veri sonu: {a.result.dataEnd}.</p>}

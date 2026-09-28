@@ -7,7 +7,7 @@ import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { DEPT, budgetApi, fmtMoney, fmtPct, parseNum, type DeptLine, type Plan } from './api';
 import { NumField } from './parts';
-import { InfoLabel } from '../components/SqlInfo';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import type { Kaynaklar } from '../components/sqlInfo';
 
 const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
@@ -42,7 +42,12 @@ function EditSheet({ plan, line, editable, onClose, k }: { plan: Plan; line: Dep
   const iz = line?.izleme;
   return (
     <Sheet open={!!line} onClose={onClose} modal wide title={line ? `${line.merkezAdi} · ${line.hesapAdi}` : ''}
-      subtitle={line ? `Masraf merkezi ${line.merkezKodu.startsWith('#') ? '—' : line.merkezKodu} · hesap ${line.hesap}. Öneri: taban dönemin aynı ayı × (1 + gider artışı ${fmtPct(line.oneri.gider ?? 0)}).` : undefined}>
+      subtitle={line ? (
+        <>
+          Masraf merkezi {line.merkezKodu.startsWith('#') ? '—' : line.merkezKodu} · hesap {line.hesap}. Öneri: taban dönemin aynı ayı × (1 + gider artışı {fmtPct(line.oneri.gider ?? 0)}).
+          <SqlInfo k={k} alan="items[].oneri" label="Gider artışı ve öneri" className="ml-0.5" />
+        </>
+      ) : undefined}>
       {line && (
         <div className="flex flex-col gap-4">
           <TableWrap>

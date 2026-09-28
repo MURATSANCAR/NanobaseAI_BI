@@ -241,7 +241,7 @@ export type BudgetMeta = {
   me: { username: string; display: string; canEdit: boolean; canApprove: boolean };
 };
 
-export type Defaults = BudgetParams & { tahminVar: boolean; tahminBaslangic?: string | null };
+export type Defaults = BudgetParams & { tahminVar: boolean; tahminBaslangic?: string | null; kaynaklar?: Kaynaklar };
 
 export type Compare = {
   year: number;

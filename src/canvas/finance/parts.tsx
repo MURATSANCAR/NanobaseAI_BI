@@ -62,3 +62,15 @@ export function Money({ v, strong }: { v: number | null | undefined; strong?: bo
 
 /** Tıklanabilir satır/hücre için ortak sınıf: dokunma hedefi ve basış geri bildirimi. */
 export const pressable = 'transition-transform duration-150 ease-out active:scale-[0.98]';
+
+/** Özet kutusu (tıklanmaz): etiket, değer, alt not; «i» sağ üstte (`info`). Kârlılık ve nakit özetleri. */
+export function SumCard({ label, value, note, info, tone = '' }: { label: ReactNode; value: ReactNode; note?: ReactNode; info?: ReactNode; tone?: string }) {
+  return (
+    <div className="relative rounded-2xl bg-white/80 p-3">
+      <div className={`flex items-center gap-1 text-[11px] font-bold uppercase text-canvas-muted ${info ? 'pr-6' : ''}`}>{label}</div>
+      <div className={`mt-1 font-mono text-[20px] font-bold tabular-nums ${tone}`}>{value}</div>
+      {note && <div className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">{note}</div>}
+      {info && <span className="absolute right-2.5 top-2.5">{info}</span>}
+    </div>
+  );
+}

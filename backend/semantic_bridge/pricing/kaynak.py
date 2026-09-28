@@ -155,12 +155,29 @@ def for_book(engine: Any, tenant: str, snap: dict[str, Any], out: dict[str, Any]
     sug = suggested_fields(k, snap, logo_db, crm_db, engine, tenant)
     for key, ref in sug.items():
         fields[f"suggested.{key}" if key else "suggested"] = ref
-    fl = k.hesap("serbest", "Kitaba bağlı serbest çalışan (çeviri, grafik, redaksiyon) ödemeleri: Logo'daki hizmet "
-                            "faturalarından eşleşen tutarlar.", kitap)
-    fields["freelance"] = fl
-    fields["quotes[]"] = k.hesap("teklifler", "Üretim modülündeki matbaa teklifleri (kitabın CRM baskılarıyla eşleşen).",
-                                 crm_baski)
     book_id = (out.get("book") or {}).get("id")
+    fl_in = list(kitap)
+    q_in = list(crm_baski)
+    try:
+        from semantic_bridge import pricing as PR
+        from semantic_bridge import production_store as PST
+
+        if book_id:
+            fl_in.append(k.portal("portal.fiyat.serbest", "Serbest çalışan iş paketleri (bu kitap)",
+                                  PR.freelance_stmt(tenant, book_id), engine,
+                                  description="Serbest çalışanlar ekranında bu kitaba açılmış, iptal olmayan görevler."))
+        cards = [p["id"] for p in out.get("crmPrints") or [] if p.get("id")]
+        if cards:
+            q_in.append(k.portal("portal.fiyat.teklifler", "Matbaa teklifleri (Üretim ekranı)",
+                                 PST.quotes_stmt(tenant, cards), engine,
+                                 description="Kitabın CRM üretim kayıtlarına girilen matbaa teklifleri (elle girilir); "
+                                             "listenin tamamı gösterilir."))
+    except Exception:  # noqa: BLE001 — M8/M12 tabloları yoksa kaynak da yok
+        pass
+    fields["freelance"] = k.hesap("serbest", "Kitaba bağlı serbest çalışan (çeviri, grafik, redaksiyon) iş paketleri: "
+                                             "tutar = birim × birim fiyat, maliyet kalemine göre toplanır.", fl_in)
+    fields["quotes[]"] = k.hesap("teklifler", "Üretim modülündeki matbaa teklifleri (kitabın CRM baskılarıyla eşleşen); "
+                                              "birim = teklif birim fiyatı, yoksa toplam ÷ baskı adedi.", q_in)
     if book_id:
         an = k.portal("portal.fiyat.kitapAnaliz", "Bu kitabın analizleri", S.analyses_stmt(tenant, book=book_id), engine,
                       description="Arşiv dışı analizler.")
@@ -236,7 +253,9 @@ def for_calc(snap: Optional[dict[str, Any]], logo_db: Optional[str], crm_db: Opt
 def for_actuals(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[str]) -> P.Kaynaklar:
     k = _new(snap)
     ref = k.hesap("gerceklesen", F_GERCEK, snap_sources(k, snap, ["logo_baski", "logo_satis", "crm_kitap"], logo_db, crm_db))
-    k.alanlar({"rows[]": ref, "count": ref, "net": ref, "printCost": ref, "printed": ref, "sold": ref, "margin": ref})
+    k.alanlar({"rows[]": ref, "count": ref, "net": ref, "printCost": ref, "printed": ref, "sold": ref, "margin": ref,
+               "gosterilen": k.hesap("gosterilen", "Gösterilen = bu sayfada listelenen kitap satırı sayısı; «Kitap» kutusu "
+                                                   "süzgece uyan bütün kitapların sayısıdır (ekranda sayılır).", [ref])})
     return k
 
 
@@ -244,7 +263,9 @@ def for_backlist(snap: dict[str, Any], logo_db: Optional[str], crm_db: Optional[
     k = _new(snap)
     ref = k.hesap("backlist", F_BACKLIST + " " + F_KAGIT,
                   snap_sources(k, snap, ["logo_baski", "logo_kagit", "crm_kitap", "crm_baski", "logo_satis"], logo_db, crm_db))
-    k.alanlar({"rows[]": ref, "count": ref, "target": ref, "measuredTarget": ref, "freshBooks": ref, "candidates": ref})
+    k.alanlar({"rows[]": ref, "count": ref, "target": ref, "measuredTarget": ref, "freshBooks": ref, "candidates": ref,
+               "secim": k.hesap("secim", "Seçilen = tabloda işaretlenen kitap sayısı; ortalama artış = seçilen kitapların "
+                                         "önerilen artış oranlarının aritmetik ortalaması (ekranda hesaplanır).", [ref])})
     return k
 
 

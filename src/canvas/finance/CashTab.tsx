@@ -6,7 +6,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { financeApi, fmtDay, fmtMoney, fmtShort } from './api';
-import { Approx, DataEnd, Money } from './parts';
+import { Approx, DataEnd, Money, SumCard } from './parts';
 import CashBandPanel from './CashBandPanel';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
@@ -78,6 +78,7 @@ export default function CashTab() {
           <span>
             {open.hafta}. hafta ({fmtDay(open.baslangic)}) kapanış bakiyesi {fmtMoney(open.kapanis)}: nakit açığı.
             {open.enBuyukCikis && <> En büyük çıkış: {open.enBuyukCikis}.</>}
+            <SqlInfo k={d.kaynaklar} alan="acikHafta" label={`${open.hafta}. hafta kapanış bakiyesi`} className="ml-0.5" />
           </span>
         </div>
       )}
@@ -87,31 +88,21 @@ export default function CashTab() {
         </Note>
       )}
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <div className="rounded-2xl bg-white/80 p-3">
-          <div className="text-[11px] font-bold uppercase text-canvas-muted">Açılış (kasa + banka)</div>
-          <div className="mt-1 font-mono text-[20px] font-bold">{fmtShort(d.acilisBakiye)}</div>
-          <div className="text-[11px] text-canvas-muted">{fmtDay(d.veriSonu)} muhasebe bakiyesi</div>
-        </div>
-        <div className="rounded-2xl bg-white/80 p-3">
-          <div className="flex items-center justify-between text-[11px] font-bold uppercase text-canvas-muted">Vadesi geçmiş alacak <Approx /></div>
-          <div className="mt-1 font-mono text-[20px] font-bold">{fmtShort(d.vadesiGecmis?.alacak ?? 0)}</div>
-          <div className="text-[11px] text-canvas-muted">Tahsil günü belirsiz; tabloya konmadı</div>
-        </div>
-        <div className="rounded-2xl bg-white/80 p-3">
-          <div className="flex items-center justify-between text-[11px] font-bold uppercase text-canvas-muted">Vadesi geçmiş borç <Approx /></div>
-          <div className="mt-1 font-mono text-[20px] font-bold">{fmtShort(d.vadesiGecmis?.satici ?? 0)}</div>
-          <div className="text-[11px] text-canvas-muted">Ödeme günü belirsiz; tabloya konmadı</div>
-        </div>
-        <div className="rounded-2xl bg-white/80 p-3">
-          <div className="text-[11px] font-bold uppercase text-canvas-muted">13. hafta sonu</div>
-          <div className={`mt-1 font-mono text-[20px] font-bold ${(weeks.at(-1)?.kapanis ?? 0) < 0 ? 'text-red-700' : ''}`}>{fmtShort(weeks.at(-1)?.kapanis)}</div>
-          {Object.keys(d.dovizTelif ?? {}).length > 0 && (
-            <div className="text-[11px] text-canvas-muted">Döviz sözleşme ödemesi (çevrilmedi): {Object.entries(d.dovizTelif ?? {}).map(([k, v]) => `${fmtShort(v, '')} ${k}`).join(', ')}</div>
-          )}
-        </div>
+        <SumCard label="Açılış (kasa + banka)" value={fmtShort(d.acilisBakiye)} note={`${fmtDay(d.veriSonu)} muhasebe bakiyesi`}
+          info={<SqlInfo k={d.kaynaklar} alan="acilisBakiye" label="Açılış (kasa + banka)" />} />
+        <SumCard label={<>Vadesi geçmiş alacak <Approx /></>} value={fmtShort(d.vadesiGecmis?.alacak ?? 0)} note="Tahsil günü belirsiz; tabloya konmadı"
+          info={<SqlInfo k={d.kaynaklar} alan="vadesiGecmis.alacak" label="Vadesi geçmiş alacak" />} />
+        <SumCard label={<>Vadesi geçmiş borç <Approx /></>} value={fmtShort(d.vadesiGecmis?.satici ?? 0)} note="Ödeme günü belirsiz; tabloya konmadı"
+          info={<SqlInfo k={d.kaynaklar} alan="vadesiGecmis.satici" label="Vadesi geçmiş borç" />} />
+        <SumCard label="13. hafta sonu" value={fmtShort(weeks.at(-1)?.kapanis)} tone={(weeks.at(-1)?.kapanis ?? 0) < 0 ? 'text-red-700' : ''}
+          info={<SqlInfo k={d.kaynaklar} alan="haftalar[]" label="13. hafta sonu kapanış" />}
+          note={Object.keys(d.dovizTelif ?? {}).length > 0 ? (
+            <>Döviz sözleşme ödemesi (çevrilmedi): {Object.entries(d.dovizTelif ?? {}).map(([k, v]) => `${fmtShort(v, '')} ${k}`).join(', ')}
+              <SqlInfo k={d.kaynaklar} alan="dovizTelif" label="Döviz sözleşme ödemesi" className="ml-0.5" /></>
+          ) : undefined} />
       </div>
 
-      <CashBandPanel band={d.bant} />
+      <CashBandPanel band={d.bant} k={d.kaynaklar} />
 
       {/* Telefon: hafta kartları. */}
       <ul className="flex flex-col gap-1.5 sm:hidden">
@@ -121,7 +112,10 @@ export default function CashTab() {
               <span>{w.hafta}. hafta · {fmtDay(w.baslangic)}{w.kismi ? ' (kısmi)' : ''}</span>
               <Money v={w.kapanis} strong />
             </div>
-            <div className="mt-0.5 text-[11.5px] text-canvas-muted">Giriş {fmtMoney(w.giris)} · çıkış {fmtMoney(w.cikis)}</div>
+            <div className="mt-0.5 flex items-center gap-0.5 text-[11.5px] text-canvas-muted">
+              <span>Giriş {fmtMoney(w.giris)} · çıkış {fmtMoney(w.cikis)}</span>
+              <SqlInfo k={d.kaynaklar} alan="haftalar[]" label={`${w.hafta}. hafta: giriş, çıkış, kapanış`} />
+            </div>
           </li>
         ))}
       </ul>

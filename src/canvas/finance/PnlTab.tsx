@@ -233,7 +233,7 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
                   <div className="font-semibold normal-case tracking-normal">{d.columns[k].label}</div>
                 </th>
               ))}
-              {d.columns.butce && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].values.butce" label="Bütçeden fark (dönem − bütçe)">Bütçeden fark</InfoLabel></th>}
+              {d.columns.butce && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="rows[].values.fark" label="Bütçeden fark (dönem − bütçe)">Bütçeden fark</InfoLabel></th>}
             </tr>
           </thead>
           <tbody>
@@ -261,8 +261,10 @@ export default function PnlTab({ meta, year, month, grain }: { meta: Meta; year:
         </TableWrap>
       </div>
       <ul className="flex flex-col gap-1.5 sm:hidden">
-        <li className="flex items-center justify-end px-1 text-[11.5px] font-semibold text-canvas-muted">
+        <li className="flex flex-wrap items-center justify-end gap-x-3 gap-y-1 px-1 text-[11.5px] font-semibold text-canvas-muted">
           <InfoLabel k={d.kaynaklar} alan="rows[].values.donem" label={`Gelir tablosu · ${cur.label}`}>Tutarların kaynağı</InfoLabel>
+          {d.columns.gecenYil && <InfoLabel k={d.kaynaklar} alan="rows[].values.gecenYil" label={`Gelir tablosu · geçen yıl (${d.columns.gecenYil.label})`}>Geçen yıl</InfoLabel>}
+          {d.columns.butce && <InfoLabel k={d.kaynaklar} alan="rows[].values.butce" label="Gelir tablosu · bütçe">Bütçe</InfoLabel>}
         </li>
         {d.rows.map((r) => (
           <li key={r.kod}>

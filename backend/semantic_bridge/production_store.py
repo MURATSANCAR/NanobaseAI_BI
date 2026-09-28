@@ -256,19 +256,30 @@ def _quote(r: dict[str, Any]) -> dict[str, Any]:
             "at": _iso(r.get("created_at"))}
 
 
+def entries_stmt(tenant: str, card_ids: Optional[list[str]] = None):
+    """Silinmemiş portal kayıtları (gerçekleşen tarih, yayın, kalite, onay), yeniden eskiye. Sorgu bilgisi de bunu gösterir."""
+    q = sa.select(ENTRIES).where(ENTRIES.c.tenant_id == tenant, ENTRIES.c.deleted_at.is_(None))
+    if card_ids is not None:
+        q = q.where(ENTRIES.c.card_id.in_(card_ids))
+    return q.order_by(ENTRIES.c.created_at.desc())
+
+
+def quotes_stmt(tenant: str, card_ids: Optional[list[str]] = None):
+    """Silinmemiş matbaa teklifleri, yeniden eskiye."""
+    q = sa.select(QUOTES).where(QUOTES.c.tenant_id == tenant, QUOTES.c.deleted_at.is_(None))
+    if card_ids is not None:
+        q = q.where(QUOTES.c.card_id.in_(card_ids))
+    return q.order_by(QUOTES.c.created_at.desc())
+
+
 def load(engine: sa.engine.Engine, tenant: str, card_ids: Optional[list[str]] = None) -> tuple[dict[str, list[dict]], dict[str, list[dict]]]:
     """Silinmemiş kayıtlar ve teklifler, karta göre, yeniden eskiye."""
-    e_q = sa.select(ENTRIES).where(ENTRIES.c.tenant_id == tenant, ENTRIES.c.deleted_at.is_(None))
-    q_q = sa.select(QUOTES).where(QUOTES.c.tenant_id == tenant, QUOTES.c.deleted_at.is_(None))
-    if card_ids is not None:
-        e_q = e_q.where(ENTRIES.c.card_id.in_(card_ids))
-        q_q = q_q.where(QUOTES.c.card_id.in_(card_ids))
     entries: dict[str, list[dict]] = {}
     quotes: dict[str, list[dict]] = {}
     with engine.connect() as c:
-        for r in c.execute(e_q.order_by(ENTRIES.c.created_at.desc())).mappings():
+        for r in c.execute(entries_stmt(tenant, card_ids)).mappings():
             entries.setdefault(r["card_id"], []).append(_entry(dict(r)))
-        for r in c.execute(q_q.order_by(QUOTES.c.created_at.desc())).mappings():
+        for r in c.execute(quotes_stmt(tenant, card_ids)).mappings():
             quotes.setdefault(r["card_id"], []).append(_quote(dict(r)))
     return entries, quotes
 

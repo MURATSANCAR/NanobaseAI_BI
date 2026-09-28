@@ -7,6 +7,7 @@ import { Panel } from '../editorial/kit';
 import { day, mn, num, overviewKey, pct, pricingApi, tl2, type Defaults, type Overview } from './api';
 import { NumField, parseQtys } from './parts';
 import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { useCan } from '../useAdmin';
 
 /** Ölçülen değerler (kanal iskontosu, kâğıt fiyatı, dağıtım gideri), düzenlenebilir varsayımlar ve kaynak sorgular. */
 export default function DataPane({ ov }: { ov: Overview }) {
@@ -123,12 +124,12 @@ function DefaultsForm({ ov }: { ov: Overview }) {
         {ov.defaults.updatedBy ? ` Son değiştiren ${ov.defaults.updatedBy}, ${fmtDate(ov.defaults.updatedAt)}.` : ''}
       </p>
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <NumField label="Hedef kâr marjı" suffix="%" percent value={d.targetMargin} disabled={ro} onChange={(v) => setD({ ...d, targetMargin: v ?? 0 })} />
-        <NumField label="Dağıtım gideri (ölçülemezse)" suffix="%" percent value={d.variableRate} disabled={ro} onChange={(v) => setD({ ...d, variableRate: v ?? 0 })} />
-        <NumField label="Genel gider payı" suffix="%" percent value={d.overheadRate} disabled={ro} onChange={(v) => setD({ ...d, overheadRate: v ?? 0 })} />
-        <NumField label="Satış oranı" suffix="%" percent value={d.sellThrough} disabled={ro} onChange={(v) => setD({ ...d, sellThrough: v ?? 1 })} />
+        <NumField label="Hedef kâr marjı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Hedef kâr marjı (varsayım)" />} suffix="%" percent value={d.targetMargin} disabled={ro} onChange={(v) => setD({ ...d, targetMargin: v ?? 0 })} />
+        <NumField label="Dağıtım gideri (ölçülemezse)" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Dağıtım gideri (varsayım)" />} suffix="%" percent value={d.variableRate} disabled={ro} onChange={(v) => setD({ ...d, variableRate: v ?? 0 })} />
+        <NumField label="Genel gider payı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Genel gider payı (varsayım)" />} suffix="%" percent value={d.overheadRate} disabled={ro} onChange={(v) => setD({ ...d, overheadRate: v ?? 0 })} />
+        <NumField label="Satış oranı" info={<SqlInfo k={ov.kaynaklar} alan="defaults" label="Satış oranı (varsayım)" />} suffix="%" percent value={d.sellThrough} disabled={ro} onChange={(v) => setD({ ...d, sellThrough: v ?? 1 })} />
         <label className="block min-w-0">
-          <span className={labelCls}>Baskı adedi senaryoları</span>
+          <span className={`${labelCls} flex items-center gap-1`}>Baskı adedi senaryoları<SqlInfo k={ov.kaynaklar} alan="defaults" label="Baskı adedi senaryoları (varsayım)" /></span>
           <input className={`${field} mt-1 tabular-nums`} value={qtyText} disabled={ro} onChange={(e) => setQtyText(e.target.value)} />
         </label>
       </div>
@@ -147,6 +148,7 @@ function DefaultsForm({ ov }: { ov: Overview }) {
 }
 
 function SourcesList() {
+  const canSql = useCan('kart.sql-goster');
   const src = useQuery({ queryKey: ['pricing', 'sources'], queryFn: pricingApi.sources, enabled: ENGINE_ENABLED });
   if (src.error) return <Note tone="err">{errText(src.error, 'Kaynaklar okunamadı.')}</Note>;
   if (!src.data) return <Loading />;
@@ -167,7 +169,9 @@ function SourcesList() {
               {s.description}
               <InfoLabel k={src.data.kaynaklar} alan="sources[]" row={s.id} label={s.title}>Çalışan sorgular</InfoLabel>
             </p>
-            {s.sql ? (
+            {s.sql && !canSql ? (
+              <p className="mt-1 text-[11.5px] text-canvas-muted">SQL metni «SQL'i göster ve kopyala» yetkisinde görünür.</p>
+            ) : s.sql ? (
               <pre className="mt-2 max-h-72 overflow-auto rounded-lg bg-slate-900 p-3 font-mono text-[11px] leading-relaxed text-slate-100">{s.sql}</pre>
             ) : (
               <p className="mt-1 text-[11.5px] text-canvas-muted">Görüntü henüz kurulmadı; sorgu ilk kurulumda çalışır.</p>

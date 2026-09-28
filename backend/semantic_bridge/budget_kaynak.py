@@ -303,6 +303,42 @@ def for_deviations(engine: Any, tenant: str, year: int, *, status: str = "acik",
     return k
 
 
+F_FIYAT_ARTIS = ("Ölçülen fiyat artışı: verinin son yılının tam ayları ile geçen yılın aynı ayları; iki dönemde de "
+                 "satılan kitaplar (157 ticari ürün hariç), fiyat artışı = Σ bu yıl ciro ÷ Σ (bu yıl adet × geçen yıl "
+                 "birim fiyat) − 1. Sepet değişimi fiyat sayılmaz. Ölçülemezse 0 önerilir, elle girilir.")
+F_GIDER_ARTIS = ("Ölçülen gider artışı: verinin son yılının tam aylarındaki toplam departman gideri ÷ geçen yılın "
+                 "aynı aylarındaki toplam − 1. Ölçülemezse 0 önerilir, elle girilir.")
+F_VARSAYILAN = ("Hacim büyümesi (senaryo başına), marj değişimi, uyarı eşiği ve uyarı kapsamı sabit başlangıç "
+                "değerleridir; sayfada değiştirilebilir. Taban penceresi: plan yılından önceki tam yıl, veri o yılı "
+                "kapsamıyorsa verinin son tam ayından geriye 12 ay.")
+
+
+def for_defaults(engine: Any, year: int, logo_db: Optional[str]) -> Optional[P.Kaynaklar]:
+    """`GET /defaults`: öneri sayfasının ön dolu kutuları (ölçülen fiyat ve gider artışı, taban penceresi)."""
+    end = B.data_end(engine)
+    if end is None:
+        return None
+    k = _new(engine)
+    y = end.year
+    sales, exp = logo_sources(k, engine, [y - 1, y], logo_db)
+    de = _data_end_source(k, engine, logo_db)
+    act = k.portal("portal.satis", f"Satışlar · {y - 1}–{y}", B.sales_stmt(y - 1, y), engine, origin=sales,
+                   description="Kitap × ay net adet ve ciro; ölçümde yalnız son yılın tam ayları ve geçen yılın aynı "
+                               "ayları kullanılır.")
+    gid = k.portal("portal.gider", f"Giderler · {y - 1}–{y}", B.expenses_stmt(y - 1, y), engine, origin=exp,
+                   description="Departman × hesap × ay gider; ölçümde yalnız son yılın tam ayları ve geçen yılın aynı "
+                               "ayları kullanılır.")
+    extra = [de] if de else []
+    k.alanlar({
+        "fiyat": k.hesap("fiyatArtis", F_NET + " " + F_FIYAT_ARTIS, [act] + extra),
+        "gider": k.hesap("giderArtis", F_GIDER + " " + F_GIDER_ARTIS, [gid] + extra),
+        "hacim": k.hesap("varsayilan", F_VARSAYILAN, [act] + extra),
+        "marjDegisim": "hesap:varsayilan", "esik": "hesap:varsayilan", "uyariKapsam": "hesap:varsayilan",
+        "pencere": "hesap:varsayilan",
+    })
+    return k
+
+
 #: Rakam olmayan sayılar (yıl, sürüm, sayfa, ay numarası): kapsam denetiminde atlanır.
 NOT_RAKAM = ("year", "years", "total", "page", "pageSize", "items[].year", "items[].version", "plan.year",
              "plan.version", "aylar[].ay", "aylar[].gecen")

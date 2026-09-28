@@ -65,7 +65,7 @@ export default function ActualsPane({ ready }: { ready: boolean }) {
             <Stat info={<SqlInfo k={d.kaynaklar} alan="net" label="Net satış" />} label="Net satış" value={mn(d.net)} note={`${num(d.sold)} adet (faturalı, iade düşülmüş)`} />
             <Stat info={<SqlInfo k={d.kaynaklar} alan="printCost" label="Baskı faturaları" />} label="Baskı faturaları" value={mn(d.printCost)} note={`${num(d.printed)} adet basıldı (kâğıt hariç)`} />
             <Stat info={<SqlInfo k={d.kaynaklar} alan="margin" label="Brüt marj" />} label="Brüt marj" value={pct(d.margin)} note="Net satış − Logo satılan malın maliyeti; maliyetli satırlar" />
-            <Stat label="Gösterilen" value={num(d.rows.length)} note={d.rows.length < d.count ? 'Aşağıdan fazlasını açın' : 'Hepsi'} />
+            <Stat info={<SqlInfo k={d.kaynaklar} alan="gosterilen" label="Gösterilen kitap sayısı" />} label="Gösterilen" value={num(d.rows.length)} note={d.rows.length < d.count ? 'Aşağıdan fazlasını açın' : 'Hepsi'} />
           </div>
           <TableWrap>
             <thead>

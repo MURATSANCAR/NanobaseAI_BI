@@ -3,11 +3,13 @@ import { AlertTriangle } from 'lucide-react';
 import { Note, Pill } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtDay, fmtMoney, fmtShort, type CashBand } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Olasılıklı 13 haftalık nakit bandı (öneri 7). Vadesi belli kalemler (çek/senet, sözleşme ödemesi, vergi) tablodaki
  *  kuraldan; vadesi belirsiz müşteri tahsilatı ve satıcı ödemesi geçmiş haftalık gerçekleşenin tahmininden (p10–p90).
  *  «En kötü %10» çizgisi = kesin kalemler + tahsilat p10 − ödeme p90. Kantil yoksa bant hiç çizilmez. */
-export default function CashBandPanel({ band }: { band: CashBand | undefined }) {
+export default function CashBandPanel({ band, k }: { band: CashBand | undefined; k?: Kaynaklar }) {
   if (!band) return null;
   if (!band.var) {
     return (
@@ -27,7 +29,7 @@ export default function CashBandPanel({ band }: { band: CashBand | undefined }) 
   return (
     <Panel>
       <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-[15px] font-extrabold">Olasılıklı nakit bandı</h3>
+        <h3 className="flex items-center gap-1 text-[15px] font-extrabold">Olasılıklı nakit bandı<SqlInfo k={k} alan="bant" label="Olasılıklı nakit bandı" /></h3>
         <Pill tone="violet">Tahmin</Pill>
       </div>
       <p className="mt-1 text-[12px] leading-snug text-canvas-muted">{band.not} Geçmiş: {band.gecmisHafta} hafta.</p>
@@ -36,14 +38,15 @@ export default function CashBandPanel({ band }: { band: CashBand | undefined }) 
           <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0" />
           <span>
             En kötü %10 senaryoda {band.enKotuAcik.hafta}. hafta ({fmtDay(band.enKotuAcik.baslangic)}) kasa {fmtMoney(band.enKotuAcik.kapanis)}: açık riski.
+            <SqlInfo k={k} alan="bant" label="En kötü %10 senaryoda açık" className="ml-0.5" />
           </span>
         </div>
       )}
       {last && (
         <div className="mt-2 grid grid-cols-3 gap-2 text-[12px]">
-          {([['En kötü %10', last.kapanis.kotu], ['Beklenen', last.kapanis.orta], ['En iyi %10', last.kapanis.iyi]] as const).map(([k, v]) => (
-            <div key={k} className="rounded-xl bg-white/80 p-2">
-              <div className="text-[10.5px] font-bold uppercase text-canvas-muted">{k}</div>
+          {([['En kötü %10', last.kapanis.kotu], ['Beklenen', last.kapanis.orta], ['En iyi %10', last.kapanis.iyi]] as const).map(([name, v]) => (
+            <div key={name} className="rounded-xl bg-white/80 p-2">
+              <div className="flex items-center gap-0.5 text-[10.5px] font-bold uppercase text-canvas-muted">{name}<SqlInfo k={k} alan="bant" label={`${name} · 13. hafta sonu`} /></div>
               <div className={`font-mono text-[14px] font-bold tabular-nums ${v < 0 ? 'text-red-700' : ''}`}>{fmtShort(v)}</div>
               <div className="text-[10.5px] text-canvas-muted">13. hafta sonu</div>
             </div>

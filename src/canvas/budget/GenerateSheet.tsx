@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Calculator, Loader2 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { Loading, Note, btnPrimary, errText, field, label as labelCls } from '..
 import Sheet from '../editorial/studio/reader/Sheet';
 import { budgetApi, parseNum, type BudgetParams, type Plan, type Scenario } from './api';
 import { NumField } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 const SC: Array<[Scenario, string]> = [['muhafazakar', 'Muhafazakâr'], ['temel', 'Temel'], ['iyimser', 'İyimser']];
 const pct = (v: number | undefined | null) => (v === null || v === undefined ? '' : (v * 100).toLocaleString('tr-TR', { maximumFractionDigits: 2 }));
@@ -43,24 +44,28 @@ export function fromText(t: ParamText): Partial<BudgetParams> {
 }
 
 /** Senaryo parametreleri: hacim büyümesi senaryoya göre, fiyat/gider/marj/eşik ortak. */
-export function ParamsForm({ value, onChange, sources, only, forecast }: {
+export type ParamKey = 'hacim' | 'fiyat' | 'gider' | 'marjDegisim' | 'esik' | 'uyariKapsam';
+
+export function ParamsForm({ value, onChange, sources, only, forecast, info }: {
   value: ParamText; onChange: (v: ParamText) => void; sources?: { fiyat?: string; gider?: string }; only?: Scenario; forecast?: string | null;
+  /** Kutudaki değerin sorgu bilgisi (öneri sayfasında ölçüm, plan sayfasında planın saklı parametresi). */
+  info?: (key: ParamKey, label: string) => ReactNode;
 }) {
   const set = (k: keyof Omit<ParamText, 'hacim' | 'tahmin'>) => (s: string) => onChange({ ...value, [k]: s });
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {SC.filter(([k]) => !only || k === only).map(([k, l]) => (
-          <NumField key={k} id={`h-${k}`} label={`${l}: hacim büyümesi`} value={value.hacim[k]} suffix="%"
+          <NumField key={k} id={`h-${k}`} label={`${l}: hacim büyümesi`} value={value.hacim[k]} suffix="%" info={info?.('hacim', `${l}: hacim büyümesi`)}
             onChange={(s) => onChange({ ...value, hacim: { ...value.hacim, [k]: s } })} help="Net adet, taban döneme göre" />
         ))}
       </div>
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <NumField id="p-fiyat" label="Fiyat artışı (net birim fiyat)" value={value.fiyat} onChange={set('fiyat')} suffix="%" help={sources?.fiyat} />
-        <NumField id="p-gider" label="Gider artışı (departman)" value={value.gider} onChange={set('gider')} suffix="%" help={sources?.gider} />
-        <NumField id="p-marj" label="Marj değişimi (puan)" value={value.marjDegisim} onChange={set('marjDegisim')} suffix="%" help="Kitabın taban marjına eklenir" />
-        <NumField id="p-esik" label="Sapma uyarı eşiği" value={value.esik} onChange={set('esik')} suffix="%" help="Gerçekleşen, beklenenin bu oranının altına düşünce uyarı" />
-        <NumField id="p-kapsam" label="Kitap uyarısı kapsamı" value={value.uyariKapsam} onChange={set('uyariKapsam')} suffix="%"
+        <NumField id="p-fiyat" label="Fiyat artışı (net birim fiyat)" info={info?.('fiyat', 'Fiyat artışı (net birim fiyat)')} value={value.fiyat} onChange={set('fiyat')} suffix="%" help={sources?.fiyat} />
+        <NumField id="p-gider" label="Gider artışı (departman)" info={info?.('gider', 'Gider artışı (departman)')} value={value.gider} onChange={set('gider')} suffix="%" help={sources?.gider} />
+        <NumField id="p-marj" label="Marj değişimi (puan)" info={info?.('marjDegisim', 'Marj değişimi (puan)')} value={value.marjDegisim} onChange={set('marjDegisim')} suffix="%" help="Kitabın taban marjına eklenir" />
+        <NumField id="p-esik" label="Sapma uyarı eşiği" info={info?.('esik', 'Sapma uyarı eşiği')} value={value.esik} onChange={set('esik')} suffix="%" help="Gerçekleşen, beklenenin bu oranının altına düşünce uyarı" />
+        <NumField id="p-kapsam" label="Kitap uyarısı kapsamı" info={info?.('uyariKapsam', 'Kitap uyarısı kapsamı')} value={value.uyariKapsam} onChange={set('uyariKapsam')} suffix="%"
           help="Hedef cirosunun bu payını oluşturan kitaplar uyarı açar; diğerlerinin durumu listede görünür. %100: her kitap" />
       </div>
       <label className="flex min-h-11 items-start gap-2 text-[12.5px]">
@@ -127,8 +132,12 @@ export default function GenerateSheet({ open, year, years, onClose, onDone }: {
           defaults.error ? <Note tone="err">{errText(defaults.error, 'Varsayılanlar okunamadı.')}</Note> : <Loading />
         ) : (
           <>
-            <Note tone="info">Taban dönem: <strong>{defaults.data?.pencere}</strong>. Fiyat ve gider artışı veriden ölçüldü; değiştirebilirsiniz.</Note>
+            <Note tone="info">
+              Taban dönem: <strong>{defaults.data?.pencere}</strong>
+              <SqlInfo k={defaults.data?.kaynaklar} alan="pencere" label="Taban dönem" className="ml-0.5" />. Fiyat ve gider artışı veriden ölçüldü; değiştirebilirsiniz.
+            </Note>
             <ParamsForm value={text} onChange={setText} sources={{ fiyat: defaults.data?.fiyatKaynak, gider: defaults.data?.giderKaynak }}
+              info={(key, l) => <SqlInfo k={defaults.data?.kaynaklar} alan={key} label={l} />}
               forecast={defaults.data?.tahminVar ? defaults.data?.tahminBaslangic : null} />
           </>
         )}

@@ -290,3 +290,82 @@ def test_pricing_every_number_has_its_query(engine, snap):
     one = PS.get_analysis(engine, T, a["id"])
     k = _check(P.ekle(one, PK.for_analysis(engine, T, a["id"])), ig + ("approvals", "history", "required"))
     assert a["id"] in k["sources"]["portal.fiyat.analiz"]["sql"]
+
+
+# ------------------------------------------------------------------ örnek modüllerde kalan kalemler (Grup 2)
+
+
+def test_budget_defaults_have_their_measurement_queries(engine):
+    """Öneri sayfasının ön dolu kutuları: ölçülen fiyat ve gider artışı hangi satış/gider satırlarından."""
+    seed_budget(engine)
+    _budget_meta(engine)
+    end = B.data_end(engine)
+    out = {**B.default_params(engine, end.year + 1), "tahminVar": False, "tahminBaslangic": None}
+    k = _check(P.ekle(out, BK.for_defaults(engine, end.year + 1, "TIGERDB")), BK.NOT_RAKAM)
+    assert {"fiyat", "gider", "hacim", "esik", "uyariKapsam", "pencere"} <= set(k["fields"])
+    fiyat = k["formulas"][k["fields"]["fiyat"][6:]]
+    assert "portal.satis" in fiyat["inputs"] and "birim fiyat" in fiyat["text"]
+    assert f"logo.satis.{end.year}" in k["sources"]["portal.satis"]["origin"]
+    assert k["sources"][f"logo.satis.{end.year}"]["sql"].startswith("USE [TIGERDB];")
+
+
+def test_budget_scenario_params_have_row_keys(engine):
+    seed_budget(engine)
+    _budget_meta(engine)
+    items = B.generate(engine, T, "hazirlayan", {"year": 2026, "scenarios": ["temel"]})
+    out = B.compare(engine, T, 2026)
+    k = _check(P.ekle(out, BK.for_compare(engine, T, 2026, out, None)), BK.NOT_RAKAM)
+    assert f"items[].params:{items[0]['id']}" in k["fields"]
+
+
+def test_finance_remaining_fields(engine):
+    """Gelir tablosu «bütçeden fark», vergi kalan günü, nakit bandı, eşleme grup sayısı kendi hesaplarıyla."""
+    _finance_all(engine)
+    ig = FK.NOT_RAKAM + ("status",)
+    pnl = F.pnl(engine, T, 2026, 7, "ay")
+    k = _check(P.ekle(pnl, FK.for_pnl(engine, T, pnl, None)), ig)
+    fark = k["formulas"][k["fields"]["rows[].values.fark"][6:]]
+    assert "dönem − bütçe" in fark["text"] and set(fark["inputs"]) == {k["fields"]["rows[].values.donem"],
+                                                                         k["fields"]["rows[].values.butce"]}
+
+    tax = F.tax_list(engine, T, 2026)
+    k = _check(P.ekle(tax, FK.for_tax(engine, T, 2026)), ig)
+    assert k["fields"]["items[].kalanGun"] == k["fields"]["geciken[]"] == "hesap:vergiGun"
+
+    cash = F.cash(engine, T)
+    cash["bant"] = {"var": True, "gecmisHafta": 104, "haftalar": [{"hafta": 1, "kesin": 10.0,
+                                                                   "kapanis": {"kotu": -5.0, "orta": 3.0, "iyi": 9.0}}],
+                    "enKotuAcik": {"hafta": 1, "kapanis": -5.0},
+                    "sorgular": [{"year": 2026, "firm": "411", "from": "2024-08-19", "to": "2026-08-17", "rows": 480,
+                                  "dbMs": 900, "at": "2026-09-28T07:00:00"}]}
+    k = _check(P.ekle(cash, FK.for_cash(engine, T, cash, "TIGERDB", None)), ig)
+    band = k["sources"]["logo.nakit.bant.2026"]
+    assert "LG_411_01_EMFLINE" in band["sql"] and "'20240819'" in band["sql"] and band["stats"]["rows"] == 480
+    assert "logo.nakit.bant.2026" in k["formulas"]["bant"]["inputs"]
+
+    amap = F.account_map(engine, T, 2026)
+    k = _check(P.ekle(amap, FK.for_account_map(engine, T, amap, None)), ig)
+    assert k["fields"]["gruplar"] == "hesap:gruplar" and "items[].esleme" in k["fields"] and "suggest" in k["fields"]
+
+
+def test_pricing_remaining_fields(engine, snap):
+    ig = PK.NOT_RAKAM + ("offset", "limit", "dataEnd", "since", "until")
+    k = _check(P.ekle(D.actuals(snap), PK.for_actuals(snap, None, None)), ig + ("sinceYear",))
+    assert k["fields"]["gosterilen"] == "hesap:gosterilen"
+    k = _check(P.ekle(D.backlist(snap), PK.for_backlist(snap, None, None)), ig)
+    assert k["fields"]["secim"] == "hesap:secim"
+
+    det = D.book_detail(snap, "15201.01.1")
+    det["suggested"] = D.suggested_inputs(snap, det["spec"], PS.get_defaults(engine, T))
+    det["freelance"], det["quotes"] = {"items": [], "byKey": {}}, []
+    det["analyses"], det["market"] = [], []
+    k = _check(P.ekle(det, PK.for_book(engine, T, snap, det, None, None)), ig)
+    # girdi kutuları (NumField «i») bu anahtarlarla çözülür
+    for key in ("printService", "paper", "printSetup", "royaltyRate", "vat", "discount", "variableRate", "sellThrough",
+                "targetMargin", "advance"):
+        assert f"suggested.{key}" in k["fields"], key
+    ins = k["formulas"]["teklifler"]["inputs"]
+    if [p for p in det["crmPrints"] if p.get("id")]:
+        assert "portal.fiyat.teklifler" in ins and "semantic_" in k["sources"]["portal.fiyat.teklifler"]["sql"]
+    if (det.get("book") or {}).get("id"):
+        assert "portal.fiyat.serbest" in k["formulas"]["serbest"]["inputs"]
