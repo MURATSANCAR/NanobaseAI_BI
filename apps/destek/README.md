@@ -19,7 +19,7 @@ telif başlıkları korunur, yalnız ekrandaki ürün adları değişir.
 ## Nerede, nasıl çalışır
 
 - Tek site `destek`; Docker yığını `nanobase-destek` (`docker/compose.yaml`): MariaDB 11.8,
-  iki Redis, gunicorn, websocket, iki kuyruk işçisi, zamanlayıcı, nginx.
+  iki Redis (önbellek arama eklentili `redis-stack-server`: kayıt araması için), gunicorn, websocket, iki kuyruk işçisi, zamanlayıcı, nginx.
 - Test sunucusu: `/data/nanobaseai/destek` (yalnız `compose.yaml` + `.env`; kod imajın içinde).
   Konteyner nginx'i `127.0.0.1:8447`; dışarıya `https://portal.nanobase.ai:8446` (`deploy/nginx-destek-8446.conf`).
   Çatı kök yolda çalışır (`/helpdesk`, `/app`, `/api`, `/assets`), o yüzden `/timas/` altına değil ayrı porta konur.
