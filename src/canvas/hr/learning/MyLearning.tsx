@@ -8,7 +8,7 @@ import { NAV } from '../../nav/navModel';
 import { canSeePage, usePageAccess } from '../../useAdmin';
 import { Block, FilePick, HrFrame } from '../parts';
 import { MB } from '../../components/fileDropRules';
-import { fmtSize, type WithK } from '../hrApi';
+import type { WithK } from '../hrApi';
 import SqlInfo from '../../components/SqlInfo';
 import GuideSheet from './GuideSheet';
 import { learningApi, type Me, type Question, type Team } from './learningApi';
