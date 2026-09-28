@@ -95,6 +95,14 @@ describe('İnsan Kaynakları (açıkça verilen sayfalar)', () => {
     expect(itemIds(g)).toEqual(['kampus', 'ik-ise-alim']);
   });
 
+  it('M57: eğitim alt ekranları «Eğitim ve gelişim»i, Eğitimlerim kendi öğesini etkin yapar', () => {
+    const g = visibleNav(admin, {});
+    expect(matchActive(g, '/ik/egitim/oturum/otr_1')?.item.id).toBe('ik-egitim');
+    expect(matchActive(g, '/ik/egitim/rehberler')?.item.id).toBe('ik-egitim');
+    expect(matchActive(g, '/ik/egitimlerim')?.item.id).toBe('ik-egitimlerim');
+    expect(itemIds(visibleNav(user, {}, new Set(['sayfa:ik-egitimlerim'])))).toEqual(['kampus', 'ik-egitimlerim']);
+  });
+
   it('aday kartı işe alım panosunu etkin yapar', () => {
     const g = visibleNav(admin, {});
     expect(matchActive(g, '/ik/ise-alim/aday/aday_1')?.item.id).toBe('ik-ise-alim');

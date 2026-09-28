@@ -31,6 +31,7 @@ import { readersApi } from '../readers/api';
 import PersonAvatar from './PersonAvatar';
 import BulletinCard from './BulletinCard';
 import AgendaCard from './AgendaCard';
+import LearningCard from '../hr/learning/LearningCard';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
@@ -383,6 +384,9 @@ export default function KampusPage() {
 
           {/* ÖNEMLİ GÜNLER & AJANDA — M27: sorumlusu olduğum yaklaşan fuar/etkinlik ve görevler (yalnız kendi kayıtlarım) */}
           <AgendaCard />
+
+          {/* EĞİTİMLERİM — M57: yaklaşan oturum, dolacak zorunlu eğitim, bekleyen anket (yalnız kendi kaydım) */}
+          <LearningCard />
         </aside>
 
         {/* ORTA SÜTUN */}

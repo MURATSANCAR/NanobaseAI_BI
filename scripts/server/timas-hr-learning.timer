@@ -1,0 +1,10 @@
+[Unit]
+Description=Eğitim ve gelişim sabah özeti; her gün 07:30
+
+[Timer]
+OnCalendar=*-*-* 07:30:00
+Persistent=true
+Unit=timas-hr-learning.service
+
+[Install]
+WantedBy=timers.target

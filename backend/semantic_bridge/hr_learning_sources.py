@@ -63,30 +63,33 @@ def raw_usage(engine: sa.engine.Engine, tenant: str, days: int) -> dict[str, set
     since = _since(days)
     day0 = L.today() - timedelta(days=days - 1)
     out: dict[str, set[str]] = {}
+    # Her kaynak ayrı bağlantıda: biri okunamazsa (tablo yok) ötekinin işlemi bozulmasın.
     with engine.connect() as c:
         for route, user in c.execute(sa.select(L.PAGE_VISITS.c.route_prefix, L.PAGE_VISITS.c.username).where(
                 L.PAGE_VISITS.c.tenant_id == tenant, L.PAGE_VISITS.c.day >= day0).distinct()).all():
             out.setdefault(route, set()).add(_account(user))
-        try:
+    try:
+        with engine.connect() as c:
             users = c.execute(sa.select(sl_query_log.c.username).where(
                 sl_query_log.c.tenant_id == tenant, sl_query_log.c.username.isnot(None),
                 sl_query_log.c.created_at >= since).distinct()).scalars().all()
-        except sa.exc.SQLAlchemyError as e:           # soru kaydı tablosu bu veritabanında yoksa
-            log.warning("hr.learning: soru kaydı okunamadı: %s", e)
-            users = []
-        for u in users:
-            if _account(u):
-                out.setdefault(ZEKI, set()).add(_account(u))
-        try:
+    except sa.exc.SQLAlchemyError as e:               # soru kaydı tablosu bu veritabanında yoksa
+        log.warning("hr.learning: soru kaydı okunamadı: %s", e)
+        users = []
+    for u in users:
+        if _account(u):
+            out.setdefault(ZEKI, set()).add(_account(u))
+    try:
+        with engine.connect() as c:
             rows = c.execute(sa.select(admin_mod.AUDIT.c.actor, admin_mod.AUDIT.c.kind).where(
                 admin_mod.AUDIT.c.at >= since).distinct()).all()
-        except sa.exc.SQLAlchemyError as e:
-            log.warning("hr.learning: değişiklik kaydı okunamadı: %s", e)
-            rows = []
-        for actor, kind in rows:
-            a = _account(actor)
-            if a and a not in ("sistem", "eposta"):
-                out.setdefault(f"audit:{kind}", set()).add(a)
+    except sa.exc.SQLAlchemyError as e:
+        log.warning("hr.learning: değişiklik kaydı okunamadı: %s", e)
+        rows = []
+    for actor, kind in rows:
+        a = _account(actor)
+        if a and a not in ("sistem", "eposta"):
+            out.setdefault(f"audit:{kind}", set()).add(a)
     return out
 
 
@@ -163,17 +166,19 @@ def my_usage(engine: sa.engine.Engine, tenant: str, user: str, days: int) -> dic
         visits = c.execute(sa.select(L.PAGE_VISITS.c.route_prefix, sa.func.count(), sa.func.sum(L.PAGE_VISITS.c.count)).where(
             L.PAGE_VISITS.c.tenant_id == tenant, L.PAGE_VISITS.c.username == u, L.PAGE_VISITS.c.day >= day0)
             .group_by(L.PAGE_VISITS.c.route_prefix)).all()
-        try:
+    try:
+        with engine.connect() as c:
             asked = c.execute(sa.select(sa.func.count()).where(
                 sl_query_log.c.tenant_id == tenant, sa.func.lower(sl_query_log.c.username) == u,
                 sl_query_log.c.created_at >= since)).scalar() or 0
-        except sa.exc.SQLAlchemyError:
-            asked = 0
-        try:
+    except sa.exc.SQLAlchemyError:
+        asked = 0
+    try:
+        with engine.connect() as c:
             acts = c.execute(sa.select(admin_mod.AUDIT.c.kind, sa.func.count()).where(
                 sa.func.lower(admin_mod.AUDIT.c.actor) == u, admin_mod.AUDIT.c.at >= since).group_by(admin_mod.AUDIT.c.kind)).all()
-        except sa.exc.SQLAlchemyError:
-            acts = []
+    except sa.exc.SQLAlchemyError:
+        acts = []
     return {"days": days, "since": day0.isoformat(),
             "screens": [{"key": r[0], "days": int(r[1]), "visits": int(r[2] or 0)} for r in visits],
             "questions": int(asked),

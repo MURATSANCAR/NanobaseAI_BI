@@ -76,8 +76,8 @@ def register(app, hr: HrContext) -> None:
 
     # ------------------------------------------------------------------ ziyaret sayacı
 
-    @app.post("/api/v1/hr/visit", status_code=204)
-    def hr_visit(body: dict[str, Any], request: Request) -> Response:
+    @app.post("/api/v1/hr/visit")
+    def hr_visit(body: dict[str, Any], request: Request) -> dict[str, Any]:
         """Menü öğesi değişince ön yüz çağırır: (gün, öğe, hesap) sayacı. Yalnız kendi hesabına."""
         from semantic_bridge import board as board_mod
 
@@ -88,7 +88,7 @@ def register(app, hr: HrContext) -> None:
             raise HTTPException(status_code=401, detail={"code": "UNAUTHORIZED", "message": "Oturum gerekli."}) from None
         engine, tenant = hr.system()
         call(L.record_visit, engine, tenant, user, str(body.get("route") or ""))
-        return Response(status_code=204)
+        return {"ok": True}
 
     # ------------------------------------------------------------------ Eğitimlerim (oturum yeter)
 

@@ -119,6 +119,41 @@
 - **Yakalanan hata:** besleme `X-Editor: zamanlayıcı` gönderiyordu; HTTP başlığı ASCII olmalı → httpx `UnicodeEncodeError`, hiçbir şey gitmedi. Gece işi her gece böyle düşecekti. Düzeltme: `header_name()` (Türkçe harf → ASCII), varsayılan `zamanlayici`, test eklendi (8/8). İlk doldurma ASCII adla yapıldı. Düzeltme main'e alınıp köprüye kurulacak.
 - **Uçtan uca (portal, timasai 15 dk oturum, yalnız GET, oturum silindi):** indirme bitti — 6.742 kapak, 21 hata (sitenin kendisi 404: «(Eski)» ürünlerin `-B.jpg` adresi), 18 görselsiz. Ağaç 24 kök (Çocuk 2.744 → Hikaye 716, Masal ve Öykü 396…; Yetişkin 2.163 → Tarih 525…), alt kategori süzgeci, «sukru» araması (Recep Şükrü Apuhan, 14), kitle + ada göre + sayfa, görsel WebP 360 px 11 KB / 800 px 34 KB, oturumsuz 401, ekran 200.
 - **Kitap dışı ürünler:** «En çok satan»ın başında oyun hamuru çıktı; sitede oyun/oyuncak/kırtasiye de satılıyor ve ~490'ının CRM stok kartı var (CRM eşleşmesi ayırmıyor). Ölçüm: 6.081 ISBN+CRM, 494 ISBN değil+CRM (kutu oyunları…), 204 ISBN değil+CRM yok (setler: barkod «1»+ISBN), 2 ISBN+CRM yok. Kural: barkod 978/979 ile başlayan 13 haneyle bitiyorsa kitap (`is_book`; setler dahil). Besleme yalnız kitapları gönderir; sonunda tam listeyi `POST /v1/studio/library/retain` ile verir, listede olmayan kayıtlar `hidden` olur (görsel diskte kalır, yeniden gelirse görünür; liste görünenin yarısından kısaysa eksik eşitleme sayılıp hiçbir şey gizlenmez). Testler köprü 22/22, stüdyo 8/8. Kurulum: GPU stüdyo imajı + köprü, sonra yeniden besleme.
+## 2026-09-28 — M57 Eğitim ve gelişim kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-a8a8e37c0663198b7`, İK-0/M55 dalının (`worktree-agent-a413d1dced953ab0a`, main `54129d14` üstünde) ucundan
+  başladı; İK-0 yeniden yazılmadı, kancaları kullanıldı (`register_purger`, `register_data_class`, `HrContext`). Sunucuya
+  bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması. pytest (`test_hr_learning.py`, `test_hr_core.py`, `test_data_security.py`,
+  `test_access.py`), vitest (`navModel.test.ts`), tsc ve gerçek veri kabulü (`scripts/acceptance/M57/kabul.py`) test sunucusunda
+  koşturulacak.
+- **İlk sürüm (analiz §9, §14):** katalog (zorunlu/gelişim/ZEKİ; iç/dış/çevrimiçi; geçerlilik süresi; kişi başı maliyet; zorunlu
+  eğitimin birimleri; ZEKİ eğitiminde ilgili ekran), oturum + katılım + onay zinciri (çalışan talebi → yönetici → dış eğitimde İK),
+  telefondan yoklama, kapanışta sertifika ve anonim anket jetonu, çalışan sertifika yüklemesi ve İK doğrulaması, dolmuş/dolacak
+  zorunlu eğitim listesi ve seçilenlerle tek adımda oturum, birim × eğitim tamamlanma, ihtiyaç listesi ve Zeki AI önerisi, anket tema
+  özeti, modül rehberleri (Zeki AI taslağı, altyapı adı denetimi, sürüme bağlı oy), ekran ziyaret sayacı ve birim × ekran kullanım
+  haritası, kişinin kendi kullanımı, Logo eğitim gideri ve elle yıllık bütçe, sabah özeti zamanlayıcısı.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` RULES 5 satır (+ `/api/v1/hr/` kümesine `sayfa:ik-egitim`), `access_catalog.json`
+  2 sayfa + 5 özellik, `app.py` 2 satır, `admin.py` 3 ayar, `data_security_inventory.json` 5 tablo, `App.tsx` 7 rota, `navModel.ts`
+  2 öğe (+2 ikon), `navModel.test.ts`, `ModulesMenu.tsx` M57, `Shell.tsx` `GuideLink` (rehber penceresi tembel yüklenir),
+  `KampusPage.tsx` kart, `test_hr_core.py` İK sayfa kümesi eşitliği → kapsama (M56–M58 sayfa ekler).
+- **§10 açık sorularında verilen kararlar (veriye/koda bakılarak; iş kararları Claude'a bırakıldı kuralı):**
+  (1) Zorunlu eğitim listesi ve tehlike sınıfı bilinmiyor → sistemde sabit periyot yok; eğitim kartında «geçerlilik süresi» ve
+  «uygulanan birimler» İK/İSG sorumlusunca girilir. (2) Eğitim gider hesabı bilinmiyor → `HR_TRAINING_ACCOUNTS` ayarı (varsayılan
+  boş, ekran «seçilmedi» der) ve `GET /spend/accounts` ölçüm listesi (adında eğitim/seminer/kurs geçen 7'li hesaplar; kabul K1).
+  Kapanış fişi hariç tutuldu: Kural 16'nın yalın `SUM(DEBIT-CREDIT)`'i yıl sonu kapanışında 7'li hesabı sıfırlar (M46 bütçe gideriyle
+  aynı dışlama). (3) Geçmiş kayıt aktarımı: toplu içe aktarma yok; İK `POST /certificates` ile elle (doğrulanmış) kayıt girer.
+  (4) İç eğitmen/rol önceliği: rolden bağımsız — `ik.rehber-yaz` portal sorumlusuna, `ik.egitim-onay` yöneticilere bağlanır.
+  (5) Kullanım sayılarının gösterimi: yalnız birim düzeyi, hesap adı yok; kişi bazında yalnız kişinin kendisi (`/me/usage?user=` başkası
+  → 403, İK dahil); performansa aktarılmaz. **Küçük grup eşiği** kullanıcı kuralı gereği kendiliğinden konmadı: `HR_PRIVACY_MIN_GROUP`
+  boşken birleştirme yapılmaz, ekran bunu açıkça uyarır; girilince küçük birimler ve kayıtsız hesaplar tek sütunda birleşir, az
+  yanıtlı anket sonucu gizlenir.
+- **Diğer tasarım kararları:** anket yanıtı kişisiz ve yalnız gün düzeyinde tarihli (jetonun kullanıldığı gün de yalnız gün) — saat
+  eşleşmesiyle kişi bulunamasın. Portal kullanıcıya bildirim zili yok (kodda bulunamadı): çalışan uyarısı Eğitimlerim ve Kampüs
+  kartında, İK'ya 07:30 kişi adsız e-posta özeti; çalışana e-posta gönderilmez. Yönetici = çalışanın `manager_id`'si ya da birimin
+  `manager_employee_id`'si. `ik.egitim-yonet` duyarlı (kişi bazında eğitim verisi): portal yöneticisi rolsüz görmez.
+  Oda rezervasyonu bağı yok (yer serbest metin, `room_booking_id` kolonu hazır). İK soru kutusu ve M55/M56 otomatik ihtiyaç
+  beslemesi, etki raporu, bilgisayarsız çalışan yoklaması sonraki sürüm.
+
 ## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
 
 - **Dal:** `worktree-agent-ac485f3ca53f8031a` (main `d21da878` üstüne yeniden dizildi). Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON

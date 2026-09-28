@@ -69,6 +69,7 @@ export const LIVE: Record<string, string> = {
   M54: '/telif-donem',
   M47: '/risk-uyum',
   M55: '/ik/ise-alim',
+  M57: '/ik/egitim',
   categories: '/kategori-agaci',
   M53: '/pazarlama/set-hediye',
   email: '/kurumsal-eposta',

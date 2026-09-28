@@ -114,6 +114,13 @@ const CandidateDrawer = lazy(() => import('@/canvas/hr/recruit/CandidateDrawer')
 const PositionEditor = lazy(() => import('@/canvas/hr/recruit/PositionEditor'));
 const HrTemplatesScreen = lazy(() => import('@/canvas/hr/recruit/TemplatesScreen'));
 const HrRecordsScreen = lazy(() => import('@/canvas/hr/records/HrRecordsScreen'));
+const MyLearning = lazy(() => import('@/canvas/hr/learning/MyLearning'));
+const LearningDashboard = lazy(() => import('@/canvas/hr/learning/LearningDashboard'));
+const LearningCourses = lazy(() => import('@/canvas/hr/learning/CoursesScreen'));
+const LearningSession = lazy(() => import('@/canvas/hr/learning/SessionScreen'));
+const LearningNeeds = lazy(() => import('@/canvas/hr/learning/NeedsScreen'));
+const LearningUsage = lazy(() => import('@/canvas/hr/learning/UsageMap'));
+const LearningGuides = lazy(() => import('@/canvas/hr/learning/GuidesScreen'));
 const MarketingHome = lazy(() => import('@/canvas/marketing/MarketingHome'));
 const MarketingPlan = lazy(() => import('@/canvas/marketing/PlanScreen'));
 const SetsScreen = lazy(() => import('@/canvas/marketing/sets/SetsScreen'));
@@ -314,6 +321,14 @@ export default function App() {
             <Route path="stok/aktarim" element={<StockTransfers />} />
             <Route path="stok/depo-hatti" element={<StockPickLine />} />
             <Route path="stok/:stokKodu" element={<StockItem />} />
+            {/* M57 Eğitim ve gelişim (/api/v1/hr/learning): Eğitimlerim, pano, katalog/oturum, ihtiyaç, kullanım haritası, rehberler. */}
+            <Route path="ik/egitimlerim" element={<MyLearning />} />
+            <Route path="ik/egitim" element={<LearningDashboard />} />
+            <Route path="ik/egitim/katalog" element={<LearningCourses />} />
+            <Route path="ik/egitim/oturum/:id" element={<LearningSession />} />
+            <Route path="ik/egitim/ihtiyaclar" element={<LearningNeeds />} />
+            <Route path="ik/egitim/kullanim" element={<LearningUsage />} />
+            <Route path="ik/egitim/rehberler" element={<LearningGuides />} />
             {/* Fiyatlama ve maliyet (M9): kitap maliyeti, başabaş, kapak fiyatı, onay; uçlar /api/v1/pricing. */}
             <Route path="fiyatlama" element={<PricingScreen />} />
             {/* Pazarlama › Planlama: M15 yeni kitap pazarlama planı (/api/v1/marketing). */}

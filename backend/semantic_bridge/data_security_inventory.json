@@ -474,6 +474,69 @@
       "module": "İnsan kaynakları (İK-0)"
     },
     {
+      "object": "semantic_hr_page_visits",
+      "columns": [
+        "username"
+      ],
+      "data": "Ekran ziyaret sayısı (gün, menü öğesi, hesap)",
+      "subjects": "çalışan",
+      "purpose": "Eğitim ihtiyacı için birim düzeyinde kullanım haritası; kişi bazında yalnız kişinin kendisine",
+      "retention": null,
+      "retentionNote": "İK saklama sınıfı «egitim_kullanim» (İK ekranında süre; gece imhası)",
+      "module": "Eğitim ve gelişim (M57)"
+    },
+    {
+      "object": "semantic_hr_certificates",
+      "columns": [
+        "employee_id",
+        "file_blob",
+        "file_name"
+      ],
+      "data": "Çalışanın eğitim sertifikası ve belgesi",
+      "subjects": "çalışan",
+      "purpose": "Eğitim ve zorunlu eğitim takibi",
+      "retention": null,
+      "retentionNote": "İK saklama sınıfı «egitim_kaydi» (ayrılıştan sonra süre dolunca gece imhası)",
+      "module": "Eğitim ve gelişim (M57)"
+    },
+    {
+      "object": "semantic_hr_enrollments",
+      "columns": [
+        "employee_id"
+      ],
+      "data": "Eğitim katılımı ve yoklama",
+      "subjects": "çalışan",
+      "purpose": "Eğitim takibi",
+      "retention": null,
+      "retentionNote": "İK saklama sınıfı «egitim_kaydi»",
+      "module": "Eğitim ve gelişim (M57)"
+    },
+    {
+      "object": "semantic_hr_training_needs",
+      "columns": [
+        "employee_id",
+        "text"
+      ],
+      "data": "Çalışanın eğitim ihtiyacı metni",
+      "subjects": "çalışan",
+      "purpose": "Eğitim ihtiyaç analizi",
+      "retention": null,
+      "retentionNote": "İK saklama sınıfı «egitim_kaydi»",
+      "module": "Eğitim ve gelişim (M57)"
+    },
+    {
+      "object": "semantic_hr_guide_votes",
+      "columns": [
+        "username"
+      ],
+      "data": "Rehbere «yaradı / yaramadı» oyu",
+      "subjects": "çalışan",
+      "purpose": "Rehber kalitesi (yalnız sayı gösterilir)",
+      "retention": null,
+      "retentionNote": "İş kaydı; rehber silinince gider",
+      "module": "Eğitim ve gelişim (M57)"
+    },
+    {
       "object": "semantic_support_insights",
       "columns": [
         "contact_ref"
