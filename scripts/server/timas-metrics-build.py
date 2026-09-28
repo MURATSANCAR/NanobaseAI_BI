@@ -78,6 +78,7 @@ def main() -> int:
     t0 = time.time()
     parts = []
     texts = []
+    sources = {}
     for name, make in QUERIES.items():
         try:
             sql = make(YEAR)
@@ -89,6 +90,11 @@ def main() -> int:
             # Ekrandaki "SQL'i göster" bunu gösterir: kartın rakamını gerçekten üreten metin.
             # Köprü dönem/yıl kopyalarını çözdüğü için varsa çalıştırılan fiziksel SQL yazılır.
             texts.append(f"-- {name}\n{got.get('physicalSql') or sql}")
+            # Sorgu bilgisi («i»): köprünün bu koşu için kurduğu kayıt (fiziksel SQL, USE satırı, satır, süre, zaman).
+            # Kayıt köprüde kurulur (sır süzgeci, yer tutucu denetimi orada); burada yalnız taşınır, metin uydurulmaz.
+            rec = ((got.get("kaynaklar") or {}).get("sources") or {}).get("sorgu")
+            if rec:
+                sources[name] = rec
         except (urllib.error.URLError, OSError, ValueError) as exc:
             # Bir sorgu patlarsa öncekiler korunur; ekran eksik kartı boş gösterir.
             errors[name] = str(exc)[:200]
@@ -105,6 +111,8 @@ def main() -> int:
     }
     # Kartın dayanağı: çalıştırılan sorguların tam metni. Kırpılmaz; ekran kendi kaydırır.
     out["sql"] = "\n\n".join(texts) or None
+    # Ekran kart başına «i» penceresini bundan kurar (src/canvas/cfo.ts cfoKaynaklar).
+    out["kaynakSorgulari"] = sources
     if errors:
         out["errors"] = errors
     OUT.parent.mkdir(parents=True, exist_ok=True)

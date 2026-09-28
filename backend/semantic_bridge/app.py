@@ -1400,7 +1400,10 @@ class Runtime:
         del thread[:-12]
         log.info("ask ok compiler=%s plan parts=%d rows=%d timings=%s q=%r", compiled.compiler, len(plan.parts),
                  result["totalRows"], timings, question[:80])
-        return {"id": result["id"], "type": "TEXT_TO_SQL", "sql": text, "physicalSql": text, "summary": summary,
+        # Ekranda gösterilen/kopyalanan metin: her parçanın kendi sunucusunda koşan fiziksel SQL'i (plan metni SQL değil).
+        phys_parts = "\n\n".join(f"-- {p['name']} · {'CRM' if p.get('source') == 'crm' else 'Logo'}\n{p['sql']}"
+                                 for p in parts_ms if p.get("sql")) or text
+        return {"id": result["id"], "type": "TEXT_TO_SQL", "sql": text, "physicalSql": phys_parts, "summary": summary,
                 "resultId": result["id"], "presentation": result.get("presentation"),
                 "comparison": result.get("comparison"), "dataCoverage": result.get("dataCoverage", []), "dataNotes": result.get("dataNotes", []),
                 "columns": result["columns"], "records": shown, "shownRows": len(shown),

@@ -169,6 +169,10 @@ export default function BiCanvasPage() {
   const view = useMemo(() => {
     if (!answer && !asking && !askErr) return d;
     const rows = answer?.records?.length ?? 0;
+    // Gösterilen ve kopyalanan SQL köprünün Logo/CRM'de koşturduğu fiziksel metindir: mantıksal metin (katalog adları,
+    // dönem çözülmemiş) SSMS'te aynı sonucu vermez. Panoya kart eklerken mantıksal metin saklanır (yeniden çözülsün).
+    const shownSql = answer?.physicalSql || undefined;
+    const info = !asking && !askErr && answer?.kaynaklar ? { k: answer.kaynaklar, alan: 'records', label: 'Sorunun cevabı' } : undefined;
     return {
       ...d,
       // Balon sabit örnek soruyu değil sorulan soruyu gösterir; çipten yeniden sorulan metin de burada görünür.
@@ -177,7 +181,8 @@ export default function BiCanvasPage() {
         ...d.main,
         subject: 'Verine sor',
         // Cevap görünümünde özet motorun ürettiği sorguya dayanır; bekleme/hata anında eski kartın SQL'i gösterilmez.
-        sql: !asking && answer?.sql ? answer.sql : undefined,
+        sql: !asking && shownSql ? shownSql : undefined,
+        info,
         loading: asking,
         model: asking ? `${PHASES[phase]}…` : answer?.latency_ms ? `${(answer.latency_ms / 1000).toFixed(1)} sn` : '',
         text: asking
@@ -206,8 +211,9 @@ export default function BiCanvasPage() {
         ...d.c5,
         title: 'Üretilen SQL',
         badge: askErr ? 'Hata' : asking ? 'Çalışıyor' : 'Canlı',
-        summary: answer?.sql ?? (asking ? 'Bekleniyor…' : (askErr ?? '')),
-        sql: answer?.sql,
+        summary: shownSql ?? (asking ? 'Bekleniyor…' : (askErr ?? '')),
+        sql: shownSql,
+        info,
         latency: answer?.latency_ms ? `${answer.latency_ms} ms` : '—',
         timing: !asking && answer?.records ? answer : null,
       },

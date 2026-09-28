@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, isAuthBlocked, runSql } from './engine';
 import type { DbTiming } from './DbTiming';
 import { httpErrorText } from './httpError';
+import type { KaynakSorgu, Kaynaklar } from './components/sqlInfo';
 
 /**
  * CFO'nun ekranda görmek istediği rakamlar. Hepsi semantic bridge üzerinden
@@ -81,6 +82,8 @@ export type CfoData = {
   sql?: string | null;
   /** Rakamların veritabanından gelme süresi (sorguların toplamı). */
   db?: DbTiming | null;
+  /** Sorgu bilgisi: her kartın rakamını üreten fiziksel SQL ve hesap (kart başına «i»). */
+  kaynaklar?: Kaynaklar | null;
 };
 
 const EMPTY: Omit<CfoData, 'ready' | 'authRequired' | 'failed'> = {
@@ -114,7 +117,118 @@ type RawSets = {
   db?: DbTiming | null;
   /** Geçen yılın gün düzeyinde eş dönemi (tek satır); yoksa aylık kırpmaya düşülür. */
   prevSameDate?: Array<{ net_ciro: number | null; fatura?: number; son_fatura?: string }>;
+  /** Sorgu adı → köprünün koşturduğu sorgunun kaydı (fiziksel SQL, satır, süre, zaman). */
+  sources?: Record<string, KaynakSorgu | null | undefined>;
 };
+
+/* ----------------------------------------------------------- sorgu bilgisi */
+
+const SOURCE_TITLES: Record<string, string> = {
+  months: 'Aylık net ciro · bu yıl',
+  prevMonths: 'Aylık net ciro · geçen yıl',
+  prevSameDate: 'Geçen yıl eş dönem (gün düzeyinde)',
+  totals: 'Satış ve iade toplamları · bu yıl',
+  units: 'Satılan adet, satır ve başlık · bu yıl',
+  channels: 'Fatura türüne göre net ciro · bu yıl',
+  customers: 'En büyük 5 cari · bu yıl',
+  items: 'En çok satan 8 başlık · bu yıl',
+  returnItems: 'İadesi en yüksek başlıklar · bu yıl',
+};
+
+const NET_RULE =
+  'Net ciro = Σ fatura net tutarı (satış: TRCODE 7, 8, 9) − Σ fatura net tutarı (iade: TRCODE 2, 3); iptal faturalar hariç.';
+
+/** Kart başına hesap metni ve girdileri (sorgu adları ya da başka hesap). Hesap `shape()` ve `cfoData()`'dadır. */
+const FORMULAS: Record<string, { text: string; inputs: string[] }> = {
+  netYtd: { text: `Yılbaşından net ciro = Σ aylık net ciro. ${NET_RULE}`, inputs: ['months'] },
+  netPrevSame: {
+    text:
+      'Geçen yıl aynı dönem = geçen yılın 1 Ocak gününden, bu yılın son fatura gününün geçen yıldaki karşılığına kadar ' +
+      'net ciro (gün düzeyinde). Bu sorgu yoksa geçen yılın ilk N ayı (N = bu yıl gerçekleşen ay sayısı).',
+    inputs: ['prevSameDate', 'prevMonths'],
+  },
+  c1: {
+    text:
+      'Net ciro kartı: büyük rakam yılbaşından net ciro; rozet artış = net ciro ÷ geçen yıl aynı dönem − 1; aylık ' +
+      'ortalama = net ciro ÷ gerçekleşen ay; «N / 12 ay» gerçekleşen ay = verisi olan en büyük ay numarası; «Veri» son ' +
+      'fatura günü.',
+    inputs: ['hesap:netYtd', 'hesap:netPrevSame', 'totals'],
+  },
+  c2: {
+    text:
+      `Aylık seyir: son tam ay = verisi olan son aydan önceki ay; yüzde = bu ayın net cirosu ÷ geçen yılın aynı ayı − 1; ` +
+      `çizgi ve son üç ay aylık net ciro. ${NET_RULE}`,
+    inputs: ['months', 'prevMonths'],
+  },
+  c3: {
+    text:
+      'Kanal dağılımı fatura türüdür: Toptan = TRCODE 8, Perakende = 7, Diğer = 9, İade = 2 + 3 (mutlak değer); ' +
+      'ortadaki toplam dördünün toplamı; iade oranı = iade tutarı ÷ brüt satış (satış faturaları toplamı).',
+    inputs: ['channels', 'totals'],
+  },
+  c4: {
+    text:
+      'En büyük cari: net cirosu en yüksek 5 cari (cari kartı adına göre). Pay = carinin net cirosu ÷ yılbaşından net ' +
+      'ciro; ilk 5 payı = ilk 5 carinin toplamı ÷ yılbaşından net ciro.',
+    inputs: ['customers', 'hesap:netYtd'],
+  },
+  c5: {
+    text:
+      'Kanıt: fatura = bu yılın satış ve iade faturası sayısı; satır = malzeme satırı sayısı; başlık = farklı stok ' +
+      'sayısı; cari = listelenen cari sayısı. Süre bütün sorguların veritabanı süresinin toplamıdır.',
+    inputs: ['totals', 'units', 'customers'],
+  },
+  main: {
+    text:
+      'Özet cümlesi: net ciro ve artış Net ciro kartıyla aynı hesap; iade oranı = iade tutarı ÷ brüt satış. Satılan ' +
+      'adet = Σ miktar (satış 7, 8, 9) − Σ miktar (iade 2, 3), malzeme satırları; fatura = satış ve iade faturası ' +
+      'sayısı; iade faturası = TRCODE 2, 3 fatura sayısı.',
+    inputs: ['hesap:c1', 'totals', 'units'],
+  },
+  sticker: {
+    text: 'En çok satan: net adedi en yüksek başlık; adet ve net ciro aynı satırdan (satış − iade, malzeme satırları).',
+    inputs: ['items'],
+  },
+  ghost: {
+    text: 'İade: iade faturalarının (TRCODE 2, 3) tutarı; oran = iade tutarı ÷ brüt satış; iade faturası sayısı.',
+    inputs: ['channels', 'totals'],
+  },
+};
+
+/** Alan (kart) → hesap. Ekran `<SqlInfo k={c.kaynaklar} alan="c1" …>` ile ister. */
+const CARD_FIELDS = ['c1', 'c2', 'c3', 'c4', 'c5', 'main', 'sticker', 'ghost'] as const;
+
+/** Sorgu kayıtlarından (köprünün `/run_sql` cevabındaki fiziksel SQL) kartların sorgu bilgisi. Kayıt yoksa sessiz
+ *  kalmaz: pencere nedenini yazar. */
+export function cfoKaynaklar(given: RawSets['sources'], dataEnd?: string | null): Kaynaklar {
+  const sources: Kaynaklar['sources'] = {};
+  for (const [name, s] of Object.entries(given ?? {})) {
+    if (!s?.sql) continue;
+    const id = `cfo.${name}`;
+    sources[id] = { ...s, id, title: SOURCE_TITLES[name] ?? s.title, origin: [] };
+  }
+  const has = (ref: string) => (ref.startsWith('hesap:') ? true : Boolean(sources[`cfo.${ref}`]));
+  const formulas: Kaynaklar['formulas'] = {};
+  for (const [name, f] of Object.entries(FORMULAS)) {
+    formulas[name] = {
+      name,
+      text: f.text,
+      inputs: f.inputs.filter(has).map((r) => (r.startsWith('hesap:') ? r : `cfo.${r}`)),
+    };
+  }
+  const fields: Kaynaklar['fields'] = {};
+  for (const c of CARD_FIELDS) fields[c] = `hesap:${c}`;
+  const empty = Object.keys(sources).length === 0;
+  return {
+    sources,
+    formulas,
+    fields,
+    dataEnd: dataEnd ?? null,
+    ...(empty
+      ? { error: 'Özet henüz sorgu bilgisini taşımıyor; özet yeniden üretilince (birkaç dakika içinde) görünür.' }
+      : {}),
+  };
+}
 
 /** Ham sonuç kümelerinden ekranın beklediği özet. Hem arka plandaki dosya
  *  hem canlı sorgular bu fonksiyondan geçer; hesap tek yerde. */
@@ -142,6 +256,7 @@ function shape(r: RawSets): CfoData {
     generatedAt: r.generatedAt,
     sql: r.sql ?? null,
     db: r.db ?? null,
+    kaynaklar: cfoKaynaklar(r.sources, r.totals?.son_fatura?.slice(0, 10) ?? null),
     observedMonths,
     netYtd,
     netPrevSame,
@@ -159,7 +274,11 @@ async function fetchSnapshot(): Promise<RawSets> {
   });
   if (res.status === 401 || res.status === 403) throw new EngineAuthError();
   if (!res.ok) throw new Error(httpErrorText(res.status));
-  const j = (await res.json()) as Partial<RawSets> & { generatedAt?: string; db?: DbTiming | null };
+  const j = (await res.json()) as Partial<RawSets> & {
+    generatedAt?: string;
+    db?: DbTiming | null;
+    kaynakSorgulari?: RawSets['sources'];
+  };
   return {
     months: j.months ?? [],
     prevMonths: j.prevMonths ?? [],
@@ -176,22 +295,10 @@ async function fetchSnapshot(): Promise<RawSets> {
     db: j.db ?? { dbMs: null, computedAt: j.generatedAt ?? null },
     // Eski üretici bu alanı yazmıyordu: yoksa aylık kırpmaya düşülür.
     prevSameDate: j.prevSameDate,
+    // Sorgu başına köprünün kaydı (fiziksel SQL); eski üretici yazmıyorsa pencere nedenini söyler.
+    sources: j.kaynakSorgulari,
   };
 }
-
-/** Canlı yolda koşan sekiz sorgunun tam metni; snapshot düşse de kaynak görünür kalır. */
-const LIVE_SQL = [
-  ['months', SQL.months(YEAR)],
-  ['prevMonths', SQL.months(PREV)],
-  ['totals', SQL.totals(YEAR)],
-  ['units', SQL.units(YEAR)],
-  ['channels', SQL.channels(YEAR)],
-  ['customers', SQL.customers(YEAR)],
-  ['items', SQL.topItem(YEAR)],
-  ['returnItems', SQL.returnItems(YEAR)],
-]
-  .map(([name, sql]) => `-- ${name}\n${sql}`)
-  .join('\n\n');
 
 /**
  * Önce arka plandaki özet okunur (tek istek, anlık). Ulaşılamazsa sekiz sorgu
@@ -233,6 +340,7 @@ export function useCfoData(): CfoData {
   if (authRequired) return { ...EMPTY, ready: false, authRequired: true, failed: false };
   if (!snapFailed) return { ...EMPTY, ready: false, authRequired: false, failed: false };
 
+  const NAMES = ['months', 'prevMonths', 'totals', 'units', 'channels', 'customers', 'items', 'returnItems'] as const;
   const [months, prev, totals, units, channels, customers, items, returnItems] = q;
   const ready = q.some((r) => r.isSuccess);
   if (!ready) return { ...EMPTY, ready: false, authRequired: false, failed: q.every((r) => r.isError) };
@@ -247,9 +355,16 @@ export function useCfoData(): CfoData {
     computedAt: stamps.length ? Math.min(...stamps) : null,
     queries: done.length,
   };
+  // Gösterilen/kopyalanan metin köprünün koşturduğu fiziksel SQL'dir (mantıksal metin SSMS'te aynı sonucu vermez).
+  const physical = NAMES.map((name, i) => [name, q[i].data?.physicalSql] as const).filter(([, t]) => Boolean(t));
+  const sources: RawSets['sources'] = {};
+  NAMES.forEach((name, i) => {
+    sources[name] = q[i].data?.kaynaklar?.sources?.sorgu;
+  });
   return shape({
     db,
-    sql: LIVE_SQL,
+    sql: physical.length ? physical.map(([name, t]) => `-- ${name}\n${t}`).join('\n\n') : null,
+    sources,
     months: rec<MonthRow>(months),
     prevMonths: rec<MonthRow>(prev),
     totals: rec<TotalsRow>(totals)[0] ?? null,

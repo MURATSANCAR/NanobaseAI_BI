@@ -247,6 +247,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     c1: {
       icon: '💰',
       title: 'Net ciro',
+      info: { k: c.kaynaklar, alan: 'c1', label: 'Net ciro' },
       sql: sqlOf('months', 'prevSameDate', 'prevMonths', 'totals'),
       badge: c.yoyPct == null ? String(c.year) : `${c.yoyPct >= 0 ? '+' : ''}${trPct(c.yoyPct)}`,
       big: yok(money(c.netYtd)),
@@ -261,6 +262,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c2: {
       title: 'Aylık seyir',
+      info: { k: c.kaynaklar, alan: 'c2', label: 'Aylık seyir' },
       sql: sqlOf('months', 'prevMonths'),
       badge: `${c.observedMonths || 0} ay`,
       label: lastFull ? `${AY[lastFull.ay - 1]} (son tam ay)` : 'Ay verisi yok',
@@ -275,6 +277,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c3: {
       title: 'Kanal dağılımı',
+      info: { k: c.kaynaklar, alan: 'c3', label: 'Kanal dağılımı' },
       sql: sqlOf('channels', 'totals'),
       badge: `${c.year} · brüt`,
       center: yok(money(toptan + perakende + diger + iade)),
@@ -290,6 +293,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c4: {
       title: 'En büyük cari',
+      info: { k: c.kaynaklar, alan: 'c4', label: 'En büyük cari' },
       sql: sqlOf('customers', 'months'),
       badge: top && c.netYtd > 0 ? trPct((top.net_ciro / c.netYtd) * 100) : '—',
       initials: (top?.cari ?? '??').slice(0, 2).toUpperCase(),
@@ -304,6 +308,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     },
     c5: {
       title: 'Kanıt & Kaynak',
+      info: { k: c.kaynaklar, alan: 'c5', label: 'Kanıt ve kaynak' },
       badge: durum ? 'Bağlantı' : 'Canlı',
       summary: durum || `${money(c.units?.satir ?? 0)} satır · ${money(c.units?.baslik_sayisi ?? 0)} başlık`,
       rows: [
@@ -318,6 +323,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
     main: {
       badge: 'ZEKİ AI ÖZETİ',
       subject: `Net ciro · ${c.year}`,
+      info: { k: c.kaynaklar, alan: 'main', label: 'Özet' },
       sql: sqlOf('months', 'prevSameDate', 'prevMonths', 'totals', 'units'),
       timing: durum ? null : c.db,
       model: durum || `${sonTR} itibarıyla`,
@@ -334,6 +340,7 @@ export function cfoData(c: CfoData, source: string): StitchCanvasData {
       note: `${c.observedMonths || 0} ay gerçekleşti`,
     },
     sticker: {
+      info: { k: c.kaynaklar, alan: 'sticker', label: 'En çok satan' },
       kicker: 'En çok satan',
       meta: item ? `${money(item.adet)} adet` : '—',
       title: item?.urun ?? yok('VERİ YOK'),

@@ -8,6 +8,7 @@
  */
 import type { DbTiming } from './DbTiming';
 import { httpErrorText } from './httpError';
+import type { Kaynaklar } from './components/sqlInfo';
 
 const RAW_BASE = (import.meta.env.VITE_ENGINE_BASE as string | undefined) ?? '';
 export const ENGINE_BASE = RAW_BASE.replace(/\/$/, '');
@@ -51,6 +52,10 @@ export type SqlResult<T> = DbTiming & {
   records: T[];
   totalRows?: number;
   truncated?: boolean;
+  /** Köprünün veritabanında gerçekten koşturduğu metin (dönem ve yıl kopyaları çözülmüş). */
+  physicalSql?: string;
+  /** Sorgu bilgisi: gösterilen ve kopyalanan SQL fiziksel metindir. */
+  kaynaklar?: Kaynaklar;
 };
 
 async function post<T>(path: string, body: unknown, timeoutMs = 45_000): Promise<T> {
@@ -104,7 +109,12 @@ export type AskAnswer = DbTiming & {
   /** Soru kaydının kimliği (sl_query_log): cevabın altındaki «Doğru / Kısmen / Yanlış» bununla yazılır (M50). */
   queryId?: string;
   type?: string;
+  /** Mantıksal SQL (katalog adları); panoya kart eklerken saklanır, kullanıcıya gösterilmez. */
   sql?: string;
+  /** Köprünün Logo/CRM'de koşturduğu fiziksel SQL; ekranda gösterilen ve kopyalanan budur. */
+  physicalSql?: string;
+  /** Sorgu bilgisi (cevaptaki her rakamın SQL'i). */
+  kaynaklar?: Kaynaklar;
   summary?: string;
   explanation?: string;
   columns?: Array<{ name: string; type: string }>;

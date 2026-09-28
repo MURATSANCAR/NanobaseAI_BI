@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import Shell from './Shell';
 import Node, { LayoutProvider, useLayout, type BoxMap } from './layout';
 import zekiGif from '@/assets/zeki-ai.gif';
-import type { StitchCanvasData } from './data';
+import type { CardInfo, StitchCanvasData } from './data';
+import SqlInfo from '../components/SqlInfo';
 import DbTimingBadge from '../DbTiming';
 import CardSql from './CardSql';
 import { useCan } from '../useAdmin';
@@ -341,6 +342,7 @@ function CanvasBody({
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-coral/10 text-coral flex items-center justify-center text-xs font-bold">{d.c1.icon}</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c1.title}</span>
+              <Inf i={d.c1.info} />
             </div>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-600 border border-red-100">{d.c1.badge}</span>
           </div>
@@ -380,6 +382,7 @@ function CanvasBody({
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-violet/10 text-violet flex items-center justify-center text-xs font-bold">📈</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c2.title}</span>
+              <Inf i={d.c2.info} />
             </div>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-violet/10 text-violet border border-violet/20">{d.c2.badge}</span>
           </div>
@@ -434,6 +437,7 @@ function CanvasBody({
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-emerald-50 text-mintSuccess flex items-center justify-center text-xs font-bold">🍩</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c3.title}</span>
+              <Inf i={d.c3.info} />
             </div>
             <span className="text-[11px] font-bold text-muted">{d.c3.badge}</span>
           </div>
@@ -504,6 +508,7 @@ function CanvasBody({
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-amber-50 text-amberWarn flex items-center justify-center text-xs font-bold">✍️</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c4.title}</span>
+              <Inf i={d.c4.info} />
             </div>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200/60">{d.c4.badge}</span>
           </div>
@@ -545,6 +550,7 @@ function CanvasBody({
             <div className="flex items-center gap-2">
               <span className="w-6 h-6 rounded-lg bg-slate-100 text-slate-700 flex items-center justify-center text-xs font-bold">🔍</span>
               <span className="text-xs font-extrabold tracking-tight text-ink">{d.c5.title}</span>
+              <Inf i={d.c5.info} />
             </div>
             {/* Tiny Sample Data Chip Inside Kanıt Card as requested */}
             <span className="text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 text-muted border border-slate-200">{d.c5.badge}</span>
@@ -608,6 +614,7 @@ function CanvasBody({
                 {d.main.badge}
               </span>
               <span className="text-xs text-muted font-medium">{d.main.subject}</span>
+              <Inf i={d.main.info} />
             </div>
             <div className="flex items-center gap-2 text-xs font-semibold text-muted">
               <span className="inline-block w-2 h-2 rounded-full bg-mintSuccess animate-ping"></span>
@@ -694,6 +701,11 @@ function CanvasBody({
         {/* Positioned pinned near the decision card with tape effect, tilted 6° */}
         <Node id="sticker" tilt={6} z={30} resizable={false} className="group hidden xl:block">
         <div>
+          {d.sticker.info && (
+            <span className="absolute -right-2 -top-2 z-50 rounded-full bg-white shadow-md">
+              <Inf i={d.sticker.info} />
+            </span>
+          )}
           {/* Washi Tape Pin */}
           <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-6 washi-tape rounded-sm z-40"></div>
         
@@ -792,4 +804,11 @@ function CanvasBody({
 
     </Shell>
   );
+}
+
+/** Kart başlığının yanındaki «i»: rakamların hesabı ve çalışan SQL (kopyalanabilir). Düğme olduğu için sürükleme
+ *  buradan başlamaz (layout INTERACTIVE). */
+function Inf({ i }: { i?: CardInfo }) {
+  if (!i) return null;
+  return <SqlInfo k={i.k} alan={i.alan} label={i.label} />;
 }

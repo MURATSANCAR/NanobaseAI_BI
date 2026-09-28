@@ -1,6 +1,10 @@
 /** Stitch kanvasının metin yuvaları. Tasarım sabit; bu tip yalnız hangi
  *  metnin nereye gireceğini söyler. Yeni ekran = yeni bir bu nesne. */
 import type { DbTiming } from '../DbTiming';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Kartın sorgu bilgisi: başlığın yanındaki «i» (hesap + çalışan SQL'in tamamı, kopyalanabilir). */
+export type CardInfo = { k: Kaynaklar | null | undefined; alan: string; label: string };
 
 export type StitchRow = { label: string; value: string };
 export type StitchSourceRow = { name: string; tag: string };
@@ -34,6 +38,7 @@ export type StitchCanvasData = {
   dock: [string, string, string, string];
   q: { initials: string; role: string; at: string; text: string };
   c1: {
+    info?: CardInfo;
     /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
     sql?: string;
     icon: string;
@@ -50,6 +55,7 @@ export type StitchCanvasData = {
     rowValue: string;
   };
   c2: {
+    info?: CardInfo;
     /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
     sql?: string;
     title: string;
@@ -68,6 +74,7 @@ export type StitchCanvasData = {
     dot: [number, number];
   };
   c3: {
+    info?: CardInfo;
     /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
     sql?: string;
     title: string;
@@ -80,6 +87,7 @@ export type StitchCanvasData = {
     footValue: string;
   };
   c4: {
+    info?: CardInfo;
     /** Kartın rakamlarını üreten sorgular; "SQL'i göster" bunu açar. Yoksa düğme görünmez. */
     sql?: string;
     title: string;
@@ -94,6 +102,7 @@ export type StitchCanvasData = {
     footValue: string;
   };
   c5: {
+    info?: CardInfo;
     title: string;
     badge: string;
     summary: string;
@@ -105,6 +114,7 @@ export type StitchCanvasData = {
     timing?: DbTiming | null;
   };
   main: {
+    info?: CardInfo;
     /** Özetin dayandığı SQL; cevap görünümünde motorun ürettiği sorgu. */
     sql?: string;
     badge: string;
@@ -139,6 +149,6 @@ export type StitchCanvasData = {
     /** «Neden?»: farkın kanal/cari/kitap katkısı; yalnız ayrıştırılabilir cevapta. */
     reason?: { queryId: string };
   };
-  sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
+  sticker: { info?: CardInfo; kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
   ghost: { title: string; badge: string; text: string; foot: string };
 };
