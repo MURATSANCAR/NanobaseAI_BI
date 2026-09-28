@@ -46,7 +46,6 @@ function YearEndPanel({ y }: { y: YearEnd }) {
   );
 }
 
-function Summary({ title, g, help }: { title: string; g: GroupTrack; help: string }) {
 function Summary({ title, g, help, info }: { title: string; g: GroupTrack; help: string; info?: ReactNode }) {
   return (
     <div className="glass-panel rounded-2xl p-3.5 shadow-glass-float sm:rounded-3xl sm:p-4">
