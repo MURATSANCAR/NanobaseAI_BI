@@ -6746,6 +6746,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
     from semantic_bridge import marketing
     app.state.marketing = marketing.register(app, rt, _require_caller, _can)
+
+    # M53 Set, hediye ve promosyon (pazarlama çekirdeğinin yanında, kendi `semantic_mkt_set*` tablolarıyla): set envanteri,
+    # fiyat–marj, öneri, açılacak kart, kurumsal hediye, promosyon ürünleri. Uçlar /api/v1/marketing/sets*, /gift-offers*,
+    # /promo-items; M15'in /api/v1/marketing/* uçlarıyla yol çakışması yok.
+    from semantic_bridge import sets_api
+    app.state.marketing_sets = sets_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("marketing", priority),
+    })
     return app
 
 

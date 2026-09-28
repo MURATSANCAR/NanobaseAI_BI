@@ -350,6 +350,11 @@
       "key": "sayfa:kurumsal-satis",
       "area": "satis",
       "label": "Kurumsal ve B2B"
+    },
+    {
+      "key": "sayfa:pazarlama-set-hediye",
+      "area": "pazarlama",
+      "label": "Set ve hediye"
     }
   ],
   "features": [
@@ -931,6 +936,36 @@
       "label": "Materyal editoryal onayı",
       "hint": "Föy, basın bülteni, sosyal medya metni gibi materyallerin kitabın içeriğine uygunluğunu onaylama",
       "explicit": true
+    },
+    {
+      "key": "ozellik:set.yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Set, öneri ve kurumsal teklif hazırlama",
+      "hint": "Set taslağı ve bileşenleri, öneriyi taslağa alma/reddetme, onaya gönderme, CRM kartıyla eşleme, ZEKİ AI metinleri, kurumsal hediye teklifi, veri yenileme"
+    },
+    {
+      "key": "ozellik:set.onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Set onayı (fiyat dahil)",
+      "hint": "Onaya gönderilen seti ve fiyatını onaylama ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:set.teklif-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Kurumsal hediye teklifi onayı",
+      "hint": "Kurumsal hediye teklifini gönderilebilir yapma ya da geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:set.maliyet-gor",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-set-hediye",
+      "label": "Set maliyeti ve marjı",
+      "hint": "Bileşen birim maliyeti, ambalaj maliyeti ve marjı görme; yoksa yalnız fiyat ve indirim görünür"
     }
   ]
 }

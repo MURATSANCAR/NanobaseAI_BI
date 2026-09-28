@@ -481,6 +481,11 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/tenders/run-due", SYSTEM),
     ("/api/v1/tenders/", frozenset({page("ihale")})),
     # Pazarlama çekirdeği (M15; M16–M18 kendi sayfa anahtarlarını buraya ve sözleşme satırına ekler).
+    # M53 Set, hediye ve promosyon (Pazarlama → Üretim).
+    ("/api/v1/marketing/sets/run-due", SYSTEM),
+    ("/api/v1/marketing/sets/", frozenset({page("pazarlama-set-hediye")})),
+    ("/api/v1/marketing/gift-offers/", frozenset({page("pazarlama-set-hediye")})),
+    ("/api/v1/marketing/promo-items", frozenset({page("pazarlama-set-hediye")})),
     ("/api/v1/marketing/run-due", SYSTEM),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
@@ -594,6 +599,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      "ozellik:pazarlama.plan-yaz"),
     (frozenset({"GET"}), r"^/api/v1/marketing/plans/[^/]+/(export\.(pdf|csv)|package\.zip|crm-todo\.csv)$",
      "ozellik:veri.disa-aktar"),
+    # M53 Set ve hediye: set/öneri/teklif yazma, veri yenileme. Set onayı (`set.onay`) ve teklif onayı (`set.teklif-onay`)
+    # açıkça verilir, ucun içinde denetlenir; fiyat hesabı (price) kaydetmez, sayfa yetkisiyle gelir.
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/marketing/sets(/refresh|/suggestions/[^/]+/(adopt|dismiss)|/(?!run-due$)[^/]+(/(items|submit|withdraw|link|text))?)?$",
+     "ozellik:set.yaz"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/marketing/gift-offers(/[^/]+(/(letter|submit|withdraw))?)?$",
+     "ozellik:set.yaz"),
+    (frozenset({"GET"}), r"^/api/v1/marketing/sets/[^/]+/card-todo\.(csv|pdf)$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),
