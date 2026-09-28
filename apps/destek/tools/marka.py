@@ -320,6 +320,16 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 		[('        <!-- Key Info (core fields) -->\n', '        <NanobaseAIPanel />\n\n        <!-- Key Info (core fields) -->\n'),
 		 ('import TicketSLA from "./TicketSLA.vue";\n', 'import TicketSLA from "./TicketSLA.vue";\nimport NanobaseAIPanel from "./NanobaseAIPanel.vue";\n')],
 	),
+	(
+		# Üst kaynak hatası (marka değil): artımlı eşitleme, son eşitlemeden sonra silinen belge adlarını bilgi
+		# bankasından siliyordu; aynı adla yeniden açılmış (hâlâ var olan) kaydın parçası da gidiyordu.
+		"flow/flow/knowledge/ingest.py",
+		[('			pluck="deleted_name",\n		)\n	)\n	to_remove = exits | deleted\n',
+		  '			pluck="deleted_name",\n		)\n	)\n'
+		  '	if deleted:\n'
+		  '		deleted -= set(frappe.get_all(ref, filters={"name": ["in", list(deleted)]}, pluck="name"))\n'
+		  '	to_remove = exits | deleted\n')],
+	),
 	# ── Flow ──────────────────────────────────────────────────────────────
 	(
 		"flow/flow/hooks.py",

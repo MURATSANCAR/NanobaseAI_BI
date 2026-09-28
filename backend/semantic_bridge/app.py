@@ -1672,7 +1672,9 @@ class AskIn(BaseModel):
 
 class FeedbackIn(BaseModel):
     queryId: str
-    validated: bool
+    validated: bool | None = None
+    # M50: cevabın altındaki düğme — dogru | kismen | yanlis (+ not). Eski gövde {queryId, validated} geçerli kalır.
+    verdict: str | None = None
     comment: str | None = None
 
 
@@ -2049,16 +2051,33 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return (401, "Oturum gerekli."), _NO_SCOPE
         r = rt()
         admin_mod.ensure(r.store.engine)
+
+        def _log(kind: str, key: Optional[str]) -> None:
+            # M49: yalnız 403 kararı ve dışa aktarma yazılır (her istek değil); yazılamazsa istek durmaz.
+            from semantic_bridge import data_security as ds_mod
+            ds_mod.record_access(r.store.engine, user, kind, method, path, key)
+
         if rule is None:
             log.warning("access: kuralı olmayan uç kişiye kapalı: %s", path)
-            return (None if admin_mod.is_admin(user) else (403, "Bu işleme yetkiniz yok.")), _NO_SCOPE
+            if admin_mod.is_admin(user):
+                return None, _NO_SCOPE
+            _log("forbidden", None)
+            return (403, "Bu işleme yetkiniz yok."), _NO_SCOPE
         if rule == access_mod.SYSTEM:
-            return (None if admin_mod.is_admin(user) else (403, "Bu işlem zamanlayıcıya aittir.")), _NO_SCOPE
+            if admin_mod.is_admin(user):
+                return None, _NO_SCOPE
+            _log("forbidden", "zamanlayici")
+            return (403, "Bu işlem zamanlayıcıya aittir."), _NO_SCOPE
         acc = access_mod.effective(r.store.engine, r.settings.tenant_id, user, admin_mod.is_admin)
         if rule != access_mod.OPEN and not acc.can(*rule):
+            _log("forbidden", ",".join(sorted(rule)))
             return (403, "Bu sayfaya yetkiniz yok."), _NO_SCOPE
-        if any(not acc.can(k) for k in wanted):
+        missing = [k for k in wanted if not acc.can(k)]
+        if missing:
+            _log("forbidden", ",".join(missing))
             return (403, "Bu işlem rolünüzde yok."), _NO_SCOPE
+        if "ozellik:veri.disa-aktar" in wanted:
+            _log("export", "ozellik:veri.disa-aktar")
         return None, (access_mod.allowed_domains(acc) if data else _NO_SCOPE)
 
     @app.middleware("http")
@@ -2243,7 +2262,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # ne ön yüz ne betikler kullanıyordu (yetki analizi, bölüm 7.8).
 
     @app.post("/api/v1/feedback")
-    def feedback(body: FeedbackIn) -> dict[str, Any]:
+    def feedback(body: FeedbackIn, request: Request) -> dict[str, Any]:
+        # Oturumlu kişi ya da Doğru/Kısmen/Yanlış hükmü: M50 geri bildirim kaydı (kuyruk + validated). Çerezsiz eski
+        # çağrı (yalnız validated) eskisi gibi yalnız sl_query_log.validated'ı günceller.
+        mq = getattr(app.state, "model_quality", None)
+        if mq is not None and (body.verdict or "timas_session" in request.headers.get("cookie", "")):
+            return mq.feedback(request, {"queryId": body.queryId, "validated": body.validated,
+                                         "verdict": body.verdict, "comment": body.comment})
+        if body.validated is None:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "validated ya da verdict gerekli."})
         ok = rt().store.mark_validated(body.queryId, body.validated)
         return {"ok": ok, "queryId": body.queryId, "validated": body.validated, "note": "validated pairs feed the History Miner on the next pipeline run"}
 
@@ -5386,12 +5413,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M4 → M8: çeviri işinin serbest çalışanı, kelime ücreti, M8 iş paketi ve hakedişe aktarım (translation_payout.py).
     from semantic_bridge import translation_payout as tr_payout_mod
     tr_payout_mod.register(app, {"auth": _tr, "audit": admin_mod.audit})
-<<<<<<< HEAD
-=======
     # Dış çeviri belleği (TMX) ve terim bankası TBX içe/dışa aktarımı: uçlar editorial_translation_io.py'de.
     from semantic_bridge import editorial_translation_io as tr_io
     tr_io.register(app, _tr, _tr_call, _attachment, admin_mod.audit)
->>>>>>> df8a23cf40a4ba9871d18082778a298fc177604c
 
     # ------------------------------------------------------------------ serbest çalışanlar (M8)
     # Kayıt + portfolyo, iş paketi ve toplu dağıtım, kapasite, teslim, hakediş, yazışma. Kendi tablolarımız;
@@ -6973,6 +6997,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     app.state.unit_cost = app.state.pricing_costs.labelled()                        # M33 (tenders_api okur)
     from semantic_bridge import sets_sources
     sets_sources.register_cost_provider(app.state.pricing_costs.birim)              # M53 (SETS_COST_SOURCE=m9)
+    # M45 Finansal raporlama (/api/v1/finance/*): M46 bütçesini ve M9 maliyetini okur, bu yüzden ikisinden sonra.
+    from semantic_bridge import finance_api
+    app.state.finance = finance_api.register(app, rt, _require_caller, _can)
 
     # M33 İhale takibi (Satış ve saha): /api/v1/tenders/*.
     from semantic_bridge import tenders_api
@@ -6980,6 +7007,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     from semantic_bridge import categories_api
     app.state.categories = categories_api.register(app, rt, _require_caller, _can)
+    # M49 Veri güvenliği (Altyapı ve destek): /api/v1/data-security/*. Giriş olayları giriş servisinden çekilir.
+    from semantic_bridge import data_security_api
+    app.state.data_security = data_security_api.register(app, rt, _require_caller, _can, access_dir)
+    # H2 Okuyucu veri tabanı (Pazarlama › Okur ve müşteri): /api/v1/readers/*.
+    from semantic_bridge import readers_api
+    app.state.readers = readers_api.register(app, rt, _require_caller, _can)
+    # M39 Pazar araştırması ve rekabet (Analiz): /api/v1/pazar/*.
+    from semantic_bridge import pazar_api
+    app.state.pazar = pazar_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing
@@ -7007,6 +7043,28 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "studio_jobs": _production_studio.jobs,
     })
 
+    # M52 Tedarik ve baskı: M12 kartları (production.Service) + CRM kağıt/teknik alanları + Logo tedarikçi borç, ödeme
+    # planı ve baskı faturası (salt okunur); plan girdisi Baskı Öneri (M11) ve M10 onaylı ilk baskı, maliyet M9.
+    # Uçlar /api/v1/supply/*; CRM'e, Logo'ya, matbaaya yazma/gönderim yok.
+    from semantic_bridge import supply_api
+    from semantic_bridge.budget_api import _send_mail as _supply_send_mail
+    from semantic_bridge.management import ilk_baski_api as _supply_fp
+
+    def _supply_decisions(engine, tenant):
+        _supply_fp.ensure(engine)
+        return _supply_fp.list_decisions(engine, tenant, status="onaylandi")
+
+    app.state.supply = supply_api.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get, "require_caller": _require_caller,
+        "runtime": lambda: (rt().store.engine, rt().settings.tenant_id), "production": app.state.production,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("tedarik", priority), "send_mail": _supply_send_mail,
+        "report_data": lambda: app.state.management_reports.read("baski-oneri").get("data"),
+        "decisions": _supply_decisions, "unit_costs": lambda codes: app.state.unit_cost.unit_costs(codes),
+    })
+
     # M30 Saha satış ve tahsilat (BMT): CRM atama/risk/tahsilat + Logo bakiye/yaşlandırma/satış; uçlar /api/v1/field/*.
     from semantic_bridge import field_sales_api
     app.state.field_sales = field_sales_api.register(app, {
@@ -7016,6 +7074,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
         "logo_connect": _production_connect(lambda: rt().settings.connection_file),
         "llm": lambda: rt().llm_for("saha"), "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
+
+    # M59 Kitapçı/bayi risk ve performans: M30 kaynak fonksiyonlarıyla günlük skor, segment, limit önerisi; /api/v1/dealers/*.
+    from semantic_bridge import dealers_api
+    from semantic_layer.runtime.llm_queue import BATCH as _DEALERS_BATCH
+
+    app.state.dealers = dealers_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda batch: rt().llm_for("dealers", _DEALERS_BATCH if batch else None),
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
     })
 
     # M31 Okul tanıtım ve ziyaret: CRM ziyaret yerleri/etkinlik/sipariş + Logo stok/fiyat/bayi satışı (salt okunur) +
@@ -7043,6 +7115,70 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "logo_file": lambda: rt().settings.connection_file,
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("kurumsal", priority),
+    })
+
+    # M51 Müşteri hizmetleri: destek masası (apps/destek) REST ile salt okunur; CRM sipariş/kargo + Logo fatura bağlamı,
+    # bayi görünümü, Zeki AI sınıflama/SSS/taslak, kalite panosu. Uçlar /api/v1/support/*.
+    from semantic_bridge import support_api
+    app.state.support = support_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority=None: rt().llm_for("destek", priority),
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
+
+    # M38 Müşteri ilişkileri ve CRM: cari değer, kayıp riski, portföy, aksiyon, CRM veri sağlığı. Uçlar /api/v1/musteri/*.
+    from semantic_bridge import musteri_api
+    from semantic_layer.runtime.llm_queue import BATCH as _MUSTERI_BATCH
+
+    app.state.musteri = musteri_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority: rt().llm_for("musteri", priority), "batch": _MUSTERI_BATCH,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+    })
+
+    # M27 Fuar, etkinlik ve ödül: CRM etkinlik/sipariş + Logo fuar kanalı/stok (salt okunur) + portal kayıtları.
+    # Uçlar /api/v1/events/*.
+    from semantic_bridge import events_api
+    app.state.events = events_api.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority: rt().llm_for("etkinlik", _SCHOOLS_BATCH if priority else None),
+        "system": lambda: (rt().store.engine, rt().settings.tenant_id),
+        "require_caller": _require_caller,
+    })
+
+    # M28 Kurumsal ilişkiler: kanaat önderi/kurum kartı, hediye kitap programı, kamu projeleri. Uçlar /api/v1/public-affairs/*.
+    from semantic_bridge import public_affairs_api
+    app.state.public_affairs = public_affairs_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("iliskiler", priority),
+    })
+
+    # M43 Depo ve stok (Lojistik): Logo bakiye/ambar, satış hızı (Baskı Öneri'nin SQL'i), CRM raf/aktarım/depo hattı,
+    # M12 açık üretim kartı, M9 birim maliyeti; eşik ve öneri portalda. Uçlar /api/v1/stock/*.
+    from semantic_bridge import stock_api
+    app.state.stock = stock_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("stok", priority),
+        "m12": lambda: getattr(app.state, "production", None), "costs": lambda: getattr(app.state, "pricing_costs", None),
     })
 
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
@@ -7075,8 +7211,152 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_system": lambda: (admin_mod.conf("CRM_SCHEMA"), lambda sql: rt().run_sql(sql, rt().settings.max_rows)),
     })
 
+    # M36 Dijital yayın ve e-kitap: katalog, hak kararı, fırsat, platform durumu, satış raporu yükleme. Uçlar
+    # /api/v1/dijital/*; tablolar semantic_dijital_*. CRM/Logo/stüdyo yalnız okunur; platformlara hiçbir şey gönderilmez.
+    from semantic_bridge import dijital_api
+    from semantic_bridge import editorial_studio_epub as _dijital_epub
+    app.state.dijital = dijital_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("dijital", priority),
+        "studio_jobs": _production_studio.jobs, "studio_view": _dijital_epub.view, "send_mail": _mkt_send_mail,
+    })
+    # M54 hak haritası main'e girince: dijital_sources.register_rights_provider(<kitap × biçim hak kararı işlevi>).
+
+    # M35 E-ticaret kampanya yönetimi: kayıt defteri, simülasyon ve kontroller, aday, takvim, sonuç ve öğrenim. Uçlar
+    # /api/v1/kampanya/*; tablolar semantic_kampanya_*. Birim maliyet M9 sağlayıcısından; dış kanala gönderim yok.
+    # M34 (e-ticaret platform) hazır olunca: kampanya_sources.register_platform_items(<M34 ürün aktifliği/stok okuyucusu>).
+    from semantic_bridge import kampanya as kampanya_mod
+    from semantic_bridge import kampanya_api
+    from semantic_bridge.budget_api import _send_mail as _kampanya_send_mail
+    kampanya_mod.register_cost_provider(app.state.pricing_costs.unit_costs)
+    app.state.kampanya = kampanya_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("kampanya", priority),
+        "send_mail": _kampanya_send_mail, "directory": _directory,
+    })
+
+    # M44 Lojistik ve kargo: günlük hat, gönderi kartı, firma karnesi, mutabakat, taslak ve karar kaydı. Uçlar
+    # /api/v1/shipping/*; tablolar semantic_shipping_*; CRM/Logo yalnız okunur, kargo firmasına hiçbir şey gitmez.
+    from semantic_bridge import shipping_api
+    from semantic_bridge.corporate_sales_api import send_mail as _shipping_send_mail
+    app.state.shipping = shipping_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("kargo", priority), "send_mail": _shipping_send_mail,
+    })
+
     from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı
     editorial_studio_library.register(app, {"auth": _books, "audit": admin_mod.audit, "seo": app.state.seo_geo})
+
+    # H4 Kurumsal e-posta (timas@ genel kutusu, Gmail yalnız okuma): tür/öncelik önerisi, atama, SLA, yanıt taslağı,
+    # başvuru aktarımı. Uçlar /api/v1/mailbox/*. İş başvurusu yetkisi (`ozellik:eposta.ik`) yöneticiye kendiliğinden gelmez.
+    from semantic_bridge import mailbox_api
+
+    def _mail_granted(user: str, key: str) -> bool:
+        try:
+            return key in access_mod.effective(rt().store.engine, rt().settings.tenant_id, user, admin_mod.is_admin).perms
+        except Exception as e:  # noqa: BLE001
+            log.warning("mailbox: %s için %s okunamadı: %s", user, key, e)
+            return False
+
+    def _mail_people() -> list[dict[str, Any]]:
+        rows, _, _ = _crm_people()
+        return people_mod.people(rt().store.engine, rt().settings.tenant_id, rows)
+
+    app.state.mailbox = mailbox_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "granted": _mail_granted,
+        "is_admin": admin_mod.is_admin, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("mailbox", priority),
+        "people": _mail_people,
+    })
+
+    # M48 IT altyapı ve sistem durumu: halka denetimleri, olaylar, zamanlanmış işler, sürüm kaydı. Uçlar /api/v1/it-ops/*.
+    from semantic_bridge import it_ops_api
+    app.state.it_ops = it_ops_api.register(app, {
+        "require_caller": _require_caller, "can": _can, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "datasource": lambda: rt().settings.datasource_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("sistem", priority),
+        "run_check": admin_mod.run_check,
+    })
+
+    # M50 Zeki AI kalitesi: kapı koşuları, önce/sonra, sürüm kaydı, geri bildirim, hata sınıfları, karne.
+    # Uçlar /api/v1/model-quality/*; /api/v1/feedback bu servise yazar.
+    from semantic_bridge import model_quality_api
+    app.state.model_quality = model_quality_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "rt": rt,
+    })
+    # M54 Telif dönemi ve haklar (M6'nın hesap motoruyla dönem koşusu): /api/v1/royalty/*, /api/v1/rights/*.
+    from semantic_bridge import royalty_api
+    app.state.royalty = royalty_api.register(app, rt, _require_caller, _can)
+    # M47 Risk yönetimi ve uyum (Finans): risk kaydı, göstergeler, uyum takvimi, sigorta/BCP, brifing. /api/v1/risk/*.
+    from semantic_bridge import risk_api
+    app.state.risk = risk_api.register(app, rt, _require_caller, _can)
+    # M37 Okur topluluğu (Pazarlama › Okur ve müşteri): /api/v1/okur/*; okur sayıları H2 çekirdeğinden (okur_sources.ReadersCore).
+    from semantic_bridge import okur_api
+    app.state.okur = okur_api.register(app, rt, _require_caller, _can)
+    # M20 Basın, medya ve halkla ilişkiler (Pazarlama): PR dosyası, medya kişileri, gönderim, yansıma. /api/v1/pr/*.
+    from semantic_bridge import pr_api
+    app.state.pr = pr_api.register(app, rt, _require_caller, _can)
+    # M21 Dijital pazarlama ve reklam: harcama dosyası, kampanya ↔ kitap, Logo e-ticaret cirosu. Uçlar /api/v1/ads/*.
+    from semantic_bridge import ads_api
+    app.state.ads = ads_api.register(app, rt, _require_caller, _can)
+    # M22 Sosyal medya: tek takvim, onay, yayına hazır paket, performans içe aktarma (otomatik yayın yok). /api/v1/social/*.
+    from semantic_bridge import social_api
+    app.state.social = social_api.register(app, rt, _require_caller, _can)
+    # M23 İşbirlikleri (içerik üreticisi, gönderim, yayın, ödeme): /api/v1/influencers/*.
+    from semantic_bridge import influencers_api
+    app.state.influencers = influencers_api.register(app, rt, _require_caller, _can)
+    # M24 Katalog ve bülten (Pazarlama › Kampanya). Uçlar /api/v1/catalog-newsletter/*.
+    from semantic_bridge import catalogs_api
+    app.state.catalogs = catalogs_api.register(app, rt, _require_caller, _can)
+    # İnsan kaynakları: İK-0 ortak temel (/api/v1/hr/*; app.state.hr M56–M58'in de bağlandığı bağlam) ve M55 işe alım.
+    from semantic_bridge import hr_api, hr_recruit_api
+    app.state.hr = hr_api.register(app, rt, _require_caller)
+    hr_recruit_api.register(app, app.state.hr)
+    from semantic_bridge import hr_learning_api  # M57 eğitim ve gelişim (/api/v1/hr/learning/*, /api/v1/hr/visit)
+    hr_learning_api.register(app, app.state.hr)
+    # M42 Platform ve kanallar (M40/M41 aynı pakete eklenir): kanal karnesi, kitap × kanal, D2C, cari eşleme. /api/v1/channels/*.
+    from semantic_bridge import channels
+    app.state.channels = channels.register(app, rt, _require_caller, _can)
+    # M34 E-ticaret ve platform yönetimi: site (SEO eşitlemesinden) ↔ CRM ↔ Logo farkları, huni, pazar yeri sell-in,
+    # içerik paketi. Uçlar /api/v1/eticaret/*; tablolar semantic_eticaret_*; öneriler SEO öneri kaydına düşer. Yazma yok.
+    from semantic_bridge import eticaret_api
+    from semantic_bridge.budget_api import _send_mail as _ecom_send_mail
+    app.state.eticaret = eticaret_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("eticaret", priority), "seo": app.state.seo_geo, "send_mail": _ecom_send_mail,
+    })
+    # H3 E-ticaret müşteri yönetimi (Pazarlama › Okur ve müşteri): T-soft siparişinden müşteri tablosu, RFM, tetik listesi,
+    # kontrol gruplu sonuç. /api/v1/commerce/*; tablolar semantic_commerce_*. H2'ye `tsoft_member` kaynağı ve segment
+    # alanları, M42 D2C'ye site özeti bağlanır. T-soft'a/CRM'e/Logo'ya yazma yok.
+    from semantic_bridge import commerce_api
+    app.state.commerce = commerce_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("commerce", priority), "send_mail": _ecom_send_mail,
+    })
     return app
 
 

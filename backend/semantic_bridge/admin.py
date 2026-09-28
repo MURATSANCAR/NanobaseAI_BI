@@ -85,16 +85,30 @@ SPEC: list[dict[str, Any]] = [
      "help": "Eski dosyalar bu sayıdan sonra silinir"},
     {"key": "BUDGET_ALERT_RECIPIENTS", "group": "delivery", "label": "Bütçe uyarısı alıcıları", "type": "text", "default": "",
      "help": "Virgülle e-posta adresleri. Satış hedefinin eşik altına düşmesi ve departman bütçesi aşımı özetle gider"},
+    {"key": "FINANCE_SUMMARY_RECIPIENTS", "group": "delivery", "label": "Finansal sabah özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri (mali işler, genel müdür). İş günü 08:30'dan sonra özet kartlar ve «bu ay dikkat» listesi; ek dosya yok"},
+    {"key": "FINANCE_TAX_RECIPIENTS", "group": "delivery", "label": "Vergi takvimi hatırlatması alıcıları", "type": "text", "default": "",
+     "help": "Virgülle muhasebe e-posta adresleri. Beyanın son gününe 7 ve 2 gün kala hatırlatma"},
     {"key": "DIST_ALERT_RECIPIENTS", "group": "delivery", "label": "İlk dağılım uyarısı alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (satış, lojistik). Plansız kitap, sevk gecikmesi, hiç satmayan bölge özetle gider; müşteriye gönderim yok"},
     {"key": "TENDER_ALERT_RECIPIENTS", "group": "delivery", "label": "İhale hatırlatması alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç ekip e-posta adresleri (ihale sorumlusu, finans). Son teklif tarihi, belge geçerliliği, teminat iadesi ve onay bekleyen karar her sabah tek özetle gider; kuruma gönderim yok"},
+    {"key": "SUPPLY_ALERT_RECIPIENTS", "group": "delivery", "label": "Baskı yükü uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (prodüksiyon). Ay × matbaa eşik aşımı ve yeni yük dengeleme önerisi gece özetle gider; matbaaya gönderim yok"},
+    {"key": "SUPPLY_PAYMENT_RECIPIENTS", "group": "delivery", "label": "Matbaa/kağıtçı ödeme listesi alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (finans). Her pazartesi 08:00 önümüzdeki 30 günün ödemeleri (FIFO yaklaşımı) gider"},
     {"key": "TENDER_WATCH_ENABLED", "group": "delivery", "label": "İhale ilanı içe alma", "type": "bool", "default": "0",
      "help": "Resmî kaynaktan ilan içe alma (ikinci sürüm). Kapalıyken ilanlar elle ya da dosyayla girilir; müşteri ortamında kullanıcı kararı olmadan açılmaz"},
     {"key": "TENDER_PRICE_SOURCE", "group": "delivery", "label": "İhale teklifinde liste fiyatı", "type": "text", "default": "crm",
      "help": "crm = CRM KDV dahil liste fiyatı, logo = Logo geçerli satış fiyat listesi. Hangisi kullanıldığı teklif tablosunda yazar"},
     {"key": "TENDER_DEFAULT_VAT", "group": "delivery", "label": "İhale: varsayılan KDV oranı", "type": "text", "default": "0",
      "help": "CRM kitap kartında KDV oranı yoksa kullanılır; oran olarak (0,10 = %10)"},
+    {"key": "DEALERS_MORNING_RECIPIENTS", "group": "delivery", "label": "Bayi riski sabah özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (satış müdürü, finans). Her sabah segmenti düşen bayiler, vadesi geçmiş ve onay bekleyen limit önerileri; bayiye gönderim yok"},
+    {"key": "RISK_ALERT_RECIPIENTS", "group": "delivery", "label": "Risk ve uyum özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle risk ve uyum koordinatörünün adresleri. Kırmızıya dönen gösterge, aksiyon termini, gözden geçirme, uyum son günü ve poliçe bitişi her sabah tek özetle gider"},
+    {"key": "RISK_CRITICAL_RECIPIENTS", "group": "delivery", "label": "Kritik risk alıcıları", "type": "text", "default": "",
+     "help": "Virgülle adresler (genel müdür). Etkisi kritik (5) bir riske bağlı gösterge kırmızıya dönünce aynı gün gider"},
     # Toplantı odaları
     {"key": "ROOM_DAY_START", "group": "rooms", "label": "Takvim başlangıcı", "type": "time", "default": "08:00",
      "help": "Oda takviminin ilk saati, SS:DD"},
@@ -322,6 +336,30 @@ SPEC: list[dict[str, Any]] = [
      "help": "Virgülle iç e-posta adresleri (satış müdürü). Boşsa bildirim gitmez; kuyruk ekranda durur. Kuruma hiçbir e-posta gitmez"},
     {"key": "CORP_B2B_REPORT_TO", "group": "corporate", "label": "Haftalık bayi özeti alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri. Pazartesi sabahı sipariş vermeyen bayi listesi ekiyle gider; boşsa gitmez"},
+    # M28 Kurumsal ilişkiler
+    {"key": "REL_CONTACT_DAYS", "group": "relations", "label": "Temas aralığı (gün)", "type": "int", "default": "180",
+     "help": "Normal öncelikli kişiyle son temastan bu kadar gün geçince «temas zamanı gelen» listesine girer"},
+    {"key": "REL_CRITICAL_DAYS", "group": "relations", "label": "Kritik kişi temas aralığı (gün)", "type": "int", "default": "90",
+     "help": "Kritik işaretli kişi için aynı sınır; hiç temas yazılmamış kritik kişi de listeye girer"},
+    {"key": "REL_GIFT_GAP_DAYS", "group": "relations", "label": "Hediye aralığı (gün)", "type": "int", "default": "90",
+     "help": "Son hediyesi bundan yeni olan kişi hediye önerisinde geriye düşer (gerekçede yazar)"},
+    {"key": "REL_ORDER_TYPES", "group": "relations", "label": "Sayılan CRM sipariş tipleri", "type": "text", "default": "12,15,10,11",
+     "help": "Rapordaki tanıtım/bağış toplamı: 12 Pazarlama (Tanıtım Gönderimi), 15 Deprem Bağış, 10 Okul Örneği, 11 Öğretmen Örneği"},
+    {"key": "REL_ORDER_EXCLUDED_STATUS", "group": "relations", "label": "Sayılmayan sipariş durumları", "type": "text",
+     "default": "100000001,100000003",
+     "help": "CRM sipariş durum kodları (virgülle): 100000001 İptal Edildi, 100000003 Birleştirildi (satırları yeni siparişte de durur)"},
+    {"key": "REL_SHIPPED_STATUS", "group": "relations", "label": "Sevk sayılan sipariş durumu", "type": "text", "default": "100000000",
+     "help": "Hediye satırına yazılan CRM siparişi bu durumdaysa (ya da sevk tarihi doluysa) hediye «sevk edildi» olur"},
+    {"key": "REL_BANNED_TERMS", "group": "relations", "label": "Ek yasaklı alan sözcükleri", "type": "text", "default": "",
+     "help": "Virgülle. Alan listesine ve ilgi alanlarına yazılamaz. İnanç, mezhep, cemaat, siyasi görüş, parti, etnik köken, "
+             "sendika gibi sözcükler zaten yasak; bu liste yalnız genişletir"},
+    {"key": "REL_ALERT_RECIPIENTS", "group": "relations", "label": "Haftalık özet alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri. Pazartesi sabahı temas zamanı gelen kişiler, geciken proje adımları ve onay bekleyen "
+             "hediyeler gider; boşsa gitmez. Kişilere ve kurumlara hiçbir e-posta gitmez"},
+    {"key": "REL_LLM_MIN_PROB", "group": "relations", "label": "Alan önerisi: en düşük olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI'ın alan önerisi bu olasılığın altındaysa «emin değil» denir, alanı kullanıcı seçer"},
+    {"key": "REL_LLM_MIN_MARGIN", "group": "relations", "label": "Alan önerisi: en düşük marj", "type": "text", "default": "0.30",
+     "help": "Seçilen alanla ikinci aday arasındaki olasılık farkı bunun altındaysa öneri gösterilmez"},
     # Pazarlama (M15 yeni kitap planı; M16–M18 aynı grubu kullanır)
     {"key": "MARKETING_ALERT_RECIPIENTS", "group": "marketing", "label": "Pazarlama bildirim alıcıları", "type": "text",
      "default": "", "help": "Virgülle e-posta adresleri (pazarlama müdürü, onaycılar). Onaya gönderilen plan ve günlük özet "
@@ -361,6 +399,27 @@ SPEC: list[dict[str, Any]] = [
              "kanıtsız üstünlük iddiaları zaten yasak"},
     {"key": "MARKETING_TASK_TEMPLATE", "group": "marketing", "label": "Takvim şablonu (JSON)", "type": "text", "default": "",
      "help": "Boşsa varsayılan şablon. Biçim: [[gün, \"iş\", \"kanal\", \"materyal\"], …] — gün yayın gününe göre (−60 … +30)"},
+    # M43 Depo ve stok
+    {"key": "STOCK_BULLETIN_RECIPIENTS", "group": "stock", "label": "Sabah stok bülteni alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip adresleri (depo, üretim planlama). Bitecekler, aktarım hataları ve Logo–CRM farkı her sabah tek e-postayla"},
+    {"key": "STOCK_RUNOUT_DAYS", "group": "stock", "label": "Bitecekler: gün", "type": "int", "default": "30",
+     "help": "Yeterliliği bu günün altındaki kitap «bitecek» sayılır (ekranda değiştirilebilir)"},
+    {"key": "STOCK_SAFETY_DAYS", "group": "stock", "label": "Varsayılan güvenlik günü", "type": "int", "default": "15",
+     "help": "Kitabın onaylı güvenlik stoku yoksa kullanılır. Kritik = yeterlilik ≤ baskı süresi + güvenlik günü"},
+    {"key": "STOCK_LEAD_DAYS", "group": "stock", "label": "Baskı süresi (gün)", "type": "text", "default": "",
+     "help": "Boş: üretim kartlarında ölçülen süre (matbaa belirleme → depo girişi); ölçüm yoksa 45"},
+    {"key": "STOCK_EXCESS_DAYS", "group": "stock", "label": "Fazla stok: yeterlilik (gün)", "type": "int", "default": "730",
+     "help": "Stoğu bu günden uzun yeten kitap fazla stok listesine girer"},
+    {"key": "STOCK_DEAD_DAYS", "group": "stock", "label": "Hareketsiz stok penceresi (gün)", "type": "int", "default": "365",
+     "help": "Bu pencerede hiç hareketi olmayan stoklu kitap hareketsiz sayılır (açılış devri hareket değildir)"},
+    {"key": "STOCK_EXCLUDE_PLANNED", "group": "stock", "label": "Planlanan üretim girişi bakiyeye girmesin", "type": "bool",
+     "default": "1", "help": "Logo'daki planlanan (ileri tarihli) üretimden giriş fişi fiziksel stok değildir; ilk dağılımla aynı karar"},
+    {"key": "STOCK_EXCLUDE_PREFIXES", "group": "stock", "label": "Listeye girmeyen kod önekleri", "type": "text", "default": "157",
+     "help": "Virgülle; 157 = ticari ürün (mevcut baskı öneri raporundaki süzgeçle aynı)"},
+    {"key": "STOCK_MODEL", "group": "stock", "label": "Zeki AI önerileri", "type": "bool", "default": "1",
+     "help": "Aktarım hata mesajı sınıflaması, fazla stok eritme yönü ve bülten metni. Kapalıyken kural metni yazılır"},
+    {"key": "STOCK_MODEL_BUDGET_SEC", "group": "stock", "label": "Gece işinde Zeki AI süresi (sn)", "type": "int", "default": "1200",
+     "help": "Bitmeyen sınıflama ve öneriler sonraki geceye kalır; hiçbiri atlanmaz"},
     # M53 Set, hediye ve promosyon
     {"key": "SETS_COMPONENT_SOURCE", "group": "sets", "label": "Set bileşeni kaynağı", "type": "text", "default": "auto",
      "help": "crm: setin en son CRM «Set Yapma» işlemi; logo: Logo ürün reçetesi; auto: CRM, işlem yoksa Logo reçetesi"},
@@ -391,6 +450,133 @@ SPEC: list[dict[str, Any]] = [
      "help": "Özel güne bu kadar kala o sezonun seti CRM'de açılmamışsa uyarı"},
     {"key": "SETS_ALERT_RECIPIENTS", "group": "sets", "label": "Uyarı özeti alıcıları", "type": "text", "default": "",
      "help": "Virgülle iç e-posta adresleri (set sorumlusu, depo, satın alma). Boşsa e-posta gitmez; uyarılar ekranda durur"},
+    # M34 E-ticaret ve platform yönetimi (eticaret.py; yalnız ortamdan: ECOM_DIFF_KINDS, ECOM_HAK_RIGHTS, ECOM_SNOOZE_DAYS,
+    # ECOM_SALES_MONTHS, ECOM_FUNNEL_*, ECOM_REASON_MIN_*, ECOM_LLM_BUDGET_SEC, ECOM_DEFAULT_OWNERS, ECOM_NAME_CHECK, ECOM_WEEKLY_DAY)
+    {"key": "ECOM_CHANNELS", "group": "eticaret", "label": "Pazar yeri kanalı (Logo özel kod 2)", "type": "text", "default": "E-TICARET",
+     "help": "Virgülle. Pazar yeri carileri Logo'da bu özel kod 2 değeriyle ayrılır; sell-in panosu bu carilerden okunur"},
+    {"key": "ECOM_PRICE_REFERENCE", "group": "eticaret", "label": "Fiyat farkında esas fiyat", "type": "text", "default": "crm",
+     "help": "crm: kitap kartının KDV dahil fiyatı; logo: Logo'da bugün geçerli satış fiyat listesi. Sitedeki fiyat bununla karşılaştırılır"},
+    {"key": "ECOM_PRICE_TOLERANCE", "group": "eticaret", "label": "Fiyat farkı eşiği (₺)", "type": "text", "default": "0.01",
+     "help": "Sitedeki fiyat esas fiyattan bundan fazla saparsa fark açılır"},
+    {"key": "ECOM_STOCK_MIN", "group": "eticaret", "label": "Stok farkı eşiği (adet)", "type": "text", "default": "0",
+     "help": "Sitede satışta olup Logo stoğu bu sayı ve altında olan kitap fark sayılır (kesim tarihiyle gösterilir)"},
+    {"key": "ECOM_REQUIRED_FIELDS", "group": "eticaret", "label": "Ürün kartında zorunlu alanlar", "type": "text",
+     "default": "gorsel,arka_kapak,yazar,kategori,site_gorsel",
+     "help": "Virgülle: gorsel, arka_kapak, spot, yazar, kategori, anahtar_kelime, foy, site_gorsel. Boş olan «eksik kart» farkı açar"},
+    {"key": "ECOM_ALERT_KINDS", "group": "eticaret", "label": "E-posta gönderilen fark türleri", "type": "text", "default": "hak,fiyat,stok",
+     "help": "Virgülle: hak, fiyat, stok, aktiflik, barkod, ad, eksik_kart. Fark ilk kez görüldüğünde bir kez bildirilir"},
+    {"key": "ECOM_ALERT_RECIPIENTS", "group": "eticaret", "label": "Fark bildirimi alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (site sorumlusu). Boşsa e-posta gitmez; farklar ekranda durur"},
+    {"key": "ECOM_WEEKLY_TO", "group": "eticaret", "label": "Haftalık özet alıcıları", "type": "text", "default": "",
+     "help": "Virgülle (müdür, pazar yeri sorumlusu). Pazartesi sabahı: açık farklar, kapanma hızı, pazar yeri carileri, tükenme riski"},
+    {"key": "ECOM_STOCKOUT_DAYS", "group": "eticaret", "label": "Tükenme riski (gün)", "type": "int", "default": "30",
+     "help": "Logo stoğu son 12 ayın satış hızıyla bu kadar günden az yetecekse pazar yeri listesinde işaretlenir"},
+    # M36 Dijital yayın ve e-kitap
+    {"key": "DIJITAL_OPP_MIN_QTY", "group": "dijital", "label": "E-kitap fırsatı: son 12 ay en az basılı satış", "type": "int",
+     "default": "1000",
+     "help": "Hakkı olup e-kitabı olmayan kitap, son 12 ayda (Logo faturalı net adet) en az bu kadar sattıysa fırsat listesine girer"},
+    {"key": "DIJITAL_AUDIO_MIN_QTY", "group": "dijital", "label": "Sesli kitap adayı: son 12 ay en az basılı satış", "type": "int",
+     "default": "1000", "help": "Sesli kitap hakkı olup sesli sürümü olmayan kitaplar için aynı eşik"},
+    {"key": "DIJITAL_AUDIO_GENRES", "group": "dijital", "label": "Sesli kitap adayı: türler", "type": "text", "default": "",
+     "help": "Virgülle tür ya da hedef kitle kelimeleri (örn. roman, kişisel gelişim, masal, çocuk). Boşsa bütün türler"},
+    {"key": "DIJITAL_BOOK_TYPES", "group": "dijital", "label": "Kitap sayılan CRM tipleri", "type": "text", "default": "1",
+     "help": "Virgülle CRM kitap kartı «Tip» kodları (1 = Kitap). Fırsat ve katalog göstergeleri bu tiplerden"},
+    {"key": "DIJITAL_AUDIO_TYPES", "group": "dijital", "label": "Sesli kitap CRM tipleri", "type": "text", "default": "9",
+     "help": "Virgülle CRM «Tip» kodları (9 = SesliKitap). Aynı adlı basılı kitabın sesli sürümü var sayılır"},
+    {"key": "DIJITAL_MATCH_MIN_PROB", "group": "dijital", "label": "Rapor eşleme: güçlü öneri olasılığı", "type": "text",
+     "default": "0.6",
+     "help": "Zeki AI önerisinin «güçlü» sayılacağı olasılık (0–1). Güçlü öneriler tek düğmeyle onaylanabilir; hiçbiri kendiliğinden onaylanmaz"},
+    {"key": "DIJITAL_MATCH_CANDIDATES", "group": "dijital", "label": "Rapor eşleme: aday kitap sayısı", "type": "int", "default": "8",
+     "help": "Eşleşmeyen satır için ad/yazar benzerliğiyle Zeki AI'a sunulan aday sayısı"},
+    {"key": "DIJITAL_EDITION_DAYS", "group": "dijital", "label": "Yeni baskı / kapak değişikliği penceresi (gün)", "type": "int",
+     "default": "90", "help": "Dijital sürümü olan kitapta bu süre içindeki yeni baskı ya da kapak değişikliği işaretlenir"},
+    {"key": "DIJITAL_WEEKLY_DAY", "group": "dijital", "label": "Haftalık yeni baskı e-postası günü", "type": "int", "default": "1",
+     "help": "1 Pazartesi … 7 Pazar"},
+    {"key": "DIJITAL_NOTE_BUDGET_SEC", "group": "dijital", "label": "Hak notu ön okuması: gece süre bütçesi (sn)", "type": "int",
+     "default": "1800", "help": "Bitmeyen notlar sonraki geceye kalır; kalan sayı gece raporunda yazılır"},
+    {"key": "DIJITAL_RIGHTS_RECIPIENTS", "group": "dijital", "label": "Hak riski e-postası alıcıları (telif)", "type": "text",
+     "default": "", "help": "Virgülle. Hak riski listesine yeni kitap girdiğinde. Boşsa e-posta gitmez, liste ekranda durur"},
+    {"key": "DIJITAL_ALERT_RECIPIENTS", "group": "dijital", "label": "Yeni baskı e-postası alıcıları (dijital yayın)", "type": "text",
+     "default": "", "help": "Virgülle. Dijital sürümü olan kitapta yeni baskı ya da kapak değişikliği (haftalık)"},
+    {"key": "DIJITAL_FINANCE_RECIPIENTS", "group": "dijital", "label": "Rapor hatırlatması alıcıları (finans)", "type": "text",
+     "default": "", "help": "Virgülle. Platformun aylık satış raporu beklenen günde yüklenmediyse"},
+    {"key": "DIJITAL_IMPORT_MAX_MB", "group": "dijital", "label": "Satış raporu dosya sınırı (MB)", "type": "int", "default": "40",
+     "help": "Yüklenen Excel/CSV dosyasının en büyük boyutu"},
+    # M35 E-ticaret kampanya yönetimi
+    {"key": "KAMPANYA_LIST_PRICE_SOURCE", "group": "kampanya", "label": "Liste fiyatı kaynağı", "type": "text", "default": "crm",
+     "help": "crm: kitap kartının KDV dahil fiyatı; logo: Logo'da bugün geçerli satış fiyat listesi. Seçilen boşsa diğeri kullanılır "
+             "ve satırda yazılır"},
+    {"key": "KAMPANYA_COST_SOURCE", "group": "kampanya", "label": "Marj için birim maliyet", "type": "text", "default": "m9+logo",
+     "help": "m9: birim maliyet modülü (onaylı analiz, M9'un Logo gerçekleşeni); m9+logo: o yoksa bu modülün okuduğu güncel yıl "
+             "Logo maliyeti; logo: yalnız Logo; yok: marj hesaplanmaz. Maliyet bulunamayan kitapta marj «hesaplanamaz» yazar"},
+    {"key": "KAMPANYA_MARJ_MIN_PCT", "group": "kampanya", "label": "Kampanyalı marj alt sınırı (%)", "type": "text", "default": "",
+     "help": "Kampanya fiyatındaki marj bunun altındaysa kitap sarı işaretlenir (zarar her zaman kırmızı). Boş: uyarı yok"},
+    {"key": "KAMPANYA_KANAL_CARI", "group": "kampanya", "label": "Kanalın Logo cari kodları", "type": "text", "default": "",
+     "help": "Sonuç satışını kanala göre ayırmak için, örn. site:120.01.001;pazar_yeri:120.05.010,120.05.011. Boşsa sonuç bütün "
+             "kanalların satışıdır ve ekranda öyle yazar"},
+    {"key": "KAMPANYA_ADAY_HIZ_AY", "group": "kampanya", "label": "Satış hızı penceresi (ay)", "type": "int", "default": "3",
+     "help": "Aday süzgecinde ve tükenme tahmininde son bu kadar ayın satışı; yavaşlama bir önceki eşit pencereyle karşılaştırılır"},
+    {"key": "KAMPANYA_ADAY_STOK_AY", "group": "kampanya", "label": "Aday: stok kaç ay yetiyorsa «fazla»", "type": "text",
+     "default": "12", "help": "Stok ÷ aylık satış bu sayıdan büyükse kitap stok fazlası sayılır"},
+    {"key": "KAMPANYA_ADAY_DUSUS_PCT", "group": "kampanya", "label": "Aday: satış düşüşü (%)", "type": "text", "default": "30",
+     "help": "Son pencere önceki pencereye göre en az bu kadar düştüyse kitap «satışı yavaşlamış» sayılır"},
+    {"key": "KAMPANYA_ADAY_MARJ_MIN_PCT", "group": "kampanya", "label": "Aday: kampanya indiriminde en düşük marj (%)",
+     "type": "text", "default": "", "help": "«Marjı indirimi kaldırıyor» kuralı seçildiğinde. Boş: marj sıfırın üstünde olmalı"},
+    {"key": "KAMPANYA_SEZON_ONCESI_GUN", "group": "kampanya", "label": "Sezon bağı: özel günden kaç gün önce", "type": "int",
+     "default": "21", "help": "Kampanya bitişinden bu kadar gün sonrasına kadar düşen özel güne bağlı kitaplar «sezona bağlı» sayılır"},
+    {"key": "KAMPANYA_SONRA_GUN", "group": "kampanya", "label": "Sonuç: kampanya sonrası izleme (gün)", "type": "int",
+     "default": "14", "help": "İade ve satış düşüşü için kampanya bitişinden sonra bu kadar gün okunur"},
+    {"key": "KAMPANYA_FIYAT_GUN", "group": "kampanya", "label": "En düşük fiyat kuralı (gün)", "type": "int", "default": "30",
+     "help": "İndirim öncesi fiyat son bu kadar gündeki en düşük site fiyatı olmalı (hukuk birimi teyit etmeli). Site fiyatı her gece "
+             "kaydedilir; kayıt bu süreden kısaysa ekranda yazılır"},
+    {"key": "KAMPANYA_TAKVIM_GUN", "group": "kampanya", "label": "Takvim şeridi (gün)", "type": "int", "default": "60",
+     "help": "Kampanyalar ekranının üstündeki takvimde bugünden bu kadar gün ileri"},
+    {"key": "KAMPANYA_LEARN_MIN_N", "group": "kampanya", "label": "Beklenen artış: en az öğrenim kaydı", "type": "int",
+     "default": "3", "help": "Kampanyada artış girilmediyse aynı kanaldaki öğrenim kayıtlarının ortancası kullanılır; bu kadar kayıt "
+                             "yoksa artış varsayılmaz (1 kat)"},
+    {"key": "KAMPANYA_ONAY_ALICILARI", "group": "kampanya", "label": "Onay bildirimi alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (pazarlama müdürü, finans). Kampanya onaya gönderilince bildirim gider; boşsa gitmez"},
+    {"key": "KAMPANYA_DEPO_ALICILARI", "group": "kampanya", "label": "Stok uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Yürüyen kampanyada stok bitişten önce tükenecek görünürse hazırlayana ve bu adreslere gider"},
+    {"key": "KAMPANYA_LLM_BUDGET_SEC", "group": "kampanya", "label": "Gece Zeki AI süresi (sn)", "type": "int", "default": "900",
+     "help": "Biten kampanyaların özeti ve CRM bayi kampanyası türü için gece ayrılan süre; biten iş sonraki geceye kalır"},
+    {"key": "KAMPANYA_LLM_MIN_PROB", "group": "kampanya", "label": "Tür seçimi: en düşük olasılık", "type": "text",
+     "default": "0.70", "help": "Zeki AI bayi kampanyasının türünü bu olasılığın altında seçerse «belirsiz» yazılır"},
+    {"key": "KAMPANYA_LLM_MIN_MARGIN", "group": "kampanya", "label": "Tür seçimi: en düşük fark", "type": "text",
+     "default": "0.30", "help": "İki seçenek arasındaki olasılık farkı bundan küçükse «belirsiz» yazılır"},
+    # H3 E-ticaret müşteri yönetimi (RFM eşikleri ve kontrol payı modülün kendi ekranında)
+    {"key": "COMMERCE_ENABLED", "group": "commerce", "label": "Gece okuması açık", "type": "bool", "default": "1",
+     "help": "Kapalıyken zamanlayıcı T-soft'u okumaz ve özet göndermez; ekran son okumayı gösterir"},
+    {"key": "COMMERCE_TSOFT_ORDER_PATH", "group": "commerce", "label": "T-soft sipariş yöntemi", "type": "text",
+     "default": "order/get", "help": "Yalnız okuma yöntemi (…/get…). Ölçülecek: alanlar ve tarih süzgeci"},
+    {"key": "COMMERCE_TSOFT_ORDER_PARAMS", "group": "commerce", "label": "Sipariş yöntemine ek parametre (JSON)", "type": "text",
+     "default": "", "help": "Örn. {\"FetchProductData\": true}. Satırlar gelmiyorsa T-soft konsolundaki ad buraya yazılır"},
+    {"key": "COMMERCE_TSOFT_DATE_PARAM", "group": "commerce", "label": "Sipariş tarih süzgeci parametresi", "type": "text",
+     "default": "OrderDateTimeStart", "help": "Gece artımlı okumada «bu tarihten sonra» parametresi. Boşsa her gece bütün "
+                                              "siparişler okunur. Süzgeç yok sayılırsa okuma yine doğru, yalnız uzun sürer"},
+    {"key": "COMMERCE_TSOFT_DATE_FORMAT", "group": "commerce", "label": "Tarih süzgeci biçimi", "type": "text",
+     "default": "%Y-%m-%d", "help": "Python strftime biçimi (örn. %d.%m.%Y)"},
+    {"key": "COMMERCE_TSOFT_ORDER_ID_PARAM", "group": "commerce", "label": "Tek sipariş parametresi", "type": "text",
+     "default": "OrderCode", "help": "Misafir müşterinin adresi dışa aktarımda bu parametreyle siparişten okunur"},
+    {"key": "COMMERCE_TSOFT_MEMBER_PATH", "group": "commerce", "label": "T-soft üye yöntemi", "type": "text",
+     "default": "customer/get", "help": "Üye izni ve üyelik tarihi için. «-» yazılırsa üyeler okunmaz"},
+    {"key": "COMMERCE_TSOFT_MEMBER_ID_PARAM", "group": "commerce", "label": "Tek üye parametresi", "type": "text",
+     "default": "CustomerId", "help": "Yetkili ekranda ve dışa aktarımda kişi bilgisi bu parametreyle anlık okunur"},
+    {"key": "COMMERCE_TSOFT_FIELDS", "group": "commerce", "label": "T-soft alan adları (JSON)", "type": "text", "default": "",
+     "help": "Boşsa varsayılan adaylar. Biçim: {\"rol\": [\"AlanAdı\", …]}; roller ve bulunan alanlar ekrandaki «Veri» "
+             "bölümünde yazar"},
+    {"key": "COMMERCE_CANCEL_STATUSES", "group": "commerce", "label": "İptal/iade sayılan durumlar", "type": "text",
+     "default": "", "help": "Virgülle durum adı ya da numarası. Boşsa adında iptal/iade/red geçen durumlar"},
+    {"key": "COMMERCE_TSOFT_FALSE_IS_RET", "group": "commerce", "label": "Sitede izin kapalıysa ret say", "type": "bool",
+     "default": "1", "help": "Açıkken T-soft üyesinin e-posta/SMS izni kapalıysa o kanalda ret kanıtı yazılır (ret kazanır)"},
+    {"key": "COMMERCE_RESYNC_DAYS", "group": "commerce", "label": "Gece yeniden okunan gün", "type": "int", "default": "7",
+     "help": "Son bu kadar günün siparişi her gece yeniden yazılır (durum değişikliği); pazar günleri tam tur"},
+    {"key": "COMMERCE_STALE_HOURS", "group": "commerce", "label": "Veri eski sayılır (saat)", "type": "int", "default": "30",
+     "help": ""},
+    {"key": "COMMERCE_SUMMARY_RECIPIENTS", "group": "commerce", "label": "Sabah özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip adresleri (e-ticaret müdürü, yönetim). Dünün sipariş/ciro/müşteri özeti ve düşüş uyarısı"},
+    {"key": "COMMERCE_ADMIN_RECIPIENTS", "group": "commerce", "label": "Okuma sorunu alıcıları", "type": "text", "default": "",
+     "help": "Virgülle. T-soft okuması başarısız olunca"},
     # M19 Pazarlama görsel ve metin
     {"key": "MKT_CREATIVE_COVER_BASE_URL", "group": "creative", "label": "CRM kapak adresi kökü", "type": "text",
      "default": "",
@@ -408,6 +594,589 @@ SPEC: list[dict[str, Any]] = [
      "default": "",
      "help": "Kodda platformların yayımladığı sınırlar var; farklıysa buraya {\"platform\": {\"tür\": [sınır, önerilen]}} "
              "biçiminde yazılır (ör. {\"meta-ads\": {\"baslik\": [40, 27]}})"},
+    # M18 Aylık plan ve satış föyü
+    {"key": "MARKETING_MONTH_DRAFT_DAY", "group": "marketing", "label": "Ay taslağı günü", "type": "int", "default": "15",
+     "help": "Her ayın bu gününde gelecek ayın taslak planı kendiliğinden kurulur ve bildirim alıcılarına haber gider. "
+             "Ekran da bu günden sonra gelecek ayı açar"},
+    {"key": "MARKETING_MONTHLY_BUDGET", "group": "marketing", "label": "Aylık pazarlama bütçesi (TL)", "type": "text", "default": "",
+     "help": "Ay planının bütçe çerçevesi. Boşsa çerçeve = ayın onaylı satış hedefi cirosu × kitap bütçesi oranı (oran boşsa "
+             "veriden). Müdür ay planında elle de girebilir"},
+    {"key": "MARKETING_CONFLICT_KEYS", "group": "marketing", "label": "Çakışma kuralı", "type": "text", "default": "kitaplik",
+     "help": "Aynı hafta birden çok lansman hangi alanda çakışma sayılır: kitaplik, hedef-kitle (virgülle ikisi)"},
+    {"key": "MARKETING_B2B_CAMPAIGN_TYPES", "group": "marketing", "label": "Takvime girecek CRM kampanya tipleri", "type": "text",
+     "default": "", "help": "CRM kampanya tipi: 1 Kampanya, 2 Anlaşma. Boşsa ikisi de takvime girer"},
+    {"key": "MARKETING_MONTH_SUMMARY_WORKDAY", "group": "marketing", "label": "Ay özeti iş günü", "type": "int", "default": "3",
+     "help": "Önceki ayın özeti (hedef/gerçekleşen, yapılan iş) ayın bu iş gününde gönderilir (resmî tatiller sayılmaz)"},
+    {"key": "MARKETING_FOY_REMIND_DAY", "group": "marketing", "label": "Föy hatırlatma günü", "type": "int", "default": "20",
+     "help": "Bu gün gelecek ayın föyü eksik ya da onaysız kitapları bildirim ve föy dağıtım listesine gider"},
+    {"key": "MARKETING_FOY_RECIPIENTS", "group": "marketing", "label": "Föy dağıtım listesi", "type": "text", "default": "",
+     "help": "Onaylı föy paketi «Gönder» ile yalnız bu iç adreslere gider (satış müdürü, saha ekibi). Boşsa gönderilmez; paket indirilir"},
+    {"key": "MARKETING_FOY_REQUIRED", "group": "marketing", "label": "Föyde zorunlu alanlar", "type": "text",
+     "default": "ad,yazar,hedefKitle,fiyat,barkod,tanitim,argumanlar",
+     "help": "Boşsa föy onaylanmaz. Alanlar: ad, yazar, yayinevi, kitaplik, dizi, hedefKitle, fiyat, barkod, isbn, sayfa, ebat, "
+             "cilt, yayinTarihi, tanitim, argumanlar, ozet, kapak"},
+    {"key": "MARKETING_FOY_LOGO_PRICE", "group": "marketing", "label": "Föy fiyatı hangi Logo fiyatıyla karşılaştırılır", "type": "text",
+     "default": "satis", "help": "satis: B2B/CRM siparişli satış satırındaki güncel fiyat (Baskı Öneri tanımı) · liste: Logo satış "
+                                 "fiyat listesi · yok: karşılaştırma yapılmaz"},
+    {"key": "MARKETING_FOY_PRICE_TOLERANCE", "group": "marketing", "label": "Fiyat farkı toleransı (TL)", "type": "text", "default": "0.01",
+     "help": "CRM ile Logo fiyatı arasındaki fark bunu aşarsa föyde uyumsuzluk uyarısı çıkar"},
+    {"key": "MARKETING_COVER_BASE_URL", "group": "marketing", "label": "Kapak görseli adresi", "type": "text", "default": "",
+     "help": "CRM kapak yolunun (göreli) önüne eklenen adres, ör. https://www.timas.com.tr. Boşsa föyde kapak yerine boş kutu çıkar"},
+    # H4 Kurumsal e-posta (timas@ genel kutusu). Kutu yalnız okunur; portal dışarıya ileti göndermez.
+    {"key": "MAIL_PROVIDER", "group": "mailbox", "label": "Kutunun sistemi", "type": "text", "default": "gmail",
+     "help": "gmail: Google Workspace (bu kurulum). Microsoft 365 ve IMAP bağdaştırıcıları bu sürümde kurulmadı"},
+    {"key": "MAIL_ADDRESS", "group": "mailbox", "label": "Kutu adresi", "type": "text", "default": "timas@timas.com.tr",
+     "help": "Okunacak genel kutu. Boşsa ekran «kutu bağlı değil» der"},
+    {"key": "MAIL_GMAIL_AUTH", "group": "mailbox", "label": "Bağlantı yolu", "type": "text", "default": "hizmet-hesabi",
+     "help": "hizmet-hesabi (önerilen): Google Cloud'da hizmet hesabı + Workspace Yönetici Konsolu → Güvenlik → API denetimleri → "
+             "Alan genelinde yetki devri'nde hesabın istemci kimliğine YALNIZ şu iki kapsam: "
+             "https://www.googleapis.com/auth/gmail.readonly ve https://www.googleapis.com/auth/gmail.labels. "
+             "oauth: kutunun kendi hesabıyla bir kez onay verilir (alan geneli yetki istenmiyorsa). Gönderme kapsamı verilmez"},
+    {"key": "MAIL_GOOGLE_SERVICE_ACCOUNT_JSON", "group": "mailbox", "label": "Hizmet hesabı anahtarı (JSON)", "type": "secret",
+     "default": "",
+     "help": "BT'den istenecek: (1) Gmail API açık bir Google Cloud projesinde hizmet hesabı ve JSON anahtarı, (2) hesabın "
+             "istemci kimliğine (sayı) alan geneli yetki devri, yalnız gmail.readonly + gmail.labels, (3) kutu adresi. "
+             "SEO'nun servis hesabından ayrı tutun; bu anahtar yalnız kutuyu okur"},
+    {"key": "MAIL_OAUTH_CLIENT_ID", "group": "mailbox", "label": "OAuth istemci kimliği", "type": "text", "default": "",
+     "help": "Yalnız bağlantı yolu oauth ise. Google Cloud → API'ler → Kimlik bilgileri → OAuth istemcisi (Masaüstü)"},
+    {"key": "MAIL_OAUTH_CLIENT_SECRET", "group": "mailbox", "label": "OAuth istemci sırrı", "type": "secret", "default": "", "help": ""},
+    {"key": "MAIL_OAUTH_REFRESH_TOKEN", "group": "mailbox", "label": "OAuth yenileme belirteci", "type": "secret", "default": "",
+     "help": "Kutunun hesabıyla gmail.readonly + gmail.labels kapsamlarına onay verilerek alınır. Onay geri alınırsa okuma durur "
+             "ve bağlantı uyarısı gider"},
+    {"key": "MAIL_START_DATE", "group": "mailbox", "label": "Canlı işleme başlangıcı", "type": "text", "default": "",
+     "help": "YYYY-AA-GG. Bu tarihten önce gelen iletiler «geçmiş»tir: listeye, SLA'ya, bildirime girmez; yalnız etiketleme "
+             "ekranında görünür. Boşsa ilk okumanın anı"},
+    {"key": "MAIL_HISTORY_FROM", "group": "mailbox", "label": "Geçmiş iletiler şu tarihten", "type": "text", "default": "",
+     "help": "YYYY-AA-GG. İlk okumada bu tarihten sonraki geçmiş iletiler de okunur (doğruluk ölçümü için etiketlenir). Boşsa okunmaz"},
+    {"key": "MAIL_BUSINESS_HOURS", "group": "mailbox", "label": "İş saatleri", "type": "text", "default": "1-5 09:00-18:00",
+     "help": "Hafta günü (1 = pazartesi) ve saat; birden çok satır noktalı virgülle, örn. 1-5 09:00-18:00; 6 10:00-14:00. SLA bu saatlerle sayılır"},
+    {"key": "MAIL_HOLIDAYS", "group": "mailbox", "label": "Resmî tatiller", "type": "text", "default": "",
+     "help": "Virgülle YYYY-AA-GG. Bu günler SLA'da sayılmaz"},
+    {"key": "MAIL_SLA_REMIND_H", "group": "mailbox", "label": "Hatırlatma (iş saati)", "type": "int", "default": "24",
+     "help": "Tür için kuralda SLA yazılmamışsa: bu kadar iş saati yanıtsız kalan ileti için atanan kişiye hatırlatma"},
+    {"key": "MAIL_SLA_ESCALATE_H", "group": "mailbox", "label": "Eskalasyon (iş saati)", "type": "int", "default": "48",
+     "help": "Birim yöneticisine (yönlendirme tablosunda) bildirim"},
+    {"key": "MAIL_SLA_TOP_H", "group": "mailbox", "label": "Üst yönetici (iş saati)", "type": "int", "default": "72", "help": ""},
+    {"key": "MAIL_INBOX_OWNERS", "group": "mailbox", "label": "Genel kutu sorumluları", "type": "users", "default": "",
+     "help": "Atanmamış iletinin hatırlatması ve birim yöneticisi yazılmamış eskalasyon bunlara gider"},
+    {"key": "MAIL_TOP_MANAGERS", "group": "mailbox", "label": "Üst yöneticiler", "type": "users", "default": "",
+     "help": "Üst yönetici eşiğini aşan iletilerin bildirimi"},
+    {"key": "MAIL_NOTIFY_EMAIL", "group": "mailbox", "label": "SLA bildirimini e-postayla gönder", "type": "bool", "default": "1",
+     "help": "İç e-posta (portalın bildirim hesabından, çalışanlara). Kapalıyken bildirim yalnız ileti geçmişine yazılır"},
+    {"key": "MAIL_SUGGEST_MIN_PROB", "group": "mailbox", "label": "Öneri eşiği: olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI'ın tür olasılığı bunun altındaysa ileti «Emin olunmayan» sekmesine düşer"},
+    {"key": "MAIL_SUGGEST_MIN_MARGIN", "group": "mailbox", "label": "Öneri eşiği: fark", "type": "text", "default": "0.30",
+     "help": "Seçilen tür ile en yakın ikinci tür arasındaki olasılık farkı"},
+    {"key": "MAIL_AUTO_MIN_PROB", "group": "mailbox", "label": "Otomatik işlem eşiği: olasılık", "type": "text", "default": "0.90",
+     "help": "Tanıtım/spam arşivi ve açılmış türlerde otomatik atama yalnız bu olasılığın üstünde"},
+    {"key": "MAIL_AUTO_MIN_MARGIN", "group": "mailbox", "label": "Otomatik işlem eşiği: fark", "type": "text", "default": "0.50", "help": ""},
+    {"key": "MAIL_AUTO_ASSIGN_CATEGORIES", "group": "mailbox", "label": "Otomatik atanan türler", "type": "text", "default": "",
+     "help": "Virgülle tür anahtarları. Boş (varsayılan): hiçbir tür kendiliğinden atanmaz. Etiketlenmiş geçmişte o türün "
+             "doğruluğu %90'ı geçmeden açmayın"},
+    {"key": "MAIL_SPAM_SENDERS", "group": "mailbox", "label": "Doğrudan arşivlenen gönderenler", "type": "text", "default": "",
+     "help": "Virgülle adres ya da alan adı (örn. bulten.ornek.com). Kutunun kendi spam işaretine ek; arşiv geri alınabilir"},
+    {"key": "MAIL_ORDER_PATTERN", "group": "mailbox", "label": "Sipariş numarası deseni", "type": "text",
+     "default": r"(?:sipari[şs]|order)\s*(?:no|numaras[ıi]|#)?\s*[:#]?\s*([A-Z0-9][A-Z0-9\-]{4,19})",
+     "help": "İleti metnindeki sipariş numarasını bulan düzenli ifade (ilk grup numara). Boşsa aranmaz"},
+    {"key": "MAIL_MODEL_BODY_CHARS", "group": "mailbox", "label": "Zeki AI'a giden metin (karakter)", "type": "int", "default": "6000",
+     "help": "Uzun iletide modelin bağlam penceresine sığacak kısım. Ekranda ileti kutudan tam okunur"},
+    {"key": "MAIL_LLM_BUDGET_SEC", "group": "mailbox", "label": "Okuma turu süresi (sn)", "type": "int", "default": "200",
+     "help": "5 dakikalık turda sınıflamaya ayrılan süre; bitmeyen iletiler sonraki tura kalır"},
+    {"key": "MAIL_READ_OVERLAP_MIN", "group": "mailbox", "label": "Okuma örtüşmesi (dk)", "type": "int", "default": "60",
+     "help": "Her okuma son iletiden bu kadar geriden başlar; aynı ileti iki kez yazılmaz"},
+    {"key": "MAIL_REPLY_CHECK_MIN", "group": "mailbox", "label": "Yanıt denetimi aralığı (dk)", "type": "int", "default": "15",
+     "help": "Açık iletinin konu zincirinde kutudan gönderilmiş yanıt bu aralıkla aranır"},
+    {"key": "MAIL_CONNECTION_ALERT_MIN", "group": "mailbox", "label": "Bağlantı uyarısı (dk)", "type": "int", "default": "30",
+     "help": "Kutu bu kadar dakikadır okunamadıysa aşağıdaki adreslere bir kez uyarı gider"},
+    {"key": "MAIL_CONNECTION_ALERT_TO", "group": "mailbox", "label": "Bağlantı uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (portal yöneticisi / BT)"},
+    # M48 Sistem durumu (halka denetimleri, olaylar). Bu grup Sistem durumu ekranından da `ozellik:sistem.ayar` ile düzenlenir.
+    {"key": "ITOPS_RECIPIENTS", "group": "itops", "label": "Kopma ve düzelme bildirimi alıcıları", "type": "text", "default": "",
+     "help": "Virgülle BT ve işletim ekibinin e-posta adresleri. Yalnız aşağıdaki iç alan adlarındaki adreslere gönderilir"},
+    {"key": "ITOPS_INTERNAL_DOMAINS", "group": "itops", "label": "İç alan adları", "type": "text", "default": "timas.com.tr",
+     "help": "Virgülle. Sistem durumu e-postası yalnız bu alan adlarına gider; boşsa izinli alıcı alan adları kullanılır"},
+    {"key": "ITOPS_WEEKLY_TO", "group": "itops", "label": "Haftalık sağlık özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle; boşsa bildirim alıcılarına gider. Kesinti dakikası ve en çok bozulan halka"},
+    {"key": "ITOPS_WEEKLY_DAY", "group": "itops", "label": "Haftalık özet günü (1=Pazartesi … 7=Pazar)", "type": "int", "default": "1", "help": ""},
+    {"key": "ITOPS_REPORT_HOUR", "group": "itops", "label": "Özet saati", "type": "int", "default": "8",
+     "help": "Haftalık özet ve günlük «hata veren zamanlanmış işler» e-postası bu saatten sonraki ilk turda gider (0–23)"},
+    {"key": "ITOPS_FAILS_TO_OPEN", "group": "itops", "label": "Olay açmak için art arda başarısız deneme", "type": "int", "default": "2",
+     "help": "Tek başarısız deneme olay açmaz (yanlış alarm); 5 dk'lık turda 2 deneme ≈ 10 dk içinde bildirim"},
+    {"key": "ITOPS_LOGO_STALE_DAYS", "group": "itops", "label": "Logo verisi eski sayılır (gün)", "type": "int", "default": "3",
+     "help": "Son fatura bu kadar günden eskiyse «veri eski» olayı açılır. 0: bakılmaz. Hafta sonu yanlış alarm vermesin diye 3"},
+    {"key": "ITOPS_CRM_STALE_HOURS", "group": "itops", "label": "CRM verisi eski sayılır (saat)", "type": "int", "default": "24",
+     "help": "Kitap kartlarında son değişiklik bu kadar saatten eskiyse «veri eski» olayı açılır. 0: bakılmaz"},
+    {"key": "ITOPS_CRM_FRESH_TABLE", "group": "itops", "label": "CRM tazelik tablosu", "type": "text", "default": "new_kitapBase",
+     "help": "Son değişiklik zamanına bakılan CRM tablosu"},
+    {"key": "ITOPS_STALE_REMIND_HOURS", "group": "itops", "label": "«Veri eski» hatırlatması (saat)", "type": "int", "default": "24",
+     "help": "Veri eskiliği sürerse bu kadar saatte bir yeniden bildirilir. Kopma hatırlatması uyarılarınkiyle aynı"},
+    {"key": "ITOPS_VPN_IFACE", "group": "itops", "label": "Şirket ağı bağlantı arayüzü", "type": "text", "default": "tun0",
+     "help": "Test sunucusunda şirket ağı bağlantısının arayüz adı. Müşteri VM'inde bakılmaz"},
+    {"key": "ITOPS_VPN_PROBE", "group": "itops", "label": "Şirket ağında denenecek adres", "type": "text", "default": "",
+     "help": "sunucu:port, örn. 192.168.0.155:1433. Yerel tünel ağzı değil, ağın içindeki gerçek adres"},
+    {"key": "ITOPS_VM_URL", "group": "itops", "label": "Müşteri VM'i adresi", "type": "text", "default": "",
+     "help": "Test sunucusundan denenecek portal adresi, örn. http://192.168.0.55/timas/. Boşsa bu halka ölçülmez"},
+    {"key": "ITOPS_VM_HEARTBEAT_SEC", "group": "itops", "label": "VM iş bildirimi beklenen en uzun süre (sn)", "type": "int",
+     "default": "1200", "help": "Müşteri VM'inde zamanlanmış işlerden bu süre bildirim gelmezse halka kopuk sayılır"},
+    {"key": "ITOPS_MODEL_TIMEOUT_SEC", "group": "itops", "label": "Zeki AI deneme süresi (sn)", "type": "int", "default": "240",
+     "help": "Sırada bekleyip cevap alamayan deneme kopma sayılmaz, «meşgul» yazar"},
+    {"key": "ITOPS_RING_TIMEOUT_SEC", "group": "itops", "label": "Bağlantı denemesi süresi (sn)", "type": "int", "default": "90", "help": ""},
+    {"key": "ITOPS_QUERY_TIMEOUT_SEC", "group": "itops", "label": "Veri sonu sorgusu süresi (sn)", "type": "int", "default": "60", "help": ""},
+    {"key": "ITOPS_DISK_PATHS", "group": "itops", "label": "İzlenen disk klasörleri", "type": "text", "default": "",
+     "help": "Virgülle; boşsa uygulama veri klasörü"},
+    # Veri güvenliği (M49)
+    {"key": "SECURITY_ALERT_RECIPIENTS", "group": "security", "label": "Güvenlik uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri (bilgi güvenliği sorumlusu, yönetici). Kritik uyarı anında, 403 özeti günde bir gider; boşsa e-posta gitmez, uyarı ekranda kalır"},
+    {"key": "SECURITY_FAIL_THRESHOLD", "group": "security", "label": "Hatalı giriş eşiği (deneme)", "type": "int", "default": "5",
+     "help": "Aynı hesaba aşağıdaki süre içinde bu kadar hatalı giriş denenirse kritik uyarı açılır"},
+    {"key": "SECURITY_FAIL_WINDOW_MIN", "group": "security", "label": "Hatalı giriş penceresi (dakika)", "type": "int", "default": "10", "help": ""},
+    {"key": "SECURITY_WORK_HOURS", "group": "security", "label": "Mesai saatleri", "type": "text", "default": "08:00-19:00",
+     "help": "SS:DD-SS:DD. Bunun dışında yapılan dışa aktarmalar «mesai dışı» sayılır"},
+    {"key": "SECURITY_WORK_DAYS", "group": "security", "label": "Mesai günleri", "type": "text", "default": "1-5",
+     "help": "1 = Pazartesi … 7 = Pazar; «1-5» ya da «1,2,3,4,5,6»"},
+    {"key": "SECURITY_OFFHOURS_EXPORT_MIN", "group": "security", "label": "Mesai dışı toplu dışa aktarma (bir saatte)", "type": "int", "default": "3",
+     "help": "Bir kişi mesai dışında bir saat içinde bu kadar dışa aktarma yaparsa kritik uyarı açılır"},
+    {"key": "SECURITY_IDLE_DAYS", "group": "security", "label": "Uzun süredir girmeyen hesap (gün)", "type": "int", "default": "90",
+     "help": "Hesap hijyeni raporunda: portal izi olan ama bu kadar gündür giriş yapmamış hesaplar. 0 = bakılmaz"},
+    {"key": "SECURITY_TEST_ACCOUNT_PATTERN", "group": "security", "label": "Test hesabı ad kalıbı", "type": "text",
+     "default": "^(test|deneme|demo|qa[-_.]|claude)",
+     "help": "Bu kalıba uyan hesaplar hesap hijyeni raporunda «test/deneme adı» diye çıkar (düzenli ifade)"},
+    {"key": "SECURITY_DAILY_AT", "group": "security", "label": "Günlük iş saati", "type": "time", "default": "03:40",
+     "help": "Saklama süresi işi ve günlük erişim özeti bu saatten sonraki ilk koşuda, günde bir kez çalışır"},
+    {"key": "SECURITY_RETENTION_APPLY", "group": "security", "label": "Saklama süresini uygula", "type": "bool", "default": "0",
+     "help": "Kapalıyken hiçbir kayıt silinmez; gece işi yalnız «kaç satır etkilenecek» önizlemesini yazar. Açmak yönetici "
+             "kararıdır (Veri güvenliği → Saklama süreleri, önizlemeyle)"},
+    {"key": "SECURITY_RETENTION_QUERY_RESULT_DAYS", "group": "security", "label": "Soru sonucu saklama (gün)", "type": "int", "default": "90",
+     "help": "Soru kaydındaki tam sonuç tablosu bu süreden sonra boşaltılır; soru ve SQL kalır. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_LLM_TEXT_DAYS", "group": "security", "label": "Model sırası metni saklama (gün)", "type": "int", "default": "30",
+     "help": "Model sırasındaki ve model işindeki mesaj/cevap metni boşaltılır; süre ve sayılar kalır. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_LOGIN_DAYS", "group": "security", "label": "Giriş kaydı saklama (gün)", "type": "int", "default": "365",
+     "help": "0 = süresiz"},
+    {"key": "SECURITY_RETENTION_ACCESS_DAYS", "group": "security", "label": "Erişim kaydı saklama (gün)", "type": "int", "default": "365",
+     "help": "Yetkisiz erişim ve dışa aktarma satırları. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_ALERT_DAYS", "group": "security", "label": "Kapanmış uyarı saklama (gün)", "type": "int", "default": "730",
+     "help": "Açık uyarı silinmez. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_AUDIT_DAYS", "group": "security", "label": "Değişiklik kaydı saklama (gün)", "type": "int", "default": "0",
+     "help": "0 = süresiz (yetki değişikliklerinin kanıtı)"},
+    # M51 Müşteri hizmetleri: destek masası (NanobaseAI Destek) salt okuma bağlantısı ve Zeki AI eşikleri.
+    {"key": "DESTEK_API_BASE", "group": "support", "label": "Destek masası adresi", "type": "text", "default": "",
+     "help": "Masanın köprüden erişilen adresi, örn. http://127.0.0.1:8447. Masaya yalnız okuma çağrısı yapılır"},
+    {"key": "DESTEK_API_KEY", "group": "support", "label": "Masa okuma anahtarı", "type": "secret", "default": "",
+     "help": "Masada açılan salt okuma API kullanıcısının anahtarı (API Key)"},
+    {"key": "DESTEK_API_SECRET", "group": "support", "label": "Masa okuma parolası", "type": "secret", "default": "",
+     "help": "Aynı kullanıcının API Secret değeri"},
+    {"key": "DESTEK_PUBLIC_URL", "group": "support", "label": "Masanın kullanıcı adresi", "type": "text", "default": "",
+     "help": "Ekrandaki «Masada aç» bağlantıları için, örn. https://portal.nanobase.ai:8446"},
+    {"key": "DESTEK_API_VERIFY_TLS", "group": "support", "label": "Masa sertifikasını doğrula", "type": "bool", "default": "1",
+     "help": "Masa adresi https ve iç sertifikalıysa kapatılabilir"},
+    {"key": "DESTEK_PANEL_TOKEN", "group": "support", "label": "Masa paneli anahtarı", "type": "secret", "default": "",
+     "help": "Doluysa masa panelinin bağlam isteği X-Destek-Panel-Key başlığında bu değeri taşımalı (nginx anahtarına ek)"},
+    {"key": "SUPPORT_CLASSIFY_MIN_PROB", "group": "support", "label": "Konu sınıflaması: en düşük olasılık", "type": "text",
+     "default": "0.70", "help": "Zeki AI bu olasılığın altında kalırsa talep «sınıflanamadı» olur, temsilci seçer (0–1)"},
+    {"key": "SUPPORT_CLASSIFY_MIN_MARGIN", "group": "support", "label": "Konu sınıflaması: en düşük fark", "type": "text",
+     "default": "0.30", "help": "Seçilen konu ile ikinci konu arasındaki olasılık farkı bunun altındaysa «sınıflanamadı» (0–1)"},
+    {"key": "SUPPORT_ORDER_DAYS", "group": "support", "label": "Bağlamda sipariş penceresi (gün)", "type": "int", "default": "365",
+     "help": "Müşteri bağlamında bu kadar günlük sipariş gösterilir; açık (bekleyen) siparişler tarihten bağımsız hep gelir"},
+    {"key": "SUPPORT_LOGO_MONTHS", "group": "support", "label": "Bağlamda fatura penceresi (ay)", "type": "int", "default": "12",
+     "help": "Logo'dan son bu kadar ayın satış ve iade faturaları (veri sonu tarihiyle)"},
+    {"key": "SUPPORT_CARGO_MATCH", "group": "support", "label": "Kargo kaydı eşleme yolu", "type": "text", "default": "takip,irsaliye",
+     "help": "Kargo firmasının gönderi kaydını siparişe bağlayan alan: takip (takip numarası), irsaliye (müşteri irsaliye no) ya da ikisi"},
+    {"key": "SUPPORT_SLA_WARN_RATIO", "group": "support", "label": "SLA uyarı payı", "type": "text", "default": "0.80",
+     "help": "Sürenin bu payı dolan açık talep «yaklaşıyor» sayılır (0–1)"},
+    {"key": "SUPPORT_REPEAT_DAYS", "group": "support", "label": "Tekrarlayan talep penceresi (gün)", "type": "int", "default": "7",
+     "help": "Aynı kişiden aynı konuda bu kadar gün içinde ikinci talep «tekrar» sayılır"},
+    {"key": "SUPPORT_GAP_DAYS", "group": "support", "label": "SSS açığı penceresi (gün)", "type": "int", "default": "30",
+     "help": "SSS eşleşmesi bulunamayan talepler bu kadar günlük pencerede konuya göre sayılır"},
+    {"key": "SUPPORT_GAP_MIN_TICKETS", "group": "support", "label": "SSS açığı için en az talep", "type": "int", "default": "3",
+     "help": "Bir konu en az bu kadar eşleşmesiz talepte SSS adayı olur"},
+    {"key": "SUPPORT_DEALER_CHANNELS", "group": "support", "label": "Bayi aramasında kanal", "type": "text", "default": "",
+     "help": "Boşsa bütün etkin cariler aranır; doluysa CRM firma kanalı kodları (virgülle, örn. 100000008 bayi, 100000001 kitapçı)"},
+    {"key": "SUPPORT_DRAFT_SIGNATURE", "group": "support", "label": "Taslak imzası", "type": "text",
+     "default": "Timaş Yayınları Müşteri Hizmetleri", "help": "Cevap taslağının sonuna eklenen satır"},
+    # M50 Zeki AI kalitesi
+    {"key": "MODEL_QUALITY_RECIPIENTS", "group": "model_quality", "label": "Bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle; yalnız iç adresler (izinli alan adı süzgeci geçerli). Koşuda bozulan soru, aynı soruya tekrarlanan "
+             "«Yanlış» ve günlük geri bildirim özeti buraya gider. Boşsa e-posta gitmez, ekranda görünür"},
+    {"key": "MODEL_QUALITY_WINDOW_DAYS", "group": "model_quality", "label": "Karne penceresi (gün)", "type": "int",
+     "default": "30", "help": "Karne ve hata sınıfı sayımının varsayılan süresi; ekrandan değiştirilebilir"},
+    {"key": "MODEL_QUALITY_REPEAT_WRONG", "group": "model_quality", "label": "Tekrarlanan «Yanlış» eşiği", "type": "int",
+     "default": "3", "help": "Aynı soruya pencere içinde bu kadar «Yanlış» gelirse ekibe anında bir kez yazılır"},
+    {"key": "MODEL_QUALITY_QUEUE_STALE_DAYS", "group": "model_quality", "label": "Bekleyen bildirim uyarısı (gün)",
+     "type": "int", "default": "7", "help": "Bu süreden eski, sınıflanmamış bildirimler günlük özette ayrıca yazılır"},
+    {"key": "MODEL_QUALITY_STALE_HOURS", "group": "model_quality", "label": "Yarıda kalan koşu (saat)", "type": "int",
+     "default": "6", "help": "Rapor getirmeyen koşu bu süreden sonra «hata» olur"},
+    {"key": "MODEL_QUALITY_ENV", "group": "model_quality", "label": "Ortam", "type": "text", "default": "",
+     "help": "test ya da vm; sürüm kaydında ve koşularda ortam adı olarak yazılır"},
+    {"key": "MODEL_QUALITY_CODE_SHA", "group": "model_quality", "label": "Kod sürümü (elle)", "type": "text", "default": "",
+     "help": "Boş bırakın: kurulum betiğinin bildirdiği sürüm kullanılır. Yalnız kurulum bildirim yapamıyorsa doldurun"},
+    {"key": "MODEL_QUALITY_RULES_PATHS", "group": "model_quality", "label": "Kural dosyaları", "type": "text", "default": "",
+     "help": "Sürüm kaydına özeti girecek ek kural klasörleri/dosyaları, virgülle (bilgi paketi zaten sayılır)"},
+    {"key": "MODEL_QUALITY_PROMPT_PATHS", "group": "model_quality", "label": "İstem dosyaları", "type": "text", "default": "",
+     "help": "Sürüm kaydına özeti girecek istem dosyaları, virgülle. Boşsa istem kodla birlikte sürümlenir"},
+    # M54 Telif dönemi
+    {"key": "ROYALTY_CRM_STATUSES", "group": "royalty", "label": "Kapsamdaki CRM durum kodları", "type": "text",
+     "default": "100000000,100000007",
+     "help": "Dönem koşusuna giren Telif Alış sözleşmelerinin CRM durum kodları (100000000 Aktif-Sözleşme, 100000007 "
+             "Aktif-Yenileme, 100000006 Aktif (Proje))"},
+    {"key": "ROYALTY_CRM_PAYMENT_TYPES", "group": "royalty", "label": "Kapsamdaki ödeme şekilleri", "type": "text", "default": "2,7",
+     "help": "CRM ödeme şekli kodları: 2 Satıştan, 7 Satıştan kademeli. Baskıdan ödemeli sözleşmeler (baskı adedi elle) "
+             "sözleşme sayfasında hesaplanır"},
+    {"key": "ROYALTY_PERIOD_MONTHS", "group": "royalty", "label": "Telif dönemi (ay)", "type": "int", "default": "6",
+     "help": "Yeni koşunun önerilen dönem uzunluğu ve «koşu açılmadı» hatırlatmasının takvimi (6: Ocak–Haziran, Temmuz–Aralık)"},
+    {"key": "ROYALTY_WITHHOLDING_PCT", "group": "royalty", "label": "Varsayılan stopaj oranı (%)", "type": "text", "default": "",
+     "help": "Sözleşmesinde stopaj oranı olmayan ve bütün tarafları kişi olan sözleşmelere uygulanır. Boşsa stopaj "
+             "yalnız sözleşmede oran varsa hesaplanır; oranı muhasebe belirler"},
+    {"key": "ROYALTY_RENEWAL_DAYS", "group": "royalty", "label": "Yenileme hatırlatma günleri", "type": "text", "default": "90,60,30",
+     "help": "Bitişine bu kadar gün kalan, kararı girilmemiş sözleşmeler günlük özete girer"},
+    {"key": "ROYALTY_ADVANCE_RISK_YEARS", "group": "royalty", "label": "Avans geri dönüş eşiği (yıl)", "type": "text",
+     "default": "3", "help": "Kalan avans bugünkü telif hızıyla bu kadar yılda kapanmıyorsa «geri dönmesi zor» işaretlenir"},
+    {"key": "ROYALTY_RUN_REMIND_WORKDAYS", "group": "royalty", "label": "«Koşu açılmadı» hatırlatması (iş günü)", "type": "int",
+     "default": "5", "help": "Dönem bitiminden bu kadar iş günü sonra koşu yoksa özete girer"},
+    {"key": "ROYALTY_ALERT_RECIPIENTS", "group": "royalty", "label": "Telif bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (telif birimi, muhasebe). Koşu hatırlatması, yenileme özeti ve «ödeme listesi "
+             "hazır» gider; yazara gönderim yok"},
+    # H2 Okur veri tabanı
+    {"key": "READERS_EXPORT_ENABLED", "group": "readers", "label": "Liste dışa aktarımı açık", "type": "bool", "default": "0",
+     "help": "Rıza metni ve çocuk kayıtları için hukuk teyidi gelince açılır. Kapalıyken segmentler sayılır, liste alınamaz"},
+    {"key": "READERS_REQUIRE_KVKK", "group": "readers", "label": "Listede KVKK açık rızası şart", "type": "bool", "default": "1",
+     "help": "Açıkken İYS izni olsa da KVKK açık rızası CRM'de işaretli olmayan okur listeye girmez"},
+    {"key": "READERS_MINOR_EXPORT", "group": "readers", "label": "18 yaş altı listeye girebilir", "type": "bool", "default": "0",
+     "help": "Ebeveyn rızası CRM'de ayrı tutulmuyor; hukuk teyidi olmadan açılmaz"},
+    {"key": "READERS_MINOR_AGE", "group": "readers", "label": "Çocuk yaş sınırı", "type": "int", "default": "18", "help": ""},
+    {"key": "READERS_IMPORT_RETENTION_DAYS", "group": "readers", "label": "Yükleme satırlarının saklama süresi (gün)",
+     "type": "int", "default": "30", "help": "Etkinlik dosyasındaki kişi satırları bu süre sonunda silinir; sayılar kalır"},
+    {"key": "READERS_ALERT_RECIPIENTS", "group": "readers", "label": "Okur uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle. Kaynak okunamadı / eskidi ya da birleştirme kuyruğu eşiği aştığında gece özeti"},
+    {"key": "READERS_KVKK_RECIPIENTS", "group": "readers", "label": "KVKK irtibat alıcıları", "type": "text", "default": "",
+     "help": "Virgülle. Son 24 saatte dışa aktarılan okur listelerinin günlük özeti"},
+    {"key": "READERS_CRM_FLAG_RULES", "group": "readers", "label": "CRM izin bayraklarının anlamı (JSON)", "type": "text",
+     "default": "", "help": "Boşsa varsayılan: DoNot* = 1 ret, new_kvkkonayi = 1 KVKK onayı, adayda obs_donotkvkk = 1 KVKK ret. "
+                           "Biçim: [{\"source\": \"crm_contact\", \"field\": …, \"value\": 1, \"channel\": email|sms|call|kvkk, "
+                           "\"status\": ret|izinli}]"},
+    {"key": "READERS_IYS_FIELD_CHANNELS", "group": "readers", "label": "İYS alanı → kanal (JSON)", "type": "text", "default": "",
+     "help": "Boşsa alan adından (E-POSTA / MESAJ / ARAMA). Biçim: {\"alan kimliği\": \"email|sms|call\"}"},
+    {"key": "READERS_CANDIDATE_GROUP_MAX", "group": "readers", "label": "Aynı ad + il grubunda en çok okur", "type": "int",
+     "default": "5", "help": "Daha kalabalık gruplar (yaygın ad) birleştirme adayı üretmez; sayısı özet ekranında yazılır"},
+    # M37 Okur topluluğu
+    {"key": "OKUR_ALERT_RECIPIENTS", "group": "marketing", "label": "Okur topluluğu özeti alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (KVKK sorumlusu, topluluk sorumlusu). Onay bekleyen segment, izin çelişkisi "
+             "artışı, yeni cevapsız yorum ve yaklaşan program her gece tek özetle gider; okura hiçbir ileti gitmez"},
+    {"key": "OKUR_HASSAS_SEGMENT_ACIK", "group": "marketing", "label": "Özel nitelikli ilgi alanıyla segment", "type": "bool",
+     "default": "0",
+     "help": "Kapalıyken din/inanç gibi özel nitelikli çağrışım taşıyan ilgi alanları segmentte kullanılamaz (KVKK md. 6). "
+             "Yalnız hukuk birimi yazılı karar verirse açılır; açıkken de ayrı açık rıza gerekir"},
+    # M16 Lansman
+    {"key": "MARKETING_LAUNCH_OPEN_DAYS", "group": "marketing", "label": "Lansmanın açılması (gün)", "type": "int", "default": "14",
+     "help": "Onaylı pazarlama planı olan kitabın lansman paketi yayına bu kadar gün kala kendiliğinden açılır (elle her zaman açılır)"},
+    {"key": "MARKETING_LAUNCH_PRE_DAYS", "group": "marketing", "label": "Lansman izlemesi yayından önce (gün)", "type": "int",
+     "default": "14", "help": "İzleme grafiği ve ön sipariş sayımı yayın gününden bu kadar gün önce başlar"},
+    {"key": "MARKETING_LAUNCH_ALERT_RATIO", "group": "marketing", "label": "Lansman hedef eşiği (%)", "type": "int", "default": "80",
+     "help": "İlk günlerde satış (Logo verisi yoksa sipariş) hedefin o güne düşen payının bu oranının altındaysa lansman kırmızı "
+             "olur ve sahibine günlük özette yazılır (bütçe modülünün sapma kuralıyla aynı varsayılan)"},
+    {"key": "MARKETING_LAUNCH_ORDER_EXCLUDE", "group": "marketing", "label": "Sayılmayan sipariş durumları", "type": "text",
+     "default": "1,100000001", "help": "CRM sipariş durum kodları (virgülle): 1 Taslak, 100000001 İptal Edildi. Birleştirilen "
+                                       "siparişler (100000003) çift sayılıyorsa buraya eklenir"},
+    {"key": "MARKETING_LAUNCH_STOCK_RECIPIENTS", "group": "marketing", "label": "Stok uyarısı alıcıları (satış)", "type": "text",
+     "default": "", "help": "Açık sipariş depo stokunu aşınca ya da yayından sonra dağılım siparişi yoksa anında giden e-postanın "
+                            "alıcıları (virgülle); lansman sahibine de gider. Kitap başına günde en çok bir kez"},
+    {"key": "MARKETING_LAUNCH_DAILY_HOUR", "group": "marketing", "label": "Lansman günlük okuma saati", "type": "int", "default": "7",
+     "help": "Logo satış ve depo okuması, D+7/D+30 raporu ve günlük özet bu saatten sonraki ilk koşuda yapılır; sipariş saatte bir okunur"},
+    {"key": "MARKETING_LAUNCH_TASKS", "group": "marketing", "label": "Lansman kontrol listesi (JSON)", "type": "text", "default": "",
+     "help": "Planın takvimine eklenen lansman maddeleri. Boşsa varsayılan. Biçim: [[gün, \"iş\", \"kanal\", \"materyal\"], …]"},
+    # M17 Backlist (backlist kümesi M46'nın backlist segmentidir; aşağıdaki yaş eşiği yalnız o yıl onaylı bütçe planı yoksa)
+    {"key": "MARKETING_BACKLIST_MIN_MONTHS", "group": "marketing", "label": "Backlist yaşı (ay)", "type": "int", "default": "12",
+     "help": "Onaylı bütçe planı olmayan yılda backlist: ilk yayını veri sonundan en az bu kadar ay önce olan kitaplar"},
+    {"key": "MARKETING_BACKLIST_AGENDA_WEEKS", "group": "marketing", "label": "Backlist gündem penceresi (hafta)", "type": "int",
+     "default": "8", "help": "Gündem sekmesi ve fırsat listesindeki «yakın özel gün» süzgeci"},
+    {"key": "MARKETING_BACKLIST_REMIND_WEEKS", "group": "marketing", "label": "Özel gün hatırlatması (hafta)", "type": "int",
+     "default": "6", "help": "Özel güne bu kadar hafta kala bağlı, stoklu ve aktivasyonu olmayan kitaplar e-postayla bildirilir"},
+    {"key": "MARKETING_BACKLIST_DIGEST_MIN", "group": "marketing", "label": "Aylık özet endeks eşiği", "type": "int", "default": "70",
+     "help": "Ayın ilk iş günü özetinde sayılan kitapların en düşük uyku endeksi (0–100)"},
+    # M20 Basın ilişkileri (aynı grup)
+    {"key": "PR_ALERT_RECIPIENTS", "group": "marketing", "label": "Basın ilişkileri bildirim alıcıları", "type": "text",
+     "default": "", "help": "Virgülle iç e-posta adresleri (pazarlama müdürü, basın sorumlusu). Onaya gönderilen basın dosyası ve "
+                            "takip günü geçen cevapsız gönderimler buraya gider (dosya sahibine ayrıca). Gazeteciye hiçbir şey "
+                            "kendiliğinden gitmez"},
+    {"key": "PR_REPORT_RECIPIENTS", "group": "marketing", "label": "Haftalık yansıma özeti alıcıları", "type": "text",
+     "default": "", "help": "Virgülle iç e-posta adresleri. Boşsa bildirim alıcılarına gider; ikisi de boşsa özet gönderilmez"},
+    {"key": "PR_REPORT_WEEKDAY", "group": "marketing", "label": "Haftalık yansıma özeti günü", "type": "int", "default": "1",
+     "help": "1 = pazartesi … 7 = pazar. O günün sabah turunda bir önceki haftanın (pazartesi–pazar) özeti gider"},
+    {"key": "PR_FOLLOW_UP_DAYS", "group": "marketing", "label": "Basın gönderimi takip süresi (gün)", "type": "int", "default": "5",
+     "help": "Gönderimden bu kadar gün sonra cevap yoksa satır «takip günü geçti» olur ve hatırlatmaya girer"},
+    {"key": "PR_CRM_MEDIA_ROLES", "group": "marketing", "label": "CRM'de gazeteci kişi rolleri", "type": "text", "default": "",
+     "help": "CRM «Kişi Rolü» adları (virgülle; ör. Gazeteci). Bu rollere bağlı kişiler de medya kişisi sayılır. Boşsa yalnız "
+             "«Basın medya Mecrası» dolu kişiler ve CRM haber kayıtlarında haberi yapan/görüşülen kişiler gelir"},
+    {"key": "PR_TONE_MIN_PROB", "group": "marketing", "label": "Yansıma tonu: en düşük olasılık", "type": "text", "default": "0.6",
+     "help": "Zeki AI yansımanın tonunu bu olasılığın altında önermez; ton boş kalır, kullanıcı seçer"},
+    # M21 Dijital pazarlama ve reklam. Eşiği boş bırakılan öneri kuralı çalışmaz.
+    {"key": "ADS_ALERT_RECIPIENTS", "group": "ads", "label": "Reklam bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri. Günlük işte çıkan yeni öneri ve uyarılar (stok, satıştan kalkan kitap, veri gelmedi, "
+             "bütçe aşımı, durdurma/kaydırma) buraya gider. Boşsa e-posta gitmez; öneriler ekranda durur"},
+    {"key": "ADS_ECOM_CHANNELS", "group": "ads", "label": "E-ticaret kanal kodları", "type": "text", "default": "E-TICARET",
+     "help": "Logo cari kartındaki özel kod 2 (satış kanalı) değerleri, virgülle. Pazarlama verimi bu kanalların net cirosuyla "
+             "hesaplanır. İnternet satışı başka bir kodla da tutuluyorsa ekleyin (ör. E-TICARET,INTERNET)"},
+    {"key": "ADS_STOCK_DAYS", "group": "ads", "label": "Stok uyarısı (gün)", "type": "text", "default": "14",
+     "help": "Reklamı süren kitabın stoğu bu kadar günlük satışı karşılamıyorsa (ya da bakiye sıfırsa) uyarı. Boşsa yalnız "
+             "stoğu biten kitap için uyarı"},
+    {"key": "ADS_VELOCITY_DAYS", "group": "ads", "label": "Satış hızı penceresi (gün)", "type": "int", "default": "60",
+     "help": "Günlük satış hızı = Logo verisinin bittiği güne kadar bu kadar günün bütün kanallardaki net adedi ÷ gün"},
+    {"key": "ADS_ACTIVE_DAYS", "group": "ads", "label": "«Reklam sürüyor» penceresi (gün)", "type": "int", "default": "3",
+     "help": "Son bu kadar günde harcaması olan kampanya açık sayılır (stok ve satış dışı uyarıları için)"},
+    {"key": "ADS_NO_DATA_DAYS", "group": "ads", "label": "«Veri gelmedi» uyarısı (gün)", "type": "int", "default": "2",
+     "help": "Hesabın son harcama günü bundan eskiyse uyarı (son 30 günde verisi olan hesaplar)"},
+    {"key": "ADS_OFF_SALE_STATUS", "group": "ads", "label": "Satış dışı yayın durumları", "type": "text",
+     "default": "YS01,YS05,YS06,YS11,YS12",
+     "help": "CRM yayıncılık durumu kodları (etiketin başındaki YS kodu). Bu durumdaki kitaba reklam sürüyorsa uyarı"},
+    {"key": "ADS_OVERSPEND_PCT", "group": "ads", "label": "Bütçe aşımı payı (%)", "type": "text", "default": "0",
+     "help": "Ayın harcaması ay sonuna taşındığında kanal planını bu yüzdeden fazla aşarsa uyarı. Plan girilmemiş kanal için "
+             "uyarı çıkmaz"},
+    {"key": "ADS_PERF_WINDOW_DAYS", "group": "ads", "label": "Performans penceresi (gün)", "type": "int", "default": "14",
+     "help": "Durdurma ve kaydırma önerileri son bu kadar günün harcaması ve dönüşümüyle hesaplanır"},
+    {"key": "ADS_STOP_MIN_SPEND", "group": "ads", "label": "Durdurma önerisi: en az harcama (TL)", "type": "text", "default": "",
+     "help": "Pencerede bu tutardan fazla harcayıp hiç dönüşümü olmayan kampanya için durdurma önerisi. Boşsa kural kapalı"},
+    {"key": "ADS_STOP_MAX_ROAS", "group": "ads", "label": "Durdurma önerisi: platform ROAS altı", "type": "text", "default": "",
+     "help": "Doluysa platform ROAS'ı bunun altında kalan kampanya da durdurma önerisine girer (harcama eşiği aşılmışsa)"},
+    {"key": "ADS_SHIFT_MIN_SPEND", "group": "ads", "label": "Kaydırma önerisi: en az harcama (TL)", "type": "text", "default": "",
+     "help": "Aynı kanalda pencerede bu tutardan fazla harcayan kampanyalar karşılaştırılır. Boşsa kural kapalı"},
+    {"key": "ADS_SHIFT_ROAS_RATIO", "group": "ads", "label": "Kaydırma önerisi: ROAS oranı", "type": "text", "default": "2",
+     "help": "En yüksek platform ROAS'ı en düşüğün bu katıysa kaydırma önerilir"},
+    {"key": "ADS_SHIFT_SHARE", "group": "ads", "label": "Kaydırma önerisi: pay (%)", "type": "text", "default": "20",
+     "help": "Önerilen tutar = düşük kampanyanın pencere harcaması × bu pay"},
+    {"key": "ADS_M15_CHANNEL_MAP", "group": "ads", "label": "M15 plan kanalı eşlemesi", "type": "text",
+     "default": "google=dijital,meta=sosyal-medya,tiktok=sosyal-medya,pazaryeri=dijital,diger=dijital",
+     "help": "Reklam kanalı = yeni kitap pazarlama planındaki kanal. Bütçe ekranı onaylı planların bu kanallardaki satırlarını gösterir"},
+    {"key": "ADS_LOOKBACK_DAYS", "group": "ads", "label": "Satış önbelleği penceresi (gün)", "type": "int", "default": "400",
+     "help": "Logo e-ticaret cirosu ve kitap satışı veri sonundan bu kadar gün geri okunur; ilk reklam günü daha eskiyse ondan"},
+    {"key": "ADS_DATE_ORDER", "group": "ads", "label": "Dosyada tarih sırası", "type": "text", "default": "gun-ay",
+     "help": "01/09/2026 gibi eğik çizgili tarihlerde: gun-ay (Türkçe) ya da ay-gun (İngilizce dışa aktarım)"},
+    {"key": "ADS_IMPORT_MAX_MB", "group": "ads", "label": "Yükleme dosyası sınırı (MB)", "type": "text", "default": "50",
+     "help": "Bundan büyük dosya reddedilir ve ekranda söylenir"},
+    {"key": "ADS_LINK_MIN_PROB", "group": "ads", "label": "Kitap önerisi en az olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI kampanya adından kitap önerirken bu olasılığın altındaysa öneri yazılmaz; aday listesi elle seçilir"},
+    {"key": "ADS_LINK_MIN_MARGIN", "group": "ads", "label": "Kitap önerisi en az fark", "type": "text", "default": "0.30",
+     "help": "Seçilen kitabın olasılığı ikinci adaydan en az bu kadar yüksek olmalı"},
+    # Sosyal medya (M22). Otomatik yayın yok; platformlara hiçbir istek gitmez.
+    {"key": "SOCIAL_ALERT_RECIPIENTS", "group": "social", "label": "Sosyal medya bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (pazarlama müdürü, onaycılar). Onaya gönderilen gönderi ve her sabah 07:00 özeti "
+             "(yarın hazır olmayan gönderi, yaklaşan özel gün, onay bekleyen) buraya gider. Boşsa gönderilmez"},
+    {"key": "SOCIAL_OPPORTUNITY_DAYS", "group": "social", "label": "Fırsat penceresi (gün)", "type": "int", "default": "30",
+     "help": "«Fırsatlar» ekranı bugünden bu kadar gün ilerideki özel günleri ve yeni çıkan kitapları gösterir (ekranda değişir)"},
+    {"key": "SOCIAL_OCCASION_LEAD_DAYS", "group": "social", "label": "Özel gün uyarısı (gün)", "type": "int", "default": "14",
+     "help": "Özel güne bu kadar gün ya da daha az kalmışken bağlı kitaplardan hiçbiri takvimde değilse uyarı verilir"},
+    {"key": "SOCIAL_BACKLIST_MIN_AGE_DAYS", "group": "social", "label": "Backlist sayılma (gün)", "type": "int", "default": "365",
+     "help": "İlk yayını bu kadar günden eski kitap backlist sayılır"},
+    {"key": "SOCIAL_BACKLIST_QUIET_DAYS", "group": "social", "label": "Uzun süredir paylaşılmayan (gün)", "type": "int",
+     "default": "90", "help": "Son 12 ayda çok satan backlist kitaplardan bu kadar gündür takvimde gönderisi olmayanlar önerilir"},
+    {"key": "SOCIAL_BACKLIST_EXCLUDE_STATUS", "group": "social", "label": "Önerilmeyecek kitap statüleri", "type": "text",
+     "default": "", "help": "Virgülle CRM kitap statüleri (ör. baskısı tükenmiş). Bu statüdeki kitaplar backlist önerisine girmez"},
+    {"key": "SOCIAL_PLATFORM_LIMITS", "group": "social", "label": "Platform sınırları (JSON)", "type": "text", "default": "",
+     "help": "Boşsa: Instagram 2200, Facebook 63206, X 280, LinkedIn 3000, TikTok 2200, YouTube 5000 karakter; Instagram 30 "
+             "etiket. Değiştirmek için ör. {\"x\": 280, \"instagram:etiket\": 30}"},
+    {"key": "SOCIAL_DEFAULT_HOUR", "group": "social", "label": "Varsayılan paylaşım saati", "type": "time", "default": "10:00",
+     "help": "Yalnız gün seçilen gönderinin saati (SS:DD)"},
+    {"key": "SOCIAL_BANNED_CLAIMS", "group": "social", "label": "Ek yasaklı ifadeler", "type": "text", "default": "",
+     "help": "Zeki AI taslağında geçerse cümlenin düşeceği ek ifadeler (virgülle). Kanıtsız üstünlük iddiaları zaten yasak"},
+    {"key": "SOCIAL_STUDIO_LICENSE_PENDING", "group": "social", "label": "Stüdyo görseli lisans uyarısı", "type": "bool",
+     "default": "1", "help": "Açıkken stüdyo görseli eklenen gönderide ve pakette «ticari kullanım lisansı bekleniyor» uyarısı durur"},
+    # İşbirlikleri (M23: içerik üreticisi kayıt defteri, işbirliği panosu, ödeme listesi)
+    {"key": "INFLUENCER_ALERT_RECIPIENTS", "group": "influencer", "label": "Hatırlatma alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç ekip e-posta adresleri (işbirliği sorumlusu). Yayın tarihi yaklaşan, bağlantısı girilmemiş, içerik onayı "
+             "bekleyen işler ve takipçi sıçraması her sabah tek özetle gider; içerik üreticisine hiçbir e-posta gitmez"},
+    {"key": "INFLUENCER_APPROVAL_RECIPIENTS", "group": "influencer", "label": "Onay bildirimi alıcıları", "type": "text", "default": "",
+     "help": "Virgülle (pazarlama müdürü). Onay bekleyen teklif ve aylık bütçe uyarısı. Boşsa hatırlatma alıcılarına gider"},
+    {"key": "INFLUENCER_PAYOUT_RECIPIENTS", "group": "influencer", "label": "Ödeme listesi alıcıları", "type": "text", "default": "",
+     "help": "Virgülle (muhasebe). Ödeme günü geldiğinde onay/ödeme bekleyen satır varsa bildirim"},
+    {"key": "INFLUENCER_PAYOUT_DAY", "group": "influencer", "label": "Ödeme listesi günü", "type": "int", "default": "25",
+     "help": "Ayın bu gününden itibaren bekleyen ödeme satırı varsa muhasebeye bir kez bildirim gider (1–28)"},
+    {"key": "INFLUENCER_MONTHLY_BUDGET", "group": "influencer", "label": "Aylık işbirliği bütçesi (₺)", "type": "text", "default": "",
+     "help": "Boşsa bütçe uyarısı yok. Onaylı işbirliklerinin o aya düşen ücret toplamı eşiği geçince müdüre uyarı"},
+    {"key": "INFLUENCER_BUDGET_WARN_PCT", "group": "influencer", "label": "Bütçe uyarı eşiği (%)", "type": "text", "default": "90",
+     "help": "Aylık bütçenin bu yüzdesine ulaşılınca uyarı"},
+    {"key": "INFLUENCER_COOLDOWN_DAYS", "group": "influencer", "label": "İki işbirliği arası (gün)", "type": "int", "default": "60",
+     "help": "Son işbirliği bundan yeni olan kişi aday sırasında «tazelik» puanı almaz"},
+    {"key": "INFLUENCER_RANK_WEIGHTS", "group": "influencer", "label": "Aday puanı ağırlıkları (JSON)", "type": "text", "default": "",
+     "help": "Boşsa {\"konu\":35,\"yas\":15,\"performans\":20,\"iliski\":10,\"tazelik\":10,\"butce\":10}. Puan bu ağırlıklarla 0–100"},
+    {"key": "INFLUENCER_TOPIC_WORDS", "group": "influencer", "label": "Konu kelimeleri (JSON)", "type": "text", "default": "",
+     "help": "Kitabın CRM tür/raf/hedef kitle metninden konu çıkaran kelimelere ek: {\"tarih\": [\"savaş\"], …}"},
+    {"key": "INFLUENCER_TOPIC_MIN_PROB", "group": "influencer", "label": "Zeki AI konu eşiği", "type": "text", "default": "0.70",
+     "help": "Konu önerisinin kabul edileceği en düşük olasılık"},
+    {"key": "INFLUENCER_JUMP_PCT", "group": "influencer", "label": "Takipçi sıçraması (%)", "type": "text", "default": "30",
+     "help": "Kendi iki ölçümümüz arasında (en çok 45 gün) takipçi bu yüzdeden fazla artarsa uyarı. Sahte takipçi puanı değildir"},
+    {"key": "INFLUENCER_CONTENT_WAIT_DAYS", "group": "influencer", "label": "İçerik onayı bekleme (gün)", "type": "int", "default": "3",
+     "help": "İçerik taslağı bu kadar gündür «onayda» ise hatırlatma"},
+    {"key": "INFLUENCER_LINK_GRACE_DAYS", "group": "influencer", "label": "Bağlantı gecikmesi (gün)", "type": "int", "default": "2",
+     "help": "Planlanan yayın tarihinden bu kadar gün sonra paylaşım bağlantısı yoksa hatırlatma"},
+    {"key": "INFLUENCER_DISCLOSURE_KINDS", "group": "influencer", "label": "Yasal etiket zorunlu türler", "type": "text",
+     "default": "hediye,ucretli,karsilikli",
+     "help": "Bu türlerde «yasal etiket var» işaretlenmeden rapora geçilmez (hediye, ucretli, karsilikli). Hukuka doğrulatılacak"},
+    {"key": "INFLUENCER_GIFT_NEEDS_APPROVAL", "group": "influencer", "label": "Hediye kitap da onaylı", "type": "bool", "default": "1",
+     "help": "Açıkken hediye kitap gönderimi de müdür onayı olmadan ilerlemez; ücretli ve karşılıklı her zaman onaylı"},
+    {"key": "INFLUENCER_API_ENABLED", "group": "influencer", "label": "Resmî API ile hesap sayıları", "type": "bool", "default": "0",
+     "help": "İkinci sürüm. Kapalıyken sayılar elle ya da dosyayla girilir; müşteri ortamında kullanıcı kararı olmadan açılmaz"},
+    # Katalog ve bülten (M24)
+    {"key": "CATALOG_PRICE_SOURCE", "group": "catalog", "label": "Katalog fiyatı kaynağı", "type": "text", "default": "crm",
+     "help": "crm = CRM kitap kartı KDV dahil fiyat (varsayılan; kayıtlı liste fiyatı, ihale tablosuyla aynı alan), crm-perakende "
+             "= CRM perakende birim fiyat, crm-uzeri = kitabın üzerindeki fiyat (Baskı önerisi raporu), logo = son B2B/CRM satış "
+             "faturasının birim fiyatı, tsoft = web sitesi satış fiyatı. Yeni katalog bunu alır; katalog başına değiştirilir"},
+    {"key": "CATALOG_STOCK_SOURCE", "group": "catalog", "label": "Stok kaynağı", "type": "text", "default": "crm",
+     "help": "crm = CRM stok adedi (Baskı önerisi «Tükenme süresi» ile aynı), logo = Logo depo stoku. Stok ay sayısı = stok ÷ "
+             "ağırlıklı aylık satış hızı"},
+    {"key": "CATALOG_BOOK_TYPES", "group": "catalog", "label": "Katalog havuzundaki ürün tipleri", "type": "text", "default": "1,4",
+     "help": "CRM kitap kartı tipi, virgülle: 1 Kitap, 4 Set, 5 Dergi, 8 E-kitap, 9 Sesli kitap"},
+    {"key": "CATALOG_CRITICAL_STOCK_MONTHS", "group": "catalog", "label": "Kritik stok (ay)", "type": "text", "default": "1",
+     "help": "Katalogdaki kitabın stoku bu kadar aydan az yetiyorsa kritik uyarı"},
+    {"key": "CATALOG_TARGET_STOCK_MONTHS", "group": "catalog", "label": "Öneride yeterli stok (ay)", "type": "text", "default": "6",
+     "help": "Öneri puanında stok parçası bu aya ulaşınca tam puan alır"},
+    {"key": "CATALOG_NEW_MONTHS", "group": "catalog", "label": "Yeni kitap penceresi (ay)", "type": "int", "default": "12",
+     "help": "İlk baskısı bu kadar ay içinde olan kitap «yeni» sayılır ve yenilik puanı alır"},
+    {"key": "CATALOG_SCORE_WEIGHTS", "group": "catalog", "label": "Öneri puanı ağırlıkları (JSON)", "type": "text", "default": "",
+     "help": "Boşsa {\"hiz\": 40, \"stok\": 20, \"yenilik\": 20, \"ozelgun\": 20}. Ölçülemeyen parça dışarıda kalır"},
+    {"key": "CATALOG_TEXT_WORDS", "group": "catalog", "label": "Katalog metni (kelime)", "type": "int", "default": "60",
+     "help": "Zeki AI tanıtım metnini en çok bu kadar kelimeye kısaltır"},
+    {"key": "CATALOG_PDF_PER_PAGE", "group": "catalog", "label": "PDF önizlemede sayfa başına kitap", "type": "int", "default": "6",
+     "help": "1–12; ekranda indirirken değiştirilir"},
+    {"key": "CATALOG_ALERT_RECIPIENTS", "group": "catalog", "label": "Katalog uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (katalog sorumlusu, pazarlama müdürü). Kritik fiyat/stok uyarısı ve onay bekleyen "
+             "katalog/bülten her sabah tek özetle gider; okura ya da bayiye hiçbir gönderim yok"},
+    {"key": "NEWSLETTER_REQUIRE_KVKK", "group": "catalog", "label": "Segmentte KVKK onayı şart", "type": "bool", "default": "0",
+     "help": "Açıksa segment sayısına yalnız KVKK onayı da olan kişi girer. İYS onayı, e-posta izni ve toplu e-posta izni her "
+             "durumda şarttır"},
+    {"key": "NEWSLETTER_SUBJECT_OPTIONS", "group": "catalog", "label": "Konu satırı seçeneği", "type": "int", "default": "5",
+     "help": "Zeki AI'ın bülten için önereceği konu satırı sayısı"},
+    {"key": "NEWSLETTER_INTEREST_KEYWORDS", "group": "catalog", "label": "İlgi alanı → kitap türü sözcükleri (JSON)", "type": "text",
+     "default": "", "help": "Kişi kartındaki ilgi bayrağının kitabın tür/Kitaplık/web kategorisinde aranan sözcükleri, örn. "
+                            "{\"new_tarihveakademi\": [\"tarih\", \"akademi\"]}. Boşsa varsayılan eşleme"},
+    # İnsan kaynakları (İK-0 + M55)
+    {"key": "HR_RECRUIT_SLA_DAYS", "group": "hr", "label": "Aşamada bekleme eşiği (gün)", "type": "text", "default": "",
+     "help": "Aday bir aşamada bundan uzun kalırsa panoda sayılır ve İK alıcılarına aday bilgisi içermeyen özet gider. Boş: eşik yok"},
+    {"key": "HR_ALERT_RECIPIENTS", "group": "hr", "label": "İK bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri. Adaya hiçbir e-posta gönderilmez; mektupları İK kendisi gönderir"},
+    {"key": "HR_ADMIN_SEES_PERSONAL", "group": "hr", "label": "Yönetici aday verisini rolsüz görsün", "type": "bool", "default": "0",
+     "help": "Kapalıyken (önerilen) portal yöneticisi aday kişisel verisini, KVKK yönetimini ve İK erişim kaydını ancak kendine "
+             "rol bağlarsa görür; bağ değişiklik kaydına düşer"},
+    {"key": "HR_FILE_MAX_MB", "group": "hr", "label": "Özgeçmiş dosyası üst boyutu (MB)", "type": "int", "default": "20",
+     "help": "Bozuk ya da kötü niyetli yüklemeye karşı; aşan dosya reddedilir ve nedeni yazılır"},
+    {"key": "HR_COMPANY_NAME", "group": "hr", "label": "Mektuplarda şirket adı", "type": "text", "default": "Timaş Yayınları",
+     "help": "Şablonlardaki {{sirket}} alanı"},
+    {"key": "HR_CRM_UNIT_MANAGER_COLUMN", "group": "hr", "label": "CRM birim yöneticisi kolonu", "type": "text",
+     "default": "new_departmanyoneticisiid",
+     "help": "BusinessUnitBase'te departman yöneticisini tutan kolon. Okunamazsa eşitleme yöneticisiz sürer ve not düşer"},
+    # M57 Eğitim ve gelişim
+    {"key": "HR_LEARNING_ALERT_DAYS", "group": "hr", "label": "Zorunlu eğitim uyarısı (gün önce)", "type": "text", "default": "",
+     "help": "Sertifika geçerliliği bitmeden kaç gün önce «dolacak» sayılsın ve sabah özetine girsin. Boş: yalnız süresi dolmuş olanlar"},
+    {"key": "HR_PRIVACY_MIN_GROUP", "group": "hr", "label": "Gizlilik eşiği (kişi)", "type": "text", "default": "",
+     "help": "Kullanım haritasında bu sayıdan az çalışanı olan birimler birleştirilir; anket sonucu bu sayıdan az yanıtta "
+             "gösterilmez. Boş: birleştirme yok, ekran uyarır"},
+    {"key": "HR_TRAINING_ACCOUNTS", "group": "hr", "label": "Eğitim gider hesapları (Logo)", "type": "text", "default": "",
+     "help": "Virgülle 7'li gider hesap kodları; alt hesaplar dahil sayılır. Adayları Eğitim → Gider ekranı listeler (Mali İşler seçer)"},
+    # Platform ve kanallar (M42; M40/M41 bağlantı anahtarlarını aynı gruba ekler)
+    {"key": "CHANNEL_SPECODES", "group": "channels", "label": "E-ticaret kanal kodları", "type": "text", "default": "E-TICARET",
+     "help": "Logo cari kartındaki özel kod 2 değerleri (virgülle). Bu kodlu cariler eşleme listesine ve kanal karnesine girer"},
+    {"key": "CHANNEL_YEARS", "group": "channels", "label": "Okunan yıl sayısı", "type": "int", "default": "2",
+     "help": "Verinin son yılı ve öncesi; geçen yılla kıyas için en az 2"},
+    {"key": "CHANNEL_RETURN_THRESHOLD", "group": "channels", "label": "İade oranı uyarı eşiği", "type": "text", "default": "0.10",
+     "help": "Oran (0,10 = %10). Platformun yıl içi iade oranı bunu aşarsa pazartesi uyarısı. Ölçülmemiş başlangıç değeridir"},
+    {"key": "CHANNEL_DISCOUNT_RISE_PTS", "group": "channels", "label": "İskonto artışı uyarısı (puan)", "type": "text", "default": "2",
+     "help": "İskonto oranı geçen yılın aynı dönemine göre bu kadar puandan çok artarsa uyarı"},
+    {"key": "CHANNEL_REPORT_RECIPIENTS", "group": "channels", "label": "Kanal karnesi ve uyarı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri. Ayın 2'si aylık karne, pazartesi uyarı özeti. Boşsa e-posta gitmez, uyarı ekranda kalır"},
+    {"key": "CHANNEL_MAP_MIN_PROB", "group": "channels", "label": "Eşleme adayı en düşük olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI'ın cari için seçtiği platform bu olasılığın altındaysa aday gösterilmez («emin değil»)"},
+    {"key": "CHANNEL_MAP_MIN_MARGIN", "group": "channels", "label": "Eşleme adayı en düşük fark", "type": "text", "default": "0.30",
+     "help": "Seçilen platformla ikinci en olası seçenek arasındaki en düşük olasılık farkı"},
+    {"key": "CHANNEL_PLATFORM_HINTS", "group": "channels", "label": "Platform işletmeci unvanları (JSON)", "type": "text", "default": "",
+     "help": "Boşsa varsayılan. Biçim: {\"hepsiburada\": [\"D-MARKET\"], \"dr\": [\"TURKUVAZ\"]}. Unvanda geçerse aday olur; onay yine gerekir"},
+    {"key": "CHANNEL_ORDER_DAYS", "group": "channels", "label": "CRM sipariş sayımı (gün)", "type": "int", "default": "180",
+     "help": "Kanal detayındaki CRM sipariş tipi sayıları (Pazaryeri, Amazon Konsinye, B2C) bu kadar günlük pencereden"},
+    {"key": "CHANNEL_D2C_MIN_ADET", "group": "channels", "label": "D2C güçlü kitap: en az adet", "type": "text", "default": "20",
+     "help": "Sitede bu kadar net adetten az satan kitap «D2C'de güçlü» listesine girmez"},
+    {"key": "CHANNEL_D2C_INDEX", "group": "channels", "label": "D2C güçlü kitap: pay katı", "type": "text", "default": "1.5",
+     "help": "Kitabın D2C payı, bütün kitaplardaki D2C payının en az bu katıysa listeye girer"},
+    {"key": "CHANNEL_TARGET_YEAR_CODES", "group": "channels", "label": "CRM hedef yılı kodları", "type": "text", "default": "",
+     "help": "Boşsa CRM seçim listesinden okunur. Elle: 2025:3,2026:100000000"},
+    # M39 Pazar araştırması ve rekabet
+    {"key": "PAZAR_ALERT_RECIPIENTS", "group": "pazar", "label": "Bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (pazarlama müdürü, yönetim): özet taslağı hazır, onay bekliyor, onaylandı ve "
+             "rakip verisi eski uyarısı. Boşsa e-posta gitmez"},
+    {"key": "PAZAR_STALE_DAYS", "group": "pazar", "label": "Rakip verisi eski sayılır (gün)", "type": "int", "default": "180",
+     "help": "CRM rakip kitap kayıtlarının son eklenme/değişme tarihinden bu yana geçen gün bu sayıyı aşınca ekranda "
+             "uyarı ve haftalık e-posta. Ekipçe belirlenecek"},
+    {"key": "PAZAR_NEW_DAYS", "group": "pazar", "label": "«Yeni kayıt» penceresi (gün)", "type": "int", "default": "365",
+     "help": "Matristeki yeni kayıt sayısı: CRM'e bu kadar gün içinde eklenen rakip kitap"},
+    {"key": "PAZAR_CATEGORY_SOURCE", "group": "pazar", "label": "TİMAŞ kategori listesi", "type": "text", "default": "auto",
+     "help": "auto: yürürlükte kategori ağacı varsa ağaç, yoksa CRM Kitaplık; agac; kitaplik. Değişince onaylı eşlemelerin "
+             "karşılığı kalmayanlar yeniden öneriye düşer"},
+    {"key": "PAZAR_CATEGORY_LEVELS", "group": "pazar", "label": "Ağaçtan alınan düzeyler", "type": "text", "default": "ana,alt",
+     "help": "Virgülle: yayinevi, ana, alt, altalt. Rakip kategorisi bu düzeylerdeki düğümlere eşlenir"},
+    {"key": "PAZAR_MAP_MIN_PROB", "group": "pazar", "label": "Eşleme önerisi: en düşük olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI bunun altında emin olduğunda öneri «emin değil» olarak gelir; karar her durumda insanda"},
+    {"key": "PAZAR_MAP_MIN_MARGIN", "group": "pazar", "label": "Eşleme önerisi: en düşük fark", "type": "text", "default": "0.30",
+     "help": "Seçilen kategori ile ikinci aday arasındaki olasılık farkı"},
+    {"key": "PAZAR_BATCH_SECONDS", "group": "pazar", "label": "Eşleme önerisi süresi (saniye)", "type": "int", "default": "1800",
+     "help": "Bir turda öneriye ayrılan süre; biten süre sonraki tura kalır (kuyruk kalıcı)"},
+    {"key": "PAZAR_BLURB_CHARS", "group": "pazar", "label": "Tanıtım metninden alınan karakter", "type": "int", "default": "280",
+     "help": "Rakip tanıtım metni ve TİMAŞ arka kapak metninin yalnız başı alınır (emsal benzerliği için); toplu kopyalanmaz"},
+    {"key": "PAZAR_COMP_PAGE_TOL", "group": "pazar", "label": "Emsal: sayfa farkı payı", "type": "text", "default": "0.25",
+     "help": "0.25 = ±%25. Sayfa sayısı girildiyse bu payın dışındaki aday elenir"},
+    {"key": "PAZAR_COMP_PRICE_TOL", "group": "pazar", "label": "Emsal: fiyat farkı payı", "type": "text", "default": "0.30",
+     "help": "0.30 = ±%30. Fiyat girildiyse bu payın dışındaki aday elenir"},
+    {"key": "PAZAR_COMP_MODEL_CANDIDATES", "group": "pazar", "label": "Emsal: Zeki AI'ın okuduğu aday", "type": "int",
+     "default": "20", "help": "Ortak sözcük puanı en yüksek bu kadar aday Zeki AI'ya sorulur; kalanlar puan sırasıyla listelenir "
+                             "ve ekranda yazılır"},
+    {"key": "PAZAR_OWN_YEARS", "group": "pazar", "label": "İç göstergelerde yıl sayısı", "type": "int", "default": "3",
+     "help": "Logo'dan okunan yıl sayısı (veri sonunun yılı dahil)"},
+    {"key": "PAZAR_BRIEF_MAX_SOURCES", "group": "pazar", "label": "Özet taslağı: en çok kaynak", "type": "int", "default": "60",
+     "help": "Taslağa verilen kaynak sayısı; dışarıda kalan sayısı özette yazılır"},
+    {"key": "PAZAR_BRIEF_TWO_EYES", "group": "pazar", "label": "Özeti yazan onaylayamaz", "type": "bool", "default": "1", "help": ""},
+    {"key": "PAZAR_FILE_MAX_MB", "group": "pazar", "label": "Rapor dosyası üst sınırı (MB)", "type": "int", "default": "50", "help": ""},
+    {"key": "PAZAR_EXTRACT_PAGE_CHARS", "group": "pazar", "label": "Rakam çıkarımında parça boyu (karakter)", "type": "int",
+     "default": "12000", "help": "Uzun sayfa bu boyda parçalara bölünür; hiçbir parça atlanmaz"},
+    # M44 Lojistik ve kargo
+    {"key": "SHIPPING_SHIPPED_STATUSES", "group": "shipping", "label": "Sevk edilmiş sayılan sipariş durumları", "type": "text",
+     "default": "100000000,100000015", "help": "Virgülle CRM sipariş durum kodları (100000000 Sevk edildi, 100000015 Tamamlandı)"},
+    {"key": "SHIPPING_UNTRACKED_STATUSES", "group": "shipping", "label": "Takip no'suz sevk: durumlar", "type": "text",
+     "default": "100000000", "help": "Bu durumdaki siparişte takip numarası boşsa «takip numarasız sevk» listesine girer"},
+    {"key": "SHIPPING_UNTRACKED_EXCLUDE_TYPES", "group": "shipping", "label": "Takip no'suz sevk: hariç sipariş tipleri",
+     "type": "text", "default": "", "help": "Kargoyla gitmeyen sipariş tipleri (virgülle CRM kodu, ör. 16 İmza siparişi). Ölçülecek"},
+    {"key": "SHIPPING_INTEGRATION_OK_VALUES", "group": "shipping", "label": "Entegrasyon sonucunda «başarılı» değerleri",
+     "type": "text", "default": "başarılı,basarili,success,successful,ok,true,1,evet",
+     "help": "Aras/UPS/MNG/Akademi sonuç alanında bu değerler hata sayılmaz (harf büyüklüğü fark etmez). Değer kümesi ölçülecek"},
+    {"key": "SHIPPING_WINDOW_DAYS", "group": "shipping", "label": "Günlük hat penceresi (gün)", "type": "int", "default": "30",
+     "help": "Entegrasyon hatası, takip numarasız sevk ve sipariş listesinin kaç gün geriye baktığı (ekranda yazılır)"},
+    {"key": "SHIPPING_CARGO_DATE_FORMATS", "group": "shipping", "label": "Kargo kaydı tarih biçimleri", "type": "text",
+     "default": "%d.%m.%Y,%d.%m.%Y %H:%M:%S,%d.%m.%Y %H:%M,%d/%m/%Y,%Y-%m-%d,%Y-%m-%d %H:%M:%S,%Y%m%d",
+     "help": "Kargo bilgisi tablosunda tarihler metin; sırayla denenir, okunamayan kayıt ekranda sayılır. Ölçülecek"},
+    {"key": "SHIPPING_RETURN_NO_VALUES", "group": "shipping", "label": "İade durumu: «iade değil» değerleri", "type": "text",
+     "default": "hayır,hayir,yok,0,false,-,normal,iade değil", "help": "Kargo kaydının iade durumu alanında bu değerler iade sayılmaz. Ölçülecek"},
+    {"key": "SHIPPING_COD_NO_VALUES", "group": "shipping", "label": "Tahsilatlı kargo: «hayır» değerleri", "type": "text",
+     "default": "hayır,hayir,yok,0,false,-", "help": "Tahsilatlı kargo alanında bu değerler tahsilatsız sayılır. Ölçülecek"},
+    {"key": "SHIPPING_LOGO_CARRIER_CODES", "group": "shipping", "label": "Kargo firması → Logo cari kodları", "type": "text",
+     "default": "", "help": "Mutabakat için. Biçim: ARAS KARGO=320.01.001,320.01.002;MNG KARGO=320.01.003 (firma adı kargo "
+                            "kaydındaki gibi). Mutabakat ekranındaki «Aday cariler» listesinden seçilir"},
+    {"key": "SHIPPING_LOGO_CARRIER_HINTS", "group": "shipping", "label": "Aday cari ipuçları", "type": "text",
+     "default": "KARGO,KURYE,LOJİSTİK,EXPRESS", "help": "Logo'da ünvanında bu sözcükler geçen hizmet faturası carileri aday olarak listelenir"},
+    {"key": "SHIPPING_STALE_DAYS", "group": "shipping", "label": "Kargo kaydı eskime uyarısı (gün)", "type": "int", "default": "3",
+     "help": "Son kargo kaydı bundan eskiyse ekranlar «teslim bilgisi eksik olabilir» uyarır"},
+    {"key": "SHIPPING_WAITING_DAYS", "group": "shipping", "label": "Teslim bekleyen eşiği (gün, varsayılan)", "type": "int",
+     "default": "5", "help": "Depo müdürü ekranda değiştirebilir (kargo.karar yetkisiyle); bu değer ilk varsayılandır"},
+    {"key": "SHIPPING_BOXED_DAYS", "group": "shipping", "label": "Kutulandı bekleyen eşiği (gün, varsayılan)", "type": "int",
+     "default": "2", "help": "Kutulanıp bu kadar gün sevk edilmeyen sipariş sabah listesine girer"},
+    {"key": "SHIPPING_DAILY_AT", "group": "shipping", "label": "Günlük özet saati", "type": "time", "default": "06:45",
+     "help": "Hata sınıflaması ve iç özet e-postası bu saatten sonraki ilk turda, günde bir kez"},
+    {"key": "SHIPPING_DAILY_TO", "group": "shipping", "label": "Günlük özet alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (sevkiyat sorumlusu). Boşsa e-posta gitmez"},
+    {"key": "SHIPPING_WEEKLY_AT", "group": "shipping", "label": "Haftalık karne saati (pazartesi)", "type": "time", "default": "08:00",
+     "help": "Haftalık firma karnesi pazartesi bu saatten sonra"},
+    {"key": "SHIPPING_WEEKLY_TO", "group": "shipping", "label": "Haftalık karne alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (depo müdürü, yönetim). Karnede maliyet de vardır. Boşsa gitmez"},
+    {"key": "SHIPPING_MONTHLY_TO", "group": "shipping", "label": "Aylık mutabakat alıcıları", "type": "text", "default": "",
+     "help": "Ayın 3'ünde önceki ayın kargo mutabakatı özeti (finans). Boşsa gitmez"},
+    {"key": "SHIPPING_CLASSIFY_MIN_PROB", "group": "shipping", "label": "Hata sınıflaması: en düşük olasılık", "type": "text",
+     "default": "0.70", "help": "Zeki AI bu olasılığın altında kalırsa sınıf «Belirsiz» yazılır"},
+    {"key": "SHIPPING_CLASSIFY_MIN_MARGIN", "group": "shipping", "label": "Hata sınıflaması: en düşük fark", "type": "text",
+     "default": "0.30", "help": "İlk iki sınıfın olasılık farkı bundan küçükse «Belirsiz»"},
+    {"key": "SHIPPING_CLASSIFY_BUDGET_SEC", "group": "shipping", "label": "Hata sınıflaması süre bütçesi (sn)", "type": "int",
+     "default": "600", "help": "Günlük turda sınıflamaya ayrılan en uzun süre; kalan mesajlar ertesi tura kalır (kayıp yok)"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -451,6 +1220,26 @@ GROUPS = [
     {"id": "sets", "label": "Set, hediye ve promosyon",
      "help": "Set bileşeni, satış ve fiyat kaynağı, marj alt sınırı, birlikte alım ve kurumsal hediye kademeleri. CRM'e, Logo'ya "
              "ve T-soft'a hiçbir şey yazılmaz; onaylanan set için açılacak kart listesi verilir."},
+    {"id": "mailbox", "label": "Kurumsal e-posta",
+     "help": "timas@ genel kutusu yalnız okunur (Gmail: gmail.readonly + gmail.labels). Portal dışarıya ileti göndermez, kutudan "
+             "silmez, taşımaz; yanıtı kişi kutunun kendi arayüzünden gönderir. İleti gövdesi portalda saklanmaz."},
+    {"id": "relations", "label": "Kurumsal ilişkiler",
+     "help": "Kanaat önderi ve kurum ilişkileri, hediye kitap programı, kamu projeleri. CRM'e hiçbir şey yazılmaz; kişilere ve "
+             "kurumlara e-posta gitmez."},
+    {"id": "eticaret", "label": "E-ticaret ve pazar yerleri",
+     "help": "Site, CRM ve Logo arasındaki fark kuralları, bildirim alıcıları ve pazar yeri kanalı. T-soft'a, CRM'e, Logo'ya ve "
+             "pazar yerlerine hiçbir şey yazılmaz; düzeltmeyi kişi yapar."},
+    {"id": "dijital", "label": "Dijital yayın ve e-kitap",
+     "help": "Fırsat eşikleri, rapor eşleme ve iç uyarı alıcıları. Platformlara, CRM'e, Logo'ya ve T-soft'a hiçbir şey gönderilmez."},
+    {"id": "kampanya", "label": "E-ticaret kampanyaları",
+     "help": "Fiyat ve maliyet kaynağı, aday süzgeci eşikleri, sonuç penceresi ve bildirim alıcıları. Kampanya hiçbir platforma, "
+             "T-soft'a ya da CRM'e gönderilmez; onaydan sonra ekip elle kurar."},
+    {"id": "stock", "label": "Depo ve stok",
+     "help": "Bitecek, fazla ve hareketsiz stok kuralları, baskı süresi ve sabah bülteni. Logo'ya ve CRM'e hiçbir şey yazılmaz; "
+             "onaylanan güvenlik stoku portalda durur."},
+    {"id": "commerce", "label": "E-ticaret müşterileri",
+     "help": "Site siparişi ve üyesi T-soft'tan yalnız okunur; kişisel alan portalda yalnız tuzlu özet olarak durur. RFM "
+             "eşikleri modülün kendi ekranındadır. T-soft'a, CRM'e ve Logo'ya hiçbir şey yazılmaz; portal ileti göndermez."},
     {"id": "studio", "label": "Kitap Tasarım Stüdyosu", "help": "Sayfa düzeni, karakter kartı ve okur araçları ayarları."},
     {"id": "creative", "label": "Pazarlama görsel ve metin",
      "help": "Kapak kaynağı, günlük özet alıcıları ve metin denetimi eşikleri. Dış kanala hiçbir şey gönderilmez."},
@@ -458,8 +1247,49 @@ GROUPS = [
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
              "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},
     {"id": "marketing", "label": "Pazarlama planları",
-     "help": "Yeni kitap pazarlama planının bildirimleri, onay eşiği ve öneri kuralları. CRM'e ve dış kanallara hiçbir şey "
-             "gönderilmez; planlar portalda onaylanır."},
+     "help": "Yeni kitap ve aylık pazarlama planının bildirimleri, onay eşiği, öneri kuralları ve satış föyü. CRM'e ve dış "
+             "kanallara hiçbir şey kendiliğinden gönderilmez; planlar ve föyler portalda onaylanır."},
+    {"id": "itops", "label": "Sistem durumu",
+     "help": "Halka denetimleri 5 dk'da bir koşar; kopma ve düzelme yalnız iç alıcılara e-postayla bildirilir. Denetimler "
+             "yalnız okur, hiçbir servisi yeniden başlatmaz."},
+    {"id": "security", "label": "Veri güvenliği",
+     "help": "Güvenlik uyarı kuralları, hesap hijyeni ve saklama süreleri. Saklama süresi yalnız «uygula» açıkken siler; "
+             "önizleme ve kanıt Veri güvenliği ekranındadır."},
+    {"id": "support", "label": "Müşteri hizmetleri",
+     "help": "Destek masası yalnız okunur; masaya, CRM'e ve Logo'ya hiçbir şey yazılmaz. Zeki AI taslağı müşteriye gitmez, "
+             "temsilci düzeltip masadan kendisi gönderir."},
+    {"id": "model_quality", "label": "Zeki AI kalitesi",
+     "help": "Kapı koşularının bildirimleri, karne penceresi ve sürüm kaydının ek dosyaları. Bildirimler yalnız iç ekibe gider."},
+    {"id": "royalty", "label": "Telif dönemi",
+     "help": "Dönem koşusunun kapsamı, stopaj varsayılanı ve hatırlatmalar. CRM'e, Logo'ya ve bankaya hiçbir şey yazılmaz; "
+             "beyannameyi yazara insan gönderir."},
+    {"id": "readers", "label": "Okur veri tabanı",
+     "help": "Tekil okur, izin ve segment kuralları. CRM'e yazılmaz, portal ileti göndermez; liste dışa aktarımı izin "
+             "denetimli ve kayıt altındadır."},
+    {"id": "ads", "label": "Dijital pazarlama ve reklam",
+     "help": "Reklam harcaması platformun dışa aktarım dosyasıyla gelir; platformlara hiçbir şey gönderilmez (bütçe, teklif, "
+             "durdurma yok). Eşiği boş bırakılan öneri kuralı çalışmaz."},
+    {"id": "social", "label": "Sosyal medya",
+     "help": "Takvim uyarıları, fırsat kuralları ve platform sınırları. Portal hiçbir sosyal medya hesabına paylaşım yapmaz; "
+             "onaylı gönderi yayına hazır paket olarak iner."},
+    {"id": "influencer", "label": "İşbirlikleri",
+     "help": "İçerik üreticisi işbirliklerinin hatırlatmaları, onay ve ödeme bildirimleri, aday puanı. İçerik üreticisine "
+             "portaldan e-posta gitmez; hesap sayıları kazınmaz."},
+    {"id": "catalog", "label": "Katalog ve bülten",
+     "help": "Katalog fiyat ve stok kaynağı, uyarı eşikleri, öneri ağırlıkları ve bülten segment kuralı. Portal toplu e-posta "
+             "göndermez, kişi listesi dışarı vermez; CRM'e ve T-soft'a hiçbir şey yazılmaz."},
+    {"id": "hr", "label": "İnsan kaynakları",
+     "help": "İşe alım bildirimleri ve aday verisine yönetici erişimi. Saklama süreleri ve aydınlatma metni İK ekranındadır "
+             "(Çalışan ve KVKK kayıtları). CRM'e yazılmaz; adaya portal e-posta göndermez."},
+    {"id": "channels", "label": "Platform ve kanallar",
+     "help": "Kanal karnesi, eşleme ve uyarı ayarları. Pazar yerlerine, T-soft'a, CRM'e ve Logo'ya hiçbir şey yazılmaz; "
+             "öneriler portalda onaylanır, gönderimi insan yapar."},
+    {"id": "pazar", "label": "Pazar araştırması ve rekabet",
+     "help": "Rakip verisi CRM'den okunur, pazar rakamları yalnız yüklenen ve onaylanan rapordan gelir; dış kaynak taraması "
+             "yok. CRM'e ve Logo'ya hiçbir şey yazılmaz."},
+    {"id": "shipping", "label": "Lojistik ve kargo",
+     "help": "Kargo günlük hattı, firma karnesi ve mutabakat. CRM, Logo ve kargo firmaları yalnız okunur; kargo firmasına, "
+             "CRM'e ve müşteriye hiçbir şey gönderilmez. Alıcılar yalnız iç e-posta adresleridir."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -492,7 +1322,22 @@ LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
               "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki",
-              "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali"}
+              "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali",
+              "marketing_foy": "Satış föyü",
+              "itops_incident": "Sistem olayı", "itops_check": "Bağlantı denemesi", "itops_release": "Sürüm kaydı",
+              "security_alert": "Güvenlik uyarısı",
+              "support_context": "Müşteri bağlamı", "support_dealer": "Bayi görünümü", "support_draft": "Cevap taslağı",
+              "support_class": "Talep sınıfı", "support_class_def": "Destek sınıfı", "support_faq": "SSS maddesi",
+              "ads_account": "Reklam hesabı", "ads_import": "Reklam dosyası", "ads_campaign": "Reklam kampanyası",
+              "ads_budget": "Reklam bütçesi", "ads_suggestion": "Reklam önerisi", "ads_brief": "Reklam brief'i",
+              "ads_report": "Reklam raporu", "ads_refresh": "Reklam satış verisi", "ads_run_due": "Reklam günlük işi",
+              "social_post": "Sosyal medya gönderisi", "social_account": "Sosyal medya hesabı",
+              "social_import": "Sosyal medya içe aktarma", "social_metric": "Sosyal medya içgörüsü",
+              "social_report": "Sosyal medya raporu",
+              "catalog": "Katalog", "catalog_item": "Katalog kitabı", "newsletter": "E-bülten",
+              "dijital_listing": "Dijital platform durumu", "dijital_rights": "Dijital hak kararı",
+              "dijital_price": "Dijital fiyat kararı", "dijital_platform": "Dijital platform",
+              "dijital_import": "Dijital satış raporu"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -794,6 +1639,21 @@ def _validate(spec: dict[str, Any], raw: Any) -> str:
     if spec["key"] == "SEO_SITE_URL" and v and ("/rest" in v.lower() or not v.lower().startswith(("http://", "https://"))):
         # 2026-09-25: T-soft REST adresi bu kutuya girilmiş, şema taraması ve bağlantılar API adresine gitmişti.
         raise AdminError("«Mağaza adresi» sitenin adresi olmalı (örn. https://timas.com.tr); T-soft REST adresi üstteki kutuya girilir.")
+    if spec["key"] == "MARKETING_FOY_LOGO_PRICE" and v and v not in ("satis", "liste", "yok"):
+        raise AdminError("«Föy fiyatı …» satis, liste ya da yok olmalı.")
+    if spec["key"] == "MARKETING_CONFLICT_KEYS" and v and any(x.strip() not in ("kitaplik", "hedef-kitle") for x in v.split(",")):
+        raise AdminError("«Çakışma kuralı» kitaplik ve/veya hedef-kitle olmalı.")
+    if spec["key"] in ("MARKETING_MONTH_DRAFT_DAY", "MARKETING_FOY_REMIND_DAY") and v and not (v.isdigit() and 1 <= int(v) <= 28):
+        raise AdminError(f"«{spec['label']}» 1 ile 28 arasında bir gün olmalı.")
+    if spec["key"] in ("MARKETING_MONTHLY_BUDGET", "MARKETING_FOY_PRICE_TOLERANCE") and v:
+        raw = v.replace(".", "").replace(",", ".") if "," in v else v
+        try:
+            n = float(raw)
+        except ValueError:
+            raise AdminError(f"«{spec['label']}» bir sayı olmalı.") from None
+        if n < 0:
+            raise AdminError(f"«{spec['label']}» eksi olamaz.")
+        return raw
     if spec["key"] in ("MARKETING_UPPER_APPROVAL_THRESHOLD", "MARKETING_BUDGET_RATE") and v:
         try:
             n = float(v.replace(",", "."))
@@ -811,6 +1671,27 @@ def _validate(spec: dict[str, Any], raw: Any) -> str:
             ok = False
         if not ok:
             raise AdminError("«Takvim şablonu» [[gün, \"iş\", \"kanal\", \"materyal\"], …] biçiminde JSON olmalı.")
+        return v
+    if spec["key"] == "SOCIAL_PLATFORM_LIMITS" and v:
+        try:
+            lim = json.loads(v)
+            ok = isinstance(lim, dict) and all(isinstance(n, int) and n > 0 for n in lim.values())
+        except ValueError:
+            ok = False
+        if not ok:
+            raise AdminError("«Platform sınırları» {\"x\": 280, \"instagram:etiket\": 30} biçiminde JSON olmalı.")
+    if spec["key"] in ("CATALOG_PRICE_SOURCE", "CATALOG_STOCK_SOURCE") and v:
+        allowed = (("crm", "crm-perakende", "crm-uzeri", "logo", "tsoft") if spec["key"] == "CATALOG_PRICE_SOURCE" else ("crm", "logo"))
+        if v.lower() not in allowed:
+            raise AdminError(f"«{spec['label']}» şunlardan biri olmalı: {', '.join(allowed)}.")
+        return v.lower()
+    if spec["key"] in ("CATALOG_SCORE_WEIGHTS", "NEWSLETTER_INTEREST_KEYWORDS") and v:
+        try:
+            obj = json.loads(v)
+        except ValueError:
+            obj = None
+        if not isinstance(obj, dict):
+            raise AdminError(f"«{spec['label']}» JSON nesnesi olmalı.")
         return v
     if t == "bool":
         return "1" if v in ("1", "true", "True", "on", "evet") else "0"
@@ -1179,6 +2060,16 @@ def _seo_check() -> tuple[bool, str]:
     return t_ok and g_ok, f"T-soft: {t_msg} · Google: {g_msg}"
 
 
+def mailbox_test() -> tuple[bool, str]:
+    """Kurumsal e-posta kutusu: ayar tamsa kutunun profilini ve etiket listesini okur (yalnız okuma)."""
+    from semantic_bridge import mailbox_sources as ms
+
+    state = ms.connection_state(conf)
+    if not state["connected"]:
+        return False, f"Kutu bağlı değil: {state['reason']}"
+    return ms.source(conf).test()
+
+
 #: Tek tuşla çalışan denemeler. E-posta burada yalnız ayar bütünlüğüne bakar: bir denemenin
 #: kimseye posta göndermemesi gerekir.
 CHECKS: list[dict[str, Any]] = [
@@ -1188,6 +2079,7 @@ CHECKS: list[dict[str, Any]] = [
     {"id": "directory", "group": "directory", "label": "Active Directory", "run": lambda: directory_test("")},
     {"id": "email", "group": "email", "label": "E-posta ayarı", "run": email_config_test},
     {"id": "seo", "group": "seo", "label": "T-soft ve Google", "run": lambda: _seo_check()},
+    {"id": "mailbox", "group": "mailbox", "label": "Kurumsal e-posta kutusu", "run": mailbox_test},
     {"id": "store", "group": None, "label": "Meta veritabanı", "run": store_test},
 ]
 _CHECK_BY_ID = {c["id"]: c for c in CHECKS}

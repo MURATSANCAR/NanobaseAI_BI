@@ -7,9 +7,7 @@ import {
   Bell,
   BookOpen,
   Bot,
-  Calendar,
   Contact,
-  Flag,
   HeartHandshake,
   LayoutGrid,
   MessageCircle,
@@ -29,8 +27,11 @@ import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
 import { relative } from '../format';
 import { categoriesApi } from '../categories/api';
+import { readersApi } from '../readers/api';
 import PersonAvatar from './PersonAvatar';
 import BulletinCard from './BulletinCard';
+import AgendaCard from './AgendaCard';
+import LearningCard from '../hr/learning/LearningCard';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
@@ -38,6 +39,8 @@ import zekiImg from '@/assets/kampus/zeki.jpg';
 import book1Img from '@/assets/kampus/book1.jpg';
 import book2Img from '@/assets/kampus/book2.jpg';
 import './kampus.css';
+import OutageStrip from '../it-ops/OutageStrip';
+import { notifyExport } from '../data-security/notify';
 
 /**
  * Girişten sonraki ilk ekran: Timaş Kampüs & ZEKİ Akıllı Rehber.
@@ -65,11 +68,11 @@ const PROMPTS = [
 ];
 
 /** Ana modüller ortak menüdeki giriş sayfalarını kullanır; alt ekranlar modül içinde kalır. */
-const MODULE_TILES = ['Genel Bakış', 'Editoryal Süreç', 'Finans & Risk', 'Yönetim Raporları', 'SEO & GEO'].map((title, index) => ({
+const MODULE_TILES = ['Genel Bakış', 'Editoryal Süreç', 'Finans & Risk', 'Yönetim Raporları', 'SEO & GEO', 'İnsan Kaynakları'].map((title, index) => ({
   title,
   to: GROUP_HOME[title].to,
   note: GROUP_HOME[title].hint,
-  tone: ['bg-violet/10 text-violet', 'bg-amber-100 text-amber-800', 'bg-emerald-100 text-emerald-700', 'bg-sky-100 text-sky-700', 'bg-rose-100 text-rose-700'][index],
+  tone: ['bg-violet/10 text-violet', 'bg-amber-100 text-amber-800', 'bg-emerald-100 text-emerald-700', 'bg-sky-100 text-sky-700', 'bg-rose-100 text-rose-700', 'bg-teal-100 text-teal-800'][index],
 }));
 
 const trNorm = (s: string) => s.toLocaleLowerCase('tr');
@@ -159,6 +162,17 @@ export default function KampusPage() {
     refetchInterval: 5 * 60_000,
   });
   const profilesWaiting = categoryPending.data?.pending ?? 0;
+  // Okur veri tabanı: onayınızı bekleyen segment ve okunamayan/eskiyen kaynak (sayfa rolde varsa).
+  const readersMine = useQuery({
+    queryKey: ['readers', 'mine'],
+    queryFn: readersApi.mine,
+    enabled: ENGINE_ENABLED && canOpenRoute(pages, '/okurlar') && pages !== null,
+    retry: false,
+    refetchInterval: 5 * 60_000,
+  });
+  const segmentsWaiting = readersMine.data?.segmentsAwaiting ?? 0;
+  const readerSourceProblems = readersMine.data?.sourceProblems ?? [];
+  const readerNotes = (segmentsWaiting ? 1 : 0) + (readerSourceProblems.length ? 1 : 0);
   const [notifOpen, setNotifOpen] = useState(false);
   useEffect(() => {
     if (!notifOpen) return;
@@ -217,6 +231,7 @@ export default function KampusPage() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `dahili-rehber-${new Date().toISOString().slice(0, 10)}.csv`;
+    notifyExport('Dahili rehber (kişi, dahili, cep, e-posta)', 'csv', everyone.length);
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -234,6 +249,8 @@ export default function KampusPage() {
       {/* Kanvas ekranlarıyla aynı sahne: ortak kabuk (zemin, yazı, ray), içerik kendi içinde kayar. */}
       <main className="kp-root absolute bottom-2 left-2 right-2 top-16 overflow-y-auto overscroll-contain text-ink/80 antialiased selection:bg-violet/20 selection:text-ink sm:bottom-6 sm:left-6 sm:right-6 sm:top-[84px]">
       <ZoomStage className="h-full">
+        {/* M48: bir halka kopukken herkese tek satır (yalnız halka adı). */}
+        <OutageStrip />
         {/* ARAÇ ÇUBUĞU: arama, bülten, bildirim, kişi */}
         <div className="glass-panel mx-auto flex w-full max-w-[1720px] items-center gap-2 rounded-2xl px-2 py-2 shadow-glass-float sm:gap-3 sm:rounded-3xl sm:px-3">
           <div className="relative min-w-0 flex-1">
@@ -267,14 +284,14 @@ export default function KampusPage() {
             <button
               type="button"
               title="Bildirimler"
-              aria-label={unseen || profilesWaiting ? `Bildirimler (${unseen + (profilesWaiting ? 1 : 0)} yeni)` : 'Bildirimler'}
+              aria-label={unseen || profilesWaiting || readerNotes ? `Bildirimler (${unseen + (profilesWaiting ? 1 : 0) + readerNotes} yeni)` : 'Bildirimler'}
               aria-haspopup="dialog"
               aria-expanded={notifOpen}
               onClick={() => setNotifOpen((v) => !v)}
               className="kp-press relative flex h-11 w-11 items-center justify-center rounded-xl text-muted hover:bg-white hover:text-ink sm:h-9 sm:w-9"
             >
               <Bell className="h-4 w-4" />
-              {(unseen > 0 || profilesWaiting > 0) && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />}
+              {(unseen > 0 || profilesWaiting > 0 || readerNotes > 0) && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-coral ring-2 ring-white" />}
             </button>
             {notifOpen && (
               <>
@@ -287,6 +304,26 @@ export default function KampusPage() {
                       className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
                     >
                       <span>Kategori ağacı: {profilesWaiting} kitap profili onayınızı bekliyor</span>
+                      <span className="text-violet">Aç</span>
+                    </Link>
+                  )}
+                  {segmentsWaiting > 0 && (
+                    <Link
+                      to="/okurlar/segmentler"
+                      onClick={() => setNotifOpen(false)}
+                      className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
+                    >
+                      <span>Okurlar: {segmentsWaiting} segment onayınızı bekliyor</span>
+                      <span className="text-violet">Aç</span>
+                    </Link>
+                  )}
+                  {readerSourceProblems.length > 0 && (
+                    <Link
+                      to="/okurlar"
+                      onClick={() => setNotifOpen(false)}
+                      className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-coral/30 bg-white/90 p-2 text-xs font-bold text-ink"
+                    >
+                      <span>Okurlar: {readerSourceProblems.join(', ')} okunamadı ya da eski</span>
                       <span className="text-violet">Aç</span>
                     </Link>
                   )}
@@ -345,39 +382,11 @@ export default function KampusPage() {
           {/* SESLİ BÜLTEN — sunucuda üretilen ses (bkz. BulletinCard, Yönetim → Sesli bülten) */}
           <BulletinCard />
 
-          {/* ÖNEMLİ GÜNLER & AJANDA — içerik sonra gerçek takvime bağlanacak */}
-          <Card id="ajanda" className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-sky-600" />
-                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Önemli Günler &amp; Ajanda</h3>
-              </div>
-              <span className="shrink-0 text-[11px] font-medium text-violet">Takvime Ekle</span>
-            </div>
-            <div className="relative space-y-3.5 border-l-2 border-slate-200/70 pl-3.5 text-xs">
-              <div className="relative">
-                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-sky-600 ring-2 ring-white" />
-                <span className="kp-mono text-[11px] font-semibold uppercase text-sky-700">22 Nisan Pazartesi • 10:00</span>
-                <h4 className="mt-0.5 font-bold text-ink">Dünya Kitap ve Telif Hakları Günü</h4>
-                <p className="text-[11px] text-muted">Genel merkez fuayesinde mini sergi &amp; söyleşi</p>
-              </div>
-              <div className="relative">
-                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-violet ring-2 ring-white" />
-                <span className="kp-mono text-[11px] font-semibold uppercase text-violet">26 Nisan Cuma • 15:30</span>
-                <h4 className="mt-0.5 font-bold text-ink">Aylık Yayın Kurulu Değerlendirmesi</h4>
-                <p className="text-[11px] text-muted">Büyük Divan Salonu &amp; Zoom Hibrit</p>
-              </div>
-              <div className="rounded-xl border border-violet/20 bg-violet/5 p-3 text-xs">
-                <div className="flex items-center justify-between gap-2 font-bold text-ink">
-                  <span className="flex items-center gap-1">
-                    <Flag className="h-3.5 w-3.5 text-rose-500" /> TÜYAP Fuarı 2024
-                  </span>
-                  <span className="kp-mono whitespace-nowrap rounded bg-rose-100 px-1.5 py-0.5 text-[11px] text-rose-700">18 Gün</span>
-                </div>
-                <p className="mt-1 text-[11px] text-muted">Stand planı, görev listesi ve yazar imza saatleri ZEKİ AI üzerinden görüntülenebilir.</p>
-              </div>
-            </div>
-          </Card>
+          {/* ÖNEMLİ GÜNLER & AJANDA — M27: sorumlusu olduğum yaklaşan fuar/etkinlik ve görevler (yalnız kendi kayıtlarım) */}
+          <AgendaCard />
+
+          {/* EĞİTİMLERİM — M57: yaklaşan oturum, dolacak zorunlu eğitim, bekleyen anket (yalnız kendi kaydım) */}
+          <LearningCard />
         </aside>
 
         {/* ORTA SÜTUN */}

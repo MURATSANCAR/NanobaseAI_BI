@@ -1,0 +1,10 @@
+[Unit]
+Description=E-ticaret kampanya (M35): Logo/CRM okuması, site fiyat kaydı, tarih geçişleri, stok uyarısı, sonuç ve özet
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/kampanya/run-due); bu birim yalnız çağırır. İlk kurulumda elle koşturulup süresi ölçülür
+# (günlüğe yazılır). Kampanya hiçbir platforma, T-soft'a ya da CRM'e gönderilmez.
+ExecStart=/bin/sh -c 'curl -fsS -m 3590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/kampanya/run-due'

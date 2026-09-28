@@ -1,6 +1,6 @@
 # H3 — E-Ticaret Müşteri Yönetimi Entegrasyonu: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Modül kimliği `commerce-integration` (`src/canvas/modules.json`,
+Durum: ilk sürüm kodlandı (dalda, test sunucusunda doğrulanmadı — günlük 2026-09-28) · Tarih: 2026-09-28 · Modül kimliği `commerce-integration` (`src/canvas/modules.json`,
 «Hazırlıklar» grubu)
 
 Kaynaklar: iş tanımı `specs/E_Ticaret_Müşteri_Yönetimi_Ent.txt`, `ZEKİ_Veri_Haritasi2.html` (M34/M35/M42 girdileri),

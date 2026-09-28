@@ -1,0 +1,10 @@
+[Unit]
+Description=Zeki AI kalitesi (M50): cevap kapısı her pazar 05:30 (referans rakamla, ~35 dk)
+
+[Timer]
+OnCalendar=Sun *-*-* 05:30:00
+Persistent=true
+Unit=timas-model-quality@hafta.service
+
+[Install]
+WantedBy=timers.target

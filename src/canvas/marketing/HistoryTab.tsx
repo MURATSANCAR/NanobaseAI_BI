@@ -13,6 +13,7 @@ const EVENT: Record<string, string> = {
   'onaya-gonderildi': 'Onaya gönderildi', 'onaydan-cekildi': 'Onaydan çekildi', 'onay-pazarlama': 'Pazarlama onayı', 'onay-ust': 'Üst onay',
   'geri-gonderildi': 'Geri gönderildi', revizyon: 'Revizyon sürümü', 'revizyon-acildi': 'Revizyon açıldı', arsivlendi: 'Arşive geçti',
   'zeki-oneri': 'Zeki AI gerekçesi ve emsal kontrolü', bildirim: 'Bildirim',
+  kitaplar: 'Kitap listesi değişti', 'kitaplar-acilis': 'Plan kitapları eklendi',
 };
 const MAIL: Record<string, string> = { sent: 'gönderildi', no_smtp: 'gönderilemedi: e-posta ayarı yok', no_recipient: 'gönderilemedi: alıcı yok', failed: 'gönderilemedi' };
 

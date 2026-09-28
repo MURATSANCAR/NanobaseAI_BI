@@ -1,6 +1,6 @@
 # M59 — Kitapçı/Bayi Risk ve Performans Yönetimi: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M59.txt`, `specs/M30.txt`, `specs/M31.txt`,
+Durum: kodlandı, dalda (2026-09-28; sunucuda doğrulanmadı — kararlar ve plandan sapmalar günlükte) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M59.txt`, `specs/M30.txt`, `specs/M31.txt`,
 `specs/M46.txt`; Veri Haritası (`veri_haritasi2.txt`: «Bayi & Alacak Verileri», «Bölge & Pazar Girdileri»); `PROJECT-MEMORY.md`
 (Vade/yaşlandırma, Satış = faturalı satır); `configs/semantic/knowledge/logo/knowledge/{caveats,metrics,glossary}/logo-timas.md`,
 `configs/semantic/knowledge/logo/knowledge/sql/{vadesi-gecmis-yaslandirma-fifo,vadesi-gecmis-toplam-fifo,ortalama-tahsilat-suresi-dso,planlanan-odeme-vadesi,en-cok-iade-alan-10-musteri-kimler}.md`;

@@ -1,0 +1,11 @@
+[Unit]
+Description=E-ticaret müşteri okuması (02:50, H2 okur turundan önce) ve sabah özeti (07:20)
+
+[Timer]
+OnCalendar=*-*-* 02:50:00
+OnCalendar=*-*-* 07:20:00
+Persistent=true
+Unit=timas-commerce.service
+
+[Install]
+WantedBy=timers.target

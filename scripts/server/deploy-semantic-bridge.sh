@@ -252,6 +252,8 @@ curl -fsS -H "X-Semantic-Caller: ${SEMANTIC_CALLER_TOKEN:-}" -m 20 "http://127.0
 ASK="$(curl -fsS -H "X-Semantic-Caller: ${SEMANTIC_CALLER_TOKEN:-}" -m 240 -H 'Content-Type: application/json' -d '{"question":"2026 toplam net ciro nedir?","sampleSize":5}' "http://127.0.0.1:${PORT}/api/v1/ask")"
 echo "$ASK" | head -c 700; echo
 echo "$ASK" | grep -q '"type": *"TEXT_TO_SQL"' || die "ask smoke did not produce SQL — inspect journalctl -u nanobase-semantic-bridge"
+# M50 sürüm kaydı: kod + katalog + bilgi paketi + model tek satırda (Zeki AI kalitesi → Sürümler). Düşerse kurulum durmaz.
+ENV=test ROOT="$ROOT" BRIDGE="http://127.0.0.1:${PORT}" bash "${ROOT}/scripts/server/model-quality-version.sh" || true
 
 # The portal page runs inside nanobase_api, which loads its own env file: give it the same catalog
 # coordinates, otherwise /bi/semantic-layer can read nothing and its pipeline action always fails.
@@ -269,6 +271,10 @@ if [[ -f "$API_ENV" ]] && ! grep -q '^SEMANTIC_STORE_DSN=' "$API_ENV"; then
     echo "SEMANTIC_TABLE_LIKE=${SEMANTIC_TABLE_LIKE:-}"
   } >> "$API_ENV"
 fi
+
+# M48 sürüm kaydı: kurulan kod sürümü ve kaynak ağaçtaki Mac artığı (._*) sayısı Sistem durumu'na (CODE_SHA verilmezse
+# ağaç git ise HEAD, değilse ROOT/.code-sha). Kayıt düşerse kurulum durmaz.
+ENV=test ROOT="$ROOT" BRIDGE="http://127.0.0.1:${PORT}" bash "${ROOT}/scripts/server/itops-report-release.sh" || true
 
 log "bridge is up on :${PORT}; traffic is NOT switched yet"
 log "next: verification gates in docs/architecture/semantic-bridge-runbook.md, then ./scripts/server/switch-timas-api.sh semantic"

@@ -1,0 +1,12 @@
+[Unit]
+Description=İşbirlikleri (M23): yayın tarihi, eksik paylaşım bağlantısı, içerik onayı, teklif onayı, aylık bütçe, ödeme listesi ve takipçi sıçraması hatırlatmaları
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/influencers/run-due); bu birim yalnız çağırır. Hatırlatma tek özet e-postayla iç ekibe
+# (INFLUENCER_ALERT_/APPROVAL_/PAYOUT_RECIPIENTS) gider; içerik üreticisine hiçbir gönderim yok. Resmî API ile hesap
+# sayısı alma ikinci sürümde (INFLUENCER_API_ENABLED); kazıma yok.
+# İlk kez elle koşturulur: systemctl start timas-influencers.service (bellek: run-it-before-it-runs-itself).
+ExecStart=/bin/sh -c 'curl -fsS -m 600 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/influencers/run-due'

@@ -16,6 +16,22 @@ describe('sayfa yetkisi', () => {
     expect(itemIds(g)).toEqual(['kampus', 'finansal-denetim', 'seo-geo']);
   });
 
+  it('Sistem durumu yönetici alanında değil; sayfa yetkisi olan BT personeli görür, olmayan görmez', () => {
+    const bt = visibleNav(user, {}, new Set(['sayfa:sistem-durumu']));
+    expect(ids(bt)).toEqual(['kampus', 'altyapi']);
+    expect(itemIds(bt)).toEqual(['kampus', 'sistem-durumu']);
+    expect(ids(visibleNav(user, {}, new Set(['sayfa:finansal-denetim'])))).not.toContain('altyapi');
+    expect(itemIds(visibleNav(user, {}, new Set(['sayfa:veri-guvenligi'])))).toEqual(['kampus', 'veri-guvenligi']);
+    expect(itemIds(visibleNav(user, {}, new Set(['sayfa:musteri-destek'])))).toEqual(['kampus', 'musteri-destek']);
+  });
+
+  it('Zeki AI kalitesi yönetici alanında değil; sayfa yetkisi olan görür, olmayan görmez', () => {
+    const team = visibleNav(user, {}, new Set(['sayfa:zeki-kalite']));
+    expect(ids(team)).toEqual(['kampus', 'altyapi']);
+    expect(itemIds(team)).toEqual(['kampus', 'zeki-kalite']);
+    expect(ids(visibleNav(user, {}, new Set(['sayfa:finansal-denetim'])))).not.toContain('altyapi');
+  });
+
   it('yetki henüz bilinmiyorken rol sayfaları gizli, yönetici ekranları yine role bağlı', () => {
     expect(ids(visibleNav(user, {}, null))).toEqual(['kampus']);
     expect(ids(visibleNav(admin, {}, null))).toEqual(['kampus', 'yonetim']);
@@ -32,7 +48,7 @@ describe('sayfa yetkisi', () => {
 describe('rol görünürlüğü', () => {
   it('yönetici bütün grupları ve Yönetim grubunu görür', () => {
     const g = visibleNav(admin, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama', 'yonetim']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'ik', 'platform', 'yonetim']);
     expect(itemIds(g)).toEqual(expect.arrayContaining(['veri-sozlugu', 'onaylar', 'es-anlamlilar', 'portal-ayarlari']));
   });
 
@@ -45,7 +61,7 @@ describe('rol görünürlüğü', () => {
 
   it('ayar boşsa (editör değil) gruplar normal sırada ve hepsi açık gelir', () => {
     const g = visibleNav(user, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'pazarlama']);
+    expect(ids(g)).toEqual(['kampus', 'analiz', 'finans', 'editoryal', 'kayitlar', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'platform']);
     expect(g.every((x) => x.defaultOpen)).toBe(true);
     expect(g.some((x) => x.tag)).toBe(false);
     expect(homeGroup(user)).toBe('analiz');
@@ -53,7 +69,7 @@ describe('rol görünürlüğü', () => {
 
   it('editör: Editoryal en üstte «Çalışma alanım», Analiz ve Finans kapalı ama görünür, Yönetim yok', () => {
     const g = visibleNav(editor, { webWatch: true });
-    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama']);
+    expect(ids(g)).toEqual(['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'platform']);
     const by = Object.fromEntries(g.map((x) => [x.id, x]));
     expect(by.editoryal.tag).toBe('Çalışma alanım');
     expect(by.editoryal.defaultOpen).toBe(true);
@@ -67,6 +83,30 @@ describe('rol görünürlüğü', () => {
     const g = visibleNav({ isAdmin: true, isEditor: true }, { webWatch: true });
     expect(ids(g)[1]).toBe('analiz');
     expect(ids(g)).toContain('yonetim');
+  });
+});
+
+describe('İnsan Kaynakları (açıkça verilen sayfalar)', () => {
+  it('«bütün sayfalar» yöneticide İK grubunu açar, başkasında açmaz; rolde anahtar varsa görünür', () => {
+    expect(ids(visibleNav(user, { webWatch: true }))).not.toContain('ik');
+    expect(ids(visibleNav(admin, { webWatch: true }))).toContain('ik');
+    const g = visibleNav(user, {}, new Set(['sayfa:ik-ise-alim']));
+    expect(ids(g)).toEqual(['kampus', 'ik']);
+    expect(itemIds(g)).toEqual(['kampus', 'ik-ise-alim']);
+  });
+
+  it('M57: eğitim alt ekranları «Eğitim ve gelişim»i, Eğitimlerim kendi öğesini etkin yapar', () => {
+    const g = visibleNav(admin, {});
+    expect(matchActive(g, '/ik/egitim/oturum/otr_1')?.item.id).toBe('ik-egitim');
+    expect(matchActive(g, '/ik/egitim/rehberler')?.item.id).toBe('ik-egitim');
+    expect(matchActive(g, '/ik/egitimlerim')?.item.id).toBe('ik-egitimlerim');
+    expect(itemIds(visibleNav(user, {}, new Set(['sayfa:ik-egitimlerim'])))).toEqual(['kampus', 'ik-egitimlerim']);
+  });
+
+  it('aday kartı işe alım panosunu etkin yapar', () => {
+    const g = visibleNav(admin, {});
+    expect(matchActive(g, '/ik/ise-alim/aday/aday_1')?.item.id).toBe('ik-ise-alim');
+    expect(matchActive(g, '/ik/pozisyonlar')?.item.id).toBe('ik-pozisyonlar');
   });
 });
 
@@ -111,9 +151,39 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/ceviri/masam/abc')).toBe('ceviri-masam');
     expect(at('/kurumsal-satis/firsat/abc')).toBe('kurumsal-satis'); // M32 fırsat sayfası → Kurumsal ve B2B
     expect(at('/pazarlama/yeni-kitap')).toBe('pazarlama-yeni-kitap');
+    expect(at('/pazarlama/aylik-plan')).toBe('pazarlama-aylik');
+    expect(at('/pazarlama/aylik-plan/2026-11')).toBe('pazarlama-aylik'); // ay seçili adres → Aylık plan
+    expect(at('/pazarlama/foy')).toBe('pazarlama-foy');
+    expect(at('/pazarlama/foy/15201.0001')).toBe('pazarlama-foy'); // föy sayfası → Satış föyleri
     expect(at('/pazarlama/plan/MP-2026-0001')).toBe('pazarlama-yeni-kitap'); // plan ekranı → Yeni kitap planı
     expect(at('/pazarlama/set-hediye/set/MS-2026-0001')).toBe('pazarlama-set-hediye'); // M53 set ekranı → Set ve hediye
     expect(at('/pazarlama/set-hediye/teklif/KT-2026-0001')).toBe('pazarlama-set-hediye');
+    expect(at('/kurumsal-eposta/ileti/abc')).toBe('kurumsal-eposta'); // H4 ileti sayfası → Kurumsal e-posta
+    expect(at('/kurumsal-eposta/kurallar')).toBe('kurumsal-eposta');
+    expect(at('/pazarlama/lansman')).toBe('pazarlama-lansman');
+    expect(at('/pazarlama/lansman/ML-2026-0001')).toBe('pazarlama-lansman'); // lansman ekranı → Lansman
+    expect(at('/sosyal-medya/gonderi/SM-2026-0001')).toBe('sosyal-medya'); // M22 gönderi ekranı → Sosyal medya
+    expect(at('/katalog-bulten/katalog/abc')).toBe('katalog-bulten'); // M24 katalog ve bülten alt sayfaları
+    expect(at('/katalog-bulten/rapor')).toBe('katalog-bulten');
+    expect(at('/kanallar/hepsiburada')).toBe('kanallar'); // M42 kanal detayı → Kanal karnesi
+    expect(at('/kanallar/matris')).toBe('kanal-matris');
+    expect(at('/kanallar/eslesme')).toBe('kanal-eslesme');
+    expect(at('/e-ticaret')).toBe('eticaret'); // M34 platform durumu
+    expect(at('/e-ticaret/farklar')).toBe('eticaret-farklar');
+    expect(at('/e-ticaret/pazar-yerleri')).toBe('eticaret-pazar-yerleri');
+    expect(at('/kargo')).toBe('kargo'); // M44
+    expect(at('/kargo/gonderi/0f1e2d3c-0000-0000-0000-000000000000')).toBe('kargo');
+    expect(at('/kargo/hatalar')).toBe('kargo');
+    expect(at('/kargo/firmalar')).toBe('kargo-firmalar');
+    expect(at('/kargo/mutabakat')).toBe('kargo-mutabakat');
+    expect(at('/stok/15201.01.0001')).toBe('stok'); // M43 kitap stok kartı → Stok
+    expect(at('/stok/bitecekler')).toBe('stok-bitecekler');
+    expect(at('/stok/depo-hatti')).toBe('stok-depo-hatti');
+    expect(at('/tedarik')).toBe('tedarik'); // M52
+    expect(at('/tedarik/yuk')).toBe('tedarik-yuk');
+    expect(at('/tedarik/kapasite')).toBe('tedarik-yuk'); // kapasite ekranı → Baskı yükü
+    expect(at('/tedarik/tedarikci/320.01.001')).toBe('tedarik-tedarikciler'); // tedarikçi sayfası → Tedarikçiler
+    expect(at('/tedarik/maliyet')).toBe('tedarik-maliyet');
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {

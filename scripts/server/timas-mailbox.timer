@@ -1,0 +1,11 @@
+[Unit]
+Description=Kurumsal e-posta kutusu okuması, 5 dakikada bir
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Persistent=true
+Unit=timas-mailbox.service
+
+[Install]
+WantedBy=timers.target

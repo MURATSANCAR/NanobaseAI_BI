@@ -1,0 +1,10 @@
+[Unit]
+Description=Bayi riski (M59) günlük tur: her gün 06:00 (ilk kez elle koşturulur: systemctl start timas-dealers@gunluk)
+
+[Timer]
+OnCalendar=*-*-* 06:00:00
+Persistent=true
+Unit=timas-dealers@gunluk.service
+
+[Install]
+WantedBy=timers.target

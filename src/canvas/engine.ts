@@ -101,6 +101,8 @@ export async function engineInfo(): Promise<EngineInfo> {
 
 export type AskAnswer = DbTiming & {
   id?: string;
+  /** Soru kaydının kimliği (sl_query_log): cevabın altındaki «Doğru / Kısmen / Yanlış» bununla yazılır (M50). */
+  queryId?: string;
   type?: string;
   sql?: string;
   summary?: string;
@@ -830,9 +832,10 @@ export type AccessMe = {
   roles: Array<{ id: string; name: string; via: string[] }>;
 };
 
-export type AccessPage = { key: string; area: string; label: string };
+/** `explicit`: «Bütün sayfalar» ile gelmez (İK ekranları); `sensitive`: kişisel veri, yöneticiye de rolüyle verilir. */
+export type AccessPage = { key: string; area: string; label: string; explicit?: boolean; sensitive?: boolean };
 /** Sayfa içindeki işlem. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
-export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean };
+export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean; sensitive?: boolean };
 /** ZEKİ AI veri alanı (yetki Aşama C). `always`: herkese açık ortak başvuru, rolle kapatılmaz. */
 export type AccessDataDomain = { id: string; key: string; label: string; hint: string; always?: boolean };
 export type AccessCatalog = {

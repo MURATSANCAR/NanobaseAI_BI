@@ -228,7 +228,8 @@ def _is_heading_line(text: str) -> bool:
     if not t or len(t) > 90:
         return False
     if desk._HEADING.match(t) or _EN_HEAD.match(t):
-        return True
+        # «2. Kablolar test edilecektir.» madde/cümledir; başlık cümle noktalamasıyla bitmez.
+        return t[-1] not in ".!?…,;"
     words = t.split()
     letters = [ch for ch in t if ch.isalpha()]
     # Tamamı büyük harfli kısa satır (ÖNSÖZ, THE BEGINNING) ve cümle sonu noktalaması yok.
@@ -236,11 +237,20 @@ def _is_heading_line(text: str) -> bool:
             and any(ch != ch.lower() for ch in letters) and t[-1] not in ".!?…,;:")
 
 
+#: İçindekiler satırı: «KAPSAM ........ 6» — nokta dizisi (ya da …), sonda sayfa numarası (PDF okuyucu çoğu kez
+#: numarayı düşürür; isteğe bağlı).
+_TOC = re.compile(r"^(?P<t>.*?\S)\s*(?:\.\s?){4,}\.?\s*(?P<n>\d{1,4})?\s*$|^(?P<t2>.*?\S)\s*…{2,}\s*(?P<n2>\d{1,4})?\s*$")
+
+
 def _join_lines(lines: list[str]) -> list[tuple[str, bool]]:
     """PDF satırlarını paragrafa çevirir: satır cümle sonuyla bitiyorsa ve sonraki satır kısa değilse paragraf
-    orada biter; satır sonu tirelemesi birleştirilir."""
+    orada biter; satır sonu tirelemesi birleştirilir. Başlık satırı, önceki sayfadan yarım kalan paragrafı kapatıp
+    kendi paragrafını açar. İçindekiler satırı tek başına kalır; nokta dizisi ve sayfa numarası atılır (dizgide
+    yeniden üretilir)."""
     out: list[tuple[str, bool]] = []
     cur = ""
+    num = ""          # tek başına kalan liste numarası («1.») sonraki satırın başına eklenir
+    in_toc = False    # içindekiler bloğunda: «METİN 66» satırı da içindekiler sayılır
     for raw in lines:
         ln = raw.strip()
         if not ln:
@@ -248,7 +258,26 @@ def _join_lines(lines: list[str]) -> list[tuple[str, bool]]:
                 out.append((cur, False))
                 cur = ""
             continue
-        if _is_heading_line(ln) and not cur:
+        if re.fullmatch(r"(?:\d{1,3}|[IVXLC]{1,7})[.)]", ln):
+            num = f"{num} {ln}".strip()
+            continue
+        if num:
+            ln, num = f"{num} {ln}", ""
+        toc = _TOC.match(ln)
+        if not toc and in_toc:
+            m = re.fullmatch(r"(?P<t>.*\S)\s+(?P<n>\d{1,4})", ln)
+            toc = m if m and _is_heading_line(m.group("t")) else None
+        in_toc = bool(toc)
+        if toc:
+            if cur:
+                out.append((cur, False))
+                cur = ""
+            out.append(((toc.groupdict().get("t") or toc.groupdict().get("t2")).strip(), False))
+            continue
+        if _is_heading_line(ln):
+            if cur:
+                out.append((cur, False))
+                cur = ""
             out.append((ln, True))
             continue
         if cur.endswith("-") and ln[:1].islower():
@@ -264,16 +293,17 @@ def _join_lines(lines: list[str]) -> list[tuple[str, bool]]:
 
 
 def pdf_lines(pages: list[list[str]]) -> list[str]:
-    """Sayfa numarası ve her sayfada tekrar eden üst/alt bilgi (kitap adı, yazar) metne karışmaz: tek başına
-    sayı/Roma rakamı olan satır ve sayfaların %30'undan fazlasında (en az 3) geçen kısa satır atılır."""
+    """Sayfa numarası ve her sayfada tekrar eden üst/alt bilgi (kitap adı, yazar, «Şartname / 2025 23/115», belge
+    kimliği şeridi) metne karışmaz: tek başına sayı/Roma rakamı olan satır ve sayfaların %30'undan fazlasında (en az
+    3) geçen satır — uzunluğundan bağımsız — atılır. Sayılar karşılaştırmada eşitlenir (sayfa no değişse de aynı satır)."""
     pages = [[ln.strip() for ln in pg] for pg in pages]
-    key = lambda ln: re.sub(r"\d+", "#", ln)   # noqa: E731
-    seen = Counter(k for pg in pages for k in {key(ln) for ln in pg if ln and len(ln) <= 60})
+    key = lambda ln: re.sub(r"\d+", "#", re.sub(r"\s+", " ", ln))   # noqa: E731
+    seen = Counter(k for pg in pages for k in {key(ln) for ln in pg if ln})
     limit = max(3, 0.3 * len(pages))
     lines: list[str] = []
     for pg in pages:
         lines.extend(ln for ln in pg if not re.fullmatch(r"[\divxlcIVXLC]{1,5}", ln or "x")
-                     and not (ln and len(ln) <= 60 and seen[key(ln)] >= limit))
+                     and not (ln and seen[key(ln)] >= limit))
     # Sayfa sonu paragrafı bitirmez: sayfa arasında bölünen cümle tek segment kalır.
     return lines
 
@@ -292,7 +322,11 @@ def paragraphs(filename: str, data: bytes) -> list[tuple[str, bool]]:
             reader = desk._pdf_reader(data)
         except desk.DeskError as e:
             raise TranslationError(str(e), e.status) from e
-        return _join_lines(pdf_lines([(page.extract_text() or "").splitlines() for page in reader.pages]))
+        pages = [(page.extract_text() or "").splitlines() for page in reader.pages]
+        if pages and not any(ln.strip() for pg in pages for ln in pg):
+            raise TranslationError("Bu PDF'te seçilebilir metin yok (taranmış sayfa görüntüsü). Metni seçilebilen bir "
+                                   "PDF ya da DOCX yükleyin; taranmış sayfalar okunmaz.")
+        return _join_lines(pdf_lines(pages))
     if ext in ("txt", "md"):
         text = data.decode("utf-8-sig", errors="replace").replace("\r\n", "\n").replace("\r", "\n")
         if ext == "md":
@@ -347,6 +381,9 @@ def split_sentences(text: str) -> list[str]:
             if low in _ABBR or (len(token) == 1 and token.isalpha() and token.isupper()) or re.fullmatch(r"(?:[A-Za-z]\.)+[A-Za-z]", token):
                 continue
             if token.isdigit() and len(token) <= 3 and nxt.isdigit():
+                continue
+            # Cümle başındaki liste numarası («1. KISALTMALAR», «IV. Bölüm») cümle sonu değildir.
+            if re.fullmatch(r"(?:\d{1,3}|[IVXLC]{1,7})", before.strip()):
                 continue
         opener = nxt in "\"'“‘«([—–-¿¡" or nxt.isdigit()
         caseless = nxt.isalpha() and nxt.lower() == nxt.upper()

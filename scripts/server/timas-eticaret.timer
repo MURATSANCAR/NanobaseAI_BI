@@ -1,0 +1,10 @@
+[Unit]
+Description=E-ticaret fark raporu ve bildirimleri; her gece 04:30 (SEO & GEO eşitlemesinden sonra)
+
+[Timer]
+OnCalendar=*-*-* 04:30:00
+Persistent=true
+Unit=timas-eticaret.service
+
+[Install]
+WantedBy=timers.target

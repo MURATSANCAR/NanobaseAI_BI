@@ -1,0 +1,11 @@
+[Unit]
+Description=Pazarlama (M17): backlist fırsat listesi — Logo/CRM okuması, pazar günü geçmiş yıllar ve konu eşleşmesi
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/marketing/backlist/run-due?adim=gece); bu birim yalnız çağırır. İlk kurulumda elle bir kez
+# koşturulur ve süresi ölçülür (M46'da olmayan geçmiş yıllar ilk koşuda Logo'dan okunur):
+#   systemctl start timas-marketing-backlist.service && journalctl -u timas-marketing-backlist.service -n 50
+ExecStart=/bin/sh -c 'curl -fsS -m 3590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/marketing/backlist/run-due?adim=gece"'

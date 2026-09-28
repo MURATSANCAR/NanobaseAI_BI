@@ -1,0 +1,10 @@
+[Unit]
+Description=Veri güvenliği: giriş olayları ve güvenlik kuralları her 5 dakikada; saklama ve özet günde bir kez
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=5min
+Unit=timas-security.service
+
+[Install]
+WantedBy=timers.target

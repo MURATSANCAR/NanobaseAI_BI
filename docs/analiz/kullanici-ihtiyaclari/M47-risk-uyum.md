@@ -1,6 +1,6 @@
 # M47 — Risk Yönetimi ve Uyum: kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M47.txt`, `specs/M49.txt`, `specs/DYK.txt`;
+Durum: kodlandı (dal `worktree-agent-a158e42e25cc349c0`, 2026-09-28; test sunucusunda doğrulanmadı) · Tarih: 2026-09-28 · Kaynaklar: iş tanımı `specs/M47.txt`, `specs/M49.txt`, `specs/DYK.txt`;
 Veri Haritası (`veri_haritasi2.txt`: «Risk Girdileri», «İzleme Girdileri»); `PROJECT-MEMORY.md` (Finansal Denetim,
 Yönetim Raporları/Baskı önerisi, M6, SEO «Haklar ve CRM», Yetki); `docs/analiz/finansal-denetim-2026-09-21.md`;
 `docs/analiz/yetki-mekanizmasi-2026-09-27.md`; `docs/analiz/crm-timas-mscrm-detay-2026-09-15.md`;

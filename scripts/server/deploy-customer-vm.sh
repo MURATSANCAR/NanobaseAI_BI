@@ -56,4 +56,16 @@ $SSH "$VM" "cd $DST/infra/docker/bi && grep -q '^SEMANTIC_ADMIN_TOKEN=.' .env ||
   # Oturumsuz: sayfa 200, veri yolları 401, giriş servisi oturum sorusuna 401.
   for p in / /timas/ /timas/auth/session /timas/api/v1/engine /timas/api/v1/alerts /timas/metrics/cfo.json; do echo \"\$p -> \$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:8088\$p)\"; done
   docker compose logs --tail 4 jobs"
+# M48 sürüm kaydı: kurulan main sürümü, köprü imajı ve VM'deki Mac artığı sayısı hem test sunucusunun köprüsüne (ortam
+# eşliği orada görünür) hem VM'in kendi köprüsüne yazılır. Kaynak git archive olduğu için sürüm CODE_SHA ile verilir
+# (örn. CODE_SHA=$(git rev-parse main)); verilmezse SRC/.code-sha okunur.
+echo "== sürüm kaydı"
+AD_VM="$($SSH "$VM" "find $DST -name '._*' -type f -not -path '*/node_modules/*' | wc -l" | tr -d ' ')"
+IMG_VM="$($SSH "$VM" "docker inspect bi-bridge-1 --format '{{.Config.Image}}'" 2>/dev/null || true)"
+SHA="${CODE_SHA:-$(cat "$SRC/.code-sha" 2>/dev/null || git -C "$SRC" rev-parse HEAD 2>/dev/null || echo bilinmiyor)}"
+if [[ -r /etc/nanobase/semantic-bridge.env ]]; then set +u -a; . /etc/nanobase/semantic-bridge.env; set -u +a; fi
+ENV=vm APPLEDOUBLE="${AD_VM:-0}" IMAGE="$IMG_VM" CODE_SHA="$SHA" ROOT="$SRC" bash "$SRC/scripts/server/itops-report-release.sh" || true
+printf '{"env":"vm","codeSha":"%s","image":"%s","appledoubleCount":%s,"reportedBy":"kurulum:deploy-customer-vm"}' \
+  "$SHA" "$IMG_VM" "${AD_VM:-0}" | $SSH "$VM" "docker exec -i bi-bridge-1 python3 -c 'import os,sys,urllib.request as u; r=u.Request(\"http://127.0.0.1:8795/api/v1/it-ops/report-release\", data=sys.stdin.buffer.read(), method=\"POST\", headers={\"Content-Type\": \"application/json\", \"X-Semantic-Caller\": os.environ.get(\"SEMANTIC_CALLER_TOKEN\", \"\")}); print(u.urlopen(r, timeout=20).read().decode()[:300])'" \
+  || echo "UYARI: sürüm kaydı VM köprüsüne yazılamadı"
 echo "== bitti. Dış kapı: http://192.168.0.55/timas/ (NPM özel ayarı, npm-custom-http.conf)."

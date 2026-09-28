@@ -1,0 +1,10 @@
+[Unit]
+Description=Müşteri ilişkileri (M38) pazartesi e-postaları 08:00: temsilciye yükselen riskli carileri, müdüre risk özeti (MUSTERI_MANAGER_RECIPIENTS; boşsa gitmez)
+
+[Timer]
+OnCalendar=Mon *-*-* 08:00:00
+Persistent=true
+Unit=timas-musteri@haftalik.service
+
+[Install]
+WantedBy=timers.target

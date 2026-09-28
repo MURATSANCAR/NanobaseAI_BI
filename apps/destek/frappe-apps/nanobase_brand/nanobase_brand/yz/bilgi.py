@@ -66,3 +66,8 @@ def search(query: str, limit: int = 5) -> list[dict]:
 	except Exception:
 		frappe.log_error(title="NanobaseAI bilgi bankası araması")
 		return []
+
+
+def source_name(title: str) -> str | None:
+	kb = frappe.db.get_value("Flow Knowledge Base", {"title": KB_TITLE}, "name")
+	return frappe.db.get_value("Flow Knowledge Source", {"knowledge_base": kb, "title": title}, "name") if kb else None

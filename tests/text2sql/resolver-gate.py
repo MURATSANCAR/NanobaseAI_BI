@@ -2,6 +2,11 @@
 
     resolver-gate.py <questions.jsonl> [--baseline tests/text2sql/resolver-baseline-set100.json]
                      [--record] [--url http://127.0.0.1:8795]
+                     [--report http://127.0.0.1:8795 [--request <koşu isteği>] [--code-sha <sha>]]
+
+`--report`: karşılaştırma bitince özet ve vaka listesi köprüye yazılır (M50 Zeki AI kalitesi → Koşular; bkz.
+`mq_report.py`). Okuması değişen soru «bozuk», aynı kalan «sağlam», temel çizgide olmayan «yeni» gider. Seçenek
+verilmezse davranış aynıdır; `--record` ile birlikte rapor gönderilmez (temel çizgi yazımı bir ölçüm değildir).
 
 Gerçek köprünün `/api/v1/semantic/resolve` ucunu her soru için çağırır ve yalnız çözücünün çıktısını
 kayıtlı anlık görüntüyle karşılaştırır: hangi kaynak, hangi kavramlar hangi role yerleşti, ne düştü ve
@@ -27,6 +32,9 @@ import sys
 import time
 import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import mq_report  # noqa: E402
 
 #: çözücünün açıklama izinde bir kavramın elendiğini söyleyen cümleler → gerekçe kodu
 _DROPS = (
@@ -122,6 +130,7 @@ def main() -> int:
     token = os.environ.get("SEMANTIC_CALLER_TOKEN", "")
     source_of = _sources()
     started, shots, state = time.time(), {}, {}
+    started_iso, first_state = mq_report.now_iso(), None
     cases = [json.loads(line) for line in questions.read_text(encoding="utf-8").splitlines() if line.strip()]
     for n, case in enumerate(cases, 1):
         req = urllib.request.Request(url, data=json.dumps({"question": case["soru"]}).encode(),
@@ -129,6 +138,7 @@ def main() -> int:
         query = json.load(urllib.request.urlopen(req, timeout=120))["query"]
         state = {"catalogHash": query.get("catalogHash"), "languagePoolHash": query.get("languagePoolHash"),
                  "catalogVersion": query.get("catalogVersion")}
+        first_state = first_state or dict(state)
         shots[case["id"]] = {"n": n, "soru": case["soru"], "kaynak": case.get("kaynak"), "read": snapshot(query, source_of)}
     for label, path in (("rules", _arg("--rules-dir")), ("prompt", _arg("--prompt-file"))):
         if path and Path(path).exists():
@@ -154,16 +164,25 @@ def main() -> int:
         print(f"sorunun etiketiyle uyuşmayan kaynak okuması: {len(wrong)} (temel çizgi bunları DOĞRU saymaz, yalnız kaydeder)")
         for line in wrong:
             print("  ?", line)
+        if mq_report.wanted():
+            print("rapor: temel çizgi yazımında köprüye rapor gönderilmez")
         return 0
 
     recorded = json.loads(baseline.read_text(encoding="utf-8"))
     changed = 0
+    report_cases = []
     for cid, shot in sorted(shots.items(), key=lambda kv: kv[1]["n"]):
         old = (recorded["cases"].get(cid) or {}).get("read")
+        read = shot["read"]
+        base = {"id": cid, "n": shot["n"], "question": shot["soru"], "dropCodes": [d["code"] for d in read["drops"]],
+                "unresolved": read["unresolved"], "resultDigest": mq_report.digest(read)}
         if old is None:
             print(f"Q{shot['n']} {cid}: temel çizgide yok")
+            report_cases.append({**base, "status": "yeni", "detail": ["temel çizgide yok"]})
             continue
-        lines = _diff(old, shot["read"])
+        lines = _diff(old, read)
+        report_cases.append({**base, "status": "bozuk" if lines else "saglam", "detail": lines,
+                             "expectedDigest": mq_report.digest(old)})
         if lines:
             changed += 1
             print(f"Q{shot['n']} {cid}: {shot['soru'][:90]}")
@@ -173,6 +192,13 @@ def main() -> int:
     print(f"\n{len(shots)} soru, {took} sn · okuması değişen {changed} · temel çizgi {recorded.get('recordedAt')}")
     if moved:
         print("değişen durum:", json.dumps(moved, ensure_ascii=False))
+    if mq_report.wanted():
+        mq_report.post({"suite": "resolver", "label": questions.name, "startedAt": started_iso,
+                        "finishedAt": mq_report.now_iso(), "cases": report_cases,
+                        "state": {"start": first_state or {}, "end": state},
+                        "metrics": {"questions": len(shots), "changed": changed, "seconds": took,
+                                    "baseline": str(baseline), "baselineRecordedAt": recorded.get("recordedAt"),
+                                    "stateVsBaseline": {k: list(v) for k, v in moved.items()}}})
     return 1 if changed else 0
 
 

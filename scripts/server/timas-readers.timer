@@ -1,0 +1,10 @@
+[Unit]
+Description=Okur veri tabanı kaynak okuması ve gece işleri, her gece 03:20
+
+[Timer]
+OnCalendar=*-*-* 03:20:00
+Persistent=true
+Unit=timas-readers.service
+
+[Install]
+WantedBy=timers.target

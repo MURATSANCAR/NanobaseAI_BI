@@ -1,0 +1,11 @@
+[Unit]
+Description=Müşteri ilişkileri (M38): %i turu (gece = cari değer + kayıp riski + CRM veri sağlığı + aksiyon sonucu, haftalik = pazartesi e-postaları)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/musteri/run-due?tur=%i); bu birim yalnız çağırır. $$ ile anahtar kabuktan okunur, günlüğe düşmez.
+# Gece turu Logo'yu firma başına tek toplu sorguyla okur; tekrar adayları için Zeki AI süresi MUSTERI_LLM_BUDGET_SEC.
+# CRM'e ve Logo'ya yazılmaz; e-posta yalnız iç alıcılara.
+ExecStart=/bin/sh -c 'curl -fsS -m 3500 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/musteri/run-due?tur=%i"'

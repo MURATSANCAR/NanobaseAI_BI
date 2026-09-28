@@ -2,6 +2,7 @@
 
     answer-gate.py [--gold tests/text2sql/answers-set100.json] [--repeat 3] [--only Q68,Q69]
                    [--holdout | --dev] [--out <rapor.json>] [--url http://127.0.0.1:8795]
+                   [--report http://127.0.0.1:8795 [--request <koşu isteği>] [--code-sha <sha>]]
 
 Sunucuda, gerçek köprüye ve gerçek veritabanlarına karşı koşar. Her altın soru:
   1. gerçek API'den `--repeat` kez sorulur; cevabın TAMAMI `/api/v1/result/{id}` ile alınır
@@ -20,6 +21,9 @@ cevap üretmek de, `answer` beklenen yerde ret de bozulmadır.
 Çıkış kodu: `verified: true` olan bir soru SAĞLAM değilse 1. Holdout soruları (`holdout: true`) için
 kural/kavram yazılmaz; kırılırlarsa eksik olan genel kuraldır.
 
+`--report`: koşu bitince hüküm, ilk denemenin SQL'i, sonuç ve referans özetleri ve fark satırları köprüye yazılır
+(M50 Zeki AI kalitesi → Koşular, önceki koşuyla önce/sonra; bkz. `mq_report.py`). Seçenek verilmezse davranış aynıdır.
+
 Ortam: SEMANTIC_CALLER_TOKEN, SEMANTIC_CONNECTION_FILE (ana kaynak), SEMANTIC_CRM_CONNECTION_FILE.
 """
 from __future__ import annotations
@@ -32,6 +36,9 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import mq_report  # noqa: E402
 
 
 def _arg(name: str, default: str = "") -> str:
@@ -232,6 +239,7 @@ def main() -> int:
         return connectors[source].execute(sql, 1_000_000)[1]
 
     report, counters, failed = [], {"answer": 0, "deny": 0, "clarify": 0, "error": 0}, 0
+    started_iso, clock, mq_cases = mq_report.now_iso(), time.time(), []
     for case in gold["cases"]:
         label = f"Q{case['n']}"
         if only and label.upper() not in only and case["id"].upper() not in only:
@@ -255,9 +263,11 @@ def main() -> int:
             except Exception:  # noqa: BLE001
                 pass
         attempts, sqls = [], set()
+        first_answer = None
         for _ in range(repeat):
             started = time.time()
             answer = bridge.ask(case["soru"])
+            first_answer = first_answer or answer
             got = kind_of(answer)
             counters[got] += 1
             sqls.add(re.sub(r"\s+", " ", (answer.get("sql") or "")).strip().lower())
@@ -282,6 +292,17 @@ def main() -> int:
                        "distinctSql": len(sqls - {""}), "holdout": bool(case.get("holdout")), "verified": bool(case.get("verified")),
                        "dataNote": data_note, "attempts": attempts})
         first = next((p for a in attempts for p in a["problems"]), data_note)
+        if mq_report.wanted():
+            fa = first_answer or {}
+            problems = list(dict.fromkeys(p for a in attempts for p in a["problems"]))
+            mq_cases.append({
+                "id": case["id"], "n": case["n"], "question": case["soru"],
+                "status": {"SAĞLAM": "saglam", "BOZUK": "bozuk", "KARARSIZ": "kararsiz", "VERİ": "veri"}[verdict],
+                "sql": fa.get("sql"), "answerType": fa.get("type"),
+                "resultDigest": mq_report.rows_digest(fa.get("records")) if fa.get("type") == "TEXT_TO_SQL" else None,
+                "expectedDigest": mq_report.rows_digest(reference) if case.get("reference_sql") and not data_note else None,
+                "detail": ([data_note] if data_note else []) + [f"{passed}/{repeat} deneme geçti", *problems[:20]],
+                "note": ("holdout" if case.get("holdout") else None)})
         print(f"{label:>4} {verdict:<9} {passed}/{repeat}  {len(sqls - {''})} farklı SQL  {case['soru'][:70]}" + (f"\n       ↳ {first}" if first else ""), flush=True)
 
     tally: dict[str, int] = {}
@@ -293,6 +314,16 @@ def main() -> int:
     if out:
         Path(out).write_text(json.dumps({"at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()), "repeat": repeat,
                                          "tally": tally, "counters": counters, "cases": report}, ensure_ascii=False, indent=1), encoding="utf-8")
+    if mq_report.wanted():
+        # Karşılaştırma anahtarı: aynı altın dosyası ve aynı seçim (--only/--holdout/--dev) — kısmi koşu tam koşunun
+        # önce/sonrası sayılmaz.
+        label = gold_path.name + (" only=" + ",".join(sorted(only)) if only else "") + \
+            (" holdout" if "--holdout" in sys.argv else " dev" if "--dev" in sys.argv else "")
+        mq_report.post({"suite": "answer", "label": label, "startedAt": started_iso, "finishedAt": mq_report.now_iso(),
+                        "cases": mq_cases,
+                        "metrics": {"questions": len(report), "repeat": repeat, "verdicts": tally, "counters": counters,
+                                    "verifiedNotSound": failed, "seconds": round(time.time() - clock, 1),
+                                    "tolerance": tolerance}})
     return 1 if failed else 0
 
 

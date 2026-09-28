@@ -1,0 +1,10 @@
+[Unit]
+Description=Pazar araştırması ve rekabet (M39): haftalık kaynak okuma, eşleme önerisi, tazelik; pazartesi 05:30
+
+[Timer]
+OnCalendar=Mon *-*-* 05:30:00
+Persistent=true
+Unit=timas-pazar.service
+
+[Install]
+WantedBy=timers.target

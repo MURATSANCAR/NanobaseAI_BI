@@ -1,0 +1,10 @@
+[Unit]
+Description=Müşteri hizmetleri gece turu, her gece 04:20
+
+[Timer]
+OnCalendar=*-*-* 04:20:00
+Persistent=true
+Unit=timas-support-gece.service
+
+[Install]
+WantedBy=timers.target

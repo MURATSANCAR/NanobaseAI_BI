@@ -1,5 +1,22 @@
 import {
+  Activity,
+  Headset,
+  Server,
+  Handshake,
+  Filter,
+  GitCompareArrows,
+  Store,
+  BadgePercent,
+  Boxes,
+  Hourglass,
+  ListOrdered,
+  PackageMinus,
+  ShieldHalf,
+  TriangleAlert,
+  Warehouse,
   HeartHandshake,
+  CalendarHeart,
+  MessageSquareReply,
   Inbox,
   ArrowLeftRight,
   BookCopy,
@@ -21,16 +38,23 @@ import {
   UserRoundCheck,
   Video,
   BadgeCheck,
+  BadgeDollarSign,
   Stethoscope,
   TrendingUp,
   Swords,
   Target,
   Truck,
+  PackageSearch,
+  ReceiptText,
+  Scale,
   Gavel,
   Waypoints,
+  Grid3x3,
+  Globe,
   Library,
   Radar,
   Bell,
+  Layers,
   BookA,
   Calculator,
   BookImage,
@@ -41,9 +65,11 @@ import {
   Building2,
   Braces,
   CalendarClock,
+  CalendarRange,
   ChartColumn,
   ClipboardCheck,
   ClipboardList,
+  Rocket,
   Factory,
   Contact,
   CornerDownRight,
@@ -53,6 +79,8 @@ import {
   FolderTree,
   Gauge,
   Gift,
+  GraduationCap,
+  BookOpenCheck,
   History,
   House,
   Images,
@@ -61,6 +89,7 @@ import {
   LayoutDashboard,
   ListChecks,
   LayoutGrid,
+  Mail,
   MapPinned,
   Megaphone,
   Newspaper,
@@ -74,13 +103,20 @@ import {
   Search,
   Settings,
   ShieldCheck,
+  LockKeyhole,
   SlidersHorizontal,
+  Share2,
   Sparkles,
   SpellCheck,
   UserCog,
   UserPen,
   UsersRound,
+  Wallet,
   type LucideIcon,
+  ShieldAlert,
+  FileSpreadsheet,
+  TabletSmartphone,
+  ShoppingCart,
 } from 'lucide-react';
 
 /**
@@ -90,9 +126,19 @@ import {
  * öğe olarak girmez, `also` ile en yakın menü öğesine bağlanır ki doğru öğe etkin görünsün.
  */
 
-export type NavGroupId = 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'pazarlama' | 'yonetim';
+export type NavGroupId =
+  | 'kampus' | 'analiz' | 'finans' | 'editoryal' | 'kayitlar' | 'satis' | 'lojistik' | 'pazarlama' | 'platform' | 'ik' | 'altyapi' | 'yonetim';
 export type NavFeature = 'webWatch';
-export type NavBadge = 'alerts';
+export type NavBadge = 'alerts' | 'mailbox';
+
+/** Rozet sayıları: uyarılar (eşiği aşmış kural) ve kurumsal e-posta (bana atanan açık ileti). */
+export type NavCounts = Partial<Record<NavBadge, number>>;
+
+/** Rozetin ekran okuyucu metni. `overdue`: süresi aşan ileti sayısı (e-posta rozetinde). */
+export function badgeLabel(badge: NavBadge, count: number, overdue = 0): string {
+  if (badge === 'mailbox') return overdue > 0 ? `${count} ileti size atanmış, ${overdue} tanesinin süresi aşmış` : `${count} ileti size atanmış`;
+  return `${count} uyarı eşiği aşmış`;
+}
 
 export type NavItem = {
   id: string;
@@ -126,6 +172,8 @@ export type NavGroup = {
   /** Kampüs gibi tek ekranlı alan: rayda doğrudan bağlantıdır, paneli yoktur. */
   to?: string;
   adminOnly?: boolean;
+  /** Sayfaları açıkça verilir (İK): «bütün sayfalar» yalnız yöneticide bu grubu açar. */
+  explicit?: boolean;
 };
 
 export const NAV: NavGroup[] = [
@@ -147,6 +195,34 @@ export const NAV: NavGroup[] = [
       { id: 'panolar', label: 'Panolar', to: '/panolar', icon: LayoutGrid, hint: 'Kişisel pano kartları', keywords: ['pano', 'panom', 'kart'] },
       { id: 'planli-raporlar', label: 'Planlı raporlar', to: '/planli-raporlar', icon: CalendarClock, hint: 'E-postayla giden zamanlı raporlar', keywords: ['rapor', 'excel'] },
       { id: 'uyarilar', label: 'Uyarılar', to: '/uyarilar', icon: Bell, hint: 'Eşik kuralları ve bildirimler', badge: 'alerts', keywords: ['uyarı', 'kural', 'eşik'] },
+      // M39 Pazar araştırması ve rekabet: özet ve yönetim özeti; rakipler (matris, emsal, kategori eşlemesi); sektör raporları.
+      {
+        id: 'pazar-arastirma',
+        label: 'Pazar ve rakip',
+        to: '/pazar-arastirma',
+        icon: Radar,
+        hint: 'Pazar özeti, TİMAŞ kategori/kanal büyümesi, sektör rakamları ve kurula giden aylık özet',
+        keywords: ['pazar', 'rakip', 'rekabet', 'pazar araştırması', 'sektör', 'pazar payı', 'yönetim özeti', 'fırsat', 'tehdit'],
+      },
+      {
+        id: 'pazar-rakipler',
+        label: 'Rakipler ve emsal',
+        to: '/pazar-arastirma/rakipler',
+        icon: Swords,
+        parent: 'pazar-arastirma',
+        also: ['/pazar-arastirma/emsal', '/pazar-arastirma/kategori-esleme'],
+        hint: 'Rakip yayınevlerinin fiyat, sayfa ve format bandı; emsal kitap bulma; rakip kategori eşlemesi',
+        keywords: ['rakip yayınevi', 'fiyat bandı', 'emsal', 'rakip kitap', 'kategori eşleme', 'izlenen rakip'],
+      },
+      {
+        id: 'pazar-raporlar',
+        label: 'Sektör raporları',
+        to: '/pazar-arastirma/raporlar',
+        icon: FileText,
+        parent: 'pazar-arastirma',
+        hint: 'Sektör raporu yükleme, sayfa numaralı rakam çıkarımı ve onayı',
+        keywords: ['sektör raporu', 'yayıncılar birliği', 'bandrol', 'pazar büyüklüğü', 'rapor yükle'],
+      },
     ],
   },
   {
@@ -155,6 +231,14 @@ export const NAV: NavGroup[] = [
     hint: 'Denetim, yönetim raporları ve bütçe',
     icon: Landmark,
     items: [
+      {
+        id: 'finansal-raporlar',
+        label: 'Finansal raporlar',
+        to: '/finansal-raporlar',
+        icon: Wallet,
+        hint: 'Gelir tablosu, bütçe–gerçekleşme, kârlılık, 13 haftalık nakit ve vergi takvimi',
+        keywords: ['gelir tablosu', 'kâr zarar', 'kârlılık', 'nakit', 'nakit akışı', 'vergi takvimi', 'beyanname', 'katkı payı', 'mutabakat'],
+      },
       { id: 'finansal-denetim', label: 'Finansal denetim', to: '/finansal-denetim', icon: ShieldCheck, hint: 'Logo kayıtlarının denetimi', keywords: ['denetim', 'muhasebe', 'risk'] },
       { id: 'yonetim-raporlari', label: 'Yönetim raporları', to: '/yonetim-raporlari', icon: FileChartColumn, hint: 'Karar raporları', keywords: ['rapor'] },
       {
@@ -190,6 +274,14 @@ export const NAV: NavGroup[] = [
         hint: 'Kitap bazlı satış hedefleri, departman bütçesi, senaryolar ve sapma uyarısı',
         keywords: ['bütçe', 'hedef', 'satış hedefi', 'senaryo', 'sapma', 'departman'],
       },
+      {
+        id: 'risk-uyum',
+        label: 'Risk ve uyum',
+        to: '/risk-uyum',
+        icon: ShieldAlert,
+        hint: 'Risk kaydı ve ısı haritası, göstergeler, uyum takvimi, sigorta ve iş sürekliliği, kurul brifingi',
+        keywords: ['risk', 'uyum', 'kvkk', 'sigorta', 'poliçe', 'iş sürekliliği', 'bcp', 'gösterge', 'kri', 'ısı haritası', 'telif uyumu'],
+      },
     ],
   },
   {
@@ -211,6 +303,8 @@ export const NAV: NavGroup[] = [
       { id: 'son-okuma', label: 'Son okuma', to: '/son-okuma', icon: SpellCheck, section: 'Yayına hazırlık', hint: 'Baskı öncesi son denetim', keywords: ['yazım', 'denetim', 'okuma'] },
       { id: 'kitap-tasarim', label: 'Kitap tasarım', to: '/kitap-tasarim', icon: BookImage, section: 'Yayına hazırlık', hint: 'Sayfa, kapak ve baskı provası', keywords: ['stüdyo', 'kapak', 'mizanpaj', 'resim'] },
       { id: 'kapak-arsivi', label: 'Kapak arşivi', to: '/kitap-tasarim/kapak-arsivi', icon: Images, section: 'Yayına hazırlık', parent: 'kitap-tasarim', hint: 'Timaş kapakları, kategori ve alt kategoriye göre', keywords: ['kapak', 'örnek', 'arşiv', 'görsel', 'kategori'] },
+      { id: 'dijital-yayin', label: 'Dijital yayın', to: '/dijital-yayin', icon: TabletSmartphone, section: 'Yayına hazırlık', hint: 'E-kitap ve sesli kitap hakları, platform durumu, dijital fırsatlar', keywords: ['e-kitap', 'ekitap', 'epub', 'sesli kitap', 'dijital', 'kindle', 'e-isbn', 'platform'] },
+      { id: 'dijital-satis', label: 'Dijital satış', to: '/dijital-yayin/satis', icon: FileSpreadsheet, section: 'Yayına hazırlık', parent: 'dijital-yayin', hint: 'Platform satış raporları, kitaba eşleme, dijital gelir', keywords: ['dijital gelir', 'e-kitap satış', 'platform raporu', 'rapor yükleme'] },
       { id: 'serbest-calisanlar', label: 'Serbest çalışanlar', to: '/serbest-calisanlar', icon: BriefcaseBusiness, section: 'Yayına hazırlık', hint: 'Çizer ve serbest çalışan havuzu, iş paketleri, kapasite, hakediş', keywords: ['çizer', 'freelancer', 'illüstratör', 'hakediş', 'iş paketi', 'kapasite'] },
       { id: 'uretim', label: 'Üretim yönetimi', to: '/uretim', icon: Factory, section: 'Üretim', hint: 'Baskı takvimi, matbaa takibi ve gecikmeler; depo girişi Logo\'dan', keywords: ['üretim', 'matbaa', 'baskı takvimi', 'depo girişi', 'gecikme', 'bandrol', 'baskı çıkışı'] },
     ],
@@ -225,8 +319,19 @@ export const NAV: NavGroup[] = [
       { id: 'yazar-iliskileri', label: 'Yazar ilişkileri', to: '/yazar-iliskileri', icon: HeartHandshake, hint: 'Yazar kartı, randevu ve görüşme notu, aday havuzu, ilişki ısısı', keywords: ['randevu', 'görüşme', 'aday', 'potansiyel yazar', 'ısı haritası'] },
       { id: 'basin-web', label: 'Basın ve web', to: '/basin-web', icon: Newspaper, hint: 'Açık kaynaklarda yazar ve kitap haberleri', feature: 'webWatch', keywords: ['haber', 'basın'] },
       { id: 'telif-sozlesme', label: 'Sözleşmeler', to: '/telif-sozlesme', icon: FileSignature, hint: 'Telif ve sözleşme kayıtları', keywords: ['telif', 'sözleşme'] },
+      { id: 'telif-donem', label: 'Telif dönemi', to: '/telif-donem', icon: Calculator, parent: 'telif-sozlesme', hint: 'Dönem telif koşusu, istisnalar, beyanname, ödeme listesi, avans ve yenilemeler', keywords: ['telif', 'hakediş', 'beyanname', 'avans', 'yenileme', 'royalty', 'ödeme listesi', 'stopaj'] },
+      { id: 'haklar', label: 'Haklar ve lisanslar', to: '/haklar', icon: Languages, parent: 'telif-sozlesme', hint: 'Kitabın hak kartı, dil/ülke hakları, verilen lisanslar', keywords: ['hak', 'lisans', 'çeviri hakkı', 'telif satış', 'yabancı hak'] },
       { id: 'editor-atama', label: 'Editör atama', to: '/editor-atama', icon: UserCog, hint: 'Atama, iş yükü, takvim ve kategori kuralları', keywords: ['editörler', 'atama', 'iş yükü', 'takvim', 'kural'] },
       { id: 'kategori-agaci', label: 'Kategori ağacı', to: '/kategori-agaci', icon: FolderTree, hint: 'Kitap profili, kategori mimarisi ve tutarsızlıklar', keywords: ['kategori', 'kitaplık', 'tür', 'tema', 'etiket', 'künye', 'profil', 'web kategorisi', 'tutarsızlık'] },
+      {
+        id: 'kurumsal-eposta',
+        label: 'Kurumsal e-posta',
+        to: '/kurumsal-eposta',
+        icon: Mail,
+        hint: 'Genel kutuya gelen iletiler, atama ve yanıt süreleri',
+        badge: 'mailbox',
+        keywords: ['e-posta', 'eposta', 'mail', 'timas@', 'genel kutu', 'gelen kutusu', 'şikâyet', 'başvuru', 'iş başvurusu', 'sla', 'yanıt'],
+      },
     ],
   },
   {
@@ -246,6 +351,7 @@ export const NAV: NavGroup[] = [
         keywords: ['dağılım', 'sevk', 'sevk listesi', 'bölge', 'bmt', 'bölgem', 'depo girişi', 'yeni kitap', 'iade'],
       },
       { id: 'saha', label: 'Saha ve tahsilat', to: '/saha', icon: MapPinned, section: 'Saha', hint: 'Bugünün ziyaret sırası, müşteri brifingi, vadesi geçmiş alacak ve CRM tahsilat onayı', keywords: ['bmt', 'ziyaret', 'tahsilat', 'vadesi geçmiş', 'yaşlandırma', 'brifing', 'ödeme planı', 'saha satış', 'bayi', 'kitapçı'] },
+      { id: 'bayi-risk', label: 'Bayi riski', to: '/bayi-risk', icon: ShieldCheck, section: 'Saha', hint: 'Bayi ve kitapçı risk skoru (A/B/C/D), alacak yaşlandırması, limit önerisi ve ziyaret öncesi risk brifi', keywords: ['bayi', 'kitapçı', 'alacak', 'vade', 'limit', 'tahsilat', 'risk', 'segment', 'yaşlandırma', 'karşılıksız çek'] },
       {
         id: 'okul-tanitim',
         label: 'Okul tanıtım',
@@ -254,6 +360,24 @@ export const NAV: NavGroup[] = [
         section: 'Saha',
         hint: 'Okul ziyaret planı, okul kartı, kademeye uygun katalog, bayi eşleştirme ve ziyaret raporu',
         keywords: ['okul', 'ziyaret', 'öğretmen', 'katalog', 'bayi eşleştirme', 'okul örneği', 'akademik takvim'],
+      },
+      {
+        id: 'musteri-iliskileri',
+        label: 'Müşteri ilişkileri',
+        to: '/musteri-iliskileri',
+        icon: HeartHandshake,
+        section: 'Müşteri',
+        hint: 'Cari değeri, nedenleri yazılı kayıp riski, temsilci portföyü ve aksiyon kaydı',
+        keywords: ['müşteri', 'cari', 'kayıp riski', 'churn', 'portföy', 'aksiyon', 'segment', 'değer', 'crm', 'bayi', 'kitapçı', 'dağıtıcı'],
+      },
+      {
+        id: 'musteri-veri-sagligi',
+        label: 'CRM veri sağlığı',
+        to: '/musteri-iliskileri/veri-sagligi',
+        icon: Stethoscope,
+        section: 'Müşteri',
+        hint: 'Logo bağı olmayan, tekrar olasılığı olan, sahipsiz cari kayıtları ve izin çelişkileri; CRM\'de düzeltilecek listesi',
+        keywords: ['veri sağlığı', 'veri kalitesi', 'tekrar kayıt', 'logo bağı', 'sahipsiz', 'ortak hesap', 'izin', 'kvkk', 'iys'],
       },
       {
         id: 'kurumsal-satis',
@@ -276,11 +400,47 @@ export const NAV: NavGroup[] = [
     ],
   },
   {
+    // M43 depo ve stok; M44 lojistik/kargo ve M52 tedarik aynı alana eklenir.
+    id: 'lojistik',
+    label: 'Lojistik',
+    hint: 'Depo ve stok, kargo, tedarik ve baskı yükü, kağıt, tedarikçi borcu',
+    icon: Warehouse,
+    items: [
+      { id: 'stok', label: 'Stok', to: '/stok', icon: Boxes, section: 'Stok', hint: 'Kitap başına Logo stoğu, raf dağılımı, satış hızı ve kaç gün yeteceği', keywords: ['stok', 'depo', 'raf', 'kaç gün yeter', 'tükenme', 'stokta var mı', 'bekleyen sipariş', 'ambar'] },
+      { id: 'stok-bitecekler', label: 'Bitecekler', to: '/stok/bitecekler', icon: Hourglass, section: 'Stok', hint: 'Stoğu yakında bitecek kitaplar, açık üretim kartı ve baskı tekrarı önerisi', keywords: ['bitecek', 'baskı tekrarı', 'kritik stok', 'yeniden baskı'] },
+      { id: 'stok-fazla', label: 'Fazla stok', to: '/stok/fazla', icon: PackageMinus, section: 'Stok', hint: 'Fazla, hareketsiz ve satışı olmayan stok; eritme önerisi', keywords: ['ölü stok', 'hareketsiz', 'fazla stok', 'devir hızı', 'eritme'] },
+      { id: 'stok-esikler', label: 'Güvenlik stoku', to: '/stok/esikler', icon: ShieldHalf, section: 'Stok', hint: 'Güvenlik günü ve yeniden sipariş noktası önerisi ve onayı', keywords: ['eşik', 'asgari stok', 'minimum stok', 'yeniden sipariş'] },
+      { id: 'stok-fark', label: 'Logo–CRM farkı', to: '/stok/fark', icon: GitCompareArrows, section: 'Depo', hint: 'Logo stoğu ile CRM raf stoğu farkı ve kök nedeni', keywords: ['fark', 'sayım', 'mutabakat', 'raf stoğu'] },
+      { id: 'stok-aktarim', label: 'Aktarım hataları', to: '/stok/aktarim', icon: TriangleAlert, section: 'Depo', hint: 'Logo’ya aktarılamayan depo hareketleri ve hata nedeni', keywords: ['aktarım', 'logo mesajı', 'hata', 'depolar arası sevk'] },
+      { id: 'stok-depo-hatti', label: 'Depo hattı', to: '/stok/depo-hatti', icon: ListOrdered, section: 'Depo', hint: 'Sipariş hazırlık aşamaları, bekleme ve toplama süreleri', keywords: ['toplama', 'pusula', 'kutulama', 'sevk', 'sipariş hazırlık'] },
+      // Gönderi kartı, hata/bekleyen listeleri (/kargo/gonderi/:id, /kargo/hatalar, /kargo/bekleyen) menüde yok; «Kargo» etkin görünür.
+      {
+        id: 'kargo',
+        label: 'Kargo',
+        to: '/kargo',
+        icon: PackageSearch,
+        section: 'Kargo',
+        hint: 'Günün sevki, entegrasyon hatası, takip numarasız sevk, teslim bekleyenler; sipariş, fatura ya da takip no ile gönderi arama',
+        keywords: ['kargo', 'gönderi', 'takip no', 'sevk', 'etiket', 'entegrasyon hatası', 'teslim', 'aras', 'mng', 'ups', 'kargom nerede'],
+      },
+      { id: 'kargo-firmalar', label: 'Firma karnesi', to: '/kargo/firmalar', icon: Scale, section: 'Kargo', hint: 'Kargo firmalarının gönderi, teslim süresi, iade ve desi başı maliyeti; şehir kırılımı ve karar kaydı', keywords: ['kargo firması', 'karne', 'desi', 'teslim süresi', 'iade oranı', 'kurye', 'bölge'] },
+      { id: 'kargo-mutabakat', label: 'Kargo mutabakatı', to: '/kargo/mutabakat', icon: ReceiptText, section: 'Kargo', hint: 'Logo kargo faturası ile kargo kaydı toplamı, mükerrer takip no, Logo sevk ↔ CRM sevkiyat eşleşmesi', keywords: ['mutabakat', 'kargo faturası', 'fark', 'mükerrer'] },
+      { id: 'tedarik', label: 'Tedarik özeti', to: '/tedarik', icon: Gauge, section: 'Tedarik', hint: 'Ay × matbaa yükü, eşik aşımı, kağıt, ödeme ve maliyet özeti', keywords: ['tedarik', 'baskı planı', 'matbaa', 'tedarik zinciri'] },
+      { id: 'tedarik-yuk', label: 'Baskı yükü', to: '/tedarik/yuk', icon: Factory, section: 'Tedarik', hint: 'Ay × matbaa yükü, kapasite, çakışma ve yük dengeleme önerisi', also: ['/tedarik/kapasite'], keywords: ['matbaa yükü', 'kapasite', 'çakışma', 'yığılma', 'dengeleme', 'forma'] },
+      { id: 'tedarik-kagit', label: 'Kağıt ve malzeme', to: '/tedarik/kagit', icon: Layers, section: 'Tedarik', hint: 'Açık kartların aylık kağıt ihtiyacı, alım zamanı ve alış fiyatı', keywords: ['kağıt', 'kağıt ihtiyacı', 'ton', 'gramaj', 'kağıtçı', 'bristol'] },
+      { id: 'tedarik-tedarikciler', label: 'Tedarikçiler', to: '/tedarik/tedarikciler', icon: Building2, section: 'Tedarik', hint: 'Matbaa ve kağıtçı: iş, borç, ödeme planı, fatura eşleşmesi', also: ['/tedarik/tedarikci'], keywords: ['matbaa borcu', 'ödeme', 'vade', 'fatura', 'kağıtçı', 'faturası gelmemiş'] },
+      { id: 'tedarik-maliyet', label: 'Baskı maliyeti eğilimi', to: '/tedarik/maliyet', icon: TrendingUp, section: 'Tedarik', hint: 'Adet başı baskı bedeli: cilt, sayfa, baskı tipi ve matbaa kırılımı', keywords: ['birim maliyet', 'baskı maliyeti', 'baskı fiyatı', 'eğilim'] },
+    ],
+  },
+  {
     id: 'pazarlama',
     label: 'Pazarlama',
-    hint: 'Plan, içerik, SEO & GEO, set ve hediye',
+    hint: 'Plan, içerik, e-ticaret, SEO & GEO, set ve hediye',
     icon: Megaphone,
     items: [
+      // M18: ay planı bölümün ilk öğesi; föy sayfası saha temsilcisine de açık (telefon alt menüsünde görünür).
+      { id: 'pazarlama-aylik', label: 'Aylık plan', to: '/pazarlama/aylik-plan', icon: CalendarClock, section: 'Planlama', hint: 'Ayın yeni kitap, backlist, özel gün ve B2B kampanyası takvimi; çakışmalar ve bütçe dağılımı', keywords: ['aylık plan', 'pazarlama takvimi', 'backlist', 'özel gün', 'kampanya', 'çakışma', 'bütçe'] },
+      { id: 'pazarlama-foy', label: 'Satış föyleri', to: '/pazarlama/foy', icon: FileText, section: 'Planlama', hint: 'Yeni kitapların tek sayfalık satış föyü: fiyat, barkod, hedef kitle, neden satılır; aylık paket', keywords: ['föy', 'tanıtım', 'satış'] },
       // Plan ekranı (/pazarlama/plan/:id) menüde yok; açıkken «Yeni kitap planı» etkin görünür.
       { id: 'pazarlama-yeni-kitap', label: 'Yeni kitap planı', to: '/pazarlama/yeni-kitap', icon: ClipboardList, section: 'Planlama', hint: 'Yayına hazırlanan kitapların pazarlama planı, bütçe, takvim ve materyalleri', also: ['/pazarlama/plan'], keywords: ['pazarlama planı', 'yeni kitap', 'lansman', 'föy', 'basın bülteni', 'emsal', 'bütçe'] },
       {
@@ -293,6 +453,42 @@ export const NAV: NavGroup[] = [
         keywords: ['set', 'hediye', 'promosyon', 'kurumsal hediye', 'ajanda', 'defter', 'toplama set', 'birlikte alınan'],
       },
       { id: 'pazarlama-icerik', label: 'Görsel ve metin', to: '/pazarlama/icerik', icon: Palette, section: 'Üretim', hint: 'Sosyal medya, reklam ve site görselleri; Zeki AI metin varyantları, onay ve arşiv', keywords: ['görsel', 'banner', 'sosyal medya', 'reklam metni', 'hashtag', 'video senaryosu', 'influencer'] },
+      // H2 Okuyucu veri tabanı: kart (/okurlar/kisi/:id), segmentler, yüklemeler aynı öğenin altında.
+      { id: 'okurlar', label: 'Okurlar', to: '/okurlar', icon: Contact, section: 'Okur ve müşteri', hint: 'Tekil okur, izinler ve segmentler', keywords: ['okur', 'müşteri', 'segment', 'izin', 'iys', 'kvkk', 'bülten listesi', 'etkinlik katılımcı', 'fuar listesi', 'kopya kayıt'] },
+      // M37 Okur topluluğu: yalnız sayı (kişi adı yok). H2 «Okurlar» öğesi aynı bölüme eklenir.
+      { id: 'okur-toplulugu', label: 'Okur kitlesi', to: '/okur-toplulugu', icon: UsersRound, section: 'Okur ve müşteri', hint: 'Okur kaynağı, KVKK ve İYS izin sağlığı, yaklaşan programlar (yalnız sayı)', keywords: ['okur', 'topluluk', 'kvkk', 'iys', 'izin', 'kitle', 'e-bülten'] },
+      { id: 'okur-segmentler', label: 'Okur segmentleri', to: '/okur-toplulugu/segmentler', icon: SlidersHorizontal, section: 'Okur ve müşteri', hint: 'Segment kuralı, büyüklük, amaç ve KVKK onayı', keywords: ['segment', 'hedef kitle', 'kvkk onayı', 'ilgi alanı'] },
+      { id: 'okur-programlar', label: 'Topluluk programları', to: '/okur-toplulugu/programlar', icon: CalendarHeart, section: 'Okur ve müşteri', hint: 'Okuma kulübü, imza günü, anket takvimi ve geçmiş etkinlikler', keywords: ['okuma kulübü', 'imza günü', 'etkinlik', 'anket', 'duyuru'] },
+      { id: 'okur-yorumlar', label: 'Yorum cevapları', to: '/okur-toplulugu/yorumlar', icon: MessageSquareReply, section: 'Okur ve müşteri', hint: 'Cevapsız okur yorumları ve Zeki AI cevap taslağı', keywords: ['yorum', 'cevap', 'okur yorumu', 'puan'] },
+      // H3: müşteri kartı (/eticaret-musteri/musteri/:key) ve bölümler aynı öğenin altında.
+      { id: 'eticaret-musteri', label: 'E-ticaret müşterileri', to: '/eticaret-musteri', icon: ShoppingCart, section: 'Okur ve müşteri', hint: 'Site siparişleri, müşteri segmentleri, tetikler ve kampanya sonucu', keywords: ['site müşterisi', 'rfm', 'sadık müşteri', 'kayıp müşteri', 'geri kazanım', 'yeni kitap', 'kontrol grubu', 'sepet', 'sipariş', 'timas.com.tr'] },
+      // Lansman ekranı (/pazarlama/lansman/:id) alt yol olarak «Lansman» öğesini etkin gösterir.
+      { id: 'pazarlama-lansman', label: 'Lansman', to: '/pazarlama/lansman', icon: Rocket, section: 'Planlama', hint: 'Yayın haftası ve ilk ay: kontrol listesi, sipariş ve satış izleme, stok uyarısı, D+7 ve D+30 raporu', keywords: ['lansman', 'yayın günü', 'yayın ayı', 'ilk hafta', 'imza günü', 'etkinlik', 'medya yansıması', 'stok uyarısı'] },
+      { id: 'pazarlama-backlist', label: 'Backlist', to: '/pazarlama/backlist', icon: History, section: 'Planlama', hint: 'Uyuyan backlist kitapların fırsat sıralaması, özel gün gündemi, aktivasyon planı ve kampanya etkisi', keywords: ['uyuyan', 'eski kitap', 'kampanya', 'özel gün'] },
+      { id: 'basin-iliskileri', label: 'Basın ilişkileri', to: '/basin-iliskileri', icon: Megaphone, section: 'İletişim', hint: 'Bülten, medya kişileri ve yansımalar', keywords: ['basın', 'pr', 'halkla ilişkiler', 'gazeteci', 'bülten', 'yansıma', 'medya kiti', 'röportaj'] },
+      { id: 'reklam', label: 'Reklam', to: '/reklam', icon: BadgeDollarSign, section: 'Kampanya', hint: 'Harcama, getiri ve bütçe', keywords: ['reklam', 'dijital pazarlama', 'google ads', 'meta', 'instagram', 'tiktok', 'harcama', 'roas', 'tbm', 'kampanya', 'brief'] },
+      // M22: gönderi, fırsat, rapor ve hesap ekranları /sosyal-medya altında; hepsinde «Sosyal medya» etkin görünür.
+      { id: 'sosyal-medya', label: 'Sosyal medya', to: '/sosyal-medya', icon: Share2, section: 'İletişim', hint: 'Takvim, onay ve performans', keywords: ['sosyal medya', 'instagram', 'paylaşım', 'takvim', 'gönderi', 'hashtag', 'özel gün', 'içgörü'] },
+      // M23: kişi kartı, aday listesi, rapor ve ödemeler /isbirlikleri/* altında; menüde tek öğe.
+      { id: 'isbirlikleri', label: 'İşbirlikleri', to: '/isbirlikleri', icon: Handshake, section: 'İletişim', hint: 'İçerik üreticileri, gönderim ve sonuç', keywords: ['influencer', 'içerik üreticisi', 'bookstagram', 'booktube', 'booktok', 'işbirliği', 'brief', 'hediye kitap', 'cpe', 'etkileşim'] },
+      { id: 'katalog-bulten', label: 'Katalog ve bülten', to: '/katalog-bulten', icon: BookOpen, section: 'Kampanya', hint: 'Dönemsel katalog ve e-bülten', keywords: ['katalog', 'bülten', 'e-bülten', 'newsletter', 'segment', 'konu satırı', 'bayi kataloğu', 'tasarım paketi', 'iys'] },
+      { id: 'etkinlikler', label: 'Fuar ve etkinlik', to: '/etkinlikler', icon: CalendarRange, section: 'Etkinlik', hint: 'Fuar, imza günü, söyleşi ve ödüller', keywords: ['fuar', 'tüyap', 'imza günü', 'söyleşi', 'etkinlik', 'ödül', 'stant', 'fuar sonucu', 'ajanda'] },
+      // M28: kişi kartı, kurumlar, hediye programı, projeler ve rapor alt adresleri (/kurumsal-iliskiler/…) bu öğenin altında.
+      { id: 'kurumsal-iliskiler', label: 'Kurumsal ilişkiler', to: '/kurumsal-iliskiler', icon: Landmark, section: 'İlişkiler', hint: 'Kanaat önderleri, kurumlar ve kamu projeleri', keywords: ['kanaat önderi', 'hediye kitap', 'kamu projesi', 'belediye', 'milli eğitim', 'kütüphane bağışı', 'okuma kampanyası', 'akademisyen', 'teklif dosyası'] },
+      // M34 E-ticaret: site ↔ CRM ↔ Logo farkları, huni, pazar yeri carileri (portal hiçbir sisteme yazmaz).
+      { id: 'eticaret', label: 'Platform durumu', to: '/e-ticaret', icon: Store, section: 'E-ticaret', hint: 'Sitedeki ürün, CRM kartı ve Logo kaydı: açık fark, eksik kart, satışta olmaması gereken kitap', keywords: ['e-ticaret', 'site', 't-soft', 'platform', 'tsoft aktif', 'satışta olmaması gereken'] },
+      { id: 'eticaret-farklar', label: 'Farklar', to: '/e-ticaret/farklar', icon: GitCompareArrows, section: 'E-ticaret', hint: 'Fiyat, stok, aktiflik, barkod ve kart farkları; işaretleme ve içerik paketi', keywords: ['fark', 'eşitleme', 'fiyat farkı', 'stok', 'barkod', 'içerik paketi'] },
+      { id: 'eticaret-huni', label: 'Huni', to: '/e-ticaret/huni', icon: Filter, section: 'E-ticaret', hint: 'Sitede görüntülenme → satış; çok bakılıp az satan kitaplar', keywords: ['huni', 'dönüşüm', 'görüntülenme'] },
+      { id: 'eticaret-pazar-yerleri', label: 'Pazar yerleri', to: '/e-ticaret/pazar-yerleri', icon: ShoppingBag, section: 'E-ticaret', hint: 'Pazar yeri carilerine Logo satışı, iade, tükenme riski', keywords: ['pazar yeri', 'kitapyurdu', 'hepsiburada', 'amazon', 'trendyol', 'sell-in', 'iade'] },
+      {
+        id: 'kampanya',
+        label: 'Kampanyalar',
+        to: '/kampanyalar',
+        icon: BadgePercent,
+        section: 'E-ticaret',
+        hint: 'Site, pazar yeri, bayi ve fuar kampanyaları: indirim simülasyonu (marj, telif, asgari fiyat), aday kitaplar, takvim, onay ve sonuç',
+        keywords: ['kampanya', 'indirim', 'promosyon', 'pazar yeri', 'trendyol', '11.11', 'flaş indirim', 'kupon', 'bayi kampanyası', 'marj'],
+      },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },
@@ -331,6 +527,76 @@ export const NAV: NavGroup[] = [
       { id: 'seo-urun', label: 'Ürün denetimi', to: '/seo-geo/urun-denetimi', icon: ClipboardCheck, section: 'İş', hint: 'Ürün açıklaması ve başlık önerileri', keywords: ['ürün'] },
       { id: 'seo-gecmis', label: 'Karar geçmişi', to: '/seo-geo/gecmis', icon: History, section: 'İş', hint: 'Onaylanan ve reddedilen öneriler', keywords: ['geçmiş'] },
       { id: 'seo-baglanti', label: 'Bağlantılar', to: '/seo-geo/baglantilar', icon: Plug, section: 'Ayar', hint: 'Site ve arama hesabı bağlantıları', keywords: ['bağlantı'] },
+    ],
+  },
+  {
+    // Altyapı ve destek (M48–M51): yönetici alanı değil, sayfa yetkisiyle açılır; BT personeli yönetici olmayabilir.
+    id: 'altyapi',
+    label: 'Altyapı ve destek',
+    hint: 'Sistem durumu, veri güvenliği, müşteri hizmetleri ve Zeki AI kalitesi',
+    icon: Server,
+    items: [
+      {
+        id: 'sistem-durumu',
+        label: 'Sistem durumu',
+        to: '/sistem-durumu',
+        icon: Activity,
+        hint: 'Logo, CRM, giriş, Zeki AI, e-posta ve ağ bağlantısının durumu; olaylar ve zamanlanmış işler',
+        keywords: ['bt', 'altyapı', 'kesinti', 'bağlantı', 'olay', 'veri sonu', 'sürüm', 'zamanlanmış iş'],
+      },
+      {
+        id: 'veri-guvenligi',
+        label: 'Veri güvenliği',
+        to: '/veri-guvenligi',
+        icon: LockKeyhole,
+        hint: 'Giriş ve erişim kaydı, güvenlik uyarıları, hesap hijyeni, kişisel veri envanteri ve saklama süreleri',
+        keywords: ['güvenlik', 'kvkk', 'giriş kaydı', 'oturum', 'erişim', 'dışa aktarma', 'kişisel veri', 'saklama', 'hesap', 'denetim izi'],
+      },
+      {
+        id: 'musteri-destek',
+        label: 'Müşteri hizmetleri',
+        to: '/musteri-destek',
+        icon: Headset,
+        hint: 'Talep kuyruğu ve SLA, müşteri bağlamı (sipariş, kargo, fatura), bayi görünümü, konu eğilimi ve SSS açıkları',
+        keywords: ['destek', 'talep', 'şikâyet', 'sla', 'kargo takip', 'sipariş durumu', 'müşteri', 'okur', 'bayi', 'sss', 'memnuniyet', 'csat'],
+      },
+      {
+        id: 'zeki-kalite',
+        label: 'Zeki AI kalitesi',
+        to: '/zeki-kalite',
+        icon: BadgeCheck,
+        hint: 'Zeki AI karnesi, kalite koşuları ve bozulan sorular, hata sınıfları, kullanıcı geri bildirimi, sürümler',
+        keywords: ['zeki', 'kalite', 'karne', 'doğruluk', 'geri bildirim', 'yanlış cevap', 'test seti', 'sürüm', 'model'],
+      },
+    ],
+  },
+  {
+    // İnsan Kaynakları (M55–M58; İK-0 ortak kayıtlar). Sayfaları açıkça verilir, «Herkes» rolüne girmez.
+    id: 'ik',
+    label: 'İnsan Kaynakları',
+    hint: 'İşe alım, eğitim ve gelişim, İK belgeleri ve KVKK kayıtları',
+    icon: Contact,
+    explicit: true,
+    items: [
+      { id: 'ik-ise-alim', label: 'İşe alım panosu', to: '/ik/ise-alim', icon: ClipboardList, section: 'İşe alım', hint: 'Başvurular aşamalarıyla, aday kartı, kanıtlı özgeçmiş özeti ve mülakat notları', keywords: ['aday', 'başvuru', 'özgeçmiş', 'cv', 'mülakat', 'işe alım', 'ik'] },
+      { id: 'ik-pozisyonlar', label: 'Pozisyonlar', to: '/ik/pozisyonlar', icon: BriefcaseBusiness, section: 'İşe alım', hint: 'Pozisyon kartı, yetkinlikler, ilan taslağı, mülakat soru seti ve onay', keywords: ['kadro', 'ilan', 'yetkinlik', 'pozisyon'] },
+      { id: 'ik-belgeler', label: 'Belgeler', to: '/ik/belgeler', icon: FileText, section: 'İşe alım', hint: 'İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları', keywords: ['şablon', 'teklif mektubu', 'ret mektubu'] },
+      { id: 'ik-egitimlerim', label: 'Eğitimlerim', to: '/ik/egitimlerim', icon: BookOpenCheck, section: 'Eğitim', hint: 'Zorunlu eğitimlerim, oturumlarım, sertifikalarım, anketlerim ve ekibimin eğitim onayları', keywords: ['eğitim', 'sertifika', 'anket', 'iş güvenliği', 'isg', 'kurs', 'seminer'] },
+      { id: 'ik-egitim', label: 'Eğitim ve gelişim', to: '/ik/egitim', icon: GraduationCap, section: 'Eğitim', hint: 'Eğitim panosu, katalog ve oturumlar, yoklama, ihtiyaçlar, portal kullanım haritası, modül rehberleri ve eğitim gideri', keywords: ['eğitim', 'oturum', 'yoklama', 'zorunlu eğitim', 'katalog', 'rehber', 'kullanım', 'lms'] },
+      { id: 'ik-kayitlar', label: 'Çalışan ve KVKK kayıtları', to: '/ik/kayitlar', icon: ShieldCheck, section: 'Temel', hint: 'Çalışan ve birim kaydı, aydınlatma metni, açık rıza, saklama süresi, imha tutanağı, erişim kaydı', keywords: ['kvkk', 'çalışan', 'birim', 'rıza', 'imha', 'saklama'] },
+    ],
+  },
+  {
+    // M40–M42 ortak çalışma alanı (pazar yerleri ve D2C); ilk açan M42 «Kanallar». M40 Trendyol ve M41 Amazon kendi bölümleriyle eklenir.
+    id: 'platform',
+    label: 'Platform',
+    hint: 'Pazar yerleri, D2C ve kanal kârlılığı',
+    icon: Store,
+    items: [
+      { id: 'kanallar', label: 'Kanal karnesi', to: '/kanallar', icon: Store, section: 'Kanallar', hint: 'Pazar yerleri ve timas.com.tr: kanala satış, iskonto, iade, marj ve hedef gerçekleşmesi; kanal detayı ve iskonto simülasyonu', keywords: ['kanal', 'pazar yeri', 'hepsiburada', 'kitapyurdu', 'd&r', 'idefix', 'amazon', 'trendyol', 'e-ticaret', 'iskonto', 'iade', 'marj', 'kârlılık', 'karne'] },
+      { id: 'kanal-matris', label: 'Kitap × kanal', to: '/kanallar/matris', icon: Grid3x3, section: 'Kanallar', hint: 'Hangi kanal hangi kitabı alıyor, hangisi iade ediyor', keywords: ['matris', 'kitap kanal', 'alım', 'iade'] },
+      { id: 'kanal-d2c', label: 'D2C büyüme', to: '/kanallar/d2c', icon: Globe, section: 'Kanallar', hint: 'timas.com.tr payı, sitede güçlü kitaplar ve D2C\'ye özel set önerisi', keywords: ['d2c', 'site', 'timas.com.tr', 'sadakat', 'set'] },
+      { id: 'kanal-eslesme', label: 'Cari eşleme', to: '/kanallar/eslesme', icon: Link2, section: 'Kanallar', hint: 'Logo carisi, kanal kodu ve CRM hedef bölgesi ↔ platform', keywords: ['eşleme', 'cari', 'platform', 'bölge'] },
     ],
   },
   {
@@ -373,16 +639,18 @@ export function visibleNav(
   pages: 'all' | ReadonlySet<string> | null = 'all',
 ): VisibleGroup[] {
   // pages: kişinin görebildiği `sayfa:<id>` anahtarları (köprü karar verir); null = henüz bilinmiyor → rol sayfaları gizli.
+  // Açıkça verilen grup (İK) «bütün sayfalar» ile yalnız yöneticide açılır: köprü yanıtı okunamayınca ('all') herkese görünmez.
   const allowed = (g: NavGroup, i: NavItem) =>
-    !needsPagePermission(g, i) || pages === 'all' || (pages !== null && pages.has(`sayfa:${i.id}`));
+    !needsPagePermission(g, i) ||
+    (pages === 'all' ? !g.explicit || role.isAdmin : pages !== null && pages.has(`sayfa:${i.id}`));
   const keep = (g: NavGroup) => (i: NavItem) =>
     (!i.adminOnly || role.isAdmin) && (!i.feature || flags[i.feature] === true) && allowed(g, i);
   const groups = NAV.filter((g) => !g.adminOnly || role.isAdmin)
     .map((g) => ({ ...g, items: g.items.filter(keep(g)), defaultOpen: true } as VisibleGroup))
     .filter((g) => g.items.length > 0);
   if (!role.isEditor || role.isAdmin) return groups;
-  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'pazarlama'];
-  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'pazarlama']);
+  const order: NavGroupId[] = ['kampus', 'editoryal', 'kayitlar', 'analiz', 'finans', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'ik', 'platform'];
+  const closed = new Set<NavGroupId>(['analiz', 'finans', 'satis', 'lojistik', 'pazarlama', 'altyapi', 'ik', 'platform']);
   return order
     .map((id) => groups.find((g) => g.id === id))
     .filter((g): g is VisibleGroup => !!g)

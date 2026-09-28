@@ -1,0 +1,9 @@
+[Unit]
+Description=Kurumsal e-posta (H4): iş saatleriyle SLA, hatırlatma ve eskalasyon (iç bildirim), kutu bağlantı uyarısı
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Alıcılar portal çalışanlarıdır (yönlendirme tablosu, MAIL_INBOX_OWNERS, MAIL_TOP_MANAGERS); gönderene bir şey gitmez.
+ExecStart=/bin/sh -c 'curl -fsS -m 600 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/mailbox/sla-due'

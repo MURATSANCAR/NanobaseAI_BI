@@ -1,0 +1,10 @@
+[Unit]
+Description=Zeki AI kalitesi (M50): okuma kapısı her gece 05:10 (katalog taraması 02:00'de başlar; üst üste binmesin)
+
+[Timer]
+OnCalendar=*-*-* 05:10:00
+Persistent=true
+Unit=timas-model-quality@gece.service
+
+[Install]
+WantedBy=timers.target

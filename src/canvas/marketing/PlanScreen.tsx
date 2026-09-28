@@ -14,6 +14,7 @@ import ChannelsTab from './ChannelsTab';
 import CalendarTab from './CalendarTab';
 import MaterialsTab from './MaterialsTab';
 import HistoryTab from './HistoryTab';
+import PlanBooks from './backlist/PlanBooks';
 
 /** Plan ekranı: Karne · Kanal ve bütçe · Takvim · Materyaller · Onay ve geçmiş; sağda Zeki AI önerisi. */
 
@@ -92,7 +93,7 @@ export default function PlanScreen() {
       const msg = { submit: 'Plan onaya gönderildi.', withdraw: 'Plan taslağa geri alındı.', approve: 'Onay kaydedildi.', upper: 'Üst onay kaydedildi.', reject: 'Plan gerekçesiyle geri gönderildi.', revise: 'Revizyon taslağı açıldı.', delete: 'Taslak silindi.' }[kind];
       toast.success(msg);
       if (kind === 'revise' && out) nav(`/pazarlama/plan/${encodeURIComponent(out.id)}`);
-      if (kind === 'delete') nav('/pazarlama/yeni-kitap');
+      if (kind === 'delete') nav(bl ? '/pazarlama/backlist?sekme=aktivasyonlar' : '/pazarlama/yeni-kitap');
     },
     onError: (e) => toast.error(errText(e, 'İşlem yapılamadı.') ?? ''),
   });
@@ -104,6 +105,10 @@ export default function PlanScreen() {
   const mine = !!p && (p.gonderen ?? '').toLowerCase() === (me?.username ?? '').toLowerCase();
   const left = p ? daysLeft(p.yayinTarihi) : null;
   const approvedMaterials = p ? p.materials.filter((x) => x.durum === 'onayli').length : 0;
+  // M17: backlist planı aynı ekranda; ilk sekme kitap listesi, öneri ve taslaklar Backlist uçlarından.
+  const bl = p?.kind === 'backlist';
+  const tabs = bl ? TABS.map((t) => (t.key === 'karne' ? { ...t, label: 'Kitaplar' } : t)) : TABS;
+  const home = bl ? { to: '/pazarlama/backlist?sekme=aktivasyonlar', label: 'Backlist planları' } : { to: '/pazarlama/yeni-kitap', label: 'Yeni kitap planları' };
 
   const aside = p && me ? (
     <div className="flex flex-wrap gap-2 lg:justify-end">
@@ -119,12 +124,12 @@ export default function PlanScreen() {
 
   return (
     <MarketingFrame
-      crumb="Yeni kitap planı"
+      crumb={bl ? 'Backlist' : 'Yeni kitap planı'}
       title={p?.baslik ?? 'Pazarlama planı'}
       source={p ? `${p.id} · sürüm ${p.surum}` : ''}
       presence={p ? p.durumAdi : '…'}
       detail={p?.baslik}
-      back={{ to: '/pazarlama/yeni-kitap', label: 'Yeni kitap planları' }}
+      back={home}
       aside={aside}
     >
       {plan.error && <Note tone="err">{errText(plan.error, 'Plan açılamadı.')}</Note>}
@@ -162,7 +167,7 @@ export default function PlanScreen() {
           {p.durum === 'arsiv' && <Note tone="info">Bu sürüm arşivde; yerini yeni onaylı sürüm aldı.</Note>}
 
           <KpiRow>
-            <Kpi label="Yayın günü" value={left === null ? '—' : left < 0 ? `${-left} gün önce` : `${left} gün`} help={`${fmtDay(p.yayinTarihi)} · ${p.yayinTarihiKaynakAdi ?? 'kaynak yok'}`} />
+            <Kpi label={bl ? 'Aktivasyon başlangıcı' : 'Yayın günü'} value={left === null ? '—' : left < 0 ? `${-left} gün önce` : `${left} gün`} help={`${fmtDay(p.yayinTarihi)} · ${p.yayinTarihiKaynakAdi ?? 'kaynak yok'}`} />
             <Kpi label="Satış hedefi" value={p.hedef?.adet != null ? `${fmtInt(p.hedef.adet)} adet` : '—'}
               help={p.hedef?.planId ? (me.canSeeBudget && p.hedef.ciro != null ? `${fmtMoney(p.hedef.ciro)} net ciro · ${p.hedef.year}` : `${p.hedef.year} bütçe planı`) : (p.hedef?.not ?? 'Onaylı hedef yok')} />
             <Kpi label="Plan bütçesi" value={me.canSeeBudget ? fmtMoney(p.butceToplam) : '—'}
@@ -175,8 +180,9 @@ export default function PlanScreen() {
 
           <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:gap-4">
             <div className="flex min-w-0 flex-1 flex-col gap-3">
-              <Tabs tabs={TABS} value={tab} onChange={(k) => setParams({ sekme: k }, { replace: true })} />
-              {tab === 'karne' && p.stokKodu && <CardTab stok={p.stokKodu} meta={m} />}
+              <Tabs tabs={tabs} value={tab} onChange={(k) => setParams({ sekme: k }, { replace: true })} />
+              {tab === 'karne' && !bl && p.stokKodu && <CardTab stok={p.stokKodu} meta={m} />}
+              {tab === 'karne' && bl && <PlanBooks plan={p} editable={editable} />}
               {tab === 'kanal' && <ChannelsTab plan={p} meta={m} editable={editable} onSaved={setPlan} />}
               {tab === 'takvim' && <CalendarTab plan={p} meta={m} editable={editable} canMark={me.canWrite && p.durum !== 'arsiv'} onSaved={setPlan} />}
               {tab === 'materyal' && <MaterialsTab plan={p} meta={m} running={!!running} />}
@@ -189,13 +195,19 @@ export default function PlanScreen() {
                 help="Kanal ve bütçe kural ve emsal oranlarıyla hesaplanır; Zeki AI yalnız gerekçeyi, konumlamayı ve metin taslaklarını yazar. Rakam üretmez; kaynakta olmayan alıntı ve rakam düşer."
               >
                 {!m.modelReady && <Note tone="warn">Zeki AI modeli bu kurulumda bağlı değil: öneri yalnız kural ve emsal oranıyla kurulur.</Note>}
-                {me.canWrite && p.durum !== 'arsiv' && (
+                {bl && (
+                  <p className="mt-1 text-[12px] leading-snug text-canvas-muted">
+                    Kanal ve bütçe plan açılırken kural ve kitapların geçmiş pazarlama harcamasıyla kuruldu. «Neden şimdi oku»
+                    gönderileri, e-bülten bölümü ve toplu alım mektubu Materyaller sekmesinden Zeki AI'a yazdırılır.
+                  </p>
+                )}
+                {!bl && me.canWrite && p.durum !== 'arsiv' && (
                   <button type="button" className={`${btnPrimary} mt-2 w-full`} onClick={() => suggest.mutate()} disabled={!!running || suggest.isPending}>
                     {running || suggest.isPending ? <Loader2 aria-hidden className="h-4 w-4 animate-spin" /> : <Sparkles aria-hidden className="h-4 w-4" />}
                     {running ? (running.adim ?? 'Hazırlanıyor…') : 'Zeki AI önerisi al'}
                   </button>
                 )}
-                {!editable && p.durum !== 'arsiv' && me.canWrite && (
+                {!bl && !editable && p.durum !== 'arsiv' && me.canWrite && (
                   <p className="mt-1.5 text-[11px] text-canvas-muted">Plan onayda ya da onaylı: öneri bütçe satırlarına dokunmaz, yalnız materyal taslağı yazar.</p>
                 )}
                 {lastJob?.durum === 'hata' && <div className="mt-2"><Note tone="err">{lastJob.hata}</Note></div>}
@@ -230,7 +242,7 @@ export default function PlanScreen() {
                 )}
                 {!!p.zeki?.dusen && <p className="mt-2 text-[11px] text-canvas-muted">Denetimde {p.zeki.dusen} cümle düştü (kaynaksız rakam, bulunamayan alıntı ya da kanıtsız iddia).</p>}
               </Block>
-              {p.stokKodu && (
+              {p.stokKodu && !bl && (
                 <Block title="Zeki AI'a sor" help="Genel bakıştaki soru kutusu açılır; cevap satış verisinden gelir.">
                   <ul className="flex flex-col gap-1.5">
                     {[

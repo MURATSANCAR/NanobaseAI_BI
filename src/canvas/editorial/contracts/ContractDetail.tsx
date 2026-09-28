@@ -11,6 +11,7 @@ import AddendaTab from './AddendaTab';
 import PaymentsTab from './PaymentsTab';
 import StatementsTab from './StatementsTab';
 import TextTab from './TextTab';
+import ContractRuns from '../royalty/ContractRuns';
 import { changedFields, show } from './terms';
 import { Field, Row, Sheet, Tabs, day, errMsg, money, num, stamp, statusTone, today } from './ui';
 
@@ -344,6 +345,7 @@ export default function ContractDetail() {
           {tab === 'zeyilname' && <AddendaTab d={d} meta={m} />}
           {tab === 'odeme' && <PaymentsTab d={d} meta={m} />}
           {tab === 'hakedis' && <StatementsTab d={d} meta={m} />}
+          {tab === 'hakedis' && <ContractRuns contractKey={d.record?.id ?? d.key} />}
           {tab === 'gecmis' && <Panel><History d={d} meta={m} /></Panel>}
 
           {edit && <EditSheet d={d} meta={m} onClose={() => setEdit(false)} />}

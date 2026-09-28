@@ -1,0 +1,10 @@
+[Unit]
+Description=Kurumsal e-posta SLA turu, saat başı
+
+[Timer]
+OnCalendar=*-*-* *:07:00
+Persistent=true
+Unit=timas-mailbox-sla.service
+
+[Install]
+WantedBy=timers.target

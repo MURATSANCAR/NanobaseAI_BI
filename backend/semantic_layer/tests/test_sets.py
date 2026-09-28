@@ -354,7 +354,7 @@ def test_set_routes_fall_to_the_set_page_not_the_plan_page():
     assert A.rule_for("/api/v1/marketing/gift-offers/KT-2026-0001") == set_page
     assert A.rule_for("/api/v1/marketing/promo-items") == set_page
     assert A.rule_for("/api/v1/marketing/sets/run-due") == A.SYSTEM
-    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap")})
+    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap"), A.page("pazarlama-backlist")})
     assert A.features_for("POST", "/api/v1/marketing/sets") == ["ozellik:set.yaz"]            # plan yazma kuralı değil
 
 

@@ -9,11 +9,8 @@ import { useCan } from '../../useAdmin';
 import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
 import PayoutPanel from './PayoutPanel';
-<<<<<<< HEAD
-=======
 import MemoryBank from './MemoryBank';
 import { QeJobPanel } from './qe';
->>>>>>> df8a23cf40a4ba9871d18082778a298fc177604c
 import TermBank from './TermBank';
 import Translators from './Translators';
 import { SuggestedTranslators } from './TranslatorMatch';

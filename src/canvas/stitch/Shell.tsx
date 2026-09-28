@@ -7,6 +7,7 @@ import DataRefresh from '../DataRefresh';
 import DesktopNav from '../nav/DesktopNav';
 import PhoneNav from '../nav/PhoneNav';
 import CommandPalette from '../nav/CommandPalette';
+import GuideLink from '../hr/learning/GuideLink';
 import { pushRecent } from '../nav/navState';
 import { NavUiContext, initials, paletteKey, useNavData, type NavUi } from '../nav/useNav';
 import '../nav/nav.css';
@@ -229,6 +230,9 @@ export default function Shell({
             <span className="hidden sm:inline">Düzeni sıfırla</span>
           </button>
         )}
+
+        {/* M57: ekranın yayımlı rehberi varsa «Nasıl kullanılır»; ekran ziyaret sayacını da besler. */}
+        <GuideLink item={active?.item} />
 
         {/* Veri gösteren her ekranda: son güncelleme, 5 dk otomatik yenileme, elle yenileme. */}
         <DataRefresh />

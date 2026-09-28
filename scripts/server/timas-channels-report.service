@@ -1,0 +1,10 @@
+[Unit]
+Description=Kanallar (M42): pazartesi iade/iskonto uyarısı, ayın 2'si aylık kanal karnesi e-postası
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Köprü güne bakar: pazartesi haftalık uyarı, ayın 2'si önceki ayın karnesi (aynı hafta/ay ikinci kez gönderilmez).
+# Alıcı CHANNEL_REPORT_RECIPIENTS (Yönetim → Platform ve kanallar); boşsa e-posta gitmez, uyarı ekranda kalır.
+ExecStart=/bin/sh -c 'curl -fsS -m 1790 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/channels/run-due?tur=rapor"'

@@ -1,0 +1,11 @@
+[Unit]
+Description=Müşteri hizmetleri (M51): destek masasındaki yeni talepleri Zeki AI ile sınıfla, SSS eşleştir
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/support/classify/run-due); bu birim yalnız çağırır. Tur süresi SUPPORT_BATCH_SECONDS
+# (varsayılan 240 sn); biten iş sonraki tura kalır. Masa bağlantısı (DESTEK_API_*) yoksa uç «atlandı» döner.
+# İlk kez elle koşturulur: systemctl start timas-support.service
+ExecStart=/bin/sh -c 'curl -fsS -m 290 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/support/classify/run-due'

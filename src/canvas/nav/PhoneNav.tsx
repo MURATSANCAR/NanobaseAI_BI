@@ -126,7 +126,7 @@ export default function PhoneNav({ nav, whoName }: { nav: NavData; whoName: stri
               </div>
               <Drawer.Content className="min-h-0 flex-1 touch-auto overflow-y-auto overscroll-contain px-3 pb-[max(16px,env(safe-area-inset-bottom))] pt-2">
                 {shown?.tag && <p className="px-3 pb-1 text-[12px] font-bold text-emerald-700">{shown.tag}</p>}
-                {shown && <NavList items={shown.items} activeId={nav.active?.item.id} alertCount={nav.alertCount} onPick={() => setMenuOpen(false)} variant="sheet" />}
+                {shown && <NavList items={shown.items} activeId={nav.active?.item.id} alertCount={nav.alertCount} counts={nav.counts} mailOverdue={nav.mailOverdue} onPick={() => setMenuOpen(false)} variant="sheet" />}
                 <div className="mt-3 border-t border-slate-200/80 pt-2">
                   <button
                     type="button"

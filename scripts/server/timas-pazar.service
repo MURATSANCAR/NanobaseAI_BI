@@ -1,0 +1,11 @@
+[Unit]
+Description=Pazar araştırması ve rekabet (M39): CRM rakip katalog ve TİMAŞ kitapları, Logo iç göstergeleri, rakip kategori eşleme önerisi, tazelik uyarısı, ayın ilk haftasında geçen ayın özet taslağı
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/pazar/run-due); bu birim yalnız çağırır. Dış tarama yok. Bildirim iç ekibe
+# (PAZAR_ALERT_RECIPIENTS) gider. İlk kez elle koşturulur: systemctl start timas-pazar.service
+# (bellek: run-it-before-it-runs-itself). Eşleme önerisi süresi PAZAR_BATCH_SECONDS (varsayılan 1800 sn).
+ExecStart=/bin/sh -c 'curl -fsS -m 7190 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/pazar/run-due'

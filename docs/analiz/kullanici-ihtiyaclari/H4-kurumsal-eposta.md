@@ -1,6 +1,6 @@
 # H4 — Kurumsal E-posta Yönetimi (timas@timas.com.tr): kullanıcı ihtiyaç analizi
 
-Durum: analiz (kod yok) · Tarih: 2026-09-28 · Modül kimliği `email` (`src/canvas/modules.json`, «Hazırlıklar» grubu)
+Durum: kodlandı (2026-09-28, dalda; sunucuda doğrulanmadı — günlük «H4 Kurumsal e-posta») · Tarih: 2026-09-28 · Modül kimliği `email` (`src/canvas/modules.json`, «Hazırlıklar» grubu). Kutu Google Workspace (kullanıcı kararı); Gmail API yalnız okuma + etiket.
 
 Kaynaklar: iş tanımı `specs/Kurumsal_E_posta_Yönetimi.txt`, `ZEKİ_Veri_Haritasi2.html` (M51 destek girdileri),
 `specs/M1.txt`, `M51.txt`, `M55.txt`, `docs/analiz/yazar-giris-sureci-crm-2026-09-24.md`,

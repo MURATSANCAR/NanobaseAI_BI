@@ -185,6 +185,14 @@ MATERIAL_STATUSES = {"taslak": "Taslak", "editoryal-onayli": "Editoryal onaylı"
 
 _ready: set[int] = set()
 _lock = threading.Lock()
+#: Plana bağlı modül tabloları (M18 ay kalemleri ve bütçe payları; M16/M17 de buraya ekler). Taslak silinince satırları
+#: silinir, revizyonda yeni sürüme kopyalanır. Tablonun `plan_id` kolonu olmalı; `id` kolonu varsa kopyada yenilenir.
+PLAN_TABLES: list[sa.Table] = []
+
+
+def register_plan_table(table: sa.Table) -> None:
+    if table not in PLAN_TABLES:
+        PLAN_TABLES.append(table)
 
 
 class MarketingError(ValueError):
@@ -496,7 +504,7 @@ def delete_plan(engine: sa.engine.Engine, tenant: str, plan_id: str) -> dict[str
         r = _row(c, tenant, plan_id, lock=True)
         if r.durum != "taslak":
             raise MarketingError("Yalnız taslak plan silinebilir.", 409)
-        for t in (LINES, TASKS, MATERIALS, EVENTS, JOBS):
+        for t in (LINES, TASKS, MATERIALS, EVENTS, JOBS, *PLAN_TABLES):
             c.execute(t.delete().where(t.c.plan_id == r.id))
         c.execute(PLANS.delete().where(PLANS.c.id == r.id))
     return {"id": r.id, "baslik": r.baslik}
@@ -836,6 +844,12 @@ def revise(engine: sa.engine.Engine, tenant: str, user: str, plan_id: str, reaso
             c.execute(TASKS.insert().values(**{**dict(tk._mapping), "id": _uid(), "plan_id": pid}))
         for m in c.execute(sa.select(MATERIALS).where(MATERIALS.c.plan_id == r.id)).all():
             c.execute(MATERIALS.insert().values(**{**dict(m._mapping), "id": _uid(), "plan_id": pid}))
+        for t in PLAN_TABLES:
+            for x in c.execute(sa.select(t).where(t.c.plan_id == r.id)).all():
+                row = {**dict(x._mapping), "plan_id": pid}
+                if "id" in t.c:
+                    row["id"] = _uid()
+                c.execute(t.insert().values(**row))
         event(c, pid, user, "revizyon", {"onceki": r.id, "surum": r.surum}, {"surum": r.surum + 1, "gerekce": why})
         event(c, r.id, user, "revizyon-acildi", None, {"yeni": pid, "gerekce": why})
     return plan_full(engine, tenant, pid)

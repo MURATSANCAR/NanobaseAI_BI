@@ -1,0 +1,8 @@
+[Unit]
+Description=Pazarlama (M17): backlist bildirimleri — aylık fırsat özeti, özel gün hatırlatması, haftalık sapma, çapraz satış
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+ExecStart=/bin/sh -c 'curl -fsS -m 890 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" "http://127.0.0.1:8795/api/v1/marketing/backlist/run-due?adim=bildirim"'

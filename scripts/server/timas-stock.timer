@@ -1,0 +1,10 @@
+[Unit]
+Description=Depo ve stok (M43): gece fotoğrafı, öneriler ve sabah bülteni; her gün 06:30
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+Unit=timas-stock.service
+
+[Install]
+WantedBy=timers.target

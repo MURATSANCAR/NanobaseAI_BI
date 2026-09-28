@@ -245,3 +245,89 @@ def article_draft(ticket: str) -> dict:
 	}).insert()
 	_activity(ticket, f"NanobaseAI makale taslağı oluşturdu: {article.name}")
 	return {"name": article.name, "title": article.title}
+
+
+# ---------------------------------------------------------------- 6. benzer kayıtlar ve uygulanan çözümler
+
+def _applied(ticket: str, limit_chars: int = 2500) -> str:
+	"""Çözülmüş bir kayıtta ne yapıldığı: çözüm notu + temsilci yanıtları + iç notlar (son kısımlar)."""
+	doc = frappe.db.get_value("HD Ticket", ticket, ["resolution_details"], as_dict=True) or {}
+	parts = []
+	if doc.get("resolution_details"):
+		parts.append(f"[Çözüm notu] {_text(doc.resolution_details, 1500)}")
+	for c in frappe.get_all(
+		"Communication",
+		filters={"reference_doctype": "HD Ticket", "reference_name": ticket, "sent_or_received": "Sent"},
+		fields=["content"], order_by="creation desc", limit=3,
+	):
+		parts.append(f"[Temsilci] {_text(c.content, 800)}")
+	for c in frappe.get_all("HD Ticket Comment", filters={"reference_ticket": ticket}, fields=["content"],
+							order_by="creation desc", limit=2):
+		parts.append(f"[İç not] {_text(c.content, 500)}")
+	return "\n".join(parts)[:limit_chars]
+
+
+def _candidates(doc, limit: int) -> tuple[list[str], str]:
+	"""Anlamca en yakın çözülmüş kayıtlar; bilgi bankası boşsa aynı türdeki son çözülenler."""
+	query = f"{doc.subject}\n{_text(doc.description, 1500)}"
+	names: list[str] = []
+	for hit in bilgi.search(query, limit=limit * 3):
+		name = hit.get("reference_name")
+		if hit.get("reference_doctype") == "HD Ticket" and name and str(name) != str(doc.name) and name not in names:
+			names.append(name)
+	if names:
+		return names[:limit], "anlam"
+	filters = {"status": ["in", ["Resolved", "Closed"]], "name": ["!=", doc.name]}
+	if doc.ticket_type:
+		filters["ticket_type"] = doc.ticket_type
+	return frappe.get_all("HD Ticket", filters=filters, pluck="name", order_by="modified desc", limit=limit), "tür"
+
+
+@frappe.whitelist()
+def similar(ticket: str, limit: int = 5) -> dict:
+	doc = _check(ticket)
+	names, how = _candidates(doc, min(int(limit or 5), 10))
+	rows = []
+	for name in names:
+		if not frappe.has_permission("HD Ticket", "read", doc=name):
+			continue
+		info = frappe.db.get_value("HD Ticket", name, ["name", "subject", "status", "modified", "customer"], as_dict=True)
+		if info:
+			rows.append({**info, "yapilan": _applied(name)})
+	if not rows:
+		return {"kayitlar": [], "oneri": "", "yontem": how}
+
+	listing = "\n\n".join(f"KAYIT #{r['name']} — {r['subject']}\n{r['yapilan'] or '(çözüm kaydı yok)'}" for r in rows)
+	prompt = (
+		"Yeni bir destek kaydını çözecek temsilciye, geçmişteki benzer kayıtlarda ne yapıldığını anlat.\n"
+		"- Önce eleme: geçmiş kayıtlardan yeni kayıtla GERÇEKTEN aynı ya da çok yakın sorunu olanları seç; "
+		"konusu farklı olanı listeye alma (hiçbiri ilgili değilse boş bırak).\n"
+		"- Seçtiğin her kayıt için tek cümle: o kayıtta uygulanan çözüm. Çözüm bilgisi yoksa «Çözüm kaydı yok» yaz.\n"
+		"- Sonra yeni kayıt için en çok 3 maddelik önerilen yol; yalnız seçtiğin kayıtlardaki çözümlere dayan, "
+		"ilgili kayıt yoksa öneri listesini boş bırak.\n"
+		"- Türkçe. Yalnız şu JSON'u döndür: "
+		'{"ilgili": {"<kayıt no>": "uygulanan çözüm"}, "oneri": ["...", "..."]}\n\n'
+		f"YENİ KAYIT: {doc.subject}\n{_text(doc.description, 1500)}\n\nGEÇMİŞ KAYITLAR:\n{listing}"
+	)
+	try:
+		out = llm.chat_json([{"role": "system", "content": KIMLIK}, {"role": "user", "content": prompt}],
+							max_tokens=900, temperature=0.1)
+	except (llm.ModelUnavailable, ValueError):
+		out = None
+	if out is None:
+		# Model yoksa eleme yapılamaz: bulunanlar çözüm notlarıyla, yorumsuz gösterilir.
+		applied = {str(r["name"]): _text(r["yapilan"], 300) or "Çözüm kaydı yok" for r in rows}
+		advice = []
+	else:
+		applied = {str(k).lstrip("#"): str(v) for k, v in (out.get("ilgili") or {}).items()}
+		advice = [str(x) for x in (out.get("oneri") or []) if str(x).strip()][:3] if applied else []
+		rows = [r for r in rows if str(r["name"]) in applied]
+	return {
+		"yontem": how,
+		"oneri": advice,
+		"kayitlar": [
+			{"ad": r["name"], "konu": r["subject"], "durum": r["status"], "musteri": r.get("customer"),
+			 "tarih": str(r["modified"])[:10], "uygulanan": applied.get(str(r["name"])) or "Çözüm kaydı yok"}
+			for r in rows
+		],
+	}

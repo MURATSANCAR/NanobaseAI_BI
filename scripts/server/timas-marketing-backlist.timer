@@ -1,0 +1,10 @@
+[Unit]
+Description=Backlist fırsat listesi, her gece 04:00 (M46'nın saatlik Logo okumasıyla çakışmasın diye)
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+Unit=timas-marketing-backlist.service
+
+[Install]
+WantedBy=timers.target

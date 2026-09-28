@@ -507,7 +507,7 @@ def test_exports_hide_amounts_without_budget_right_and_package_has_only_approved
 
 def test_access_rules_for_marketing():
     page = frozenset({A.page("pazarlama-yeni-kitap")})
-    assert A.rule_for("/api/v1/marketing/plans") == page
+    assert A.rule_for("/api/v1/marketing/plans") == page | {A.page("pazarlama-backlist")}   # M17 planı aynı uçlarla
     assert A.rule_for("/api/v1/marketing/run-due") == A.SYSTEM
     assert A.rule_for("/api/v1/marketing/contract/plans") == page
     assert A.page("pazarlama-yeni-kitap") in A.rule_for("/api/v1/budget/targets")

@@ -1,0 +1,10 @@
+[Unit]
+Description=Sosyal medya günlük özeti, her gün 07:00
+
+[Timer]
+OnCalendar=*-*-* 07:00:00
+Persistent=true
+Unit=timas-social.service
+
+[Install]
+WantedBy=timers.target

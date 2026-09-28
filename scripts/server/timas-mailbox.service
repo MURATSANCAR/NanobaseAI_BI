@@ -1,0 +1,10 @@
+[Unit]
+Description=Kurumsal e-posta (H4): timas@ kutusunu okur, gönderen tanır, Zeki AI sınıflar, yanıtları konu zincirinden işler
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/mailbox/run-due); bu birim yalnız çağırır. Kutu yalnız okunur (gmail.readonly + gmail.labels);
+# dışarıya hiçbir ileti gitmez. Tur süresi MAIL_LLM_BUDGET_SEC (varsayılan 200 sn); bitmeyen iletiler sonraki tura kalır.
+ExecStart=/bin/sh -c 'curl -fsS -m 290 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/mailbox/run-due'

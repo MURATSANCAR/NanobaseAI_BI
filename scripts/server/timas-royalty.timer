@@ -1,0 +1,10 @@
+[Unit]
+Description=Telif dönemi (M54): koşu hatırlatması ve yenileme özeti, her sabah 06:30
+
+[Timer]
+OnCalendar=*-*-* 06:30:00
+Persistent=true
+Unit=timas-royalty.service
+
+[Install]
+WantedBy=timers.target

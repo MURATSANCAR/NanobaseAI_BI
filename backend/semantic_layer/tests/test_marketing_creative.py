@@ -307,7 +307,7 @@ def test_access_rules():
     assert A.rule_for(f"{p}/run-due") == A.SYSTEM
     assert A.features_for("POST", f"{p}/requests") == ["ozellik:icerik.talep"]
     assert A.features_for("POST", f"{p}/from-material/{'a' * 32}") == ["ozellik:icerik.talep"]
-    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap")})   # M15 ayrı sayfa
+    assert A.rule_for("/api/v1/marketing/plans") == frozenset({A.page("pazarlama-yeni-kitap"), A.page("pazarlama-backlist")})   # M15 ayrı sayfa
     assert A.features_for("POST", f"{p}/assets/{'a' * 32}/reject") == []
     from semantic_bridge.marketing import core as mc
     ours = {t.name for t in M._md.sorted_tables}

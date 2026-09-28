@@ -1,0 +1,10 @@
+[Unit]
+Description=Backlist bildirimleri, her gün 08:00 (aylık özet ayın ilk iş günü, sapma özeti pazartesi)
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+Unit=timas-marketing-backlist-bildirim.service
+
+[Install]
+WantedBy=timers.target

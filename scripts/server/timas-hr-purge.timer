@@ -1,0 +1,10 @@
+[Unit]
+Description=İK gece imha işi; her gece 03:40
+
+[Timer]
+OnCalendar=*-*-* 03:40:00
+Persistent=true
+Unit=timas-hr-purge.service
+
+[Install]
+WantedBy=timers.target

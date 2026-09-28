@@ -1,4 +1,4 @@
-"""Arka plan işleri: ana ekran özeti 3 dk, uyarı kontrolü 15 dk, pano kartları 15 dk, planlı raporlar 5 dk.
+"""Arka plan işleri: ana ekran özeti 3 dk, uyarı kontrolü 15 dk, pano kartları 15 dk, planlı raporlar 5 dk, sistem durumu 5 dk.
 
 Sunucuda bunlar systemd zamanlayıcılarıdır (timas-metrics, timas-alerts, timas-board, timas-reports). Müşteri
 yığınında aynı işler bu tek konteynerde döner; mantık yine köprüdedir, burası yalnız zamanında çağırır.
@@ -24,14 +24,31 @@ def metrics() -> None:
         print(f"özet üretilemedi: {e}", flush=True)
 
 
-def call(name: str, path: str, timeout: int) -> None:
-    req = urllib.request.Request(f"{BRIDGE}{path}", data=b"{}", method="POST",
+def _post(path: str, body: dict, timeout: int):
+    req = urllib.request.Request(f"{BRIDGE}{path}", data=json.dumps(body).encode(), method="POST",
                                  headers={"Content-Type": "application/json", "X-Semantic-Caller": TOKEN})
+    with urllib.request.urlopen(req, timeout=timeout) as res:
+        return json.load(res)
+
+
+def report(name: str, path: str, every: int, ok: bool, detail: str = "") -> None:
+    """M48: VM'de sunucu zamanlayıcısı yok; her işin sonucu Sistem durumu'nun iş tablosuna buradan yazılır. Bu
+    bildirimlerin tazeliği aynı zamanda «Müşteri VM'i» halkasının kalp atışıdır. Bildirim düşerse iş etkilenmez."""
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as res:
-            print(f"{name}:", json.load(res), flush=True)
+        _post("/api/v1/it-ops/watchdog", {"job": f"vm:{path}", "label": name, "ok": ok, "detail": detail[:500],
+                                          "every": f"{max(1, every // 60)} dk", "source": "jobs-container"}, 30)
+    except Exception as e:  # noqa: BLE001
+        print(f"{name}: sistem durumuna bildirilemedi: {e}", flush=True)
+
+
+def call(name: str, path: str, timeout: int, every: int = 0) -> None:
+    try:
+        out = _post(path, {}, timeout)
+        print(f"{name}:", out, flush=True)
+        report(name, path, every, True)
     except Exception as e:  # noqa: BLE001
         print(f"{name} başarısız: {e}", flush=True)
+        report(name, path, every, False, f"{type(e).__name__}: {e}")
 
 
 # (ad, yol, aralık sn, zaman aşımı sn) — sunucudaki zamanlayıcıların aynısı
@@ -45,6 +62,27 @@ JOBS = [
     # M7 yazar ilişkileri sabah özeti (sunucuda timas-author-reminders.timer): köprü saat eşiğini ve günde bir kez kuralını
     # kendisi uygular, sık çağrı zararsız.
     ("yazar hatırlatmaları", "/api/v1/editorial/authors/reminders/run-due", int(os.environ.get("AUTHOR_REMINDERS_EVERY_SEC", "900")), 590),
+    # M48 sistem durumu: halka denetimi, olay aç/kapat, bildirim (sunucuda timas-itops.timer, 5 dk).
+    ("sistem durumu", "/api/v1/it-ops/run-due", int(os.environ.get("ITOPS_EVERY_SEC", "300")), 290),
+    # M49 veri güvenliği: giriş olayları + kurallar her 5 dk; saklama ve günlük özet SECURITY_DAILY_AT'te günde bir kez.
+    ("veri güvenliği", "/api/v1/data-security/run-due", int(os.environ.get("SECURITY_EVERY_SEC", "300")), 1700),
+    # M51 müşteri hizmetleri: destek masasındaki yeni talepleri sınıfla (sunucuda timas-support.timer 5 dk) ve gece SSS
+    # açığı listesi (timas-support-gece.timer). Masa bağlantısı ayarlanmamışsa uç «atlandı» döner.
+    ("müşteri hizmetleri sınıflama", "/api/v1/support/classify/run-due", int(os.environ.get("SUPPORT_EVERY_SEC", "300")), 290),
+    ("müşteri hizmetleri gece", "/api/v1/support/run-due", int(os.environ.get("SUPPORT_NIGHT_EVERY_SEC", "86400")), 1700),
+    # M45 finansal raporlar: Logo okuması, pazartesi nakit tablosu, vergi hatırlatması, sabah özeti (sunucuda timas-finance.timer).
+    ("finansal raporlar", "/api/v1/finance/run-due", int(os.environ.get("FINANCE_EVERY_SEC", "3600")), 1790),
+    # M54 telif dönemi: koşu hatırlatması + yenileme özeti (sunucuda timas-royalty.timer, günde bir; bildirim bir kez gider).
+    ("telif dönemi", "/api/v1/royalty/run-due", int(os.environ.get("ROYALTY_EVERY_SEC", "86400")), 600),
+    # M47 risk ve uyum (sunucuda timas-risk.timer 06:15): yalnız sıklığı gelen göstergeyi ölçer, hatırlatma bir kez gider.
+    ("risk ve uyum", "/api/v1/risk/run-due", int(os.environ.get("RISK_EVERY_SEC", "3600")), 3590),
+    # H2 okur veri tabanı: CRM kişi/aday/İYS okuması ve gece işleri (sunucuda timas-readers.timer, gece 03:20).
+    ("okur veri tabanı", "/api/v1/readers/run-due", int(os.environ.get("READERS_EVERY_SEC", "86400")), 3590),
+    # M22 sosyal medya günlük özeti (sunucuda timas-social.timer 07:00; e-posta günde bir kez gider, paylaşım yapılmaz).
+    ("sosyal medya", "/api/v1/social/run-due", int(os.environ.get("SOCIAL_EVERY_SEC", "86400")), 1790),
+    # M44 kargo (sunucuda timas-shipping.timer, 15 dk): köprü günlük (06:45), haftalık (pazartesi 08:00) ve aylık (ayın 3'ü)
+    # işleri kendisi zamanlar, günde/haftada/ayda bir kez koşar; sık çağrı zararsız.
+    ("kargo", "/api/v1/shipping/run-due", int(os.environ.get("SHIPPING_EVERY_SEC", "900")), 1790),
 ]
 
 
@@ -59,7 +97,7 @@ def loop(every: int, fn, *args) -> None:
 def main() -> None:
     time.sleep(30)   # köprü açılsın diye kısa bekleme
     threads = [threading.Thread(target=loop, args=(METRICS_EVERY, metrics), daemon=True)]
-    threads += [threading.Thread(target=loop, args=(every, call, name, path, timeout), daemon=True)
+    threads += [threading.Thread(target=loop, args=(every, call, name, path, timeout, every), daemon=True)
                 for name, path, every, timeout in JOBS]
     for t in threads:
         t.start()

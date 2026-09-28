@@ -1,0 +1,10 @@
+[Unit]
+Description=İşe alım aşama süresi hatırlatması; 15 dakikada bir
+
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+Unit=timas-hr-recruit-reminders.service
+
+[Install]
+WantedBy=timers.target

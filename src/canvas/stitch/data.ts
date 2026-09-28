@@ -134,6 +134,8 @@ export type StitchCanvasData = {
     timing?: DbTiming | null;
     /** Boş cevapta verinin bittiği döneme kurulmuş aynı soru; tıklayınca o soru sorulur. */
     retry?: { question: string; busy: boolean; onAsk: (question: string) => void };
+    /** Cevabın soru kaydı: altında «Doğru / Kısmen / Yanlış» gösterilir (M50). */
+    feedback?: { queryId: string };
   };
   sticker: { kicker: string; meta: string; title: string; sub: string; footL: string; footR: string; badge: string };
   ghost: { title: string; badge: string; text: string; foot: string };

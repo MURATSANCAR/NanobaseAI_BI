@@ -1,0 +1,10 @@
+[Unit]
+Description=Risk göstergeleri, aksiyon/uyum/poliçe hatırlatmaları; her gün 06:15
+
+[Timer]
+OnCalendar=*-*-* 06:15:00
+Persistent=true
+Unit=timas-risk.service
+
+[Install]
+WantedBy=timers.target

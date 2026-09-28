@@ -31,6 +31,13 @@
 - **Kurulumda:** GPU'da `editor-voice:3` derlenmeli + gateway yeniden okumalı (eski servis `recording`'i tanımaz, kayıt
   400 → «ses servisi insan kaydını henüz desteklemiyor» hatası), `add-studio-routes.py`, test sunucusunda
   `add-studio-voice-size.py`; müşteri VM'inin web nginx'inde de bu yola gövde sınırı gerekir.
+## 2026-09-28 — M4 kaynak okuma gerçek PDF/DOCX ile sınandı; PDF'te 5 kusur düzeltildi
+
+- **Neden:** kullanıcı «çeviri için PDF, DOCX yükleyebilecek miyim» diye sordu; gerçek sunucuda yalnız TXT denenmişti. Test sunucusundaki gerçek belgelerle (Timaş kitabı yok; kitap PDF'leri yalnız GPU'daki editör deposunda) okuyucu bellekte koşturuldu, DB'ye yazılmadı.
+- **DOCX** (İngilizce iş analizi, 39 KB): Word başlık stilleri 33 bölüm, 230 segment, sorun yok.
+- **Metin PDF'i** (Türkçe teknik şartname, 115 sayfa): (1) her sayfadaki uzun üst bilgi («… Şartnamesi / 2025 23/115») ve belge kimliği şeridi 60 karakterden uzun olduğu için tekrar süzgecine girmiyor, 377 kelimelik anlamsız segment oluşuyordu → sayfaların %30'undan fazlasında geçen satır uzunluğundan bağımsız atılır; (2) sayfa sonunda yarım kalan paragraf sonraki sayfanın numaralı başlığını yutuyordu (1–4, 9, 10, 12, 13. başlıklar kaçıyordu) → başlık satırı yarım paragrafı kapatır; (3) içindekiler satırları nokta dizisiyle (çoğu kez sayfa numarası düşmüş) birbirine bağlanıyordu → içindekiler satırı tek başına kalır, nokta dizisi ve numara atılır, ardından gelen «METİN 66» satırı da içindekiler sayılır; (4) cümle bölücü «1. KISALTMALAR»daki «1.»i cümle sonu sanıyordu (58 tek kelimelik segment) → cümle başındaki liste numarası bölünmez; tek başına satıra düşmüş numara sonraki satırla birleşir; (5) sonu cümle noktalamasıyla biten numaralı madde başlık sayılmaz.
+- **Taranmış PDF** (235 sayfa, metin katmanı yok): artık «Bu PDF'te seçilebilir metin yok (taranmış sayfa görüntüsü)…» — karakter tanıma yok.
+- **Sonuç (aynı PDF):** tek kelimelik segment 58 → 2, üst bilgi/kimlik şeridi 0, içindekiler tek satırlı. Kurallar genel (belgeye özel kural yok); testlere gerçek kalıplar eklendi. Sunucu sahnesinde çeviri testleri 46/46. Gerçek bir Timaş kitabı PDF'iyle henüz denenmedi.
 
 ## 2026-09-28 (08:10) — Sesli okuma: tam kitap dinlemesindeki robotik yerler ve efekt hataları düzeltildi
 
@@ -73,9 +80,25 @@
   istiyor), kalan 19'u ölçüm sayfadan çıkınca 499. Köprü tarafı sağlam (hepsi 200). Düzeltme: `deploy/nanobase-direct/
   add-cover-image-limit.py` kapak görsel ucunu stüdyo görsel bölgesine (`timas_studio_img`, 600/dk, 120 anlık) alır; VM
   şablonu `infra/docker/bi/web.default.conf.template` aynı blokla.
-- **Durum:** commit dalda; `main`e merge/push bu oturumda izin denetimine takıldı → test sunucusuna **kurulmadı**, kurulum ve
-  doğrulama merge sonrasına kaldı (sıra: main → test sunucusu → VM). Sözdizimi/içe aktarma ve `tsc -b` sunucuda geçici
-  klasörde geçti. Test oturumu satırı (1) ve geçici klasör silindi; yazma ucu çağrılmadı.
+- **Kurulum 1 (main `2207978b`, test sunucusu 07:47):** köprüye 2 dosya (sunucu md5'i eski main'le aynıydı), ön yüze 2 dosya
+  (sunucu `src` ağacı main'in gerisinde — başka oturumların kurulmamış işi — o yüzden yalnız bu dosyalar; kendi çıktı
+  klasörüne derlenip `cockpit/dist`e), nginx betiği uygulandı, köprü yeniden başlatıldı; `._*` 0. Gerçek oturumla portal:
+  üretim soğuk 31 sn → sonra **0,07 sn**, `meta` soğukken 0,4 sn, disk kaydı 7,9 MB, sayılar tutarlı (5.599 / 589 açık /
+  186 geciken). Saha: sayfa 32 KB (109 MB yerine), sıcak **0,05 sn**, arama 0,4 sn, `offset` sayfaları ardışık, KPI eskisiyle
+  birebir; ama soğuk ilk istek hâlâ 22 sn.
+- **Tur 2 (saha soğuk yol):** sıra iki katmana ayrıldı. Temel (gece turu + gün) girdisiz puanlanır; ziyaret/söz/öncelik/red
+  değişince yalnız girdisi olan cariler DB'den okunup yeniden puanlanır (`F.overdue_ranks`, `F.scored`, `F.card_order`,
+  `portfolio_rows(codes=…)`). Yönetici kapsamı köprü açılışında (20 sn sonra) ve gece turu / elle yenilemeden sonra arka
+  planda hazırlanır. Eşdeğerlik gerçek DB'de sınandı (200 + 50 gerçek CRM hesabına red girdisi): eski `F.ranked` ile
+  kartlar ve sıra birebir; girdi değişiminde 15 sn → 1,3 sn. Sınarken bulunan: eşit anahtarlı (puan, gecikme, unvan) 15.473
+  satırın sırası okumadan okumaya değişiyordu (sorguda ORDER BY yok) → son anahtar cari kodu.
+- **Kurulum 2 (main `afd2b99d`, 08:00) ve bulunan hata:** tur 2'nin «açılışta 20 sn sonra ön hazırlık» adımı
+  `deps["engine"]()` → `rt()` çağırıyordu; çalışma ortamı henüz kurulmamışken `rt()` onu **ikinci kez kurdu** (günlükte iki
+  «knowledge pack» uyarısı, 07:58:54 ve 07:59:42; açılış 40 → 110 sn). Aynı anda istek ve ön hazırlık CRM tahsilat okumasını
+  ayrı ayrı yaptı, ilk saha isteği 34,6 sn sürdü; açılıştaki yük yüzünden üretim de disk kaydından 4–11 sn'de döndü.
+  Düzeltme (tur 3): kayıt anında ön hazırlık yok; yalnız istek içinden — zamanlayıcının hafif (15 dk) ve gece turundan,
+  elle yenilemeden sonra — başlar. Kural: modül `register` içinde `deps["engine"]()`/`rt()` çağıran iş parçacığı açılmaz.
+- Test oturumu satırları ve geçici klasör silindi; yazma ucu çağrılmadı.
 
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
 
@@ -110,6 +133,15 @@
 - **Test sunucusu:** M31 düzeltmesi kuruldu (okul kartı ve dönem raporu canlıda 200). Sohbet düzeltmesi bu girişle birlikte kuruluyor. **VM:** kurulmadı — VM `e543a122`'de; bu iki düzeltmeyi taşıyacak sonraki `main` noktası başka oturumların henüz VM kabulü yapılmamış işlerini de içeriyor.
 
 ## 2026-09-28 — M4 çeviri işi → M8 serbest çalışan işi ve hakediş (dalda, sunucuda doğrulanmadı)
+## 2026-09-28 (07:45) — İstek fırtınası: rota ve oturum kapısı hatalı sorgu yeniden sorulurken ekranı söküyordu
+
+- **Belirti:** 72 menü ekranının headless ölçümünde (1440 px, timasai) Gelen bağlantılar açıkken 7.521, Panolar'da 28 sn'de 1.224 API isteği; nginx `timas_api` (120/dk, burst 30) 429'a düştü, köprü yüklendi.
+- **Neden ekranların kendi kodu değil, kapı:** köprü 502 verince `access/me` verisiz hatada kalıyor. TanStack v5'te böyle sorgu yeniden sorulurken `pending`e döner (hata silinir). `PageGate` `usePageAccess() === null` iken `null`, `RequireTimasSession` `isLoading` iken «Yükleniyor» çiziyor → ekran sökülüyor; hata gelince ekran yeniden kuruluyor, kabuğun/`useCan`'ın yeni gözlemcisi hatalı sorguyu yine sorduruyor → döngü. Her turda ekranın kendi hatalı sorguları da (backlinks, board, display-words) yeniden gidiyordu.
+- **Düzeltme:** `usePageAccess` null'u yalnız ilk cevaptan önce verir (`errorUpdateCount`), bir kez hata almışsa `'all'` kalır; `RequireTimasSession` «Yükleniyor»u yalnız ilk cevaptan önce gösterir, «oturum yok» kararını son sonuçtan tutar. Panolar'ın `useUser`'ı aynı `['timas-session']` anahtarına ikinci bir sorgu işleviyle (her hatayı `EngineAuthError` sayan) bağlanıyordu; `useTimasSession`'a çevrildi.
+- **Önce (canlı `index-Cw7D4qZS.js`, test sunucusunda Playwright, timasai 15 dk oturum, 60 sn):** normal — Gelen bağlantılar 19, Panolar 7.221 (aynı IP'den koşan başka bir ölçüm `timas_api` bölgesini doldurmuştu; ilk 502 oradan); köprü düşmüş (tarayıcı içinde her `/timas/api/` 502) — Gelen bağlantılar 6.885, Panolar 7.221. Her turda `access/me` + `admin/me` birlikte tekrarlanıyor (kapı döngüsünün imzası). Oturum satırı silindi (1).
+- **Sonra (aday derleme `index-DwktNFn0.js` = main + düzeltme; sunucuya kurulmadı — test sunucusunda Playwright yalnız statik dosyaları `/tmp/claude-storm/cand/dist`'ten verdi, API/giriş gerçek köprüye, timasai 15 dk oturum, 60 sn):** normal — Gelen bağlantılar 27 (o dakikada aynı IP'den başka oturumun ölçümü 925 istek atıyordu, hepsi 429), Panolar 22; köprü düşmüş — Gelen bağlantılar 27, Panolar 29. Çerezsiz açılışta iki ekranda da giriş formu, 20 sn'de 1 API + 1 giriş isteği. Oturum satırı silindi (1); yazma yapılmadı.
+- **Kalan:** main'e taşıma (merge/push izin sınıflandırıcısına takıldı, kullanıcıda), sonra test sunucusuna kurulum ve aynı ölçümün canlı derlemeyle tekrarı; VM'e test sunucusu doğrulamasından sonra.
+
 ## 2026-09-28 (06:45) — Kapak arşivi kuruldu: GPU stüdyo + test sunucusu (main `ddd33e68`); ilk doldurma; gece beslemesinde ASCII başlık hatası
 
 - **GPU:** `releases/ddd33e68` (`._*` 0), `editor-py:0.15.9-ddd33e68` + `editor-py-studio:0.15.9-ddd33e68`; göç `030_cover_library` uygulandı; Temporal'da koşan iş 0 iken yalnız `studio` ve `studio-worker` bu imajla yeniden kuruldu (compose servis adları `studio`/`studio-worker`; `secrets/cards.env` root'a ait olduğundan compose `sudo env …` ile — komutu kullanıcı koştu, Claude'un denemesi izin denetimine takıldı). Kaplarda `EDITOR_CODE_VERSION=0.15.9-ddd33e68`, `._*` 0; arşiv uçları anahtarsız 401, olmayan uç 404. Öteki servisler `68a1d411`'de (değişiklik yalnız stüdyo kodunda). Bu imaj main'deki M19 pazarlama stüdyo kodunu da canlıya aldı. GPU nginx (`add-studio-routes.py`, VM yolu) henüz koşmadı.
@@ -118,6 +150,273 @@
 - **Yakalanan hata:** besleme `X-Editor: zamanlayıcı` gönderiyordu; HTTP başlığı ASCII olmalı → httpx `UnicodeEncodeError`, hiçbir şey gitmedi. Gece işi her gece böyle düşecekti. Düzeltme: `header_name()` (Türkçe harf → ASCII), varsayılan `zamanlayici`, test eklendi (8/8). İlk doldurma ASCII adla yapıldı. Düzeltme main'e alınıp köprüye kurulacak.
 - **Uçtan uca (portal, timasai 15 dk oturum, yalnız GET, oturum silindi):** indirme bitti — 6.742 kapak, 21 hata (sitenin kendisi 404: «(Eski)» ürünlerin `-B.jpg` adresi), 18 görselsiz. Ağaç 24 kök (Çocuk 2.744 → Hikaye 716, Masal ve Öykü 396…; Yetişkin 2.163 → Tarih 525…), alt kategori süzgeci, «sukru» araması (Recep Şükrü Apuhan, 14), kitle + ada göre + sayfa, görsel WebP 360 px 11 KB / 800 px 34 KB, oturumsuz 401, ekran 200.
 - **Kitap dışı ürünler:** «En çok satan»ın başında oyun hamuru çıktı; sitede oyun/oyuncak/kırtasiye de satılıyor ve ~490'ının CRM stok kartı var (CRM eşleşmesi ayırmıyor). Ölçüm: 6.081 ISBN+CRM, 494 ISBN değil+CRM (kutu oyunları…), 204 ISBN değil+CRM yok (setler: barkod «1»+ISBN), 2 ISBN+CRM yok. Kural: barkod 978/979 ile başlayan 13 haneyle bitiyorsa kitap (`is_book`; setler dahil). Besleme yalnız kitapları gönderir; sonunda tam listeyi `POST /v1/studio/library/retain` ile verir, listede olmayan kayıtlar `hidden` olur (görsel diskte kalır, yeniden gelirse görünür; liste görünenin yarısından kısaysa eksik eşitleme sayılıp hiçbir şey gizlenmez). Testler köprü 22/22, stüdyo 8/8. Kurulum: GPU stüdyo imajı + köprü, sonra yeniden besleme.
+## 2026-09-28 — M57 Eğitim ve gelişim kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-a8a8e37c0663198b7`, İK-0/M55 dalının (`worktree-agent-a413d1dced953ab0a`, main `54129d14` üstünde) ucundan
+  başladı; İK-0 yeniden yazılmadı, kancaları kullanıldı (`register_purger`, `register_data_class`, `HrContext`). Sunucuya
+  bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması. pytest (`test_hr_learning.py`, `test_hr_core.py`, `test_data_security.py`,
+  `test_access.py`), vitest (`navModel.test.ts`), tsc ve gerçek veri kabulü (`scripts/acceptance/M57/kabul.py`) test sunucusunda
+  koşturulacak.
+- **İlk sürüm (analiz §9, §14):** katalog (zorunlu/gelişim/ZEKİ; iç/dış/çevrimiçi; geçerlilik süresi; kişi başı maliyet; zorunlu
+  eğitimin birimleri; ZEKİ eğitiminde ilgili ekran), oturum + katılım + onay zinciri (çalışan talebi → yönetici → dış eğitimde İK),
+  telefondan yoklama, kapanışta sertifika ve anonim anket jetonu, çalışan sertifika yüklemesi ve İK doğrulaması, dolmuş/dolacak
+  zorunlu eğitim listesi ve seçilenlerle tek adımda oturum, birim × eğitim tamamlanma, ihtiyaç listesi ve Zeki AI önerisi, anket tema
+  özeti, modül rehberleri (Zeki AI taslağı, altyapı adı denetimi, sürüme bağlı oy), ekran ziyaret sayacı ve birim × ekran kullanım
+  haritası, kişinin kendi kullanımı, Logo eğitim gideri ve elle yıllık bütçe, sabah özeti zamanlayıcısı.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` RULES 5 satır (+ `/api/v1/hr/` kümesine `sayfa:ik-egitim`), `access_catalog.json`
+  2 sayfa + 5 özellik, `app.py` 2 satır, `admin.py` 3 ayar, `data_security_inventory.json` 5 tablo, `App.tsx` 7 rota, `navModel.ts`
+  2 öğe (+2 ikon), `navModel.test.ts`, `ModulesMenu.tsx` M57, `Shell.tsx` `GuideLink` (rehber penceresi tembel yüklenir),
+  `KampusPage.tsx` kart, `test_hr_core.py` İK sayfa kümesi eşitliği → kapsama (M56–M58 sayfa ekler).
+- **§10 açık sorularında verilen kararlar (veriye/koda bakılarak; iş kararları Claude'a bırakıldı kuralı):**
+  (1) Zorunlu eğitim listesi ve tehlike sınıfı bilinmiyor → sistemde sabit periyot yok; eğitim kartında «geçerlilik süresi» ve
+  «uygulanan birimler» İK/İSG sorumlusunca girilir. (2) Eğitim gider hesabı bilinmiyor → `HR_TRAINING_ACCOUNTS` ayarı (varsayılan
+  boş, ekran «seçilmedi» der) ve `GET /spend/accounts` ölçüm listesi (adında eğitim/seminer/kurs geçen 7'li hesaplar; kabul K1).
+  Kapanış fişi hariç tutuldu: Kural 16'nın yalın `SUM(DEBIT-CREDIT)`'i yıl sonu kapanışında 7'li hesabı sıfırlar (M46 bütçe gideriyle
+  aynı dışlama). (3) Geçmiş kayıt aktarımı: toplu içe aktarma yok; İK `POST /certificates` ile elle (doğrulanmış) kayıt girer.
+  (4) İç eğitmen/rol önceliği: rolden bağımsız — `ik.rehber-yaz` portal sorumlusuna, `ik.egitim-onay` yöneticilere bağlanır.
+  (5) Kullanım sayılarının gösterimi: yalnız birim düzeyi, hesap adı yok; kişi bazında yalnız kişinin kendisi (`/me/usage?user=` başkası
+  → 403, İK dahil); performansa aktarılmaz. **Küçük grup eşiği** kullanıcı kuralı gereği kendiliğinden konmadı: `HR_PRIVACY_MIN_GROUP`
+  boşken birleştirme yapılmaz, ekran bunu açıkça uyarır; girilince küçük birimler ve kayıtsız hesaplar tek sütunda birleşir, az
+  yanıtlı anket sonucu gizlenir.
+- **Diğer tasarım kararları:** anket yanıtı kişisiz ve yalnız gün düzeyinde tarihli (jetonun kullanıldığı gün de yalnız gün) — saat
+  eşleşmesiyle kişi bulunamasın. Portal kullanıcıya bildirim zili yok (kodda bulunamadı): çalışan uyarısı Eğitimlerim ve Kampüs
+  kartında, İK'ya 07:30 kişi adsız e-posta özeti; çalışana e-posta gönderilmez. Yönetici = çalışanın `manager_id`'si ya da birimin
+  `manager_employee_id`'si. `ik.egitim-yonet` duyarlı (kişi bazında eğitim verisi): portal yöneticisi rolsüz görmez.
+  Oda rezervasyonu bağı yok (yer serbest metin, `room_booking_id` kolonu hazır). İK soru kutusu ve M55/M56 otomatik ihtiyaç
+  beslemesi, etki raporu, bilgisayarsız çalışan yoklaması sonraki sürüm.
+## 2026-09-28 — H3 E-ticaret müşteri yönetimi kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-a72f01f147d657553`, H2/M37/M38/M34/M35/M42'yi taşıyan `worktree-agent-ad24fa5ef7c8ee6a7` ucunun
+  üstünde. Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması. pytest (`test_commerce.py`, `test_readers.py`,
+  `test_access.py`), vitest (`src/canvas/commerce/api.test.ts`, menü–katalog eşliği), tsc ve gerçek T-soft/Logo/CRM kabulü
+  (`scripts/acceptance/H3/kabul.py`) test sunucusunda koşturulacak.
+- **Ne:** T-soft sipariş (+ satır) ve üye okuması (`seo_geo.connections.tsoft`, yalnız `*/get*`; sonuna kadar sayfalı, tavan yok),
+  kişisel alanların bellekte H2'nin tuzlu özetine çevrilmesi (e-posta/telefon/ad portalda düz metin durmaz), müşteri anahtarı
+  (e-posta özeti → üye no → telefon özeti; misafir ve üye siparişi aynı e-postayla tek müşteri), RFM segmenti (ilk alıcı / aktif /
+  sadık / kayıp / üye-siparişsiz) ve geçiş kaydı, ürün görüntülenme farkı (SEO eşitlemesinin `StatViews` sayacından), özet
+  (dün / 7 gün / bu ay; önceki döneme göre; dört haftalık aynı gün düşüş uyarısı), Logo uzlaşması, tetik listeleri, kontrol
+  gruplu kampanya sonucu, huni, müşteri kartı, sözleşme ucu. Köprü `commerce.py`, `commerce_sources.py`, `commerce_api.py`;
+  tablolar `semantic_commerce_orders|order_lines|customers|segment_moves|product_stats|triggers|trigger_runs|run_members|
+  campaigns|settings|meta`; ekranlar `src/canvas/commerce/`, rota `/timas/eticaret-musteri`.
+- **H2 ile bağ (kopya yok):** `readers.register_source("tsoft_member", …, address=True)` — site müşterisi tekil okura bağlanır,
+  T-soft üye izni «Site» kanıtı olur (ret kazanır; izinli ancak `READERS_CONSENT_SOURCES` «tsoft» içerirse sayılır). H2'ye iki
+  küçük ek: `ADDRESS_SOURCES` (dışa aktarımda adresi kendi kaynağından okuyan modül; önce yalnız `crm_*`) ve
+  `readers_segments.record_export` (başka modülün listesini aynı KVKK defterine yazar) + «okur_yok» dışlama etiketi. H2 segment
+  motoruna altı alan (E-ticaret segmenti, site siparişi sayısı, site cirosu, son/ilk site siparişi, sitede aldığı kategori).
+- **M42 D2C bağlantısı:** `channels/d2c.py`'ye `register_site_provider`; H3 kaydolunca D2C sekmesi site özetini iptal/iade hariç,
+  veritabanında sayar (önce tablo yoksa «bağlı değil» diyordu; tablo varken iptalleri de sayacaktı).
+- **Kararlar (§10 açık soruları; iş kararları Claude'a bırakıldı kuralıyla):** (1) Site analitiği/GA4 yok → terk sepeti tetiği
+  kurulamaz (409, «sepet verisi okunmuyor»), %15 dönüşüm hedefi ölçülemez diye ekranda yazar. (2) Öneri kutusu/mevcut e-posta
+  aracı bilinmiyor → portal yalnız liste verir, gönderim yok. (3) T-soft siparişinin Logo'daki carisi ölçülmedi → Logo tarafı
+  M42'nin onaylı `timas.com.tr` eşlemesinden (cari ya da kanal kodu) alınır; eşleme yoksa özet nedenini yazar. Logo aylık
+  (M42 karnesi ay kırılımlı); veri sonu seçilen aydan önceyse (donmuş .155) kıyas Logo'nun son ayıyla yapılır. (4) T-soft izni
+  ile İYS ilişkisi bilinmiyor → sitede izin **kapalı** ise ret (`COMMERCE_TSOFT_FALSE_IS_RET=1`, en temkinli), **açık** izin ancak
+  yönetici «tsoft»u izinli kaynaklara eklerse sayılır. (5) Kontrol grubu varsayılan %10, tetik başına değişir; kontrol grubu
+  yalnız dışa aktarılabilir (ulaşılabilir) kümeden ayrılır — ulaşılamayan kişi kontrol grubunu şişirmesin. Kontrol grubu hiçbir
+  zaman indirilmez; sonuç niyet edilen hedef grup üzerinden (dışa aktarımda düşen kişi hedefte kalır, ekranda yazar).
+- **Tasarım kararları:** T-soft alan adları ölçülmediği için her rolün aday adları kodda, `COMMERCE_TSOFT_FIELDS` ile
+  değişir; okuma hangi rolün hangi alandan geldiğini ve bulunamayanları kaydeder («Veri ve eşikler» ekranı). İptal/iade ayrımı
+  durum adıyla (`\b(iptal|iade|…)`, «Kredi kartı…» iptal sayılmaz) ya da `COMMERCE_CANCEL_STATUSES`. Tarih süzgeci yok sayılırsa
+  okuma yine doğrudur, yalnız uzun sürer (sayfalama aynı sayfayı ikinci kez verirse durur). Kişi bilgisi (kart ve dışa aktarım)
+  T-soft'tan o an okunur; dönen kaydın kimliği ve e-posta özeti beklenenle aynı değilse gösterilmez (süzgeç yok sayılırsa başkası
+  gösterilmesin). Zeki AI yalnız kampanya sonucuna rakamsız yorum yazar (`llm_for("commerce")`, istem kişisel veri denetimli).
+  Segment başına kitap önerisi ve bülten metni sonraki sürüm (analiz §9).
+- **Yetki:** `sayfa:eticaret-musteri` (explicit — maskeli de olsa müşteri listesi), `ozellik:eticaret.tetik`, `ozellik:eticaret.ayar`,
+  `ozellik:eticaret.liste-onay` (explicit; tetiği yazan ve listeyi çalıştıran onaylayamaz); H2'nin `okur.liste-aktar` ve
+  `okur.kisisel-veri` anahtarları. Sözleşme ucu `segments/summary` M35/M42 D2C/M18 sayfalarına açık.
+- **Kabul (`scripts/acceptance/H3/`):** K1 T-soft ↔ portal gün sipariş sayısı, K2 Logo `STLINE` timas.com.tr net ciro ↔ özet, K3 CRM
+  B2C sipariş = 0, K4 barkod ↔ CRM `new_ean13`, K5 RFM iki yol + API, K6 kişisel veri taraması, K7 aday/kontrol payı, K8 dün, K9 D2C,
+  K10 sözleşme; `temizlik.py` tetik/liste/kampanya/değişiklik kaydını siler. **Ölçülecek:** T-soft sipariş/üye alan adları, tarih
+  süzgeci parametresi, üye yöntemi, iptal durum adları, `StatViews` toplam mı dönemsel mi.
+- **Sunucuda kalan:** köprü + arayüz kurulumu (`VITE_BASE=/timas/`), `timas-commerce.timer` (önce elle `systemctl start
+  timas-commerce.service`; ilk tur bütün siparişleri okur), sonra H2 okur turu (`timas-readers`, site müşterileri okur olur),
+  pytest/vitest/tsc, kabul ve temizlik; `READERS_HASH_SALT` tanımlı olmalı (yoksa okuma 503).
+
+## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-ac485f3ca53f8031a` (main `d21da878` üstüne yeniden dizildi). Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON
+  doğrulaması yapıldı. pytest (`test_hr_core.py`, `test_hr_recruit.py`, `test_access.py`), vitest (`navModel.test.ts`), tsc ve
+  gerçek CRM/AD kabulü (`scripts/acceptance/M55/kabul.py`) test sunucusunda koşturulacak.
+- **İK-0 (analiz §14.1):** çalışan ve birim kaydı (CRM ∩ AD önerisi, İK onayıyla; CRM'e yazılmaz), aydınlatma metni sürümleri, açık
+  rıza (yalnız havuz / referans / gereksiz özel nitelikli veri — başvurunun değerlendirilmesi md. 5/2-c), veri sınıfı başına saklama
+  süresi, gece imha işi ve tutanağı, erişim kaydı, arka plan işleri. M56–M58 için `HrContext` (`app.state.hr`), kanca kayıtları ve
+  `src/canvas/hr/hrApi.ts` hazır.
+- **Yetki (ortak dosyalarda en küçük değişiklik):** `access.explicit_keys()` sayfaları da kapsıyor (M49 dalındaki değişiklikle aynı
+  amaç; birleşmede tek sürüm kalmalı). Yeni `sensitive` işareti ve `access.sensitive_keys()`. `access_catalog.json`'a `ik` alanı,
+  4 sayfa, 12 özellik; `RULES`'a İK önekleri. `AccessAdmin.tsx` açıkça verilen sayfayı «ayrıca verilir» gösterir; `engine.ts`
+  katalog türü. `navModel.ts` `ik` grubu (`explicit`), `ModulesMenu.tsx` M55 + `GROUP_HOME`, `KampusPage.tsx` kutu, `App.tsx` 5 rota,
+  `admin.py` «İnsan kaynakları» ayar grubu (6 anahtar), `app.py` iki satır kayıt, `llm_queue.py` `queue_label`/`labelled`.
+- **Karar (analiz «kullanıcıya sorulur» dediği; iş kararları Claude'a bırakıldı kuralıyla):** portal yöneticisi aday kişisel
+  verisini, KVKK yönetimini, İK erişim kaydını ve İK dışa aktarmayı **kendiliğinden görmez**; rolüyle görür (bağ `semantic_audit`'e
+  düşer). Gerekçe: KVKK md. 12 (teknik hesap aday verisini görmemeli) ve analiz önerisi; geri dönüş `HR_ADMIN_SEES_PERSONAL=1`.
+  Sayfalar ve kişisel olmayan işlemler (pozisyon açma/onay, şablon, çalışan eşitleme) yöneticide açık kalır.
+- **§10 açık sorularında verilen kararlar:** (1) İK kişi sayısı/son karar: kod rolden bağımsız — pozisyon onayı ve teklif onayı ayrı
+  anahtarlar, iki göz. (2) Aday adresi: portal adaya yazmaz; mektup taslağı, gönderim İK'nın kendi kutusundan. (3) Bordro/özlük:
+  ölçülmeden bağlanmadı; çalışan kaydı CRM ∩ AD + İK girişi, ücret/T.C./sağlık tutulmaz; Logo `LG_411_EMPLOYEE` ölçümü
+  `referans.sql` sonunda. (4) Saklama süresi: varsayılan yok — girilmeyen sınıfta imha yapılmaz, ekran uyarır (sessiz varsayım
+  yok). (5) Test sunucusunda gerçek aday verisi: kabul yalnız CRM/AD yapısı ve «KABUL TESTİ» adlı uydurma adayla; temizlik betiği
+  hepsini siler.
+- **Tasarım kararları:** kanıtlı özette alıntıyı model yazmaz — satır numarası verir, metin özgeçmişin satırıdır (uydurma
+  alıntı imkânsız); özel nitelikli maske de satır numarasıyla (şüphede gizlenir). Kanıt işi arka planda (`semantic_hr_jobs`).
+  E-postadan başvuru (`/intake`) ileti kimliğinin özetiyle bir kez; konu satırı tam olarak tek açık pozisyonun adını içeriyorsa
+  pozisyona bağlanır, değilse İK atar. İK soru kutusu (analiz §13 son satır) ve yetkinlik haritası sonraki sürüm.
+- **Kabul (`scripts/acceptance/M55/`):** K1 etkin CRM kullanıcı, K1b devre dışı olmayan hesap, K2 etkin birim başına kullanıcı,
+  K3 yöneticili birim (kolon doluluğu **ölçülecek**), K4 ekip üyeliği, K5 pano pozisyon×aşama, K5b eşik üstü (eşik İK ayarı),
+  K6 imha (gerçek `run-due`), K7 model izi, K8 yetki; `--yazma` geçici rol + yapay aday + kanıt + e-posta aktarımı;
+  `temizlik.py` rol, bağ, aday, pozisyon ve bağlı bütün satırları siler.
+- **Sunucuda kalan:** köprü + arayüz kurulumu, `timas-hr-purge.timer` ve `timas-hr-recruit-reminders.timer` (önce elle
+  `systemctl start`), pytest/vitest/tsc, kabul ve temizlik; İK rolü atanana kadar ekranlar yalnız yöneticide görünür.
+## 2026-09-28 — M34 E-ticaret ve platform yönetimi (ilk sürüm) — DOĞRULANAMADI, testler koordinatörde
+
+- **Neden:** yol haritası «Dijital ve müşteri» bloku. Ürün kartı CRM'de, stok ve maliyet Logo'da, vitrin T-soft'ta; üçü
+  arasındaki farkı gösteren ekran yoktu, hatalı kart ancak okur ya da Google fark edince görülüyordu (analiz
+  `docs/analiz/kullanici-ihtiyaclari/M34-eticaret-platform.md`, 14. bölüm). İş tanımındaki «otomatik eşitleme ve listeleme»
+  T-soft yazma yasağı ve CRM yazma yetkisizliği yüzünden bu sürümde K4'tür: fark gösterilir, düzeltmeyi kişi yapar.
+- **Ne yapıldı:**
+  - Köprü `eticaret.py` / `eticaret_sources.py` / `eticaret_api.py`; tablolar `semantic_eticaret_items`, `_diffs`, `_diff_log`,
+    `_runs`. Yazmalar `semantic_audit`'e (`eticaret_diff`, `eticaret_proposal`, `eticaret_export`, `eticaret_refresh`).
+  - Uçlar `/api/v1/eticaret/*`: `meta`, `overview`, `status`, `refresh`, `run-due` (sistem), `diffs` (+ `export.csv`,
+    `mark-bulk`, `{id}`, `{id}/mark`), `items/{anahtar}` (+ `propose`), `proposals` (+ `{id}/decide`), `funnel`,
+    `marketplaces` (+ `stock-risk`, `{cari}/books`), `export/content-pack`.
+  - Ön yüz `src/canvas/eticaret/` (`EticaretHome`, `DiffsScreen`, `FunnelScreen`, `MarketplacesScreen`, `ItemDrawer`, `parts`,
+    `api`); menü Pazarlama › «E-ticaret» bölümü (4 öğe; alanın ipucu «Plan, içerik, e-ticaret, SEO & GEO, set ve hediye»);
+    Kampüs `M34: '/e-ticaret'`, grup girişi «Dijital & Topluluk». Telefonda fark satırı kart, üç kaynak alt alta; geniş cari
+    tablosu kendi kabında kayar. Yeni animasyon yok (mevcut düğme/sekme geçişleri).
+  - Yetki: `sayfa:eticaret`, `sayfa:eticaret-farklar`, `sayfa:eticaret-huni`, `sayfa:eticaret-pazar-yerleri`,
+    `ozellik:eticaret.fark-isaretle`, `ozellik:eticaret.oneri-uret`, açık `ozellik:eticaret.oneri-onay`; indirmeler
+    `ozellik:veri.disa-aktar`. Ayarlar (Yönetim › E-ticaret): `ECOM_CHANNELS` (E-TICARET), `ECOM_PRICE_REFERENCE` (crm),
+    `ECOM_PRICE_TOLERANCE` (0,01), `ECOM_STOCK_MIN` (0), `ECOM_REQUIRED_FIELDS`, `ECOM_ALERT_KINDS` (hak,fiyat,stok),
+    `ECOM_ALERT_RECIPIENTS`, `ECOM_WEEKLY_TO`, `ECOM_STOCKOUT_DAYS` (30); yalnız ortamdan: `ECOM_DIFF_KINDS`, `ECOM_HAK_RIGHTS`,
+    `ECOM_SNOOZE_DAYS` (7), `ECOM_SALES_MONTHS` (12), `ECOM_FUNNEL_MIN_VIEWS` (500), `ECOM_FUNNEL_LOW_RATIO` (0,5),
+    `ECOM_REASON_MIN_P` (0,70), `ECOM_REASON_MIN_MARGIN` (0,30), `ECOM_LLM_BUDGET_SEC` (600), `ECOM_DEFAULT_OWNERS`,
+    `ECOM_NAME_CHECK` (1), `ECOM_WEEKLY_DAY` (0 = Pazartesi).
+  - Zamanlayıcı `scripts/server/timas-eticaret.{service,timer}` her gece 04:30 (SEO eşitlemesi 03:00'ten sonra); ilk kez elle.
+- **Kararlar (sormadan, gerekçeli; analiz 10. bölüm ve plan boşlukları):**
+  1. *Site verisi:* T-soft yeniden okunmaz; SEO eşitlemesinin tablosu tek kaynak (çift istek ve yazma riski yok). Site fiyatı
+     ve stoğu Google Alışveriş hazırlığının alan seçicisiyle okunur; alan yoksa değer boş kalır, fark açılmaz (uydurulmaz).
+  2. *Geçerli fiyat (soru 4):* bilinmiyor → esas fiyat ayar (`ECOM_PRICE_REFERENCE`, varsayılan CRM `new_kdvdahilfiyat`:
+     CRM'in `Tsoft_KitapDetay` görünümünün «Fiyat» kolonu). Logo listesi her satırda üçüncü sütun olarak durur.
+  3. *Satışta olmaması gereken:* SEO Haklar ekranının kuralı (CRM yayın durumu: bizim değil, devredildi, geri istendi, iptal,
+     çekildi). «Sözleşme kaydı yok» (2.575) hukuki kesinlik taşımadığı için varsayılan değil; `ECOM_HAK_RIGHTS=yok,eksik`
+     ile açılır.
+  4. *Stok:* M12/M33 tanımı (planlanan üretim girişi hariç); donmuş kopya olduğu için her satırda kesim tarihi yazılır.
+  5. *Pazar yeri satışı:* satır tanımı (`LINENET`, faturalı) — kokpit, bütçe ve M32 ile aynı. Analizin önerdiği fatura
+     başlığı (`NETTOTAL`) ile fark kabulde ÖLÇÜM olarak raporlanır. Satış görünümleri kullanılmadı (plan tuzakları).
+  6. *Kim kapatır (soru 5):* sahip alanı kişiye atanır (`ECOM_DEFAULT_OWNERS` tür başına varsayılan); fiyat farkında ayrı
+     finans onayı yok — onay gerektiren iş portalda değil, T-soft/CRM'de yapılıyor.
+  7. *Kapanma:* koşulu kalkan fark kendiliğinden kapanır; «düzeltildi» yalnız işaretten **sonra** okunan site verisiyle
+     doğrulanır ya da yeniden açılır; okunamayan kaynağa bağlı tür o turda kapanmaz (yanlış «kapandı» yok).
+  8. *Model:* yalnız fiyat farkı nedeni (kapalı küme, olasılıklı) ve kart metni. Huninin «olası nedenleri» veriden kurallı
+     (kart doluluğu, yorum, stok, fiyat) — deterministik bilgiyi model tekrar etmez.
+  9. *Platform satıcı verisi (soru 2–3):* yok → pazar yeri ekranı yalnız sell-in; «okura satış bu sürümde yok» ekranda yazar.
+     T-soft siparişleri kişisel veri içerdiği için okunmadı.
+- **Zeki AI'a sorulacaklar:** «Sitede aktif, Logo stoğu sıfır kaç kitap» → `diffs?tur=stok`; «Görüntülenip satmayan 20 kitap»
+  → `funnel?dusuk=1`; «Kitapyurdu'na bu yıl satış, iade oranı» → `marketplaces`; «CRM fiyatı sitedekinden farklı» →
+  `diffs?tur=fiyat`; «Arka kapağı boş çok satanlar» → `diffs?tur=eksik_kart`; «Hakkı bizde olmadığı hâlde satışta» →
+  `diffs?tur=hak`. Sohbet kapsamında `eticaret` konusu zaten var (`chat_topics.json`).
+- **Testler:** `backend/semantic_layer/tests/test_eticaret.py` (yedi tür, eşleme, yaşam döngüsü, okunamayan kaynak, huni,
+  pazar yeri özeti ve pencereleri, tükenme riski, içerik paketi, neden eşiği, bildirim/haftalık, ayar, yetki, yazma yasağı,
+  uçlar: 422/403/409/503/401). `navModel.test.ts`'e M34 rotaları. **Koşulmadı** (yerelde test yasak); yalnız `py_compile` ve
+  `access_catalog.json` JSON doğrulaması yapıldı. tsc/vitest/derleme de sunucuda.
+- **Kabul (sunucuda koşulacak):** `scripts/acceptance/M34/check.sh` (pytest + tsc + vitest + derleme), `kabul.py` (R1 CRM TSOFT
+  Aktif, R2 CRM'de aktif–sitede yok kümesi ve ilk 20 barkod, R3 cari başına net ciro kuruş + NETTOTAL ölçümü, R4 20 rastgele
+  stok, R5 satışta olmaması gereken = Haklar kuralı, R6 huni sayaçları, R7 cari kitap kırılımı, R8 fiyat farkında CRM fiyatı,
+  Ö1 sitede fiyat/stok alanı doluluğu; `--yazma` işaret akışı), `temizlik.py` (farkın önceki hâli, günlük ve değişiklik
+  kaydı). **Ölçülecek:** sitede fiyat/stok alan adları ve doluluğu, `CountTotalSales` dönemi, `E-TICARET` kanal carilerinin
+  kapsamı, aynı EAN'lı çift CRM kartı sayısı, fiyat nedeni eşiklerinin isabeti.
+- **Açık:** platform satıcı raporu yüklemesi (sell-through, M40–M42 ile), GA4 sepet hunisi, CRM Web API yetkisi gelince onaylı
+  metnin CRM'e yazılması, M35 kampanya bağı (bu modülün `items`/`diffs` tabloları okunur), M43 stok bağı.
+## 2026-09-28 — M36 Dijital yayın ve e-kitap kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** `docs/analiz/kullanici-ihtiyaclari/M36-dijital-yayin-ekitap.md` §14'ün ilk sürümü. Köprü `dijital.py`,
+  `dijital_sources.py`, `dijital_api.py` (`/api/v1/dijital/*`), tablolar `semantic_dijital_*`; ekranlar `src/canvas/dijital/`
+  (Katalog, Hak riski, CRM'e işlenecek, Platformlar, Fırsatlar, Satış + rapor yükleme sihirbazı, kitap yan paneli); zamanlayıcı
+  `scripts/server/timas-dijital.{service,timer}` (04:00); kabul `scripts/acceptance/M36/` (kabul.py K1–K8 + ölçüm, referans.sql,
+  temizlik.py); testler `test_dijital.py`, `dijital.test.ts`.
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (kayıt bloğu), `access.py` (RULES + FEATURE_RULES), `access_catalog.json` (2 sayfa,
+  4 özellik), `admin.py` (ayar grubu `dijital`, 14 ayar, değişiklik kaydı adları), `App.tsx` (4 rota), `navModel.ts` (2 menü öğesi),
+  `ModulesMenu.tsx` (`M36`).
+- **Açık sorulara verilen kararlar (§10; veriye/koda bakıldı, kullanıcıya sorulmadı):**
+  - *Platform ve dağıtıcı bilinmiyor:* platformlar portalda tanımlanır (tür, doğrudan/dağıtıcı, rapor para birimi, raporun ay
+    kapanışından kaç gün sonra beklendiği). Platform durumu yalnız kullanıcının girdiği bilgidir; bilinmeyen «bilinmiyor».
+  - *Rapor biçimi bilinmiyor:* kolon adları Türkçe/İngilizce eş anlamlılarla tanınır, kullanıcı düzeltir; dönem satırdaki tarihten
+    ya da yüklemedeki dönemden. Kur kullanıcıdan (modül kur varsaymaz). Logo'daki e-kitap faturası ayrı sütun, platform raporuyla
+    toplanmaz (aynı satış iki yerde olabilir).
+  - *Bölge/platform kısıtı:* serbest metin notu olan sözleşme «incele»; telif birimi `uygun / kısıtlı / uygun değil` yazar, karar
+    notun metin özetine bağlanır (not değişirse yeniden sorulur). «Kısıtlı» fırsat listesine girer ama rozetle görünür.
+  - *EPUB kim hazırlıyor:* bilinmiyor; CRM `new_EPubDurumu`, üretim kartının e-kitap aşamaları ve (varsa) stüdyo e-kitap durumu
+    yan yana gösterilir; stüdyo kapalıysa bir önceki okuma kalır.
+  - *Sesli kitap anlaşması:* sesli sürüm = aynı adlı `SesliKitap` (Tip 9) kartı ya da sesli platformda kayıt; adaylar tür süzgeciyle
+    (`DIJITAL_AUDIO_GENRES`, boşsa hepsi).
+  - *Basılı satış:* analizdeki `V_SatisRaporu_411/211` yerine doğrudan `STLINE` faturalı satır (bütçe/kokpitle aynı tanım; görünüm
+    plan tuzağı yok). Pencere: Logo veri sonunun ayı dahil son 12 takvim ayı (`Yıl*12+Ay`), .155'in 17.08.2026 donması ekranda yazılı.
+  - *Fırsat eşiği:* 1.000 adet varsayılan, yönetim ekranından; ölçülmedi.
+  - *`sayfa:dijital-satis`:* finans verisi → katalogda `explicit: true`. `access.explicit_keys()` bugün yalnız özellikleri kapsıyor;
+    M49 (sayfa explicit desteği) main'e girince bu sayfa Herkes rolüne kapanır. O zamana kadar Herkes'e açıktır.
+- **Kapsam dışı (ikinci sürüm):** ONIX dışa aktarma, stüdyo dışı EPUB yükleme ve denetimi, dijital fiyat önerisi (şimdilik yalnız
+  açık yetkiyle fiyat kararı kaydı), abonelik/sesli kitap senaryosu, M6/M54 hakedişine otomatik akış, platform API'leri. Zeki AI
+  sohbeti bu tabloları henüz okumuyor (katalog veri alanı yok); `chat_topics.json` «yayin» konusu M36'yı zaten içeriyor.
+- **M54 bağlantı noktası:** `dijital_sources.register_rights_provider(fn)`; `fn(kitap_idleri, bicim) → {kitap_id: (karar, gerekçe)}`.
+  Telif modülü main'e girince `app.py`'deki yorum satırı açılır; o zaman hak kararı ekranda «telif hak haritası» kaynağıyla görünür.
+- **Doğrulama:** yalnız `py_compile` ve JSON; birim testleri, `tsc`, vitest ve gerçek CRM/Logo kabulü test sunucusunda koordinatörce
+  koşulacak (**DOĞRULANAMADI**). Ölçülecekler kabul betiğinde: sesli kitap hakkı sayısı, Tip 8/9 ve dijital kimlik doluluğu, e-kitap
+  üretim aşaması sayısı, Logo'da e-kitap stok koduyla fatura olup olmadığı (boşsa 2021–2025 kopyasında da bakılır), iletim ↔ e-kitap
+  kararı çelişkisi.
+## 2026-09-28 — M44 Lojistik ve kargo: günlük hat, gönderi kartı, firma karnesi, mutabakat, Zeki AI taslak ve karar kaydı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** analiz §14 kodlama planı. Köprü `shipping.py` + `shipping_sources.py` + `shipping_api.py`, SQL `backend/semantic_bridge/shipping_sql/`
+  (14 dosya), tablolar `semantic_shipping_classes|decisions|drafts|settings`, uçlar `/api/v1/shipping/*`; ekranlar `src/canvas/shipping/`
+  (`/kargo`, `/kargo/gonderi/:id`, `/kargo/hatalar`, `/kargo/bekleyen`, `/kargo/firmalar`, `/kargo/mutabakat`); menü yeni **Lojistik** alanı;
+  zamanlayıcı `timas-shipping.timer` (15 dk; köprü günlük/haftalık/aylık işleri kendisi zamanlar), VM `jobs.py` satırı.
+- **Güvenlik (kullanıcı kararı):** CRM `new_kargofirmasi` kullanıcı adı/şifre/token/client id-secret ve UPS gönderici kolonları hiçbir sorguda
+  yok; kolonlar adıyla seçilir, `guard()` yasak kolon ya da `SELECT *` geçen SQL'i çalıştırmaz; test hem SQL dosyalarını hem üretilen SQL'i tarar.
+  Kargo firmasına, CRM'e, Logo'ya, T-soft'a yazma yok; müşteriye mesaj gitmez (taslak + «kullanıldı» işareti, gönderimi insan yapar).
+- **Kararlar (açık sorular §10; veriye/koda bakılarak, kullanıcıya sorulmadan):**
+  - Termin yok (2026-09-20) → «geç teslim» oranı yok; teslim süresi (ortanca/ortalama/%90), bekleyen yaşı ve **kullanıcının il hedefi** varsa
+    hedefi aşan pay. Hedef verilmeyen ilde oran hesaplanmaz.
+  - Entegrasyon hatası = takip no boş + dört firmadan birinin sonuç/mesaj alanı dolu ve «başarılı» değerlerinden biri değil; değer kümesi
+    ölçülmediği için `SHIPPING_INTEGRATION_OK_VALUES` ayarı, `kabul.py --olcum` dağılımı döker.
+  - Kargo kaydının bütün kolonları metin: sayılar Kural C19 ile (`replace(',', '.')`, SQL `TRY_CAST` ile aynı anlam), tarihler
+    `SHIPPING_CARGO_DATE_FORMATS` biçimleriyle; okunamayan her değer sayılır ve ekranda yazılır. 13.242 kayıt tek sorguda okunup 5 dk bellekte
+    tutulur (dönem süzgeci metin tarihte SQL'de güvenilir değil).
+  - Kargo kaydı ↔ sipariş: yalnız takip numarasıyla doğrudan eşleme. M51'in `SUPPORT_CARGO_MATCH` mantığı kopyalanmadı; bağlantı noktası
+    `shipping_sources.register_cargo_matcher(fn, label)` — M51 main'e girince app.py'de bağlanır, ekranda eşleme yolu yazılır.
+  - Kargo faturası carileri Logo'da bilinmiyor → `SHIPPING_LOGO_CARRIER_CODES` (insan onaylı), mutabakat ekranında «aday cariler» (son 12 ay TRCODE 4,
+    ünvanda ipucu sözcüğü ya da CRM kargo firması adı). Kargo kaydı tutarının KDV durumu bilinmiyor → Logo hem KDV hariç hem dahil verilir.
+  - Haftalık karne `timas-reports` yerine aynı `run-due` içinde (karne bir soru değil, hesap); alıcılar `SHIPPING_WEEKLY_TO`.
+  - Sonraki sürüme: birleştirme fırsatı, «bu kural geçen çeyrek uygulansaydı» benzetimi, kargo firması API'sinden canlı durum, M51 şikâyet bağı,
+    pazar yeri/D2C gönderileri.
+- **Zeki AI:** hata mesajı sınıfı `QueuedLlm.choose` (kapalı küme 7 sınıf, mesaj başına bir kez, eşik altı «Belirsiz»; modele giden mesajda e-posta
+  ve 5+ haneli sayı silinir); taslak/karar/mutabakat özeti `chat`, müşteri adı/adres modele gitmez, olgularda olmayan rakam öbeği varsa model metni
+  atılıp kural metni kullanılır. Model `rt.llm_for("kargo", …)`.
+- **Ortak dosyalar:** `app.py` (tek register), `admin.py` («Lojistik ve kargo» grubu + `SHIPPING_*`), `access.py` (RULES + FEATURE_RULES),
+  `access_catalog.json` (alan `lojistik`, 3 sayfa, 4 özellik), `navModel.ts` (+ test), `ModulesMenu.tsx` (M44, Lojistik grubu), `App.tsx`, `jobs.py`.
+- **Doğrulama:** yalnız `py_compile` ve JSON (kural: Mac'te test yok). **DOĞRULANAMADI — testler koordinatörde:** `test_shipping.py`, `test_access.py`,
+  `navModel.test.ts`, `shipping/api.test.ts`, tsc, derleme ve `scripts/acceptance/M44/calistir.sh` → `kabul.py --olcum` → `kabul.py` (R1–R8) → `temizlik.py`.
+## 2026-09-28 — M43 Depo ve stok yönetimi kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** yeni menü alanı «Lojistik» ve yedi sayfa: Stok (açılış: dört gösterge, kitap sor, bugün ilgilenilecekler, süzgeçli stok listesi), kitap stok kartı, Bitecekler (+ üretime öneriler), Fazla stok (fazla / hareketsiz / satışı yok + Zeki AI eritme yönü), Güvenlik stoku (öneri → taslak → onay), Logo–CRM farkı (kök nedenle), Aktarım hataları (Zeki AI neden sınıfı), Depo hattı. Köprü `stock*.py` + `stock_sql/`, uçlar `/api/v1/stock/*`, gece işi `timas-stock.timer` 06:30. Logo'ya, CRM'e, T-soft'a yazma yok; eşik ve öneri kararı portal tablolarında.
+- **Neden böyle (analiz §14'ten sapmalar):** (1) `logo_bakiye.sql` ile `logo_ambar_bakiye.sql` tek dosya: ambar kırılımlı tek okuma, kitap toplamı ambarların toplamı (STLINE'ı iki kez taramamak için; kabul R2 toplamı doğrular). (2) `logo_eos_stok.sql` yazılmadı: Baskı Öneri'nin `logo_depo_stok.sql` dosyası içe aktarıldı (kopya yok). (3) Satış hızı ve CRM bekleyen sipariş de Baskı Öneri dosyalarından; tükenme etiketi Baskı Öneri'nin `_dax_div/_marj_oneri` işlevleriyle — tek fark bölünen stok (Baskı Öneri CRM stok adedi, burada Logo bakiyesi; analiz §14 formülü). (4) ABC analizi, raf yerleşim önerisi, 30-60-90 tahmin sekmesi ve depo kapasitesi ikinci sürüme kaldı; kitap kartında Zeki AI aylık tahmininden 30/60/90 gün gösteriliyor (Baskı Öneri tahmin önbelleği).
+- **Açık soruların kararları (§10; veriye/koda bakılarak, sorulmadı):** (S1) Esas stok Logo bakiyesidir (kayıt sistemi Logo); CRM raf kalanı yanında durur, iki sayı birleştirilmez, fark ve kök nedeni ayrı ekranda. (S2) Fiziksel/sanal depo ayrımı ölçülmedi: bütün Logo ambarları sayılır, ambar süzgeci ekranda; ayrım gelince süzgeç ayarı eklenir. (S3) Bekleyen sipariş ana kolon CRM (Baskı Öneri ile aynı tanım: B2C ve iki iç cari hariç), Logo `ORFLINE` bekleyeni yanında ayrı kolon. (S4) Depo kapasitesi hiçbir kaynakta yok; ikinci sürüm. (S5) Güvenlik günü varsayılan 15 (`STOCK_SAFETY_DAYS`), kitap bazında onayla değişir; okul sezonu ayrımı ikinci sürüm.
+- **Tanım kararları:** planlanan üretimden giriş fişi (`PRODSTAT 1`, ileri tarihli) bakiyeye girmez (M12/M29 ölçümüyle aynı; `STOCK_EXCLUDE_PLANNED`, kabul R1 etkisini ayrıca ölçer); hareketsiz stokta açılış devri (TRCODE 14) hareket sayılmaz (sayılırsa stoklu hiçbir kitap hareketsiz çıkmaz — Kural 17 metninden bilinçli sapma); ticari ürün (157) listede yok (Baskı Öneri süzgeci); hareket penceresi okunamazsa kitaba «hareketsiz» denmez; baskı süresi M12'nin gerçekleşen sürelerinden ölçülür, yoksa 45 gün (ölçülecek).
+- **Yetki:** 7 sayfa Herkes'e açık (İK değil); `stok.oneri-karar` (öneri kararı, eşik taslağı), açıkça verilen `stok.esik-onay`, `stok.maliyet` (stok değeri; yoksa alan yanıtta hiç yok), `stok.depo-hatti` (kişi bazlı toplama süresi). Ayarlar Yönetim › «Depo ve stok».
+- **Bağlantı noktaları (başka modüllere dokunulmadı):** M44 lojistik depo hattını `GET /api/v1/stock/pick-line` ya da `app.state.stock` üzerinden okur; M11/M12/M35/M53 açık önerileri `GET /suggestions?hedef=…` ile; M45 stok değeri için `app.state.stock.model()`; M9 birim maliyeti `app.state.pricing_costs.birim`.
+- **Değişen ortak dosyalar:** `access.py` (RULES + FEATURE_RULES), `access_catalog.json` (alan, 7 sayfa, 4 özellik), `admin.py` (STOCK_* ayarları + «stock» grubu), `app.py` (kayıt bloğu), `App.tsx` (8 rota), `navModel.ts` (+ `navModel.test.ts` grup sırası), `ModulesMenu.tsx` (M43, Lojistik grubu).
+- **Doğrulama:** yerelde yalnız `py_compile` ve JSON denetimi. pytest (`test_stock.py`, `test_access.py`), tsc, vitest, derleme ve gerçek Logo/CRM kabulü (`scripts/acceptance/M43/`, R1–R11) **DOĞRULANAMADI — testler koordinatörde**. Ölçülecekler: CRM «kalan miktar»ın raf stoğu anlamı (R6), planlanan girişin bakiyeye etkisi (R1), ilk okuma süresi, hareketsiz küme (R7), ORFLINE'da `CANCELLED` kolonu.
+## 2026-09-28 — M52 Tedarik ve baskı yönetimi (dal; DOĞRULANAMADI — testler koordinatörde, sunucuya bağlanılmadı)
+
+- **Ne:** yeni menü alanı Lojistik › «Tedarik»: özet, baskı yükü (ay × matbaa ısı tablosu, eşik aşımı, yük dengeleme önerisi, kartı açılmamış ihtiyaç, CRM plan değişiklikleri), kapasite girişi, kağıt ihtiyacı (ay × cins, alım zamanı önerisi, kağıt bilgisi eksik kart, kağıtçı alış fiyatı), tedarikçiler (iş + borç + karne, 30/60/90 gün ödeme, fatura eşleşmesi, matbaa ↔ cari), tedarikçi sayfası, birim baskı maliyeti eğilimi, Excel dışa aktarımları. Kod `backend/semantic_bridge/supply*.py`, `supply_sql/`, `src/canvas/supply/`; uçlar `/api/v1/supply/*`. Ayrıntı PROJECT-MEMORY.
+- **Yeniden yazılmayanlar:** M12 kartları `production.Service.cards` ile içeriden, fatura ↔ kart kuralı `production.match_costs`, matbaa karnesi `production_plan.printer_stats`; Baskı Öneri önbelleği (tükenme süresi, öneri seviyesi, CRM önerilen adet) plan girdisi; M10 onaylı kararları `ilk_baski_api.list_decisions`; M9 birim maliyeti `app.state.unit_cost`; e-posta `budget_api._send_mail`; Logo yıl → firma `budget_sources.firms_by_year`.
+- **§10 açık soruları — kararlar (veriye bakılarak, sorulmadan):**
+  1. *Matbaa kapasitesi:* hiçbir kaynakta yok → portalda girilir (`semantic_supply_capacity`, ay boşsa her ay). Girilmemiş matbaada karşılaştırma son 12 ayda baskıdan çıkan en yüksek aylık yükle yapılır ve ekranda «referans, kapasite değil» yazar (analizin «kapasite bilmeden kapasite aşıldı demek» uyarısı).
+  2. *Kağıdı kim alıyor:* Logo'da «KAĞITÇILAR» özel kodu (CRM `new_ozelKod` seçeneği) en azından bir kısmını Timaş'ın aldığını gösteriyor → varsayılan `SUPPLY_PAPER_BUYER=karisik`, alım önerisi üretilir; «matbaa» yapılırsa üretilmez. Özel kodun Logo'daki yazımı ölçülmedi: ekranda gerçek dağılım gösterilir, eşleşme Türkçe harf ve büyük/küçük harf farksızdır; bulunamazsa uyarı + matbaa baskı faturası kesmiş cariden bulunur (M12 ölçümü, veri kanıtı).
+  3. *Eski matbaa teklifleri:* ilk sürümde içe alınmaz (M12 teklif tablosu yeni; e-posta/Excel kaynağı yok). Maliyet eğilimi gerçekleşen Logo baskı faturasından.
+  4. *Fatura ↔ kart bağı:* M12'nin ölçtüğü kural (satır özel kodu = stok kodu, kart penceresi) esas. Bağlanamayan satır için aday: aynı stok kodlu kart ya da eşlenmiş matbaa + adet ±%15 + depo tarihi ±60 gün; tek aday kural, çok aday `QueuedLlm.choose` («Hiçbiri» dahil). Hepsi öneridir; `ozellik:tedarik.eslesme` onaylamadan hesaba girmez.
+  5. *Ödeme vadesi:* sabit gün varsayılmaz; Logo ödeme planı satırları (PAYTRANS SIGN 1) FIFO yaklaşımıyla.
+- **Diğer kararlar:** üretimden giriş Kural 20 + `PRODSTAT = 0` (M12 ölçümü: 1 = planlanan fiş; kabul testi süzgeçsiz toplamı da bilgi olarak yazar). Kağıt ölçüsü varsayılanı brüt kg (satın alma fire dahil alır); CRM «toplam kağıt ihtiyacı» kolonu birimi ölçülmeden ayrı sütunda. «Faturası gelmemiş» bekleme süresi veriden (depo girişi → fatura gün farkının 3. çeyreği, en az 20 örnek). Gece işi değişiklik kaydına yazmaz (sistem adı Yönetim → Kişiler'de kişi gibi görünürdü). Tedarikçiler ve maliyet sayfaları katalogda `explicit` işaretli (M49 sayfa desteğiyle etkinleşir); tutarlar zaten açıkça verilen `tedarik.borc|maliyet` olmadan uçtan gitmez.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (RULES `/api/v1/supply/`, FEATURE_RULES üç satır), `access_catalog.json` (alan `lojistik`, 5 sayfa, 5 özellik), `admin.py` (iki alıcı ayarı), `app.py` (tek kayıt bloğu), `App.tsx` (7 rota), `navModel.ts` (grup `lojistik` + editör sırası), `navModel.test.ts`, `ModulesMenu.tsx` (LIVE M52, GROUP_HOME Lojistik). M43/M44 aynı alanı açacak: birleşmede `lojistik` grubu tek kalmalı, M52 öğeleri «Tedarik» bölümünde.
+- **Ölçülecek (kabul listesinde):** özel kod yazımı (kontrol 2), CRM kağıt alanlarının doluluğu ve birimi (6), `new_uretimplanlamatakvimi` arama kolonunun karta bağı, Logo `UNITSETL` birim kodu, kağıt tedarik süresi (`SUPPLY_PAPER_LEAD_DAYS` 30), fatura adayı eşikleri.
+- **Doğrulama:** yalnız `py_compile` ve JSON doğrulaması (kural gereği Mac'te test yok). pytest `test_supply.py` (yük/kapasite/referans, kağıt, FIFO = katalog, sınıflama, eşleme, faturasız, aday, seçim, maliyet, plan girdisi, dengeleme, model sayı denetimi, şartname, portal kayıtları, SQL koruması, yetki uçları), vitest menü eşliği ve `scripts/acceptance/M52/kabul.py` gerçek veri kabulü **koordinatörde koşulacak**. Sunucuda: kurulum sonrası `systemctl start timas-supply.service` elle bir kez, sonra iki timer.
 
 ## 2026-09-28 (06:40) — Test sunucusuna main `935080d5` (M1, M9, M15, M29–M33); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
 
@@ -134,7 +433,107 @@
   - **M9 Fiyatlama: doğrulanamadı** — ilk veri hazırlığı (Logo 211 beş yıl) köprü her yeniden başladığında sıfırlanıyor; 05:40–06:37 arasında köprü başka oturumlarca 7 kez yeniden başlatıldı, `books`/`actuals` hep 503 «hazırlanıyor».
   - **Sohbet kapsamı:** hızlı kapı kurulum öncesi ve sonrası birebir (aynı 9 soru 21.09 temel çizgisinden farklı, katalog 70554→70581; satır farkı 0). `run_acceptance.py` iki kez köprü restart'ıyla yarıda kaldı (ilk 40 soruda 37 geçti; kalan 3 şirket dışı soru — tarif, başkent, şiir — için model «şirket dışı» demedi). **Tam kapı (`answer-gate --repeat 3`) koşulmadı**: bu sıklıkta restart altında bitemez.
 - **Test verisi:** her yazma testinin kaydı temizlik betiğiyle silindi (M29 plan, M31 ziyaret, M32 fırsat, M33 iki ihale + 22 kalem, M15 plan + karne, M1 başvuru + rapor); yarım kalan koşuların kayıtları elle bulunup silindi (M33 ihale 1, sohbet sorgu günlüğü 41 + 35 satır, M29 değişiklik kaydı 1). Son taramada timasai adına benim kaydım yok, test oturumu 0. Başka oturumlardan kalan 6 değişiklik kaydı (deneme belgesi, bülten, SEO koşuları) dokunulmadan bırakıldı.
+## 2026-09-28 — M35 E-ticaret kampanya yönetimi (dal; DOĞRULANAMADI — testler koordinatörde)
+## 2026-09-28 — M39 Pazar araştırması ve rekabet analizi (dalda; DOĞRULANAMADI — testler koordinatörde)
 
+- **Ne:** Analiz §14 kodlama planı. Köprü `pazar.py` (depo + kurallar), `pazar_sources.py` (CRM rakip katalog, TİMAŞ
+  kitapları, emsal bağı, kitaplık; Logo stok kodu ve kanal kırılımında aynı dönem satışı; PDF/Excel/CSV sayfaları),
+  `pazar_api.py` (`/api/v1/pazar/*`, `app.py`'de yalnız kayıt). Tablolar `semantic_pazar_*` (competitor_books,
+  own_books, own_sales, links, categories, category_map, reports, report_figures, briefs, watchlist, meta). Ekran
+  `src/canvas/pazar/` (Özet · Rakipler · Emsal bul · Kategori eşlemesi · Sektör raporları · aylık özet), rota
+  `/timas/pazar-arastirma`, menü Analiz › «Pazar ve rakip» (+ «Rakipler ve emsal», «Sektör raporları»), Kampüs M39 ve
+  «Müşteri & Pazar» grup girişi. Zamanlayıcı `timas-pazar.timer` pazartesi 05:30 (`run-due`). Kabul `scripts/acceptance/M39/`.
+- **Yetki:** sayfalar `pazar-arastirma`, `pazar-rakipler`, `pazar-raporlar` (sektör raporu telifli olabilir →
+  `explicit: true`; sayfa düzeyindeki açık yetki M49 main'e girince etkinleşir, bugünkü main yalnız özelliklerde
+  okuyor). Özellikler `pazar.rapor-yukle`, `pazar.rakam-onay`, `pazar.kategori-esleme` (kaynak yenileme dahil),
+  `pazar.ozet-yaz` (analizde yoktu: taslak/düzenleme/onaya gönderme onaydan ayrı bir iş), `pazar.ozet-onay` (explicit,
+  yazan/gönderen onaylayamaz). Emsal ucu M1/M10 sayfalarına, matris M9 fiyatlama sayfasına da açık (sonradan bağlanacak).
+- **Kararlar (analiz §10'daki açık sorular; veriye/koda bakılarak):**
+  - «Satış Adedi / Satış Adedi 2»nin anlamı bilinmiyor → ham kopyalanır, hiçbir hesapta ve ekranda sayı olarak
+    kullanılmaz; kabulde doluluğu ve alma partisi sayısı (`ImportSequenceNumber`) ölçülür (Ö1).
+  - Rakip kategori metni bölünmeden bütün olarak eşlenir (ayırıcı biçimi ölçülmedi; Ö1/Ö2 ölçer). Önce ad eşleşmesi
+    (metnin tamamı ya da «>», «/», «;», «,» sonrası son parça TİMAŞ kategori adıyla aynıysa), sonra Zeki AI
+    `QueuedLlm.choose` (olasılık ≥ 0,70, fark ≥ 0,30 → öneri; altı «emin değil»). Karar her durumda insanda; eşleme kararı
+    ucu analizdeki `{kategori_ham}` yol parametresi yerine gövdede toplu (`POST category-map/decision {items}`), çünkü
+    ham metin «/» içerebiliyor ve ekranda toplu onay var.
+  - TİMAŞ kategori listesi: yürürlükte H1 ağacı varsa ağacın `ana,alt` düzeyleri, yoksa CRM Kitaplık
+    (`PAZAR_CATEGORY_SOURCE=auto`); liste değişince karşılığı kalmayan eşleme notuyla öneriye döner.
+  - İç göstergelerde satır tanımı M46 ile aynı (faturalı, `LINENET`, iade eksi); yayınevi = `ITEMS.SPECODE`, kanal =
+    `CLCARD.SPECODE2`. Kayıtlı SQL'ler (TOTAL / fatura başlığı NETTOTAL) farklı tanım; fark kabulde ölçüm olarak yazılır
+    (Ö3, Ö4). Büyüme hep aynı dönem (1 Ocak – veri sonu) karşılaştırması; «pazar payı» hiçbir yerde hesaplanmaz, yalnız
+    «TİMAŞ içi pay» (analiz §12 «bunu yaparsanız kullanmam» 3).
+  - Emsal: kurallı süzgeç (kategori, sayfa ±%25, fiyat ±%30 — ayar) → ortak sözcük puanı (Türkçe ek için ilk 6 harf) →
+    ilk 20 aday Zeki AI'ya «çok benzer / kısmen / benzemiyor». Gerekçe kurallı; model yalnız sınıf verir. Kaç adayın
+    modele sorulduğu ekranda yazar (sessiz tavan yok). Rakip tanıtım metninin yalnız ilk 280 karakteri okunur (FSEK).
+  - Rapor çıkarımı: sayfa sayfa (uzun sayfa 12.000 karakterlik parçalar, parça atlanmaz); modelin verdiği her rakam
+    sayfa metninde birebir aranır, bulunmayan atılır ve sayısı ekranda. Taranmış sayfa «metin yok» — elle rakam girilir.
+  - Özet: kaynaklar sabit sırayla (TİMAŞ toplam, kategori, kanal; onaylı rapor rakamları; izlenen rakiplerin medyan
+    fiyatı; rakip verisinin yaşı), en çok 60 (ayar; dışarıda kalan sayısı özette). Her madde bir [Kn]'ye bağlı olmalı ve
+    maddedeki her sayı bağlandığı kaynağın değeriyle (yuvarlama ve «milyon/milyar» ölçeğiyle) tutmalı; tutmayan madde
+    taslağa girmez, düzenlemede onaya gönderilemez, onayda yeniden denetlenir (analiz kabul 8). Onaylı rapor rakamı yoksa
+    özette «Pazar büyüklüğü: kaynak yok».
+  - Zeki AI sohbeti: `chat_topics.json` «pazar» konusu `yayin-crm` + `satis` veri alanlarına bağlandı (rakip kitap CRM
+    alanında). Sektör raporu rakamları katalogda değil; o sorular sohbette cevaplanamaz (açık kalan).
+- **Dış tarama yok** (`MARKET_WATCH_ENABLED` eklenmedi — bu sürümde açılacak bir şey yok); CRM'e ve Logo'ya yazma yok.
+- **Testler:** `backend/semantic_layer/tests/test_pazar.py` (anlık görüntü, tazelik, eşleme, matris = PERCENTILE_CONT,
+  emsal, iç göstergeler, rapor ve rakam, özet denetimi ve iki göz, yetki), `src/canvas/pazar/api.test.ts` (biçim, menü
+  yetkisi). **DOĞRULANAMADI** — kurallar gereği yerelde koşturulmadı, test sunucusuna bağlanılmadı; testler ve
+  `scripts/acceptance/M39/kabul.py` (K1–K9 doğrudan SQL, Ö1–Ö4 ölçüm, A1–A3 API) koordinatörde.
+
+- **Neden:** kampanya kararı (kitap, yüzde, kanal) Excel'de, sonucu Logo'da, sözleşme sınırı CRM'de duruyordu; CRM'deki 308 kampanya
+  kaydı bayi kampanyası ve planlanan/gerçekleşen ciro alanları boş. Analiz: `docs/analiz/kullanici-ihtiyaclari/M35-eticaret-kampanya.md`.
+- **Ne yapıldı:** köprü `kampanya.py` + `kampanya_sources.py` + `kampanya_api.py` (tablolar `semantic_kampanya_*`, uçlar
+  `/api/v1/kampanya/*`), ekran `src/canvas/kampanya/` (Kampanyalar, Takvim, Aday kitaplar, CRM bayi kampanyaları, Öğrenimler; kampanya
+  ayrıntısı: Kitaplar/simülasyon, Aday iste, Kampanya metni, Sonuç), menü Pazarlama › E-ticaret › Kampanyalar, Kampüs M35, yetki kataloğu
+  (`sayfa:kampanya`, `ozellik:kampanya.duzenle|metin-uret`, açık `kampanya.onay`), yönetim ayarları (`KAMPANYA_*`, grup «E-ticaret
+  kampanyaları»), zamanlayıcı `timas-kampanya` (05:00), pytest `test_kampanya.py`, vitest `kampanya/api.test.ts`, kabul
+  `scripts/acceptance/M35/` (kabul.py, referans.sql, temizlik.py).
+- **Kararlar (veriye/koda bakılarak, sorulmadan):**
+  - *Satış tanımı:* analiz yıllık `V_SatisRaporu_*` görünümünü önerse de bütçe/kokpit/M53 ile aynı olsun diye doğrudan `STLINE`
+    (faturalı satır, iade eksi, `LINETYPE = 0`); yıllar kendi firmalarından ayrı sorgu (kopya birleşiminde kolon kayması yok), kod listesi
+    `JOIN (VALUES …)`. Kabul testi 1–2'nin SQL'i birebir bu tanım.
+  - *Pazar yerinde indirimi kim karşılıyor (soru 2):* varsayım yok — kampanyada «kanal kesintisi %» alanı; girilmezse 0 sayılır ve her
+    kitap satırında «girilmedi» yazar.
+  - *En düşük marj (soru 3):* uydurulmadı — `KAMPANYA_MARJ_MIN_PCT` boş (uyarı yok); zarar her zaman kırmızı; maliyetsiz kitapta marj
+    «hesaplanamaz» (sıfır yazılmaz), onaya gönderilebilir ama kırmızı işaretli gider.
+  - *30 gün kuralı (soru 4):* yönetmelik kuralı site için kendi günlük fiyat kaydımızla (SEO modülünün T-soft ürün tablosundan her gece
+    kopya; T-soft'a istek yok). Kayıt 30 günden kısaysa sarı. Pazar yeri fiyatı bizde yok → bilgi notu. Hukuk birimi teyit etmeli.
+  - *Telif:* M6 terimlerinde `new_HesaplamaTipi` ve asgari fiyat yok → CRM'den doğrudan (yürürlükteki Telif Alış, tip 5). Asgari fiyat
+    metin alan: ayrıştırılıp sözleşmelerin en büyüğü alt sınır. Baskıdan/tek ödemeli telif satış fiyatıyla değişmez.
+  - *Tükenme:* baskı önerisi raporu kitap başına hazır tahmin vermiyor (rapor her istekte kurulur) → basit hız: son 3 ay net adet ÷ gün ×
+    beklenen artış (girilen ya da aynı kanalda en az 3 öğrenimin ortancası, yoksa 1). Veri sonundan kampanya başına normal hızla düşülür.
+  - *Onaydan sonra:* hesap donar (onaycı gördüğünü onaylar); gece yalnız stok, hız, tükenme ve stok kontrolü tazelenir; «gönderildi»
+    durumu yok, «Elle kurdum» notu.
+  - *Kupon (soru 5):* 50.000 CRM kupon kodu ilk sürümde okunmuyor; kampanyaya bağlı sipariş satırı etkisi `new_kampanyaid` ile, kod
+    kırılımı kabulde ölçüm (Ö2).
+- **M34 ile paralel:** M34 dosyalarına dokunulmadı; bağlantı noktası `kampanya_sources.register_platform_items(fn)` (ürün aktifliği ve
+  platform stoğu), menüde aynı «E-ticaret» bölüm adı (merge'de tekilleşir).
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (2 RULES + 3 FEATURE_RULES satırı), `access_catalog.json` (1 sayfa + 3 özellik),
+  `admin.py` (KAMPANYA_* ayarları + grup), `app.py` (register bloğu), `App.tsx` (4 rota), `navModel.ts` (1 öğe + ikon), `ModulesMenu.tsx`
+  (`M35`).
+- **DOĞRULANAMADI — testler koordinatörde:** yerelde yalnız `py_compile` ve JSON doğrulaması; pytest/vitest/tsc koşturulmadı, gerçek
+  DB/API kabulü yapılmadı. Sunucuda sıra: main'e taşıma → kurulum (+ `timas-kampanya.timer`) → `run-due` elle (süre günlüğe) →
+  `kabul.py` (K1–K8, Ö1–Ö3) → `kabul.py --api --yazma` → `temizlik.py` → pytest `test_kampanya.py`, `test_access.py`; vitest; 320/390/768
+  genişlikte görsel kontrol.
+- **Açık:** Zeki AI'ın aday gerekçesini cümleye dökmesi (şimdilik rakamlı kural cümlesi), T-soft sipariş toplama (gün içi izleme),
+  platform raporu yükleme, set/çapraz satış önerisi, müşteri VM'inde zamanlayıcı (jobs döngüsü) kaydı, kanal cari kodlarının ölçülmesi
+  (`KAMPANYA_KANAL_CARI`), Zeki AI sohbetinin `semantic_kampanya_*` tablolarını okuması.
+
+## 2026-09-28 (06:40) — Test sunucusuna main `935080d5` (M1, M9, M15, M29–M33); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
+
+- **Kurulum:** önce `8ba10c01` (75 dosya), sonra `935080d5` (82 dosya; sunucuya özgü her satır main geçmişinde vardı). Kaynak ağaç main'le fark 0, `._*` 0, ön yüz `index-BsMX52H7.js`, köprü restart. Klasörler `var/applications`, `var/pricing`, `var/tenders` açıldı. `scripts/server/deploy-customer-vm.sh` sunucuda hiçbir commit'le eşleşmiyor; bu tur VM dışı olduğu için dokunulmadı. VM'e kurulmadı. Bağlantı: tek ControlMaster ssh (yeni kural).
+- **İlk koşular ve zamanlayıcılar (14 zamanlayıcı birimi):** M29 dağılım 118 sn · M30 gece 193 sn (CRM kolon uyarısı yok; portföy 248.351, atanan 31.209) · M31 okul 178 sn · M32 kurumsal 1.295 sn (ilk iki deneme başka oturumların köprü restart'ıyla kesildi) · M33 ihale 84 sn · M15 pazarlama 4 sn → hepsi başarılı, zamanlayıcıları açık.
+- **Kabul (gerçek oturum `timasai`, gerçek Logo .155 + CRM .28; referanslar doğrudan SQL):**
+  - **M29 İlk dağılım 34/34.** Stok bakiyesi 869 kitap, ilk 56 gün net adet ve müşteri sayısı 5 kitapta, cari × sevk/fatura/iade birebir; iki göz ve stok kuralları 409.
+  - **M30 Saha:** okuma 6/6 (FIFO kovaları, YTD net ciro, portföy, CRM tahsilat, karşılıksız olay, risk doluluğu); hedef dağıtımı (onaylı M46 planı yok) ve kapsam 403 (temsilci oturumu yok) doğrulanamadı. Yazma: geçersiz gövdeler doğru; `POST /payment-plans` 422 yerine 400; tek geçerli ziyaret notu 120 sn'de zaman aşımına düştü (kayıt oluşmadı).
+  - **M31 Okul:** 2 geçti (il × kademe dağılımı 65.478 = 65.478; bayi eşleşmesi), **3 kaldı**: öğrenci sayısı temizliği (bir kartta ham 210 → SQL 210, API 502), okul kartında geçmiş ziyaret 0 okul, dönem raporu sipariş tipleri API'de boş (SQL 181/116/475); 2 doğrulanamadı.
+  - **M32 Kurumsal:** 28/40 OK, **fark 0** (KURUM net ciro 17.209.779,45; fatura, B2B sipariş, fiyat, stok, sessiz bayi 754, hacim indirimi, kurum carisi 403 birebir); «teklif için kitap» doğrulanamadı, kalan adımlara gelinmedi.
+  - **M33 İhale:** kamu net ciro 17.209.779,45 ve 33 cari birebir, ISBN eşleşmesi, stok, fiyat, ara toplam ve KDV kuruşu kuruşuna; **1 kaldı:** adla verilen 4 kalemin 3'ü doğru kitaba. İlan içe alma kapalı (409).
+  - **M15 Pazarlama 10/11;** **kalan:** plan PDF'i 500 — `marketing/export.py:186 plan_pdf` `'str' object has no attribute 'get'`.
+  - **M1 Başvuru:** deneme başvurusu → rapor 120 sn → pazar (Tarih Kitaplığı) referansla **birebir**: 81 kitap, 71 satışlı, ilk yıl p25/p50/p75 602/850/1.291, son 36 ay 139.076 ve kanal dağılımı. Referans betiği (`m1/market_ref.py`) iki hatayla koşmuyor: çok komutlu sorguda `SET NOCOUNT ON` yok, tarih metin dönünce `.year` yok — geçici kopyayla koşturuldu, depo dosyası değişmedi.
+  - **M9 Fiyatlama: doğrulanamadı** — ilk veri hazırlığı (Logo 211 beş yıl) köprü her yeniden başladığında sıfırlanıyor; 05:40–06:37 arasında köprü başka oturumlarca 7 kez yeniden başlatıldı, `books`/`actuals` hep 503 «hazırlanıyor».
+  - **Sohbet kapsamı:** hızlı kapı kurulum öncesi ve sonrası birebir (aynı 9 soru 21.09 temel çizgisinden farklı, katalog 70554→70581; satır farkı 0). `run_acceptance.py` iki kez köprü restart'ıyla yarıda kaldı (ilk 40 soruda 37 geçti; kalan 3 şirket dışı soru — tarif, başkent, şiir — için model «şirket dışı» demedi). **Tam kapı (`answer-gate --repeat 3`) koşulmadı**: bu sıklıkta restart altında bitemez.
+- **Test verisi:** her yazma testinin kaydı temizlik betiğiyle silindi (M29 plan, M31 ziyaret, M32 fırsat, M33 iki ihale + 22 kalem, M15 plan + karne, M1 başvuru + rapor); yarım kalan koşuların kayıtları elle bulunup silindi (M33 ihale 1, sohbet sorgu günlüğü 41 + 35 satır, M29 değişiklik kaydı 1). Son taramada timasai adına benim kaydım yok, test oturumu 0. Başka oturumlardan kalan 6 değişiklik kaydı (deneme belgesi, bülten, SEO koşuları) dokunulmadan bırakıldı.
 ## 2026-09-28 (06:30) — Efekt sesleri kuruldu: GPU (dokuz editör servisi `68a1d411`) ve test sunucusu
 
 - **GPU:** `releases/68a1d411` (`._*` 0), `editor-py:0.15.9-68a1d411`, stüdyo `editor-py-studio:0.15.9-68a1d411`
@@ -207,7 +606,7 @@
 - **Doğrulama (test sunucusu, `/tmp/claude-m4` sahnesi, tek bağlantı):** arka uç 58/58 (çeviri, böl/birleştir, öneri, hakediş, TMX/TBX, kalite tahmini, yetki), `tsc` temiz, vitest 77/77, `vite build` temiz. Gerçek veritabanı ve gerçek modelle ekran kabulü aşağıda.
 - **Kurulum (test sunucusu, main `e29b5e3e`):** 21 dosya md5 denetimiyle; ortak 4 dosya (`app.py`, `access.py`, `access_catalog.json`, `engine.ts`) sunucuda son 60 main commit'inin hiçbiriyle eşleşmiyordu (main'e girmemiş başka iş kurulu) → üstüne yazılmadı, M4 farkı üç yollu birleştirmeyle eklendi (çakışma 0). Köprüyü ben yeniden başlatmadım: M2'den pencere alındı ama başka bir oturum 07:40 ve 07:46'da zaten yeniden başlattı, M4 kodu o sırada yüklendi (yeni uçlar 401, olmayan 404). Ön yüz canlı ağaçtan derlendi (`index-DiH9weOx.js`).
 - **Kabul (kullanıcının açtığı AD oturumu `timasai`, gerçek PostgreSQL, gerçek model):** böl/birleştir — bölünmüş diyalog birleşti ve doğru yerden yeniden bölündü, numaralar bitişik (17→15→16), başlık ve paragraf sınırında gerekçeli red. Çevirmen önerisi 200, tek aday (M8'de «Çeviri» rolünde kimse yok), 5 sinyal + sıralama cümlesi. TMX: `en-US`/`tr-TR` → `en`/`tr`, ikinci yükleme 2 çift, iç DOCTYPE/ENTITY 400, çeviri belleği «Dış bellek: m4-kabul.tmx» %100; TBX: tercih edilen karşılık + kullanımdan kalkan → yasak; iki dışa aktarım 200. ZEKİ kalite tahmini 6 segment 3 sn: bilerek alakasız yazılan çeviri 0 / anlam / kritik; ayrıca kabul sırasında numara kayması yüzünden yanlış cümleye düşen 3 çeviriyi de 0 ile yakaladı; doğru 2 çeviri 85–100; alıntılar çeviride birebir. Çeviri masasında «ZEKİ 0» rozeti, böl/birleştir düğmeleri, 390–511 px'te taşma yok. Hakediş: okuma ucu 200, panel çiziliyor.
-- **DOĞRULANAMADI:** hakedişin yazma akışı (iş paketi açma, hakedişe aktarma) gerçek veritabanında denenmedi — M8'de kişi/paket silme ucu yok, test kişisi ve paketi kalıcı kalırdı (test verisi bırakılmaz kuralı); mantık birim testlerinde.
+- **Hakediş yazma akışı (sonradan, aynı oturumla, gerçek DB):** e-postasız test kişisi (M8, rol «Çeviri», 0,50 TL/kelime) + 5 segmentlik iş (40 kelime). Bağ → iş paketi (40 kelime, M8 görevi) → 3 segment onaylıyken aktarım: 24 kelime = 12 TL, ayrı görev «1–24. kelime» açıldı, teslim tutanağıyla kabul edildi; aynı aktarım tekrar: 0; kalan 2 segment onaylanınca yalnız yeni 16 kelime = 8 TL; aktarılan toplam 40. M8'de doğrudan DB: 2 görev «onaylandı», birim fiyat 0,50, 2 teslim dosyası, 7 sistem mesajı, giden e-posta 0. Temizlik: çeviri işi uçla (bağ ve aktarım kayıtları iş silmeyle gitti); M8'de silme ucu olmadığından kişi, paket, 2 görev, 2 teslim, 7 mesaj kimlikleriyle (ad/bağ denetimli) DB'den, tutanak klasörleri diskten silindi; hepsi 0. Değişiklik kaydı satırları kural gereği kaldı.
 - **Temizlik:** iş, TBX terimi ve TMX kayıtları uygulamanın uçlarıyla silindi; doğrudan DB'de iş, segment, hata, olay, kalite tahmini, bağ, aktarım, dış bellek ve terim 0 (yan tabloları iş silme temizledi). Sunucudaki `/tmp/claude-m4*` klasörleri silindi. `timasai`'nin değişiklik kaydı satırları kural gereği kaldı.
 
 ## 2026-09-28 — M4 ZEKİ taslak kalitesi: ölçüm, üç geçişli hat, ikinci okuma kapalı
@@ -226,6 +625,642 @@
 - **Akış:** «İş paketi aç» M8'de kitaba çeviri paketi + kişiye atanmış tek görev (birim kelime, miktar = kaynak kelimesi − aktarılan, termin = işin teslim tarihi, saat = kelime/250 × M8 çeviri saati); yeniden basılınca ikinci görev açılmaz, açık görev eşitlenir. «Hakedişe aktar» yalnız son aktarımdan sonraki esas kelimeyi gönderir: açık görev bölünür, aktarılan kelime ayrı görev olur ve M8'in kendi `add_tasks → assign → add_delivery (teslim tutanağı) → decide_delivery(kabul)` yoluyla ödenecek işe düşer; kalan asıl görevi karşılıyorsa asıl görev kabul edilir. Kelime önce koşullu güncellemeyle ayrılır, M8 adımı düşerse görev ve ayrılan kelime geri alınır. Hakediş hesabı M8'de kaldı.
 - **Ekran:** Çeviri › iş paneli «Serbest çalışan ve hakediş» (`translation/PayoutPanel.tsx`; yöneten + `serbest.yonet`): kişi, kelime ücreti, esas, esas/aktarılan/aktarılacak kelime ve tutar, M8 görev durumu, aktarımlar ve hangi hakedişe girdikleri, M8 paketine/hakedişe bağlantı.
 - **Test:** `test_translation_payout.py` yazıldı, yerelde koşturulmadı (kural). Sunucuda gerçek akışla denenmedi: **DOĞRULANAMADI**.
+## 2026-09-28 — M59 Kitapçı/bayi risk ve performans kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Ne:** `/timas/bayi-risk` (Pano · Bayiler · Limit önerileri · Aksiyonlar · Kurallar) ve bayi kartı `/bayi-risk/:code`
+  (telefonda Risk brifi · Not bırak · Aksiyon alt çubuğu). Köprü `dealers.py`, `dealers_sources.py`, `dealers_api.py`
+  (`/api/v1/dealers/*`); tablolar `semantic_dealer_rules|scores|series|limit_proposals|actions|briefs|meta`; zamanlayıcı
+  `timas-dealers@{gunluk,sabah}` (06:00 / 08:00). Ayrıntı PROJECT-MEMORY.md.
+- **M30 ile bağ (görev notu):** M30'un salt okunur yazdığı risk/yaşlandırma/çek/limit fonksiyonları yeniden yazılmadı,
+  `field_sales_sources`/`field_sales`'tan çağrıldı; ortak `dealer_risk_sources.py`'ye taşımaya gerek çıkmadı (M30 dosyası
+  değişmedi, M30 davranışı ve testleri aynı). Atama da M30'un `assign`/`match_clients`'i: bir cari iki ekranda aynı
+  temsilcide. M59'a özgü okumalar (aylık seri, CRM bayrakları, risk onay geçmişi) `dealers_sources.py`'de.
+- **Plandan sapmalar (gerekçeli):** (1) `semantic_dealer_notes` açılmadı — M30 analizi §14 kararı: not tek tablo
+  `semantic_saha_ziyaret` (`tur='cari'`). (2) `semantic_dealer_school_links` açılmadı — okul↔bayi M31'in tablosunda
+  (`semantic_school_dealer_links`, «M59 gelirse aynı tabloya yazar»); okul önerisi uçları sonraki sürüm. (3) Kapsama
+  sekmesi, dış potansiyel CSV yükleme, not tema etiketi ve M46 bayi hedefi analiz §9'daki «sonraki sürüm»de bırakıldı.
+  (4) Tablo listesine `semantic_dealer_series` eklendi: 12 aylık seri günlük skor satırına yazılsaydı her gün bütün
+  cariler için kopyalanırdı; son seri tek satır. (5) Liste sayfalı ama toplam her zaman döner, `size=0` hepsini verir
+  (sessiz tavan yok).
+- **Açık sorulara kararlar (§10; veriye/koda bakılarak, kullanıcıya sorulmadı):**
+  - *Kapsam kanalları:* KITAPCI, BAYI, DAGITICI, ZINCIR, E-TICARET (Logo `SPECODE2`; ayar `DEALERS_CHANNELS`, kural
+    sürümünde değişir). KURUM/MAGAZA/FUAR dışarıda: kurum M32'nin, mağaza/fuar perakende. Zincir, e-ticaret, dağıtıcı ve
+    kapsam cirosunun %2'sinden büyük cari **anahtar hesap**: aynı bileşenler, gevşek eşik (uzman: «Kitapyurdu'nu mahalle
+    kitapçısıyla aynı ölçüyle kırmızı göstermek» kullanılmaz). Kanal yazımı ölçülecek.
+  - *CRM limit alanları:* yalnız okunur, kim güncellerse güncellesin kart CRM'in anlık değerini gösterir; boş limit
+    «girilmemiş» (limit bileşeni 0 puan, açıklamada yazılı), `new_toplamrisk` kaynağı ölçülecek.
+  - *Vade şablonu:* skora girmedi (Logo PAYTRANS vadesi esas); CRM `new_vadegun` kartta bilgi olarak.
+  - *Onaylayıcılar:* rol değil yetki — açık `ozellik:bayi.limit-onay`; kimlere verileceği Yönetim › Yetki'de.
+  - *Bölge:* 15 bölge ↔ il eşlemesi zayıf (ölçüldü); süzgeç il (M30 ile aynı: CRM il, yoksa Logo şehir). Bölge sonraki sürüm.
+  - *Sipariş düzensizliği:* Logo faturalı satışın 12 aylık değişim katsayısı (CRM sipariş kaynağı ölçülecek; ORFICHE bütün
+    satışı kapsamıyor).
+  - *Limit önerisi D segmentinde:* mevcut riske **yukarı** yuvarlanır (limit riskin altına inmez; yeni açık hesap açılmaz).
+- **Ölçülecek (kabul listesinde):** SPECODE2 değerleri ve kapsam sayısı; CRM `StatusCode`/`CreditOnHold`/`new_vadegun`
+  doluluğu; `new_onaylanmatarihi`/`new_reddedilmetarihi`'nin risk onayına mı genel onaya mı ait olduğu; CSTRANS portföy
+  giriş `CARDREF`'inin cari olduğu (M30 ile ortak); ödeme TRCODE listesi (M30 ayarı).
+- **Ortak dosyalarda en küçük ekleme:** `app.py` (register bloğu), `access.py` (2 RULES + 4 FEATURE_RULES satırı),
+  `access_catalog.json` (1 sayfa + 6 özellik), `admin.py` (`DEALERS_MORNING_RECIPIENTS`), `App.tsx` (2 rota),
+  `navModel.ts` (1 öğe), `ModulesMenu.tsx` (LIVE.M59 + GROUP_HOME).
+- **Doğrulama:** yalnız `py_compile` ve JSON (kural: Mac'te test koşusu yok, sunucu kapalı). pytest
+  `test_dealers.py` ve vitest `src/canvas/dealers/api.test.ts` yazıldı, **koşturulmadı**; tsc koşturulmadı.
+  **DOĞRULANAMADI** — test sunucusunda: `scripts/acceptance/M59/run_tests.sh`, ilk günlük tur elle, `reference_check.py
+  --rerun`, `write_check.py --write` + `cleanup.py`, 320/390/768 px ekran kontrolü.
+## 2026-09-28 — M51 Müşteri hizmetleri: destek masasına bağlam, Zeki AI ve kalite katmanı (DOĞRULANAMADI — sunucu kapalı)
+
+- **Ne:** analiz `docs/analiz/kullanici-ihtiyaclari/M51-musteri-hizmetleri.md` §14 A seçeneği (kullanıcı kararı: `apps/destek`
+  TİMAŞ'ın destek masası). Köprü `support_sources.py` + `support.py` + `support_api.py`, ekran `/musteri-destek`
+  (`src/canvas/support/`), zamanlayıcılar `timas-support{,-gece}`, VM `jobs.py`, masa paneli için nginx konumu ve sözleşme
+  belgesi `docs/analiz/M51-destek-paneli-baglam-ucu.md`. `apps/destek` altında hiçbir dosya değişmedi.
+- **Kararlar (analiz §10 açık sorular, veriye/koda bakarak):**
+  - `ozellik:destek.baglam` **açıkça verilir** (analizde değildi): Herkes rolü kurulumda bütün yetkilerle açılıyor; bağlam
+    herhangi bir okurun sipariş, kargo ve fatura geçmişini açar (KVKK). Ayrıca kimlik eşleşmesi `cari`, sipariş/kargo/fatura
+    `satis` veri alanı ister — hazır uçlar SQL kapısından geçmediği için uç içinde `access.allowed_for` ile.
+  - Müşteri eşleşmesinde e-posta ve telefon **hiç seçilmez**, yalnız koşulda; yanıtta ad, cari ve bağlı kayıtlar döner.
+  - Birden çok cari eşleşirse yanıt yalnız adayları verir (`needsChoice`), temsilci seçer; model karar vermez.
+  - Kargo gönderi kaydının siparişe bağı ölçülmedi: takip no ve müşteri irsaliye no ikisi de denenir, `SUPPORT_CARGO_MATCH` ile daraltılır.
+  - Sipariş penceresi 365 gün (`SUPPORT_ORDER_DAYS`), açık sipariş tarihten bağımsız hep gelir; Logo 12 ay (`SUPPORT_LOGO_MONTHS`) ve her yanıtta veri sonu.
+  - Temsilci ↔ masa kullanıcısı: masada AD girişi `username` = `sAMAccountName`; köprü masanın User listesinden eşler, okunamazsa e-postanın @ öncesi (**ölçülecek**).
+  - Tekrarlayan talep için gönderen adresin kendisi değil SHA-256 özetinin ilk 32 hanesi saklanır; taslak sonucu için son metin değil yalnız düzeltme oranı.
+  - SSS cevabını Zeki AI'a yazdırma (K2 SSS taslağı) ve kural dışı işlem onayı (`destek.kural-disi`) bu sürüme girmedi (analiz §9 «sonraki sürüm»); anahtar kataloğa eklenmedi (kullanılmayan yetki olmasın).
+  - Zeki AI sohbet kapsamı genişlediği için ekrana destek örnek soruları kondu (`ZEKI_QUESTIONS`).
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (register), `access.py` (4 RULES + 2 FEATURE_RULES), `access_catalog.json`
+  (alan `altyapi`, sayfa, 5 özellik), `admin.py` (grup «Müşteri hizmetleri», 16 ayar, değişiklik kaydı türleri), `App.tsx`,
+  `navModel.ts` (+ test; alan `altyapi` M48 dalındakiyle aynı id/etiket/simge — merge'de tekilleşir), `ModulesMenu.tsx`,
+  `infra/docker/bi/jobs.py`.
+- **Doğrulama:** yalnız `py_compile` ve JSON; pytest `test_support.py` ve vitest yazıldı, yerelde koşturulmadı (kural).
+  **DOĞRULANAMADI — sunucu kapalı.** Sunucuda: `scripts/acceptance/M51/calistir.sh` (birim testleri, masa MariaDB
+  referansı, 8 kontrol: sipariş durumu/bekleyen, kargo, bayi açık/bekleyen/risk, Logo fatura + veri sonu, kalite, güvenlik,
+  KVKK, sınıflama isabeti; sonunda `temizlik.py`).
+- **Sunucuda kalan adımlar:** masada salt okuma API kullanıcısı açıp anahtarını Yönetim → Ayarlar'a girmek; `nginx-destek-baglam.conf`
+  (kullanıcı onayıyla); iki zamanlayıcıyı kurup ilk turu elle koşturmak; masa MariaDB konteyner adını ölçmek (`DESTEK_DB_CONTAINER`).
+## 2026-09-28 — M50 Zeki AI kalitesi: kapı raporu, önce/sonra, sürüm kaydı, geri bildirim düğmesi, hata sınıfları, karne (DOĞRULANAMADI — sunucu kapalı)
+
+- **Neden:** iyileştirme döngüsü (katalog, kural, eş anlamlı → kapı koşusu → karşılaştır) yalnız geliştiricinin elinde ve
+  dosyalardaydı; önce/sonra arasına başka kurulum girince fark yanlış işe yazılıyordu, model/katalog/kural sürümü tek yerde
+  değildi, son kullanıcının «bu cevap yanlış» diyeceği düğme yoktu (`validated` kolonu ve `/api/v1/feedback` duruyordu).
+  Analiz: `docs/analiz/kullanici-ihtiyaclari/M50-zeki-model-gelistirme.md` §9 ilk sürüm. İnce ayar yok.
+- **Ne yapıldı:** köprü `model_quality.py` / `_sources.py` / `_api.py` (6 tablo `semantic_mq_*`); `resolver-gate.py` ve
+  `answer-gate.py`'ye `--report` (ortak `mq_report.py`, seçenek yoksa davranış aynı); `/api/v1/feedback` Doğru/Kısmen/Yanlış
+  + not alır; cevap altındaki `AnswerFeedback` (Genel bakış — Kampüs soru kutusu dahil — ve Pano soru kutusu); ekran
+  `/timas/zeki-kalite` (Karne · Koşular · Hata sınıfları · Geri bildirim · Sürümler); zamanlayıcı birimleri ve kurulum
+  sonu sürüm kaydı; SEO onayı karar kaydına öneride değiştirilen alanları (`duzenlenen`) yazar.
+- **Kararlar (analizin açık soruları ve belirsizlikler; veriye/koda bakılarak verildi):**
+  - Sürüm kaydı M50'nin kendi tablosunda (`semantic_mq_versions`); M48 henüz main'de değil. M48'in kurulum kaydı
+    (`semantic_itops_releases`) varsa yalnız okunur (Sürümler sekmesi ve ölçüm penceresi uyarısı); iki modül aynı kurulumu
+    iki kez yazmaz: M48 kod/imaj/`._*` sayısını, M50 kod + katalog + bilgi paketi + model anlık görüntüsünü yazar.
+  - Ölçüm «önce/sonra»: aynı takım + aynı dosya etiketinin önceki bitmiş koşusu. `--only`/`--holdout` koşusu ayrı etikettir,
+    tam koşunun karşılaştırması sayılmaz. İlk koşuda karşılaştırma betiğin kendi temel çizgisine göredir.
+  - Hata sınıfı kuralları kod değil tablo satırıdır (kural = koşul listesi); 7 analiz sınıfına ek olarak «bağlantı» ve
+    «netleştirme» ayrı tutuldu — ikisi de isabetsizlik değildir, 1000 soruluk karnede «hata-netleştirme» ayrı kalemdi.
+  - Not alanı isteğe bağlı (eski çeviri metni «en az 5 karakter» diyordu): tek dokunuşla hüküm kaydedilir, Kısmen/Yanlış'ta
+    not alanı açılır. Başarı ölçütü «cevapların %2'si işaretleniyor»; sürtünme bunu düşürür.
+  - Sayfa açıkça verilir (Herkes'e girmez): kuyrukta soran kişi ve soru metni görünür. Bunun için `explicit_keys()`
+    explicit sayfaları da kapsayacak şekilde genişledi (M48'deki değişikliğin aynısı; merge'de çakışmasız birleşir).
+  - SEO «değiştirmeden onay» geçmiş kararlar için bilinmiyor (öneri alanı onayda üzerine yazılıyordu); bu sürümden
+    itibaren karar kaydında `duzenlenen` tutulur, oran yalnız bu alanı taşıyan kararlardan hesaplanır.
+  - Zamanlama: katalog taraması 02:00 → okuma kapısı her gece 05:10; cevap kapısı (~35 dk, model kapasitesi) pazar 05:30;
+    ekrandan istenen koşu 10 dk'da bir alınır, aynı anda tek kapı (flock).
+- **Arayüz:** `emil-design-eng` ölçütüyle — giriş animasyonu yok (günde onlarca kez görülen düğme), yalnız basma geri
+  bildirimi (scale 0.97, 150 ms ease-out, `motion-reduce` kapalı); telefonda 44 px dokunma alanı, geniş tablolar kendi
+  kutusunda kayar; ekranda model/teknoloji adı yok.
+- **Doğrulama:** **DOĞRULANAMADI — sunucu kapalı.** Yerelde yalnız `py_compile` ve JSON doğrulaması; pytest, tsc, vitest ve
+  gerçek DB kabulü koşulmadı. Sunucuda kalan: `scripts/acceptance/M50/check.sh` (pytest + tsc + vitest + derleme),
+  yan port köprüsüyle `kabul.py --gate` (R1–R9 doğrudan SQL, geri bildirim yazımı) + `cleanup.py`, okuma kapısının
+  `--report`'suz farksız çıkması, birimlerin elle ilk koşusu. Dal `main`e taşınmadı, kurulum yapılmadı.
+## 2026-09-28 — M45 Finansal raporlama ve analiz: gelir tablosu, bütçe–gerçekleşme, kârlılık, 13 haftalık nakit, vergi takvimi
+
+**DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-a0b2da6a02d5857a7`, main `7aa83b6a` üstüne); yalnız
+`py_compile` ve JSON denetimi yapıldı. pytest, tsc, vitest ve gerçek Logo/CRM kabulü test sunucusunda koşulacak
+(`scripts/acceptance/M45/check.sh`, `kabul.py` R1–R8, `temizlik.py`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** analiz `docs/analiz/kullanici-ihtiyaclari/M45-finansal-raporlama.md` §14. Portalda satış tarafı vardı; gelir
+  tablosu, gider, nakit ve kârlılık tarafı yoktu. Genel bakış, Finansal denetim, Yönetim raporları ve soru-cevap yeniden
+  yazılmadı.
+- **Ekran** `/timas/finansal-raporlar` (Finans alanının ilk öğesi; Kampüs M45 ve «Finans & Risk» grubu buraya):
+  Özet (net satış yıl başından + geçen yıl aynı gün aralığı, brüt kâr maliyetli satırlardan + kapsam, faaliyet gideri,
+  kasa-banka, vadesi geçmiş alacak, bütçe durumu; «bu ay dikkat»), Gelir tablosu (dönem/önceki/geçen yıl/bütçe; satır →
+  hesaplar → Logo fiş satırları, iki dokunuş; mizan rozeti; mutabakat; ay kapanışı; hesap eşlemesi paneli; Excel),
+  Bütçe–gerçekleşme (M46 okunur, yeniden hesap yok; departman × hesap sapması, açık uyarılar, sapma açıklaması),
+  Kârlılık (kitap/seri/yayınevi/kanal/cari; kesin ve yaklaşık katkı ayrı; CSV), Nakit (13 hafta; açık hafta en üstte
+  kırmızı; kaynak başına «okunamadı» nedeni; geçmiş tahmin ↔ gerçekleşen), Vergi takvimi. Telefonda gelir tablosu ve
+  nakit kart listesine döner; geniş tablolar kendi kapsayıcısında kayar. Her sekmede veri son günü; animasyon eklenmedi
+  (panoda sık görülen geçişler: yalnız mevcut basış geri bildirimi).
+- **Kararlar (uzman soruları yerine veri/kod; gerekçeli):**
+  - *7/A mı 7/B mi, yansıtma aylık mı (soru 1):* M46 7xx'te hareket okudu (2025: 990 gider satırı) → 7/A. Yansıtmanın
+    ne zaman yapıldığına bakılmadan doğru kalan kural seçildi: gider 7xx'te bir kez sayılır, 7x1 hesapları ve
+    yansıtma fişindeki 6xx karşılıkları (`yansitma`) ile 690/692 kapanış fişleri (`kapanis`) rapora girmez; 7xx'te M46'nın
+    kapanış tanımı aynen (iki modül aynı gideri söylesin; kabul R7). Dışarıda kalan tutar ekranda yazılır.
+  - *710/720/730:* üretim giderleri stoka gider (151/152), gelir tablosuna satılan malın maliyetiyle gelir → hesap planı
+    kuralında «dışla» (muhasebe değiştirebilir). 740 → satışların maliyeti, 750/760/770/780 → Ar-Ge/PSD/GYG/finansman.
+  - *Eşlenmemiş hesap:* net kâra katılır, ayrı satırda durur (para sessizce kaybolmaz); onaysız eşlemeli tutar taslak
+    uyarısıyla gösterilir.
+  - *Maliyetlendirme gecikmesi (soru 2):* sayı uydurulmaz. Logo maliyeti yalnız `OUTCOST ≠ 0` satırlarda; maliyetsiz satış
+    M9 birim maliyetiyle (onaylı analiz → son maliyetli yıl) «yaklaşık» doldurulur, o da yoksa «maliyet bilinmiyor»
+    kalır ve kapsam düşer. Maliyeti işlenmiş son satış günü ekranda (`son_maliyetli`).
+  - *Kitaba yüklenecek maliyet (soru 3):* ilk sürümde Logo maliyeti + telif. Telif CRM'deki yürürlükteki sözleşmenin
+    oranından (M9 görüntüsü: brüt/net taban, satıştan/baskıdan) tahakkuk, «yaklaşık»; oranı olmayan kitapta «telif verisi
+    yok». OUTCOST'un telif içerip içermediği ölçülecek (kabul listesinde).
+  - *Seri:* CRM «Kitaplık» (M46'nın kitap kartı önbelleği `semantic_budget_books`; ikinci Logo/CRM okuması yok).
+  - *Bütçe sekmesi:* M46 uçlarını HTTP ile değil köprü içinde okur (`budget.tracking/departments/deviations`); M46'nın
+    erişim satırlarına dokunulmadı, tek istek.
+  - *Nakit «bugün»ü:* Logo .155 donmuş (17.08.2026) → tablo veri son gününün haftasından başlar, ekranda yazar. Vadesi
+    geçmiş alacak/borç haftalara dağıtılmaz (tahsil günü belirsiz), ayrı gösterilir. Bütçe gider temposu satıcı borcuyla
+    örtüştüğü için varsayılan bilgi satırıdır, isteğe bağlı çıkışa katılır. Döviz sözleşme ödemeleri çevrilmez, ayrı yazılır.
+  - *Vergi takvimi:* dış veri, elle; «geçen yılın takvimini kopyala» günleri aynen taşır, mevzuat üretmez.
+  - *Zeki AI aylık özet metni:* §9'a göre sonraki sürüm (not tablosu ve sapma açıklaması hazır, model çağrısı yok).
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (kayıt, M9'dan sonra), `access.py` (2 RULES + 4 FEATURE_RULES),
+  `access_catalog.json` (sayfa `explicit` + 5 özellik), `admin.py` (2 alıcı ayarı), `budget_sources.py` (`runner(path,
+  timeout)` isteğe bağlı parametre, davranış aynı), `App.tsx`, `navModel.ts`, `ModulesMenu.tsx`, `infra/docker/bi/jobs.py`.
+- **Ölçülecek (parametre/kabul):** CSCARD belge türü × durum kodları (`FINANCE_CS_*`), CRM tahsilat statü etiketi
+  (`FINANCE_CRM_PENDING_LABEL`), kapanış hesapları (`FINANCE_CLOSE_ACCOUNTS`), EMFLINE bütçe satırı (BDGTLINETYPE),
+  EMFICHE/EMFLINE açıklama kolonları, OUTCOST'un telifi içerip içermediği.
+## 2026-09-28 — M54 Telif dönemi ve Haklar ve lisanslar
+
+**DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-adfac43e12d7edbac`, main `7aa83b6a` üstüne); yalnız
+`py_compile` ve JSON denetimi yapıldı. pytest, vitest, tsc ve gerçek CRM/Logo kabulü test sunucusunda koşulacak
+(`scripts/acceptance/m54/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** M54 analizi (`docs/analiz/kullanici-ihtiyaclari/M54-yazar-telif-sozlesme.md` §14). M6 tek sözleşmenin
+  defteri; satıştan ödemeli ~2.459 sözleşmenin dönem hesabı, istisna takibi, yazar başına beyanname, ödeme listesi,
+  avans portföyü ve yenileme kararı yoktu.
+- **Ne yapıldı:** köprüde `royalty.py`, `royalty_sources.py`, `royalty_api.py`; ön yüzde `/timas/telif-donem` ve
+  `/timas/haklar`; `timas-royalty.{timer,service}`, VM `jobs.py` satırı; Yönetim → «Telif dönemi» ayarları; yetki
+  kataloğu (iki sayfa, sekiz özellik). Ortak dosyalarda küçük ekler: `app.py`, `access.py`, `access_catalog.json`,
+  `admin.py`, `App.tsx`, `navModel.ts`, `ModulesMenu.tsx`, `ContractDetail.tsx` (dönem koşuları bağlantısı),
+  `infra/docker/bi/jobs.py`.
+- **M6 yeniden yazılmadı:** hesap `contracts_royalty.compute`; CRM başlığı `crm_contract_sql`'in kolonlarıyla birebir
+  (yalnız WHERE kapsamla değişir) ve `crm_contract` eşlemesi; onayda `adopt_crm` / `save_statement` / `approve_statement`.
+  M6'daki satır tavanları zaten kaldırılmıştı (main `02d293be`); M54 hiçbir listede tavan koymaz (satırlar sayfalı,
+  toplam görünür; stok kodları 500'lük gruplarla okunur, hepsi okunur; kaynak beklenenden büyükse hata, kesme yok).
+- **Kararlar (analiz §10 soruları, veriye/koda bakılarak):**
+  - *Telif dönemi:* takvim yarıyılı (Ocak–Haziran, Temmuz–Aralık), `ROYALTY_PERIOD_MONTHS` = 6. CRM sözleşmesinde dönem
+    alanı yok, M6 varsayılanı 6 ay, analizin örneği «2026 1. yarı». Sözleşmenin kendi hakediş dönemi farklıysa (portal
+    kaydında) kabul edilebilir istisna. Ödeme vadesi M6'nın `paymentDays`'i (varsayılan 30 gün).
+  - *Kapsam durum kodları:* 100000000 Aktif-Sözleşme + 100000007 Aktif-Yenileme (kabul sorgusu 1); 100000006 «Aktif
+    (Proje)» dışarıda — yayımlanmamış projenin satışı yok; ayardan eklenir, doluluk **ölçülecek**.
+  - *Son ödenen dönem ve avans bakiyesi:* hiçbir kaynakta sözleşme bazında yok (CRM ödeme 2014'te kalmış, Logo cariye
+    yazıyor) → elle açılış bakiyesi (kazanılmamış kalan, tarihli, gerekçeli, geçmişli). Portalda onaylı hakedişi olmayan
+    ve bu dönemden önce başlamış avanslı sözleşme açılış girilene kadar istisna; sıfır varsayılmaz (analiz §12 «kullanmam» 3).
+  - *Dil/ülke hakları:* CRM'de kırılım yok (yalnız `new_telifsatilanulke`, `new_orjinaldili`; doluluk **ölçülecek**) →
+    hak kartında portal kaydı (`semantic_rights_grants`); CRM bitleri SEO «Haklar ve CRM» kuralıyla yorumlanır.
+  - *Stopaj:* oran mevzuat/muhasebe kararı; statik oran konmadı. `ROYALTY_WITHHOLDING_PCT` boşsa stopaj yalnız
+    sözleşmesinde oran olanlarda; doluysa yalnız bütün tarafları kişi olan sözleşmelere (firmaya stopaj yok varsayımı,
+    satırda uyarı).
+  - *Beyanname gönderimi:* kullanıcı kararı (ilk sürümde otomatik dış gönderim yok) → Word + toplu zip + «gönderildi»
+    kaydı; analizdeki `send`/`send-all` uçları yazılmadı.
+  - *Hak sahibi payı:* hesap satırlarındaki telif payı (M6 bölüşümüyle aynı); telif sıfırsa sözleşmedeki pay.
+  - *İki göz:* hesaplatan ve gönderen onaylayamaz; kabul betiği onayı aynı süreçte işlevle dener (tek test kullanıcısı
+    `timasai`), API'nin 403 verdiğini ayrıca denetler.
+- **Sonraki sürüme kalan:** Logo ödeme mutabakatı (kişi carisi CRM'de Logo'ya bağlı değil — `AccountBase.new_logicalref`
+  yalnız firmada; eşleştirme kuralı ölçülmeli), lisans fırsat listesi, yenileme/ihlal yazışma taslakları, hak açıklaması
+  özet cümlesi, baskıdan ödemeli sözleşmelerin toplu koşusu (baskı adedi M11/üretimden).
+- **Sunucuda yapılacak:** `run.sh` (pytest `test_royalty.py`, `test_contracts.py`, `test_access.py`; kabul 8 denetim, test
+  koşusu + `cleanup.py`), vitest `navModel.test.ts` (katalog eşliği), `tsc`, ekranı 320/390/768/masaüstünde tarayıcıda
+  deneme, `timas-royalty.timer` kurulumu ve ilk `run-due`'nun elle koşturulması, ölçülecek doluluklar (`referans.sql`).
+## 2026-09-28 — M47 Risk yönetimi ve uyum kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** `/timas/risk-uyum` (Finans › Risk ve uyum): risk kaydı + 5×5 ısı haritası, «gözden geçir» kuyruğu, aksiyonlar (sahibi telefondan «Tamamlandı» + kanıt), 15 hazır gösterge (Logo/CRM doğrudan sorgu ya da portalın hazır raporu), uyum takvimi (kanıt, kapanış), sigorta poliçesi ve iş sürekliliği kaydı, çeyreklik kurul brifingi (Zeki AI taslağı → iki göz onayı → Word). Köprü `risk.py`, `risk_sources.py`, `risk_api.py`; ön yüz `src/canvas/risk/`; zamanlayıcı `timas-risk.timer` 06:15.
+- **Kararlar (analiz §10 açık soruları, veriye/koda bakılarak):** (1) Risk sahibi ve koordinatör unvanı belirsiz → sahip serbest kullanıcı adı + isteğe bağlı e-posta; bütün riskleri görmek açık `risk.herkesinki` ile, diğerleri yalnız kendi riskini görür. (2) Kurul sıklığı bilinmiyor → brifing dönemi serbest (varsayılan bu çeyrek), hazırlatan onaylayamaz. (3) KVKK envanteri M49'da (dal) → burada yalnız KVKK alanındaki uyum yükümlülükleri; envanter için `GET /api/v1/risk/kvkk` bağlantı noktası. (4) Poliçe ve BCP hiçbir bağlı sistemde yok → kullanıcı girer, numara maskeli. (5) Eşik değerleri hiçbir kaynakta yok → hazır göstergeler eşiksiz gelir; sayı uydurmamak için renk ve bildirim ancak sahibin önerdiği, başka birinin onayladığı eşikle başlar. (6) «Süresi bitmiş ama satan» kitapta başka yürürlükte (süresiz ya da bitişi bugün/sonra) telif alış sözleşmesi olan kitap sayılmaz; bitişi boş sözleşme yürürlükte sayılmaz. Satış penceresi Logo donmuş olduğundan veri son gününden geriye 30 gün.
+- **Ölçülmemiş varsayımlar (ayar, kabulde «ölçülecek»):** müşteri çeki/senedi `CSCARD.DOC` kodları (1,2 — M30 ile aynı), yerel para `TRCURR` kodları (0,160; bilgi paketinin 74'ü `TRCURR <> 0` idi, fark kabulde yazılır), müşteri cari öneki (120), CRM bayi başvurusu KVKK izni/tarih kolon adları (`new_bayibasvurusukvkkizni`, `new_bayibasvurusukvkkizintarihi`), tedarikçi yoğunlaşmasında alış iadesi (TRCODE 6) düşülmedi.
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (register), `access.py` (RULES 2 satır + FEATURE_RULES 4 satır), `access_catalog.json` (sayfa + 8 özellik), `admin.py` (2 ayar), `App.tsx` (2 rota), `navModel.ts` (1 öğe), `ModulesMenu.tsx` (`LIVE.M47`), `infra/docker/bi/jobs.py` (VM saatlik iş).
+- **Doğrulama:** yalnız `python3 -m py_compile` ve JSON. pytest `test_risk.py` (kenar kuralı DB'siz, eşik onayı, kuyruk, uyum dönemleri, hatırlatma, hesapçılar sahte bağlantıyla), tsc/vitest ve gerçek DB kabulü (`scripts/acceptance/M47/`, R1–R10) **DOĞRULANAMADI — testler koordinatörde**.
+- **Açık kalanlar:** mevzuat metni yükleme + özet, plan/BCP belge taslağı (Zeki AI), Uyarılar altyapısıyla portal içi bildirim, M45 likidite ve M59 bayi göstergeleri (modüller gelince), Zeki AI sohbet konusu «risk»in veri alanına `semantic_risk_*` bağlanması, DYK'nın `summary`/`reports` okuması.
+## 2026-09-28 — M38 Müşteri ilişkileri ve CRM yönetimi kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** cari değer (son 12 ay / önceki 12 ay / bu yıl, Logo kesimine kadar), nedenleri yazılı kayıp riski, temsilci portföyü (telefon), aksiyon kaydı ve 30/90 gün sonucu, CRM veri sağlığı ve «CRM'de düzeltilecek» listesi, segmentler (değer dilimi × kanal × eğilim). Dal `worktree-agent-ad45fe06bf5584dc0`; kod `backend/semantic_bridge/musteri*.py`, `crm_people_rules.py`, ekranlar `src/canvas/musteri/`, testler `test_musteri.py` + `src/canvas/musteri/api.test.ts`, kabul `scripts/acceptance/M38/`. Mac'te yalnız `py_compile`/JSON doğrulaması yapıldı; pytest, tsc, vitest ve gerçek DB kabulü koordinatörün test sunucusu koşusunda.
+- **M30 ile örtüşme:** portföy/atama, cari kartı, son fatura, kitap kırılımı, CRM siparişi, ziyaret tablosu ve tahsilat göstergesi M30 fonksiyonlarından çağrıldı (yeniden yazılmadı). M38 yalnız değer/kayıp ve veri sağlığını ekler. M59'un kredi riski ayrı; cari ayrıntısında M30 sinyal satırı «gösterge» olarak durur, kredi kararı M38'de yok.
+- **Kararlar (analiz §10, veriye/koda bakarak; kullanıcıya sorulmadı):**
+  1. *Kaybedilmiş cari:* sabit gün değil, carinin kendi ritmi: son alımdan geçen gün ≥ max(180, 4 × olağan aralık) ve sonrasında CRM siparişi yok (`MUSTERI_LOST_MIN_DAYS`, `MUSTERI_LOST_MULTIPLE`). Kanal farkı bu yolla kendiliğinden girer (kitapçı ile okul aynı eşikte değil); az alımlı caride aralık kanal medyanından.
+  2. *Sahiplik kaynağı:* M30 ile aynı — «BMT İl» carisinde il tablosundaki temsilci, diğerlerinde kaydın sahibi; ortak hesap («Timas CRM») temsilci sayılmaz. İki modülün portföyü birebir aynı kalsın diye.
+  3. *Değer ölçüsü:* net ciro, faturalı satır `LINENET` (M30/M46 ile aynı; kitap kırılımı da satırdan). Analizdeki kabul SQL'i fatura seviyesiydi (`NETTOTAL`, ~%1 fark); kabul betiği satır seviyesini esas alır, fatura seviyesini bilgi olarak yazar. Brüt kâr tanımı katalogda iş teyidi bekliyor; kullanılmadı.
+  4. *Süre ölçüsü:* Logo kopyası donmuş (son fatura 2026-08-17) olduğu için «alımsız gün» Logo kesimine göre; CRM canlı olduğu için sipariş sessizliği bugüne göre ve kesimden sonra CRM siparişi varsa aralık puanı yarıya iner, «kayıp» düzeyi verilmez.
+  5. *Tekrar kaydı:* aynı cari kodu (1,0), aynı Logo bağı (0,95), aynı normal ad + il (0,9; vergi dairesi farklıysa modele); bulanık aday aynı il + ilk kelime bloğunda sıralı komşuluk (pencere `MUSTERI_DUP_WINDOW`, benzerlik `MUSTERI_DUP_RATIO`). Model yalnız ticari unvan, il, vergi dairesi görür; şahıs carisi hiç sorulmaz. Kararlar `semantic_musteri_pair_decisions`'ta kalıcı; süre bütçesi dolunca kalan çiftler sonraki geceye.
+  6. *Logo bağı yok:* cari kodu (herhangi bir yıl kopyasında) ya da `new_logicalref` (bu yılın firması; `MUSTERI_LOGICALREF_FIRM` ile değiştirilir) eşleşmezse bulgu. Hangi firmanın LOGICALREF'i olduğu **ölçülecek**.
+  7. *Veri sağlığı puanı:* bulgusu olmayan etkin CRM carisi payı (kişi kaydı ve güvenlik bulguları hariç) — açıklanabilir, ay ay izlenebilir.
+- **Seçenekli ve ölçülecek:** kampanya gönderim tablosu (`obs_kampanyagonderimleriBase`, kolonlar `MUSTERI_CAMPAIGN_*`; okunamazsa tur uyarı yazıp sürer), CRM ziyaret–cari kolonu (M30 ayarı `FIELD_CRM_VISIT_ACCOUNT_COLUMN`), `new_VeriDurumu` kullanımı (ekranda doluluk), `InternalEMailAddress` doluluğu (temsilci e-postası).
+- **Güvenlik/KVKK:** kişisel kolon seçilmez (`crm_people_rules.PERSONAL_COLUMNS`); tek istisna portföy sahibinin «Ara» düğmesi — carinin `Telephone1`'i o an okunur, yalnız carinin temsilcisine (herkesinki yetkisi bile açmaz), her okuma `semantic_audit`'e. Güvenlik taramasında şifre değeri seçilmez; `new_kargofirmasi` tablosuna sorgu atılmaz, yalnız kolon adı. 403 cevapları `FORBIDDEN` koduyla döner (ön yüz oturum düştü sanmasın).
+- **Sunucuda kalan:** koordinatör `sh scripts/acceptance/M38/run_tests.sh`; kurulumdan sonra `systemctl start timas-musteri@gece` (ilk tur elle), `reference_check.py`, `write_check.py`, `cleanup.py`; timer'lar etkinleştirilir (`timas-musteri.timer`, `timas-musteri-haftalik.timer`); e-posta alıcıları `MUSTERI_MANAGER_RECIPIENTS`, `MUSTERI_CRM_ADMIN_RECIPIENTS`, CRM bağlantısı `MUSTERI_CRM_URL` (isteğe bağlı).
+## 2026-09-28 — H2 Okuyucu veri tabanı kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** Pazarlama › Okur ve müşteri › Okurlar (`/timas/okurlar`). CRM kişi (59.637), müşteri adayı (63.332), Tüketici-Okur firması ve İYS günlüğü (56.867) okunur; aynı normalize e-posta / Türkiye cep telefonu / adayın bağlı kişisi / insan kararıyla tek okurda birleşir. Kanal başına izin (e-posta, SMS, arama) + KVKK açık rıza, kural tabanlı segment (anlık toplam / izinli / listeye girebilir, dışarıda kalma nedeniyle), iki göz onayı, izin denetimli liste dışa aktarımı (amaç zorunlu, kayıtlı), etkinlik dosyası yükleme/eşleştirme, belirsiz eşleşme kuyruğu, okur kartı (zaman çizelgesi), KVKK başvurusu araması, Kampüs zili. Kod: `backend/semantic_bridge/readers*.py`, `src/canvas/readers/`, `scripts/server/timas-readers.{service,timer}`, `scripts/acceptance/H2/`.
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (kayıt), `access.py` (RULES + FEATURE_RULES), `access_catalog.json` (sayfa + 6 özellik), `admin.py` (ayar grubu «Okur veri tabanı»), `App.tsx` (3 rota), `navModel.ts` (öğe), `ModulesMenu.tsx` (`readers`), `KampusPage.tsx` (zil), `infra/docker/bi/jobs.py` (VM günlük iş).
+- **Kararlar (analiz §10 açık soruları; veriye/koda bakılarak, sorulmadı):**
+  - Kişisel veri portalda kopyalanmaz: e-posta/telefon/ad yalnız tuzlu HMAC özeti; ekranda kişi adı yok, sayılar var; ad/e-posta/telefon yalnız açık `okur.kisisel-veri` ile CRM'den anlık okunur ve her görüntüleme değişiklik kaydına düşer.
+  - Okuma her gece **tam tur** (delta değil): ~180 bin satır küçük; delta silinen/pasifleşen kaydı ve birleşmenin çözülmesini göremez.
+  - Telefon yalnız 5 ile başlayan 10 haneli Türkiye cep numarasıysa kimlikte kullanılır (santral/iş telefonu farklı kişileri birleştirmesin).
+  - Kuruma bağlı kişi kartı (`ParentCustomerId`) ve esere katkı veren (yazar, çevirmen, çizer) okur sayılmaz; sayıları özette yazılır, ayarla açılır.
+  - İzin: ret her zaman kazanır; izinli yalnız İYS onayı (İYS kaydı olmayan izinli sayılmaz); CRM bayrakları yalnız ret üretir. Bayrakların hangi değerinin ret olduğu (`obs_donotsms`, `obs_SmsezinVerme`, `obs_donotkvkk`…) ve İYS `obs_permissionstatus` değeri (1 = onay) **ölçülecek**; ayardır. Etkinlik dosyasındaki izin kolonu bilgi amaçlıdır.
+  - Listeye girmek için KVKK açık rızası da gerekir (`READERS_REQUIRE_KVKK=1`); 18 yaş altı hiçbir listeye girmez; **dışa aktarım hukuk teyidine kadar kapalı** (`READERS_EXPORT_ENABLED=0`). Hukuk soruları: çocuk kayıtları ve ebeveyn rızası (Zürafam Uçabilir vb.), aydınlatma/rıza metni, pazaryeri müşteri verisi (kullanılmıyor).
+  - Belirsiz eşleşme modelsiz: aynı ad özeti + aynı il, doğum yılı çelişmiyor; yaygın ad grubu (> 5 okur) aday üretmez, sayısı yazılır. «Aynı kişi» kararı kayıt düzeyinde saklanır, sonraki okumalarda korunur.
+  - Zeki AI yalnız segment **taslağı** önerir (kapalı küme alan/değer; olmayan değer atılır ve notu yazılır); sayılar kuraldan, açıklama deterministik.
+  - `sayfa:okurlar` katalogda `explicit` (M49 sayfaları da kapsayınca Herkes'e açılmaz; bugünkü main'de etkisi yok).
+- **Sonraki sürüm (analiz §9):** T-soft üye/sipariş kaynağı (H3, `register_source` ile), ilgi alanının H1 ağacından satın alma geçmişiyle çıkarılması, sadakat/kayıp sinyali, bülten platformu açılma/tıklama, «aynı kişi» kararlarının CRM ekibine «CRM'e işlenecek kopyalar» listesi (M38), Zeki AI sohbetine okur ölçüleri.
+- **Doğrulama:** Mac'te yalnız `py_compile` ve JSON denetimi yapıldı. pytest (`test_readers.py`), tsc, vitest, derleme ve gerçek CRM kabulü (`scripts/acceptance/H2/check.sh`, `kabul.py` R1–R10, `cleanup.py`) **DOĞRULANAMADI — testler koordinatörde**. Sunucuda önce köprü ortamına `READERS_HASH_SALT` eklenmeli.
+## 2026-09-28 — M37 Okur topluluğu kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** okur kitlesi envanteri ve izin sağlığı (yalnız sayı), onaylı segment akışı, topluluk program takvimi ve Zeki AI
+  duyuru taslağı, cevapsız okur yorumlarına cevap taslağı, CRM geçmiş etkinlik özeti. Köprü `okur.py`, `okur_sources.py`,
+  `okur_api.py` (`/api/v1/okur/*`); ekranlar `src/canvas/okur/` (dört rota, Pazarlama › «Okur ve müşteri»); zamanlayıcı
+  `timas-okur.timer` 03:50; test `test_okur.py`; kabul `scripts/acceptance/M37/`. Dal `worktree-agent-a2c42c8cb3680351f`.
+- **H2 ile sınır:** H2 okur veri tabanı çekirdeği başka ajanca kodlanıyor; kimlik, izin, ilgi alanı ve segment sayımı
+  kopyalanmadı. M37 sayıları tek bir bağlantı noktasından (`okur_sources.ReadersCore`) ister; sözleşme dosyanın başında
+  (Türkçe yöntem adları + İngilizce eşdeğerleri). H2 kaydolmazsa ekran «Okur çekirdeği bağlı değil» der; program, etkinlik
+  özeti ve yorumlar yine çalışır. Merge'de H2'nin gerçek yöntem adlarıyla `_CONTRACT` eşlemesi hizalanmalı.
+- **Kararlar (analiz §10 açık soruları, veriye/koda bakılarak):**
+  - Yetki anahtarları `ozellik:topluluk.*` — analizdeki `okur.segment-onay` H2 analizinde de aynı adla geçiyor; iki modülün
+    onayı farklı (KVKK amaç onayı / pazarlama müdürü), çakışmasın diye ayrıldı. Sayfalar «Herkes»e açık (yalnız sayı);
+    onay ve dışa aktarım açıkça verilir.
+  - Din/inanç çağrışımı sabit sözcük listesiyle değil, her ilgi alanında Zeki AI kapalı küme seçimiyle işaretlenir; «yok»
+    ancak p ≥ 0,90 ve marj ≥ 0,50'de (`OKUR_HASSAS_ESIK/MARJ`), gerisi «bilinmiyor» ve kullanılamaz. İnsan kararı gerekçesiz
+    kaydedilmez, modelle ezilmez. Hukuk görüşü gelene kadar `OKUR_HASSAS_SEGMENT_ACIK=0`.
+  - Etkinlik özeti: `new_etkinlikBase`'in çoğu satış ziyareti (57.013 kayıt); ziyaret tipi dolu kayıtlar varsayılan olarak
+    dışarıda. Okur etkinliği tipleri (371 seçenek) ölçülmedi → tip süzgeci ayar, boşsa hepsi; ekran tipe göre kırar.
+    Katılımcı/satılan yalnız «Tamamlandı» (100000002) kayıtlarda toplanır (analiz kabul 6).
+  - Yorum «cevaplandı»: T-soft'ta yayınevi cevabı alanının adı bilinmiyor (2026-09-25'te 86 yorumun hiçbiri cevaplı
+    değildi); birkaç olası ad okunur, biri doluysa cevaplı sayılır, yoksa portal işareti geçerli. Ölçülecek.
+  - Zamanlayıcı 03:50: H2 turu 03:20, kategori ağacı 03:40.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (RULES 9 satır + FEATURE_RULES 4), `access_catalog.json` (4 sayfa,
+  5 özellik), `admin.py` (2 ayar), `app.py` (2 satır), `App.tsx` (4 rota), `navModel.ts` (4 öğe + 2 simge),
+  `ModulesMenu.tsx` (LIVE M37, GROUP_HOME «Dijital & Topluluk»).
+- **Doğrulama:** yerelde yalnız `py_compile` ve JSON denetimi; pytest, tsc, vitest, derleme ve gerçek CRM/H2/T-soft kabulü
+  test sunucusunda koordinatörde (`scripts/acceptance/M37/check.sh`, `kabul.py`, `temizlik.py`). Ölçülecekler: CRM
+  `new_contact_new_kitapilgialanBase` kolon adları (R5), H2 izin sağlığı tür anahtarı (R3, `M37_CELISKI_TUR`), T-soft yorum
+  cevap alanı, okur etkinliği tipleri.
+## 2026-09-28 — M16 Lansman / yayın ayı pazarlama: lansman paketi, kontrol listesi, ilk 7/30 gün izleme, D+7/D+30 raporu
+
+**DOĞRULANAMADI — testler koordinatörde.** Kod dalda (`worktree-agent-afc093dde6b836ee0`); yalnız `py_compile` ve JSON denetimi
+yapıldı. pytest, vitest, tsc ve gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m16/run.sh`). main'e
+taşınmadı, kurulmadı.
+
+- **Neden:** M16 analizi (`docs/analiz/kullanici-ihtiyaclari/M16-lansman-yayin-ayi.md` §14). Yayın haftasının bilgisi dört yerde
+  (üretim kartı, dağılım siparişi, açık sipariş, Logo faturası); «kitap rafa ulaştı mı, ilk hafta hedefe göre nerede» tek ekranda yoktu.
+- **Çekirdeğe en küçük değişiklik:** M15 dosyalarına dokunulmadı; `marketing/__init__.py`'de `launch_api.register` bir satır.
+  Yeni dosyalar `launch.py`, `launch_sources.py`, `launch_track.py`, `launch_report.py`, `launch_api.py`. Kontrol listesi yeni tablo
+  değil, çekirdeğin `semantic_mkt_tasks`'ı (`launch_id` hazırdı): planın takvimi lansmana bağlanır, üstüne 8 lansman maddesi
+  (`kaynak='lansman'`). Lansmanda işaretlenen madde planın takviminde de yapılmış görünür. Tablolar `semantic_mkt_launches`,
+  `semantic_mkt_launch_daily|events|media|reviews` (kendi `ensure`'ı; çekirdeğin şeması değişmedi).
+- **Akış:** lansman yalnız onaylı yeni kitap planından (409 değilse); elle ya da zamanlayıcıyla yayına 14 gün kala (K1). Durum
+  yayın gününe göre yürür: hazırlık → yayın haftası (D0…D+6) → ilk ay izleme → kapandı (D+30 raporundan sonra ya da elle).
+- **İzleme (rakamı model üretmez):** CRM sipariş sinyali saatte bir (gün = sipariş tarihinin İstanbul günü, sipariş satış değildir,
+  ayrı etiket), dağılım (tip 2) adet ve bayi sayısı, Baskı Öneri'nin açık sipariş ve depo SQL'i dosyadan (tanım yeniden yazılmadı),
+  CRM «Bekleyen Ürün» ayrı satır, Logo faturalı net adet/ciro M46 satır tanımıyla günde bir, M46 hedefinin günlük payı. Emsal:
+  M15 karnesindeki emsallerin ilk satış gününden 7/30 gün (Logo, tamamlanan sonuç önbellekte). Okunamayan kaynak sıfır yazılmaz;
+  özet «okunamadı» der.
+- **Kararlar (uzmana sorulacak sorular yerine veriye/koda bakılarak):**
+  - *Yayın günü:* onaylı planın yayın günü esas (M15 sırası: kitap kartı → proje → üretim; M46 hedefi ve M10 aynı alanı okur).
+    M12 `print_exit`'in gerçekleşen depo girişi ve CRM kitap/proje/üretim tarihleri «aday» olarak başlıkta; çelişki uyarı
+    («kitap depoya yayından N gün sonra girdi», «yayın geçti, depo girişi yok»), biri «esas al»ınır ya da elle girilir; bekleyen
+    şablon maddeleri kayar. Depo girişini kendiliğinden yayın günü yapmadık: depo girişi rafa ulaşmanın koşulu, yayın günü değil.
+  - *Ön sipariş:* iki ayrı ölçü — açık sipariş (Baskı Öneri tanımı) ve CRM «Bekleyen Ürün»; ayrıca yayından önceki sipariş
+    (`MARKETING_LAUNCH_PRE_DAYS`, 14 gün) raporda «yayından önceki sipariş».
+  - *Başarı ölçüsü:* birikmiş hedef payına oran; esas Logo faturası (veri sonuna kadar), Logo yayından önce bitmişse CRM siparişi
+    (etiketli). Eşik M46 sapma kuralı (%80, `MARKETING_LAUNCH_ALERT_RATIO`). Hedef payı yayın gününden itibaren sayılır (yayın ayının
+    yayından önceki günlerinin payı gösterilmez — M46 aylık izlemesinden bu kadar farklı).
+  - *Stok–talep:* açık sipariş > depo stoku ya da yayından sonra dağılım siparişi yok → kırmızı ve anında e-posta (satış alıcıları
+    `MARKETING_LAUNCH_STOCK_RECIPIENTS` + sahip, kitap başına günde bir). Depo stoku Logo verisi sipariş anındaki CRM stokundan eskiyse
+    CRM değeri (kaynağı yazılı) — .155 17.08.2026'da donmuşken tek güncel sinyal.
+  - *Canlı Logo:* BT kararı; kodda bağlantı değişikliği yok, her ekranda veri sonu tarihi.
+  - *Kontrol listesi:* planın takvimi + 8 lansman maddesi (depo/dağılım teyidi, e-ticaret sayfası kontrolü, basın/etkinlik takvimi,
+    yayın günü kontrolü, gönderi kanıtı, basın yansıması, etkinlik sonucu); `MARKETING_LAUNCH_TASKS` (JSON) ile değişir.
+  - *Sipariş durumları:* 1 Taslak ve 100000001 İptal hariç (analizin kabul SQL'i); «Birleştirildi» (100000003) çift sayıyorsa
+    `MARKETING_LAUNCH_ORDER_EXCLUDE`'e eklenir — **ölçülecek**.
+- **D+7 / D+30:** günlük okumadan sonra rakam tablosu (sipariş, ön sipariş, dağılım, faturalı adet/ciro, kapsanan gün, hedef payı ve
+  oranlar, emsal ortalaması, açık sipariş, depo, etkinlik, medya tonu, yapılan madde) ve SQL'leri; Zeki AI (`llm_for("marketing",
+  BATCH)`, ekrandan NORMAL) iki paragraf + en çok 3 öneri, `guard.check` tabloda olmayan sayıyı içeren cümleyi düşürür; ciro modele hiç
+  verilmez. Karar artır/koru/kes/diğer + gerekçe (`pazarlama.plan-onay`), plan geçmişine `lansman-karar`; karardan sonra rakam donar.
+  PDF `export.pdf`.
+- **Etkinlik ve medya:** CRM `new_etkinlik` (ilgili kitap) okunur; sonuç (katılımcı, satılan, gelir, gider) portalda girilir, elle
+  etkinlik eklenir; medya test sunucusunda «Basın ve web» kayıtları (açıksa) + elle kayıt. Hepsi «CRM'e işlenecek» listesinde (CRM'e
+  yazma yok). Katılımcı kişisel verisi alınmaz.
+- **Bildirim:** günlük tek özet (D−7 açık madde, D0 depo/dağılım/açık sipariş, ilk hafta hedef altı, hazır rapor) pazarlama
+  alıcılarına ve sahibine; stok uyarısı anında. Dış kanala gönderim yok (hatırlatma + «yapıldı» + kanıt bağlantısı).
+- **Yetki:** `sayfa:pazarlama-lansman`, `ozellik:pazarlama.lansman-yaz` (Bütün ile gelir); karar açıkça verilen `plan-onay`; ciro
+  `butce-gor`; PDF `veri.disa-aktar`. `access.py` RULES iki satır + FEATURE_RULES iki satır.
+- **Ortak dosyalar:** `access.py`, `access_catalog.json`, `admin.py` (7 ayar), `marketing/__init__.py`, `App.tsx` (2 rota),
+  `navModel.ts` (+ `Rocket`), `navModel.test.ts` (+2), `ModulesMenu.tsx` (`LIVE.M16`).
+- **Ekran:** telefon düzeni öncelikli (şerit yatay kayar, madde düğmeleri 44 px, tablolar kendi kabında kayar); grafik recharts
+  (2B), animasyon eklenmedi (mevcut 150 ms basma/renk geçişleri).
+- **Zamanlayıcı:** `scripts/server/timas-marketing-launch.{service,timer}` saatte bir (`*:05`); ilk kurulumda elle bir kez.
+- **Ölçülecek (kabulde):** sipariş satırı sorgusunun süresi (9,7 Mn satır, `new_StokKodu` indeksi), `new_etkinlik` görünümünde
+  `new_etkinliktipiidName`/`new_sehirName`/`new_lgiliYazarName` kolonları, satır düzeyinde iptal (`new_siparissatiri.statuscode`)
+  siparişe dahil mi, «Birleştirildi» çift sayımı, `EOS_DEPO_STOK_KONTROL_211`'in güncelliği, M12 `print_exit` süresi.
+- **Açık kalanlar:** Uyarılar rozeti ve telefon alt çubuğu sayacına bağlanmadı (e-posta + ekran rengi var); panoya «lansman izleme»
+  kartı ve Zeki AI sohbetine lansman soruları sonraki tur; M19 onaylı görseller bağlanınca kontrol listesinde görünür; plan revize
+  edilip yeni sürüm onaylanırsa lansman eski plan kimliğinde kalır (maddeler kopyalanmaz); iş kuyruğu köprü içi iş parçacığı.
+## 2026-09-28 — M17 Backlist pazarlama planları kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** Pazarlama › Planlama › Backlist ekranı (Fırsatlar, Gündem, Aktivasyonlar, Etki) ve köprüde `/api/v1/marketing/backlist*`. Uyku endeksi bileşenleri görünür, ağırlıklar kişisel/ekip; bütün backlist tavansız (sayfalı, toplam sayı döner). Aktivasyon planı çekirdeğin `kind='backlist'` planı: çok kitaplı (`semantic_mkt_plan_books`, M17 ile geldi), başlangıç günü en yakın bağlı özel gün, bütçe çerçevesi M15 kuralı (oran × kitapların yıllık hedef cirosu), kanal payı kitapların CRM pazarlama harcaması, takvim şablonu; içerik taslakları («neden şimdi oku», e-bülten bölümü, toplu alım mektubu) Zeki AI + `guard` denetimi.
+- **Kararlar (analiz §10 açık sorular, veriye/koda bakılarak):** (1) Backlist tanımı M46 segmenti — tek tanım; onaylı plan yoksa CRM ilk yayın + 12 ay yedek, ekranda hangisi olduğu yazar. (2) 12/12 ay **tam ay** üzerinden (veri sonu 17.08.2026 → son tam ay Temmuz): yarım ay önceki yılın tam ayıyla karşılaştırılınca sahte düşüş verirdi. (3) Tükenme süresi = Logo depo stoku ÷ (son 12 ay net adet ÷ 12); Baskı Öneri'nin CRM stoklu formülü yerine Logo depo stoku (kabul 3 aynı sorguyla). (4) Kampanya etkisi ay düzeyi (M46 önbelleği aylık); nedensellik iddiası yok. (5) Konu eşleşmesi aday çifti: özel gün adının anahtar kelimesi kitabın CRM anahtar kelime/tema/tür metninde iki yönlü önekle (öğretmen ↔ öğretmenler); model kapalı küme «İlgili/İlgisiz/Belirsiz», eşik altı onaya düşer, emin «İlgisiz» bir daha sorulmaz. (6) Backlist sosyal gönderisi `sosyal` değil `yeniden-kesfet` türü: `sosyal` CRM kitap alanına eşli, çok kitaplı planda «CRM'e işlenecek» listesini yanıltırdı. (7) Ekip ağırlığı explicit yetki (ekip ayarı). (8) Arama ilgisi ve haber yok (kazıma yok, müşteride web taraması kapalı) — sonraki sürüm. (9) Aktivasyon planı çekirdeğin `POST /plans`'ı yerine `POST /backlist/plans` ile açılır (çekirdek ucu yalnız yeni kitap planı açıyor; M18 dalıyla çakışmasın diye dokunulmadı); onay, bütçe, takvim ve materyal onayı çekirdeğin uçları.
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (backlist satırları; genel marketing ve M46 targets/deviations satırlarına backlist sayfası; özellik kuralları), `access_catalog.json` (sayfa + `pazarlama.backlist-ayar`), `admin.py` (4 ayar), `App.tsx` (rota), `navModel.ts` (menü), `ModulesMenu.tsx` (M17), `marketing/core.py` (M18'in `register_plan_table` hunk'ı birebir), `marketing/api.py` (backlist planında M15 önerisi/taslağı 409), `marketing/__init__.py` (register), M15 ekranları `PlanScreen.tsx`/`MaterialsTab.tsx`/`HistoryTab.tsx` (backlist planı dalı), `test_marketing.py` (genel satır artık iki sayfa).
+- **Sunucuda kalan:** pytest (`test_backlist.py` + marketing/access/budget) ve vitest (menü–katalog); köprü + ön yüz kurulumu; `timas-marketing-backlist*.{service,timer}` kurulup ilk gece koşusu elle (`BUILD=1 sh scripts/acceptance/m17/run.sh`, süre ölçülür — ilk koşuda 2022–2024 Logo'dan okunur); canlı kabul `accept.py --write`, `cleanup.py`. **Ölçülecek:** M46 segmenti ile CRM ilk yayın tanımının farkı, e-kitap alanlarının doluluğu, kampanya ürünlerinin `ProductNumber` = stok kodu eşleşme oranı, gece koşusu süresi.
+## 2026-09-28 — M20 Basın, medya ve halkla ilişkiler (ilk sürüm) — DOĞRULANAMADI, testler koordinatörde
+
+**DOĞRULANAMADI — testler koordinatörde.** Kod dalda (`worktree-agent-a4231a76a4d0facdc`); yalnız `py_compile` ve JSON
+denetimi yapıldı. pytest (`test_pr.py`, `test_access.py`), vitest, tsc ve gerçek CRM kabulü test sunucusunda
+(`scripts/acceptance/m20/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** M20 analizi (`docs/analiz/kullanici-ihtiyaclari/M20-basin-medya-halkla-iliskiler.md` §14). CRM Haber modülü
+  2025-06'dan beri boş; bülten, gönderim, cevap ve yansıma birbirine bağlı değildi.
+- **Ne yapıldı:** köprü `pr.py`, `pr_sources.py`, `pr_api.py`, `pr_export.py` (`/api/v1/pr/*`, tablolar `semantic_pr_*`);
+  ekranlar `src/canvas/pr/` (Bugün, kitap, PR dosyası, gönderim listesi + öneri, medya kişileri + kart, yansımalar +
+  ekleme, rapor); menü Pazarlama › İletişim, Kampüs M20, yetki (`sayfa:basin-iliskileri` explicit, `pr.duzenle`,
+  `pr.onay`/`pr.gonder` explicit), Yönetim ayarları `PR_*`, `timas-pr.timer`, testler ve kabul betikleri.
+- **Mevcut kod yeniden yazılmadı:** «Basın ve web» (`web_watch.py`) yansıma kaynağı olarak okunur (yalnız `WEB_WATCH_ENABLED`
+  açıkken; VM'de elle giriş); M15'in onaylı basın bülteni materyali (`semantic_mkt_materials`) dosyanın ilk bülteni;
+  `marketing.guard` Zeki AI metin denetimi; `QueuedLlm.choose` ton kararı; `budget_api._send_mail` iç bildirimler.
+- **Açık sorularda verilen kararlar (analiz §10):**
+  1. *PR'ı kim yürütüyor:* veride yok (AD/CRM unvan boş). Rol eşlemesi Yetki ekranında; sayfa explicit, çünkü medya
+     kişilerinin e-posta/telefonu kişisel veri — kurulumda herkese açılmamalı.
+  2. *Gazeteci listesi nerede:* CRM'de «Basın medya Mecrası» dolu kişiler + Haber kayıtlarında haberi yapan/basında
+     görüşülen kişiler; CRM «Kişi Rolü»nde gazeteci rolü varsa adı `PR_CRM_MEDIA_ROLES`'a girilir (ölçülecek). Excel
+     aktarımı bu sürümde yok; kişi portalda tek tek eklenir.
+  3. *CRM Haber modülü:* yalnız okunur, arşiv olarak yansıma listesine ve öneri puanına katılır. «Haberi Yapan Kişi»
+     alanının Contact'a mı SystemUser'a mı baktığı ölçülmedi: kabul 3 ikisini sayar; kod ikisini de dener (temel tablo
+     yolunda). Mecra adları CRM görünümünden; görünüm okunamazsa temel tablo yolu (`new_HaberMecra` → Mecra varsayımı).
+  4. *Tanıtım gönderimi:* tip 12 siparişin alıcısı cari (gazeteci kişi bağı yok); kitap ekranında adet ve cari olarak
+     gösterilir, gönderim satırına sipariş numarası elle yazılır.
+  5. *İYS/6563:* hukuka sorulacak. Bu sürümde toplu gönderim yok, her e-posta tek kişiye ve onaylı satırdan; CRM'deki
+     «E-postaya izin verme» ve portaldaki «haberdar olmak istemiyor» e-postayı engeller; İYS onayı kart üzerinde görünür.
+- **Diğer kararlar:** haftalık özet pazartesi (analizdeki «pazartesi 09:00» ile zamanlayıcının 08:30 turu; gün ayardan);
+  takip süresi 5 gün (ayar); erişim/tiraj rakamı yok (hiçbir kaynakta tutulmuyor); öneri puanı modelsiz kural (analizde
+  sonraki sürüm, gerekçesi satırda); yansıma bağlantısı yalnız ortamda web okuma açıksa okunur, iç ağ adresine gidilmez.
+- **Kabul listesinde ölçülecek:** Haber görünümünün `…Name` kolonları; `new_HaberinYazari` hedefi; medya kişisi havuzu
+  büyüklüğü; tip 12 hacmi; model tonu eşiği (`PR_TONE_MIN_PROB` 0.6 varsayım).
+- **Açık kalan:** Kitap sayfasına (`/kitap/:id`) «Basın» sekmesi eklenmedi (editoryal ortak ekran; şimdilik
+  `/basin-iliskileri/kitap/:id` bağlantısı); röportaj soru seti, satış etkisi (canlı Logo), Excel ile kişi aktarımı,
+  lisanslı medya takip verisi sonraki sürüm.
+## 2026-09-28 — M21 Dijital pazarlama ve reklam kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** `/timas/reklam` beş ekran (Özet, Kampanyalar, Veri yükle, Bütçe, Brief); köprü `ads.py`, `ads_sources.py`, `ads_api.py`,
+  `ads_export.py`; tablolar `semantic_ads_*`; uçlar `/api/v1/ads/*`; zamanlayıcı `scripts/server/timas-ads.{service,timer}`;
+  testler `backend/semantic_layer/tests/test_ads.py`; kabul `scripts/acceptance/M21/` (kabul.py, cleanup.py, run.sh).
+- **Neden dosya yükleme:** reklam platformu API yetkisi ve site analitiği yok (analiz §6). Platformların dışa aktarım dosyası
+  (Google Ads UTF-16/sekmeli, Meta virgüllü, Excel) okunur; kolon eşlemesi hesap başına kaydedilir. Okunamayan tek satır bile
+  yüklemeyi durdurur: harcama toplamı eksik yazılmasın (kabul 3).
+- **Kararlar (analiz §10 soruları; veriye/koda bakılarak, sorulmadan):**
+  - E-ticaret kanalı = Logo `CLCARD.SPECODE2 = 'E-TICARET'` (katalog `kanal_net_ciro` ile aynı); CRM seçeneklerinde ayrıca «INTERNET»
+    var → `ADS_ECOM_CHANNELS` ayarı, hangi kodun internet satışı olduğu **ölçülecek**.
+  - Kampanya → sipariş bağı (UTM) yok: karşılaştırma kanal ve kitap düzeyinde; pazarlama verimi yalnız Logo verisi olan günlerde
+    (donmuş .155 kopyası 2026-08-17'de bitiyor; sonraki harcama verime girmez, ekranda yazılır).
+  - Bütçe CRM'e yazılamadığı için portalda (ay × kanal); CRM pazarlama bütçe kayıtları (tip 4 Sosyal Medya, 5 Dijital Pazarlama) ve
+    reklam planları salt okunur yanında.
+  - M15 bağı: onaylı yeni kitap planlarının `dijital`/`sosyal-medya` satırları (platform → M15 kanalı `ADS_M15_CHANNEL_MAP`) günlere
+    bölünüp aya dağıtılır; kitap tablosunda kitabın M15 reklam satırı toplamı görünür.
+  - Durdurma/kaydırma eşiği varsayılan yok (kullanıcı tanımlar; kural kapalı ekranda yazar); stok uyarısı 14 gün (analizdeki soru
+    «iki haftadan az»), satış hızı son 60 gün.
+  - Sistemin kapattığı uyarı (koşulu kalktı) koşul dönünce yeniden çıkar; insanın karar verdiği öneri 7 gün tekrar yazılmaz.
+- **Yapılmadı / açık:** reklam faturası mutabakatı (Logo TRCODE 4 hizmet kartı ölçülecek), A/B test anlamlılığı, Genel bakış kartı,
+  portal Uyarılar'a düşürme (şimdilik e-posta + ekran), sohbet konusu «sosyal medya ve dijital reklam»ın `semantic_ads_*` verisine
+  bağlanması, katalog `kanal_net_ciro` sorusuyla karşılaştırma (kabul 1'in ikinci yarısı).
+- **Doğrulama:** Mac'te yalnız `py_compile` ve JSON; pytest, tsc/vitest ve canlı kabul koordinatörün test sunucusu turunda.
+  Durum: **DOĞRULANAMADI**.
+## 2026-09-28 — M22 Sosyal medya yönetimi (ilk sürüm) — DOĞRULANAMADI, testler koordinatörde
+
+**Kod dalda (`worktree-agent-a81033d6003db50cc`); yalnız `py_compile` ve JSON denetimi yapıldı.** pytest, vitest, tsc ve
+gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m22/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** analiz `docs/analiz/kullanici-ihtiyaclari/M22-sosyal-medya.md` §14. İmprint hesapları ayrı ayrı yönetiliyor;
+  takvim, onay, performans ve özel gün ↔ kitap bağı sosyal medya işine bağlı değildi. Kitap kartında tek serbest alan
+  (`new_sosyalmedyametni`) vardı.
+- **Köprü:** `social.py` (tablolar `semantic_social_*`, durum makinesi, fırsat kuralları, içe aktarma ayrıştırıcısı,
+  rapor, paket, PDF), `social_sources.py` (CRM okuma, M46 önbelleği, stüdyo görselleri, basın, M19 bağlantı noktası),
+  `social_api.py` (uçlar `/api/v1/social/*`). `app.py`'de iki satır.
+- **Otomatik yayın yok** (kullanıcı kararı): hiçbir platforma istek gitmez. Onaylı gönderi «yayına hazır paket» (metin,
+  etiket, görseller, bilgi, OKUBENI) olarak iner; uzman paylaşır, bağlantıyı girip «yayınlandı» işaretler. Resmî API
+  bağlantısı yok; içgörü platformun dışa aktarım dosyasından ya da elle.
+- **Kararlar (uzmana sorulacak sorular yerine koda/veriye bakılarak):**
+  - *Hesaplar* kullanıcı tanımlıdır (X/TikTok/YouTube/LinkedIn listesi CRM'de yok); CRM marka kartındaki
+    `new_instagramkullaniciadi` öneri olarak gelir, imprint bağı `new_markaBase.new_markaId` (kitabın `new_yayineviid`'i
+    markaya bağlı). Kaç markada dolu olduğu kabul 5'te sayılır.
+  - *Onay:* tek seviye, açıkça verilen `ozellik:sosyal.onay` (analizde onayın kimde olduğu soruluyordu; M15'teki iki
+    göz kuralı alındı: gönderen onaylayamaz). İçerik (metin, etiket, hesap, görsel, kitap) değişince onay düşer; yalnız
+    saat değişince kalır — onaylanan içerik aynı, yayın saati operasyon kararı.
+  - *Özel gün kitap sayısı:* SEO sezon takvimindeki gibi aynı adlı günler birleşik, ama barkod (`new_ean13`) şartı yok —
+    burada kitap sayfası değil kitabın kendisi paylaşılıyor. Gün ve kitap kartı `statecode = 0`. Tarih yöntemi
+    `seo_geo.seasons` saf işlevleri (VM'de SEO tabloları olmasa da çalışır).
+  - *«Takvimde»:* güne bağlanmış (occasion) ya da pencere içinde planlı gönderisi olan kitap. Uyarı: güne
+    `SOCIAL_OCCASION_LEAD_DAYS` (14) gün ya da az kalmış ve bağlı kitaplardan hiçbiri takvimde değil.
+  - *Yeni kitaplar:* M15/M46 tanımı (`statecode 0`, `new_Tip = 1`), pencere ay başından fırsat penceresi sonuna.
+  - *Backlist çok satan:* Logo'ya ikinci kez gidilmez — M46 önbelleği (`semantic_budget_sales_actuals`, faturalı satır,
+    iade eksi), veri sonunun ayı dahil son 12 ay. Backlist = ilk yayını 365 günden eski (bilinmiyorsa sayılmaz); son 90
+    gündür takvimde gönderisi (planlı dahil) olmayan. Stokta olmayanı önermemek için stok bakiyesi yerine CRM statüsü
+    listesi (`SOCIAL_BACKLIST_EXCLUDE_STATUS`, boş) — hangi statünün «tükendi» olduğu **ölçülecek**. Liste tavansız,
+    sayfalı (20).
+  - *Platform sınırları* (Instagram 2200 / 30 etiket, X 280, LinkedIn 3000, Facebook 63206, TikTok 2200, YouTube 5000)
+    yayımlanmış değerler; `SOCIAL_PLATFORM_LIMITS` ile değişir. Sınırı aşan gönderi onaya gönderilemez.
+  - *İçe aktarma:* gerçek dışa aktarım dosyası görülmedi; Türkçe/İngilizce başlık takma adları (Meta, X, YouTube,
+    LinkedIn kolon adları) kodda, tanınmayan kolon özetle döner — gerçek dosyalarla **ölçülecek**. Satır, yayın
+    bağlantısı (şema/www/sorgu atılarak) aynı olan gönderiye bağlanır.
+  - *Rapor:* etkileşim = beğeni + yorum + paylaşım + kaydetme, oran = etkileşim ÷ erişim. Kişi adı yok (KVKK); yorum/DM
+    saklanmıyor (resmî API sonraki sürüm, `ozellik:sosyal.topluluk` şimdiden açık yetki).
+  - *Zeki AI:* taslak üç seçenek (platform ipucu + hesabın dili + CRM metinleri + stüdyo alıntıları), her seçenek
+    `marketing.guard` ile cümle cümle denetlenir (birebir olmayan alıntı, kaynaksız rakam, kanıtsız iddia, teknoloji adı
+    düşer; etiketler tek tek). Tür etiketi gece `choose` ile (eşik 0,70 / marj 0,30), rapor yorumu yalnız rapor sayılarıyla.
+  - *Görsel:* stüdyo pazarlama kitinin sosyal görselleri kitaba bağlı işlerden (`crm_book_id` ya da aynı ad) okunur;
+    önizleme `/api/v1/social/studio/{iş}/{sid}` (stüdyo sayfası yetkisi olmayan sosyal medya uzmanı da görsün). Stüdyo
+    görselinde ve pakette «ticari kullanım lisansı bekleniyor» uyarısı (`SOCIAL_STUDIO_LICENSE_PENDING`).
+- **Bağlantı noktaları:** M19 (dalda) main'e girince `app.state.marketing_creative` `contract_assets(stok=, kanal=,
+  durum="onayli")` ve `asset_file(id)` verirse arşiv görselleri gönderiye bağlanır ve pakete girer. M18 (dalda) için
+  `GET /api/v1/social/contract/posts` (onaylı/yayınlanmış gönderi + ölçü toplamı) ve gönderide `planRef`.
+- **Ekran:** `src/canvas/social/` (Takvim · Fırsatlar · Rapor · Hesaplar sekmeleri + gönderi sayfası), menü Pazarlama ›
+  İletişim › Sosyal medya, Kampüs `LIVE.M22`. Telefon: gün görünümü, 44 px düğmeler, tablolar kendi içinde kayar. Yeni
+  animasyon yok (mevcut 150 ms renk/basma geçişleri ve Sheet).
+- **Ortak dosyalar:** `access.py` (RULES 2, FEATURE_RULES 2), `access_catalog.json` (sayfa + 3 özellik), `admin.py`
+  (grup «Sosyal medya», 10 ayar, KIND_LABEL), `app.py` (2 satır), `App.tsx`, `navModel.ts` (+`Share2`), `navModel.test.ts`,
+  `ModulesMenu.tsx`, `infra/docker/bi/jobs.py`.
+- **Testler:** `backend/semantic_layer/tests/test_social.py` (durum makinesi, iki göz, onay düşmesi, sınırlar, takvim sayımı
+  = GROUP BY, özel gün ve backlist kuralları, içe aktarma, rapor, seçenek ayrıştırma, paket, yetki, köprü uçları).
+  **Koşulmadı.**
+- **Kabul (sunucuda):** `scripts/acceptance/m22/` — `accept.py` (özel gün kitap sayısı, yeni kitap kümesi, backlist ilk 10
+  Logo STLINE, takvim sayımı, marka Instagram kümesi: 5 doğrudan SQL; `--write` içe aktarma toplamı = DB ve gönderen
+  onaylayamaz; `--draft` Zeki AI taslağı; teknoloji adı ve web bayrağı), `cleanup.py`, `run.sh`.
+- **Açık kalanlar:** kitap sayfasına «Sosyal» sekmesi (BookScreen ortak dosya, dokunulmadı); resmî API ile içgörü/yorum
+  ve kriz sınıflaması (sonraki sürüm); M51'e şikâyet aktarımı; Uyarılar rozetine onay bekleyen sayısı; M20 elle haber kaydı
+  (M20 yok); zamanlayıcının ilk kurulumda elle bir kez koşturulması.
+## 2026-09-28 — M23 İnfluencer ve İşbirliği Yönetimi kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** ekran `/timas/isbirlikleri` (menü Pazarlama › İletişim › İşbirlikleri, Kampüs M23): Pano (teklif → kitap gönderildi → içerik bekleniyor → içerik onayda → yayında → rapor → ödeme; telefonda tek sütun + aşama seçici), İçerik üreticileri (`/kisiler`, CSV içe aktarma), kişi kartı (`/kisi/:id`), kitaba aday (`/aday/:kitap`), Rapor (`/rapor`, Excel), Ödemeler (`/odemeler`, Excel); kitap sayfasına «İşbirlikleri» bölümü. Köprü `influencers.py` (tablolar `semantic_infl_people|accounts|snapshots|collabs|events|payouts|drafts|reminders`), `influencers_sources.py` (CRM yalnız okuma), `influencers_api.py` (`/api/v1/influencers/*`, `app.py`'de iki satır), zamanlayıcı `timas-influencers.timer` 08:00.
+- **Kararlar (analiz §10 açık soruları; veriye bakılamadı, kod parametreli):**
+  - *CRM'de influencer varlığı yok* → kayıt defteri köprüde; CRM kişisi yalnız isteğe bağlı bağ (`crm_contact_id`) ve sosyal kullanıcı adı eşleşme önerisi (`GET crm/contacts`).
+  - *Tanıtım gönderiminin alıcısı kişi mi cari mi* ölçülmedi → bağ sipariş numarasıyla (kartta elle), kişi kartı adedi `new_siparistipi = 12` satırlarından.
+  - *Hesap sayıları:* resmî API ile keşif/sahte takipçi yapılamıyor, kazıma yok → ilk sürüm elle/CSV; `INFLUENCER_API_ENABLED` ikinci sürüm bayrağı (açık olsa bile yalnız durum döner). «Ani sıçrama» yalnız kendi iki ölçümümüzden (varsayılan %30, 45 gün).
+  - *Otomatik dış gönderim yok* (kullanıcı kararı) → brief/iletişim/sadakat taslağı onaylanır, insan kendi e-postasıyla gönderir, portal «Gönderdim» kaydını tutar (`mailto:` bağlantısı). SMTP yalnız iç ekip hatırlatması için.
+  - *Yasal etiket* (Reklam Kurulu kılavuzu): brief'te sabit madde (modele yazdırılmaz; maddesi silinen brief onaylanmaz); «rapor»a geçiş `disclosure_ok = true` ister (türler `INFLUENCER_DISCLOSURE_KINDS`, varsayılan hediye dahil hepsi — hukuka doğrulatılacak).
+  - *Onay:* ücretli/karşılıklı teklif her zaman, hediye `INFLUENCER_GIFT_NEEDS_APPROVAL` (varsayılan açık) ile müdür onayı olmadan ilerlemez; açan onaylayamaz. Ret nedenli, işi «vazgeçildi» yapar.
+  - *Ödeme:* M8 hakediş deseni (iki göz, Logo belge no ile ödendi, tutar dondurulur) işbirliği başına satır olarak; ortak yardımcılar `freelance.py`'den (`_money`, `_day`, `_tl`…), `InfluencerError` `FreelanceError`'dan türer. «ödeme» aşaması satırı açar, ödendi işi kapatır, iptal işi rapora döndürür.
+  - *Ücret görünürlüğü (KVKK):* ücret aralığı, işbirliği ücreti, harcama ve CPE yalnız `ozellik:isbirligi.onay` ya da `.odeme` sahibine; diğerleri ücret girebilir ama göremez.
+  - *Aday puanı:* kural (konu 35, yaş 15, geçmiş etkileşim 20, ilişki 10, tazelik 10, bütçe 10; `INFLUENCER_RANK_WEIGHTS`). Kitap konusu CRM tür/raf/hedef kitle metninden kelime kuralıyla (`INFLUENCER_TOPIC_WORDS` ile genişler; ≤3 harfli kelime tam kelime), çıkmazsa Zeki AI `choose` (p ≥ 0,70). Zeki AI yalnız seçilen adaylara gerekçe cümlesi yazar (`marketing.guard` denetimi; olgu dışı sayı → kural gerekçesi). Tavan yok; «iletişim kurulmasın» ve aynı kitabı almış kişiler ayrı listede nedeniyle.
+  - *Durum anahtarları ASCII:* `teklif, gonderildi, icerik-bekleniyor, onayda, yayinda, rapor, odeme, kapali, vazgecildi`; ödeme `hazir, onayli, odendi, iptal` (analizdeki kabul SQL'i Türkçe harfliydi; referans.sql buna göre).
+- **Yetki:** `sayfa:isbirlikleri`; `ozellik:isbirligi.duzenle`; açık `ozellik:isbirligi.onay`, `ozellik:isbirligi.odeme`; Excel `veri.disa-aktar`. Sayfa «Herkes»e kapalı değil (pazarlama işi; ücretler özellikle korunur).
+- **Ayarlar:** Yönetim → «İşbirlikleri» (`INFLUENCER_*`: alıcılar, ödeme günü 25, aylık bütçe, bütçe eşiği %90, bekleme/gecikme günleri, ağırlıklar, konu kelimeleri, yasal etiket türleri, hediye onayı, API bayrağı).
+- **Testler:** `backend/semantic_layer/tests/test_influencers.py` (25 test; yerelde koşulmadı, yalnız `py_compile`). Kabul: `scripts/acceptance/M23/` (`check.sh`, `kabul.py` R1–R5 doğrudan SQL + kapı/yetki denemeleri, `cleanup.py`, `referans.sql`). **DOĞRULANAMADI — testler, tsc/vitest ve gerçek CRM kabulü koordinatörde.**
+- **Açık:** Kampüs zilinde «onay bekleyen teklif» rozeti yok (e-posta + pano sayacı var); kabul için onay yetkili ikinci oturum (COOKIE2) ve yetkisiz oturum (COOKIE3) gerekir; tanıtım siparişinin alıcı bağı, Logo'da influencer ödemesinin kartı/özel kodu ve mutabakat ölçülecek; resmî API istemcisi, UTM/indirim kodu satış bağı ikinci sürüm.
+## 2026-09-28 — M24 Katalog ve bülten kodlandı (dal `worktree-agent-ac2e6d2c2fb3a1d34`; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** analiz belgesinin 14. bölümü (`docs/analiz/kullanici-ihtiyaclari/M24-katalog-bulten.md`). Köprü `catalogs.py`,
+  `newsletters.py`, `catalogs_sources.py`, `catalogs_api.py`; ekran `src/canvas/catalog-newsletter/` (liste, katalog
+  düzenleme, bülten düzenleme, segment sayacı, rapor); zamanlayıcı `timas-catalog.timer` (07:15); testler
+  `test_catalogs.py`; kabul `scripts/acceptance/M24/` (R1 stok ay × doğrudan SQL ve Baskı önerisi ekranı, R2 fiyat,
+  R3/R3b segment ve izinsizler, R4 özel gün, R5 CRM kampanya, R6 satıştan kalkan, R7 Logo veri sonu, R8 yanıtlarda «@» yok;
+  `cleanup.py`). Ortak dosyalara en küçük ekleme: `app.py` (2 satır), `access.py` (2 sayfa kuralı + 3 özellik kuralı),
+  `access_catalog.json` (1 sayfa, 4 özellik; 2'si açık), `admin.py` (grup «Katalog ve bülten», 13 ayar, 2 doğrulama,
+  3 kayıt türü adı), `App.tsx` (4 rota), `navModel.ts` (1 öğe, bölüm «Kampanya»), `ModulesMenu.tsx` (M24), `navModel.test.ts` (2 satır).
+- **Kararlar (analiz 10. bölüm soruları; veriye/koda bakılarak, sorulmadan):**
+  - *Katalog fiyatı kaynağı* belirsiz → ayar `CATALOG_PRICE_SOURCE`, varsayılan **CRM `new_kdvdahilfiyat`**: kitabın kayıtlı
+    liste fiyatı tek alanda; ihale teklif tablosu da aynı alanı kullanıyor. Logo `logo_fiyat.sql` son B2B/CRM faturasının birim
+    fiyatıdır (bayi iskontosu içerebilir), T-soft fiyatı kampanyalı olabilir. Diğer kaynaklar (perakende birim fiyat, kitabın
+    üzerindeki fiyat, Logo, web) seçilebilir; katalog başına değişir; kaynaklar arası farklı fiyatlı kitap sayısı havuzda ölçülüp
+    ekranda/kabulde yazar. CRM fiyat listesi (`new_fiyatlistesiogesiBase`) kaynak yapılmadı: `new_StokId` bağının hedefi belgede
+    yok (**ölçülecek**).
+  - *Stok ay sayısı* → Baskı önerisinin tanımı ve **aynı SQL dosyaları** (CRM `powerbikitap.StokAdedi` ÷ `logo_satis_hizi`
+    ağırlıklı hız = «Tükenme süresi»). Kabul maddesi Logo depo stokunu da anıyordu; o `CATALOG_STOCK_SOURCE=logo` ile seçilir.
+    Hızı olmayan stoklu kitap «son 12 ayda satış yok» yazar, ay sayısı uydurulmaz.
+  - *Havuz* → etkin kart ve tip 1 (Kitap) + 4 (Set) (`CATALOG_BOOK_TYPES`); satış durumu boşsa açık sayılır (doluluk ölçülecek).
+  - *Bülten aracı ve abone listesi bilinmiyor* → portal göndermez; sonuç ya bağlı CRM kampanyasının sayaçlarından (her sabah) ya da
+    aracın CSV dışa aktarımından alınır: özet dosyada sayılar, kişi satırlı dosyada satırlar sayılır, adres okunmaz/saklanmaz.
+  - *İzin kuralı* → kabul maddesindeki SQL'in birebiri (`permit_sql`, tek yer); KVKK onayı ayarla şart yapılır
+    (`NEWSLETTER_REQUIRE_KVKK`, varsayılan kapalı — kabul SQL'i KVKK istemiyor). «Son alışveriş» segmenti yok: okur–sipariş bağı
+    ölçülmedi.
+  - *İlgi alanı → kitap* eşlemesi modelsiz: kişi bayrağı için sözcük listesi (ayar `NEWSLETTER_INTEREST_KEYWORDS`), CRM ilgi
+    alanı için adının sözcükleri; kitabın tür/Kitaplık/web kategorisi metninde aranır, gerekçesi satırda yazar.
+  - Sıralama sürükle-bırak yerine yukarı/aşağı düğmeleriyle (telefonda ve klavyede güvenilir). PDF önizlemede kapak görseli
+    basılmaz (bağlantılar pakette); baskıya hazır PDF sonraki sürüm.
+- **Açık kalan:** rapor için Zeki AI 3 cümle yorum yazılmadı; «Uyarılar» rozetine bağlanmadı (onay bekleyen sayısı sekmede ve
+  sabah e-postasında); VM iş döngüsüne (`infra/docker/bi/jobs.py`) `catalog-newsletter/run-due` eklenmedi; bülten → satış bağı
+  (UTM) sonraki sürüm.
+- **Ölçülecek (kabul listesinde):** `new_satisdurumu`, `new_resimurl` ve İYS/KVKK alanlarının doluluğu; `CampaignBase`'in son
+  kullanım tarihi; `powerbikitap.StokAdedi`'nin güncelliği; T-soft `SellingPriceVatIncluded` alanının varlığı; ilgi sözcük
+  eşlemesinin isabeti.
+- **DOĞRULANAMADI:** sunucuya bağlanılmadı; yalnız `py_compile` ve JSON denetimi yapıldı. pytest/tsc/vitest ve gerçek DB kabulü
+  koordinatörde (`scripts/acceptance/M24/check.sh`, `kabul.py`, `cleanup.py`). Test verisi yazılmadı.
+## 2026-09-28 — M27 Fuar, etkinlik ve ödül yönetimi (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-a2024553149e97c68` (main `7aa83b6a` üstü). Sunucuya bağlanılmadı; yerelde yalnız `py_compile` ve JSON
+  doğrulaması. pytest (`test_events.py`), tsc, vitest, derleme ve gerçek DB kabulü (`scripts/acceptance/M27/`) koordinatörde.
+- **Köprü:** `events.py`, `events_sources.py`, `events_api.py`; `app.py`'de tek kayıt bloğu, `access.py`'de üç sayfa kuralı + dört
+  işlem kuralı, `access_catalog.json`'da `sayfa:etkinlikler`, `ozellik:etkinlik.duzenle`, `ozellik:etkinlik.onay` (explicit),
+  `ozellik:odul.duzenle`. Zamanlayıcı `scripts/server/timas-events.{service,timer}` (07:45).
+- **Ekran:** `src/canvas/events/` (takvim, fuar kartı, sonuç, CRM etkinlikleri, ödüller, tip eşlemesi); rota `App.tsx`, menü
+  Pazarlama › Etkinlik, Kampüs «Tüm modüller» M27. Kampüs ajanda kartı gerçek veriye bağlandı (`AgendaCard.tsx`): sabit
+  «Dünya Kitap Günü / Yayın Kurulu / TÜYAP Fuarı 2024» yer tutucuları silindi.
+- **Kararlar (10. bölümdeki açık sorular, veriye/koda bakılarak):**
+  - *371 tipin hangisi fuar:* eşleme bir **ayar ekranı** (`/etkinlikler/tip-eslemesi`, tablo `semantic_events_type_map`).
+    Zeki AI kapalı küme seçimiyle öneri yazar (olasılıkla); takvim ve kabul yalnız insan kararını kullanır. Gerekçe: tip adları
+    dağınık (satış ziyareti ağırlıklı), yanlış sınıf 57 bin ziyareti takvime döker.
+  - *Fuar satışı fuar başına ayrı cari mi:* ölçülmedi → kart başına **cari seçimi** (fuar kanalının cari listesinden); seçilmezse
+    aynı günlerin bütün kanal satışı sayılır ve raporda uyarı yazılır.
+  - *Sipariş sayımı:* tip 4/5/16 (`EVENTS_ORDER_TYPES`), İptal (100000001) ve Birleştirildi (100000003) hariç
+    (`EVENTS_ORDER_EXCLUDED_STATUS`; birleşen sipariş hedefte ikinci kez sayılırdı) — ölçülecek.
+  - *Gider:* CRM'de neredeyse boş (C10) → portalda tür + tutar + isteğe bağlı fiş fotoğrafı; sonuçta CRM gideri ayrıca eklenir.
+  - *Adet önerisi:* rakam kuralla (geçmiş fuar × katsayı, yeni çıkanlar ortanca × katsayı, stok işareti); katsayılar ayar, ölçülecek.
+  - *Dış gönderim yok:* hatırlatmalar ekranda ve Kampüs ajandasında (e-posta yok).
+- **Sonraki sürüm (yapılmadı):** set/bundle önerisi, stant/materyal brief'i, ödül başvuru metni ve İngilizce hak kataloğu taslağı,
+  katılım öncelik puanı.
+- **Sunucuda kalan:** kurulum sonrası `check.sh`; `kabul.py` (salt okunur) ve `--write`; `cleanup.py`; tip eşlemesi için
+  «Zeki AI önerisi al» bir kez ve uzmanla karar; `timas-events.service` elle bir kez, sonra zamanlayıcı; telefon düzeni kontrolü.
+## 2026-09-28 — M28 Kurumsal ilişkiler (kanaat önderleri, kurumlar, kamu projeleri) ve ortak ilişki çekirdeği
+
+**DOĞRULANAMADI — testler koordinatörde.** Kod dalda (`worktree-agent-a4cd1a2a630d452b1`); yalnız `py_compile` ve JSON denetimi
+yapıldı. pytest (`test_public_affairs.py`, M7 regresyonu `test_author_relations.py`, `test_access.py`), vitest, tsc ve gerçek CRM
+kabulü (`scripts/acceptance/m28/kabul.py`) test sunucusunda koşulacak. main'e taşınmadı, kurulmadı.
+
+- **Neden:** M28 analizi §14. CRM'de kişi/kurum çok (ContactBase, 68.713 ziyaret yeri) ama kime hangi kitap gitti, ne döndü, hangi
+  projede ne söz verildi hiçbir yerde tutulmuyor; hediye talebi modülü 11 kayıtla fiilen kullanılmıyor.
+- **Ön adım — `relations_core.py`:** M7'deki doğrulama yardımcıları, ısı puanı, gizli not okuma kuralı, CRM şema/LIKE kaçışı ortak
+  dosyaya çıktı. `heat` artık hangi kaydın «yapılmış temas» olduğunu ve zamanın hangi alanda durduğunu erişimciyle alır
+  (varsayılan M7 görüşme tablosu). `author_relations.py` eski adları yeniden dışa verir (`R.heat`, `R.TZ`, `R.RelationError`…);
+  davranış değişmedi, M7 testleri olduğu gibi kalır. Yeni ilişki modülleri (M15/M16/M30–M32/M37/M38) buradan alır.
+- **Köprü:** `public_affairs.py` (tablolar `semantic_rel_*`), `public_affairs_sources.py` (CRM okuma), `public_affairs_docs.py`
+  (PDF), `public_affairs_criteria.json`, `public_affairs_api.py` (`/api/v1/public-affairs/*`). `app.py`'de tek `register` bloğu.
+- **Ekran:** `src/canvas/public-affairs/` — Bugün (temas zamanı gelen, açık projeler, ayın hediye programı), Kişiler, kişi kartı
+  (temas notları, gönderilen kitaplar, CRM'deki rol/uzmanlık, Zeki AI alan önerisi), Kurumlar (CRM ziyaret yerinden bağlama, il
+  istatistiği), Hediye programı («Kime gönderelim?», toplu onay, kişisel not taslağı, CRM sipariş no), Projeler (aşama panosu,
+  kitap listesi, hedef kurumlar, bütçe/teklif onayı, teklif taslağı, CRM erişim raporu), Etki raporu (+PDF, alan listesi yönetimi).
+  Menü Pazarlama › İlişkiler; telefonda iki dokunuşla not (Bugün → «Not yaz»). Yeni animasyon yok; mevcut `Sheet` ve basma geri
+  bildirimi kullanıldı.
+- **Kararlar (uzmana sorulacak sorular yerine veriye/koda bakılarak; gerekçeli):**
+  - *Yetki anahtarları `iliskiler.*`:* analiz `kurumsal.duzenle/onay/hassas` diyordu; M32 zaten `ozellik:kurumsal.teklif`,
+    `kurumsal.teklif-onay`… kullanıyor. Rol ekranında «Kurumsal onay» ile «Kurumsal teklif onayı» yan yana karışır; önek
+    `iliskiler` seçildi. Sayfa anahtarı analizdeki gibi `sayfa:kurumsal-iliskiler`. LLM modül adı da `iliskiler` (M32 `kurumsal`).
+  - *Sayfa «Herkes»e kapalı:* kişi kartları hassas; katalogda sayfa `explicit`. Main'deki `access.explicit_keys()` yalnız özellikleri
+    kapsıyor; M49 dalı sayfaları da kapsayınca etkin olur. O güne kadar kurulumdaki «Herkes» rolü sayfayı görür — açık kalan.
+  - *Alan listesi:* hukuk onayı gelene kadar yalnız kurum türüyle başlar (Akademi, Eğitim, Medya ve yayın, Sivil toplum, Kamu
+    yönetimi, Diğer). Yeni alan `iliskiler.onay` ile eklenir; yasak sözcük kök/tam sözcük olarak yakalanır («din» evet,
+    «dinleme» hayır), ek liste `REL_BANNED_TERMS` yalnız genişletir.
+  - *Temas zamanı:* kritik kişi 90, diğerleri 180 gün (ayar). Hiç temas yazılmamış normal kişi listeye düşmez — yoksa CRM'den alınan
+    her kişi ilk gün «zamanı geldi» olur; hiç temas yazılmamış kritik kişi düşer.
+  - *Hediye → gönderim:* CRM sipariş satırında alıcı kişi alanı yok (sipariş firmaya açılıyor, bilgi paketi); bağ kişi kartı ↔
+    CRM sipariş numarası elle yazılarak kurulur, durum her sabah okunur. Sevk: sevk tarihi dolu ya da durum 100000000 «Sevk Edildi»
+    (ayar `REL_SHIPPED_STATUS`). Sayılmayan sipariş durumları 100000001 İptal Edildi ve 100000003 Birleştirildi (birleştirilen
+    siparişin satırları yeni siparişte de durur; ayar). Satır düzeyinde iptal (`new_siparissatiriBase.statuscode` 100000001)
+    düşülmüyor — kabulde ölçülecek.
+  - *Öneri puanı modelsiz:* analiz «puan kuralla, model gerekçe» diyor; ilk sürümde gerekçe de kuraldan yazılır (örtüşen kök,
+    kritik, temas zamanı, son hediye) — açıklanabilir ve her kitap/kişi için aynı hat. Model yalnız kişisel not taslağı, alan
+    önerisi (kapalı küme `choose`, eşik `REL_LLM_MIN_PROB/MARGIN`) ve teklif bölümlerinde.
+  - *Teklif dosyası:* model amaç/kapsam/fayda/takvim yazar; rakam içeren satırı atılır. Kurum/öğrenci/öğretmen sayısı CRM ziyaret
+    yerlerinden (metin kolonu, çevrilemeyen kurum ayrıca yazılır), kitap adedi proje listesinden, dağıtılan adet CRM siparişinden.
+    Mevzuat maddeleri `meb-uygunluk-olcutleri.md`'deki OKY m.10/1 a–f, m.10/4 ve KLV 1.4, 2.2'den aynen (JSON, kaynak bağlantısıyla);
+    Diyanet/belediye/etkinlik için resmî madde bulunamadı, boş.
+  - *Kamu görevlisine hediye:* onay anında «hukuk onayı alındı» işareti şart (satırda kim/ne zaman). Tanıtım/bağış ile kişisel hediye
+    ayrımı kurum politikasıdır — sorulacak.
+- **Hukuka sorulacak (KVKK):** (1) Kişi kartının işleme amacı ve aydınlatma metni; (2) «din hizmetleri kurumu» (Diyanet) ile kurum
+  bağının kendisi özel nitelikli veriye götürür mü — kurum türü olarak tutuluyor, kişiye inanç etiketi konmuyor; analizdeki «din
+  adamları» sınıflaması uygulanmadı; (3) «Sivil toplum» alanı KVKK md. 6'daki dernek/vakıf üyeliğine götürür mü (alan mesleki bağ
+  olarak tanımlı, üyelik değil); (4) «yalnız ben» notlarının saklama süresi.
+- **Açık kalan:** M49 sayfa `explicit` desteği; VM `jobs.py`'ye `/api/v1/public-affairs/run-due` (günlük) — VM kurulumunda; Uyarılar
+  rozetine «onay bekleyen hediye/teklif»; etki izleme (M20/M22 verisi) ve kriz sinyali sonraki sürüm; M33 ihale → proje «fikir» bağı
+  (`tender_ref` kolonu hazır); M46 hediye/proje bütçesi bağı; kitap listesinin stüdyo yaş uygunluğu raporuyla otomatik bağı.
+- **Neden:** modülün adı «Yazarla İlişki ve Gelişim Takibi» ama ekranda satış yoktu; iş tanımındaki okur duygusu, strateji önerisi ve sadakat puanı eksikti; randevu/adım için hatırlatma yoktu. İş kararları veriye bakılarak verildi (hafıza: iş kararları Claude'a bırakıldı).
+- **Gelişim** (`semantic_bridge/author_growth.py`, uç `GET /api/v1/editorial/authors/growth/{kişi}`, kart panelinde «Gelişim»): yazarın CRM'deki kitapları (yazar rolü, `new_StokKodu` + e-kitap kodu) → Logo yıllık satış görünümleri, M6 hakediş hesabıyla **aynı sorgu ve kural** (faturalı malzeme satırı, iade düşülür, 157 ile başlayan kod ve bedelsiz satır sayılmaz). Son 12 ay / önceki 12 ay veri sonundan geriye (değişim %, artış/düşüş/yatay), yıllara göre ve son 24 ay grafik + tablo, kitap kitap adet. Kendi salt okunur Logo bağlantısı; aynı anda tek yazar okunur; sonuç `semantic_author_growth`'ta 12 saat, «Yenile» beklemeden okur.
+- **Telif:** CRM telif ödeme tablosu 2014'ten beri boş → gerçek iz M6'da hesaplanıp kaydedilen hakedişler (`semantic_contract_statements`); oranla tahmin **üretilmez**, hakediş yoksa ekran «Sözleşmeler ekranında hesaplanır» der.
+- **Okur sesi:** timas.com.tr ürün yorum özeti (SEO modülü, T-soft'tan gece; metin ve kişisel veri yok) kitaba EAN-13 ile bağlanır → ortalama puan, yıldız dağılımı; açık web taramasının olumlu/nötr/olumsuz sayısı yalnız `WEB_WATCH_ENABLED` ortamında. Bot korumalı satıcı yorumları okunmaz.
+- **Sadakat puanı** (yazarın yayınevine bağlılığı, yalnız CRM, kuralı ekranda yazılı): birliktelik yıl başı 3 (≤30), kitap başı 5 (≤25), son 24 ayda yeni eser/sözleşme 20 (24–48 ay 10), yürürlükte sözleşme 15, birden çok sözleşme 10; 70+ bağlı, 40–69 düzenli, altı zayıf bağ. Isı haritasında sütun ve «en sadık / sadakati en zayıf» sırası (tek CRM sorgusu, bütün yazarlar).
+- **ZEKİ AI önerisi** (`POST /api/v1/editorial/authors/advice/{kişi}`, yetki `ozellik:yazar-iliski.oneri`): girdi ekrandaki sayılar + gizli olmayan son 5 not; çıktı özet, en çok 4 öneri (neden + ne zaman), riskler; girdisiyle birlikte `semantic_author_advice`'ta saklanır. Kabulde iki model hatası bulundu ve girdi düzeltildi: sadakat puan dökümü «30 yıllık iş birliği» diye okundu (→ yıl ve sayılar gider), yarım 2026 «tarihin en düşüğü» sayıldı (→ `kismi_yil` işareti).
+- **Sabah e-posta özeti** (`author_reminders.py`): kişi başına günde bir kez; bugün/yarınki randevular, notu girilmemiş randevular (yalnız yazana), geciken ve bugün vadesi gelen adımlar. Boşsa gitmez; gizli notun konusu gitmez; alıcı kişi rehberinden, izinli alan adı süzgeci uyarılarla aynı; yalnız yayınevi içi. Ayarlar `AUTHOR_REMINDERS_ENABLED` (varsayılan açık), `AUTHOR_REMINDER_TIME` (08:15); kişi Randevular sekmesinden kapatır. Zamanlayıcı `scripts/server/timas-author-reminders.{service,timer}` (08–19 arası 15 dk; köprü saat eşiğini ve günde bir kez kuralını uygular); müşteri VM'inde `jobs.py` döngüsü.
+- **Doğrulama (test sunucusu, yan port 8798 aday köprü, gerçek CRM .28 + Logo + katalog DB, geçici `timasai` oturumu):** ısı haritası 549 sözleşmeli yazar, hepsinde sadakat, 4–7 sn; iki yazarda gelişim: ilk okuma 117–121 sn, sonra önbellekten 0 sn, «Yenile» 87 sn ve aynı sonuç. **Bağımsız referans:** Adem Güneş'in 55 stok koduyla yıllık görünümden düz toplam 2025 = 19.032, 2026 = 7.451 — uygulamayla birebir (süzgeçsiz toplam 19.050 / 7.462; fark 157 kodları ve bedelsiz satırlar, kural gereği). Sabah özeti kuru koşu 200. nginx `/timas/api/` 600 sn (test ve VM şablonu). Test verisi: iki öneri kaydı + 2 değişiklik kaydı satırı ve oturumlar silindi. tsc temiz, vitest 71/71, köprü testleri 36/36 (yeni `test_author_growth.py` 11).
+- **Açık:** test sunucusunda site yorum özeti yalnız 67 üründe (SEO yorum okuması sürüyor); denenen iki yazarın kitaplarında yorum yoktu — eşleşme kuralı SEO modülünün EAN anahtarıyla aynı. Kurulum ve 4 genişlikte görsel kontrol `main`e girdikten sonra.
+## 2026-09-28 — M42 Diğer pazar yerleri ve D2C: kanal karnesi, kitap × kanal, D2C, cari eşleme (+ ortak `channels/` paketi)
+
+**Durum: DOĞRULANAMADI — testler koordinatörde.** Yerelde yalnız `py_compile` ve JSON denetimi yapıldı; pytest, tsc, vitest,
+derleme ve gerçek Logo/CRM kabulü (`scripts/acceptance/M42/check.sh`, `kabul.py`) test sunucusunda koşturulacak. Dal
+`worktree-agent-a413d1dced953ab0a`; main'e taşınmadı, kurulmadı.
+
+- **Ne:** yeni menü alanı «Platform» (`platform`, `NavGroupId` + `access_catalog.json` `areas`) › Kanallar: kanal karnesi
+  (`/kanallar`), kanal detayı (`/kanallar/:platform`), kitap × kanal (`/kanallar/matris`), D2C büyüme (`/kanallar/d2c`), cari
+  eşleme (`/kanallar/eslesme`). M40/M41 aynı alana ve `channels/` paketine kendi bölümleriyle eklenecek (`platforms.ReadOnlyClient`,
+  `semantic_channel_accounts`, `semantic_channel_suggestions` hazır).
+- **Karar — önbellek cari düzeyinde:** analizdeki `semantic_channel_scorecards` (platform × ay) yerine grup (cari ya da
+  `#K:<kanal kodu>`) × ay tutuldu; platform okuma anında onaylı eşlemeyle toplanır. Gerekçe: eşleme onaylanınca karne yeniden okuma
+  beklemeden değişir, «platform = eşlenmiş carilerin toplamı» (kabul 7) yapı gereği tutar.
+- **Karar — ölçüler tek geçişte:** plandaki `logo_iade.sql`, `logo_iskonto.sql`, `logo_marj.sql` ayrı dosyalar yerine ortak
+  `_metrics.sql` parçası (satış, iade, adet, brüt, satır iskontosu, maliyetli ciro/maliyet, maliyetsiz satır/ciro, iade maliyeti) kanal
+  ve cari sorgularına girer: yıl başına üç tarama yerine bir.
+- **Karar — iskonto ve iade tanımı:** iskonto oranı = LINETYPE 2 TOTAL ÷ malzeme satırı TOTAL, TRCODE 7,8,9 ve faturalı (katalogdaki
+  `iskonto_yuku` 7,8 ve faturasız satırları da sayar; fark kabulde yazılır). İade oranı satır LINENET'iyle (katalogdaki `iade_orani`
+  başlık NETTOTAL; iki tanımın farkı R1b/R3'te bilgi olarak).
+- **Karar — kanal koduyla eşleme (Soru 3):** D2C'nin Logo'daki carisi ölçülmedi; bireysel site müşterileri tek tek cari olabilir.
+  Eşleme ekranında bir kanal kodu bütünüyle platforma bağlanabilir (ör. INTERNET → timas.com.tr); tek tek eşlenen cari önce gelir.
+- **Karar — kanal hedefi (Soru 4):** kanal hedefi CRM satış hedefi bölgesidir (adet; bölge ↔ platform eşlemesi kullanıcıda, ad
+  eşleşmesi öneri); M46'dan türetilen kanal hedefi ayrıca gösterilir (kitap hedefi × kanalın geçen yıl o kitaptaki payı; kitap geçen
+  yıl kanalda yoksa kanalın genel payı) — bütçede kanal kırılımı yok, ekranda «paylaştırma» diye yazılır.
+- **Karar — kanal maliyeti (Soru 5):** komisyon/kargo/reklam Logo'da kanal bazında ayrışmıyor (ölçülecek); finansın girdiği
+  platform oranı (`ek-maliyet:<platform>`) varsa «katkı» hesaplanır, yoksa hiç gösterilmez.
+- **Karar — mağazaya yazma (Soru 2, kullanıcı kararı):** yok. Platform istemcisi taban sınıfı yalnız izinli okuma yollarını çağırır;
+  öneri onayı portal kaydıdır. Satış modeli sonraya: sell-through yalnız panel Excel/CSV yüklemesiyle (kişisel kolonlar içeri alınmaz,
+  adları kayda «kişisel olabilir» diye düşer).
+- **Eşleme adayı:** unvan ya da CRM adında platform adı veya işletmeci unvanı (varsayılan D-MARKET → Hepsiburada, DSM GRUP → Trendyol,
+  TURKUVAZ → D&R; Yönetim ayarından değişir) — birden çok platform geçerse modele kalır; değilse Zeki AI kapalı küme seçimi (platform
+  listesi + «Platform değil»), olasılık eşiği altı aday gösterilmez. Onay her zaman insanda.
+- **Marj:** yalnız `ozellik:kanal.marj` (explicit) olan kişiye gider; alanlar cevaptan çıkarılır. Maliyetsiz satır sayısı ve cirosu
+  her ekranda; M9 birim maliyet sağlayıcısı (`app.state.pricing_costs`, dalda) bağlıysa maliyetsiz satırlar onunla tamamlanır ve
+  birim maliyeti bilinmeyen kitap ayrıca sayılır. Bağ noktası `api.unit_costs()` — M9 main'e girince ek kod gerekmez.
+- **Eşikler (ölçülmedi, ayar):** iade uyarısı %10, iskonto artışı 2 puan, D2C güçlü kitap en az 20 adet ve genel payın 1,5 katı,
+  eşleme olasılığı 0,70 / fark 0,30.
+- **Ortak dosyalar (en küçük ekleme):** `app.py` (2 satır), `access.py` (RULES + FEATURE_RULES), `access_catalog.json` (alan, 4 sayfa,
+  5 özellik), `admin.py` (`CHANNEL_*` ayarları, «Platform ve kanallar» grubu), `App.tsx` (5 rota), `navModel.ts` (+ test),
+  `ModulesMenu.tsx` (M42, «Platform Yönetimi»).
+- **Açık:** H3 site sipariş tabloları henüz yok (D2C sekmesi «bağlı değil» der; kolonlar okunurken doğrulanır); M43 yokken stok payı
+  önerisi kapalı; Zeki AI sohbet konusu `eticaret`'in veri alanı boş (`chat_topics.json`'a dokunulmadı).
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
@@ -330,6 +1365,129 @@
 - **Testler:** `backend/semantic_layer/tests/test_pricing_cost_provider.py` — öncelik (onaylı > gerçekleşen > yok), kesin > tahmini, aynı aşamada en yeni, onaysız/başka kiracı/sıfır maliyetli analiz yok sayılır, maliyetsiz yıl atlanır, bozuk kayıt/görüntü, M32 ve M33 sağlayıcıyı kendi biçiminde alır, `create_app` bağı (sahte kayıt + sahte `snapshot.json`).
 - **Kabul (sunucuda koşulacak):** `scripts/acceptance/M9-maliyet/kabul.py` (K1 onaylı analiz = kayıt, K2 ≥5 kitapta gerçekleşen = Logo'da aynı yıl/kopya bağımsız SQL, K3 maliyetsiz kitap = Logo'da maliyetli satır 0, K4 olmayan kod, K5 M32/M33(/M53) biçimleri aynı sayı), `referans.sql` R1–R3, `temizlik.py` (kabul yalnız okur; «KABUL» adlı artık analiz denetimi).
 - **Açık kalanlar:** M33'ün «Maliyet bilinmiyor: birim maliyet kaynağı bu kurulumda bağlı değil.» notu ve M32/M33 modül belgelerindeki «M9 henüz main'de değil» cümleleri artık eski — modül kodu olduğu için dokunulmadı (M33 sahibi düzeltmeli: not «bu kitapların maliyeti bilinmiyor» olmalı). Onaylı analizi olmayan ve M9 görüntüsü hiç kurulmamış kurulumda (M9 ekranı hiç açılmamış) gerçekleşen adımı boştur; görüntü ilk M9 isteğiyle kurulur.
+## 2026-09-28 — M18 Aylık pazarlama planı (yeni kitap + backlist) ve satış föyü (FÖY)
+
+**DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-a61a63ee65f2db510`, main `e543a122` üstünde); yalnız
+`py_compile` ve JSON denetimi yapıldı. pytest, vitest, tsc ve gerçek CRM/Logo kabulü test sunucusunda koşulacak
+(`scripts/acceptance/m18/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** M18 analizi (`docs/analiz/kullanici-ihtiyaclari/M18-aylik-pazarlama-plani.md` §14). Ay planı pazarlamanın
+  kendi dosyalarındaydı, satış hedefiyle bağı yoktu; föy metni CRM'de olduğu hâlde föy elle diziliyordu.
+- **Çekirdek genişletildi, ikinci paket yok:** `marketing/monthly.py`, `foy.py`, `foy_pdf.py`, `monthly_api.py`. Çekirdeğe
+  tek ek: `core.register_plan_table` — taslak silinince modül tabloları da silinir, revizyonda yeni sürüme kopyalanır
+  (M16/M17 de kullanacak). `api.register` iki kanca aldı (`run_due`, `meta`); M18 uçları oradan bağlanır, app.py
+  değişmedi. `sources.py`'ye CRM okumaları eklendi: ayla kesişen kampanyalar, özel günler (bağlı kitap sayısıyla),
+  föy alanları (500'lük parçalar, tavan yok), bölge satış hedefi (bilgi).
+- **Ay planı:** `kind='aylik'`, `donem`. Kalemler kaynağından: CRM yayın günü (M15 önceliği, M15'te elle girilen gün
+  önce), onaylı M15/M17 plan satırları, CRM özel günleri (`seo_geo.seasons` tarih yöntemi), CRM kampanyaları. Yeniden
+  kurmada elle düzeltilen kalem korunur, kaynaktan düşerse silinmez «kaynakta yok» olur; kullanıcının eklediği kalem
+  korunur, yalnız o silinir. Çakışma kuralı: aynı ISO hafta + aynı kitaplık ≥ 2 lansman; aynı kanalda tarihi örtüşen
+  kampanya (B2B'de aynı mecra). Onay akışı çekirdeğinki (iki göz, eşik üstü üst onay, revizyon).
+- **Bütçe (rakamı kod üretir):** çerçeve elle > `MARKETING_MONTHLY_BUDGET` > oran × ay hedef cirosu (oran M15'teki ayar ya
+  da veri). Segment payı = M46 ay hedef payı × (1 + önceki ay hedefin altında kalınan pay); kanal payı segmentin M46
+  kitaplarına bağlı CRM pazarlama bütçe modülü harcamasından, yoksa şirket geneli. Öneri satırları çekirdeğin bütçe
+  satırlarına yansıtılır (onay eşiği, CSV/PDF aynı satırlardan); müdürün düzelttiği tutar yeniden öneride korunur.
+  Zeki AI (`rt.llm_for("marketing", NORMAL)`; 15'indeki taslakta arka planda `BATCH`) yalnız gerekçe ve genel müdüre
+  üç paragraf özet yazar; olgu listesi dışındaki sayının cümlesi düşer (`guard.check`).
+- **Önceki ay:** M46 Logo önbelleğinden hedefli kitapların net cirosu ÷ aynı kitapların ay hedefi (segment başına);
+  şirket toplamı 157 ticari ürün hariç; veri sonu yazılır (Logo .155 donmuşsa «ay tam değil»). Plan işlerinin yapılma
+  oranı onaylı planların o aya düşen işlerinden.
+- **Föy:** alanlar CRM kitap kartından, her alanın kaynağıyla; elle düzeltme CRM yenilemesinde korunur. Uyumsuzluk: CRM
+  KDV dahil fiyat ≠ Logo fiyatı (tolerans ayarı), «Föy için taslak fiyat» ≠ KDV dahil fiyat, raporlama görünümü fiyatı ≠
+  KDV dahil fiyat, barkod ≠ güncel ISBN, EAN-13 denetim hanesi yanlış. Eksik zorunlu alanlı föy onaylanmaz; uyumsuz föy
+  yalnız gerekçeyle kabul edilerek onaylanır. Onaylı föyün CRM özeti değişince «eski»; «CRM'den yenile» yeni sürümü
+  taslak açar. Zeki AI satış argümanı yalnız CRM'de «Bu kitap neden önemli?» boşsa. PDF: A4 tek sayfa, taşan metin
+  görünür biçimde kesilir («tam metin portalda»), EAN-13 çizilir; paket = onaylı föylerin birleşik PDF'i + zip.
+  Gönderim yalnız `foy-gonder` yetkisiyle ve yalnız Yönetim'deki föy dağıtım listesine; alıcı ekrandan girilmez.
+  CRM'e yazılmaz: onaylı föyde elle/Zeki AI gelen metin «CRM'e işlenecek» listesinde.
+- **Zamanlayıcı:** yeni birim yok; `timas-marketing` (07:30) run-due kancası: 15'inde gelecek ay taslağı (dönem başına
+  bir kez, kaçırılırsa sonraki gün), her gün bu ve gelecek ayın föy CRM denetimi, 20'sinde eksik/onaysız föy
+  hatırlatması, ayın 3. iş günü önceki ay özeti, pazartesi M46 sapma özeti (plan sahibine ya da alıcılara).
+  `POST /api/v1/marketing/months/run-due` elle tetikler. İlk kurulumda elle koşturulmalı.
+- **Yetki:** `sayfa:pazarlama-aylik`, `sayfa:pazarlama-foy` (saha temsilcisinin rolünde yalnız bu); `ozellik:pazarlama.foy-yaz`;
+  açık `foy-onay`, `foy-gonder`. Ay planı yazma `plan-yaz`, onay `plan-onay`/`butce-ust-onay`, tutarlar `butce-gor`.
+  Föy PDF'i ve paketi `veri.disa-aktar` istemez (katalogda not). M46 targets/deviations aylık plan sayfasına açıldı.
+- **Ekran:** `src/canvas/marketing/monthly/` — `MonthScreen` (ay seçici, önceki ay şeridi, sekmeler Takvim · Bütçe ve
+  öncelik · Föyler · Özet; kalem ayrıntısı ve düzeltme alttan açılan panelde), `CalendarGrid` (masaüstünde hafta × kanal
+  tablosu, telefonda hafta hafta liste; çakışma kırmızı çerçeve), `BudgetPanel`, `FoyList`/`FoyTable`, `FoyScreen`
+  (telefonda önce föy önizlemesi ve «Paylaş» = `navigator.share` ile PDF, olmazsa PDF açılır). Yeni animasyon yok.
+- **Kararlar (uzmana sorulacak sorular yerine; gerekçeli):**
+  - *Föy onayı `onayda` şartı yok:* satış müdürü taslağı doğrudan onaylayabilir; iki göz son düzelten/gönderen kişinin
+    onaylayamamasıyla sağlanır (her ay onlarca föyü tek tek «gönder»mek ek tık; §12 «bunu yaparsanız kullanmam»).
+  - *Çakışma anahtarı varsayılan kitaplık:* hedef kitle CRM'de üç değer (Çocuk/Genç/Yetişkin); ona göre her hafta
+    çakışma çıkar. `MARKETING_CONFLICT_KEYS` ile eklenir.
+  - *Segment ağırlığı:* hedef payı × (1 + açık) — hedefi tutturan segment payında kalır, %70'te kalan 1,3 kat; tavan
+    yok (açık en çok 1 → en çok 2 kat). Bir kural istenirse ayardan sabit bütçe girilir.
+  - *Logo fiyatı:* Baskı Öneri tanımı (satış satırı) varsayılan, Power BI'daki «güncel fiyat» ile aynı; yeni kitapta
+    henüz satış yoksa karşılaştırma yok. Fiyat listesi (`PRCLIST`) ayarla seçilir; hangisinin doğru olduğu ölçülecek.
+  - *CRM kampanya tipi:* «Kampanya» ve «Anlaşma» ikisi de takvimde; anlaşmalar bayi sözleşmesi olabilir, ayarla süzülür.
+  - *Ay özeti günü:* 3. iş günü resmî tatilleri saymaz (ölçülecek; ayarla).
+- **Ölçülecek (kabul listesinde):** CRM kampanya kullanımı 2026; `new_satishedefleriBase` 2026 doluluğu ve M46 ile ilişkisi;
+  `new_resimurl` tam adresi (`MARKETING_COVER_BASE_URL`); `new_diziidName`/`new_Ebat`/`new_ciltlemesekli` doluluğu;
+  föy fiyatının satış satırı mı liste mi olduğu; föy dilinde «tavsiye edilen satış fiyatı».
+- **Açık kalan:** VM `infra/docker/bi/jobs.py`'de pazarlama run-due'su yok (M15'ten beri) — VM kurulumunda eklenmeli.
+  Platform ve e-bülten performansı, M22/M30/M32 bağlantıları sonraki sürüm (`contract/month/{ay}` hazır).
+## 2026-09-28 — M49 Veri yönetimi ve güvenlik (ilk sürüm) — DOĞRULANAMADI, sunucu kapalı
+
+- **Neden:** analiz (`docs/analiz/kullanici-ihtiyaclari/M49-veri-guvenligi.md`): erişim kapısı (Yetki A/B/C) kurulu, izleme ve uyum
+  tarafı yoktu. Giriş servisi başarılı/başarısız girişi hiç yazmıyordu; 403 ve dışa aktarma kayıtsızdı; soru kaydı
+  (`sl_query_log.result_json`) tam sonucu süresiz tutuyordu ve silen kod yoktu; model sırası (`sl_llm_queue.question` ilk 500
+  karakter) ve model işi (`sl_llm_job.messages_json` tamamı) de öyle.
+- **Ne yapıldı (dalda, main'e taşınmadı):**
+  - Giriş servisi (`scripts/server/portal-login/server.py`): `login_events` tablosu (hesap, sonuç, neden
+    `ok|bad_password|unknown_account|unknown_domain|bad_format|directory_down|logout|revoked`, adres, tarayıcı özeti);
+    `sessions`'a `created`, `addr`. Parola ve oturum anahtarı yazılmaz; dizinde olmayan ya da geçersiz biçimli ad da
+    yazılmaz («(bilinmeyen hesap)» / «(geçersiz biçim)»: kişi parolasını ad kutusuna yazmış olabilir). Yönetim uçları
+    `GET /admin/events`, `GET /admin/sessions`, `POST /admin/sessions/revoke` yalnız `LOGIN_ADMIN_TOKEN` (≥ 24 karakter)
+    başlığıyla ve `X-Real-IP` taşımayan (ters vekilden gelmeyen) istekte çalışır — `/timas/auth/` dışarıya açık olduğu için.
+    Servisteki olay kopyası 30 gün (`LOGIN_EVENTS_KEEP_DAYS`); uzun süreli kayıt köprüde.
+  - Köprü `data_security.py` + `data_security_api.py` (`/api/v1/data-security/*`) + `data_security_inventory.json`
+    (portal içi kişisel veri defteri; 25 tablo, 5 klasör). Tablolar `semantic_security_logins|access|alerts|retention_runs|state`.
+    Sayfa kapısı (`app.py` `_gate_verdict`) 403 kararını ve `ozellik:veri.disa-aktar` isteğini yazar (her istek değil);
+    istemci tarafı CSV/PDF için `export-notice` (Baskı öneri CSV, dahili rehber CSV, pano kartı CSV, pano PDF bağlandı).
+    Yetki dışı soru kopyalanmaz, `sl_query_log.answer_type='NOT_PERMITTED'`'ten okunur.
+  - Kurallar (model yok, tekrarlanabilir): aynı hesaba W dakikada ≥ N hatalı giriş (5/10), mesai dışı bir saatte ≥ 3 dışa
+    aktarma (mesai 08:00–19:00, Pzt–Cum), yeni yönetici, «Herkes»e yetki eklenmesi, uygulanıyorken saklama işinin 48 saat
+    çalışmaması. Kritik uyarı `SECURITY_ALERT_RECIPIENTS`'e anında, 403/yetki dışı soru özeti günde bir. İlk koşu yönetici
+    ve Herkes için yalnız taban kaydeder (kurulum günü sahte «yeni yönetici» uyarısı çıkmaz).
+  - Hesap hijyeni: açık oturumu olup AD'de etkin olmayan (kritik), yönetici listesinde olup AD'de olmayan, role kişi olarak
+    bağlı olup AD'de olmayan, CRM'de etkin AD'de değil, test adı kalıplı, uzun süredir girmeyen, yalnız «Herkes» ile giren.
+    Okunamayan kaynağa dayanan bulgu çıkmaz, not düşülür. Eşleşme hesap adıyla (GUID değil) — kabulde CRM farkıyla ölçülecek.
+  - «Herkes» daraltma önizlemesi: bugünkü rol/bağ/üyelikle kişi kişi kim neyi kaybeder; yöneticiler hesaplanmaz.
+  - Kişisel veri envanteri: katalogdaki `sensitive` kolonlar (varlık + kolon başına bir satır, değer yok) ve ad-soyad kalıbı
+    (yalnız envanterde «kişisel veri (ad)»; soru hattına dokunulmadı, `sensitivity.py` değişmedi → tam set regresyonu gerekmez).
+  - Saklama süresi: nesneler soru sonucu, model sırası metni, giriş kaydı, erişim kaydı, kapanmış uyarı, değişiklik kaydı.
+    Gece işi (`SECURITY_DAILY_AT` 03:40'tan sonraki ilk 5 dk'lık koşu) önce önizleme satırı yazar; **`SECURITY_RETENTION_APPLY`
+    varsayılan kapalı** — kapalıyken hiçbir şey silinmez. Açmak `ozellik:guvenlik.saklama` ister ve ekran önizlemeyi
+    göstermeden açamaz (`onizlemeGoruldu`); açılış ayrıca `approve` diye değişiklik kaydına önizleme sayılarıyla yazılır.
+    Soru kaydında satır silinmez, yalnız `result_json` boşaltılır; model sırası/işinde yalnız metin boşaltılır (süreler M48
+    kapasite görünümü için kalır). Parti parti (2.000) biter, tavan yok.
+  - **Varsayılan süreler ve gerekçesi** (hukuk teyidi bekliyor, analiz §10 soru 2): soru sonucu **90 gün** (bir çeyrek:
+    sonucu yeniden görme ve itiraz için yeter; soru ve SQL kalır, promt izleme bozulmaz); model metni **30 gün** (yalnız
+    hata ayıklama için tutuluyor, en hassas kopya bu); giriş ve erişim kaydı **365 gün** (yıllık denetim döngüsü ve ihlal
+    incelemesi için geriye bir yıl); kapanmış uyarı **730 gün**; değişiklik kaydı **0 = süresiz** (yetki değişikliğinin kanıtı).
+  - Yetki: `sayfa:veri-guvenligi` **açıkça verilen sayfa** — `access.explicit_keys()` artık `pages` içinde `explicit`
+    olanları da kapsar (M55 §14.1 ile aynı değişiklik, en küçük hâli); aksi hâlde «Herkes»in bütün sayfaları güvenlik
+    ekranını herkese açardı. `ozellik:guvenlik.uyari-kapat` (FEATURE_RULES), açıkça verilen `guvenlik.oturum-kapat` ve
+    `guvenlik.saklama` (uçta). Rol düzenleyici açıkça verilen sayfayı «ayrıca verilir» diye gösterir.
+  - Menü: yeni çalışma alanı `altyapi` «Altyapı ve destek» (M48 ile aynı id/etiket; merge'de tekilleşir) › Veri güvenliği;
+    Kampüs M49; rota `/timas/veri-guvenligi`; ön yüz `src/canvas/data-security/` (sekmeler Özet · Uyarılar · Giriş ve
+    oturumlar · Erişim kaydı · Hesap hijyeni · Kişisel veri envanteri · Saklama süreleri; telefon düzeni, animasyon yok).
+  - Zamanlayıcı `timas-security.timer` (5 dk) → `run-due`; VM `jobs.py`'de `SECURITY_EVERY_SEC`=300. Compose: giriş
+    konteynerine `LOGIN_ADMIN_TOKEN`; nginx `/timas/auth/`'a `X-Real-IP` (şablon + `configure_nginx.py`);
+    `timas-login.service`'e `EnvironmentFile=-/etc/nanobase/timas-login.env`.
+- **Plandan sapmalar:** saklama politikası ayrı tablo yerine `admin.conf` (ekran > env > varsayılan; kim/ne zaman
+  `semantic_settings` + değişiklik kaydında), kanıt `semantic_security_retention_runs`'ta. Veri sahibi, çeyreklik gözden
+  geçirme, belge taslakları, ihlal akışı ve `sensitive_read` kaydı ikinci sürüme (analiz §9). Sohbet kutusu (sabit sorgulara
+  kapalı küme eşleme) bu sürümde yok.
+- **Testler:** `backend/semantic_layer/tests/test_data_security.py` (20), `scripts/server/portal-login/test_server.py`'ye 6,
+  `navModel.test.ts`'e 1 + beklenti güncellemesi. Yerelde yalnız `py_compile` ve JSON doğrulaması; **pytest/tsc/vitest
+  koşulmadı — DOĞRULANAMADI, sunucu kapalı.**
+- **Sunucuda kalan:** giriş servisinin yeniden kurulumu (sudo, kullanıcı), iki tarafa aynı `LOGIN_ADMIN_TOKEN`, nginx başlığı,
+  `scripts/acceptance/M49/check.sh` (pytest, tsc, vitest, derleme), `kabul.py` (R1–R8 + yanıt taraması), `cleanup.py` ve
+  giriş servisindeki test satırlarının silinmesi, `timas-security.service`'in elle ilk koşusu (`?zorla=gunluk`), sonra timer.
+  `SECURITY_RETENTION_APPLY` kapalı kalır. Ölçülecek: katalogdaki maskeli kolon sayısı ve CRM `Contact` TC kolonlarının
+  işaretli olup olmadığı; CRM–AD hesap adı eşleşmesinin GUID eşleşmesinden farkı.
 
 ## 2026-09-28 (03:20) — Müşteri VM'ine `0e2ad1e8` kuruldu (M10 İlk baskı, M12 Üretim, M46 düzeltmeleri); VM'de bütçe yenilemesi
 
@@ -338,6 +1496,42 @@
 - **Kurulum:** `git archive 0e2ad1e8` → `/tmp/bi-main-0e2ad1e8` → `systemd-run --unit=vm-deploy-0e2ad1e8`, günlük `/tmp/vm-deploy-0e2ad1e8.log`, EXIT 0; `c6699f5d`'nin devamı (geriye sarma yok); `bi_var` korundu (rapor önbelleği 4 → 5). Kontroller: `._*` kaynakta 0, köprü konteynerinde 0; köprü/web imajı 02:58, konteynerler bu imajda; köprüde `app.py` ve `production.py` md5 = `0e2ad1e8`; web `index-CVv5-QTM.js` = test sunucusu.
 - **VM kabulü** (dış kapı, giriş konteynerinde 15 dk'lık `timasai` oturumları, her biri sonra silindi; yalnız okuma): 38 uç/sayfa; M8, M4, M2, M7, M6, M46, Yetki, bülten, M10 (`summary`, `decisions`), M12 (`overview` ilk açılış 60 sn, `cards`, `delays`, `printers`) ve 9 sayfa 200. M10 `options` ilk açılışta 503 «hazırlanıyor» (beklenen): ilk rapor VM'de 721 sn'de hazırlandı, sonra `hasData: true`, yayınevi seçenekleri doldu.
 - **Temizlik:** test sunucusu ve VM'deki geçici betikler/klasörler silindi; test kaydı yazılmadı.
+## 2026-09-28 — M48 IT altyapı ve sistem durumu kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Ne:** `/timas/sistem-durumu` ekranı (Durum · Olaylar · Zamanlanmış işler · Sürümler · Kapasite · Ayarlar), yeni menü alanı
+  «Altyapı ve destek» (`altyapi`, M48–M51 ortak), Kampüs'te kopukluk şeridi. Köprü `it_ops.py`, `it_ops_sources.py`,
+  `it_ops_api.py`; `app.py`'de yalnız `register`. Analiz `docs/analiz/kullanici-ihtiyaclari/M48-it-altyapi.md` §14.
+- **Yeniden kullanılan:** bağlantı denemeleri `admin.run_check` (Logo, CRM, dizin), zamanlayıcı durumu `admin.system_status` /
+  `_unit` / `_timer_times`, SMTP ayarı `alerts.smtp_settings`, yıl→firma `budget_sources.firms_by_year`, rapor/pano/uyarı
+  listeleri `admin.all_reports` / `all_cards` / `alerts.list_rules`. Bekçi betiği yeniden yazılmadı; sonuna yalnız bildirim eklendi.
+- **Kararlar (analizin açık noktaları, gerekçeyle):**
+  - Logo «veri eski» eşiği **3 gün** (analiz 2 diyordu): cuma akşamı son faturalı bir haftada pazartesi 08:00 turu 2 günle
+    her hafta yanlış alarm verirdi. Ekrandan değişir (`ITOPS_LOGO_STALE_DAYS`).
+  - Tazelik ayrı olay türü (`tazelik`): bağlantı yeşil, veri donmuşken (.155, 2026-08-17) de BT bilsin; kopma sayısına ve
+    kesinti dakikasına girmez.
+  - Model halkası kapıdan geçer; süre dolduğunda deneme hâlâ sıradaysa sonuç «ölçülemedi» (kopma değil), modelin kendi süresi
+    ve sırada bekleme ayrı yazılır.
+  - E-posta **yalnız iç alıcıya**: `ITOPS_INTERNAL_DOMAINS` (varsayılan `timas.com.tr`) dışındaki adres gönderilmez, ekranda
+    «gönderilmeyen» diye listelenir; alan adı listesi boşsa kimseye gitmez. Aynı turdaki olaylar tek e-postada.
+  - Zamanlanmış iş hatası tek tek değil, günde bir özetle (`ITOPS_REPORT_HOUR` sonrası); haftalık sağlık özeti
+    `ITOPS_WEEKLY_DAY`. İşin sahibine ayrı e-posta ilk sürümde yok (sahip bilgisi her modülde farklı).
+  - VPN halkası müşteri VM'inde uygulanmaz (VM şirket ağının içinde; kapsayıcıda arayüz görünmez); VM'de «Müşteri VM'i»
+    halkası iş kapsayıcısının bildirim tazeliğidir (`ITOPS_VM_HEARTBEAT_SEC`), test sunucusunda `ITOPS_VM_URL` denemesi.
+  - Açıkça verilen sayfa: `access.explicit_keys()` sayfaları da kapsar (M55 §14.1'deki gerekli değişiklik); «Herkes» ve
+    «Bütün sayfalar» Sistem durumu'nu açmaz. İşlem yetkileri FEATURE_RULES'a değil, açıkça verilen anahtar olduğu için ucun içine.
+  - Ekrana/e-postaya giden hata metninden teknoloji adları ayıklanır (`it_ops.screen_text`); iç günlükte ham metin kalır.
+  - Kapasite sekmesi ilk sürümde anlık okuma (disk, modül başına model ortancası, soru süresi); projeksiyon ve CRM iş akışı
+    hataları sonraki sürüm. Olay değerlendirmesi taslağı (K2) Zeki AI'dan, sayılar olay tablosundan; yayım olay kapanınca.
+- **Ortak dosyalar:** `access.py` (explicit sayfa, RULES), `access_catalog.json`, `admin.py` (SPEC `itops`, KIND_LABEL), `app.py`,
+  `navModel.ts` (+test), `ModulesMenu.tsx`, `App.tsx`, `AccessAdmin.tsx`, `engine.ts` (`AccessPage.explicit`), `Overview.tsx`
+  (Sistem durumu bağlantısı), `KampusPage.tsx` (şerit), `infra/docker/bi/jobs.py`, `semantic-watchdog.sh` + birimi,
+  `deploy-customer-vm.sh`, `deploy-semantic-bridge.sh`. Yeni: `scripts/server/timas-itops.{service,timer}`, `itops-report-release.sh`.
+- **Doğrulama:** yerelde yalnız `py_compile`, JSON ve `bash -n` (kural). pytest/vitest/tsc koşturulmadı. **DOĞRULANAMADI —
+  sunucu kapalı.** Sunucuda sıra: main'e merge → test sunucusu tam kurulum → `scripts/acceptance/M48/calistir.sh` (birim testleri,
+  zamanlayıcı kurulumu + ilk tur elle, `kabul.py` K1–K9; API ile `--api --dene`) → `temizlik.py` → VM (`--vm`).
+- **Açık:** SMTP ve `ITOPS_RECIPIENTS` girilmeden bildirim gitmez; `ITOPS_VPN_PROBE` ve `ITOPS_VM_URL` test sunucusunda
+  girilmeli (ölçülecek); watchdog birimine `EnvironmentFile` eklendi (jetonla bildirim için) — kurulumda birim yeniden yüklenmeli;
+  VM'de ilk turdan sonra halkaların «bilinmiyor» kalmadığı ölçülecek (kabul 7).
 
 ## 2026-09-28 (01:20) — Sesli okuma yenilikleri + son okuma (sade metin, karar taşıma) kuruldu: GPU ve test sunucusu (main `3e1a408c`)
 
@@ -642,6 +1836,81 @@ main'e taşınmadı, kurulmadı.
 - **Açık:** `main`e taşıma ve test sunucusu kurulumu erişim dönünce; CRM kitap → marka/kitaplık birleşimi ve Logo `TOTAL`'in liste fiyatı olduğu sunucuda teyit edilecek; sunucudaki `~/m9` ölçüm klasörü silinecek. Müşteri VM'ine kurulmayacak.
 
 ## 2026-09-28 — M7 çapraz yazar önerisi: e-ticarette birlikte alınan yazarlar
+## 2026-09-28 — H4 Kurumsal e-posta yönetimi (timas@ genel kutusu; dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Neden:** genel kutu elle okunup iletiliyor; kime gittiği, cevaplanıp cevaplanmadığı, ne kadar sürdüğü kayıtta yok. CRM'deki
+  karşılıklar ölü (dosya başvurusu 19 kayıt, `IncidentBase` 34). Analiz: `docs/analiz/kullanici-ihtiyaclari/H4-kurumsal-eposta.md`
+  (14. bölüm planı uygulandı).
+- **Ne yapıldı:** köprü `mailbox.py` (depo, durum makinesi, iş saatli SLA, kural sürümleri, rapor, etiketleme),
+  `mailbox_sources.py` (posta bağdaştırıcısı arayüzü, Gmail; CRM gönderen tanıma), `mailbox_classify.py` (Zeki AI: tür, öncelik,
+  özet, başvuru alanları, yanıt taslağı), `mailbox_api.py` (`/api/v1/mailbox/*`); tablolar `semantic_mail_messages|events|
+  rulesets|categories|routes|templates|sla|applications|labels|meta`. Ekran `src/canvas/mailbox/` (gelen kutusu, ileti, rapor,
+  kurallar, etiketleme), rota `/kurumsal-eposta` (+ `/ileti/:id`, `/rapor`, `/kurallar`, `/etiketleme`), menü **Kayıtlar ›
+  Kurumsal e-posta** (rozet: bana atanan açık ileti; ekran okuyucuya süresi aşan sayısı da), Kampüs «email» kutusu canlı, yazar
+  giriş süreci panosunda «E-postayla gelen başvurular» kutusu, Yönetim → Portal ayarları'nda «Kurumsal e-posta» grubu ve
+  «Kutuyu oku» denemesi, iki zamanlayıcı (`timas-mailbox` 5 dk, `timas-mailbox-sla` saat başı :07), pytest `test_mailbox.py`,
+  vitest `mailbox/api.test.ts`, kabul `scripts/acceptance/H4/`.
+- **Kutu (kullanıcı kararı 2026-09-28): Google Workspace, Gmail API birincil ve varsayılan.** Kapsam yalnız `gmail.readonly` +
+  `gmail.labels`; gönderme/değiştirme kapsamı istenmez. Microsoft 365 / IMAP için yalnız arayüz (bu kurulumda kurulmadı).
+  **BT'nin vermesi gerekenler** (Yönetim ekranı yardım metninde de yazılı):
+  1. *Önerilen — hizmet hesabı + alan geneli yetki devri:* Gmail API açık bir Google Cloud projesinde hizmet hesabı ve JSON
+     anahtarı (SEO'nunkinden ayrı); Workspace Yönetici Konsolu → Güvenlik → API denetimleri → Alan genelinde yetki devri'nde
+     hesabın istemci kimliğine yalnız `https://www.googleapis.com/auth/gmail.readonly` ve
+     `https://www.googleapis.com/auth/gmail.labels`; kutu adresi (`timas@timas.com.tr`). Belirteç `sub = kutu` ile alınır.
+  2. *Alternatif — OAuth:* alan geneli yetki verilmek istenmezse kutunun kendi hesabıyla bir kez onay; OAuth istemci kimliği,
+     sırrı ve yenileme belirteci girilir.
+  JWT imzası SEO modülünün servis hesabı deseniyle aynı (`seo_geo.connections._sign`, sunucudaki openssl); yeni bağımlılık yok.
+  Ayar boşken ekran «Kutu bağlı değil» ve nedenini söyler; sahte ileti yok.
+- **Kararlar (sormadan, gerekçeli — analiz §10 ve kodlama sırasında çıkanlar):**
+  1. *Tür listesi:* kurulumda 11 tür yürürlükte başlar (iş tanımındaki beş + analizde görülen sipariş/kargo, bayi/kurum,
+     telif/izin, basın, diğer). Kodda sabit değil: tablo boşken bir kez yazılır, sonra Kurallar ekranında taslak → onay.
+     Türün rolü (dosya başvurusu / iş başvurusu / tanıtım-spam) davranışı belirler, tür anahtarı değil. Yönlendirme tablosu boş
+     başlar (tür → birim eşlemesini iş tarafı girer); boşken her ileti «Atanmamış»a düşer.
+  2. *İş başvurusu:* yalnız açıkça verilen `ozellik:eposta.ik`; **portal yöneticisine istisna yok** (analiz «tartışılacak»
+     dedi; KVKK özel nitelikli veri, yönetici gerekiyorsa rolle alır ve bu kayıtta görünür). Başkasına atanamaz (atanacak kişide
+     de İK yetkisi aranır). M55 henüz yok: `POST /api/v1/hr/recruit/intake` ucu kurulumda yoksa ileti İK kuyruğunda bekler.
+  3. *Dışarı giden yanıt:* kullanıcı kararıyla (dış gönderim yok) portal göndermez; Zeki AI taslağı ekranda, saklanmaz; kişi
+     «Kutuda aç» ile timas@'nın kendi arayüzünden gönderir. «Alındı» otomatik yanıtı yok; `ozellik:eposta.yanitla` ve
+     `ozellik:eposta.otomatik-yanit` kataloğa eklenmedi (işlevi olmayan yetki kutusu olmasın; gönderim sürümüyle gelir).
+  4. *Yanıt süresi:* ilk yanıt, konu zincirinde kutudan gönderilmiş (`SENT`) ilk iletinin zamanıdır (portal ile kutu iki ayrı
+     gerçek olmaz). Kişisel adresinden yanıtlayan «Kutu dışından yanıtladım» der; olay «beyan» işaretlenir.
+  5. *SLA:* gelişten itibaren iş saatiyle (ayar: «1-5 09:00-18:00», tatil listesi); tür başına 24/48/72 kuralda, yoksa
+     varsayılan. Hatırlatma atanan kişiye (atanmamışsa yönlendirmedeki sorumluya, o da yoksa genel kutu sorumlularına),
+     eskalasyon birim yöneticisine, üst eşik üst yöneticilere; her seviye bir kez, üst seviye alttakini gönderilmiş sayar. İç
+     e-posta portalın bildirim hesabından (SMTP) gider; kapatılabilir, olay yine yazılır.
+  6. *Sınıflama eşikleri:* öneri p ≥ 0,70 ve fark ≥ 0,30, otomatik p ≥ 0,90 ve fark ≥ 0,50 (llm-choose önerisi; ayarda).
+     Altı «Emin olunmayan». Olasılıksız yol (`text`/`none`) hiçbir zaman emin sayılmaz. Otomatik atama türü varsayılan **boş**:
+     etiketli geçmişte o türün doğruluğu %90'ı geçmeden açılmaz. Otomatik işlem yalnız tanıtım/spam arşivi (geri alınır).
+  7. *Kutu etiketi:* `gmail.labels` etiket tanımını yönetir, iletiye etiket takmak `gmail.modify` ister (silme/taşıma da
+     açar). Kapsam kullanıcı kararıyla sınırlı kaldığı için bu sürüm kutuya etiket takmaz; tür/durum portalda.
+  8. *Artımlı okuma:* geçmiş kimliği (historyId) yerine `after:<epoch>` sorgusu + 60 dk örtüşme + sağlayıcı kimliğinde tekillik
+     (geçmiş kimliği bir haftada geçersizleşir; kesintide ileti kaçar). Sayfa tavanı yok; tur süresi dolarsa kalan sonraki tura.
+  9. *Geçmiş iletiler:* `MAIL_START_DATE`'ten önce gelenler «geçmiş»: liste/SLA/bildirim dışı, yalnız Etiketleme'de; model
+     yalnız tür sorar (BATCH). Etiketleme kördür (modelin önerisi gösterilmez); doğruluk = çoğunluk insan etiketi ↔ modelin
+     ilk seçimi (`model_category`, düzeltmeyle ezilmez).
+  10. *KVKK:* gövde ve ek saklanmaz (her açılışta kutudan); adres yalnız SHA-256 + maskeli gösterim; özet rakam taşımaz (rakamlı
+      cümle atılır). Modele giden metin `MAIL_MODEL_BODY_CHARS` (6000) — bağlam penceresi, veri tavanı değil.
+  11. *Dosya başvurusu → M1:* M1 dalda (`/api/v1/editorial/applications`, zorunlu alanlar eser adı, yazar, özet, biyografi, sayfa
+      tahmini). Aktarım köprünün içinden kişinin kendi çereziyle yapılır (M1'in yetkisi aynen uygulanır); PDF/DOCX/DOC ekler
+      kutudan anlık alınıp `PUT …/{id}/files` ile gider, diğerleri adıyla bildirilir. Zeki AI yalnız metinde birebir geçen
+      yazar/eser/tür/sayfayı doldurur. Uç yoksa başvuru «aktarılmayı bekliyor» kalır. M1 main'e girince `access.RULES`'taki
+      `/api/v1/mailbox/applications` satırına `sayfa:basvurular` eklenmeli.
+  12. *Taslak:* söz ve tarih yasak; rakam geçen satır atılır, yalnız onaylı şablondaki rakam kalabilir.
+- **Ölçülecek (kabul listesinde):** kutunun günlük hacmi ve tür dağılımı; CRM `EMailAddress1` doluluğu ve
+  `new_projeBase.new_olasyazaryazar` kolonunun varlığı (yazar adayı rozeti bu kolona bağlı); `choose` eşiklerinin kabul oranı;
+  Gmail sorgusunun sayımı = portal sayımı; yanıt tespitinin 10 örnekte elle doğrulanması; LLM kapısının istem günlüğünde
+  ileti metninin tutulma süresi (analiz §8, kontrol edilmedi).
+- **Açık kalan:** Zeki AI sohbetinde «destek» konusu verisi bağlı değil (`chat_topics.json`, `data` boş) — e-posta sorularına
+  «henüz veri bağlı değil» der; rapor ekranı bu soruları karşılar. Şikâyetteki sipariş numarası yalnız gösterilir (CRM sipariş
+  durumu sonraki sürüm). Kampüs zilinde ayrı «bana atanan ileti» yok; menü rozeti var. Portal içinden gönderim ve «alındı»
+  yanıtı sonraki sürüm.
+- **Doğrulama:** yalnız `py_compile` ve JSON denetimi (kural: Mac'te koşu yok). **DOĞRULANAMADI — sunucu kapalı.** Sunucuda kalan
+  adımlar: main'e taşıma → kurulum (köprü + arayüz `VITE_BASE=/timas/`) → Yönetim'de bağlantı (BT'den hizmet hesabı) → «Kutuyu
+  oku» → `run-due` elle bir kez → pytest `test_mailbox.py` + `test_access.py` + vitest + `tsc -b` → `scripts/acceptance/H4/kabul.py`
+  (+ `--api --yazma` timasai kısa oturumu) → `temizlik.py --by timasai` → zamanlayıcıları etkinleştir → 320/390/768 px ve
+  masaüstü tarayıcı kontrolü.
+
+## 2026-09-28 — M7 çapraz yazar önerisi: e-ticarette birlikte alınan yazarlar (dalda, kurulmadı)
 
 - **Neden sipariş:** CRM sınıflandırması yetmedi — kitaplık %96 dolu ama çok geniş («Çocuk Kitaplığı» 3.084 kitap; öneride en çok kitabı olanlar ve «Komisyon»/«Anonim» öne çıktı), dizi %93 dolu ama tek yazarın serisi, tür metni %44. Kullanıcı «çapraz öneriyi başlat» dedi.
 - **Veri:** T-soft `order/get` + `FetchProductData` (yalnız okuma; `order/getOrders` yok, katalog yöntemi 500 veriyor). 63.118 sipariş (2022-12-07'den), `OrderDateTimeStart` süzgeci çalışıyor. Saklanan: sipariş no, gün, durum, silindi mi; satırda ürün no, barkod, adet. **Müşteri adı/telefonu/adresi/e-postası/müşteri no okunmaz, saklanmaz.** Gece turu son 60 günü yeniden okur (durum değişimi).

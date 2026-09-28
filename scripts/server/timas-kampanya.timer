@@ -1,0 +1,10 @@
+[Unit]
+Description=E-ticaret kampanya verisi ve bildirimleri her gece 05:00
+
+[Timer]
+OnCalendar=*-*-* 05:00:00
+Persistent=true
+Unit=timas-kampanya.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,10 @@
+[Unit]
+Description=Kurumsal ilişkiler: hediye satırlarının CRM sipariş durumu, her gün 07:50
+
+[Timer]
+OnCalendar=*-*-* 07:50:00
+Persistent=true
+Unit=timas-public-affairs.service
+
+[Install]
+WantedBy=timers.target

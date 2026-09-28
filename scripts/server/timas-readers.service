@@ -1,0 +1,12 @@
+[Unit]
+Description=Okur veri tabanı (H2): CRM kişi/aday/İYS okuması, kesin birleştirme, izin kanıtları, belirsiz adaylar, onaylı segment sayımı, süresi dolan yükleme satırlarının silinmesi
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/readers/run-due); bu birim yalnız çağırır. Her gece bütün etkin kişi (~60 bin), açık aday
+# (~63 bin) ve İYS günlüğü (~57 bin) okunur (tam tur; kişisel alanlar yalnız bellekte özete çevrilir). Köprünün
+# ortamında READERS_HASH_SALT (en az 16 karakter, bir kez üretilir, sonra değişmez) olmalı; yoksa okuma yapılmaz.
+# İlk kez elle koşturulur: systemctl start timas-readers.service
+ExecStart=/bin/sh -c 'curl -fsS -m 3590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/readers/run-due'

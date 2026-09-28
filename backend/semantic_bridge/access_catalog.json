@@ -1,5 +1,5 @@
 {
-  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler. Özellik = sayfa içindeki işlem; 'explicit' olanlar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
+  "_note": "Yetki anahtarları kataloğu. Sayfa anahtarı = 'sayfa:' + menü öğesinin id'si (src/canvas/nav/navModel.ts). Kampüs her zaman açık, Yönetim alanı yalnız yöneticide; ikisi de burada yok. Ön yüz testi (navModel.test.ts) menüdeki her öğenin burada olduğunu denetler. Özellik = sayfa içindeki işlem; 'explicit' olan özellik ve sayfalar «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (bugüne kadar yalnız yöneticinin yapabildiği işler).",
   "version": 2,
   "areas": [
     {
@@ -31,8 +31,24 @@
       "label": "Satış ve saha"
     },
     {
+      "id": "lojistik",
+      "label": "Lojistik"
+    },
+    {
       "id": "pazarlama",
       "label": "Pazarlama"
+    },
+    {
+      "id": "altyapi",
+      "label": "Altyapı ve destek"
+    },
+    {
+      "id": "ik",
+      "label": "İnsan Kaynakları"
+    },
+    {
+      "id": "platform",
+      "label": "Platform"
     }
   ],
   "pages": [
@@ -55,6 +71,28 @@
       "key": "sayfa:uyarilar",
       "area": "analiz",
       "label": "Uyarılar"
+    },
+    {
+      "key": "sayfa:finansal-raporlar",
+      "area": "finans",
+      "label": "Finansal raporlar",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:pazar-arastirma",
+      "area": "analiz",
+      "label": "Pazar ve rakip"
+    },
+    {
+      "key": "sayfa:pazar-rakipler",
+      "area": "analiz",
+      "label": "Rakipler ve emsal"
+    },
+    {
+      "key": "sayfa:pazar-raporlar",
+      "area": "analiz",
+      "label": "Sektör raporları",
+      "explicit": true
     },
     {
       "key": "sayfa:finansal-denetim",
@@ -85,6 +123,12 @@
       "key": "sayfa:butce",
       "area": "finans",
       "label": "Bütçe ve hedefler"
+    },
+    {
+      "key": "sayfa:risk-uyum",
+      "area": "finans",
+      "label": "Risk ve uyum",
+      "explicit": true
     },
     {
       "key": "sayfa:editoryal",
@@ -157,6 +201,18 @@
       "label": "Kapak arşivi"
     },
     {
+      "key": "sayfa:dijital-yayin",
+      "area": "editoryal",
+      "label": "Dijital yayın"
+    },
+    {
+      "key": "sayfa:dijital-satis",
+      "area": "editoryal",
+      "label": "Dijital satış",
+      "hint": "Platform satış raporları ve dijital gelir (finans verisi); role açıkça verilir",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kisiler",
       "area": "kayitlar",
       "label": "Kişiler"
@@ -177,6 +233,17 @@
       "label": "Sözleşmeler"
     },
     {
+      "key": "sayfa:telif-donem",
+      "area": "kayitlar",
+      "label": "Telif dönemi",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:haklar",
+      "area": "kayitlar",
+      "label": "Haklar ve lisanslar"
+    },
+    {
       "key": "sayfa:editor-atama",
       "area": "kayitlar",
       "label": "Editör atama"
@@ -192,9 +259,29 @@
       "label": "Saha ve tahsilat"
     },
     {
+      "key": "sayfa:bayi-risk",
+      "area": "satis",
+      "label": "Bayi riski"
+    },
+    {
       "key": "sayfa:ihale",
       "area": "satis",
       "label": "İhale takibi"
+    },
+    {
+      "key": "sayfa:kargo",
+      "area": "lojistik",
+      "label": "Kargo: günlük hat ve gönderi arama"
+    },
+    {
+      "key": "sayfa:kargo-firmalar",
+      "area": "lojistik",
+      "label": "Kargo firma karnesi"
+    },
+    {
+      "key": "sayfa:kargo-mutabakat",
+      "area": "lojistik",
+      "label": "Kargo mutabakatı"
     },
     {
       "key": "sayfa:pazarlama-yeni-kitap",
@@ -207,9 +294,92 @@
       "label": "Görsel ve metin"
     },
     {
+      "key": "sayfa:okurlar",
+      "area": "pazarlama",
+      "label": "Okurlar",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:okur-toplulugu",
+      "area": "pazarlama",
+      "label": "Okur kitlesi"
+    },
+    {
+      "key": "sayfa:okur-segmentler",
+      "area": "pazarlama",
+      "label": "Okur segmentleri"
+    },
+    {
+      "key": "sayfa:okur-programlar",
+      "area": "pazarlama",
+      "label": "Topluluk programları"
+    },
+    {
+      "key": "sayfa:okur-yorumlar",
+      "area": "pazarlama",
+      "label": "Yorum cevapları"
+    },
+    {
+      "key": "sayfa:pazarlama-lansman",
+      "area": "pazarlama",
+      "label": "Lansman"
+    },
+    {
+      "key": "sayfa:pazarlama-backlist",
+      "area": "pazarlama",
+      "label": "Backlist"
+    },
+    {
+      "key": "sayfa:basin-iliskileri",
+      "area": "pazarlama",
+      "label": "Basın ilişkileri",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:reklam",
+      "area": "pazarlama",
+      "label": "Reklam"
+    },
+    {
+      "key": "sayfa:sosyal-medya",
+      "area": "pazarlama",
+      "label": "Sosyal medya"
+    },
+    {
+      "key": "sayfa:isbirlikleri",
+      "area": "pazarlama",
+      "label": "İşbirlikleri"
+    },
+    {
+      "key": "sayfa:katalog-bulten",
+      "area": "pazarlama",
+      "label": "Katalog ve bülten"
+    },
+    {
+      "key": "sayfa:etkinlikler",
+      "area": "pazarlama",
+      "label": "Fuar ve etkinlik"
+    },
+    {
+      "key": "sayfa:kurumsal-iliskiler",
+      "area": "pazarlama",
+      "label": "Kurumsal ilişkiler",
+      "explicit": true
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
+    },
+    {
+      "key": "sayfa:pazarlama-aylik",
+      "area": "pazarlama",
+      "label": "Aylık plan"
+    },
+    {
+      "key": "sayfa:pazarlama-foy",
+      "area": "pazarlama",
+      "label": "Satış föyleri"
     },
     {
       "key": "sayfa:seo-geo",
@@ -412,9 +582,196 @@
       "label": "Kurumsal ve B2B"
     },
     {
+      "key": "sayfa:stok",
+      "area": "lojistik",
+      "label": "Stok"
+    },
+    {
+      "key": "sayfa:stok-bitecekler",
+      "area": "lojistik",
+      "label": "Bitecekler"
+    },
+    {
+      "key": "sayfa:stok-fazla",
+      "area": "lojistik",
+      "label": "Fazla stok"
+    },
+    {
+      "key": "sayfa:stok-esikler",
+      "area": "lojistik",
+      "label": "Güvenlik stoku"
+    },
+    {
+      "key": "sayfa:stok-fark",
+      "area": "lojistik",
+      "label": "Logo–CRM farkı"
+    },
+    {
+      "key": "sayfa:stok-aktarim",
+      "area": "lojistik",
+      "label": "Aktarım hataları"
+    },
+    {
+      "key": "sayfa:stok-depo-hatti",
+      "area": "lojistik",
+      "label": "Depo hattı"
+    },
+    {
       "key": "sayfa:pazarlama-set-hediye",
       "area": "pazarlama",
       "label": "Set ve hediye"
+    },
+    {
+      "key": "sayfa:kurumsal-eposta",
+      "area": "kayitlar",
+      "label": "Kurumsal e-posta"
+    },
+    {
+      "key": "sayfa:sistem-durumu",
+      "area": "altyapi",
+      "label": "Sistem durumu",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:veri-guvenligi",
+      "area": "altyapi",
+      "label": "Veri güvenliği",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:musteri-destek",
+      "area": "altyapi",
+      "label": "Müşteri hizmetleri"
+    },
+    {
+      "key": "sayfa:zeki-kalite",
+      "area": "altyapi",
+      "label": "Zeki AI kalitesi",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:musteri-iliskileri",
+      "area": "satis",
+      "label": "Müşteri ilişkileri"
+    },
+    {
+      "key": "sayfa:musteri-veri-sagligi",
+      "area": "satis",
+      "label": "CRM veri sağlığı"
+    },
+    {
+      "key": "sayfa:ik-ise-alim",
+      "area": "ik",
+      "label": "İşe alım panosu",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-pozisyonlar",
+      "area": "ik",
+      "label": "Pozisyonlar",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-belgeler",
+      "area": "ik",
+      "label": "İK belgeleri (şablonlar)",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-kayitlar",
+      "area": "ik",
+      "label": "Çalışan ve KVKK kayıtları",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-egitimlerim",
+      "area": "ik",
+      "label": "Eğitimlerim",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:ik-egitim",
+      "area": "ik",
+      "label": "Eğitim ve gelişim",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:kanallar",
+      "area": "platform",
+      "label": "Kanal karnesi"
+    },
+    {
+      "key": "sayfa:kanal-matris",
+      "area": "platform",
+      "label": "Kitap × kanal"
+    },
+    {
+      "key": "sayfa:kanal-d2c",
+      "area": "platform",
+      "label": "D2C büyüme"
+    },
+    {
+      "key": "sayfa:kanal-eslesme",
+      "area": "platform",
+      "label": "Cari eşleme"
+    },
+    {
+      "key": "sayfa:eticaret",
+      "area": "pazarlama",
+      "label": "E-ticaret: platform durumu"
+    },
+    {
+      "key": "sayfa:eticaret-farklar",
+      "area": "pazarlama",
+      "label": "E-ticaret: farklar"
+    },
+    {
+      "key": "sayfa:eticaret-huni",
+      "area": "pazarlama",
+      "label": "E-ticaret: huni"
+    },
+    {
+      "key": "sayfa:eticaret-pazar-yerleri",
+      "area": "pazarlama",
+      "label": "E-ticaret: pazar yerleri"
+    },
+    {
+      "key": "sayfa:kampanya",
+      "area": "pazarlama",
+      "label": "Kampanyalar"
+    },
+    {
+      "key": "sayfa:eticaret-musteri",
+      "area": "pazarlama",
+      "label": "E-ticaret müşterileri",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:tedarik",
+      "area": "lojistik",
+      "label": "Tedarik özeti"
+    },
+    {
+      "key": "sayfa:tedarik-yuk",
+      "area": "lojistik",
+      "label": "Baskı yükü"
+    },
+    {
+      "key": "sayfa:tedarik-kagit",
+      "area": "lojistik",
+      "label": "Kağıt ve malzeme"
+    },
+    {
+      "key": "sayfa:tedarik-tedarikciler",
+      "area": "lojistik",
+      "label": "Tedarikçiler",
+      "explicit": true
+    },
+    {
+      "key": "sayfa:tedarik-maliyet",
+      "area": "lojistik",
+      "label": "Baskı maliyeti eğilimi",
+      "explicit": true
     }
   ],
   "features": [
@@ -423,6 +780,12 @@
       "area": "ortak",
       "label": "ZEKİ AI'a soru sorma",
       "hint": "Genel bakış, Kampüs soru kutusu, panoya soruyla kart, uyarıda anlık ölçüm"
+    },
+    {
+      "key": "ozellik:zeki.geri-bildirim",
+      "area": "ortak",
+      "label": "ZEKİ AI cevabına geri bildirim",
+      "hint": "Cevabın altındaki Doğru / Kısmen / Yanlış düğmesi ve kısa not; «Yanlış» model ekibinin kuyruğuna düşer"
     },
     {
       "key": "ozellik:kart.sql-goster",
@@ -463,6 +826,42 @@
       "page": "sayfa:uyarilar",
       "label": "Uyarı kuralı yazma",
       "hint": "Kural kaydet, duraklat, sil, şimdi kontrol et"
+    },
+    {
+      "key": "ozellik:pazar.rapor-yukle",
+      "area": "analiz",
+      "page": "sayfa:pazar-raporlar",
+      "label": "Sektör raporu yükleme",
+      "hint": "Rapor dosyası (PDF, Excel, CSV) yükleme ve silme; Zeki AI ile sayfa sayfa rakam çıkarımı (model harcar)"
+    },
+    {
+      "key": "ozellik:pazar.rakam-onay",
+      "area": "analiz",
+      "page": "sayfa:pazar-raporlar",
+      "label": "Rapor rakamlarını onaylama",
+      "hint": "Çıkarılan rakamı sayfasına bakarak onaylama, düzeltme, reddetme; elle rakam girme"
+    },
+    {
+      "key": "ozellik:pazar.kategori-esleme",
+      "area": "analiz",
+      "page": "sayfa:pazar-rakipler",
+      "label": "Rakip kategori eşlemesi",
+      "hint": "Rakip kategorisini TİMAŞ kategorisine eşleme kararı, Zeki AI eşleme önerisi, CRM/Logo kaynaklarını yenileme"
+    },
+    {
+      "key": "ozellik:pazar.ozet-yaz",
+      "area": "analiz",
+      "page": "sayfa:pazar-arastirma",
+      "label": "Pazar özeti taslağı",
+      "hint": "Zeki AI ile aylık yönetim özeti taslağı, düzenleme, onaya gönderme"
+    },
+    {
+      "key": "ozellik:pazar.ozet-onay",
+      "area": "analiz",
+      "page": "sayfa:pazar-arastirma",
+      "label": "Pazar özetini onaylama",
+      "hint": "Onaya gönderilen aylık pazar özetini onaylayıp kurul paketine (DYK) gönderme ya da gerekçeyle geri gönderme (yazan onaylayamaz)",
+      "explicit": true
     },
     {
       "key": "ozellik:denetim.detay",
@@ -523,6 +922,104 @@
       "explicit": true
     },
     {
+      "key": "ozellik:finans.nakit",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Nakit ve banka",
+      "hint": "Kasa-banka bakiyesi, 13 haftalık nakit tablosu, vadesi geçmiş alacak; satış ve editörya için gerekmez"
+    },
+    {
+      "key": "ozellik:finans.esleme",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Hesap eşlemesi kararı",
+      "hint": "Muhasebe hesabını gelir tablosu satırına onaylama, dışlama, Zeki AI önerisi isteme (muhasebe)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:finans.kapanis",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Ay kapanışı",
+      "hint": "Ayın gelir tablosunu «kapandı» işaretleme ve gerekçeyle yeniden açma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:finans.vergi-takvimi",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Vergi takvimi düzenleme",
+      "hint": "Beyan ekleme, son gün, sorumlu, durum ve tahmini ödeme"
+    },
+    {
+      "key": "ozellik:finans.sapma-notu",
+      "area": "finans",
+      "page": "sayfa:finansal-raporlar",
+      "label": "Sapma açıklaması",
+      "hint": "Bütçe sapmasına neden cümlesi yazma"
+    },
+    {
+      "key": "ozellik:risk.yaz",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Risk kaydı ve aksiyon",
+      "hint": "Risk açma, tanım ve bağlı gösterge düzeltme, gözden geçirme (puan, eğilim, not), aksiyon ekleme, Zeki AI risk önerisi ve kategori önerisi, brifing taslağı. Yalnız sahibi olunan risk"
+    },
+    {
+      "key": "ozellik:risk.herkesinki",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Bütün riskler",
+      "hint": "Sahibi olmadığı riskleri de görme ve değiştirme (risk ve uyum koordinatörü, genel müdür, CFO); kurul brifingi hazırlatma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.gosterge",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Gösterge tanımı ve eşik",
+      "hint": "Gösterge eşiği, yönü, sahibi ve sıklığı için yeni sürüm taslağı; göstergeyi şimdi ölçme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.gosterge-onay",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Gösterge onayı",
+      "hint": "Gösterge taslağını yürürlüğe alma ya da reddetme (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.rapor-onay",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Risk brifingi onayı",
+      "hint": "Çeyreklik kurul risk brifingini onaylama (taslağı hazırlatan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:uyum.yaz",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Uyum takvimi",
+      "hint": "Uyum yükümlülüğü ekleme ve düzeltme, kanıt dosyası yükleme, dönemi kapatma"
+    },
+    {
+      "key": "ozellik:uyum.kvkk",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "KVKK uyum maddeleri",
+      "hint": "KVKK alanındaki uyum yükümlülüklerini ve kanıtlarını yazma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:risk.sigorta-bcp",
+      "area": "finans",
+      "page": "sayfa:risk-uyum",
+      "label": "Sigorta ve iş sürekliliği",
+      "hint": "Sigorta poliçesi ve iş sürekliliği (BCP) süreç kaydı, belge yükleme, silme"
+    },
+    {
       "key": "ozellik:dagilim.plan",
       "area": "satis",
       "page": "sayfa:ilk-dagilim",
@@ -574,6 +1071,37 @@
       "label": "İhale ilanı kaynağı",
       "hint": "Resmî kaynaktan ilan içe almayı çalıştırma (ikinci sürüm; ortamda kapalıyken etkisiz)",
       "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.maliyet",
+      "area": "lojistik",
+      "page": "sayfa:kargo-firmalar",
+      "label": "Kargo maliyetini görme",
+      "hint": "Tutar, desi, desi ve sevk başı maliyet, kargo mutabakatı (Logo kargo faturası ↔ kargo kaydı)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.alici",
+      "area": "lojistik",
+      "page": "sayfa:kargo",
+      "label": "Alıcı adını görme (KVKK)",
+      "hint": "Gönderi kartında alıcı ve teslim alan adı; listelerde ve dışa aktarmada hiç yok",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.karar",
+      "area": "lojistik",
+      "page": "sayfa:kargo-firmalar",
+      "label": "Kurye ve bölge kararı",
+      "hint": "Kurye firması, bölge kuralı ve sözleşme kararını gerekçesiyle kaydetme; teslim bekleyen ve il hedef süresi eşikleri",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kargo.taslak",
+      "area": "lojistik",
+      "page": "sayfa:kargo",
+      "label": "Müşteri mesajı taslağı",
+      "hint": "Zeki AI ile gecikme, özür ve iade yönlendirme mesajı taslağı; gönderimi kişi kendi e-postasından yapar"
     },
     {
       "key": "ozellik:masa.herkesinki",
@@ -771,6 +1299,36 @@
       "explicit": true
     },
     {
+      "key": "ozellik:dijital.durum-yaz",
+      "area": "editoryal",
+      "page": "sayfa:dijital-yayin",
+      "label": "Dijital platform durumu",
+      "hint": "Kitabın platformdaki durumunu (hazırlanıyor, yüklendi, yayında…) ve notunu girme, platform tanımlama, katalog okumasını yenileme"
+    },
+    {
+      "key": "ozellik:dijital.rapor-yukle",
+      "area": "editoryal",
+      "page": "sayfa:dijital-satis",
+      "label": "Dijital satış raporu yükleme",
+      "hint": "Platform satış raporunu (Excel/CSV) yükleme, kolon ve kitap eşlemesini düzeltme, Zeki AI önerisini onaylama, raporu onaylama ya da iptal etme"
+    },
+    {
+      "key": "ozellik:dijital.hak-karari",
+      "area": "editoryal",
+      "page": "sayfa:dijital-yayin",
+      "label": "Dijital hak kararı",
+      "hint": "Hak notu olan sözleşmede e-kitap / sesli kitap için karar ve gerekçe yazma (telif birimi)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:dijital.fiyat-onay",
+      "area": "editoryal",
+      "page": "sayfa:dijital-yayin",
+      "label": "Dijital fiyat kararı",
+      "hint": "Kitabın dijital fiyatını gerekçesiyle kaydetme (platformlara gönderilmez)",
+      "explicit": true
+    },
+    {
       "key": "ozellik:saha.not",
       "area": "satis",
       "page": "sayfa:saha",
@@ -806,6 +1364,51 @@
       "page": "sayfa:saha",
       "label": "Temsilci karşılaştırması",
       "hint": "Haftalık saha raporunda bütün temsilcilerin satırları (kişisel performans verisi)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bayi.not",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Bayi ziyaret notu",
+      "hint": "Bayi kartından görüşme notu, ödeme sözü ve sonraki adım (saha ziyaret kaydıyla ortak)"
+    },
+    {
+      "key": "ozellik:bayi.aksiyon",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Bayi aksiyonu",
+      "hint": "Bayiye ziyaret, arama ya da limit aksiyonu açma ve durumunu değiştirme"
+    },
+    {
+      "key": "ozellik:bayi.kural",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Risk kuralı taslağı",
+      "hint": "Skor ağırlıkları, segment eşikleri ve kapsam kanalları için yeni sürüm taslağı hazırlama ve onaya gönderme"
+    },
+    {
+      "key": "ozellik:bayi.herkesinki",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Bütün bayiler",
+      "hint": "Bayi riski ekranında yalnız CRM'de size atanmış cariler yerine bütün bayiler (satış müdürü, tahsilat, finans)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bayi.limit-onay",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Limit önerisi kararı",
+      "hint": "Kuraldan çıkan kredi limiti önerisini onaylama ya da gerekçeyle reddetme; onaylanan «CRM'e işlenecek» listesine düşer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bayi.kural-onay",
+      "area": "satis",
+      "page": "sayfa:bayi-risk",
+      "label": "Risk kuralı onayı",
+      "hint": "Onaya gönderilen skor/segment kuralını yürürlüğe alma ya da geri çevirme (hazırlayan onaylayamaz)",
       "explicit": true
     },
     {
@@ -894,6 +1497,66 @@
       "explicit": true
     },
     {
+      "key": "ozellik:telif.kosu",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif dönemi koşusu",
+      "hint": "Koşu açma, hesaplatma, istisnayı kabul etme ya da hariç tutma, onaya gönderme, iptal (Logo ve CRM okunur)"
+    },
+    {
+      "key": "ozellik:telif.kosu-onay",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif koşusu onayı",
+      "hint": "Onaydaki koşuyu onaylama (sözleşmelerin hakedişi ve ödeme takvimi oluşur) ya da geri gönderme; hesaplatan ve gönderen onaylayamaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.bildirim",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif beyannamesi",
+      "hint": "Hak sahibi beyannamesini (Word) indirme, hak sahibinin e-postasını görme, gönderildi kaydı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.odeme-listesi",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Telif ödeme listesi",
+      "hint": "Onaylı koşunun ödeme listesi ve stopaj özeti (muhasebe); bankaya ve Logo'ya gönderim yok",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.avans",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Avans açılış bakiyesi",
+      "hint": "Sözleşmenin kazanılmamış kalan avansını tarihli ve gerekçeli girme; hesap bu bakiyeden mahsup eder",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:telif.yenileme-karar",
+      "area": "kayitlar",
+      "page": "sayfa:telif-donem",
+      "label": "Yenileme kararı",
+      "hint": "Bitişi yaklaşan sözleşme için yenile / bırak / yeniden müzakere kararı (CRM'e yazılmaz)"
+    },
+    {
+      "key": "ozellik:haklar.duzenle",
+      "area": "kayitlar",
+      "page": "sayfa:haklar",
+      "label": "Hak kartı düzenleme",
+      "hint": "Dil ve ülke hak kaydı ekleme/düzeltme, hak açıklamalarını Zeki AI ile sınıflandırma ve sınıfı onaylama"
+    },
+    {
+      "key": "ozellik:haklar.lisans",
+      "area": "kayitlar",
+      "page": "sayfa:haklar",
+      "label": "Verilen lisanslar",
+      "hint": "Yurtdışına verilen lisans (telif satışı) kaydı ve tahsilat durumu"
+    },
+    {
       "key": "ozellik:okul.ziyaret",
       "area": "satis",
       "page": "sayfa:okul-tanitim",
@@ -967,6 +1630,67 @@
       "hint": "ZEKİ AI'ın kitaba önerdiği temayı onaylama, reddetme; elle tema ekleme"
     },
     {
+      "key": "ozellik:musteri.herkesinki",
+      "area": "satis",
+      "page": "sayfa:musteri-iliskileri",
+      "label": "Bütün carilerin değeri ve riski",
+      "hint": "Yalnız kendi portföyü yerine bütün temsilcilerin carileri, aksiyonları ve temsilci süzgeci (müdür, yönetim)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:musteri.eylem-yaz",
+      "area": "satis",
+      "page": "sayfa:musteri-iliskileri",
+      "label": "Müşteri aksiyonu yazma",
+      "hint": "Riskli cariye arama, ziyaret, kampanya aksiyonu yazma; durum ve sonuç notu (sonuç 30/90 gün sonra Logo'dan ölçülür)"
+    },
+    {
+      "key": "ozellik:musteri.bulgu-isaretle",
+      "area": "satis",
+      "page": "sayfa:musteri-veri-sagligi",
+      "label": "Veri sağlığı bulgusunu işaretleme",
+      "hint": "«CRM'de düzeltildi» (ertesi gece doğrulanır) ya da gerekçeyle «yok say»"
+    },
+    {
+      "key": "ozellik:musteri.guvenlik-bulgulari",
+      "area": "satis",
+      "page": "sayfa:musteri-veri-sagligi",
+      "label": "CRM güvenlik bulguları",
+      "hint": "Şifre içeren tablo/kolon/görünüm bulgularını görme ve işaretleme (değer gösterilmez; BT)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:stok.oneri-karar",
+      "area": "lojistik",
+      "page": "sayfa:stok",
+      "label": "Stok önerisine karar ve güvenlik stoku taslağı",
+      "hint": "Bitecek ve fazla stok önerisini kabul/ret (üretim, kampanya, set modülüne not), kitap için güvenlik günü ve yeniden sipariş adedi taslağı"
+    },
+    {
+      "key": "ozellik:stok.esik-onay",
+      "area": "lojistik",
+      "page": "sayfa:stok-esikler",
+      "label": "Güvenlik stoku onayı",
+      "hint": "Güvenlik stoku / yeniden sipariş noktası taslağını onaylama ya da gerekçeyle reddetme (stok planlama, depo müdürü). Logo'ya yazılmaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:stok.maliyet",
+      "area": "lojistik",
+      "page": "sayfa:stok",
+      "label": "Stok değeri ve birim maliyet",
+      "hint": "Kitap birim maliyeti (fiyatlama modülünden) ve stok değeri; yoksa bu alanlar hiçbir stok ekranında ve Excel'de görünmez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:stok.depo-hatti",
+      "area": "lojistik",
+      "page": "sayfa:stok-depo-hatti",
+      "label": "Depo hattı: kişi bazlı süreler",
+      "hint": "Sipariş hazırlık hattında toplayıcı adı ve kişi başına toplama süresi (hassas veri)",
+      "explicit": true
+    },
+    {
       "key": "ozellik:pazarlama.plan-yaz",
       "area": "pazarlama",
       "page": "sayfa:pazarlama-yeni-kitap",
@@ -1035,6 +1759,28 @@
       "hint": "Bileşen birim maliyeti, ambalaj maliyeti ve marjı görme; yoksa yalnız fiyat ve indirim görünür"
     },
     {
+      "key": "ozellik:kampanya.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:kampanya",
+      "label": "Kampanya hazırlama",
+      "hint": "Kampanya açma, kitap ve indirim girme, toplu hesap, onaya gönderme ve geri çekme, iptal, takvime platform dönemi ve fuar ekleme, sonuç okuma, öğrenim kaydı, veri yenileme"
+    },
+    {
+      "key": "ozellik:kampanya.onay",
+      "area": "pazarlama",
+      "page": "sayfa:kampanya",
+      "label": "Kampanya onayı",
+      "hint": "Onaya gönderilen kampanyayı (indirim, marj ve kontrollerle) onaylama ya da gerekçeyle geri gönderme; hazırlayan ve onaya gönderen onaylayamaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kampanya.metin-uret",
+      "area": "pazarlama",
+      "page": "sayfa:kampanya",
+      "label": "Kampanya metni ve sonuç özeti (Zeki AI)",
+      "hint": "Zeki AI'dan kampanya başlığı, kısa açıklama ve banner metni ile kampanya sonucu özeti isteme (model harcar)"
+    },
+    {
       "key": "ozellik:icerik.talep",
       "area": "pazarlama",
       "page": "sayfa:pazarlama-icerik",
@@ -1070,6 +1816,684 @@
       "page": "sayfa:pazarlama-icerik",
       "label": "Marka kiti ve yasaklı kalıplar",
       "hint": "Marka paleti, logo ve yazı tipi dosyaları (lisans notuyla), marka kuralları, yasaklı kalıp listesi",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.foy-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-foy",
+      "label": "Satış föyü hazırlama",
+      "hint": "Föy alanlarını düzeltme, CRM'den yenileme, Zeki AI satış argümanı taslağı, onaya gönderme. Föy PDF'ini indirmek için veri dışa aktarma yetkisi gerekmez (saha temsilcisinin işi)"
+    },
+    {
+      "key": "ozellik:pazarlama.foy-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-foy",
+      "label": "Satış föyü onayı",
+      "hint": "Föyü onaylama ya da gerekçeyle geri gönderme; fiyat/barkod uyumsuzluğunu gerekçeyle kabul (satış müdürü; hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.foy-gonder",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-foy",
+      "label": "Föy paketini e-postayla gönderme",
+      "hint": "Onaylı föy paketini Yönetim'deki föy dağıtım listesine e-postayla gönderme; kendiliğinden gönderim yok",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:eposta.ata",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "E-posta atama ve düzeltme",
+      "hint": "İletiyi kişiye/birime atama, tür ve durum düzeltme, dosya başvurusunu yazar giriş sürecine aktarma, geçmiş ileti etiketleme"
+    },
+    {
+      "key": "ozellik:eposta.herkesinki",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "Bütün kutu",
+      "hint": "Atanmamış, emin olunmayan ve başkasına atanmış iletileri görme (yoksa yalnız kendine ve birimine atananlar)"
+    },
+    {
+      "key": "ozellik:eposta.kural",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "E-posta kural taslağı",
+      "hint": "Tür listesi, yönlendirme tablosu, SLA saatleri ve yanıt şablonlarının taslağını yazma; bağlantı denemesi"
+    },
+    {
+      "key": "ozellik:eposta.kural-onay",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "E-posta kurallarını yürürlüğe alma",
+      "hint": "Kural taslağını onaylama (taslağı yazan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:eposta.ik",
+      "area": "kayitlar",
+      "page": "sayfa:kurumsal-eposta",
+      "label": "İş başvuruları (İK)",
+      "hint": "İş başvurusu türündeki iletileri görme, İK aday kaydına aktarma. Kişisel veri: yöneticiye de kendiliğinden verilmez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sistem.dene",
+      "area": "altyapi",
+      "page": "sayfa:sistem-durumu",
+      "label": "Bağlantıyı şimdi dene",
+      "hint": "Halka denetimini zamanlayıcıyı beklemeden yeniden koşturur (yalnız okur, servis başlatmaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sistem.olay-kapat",
+      "area": "altyapi",
+      "page": "sayfa:sistem-durumu",
+      "label": "Olay değerlendirmesi",
+      "hint": "Kök neden notu, «gerçek değil» işareti, Zeki AI değerlendirme taslağı ve yayımı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sistem.ayar",
+      "area": "altyapi",
+      "page": "sayfa:sistem-durumu",
+      "label": "Sistem durumu ayarları",
+      "hint": "Eşikler ve bildirim alıcıları (yalnız iç adresler)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:guvenlik.uyari-kapat",
+      "area": "altyapi",
+      "page": "sayfa:veri-guvenligi",
+      "label": "Güvenlik uyarısını kapatma",
+      "hint": "Uyarıyı inceleyip «gerçek / gerçek değil» diye kapatma ya da yeniden açma"
+    },
+    {
+      "key": "ozellik:guvenlik.oturum-kapat",
+      "area": "altyapi",
+      "page": "sayfa:veri-guvenligi",
+      "label": "Portal oturumunu kapatma",
+      "hint": "Bir kişinin açık portal oturumlarını kapatma (işten ayrılan, kaybolan cihaz); AD hesabına dokunmaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:guvenlik.saklama",
+      "area": "altyapi",
+      "page": "sayfa:veri-guvenligi",
+      "label": "Saklama süresi politikası",
+      "hint": "Soru sonucu, giriş ve erişim kaydı gibi kayıtların saklama süresini değiştirme ve süresi dolanı silme işini açma",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.baglam",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Müşteri bağlamı ve bayi görünümü",
+      "hint": "E-posta, telefon, sipariş no ya da cariyle müşterinin CRM siparişleri, sevkiyat, kargo takibi ve Logo faturaları; bayinin açık siparişleri ve risk onayı. Kişisel veri: rol «Satış ve sipariş» ile «Cari ve tahsilat» veri alanlarını da taşımalı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.oneri",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Zeki AI önerisi ve cevap taslağı",
+      "hint": "Talebin konusunu ve aciliyetini sınıflama, sınıfı düzeltme, cevap taslağı üretme ve taslağın gönderilip gönderilmediğini işaretleme (taslak hiçbir yere gönderilmez)"
+    },
+    {
+      "key": "ozellik:destek.sss",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "SSS maddesi onayı",
+      "hint": "Bilgi bankası açığı listesindeki SSS sorusunu ve cevabını düzeltme, onaylama, siteye elle girildi diye işaretleme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.herkesinki",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Bütün talep kuyruğu",
+      "hint": "Başka temsilcilere atanmış açık talepler ve kalite panosunda temsilci başına açık talep sayısı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:destek.ayar",
+      "area": "altyapi",
+      "page": "sayfa:musteri-destek",
+      "label": "Konu sınıfları ve SLA",
+      "hint": "Zeki AI'ın seçtiği konu listesini, portal SLA uyarı sürelerini ve yükseltme kişisini düzenleme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:zeki-kalite.kosu",
+      "area": "altyapi",
+      "page": "sayfa:zeki-kalite",
+      "label": "Kalite koşusu başlatma",
+      "hint": "Okuma ya da cevap kapısını zamanlayıcıyı beklemeden sıraya koyar (cevap kapısı Zeki AI kapasitesi harcar)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:zeki-kalite.karar",
+      "area": "altyapi",
+      "page": "sayfa:zeki-kalite",
+      "label": "Geri bildirim ve hata sınıfı kararı",
+      "hint": "Kullanıcı bildirimlerini sınıflama, kapatma ve hata sınıfı kurallarını düzenleme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okur.kisisel-veri",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: kişisel veriyi görme",
+      "hint": "Okur kartında ad, e-posta ve telefonu açık görme, ada göre arama, KVKK başvurusu araması, başkasının yüklemesindeki yeni kişiler. Her görüntüleme kayda geçer",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okur.birlestir",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: birleştirme kararı",
+      "hint": "Belirsiz eşleşme kuyruğunda «aynı kişi / farklı kişi» kararı ve kaynakları yeniden okuma"
+    },
+    {
+      "key": "ozellik:okur.segment",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: segment taslağı",
+      "hint": "Kural tabanlı segment kurma, düzenleme, Zeki AI önerisi, onaya gönderme, arşivleme"
+    },
+    {
+      "key": "ozellik:okur.segment-onay",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: segment onayı",
+      "hint": "Onaya gönderilen segmenti onaylama ya da gerekçeyle geri gönderme (yazan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okur.liste-aktar",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: liste dışa aktarımı",
+      "hint": "Onaylı segmentten izin denetimli iletişim listesi alma (amaç zorunlu, kayda geçer; ayrıca veri dışa aktarma yetkisi ister)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:okur.ice-aktar",
+      "area": "pazarlama",
+      "page": "sayfa:okurlar",
+      "label": "Okur: etkinlik dosyası yükleme",
+      "hint": "Fuar/etkinlik katılımcı dosyasını yükleme, kolon eşleme, eşleştirme ve yüklemeyi silme"
+    },
+    {
+      "key": "ozellik:topluluk.segment-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:okur-segmentler",
+      "label": "Okur segmenti hazırlama",
+      "hint": "Segment kuralı, amaç, süre ve kanal yazma; büyüklüğü ölçme (yalnız sayı), onaya gönderme ve geri çekme, ilgi alanlarını Zeki AI'a sınıflatma"
+    },
+    {
+      "key": "ozellik:topluluk.segment-onay",
+      "area": "pazarlama",
+      "page": "sayfa:okur-segmentler",
+      "label": "Okur segmenti KVKK onayı",
+      "hint": "Onaya gönderilen segmenti amaç ve süreyle onaylama ya da gerekçeyle reddetme; ilgi alanının özel nitelikli çağrışım kararı (yazan ve gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:topluluk.liste-disa-aktar",
+      "area": "pazarlama",
+      "page": "sayfa:okur-segmentler",
+      "label": "Okur listesi dışa aktarımı",
+      "hint": "Onaylı segmentin izinli kişi listesini gönderim için indirme (ikinci sürüm; hukuk görüşünden sonra açılır, her indirme kayda geçer)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:topluluk.program-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:okur-programlar",
+      "label": "Topluluk programı yazma",
+      "hint": "Okuma kulübü, imza günü, anket ve çevrim içi etkinlik planı; Zeki AI duyuru taslağı"
+    },
+    {
+      "key": "ozellik:topluluk.yorum-taslak",
+      "area": "pazarlama",
+      "page": "sayfa:okur-yorumlar",
+      "label": "Yorum cevap taslağı",
+      "hint": "Cevapsız okur yorumuna Zeki AI cevap taslağı alma, düzenleme ve «cevaplandı» işaretleme (cevap sitede elle girilir)"
+    },
+    {
+      "key": "ozellik:pazarlama.lansman-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-lansman",
+      "label": "Lansman yönetme",
+      "hint": "Onaylı plandan lansman açma, kontrol listesi, etkinlik ve medya kaydı, veri yenileme, değerlendirme raporu taslağı"
+    },
+    {
+      "key": "ozellik:pazarlama.backlist-ayar",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-backlist",
+      "label": "Backlist ekip ağırlığı",
+      "hint": "Uyku endeksi bileşen ağırlıklarını ekibin varsayılanı olarak kaydetme (kişisel ağırlık herkesin kendi tercihidir)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pr.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:basin-iliskileri",
+      "label": "Basın dosyası, medya kişisi ve yansıma",
+      "hint": "PR dosyası açma, bülten ve e-posta metni, Zeki AI taslağı, gönderim listesi ve durumu, medya kişisi ekleme/düzenleme, yansıma kaydı"
+    },
+    {
+      "key": "ozellik:pr.onay",
+      "area": "pazarlama",
+      "page": "sayfa:basin-iliskileri",
+      "label": "Basın dosyası onayı",
+      "hint": "Basın bültenini ve gönderim listesini onaylama ya da gerekçeyle geri gönderme, sonradan eklenen satırın onayı (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pr.gonder",
+      "area": "pazarlama",
+      "page": "sayfa:basin-iliskileri",
+      "label": "Basına e-posta gönderme",
+      "hint": "Onaylı satırdaki kişiye özel e-postayı portal üzerinden tek alıcıya gönderme (toplu gönderim yok)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:reklam.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:reklam",
+      "label": "Reklam verisi ve bağlar",
+      "hint": "Harcama dosyası yükleme ve geri alma, kampanyayı kitaba bağlama, reklam bütçe planı, brief taslağı, öneriyi «uygulandı» işaretleme"
+    },
+    {
+      "key": "ozellik:reklam.onay",
+      "area": "pazarlama",
+      "page": "sayfa:reklam",
+      "label": "Reklam önerisi onayı",
+      "hint": "Durdurma ve bütçe kaydırma önerisini onaylama ya da gerekçeyle reddetme (platformda uygulamayı ekip yapar)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sosyal.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:sosyal-medya",
+      "label": "Sosyal medya takvimi düzenleme",
+      "hint": "Gönderi taslağı, takvim, hesaplar, Zeki AI taslağı, onaya gönderme, «yayınlandı» işareti, içgörü içe aktarma"
+    },
+    {
+      "key": "ozellik:sosyal.onay",
+      "area": "pazarlama",
+      "page": "sayfa:sosyal-medya",
+      "label": "Sosyal medya gönderisi onayı",
+      "hint": "Onaya gönderilen gönderiyi onaylama ya da gerekçeyle geri gönderme (gönderen onaylayamaz). Paylaşımı yine ekip yapar",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:sosyal.topluluk",
+      "area": "pazarlama",
+      "page": "sayfa:sosyal-medya",
+      "label": "Sosyal medya yorum ve mesajları",
+      "hint": "Kendi hesaplarımıza gelen yorum ve mesajları görme (yorumcu kişisel verisi). Resmî bağlantı kurulunca açılır",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:isbirligi.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:isbirlikleri",
+      "label": "İşbirliği kaydı ve takibi",
+      "hint": "İçerik üreticisi ekleme ve CSV içe aktarma, hesap ölçümü, işbirliği açma ve aşama ilerletme, paylaşım bağlantısı ve sonuç, brief/iletişim taslağı, «gönderildi» kaydı"
+    },
+    {
+      "key": "ozellik:isbirligi.onay",
+      "area": "pazarlama",
+      "page": "sayfa:isbirlikleri",
+      "label": "İşbirliği onayı ve ücretler",
+      "hint": "Teklif/seçim onayı ve reddi (açan onaylayamaz), taslak onayı, ücret aralıklarını ve harcamayı görme, onaylı işin ücretini değiştirme, ödeme satırını onaylama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:isbirligi.odeme",
+      "area": "pazarlama",
+      "page": "sayfa:isbirlikleri",
+      "label": "İşbirliği ödemeleri",
+      "hint": "Ödeme listesini görme ve Excel'e alma, ödeme satırını onaylama, Logo belge numarasıyla ödendi işaretleme (muhasebe)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:katalog.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Katalog hazırlama",
+      "hint": "Katalog açma, kitap önerisi ve seçimi, sıralama, öne çıkarma, fiyat/stok uyarısını kabul, Zeki AI metni, onaya gönderme, yayına alma"
+    },
+    {
+      "key": "ozellik:bulten.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Bülten hazırlama",
+      "hint": "E-bülten taslağı, kitap önerisi, Zeki AI gövde ve konu satırı, onaya gönderme, gönderildi işareti, sonuç girişi"
+    },
+    {
+      "key": "ozellik:katalog-bulten.onay",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Katalog ve bülten onayı",
+      "hint": "Onaya gönderilen kataloğu ya da bülteni onaylama veya gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:bulten.segment",
+      "area": "pazarlama",
+      "page": "sayfa:katalog-bulten",
+      "label": "Bülten segment sayacı",
+      "hint": "CRM'deki izinli kişi sayısını ve izin dağılımını görme (yalnız sayı; kişi listesi portalda hiç gösterilmez)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:etkinlik.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:etkinlikler",
+      "label": "Fuar ve etkinlik kartı hazırlama",
+      "hint": "Fuar/etkinlik kartı, kitap ve adet önerisi, görev ekleme, gider ve fiş, yazar programı, CRM etkinlik tipi eşlemesi"
+    },
+    {
+      "key": "ozellik:etkinlik.onay",
+      "area": "pazarlama",
+      "page": "sayfa:etkinlikler",
+      "label": "Fuar katılım kararı ve bütçe onayı",
+      "hint": "Karar bekleyen fuar/etkinlik kartını bütçesiyle onaylama (kartı açan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:odul.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:etkinlikler",
+      "label": "Ödül defteri ve başvurular",
+      "hint": "Ödül kaydı (son tarih, koşul), kitap başvurusu, başvuru metni ve sonuç"
+    },
+    {
+      "key": "ozellik:iliskiler.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:kurumsal-iliskiler",
+      "label": "Kişi, kurum ve proje kaydı",
+      "hint": "Kişi ve kurum kartı, temas notu, hediye önerisi ve kişisel not taslağı, proje aşaması ve teklif dosyası taslağı"
+    },
+    {
+      "key": "ozellik:iliskiler.onay",
+      "area": "pazarlama",
+      "page": "sayfa:kurumsal-iliskiler",
+      "label": "Hediye, bütçe ve teklif onayı",
+      "hint": "Aylık hediye listesini, proje bütçesini ve teklif metnini onaylama; kamu görevlisine hediyede hukuk onayı; alan listesini yönetme (öneriyi yazan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:iliskiler.hassas",
+      "area": "pazarlama",
+      "page": "sayfa:kurumsal-iliskiler",
+      "label": "Gizli notları okuma",
+      "hint": "Başkalarının «yalnız ben ve katılımcılar» işaretli temas notlarının metnini görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.calisan-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-kayitlar",
+      "label": "Çalışan ve birim kaydını düzenleme",
+      "hint": "CRM ∩ AD eşitlemesini onaylama, çalışan ve birim ekleme/düzeltme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.kvkk-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-kayitlar",
+      "label": "KVKK yönetimi",
+      "hint": "Aydınlatma metni, açık rıza kaydı, saklama süreleri, imha önizlemesi ve talep üzerine aday verisini silme",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.erisim-kaydi",
+      "area": "ik",
+      "page": "sayfa:ik-kayitlar",
+      "label": "İK erişim kaydını görme",
+      "hint": "Kim hangi aday/çalışan kaydını ne zaman gördü, indirdi ya da dışa aktardı",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.disa-aktar",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "İK verisini dışa aktarma",
+      "hint": "İlgili kişi başvurusu (KVKK md. 11) için adayın bütün kaydını dışa verme; genel dışa aktarma yetkisinden ayrı",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.pozisyon-ac",
+      "area": "ik",
+      "page": "sayfa:ik-pozisyonlar",
+      "label": "Pozisyon açma",
+      "hint": "Pozisyon kartı, yetkinlik listesi, ilan taslağı ve mülakat seti; onaya gönderme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.pozisyon-onay",
+      "area": "ik",
+      "page": "sayfa:ik-pozisyonlar",
+      "label": "Pozisyon onayı",
+      "hint": "Onaya gönderilen pozisyonu açma ya da gerekçeyle geri gönderme (gönderen onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.aday-gor",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Adayları görme (kendi pozisyonları)",
+      "hint": "Yalnız işe alan yöneticisi ya da görüşmecisi olduğu pozisyonların adayları; özgeçmiş maskeli metin olarak",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.aday-hepsi",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Bütün adayları görme",
+      "hint": "Bütün pozisyonların adayları, özgün özgeçmiş dosyası, aday ekleme ve düzenleme",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.aday-karar",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Aday aşama kararı",
+      "hint": "Adayı ön elemeye, mülakata, teklife alma ya da sonuçlandırma (kendi pozisyonlarında ya da bütün adaylarda)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.yazisma-gonder",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Adaya yazışma",
+      "hint": "Davet, teklif ve ret mektubu taslağı hazırlama ve gönderildiğini kaydetme (gönderimi insan yapar)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.teklif-onay",
+      "area": "ik",
+      "page": "sayfa:ik-ise-alim",
+      "label": "Teklif mektubu onayı",
+      "hint": "Teklif mektubunu adaya gönderilmeden önce onaylama (hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.sablon",
+      "area": "ik",
+      "page": "sayfa:ik-belgeler",
+      "label": "İK şablonlarını düzenleme",
+      "hint": "İlan, davet, teklif, ret ve «başvurunuz alındı» şablonları",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.egitim-yonet",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Eğitim kayıtlarını yönetme",
+      "hint": "Katalog, oturum, katılımcı, yoklama, sertifika doğrulama ve kişi bazında zorunlu eğitim durumu",
+      "explicit": true,
+      "sensitive": true
+    },
+    {
+      "key": "ozellik:ik.egitim-onay",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Eğitim katılım onayı",
+      "hint": "Kendi ekibinin (doğrudan bağlılar ve yöneticisi olduğu birim) katılım taleplerini onaylama ve ekibin eğitim durumunu görme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.egitim-butce",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Eğitim bütçesi ve gideri",
+      "hint": "Yıllık eğitim bütçesi ve Logo'daki gerçekleşen eğitim gideri",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.kullanim-haritasi",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Portal kullanım haritası",
+      "hint": "Birim × ekran kullanım sayıları (kişi adı yok); kişi bazında kullanım yalnız kişinin kendisine açıktır",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ik.rehber-yaz",
+      "area": "ik",
+      "page": "sayfa:ik-egitim",
+      "label": "Modül rehberi yazma",
+      "hint": "Ekran rehberlerini Zeki AI taslağıyla yazma, düzeltme ve yayımlama",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kanal.marj",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Kanal marjı ve simülasyon",
+      "hint": "Kanal ve kitap bazında maliyet, brüt kâr, marj, iade sonrası marj, M9 maliyetiyle tamamlama, iskonto simülasyonu ve ek kanal maliyeti oranı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kanal.oneri-karar",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Kanal önerisi kararı",
+      "hint": "İskonto, stok payı ve D2C önerilerini onaylama ya da gerekçeyle reddetme (öneren onaylayamaz; onay portal kaydıdır, platforma gönderilmez)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kanal.eslesme",
+      "area": "platform",
+      "page": "sayfa:kanal-eslesme",
+      "label": "Cari ↔ platform eşlemesi",
+      "hint": "Logo carisini, kanal kodunu ve CRM hedef bölgesini platforma bağlama, Zeki AI adayını onaylama ya da değiştirme"
+    },
+    {
+      "key": "ozellik:kanal.yukle",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Panel dosyası yükleme",
+      "hint": "Pazar yeri panelinden indirilen satış raporunu (Excel/CSV) yükleme ve silme; kişisel kolonlar içeri alınmaz"
+    },
+    {
+      "key": "ozellik:kanal.oneri-yaz",
+      "area": "platform",
+      "page": "sayfa:kanallar",
+      "label": "Kanal önerisi taslağı",
+      "hint": "Simülasyondan iskonto önerisi ve D2C'ye özel set önerisi taslağı açma (Zeki AI gerekçe yazar)"
+    },
+    {
+      "key": "ozellik:eticaret.fark-isaretle",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-farklar",
+      "label": "E-ticaret farkını işaretleme",
+      "hint": "Farkı düzeltildi / bilinçli fark / sonra diye işaretleme, sahip atama, CRM–Logo–site okumasını yenileme"
+    },
+    {
+      "key": "ozellik:eticaret.oneri-uret",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret",
+      "label": "E-ticaret kart önerisi üretme",
+      "hint": "Zeki AI'dan ürün kartı başlık, açıklama ve anahtar kelime taslağı isteme (model harcar)"
+    },
+    {
+      "key": "ozellik:eticaret.oneri-onay",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret",
+      "label": "E-ticaret kart önerisi onayı",
+      "hint": "Zeki AI kart önerisini onaylama ya da gerekçeyle reddetme (öneriyi isteyen onaylayamaz); onay kayıttır, siteye gönderilmez",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:eticaret.tetik",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-musteri",
+      "label": "E-ticaret: tetik ve kampanya",
+      "hint": "Yeni kitap, geri kazanım ve ikinci sipariş tetiği yazma, önizleme, listeyi çalıştırma (kontrol grubu ayrılır), kampanya açma ve Zeki AI sonuç yorumu"
+    },
+    {
+      "key": "ozellik:eticaret.ayar",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-musteri",
+      "label": "E-ticaret: müşteri eşikleri",
+      "hint": "RFM eşikleri, kontrol grubu payı, sonuç penceresi ve uyarı eşiğini değiştirme; site siparişlerini yeniden okutma"
+    },
+    {
+      "key": "ozellik:eticaret.liste-onay",
+      "area": "pazarlama",
+      "page": "sayfa:eticaret-musteri",
+      "label": "E-ticaret: tetik listesi onayı",
+      "hint": "Çalıştırılan tetik listesini onaylama ya da gerekçeyle geri gönderme (tetiği yazan ve listeyi çalıştıran onaylayamaz); onaysız liste dışa aktarılamaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:tedarik.borc",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-tedarikciler",
+      "label": "Tedarikçi borç, ödeme ve fatura tutarı",
+      "hint": "Matbaa ve kağıtçı bakiyesi, vadesi geçmiş (FIFO yaklaşımı), 30/60/90 gün ödeme listesi, fatura tutarları ve dışa aktarımı",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:tedarik.maliyet",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-maliyet",
+      "label": "Birim baskı maliyeti ve fiyatlar",
+      "hint": "Adet başı baskı bedeli eğilimi, kağıt alış fiyatı, kartlardaki birim fiyat ve fiyatlama maliyeti",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:tedarik.kapasite",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-yuk",
+      "label": "Matbaa kapasitesi tanımlama",
+      "hint": "Matbaanın aylık kapasitesini (adet / forma) girme ve silme; eşik uyarıları buna göre"
+    },
+    {
+      "key": "ozellik:tedarik.oneri-karar",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-yuk",
+      "label": "Yük ve kağıt önerisi kararı, taslak",
+      "hint": "Yük dengeleme ve kağıt alım önerisini kabul/ret (CRM kartı değişmez), sipariş formu ve matbaaya gecikme yazısı taslağı"
+    },
+    {
+      "key": "ozellik:tedarik.eslesme",
+      "area": "lojistik",
+      "page": "sayfa:tedarik-tedarikciler",
+      "label": "Fatura–kart ve matbaa–cari eşleşmesi",
+      "hint": "Kuralın bağlayamadığı baskı faturasını karta bağlama/onaylama, CRM matbaasını Logo carisine eşleme",
       "explicit": true
     }
   ]

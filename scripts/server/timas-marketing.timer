@@ -1,5 +1,5 @@
 [Unit]
-Description=Pazarlama planı hatırlatması, her gün 07:30
+Description=Pazarlama planı hatırlatması ve aylık plan / föy işleri, her gün 07:30
 
 [Timer]
 OnCalendar=*-*-* 07:30:00
