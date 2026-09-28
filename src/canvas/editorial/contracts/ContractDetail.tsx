@@ -16,6 +16,7 @@ import TextTab from './TextTab';
 import ContractRuns from '../royalty/ContractRuns';
 import { changedFields, show } from './terms';
 import { Field, Row, Sheet, Tabs, day, errMsg, money, num, stamp, statusTone, today } from './ui';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** M6: tek sözleşmenin sayfası. Adres CRM kimliği ya da portal kaydı kimliğidir; CRM sözleşmesi ilk
  *  düzenlemede portala alınır (CRM'e yazılmaz), sonra aynı adresten açılır. */
@@ -30,7 +31,7 @@ function TermsView({ d, meta }: { d: Detail; meta: Meta }) {
   return (
     <div className="grid gap-3 lg:grid-cols-2">
       <Panel>
-        <h3 className="mb-1 text-[13px] font-extrabold">Taraflar ve kitaplar</h3>
+        <h3 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">Taraflar ve kitaplar <SqlInfo k={d.kaynaklar} alan="terms" label="Taraflar ve kitaplar (pay, kapak fiyatı)" /></h3>
         <dl>
           <Row label="Sözleşme türü">{meta.kinds[t.kind] ?? t.kind}</Row>
           <Row label="Yayınevi tarafı">{t.company || '—'}</Row>
@@ -77,7 +78,7 @@ function TermsView({ d, meta }: { d: Detail; meta: Meta }) {
         </dl>
       </Panel>
       <Panel>
-        <h3 className="mb-1 text-[13px] font-extrabold">Telif ve ödeme</h3>
+        <h3 className="mb-1 flex items-center gap-1 text-[13px] font-extrabold">Telif ve ödeme <SqlInfo k={d.kaynaklar} alan="terms" label="Telif ve ödeme şartları" /></h3>
         <dl>
           <Row label="Ödeme şekli">{meta.paymentTypes[t.paymentType] ?? t.paymentType}</Row>
           <Row label="Telif esası">{meta.bases[t.basis] ?? t.basis}</Row>
@@ -220,6 +221,10 @@ function StatusSheet({ d, meta, to, onClose }: { d: Detail; meta: Meta; to: Stat
 function History({ d, meta }: { d: Detail; meta: Meta }) {
   if (!d.events.length) return <p className="py-8 text-center text-[12.5px] text-canvas-muted">{d.record ? 'Henüz kayıt yok.' : 'Sözleşme portalda düzenlenmedi; geçmiş CRM\'de.'}</p>;
   return (
+    <>
+    <div className="mb-2 text-[11.5px] font-semibold text-canvas-muted">
+      <InfoLabel k={d.kaynaklar} alan="sayac.gecmis" label="Geçmiş kayıt sayısı">{`${d.events.length} kayıt`}</InfoLabel>
+    </div>
     <ol className="space-y-2">
       {d.events.map((e, i) => (
         <li key={i} className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
@@ -239,6 +244,7 @@ function History({ d, meta }: { d: Detail; meta: Meta }) {
         </li>
       ))}
     </ol>
+    </>
   );
 }
 
@@ -330,7 +336,7 @@ export default function ContractDetail() {
             )}
             {d.diff.length > 0 && (
               <div className="mt-3 rounded-2xl bg-violet-50/70 p-3 text-[12px]">
-                <div className="font-extrabold text-canvas-violet">CRM'e işlenmesi gereken {d.diff.length} fark</div>
+                <div className="flex items-center font-extrabold text-canvas-violet">CRM'e işlenmesi gereken {d.diff.length} fark<SqlInfo k={d.kaynaklar} alan="diff" label="CRM ile fark" className="ml-0.5" /></div>
                 <p className="mt-0.5 text-canvas-muted">Portal CRM'e yazmaz. Bu değerler CRM kaydında elle güncellenmeli.</p>
                 <ul className="mt-1.5 space-y-0.5">
                   {d.diff.map((c) => (

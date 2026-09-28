@@ -8,6 +8,7 @@ import { contractApi, downloadDocx, type Addendum, type Detail, type Meta, type 
 import { changedFields, show } from './terms';
 import TermsForm from './TermsForm';
 import { Field, Sheet, day, errMsg, stamp, today } from './ui';
+import { InfoLabel } from '../../components/SqlInfo';
 
 /** Zeyilname: imzalı sözleşmenin şart değişikliği. Taslakta hazırlanır, «imzalandı» işaretlenince şartlara işlenir. */
 
@@ -163,6 +164,11 @@ export default function AddendaTab({ d, meta }: { d: Detail; meta: Meta }) {
       </div>
       {!signed && <Note tone="info">Sözleşme «{d.statusLabel}»; zeyilname imzalı sözleşmeye yapılır. Taslağı doğrudan düzenleyin.</Note>}
       {!d.addenda.length && signed && <p className="py-6 text-center text-[12.5px] text-canvas-muted">Zeyilname yok.</p>}
+      {d.addenda.length > 0 && (
+        <div className="mb-2 text-[11.5px] font-semibold text-canvas-muted">
+          <InfoLabel k={d.kaynaklar} alan="sayac.zeyilname" label="Zeyilnameler (sayı ve değişen değerler)">{`${d.addenda.length} zeyilname`}</InfoLabel>
+        </div>
+      )}
       <ul className="space-y-2">
         {d.addenda.map((a) => (
           <li key={a.id} className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">

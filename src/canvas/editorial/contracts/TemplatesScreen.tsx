@@ -9,6 +9,8 @@ import { contractApi, downloadDocx, metaOptions, type Template } from './api';
 import { Field, Sheet, errMsg, stamp } from './ui';
 import { FileDrop, FilePick } from '../../components/FileDrop';
 import { MB, titleFromFilename } from '../../components/fileDropRules';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** Şablon kütüphanesi: sözleşme, zeyilname ve hakediş bildirimi metinleri. Metin portalda yazılır ya da
  *  hukuk biriminin Word dosyası yüklenir; ikisinde de `{{alan}}` yer tutucuları doldurulur. */
@@ -141,7 +143,7 @@ function Preview({ t, onClose }: { t: Template; onClose: () => void }) {
   );
 }
 
-function Card({ t, can, onEdit, onPreview }: { t: Template; can: boolean; onEdit: () => void; onPreview: () => void }) {
+function Card({ t, can, k, onEdit, onPreview }: { t: Template; can: boolean; k?: Kaynaklar; onEdit: () => void; onPreview: () => void }) {
   const qc = useQueryClient();
   const done = () => qc.invalidateQueries({ queryKey: ['contracts', 'templates'] });
   const upload = useMutation({ mutationFn: (f: File) => contractApi.templateDocx(t.id, f), onSuccess: (r) => { toast.success(`Word şablonu yüklendi (${r.fields.length} alan).`); done(); }, onError: (e) => toast.error(errMsg(e) ?? 'Yüklenemedi.') });
@@ -158,7 +160,10 @@ function Card({ t, can, onEdit, onPreview }: { t: Template; can: boolean; onEdit
         <span className="text-[11.5px] text-canvas-muted">sürüm {t.version} · {stamp(t.updatedAt)} {t.updatedBy}</span>
       </div>
       {t.description && <p className="mt-1 text-[11.5px] text-canvas-muted">{t.description}</p>}
-      <p className="mt-1 text-[11.5px] text-canvas-muted">{t.fields.length} alan{t.unknownFields.length ? ` · tanınmayan: ${t.unknownFields.join(', ')}` : ''}</p>
+      <p className="mt-1 inline-flex flex-wrap items-center text-[11.5px] text-canvas-muted">
+        {t.fields.length} alan{t.unknownFields.length ? ` · tanınmayan: ${t.unknownFields.join(', ')}` : ''}
+        <SqlInfo k={k} alan="items[]" label={`${t.name} · alan sayısı`} className="ml-0.5" />
+      </p>
       <div className="mt-2 flex flex-wrap gap-1.5">
         <button type="button" className={btnGhost} onClick={onPreview}>
           <Eye aria-hidden className="h-4 w-4" />
@@ -281,7 +286,7 @@ export default function TemplatesScreen() {
           {!g.items.length && <p className="text-[12px] text-canvas-muted">Şablon yok. Word şablonunu yukarıdaki alana bırakın.</p>}
           <ul className="space-y-2">
             {g.items.map((t) => (
-              <Card key={t.id} t={t} can={can} onEdit={() => setEdit(t)} onPreview={() => setPreview(t)} />
+              <Card key={t.id} t={t} can={can} k={data?.kaynaklar} onEdit={() => setEdit(t)} onPreview={() => setPreview(t)} />
             ))}
           </ul>
         </Panel>

@@ -7,6 +7,7 @@ import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { Pager, Panel, useDebounced } from '../kit';
 import { Field, Row, Sheet, day, errMsg, money, num } from '../contracts/ui';
 import { lineTone, royaltyApi, type Meta, type Run } from './api';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Koşunun satırları: süzgeç (durum, istisna nedeni, arama), sayfalı liste ve satırın hesabı. */
 
@@ -47,6 +48,12 @@ export function RunLines({ run, meta, status, code, title }: { run: Run; meta: M
           ))}
         </select>
       </div>
+      {d && (
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] font-semibold text-canvas-muted">
+          <InfoLabel k={d.kaynaklar} alan="items[]" label="Koşu satırları (durum, net)">Satırlar</InfoLabel>
+          {reasons.length > 0 && <InfoLabel k={run.kaynaklar} alan="summary.reasons" label="İstisna nedeni seçeneğindeki sayılar">Neden sayıları</InfoLabel>}
+        </div>
+      )}
       {lines.error && <div className="mt-2"><Note tone="err">{errMsg(lines.error)}</Note></div>}
       {lines.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
       {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan satır yok.</p>}
@@ -81,9 +88,18 @@ export function RunLines({ run, meta, status, code, title }: { run: Run; meta: M
         ))}
       </ul>
       {d && d.total > d.pageSize && (
-        <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={lines.isLoading} fetching={lines.isFetching} onPage={setPage} />
+        <>
+          <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
+            <InfoLabel k={d.kaynaklar} alan="total" label="Süzgece uyan satır sayısı">Toplam</InfoLabel>
+          </div>
+          <Pager page={page} pageSize={d.pageSize} total={d.total} shown={d.items.length} loading={lines.isLoading} fetching={lines.isFetching} onPage={setPage} />
+        </>
       )}
-      {d && d.total <= d.pageSize && d.total > 0 && <p className="mt-2 text-[11.5px] text-canvas-muted">{num(d.total, 0)} satır</p>}
+      {d && d.total <= d.pageSize && d.total > 0 && (
+        <p className="mt-2 inline-flex items-center text-[11.5px] text-canvas-muted">
+          {num(d.total, 0)} satır<SqlInfo k={d.kaynaklar} alan="total" label="Süzgece uyan satır sayısı" className="ml-0.5" />
+        </p>
+      )}
       {open != null && <LineSheet run={run} lineId={open} onClose={() => setOpen(null)} />}
     </Panel>
   );
@@ -153,6 +169,9 @@ function LineSheet({ run, lineId, onClose }: { run: Run; lineId: number; onClose
           {ln.decision.kabul && <Note tone="info">Kabul edildi: {ln.decision.kabul.reason} — {ln.decision.kabul.by}</Note>}
           {c ? (
             <>
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                Satırın hesabı <SqlInfo k={ln.kaynaklar} alan="calc" label="Satırın hesabı (adet, matrah, telif, avans, stopaj, net)" />
+              </div>
               <dl>
                 <Row label="Dönem">{day(c.periodStart)} – {day(c.periodEnd)}</Row>
                 <Row label="Net adet">{num(c.quantity, 0)}</Row>
@@ -174,7 +193,7 @@ function LineSheet({ run, lineId, onClose }: { run: Run; lineId: number; onClose
                       <th className="px-2 py-1.5">Kitap</th><th className="px-2 py-1.5">Hak sahibi</th>
                       <th className="px-2 py-1.5 text-right">Adet</th><th className="px-2 py-1.5 text-right">İade</th>
                       <th className="px-2 py-1.5 text-right">Matrah</th><th className="px-2 py-1.5 text-right">Oran</th>
-                      <th className="px-2 py-1.5 text-right">Telif</th>
+                      <th className="px-2 py-1.5 text-right"><InfoLabel k={ln.kaynaklar} alan="calc" label="Kitap × hak sahibi satırları">Telif</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>

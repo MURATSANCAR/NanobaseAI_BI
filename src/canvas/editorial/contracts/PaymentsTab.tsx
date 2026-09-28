@@ -7,6 +7,7 @@ import { Panel } from '../kit';
 import { contractApi, type Detail, type Meta, type Payment } from './api';
 import { NumInput } from './TermsForm';
 import { Field, Sheet, day, errMsg, money, today } from './ui';
+import SqlInfo from '../../components/SqlInfo';
 
 /** Sözleşmenin ödeme takvimi: avans, tek ödeme, onaylı hakedişler ve diğer ödemeler; vade ve ödendi bilgisi. */
 
@@ -198,9 +199,10 @@ export default function PaymentsTab({ d, meta }: { d: Detail; meta: Meta }) {
     <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_320px]">
       <Panel>
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-[12.5px]">
-            <span className="font-extrabold">Bekleyen: </span>
+          <div className="inline-flex items-center text-[12.5px]">
+            <span className="font-extrabold">Bekleyen:&nbsp;</span>
             {Object.keys(byCur).length ? Object.entries(byCur).map(([c, v]) => money(v, c)).join(' · ') : 'yok'}
+            <SqlInfo k={d.kaynaklar} alan="sayac.bekleyen" label="Bekleyen ödemeler ve tutarları" className="ml-0.5" />
           </div>
           {d.can.edit && d.status !== 'iptal' && (
             <div className="flex flex-wrap gap-1.5">
@@ -223,7 +225,7 @@ export default function PaymentsTab({ d, meta }: { d: Detail; meta: Meta }) {
         </ul>
       </Panel>
       <Panel>
-        <h3 className="text-[13px] font-extrabold">Hakediş dönemleri</h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">Hakediş dönemleri <SqlInfo k={d.kaynaklar} alan="terms" label="Hakediş dönemi ve vade (şartlar)" /></h3>
         {!d.periods.length ? (
           <p className="mt-1 text-[12px] text-canvas-muted">Bu sözleşmede dönemsel hakediş yok ({meta.paymentTypes[d.terms.paymentType] ?? d.terms.paymentType}) ya da başlangıç tarihi girilmemiş.</p>
         ) : (

@@ -7,6 +7,7 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { contractApi, metaOptions, type Payment } from './api';
 import { PaidSheet, PaymentRow } from './PaymentsTab';
 import { errMsg, money } from './ui';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Bütün sözleşmelerin ödeme takvimi: vadesi gelen avans, tek ödeme ve hakedişler. */
 export default function PaymentsScreen() {
@@ -34,10 +35,13 @@ export default function PaymentsScreen() {
       {q.error && <Note tone="err">{errMsg(q.error)}</Note>}
       {data && status === 'planlandi' && (
         <KpiRow>
-          <Kpi label="Bekleyen ödeme" value={String(items.length)} help={within ? `${within} gün içinde vadesi gelen ve vadesiz` : 'Bütün vadeler'} />
-          <Kpi label="Vadesi geçen" value={String(overdue.length)} help={overdue.length ? 'Ödendi işaretlenmemiş' : 'Yok'} />
+          <Kpi label="Bekleyen ödeme" value={String(items.length)} help={within ? `${within} gün içinde vadesi gelen ve vadesiz` : 'Bütün vadeler'}
+            info={<SqlInfo k={data.kaynaklar} alan="sayac.bekleyen" label="Bekleyen ödeme" />} />
+          <Kpi label="Vadesi geçen" value={String(overdue.length)} help={overdue.length ? 'Ödendi işaretlenmemiş' : 'Yok'}
+            info={<SqlInfo k={data.kaynaklar} alan="sayac.vadesiGecen" label="Vadesi geçen" />} />
           {totals.slice(0, 2).map(([cur, t]) => (
-            <Kpi key={cur} label={`Toplam (${cur})`} value={money(t.amount, cur)} help={t.overdue ? `${money(t.overdue, cur)} vadesi geçmiş` : 'Vadesi geçen yok'} />
+            <Kpi key={cur} label={`Toplam (${cur})`} value={money(t.amount, cur)} help={t.overdue ? `${money(t.overdue, cur)} vadesi geçmiş` : 'Vadesi geçen yok'}
+              info={<SqlInfo k={data.kaynaklar} alan="totals" label={`Toplam (${cur})`} />} />
           ))}
         </KpiRow>
       )}
@@ -64,6 +68,11 @@ export default function PaymentsScreen() {
         </div>
         {q.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
         {data && !items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan ödeme yok.</p>}
+        {data && items.length > 0 && (
+          <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
+            <InfoLabel k={data.kaynaklar} alan="items[]" label="Ödemeler (tutar, vade, ödenen)">{`${items.length} ödeme`}</InfoLabel>
+          </div>
+        )}
         <ul className="mt-3 space-y-2">
           {items.map((p) => (
             <PaymentRow

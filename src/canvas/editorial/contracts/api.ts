@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
 import { httpErrorText } from '../../httpError';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 /** M6 Sözleşmeler: köprü uçları /api/v1/editorial/contracts/* (taslak, düzenleme, zeyilname, ödeme, hakediş, şablon). */
 
@@ -139,6 +140,8 @@ export type Calc = {
   warnings: string[];
   dataEnd: string | null;
   source?: string;
+  /** Sorgu bilgisi (önizleme cevabında); kaydedilen hakedişte sözleşme sayfasının kaydındadır. */
+  kaynaklar?: Kaynaklar;
 };
 export type Statement = {
   id: string;
@@ -188,6 +191,7 @@ export type Detail = {
   events: ContractEvent[];
   periods: Period[];
   can: Caps;
+  kaynaklar?: Kaynaklar;
 };
 export type Template = {
   id: string;
@@ -229,7 +233,7 @@ export type Meta = {
 };
 
 /** CRM seçicisinin bir sayfası: `total` CRM'deki bütün eşleşme, `shown` bu sayfayla birlikte gösterilen kayıt sayısı. */
-export type LookupPage<T> = { items: T[]; total: number; shown: number; page: number };
+export type LookupPage<T> = { items: T[]; total: number; shown: number; page: number; kaynaklar?: Kaynaklar };
 
 const BASE = '/api/v1/editorial/contracts';
 
@@ -266,7 +270,7 @@ const enc = encodeURIComponent;
 
 export const contractApi = {
   meta: () => call<Meta>('/meta'),
-  records: (p: { q?: string; status?: string; source?: string }) => call<{ items: Record_[] }>(`/records${qs(p)}`),
+  records: (p: { q?: string; status?: string; source?: string }) => call<{ items: Record_[]; kaynaklar?: Kaynaklar }>(`/records${qs(p)}`),
   detail: (key: string) => call<Detail>(`/item/${enc(key)}`),
   create: (terms: Partial<Terms>, templateId?: string) => call<Record_>('/drafts', { method: 'POST', body: { terms, templateId } }),
   update: (key: string, terms: Partial<Terms>, version?: number, reason?: string) =>
@@ -290,14 +294,14 @@ export const contractApi = {
     call<Payment>(`/payments/${enc(id)}/paid`, { method: 'POST', body: b }),
   paymentCancel: (id: string, note?: string) => call<Payment>(`/payments/${enc(id)}/cancel`, { method: 'POST', body: { note } }),
   due: (p: { status?: string; within?: number; kind?: string }) =>
-    call<{ items: Payment[]; totals: Record<string, { amount: number; overdue: number }>; today: string; can: Caps }>(`/payments${qs(p)}`),
+    call<{ items: Payment[]; totals: Record<string, { amount: number; overdue: number }>; today: string; can: Caps; kaynaklar?: Kaynaklar }>(`/payments${qs(p)}`),
   preview: (key: string, b: StatementInput) => call<Calc>(`/item/${enc(key)}/statements/preview`, { method: 'POST', body: b, timeout: 620_000 }),
   statementSave: (key: string, b: StatementInput & { note?: string }) =>
     call<Statement>(`/item/${enc(key)}/statements`, { method: 'POST', body: b, timeout: 620_000 }),
   statementApprove: (id: string) => call<Statement>(`/statements/${enc(id)}/approve`, { method: 'POST', body: {} }),
   statementCancel: (id: string, note?: string) => call<Statement>(`/statements/${enc(id)}/cancel`, { method: 'POST', body: { note } }),
   templates: (p: { target?: string; archived?: boolean } = {}) =>
-    call<{ items: Template[]; fields: Record<string, string>; targets: Record<string, string>; can: Caps }>(`/templates${qs(p)}`),
+    call<{ items: Template[]; fields: Record<string, string>; targets: Record<string, string>; can: Caps; kaynaklar?: Kaynaklar }>(`/templates${qs(p)}`),
   templateSave: (b: Partial<Template> & { version?: number }, id?: string) =>
     call<Template>(id ? `/templates/${enc(id)}` : '/templates', { method: id ? 'PATCH' : 'POST', body: b }),
   templatePreview: (id: string, contract?: string) =>

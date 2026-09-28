@@ -403,11 +403,15 @@ def digital_view(m: Optional[dict[str, Any]]) -> Optional[dict[str, Any]]:
             "kaynak": m["source"], "onayli": m["status"] == "onayli"}
 
 
+def counts_stmt(tenant: str) -> sa.Select:
+    """Hak haritası durum sayıları (sorgu bilgisi aynı ifadeyi gösterir)."""
+    return sa.select(MAP.c.durum, sa.func.count()).where(MAP.c.tenant_id == tenant).group_by(MAP.c.durum)
+
+
 def counts(engine: sa.engine.Engine, tenant: str) -> dict[str, int]:
     ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(MAP.c.durum, sa.func.count()).where(MAP.c.tenant_id == tenant)
-                         .group_by(MAP.c.durum)).all()
+        rows = c.execute(counts_stmt(tenant)).all()
     return {d: int(n) for d, n in rows}
 
 

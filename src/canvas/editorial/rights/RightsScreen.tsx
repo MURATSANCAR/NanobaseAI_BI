@@ -9,6 +9,7 @@ import { NumInput } from '../contracts/TermsForm';
 import { Field, Sheet, Tabs, day, errMsg, money, num } from '../contracts/ui';
 import RightsMapView from './RightsMap';
 import { rightsApi, rightsMetaOptions, type BookCard, type Grant, type License, type RightState, type RightsMeta } from '../royalty/api';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** M54 Haklar ve lisanslar: kitabın hak kartı (CRM hak bitleri + portaldaki dil/ülke kaydı + verilen lisanslar),
  *  yurtdışına verilen lisanslar ve serbest metinli hak açıklamalarının sınıfı. CRM'e yazılmaz. */
@@ -100,7 +101,12 @@ function CardTab({ meta, book, onBook }: { meta: RightsMeta; book: string | null
               ))}
             </ul>
             {search.data.total > 20 && (
-              <Pager page={page} pageSize={20} total={search.data.total} shown={search.data.items.length} loading={search.isLoading} fetching={search.isFetching} onPage={setPage} />
+              <>
+                <div className="mt-2 text-[11.5px] font-semibold text-canvas-muted">
+                  <InfoLabel k={search.data.kaynaklar} alan="total" label="CRM'deki kitap eşleşmesi">Eşleşen kitap</InfoLabel>
+                </div>
+                <Pager page={page} pageSize={20} total={search.data.total} shown={search.data.items.length} loading={search.isLoading} fetching={search.isFetching} onPage={setPage} />
+              </>
             )}
             {!search.data.total && <p className="py-4 text-center text-[12px] text-canvas-muted">Eşleşen kitap yok.</p>}
           </>
@@ -175,11 +181,11 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
       </Panel>
 
       <Panel>
-        <h3 className="mb-2 text-[13px] font-extrabold">Telif alış sözleşmeleri ({alis.length})</h3>
+        <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Telif alış sözleşmeleri ({alis.length}) <SqlInfo k={c.kaynaklar} alan="sayac.alis" label="Telif alış sözleşmeleri" /></h3>
         <ContractList items={alis} meta={meta} />
         {satis.length > 0 && (
           <>
-            <h3 className="mb-2 mt-4 text-[13px] font-extrabold">CRM'deki telif satış sözleşmeleri ({satis.length})</h3>
+            <h3 className="mb-2 mt-4 flex items-center gap-1 text-[13px] font-extrabold">CRM'deki telif satış sözleşmeleri ({satis.length}) <SqlInfo k={c.kaynaklar} alan="sayac.satis" label="Telif satış sözleşmeleri" /></h3>
             <ContractList items={satis} meta={meta} />
           </>
         )}
@@ -187,7 +193,7 @@ function Card({ c, meta }: { c: BookCard; meta: RightsMeta }) {
 
       <Panel>
         <div className="mb-2 flex flex-wrap items-center gap-2">
-          <h3 className="text-[13px] font-extrabold">Verilen lisanslar</h3>
+          <h3 className="flex items-center gap-1 text-[13px] font-extrabold">Verilen lisanslar <SqlInfo k={c.kaynaklar} alan="licenses[]" label="Verilen lisanslar (avans, oran, tahsilat, yazar payı)" /></h3>
           {c.can.license && (
             <button type="button" className={`${btnGhost} ml-auto`} onClick={() => setLic('new')}>
               <Plus aria-hidden className="h-4 w-4" /> Lisans ekle
@@ -337,7 +343,11 @@ function Licenses({ meta }: { meta: RightsMeta }) {
       {list.error && <div className="mt-2"><Callout tone="err">{errMsg(list.error)}</Callout></div>}
       {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
       <div className="mt-3"><LicenseList items={d?.items ?? []} canEdit={!!d?.can.license} onEdit={setEdit} /></div>
-      {d && <p className="mt-2 text-[11.5px] text-canvas-muted">{num(d.total, 0)} lisans</p>}
+      {d && (
+        <p className="mt-2 inline-flex items-center text-[11.5px] text-canvas-muted">
+          {num(d.total, 0)} lisans<SqlInfo k={d.kaynaklar} alan="total" label="Lisanslar (sayı, avans, oran, tahsilat, yazar payı)" className="ml-0.5" />
+        </p>
+      )}
       {edit && <LicenseSheet meta={meta} x={edit === 'new' ? null : edit} book={null} onClose={() => setEdit(null)} />}
     </Panel>
   );
@@ -469,6 +479,13 @@ function Notes({ meta }: { meta: RightsMeta }) {
         )}
       </div>
       <p className="mt-2 text-[11.5px] text-canvas-muted">CRM'deki serbest metinli hak açıklamaları. Zeki AI yalnız sınıf önerir; emin olmadığı açıklama «incelenecek»tir, sınıfı telif uzmanı onaylar. Hak haritası dil, ülke, format, bitiş ve münhasırlığı açıklamadan birebir alıntıyla çıkarır; alıntısı olmayan alan boş kalır, haritayı telif uzmanı onaylar.</p>
+      {d && (
+        <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] font-semibold text-canvas-muted">
+          <InfoLabel k={d.kaynaklar} alan="counts" label="Durum sayıları (İncelenecek, öneri, onaylı)">Durum sayıları</InfoLabel>
+          <InfoLabel k={d.kaynaklar} alan="total" label="Süzgece uyan açıklama sayısı">{`${num(d.total, 0)} açıklama`}</InfoLabel>
+          {d.job.running && <InfoLabel k={d.kaynaklar} alan="job" label="Sınıflama işi ilerlemesi">İlerleme</InfoLabel>}
+        </div>
+      )}
       {d?.job.error && <div className="mt-2"><Callout tone="warn">{d.job.error}</Callout></div>}
       {d?.mapJob?.error && <div className="mt-2"><Callout tone="warn">{d.mapJob.error}</Callout></div>}
       {list.error && <div className="mt-2"><Callout tone="err">{errMsg(list.error)}</Callout></div>}
@@ -480,6 +497,7 @@ function Notes({ meta }: { meta: RightsMeta }) {
               <Link to={`/telif-sozlesme/${n.contractKey}`} className="font-extrabold text-canvas-violet hover:underline">{n.no ?? n.contractKey.slice(0, 8)}</Link>
               <span className="min-w-0 truncate text-canvas-muted">{n.book}</span>
               {n.classLabel && <Pill tone={n.status === 'onayli' ? 'ok' : n.status === 'oneri' ? 'violet' : 'warn'}>{n.classLabel}{n.probability != null && n.status !== 'onayli' ? ` · %${num(n.probability * 100, 0)}` : ''}</Pill>}
+              {n.probability != null && n.status !== 'onayli' && <SqlInfo k={d.kaynaklar} alan="items[]" label="Sınıf olasılığı" />}
             </div>
             <p className="mt-1 whitespace-pre-wrap text-[12.5px] leading-snug">{n.text}</p>
             {n.map && <div className="mt-2"><RightsMapView key={`${n.map.id}-${n.map.status}`} map={n.map} canEdit={d.can.rightsEdit} /></div>}

@@ -7,6 +7,8 @@ import { Kpi, KpiRow, Panel, useDebounced } from '../kit';
 import { NumInput } from '../contracts/TermsForm';
 import { Field, Sheet, day, errMsg, money, num, stamp, today } from '../contracts/ui';
 import { royaltyApi, type AdvanceItem, type Meta } from './api';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 const STEP = 50;
 
@@ -25,18 +27,24 @@ export function Advances({ meta }: { meta: Meta }) {
       {d && totals.length > 0 && (
         <KpiRow>
           {totals.slice(0, 2).map(([cur, t]) => (
-            <Kpi key={cur} label={`Kalan avans (${cur})`} value={money(t.remaining, cur)} help={`Verilen ${money(t.advance, cur)}`} />
+            <Kpi key={cur} label={`Kalan avans (${cur})`} value={money(t.remaining, cur)} help={`Verilen ${money(t.advance, cur)}`}
+              info={<SqlInfo k={d.kaynaklar} alan="totals" label={`Kalan avans (${cur})`} />} />
           ))}
           <Kpi label="Açılışı girilmemiş" value={num(totals.reduce((s, [, t]) => s + t.missing, 0), 0)} help="Bu sözleşmeler koşuda istisna"
-            active={only === 'acilis-yok'} onClick={() => setOnly((v) => (v === 'acilis-yok' ? '' : 'acilis-yok'))} />
+            active={only === 'acilis-yok'} onClick={() => setOnly((v) => (v === 'acilis-yok' ? '' : 'acilis-yok'))}
+            info={<SqlInfo k={d.kaynaklar} alan="totals" label="Açılışı girilmemiş" />} />
           <Kpi label="Geri dönmesi zor" value={num(totals.reduce((s, [, t]) => s + t.risk, 0), 0)} help={`Bugünkü hızla ${num(meta.riskYears)} yıldan uzun`}
-            active={only === 'risk'} onClick={() => setOnly((v) => (v === 'risk' ? '' : 'risk'))} />
+            active={only === 'risk'} onClick={() => setOnly((v) => (v === 'risk' ? '' : 'risk'))}
+            info={<SqlInfo k={d.kaynaklar} alan="riskYears" label="Geri dönmesi zor (risk yılı)" />} />
         </KpiRow>
       )}
       <Panel>
         <input value={q} onChange={(e) => { setQ(e.target.value); setShown(STEP); }} placeholder="Sözleşme, kitap ya da hak sahibi ara" aria-label="Ara" className={field} />
         {d?.run ? (
-          <p className="mt-2 text-[11.5px] text-canvas-muted">Kaynak: {d.run.no} ({d.run.label}) koşusu. Kalan avans o dönemin mahsubundan sonraki tutardır.</p>
+          <p className="mt-2 text-[11.5px] text-canvas-muted">
+            Kaynak: {d.run.no} ({d.run.label}) koşusu. Kalan avans o dönemin mahsubundan sonraki tutardır.
+            <SqlInfo k={d.kaynaklar} alan="items[]" label="Avanslı sözleşmeler (avans, kalan, dönem telifi, kapanma)" className="ml-0.5 align-middle" />
+          </p>
         ) : d ? (
           <div className="mt-2"><Note tone="info">Henüz hesaplanmış bir dönem koşusu yok; avans portföyü koşudan okunur.</Note></div>
         ) : null}
@@ -70,17 +78,17 @@ export function Advances({ meta }: { meta: Meta }) {
         </ul>
         {d && d.items.length > shown && (
           <div className="mt-3 flex items-center justify-between gap-2 text-[12px] text-canvas-muted">
-            <span>{num(d.items.length, 0)} sözleşmenin {num(shown, 0)} tanesi gösteriliyor</span>
+            <span className="inline-flex items-center">{num(d.items.length, 0)} sözleşmenin {num(shown, 0)} tanesi gösteriliyor<SqlInfo k={d.kaynaklar} alan="items[]" label="Avanslı sözleşme sayısı" className="ml-0.5" /></span>
             <button type="button" className={btnGhost} onClick={() => setShown((n) => n + STEP)}>Daha fazla göster</button>
           </div>
         )}
       </Panel>
-      {edit && <OpeningSheet item={edit} meta={meta} onClose={() => setEdit(null)} />}
+      {edit && <OpeningSheet item={edit} meta={meta} k={d?.kaynaklar} onClose={() => setEdit(null)} />}
     </>
   );
 }
 
-function OpeningSheet({ item, meta, onClose }: { item: AdvanceItem; meta: Meta; onClose: () => void }) {
+function OpeningSheet({ item, meta, k, onClose }: { item: AdvanceItem; meta: Meta; k?: Kaynaklar; onClose: () => void }) {
   const qc = useQueryClient();
   const [amount, setAmount] = useState<number | null>(item.opening?.amount ?? null);
   const [asOf, setAsOf] = useState(item.opening?.asOf ?? '');
@@ -108,7 +116,7 @@ function OpeningSheet({ item, meta, onClose }: { item: AdvanceItem; meta: Meta; 
       }>
       <div className="space-y-3">
         <Note tone="info">
-          Sözleşmedeki avans {money(item.advance, item.currency)}. Girilen tutar, seçilen tarihte henüz telifle kapanmamış (kazanılmamış) kalan avanstır.
+          Sözleşmedeki avans {money(item.advance, item.currency)}<SqlInfo k={k} alan="items[]" label="Sözleşmedeki avans" className="ml-0.5 align-middle" />. Girilen tutar, seçilen tarihte henüz telifle kapanmamış (kazanılmamış) kalan avanstır.
           Bilinmeyen avans sıfır sayılmaz; açılış girilene kadar sözleşme koşuda istisnadır.
         </Note>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -124,7 +132,7 @@ function OpeningSheet({ item, meta, onClose }: { item: AdvanceItem; meta: Meta; 
         </Field>
         {(hist.data?.history.length ?? 0) > 0 && (
           <div>
-            <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Geçmiş</div>
+            <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Geçmiş <SqlInfo k={hist.data?.kaynaklar} alan="history[]" label="Avans açılışı geçmişi" /></div>
             <ul className="mt-1 space-y-1 text-[12px]">
               {hist.data!.history.map((h, i) => (
                 <li key={i} className={h.active ? 'font-semibold' : 'text-canvas-muted'}>

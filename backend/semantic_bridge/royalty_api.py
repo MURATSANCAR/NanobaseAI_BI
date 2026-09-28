@@ -27,12 +27,15 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import budget_sources as bsrc
 from semantic_bridge import contracts as C
+from semantic_bridge import contracts_kaynak as CK
+from semantic_bridge import provenance as P
 from semantic_bridge import contracts_royalty as CR
 from semantic_bridge import contracts_terms as T
 from semantic_bridge import rights_map as RM
 from semantic_bridge import rights_notes as RN
 from semantic_bridge import royalty as RY
 from semantic_bridge import royalty_draft as RD
+from semantic_bridge import royalty_kaynak as K
 from semantic_bridge import royalty_sources as S
 
 log = logging.getLogger("semantic.royalty.api")
@@ -95,7 +98,10 @@ def _tcmb_get(url: str) -> tuple[int, str]:
 
 class _Sources(RY.Sources):
     def __init__(self, crm: S.Runner, logo: S.Runner, prefix: str, statuses: tuple[int, ...], codes: tuple[int, ...]):
-        self.crm, self.logo, self.p, self.statuses, self.codes = crm, logo, prefix, statuses, codes
+        # Sorgu bilgisi: hesapta çalışan her CRM/Logo metni (satır, süre, an) koşunun kapsam kaydına yazılır.
+        rec = CK.Kayit()
+        self.log = rec.items
+        self.crm, self.logo, self.p, self.statuses, self.codes = rec.rows(crm, "crm"), rec.rows(logo, "logo"), prefix, statuses, codes
 
     def scope(self) -> list[dict[str, Any]]:
         return S.read_scope(self.crm, self.p, self.statuses, self.codes)
@@ -121,6 +127,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     work_lock = threading.Lock()   # Logo'yu aynı anda tek ağır iş okur
     notes_state: dict[str, Any] = {"running": False, "done": 0, "total": 0, "error": None, "at": None}
     map_state: dict[str, Any] = {"running": False, "done": 0, "total": 0, "error": None, "at": None}
+    notes_read: dict[str, Any] = {}  # sorgu bilgisi: son sınıflama işinde çalışan CRM okuması (metin, satır, süre, an)
 
     def crm_file() -> str:
         return os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
@@ -133,6 +140,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     def prefix() -> str:
         return _prefix(admin_mod.conf("CRM_SCHEMA"))
+
+    def dbs() -> tuple[Optional[str], Optional[str]]:
+        """Sorgu bilgisindeki `USE` satırı için yalnız veritabanı adları (Logo, CRM)."""
+        return P.connection_database(rt().settings.connection_file), P.connection_database(crm_file())
 
     def conf_int(key: str, default: int) -> int:
         try:
@@ -228,20 +239,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, display = ctx(request)
         st = settings()
         a, b = RY.default_period(RY.today(), st["periodMonths"])
-        return {"can": caps(user), "me": {"username": user, "display": display},
-                "runStatuses": RY.RUN_STATUSES, "lineStatuses": RY.LINE_STATUSES,
-                "exceptions": {k: {"label": v[0], "acceptable": v[1], "fix": v[2]} for k, v in RY.EXCEPTIONS.items()},
-                "autoExclude": RY.AUTO_EXCLUDE, "renewalDecisions": RY.RENEWAL_DECISIONS, "currencies": T.CURRENCIES,
-                "defaultPeriod": {"start": a, "end": b}, "periodMonths": st["periodMonths"],
-                "withholdingPct": st["withholdingPct"], "renewalDays": st["renewalDays"], "riskYears": st["riskYears"],
-                "scope": {"statuses": list(st["statuses"]), "paymentCodes": list(st["paymentCodes"])}}
+        out = {"can": caps(user), "me": {"username": user, "display": display},
+               "runStatuses": RY.RUN_STATUSES, "lineStatuses": RY.LINE_STATUSES,
+               "exceptions": {k: {"label": v[0], "acceptable": v[1], "fix": v[2]} for k, v in RY.EXCEPTIONS.items()},
+               "autoExclude": RY.AUTO_EXCLUDE, "renewalDecisions": RY.RENEWAL_DECISIONS, "currencies": T.CURRENCIES,
+               "defaultPeriod": {"start": a, "end": b}, "periodMonths": st["periodMonths"],
+               "withholdingPct": st["withholdingPct"], "renewalDays": st["renewalDays"], "riskYears": st["riskYears"],
+               "scope": {"statuses": list(st["statuses"]), "paymentCodes": list(st["paymentCodes"])}}
+        return P.bagla(out, lambda: K.for_meta(engine, tenant, out))
 
     # ------------------------------------------------------------------ koşular
 
     @app.get("/api/v1/royalty/runs")
     def royalty_runs(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {"items": call(RY.list_runs, engine, tenant), "can": caps(user)}
+        out = {"items": call(RY.list_runs, engine, tenant), "can": caps(user)}
+        return P.bagla(out, lambda: K.for_runs(engine, tenant, out))
 
     @app.post("/api/v1/royalty/runs")
     def royalty_run_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -254,7 +267,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/royalty/runs/{run_id}")
     def royalty_run(run_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {**call(RY.get_run, engine, tenant, run_id), "can": caps(user)}
+        out = {**call(RY.get_run, engine, tenant, run_id), "can": caps(user)}
+        return P.bagla(out, lambda: K.for_run(engine, tenant, run_id, out, *dbs()))
 
     @app.get("/api/v1/royalty/runs/{run_id}/status")
     def royalty_run_status(run_id: str, request: Request) -> dict[str, Any]:
@@ -287,12 +301,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/royalty/runs/{run_id}/lines")
     def royalty_lines(run_id: str, request: Request, status: str = "", code: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(RY.lines, engine, tenant, run_id, status=status, code=code, q=q, page=page)
+        out = call(RY.lines, engine, tenant, run_id, status=status, code=code, q=q, page=page)
+        return P.bagla(out, lambda: K.for_lines(engine, tenant, run_id, out, status, *dbs()))
 
     @app.get("/api/v1/royalty/runs/{run_id}/lines/{line_id}")
     def royalty_line(run_id: str, line_id: int, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(RY.line, engine, tenant, run_id, line_id)
+        out = call(RY.line, engine, tenant, run_id, line_id)
+        return P.bagla(out, lambda: K.for_line(engine, tenant, run_id, line_id, out, *dbs()))
 
     @app.patch("/api/v1/royalty/runs/{run_id}/lines/{line_id}")
     def royalty_line_decide(run_id: str, line_id: int, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -360,7 +376,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/royalty/runs/{run_id}/parties")
     def royalty_parties(run_id: str, request: Request, q: str = "", status: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(RY.parties, engine, tenant, run_id, q=q, status=status, show_email=can(user, NOTIFY), page=page)
+        out = call(RY.parties, engine, tenant, run_id, q=q, status=status, show_email=can(user, NOTIFY), page=page)
+        return P.bagla(out, lambda: K.for_parties(engine, tenant, run_id, out))
 
     @app.get("/api/v1/royalty/runs/{run_id}/parties/{party}/statement.docx")
     def royalty_party_doc(run_id: str, party: str, request: Request) -> Response:
@@ -416,7 +433,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             for k in ("gross", "advance", "withholding", "net"):
                 t[k] = round(t[k] + r[k], 2)
             t["payees"] += 1 if r["net"] > 0 else 0
-        return {"items": rows, "totals": totals, "run": {"id": run["id"], "no": run["no"], "label": run["label"]}}
+        out = {"items": rows, "totals": totals, "run": {"id": run["id"], "no": run["no"], "label": run["label"]}}
+        return P.bagla(out, lambda: K.for_payments(engine, tenant, run_id, out))
 
     @app.get("/api/v1/royalty/runs/{run_id}/payments.csv")
     def royalty_payments_csv(run_id: str, request: Request) -> Response:
@@ -439,12 +457,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/royalty/advances")
     def royalty_advances(request: Request, q: str = "", only: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {**call(RY.advances, engine, tenant, risk_years=settings()["riskYears"], q=q, only=only), "can": caps(user)}
+        out = {**call(RY.advances, engine, tenant, risk_years=settings()["riskYears"], q=q, only=only), "can": caps(user)}
+        return P.bagla(out, lambda: K.for_advances(engine, tenant, out, *dbs()))
 
     @app.get("/api/v1/royalty/advances/{contract}")
     def royalty_advance_history(contract: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"contractKey": contract.lower(), "history": call(RY.advance_history, engine, tenant, contract)}
+        out = {"contractKey": contract.lower(), "history": call(RY.advance_history, engine, tenant, contract)}
+        return P.bagla(out, lambda: K.for_advance_history(engine, tenant, contract, out))
 
     @app.put("/api/v1/royalty/advances/{contract}")
     def royalty_advance_set(contract: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -458,10 +478,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     # ------------------------------------------------------------------ yenilemeler
 
-    def renewal_list(engine, tenant, days: int, overdue: bool) -> list[dict[str, Any]]:
+    def renewal_list(engine, tenant, days: int, overdue: bool, qlog: Optional[CK.Kayit] = None) -> list[dict[str, Any]]:
         on = RY.today()
         p = prefix()
-        rows = crm()(S.renewals_sql(p, None, on) if overdue else S.renewals_sql(p, on, on + timedelta(days=days)))
+        run = crm() if qlog is None else qlog.rows(crm(), "crm")
+        rows = run(S.renewals_sql(p, None, on) if overdue else S.renewals_sql(p, on, on + timedelta(days=days)))
         return RY.renewal_rows(rows, RY.renewal_decisions(engine, tenant), on)
 
     @app.get("/api/v1/royalty/renewals")
@@ -470,13 +491,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, _ = ctx(request)
         if not 1 <= days <= 3660:
             raise HTTPException(status_code=400, detail={"code": "ROYALTY", "message": "Gün 1–3660 arasında olmalı."})
-        items = call(renewal_list, engine, tenant, days, overdue)
+        qlog = CK.Kayit()
+        items = call(renewal_list, engine, tenant, days, overdue, qlog)
         counts = {k: sum(1 for x in items if x["decision"] == k) for k in RY.RENEWAL_DECISIONS}
         needle = RY.fold(q)
         items = [x for x in items if (not decision or x["decision"] == decision) and (not kind or x["kind"] == kind)
                  and (not needle or needle in RY.fold(" ".join(str(x.get(k) or "") for k in ("no", "book", "author", "stockCode"))))]
-        return {"items": items, "total": len(items), "counts": counts, "days": days, "overdue": overdue,
-                "today": RY.today().isoformat(), "can": caps(user)}
+        out = {"items": items, "total": len(items), "counts": counts, "days": days, "overdue": overdue,
+               "today": RY.today().isoformat(), "can": caps(user)}
+        return P.bagla(out, lambda: K.for_renewals(engine, tenant, out, qlog, dbs()[1], dbs()[0]))
 
     @app.patch("/api/v1/royalty/renewals/{contract}")
     def royalty_renewal_decide(contract: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -487,9 +510,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
               {"decision": out["decision"], "reason": out["reason"]})
         return out
 
-    def renewal_facts(contract: str) -> tuple[dict[str, Any], Optional[str]]:
+    def renewal_facts(contract: str, qlog: Optional[CK.Kayit] = None) -> tuple[dict[str, Any], Optional[str]]:
         p = prefix()
         c_run, l_run = crm(), logo()
+        if qlog is not None:  # sorgu bilgisi: olguların çalışan metni
+            c_run, l_run = qlog.rows(c_run, "crm"), qlog.rows(l_run, "logo")
         rows = c_run(S.renewals_sql(p, None, None, contract_id=contract))
         if not rows:
             raise RY.RoyaltyError("Sözleşme CRM'de bulunamadı.", 404)
@@ -526,11 +551,13 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if not RY._GUID.match(key):
             raise HTTPException(status_code=400, detail={"code": "ROYALTY", "message": "Sözleşme kimliği geçerli değil."})
 
+        qlog = CK.Kayit()
+
         def work() -> dict[str, Any]:
             from semantic_bridge.marketing import guard
             from semantic_layer.runtime.llm_queue import NORMAL
 
-            facts, end = renewal_facts(key)
+            facts, end = renewal_facts(key, qlog)
             adv = RY.advances(engine, tenant, risk_years=settings()["riskYears"], q="")
             mine = next((x for x in adv["items"] if x["contractKey"] == key), None)
             if mine and mine.get("remaining") is not None:
@@ -546,17 +573,19 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             checked = guard.check(text, [], [str(v) for v in facts.values() if v is not None])
             sug = {"decision": RENEWAL_KEYS.get(ch.choice or ""), "probability": ch.probability, "text": checked["metin"] or None,
                    "inputs": facts, "dropped": checked["dusenSayisi"]}
-            RY.save_renewal_suggestion(engine, tenant, key, end, sug)
+            # Olguların çalışan sorgusu öneriyle saklanır (ekrandaki olgu listesine karışmaz; «i» bunu gösterir).
+            RY.save_renewal_suggestion(engine, tenant, key, end, {**sug, "inputs": {**facts, "_sorgular": qlog.items}})
             return sug
 
         out = await run_in_threadpool(call, work)
         audit(engine, user, "run", "royalty_renewal", key, "Zeki AI yenileme önerisi", {"decision": out.get("decision")})
-        return out
+        return await run_in_threadpool(P.bagla, out, lambda: K.for_suggest(engine, tenant, out, qlog, *dbs()))
 
     @app.get("/api/v1/royalty/contracts/{key}/lines")
     def royalty_contract_lines(key: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": call(RY.contract_lines, engine, tenant, key)}
+        out = {"items": call(RY.contract_lines, engine, tenant, key)}
+        return P.bagla(out, lambda: K.for_contract_lines(engine, tenant, key, out))
 
     # ------------------------------------------------------------------ zamanlayıcı
 
@@ -616,17 +645,19 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/rights/search")
     def rights_search(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         ctx(request)
-        rows = call(lambda: crm()(C.book_lookup_sql(prefix(), q, page)))
-        return {"items": [{"id": str(r.get("new_kitapId") or "").strip("{}").lower(), "title": r.get("new_name"),
-                           "stockCode": r.get("new_StokKodu"), "isbn": r.get("new_isbn13")} for r in rows],
-                **C.lookup_page(rows, page)}
+        qlog = CK.Kayit()
+        rows = call(lambda: qlog.rows(crm(), "crm")(C.book_lookup_sql(prefix(), q, page)))
+        out = {"items": [{"id": str(r.get("new_kitapId") or "").strip("{}").lower(), "title": r.get("new_name"),
+                          "stockCode": r.get("new_StokKodu"), "isbn": r.get("new_isbn13")} for r in rows],
+               **C.lookup_page(rows, page)}
+        return P.bagla(out, lambda: K.for_search(qlog, dbs()[1], out))
 
-    def book_card(engine, tenant, book_id: str) -> dict[str, Any]:
+    def book_card(engine, tenant, book_id: str, qlog: Optional[CK.Kayit] = None) -> dict[str, Any]:
         book_id = book_id.strip("{}").lower()
         if not RY._GUID.match(book_id):
             raise RY.RoyaltyError("Kitap kimliği geçerli değil.")
         p = prefix()
-        c_run = crm()
+        c_run = crm() if qlog is None else qlog.rows(crm(), "crm")
         head = c_run(S.book_head_sql(p, book_id))
         if not head:
             raise RY.RoyaltyError("Kitap CRM'de bulunamadı.", 404)
@@ -672,7 +703,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/rights/books/{book_id}")
     def rights_book(book_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return {**call(book_card, engine, tenant, book_id), "can": caps(user)}
+        qlog = CK.Kayit()
+        out = {**call(book_card, engine, tenant, book_id, qlog), "can": caps(user)}
+        return P.bagla(out, lambda: K.for_book(engine, tenant, book_id, out, qlog, dbs()[1]))
 
     @app.post("/api/v1/rights/grants")
     def rights_grant_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -702,7 +735,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def rights_licenses(request: Request, q: str = "", status: str = "", book: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         items = call(RY.licenses, engine, tenant, book_id=book, q=q, status=status)
-        return {"items": items, "total": len(items), "can": caps(user)}
+        out = {"items": items, "total": len(items), "can": caps(user)}
+        return P.bagla(out, lambda: K.for_licenses(engine, tenant, out, book=book, status=status))
 
     @app.post("/api/v1/rights/licenses-out")
     def rights_license_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -731,6 +765,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             n["map"] = m if m and m["hash"] == n.get("textHash") else None
         return {**out, "job": dict(notes_state), "mapJob": dict(map_state), "mapCounts": RM.counts(engine, tenant),
                 "can": caps(user)}
+        out = {**call(RY.notes, engine, tenant, status=status, cls=cls, q=q, page=page), "job": dict(notes_state), "can": caps(user)}
+        return P.bagla(out, lambda: K.for_notes(engine, tenant, out, status=status, cls=cls, prefix=prefix(), crm_db=dbs()[1],
+                                                last_read=notes_read.get("item")))
 
     @app.get("/api/v1/rights/notes/classify")
     def rights_notes_job(request: Request) -> dict[str, Any]:
@@ -743,7 +780,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         need(user, RIGHTS_EDIT, "Hak açıklaması sınıflandırma")
         if notes_state["running"]:
             return dict(notes_state)
-        items = call(RN.pending, engine, tenant, call(lambda: crm()(S.notes_sql(prefix()))))
+        qlog = CK.Kayit()
+        items = call(RN.pending, engine, tenant, call(lambda: qlog.rows(crm(), "crm")(S.notes_sql(prefix()))))
+        notes_read["item"] = qlog.items[-1] if qlog.items else None
         notes_state.update(running=True, done=0, total=len(items), error=None, at=None, failed=0)
 
         def progress(ok: bool) -> None:

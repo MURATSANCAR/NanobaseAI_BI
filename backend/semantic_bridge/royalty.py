@@ -366,9 +366,10 @@ def run_months(a: str, b: str) -> int:
 # ------------------------------------------------------------------------------------------ koşu
 
 def _run(r: Any) -> dict[str, Any]:
+    scope = {k: v for k, v in (r.kapsam_json or {}).items() if k != "sorgular"}  # çalışan SQL yalnız sorgu bilgisinde
     return {"id": r.id, "no": r.no, "periodStart": r.donem_bas, "periodEnd": r.donem_bit,
             "label": period_label(r.donem_bas, r.donem_bit), "status": r.durum, "statusLabel": RUN_STATUSES.get(r.durum),
-            "dataEnd": r.veri_son_gunu, "scope": r.kapsam_json or {}, "summary": r.ozet_json or {},
+            "dataEnd": r.veri_son_gunu, "scope": scope, "summary": r.ozet_json or {},
             "options": r.secenek_json or {}, "progress": r.ilerleme_json or {}, "error": r.hata, "note": r.not_,
             "preparedBy": r.hazirlayan, "submittedBy": r.gonderen, "approvedBy": r.onaylayan,
             "createdBy": r.olusturan, "createdAt": _iso(r.olusturma_at), "computedAt": _iso(r.hesap_at),
@@ -376,10 +377,25 @@ def _run(r: Any) -> dict[str, Any]:
             "version": r.surum}
 
 
+def run_stmt(tenant: str, run_id: str) -> sa.Select:
+    return sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.id == run_id)
+
+
+def runs_stmt(tenant: str) -> sa.Select:
+    return sa.select(RUNS).where(RUNS.c.tenant_id == tenant).order_by(RUNS.c.donem_bas.desc(), RUNS.c.olusturma_at.desc())
+
+
+def run_queries(engine: sa.engine.Engine, tenant: str, run_id: str) -> list[dict[str, Any]]:
+    """Koşunun son hesabında çalışan CRM/Logo sorguları (metin, satır, süre, an; sonuç satırı yok)."""
+    with engine.connect() as c:
+        scope = c.execute(sa.select(RUNS.c.kapsam_json).where(RUNS.c.tenant_id == tenant, RUNS.c.id == run_id)).scalar()
+    return list((scope or {}).get("sorgular") or [])
+
+
 def _get_run(c: sa.engine.Connection, tenant: str, run_id: str, lock: bool = False) -> Any:
     if not _PID.match(run_id or ""):
         raise RoyaltyError("Koşu kimliği geçerli değil.")
-    q = sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.id == run_id)
+    q = run_stmt(tenant, run_id)
     r = c.execute(q.with_for_update() if lock else q).first()
     if not r:
         raise RoyaltyError("Koşu bulunamadı.", 404)
@@ -397,8 +413,7 @@ def list_runs(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
     """Bütün koşular, yeniden eskiye (tavan yok)."""
     ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant)
-                         .order_by(RUNS.c.donem_bas.desc(), RUNS.c.olusturma_at.desc())).all()
+        rows = c.execute(runs_stmt(tenant)).all()
     return [_run(r) for r in rows]
 
 
@@ -700,10 +715,18 @@ class Sources:
     def fx(self, currency: str, on: date) -> Optional[dict[str, Any]]: ...
 
 
+def approved_statements_stmt(tenant: str) -> sa.Select:
+    return (sa.select(C.STATEMENTS.c.contract_id, C.STATEMENTS.c.period_start, C.STATEMENTS.c.period_end,
+                      C.STATEMENTS.c.advance_offset, C.STATEMENTS.c.carry_out)
+            .where(C.STATEMENTS.c.tenant_id == tenant, C.STATEMENTS.c.status == "onaylandi"))
+
+
+def records_stmt(tenant: str) -> sa.Select:
+    return sa.select(C.RECORDS).where(C.RECORDS.c.tenant_id == tenant)
+
+
 def _approved_statements(c: sa.engine.Connection, tenant: str) -> dict[str, list[dict[str, Any]]]:
-    rows = c.execute(sa.select(C.STATEMENTS.c.contract_id, C.STATEMENTS.c.period_start, C.STATEMENTS.c.period_end,
-                               C.STATEMENTS.c.advance_offset, C.STATEMENTS.c.carry_out)
-                     .where(C.STATEMENTS.c.tenant_id == tenant, C.STATEMENTS.c.status == "onaylandi")).all()
+    rows = c.execute(approved_statements_stmt(tenant)).all()
     out: dict[str, list[dict[str, Any]]] = {}
     for r in rows:
         out.setdefault(r.contract_id, []).append({"periodStart": r.period_start, "periodEnd": r.period_end,
@@ -711,16 +734,19 @@ def _approved_statements(c: sa.engine.Connection, tenant: str) -> dict[str, list
     return out
 
 
+def openings_stmt(tenant: str) -> sa.Select:
+    return sa.select(ADVANCES).where(ADVANCES.c.tenant_id == tenant, ADVANCES.c.aktif.is_(True)).order_by(ADVANCES.c.tarih)
+
+
 def openings(c: sa.engine.Connection, tenant: str) -> dict[str, dict[str, Any]]:
-    rows = c.execute(sa.select(ADVANCES).where(ADVANCES.c.tenant_id == tenant, ADVANCES.c.aktif.is_(True))
-                     .order_by(ADVANCES.c.tarih)).all()
+    rows = c.execute(openings_stmt(tenant)).all()
     return {r.contract_key: {"amount": r.acilis_tutari, "currency": r.para, "asOf": r.acilis_tarihi, "by": r.giren,
                              "reason": r.gerekce, "at": _iso(r.tarih), "source": r.kaynak} for r in rows}
 
 
 def candidates(c: sa.engine.Connection, tenant: str, crm_items: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """CRM kapsamı + portal kaydı (portal değeri kazanır) + yalnız portalda açılmış yürürlükteki satıştan ödemeli sözleşmeler."""
-    recs = c.execute(sa.select(C.RECORDS).where(C.RECORDS.c.tenant_id == tenant)).all()
+    recs = c.execute(records_stmt(tenant)).all()
     by_crm = {r.crm_id: r for r in recs if r.crm_id}
     out = []
     for it in crm_items:
@@ -792,6 +818,8 @@ def compute_run(engine: sa.engine.Engine, tenant: str, run_id: str, user: str, s
             kept = [x for x in dec["kabul"].get("codes") or [] if x in now_codes]
             dec["kabul"] = {**dec["kabul"], "codes": kept} if kept else None
         durum, first = line_status(ev["exceptions"], dec, ev["auto"])
+        if ev["calc"]:
+            ev["calc"]["kosu"] = {"id": run_id, "no": run.no}
         calc = ev["calc"] or {}
         lines.append({
             "run_id": run_id, "tenant_id": tenant, "contract_key": it["key"], "crm_id": it["crmId"], "contract_id": it["recordId"],
@@ -818,7 +846,9 @@ def compute_run(engine: sa.engine.Engine, tenant: str, run_id: str, user: str, s
         c.execute(RUNS.update().where(RUNS.c.id == run_id).values(
             durum="hesaplandi", veri_son_gunu=data_end, ozet_json=summary, hata=None, hazirlayan=user, hesap_at=_now(),
             kapsam_json={"statuses": list(settings.get("statuses") or []), "paymentCodes": list(settings.get("paymentCodes") or []),
-                         "crmCount": len(crm_items), "lines": len(lines), "firstSalesYear": first_year},
+                         "crmCount": len(crm_items), "lines": len(lines), "firstSalesYear": first_year,
+                         # sorgu bilgisi: bu hesapta çalışan CRM/Logo metni (satır, süre, an); ekrana yalnız «i»de çıkar
+                         "sorgular": list(getattr(src, "log", None) or [])},
             ilerleme_json={"step": "Bitti", "done": len(lines), "total": len(lines), "at": _iso(_now())},
             updated_at=_now()))
     return get_run(engine, tenant, run_id)
@@ -875,15 +905,23 @@ _LIGHT = [LINES.c[k] for k in ("id", "contract_key", "crm_id", "contract_id", "n
                                 "kur_tarihi", "statement_id", "onay_hatasi")]
 
 
+def lines_stmt(tenant: str, run_id: str, status: str = "") -> sa.Select:
+    stmt = sa.select(*_LIGHT).where(LINES.c.run_id == run_id, LINES.c.tenant_id == tenant)
+    if status:
+        stmt = stmt.where(LINES.c.durum == status)
+    return stmt.order_by(LINES.c.durum, LINES.c.no, LINES.c.id)
+
+
+def line_stmt(tenant: str, run_id: str, line_id: int) -> sa.Select:
+    return sa.select(LINES).where(LINES.c.run_id == run_id, LINES.c.tenant_id == tenant, LINES.c.id == int(line_id))
+
+
 def lines(engine: sa.engine.Engine, tenant: str, run_id: str, *, status: str = "", code: str = "", q: str = "",
           page: int = 0) -> dict[str, Any]:
     """Koşunun satırları, sayfalı; `total` süzgece uyan bütün satır (kesilmez, sayfalanır)."""
     with engine.connect() as c:
         _get_run(c, tenant, run_id)
-        stmt = sa.select(*_LIGHT).where(LINES.c.run_id == run_id, LINES.c.tenant_id == tenant)
-        if status:
-            stmt = stmt.where(LINES.c.durum == status)
-        rows = c.execute(stmt.order_by(LINES.c.durum, LINES.c.no, LINES.c.id)).all()
+        rows = c.execute(lines_stmt(tenant, run_id, status)).all()
     needle = fold(q)
     out = []
     for r in rows:
@@ -900,7 +938,7 @@ def lines(engine: sa.engine.Engine, tenant: str, run_id: str, *, status: str = "
 
 def line(engine: sa.engine.Engine, tenant: str, run_id: str, line_id: int) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(LINES).where(LINES.c.run_id == run_id, LINES.c.tenant_id == tenant, LINES.c.id == int(line_id))).first()
+        r = c.execute(line_stmt(tenant, run_id, line_id)).first()
     if not r:
         raise RoyaltyError("Satır bulunamadı.", 404)
     return _line(r, full=True)
@@ -1129,10 +1167,14 @@ def party_totals(lines_: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
     return out
 
 
+def approved_lines_stmt(tenant: str, run_id: str) -> sa.Select:
+    return (sa.select(LINES).where(LINES.c.run_id == run_id, LINES.c.tenant_id == tenant,
+                                   LINES.c.durum == "hesaplandi", LINES.c.statement_id.is_not(None))
+            .order_by(LINES.c.no))
+
+
 def _approved_lines(c: sa.engine.Connection, tenant: str, run_id: str) -> list[dict[str, Any]]:
-    rows = c.execute(sa.select(LINES).where(LINES.c.run_id == run_id, LINES.c.tenant_id == tenant,
-                                            LINES.c.durum == "hesaplandi", LINES.c.statement_id.is_not(None))
-                     .order_by(LINES.c.no)).all()
+    rows = c.execute(approved_lines_stmt(tenant, run_id)).all()
     return [{"id": r.id, "no": r.no, "title": r.baslik, "parties": r.taraflar or [], "calc": r.calc_json or {},
              "currency": r.para, "terms": r.terms_json or {}, "statementId": r.statement_id} for r in rows]
 
@@ -1155,12 +1197,15 @@ def _party(r: Any, show_email: bool) -> dict[str, Any]:
             "channel": r.kanal, "note": r.not_, "sentBy": r.gonderen, "sentAt": _iso(r.gonderim_at), "docHash": r.belge_hash}
 
 
+def parties_stmt(tenant: str, run_id: str) -> sa.Select:
+    return sa.select(PARTIES).where(PARTIES.c.run_id == run_id, PARTIES.c.tenant_id == tenant).order_by(PARTIES.c.ad)
+
+
 def parties(engine: sa.engine.Engine, tenant: str, run_id: str, *, q: str = "", status: str = "", show_email: bool = False,
             page: int = 0) -> dict[str, Any]:
     with engine.connect() as c:
         run = _get_run(c, tenant, run_id)
-        rows = c.execute(sa.select(PARTIES).where(PARTIES.c.run_id == run_id, PARTIES.c.tenant_id == tenant)
-                         .order_by(PARTIES.c.ad)).all()
+        rows = c.execute(parties_stmt(tenant, run_id)).all()
     needle = fold(q)
     items = [r for r in rows if (not needle or needle in fold(r.ad)) and (not status or r.durum == status)]
     n = max(0, int(page or 0))
@@ -1278,15 +1323,19 @@ def _csv(header: list[str], rows: Iterable[list[Any]]) -> bytes:
     return ("﻿" + buf.getvalue()).encode("utf-8")
 
 
+def run_payments_stmt(tenant: str, statement_ids: list[str]) -> sa.Select:
+    """Onaylı koşunun hakedişlerinden doğan ödeme satırları (vade ve durum)."""
+    return (sa.select(C.PAYMENTS.c.statement_id, C.PAYMENTS.c.due_on, C.PAYMENTS.c.status)
+            .where(C.PAYMENTS.c.tenant_id == tenant, C.PAYMENTS.c.statement_id.in_(list(statement_ids) or ["-"])))
+
+
 def payment_rows(engine: sa.engine.Engine, tenant: str, run_id: str) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     run = get_run(engine, tenant, run_id)
     if run["status"] != "onayli":
         raise RoyaltyError("Ödeme listesi onaylı koşudan üretilir.", 409)
     with engine.connect() as c:
         lines_ = _approved_lines(c, tenant, run_id)
-        pay = {r.statement_id: r for r in c.execute(sa.select(C.PAYMENTS.c.statement_id, C.PAYMENTS.c.due_on, C.PAYMENTS.c.status)
-                                                     .where(C.PAYMENTS.c.tenant_id == tenant, C.PAYMENTS.c.statement_id.in_(
-                                                         [ln["statementId"] for ln in lines_] or ["-"]))).all()}
+        pay = {r.statement_id: r for r in c.execute(run_payments_stmt(tenant, [ln["statementId"] for ln in lines_])).all()}
     out = []
     for ln in lines_:
         shares = party_shares(ln)
@@ -1329,9 +1378,19 @@ def withholding_csv(engine: sa.engine.Engine, tenant: str, run_id: str) -> tuple
 
 # ------------------------------------------------------------------------------------------ avans
 
+def latest_run_stmt(tenant: str) -> sa.Select:
+    return (sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.durum.in_(("hesaplandi", "onayda", "onaylaniyor", "onayli")))
+            .order_by(RUNS.c.donem_bit.desc(), RUNS.c.hesap_at.desc()))
+
+
+def advance_lines_stmt(run_id: str) -> sa.Select:
+    return (sa.select(LINES.c.id, LINES.c.contract_key, LINES.c.no, LINES.c.baslik, LINES.c.durum,
+                      LINES.c.istisnalar, LINES.c.calc_json, LINES.c.terms_json, LINES.c.taraflar)
+            .where(LINES.c.run_id == run_id))
+
+
 def latest_run(c: sa.engine.Connection, tenant: str) -> Any:
-    return c.execute(sa.select(RUNS).where(RUNS.c.tenant_id == tenant, RUNS.c.durum.in_(("hesaplandi", "onayda", "onaylaniyor", "onayli")))
-                     .order_by(RUNS.c.donem_bit.desc(), RUNS.c.hesap_at.desc())).first()
+    return c.execute(latest_run_stmt(tenant)).first()
 
 
 def advances(engine: sa.engine.Engine, tenant: str, *, risk_years: float, q: str = "", only: str = "") -> dict[str, Any]:
@@ -1341,9 +1400,7 @@ def advances(engine: sa.engine.Engine, tenant: str, *, risk_years: float, q: str
     with engine.connect() as c:
         run = latest_run(c, tenant)
         opens = openings(c, tenant)
-        rows = c.execute(sa.select(LINES.c.id, LINES.c.contract_key, LINES.c.no, LINES.c.baslik, LINES.c.durum,
-                                   LINES.c.istisnalar, LINES.c.calc_json, LINES.c.terms_json, LINES.c.taraflar)
-                         .where(LINES.c.run_id == run.id)).all() if run else []
+        rows = c.execute(advance_lines_stmt(run.id)).all() if run else []
     items = []
     months = run_months(run.donem_bas, run.donem_bit) if run else 6
     needle = fold(q)
@@ -1421,11 +1478,15 @@ def set_advance(engine: sa.engine.Engine, tenant: str, user: str, contract_key: 
                                              "reason": h.gerekce, "by": h.giren, "at": _iso(h.tarih), "active": bool(h.aktif)} for h in hist]}
 
 
+def advance_history_stmt(tenant: str, contract_key: str) -> sa.Select:
+    return (sa.select(ADVANCES).where(ADVANCES.c.tenant_id == tenant, ADVANCES.c.contract_key == contract_key.lower())
+            .order_by(ADVANCES.c.tarih.desc(), ADVANCES.c.id.desc()))
+
+
 def advance_history(engine: sa.engine.Engine, tenant: str, contract_key: str) -> list[dict[str, Any]]:
     ensure(engine)
     with engine.connect() as c:
-        hist = c.execute(sa.select(ADVANCES).where(ADVANCES.c.tenant_id == tenant, ADVANCES.c.contract_key == contract_key.lower())
-                         .order_by(ADVANCES.c.tarih.desc(), ADVANCES.c.id.desc())).all()
+        hist = c.execute(advance_history_stmt(tenant, contract_key)).all()
     return [{"amount": h.acilis_tutari, "currency": h.para, "asOf": h.acilis_tarihi, "reason": h.gerekce, "by": h.giren,
              "at": _iso(h.tarih), "active": bool(h.aktif)} for h in hist]
 
@@ -1457,15 +1518,20 @@ def renewal_rows(crm_rows: list[dict[str, Any]], decisions: dict[str, Any], on: 
             "reason": None if stale or not d else d.gerekce, "decidedBy": None if stale or not d else d.karar_veren,
             "decidedAt": None if stale or not d else _iso(d.karar_at), "staleDecision": stale,
             "suggestion": ({"decision": d.oneri_karar, "probability": d.oneri_olasilik, "text": d.oneri_metni,
-                            "inputs": d.oneri_girdi, "at": _iso(d.oneri_at)} if d and d.oneri_metni and not stale else None),
+                            "inputs": {k: v for k, v in (d.oneri_girdi or {}).items() if not str(k).startswith("_")},
+                            "at": _iso(d.oneri_at)} if d and d.oneri_metni and not stale else None),
         })
     return out
+
+
+def renewals_stmt(tenant: str) -> sa.Select:
+    return sa.select(RENEWALS).where(RENEWALS.c.tenant_id == tenant)
 
 
 def renewal_decisions(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     ensure(engine)
     with engine.connect() as c:
-        return {r.contract_key: r for r in c.execute(sa.select(RENEWALS).where(RENEWALS.c.tenant_id == tenant)).all()}
+        return {r.contract_key: r for r in c.execute(renewals_stmt(tenant)).all()}
 
 
 def _renewal_upsert(c: sa.engine.Connection, tenant: str, key: str, values: dict[str, Any]) -> None:
@@ -1547,11 +1613,15 @@ def _grant(r: Any) -> dict[str, Any]:
             "source": r.kaynak, "contractKey": r.contract_key, "note": r.not_, "by": r.giren, "at": _iso(r.tarih)}
 
 
+def grants_stmt(tenant: str, book_id: str) -> sa.Select:
+    return (sa.select(GRANTS).where(GRANTS.c.tenant_id == tenant, GRANTS.c.kitap_id == book_id.lower())
+            .order_by(GRANTS.c.hak_turu, GRANTS.c.dil, GRANTS.c.ulke))
+
+
 def grants(engine: sa.engine.Engine, tenant: str, book_id: str) -> list[dict[str, Any]]:
     ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(GRANTS).where(GRANTS.c.tenant_id == tenant, GRANTS.c.kitap_id == book_id.lower())
-                         .order_by(GRANTS.c.hak_turu, GRANTS.c.dil, GRANTS.c.ulke)).all()
+        rows = c.execute(grants_stmt(tenant, book_id)).all()
     return [_grant(r) for r in rows]
 
 
@@ -1614,15 +1684,19 @@ def _license(r: Any) -> dict[str, Any]:
             "updatedBy": r.guncelleyen, "updatedAt": _iso(r.guncelleme_at)}
 
 
-def licenses(engine: sa.engine.Engine, tenant: str, *, book_id: str = "", q: str = "", status: str = "") -> list[dict[str, Any]]:
-    ensure(engine)
+def licenses_stmt(tenant: str, *, book_id: str = "", status: str = "") -> sa.Select:
     stmt = sa.select(LICENSES).where(LICENSES.c.tenant_id == tenant)
     if book_id:
         stmt = stmt.where(LICENSES.c.kitap_id == book_id.lower())
     if status:
         stmt = stmt.where(LICENSES.c.durum == status)
+    return stmt.order_by(LICENSES.c.tarih.desc())
+
+
+def licenses(engine: sa.engine.Engine, tenant: str, *, book_id: str = "", q: str = "", status: str = "") -> list[dict[str, Any]]:
+    ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(LICENSES.c.tarih.desc())).all()
+        rows = c.execute(licenses_stmt(tenant, book_id=book_id, status=status)).all()
     needle = fold(q)
     return [_license(r) for r in rows if not needle or needle in fold(" ".join(str(x or "") for x in (r.kitap, r.alici_yayinevi, r.dil, r.ulke)))]
 
@@ -1714,15 +1788,19 @@ def _note(r: Any) -> dict[str, Any]:
             "textHash": r.metin_hash}
 
 
-def notes(engine: sa.engine.Engine, tenant: str, *, status: str = "", cls: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
-    ensure(engine)
+def notes_stmt(tenant: str, *, status: str = "", cls: str = "") -> sa.Select:
     stmt = sa.select(NOTES).where(NOTES.c.tenant_id == tenant)
     if status:
         stmt = stmt.where(NOTES.c.durum == status)
     if cls:
         stmt = stmt.where(NOTES.c.sinif == cls)
+    return stmt.order_by(NOTES.c.durum, NOTES.c.no)
+
+
+def notes(engine: sa.engine.Engine, tenant: str, *, status: str = "", cls: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
+    ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(NOTES.c.durum, NOTES.c.no)).all()
+        rows = c.execute(notes_stmt(tenant, status=status, cls=cls)).all()
     needle = fold(q)
     items = [r for r in rows if not needle or needle in fold(" ".join(str(x or "") for x in (r.no, r.kitap, r.metin)))]
     n = max(0, int(page or 0))
@@ -1792,19 +1870,28 @@ def note_prompt(text: str) -> str:
 
 # ------------------------------------------------------------------------------------------ sözleşme sayfası
 
+def contract_keys(c: sa.engine.Connection, tenant: str, key: str) -> list[str]:
+    """Sözleşmenin koşu satırlarındaki anahtarları: verilen anahtar + portal kaydı kimliği + CRM kimliği."""
+    k = (key or "").lower()
+    rec = c.execute(sa.select(C.RECORDS.c.id, C.RECORDS.c.crm_id).where(
+        C.RECORDS.c.tenant_id == tenant, sa.or_(C.RECORDS.c.id == k, C.RECORDS.c.crm_id == k))).first()
+    return sorted({k} | ({rec.id, rec.crm_id} - {None} if rec else set()))
+
+
+def contract_lines_stmt(tenant: str, keys: list[str]) -> sa.Select:
+    return (sa.select(LINES.c.id, LINES.c.run_id, LINES.c.durum, LINES.c.istisna_kodu, LINES.c.net, LINES.c.para,
+                      LINES.c.statement_id, RUNS.c.no, RUNS.c.donem_bas, RUNS.c.donem_bit, RUNS.c.durum.label("run_durum"))
+            .join(RUNS, RUNS.c.id == LINES.c.run_id)
+            .where(LINES.c.tenant_id == tenant, LINES.c.contract_key.in_(keys), RUNS.c.durum != "iptal")
+            .order_by(RUNS.c.donem_bas.desc()))
+
+
 def contract_lines(engine: sa.engine.Engine, tenant: str, key: str) -> list[dict[str, Any]]:
     """Bir sözleşmenin dönem koşularındaki satırları (M6 sözleşme sayfasındaki bağlantı için)."""
     ensure(engine)
     k = (key or "").lower()
     with engine.connect() as c:
-        rec = c.execute(sa.select(C.RECORDS.c.id, C.RECORDS.c.crm_id).where(
-            C.RECORDS.c.tenant_id == tenant, sa.or_(C.RECORDS.c.id == k, C.RECORDS.c.crm_id == k))).first()
-        keys = {k} | ({rec.id, rec.crm_id} - {None} if rec else set())
-        rows = c.execute(sa.select(LINES.c.id, LINES.c.run_id, LINES.c.durum, LINES.c.istisna_kodu, LINES.c.net, LINES.c.para,
-                                   LINES.c.statement_id, RUNS.c.no, RUNS.c.donem_bas, RUNS.c.donem_bit, RUNS.c.durum.label("run_durum"))
-                         .join(RUNS, RUNS.c.id == LINES.c.run_id)
-                         .where(LINES.c.tenant_id == tenant, LINES.c.contract_key.in_(keys), RUNS.c.durum != "iptal")
-                         .order_by(RUNS.c.donem_bas.desc())).all()
+        rows = c.execute(contract_lines_stmt(tenant, contract_keys(c, tenant, k))).all()
     return [{"lineId": r.id, "runId": r.run_id, "runNo": r.no, "label": period_label(r.donem_bas, r.donem_bit),
              "runStatus": r.run_durum, "runStatusLabel": RUN_STATUSES.get(r.run_durum), "status": r.durum,
              "statusLabel": LINE_STATUSES.get(r.durum), "exception": EXCEPTIONS.get(r.istisna_kodu or "", ("",))[0] or None,

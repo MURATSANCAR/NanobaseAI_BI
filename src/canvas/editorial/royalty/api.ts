@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../../engine';
 import { httpErrorText } from '../../httpError';
+import type { Kaynaklar } from '../../components/sqlInfo';
+
+/** Köprü cevabındaki sorgu bilgisi (her rakamın sorgusu ve hesabı). */
+type K = { kaynaklar?: Kaynaklar };
 
 /** M54 Telif dönemi ve haklar: köprü uçları /api/v1/royalty/* ve /api/v1/rights/*. */
 
@@ -43,6 +47,7 @@ export type Run = {
   approvedAt: string | null;
   updatedAt: string;
   version: number;
+  kaynaklar?: Kaynaklar;
 };
 export type Exception = { code: string; label: string; acceptable: boolean; fix: string; detail: string | null };
 export type Stamp = { by: string; at: string; reason?: string };
@@ -116,8 +121,9 @@ export type Line = {
   statementId: string | null;
   approvalError: string | null;
   calc?: Calc | null;
+  kaynaklar?: Kaynaklar;
 };
-export type Page<T> = { items: T[]; total: number; page: number; pageSize: number };
+export type Page<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 export type Caps = {
   run: boolean;
   approve: boolean;
@@ -317,6 +323,7 @@ export type BookCard = {
   grants: Grant[];
   licenses: License[];
   can: Caps;
+  kaynaklar?: Kaynaklar;
 };
 export type RightsMeta = {
   can: Caps;
@@ -401,35 +408,35 @@ export const royaltyApi = {
     call<Page<Party> & { ready: boolean; sent: number; all: number }>(`${R}/runs/${enc(id)}/parties${qs(p)}`),
   markSent: (id: string, b: { keys: string[]; channel?: string; note?: string; undo?: boolean }) =>
     call<{ updated: number }>(`${R}/runs/${enc(id)}/parties/mark-sent`, { method: 'POST', body: b }),
-  payments: (id: string) => call<{ items: PaymentRow[]; totals: Record<string, Money4 & { payees: number }>; run: { id: string; no: string; label: string } }>(`${R}/runs/${enc(id)}/payments`),
+  payments: (id: string) => call<{ items: PaymentRow[]; totals: Record<string, Money4 & { payees: number }>; run: { id: string; no: string; label: string } } & K>(`${R}/runs/${enc(id)}/payments`),
   advances: (p: { q?: string; only?: string }) =>
-    call<{ run: Run | null; items: AdvanceItem[]; totals: Record<string, { advance: number; remaining: number; missing: number; risk: number }>; riskYears: number; can: Caps }>(`${R}/advances${qs(p)}`),
-  advanceHistory: (key: string) => call<{ contractKey: string; history: AdvanceHistory[] }>(`${R}/advances/${enc(key)}`),
+    call<{ run: Run | null; items: AdvanceItem[]; totals: Record<string, { advance: number; remaining: number; missing: number; risk: number }>; riskYears: number; can: Caps } & K>(`${R}/advances${qs(p)}`),
+  advanceHistory: (key: string) => call<{ contractKey: string; history: AdvanceHistory[] } & K>(`${R}/advances/${enc(key)}`),
   setAdvance: (key: string, b: { amount?: number | null; currency?: string; asOf?: string; reason: string; remove?: boolean; no?: string }) =>
     call<{ contractKey: string; history: AdvanceHistory[] }>(`${R}/advances/${enc(key)}`, { method: 'PUT', body: b }),
   renewals: (p: { days?: number; overdue?: boolean; q?: string; decision?: string; kind?: string }) =>
-    call<{ items: Renewal[]; total: number; counts: Record<string, number>; days: number; overdue: boolean; today: string; can: Caps }>(`${R}/renewals${qs(p)}`),
+    call<{ items: Renewal[]; total: number; counts: Record<string, number>; days: number; overdue: boolean; today: string; can: Caps } & K>(`${R}/renewals${qs(p)}`),
   decideRenewal: (key: string, b: { decision: string; reason?: string; end?: string | null; no?: string | null }) =>
     call<{ decision: string }>(`${R}/renewals/${enc(key)}`, { method: 'PATCH', body: b }),
   suggestRenewal: (key: string) =>
-    call<{ decision: string | null; probability: number | null; text: string | null; inputs: Record<string, unknown>; dropped: number }>(`${R}/renewals/${enc(key)}/suggest`, { method: 'POST', body: {}, timeout: 300_000 }),
+    call<{ decision: string | null; probability: number | null; text: string | null; inputs: Record<string, unknown>; dropped: number } & K>(`${R}/renewals/${enc(key)}/suggest`, { method: 'POST', body: {}, timeout: 300_000 }),
   coverEmail: (id: string, party: string) =>
     call<CoverEmail>(`${R}/runs/${enc(id)}/parties/${enc(party)}/cover-email`, { method: 'POST', body: {}, timeout: 300_000 }),
   summaryNote: (id: string, fresh = false) =>
     call<RunNote>(`${R}/runs/${enc(id)}/summary-note${fresh ? '?fresh=true' : ''}`, { method: 'POST', body: {}, timeout: 300_000 }),
   contractLines: (key: string) =>
-    call<{ items: Array<{ lineId: number; runId: string; runNo: string; label: string; runStatusLabel: string; status: LineStatus; statusLabel: string; exception: string | null; net: number | null; currency: string; statementId: string | null }> }>(`${R}/contracts/${enc(key)}/lines`),
+    call<{ items: Array<{ lineId: number; runId: string; runNo: string; label: string; runStatusLabel: string; status: LineStatus; statusLabel: string; exception: string | null; net: number | null; currency: string; statementId: string | null }> } & K>(`${R}/contracts/${enc(key)}/lines`),
 };
 
 export const rightsApi = {
   meta: () => call<RightsMeta>('/rights/meta'),
   search: (q: string, page = 0) =>
-    call<{ items: Array<{ id: string; title: string; stockCode: string | null; isbn: string | null }>; total: number; shown: number; page: number }>(`/rights/search${qs({ q, page: page || undefined })}`),
+    call<{ items: Array<{ id: string; title: string; stockCode: string | null; isbn: string | null }>; total: number; shown: number; page: number } & K>(`/rights/search${qs({ q, page: page || undefined })}`),
   book: (id: string) => call<BookCard>(`/rights/books/${enc(id)}`),
   grantCreate: (b: Partial<Grant> & { bookId: string }) => call<Grant>('/rights/grants', { method: 'POST', body: b }),
   grantUpdate: (id: number, b: Partial<Grant>) => call<Grant>(`/rights/grants/${id}`, { method: 'PATCH', body: b }),
   grantDelete: (id: number) => call<Grant>(`/rights/grants/${id}`, { method: 'DELETE' }),
-  licenses: (p: { q?: string; status?: string; book?: string }) => call<{ items: License[]; total: number; can: Caps }>(`/rights/licenses-out${qs(p)}`),
+  licenses: (p: { q?: string; status?: string; book?: string }) => call<{ items: License[]; total: number; can: Caps } & K>(`/rights/licenses-out${qs(p)}`),
   licenseCreate: (b: Partial<License>) => call<License>('/rights/licenses-out', { method: 'POST', body: b }),
   licenseUpdate: (id: number, b: Partial<License>) => call<License>(`/rights/licenses-out/${id}`, { method: 'PATCH', body: b }),
   notes: (p: { status?: string; cls?: string; q?: string; page?: number }) =>

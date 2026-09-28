@@ -5,6 +5,7 @@ import { btnGhost, field, nf } from '../../admin/ui';
 import { useDebounced } from '../kit';
 import { contractApi, type Book, type LookupPage, type Meta, type Party, type Terms, type Tier } from './api';
 import { Field, num, toNum } from './ui';
+import SqlInfo from '../../components/SqlInfo';
 
 /** Sözleşme şartlarının formu: yeni taslakta, düzenlemede ve zeyilnamede aynı form kullanılır. */
 
@@ -95,10 +96,11 @@ function Lookup<T>({ label, placeholder, fetcher, render, onPick, qkey, unit }: 
           ))}
           {last && last.total > 0 && (
             <li className="sticky bottom-0 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-1.5 text-[11.5px] text-canvas-muted">
-              <span>
+              <span className="inline-flex items-center">
                 {last.shown < last.total
                   ? `${nf.format(last.total)} ${unit} içinden ${nf.format(last.shown)} tanesi gösteriliyor`
                   : `${nf.format(last.total)} ${unit}, hepsi gösteriliyor`}
+                <SqlInfo k={last.kaynaklar} alan="total" label={`CRM'deki ${unit} eşleşmesi`} className="ml-0.5" />
               </span>
               {res.hasNextPage && (
                 <button

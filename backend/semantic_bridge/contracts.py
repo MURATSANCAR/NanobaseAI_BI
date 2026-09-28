@@ -232,14 +232,18 @@ def _record(r: Any) -> dict[str, Any]:
     }
 
 
-def _get(c: sa.engine.Connection, tenant: str, key: str, *, lock: bool = False) -> Any:
+def record_stmt(tenant: str, key: str) -> sa.Select:
+    """Bir sözleşme kaydı: CRM kimliğiyle ya da portal kimliğiyle (sorgu bilgisinde gösterilen ifade budur)."""
     q = sa.select(RECORDS).where(RECORDS.c.tenant_id == tenant)
     if is_crm_id(key):
-        q = q.where(RECORDS.c.crm_id == key.lower())
-    elif _PID.match(key or ""):
-        q = q.where(RECORDS.c.id == key)
-    else:
-        raise ContractError("Sözleşme kimliği geçerli değil.")
+        return q.where(RECORDS.c.crm_id == key.lower())
+    if _PID.match(key or ""):
+        return q.where(RECORDS.c.id == key)
+    raise ContractError("Sözleşme kimliği geçerli değil.")
+
+
+def _get(c: sa.engine.Connection, tenant: str, key: str, *, lock: bool = False) -> Any:
+    q = record_stmt(tenant, key)
     if lock:
         q = q.with_for_update()
     return c.execute(q).first()
@@ -258,11 +262,15 @@ def _event(c: sa.engine.Connection, tenant: str, contract_id: str, actor: str, a
                                      action=action, summary=summary[:2000], changes=changes))
 
 
+def events_stmt(tenant: str, contract_id: str) -> sa.Select:
+    return (sa.select(EVENTS).where(EVENTS.c.tenant_id == tenant, EVENTS.c.contract_id == contract_id)
+            .order_by(EVENTS.c.at.desc(), EVENTS.c.id.desc()))
+
+
 def events(engine: sa.engine.Engine, tenant: str, contract_id: str) -> list[dict[str, Any]]:
     """Sözleşmenin bütün geçmişi, yeniden eskiye. Satır tavanı yok: eski kayıt kesilirse geçmiş eksik görünür."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(EVENTS).where(EVENTS.c.tenant_id == tenant, EVENTS.c.contract_id == contract_id)
-                         .order_by(EVENTS.c.at.desc(), EVENTS.c.id.desc())).all()
+        rows = c.execute(events_stmt(tenant, contract_id)).all()
     return [{"at": _iso(r.at), "actor": r.actor, "action": r.action, "summary": r.summary, "changes": r.changes} for r in rows]
 
 
@@ -425,10 +433,7 @@ def render_body(engine: sa.engine.Engine, tenant: str, user: str, key: str, temp
     return find(engine, tenant, r.id)
 
 
-def list_records(engine: sa.engine.Engine, tenant: str, *, q: str = "", status: str = "", source: str = "") -> list[dict[str, Any]]:
-    """Portal kayıtlarının hepsi. Satır tavanı yok: arama süzgeci satırlar okunduktan sonra uygulandığı için tavan,
-    eski bir sözleşmeyi aramada da bulunmaz yapıyordu."""
-    ensure(engine)
+def _records_where(tenant: str, status: str = "", source: str = "") -> sa.Select:
     stmt = sa.select(RECORDS).where(RECORDS.c.tenant_id == tenant)
     if status:
         stmt = stmt.where(RECORDS.c.status == status)
@@ -436,9 +441,26 @@ def list_records(engine: sa.engine.Engine, tenant: str, *, q: str = "", status: 
         stmt = stmt.where(RECORDS.c.crm_id.is_(None))
     elif source == "crm":
         stmt = stmt.where(RECORDS.c.crm_id.is_not(None))
+    return stmt
+
+
+def records_stmt(tenant: str, status: str = "", source: str = "") -> sa.Select:
+    """Portal kayıtları listesinin okuması (arama süzgeci satırlar okunduktan sonra uygulanır)."""
+    return _records_where(tenant, status, source).order_by(RECORDS.c.updated_at.desc())
+
+
+def records_payments_stmt(tenant: str, status: str = "", source: str = "") -> sa.Select:
+    """Listedeki kayıtların bekleyen ödemeleri (sayı, vadesi geçen, sıradaki vade bunlardan sayılır)."""
+    return payment_totals_stmt(tenant, _records_where(tenant, status, source).with_only_columns(RECORDS.c.id))
+
+
+def list_records(engine: sa.engine.Engine, tenant: str, *, q: str = "", status: str = "", source: str = "") -> list[dict[str, Any]]:
+    """Portal kayıtlarının hepsi. Satır tavanı yok: arama süzgeci satırlar okunduktan sonra uygulandığı için tavan,
+    eski bir sözleşmeyi aramada da bulunmaz yapıyordu."""
+    ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(RECORDS.c.updated_at.desc())).all()
-        pay = _payment_totals(c, tenant, stmt.with_only_columns(RECORDS.c.id))
+        rows = c.execute(records_stmt(tenant, status, source)).all()
+        pay = _payment_totals(c, tenant, _records_where(tenant, status, source).with_only_columns(RECORDS.c.id))
     out = []
     needle = q.strip().lower()
     for r in rows:
@@ -454,6 +476,11 @@ def list_records(engine: sa.engine.Engine, tenant: str, *, q: str = "", status: 
     return out
 
 
+def crm_state_stmt(tenant: str, crm_ids: list[str]) -> sa.Select:
+    ids = [i.lower() for i in crm_ids if is_crm_id(i)]
+    return sa.select(RECORDS).where(RECORDS.c.tenant_id == tenant, RECORDS.c.crm_id.in_(ids))
+
+
 def crm_state(engine: sa.engine.Engine, tenant: str, crm_ids: list[str]) -> dict[str, dict[str, Any]]:
     """CRM listesindeki sözleşmelerden portalda kaydı olanlar: crm_id → {id, status, updatedAt, diff}."""
     ids = [i.lower() for i in crm_ids if is_crm_id(i)]
@@ -461,7 +488,7 @@ def crm_state(engine: sa.engine.Engine, tenant: str, crm_ids: list[str]) -> dict
         return {}
     ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(RECORDS).where(RECORDS.c.tenant_id == tenant, RECORDS.c.crm_id.in_(ids))).all()
+        rows = c.execute(crm_state_stmt(tenant, ids)).all()
     return {r.crm_id: {"id": r.id, "status": r.status, "statusLabel": T.STATUSES.get(r.status), "updatedAt": _iso(r.updated_at),
                        "diff": len(T.diff(r.crm_terms or {}, r.terms or {}))} for r in rows}
 
@@ -488,10 +515,13 @@ def _changes(terms: dict[str, Any], raw: Any) -> list[dict[str, Any]]:
     return changes
 
 
+def addenda_stmt(tenant: str, contract_id: str) -> sa.Select:
+    return sa.select(ADDENDA).where(ADDENDA.c.tenant_id == tenant, ADDENDA.c.contract_id == contract_id).order_by(ADDENDA.c.seq)
+
+
 def addenda(engine: sa.engine.Engine, tenant: str, contract_id: str, no: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(ADDENDA).where(ADDENDA.c.tenant_id == tenant, ADDENDA.c.contract_id == contract_id)
-                         .order_by(ADDENDA.c.seq)).all()
+        rows = c.execute(addenda_stmt(tenant, contract_id)).all()
     return [_addendum(r, no) for r in rows]
 
 
@@ -591,17 +621,25 @@ def _payment(r: Any) -> dict[str, Any]:
             "createdBy": r.created_by, "updatedBy": r.updated_by, "updatedAt": _iso(r.updated_at)}
 
 
+def payments_stmt(tenant: str, contract_id: str) -> sa.Select:
+    return (sa.select(PAYMENTS).where(PAYMENTS.c.tenant_id == tenant, PAYMENTS.c.contract_id == contract_id)
+            .order_by(sa.func.coalesce(PAYMENTS.c.due_on, "9999"), PAYMENTS.c.created_at))
+
+
 def payments(engine: sa.engine.Engine, tenant: str, contract_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PAYMENTS).where(PAYMENTS.c.tenant_id == tenant, PAYMENTS.c.contract_id == contract_id)
-                         .order_by(sa.func.coalesce(PAYMENTS.c.due_on, "9999"), PAYMENTS.c.created_at)).all()
+        rows = c.execute(payments_stmt(tenant, contract_id)).all()
     return [_payment(r) for r in rows]
+
+
+def payment_totals_stmt(tenant: str, ids: sa.Select) -> sa.Select:
+    return (sa.select(PAYMENTS.c.contract_id, PAYMENTS.c.status, PAYMENTS.c.due_on)
+            .where(PAYMENTS.c.tenant_id == tenant, PAYMENTS.c.contract_id.in_(ids), PAYMENTS.c.status == "planlandi"))
 
 
 def _payment_totals(c: sa.engine.Connection, tenant: str, ids: sa.Select) -> dict[str, dict[str, Any]]:
     """`ids`: sözleşme kimliği seçen alt sorgu (kimlik listesi değil; binlerce bağ değişkeni sürücü sınırına takılır)."""
-    rows = c.execute(sa.select(PAYMENTS.c.contract_id, PAYMENTS.c.status, PAYMENTS.c.due_on)
-                     .where(PAYMENTS.c.tenant_id == tenant, PAYMENTS.c.contract_id.in_(ids), PAYMENTS.c.status == "planlandi")).all()
+    rows = c.execute(payment_totals_stmt(tenant, ids)).all()
     out: dict[str, dict[str, Any]] = {}
     today = _today().isoformat()
     for r in rows:
@@ -763,11 +801,8 @@ def schedule_periods(t: dict[str, Any]) -> list[dict[str, Any]]:
             for a, b in R.periods(t, horizon)]
 
 
-def due_list(engine: sa.engine.Engine, tenant: str, *, status: str = "planlandi", within: Optional[int] = None,
-             kind: str = "") -> dict[str, Any]:
-    """Bütün sözleşmelerin ödeme takvimi (vadeye göre). Satır tavanı yok: toplamlar ve vadesi geçen sayısı
-    ekrandaki listeyle aynı, eksiksiz kümeden hesaplanır."""
-    ensure(engine)
+def due_stmt(tenant: str, *, status: str = "planlandi", within: Optional[int] = None, kind: str = "") -> sa.Select:
+    """Ödeme takviminin okuması (süzgeçler değerleriyle; vade sınırı bugün + `within` gün)."""
     stmt = (sa.select(PAYMENTS, RECORDS.c.no, RECORDS.c.terms, RECORDS.c.crm_id)
             .join(RECORDS, RECORDS.c.id == PAYMENTS.c.contract_id)
             .where(PAYMENTS.c.tenant_id == tenant))
@@ -777,8 +812,16 @@ def due_list(engine: sa.engine.Engine, tenant: str, *, status: str = "planlandi"
         stmt = stmt.where(PAYMENTS.c.kind == kind)
     if within is not None and status == "planlandi":
         stmt = stmt.where(sa.or_(PAYMENTS.c.due_on.is_(None), PAYMENTS.c.due_on <= (_today() + timedelta(days=int(within))).isoformat()))
+    return stmt.order_by(sa.func.coalesce(PAYMENTS.c.due_on, "9999"), PAYMENTS.c.created_at)
+
+
+def due_list(engine: sa.engine.Engine, tenant: str, *, status: str = "planlandi", within: Optional[int] = None,
+             kind: str = "") -> dict[str, Any]:
+    """Bütün sözleşmelerin ödeme takvimi (vadeye göre). Satır tavanı yok: toplamlar ve vadesi geçen sayısı
+    ekrandaki listeyle aynı, eksiksiz kümeden hesaplanır."""
+    ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(sa.func.coalesce(PAYMENTS.c.due_on, "9999"), PAYMENTS.c.created_at)).all()
+        rows = c.execute(due_stmt(tenant, status=status, within=within, kind=kind)).all()
     items = []
     totals: dict[str, dict[str, float]] = {}
     for r in rows:
@@ -804,20 +847,29 @@ def _statement(r: Any) -> dict[str, Any]:
             "approvedAt": _iso(r.approved_at), "cancelledBy": r.cancelled_by, "cancelledAt": _iso(r.cancelled_at)}
 
 
+def statements_stmt(tenant: str, contract_id: str) -> sa.Select:
+    return (sa.select(STATEMENTS).where(STATEMENTS.c.tenant_id == tenant, STATEMENTS.c.contract_id == contract_id)
+            .order_by(STATEMENTS.c.period_start.desc(), STATEMENTS.c.created_at.desc()))
+
+
+def statement_context_stmt(tenant: str, contract_id: str, period_start: str) -> sa.Select:
+    """Önceki onaylı hakedişler: avanstan düşülen toplam ve devreden tutar bunlardan okunur."""
+    return (sa.select(STATEMENTS).where(
+        STATEMENTS.c.tenant_id == tenant, STATEMENTS.c.contract_id == contract_id,
+        STATEMENTS.c.status == "onaylandi", STATEMENTS.c.period_start < period_start)
+        .order_by(STATEMENTS.c.period_end))
+
+
 def statements(engine: sa.engine.Engine, tenant: str, contract_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(STATEMENTS).where(STATEMENTS.c.tenant_id == tenant, STATEMENTS.c.contract_id == contract_id)
-                         .order_by(STATEMENTS.c.period_start.desc(), STATEMENTS.c.created_at.desc())).all()
+        rows = c.execute(statements_stmt(tenant, contract_id)).all()
     return [_statement(r) for r in rows]
 
 
 def statement_context(engine: sa.engine.Engine, tenant: str, contract_id: str, period_start: str) -> dict[str, float]:
     """Önceki onaylı hakedişlerden: avanstan düşülen toplam ve bir önceki dönemden devreden eksi tutar."""
     with engine.connect() as c:
-        rows = c.execute(sa.select(STATEMENTS).where(
-            STATEMENTS.c.tenant_id == tenant, STATEMENTS.c.contract_id == contract_id,
-            STATEMENTS.c.status == "onaylandi", STATEMENTS.c.period_start < period_start)
-            .order_by(STATEMENTS.c.period_end)).all()
+        rows = c.execute(statement_context_stmt(tenant, contract_id, period_start)).all()
     used = sum(float(r.advance_offset or 0) for r in rows)
     carry = float(rows[-1].carry_out or 0) if rows else 0.0
     return {"advanceUsed": used, "carryIn": carry}
@@ -949,16 +1001,20 @@ def _template(r: Any, with_docx: bool = False) -> dict[str, Any]:
     return out
 
 
-def templates(engine: sa.engine.Engine, tenant: str, *, target: str = "", include_archived: bool = False) -> list[dict[str, Any]]:
-    ensure(engine)
-    seed_templates(engine, tenant)
+def templates_stmt(tenant: str, *, target: str = "", include_archived: bool = False) -> sa.Select:
     stmt = sa.select(TEMPLATES).where(TEMPLATES.c.tenant_id == tenant)
     if target:
         stmt = stmt.where(TEMPLATES.c.target == target)
     if not include_archived:
         stmt = stmt.where(TEMPLATES.c.active.is_(True))
+    return stmt.order_by(TEMPLATES.c.target, TEMPLATES.c.name)
+
+
+def templates(engine: sa.engine.Engine, tenant: str, *, target: str = "", include_archived: bool = False) -> list[dict[str, Any]]:
+    ensure(engine)
+    seed_templates(engine, tenant)
     with engine.connect() as c:
-        rows = c.execute(stmt.order_by(TEMPLATES.c.target, TEMPLATES.c.name)).all()
+        rows = c.execute(templates_stmt(tenant, target=target, include_archived=include_archived)).all()
     return [_template(r) for r in rows]
 
 

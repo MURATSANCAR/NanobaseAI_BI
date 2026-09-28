@@ -4483,8 +4483,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/contracts/summary")
     def editorial_contracts_summary(request: Request) -> dict[str, Any]:
         schema, run = _editorial(request)
+        from semantic_bridge import contracts_kaynak as K, provenance as P
         try:
-            return editorial_mod.summary(schema, run, _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60))
+            return P.bagla(out := editorial_mod.summary(schema, run, _int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60)), lambda: K.for_summary(schema, out, rt().store.engine))
         except editorial_mod.EditorialError as e:
             raise _editorial_error(e) from e
 
@@ -4504,7 +4505,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         state = contracts_mod.crm_state(engine, tenant, [c["id"] for c in out["items"] if c.get("id")])
         for c in out["items"]:
             c["portal"] = state.get((c.get("id") or "").lower())
-        return out
+        from semantic_bridge import contracts_kaynak as K, provenance as P
+        return P.bagla(out, lambda: K.for_page(engine, tenant, schema, out, page, order=order, q=q, status=status, kind=kind, expiring_days=expiring_days))
 
     from semantic_bridge import contracts as contracts_mod
     from semantic_bridge import contracts_api as contracts_api_mod

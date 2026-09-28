@@ -7,6 +7,7 @@ import { Kpi, KpiRow, Pager, Panel, useDebounced } from '../kit';
 import { Field, Sheet, day, errMsg, money, num, stamp } from '../contracts/ui';
 import { download, royaltyApi, runPath, type Caps, type Party, type Run } from './api';
 import { CoverEmailButton } from './Drafts';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
 
 /** Hak sahipleri: onaylı koşudan yazar başına birleşik beyanname. Gönderimi insan kendi e-postasıyla yapar; burada
  *  «gönderildi» kaydı tutulur (ilk sürümde sistemden dış gönderim yok). */
@@ -57,9 +58,9 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
     <>
       {d && (
         <KpiRow>
-          <Kpi label="Hak sahibi" value={num(d.all, 0)} help="Onaylı sözleşmelerin tarafları" />
-          <Kpi label="Gönderildi" value={num(d.sent, 0)} help={d.all ? `%${num((d.sent / d.all) * 100, 0)} tamamlandı` : '—'} />
-          <Kpi label="Bekleyen" value={num(d.all - d.sent, 0)} help="Beyannamesi henüz gönderilmedi" />
+          <Kpi label="Hak sahibi" value={num(d.all, 0)} help="Onaylı sözleşmelerin tarafları" info={<SqlInfo k={d.kaynaklar} alan="all" label="Hak sahibi" />} />
+          <Kpi label="Gönderildi" value={num(d.sent, 0)} help={d.all ? `%${num((d.sent / d.all) * 100, 0)} tamamlandı` : '—'} info={<SqlInfo k={d.kaynaklar} alan="sent" label="Gönderildi" />} />
+          <Kpi label="Bekleyen" value={num(d.all - d.sent, 0)} help="Beyannamesi henüz gönderilmedi" info={<SqlInfo k={d.kaynaklar} alan="all" label="Bekleyen (bütün − gönderilen)" />} />
         </KpiRow>
       )}
       <Panel>
@@ -87,6 +88,11 @@ export function PartyStatements({ run, can }: { run: Run; can: Caps }) {
         {list.error && <div className="mt-2"><Note tone="err">{errMsg(list.error)}</Note></div>}
         {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
         {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan hak sahibi yok.</p>}
+        {d && d.items.length > 0 && (
+          <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
+            <InfoLabel k={d.kaynaklar} alan="items[]" label="Hak sahibi toplamları (ödenecek, brüt, avans, stopaj, sözleşme sayısı)">{`${num(d.total, 0)} hak sahibi`}</InfoLabel>
+          </div>
+        )}
         <ul className="mt-3 space-y-2">
           {d?.items.map((p) => (
             <li key={p.key} className="rounded-2xl border border-slate-100 bg-white/80 p-3">
@@ -202,7 +208,8 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
       {q.data && (
         <KpiRow>
           {Object.entries(q.data.totals).map(([cur, t]) => (
-            <Kpi key={cur} label={`Ödenecek (${cur})`} value={money(t.net, cur)} help={`${t.payees} ödeme · stopaj ${money(t.withholding, cur)}`} />
+            <Kpi key={cur} label={`Ödenecek (${cur})`} value={money(t.net, cur)} help={`${t.payees} ödeme · stopaj ${money(t.withholding, cur)}`}
+              info={<SqlInfo k={q.data?.kaynaklar} alan="totals" label={`Ödenecek (${cur})`} />} />
           ))}
         </KpiRow>
       )}
@@ -230,8 +237,10 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
               <thead>
                 <tr className="text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
                   <th className="px-3 py-2">Hak sahibi</th><th className="px-3 py-2">Sözleşme</th>
-                  <th className="px-3 py-2 text-right">Brüt</th><th className="px-3 py-2 text-right">Avans</th>
-                  <th className="px-3 py-2 text-right">Stopaj</th><th className="px-3 py-2 text-right">Net</th><th className="px-3 py-2">Vade</th>
+                  <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Brüt (satır × pay)">Brüt</InfoLabel></th>
+                  <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Avans mahsubu (satır × pay)">Avans</InfoLabel></th>
+                  <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Stopaj (satır × pay)">Stopaj</InfoLabel></th>
+                  <th className="px-3 py-2 text-right"><InfoLabel k={q.data.kaynaklar} alan="items[]" label="Net (satır × pay)">Net</InfoLabel></th><th className="px-3 py-2">Vade</th>
                 </tr>
               </thead>
               <tbody>
@@ -250,7 +259,11 @@ export function PaymentList({ run, can }: { run: Run; can: Caps }) {
             </table>
           </div>
         )}
-        {q.data && <p className="mt-2 text-[11.5px] text-canvas-muted">{num(rows.length, 0)} ödeme satırı; ödenecek tutarı olmayanlar (avans mahsubu, devir) listede yok, beyannamede görünür.</p>}
+        {q.data && (
+          <p className="mt-2 text-[11.5px] text-canvas-muted">
+            {num(rows.length, 0)} ödeme satırı<SqlInfo k={q.data.kaynaklar} alan="items[]" label="Ödeme satırı sayısı" className="ml-0.5 align-middle" />; ödenecek tutarı olmayanlar (avans mahsubu, devir) listede yok, beyannamede görünür.
+          </p>
+        )}
       </Panel>
     </>
   );

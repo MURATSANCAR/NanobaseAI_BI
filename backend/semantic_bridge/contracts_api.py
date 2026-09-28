@@ -24,6 +24,8 @@ from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import contracts as C
 from semantic_bridge import contracts_docs as D
+from semantic_bridge import contracts_kaynak as K
+from semantic_bridge import provenance as P
 from semantic_bridge import contracts_royalty as R
 from semantic_bridge import contracts_terms as T
 
@@ -54,8 +56,10 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
         except T.ContractError as e:
             raise HTTPException(status_code=e.status, detail={"code": "CONTRACT", "message": str(e)}) from e
 
-    def crm_loader(request: Request) -> Callable[[str], Optional[dict[str, Any]]]:
+    def crm_loader(request: Request, qlog: Optional[K.Kayit] = None) -> Callable[[str], Optional[dict[str, Any]]]:
         schema, run = editorial(request)
+        if qlog is not None:
+            run = qlog.res(run, "crm")  # sorgu bilgisi: çalışan metin, satır, süre
 
         def load(crm_id: str) -> Optional[dict[str, Any]]:
             head_sql, books_sql, parties_sql = C.crm_contract_sql(crm_prefix(schema), crm_id)
@@ -99,37 +103,47 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
                 "paymentKinds": C.PAYMENT_KINDS, "paymentStatuses": C.PAYMENT_STATUSES,
                 "templateFields": D.FIELDS, "templateTargets": D.TARGETS}
 
+    def logo_db() -> Optional[str]:
+        return P.connection_database(rt().settings.connection_file)
+
     @app.get("/api/v1/editorial/contracts/records")
     def contracts_records(request: Request, q: str = "", status: str = "", source: str = "") -> dict[str, Any]:
         engine, tenant, _ = session(request)
-        return {"items": call(C.list_records, engine, tenant, q=q, status=status, source=source)}
+        out = {"items": call(C.list_records, engine, tenant, q=q, status=status, source=source)}
+        return P.bagla(out, lambda: K.for_records(engine, tenant, out, status=status, source=source))
 
     @app.get("/api/v1/editorial/contracts/item/{key}")
     def contract_detail(key: str, request: Request) -> dict[str, Any]:
         engine, tenant, user = session(request)
-        out = call(C.detail, engine, tenant, key, crm_loader(request))
+        qlog = K.Kayit()
+        out = call(C.detail, engine, tenant, key, crm_loader(request, qlog))
         out["can"] = caps(user)
-        return out
+        return P.bagla(out, lambda: K.for_detail(engine, tenant, out, qlog, crm_prefix(editorial(request)[0]), logo_db()))
 
     @app.get("/api/v1/editorial/contracts/payments")
     def contracts_due(request: Request, status: str = "planlandi", within: Optional[int] = None, kind: str = "") -> dict[str, Any]:
         engine, tenant, user = session(request)
-        return dict(call(C.due_list, engine, tenant, status=status, within=within, kind=kind), can=caps(user))
+        out = dict(call(C.due_list, engine, tenant, status=status, within=within, kind=kind), can=caps(user))
+        return P.bagla(out, lambda: K.for_due(engine, tenant, out, status=status, within=within, kind=kind))
 
     @app.get("/api/v1/editorial/contracts/lookup/books")
     def lookup_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         session(request)
         schema, run = editorial(request)
-        rows = run(call(C.book_lookup_sql, crm_prefix(schema), q, page)).get("records") or []
-        return {"items": C._crm_books(rows), **C.lookup_page(rows, page)}
+        qlog = K.Kayit()
+        rows = qlog.res(run)(call(C.book_lookup_sql, crm_prefix(schema), q, page)).get("records") or []
+        out = {"items": C._crm_books(rows), **C.lookup_page(rows, page)}
+        return P.bagla(out, lambda: K.for_lookup(qlog, crm_prefix(schema), out))
 
     @app.get("/api/v1/editorial/contracts/lookup/parties")
     def lookup_parties(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         session(request)
         schema, run = editorial(request)
-        rows = run(call(C.party_lookup_sql, crm_prefix(schema), q, page)).get("records") or []
-        return {"items": [{"type": str(r.get("tur")), "id": str(r.get("id") or ""), "name": str(r.get("ad") or "").strip()}
-                          for r in rows], **C.lookup_page(rows, page)}
+        qlog = K.Kayit()
+        rows = qlog.res(run)(call(C.party_lookup_sql, crm_prefix(schema), q, page)).get("records") or []
+        out = {"items": [{"type": str(r.get("tur")), "id": str(r.get("id") or ""), "name": str(r.get("ad") or "").strip()}
+                         for r in rows], **C.lookup_page(rows, page)}
+        return P.bagla(out, lambda: K.for_lookup(qlog, crm_prefix(schema), out))
 
     # ------------------------------------------------------------------ kayıt
 
@@ -287,21 +301,32 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
         conn.query_timeout = 600
         return conn
 
-    def logo_rows(conn, sql: str) -> list[dict[str, Any]]:
-        return list(conn.execute(sql, 100_000)[1])
+    def logo_rows(conn, sql: str, qlog: Optional[K.Kayit] = None) -> list[dict[str, Any]]:
+        import time
+        t0 = time.monotonic()
+        rows = list(conn.execute(sql, 100_000)[1])
+        if qlog is not None:  # sorgu bilgisi: hesap anında çalışan metin (sonuç satırı kayda girmez)
+            qlog.add("logo", sql, rows=len(rows), ms=int((time.monotonic() - t0) * 1000))
+        return rows
 
-    def sales_years(conn) -> set[int]:
+    def sales_years(conn, qlog: Optional[K.Kayit] = None) -> set[int]:
         import time
         if years_cache.get("at", 0) > time.time() - 3600:
+            if qlog is not None and years_cache.get("log"):
+                qlog.items.append(dict(years_cache["log"], cached=True))
             return years_cache["years"]
-        rows = logo_rows(conn, "SELECT name FROM sys.views WHERE name LIKE 'V[_]SatisRaporu[_]20[0-9][0-9]'")
-        years_cache.update(at=time.time(), years={int(r["name"][-4:]) for r in rows})
+        mine = K.Kayit()
+        rows = logo_rows(conn, "SELECT name FROM sys.views WHERE name LIKE 'V[_]SatisRaporu[_]20[0-9][0-9]'", mine)
+        years_cache.update(at=time.time(), years={int(r["name"][-4:]) for r in rows}, log=mine.items[0])
+        if qlog is not None:
+            qlog.items.append(dict(mine.items[0]))
         return years_cache["years"]
 
-    def run_sales(conn, codes: list[str], a: date, b: date, present: set[int]) -> tuple[dict[str, dict[str, float]], list[int]]:
+    def run_sales(conn, codes: list[str], a: date, b: date, present: set[int],
+                  qlog: Optional[K.Kayit] = None) -> tuple[dict[str, dict[str, float]], list[int]]:
         from semantic_bridge.management import expand_sales
         sql, missing = expand_sales(R.sales_sql(codes, a, b), date.today(), present)
-        return R.fold_sales(logo_rows(conn, sql)), missing
+        return R.fold_sales(logo_rows(conn, sql, qlog)), missing
 
     def tcmb_get(url: str) -> tuple[int, str]:
         import httpx
@@ -313,11 +338,12 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
             return 0, ""
 
     def calculate(engine, tenant, request: Request, key: str, body: dict[str, Any]) -> dict[str, Any]:
+        qlog = K.Kayit()  # hesap anında çalışan Logo/CRM metni; hesap sonucunun yanında saklanır (sorgu bilgisi)
         rec = C.find(engine, tenant, key)
         if rec:
             terms = rec["terms"]
         elif C.is_crm_id(key):
-            crm = crm_loader(request)(key)
+            crm = crm_loader(request, qlog)(key)
             if crm is None:
                 raise T.ContractError("Sözleşme CRM'de bulunamadı.", 404)
             terms = crm["terms"]
@@ -337,20 +363,20 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
         if need_logo:
             with logo_lock:  # Logo'yu aynı anda tek hakediş okur (ağır sorgu, tek bağlantı)
                 conn = logo()
-                present = sales_years(conn)
+                present = sales_years(conn, qlog)
                 if pt in T.SALES_BASED and codes:
-                    sales, missing = run_sales(conn, codes, a, b, present)
+                    sales, missing = run_sales(conn, codes, a, b, present, qlog)
                     if missing:
                         notes.append("Logo'da şu yılların satış görünümü yok: " + ", ".join(map(str, missing)) + ".")
                     if pt in T.TIERED and terms.get("tiers") and terms.get("start"):
                         s0 = date.fromisoformat(terms["start"]).replace(day=1)
                         if s0 < a:
                             before_end = a - timedelta(days=1)
-                            p_sales, _ = run_sales(conn, codes, max(s0, date(min(present or {a.year}), 1, 1)), before_end, present)
+                            p_sales, _ = run_sales(conn, codes, max(s0, date(min(present or {a.year}), 1, 1)), before_end, present, qlog)
                             prior = {k: v["qty"] for k, v in p_sales.items()}
                     last_year = max([y for y in present if y <= b.year] or [0])
                     if last_year:
-                        rows = logo_rows(conn, R.data_end_sql(last_year))
+                        rows = logo_rows(conn, R.data_end_sql(last_year), qlog)
                         data_end = str(rows[0]["son"])[:10] if rows and rows[0].get("son") else None
         if terms.get("currency") not in (None, "TRY"):
             manual = body.get("fxRate")
@@ -367,13 +393,16 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
                         fx=fx, data_end=data_end)
         out["warnings"] = notes + out["warnings"]
         out["source"] = "Logo satış görünümleri (faturalı satır), stok kodu ile" if pt in T.SALES_BASED else "Elle girilen baskı adedi"
+        out["sorgular"] = qlog.items
         return out
 
     @app.post("/api/v1/editorial/contracts/item/{key}/statements/preview")
     async def statement_preview(key: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user = await run_in_threadpool(session, request)
         need(user, FINANCE)
-        return await run_in_threadpool(call, calculate, engine, tenant, request, key, body)
+        out = await run_in_threadpool(call, calculate, engine, tenant, request, key, body)
+        return await run_in_threadpool(P.bagla, out, lambda: K.for_calc(
+            engine, tenant, out, key, {"logo": logo_db(), "crm": K.crm_db(crm_prefix(editorial(request)[0]))}))
 
     @app.post("/api/v1/editorial/contracts/item/{key}/statements")
     async def statement_save(key: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -415,8 +444,9 @@ def register(app: FastAPI, *, rt: Callable[[], Any], greetings: Callable[[Reques
     @app.get("/api/v1/editorial/contracts/templates")
     def templates_list(request: Request, target: str = "", archived: bool = False) -> dict[str, Any]:
         engine, tenant, user = session(request)
-        return {"items": call(C.templates, engine, tenant, target=target, include_archived=archived),
-                "fields": D.FIELDS, "targets": D.TARGETS, "can": caps(user)}
+        out = {"items": call(C.templates, engine, tenant, target=target, include_archived=archived),
+               "fields": D.FIELDS, "targets": D.TARGETS, "can": caps(user)}
+        return P.bagla(out, lambda: K.for_templates(engine, tenant, out, target=target, archived=archived))
 
     @app.post("/api/v1/editorial/contracts/templates")
     def template_create(body: dict[str, Any], request: Request) -> dict[str, Any]:

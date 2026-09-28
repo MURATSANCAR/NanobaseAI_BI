@@ -7,6 +7,8 @@ import { Note, Pill, btnGhost, btnPrimary, field } from '../../admin/ui';
 import { Kpi, KpiRow, Panel, useDebounced } from '../kit';
 import { Field, Row, Sheet, day, errMsg, money, num, stamp } from '../contracts/ui';
 import { royaltyApi, type Meta, type Renewal } from './api';
+import SqlInfo, { InfoLabel } from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
 
 const STEP = 50;
 const decisionTone = (d: string): 'ok' | 'warn' | 'err' | 'muted' | 'violet' =>
@@ -32,11 +34,13 @@ export function Renewals({ meta }: { meta: Meta }) {
     <>
       {d && (
         <KpiRow>
-          <Kpi label={overdue ? 'Bitişi geçmiş' : `${days} gün içinde biten`} value={num(d.total, 0)} help="Etkin ve süreli sözleşme (bütün türler)" />
+          <Kpi label={overdue ? 'Bitişi geçmiş' : `${days} gün içinde biten`} value={num(d.total, 0)} help="Etkin ve süreli sözleşme (bütün türler)"
+            info={<SqlInfo k={d.kaynaklar} alan="total" label={overdue ? 'Bitişi geçmiş' : `${days} gün içinde biten`} />} />
           <Kpi label="Karar bekliyor" value={num(d.counts.bekliyor ?? 0, 0)} help="Yenile / bırak / müzakere girilmemiş"
-            active={decision === 'bekliyor'} onClick={() => { setDecision((v) => (v === 'bekliyor' ? '' : 'bekliyor')); reset(); }} />
-          <Kpi label="Yenilenecek" value={num(d.counts.yenile ?? 0, 0)} help="Kararı verilmiş" />
-          <Kpi label="Müzakere" value={num(d.counts.muzakere ?? 0, 0)} help="Yeniden müzakere edilecek" />
+            active={decision === 'bekliyor'} onClick={() => { setDecision((v) => (v === 'bekliyor' ? '' : 'bekliyor')); reset(); }}
+            info={<SqlInfo k={d.kaynaklar} alan="counts" label="Karar bekliyor" />} />
+          <Kpi label="Yenilenecek" value={num(d.counts.yenile ?? 0, 0)} help="Kararı verilmiş" info={<SqlInfo k={d.kaynaklar} alan="counts" label="Yenilenecek" />} />
+          <Kpi label="Müzakere" value={num(d.counts.muzakere ?? 0, 0)} help="Yeniden müzakere edilecek" info={<SqlInfo k={d.kaynaklar} alan="counts" label="Müzakere" />} />
         </KpiRow>
       )}
       <Panel>
@@ -55,6 +59,11 @@ export function Renewals({ meta }: { meta: Meta }) {
         {list.error && <div className="mt-2"><Note tone="err">{errMsg(list.error)}</Note></div>}
         {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">CRM okunuyor…</p>}
         {d && !d.items.length && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Bu süzgece uyan sözleşme yok.</p>}
+        {d && d.items.length > 0 && (
+          <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
+            <InfoLabel k={d.kaynaklar} alan="items[]" label="Sözleşmeler (bitiş, kalan gün, karar)">{`${num(d.items.length, 0)} sözleşme`}</InfoLabel>
+          </div>
+        )}
         <ul className="mt-3 space-y-2">
           {d?.items.slice(0, shown).map((r) => (
             <li key={r.contractKey}>
@@ -81,19 +90,22 @@ export function Renewals({ meta }: { meta: Meta }) {
           </div>
         )}
       </Panel>
-      {open && <RenewalSheet r={open} meta={meta} canDecide={!!d?.can.renewal} onClose={() => setOpen(null)} />}
+      {open && <RenewalSheet r={open} meta={meta} k={d?.kaynaklar} canDecide={!!d?.can.renewal} onClose={() => setOpen(null)} />}
     </>
   );
 }
 
-function RenewalSheet({ r, meta, canDecide, onClose }: { r: Renewal; meta: Meta; canDecide: boolean; onClose: () => void }) {
+function RenewalSheet({ r, meta, k, canDecide, onClose }: { r: Renewal; meta: Meta; k?: Kaynaklar; canDecide: boolean; onClose: () => void }) {
   const qc = useQueryClient();
   const [decision, setDecision] = useState(r.decision === 'bekliyor' ? (r.suggestion?.decision ?? 'yenile') : r.decision);
   const [reason, setReason] = useState(r.reason ?? r.suggestion?.text ?? '');
   const [sug, setSug] = useState(r.suggestion);
+  // Yeni öneride sorgu bilgisi önerinin cevabındadır; kayıtlı öneride listenin kaydındadır.
+  const [sugK, setSugK] = useState<Kaynaklar | undefined>(undefined);
   const suggest = useMutation({
     mutationFn: () => royaltyApi.suggestRenewal(r.contractKey),
     onSuccess: (s) => {
+      setSugK(s.kaynaklar);
       setSug({ ...s, at: new Date().toISOString() });
       if (!reason.trim() && s.text) setReason(s.text);
       if (r.decision === 'bekliyor' && s.decision) setDecision(s.decision);
@@ -124,6 +136,9 @@ function RenewalSheet({ r, meta, canDecide, onClose }: { r: Renewal; meta: Meta;
         <Link to={`/telif-sozlesme/${r.contractKey}`} className="inline-flex min-h-11 items-center gap-1 text-[12px] font-bold text-canvas-violet hover:underline sm:min-h-0">
           <ExternalLink aria-hidden className="h-3.5 w-3.5" /> Sözleşme sayfası
         </Link>
+        <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+          CRM sözleşme kartı <SqlInfo k={k} alan="items[]" label="Sözleşme (süre, yenilenme, imha, avans)" />
+        </div>
         <dl>
           <Row label="Kitap">{r.book || '—'}{r.stockCode ? ` · ${r.stockCode}` : ''}</Row>
           <Row label="Taraflar">{[r.author, r.translator, r.illustrator].filter(Boolean).join(', ') || '—'}</Row>
@@ -148,7 +163,13 @@ function RenewalSheet({ r, meta, canDecide, onClose }: { r: Renewal; meta: Meta;
           </div>
           {sug ? (
             <div className="mt-2 space-y-1.5 text-[12.5px]">
-              {sug.decision && <div>Öneri: <b>{meta.renewalDecisions[sug.decision] ?? sug.decision}</b>{sug.probability != null ? ` (olasılık %${num(sug.probability * 100, 0)})` : ''}</div>}
+              {sug.decision && (
+                <div className="flex flex-wrap items-center">
+                  Öneri:&nbsp;<b>{meta.renewalDecisions[sug.decision] ?? sug.decision}</b>{sug.probability != null ? ` (olasılık %${num(sug.probability * 100, 0)})` : ''}
+                  {sugK ? <SqlInfo k={sugK} alan="probability" label="Zeki AI önerisi ve olguları" className="ml-0.5" />
+                    : <SqlInfo k={k} alan="items[].suggestion" row={r.contractKey} label="Zeki AI önerisi ve olguları" className="ml-0.5" />}
+                </div>
+              )}
               {sug.text && <p className="leading-snug">{sug.text}</p>}
               <ul className="text-[11.5px] text-canvas-muted">
                 {Object.entries(sug.inputs ?? {}).filter(([, v]) => v != null && v !== '').map(([k, v]) => <li key={k}>{k}: {String(v)}</li>)}

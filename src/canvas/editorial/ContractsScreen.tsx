@@ -9,6 +9,11 @@ import { crmLabel, dateTime, pct } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Pager, Panel, useDebounced } from './kit';
 import { contractApi, metaOptions } from './contracts/api';
 import { Tabs, day, errMsg, statusTone as portalTone } from './contracts/ui';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Köprü cevabındaki sorgu bilgisi (tipler engine.ts'te ortak; bu ekran yalnız okur). */
+type WithK<T> = T & { kaynaklar?: Kaynaklar };
 
 /** M6 Telif & Sözleşme. Portföy CRM'den okunur (salt okunur). Yeni taslak, düzenleme, zeyilname, ödeme
  *  takvimi, hakediş ve şablonlar portalda tutulur (bkz. `backend/semantic_bridge/contracts.py`); satıra
@@ -90,19 +95,21 @@ function Period({ c }: { c: Contract }) {
   );
 }
 
-function Kpis({ s, expiring, onExpiring }: { s: ContractSummary; expiring: boolean; onExpiring: () => void }) {
+function Kpis({ s, expiring, onExpiring }: { s: WithK<ContractSummary>; expiring: boolean; onExpiring: () => void }) {
+  const k = s.kaynaklar;
   return (
     <KpiRow>
-      <Kpi label="Yürürlükte" value={nf.format(s.active)} help={`${nf.format(s.total)} etkin kayıt içinde`} />
-      <Kpi label="Yenilemede" value={nf.format(s.renewal)} help="Durumu “Aktif - Yenileme”" />
+      <Kpi label="Yürürlükte" value={nf.format(s.active)} help={`${nf.format(s.total)} etkin kayıt içinde`} info={<SqlInfo k={k} alan="active" label="Yürürlükte" />} />
+      <Kpi label="Yenilemede" value={nf.format(s.renewal)} help="Durumu “Aktif - Yenileme”" info={<SqlInfo k={k} alan="renewal" label="Yenilemede" />} />
       <Kpi
         label={`${s.warnDays} günde bitiyor`}
         value={nf.format(s.expiring)}
         help={expiring ? 'Süzgeç açık; kapatmak için dokunun' : 'Listede görmek için dokunun'}
         active={expiring}
         onClick={onExpiring}
+        info={<SqlInfo k={k} alan="expiring" label={`${s.warnDays} günde bitiyor`} />}
       />
-      <Kpi label="Ortalama telif" value={pct(s.avgRoyalty, 1)} help={`Karton kapak oranı dolu ${nf.format(s.avgRoyaltyOver)} yürürlükteki sözleşme`} />
+      <Kpi label="Ortalama telif" value={pct(s.avgRoyalty, 1)} help={`Karton kapak oranı dolu ${nf.format(s.avgRoyaltyOver)} yürürlükteki sözleşme`} info={<SqlInfo k={k} alan="avgRoyalty" label="Ortalama telif" />} />
     </KpiRow>
   );
 }
@@ -129,6 +136,11 @@ function PortalRecords() {
           ))}
         </select>
       </div>
+      {list.data && items.length > 0 && (
+        <div className="mt-3 text-[11.5px] font-semibold text-canvas-muted">
+          <InfoLabel k={list.data.kaynaklar} alan="sayac.kayit" label="Portal kayıtları (sayı, geciken ödeme, sıradaki vade)">{`${nf.format(items.length)} kayıt`}</InfoLabel>
+        </div>
+      )}
       {list.error && <div className="mt-3"><Note tone="err">{errMsg(list.error)}</Note></div>}
       {list.isLoading && <p className="py-10 text-center text-[12.5px] text-canvas-muted">Okunuyor…</p>}
       {list.data && !items.length && (
@@ -178,8 +190,8 @@ export default function ContractsScreen() {
   const summary = useQuery(contractsSummaryOptions());
   const list = useQuery(contractsListOptions(q, status, kind, expiring, order, page));
 
-  const s = summary.data;
-  const data = list.data;
+  const s = summary.data as WithK<ContractSummary> | undefined;
+  const data = list.data as WithK<NonNullable<typeof list.data>> | undefined;
   const items = data?.items ?? [];
   const warnDays = s?.warnDays ?? 60;
   const err = errText(summary.error || list.error, 'Sözleşmeler okunamadı.');
@@ -265,6 +277,12 @@ export default function ContractsScreen() {
                 </select>
               </div>
 
+              <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] font-semibold text-canvas-muted">
+                <InfoLabel k={s?.kaynaklar} alan="statuses[]" label="Durum süzgecindeki sayılar">Durum sayıları</InfoLabel>
+                <InfoLabel k={s?.kaynaklar} alan="kinds[]" label="Tip süzgecindeki sayılar">Tip sayıları</InfoLabel>
+                <InfoLabel k={data?.kaynaklar} alan="total" label="Süzgece uyan sözleşme sayısı">Süzgeçteki toplam</InfoLabel>
+              </div>
+
               <Pager
                 page={page}
                 pageSize={data?.pageSize ?? 50}
@@ -286,7 +304,10 @@ export default function ContractsScreen() {
                   <li key={c.id} className="rounded-2xl border border-slate-100 bg-white/85 p-3 text-[12.5px]">
                     <div className="flex items-start justify-between gap-2">
                       <Title c={c} />
-                      {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
+                      <div className="flex shrink-0 items-center gap-1">
+                        {c.status && <Pill tone={statusTone(c.status)}>{crmLabel(c.status)}</Pill>}
+                        <SqlInfo k={data?.kaynaklar} alan="items[]" label="Sözleşme (oran, pay, avans, kalan gün)" />
+                      </div>
                     </div>
                     <div className="mt-2">
                       <Parties c={c} />
@@ -311,10 +332,10 @@ export default function ContractsScreen() {
                   <table className="w-full text-[12.5px]">
                     <thead>
                       <tr className="border-b border-slate-100 text-left text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
-                        <th className="px-3 py-2.5">Kitap ve sözleşme no</th>
-                        <th className="px-3 py-2.5">Hak sahibi</th>
-                        <th className="px-3 py-2.5">Telif oranları</th>
-                        <th className="px-3 py-2.5">Süre</th>
+                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].portal" label="Portal rozeti ve fark sayısı">Kitap ve sözleşme no</InfoLabel></th>
+                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].parties" label="Hak sahibi payı">Hak sahibi</InfoLabel></th>
+                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].rates" label="Telif oranları ve avans">Telif oranları</InfoLabel></th>
+                        <th className="px-3 py-2.5"><InfoLabel k={data?.kaynaklar} alan="items[].daysLeft" label="Kalan gün">Süre</InfoLabel></th>
                         <th className="px-3 py-2.5">Durum</th>
                       </tr>
                     </thead>

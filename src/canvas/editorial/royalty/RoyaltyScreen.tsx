@@ -13,6 +13,7 @@ import { PartyStatements, PaymentList } from './PartyStatements';
 import { Renewals } from './Renewals';
 import { RunLines } from './RunLines';
 import { metaOptions, royaltyApi, runTone, type Meta, type Run } from './api';
+import SqlInfo from '../../components/SqlInfo';
 
 /** M54 Telif dönemi: dönem koşusu (M6'nın hesabıyla bütün satıştan ödemeli sözleşmeler), istisnalar, iki gözlü onay,
  *  hak sahibi beyannamesi, ödeme listesi, avans portföyü ve yenilemeler. CRM'e, Logo'ya ve bankaya yazılmaz. */
@@ -130,6 +131,7 @@ export default function RoyaltyScreen() {
 
 function Summary({ run, meta, onReason }: { run: Run; meta: Meta; onReason: (code: string) => void }) {
   const s = run.summary;
+  const k = run.kaynaklar;
   const totals = Object.entries(s.totals ?? {});
   if (run.status === 'taslak' && !s.lines) {
     return <Panel><p className="py-6 text-center text-[12.5px] text-canvas-muted">Koşu açıldı; «Hesapla» ile kapsamdaki bütün sözleşmeler okunur ve hesaplanır.</p></Panel>;
@@ -137,22 +139,25 @@ function Summary({ run, meta, onReason }: { run: Run; meta: Meta; onReason: (cod
   return (
     <>
       <KpiRow>
-        <Kpi label="Kapsam" value={num(s.lines ?? 0, 0)} help={`CRM ${num(s.crmScope ?? 0, 0)}${s.portalOnly ? ` + portal ${num(s.portalOnly, 0)}` : ''} sözleşme`} />
-        <Kpi label="Hesaplandı" value={num(s.counts?.hesaplandi ?? 0, 0)} help="Onaya hazır" />
-        <Kpi label="İstisna" value={num(s.counts?.istisna ?? 0, 0)} help={s.counts?.istisna ? 'Çözülmeden onaya gitmez' : 'Yok'} />
-        <Kpi label="Hariç" value={num(s.counts?.haric ?? 0, 0)} help="Gerekçesiyle ya da dönem dışı" />
+        <Kpi label="Kapsam" value={num(s.lines ?? 0, 0)} help={`CRM ${num(s.crmScope ?? 0, 0)}${s.portalOnly ? ` + portal ${num(s.portalOnly, 0)}` : ''} sözleşme`}
+          info={<SqlInfo k={k} alan="summary.lines" label="Kapsam" />} />
+        <Kpi label="Hesaplandı" value={num(s.counts?.hesaplandi ?? 0, 0)} help="Onaya hazır" info={<SqlInfo k={k} alan="summary.counts" label="Hesaplandı" />} />
+        <Kpi label="İstisna" value={num(s.counts?.istisna ?? 0, 0)} help={s.counts?.istisna ? 'Çözülmeden onaya gitmez' : 'Yok'}
+          info={<SqlInfo k={k} alan="sayac.istisna" label="İstisna (İstisnalar sekmesinin rozeti)" />} />
+        <Kpi label="Hariç" value={num(s.counts?.haric ?? 0, 0)} help="Gerekçesiyle ya da dönem dışı" info={<SqlInfo k={k} alan="summary.counts" label="Hariç" />} />
       </KpiRow>
       {totals.length > 0 && (
         <KpiRow>
           {totals.map(([cur, t]) => (
             <Kpi key={cur} label={`Ödenecek (${meta.currencies[cur] ?? cur})`} value={money(t.net, cur)}
-              help={`Brüt ${money(t.gross, cur)} · avans ${money(t.advance, cur)} · stopaj ${money(t.withholding, cur)} · ${num(t.count ?? 0, 0)} sözleşme`} />
+              help={`Brüt ${money(t.gross, cur)} · avans ${money(t.advance, cur)} · stopaj ${money(t.withholding, cur)} · ${num(t.count ?? 0, 0)} sözleşme`}
+              info={<SqlInfo k={k} alan="summary.totals" label={`Ödenecek (${cur})`} />} />
           ))}
         </KpiRow>
       )}
       {Object.keys(s.reasons ?? {}).length > 0 && (
         <Panel>
-          <h3 className="mb-2 text-[13px] font-extrabold">İstisnalar nedene göre</h3>
+          <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">İstisnalar nedene göre <SqlInfo k={k} alan="summary.reasons" label="İstisnalar nedene göre" /></h3>
           <div className="flex flex-wrap gap-1.5">
             {Object.entries(s.reasons ?? {}).map(([code, n]) => (
               <button key={code} type="button" onClick={() => onReason(code)}
@@ -231,6 +236,7 @@ function RunHeader({ run, meta }: { run: Run; meta: Meta }) {
           <Loader2 aria-hidden className="h-4 w-4 animate-spin text-canvas-violet" />
           <span className="font-semibold">{p.step ?? 'Çalışıyor'}</span>
           {p.total ? <span className="font-mono tabular-nums text-canvas-muted">{num(p.done ?? 0, 0)} / {num(p.total, 0)}</span> : null}
+          {p.total ? <SqlInfo k={run.kaynaklar} alan="progress" label="İlerleme" /> : null}
         </div>
       )}
       {meta.can.approve && run.status === 'onayda' && selfBlocked && (
@@ -242,6 +248,7 @@ function RunHeader({ run, meta }: { run: Run; meta: Meta }) {
       {foreign.length > 0 && (
         <p className="mt-2 text-[11.5px] text-canvas-muted">
           Kur: {foreign.map(([c, f]) => (f ? `${c} ${num(f.rate, 4)} (${f.source}, ${day(f.on)})` : `${c} bulunamadı`)).join(' · ')}
+          <SqlInfo k={run.kaynaklar} alan="summary.fx" label="Dönem sonu kuru" className="ml-0.5" />
         </p>
       )}
       {meta.withholdingPct == null && <p className="mt-1 text-[11.5px] text-canvas-muted">Varsayılan stopaj oranı tanımlı değil; stopaj yalnız sözleşmesinde oran olanlarda hesaplanır.</p>}

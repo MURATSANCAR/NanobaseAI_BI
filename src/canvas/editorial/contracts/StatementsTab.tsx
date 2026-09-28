@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Calculator, Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -7,6 +7,11 @@ import { Panel } from '../kit';
 import { contractApi, downloadDocx, type Calc, type Detail, type Meta, type Statement } from './api';
 import { NumInput } from './TermsForm';
 import { Field, day, errMsg, money, num, stamp } from './ui';
+import SqlInfo from '../../components/SqlInfo';
+import type { Kaynaklar } from '../../components/sqlInfo';
+
+/** Hesap görünümündeki «i»: `alan` verilmezse hesabın genel alanı. */
+type Info = (label: string, alan?: string) => ReactNode;
 
 /** Hakediş: dönem seçilir → Logo satışı (ya da girilen baskı adedi) ile hesaplanır → taslak kaydedilir →
  *  onaylanınca ödeme takvimine düşer. Onaylı hakediş değişmez; iptal edilip yeniden hesaplanır. */
@@ -18,7 +23,7 @@ const monthEnd = (ym: string) => {
   return `${ym}-${String(last).padStart(2, '0')}`;
 };
 
-function CalcView({ c }: { c: Calc }) {
+function CalcView({ c, info }: { c: Calc; info?: Info }) {
   const cur = c.currency;
   return (
     <div className="space-y-3">
@@ -37,7 +42,7 @@ function CalcView({ c }: { c: Calc }) {
           ['Ödenecek net', money(c.net, cur)],
         ].map(([l, v]) => (
           <div key={l} className="rounded-2xl border border-slate-100 bg-white p-2.5">
-            <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{l}</div>
+            <div className="flex items-center justify-between gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{l}{info?.(l)}</div>
             <div className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{v}</div>
           </div>
         ))}
@@ -49,6 +54,7 @@ function CalcView({ c }: { c: Calc }) {
         {c.carryOut ? ` · sonraki döneme devreden ${money(c.carryOut, cur)}` : ''}
         {c.source ? ` · kaynak: ${c.source}` : ''}
         {c.dataEnd ? ` · Logo verisi ${day(c.dataEnd)} gününe kadar` : ''}
+        {info && <span className="ml-0.5 inline-flex align-middle">{info('Matrah, kur, avans ve stopaj')}</span>}
       </div>
       <div className="overflow-x-auto rounded-2xl border border-slate-100 bg-white">
         <table className="w-full min-w-[640px] text-[12px]">
@@ -59,7 +65,7 @@ function CalcView({ c }: { c: Calc }) {
               <th className="px-2.5 py-2 text-right">Adet</th>
               <th className="px-2.5 py-2 text-right">Matrah</th>
               <th className="px-2.5 py-2 text-right">Oran</th>
-              <th className="px-2.5 py-2 text-right">Telif</th>
+              <th className="px-2.5 py-2 text-right"><span className="inline-flex items-center gap-1">Telif{info?.('Kitap × taraf satırları (adet, matrah, oran, telif)', 'lines')}</span></th>
             </tr>
           </thead>
           <tbody>
@@ -93,7 +99,8 @@ function CalcView({ c }: { c: Calc }) {
   );
 }
 
-function StatementCard({ s, canFinance }: { s: Statement; canFinance: boolean }) {
+function StatementCard({ s, canFinance, k }: { s: Statement; canFinance: boolean; k?: Kaynaklar }) {
+  const info: Info = (label) => <SqlInfo k={k} alan="statements[]" row={s.id} label={label} />;
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const done = () => {
@@ -118,6 +125,7 @@ function StatementCard({ s, canFinance }: { s: Statement; canFinance: boolean })
         <span className="text-[11.5px] text-canvas-muted">
           brüt {money(s.gross, s.currency)} · {s.approvedBy ? `onay ${stamp(s.approvedAt)} ${s.approvedBy}` : `${stamp(s.createdAt)} ${s.createdBy}`}
         </span>
+        {info('Hakediş (net, brüt)')}
       </div>
       {s.note && <p className="mt-1 whitespace-pre-wrap text-[11.5px] text-canvas-muted">{s.note}</p>}
       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -148,7 +156,7 @@ function StatementCard({ s, canFinance }: { s: Statement; canFinance: boolean })
           </button>
         )}
       </div>
-      {open && <div className="mt-3"><CalcView c={s.calc} /></div>}
+      {open && <div className="mt-3"><CalcView c={s.calc} info={info} /></div>}
     </li>
   );
 }
@@ -243,8 +251,9 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
             <ul className="mt-3 space-y-2">
               {books.map((b) => (
                 <li key={b.stockCode} className="grid gap-2 rounded-xl border border-slate-100 bg-white p-2 sm:grid-cols-[minmax(0,1fr)_160px_160px]">
-                  <div className="min-w-0 self-center text-[12.5px] font-semibold">
-                    {b.title} <span className="font-mono text-[11px] font-normal text-canvas-muted">{b.stockCode}</span>
+                  <div className="flex min-w-0 items-center gap-1 self-center text-[12.5px] font-semibold">
+                    <span className="min-w-0">{b.title} <span className="font-mono text-[11px] font-normal text-canvas-muted">{b.stockCode}</span></span>
+                    {b.listPrice ? <SqlInfo k={d.kaynaklar} alan="terms" label={`${b.title} · CRM kapak fiyatı`} /> : null}
                   </div>
                   {printBased ? <NumInput value={prints[b.stockCode!] ?? null} onChange={(v) => setPrints({ ...prints, [b.stockCode!]: v })} placeholder="Basılan adet" suffix="ad." /> : <span className="hidden sm:block" />}
                   {needPrice && (
@@ -269,7 +278,7 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
           {preview.error && <div className="mt-3"><Note tone="err">{errMsg(preview.error)}</Note></div>}
           {calc && (
             <div className="mt-3 space-y-3">
-              <CalcView c={calc} />
+              <CalcView c={calc} info={(l, a) => <SqlInfo k={calc.kaynaklar} alan={a ?? 'net'} label={l} />} />
               <Field label="Not (isteğe bağlı)">
                 <input value={note} onChange={(e) => setNote(e.target.value)} className={field} />
               </Field>
@@ -285,11 +294,11 @@ export default function StatementsTab({ d, meta }: { d: Detail; meta: Meta }) {
         </Panel>
       )}
       <Panel>
-        <h3 className="mb-2 text-[13px] font-extrabold">Hakedişler</h3>
+        <h3 className="mb-2 flex items-center gap-1 text-[13px] font-extrabold">Hakedişler <SqlInfo k={d.kaynaklar} alan="sayac.hakedis" label="Hakediş sayısı" /></h3>
         {!d.statements.length && <p className="py-4 text-center text-[12.5px] text-canvas-muted">Kayıtlı hakediş yok.</p>}
         <ul className="space-y-2">
           {d.statements.map((s) => (
-            <StatementCard key={s.id} s={s} canFinance={d.can.finance} />
+            <StatementCard key={s.id} s={s} canFinance={d.can.finance} k={d.kaynaklar} />
           ))}
         </ul>
       </Panel>
