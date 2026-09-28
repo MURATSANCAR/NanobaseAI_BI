@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
+
+- **Editör veritabanı (GPU, `ed` şeması):** üç deneme belgesi («Dilek Ağacı (deneme belgesi)», «Portal denemesi», «VM denemesi») 167 bulgu ve 15 denetim koşusuyla silindi; `ed.document_review` boş. GPU `/tmp`'deki ölçüm/deneme betikleri silindi.
+- **16 kitaplık yeni denetim turu bitti:** `word_variety`, `word_overuse`, `sentence_starts`, `phrase_repeats` 16/16; `word_choice` bir kitapta geçici ad çözümü hatasıyla düşmüştü, yeniden koşturuldu (13 bulgu) → 16/16.
+- **Git:** `claude/document-review` worktree'si, yerel ve uzak dalı silindi; uzak daldaki üç commit yeniden dizilmeden önceki kopyalardı (`git cherry` hepsi main'de).
+
 ## 2026-09-28 — Test izi temizliği 2 ve CRM mükerrer yazar kaydı
 
 - **Tarama (salt okuma, bütün `semantic_*` metin alanları):** «silinecek», «ZZ », «ZEKI-TEST», «M4 KABUL», «KABUL excel», «_DENEME», `qa-`, `claude`. M6 «TS-2026-0001» deneme sözleşmesi, M8 test kişisi ve kabul paketi (yazışmasıyla), yetki deneme bağı zaten silinmişti. Bütçe/kurumsal satış tablosundaki «(silinecek)» kitap adları müşterinin kendi Logo kayıtları; SEO/web/tercih tablolarındaki eşleşmeler ürün ve katalog metni — dokunulmadı.
