@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import sys
 from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -9,6 +10,7 @@ from zoneinfo import ZoneInfo
 ROOT = Path(__file__).resolve().parents[3]
 SPEC = importlib.util.spec_from_file_location("vm_jobs", ROOT / "infra/docker/bi/jobs.py")
 jobs = importlib.util.module_from_spec(SPEC)
+sys.modules["vm_jobs"] = jobs  # dataclass, `from __future__ import annotations` ile modülü sys.modules'ta arar
 SPEC.loader.exec_module(jobs)  # type: ignore[union-attr]
 IST = ZoneInfo("Europe/Istanbul")
 SCHED = str(ROOT / "scripts/server")
