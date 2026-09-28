@@ -152,6 +152,8 @@ export type Plan = {
   } | null;
   olusturan: string;
   olusturma: string | null;
+  guncelleyen?: string | null;
+  guncelleme?: string | null;
   gonderen: string | null;
   gonderme: string | null;
   onaylayan: string | null;

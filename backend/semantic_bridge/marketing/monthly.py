@@ -510,6 +510,13 @@ def update_item(engine: sa.engine.Engine, tenant: str, user: str, plan_id: str, 
         if not it:
             raise C.MarketingError("Kalem bulunamadı.", 404)
         bas, bit = vals.get("baslangic", it.baslangic), vals.get("bitis", it.bitis)
+        if "baslangic" in vals and "bitis" not in vals and bas and it.baslangic and it.bitis and bit < bas:
+            # Yalnız başlangıç kaydırıldıysa kalemin süresi korunur (tek günlük kalemde bitiş de aynı güne gelir).
+            try:
+                bit = bas + (it.bitis - it.baslangic)
+            except TypeError:
+                bit = bas
+            vals["bitis"] = bit
         if bas and bit and bit < bas:
             raise C.MarketingError("Bitiş başlangıçtan önce olamaz.")
         old = {k: getattr(it, k) for k in vals}
@@ -724,6 +731,8 @@ def suggest_budget(engine: Any, crm: Crm, plan: dict[str, Any], targets: dict[st
     rows: list[dict[str, Any]] = []
     shares_by: dict[str, Any] = {}
     for s, w in weights.items():
+        if not w.get("pay"):
+            continue                                   # bu ay hedefi olmayan segmente sıfır tutarlı satır açılmaz
         codes = [k for k, v in (targets.get("kitap") or {}).items() if v["segment"] == s]
         try:
             sh = P.channel_shares(crm, codes, st)

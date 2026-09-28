@@ -1014,6 +1014,12 @@ def assign(engine: sa.engine.Engine, tenant: str, user: str, rights: dict[str, b
                 unit = route.get("unit")
             elif who == r.assignee:
                 unit = r.unit
+            else:
+                # Tür henüz belli değilse (sınıflanmamış ileti) kişinin tek birimi varsa o birim; birden çok birimi
+                # varsa birim boş kalır, ileti yalnız atanan kişiye görünür.
+                own = user_units(rules, who)
+                if len(own) == 1:
+                    unit = next(iter(own))
         status = r.status if r.status == "yanitlandi" else ("atandi" if who else "yeni")
         c.execute(sa.update(MESSAGES).where(MESSAGES.c.id == r.id)
                   .values(assignee=who, unit=unit if who else None, status=status, updated_at=_now()))
