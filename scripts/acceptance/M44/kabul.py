@@ -106,9 +106,11 @@ def measure(crm) -> int:
         print(f"== {col}: " + "; ".join(f"{r['v']!r}={r['n']}" for r in rows))
     r = crm(f"SELECT COUNT(*) AS n, MAX(CreatedOn) AS son FROM {p}.new_kargobilgisiBase WHERE statecode = 0")[0]
     print(f"== Kargo kaydı: {r['n']} etkin, son oluşturma {r['son']}")
-    r = crm(f"SELECT COUNT(*) AS n, SUM(CASE WHEN EXISTS (SELECT 1 FROM {p}.new_siparisBase s WHERE s.new_kargotakipno = b.new_KargoTakipNo) "
-            f"OR EXISTS (SELECT 1 FROM {p}.new_kargotakipbilgisiBase k WHERE k.new_kargotakipnumarasi = b.new_KargoTakipNo) THEN 1 ELSE 0 END) AS eslesen "
-            f"FROM {p}.new_kargobilgisiBase b WHERE b.statecode = 0 AND ISNULL(b.new_KargoTakipNo, '') <> ''")[0]
+    # SQL Server toplama içinde alt sorgu kabul etmez (130): eşleşme önce satır başına işaretlenir, sonra sayılır.
+    r = crm(f"SELECT COUNT(*) AS n, SUM(x.e) AS eslesen FROM (SELECT CASE WHEN EXISTS (SELECT 1 FROM {p}.new_siparisBase s "
+            f"WHERE s.new_kargotakipno = b.new_KargoTakipNo) OR EXISTS (SELECT 1 FROM {p}.new_kargotakipbilgisiBase k "
+            f"WHERE k.new_kargotakipnumarasi = b.new_KargoTakipNo) THEN 1 ELSE 0 END AS e "
+            f"FROM {p}.new_kargobilgisiBase b WHERE b.statecode = 0 AND ISNULL(b.new_KargoTakipNo, '') <> '') x")[0]
     print(f"== Takip no ile siparişe bağlanan kargo kaydı: {r['eslesen']}/{r['n']}")
     rows = crm(f"SELECT CAST(new_siparistipi AS int) AS t, COUNT(*) AS n FROM {p}.new_siparisBase WHERE statecode = 0 AND statuscode = 100000000 "
                f"AND ISNULL(new_kargotakipno, '') = '' AND new_sevktarihi >= '{since}' GROUP BY CAST(new_siparistipi AS int) ORDER BY COUNT(*) DESC")
