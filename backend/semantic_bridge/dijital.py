@@ -26,7 +26,8 @@ eşik (`DIJITAL_OPP_MIN_QTY`) ∧ yayın durumu satış dışı değil. Puan = b
 Sesli adaylarda ayrıca tür süzgeci (`DIJITAL_AUDIO_GENRES`, boşsa hepsi).
 
 **Hak riski:** dijitalde görünen (e-kitap stok kodu / platform / Logo'da e-kitap satışı) ama hakkı `eksik`, `yok` ya da
-`incele` olan kitap. Model hak notunu «dijitali kısıtlıyor / kısıtlamıyor / belirsiz» diye ön okur (yalnız sıralama);
+`incele` olan kitap. Hak notu M54 telif ile **ortak** sınıflanır (`rights_notes`, tek tablo); «dijitali kısıtlıyor /
+kısıtlamıyor / belirsiz» okuması o sınıftan türetilir (yalnız sıralama);
 karar telif biriminindir.
 
 **Rapor yükleme:** Excel/CSV satırlarının **hiçbiri atılmaz**: boş satır dışında her satır `semantic_dijital_sales`'e
@@ -53,6 +54,7 @@ from zoneinfo import ZoneInfo
 import sqlalchemy as sa
 
 from semantic_bridge import dijital_sources as src
+from semantic_bridge import rights_notes as RN
 from semantic_bridge.seo_geo import crm as seo_crm
 
 log = logging.getLogger("semantic.dijital")
@@ -150,14 +152,6 @@ DECISIONS = sa.Table(
     sa.Column("gerekce", sa.Text, nullable=False),
     sa.Column("not_ozeti", sa.String(64)),                            # kararın verildiği hak notunun özeti
     sa.Column("yazan", sa.String(120), nullable=False),
-    sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-)
-NOTE_READS = sa.Table(
-    "semantic_dijital_note_reads", _md,
-    sa.Column("sozlesme_id", sa.String(40), primary_key=True),
-    sa.Column("not_ozeti", sa.String(64), nullable=False),
-    sa.Column("sonuc", sa.String(16)),                                # kisitliyor|kisitlamiyor|belirsiz
-    sa.Column("olasilik", sa.Float),
     sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
 )
 IMPORTS = sa.Table(
@@ -847,53 +841,26 @@ class Refresher:
 # ------------------------------------------------------------------ hak notu ön okuması (Zeki AI)
 
 
-NOTE_PROMPT = ("Bir yayınevinin telif alış sözleşmesindeki serbest metinli hak notunu okuyorsun. Soru: bu not, kitabın "
-               "e-kitap ya da sesli kitap olarak dijital dağıtımını kısıtlıyor mu (bölge, platform, süre, biçim yasağı, "
-               "ayrıca izin şartı gibi)? Not açıkça kısıtlamıyorsa «dijitali kısıtlamıyor», emin değilsen «belirsiz» seç.\n\n"
-               "Hak notu:\n{note}")
-
-
 def read_notes(engine: sa.engine.Engine, tenant: str, llm: Any, budget_sec: int) -> dict[str, Any]:
-    """Okunmamış (ya da metni değişmiş) hak notlarını kapalı küme seçimle ön okur. Süre bütçesi biterse kalan sonraki
-    geceye kalır (sessiz tavan değil: kalan sayısı döner)."""
+    """Yürürlükteki sözleşmelerin okunmamış (ya da metni değişmiş) hak notlarını **ortak sınıflamaya** gönderir
+    (`rights_notes`: M54 telif ile tek soru, tek tablo; telifin sorduğu ya da onayladığı not yeniden sorulmaz). Süre
+    bütçesi biterse kalan sonraki geceye kalır (sessiz tavan değil: kalan sayısı döner)."""
     if llm is None or not hasattr(llm, "choose"):
         return {"okunan": 0, "kalan": None, "model": False}
     with engine.connect() as c:
-        rows = c.execute(sa.select(TITLES.c.sozlesme_json).where(TITLES.c.tenant_id == tenant, TITLES.c.hak_notu_var.is_(True))).all()
-        done = {r.sozlesme_id: r.not_ozeti for r in c.execute(sa.select(NOTE_READS)).all()}
-    todo: dict[str, str] = {}
-    for r in rows:
-        for ct in _j(r.sozlesme_json, []):
-            note = ct.get("not")
-            if note and ct.get("id") and done.get(ct["id"]) != note_hash(note):
-                todo[ct["id"]] = note
-    labels = list(NOTE_CHOICES.values())
-    back = {v: k for k, v in NOTE_CHOICES.items()}
-    t0, n = time.monotonic(), 0
-    for cid, note in todo.items():
-        if time.monotonic() - t0 > budget_sec:
-            break
-        try:
-            ch = llm.choose(NOTE_PROMPT.format(note=note[:1200]), labels)
-        except Exception as e:  # noqa: BLE001 — model yoksa kalan sonraki geceye
-            log.info("dijital: hak notu okunamadı: %s", e)
-            break
-        now = _now()
-        vals = {"not_ozeti": note_hash(note), "sonuc": back.get(ch.choice) if ch.choice else None,
-                "olasilik": ch.probability, "created_at": now}
-        with engine.begin() as c:
-            if c.execute(sa.select(NOTE_READS.c.sozlesme_id).where(NOTE_READS.c.sozlesme_id == cid)).first():
-                c.execute(NOTE_READS.update().where(NOTE_READS.c.sozlesme_id == cid).values(**vals))
-            else:
-                c.execute(NOTE_READS.insert().values(sozlesme_id=cid, **vals))
-        n += 1
-    return {"okunan": n, "kalan": len(todo) - n, "model": True}
+        rows = c.execute(sa.select(TITLES.c.ad, TITLES.c.sozlesme_json)
+                         .where(TITLES.c.tenant_id == tenant, TITLES.c.hak_notu_var.is_(True))).all()
+    crm_rows = [{"id": ct["id"], "no": ct.get("ad"), "kitap": r.ad, "metin": ct["not"]}
+                for r in rows for ct in _j(r.sozlesme_json, []) if ct.get("not") and ct.get("id") and ct.get("yururlukte")]
+    todo = RN.pending(engine, tenant, crm_rows)
+    out = RN.classify(engine, tenant, todo, llm, budget_sec=budget_sec, stop_on_error=True)
+    return {"okunan": out["okunan"], "kalan": out["kalan"], "model": True}
 
 
-def note_reads(engine: sa.engine.Engine) -> dict[str, dict[str, Any]]:
-    with engine.connect() as c:
-        return {r.sozlesme_id: {"sonuc": r.sonuc, "olasilik": r.olasilik, "ozet": r.not_ozeti}
-                for r in c.execute(sa.select(NOTE_READS)).all()}
+def note_reads(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
+    """Ortak sınıflamadan dijital okuma; `ozet` bu modülün not özetiyle karşılaştırılır (metin değiştiyse eşleşmez)."""
+    return {k.upper(): {"sonuc": v["dijital"], "olasilik": v["olasilik"], "ozet": note_hash(v["metin"]), "sinif": v["sinif"],
+                        "durum": v["durum"]} for k, v in RN.reads(engine, tenant).items()}
 
 
 # ------------------------------------------------------------------ okuma uçları
@@ -996,10 +963,12 @@ def get_title(engine: sa.engine.Engine, tenant: str, kitap_id: str, *, with_sale
     r = _title_row(engine, tenant, kitap_id)
     plats = _platforms(engine, tenant)
     out = _title_dict(r, plats, _listing_state(engine, tenant), full=True)
-    reads = note_reads(engine)
+    reads = note_reads(engine, tenant)
     for ct in out["sozlesmeler"]:
         rd = reads.get(ct["id"]) if ct.get("not") else None
-        ct["notOkuma"] = ({"sonuc": rd["sonuc"], "sonucAdi": NOTE_CHOICES.get(rd["sonuc"] or "", "okunamadı"), "olasilik": rd["olasilik"]}
+        ct["notOkuma"] = ({"sonuc": rd["sonuc"], "sonucAdi": NOTE_CHOICES.get(rd["sonuc"] or "", "okunamadı"), "olasilik": rd["olasilik"],
+                           "sinif": rd["sinif"], "sinifAdi": RN.RY.NOTE_CLASSES.get(rd["sinif"] or ""),
+                           "onayli": rd["durum"] == "onayli"}
                           if rd and rd["ozet"] == note_hash(ct["not"]) else None)
     decisions = decisions_map(engine, tenant)
     out["kararlar"] = [{"sozlesmeId": k[0], "bicim": k[1], "bicimAdi": FORMATS[k[1]], **v, "kararAdi": DECISIONS_KINDS.get(v["karar"])}
@@ -1285,7 +1254,7 @@ def _tr(v: Any, d: int) -> str:
 def rights_risks(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     """Dijitalde görünüp hakkı eksik/yok/incele olan kitaplar + dijitalde olmayan «incele» kayıtları (karar bekleyen).
     Model ön okuması «kısıtlıyor» diyenler önce."""
-    reads = note_reads(engine)
+    reads = note_reads(engine, tenant)
     t = TITLES.c
     with engine.connect() as c:
         rows = c.execute(sa.select(TITLES).where(t.tenant_id == tenant, sa.or_(t.hak_ekitap.in_(RISK_RIGHTS), t.hak_sesli.in_(RISK_RIGHTS)))).all()

@@ -20,6 +20,8 @@ import pytest
 from semantic_bridge import access as A
 from semantic_bridge import dijital as D
 from semantic_bridge import dijital_sources as src
+from semantic_bridge import contracts as C
+from semantic_bridge import royalty as RY
 from semantic_layer.store.catalog_store import open_store
 
 T = "t1"
@@ -32,6 +34,8 @@ TODAY = date(2026, 9, 28)
 def engine():
     e = open_store("sqlite://").engine
     D._ready.discard(id(e))
+    RY._ready.discard(id(e))     # hak notu sınıflaması telifin tablosunda (ortak)
+    C._ready.discard(id(e))
     D.ensure(e)
     return e
 
@@ -313,12 +317,18 @@ def test_note_reads_are_cached_by_note_text(engine):
 
     class Llm:
         def choose(self, prompt, choices):
-            calls.append(prompt)
-            return SimpleNamespace(choice="dijitali kısıtlıyor", probability=0.7, probs=None)
+            calls.append((prompt, choices))
+            return SimpleNamespace(choice="Format kısıtı", probability=0.9, margin=0.8, method="logprobs", probs=None)
 
     assert D.read_notes(engine, T, Llm(), 60)["okunan"] == 1
     assert D.read_notes(engine, T, Llm(), 60)["okunan"] == 0 and len(calls) == 1
     assert D.read_notes(engine, T, None, 60)["model"] is False
+    assert calls[0][1] == list(RY.NOTE_CLASSES.values())          # telifle aynı kapalı küme (tek soru)
+    rd = D.note_reads(engine, T)["A"]
+    assert rd["sonuc"] == "kisitliyor" and rd["sinif"] == "format" and rd["ozet"] == D.note_hash("Yalnız basılı")
+    title = D.get_title(engine, T, "A", with_sales=False)
+    assert title["sozlesmeler"][0]["notOkuma"]["sonuc"] == "kisitliyor"
+    assert title["sozlesmeler"][0]["notOkuma"]["sinifAdi"] == "Format kısıtı"
 
 
 # ------------------------------------------------------------------ uyarılar

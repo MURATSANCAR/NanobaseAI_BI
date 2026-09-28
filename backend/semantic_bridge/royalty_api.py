@@ -29,6 +29,7 @@ from semantic_bridge import budget_sources as bsrc
 from semantic_bridge import contracts as C
 from semantic_bridge import contracts_royalty as CR
 from semantic_bridge import contracts_terms as T
+from semantic_bridge import rights_notes as RN
 from semantic_bridge import royalty as RY
 from semantic_bridge import royalty_sources as S
 
@@ -44,7 +45,7 @@ RIGHTS_EDIT = "ozellik:haklar.duzenle"
 LICENSE = "ozellik:haklar.lisans"
 EXPORT = "ozellik:veri.disa-aktar"
 DOCX = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-NOTE_THRESHOLDS = (0.70, 0.30)  # llm-choose belgesinin «öneri» eşiği; altı «incele»
+NOTE_THRESHOLDS = RN.THRESHOLDS  # llm-choose belgesinin «öneri» eşiği; altı «incele» (ortak sınıflama)
 RENEWAL_CHOICES = ["Yenile", "Bırak", "Yeniden müzakere"]
 RENEWAL_KEYS = {"Yenile": "yenile", "Bırak": "birak", "Yeniden müzakere": "muzakere"}
 
@@ -704,26 +705,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         need(user, RIGHTS_EDIT, "Hak açıklaması sınıflandırma")
         if notes_state["running"]:
             return dict(notes_state)
-        items = call(RY.pending_notes, engine, tenant, call(lambda: crm()(S.notes_sql(prefix()))))
-        labels = list(RY.NOTE_CLASSES.values())
-        by_label = {v: k for k, v in RY.NOTE_CLASSES.items()}
+        items = call(RN.pending, engine, tenant, call(lambda: crm()(S.notes_sql(prefix()))))
         notes_state.update(running=True, done=0, total=len(items), error=None, at=None, failed=0)
+
+        def progress(ok: bool) -> None:
+            if ok:
+                notes_state["done"] += 1
+                return
+            notes_state["failed"] = notes_state.get("failed", 0) + 1
+            notes_state["error"] = "Zeki AI bazı açıklamalara cevap veremedi; kalanlar bir sonraki denemede sorulur."
 
         def job():
             from semantic_layer.runtime.llm_queue import BATCH
-            llm = rt().llm_for("royalty", BATCH)
             try:
-                for it in items:
-                    try:
-                        ch = llm.choose(RY.note_prompt(it["text"]), labels)
-                    except Exception as e:  # noqa: BLE001 — model yoksa kalanlar sonraki denemeye kalır
-                        log.warning("royalty: hak açıklaması sınıflanamadı: %s", e)
-                        notes_state["failed"] = notes_state.get("failed", 0) + 1
-                        notes_state["error"] = "Zeki AI bazı açıklamalara cevap veremedi; kalanlar bir sonraki denemede sorulur."
-                        continue
-                    RY.save_note(engine, tenant, it, {"class": by_label.get(ch.choice or ""), "probability": ch.probability,
-                                                      "margin": ch.margin, "method": ch.method}, NOTE_THRESHOLDS)
-                    notes_state["done"] += 1
+                llm = rt().llm_for("royalty", BATCH)
+                # Ortak sınıflama (M36 dijital de aynı tabloyu okur ve yazar; aynı metin iki kez sorulmaz).
+                RN.classify(engine, tenant, items, llm, progress=progress)
             finally:
                 notes_state.update(running=False, at=RY._iso(RY._now()))
 
