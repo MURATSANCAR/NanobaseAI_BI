@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, errText, label as labelCls, td, th } from '../admin/ui';
 import { fieldApi, fmtCount, fmtDay, fmtMoney, fmtPct, type FieldMeta, type RepRow } from './api';
 import { Empty } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Haftalık saha raporu: temsilci × hedef–gerçekleşme, vadesi geçmiş, tahsilat, ziyaret. Temsilci karşılaştırması kişisel
  *  performans verisidir: yalnız `saha.performans` yetkilisi bütün satırları görür, öteki kişi kendi satırını. Telefonda kart,
@@ -74,6 +75,7 @@ export default function ManagerReport({ meta, temsilci }: { meta: FieldMeta; tem
         <>
           <p className="px-1 text-[11.5px] text-canvas-muted">
             {fmtDay(d.start)} – {fmtDay(d.end)} · satış ve alacak {fmtDay(d.asof)} sabahki veriden (Logo {fmtDay(d.dataEnd)} tarihine kadar). Vadesi geçmiş tutarlar yaklaşıktır (FIFO).
+            <SqlInfo k={d.kaynaklar} alan="items" label="Haftalık saha raporu" className="ml-0.5" />
           </p>
           <ul className="flex flex-col gap-2 lg:hidden">
             {d.items.map((r) => (
@@ -86,7 +88,7 @@ export default function ManagerReport({ meta, temsilci }: { meta: FieldMeta; tem
                 <tr>
                   {['Temsilci', 'Cari', 'Yıl başından', 'Geçen yıl', 'Hedef oranı', 'Vadesi geçmiş', '90+ gün', 'Onay bekleyen', 'Reddedilen', 'Ziyaret', 'Notlu'].map((h) => (
                     <th key={h} className={th}>
-                      {h}
+                      {h === 'Temsilci' ? h : <InfoLabel k={d.kaynaklar} alan="items" label={h}>{h}</InfoLabel>}
                     </th>
                   ))}
                 </tr>

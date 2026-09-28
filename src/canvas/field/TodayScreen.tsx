@@ -9,6 +9,7 @@ import { fieldApi, fmtCount, fmtDay, fmtMoney, fmtPct, fmtShort, type FieldMeta,
 import { CustomerRow, Empty, Stat } from './parts';
 import VisitNoteSheet from './VisitNoteSheet';
 import MorningBrief from './MorningBrief';
+import SqlInfo from '../components/SqlInfo';
 
 /** «Bugün» (telefonun ilk ekranı): üstte 3 sayı, bugün planlanan ziyaretler, sonra kural puanıyla sıralı müşteri listesi
  *  (gerekçe çipleriyle). Sıralamayı temsilci ziyaret planlayarak değiştirir; müdür önceliği gerekçesiyle üste çıkarır. */
@@ -46,10 +47,11 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
       {!dq && <MorningBrief temsilci={temsilci} />}
       {t.warning && <Note tone="warn">{t.warning}</Note>}
       <div className="grid grid-cols-3 gap-2">
-        <Stat label="Vadesi geçmiş" value={fmtShort(t.kpi.vadesiGecmis)} help={`90+ gün ${fmtShort(t.kpi.k90)}`} tone={t.kpi.k90 > 0 ? 'err' : undefined} />
-        <Stat label="Onay bekleyen" value={fmtCount(t.kpi.onayBekleyen)} help={`CRM tahsilatı · ${fmtShort(t.kpi.onayBekleyenTutar)}`} tone={t.kpi.onayBekleyen ? 'warn' : undefined} />
+        <Stat label="Vadesi geçmiş" info={<SqlInfo k={t.kaynaklar} alan="kpi" label="Vadesi geçmiş ve 90+ gün" />} value={fmtShort(t.kpi.vadesiGecmis)} help={`90+ gün ${fmtShort(t.kpi.k90)}`} tone={t.kpi.k90 > 0 ? 'err' : undefined} />
+        <Stat label="Onay bekleyen" info={<SqlInfo k={t.kaynaklar} alan="kpi.onayBekleyen" label="Onay bekleyen CRM tahsilatı" />} value={fmtCount(t.kpi.onayBekleyen)} help={`CRM tahsilatı · ${fmtShort(t.kpi.onayBekleyenTutar)}`} tone={t.kpi.onayBekleyen ? 'warn' : undefined} />
         <Stat
           label="Hedef oranı"
+          info={<SqlInfo k={t.kaynaklar} alan="kpi.hedefOrani" label="Hedef oranı" />}
           value={fmtPct(t.kpi.hedefOrani)}
           help={meta.run.target?.kaynak === 'crm-tutarsiz' ? 'CRM hedefleri tutarsız; ayrıntı aşağıda' : 'Yıl başından, beklenene göre'}
         />
@@ -84,7 +86,10 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
       )}
 
       <section aria-label="Bugün planlanan ziyaretler" className="flex flex-col gap-2">
-        <h2 className="px-1 text-[15px] font-extrabold tracking-tight">Bugün planlanan ({t.planned.length})</h2>
+        <h2 className="flex items-center gap-1 px-1 text-[15px] font-extrabold tracking-tight">
+          Bugün planlanan ({t.planned.length})
+          <SqlInfo k={t.kaynaklar} alan="planned" label="Bugün planlanan ziyaretler" />
+        </h2>
         {t.planned.length === 0 ? (
           <Empty>Bugün için planlanmış ziyaret yok. Listeden bir müşteriyi «Planla» ile bugüne alabilirsiniz.</Empty>
         ) : (
@@ -94,6 +99,8 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
                 <CustomerRow
                   key={v.id}
                   c={v.musteri}
+                  k={t.kaynaklar}
+                  alan="planned[].musteri"
                   trailing={
                     canNote && v.durum === 'planlandi' ? (
                       <button
@@ -122,7 +129,10 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
       <section aria-label="Öncelik listesi" className="flex flex-col gap-2">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <div>
-            <h2 className="text-[15px] font-extrabold tracking-tight">Öncelik sırası ({fmtCount(total)})</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+              Öncelik sırası ({fmtCount(total)})
+              <SqlInfo k={t.kaynaklar} alan="total" label="Öncelik listesi" />
+            </h2>
             <p className="text-[11.5px] text-canvas-muted">
               Veri {fmtDay(t.asof)} sabahı · Logo {fmtDay(t.dataEnd)} tarihine kadar
             </p>
@@ -147,6 +157,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
               <CustomerRow
                 key={c.code}
                 c={c}
+                k={t.kaynaklar}
                 showRep={meta.me.canAll && !temsilci}
                 trailing={
                   canNote ? (
@@ -179,6 +190,10 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
 
       <details className="rounded-2xl border border-slate-100 bg-white/70 p-3 text-[12px]">
         <summary className="min-h-8 cursor-pointer font-extrabold">Sıra nasıl belirleniyor?</summary>
+        <div className="mt-1 flex items-center gap-1 text-canvas-muted">
+          Öncelik puanının formülü ve girdileri
+          <SqlInfo k={t.kaynaklar} alan="items[].puan" label="Öncelik puanı" />
+        </div>
         <p className="mt-2 leading-snug text-canvas-muted">
           Puan kuraldır, model vermez. Her bileşenin en çok puanı yanında; toplam 100'de kesilir. Vadesi geçmiş alacak yaşa göre
           ağırlıklıdır ve sizin portföyünüzdeki sırasına göre puanlanır. Tutarlar yaklaşıktır: Logo'da ödeme kapama kullanılmadığı için

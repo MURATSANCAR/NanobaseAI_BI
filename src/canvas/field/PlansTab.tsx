@@ -7,6 +7,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui'
 import { AskSheet } from '../budget/parts';
 import { fieldApi, fmtDay, fmtMoney, type FieldMeta, type PaymentPlan } from './api';
 import { Empty } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Ödeme planları: Zeki AI kuralla önerir (tutar = vadesi geçmiş, taksit = aylık ödeme hızına göre), temsilci düzeltir ve
  *  onaya gönderir, yetkili (öneren/gönderen değil) onaylar ya da gerekçeyle geri çevirir. Kayıttır: müşteriyle anlaşma,
@@ -48,7 +50,7 @@ export default function PlansTab({ meta }: { meta: FieldMeta }) {
       ) : (
         <ul className="flex flex-col gap-2">
           {q.data!.items.map((p) => (
-            <PlanCard key={p.id} p={p} meta={meta} />
+            <PlanCard key={p.id} p={p} meta={meta} k={q.data?.kaynaklar} />
           ))}
         </ul>
       )}
@@ -56,7 +58,7 @@ export default function PlansTab({ meta }: { meta: FieldMeta }) {
   );
 }
 
-export function PlanCard({ p, meta, compact }: { p: PaymentPlan; meta: FieldMeta; compact?: boolean }) {
+export function PlanCard({ p, meta, compact, k, alan = 'items' }: { p: PaymentPlan; meta: FieldMeta; compact?: boolean; k?: Kaynaklar; alan?: string }) {
   const qc = useQueryClient();
   const [ask, setAsk] = useState<null | 'approve' | 'reject'>(null);
   const done = (msg: string) => {
@@ -81,8 +83,9 @@ export function PlanCard({ p, meta, compact }: { p: PaymentPlan; meta: FieldMeta
               {p.unvan || p.code}
             </Link>
           )}
-          <div className="text-[11.5px] text-canvas-muted">
+          <div className="flex flex-wrap items-center gap-x-1 text-[11.5px] text-canvas-muted">
             {fmtMoney(p.tutar)} · {p.taksitler.length} taksit · öneren {p.oneren} · {fmtDay(p.olusturma)}
+            {k && <SqlInfo k={k} alan={alan} row={p.id} label="Ödeme planı" />}
           </div>
         </div>
         <Pill tone={TONE[p.durum]}>{p.durumAd}</Pill>

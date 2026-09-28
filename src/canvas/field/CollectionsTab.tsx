@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, errText } from '../admin/ui';
 import { fieldApi, fmtAge, fmtDay, fmtMoney, fmtShort, type BucketKey, type Collection, type FieldMeta } from './api';
 import { CustomerRow, Empty } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Tahsilat: (1) vadesi geçmiş alacak FIFO kovaları (Logo, yaklaşık) ve (2) CRM tahsilat onay akışı — onay bekleyen ve
  *  reddedilen, nedeniyle. Tahsilat CRM'de girilir; burada yalnız görünür. */
@@ -61,6 +62,10 @@ function Buckets({ meta, temsilci, kova, setKova }: { meta: FieldMeta; temsilci:
   if (!d) return null;
   return (
     <>
+      <div className="flex items-center gap-1 px-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+        Kova toplamları
+        <SqlInfo k={d.kaynaklar} alan="totals" label="Vadesi geçmiş kova toplamları" />
+      </div>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" role="group" aria-label="Kova süzgeci">
         {meta.buckets.map((b) => (
           <button
@@ -82,12 +87,13 @@ function Buckets({ meta, temsilci, kova, setKova }: { meta: FieldMeta; temsilci:
         <Empty>{kova ? 'Bu kovada alacağı olan müşteri yok.' : 'Vadesi geçmiş alacağı olan müşteri yok.'}</Empty>
       ) : (
         <>
-          <div className="px-1 text-[12px] font-bold">
+          <div className="flex items-center gap-1 px-1 text-[12px] font-bold">
             {d.count} müşteri · {fmtMoney(d.total)}
+            <SqlInfo k={d.kaynaklar} alan="total" label="Vadesi geçmiş toplam" />
           </div>
           <ul className="flex flex-col gap-2">
             {d.items.map((c) => (
-              <CustomerRow key={c.code} c={c} showRep={meta.me.canAll && !temsilci} />
+              <CustomerRow key={c.code} c={c} k={d.kaynaklar} showRep={meta.me.canAll && !temsilci} />
             ))}
           </ul>
         </>
@@ -111,7 +117,8 @@ function CrmList({ durum, meta, temsilci }: { durum: 'onay-bekliyor' | 'reddedil
           : 'Son 30 günde finansın reddettiği tahsilatlar. Düzeltme CRM\'de yapılır; müşteriye tekrar gitmek gerekebilir.'}
       </p>
       {durum === 'reddedildi' && d.reasons.length > 0 && (
-        <div className="flex flex-wrap gap-1.5" aria-label="Red nedenleri">
+        <div className="flex flex-wrap items-center gap-1.5" aria-label="Red nedenleri">
+          <SqlInfo k={d.kaynaklar} alan="reasons" label="Red nedenleri sayımı" />
           {d.reasons.map((r) => (
             <span key={r.sebep} className="inline-flex items-center gap-1 rounded-lg bg-red-50 px-2 py-1 text-[11.5px] font-bold text-red-700">
               {r.sebep}
@@ -120,8 +127,10 @@ function CrmList({ durum, meta, temsilci }: { durum: 'onay-bekliyor' | 'reddedil
           ))}
         </div>
       )}
-      <div className="px-1 text-[12px] font-bold">
+      <div className="flex items-center gap-1 px-1 text-[12px] font-bold">
         {d.count} kayıt · {fmtMoney(d.total)}
+        <SqlInfo k={d.kaynaklar} alan="total" label="CRM tahsilat kayıtları" />
+        <SqlInfo k={d.kaynaklar} alan="items[]" label="CRM tahsilat sorgusu" />
       </div>
       {d.items.length === 0 ? (
         <Empty>{durum === 'onay-bekliyor' ? 'Onay bekleyen tahsilat yok.' : 'Son 30 günde reddedilen tahsilat yok.'}</Empty>

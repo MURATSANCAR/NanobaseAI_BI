@@ -194,6 +194,38 @@ def okul(heavy: bool) -> None:
                 contract(f"okul {path}", out, K.NOT_RAKAM)
 
 
+# ---------------------------------------------------------------- M30 saha satış ve tahsilat
+
+@block("saha")
+def saha(heavy: bool) -> None:
+    from semantic_bridge import field_sales_kaynak as K
+
+    st, t = http("/api/v1/field/today?limit=40", 900)
+    if not ok_or_skip("saha /today", st, t):
+        return
+    k = contract("saha /today", t, K.NOT_RAKAM)
+    got = run_all("saha /today", k, heavy)
+    # R: KPI «Vadesi geçmiş» = kapsamdaki sinyal satırlarının toplamı (aynı portal ifadesi)
+    rows = got.get("saha.sinyal")
+    if rows is not None:
+        total = sum(num(r.get("vadesi_gecmis")) for r in rows)
+        check("R saha: vadesi geçmiş KPI = sinyal tablosu toplamı", abs(total - num((t.get("kpi") or {}).get("vadesiGecmis"))) < 1,
+              f"tablo {total:,.2f} · kart {(t.get('kpi') or {}).get('vadesiGecmis')}")
+    for path in ("/api/v1/field/meta", "/api/v1/field/portfolio", "/api/v1/field/collections",
+                 "/api/v1/field/collections/crm?durum=onay-bekliyor", "/api/v1/field/payment-plans", "/api/v1/field/visits",
+                 "/api/v1/field/report/weekly"):
+        st, out = http(path, 900)
+        if ok_or_skip(f"saha {path}", st, out):
+            k2 = contract(f"saha {path.split('?')[0]}", out, K.NOT_RAKAM)
+            run_all(f"saha {path.split('?')[0]}", {"sources": {sid: v for sid, v in (k2.get("sources") or {}).items()
+                                                               if v["connection"] == "portal" or heavy}}, heavy)
+    code = next((c["code"] for c in t.get("items") or []), None)
+    if code:
+        st, b = http(f"/api/v1/field/customers/{code}/brief", 600)
+        if ok_or_skip("saha /brief", st, b):
+            contract("saha /brief", b, K.NOT_RAKAM)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-heavy", action="store_true")

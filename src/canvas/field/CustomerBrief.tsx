@@ -12,6 +12,7 @@ import { Block, Chips, Empty, FieldFrame, KV, ScoreBadge } from './parts';
 import { PlanCard } from './PlansTab';
 import VisitNoteSheet from './VisitNoteSheet';
 import NoteSignalCard from '../signals/NoteSignalCard';
+import SqlInfo from '../components/SqlInfo';
 
 /** Müşteri brifingi (telefon, tek sayfa, kaydırmalı): Özet · Ödeme · Sipariş · Hedef · Öneri · Notlar. Rakamlar Logo ve
  *  CRM'den; Zeki AI yalnız 3 cümlelik özeti yazar ve özetteki her sayı aşağıdaki olgulardan gelir. Alt çubuk: not bırak,
@@ -87,6 +88,9 @@ export default function CustomerBrief() {
         <div className="flex flex-col gap-3">
           <div className="flex items-start gap-3 px-1">
             <ScoreBadge value={b.puan} />
+            <span className="pt-2">
+              <SqlInfo k={b.kaynaklar} alan="puan" label="Öncelik puanı" />
+            </span>
             <div className="min-w-0 flex-1">
               <div className="text-[12px] text-canvas-muted">
                 {[b.code, b.il, b.kanal, b.temsilciAd ? `BMT ${b.temsilciAd}` : 'temsilcisi yok'].filter(Boolean).join(' · ')}
@@ -104,6 +108,7 @@ export default function CustomerBrief() {
           {b.sozGecti && (
             <Note tone="err">
               Verilen ödeme sözünün tarihi ({fmtDay(b.sozGecti.tarih)}{b.sozGecti.tutar ? `, ${fmtMoney(b.sozGecti.tutar)}` : ''}) geçti; sonrasında Logo'da ödeme yok.
+              <SqlInfo k={b.kaynaklar} alan="sozGecti" label="Geçen ödeme sözü" className="ml-0.5" />
             </Note>
           )}
 
@@ -134,28 +139,33 @@ export default function CustomerBrief() {
           </nav>
 
           <Block id="odeme" title="Ödeme" help={`Vade ve yaşlandırma yaklaşık (FIFO): Logo'da ödeme kapama kullanılmıyor. Yaşlandırma ${fmtDay(b.agingAsof)} gününe göre.`}>
-            <KV k="Bakiye" v={fmtMoney(s.bakiye)} />
-            <KV k="Vadesi geçmiş (yaklaşık)" v={fmtMoney(s.vadesi_gecmis)} tone={(s.vadesi_gecmis ?? 0) > 0 ? 'err' : undefined} />
+            <KV k="Bakiye" info={<SqlInfo k={b.kaynaklar} alan="signals.bakiye" label="Bakiye" />} v={fmtMoney(s.bakiye)} />
+            <KV k="Vadesi geçmiş (yaklaşık)" info={<SqlInfo k={b.kaynaklar} alan="signals.vadesi_gecmis" label="Vadesi geçmiş" />} v={fmtMoney(s.vadesi_gecmis)} tone={(s.vadesi_gecmis ?? 0) > 0 ? 'err' : undefined} />
             {m.buckets.map((k) => (
-              <KV key={k.key} k={`  ${k.label}`} v={fmtMoney(s[k.key])} tone={k.key === 'k_90p' && (s.k_90p ?? 0) > 0 ? 'err' : undefined} />
+              <KV key={k.key} k={`  ${k.label}`} info={<SqlInfo k={b.kaynaklar} alan={`signals.${k.key}`} label={k.label} />} v={fmtMoney(s[k.key])} tone={k.key === 'k_90p' && (s.k_90p ?? 0) > 0 ? 'err' : undefined} />
             ))}
-            <KV k="Vadesi gelmemiş" v={fmtMoney(s.gelmemis)} />
-            {(s.plansiz ?? 0) > 0 && <KV k="Vade planı olmayan bakiye" v={fmtMoney(s.plansiz)} tone="warn" />}
+            <KV k="Vadesi gelmemiş" info={<SqlInfo k={b.kaynaklar} alan="signals.gelmemis" label="Vadesi gelmemiş" />} v={fmtMoney(s.gelmemis)} />
+            {(s.plansiz ?? 0) > 0 && <KV k="Vade planı olmayan bakiye" info={<SqlInfo k={b.kaynaklar} alan="signals.plansiz" label="Plansız bakiye" />} v={fmtMoney(s.plansiz)} tone="warn" />}
             <KV
               k="Son ödeme"
+              info={<SqlInfo k={b.kaynaklar} alan="signals.odeme_12ay" label="Son ödeme" />}
               v={s.son_odeme_tarihi ? `${fmtDay(s.son_odeme_tarihi)} (${daysAgo(s.son_odeme_tarihi, today)} gün)` : '—'}
             />
-            <KV k="Son 12 ayda ödeme" v={fmtMoney(s.odeme_12ay)} />
+            <KV k="Son 12 ayda ödeme" info={<SqlInfo k={b.kaynaklar} alan="signals.odeme_12ay" label="12 ayda ödeme" />} v={fmtMoney(s.odeme_12ay)} />
             <KV
               k="Çek/senet olayı (12 ay)"
+              info={<SqlInfo k={b.kaynaklar} alan="signals.karsiliksiz_olay_12ay" label="Çek/senet olayı" />}
               v={`${s.karsiliksiz_olay_12ay ?? 0} karşılıksız · ${s.protesto_olay_12ay ?? 0} protesto`}
               tone={(s.karsiliksiz_olay_12ay ?? 0) + (s.protesto_olay_12ay ?? 0) > 0 ? 'err' : undefined}
             />
-            <KV k="Risk / limit (CRM)" v={`${fmtMoney(s.risk_toplam)} / ${fmtMoney(s.limit_toplam)}`} />
-            <KV k="Limit doluluğu" v={fmtPct(s.risk_doluluk)} tone={(s.risk_doluluk ?? 0) >= 0.9 ? 'err' : (s.risk_doluluk ?? 0) >= 0.75 ? 'warn' : undefined} />
+            <KV k="Risk / limit (CRM)" info={<SqlInfo k={b.kaynaklar} alan="signals.risk_toplam" label="Risk ve limit" />} v={`${fmtMoney(s.risk_toplam)} / ${fmtMoney(s.limit_toplam)}`} />
+            <KV k="Limit doluluğu" info={<SqlInfo k={b.kaynaklar} alan="signals.risk_doluluk" label="Limit doluluğu" />} v={fmtPct(s.risk_doluluk)} tone={(s.risk_doluluk ?? 0) >= 0.9 ? 'err' : (s.risk_doluluk ?? 0) >= 0.75 ? 'warn' : undefined} />
             {b.odemeler.length > 0 && (
               <div className="mt-2">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Son ödemeler (Logo)</div>
+                <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                  Son ödemeler (Logo)
+                  <SqlInfo k={b.kaynaklar} alan="odemeler" label="Son ödemeler" />
+                </div>
                 <ul className="mt-1 flex flex-col">
                   {b.odemeler.map((o, i) => (
                     <li key={i} className="flex justify-between gap-2 py-0.5 text-[12px]">
@@ -167,7 +177,10 @@ export default function CustomerBrief() {
               </div>
             )}
             <div className="mt-3">
-              <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">CRM tahsilat kayıtları</div>
+              <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                CRM tahsilat kayıtları
+                <SqlInfo k={b.kaynaklar} alan="tahsilatlar" label="CRM tahsilat kayıtları" />
+              </div>
               {b.tahsilatlar.length === 0 ? (
                 <p className="mt-1 text-[12px] text-canvas-muted">Son dönemde CRM'e girilmiş tahsilat yok.</p>
               ) : (
@@ -192,7 +205,10 @@ export default function CustomerBrief() {
             </div>
             {b.sahaTahsilat.length > 0 && (
               <div className="mt-3">
-                <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Saha uygulamasına girilen tahsilat</div>
+                <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                  Saha uygulamasına girilen tahsilat
+                  <SqlInfo k={b.kaynaklar} alan="sahaTahsilat" label="Saha uygulaması tahsilatı" />
+                </div>
                 <ul className="mt-1">
                   {b.sahaTahsilat.map((t, i) => (
                     <li key={`${t.no}-${i}`} className="flex justify-between gap-2 py-0.5 text-[12px]">
@@ -212,14 +228,26 @@ export default function CustomerBrief() {
               ) : (
                 <ul className="mt-1 flex flex-col gap-2">
                   {b.odemePlanlari.map((p) => (
-                    <PlanCard key={p.id} p={p} meta={m} compact />
+                    <PlanCard key={p.id} p={p} meta={m} compact k={b.kaynaklar} alan="odemePlanlari" />
                   ))}
                 </ul>
               )}
             </div>
           </Block>
 
-          <Block id="siparis" title="Sipariş" help="Son faturalar Logo'dan; siparişler ve risk onayı CRM'den (son 6 ay).">
+          <Block
+            id="siparis"
+            title="Sipariş"
+            help="Son faturalar Logo'dan; siparişler ve risk onayı CRM'den (son 6 ay)."
+            action={
+              <span className="flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+                Fatura
+                <SqlInfo k={b.kaynaklar} alan="faturalar" label="Son faturalar" />
+                Sipariş
+                <SqlInfo k={b.kaynaklar} alan="siparisler" label="CRM siparişleri" />
+              </span>
+            }
+          >
             {b.faturalar.length === 0 ? (
               <p className="text-[12px] text-canvas-muted">Bu yıl ve geçen yıl satış faturası yok.</p>
             ) : (
@@ -265,20 +293,25 @@ export default function CustomerBrief() {
                   : 'Bu cari için hedef yok (onaylı bütçe planı ya da CRM hedefi yok).'
             }
           >
-            <KV k="Yıl başından net alım" v={fmtMoney(s.ytd_net_ciro)} />
-            <KV k="Geçen yılın aynı dönemi" v={fmtMoney(s.gecen_yil_ayni_donem)} />
-            <KV k="Geçen yıl toplam" v={fmtMoney(s.gecen_yil_tam)} />
-            <KV k="İade oranı" v={fmtPct(s.iade_orani)} />
-            {s.hedef_beklenen !== null && <KV k="Bugüne kadar beklenen" v={fmtMoney(s.hedef_beklenen)} />}
-            {s.hedef_acigi !== null && <KV k="Hedef açığı" v={fmtPct(s.hedef_acigi)} tone={(s.hedef_acigi ?? 0) > 0.2 ? 'err' : undefined} />}
+            <KV k="Yıl başından net alım" info={<SqlInfo k={b.kaynaklar} alan="signals.ytd_net_ciro" label="Yıl başından net alım" />} v={fmtMoney(s.ytd_net_ciro)} />
+            <KV k="Geçen yılın aynı dönemi" info={<SqlInfo k={b.kaynaklar} alan="signals.gecen_yil_ayni_donem" label="Geçen yılın aynı dönemi" />} v={fmtMoney(s.gecen_yil_ayni_donem)} />
+            <KV k="Geçen yıl toplam" info={<SqlInfo k={b.kaynaklar} alan="signals.gecen_yil_tam" label="Geçen yıl toplam" />} v={fmtMoney(s.gecen_yil_tam)} />
+            <KV k="İade oranı" info={<SqlInfo k={b.kaynaklar} alan="signals.iade_orani" label="İade oranı" />} v={fmtPct(s.iade_orani)} />
+            {s.hedef_beklenen !== null && <KV k="Bugüne kadar beklenen" info={<SqlInfo k={b.kaynaklar} alan="signals.hedef_beklenen" label="Beklenen" />} v={fmtMoney(s.hedef_beklenen)} />}
+            {s.hedef_acigi !== null && <KV k="Hedef açığı" info={<SqlInfo k={b.kaynaklar} alan="signals.hedef_acigi" label="Hedef açığı" />} v={fmtPct(s.hedef_acigi)} tone={(s.hedef_acigi ?? 0) > 0.2 ? 'err' : undefined} />}
             {b.hedefKitaplar.length > 0 && <GapList brief={b} />}
           </Block>
 
-          <Block id="oneri" title="Önerilecek kitaplar" help={b.oneriKurali}>
+          <Block id="oneri" title="Önerilecek kitaplar" help={b.oneriKurali} action={<SqlInfo k={b.kaynaklar} alan="oneriler" label="Önerilecek kitaplar" />}>
             <SuggestionList brief={b} />
           </Block>
 
-          <Block id="notlar" title="Görüşme notları" help="Ziyaret ve not portalda kalır; CRM'e aktarılmaz. Gizli not yalnız yazana görünür.">
+          <Block
+            id="notlar"
+            title="Görüşme notları"
+            help="Ziyaret ve not portalda kalır; CRM'e aktarılmaz. Gizli not yalnız yazana görünür."
+            action={<SqlInfo k={b.kaynaklar} alan="ziyaretler" label="Görüşme notları ve ödeme sözleri" />}
+          >
             <div className="mb-2">
               <NoteSignalCard code={b.code} screen="saha" />
             </div>
@@ -403,7 +436,10 @@ function GapList({ brief }: { brief: Brief }) {
   const rows = all ? brief.hedefKitaplar : brief.hedefKitaplar.slice(0, 5);
   return (
     <div className="mt-3">
-      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Hedef açığı en büyük kitaplar</div>
+      <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+        Hedef açığı en büyük kitaplar
+        <SqlInfo k={brief.kaynaklar} alan="hedefKitaplar" label="Kitap hedef açığı" />
+      </div>
       {brief.hedefKurali && <p className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{brief.hedefKurali}</p>}
       <ul className="mt-1 flex flex-col gap-1">
         {rows.map((g) => (

@@ -10,6 +10,7 @@ import TodayTab from './TodayScreen';
 import CollectionsTab from './CollectionsTab';
 import PlansTab from './PlansTab';
 import ManagerReport from './ManagerReport';
+import SqlInfo from '../components/SqlInfo';
 
 /** M30 Saha satış ve tahsilat (BMT). Telefon önce: ilk sekme «Bugün». Sekme ve temsilci adres çubuğunda
  *  (?sekme=, ?temsilci=); temsilci seçimi yalnız bütün temsilcileri görme yetkisi olanda. */
@@ -45,7 +46,10 @@ export default function FieldScreen() {
   const run = m?.run;
   const aside = m?.me.canAll ? (
     <label className="flex flex-col gap-1">
-      <span className={labelCls}>Temsilci</span>
+      <span className={`${labelCls} flex items-center gap-0.5`}>
+        Temsilci (cari sayısı)
+        <SqlInfo k={m.kaynaklar} alan="reps" label="Temsilci başına cari" />
+      </span>
       <select className={field} value={temsilci} onChange={(e) => update({ temsilci: e.target.value || null })}>
         <option value="">Bütün temsilciler</option>
         {m.reps.map((r) => (
@@ -68,6 +72,12 @@ export default function FieldScreen() {
     >
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
+      {run?.asof && (
+        <p className="flex flex-wrap items-center gap-1 px-1 text-[11.5px] font-semibold text-canvas-muted">
+          {`${fmtCount(run.portfolio ?? 0)} cari · Logo ${fmtDay(run.dataEnd)} tarihine kadar`}
+          <SqlInfo k={m?.kaynaklar} alan="run" label="Gece turu: cari sayısı ve veri sonu" />
+        </p>
+      )}
       {meta.isLoading && <Loading />}
       {m && (
         <>

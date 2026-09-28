@@ -24,7 +24,9 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import field_sales as F
+from semantic_bridge import field_sales_kaynak as K
 from semantic_bridge import field_sales_sources as src
+from semantic_bridge import provenance as PV
 from semantic_bridge.field_sales import FieldError
 from semantic_bridge.field_sales_sources import SourceError, day, guid, num, text
 
@@ -95,7 +97,7 @@ class Service:
 
     def labels(self, engine: Any) -> dict[str, dict[str, Any]]:
         with engine.connect() as c:
-            return {r.tahsilat_id: {"etiket": r.etiket, "olasilik": r.olasilik} for r in c.execute(sa.select(F.REASONS))}
+            return {r.tahsilat_id: {"etiket": r.etiket, "olasilik": r.olasilik} for r in c.execute(F.labels_stmt())}
 
     def approved_plan(self, engine: Any, tenant: str, year: int) -> Optional[dict[str, Any]]:
         try:
@@ -116,7 +118,9 @@ class Service:
         try:
             st = self.settings()
             t0 = time.monotonic()
-            data = F.read_all(self.source, st)
+            # Sorgu bilgisi: turda çalışan CRM/Logo metni tur kaydına yazılır (ekranda köken; cevaplardan ayıklanır).
+            with F.recording() as reads:
+                data = F.read_all(self.source, st)
             year = data["logo"]["cal"]["year"]
             plan = self.approved_plan(engine, tenant, year)
             portfolio, signals, info = F.build(data, st, plan, F.last_visit_days(engine, tenant))
@@ -134,7 +138,7 @@ class Service:
             F.write_snapshot(engine, tenant, portfolio, signals)
             info["ms"] = int((time.monotonic() - t0) * 1000)
             info["firm"], info["prevFirm"] = data["logo"]["cal"]["firm"], data["logo"]["cal"].get("prevFirm")
-            F.meta_set(engine, tenant, "run", info)
+            F.meta_set(engine, tenant, "run", {**info, "sorgular": reads})
             info["events"] = self._cheque_events(engine, tenant, portfolio, signals)
             info["reasons"] = self._label_reasons(engine, data["crm"]["collections"], now)
             info["summaries"] = self._planned_summaries(engine, tenant, now)
@@ -448,11 +452,8 @@ class Service:
     def _book_prev_totals(engine: Any, year: int) -> dict[str, float]:
         """Kitabın önceki yıl bütün carilere net adedi (M46'nın gerçekleşme önbelleği, aynı satır tanımı)."""
         try:
-            from semantic_bridge import budget as B
-
             with engine.connect() as c:
-                rows = c.execute(sa.select(B.SALES.c.stok_kodu, sa.func.sum(B.SALES.c.adet)).where(B.SALES.c.year == year)
-                                 .group_by(B.SALES.c.stok_kodu)).all()
+                rows = c.execute(F.book_prev_totals_stmt(year)).all()
             return {k: float(v or 0) for k, v in rows}
         except Exception as e:  # noqa: BLE001
             log.info("field: M46 satış önbelleği okunamadı: %s", e)
@@ -580,7 +581,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         mine = sa.select(sa.func.count()).select_from(F.PORTFOLIO).where(F.PORTFOLIO.c.tenant_id == tenant, F.PORTFOLIO.c.ad_hesap == user)
         with engine.connect() as c:
             my_count = int(c.execute(mine).scalar() or 0)
-        return {
+        out = {
             "me": {"username": user, "display": display, "admin": is_admin(user), "cari": my_count,
                    "canAll": all_scope(user), "canNote": flag(user, "ozellik:saha.not"),
                    "canOverride": flag(user, "ozellik:saha.oncelik-duzenle"),
@@ -597,6 +598,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             "settings": {k: st[k] for k in ("visitCycleDays", "collectionDays", "pendingWarnHours", "planMaxInstallments",
                                              "similarMin", "newBookDays", "agingAsof", "targetSource", "mmx")},
         }
+        return PV.bagla(out, lambda: K.for_meta(engine, tenant, user, out))
 
     @app.post(f"{P}/run-due")
     def field_run_due(request: Request, tur: str = "gece") -> dict[str, Any]:
@@ -720,12 +722,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         owner = owner_of(user, temsilci)
         st = settings()
         now = F.today()
-        try:
-            cols = svc.source.collections(st)
-            warn = None
-        except Exception as e:  # noqa: BLE001
-            log.warning("field: bugün listesinde CRM okunamadı: %s", e)
-            cols, warn = [], "CRM'e ulaşılamadı; reddedilen tahsilat sinyali bu listede yok."
+        with F.recording() as reads:
+            try:
+                cols = svc.source.collections(st)
+                warn = None
+            except Exception as e:  # noqa: BLE001
+                log.warning("field: bugün listesinde CRM okunamadı: %s", e)
+                cols, warn = [], "CRM'e ulaşılamadı; reddedilen tahsilat sinyali bu listede yok."
+            users_ids = ({k for k, v in svc.users_map().items() if v["hesap"] == owner} if cols else set()) if owner is not None else None
         rank = today_ranked(engine, tenant, owner, cols, st, now)
         cards = rank["list"]
         needle = F.fold(q.strip())
@@ -735,12 +739,11 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         planned = [v for v in F.list_visits(engine, tenant, user, tur="cari", owner=owner, day_=now.isoformat(), admin=is_admin(user))
                    if v["durum"] != "iptal"]
         pending = [t for t in cols if int(num(t.get("durum"))) == src.T_PENDING]
-        if owner is not None:
-            ids = {k for k, v in svc.users_map().items() if v["hesap"] == owner} if cols else set()
-            pending = [t for t in pending if guid(t.get("owner_id")) in ids]
+        if users_ids is not None:
+            pending = [t for t in pending if guid(t.get("owner_id")) in users_ids]
         run = F.meta_get(engine, tenant, "run")
         at = rank["at"]
-        return {
+        out = {
             "asof": run.get("asof"), "dataEnd": run.get("dataEnd"), "warning": warn,
             "kpi": {**rank["kpi"], "onayBekleyen": len(pending), "onayBekleyenTutar": round(sum(num(t.get("tutar")) for t in pending), 2)},
             "planned": [{**v, "musteri": rank["list"][at[v["hedef"]]] if v["hedef"] in at else None} for v in planned],
@@ -749,6 +752,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             "offset": offset,
             "events": F.events(engine, tenant, user, days=14),
         }
+        return PV.bagla(out, lambda: K.for_today(engine, tenant, owner, out, reads, user))
 
     morning_cache: dict[tuple[str, Optional[str]], dict[str, Any]] = {}
 
@@ -761,11 +765,12 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         owner = owner_of(user, temsilci)
         st = settings()
         now = F.today()
-        try:
-            cols = svc.source.collections(st)
-        except Exception as e:  # noqa: BLE001
-            log.info("field: brifte CRM okunamadı: %s", e)
-            cols = []
+        with F.recording() as reads:
+            try:
+                cols = svc.source.collections(st)
+            except Exception as e:  # noqa: BLE001
+                log.info("field: brifte CRM okunamadı: %s", e)
+                cols = []
         rank = call(today_ranked, engine, tenant, owner, cols, st, now)
         planned = [v for v in F.list_visits(engine, tenant, user, tur="cari", owner=owner, day_=now.isoformat(), admin=is_admin(user))
                    if v["durum"] != "iptal"]
@@ -782,24 +787,29 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         if cached and cached["digest"] == digest:
             return cached["out"]
         out = {**F.morning_brief(facts, plain, names, svc.llm()), "gun": now.isoformat(), "dataEnd": F.meta_get(engine, tenant, "run").get("dataEnd")}
+        PV.bagla(out, lambda: K.for_morning(engine, tenant, owner, out, reads))
         morning_cache[(tenant, owner)] = {"digest": digest, "out": out}
         return out
 
     @app.get(f"{P}/portfolio")
     def field_portfolio(request: Request, temsilci: str = "", q: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        rows = F.portfolio_rows(engine, tenant, owner_of(user, temsilci))
+        owner = owner_of(user, temsilci)
+        rows = F.portfolio_rows(engine, tenant, owner)
         if q.strip():
             needle = F.fold(q)
             rows = [r for r in rows if needle in F.fold(f"{r.get('unvan') or ''} {r['logo_code']} {r.get('il') or ''}")]
         rows.sort(key=lambda r: (r.get("unvan") or "").lower())
-        return {"items": [F.customer_card({**r, "puan": r.get("oncelik_puani"), "gerekce": F._j(r.get("gerekce_json"), [])}) for r in rows],
-                "count": len(rows)}
+        out = {"items": [F.customer_card({**r, "puan": r.get("oncelik_puani"), "gerekce": F._j(r.get("gerekce_json"), [])}) for r in rows],
+               "count": len(rows)}
+        return PV.bagla(out, lambda: K.for_portfolio(engine, tenant, owner, out))
 
     @app.get(f"{P}/customers/{{code}}/brief")
     def field_brief(code: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.brief, engine, tenant, user, code, all_scope(user), fresh(), is_admin(user))
+        with F.recording() as reads:
+            out = call(svc.brief, engine, tenant, user, code, all_scope(user), fresh(), is_admin(user))
+        return PV.bagla(out, lambda: K.for_brief(engine, tenant, out["code"], out, reads))
 
     @app.post(f"{P}/customers/{{code}}/brief/summary")
     def field_brief_summary(code: str, request: Request) -> dict[str, Any]:
@@ -815,14 +825,16 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant, user, _ = ctx(request)
         if kova and kova not in {k for k, _ in F.BUCKETS}:
             raise HTTPException(status_code=422, detail={"code": "FIELD", "message": "Kova geçersiz."})
-        rows = [r for r in F.portfolio_rows(engine, tenant, owner_of(user, temsilci)) if num(r.get("vadesi_gecmis")) > 0]
+        owner = owner_of(user, temsilci)
+        rows = [r for r in F.portfolio_rows(engine, tenant, owner) if num(r.get("vadesi_gecmis")) > 0]
         totals = {k: round(sum(num(r.get(k)) for r in rows), 2) for k, _ in F.BUCKETS}
         if kova:
             rows = [r for r in rows if num(r.get(kova)) > 0]
         rows.sort(key=lambda r: (-num(r.get(kova)) if kova else -F.weighted_overdue(r)))
-        return {"totals": totals, "count": len(rows), "total": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2),
-                "items": [F.customer_card({**r, "puan": r.get("oncelik_puani"), "gerekce": F._j(r.get("gerekce_json"), [])}) for r in rows],
-                "note": "Yaklaşık: Logo'da ödeme kapama kullanılmadığı için bakiye en yeni vade satırlarından geriye dağıtılır (FIFO)."}
+        out = {"totals": totals, "count": len(rows), "total": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2),
+               "items": [F.customer_card({**r, "puan": r.get("oncelik_puani"), "gerekce": F._j(r.get("gerekce_json"), [])}) for r in rows],
+               "note": "Yaklaşık: Logo'da ödeme kapama kullanılmadığı için bakiye en yeni vade satırlarından geriye dağıtılır (FIFO)."}
+        return PV.bagla(out, lambda: K.for_collections(engine, tenant, owner, out))
 
     @app.get(f"{P}/collections/crm")
     def field_collections_crm(request: Request, durum: str = "onay-bekliyor", temsilci: str = "", gun: int = 30) -> dict[str, Any]:
@@ -840,9 +852,10 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             return F.collections_view(items, durum=durum, owner_ids=ids, codes=codes, users=users,
                                       accounts=svc.accounts_map(engine, tenant), labels=svc.labels(engine),
                                       reject_days=max(1, min(730, int(gun))))
-        out = call(build)
+        with F.recording() as reads:
+            out = call(build)
         out["warnHours"] = st["pendingWarnHours"]
-        return out
+        return PV.bagla(out, lambda: K.for_crm_collections(engine, tenant, out, reads))
 
     @app.get(f"{P}/events")
     def field_events(request: Request) -> dict[str, Any]:
@@ -863,8 +876,10 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         owner = sahip.strip().lower() or None
         if owner and owner != user and not all_scope(user):
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Başkasının ziyaretlerini görme yetkiniz yok."})
-        return {"items": F.list_visits(engine, tenant, user, codes=codes, hedef=musteri, tur=tur, owner=owner,
-                                       day_=(tarih[:10] if tarih else ""), admin=is_admin(user))}
+        out = {"items": F.list_visits(engine, tenant, user, codes=codes, hedef=musteri, tur=tur, owner=owner,
+                                      day_=(tarih[:10] if tarih else ""), admin=is_admin(user))}
+        return PV.bagla(out, lambda: K.for_visits(engine, tenant, out, hedef=musteri, tur=tur, owner=owner,
+                                                  day_=(tarih[:10] if tarih else "")))
 
     @app.post(f"{P}/visits", status_code=201)
     def field_visit_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -913,7 +928,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def field_plans(request: Request, durum: str = "", musteri: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         codes = None if (all_scope(user) or flag(user, "ozellik:saha.odeme-plani-onay")) else scope_codes(engine, tenant, user)
-        return {"items": F.list_plans(engine, tenant, codes=codes, durum=durum, code=musteri)}
+        out = {"items": F.list_plans(engine, tenant, codes=codes, durum=durum, code=musteri)}
+        return PV.bagla(out, lambda: K.for_plans(engine, tenant, out, durum, musteri))
 
     @app.post(f"{P}/payment-plans", status_code=201)
     def field_plan_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -966,7 +982,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant, user, _ = ctx(request)
         codes = scope_codes(engine, tenant, user)
         items = [{"code": k, **v} for k, v in F.overrides(engine, tenant).items() if codes is None or k in codes]
-        return {"items": items}
+        out = {"items": items}
+        return PV.bagla(out, lambda: K.for_overrides(engine, tenant, out))
 
     @app.post(f"{P}/overrides", status_code=201)
     def field_override_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -986,20 +1003,21 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
 
     # -------------------------------------------------------------- haftalık rapor
 
-    def _report(request: Request, hafta: str, temsilci: str) -> tuple[Any, str, dict[str, Any]]:
+    def _report(request: Request, hafta: str, temsilci: str) -> tuple[Any, str, str, Optional[str], dict[str, Any]]:
         engine, tenant, user, _ = ctx(request)
         # Temsilci karşılaştırması (kişisel performans verisi) yalnız açıkça yetkili yöneticiye; öteki kişi kendi satırını görür.
         owner = (temsilci.strip().lower() or None) if flag(user, "ozellik:saha.performans") else user
-        return engine, user, call(svc.weekly, engine, tenant, hafta, owner)
+        return engine, tenant, user, owner, call(svc.weekly, engine, tenant, hafta, owner)
 
     @app.get(f"{P}/report/weekly")
     def field_report(request: Request, hafta: str = "", temsilci: str = "") -> dict[str, Any]:
-        _, _, out = _report(request, hafta, temsilci)
-        return out
+        with F.recording() as reads:
+            engine, tenant, _, owner, out = _report(request, hafta, temsilci)
+        return PV.bagla(out, lambda: K.for_weekly(engine, tenant, owner, out["start"], out, reads))
 
     @app.get(f"{P}/report/weekly.xlsx")
     def field_report_xlsx(request: Request, hafta: str = "", temsilci: str = "") -> Response:
-        engine, user, out = _report(request, hafta, temsilci)
+        engine, _, user, _, out = _report(request, hafta, temsilci)
         data = F.report_xlsx(out["items"], date.fromisoformat(out["start"]), date.fromisoformat(out["end"]))
         audit(engine, user, "run", "saha_rapor_disa", None, f"Saha raporu {out['start']}", {"satir": len(out["items"])})
         return Response(data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

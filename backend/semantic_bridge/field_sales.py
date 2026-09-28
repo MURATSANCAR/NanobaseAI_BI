@@ -283,6 +283,11 @@ def short_write(engine: sa.engine.Engine):
         raise
 
 
+def meta_stmt(tenant: str, key: str) -> Any:
+    """Tur kaydı (gece turu özeti ve o turda çalışan okuma sorguları)."""
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
     with engine.connect() as c:
         row = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
@@ -791,11 +796,41 @@ def followup_prompt(facts: list[str], visit: dict[str, Any], customer: str) -> s
 # ------------------------------------------------------------------ kaynak okuması (gece turu)
 
 
-def _runner(conn: Any) -> Callable[[str], list[dict[str, Any]]]:
+_REC = threading.local()
+
+
+@contextmanager
+def recording():
+    """Sorgu bilgisi: bu blokta (aynı iş parçacığında) CRM/Logo'da ÇALIŞAN her SQL'i metni, satır sayısı, süresi, anı ve
+    bağlantının yalnız veritabanı adıyla toplar. Önbellekten dönen okumada, önbelleği dolduran okumanın kaydı eklenir."""
+    prev = getattr(_REC, "sink", None)
+    sink: list[dict[str, Any]] = []
+    _REC.sink = sink
+    try:
+        yield sink
+    finally:
+        _REC.sink = prev
+        if prev is not None:
+            prev.extend(sink)
+
+
+def _record(entries: list[dict[str, Any]]) -> None:
+    sink = getattr(_REC, "sink", None)
+    if sink is not None:
+        sink.extend(entries)
+
+
+def _runner(conn: Any, name: str = "") -> Callable[[str], list[dict[str, Any]]]:
+    cfg = getattr(conn, "cfg", None)
+    db = cfg.get("database") if isinstance(cfg, dict) and isinstance(cfg.get("database"), str) else None
+
     def run(sql: str) -> list[dict[str, Any]]:
+        t = time.monotonic()
         _cols, rows, truncated = conn.execute(sql, MAX_ROWS)
         if truncated:
             raise SourceError("Sonuç beklenenden büyük; eksik okunmasın diye durduruldu.")
+        _record([{"conn": name, "db": db, "key": src.query_tag(sql), "sql": sql, "rows": len(rows),
+                  "dbMs": int((time.monotonic() - t) * 1000), "at": datetime.now(TZ).isoformat(timespec="seconds")}])
         return rows
     return run
 
@@ -815,19 +850,19 @@ class Source:
     def __init__(self, crm_connect: Callable[[], Any], logo_connect: Callable[[], Any]):
         self._crm, self._logo = crm_connect, logo_connect
         self._lock = threading.Lock()
-        self._cache: dict[str, tuple[float, Any]] = {}
+        self._cache: dict[str, tuple[float, Any, list[dict[str, Any]]]] = {}
 
     def crm(self, fn: Callable[[Callable[[str], list[dict[str, Any]]]], Any]) -> Any:
         conn = self._crm()
         try:
-            return fn(_runner(conn))
+            return fn(_runner(conn, "crm"))
         finally:
             _close(conn)
 
     def logo(self, fn: Callable[[Callable[[str], list[dict[str, Any]]]], Any]) -> Any:
         conn = self._logo()
         try:
-            return fn(_runner(conn))
+            return fn(_runner(conn, "logo"))
         finally:
             _close(conn)
 
@@ -835,10 +870,12 @@ class Source:
         with self._lock:
             hit = self._cache.get(key)
             if hit and not fresh and time.time() - hit[0] < self.TTL:
+                _record(hit[2])
                 return hit[1]
-        val = fn()
+        with recording() as reads:
+            val = fn()
         with self._lock:
-            self._cache[key] = (time.time(), val)
+            self._cache[key] = (time.time(), val, list(reads))
             if len(self._cache) > 2000:   # bellek koruması: en eskiler atılır (veri kesilmez, yeniden okunur)
                 for k, _ in sorted(self._cache.items(), key=lambda kv: kv[1][0])[:500]:
                     self._cache.pop(k, None)
@@ -1026,14 +1063,22 @@ def _row(r: Any) -> dict[str, Any]:
     return dict(r._mapping)
 
 
-def portfolio_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str],
-                   codes: Optional[set[str]] = None) -> list[dict[str, Any]]:
-    """Portföy + sinyaller. `owner` None = herkes (yetkili); `codes` verilirse yalnız o cariler."""
+def portfolio_stmt(tenant: str, owner: Optional[str] = None, code: Optional[str] = None) -> Any:
+    """Portföy + gece sinyalleri (ekranların okuduğu ifade; sorgu bilgisinde gösterilen de budur)."""
     j = PORTFOLIO.join(SIGNALS, sa.and_(SIGNALS.c.tenant_id == PORTFOLIO.c.tenant_id, SIGNALS.c.logo_code == PORTFOLIO.c.logo_code))
     q = sa.select(PORTFOLIO, *[c for c in SIGNALS.c if c.name not in ("tenant_id", "logo_code", "logo_clientref", "asof")]).select_from(j) \
         .where(PORTFOLIO.c.tenant_id == tenant)
     if owner is not None:
         q = q.where(PORTFOLIO.c.ad_hesap == owner)
+    if code is not None:
+        q = q.where(PORTFOLIO.c.logo_code == code)
+    return q
+
+
+def portfolio_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str],
+                   codes: Optional[set[str]] = None) -> list[dict[str, Any]]:
+    """Portföy + sinyaller. `owner` None = herkes (yetkili); `codes` verilirse yalnız o cariler."""
+    q = portfolio_stmt(tenant, owner)
     if codes is None:
         with engine.connect() as c:
             return [_row(r) for r in c.execute(q)]
@@ -1045,17 +1090,20 @@ def portfolio_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str],
 
 
 def one(engine: sa.engine.Engine, tenant: str, code: str) -> Optional[dict[str, Any]]:
-    j = PORTFOLIO.join(SIGNALS, sa.and_(SIGNALS.c.tenant_id == PORTFOLIO.c.tenant_id, SIGNALS.c.logo_code == PORTFOLIO.c.logo_code))
-    q = sa.select(PORTFOLIO, *[c for c in SIGNALS.c if c.name not in ("tenant_id", "logo_code", "logo_clientref", "asof")]).select_from(j) \
-        .where(PORTFOLIO.c.tenant_id == tenant, PORTFOLIO.c.logo_code == code)
+    q = portfolio_stmt(tenant, code=code)
     with engine.connect() as c:
         r = c.execute(q).first()
     return _row(r) if r else None
 
 
-def reps(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
-    q = sa.select(PORTFOLIO.c.ad_hesap, sa.func.max(PORTFOLIO.c.temsilci_ad), sa.func.count()).where(
+def reps_stmt(tenant: str) -> Any:
+    """Temsilci başına portföydeki cari sayısı."""
+    return sa.select(PORTFOLIO.c.ad_hesap, sa.func.max(PORTFOLIO.c.temsilci_ad).label("ad"), sa.func.count().label("cari")).where(
         PORTFOLIO.c.tenant_id == tenant, PORTFOLIO.c.ad_hesap.isnot(None)).group_by(PORTFOLIO.c.ad_hesap)
+
+
+def reps(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
+    q = reps_stmt(tenant)
     with engine.connect() as c:
         out = [{"hesap": a, "ad": n or a, "cari": int(k)} for a, n, k in c.execute(q)]
     return sorted(out, key=lambda x: (x["ad"] or "").lower())
@@ -1189,6 +1237,17 @@ def update_visit(engine: sa.engine.Engine, tenant: str, user: str, vid: str, bod
 def list_visits(engine: sa.engine.Engine, tenant: str, viewer: str, *, codes: Optional[set[str]] = None, hedef: str = "",
                 tur: str = "", owner: Optional[str] = None, day_: str = "", since: str = "", admin: bool = False) -> list[dict[str, Any]]:
     """Ziyaretler (yeniden eskiye). `codes` verilirse yalnız bu cariler (kapsam) ve kişinin kendi kayıtları."""
+    q = visits_stmt(tenant, hedef=hedef, tur=tur, owner=owner, day_=day_, since=since)
+    with engine.connect() as c:
+        rows = [_row(r) for r in c.execute(q)]
+    if codes is not None:
+        rows = [r for r in rows if r["sahip"] == viewer or (r["tur"] == "cari" and r["hedef_kimlik"] in codes)]
+    return [_visit_out(r, viewer, admin) for r in rows]
+
+
+def visits_stmt(tenant: str, *, hedef: str = "", tur: str = "", owner: Optional[str] = None, day_: str = "",
+                since: str = "") -> Any:
+    """Ortak saha ziyaret tablosu (M30/M31); ekranın okuduğu ifade."""
     q = sa.select(VISITS).where(VISITS.c.tenant_id == tenant)
     if tur:
         q = q.where(VISITS.c.tur == tur)
@@ -1200,12 +1259,7 @@ def list_visits(engine: sa.engine.Engine, tenant: str, viewer: str, *, codes: Op
         q = q.where(sa.or_(VISITS.c.planlanan.like(f"{day_}%"), VISITS.c.gerceklesen.like(f"{day_}%")))
     if since:
         q = q.where(sa.or_(VISITS.c.planlanan >= since, VISITS.c.gerceklesen >= since))
-    q = q.order_by(sa.func.coalesce(VISITS.c.gerceklesen, VISITS.c.planlanan).desc(), VISITS.c.olusturma.desc())
-    with engine.connect() as c:
-        rows = [_row(r) for r in c.execute(q)]
-    if codes is not None:
-        rows = [r for r in rows if r["sahip"] == viewer or (r["tur"] == "cari" and r["hedef_kimlik"] in codes)]
-    return [_visit_out(r, viewer, admin) for r in rows]
+    return q.order_by(sa.func.coalesce(VISITS.c.gerceklesen, VISITS.c.planlanan).desc(), VISITS.c.olusturma.desc())
 
 
 def last_visit_days(engine: sa.engine.Engine, tenant: str) -> dict[str, str]:
@@ -1232,6 +1286,24 @@ def broken_promises(engine: sa.engine.Engine, tenant: str, pay_after: dict[str, 
 
 
 # ------------------------------------------------------------------ müdür önceliği
+
+
+def book_prev_totals_stmt(year: int) -> Any:
+    """Kitabın bir yıldaki bütün carilere net adedi: bütçe modülünün gerçekleşme önbelleği (aynı satır tanımı)."""
+    from semantic_bridge import budget as B
+
+    return sa.select(B.SALES.c.stok_kodu, sa.func.sum(B.SALES.c.adet).label("adet")).where(B.SALES.c.year == year) \
+        .group_by(B.SALES.c.stok_kodu)
+
+
+def labels_stmt() -> Any:
+    """Reddedilen tahsilatın serbest metin nedeninin kapalı kümeye sınıflaması (olasılıkla)."""
+    return sa.select(REASONS)
+
+
+def overrides_stmt(tenant: str) -> Any:
+    """Müdür öncelikleri (portal; elle girilir)."""
+    return sa.select(OVERRIDES).where(OVERRIDES.c.tenant_id == tenant)
 
 
 def overrides(engine: sa.engine.Engine, tenant: str, now: Optional[date] = None) -> dict[str, dict[str, Any]]:
@@ -1523,14 +1595,19 @@ def decide_plan(engine: sa.engine.Engine, tenant: str, user: str, pid: str, appr
     return _plan_out({**cur, **vals})
 
 
-def list_plans(engine: sa.engine.Engine, tenant: str, *, codes: Optional[set[str]], durum: str = "", code: str = "") -> list[dict[str, Any]]:
+def plans_stmt(tenant: str, durum: str = "", code: str = "") -> Any:
+    """Ödeme planı önerileri (portal; temsilci girer, müdür onaylar)."""
     q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant)
     if durum:
         q = q.where(PLANS.c.durum == durum)
     if code:
         q = q.where(PLANS.c.logo_code == code)
+    return q.order_by(PLANS.c.olusturma.desc())
+
+
+def list_plans(engine: sa.engine.Engine, tenant: str, *, codes: Optional[set[str]], durum: str = "", code: str = "") -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = [_row(r) for r in c.execute(q.order_by(PLANS.c.olusturma.desc()))]
+        rows = [_row(r) for r in c.execute(plans_stmt(tenant, durum, code))]
     if codes is not None:
         rows = [r for r in rows if r["logo_code"] in codes]
     return [_plan_out(r) for r in rows]

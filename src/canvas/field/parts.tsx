@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { fmtDay, fmtShort, scoreTone, type Chip, type Customer } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Saha ekranlarının ortak parçaları: kabuk, müşteri kartı, gerekçe çipleri, puan rozeti. Telefon önce (320/390 px):
  *  listeler kart, dokunma hedefleri en az 44 px, geniş tablo yalnız yöneticinin raporunda ve kendi kabında kayar. */
@@ -90,9 +92,9 @@ export function Chips({ chips, limit }: { chips: Chip[]; limit?: number }) {
 }
 
 /** Liste satırı: puan, unvan, il, vadesi geçmiş, gerekçe; tamamı brifinge götürür (tek dokunuş). */
-export function CustomerRow({ c, showRep, trailing }: { c: Customer; showRep?: boolean; trailing?: ReactNode }) {
+export function CustomerRow({ c, showRep, trailing, k, alan = 'items[]' }: { c: Customer; showRep?: boolean; trailing?: ReactNode; k?: Kaynaklar; alan?: string }) {
   return (
-    <li className="flex items-stretch gap-2">
+    <li className="relative flex items-stretch gap-2">
       <Link
         to={`/saha/musteri/${encodeURIComponent(c.code)}`}
         className="flex min-h-14 min-w-0 flex-1 items-start gap-2.5 rounded-2xl border border-slate-100 bg-white/85 p-3 transition-transform duration-150 ease-out active:scale-[0.98]"
@@ -114,18 +116,27 @@ export function CustomerRow({ c, showRep, trailing }: { c: Customer; showRep?: b
         </div>
         <ChevronRight aria-hidden className="mt-2 h-4 w-4 shrink-0 text-canvas-muted" />
       </Link>
+      {k && (
+        // «i» bağlantının dışında: dokunuş brifinge götürmesin.
+        <span className="flex shrink-0 items-start pt-3">
+          <SqlInfo k={k} alan={alan} row={c.code} label={`${c.unvan || c.code}: puan ve alacak`} />
+        </span>
+      )}
       {trailing}
     </li>
   );
 }
 
-export function Stat({ label, value, help, tone }: { label: string; value: string; help?: string; tone?: 'err' | 'warn' }) {
+export function Stat({ label, value, help, tone, info }: { label: string; value: string; help?: string; tone?: 'err' | 'warn'; info?: ReactNode }) {
   // «137,4 Mn ₺»: rakam büyük, birim küçük; dar telefonda (320 px, kutu içi ~66 px) birim alt satıra iner, kesilmez.
   const m = /^(.*\d)\s+((?:bin|Mn)\s*₺|₺)$/.exec(value);
   const [num, unit] = m ? [m[1], m[2]] : [value, ''];
   return (
     <div className="min-w-0 rounded-2xl border border-slate-100 bg-white/85 p-3">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-0.5 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        <span className="min-w-0 truncate">{label}</span>
+        {info}
+      </div>
       <div className={`mt-0.5 flex flex-wrap items-baseline gap-x-1 font-mono text-[17px] font-extrabold leading-tight tabular-nums sm:text-[20px] ${tone === 'err' ? 'text-red-700' : tone === 'warn' ? 'text-amber-800' : ''}`}>
         <span className="min-w-0 break-all">{num}</span>
         {unit && <span className="whitespace-nowrap font-sans text-[11px] font-bold sm:text-[13px]">{unit}</span>}
@@ -156,10 +167,13 @@ export function Block({ id, title, help, action, children }: { id?: string; titl
 }
 
 /** Anahtar–değer satırı (telefonda iki sütun). */
-export function KV({ k, v, tone }: { k: string; v: ReactNode; tone?: 'err' | 'warn' }) {
+export function KV({ k, v, tone, info }: { k: string; v: ReactNode; tone?: 'err' | 'warn'; info?: ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-3 border-b border-slate-100 py-1.5 last:border-0">
-      <span className="min-w-0 text-[12px] text-canvas-muted">{k}</span>
+      <span className="flex min-w-0 items-center gap-0.5 text-[12px] text-canvas-muted">
+        {k}
+        {info}
+      </span>
       <span className={`shrink-0 text-right font-mono text-[12.5px] font-bold tabular-nums ${tone === 'err' ? 'text-red-700' : tone === 'warn' ? 'text-amber-800' : ''}`}>{v}</span>
     </div>
   );

@@ -1,4 +1,5 @@
 import { ENGINE_BASE, send } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M30 Saha satış ve tahsilat köprü istemcisi (`/api/v1/field/*`). Cari = Logo müşteri carisi (cari kodu); temsilci ataması
  *  CRM'den, bakiye/yaşlandırma/satış Logo'dan (gece turu), tahsilat onay akışı CRM'den okunur. Portal CRM'e ve Logo'ya yazmaz. */
@@ -75,6 +76,7 @@ export type VisitInput = Partial<{
 export type FieldEvent = { id: string; tur: string; baslik: string; detay: string | null; code: string | null; zaman: string; goruldu: boolean };
 
 export type FieldMeta = {
+  kaynaklar?: Kaynaklar;
   me: {
     username: string;
     display: string;
@@ -117,6 +119,7 @@ export type FieldMeta = {
 };
 
 export type Today = {
+  kaynaklar?: Kaynaklar;
   asof: string | null;
   dataEnd: string | null;
   warning: string | null;
@@ -206,6 +209,7 @@ export type Signals = {
 };
 
 export type Brief = {
+  kaynaklar?: Kaynaklar;
   code: string;
   unvan: string | null;
   il: string | null;
@@ -255,7 +259,7 @@ export type RepRow = {
   ziyaret: number;
   not: number;
 };
-export type Weekly = { start: string; end: string; items: RepRow[]; asof: string | null; dataEnd: string | null; warning: string | null };
+export type Weekly = { kaynaklar?: Kaynaklar; start: string; end: string; items: RepRow[]; asof: string | null; dataEnd: string | null; warning: string | null };
 
 const P = '/api/v1/field';
 const enc = encodeURIComponent;
@@ -268,19 +272,19 @@ const qs = (o: Record<string, string | number | undefined | null>) => {
 
 /** Sabah saha brifi: Bugün listesinin kapsamından 4–5 cümle. `kaynak` 'zeki' yalnız model metni sayı denetiminden
  *  geçtiyse; 'kural' iken olgular olduğu gibi yazılır. */
-export type MorningBrief = { metin: string; kaynak: 'zeki' | 'kural'; neden: string | null; gun: string; dataEnd: string | null };
+export type MorningBrief = { kaynaklar?: Kaynaklar; metin: string; kaynak: 'zeki' | 'kural'; neden: string | null; gun: string; dataEnd: string | null };
 
 export const fieldApi = {
   meta: () => send<FieldMeta>('GET', `${P}/meta`, undefined, 60_000),
   today: (p: { temsilci?: string; q?: string; limit?: number }) => send<Today>('GET', `${P}/today${qs(p)}`, undefined, 120_000),
   todayBrief: (p: { temsilci?: string }) => send<MorningBrief>('GET', `${P}/today/brief${qs(p)}`, undefined, 180_000),
-  portfolio: (p: { temsilci?: string; q?: string }) => send<{ items: Customer[]; count: number }>('GET', `${P}/portfolio${qs(p)}`),
+  portfolio: (p: { temsilci?: string; q?: string }) => send<{ items: Customer[]; count: number; kaynaklar?: Kaynaklar }>('GET', `${P}/portfolio${qs(p)}`),
   brief: (code: string) => send<Brief>('GET', `${P}/customers/${enc(code)}/brief`, undefined, 180_000),
   summary: (code: string) => send<{ metin: string; kaynak: 'zeki' | 'kural'; not: string | null }>('POST', `${P}/customers/${enc(code)}/brief/summary`, {}, 180_000),
   collections: (p: { kova?: string; temsilci?: string }) =>
-    send<{ totals: Record<BucketKey, number>; count: number; total: number; items: Customer[]; note: string }>('GET', `${P}/collections${qs(p)}`),
+    send<{ totals: Record<BucketKey, number>; count: number; total: number; items: Customer[]; note: string; kaynaklar?: Kaynaklar }>('GET', `${P}/collections${qs(p)}`),
   crmCollections: (p: { durum: 'onay-bekliyor' | 'reddedildi'; temsilci?: string; gun?: number }) =>
-    send<{ items: Collection[]; count: number; total: number; reasons: Array<{ sebep: string; adet: number }>; warnHours: number }>(
+    send<{ items: Collection[]; count: number; total: number; reasons: Array<{ sebep: string; adet: number }>; warnHours: number; kaynaklar?: Kaynaklar }>(
       'GET',
       `${P}/collections/crm${qs(p)}`,
       undefined,
@@ -292,7 +296,7 @@ export const fieldApi = {
   addVisit: (b: VisitInput) => send<Visit>('POST', `${P}/visits`, b),
   updateVisit: (id: string, b: VisitInput) => send<Visit>('PATCH', `${P}/visits/${enc(id)}`, b),
   followup: (id: string) => send<{ taslak: string; gonderilmez: true; sayilarDogrulandi: boolean }>('POST', `${P}/visits/${enc(id)}/followup-draft`, {}, 180_000),
-  plans: (p: { durum?: string; musteri?: string }) => send<{ items: PaymentPlan[] }>('GET', `${P}/payment-plans${qs(p)}`),
+  plans: (p: { durum?: string; musteri?: string }) => send<{ items: PaymentPlan[]; kaynaklar?: Kaynaklar }>('GET', `${P}/payment-plans${qs(p)}`),
   addPlan: (b: { code: string; taksitSayisi?: number; baslangic?: string }) => send<PaymentPlan>('POST', `${P}/payment-plans`, b),
   editPlan: (id: string, b: { taksitler?: Array<{ tarih: string; tutar: number }>; gerekce?: string }) => send<PaymentPlan>('PATCH', `${P}/payment-plans/${enc(id)}`, b),
   submitPlan: (id: string) => send<PaymentPlan>('POST', `${P}/payment-plans/${enc(id)}/submit`, {}),

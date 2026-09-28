@@ -458,6 +458,59 @@ def _str_literal(v: str) -> str:
 # ------------------------------------------------------------------ okuma (çağıran bağlantıyı verir)
 
 
+def query_tag(sql: str) -> str:
+    """Okumada çalışan SQL'in hangi okuma olduğu (sorgu bilgisi başlığı için; yukarıdaki üreticilerin ayırt edici
+    parçalarından). Logo okumalarında firma kopyası ve pencere başı etikete girer."""
+    s = sql or ""
+    firm_ = re.search(r"LG_(\d+)_", s)
+    f = firm_.group(1) if firm_ else ""
+    since = re.search(r"DATE_ >= '(\d{4}-\d{2}-\d{2})'", s)
+    d = since.group(1) if since else ""
+    if "L_CAPIPERIOD" in s:
+        return "logo.donem"
+    if "VW_MMX_" in s:
+        return "logo.saha_ziyaret" if "ZIYARET" in s else "logo.saha_tahsilat"
+    if "SystemUserBase u WHERE u.IsDisabled" in s:
+        return "crm.kullanicilar"
+    if "new_tahsilatBase" in s:
+        return "crm.tahsilat"
+    if "new_etkinlikBase" in s:
+        return "crm.ziyaret"
+    if "StringMapBase" in s:
+        return "crm.siparis_durum"
+    if "new_siparisBase s WHERE s.new_firmaid =" in s:
+        return "crm.siparisler"
+    if "new_siparisBase" in s:
+        return "crm.riskli_siparis"
+    if "AccountBase a" in s:
+        return "crm.cariler"
+    if "MAX(DATE_) AS son FROM" in s:
+        return f"logo.verisonu.{f}"
+    if "_CSTRANS" in s:
+        return f"logo.cek.{f}"
+    if "WITH B AS" in s:
+        return f"logo.yaslandirma.{f}"
+    if "SELECT TOP 5 L.DATE_" in s:
+        return f"logo.son_odeme.{f}"
+    if "_CLFLINE" in s:
+        return f"logo.odeme.{f}"
+    if "_01_INVOICE" in s:
+        return f"logo.faturalar.{f}"
+    if "AS son_fatura" in s:
+        return f"logo.satis.{f}.{d}"
+    if "C.CODE AS cari" in s:
+        return f"logo.benzer.{f}.{d}"
+    if "MIN(S.DATE_) AS ilk" in s:
+        return f"logo.yeni_kitap.{f}"
+    if "SELECT DISTINCT I.CODE AS stok" in s:
+        return f"logo.satilmis.{f}"
+    if "_ITEMS I" in s:
+        return f"logo.kitaplar.{f}.{d}"
+    if "_CLCARD C WHERE" in s:
+        return f"logo.cariler.{f}"
+    return "diger"
+
+
 def read_rows(run: Run, sql: str) -> list[dict[str, Any]]:
     return lower_keys(run(sql))
 

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ListChecks, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { fieldApi, fmtDay } from './api';
+import SqlInfo from '../components/SqlInfo';
 
 /** Sabah brifi: Bugün sekmesinin en üstünde, telefonda tek bakışta okunan 4–5 cümle. Rakamlar ve sıra kuraldan gelir;
  *  «Zeki AI» etiketi yalnız model metni sayı denetiminden geçtiyse görünür, değilse «Kurala göre özet» yazar. Brif
@@ -36,6 +37,7 @@ export default function MorningBrief({ temsilci }: { temsilci: string }) {
           {zeki ? 'Zeki AI · günün özeti' : 'Kurala göre özet'}
         </span>
         <span className="text-[11px] text-canvas-muted">{fmtDay(b.gun)}{b.dataEnd ? ` · veri ${fmtDay(b.dataEnd)}` : ''}</span>
+        <SqlInfo k={b.kaynaklar} alan="metin" label="Günün özetindeki sayılar" />
       </div>
       <p className="text-[14px] leading-relaxed text-canvas-ink [overflow-wrap:anywhere]">{b.metin}</p>
     </section>
