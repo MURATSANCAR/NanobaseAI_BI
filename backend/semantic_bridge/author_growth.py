@@ -451,6 +451,7 @@ ADVICE_SYSTEM = (
     "Cevabı yalnız şu JSON olarak ver: "
     '{"ozet": "iki cümlelik durum", "oneriler": [{"baslik": "...", "neden": "hangi veriye dayandığı, sayıyla", '
     '"ne_zaman": "bu hafta | bu ay | bu çeyrek"}], "riskler": ["..."]} '
+    "«kismi_yil» işaretli yıl veri sonuna kadardır; onu tam yıllarla karşılaştırma, son 12 ay ile önceki 12 ayı kullan. "
     "En çok 4 öneri. Puanları (sadakat, ısı) yıl ya da adet gibi okuma; süreyi yalnız «birlikte_gecen_yil»dan al. "
     "Teknoloji ya da model adı yazma."
 )
@@ -463,7 +464,10 @@ def advice_input(name: str, growth: dict[str, Any], relation: dict[str, Any]) ->
     return {
         "yazar": name,
         "satis": {"son12_adet": (s.get("last12") or {}).get("qty"), "onceki12_adet": (s.get("prev12") or {}).get("qty"),
-                  "degisim_yuzde": s.get("changePct"), "yillik": s.get("years"), "veri_sonu": growth.get("dataEnd")},
+                  "degisim_yuzde": s.get("changePct"), "veri_sonu": growth.get("dataEnd"),
+                  # Veri sonunun yılı yarımdır: model onu tam yıllarla kıyaslamasın (2026-09-28 kabulünde «tarihin en düşüğü» dedi).
+                  "yillik": [dict(y, kismi_yil=bool(growth.get("dataEnd")) and str(y.get("year")) == str(growth.get("dataEnd"))[:4])
+                             for y in (s.get("years") or [])]},
         "kitaplar": [{"ad": b["title"], "net_adet": b["qty"], "ilk_yayin": b["firstPublished"]} for b in (growth.get("books") or [])],
         "yeni_kitap_yillara_gore": growth.get("newBooksByYear"),
         # Puan dökümü (years=30 gibi) modele gitmez: 2026-09-28 kabulünde model süre puanını «30 yıllık» diye okudu.

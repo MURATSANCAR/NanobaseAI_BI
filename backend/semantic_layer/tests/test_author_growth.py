@@ -92,6 +92,8 @@ def test_advice_input_gives_years_not_score_parts():
     inp = G.advice_input("Deniz", g, {"timeline": [{"status": "yapildi", "private": True, "notes": "gizli"}]})
     assert inp["sadakat"]["birlikte_gecen_yil"] == pytest.approx(14.7, abs=0.1) and "parts" not in inp["sadakat"]
     assert inp["son_notlar"] == []      # gizli not modele gitmez
+    g2 = dict(g, dataEnd="2026-08-17", sales={"years": [{"year": 2025, "qty": 1}, {"year": 2026, "qty": 1}]})
+    assert [y["kismi_yil"] for y in G.advice_input("D", g2, {})["satis"]["yillik"]] == [False, True]
 
 
 def test_growth_cache_is_reused_until_refresh(engine):
