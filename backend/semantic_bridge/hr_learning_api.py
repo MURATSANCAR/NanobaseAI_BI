@@ -440,6 +440,15 @@ def register(app, hr: HrContext) -> None:
         hr.audit(engine, who.user, "update", "hr_certificate", cid, "Sertifika doğrulandı")
         return out
 
+    @app.post(P + "/certificates/{cid}/check")
+    def learning_certificate_check(cid: str, request: Request) -> dict[str, Any]:
+        """Doğrulamaya yardım: belge okunur (taranmışsa OCR), kayıttaki tarih ve ad belgede birebir aranır."""
+        engine, tenant, who = ready(request)
+        need(who, L.F_MANAGE, what="Sertifika belgesi")
+        out = call(L.certificate_check, engine, tenant, cid)
+        H.log_access(engine, tenant, who.user, "calisan", out["employeeId"], "goruntule", "sertifika belgesi okuma")
+        return out
+
     @app.delete(P + "/certificates/{cid}")
     def learning_certificate_delete(cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)

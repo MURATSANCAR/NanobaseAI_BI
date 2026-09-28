@@ -1,3 +1,4 @@
+import type { Reading } from '../components/ReadingBadge';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
 
@@ -37,10 +38,10 @@ export type Score = {
   kalanGun: number | null;
 };
 
-export type Quote = { deger: string; kaynak: string };
+export type Quote = { deger: string; kaynak: string; sayfa?: string; okuma?: 'metin' | 'ocr' | 'yok'; guven?: number | null };
 export type Summary = {
   konu?: Quote | null; teslimSuresi?: Quote | null; teminat?: Quote | null; belgeler?: Quote[]; kosullar?: Quote[];
-  atilan?: number; parca?: number; karakter?: number; dosya?: string;
+  atilan?: number; parca?: number; karakter?: number; dosya?: string; okuma?: Reading;
 };
 
 export type TenderRow = {

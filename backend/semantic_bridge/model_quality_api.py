@@ -8,7 +8,7 @@ yetkisi istemez; `access.FEATURE_RULES`).
 Sistem uçları (çerezsiz jeton ya da yönetici): `POST report` (kapı betiklerinin `--report`u), `POST run-due`
 (zamanlayıcı: sıradaki koşu istekleri, günlük özet, yarıda kalan koşu), `POST versions` (kurulum sonu sürüm kaydı).
 
-Rakamı model üretmez: bu modül model çağırmaz. Kapı hükmü betiğin referans SQL karşılaştırmasıdır; karne tablolardan
+Rakamı model üretmez: model yalnız başarısız soru kümelerine sınıf önerir (`model_quality_clusters`, `QueuedLlm.choose`, onay insanda). Kapı hükmü betiğin referans SQL karşılaştırmasıdır; karne tablolardan
 sayılır. Dış gönderim yalnız iç ekibe e-posta (`MODEL_QUALITY_RECIPIENTS`, izinli alan adı süzgeciyle).
 """
 from __future__ import annotations
@@ -379,6 +379,76 @@ def register(app, deps: dict[str, Any]) -> Service:
         out = call(MQ.update_class, engine, klass, body, user)
         audit(engine, user, "update", "model_quality_class", klass, out["label"],
               {k: body[k] for k in ("label", "active", "countsAsError", "rule", "sort") if k in body})
+        return out
+
+    # ------------------------------------------------------------------ başarısız soru kümeleri (öneri 20)
+
+    from semantic_bridge import model_quality_clusters as MC
+
+    cluster_job: dict[str, Any] = {"thread": None, "state": {"running": False, "startedAt": None, "finishedAt": None,
+                                                             "error": None, "result": None}}
+    cluster_lock = threading.Lock()
+
+    def cluster_running() -> bool:
+        t = cluster_job["thread"]
+        return bool(t and t.is_alive())
+
+    @app.get("/api/v1/model-quality/clusters")
+    def mq_clusters(request: Request, status: str = "oneri") -> dict[str, Any]:
+        engine, tenant, _, user, _ = ctx(request)
+        if status not in ("", "oneri", "onaylandi", "reddedildi"):
+            raise HTTPException(status_code=400, detail={"code": "INVALID", "message": "Bilinmeyen durum."})
+        out = MC.listing(engine, tenant, status=status)
+        out["job"] = {**cluster_job["state"], "running": cluster_running()}
+        out["canDecide"] = can(user, "ozellik:zeki-kalite.karar")
+        out["classes"] = [{"klass": k["klass"], "label": k["label"]} for k in MQ.load_classes(engine)]
+        return out
+
+    @app.post("/api/v1/model-quality/clusters/build", status_code=202)
+    def mq_clusters_build(request: Request, days: int | None = None) -> dict[str, Any]:
+        engine, tenant, ds, user, _ = ctx(request)
+        need(user, "ozellik:zeki-kalite.karar", "Soru kümeleme")
+        from semantic_bridge import book_similarity as BS
+        from semantic_layer.runtime import llm_queue
+
+        embed = BS.embedder()
+        if embed is None:
+            raise HTTPException(status_code=503, detail={"code": "UNAVAILABLE", "message": "Gömme servisi bu kurulumda tanımlı değil."})
+        try:
+            llm = rt().llm_for("zeki-kalite", llm_queue.BATCH)
+        except Exception:  # noqa: BLE001
+            llm = None
+        choose = (lambda p, ch: llm.choose(p, ch)) if llm is not None and hasattr(llm, "choose") else None
+        d = window_days(days)
+        with cluster_lock:
+            if cluster_running():
+                return {"started": False, "job": cluster_job["state"]}
+            stt = cluster_job["state"]
+
+            def work() -> None:
+                stt.update(running=True, startedAt=MQ._iso(MQ._now()), finishedAt=None, error=None, result=None)
+                try:
+                    stt["result"] = MC.build(engine, tenant, ds, days=d, embed=embed, choose=choose, conf=conf)
+                except Exception as e:  # noqa: BLE001
+                    log.warning("soru kümeleme başarısız: %s", e)
+                    stt["error"] = str(e)[:400]
+                finally:
+                    stt.update(running=False, finishedAt=MQ._iso(MQ._now()))
+
+            cluster_job["thread"] = threading.Thread(target=work, name="mq-clusters", daemon=True)
+            cluster_job["thread"].start()
+        audit(engine, user, "run", "model_quality_clusters", None, "Başarısız soru kümeleme", {"gun": d})
+        return {"started": True, "job": cluster_job["state"]}
+
+    @app.post("/api/v1/model-quality/clusters/{cid}/decide")
+    def mq_cluster_decide(cid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, _, user, _ = ctx(request)
+        need(user, "ozellik:zeki-kalite.karar", "Küme sınıflama")
+        out = call(MC.decide, engine, tenant, cid, user, str(body.get("action") or ""),
+                   str(body.get("klass") or "") or None, str(body.get("note") or "")[:1000] or None)
+        audit(engine, user, "update", "model_quality_cluster", cid, "Soru kümesi kararı",
+              {"islem": body.get("action"), "sinif": out.get("klass"), "soru": out.get("written")})
+        src.clear_cache()
         return out
 
     # ------------------------------------------------------------------ geri bildirim kuyruğu

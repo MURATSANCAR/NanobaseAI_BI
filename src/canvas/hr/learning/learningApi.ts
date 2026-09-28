@@ -1,3 +1,4 @@
+import type { Reading } from '../../components/ReadingBadge';
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError } from '../../engine';
 import { httpErrorText } from '../../httpError';
 import { hrDownload, hrSend, qs, type Job } from '../hrApi';
@@ -47,6 +48,10 @@ export type Certificate = {
   id: string; employeeId: string; courseId: string | null; title: string; courseKind: Kind | null; source: string; sourceLabel: string;
   issuedOn: string | null; expiresOn: string | null; hasFile: boolean; fileName: string | null; fileSize: number | null;
   verified: boolean; verifiedBy: string | null; verifiedAt: string | null; createdAt: string | null; employee?: EmpBrief | null;
+};
+export type CertCheck = {
+  id: string; employeeId: string; yontem: string; okuma: Reading;
+  alanlar: Array<{ alan: string; deger: string | null; bulundu: boolean | null; sayfa: string | null; okuma: 'metin' | 'ocr' | 'yok' | null; guven: number | null; cevre: string | null }>;
 };
 export type Need = {
   id: string; source: string; sourceLabel: string; text?: string; suggestedCourseId: string | null; suggestedCourseTitle: string | null;
@@ -189,6 +194,7 @@ export const learningApi = {
     hrSend<{ items: Certificate[]; total: number }>('GET', `${L}/certificates${qs({ employeeId, unverified: unverified || undefined })}`),
   recordCertificate: (body: { employeeId: string; courseId?: string; title?: string; issuedOn: string; expiresOn?: string }) =>
     hrSend<Certificate>('POST', `${L}/certificates`, body),
+  checkCertificate: (id: string) => hrSend<CertCheck>('POST', `${L}/certificates/${enc(id)}/check`),
   verifyCertificate: (id: string) => hrSend<{ verified: boolean }>('POST', `${L}/certificates/${enc(id)}/verify`),
   deleteCertificate: (id: string) => hrSend<{ ok: boolean }>('DELETE', `${L}/certificates/${enc(id)}`),
   certificateFile: (id: string, name: string) => hrDownload(`${L}/certificates/${enc(id)}/file`, name),

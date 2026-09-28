@@ -760,11 +760,14 @@ def add_file(engine: sa.engine.Engine, tenant: str, who: H.Who, cid: str, filena
     if len(data) > max_mb * 1024 * 1024:
         raise HrError(f"Dosya {max_mb} MB sınırını aşıyor.", 413)
     name = clean(filename, 255).replace("/", "_").replace("\\", "_") or "ozgecmis"
-    text = X.extract_text(name, data)
+    text, reading = X.extract_reading(name, data)       # taranmış PDF: ortak belge okuma (OCR), sonra maske
     masked, counts = X.rule_mask(text)
     with engine.connect() as c:
         _load_candidate(c, tenant, who, cid)
-    return _store_file(engine, tenant, who.user, cid, name, data, text, masked, counts)
+    out = _store_file(engine, tenant, who.user, cid, name, data, text, masked, counts)
+    if reading and reading.get("ocrSayfa"):
+        out["okuma"] = reading
+    return out
 
 
 def _store_file(engine: sa.engine.Engine, tenant: str, actor: str, cid: str, name: str, data: bytes, text: str,

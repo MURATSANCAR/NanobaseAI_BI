@@ -54,6 +54,13 @@ def _magic_ok(ext: str, data: bytes) -> bool:
 
 
 def extract_text(filename: str, data: bytes) -> str:
+    return extract_reading(filename, data)[0]
+
+
+def extract_reading(filename: str, data: bytes) -> tuple[str, Optional[dict[str, Any]]]:
+    """(metin, okuma özeti). PDF ortak belge okuma hattından (`doc_read`): metin katmanı yoksa sayfalar kendi GPU
+    sunucumuzda OCR'la okunur (içerik orada deftere yazılmaz). Çıkan metin — OCR dahil — modele gitmeden önce bu
+    modülün kural maskesinden geçer (çağıran `rule_mask`); okuma özeti ekranda «n sayfa OCR ile okundu» için döner."""
     ext = ext_of(filename)
     if ext not in EXTENSIONS:
         raise HrError("Özgeçmiş PDF, Word (.docx), OpenDocument (.odt) ya da düz metin olmalı.")
@@ -61,16 +68,19 @@ def extract_text(filename: str, data: bytes) -> str:
         raise HrError("Dosya boş.")
     if not _magic_ok(ext, data):
         raise HrError("Dosyanın içeriği uzantısıyla uyuşmuyor.")
+    summary = None
     if ext == "pdf":
+        from semantic_bridge import doc_read as DR
+
         try:
-            from pypdf import PdfReader
-        except ImportError:  # pragma: no cover
-            raise HrError("PDF okuyucu bu kurulumda yok.", 503) from None
-        try:
-            reader = PdfReader(io.BytesIO(data))
-            text = "\n".join((p.extract_text() or "") for p in reader.pages)
-        except Exception as e:  # noqa: BLE001
-            raise HrError(f"PDF okunamadı: {str(e)[:120]}") from None
+            reading = DR.read(filename, data, allowed=("pdf",))
+        except DR.ReadError as e:
+            raise HrError(str(e), e.status) from None
+        text = reading.text()
+        summary = reading.summary()
+        if not text.strip():
+            why = " ".join(e.rstrip(".") + "." for e in reading.errors) or "Taranmış görüntü okunamadı."
+            raise HrError(f"Dosyadan metin çıkmadı (taranmış görüntü olabilir). {why} Metin içeren bir sürüm yükleyin.")
     elif ext == "docx":
         from semantic_bridge.contracts_docs import docx_text
 
@@ -85,7 +95,7 @@ def extract_text(filename: str, data: bytes) -> str:
     text = "\n".join(line.rstrip() for line in text.replace("\r\n", "\n").replace("\r", "\n").split("\n"))
     if not text.strip():
         raise HrError("Dosyadan metin çıkmadı (taranmış görüntü olabilir); metin içeren bir sürüm yükleyin.")
-    return text
+    return text, summary
 
 
 def _odt_text(data: bytes) -> str:

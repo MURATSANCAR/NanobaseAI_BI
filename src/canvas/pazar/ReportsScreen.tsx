@@ -96,6 +96,8 @@ function ReportItem({ r, canUpload, busy, onExtract, onDelete }: { r: Report; ca
               {pending ? ` · ${fmtInt(pending)} onay bekliyor` : ''}
               {p.atilan ? ` · sayfada bulunmayan ${fmtInt(p.atilan)} öneri atıldı` : ''}
               {(p.metinsiz ?? p.metinsizSayfa) ? ` · ${fmtInt(p.metinsiz ?? p.metinsizSayfa)} sayfada metin yok` : ''}
+              {p.ocrSayfa?.length ? ` · ${fmtInt(p.ocrSayfa.length)} taranmış sayfa OCR ile okundu` : ''}
+              {p.okumaHatasi ? ` · ${p.okumaHatasi}` : ''}
             </>
           )}
           {r.durum === 'hata' && p.hata && <span className="text-red-700"> · {p.hata}</span>}

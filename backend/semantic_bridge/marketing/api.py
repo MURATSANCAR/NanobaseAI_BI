@@ -185,6 +185,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             out = {**out, "crmButce": None, "hedef": {k: v for k, v in (out.get("hedef") or {}).items() if k not in ("ciro", "aylik")}}
         return out
 
+    @app.get(R + "/books/{stok}/emsal-adaylari")
+    async def mkt_emsal_candidates(stok: str, request: Request, n: int = 10) -> dict[str, Any]:
+        """Emsali girilmemiş kitaba anlamca yakın katalog kitapları (aday; seçim insanda). Satış sütunları SQL'den."""
+        engine, tenant, _, _ = await run_in_threadpool(ctx, request)
+        if not 1 <= n <= 100:
+            raise HTTPException(status_code=400, detail={"code": "MARKETING", "message": "Aday sayısı 1–100 olmalı."})
+        eng = m10()
+        card_ = await run_in_threadpool(call, P.card, engine, tenant, crm, eng, stok, st())
+        return await run_in_threadpool(call, P.emsal_candidates, engine, tenant, eng, card_, n)
+
     # ------------------------------------------------------------------ planlar
 
     @app.post(R + "/plans", status_code=201)

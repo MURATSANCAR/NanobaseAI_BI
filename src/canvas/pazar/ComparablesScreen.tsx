@@ -119,7 +119,9 @@ export default function ComparablesScreen() {
       {r && (
         <>
           <Note tone="info">
-            {fmtInt(r.counts.havuz)} aday süzgeçten geçti, {fmtInt(r.counts.sozcukEslesen)} tanesi konuyla sözcük paylaşıyor. {r.note}
+            {fmtInt(r.counts.havuz)} aday süzgeçten geçti, {fmtInt(r.counts.sozcukEslesen)} tanesi konuyla sözcük paylaşıyor.
+            {r.counts.anlamEklenen ? ` Sözcük paylaşmayan ${fmtInt(r.counts.anlamEklenen)} TİMAŞ kitabı özeti anlamca yakın olduğu için eklendi (sıra, sözcük ve anlam sırasının birleşimi).` : ''}
+            {r.anlamNot ? ` ${r.anlamNot}` : ''} {r.note}
             {r.counts.zekiBenzemiyor > 0 && <> Zeki AI'ın «benzemiyor» dediği {fmtInt(r.counts.zekiBenzemiyor)} aday listeden çıkarıldı.</>}
             {r.stopped && <> {r.stopped}</>}
             {r.query.kategoriYol && <> Kategori: {r.query.kategoriYol}.</>}

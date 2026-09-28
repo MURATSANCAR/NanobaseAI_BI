@@ -231,7 +231,7 @@ export const recruitApi = {
     hrSend<{ changed: string[] }>('PATCH', `${R}/candidates/${enc(id)}`, b),
   stage: (id: string, b: { stage: Stage; outcome?: Outcome; reason?: string; startDate?: string }) =>
     hrSend<{ from: Stage; to: Stage; outcome: Outcome | null; employeeId: string | null }>('POST', `${R}/candidates/${enc(id)}/stage`, b),
-  addFile: (id: string, file: File) => upload<{ id: string; filename: string; size: number; maskCounts: Record<string, number> }>(`${R}/candidates/${enc(id)}/files`, file),
+  addFile: (id: string, file: File) => upload<{ id: string; filename: string; size: number; maskCounts: Record<string, number>; okuma?: { ocrSayfa: string[]; enDusukGuven: number | null } }>(`${R}/candidates/${enc(id)}/files`, file),
   deleteFile: (id: string, fid: string) => hrSend<{ ok: boolean }>('DELETE', `${R}/candidates/${enc(id)}/files/${enc(fid)}`),
   downloadFile: (id: string, fid: string, name: string) => hrDownload(`${R}/candidates/${enc(id)}/files/${enc(fid)}`, name),
   evidence: (id: string) => hrSend<Job>('POST', `${R}/candidates/${enc(id)}/evidence`, {}),

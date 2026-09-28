@@ -170,7 +170,8 @@ export type Comparables = {
   query: { q: string; crmKitapId: string | null; kategoriId: string | null; kategoriYol: string | null; sayfa: number | null; fiyat: number | null; base: { ad: string; stokKodu: string | null } | null };
   rakip: Comparable[];
   timas: Comparable[];
-  counts: { havuz: number; sozcukEslesen: number; zekiOkudu: number; zekiBenzemiyor: number; crmEmsal: number };
+  counts: { havuz: number; sozcukEslesen: number; zekiOkudu: number; zekiBenzemiyor: number; crmEmsal: number; anlamAday?: number; anlamEklenen?: number };
+  anlamNot?: string | null;
   salesYear: number | null;
   stopped: string | null;
   note: string;
@@ -188,7 +189,7 @@ export type Report = {
   sayfaSayisi: number | null;
   durum: 'yuklendi' | 'cikariliyor' | 'cikarildi' | 'hata';
   durumAd: string;
-  ilerleme: { sayfa?: number; toplam?: number; rakam?: number; atilan?: number; metinsiz?: number; metinsizSayfa?: number; hata?: string } | null;
+  ilerleme: { sayfa?: number; toplam?: number; rakam?: number; atilan?: number; metinsiz?: number; metinsizSayfa?: number; hata?: string; ocrSayfa?: string[]; okumaHatasi?: string } | null;
   yukleyen: string;
   yuklendiAt: string | null;
   rakam?: Partial<Record<FigureStatus, number>>;
@@ -205,6 +206,8 @@ export type Figure = {
   donem: string | null;
   sayfa: string;
   alinti: string | null;
+  okuma?: 'ocr';
+  guven?: number | null;
   olcu: string;
   olcuAd: string;
   kategoriId: string | null;

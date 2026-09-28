@@ -855,6 +855,26 @@ SPEC: list[dict[str, Any]] = [
      "help": "Sürüm kaydına özeti girecek ek kural klasörleri/dosyaları, virgülle (bilgi paketi zaten sayılır)"},
     {"key": "MODEL_QUALITY_PROMPT_PATHS", "group": "model_quality", "label": "İstem dosyaları", "type": "text", "default": "",
      "help": "Sürüm kaydına özeti girecek istem dosyaları, virgülle. Boşsa istem kodla birlikte sürümlenir"},
+    {"key": "MODEL_QUALITY_CLUSTER_MIN_SIM", "group": "model_quality", "label": "Soru kümesi: benzerlik eşiği", "type": "text",
+     "default": "0.82", "help": "Başarısız sorular anlam benzerliği bu değerin üstündeyse aynı kümeye girer (0–1)"},
+    {"key": "MODEL_QUALITY_CLUSTER_MIN_PROB", "group": "model_quality", "label": "Küme sınıf önerisi: en düşük olasılık",
+     "type": "text", "default": "0.70", "help": "Zeki AI'ın küme için önerdiği sınıf bu olasılığın altındaysa «emin değil» yazılır (0–1)"},
+    {"key": "MODEL_QUALITY_CLUSTER_MIN_MARGIN", "group": "model_quality", "label": "Küme sınıf önerisi: en düşük fark",
+     "type": "text", "default": "0.30", "help": "Önerilen sınıf ile ikinci sınıf arasındaki olasılık farkı bunun altındaysa «emin değil» (0–1)"},
+    # Zeki AI ortak araçlar (belge okuma, kitap benzerliği)
+    {"key": "DOC_READ_OCR", "group": "zeki_ortak", "label": "Taranmış sayfaları oku (OCR)", "type": "bool", "default": "1",
+     "help": "Açıkken metin katmanı olmayan PDF sayfası ve görüntü dosyası GPU sunucusundaki okuyucuyla okunur. Kapalıyken "
+             "bu sayfalar «okunamadı» diye işaretlenir"},
+    {"key": "DOC_READ_TIMEOUT_SEC", "group": "zeki_ortak", "label": "Belge okuma süresi (sn)", "type": "int", "default": "900",
+     "help": "Taranmış belgenin okunması için beklenecek en uzun süre; model açılırken beklenen süre de buna dahil"},
+    {"key": "DOC_READ_MIN_PAGE_CHARS", "group": "zeki_ortak", "label": "Metin sayılacak en az harf", "type": "int",
+     "default": "20", "help": "PDF sayfasının metin katmanında bundan az harf varsa sayfa taranmış sayılır ve OCR'a gider"},
+    {"key": "DOC_READ_LOW_CONFIDENCE", "group": "zeki_ortak", "label": "OCR düşük güven eşiği", "type": "text",
+     "default": "0.80", "help": "Bu güvenin altında okunan sayfa ekranda «düşük güven» diye işaretlenir; metin atılmaz (0–1)"},
+    {"key": "BOOK_SIMILAR_TEXT_CHARS", "group": "zeki_ortak", "label": "Kitap benzerliği: özet uzunluğu", "type": "int",
+     "default": "3000", "help": "Kitabın benzerlik dizinine girecek arka kapak/özet metninin karakter sayısı (HTML temizlenmiş)"},
+    {"key": "BOOK_SIMILAR_BATCH", "group": "zeki_ortak", "label": "Kitap benzerliği: parti", "type": "int", "default": "32",
+     "help": "Dizin kurulurken gömme servisine bir istekte gönderilen kitap sayısı"},
     # M54 Telif dönemi
     {"key": "ROYALTY_CRM_STATUSES", "group": "royalty", "label": "Kapsamdaki CRM durum kodları", "type": "text",
      "default": "100000000,100000007",
@@ -1198,6 +1218,9 @@ SPEC: list[dict[str, Any]] = [
     {"key": "PAZAR_COMP_MODEL_CANDIDATES", "group": "pazar", "label": "Emsal: Zeki AI'ın okuduğu aday", "type": "int",
      "default": "20", "help": "Ortak sözcük puanı en yüksek bu kadar aday Zeki AI'ya sorulur; kalanlar puan sırasıyla listelenir "
                              "ve ekranda yazılır"},
+    {"key": "PAZAR_COMP_EMBED_CANDIDATES", "group": "pazar", "label": "Emsal: anlam benzerliğiyle eklenen aday", "type": "int",
+     "default": "30", "help": "Kitap benzerliği dizininden özeti anlamca en yakın bu kadar TİMAŞ kitabı (ortak sözcüğü olmasa da) "
+                             "aday kümesine eklenir; kurallı süzgeç yine uygulanır. 0: kapalı"},
     {"key": "PAZAR_OWN_YEARS", "group": "pazar", "label": "İç göstergelerde yıl sayısı", "type": "int", "default": "3",
      "help": "Logo'dan okunan yıl sayısı (veri sonunun yılı dahil)"},
     {"key": "PAZAR_BRIEF_MAX_SOURCES", "group": "pazar", "label": "Özet taslağı: en çok kaynak", "type": "int", "default": "60",
@@ -1370,6 +1393,9 @@ GROUPS = [
              "temsilci düzeltip masadan kendisi gönderir."},
     {"id": "model_quality", "label": "Zeki AI kalitesi",
      "help": "Kapı koşularının bildirimleri, karne penceresi ve sürüm kaydının ek dosyaları. Bildirimler yalnız iç ekibe gider."},
+    {"id": "zeki_ortak", "label": "Zeki AI ortak araçlar",
+     "help": "Belge okuma (taranmış sayfa dahil) ve kitap benzerliği araması. Belgeler yalnız kendi GPU sunucumuzda okunur, "
+             "okunan metin modele gitmeden önce maskelenir; benzerlik yalnız sıralama içindir, rakamlar SQL'den gelir."},
     {"id": "royalty", "label": "Telif dönemi",
      "help": "Dönem koşusunun kapsamı, stopaj varsayılanı ve hatırlatmalar. CRM'e, Logo'ya ve bankaya hiçbir şey yazılmaz; "
              "beyannameyi yazara insan gönderir."},

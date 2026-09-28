@@ -305,6 +305,7 @@ def settings() -> dict[str, Any]:
         "batchSeconds": max(60, int(_f("PAZAR_BATCH_SECONDS", 1800))),
         "compPageTol": _f("PAZAR_COMP_PAGE_TOL", 0.25), "compPriceTol": _f("PAZAR_COMP_PRICE_TOL", 0.30),
         "compModel": max(0, int(_f("PAZAR_COMP_MODEL_CANDIDATES", 20))),
+        "compEmbed": max(0, int(_f("PAZAR_COMP_EMBED_CANDIDATES", 30))),
         "extractChars": max(2000, int(_f("PAZAR_EXTRACT_PAGE_CHARS", 12000))),
         "fileMaxMb": max(1, int(_f("PAZAR_FILE_MAX_MB", 50))),
         "briefMaxSources": max(5, int(_f("PAZAR_BRIEF_MAX_SOURCES", 60))),
@@ -928,10 +929,16 @@ def tokens(text: Any) -> list[str]:
 
 
 def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
-                choose: Optional[Callable[[str, list[str]], Any]]) -> dict[str, Any]:
+                choose: Optional[Callable[[str, list[str]], Any]],
+                neighbors: Optional[Callable[[Optional[str], str, int], dict[str, Any]]] = None) -> dict[str, Any]:
     """Emsal bul: kurallı süzgeç (kategori, sayfa ±, fiyat ±) → sözcük örtüşmesiyle sıralama (idf) → ilk N aday Zeki
     AI'ya «çok / kısmen / benzemiyor» diye sorulur. Gerekçe kurallıdır (aynı kategori, sayfa farkı, fiyat farkı, ortak
-    sözcükler); model yalnız benzerlik sınıfını verir. TİMAŞ kitabından başlanırsa CRM'deki emsal bağları da işaretlenir."""
+    sözcükler); model yalnız benzerlik sınıfını verir. TİMAŞ kitabından başlanırsa CRM'deki emsal bağları da işaretlenir.
+
+    `neighbors(crmKitapId, q, n)` (ortak yapı taşı 5, kitap benzerliği dizini) verilirse TİMAŞ kitaplarında aday kümesi
+    genişler: ortak sözcüğü olmasa da özeti anlamca yakın ilk `compEmbed` kitap kurallı süzgeçten geçerse havuza girer.
+    Sıra iki sıralamanın birleşimidir (karşılıklı sıra toplamı, k=60): sözcük sırası ve anlam sırası; puan ekrana
+    yazılmaz. Dizin yoksa davranış eskisiyle aynıdır."""
     st = settings()
     idx = categories(engine, tenant)
     q = str(body.get("q") or "").strip()
@@ -976,6 +983,16 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
             return False
         return True
 
+    emb_rank: dict[str, int] = {}
+    emb_note: Optional[str] = None
+    if neighbors is not None and st["compEmbed"] > 0:
+        try:
+            res = neighbors(base_id, q, st["compEmbed"])
+            emb_rank = {str(x.get("kitapId") or "").upper(): int(x["sira"]) for x in res.get("items") or [] if x.get("kitapId")}
+            if not res.get("hazir"):
+                emb_note = res.get("not")
+        except Exception as e:  # noqa: BLE001 — dizin yoksa sözcük sırası kalır
+            emb_note = f"Anlam benzerliği okunamadı: {str(e)[:160]}"
     pool: list[dict[str, Any]] = []
     for r in comp:
         if rule_ok(r.kategori_id, r.sayfa, r.liste_fiyat) or r.crm_id in linked:
@@ -990,7 +1007,7 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
             pool.append({"tur": "timas", "id": r.crm_id, "ad": r.ad, "yazar": r.yazar, "yayinevi": r.marka,
                          "kategoriId": r.kategori_id, "kategoriHam": r.kitaplik, "sayfa": r.sayfa, "fiyat": r.fiyat,
                          "metin": r.ozet_kisa, "stokKodu": r.stok_kodu, "satis": sales.get(r.stok_kodu or "") if r.stok_kodu else None,
-                         "ilkYayin": r.ilk_yayin, "crmEmsal": False,
+                         "ilkYayin": r.ilk_yayin, "crmEmsal": False, "anlamSira": emb_rank.get(str(r.crm_id).upper()),
                          "tok": set(tokens(f"{r.ad} {r.kitaplik or ''} {r.ozet_kisa or ''}"))})
     df = Counter(t for p in pool for t in p["tok"])
     n = max(1, len(pool))
@@ -998,7 +1015,15 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
         common = qtok & p["tok"]
         p["skor"] = sum(math.log(1 + n / df[t]) for t in common)
         p["ortak"] = sorted(common, key=lambda t: df[t])[:6]
-    ranked = sorted((p for p in pool if p["skor"] > 0 or p["crmEmsal"]), key=lambda p: (-p["crmEmsal"], -p["skor"], fold(p["ad"])))
+    cands = [p for p in pool if p["skor"] > 0 or p["crmEmsal"] or p.get("anlamSira")]
+    word_rank = {id(p): i for i, p in enumerate(sorted((p for p in cands if p["skor"] > 0),
+                                                       key=lambda p: (-p["skor"], fold(p["ad"]))), start=1)}
+
+    def fused(p: dict[str, Any]) -> float:
+        w = word_rank.get(id(p))
+        return (1.0 / (60 + w) if w else 0.0) + (1.0 / (60 + p["anlamSira"]) if p.get("anlamSira") else 0.0)
+
+    ranked = sorted(cands, key=lambda p: (-p["crmEmsal"], -fused(p), fold(p["ad"])))
     model_n = min(st["compModel"], len(ranked)) if choose else 0
     stopped = None
     for p in ranked[:model_n]:
@@ -1032,6 +1057,8 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
             g.append(f"fiyat {fmt_tr(p['fiyat'], 2)} ₺ ({'+' if p['fiyat'] >= fiyat else ''}{round((p['fiyat'] - fiyat) / fiyat * 100)}%)")
         if p["ortak"]:
             g.append("ortak sözcükler: " + ", ".join(shown.get(t, t) for t in p["ortak"]))
+        if p.get("anlamSira"):
+            g.append(f"özeti anlamca yakın ({p['anlamSira']}. sırada)")
         if p.get("zeki"):
             z = p["zeki"]
             g.append(f"Zeki AI: {z['sinif']}" + (f" (%{round((z['olasilik'] or 0) * 100)})" if z.get("olasilik") is not None else ""))
@@ -1044,8 +1071,10 @@ def comparables(engine: sa.engine.Engine, tenant: str, body: dict[str, Any],
     return {"query": {"q": q[:600], "crmKitapId": base_id, "kategoriId": kategori, "kategoriYol": idx.path(kategori),
                       "sayfa": sayfa, "fiyat": fiyat, "base": {"ad": base.ad, "stokKodu": base.stok_kodu} if base else None},
             "rakip": [row(p) for p in out if p["tur"] == "rakip"], "timas": [row(p) for p in out if p["tur"] == "timas"],
-            "counts": {"havuz": len(pool), "sozcukEslesen": len(ranked), "zekiOkudu": len(judged),
-                       "zekiBenzemiyor": len(dropped), "crmEmsal": len(linked)},
+            "counts": {"havuz": len(pool), "sozcukEslesen": len(word_rank), "adayToplam": len(ranked), "zekiOkudu": len(judged),
+                       "zekiBenzemiyor": len(dropped), "crmEmsal": len(linked),
+                       "anlamAday": len(emb_rank), "anlamEklenen": sum(1 for p in ranked if p.get("anlamSira") and not p["skor"])},
+            "anlamNot": emb_note,
             "salesYear": last_year, "stopped": stopped,
             "note": (f"Zeki AI ilk {len(judged)} adayı okudu; kalan {len(rest)} aday ortak sözcük puanıyla sıralı."
                      if choose else "Zeki AI bu kurulumda tanımlı değil; adaylar ortak sözcük puanıyla sıralı.")}
@@ -1375,7 +1404,16 @@ def figures(engine: sa.engine.Engine, tenant: str, rid: str) -> dict[str, Any]:
         return (0, int(s)) if str(s).isdigit() else (1, str(s))
 
     rows = sorted(rows, key=lambda r: (page_key(r.sayfa), r.olusturuldu_at))
-    return {"report": _report_out(rep), "items": [_figure_out(r, idx) for r in rows], "olcu": OLCU,
+    # Ortak belge okuma: taranmış sayfadan (OCR) okunan rakam ekranda «OCR» etiketi ve sayfanın güveniyle görünür.
+    prog = loads(rep.ilerleme_json, {}) or {}
+    ocr = {str(k): v for k, v in (prog.get("ocrGuven") or {}).items()}
+    items = []
+    for r in rows:
+        f = _figure_out(r, idx)
+        if str(r.sayfa) in ocr:
+            f.update(okuma="ocr", guven=ocr[str(r.sayfa)])
+        items.append(f)
+    return {"report": _report_out(rep), "items": items, "olcu": OLCU,
             "statusLabels": FIGURE_STATUS, "categories": idx.items()}
 
 

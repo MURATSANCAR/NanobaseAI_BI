@@ -1,0 +1,10 @@
+[Unit]
+Description=Kitap benzerliği dizini: her gece 03:40
+
+[Timer]
+OnCalendar=*-*-* 03:40:00
+Persistent=true
+Unit=timas-book-similar.service
+
+[Install]
+WantedBy=timers.target

@@ -768,6 +768,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/it-ops/", frozenset({page("sistem-durumu")})),
     # M50 Zeki AI kalitesi. Sayfa açıkça verilir (Herkes'e girmez). Kapı betiklerinin raporu ve zamanlayıcı çerezsiz
     # jetonla gelir; cevap altındaki geri bildirim düğmesi (ve kişinin kendi hükmü) sayfa istemez, özellik ister.
+    ("/api/v1/books/similar/run-due", SYSTEM),
+    ("/api/v1/books/similar/index", SYSTEM),
+    ("/api/v1/books/similar/status", OPEN),
     ("/api/v1/model-quality/report", SYSTEM),
     ("/api/v1/model-quality/run-due", SYSTEM),
     ("/api/v1/model-quality/feedback", OPEN),

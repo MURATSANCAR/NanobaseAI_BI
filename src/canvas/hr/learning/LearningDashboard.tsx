@@ -7,7 +7,8 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as l
 import { Kpi, KpiRow } from '../../editorial/kit';
 import Sheet from '../../editorial/studio/reader/Sheet';
 import { Block } from '../parts';
-import { fmtMoney, learningApi, localToIso, pct, type Info, type StatusRow } from './learningApi';
+import { fmtMoney, learningApi, localToIso, pct, type CertCheck, type Info, type StatusRow } from './learningApi';
+import { ReadingBadge, ReadingNote } from '../../components/ReadingBadge';
 import { LearningFrame, StatusPill, fmtDay, fmtWhen, useLearningInfo } from './parts';
 
 /** Eğitim panosu (İK): sayaçlar, dolmuş/dolacak zorunlu eğitimler (kişi listesi yalnız `ik.egitim-yonet`), seçilenlerle
@@ -250,6 +251,12 @@ function Unverified() {
     },
     onError: (e) => toast.error(errText(e, 'Silinemedi.')),
   });
+  const [checks, setChecks] = useState<Record<string, CertCheck>>({});
+  const check = useMutation({
+    mutationFn: learningApi.checkCertificate,
+    onSuccess: (r) => setChecks((m) => ({ ...m, [r.id]: r })),
+    onError: (e) => toast.error(errText(e, 'Belge okunamadı.')),
+  });
   const items = q.data?.items ?? [];
   if (!items.length) return null;
   return (
@@ -267,13 +274,40 @@ function Unverified() {
                   Belgeyi aç
                 </button>
               )}
+              {c.hasFile && (
+                <button type="button" className={btnGhost} disabled={check.isPending} onClick={() => check.mutate(c.id)}>
+                  {check.isPending && check.variables === c.id ? 'Okunuyor…' : 'Belgeyi oku ve karşılaştır'}
+                </button>
+              )}
               <button type="button" className={btnPrimary} disabled={verify.isPending} onClick={() => verify.mutate(c.id)}>Doğrula</button>
               <button type="button" className={btnGhost} disabled={del.isPending} onClick={() => del.mutate(c.id)}>Reddet ve sil</button>
             </div>
+            {checks[c.id] && <CertCheckResult r={checks[c.id]} />}
           </li>
         ))}
       </ul>
     </Block>
+  );
+}
+
+/** Belgeden okuma sonucu: kayıttaki değer belgede birebir geçiyor mu (kurala göre; karar İK'nın). */
+function CertCheckResult({ r }: { r: CertCheck }) {
+  return (
+    <div className="w-full rounded-xl bg-slate-50 px-3 py-2 text-[12px]">
+      <ul className="flex flex-col gap-1">
+        {r.alanlar.map((a) => (
+          <li key={a.alan} className="flex flex-wrap items-center gap-1.5">
+            <span className="font-semibold">{a.alan}</span>
+            <span className="text-canvas-muted">{a.deger ?? '—'}</span>
+            {a.bulundu === null ? <Pill tone="muted">kayıtta yok</Pill> : a.bulundu ? <Pill tone="ok">belgede var</Pill> : <Pill tone="warn">belgede bulunamadı</Pill>}
+            <ReadingBadge okuma={a.okuma} guven={a.guven} sayfa={a.sayfa} esik={r.okuma.esik} />
+            {a.cevre && <q className="block w-full break-words text-[11px] italic text-canvas-muted">{a.cevre}</q>}
+          </li>
+        ))}
+      </ul>
+      <ReadingNote reading={r.okuma} />
+      <p className="mt-1 text-[11px] text-canvas-muted">{r.yontem}</p>
+    </div>
   );
 }
 

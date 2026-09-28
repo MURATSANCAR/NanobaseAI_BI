@@ -226,6 +226,29 @@ def register(app, deps: dict[str, Any]) -> None:
         items = mkt.overlap_rows(call(crm_rows, sql)) if sql else []
         return {"items": items, "words": mkt._words(a["title"])}
 
+    @app.get(A + "/{app_id}/similar")
+    def applications_similar(app_id: str, request: Request, n: int = 10) -> dict[str, Any]:
+        """Katalogda anlamca benzer kitaplar (ortak yapı taşı 5): başvurunun adı, türü, kategorisi ve özeti ile kitap
+        benzerliği dizini. Başlık-kelime örtüşmesinin yanına; benzerlik yalnız sıralama, rakam yok. Özet gömmeye
+        maskelenerek gider (kişisel veri)."""
+        from semantic_bridge import book_similarity as BS
+        from semantic_bridge import zeki_text as Z
+
+        if not 1 <= n <= 50:
+            raise HTTPException(status_code=400, detail={"code": "APPLICATION", "message": "Kitap sayısı 1–50 olmalı."})
+        engine, tenant, _, _ = ctx(request)
+        a = call(mod.snapshot, engine, tenant, app_id)["app"]
+        parts = [a.get("title") or "", f"Tür: {a['genre']}" if a.get("genre") else "",
+                 f"Kitaplık: {a['categoryName']}" if a.get("categoryName") else "", Z.mask_personal(a.get("summary") or "")]
+        text = ". ".join(p for p in parts if p.strip())
+        try:
+            out = BS.similar_books(engine, tenant, metin=text, n=n,
+                                   suzgec={"baglam": {"kitaplik": a.get("categoryName"), "turler": a.get("genre")}})
+        except BS.SimilarityError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "APPLICATION", "message": str(e)}) from e
+        out["ozetVar"] = bool((a.get("summary") or "").strip())
+        return out
+
     @app.post(A + "/{app_id}/crm-project")
     def applications_crm_project(app_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, display = ctx(request)

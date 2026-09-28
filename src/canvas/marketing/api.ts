@@ -282,6 +282,7 @@ export const mktApi = {
   meta: () => send<Meta>('GET', '/meta'),
   newBooks: (p: { frm?: string; to?: string; durum?: string; yayinevi?: string; sahip?: string; q?: string; page?: number; yenile?: boolean }) =>
     send<BookPage>('GET', `/new-books${qs(p)}`, undefined, 180_000),
+  emsalCandidates: (stok: string, n = 10) => send<EmsalCandidates>('GET', `/books/${enc(stok)}/emsal-adaylari${qs({ n })}`, undefined, 180_000),
   card: (stok: string, yenile = false) => send<Card>('GET', `/books/${enc(stok)}/card${qs({ yenile })}`, undefined, 180_000),
   create: (stokKodu: string) => send<Plan>('POST', '/plans', { kind: 'yeni', stokKodu }, 180_000),
   plan: (id: string) => send<Plan>('GET', `/plans/${enc(id)}`),
@@ -366,4 +367,16 @@ export const DROP_REASON: Record<string, string> = {
   'kaynaksiz-rakam': 'kaynaksız rakam',
   'kanitsiz-iddia': 'kanıtsız üstünlük iddiası',
   'teknoloji-adi': 'teknoloji adı',
+};
+
+/** Emsali girilmemiş kitaba anlamca yakın katalog kitapları (aday; seçim insanda). Satış sütunları SQL'den. */
+export type EmsalCandidates = {
+  gerekli: boolean;
+  hazir?: boolean;
+  not?: string;
+  kaynak: string;
+  satisKaynagi?: string;
+  sql?: string | null;
+  items: Array<{ sira: number; stokKodu: string; ad: string; yazar: string | null; kitaplik: string | null; gerekce: string[];
+    lansman: string | null; ilk3: number | null; ilk6: number | null; ilk12: number | null; gozlenenAy: number }>;
 };

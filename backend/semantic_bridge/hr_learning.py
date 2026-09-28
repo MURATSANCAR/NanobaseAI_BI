@@ -939,6 +939,63 @@ def certificate_file(engine: sa.engine.Engine, tenant: str, cert_id: str, owner_
     return bytes(r.file_blob), r.file_name or "belge", r.file_mime or "application/octet-stream", r.employee_id
 
 
+_TR_MONTHS = ("ocak", "subat", "mart", "nisan", "mayis", "haziran", "temmuz", "agustos", "eylul", "ekim", "kasim", "aralik")
+
+
+def date_forms(d: date) -> list[str]:
+    """Bir tarihin belgede yazılabileceği biçimler (katlanmış): 05.03.2026, 5.3.2026, 05/03/2026, 2026-03-05,
+    5 mart 2026. `doc_read.fold` noktalamayı boşluğa çevirdiği için biçimler de aynı katlamayla karşılaştırılır."""
+    from semantic_bridge import doc_read as DR
+
+    forms = {f"{d.day:02d}.{d.month:02d}.{d.year}", f"{d.day}.{d.month}.{d.year}", f"{d.day:02d}/{d.month:02d}/{d.year}",
+             d.isoformat(), f"{d.day} {_TR_MONTHS[d.month - 1]} {d.year}", f"{d.day:02d} {_TR_MONTHS[d.month - 1]} {d.year}"}
+    return sorted({DR.fold(x) for x in forms})
+
+
+def certificate_check(engine: sa.engine.Engine, tenant: str, cert_id: str, *, read: Optional[Any] = None) -> dict[str, Any]:
+    """İK doğrulamasına yardım (M57): yüklenen belge ortak belge okuma hattıyla okunur (taranmış PDF ve fotoğraf dahil,
+    OCR kendi GPU sunucumuzda) ve kayıttaki belge tarihi, geçerlilik bitişi ve eğitim adı belgede **birebir** aranır.
+    Model karar vermez ve metin sohbet modeline gitmez; sonuç «belgede bulundu / bulunamadı» ile sayfa ve okuma türü
+    (metin/OCR) ve güvendir. Doğrulamayı İK yapar. Okunan metin saklanmaz; ekrana yalnız bulunan alanın çevresi gider."""
+    from semantic_bridge import doc_read as DR
+
+    data, name, _, _ = certificate_file(engine, tenant, cert_id)
+    with engine.connect() as c:
+        r = c.execute(sa.select(CERTIFICATES).where(CERTIFICATES.c.id == cert_id, CERTIFICATES.c.tenant_id == tenant)).first()
+        course = c.execute(sa.select(COURSES.c.title).where(COURSES.c.id == r.course_id)).scalar() if r.course_id else None
+    try:
+        reading = (read or DR.read)(name, data, allowed=tuple(CERT_EXT))
+    except DR.ReadError as e:
+        raise HrError(str(e), e.status) from None
+    pages = [(p, DR.fold(p["metin"])) for p in reading.pages if p.get("metin")]
+
+    def near(page: dict[str, Any], folded: str, needle: str) -> str:
+        i = folded.find(needle)
+        a = max(0, i - 60)
+        return ("…" if a else "") + folded[a:i + len(needle) + 60].strip() + ("…" if i + len(needle) + 60 < len(folded) else "")
+
+    def look(label: str, shown: Optional[str], needles: list[str]) -> dict[str, Any]:
+        row = {"alan": label, "deger": shown, "bulundu": None, "sayfa": None, "okuma": None, "guven": None, "cevre": None}
+        if not shown or not needles:
+            return row
+        row["bulundu"] = False
+        for p, f in pages:
+            hit = next((n for n in needles if n and n in f), None)
+            if hit:
+                row.update(bulundu=True, sayfa=p["sayfa"], okuma=p["okuma"], guven=p.get("guven"), cevre=near(p, f, hit))
+                break
+        return row
+
+    title = course or r.title
+    rows = [look("Eğitim / belge adı", title, [DR.fold(title)] if title and len(DR.fold(title)) >= 4 else []),
+            look("Belge tarihi", r.issued_on.strftime("%d.%m.%Y") if r.issued_on else None,
+                 date_forms(r.issued_on) if r.issued_on else []),
+            look("Geçerlilik bitişi", r.expires_on.strftime("%d.%m.%Y") if r.expires_on else None,
+                 date_forms(r.expires_on) if r.expires_on else [])]
+    return {"id": cert_id, "employeeId": r.employee_id, "alanlar": rows, "okuma": reading.summary(),
+            "yontem": "Belgenin metni okunur (taranmışsa görüntüden); kayıttaki değerler belgede birebir aranır. Karar İK'nındır."}
+
+
 # ------------------------------------------------------------------ zorunlu eğitim durumu
 
 

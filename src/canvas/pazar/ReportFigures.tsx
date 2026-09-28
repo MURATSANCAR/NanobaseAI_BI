@@ -8,6 +8,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as lab
 import { Panel } from '../editorial/kit';
 import { STATUS_TONE, fmtInt, fmtNum, pazarApi, type Category, type Figure, type FigureStatus } from './api';
 import { CategorySelect, ROOT, useMeta } from './parts';
+import { ReadingBadge } from '../components/ReadingBadge';
 
 /** Bir raporun rakamları: Zeki AI önerisi → insan kararı (onayla, düzelt, reddet). Her rakam sayfa numarası ve kısa
  *  alıntıyla; düzeltmede modelin değeri korunur. */
@@ -117,6 +118,7 @@ function FigureItem({ f, can, olcu, categories, busy, onDecide }: {
             <span className="text-[13px] font-bold">{f.gosterge}</span>
             <Pill tone={STATUS_TONE[f.durum]}>{f.durumAd}</Pill>
             <span className="text-[11px] font-semibold text-canvas-muted">s. {f.sayfa}{f.donem ? ` · ${f.donem}` : ''} · {f.yontem === 'elle' ? 'elle girildi' : 'Zeki AI'}</span>
+            {f.okuma === 'ocr' && <ReadingBadge okuma="ocr" guven={f.guven} />}
           </div>
           {f.alinti && <blockquote className="mt-1 border-l-2 border-slate-200 pl-2 text-[11.5px] leading-snug text-canvas-muted">{f.alinti}</blockquote>}
           {f.durum === 'duzeltildi' && f.degerOneri !== null && <div className="mt-0.5 text-[11px] text-canvas-muted">Zeki AI'ın okuduğu: {fmtNum(f.degerOneri)}</div>}

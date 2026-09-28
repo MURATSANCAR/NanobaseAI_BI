@@ -6,6 +6,7 @@ import { Download, FileText, Loader2, Pencil, Sparkles, Trash2 } from 'lucide-re
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import { ReadingBadge, ReadingNote } from '../components/ReadingBadge';
 import Sheet from '../editorial/studio/reader/Sheet';
 import {
   STATUS_TONE, fmtDay, fmtMoney, fmtPct, parseNum, tendersApi,
@@ -255,7 +256,7 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
           <Note tone="warn">Taslaktır: her madde şartnameden alıntılanan cümleyle gösterilir; hukuk ve ihale sorumlusu onaylamadan beyan olarak kullanılmaz.</Note>
           <div className="mt-3 grid grid-cols-1 gap-2 lg:grid-cols-3">
             {([['Konu', s.konu], ['Teslim süresi', s.teslimSuresi], ['Teminat', s.teminat]] as Array<[string, Quote | null | undefined]>).map(([lbl, x]) => (
-              <Fact key={lbl} label={lbl} value={x?.deger ?? '—'} help={x?.kaynak ? <q className="italic">{x.kaynak}</q> : undefined} />
+              <Fact key={lbl} label={lbl} value={x?.deger ?? '—'} help={x?.kaynak ? <><q className="italic">{x.kaynak}</q> <ReadingBadge okuma={x.okuma} guven={x.guven} sayfa={x.sayfa} esik={s.okuma?.esik} /></> : undefined} />
             ))}
           </div>
           {([['İstenen belgeler', s.belgeler ?? []], ['Kritik koşullar', s.kosullar ?? []]] as Array<[string, Quote[]]>).map(([lbl, list]) =>
@@ -266,7 +267,8 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
                   {list.map((x, i) => (
                     <li key={i} className="rounded-lg bg-white/80 px-3 py-1.5 text-[12.5px]">
                       <div className="font-semibold">{x.deger}</div>
-                      <q className="text-[11.5px] italic text-canvas-muted">{x.kaynak}</q>
+                      <q className="text-[11.5px] italic text-canvas-muted">{x.kaynak}</q>{' '}
+                      <ReadingBadge okuma={x.okuma} guven={x.guven} sayfa={x.sayfa} esik={s.okuma?.esik} />
                     </li>
                   ))}
                 </ul>
@@ -277,6 +279,7 @@ function Overview({ d, meta, busy }: { d: Detail; meta: TenderMeta; busy: boolea
             {s.dosya ? `Kaynak: ${s.dosya}. ` : ''}{s.parca ? `${s.parca} bölümde okundu. ` : ''}
             {s.atilan ? `${s.atilan} madde şartnamede alıntısı bulunamadığı için atıldı.` : ''}
           </div>
+          <ReadingNote reading={s.okuma} />
         </Panel>
       ) : null}
 

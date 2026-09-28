@@ -11,7 +11,7 @@ import SeoLayout, { Failed, Loading } from './SeoLayout';
  *  «ilgili ürünler» bağlantıları. Karar yalnız kaydedilir; onaylananlar CSV ile T-soft'a elle girilir. */
 
 type View = 'eklenecek' | 'yetimler' | 'hepsi';
-type Tier = 'emsal' | 'tema' | 'yazar' | 'dizi' | 'elle';
+type Tier = 'emsal' | 'tema' | 'yazar' | 'dizi' | 'elle' | 'anlam';
 type Suggestion = {
   id: string;
   code: string | null;
@@ -26,6 +26,13 @@ type Suggestion = {
   inlinks: number | null;
   orphan: boolean;
   weak: boolean;
+};
+/** Kurala ek aday: kitap benzerliği dizininde özeti anlamca yakın, satıştaki kitaplar (sıra; puan yok). */
+type Meaning = {
+  hazir: boolean;
+  not?: string | null;
+  kaynak?: string;
+  items: Array<{ id: string; code: string | null; name: string | null; url: string; author: string | null; sales: number; reasonText: string; sira: number }>;
 };
 type Decision = {
   status: 'onaylandi' | 'reddedildi';
@@ -72,7 +79,7 @@ type Similar = {
     withSuggestions: number;
     emsalLinks: number;
     emsalOnSale: number;
-    tiers: Record<Exclude<Tier, 'elle'>, number>;
+    tiers: Record<Exclude<Tier, 'elle' | 'anlam'>, number>;
     excluded: { baski: number; set: number };
     graphKnown: boolean;
     crawledSources: number;
@@ -87,8 +94,8 @@ type Similar = {
 };
 
 const PAGE = 30;
-const TIER_TONE: Record<Tier, string> = { emsal: 'violet', tema: 'good', yazar: '', dizi: '', elle: 'mid' };
-const TIER_SHORT: Record<Tier, string> = { emsal: 'Emsal', tema: 'Tema', yazar: 'Yazar', dizi: 'Dizi', elle: 'Elle' };
+const TIER_TONE: Record<Tier, string> = { emsal: 'violet', tema: 'good', yazar: '', dizi: '', elle: 'mid', anlam: 'mid' };
+const TIER_SHORT: Record<Tier, string> = { emsal: 'Emsal', tema: 'Tema', yazar: 'Yazar', dizi: 'Dizi', elle: 'Elle', anlam: 'Anlam' };
 
 const api = {
   list: (p: { view: View; q: string; start: number; limit: number }) => call<Similar>(`similar?${qs(p)}`),
@@ -96,6 +103,7 @@ const api = {
   decide: (id: string, body: { action: 'approve' | 'reject'; targets: string[]; note: string }) =>
     call<Row>(`similar/${encodeURIComponent(id)}/decide`, { method: 'POST', body }),
   csv: () => `${ENGINE_BASE}/api/v1/seo-geo/similar/export.csv`,
+  one: (id: string) => call<{ meaning?: Meaning }>(`similar/${encodeURIComponent(id)}`),
 };
 
 export default function SeoSimilar() {
@@ -228,7 +236,10 @@ function Book({ row, perBook, canApprove }: { row: Row; perBook: number; canAppr
     onSuccess: () => qc.invalidateQueries({ queryKey: ['seo-similar'] }),
   });
   const toggle = (id: string) => setPicked((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
-  const manual = picked.filter((id) => !row.suggestions.some((x) => x.id === id));
+  const [showMeaning, setShowMeaning] = useState(false);
+  const meaning = useQuery({ queryKey: ['seo-similar-meaning', row.id], queryFn: () => api.one(row.id), enabled: ENGINE_ENABLED && showMeaning, retry: false });
+  const meaningItems = meaning.data?.meaning?.items ?? [];
+  const manual = picked.filter((id) => !row.suggestions.some((x) => x.id === id) && !meaningItems.some((x) => x.id === id));
   const addExtra = () => {
     const code = extra.trim();
     if (code && !picked.includes(code)) setPicked((p) => [...p, code]);
@@ -302,6 +313,49 @@ function Book({ row, perBook, canApprove }: { row: Row; perBook: number; canAppr
           : `Kitap başına en çok ${fmt(perBook)} öneri.`}
         {row.excluded.length > 0 && ` Elenen emsal: ${row.excluded.map((e) => `${e.name ?? e.id} (${e.why === 'baski' ? 'aynı kitabın baskısı' : 'set bağı'})`).join(', ')}.`}
       </p>
+
+      <div style={{ marginTop: 8 }}>
+        {!showMeaning ? (
+          <button className="sg-button" onClick={() => setShowMeaning(true)}>
+            Özeti anlamca yakın kitapları göster
+          </button>
+        ) : meaning.isLoading ? (
+          <small style={{ color: 'var(--sg-muted)' }}>Yükleniyor…</small>
+        ) : meaning.error ? (
+          <small style={{ color: '#9b1c24' }}>{(meaning.error as Error).message}</small>
+        ) : !meaningItems.length ? (
+          <small style={{ color: 'var(--sg-muted)' }}>{meaning.data?.meaning?.not ?? 'Kurala ek, anlamca yakın satıştaki kitap bulunamadı.'}</small>
+        ) : (
+          <>
+            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--sg-ink)' }}>Kurala ek aday: özeti anlamca yakın</div>
+            <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {meaningItems.map((x) => (
+                <li key={x.id} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', border: '1px dashed var(--sg-line)', borderRadius: 12, padding: '8px 10px', minWidth: 0 }}>
+                  {canApprove && (
+                    <input
+                      type="checkbox"
+                      checked={picked.includes(x.id)}
+                      onChange={() => toggle(x.id)}
+                      aria-label={`${x.name ?? x.id} listeye ekle`}
+                      style={{ width: 18, height: 18, marginTop: 2, flex: 'none' }}
+                    />
+                  )}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                      <span className="sg-chip mid">{x.sira}. Anlam</span>
+                      <a href={x.url} target="_blank" rel="noreferrer" style={{ fontSize: 13, fontWeight: 700, overflowWrap: 'anywhere' }}>{x.name || x.code}</a>
+                    </div>
+                    <div style={{ fontSize: 11.5, color: 'var(--sg-muted)', marginTop: 2, overflowWrap: 'anywhere' }}>
+                      {x.reasonText} · <span className="sg-mono">{x.code}</span> · {fmt(x.sales)} satış
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            {meaning.data?.meaning?.kaynak && <p style={{ margin: '6px 0 0', fontSize: 11, color: 'var(--sg-muted)' }}>{meaning.data.meaning.kaynak}</p>}
+          </>
+        )}
+      </div>
 
       {canApprove && (
         <div className="sg-decide" style={{ position: 'static', marginTop: 10 }}>

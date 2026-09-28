@@ -282,7 +282,10 @@ function Files({ c, meta }: { c: Candidate; meta: RecruitMeta }) {
     mutationFn: (f: File) => recruitApi.addFile(c.id, f),
     onSuccess: (r) => {
       const n = Object.values(r.maskCounts).reduce((a, b) => a + b, 0);
-      toast.success(n ? `Özgeçmiş yüklendi; ${n} kişisel bilgi maskelendi.` : 'Özgeçmiş yüklendi.');
+      const ocr = r.okuma?.ocrSayfa.length
+        ? ` ${r.okuma.ocrSayfa.length} sayfa taranmış görüntüden okundu (OCR)${r.okuma.enDusukGuven != null ? `, en düşük güven %${Math.round(r.okuma.enDusukGuven * 100)}` : ''}.`
+        : '';
+      toast.success((n ? `Özgeçmiş yüklendi; ${n} kişisel bilgi maskelendi.` : 'Özgeçmiş yüklendi.') + ocr);
       refresh();
     },
     onError: (e) => toast.error(errText(e, 'Dosya yüklenemedi.')),

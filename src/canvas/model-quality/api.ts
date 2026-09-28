@@ -224,6 +224,20 @@ const qs = (o: Record<string, string | number | undefined | null>) => {
   return s ? `?${s}` : '';
 };
 
+/** Başarısız soru kümesi (öneri 20): anlamca yakın başarısız sorular; Zeki AI sınıf önerir, onay insanda. */
+export type Cluster = {
+  id: string; size: number; distinctTexts: number; samples: string[];
+  ruleClasses: Array<{ klass: string; label: string; count: number }>;
+  suggested: string | null; suggestedLabel: string | null; probability: number | null; margin: number | null;
+  method: string; confident: boolean; status: 'oneri' | 'onaylandi' | 'reddedildi'; statusLabel: string;
+  decidedKlass: string | null; decidedLabel: string | null; decidedBy: string | null; decidedAt: string | null;
+  builtAt: string | null; windowDays: number; note: string | null;
+};
+export type ClusterJob = { running: boolean; startedAt: string | null; finishedAt: string | null; error: string | null;
+  result: { clusters: number; questions: number; singletons: number; asked: number; stopped: string | null; note?: string } | null };
+export type ClusterList = { items: Cluster[]; builtAt: string | null; method: string; job: ClusterJob; canDecide: boolean;
+  classes: Array<{ klass: string; label: string }> };
+
 export const mqApi = {
   meta: () => send<Meta>('GET', '/meta'),
   scorecard: (days?: number) => send<Scorecard>('GET', `/scorecard${qs({ days })}`, undefined, 300_000),
@@ -246,6 +260,10 @@ export const mqApi = {
     ),
   feedback: (b: { queryId: string; verdict: Verdict; comment?: string }) =>
     send<{ ok: boolean; verdict: Verdict; verdictLabel: string; message: string; comment: string | null }>('POST', '/feedback', b),
+  clusters: (status = 'oneri') => send<ClusterList>('GET', `/clusters${qs({ status })}`),
+  buildClusters: (days?: number) => send<{ started: boolean; job: ClusterJob }>('POST', `/clusters/build${qs({ days })}`),
+  decideCluster: (id: string, b: { action: 'onayla' | 'reddet'; klass?: string; note?: string }) =>
+    send<{ id: string; status: string; klass?: string; written: number }>('POST', `/clusters/${enc(id)}/decide`, b),
   mine: (queryId: string) =>
     send<{ feedback: { verdict: Verdict; comment: string | null; triageLabel: string } | null }>('GET', `/feedback/mine${qs({ queryId })}`),
 };

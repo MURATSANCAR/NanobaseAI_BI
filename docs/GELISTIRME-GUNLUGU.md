@@ -75,6 +75,41 @@
 - **Sunucuda kalan:** pytest `test_marketing.py test_editorial_applications.py test_field_sales.py test_http_forbidden.py
   test_tenders.py test_readers.py test_access.py`; M15 PDF ucu, `M30/write_check.py --write-one` (+ cleanup), `M33/kabul.py`,
   `H2/iys-fark.sql` sonra `H2/kabul.py` R5, `m1/market_ref.py "Tarih Kitaplığı"`.
+## 2026-09-28 — Zeki AI ortak yapı taşı 4 (belge okuma + OCR), 5 (kitap benzerliği), öneri 9·10·20 (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+Dal `worktree-agent-a6bd66ac8a466f437` (ortak yapı taşları 1·2·3·6 dalının ucu `f3ad750e` üstü). Sunucuya bağlanılmadı;
+Mac'te yalnız `py_compile`.
+
+- **Neden:** `docs/analiz/ai-firsatlari/README.md` «ortak yapı taşları» 4–5 ve «en değerli 20» 9, 10, 20. Taranmış
+  şartname/özgeçmiş «metin okunamadı» hatası veriyordu (`tenders.py`, `hr_recruit_text.py`), sektör raporunda taranmış
+  sayfa elle giriliyordu; emsal/benzer kitap hep ortak sözcükle aranıyordu; «sınıflanamadı» sorular tek tek okunuyordu.
+- **Belge okuma (4 + öneri 10):** `doc_read.py` tek giriş; köprü metin katmanını kendisi okur, yalnız metinsiz sayfa ve
+  görüntü GPU'ya gider. Okuyucu: editörde 22 Eylül'de 39 zor sayfada ölçülerek seçilen OCR takma adı (models.yaml 99–104);
+  yeni kart ucu `POST /v1/read` (`portal_read.py`) aynı gateway'den, **defter kaydı yok** (özgeçmiş kişisel veri),
+  dosya diske yazılmaz. Güven: modelin token olasılıklarının geometrik ortalaması (vermezse «ölçülemedi»); eşik
+  `DOC_READ_LOW_CONFIDENCE` yalnız işaretler, metni atmaz. Alıntı denetimi aynen: M33 maddesi belgede birebir yoksa
+  atılır; bulunursa sayfası ve okuma türü maddeye yazılır. Karar: servis yoksa/düşerse sayfa «okunamadı» kalır ve neden
+  yazılır (sessiz boş geçiş yok). M44'te kargo faturası yükleme ucu yok → bağlanmadı.
+- **VM:** TT GPU nginx beyaz listesine `/editor/cards/v1/read` location'ı gerekir; kalıp `docs/analiz/ai-firsatlari/
+  BELGE-OKUMA.md`'de, **üretime uygulanmadı** (paylaşılan kaynak, kullanıcı onayı).
+- **Kitap benzerliği (5 + öneri 9):** `book_similarity.py`, tablo `semantic_book_embeddings`. Karar: yazar adı gömme
+  metnine girmez (aynı yazar zaten başka yoldan bulunuyor; gömme konu için). Artımlı: metin özeti değişmeyen kitap
+  gömülmez; gömme modeli değişirse boyut uyarısı + `?sifirdan=1`. numpy varsa matris, yoksa saf Python. Benzerlik yalnız
+  sıralama; ekranda sıra + kurallı gerekçe (ortak kitaplık/kategori/tür/tema), puan yok; satış her ekranın kendi SQL'i.
+  M15: CRM emsali olmayan kitaba «Emsal adayları»; seçim insanda (aday CRM kartına emsal girilir; portal CRM'e yazmaz).
+  M39: sözcük sırası ile anlam sırası karşılıklı sıra toplamıyla (k=60) birleşir; dizin yoksa eski sıra birebir. SEO:
+  kurala ek «Anlam» adayı onay listesine eklenebilir (karar ucu satıştaki ürünü zaten kabul ediyordu, gerekçe korunur).
+  M1: başvuru adı + tür + kitaplık + maskeli özetle «Konusu anlamca yakın kitaplar».
+- **Soru kümeleri (öneri 20):** `model_quality_clusters.py`; aynı metin birleşir, sıralı öncü kümeleme (deterministik),
+  tek soruluk küme gösterilmez; sınıf önerisi `QueuedLlm.choose` (etkin sınıflar + «Hiçbiri»), olasılık/marj eşiği; onay
+  kümedeki her soruya insan sınıfı yazar, kural tablosu değişmez. `classified_items` artık `klassSource` (insan/kume/kural).
+- **Testler:** `test_doc_read.py`, `test_book_similarity.py`, `test_model_quality_clusters.py`, `apps/editor/tests/
+  test_portal_read.py`, vitest `components/reading.test.ts`.
+- **Sunucuda kalan:** pytest (check.sh listesi) + tsc + vitest + derleme; editör kart imajının yeniden kurulumu ve
+  `test_portal_read.py`; köprü kurulumu; `timas-book-similar.service/timer` kurulup **önce elle** koşturulması (ilk dizin
+  uzun; bitene kadar run-due tekrarı); kabul `scripts/acceptance/zeki-ortak-belge-benzerlik/` (R1–R10) + temizlik;
+  VM için nginx location (onayla). Açık: OCR güveninin doğruluğu ölçülmedi (eşik 0,80 varsayım); küme benzerlik eşiği
+  0,82 ve M39 anlam aday sayısı 30 ölçülmedi — kabulde gerçek sorularla ayarlanmalı.
 
 ## 2026-09-28 (11:55) — NanobaseAI Destek son gözden geçirme: canlı bildirim hiç çalışmıyordu, masaüstünde marka artıkları
 

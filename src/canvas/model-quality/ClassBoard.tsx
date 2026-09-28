@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { ChevronLeft } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
-import { Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
+import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Pager, Panel } from '../editorial/kit';
-import { VERDICT_TONE, fmtAt, mqApi, type Meta, type QualityClass } from './api';
+import { VERDICT_TONE, fmtAt, mqApi, type Cluster, type Meta, type QualityClass } from './api';
 import { Empty, WeekBars, weekLabels } from './parts';
 
 /** Hata sınıfları: sınıf başına soru sayısı ve 4 haftalık eğilim. Tek soruyu değil sınıfı düzeltmek için
@@ -56,6 +57,7 @@ export default function ClassBoard({ meta, selected, onSelect }: { meta: Meta; s
               </tbody>
             </TableWrap>
           </Panel>
+          <Clusters />
           <Rules classes={d.classes} />
         </>
       )}
@@ -147,5 +149,98 @@ function ClassQuestions({ meta, klass, onBack }: { meta: Meta; klass: string; on
         )}
       </Panel>
     </>
+  );
+}
+
+/** Başarısız soru kümeleri: anlamca yakın başarısız sorular bir arada; Zeki AI her kümeye sınıf önerir (olasılıkla),
+ *  onaylayan kişi kümeyi bir sınıfla onaylar ya da reddeder. Onay kümedeki soruları o sınıfta saydırır; kural değişmez. */
+function Clusters() {
+  const qc = useQueryClient();
+  const q = useQuery({
+    queryKey: ['mq', 'clusters'],
+    queryFn: () => mqApi.clusters(),
+    enabled: ENGINE_ENABLED,
+    refetchInterval: (query) => (query.state.data?.job.running ? 5000 : false),
+  });
+  const build = useMutation({
+    mutationFn: () => mqApi.buildClusters(),
+    onSuccess: (r) => {
+      toast.success(r.started ? 'Kümeleme başladı.' : 'Kümeleme zaten sürüyor.');
+      void qc.invalidateQueries({ queryKey: ['mq', 'clusters'] });
+    },
+    onError: (e) => toast.error(errText(e, 'Kümeleme başlatılamadı.')),
+  });
+  const d = q.data;
+  const job = d?.job;
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <h3 className="text-[13px] font-extrabold">Başarısız soru kümeleri</h3>
+          <p className="text-[11.5px] leading-snug text-canvas-muted">{d?.method ?? 'Anlamca yakın başarısız sorular bir arada gösterilir.'}</p>
+        </div>
+        {d?.canDecide && (
+          <button type="button" className={btnGhost} disabled={build.isPending || job?.running} onClick={() => build.mutate()}>
+            {job?.running ? 'Kümeleniyor…' : 'Yeniden kümele'}
+          </button>
+        )}
+      </div>
+      {q.error && <Note tone="err">{errText(q.error, 'Kümeler okunamadı.')}</Note>}
+      {job?.error && <Note tone="err">Son kümeleme yarım kaldı: {job.error}</Note>}
+      {job?.result && !job.running && (
+        <p className="mt-1 text-[11.5px] text-canvas-muted">
+          {job.result.note ?? `${job.result.clusters} küme, ${job.result.questions} soru; tek soruluk ${job.result.singletons} soru kümeye girmedi.`}
+          {job.result.stopped ? ` ${job.result.stopped}` : ''}
+        </p>
+      )}
+      {d && !d.items.length && !job?.running && <Empty>Onay bekleyen küme yok.{d.canDecide ? ' «Yeniden kümele» ile son pencerenin başarısız soruları kümelenir.' : ''}</Empty>}
+      <ul className="mt-2 flex flex-col gap-2">
+        {d?.items.map((c) => <ClusterCard key={c.id} c={c} classes={d.classes} canDecide={d.canDecide} />)}
+      </ul>
+    </Panel>
+  );
+}
+
+function ClusterCard({ c, classes, canDecide }: { c: Cluster; classes: Array<{ klass: string; label: string }>; canDecide: boolean }) {
+  const qc = useQueryClient();
+  const [klass, setKlass] = useState(c.suggested ?? '');
+  const decide = useMutation({
+    mutationFn: (action: 'onayla' | 'reddet') => mqApi.decideCluster(c.id, { action, klass: action === 'onayla' ? klass : undefined }),
+    onSuccess: (r) => {
+      toast.success(r.status === 'onaylandi' ? `${r.written} soru sınıflandı.` : 'Küme reddedildi.');
+      void qc.invalidateQueries({ queryKey: ['mq'] });
+    },
+    onError: (e) => toast.error(errText(e, 'Karar kaydedilemedi.')),
+  });
+  const p = c.probability != null ? `%${Math.round(c.probability * 100)}` : null;
+  return (
+    <li className="rounded-xl border border-slate-100 bg-white/80 p-3">
+      <div className="flex flex-wrap items-center gap-1.5 text-[12px]">
+        <Pill tone="muted">{c.size} soru</Pill>
+        {c.distinctTexts < c.size && <span className="text-canvas-muted">{c.distinctTexts} farklı yazım</span>}
+        {c.suggestedLabel ? (
+          <Pill tone={c.confident ? 'violet' : 'warn'}>
+            Zeki AI önerisi: {c.suggestedLabel}{p ? ` · ${p}` : ''}{c.confident ? '' : ' · emin değil'}
+          </Pill>
+        ) : (
+          <Pill tone="muted">{c.method === 'yok' ? 'Öneri yok (model bağlı değil)' : 'Öneri yok'}</Pill>
+        )}
+      </div>
+      <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-[12px] leading-snug">
+        {c.samples.map((s) => <li key={s} className="break-words">{s}</li>)}
+      </ul>
+      <p className="mt-1 text-[11px] text-canvas-muted">Kuralın verdiği: {c.ruleClasses.map((r) => `${r.label} (${r.count})`).join(' · ')}</p>
+      {c.note && <p className="mt-0.5 text-[11px] text-amber-800">{c.note}</p>}
+      {canDecide && (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <select value={klass} onChange={(e) => setKlass(e.target.value)} className={`${field} w-full sm:w-auto`} aria-label="Küme sınıfı">
+            <option value="">Sınıf seçin</option>
+            {classes.map((k) => <option key={k.klass} value={k.klass}>{k.label}</option>)}
+          </select>
+          <button type="button" className={btnPrimary} disabled={!klass || decide.isPending} onClick={() => decide.mutate('onayla')}>Sınıfla onayla</button>
+          <button type="button" className={btnGhost} disabled={decide.isPending} onClick={() => decide.mutate('reddet')}>Reddet</button>
+        </div>
+      )}
+    </li>
   );
 }

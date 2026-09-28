@@ -306,6 +306,69 @@ def emsal_section(eng: Any, detail: dict[str, Any], pub: Optional[str]) -> dict[
             "kaynak": "İlk baskı tahmini veri kümesi: CRM emsal bağı ve Logo aylık net satış (iade düşülmüş)."}
 
 
+def emsal_candidates(engine: Any, tenant: str, eng: Any, card_: dict[str, Any], n: int = 10, *,
+                     similar: Optional[Callable[..., dict[str, Any]]] = None) -> dict[str, Any]:
+    """Emsali girilmemiş kitaba **emsal adayı** (ortak yapı taşı 5): katalogda özeti/kategorisi/teması anlamca en yakın
+    kitaplar. Benzerlik yalnız sıralamadır; ilk 3/6/12 ay net adet kartın emsal tablosuyla aynı kaynaktan (ilk baskı
+    tahmini veri kümesi, Logo aylık net satış). Seçimi insan yapar: aday CRM kartına emsal olarak girilince karne
+    yenilenir ve «CRM emsali» olarak görünür. Portal CRM'e yazmaz."""
+    from semantic_bridge import book_similarity as BS
+
+    em = card_.get("emsal") or {}
+    k = card_.get("kitap") or {}
+    stok = k.get("stokKodu")
+    out: dict[str, Any] = {"gerekli": not em.get("crmEmsalSayisi"), "items": [], "kaynak": BS.SOURCE_NOTE}
+    if not out["gerekli"]:
+        out["not"] = "CRM'de emsal girilmiş; aday önerilmez."
+        return out
+    have = [x.get("stokKodu") for x in em.get("items") or [] if x.get("stokKodu")]
+    base_fn = similar or BS.similar_books
+
+    def fn(*a: Any, **kw: Any) -> dict[str, Any]:
+        try:
+            return base_fn(*a, **kw)
+        except BS.SimilarityError as e:
+            return {"hazir": False, "items": [], "not": str(e)}
+
+    res = fn(engine, tenant, stok_kodu=stok, n=n, suzgec={"haric": have + ([stok] if stok else []), "stokluOlsun": True})
+    if not res.get("hazir") and not res.get("items"):
+        # Kitap dizinde yoksa (yeni kart, özet sonradan girilmiş) kartın kendi metniyle sorulur
+        text = " ".join(x for x in [k.get("ad") or ""] + [m["metin"] for m in card_.get("metinler") or []
+                                                          if m.get("alan") in ("new_ozet", "new_kitapspotu")] if x)
+        if text.strip():
+            res = fn(engine, tenant, metin=text, n=n, suzgec={"haric": have + ([stok] if stok else []), "stokluOlsun": True,
+                                                              "baglam": {"kitaplik": k.get("kitaplik"), "turler": k.get("turler")}})
+    out["hazir"] = bool(res.get("hazir"))
+    if res.get("not"):
+        out["not"] = res["not"]
+    ds = getattr(eng, "ds", None)
+    for r in res.get("items") or []:
+        code = r.get("stokKodu")
+        o = ds.outcomes.get(code) if ds is not None and code else None
+        months = list(o.months) if o else []
+        bk = ds.books.get(code) if ds is not None and code else None
+        out["items"].append({**{kk: r.get(kk) for kk in ("sira", "stokKodu", "ad", "yazar", "kitaplik", "gerekce")},
+                             "lansman": _launch_of(bk), "ilk3": _sum_first(months, 3), "ilk6": _sum_first(months, 6),
+                             "ilk12": _sum_first(months, 12), "gozlenenAy": len(months)})
+    out["satisKaynagi"] = "İlk baskı tahmini veri kümesi: Logo aylık net satış (iade düşülmüş), ilk yayın ayından itibaren."
+    try:
+        from semantic_bridge.management import ilk_baski as IB
+        from semantic_bridge.management import sql_text
+
+        out["sql"] = sql_text(IB.REPORT_ID, "logo_aylik_kanal")
+    except Exception:  # noqa: BLE001 — SQL metni okunamazsa kaynak cümlesi kalır
+        out["sql"] = None
+    if ds is None:
+        out["not"] = (out.get("not") + " " if out.get("not") else "") + "İlk baskı tahmini veri kümesi hazır değil; satış sütunları boş."
+    return out
+
+
+def _launch_of(bk: Any) -> Optional[str]:
+    from semantic_bridge.management import ilk_baski_model as M
+
+    return M.ms(bk.launch) if bk is not None and getattr(bk, "launch", None) is not None else None
+
+
 def author_section(engine: Any, eng: Any, detail: dict[str, Any]) -> dict[str, Any]:
     """Yazarın diğer kitapları: ilk 12 ay (M10) ve yıllık net adet/ciro (M46 Logo önbelleği)."""
     from semantic_bridge.management import ilk_baski_model as M

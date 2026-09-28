@@ -240,6 +240,23 @@ def book_proofing(book_id: UUID):
                          'group':r['grp'],'confidence':_num(r['confidence']),'marks':r['marks'],
                          'decision':decisions.get(str(r['id']))} for r in rows]}
 
+# ------------------------------------------------------------------ portal belge okuma (editor.portal_read)
+@app.post('/v1/read')
+async def portal_document_read(file: UploadFile = File(...), ocr: str = Form(default='auto'), pages: str = Form(default='')):
+    """Portalın yüklediği belgenin (PDF ya da görüntü) sayfa sayfa metni: metin katmanı varsa o, yoksa OCR.
+    Sayfa: {page, text, source: text|ocr|none, confidence, reasons}. Dosya diske yazılmaz, model defterine
+    içerik yazılmaz (özgeçmiş gibi kişisel belge). `ocr=off`: yalnız katman. `pages`: OCR yalnız bu sayfalarda (1,3,7)."""
+    from . import portal_read as PR
+    data=await file.read()
+    try:
+        only=[int(x) for x in pages.split(',') if x.strip()] if pages.strip() else None
+    except ValueError:
+        raise HTTPException(422,'pages: virgülle ayrılmış sayfa numaraları olmalı') from None
+    try:
+        return await PR.read(data,file.filename or 'belge',ocr=(ocr or 'auto').lower()!='off',only_pages=only)
+    except PR.ReadError as e:
+        raise HTTPException(422,str(e)) from None
+
 # ------------------------------------------------------------------ belge incelemesi (editor.document_review)
 @app.post('/v1/documents')
 async def document_upload(file: UploadFile = File(...), title: str = Form(default=''), audience: str = Form(default=''),

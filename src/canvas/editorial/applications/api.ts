@@ -337,6 +337,7 @@ export const applicationsApi = {
     send<AppDetail>('POST', `${A}/${enc(id)}/decision`, { action, note }, 30_000),
   reopen: (id: string, note: string) => send<AppDetail>('POST', `${A}/${enc(id)}/reopen`, { note }, 30_000),
   overlap: (id: string) => send<{ items: OverlapItem[]; words: string[] }>('GET', `${A}/${enc(id)}/overlap`, undefined, 120_000),
+  similar: (id: string) => send<SimilarBooks>('GET', `${A}/${enc(id)}/similar`, undefined, 120_000),
   linkCrm: (id: string, projectId: string) => send<AppDetail>('POST', `${A}/${enc(id)}/crm-project`, { projectId }, 60_000),
   startReport: (id: string, refresh = false) => send<{ status: string }>('POST', `${A}/${enc(id)}/report`, { refresh }, 30_000),
   report: (id: string) => send<ReportResponse>('GET', `${A}/${enc(id)}/report`, undefined, 30_000),
@@ -359,4 +360,13 @@ export const boardApi = {
   decide: (id: string, appId: string, b: { decision: string; note?: string; printRun?: string; price?: string; royalty?: string; publishOn?: string }) =>
     send<{ ok: boolean; decision: string | null; status?: string }>('POST', `${S}/${enc(id)}/decisions/${enc(appId)}`, b, 30_000),
   close: (id: string) => send<{ ok: boolean; postponed: number }>('POST', `${S}/${enc(id)}/close`, {}, 30_000),
+};
+
+/** Katalogda anlamca benzer kitaplar (kitap benzerliği dizini): sıra ve kurallı gerekçe; puan ve rakam yok. */
+export type SimilarBooks = {
+  hazir: boolean;
+  not?: string;
+  kaynak: string;
+  ozetVar?: boolean;
+  items: Array<{ sira: number; kitapId: string; stokKodu: string | null; ad: string; yazar: string | null; kitaplik: string | null; gerekce: string[] }>;
 };

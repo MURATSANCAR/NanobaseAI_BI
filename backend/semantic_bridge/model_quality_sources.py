@@ -445,11 +445,19 @@ def classified_items(engine: sa.engine.Engine, tenant: str, ds: str, since: date
     flagged = {f["query_id"]: f for f in fb if f["verdict"] in ("kismen", "yanlis")}
     rows = failing_rows(engine, tenant, ds, since, tuple(flagged))
     classes = MQ.load_classes(engine)
+    from semantic_bridge import model_quality_clusters as MC
+
+    cluster_class = MC.human_classes(engine, tenant)     # başarısız soru kümesinden insanın onayladığı sınıf
     out = []
     for r in rows:
         f = flagged.get(r["id"])
-        klass = (f or {}).get("klass") or MQ.classify(MQ.evidence_from_log(r), classes)
-        out.append({"queryId": r["id"], "question": r.get("question"), "klass": klass,
+        if (f or {}).get("klass"):
+            klass, how = f["klass"], "insan"
+        elif r["id"] in cluster_class:
+            klass, how = cluster_class[r["id"]], "kume"
+        else:
+            klass, how = MQ.classify(MQ.evidence_from_log(r), classes), "kural"
+        out.append({"queryId": r["id"], "question": r.get("question"), "klass": klass, "klassSource": how,
                     "source": "geri-bildirim" if f else "kayit", "at": r.get("created_at"),
                     "answerType": r.get("answer_type"), "verdict": (f or {}).get("verdict"),
                     "username": r.get("username")})

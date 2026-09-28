@@ -372,16 +372,19 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if not fid:
             raise HTTPException(400, detail={"code": "TENDER", "message": "Önce şartname dosyasını yükleyin."})
         name, data = call(_file_bytes, engine, tenant, tid, fid)
-        text = call(T.document_text, name, data)
+        if T._ext(name) not in ("pdf", "png", "jpg", "jpeg", "tif", "tiff", "webp"):
+            call(T.document_text, name, data)       # desteklenmeyen tür hemen söylenir; PDF/görüntü okuması işin içinde
         choose = chooser()
         cfg = T.settings()
 
         def work(progress):
-            summary = T.summarize_text(text, chat, cfg, progress)
+            # Ortak belge okuma hattı: taranmış sayfalar OCR'la okunur (dakikalar sürebilir, bu yüzden işin içinde).
+            text, reading = T.document_reading(name, data)
+            summary = T.summarize_text(text, chat, cfg, progress, reading=reading)
             summary["dosya"] = name
             classify = T.classify_notice((summary.get("konu") or {}).get("deger") or d["konu"], choose)
             applied = T.apply_summary(engine, tenant, user, tid, summary, classify, choose)
-            return {**applied, "atilan": summary["atilan"], "parca": summary["parca"]}
+            return {**applied, "atilan": summary["atilan"], "parca": summary["parca"], "okuma": summary.get("okuma")}
 
         out = call(T.start_job, engine, tenant, user, tid, "ozet", work)
         audit(engine, user, "run", "tender", tid, d["kurum"], {"is": "şartname özeti", "dosya": name})

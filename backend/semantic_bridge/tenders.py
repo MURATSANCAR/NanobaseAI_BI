@@ -777,8 +777,25 @@ def extract_rows(filename: str, data: bytes) -> list[list[Any]]:
     raise TenderError("Kalem listesi Excel (.xlsx), CSV, metin, Word (.docx) ya da PDF olmalı.")
 
 
+def document_reading(filename: str, data: bytes):
+    """Şartname özetinin girdisi, ortak belge okuma hattıyla (`doc_read`): PDF'in metin katmanı, taranmış sayfalar OCR;
+    görüntü dosyası (JPG/PNG/TIFF) da okunur. Dönen: (düz metin, okuma) — okuma sayfa/OCR/güven bilgisini taşır."""
+    from semantic_bridge import doc_read as DR
+
+    ext = _ext(filename)
+    if ext in ("pdf",) + tuple(DR.IMAGES):
+        try:
+            reading = DR.read(filename, data, allowed=("pdf",) + tuple(DR.IMAGES))
+        except DR.ReadError as e:
+            raise TenderError(str(e), e.status) from None
+        return reading.text(), reading
+    text = document_text(filename, data)
+    return text, DR.Reading(filename=filename, pages=[{"sayfa": "1", "metin": text,
+                                                        "okuma": DR.METIN if text.strip() else DR.YOK, "guven": None}])
+
+
 def document_text(filename: str, data: bytes) -> str:
-    """Şartname özetinin girdisi: dosyanın düz metni."""
+    """Şartname özetinin girdisi: dosyanın düz metni (yalnız metin katmanı; taranmış sayfa için `document_reading`)."""
     ext = _ext(filename)
     if ext == "pdf":
         return pdf_text(data)
@@ -1756,12 +1773,16 @@ def _quote_ok(value: str, quote: str, text_fold: str) -> bool:
 
 
 def summarize_text(text: str, chat: Callable[[list[dict[str, str]]], str], cfg: dict[str, Any],
-                   progress: Callable[[int, int], None]) -> dict[str, Any]:
+                   progress: Callable[[int, int], None], reading: Any = None) -> dict[str, Any]:
     """Şartname özeti: metin parçalara bölünür (sessiz kesme yok), her parça için kaynak cümleli JSON istenir; alıntısı
-    belgede bulunmayan ya da alıntıda olmayan sayı içeren madde atılır ve sayılır."""
+    belgede bulunmayan ya da alıntıda olmayan sayı içeren madde atılır ve sayılır. `reading` (ortak belge okuma)
+    verilirse her maddenin alıntısının bulunduğu sayfa ve okuması (metin/OCR) maddeye yazılır; OCR'dan gelen madde
+    ekranda «OCR» etiketiyle görünür, alıntı denetimi OCR metninde aynen uygulanır."""
     text = (text or "").strip()
     if not text:
-        raise TenderError("Şartname dosyasından metin okunamadı (taranmış görüntü olabilir).")
+        why = " ".join(getattr(reading, "errors", None) or [])
+        raise TenderError("Şartname dosyasından metin okunamadı. " + (why or "Taranmış görüntü olabilir; belge okuma "
+                                                                          "servisi bağlıysa yeniden deneyin."))
     size = cfg["summaryChunk"]
     chunks = [text[i:i + size] for i in range(0, len(text), size)]
     tf = fold(text)
@@ -1796,6 +1817,24 @@ def summarize_text(text: str, chat: Callable[[list[dict[str, str]]], str], cfg: 
                     continue
                 out[name].append({"deger": str(v["deger"])[:300], "kaynak": str(v["kaynak"])[:600]})
         progress(n, len(chunks))
+    if reading is not None:
+        from semantic_bridge import doc_read as DR
+
+        def mark(item: Optional[dict[str, Any]]) -> None:
+            if not item:
+                return
+            hit = DR.find_quote(item.get("kaynak"), reading)
+            if hit:
+                item["sayfa"], item["okuma"] = hit["sayfa"], hit["okuma"]
+                if hit["okuma"] == DR.OCR:
+                    item["guven"] = hit.get("guven")
+
+        for key in ("konu", "teslimSuresi", "teminat"):
+            mark(out[key])
+        for key in ("belgeler", "kosullar"):
+            for item in out[key]:
+                mark(item)
+        out["okuma"] = reading.summary()
     return out
 
 

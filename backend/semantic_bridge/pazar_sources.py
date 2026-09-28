@@ -20,7 +20,8 @@
 ekran bunu her yerde yazar.
 
 **Yüklenen dosya:** PDF'in metin katmanı sayfa sayfa (`pypdf`), Excel'de her çalışma sayfası, CSV/metin tek parça.
-Taranmış (metinsiz) PDF sayfası «metin yok» diye işaretlenir; görüntüden okuma ikinci sürüm.
+Taranmış (metinsiz) PDF sayfası yüklemede «metin yok» diye sayılır; rakam çıkarımında ortak belge okuma hattıyla
+(`doc_read`, OCR) okunur (`read_scanned`), rakam yine OCR metninde birebir aranır ve ekranda «OCR» etiketiyle görünür.
 """
 from __future__ import annotations
 
@@ -302,6 +303,31 @@ def _decode(data: bytes) -> str:
         except UnicodeDecodeError:
             continue
     return data.decode("utf-8", errors="replace")
+
+
+def read_scanned(filename: str, data: bytes, pages: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Metni olmayan PDF sayfalarını ortak belge okuma hattıyla (OCR) doldurur. Dönen: (sayfalar, ilerleme ekleri)
+    — `ocrSayfa` (OCR'la okunan sayfalar), `ocrGuven` (sayfa → güven), `okumaHatasi` (servis yoksa ya da düştüyse).
+    Okunamayan sayfa boş metinle kalır ve çıkarımda «metinsiz» sayılır; sessizce atlanmaz."""
+    from semantic_bridge import doc_read as DR
+
+    try:
+        reading = DR.read(filename, data, allowed=("pdf",))
+    except DR.ReadError as e:
+        return pages, {"okumaHatasi": str(e)}
+    by = {p["sayfa"]: p for p in reading.pages}
+    out = []
+    for p in pages:
+        r = by.get(p["sayfa"])
+        if not (p["metin"] or "").strip() and r and r["okuma"] == DR.OCR:
+            out.append({**p, "metin": r["metin"], "okuma": DR.OCR, "guven": r.get("guven")})
+        else:
+            out.append(p)
+    extra: dict[str, Any] = {"ocrSayfa": reading.ocr_pages,
+                             "ocrGuven": {p["sayfa"]: p.get("guven") for p in reading.pages if p["okuma"] == DR.OCR}}
+    if reading.errors:
+        extra["okumaHatasi"] = " ".join(reading.errors)
+    return out, extra
 
 
 def pages_of(filename: str, data: bytes) -> list[dict[str, Any]]:

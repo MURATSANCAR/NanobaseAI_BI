@@ -7175,6 +7175,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M39 Pazar araştırması ve rekabet (Analiz): /api/v1/pazar/*.
     from semantic_bridge import pazar_api
     app.state.pazar = pazar_api.register(app, rt, _require_caller, _can)
+    # Ortak yapı taşı 5: kitap benzerliği dizini (/api/v1/books/similar/*); arama modüllerin kendi uçlarından.
+    from semantic_bridge import book_similarity_api
+    app.state.book_similarity = book_similarity_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing

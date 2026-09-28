@@ -1,0 +1,11 @@
+[Unit]
+Description=Kitap benzerliği dizini (ortak yapı taşı 5): CRM kitap özetleri → gömme dizini, artımlı (yalnız metni değişen kitap)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/books/similar/run-due); bu birim yalnız çağırır. CRM'e yazılmaz. Süre bütçesi
+# BOOK_SIMILAR_SECONDS (varsayılan 3000 sn); bitmeyen kitaplar sonraki gece. İlk kurulum uzun sürer: önce elle
+# koşturulur (bellek: run-it-before-it-runs-itself): systemctl start timas-book-similar.service
+ExecStart=/bin/sh -c 'curl -fsS -m 3590 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/books/similar/run-due'

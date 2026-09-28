@@ -532,6 +532,52 @@ def _row_view(r: dict[str, Any], decision: Optional[dict[str, Any]]) -> dict[str
     return {**r, "decision": d}
 
 
+def meaning_candidates(sim: "Similar", pid: str, taken: set[str], n: int = SUGGESTIONS_PER_BOOK) -> dict[str, Any]:
+    """Kurala ek aday (ortak yapı taşı 5): kitap benzerliği dizininde bu ürünün CRM kitabına özeti anlamca en yakın,
+    satışta olan kitaplar. Kurallı öneriye girmiş, aynı barkodlu ya da kendisi olan ürün çıkarılır. Onaylayan isterse
+    listeye ekler (karar ucu «elle eklenen» gibi satıştaki ürünü kabul eder); gerekçe «özeti anlamca yakın»."""
+    from semantic_bridge import book_similarity as BS
+
+    tenant = sim.seo.tenant()
+    site = sim.site()
+    with sim.engine().connect() as c:
+        prows = c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.code, PRODUCTS.c.name, PRODUCTS.c.data_json).where(
+            PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.active.is_(True))).all()
+        books = {ean: bid for ean, bid in c.execute(sa.select(CRM_BOOKS.c.ean, CRM_BOOKS.c.book_id).where(
+            CRM_BOOKS.c.tenant_id == tenant))}
+    by_ean: dict[str, dict[str, Any]] = {}
+    me = None
+    for p_id, code, name, dj in prows:
+        p = loads(dj, {})
+        ean = crm.ean_key(p.get("Barcode"))
+        item = {"id": p_id, "code": code, "name": name or rules.text_of(p.get("ProductName")), "url": _product_url(p, site),
+                "author": rules.text_of(p.get("Model")) or None, "sales": _num(p.get("CountTotalSales")), "ean": ean}
+        if p_id == pid:
+            me = item
+        if ean and ean not in by_ean:
+            by_ean[ean] = item
+    if me is None or not me.get("ean") or me["ean"] not in books:
+        return {"items": [], "hazir": False, "not": "Bu ürünün CRM kitap kartı barkodla bulunamadı."}
+    book_of = {_id(bid): ean for ean, bid in books.items()}
+    try:
+        res = BS.similar_books(sim.engine(), tenant, kitap_id=books[me["ean"]], n=max(n * 4, n))
+    except BS.SimilarityError as e:
+        return {"items": [], "hazir": False, "not": str(e)}
+    out = []
+    for r in res.get("items") or []:
+        ean = book_of.get(_id(r["kitapId"]))
+        t = by_ean.get(ean or "")
+        if not t or t["id"] in taken or t["id"] == pid or t.get("ean") == me.get("ean") or same_title(me.get("name"), t.get("name")):
+            continue
+        out.append({"id": t["id"], "code": t.get("code"), "name": t.get("name"), "url": t["url"], "author": t.get("author"),
+                    "sales": t.get("sales") or 0, "reason": "anlam",
+                    "reasonText": "Özeti anlamca yakın" + ("" if r["gerekce"] == ["özet benzerliği"] else " · " + ", ".join(r["gerekce"])),
+                    "sira": len(out) + 1})
+        if len(out) >= n:
+            break
+    return {"items": out, "hazir": bool(res.get("hazir")), "not": res.get("not"), "kaynak": BS.SOURCE_NOTE}
+
+
 def register(app, ctx) -> None:
     sim = Similar(ctx.seo)
     ctx.seo.similar = sim
@@ -609,8 +655,10 @@ def register(app, ctx) -> None:
         if not r and not d:
             raise _err(404, "Bu kitap için öneri yok (satışta değil, CRM'de uyarılı ya da benzer kitap bulunamadı).")
         if not r:
-            return {"id": pid, "suggestions": [], "excluded": [], "decision": d, "perBook": SUGGESTIONS_PER_BOOK}
-        return {**_row_view(r, d), "perBook": SUGGESTIONS_PER_BOOK}
+            return {"id": pid, "suggestions": [], "excluded": [], "decision": d, "perBook": SUGGESTIONS_PER_BOOK,
+                    "meaning": meaning_candidates(sim, pid, set())}
+        return {**_row_view(r, d), "perBook": SUGGESTIONS_PER_BOOK,
+                "meaning": meaning_candidates(sim, pid, {x["id"] for x in r["suggestions"]})}
 
     @app.post("/api/v1/seo-geo/similar/{pid}/decide")
     def seo_similar_decide(pid: str, body: SimilarDecision, request: Request) -> dict[str, Any]:
@@ -646,6 +694,14 @@ def register(app, ctx) -> None:
                 missing = [i for i in extra if i not in known]
                 if missing:
                     raise _err(422, "Satışta bulunamayan ürün: " + ", ".join(missing))
+                try:  # anlam benzerliği adayından seçildiyse gerekçesi korunur
+                    mean = {x["id"]: x for x in meaning_candidates(sim, pid, set(sugg))["items"]}
+                except Exception:  # noqa: BLE001
+                    mean = {}
+                for i in extra:
+                    m = mean.get(known[i]["id"])
+                    if m:
+                        known[i] = {**known[i], "reason": "anlam", "reasonText": m["reasonText"]}
             for i in ids:
                 x = sugg.get(i) or known[i]
                 targets.append({k: x.get(k) for k in ("id", "code", "name", "url", "reason", "reasonText", "linked")})

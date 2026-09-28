@@ -347,7 +347,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.post(B + "/comparables")
     async def pazar_comparables(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = await run_in_threadpool(ctx, request)
-        out = await run_in_threadpool(call, P.comparables, engine, tenant, body, chooser(False))
+        from semantic_bridge import book_similarity as BS
+
+        def neighbors(base_id: Optional[str], q: str, n: int) -> dict[str, Any]:
+            """Kitap benzerliği dizini (ortak yapı taşı 5): TİMAŞ kitabından başlandıysa onun vektörü, yoksa konu cümlesi."""
+            res = BS.similar_books(engine, tenant, kitap_id=base_id, n=n) if base_id else {"hazir": False}
+            if not res.get("hazir") and q.strip():
+                res = BS.similar_books(engine, tenant, metin=q, n=n)
+            return res
+
+        out = await run_in_threadpool(call, P.comparables, engine, tenant, body, chooser(False), neighbors)
         audit(engine, user, "run", "pazar_comparables", body.get("crmKitapId"), "Emsal arama",
               {"q": str(body.get("q") or "")[:120], "rakip": len(out["rakip"]), "timas": len(out["timas"]), **out["counts"]})
         return out
@@ -435,8 +444,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         prog: dict[str, Any] = {"sayfa": 0, "toplam": 0, "rakam": 0, "atilan": 0, "metinsiz": 0, "baslangic": P.iso(P.now())}
         try:
             path, name, _ = P.report_file(engine, tenant, rid)
-            pages = src.pages_of(name, Path(path).read_bytes())
+            data = Path(path).read_bytes()
+            pages = src.pages_of(name, data)
             prog["toplam"] = len(pages)
+            if src.ext_of(name) == "pdf" and any(not (p["metin"] or "").strip() for p in pages):
+                # Taranmış sayfalar ortak belge okuma hattından (OCR); rakamlar yine OCR metninde birebir aranır.
+                P.set_report_state(engine, tenant, rid, "cikariliyor", {**prog, "adim": "Taranmış sayfalar okunuyor"})
+                pages, ocr = src.read_scanned(name, data, pages)
+                prog.update(ocr)
             chat = chatter(4000)
             if chat is None:
                 raise P.PazarError("Zeki AI bu kurulumda tanımlı değil; rakamları elle girebilirsiniz.")

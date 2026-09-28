@@ -141,6 +141,8 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
         )}
       </Block>
 
+      {!em.crmEmsalSayisi && <EmsalCandidatesBlock stok={stok} />}
+
       <Block title={`Yazarın diğer kitapları${c.yazar.yazar ? ` · ${c.yazar.yazar}` : ''}`} help="Yıllık net adet ve net ciro Logo faturalı satıştır.">
         {c.yazar.not && <Note tone="info">{c.yazar.not}</Note>}
         {c.yazar.items.length ? (
@@ -246,5 +248,56 @@ export default function CardTab({ stok, meta }: { stok: string; meta: Meta }) {
         )}
       </Block>
     </div>
+  );
+}
+
+/** Emsal adayı (CRM'de emsal girilmemişse): katalogda özeti, kategorisi ve teması anlamca en yakın kitaplar. Sıra
+ *  benzerliktir, puan gösterilmez; satış sütunları emsal tablosuyla aynı kaynaktan. Seçim insanda: aday CRM kartına
+ *  emsal olarak girilince karne yenilenir. */
+function EmsalCandidatesBlock({ stok }: { stok: string }) {
+  const q = useQuery({ queryKey: ['mkt', 'emsal-adaylari', stok], queryFn: () => mktApi.emsalCandidates(stok), enabled: ENGINE_ENABLED, retry: false });
+  return (
+    <Block
+      title="Emsal adayları (özet benzerliği)"
+      help="CRM'de bu kitaba emsal girilmemiş. Katalogda arka kapak metni, kitaplığı, kategorisi ve teması anlamca en yakın kitaplar sırayla listelenir; emsal seçimi sizindir."
+    >
+      {q.isLoading ? (
+        <Loading />
+      ) : q.error ? (
+        <Note tone="err">{errText(q.error, 'Adaylar okunamadı.')}</Note>
+      ) : !q.data?.items.length ? (
+        <Note tone="info">{q.data?.not ?? 'Aday bulunamadı.'}</Note>
+      ) : (
+        <>
+          {q.data.not && <Note tone="info">{q.data.not}</Note>}
+          <TableWrap>
+            <thead>
+              <tr className="border-b border-slate-100">
+                <th className={th}>Sıra</th><th className={th}>Kitap</th><th className={th}>Neden yakın</th><th className={th}>Lansman</th>
+                <th className={`${th} text-right`}>İlk 3 ay</th><th className={`${th} text-right`}>İlk 6 ay</th><th className={`${th} text-right`}>İlk 12 ay</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.items.map((e) => (
+                <tr key={e.stokKodu} className="border-b border-slate-50 last:border-0">
+                  <td className={`${td} font-mono tabular-nums`}>{e.sira}</td>
+                  <td className={td}>
+                    <div className="max-w-[280px] font-semibold leading-snug">{e.ad}</div>
+                    <div className="text-[11px] text-canvas-muted">{[e.yazar, e.stokKodu].filter(Boolean).join(' · ')}</div>
+                  </td>
+                  <td className={`${td} text-[11px] text-canvas-muted`}><div className="max-w-[240px]">{e.gerekce.join(' · ')}</div></td>
+                  <td className={`${td} whitespace-nowrap`}>{e.lansman ?? '—'}</td>
+                  <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(e.ilk3)}</td>
+                  <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(e.ilk6)}</td>
+                  <td className={`${td} text-right font-mono tabular-nums`}>{fmtInt(e.ilk12)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </TableWrap>
+          <p className="mt-2 text-[11px] text-canvas-muted">Aday bir kitabı emsal olarak kullanmak için CRM kitap kartına emsal girin; karne yenilenince «CRM emsali» olarak görünür.</p>
+          <SourceNote text={`${q.data.kaynak} ${q.data.satisKaynagi ?? ''}`} sql={q.data.sql} />
+        </>
+      )}
+    </Block>
   );
 }

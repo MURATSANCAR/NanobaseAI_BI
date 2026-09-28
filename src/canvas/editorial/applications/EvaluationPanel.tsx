@@ -83,6 +83,44 @@ function Overlap({ appId }: { appId: string }) {
           ))}
         </ul>
       )}
+      <SimilarCatalog appId={appId} />
+    </div>
+  );
+}
+
+/** Başlık kelimesi paylaşmasa da konusu anlamca yakın katalog kitapları (başvurunun adı, türü, kitaplığı ve özeti). */
+function SimilarCatalog({ appId }: { appId: string }) {
+  const q = useQuery({
+    queryKey: ['applications', 'similar', appId],
+    queryFn: () => applicationsApi.similar(appId),
+    enabled: ENGINE_ENABLED,
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  if (q.isLoading) return <p className="mt-2 text-[12px] text-canvas-muted">Anlamca benzer kitaplar aranıyor…</p>;
+  if (q.error) return <Note tone="warn">{errMsg(q.error, 'Benzer kitaplar okunamadı.')}</Note>;
+  const d = q.data;
+  if (!d) return null;
+  return (
+    <div className="mt-2.5 border-t border-slate-200 pt-2">
+      <p className="font-bold text-canvas-ink">Konusu anlamca yakın kitaplar</p>
+      {!d.items.length ? (
+        <p className="text-canvas-muted">{d.not ?? 'Benzer kitap bulunamadı.'}</p>
+      ) : (
+        <ol className="mt-1.5 max-h-64 space-y-1 overflow-y-auto overscroll-contain">
+          {d.items.map((x) => (
+            <li key={x.kitapId} className="rounded-lg bg-white px-2 py-1.5">
+              <span className="min-w-0 break-words">
+                <span className="font-mono text-canvas-muted">{x.sira}.</span> <b className="font-extrabold">{x.ad}</b>
+                <span className="text-canvas-muted">{[x.yazar, x.kitaplik].filter(Boolean).map((t) => ` · ${t}`).join('')}</span>
+              </span>
+              <span className="block text-[11px] text-canvas-muted">{x.gerekce.join(' · ')}</span>
+            </li>
+          ))}
+        </ol>
+      )}
+      {d.ozetVar === false && <p className="mt-1 text-[11px] text-canvas-muted">Başvuruda özet yok; benzerlik yalnız ad, tür ve kitaplıktan.</p>}
+      <p className="mt-1 text-[11px] text-canvas-muted">{d.kaynak}</p>
     </div>
   );
 }
