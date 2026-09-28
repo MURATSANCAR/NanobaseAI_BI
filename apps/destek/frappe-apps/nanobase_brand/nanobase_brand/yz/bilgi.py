@@ -1,6 +1,8 @@
 """Bilgi bankası: yayımlanmış makaleler ve çözülen kayıtlar; gömme modeli BI'ın gömme servisi (kapıdan).
 
 `ensure()` kurulumda koşar (nanobase_brand.install.apply); kaynaklar Flow'un günlük eşitlemesiyle güncel kalır.
+Gömme servisi olmayan ortamda (müşteri VM'i: GPU yok, BI'ın gömme servisi yok) site ayarı `nb_bilgi_bankasi_kapali`
+1 yapılır: bilgi bankası kurulmaz, eşitleme işi kuyruğa girmez, arama boş döner (taslak ve benzer kayıtlar aramasız çalışır).
 """
 
 from __future__ import annotations
@@ -17,9 +19,13 @@ SOURCES = [
 ]
 
 
+def kapali() -> bool:
+	return bool(frappe.conf.get("nb_bilgi_bankasi_kapali"))
+
+
 def ensure_embedding_model() -> str | None:
 	"""Gömme modeli sohbet modeliyle aynı uç ve anahtarla (kapı /embeddings'i BI'ın gömme servisine iletir)."""
-	if not frappe.db.exists("Flow Model", "NanobaseAI"):
+	if kapali() or not frappe.db.exists("Flow Model", "NanobaseAI"):
 		return None
 	chat = frappe.get_doc("Flow Model", "NanobaseAI")
 	values = {"enabled": 1, "provider": chat.provider, "model_id": f"{chat.provider}/bge-m3",
