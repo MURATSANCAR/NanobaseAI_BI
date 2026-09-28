@@ -225,7 +225,8 @@ def test_draft_review_and_repair_passes_with_evidence_rule():
 
     def chat(messages):
         system, payload = messages[0]["content"], _json.loads(messages[1]["content"])
-        calls.append(system[:30])
+        kind = "taslak" if "cumleler" in payload else ("onarim" if "sorunlar" in _json.dumps(payload, ensure_ascii=False) else "okuma")
+        calls.append(kind)
         if "cumleler" in payload:                      # 1) taslak: sayı yanlış, deyim kelimesi kelimesine, terim yok
             assert [c["p"] for c in payload["cumleler"]] == [1, 1, 2]
             assert payload["terimler"] == [{"kaynak": "White Rabbit", "hedef": "Beyaz Tavşan"}]
@@ -236,7 +237,14 @@ def test_draft_review_and_repair_passes_with_evidence_rule():
         # 2) ikinci okuma: 2'yi düzeltir; 3'ü bozar (noktalamayı siler) → kanıt kuralı reddeder
         return _json.dumps([{"n": 2, "t": "Aa, Beyaz Tavşan'dı!", "h": "deyim"}, {"n": 3, "t": "Kimse gelmedi", "h": "x"}])
 
-    out, st = T.draft_segments(rows, chat, idx, title="t", src="en", tgt="tr", context=lambda n: "")
+    out, st = T.draft_segments(rows, chat, idx, title="t", src="en", tgt="tr", context=lambda n: "", second_read=True)
     assert out == {"a": "1.000 sikke ödedi.", "b": "Aa, Beyaz Tavşan'dı!", "c": "Kimse gelmedi."}
     assert st["drafted"] == 3 and st["reviewed"] == 1 and st["rejected"] == 1 and st["repaired"] == 1 and st["left"] == 0
-    assert len(calls) == 3
+    assert calls == ["taslak", "okuma", "onarim"]
+
+    # Varsayılan: ikinci okuma kapalı (ölçümde kazanç yoktu) — taslak + onarım, 2 çağrı; «b» taslaktaki hâliyle kalır.
+    calls.clear()
+    out, st = T.draft_segments(rows, chat, idx, title="t", src="en", tgt="tr", context=lambda n: "")
+    assert st["reviewed"] == 0 and st["repaired"] >= 1
+    assert "okuma" not in calls and calls[0] == "taslak"
+    assert out["a"] == "1.000 sikke ödedi." and out["b"] == "Neden, Ak Tavşan'dı!"

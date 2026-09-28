@@ -1125,6 +1125,11 @@ def use_draft(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, j
 #      sorun buluyorsa segment, sorunların adıyla yeniden sorulur (en çok 2 tur).
 # Kanıt kuralı: 2. ve 3. geçişin önerisi yalnız modelsiz uyarı sayısını artırmıyorsa kabul edilir; boş ya da aynı
 # öneri atılır. Taslak yine ayrı sütundadır, hedefe kendiliğinden yazılmaz.
+#
+# İkinci okuma varsayılan olarak KAPALI (`SECOND_READ`): 2026-09-28 ölçümünde (Alice 1. bölüm, 796 kelime, gerçek
+# model) hiçbir cümleyi düzeltmedi; her parçada ek bir model çağrısı harcıyordu. MQM 96,9 → 97,6 artışının tamamı
+# güçlendirilmiş taslak isteğinden geldi. Daha geniş ölçümde kazanç görülürse açılır.
+SECOND_READ = os.environ.get("TRANSLATION_SECOND_READ", "0") in ("1", "true")
 
 DRAFT_SYSTEM = (
     "Sen yayınevinde çalışan deneyimli bir edebî çevirmensin. {src} bir kitabı {tgt} diline çeviriyorsun. "
@@ -1217,7 +1222,7 @@ def _issue_codes(source: str, target: str, index: "TermIndex") -> list[dict[str,
 def draft_segments(rows: list[Any], chat: Callable[[list[dict[str, str]]], str], index: "TermIndex", *,
                    title: str, src: str, tgt: str, context: Callable[[int], str],
                    progress: Callable[[int], None] = lambda n: None, checkpoint: Callable[[dict[str, str]], None] = lambda d: None,
-                   repair_rounds: int = 2) -> tuple[dict[str, str], dict[str, int]]:
+                   repair_rounds: int = 2, second_read: Optional[bool] = None) -> tuple[dict[str, str], dict[str, int]]:
     """Segmentlerin taslağı (kimlik → metin) ve geçiş sayıları. Veritabanına yazmaz; çağıran yazar."""
     names = {"src": LANGS.get(src, src), "tgt": LANGS.get(tgt, tgt)}
     stats = {"drafted": 0, "missed": 0, "reviewed": 0, "repaired": 0, "left": 0, "rejected": 0}
@@ -1259,8 +1264,8 @@ def draft_segments(rows: list[Any], chat: Callable[[list[dict[str, str]]], str],
         step += len(batch)
         progress(step)
         checkpoint(out)
-    # 2) ikinci okuma
-    for batch in batches:
+    # 2) ikinci okuma (varsayılan kapalı; bkz. SECOND_READ)
+    for batch in batches if (SECOND_READ if second_read is None else second_read) else []:
         have = [(i, r) for i, r in enumerate(batch, 1) if r.id in out]
         if have:
             got = ask(REVIEW_SYSTEM, {"eser": title, "terimler": terms_of(batch),
@@ -1316,9 +1321,9 @@ def start_draft(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool,
             if not todo:
                 raise TranslationError("Taslak bekleyen boş segment yok.", 409)
             terms = [t for t in _terms_for(conn, tenant, job) if t.status == "onayli" and t.target_term]
-            # İlerleme iki geçiş üzerinden sayılır (taslak + ikinci okuma); onarım kısa sürer.
+            # İlerleme geçiş sayısıyla ölçülür (taslak, açıksa ikinci okuma); onarım kısa sürer.
             conn.execute(sa.update(JOBS).where(JOBS.c.id == job_id).values(
-                draft_state="calisiyor", draft_note=None, draft_done=0, draft_total=2 * len(todo)))
+                draft_state="calisiyor", draft_note=None, draft_done=0, draft_total=(2 if SECOND_READ else 1) * len(todo)))
         except BaseException:
             _running.discard(job_id)
             raise

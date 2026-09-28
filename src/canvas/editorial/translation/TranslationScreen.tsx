@@ -500,12 +500,12 @@ function JobPanel({ jobId, onDeleted }: { jobId: string; onDeleted: () => void }
         <Panel>
           <h3 className="px-1 text-[13px] font-extrabold">ZEKİ ham taslak</h3>
           <p className="mt-0.5 px-1 text-[11.5px] leading-snug text-canvas-muted">
-            Boş segmentler için terim bankasına uyan ham çeviri. ZEKİ önce çevirir, sonra kendi çevirisini kaynakla karşılaştırıp düzeltir, otomatik denetimin bulduğu sorunları giderir. Taslak hedef metne kendiliğinden yazılmaz; çevirmen segment segment kullanır ya da düzeltir.
+            Boş segmentler için terim bankasına uyan ham çeviri. ZEKİ çevirir; otomatik denetim sayı, terim, yasak karşılık ya da noktalama sorunu bulursa o cümleleri sorunun adıyla yeniden düzelttirir. Taslak hedef metne kendiliğinden yazılmaz; çevirmen segment segment kullanır ya da düzeltir.
           </p>
           {drafting && (
             <div className="mt-2">
               <Note tone="info">
-                Taslak hazırlanıyor: %{pct(j.draft.done, j.draft.total)} (çeviri, sonra ikinci okuma ve otomatik denetimle düzeltme).
+                Taslak hazırlanıyor: %{pct(j.draft.done, j.draft.total)} (çeviri, sonra otomatik denetimin bulduğu sorunların düzeltilmesi).
               </Note>
             </div>
           )}
