@@ -130,6 +130,12 @@ const InfluencerPayouts = lazy(() => import('@/canvas/influencers/Payouts'));
 const CatalogNewsletterHome = lazy(() => import('@/canvas/catalog-newsletter/CatalogNewsletterHome'));
 const CatalogEditor = lazy(() => import('@/canvas/catalog-newsletter/CatalogEditor'));
 const NewsletterEditor = lazy(() => import('@/canvas/catalog-newsletter/NewsletterEditor'));
+const EventsCalendar = lazy(() => import('@/canvas/events/EventsCalendar'));
+const EventsFair = lazy(() => import('@/canvas/events/FairCard'));
+const EventsResult = lazy(() => import('@/canvas/events/FairResult'));
+const EventsCrm = lazy(() => import('@/canvas/events/CrmEvents'));
+const EventsAwards = lazy(() => import('@/canvas/events/Awards'));
+const EventsTypeMap = lazy(() => import('@/canvas/events/TypeMap'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -301,6 +307,13 @@ export default function App() {
             <Route path="katalog-bulten/rapor" element={<CatalogNewsletterHome initial="rapor" />} />
             <Route path="katalog-bulten/katalog/:id" element={<CatalogEditor />} />
             <Route path="katalog-bulten/bulten/:id" element={<NewsletterEditor />} />
+            {/* Pazarlama › Etkinlik: M27 fuar, etkinlik ve ödül (/api/v1/events). */}
+            <Route path="etkinlikler" element={<EventsCalendar />} />
+            <Route path="etkinlikler/fuar/:id" element={<EventsFair />} />
+            <Route path="etkinlikler/fuar/:id/sonuc" element={<EventsResult />} />
+            <Route path="etkinlikler/crm" element={<EventsCrm />} />
+            <Route path="etkinlikler/oduller" element={<EventsAwards />} />
+            <Route path="etkinlikler/tip-eslemesi" element={<EventsTypeMap />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

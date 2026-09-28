@@ -1,0 +1,10 @@
+[Unit]
+Description=Fuar ve etkinlik günlük işi, her gün 07:45
+
+[Timer]
+OnCalendar=*-*-* 07:45:00
+Persistent=true
+Unit=timas-events.service
+
+[Install]
+WantedBy=timers.target

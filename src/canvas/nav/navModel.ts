@@ -48,6 +48,7 @@ import {
   Building2,
   Braces,
   CalendarClock,
+  CalendarRange,
   ChartColumn,
   ClipboardCheck,
   ClipboardList,
@@ -381,6 +382,7 @@ export const NAV: NavGroup[] = [
       // M23: kişi kartı, aday listesi, rapor ve ödemeler /isbirlikleri/* altında; menüde tek öğe.
       { id: 'isbirlikleri', label: 'İşbirlikleri', to: '/isbirlikleri', icon: Handshake, section: 'İletişim', hint: 'İçerik üreticileri, gönderim ve sonuç', keywords: ['influencer', 'içerik üreticisi', 'bookstagram', 'booktube', 'booktok', 'işbirliği', 'brief', 'hediye kitap', 'cpe', 'etkileşim'] },
       { id: 'katalog-bulten', label: 'Katalog ve bülten', to: '/katalog-bulten', icon: BookOpen, section: 'Kampanya', hint: 'Dönemsel katalog ve e-bülten', keywords: ['katalog', 'bülten', 'e-bülten', 'newsletter', 'segment', 'konu satırı', 'bayi kataloğu', 'tasarım paketi', 'iys'] },
+      { id: 'etkinlikler', label: 'Fuar ve etkinlik', to: '/etkinlikler', icon: CalendarRange, section: 'Etkinlik', hint: 'Fuar, imza günü, söyleşi ve ödüller', keywords: ['fuar', 'tüyap', 'imza günü', 'söyleşi', 'etkinlik', 'ödül', 'stant', 'fuar sonucu', 'ajanda'] },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },

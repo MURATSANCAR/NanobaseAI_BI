@@ -7119,6 +7119,20 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
     })
 
+    # M27 Fuar, etkinlik ve ödül: CRM etkinlik/sipariş + Logo fuar kanalı/stok (salt okunur) + portal kayıtları.
+    # Uçlar /api/v1/events/*.
+    from semantic_bridge import events_api
+    app.state.events = events_api.register(app, {
+        "auth": _greetings, "can": _can, "is_admin": admin_mod.is_admin, "audit": admin_mod.audit,
+        "conf": admin_mod.conf, "fresh": FORCE_FRESH.get,
+        "crm_connect": _production_connect(lambda: os.environ.get(
+            "SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")),
+        "logo_connect": _production_connect(lambda: rt().settings.connection_file),
+        "llm": lambda priority: rt().llm_for("etkinlik", _SCHOOLS_BATCH if priority else None),
+        "system": lambda: (rt().store.engine, rt().settings.tenant_id),
+        "require_caller": _require_caller,
+    })
+
     # Pazarlama çekirdeği (M15 yeni kitap planı; M16–M18 aynı pakete eklenir). Uçlar /api/v1/marketing/*.
     from semantic_bridge import marketing
     app.state.marketing = marketing.register(app, rt, _require_caller, _can)

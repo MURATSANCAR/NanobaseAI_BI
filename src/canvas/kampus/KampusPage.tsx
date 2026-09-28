@@ -7,9 +7,7 @@ import {
   Bell,
   BookOpen,
   Bot,
-  Calendar,
   Contact,
-  Flag,
   HeartHandshake,
   LayoutGrid,
   MessageCircle,
@@ -32,6 +30,7 @@ import { categoriesApi } from '../categories/api';
 import { readersApi } from '../readers/api';
 import PersonAvatar from './PersonAvatar';
 import BulletinCard from './BulletinCard';
+import AgendaCard from './AgendaCard';
 import ProfileDialog, { useMyProfile } from './ProfileDialog';
 import RoomsCard from '../rooms/RoomsCard';
 import DbTimingBadge from '../DbTiming';
@@ -382,39 +381,8 @@ export default function KampusPage() {
           {/* SESLİ BÜLTEN — sunucuda üretilen ses (bkz. BulletinCard, Yönetim → Sesli bülten) */}
           <BulletinCard />
 
-          {/* ÖNEMLİ GÜNLER & AJANDA — içerik sonra gerçek takvime bağlanacak */}
-          <Card id="ajanda" className="p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-sky-600" />
-                <h3 className="kp-display text-xs font-bold uppercase tracking-wider text-ink">Önemli Günler &amp; Ajanda</h3>
-              </div>
-              <span className="shrink-0 text-[11px] font-medium text-violet">Takvime Ekle</span>
-            </div>
-            <div className="relative space-y-3.5 border-l-2 border-slate-200/70 pl-3.5 text-xs">
-              <div className="relative">
-                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-sky-600 ring-2 ring-white" />
-                <span className="kp-mono text-[11px] font-semibold uppercase text-sky-700">22 Nisan Pazartesi • 10:00</span>
-                <h4 className="mt-0.5 font-bold text-ink">Dünya Kitap ve Telif Hakları Günü</h4>
-                <p className="text-[11px] text-muted">Genel merkez fuayesinde mini sergi &amp; söyleşi</p>
-              </div>
-              <div className="relative">
-                <div className="absolute -left-[19px] top-1 h-2 w-2 rounded-full bg-violet ring-2 ring-white" />
-                <span className="kp-mono text-[11px] font-semibold uppercase text-violet">26 Nisan Cuma • 15:30</span>
-                <h4 className="mt-0.5 font-bold text-ink">Aylık Yayın Kurulu Değerlendirmesi</h4>
-                <p className="text-[11px] text-muted">Büyük Divan Salonu &amp; Zoom Hibrit</p>
-              </div>
-              <div className="rounded-xl border border-violet/20 bg-violet/5 p-3 text-xs">
-                <div className="flex items-center justify-between gap-2 font-bold text-ink">
-                  <span className="flex items-center gap-1">
-                    <Flag className="h-3.5 w-3.5 text-rose-500" /> TÜYAP Fuarı 2024
-                  </span>
-                  <span className="kp-mono whitespace-nowrap rounded bg-rose-100 px-1.5 py-0.5 text-[11px] text-rose-700">18 Gün</span>
-                </div>
-                <p className="mt-1 text-[11px] text-muted">Stand planı, görev listesi ve yazar imza saatleri ZEKİ AI üzerinden görüntülenebilir.</p>
-              </div>
-            </div>
-          </Card>
+          {/* ÖNEMLİ GÜNLER & AJANDA — M27: sorumlusu olduğum yaklaşan fuar/etkinlik ve görevler (yalnız kendi kayıtlarım) */}
+          <AgendaCard />
         </aside>
 
         {/* ORTA SÜTUN */}

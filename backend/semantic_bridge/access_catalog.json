@@ -301,6 +301,11 @@
       "label": "Katalog ve bülten"
     },
     {
+      "key": "sayfa:etkinlikler",
+      "area": "pazarlama",
+      "label": "Fuar ve etkinlik"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1825,6 +1830,28 @@
       "label": "Bülten segment sayacı",
       "hint": "CRM'deki izinli kişi sayısını ve izin dağılımını görme (yalnız sayı; kişi listesi portalda hiç gösterilmez)",
       "explicit": true
+    },
+    {
+      "key": "ozellik:etkinlik.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:etkinlikler",
+      "label": "Fuar ve etkinlik kartı hazırlama",
+      "hint": "Fuar/etkinlik kartı, kitap ve adet önerisi, görev ekleme, gider ve fiş, yazar programı, CRM etkinlik tipi eşlemesi"
+    },
+    {
+      "key": "ozellik:etkinlik.onay",
+      "area": "pazarlama",
+      "page": "sayfa:etkinlikler",
+      "label": "Fuar katılım kararı ve bütçe onayı",
+      "hint": "Karar bekleyen fuar/etkinlik kartını bütçesiyle onaylama (kartı açan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:odul.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:etkinlikler",
+      "label": "Ödül defteri ve başvurular",
+      "hint": "Ödül kaydı (son tarih, koşul), kitap başvurusu, başvuru metni ve sonuç"
     }
   ]
 }

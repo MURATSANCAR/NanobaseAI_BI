@@ -735,6 +735,31 @@ gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m22/ru
   eşlemesinin isabeti.
 - **DOĞRULANAMADI:** sunucuya bağlanılmadı; yalnız `py_compile` ve JSON denetimi yapıldı. pytest/tsc/vitest ve gerçek DB kabulü
   koordinatörde (`scripts/acceptance/M24/check.sh`, `kabul.py`, `cleanup.py`). Test verisi yazılmadı.
+## 2026-09-28 — M27 Fuar, etkinlik ve ödül yönetimi (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-a2024553149e97c68` (main `7aa83b6a` üstü). Sunucuya bağlanılmadı; yerelde yalnız `py_compile` ve JSON
+  doğrulaması. pytest (`test_events.py`), tsc, vitest, derleme ve gerçek DB kabulü (`scripts/acceptance/M27/`) koordinatörde.
+- **Köprü:** `events.py`, `events_sources.py`, `events_api.py`; `app.py`'de tek kayıt bloğu, `access.py`'de üç sayfa kuralı + dört
+  işlem kuralı, `access_catalog.json`'da `sayfa:etkinlikler`, `ozellik:etkinlik.duzenle`, `ozellik:etkinlik.onay` (explicit),
+  `ozellik:odul.duzenle`. Zamanlayıcı `scripts/server/timas-events.{service,timer}` (07:45).
+- **Ekran:** `src/canvas/events/` (takvim, fuar kartı, sonuç, CRM etkinlikleri, ödüller, tip eşlemesi); rota `App.tsx`, menü
+  Pazarlama › Etkinlik, Kampüs «Tüm modüller» M27. Kampüs ajanda kartı gerçek veriye bağlandı (`AgendaCard.tsx`): sabit
+  «Dünya Kitap Günü / Yayın Kurulu / TÜYAP Fuarı 2024» yer tutucuları silindi.
+- **Kararlar (10. bölümdeki açık sorular, veriye/koda bakılarak):**
+  - *371 tipin hangisi fuar:* eşleme bir **ayar ekranı** (`/etkinlikler/tip-eslemesi`, tablo `semantic_events_type_map`).
+    Zeki AI kapalı küme seçimiyle öneri yazar (olasılıkla); takvim ve kabul yalnız insan kararını kullanır. Gerekçe: tip adları
+    dağınık (satış ziyareti ağırlıklı), yanlış sınıf 57 bin ziyareti takvime döker.
+  - *Fuar satışı fuar başına ayrı cari mi:* ölçülmedi → kart başına **cari seçimi** (fuar kanalının cari listesinden); seçilmezse
+    aynı günlerin bütün kanal satışı sayılır ve raporda uyarı yazılır.
+  - *Sipariş sayımı:* tip 4/5/16 (`EVENTS_ORDER_TYPES`), İptal (100000001) ve Birleştirildi (100000003) hariç
+    (`EVENTS_ORDER_EXCLUDED_STATUS`; birleşen sipariş hedefte ikinci kez sayılırdı) — ölçülecek.
+  - *Gider:* CRM'de neredeyse boş (C10) → portalda tür + tutar + isteğe bağlı fiş fotoğrafı; sonuçta CRM gideri ayrıca eklenir.
+  - *Adet önerisi:* rakam kuralla (geçmiş fuar × katsayı, yeni çıkanlar ortanca × katsayı, stok işareti); katsayılar ayar, ölçülecek.
+  - *Dış gönderim yok:* hatırlatmalar ekranda ve Kampüs ajandasında (e-posta yok).
+- **Sonraki sürüm (yapılmadı):** set/bundle önerisi, stant/materyal brief'i, ödül başvuru metni ve İngilizce hak kataloğu taslağı,
+  katılım öncelik puanı.
+- **Sunucuda kalan:** kurulum sonrası `check.sh`; `kabul.py` (salt okunur) ve `--write`; `cleanup.py`; tip eşlemesi için
+  «Zeki AI önerisi al» bir kez ve uzmanla karar; `timas-events.service` elle bir kez, sonra zamanlayıcı; telefon düzeni kontrolü.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
