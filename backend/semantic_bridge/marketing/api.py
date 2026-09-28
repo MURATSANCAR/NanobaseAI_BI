@@ -5,8 +5,10 @@ dışa aktarım `ozellik:veri.disa-aktar`. Açıkça verilen yetkiler ucun için
 `ozellik:pazarlama.plan-onay`, eşik üstü bütçe `ozellik:pazarlama.butce-ust-onay`, materyalin editoryal onayı
 `ozellik:pazarlama.materyal-editoryal-onay`. Bütçe tutarları `ozellik:pazarlama.butce-gor` olmayan kişiye gitmez.
 
-Zamanlayıcı (`timas-marketing.timer`) yalnız `POST /api/v1/marketing/run-due`'yu çağırır.
+Zamanlayıcı (`timas-marketing.timer`) yalnız `POST /api/v1/marketing/run-due`'yu çağırır; M18'in günlük işi (15'inde
+ay taslağı, föy denetimi, hatırlatmalar) oradan kancayla koşar.
 Sözleşme ucu (M16, M18, M19, M20–M23 okur): `GET /api/v1/marketing/contract/plans`.
+M18 aylık plan ve satış föyü uçları `monthly_api.py`'de (`/months/*`, `/foy*`, `/contract/month/*`).
 """
 from __future__ import annotations
 
@@ -63,6 +65,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     pool = ThreadPoolExecutor(max_workers=max(1, int(os.environ.get("MARKETING_JOB_WORKERS", "2"))), thread_name_prefix="marketing")
     started = {"stale": False}
     lock = threading.Lock()
+    #: Modül kancaları (M18 aylık plan ve föy): günlük iş ve meta ekleri. M16/M17 de aynı yolla bağlanır.
+    hooks: dict[str, list[Any]] = {"run_due": [], "meta": []}
 
     def st() -> dict[str, Any]:
         return P.settings(admin_mod.conf)
@@ -135,7 +139,12 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, display = ctx(request)
         s = st()
         last = C.meta_get(engine, tenant, "run-due")
+        extra: dict[str, Any] = {}
+        for fn in hooks["meta"]:
+            extra.update(fn(user))
+        me_extra = extra.pop("meExtra", {})
         return {
+            **extra,
             "channels": C.CHANNELS, "statuses": C.STATUSES, "kinds": C.KINDS, "materials": {k: v[0] for k, v in C.MATERIALS_KINDS.items()},
             "materialStatuses": C.MATERIAL_STATUSES, "taskStatuses": C.TASK_STATUSES, "dateSources": C.DATE_SOURCES,
             "settings": {"horizonDays": s["horizonDays"], "noPlanDays": s["noPlanDays"], "materialDays": s["materialDays"],
@@ -146,7 +155,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             "modelReady": getattr(rt(), "llm", None) is not None,
             "me": {"username": user, "display": display, "canWrite": can(user, F_WRITE), "canSeeBudget": can(user, F_BUDGET),
                    "canApprove": can(user, F_APPROVE), "canUpperApprove": can(user, F_UPPER),
-                   "canEditorial": can(user, F_EDITORIAL), "canExport": can(user, F_EXPORT)},
+                   "canEditorial": can(user, F_EDITORIAL), "canExport": can(user, F_EXPORT), **me_extra},
         }
 
     @app.get(R + "/new-books")
@@ -529,7 +538,23 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             except (SourceError, C.MarketingError) as e:
                 errors.append(f"{p['id']}: {e}")
         out["karne"] = {"tazelenen": refreshed, "hata": errors}
+        # M18 (aylık plan taslağı, föy denetimi, hatırlatmalar) aynı zamanlayıcıyla koşar; biri düşerse diğeri sürer.
+        for fn in hooks["run_due"]:
+            try:
+                out.update(fn(engine, tenant, force))
+            except Exception as e:  # noqa: BLE001 — zamanlayıcı işi yarıda kalmasın, hata sonuçta görünsün
+                log.exception("marketing run-due hook failed")
+                out.setdefault("kancaHata", []).append(str(e)[:300])
         C.meta_set(engine, tenant, "run-due", out)
         return out
+
+    # M18 Aylık pazarlama planı ve satış föyü: aynı yardımcılarla /months, /foy uçları.
+    from types import SimpleNamespace
+
+    from semantic_bridge.marketing import monthly_api
+
+    monthly_api.register(app, rt, SimpleNamespace(
+        ctx=ctx, call=call, need=need, db=db, crm=crm, pool=pool, audit=audit, link=link, can=can, conf=admin_mod.conf,
+        notify=notify, send_mail=_send_mail, hooks=hooks, admin=admin_mod, require_caller=require_caller))
 
     return {"crm": crm, "pool": pool}

@@ -111,6 +111,10 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/ceviri/masam/abc')).toBe('ceviri-masam');
     expect(at('/kurumsal-satis/firsat/abc')).toBe('kurumsal-satis'); // M32 fırsat sayfası → Kurumsal ve B2B
     expect(at('/pazarlama/yeni-kitap')).toBe('pazarlama-yeni-kitap');
+    expect(at('/pazarlama/aylik-plan')).toBe('pazarlama-aylik');
+    expect(at('/pazarlama/aylik-plan/2026-11')).toBe('pazarlama-aylik'); // ay seçili adres → Aylık plan
+    expect(at('/pazarlama/foy')).toBe('pazarlama-foy');
+    expect(at('/pazarlama/foy/15201.0001')).toBe('pazarlama-foy'); // föy sayfası → Satış föyleri
     expect(at('/pazarlama/plan/MP-2026-0001')).toBe('pazarlama-yeni-kitap'); // plan ekranı → Yeni kitap planı
     expect(at('/pazarlama/set-hediye/set/MS-2026-0001')).toBe('pazarlama-set-hediye'); // M53 set ekranı → Set ve hediye
     expect(at('/pazarlama/set-hediye/teklif/KT-2026-0001')).toBe('pazarlama-set-hediye');

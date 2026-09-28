@@ -201,6 +201,94 @@ def email_sql(schema: str, user: str) -> str:
             f"WHERE IsDisabled = 0 AND DomainName LIKE N'%\\{u}'")
 
 
+# ------------------------------------------------------------------ M18: ay planı ve föy
+
+
+def campaigns_sql(schema: str, frm: date, to: date) -> str:
+    """Ay ile kesişen etkin CRM kampanyaları (B2B/CRM mecrası, ek iskonto, planlanan/gerçekleşen ciro, ürün sayısı).
+    Tarihler UTC saklanır: sınırlar İstanbul gününe çevrildi."""
+    p = prefix(schema)
+    lo, hi = _utc_bound(frm), _utc_bound(to + timedelta(days=1))
+    return f"""
+-- Ay ile kesişen CRM kampanyaları (yalnız okuma).
+SELECT c.new_kampanyaId AS id, c.new_name AS ad, CAST(c.new_tip AS int) AS tip,
+       CAST(DATEADD(HOUR, 3, c.new_baslangictarihi) AS DATE) AS baslangic,
+       CAST(DATEADD(HOUR, 3, c.new_bitistarihi) AS DATE) AS bitis,
+       CAST(c.new_kampanyamecra AS int) AS mecra, c.new_ekiskonto AS ek_iskonto, c.new_netiskonto AS net_iskonto,
+       COALESCE(c.new_planlananciro_Base, c.new_planlananciro) AS planlanan_ciro,
+       COALESCE(c.new_gerceklesenciro_Base, c.new_gerceklesenciro) AS gerceklesen_ciro,
+       (SELECT COUNT(*) FROM {p}new_new_kampanya_productBase AS x WHERE x.new_kampanyaid = c.new_kampanyaId) AS urun_sayisi
+FROM {p}new_kampanyaBase AS c
+WHERE c.statecode = 0 AND c.new_baslangictarihi < '{hi}' AND c.new_bitistarihi >= '{lo}'""".strip()
+
+
+def all_special_days_sql(schema: str) -> str:
+    """Etkin özel günlerin tamamı ve her birine bağlı etkin kitap sayısı (tarih yöntemi SEO sezon takvimiyle aynı)."""
+    p = prefix(schema)
+    return f"""
+-- CRM özel günleri ve bağlı kitap sayısı (yalnız okuma).
+SELECT o.new_ozelgunlerId AS id, o.new_name AS ad, o.new_ozelgunhafta1 AS hafta1, o.new_ozelgunlerhafta2 AS hafta2,
+       CAST(DATEADD(HOUR, 3, o.new_Tarih) AS DATE) AS tarih,
+       (SELECT COUNT(*) FROM {p}new_new_kitap_new_ozelgunlerBase AS l
+        JOIN {p}new_kitapBase AS k ON k.new_kitapId = l.new_kitapid AND k.statecode = 0
+        WHERE l.new_ozelgunlerid = o.new_ozelgunlerId) AS kitap_sayisi
+FROM {p}new_ozelgunlerBase AS o
+WHERE o.statecode = 0""".strip()
+
+
+def _values(codes: list[str]) -> str:
+    return ", ".join("(N'" + code(c) + "')" for c in codes)
+
+
+def foy_books_sql(schema: str, codes: list[str]) -> str:
+    """Föy alanları (CRM kitap kartı): künye, fiyat, barkod, hedef kitle, tanıtım metinleri. Hangi kolonun föyde neye
+    karşılık geldiği `foy.FIELDS`'te."""
+    p = prefix(schema)
+    return f"""
+-- Föy alanları: kitap kartı künyesi, fiyat, barkod, hedef kitle ve tanıtım metinleri (yalnız okuma).
+SELECT k.new_kitapId AS kitap_id, k.new_stokkodu AS stok_kodu,
+       COALESCE(p.[Ürün Adı], k.new_name) AS ad, COALESCE(p.Yazar, k.new_yazartext) AS yazar,
+       COALESCE(p.Yayınevi, k.new_yayineviidName) AS yayinevi, COALESCE(p.Kitaplık, k.new_kitaplikidName) AS kitaplik,
+       COALESCE(p.Dizi_Tür, k.new_diziidName) AS dizi, COALESCE(p.HedefKitle, hk.Value) AS hedef_kitle,
+       k.new_hedefkitleyasbaslangic AS yas_bas, k.new_hedefkitleyasbitis AS yas_bit, k.new_siniflartext AS siniflar,
+       k.new_ean13 AS ean13, k.new_isbn13 AS isbn13, k.new_kdvdahilfiyat AS kdv_dahil_fiyat,
+       k.new_PerakendeBirimFiyat AS perakende_fiyat, p.Üzeri_Fiyat AS uzeri_fiyat, k.new_FyinTaslakFiyat AS foy_taslak_fiyat,
+       COALESCE(NULLIF(p.SayfaSayısı, 0), NULLIF(k.new_sayfasayisi, 0)) AS sayfa, k.new_Ebat AS ebat,
+       COALESCE(cs.Value, k.new_KapakveCilt) AS cilt, k.new_resimurl AS kapak,
+       CAST(DATEADD(HOUR, 3, k.new_ilkyayintarihi) AS DATE) AS ilk_yayin,
+       k.new_TantmFyMetni AS new_TantmFyMetni, k.new_tanitimfoymetni AS new_tanitimfoymetni,
+       k.new_kitapspotu AS new_kitapspotu, k.new_ozet AS new_ozet,
+       k.new_kitabinonecikanyanlari AS new_kitabinonecikanyanlari,
+       k.new_editorunkitabaveyazaradairgorusleri AS new_editorunkitabaveyazaradairgorusleri
+FROM {p}new_kitap AS k
+JOIN (VALUES {_values(codes)}) AS kod(k) ON kod.k = k.new_stokkodu
+LEFT JOIN {p}powerbikitap AS p ON p.StokKodu = k.new_stokkodu
+{_HK.format(p=p)}
+LEFT JOIN {p}StringMapBase AS cs ON cs.AttributeName = 'new_ciltlemesekli' AND cs.AttributeValue = k.new_ciltlemesekli
+      AND cs.LangId = 1055 AND cs.ObjectTypeCode = (SELECT ObjectTypeCode FROM {p}EntityView WHERE Name = 'new_kitap')
+WHERE k.statecode = 0""".strip()
+
+
+#: CRM «Satış Hedefleri» yıl seçenek değeri (tablo sözlüğü 2026-09-09: 1=2023, 2=2024, 3=2025, 100000000=2026).
+REGION_TARGET_YEAR = {2023: 1, 2024: 2, 2025: 3, 2026: 100000000}
+REGION_MONTH_COLS = ("new_ocak", "new_subat", "new_Mart", "new_Nisan", "new_mayis", "new_Haziran", "new_Temmuz",
+                     "new_agustos", "new_eylul", "new_Ekim", "new_kasim", "new_aralik")
+
+
+def region_targets_sql(schema: str, year_value: int, month: int, codes: list[str]) -> str:
+    """CRM bölge × kitap satış hedefi (adet) o ay için, kitap başına toplam. Yalnız bilgi: M46 hedefiyle ilişkisi
+    ölçülmedi (M46 bu tabloyu okumuyor); iki hedef karıştırılmaz."""
+    p = prefix(schema)
+    col = REGION_MONTH_COLS[month - 1]
+    return f"""
+-- CRM bölge satış hedefleri (bilgi amaçlı; M46 hedefi esastır).
+SELECT t.new_StokKodu AS stok_kodu, SUM(COALESCE(t.{col}, 0)) AS adet, COUNT(DISTINCT t.new_bolge) AS bolge
+FROM {p}new_satishedefleriBase AS t
+JOIN (VALUES {_values(codes)}) AS kod(k) ON kod.k = t.new_StokKodu
+WHERE t.statecode = 0 AND t.new_yil = {int(year_value)}
+GROUP BY t.new_StokKodu""".strip()
+
+
 # ------------------------------------------------------------------ okuma
 
 
@@ -333,6 +421,55 @@ class Crm:
                      "tutar": bsrc._num(r.get("tutar")) or 0.0, "baslangic": _d(r.get("baslangic")),
                      "stokKodu": _s(r.get("stok_kodu"))} for r in self._run(spend_sql(self.schema(), since))]
         return self._cached(("spend", since), fresh, load)
+
+    # ---- M18
+
+    def campaigns(self, frm: date, to: date, fresh: bool = False) -> list[dict[str, Any]]:
+        def load() -> list[dict[str, Any]]:
+            return [{"id": (_s(r.get("id")) or "").lower() or None, "ad": _s(r.get("ad")), "tip": r.get("tip"),
+                     "baslangic": _d(r.get("baslangic")), "bitis": _d(r.get("bitis")), "mecra": r.get("mecra"),
+                     "ekIskonto": bsrc._num(r.get("ek_iskonto")), "netIskonto": bsrc._num(r.get("net_iskonto")),
+                     "planlananCiro": bsrc._num(r.get("planlanan_ciro")), "gerceklesenCiro": bsrc._num(r.get("gerceklesen_ciro")),
+                     "urunSayisi": int(r.get("urun_sayisi") or 0)}
+                    for r in self._run(campaigns_sql(self.schema(), frm, to))]
+        return self._cached(("camp", frm, to), fresh, load)
+
+    def all_special_days(self, fresh: bool = False) -> list[dict[str, Any]]:
+        def load() -> list[dict[str, Any]]:
+            return [{"id": (_s(r.get("id")) or "").lower() or None, "ad": _s(r.get("ad")), "hafta1": r.get("hafta1"),
+                     "hafta2": r.get("hafta2"), "tarih": _d(r.get("tarih")), "kitapSayisi": int(r.get("kitap_sayisi") or 0)}
+                    for r in self._run(all_special_days_sql(self.schema()))]
+        return self._cached(("days",), fresh, load)
+
+    def foy_books(self, codes: list[str], fresh: bool = False) -> dict[str, dict[str, Any]]:
+        """Stok kodu → föy için CRM satırı (ham; `foy.from_crm` yorumlar). Kodlar 500'lük parçalarla okunur, tavan yok."""
+        want = sorted({c for c in codes if c})
+        if not want:
+            return {}
+
+        def load() -> dict[str, dict[str, Any]]:
+            out: dict[str, dict[str, Any]] = {}
+            for i in range(0, len(want), 500):
+                for r in self._run(foy_books_sql(self.schema(), want[i:i + 500])):
+                    k = _s(r.get("stok_kodu"))
+                    if k:
+                        out.setdefault(k, r)  # powerbikitap aynı kodda birden çok satır verebilir: ilki kalır
+            return out
+        return self._cached(("foy", tuple(want)), fresh, load)
+
+    def region_targets(self, year: int, month: int, codes: list[str]) -> Optional[dict[str, dict[str, Any]]]:
+        """Kitap → CRM bölge hedefi (adet, bölge sayısı) o ay. Yıl CRM seçeneğinde yoksa None."""
+        yv = REGION_TARGET_YEAR.get(int(year))
+        want = sorted({c for c in codes if c})
+        if yv is None or not want:
+            return None
+        out: dict[str, dict[str, Any]] = {}
+        for i in range(0, len(want), 500):
+            for r in self._run(region_targets_sql(self.schema(), yv, month, want[i:i + 500])):
+                k = _s(r.get("stok_kodu"))
+                if k:
+                    out[k] = {"adet": bsrc._num(r.get("adet")) or 0.0, "bolge": int(r.get("bolge") or 0)}
+        return out
 
     def email_of(self, user: str) -> Optional[str]:
         if not user:

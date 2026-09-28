@@ -7,6 +7,9 @@ dosya ekleyerek gelir).
 - `guard.py`   — Zeki AI metin denetimi (alıntı birebir, rakam kaynaklı, kanıtsız iddia yok, teknoloji adı yok).
 - `export.py`  — PDF, CSV, yayına hazır paket.
 - `api.py`     — uçlar `/api/v1/marketing/*`.
+- `monthly.py` — M18: aylık plan (takvim, çakışma, yeni kitap / backlist bütçe dağılımı, önceki ay özeti).
+- `foy.py`, `foy_pdf.py` — M18: satış föyü (CRM alanları, fiyat/barkod uyumsuzluğu, onay, paket PDF/zip).
+- `monthly_api.py` — M18 uçları (`/months/*`, `/foy*`), api.register içinden bağlanır.
 
 app.py'de iki satır:
     from semantic_bridge import marketing

@@ -466,8 +466,10 @@ RULES: list[tuple[str, Any]] = [
     # M46 Bütçe. Onaylı hedefleri okuyacak modül (M15/M17/M18/M29/M30) kendi sayfa anahtarını targets/deviations
     # satırlarına ekler; yazma uçları butce sayfasında kalır.
     ("/api/v1/budget/run-due", SYSTEM),
-    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap")})),
-    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap")})),
+    ("/api/v1/budget/targets", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap"),
+                                          page("pazarlama-aylik")})),
+    ("/api/v1/budget/deviations", frozenset({page("butce"), page("ilk-dagilim"), page("saha"), page("pazarlama-yeni-kitap"),
+                                             page("pazarlama-aylik")})),
     ("/api/v1/budget/", frozenset({page("butce")})),
     ("/api/v1/management/first-print/", frozenset({page("ilk-baski")})),
     # M29 İlk dağılım (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
@@ -494,6 +496,13 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/marketing/gift-offers/", frozenset({page("pazarlama-set-hediye")})),
     ("/api/v1/marketing/promo-items", frozenset({page("pazarlama-set-hediye")})),
     ("/api/v1/marketing/run-due", SYSTEM),
+    # M18 Aylık plan ve satış föyü. Föy uçları saha temsilcisine de açık (rolünde yalnız föy sayfası olur); meta üç
+    # sayfanın ortak ekran bilgisidir.
+    ("/api/v1/marketing/months/run-due", SYSTEM),
+    ("/api/v1/marketing/months/", frozenset({page("pazarlama-aylik")})),
+    ("/api/v1/marketing/foy", frozenset({page("pazarlama-foy"), page("pazarlama-aylik")})),
+    ("/api/v1/marketing/meta", frozenset({page("pazarlama-yeni-kitap"), page("pazarlama-aylik"), page("pazarlama-foy")})),
+    ("/api/v1/marketing/contract/month/", frozenset({page("pazarlama-aylik"), page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/contract/", frozenset({page("pazarlama-yeni-kitap")})),
     ("/api/v1/marketing/", frozenset({page("pazarlama-yeni-kitap")})),
     # H1 Kategori ağacı. Sözleşme uçlarını (kitap profili, yürürlükteki ağaç ve düğümün kitapları) M1 başvuru
@@ -617,6 +626,15 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/marketing/gift-offers(/[^/]+(/(letter|submit|withdraw))?)?$",
      "ozellik:set.yaz"),
     (frozenset({"GET"}), r"^/api/v1/marketing/sets/[^/]+/card-todo\.(csv|pdf)$", "ozellik:veri.disa-aktar"),
+    # M18 ay planı: taslağı kurma, kalem düzeltme, bütçe, öneri, onaya gönderme, revizyon (onaylar ucun içinde).
+    (frozenset({"POST", "PUT", "PATCH", "DELETE"}),
+     r"^/api/v1/marketing/months/[^/]+/(build|items(/[^/]+)?|budget|suggest|submit|withdraw|revise)$",
+     "ozellik:pazarlama.plan-yaz"),
+    (frozenset({"GET"}), r"^/api/v1/marketing/months/[^/]+/summary\.pdf$", "ozellik:veri.disa-aktar"),
+    # Satış föyü: düzeltme, CRM'den yenileme, onaya gönderme, Zeki AI argümanı. Föy onayı (`foy-onay`) ve paketi e-postayla
+    # gönderme (`foy-gonder`) açık yetkilerle ucun içinde. Föy PDF'i ve paketi `veri.disa-aktar` istemez (saha işi).
+    (frozenset({"PUT"}), r"^/api/v1/marketing/foy/[^/]+$", "ozellik:pazarlama.foy-yaz"),
+    (frozenset({"POST"}), r"^/api/v1/marketing/foy/[^/]+/(refresh|submit|draft-args)$", "ozellik:pazarlama.foy-yaz"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

@@ -71,6 +71,9 @@ const SetEditor = lazy(() => import('@/canvas/marketing/sets/SetEditor'));
 const GiftOfferEditor = lazy(() => import('@/canvas/marketing/sets/GiftOfferEditor'));
 const CreativeHome = lazy(() => import('@/canvas/marketing/creative/CreativeHome'));
 const CreativeRequest = lazy(() => import('@/canvas/marketing/creative/RequestScreen'));
+const MarketingMonth = lazy(() => import('@/canvas/marketing/monthly/MonthScreen'));
+const MarketingFoyList = lazy(() => import('@/canvas/marketing/monthly/FoyList'));
+const MarketingFoy = lazy(() => import('@/canvas/marketing/monthly/FoyScreen'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -170,6 +173,11 @@ export default function App() {
             {/* Pazarlama › Planlama: M15 yeni kitap pazarlama planı (/api/v1/marketing). */}
             <Route path="pazarlama/yeni-kitap" element={<MarketingHome />} />
             <Route path="pazarlama/plan/:id" element={<MarketingPlan />} />
+            {/* M18 aylık pazarlama planı ve satış föyleri (/api/v1/marketing/months, /foy). */}
+            <Route path="pazarlama/aylik-plan" element={<MarketingMonth />} />
+            <Route path="pazarlama/aylik-plan/:ay" element={<MarketingMonth />} />
+            <Route path="pazarlama/foy" element={<MarketingFoyList />} />
+            <Route path="pazarlama/foy/:stok" element={<MarketingFoy />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

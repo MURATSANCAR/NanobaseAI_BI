@@ -331,6 +331,68 @@
 - **Testler:** `backend/semantic_layer/tests/test_pricing_cost_provider.py` — öncelik (onaylı > gerçekleşen > yok), kesin > tahmini, aynı aşamada en yeni, onaysız/başka kiracı/sıfır maliyetli analiz yok sayılır, maliyetsiz yıl atlanır, bozuk kayıt/görüntü, M32 ve M33 sağlayıcıyı kendi biçiminde alır, `create_app` bağı (sahte kayıt + sahte `snapshot.json`).
 - **Kabul (sunucuda koşulacak):** `scripts/acceptance/M9-maliyet/kabul.py` (K1 onaylı analiz = kayıt, K2 ≥5 kitapta gerçekleşen = Logo'da aynı yıl/kopya bağımsız SQL, K3 maliyetsiz kitap = Logo'da maliyetli satır 0, K4 olmayan kod, K5 M32/M33(/M53) biçimleri aynı sayı), `referans.sql` R1–R3, `temizlik.py` (kabul yalnız okur; «KABUL» adlı artık analiz denetimi).
 - **Açık kalanlar:** M33'ün «Maliyet bilinmiyor: birim maliyet kaynağı bu kurulumda bağlı değil.» notu ve M32/M33 modül belgelerindeki «M9 henüz main'de değil» cümleleri artık eski — modül kodu olduğu için dokunulmadı (M33 sahibi düzeltmeli: not «bu kitapların maliyeti bilinmiyor» olmalı). Onaylı analizi olmayan ve M9 görüntüsü hiç kurulmamış kurulumda (M9 ekranı hiç açılmamış) gerçekleşen adımı boştur; görüntü ilk M9 isteğiyle kurulur.
+## 2026-09-28 — M18 Aylık pazarlama planı (yeni kitap + backlist) ve satış föyü (FÖY)
+
+**DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-a61a63ee65f2db510`, main `e543a122` üstünde); yalnız
+`py_compile` ve JSON denetimi yapıldı. pytest, vitest, tsc ve gerçek CRM/Logo kabulü test sunucusunda koşulacak
+(`scripts/acceptance/m18/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** M18 analizi (`docs/analiz/kullanici-ihtiyaclari/M18-aylik-pazarlama-plani.md` §14). Ay planı pazarlamanın
+  kendi dosyalarındaydı, satış hedefiyle bağı yoktu; föy metni CRM'de olduğu hâlde föy elle diziliyordu.
+- **Çekirdek genişletildi, ikinci paket yok:** `marketing/monthly.py`, `foy.py`, `foy_pdf.py`, `monthly_api.py`. Çekirdeğe
+  tek ek: `core.register_plan_table` — taslak silinince modül tabloları da silinir, revizyonda yeni sürüme kopyalanır
+  (M16/M17 de kullanacak). `api.register` iki kanca aldı (`run_due`, `meta`); M18 uçları oradan bağlanır, app.py
+  değişmedi. `sources.py`'ye CRM okumaları eklendi: ayla kesişen kampanyalar, özel günler (bağlı kitap sayısıyla),
+  föy alanları (500'lük parçalar, tavan yok), bölge satış hedefi (bilgi).
+- **Ay planı:** `kind='aylik'`, `donem`. Kalemler kaynağından: CRM yayın günü (M15 önceliği, M15'te elle girilen gün
+  önce), onaylı M15/M17 plan satırları, CRM özel günleri (`seo_geo.seasons` tarih yöntemi), CRM kampanyaları. Yeniden
+  kurmada elle düzeltilen kalem korunur, kaynaktan düşerse silinmez «kaynakta yok» olur; kullanıcının eklediği kalem
+  korunur, yalnız o silinir. Çakışma kuralı: aynı ISO hafta + aynı kitaplık ≥ 2 lansman; aynı kanalda tarihi örtüşen
+  kampanya (B2B'de aynı mecra). Onay akışı çekirdeğinki (iki göz, eşik üstü üst onay, revizyon).
+- **Bütçe (rakamı kod üretir):** çerçeve elle > `MARKETING_MONTHLY_BUDGET` > oran × ay hedef cirosu (oran M15'teki ayar ya
+  da veri). Segment payı = M46 ay hedef payı × (1 + önceki ay hedefin altında kalınan pay); kanal payı segmentin M46
+  kitaplarına bağlı CRM pazarlama bütçe modülü harcamasından, yoksa şirket geneli. Öneri satırları çekirdeğin bütçe
+  satırlarına yansıtılır (onay eşiği, CSV/PDF aynı satırlardan); müdürün düzelttiği tutar yeniden öneride korunur.
+  Zeki AI (`rt.llm_for("marketing", NORMAL)`; 15'indeki taslakta arka planda `BATCH`) yalnız gerekçe ve genel müdüre
+  üç paragraf özet yazar; olgu listesi dışındaki sayının cümlesi düşer (`guard.check`).
+- **Önceki ay:** M46 Logo önbelleğinden hedefli kitapların net cirosu ÷ aynı kitapların ay hedefi (segment başına);
+  şirket toplamı 157 ticari ürün hariç; veri sonu yazılır (Logo .155 donmuşsa «ay tam değil»). Plan işlerinin yapılma
+  oranı onaylı planların o aya düşen işlerinden.
+- **Föy:** alanlar CRM kitap kartından, her alanın kaynağıyla; elle düzeltme CRM yenilemesinde korunur. Uyumsuzluk: CRM
+  KDV dahil fiyat ≠ Logo fiyatı (tolerans ayarı), «Föy için taslak fiyat» ≠ KDV dahil fiyat, raporlama görünümü fiyatı ≠
+  KDV dahil fiyat, barkod ≠ güncel ISBN, EAN-13 denetim hanesi yanlış. Eksik zorunlu alanlı föy onaylanmaz; uyumsuz föy
+  yalnız gerekçeyle kabul edilerek onaylanır. Onaylı föyün CRM özeti değişince «eski»; «CRM'den yenile» yeni sürümü
+  taslak açar. Zeki AI satış argümanı yalnız CRM'de «Bu kitap neden önemli?» boşsa. PDF: A4 tek sayfa, taşan metin
+  görünür biçimde kesilir («tam metin portalda»), EAN-13 çizilir; paket = onaylı föylerin birleşik PDF'i + zip.
+  Gönderim yalnız `foy-gonder` yetkisiyle ve yalnız Yönetim'deki föy dağıtım listesine; alıcı ekrandan girilmez.
+  CRM'e yazılmaz: onaylı föyde elle/Zeki AI gelen metin «CRM'e işlenecek» listesinde.
+- **Zamanlayıcı:** yeni birim yok; `timas-marketing` (07:30) run-due kancası: 15'inde gelecek ay taslağı (dönem başına
+  bir kez, kaçırılırsa sonraki gün), her gün bu ve gelecek ayın föy CRM denetimi, 20'sinde eksik/onaysız föy
+  hatırlatması, ayın 3. iş günü önceki ay özeti, pazartesi M46 sapma özeti (plan sahibine ya da alıcılara).
+  `POST /api/v1/marketing/months/run-due` elle tetikler. İlk kurulumda elle koşturulmalı.
+- **Yetki:** `sayfa:pazarlama-aylik`, `sayfa:pazarlama-foy` (saha temsilcisinin rolünde yalnız bu); `ozellik:pazarlama.foy-yaz`;
+  açık `foy-onay`, `foy-gonder`. Ay planı yazma `plan-yaz`, onay `plan-onay`/`butce-ust-onay`, tutarlar `butce-gor`.
+  Föy PDF'i ve paketi `veri.disa-aktar` istemez (katalogda not). M46 targets/deviations aylık plan sayfasına açıldı.
+- **Ekran:** `src/canvas/marketing/monthly/` — `MonthScreen` (ay seçici, önceki ay şeridi, sekmeler Takvim · Bütçe ve
+  öncelik · Föyler · Özet; kalem ayrıntısı ve düzeltme alttan açılan panelde), `CalendarGrid` (masaüstünde hafta × kanal
+  tablosu, telefonda hafta hafta liste; çakışma kırmızı çerçeve), `BudgetPanel`, `FoyList`/`FoyTable`, `FoyScreen`
+  (telefonda önce föy önizlemesi ve «Paylaş» = `navigator.share` ile PDF, olmazsa PDF açılır). Yeni animasyon yok.
+- **Kararlar (uzmana sorulacak sorular yerine; gerekçeli):**
+  - *Föy onayı `onayda` şartı yok:* satış müdürü taslağı doğrudan onaylayabilir; iki göz son düzelten/gönderen kişinin
+    onaylayamamasıyla sağlanır (her ay onlarca föyü tek tek «gönder»mek ek tık; §12 «bunu yaparsanız kullanmam»).
+  - *Çakışma anahtarı varsayılan kitaplık:* hedef kitle CRM'de üç değer (Çocuk/Genç/Yetişkin); ona göre her hafta
+    çakışma çıkar. `MARKETING_CONFLICT_KEYS` ile eklenir.
+  - *Segment ağırlığı:* hedef payı × (1 + açık) — hedefi tutturan segment payında kalır, %70'te kalan 1,3 kat; tavan
+    yok (açık en çok 1 → en çok 2 kat). Bir kural istenirse ayardan sabit bütçe girilir.
+  - *Logo fiyatı:* Baskı Öneri tanımı (satış satırı) varsayılan, Power BI'daki «güncel fiyat» ile aynı; yeni kitapta
+    henüz satış yoksa karşılaştırma yok. Fiyat listesi (`PRCLIST`) ayarla seçilir; hangisinin doğru olduğu ölçülecek.
+  - *CRM kampanya tipi:* «Kampanya» ve «Anlaşma» ikisi de takvimde; anlaşmalar bayi sözleşmesi olabilir, ayarla süzülür.
+  - *Ay özeti günü:* 3. iş günü resmî tatilleri saymaz (ölçülecek; ayarla).
+- **Ölçülecek (kabul listesinde):** CRM kampanya kullanımı 2026; `new_satishedefleriBase` 2026 doluluğu ve M46 ile ilişkisi;
+  `new_resimurl` tam adresi (`MARKETING_COVER_BASE_URL`); `new_diziidName`/`new_Ebat`/`new_ciltlemesekli` doluluğu;
+  föy fiyatının satış satırı mı liste mi olduğu; föy dilinde «tavsiye edilen satış fiyatı».
+- **Açık kalan:** VM `infra/docker/bi/jobs.py`'de pazarlama run-due'su yok (M15'ten beri) — VM kurulumunda eklenmeli.
+  Platform ve e-bülten performansı, M22/M30/M32 bağlantıları sonraki sürüm (`contract/month/{ay}` hazır).
 
 ## 2026-09-28 (03:20) — Müşteri VM'ine `0e2ad1e8` kuruldu (M10 İlk baskı, M12 Üretim, M46 düzeltmeleri); VM'de bütçe yenilemesi
 

@@ -212,6 +212,16 @@
       "label": "Kategori ağacı"
     },
     {
+      "key": "sayfa:pazarlama-aylik",
+      "area": "pazarlama",
+      "label": "Aylık plan"
+    },
+    {
+      "key": "sayfa:pazarlama-foy",
+      "area": "pazarlama",
+      "label": "Satış föyleri"
+    },
+    {
       "key": "sayfa:seo-geo",
       "area": "pazarlama",
       "label": "SEO özeti"
@@ -1070,6 +1080,29 @@
       "page": "sayfa:pazarlama-icerik",
       "label": "Marka kiti ve yasaklı kalıplar",
       "hint": "Marka paleti, logo ve yazı tipi dosyaları (lisans notuyla), marka kuralları, yasaklı kalıp listesi",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.foy-yaz",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-foy",
+      "label": "Satış föyü hazırlama",
+      "hint": "Föy alanlarını düzeltme, CRM'den yenileme, Zeki AI satış argümanı taslağı, onaya gönderme. Föy PDF'ini indirmek için veri dışa aktarma yetkisi gerekmez (saha temsilcisinin işi)"
+    },
+    {
+      "key": "ozellik:pazarlama.foy-onay",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-foy",
+      "label": "Satış föyü onayı",
+      "hint": "Föyü onaylama ya da gerekçeyle geri gönderme; fiyat/barkod uyumsuzluğunu gerekçeyle kabul (satış müdürü; hazırlayan onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:pazarlama.foy-gonder",
+      "area": "pazarlama",
+      "page": "sayfa:pazarlama-foy",
+      "label": "Föy paketini e-postayla gönderme",
+      "hint": "Onaylı föy paketini Yönetim'deki föy dağıtım listesine e-postayla gönderme; kendiliğinden gönderim yok",
       "explicit": true
     }
   ]

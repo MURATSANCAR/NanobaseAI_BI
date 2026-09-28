@@ -408,6 +408,34 @@ SPEC: list[dict[str, Any]] = [
      "default": "",
      "help": "Kodda platformların yayımladığı sınırlar var; farklıysa buraya {\"platform\": {\"tür\": [sınır, önerilen]}} "
              "biçiminde yazılır (ör. {\"meta-ads\": {\"baslik\": [40, 27]}})"},
+    # M18 Aylık plan ve satış föyü
+    {"key": "MARKETING_MONTH_DRAFT_DAY", "group": "marketing", "label": "Ay taslağı günü", "type": "int", "default": "15",
+     "help": "Her ayın bu gününde gelecek ayın taslak planı kendiliğinden kurulur ve bildirim alıcılarına haber gider. "
+             "Ekran da bu günden sonra gelecek ayı açar"},
+    {"key": "MARKETING_MONTHLY_BUDGET", "group": "marketing", "label": "Aylık pazarlama bütçesi (TL)", "type": "text", "default": "",
+     "help": "Ay planının bütçe çerçevesi. Boşsa çerçeve = ayın onaylı satış hedefi cirosu × kitap bütçesi oranı (oran boşsa "
+             "veriden). Müdür ay planında elle de girebilir"},
+    {"key": "MARKETING_CONFLICT_KEYS", "group": "marketing", "label": "Çakışma kuralı", "type": "text", "default": "kitaplik",
+     "help": "Aynı hafta birden çok lansman hangi alanda çakışma sayılır: kitaplik, hedef-kitle (virgülle ikisi)"},
+    {"key": "MARKETING_B2B_CAMPAIGN_TYPES", "group": "marketing", "label": "Takvime girecek CRM kampanya tipleri", "type": "text",
+     "default": "", "help": "CRM kampanya tipi: 1 Kampanya, 2 Anlaşma. Boşsa ikisi de takvime girer"},
+    {"key": "MARKETING_MONTH_SUMMARY_WORKDAY", "group": "marketing", "label": "Ay özeti iş günü", "type": "int", "default": "3",
+     "help": "Önceki ayın özeti (hedef/gerçekleşen, yapılan iş) ayın bu iş gününde gönderilir (resmî tatiller sayılmaz)"},
+    {"key": "MARKETING_FOY_REMIND_DAY", "group": "marketing", "label": "Föy hatırlatma günü", "type": "int", "default": "20",
+     "help": "Bu gün gelecek ayın föyü eksik ya da onaysız kitapları bildirim ve föy dağıtım listesine gider"},
+    {"key": "MARKETING_FOY_RECIPIENTS", "group": "marketing", "label": "Föy dağıtım listesi", "type": "text", "default": "",
+     "help": "Onaylı föy paketi «Gönder» ile yalnız bu iç adreslere gider (satış müdürü, saha ekibi). Boşsa gönderilmez; paket indirilir"},
+    {"key": "MARKETING_FOY_REQUIRED", "group": "marketing", "label": "Föyde zorunlu alanlar", "type": "text",
+     "default": "ad,yazar,hedefKitle,fiyat,barkod,tanitim,argumanlar",
+     "help": "Boşsa föy onaylanmaz. Alanlar: ad, yazar, yayinevi, kitaplik, dizi, hedefKitle, fiyat, barkod, isbn, sayfa, ebat, "
+             "cilt, yayinTarihi, tanitim, argumanlar, ozet, kapak"},
+    {"key": "MARKETING_FOY_LOGO_PRICE", "group": "marketing", "label": "Föy fiyatı hangi Logo fiyatıyla karşılaştırılır", "type": "text",
+     "default": "satis", "help": "satis: B2B/CRM siparişli satış satırındaki güncel fiyat (Baskı Öneri tanımı) · liste: Logo satış "
+                                 "fiyat listesi · yok: karşılaştırma yapılmaz"},
+    {"key": "MARKETING_FOY_PRICE_TOLERANCE", "group": "marketing", "label": "Fiyat farkı toleransı (TL)", "type": "text", "default": "0.01",
+     "help": "CRM ile Logo fiyatı arasındaki fark bunu aşarsa föyde uyumsuzluk uyarısı çıkar"},
+    {"key": "MARKETING_COVER_BASE_URL", "group": "marketing", "label": "Kapak görseli adresi", "type": "text", "default": "",
+     "help": "CRM kapak yolunun (göreli) önüne eklenen adres, ör. https://www.timas.com.tr. Boşsa föyde kapak yerine boş kutu çıkar"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -458,8 +486,8 @@ GROUPS = [
      "help": "İzlenen sorular bu motorlara resmî API'leriyle sorulur; Timaş'ın anılıp anılmadığı kaydedilir. Gemini ücretsiz "
              "katmanla çalışır; diğerleri ücretlidir ve anahtar girilmezse ölçülmez. Tüketici siteleri kazınmaz."},
     {"id": "marketing", "label": "Pazarlama planları",
-     "help": "Yeni kitap pazarlama planının bildirimleri, onay eşiği ve öneri kuralları. CRM'e ve dış kanallara hiçbir şey "
-             "gönderilmez; planlar portalda onaylanır."},
+     "help": "Yeni kitap ve aylık pazarlama planının bildirimleri, onay eşiği, öneri kuralları ve satış föyü. CRM'e ve dış "
+             "kanallara hiçbir şey kendiliğinden gönderilmez; planlar ve föyler portalda onaylanır."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -492,7 +520,8 @@ LLM_DISPLAY = os.environ.get("LLM_DISPLAY_NAME", "ZEKİ AI")
 KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kartı", "setting": "Ayar",
               "term": "Sözlük terimi", "annotation": "Kolon açıklaması", "session": "Oturum",
               "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki",
-              "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali"}
+              "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali",
+              "marketing_foy": "Satış föyü"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
@@ -794,6 +823,21 @@ def _validate(spec: dict[str, Any], raw: Any) -> str:
     if spec["key"] == "SEO_SITE_URL" and v and ("/rest" in v.lower() or not v.lower().startswith(("http://", "https://"))):
         # 2026-09-25: T-soft REST adresi bu kutuya girilmiş, şema taraması ve bağlantılar API adresine gitmişti.
         raise AdminError("«Mağaza adresi» sitenin adresi olmalı (örn. https://timas.com.tr); T-soft REST adresi üstteki kutuya girilir.")
+    if spec["key"] == "MARKETING_FOY_LOGO_PRICE" and v and v not in ("satis", "liste", "yok"):
+        raise AdminError("«Föy fiyatı …» satis, liste ya da yok olmalı.")
+    if spec["key"] == "MARKETING_CONFLICT_KEYS" and v and any(x.strip() not in ("kitaplik", "hedef-kitle") for x in v.split(",")):
+        raise AdminError("«Çakışma kuralı» kitaplik ve/veya hedef-kitle olmalı.")
+    if spec["key"] in ("MARKETING_MONTH_DRAFT_DAY", "MARKETING_FOY_REMIND_DAY") and v and not (v.isdigit() and 1 <= int(v) <= 28):
+        raise AdminError(f"«{spec['label']}» 1 ile 28 arasında bir gün olmalı.")
+    if spec["key"] in ("MARKETING_MONTHLY_BUDGET", "MARKETING_FOY_PRICE_TOLERANCE") and v:
+        raw = v.replace(".", "").replace(",", ".") if "," in v else v
+        try:
+            n = float(raw)
+        except ValueError:
+            raise AdminError(f"«{spec['label']}» bir sayı olmalı.") from None
+        if n < 0:
+            raise AdminError(f"«{spec['label']}» eksi olamaz.")
+        return raw
     if spec["key"] in ("MARKETING_UPPER_APPROVAL_THRESHOLD", "MARKETING_BUDGET_RATE") and v:
         try:
             n = float(v.replace(",", "."))

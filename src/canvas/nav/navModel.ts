@@ -281,6 +281,9 @@ export const NAV: NavGroup[] = [
     hint: 'Plan, içerik, SEO & GEO, set ve hediye',
     icon: Megaphone,
     items: [
+      // M18: ay planı bölümün ilk öğesi; föy sayfası saha temsilcisine de açık (telefon alt menüsünde görünür).
+      { id: 'pazarlama-aylik', label: 'Aylık plan', to: '/pazarlama/aylik-plan', icon: CalendarClock, section: 'Planlama', hint: 'Ayın yeni kitap, backlist, özel gün ve B2B kampanyası takvimi; çakışmalar ve bütçe dağılımı', keywords: ['aylık plan', 'pazarlama takvimi', 'backlist', 'özel gün', 'kampanya', 'çakışma', 'bütçe'] },
+      { id: 'pazarlama-foy', label: 'Satış föyleri', to: '/pazarlama/foy', icon: FileText, section: 'Planlama', hint: 'Yeni kitapların tek sayfalık satış föyü: fiyat, barkod, hedef kitle, neden satılır; aylık paket', keywords: ['föy', 'tanıtım', 'satış'] },
       // Plan ekranı (/pazarlama/plan/:id) menüde yok; açıkken «Yeni kitap planı» etkin görünür.
       { id: 'pazarlama-yeni-kitap', label: 'Yeni kitap planı', to: '/pazarlama/yeni-kitap', icon: ClipboardList, section: 'Planlama', hint: 'Yayına hazırlanan kitapların pazarlama planı, bütçe, takvim ve materyalleri', also: ['/pazarlama/plan'], keywords: ['pazarlama planı', 'yeni kitap', 'lansman', 'föy', 'basın bülteni', 'emsal', 'bütçe'] },
       {
