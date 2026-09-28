@@ -1,4 +1,4 @@
-# Belge incelemesi (Son Okuma → «Belge incele») — ÖLÇÜM BEKLİYOR
+# Belge incelemesi (Son Okuma → «Belge incele») — ÇALIŞIYOR, KESİNLİK KİTAP BULGULARINDAN
 
 Kaynak: `src/editor/document_review.py`, `proofing/_doc_context.py`, `db/migrations/029_document_review.sql`;
 kart servisi `/v1/documents*`; köprü `/api/v1/editorial/documents*`; ekran `src/canvas/editorial/DocumentReview.tsx`.
@@ -54,5 +54,10 @@ Belgeyi yalnız yükleyen ve yönetici görür (köprü; başkasınınki 404). Y
 
 - Birim: `tests/test_document_review.py` 6/6 (docx+tablo, odt, rtf cp1254, txt/md, pdf basılı sayfa, reddetme,
   sayfalama, belge bağlamı). Gerçek bir `.doc` ile denenmedi.
-- Uçtan uca (Dilek Ağacı metni `.docx` olarak, okur 7–9 yaş): göç uygulandı, belge oluştu (4.243 sözcük,
-  yaklaşık sayfa); denetim sonuçları VPN koptuğu için okunamadı — DEVAM EDİYOR.
+- Uçtan uca, GPU (Dilek Ağacı metni `.docx` olarak, okur 7–9 yaş): 4.243 sözcük, yaklaşık sayfa; beş denetim
+  SUCCEEDED, 443 sn.
+- Uçtan uca, test portalı ve müşteri VM'i (2026-09-28): `.txt` yükleme → QUEUED → DONE, beş denetim SUCCEEDED
+  («online → çevrimiçi», yaş özeti), kelime haritası ve Word'e aktarım 200, oturumsuz 401. Deneme kayıtları
+  sonra silindi.
+- Kesinlik: belgede editör kararı yok; denetimlerin isabeti kitap bulgularına verilen kararlardan ölçülür
+  (2026-09-28: bu beş denetimde henüz 0 karar).

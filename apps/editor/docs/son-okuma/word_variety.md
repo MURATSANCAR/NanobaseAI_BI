@@ -220,11 +220,11 @@ Yapılacak (gerçek kitapta, `--dry`):
 
 ## 9. Bilinen sınırlar ve sonraki adımlar
 
-- **Kitap geneli aşırı kullanım** («aslında» 200 kez) v1'de bulgu değil: haritada sıklık var ama
-  «bu kitapta fazla» demek için karşılaştırma derlemi gerekir. Aday derlem: editörün okuduğu öbür
-  kitaplar (tür bazında kök sıklığı) — kitaba özel değil, veri. v2.
+- **Kitap geneli aşırı kullanım** («aslında» 200 kez) bu denetimin değil, ayrı denetimin işi:
+  [word_overuse.md](word_overuse.md) (yayınevinin okunmuş kitaplarıyla G² karşılaştırması, 2026-09-27).
 - **Portal ekranı** (2026-09-25): Son Okuma (M5) → «Kelime haritası» paneli (`src/canvas/editorial/WordMapPanel.tsx`);
-  köprü `GET /api/v1/editorial/proofing/word-map?bookId=`. Sayfaya atlama yok (sayfa numarası metin).
+  köprü `GET /api/v1/editorial/proofing/word-map?bookId=`. Bulgu sayfa görselinde işaretlenir (`marks`);
+  tekrarlar grupça karara bağlanır; belge incelemesinde de aynı panel ([belge-incelemesi.md](belge-incelemesi.md)).
 - **Bölüm bazında çeşitlilik** (MTLD bölüm bölüm): bölüm sınırı defterde kesinleşince.
 - Deyim yalnız model etiketinden gelir; deyim sözlüğü yok.
 - Zemberek'in bilmediği biçimler (yöresel, uydurma) haritada `unknown_forms`'ta kalır; tekrarları
