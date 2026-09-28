@@ -1,0 +1,13 @@
+-- M41 yurtdışı kitap × ülke: yurtdışı kanal kodlu carilere faturalı satış ve iade (adet ve LINENET), yıl içinde.
+SELECT C.COUNTRY AS ulke, I.CODE AS stok_kodu,
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.AMOUNT ELSE 0 END) AS satis_adet,
+  SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.AMOUNT ELSE 0 END) AS iade_adet,
+  SUM(CASE WHEN S.TRCODE IN (7,8,9) THEN S.LINENET ELSE 0 END) AS satis_ciro,
+  SUM(CASE WHEN S.TRCODE IN (2,3) THEN S.LINENET ELSE 0 END) AS iade_ciro
+FROM dbo.LG_{firm}_01_STLINE AS S
+JOIN dbo.LG_{firm}_CLCARD AS C ON C.LOGICALREF = S.CLIENTREF
+JOIN dbo.LG_{firm}_ITEMS AS I ON I.LOGICALREF = S.STOCKREF
+WHERE S.CANCELLED = 0 AND S.INVOICEREF <> 0 AND S.LINETYPE = 0 AND S.TRCODE IN (2,3,7,8,9)
+  AND S.DATE_ >= '{year}-01-01' AND S.DATE_ < '{next}-01-01'
+  AND C.SPECODE2 IN ({specodes})
+GROUP BY C.COUNTRY, I.CODE

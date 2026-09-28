@@ -216,6 +216,39 @@
 - **Sunucuda kalan:** köprü + arayüz kurulumu (`VITE_BASE=/timas/`), `timas-commerce.timer` (önce elle `systemctl start
   timas-commerce.service`; ilk tur bütün siparişleri okur), sonra H2 okur turu (`timas-readers`, site müşterileri okur olur),
   pytest/vitest/tsc, kabul ve temizlik; `READERS_HASH_SALT` tanımlı olmalı (yoksa okuma 503).
+## 2026-09-28 — M40 Trendyol ve M41 Amazon/yurtdışı kodlandı (yalnız okuma + panel dosyası) — DOĞRULANAMADI, testler koordinatörde
+
+- **Dal:** `worktree-agent-a0a0f4ecc9f569b74`, M42'nin bulunduğu `worktree-agent-ad24fa5ef7c8ee6a7` ucundan (main `54129d14` onun
+  atası). Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON doğrulaması yapıldı. pytest (`test_trendyol.py`, `test_amazon.py`,
+  `test_channels.py`, `test_access.py`), vitest (`navModel.test.ts`), tsc, derleme ve gerçek Logo/CRM kabulü
+  (`scripts/acceptance/M40|M41/kabul.py`) test sunucusunda koşturulacak.
+- **Neden bu kapsam:** kullanıcı kararı (2026-09-28) Trendyol/Amazon satış modelini sonraya bıraktı; M40–M42 yalnız okuma + Excel
+  yükleme. Bu yüzden analiz §14'teki `POST test` (API'ye salt okunur deneme) ve `ozellik:*.baglanti` anahtarları **yazılmadı**:
+  bağlanılmayan bir anahtar ekranda istenmez. İstemciler izin listeleriyle hazır ve testle kilitli (yazma yolu ağa çıkmadan
+  `ReadOnlyViolation`, okuma da `PlatformError`); açılış tek bayrak (`NETWORK`) ve kullanıcı kararıyla.
+- **M42'yi yeniden yazmadan:** `platforms.ReadOnlyClient`, eşleme (`semantic_channel_accounts`), öneri tablosu, `report.xlsx`,
+  kanal karnesi (`scorecard.channel/books/sell_in_books`) ve genel panel yüklemesi (Amazon satış raporu) kullanıldı. M42
+  dosyalarındaki değişiklik: `channels/__init__.py` (iki alt kayıt), `timas-channels.service` (iki `ExecStart=-`).
+- **§10 açık sorularında verilen kararlar (iş kararları Claude'a bırakıldı):** (1) Trendyol ilişkisi bilinmediği için iki yol
+  birlikte: Logo'da adla bulunan cari (`TRENDYOL_CARI_ADLARI`) M42 eşlemesine «aday» düşer, toptan satır karnede; mağaza verisi
+  panel dosyasından. Boş sonuç «satış yok» diye sunulmaz. (2) Mağazaya yazma yok, öneri + fark listesi. (4) Fiyat kıyası liste
+  fiyatı (Logo `PRCLIST`) ve site fiyatı ikisi birden; KDV hariç liste fiyatı ayarla brütlenir, 0 ise ekranda yazar. M41: (1) Amazon
+  modeli bilinmediği için konsinye (faturalanmamış irsaliye) ve faturalı satış ayrı gösterilir; (3) yurtdışı = kanal kodu
+  (yazımı ölçülecek, varsayılan `YURTDIŞI,YURTDISI`); (5) parametreleri finans girer, açık anahtarla.
+- **Tasarım kararları:** ürün listesi yüklemesi mağazanın tamamı sayılır (eskisinin yerine geçer); sipariş/iade/soru/yorum
+  anahtarla güncellenir, yükleme silinince yalnız hâlâ ona ait satırlar gider. İade sınıfında önce kural (tek sınıf), sonra Zeki AI
+  kapalı küme; emin değilse sınıf boş kalır, uydurulmaz. Yanıt taslağı ve listeleme taslağı `marketing.guard`'dan geçer (kaynaksız
+  rakam, kanıtsız iddia, teknoloji adı düşer). Vitrin kuralı: son `TRENDYOL_VITRIN_GUN` gün Trendyol siparişi × depo stoğunun
+  karşıladığı hafta (26 haftada doyar). Konsinye cari kodla süzülür (yıl kopyasında LOGICALREF değişebilir).
+- **Ölçülecekler (kabul listesinde):** Trendyol barkodunun EAN-13 olup olmadığı, kitap KDV'si / `PRCLIST.INCVAT`, yıl devrinde açık
+  irsaliyenin taşınması (`AMAZON_KONSINYE_YIL`), yurtdışı kanal kodu yazımı, `CLCARD.COUNTRY` doluluğu, Logo döviz kodu listesi
+  (1 USD, 20 EUR, 17 GBP varsayımı), «Telif Satılan Ülke» aramasının varlığı (`AMAZON_ULKE_TABLOSU`), panel dışa aktarımı kolon adları.
+- **Kabul:** M40 K1 adla cari, K2 Trendyol carisi net ciro, K3 gerçek ürün dosyası (isteğe bağlı, sonunda silinir), K4 depo stoğu,
+  K5 yazma koruması, K6 liste fiyatı, K7 barkod sayısı. M41 K1 Amazon carileri, K2 net ciro, K3 konsinye kalan, K4 CRM konsinye
+  siparişi, K5 yurtdışı cari bazında, K6 döviz faturası, K7 Telif Satış sözleşmesi, K8 yazma koruması. Temizlik betikleri
+  değişiklik kaydını, yüklemeyi, taslağı ve kartı kimlikle siler.
+- **Sunucuda kalan:** köprü + arayüz kurulumu, pytest/vitest/tsc, M42 kabulünden sonra M40/M41 kabulü ve temizlik,
+  `timas-channels.service` bir kez elle; Trendyol panel dosyası örneği ve Amazon carilerinin onayı iş biriminden.
 
 ## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
 

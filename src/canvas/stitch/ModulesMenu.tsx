@@ -58,6 +58,8 @@ export const LIVE: Record<string, string> = {
   M45: '/finansal-raporlar',
   M38: '/musteri-iliskileri',
   M42: '/kanallar',
+  M40: '/trendyol',
+  M41: '/amazon',
   M36: '/dijital-yayin',
   M35: '/kampanyalar',
   M39: '/pazar-arastirma',

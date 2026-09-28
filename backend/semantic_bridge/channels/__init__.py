@@ -12,6 +12,10 @@ dosya ekleyerek gelir.
 - `platforms.py`  — satıcı API istemcileri için salt okunur taban sınıf (M40/M41).
 - `report.py`     — haftalık uyarı, aylık karne e-postası, Excel.
 - `api.py`        — uçlar `/api/v1/channels/*`.
+- M40 Trendyol: `trendyol.py` (tablolar `semantic_trendyol_*`, stok/fiyat farkı, sipariş, iade, soru, yorum, vitrin,
+  haftalık), `trendyol_import.py` (panel dosyası), `trendyol_client.py` (çevrimdışı salt okunur), `trendyol_api.py`.
+- M41 Amazon ve yurtdışı: `amazon.py` (tablolar `semantic_intl_*`, konsinye, yurtdışı, haklar, parametre, taslak, pazar
+  kartı), `amazon_client.py` (çevrimdışı salt okunur), `amazon_api.py`. Ortak: `platform_common.py`.
 
 app.py'de iki satır:
     from semantic_bridge import channels
@@ -23,6 +27,9 @@ from typing import Any, Callable
 
 
 def register(app, rt: Callable[[], Any], require_caller: Callable[..., None], can: Callable[[str, str], bool]) -> dict[str, Any]:
-    from semantic_bridge.channels import api
+    from semantic_bridge.channels import amazon_api, api, trendyol_api
 
-    return api.register(app, rt, require_caller, can)
+    out = api.register(app, rt, require_caller, can)
+    out["trendyol"] = trendyol_api.register(app, rt, require_caller, can)   # M40: /api/v1/channels/trendyol/*
+    out["amazon"] = amazon_api.register(app, rt, require_caller, can)       # M41: /api/v1/channels/amazon/*
+    return out

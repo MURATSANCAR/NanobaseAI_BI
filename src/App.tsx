@@ -231,6 +231,19 @@ const ChannelDetail = lazy(() => import('@/canvas/channels/Channel'));
 const ChannelsMatrix = lazy(() => import('@/canvas/channels/Matrix'));
 const ChannelsD2C = lazy(() => import('@/canvas/channels/D2CGrowth'));
 const ChannelsAccounts = lazy(() => import('@/canvas/channels/Accounts'));
+const TrendyolHome = lazy(() => import('@/canvas/channels/trendyol/TrendyolHome'));
+const TrendyolProducts = lazy(() => import('@/canvas/channels/trendyol/Products'));
+const TrendyolOrders = lazy(() => import('@/canvas/channels/trendyol/Orders'));
+const TrendyolQuestions = lazy(() => import('@/canvas/channels/trendyol/Questions'));
+const TrendyolShowcase = lazy(() => import('@/canvas/channels/trendyol/Showcase'));
+const TrendyolWeekly = lazy(() => import('@/canvas/channels/trendyol/Weekly'));
+const TrendyolImports = lazy(() => import('@/canvas/channels/trendyol/Imports'));
+const AmazonHome = lazy(() => import('@/canvas/channels/amazon/AmazonHome'));
+const AmazonConsignment = lazy(() => import('@/canvas/channels/amazon/Consignment'));
+const AmazonInternational = lazy(() => import('@/canvas/channels/amazon/International'));
+const AmazonRights = lazy(() => import('@/canvas/channels/amazon/Rights'));
+const AmazonDrafts = lazy(() => import('@/canvas/channels/amazon/Drafts'));
+const AmazonMarketCards = lazy(() => import('@/canvas/channels/amazon/MarketCards'));
 
 function RouteFallback() {
   return (
@@ -420,6 +433,20 @@ export default function App() {
             <Route path="kanallar/d2c" element={<ChannelsD2C />} />
             <Route path="kanallar/eslesme" element={<ChannelsAccounts />} />
             <Route path="kanallar/:platform" element={<ChannelDetail />} />
+            {/* Platform › Trendyol (M40) ve Amazon ve yurtdışı (M41): yalnız okuma + panel dosyası (/api/v1/channels/trendyol|amazon). */}
+            <Route path="trendyol" element={<TrendyolHome />} />
+            <Route path="trendyol/urunler" element={<TrendyolProducts />} />
+            <Route path="trendyol/siparisler" element={<TrendyolOrders />} />
+            <Route path="trendyol/sorular" element={<TrendyolQuestions />} />
+            <Route path="trendyol/vitrin" element={<TrendyolShowcase />} />
+            <Route path="trendyol/haftalik" element={<TrendyolWeekly />} />
+            <Route path="trendyol/yukle" element={<TrendyolImports />} />
+            <Route path="amazon" element={<AmazonHome />} />
+            <Route path="amazon/konsinye" element={<AmazonConsignment />} />
+            <Route path="amazon/yurtdisi" element={<AmazonInternational />} />
+            <Route path="amazon/haklar" element={<AmazonRights />} />
+            <Route path="amazon/pazarlar" element={<AmazonMarketCards />} />
+            <Route path="amazon/taslaklar" element={<AmazonDrafts />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

@@ -716,6 +716,46 @@
       "label": "Cari eşleme"
     },
     {
+      "key": "sayfa:trendyol",
+      "area": "platform",
+      "label": "Trendyol: mağaza özeti"
+    },
+    {
+      "key": "sayfa:trendyol-urunler",
+      "area": "platform",
+      "label": "Trendyol: ürün, stok ve fiyat farkı"
+    },
+    {
+      "key": "sayfa:trendyol-siparisler",
+      "area": "platform",
+      "label": "Trendyol: sipariş ve iade"
+    },
+    {
+      "key": "sayfa:trendyol-sorular",
+      "area": "platform",
+      "label": "Trendyol: soru ve yorum"
+    },
+    {
+      "key": "sayfa:amazon",
+      "area": "platform",
+      "label": "Amazon ve yurtdışı: özet"
+    },
+    {
+      "key": "sayfa:amazon-konsinye",
+      "area": "platform",
+      "label": "Amazon konsinye"
+    },
+    {
+      "key": "sayfa:amazon-yurtdisi",
+      "area": "platform",
+      "label": "Yurtdışı satış, haklar ve pazarlar"
+    },
+    {
+      "key": "sayfa:amazon-taslaklar",
+      "area": "platform",
+      "label": "Listeleme ve brief taslakları"
+    },
+    {
       "key": "sayfa:eticaret",
       "area": "pazarlama",
       "label": "E-ticaret: platform durumu"
@@ -2413,6 +2453,51 @@
       "page": "sayfa:kanallar",
       "label": "Kanal önerisi taslağı",
       "hint": "Simülasyondan iskonto önerisi ve D2C'ye özel set önerisi taslağı açma (Zeki AI gerekçe yazar)"
+    },
+    {
+      "key": "ozellik:trendyol.yukle",
+      "area": "platform",
+      "page": "sayfa:trendyol",
+      "label": "Trendyol panel dosyası yükleme",
+      "hint": "Ürün listesi, sipariş, iade, soru ve yorum dosyasını (Excel/CSV) yükleme ve silme; alıcı adı, adres, telefon gibi kolonlar içeri alınmaz"
+    },
+    {
+      "key": "ozellik:trendyol.taslak",
+      "area": "platform",
+      "page": "sayfa:trendyol",
+      "label": "Trendyol Zeki AI taslakları",
+      "hint": "Soru ve yorum yanıt taslağı, iade nedeni sınıflama ve vitrin önerisi taslağı (Zeki AI; hiçbir şey Trendyol'a gönderilmez)"
+    },
+    {
+      "key": "ozellik:trendyol.oneri-karar",
+      "area": "platform",
+      "page": "sayfa:trendyol",
+      "label": "Trendyol önerisi kararı",
+      "hint": "Vitrin önerisini onaylama ya da gerekçeyle reddetme (hazırlayan onaylayamaz; onay portal kaydıdır, mağazaya gönderilmez)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:amazon.taslak",
+      "area": "platform",
+      "page": "sayfa:amazon-taslaklar",
+      "label": "Listeleme ve pazar kartı taslağı",
+      "hint": "Tek kitap için hedef pazara listeleme, A+ ve çeviri brief'i taslağı; pazar değerlendirme kartı açma (Zeki AI; Amazon hesabına gönderilmez)"
+    },
+    {
+      "key": "ozellik:amazon.parametre",
+      "area": "platform",
+      "page": "sayfa:amazon-yurtdisi",
+      "label": "Uluslararası fiyat parametreleri",
+      "hint": "Pazar başına kur kaynağı, KDV, kargo birim maliyeti ve komisyon oranı (finans)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:amazon.pazar-karar",
+      "area": "platform",
+      "page": "sayfa:amazon-yurtdisi",
+      "label": "Yeni pazar kararı",
+      "hint": "Pazar değerlendirme kartına «girilsin / bekle / girilmesin» kararı (kartı hazırlayan karar veremez)",
+      "explicit": true
     },
     {
       "key": "ozellik:eticaret.fark-isaretle",
