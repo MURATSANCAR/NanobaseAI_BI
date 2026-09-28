@@ -68,6 +68,19 @@
 - **Açık kalan (ayrı iş):** aynı modülde başka tavanlar var — CRM bağlı sözleşmeler `TOP 200` (`related_sql`),
   kitap/taraf aramada `TOP 20`, `contracts_terms.py`'de taraf/kitap/kademe `[:50]/[:200]/[:20]`, hakediş dönemi 400.
   Bunlara bu işte dokunulmadı. Dal `main`e taşınmadı, kurulum yapılmadı.
+## 2026-09-28 — M15: bütçe modülü okunamazken «hedef yok» ile devam
+
+- **Neden:** test sunucusunda (dal M33 üstüne rebase, 1cfeb233) pytest 96/97; `test_endpoints_two_eyes_and_explicit_approval`
+  istek sırasında `no such table: semantic_budget_meta` ile düştü. Kök neden: `budget.ensure` motoru `id()` ile
+  hatırlıyor; önceki testin kapanan motorunun id'si yeni motora denk gelince bütçe tabloları kurulmadan okuma yapıldı.
+  Üretimde de bütçe modülü kurulmamış / tablosu okunamayan bir ortam olabilir.
+- **Kod:** `marketing/plans.py` bütçe (M46) okumalarının hepsi `budget_read` üzerinden: tablo yok ya da okunamıyorsa
+  bir kez yeniden kurmayı dener (eski id kaydını siler), yine olmazsa hata vermez — hedef «Bütçe ve hedefler modülü bu
+  kurulumda okunamıyor; hedef yok», veri sonu boş, yazar yıllık satışı notla boş, oran veriden hesaplanmaz (çerçeve boş).
+- **Test:** fixture motor kaydını test bitince siler; köprü testi bu motorun kaydını temizleyip başlar; iki yeni test
+  (bütçe modülü bozukken plan açma/liste/karne; eski id kaydında tabloların yeniden kurulması). Koşulmadı — sunucuda
+  yeniden koşturulacak.
+
 ## 2026-09-28 — Pazarlama çekirdeği (`marketing/`, `semantic_mkt_*`) ve M15 Yeni kitap pazarlama planı
 
 **DOĞRULANAMADI — sunucu kapalı.** Kod dalda (`worktree-agent-ac1505bd78bc75e7e`); yalnız `py_compile` ve JSON denetimi

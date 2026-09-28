@@ -34,7 +34,11 @@ def engine():
     B._ready.discard(id(e))
     C.ensure(e)
     B.ensure(e)
-    return e
+    yield e
+    # `ensure` motoru id'siyle hatırlar: kapanan motorun id'si sonraki testte yeni bir motora verilirse tablolar hiç
+    # kurulmaz («no such table: semantic_budget_meta»). Test bitince kayıt silinir.
+    C._ready.discard(id(e))
+    B._ready.discard(id(e))
 
 
 def _st(**over):
@@ -419,6 +423,38 @@ def test_create_plan_pulls_crm_texts_and_template(engine):
     assert card["emsal"]["hazir"] is False and card["hedef"]["planId"] is None
 
 
+def test_plan_works_without_the_budget_module(engine, monkeypatch):
+    """Bütçe (M46) kurulmamış / tabloları okunamıyor: M15 hata vermez, «hedef yok» ve boş çerçeveyle devam eder."""
+    def broken(_engine):
+        raise sa.exc.OperationalError("SELECT 1", {}, Exception("no such table: semantic_budget_meta"))
+
+    monkeypatch.setattr(B, "ensure", broken)
+    pub = (date.today() + timedelta(days=40)).isoformat()
+    h = P.target_for(engine, T, "N2", pub)
+    assert h["planId"] is None and "okunamıyor" in h["not"]
+    assert P.targets_many(engine, T, {date.today().year: ["N2"]}) == {}
+    assert P.data_end(engine) is None and P.dept_ratio(engine, _st()) is None
+    detail = {**_book("N2", tarihler={"crm-kitap": pub, "crm-proje": None, "uretim-dagilim": None, "uretim-depo": None}),
+              "turler": None, "yas": [None, None], "fiyat": None, "sayfa": None, "metinler": {}, "proje": {}}
+    assert P.author_section(engine, None, detail)["not"].startswith("Bütçe modülünün")
+    pid = P.create_new_book_plan(engine, T, "ayse", FakeCrm(detail=detail), None, _st(), {"stokKodu": "N2"})
+    plan = C.plan_full(engine, T, pid)
+    assert plan["hedef"]["planId"] is None and plan["butceCerceve"] is None
+    out = P.new_books(engine, T, "ayse", FakeCrm(books=[detail]), _st(), frm=date.today(), to=date.today() + timedelta(days=120))
+    assert out["total"] == 1 and out["items"][0]["hedef"] is None
+
+
+def test_budget_tables_are_created_when_the_engine_id_was_remembered(monkeypatch):
+    """Motor id'si eski bir motordan kalmışsa (ensure kurulumu atlar) okuma bir kez yeniden kurar."""
+    e = open_store("sqlite://").engine
+    B._ready.add(id(e))                                              # kurulmuş sanılıyor, tablo yok
+    try:
+        assert P.data_end(e) is None
+        assert "semantic_budget_meta" in set(sa.inspect(e).get_table_names())
+    finally:
+        B._ready.discard(id(e))
+
+
 def test_crm_todo_lists_differences_only(engine):
     pid = _plan(engine)
     _lines(engine, pid, 1234)
@@ -507,6 +543,9 @@ def _app(monkeypatch, store, settings):
     monkeypatch.delenv("SEMANTIC_ADMIN_TOKEN", raising=False)
     A._ready.clear()
     A.invalidate()
+    # Önceki testlerin motor kaydı bu motorun id'sine denk gelebilir: pazarlama ve bütçe şeması bu motorda kurulsun.
+    C._ready.discard(id(store.engine))
+    B._ready.discard(id(store.engine))
     app = create_app(Runtime(settings, store=store, llm=FakeLlm([""])))
     return app, TestClient(app)
 

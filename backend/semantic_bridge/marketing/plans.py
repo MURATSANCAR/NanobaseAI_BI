@@ -138,13 +138,49 @@ def _days_to(d: Optional[str], ref: date) -> Optional[int]:
 # ------------------------------------------------------------------ hedef (M46)
 
 
+class BudgetUnavailable(RuntimeError):
+    """Bütçe (M46) tabloları bu kurulumda yok ya da okunamıyor: M15 «hedef yok» ile devam eder."""
+
+
+def budget_ready(engine: Any) -> None:
+    """M46 tablolarını kurar (ilk kullanımda). Kurulamaz ya da okunamazsa `BudgetUnavailable`."""
+    try:
+        B.ensure(engine)
+    except sa.exc.SQLAlchemyError as e:
+        log.warning("marketing: bütçe tabloları hazır değil: %s", e)
+        raise BudgetUnavailable(str(e)) from None
+
+
+def budget_read(engine: Any, fn: Callable[[], Any], default: Any, what: str) -> Any:
+    """M46 okuması; bütçe modülü kurulmamış ya da tablosu okunamıyorsa `default` (hata yerine «hedef yok»)."""
+    for attempt in (1, 2):
+        try:
+            budget_ready(engine)
+            return fn()
+        except (BudgetUnavailable, sa.exc.SQLAlchemyError) as e:
+            if attempt == 1 and isinstance(e, sa.exc.SQLAlchemyError):
+                # `budget.ensure` motoru id'siyle hatırlar; aynı id'yi alan yeni bir motorda (yeniden kurulan bağlantı,
+                # testler) tablolar hiç kurulmamış olabilir: bir kez yeniden kurmayı dene.
+                B._ready.discard(id(engine))
+                continue
+            log.warning("marketing: bütçe okunamadı (%s): %s", what, e)
+            return default
+    return default
+
+
+def data_end(engine: Any) -> Optional[date]:
+    return budget_read(engine, lambda: B.data_end(engine), None, "veri sonu")
+
+
+
 def target_for(engine: Any, tenant: str, code: str, pub: Optional[str]) -> dict[str, Any]:
     """Yayın yılının yürürlükteki M46 planındaki kitap hedefi; yoksa `planId: None` ve neden."""
     if not pub:
         return {"year": None, "planId": None, "not": "Yayın tarihi yok; hedef yılı bilinmiyor."}
     year = int(pub[:4])
-    B.ensure(engine)
-    t = B.approved_targets(engine, tenant, year, codes=[code], with_actuals=False)
+    t = budget_read(engine, lambda: B.approved_targets(engine, tenant, year, codes=[code], with_actuals=False), None, "hedef")
+    if t is None:
+        return {"year": year, "planId": None, "not": "Bütçe ve hedefler modülü bu kurulumda okunamıyor; hedef yok."}
     if not t.get("plan"):
         return {"year": year, "planId": None, "not": f"{year} bütçesi henüz onaylanmadı."}
     it = (t.get("items") or [None])[0]
@@ -156,10 +192,10 @@ def target_for(engine: Any, tenant: str, code: str, pub: Optional[str]) -> dict[
 
 def targets_many(engine: Any, tenant: str, codes_by_year: dict[int, list[str]]) -> dict[str, dict[str, Any]]:
     out: dict[str, dict[str, Any]] = {}
-    B.ensure(engine)
     for y, codes in codes_by_year.items():
-        t = B.approved_targets(engine, tenant, y, codes=codes, with_actuals=False)
-        if not t.get("plan"):
+        t = budget_read(engine, lambda y=y, codes=codes: B.approved_targets(engine, tenant, y, codes=codes, with_actuals=False),
+                        None, "hedefler")
+        if not t or not t.get("plan"):
             continue
         # Planda olmayan kitap için de yürürlükteki planın kimliği gerekir (hedefi «yok» olarak karşılaştırmak için).
         out[f"_plan:{y}"] = {"year": y, "planId": t["plan"]["id"], "version": t["plan"]["version"], "adet": None, "ciro": None, "marj": None}
@@ -286,18 +322,22 @@ def author_section(engine: Any, eng: Any, detail: dict[str, Any]) -> dict[str, A
                 books[b.code] = {"stokKodu": b.code, "ad": b.name, "ilkYayin": b.first_pub,
                                  "lansman": M.ms(b.launch) if b.launch is not None else None,
                                  "ilk12": _sum_first(list(o.months), 12) if o else None}
-    B.ensure(engine)
-    with engine.connect() as c:
-        for r in c.execute(sa.select(B.BOOKINFO)).all():
-            if r.stok_kodu != code and r.stok_kodu not in books and M.parts(r.yazar) & want:
-                books[r.stok_kodu] = {"stokKodu": r.stok_kodu, "ad": r.ad, "ilkYayin": r.ilk_yayin, "lansman": None, "ilk12": None}
-        codes = list(books)
-        yearly: dict[str, dict[int, dict[str, float]]] = defaultdict(dict)
-        if codes:
-            q = (sa.select(B.SALES.c.stok_kodu, B.SALES.c.year, sa.func.sum(B.SALES.c.adet), sa.func.sum(B.SALES.c.ciro))
-                 .where(B.SALES.c.stok_kodu.in_(codes)).group_by(B.SALES.c.stok_kodu, B.SALES.c.year))
-            for s, y, a, ci in c.execute(q).all():
-                yearly[s][int(y)] = {"adet": round(float(a or 0), 2), "ciro": round(float(ci or 0), 2)}
+    yearly: dict[str, dict[int, dict[str, float]]] = defaultdict(dict)
+
+    def read_budget() -> bool:
+        with engine.connect() as c:
+            for r in c.execute(sa.select(B.BOOKINFO)).all():
+                if r.stok_kodu != code and r.stok_kodu not in books and M.parts(r.yazar) & want:
+                    books[r.stok_kodu] = {"stokKodu": r.stok_kodu, "ad": r.ad, "ilkYayin": r.ilk_yayin, "lansman": None, "ilk12": None}
+            if books:
+                q = (sa.select(B.SALES.c.stok_kodu, B.SALES.c.year, sa.func.sum(B.SALES.c.adet), sa.func.sum(B.SALES.c.ciro))
+                     .where(B.SALES.c.stok_kodu.in_(list(books))).group_by(B.SALES.c.stok_kodu, B.SALES.c.year))
+                for s, y, a, ci in c.execute(q).all():
+                    yearly[s][int(y)] = {"adet": round(float(a or 0), 2), "ciro": round(float(ci or 0), 2)}
+        return True
+
+    budget_ok = budget_read(engine, read_budget, False, "yazar satışı")
+    codes = list(books)
     years = sorted({y for v in yearly.values() for y in v})
     items = []
     for k, v in books.items():
@@ -306,6 +346,7 @@ def author_section(engine: Any, eng: Any, detail: dict[str, Any]) -> dict[str, A
     totals = [{"yil": y, "adet": round(sum((yearly[k].get(y) or {}).get("adet", 0) for k in books), 2),
                "ciro": round(sum((yearly[k].get(y) or {}).get("ciro", 0) for k in books), 2)} for y in years]
     return {"yazar": detail.get("yazar"), "items": items, "yillar": totals,
+            **({} if budget_ok else {"not": "Bütçe modülünün Logo satış önbelleği okunamadı; yıllık satış gösterilmiyor."}),
             "kaynak": "Logo faturalı satış (net adet, net ciro = satır net tutarı), bütçe modülünün yıllık önbelleği.",
             "sql": ("SELECT stok_kodu, year, SUM(adet), SUM(ciro) FROM semantic_budget_sales_actuals "
                     f"WHERE stok_kodu IN ({', '.join(repr(x) for x in codes)}) GROUP BY stok_kodu, year") if codes else None}
@@ -344,7 +385,7 @@ def build_card(engine: Any, tenant: str, crm: Crm, eng: Any, stok: str, st: dict
     emsal = emsal_section(eng, detail, pub)
     if not emsal["hazir"]:
         warnings.append(emsal["not"])
-    end = B.data_end(engine)
+    end = data_end(engine)
     metinler = [{"alan": f, "ad": FIELD_LABELS.get(f, f), "metin": v} for f, v in detail["metinler"].items() if v]
     card = {
         "kitap": {k: v for k, v in detail.items() if k not in ("metinler", "proje")},
@@ -380,8 +421,11 @@ def card(engine: Any, tenant: str, crm: Crm, eng: Any, stok: str, st: dict[str, 
 
 
 def dept_ratio(engine: Any, st: dict[str, Any]) -> Optional[dict[str, Any]]:
-    """Son tam yılda pazarlama masraf merkezlerinin gideri ÷ şirket net cirosu (M46 önbelleği)."""
-    B.ensure(engine)
+    """Son tam yılda pazarlama masraf merkezlerinin gideri ÷ şirket net cirosu (M46 önbelleği). Bütçe modülü yoksa None."""
+    return budget_read(engine, lambda: _dept_ratio(engine, st), None, "departman oranı")
+
+
+def _dept_ratio(engine: Any, st: dict[str, Any]) -> Optional[dict[str, Any]]:
     end = B.data_end(engine)
     if end is None:
         return None
