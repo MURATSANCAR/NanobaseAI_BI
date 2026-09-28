@@ -538,6 +538,40 @@ SPEC: list[dict[str, Any]] = [
     {"key": "ITOPS_QUERY_TIMEOUT_SEC", "group": "itops", "label": "Veri sonu sorgusu süresi (sn)", "type": "int", "default": "60", "help": ""},
     {"key": "ITOPS_DISK_PATHS", "group": "itops", "label": "İzlenen disk klasörleri", "type": "text", "default": "",
      "help": "Virgülle; boşsa uygulama veri klasörü"},
+    # Veri güvenliği (M49)
+    {"key": "SECURITY_ALERT_RECIPIENTS", "group": "security", "label": "Güvenlik uyarısı alıcıları", "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri (bilgi güvenliği sorumlusu, yönetici). Kritik uyarı anında, 403 özeti günde bir gider; boşsa e-posta gitmez, uyarı ekranda kalır"},
+    {"key": "SECURITY_FAIL_THRESHOLD", "group": "security", "label": "Hatalı giriş eşiği (deneme)", "type": "int", "default": "5",
+     "help": "Aynı hesaba aşağıdaki süre içinde bu kadar hatalı giriş denenirse kritik uyarı açılır"},
+    {"key": "SECURITY_FAIL_WINDOW_MIN", "group": "security", "label": "Hatalı giriş penceresi (dakika)", "type": "int", "default": "10", "help": ""},
+    {"key": "SECURITY_WORK_HOURS", "group": "security", "label": "Mesai saatleri", "type": "text", "default": "08:00-19:00",
+     "help": "SS:DD-SS:DD. Bunun dışında yapılan dışa aktarmalar «mesai dışı» sayılır"},
+    {"key": "SECURITY_WORK_DAYS", "group": "security", "label": "Mesai günleri", "type": "text", "default": "1-5",
+     "help": "1 = Pazartesi … 7 = Pazar; «1-5» ya da «1,2,3,4,5,6»"},
+    {"key": "SECURITY_OFFHOURS_EXPORT_MIN", "group": "security", "label": "Mesai dışı toplu dışa aktarma (bir saatte)", "type": "int", "default": "3",
+     "help": "Bir kişi mesai dışında bir saat içinde bu kadar dışa aktarma yaparsa kritik uyarı açılır"},
+    {"key": "SECURITY_IDLE_DAYS", "group": "security", "label": "Uzun süredir girmeyen hesap (gün)", "type": "int", "default": "90",
+     "help": "Hesap hijyeni raporunda: portal izi olan ama bu kadar gündür giriş yapmamış hesaplar. 0 = bakılmaz"},
+    {"key": "SECURITY_TEST_ACCOUNT_PATTERN", "group": "security", "label": "Test hesabı ad kalıbı", "type": "text",
+     "default": "^(test|deneme|demo|qa[-_.]|claude)",
+     "help": "Bu kalıba uyan hesaplar hesap hijyeni raporunda «test/deneme adı» diye çıkar (düzenli ifade)"},
+    {"key": "SECURITY_DAILY_AT", "group": "security", "label": "Günlük iş saati", "type": "time", "default": "03:40",
+     "help": "Saklama süresi işi ve günlük erişim özeti bu saatten sonraki ilk koşuda, günde bir kez çalışır"},
+    {"key": "SECURITY_RETENTION_APPLY", "group": "security", "label": "Saklama süresini uygula", "type": "bool", "default": "0",
+     "help": "Kapalıyken hiçbir kayıt silinmez; gece işi yalnız «kaç satır etkilenecek» önizlemesini yazar. Açmak yönetici "
+             "kararıdır (Veri güvenliği → Saklama süreleri, önizlemeyle)"},
+    {"key": "SECURITY_RETENTION_QUERY_RESULT_DAYS", "group": "security", "label": "Soru sonucu saklama (gün)", "type": "int", "default": "90",
+     "help": "Soru kaydındaki tam sonuç tablosu bu süreden sonra boşaltılır; soru ve SQL kalır. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_LLM_TEXT_DAYS", "group": "security", "label": "Model sırası metni saklama (gün)", "type": "int", "default": "30",
+     "help": "Model sırasındaki ve model işindeki mesaj/cevap metni boşaltılır; süre ve sayılar kalır. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_LOGIN_DAYS", "group": "security", "label": "Giriş kaydı saklama (gün)", "type": "int", "default": "365",
+     "help": "0 = süresiz"},
+    {"key": "SECURITY_RETENTION_ACCESS_DAYS", "group": "security", "label": "Erişim kaydı saklama (gün)", "type": "int", "default": "365",
+     "help": "Yetkisiz erişim ve dışa aktarma satırları. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_ALERT_DAYS", "group": "security", "label": "Kapanmış uyarı saklama (gün)", "type": "int", "default": "730",
+     "help": "Açık uyarı silinmez. 0 = süresiz"},
+    {"key": "SECURITY_RETENTION_AUDIT_DAYS", "group": "security", "label": "Değişiklik kaydı saklama (gün)", "type": "int", "default": "0",
+     "help": "0 = süresiz (yetki değişikliklerinin kanıtı)"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -596,6 +630,9 @@ GROUPS = [
     {"id": "itops", "label": "Sistem durumu",
      "help": "Halka denetimleri 5 dk'da bir koşar; kopma ve düzelme yalnız iç alıcılara e-postayla bildirilir. Denetimler "
              "yalnız okur, hiçbir servisi yeniden başlatmaz."},
+    {"id": "security", "label": "Veri güvenliği",
+     "help": "Güvenlik uyarı kuralları, hesap hijyeni ve saklama süreleri. Saklama süresi yalnız «uygula» açıkken siler; "
+             "önizleme ve kanıt Veri güvenliği ekranındadır."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -630,7 +667,8 @@ KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kart�
               "room": "Toplantı odası", "booking": "Oda rezervasyonu", "access": "Yetki",
               "marketing_plan": "Pazarlama planı", "marketing_material": "Pazarlama materyali",
               "marketing_foy": "Satış föyü",
-              "itops_incident": "Sistem olayı", "itops_check": "Bağlantı denemesi", "itops_release": "Sürüm kaydı"}
+              "itops_incident": "Sistem olayı", "itops_check": "Bağlantı denemesi", "itops_release": "Sürüm kaydı",
+              "security_alert": "Güvenlik uyarısı"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()

@@ -64,6 +64,8 @@ JOBS = [
     ("yazar hatırlatmaları", "/api/v1/editorial/authors/reminders/run-due", int(os.environ.get("AUTHOR_REMINDERS_EVERY_SEC", "900")), 590),
     # M48 sistem durumu: halka denetimi, olay aç/kapat, bildirim (sunucuda timas-itops.timer, 5 dk).
     ("sistem durumu", "/api/v1/it-ops/run-due", int(os.environ.get("ITOPS_EVERY_SEC", "300")), 290),
+    # M49 veri güvenliği: giriş olayları + kurallar her 5 dk; saklama ve günlük özet SECURITY_DAILY_AT'te günde bir kez.
+    ("veri güvenliği", "/api/v1/data-security/run-due", int(os.environ.get("SECURITY_EVERY_SEC", "300")), 1700),
 ]
 
 

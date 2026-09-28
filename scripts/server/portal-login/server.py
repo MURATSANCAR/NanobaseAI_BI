@@ -2,6 +2,12 @@
 
 No API keys or passwords are placed in browser storage. There is no local or demo account:
 every session belongs to an enabled directory user who proved their own password.
+
+Giriş olay kaydı (M49): her giriş denemesi, çıkış ve yönetici kapatması `login_events`'e yazılır — hesap adı (yalnız
+geçerli biçimdeyse; parola alana yazılmışsa kaydedilmez), sonuç, neden, kaynak adres ve tarayıcı özeti. Parola ve
+oturum anahtarı hiçbir yere yazılmaz. Köprü olayları `GET /admin/events` ile çeker; oturum listesi ve kapatma
+`/admin/sessions*`. Yönetim uçları yalnız `LOGIN_ADMIN_TOKEN` (en az 24 karakter) başlıkla çalışır; jeton yoksa ya da
+istek ters vekilden geldiyse (X-Real-IP taşıyorsa) 404 döner — `/timas/auth/` dışarıya açık olduğu için.
 """
 import base64
 import hashlib
@@ -40,7 +46,16 @@ DESTEK_SSO_FILE = os.environ.get('DESTEK_SSO_FILE', '/etc/nanobase/destek-sso.ke
 DESTEK_TOKEN_TTL = 60
 # sAMAccountName characters only: nothing here can widen the LDAP filter.
 ACCOUNT = re.compile(r'^[A-Za-z0-9._-]{1,64}$')
+# Yönetim uçlarının jetonu (köprüyle aynı). Boşsa /admin/* kapalıdır.
+ADMIN_TOKEN = os.environ.get('LOGIN_ADMIN_TOKEN', '')
+# Giriş servisindeki olay kopyasının ömrü; uzun süreli kayıt köprünün tablosunda, kendi saklama süresiyle durur.
+EVENTS_KEEP_DAYS = float(os.environ.get('LOGIN_EVENTS_KEEP_DAYS', '30'))
 ACTIVE_PERSON = '(&(objectCategory=person)(objectClass=user)(sAMAccountName={})(!(userAccountControl:1.2.840.113556.1.4.803:=2)))'
+
+
+#: Dizinde böyle etkin bir hesap yok (parola sınanmadı). Olay kaydına hesap adı yazılmaz: kişi parolasını kullanıcı
+#: adı kutusuna yazmış olabilir.
+UNKNOWN_ACCOUNT = object()
 
 
 class DirectoryUnavailable(Exception):
@@ -50,9 +65,33 @@ class DirectoryUnavailable(Exception):
 def connection():
     db = sqlite3.connect(DB, timeout=5)
     db.execute('CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, username TEXT, expires REAL)')
-    if 'display' not in {row[1] for row in db.execute('PRAGMA table_info(sessions)')}:
-        db.execute('ALTER TABLE sessions ADD COLUMN display TEXT')
+    cols = {row[1] for row in db.execute('PRAGMA table_info(sessions)')}
+    for name in ('display', 'addr'):
+        if name not in cols:
+            db.execute(f'ALTER TABLE sessions ADD COLUMN {name} TEXT')
+    if 'created' not in cols:
+        db.execute('ALTER TABLE sessions ADD COLUMN created REAL')
+    db.execute('CREATE TABLE IF NOT EXISTS login_events (id INTEGER PRIMARY KEY AUTOINCREMENT, at REAL NOT NULL, '
+               'username TEXT NOT NULL, ok INTEGER NOT NULL, reason TEXT NOT NULL, addr TEXT, ua_hash TEXT)')
     return db
+
+
+def safe_account(username, config=None):
+    """Olay kaydına yazılacak hesap adı: etki alanı atılmış, küçük harf; geçerli hesap biçiminde değilse (kişi parolayı
+    kullanıcı adı kutusuna yazmış olabilir) hiç yazılmaz."""
+    name = str(username or '').strip()
+    if '\\' in name:
+        name = name.split('\\', 1)[1]
+    elif '@' in name:
+        name = name.rsplit('@', 1)[0]
+    return name.lower() if ACCOUNT.match(name) else '(geçersiz biçim)'
+
+
+def record(db, username, ok, reason, addr=None, ua=None):
+    db.execute('INSERT INTO login_events (at, username, ok, reason, addr, ua_hash) VALUES (?, ?, ?, ?, ?, ?)',
+               (time.time(), username, 1 if ok else 0, reason, (addr or '')[:64] or None,
+                hashlib.sha256(ua.encode()).hexdigest()[:16] if ua else None))
+    db.execute('DELETE FROM login_events WHERE at < ?', (time.time() - EVENTS_KEEP_DAYS * 86400,))
 
 
 def digest(token):
@@ -138,7 +177,7 @@ def ad_verify(username, password):
             lookup.search(config['base_dn'], ACTIVE_PERSON.format(account), SUBTREE,
                           attributes=['sAMAccountName', 'displayName'], size_limit=2)
             if len(lookup.entries) != 1:
-                return None
+                return UNKNOWN_ACCOUNT
             entry = lookup.entries[0]
             account = str(entry.sAMAccountName.value)
             display = str(entry.displayName.value or account)
@@ -254,6 +293,63 @@ class Handler(BaseHTTPRequestHandler):
     def log_message(self, *_):
         pass  # nginx supplies access logs; never log credentials
 
+    def client_addr(self):
+        # Ters vekil (nginx) X-Real-IP'yi kendi yazar; yoksa X-Forwarded-For'un ilki, o da yoksa bağlanan adres.
+        real = (self.headers.get('X-Real-IP') or '').strip()
+        if real:
+            return real[:64]
+        fwd = (self.headers.get('X-Forwarded-For') or '').split(',')[0].strip()
+        return (fwd or self.client_address[0])[:64]
+
+    def admin_ok(self):
+        """Yönetim uçları: jeton tanımlı ve eşleşiyor, istek ters vekilden gelmiyor."""
+        if len(ADMIN_TOKEN) < 24 or self.headers.get('X-Real-IP'):
+            return False
+        return hmac.compare_digest(self.headers.get('X-Login-Admin', ''), ADMIN_TOKEN)
+
+    def admin_get(self, path, query):
+        if path == '/admin/events':
+            try:
+                after = int(query.get('after', ['0'])[0])
+                limit = max(1, min(int(query.get('limit', ['1000'])[0]), 5000))
+            except ValueError:
+                return self.reply(400)
+            with connection() as db:
+                rows = db.execute('SELECT id, at, username, ok, reason, addr, ua_hash FROM login_events WHERE id > ? '
+                                  'ORDER BY id LIMIT ?', (after, limit + 1)).fetchall()
+                max_id = db.execute('SELECT COALESCE(MAX(id), 0) FROM login_events').fetchone()[0]
+            items = [{'id': r[0], 'at': r[1], 'username': r[2], 'ok': bool(r[3]), 'reason': r[4], 'addr': r[5], 'ua': r[6]}
+                     for r in rows[:limit]]
+            return self.reply(200, {'items': items, 'more': len(rows) > limit, 'maxId': max_id})
+        if path == '/admin/sessions':
+            with connection() as db:
+                rows = db.execute('SELECT token, username, display, created, expires, addr FROM sessions WHERE expires > ? '
+                                  'ORDER BY created DESC', (time.time(),)).fetchall()
+            # Oturum kimliği: saklanan özetin ilk 16 hanesi (anahtarın kendisi değil; ondan anahtar üretilemez).
+            return self.reply(200, {'items': [{'id': r[0][:16], 'username': r[1], 'display': r[2], 'created': r[3],
+                                               'expires': r[4], 'addr': r[5]} for r in rows]})
+        return self.reply(404)
+
+    def admin_revoke(self):
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            data = json.loads(self.rfile.read(size)) if 0 < size <= 4096 else {}
+        except (ValueError, TypeError):
+            return self.reply(400)
+        username = str(data.get('username') or '').strip().lower()
+        sid = str(data.get('session') or '').strip().lower()
+        if not username and not (len(sid) == 16 and all(c in '0123456789abcdef' for c in sid)):
+            return self.reply(400)
+        with connection() as db:
+            if username:
+                rows = db.execute('SELECT token, username FROM sessions WHERE lower(username) = ?', (username,)).fetchall()
+            else:
+                rows = db.execute('SELECT token, username FROM sessions WHERE substr(token, 1, 16) = ?', (sid,)).fetchall()
+            for token, user in rows:
+                db.execute('DELETE FROM sessions WHERE token = ?', (token,))
+                record(db, (user or '?').lower(), True, 'revoked', 'yonetici:' + str(data.get('actor') or '')[:40])
+        return self.reply(200, {'revoked': len(rows)})
+
     def reply(self, status, data=None, cookie=None):
         raw = json.dumps(data or {}, ensure_ascii=False).encode()
         self.send_response(status)
@@ -273,6 +369,11 @@ class Handler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
+        if self.path.startswith('/admin/'):
+            if not self.admin_ok():
+                return self.reply(404)
+            parsed = urllib.parse.urlsplit(self.path)
+            return self.admin_get(parsed.path, urllib.parse.parse_qs(parsed.query))
         url = urllib.parse.urlsplit(self.path)
         if url.path == '/destek-sso':
             # Destek'in giriş sayfası tarayıcıyı buraya yollar; portal oturumu varsa imzalı jetonla geri döner,
@@ -314,13 +415,18 @@ class Handler(BaseHTTPRequestHandler):
         self.reply(404)
 
     def do_POST(self):
+        if self.path == '/admin/sessions/revoke':
+            return self.admin_revoke() if self.admin_ok() else self.reply(404)
         if self.headers.get('Origin') != ORIGIN:
             return self.reply(403)
         if self.path == '/logout':
             try:
                 token = SimpleCookie(self.headers.get('Cookie', ''))[COOKIE].value
                 with connection() as db:
+                    row = db.execute('SELECT username FROM sessions WHERE token=?', (digest(token),)).fetchone()
                     db.execute('DELETE FROM sessions WHERE token=?', (digest(token),))
+                    if row:
+                        record(db, (row[0] or '?').lower(), True, 'logout', self.client_addr(), self.headers.get('User-Agent'))
             except (KeyError, ValueError):
                 pass
             return self.reply(200, cookie=f'{COOKIE}=; Path=/timas/; {FLAGS}; Max-Age=0')
@@ -336,18 +442,33 @@ class Handler(BaseHTTPRequestHandler):
                 return self.reply(400)
         except (ValueError, KeyError, TypeError):
             return self.reply(400)
+        addr, ua = self.client_addr(), self.headers.get('User-Agent')
+        shown = safe_account(username)
         try:
             found = ad_verify(username, password)
         except DirectoryUnavailable as exc:
             print(f'timas-login: directory unavailable ({exc})', file=sys.stderr, flush=True)
+            with connection() as db:
+                record(db, shown, False, 'directory_down', addr, ua)
             return self.reply(503, {'error': 'Şirket dizinine (Active Directory) şu an ulaşılamıyor. Birazdan tekrar deneyin.'})
+        if found is UNKNOWN_ACCOUNT:
+            with connection() as db:
+                record(db, '(bilinmeyen hesap)', False, 'unknown_account', addr, ua)
+            return self.reply(401, {'error': 'Kullanıcı adı veya şifre doğru değil.'})
         if not found:
+            config = ad_config() or {}
+            reason = 'bad_format' if shown == '(geçersiz biçim)' else (
+                'unknown_domain' if config and account_name(username, config) is None else 'bad_password')
+            with connection() as db:
+                record(db, shown, False, reason, addr, ua)
             return self.reply(401, {'error': 'Kullanıcı adı veya şifre doğru değil.'})
         user, display = found
         token = secrets.token_urlsafe(32)
         with connection() as db:
             db.execute('DELETE FROM sessions WHERE expires<=?', (time.time(),))
-            db.execute('INSERT INTO sessions (token, username, expires, display) VALUES (?, ?, ?, ?)', (digest(token), user, time.time() + TTL, display))
+            db.execute('INSERT INTO sessions (token, username, expires, display, created, addr) VALUES (?, ?, ?, ?, ?, ?)',
+                       (digest(token), user, time.time() + TTL, display, time.time(), addr))
+            record(db, user.lower(), True, 'ok', addr, ua)
         self.reply(200, {'username': user, 'displayName': display}, f'{COOKIE}={token}; Path=/timas/; {FLAGS}; Max-Age={TTL}')
 
 

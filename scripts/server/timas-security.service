@@ -1,0 +1,12 @@
+[Unit]
+Description=Veri güvenliği (M49): giriş olaylarını çeker, güvenlik kurallarını koşar; günde bir kez saklama süresi ve erişim özeti
+After=nanobase-semantic-bridge.service timas-login.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/data-security/run-due); bu birim yalnız çağırır. Saklama süresi SECURITY_RETENTION_APPLY
+# kapalıyken yalnız önizleme yazar, hiçbir şey silmez. Günlük kısım SECURITY_DAILY_AT'ten (03:40) sonraki ilk koşuda.
+# İlk kez elle koşturulur (bellek: run-it-before-it-runs-itself):
+#   curl -X POST -H "X-Semantic-Caller: $SEMANTIC_CALLER_TOKEN" 'http://127.0.0.1:8795/api/v1/data-security/run-due?zorla=gunluk'
+ExecStart=/bin/sh -c 'curl -fsS -m 1700 -X POST -H "X-Semantic-Caller: $${SEMANTIC_CALLER_TOKEN}" http://127.0.0.1:8795/api/v1/data-security/run-due'

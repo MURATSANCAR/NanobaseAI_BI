@@ -830,7 +830,7 @@ export type AccessMe = {
   roles: Array<{ id: string; name: string; via: string[] }>;
 };
 
-/** Sayfa. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir (ör. Sistem durumu). */
+/** `explicit`: kişisel veri gösteren sayfa (güvenlik, İK); «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
 export type AccessPage = { key: string; area: string; label: string; explicit?: boolean };
 /** Sayfa içindeki işlem. `explicit`: «Bütün sayfalar ve işlemler» ile gelmez, role tek tek verilir. */
 export type AccessFeature = { key: string; area: string; page?: string; label: string; hint: string; explicit?: boolean };

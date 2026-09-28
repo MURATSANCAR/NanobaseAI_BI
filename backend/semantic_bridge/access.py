@@ -514,6 +514,10 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/categories/profile/", _CATEGORY_READERS),
     ("/api/v1/categories/nodes", _CATEGORY_READERS),
     ("/api/v1/categories/", frozenset({page("kategori-agaci")})),
+    # M49 Veri güvenliği (Altyapı ve destek). Sayfa açıkça verilir; istemci tarafı dışa aktarma bildirimi herkese açık.
+    ("/api/v1/data-security/run-due", SYSTEM),
+    ("/api/v1/data-security/export-notice", OPEN),
+    ("/api/v1/data-security/", frozenset({page("veri-guvenligi")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -625,6 +629,8 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
      r"^/api/v1/categories/(tree|tree/(open|draft|suggest|submit|withdraw)|mappings|rules/[^/]+|tags/decision)$",
      "ozellik:kategori.agac-duzenle"),
     (frozenset({"GET"}), r"^/api/v1/categories/crm-diff/export\.xlsx$", "ozellik:veri.disa-aktar"),
+    # Güvenlik uyarısını kapatma/yeniden açma. Oturum kapatma ve saklama politikası açıkça verilir, ucun içinde.
+    (frozenset({"PATCH"}), r"^/api/v1/data-security/alerts/[^/]+$", "ozellik:guvenlik.uyari-kapat"),
     # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
     # Pazarlama planı: taslak, düzenleme, Zeki AI önerisi, materyal taslağı, onaya gönderme, revizyon. Plan onayı, üst

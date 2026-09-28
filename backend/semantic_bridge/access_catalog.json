@@ -440,6 +440,12 @@
       "area": "altyapi",
       "label": "Sistem durumu",
       "explicit": true
+    },
+    {
+      "key": "sayfa:veri-guvenligi",
+      "area": "altyapi",
+      "label": "Veri güvenliği",
+      "explicit": true
     }
   ],
   "features": [
@@ -1179,6 +1185,29 @@
       "page": "sayfa:sistem-durumu",
       "label": "Sistem durumu ayarları",
       "hint": "Eşikler ve bildirim alıcıları (yalnız iç adresler)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:guvenlik.uyari-kapat",
+      "area": "altyapi",
+      "page": "sayfa:veri-guvenligi",
+      "label": "Güvenlik uyarısını kapatma",
+      "hint": "Uyarıyı inceleyip «gerçek / gerçek değil» diye kapatma ya da yeniden açma"
+    },
+    {
+      "key": "ozellik:guvenlik.oturum-kapat",
+      "area": "altyapi",
+      "page": "sayfa:veri-guvenligi",
+      "label": "Portal oturumunu kapatma",
+      "hint": "Bir kişinin açık portal oturumlarını kapatma (işten ayrılan, kaybolan cihaz); AD hesabına dokunmaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:guvenlik.saklama",
+      "area": "altyapi",
+      "page": "sayfa:veri-guvenligi",
+      "label": "Saklama süresi politikası",
+      "hint": "Soru sonucu, giriş ve erişim kaydı gibi kayıtların saklama süresini değiştirme ve süresi dolanı silme işini açma",
       "explicit": true
     }
   ]

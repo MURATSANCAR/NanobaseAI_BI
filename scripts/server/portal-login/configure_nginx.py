@@ -40,6 +40,8 @@ locations = '''
         proxy_pass http://127.0.0.1:8796/;
         proxy_set_header Origin $http_origin;
         proxy_set_header Cookie $http_cookie;
+        # Giriş olay kaydının kaynak adresi (M49); giriş servisinin yönetim uçları bu başlığı taşıyan isteği reddeder.
+        proxy_set_header X-Real-IP $remote_addr;
         proxy_hide_header X-Powered-By;
     }
 '''

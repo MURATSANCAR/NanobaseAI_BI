@@ -393,6 +393,67 @@
   föy fiyatının satış satırı mı liste mi olduğu; föy dilinde «tavsiye edilen satış fiyatı».
 - **Açık kalan:** VM `infra/docker/bi/jobs.py`'de pazarlama run-due'su yok (M15'ten beri) — VM kurulumunda eklenmeli.
   Platform ve e-bülten performansı, M22/M30/M32 bağlantıları sonraki sürüm (`contract/month/{ay}` hazır).
+## 2026-09-28 — M49 Veri yönetimi ve güvenlik (ilk sürüm) — DOĞRULANAMADI, sunucu kapalı
+
+- **Neden:** analiz (`docs/analiz/kullanici-ihtiyaclari/M49-veri-guvenligi.md`): erişim kapısı (Yetki A/B/C) kurulu, izleme ve uyum
+  tarafı yoktu. Giriş servisi başarılı/başarısız girişi hiç yazmıyordu; 403 ve dışa aktarma kayıtsızdı; soru kaydı
+  (`sl_query_log.result_json`) tam sonucu süresiz tutuyordu ve silen kod yoktu; model sırası (`sl_llm_queue.question` ilk 500
+  karakter) ve model işi (`sl_llm_job.messages_json` tamamı) de öyle.
+- **Ne yapıldı (dalda, main'e taşınmadı):**
+  - Giriş servisi (`scripts/server/portal-login/server.py`): `login_events` tablosu (hesap, sonuç, neden
+    `ok|bad_password|unknown_account|unknown_domain|bad_format|directory_down|logout|revoked`, adres, tarayıcı özeti);
+    `sessions`'a `created`, `addr`. Parola ve oturum anahtarı yazılmaz; dizinde olmayan ya da geçersiz biçimli ad da
+    yazılmaz («(bilinmeyen hesap)» / «(geçersiz biçim)»: kişi parolasını ad kutusuna yazmış olabilir). Yönetim uçları
+    `GET /admin/events`, `GET /admin/sessions`, `POST /admin/sessions/revoke` yalnız `LOGIN_ADMIN_TOKEN` (≥ 24 karakter)
+    başlığıyla ve `X-Real-IP` taşımayan (ters vekilden gelmeyen) istekte çalışır — `/timas/auth/` dışarıya açık olduğu için.
+    Servisteki olay kopyası 30 gün (`LOGIN_EVENTS_KEEP_DAYS`); uzun süreli kayıt köprüde.
+  - Köprü `data_security.py` + `data_security_api.py` (`/api/v1/data-security/*`) + `data_security_inventory.json`
+    (portal içi kişisel veri defteri; 25 tablo, 5 klasör). Tablolar `semantic_security_logins|access|alerts|retention_runs|state`.
+    Sayfa kapısı (`app.py` `_gate_verdict`) 403 kararını ve `ozellik:veri.disa-aktar` isteğini yazar (her istek değil);
+    istemci tarafı CSV/PDF için `export-notice` (Baskı öneri CSV, dahili rehber CSV, pano kartı CSV, pano PDF bağlandı).
+    Yetki dışı soru kopyalanmaz, `sl_query_log.answer_type='NOT_PERMITTED'`'ten okunur.
+  - Kurallar (model yok, tekrarlanabilir): aynı hesaba W dakikada ≥ N hatalı giriş (5/10), mesai dışı bir saatte ≥ 3 dışa
+    aktarma (mesai 08:00–19:00, Pzt–Cum), yeni yönetici, «Herkes»e yetki eklenmesi, uygulanıyorken saklama işinin 48 saat
+    çalışmaması. Kritik uyarı `SECURITY_ALERT_RECIPIENTS`'e anında, 403/yetki dışı soru özeti günde bir. İlk koşu yönetici
+    ve Herkes için yalnız taban kaydeder (kurulum günü sahte «yeni yönetici» uyarısı çıkmaz).
+  - Hesap hijyeni: açık oturumu olup AD'de etkin olmayan (kritik), yönetici listesinde olup AD'de olmayan, role kişi olarak
+    bağlı olup AD'de olmayan, CRM'de etkin AD'de değil, test adı kalıplı, uzun süredir girmeyen, yalnız «Herkes» ile giren.
+    Okunamayan kaynağa dayanan bulgu çıkmaz, not düşülür. Eşleşme hesap adıyla (GUID değil) — kabulde CRM farkıyla ölçülecek.
+  - «Herkes» daraltma önizlemesi: bugünkü rol/bağ/üyelikle kişi kişi kim neyi kaybeder; yöneticiler hesaplanmaz.
+  - Kişisel veri envanteri: katalogdaki `sensitive` kolonlar (varlık + kolon başına bir satır, değer yok) ve ad-soyad kalıbı
+    (yalnız envanterde «kişisel veri (ad)»; soru hattına dokunulmadı, `sensitivity.py` değişmedi → tam set regresyonu gerekmez).
+  - Saklama süresi: nesneler soru sonucu, model sırası metni, giriş kaydı, erişim kaydı, kapanmış uyarı, değişiklik kaydı.
+    Gece işi (`SECURITY_DAILY_AT` 03:40'tan sonraki ilk 5 dk'lık koşu) önce önizleme satırı yazar; **`SECURITY_RETENTION_APPLY`
+    varsayılan kapalı** — kapalıyken hiçbir şey silinmez. Açmak `ozellik:guvenlik.saklama` ister ve ekran önizlemeyi
+    göstermeden açamaz (`onizlemeGoruldu`); açılış ayrıca `approve` diye değişiklik kaydına önizleme sayılarıyla yazılır.
+    Soru kaydında satır silinmez, yalnız `result_json` boşaltılır; model sırası/işinde yalnız metin boşaltılır (süreler M48
+    kapasite görünümü için kalır). Parti parti (2.000) biter, tavan yok.
+  - **Varsayılan süreler ve gerekçesi** (hukuk teyidi bekliyor, analiz §10 soru 2): soru sonucu **90 gün** (bir çeyrek:
+    sonucu yeniden görme ve itiraz için yeter; soru ve SQL kalır, promt izleme bozulmaz); model metni **30 gün** (yalnız
+    hata ayıklama için tutuluyor, en hassas kopya bu); giriş ve erişim kaydı **365 gün** (yıllık denetim döngüsü ve ihlal
+    incelemesi için geriye bir yıl); kapanmış uyarı **730 gün**; değişiklik kaydı **0 = süresiz** (yetki değişikliğinin kanıtı).
+  - Yetki: `sayfa:veri-guvenligi` **açıkça verilen sayfa** — `access.explicit_keys()` artık `pages` içinde `explicit`
+    olanları da kapsar (M55 §14.1 ile aynı değişiklik, en küçük hâli); aksi hâlde «Herkes»in bütün sayfaları güvenlik
+    ekranını herkese açardı. `ozellik:guvenlik.uyari-kapat` (FEATURE_RULES), açıkça verilen `guvenlik.oturum-kapat` ve
+    `guvenlik.saklama` (uçta). Rol düzenleyici açıkça verilen sayfayı «ayrıca verilir» diye gösterir.
+  - Menü: yeni çalışma alanı `altyapi` «Altyapı ve destek» (M48 ile aynı id/etiket; merge'de tekilleşir) › Veri güvenliği;
+    Kampüs M49; rota `/timas/veri-guvenligi`; ön yüz `src/canvas/data-security/` (sekmeler Özet · Uyarılar · Giriş ve
+    oturumlar · Erişim kaydı · Hesap hijyeni · Kişisel veri envanteri · Saklama süreleri; telefon düzeni, animasyon yok).
+  - Zamanlayıcı `timas-security.timer` (5 dk) → `run-due`; VM `jobs.py`'de `SECURITY_EVERY_SEC`=300. Compose: giriş
+    konteynerine `LOGIN_ADMIN_TOKEN`; nginx `/timas/auth/`'a `X-Real-IP` (şablon + `configure_nginx.py`);
+    `timas-login.service`'e `EnvironmentFile=-/etc/nanobase/timas-login.env`.
+- **Plandan sapmalar:** saklama politikası ayrı tablo yerine `admin.conf` (ekran > env > varsayılan; kim/ne zaman
+  `semantic_settings` + değişiklik kaydında), kanıt `semantic_security_retention_runs`'ta. Veri sahibi, çeyreklik gözden
+  geçirme, belge taslakları, ihlal akışı ve `sensitive_read` kaydı ikinci sürüme (analiz §9). Sohbet kutusu (sabit sorgulara
+  kapalı küme eşleme) bu sürümde yok.
+- **Testler:** `backend/semantic_layer/tests/test_data_security.py` (20), `scripts/server/portal-login/test_server.py`'ye 6,
+  `navModel.test.ts`'e 1 + beklenti güncellemesi. Yerelde yalnız `py_compile` ve JSON doğrulaması; **pytest/tsc/vitest
+  koşulmadı — DOĞRULANAMADI, sunucu kapalı.**
+- **Sunucuda kalan:** giriş servisinin yeniden kurulumu (sudo, kullanıcı), iki tarafa aynı `LOGIN_ADMIN_TOKEN`, nginx başlığı,
+  `scripts/acceptance/M49/check.sh` (pytest, tsc, vitest, derleme), `kabul.py` (R1–R8 + yanıt taraması), `cleanup.py` ve
+  giriş servisindeki test satırlarının silinmesi, `timas-security.service`'in elle ilk koşusu (`?zorla=gunluk`), sonra timer.
+  `SECURITY_RETENTION_APPLY` kapalı kalır. Ölçülecek: katalogdaki maskeli kolon sayısı ve CRM `Contact` TC kolonlarının
+  işaretli olup olmadığı; CRM–AD hesap adı eşleşmesinin GUID eşleşmesinden farkı.
 
 ## 2026-09-28 (03:20) — Müşteri VM'ine `0e2ad1e8` kuruldu (M10 İlk baskı, M12 Üretim, M46 düzeltmeleri); VM'de bütçe yenilemesi
 

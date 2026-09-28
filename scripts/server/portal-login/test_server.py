@@ -141,5 +141,73 @@ class Sessions(unittest.TestCase):
         self.assertEqual((status, data['displayName']), (200, 'ali'))
 
 
+    # ------------------------------------------------------------------ M49 giriş olay kaydı ve yönetim uçları
+
+    def events(self):
+        with login.connection() as db:
+            return db.execute('SELECT username, ok, reason, addr FROM login_events ORDER BY id').fetchall()
+
+    def test_login_attempts_are_recorded_without_password(self):
+        self.login()
+        self.login(found=None, username='TIMAS\\muratsancar')
+        with patch.object(login, 'ad_verify', return_value=login.UNKNOWN_ACCOUNT):
+            self.request('/login', 'POST', {'username': 'Parola123', 'password': 'x'}, {'Origin': login.ORIGIN})
+        self.login(found=None, username='bu bir parola!')
+        rows = self.events()
+        self.assertEqual([(r[0], r[1], r[2]) for r in rows], [
+            ('muratsancar', 1, 'ok'), ('muratsancar', 0, 'bad_password'),
+            ('(bilinmeyen hesap)', 0, 'unknown_account'), ('(geçersiz biçim)', 0, 'bad_format')])
+        with login.connection() as db:
+            dump = ' '.join(str(x) for row in db.execute('SELECT * FROM login_events') for x in row)
+        self.assertNotIn('secret', dump)
+        self.assertNotIn('parola123', dump.lower())
+
+    def test_directory_down_is_recorded(self):
+        with patch.object(login, 'ad_verify', side_effect=login.DirectoryUnavailable('x')):
+            self.request('/login', 'POST', {'username': 'ali', 'password': 'secret'}, {'Origin': login.ORIGIN})
+        self.assertEqual([(r[0], r[2]) for r in self.events()], [('ali', 'directory_down')])
+
+    def test_real_ip_from_proxy_is_the_address(self):
+        with patch.object(login, 'ad_verify', return_value=('ali', 'Ali')):
+            self.request('/login', 'POST', {'username': 'ali', 'password': 'secret'},
+                         {'Origin': login.ORIGIN, 'X-Real-IP': '10.1.2.3'})
+        self.assertEqual(self.events()[-1][3], '10.1.2.3')
+
+    def test_admin_endpoints_need_token_and_are_closed_through_proxy(self):
+        token = 'k' * 32
+        with patch.object(login, 'ADMIN_TOKEN', ''):
+            self.assertEqual(self.request('/admin/events', headers={'X-Login-Admin': ''})[0], 404)
+        with patch.object(login, 'ADMIN_TOKEN', token):
+            self.assertEqual(self.request('/admin/events', headers={'X-Login-Admin': 'yanlis'})[0], 404)
+            self.assertEqual(self.request('/admin/events', headers={'X-Login-Admin': token, 'X-Real-IP': '1.2.3.4'})[0], 404)
+            self.assertEqual(self.request('/admin/sessions/revoke', 'POST', {'username': 'ali'},
+                                          {'X-Login-Admin': token, 'X-Real-IP': '1.2.3.4'})[0], 404)
+
+    def test_admin_events_sessions_and_revoke(self):
+        token = 'k' * 32
+        status, headers, _ = self.login()
+        cookie = {'Cookie': headers['Set-Cookie'].split(';')[0]}
+        with patch.object(login, 'ADMIN_TOKEN', token):
+            h = {'X-Login-Admin': token}
+            status, _, data = self.request('/admin/events?after=0', headers=h)
+            self.assertEqual((status, len(data['items']), data['more']), (200, 1, False))
+            self.assertEqual(data['items'][0]['username'], 'muratsancar')
+            status, _, data = self.request('/admin/sessions', headers=h)
+            self.assertEqual(status, 200)
+            self.assertEqual([s['username'] for s in data['items']], ['muratsancar'])
+            sid = data['items'][0]['id']
+            self.assertEqual(len(sid), 16)
+            self.assertNotIn(cookie['Cookie'].split('=', 1)[1], json.dumps(data))
+            self.assertEqual(self.request('/admin/sessions/revoke', 'POST', {'session': sid, 'actor': 'zekiai'}, h)[2], {'revoked': 1})
+            self.assertEqual(self.request('/session', headers=cookie)[0], 401)
+            self.assertEqual(self.events()[-1][2], 'revoked')
+            self.assertEqual(self.request('/admin/sessions/revoke', 'POST', {'session': 'zz'}, h)[0], 400)
+
+    def test_logout_is_recorded(self):
+        _, headers, _ = self.login()
+        self.request('/logout', 'POST', headers={'Cookie': headers['Set-Cookie'].split(';')[0], 'Origin': login.ORIGIN})
+        self.assertEqual([r[2] for r in self.events()], ['ok', 'logout'])
+
+
 if __name__ == '__main__':
     unittest.main()

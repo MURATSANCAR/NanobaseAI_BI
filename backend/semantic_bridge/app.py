@@ -2049,16 +2049,33 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             return (401, "Oturum gerekli."), _NO_SCOPE
         r = rt()
         admin_mod.ensure(r.store.engine)
+
+        def _log(kind: str, key: Optional[str]) -> None:
+            # M49: yalnız 403 kararı ve dışa aktarma yazılır (her istek değil); yazılamazsa istek durmaz.
+            from semantic_bridge import data_security as ds_mod
+            ds_mod.record_access(r.store.engine, user, kind, method, path, key)
+
         if rule is None:
             log.warning("access: kuralı olmayan uç kişiye kapalı: %s", path)
-            return (None if admin_mod.is_admin(user) else (403, "Bu işleme yetkiniz yok.")), _NO_SCOPE
+            if admin_mod.is_admin(user):
+                return None, _NO_SCOPE
+            _log("forbidden", None)
+            return (403, "Bu işleme yetkiniz yok."), _NO_SCOPE
         if rule == access_mod.SYSTEM:
-            return (None if admin_mod.is_admin(user) else (403, "Bu işlem zamanlayıcıya aittir.")), _NO_SCOPE
+            if admin_mod.is_admin(user):
+                return None, _NO_SCOPE
+            _log("forbidden", "zamanlayici")
+            return (403, "Bu işlem zamanlayıcıya aittir."), _NO_SCOPE
         acc = access_mod.effective(r.store.engine, r.settings.tenant_id, user, admin_mod.is_admin)
         if rule != access_mod.OPEN and not acc.can(*rule):
+            _log("forbidden", ",".join(sorted(rule)))
             return (403, "Bu sayfaya yetkiniz yok."), _NO_SCOPE
-        if any(not acc.can(k) for k in wanted):
+        missing = [k for k in wanted if not acc.can(k)]
+        if missing:
+            _log("forbidden", ",".join(missing))
             return (403, "Bu işlem rolünüzde yok."), _NO_SCOPE
+        if "ozellik:veri.disa-aktar" in wanted:
+            _log("export", "ozellik:veri.disa-aktar")
         return None, (access_mod.allowed_domains(acc) if data else _NO_SCOPE)
 
     @app.middleware("http")
@@ -6977,6 +6994,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     from semantic_bridge import categories_api
     app.state.categories = categories_api.register(app, rt, _require_caller, _can)
+    # M49 Veri güvenliği (Altyapı ve destek): /api/v1/data-security/*. Giriş olayları giriş servisinden çekilir.
+    from semantic_bridge import data_security_api
+    app.state.data_security = data_security_api.register(app, rt, _require_caller, _can, access_dir)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing

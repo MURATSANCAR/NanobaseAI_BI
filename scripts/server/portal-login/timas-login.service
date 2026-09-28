@@ -6,6 +6,9 @@ After=network.target
 User=www-data
 Group=www-data
 # venv carries ldap3 + pycryptodome (requirements.txt) for Active Directory sign-in
+# LOGIN_ADMIN_TOKEN (M49 güvenlik ekranı; köprünün ortam dosyasındakiyle aynı, en az 24 karakter). Dosya yoksa yönetim
+# uçları kapalı kalır, giriş olayları yine yazılır.
+EnvironmentFile=-/etc/nanobase/timas-login.env
 ExecStart=/opt/timas-login/venv/bin/python /opt/timas-login/server.py
 Restart=on-failure
 StateDirectory=timas-login

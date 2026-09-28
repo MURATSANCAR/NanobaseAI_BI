@@ -53,6 +53,7 @@ import {
   type CardResult,
 } from './store';
 import Shell, { ZoomStage, useShellZoom } from '../stitch/Shell';
+import { notifyExport } from '../data-security/notify';
 
 /** Giriş yapan kişi; pano ona ait. Oturum kapısıyla aynı sorgu: aynı anahtara ikinci bir sorgu işlevi
  *  (her hatayı «oturum yok» sayan) giriş servisinin 502'sini oturum düşmesi gibi gösteriyordu. */
@@ -717,7 +718,10 @@ export default function BoardScreen() {
             </button>
             <button
               type="button"
-              onClick={() => setPrinting(true)}
+              onClick={() => {
+                notifyExport('Pano (bütün kartlar)', 'pdf');
+                setPrinting(true);
+              }}
               disabled={printing}
               title="Panoyu PDF olarak kaydet (yazdırma penceresi)"
               className="pano-press flex h-8 items-center gap-1.5 rounded-full px-2.5 text-[11px] font-bold text-canvas-ink transition-colors hover:bg-white disabled:opacity-60"
@@ -920,7 +924,10 @@ export default function BoardScreen() {
                       <button
                         type="button"
                         disabled={!rows.length}
-                        onClick={() => download(fileName(c.title, 'csv'), toCsv(cols, rows))}
+                        onClick={() => {
+                          notifyExport(`Pano kartı: ${c.title}`, 'csv', rows.length);
+                          download(fileName(c.title, 'csv'), toCsv(cols, rows));
+                        }}
                         title="Bu kartın verisini CSV (Excel) olarak indir"
                         className="pano-press flex h-8 items-center gap-1 rounded-lg px-2 text-[11px] font-bold text-canvas-muted transition-colors hover:bg-slate-100 hover:text-canvas-ink disabled:opacity-50"
                       >

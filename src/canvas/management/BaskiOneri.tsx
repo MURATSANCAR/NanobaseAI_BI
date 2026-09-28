@@ -11,6 +11,7 @@ import SourcesSheet, { focusOf, type SheetFocus } from './SourcesSheet';
 import SearchSelect from '../components/SearchSelect';
 import { useCan } from '../useAdmin';
 import './management.css';
+import { notifyExport } from '../data-security/notify';
 
 const REPORT_ID = 'baski-oneri';
 
@@ -196,6 +197,7 @@ export default function BaskiOneri() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `baski-oneri-${view.id}-${snap?.data?.asOf ?? 'rapor'}.csv`;
+    notifyExport(`Baskı öneri raporu (${view.id})`, 'csv', rows.length);
     a.click();
     URL.revokeObjectURL(url);
   };

@@ -63,6 +63,7 @@ const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
 const TenderDetail = lazy(() => import('@/canvas/tenders/TenderDetail'));
 const CategoriesScreen = lazy(() => import('@/canvas/categories/CategoriesScreen'));
 const CategoryBookProfile = lazy(() => import('@/canvas/categories/BookProfile'));
+const DataSecurityScreen = lazy(() => import('@/canvas/data-security/DataSecurityScreen'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
 const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
@@ -163,6 +164,8 @@ export default function App() {
             <Route path="ihale/:id" element={<TenderDetail />} />
             {/* M48 IT altyapı ve sistem durumu: halkalar, olaylar, zamanlanmış işler, sürümler, kapasite (/api/v1/it-ops). */}
             <Route path="sistem-durumu" element={<SystemStatusScreen />} />
+            {/* M49 Veri güvenliği (Altyapı ve destek): giriş/erişim kaydı, uyarılar, hijyen, envanter, saklama (/api/v1/data-security). */}
+            <Route path="veri-guvenligi" element={<DataSecurityScreen />} />
             {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
             <Route path="ilk-baski" element={<FirstPrintScreen />} />
             <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />

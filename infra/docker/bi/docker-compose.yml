@@ -64,6 +64,9 @@ services:
       PORTAL_ORIGIN: ${PORTAL_ORIGIN}
       # Müşteri iç ağında HTTP'den açılır (HTTPS yok): çerez Secure olmadan verilir.
       COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      # Güvenlik ekranı (M49): köprü giriş olaylarını ve oturum listesini bu jetonla okur (.env'de, köprüyle aynı değer;
+      # en az 24 karakter). Boşsa giriş kaydı yine yazılır ama köprüye taşınmaz, oturum kapatma çalışmaz.
+      LOGIN_ADMIN_TOKEN: ${LOGIN_ADMIN_TOKEN:-}
     volumes:
       - ./secrets/ad:/app/ad:ro
       - bi_login:/data

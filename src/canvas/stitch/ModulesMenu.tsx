@@ -50,6 +50,7 @@ export const LIVE: Record<string, string> = {
   M53: '/pazarlama/set-hediye',
   email: '/kurumsal-eposta',
   M48: '/sistem-durumu',
+  M49: '/veri-guvenligi',
 };
 
 /** Çalışan modül grupları: Kampüs kartları ve bu listedeki grup başlıkları buraya gider. Ad `modules.json`'daki başlıktır. */

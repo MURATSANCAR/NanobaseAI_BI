@@ -39,6 +39,7 @@ import book1Img from '@/assets/kampus/book1.jpg';
 import book2Img from '@/assets/kampus/book2.jpg';
 import './kampus.css';
 import OutageStrip from '../it-ops/OutageStrip';
+import { notifyExport } from '../data-security/notify';
 
 /**
  * Girişten sonraki ilk ekran: Timaş Kampüs & ZEKİ Akıllı Rehber.
@@ -218,6 +219,7 @@ export default function KampusPage() {
     const a = document.createElement('a');
     a.href = url;
     a.download = `dahili-rehber-${new Date().toISOString().slice(0, 10)}.csv`;
+    notifyExport('Dahili rehber (kişi, dahili, cep, e-posta)', 'csv', everyone.length);
     a.click();
     URL.revokeObjectURL(url);
   };
