@@ -178,7 +178,7 @@ export default function SettingsPanel() {
     onSuccess: (d) => keep([d]),
     // İstek hiç cevap vermezse de (ağ, yetki, zaman aşımı) sonuç kırmızı görünür; tuş sessiz kalmaz.
     onError: (e, id) =>
-      keep([{ id, group: null, label: '', ok: false, message: errText(e, 'Deneme yapılamadı.'), ms: 0, at: new Date().toISOString() }]),
+      keep([{ id, group: null, label: '', ok: false, message: errText(e, 'Deneme yapılamadı.') ?? 'Deneme yapılamadı.', ms: 0, at: new Date().toISOString() }]),
     onSettled: () => setChecking(null),
   });
   // Kaydedilmemiş değişiklik varken tuş önce kaydeder, sonra sınar: deneme her zaman kayıtlı ayarla yapılır.
