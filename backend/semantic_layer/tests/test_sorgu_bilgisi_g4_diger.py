@@ -9,6 +9,7 @@ okuma işinin kaydettiği asıl sorgu `origin` olarak görünür. Örnek bir uç
 from __future__ import annotations
 
 import json
+import re
 from datetime import date, datetime, timezone
 
 import pytest
@@ -166,7 +167,14 @@ def test_m24_katalog_bulten_kaynaklari(engine):
     _ok(KCAT.for_newsletters(engine, T, {"items": [{"id": "N1"}]}, ""))
     nl = _ok(KCAT.for_newsletter(engine, T, "N1", {"segment": {}}, SCHEMA, LOGO_DB))
     seg = nl["sources"]["bulten.segment"]
-    assert seg["connection"] == "crm" and "FullName" not in seg["sql"] and "EMailAddress1" not in seg["sql"]
+    # Karar: sorgu değil test düzeltildi. İzin kuralı «e-posta adresi dolu» şartını içerir; adres kolonuna süzgeçte ve
+    # CASE içinde bakmadan izinli kişi sayılamaz. Kişisel veri koruması kolonun metinde geçmemesi değil, sonuçta kişi
+    # kolonu olmamasıdır: seçim listesinde yalnız sayım ve toplam var (sonuç tek satır sayı).
+    assert seg["connection"] == "crm"
+    proj = re.split(r"\sFROM\s", seg["sql"], maxsplit=1)[0]
+    assert set(re.findall(r"\bAS (\w+)", proj)) <= {"aday", "izinli", "toplu_red", "eposta_red", "iys_yok", "adres_yok",
+                                                    "kvkk_var", "izinli_kvkk"}
+    assert "FullName" not in proj and not re.search(r"SELECT\s+(DISTINCT\s+)?c\.", proj)
     _ok(KCAT.for_segment(SCHEMA, NL.normalize_segment({})))
     _ok(KCAT.for_report(engine, T, {"items": [], "crm": {}}, SCHEMA))
 
