@@ -5,6 +5,8 @@ import { ENGINE_ENABLED } from '../../engine';
 import { canSeePage, usePageAccess } from '../../useAdmin';
 import { learningApi } from './learningApi';
 import { fmtDay, fmtWhen } from './parts';
+import SqlInfo from '../../components/SqlInfo';
+import { kaynakOf } from '../../components/kaynakOf';
 
 /** Kampüs «Eğitimlerim» kısa kartı (M57): yaklaşan oturumum, süresi dolan/dolacak zorunlu eğitimim, bekleyen anketim.
  *  Yalnız kişinin kendi kaydı; sayfa rolünde yoksa ya da gösterecek bir şey yoksa kart hiç çizilmez. */
@@ -39,7 +41,12 @@ export default function LearningCard({ className = '' }: { className?: string })
             <div className="text-[11px] text-muted">{m.statusLabel}{m.expiresOn ? ` · ${fmtDay(m.expiresOn)}` : ''}</div>
           </li>
         ))}
-        {d.feedback.length > 0 && <li className="text-[11px] font-semibold text-violet">{d.feedback.length} anket sizi bekliyor</li>}
+        {d.feedback.length > 0 && (
+          <li className="text-[11px] font-semibold text-violet">
+            {d.feedback.length} anket sizi bekliyor
+            <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Bekleyen anket" className="ml-0.5" />
+          </li>
+        )}
       </ul>
     </section>
   );

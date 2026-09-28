@@ -3736,7 +3736,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/rooms/now")
     def rooms_now(request: Request) -> dict[str, Any]:
         engine, tenant, user, display, is_admin = _rooms(request)
-        return {**rooms_mod.now_view(engine, tenant, user), "me": {"username": user, "displayName": display, "admin": is_admin}}
+        from semantic_bridge import kampus_kaynak as KK
+        from semantic_bridge import sorgu_izi as IZ
+
+        return IZ.izli(engine, lambda: {**rooms_mod.now_view(engine, tenant, user),
+                                        "me": {"username": user, "displayName": display, "admin": is_admin}},
+                       prefix="portal.kampus.odalar", title="Toplantı odaları", text=KK.F_ODA)
 
     @app.post("/api/v1/rooms/{room_id}/bookings", status_code=201)
     def rooms_book(room_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -3801,11 +3806,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/greetings")
     def greetings_state(request: Request) -> dict[str, Any]:
         engine, tenant, user, display = _greetings(request)
-        return {"sent": greetings_mod.sent_today(engine, tenant, user),
-                "inbox": greetings_mod.inbox(engine, tenant, user, display),
-                # Kampüs zili ve alkış duvarı: görülmüş olsa da son 30 günün kayıtları.
-                "received": greetings_mod.received(engine, tenant, user, display),
-                "wall": greetings_mod.wall(engine, tenant)}
+        from semantic_bridge import kampus_kaynak as KK
+        from semantic_bridge import sorgu_izi as IZ
+
+        return IZ.izli(engine, lambda: {"sent": greetings_mod.sent_today(engine, tenant, user),
+                                        "inbox": greetings_mod.inbox(engine, tenant, user, display),
+                                        # Kampüs zili ve alkış duvarı: görülmüş olsa da son 30 günün kayıtları.
+                                        "received": greetings_mod.received(engine, tenant, user, display),
+                                        "wall": greetings_mod.wall(engine, tenant)},
+                       prefix="portal.kampus.kutlama", title="Kutlamalar", text=KK.F_KUTLAMA)
 
     @app.post("/api/v1/greetings", status_code=201)
     def greetings_send(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -4005,6 +4014,8 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         admin_mod.ensure(engine)
         return engine, tenant, user, display
 
+    _people_last: dict[str, Any] = {}
+
     def _crm_people(fresh: bool = False) -> tuple[list[dict[str, Any]], float, bool]:
         r = rt()
         truncated = False
@@ -4013,6 +4024,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             nonlocal truncated
             out = r.run_sql(sql, r.settings.max_rows)
             truncated = bool(out.get("truncated"))
+            # Sorgu bilgisi: rehberi dolduran, köprünün CRM'de koşturduğu metin (liste bellekteyken de gösterilir).
+            _people_last.update(sql=out.get("physicalSql"), rows=out.get("totalRows"), ms=out.get("dbMs"),
+                                at=out.get("computedAt"))
             return out
 
         try:
@@ -4042,10 +4056,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, _, _ = _people(request)
         asked = time.time()
         rows, at, truncated = _crm_people(fresh)
-        items = people_mod.people(engine, tenant, rows)
-        return {"items": items, "total": len(items), "truncated": truncated, "source": "crm",
-                "adChecked": people_dir.ad_checked, "db": people_dir.timing(from_memory=at < asked),
-                "at": datetime.fromtimestamp(at, timezone.utc).isoformat()}
+        from semantic_bridge import kampus_kaynak as KK
+        from semantic_bridge import sorgu_izi as IZ
+
+        with IZ.izle(engine) as ran:
+            items = people_mod.people(engine, tenant, rows)
+        out = {"items": items, "total": len(items), "truncated": truncated, "source": "crm",
+               "adChecked": people_dir.ad_checked, "db": people_dir.timing(from_memory=at < asked),
+               "at": datetime.fromtimestamp(at, timezone.utc).isoformat()}
+        crm_db = SK.databases(rt().settings.connection_file)[1]
+        return P.bagla(out, lambda: IZ.kaynak(
+            engine, ran, out, prefix="portal.kampus.profiller", title="Kişi profilleri", text=KK.F_REHBER,
+            extra=lambda k: KK.people_sources(k, admin_mod.conf("CRM_SCHEMA"), crm_db, dict(_people_last), len(rows), at)))
 
     @app.get("/api/v1/me/profile")
     def profile_get(request: Request) -> dict[str, Any]:
@@ -6906,7 +6928,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         r = rt()
         admin_mod.ensure(r.store.engine)
         acc = access_mod.effective(r.store.engine, r.settings.tenant_id, user, admin_mod.is_admin)
-        return {**acc.view(), "isEditor": admin_mod.is_editor(user)}
+        out = {**acc.view(), "isEditor": admin_mod.is_editor(user)}
+
+        def kaynak() -> Any:
+            # Kampüs «N modül» rozeti: menüdeki ana modüllerden kişinin rolündeki sayfalarla açılabilenler.
+            k = P.Kaynaklar()
+            st = access_mod.role_stmts(r.settings.tenant_id)
+            ids = [k.portal("portal.yetki.roller", "Roller", st["roles"], r.store.engine),
+                   k.portal("portal.yetki.izinler", "Rol izinleri", st["perms"], r.store.engine),
+                   k.portal("portal.yetki.baglar", "Rol bağları", st["bindings"], r.store.engine),
+                   k.portal("portal.yetki.uyeler", "Bağ üyeleri", st["members"], r.store.engine),
+                   k.hesap("ad", "Kişinin AD grupları ve OU'su.", dis="Etki alanı dizini (Active Directory) okuması")]
+            k.alan("_hepsi", k.hesap("moduller", "Modül sayısı = menüdeki ana modüllerden, rollerinizin izin verdiği "
+                                                 "sayfaya sahip olanlar (rol = AD grubu, OU, CRM rolü ya da kişi bağı).", ids))
+            return k
+        return P.bagla(out, kaynak)
 
     @app.get("/api/v1/access/catalog")
     def access_catalog(request: Request) -> dict[str, Any]:

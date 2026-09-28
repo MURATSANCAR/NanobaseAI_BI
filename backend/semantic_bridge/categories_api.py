@@ -269,7 +269,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get("/api/v1/categories/mine")
     def categories_mine(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return C.my_pending(engine, tenant, me_crm(user))
+        from semantic_bridge import kampus_kaynak as KK
+        from semantic_bridge import sorgu_izi as IZ
+
+        return IZ.izli(engine, lambda: C.my_pending(engine, tenant, me_crm(user)), prefix="portal.kampus.kategori",
+                       title="Onayınızı bekleyen kitap profilleri", text=KK.F_ZIL)
 
     @app.post("/api/v1/categories/refresh")
     def categories_refresh(request: Request) -> dict[str, Any]:

@@ -115,7 +115,7 @@ function RunView({ meta, id, onBack }: { meta: Meta; id: string; onBack: () => v
         <ChevronLeft aria-hidden className="h-3.5 w-3.5" /> Koşular
       </button>
       {run.error && <Note tone="err">{errText(run.error, 'Koşu okunamadı.')}</Note>}
-      {r && <RunHeader r={r} />}
+      {r && <RunHeader r={r} kRun={kaynakOf(run.data)} kCases={kaynakOf(cases.data)} />}
       <Panel>
         <div className="-mx-1 overflow-x-auto px-1">
           <div className="flex w-max gap-1.5" role="radiogroup" aria-label="Vaka süzgeci">
@@ -153,15 +153,15 @@ function RunView({ meta, id, onBack }: { meta: Meta; id: string; onBack: () => v
   );
 }
 
-function RunHeader({ r }: { r: RunDetail }) {
+function RunHeader({ r, kRun, kCases }: { r: RunDetail; kRun?: ReturnType<typeof kaynakOf>; kCases?: ReturnType<typeof kaynakOf> }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-center gap-1.5">
         <Pill tone={RUN_TONE[r.status]}>{r.statusLabel}</Pill>
         <h2 className="text-[16px] font-extrabold tracking-tight">{r.suiteLabel}</h2>
         <span className="font-mono text-[11.5px] text-canvas-muted">{r.label}</span>
-        <SqlInfo k={kaynakOf(run.data)} alan="_hepsi" label="Koşu sayıları" />
-        <SqlInfo k={kaynakOf(cases.data)} alan="_hepsi" label="Vaka sayaçları" />
+        <SqlInfo k={kRun} alan="_hepsi" label="Koşu sayıları" />
+        <SqlInfo k={kCases} alan="_hepsi" label="Vaka sayaçları" />
       </div>
       <div className="mt-1 text-[11.5px] text-canvas-muted">
         {fmtAt(r.startedAt)} → {fmtAt(r.finishedAt)} · {fmtDuration(r.durationSec)}{r.env ? ` · ${r.env === 'vm' ? 'müşteri ortamı' : 'test sunucusu'}` : ''}

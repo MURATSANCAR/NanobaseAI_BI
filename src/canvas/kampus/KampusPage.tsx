@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { GROUP_HOME } from '../stitch/ModulesMenu';
 import { useTimasSession } from '../TimasSession';
-import { canOpenRoute, useCan, usePageAccess } from '../useAdmin';
+import { canOpenRoute, useAccessMe, useCan, usePageAccess } from '../useAdmin';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED, EngineAuthError, greetingsApi, peopleApi, type Person } from '../engine';
@@ -41,6 +41,8 @@ import DestekCard from './DestekCard';
 import './kampus.css';
 import OutageStrip from '../it-ops/OutageStrip';
 import { notifyExport } from '../data-security/notify';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /**
  * Girişten sonraki ilk ekran: Timaş Kampüs & ZEKİ Akıllı Rehber.
@@ -90,6 +92,8 @@ export default function KampusPage() {
   const navigate = useNavigate();
   // Ana modül kutuları kişinin rolündeki sayfalara göre: açamayacağı modül gösterilmez.
   const pages = usePageAccess();
+  // Sorgu bilgisi: «N modül» rozetinin kaynağı (rol, izin ve bağ okumaları).
+  const accessMe = useAccessMe();
   const tiles = MODULE_TILES.filter((m) => canOpenRoute(pages, m.to));
   // ZEKİ'ye soru: rolde «Zeki AI'a soru sorma» ve cevabın açıldığı Genel bakış olmalı; yoksa kutu gösterilmez.
   const canAskZeki = useCan('zeki.soru') && canOpenRoute(pages, '/genel-bakis');
@@ -299,24 +303,30 @@ export default function KampusPage() {
                 <button type="button" aria-label="Bildirimleri kapat" onClick={() => setNotifOpen(false)} className="fixed inset-0 z-40 cursor-default" />
                 <div role="dialog" aria-label="Bildirimler" className="glass-panel absolute right-0 top-full z-50 mt-2 w-[min(92vw,360px)] rounded-2xl p-3 shadow-glass-float">
                   {profilesWaiting > 0 && (
+                    <div className="mb-2 flex items-center gap-1">
                     <Link
                       to="/kategori-agaci/kuyruk?sahip=ben&durum=taslak,kismi"
                       onClick={() => setNotifOpen(false)}
-                      className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
+                      className="kp-press flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
                     >
                       <span>Kategori ağacı: {profilesWaiting} kitap profili onayınızı bekliyor</span>
                       <span className="text-violet">Aç</span>
                     </Link>
+                    <SqlInfo k={kaynakOf(categoryPending.data)} alan="_hepsi" label="Onayınızı bekleyen kitap profilleri" />
+                    </div>
                   )}
                   {segmentsWaiting > 0 && (
+                    <div className="mb-2 flex items-center gap-1">
                     <Link
                       to="/okurlar/segmentler"
                       onClick={() => setNotifOpen(false)}
-                      className="kp-press mb-2 flex items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
+                      className="kp-press flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl border border-violet/20 bg-white/90 p-2 text-xs font-bold text-ink"
                     >
                       <span>Okurlar: {segmentsWaiting} segment onayınızı bekliyor</span>
                       <span className="text-violet">Aç</span>
                     </Link>
+                    <SqlInfo k={kaynakOf(readersMine.data)} alan="_hepsi" label="Onayınızı bekleyen segmentler" />
+                    </div>
                   )}
                   {readerSourceProblems.length > 0 && (
                     <Link
@@ -483,6 +493,7 @@ export default function KampusPage() {
                     <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">
                       {tiles.length} modül
                     </span>
+                    <SqlInfo k={kaynakOf(accessMe.data)} alan="_hepsi" label="Açabildiğiniz modüller" />
                   </div>
                   <p className="text-xs text-muted">Modülünüzü seçin, kendi ana sayfasından devam edin</p>
                 </div>
@@ -527,6 +538,7 @@ export default function KampusPage() {
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="kp-display text-base font-bold text-ink">Timaş Rehber · Anında Arama &amp; Kat Planı</h2>
                     <span className="kp-mono whitespace-nowrap rounded border border-slate-200/70 bg-slate-100 px-2 text-[11px] font-semibold text-muted">{people.data ? `${people.data.total} Kişi` : '…'}</span>
+                    <SqlInfo k={kaynakOf(people.data)} alan="total" label="Rehber: kişi ve birim sayısı" />
                   </div>
                   <p className="text-xs text-muted">CRM’deki etkin kullanıcılar · kat, dahili, cep ve birim araması</p>
                 </div>
@@ -624,6 +636,7 @@ export default function KampusPage() {
                       </>
                     )}
                     <strong>{people.data.total}</strong> etkin kullanıcı
+                    <SqlInfo k={kaynakOf(people.data)} alan="total" label="Rehber: kişi ve birim sayısı" className="ml-0.5" />
                     {people.data.truncated && ' (liste kesildi)'}
                     {!people.data.adChecked && ' · dizin denetlenemedi'}
                     {people.data.db && <DbTimingBadge timing={people.data.db} className="mt-0.5 flex" />}

@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { CalendarDays, DoorClosed } from 'lucide-react';
 import { EngineAuthError, ENGINE_ENABLED, roomsApi, type RoomBooking, type RoomNow } from '../engine';
 import { dayLabel } from './time';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 const RoomBookingDialog = lazy(() => import('./RoomBookingDialog'));
 
@@ -78,6 +80,7 @@ export default function RoomsCard({ className = '' }: { className?: string }) {
         <>
           <p className="kp-mono mb-2 text-[11px] font-semibold text-muted">
             {rooms.length - busyCount} boş · {busyCount} dolu
+            <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Boş ve dolu oda" className="ml-0.5" />
           </p>
           <ul className="space-y-2.5 text-xs">
             {rooms.map((r) => (

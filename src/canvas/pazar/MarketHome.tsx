@@ -9,7 +9,7 @@ import { canOpenRoute, usePageAccess } from '../useAdmin';
 import { STATUS_TONE, fmtDay, fmtGrowth, fmtInt, fmtNum, fmtPct, fmtTlShort, lastMonth, pazarApi, type Dimension, type OwnMarket, type Overview } from './api';
 import { ROOT, useMeta } from './parts';
 import { BriefView } from './BriefEditor';
-import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 
 /** Özet: yönetim özeti, TİMAŞ iç göstergeleri (Logo, sell-in), onaylı sektör rakamları, eşleme kapsamı. Telefonda okunur. */

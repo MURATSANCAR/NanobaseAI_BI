@@ -282,10 +282,23 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             log.info("events agenda: CRM okunamadı: %s", e)
             crm = []
             warnings.append("CRM'e şu an ulaşılamıyor; yalnız portal kayıtları gösteriliyor.")
-        out = call(E.agenda, engine, tenant, user, crm, t, days)
+        from semantic_bridge import kampus_kaynak as KK
+        from semantic_bridge import provenance as PV
+        from semantic_bridge import soru_kaynak as SK
+        from semantic_bridge import sorgu_izi as IZ
+
+        with IZ.izle(engine) as ran:
+            out = call(E.agenda, engine, tenant, user, crm, t, days)
         out["warnings"] = warnings
         out["canOpen"] = allowed(user, "sayfa:etkinlikler")
-        return out
+
+        def extra(k: PV.Kaynaklar) -> list[str]:
+            try:
+                return KK.agenda_sources(k, source._schema(), t, t + timedelta(days=days + 1), SK.databases()[1])
+            except Exception:  # noqa: BLE001 — CRM şeması tanımlı değilse yalnız portal kayıtları
+                return []
+        return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.kampus.ajanda", title="Ajanda",
+                                               text=KK.F_AJANDA, extra=extra, skip=("days",)))
 
     @app.post(f"{P}/run-due")
     def events_run_due(request: Request) -> dict[str, Any]:

@@ -96,12 +96,19 @@ def register(app, hr: HrContext) -> None:
     def learning_me(request: Request) -> dict[str, Any]:
         engine, tenant, who = ready(request)
         s = st()
-        out = L.me(engine, tenant, who.user, s["alertDays"])
+        from semantic_bridge import kampus_kaynak as KK
+        from semantic_bridge import sorgu_izi as IZ
+
+        with IZ.izle(engine) as ran:
+            out = L.me(engine, tenant, who.user, s["alertDays"])
         out.update(can=can_flags(who), alertDays=s["alertDays"], questions=L.QUESTIONS,
                    catalog=[{"id": k["id"], "title": k["title"], "kind": k["kind"], "validityDays": k["validityDays"]}
                             for k in L.list_courses(engine, tenant, active_only=True)],
                    fileMaxMb=hr.settings()["fileMaxMb"])
-        return out
+        from semantic_bridge import provenance as PV
+
+        return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.kampus.egitim", title="Eğitimlerim",
+                                               text=KK.F_EGITIM, skip=("alertDays", "fileMaxMb", "catalog", "questions")))
 
     @app.get(P + "/me/usage")
     def learning_my_usage(request: Request, days: int = 30, user: str = "") -> dict[str, Any]:

@@ -3,6 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { Calendar, Flag } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { evApi, fmtWeekday, type AgendaItem } from '../events/api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Kampüs «Önemli günler ve ajanda»: sorumlusu olduğum yaklaşan fuar kartları, bana atanan hazırlık görevleri ve CRM'de
  *  sorumlusu olduğum etkinlikler (M27 `/api/v1/events/me/agenda`). Yalnız kişinin kendi kayıtları; ilk beşi gösterilir,
@@ -44,7 +46,9 @@ export default function AgendaCard({ className = '' }: { className?: string }) {
       )}
       {rest.length > SHOW && (
         <p className="mt-2 text-[11px] text-muted">
-          +{rest.length - SHOW} kayıt daha{d?.canOpen ? <> · <Link to="/etkinlikler" className="font-medium text-violet hover:underline">takvimde gör</Link></> : null}
+          +{rest.length - SHOW} kayıt daha
+          <SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Ajanda kayıtları" className="ml-0.5" />
+          {d?.canOpen ? <> · <Link to="/etkinlikler" className="font-medium text-violet hover:underline">takvimde gör</Link></> : null}
         </p>
       )}
       {fairs.map((f) => (

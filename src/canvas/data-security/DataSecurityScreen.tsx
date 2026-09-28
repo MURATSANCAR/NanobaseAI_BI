@@ -13,7 +13,7 @@ import AccessTab from './AccessTab';
 import HygieneTab from './HygieneTab';
 import InventoryTab from './InventoryTab';
 import RetentionTab from './RetentionTab';
-import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 
 /** M49 Veri yönetimi ve güvenlik. Sekme adres çubuğunda (?sekme=); bağlantı paylaşılabilir. Yetkiler ve değişiklik

@@ -179,9 +179,14 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def readers_mine(request: Request) -> dict[str, Any]:
         """Kampüs zili: onayınızı bekleyen segment ve kaynak sorunu (yalnız sayı)."""
         engine, tenant, user, _ = ctx(request)
-        waiting = seg.pending_for(engine, tenant, user) if can(user, F_APPROVE) else 0
-        problems = [s["label"] for s in R.sources_state(engine, tenant) if s["failing"] or s["stale"]]
-        return {"segmentsAwaiting": waiting, "sourceProblems": problems}
+        from semantic_bridge import kampus_kaynak as KK
+        from semantic_bridge import sorgu_izi as IZ
+
+        def read() -> dict[str, Any]:
+            waiting = seg.pending_for(engine, tenant, user) if can(user, F_APPROVE) else 0
+            problems = [s["label"] for s in R.sources_state(engine, tenant) if s["failing"] or s["stale"]]
+            return {"segmentsAwaiting": waiting, "sourceProblems": problems}
+        return IZ.izli(engine, read, prefix="portal.kampus.okur", title="Onayınızı bekleyen segmentler", text=KK.F_ZIL)
 
     @app.get(P + "/status")
     def readers_status(request: Request) -> dict[str, Any]:

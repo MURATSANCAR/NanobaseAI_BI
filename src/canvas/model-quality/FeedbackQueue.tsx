@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED } from '../engine';
-import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { InfoLabel } from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
