@@ -1,0 +1,10 @@
+[Unit]
+Description=Reklam önbelleği ve önerileri, her gün 07:30
+
+[Timer]
+OnCalendar=*-*-* 07:30:00
+Persistent=true
+Unit=timas-ads.service
+
+[Install]
+WantedBy=timers.target

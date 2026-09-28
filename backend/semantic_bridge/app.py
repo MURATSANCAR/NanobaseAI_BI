@@ -7207,6 +7207,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # M20 Basın, medya ve halkla ilişkiler (Pazarlama): PR dosyası, medya kişileri, gönderim, yansıma. /api/v1/pr/*.
     from semantic_bridge import pr_api
     app.state.pr = pr_api.register(app, rt, _require_caller, _can)
+    # M21 Dijital pazarlama ve reklam: harcama dosyası, kampanya ↔ kitap, Logo e-ticaret cirosu. Uçlar /api/v1/ads/*.
+    from semantic_bridge import ads_api
+    app.state.ads = ads_api.register(app, rt, _require_caller, _can)
     return app
 
 

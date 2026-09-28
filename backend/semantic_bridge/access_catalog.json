@@ -281,6 +281,11 @@
       "explicit": true
     },
     {
+      "key": "sayfa:reklam",
+      "area": "pazarlama",
+      "label": "Reklam"
+    },
+    {
       "key": "sayfa:kategori-agaci",
       "area": "kayitlar",
       "label": "Kategori ağacı"
@@ -1713,6 +1718,21 @@
       "page": "sayfa:basin-iliskileri",
       "label": "Basına e-posta gönderme",
       "hint": "Onaylı satırdaki kişiye özel e-postayı portal üzerinden tek alıcıya gönderme (toplu gönderim yok)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:reklam.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:reklam",
+      "label": "Reklam verisi ve bağlar",
+      "hint": "Harcama dosyası yükleme ve geri alma, kampanyayı kitaba bağlama, reklam bütçe planı, brief taslağı, öneriyi «uygulandı» işaretleme"
+    },
+    {
+      "key": "ozellik:reklam.onay",
+      "area": "pazarlama",
+      "page": "sayfa:reklam",
+      "label": "Reklam önerisi onayı",
+      "hint": "Durdurma ve bütçe kaydırma önerisini onaylama ya da gerekçeyle reddetme (platformda uygulamayı ekip yapar)",
       "explicit": true
     }
   ]

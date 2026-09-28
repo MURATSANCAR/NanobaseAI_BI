@@ -111,6 +111,11 @@ const PrContacts = lazy(() => import('@/canvas/pr/PrContacts'));
 const PrContact = lazy(() => import('@/canvas/pr/PrContact'));
 const PrCoverage = lazy(() => import('@/canvas/pr/PrCoverage'));
 const PrReport = lazy(() => import('@/canvas/pr/PrReport'));
+const AdsOverview = lazy(() => import('@/canvas/ads/AdsOverview'));
+const AdsCampaigns = lazy(() => import('@/canvas/ads/AdsCampaigns'));
+const AdsImport = lazy(() => import('@/canvas/ads/AdsImport'));
+const AdsBudget = lazy(() => import('@/canvas/ads/AdsBudget'));
+const AdsBriefs = lazy(() => import('@/canvas/ads/AdsBriefs'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -257,6 +262,12 @@ export default function App() {
             <Route path="basin-iliskileri/kisi/:key" element={<PrContact />} />
             <Route path="basin-iliskileri/yansimalar" element={<PrCoverage />} />
             <Route path="basin-iliskileri/rapor" element={<PrReport />} />
+            {/* Pazarlama › Kampanya: M21 dijital pazarlama ve reklam (/api/v1/ads). */}
+            <Route path="reklam" element={<AdsOverview />} />
+            <Route path="reklam/kampanyalar" element={<AdsCampaigns />} />
+            <Route path="reklam/yukle" element={<AdsImport />} />
+            <Route path="reklam/butce" element={<AdsBudget />} />
+            <Route path="reklam/brief" element={<AdsBriefs />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

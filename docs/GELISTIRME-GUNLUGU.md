@@ -591,6 +591,31 @@ denetimi yapıldı. pytest (`test_pr.py`, `test_access.py`), vitest, tsc ve ger�
 - **Açık kalan:** Kitap sayfasına (`/kitap/:id`) «Basın» sekmesi eklenmedi (editoryal ortak ekran; şimdilik
   `/basin-iliskileri/kitap/:id` bağlantısı); röportaj soru seti, satış etkisi (canlı Logo), Excel ile kişi aktarımı,
   lisanslı medya takip verisi sonraki sürüm.
+## 2026-09-28 — M21 Dijital pazarlama ve reklam kodlandı (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** `/timas/reklam` beş ekran (Özet, Kampanyalar, Veri yükle, Bütçe, Brief); köprü `ads.py`, `ads_sources.py`, `ads_api.py`,
+  `ads_export.py`; tablolar `semantic_ads_*`; uçlar `/api/v1/ads/*`; zamanlayıcı `scripts/server/timas-ads.{service,timer}`;
+  testler `backend/semantic_layer/tests/test_ads.py`; kabul `scripts/acceptance/M21/` (kabul.py, cleanup.py, run.sh).
+- **Neden dosya yükleme:** reklam platformu API yetkisi ve site analitiği yok (analiz §6). Platformların dışa aktarım dosyası
+  (Google Ads UTF-16/sekmeli, Meta virgüllü, Excel) okunur; kolon eşlemesi hesap başına kaydedilir. Okunamayan tek satır bile
+  yüklemeyi durdurur: harcama toplamı eksik yazılmasın (kabul 3).
+- **Kararlar (analiz §10 soruları; veriye/koda bakılarak, sorulmadan):**
+  - E-ticaret kanalı = Logo `CLCARD.SPECODE2 = 'E-TICARET'` (katalog `kanal_net_ciro` ile aynı); CRM seçeneklerinde ayrıca «INTERNET»
+    var → `ADS_ECOM_CHANNELS` ayarı, hangi kodun internet satışı olduğu **ölçülecek**.
+  - Kampanya → sipariş bağı (UTM) yok: karşılaştırma kanal ve kitap düzeyinde; pazarlama verimi yalnız Logo verisi olan günlerde
+    (donmuş .155 kopyası 2026-08-17'de bitiyor; sonraki harcama verime girmez, ekranda yazılır).
+  - Bütçe CRM'e yazılamadığı için portalda (ay × kanal); CRM pazarlama bütçe kayıtları (tip 4 Sosyal Medya, 5 Dijital Pazarlama) ve
+    reklam planları salt okunur yanında.
+  - M15 bağı: onaylı yeni kitap planlarının `dijital`/`sosyal-medya` satırları (platform → M15 kanalı `ADS_M15_CHANNEL_MAP`) günlere
+    bölünüp aya dağıtılır; kitap tablosunda kitabın M15 reklam satırı toplamı görünür.
+  - Durdurma/kaydırma eşiği varsayılan yok (kullanıcı tanımlar; kural kapalı ekranda yazar); stok uyarısı 14 gün (analizdeki soru
+    «iki haftadan az»), satış hızı son 60 gün.
+  - Sistemin kapattığı uyarı (koşulu kalktı) koşul dönünce yeniden çıkar; insanın karar verdiği öneri 7 gün tekrar yazılmaz.
+- **Yapılmadı / açık:** reklam faturası mutabakatı (Logo TRCODE 4 hizmet kartı ölçülecek), A/B test anlamlılığı, Genel bakış kartı,
+  portal Uyarılar'a düşürme (şimdilik e-posta + ekran), sohbet konusu «sosyal medya ve dijital reklam»ın `semantic_ads_*` verisine
+  bağlanması, katalog `kanal_net_ciro` sorusuyla karşılaştırma (kabul 1'in ikinci yarısı).
+- **Doğrulama:** Mac'te yalnız `py_compile` ve JSON; pytest, tsc/vitest ve canlı kabul koordinatörün test sunucusu turunda.
+  Durum: **DOĞRULANAMADI**.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

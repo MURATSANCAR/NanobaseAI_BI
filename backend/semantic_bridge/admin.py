@@ -732,6 +732,53 @@ SPEC: list[dict[str, Any]] = [
              "«Basın medya Mecrası» dolu kişiler ve CRM haber kayıtlarında haberi yapan/görüşülen kişiler gelir"},
     {"key": "PR_TONE_MIN_PROB", "group": "marketing", "label": "Yansıma tonu: en düşük olasılık", "type": "text", "default": "0.6",
      "help": "Zeki AI yansımanın tonunu bu olasılığın altında önermez; ton boş kalır, kullanıcı seçer"},
+    # M21 Dijital pazarlama ve reklam. Eşiği boş bırakılan öneri kuralı çalışmaz.
+    {"key": "ADS_ALERT_RECIPIENTS", "group": "ads", "label": "Reklam bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle e-posta adresleri. Günlük işte çıkan yeni öneri ve uyarılar (stok, satıştan kalkan kitap, veri gelmedi, "
+             "bütçe aşımı, durdurma/kaydırma) buraya gider. Boşsa e-posta gitmez; öneriler ekranda durur"},
+    {"key": "ADS_ECOM_CHANNELS", "group": "ads", "label": "E-ticaret kanal kodları", "type": "text", "default": "E-TICARET",
+     "help": "Logo cari kartındaki özel kod 2 (satış kanalı) değerleri, virgülle. Pazarlama verimi bu kanalların net cirosuyla "
+             "hesaplanır. İnternet satışı başka bir kodla da tutuluyorsa ekleyin (ör. E-TICARET,INTERNET)"},
+    {"key": "ADS_STOCK_DAYS", "group": "ads", "label": "Stok uyarısı (gün)", "type": "text", "default": "14",
+     "help": "Reklamı süren kitabın stoğu bu kadar günlük satışı karşılamıyorsa (ya da bakiye sıfırsa) uyarı. Boşsa yalnız "
+             "stoğu biten kitap için uyarı"},
+    {"key": "ADS_VELOCITY_DAYS", "group": "ads", "label": "Satış hızı penceresi (gün)", "type": "int", "default": "60",
+     "help": "Günlük satış hızı = Logo verisinin bittiği güne kadar bu kadar günün bütün kanallardaki net adedi ÷ gün"},
+    {"key": "ADS_ACTIVE_DAYS", "group": "ads", "label": "«Reklam sürüyor» penceresi (gün)", "type": "int", "default": "3",
+     "help": "Son bu kadar günde harcaması olan kampanya açık sayılır (stok ve satış dışı uyarıları için)"},
+    {"key": "ADS_NO_DATA_DAYS", "group": "ads", "label": "«Veri gelmedi» uyarısı (gün)", "type": "int", "default": "2",
+     "help": "Hesabın son harcama günü bundan eskiyse uyarı (son 30 günde verisi olan hesaplar)"},
+    {"key": "ADS_OFF_SALE_STATUS", "group": "ads", "label": "Satış dışı yayın durumları", "type": "text",
+     "default": "YS01,YS05,YS06,YS11,YS12",
+     "help": "CRM yayıncılık durumu kodları (etiketin başındaki YS kodu). Bu durumdaki kitaba reklam sürüyorsa uyarı"},
+    {"key": "ADS_OVERSPEND_PCT", "group": "ads", "label": "Bütçe aşımı payı (%)", "type": "text", "default": "0",
+     "help": "Ayın harcaması ay sonuna taşındığında kanal planını bu yüzdeden fazla aşarsa uyarı. Plan girilmemiş kanal için "
+             "uyarı çıkmaz"},
+    {"key": "ADS_PERF_WINDOW_DAYS", "group": "ads", "label": "Performans penceresi (gün)", "type": "int", "default": "14",
+     "help": "Durdurma ve kaydırma önerileri son bu kadar günün harcaması ve dönüşümüyle hesaplanır"},
+    {"key": "ADS_STOP_MIN_SPEND", "group": "ads", "label": "Durdurma önerisi: en az harcama (TL)", "type": "text", "default": "",
+     "help": "Pencerede bu tutardan fazla harcayıp hiç dönüşümü olmayan kampanya için durdurma önerisi. Boşsa kural kapalı"},
+    {"key": "ADS_STOP_MAX_ROAS", "group": "ads", "label": "Durdurma önerisi: platform ROAS altı", "type": "text", "default": "",
+     "help": "Doluysa platform ROAS'ı bunun altında kalan kampanya da durdurma önerisine girer (harcama eşiği aşılmışsa)"},
+    {"key": "ADS_SHIFT_MIN_SPEND", "group": "ads", "label": "Kaydırma önerisi: en az harcama (TL)", "type": "text", "default": "",
+     "help": "Aynı kanalda pencerede bu tutardan fazla harcayan kampanyalar karşılaştırılır. Boşsa kural kapalı"},
+    {"key": "ADS_SHIFT_ROAS_RATIO", "group": "ads", "label": "Kaydırma önerisi: ROAS oranı", "type": "text", "default": "2",
+     "help": "En yüksek platform ROAS'ı en düşüğün bu katıysa kaydırma önerilir"},
+    {"key": "ADS_SHIFT_SHARE", "group": "ads", "label": "Kaydırma önerisi: pay (%)", "type": "text", "default": "20",
+     "help": "Önerilen tutar = düşük kampanyanın pencere harcaması × bu pay"},
+    {"key": "ADS_M15_CHANNEL_MAP", "group": "ads", "label": "M15 plan kanalı eşlemesi", "type": "text",
+     "default": "google=dijital,meta=sosyal-medya,tiktok=sosyal-medya,pazaryeri=dijital,diger=dijital",
+     "help": "Reklam kanalı = yeni kitap pazarlama planındaki kanal. Bütçe ekranı onaylı planların bu kanallardaki satırlarını gösterir"},
+    {"key": "ADS_LOOKBACK_DAYS", "group": "ads", "label": "Satış önbelleği penceresi (gün)", "type": "int", "default": "400",
+     "help": "Logo e-ticaret cirosu ve kitap satışı veri sonundan bu kadar gün geri okunur; ilk reklam günü daha eskiyse ondan"},
+    {"key": "ADS_DATE_ORDER", "group": "ads", "label": "Dosyada tarih sırası", "type": "text", "default": "gun-ay",
+     "help": "01/09/2026 gibi eğik çizgili tarihlerde: gun-ay (Türkçe) ya da ay-gun (İngilizce dışa aktarım)"},
+    {"key": "ADS_IMPORT_MAX_MB", "group": "ads", "label": "Yükleme dosyası sınırı (MB)", "type": "text", "default": "50",
+     "help": "Bundan büyük dosya reddedilir ve ekranda söylenir"},
+    {"key": "ADS_LINK_MIN_PROB", "group": "ads", "label": "Kitap önerisi en az olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI kampanya adından kitap önerirken bu olasılığın altındaysa öneri yazılmaz; aday listesi elle seçilir"},
+    {"key": "ADS_LINK_MIN_MARGIN", "group": "ads", "label": "Kitap önerisi en az fark", "type": "text", "default": "0.30",
+     "help": "Seçilen kitabın olasılığı ikinci adaydan en az bu kadar yüksek olmalı"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -804,6 +851,9 @@ GROUPS = [
     {"id": "readers", "label": "Okur veri tabanı",
      "help": "Tekil okur, izin ve segment kuralları. CRM'e yazılmaz, portal ileti göndermez; liste dışa aktarımı izin "
              "denetimli ve kayıt altındadır."},
+    {"id": "ads", "label": "Dijital pazarlama ve reklam",
+     "help": "Reklam harcaması platformun dışa aktarım dosyasıyla gelir; platformlara hiçbir şey gönderilmez (bütçe, teklif, "
+             "durdurma yok). Eşiği boş bırakılan öneri kuralı çalışmaz."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
@@ -841,7 +891,10 @@ KIND_LABEL = {"report": "Planlı rapor", "alert": "Uyarı", "board": "Pano kart�
               "itops_incident": "Sistem olayı", "itops_check": "Bağlantı denemesi", "itops_release": "Sürüm kaydı",
               "security_alert": "Güvenlik uyarısı",
               "support_context": "Müşteri bağlamı", "support_dealer": "Bayi görünümü", "support_draft": "Cevap taslağı",
-              "support_class": "Talep sınıfı", "support_class_def": "Destek sınıfı", "support_faq": "SSS maddesi"}
+              "support_class": "Talep sınıfı", "support_class_def": "Destek sınıfı", "support_faq": "SSS maddesi",
+              "ads_account": "Reklam hesabı", "ads_import": "Reklam dosyası", "ads_campaign": "Reklam kampanyası",
+              "ads_budget": "Reklam bütçesi", "ads_suggestion": "Reklam önerisi", "ads_brief": "Reklam brief'i",
+              "ads_report": "Reklam raporu", "ads_refresh": "Reklam satış verisi", "ads_run_due": "Reklam günlük işi"}
 
 _ready: set[int] = set()
 _lock = threading.Lock()
