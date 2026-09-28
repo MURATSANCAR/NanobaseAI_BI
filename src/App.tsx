@@ -92,6 +92,8 @@ const ShippingReconcile = lazy(() => import('@/canvas/shipping/Reconcile'));
 const CategoriesScreen = lazy(() => import('@/canvas/categories/CategoriesScreen'));
 const ReadersScreen = lazy(() => import('@/canvas/readers/ReadersScreen'));
 const ReaderCard = lazy(() => import('@/canvas/readers/ReaderCard'));
+const CommerceScreen = lazy(() => import('@/canvas/commerce/CommerceScreen'));
+const CommerceCustomer = lazy(() => import('@/canvas/commerce/CustomerCard'));
 const CategoryBookProfile = lazy(() => import('@/canvas/categories/BookProfile'));
 const DataSecurityScreen = lazy(() => import('@/canvas/data-security/DataSecurityScreen'));
 const PazarScreen = lazy(() => import('@/canvas/pazar/PazarScreen'));
@@ -343,6 +345,10 @@ export default function App() {
             <Route path="okurlar" element={<ReadersScreen />} />
             <Route path="okurlar/kisi/:id" element={<ReaderCard />} />
             <Route path="okurlar/:section/*" element={<ReadersScreen />} />
+            {/* H3 E-ticaret müşterileri (/api/v1/commerce): özet, RFM, tetikler, kampanya sonucu, huni, müşteri kartı. */}
+            <Route path="eticaret-musteri" element={<CommerceScreen />} />
+            <Route path="eticaret-musteri/musteri/:key" element={<CommerceCustomer />} />
+            <Route path="eticaret-musteri/:section/*" element={<CommerceScreen />} />
             {/* Pazarlama › Okur ve müşteri: M37 okur topluluğu (/api/v1/okur); okur sayıları H2 çekirdeğinden, kişi adı yok. */}
             <Route path="okur-toplulugu" element={<OkurAudience />} />
             <Route path="okur-toplulugu/segmentler" element={<OkurSegments />} />

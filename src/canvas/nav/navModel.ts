@@ -115,6 +115,7 @@ import {
   ShieldAlert,
   FileSpreadsheet,
   TabletSmartphone,
+  ShoppingCart,
 } from 'lucide-react';
 
 /**
@@ -453,6 +454,8 @@ export const NAV: NavGroup[] = [
       { id: 'okur-segmentler', label: 'Okur segmentleri', to: '/okur-toplulugu/segmentler', icon: SlidersHorizontal, section: 'Okur ve müşteri', hint: 'Segment kuralı, büyüklük, amaç ve KVKK onayı', keywords: ['segment', 'hedef kitle', 'kvkk onayı', 'ilgi alanı'] },
       { id: 'okur-programlar', label: 'Topluluk programları', to: '/okur-toplulugu/programlar', icon: CalendarHeart, section: 'Okur ve müşteri', hint: 'Okuma kulübü, imza günü, anket takvimi ve geçmiş etkinlikler', keywords: ['okuma kulübü', 'imza günü', 'etkinlik', 'anket', 'duyuru'] },
       { id: 'okur-yorumlar', label: 'Yorum cevapları', to: '/okur-toplulugu/yorumlar', icon: MessageSquareReply, section: 'Okur ve müşteri', hint: 'Cevapsız okur yorumları ve Zeki AI cevap taslağı', keywords: ['yorum', 'cevap', 'okur yorumu', 'puan'] },
+      // H3: müşteri kartı (/eticaret-musteri/musteri/:key) ve bölümler aynı öğenin altında.
+      { id: 'eticaret-musteri', label: 'E-ticaret müşterileri', to: '/eticaret-musteri', icon: ShoppingCart, section: 'Okur ve müşteri', hint: 'Site siparişleri, müşteri segmentleri, tetikler ve kampanya sonucu', keywords: ['site müşterisi', 'rfm', 'sadık müşteri', 'kayıp müşteri', 'geri kazanım', 'yeni kitap', 'kontrol grubu', 'sepet', 'sipariş', 'timas.com.tr'] },
       // Lansman ekranı (/pazarlama/lansman/:id) alt yol olarak «Lansman» öğesini etkin gösterir.
       { id: 'pazarlama-lansman', label: 'Lansman', to: '/pazarlama/lansman', icon: Rocket, section: 'Planlama', hint: 'Yayın haftası ve ilk ay: kontrol listesi, sipariş ve satış izleme, stok uyarısı, D+7 ve D+30 raporu', keywords: ['lansman', 'yayın günü', 'yayın ayı', 'ilk hafta', 'imza günü', 'etkinlik', 'medya yansıması', 'stok uyarısı'] },
       { id: 'pazarlama-backlist', label: 'Backlist', to: '/pazarlama/backlist', icon: History, section: 'Planlama', hint: 'Uyuyan backlist kitapların fırsat sıralaması, özel gün gündemi, aktivasyon planı ve kampanya etkisi', keywords: ['uyuyan', 'eski kitap', 'kampanya', 'özel gün'] },
