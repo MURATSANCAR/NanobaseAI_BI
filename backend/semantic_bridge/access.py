@@ -358,21 +358,34 @@ def invalidate() -> None:
 # ------------------------------------------------------------------ durum (30 sn bellek)
 
 
+def role_stmts(tenant: str) -> dict[str, Any]:
+    """Rol, rol yetkisi, bağ ve üye görüntüsü okumaları (yetki hesabı ve sorgu bilgisi aynı ifadeleri kullanır)."""
+    roles = sa.select(ROLES).where(ROLES.c.tenant_id == tenant)
+    return {
+        "roles": roles,
+        "perms": sa.select(ROLE_PERMS.c.role_id, ROLE_PERMS.c.perm).where(
+            ROLE_PERMS.c.role_id.in_(sa.select(ROLES.c.id).where(ROLES.c.tenant_id == tenant).scalar_subquery())),
+        "bindings": sa.select(BINDINGS).where(BINDINGS.c.tenant_id == tenant),
+        "members": sa.select(MEMBERS.c.subject_type, MEMBERS.c.subject, MEMBERS.c.members, MEMBERS.c.updated_at,
+                             MEMBERS.c.error),
+    }
+
+
 def _load(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     # Anahtar veritabanı + tenant: aynı süreçte iki veritabanı (testler, yönetim ekranının denemesi) birbirinin
     # rollerini görmesin.
     key = (id(engine), tenant)
     if _state["key"] == key and time.monotonic() - _state["at"] < _TTL:
         return _state
+    st = role_stmts(tenant)
     with engine.connect() as c:
-        roles = {r["id"]: {**dict(r), "perms": set()} for r in
-                 c.execute(sa.select(ROLES).where(ROLES.c.tenant_id == tenant)).mappings()}
-        for rid, perm in c.execute(sa.select(ROLE_PERMS.c.role_id, ROLE_PERMS.c.perm)
-                                   .where(ROLE_PERMS.c.role_id.in_(list(roles) or [""]))).all():
-            roles[rid]["perms"].add(perm)
-        bindings = [dict(b) for b in c.execute(sa.select(BINDINGS).where(BINDINGS.c.tenant_id == tenant)).mappings()]
+        roles = {r["id"]: {**dict(r), "perms": set()} for r in c.execute(st["roles"]).mappings()}
+        for rid, perm in c.execute(st["perms"]).all():
+            if rid in roles:
+                roles[rid]["perms"].add(perm)
+        bindings = [dict(b) for b in c.execute(st["bindings"]).mappings()]
         members: dict[tuple[str, str], frozenset[str]] = {}
-        for t, s, m in c.execute(sa.select(MEMBERS.c.subject_type, MEMBERS.c.subject, MEMBERS.c.members)).all():
+        for t, s, m, _at, _err in c.execute(st["members"]).all():
             try:
                 members[(t, s)] = frozenset(str(x).strip().lower() for x in json.loads(m or "[]") if str(x).strip())
             except ValueError:
@@ -1353,8 +1366,7 @@ def delete_binding(engine: sa.engine.Engine, tenant: str, binding_id: str) -> Op
 def _snapshots(engine: sa.engine.Engine) -> dict[tuple[str, str], dict[str, Any]]:
     out = {}
     with engine.connect() as c:
-        for t, s, m, at, err in c.execute(sa.select(MEMBERS.c.subject_type, MEMBERS.c.subject, MEMBERS.c.members,
-                                                    MEMBERS.c.updated_at, MEMBERS.c.error)).all():
+        for t, s, m, at, err in c.execute(role_stmts("")["members"]).all():
             try:
                 n = len(json.loads(m or "[]"))
             except ValueError:
@@ -1581,15 +1593,22 @@ class Directory:
                 raise RuntimeError(f"CRM şeması «{schema}» geçerli bir ad değil")
         return schema + "."
 
+    def crm_role_members_sql(self) -> str:
+        """Rol üyeliği okuması (üye görüntüsünü dolduran asıl CRM sorgusu; sorgu bilgisi aynı metni gösterir)."""
+        p = self._crm_prefix()
+        return (f"SELECT CAST(r.ParentRootRoleId AS nvarchar(40)) AS RootId, u.DomainName "
+                f"FROM {p}SystemUserRoles sur JOIN {p}RoleBase r ON r.RoleId = sur.RoleId "
+                f"JOIN {p}SystemUserBase u ON u.SystemUserId = sur.SystemUserId "
+                f"WHERE u.IsDisabled = 0 AND u.AccessMode IN (0, 1) AND u.DomainName IS NOT NULL AND u.DomainName <> ''")
+
+    def crm_roles_sql(self) -> str:
+        p = self._crm_prefix()
+        return f"SELECT CAST(RoleId AS nvarchar(40)) AS RoleId, Name FROM {p}RoleBase WHERE ParentRoleId IS NULL"
+
     def crm_role_members(self) -> dict[str, set[str]]:
         """Kök rol kimliği (küçük harf) → rolü taşıyan etkin CRM kullanıcılarının hesap adları.
         CRM rolü her iş biriminde bir kopya olarak durur; kişi kopyaya atanır, kopya kök role `ParentRootRoleId` ile bağlıdır."""
-        p = self._crm_prefix()
-        rows = self._crm_rows(
-            f"SELECT CAST(r.ParentRootRoleId AS nvarchar(40)) AS RootId, u.DomainName "
-            f"FROM {p}SystemUserRoles sur JOIN {p}RoleBase r ON r.RoleId = sur.RoleId "
-            f"JOIN {p}SystemUserBase u ON u.SystemUserId = sur.SystemUserId "
-            f"WHERE u.IsDisabled = 0 AND u.AccessMode IN (0, 1) AND u.DomainName IS NOT NULL AND u.DomainName <> ''")
+        rows = self._crm_rows(self.crm_role_members_sql())
         out: dict[str, set[str]] = {}
         for r in rows:
             acc = _account(r.get("DomainName"))
@@ -1600,9 +1619,7 @@ class Directory:
 
     def list_crm_roles(self) -> list[dict[str, Any]]:
         def read() -> list[dict[str, Any]]:
-            p = self._crm_prefix()
-            rows = self._crm_rows(f"SELECT CAST(RoleId AS nvarchar(40)) AS RoleId, Name FROM {p}RoleBase "
-                                  f"WHERE ParentRoleId IS NULL")
+            rows = self._crm_rows(self.crm_roles_sql())
             members = self.crm_role_members()
             out = []
             for r in rows:

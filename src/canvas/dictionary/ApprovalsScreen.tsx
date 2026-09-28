@@ -13,6 +13,8 @@ import {
 } from '../engine';
 import { SourceBadge, SourceTabs, matchesSource, useSourceFilter } from './source';
 import AdminGuard from '../AdminGuard';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 const nf = new Intl.NumberFormat('tr-TR');
 const norm = (s: string) => s.toLocaleLowerCase('tr').replace(/[ıİ]/g, 'i').replace(/[şŞ]/g, 's').replace(/[ğĞ]/g, 'g');
@@ -145,7 +147,10 @@ function ApprovalsScreenInner() {
           <div className="glass-panel flex max-h-[38vh] w-full shrink-0 flex-col rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4 md:max-h-none md:w-[360px]">
             <div className="flex items-center justify-between">
               <span className="text-[13px] font-extrabold">Onay kuyruğu</span>
-              <span className="text-[11px] font-bold text-canvas-muted">{filtered.length} kayıt</span>
+              <span className="flex items-center gap-1 text-[11px] font-bold text-canvas-muted">
+                {filtered.length} kayıt
+                <SqlInfo k={kaynakOf(queue.data)} alan="items" label="Onay kuyruğu: bekleyen, aday ve destek sayıları" />
+              </span>
             </div>
             <div className="mt-2.5 flex items-center gap-2 rounded-xl border border-slate-200 bg-white/90 px-3 py-2">
               <Search className="h-3.5 w-3.5 text-canvas-muted" />
@@ -279,7 +284,10 @@ function ApprovalsScreenInner() {
 
                 {(cur.observed?.length ?? 0) > 0 && (
                   <div>
-                    <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Kolonda görülen değerler</div>
+                    <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                      Kolonda görülen değerler
+                      <SqlInfo k={kaynakOf(queue.data)} alan="items" label="Değer başına satır" />
+                    </div>
                     <div className="mt-1 overflow-x-auto rounded-xl border border-slate-100">
                       <table className="w-full text-[11.5px]">
                         <tbody>

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Loader2, Radio, Trash2, Wand2 } from 'lucide-react';
 import { bulletinAudioUrl, bulletinsApi, type Bulletin, type BulletinJob, type BulletinPatch } from '../engine';
 import { clock } from '../kampus/BulletinCard';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate, label, nf } from './ui';
 import { FilePick } from '../components/FileDrop';
 import { MB } from '../components/fileDropRules';
@@ -217,7 +218,8 @@ function GeneratePanel() {
                 <Pill tone={s.tone}>{s.label}</Pill>
                 <span className="min-w-0 flex-1 truncate font-semibold">{j.title || 'Sesli bülten'}</span>
                 <span className="text-canvas-muted">
-                  {nf.format(j.chars)} karakter · {j.createdBy} · {fmtDate(j.createdAt)}
+                  {nf.format(j.chars)} karakter
+                  <SqlInfo k={jobs.data?.kaynaklar} alan="items" label="Seslendirme işi" className="ml-0.5" /> · {j.createdBy} · {fmtDate(j.createdAt)}
                   {j.bulletinId ? ' · taslaklarda' : ''}
                 </span>
                 {j.error && <span className="w-full text-[11.5px] text-red-700">{j.error}</span>}
@@ -285,8 +287,9 @@ export default function BulletinsAdmin() {
         <Note tone="err">{errText(list.error, 'Bültenler okunamadı.')}</Note>
       ) : items.length ? (
         <>
-          <p className="text-[11.5px] text-canvas-muted">
+          <p className="flex items-center gap-1 text-[11.5px] text-canvas-muted">
             {nf.format(items.length)} kayıt · {nf.format(items.filter((b) => b.status === 'yayinda').length)} yayında
+            <SqlInfo k={list.data?.kaynaklar} alan="items" label="Sesli bültenler" />
           </p>
           <ul className="flex flex-col gap-3">
             {items.map((b) => (

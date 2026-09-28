@@ -203,15 +203,18 @@ def add(engine: sa.engine.Engine, tenant: str, user: str, data: bytes, *, origin
     return to_api(row)
 
 
-def listing(engine: sa.engine.Engine, tenant: str, *, published_only: bool) -> list[dict[str, Any]]:
-    ensure(engine)
+def listing_stmt(tenant: str, *, published_only: bool) -> Any:
+    """Bülten listesi okuması (sorgu bilgisi aynı ifadeyi gösterir)."""
     q = sa.select(BULLETINS).where(BULLETINS.c.tenant_id == tenant)
     if published_only:
-        q = q.where(BULLETINS.c.status == PUBLISHED).order_by(BULLETINS.c.published_at.desc())
-    else:
-        q = q.order_by(BULLETINS.c.created_at.desc())
+        return q.where(BULLETINS.c.status == PUBLISHED).order_by(BULLETINS.c.published_at.desc())
+    return q.order_by(BULLETINS.c.created_at.desc())
+
+
+def listing(engine: sa.engine.Engine, tenant: str, *, published_only: bool) -> list[dict[str, Any]]:
+    ensure(engine)
     with engine.connect() as c:
-        return [to_api(r) for r in c.execute(q)]
+        return [to_api(r) for r in c.execute(listing_stmt(tenant, published_only=published_only))]
 
 
 def current(engine: sa.engine.Engine, tenant: str) -> Optional[dict[str, Any]]:
@@ -354,9 +357,13 @@ def sync_jobs(engine: sa.engine.Engine, tenant: str, studio_state: Any, studio_a
             with engine.begin() as c:
                 c.execute(JOBS.update().where(JOBS.c.id == r["id"]).values(**vals))
     with engine.connect() as c:
-        rows = c.execute(sa.select(JOBS).where(JOBS.c.tenant_id == tenant)
-                         .order_by(JOBS.c.created_at.desc()).limit(20)).fetchall()
+        rows = c.execute(jobs_stmt(tenant)).fetchall()
     return [_job_api(r) for r in rows]
+
+
+def jobs_stmt(tenant: str) -> Any:
+    """Son 20 seslendirme işi (sorgu bilgisi aynı ifadeyi gösterir)."""
+    return sa.select(JOBS).where(JOBS.c.tenant_id == tenant).order_by(JOBS.c.created_at.desc()).limit(20)
 
 
 def pending(engine: sa.engine.Engine, tenant: str) -> int:

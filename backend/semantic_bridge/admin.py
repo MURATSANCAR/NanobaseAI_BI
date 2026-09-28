@@ -2384,21 +2384,26 @@ def all_reports(engine: sa.engine.Engine, tenant: str, ds: str) -> list[dict[str
 
     rm.ensure(engine)
     with engine.connect() as c:
-        rows = c.execute(sa.select(rm.REPORTS).where(*rm._scope(tenant, ds, None))
-                         .order_by(rm.REPORTS.c.created_at.desc())).mappings().all()
+        rows = c.execute(rm.list_stmt(tenant, ds, None)).mappings().all()
     return [{**rm.to_dict(r), "owner": r["username"]} for r in rows]
+
+
+def all_cards_stmt(tenant: str, ds: str) -> Any:
+    """Bütün pano kartları (yönetim listesi ve genel durum sayacı; sorgu bilgisi aynı ifadeyi gösterir)."""
+    from semantic_bridge import board as bm
+
+    C = bm.CARDS
+    cols = [C.c.id, C.c.username, C.c.title, C.c.question, C.c.chart, C.c.refresh, C.c.refresh_at,
+            C.c.created_at, C.c.updated_at, C.c.result_at, C.c.last_auto_at, C.c.last_error]
+    return sa.select(*cols).where(C.c.tenant_id == tenant, C.c.datasource_id == ds).order_by(C.c.username, C.c.position)
 
 
 def all_cards(engine: sa.engine.Engine, tenant: str, ds: str) -> list[dict[str, Any]]:
     from semantic_bridge import board as bm
 
     bm.ensure(engine)
-    C = bm.CARDS
-    cols = [C.c.id, C.c.username, C.c.title, C.c.question, C.c.chart, C.c.refresh, C.c.refresh_at,
-            C.c.created_at, C.c.updated_at, C.c.result_at, C.c.last_auto_at, C.c.last_error]
     with engine.connect() as c:
-        rows = c.execute(sa.select(*cols).where(C.c.tenant_id == tenant, C.c.datasource_id == ds)
-                         .order_by(C.c.username, C.c.position)).mappings().all()
+        rows = c.execute(all_cards_stmt(tenant, ds)).mappings().all()
     return [{"id": r["id"], "owner": r["username"], "title": r["title"], "question": r["question"] or "",
              "chart": r["chart"], "refresh": r["refresh"], "refreshAt": r["refresh_at"],
              "createdAt": _iso(r["created_at"]), "updatedAt": _iso(r["updated_at"]),
@@ -2419,6 +2424,21 @@ def delete_card(engine: sa.engine.Engine, tenant: str, ds: str, card_id: str) ->
     return dict(row)
 
 
+def users_stmts(tenant: str, ds: str) -> dict[str, Any]:
+    """Kişi başına kart, plan ve kayıtlı işlem sayımı (sorgu bilgisi aynı ifadeleri gösterir)."""
+    from semantic_bridge import board as bm
+    from semantic_bridge import reports as rm
+
+    return {
+        "cards": sa.select(bm.CARDS.c.username, sa.func.count(), sa.func.max(bm.CARDS.c.updated_at))
+        .where(bm.CARDS.c.tenant_id == tenant, bm.CARDS.c.datasource_id == ds).group_by(bm.CARDS.c.username),
+        "reports": sa.select(rm.REPORTS.c.username, sa.func.count(), sa.func.max(rm.REPORTS.c.updated_at))
+        .where(*rm._scope(tenant, ds, None)).group_by(rm.REPORTS.c.username),
+        "actions": sa.select(AUDIT.c.actor, sa.func.count(), sa.func.max(AUDIT.c.at))
+        .where(AUDIT.c.actor != "sistem").group_by(AUDIT.c.actor),
+    }
+
+
 def users(engine: sa.engine.Engine, tenant: str, ds: str) -> list[dict[str, Any]]:
     """Sistemi kullanan kişiler: tanımı ya da kaydı olan her hesap, son hareketiyle."""
     from semantic_bridge import board as bm
@@ -2436,16 +2456,13 @@ def users(engine: sa.engine.Engine, tenant: str, ds: str) -> list[dict[str, Any]
         if s and (p["lastSeen"] is None or s > p["lastSeen"]):
             p["lastSeen"] = s
 
+    st = users_stmts(tenant, ds)
     with engine.connect() as c:
-        for u, n, last in c.execute(sa.select(bm.CARDS.c.username, sa.func.count(), sa.func.max(bm.CARDS.c.updated_at))
-                                    .where(bm.CARDS.c.tenant_id == tenant, bm.CARDS.c.datasource_id == ds)
-                                    .group_by(bm.CARDS.c.username)).all():
+        for u, n, last in c.execute(st["cards"]).all():
             p = person(u); p["cards"] = n; seen(p, last)
-        for u, n, last in c.execute(sa.select(rm.REPORTS.c.username, sa.func.count(), sa.func.max(rm.REPORTS.c.updated_at))
-                                    .where(*rm._scope(tenant, ds, None)).group_by(rm.REPORTS.c.username)).all():
+        for u, n, last in c.execute(st["reports"]).all():
             p = person(u); p["reports"] = n; seen(p, last)
-        for u, n, last in c.execute(sa.select(AUDIT.c.actor, sa.func.count(), sa.func.max(AUDIT.c.at))
-                                    .where(AUDIT.c.actor != "sistem").group_by(AUDIT.c.actor)).all():
+        for u, n, last in c.execute(st["actions"]).all():
             p = person(u); p["actions"] = n; seen(p, last)
     for a in admins():
         person(a)["admin"] = True

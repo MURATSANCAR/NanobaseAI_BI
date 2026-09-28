@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Pause, Play, Search, Trash2 } from 'lucide-react';
 import { adminApi, type AlertRule } from '../engine';
 import DbTimingBadge from '../DbTiming';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, Section, TableWrap, errText, field, fmtDate, nf, td, th } from './ui';
 
 const norm = (s: string) => s.toLocaleLowerCase('tr');
@@ -123,6 +124,7 @@ export function ReportsAdmin() {
                       {r.lastRows != null && r.lastStatus !== 'failed' ? ` · ${nf.format(r.lastRows)} satır` : ''}
                     </Pill>
                   )}
+                  <SqlInfo k={q.data?.kaynaklar} alan="items[]" row={r.id} label={r.title} className="ml-1" />
                   {r.lastDb && r.lastStatus !== 'failed' && <DbTimingBadge timing={r.lastDb} className="mt-0.5" />}
                 </td>
                 <td className={`${td} text-right`}>
@@ -199,7 +201,10 @@ export function AlertsAdmin() {
                   {COND[r.condition]} {nf.format(r.threshold)}
                 </td>
                 <td className={td}>
-                  <div className="font-mono tabular-nums">{r.last_value != null ? nf.format(r.last_value) : '—'}</div>
+                  <div className="flex items-center gap-1 font-mono tabular-nums">
+                    {r.last_value != null ? nf.format(r.last_value) : '—'}
+                    <SqlInfo k={q.data?.kaynaklar} alan="items[]" row={r.id} label={r.title} />
+                  </div>
                   <div className="text-[11px] text-canvas-muted">{fmtDate(r.last_checked_at)}</div>
                   {r.last_db && r.state !== 'error' && <DbTimingBadge timing={r.last_db} className="mt-0.5" />}
                 </td>

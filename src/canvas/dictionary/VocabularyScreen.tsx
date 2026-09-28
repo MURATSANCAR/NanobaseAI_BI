@@ -2,6 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Check, Loader2, MessageSquarePlus, Plus, Search, Sparkles, X } from 'lucide-react';
 import AdminGuard from '../AdminGuard';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import {
   ENGINE_ENABLED,
@@ -166,7 +168,15 @@ function VocabularyInner() {
               />
             </div>
             <SourceTabs value={source} onChange={(v) => { setSource(v); setSel(''); }} counts={sourceCounts} className="mt-2" />
-            <div className="mt-2 text-[11px] font-semibold text-canvas-muted">{nf.format(filtered.length)} alan</div>
+            <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+              {nf.format(filtered.length)} alan
+              {/* Öneri, onaylı ve grup sayaçları eş anlamlı kayıtlarından; boşluklar tablo profillerinden. */}
+              <SqlInfo
+                k={kaynakOf(tab === 'oneri' ? proposed.data : tab === 'karar' ? decided.data : gaps.data)}
+                alan={tab === 'bosluk' ? 'items' : 'groups'}
+                label="Eş anlamlı sayıları"
+              />
+            </div>
             <div className="mt-1.5 flex-1 space-y-1 overflow-auto pr-1">
               {loading && (
                 <div className="flex h-24 items-center justify-center text-canvas-muted">

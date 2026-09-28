@@ -10,6 +10,7 @@ import {
   type AccessSubjectType,
 } from '../engine';
 import { trFold } from '../nav/navModel';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Card, Loading, Note, Pill, Section, btnGhost, btnPrimary, errText, field, fmtDate, label, nf } from './ui';
 
 /**
@@ -101,6 +102,10 @@ function Roles() {
           <Plus className="h-4 w-4" />
           Yeni rol
         </button>
+        {/* Rol satırı düğme olduğu için «i» listenin başında: sayfa, bağ ve kişi sayıları. */}
+        <div className="flex justify-end text-[11px] text-canvas-muted">
+          <InfoLabel k={roles.data?.kaynaklar} alan="items" label="Rol sayıları">Sayfa, bağ ve kişi sayıları</InfoLabel>
+        </div>
         <ul className="space-y-1.5">
           {items.map((r) => {
             const on = selected !== 'new' && current?.id === r.id;
@@ -474,10 +479,13 @@ function Bindings({ role }: { role: AccessRole }) {
 }
 
 function BindingMeta({ b }: { b: AccessBinding }) {
+  // Rol listesinin okuması önbellekte; üye sayısının kaynağı (üye görüntüsü ve onu dolduran okuma) oradan.
+  const k = useQuery({ queryKey: ['access', 'roles'], queryFn: accessApi.roles, retry: false }).data?.kaynaklar;
   if (b.type === 'user') return <span className="block text-[11.5px] text-canvas-muted">{b.subject}</span>;
   return (
     <span className="block text-[11.5px] text-canvas-muted">
       {b.members === null ? 'Üyeler henüz okunmadı' : `${nf.format(b.members)} kişi`}
+      {b.members !== null && <SqlInfo k={k} alan="items" label={`${b.label}: üye sayısı`} className="ml-0.5" />}
       {b.updatedAt ? ` · ${fmtDate(b.updatedAt)} itibarıyla` : ''}
       {b.error && <span className="ml-1 font-semibold text-amber-700">· son okuma başarısız, eski üyeler geçerli</span>}
     </span>
@@ -555,7 +563,10 @@ function BindingPicker({ role, onClose }: { role: AccessRole; onClose: () => voi
                   )}
                 </span>
                 {typeof c.count === 'number' && (
-                  <span className="shrink-0 text-[11.5px] font-bold tabular-nums text-canvas-muted">{nf.format(c.count)} kişi</span>
+                  <span className="flex shrink-0 items-center gap-0.5 text-[11.5px] font-bold tabular-nums text-canvas-muted">
+                    {nf.format(c.count)} kişi
+                    <SqlInfo k={list.data?.kaynaklar} alan="items" label={`${c.label}: kişi sayısı`} />
+                  </span>
                 )}
                 {already ? (
                   <Pill tone="ok">Bağlı</Pill>
@@ -754,7 +765,8 @@ function DataDomains() {
         Her tablo bir veri alanına düşer; rol, ZEKİ AI'ın hangi alanları okuyabileceğini taşır. Alan kurallarla atanır; buradan
         seçtiğiniz alan kuralın önüne geçer. «Atanmamış» tablolar, «Herkes» rolü daraltıldığında yalnız yöneticiye açık kalır.
       </Note>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <SqlInfo k={list.data?.kaynaklar} alan="counts" label="Veri alanı sayaçları ve satır sayıları" />
         {[{ id: 'all', label: 'Hepsi', n: total }, ...domains.map((d) => ({ id: d.id, label: d.label, n: counts[d.id] ?? 0 }))].map((c) => (
           <button
             key={c.id}

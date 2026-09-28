@@ -47,6 +47,9 @@ export class EngineForbiddenError extends EngineAuthError {
   }
 }
 
+/** Uç cevabına eklenen sorgu bilgisi (her rakamın SQL'i ve hesabı). */
+export type WithK<T> = T & { kaynaklar?: Kaynaklar };
+
 export type SqlResult<T> = DbTiming & {
   columns: Array<{ name: string; type: string }>;
   records: T[];
@@ -808,7 +811,16 @@ export type PromptRow = {
 /** Tek promtun her şeyi: SQL, tam sonuç satırları, semantik çözümleme, kapı kararları. */
 export type PromptDetail = PromptRow & {
   resolved: Record<string, unknown>;
-  result: { columns: Array<{ name: string }>; records: Array<Record<string, unknown>>; totalRows?: number; truncated?: boolean; _truncated_store?: boolean } | null;
+  result: {
+    columns: Array<{ name: string }>;
+    records: Array<Record<string, unknown>>;
+    totalRows?: number;
+    truncated?: boolean;
+    _truncated_store?: boolean;
+    /** Soru koşarken veritabanında koşan metin (kayıttaki `sql` çözülmemiş, katalog adlı metindir). */
+    physicalSql?: string | null;
+    dbMs?: number | null;
+  } | null;
   gate: Record<string, unknown> | null;
 };
 
@@ -839,7 +851,7 @@ export const adminApi = {
   /** Oturumdaki kişinin rolü. `isEditor`: yönetim ekranındaki «Editör AD grubu» üyesi (ayar boşsa false);
    *  eski köprü göndermez, o zaman editör sayılmaz. */
   me: () => send<{ user: string; isAdmin: boolean; isEditor?: boolean }>('GET', '/api/v1/admin/me', undefined, 15_000),
-  overview: () => send<AdminOverview>('GET', '/api/v1/admin/overview', undefined, 30_000),
+  overview: () => send<WithK<AdminOverview>>('GET', '/api/v1/admin/overview', undefined, 30_000),
   settings: () => send<AdminSettings>('GET', '/api/v1/admin/settings', undefined, 15_000),
   saveSettings: (values: Record<string, string>) =>
     send<AdminSettings & { changed: string[]; applied: string[]; applyError: string | null }>(
@@ -856,22 +868,22 @@ export const adminApi = {
   test: (id: string) => send<AdminCheck>('POST', `/api/v1/admin/tests/${encodeURIComponent(id)}`, undefined, 120_000),
   testAll: () => send<{ items: AdminCheck[]; ok: boolean; at: string }>('POST', '/api/v1/admin/tests', undefined, 180_000),
   system: () => send<AdminSystem>('GET', '/api/v1/admin/system', undefined, 15_000),
-  reports: () => send<{ items: AdminReport[] }>('GET', '/api/v1/admin/reports', undefined, 30_000),
+  reports: () => send<WithK<{ items: AdminReport[] }>>('GET', '/api/v1/admin/reports', undefined, 30_000),
   updateReport: (id: string, b: Partial<ReportInput>) =>
     send<ReportDto>('PATCH', `/api/v1/admin/reports/${encodeURIComponent(id)}`, b, 30_000),
   deleteReport: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/reports/${encodeURIComponent(id)}`, undefined, 30_000),
-  alerts: () => send<{ items: AlertRule[] }>('GET', '/api/v1/admin/alerts', undefined, 30_000),
+  alerts: () => send<WithK<{ items: AlertRule[] }>>('GET', '/api/v1/admin/alerts', undefined, 30_000),
   updateAlert: (id: string, b: Partial<AlertInput> & { status?: 'active' | 'paused' }) =>
     send<AlertRule>('PATCH', `/api/v1/admin/alerts/${encodeURIComponent(id)}`, b, 30_000),
   deleteAlert: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/alerts/${encodeURIComponent(id)}`, undefined, 30_000),
   cards: () => send<{ items: AdminCard[] }>('GET', '/api/v1/admin/cards', undefined, 30_000),
   deleteCard: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/admin/cards/${encodeURIComponent(id)}`, undefined, 30_000),
-  users: () => send<{ items: AdminUser[] }>('GET', '/api/v1/admin/users', undefined, 30_000),
+  users: () => send<WithK<{ items: AdminUser[] }>>('GET', '/api/v1/admin/users', undefined, 30_000),
   audit: (q: AuditQuery) => send<{ items: AuditItem[]; next: number | null }>('GET', `/api/v1/admin/audit${qs(q)}`, undefined, 30_000),
   prompts: (q: PromptQuery) =>
-    send<{ items: PromptRow[]; hasMore: boolean; nextOffset: number | null }>('GET', `/api/v1/admin/prompts${qs(q)}`, undefined, 30_000),
-  promptsOverview: (days = 30) => send<PromptOverview>('GET', `/api/v1/admin/prompts/overview${qs({ days })}`, undefined, 30_000),
-  prompt: (id: string) => send<PromptDetail>('GET', `/api/v1/admin/prompts/${encodeURIComponent(id)}`, undefined, 30_000),
+    send<WithK<{ items: PromptRow[]; hasMore: boolean; nextOffset: number | null }>>('GET', `/api/v1/admin/prompts${qs(q)}`, undefined, 30_000),
+  promptsOverview: (days = 30) => send<WithK<PromptOverview>>('GET', `/api/v1/admin/prompts/overview${qs({ days })}`, undefined, 30_000),
+  prompt: (id: string) => send<WithK<PromptDetail>>('GET', `/api/v1/admin/prompts/${encodeURIComponent(id)}`, undefined, 30_000),
   markPrompt: (id: string, b: { flag?: string; note?: string }) =>
     send<PromptDetail>('PATCH', `/api/v1/admin/prompts/${encodeURIComponent(id)}`, b, 30_000),
   /** CSV indirme adresi (aynı köken, oturum çerezi taşınır). */
@@ -963,7 +975,7 @@ export type AccessDataEntity = {
 export const accessApi = {
   me: () => send<AccessMe>('GET', '/api/v1/access/me', undefined, 15_000),
   catalog: () => send<AccessCatalog>('GET', '/api/v1/access/catalog', undefined, 15_000),
-  roles: () => send<{ items: AccessRole[] }>('GET', '/api/v1/access/roles', undefined, 30_000),
+  roles: () => send<WithK<{ items: AccessRole[] }>>('GET', '/api/v1/access/roles', undefined, 30_000),
   createRole: (b: AccessRoleInput) => send<{ id: string }>('POST', '/api/v1/access/roles', b, 30_000),
   updateRole: (id: string, b: AccessRoleInput) =>
     send<{ id: string }>('PUT', `/api/v1/access/roles/${encodeURIComponent(id)}`, b, 30_000),
@@ -978,11 +990,11 @@ export const accessApi = {
     ),
   deleteBinding: (id: string) => send<{ ok: boolean }>('DELETE', `/api/v1/access/bindings/${encodeURIComponent(id)}`, undefined, 30_000),
   subjects: (type: AccessSubjectType) =>
-    send<{ type: AccessSubjectType; items: AccessCandidate[] }>('GET', `/api/v1/access/subjects${qs({ type })}`, undefined, 120_000),
-  explain: (user: string) => send<AccessExplain>('GET', `/api/v1/access/explain${qs({ user })}`, undefined, 120_000),
+    send<WithK<{ type: AccessSubjectType; items: AccessCandidate[] }>>('GET', `/api/v1/access/subjects${qs({ type })}`, undefined, 120_000),
+  explain: (user: string) => send<WithK<AccessExplain>>('GET', `/api/v1/access/explain${qs({ user })}`, undefined, 120_000),
   /** Kataloğun her varlığı ve veri alanı; `manual`: alanı yönetici atadı (kural değil). */
   dataEntities: () =>
-    send<{ items: AccessDataEntity[]; counts: Record<string, number> }>('GET', '/api/v1/access/data-entities', undefined, 60_000),
+    send<WithK<{ items: AccessDataEntity[]; counts: Record<string, number> }>>('GET', '/api/v1/access/data-entities', undefined, 60_000),
   setEntityDomain: (entity: string, domain: string | null) =>
     send<{ ok: boolean }>('PUT', `/api/v1/access/data-entities/${encodeURIComponent(entity)}`, { domain }, 30_000),
   refresh: () =>
@@ -1113,11 +1125,11 @@ export type BulletinVoice = { id: string; label: string; note: string; group: st
 /** Kampüs'te en son yayınlanan bülten çalar; Yönetim → Sesli bülten taslakları da görür, ekler, yayınlar. */
 export const bulletinsApi = {
   current: () => roomsSend<{ item: Bulletin | null }>('GET', '/api/v1/bulletins/current'),
-  adminList: () => roomsSend<{ items: Bulletin[]; maxMb: number }>('GET', '/api/v1/admin/bulletins'),
+  adminList: () => roomsSend<WithK<{ items: Bulletin[]; maxMb: number }>>('GET', '/api/v1/admin/bulletins'),
   update: (id: string, patch: BulletinPatch) => roomsSend<Bulletin>('PATCH', `/api/v1/admin/bulletins/${encodeURIComponent(id)}`, patch),
   remove: (id: string) => roomsSend<{ ok: boolean }>('DELETE', `/api/v1/admin/bulletins/${encodeURIComponent(id)}`),
   voices: () => roomsSend<{ voices: BulletinVoice[]; groups: Record<string, string>; error?: string }>('GET', '/api/v1/admin/bulletins/voices'),
-  jobs: () => roomsSend<{ items: BulletinJob[] }>('GET', '/api/v1/admin/bulletins/jobs'),
+  jobs: () => roomsSend<WithK<{ items: BulletinJob[] }>>('GET', '/api/v1/admin/bulletins/jobs'),
   generate: (b: { text: string; voice: string | null; title: string | null }) =>
     roomsSend<BulletinJob>('POST', '/api/v1/admin/bulletins/generate', b),
   /** Ham gövdeyle yükleme; süre tarayıcıda ölçülüp gönderilir (sunucuda ses çözümleyici yok). */

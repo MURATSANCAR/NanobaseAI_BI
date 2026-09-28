@@ -1250,7 +1250,9 @@ class Runtime:
         # döndüğünü birebir görürüz. Motorun satır tavanı zaten kesiyor; devasa kaçaklar _cap_result'la
         # düşürülür. Kapı kararları (eleştiri) da promtla birlikte saklanır.
         stored_result = {"columns": result["columns"], "records": list(result["records"]),
-                         "totalRows": result["totalRows"], "truncated": result.get("truncated")}
+                         "totalRows": result["totalRows"], "truncated": result.get("truncated"),
+                         # Sorgu bilgisi: kayıttaki sql_text mantıksaldır; veritabanında koşan metin ve süresi burada.
+                         "physicalSql": result.get("physicalSql"), "dbMs": result.get("dbMs")}
         gate = {k: semantic[k] for k in ("critic", "unmetObligations", "catalogAudit") if k in semantic} or None
         if result.get("dataNotes"):
             gate = {**(gate or {}), "dataNotes": result["dataNotes"]}
@@ -2528,11 +2530,18 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _admin_gate(request)
         r = rt()
         s = r.settings
-        rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
+        from semantic_bridge import sorgu_izi as IZ
+        from semantic_bridge import sozluk_kaynak as SZK
+
+        with IZ.izle(r.store.engine) as ran:
+            rows = r.store.search_concepts(s.tenant_id, s.datasource_id, q, limit) if q else r.store.find_concepts(s.tenant_id, s.datasource_id, status=status, semantic_type=type, limit=limit)
         src = source_by_entity(r.profiles)
         # Terim başına ayrı eşleme sorgusu 5.000 terimde 13–15 sn sürüyordu (Veri sözlüğü açılışı); toplu okunur.
         maps = r.store.list_mappings_many([c.id for c in rows])
-        return {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in maps.get(c.id, [])]} for c in rows]}
+        out = {"items": [{"concept": c.to_dict(), "mappings": [{**m.to_dict(), "source": src.get(m.entity)} for m in maps.get(c.id, [])]} for c in rows]}
+        # Sorgu bilgisi: terim sayısını veren okuma (eşleme okumaları sayı vermez, kayda girmez).
+        return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, s.datasource_id, ran, out, title="Katalog terimleri",
+                                                    text=SZK.F_TERIM))
 
     @app.post("/api/v1/semantic/concepts/{concept_id}/review")
     def review_concept(concept_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -2631,14 +2640,21 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         unlock and, for a dropped one, why the system did not dare propose it."""
         from semantic_layer import vocabulary
         r = rt()
-        items = vocabulary.listing(r.store, r.settings, status=status.upper(), entity=entity, limit=limit)
+        from semantic_bridge import sorgu_izi as IZ
+        from semantic_bridge import sozluk_kaynak as SZK
+
+        with IZ.izle(r.store.engine) as ran:
+            items = vocabulary.listing(r.store, r.settings, status=status.upper(), entity=entity, limit=limit)
+            counts = vocabulary.counts(r.store, r.settings)
         groups: dict[tuple, dict[str, Any]] = {}
         src = source_by_entity(r.profiles)
         for it in items:
             key = (it["entity"], it["column"])
             g = groups.setdefault(key, {"entity": it["entity"], "column": it["column"], "source": src.get(it["entity"]), "items": []})
             g["items"].append(it)
-        return {"groups": list(groups.values()), "counts": vocabulary.counts(r.store, r.settings)}
+        out = {"groups": list(groups.values()), "counts": counts}
+        return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, r.settings.datasource_id, ran, out,
+                                                    title="Eş anlamlılar", text=SZK.F_ES))
 
     @app.get("/api/v1/semantic/vocabulary/gaps")
     def vocabulary_gaps(entity: str | None = None) -> dict[str, Any]:
@@ -2653,7 +2669,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             certified = r.store.find_concepts(r.settings.tenant_id, r.settings.datasource_id, status=ConceptStatus.CERTIFIED, limit=100000)
             entities = sorted({m.entity for ms in r.store.list_mappings_many([c.id for c in certified]).values() for m in ms})
         src = source_by_entity(r.profiles)
-        return {"items": [{**g, "source": src.get(g["entity"])} for g in vocabulary.gaps(r.store, r.settings, r.profiles, entities=entities)]}
+        from semantic_bridge import sorgu_izi as IZ
+        from semantic_bridge import sozluk_kaynak as SZK
+
+        with IZ.izle(r.store.engine) as ran:
+            gaps = vocabulary.gaps(r.store, r.settings, r.profiles, entities=entities)
+        out = {"items": [{**g, "source": src.get(g["entity"])} for g in gaps]}
+        return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, r.settings.datasource_id, ran, out,
+                                                    title="Açıklama bekleyen alanlar", text=SZK.F_BOSLUK, profiles=True))
 
     @app.post("/api/v1/semantic/vocabulary/{row_id}/decide")
     def vocabulary_decide(row_id: str, request: Request, body: dict[str, Any] | None = None) -> dict[str, Any]:
@@ -2709,7 +2732,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _admin_gate(request)
         r = rt()
         s = r.settings
-        rows = r.store.review_rows(s.tenant_id, s.datasource_id, ConceptStatus.CANDIDATE, limit=2000)
+        from semantic_bridge import sorgu_izi as IZ
+
+        with IZ.izle(r.store.engine) as ran:
+            rows = r.store.review_rows(s.tenant_id, s.datasource_id, ConceptStatus.CANDIDATE, limit=2000)
         # Two kinds of proposal are not questions for a person, and both are recognisable from the
         # catalog rather than from a list somebody has to maintain:
         #
@@ -2802,7 +2828,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
                                 readable=_formula_reader(prof, said)),
                 "counterEvidence": x["counterEvidence"],
             })
-        return {"waiting": len(pool), "used": len(used), "total": len(rows), "source": source, "items": out}
+        from semantic_bridge import sozluk_kaynak as SZK
+
+        res = {"waiting": len(pool), "used": len(used), "total": len(rows), "source": source, "items": out}
+        # Sorgu bilgisi: aday, kanıt ve karşı kanıt okumaları (değer dağılımı tablo profilinden).
+        return P.bagla(res, lambda: SZK.for_catalog(r.store.engine, s.datasource_id, ran, res,
+                                                    title="Onay bekleyen adaylar", text=SZK.F_ADAY, profiles=True))
 
     @app.get("/api/v1/semantic/concepts/{concept_id}")
     def concept(concept_id: str) -> dict[str, Any]:
@@ -3029,15 +3060,28 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/schema/gaps")
     def schema_gaps(request: Request) -> dict[str, Any]:
         _admin_gate(request)
-        return rt().gaps()
+        from semantic_bridge import sorgu_izi as IZ
+        from semantic_bridge import sozluk_kaynak as SZK
+
+        r = rt()
+        with IZ.izle(r.store.engine) as ran:
+            out = r.gaps()
+        return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, r.settings.datasource_id, ran, out,
+                                                    title="Tablolar ve eksik açıklamalar", text=SZK.F_TABLO, profiles=True))
 
     @app.get("/api/v1/schema/gaps/detail")
     def schema_gap_detail(request: Request, tablePattern: str) -> dict[str, Any]:
         _admin_gate(request)
-        out = rt().gap_detail(tablePattern)
+        from semantic_bridge import sorgu_izi as IZ
+        from semantic_bridge import sozluk_kaynak as SZK
+
+        r = rt()
+        with IZ.izle(r.store.engine) as ran:
+            out = r.gap_detail(tablePattern)
         if out is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Tablo bulunamadı."})
-        return out
+        return P.bagla(out, lambda: SZK.for_catalog(r.store.engine, r.settings.datasource_id, ran, out,
+                                                    title="Tablo ayrıntısı", text=SZK.F_TABLO, profiles=True))
 
     @app.post("/api/v1/schema/gaps/describe")
     def schema_gap_describe(request: Request, body: AnnotationIn) -> dict[str, Any]:
@@ -3814,8 +3858,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     def bulletin_admin_list(request: Request) -> dict[str, Any]:
         _admin_gate(request)
         r = rt()
-        return {"items": bulletins_mod.listing(r.store.engine, r.settings.tenant_id, published_only=False),
-                "maxMb": bulletins_mod.max_bytes() // (1024 * 1024)}
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = {"items": bulletins_mod.listing(r.store.engine, r.settings.tenant_id, published_only=False),
+               "maxMb": bulletins_mod.max_bytes() // (1024 * 1024)}
+        return P.bagla(out, lambda: ADK.for_bulletins(r.store.engine, r.settings.tenant_id, out))
 
     @app.post("/api/v1/admin/bulletins", status_code=201)
     async def bulletin_upload(request: Request, filename: str = "", duration: str = "") -> dict[str, Any]:
@@ -3915,7 +3962,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         items = bulletins_mod.sync_jobs(r.store.engine, r.settings.tenant_id, _studio_bulletin_state, _studio_bulletin_audio)
         if bulletins_mod.pending(r.store.engine, r.settings.tenant_id):
             _ensure_bulletin_poller()
-        return {"items": items}
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = {"items": items}
+        return P.bagla(out, lambda: ADK.for_jobs(r.store.engine, r.settings.tenant_id, out))
 
     @app.get("/api/v1/admin/bulletins/voices")
     def bulletin_voices(request: Request) -> dict[str, Any]:
@@ -6872,7 +6922,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         counts: dict[str, int] = {}
         for it in items:
             counts[it["domain"]] = counts.get(it["domain"], 0) + 1
-        return {"items": items, "counts": counts, "domains": access_mod.data_domains()}
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = {"items": items, "counts": counts, "domains": access_mod.data_domains()}
+        return P.bagla(out, lambda: ADK.for_entities(engine, tenant, rt().settings.datasource_id, out))
 
     @app.put("/api/v1/access/data-entities/{entity}")
     def access_data_entity_set(entity: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -6890,7 +6943,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/access/roles")
     def access_roles(request: Request) -> dict[str, Any]:
         engine, tenant, _ = _access_admin(request)
-        return {"items": access_mod.list_roles(engine, tenant)}
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = {"items": access_mod.list_roles(engine, tenant)}
+        return P.bagla(out, lambda: ADK.for_roles(engine, tenant, access_dir, SK.databases()[1]))
 
     @app.post("/api/v1/access/roles", status_code=201)
     def access_role_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -6955,7 +7011,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         _access_admin(request)
         kind = request.query_params.get("type", "")
         try:
-            return {"type": kind, "items": access_dir.candidates(kind)}
+            from semantic_bridge import admin_kaynak as ADK
+
+            out = {"type": kind, "items": access_dir.candidates(kind)}
+            return P.bagla(out, lambda: ADK.for_subjects(kind, out, access_dir, SK.databases()[1]))
         except access_mod.AccessError as e:
             raise _access_fail(e) from e
         except Exception as e:  # noqa: BLE001
@@ -6970,7 +7029,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         who = (user or "").strip().lower()
         if not who:
             raise _access_fail(access_mod.AccessError("Kişi seçilmedi."))
-        return access_mod.explain(engine, tenant, who, admin_mod.is_admin, access_dir)
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = access_mod.explain(engine, tenant, who, admin_mod.is_admin, access_dir)
+        return P.bagla(out, lambda: ADK.for_explain(engine, tenant, out, access_dir, SK.databases()[1]))
 
     @app.post("/api/v1/access/refresh")
     def access_refresh(request: Request) -> dict[str, Any]:
@@ -6985,7 +7047,7 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         alerts = alerts_mod.list_rules(engine, tenant, ds)
         cards = admin_mod.all_cards(engine, tenant, ds)
         people = admin_mod.users(engine, tenant, ds)
-        return {
+        out = {
             "counts": {
                 "reports": len(reports), "reportsActive": sum(1 for x in reports if x["status"] == "active"),
                 "reportsFailed": sum(1 for x in reports if x["lastStatus"] == "failed"),
@@ -7000,6 +7062,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
             **admin_mod.system_status(),
             "recent": admin_mod.audit_list(engine, limit=8)["items"],
         }
+        from semantic_bridge import admin_kaynak as ADK
+
+        return P.bagla(out, lambda: ADK.for_overview(engine, r.store, tenant, ds, out))
 
     @app.get("/api/v1/admin/settings")
     def admin_settings(request: Request) -> dict[str, Any]:
@@ -7089,8 +7154,11 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/admin/reports")
     def admin_reports(request: Request) -> dict[str, Any]:
-        _, engine, tenant, ds, _ = _admin(request)
-        return {"items": admin_mod.all_reports(engine, tenant, ds)}
+        r, engine, tenant, ds, _ = _admin(request)
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = {"items": admin_mod.all_reports(engine, tenant, ds)}
+        return P.bagla(out, lambda: ADK.for_reports(engine, tenant, ds, out["items"], *SK.databases(r.settings.connection_file)))
 
     @app.patch("/api/v1/admin/reports/{rid}")
     def admin_report_update(rid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -7118,9 +7186,12 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/admin/alerts")
     def admin_alerts(request: Request) -> dict[str, Any]:
-        _, engine, tenant, ds, _ = _admin(request)
+        r, engine, tenant, ds, _ = _admin(request)
         alerts_mod.ensure(engine)
-        return {"items": alerts_mod.list_rules(engine, tenant, ds)}
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = {"items": alerts_mod.list_rules(engine, tenant, ds)}
+        return P.bagla(out, lambda: ADK.for_alerts(engine, tenant, ds, out["items"], *SK.databases(r.settings.connection_file)))
 
     @app.patch("/api/v1/admin/alerts/{rule_id}")
     def admin_alert_update(rule_id: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -7149,7 +7220,10 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/admin/users")
     def admin_users(request: Request) -> dict[str, Any]:
         _, engine, tenant, ds, _ = _admin(request)
-        return {"items": admin_mod.users(engine, tenant, ds)}
+        from semantic_bridge import admin_kaynak as ADK
+
+        out = {"items": admin_mod.users(engine, tenant, ds)}
+        return P.bagla(out, lambda: ADK.for_users(engine, tenant, ds))
 
     @app.get("/api/v1/admin/audit")
     def admin_audit(request: Request, kind: Optional[str] = None, actor: Optional[str] = None,
@@ -7165,14 +7239,22 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/admin/prompts")
     def admin_prompts(request: Request, limit: int = 60, offset: int = 0, only: Optional[str] = None,
                       q: Optional[str] = None, user: Optional[str] = None, days: Optional[int] = None) -> dict[str, Any]:
-        _, _, tenant, ds, _ = _admin(request)
-        return rt().store.list_query_log(tenant, ds, limit=limit, offset=offset, only=only,
-                                         search=q, username=user, since_days=days)
+        _, engine, tenant, ds, _ = _admin(request)
+        from semantic_bridge import admin_kaynak as ADK
+
+        ran: list = []
+        out = rt().store.list_query_log(tenant, ds, limit=limit, offset=offset, only=only,
+                                        search=q, username=user, since_days=days, stmt_out=ran)
+        return P.bagla(out, lambda: ADK.for_prompt_list(engine, ran[0], out))
 
     @app.get("/api/v1/admin/prompts/overview")
     def admin_prompts_overview(request: Request, days: int = 30) -> dict[str, Any]:
-        _, _, tenant, ds, _ = _admin(request)
-        return rt().store.query_log_overview(tenant, ds, since_days=max(1, min(int(days), 365)))
+        _, engine, tenant, ds, _ = _admin(request)
+        from semantic_bridge import admin_kaynak as ADK
+
+        stmts = rt().store.query_log_overview_stmts(tenant, ds, since_days=max(1, min(int(days), 365)))
+        out = rt().store.query_log_overview(tenant, ds, since_days=max(1, min(int(days), 365)), stmts=stmts)
+        return P.bagla(out, lambda: ADK.for_prompt_overview(engine, stmts, out))
 
     @app.get("/api/v1/admin/prompts/export.csv")
     def admin_prompts_export(request: Request, only: Optional[str] = None, q: Optional[str] = None,
@@ -7201,11 +7283,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
 
     @app.get("/api/v1/admin/prompts/{qid}")
     def admin_prompt_detail(qid: str, request: Request) -> dict[str, Any]:
-        _, _, tenant, ds, _ = _admin(request)
-        row = rt().store.get_query_log(tenant, ds, qid)
+        r, engine, tenant, ds, _ = _admin(request)
+        ran: list = []
+        row = rt().store.get_query_log(tenant, ds, qid, stmt_out=ran)
         if row is None:
             raise HTTPException(status_code=404, detail={"code": "NOT_FOUND", "message": "Promt bulunamadı."})
-        return row
+        from semantic_bridge import admin_kaynak as ADK
+
+        return P.bagla(row, lambda: ADK.for_prompt(engine, ran[0], row, *SK.databases(r.settings.connection_file)))
 
     @app.patch("/api/v1/admin/prompts/{qid}")
     def admin_prompt_mark(qid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:

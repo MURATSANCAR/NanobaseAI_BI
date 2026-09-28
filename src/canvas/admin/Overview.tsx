@@ -2,11 +2,30 @@ import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { adminApi, type AdminUnit } from '../engine';
 import { AuditRow } from './AuditLog';
+import type { ReactNode } from 'react';
+import SqlInfo from '../components/SqlInfo';
 import { Card, Loading, Note, Pill, Section, btnGhost, errText, fmtUnitTime, nf } from './ui';
 import type { AdminTab } from './AdminScreen';
 
-function Tile({ label, value, sub, tone, onClick }: { label: string; value: number; sub: string; tone?: 'err' | 'warn'; onClick: () => void }) {
+function Tile({
+  label,
+  value,
+  sub,
+  tone,
+  onClick,
+  info,
+}: {
+  label: string;
+  value: number;
+  sub: string;
+  tone?: 'err' | 'warn';
+  onClick: () => void;
+  info?: ReactNode;
+}) {
+  // «i» kartın düğmesinin dışında, sağ üstte (iç içe düğme olmaz).
   return (
+    <div className="relative">
+    {info && <span className="absolute right-2 top-2 z-10">{info}</span>}
     <button
       type="button"
       onClick={onClick}
@@ -16,6 +35,7 @@ function Tile({ label, value, sub, tone, onClick }: { label: string; value: numb
       <div className="mt-1 text-3xl font-extrabold tabular-nums tracking-tight">{nf.format(value)}</div>
       <div className={`mt-0.5 text-[12px] font-semibold ${tone === 'err' ? 'text-red-700' : tone === 'warn' ? 'text-amber-700' : 'text-canvas-muted'}`}>{sub}</div>
     </button>
+    </div>
   );
 }
 
@@ -29,6 +49,7 @@ export default function Overview({ go }: { go: (t: AdminTab) => void }) {
   if (q.error || !q.data) return <Note tone="err">{errText(q.error, 'Durum okunamadı.')}</Note>;
   const { counts: c, email, engine, services, timers, recent } = q.data;
   const certified = engine.catalog?.CERTIFIED ?? 0;
+  const k = q.data.kaynaklar;
 
   return (
     <div className="space-y-6">
@@ -52,10 +73,10 @@ export default function Overview({ go }: { go: (t: AdminTab) => void }) {
           </Note>
         )}
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Tile label="Planlı rapor" value={c.reports} sub={c.reportsFailed ? `${c.reportsActive} etkin · ${c.reportsFailed} hatalı` : `${c.reportsActive} etkin`} tone={c.reportsFailed ? 'err' : undefined} onClick={() => go('reports')} />
-          <Tile label="Uyarı" value={c.alerts} sub={c.alertsTriggered ? `${c.alertsActive} etkin · ${c.alertsTriggered} tetiklendi` : `${c.alertsActive} etkin`} tone={c.alertsTriggered ? 'warn' : undefined} onClick={() => go('alerts')} />
-          <Tile label="Pano kartı" value={c.cards} sub={c.cardsFailed ? `${c.cardsFailed} kartta hata` : 'hatasız'} tone={c.cardsFailed ? 'err' : undefined} onClick={() => go('cards')} />
-          <Tile label="Kişi" value={c.users} sub={`${c.admins} yönetici`} onClick={() => go('people')} />
+          <Tile label="Planlı rapor" value={c.reports} sub={c.reportsFailed ? `${c.reportsActive} etkin · ${c.reportsFailed} hatalı` : `${c.reportsActive} etkin`} tone={c.reportsFailed ? 'err' : undefined} onClick={() => go('reports')} info={<SqlInfo k={k} alan="counts.reports" label="Planlı rapor" />} />
+          <Tile label="Uyarı" value={c.alerts} sub={c.alertsTriggered ? `${c.alertsActive} etkin · ${c.alertsTriggered} tetiklendi` : `${c.alertsActive} etkin`} tone={c.alertsTriggered ? 'warn' : undefined} onClick={() => go('alerts')} info={<SqlInfo k={k} alan="counts.alerts" label="Uyarı" />} />
+          <Tile label="Pano kartı" value={c.cards} sub={c.cardsFailed ? `${c.cardsFailed} kartta hata` : 'hatasız'} tone={c.cardsFailed ? 'err' : undefined} onClick={() => go('cards')} info={<SqlInfo k={k} alan="counts.cards" label="Pano kartı" />} />
+          <Tile label="Kişi" value={c.users} sub={`${c.admins} yönetici`} onClick={() => go('people')} info={<SqlInfo k={k} alan="counts.users" label="Kişi" />} />
         </div>
       </Section>
 
@@ -80,8 +101,10 @@ export default function Overview({ go }: { go: (t: AdminTab) => void }) {
             </div>
             <div>
               <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Katalog</div>
-              <div className="font-semibold tabular-nums">
-                {nf.format(engine.profiles)} tablo · {nf.format(certified)} sertifikalı terim
+              <div className="flex items-center gap-1 font-semibold tabular-nums">
+                {nf.format(engine.profiles)} tablo
+                <SqlInfo k={k} alan="engine.profiles" label="Katalog tabloları" /> · {nf.format(certified)} sertifikalı terim
+                <SqlInfo k={k} alan="engine.catalog" label="Sertifikalı terim" />
               </div>
             </div>
             <div>

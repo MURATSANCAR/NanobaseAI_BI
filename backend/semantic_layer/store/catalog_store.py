@@ -806,8 +806,10 @@ class CatalogStore:
 
     def list_query_log(self, tenant_id: str, datasource_id: str, *, limit: int = 60, offset: int = 0,
                        only: Optional[str] = None, search: Optional[str] = None,
-                       username: Optional[str] = None, since_days: Optional[int] = None) -> dict[str, Any]:
-        """Prompt tracker list view — light rows (no result/resolved payload), newest first."""
+                       username: Optional[str] = None, since_days: Optional[int] = None,
+                       stmt_out: Optional[list] = None) -> dict[str, Any]:
+        """Prompt tracker list view — light rows (no result/resolved payload), newest first.
+        `stmt_out`: sorgu bilgisi için çalışan ifade bu listeye eklenir (gösterilen = çalışan)."""
         conds = self._query_log_filter(tenant_id, datasource_id, only=only, search=search,
                                        username=username, since_days=since_days)
         cols = [c for c in S.sl_query_log.c if c.name not in ("result_json", "resolved_json", "gate_json")]
@@ -815,17 +817,23 @@ class CatalogStore:
         stmt = (sa.select(*cols).where(*conds)
                 .order_by(S.sl_query_log.c.created_at.desc())
                 .limit(limit + 1).offset(max(0, int(offset))))
+        if stmt_out is not None:
+            stmt_out.append(stmt)
         rows = self._rows(stmt)
         more = len(rows) > limit
         return {"items": [self._query_log_light(r) for r in rows[:limit]], "hasMore": more,
                 "nextOffset": max(0, int(offset)) + limit if more else None}
 
-    def get_query_log(self, tenant_id: str, datasource_id: str, qid: str) -> Optional[dict[str, Any]]:
+    def get_query_log(self, tenant_id: str, datasource_id: str, qid: str,
+                      stmt_out: Optional[list] = None) -> Optional[dict[str, Any]]:
         """One prompt, everything: SQL, full result rows, semantic resolution, gate decisions."""
-        rows = self._rows(sa.select(S.sl_query_log).where(
+        stmt = sa.select(S.sl_query_log).where(
             S.sl_query_log.c.id == qid,
             S.sl_query_log.c.tenant_id == tenant_id,
-            S.sl_query_log.c.datasource_id == datasource_id))
+            S.sl_query_log.c.datasource_id == datasource_id)
+        if stmt_out is not None:
+            stmt_out.append(stmt)
+        rows = self._rows(stmt)
         if not rows:
             return None
         r = rows[0]
@@ -851,17 +859,29 @@ class CatalogStore:
             return None
         return self.get_query_log(tenant_id, datasource_id, qid)
 
-    def query_log_overview(self, tenant_id: str, datasource_id: str, *, since_days: int = 30) -> dict[str, Any]:
-        """The numbers the review starts from: how many prompts, how many failed, what fell over."""
+    def query_log_overview_stmts(self, tenant_id: str, datasource_id: str, *, since_days: int = 30) -> dict[str, Any]:
+        """Özetin sayım ifadeleri (sorgu bilgisi aynı ifadeleri gösterir; gösterilen = çalışan)."""
         base_conds = [S.sl_query_log.c.tenant_id == tenant_id,
                       S.sl_query_log.c.datasource_id == datasource_id,
                       S.sl_query_log.c.created_at >= utcnow() - timedelta(days=int(since_days))]
+        return {
+            "base": base_conds,
+            "total": sa.select(sa.func.count()).select_from(S.sl_query_log).where(*base_conds),
+            "answered": sa.select(sa.func.count()).select_from(S.sl_query_log).where(
+                *base_conds, S.sl_query_log.c.executed.is_(True), S.sl_query_log.c.error.is_(None)),
+            "todo": sa.select(sa.func.count()).select_from(S.sl_query_log).where(
+                *base_conds, S.sl_query_log.c.review_flag == "todo"),
+        }
+
+    def query_log_overview(self, tenant_id: str, datasource_id: str, *, since_days: int = 30,
+                           stmts: Optional[dict[str, Any]] = None) -> dict[str, Any]:
+        """The numbers the review starts from: how many prompts, how many failed, what fell over."""
+        stmts = stmts or self.query_log_overview_stmts(tenant_id, datasource_id, since_days=since_days)
+        base_conds = stmts["base"]
         with self.engine.connect() as conn:
-            total = conn.execute(sa.select(sa.func.count()).select_from(S.sl_query_log).where(*base_conds)).scalar() or 0
-            answered = conn.execute(sa.select(sa.func.count()).select_from(S.sl_query_log).where(
-                *base_conds, S.sl_query_log.c.executed.is_(True), S.sl_query_log.c.error.is_(None))).scalar() or 0
-            todo = conn.execute(sa.select(sa.func.count()).select_from(S.sl_query_log).where(
-                *base_conds, S.sl_query_log.c.review_flag == "todo")).scalar() or 0
+            total = conn.execute(stmts["total"]).scalar() or 0
+            answered = conn.execute(stmts["answered"]).scalar() or 0
+            todo = conn.execute(stmts["todo"]).scalar() or 0
             by_type = {str(k or "—"): int(v) for k, v in conn.execute(
                 sa.select(S.sl_query_log.c.answer_type, sa.func.count()).where(*base_conds)
                 .group_by(S.sl_query_log.c.answer_type)).all()}
@@ -1197,12 +1217,17 @@ class CatalogStore:
         self._index_cache[key] = (ver, index)
         return index
 
-    def status_counts(self, tenant_id: str, datasource_id: str) -> dict[str, int]:
-        stmt = (
+    @staticmethod
+    def status_counts_stmt(tenant_id: str, datasource_id: str) -> Any:
+        """Kavram durum sayımı (sorgu bilgisi aynı ifadeyi gösterir)."""
+        return (
             sa.select(S.sl_concept.c.status, sa.func.count())
             .where(S.sl_concept.c.tenant_id == tenant_id, S.sl_concept.c.datasource_id == datasource_id)
             .group_by(S.sl_concept.c.status)
         )
+
+    def status_counts(self, tenant_id: str, datasource_id: str) -> dict[str, int]:
+        stmt = self.status_counts_stmt(tenant_id, datasource_id)
         out = {s: 0 for s in ConceptStatus.ALL}
         with self.engine.connect() as conn:
             for status, n in conn.execute(stmt):

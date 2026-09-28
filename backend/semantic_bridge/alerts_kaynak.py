@@ -55,14 +55,15 @@ def _rule_refs(k: P.Kaynaklar, rule: dict[str, Any], base: str, logo_db: Optiona
 
 
 def for_list(engine: Any, tenant: str, ds: str, owner: Optional[str], out: dict[str, Any],
-             logo_db: Optional[str], crm_db: Optional[str]) -> P.Kaynaklar:
+             logo_db: Optional[str], crm_db: Optional[str], *, key: str = "alerts") -> P.Kaynaklar:
+    """`key`: cevaptaki liste anahtarı (kişinin ekranı `alerts`, yönetim ekranı `items`)."""
     k = P.Kaynaklar()
     base = k.portal("portal.uyari.kurallar", "Uyarı kuralları", A.list_stmt(tenant, ds, owner), engine,
                     rows=len(out.get("alerts") or []),
                     description="Kuralların soru, koşul, eşik, son değer ve durumları (semantic_alert_rules).")
-    fields = {"alerts": k.hesap("sayac", F_SAYAC, [base])}
+    fields = {key: k.hesap("sayac", F_SAYAC, [base])}
     for rule in out.get("alerts") or []:
-        fields[f"alerts[]:{rule['id']}"] = _rule_refs(k, rule, base, logo_db, crm_db)
+        fields[f"{key}[]:{rule['id']}"] = _rule_refs(k, rule, base, logo_db, crm_db)
     k.alanlar(fields)
     return k
 

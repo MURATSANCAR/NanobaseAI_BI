@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { InfoLabel } from '../components/SqlInfo';
 import { Loader2, ShieldCheck, UserPlus } from 'lucide-react';
 import { adminApi } from '../engine';
 import { Loading, Note, Pill, Section, TableWrap, btnPrimary, errText, field, fmtDate, nf, td, th } from './ui';
@@ -46,9 +47,9 @@ export default function People({ me }: { me: string }) {
           <thead className="bg-slate-50/80">
             <tr>
               <th className={th}>Hesap</th>
-              <th className={`${th} text-right`}>Pano kartı</th>
-              <th className={`${th} text-right`}>Planlı rapor</th>
-              <th className={`${th} text-right`}>Kayıtlı işlem</th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Pano kartı</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Planlı rapor</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={q.data?.kaynaklar} alan="items">Kayıtlı işlem</InfoLabel></th>
               <th className={th}>Son hareket</th>
               <th className={`${th} text-right`}>Yetki</th>
             </tr>

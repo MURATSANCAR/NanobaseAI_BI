@@ -17,6 +17,8 @@ import {
 } from '../engine';
 import { SourceBadge, SourceTabs, matchesSource, sourcesOf, useSourceFilter } from './source';
 import AdminGuard from '../AdminGuard';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /**
  * Veri Sözlüğü. Üç soruya cevap verir, her biri bir bölüm:
@@ -414,8 +416,9 @@ function TableDetail({ tablePattern, mode, canWrite }: { tablePattern: string; m
         <h2 className="break-all font-mono text-xl font-extrabold tracking-tight text-canvas-ink">{d.example}</h2>
         <TableDescription d={d} canWrite={canWrite} />
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-canvas-muted">
-          <span>
+          <span className="inline-flex items-center gap-1">
             <strong className="font-mono tabular-nums text-canvas-ink">{nf.format(d.rows)}</strong> satır
+            <SqlInfo k={kaynakOf(q.data)} alan="rows" label={`${d.example}: satır ve alan sayıları`} />
           </span>
           <span>
             <strong className="font-mono tabular-nums text-canvas-ink">{nf.format(total)}</strong> alan
@@ -734,9 +737,15 @@ function GlossaryScreenInner() {
                 </div>
               )}
 
-              <div className="mt-2 text-[11.5px] font-semibold text-canvas-muted">
+              <div className="mt-2 flex items-center gap-1 text-[11.5px] font-semibold text-canvas-muted">
                 {tab === 'terimler' ? `${nf.format(shownTerms.length)} terim` : `${nf.format(shownTables.length)} tablo`}
                 {tab === 'eksikler' && ' · en çok kullanılan üstte'}
+                {/* Terim sayısı katalog okumasından; tablo, satır ve eksik alan sayıları tablo profillerinden. */}
+                <SqlInfo
+                  k={kaynakOf(tab === 'terimler' ? conceptsQ.data : gapsQ.data)}
+                  alan={tab === 'terimler' ? 'items' : 'items'}
+                  label={tab === 'terimler' ? 'Onaylı terimler' : 'Tablolar ve eksik alanlar'}
+                />
               </div>
 
               <div className="mt-1.5 flex-1 space-y-1 overflow-auto pr-1">

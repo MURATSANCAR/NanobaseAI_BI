@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react';
 import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, Check, Copy, Download, FileDown, Search, X } from 'lucide-react';
 import { adminApi, type PromptDetail, type PromptRow } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { Loading, Note, Pill, Section, TableWrap, btnGhost, errText, field, fmtDate, nf, td, th } from './ui';
 
 /** Cevap tipi → okunur etiket + renk. Başarısız/eksik olanlar göze çarpsın. */
@@ -39,11 +41,14 @@ const DAYS: Array<[string, string]> = [
   ['', 'Tümü'],
 ];
 
-function Stat({ label, value, tone }: { label: string; value: number; tone: 'ink' | 'ok' | 'err' | 'violet' }) {
+function Stat({ label, value, tone, k, alan }: { label: string; value: number; tone: 'ink' | 'ok' | 'err' | 'violet'; k?: Kaynaklar; alan: string }) {
   const color = { ink: 'text-canvas-ink', ok: 'text-emerald-600', err: 'text-red-600', violet: 'text-canvas-violet' }[tone];
   return (
     <div className="rounded-2xl border border-slate-100 bg-white/80 px-4 py-3">
-      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+        {label}
+        <SqlInfo k={k} alan={alan} label={label} />
+      </div>
       <div className={`mt-0.5 text-2xl font-extrabold tabular-nums ${color}`}>{nf.format(value)}</div>
     </div>
   );
@@ -155,6 +160,7 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
               {d?.username ?? 'oturumsuz'} · {fmtDate(d?.createdAt)}
               {d?.latencyMs != null && ` · ${nf.format(d.latencyMs)} ms`}
               {d?.rowCount != null && ` · ${nf.format(d.rowCount)} satır`}
+              {d && <SqlInfo k={d.kaynaklar} alan="result" label="Sorunun sonucu" className="ml-1" />}
             </div>
           </div>
           <button type="button" onClick={onClose} aria-label="Kapat" className={`${btnGhost} !min-h-0 !p-2`}>
@@ -183,13 +189,15 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
                   <p className="whitespace-pre-wrap rounded-xl bg-red-50 p-3 text-[12px] text-red-700">{d.error}</p>
                 </section>
               )}
-              {d.sql && (
+              {(d.result?.physicalSql || d.sql) && (
                 <section>
                   <div className="mb-1 flex items-center justify-between">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Üretilen SQL</span>
-                    <CopyBtn text={d.sql} />
+                    <span className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+                      {d.result?.physicalSql ? 'Veritabanında koşan SQL' : 'Üretilen SQL (çözülmemiş, katalog adlarıyla)'}
+                    </span>
+                    <CopyBtn text={d.result?.physicalSql || d.sql || ''} />
                   </div>
-                  <pre className="overflow-x-auto rounded-xl bg-canvas-ink p-3 text-[11.5px] leading-relaxed text-slate-100">{d.sql}</pre>
+                  <pre className="overflow-x-auto rounded-xl bg-canvas-ink p-3 text-[11.5px] leading-relaxed text-slate-100">{d.result?.physicalSql || d.sql}</pre>
                 </section>
               )}
               {d.result && (
@@ -317,10 +325,10 @@ export default function PromptTracker() {
     >
       {o && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          <Stat label={`Toplam (${o.sinceDays} gün)`} value={o.total} tone="ink" />
-          <Stat label="Cevaplanan" value={o.answered} tone="ok" />
-          <Stat label="Başarısız" value={o.failed} tone="err" />
-          <Stat label="Düzeltilecek" value={o.todo} tone="violet" />
+          <Stat label={`Toplam (${o.sinceDays} gün)`} value={o.total} tone="ink" k={o.kaynaklar} alan="total" />
+          <Stat label="Cevaplanan" value={o.answered} tone="ok" k={o.kaynaklar} alan="answered" />
+          <Stat label="Başarısız" value={o.failed} tone="err" k={o.kaynaklar} alan="failed" />
+          <Stat label="Düzeltilecek" value={o.todo} tone="violet" k={o.kaynaklar} alan="todo" />
         </div>
       )}
 
@@ -382,6 +390,10 @@ export default function PromptTracker() {
         <Note tone="err">{errText(list.error, 'Sorular okunamadı.')}</Note>
       ) : items.length ? (
         <div className="rounded-2xl border border-slate-100 bg-white/80 px-4">
+          {/* Satırdaki «N satır · N ms» soru kaydından; satır düğme olduğu için «i» listenin başında. */}
+          <div className="flex justify-end pt-2 text-[11px] text-canvas-muted">
+            <InfoLabel k={list.data?.pages[0]?.kaynaklar} alan="items" label="Satır ve süre">Satır ve süre</InfoLabel>
+          </div>
           <ul className="divide-y divide-slate-100">
             {items.map((it) => (
               <Row key={it.id} item={it} onOpen={() => setOpenId(it.id)} />
