@@ -10,6 +10,7 @@ import { Kpi, KpiRow, ModuleFrame, Panel } from '../kit';
 import { FileButton, LANGS, PersonField, ProgressBar, StagePill, Tabs, fmtDay, pair, paceText, pct, type PersonPick } from './parts';
 import TermBank from './TermBank';
 import Translators from './Translators';
+import { SuggestedTranslators } from './TranslatorMatch';
 
 /** M4 Çeviri Yönetimi: çeviri işleri (kaynak, segmentler, atama, ilerleme, ZEKİ ham taslak, dosyalar),
  *  terim bankası ve çevirmen karneleri. Çevirmenin kendi ekranı /ceviri/masam, kalite raporu /ceviri/:iş/kalite. */
@@ -81,6 +82,7 @@ function JobForm({ onDone, onCancel }: { onDone: (id: string) => void; onCancel:
       <div>
         <span className={label}>Çevirmen</span>
         <PersonField value={translator} onChange={setTranslator} />
+        <SuggestedTranslators src={src} tgt={tgt} due={due} value={translator} onPick={setTranslator} />
       </div>
       <div>
         <span className={label}>İnceleyen</span>
@@ -201,8 +203,13 @@ function Assignment({ job, onSaved }: { job: TranslationJobDetail; onSaved: () =
       }),
     onSuccess: onSaved,
   });
+  // Serbest çalışan önerisi yalnız adı doldurur (kullanıcı adı boş kalır): ad değişikliği de kaydedilecek değişikliktir.
   const dirty =
-    translator.username !== (job.translator ?? '') || reviewer.username !== (job.reviewer ?? '') || due !== (job.dueDate ?? '') || note !== (job.note ?? '');
+    translator.username !== (job.translator ?? '') ||
+    translator.name !== (job.translatorName ?? '') ||
+    reviewer.username !== (job.reviewer ?? '') ||
+    due !== (job.dueDate ?? '') ||
+    note !== (job.note ?? '');
   return (
     <form
       className="grid gap-2.5 sm:grid-cols-2"
@@ -218,6 +225,17 @@ function Assignment({ job, onSaved }: { job: TranslationJobDetail; onSaved: () =
       <div>
         <span className={label}>İnceleyen</span>
         <PersonField value={reviewer} onChange={setReviewer} />
+      </div>
+      <div className="sm:col-span-2">
+        <SuggestedTranslators
+          src={job.sourceLang}
+          tgt={job.targetLang}
+          words={Math.max(0, job.words.total - job.words.done)}
+          due={due}
+          jobId={job.id}
+          value={translator}
+          onPick={setTranslator}
+        />
       </div>
       <label className="block">
         <span className={label}>Teslim tarihi</span>

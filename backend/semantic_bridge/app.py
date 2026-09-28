@@ -5053,6 +5053,19 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         engine, tenant, _user, _ = _tr(request)
         return {"items": tr_mod.translators(engine, tenant)}
 
+    @app.get("/api/v1/editorial/translation/match")
+    def tr_match(request: Request, src: str = "", tgt: str = "", words: str = "0", due: str = "", job: str = "") -> dict[str, Any]:
+        # Çevirmen eşleştirme önerisi (editorial_translation_match.py): yalnız okur. Rehber yalnız e-postalı
+        # serbest çalışan kartı varsa okunur (kart ↔ portal kullanıcısı bağı); okunamazsa kayıtlar ayrı kalır.
+        from semantic_bridge import editorial_translation_match as match_mod
+        engine, tenant, _user, _ = _tr(request)
+
+        def directory() -> dict[str, str]:
+            rows, _, _ = _crm_people()
+            return {str(p.get("username") or "").lower(): str(p.get("email") or "").lower() for p in rows if p.get("username")}
+
+        return _tr_call(match_mod.match, engine, tenant, src, tgt, words, due or None, exclude_job=job or None, directory=directory)
+
     @app.get("/api/v1/editorial/translation/terms")
     def tr_terms(request: Request, src: str = "", tgt: str = "", q: str = "", status: str = "", job: str = "") -> dict[str, Any]:
         engine, tenant, _user, _ = _tr(request)
