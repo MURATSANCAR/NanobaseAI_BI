@@ -307,6 +307,27 @@ Dal `worktree-agent-a72f5b0e1fbf9d216` (main `b625a387` üstü). Sunucuya bağla
   - `test_state_participles::…costs_no_model_call` — 575d6a22 (09-20) `profiled_name` `self.profiles` okur; elle kurulan derleyiciye `profiles`.
   - `test_dynamic_schema::test_no_customer_specific_identifiers…` — 09-19…27 arası dokuz docstring olay anlatırken tablo/kolon adı anıyor; satır biçimi sezgisi docstring'in yalnız ilk satırını muaf tutuyordu. Koruma artık ast + tokenize ile docstring/yorumu ayırır, koddaki her dize satırını da denetler (eskiden tırnakla başlayan satır hiç denetlenmiyordu); kendi testi var.
 - **Doğrulama:** Mac'te yalnız `py_compile` (+ koruma yardımcısının örnek dizesi). Pytest koordinatörde.
+## 2026-09-28 — Sorgu bilgisi: her rakamın SQL'i ve hesabı «i» düğmesinde (ortak altyapı + bütçe, finans, fiyatlama) — DOĞRULANAMADI, testler koordinatörde
+
+- **Neden:** kullanıcı «tüm hesaplama ve rakam verdiğimiz ekranlarda çalıştırdığımız sorguları info olarak her kalemde ver
+  ve kopyalanabilir olsun ama eksiksiz hepsinde istiyorum». Bugün SQL gösteren dört ayrı parça vardı (kart SQL şeridi,
+  yönetim raporu kaynak sayfası, denetim bulgusu, fiyatlama kaynak listesi) ve rakam ↔ sorgu eşlemesi yalnız yönetim
+  raporlarında kolon düzeyindeydi. Yeni kalıp onun genellemesi (aynı alan adları: connection, database, title, sql, stats).
+- **Kararlar:** (1) Gösterilen SQL çalışan SQL'dir: portal okumaları `*_stmt()`'e ayrıldı, aynı ifade hem koşar hem
+  değerleriyle derlenir; Logo/CRM metni firma kopyası ve tarih aralığı yerinde, başında `USE [VT];`. (2) Önbellekten gelen
+  rakamda tabloyu dolduran Logo sorgusu `origin` olarak eklenir; yenileme meta'sında firma yoksa kayıt açılmaz (yanlış yıl
+  kopyası göstermektense yok). (3) Python hesabı okunur formül metniyle. (4) SQL metni mevcut `kart.sql-goster` yetkisine
+  bağlı kaldı (yönetimin rol kararı); yetkisiz kişi formülü ve kaynağın adını görür. (5) Fiyatlama `/sources` görüntü
+  kurulmadan şablon (`{f}`) gösteriyordu: kaldırıldı. (6) Liste satırları farklı sorgudan geliyorsa satıra özel anahtar
+  (`cards[]:net-satis`, `items[].totals:<plan>`).
+- **Bekçi:** `uncovered_numbers` cevaptaki kaynaksız her rakamı yakalar; `problems` boş SQL, yer tutucu, eksik köken, sır
+  izini; `clean_sql` teknoloji adlı açıklama satırını atar, parola/anahtar kolonu okuyan SQL'i reddeder.
+- **Envanter:** 275 rota + 163 menü adresi, 5 yayılım grubuna bölündü (`docs/analiz/sorgu-bilgisi-envanteri.md`), betikle
+  denetlenir. Salt okuma ile çıkarıldı; alt ajan bulguları: genel bakış kartı mantıksal SQL'i gösteriyor (Logo'da koşan
+  fiziksel SQL farklı), tedarik `/sources` şablon döndürüyor ve ön yüzde kullanılmıyor, stokta kaynak paneli var ama KPI
+  eşlemesi yok, İK rakamları çoğunlukla portal hesabı.
+- **Sunucuda kalan:** `scripts/acceptance/sorgu-bilgisi/check.sh` (pytest, tsc, vitest, derleme) + `kabul.py` (her
+  kaynağın SQL'i gerçek Logo/CRM/portalda koşar; R1–R6 doğrudan SQL karşılaştırması). Mac'te yalnız `py_compile` yapıldı.
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 
