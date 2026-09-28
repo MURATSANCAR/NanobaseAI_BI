@@ -31,6 +31,7 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import readers as R
+from semantic_bridge import readers_core as RC
 from semantic_bridge import readers_imports as imp
 from semantic_bridge import readers_segments as seg
 from semantic_bridge import readers_sources as src
@@ -56,6 +57,9 @@ def _iso_now() -> str:
 def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], None], can: Callable[[str, str], bool]):
     from semantic_bridge import admin as admin_mod
     from semantic_bridge import board as board_mod
+
+    # M37 okur topluluğu bu sözleşmeyle okur (okur_sources.ReadersCore); sayılar H2'nin kendi işlevlerinden.
+    RC.register(app, lambda: rt().store.engine, lambda: rt().settings.tenant_id)
 
     def crm_path() -> str:
         return os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
