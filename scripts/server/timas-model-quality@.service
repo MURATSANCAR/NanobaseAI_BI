@@ -1,0 +1,12 @@
+[Unit]
+Description=Zeki AI kalitesi (M50): %i turu (sira = ekrandan istenen koşu, gece = okuma kapısı, hafta = cevap kapısı, ozet = günlük özet)
+After=nanobase-semantic-bridge.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/nanobase/semantic-bridge.env
+# Mantık köprüde (/api/v1/model-quality/*); betik kapıyı koşturur ve sonucu --report ile köprüye yazar. Aynı anda tek
+# kapı koşar (flock). Cevap kapısı Zeki AI'a soru sorar (~35 dk); gündüz kullanıcıların önüne geçmesin diye pazar gecesi.
+# İlk kez elle koşturulur: systemctl start timas-model-quality@gece.service (bellek: run-it-before-it-runs-itself).
+ExecStart=/data/nanobaseai/bi/frontend/scripts/server/model-quality-run.sh %i
+TimeoutStartSec=3h

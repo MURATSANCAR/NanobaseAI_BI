@@ -1,0 +1,10 @@
+[Unit]
+Description=Zeki AI kalitesi (M50): ekrandan istenen koşuları 10 dakikada bir alır
+
+[Timer]
+OnBootSec=11min
+OnUnitActiveSec=10min
+Unit=timas-model-quality@sira.service
+
+[Install]
+WantedBy=timers.target

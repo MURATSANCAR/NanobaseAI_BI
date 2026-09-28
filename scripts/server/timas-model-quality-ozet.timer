@@ -1,0 +1,10 @@
+[Unit]
+Description=Zeki AI kalitesi (M50): günlük geri bildirim özeti 08:00 (yalnız iç alıcılara) ve yarıda kalan koşunun kapatılması
+
+[Timer]
+OnCalendar=*-*-* 08:00:00
+Persistent=true
+Unit=timas-model-quality@ozet.service
+
+[Install]
+WantedBy=timers.target
