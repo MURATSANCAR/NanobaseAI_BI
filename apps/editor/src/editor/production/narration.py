@@ -930,6 +930,23 @@ def _hash(obj) -> str:
     return hashlib.sha256(json.dumps(obj, ensure_ascii=False, sort_keys=True).encode()).hexdigest()[:16]
 
 
+# Kısa ünlem (en çok EXCL_WORDS okunuş kelimesi, «!» ile biten parça) model tarafından çok kısa okunuyor: tam kitap
+# dinlemesinde «Tüh!» 0,20 sn, «O da ne!» 0,40–0,46 sn (6,5–7,5 kelime/sn). Servise hece başına en az süre gider; daha kısa
+# çıkarsa perdeyi koruyarak esnetilir (servis `min_sec`, en çok %40 yavaşlatma).
+EXCL_WORDS = 3
+EXCL_SYLLABLE_SEC = 0.28
+
+
+def excl_min_sec(p: Piece, units: list[Unit]) -> float | None:
+    if not p.text.rstrip().endswith("!"):
+        return None
+    say = [s for k in p.words for s in units[p.unit].words[k].say]
+    if not say or len(say) > EXCL_WORDS:
+        return None
+    syl = sum(max(1, sum(1 for ch in tr_lower(s) if ch in VOWELS)) for s in say)
+    return round(syl * EXCL_SYLLABLE_SEC, 2)
+
+
 def page_input(d: Path, pg: dict, cfg: dict | None = None, lex: Lexicon | None = None) -> tuple[list[Unit], list[Piece], str]:
     cfg = cfg or settings_of(d)
     lex = lex or lexicon(d)
@@ -939,8 +956,10 @@ def page_input(d: Path, pg: dict, cfg: dict | None = None, lex: Lexicon | None =
     # servis gövdesine narrate_page'deki `expression.prepare` çevirir. İşaretsiz sayfada x None: özet eskisiyle aynı.
     from . import expression
     plist, x = expression.apply(d, pg, units, plist)
+    ex = [excl_min_sec(p, units) for p in plist]
     h = _hash({"v": VERSION, "p": [(p.text, p.voice, p.pause_ms) for p in plist],
-               "w": [[w.text for w in u.words] for u in units], **({"x": x} if x else {})})
+               "w": [[w.text for w in u.words] for u in units], **({"x": x} if x else {}),
+               **({"e": ex} if any(ex) else {})})
     return units, plist, h
 
 
@@ -1096,7 +1115,8 @@ async def narrate_page(d: Path, pid: str, by: str, keep_human: bool = False) -> 
         return {"page": pid, "status": "empty"}
     refs = {vid: await voice_ref(vid) for vid in {p.voice for p in plist}}
     body = {"segments": [{"text": p.text, "voice": refs[p.voice], "pause_ms": p.pause_ms,
-                          "words": [s for k in p.words for s in units[p.unit].words[k].say]} for p in plist],
+                          "words": [s for k in p.words for s in units[p.unit].words[k].say],
+                          **({"min_sec": m} if (m := excl_min_sec(p, units)) else {})} for p in plist],
             "format": "mp3", "align": True}
     t0 = time.time()
     from . import expression

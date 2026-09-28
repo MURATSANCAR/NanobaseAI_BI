@@ -345,3 +345,11 @@ def test_guess_voice_ignores_comparisons_and_follows_stated_sex():
     assert N.guess_voice("lion", "a big man with a mane") == "genc-erkek"
     assert N.guess_voice("son of the king", "") == "cocuk-erkek"
     assert N.guess_voice("tree", "old and tall") is None
+
+
+def test_short_exclamation_gets_min_duration():
+    t = "Tüh! O da ne! Bu çok güzel bir gün oldu! Nerede?"
+    u = N.Unit("x", "para", None, "anlatici-kadin", t, N.read(t))
+    ps = N.pieces([u])
+    got = {p.text: N.excl_min_sec(p, [u]) for p in ps}
+    assert got == {"Tüh!": 0.28, "O da ne!": 0.84, "Bu çok güzel bir gün oldu!": None, "Nerede?": None}

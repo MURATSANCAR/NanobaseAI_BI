@@ -137,6 +137,7 @@ class Segment(BaseModel):
     pause_before_ms: int = Field(0, ge=0, le=3000)              # ifade: parçadan önce sessizlik
     clone: str | None = Field(None, pattern="^(full|ref)$")     # referanslı seste klon kipi (boş: style → ref)
     cfg: float | None = Field(None, ge=1.0, le=3.0)            # ifade: yönlendirme gücü (boş: sunucu varsayılanı)
+    min_sec: float | None = Field(None, ge=0, le=10)            # kısa ünlem: üretilen ses bundan kısaysa yavaşlatılır
 
 
 class Narrate(BaseModel):
@@ -166,6 +167,9 @@ def _fade(wav: np.ndarray, ms: int = 12) -> np.ndarray:
         wav[:n] *= r
         wav[-n:] *= r[::-1]
     return wav
+
+
+MIN_STRETCH = 0.6
 
 
 def _stretch(wav: np.ndarray, rate: float) -> np.ndarray:
@@ -216,8 +220,12 @@ def _speak(seg: Segment, tmp: str) -> np.ndarray:
     elif ref:
         # Yalnız referans sesi (VoxCPM2 "controllable cloning"): ses referanstan, ton talimattan.
         kw.update(reference_wav_path=ref)
-    wav = TTS.generate(**kw)
-    return _fade(_trim(_stretch(np.asarray(wav, dtype=np.float32), seg.rate)))
+    wav = _trim(_stretch(np.asarray(wav, dtype=np.float32), seg.rate))
+    if seg.min_sec and len(wav) and len(wav) / SR < seg.min_sec:
+        # Kısa ünlem yutulmasın («Tüh!» 0,2 sn, «O da ne!» 0,45 sn çıkıyordu): perdeyi koruyarak en az süreye esnetilir,
+        # en çok MIN_STRETCH kadar (daha yavaşı yapay duyulur).
+        wav = _stretch(wav, max(MIN_STRETCH, len(wav) / SR / seg.min_sec))
+    return _fade(wav)
 
 
 # ------------------------------------------------------------------ hizalama
