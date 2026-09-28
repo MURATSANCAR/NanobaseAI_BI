@@ -34,7 +34,9 @@ from fastapi import HTTPException, Request
 from fastapi.responses import FileResponse, Response
 from starlette.concurrency import run_in_threadpool
 
+from semantic_bridge import provenance as PK
 from semantic_bridge import risk as R
+from semantic_bridge import risk_kaynak as K
 from semantic_bridge import risk_sources as src
 
 log = logging.getLogger("semantic.risk.api")
@@ -59,6 +61,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
     def crm_file() -> str:
         return os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json")
+
+    def dbs() -> tuple[Optional[str], Optional[str]]:
+        """Bağlantı dosyalarından YALNIZ veritabanı adları (sorgu bilgisinde USE satırı için)."""
+        from semantic_bridge import provenance as PV
+        return PV.connection_database(rt().settings.connection_file), PV.connection_database(crm_file())
 
     def context(engine, tenant) -> src.Context:
         return src.Context(logo_file=lambda: rt().settings.connection_file, crm_file=crm_file,
@@ -227,7 +234,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/summary")
     def risk_summary(request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(R.summary, engine, tenant, user, see_all(user), indicator_list(engine, tenant))
+        ind = indicator_list(engine, tenant)
+        out = call(R.summary, engine, tenant, user, see_all(user), ind)
+        return PK.bagla(out, lambda: K.for_summary(engine, tenant, out, *dbs(), ind))
 
     @app.get(P + "/status")
     def risk_status(request: Request) -> dict[str, Any]:
@@ -254,7 +263,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/risks")
     def risk_list(request: Request, durum: str = "canli", kategori: str = "", q: str = "", sahip: str = "", hucre: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(R.list_risks, engine, tenant, user, see_all(user), durum=durum, kategori=kategori, q=q, sahip=sahip, hucre=hucre)
+        out = call(R.list_risks, engine, tenant, user, see_all(user), durum=durum, kategori=kategori, q=q, sahip=sahip, hucre=hucre)
+        return PK.bagla(out, lambda: K.for_list(engine, tenant))
 
     @app.post(P + "/risks", status_code=201)
     def risk_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -308,7 +318,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         engine, tenant, user, _ = ctx(request)
         d = risk_for(engine, tenant, user, rid)
         d["yazabilir"] = can(user, F_WRITE) and (see_all(user) or owns(user, d["sahip"], d["olusturan"]))
-        return d
+        return PK.bagla(d, lambda: K.for_detail(engine, tenant, rid, d, *dbs()))
 
     @app.patch(P + "/risks/{rid}")
     def risk_update(rid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -399,8 +409,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/indicators")
     def risk_indicators(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": indicator_list(engine, tenant),
-                "kutuphane": [{k: v for k, v in s.items()} for s in src.LIBRARY]}
+        out = {"items": indicator_list(engine, tenant), "kutuphane": [{k: v for k, v in s.items()} for s in src.LIBRARY]}
+        return PK.bagla(out, lambda: K.for_indicators(engine, tenant, out, *dbs()))
 
     @app.post(P + "/indicators", status_code=201)
     def risk_indicator_propose(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -432,7 +442,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/indicators/{kod}/values")
     def risk_indicator_values(kod: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(R.indicator_values, engine, tenant, kod)
+        out = call(R.indicator_values, engine, tenant, kod)
+        return PK.bagla(out, lambda: K.for_values(engine, tenant, kod, *dbs()))
 
     @app.post(P + "/indicators/{kod}/measure")
     async def risk_indicator_measure(kod: str, request: Request) -> dict[str, Any]:
@@ -457,7 +468,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
 
         out = await run_in_threadpool(call, run)
         audit(engine, user, "run", "risk_indicator", kod, out["ad"], {"deger": out["deger"], "durum": out["durum"], "hata": out["hata"]})
-        return out
+        return await run_in_threadpool(PK.bagla, out, lambda: K.for_measure(engine, tenant, kod, out, *dbs()))
 
     # ------------------------------------------------------------------ uyum
 
@@ -468,7 +479,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/compliance/items")
     def risk_comp_items(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return R.compliance_items(engine, tenant)
+        out = R.compliance_items(engine, tenant)
+        return PK.bagla(out, lambda: K.for_compliance(engine, tenant, out))
 
     @app.post(P + "/compliance/items", status_code=201)
     def risk_comp_item_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -493,7 +505,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/compliance/calendar")
     def risk_comp_calendar(request: Request, ay: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(R.calendar, engine, tenant, ay)
+        out = call(R.calendar, engine, tenant, ay)
+        return PK.bagla(out, lambda: K.for_compliance(engine, tenant, out, out["ay"]))
 
     @app.post(P + "/compliance/events/{eid}/evidence")
     async def risk_comp_evidence(eid: str, request: Request, filename: str = "", note: str = "") -> dict[str, Any]:
@@ -523,7 +536,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/policies")
     def risk_policies(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return R.policies(engine, tenant)
+        out = R.policies(engine, tenant)
+        return PK.bagla(out, lambda: K.for_manual(engine, tenant, out, "police"))
 
     @app.post(P + "/policies", status_code=201)
     def risk_policy_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -563,7 +577,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/bcp")
     def risk_bcp(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return R.bcp(engine, tenant)
+        out = R.bcp(engine, tenant)
+        return PK.bagla(out, lambda: K.for_manual(engine, tenant, out, "bcp"))
 
     @app.post(P + "/bcp", status_code=201)
     def risk_bcp_add(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -592,7 +607,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/reports")
     def risk_reports(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return R.reports(engine, tenant)
+        out = R.reports(engine, tenant)
+        return PK.bagla(out, lambda: K.for_reports(engine, tenant, out))
 
     @app.post(P + "/reports/draft", status_code=202)
     def risk_report_draft(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -622,7 +638,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/reports/{rid}")
     def risk_report(rid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(R.report, engine, tenant, rid)
+        out = call(R.report, engine, tenant, rid)
+        return PK.bagla(out, lambda: K.for_reports(engine, tenant, out, rid))
 
     @app.patch(P + "/reports/{rid}")
     def risk_report_edit(rid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

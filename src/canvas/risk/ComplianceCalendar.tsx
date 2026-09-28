@@ -7,6 +7,7 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui'
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtLeft, monthLabel, monthShift, riskApi, type CompEvent, type CompItem, type RiskMeta } from './api';
+import SqlInfo from '../components/SqlInfo';
 import { AskSheet, Empty, FilePick, SelectInput, TextInput } from './parts';
 
 /** Uyum: ayın yükümlülükleri (açılışta bu ay; geciken eski dönemler de görünür), kanıt yükleme ve dönemi kapatma;
@@ -27,6 +28,7 @@ export default function ComplianceCalendar({ meta }: { meta: RiskMeta }) {
             <button type="button" className={btnGhost} aria-label="Önceki ay" onClick={() => setAy(monthShift(ay, -1))}><ChevronLeft aria-hidden className="h-4 w-4" /></button>
             <h2 className="min-w-[140px] text-center text-[15px] font-extrabold capitalize tracking-tight">{monthLabel(ay)}</h2>
             <button type="button" className={btnGhost} aria-label="Sonraki ay" onClick={() => setAy(monthShift(ay, 1))}><ChevronRight aria-hidden className="h-4 w-4" /></button>
+            <SqlInfo k={cal.data?.kaynaklar} alan="items[]" label={`${monthLabel(ay)} uyum dönemleri: kalan gün`} />
           </div>
           {meta.me.canCompliance && (
             <button type="button" className={btnPrimary} onClick={() => setEditing('new')}><Plus aria-hidden className="h-4 w-4" />Yükümlülük ekle</button>
@@ -42,7 +44,7 @@ export default function ComplianceCalendar({ meta }: { meta: RiskMeta }) {
         </div>
       </Panel>
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Yükümlülükler</h2>
+        <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Yükümlülükler<SqlInfo k={items.data?.kaynaklar} alan="items[]" label="Yükümlülükler: geciken ve kapanan dönem sayısı" /></h2>
         {items.isLoading ? <Loading /> : (items.data?.items.length ?? 0) === 0 ? (
           <Empty>Henüz yükümlülük yok. Telif, KVKK, vergi, ticaret ve iş sağlığı maddelerini son günü ve sıklığıyla ekleyin.</Empty>
         ) : (

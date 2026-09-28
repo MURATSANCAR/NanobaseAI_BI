@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Download, Loader2, Plus, Trash2 } from 'lucide-react';
+import SqlInfo from '../components/SqlInfo';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { Panel } from '../editorial/kit';
@@ -21,7 +22,7 @@ export default function ContinuityTab({ meta }: { meta: RiskMeta }) {
     <>
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-extrabold tracking-tight">Sigorta poliçeleri</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Sigorta poliçeleri<SqlInfo k={pol.data?.kaynaklar} alan="items[]" label="Poliçe primi, teminatlar, kalan gün" /></h2>
           {can && <button type="button" className={btnPrimary} onClick={() => setPolicy('new')}><Plus aria-hidden className="h-4 w-4" />Poliçe ekle</button>}
         </div>
         {pol.isLoading ? <Loading /> : pol.error ? <Note tone="err">{errText(pol.error, 'Poliçeler okunamadı.')}</Note> :
@@ -33,7 +34,7 @@ export default function ContinuityTab({ meta }: { meta: RiskMeta }) {
       </Panel>
       <Panel>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <h2 className="text-[15px] font-extrabold tracking-tight">İş sürekliliği (kritik süreçler)</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">İş sürekliliği (kritik süreçler)<SqlInfo k={bcp.data?.kaynaklar} alan="items[]" label="Kesinti, veri kaybı saati ve tatbikat" /></h2>
           {can && <button type="button" className={btnPrimary} onClick={() => setProc('new')}><Plus aria-hidden className="h-4 w-4" />Süreç ekle</button>}
         </div>
         {bcp.isLoading ? <Loading /> : bcp.error ? <Note tone="err">{errText(bcp.error, 'Süreçler okunamadı.')}</Note> :

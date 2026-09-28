@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Uç cevabındaki sorgu bilgisi (`<SqlInfo k={…kaynaklar} alan="…" />`). */
+export type WithK = { kaynaklar?: Kaynaklar };
 
 /** M47 Risk ve uyum ekranlarının köprü uçları: /api/v1/risk/*. */
 
@@ -171,10 +175,10 @@ const enc = encodeURIComponent;
 
 export const riskApi = {
   meta: () => send<RiskMeta>('GET', '/meta'),
-  summary: () => send<Summary>('GET', '/summary', undefined, 300_000),
+  summary: () => send<Summary & WithK>('GET', '/summary', undefined, 300_000),
   risks: (p: { durum?: string; kategori?: string; q?: string; sahip?: string; hucre?: string }) =>
-    send<{ items: Risk[]; total: number }>('GET', `/risks${qs(p)}`),
-  risk: (id: string) => send<RiskDetail>('GET', `/risks/${enc(id)}`),
+    send<{ items: Risk[]; total: number } & WithK>('GET', `/risks${qs(p)}`),
+  risk: (id: string) => send<RiskDetail & WithK>('GET', `/risks/${enc(id)}`),
   create: (b: RiskInput) => send<Risk>('POST', '/risks', b),
   update: (id: string, b: RiskInput) => send<Risk>('PATCH', `/risks/${enc(id)}`, b),
   review: (id: string, b: { olasilik: number; etki: number; egilim?: string; not?: string; sonrakiGozdenGecirme?: string }) =>
@@ -190,31 +194,31 @@ export const riskApi = {
     send<Action>('PATCH', `/actions/${enc(aid)}`, b),
   actionEvidence: (aid: string, file: File) => upload<Action>(`/actions/${enc(aid)}/evidence`, file),
   actionEvidenceUrl: (aid: string) => `${ENGINE_BASE}${B}/actions/${enc(aid)}/evidence`,
-  indicators: () => send<{ items: Indicator[] }>('GET', '/indicators', undefined, 300_000),
+  indicators: () => send<{ items: Indicator[] } & WithK>('GET', '/indicators', undefined, 300_000),
   proposeIndicator: (b: Partial<{ kod: string; ad: string; aciklama: string; birim: string; yon: string; esikSari: number | null; esikKirmizi: number | null; sahip: string; sahipEposta: string; siklik: string; not: string }>) =>
     send<IndicatorDef>('POST', '/indicators', b),
   approveIndicator: (kod: string, not?: string) => send<IndicatorDef>('POST', `/indicators/${enc(kod)}/approve`, { not }),
   rejectIndicator: (kod: string, not: string) => send<IndicatorDef>('POST', `/indicators/${enc(kod)}/reject`, { not }),
-  measure: (kod: string) => send<Measure & { kod: string; ad: string; bildirim?: string }>('POST', `/indicators/${enc(kod)}/measure`, undefined, 900_000),
-  values: (kod: string) => send<{ kod: string; items: Measure[]; surumler: IndicatorDef[] }>('GET', `/indicators/${enc(kod)}/values`),
-  compItems: () => send<{ items: CompItem[]; alanlar: Record<string, string>; sikliklar: Record<string, string> }>('GET', '/compliance/items'),
+  measure: (kod: string) => send<Measure & { kod: string; ad: string; bildirim?: string } & WithK>('POST', `/indicators/${enc(kod)}/measure`, undefined, 900_000),
+  values: (kod: string) => send<{ kod: string; items: Measure[]; surumler: IndicatorDef[] } & WithK>('GET', `/indicators/${enc(kod)}/values`),
+  compItems: () => send<{ items: CompItem[]; alanlar: Record<string, string>; sikliklar: Record<string, string> } & WithK>('GET', '/compliance/items'),
   saveItem: (id: string | null, b: Partial<{ alan: string; madde: string; dayanak: string; siklik: string; ilkSonGun: string; sorumlu: string; sorumluEposta: string; aktif: boolean; not: string }>) =>
     id ? send<CompItem>('PATCH', `/compliance/items/${enc(id)}`, b) : send<CompItem>('POST', '/compliance/items', b),
-  calendar: (ay: string) => send<{ ay: string; items: CompEvent[]; bugun: string }>('GET', `/compliance/calendar${qs({ ay })}`),
+  calendar: (ay: string) => send<{ ay: string; items: CompEvent[]; bugun: string } & WithK>('GET', `/compliance/calendar${qs({ ay })}`),
   eventEvidence: (eid: string, file: File) => upload<CompEvent>(`/compliance/events/${enc(eid)}/evidence`, file),
   eventEvidenceUrl: (eid: string) => `${ENGINE_BASE}${B}/compliance/events/${enc(eid)}/evidence`,
   closeEvent: (eid: string, not: string) => send<CompEvent>('POST', `/compliance/events/${enc(eid)}/close`, { not }),
-  policies: () => send<{ items: Policy[]; uyariGun: number }>('GET', '/policies'),
+  policies: () => send<{ items: Policy[]; uyariGun: number } & WithK>('GET', '/policies'),
   savePolicy: (id: string | null, b: Record<string, unknown>) => (id ? send<Policy>('PATCH', `/policies/${enc(id)}`, b) : send<Policy>('POST', '/policies', b)),
   deletePolicy: (id: string) => send<{ ok: boolean }>('DELETE', `/policies/${enc(id)}`),
   policyDocument: (id: string, file: File) => upload<Policy>(`/policies/${enc(id)}/document`, file),
   policyDocumentUrl: (id: string) => `${ENGINE_BASE}${B}/policies/${enc(id)}/document`,
-  bcp: () => send<{ items: Bcp[]; durumlar: Record<string, string> }>('GET', '/bcp'),
+  bcp: () => send<{ items: Bcp[]; durumlar: Record<string, string> } & WithK>('GET', '/bcp'),
   saveBcp: (id: string | null, b: Record<string, unknown>) => (id ? send<Bcp>('PATCH', `/bcp/${enc(id)}`, b) : send<Bcp>('POST', '/bcp', b)),
   deleteBcp: (id: string) => send<{ ok: boolean }>('DELETE', `/bcp/${enc(id)}`),
   kvkk: () => send<{ available: boolean; message?: string } & Record<string, unknown>>('GET', '/kvkk'),
-  reports: () => send<{ items: Report[] }>('GET', '/reports'),
-  report: (id: string) => send<Report>('GET', `/reports/${enc(id)}`),
+  reports: () => send<{ items: Report[] } & WithK>('GET', '/reports'),
+  report: (id: string) => send<Report & WithK>('GET', `/reports/${enc(id)}`),
   draftReport: (donem?: string) => send<Job>('POST', '/reports/draft', donem ? { donem } : {}),
   editReport: (id: string, metin: string) => send<Report>('PATCH', `/reports/${enc(id)}`, { metin }),
   approveReport: (id: string) => send<Report>('POST', `/reports/${enc(id)}/approve`),

@@ -588,7 +588,8 @@ def _indicator_out(r: Any) -> dict[str, Any]:
 def _value_out(r: Any) -> dict[str, Any]:
     d = dict(r._mapping)
     return {"olcum": _iso(d["olcum_at"]), "deger": d["deger"], "durum": d["durum"], "durumAdi": VALUE_STATES.get(d["durum"], d["durum"]),
-            "veriSonGunu": d["veri_son_gunu"], "kanit": _j(d["kanit_json"], {}), "esik": _j(d["esik_json"], {}), "hata": d["hata"],
+            "veriSonGunu": d["veri_son_gunu"], "kanit": {k: v for k, v in (_j(d["kanit_json"], {}) or {}).items() if k != "_sorgular"},
+            "esik": _j(d["esik_json"], {}), "hata": d["hata"],
             "olcen": d["olcen"]}
 
 
@@ -614,6 +615,91 @@ def seed_library(engine: sa.engine.Engine, tenant: str, library: Iterable[dict[s
     return added
 
 
+# ------------------------------------------------------------------ okuma ifadeleri (sorgu bilgisi aynısını gösterir)
+
+
+def risks_stmt(tenant: str):
+    return sa.select(RISKS).where(RISKS.c.tenant_id == tenant)
+
+
+def risk_stmt(tenant: str, rid: str):
+    return sa.select(RISKS).where(RISKS.c.id == rid, RISKS.c.tenant_id == tenant)
+
+
+def actions_stmt(risk_ids: Optional[list[str]] = None, *, live: bool = False):
+    q = sa.select(ACTIONS)
+    if risk_ids is not None:
+        q = q.where(ACTIONS.c.risk_id.in_(risk_ids or [""]))
+    if live:
+        q = q.where(ACTIONS.c.durum.in_(("acik", "devam")))
+    return q.order_by(ACTIONS.c.created_at)
+
+
+def links_stmt(risk_ids: Optional[list[str]] = None):
+    q = sa.select(LINKS.c.risk_id, LINKS.c.gosterge_kod)
+    if risk_ids is not None:
+        q = q.where(LINKS.c.risk_id.in_(risk_ids or [""]))
+    return q
+
+
+def reviews_stmt(rid: str):
+    return sa.select(REVIEWS).where(REVIEWS.c.risk_id == rid).order_by(REVIEWS.c.tarih.desc())
+
+
+def indicator_defs_stmt(tenant: str, kod: Optional[str] = None):
+    q = sa.select(INDICATORS).where(INDICATORS.c.tenant_id == tenant)
+    if kod is None:
+        return q.where(INDICATORS.c.durum.in_(("yururlukte", "taslak"))).order_by(INDICATORS.c.kod, INDICATORS.c.surum)
+    return q.where(INDICATORS.c.kod == kod).order_by(INDICATORS.c.surum.desc())
+
+
+def values_stmt(tenant: str, kod: Optional[str] = None):
+    q = sa.select(VALUES).where(VALUES.c.tenant_id == tenant)
+    if kod is not None:
+        q = q.where(VALUES.c.kod == kod)
+    return q.order_by(VALUES.c.olcum_at.desc())
+
+
+def alert_state_stmt(tenant: str):
+    return sa.select(ALERT_STATE).where(ALERT_STATE.c.tenant_id == tenant)
+
+
+def comp_items_stmt(tenant: str):
+    return sa.select(COMP_ITEMS).where(COMP_ITEMS.c.tenant_id == tenant).order_by(COMP_ITEMS.c.alan, COMP_ITEMS.c.madde)
+
+
+def comp_events_stmt(tenant: str, first: Optional[date] = None, last: Optional[date] = None):
+    q = sa.select(COMP_EVENTS).where(COMP_EVENTS.c.tenant_id == tenant)
+    if first is not None and last is not None:
+        q = q.where(sa.or_(sa.and_(COMP_EVENTS.c.son_gun >= first.isoformat(), COMP_EVENTS.c.son_gun <= last.isoformat()),
+                           sa.and_(COMP_EVENTS.c.son_gun < first.isoformat(), COMP_EVENTS.c.durum != "kapandi")))
+    return q
+
+
+def policies_stmt(tenant: str):
+    return sa.select(POLICIES).where(POLICIES.c.tenant_id == tenant)
+
+
+def bcp_stmt(tenant: str):
+    return sa.select(BCP).where(BCP.c.tenant_id == tenant)
+
+
+def reports_stmt(tenant: str, rid: Optional[str] = None):
+    q = sa.select(REPORTS).where(REPORTS.c.tenant_id == tenant)
+    return q.where(REPORTS.c.id == rid) if rid else q.order_by(REPORTS.c.created_at.desc())
+
+
+def measure_queries(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
+    """Her göstergenin son ölçümünde çalışan sorgular (kanıtın yanında saklanır; ekrana kanıt olarak gitmez)."""
+    out: dict[str, dict[str, Any]] = {}
+    with engine.connect() as c:
+        for r in c.execute(values_stmt(tenant)):
+            if r.kod in out:
+                continue
+            out[r.kod] = {"olcum": _iso(r.olcum_at), "sorgular": (_j(r.kanit_json, {}) or {}).get("_sorgular") or []}
+    return out
+
+
 def _current(c: Any, tenant: str, kod: str) -> Optional[Any]:
     return c.execute(sa.select(INDICATORS).where(INDICATORS.c.tenant_id == tenant, INDICATORS.c.kod == kod,
                                                  INDICATORS.c.durum == "yururlukte")).first()
@@ -623,11 +709,10 @@ def indicators(engine: sa.engine.Engine, tenant: str, library_codes: Optional[se
                links: Optional[dict[str, list[str]]] = None) -> list[dict[str, Any]]:
     """Yürürlükteki her gösterge: son değer, son 12 değer, bekleyen taslak, bağlı riskler."""
     with engine.connect() as c:
-        defs = c.execute(sa.select(INDICATORS).where(INDICATORS.c.tenant_id == tenant, INDICATORS.c.durum.in_(("yururlukte", "taslak")))
-                         .order_by(INDICATORS.c.kod, INDICATORS.c.surum)).all()
-        vals = c.execute(sa.select(VALUES).where(VALUES.c.tenant_id == tenant).order_by(VALUES.c.olcum_at.desc())).all()
-        alerts = {r.kod: r for r in c.execute(sa.select(ALERT_STATE).where(ALERT_STATE.c.tenant_id == tenant))}
-        link_rows = c.execute(sa.select(LINKS.c.risk_id, LINKS.c.gosterge_kod)).all() if links is None else None
+        defs = c.execute(indicator_defs_stmt(tenant)).all()
+        vals = c.execute(values_stmt(tenant)).all()
+        alerts = {r.kod: r for r in c.execute(alert_state_stmt(tenant))}
+        link_rows = c.execute(links_stmt()).all() if links is None else None
     if links is None:
         links = {}
         for lr in link_rows or []:
@@ -662,10 +747,8 @@ def indicators(engine: sa.engine.Engine, tenant: str, library_codes: Optional[se
 
 def indicator_values(engine: sa.engine.Engine, tenant: str, kod: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(VALUES).where(VALUES.c.tenant_id == tenant, VALUES.c.kod == kod)
-                         .order_by(VALUES.c.olcum_at.desc())).all()
-        versions = c.execute(sa.select(INDICATORS).where(INDICATORS.c.tenant_id == tenant, INDICATORS.c.kod == kod)
-                             .order_by(INDICATORS.c.surum.desc())).all()
+        rows = c.execute(values_stmt(tenant, kod)).all()
+        versions = c.execute(indicator_defs_stmt(tenant, kod)).all()
     if not versions:
         raise RiskError("Gösterge bulunamadı.", 404)
     return {"kod": kod, "items": [_value_out(r) for r in rows], "surumler": [_indicator_out(v) for v in versions]}
@@ -768,7 +851,8 @@ def record_measure(engine: sa.engine.Engine, tenant: str, kod: str, result: dict
         st = "olculemedi" if value is None else state_of(float(value), d.yon, d.esik_sari, d.esik_kirmizi)
         c.execute(VALUES.insert().values(
             tenant_id=tenant, kod=kod, olcum_at=now, deger=None if value is None else float(value), durum=st,
-            veri_son_gunu=result.get("veri_son_gunu"), kanit_json=_dump(result.get("kanit") or {}),
+            veri_son_gunu=result.get("veri_son_gunu"),
+            kanit_json=_dump({**(result.get("kanit") or {}), **({"_sorgular": result["sorgular"]} if result.get("sorgular") else {})}),
             esik_json=_dump({"surum": d.surum, "sari": d.esik_sari, "kirmizi": d.esik_kirmizi, "yon": d.yon}),
             hata=(str(err)[:2000] if err else None), olcen=user))
         prev_row = c.execute(sa.select(ALERT_STATE).where(ALERT_STATE.c.tenant_id == tenant, ALERT_STATE.c.kod == kod)).first()
@@ -790,11 +874,8 @@ def record_measure(engine: sa.engine.Engine, tenant: str, kod: str, result: dict
 
 
 def _links_map(c: Any, risk_ids: Optional[list[str]] = None) -> dict[str, list[str]]:
-    q = sa.select(LINKS.c.risk_id, LINKS.c.gosterge_kod)
-    if risk_ids is not None:
-        q = q.where(LINKS.c.risk_id.in_(risk_ids or [""]))
     out: dict[str, list[str]] = {}
-    for r in c.execute(q):
+    for r in c.execute(links_stmt(risk_ids)):
         out.setdefault(r.risk_id, []).append(r.gosterge_kod)
     return out
 
@@ -808,18 +889,18 @@ def visible(risk: dict[str, Any], user: str, see_all: bool, action_owners: Itera
 
 
 def _risk_row(c: Any, tenant: str, rid: str) -> Any:
-    r = c.execute(sa.select(RISKS).where(RISKS.c.id == rid, RISKS.c.tenant_id == tenant)).first()
+    r = c.execute(risk_stmt(tenant, rid)).first()
     if r is None:
         raise RiskError("Risk bulunamadı.", 404)
     return r
 
 
 def _all_risks(c: Any, tenant: str) -> tuple[list[Any], dict[str, list[Any]]]:
-    rows = c.execute(sa.select(RISKS).where(RISKS.c.tenant_id == tenant)).all()
+    rows = c.execute(risks_stmt(tenant)).all()
     acts: dict[str, list[Any]] = {}
     ids = [r.id for r in rows]
     if ids:
-        for a in c.execute(sa.select(ACTIONS).where(ACTIONS.c.risk_id.in_(ids))):
+        for a in c.execute(actions_stmt(ids)):
             acts.setdefault(a.risk_id, []).append(a)
     return rows, acts
 
@@ -958,8 +1039,8 @@ def risk_detail(engine: sa.engine.Engine, tenant: str, rid: str) -> dict[str, An
     with engine.connect() as c:
         r = _risk_row(c, tenant, rid)
         links = _links_map(c, [rid]).get(rid, [])
-        acts = c.execute(sa.select(ACTIONS).where(ACTIONS.c.risk_id == rid).order_by(ACTIONS.c.created_at)).all()
-        revs = c.execute(sa.select(REVIEWS).where(REVIEWS.c.risk_id == rid).order_by(REVIEWS.c.tarih.desc())).all()
+        acts = c.execute(actions_stmt([rid])).all()
+        revs = c.execute(reviews_stmt(rid)).all()
     out = _risk_out(r, links)
     out["aksiyonlar"] = [_action_out(a) for a in acts]
     out["gozdenGecirmeler"] = [_review_out(v) for v in revs]
@@ -1211,8 +1292,8 @@ def _event_out(r: Any, item: Optional[dict[str, Any]] = None, asof: Optional[dat
 
 def compliance_items(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(COMP_ITEMS).where(COMP_ITEMS.c.tenant_id == tenant).order_by(COMP_ITEMS.c.alan, COMP_ITEMS.c.madde)).all()
-        ev = c.execute(sa.select(COMP_EVENTS).where(COMP_EVENTS.c.tenant_id == tenant)).all()
+        rows = c.execute(comp_items_stmt(tenant)).all()
+        ev = c.execute(comp_events_stmt(tenant)).all()
     by: dict[str, list[Any]] = {}
     for e in ev:
         by.setdefault(e.item_id, []).append(e)
@@ -1291,12 +1372,8 @@ def calendar(engine: sa.engine.Engine, tenant: str, ay: str = "") -> dict[str, A
         raise RiskError("Ay YYYY-AA biçiminde olmalı.") from None
     last = _add_months(first, 1) - timedelta(days=1)
     with engine.connect() as c:
-        items = {r.id: _item_out(r) for r in c.execute(sa.select(COMP_ITEMS).where(COMP_ITEMS.c.tenant_id == tenant))}
-        rows = c.execute(sa.select(COMP_EVENTS).where(COMP_EVENTS.c.tenant_id == tenant,
-                                                      sa.or_(sa.and_(COMP_EVENTS.c.son_gun >= first.isoformat(),
-                                                                     COMP_EVENTS.c.son_gun <= last.isoformat()),
-                                                             sa.and_(COMP_EVENTS.c.son_gun < first.isoformat(),
-                                                                     COMP_EVENTS.c.durum != "kapandi")))).all()
+        items = {r.id: _item_out(r) for r in c.execute(comp_items_stmt(tenant))}
+        rows = c.execute(comp_events_stmt(tenant, first, last)).all()
     out = [_event_out(r, items.get(r.item_id)) for r in rows if r.item_id in items]
     out.sort(key=lambda e: (e["sonGun"], e.get("madde") or ""))
     return {"ay": first.strftime("%Y-%m"), "items": out, "bugun": today().isoformat()}
@@ -1377,7 +1454,7 @@ def _teminat(v: Any) -> Optional[str]:
 def policies(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     warn = settings()["policyWarnDays"]
     with engine.connect() as c:
-        rows = c.execute(sa.select(POLICIES).where(POLICIES.c.tenant_id == tenant)).all()
+        rows = c.execute(policies_stmt(tenant)).all()
     items = [_policy_out(r, warn) for r in rows]
     items.sort(key=lambda p: (p["bit"] is None, p["bit"] or "", p["tur"]))
     return {"items": items, "uyariGun": warn}
@@ -1438,7 +1515,7 @@ def delete_row(engine: sa.engine.Engine, table: sa.Table, tenant: str, oid: str,
 
 def bcp(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(BCP).where(BCP.c.tenant_id == tenant)).all()
+        rows = c.execute(bcp_stmt(tenant)).all()
     items = [_bcp_out(r) for r in rows]
     items.sort(key=lambda b: (-(b["kritiklik"] or 0), b["surec"]))
     return {"items": items, "durumlar": BCP_STATES}
@@ -1524,7 +1601,7 @@ def summary(engine: sa.engine.Engine, tenant: str, user: str, see_all: bool, ind
     ind = {g["kod"]: g for g in ind_list}
     visible_ids = {r["id"] for r in live}
     with engine.connect() as c:
-        acts = c.execute(sa.select(ACTIONS).where(ACTIONS.c.durum.in_(("acik", "devam")))).all()
+        acts = c.execute(actions_stmt(live=True)).all()
     overdue, soon = [], []
     titles = {r["id"]: r["baslik"] for r in listing}
     for a in acts:
@@ -1765,13 +1842,13 @@ def _report_out(r: Any, with_text: bool = True) -> dict[str, Any]:
 
 def reports(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(REPORTS).where(REPORTS.c.tenant_id == tenant).order_by(REPORTS.c.created_at.desc())).all()
+        rows = c.execute(reports_stmt(tenant)).all()
     return {"items": [_report_out(r, False) for r in rows]}
 
 
 def report(engine: sa.engine.Engine, tenant: str, rid: str) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(REPORTS).where(REPORTS.c.id == rid, REPORTS.c.tenant_id == tenant)).first()
+        r = c.execute(reports_stmt(tenant, rid)).first()
     if r is None:
         raise RiskError("Rapor bulunamadı.", 404)
     return _report_out(r)

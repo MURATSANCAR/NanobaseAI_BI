@@ -6,8 +6,9 @@ import { ArrowRight, Loader2, Plus, Search, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow, Panel, useDebounced } from '../editorial/kit';
+import SqlInfo from '../components/SqlInfo';
 import Sheet from '../editorial/studio/reader/Sheet';
-import { fmtDay, fmtLeft, fmtValue, riskApi, waitJob, type RiskInput, type RiskMeta, type Summary } from './api';
+import { fmtDay, fmtLeft, fmtValue, riskApi, waitJob, type RiskInput, type RiskMeta, type Summary, type WithK } from './api';
 import { Empty, LevelPill, RiskFrame, ScalePick, SelectInput, Tabs, TextInput } from './parts';
 import HeatMap from './HeatMap';
 import IndicatorsTab from './IndicatorCard';
@@ -81,21 +82,22 @@ function Overview({ meta, onCell }: { meta: RiskMeta; onCell: (h: string) => voi
   const [cell, setCell] = useState<string | null>(null);
   if (q.isLoading) return <Loading />;
   if (q.error) return <Note tone="err">{errText(q.error, 'Özet okunamadı.')}</Note>;
-  const s = q.data as Summary;
+  const s = q.data as Summary & WithK;
+  const k = s.kaynaklar;
   const picked = cell ? s.isiHaritasi.flat().find((c) => `${c.olasilik}x${c.etki}` === cell) : null;
   return (
     <>
       <KpiRow>
-        <Kpi label="Canlı risk" value={String(s.sayilar.canli)} help={`Kritik bantta ${s.sayilar.kritik}${s.puansiz ? ` · puansız ${s.puansiz}` : ''}`} />
-        <Kpi label="Gözden geçir" value={String(s.kuyruk.length)} help="Eşiği aşan gösterge, tarihi gelen ya da sahipsiz risk" />
-        <Kpi label="Geciken aksiyon" value={String(s.gecikenAksiyon.length)} help={`${meta.ayarlar.actionWarnDays} gün içinde termini gelen ${s.yaklasanAksiyon.length}`} />
-        <Kpi label="Kırmızı gösterge" value={String(s.sayilar.kirmizi)} help={`${s.sayilar.gosterge} göstergeden; eşiği girilmemiş ${s.sayilar.esiksiz}`} />
+        <Kpi label="Canlı risk" value={String(s.sayilar.canli)} help={`Kritik bantta ${s.sayilar.kritik}${s.puansiz ? ` · puansız ${s.puansiz}` : ''}`} info={<SqlInfo k={k} alan="sayilar" label="Canlı risk, kritik, puansız" />} />
+        <Kpi label="Gözden geçir" value={String(s.kuyruk.length)} help="Eşiği aşan gösterge, tarihi gelen ya da sahipsiz risk" info={<SqlInfo k={k} alan="kuyruk" label="Gözden geçir kuyruğu" />} />
+        <Kpi label="Geciken aksiyon" value={String(s.gecikenAksiyon.length)} help={`${meta.ayarlar.actionWarnDays} gün içinde termini gelen ${s.yaklasanAksiyon.length}`} info={<SqlInfo k={k} alan="gecikenAksiyon" label="Geciken ve yaklaşan aksiyon" />} />
+        <Kpi label="Kırmızı gösterge" value={String(s.sayilar.kirmizi)} help={`${s.sayilar.gosterge} göstergeden; eşiği girilmemiş ${s.sayilar.esiksiz}`} info={<SqlInfo k={k} alan="sayilar.kirmizi" label="Kırmızı gösterge" />} />
       </KpiRow>
       {!s.tumunuGorur && <Note tone="info">Yalnız sahibi, açanı ya da aksiyon sahibi olduğunuz riskleri görüyorsunuz.</Note>}
-      {s.oneriSayisi > 0 && <Note tone="info">Zeki AI'ın {s.oneriSayisi} risk önerisi kabul bekliyor (Risk kaydı → Öneriler).</Note>}
+      {s.oneriSayisi > 0 && <Note tone="info">Zeki AI'ın {s.oneriSayisi} risk önerisi kabul bekliyor (Risk kaydı → Öneriler).<SqlInfo k={k} alan="oneriSayisi" label="Öneri sayısı" className="ml-0.5" /></Note>}
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:gap-4">
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Isı haritası</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Isı haritası<SqlInfo k={k} alan="isiHaritasi" label="Isı haritası" /></h2>
           <HeatMap grid={s.isiHaritasi} selected={cell} onSelect={setCell} levels={s.seviyeler} />
           {picked && (
             <div className="mt-3 flex flex-col gap-1">
@@ -110,7 +112,7 @@ function Overview({ meta, onCell }: { meta: RiskMeta; onCell: (h: string) => voi
           )}
         </Panel>
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Gözden geçir kuyruğu</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Gözden geçir kuyruğu<SqlInfo k={k} alan="kuyruk" label="Gözden geçir kuyruğu" /></h2>
           {s.kuyruk.length === 0 ? (
             <Empty>Kuyruk boş: eşiği aşan gösterge ya da tarihi gelen risk yok.</Empty>
           ) : (
@@ -138,7 +140,7 @@ function Overview({ meta, onCell }: { meta: RiskMeta; onCell: (h: string) => voi
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Geciken ve yaklaşan aksiyon</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Geciken ve yaklaşan aksiyon<SqlInfo k={k} alan="gecikenAksiyon" label="Aksiyon kalan gün" /></h2>
           {s.gecikenAksiyon.length + s.yaklasanAksiyon.length === 0 ? (
             <Empty>Geciken ya da {meta.ayarlar.actionWarnDays} gün içinde termini gelen aksiyon yok.</Empty>
           ) : (
@@ -158,7 +160,7 @@ function Overview({ meta, onCell }: { meta: RiskMeta; onCell: (h: string) => voi
           )}
         </Panel>
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Kırmızı göstergeler</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Kırmızı göstergeler<SqlInfo k={k} alan="kirmiziGosterge[]" label="Kırmızı göstergeler" /></h2>
           {s.kirmiziGosterge.length === 0 ? (
             <Empty>Kırmızı gösterge yok. Eşiği girilmemiş gösterge renk almaz.</Empty>
           ) : (
@@ -166,14 +168,14 @@ function Overview({ meta, onCell }: { meta: RiskMeta; onCell: (h: string) => voi
               {s.kirmiziGosterge.map((g) => (
                 <li key={g.kod} className="flex items-center justify-between gap-2 rounded-xl bg-red-50 px-3 py-2">
                   <span className="min-w-0 break-words text-[12.5px] font-bold text-red-800">{g.ad}</span>
-                  <span className="shrink-0 font-mono text-[12.5px] font-bold tabular-nums text-red-800">{fmtValue(g.deger, g.birim)}</span>
+                  <span className="inline-flex shrink-0 items-center gap-0.5 font-mono text-[12.5px] font-bold tabular-nums text-red-800">{fmtValue(g.deger, g.birim)}<SqlInfo k={k} alan="kirmiziGosterge[]" row={g.kod} label={g.ad} /></span>
                 </li>
               ))}
             </ul>
           )}
         </Panel>
         <Panel>
-          <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Bu ayın uyum yükümlülükleri</h2>
+          <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Bu ayın uyum yükümlülükleri<SqlInfo k={k} alan="uyumBuAy" label="Bu ayın uyum yükümlülükleri" /></h2>
           {s.uyumBuAy.length === 0 ? (
             <Empty>Bu ay son günü gelen ya da geciken yükümlülük yok.</Empty>
           ) : (
@@ -192,7 +194,7 @@ function Overview({ meta, onCell }: { meta: RiskMeta; onCell: (h: string) => voi
         </Panel>
       </div>
       <Panel>
-        <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Öncelikli 10 risk</h2>
+        <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Öncelikli 10 risk<SqlInfo k={k} alan="ilk10" label="Öncelikli 10 risk" /></h2>
         {s.ilk10.length === 0 ? <Empty>Kayıtlı risk yok. «Yeni risk» ile ilk kaydı açın.</Empty> : <RiskRows items={s.ilk10} meta={meta} />}
       </Panel>
     </>
@@ -285,7 +287,7 @@ function Register({ meta, params, update }: { meta: RiskMeta; params: URLSearchP
         <Empty>{durum === 'oneri' ? 'Kabul bekleyen öneri yok.' : 'Bu süzgeçte risk yok.'}</Empty>
       ) : (
         <Panel>
-          <div className="mb-2 text-[11.5px] text-canvas-muted">{items.length} risk · puana göre</div>
+          <div className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">{items.length} risk · puana göre<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Risk kaydı: puan ve aksiyon sayıları" /></div>
           <RiskRows items={items} meta={meta} />
         </Panel>
       )}

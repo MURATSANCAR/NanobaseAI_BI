@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import SqlInfo from '../components/SqlInfo';
 import { toast } from 'sonner';
 import { Check, Download, FileText, Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
@@ -98,7 +99,7 @@ function ReportView({ id, meta }: { id: string; meta: RiskMeta }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold tracking-tight">Risk brifingi {r.donem}</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Risk brifingi {r.donem}<SqlInfo k={r.kaynaklar} alan="girdi" label="Brifingin dayandığı olgular" /></h2>
         <span className="flex flex-wrap gap-1.5">
           <Pill tone={r.kaynak === 'zeki' ? 'violet' : 'muted'}>{r.kaynak === 'zeki' ? 'Zeki AI taslağı' : r.kaynak === 'kural' ? 'Kural metni' : '—'}</Pill>
           {r.onaylayan && <Pill tone="ok">{r.onaylayan} onayladı</Pill>}

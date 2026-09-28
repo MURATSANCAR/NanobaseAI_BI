@@ -27,6 +27,7 @@ from __future__ import annotations
 import logging
 import os
 import re
+import time
 from datetime import date, datetime
 from typing import Any, Callable, Iterable, Optional
 
@@ -104,17 +105,34 @@ class Context:
         self.tenant = tenant
         self.asof = asof or date.today()
         self._cache: dict[str, Any] = {}
+        # Sorgu bilgisi: çalışan her SQL (bağlantı, metin, satır, süre). Aynı turda paylaşılan ara sonucun sorgusu
+        # (ör. firma, son fatura günü, cari cirosu) onu kullanan her göstergeye de yazılır.
+        self.touched: list[dict[str, Any]] = []
+        self._by_key: dict[str, list[dict[str, Any]]] = {}
 
     def once(self, key: str, load: Callable[[], Any]) -> Any:
         if key not in self._cache:
+            before = len(self.touched)
             self._cache[key] = load()
+            self._by_key[key] = self.touched[before:]
+        else:
+            self.touched.extend(self._by_key.get(key, []))
         return self._cache[key]
 
+    def _logged(self, conn: str, run: Runner) -> Runner:
+        def wrapped(sql: str) -> list[dict[str, Any]]:
+            t = time.monotonic()
+            rows = run(sql)
+            self.touched.append({"conn": conn, "sql": sql, "rows": len(rows), "dbMs": int((time.monotonic() - t) * 1000),
+                                 "at": datetime.now().isoformat(timespec="seconds")})
+            return rows
+        return wrapped
+
     def logo(self) -> Runner:
-        return self.once("logo", lambda: runner(self._logo_file()))
+        return self.once("logo", lambda: self._logged("logo", runner(self._logo_file())))
 
     def crm(self) -> Runner:
-        return self.once("crm", lambda: runner(self._crm_file()))
+        return self.once("crm", lambda: self._logged("crm", runner(self._crm_file())))
 
     def schema(self) -> str:
         s = (self._schema() or "").strip()
@@ -507,13 +525,20 @@ def measure(ctx: Context, kod: str) -> dict[str, Any]:
     fn = COMPUTERS.get(kod)
     if fn is None:
         return {"deger": None, "hata": "Bu göstergenin hesapçısı yok."}
+    ctx.touched = []
     try:
-        return fn(ctx)
+        out = fn(ctx)
     except SourceError as e:
-        return {"deger": None, "hata": str(e)}
+        out = {"deger": None, "hata": str(e)}
     except Exception as e:  # noqa: BLE001 — beklenmeyen hata da ölçümü durdurmaz, kaydı düşer
         log.exception("risk göstergesi %s ölçülemedi", kod)
-        return {"deger": None, "hata": f"Ölçüm hata verdi: {str(e)[:200]}"}
+        out = {"deger": None, "hata": f"Ölçüm hata verdi: {str(e)[:200]}"}
+    seen, used = set(), []
+    for q in ctx.touched:  # aynı metin bir kez
+        if q["sql"] not in seen:
+            seen.add(q["sql"])
+            used.append(q)
+    return {**out, "sorgular": used}
 
 
 def measure_many(ctx: Context, codes: Iterable[str]) -> dict[str, dict[str, Any]]:

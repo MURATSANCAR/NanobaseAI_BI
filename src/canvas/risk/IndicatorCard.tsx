@@ -8,6 +8,8 @@ import { Loading, Note, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtTime, fmtValue, parseNum, riskApi, type Indicator, type RiskMeta } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { AskSheet, Empty, SelectInput, Spark, TextInput, ValuePill } from './parts';
 
 /** Göstergeler: her biri son değer, durum, son 12 ölçüm, eşik ve sahibiyle. Eşik ve sahip taslakla değişir, başka biri
@@ -26,10 +28,10 @@ export default function IndicatorsTab({ meta }: { meta: RiskMeta }) {
         Değerler Logo, CRM ve portalın hazır raporlarından ölçülür (günlük, haftalık ya da aylık; her sabah). Gösterge inceleme adayıdır; hüküm değildir.
         Logo kopyası donmuşsa «son N gün» pencereleri veri son gününe göre kurulur ve değerin yanında yazar.
       </Note>
-      {pending.length > 0 && <Note tone="warn">{pending.length} gösterge taslağı onay bekliyor{meta.me.canIndicatorApprove ? '' : ' (onay yetkiniz yok)'}.</Note>}
+      {pending.length > 0 && <Note tone="warn">{pending.length} gösterge taslağı onay bekliyor{meta.me.canIndicatorApprove ? '' : ' (onay yetkiniz yok)'}.<SqlInfo k={q.data?.kaynaklar} alan="items[]" label="Gösterge tanımları" className="ml-0.5" /></Note>}
       {items.length === 0 ? <Empty>Gösterge yok.</Empty> : (
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-3">
-          {items.map((g) => <IndicatorCard key={g.kod} g={g} meta={meta} onEdit={() => setEditing(g)} expanded={open === g.kod} onToggle={() => setOpen(open === g.kod ? null : g.kod)} />)}
+          {items.map((g) => <IndicatorCard key={g.kod} g={g} meta={meta} k={q.data?.kaynaklar} onEdit={() => setEditing(g)} expanded={open === g.kod} onToggle={() => setOpen(open === g.kod ? null : g.kod)} />)}
         </div>
       )}
       {editing && <ThresholdSheet key={editing.kod} g={editing} meta={meta} onClose={() => setEditing(null)} />}
@@ -37,7 +39,7 @@ export default function IndicatorsTab({ meta }: { meta: RiskMeta }) {
   );
 }
 
-function IndicatorCard({ g, meta, onEdit, expanded, onToggle }: { g: Indicator; meta: RiskMeta; onEdit: () => void; expanded: boolean; onToggle: () => void }) {
+function IndicatorCard({ g, meta, k, onEdit, expanded, onToggle }: { g: Indicator; meta: RiskMeta; k?: Kaynaklar; onEdit: () => void; expanded: boolean; onToggle: () => void }) {
   const qc = useQueryClient();
   const [asking, setAsking] = useState<'approve' | 'reject' | null>(null);
   const measure = useMutation({
@@ -72,7 +74,7 @@ function IndicatorCard({ g, meta, onEdit, expanded, onToggle }: { g: Indicator; 
       </div>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight">{fmtValue(son?.deger ?? null, g.birim)}</div>
+          <div className="flex items-center gap-1 font-mono text-[26px] font-bold leading-none tabular-nums tracking-tight">{fmtValue(son?.deger ?? null, g.birim)}<SqlInfo k={k} alan="items[]" row={g.kod} label={`${g.ad}: değer, eşik, geçmiş ve kanıt`} /></div>
           <div className="mt-1 text-[11px] text-canvas-muted">
             {son ? <>ölçüm {fmtTime(son.olcum)}{son.veriSonGunu ? ` · veri ${fmtDay(son.veriSonGunu)}` : ''}</> : 'henüz ölçülmedi'}
           </div>

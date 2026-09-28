@@ -8,6 +8,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui'
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtLeft, fmtTime, fmtValue, riskApi, type Action, type RiskDetail, type RiskMeta } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { AskSheet, Empty, Fact, FilePick, LevelPill, RiskFrame, ScalePick, SelectInput, TextInput, ValuePill } from './parts';
 import { RiskSheet } from './RiskScreen';
 
@@ -58,10 +60,10 @@ export default function RiskCard() {
         <>
           {r.durum === 'oneri' && <Note tone="info">Zeki AI önerisi: metni kontrol edin, olasılık ve etkiyi siz verin. Kabul etmeden risk kaydına girmez.</Note>}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Fact label="Puan" value={<LevelPill level={r.seviye} score={r.puan} meta={m} />} help={r.olasilik && r.etki ? `olasılık ${r.olasilik} × etki ${r.etki}` : 'puanlanmadı'} />
+            <Fact label="Puan" value={<LevelPill level={r.seviye} score={r.puan} meta={m} />} help={<>{r.olasilik && r.etki ? `olasılık ${r.olasilik} × etki ${r.etki}` : 'puanlanmadı'}<SqlInfo k={q.data?.kaynaklar} alan="puan" label="Puan (olasılık × etki)" className="ml-0.5" /></>} />
             <Fact label="Sahip" value={r.sahip ?? '—'} help={r.egilim ? `eğilim: ${m.egilimler[r.egilim]}` : undefined} />
             <Fact label="Son gözden geçirme" value={r.sonGozdenGecirme ? fmtTime(r.sonGozdenGecirme) : 'hiç'} />
-            <Fact label="Sonraki" value={fmtDay(r.sonrakiGozdenGecirme)} help={fmtLeft(r.gozdenGecirmeKalan)} />
+            <Fact label="Sonraki" value={fmtDay(r.sonrakiGozdenGecirme)} help={<>{fmtLeft(r.gozdenGecirmeKalan)}<SqlInfo k={q.data?.kaynaklar} alan="gozdenGecirmeKalan" label="Gözden geçirmeye kalan gün" className="ml-0.5" /></>} />
           </div>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-4">
             <Panel>
@@ -85,7 +87,7 @@ export default function RiskCard() {
                           <span className="block text-[11px] text-canvas-muted">{g?.son ? `ölçüm ${fmtTime(g.son.olcum)}` : 'ölçülmedi'}</span>
                         </span>
                         <span className="flex shrink-0 items-center gap-2">
-                          <span className="font-mono text-[13px] font-bold tabular-nums">{fmtValue(g?.son?.deger ?? null, g?.birim ?? '')}</span>
+                          <span className="inline-flex items-center gap-0.5 font-mono text-[13px] font-bold tabular-nums">{fmtValue(g?.son?.deger ?? null, g?.birim ?? '')}<SqlInfo k={q.data?.kaynaklar} alan="gostergeler[]" row={k} label={g?.ad ?? k} /></span>
                           <ValuePill state={g?.son?.durum} meta={m} />
                         </span>
                       </li>
@@ -95,9 +97,9 @@ export default function RiskCard() {
               )}
             </Panel>
           </div>
-          <Actions r={r} meta={m} />
+          <Actions r={r} meta={m} k={q.data?.kaynaklar} />
           <Panel>
-            <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Gözden geçirme geçmişi</h2>
+            <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Gözden geçirme geçmişi<SqlInfo k={q.data?.kaynaklar} alan="gozdenGecirmeler[]" label="Gözden geçirme geçmişi (eski → yeni puan)" /></h2>
             {r.gozdenGecirmeler.length === 0 ? <Empty>Henüz gözden geçirilmedi.</Empty> : (
               <ul className="flex flex-col gap-1.5">
                 {r.gozdenGecirmeler.map((v) => (
@@ -176,7 +178,7 @@ function ReviewSheet({ r, meta, accept, onClose }: { r: RiskDetail; meta: RiskMe
   );
 }
 
-function Actions({ r, meta }: { r: RiskDetail; meta: RiskMeta }) {
+function Actions({ r, meta, k }: { r: RiskDetail; meta: RiskMeta; k?: Kaynaklar }) {
   const qc = useQueryClient();
   const [adding, setAdding] = useState(false);
   const [f, setF] = useState({ eylem: '', sahip: '', sahipEposta: '', termin: '' });
@@ -193,7 +195,7 @@ function Actions({ r, meta }: { r: RiskDetail; meta: RiskMeta }) {
   return (
     <Panel>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[15px] font-extrabold tracking-tight">Aksiyonlar</h2>
+        <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Aksiyonlar<SqlInfo k={k} alan="aksiyonlar[]" label="Aksiyonlar: termin ve kalan gün" /></h2>
         {r.yazabilir && !adding && <button type="button" className={btnGhost} onClick={() => setAdding(true)}><Plus aria-hidden className="h-4 w-4" />Aksiyon</button>}
       </div>
       {adding && (
