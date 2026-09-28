@@ -20,7 +20,9 @@ from typing import Any, Callable
 import sqlalchemy as sa
 from fastapi import HTTPException, Request
 
+from semantic_bridge import provenance as PV
 from semantic_bridge.management import ilk_baski as IB
+from semantic_bridge.management import ilk_baski_kaynak as K
 from semantic_bridge.management import ilk_baski_model as M
 
 log = logging.getLogger(__name__)
@@ -155,14 +157,19 @@ def withdraw(engine, tenant: str, user: str, admin: bool, did: str) -> dict:
         return decision_row(c.execute(sa.select(DECISIONS).where(DECISIONS.c.id == did)).one())
 
 
-def list_decisions(engine, tenant: str, code: str | None = None, status: str | None = None) -> list[dict]:
+def decisions_stmt(tenant: str, code: str | None = None, status: str | None = None):
+    """Kararlar (yeniden eskiye); ekranda gösterilen sorgu bilgisi de bu ifadedir."""
     q = sa.select(DECISIONS).where(DECISIONS.c.tenant_id == tenant)
     if code:
         q = q.where(DECISIONS.c.stock_code == code)
     if status:
         q = q.where(DECISIONS.c.status == status)
+    return q.order_by(DECISIONS.c.created_at.desc())
+
+
+def list_decisions(engine, tenant: str, code: str | None = None, status: str | None = None) -> list[dict]:
     with engine.connect() as c:
-        return [decision_row(r) for r in c.execute(q.order_by(DECISIONS.c.created_at.desc()))]
+        return [decision_row(r) for r in c.execute(decisions_stmt(tenant, code, status))]
 
 
 # ---------------------------------------------------------------- önbellekteki model
@@ -295,7 +302,7 @@ def register(app, runtime: Callable, gate: Callable[[Request], str], reports) ->
         if not data and not status.get("refreshing") and not status.get("error"):
             reports.start_refresh(IB.REPORT_ID)
             status = reports.read(IB.REPORT_ID, with_data=False)
-        return {
+        out = {
             "status": {k: status.get(k) for k in ("updatedAt", "refreshing", "error", "nextRefreshAt", "durationMs",
                                                    "refreshStartedAt", "hasData")},
             "ready": bool(data),
@@ -303,18 +310,26 @@ def register(app, runtime: Callable, gate: Callable[[Request], str], reports) ->
             "backtest": data.get("backtest"), "upcoming": data.get("upcoming") or [], "tracking": data.get("tracking") or [],
             "formulas": [{"name": n, "text": t} for n, t in IB.FORMULAS], "notes": IB.NOTES,
             "sources": [{"id": sid, "connection": conn, "title": title, "description": desc,
-                         "sql": ((data.get("sourceStats") or {}).get(sid) or {}).get("sql") or _sql(sid),
+                         "sql": _executed(((data.get("sourceStats") or {}).get(sid) or {}).get("sql")),
                          "rows": ((data.get("sourceStats") or {}).get(sid) or {}).get("rows")}
                         for sid, conn, title, desc in IB.SOURCES],
             "can": {"decide": can(user, FEATURE_DECIDE), "approve": can(user, FEATURE_APPROVE)},
         }
+        return PV.bagla(out, lambda: K.for_summary(out, data, dbs(), status.get("updatedAt")))
 
-    def _sql(sid: str) -> str:
-        from semantic_bridge.management import sql_text
-        try:
-            return sql_text(IB.REPORT_ID, sid)
-        except OSError:
-            return ""
+    def _executed(text: str | None) -> str | None:
+        """Son okumada çalışan metin; hiç okunmadıysa ya da yer tutucu kalmışsa yok (şablon gösterilmez)."""
+        from semantic_bridge.management.kaynak import is_template
+        return text if text and not is_template(text) else None
+
+    def dbs() -> dict[str, str | None]:
+        files = reports._connection_files()
+        return {name: PV.connection_database(files.get(name)) for name in ("logo", "crm")}
+
+    def with_sources(out: dict, free: bool = False) -> dict:
+        snap, _ = store.load()
+        return PV.bagla(out, lambda: K.for_forecast(out, (snap or {}).get("data") or {}, dbs(),
+                                                    (snap or {}).get("updatedAt"), free))
 
     @app.get(PREFIX + "/books")
     def fp_books(request: Request, q: str = "") -> dict[str, Any]:
@@ -354,7 +369,7 @@ def register(app, runtime: Callable, gate: Callable[[Request], str], reports) ->
         gate(request)
         _, eng = ready()
         em = [x for x in (emsal or "").split(",") if x.strip()] if emsal is not None else None
-        return book_forecast(eng, code, _month(launch), em)
+        return with_sources(book_forecast(eng, code, _month(launch), em))
 
     @app.post(PREFIX + "/forecast")
     async def fp_free(request: Request) -> dict[str, Any]:
@@ -363,13 +378,14 @@ def register(app, runtime: Callable, gate: Callable[[Request], str], reports) ->
         body = await request.json()
         if not isinstance(body, dict):
             raise HTTPException(400, {"code": "BAD_REQUEST", "message": "Geçersiz istek."})
-        return free_forecast(eng, body)
+        return with_sources(free_forecast(eng, body), free=True)
 
     @app.get(PREFIX + "/decisions")
     def fp_decisions(request: Request, code: str | None = None, status: str | None = None) -> dict[str, Any]:
         gate(request)
         engine, tenant = db()
-        return {"items": list_decisions(engine, tenant, code, status)}
+        out = {"items": list_decisions(engine, tenant, code, status)}
+        return PV.bagla(out, lambda: K.for_decisions(engine, decisions_stmt(tenant, code, status)))
 
     @app.post(PREFIX + "/decisions")
     async def fp_decide(request: Request) -> dict[str, Any]:

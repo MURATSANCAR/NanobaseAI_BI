@@ -5,6 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, field } from '../admin/ui';
 import { AnalogTable, Box, ChannelBars, ForecastChart, FpFrame, Legend, ScenarioCards, Segmented, TierPill } from './parts';
 import DecisionBox from './DecisionBox';
+import SqlInfo from '../components/SqlInfo';
 import { sourceLine, useSummary } from './FirstPrintScreen';
 import { NotReadyError, fmtMoney, fmtUnits, firstPrintApi, monthName, pct, stockoutText, type Forecast } from './api';
 
@@ -48,7 +49,7 @@ export default function BookForecastPage() {
 function BookLine({ fc }: { fc: Forecast }) {
   const b = fc.book;
   const bits = [b.authors, b.publisher, b.library, b.series, b.audience, b.pages ? `${fmtUnits(b.pages)} sayfa` : null, b.price ? fmtMoney(b.price) : null].filter(Boolean);
-  return <>{bits.join(' · ') || b.code}</>;
+  return <>{bits.join(' · ') || b.code}<SqlInfo k={fc.kaynaklar} alan="book" label="Kitap özellikleri (sayfa, fiyat)" className="ml-0.5" /></>;
 }
 
 function nextMonth(ym?: string): string | undefined {
@@ -78,11 +79,13 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
         <Note tone="info">
           Bu kitap {monthName(fc.launch)}'da çıktı. Aşağıdaki tahmin, çıkıştan 2 ay önce ({monthName(fc.cutoff)} sonuna kadarki veriyle) yapılabilecek
           tahmindir; siyah çizgi gerçekleşen birikimli satıştır. Revize tahmin: ilk 6 ay {fmtUnits(fc.revised?.['6'])}, ilk 12 ay {fmtUnits(fc.revised?.['12'])}.
+          <SqlInfo k={fc.kaynaklar} alan="revised" label="Revize tahmin" className="ml-0.5" />
         </Note>
       )}
-      {fc.book.salesTarget ? <Note tone="info">CRM'deki ilk yıl satış hedefi: {fmtUnits(fc.book.salesTarget)} adet.</Note> : null}
+      {fc.book.salesTarget ? <Note tone="info">CRM'deki ilk yıl satış hedefi: {fmtUnits(fc.book.salesTarget)} adet.<SqlInfo k={fc.kaynaklar} alan="book" label="CRM ilk yıl satış hedefi" className="ml-0.5" /></Note> : null}
 
       <Box
+        info={<SqlInfo k={fc.kaynaklar} alan="horizons" label="Satış senaryoları" />}
         title={`Satış senaryoları · ${fc.launchName} çıkış`}
         help={`Kötümser / baz / iyimser: geçmişte benzer tahminlerin gerçekleşme dağılımının %20 / %50 / %80 noktaları.${
           onLaunch ? ' Yayın ayı toplamı pek değiştirmez (geçmiş sınamada mevsim ve pazar düzeltmesi isabeti artırmadı); ayları ve emsallerin yaşını değiştirir.' : ''
@@ -110,6 +113,7 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-4">
         <Box
+          info={<SqlInfo k={fc.kaynaklar} alan={fc.actual ? 'actual[]' : `horizons.${h}.curve[]`} label="Birikimli satış ve güven aralığı" />}
           title="Birikimli satış"
           help={`Güven aralığı (%80): ilk ${h} ayda ${fmtUnits(hz.band.low)} – ${fmtUnits(hz.band.high)} adet.`}
           action={<Segmented label="Ufuk" value={h} onChange={setH} options={[{ key: '6', label: 'İlk 6 ay' }, { key: '12', label: 'İlk 12 ay' }]} />}
@@ -117,7 +121,7 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
           <ForecastChart h={hz} actual={fc.actual} />
           <Legend actual={!!fc.actual} />
         </Box>
-        <Box title="İlk baskı önerisi" help={rec.basis}>
+        <Box title="İlk baskı önerisi" help={rec.basis} info={<SqlInfo k={fc.kaynaklar} alan="recommendation" label="İlk baskı önerisi ve seçenekler" />}>
           <div className="flex items-baseline gap-2">
             <span className="font-mono text-[34px] font-bold leading-none tabular-nums">{fmtUnits(rec.units)}</span>
             <span className="text-[12.5px] font-semibold text-canvas-muted">adet</span>
@@ -150,7 +154,7 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.6fr)] lg:gap-4">
-        <Box title="Kanal dağılımı" help={`Emsallerin ilk 6 ayındaki satış payları, baz senaryoya uygulandı${hz.discount !== null ? `; ortalama iskonto ${pct(hz.discount)}` : ''}.`}>
+        <Box title="Kanal dağılımı" info={<SqlInfo k={fc.kaynaklar} alan="horizons.6.channels[]" label="Kanal dağılımı" />} help={`Emsallerin ilk 6 ayındaki satış payları, baz senaryoya uygulandı${hz.discount !== null ? `; ortalama iskonto ${pct(hz.discount)}` : ''}.`}>
           <ChannelBars h={fc.horizons['6']} />
         </Box>
         <Box title="Gerekçe">
@@ -160,7 +164,7 @@ export function ForecastBody({ fc, onLaunch, minLaunch, can }: {
         </Box>
       </div>
 
-      <Box title={`Emsal kitaplar (${hz.analogs.length})`} help="Puanı en yüksek emsaller; tahmin bunların satışının puan ağırlıklı ortancasıdır. Emsal adına basınca onun tahmini ve gerçekleşeni açılır.">
+      <Box title={`Emsal kitaplar (${hz.analogs.length})`} info={<SqlInfo k={fc.kaynaklar} alan={`horizons.${h}.analogs`} label="Emsal kitaplar" />} help="Puanı en yüksek emsaller; tahmin bunların satışının puan ağırlıklı ortancasıdır. Emsal adına basınca onun tahmini ve gerçekleşeni açılır.">
         <AnalogTable h={hz} />
       </Box>
     </div>

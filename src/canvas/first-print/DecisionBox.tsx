@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label } from '../admin/ui';
 import { firstPrintApi, fmtUnits, type Decision, type Forecast } from './api';
+import SqlInfo from '../components/SqlInfo';
 
 /** İlk baskı kararı: adet seçilir, karar kaydedilir; satış ve üretim onayı iki ayrı kişiden gelir. Onaylanan karar
  *  üretim modülünün okuyacağı kayıttır (CRM'e ve Logo'ya yazılmaz). */
@@ -48,7 +49,7 @@ export default function DecisionBox({ fc, can }: { fc: Forecast; can?: { decide:
       {items.map((d) => (
         <div key={d.id} className="mt-2 rounded-xl border border-slate-100 bg-white/70 p-3 text-[12.5px]">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="font-mono text-[16px] font-bold tabular-nums">{fmtUnits(d.units)} adet</span>
+            <span className="inline-flex items-center gap-1 font-mono text-[16px] font-bold tabular-nums">{fmtUnits(d.units)} adet<SqlInfo k={list.data?.kaynaklar} alan="items[]" label="Karar kaydı" /></span>
             <Pill tone={STATUS[d.status].tone}>{STATUS[d.status].label}</Pill>
           </div>
           <div className="mt-1 text-canvas-muted">Öneren {d.createdBy} · {fmtAt(d.createdAt)}{d.recommended && d.recommended !== d.units ? ` · öneri ${fmtUnits(d.recommended)}` : ''}</div>

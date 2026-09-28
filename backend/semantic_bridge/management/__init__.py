@@ -379,7 +379,7 @@ def register(app, runtime, authorize, session_user):
         def executed(sid: str) -> str | None:
             """Son okumada çalışan metin; yoksa ya da yer tutucu kalmışsa (eski önbellek) yok — şablon gösterilmez."""
             text = (stats.get(sid) or {}).get("sql")
-            return text if text and not PV.placeholders_left(text) else None
+            return text if text and not K.is_template(text) else None
         return {
             "sources": [{"id": sid, "connection": conn, "database": reports.database_label(conn), "title": title,
                          "description": desc, "sql": executed(sid), "stats": stats.get(sid)}

@@ -8,9 +8,19 @@ kayda alınmaz — şablon gösterilmez.
 """
 from __future__ import annotations
 
+import re
 from typing import Any, Optional
 
 from semantic_bridge import provenance as P
+
+#: Rapor SQL dosyalarının yer tutucuları ({satis:2024}, {satis:yil}, {stok_kodlari}); dize ve açıklama dışında kalırsa
+#: metin çalışan metin değil şablondur ve gösterilmez.
+_TEMPLATE = re.compile(r"\{[A-Za-z_]\w*(?::[^}]*)?\}")
+
+
+def is_template(sql: Optional[str]) -> bool:
+    bare = P._STRING_OR_COMMENT.sub(" ", sql or "")
+    return bool(_TEMPLATE.search(bare) or P.placeholders_left(sql or ""))
 
 F_GORUNUM = ("Sekmedeki kitap sayısı = son okumadaki satır sayısı; öneri düzeyi sayaçları = Öneri kolonunda o düzeyde "
              "olan satır sayısı. Arama ve süzgeçler ekranda uygulanır; «N kitap» süzgeçten geçen satırlardır.")
@@ -25,8 +35,8 @@ def _register(k: P.Kaynaklar, rid: str, sources: list, stats: dict[str, Any], db
     ids: dict[str, str] = {}
     for sid, conn, title, desc, *_ in sources:
         st = stats.get(sid) or {}
-        if not st.get("sql"):
-            continue
+        if not st.get("sql") or is_template(st["sql"]):
+            continue  # eski önbellek: yer tutuculu metin gösterilmez; bir sonraki okumada gelir
         note = f" {st['warning']}" if st.get("warning") else ""
         try:
             ids[sid] = k.sorgu(f"yonetim.{rid}.{sid}", title, conn, st["sql"], database=dbs.get(conn),
@@ -65,6 +75,8 @@ def for_report(report: Any, snap: dict[str, Any], dbs: dict[str, Optional[str]])
                 ins.append(ids[src])
         # model sekmesi (ör. tahmin): açıklamasındaki çalışan sorgular
         for e in (v.get("explain") or {}).get("sql") or []:
+            if is_template(e.get("sql")):
+                continue
             try:
                 ins.append(k.sorgu(f"yonetim.{rid}.{v['id']}.{e['id']}", e.get("title") or e["id"],
                                    "crm" if str(e["id"]).startswith("crm") else "logo", e["sql"],

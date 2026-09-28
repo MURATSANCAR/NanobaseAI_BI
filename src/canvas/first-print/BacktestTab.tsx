@@ -3,6 +3,7 @@ import { CartesianGrid, ResponsiveContainer, Scatter, ScatterChart, Tooltip, XAx
 import { Note, Pill, TableWrap, td, th } from '../admin/ui';
 import SqlCode from '../management/SqlCode';
 import { Box, Segmented, TierPill } from './parts';
+import SqlInfo from '../components/SqlInfo';
 import { fmtUnits, monthName, pct, type Backtest, type Metrics, type PrintRules, type Summary } from './api';
 
 /** Geçmiş sınama: geçmişte çıkmış kitaplar, çıkıştan 2 ay önceki veriyle tahmin edilip gerçekleşenle karşılaştırılır.
@@ -148,6 +149,7 @@ export default function BacktestTab({ s }: { s: Summary }) {
   return (
     <div className="flex flex-col gap-3 lg:gap-4">
       <Box
+        info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Tahmin ne kadar tutuyor" />}
         title="Tahmin ne kadar tutuyor"
         help={`${monthName(bt.from)} ile ${monthName(bt.to)} arasında çıkan her kitap, çıkışından 2 ay önceki veriyle (o gün baskı kararı verilirken bilinenle) tahmin edildi ve ilk ${bt.horizon} ayda gerçekten satılanla karşılaştırıldı. Ayarlar yalnız 2021 ortası–2023 sonu kitaplarıyla seçildi; buradaki kitaplar ayar seçiminde kullanılmadı.`}
         action={<Segmented label="Ufuk" value={h} onChange={setH} options={[{ key: '6', label: 'İlk 6 ay' }, { key: '12', label: 'İlk 12 ay' }]} />}
@@ -164,16 +166,16 @@ export default function BacktestTab({ s }: { s: Summary }) {
       </Box>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-        <Box title="Kitap kitap tahmin ve gerçekleşen" help="Her nokta bir kitap; kesik çizgi tam isabet. Eksenler logaritmik.">
+        <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Kitap kitap tahmin ve gerçekleşen" />} title="Kitap kitap tahmin ve gerçekleşen" help="Her nokta bir kitap; kesik çizgi tam isabet. Eksenler logaritmik.">
           <Scatterplot bt={bt} />
         </Box>
-        <Box title="İlk baskı bu kadar yapılsaydı" help="12 ayı gözlenmiş sınama kitapları: ilk 6 / 12 ayda satışın baskıyı aştığı (tükenen) kitap oranı ve 12. ay sonunda elde kalan payın ortancası.">
+        <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="İlk baskı bu kadar yapılsaydı" />} title="İlk baskı bu kadar yapılsaydı" help="12 ayı gözlenmiş sınama kitapları: ilk 6 / 12 ayda satışın baskıyı aştığı (tükenen) kitap oranı ve 12. ay sonunda elde kalan payın ortancası.">
           {pr ? <PrintRulesTable pr={pr} /> : <p className="text-[12px] text-canvas-muted">Henüz yok.</p>}
         </Box>
       </div>
 
       {h === '6' && bt6?.revise && (
-        <Box title="Kitap çıktıktan sonra: revize tahmin" help="Gerçekleşen ilk ay(lar) + emsallerin aynı aydan 6. aya büyümesi. Aynı sınama kitapları.">
+        <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Kitap çıktıktan sonra: revize tahmin" />} title="Kitap çıktıktan sonra: revize tahmin" help="Gerçekleşen ilk ay(lar) + emsallerin aynı aydan 6. aya büyümesi. Aynı sınama kitapları.">
           <TableWrap>
             <thead>
               <tr className="border-b border-slate-100">
@@ -204,7 +206,7 @@ export default function BacktestTab({ s }: { s: Summary }) {
       )}
 
       {bt.byTier && (
-        <Box title="Güven düzeyine göre" help="Güven düzeyi emsallerin gücünden gelir (CRM emsali, aynı yazar, aynı dizi). Düşük güvenli tahmine tek başına dayanmayın.">
+        <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Güven düzeyine göre" />} title="Güven düzeyine göre" help="Güven düzeyi emsallerin gücünden gelir (CRM emsali, aynı yazar, aynı dizi). Düşük güvenli tahmine tek başına dayanmayın.">
           <TableWrap>
             <thead>
               <tr className="border-b border-slate-100">
@@ -234,7 +236,7 @@ export default function BacktestTab({ s }: { s: Summary }) {
         </Box>
       )}
 
-      <Box title="Yıllara göre" help="Çıkış yılına göre tipik sapma ve kitap sayısı.">
+      <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Yıllara göre" />} title="Yıllara göre" help="Çıkış yılına göre tipik sapma ve kitap sayısı.">
         <TableWrap>
           <thead>
             <tr className="border-b border-slate-100">
@@ -259,7 +261,7 @@ export default function BacktestTab({ s }: { s: Summary }) {
         </TableWrap>
       </Box>
 
-      <Box title="Nasıl hesaplandı" help="Formüller ve kaynak sorgular.">
+      <Box info={<SqlInfo k={s.kaynaklar} alan="backtest" label="Nasıl hesaplandı" />} title="Nasıl hesaplandı" help="Formüller ve kaynak sorgular.">
         <ul className="mb-3 space-y-1.5 text-[12.5px] leading-snug">
           {s.formulas.map((f) => (
             <li key={f.name}><b>{f.name}:</b> {f.text}</li>
@@ -273,7 +275,11 @@ export default function BacktestTab({ s }: { s: Summary }) {
                 {src.title} <span className="font-normal text-canvas-muted">· {src.connection === 'logo' ? 'Logo' : 'CRM'}{src.rows !== null ? ` · ${fmtUnits(src.rows)} satır` : ''}</span>
               </summary>
               <p className="mt-1 text-[12px] text-canvas-muted">{src.description}</p>
-              <div className="mt-2 overflow-x-auto"><SqlCode sql={src.sql} label={src.title} /></div>
+              {src.sql ? (
+                <div className="mt-2 overflow-x-auto"><SqlCode sql={src.sql} label={src.title} /></div>
+              ) : (
+                <p className="mt-1 text-[12px] text-canvas-muted">Sorgu, ilk okumadan sonra çalışan hâliyle (yıl görünümleri yerinde) görünür.</p>
+              )}
             </details>
           ))}
         </div>

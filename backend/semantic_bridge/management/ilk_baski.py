@@ -572,12 +572,17 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None,
     sales: list[dict] = []
     n_rows = db_ms = 0
     last_sql = warning = None
+    by_year: dict[str, dict] = {}  # sorgu bilgisi: her yılın çalışan metni, satırı ve süresi ayrı
     for y in range(FIRST_YEAR, end // 12 + 1):
         r_ = run("logo_aylik_kanal", {"yil": y})
         sales += r_["records"]
         n_rows += len(r_["records"]); db_ms += r_.get("dbMs") or 0
         last_sql, warning = r_.get("sql"), warning or r_.get("warning")
-    res["logo_aylik_kanal"] = {"rowCount": n_rows, "dbMs": db_ms, "sql": last_sql, "warning": warning}
+        by_year[str(y)] = {"sql": r_.get("sql"), "rows": len(r_["records"]), "dbMs": r_.get("dbMs")}
+    res["logo_aylik_kanal"] = {"rowCount": n_rows, "dbMs": db_ms, "sql": last_sql, "warning": warning,
+                               "sqlByYear": {y: v["sql"] for y, v in by_year.items() if v["sql"]},
+                               "rowsByYear": {y: v["rows"] for y, v in by_year.items()},
+                               "msByYear": {y: v["dbMs"] for y, v in by_year.items()}}
 
     ds = M.build_dataset(kitaplar, emsal, sales, end)
     del sales
@@ -609,6 +614,8 @@ def build(run: Callable[[str, dict | None], dict], today: date | None = None,
         "tracking": tracking(eng),
         "model": save(serialize(eng)),
         "sourceStats": {sid: {"rows": r.get("rowCount", len(r.get("records") or [])), "dbMs": r.get("dbMs"),
-                              "sql": r.get("sql"), "warning": r.get("warning")} for sid, r in res.items()},
+                              "sql": r.get("sql"), "warning": r.get("warning"),
+                              **{x: r[x] for x in ("sqlByYear", "rowsByYear", "msByYear") if x in r}}
+                        for sid, r in res.items()},
         "warnings": sorted({r["warning"] for r in res.values() if r.get("warning")}),
     }

@@ -7,6 +7,7 @@ import { Loading, Note, Pill, TableWrap, btnGhost, td, th } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { BookSearch, Box, FpFrame, TierPill } from './parts';
 import BacktestTab from './BacktestTab';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { NotReadyError, dayName, firstPrintApi, fmtMoney, fmtUnits, monthName, pct, signedPct, trackTone, type Summary } from './api';
 
 /** M10 İlk baskı ve satış tahmini: yayımlanacak kitaplar, ilk satış takibi, geçmiş sınama. Sekme adreste (?sekme=). */
@@ -74,10 +75,10 @@ export default function FirstPrintScreen() {
       {s?.meta.warnings?.map((w) => <Note key={w} tone="warn">{w}</Note>)}
 
       <KpiRow>
-        <Kpi label="Yayımlanacak kitap" value={s?.ready ? fmtUnits(s.upcoming.length) : '—'} help="CRM'de yayın tarihi gelecekte, satışı yok" active={tab === 'yeni'} onClick={() => setTab('yeni')} />
-        <Kpi label="İlk satış takibinde" value={s?.ready ? fmtUnits(s.tracking.length) : '—'} help="Son 6 ayda çıkan kitaplar" active={tab === 'takip'} onClick={() => setTab('takip')} />
-        <Kpi label="Kötümserin altında" value={alerts === null || !s?.ready ? '—' : fmtUnits(alerts)} help="Gerçekleşen satış kötümser senaryonun da altında" onClick={() => setTab('takip')} />
-        <Kpi label="Tipik sapma (6 ay)" value={bt6?.model ? pct(bt6.model.mdape) : '—'} help={bt6?.model ? `Geçmişte çıkan ${fmtUnits(bt6.model.n)} kitapta tahminle gerçekleşen arasındaki ortanca fark` : 'Geçmiş sınama'} active={tab === 'sinama'} onClick={() => setTab('sinama')} />
+        <Kpi label="Yayımlanacak kitap" value={s?.ready ? fmtUnits(s.upcoming.length) : '—'} help="CRM'de yayın tarihi gelecekte, satışı yok" active={tab === 'yeni'} onClick={() => setTab('yeni')} info={<SqlInfo k={s?.kaynaklar} alan="kpi.yayimlanacak" label="Yayımlanacak kitap" />} />
+        <Kpi label="İlk satış takibinde" value={s?.ready ? fmtUnits(s.tracking.length) : '—'} help="Son 6 ayda çıkan kitaplar" active={tab === 'takip'} onClick={() => setTab('takip')} info={<SqlInfo k={s?.kaynaklar} alan="kpi.takip" label="İlk satış takibinde" />} />
+        <Kpi label="Kötümserin altında" value={alerts === null || !s?.ready ? '—' : fmtUnits(alerts)} help="Gerçekleşen satış kötümser senaryonun da altında" onClick={() => setTab('takip')} info={<SqlInfo k={s?.kaynaklar} alan="kpi.kotumser" label="Kötümserin altında" />} />
+        <Kpi label="Tipik sapma (6 ay)" value={bt6?.model ? pct(bt6.model.mdape) : '—'} help={bt6?.model ? `Geçmişte çıkan ${fmtUnits(bt6.model.n)} kitapta tahminle gerçekleşen arasındaki ortanca fark` : 'Geçmiş sınama'} active={tab === 'sinama'} onClick={() => setTab('sinama')} info={<SqlInfo k={s?.kaynaklar} alan="kpi.sapma" label="Tipik sapma (6 ay)" />} />
       </KpiRow>
 
       {s?.ready && tab === 'yeni' && <UpcomingTab s={s} />}
@@ -117,11 +118,11 @@ function UpcomingTab({ s }: { s: Summary }) {
               <th className={th}>Kitap</th>
               <th className={th}>Yayın</th>
               <th className={th}>Güven</th>
-              <th className={`${th} text-right`}>İlk 6 ay (baz)</th>
-              <th className={`${th} text-right`}>Aralık %80</th>
-              <th className={`${th} text-right`}>İlk 12 ay</th>
-              <th className={`${th} text-right`}>12 ay ciro</th>
-              <th className={`${th} text-right`}>Önerilen ilk baskı</th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="upcoming[]" label="İlk 6 ay baz tahmin">İlk 6 ay (baz)</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="upcoming[]" label="Güven aralığı %80">Aralık %80</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="upcoming[]" label="İlk 12 ay baz tahmin">İlk 12 ay</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="upcoming[]" label="12 ay ciro">12 ay ciro</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="upcoming[]" label="Önerilen ilk baskı ve tükenme olasılığı">Önerilen ilk baskı</InfoLabel></th>
             </tr>
           </thead>
           <tbody>
@@ -167,11 +168,11 @@ function TrackingTab({ s }: { s: Summary }) {
             <tr className="border-b border-slate-100">
               <th className={th}>Kitap</th>
               <th className={th}>Çıkış</th>
-              <th className={`${th} text-right`}>Gerçekleşen</th>
-              <th className={`${th} text-right`}>Beklenen (bugüne)</th>
-              <th className={`${th} text-right`}>Sapma</th>
-              <th className={`${th} text-right`}>İlk 6 ay: ilk tahmin → revize</th>
-              <th className={`${th} text-right`}>İlk 12 ay revize</th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="tracking[]" label="Gerçekleşen satış">Gerçekleşen</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="tracking[]" label="Beklenen (bugüne)">Beklenen (bugüne)</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="tracking[]" label="Sapma">Sapma</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="tracking[]" label="İlk 6 ay: ilk tahmin → revize">İlk 6 ay: ilk tahmin → revize</InfoLabel></th>
+              <th className={`${th} text-right`}><InfoLabel k={s.kaynaklar} alan="tracking[]" label="İlk 12 ay revize">İlk 12 ay revize</InfoLabel></th>
             </tr>
           </thead>
           <tbody>

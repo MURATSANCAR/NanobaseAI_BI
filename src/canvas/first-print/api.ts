@@ -1,4 +1,5 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineForbiddenError, freshHeaders } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M10 İlk baskı ve satış tahmini: köprünün /api/v1/management/first-print/* uçları. */
 
@@ -112,8 +113,10 @@ export type Summary = {
   tracking: TrackingRow[];
   formulas: Array<{ name: string; text: string }>;
   notes: string[];
-  sources: Array<{ id: string; connection: 'logo' | 'crm'; title: string; description: string; sql: string; rows: number | null }>;
+  /** Son okumada çalışan metin; henüz okunmadıysa yok (şablon gösterilmez). */
+  sources: Array<{ id: string; connection: 'logo' | 'crm'; title: string; description: string; sql: string | null; rows: number | null }>;
   can: { decide: boolean; approve: boolean };
+  kaynaklar?: Kaynaklar;
 };
 
 export type Analog = {
@@ -173,6 +176,7 @@ export type Forecast = {
   revised?: Record<string, number | null>;
   emsalCrm?: string[];
   emsalOverride?: boolean;
+  kaynaklar?: Kaynaklar;
 };
 
 export type BookHit = { code: string; name: string; authors: string | null; publisher: string | null; firstPub: string | null; launched: boolean };
@@ -245,7 +249,7 @@ export const firstPrintApi = {
   forecast: (code: string, launch?: string, emsal?: string[]) =>
     call<Forecast>(`/forecast/${encodeURIComponent(code)}${qs({ launch, emsal: emsal ? emsal.join(',') : undefined })}`),
   free: (body: FreeInput) => call<Forecast>('/forecast', 'POST', body),
-  decisions: (code?: string) => call<{ items: Decision[] }>(`/decisions${qs({ code })}`),
+  decisions: (code?: string) => call<{ items: Decision[]; kaynaklar?: Kaynaklar }>(`/decisions${qs({ code })}`),
   decide: (body: { code: string | null; title: string; launch: string; units: number; scenario: string; recommended: number; note?: string; forecast?: unknown }) =>
     call<Decision>('/decisions', 'POST', body),
   approve: (id: string, role: 'satis' | 'uretim') => call<Decision>(`/decisions/${id}/approve`, 'POST', { role }),
