@@ -334,8 +334,8 @@ class LogoPrices:
             hit = self._cache.get(key)
         if hit and not fresh and time.monotonic() - hit[0] < self.TTL:
             return hit[1]
-        run, runs = self._run()
         try:
+            run, runs = self._run()      # bağlantı yoksa hata burada: eskisi gibi «fiyat okunamadı» notuna düşer
             val = (self._sales(want, run) if mode == "satis" else self._list(want, run)), None
         except (SourceError, RuntimeError) as e:
             return {}, str(e)[:300]
