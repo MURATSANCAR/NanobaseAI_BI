@@ -70,15 +70,3 @@ export function Block({ title, help, action, info, children }: { title: string; 
     </section>
   );
 }
-
-/** Rakamın nereden geldiği: açılır küçük kutu (SQL ya da kaynak cümlesi). */
-export function SourceNote({ text, sql }: { text?: string | null; sql?: string | null }) {
-  if (!text && !sql) return null;
-  return (
-    <details className="mt-2 text-[11px] text-canvas-muted">
-      <summary className="inline-flex min-h-8 cursor-pointer items-center font-bold text-canvas-violet">Kaynak</summary>
-      {text && <p className="mt-1 leading-snug">{text}</p>}
-      {sql && <pre className="mt-1 max-w-full overflow-x-auto rounded-lg bg-slate-50 p-2 font-mono text-[10.5px] leading-snug">{sql}</pre>}
-    </details>
-  );
-}
