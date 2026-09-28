@@ -6,7 +6,6 @@ import { Loading, Note, Pill, btn, btnGhost, errText, nf } from '../admin/ui';
 import { num } from '../format';
 import { Kpi, KpiRow, ModuleFrame, Panel } from './kit';
 import { WorkList, WorkUpload, useWorks } from './WorkPicker';
-import { UploadButton, WorkList, useWorks } from './WorkPicker';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 

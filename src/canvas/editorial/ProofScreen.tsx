@@ -10,7 +10,6 @@ import { WorkList, WorkUpload, fmtBytes, useWorks } from './WorkPicker';
 import { ProofFindings, seriousCount } from './ProofFindings';
 import { WordMapPanel } from './WordMapPanel';
 import { DocumentPicker, DocumentResult, DocumentUpload } from './DocumentReview';
-import { DocumentPicker, DocumentResult } from './DocumentReview';
 import SqlInfo from '../components/SqlInfo';
 import { kaynakOf } from '../components/kaynakOf';
 

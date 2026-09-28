@@ -91,5 +91,5 @@ def test_tam_kaynak_with_cache_origin_rows():
     o = P.ekle(out, k)
     assert P.uncovered_numbers(o) == [] and P.problems(o) == []
     src = list(k.sources.values())[0]
-    assert src["stats"]["rows"] == 40 and "önbellek" in src["title"].lower()
+    assert src["stats"]["rows"] == 40 and "önbelle" in src["title"].lower()
     json.dumps(o, default=str)
