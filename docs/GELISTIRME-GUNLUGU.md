@@ -68,6 +68,72 @@
 - **Açık kalan (ayrı iş):** aynı modülde başka tavanlar var — CRM bağlı sözleşmeler `TOP 200` (`related_sql`),
   kitap/taraf aramada `TOP 20`, `contracts_terms.py`'de taraf/kitap/kademe `[:50]/[:200]/[:20]`, hakediş dönemi 400.
   Bunlara bu işte dokunulmadı. Dal `main`e taşınmadı, kurulum yapılmadı.
+## 2026-09-28 — M33 Okul, kütüphane ve kamu ihale takibi (ilk sürüm) — DOĞRULANAMADI, sunucu kapalı
+
+- **Neden:** yol haritası «Satış ve saha» bloku. Kamu kurumlarının kitap alımları (ihale, doğrudan temin, yayın alımı)
+  portalda hiçbir yerde izlenmiyordu; şartnamedeki kitap listesinin katalogla elle karşılaştırılması bir gün sürüyor
+  (analiz `docs/analiz/kullanici-ihtiyaclari/M33-ihale-takibi.md`, 14. bölüm kodlama planı).
+- **Ne yapıldı:**
+  - Köprü `tenders.py` / `tenders_sources.py` / `tenders_api.py`; tablolar `semantic_tenders`, `semantic_tender_files`,
+    `…_items`, `…_checklist`, `…_documents` (şirket belge arşivi), `…_decisions`, `…_results`, `…_jobs` (uzun iş durumu),
+    `…_reminders` (hatırlatma bir kez gider). Yazmalar `semantic_audit`'e (`tender`, `tender_item`, `tender_decision`,
+    `tender_document`, `tender_file`, `tender_result`, `tender_export`).
+  - Uçlar `/api/v1/tenders/*`: liste/kayıt/düzenleme/silme (yalnız kararsız ve sonuçsuz kayıt), dosya yükleme (PDF,
+    Word, Excel, CSV, metin, görsel; uzantı + içerik imzası), şartname özeti (iş), kalem listesi alma (yapıştır ya da
+    dosya: xlsx, csv, docx, pdf; başlık satırı ilk 15 satırda aranır, okunamayan satır nedeniyle döner, hiçbir satır
+    kesilmez), eşleştirme (iş), kalem düzeltme, katalog araması, teklif tablosu Excel, kontrol listesi, karar özeti
+    metni, karar öner/geri çek/onayla/geri gönder, sonuç, takvim, sonuçlar, kamu satışları, belge arşivi, `run-due`,
+    ilan kaynağı durumu/içe alma (kapalı).
+  - Ön yüz `src/canvas/tenders/` (`TenderList`, `TenderDetail`, `TenderItems`, `TenderChecklist`, `TenderDecision`,
+    `DocumentsVault`, `TenderCalendar`, `ResultsTab`, `PublicSalesTab`, `api.ts`, `parts.tsx`); rota `/ihale`,
+    `/ihale/:id`; menü «Satış ve saha» alanı (M29 dalıyla aynı `satis` id'si ve etiketi, `Waypoints` simgesi — merge'de
+    tekilleşir) › İhale takibi (`Gavel`); Kampüs `M33: '/ihale'`. Telefonda liste kart düzeninde, karar/onay tek sütun;
+    geniş kalem tablosu kendi kabında kayar. Yeni animasyon yok (mevcut düğme/sekme geçişleri).
+  - Yetki: `sayfa:ihale` (alan `satis`), `ozellik:ihale.duzenle`, `ozellik:ihale.belge`, açık `ozellik:ihale.karar` ve
+    `ozellik:ihale.kaynak-yonet`; Excel `ozellik:veri.disa-aktar`. Ayarlar (Yönetim › Bildirim): `TENDER_ALERT_RECIPIENTS`,
+    `TENDER_WATCH_ENABLED` (0), `TENDER_PRICE_SOURCE` (crm), `TENDER_DEFAULT_VAT` (0); yalnız ortamdan: `TENDER_MATCH_*`,
+    `TENDER_SCORE_WEIGHTS`, `TENDER_SCORE_FULL_DAYS` (14), `TENDER_PRICE_HISTORY_MIN` (3), `TENDER_SUMMARY_CHUNK_CHARS`
+    (24000), `TENDER_REMIND_DAYS` (7,2), `TENDER_DOC_WARN_DAYS` (30), `TENDER_FILE_MAX_MB` (50), `TENDER_PUBLIC_CHANNEL` (KURUM), `TENDER_DIR`.
+  - Zamanlayıcı `scripts/server/timas-tenders.{service,timer}` (her gün 07:30 `run-due`); ilk kez elle koşturulacak.
+- **Kararlar (sormadan, gerekçeli; analiz 10. bölüm):**
+  1. *Doğrudan mı bayi üzerinden mi:* bilinmiyor; kayıt TİMAŞ'ın kendi hazırlığı olarak tutulur, bayi üzerinden girilen
+     ihale not alanına yazılır (M30 bağı ikinci sürüm).
+  2. *Usul:* açık ihale, pazarlık, doğrudan temin, yayın alımı başvurusu, diğer — kayıtta seçilir; hiçbiri zorunlu değil.
+  3. *İlan kaynağı:* EKAP aboneliği/izinli API bilinmiyor ve müşteride dış tarama kapalı → elle giriş + dosya;
+     `TENDER_WATCH_ENABLED` varsayılan 0, uç açık kalsa bile 501 «ikinci sürüm». Liste ekranı «yalnız portala girilen
+     ilanlar» diye kapsamını yazar (uzmanın «hepsi burada izlenimi» itirazı).
+  4. *Belge arşivi:* finansın işi → ayrı yetki `ozellik:ihale.belge`; kontrol listesi kalemi arşivdeki belgeye bağlanır,
+     süresi geçmiş belge «süresi dolmuş» görünür ve puana «yok» sayılır.
+  5. *Fiyat politikası:* veri yok (portalda sonuç kaydı yok) → teklif birim fiyatı KDV hariç liste × fiyat oranı; oran
+     geçmiş sonuçlarda «kazanan ÷ aynı kalemlerin liste toplamı» ortancası (aynı kurum türünde ≥3 sonuç, yoksa hepsinde
+     ≥3, yoksa 1). Oran ve her satır elle değişir; karar onayı teklif fiyatının onayıdır; sistem kendi başına fiyat vermez.
+     Liste fiyatı varsayılanı CRM `new_kdvdahilfiyat` (kapak fiyatı), Logo `PRCLIST` ikinci sütunda gösterilir; hangisi
+     kullanıldığı satırda yazılı.
+  6. *Stok:* M12/M29 ölçümüyle aynı — planlanan üretim girişi (`TRCODE 13`, `PRODSTAT 1`) sayılmaz.
+  7. *Kamu kurumu:* CRM `new_KurumRolu` 2 (Devlet Kurumu) ve 3 (Resmi); 4 (Özel STK) yalnız sayılır, satışa girmez.
+     Logo kanalı `KURUM` ayrıca eklenir; her satırın kaynağı (CRM / kanal / ikisi) yazılır.
+  8. *Uygunluk puanı:* eşleşen kalem 40, stoğu yeten 25, hazır zorunlu belge 20, süre 15 (14 günde tam) — ölçülemeyen
+     parça dışarıda, ağırlık yeniden dağılır; ayar `TENDER_SCORE_WEIGHTS`. Karar insanındır.
+  9. *Maliyet:* M9 dalda → `tenders_sources.unit_costs()` köprüdeki `app.state.unit_cost` sağlayıcısına sorar; yoksa
+     «maliyet bilinmiyor», marj hesaplanmaz (Logo `OUTCOST` burada kullanılmadı: yeni kitapta yok, M9'un işi).
+  10. *Model:* ilan konusunun kitap alımı olup olmadığı kayıt anında arka planda (`choose`, evet/hayır/belirsiz);
+      belge türü önce anahtar sözcük, bilinmezse `choose`; karar özeti metni rakamları yalnız verilen olgulardan kullanır.
+- **Zeki AI'a sorulacaklar (sohbet kapsamı genişleyince bu uçlardan cevaplanır):** «Bu hafta son teklif tarihi dolan
+  kütüphane ilanları» → `/calendar`; «Bu şartnamedeki kitapların kaçı bizde, stokta kaçı yetersiz» → ihale `toplamlar`;
+  «Geçen yıl kaç ihaleye girdik, kaçını kazandık» → `/results`; «Belediyelere son 2 yılda ne kadar satış» →
+  `/public-sales` (kurum türü ayrımı yok: Logo carisinde belediye işareti yok — açık); «Bu ihalede teminat, eksik
+  belgeler» → `kararOzeti`; «Çocuk kitabı ihalelerinde kazanan/liste oranı» → `/results` (kitap türü kırılımı yok — açık).
+- **Testler:** `backend/semantic_layer/tests/test_tenders.py` (ISBN, liste okuma, eşleştirme sırası ve eşikler, model
+  yok/kapalı, toplam ve KDV, puan, akış, iki göz, fiyat oranı, özet alıntı denetimi, karar metni, hatırlatma, Excel,
+  dosya denetimi, yetki, API'de 403/409). **Koşulmadı** (yerelde test yasak, sunucu kapalı); yalnız `py_compile` ve
+  `access_catalog.json` JSON doğrulaması yapıldı. `navModel.test.ts` grup sırası `satis` ile güncellendi (M29 ile aynı).
+- **Kabul (sunucuda koşulacak):** `scripts/acceptance/M33/check.sh` (pytest + tsc + vitest + derleme), `kabul.py`
+  (R1 kamu net ciro ve cari sayısı, R2 ISBN → CRM stok kodu, R3 stok bakiyesi, R4 liste fiyatı, R5 ara toplam ve KDV
+  kuruş, R6 kurum rolü sayıları; örnek liste her koşuda CRM'den rastgele), `cleanup.py` (ihale, dosya, değişiklik kaydı).
+  **Ölçülecek:** `new_logicalref` ↔ güncel firma `CLCARD.LOGICALREF` örtüşmesi; `new_kdvorani` yüzde mi oran mı; ISBN/
+  barkod doluluğu; Logo `UNITBARCODE` varlığı; `PRCLIST.INCVAT`; model eşiklerinin gerçek şartnamede isabeti.
+- **Açık:** EKAP/izinli kaynak kararı (ikinci sürüm), M29'a sevk planı aktarımı, şartname yanıt metni üretimi, portal
+  içi anlık bildirim (şimdilik e-posta özeti ve liste rozetleri), sorumlunun e-postasına kişisel hatırlatma.
 
 ## 2026-09-28 — Yetkiler ekranında alan kutuları birbirine taşıyordu (düzeltildi, test sunucusunda)
 

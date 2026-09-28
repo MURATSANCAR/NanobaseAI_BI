@@ -52,6 +52,8 @@ const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
+const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
+const TenderDetail = lazy(() => import('@/canvas/tenders/TenderDetail'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
 const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
@@ -127,6 +129,9 @@ export default function App() {
             <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
             {/* M46 Bütçe planlama ve kontrolü (/api/v1/budget). */}
             <Route path="butce" element={<BudgetScreen />} />
+            {/* M33 İhale takibi (Satış ve saha): ilanlar, takvim, belge arşivi, sonuçlar, kamu satışları (/api/v1/tenders). */}
+            <Route path="ihale" element={<TenderList />} />
+            <Route path="ihale/:id" element={<TenderDetail />} />
             {/* M10 İlk baskı ve satış tahmini: emsal kitaplardan senaryolar, ilk satış takibi, geçmiş sınama (/api/v1/management/first-print). */}
             <Route path="ilk-baski" element={<FirstPrintScreen />} />
             <Route path="ilk-baski/kitap/:code" element={<BookForecastPage />} />

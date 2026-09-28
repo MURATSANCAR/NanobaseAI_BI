@@ -187,6 +187,11 @@
       "label": "Saha ve tahsilat"
     },
     {
+      "key": "sayfa:ihale",
+      "area": "satis",
+      "label": "İhale takibi"
+    },
+    {
       "key": "sayfa:seo-geo",
       "area": "pazarlama",
       "label": "SEO özeti"
@@ -463,6 +468,36 @@
       "page": "sayfa:ilk-dagilim",
       "label": "İlk dağılım: bütün bölgeler",
       "hint": "Bütün carilerin dağılım satırlarını görme; yoksa BMT yalnız CRM'de sahibi olduğu carileri görür",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ihale.duzenle",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "İhale kaydı ve teklif hazırlığı",
+      "hint": "İlan girişi, şartname yükleme, kalem listesi ve eşleştirme, teklif fiyatı düzeltme, belge kontrol listesi, karar önerisi, sonuç kaydı"
+    },
+    {
+      "key": "ozellik:ihale.karar",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "İhale kararı onayı",
+      "hint": "Başvurma/başvurmama kararını ve teklif fiyatını onaylama ya da gerekçeyle geri gönderme (öneren onaylayamaz)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:ihale.belge",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "Şirket belge arşivi",
+      "hint": "Vergi, SGK, imza sirküleri, teminat gibi ihale belgelerini yükleme, geçerlilik tarihini güncelleme, silme"
+    },
+    {
+      "key": "ozellik:ihale.kaynak-yonet",
+      "area": "satis",
+      "page": "sayfa:ihale",
+      "label": "İhale ilanı kaynağı",
+      "hint": "Resmî kaynaktan ilan içe almayı çalıştırma (ikinci sürüm; ortamda kapalıyken etkisiz)",
       "explicit": true
     },
     {

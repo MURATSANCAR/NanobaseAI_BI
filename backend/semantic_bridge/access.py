@@ -474,6 +474,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/field/visits", frozenset({page("saha"), page("okul-tanitim")})),
     ("/api/v1/field/", frozenset({page("saha")})),
     ("/api/v1/pricing/", frozenset({page("fiyatlama")})),
+    # M33 İhale takibi (Satış ve saha). Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/tenders/run-due", SYSTEM),
+    ("/api/v1/tenders/", frozenset({page("ihale")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     ("/api/v1/reports/run-due", SYSTEM),
@@ -556,6 +559,12 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/distribution/(plans(?!/[^/]+/(approve|reject)$)(/.*)?|books/refresh)$",
      "ozellik:dagilim.plan"),
     (frozenset({"GET"}), r"^/api/v1/distribution/plans/[^/]+/export\.xlsx$", "ozellik:veri.disa-aktar"),
+    # İhale: kayıt, dosya, kalem, eşleştirme, kontrol listesi, karar önerisi, sonuç. Karar onayı/geri gönderme açıkça
+    # verilen `ihale.karar` ile, ilan kaynağı `ihale.kaynak-yonet` ile ucun içinde; şirket belge arşivi `ihale.belge`.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/tenders(/(?!run-due$|watch/|documents(/|$)|[^/]+/decision/(approve|reject)$).*)?$", "ozellik:ihale.duzenle"),
+    (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/tenders/documents(/[^/]+)?$", "ozellik:ihale.belge"),
+    (frozenset({"GET"}), r"^/api/v1/tenders/[^/]+/pricing\.xlsx$", "ozellik:veri.disa-aktar"),
     # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),

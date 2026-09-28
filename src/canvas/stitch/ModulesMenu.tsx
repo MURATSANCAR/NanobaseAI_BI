@@ -41,6 +41,7 @@ export const LIVE: Record<string, string> = {
   M30: '/saha',
   M31: '/okul-tanitim',
   M32: '/kurumsal-satis',
+  M33: '/ihale',
   M46: '/butce',
 };
 
