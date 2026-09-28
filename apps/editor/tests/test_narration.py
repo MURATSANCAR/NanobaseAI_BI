@@ -327,3 +327,21 @@ def test_clock():
     assert N.clock(0) == "0:00:00.000"
     assert N.clock(83.4567) == "0:01:23.457"
     assert N.clock(3723.5) == "1:02:03.500"
+
+
+# ------------------------------------------------------------------ 2026-09-28 tam kitap dinlemesi
+def test_quote_then_diye_stays_one_sentence_and_speech_is_own_piece():
+    t = "“Farece…” diye kükredi. İçinden bir ses fısıldıyordu: “Kaç! Hemen kaç!”"
+    u = N.Unit("x", "para", None, "anlatici-kadin", t, N.read(t))
+    ps = N.pieces([u])
+    assert [p.text for p in ps] == ["Farece… diye kükredi.", "İçinden bir ses fısıldıyordu:", "Kaç!", "Hemen kaç!"]
+    assert ps[1].pause_ms == N.PAUSE[":"]
+    assert [k for p in ps for k in p.words] == list(range(len(u.words)))
+
+
+def test_guess_voice_ignores_comparisons_and_follows_stated_sex():
+    assert N.guess_voice("wombat", "female wombat, a bit larger than the father") == "genc-kadin"
+    assert N.guess_voice("mother wombat", "larger than the father") == "genc-kadin"
+    assert N.guess_voice("lion", "a big man with a mane") == "genc-erkek"
+    assert N.guess_voice("son of the king", "") == "cocuk-erkek"
+    assert N.guess_voice("tree", "old and tall") is None

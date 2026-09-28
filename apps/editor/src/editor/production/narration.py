@@ -223,12 +223,32 @@ _GUESS = [
 ]
 
 
+# Karşılaştırma/ilişki öbeği karakterin kendisini değil başkasını anlatır: «larger than the father», «like her
+# brother», «son of the king» (2026-09-28: dişi vombat «Annesi» tarifteki «than the father» yüzünden erkek sesi aldı).
+_OTHER = re.compile(r"\b(than|like|of|with|beside|behind|to|for|and)\s+(the|a|an|his|her|their|its|my|your)\s+\w+(\s+\w+)?")
+_FEMALE = re.compile(r"\b(female|she|her|woman|girl|mother|mom|lady|queen|princess|sister|aunt)\b")
+_MALE = re.compile(r"\b(male|he|his|man|boy|father|dad|king|prince|brother|uncle)\b")
+_SWAP = {"genc-erkek": "genc-kadin", "yasli-erkek": "yasli-kadin", "cocuk-erkek": "cocuk-kiz",
+         "genc-kadin": "genc-erkek", "yasli-kadin": "yasli-erkek", "cocuk-kiz": "cocuk-erkek"}
+
+
 def guess_voice(species: str, look: str = "") -> str | None:
-    t = f"{species} {look}".lower()
-    for pat, vid in _GUESS:
-        if re.search(pat, t):
-            return vid
-    return None
+    """Karakter tarifinden ses tahmini: önce tür/rol (species), sonra tarifin karakteri anlatan kısmı. Tarif açıkça
+    öbür cinsiyeti söylüyorsa (ör. «female» + erkek kalıbı) eşleşen sesin karşı cinsi seçilir."""
+    main = _OTHER.sub(" ", f"{species} {look}".lower())
+    vid = None
+    for t in (species.lower(), main):
+        vid = next((v for pat, v in _GUESS if re.search(pat, t)), None)
+        if vid:
+            break
+    if vid is None:                                       # yalnız «female/male» diyen hayvan tarifi: yetişkin ses
+        return "genc-kadin" if re.search(r"\bfemale\b", main) else "genc-erkek" if re.search(r"\bmale\b", main) else None
+    fem, mal = bool(_FEMALE.search(main)), bool(_MALE.search(main))
+    if vid in ("genc-erkek", "yasli-erkek", "cocuk-erkek") and fem and not mal:
+        return _SWAP[vid]
+    if vid in ("genc-kadin", "yasli-kadin", "cocuk-kiz") and mal and not fem:
+        return _SWAP[vid]
+    return vid
 
 
 # ------------------------------------------------------------------ Türkçe yardımcıları
@@ -610,7 +630,7 @@ def spoken_text(words: list[Word]) -> str:
 
 
 # ------------------------------------------------------------------ sayfa → okuma birimleri
-PAUSE = {".": 450, "!": 480, "?": 520, "…": 700, ",": 160, "block": 750, "heading": 1000, "bubble": 600,
+PAUSE = {".": 450, "!": 480, "?": 520, "…": 700, ",": 160, ":": 300, "block": 750, "heading": 1000, "bubble": 600,
          "page": 400}
 SEG_CHARS = 280                   # bir üretim parçasının hedef uzunluğu (model uzun girdide kararsızlaşıyor); metin kesilmez
 
@@ -673,6 +693,29 @@ class Piece:
     pause_ms: int
 
 
+def _core_of(w: Word) -> str:
+    return _split_punct(w.text)[1]
+
+
+def sentence_mark(words: list[Word], k: int) -> str:
+    """k. kelimede cümle bitiyorsa sonundaki işaret (. ! ? …), bitmiyorsa "". Ardından küçük harfle süren kelime cümleyi
+    sürdürür: «“Pat!” diye», «“Farece…” dedi», «Ama… belki» (2026-09-28 tam kitap dinlemesi: tırnaktan sonra gelen
+    «diye» ayrı parça olunca 1 sn kopuyordu)."""
+    sp = words[k].spoken.rstrip()
+    mark = sp[-1:] if sp else ""
+    if mark not in ".!?…":
+        return ""
+    nxt = next((w for w in words[k + 1:] if w.say), None)
+    if nxt is not None and _core_of(nxt)[:1].islower():
+        return ""
+    return mark
+
+
+def _speech_starts(words: list[Word], k: int) -> bool:
+    """k. kelimeden sonra konuşma başlıyor mu (iki nokta + açılan tırnak ya da tire): «fısıldıyordu: “Kaç!”»."""
+    return k + 1 < len(words) and words[k].spoken.rstrip().endswith(":") and words[k + 1].text[:1] in OPEN_P + "–—-"
+
+
 def pieces(units: list[Unit]) -> list[Piece]:
     out: list[Piece] = []
     for ui, u in enumerate(units):
@@ -691,8 +734,11 @@ def pieces(units: list[Unit]) -> list[Piece]:
             sp = w.spoken.rstrip()
             mark = sp[-1:] if sp else ""
             length = sum(len(u.words[j].spoken) + 1 for j in cur)
-            if mark in ".!?…":
-                flush(mark)
+            end = sentence_mark(u.words, k)
+            if end:
+                flush(end)
+            elif _speech_starts(u.words, k):             # anlatıcının girişi ile konuşma ayrı parça (ifade yalnız konuşmaya)
+                flush(":")
             elif mark in ",;:" and length >= SEG_CHARS:
                 flush(",")
             elif length >= SEG_CHARS * 1.6:              # hiç noktalama yoksa kelime sınırında böl

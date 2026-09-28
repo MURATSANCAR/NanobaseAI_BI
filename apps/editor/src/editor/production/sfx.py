@@ -56,7 +56,7 @@ from . import sfx_library as L
 log = logging.getLogger(__name__)
 
 DIR = "ses/efekt"
-MIX_VERSION = 1
+MIX_VERSION = 2                   # 2: efekt kuyruğu anlatım bitince kesilmiyor (kısma anahtarı uzatıldı)
 ALIAS = "book-director"
 VOTES = 3
 VOTE_MIN = 2
@@ -347,6 +347,9 @@ SOUND_STEMS = ("havla", "miyavla", "mırla", "kükre", "gıcırda", "çıtırda"
                "zil", "çaldı", "çalıyor", "düdük", "korna", "siren", "çarptı", "çarpıp", "düştü", "devrildi", "kırıldı",
                "zıpla", "sıçra", "kükreme", "havlama", "gök gürült", "yağmur", "rüzgâr", "rüzgar", "fırtına", "dalga")
 _REDUP = re.compile(r"\b(\w{1,8})([ -])\1(?:\2\1)*\b", re.I)
+# Tırnak içindeki kısa söz + «diye/dedi…» çoğu kez yansıma sesidir: «“Pat!” diye», «“Güüüm!” diye düştü».
+_SAID = re.compile(r"[“\"«‘']([^”\"»’']{1,24}?)[!?.…,]*[”\"»’']\s*(diye|dedi|deyip|diyerek|der gibi)\b", re.I)
+_STRETCH = re.compile(r"(\w)\1{2,}")          # harf uzatması: «Güüüümmmm», «Happppşuuuu»
 
 
 def sound_hints(units) -> list[str]:
@@ -356,9 +359,12 @@ def sound_hints(units) -> list[str]:
         for m in _REDUP.finditer(u.text):
             if len(m.group(1)) >= 2 and not m.group(1).isdigit():
                 out.append(m.group(0))
+        for m in _SAID.finditer(u.text):
+            if len(m.group(1).split()) <= 3:
+                out.append(m.group(1).strip(" ,.;:!?…"))
         for w in u.words:
             f = L.tr_lower(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
-            if any(f.startswith(s) for s in SOUND_STEMS):
+            if any(f.startswith(s) for s in SOUND_STEMS) or _STRETCH.search(f):
                 out.append(w.text.strip(" ,.;:!?…\"'«»“”‘’()"))
     return list(dict.fromkeys(x for x in out if x))
 
@@ -463,7 +469,9 @@ _LETTERS = "ABCDEFGHIJKLMNOP"
 PICK = """Bir çocuk kitabının sesli okumasına efekt konacak. Metindeki yer: «{quote}». İstenen ses: «{q}» ({en}).
 Ses kütüphanesinde aramanın bulduğu adaylar (ad, klasör, etiketler, süre):
 {rows}
-İstenen sese en uygun adayın harfini yaz. Hiçbiri o sesi içermiyorsa X yaz. Yalnız tek harf."""
+İstenen sese en uygun adayın harfini yaz. Sesi kimin/neyin çıkardığı ve eylem ikisi de tutmalı: gülme için gülüş,
+hapşırma için hapşırık; başka bir hayvanın sesi ya da benzer ama başka bir eylem (gülen aslana kedi mırlaması gibi) uygun
+değildir. Hiçbiri o sesi içermiyorsa X yaz. Yalnız tek harf."""
 
 
 def _cand_line(letter: str, r: dict) -> str:
@@ -484,7 +492,7 @@ async def rerank(llm, cue: dict, cands: list[dict]) -> tuple[list[dict], float |
                       rows="\n".join(_cand_line(a, r) for a, r in zip(letters, cands)))
     try:
         probs, _ = await llm.choose(ALIAS, [{"role": "user", "content": msg}], list(letters) + ["X"],
-                                    prompt=PromptRef("sfx.pick", "1"))
+                                    prompt=PromptRef("sfx.pick", "2"))
     except Exception:  # noqa: BLE001 — model yoksa aramanın sırası
         return cands, None
     order = sorted(range(len(cands)), key=lambda i: (-probs.get(letters[i], 0.0), i))
@@ -699,7 +707,10 @@ def render(narration_mp3: Path, duration: float, placements: list[dict], amb: di
         fx_labels.append("[amb]")
     if fx_labels:
         filters.append(f"{''.join(fx_labels)}amix=inputs={len(fx_labels)}:duration=longest:normalize=0[bus]")
-        filters.append(f"[bus][key]sidechaincompress={DUCK}[ducked]")
+        # Kısma, girdilerden kısası bitince durur: anahtar (anlatım) sessizlikle efektin sonuna kadar uzatılır;
+        # yoksa sayfa sonundaki kükreme/kahkaha ~2 sn erken kesiliyordu (2026-09-28 tam kitap dinlemesi).
+        filters.append(f"[key]apad=whole_dur={end_fx + 0.05:.3f}[keyp]")
+        filters.append(f"[bus][keyp]sidechaincompress={DUCK}[ducked]")
         filters.append("[nar][ducked]amix=inputs=2:duration=longest:normalize=0[mix]")
     else:
         filters.append("[key]anullsink")

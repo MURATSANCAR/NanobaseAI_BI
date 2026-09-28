@@ -139,8 +139,8 @@ def test_marks_reach_the_voice_service_and_make_page_stale(job, monkeypatch):
     by_text = {s["text"]: s for s in segs}
     # heyecan: ton yok (yükselen tonlar ölçümde aştı), hız ve duraklama; vurgu kelimeden önce kısa durak,
     # hizalanan kelimeler değişmez
-    short = by_text["Birlikte... oynayalım mı?"]
-    assert short["rate"] == X.TABLE["heyecan"]["rate"] and "style" not in short
+    short = by_text["Birlikte, oynayalım mı?"]
+    assert "rate" not in short and "style" not in short                  # kısa ünlem hızlandırılmaz
     assert not short["voice"].get("prompt_audio") and short["words"] == ["Birlikte", "oynayalım", "mı"]
     # uzun üzüntü cümlesi: ifade örneğinin devamı (tam klon, talimat metne girmez), önce durak
     long = by_text["Hep birlikte koşarak büyük parka gittiler!"]
@@ -243,7 +243,7 @@ def test_sample_sentence_only_that_sentence(job, monkeypatch):
     data = asyncio.run(X.sample_sentence(job, "p_1", "c2:0", "fisilti", ["zamanı"]))
     assert data == b"ID3fake"
     body = calls[-1]
-    assert [s["text"] for s in body["segments"]] == ["Güneş batarken annesi, Eve dönme... zamanı, dedi."]
+    assert [s["text"] for s in body["segments"]] == ["Güneş batarken annesi, Eve dönme, zamanı, dedi."]
     assert body["segments"][0]["style"] == X.TABLE["fisilti"]["style"] and body["align"] is False
     assert body["segments"][0]["pause_ms"] == 0
     n = len(calls)
@@ -264,3 +264,23 @@ def test_lively_group_is_placed_after_children_group():
         assert [x["id"] for x in v2] == ["a", "canli-x"]
     finally:
         L.VOICES = old
+
+
+# ------------------------------------------------------------------ 2026-09-28 tam kitap dinlemesi
+def test_emphasis_is_short_and_skips_aux_verbs_and_caps():
+    assert X._emphasize("Kimse yardım etmedi ona", ["etmedi"]) == "Kimse yardım etmedi ona"
+    assert X._emphasize("BİLİM VOMBATI AŞKINA", ["AŞKINA"]) == "BİLİM VOMBATI AŞKINA"
+    assert X._emphasize("Bu çok eğlenceli bir oyun", ["eğlenceli"]) == "Bu çok, eğlenceli bir oyun"
+
+
+def test_narrator_lead_in_is_neutral_when_sentence_has_speech(job):
+    from editor.production import studio
+    page = json.loads(json.dumps(PAGE))
+    page["text"]["blocks"][2]["runs"] = [
+        {"text": "İçinden bir ses durmadan fısıldıyordu: “Hemen eve dön, hava kararıyor!”"}]
+    studio.write(job, "plan.json", {"version": 1, "rev": 2, "pages": [page], "assets": {}})
+    X.set_marks(job, "p_1", [{"key": "c3:0", "label": "fisilti"}], "editör")
+    _units, plist, _h = N.page_input(job, page)
+    by = {p.text: getattr(p, "extra", {}) for p in plist}
+    assert by["İçinden bir ses durmadan fısıldıyordu:"] == {}
+    assert by["Hemen eve dön, hava kararıyor!"]["label"] == "fisilti"
