@@ -3,6 +3,8 @@ import { Link, NavLink } from 'react-router-dom';
 import { ChevronLeft, FileSpreadsheet } from 'lucide-react';
 import Shell, { ZoomStage } from '../stitch/Shell';
 import { Note, Pill, btnGhost } from '../admin/ui';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { fmtDay, fmtInt, shippingApi, type ExportList, type Freshness, type Meta, type Order } from './api';
 
 /** Kargo ekranlarının ortak kabuğu ve küçük parçaları. Menü tek; alt ekranlar arasında üstte kısa bir bağlantı şeridi. */
@@ -80,12 +82,14 @@ function SubNav({ meta }: { meta: Meta }) {
 }
 
 /** Kargo kaydının veri sonu; eskiyse uyarı. Her ekranda yazılır (0 satır «gecikme yok» demek değildir). */
-export function FreshNote({ f }: { f: Freshness | undefined }) {
+/** `k`: cevabın sorgu bilgisi; kayıt sayısı ve okunamayan değer sayıları «i» ile kargo kaydı sorgusuna bağlanır. */
+export function FreshNote({ f, k }: { f: Freshness | undefined; k?: Kaynaklar }) {
   if (!f) return null;
   const unread = Object.entries(f.okunamayan).filter(([, n]) => n > 0);
   const labels: Record<string, string> = { irsTarihi: 'irsaliye tarihi', teslimTarihi: 'teslim tarihi', tutar: 'tutar', desi: 'desi', sevk_adeti: 'sevk adedi', agirlik: 'ağırlık' };
   return (
     <Note tone={f.eski ? 'warn' : 'info'}>
+      {k && <SqlInfo k={k} alan="kargoVeri" label="Kargo kayıtları" className="mr-1" />}
       Kargo kayıtları: {fmtInt(f.kayit)} kayıt, veri sonu {fmtDay(f.veriSonu)}
       {f.sonKayit ? ` (son kayıt ${fmtDay(f.sonKayit)})` : ''}.
       {f.tarihsiz > 0 && ` Tarihi okunamayan ${fmtInt(f.tarihsiz)} kayıt dönem hesaplarına girmez.`}

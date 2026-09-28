@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtInt, shippingApi } from './api';
@@ -63,6 +64,7 @@ export default function Errors() {
         </div>
         {d && (
           <p className="mt-2 text-[11.5px] text-canvas-muted">
+            <SqlInfo k={d.kaynaklar} alan="toplam" label="Entegrasyon hatası sayısı" className="mr-1" />
             Son {d.pencereGun} günün siparişleri · {fmtInt(d.toplam)} sipariş. {d.not}
           </p>
         )}
@@ -79,6 +81,7 @@ export default function Errors() {
                     <div key={f.mesajHash} className="flex flex-wrap items-start gap-1.5 text-[11.5px]">
                       <Pill tone="err">{f.entegrasyon}</Pill>
                       {f.sinif && <Pill tone="violet">{f.sinif}</Pill>}
+                      {f.sinif && <SqlInfo k={d.kaynaklar} alan="items[].hatalar[].sinifOlasilik" label="Hata sınıfı (Zeki AI)" />}
                       <span className="min-w-0 break-words text-canvas-ink line-clamp-2">{f.sonuc ?? ''}{f.sonuc && f.mesaj ? ' — ' : ''}{f.mesaj ?? ''}</span>
                     </div>
                   ))}

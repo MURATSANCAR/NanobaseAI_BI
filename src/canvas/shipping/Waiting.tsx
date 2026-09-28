@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { ageTone, fmtDay, fmtInt, fmtMoney, fmtNum, shippingApi } from './api';
@@ -73,15 +74,17 @@ export default function Waiting() {
       {d && (
         <>
           <KpiRow>
-            <Kpi label={`${d.esikGun}+ gün bekleyen`} value={fmtInt(d.esikUstu)} help="Teslim ve iade bilgisi yok" />
-            <Kpi label="Toplam teslim bekleyen" value={fmtInt(d.toplam)} help="Süzgeçteki bütün gönderiler" />
+            <Kpi label={`${d.esikGun}+ gün bekleyen`} value={fmtInt(d.esikUstu)} help="Teslim ve iade bilgisi yok"
+              info={<SqlInfo k={d.kaynaklar} alan="esikUstu" label="Eşiği aşan teslim bekleyen" />} />
+            <Kpi label="Toplam teslim bekleyen" value={fmtInt(d.toplam)} help="Süzgeçteki bütün gönderiler"
+              info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Toplam teslim bekleyen" />} />
             {d.kovalar.slice(-2).map((k) => (
-              <Kpi key={k.kova} label={k.kova} value={fmtInt(k.adet)} help="Yaş kovası" />
+              <Kpi key={k.kova} label={k.kova} value={fmtInt(k.adet)} help="Yaş kovası" info={<SqlInfo k={d.kaynaklar} alan="kovalar" label={`Yaş kovası ${k.kova}`} />} />
             ))}
           </KpiRow>
-          <FreshNote f={d.kargoVeri} />
+          <FreshNote f={d.kargoVeri} k={d.kaynaklar} />
           <Panel>
-            <h2 className="text-[14px] font-extrabold">Firma bazında</h2>
+            <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="firmalar" label="Firma × yaş kovası">Firma bazında</InfoLabel></h2>
             {d.firmalar.length === 0 ? (
               <Empty>Teslim bekleyen gönderi yok (veri sonuna bakın).</Empty>
             ) : (
@@ -112,7 +115,7 @@ export default function Waiting() {
             )}
           </Panel>
           <Panel>
-            <h2 className="text-[14px] font-extrabold">Gönderiler ({d.esikGun}+ gün, en eskisi önce)</h2>
+            <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="items[]" label="Bekleyen gönderiler">{`Gönderiler (${d.esikGun}+ gün, en eskisi önce)`}</InfoLabel></h2>
             {d.items.length === 0 ? (
               <Empty>Bu eşikte bekleyen gönderi yok.</Empty>
             ) : (

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, RefreshCw, Search, SlidersHorizontal } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Note, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel, useDebounced } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -77,15 +78,19 @@ export default function ShippingHome() {
       {o && (
         <>
           <KpiRow>
-            <Kpi label="Sevk edilen" value={fmtInt(o.sevk.adet)} help={`Son ${o.pencereGun} gün · bugün ${fmtInt(o.sevk.bugun)}`} />
-            <Kpi label="Entegrasyon hatası" value={fmtInt(o.hata)} help="Takip numarası yok, firma servisi hata döndü" onClick={() => nav('/kargo/hatalar')} />
-            <Kpi label="Takip numarasız sevk" value={fmtInt(o.takipsiz)} help={`Son ${o.pencereGun} günde sevk edilmiş`} active={tab === 'takipsiz'} onClick={() => update({ sekme: 'takipsiz' })} />
-            <Kpi label={`Teslim bekleyen ${o.bekleyen.esikGun}+ gün`} value={fmtInt(o.bekleyen.esikUstu)} help={`Toplam teslim bekleyen ${fmtInt(o.bekleyen.toplam)}`} onClick={() => nav('/kargo/bekleyen')} />
+            <Kpi label="Sevk edilen" value={fmtInt(o.sevk.adet)} help={`Son ${o.pencereGun} gün · bugün ${fmtInt(o.sevk.bugun)}`}
+              info={<SqlInfo k={o.kaynaklar} alan="sevk" label="Sevk edilen" />} />
+            <Kpi label="Entegrasyon hatası" value={fmtInt(o.hata)} help="Takip numarası yok, firma servisi hata döndü" onClick={() => nav('/kargo/hatalar')}
+              info={<SqlInfo k={o.kaynaklar} alan="hata" label="Entegrasyon hatası" />} />
+            <Kpi label="Takip numarasız sevk" value={fmtInt(o.takipsiz)} help={`Son ${o.pencereGun} günde sevk edilmiş`} active={tab === 'takipsiz'} onClick={() => update({ sekme: 'takipsiz' })}
+              info={<SqlInfo k={o.kaynaklar} alan="takipsiz" label="Takip numarasız sevk" />} />
+            <Kpi label={`Teslim bekleyen ${o.bekleyen.esikGun}+ gün`} value={fmtInt(o.bekleyen.esikUstu)} help={`Toplam teslim bekleyen ${fmtInt(o.bekleyen.toplam)}`} onClick={() => nav('/kargo/bekleyen')}
+              info={<SqlInfo k={o.kaynaklar} alan="bekleyen" label="Teslim bekleyen" />} />
           </KpiRow>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-4">
             <Panel>
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-[14px] font-extrabold">Kutulandı, sevk edilmedi</h2>
+                <h2 className="text-[14px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="kutulandi">Kutulandı, sevk edilmedi</InfoLabel></h2>
                 <button type="button" className="text-[12px] font-bold text-canvas-violet hover:underline" onClick={() => update({ sekme: 'kutulandi' })}>
                   Listeyi aç
                 </button>
@@ -95,7 +100,7 @@ export default function ShippingHome() {
               </p>
               {o.hataSiniflari.length > 0 && (
                 <>
-                  <h3 className="mt-3 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted">Hatalar Zeki AI sınıfına göre</h3>
+                  <h3 className="mt-3 text-[12px] font-extrabold uppercase tracking-wide text-canvas-muted"><InfoLabel k={o.kaynaklar} alan="hataSiniflari">Hatalar Zeki AI sınıfına göre</InfoLabel></h3>
                   <div className="mt-1 flex flex-wrap gap-1.5">
                     {o.hataSiniflari.map((c) => (
                       <Link key={c.sinif} to={`/kargo/hatalar?sinif=${encodeURIComponent(c.sinif)}`} className="rounded-lg bg-white/80 px-2 py-1 text-[11.5px] hover:bg-white">
@@ -107,7 +112,7 @@ export default function ShippingHome() {
               )}
             </Panel>
             <Panel>
-              <h2 className="text-[14px] font-extrabold">Son 30 gün firma özeti</h2>
+              <h2 className="text-[14px] font-extrabold"><InfoLabel k={o.kaynaklar} alan="son30">Son 30 gün firma özeti</InfoLabel></h2>
               <p className="text-[11.5px] text-canvas-muted">
                 {o.son30.baslangic} – {o.son30.bitis} (kargo kaydının veri sonuna göre) · {fmtInt(o.son30.toplam.gonderi)} gönderi, ortanca teslim {fmtDays(o.son30.toplam.ortancaGun)}
                 {o.son30.toplam.desiBasi !== undefined && ` · desi başı ${fmtMoney(o.son30.toplam.desiBasi)}`}
@@ -222,7 +227,7 @@ function UntrackedPanel({ meta }: { meta: Meta }) {
     <Panel>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold">Takip numarası olmadan sevk</h2>
+          <h2 className="text-[15px] font-extrabold"><InfoLabel k={d?.kaynaklar} alan="toplam" label="Takip numarasız sevk">Takip numarası olmadan sevk</InfoLabel></h2>
           <p className="max-w-[80ch] text-[12px] text-canvas-muted">
             Son {meta.ayarlar.pencereGun} günde sevk edilmiş (durum kodu {meta.ayarlar.takipsizDurumlar.join(', ')}) ve CRM'de takip numarası boş siparişler.
             {d && d.haricTipler.length > 0 && ` Hariç tutulan sipariş tipleri: ${d.haricTipler.join(', ')}.`}
@@ -249,7 +254,7 @@ function BoxedPanel({ meta }: { meta: Meta }) {
     <Panel>
       <div className="flex flex-wrap items-end justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold">Kutulandı, sevk edilmedi</h2>
+          <h2 className="text-[15px] font-extrabold"><InfoLabel k={d?.kaynaklar} alan="toplam" label="Kutulandı, sevk edilmedi">Kutulandı, sevk edilmedi</InfoLabel></h2>
           <p className="max-w-[80ch] text-[12px] text-canvas-muted">Durumu «Kutulandı» ve sevk tarihi boş siparişler, kutulanalı en uzun bekleyen önce.</p>
         </div>
         <div className="flex items-end gap-2">
@@ -278,7 +283,7 @@ function BoxedPanel({ meta }: { meta: Meta }) {
                 <th className={th}>Müşteri</th>
                 <th className={th}>Kargo firması</th>
                 <th className={th}>Kutulandı</th>
-                <th className={`${th} text-right`}>Bekleyen</th>
+                <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[].kutulanaliGun">Bekleyen</InfoLabel></th>
               </tr>
             </thead>
             <tbody>

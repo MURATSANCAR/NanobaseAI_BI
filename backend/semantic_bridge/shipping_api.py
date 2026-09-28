@@ -28,7 +28,9 @@ from typing import Any, Callable, Optional
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
+from semantic_bridge import provenance as PV
 from semantic_bridge import shipping as S
+from semantic_bridge import shipping_kaynak as K
 from semantic_bridge import shipping_sources as src
 
 log = logging.getLogger("semantic.shipping.api")
@@ -45,10 +47,12 @@ XLSX = S.XLSX_MIME
 
 
 class _Cache:
-    """Süreli bellek (5 dk). Aynı anahtarı iki iş parçacığı birlikte okumaz."""
+    """Süreli bellek (5 dk). Aynı anahtarı iki iş parçacığı birlikte okumaz. Her okumanın çalıştırdığı sorgular değerle
+    birlikte saklanır; önbellekten dönen değerde de açık sorgu bilgisi toplayıcısına verilir (`src.collect`)."""
 
     def __init__(self) -> None:
         self._data: dict[Any, tuple[float, Any]] = {}
+        self._runs: dict[Any, list[dict[str, Any]]] = {}
         self._locks: dict[Any, threading.Lock] = {}
         self._guard = threading.Lock()
 
@@ -58,9 +62,15 @@ class _Cache:
         with lock:
             hit = self._data.get(key)
             if hit and not fresh and time.monotonic() - hit[0] < ttl:
+                src.note(self._runs.get(key) or [])
                 return hit[1]
-            val = load()
+            with src.collect() as got:
+                val = load()
+            tag = key[0] if isinstance(key, tuple) else key
+            for r in got:
+                r.setdefault("tag", tag)
             self._data[key] = (time.monotonic(), val)
+            self._runs[key] = list(got)
             return val
 
     def clear(self) -> None:
@@ -79,10 +89,15 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
         return S.settings_from(conf)
 
     def crm():
-        return src.runner(deps["crm_file"]())
+        return src.recording(src.runner(deps["crm_file"]()))
 
     def logo():
-        return src.runner(deps["logo_file"]())
+        return src.recording(src.runner(deps["logo_file"]()))
+
+    def kdeps() -> dict[str, Any]:
+        """Sorgu bilgisi bağlamı: yalnız veritabanı adları (bağlantı bilgisi okunmaz)."""
+        return {"logo_db": PV.connection_database(deps["logo_file"]() or None),
+                "crm_db": PV.connection_database(deps["crm_file"]() or None)}
 
     def model(priority: int):
         try:
@@ -217,7 +232,9 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
     @app.get(P + "/overview")
     def shipping_overview(request: Request, yenile: bool = False) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(overview_data, engine, tenant, user, yenile)
+        with src.collect() as runs:
+            out = call(overview_data, engine, tenant, user, yenile)
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, out, runs, kdeps()))
 
     @app.get(P + "/settings")
     def shipping_settings(request: Request) -> dict[str, Any]:
@@ -254,17 +271,24 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
         elif durum != "hepsi":
             raise HTTPException(400, detail={"code": "SHIPPING", "message": "Durum hepsi, depoda, kutulandi ya da sevk olmalı."})
         page = max(0, int(sayfa))
-        rows = call(src.read_orders, crm(), c["schema"], " AND ".join(f"({x})" for x in conds), offset=page * LIST_PAGE, size=LIST_PAGE)
+        with src.collect() as runs:
+            rows = call(src.read_orders, crm(), c["schema"], " AND ".join(f"({x})" for x in conds), offset=page * LIST_PAGE, size=LIST_PAGE)
+            cars = call(carriers)
         more = len(rows) > LIST_PAGE
-        cars = call(carriers)
         items = [S.order_view(r, cars, S.today()) for r in rows[:LIST_PAGE]]
-        return {"items": items, "sayfa": page, "sayfaBoyu": LIST_PAGE, "devami": more,
+        res = {"items": items, "sayfa": page, "sayfaBoyu": LIST_PAGE, "devami": more,
                 "kapsam": "bütün kayıtlar" if qs else f"son {c['windowDays']} günün siparişleri",
                 "firmalar": sorted(({"id": k, "ad": v["ad"]} for k, v in cars.items() if v.get("ad")), key=lambda x: x["ad"])}
+        return PV.bagla(res, lambda: K.for_shipments(engine, tenant, res, runs, kdeps()))
 
     @app.get(P + "/shipments/{sid}")
     def shipping_shipment(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
+        with src.collect() as runs:
+            out = _shipment(engine, tenant, user, sid)
+        return PV.bagla(out, lambda: K.for_shipment(engine, tenant, out, runs, kdeps()))
+
+    def _shipment(engine: Any, tenant: str, user: str, sid: str) -> dict[str, Any]:
         c = cfg()
         gid = call(src.guid, sid)
         run = crm()
@@ -319,41 +343,48 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
     def shipping_errors(request: Request, entegrasyon: str = "", sinif: str = "", yenile: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         c = cfg()
-        items = call(errors_view, engine, tenant, c, yenile)
+        with src.collect() as runs:
+            items = call(errors_view, engine, tenant, c, yenile)
         ent = sorted({f["entegrasyon"] for i in items for f in i["hatalar"]})
         if entegrasyon:
             items = [i for i in items if any(f["entegrasyon"] == entegrasyon for f in i["hatalar"])]
         if sinif:
             items = [i for i in items if (i["sinif"] or "Sınıflanmadı") == sinif]
-        return {"items": items, "toplam": len(items), "pencereGun": c["windowDays"], "entegrasyonlar": ent,
-                "not": "Sonuç alanında «başarılı» sayılan değerler yönetim ayarındadır; değer kümesi ölçülecek."}
+        out = {"items": items, "toplam": len(items), "pencereGun": c["windowDays"], "entegrasyonlar": ent,
+               "not": "Sonuç alanında «başarılı» sayılan değerler yönetim ayarındadır; değer kümesi ölçülecek."}
+        return PV.bagla(out, lambda: K.for_errors(engine, tenant, out, runs, kdeps()))
 
     @app.get(P + "/untracked")
     def shipping_untracked(request: Request, yenile: bool = False) -> dict[str, Any]:
-        ctx(request)
+        engine, tenant, _, _ = ctx(request)
         c = cfg()
-        items = S.untracked_items(call(untracked_rows, c, yenile), call(carriers), S.today())
-        return {"items": items, "toplam": len(items), "pencereGun": c["windowDays"], "durumlar": list(c["untrackedStatuses"]),
-                "haricTipler": [src.ORDER_TYPE.get(t, str(t)) for t in c["untrackedExcludeTypes"]]}
+        with src.collect() as runs:
+            items = S.untracked_items(call(untracked_rows, c, yenile), call(carriers), S.today())
+        out = {"items": items, "toplam": len(items), "pencereGun": c["windowDays"], "durumlar": list(c["untrackedStatuses"]),
+               "haricTipler": [src.ORDER_TYPE.get(t, str(t)) for t in c["untrackedExcludeTypes"]]}
+        return PV.bagla(out, lambda: K.for_untracked(engine, tenant, out, runs, kdeps()))
 
     @app.get(P + "/boxed")
     def shipping_boxed(request: Request, gun: Optional[int] = None, yenile: bool = False) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         c = cfg()
         n = gun if gun is not None and gun >= 0 else ops(engine, tenant, c)["kutuluGun"]
-        return S.boxed_items(call(boxed_rows, c, yenile), call(carriers), S.today(), n)
+        with src.collect() as runs:
+            out = S.boxed_items(call(boxed_rows, c, yenile), call(carriers), S.today(), n)
+        return PV.bagla(out, lambda: K.for_boxed(engine, tenant, out, runs, kdeps()))
 
     @app.get(P + "/waiting")
     def shipping_waiting(request: Request, gun: Optional[int] = None, firma: str = "", sehir: str = "", sayfa: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         c = cfg()
         n = gun if gun is not None and gun >= 0 else ops(engine, tenant, c)["bekleyenGun"]
-        idx = call(index)
+        with src.collect() as runs:
+            idx = call(index)
         out = S.waiting(idx, S.today(), n, firma=firma, sehir=sehir, cost=has(user, F_COST), page=max(0, sayfa))
         out["kargoVeri"] = idx.freshness(c, S.today())
         out["sehirler"] = sorted({r["sehir"] for r in idx.rows if r["sehir"]})
         out["firmaListesi"] = sorted({r["firma"] for r in idx.rows})
-        return out
+        return PV.bagla(out, lambda: K.for_waiting(engine, tenant, out, runs, kdeps()))
 
     # ------------------------------------------------------------------ firma karnesi ve karar
 
@@ -362,13 +393,14 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
                           kirilim: str = "firma") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         c = cfg()
-        idx = call(index)
+        with src.collect() as runs:
+            idx = call(index)
         start, end = call(S.period, baslangic, bitis, idx.data_end or S.today())
         out = call(S.scorecard, idx, start, end, group=kirilim, sehir=sehir, firma=firma,
                    targets=ops(engine, tenant, c)["bolgeHedef"], cost=has(user, F_COST))
         out["kargoVeri"] = idx.freshness(c, S.today())
         out["maliyetGorunur"] = has(user, F_COST)
-        return out
+        return PV.bagla(out, lambda: K.for_carriers(engine, tenant, out, runs, kdeps()))
 
     @app.get(P + "/decisions")
     def shipping_decisions(request: Request) -> dict[str, Any]:
@@ -446,10 +478,12 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
 
     @app.get(P + "/reconcile")
     def shipping_reconcile(request: Request, ay: str = "") -> dict[str, Any]:
-        _, _, user, _ = ctx(request)
+        engine, tenant, user, _ = ctx(request)
         need(user, F_COST, "Kargo maliyeti görme")
         month = ay or (S.today().replace(day=1) - timedelta(days=1)).strftime("%Y-%m")
-        return call(lambda: cache.get(("reconcile", month), TTL, lambda: reconcile_data(month)))
+        with src.collect() as runs:
+            out = dict(call(lambda: cache.get(("reconcile", month), TTL, lambda: reconcile_data(month))))
+        return PV.bagla(out, lambda: K.for_reconcile(engine, tenant, out, runs, kdeps()))
 
     @app.post(P + "/reconcile/summary")
     def shipping_reconcile_summary(request: Request, ay: str = "") -> dict[str, Any]:
@@ -468,7 +502,12 @@ def register(app: Any, deps: dict[str, Any]) -> _Cache:
     @app.get(P + "/reconcile/candidates")
     def shipping_reconcile_candidates(request: Request) -> dict[str, Any]:
         """Logo'da kargo firması olabilecek cariler (son 12 ay alınan hizmet faturası; ünvanda ipucu). İnsan onaylar."""
-        _, _, user, _ = ctx(request)
+        engine, tenant, user, _ = ctx(request)
+        with src.collect() as runs:
+            out = _candidates(user)
+        return PV.bagla(out, lambda: K.for_candidates(engine, tenant, out, runs, kdeps()))
+
+    def _candidates(user: str) -> dict[str, Any]:
         need(user, F_COST, "Kargo maliyeti görme")
         c = cfg()
         firms = call(logo_firms)

@@ -217,10 +217,15 @@ def settings_from(conf: Callable[..., str]) -> dict[str, Any]:
 OPS_KEYS = ("bekleyenGun", "kutuluGun", "bolgeHedef")
 
 
+def ops_stmt(tenant: str) -> Any:
+    """İş eşikleri okuması (uç ve sorgu bilgisi aynı ifade)."""
+    return sa.select(SETTINGS).where(SETTINGS.c.tenant_id == tenant)
+
+
 def ops_settings(engine: sa.engine.Engine, tenant: str, cfg: dict[str, Any]) -> dict[str, Any]:
     """Ekrandan verilen iş eşikleri; kayıt yoksa yönetim ayarındaki varsayılan."""
     with engine.connect() as c:
-        rows = {r.anahtar: r for r in c.execute(sa.select(SETTINGS).where(SETTINGS.c.tenant_id == tenant))}
+        rows = {r.anahtar: r for r in c.execute(ops_stmt(tenant))}
     def val(k: str) -> Any:
         r = rows.get(k)
         if r is None:
@@ -758,10 +763,14 @@ def reconcile(index: CargoIndex, start: date, end: date, *, carrier_codes: dict[
 # ------------------------------------------------------------------ Zeki AI: sınıflama
 
 
+def classes_stmt(tenant: str) -> Any:
+    return sa.select(CLASSES).where(CLASSES.c.tenant_id == tenant)
+
+
 def load_classes(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
     with engine.connect() as c:
         return {r.mesaj_hash: {"sinif": r.sinif, "olasilik": r.olasilik, "yontem": r.yontem}
-                for r in c.execute(sa.select(CLASSES).where(CLASSES.c.tenant_id == tenant))}
+                for r in c.execute(classes_stmt(tenant))}
 
 
 def classify_prompt(firma: str, text: str) -> str:

@@ -4,6 +4,7 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Note, Pill, TableWrap, btnGhost, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtDay, fmtInt, fmtMoney, fmtPct, previousMonth, shippingApi } from './api';
@@ -55,13 +56,13 @@ export default function Reconcile() {
       {d && (
         <>
           <KpiRow>
-            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`} />
-            <Kpi label="Kargo kaydı tutarı" value={fmtMoney(d.toplam.crmTutar)} help="Kargo firmasının gönderi kaydından" />
-            <Kpi label="Logo kargo faturası" value={fmtMoney(d.toplam.logoKdvHaric)} help="KDV hariç, eşlenen carilerde" />
-            <Kpi label="Logo carisi eşlenmemiş" value={fmtInt(d.toplam.eslenmeyenFirma)} help="Gönderisi olan firma" onClick={() => setShowCandidates(true)} />
+            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Gönderi" />} />
+            <Kpi label="Kargo kaydı tutarı" value={fmtMoney(d.toplam.crmTutar)} help="Kargo firmasının gönderi kaydından" info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Kargo kaydı tutarı" />} />
+            <Kpi label="Logo kargo faturası" value={fmtMoney(d.toplam.logoKdvHaric)} help="KDV hariç, eşlenen carilerde" info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Logo kargo faturası" />} />
+            <Kpi label="Logo carisi eşlenmemiş" value={fmtInt(d.toplam.eslenmeyenFirma)} help="Gönderisi olan firma" onClick={() => setShowCandidates(true)} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Logo carisi eşlenmemiş firma" />} />
           </KpiRow>
           {d.notlar.map((n) => <Note key={n} tone="warn">{n}</Note>)}
-          <FreshNote f={d.kargoVeri} />
+          <FreshNote f={d.kargoVeri} k={d.kaynaklar} />
           <Panel>
             <div className="flex flex-wrap items-start justify-between gap-2">
               <h2 className="text-[14px] font-extrabold">Firma bazında</h2>
@@ -79,13 +80,13 @@ export default function Reconcile() {
                   <thead>
                     <tr>
                       <th className={th}>Firma</th>
-                      <th className={`${th} text-right`}>Gönderi</th>
-                      <th className={`${th} text-right`}>Kargo kaydı</th>
-                      <th className={`${th} text-right`}>Logo (KDV hariç)</th>
-                      <th className={`${th} text-right`}>Fark</th>
-                      <th className={`${th} text-right`}>Logo (KDV dahil)</th>
-                      <th className={`${th} text-right`}>Mükerrer</th>
-                      <th className={`${th} text-right`}>Tutarı okunamayan</th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Gönderi</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Kargo kaydı</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Logo (KDV hariç)</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Fark</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Logo (KDV dahil)</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Mükerrer</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Tutarı okunamayan</InfoLabel></th>
                     </tr>
                   </thead>
                   <tbody>
@@ -112,7 +113,7 @@ export default function Reconcile() {
           </Panel>
           {d.sevk && (
             <Panel>
-              <h2 className="text-[14px] font-extrabold">Logo sevk ↔ CRM sevkiyat</h2>
+              <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="sevk">Logo sevk ↔ CRM sevkiyat</InfoLabel></h2>
               <p className="max-w-[80ch] text-[11.5px] text-canvas-muted">Logo'da gerçekleşen sevk: satış irsaliyesi satırları (çıkış). CRM'de Logo'ya aktarıldı işaretli sevkiyatlar, fatura numarasıyla eşlenir.</p>
               <div className="mt-2 grid grid-cols-2 gap-2 lg:grid-cols-4">
                 <Fact label="Logo irsaliye" value={`${fmtInt(d.sevk.logoIrsaliye)} (${fmtInt(d.sevk.logoFaturali)} faturalı)`} />
@@ -151,8 +152,8 @@ export default function Reconcile() {
                       <tr>
                         <th className={th}>Cari kodu</th>
                         <th className={th}>Ünvan</th>
-                        <th className={`${th} text-right`}>Fatura</th>
-                        <th className={`${th} text-right`}>KDV hariç (12 ay)</th>
+                        <th className={`${th} text-right`}><InfoLabel k={cand.data.kaynaklar} alan="items[]">Fatura</InfoLabel></th>
+                        <th className={`${th} text-right`}><InfoLabel k={cand.data.kaynaklar} alan="items[]">KDV hariç (12 ay)</InfoLabel></th>
                         <th className={th}>Son fatura</th>
                         <th className={th}>Durum</th>
                       </tr>

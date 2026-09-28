@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, Plus, Sparkles, Target, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -96,16 +97,16 @@ export default function Carriers() {
       {d && (
         <>
           <KpiRow>
-            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`} />
-            <Kpi label="Ortanca teslim" value={fmtDays(d.toplam.ortancaGun)} help={`${fmtInt(d.toplam.teslim)} teslim edilmiş gönderi`} />
-            <Kpi label="İade" value={fmtInt(d.toplam.iade)} help={`Oran ${fmtPct(d.toplam.gonderi ? d.toplam.iade / d.toplam.gonderi : null)}`} />
+            <Kpi label="Gönderi" value={fmtInt(d.toplam.gonderi)} help={`${fmtDay(d.baslangic)} – ${fmtDay(d.bitis)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Gönderi" />} />
+            <Kpi label="Ortanca teslim" value={fmtDays(d.toplam.ortancaGun)} help={`${fmtInt(d.toplam.teslim)} teslim edilmiş gönderi`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Ortanca teslim" />} />
+            <Kpi label="İade" value={fmtInt(d.toplam.iade)} help={`Oran ${fmtPct(d.toplam.gonderi ? d.toplam.iade / d.toplam.gonderi : null)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="İade ve iade oranı" />} />
             {cost ? (
-              <Kpi label="Desi başı" value={fmtMoney(d.toplam.desiBasi)} help={`Tutar ${fmtMoney(d.toplam.tutar)} · sevk başı ${fmtMoney(d.toplam.sevkBasi)}`} />
+              <Kpi label="Desi başı" value={fmtMoney(d.toplam.desiBasi)} help={`Tutar ${fmtMoney(d.toplam.tutar)} · sevk başı ${fmtMoney(d.toplam.sevkBasi)}`} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Desi başı, tutar ve sevk başı" />} />
             ) : (
               <Kpi label="Maliyet" value="—" help="Kargo maliyetini görme yetkisi gerekir" />
             )}
           </KpiRow>
-          <FreshNote f={d.kargoVeri} />
+          <FreshNote f={d.kargoVeri} k={d.kaynaklar} />
           <Panel>
             <h2 className="text-[14px] font-extrabold">{d.kirilimAdi}</h2>
             {d.items.length === 0 ? (
@@ -118,16 +119,16 @@ export default function Carriers() {
                       {(kirilim === 'firma' || kirilim === 'firma-sehir') && <th className={th}>Firma</th>}
                       {(kirilim === 'sehir' || kirilim === 'firma-sehir') && <th className={th}>Şehir</th>}
                       {kirilim === 'sube' && <th className={th}>Çıkış şubesi</th>}
-                      <th className={`${th} text-right`}>Gönderi</th>
-                      <th className={`${th} text-right`}>Ortanca</th>
-                      <th className={`${th} text-right`}>%90</th>
-                      <th className={`${th} text-right`}>Bekleyen</th>
-                      <th className={`${th} text-right`}>İade oranı</th>
-                      {hasTarget && <th className={`${th} text-right`}>Hedefi aşan</th>}
-                      {cost && <th className={`${th} text-right`}>Desi</th>}
-                      {cost && <th className={`${th} text-right`}>Tutar</th>}
-                      {cost && <th className={`${th} text-right`}>Desi başı</th>}
-                      {cost && <th className={`${th} text-right`}>Sevk başı</th>}
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Gönderi</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Ortanca</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">%90</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Bekleyen</InfoLabel></th>
+                      <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">İade oranı</InfoLabel></th>
+                      {hasTarget && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Hedefi aşan</InfoLabel></th>}
+                      {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Desi</InfoLabel></th>}
+                      {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Tutar</InfoLabel></th>}
+                      {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Desi başı</InfoLabel></th>}
+                      {cost && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="items[]">Sevk başı</InfoLabel></th>}
                     </tr>
                   </thead>
                   <tbody>

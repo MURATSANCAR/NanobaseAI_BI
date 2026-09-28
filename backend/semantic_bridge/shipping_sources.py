@@ -28,6 +28,8 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+import time
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, Optional
@@ -104,8 +106,50 @@ def sql_text(name: str) -> str:
     return "\n".join(lines).strip()
 
 
+_tl = threading.local()
+
+
 def sql(name: str, **kw: Any) -> str:
-    return guard(sql_text(name).format(**kw))
+    text = guard(sql_text(name).format(**kw))
+    _tl.last = (name, text)   # sorgu bilgisi: `recording` hangi dosyanın çalıştığını buradan bilir
+    return text
+
+
+class collect:
+    """Sorgu bilgisi toplayıcısı: `with collect() as runs:` bloğunda çalışan (ve önbellekten gelen) her `sql()` sorgusunun
+    çalışan metni, satır sayısı, süresi ve anı `runs` listesine düşer. İç içe kullanılabilir (dıştaki de görür)."""
+
+    def __enter__(self) -> list[dict[str, Any]]:
+        self.runs: list[dict[str, Any]] = []
+        _tl.__dict__.setdefault("stack", []).append(self.runs)
+        return self.runs
+
+    def __exit__(self, *exc: Any) -> None:
+        stack = _tl.__dict__.get("stack") or []
+        if stack and stack[-1] is self.runs:
+            stack.pop()
+
+
+def note(runs: Iterable[dict[str, Any]]) -> None:
+    """Önbellekten dönen okumanın kayıtlarını açık toplayıcılara ekler (rakam önbellekten gelse de asıl SQL görünür)."""
+    for lst in _tl.__dict__.get("stack") or []:
+        lst.extend(runs)
+
+
+def recording(run: Runner) -> Runner:
+    """Çalıştırıcıyı sarar: `sql()` ile kurulmuş metin çalıştığında kaydı açık toplayıcılara yazar."""
+
+    def wrapped(text: str) -> list[dict[str, Any]]:
+        t = time.monotonic()
+        rows = run(text)
+        last = getattr(_tl, "last", None)
+        if last and last[1] == text:
+            rec = {"name": last[0], "sql": text, "rows": len(rows), "ms": int((time.monotonic() - t) * 1000), "at": time.time()}
+            for lst in _tl.__dict__.get("stack") or []:
+                lst.append(rec)
+        return rows
+
+    return wrapped
 
 
 def all_sql_files() -> list[Path]:

@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Copy, ExternalLink, Loader2, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtDay, fmtDays, fmtMoney, fmtNum, shippingApi, type Draft, type DraftType, type Meta, type ShipmentCard } from './api';
@@ -58,13 +59,13 @@ export default function Shipment() {
                   )
                 }
               />
-              <Fact label="Koli" value={fmtNum(o.kutu)} />
-              <Fact label="Sipariş → sevk" value={fmtDays(o.sevkeKadarGun)} />
+              <Fact label="Koli" value={fmtNum(o.kutu)} info={<SqlInfo k={d.kaynaklar} alan="siparis.kutu" label="Koli" />} />
+              <Fact label="Sipariş → sevk" value={fmtDays(o.sevkeKadarGun)} info={<SqlInfo k={d.kaynaklar} alan="siparis.sevkeKadarGun" label="Sipariş → sevk" />} />
             </div>
           </Panel>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] lg:gap-4">
             <Panel>
-              <h2 className="text-[14px] font-extrabold">Zaman çizelgesi</h2>
+              <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="zamanCizelgesi">Zaman çizelgesi</InfoLabel></h2>
               <ol className="mt-2 flex flex-col">
                 {d.zamanCizelgesi.map((s, i) => (
                   <li key={`${s.asama}-${i}`} className="relative flex gap-3 pb-3 pl-1 last:pb-0">
@@ -120,7 +121,7 @@ export default function Shipment() {
             </Panel>
           </div>
           <Panel>
-            <h2 className="text-[14px] font-extrabold">Kargo kaydı</h2>
+            <h2 className="text-[14px] font-extrabold"><InfoLabel k={d.kaynaklar} alan="kargo">Kargo kaydı</InfoLabel></h2>
             <p className="text-[11.5px] text-canvas-muted">
               Kargo firmasının gönderi kaydı (eşleme: {d.eslemeYolu}).{!d.aliciGorunur && ' Alıcı adı yetkiyle görünür.'}
               {!d.maliyetGorunur && ' Tutar ve desi yetkiyle görünür.'}
@@ -138,8 +139,8 @@ export default function Shipment() {
                       <th className={th}>Teslim</th>
                       <th className={th}>Şehir / şube</th>
                       {d.aliciGorunur && <th className={th}>Alıcı / teslim alan</th>}
-                      {d.maliyetGorunur && <th className={`${th} text-right`}>Desi</th>}
-                      {d.maliyetGorunur && <th className={`${th} text-right`}>Tutar</th>}
+                      {d.maliyetGorunur && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kargo">Desi</InfoLabel></th>}
+                      {d.maliyetGorunur && <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="kargo">Tutar</InfoLabel></th>}
                     </tr>
                   </thead>
                   <tbody>
@@ -205,17 +206,17 @@ export default function Shipment() {
             )}
           </Panel>
           {meta.data && <DraftsPanel meta={meta.data} card={d} />}
-          <FreshNote f={d.kargoVeri} />
+          <FreshNote f={d.kargoVeri} k={d.kaynaklar} />
         </>
       )}
     </ShippingFrame>
   );
 }
 
-function Fact({ label, value }: { label: string; value: ReactNode }) {
+function Fact({ label, value, info }: { label: string; value: ReactNode; info?: ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl bg-white/80 px-3 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}{info}</div>
       <div className="mt-0.5 break-words text-[13.5px] font-bold">{value}</div>
     </div>
   );

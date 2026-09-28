@@ -1,5 +1,9 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
+
+/** Uç cevabındaki sorgu bilgisi (köprü `shipping_kaynak.py`). */
+type K = { kaynaklar?: Kaynaklar };
 
 /** M44 Lojistik ve kargo ekranlarının köprü uçları: /api/v1/shipping/*. Maliyet ve alıcı alanları yetkisi olmayana
  *  sunucuda hiç gelmez; ekran yalnız gelen alanı gösterir. */
@@ -121,6 +125,7 @@ export type Overview = {
     toplam: { gonderi: number; teslim: number; iade: number; ortancaGun: number | null; tutar?: number | null; desiBasi?: number | null };
     firmalar: Array<{ firma: string; gonderi: number; ortancaGun: number | null; iadeOrani: number | null; desiBasi?: number | null; tutar?: number | null }>;
   };
+  kaynaklar?: Kaynaklar;
 };
 
 export type Draft = { id: string; siparisId: string; siparisNo: string | null; tur: DraftType; turAdi: string; metin: string; kaynak: 'zeki' | 'kural'; yazan: string; durum: 'taslak' | 'kullanildi'; durumAdi: string; olusturma: string | null; guncelleme: string | null };
@@ -140,6 +145,7 @@ export type ShipmentCard = {
   logoNotu: string | null;
   aliciGorunur: boolean;
   maliyetGorunur: boolean;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Waiting = {
@@ -155,6 +161,7 @@ export type Waiting = {
   kargoVeri: Freshness;
   sehirler: string[];
   firmaListesi: string[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type ScoreRow = {
@@ -194,6 +201,7 @@ export type Scorecard = {
   firmalar: string[];
   kargoVeri: Freshness;
   maliyetGorunur: boolean;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Decision = { id: string; tur: DecisionType; turAdi: string; kapsam: Record<string, string>; gerekce: string | null; modelOzet: string | null; karar: string; kararVeren: string; tarih: string | null };
@@ -224,6 +232,7 @@ export type Reconcile = {
   notlar: string[];
   toplam: { gonderi: number; crmTutar: number | null; logoKdvHaric: number | null; eslenmeyenFirma: number };
   kargoVeri: Freshness;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Candidate = { cari: string | null; unvan: string | null; fatura: number; kdvHaric: number | null; son: string | null; eslenmis: boolean };
@@ -267,12 +276,12 @@ export const shippingApi = {
   settings: () => send<OpsSettings>('GET', '/settings'),
   saveSettings: (b: Partial<Pick<OpsSettings, 'bekleyenGun' | 'kutuluGun' | 'bolgeHedef'>>) => send<OpsSettings>('PUT', '/settings', b),
   shipments: (p: { q?: string; firma?: string; durum?: string; sayfa?: number }) =>
-    send<{ items: Order[]; sayfa: number; sayfaBoyu: number; devami: boolean; kapsam: string; firmalar: Array<{ id: string; ad: string }> }>('GET', `/shipments${qs(p)}`),
+    send<K & { items: Order[]; sayfa: number; sayfaBoyu: number; devami: boolean; kapsam: string; firmalar: Array<{ id: string; ad: string }> }>('GET', `/shipments${qs(p)}`),
   shipment: (id: string) => send<ShipmentCard>('GET', `/shipments/${enc(id)}`),
   errors: (p: { entegrasyon?: string; sinif?: string; yenile?: boolean }) =>
-    send<{ items: Order[]; toplam: number; pencereGun: number; entegrasyonlar: string[]; not: string }>('GET', `/errors${qs(p)}`),
-  untracked: () => send<{ items: Order[]; toplam: number; pencereGun: number; durumlar: number[]; haricTipler: string[] }>('GET', '/untracked'),
-  boxed: (gun?: number) => send<{ items: Order[]; toplam: number; esikUstu: number; esikGun: number; tarihsiz: number }>('GET', `/boxed${qs({ gun })}`),
+    send<K & { items: Order[]; toplam: number; pencereGun: number; entegrasyonlar: string[]; not: string }>('GET', `/errors${qs(p)}`),
+  untracked: () => send<K & { items: Order[]; toplam: number; pencereGun: number; durumlar: number[]; haricTipler: string[] }>('GET', '/untracked'),
+  boxed: (gun?: number) => send<K & { items: Order[]; toplam: number; esikUstu: number; esikGun: number; tarihsiz: number }>('GET', `/boxed${qs({ gun })}`),
   waiting: (p: { gun?: number; firma?: string; sehir?: string; sayfa?: number }) => send<Waiting>('GET', `/waiting${qs(p)}`),
   carriers: (p: { baslangic?: string; bitis?: string; sehir?: string; firma?: string; kirilim?: Group }) => send<Scorecard>('GET', `/carriers${qs(p)}`),
   decisions: () => send<{ items: Decision[]; turler: Record<DecisionType, string> }>('GET', '/decisions'),
@@ -283,7 +292,7 @@ export const shippingApi = {
     send<{ metin: string | null; kaynak: string | null; not: string | null }>('POST', '/decisions/summary', b),
   reconcile: (ay: string) => send<Reconcile>('GET', `/reconcile${qs({ ay })}`),
   reconcileSummary: (ay: string) => send<{ metin: string | null; not: string | null }>('POST', `/reconcile/summary${qs({ ay })}`),
-  candidates: () => send<{ items: Candidate[]; ipuclari: string[]; ayar: string }>('GET', '/reconcile/candidates'),
+  candidates: () => send<K & { items: Candidate[]; ipuclari: string[]; ayar: string }>('GET', '/reconcile/candidates'),
   createDraft: (siparisId: string, tur: DraftType) => send<Draft>('POST', '/drafts', { siparisId, tur }),
   updateDraft: (id: string, b: { metin?: string; durum?: 'taslak' | 'kullanildi' }) => send<Draft>('PATCH', `/drafts/${enc(id)}`, b),
   deleteDraft: (id: string) => send<{ ok: boolean }>('DELETE', `/drafts/${enc(id)}`),
