@@ -84,7 +84,8 @@ class Speller:
         """"toplamkac" → "toplam kac", "tutarinedir" → "tutari nedir": the one cut where both halves are words
         as written; failing that, the one cut where both are known by their root."""
         for known in (self._exact, self._known):
-            cuts = [f"{word[:k]} {word[k:]}" for k in range(3, len(word) - 2) if known(word[:k]) and known(word[k:])]
+            # the first half is a word of its own, not the root of an inflected one ("girişlerimiz" ≠ "gir işlerimiz")
+            cuts = [f"{word[:k]} {word[k:]}" for k in range(4, len(word) - 2) if known(word[:k]) and known(word[k:])]
             if len(cuts) == 1:
                 return cuts[0]
             if cuts:

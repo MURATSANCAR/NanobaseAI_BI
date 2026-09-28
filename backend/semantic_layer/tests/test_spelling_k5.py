@@ -36,6 +36,7 @@ def test_speller_splits_glued_words_and_fixes_one_letter_but_never_guesses_betwe
     assert sp.correct("yazarların") is None                  # an ending, not a slip
     assert sp.correct("zararına") is None                    # another first letter: another word
     assert sp.correct("temmuza") is None
+    assert Speller(["gir", "is", "giris"], ["gir", "islerimiz"]).correct("girişlerimiz") is None
 
 
 def test_a_misspelt_month_is_read_and_the_reading_is_said(catalog, profiles):
