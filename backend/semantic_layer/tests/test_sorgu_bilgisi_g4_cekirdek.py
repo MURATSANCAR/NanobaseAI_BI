@@ -142,7 +142,8 @@ def test_new_books_every_number_has_a_source(engine):
     out = PV.ekle(out, KP.for_new_books(engine, T, SCHEMA, P.settings(lambda k: ""), out, trace, frm, to))
     k = _check(out, KP.NOT_RAKAM)
     crm = k["sources"]["mkt.crm.yeni"]["sql"]
-    assert "new_kitap" in crm and "{" not in crm and frm.strftime("%Y-%m-%d") in crm   # çalışan metin, tarih yerinde
+    # çalışan metin, tarih yerinde: CRM UTC saklar; İstanbul gününün başı (UTC+3) bir önceki gün 21:00
+    assert "new_kitap" in crm and "{" not in crm and f"{(frm - timedelta(days=1)).isoformat()} 21:00:00" in crm
     assert k["fields"]["kpi.plansiz"].startswith("hesap:") and "mkt.planlar" in k["sources"]
 
 
