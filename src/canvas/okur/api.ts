@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M37 Okur topluluğu ekranlarının köprü uçları: /api/v1/okur/*. Yalnız sayı; kişi adı, e-posta, telefon gelmez. */
 
@@ -32,7 +33,7 @@ export type InventoryRow = {
 export type Unavailable = { bagli: false; mesaj: string };
 export type Inventory = { bagli: true; toplam: number; tekil: number | null; satirlar: InventoryRow[]; tazelik: Array<{ kaynak?: string; sonOkuma?: string }> } | Unavailable;
 export type ConsentItem = { tur: string; ad: string; sayi: number; aciklama?: string | null };
-export type Consent = { bagli: true; items: ConsentItem[]; toplam: number; onceki?: number | null } | (Unavailable & { items?: ConsentItem[] });
+export type Consent = ({ bagli: true; items: ConsentItem[]; toplam: number; onceki?: number | null } | (Unavailable & { items?: ConsentItem[] })) & { kaynaklar?: Kaynaklar };
 export type TrendPoint = { tarih: string; toplam?: number | null; kvkkOnayli?: number | null; iysOnayli?: number | null; epostaIzinli?: number | null; smsIzinli?: number | null; izinCeliskisi?: number | null };
 
 export type Program = {
@@ -41,6 +42,7 @@ export type Program = {
   segmentId: string | null; segment: { id: string; ad: string; durum: SegmentState; durumAdi: string; onayli: boolean; toplam: number | null; izinli: number | null } | null;
   durum: ProgramState; durumAdi: string; duyuruTaslagi: string | null; duyuruKaynak: 'zeki' | 'elle' | null; katilimci: number | null;
   sorumlu: string | null; notlar: string | null; olusturan: string; olusturma: string | null; guncelleyen: string | null; guncelleme: string | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Overview = {
@@ -50,6 +52,7 @@ export type Overview = {
   yaklasanProgramlar: Program[];
   yorum: (Record<ReviewState | 'toplam', number> & { zaman?: string }) | null;
   egilim: { noktalar: TrendPoint[] };
+  kaynaklar?: Kaynaklar;
 };
 
 export type Measure = { toplam: number; izinli: number | null; eposta: number | null; sms: number | null; zaman?: string | null };
@@ -63,6 +66,7 @@ export type Segment = {
   olcumler?: Array<{ tarih: string; toplam: number; izinli: number | null; eposta: number | null; sms: number | null }>;
   programlar?: Array<{ id: string; ad: string; tarih: string | null; durum: ProgramState }>;
   kvkk?: Kvkk;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Interest = { id: string; ad: string; okur: number | null; isaret: Flag; isaretAdi: string; olasilik: number | null; isaretKaynak: 'zeki' | 'insan' | null; kararVeren: string | null; gerekce: string | null; kullanilabilir: boolean };
@@ -78,6 +82,7 @@ export type EventGroup = { ad: string; etkinlik: number; katilimci: number; sati
 export type EventsSummary = {
   yil: number; yillar: number[]; toplam: number; durumlar: Record<string, number>; tamamlanan: number; katilimci: number; satilan: number;
   katilimciBos: number; tipler: EventGroup[]; iller: EventGroup[]; yazarlar: EventGroup[]; etkinlikler: EventRow[]; ziyaretHaric: boolean; tipSuzgeci: string[];
+  kaynaklar?: Kaynaklar;
 };
 
 export type Book = { id: string; ad: string | null; stokKodu: string | null; yazar: string | null };
@@ -125,22 +130,22 @@ export const okurApi = {
   meta: () => send<OkurMeta>('GET', '/meta'),
   overview: () => send<Overview>('GET', '/overview'),
   consent: () => send<Consent>('GET', '/consent-health'),
-  categories: () => send<{ bagli: boolean; mesaj?: string; items: Interest[]; hassasAcik: boolean; sayilar?: Record<Flag, number> }>('GET', '/categories'),
+  categories: () => send<{ bagli: boolean; mesaj?: string; items: Interest[]; hassasAcik: boolean; sayilar?: Record<Flag, number>; kaynaklar?: Kaynaklar }>('GET', '/categories'),
   classify: () => send<Record<string, number>>('POST', '/categories/classify', {}, 600_000),
   flag: (id: string, b: { ad: string; isaret: Flag; gerekce: string }) => send<{ isaret: Flag }>('POST', `/categories/${enc(id)}/decision`, b),
 
-  segments: (durum = '') => send<{ items: Segment[]; total: number; durumSayilari: Partial<Record<SegmentState, number>> }>('GET', `/segments${qs({ durum })}`),
+  segments: (durum = '') => send<{ items: Segment[]; total: number; durumSayilari: Partial<Record<SegmentState, number>>; kaynaklar?: Kaynaklar }>('GET', `/segments${qs({ durum })}`),
   segment: (id: string) => send<Segment>('GET', `/segments/${enc(id)}`),
   createSegment: (b: SegmentInput) => send<Segment>('POST', '/segments', b),
   updateSegment: (id: string, b: SegmentInput) => send<Segment>('PATCH', `/segments/${enc(id)}`, b),
   deleteSegment: (id: string) => send<{ ok: boolean }>('DELETE', `/segments/${enc(id)}`),
-  previewRule: (kural: Record<string, unknown>) => send<{ olcum: Measure | null; kvkk: Kvkk; kuralCumlesi: string | null }>('POST', '/segments/preview-rule', { kural }, 300_000),
+  previewRule: (kural: Record<string, unknown>) => send<{ olcum: Measure | null; kvkk: Kvkk; kuralCumlesi: string | null; kaynaklar?: Kaynaklar }>('POST', '/segments/preview-rule', { kural }, 300_000),
   measure: (id: string) => send<Segment>('POST', `/segments/${enc(id)}/preview`, {}, 300_000),
   submit: (id: string) => send<Segment>('POST', `/segments/${enc(id)}/submit`, {}),
   withdraw: (id: string) => send<Segment>('POST', `/segments/${enc(id)}/withdraw`, {}),
   decide: (id: string, karar: 'onayla' | 'reddet', not: string) => send<Segment>('POST', `/segments/${enc(id)}/decision`, { karar, not }),
 
-  programs: (p: { from?: string; to?: string; durum?: string; tur?: string } = {}) => send<{ items: Program[]; total: number }>('GET', `/programs${qs(p)}`),
+  programs: (p: { from?: string; to?: string; durum?: string; tur?: string } = {}) => send<{ items: Program[]; total: number; kaynaklar?: Kaynaklar }>('GET', `/programs${qs(p)}`),
   createProgram: (b: ProgramInput) => send<Program>('POST', '/programs', b),
   updateProgram: (id: string, b: ProgramInput) => send<Program>('PATCH', `/programs/${enc(id)}`, b),
   deleteProgram: (id: string) => send<{ ok: boolean }>('DELETE', `/programs/${enc(id)}`),
@@ -148,7 +153,7 @@ export const okurApi = {
   books: (q: string) => send<{ items: Book[] }>('GET', `/books${qs({ q })}`),
   events: (yil?: number) => send<EventsSummary>('GET', `/events-summary${qs({ yil })}`, undefined, 180_000),
 
-  reviews: (durum = '', yenile = false) => send<{ items: Review[]; sayilar: Record<ReviewState | 'toplam', number>; seo: { yorum: number; urun: number } | null }>('GET', `/reviews${qs({ durum, yenile: yenile || undefined })}`, undefined, 180_000),
+  reviews: (durum = '', yenile = false) => send<{ items: Review[]; sayilar: Record<ReviewState | 'toplam', number>; seo: { yorum: number; urun: number } | null; kaynaklar?: Kaynaklar }>('GET', `/reviews${qs({ durum, yenile: yenile || undefined })}`, undefined, 180_000),
   draftReview: (id: string) => send<{ id: string; durum: ReviewState; taslak: string | null }>('POST', `/reviews/${enc(id)}/draft`, {}, 300_000),
   markReview: (id: string, b: { durum: ReviewState; taslak?: string; productId?: string | null }) => send<{ id: string; durum: ReviewState; taslak: string | null }>('POST', `/reviews/${enc(id)}/mark`, b),
 };

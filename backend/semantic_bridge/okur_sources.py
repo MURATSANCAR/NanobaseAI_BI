@@ -434,18 +434,31 @@ class Comments:
         return None
 
 
+def product_names_stmt(tenant: str, ids: list[str]):
+    """Yorumlardaki ürünlerin adı (SEO deposu; eşitlemeyle gelir)."""
+    import sqlalchemy as sa
+    from semantic_bridge.seo_geo.store import PRODUCTS
+
+    return sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name) \
+        .where(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.product_id.in_(sorted({i for i in ids if i})))
+
+
+def seo_reviews_stmt(tenant: str):
+    """SEO'nun gece yorum özeti: toplam yorum ve yorumlu ürün sayısı."""
+    import sqlalchemy as sa
+    from semantic_bridge.seo_geo.reviews import REVIEWS
+
+    return sa.select(sa.func.sum(REVIEWS.c.comments), sa.func.count()).where(REVIEWS.c.tenant_id == tenant)
+
+
 def product_names(engine, tenant: str, ids: list[str]) -> dict[str, str]:
     """T-soft ürün adları SEO deposundan (eşitlemeyle gelir; ek T-soft isteği yok)."""
     ids = [i for i in set(ids) if i]
     if not ids:
         return {}
-    import sqlalchemy as sa
-
     try:
-        from semantic_bridge.seo_geo.store import PRODUCTS
         with engine.connect() as c:
-            return {r[0]: r[1] for r in c.execute(sa.select(PRODUCTS.c.product_id, PRODUCTS.c.name)
-                                                  .where(PRODUCTS.c.tenant_id == tenant, PRODUCTS.c.product_id.in_(ids)))}
+            return {r[0]: r[1] for r in c.execute(product_names_stmt(tenant, ids))}
     except Exception as e:  # noqa: BLE001 — SEO deposu yoksa ad boş kalır
         log.warning("okur: ürün adları okunamadı: %s", e)
         return {}
@@ -453,12 +466,9 @@ def product_names(engine, tenant: str, ids: list[str]) -> dict[str, str]:
 
 def seo_review_total(engine, tenant: str) -> Optional[dict[str, int]]:
     """SEO'nun gece yorum özeti (kabul 7 ile tutarlılık için)."""
-    import sqlalchemy as sa
-
     try:
-        from semantic_bridge.seo_geo.reviews import REVIEWS
         with engine.connect() as c:
-            r = c.execute(sa.select(sa.func.sum(REVIEWS.c.comments), sa.func.count()).where(REVIEWS.c.tenant_id == tenant)).first()
+            r = c.execute(seo_reviews_stmt(tenant)).first()
         return {"yorum": int(r[0] or 0), "urun": int(r[1] or 0)} if r and r[1] else None
     except Exception:  # noqa: BLE001
         return None

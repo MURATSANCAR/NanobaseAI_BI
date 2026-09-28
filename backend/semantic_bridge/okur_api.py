@@ -27,7 +27,10 @@ from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import okur as O
+from semantic_bridge import okur_kaynak as K
 from semantic_bridge import okur_sources as src
+from semantic_bridge import pazarlama_kaynak as PK
+from semantic_bridge import provenance as PV
 
 log = logging.getLogger("semantic.okur.api")
 P = "/api/v1/okur"
@@ -155,12 +158,16 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         progs = O.due_programs(engine, tenant, 30)
         return {"envanter": inv, "izin": consent, "segmentSayilari": segs["durumSayilari"], "yaklasanProgramlar": progs,
                 "yorum": O.meta_get(engine, tenant, "yorum_ozet", None),
-                "egilim": O.trend(engine, tenant, (date.today().replace(day=1).replace(year=date.today().year - 1)).isoformat())}
+                "egilim": O.trend(engine, tenant, _trend_since())}
+
+    def _trend_since() -> str:
+        return (date.today().replace(day=1).replace(year=date.today().year - 1)).isoformat()
 
     @app.get(P + "/overview")
     def okur_overview(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return O.scrub(call(_overview, engine, tenant))
+        out = O.scrub(call(_overview, engine, tenant))
+        return PV.bagla(out, lambda: K.for_overview(engine, tenant, out, _trend_since()))
 
     @app.get(P + "/consent-health")
     def okur_consent(request: Request) -> dict[str, Any]:
@@ -173,8 +180,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         except (src.SourceError, src.CoreUnavailable) as e:
             return {**unavailable(e), "items": []}
         today = O.today().isoformat()
-        return O.scrub({"bagli": True, "items": items, "toplam": sum(x["sayi"] for x in items),
-                        "onceki": O.consent_previous(engine, tenant, today)})
+        out = O.scrub({"bagli": True, "items": items, "toplam": sum(x["sayi"] for x in items),
+                       "onceki": O.consent_previous(engine, tenant, today)})
+        return PV.bagla(out, lambda: K.for_consent(engine, tenant))
 
     @app.get(P + "/inventory")
     def okur_inventory(request: Request) -> dict[str, Any]:
@@ -182,7 +190,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         qp = request.query_params
         since = call(O._day, qp.get("from"), "Başlangıç") if qp.get("from") else None
         until = call(O._day, qp.get("to"), "Bitiş") if qp.get("to") else None
-        return O.trend(engine, tenant, since, until)
+        return PV.bagla(O.trend(engine, tenant, since, until), lambda: K.for_inventory(engine, tenant, since, until))
 
     # ------------------------------------------------------------------ ilgi alanları ve çağrışım koruması
 
@@ -196,8 +204,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             items = O.interest_view(engine, tenant, c.interests(tenant))
         except (src.SourceError, src.CoreUnavailable) as e:
             return {**unavailable(e), "items": []}
-        return O.scrub({"bagli": True, "items": items, "hassasAcik": O.settings()["sensitiveOpen"],
-                        "sayilar": {k: sum(1 for i in items if i["isaret"] == k) for k in O.FLAG_STATES}})
+        out = O.scrub({"bagli": True, "items": items, "hassasAcik": O.settings()["sensitiveOpen"],
+                       "sayilar": {k: sum(1 for i in items if i["isaret"] == k) for k in O.FLAG_STATES}})
+        return PV.bagla(out, lambda: K.for_categories(engine, tenant))
 
     @app.post(P + "/categories/classify")
     async def okur_categories_classify(request: Request) -> dict[str, Any]:
@@ -226,7 +235,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/segments")
     def okur_segments(request: Request, durum: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(O.list_segments, engine, tenant, durum)
+        return PV.bagla(call(O.list_segments, engine, tenant, durum), lambda: K.for_segments(engine, tenant, durum))
 
     @app.post(P + "/segments", status_code=201)
     def okur_segment_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -250,14 +259,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         g = guard_for(engine, tenant, ids)
         if not g["ok"]:
             return {"olcum": None, "kvkk": g, "kuralCumlesi": text}
-        return O.scrub({"olcum": call(c.size, tenant, rule), "kvkk": g, "kuralCumlesi": text})
+        out = O.scrub({"olcum": call(c.size, tenant, rule), "kvkk": g, "kuralCumlesi": text})
+        return PV.bagla(out, lambda: K.for_rule_preview(engine, tenant))
 
     @app.get(P + "/segments/{sid}")
     def okur_segment(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         out = call(O.segment_detail, engine, tenant, sid)
         out["kvkk"] = guard_for(engine, tenant, out["ilgiAlanlari"])
-        return out
+        return PV.bagla(out, lambda: K.for_segment(engine, tenant, sid))
 
     @app.patch(P + "/segments/{sid}")
     def okur_segment_update(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -291,7 +301,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         call(O.record_size, engine, tenant, sid, size)
         out = call(O.segment_detail, engine, tenant, sid)
         out["kvkk"] = g
-        return O.scrub(out)
+        out = O.scrub(out)
+        return PV.bagla(out, lambda: K.for_segment(engine, tenant, sid))
 
     @app.post(P + "/segments/{sid}/submit")
     def okur_segment_submit(sid: str, request: Request) -> dict[str, Any]:
@@ -345,7 +356,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def okur_programs(request: Request, durum: str = "", tur: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         qp = request.query_params
-        return call(O.list_programs, engine, tenant, qp.get("from") or "", qp.get("to") or "", durum, tur)
+        filters = call(O.program_filters, qp.get("from") or "", qp.get("to") or "", durum, tur)
+        out = call(O.list_programs, engine, tenant, qp.get("from") or "", qp.get("to") or "", durum, tur)
+        return PV.bagla(out, lambda: K.for_programs(engine, tenant, out, filters))
 
     @app.post(P + "/programs", status_code=201)
     def okur_program_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -357,7 +370,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/programs/{pid}")
     def okur_program(pid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(O.program_detail, engine, tenant, pid)
+        out = call(O.program_detail, engine, tenant, pid)
+        return PV.bagla(out, lambda: K.for_program(engine, tenant, pid, out))
 
     @app.patch(P + "/programs/{pid}")
     def okur_program_update(pid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -413,13 +427,15 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def okur_events(request: Request, yil: int = 0) -> dict[str, Any]:
         await run_in_threadpool(ctx, request)
         cfg = O.settings()
-        run = await run_in_threadpool(call, crm)
+        ran: list[dict[str, Any]] = []
+        run = PK.recording(await run_in_threadpool(call, crm), "crm", ran)
         years = await run_in_threadpool(call, src.read_event_years, run, schema(), cfg["eventsExcludeVisits"])
         y = yil or (years[0] if years else date.today().year)
         if not 2000 <= y <= 2100:
             raise HTTPException(400, detail={"code": "OKUR", "message": "Yıl geçersiz."})
         out = await run_in_threadpool(call, src.read_events, run, schema(), y, cfg["eventsExcludeVisits"], cfg["eventTypes"])
-        return {**out, "yillar": years, "ziyaretHaric": cfg["eventsExcludeVisits"], "tipSuzgeci": cfg["eventTypes"]}
+        res = {**out, "yillar": years, "ziyaretHaric": cfg["eventsExcludeVisits"], "tipSuzgeci": cfg["eventTypes"]}
+        return PV.bagla(res, lambda: K.for_events(ran, schema(), y, cfg["eventsExcludeVisits"], cfg["eventTypes"]))
 
     # ------------------------------------------------------------------ yorumlar
 
@@ -435,8 +451,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             raise HTTPException(400, detail={"code": "OKUR", "message": "Bilinmeyen yorum durumu."})
         items = await run_in_threadpool(call, _reviews, engine, tenant, yenile)
         counts = O.review_counts(items)
-        return O.scrub({"items": [r for r in items if not durum or r["durum"] == durum], "sayilar": counts,
-                        "seo": src.seo_review_total(engine, tenant)})
+        out = O.scrub({"items": [r for r in items if not durum or r["durum"] == durum], "sayilar": counts,
+                       "seo": src.seo_review_total(engine, tenant)})
+        pids = [r.get("productId") for r in items if r.get("productId")]
+        return PV.bagla(out, lambda: K.for_reviews(engine, tenant, pids))
 
     @app.post(P + "/reviews/{cid}/draft")
     async def okur_review_draft(cid: str, request: Request) -> dict[str, Any]:

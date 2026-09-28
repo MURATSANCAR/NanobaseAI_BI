@@ -333,9 +333,13 @@ def assert_no_personal(text: str) -> None:
 # ------------------------------------------------------------------ meta
 
 
+def meta_stmt(tenant: str, key: str):
+    return sa.select(META.c.value, META.c.zaman).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine, tenant: str, key: str, default: Any = None) -> Any:
     with engine.connect() as c:
-        v = c.execute(sa.select(META.c.value).where(META.c.tenant_id == tenant, META.c.key == key)).scalar()
+        v = c.execute(meta_stmt(tenant, key)).scalar()
     return _load(v, default)
 
 
@@ -387,8 +391,8 @@ _SNAP_KEYS = {"toplam": "toplam", "kvkk_onayli": "kvkkOnayli", "iys_onayli": "iy
               "sms_izinli": "smsIzinli", "ilgi_alani_dolu": "ilgiAlaniDolu", "silinebilir": "silinebilir", "cocuk_olasi": "cocukOlasi"}
 
 
-def trend(engine, tenant: str, since: Optional[str] = None, until: Optional[str] = None) -> dict[str, Any]:
-    """Günlük anlık görüntülerin toplamları ve izin çelişkisi toplamı (aylık eğilim için; tarih süzgeci isteğe bağlı)."""
+def trend_stmts(tenant: str, since: Optional[str] = None, until: Optional[str] = None) -> tuple[Any, Any]:
+    """Eğilim okumaları: (günlük envanter toplamları, günlük izin çelişkisi toplamı)."""
     q = sa.select(INVENTORY.c.tarih, *[sa.func.sum(getattr(INVENTORY.c, col)).label(col) for col in _SNAP_COLS]) \
         .where(INVENTORY.c.tenant_id == tenant).group_by(INVENTORY.c.tarih).order_by(INVENTORY.c.tarih)
     cq = sa.select(CONSENT.c.tarih, sa.func.sum(CONSENT.c.sayi).label("sayi")).where(CONSENT.c.tenant_id == tenant) \
@@ -399,6 +403,12 @@ def trend(engine, tenant: str, since: Optional[str] = None, until: Optional[str]
     if until:
         q = q.where(INVENTORY.c.tarih <= until)
         cq = cq.where(CONSENT.c.tarih <= until)
+    return q, cq
+
+
+def trend(engine, tenant: str, since: Optional[str] = None, until: Optional[str] = None) -> dict[str, Any]:
+    """Günlük anlık görüntülerin toplamları ve izin çelişkisi toplamı (aylık eğilim için; tarih süzgeci isteğe bağlı)."""
+    q, cq = trend_stmts(tenant, since, until)
     with engine.connect() as c:
         inv = c.execute(q).mappings().all()
         cons = {r["tarih"]: int(r["sayi"] or 0) for r in c.execute(cq).mappings()}
@@ -414,21 +424,33 @@ def trend(engine, tenant: str, since: Optional[str] = None, until: Optional[str]
     return {"noktalar": points}
 
 
+def consent_previous_stmt(tenant: str, before: str):
+    """Verilen günden önceki son anlık görüntünün günü ve izin çelişkisi toplamı (tek okuma)."""
+    last = sa.select(sa.func.max(CONSENT.c.tarih)).where(CONSENT.c.tenant_id == tenant, CONSENT.c.tarih < before) \
+        .scalar_subquery()
+    return sa.select(last.label("tarih"), sa.func.sum(CONSENT.c.sayi).label("sayi")) \
+        .where(CONSENT.c.tenant_id == tenant, CONSENT.c.tarih == last)
+
+
 def consent_previous(engine, tenant: str, before: str) -> Optional[int]:
     """Verilen günden önceki son anlık görüntünün izin çelişkisi toplamı."""
     with engine.connect() as c:
-        d = c.execute(sa.select(sa.func.max(CONSENT.c.tarih)).where(CONSENT.c.tenant_id == tenant, CONSENT.c.tarih < before)).scalar()
-        if not d:
-            return None
-        return int(c.execute(sa.select(sa.func.sum(CONSENT.c.sayi)).where(CONSENT.c.tenant_id == tenant, CONSENT.c.tarih == d)).scalar() or 0)
+        r = c.execute(consent_previous_stmt(tenant, before)).first()
+    if not r or not r[0]:
+        return None
+    return int(r[1] or 0)
 
 
 # ------------------------------------------------------------------ ilgi alanı koruması (KVKK md. 6)
 
 
+def flags_stmt(tenant: str):
+    return sa.select(INTEREST_FLAGS).where(INTEREST_FLAGS.c.tenant_id == tenant)
+
+
 def flags(engine, tenant: str) -> dict[str, dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(INTEREST_FLAGS).where(INTEREST_FLAGS.c.tenant_id == tenant)).mappings().all()
+        rows = c.execute(flags_stmt(tenant)).mappings().all()
     return {r["kategori_id"]: {"isaret": r["isaret"], "olasilik": r["olasilik"], "kaynak": r["kaynak"],
                                "kararVeren": r["karar_veren"], "gerekce": r["gerekce"], "zaman": _iso(r["zaman"]), "ad": r["ad"]}
             for r in rows}
@@ -601,23 +623,44 @@ def _segment_row(r: dict[str, Any], sizes: Optional[list[dict[str, Any]]] = None
     return out
 
 
+def segment_stmt(tenant: str, sid: str):
+    return sa.select(SEGMENTS).where(SEGMENTS.c.id == sid, SEGMENTS.c.tenant_id == tenant)
+
+
+def segment_sizes_stmt(sid: str):
+    return sa.select(SEGMENT_SIZES).where(SEGMENT_SIZES.c.segment_id == sid).order_by(SEGMENT_SIZES.c.tarih)
+
+
+def segment_programs_stmt(tenant: str, sid: str):
+    return sa.select(PROGRAMS.c.id, PROGRAMS.c.ad, PROGRAMS.c.tarih, PROGRAMS.c.durum) \
+        .where(PROGRAMS.c.tenant_id == tenant, PROGRAMS.c.segment_id == sid)
+
+
+def segments_stmt(tenant: str, durum: str = ""):
+    q = sa.select(SEGMENTS).where(SEGMENTS.c.tenant_id == tenant)
+    if durum:
+        q = q.where(SEGMENTS.c.durum == durum)
+    return q.order_by(SEGMENTS.c.yazma_zamani.desc())
+
+
+def segment_counts_stmt(tenant: str):
+    return sa.select(SEGMENTS.c.durum, sa.func.count().label("sayi")).where(SEGMENTS.c.tenant_id == tenant) \
+        .group_by(SEGMENTS.c.durum)
+
+
 def _get_segment(c, tenant: str, sid: str) -> dict[str, Any]:
-    r = c.execute(sa.select(SEGMENTS).where(SEGMENTS.c.id == sid, SEGMENTS.c.tenant_id == tenant)).mappings().first()
+    r = c.execute(segment_stmt(tenant, sid)).mappings().first()
     if not r:
         raise OkurError("Segment bulunamadı.", 404)
     return dict(r)
 
 
 def list_segments(engine, tenant: str, durum: str = "") -> dict[str, Any]:
-    q = sa.select(SEGMENTS).where(SEGMENTS.c.tenant_id == tenant)
-    if durum:
-        if durum not in SEGMENT_STATES:
-            raise OkurError("Bilinmeyen segment durumu.")
-        q = q.where(SEGMENTS.c.durum == durum)
+    if durum and durum not in SEGMENT_STATES:
+        raise OkurError("Bilinmeyen segment durumu.")
     with engine.connect() as c:
-        rows = c.execute(q.order_by(SEGMENTS.c.yazma_zamani.desc())).mappings().all()
-        counts = {k: int(n) for k, n in c.execute(sa.select(SEGMENTS.c.durum, sa.func.count())
-                                                   .where(SEGMENTS.c.tenant_id == tenant).group_by(SEGMENTS.c.durum)).all()}
+        rows = c.execute(segments_stmt(tenant, durum)).mappings().all()
+        counts = {k: int(n) for k, n in c.execute(segment_counts_stmt(tenant)).all()}
     return {"items": [_segment_row(dict(r)) for r in rows], "total": len(rows), "durumSayilari": counts}
 
 
@@ -625,11 +668,9 @@ def segment_detail(engine, tenant: str, sid: str) -> dict[str, Any]:
     with engine.connect() as c:
         r = _get_segment(c, tenant, sid)
         sizes = [{"tarih": s["tarih"], "toplam": s["toplam"], "izinli": s["izinli"], "eposta": s["eposta"], "sms": s["sms"]}
-                 for s in c.execute(sa.select(SEGMENT_SIZES).where(SEGMENT_SIZES.c.segment_id == sid)
-                                    .order_by(SEGMENT_SIZES.c.tarih)).mappings()]
+                 for s in c.execute(segment_sizes_stmt(sid)).mappings()]
         progs = [{"id": p["id"], "ad": p["ad"], "tarih": p["tarih"], "durum": p["durum"]}
-                 for p in c.execute(sa.select(PROGRAMS.c.id, PROGRAMS.c.ad, PROGRAMS.c.tarih, PROGRAMS.c.durum)
-                                    .where(PROGRAMS.c.tenant_id == tenant, PROGRAMS.c.segment_id == sid)).mappings()]
+                 for p in c.execute(segment_programs_stmt(tenant, sid)).mappings()]
     out = _segment_row(r, sizes)
     out["programlar"] = progs
     return out
@@ -813,30 +854,50 @@ def _program_row(r: dict[str, Any], seg: Optional[dict[str, Any]] = None) -> dic
             "guncelleyen": r["updated_by"], "guncelleme": _iso(r["updated_at"])}
 
 
+def seg_brief_stmt(tenant: str, ids: Iterable[str]):
+    """Programa bağlı segmentlerin adı, durumu ve son ölçümü."""
+    return sa.select(SEGMENTS.c.id, SEGMENTS.c.ad, SEGMENTS.c.durum, SEGMENTS.c.son_toplam, SEGMENTS.c.son_izinli) \
+        .where(SEGMENTS.c.tenant_id == tenant, SEGMENTS.c.id.in_(sorted({i for i in ids if i})))
+
+
+def programs_stmt(tenant: str, since: str = "", until: str = "", durum: str = "", tur: str = ""):
+    """Program takvimi okuması (süzgeç değerleri doğrulanmış olarak gelir)."""
+    q = sa.select(PROGRAMS).where(PROGRAMS.c.tenant_id == tenant)
+    if since:
+        q = q.where(PROGRAMS.c.tarih >= since)
+    if until:
+        q = q.where(PROGRAMS.c.tarih <= until)
+    if durum:
+        q = q.where(PROGRAMS.c.durum == durum)
+    if tur:
+        q = q.where(PROGRAMS.c.tur == tur)
+    return q
+
+
+def program_stmt(tenant: str, pid: str):
+    return sa.select(PROGRAMS).where(PROGRAMS.c.id == pid, PROGRAMS.c.tenant_id == tenant)
+
+
 def _seg_brief(c, tenant: str, ids: Iterable[str]) -> dict[str, dict[str, Any]]:
     ids = [i for i in set(ids) if i]
     if not ids:
         return {}
-    rows = c.execute(sa.select(SEGMENTS.c.id, SEGMENTS.c.ad, SEGMENTS.c.durum, SEGMENTS.c.son_toplam, SEGMENTS.c.son_izinli)
-                     .where(SEGMENTS.c.tenant_id == tenant, SEGMENTS.c.id.in_(ids))).mappings().all()
+    rows = c.execute(seg_brief_stmt(tenant, ids)).mappings().all()
     return {r["id"]: {"id": r["id"], "ad": r["ad"], "durum": r["durum"], "durumAdi": SEGMENT_STATES.get(r["durum"]),
                       "onayli": r["durum"] == "onaylandi", "toplam": r["son_toplam"], "izinli": r["son_izinli"]} for r in rows}
 
 
+def program_filters(since: str = "", until: str = "", durum: str = "", tur: str = "") -> tuple[str, str, str, str]:
+    """Takvim süzgecini doğrular: (başlangıç, bitiş, durum, tür)."""
+    if durum and durum not in PROGRAM_STATES:
+        raise OkurError("Bilinmeyen program durumu.")
+    if tur and tur not in PROGRAM_TYPES:
+        raise OkurError("Bilinmeyen program türü.")
+    return (_day(since, "Başlangıç") if since else "", _day(until, "Bitiş") if until else "", durum, tur)
+
+
 def list_programs(engine, tenant: str, since: str = "", until: str = "", durum: str = "", tur: str = "") -> dict[str, Any]:
-    q = sa.select(PROGRAMS).where(PROGRAMS.c.tenant_id == tenant)
-    if since:
-        q = q.where(PROGRAMS.c.tarih >= _day(since, "Başlangıç"))
-    if until:
-        q = q.where(PROGRAMS.c.tarih <= _day(until, "Bitiş"))
-    if durum:
-        if durum not in PROGRAM_STATES:
-            raise OkurError("Bilinmeyen program durumu.")
-        q = q.where(PROGRAMS.c.durum == durum)
-    if tur:
-        if tur not in PROGRAM_TYPES:
-            raise OkurError("Bilinmeyen program türü.")
-        q = q.where(PROGRAMS.c.tur == tur)
+    q = programs_stmt(tenant, *program_filters(since, until, durum, tur))
     with engine.connect() as c:
         rows = [dict(r) for r in c.execute(q).mappings()]
         segs = _seg_brief(c, tenant, (r["segment_id"] for r in rows))
@@ -846,7 +907,7 @@ def list_programs(engine, tenant: str, since: str = "", until: str = "", durum: 
 
 def program_detail(engine, tenant: str, pid: str) -> dict[str, Any]:
     with engine.connect() as c:
-        r = c.execute(sa.select(PROGRAMS).where(PROGRAMS.c.id == pid, PROGRAMS.c.tenant_id == tenant)).mappings().first()
+        r = c.execute(program_stmt(tenant, pid)).mappings().first()
         if not r:
             raise OkurError("Program bulunamadı.", 404)
         segs = _seg_brief(c, tenant, [r["segment_id"]])
@@ -964,21 +1025,29 @@ def announcement_messages(p: dict[str, Any], book: Optional[dict[str, Any]], seg
             {"role": "user", "content": user}]
 
 
-def due_programs(engine, tenant: str, days: int) -> list[dict[str, Any]]:
+def due_programs_stmt(tenant: str, days: int):
+    """Bugünden `days` gün sonrasına kadar taslak ya da planlanmış programlar."""
     d0, d1 = today().isoformat(), (today() + timedelta(days=days)).isoformat()
+    return sa.select(PROGRAMS).where(PROGRAMS.c.tenant_id == tenant, PROGRAMS.c.durum.in_(("taslak", "planlandi")),
+                                     PROGRAMS.c.tarih >= d0, PROGRAMS.c.tarih <= d1).order_by(PROGRAMS.c.tarih)
+
+
+def due_programs(engine, tenant: str, days: int) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(PROGRAMS).where(PROGRAMS.c.tenant_id == tenant, PROGRAMS.c.durum.in_(("taslak", "planlandi")),
-                                                   PROGRAMS.c.tarih >= d0, PROGRAMS.c.tarih <= d1)
-                         .order_by(PROGRAMS.c.tarih)).mappings().all()
+        rows = c.execute(due_programs_stmt(tenant, days)).mappings().all()
     return [_program_row(dict(r)) for r in rows]
 
 
 # ------------------------------------------------------------------ yorumlar
 
 
+def review_status_stmt(tenant: str):
+    return sa.select(REVIEW_STATUS).where(REVIEW_STATUS.c.tenant_id == tenant)
+
+
 def review_status(engine, tenant: str) -> dict[str, dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(REVIEW_STATUS).where(REVIEW_STATUS.c.tenant_id == tenant)).mappings().all()
+        rows = c.execute(review_status_stmt(tenant)).mappings().all()
     return {r["comment_id"]: {"durum": r["durum"], "taslak": r["taslak"], "taslakKaynak": r["taslak_kaynak"],
                               "yazan": r["yazan"], "tarih": _iso(r["tarih"])} for r in rows}
 

@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Copy, Loader2, Plus, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel, useDebounced } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -86,6 +88,11 @@ function Calendar({ meta, kapsam, setKapsam, onOpen }: { meta: OkurMeta; kapsam:
             {v}
           </button>
         ))}
+        {list.data && (
+          <span className="ml-auto inline-flex items-center gap-1 self-center text-[11.5px] text-canvas-muted">
+            {fmtInt(list.data.total)} program<SqlInfo k={list.data.kaynaklar} alan="items" label="Program takvimi" />
+          </span>
+        )}
       </div>
       {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
       {list.error && <Note tone="err">{errText(list.error, 'Programlar okunamadı.')}</Note>}
@@ -291,17 +298,17 @@ function ProgramSheet({ meta, program, onClose }: { meta: OkurMeta; program: Pro
   );
 }
 
-function GroupTable({ title, rows, first }: { title: string; rows: EventGroup[]; first: string }) {
+function GroupTable({ title, rows, first, k, alan }: { title: string; rows: EventGroup[]; first: string; k?: Kaynaklar; alan: string }) {
   return (
     <Panel>
-      <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">{title}</h2>
+      <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">{title}<SqlInfo k={k} alan={alan} label={title} /></h2>
       <TableWrap>
         <thead>
           <tr>
             <th className={th}>{first}</th>
-            <th className={`${th} text-right`}>Etkinlik</th>
-            <th className={`${th} text-right`}>Katılımcı</th>
-            <th className={`${th} text-right`}>Satılan kitap</th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan={alan}>Etkinlik</InfoLabel></th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan={alan}>Katılımcı</InfoLabel></th>
+            <th className={`${th} text-right`}><InfoLabel k={k} alan={alan}>Satılan kitap</InfoLabel></th>
           </tr>
         </thead>
         <tbody>
@@ -344,18 +351,18 @@ function PastEvents({ yil, setYil }: { yil: number; setYil: (y: number) => void 
             </p>
           </div>
           <KpiRow>
-            <Kpi label="Etkinlik" value={fmtInt(d.toplam)} help={Object.entries(d.durumlar).map(([k, v]) => `${k} ${fmtInt(v)}`).join(' · ') || '—'} />
-            <Kpi label="Tamamlanan" value={fmtInt(d.tamamlanan)} help="CRM durumu Tamamlandı" />
-            <Kpi label="Katılımcı" value={fmtInt(d.katilimci)} help={d.katilimciBos ? `${fmtInt(d.katilimciBos)} etkinlikte katılımcı girilmemiş` : 'Tamamlananlarda'} />
-            <Kpi label="Satılan kitap" value={fmtInt(d.satilan)} help="Etkinlik kaydındaki adet" />
+            <Kpi label="Etkinlik" value={fmtInt(d.toplam)} help={Object.entries(d.durumlar).map(([k, v]) => `${k} ${fmtInt(v)}`).join(' · ') || '—'} info={<SqlInfo k={d.kaynaklar} alan="toplam" label="Etkinlik" />} />
+            <Kpi label="Tamamlanan" value={fmtInt(d.tamamlanan)} help="CRM durumu Tamamlandı" info={<SqlInfo k={d.kaynaklar} alan="tamamlanan" label="Tamamlanan" />} />
+            <Kpi label="Katılımcı" value={fmtInt(d.katilimci)} help={d.katilimciBos ? `${fmtInt(d.katilimciBos)} etkinlikte katılımcı girilmemiş` : 'Tamamlananlarda'} info={<SqlInfo k={d.kaynaklar} alan="katilimci" label="Katılımcı" />} />
+            <Kpi label="Satılan kitap" value={fmtInt(d.satilan)} help="Etkinlik kaydındaki adet" info={<SqlInfo k={d.kaynaklar} alan="satilan" label="Satılan kitap" />} />
           </KpiRow>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
-            <GroupTable title="Etkinlik tipine göre" rows={d.tipler} first="Tip" />
-            <GroupTable title="İle göre" rows={d.iller} first="İl" />
-            <GroupTable title="Yazara göre" rows={d.yazarlar} first="Yazar" />
+            <GroupTable title="Etkinlik tipine göre" rows={d.tipler} first="Tip" k={d.kaynaklar} alan="tipler" />
+            <GroupTable title="İle göre" rows={d.iller} first="İl" k={d.kaynaklar} alan="iller" />
+            <GroupTable title="Yazara göre" rows={d.yazarlar} first="Yazar" k={d.kaynaklar} alan="yazarlar" />
           </div>
           <Panel>
-            <h2 className="mb-2 text-[15px] font-extrabold tracking-tight">Etkinlikler ({fmtInt(d.etkinlikler.length)})</h2>
+            <h2 className="mb-2 flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Etkinlikler ({fmtInt(d.etkinlikler.length)})<SqlInfo k={d.kaynaklar} alan="etkinlikler" label="Etkinlikler" /></h2>
             <TableWrap>
               <thead>
                 <tr>
@@ -365,8 +372,8 @@ function PastEvents({ yil, setYil }: { yil: number; setYil: (y: number) => void 
                   <th className={th}>İl</th>
                   <th className={th}>Yazar · kitap</th>
                   <th className={th}>Durum</th>
-                  <th className={`${th} text-right`}>Katılımcı</th>
-                  <th className={`${th} text-right`}>Satılan</th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="etkinlikler">Katılımcı</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="etkinlikler">Satılan</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>

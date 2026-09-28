@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, Plus, ShieldAlert } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -84,6 +86,12 @@ function SegmentList({ meta, durum, setDurum }: { meta: OkurMeta; durum: string;
           </button>
         ))}
       </div>
+      {list.data && (
+        <p className="mb-2 flex flex-wrap items-center gap-1 text-[11.5px] text-canvas-muted">
+          Durum sayıları<SqlInfo k={list.data.kaynaklar} alan="durumSayilari" label="Durum başına segment" />
+          · toplam / izinli = son ölçüm<SqlInfo k={list.data.kaynaklar} alan="items[]" label="Segment büyüklükleri" />
+        </p>
+      )}
       {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Yükleniyor…</div>}
       {list.error && <Note tone="err">{errText(list.error, 'Segmentler okunamadı.')}</Note>}
       {list.data && !list.data.items.length && (
@@ -185,7 +193,7 @@ function SegmentSheet({ id, meta, onClose }: { id: string; meta: OkurMeta; onClo
           </div>
           <KvkkNote k={s.kvkk} />
           <div>
-            <div className={`${labelCls} mb-1`}>Son ölçüm {s.sonOlcum?.zaman ? `· ${fmtDay(s.sonOlcum.zaman)}` : ''}</div>
+            <div className={`${labelCls} mb-1 flex items-center gap-1`}>Son ölçüm {s.sonOlcum?.zaman ? `· ${fmtDay(s.sonOlcum.zaman)}` : ''}<SqlInfo k={s.kaynaklar} alan="sonOlcum" label="Son ölçüm" /></div>
             <MeasureFacts m={s.sonOlcum} />
           </div>
           {s.onayNotu && <Note tone={s.durum === 'reddedildi' ? 'err' : 'info'}>{s.onaylayan}: {s.onayNotu}</Note>}
@@ -196,6 +204,7 @@ function SegmentSheet({ id, meta, onClose }: { id: string; meta: OkurMeta; onClo
               <ul className="mt-1 flex flex-col gap-0.5 font-mono text-[11.5px] tabular-nums">
                 {s.olcumler.map((o) => <li key={o.tarih}>{o.tarih}: {fmtInt(o.toplam)} toplam · {fmtInt(o.izinli ?? o.eposta)} izinli</li>)}
               </ul>
+              <div className="mt-1 flex items-center gap-1 text-[11px] text-canvas-muted">Günlük ölçüm kaydı<SqlInfo k={s.kaynaklar} alan="olcumler" label="Ölçüm geçmişi" /></div>
             </details>
           )}
           {!!s.programlar?.length && (
@@ -287,7 +296,7 @@ function SegmentForm({ meta, initial, onDone }: { meta: OkurMeta; initial?: Segm
   const [kanal, setKanal] = useState<Channel>(initial?.kanal ?? 'eposta');
   const [sure, setSure] = useState(initial?.sureBitis ?? inFuture(90));
   const [ruleText, setRuleText] = useState(JSON.stringify(initial?.kural ?? { ilgi_alanlari: [] }, null, 2));
-  const [preview, setPreview] = useState<{ olcum: Measure | null; kvkk: Kvkk; kuralCumlesi: string | null } | null>(null);
+  const [preview, setPreview] = useState<{ olcum: Measure | null; kvkk: Kvkk; kuralCumlesi: string | null; kaynaklar?: Kaynaklar } | null>(null);
   const rule = useMemo(() => {
     try {
       const v = JSON.parse(ruleText);
@@ -357,7 +366,7 @@ function SegmentForm({ meta, initial, onDone }: { meta: OkurMeta; initial?: Segm
       </div>
 
       <div className="rounded-2xl border border-slate-100 bg-white/70 p-3">
-        <div className={labelCls}>İlgi alanları</div>
+        <div className={`${labelCls} flex items-center gap-1`}>İlgi alanları<SqlInfo k={cats.data?.kaynaklar} alan="items" label="İlgi alanı başına okur" /></div>
         {!meta.cekirdek.bagli && <p className="mt-1 text-[12px] text-canvas-muted">Okur çekirdeği bağlı değil; ilgi alanı listesi gelmiyor. Kuralı aşağıda yazabilirsiniz.</p>}
         {cats.isLoading && <p className="mt-1 text-[12px] text-canvas-muted">Yükleniyor…</p>}
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -395,7 +404,12 @@ function SegmentForm({ meta, initial, onDone }: { meta: OkurMeta; initial?: Segm
         <div className="flex flex-col gap-2">
           {preview.kuralCumlesi && <p className="leading-snug">{preview.kuralCumlesi}</p>}
           <KvkkNote k={preview.kvkk} />
-          {preview.olcum && <MeasureFacts m={preview.olcum} />}
+          {preview.olcum && (
+            <>
+              <div className="flex items-center gap-1 text-[11.5px] text-canvas-muted">Anlık sayım (kaydedilmez)<SqlInfo k={preview.kaynaklar} alan="olcum" label="Kural büyüklüğü" /></div>
+              <MeasureFacts m={preview.olcum} />
+            </>
+          )}
         </div>
       )}
       <div className="flex flex-wrap justify-end gap-2">
@@ -440,7 +454,7 @@ function InterestList({ meta }: { meta: OkurMeta }) {
     <Panel>
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold tracking-tight">İlgi alanlarının KVKK işareti</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">İlgi alanlarının KVKK işareti<SqlInfo k={d?.kaynaklar} alan="items" label="İlgi alanı okur sayısı, işaret ve olasılık" /></h2>
           <p className="max-w-[80ch] text-[12px] leading-snug text-canvas-muted">
             Bir kişiyi din, inanç, sağlık, siyasi görüş gibi özel nitelikli bir özelliğe bağlayabilecek ilgi alanı segmentte kullanılmaz
             {d?.hassasAcik ? ' (hukuk kararıyla açık; ayrı açık rıza gerekir)' : ''}. Zeki AI önce işaretler, KVKK sorumlusu karar verir; sınıflanmamış alan da kullanılmaz.

@@ -5,7 +5,7 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Section, TableWrap, btnGhost, errText, td, th } from '../admin/ui';
 import { fmtDay, fmtInt, readersApi } from './api';
 import { ROOT } from './parts';
-import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { InfoLabel } from '../components/SqlInfo';
 
 /** Dışa aktarım günlüğü: kim, ne zaman, hangi segment, hangi kanal, kaç kişi, amaç ve dışarıda kalanlar. */
 export default function Exports() {

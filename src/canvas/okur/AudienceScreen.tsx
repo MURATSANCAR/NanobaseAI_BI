@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 import { Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { PROGRAM_TONE, fmtDay, fmtInt, fmtShare, okurApi, type InventoryRow, type TrendPoint } from './api';
@@ -23,6 +24,7 @@ export default function AudienceScreen() {
   const consentTotal = consent && consent.bagli ? consent.toplam : null;
   const monthly = useMemo(() => lastPerMonth(d?.egilim.noktalar ?? []), [d]);
   const segs = d?.segmentSayilari ?? {};
+  const k = d?.kaynaklar;
 
   return (
     <OkurFrame
@@ -37,30 +39,30 @@ export default function AudienceScreen() {
       {inv && !inv.bagli && <CoreMissing message={inv.mesaj} />}
       {d && (
         <KpiRow>
-          <Kpi label="Okur kaydı" value={fmtInt(total)} help={inv && inv.bagli && inv.tekil !== null ? `Tekil ${fmtInt(inv.tekil)}` : 'Kaynak kayıtları toplamı'} />
-          <Kpi label="KVKK onaylı" value={fmtShare(sum('kvkkOnayli'), total)} help={`${fmtInt(sum('kvkkOnayli'))} kayıt`} />
-          <Kpi label="E-posta izinli" value={fmtInt(sum('epostaIzinli'))} help={`SMS izinli ${fmtInt(sum('smsIzinli'))}`} />
-          <Kpi label="İzin çelişkisi" value={fmtInt(consentTotal)} help={consent && consent.bagli && consent.onceki !== undefined && consent.onceki !== null ? `Önceki ölçüm ${fmtInt(consent.onceki)}` : 'Hedef: 0'} />
+          <Kpi label="Okur kaydı" value={fmtInt(total)} help={inv && inv.bagli && inv.tekil !== null ? `Tekil ${fmtInt(inv.tekil)}` : 'Kaynak kayıtları toplamı'} info={<SqlInfo k={k} alan="envanter" label="Okur kaydı" />} />
+          <Kpi label="KVKK onaylı" value={fmtShare(sum('kvkkOnayli'), total)} help={`${fmtInt(sum('kvkkOnayli'))} kayıt`} info={<SqlInfo k={k} alan="envanter" label="KVKK onaylı" />} />
+          <Kpi label="E-posta izinli" value={fmtInt(sum('epostaIzinli'))} help={`SMS izinli ${fmtInt(sum('smsIzinli'))}`} info={<SqlInfo k={k} alan="envanter" label="E-posta ve SMS izinli" />} />
+          <Kpi label="İzin çelişkisi" value={fmtInt(consentTotal)} help={consent && consent.bagli && consent.onceki !== undefined && consent.onceki !== null ? `Önceki ölçüm ${fmtInt(consent.onceki)}` : 'Hedef: 0'} info={<SqlInfo k={k} alan="izin" label="İzin çelişkisi" />} />
         </KpiRow>
       )}
 
       {inv && inv.bagli && (
         <Panel>
-          <h2 className="text-[15px] font-extrabold tracking-tight">Kaynak ve kayıt tipi</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Kaynak ve kayıt tipi<SqlInfo k={k} alan="envanter" label="Kaynak ve kayıt tipi, tazelik" /></h2>
           <p className="mb-2 text-[12px] text-canvas-muted">Her satır okur veri tabanının verdiği sayıdır; oran satırın toplamına göredir.</p>
           <TableWrap>
             <thead>
               <tr>
                 <th className={th}>Kaynak</th>
                 <th className={th}>Kayıt tipi</th>
-                <th className={`${th} text-right`}>Kayıt</th>
-                <th className={th}>KVKK onayı</th>
-                <th className={th}>İYS onayı</th>
-                <th className={th}>E-posta izni</th>
-                <th className={th}>SMS izni</th>
-                <th className={th}>İlgi alanı dolu</th>
-                <th className={`${th} text-right`}>Silinebilir</th>
-                <th className={`${th} text-right`}>18 yaş altı olası</th>
+                <th className={`${th} text-right`}><InfoLabel k={k} alan="envanter.satirlar">Kayıt</InfoLabel></th>
+                <th className={th}><InfoLabel k={k} alan="envanter.satirlar">KVKK onayı</InfoLabel></th>
+                <th className={th}><InfoLabel k={k} alan="envanter.satirlar">İYS onayı</InfoLabel></th>
+                <th className={th}><InfoLabel k={k} alan="envanter.satirlar">E-posta izni</InfoLabel></th>
+                <th className={th}><InfoLabel k={k} alan="envanter.satirlar">SMS izni</InfoLabel></th>
+                <th className={th}><InfoLabel k={k} alan="envanter.satirlar">İlgi alanı dolu</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={k} alan="envanter.satirlar">Silinebilir</InfoLabel></th>
+                <th className={`${th} text-right`}><InfoLabel k={k} alan="envanter.satirlar">18 yaş altı olası</InfoLabel></th>
               </tr>
             </thead>
             <tbody>
@@ -94,7 +96,7 @@ export default function AudienceScreen() {
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
         {consent && consent.bagli && (
           <Panel>
-            <h2 className="text-[15px] font-extrabold tracking-tight">İzin sağlığı</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">İzin sağlığı<SqlInfo k={k} alan="izin" label="İzin sağlığı" /></h2>
             <p className="mb-2 text-[12px] text-canvas-muted">Çelişki türü başına kayıt sayısı. Kişiler burada listelenmez; düzeltme CRM'de yapılır.</p>
             <ul className="flex flex-col gap-1.5">
               {consent.items.map((c) => (
@@ -112,17 +114,17 @@ export default function AudienceScreen() {
         )}
 
         <Panel>
-          <h2 className="text-[15px] font-extrabold tracking-tight">Aylık eğilim</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Aylık eğilim<SqlInfo k={k} alan="egilim" label="Aylık eğilim" /></h2>
           <p className="mb-2 text-[12px] text-canvas-muted">Her ayın son gece ölçümü (son 12 ay). İlk ölçüm gece turunda alınır.</p>
           {monthly.length ? (
             <TableWrap>
               <thead>
                 <tr>
                   <th className={th}>Ay</th>
-                  <th className={`${th} text-right`}>Okur kaydı</th>
-                  <th className={`${th} text-right`}>KVKK onaylı</th>
-                  <th className={`${th} text-right`}>E-posta izinli</th>
-                  <th className={`${th} text-right`}>İzin çelişkisi</th>
+                  <th className={`${th} text-right`}><InfoLabel k={k} alan="egilim">Okur kaydı</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={k} alan="egilim">KVKK onaylı</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={k} alan="egilim">E-posta izinli</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={k} alan="egilim">İzin çelişkisi</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>
@@ -144,7 +146,7 @@ export default function AudienceScreen() {
 
         <Panel>
           <div className="flex items-baseline justify-between gap-2">
-            <h2 className="text-[15px] font-extrabold tracking-tight">Yaklaşan programlar</h2>
+            <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Yaklaşan programlar<SqlInfo k={k} alan="yaklasanProgramlar" label="Yaklaşan programlar" /></h2>
             <Link to="/okur-toplulugu/programlar" className="text-[12px] font-bold text-canvas-violet hover:underline">Takvim</Link>
           </div>
           <p className="mb-2 text-[12px] text-canvas-muted">Önümüzdeki 30 gün.</p>
@@ -162,7 +164,7 @@ export default function AudienceScreen() {
         </Panel>
 
         <Panel>
-          <h2 className="text-[15px] font-extrabold tracking-tight">Segment ve yorum durumu</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">Segment ve yorum durumu<SqlInfo k={k} alan="segmentSayilari" label="Segment sayıları" /><SqlInfo k={k} alan="yorum" label="Gece yorum özeti" /></h2>
           <div className="mt-2 grid grid-cols-2 gap-2">
             <Link to="/okur-toplulugu/segmentler?durum=onay_bekliyor" className="rounded-xl bg-white/80 px-3 py-2 transition-transform duration-150 ease-out active:scale-[0.98]">
               <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">Onay bekleyen segment</div>

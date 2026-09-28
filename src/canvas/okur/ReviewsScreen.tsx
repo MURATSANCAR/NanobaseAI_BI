@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Check, Copy, Loader2, RefreshCw, Sparkles, Star } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { REVIEW_TONE, fmtDay, fmtInt, okurApi, type OkurMeta, type Review, type ReviewState } from './api';
@@ -31,6 +32,7 @@ export default function ReviewsScreen() {
   });
   const topics = useVoiceLabels('site-yorum');
   const n = list.data?.sayilar;
+  const k = list.data?.kaynaklar;
   const setDurum = (d: string) => {
     const p = new URLSearchParams(params);
     if (d === 'cevapsiz') p.delete('durum');
@@ -58,13 +60,14 @@ export default function ReviewsScreen() {
       <ReaderVoicePanel sources={['site-yorum']} />
       {n && (
         <KpiRow>
-          <Kpi label="Cevapsız" value={fmtInt(n.cevapsiz)} help="Sitede cevabı olmayan, taslağı da yok" active={durum === 'cevapsiz'} onClick={() => setDurum('cevapsiz')} />
-          <Kpi label="Taslak hazır" value={fmtInt(n.taslak)} help="Sitede girilmeyi bekliyor" active={durum === 'taslak'} onClick={() => setDurum('taslak')} />
-          <Kpi label="Cevaplandı" value={fmtInt(n.cevaplandi)} help="Sitede cevap var ya da işaretlendi" active={durum === 'cevaplandi'} onClick={() => setDurum('cevaplandi')} />
-          <Kpi label="Toplam yorum" value={fmtInt(n.toplam)} help={list.data?.seo ? `SEO gece özeti: ${fmtInt(list.data.seo.yorum)} yorum, ${fmtInt(list.data.seo.urun)} ürün` : 'Sitedeki bütün yorumlar'} active={durum === 'hepsi'} onClick={() => setDurum('hepsi')} />
+          <Kpi label="Cevapsız" value={fmtInt(n.cevapsiz)} help="Sitede cevabı olmayan, taslağı da yok" active={durum === 'cevapsiz'} onClick={() => setDurum('cevapsiz')} info={<SqlInfo k={k} alan="sayilar" label="Cevapsız yorum" />} />
+          <Kpi label="Taslak hazır" value={fmtInt(n.taslak)} help="Sitede girilmeyi bekliyor" active={durum === 'taslak'} onClick={() => setDurum('taslak')} info={<SqlInfo k={k} alan="sayilar" label="Taslak hazır" />} />
+          <Kpi label="Cevaplandı" value={fmtInt(n.cevaplandi)} help="Sitede cevap var ya da işaretlendi" active={durum === 'cevaplandi'} onClick={() => setDurum('cevaplandi')} info={<SqlInfo k={k} alan="sayilar" label="Cevaplandı" />} />
+          <Kpi label="Toplam yorum" value={fmtInt(n.toplam)} help={list.data?.seo ? `SEO gece özeti: ${fmtInt(list.data.seo.yorum)} yorum, ${fmtInt(list.data.seo.urun)} ürün` : 'Sitedeki bütün yorumlar'} active={durum === 'hepsi'} onClick={() => setDurum('hepsi')} info={<SqlInfo k={k} alan={list.data?.seo ? 'seo' : 'sayilar'} label="Toplam yorum ve SEO özeti" />} />
         </KpiRow>
       )}
       <Panel>
+        {list.data && <p className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Yorumlar, puanlar ve durum<SqlInfo k={k} alan="items" label="Yorum listesi ve puanlar" /></p>}
         {list.isLoading && <div className="py-8 text-center text-[12px] text-canvas-muted">Site yorumları okunuyor…</div>}
         {list.data && !list.data.items.length && <div className="py-8 text-center text-[12.5px] text-canvas-muted">Bu süzgeçte yorum yok.</div>}
         <div className="flex flex-col gap-2">
