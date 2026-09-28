@@ -8,6 +8,10 @@
 - Çatının Türkçesinde adı geçen 15 metin marka çevirisiyle ezildi (tema, karşılama, telif, destek, e-posta…); «arama» → «Ara». Yapay zekâ paneli adım etiketleri Türkçe (değişkenle çağrıldıkları için metin çıkarıcı görmüyordu); asistan yönergesine «kullanıcıya DocType/alan/araç adı yazma» eklendi. Durum/tür/öncelik masaüstü listede çeviriyle görünür (`translated_doctype` özellik ayarı); tür adları Arıza/Soru/Hata/Belirtilmemiş.
 - Sınananlar: panel gerçek modelle doğru cevap verdi (1 açık kayıt); telefon genişliğinde (375) taşma yok; kilit mesajının Türkçesi çatıda var. `/desk` kökünün destek ekranına gitmesi bilinçli (varsayılan uygulama), alt adresler korunuyor.
 - **Açık:** main'e ittirme bu oturumda izinli değil → kurulum yapılmadı. Test kullanıcısı (destek tarafı) silindi; portalda timasai'nin 3 kısa oturumu kaldı (kime ait olduğu ayırt edilemedi, en geç 14:00'te düşer). nginx yeniden yükleme başka oturumun `timas_api` bölge değişikliği yüzünden reddediliyor; 8446 vhost'undaki giriş sınırı ve socket kaynağı denetimi tam restart'la etkinleşir.
+## 2026-09-28 (11:45) — Yönetim «Bağlantıyı sına» tuşları: her durumda yeşil/kırmızı sonuç
+
+- **Sorun (kullanıcı):** sınama tuşları «yok ya da çalışmıyor». Sebep: istek hata verirse ekranda hiçbir şey çıkmıyordu (yalnız başarılı cevap gösteriliyordu); kaydedilmemiş değişiklik varken tuş açıklamasız kapalıydı; GEO grubunda tuş yoktu; SEO denemesi yalnız T-soft + Search Console'a bakıyordu.
+- **Düzeltme:** sonuç üstte «✓ Başarılı» (yeşil) ya da «✕ Hata» (kırmızı) + saat/süre; istek hatası da kırmızı yazılır. Değişiklik varken tuş «Kaydet ve sına» olur. `seo_geo/checks.py`: T-soft, Search Console, GA4, Google API anahtarı (CrUX), YouTube, Bing, IndexNow (site kökündeki anahtar dosyası), SerpAPI (hesap, arama harcamaz), Cloudflare (token + zone) satır satır; GEO: Gemini/ChatGPT/Claude model listesi (soru sormaz), Perplexity'de ücretsiz doğrulama olmadığından yalnız «girilmiş». Girilmeyen «Girilmemiş» (gri), grubun sonucu girilmiş olanların hepsi başarılıysa yeşil. Anahtar değeri hiçbir mesaja yazılmaz (test). `AdminCheck.parts`.
 
 ## 2026-09-28 (09:20) — Dal/worktree toplu kapanışı
 
