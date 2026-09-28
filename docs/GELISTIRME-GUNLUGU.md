@@ -705,6 +705,81 @@ main'e taşınmadı, kurulmadı.
 - **Açık:** `main`e taşıma ve test sunucusu kurulumu erişim dönünce; CRM kitap → marka/kitaplık birleşimi ve Logo `TOTAL`'in liste fiyatı olduğu sunucuda teyit edilecek; sunucudaki `~/m9` ölçüm klasörü silinecek. Müşteri VM'ine kurulmayacak.
 
 ## 2026-09-28 — M7 çapraz yazar önerisi: e-ticarette birlikte alınan yazarlar
+## 2026-09-28 — H4 Kurumsal e-posta yönetimi (timas@ genel kutusu; dalda; DOĞRULANAMADI — sunucu kapalı)
+
+- **Neden:** genel kutu elle okunup iletiliyor; kime gittiği, cevaplanıp cevaplanmadığı, ne kadar sürdüğü kayıtta yok. CRM'deki
+  karşılıklar ölü (dosya başvurusu 19 kayıt, `IncidentBase` 34). Analiz: `docs/analiz/kullanici-ihtiyaclari/H4-kurumsal-eposta.md`
+  (14. bölüm planı uygulandı).
+- **Ne yapıldı:** köprü `mailbox.py` (depo, durum makinesi, iş saatli SLA, kural sürümleri, rapor, etiketleme),
+  `mailbox_sources.py` (posta bağdaştırıcısı arayüzü, Gmail; CRM gönderen tanıma), `mailbox_classify.py` (Zeki AI: tür, öncelik,
+  özet, başvuru alanları, yanıt taslağı), `mailbox_api.py` (`/api/v1/mailbox/*`); tablolar `semantic_mail_messages|events|
+  rulesets|categories|routes|templates|sla|applications|labels|meta`. Ekran `src/canvas/mailbox/` (gelen kutusu, ileti, rapor,
+  kurallar, etiketleme), rota `/kurumsal-eposta` (+ `/ileti/:id`, `/rapor`, `/kurallar`, `/etiketleme`), menü **Kayıtlar ›
+  Kurumsal e-posta** (rozet: bana atanan açık ileti; ekran okuyucuya süresi aşan sayısı da), Kampüs «email» kutusu canlı, yazar
+  giriş süreci panosunda «E-postayla gelen başvurular» kutusu, Yönetim → Portal ayarları'nda «Kurumsal e-posta» grubu ve
+  «Kutuyu oku» denemesi, iki zamanlayıcı (`timas-mailbox` 5 dk, `timas-mailbox-sla` saat başı :07), pytest `test_mailbox.py`,
+  vitest `mailbox/api.test.ts`, kabul `scripts/acceptance/H4/`.
+- **Kutu (kullanıcı kararı 2026-09-28): Google Workspace, Gmail API birincil ve varsayılan.** Kapsam yalnız `gmail.readonly` +
+  `gmail.labels`; gönderme/değiştirme kapsamı istenmez. Microsoft 365 / IMAP için yalnız arayüz (bu kurulumda kurulmadı).
+  **BT'nin vermesi gerekenler** (Yönetim ekranı yardım metninde de yazılı):
+  1. *Önerilen — hizmet hesabı + alan geneli yetki devri:* Gmail API açık bir Google Cloud projesinde hizmet hesabı ve JSON
+     anahtarı (SEO'nunkinden ayrı); Workspace Yönetici Konsolu → Güvenlik → API denetimleri → Alan genelinde yetki devri'nde
+     hesabın istemci kimliğine yalnız `https://www.googleapis.com/auth/gmail.readonly` ve
+     `https://www.googleapis.com/auth/gmail.labels`; kutu adresi (`timas@timas.com.tr`). Belirteç `sub = kutu` ile alınır.
+  2. *Alternatif — OAuth:* alan geneli yetki verilmek istenmezse kutunun kendi hesabıyla bir kez onay; OAuth istemci kimliği,
+     sırrı ve yenileme belirteci girilir.
+  JWT imzası SEO modülünün servis hesabı deseniyle aynı (`seo_geo.connections._sign`, sunucudaki openssl); yeni bağımlılık yok.
+  Ayar boşken ekran «Kutu bağlı değil» ve nedenini söyler; sahte ileti yok.
+- **Kararlar (sormadan, gerekçeli — analiz §10 ve kodlama sırasında çıkanlar):**
+  1. *Tür listesi:* kurulumda 11 tür yürürlükte başlar (iş tanımındaki beş + analizde görülen sipariş/kargo, bayi/kurum,
+     telif/izin, basın, diğer). Kodda sabit değil: tablo boşken bir kez yazılır, sonra Kurallar ekranında taslak → onay.
+     Türün rolü (dosya başvurusu / iş başvurusu / tanıtım-spam) davranışı belirler, tür anahtarı değil. Yönlendirme tablosu boş
+     başlar (tür → birim eşlemesini iş tarafı girer); boşken her ileti «Atanmamış»a düşer.
+  2. *İş başvurusu:* yalnız açıkça verilen `ozellik:eposta.ik`; **portal yöneticisine istisna yok** (analiz «tartışılacak»
+     dedi; KVKK özel nitelikli veri, yönetici gerekiyorsa rolle alır ve bu kayıtta görünür). Başkasına atanamaz (atanacak kişide
+     de İK yetkisi aranır). M55 henüz yok: `POST /api/v1/hr/recruit/intake` ucu kurulumda yoksa ileti İK kuyruğunda bekler.
+  3. *Dışarı giden yanıt:* kullanıcı kararıyla (dış gönderim yok) portal göndermez; Zeki AI taslağı ekranda, saklanmaz; kişi
+     «Kutuda aç» ile timas@'nın kendi arayüzünden gönderir. «Alındı» otomatik yanıtı yok; `ozellik:eposta.yanitla` ve
+     `ozellik:eposta.otomatik-yanit` kataloğa eklenmedi (işlevi olmayan yetki kutusu olmasın; gönderim sürümüyle gelir).
+  4. *Yanıt süresi:* ilk yanıt, konu zincirinde kutudan gönderilmiş (`SENT`) ilk iletinin zamanıdır (portal ile kutu iki ayrı
+     gerçek olmaz). Kişisel adresinden yanıtlayan «Kutu dışından yanıtladım» der; olay «beyan» işaretlenir.
+  5. *SLA:* gelişten itibaren iş saatiyle (ayar: «1-5 09:00-18:00», tatil listesi); tür başına 24/48/72 kuralda, yoksa
+     varsayılan. Hatırlatma atanan kişiye (atanmamışsa yönlendirmedeki sorumluya, o da yoksa genel kutu sorumlularına),
+     eskalasyon birim yöneticisine, üst eşik üst yöneticilere; her seviye bir kez, üst seviye alttakini gönderilmiş sayar. İç
+     e-posta portalın bildirim hesabından (SMTP) gider; kapatılabilir, olay yine yazılır.
+  6. *Sınıflama eşikleri:* öneri p ≥ 0,70 ve fark ≥ 0,30, otomatik p ≥ 0,90 ve fark ≥ 0,50 (llm-choose önerisi; ayarda).
+     Altı «Emin olunmayan». Olasılıksız yol (`text`/`none`) hiçbir zaman emin sayılmaz. Otomatik atama türü varsayılan **boş**:
+     etiketli geçmişte o türün doğruluğu %90'ı geçmeden açılmaz. Otomatik işlem yalnız tanıtım/spam arşivi (geri alınır).
+  7. *Kutu etiketi:* `gmail.labels` etiket tanımını yönetir, iletiye etiket takmak `gmail.modify` ister (silme/taşıma da
+     açar). Kapsam kullanıcı kararıyla sınırlı kaldığı için bu sürüm kutuya etiket takmaz; tür/durum portalda.
+  8. *Artımlı okuma:* geçmiş kimliği (historyId) yerine `after:<epoch>` sorgusu + 60 dk örtüşme + sağlayıcı kimliğinde tekillik
+     (geçmiş kimliği bir haftada geçersizleşir; kesintide ileti kaçar). Sayfa tavanı yok; tur süresi dolarsa kalan sonraki tura.
+  9. *Geçmiş iletiler:* `MAIL_START_DATE`'ten önce gelenler «geçmiş»: liste/SLA/bildirim dışı, yalnız Etiketleme'de; model
+     yalnız tür sorar (BATCH). Etiketleme kördür (modelin önerisi gösterilmez); doğruluk = çoğunluk insan etiketi ↔ modelin
+     ilk seçimi (`model_category`, düzeltmeyle ezilmez).
+  10. *KVKK:* gövde ve ek saklanmaz (her açılışta kutudan); adres yalnız SHA-256 + maskeli gösterim; özet rakam taşımaz (rakamlı
+      cümle atılır). Modele giden metin `MAIL_MODEL_BODY_CHARS` (6000) — bağlam penceresi, veri tavanı değil.
+  11. *Dosya başvurusu → M1:* M1 dalda (`/api/v1/editorial/applications`, zorunlu alanlar eser adı, yazar, özet, biyografi, sayfa
+      tahmini). Aktarım köprünün içinden kişinin kendi çereziyle yapılır (M1'in yetkisi aynen uygulanır); PDF/DOCX/DOC ekler
+      kutudan anlık alınıp `PUT …/{id}/files` ile gider, diğerleri adıyla bildirilir. Zeki AI yalnız metinde birebir geçen
+      yazar/eser/tür/sayfayı doldurur. Uç yoksa başvuru «aktarılmayı bekliyor» kalır. M1 main'e girince `access.RULES`'taki
+      `/api/v1/mailbox/applications` satırına `sayfa:basvurular` eklenmeli.
+  12. *Taslak:* söz ve tarih yasak; rakam geçen satır atılır, yalnız onaylı şablondaki rakam kalabilir.
+- **Ölçülecek (kabul listesinde):** kutunun günlük hacmi ve tür dağılımı; CRM `EMailAddress1` doluluğu ve
+  `new_projeBase.new_olasyazaryazar` kolonunun varlığı (yazar adayı rozeti bu kolona bağlı); `choose` eşiklerinin kabul oranı;
+  Gmail sorgusunun sayımı = portal sayımı; yanıt tespitinin 10 örnekte elle doğrulanması; LLM kapısının istem günlüğünde
+  ileti metninin tutulma süresi (analiz §8, kontrol edilmedi).
+- **Açık kalan:** Zeki AI sohbetinde «destek» konusu verisi bağlı değil (`chat_topics.json`, `data` boş) — e-posta sorularına
+  «henüz veri bağlı değil» der; rapor ekranı bu soruları karşılar. Şikâyetteki sipariş numarası yalnız gösterilir (CRM sipariş
+  durumu sonraki sürüm). Kampüs zilinde ayrı «bana atanan ileti» yok; menü rozeti var. Portal içinden gönderim ve «alındı»
+  yanıtı sonraki sürüm.
+- **Doğrulama:** yalnız `py_compile` ve JSON denetimi (kural: Mac'te koşu yok). **DOĞRULANAMADI — sunucu kapalı.** Sunucuda kalan
+  adımlar: main'e taşıma → kurulum (köprü + arayüz `VITE_BASE=/timas/`) → Yönetim'de bağlantı (BT'den hizmet hesabı) → «Kutuyu
+  oku» → `run-due` elle bir kez → pytest `test_mailbox.py` + `test_access.py` + vitest + `tsc -b` → `scripts/acceptance/H4/kabul.py`
+  (+ `--api --yazma` timasai kısa oturumu) → `temizlik.py --by timasai` → zamanlayıcıları etkinleştir → 320/390/768 px ve
+  masaüstü tarayıcı kontrolü.
+
+## 2026-09-28 — M7 çapraz yazar önerisi: e-ticarette birlikte alınan yazarlar (dalda, kurulmadı)
 
 - **Neden sipariş:** CRM sınıflandırması yetmedi — kitaplık %96 dolu ama çok geniş («Çocuk Kitaplığı» 3.084 kitap; öneride en çok kitabı olanlar ve «Komisyon»/«Anonim» öne çıktı), dizi %93 dolu ama tek yazarın serisi, tür metni %44. Kullanıcı «çapraz öneriyi başlat» dedi.
 - **Veri:** T-soft `order/get` + `FetchProductData` (yalnız okuma; `order/getOrders` yok, katalog yöntemi 500 veriyor). 63.118 sipariş (2022-12-07'den), `OrderDateTimeStart` süzgeci çalışıyor. Saklanan: sipariş no, gün, durum, silindi mi; satırda ürün no, barkod, adet. **Müşteri adı/telefonu/adresi/e-postası/müşteri no okunmaz, saklanmaz.** Gece turu son 60 günü yeniden okur (durum değişimi).
