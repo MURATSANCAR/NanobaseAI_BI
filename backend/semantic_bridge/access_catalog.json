@@ -665,6 +665,13 @@
       "hint": "Yeni yazar kartı, aşama değiştirme, havuza alma, randevu ve görüşme notu"
     },
     {
+      "key": "ozellik:yazar-iliski.oneri",
+      "area": "kayitlar",
+      "page": "sayfa:yazar-iliskileri",
+      "label": "Yazar için Zeki AI önerisi",
+      "hint": "Satış, sadakat, ilişki ısısı ve görüşme notlarından strateji önerisi üretme (model harcar)"
+    },
+    {
       "key": "ozellik:tasarim.uret",
       "area": "editoryal",
       "page": "sayfa:kitap-tasarim",

@@ -34,6 +34,46 @@ function Section({ title, count, empty, children }: { title: string; count: numb
   );
 }
 
+/** Kişinin kendi sabah e-posta özeti tercihi (varsayılan açık). Özet köprüde her sabah bir kez gider. */
+function ReminderToggle() {
+  const qc = useQueryClient();
+  const me = useQuery({ queryKey: ['authors', 'reminders', 'me'], queryFn: authorsApi.remindersMe, enabled: ENGINE_ENABLED });
+  const set = useMutation({
+    mutationFn: (on: boolean) => authorsApi.setReminders(on),
+    onSuccess: (r) => {
+      qc.setQueryData(['authors', 'reminders', 'me'], (old: typeof me.data) => (old ? { ...old, enabled: r.enabled } : old));
+      toast.success(r.enabled ? 'Sabah özeti açıldı' : 'Sabah özeti kapatıldı');
+    },
+    onError: (e) => toast.error('Kaydedilemedi', { description: e instanceof Error ? e.message : undefined }),
+  });
+  if (!me.data) return null;
+  const d = me.data;
+  const n = d.today.randevu + d.today.not + d.today.adim;
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px]">
+      <label className="flex min-h-11 items-center gap-2 font-semibold sm:min-h-0">
+        <input
+          type="checkbox"
+          checked={d.enabled}
+          disabled={set.isPending}
+          onChange={(e) => set.mutate(e.target.checked)}
+          className="h-4 w-4 accent-[#6D4AFF]"
+        />
+        Sabah e-posta özeti
+      </label>
+      <span className="text-[11.5px] text-canvas-muted">
+        {!d.smtp
+          ? 'E-posta sunucusu tanımlı değil; özet gönderilemez (Yönetim → Ayarlar).'
+          : d.enabled
+            ? n
+              ? `Bugünkü özette ${n} iş: ${d.today.randevu} randevu, ${d.today.not} notu eksik, ${d.today.adim} adım.`
+              : 'Bugün sizi bekleyen iş yok; boş özet gönderilmez.'
+            : 'Kapalı.'}
+      </span>
+    </div>
+  );
+}
+
 export default function AgendaTab({ onOpen }: { onOpen: (t: PanelTarget) => void }) {
   const qc = useQueryClient();
   const canWrite = useCan('yazar-iliski.yaz');
@@ -72,6 +112,7 @@ export default function AgendaTab({ onOpen }: { onOpen: (t: PanelTarget) => void
           </button>
         ))}
       </div>
+      <ReminderToggle />
       {err && <Note tone="err">{err}</Note>}
       {agenda.isLoading && <Loading />}
       {data && (

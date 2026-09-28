@@ -4668,9 +4668,135 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     @app.get("/api/v1/editorial/authors/heatmap")
     def authors_heatmap(request: Request, scope: str = "hepsi", q: str = "", order: str = "soguk", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _, _ = _rel(request)
-        return _rel_call(rel_mod.heatmap, admin_mod.conf("CRM_SCHEMA"), _crm_fetch_all, engine, tenant, user,
+        schema = admin_mod.conf("CRM_SCHEMA")
+        return _rel_call(rel_mod.heatmap, schema, _crm_fetch_all, engine, tenant, user,
                          scope=scope, q=q, order=order, page_no=page,
-                         warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60))
+                         warn_days=_int_conf("EDITORIAL_CONTRACT_WARN_DAYS", 60),
+                         loyalty=lambda: growth_mod.loyalty_map(_crm_fetch_all(growth_mod.loyalty_sql(schema))))
+
+    # ---- M7 gelişim takibi: Logo satışı, M6 hakedişleri, okur sesi, sadakat, Zeki AI önerisi; günlük hatırlatma
+    from semantic_bridge import author_growth as growth_mod
+    from semantic_bridge import author_reminders as remind_mod
+
+    def _growth_call(fn, *a, **kw):
+        try:
+            return fn(*a, **kw)
+        except growth_mod.GrowthError as e:
+            raise HTTPException(status_code=e.status, detail={"code": "AUTHOR_GROWTH", "message": str(e)}) from e
+
+    def _logo_sales(codes: list[str], start: Any, end: Any):
+        """M6 hakediş hesabıyla aynı sorgu (yıllık görünümler, faturalı malzeme satırı) kendi salt okunur Logo bağlantısında."""
+        from datetime import date
+        from semantic_bridge import contracts_royalty as royalty_mod
+        from semantic_bridge.management import expand_sales
+        from semantic_layer.profiler.connectors import connector_from_file
+        conn = connector_from_file(rt().settings.connection_file)
+        conn.query_timeout = 600
+        try:
+            views = {int(r["name"][-4:]) for r in conn.execute(
+                "SELECT name FROM sys.views WHERE name LIKE 'V[_]SatisRaporu[_]20[0-9][0-9]'", 1000)[1]}
+            years = sorted(y for y in views if start.year <= y <= end.year)
+            if not years:
+                return [], None, list(range(start.year, end.year + 1))
+            a = max(start, date(years[0], 1, 1))
+            sql, missing = expand_sales(royalty_mod.sales_sql(codes, a, end), date.today(), views)
+            _, rows, truncated = conn.execute(sql, 500_000)
+            if truncated:   # sessiz eksik okuma yok
+                raise growth_mod.GrowthError("Logo satış sonucu satır sınırını aştı; gelişim eksik hesaplanırdı.", 503)
+            rows = list(rows)
+            last = list(conn.execute(royalty_mod.data_end_sql(years[-1]), 1)[1])
+            data_end = growth_mod._day(last[0].get("son")) if last else None
+            return rows, data_end, [y for y in missing if y >= a.year]
+        except growth_mod.GrowthError:
+            raise
+        except Exception as e:  # noqa: BLE001 — sürücü metni loga, kişiye düz cümle
+            log.warning("author growth: Logo satışı okunamadı: %s", str(e)[:300])
+            raise growth_mod.GrowthError("Logo satışı şu an okunamıyor; birazdan tekrar deneyin.", 503) from None
+        finally:
+            try:
+                conn.close()
+            except Exception:  # noqa: BLE001
+                pass
+
+    def _web_enabled() -> bool:
+        return (admin_mod.conf("WEB_WATCH_ENABLED") or "0").strip().lower() in ("1", "true", "evet", "on")
+
+    @app.get("/api/v1/editorial/authors/growth/{contact_id}")
+    def authors_growth(contact_id: str, request: Request, refresh: bool = False) -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        growth_mod.ensure(engine)
+        schema, run = _editorial(request)
+        build = lambda: growth_mod.compute(schema, run, _logo_sales, engine, tenant, contact_id,  # noqa: E731
+                                           web_enabled=_web_enabled())
+        return _growth_call(growth_mod.cached, engine, tenant, contact_id, build, refresh=refresh)
+
+    @app.get("/api/v1/editorial/authors/advice/{contact_id}")
+    def authors_advice(contact_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, _, _, _ = _rel(request)
+        growth_mod.ensure(engine)
+        return {"advice": _growth_call(growth_mod.latest_advice, engine, tenant, contact_id),
+                "modelReady": rt().llm_for("editorial", priority=1) is not None}
+
+    @app.post("/api/v1/editorial/authors/advice/{contact_id}")
+    def authors_advice_make(contact_id: str, request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, admin = _rel(request)
+        growth_mod.ensure(engine)
+        llm = rt().llm_for("editorial", priority=1)
+        if llm is None:
+            raise HTTPException(status_code=503, detail={"code": "AUTHOR_GROWTH", "message": "ZEKİ AI şu an bağlı değil."})
+        schema, run = _editorial(request)
+        build = lambda: growth_mod.compute(schema, run, _logo_sales, engine, tenant, contact_id,  # noqa: E731
+                                           web_enabled=_web_enabled())
+        growth = _growth_call(growth_mod.cached, engine, tenant, contact_id, build)
+        relation = _rel_call(rel_mod.by_crm, engine, tenant, user, admin, contact_id)
+        name = (relation.get("card") or {}).get("name") or ""
+        if not name:
+            recs = run(editorial_mod.person_sql(schema, contact_id)).get("records") or []
+            name = str((recs[0] if recs else {}).get("FullName") or "Yazar")
+        inp = growth_mod.advice_input(name, growth, relation)
+        out = _growth_call(growth_mod.make_advice, engine, tenant, user, contact_id, inp,
+                           lambda messages: llm.chat(messages, max_tokens=2048, temperature=0.2))
+        admin_mod.audit(engine, user, "run", "author_advice", out["id"], name, {"contact": contact_id})
+        return out
+
+    def _directory() -> dict[str, dict[str, str]]:
+        r = rt()
+        rows, _, _ = _crm_people(False)
+        return {str(p.get("username") or "").lower(): {"email": p.get("email") or "", "name": p.get("name") or ""}
+                for p in people_mod.people(r.store.engine, r.settings.tenant_id, rows) if p.get("username")}
+
+    @app.post("/api/v1/editorial/authors/reminders/run-due")
+    def authors_reminders_run(request: Request, dry: bool = False) -> dict[str, Any]:
+        """Zamanlayıcı (her sabah): kişi başına günün özeti. Çerezsiz çağrı; kişi yalnız yöneticiyse tetikler."""
+        _require_caller(request)
+        r = rt()
+        rel_mod.ensure(r.store.engine)
+        link = (admin_mod.conf("ALERT_LINK") or "").rstrip("/")
+        link = f"{link.rsplit('/timas', 1)[0]}/timas/yazar-iliskileri?sekme=randevu" if link else ""
+        if not dry and (admin_mod.conf("AUTHOR_REMINDERS_ENABLED") or "1").strip().lower() in ("0", "false", "hayir", "off"):
+            return {"skipped": "Yazar ilişkileri e-posta özeti bu ortamda kapalı (AUTHOR_REMINDERS_ENABLED).", "sent": 0}
+        out = remind_mod.run_due(r.store.engine, r.settings.tenant_id, _directory, link=link, dry_run=dry,
+                                 not_before=admin_mod.conf("AUTHOR_REMINDER_TIME") or "08:15")
+        log.info("author reminders: %s", {k: v for k, v in out.items() if k != "users"})
+        return out
+
+    @app.get("/api/v1/editorial/authors/reminders/me")
+    def authors_reminders_me(request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        remind_mod.ensure(engine)
+        from semantic_bridge import alerts as alerts_mod
+        mine = remind_mod.digests(engine, tenant).get(user.lower(), {"randevu": [], "not": [], "adim": []})
+        return {"enabled": remind_mod.enabled_for(engine, tenant, user), "smtp": bool(alerts_mod.smtp_settings()),
+                "today": {k: len(v) for k, v in mine.items()}}
+
+    @app.put("/api/v1/editorial/authors/reminders/me")
+    def authors_reminders_set(body: dict[str, Any], request: Request) -> dict[str, Any]:
+        engine, tenant, user, _, _ = _rel(request)
+        from semantic_bridge import prefs
+        prefs.ensure(engine)
+        on = bool(body.get("enabled"))
+        prefs.put(engine, tenant, remind_mod.PREF_DS, user, remind_mod.PREF_KEY, on)
+        return {"enabled": on}
 
     @app.get("/api/v1/editorial/authors/agenda")
     def authors_agenda(request: Request, scope: str = "benim", days: int = 30) -> dict[str, Any]:

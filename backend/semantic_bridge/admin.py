@@ -141,6 +141,10 @@ SPEC: list[dict[str, Any]] = [
     # Yazar giriş süreci (editoryal): hangi projeler izlenir, ne zaman gecikmiş sayılır.
     {"key": "EDITORIAL_INTAKE_SINCE", "group": "crm", "label": "Yazar giriş süreci başlangıcı", "type": "text", "default": "2025-01-01",
      "help": "Bu tarihten sonra CRM'de açılan yeni ve yenileme projeleri süreç panosunda izlenir (YYYY-AA-GG)"},
+    {"key": "AUTHOR_REMINDERS_ENABLED", "group": "crm", "label": "Yazar ilişkileri sabah özeti", "type": "bool", "default": "1",
+     "help": "Açıkken kişiye her sabah bugün/yarınki randevular, notu girilmemiş randevular ve geciken adımlar e-postayla gider (yalnız yayınevi içi; kişi kendi ekranından kapatabilir)"},
+    {"key": "AUTHOR_REMINDER_TIME", "group": "crm", "label": "Sabah özeti saati", "type": "text", "default": "08:15",
+     "help": "Özet günün bu saatinden sonraki ilk turda gider (SS:DD, İstanbul saati); kişi başına günde bir kez"},
     {"key": "AUTHOR_POOL_SINCE", "group": "crm", "label": "Aday havuzu başlangıcı", "type": "text", "default": "2024-01-01",
      "help": "Bu tarihten sonra CRM'de açılan projelerin olası yazarları (henüz yazar rolüyle eseri yoksa) aday havuzunda listelenir (YYYY-AA-GG)"},
     {"key": "WEB_WATCH_ENABLED", "group": "crm", "label": "Basın ve web taraması", "type": "bool", "default": "0",

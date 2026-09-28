@@ -531,6 +531,7 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/editorial/applications", frozenset({page("basvurular"), page("yayin-kurulu")})),
     ("/api/v1/editorial/board-sessions", frozenset({page("yayin-kurulu"), page("basvurular")})),
     ("/api/v1/editorial/web/run-due", SYSTEM),
+    ("/api/v1/editorial/authors/reminders/run-due", SYSTEM),
     ("/api/v1/editorial/authors/copurchase/run-due", SYSTEM),
     ("/api/v1/editorial/web/status", OPEN),        # menü: «Basın ve web» ortamda açık mı
     ("/api/v1/editorial/search", OPEN),            # ⌘K paletindeki kitap/kişi araması
@@ -660,6 +661,7 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PUT", "PATCH", "DELETE"}), r"^/api/v1/editorial/applications(/.*)?$", "ozellik:basvuru.yaz"),
     (frozenset({"POST", "PATCH", "DELETE"}),
      r"^/api/v1/editorial/authors/(cards(/[^/]+)?|by-crm/[^/]+/card|meetings(/[^/]+)?)$", "ozellik:yazar-iliski.yaz"),
+    (frozenset({"POST"}), r"^/api/v1/editorial/authors/advice/[^/]+$", "ozellik:yazar-iliski.oneri"),
     # M31: ziyaret raporu, plan önerisi/düzeltmesi, katalog, bayi önerme; bağlam (ilçe endeksi, takvim) yükleme.
     # Plan onayı (`okul.plan`), bayi eşleştirme onayı (açıkça verilen `okul.bayi-onay`) ve bütün ekibi görme
     # (`okul.herkesinki`) ucun içinde denetlenir.

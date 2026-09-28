@@ -42,6 +42,9 @@ JOBS = [
     ("SEO & GEO eşitlemesi", "/api/v1/seo-geo/run-due", int(os.environ.get("SEO_EVERY_SEC", "86400")), 1700),
     # M46 bütçe: Logo gerçekleşmesi + sapma uyarıları (sunucuda timas-budget.timer, saatte bir; geçmiş yıl okuması 3-4 dk).
     ("bütçe", "/api/v1/budget/run-due", int(os.environ.get("BUDGET_EVERY_SEC", "3600")), 1790),
+    # M7 yazar ilişkileri sabah özeti (sunucuda timas-author-reminders.timer): köprü saat eşiğini ve günde bir kez kuralını
+    # kendisi uygular, sık çağrı zararsız.
+    ("yazar hatırlatmaları", "/api/v1/editorial/authors/reminders/run-due", int(os.environ.get("AUTHOR_REMINDERS_EVERY_SEC", "900")), 590),
 ]
 
 

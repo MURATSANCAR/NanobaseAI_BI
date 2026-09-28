@@ -1554,6 +1554,60 @@ export type AuthorHeatRow = {
   crmContracts: number;
   /** «İlgi bekleyen» nedenleri (sözleşme bitiyor + görüşme yok, notu girilmemiş randevu, geçmiş adım). */
   attention: string[];
+  /** Sadakat puanı (yalnız CRM'deki yazar için; CRM okunamadıysa null). */
+  loyalty: AuthorLoyalty | null;
+};
+export type LoyaltyBand = 'bagli' | 'duzenli' | 'zayif';
+export type AuthorLoyalty = {
+  score: number;
+  band: LoyaltyBand;
+  parts: { years: number; books: number; recent: number; active: number; returning: number };
+  since: string | null;
+  last: string | null;
+  years?: number;
+  books: number;
+  contracts: number;
+  activeContracts: number;
+};
+export type SalesTotals = { qty: number; net: number; retQty: number };
+export type AuthorGrowth = {
+  contactId: string;
+  books: Array<{ id: string; title: string | null; stockCode: string | null; hasCode: boolean; firstPublished: string | null } & SalesTotals>;
+  booksTotal: number;
+  booksWithCode: number;
+  newBooksByYear: Array<{ year: number; count: number }>;
+  sales: {
+    last12: SalesTotals;
+    prev12: SalesTotals;
+    changePct: number | null;
+    direction: 'artis' | 'dusus' | 'yatay' | null;
+    series: Array<{ month: string } & SalesTotals>;
+    years: Array<{ year: number } & SalesTotals>;
+    window: { from: string; to: string; prevFrom: string; prevTo: string };
+  };
+  dataEnd: string | null;
+  royalty: {
+    contracts: number;
+    statements: Array<{ contractNo: string; periodStart: string; periodEnd: string; status: string; gross: number; net: number; currency: string; approved: boolean }>;
+  };
+  readers: {
+    site: { available: boolean; comments: number; rated: number; average: number | null; stars: Record<string, number>; books: Array<{ title: string | null; comments: number; rated: number; average: number | null }> };
+    web: Record<string, number> | null;
+  };
+  loyalty: AuthorLoyalty;
+  loyaltyRules?: Record<string, number>;
+  notes: string[];
+  computedAt: string;
+  cached?: boolean;
+};
+export type AuthorAdvice = {
+  id: string;
+  summary: string;
+  recommendations: Array<{ title: string; why: string; when: string }>;
+  risks: string[];
+  createdBy: string;
+  createdAt: string;
+  input?: Record<string, unknown>;
 };
 export type AuthorHeatmap = {
   months: string[];
@@ -1622,6 +1676,14 @@ export const authorsApi = {
   agenda: (scope: string, days = 30) => send<AuthorAgenda>('GET', `${A}/agenda${qs({ scope, days })}`, undefined, 30_000),
   createMeeting: (b: AuthorMeetingInput) => send<AuthorMeeting>('POST', `${A}/meetings`, b, 30_000),
   updateMeeting: (id: string, b: AuthorMeetingInput) => send<AuthorMeeting>('PATCH', `${A}/meetings/${encodeURIComponent(id)}`, b, 30_000),
+  growth: (contactId: string, refresh = false) =>
+    send<AuthorGrowth>('GET', `${A}/growth/${encodeURIComponent(contactId)}${refresh ? '?refresh=true' : ''}`, undefined, 600_000),
+  advice: (contactId: string) =>
+    send<{ advice: AuthorAdvice | null; modelReady: boolean }>('GET', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 30_000),
+  makeAdvice: (contactId: string) => send<AuthorAdvice>('POST', `${A}/advice/${encodeURIComponent(contactId)}`, undefined, 600_000),
+  remindersMe: () =>
+    send<{ enabled: boolean; smtp: boolean; today: { randevu: number; not: number; adim: number } }>('GET', `${A}/reminders/me`, undefined, 30_000),
+  setReminders: (enabled: boolean) => send<{ enabled: boolean }>('PUT', `${A}/reminders/me`, { enabled }, 30_000),
   deleteMeeting: (id: string) => send<{ ok: boolean }>('DELETE', `${A}/meetings/${encodeURIComponent(id)}`, undefined, 30_000),
 };
 
