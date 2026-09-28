@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { ChevronLeft, ChevronRight, ExternalLink, Loader2, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Kpi, KpiRow, useDebounced } from '../editorial/kit';
 import { KIT_TONE, SEND_TONE, TONE_TONE, fmtDay, monthLabel, prApi, type Book, type KitHead } from './api';
@@ -70,16 +71,17 @@ export default function PrHome() {
 
       {d && (
         <KpiRow>
-          <Kpi label="Dosyası yok" value={d.kpi.noKit.toLocaleString('tr-TR')} help={`${monthLabel(d.month)} ayında çıkan ${d.kpi.books} kitaptan`} />
-          <Kpi label="Onay bekleyen" value={d.kpi.pending.toLocaleString('tr-TR')} help="Onaya gönderilmiş PR dosyası" />
-          <Kpi label="Cevap bekleyen" value={d.kpi.overdue.toLocaleString('tr-TR')} help={`Gönderimden ${m?.settings.followUpDays ?? 5} gün geçti, dönüş yok`} />
-          <Kpi label="Son 30 gün yansıma" value={d.kpi.recent.toLocaleString('tr-TR')} help={d.kpi.candidates ? `${d.kpi.candidates} aday onay bekliyor` : 'Kayıtlı yansıma'} />
+          <Kpi label="Dosyası yok" value={d.kpi.noKit.toLocaleString('tr-TR')} help={`${monthLabel(d.month)} ayında çıkan ${d.kpi.books} kitaptan`} info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Dosyası yok" />} />
+          <Kpi label="Onay bekleyen" value={d.kpi.pending.toLocaleString('tr-TR')} help="Onaya gönderilmiş PR dosyası" info={<SqlInfo k={d.kaynaklar} alan="pending" label="Onay bekleyen" />} />
+          <Kpi label="Cevap bekleyen" value={d.kpi.overdue.toLocaleString('tr-TR')} help={`Gönderimden ${m?.settings.followUpDays ?? 5} gün geçti, dönüş yok`} info={<SqlInfo k={d.kaynaklar} alan="overdue" label="Cevap bekleyen" />} />
+          <Kpi label="Son 30 gün yansıma" value={d.kpi.recent.toLocaleString('tr-TR')} help={d.kpi.candidates ? `${d.kpi.candidates} aday onay bekliyor` : 'Kayıtlı yansıma'} info={<SqlInfo k={d.kaynaklar} alan="kpi" label="Son 30 gün yansıma ve aday" />} />
         </KpiRow>
       )}
 
       <Block
         title={`${monthLabel(ay)} ayında çıkan kitaplar`}
         help="CRM kitap kartındaki ilk baskı tarihi. Önem derecesi yüksek olan üstte."
+        info={<SqlInfo k={d?.kaynaklar} alan="books" label="Ayın kitapları, gönderim ve yansıma sayıları" />}
         action={
           <div className="flex items-center gap-1.5">
             <button type="button" className={btnGhost} aria-label="Önceki ay" onClick={() => setAy(shift(ay, -1))}>
@@ -108,13 +110,13 @@ export default function PrHome() {
       </Block>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-        <Block title="Onay bekleyen dosyalar" help="Bülten ve gönderim listesi birlikte onaylanır; gönderen onaylayamaz.">
+        <Block title="Onay bekleyen dosyalar" help="Bülten ve gönderim listesi birlikte onaylanır; gönderen onaylayamaz." info={<SqlInfo k={d?.kaynaklar} alan="pending" label="Onay bekleyen dosyalar" />}>
           {d && d.pending.length === 0 && <Empty>Onay bekleyen dosya yok.</Empty>}
           <ul className="flex flex-col gap-2">
             {d?.pending.map((k) => <KitLine key={k.id} k={k} />)}
           </ul>
         </Block>
-        <Block title="Cevap bekleyen gönderimler" help="Takip günü geçmiş, durumu «gönderildi» kalan satırlar. Tek tıkla işaretlemek için dosyayı açın.">
+        <Block title="Cevap bekleyen gönderimler" help="Takip günü geçmiş, durumu «gönderildi» kalan satırlar. Tek tıkla işaretlemek için dosyayı açın." info={<SqlInfo k={d?.kaynaklar} alan="overdue" label="Cevap bekleyen gönderimler" />}>
           {d && d.overdue.length === 0 && <Empty>Takip günü geçen gönderim yok.</Empty>}
           <ul className="flex flex-col gap-2">
             {d?.overdue.map((s) => (
@@ -138,6 +140,7 @@ export default function PrHome() {
       <Block
         title="Son yansımalar"
         help="Son 30 günde kayıtlı yansımalar (elle girilen ve kabul edilen tarama adayları)."
+        info={<SqlInfo k={d?.kaynaklar} alan="recentCoverage" label="Son yansımalar" />}
         action={<Link to="/basin-iliskileri/yansimalar" className={btnGhost}>Tümü ve yeni kayıt</Link>}
       >
         {d && d.recentCoverage.length === 0 && <Empty>Son 30 günde kayıtlı yansıma yok. Çıkan haberin bağlantısını «Yansımalar»dan ekleyin.</Empty>}
@@ -242,6 +245,7 @@ function BookSearch() {
             <div className="flex items-center justify-between gap-2 p-1 text-[11px] text-canvas-muted">
               <span className="font-mono tabular-nums">
                 {(page * res.data.pageSize + 1).toLocaleString('tr-TR')}–{(page * res.data.pageSize + res.data.items.length).toLocaleString('tr-TR')} / {res.data.total.toLocaleString('tr-TR')}
+                <SqlInfo k={res.data.kaynaklar} alan="total" label="Kitap araması" />
               </span>
               <span className="flex gap-1">
                 <button type="button" className={btnGhost} disabled={page === 0 || res.isFetching} onClick={() => setPage(page - 1)} aria-label="Önceki sayfa">

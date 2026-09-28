@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Plus, RefreshCw, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, useDebounced } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -60,7 +61,7 @@ export default function PrContacts() {
     >
       <Note tone="info">Kişisel veri: ad, e-posta ve telefon yalnız basın ilişkisi için tutulur. «Haberdar olmak istemiyorum» diyen kişiyi işaretleyin; bir daha önerilmez ve ona e-posta gitmez.</Note>
       {d?.note && <Note tone="warn">{d.note}</Note>}
-      <Block title="Liste">
+      <Block title="Liste" info={<SqlInfo k={d?.kaynaklar} alan="items" label="Medya kişileri, haber ve gönderim sayıları" />}>
         <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-[1fr_180px_180px_160px_160px_auto] lg:items-end">
           <label className="relative flex items-center">
             <span className="sr-only">Ara</span>

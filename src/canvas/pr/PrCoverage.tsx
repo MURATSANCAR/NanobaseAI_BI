@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { ExternalLink, Plus, Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, useDebounced } from '../editorial/kit';
 import { TONE_TONE, fmtDay, prApi, type Coverage, type Meta } from './api';
@@ -68,7 +69,7 @@ export default function PrCoverage() {
     >
       {d && !d.webWatch && <Note tone="info">Bu ortamda web taraması kapalı: yansımalar elle girilir, bağlantıdan başlık okunmaz.</Note>}
       {d?.note && <Note tone="warn">{d.note}</Note>}
-      <Block title="Liste">
+      <Block title="Liste" info={<><SqlInfo k={d?.kaynaklar} alan="items" label="Yansımalar ve toplam" /><SqlInfo k={d?.kaynaklar} alan="counts" label="Durum sayıları" /></>}>
         <div className="mb-2 flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Durum">
           {STATES.map((s) => (
             <button key={s.v} type="button" role="radio" aria-checked={durum === s.v}

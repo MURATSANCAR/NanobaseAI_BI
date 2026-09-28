@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Loader2, Mail, Search, Sparkles, Trash2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, useDebounced } from '../editorial/kit';
 import Sheet from '../editorial/studio/reader/Sheet';
@@ -22,6 +23,7 @@ export default function KitSends({ kit, meta, onChange }: { kit: Kit; meta: Meta
     <>
       <Block
         title={`Gönderim listesi (${kit.sends.length})`}
+        info={<SqlInfo k={kit.kaynaklar} alan="sends" label="Gönderim listesi" />}
         help={
           kit.status === 'onayli'
             ? waiting ? `${waiting} satır sonradan eklendi; onay bekliyor.` : 'Liste onaylı. E-posta tek tek gider; kargo, elden ve telefon satırlarını gönderince işaretleyin.'
@@ -265,7 +267,7 @@ function Suggest({ kit, onAdded }: { kit: Kit; onAdded: () => void }) {
   const d = s.data;
 
   return (
-    <Block title="Kime gönderelim?" help={d?.rule ?? 'Medya kişileri, bu kitaba uygunluk puanıyla sıralı. Hepsi listelenir; üstten okuyun.'}>
+    <Block title="Kime gönderelim?" help={d?.rule ?? 'Medya kişileri, bu kitaba uygunluk puanıyla sıralı. Hepsi listelenir; üstten okuyun.'} info={<SqlInfo k={d?.kaynaklar} alan="items" label="Öneri puanı ve kişi sayısı" />}>
       {d?.note && <Note tone="warn">{d.note}</Note>}
       <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-end">
         <label className="relative flex min-w-0 flex-1 items-center">

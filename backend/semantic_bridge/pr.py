@@ -307,10 +307,13 @@ def _event(c: Any, tenant: str, kind: str, ref: str, who: str, what: str, old: A
                                      new_json=None if new is None else dump(new)[:20000]))
 
 
+def events_stmt(tenant: str, ref: str):
+    return sa.select(EVENTS).where(EVENTS.c.tenant_id == tenant, EVENTS.c.ref_id == ref).order_by(EVENTS.c.at.desc())
+
+
 def events(engine: sa.engine.Engine, tenant: str, ref: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(EVENTS).where(EVENTS.c.tenant_id == tenant, EVENTS.c.ref_id == ref)
-                         .order_by(EVENTS.c.at.desc())).all()
+        rows = c.execute(events_stmt(tenant, ref)).all()
     return [{"at": iso(r.at), "who": r.who, "what": r.what, "old": loads(r.old_json, None), "new": loads(r.new_json, None)}
             for r in rows]
 
@@ -421,9 +424,13 @@ def _clean_contact(body: dict[str, Any], *, partial: bool) -> dict[str, Any]:
     return vals
 
 
+def overlays_stmt(tenant: str):
+    return sa.select(CONTACTS).where(CONTACTS.c.tenant_id == tenant)
+
+
 def overlays(engine: sa.engine.Engine, tenant: str) -> list[Any]:
     with engine.connect() as c:
-        return c.execute(sa.select(CONTACTS).where(CONTACTS.c.tenant_id == tenant)).all()
+        return c.execute(overlays_stmt(tenant)).all()
 
 
 def merge_contacts(crm_rows: Iterable[dict[str, Any]], rows: Iterable[Any]) -> list[dict[str, Any]]:
@@ -548,8 +555,26 @@ def next_kit_id(c: Any, tenant: str, year: int) -> str:
     return f"{prefix}{n:04d}"
 
 
+def kit_stmt(tenant: str, kit_id: str):
+    return sa.select(KITS).where(KITS.c.tenant_id == tenant, KITS.c.id == str(kit_id)[:24])
+
+
+def kit_sends_stmt(kit_id: str):
+    return sa.select(SENDS).where(SENDS.c.kit_id == kit_id).order_by(SENDS.c.created_at, SENDS.c.id)
+
+
+def kit_coverage_stmt(tenant: str, kit_id: str, crm_book_id: Optional[str]):
+    return sa.select(COVERAGE).where(COVERAGE.c.tenant_id == tenant, COVERAGE.c.state != "reddedildi",
+                                     sa.or_(COVERAGE.c.kit_id == kit_id, COVERAGE.c.crm_book_id == crm_book_id)) \
+        .order_by(sa.func.coalesce(COVERAGE.c.published_at, "").desc())
+
+
+def kit_job_stmt(kit_id: str):
+    return sa.select(JOBS).where(JOBS.c.ref_id == kit_id).order_by(JOBS.c.created_at.desc()).limit(1)
+
+
 def _kit_row(c: Any, tenant: str, kit_id: str, *, lock: bool = False) -> Any:
-    q = sa.select(KITS).where(KITS.c.tenant_id == tenant, KITS.c.id == str(kit_id)[:24])
+    q = kit_stmt(tenant, kit_id)
     if lock and c.engine.dialect.name == "postgresql":
         q = q.with_for_update()
     r = c.execute(q).first()
@@ -598,11 +623,9 @@ def coverage_dict(r: Any) -> dict[str, Any]:
 def kit_full(engine: sa.engine.Engine, tenant: str, kit_id: str) -> dict[str, Any]:
     with engine.connect() as c:
         r = _kit_row(c, tenant, kit_id)
-        sends = c.execute(sa.select(SENDS).where(SENDS.c.kit_id == r.id).order_by(SENDS.c.created_at, SENDS.c.id)).all()
-        cov = c.execute(sa.select(COVERAGE).where(COVERAGE.c.tenant_id == tenant, COVERAGE.c.state != "reddedildi",
-                                                  sa.or_(COVERAGE.c.kit_id == r.id, COVERAGE.c.crm_book_id == r.crm_book_id))
-                        .order_by(sa.func.coalesce(COVERAGE.c.published_at, "").desc())).all()
-        job = c.execute(sa.select(JOBS).where(JOBS.c.ref_id == r.id).order_by(JOBS.c.created_at.desc()).limit(1)).first()
+        sends = c.execute(kit_sends_stmt(r.id)).all()
+        cov = c.execute(kit_coverage_stmt(tenant, r.id, r.crm_book_id)).all()
+        job = c.execute(kit_job_stmt(r.id)).first()
     t = today()
     return {**kit_head(r),
             "releaseNational": r.release_national, "releaseLocal": r.release_local, "pitchTemplate": r.pitch_template,
@@ -611,8 +634,9 @@ def kit_full(engine: sa.engine.Engine, tenant: str, kit_id: str) -> dict[str, An
             "job": job_dict(job) if job else None}
 
 
-def list_kits(engine: sa.engine.Engine, tenant: str, *, status: str = "", books: Iterable[str] | None = None,
-              include_closed: bool = True) -> list[dict[str, Any]]:
+def list_kits_stmts(tenant: str, *, status: str = "", books: Iterable[str] | None = None,
+                    include_closed: bool = True) -> Optional[tuple[Any, Any, Any]]:
+    """(dosyalar, dosya başına gönderim / gönderilen sayısı, kitap başına kayıtlı yansıma); kitap süzgeci boşsa None."""
     cond = [KITS.c.tenant_id == tenant]
     if status:
         cond.append(KITS.c.status.in_([s for s in status.split(",") if s]))
@@ -621,15 +645,25 @@ def list_kits(engine: sa.engine.Engine, tenant: str, *, status: str = "", books:
     ids = [b.lower() for b in (books or []) if b]
     if books is not None:
         if not ids:
-            return []
+            return None
         cond.append(KITS.c.crm_book_id.in_(ids))
+    return (sa.select(KITS).where(*cond).order_by(KITS.c.created_at.desc()),
+            sa.select(SENDS.c.kit_id, sa.func.count().label("gonderim"),
+                      sa.func.sum(sa.case((SENDS.c.status.in_(SENT), 1), else_=0)).label("gonderilen"))
+            .where(SENDS.c.tenant_id == tenant).group_by(SENDS.c.kit_id),
+            sa.select(COVERAGE.c.crm_book_id, sa.func.count().label("yansima")).where(
+                COVERAGE.c.tenant_id == tenant, COVERAGE.c.state == "kayitli").group_by(COVERAGE.c.crm_book_id))
+
+
+def list_kits(engine: sa.engine.Engine, tenant: str, *, status: str = "", books: Iterable[str] | None = None,
+              include_closed: bool = True) -> list[dict[str, Any]]:
+    q = list_kits_stmts(tenant, status=status, books=books, include_closed=include_closed)
+    if q is None:
+        return []
     with engine.connect() as c:
-        rows = c.execute(sa.select(KITS).where(*cond).order_by(KITS.c.created_at.desc())).all()
-        counts = {k: (int(n), int(s or 0)) for k, n, s in c.execute(
-            sa.select(SENDS.c.kit_id, sa.func.count(), sa.func.sum(sa.case((SENDS.c.status.in_(SENT), 1), else_=0)))
-            .where(SENDS.c.tenant_id == tenant).group_by(SENDS.c.kit_id)).all()}
-        cov = dict(c.execute(sa.select(COVERAGE.c.crm_book_id, sa.func.count()).where(
-            COVERAGE.c.tenant_id == tenant, COVERAGE.c.state == "kayitli").group_by(COVERAGE.c.crm_book_id)).all())
+        rows = c.execute(q[0]).all()
+        counts = {k: (int(n), int(s or 0)) for k, n, s in c.execute(q[1]).all()}
+        cov = dict(c.execute(q[2]).all())
     out = []
     for r in rows:
         n, sent = counts.get(r.id, (0, 0))
@@ -995,13 +1029,17 @@ def record_mail(engine: sa.engine.Engine, tenant: str, user: str, sid: str, resu
         return send_dict(c.execute(sa.select(SENDS).where(SENDS.c.id == r.id)).one())
 
 
-def overdue_sends(engine: sa.engine.Engine, tenant: str, ref: Optional[date] = None) -> list[dict[str, Any]]:
+def overdue_stmt(tenant: str, ref: Optional[date] = None):
+    """Takip günü geçmiş, dönüşsüz gönderimler (kapalı dosya hariç)."""
     t = (ref or today()).isoformat()
+    return sa.select(SENDS, KITS.c.book_title, KITS.c.owner).join(KITS, KITS.c.id == SENDS.c.kit_id) \
+        .where(SENDS.c.tenant_id == tenant, SENDS.c.status == "gonderildi", SENDS.c.follow_up_at.is_not(None),
+               SENDS.c.follow_up_at <= t, KITS.c.status != "kapali").order_by(SENDS.c.follow_up_at, SENDS.c.id)
+
+
+def overdue_sends(engine: sa.engine.Engine, tenant: str, ref: Optional[date] = None) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SENDS, KITS.c.book_title, KITS.c.owner).join(KITS, KITS.c.id == SENDS.c.kit_id)
-                         .where(SENDS.c.tenant_id == tenant, SENDS.c.status == "gonderildi", SENDS.c.follow_up_at.is_not(None),
-                                SENDS.c.follow_up_at <= t, KITS.c.status != "kapali")
-                         .order_by(SENDS.c.follow_up_at, SENDS.c.id)).all()
+        rows = c.execute(overdue_stmt(tenant, ref)).all()
     return [{**send_dict(r, ref), "bookTitle": r.book_title, "owner": r.owner} for r in rows]
 
 
@@ -1188,12 +1226,16 @@ def import_web(engine: sa.engine.Engine, tenant: str, items: Iterable[dict[str, 
     return {"eklenen": added, "zatenVar": seen}
 
 
-def list_coverage(engine: sa.engine.Engine, tenant: str, *, state: str = "kayitli") -> list[dict[str, Any]]:
+def coverage_stmt(tenant: str, state: str = "kayitli"):
     cond = [COVERAGE.c.tenant_id == tenant]
     if state:
         cond.append(COVERAGE.c.state.in_([s for s in state.split(",") if s]))
+    return sa.select(COVERAGE).where(*cond)
+
+
+def list_coverage(engine: sa.engine.Engine, tenant: str, *, state: str = "kayitli") -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(COVERAGE).where(*cond)).all()
+        rows = c.execute(coverage_stmt(tenant, state)).all()
     return [coverage_dict(r) for r in rows]
 
 
@@ -1311,11 +1353,20 @@ def suggest(contacts: list[dict[str, Any]], archive: list[dict[str, Any]], book:
     return out
 
 
+def history_stmts(tenant: str) -> tuple[Any, Any]:
+    """Kişi başına geçmiş: (gönderim satırları, kişi başına kayıtlı yansıma sayısı)."""
+    return (sa.select(SENDS.c.contact_key, SENDS.c.status, SENDS.c.sent_at).where(SENDS.c.tenant_id == tenant),
+            sa.select(COVERAGE.c.contact_key, sa.func.count().label("yansima")).where(
+                COVERAGE.c.tenant_id == tenant, COVERAGE.c.state == "kayitli", COVERAGE.c.contact_key.is_not(None))
+            .group_by(COVERAGE.c.contact_key))
+
+
 def history_by_contact(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[str, Any]]:
     """Kişi başına portal geçmişi: gönderim sayısı, dönüş, olumsuz, son temas, yansıma sayısı."""
     out: dict[str, dict[str, Any]] = {}
+    sq, cq = history_stmts(tenant)
     with engine.connect() as c:
-        for r in c.execute(sa.select(SENDS.c.contact_key, SENDS.c.status, SENDS.c.sent_at).where(SENDS.c.tenant_id == tenant)).all():
+        for r in c.execute(sq).all():
             h = out.setdefault(r.contact_key, {"sends": 0, "positive": 0, "negative": 0, "coverage": 0, "last": None})
             if r.status in SENT:
                 h["sends"] += 1
@@ -1326,17 +1377,19 @@ def history_by_contact(engine: sa.engine.Engine, tenant: str) -> dict[str, dict[
             d = local_day(r.sent_at)
             if d and (h["last"] is None or d > h["last"]):
                 h["last"] = d
-        for key, n in c.execute(sa.select(COVERAGE.c.contact_key, sa.func.count()).where(
-                COVERAGE.c.tenant_id == tenant, COVERAGE.c.state == "kayitli", COVERAGE.c.contact_key.is_not(None))
-                .group_by(COVERAGE.c.contact_key)).all():
+        for key, n in c.execute(cq).all():
             out.setdefault(key, {"sends": 0, "positive": 0, "negative": 0, "coverage": 0, "last": None})["coverage"] = int(n)
     return out
 
 
+def sends_of_contact_stmt(tenant: str, key: str):
+    return sa.select(SENDS, KITS.c.book_title).join(KITS, KITS.c.id == SENDS.c.kit_id) \
+        .where(SENDS.c.tenant_id == tenant, SENDS.c.contact_key == key).order_by(SENDS.c.created_at.desc())
+
+
 def sends_of_contact(engine: sa.engine.Engine, tenant: str, key: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = c.execute(sa.select(SENDS, KITS.c.book_title).join(KITS, KITS.c.id == SENDS.c.kit_id)
-                         .where(SENDS.c.tenant_id == tenant, SENDS.c.contact_key == key).order_by(SENDS.c.created_at.desc())).all()
+        rows = c.execute(sends_of_contact_stmt(tenant, key)).all()
     return [{**send_dict(r), "bookTitle": r.book_title} for r in rows]
 
 
@@ -1389,15 +1442,22 @@ def fail_stale_jobs(engine: sa.engine.Engine) -> int:
 # ------------------------------------------------------------------ rapor
 
 
+def report_stmts(tenant: str) -> tuple[Any, Any, Any]:
+    """Rapor okumaları: gönderilmiş satırlar, kayıtlı yansımalar, aday yansıma sayısı (dönem süzgeci hesapta)."""
+    return (sa.select(SENDS.c.id, SENDS.c.status, SENDS.c.channel, SENDS.c.sent_at, SENDS.c.kit_id)
+            .where(SENDS.c.tenant_id == tenant, SENDS.c.sent_at.is_not(None)),
+            sa.select(COVERAGE).where(COVERAGE.c.tenant_id == tenant, COVERAGE.c.state == "kayitli"),
+            sa.select(sa.func.count()).select_from(COVERAGE).where(COVERAGE.c.tenant_id == tenant, COVERAGE.c.state == "aday"))
+
+
 def report(engine: sa.engine.Engine, tenant: str, frm: str, to: str, archive: list[dict[str, Any]]) -> dict[str, Any]:
     """Dönem raporu. Sayılar doğrudan tablolardan: gönderim (gönderim gününe göre), yansıma (yayın gününe göre;
     yoksa kayıt günü), CRM arşivi (haber tarihine göre) ayrı. Erişim/tiraj yok."""
+    sq, cq, pq = report_stmts(tenant)
     with engine.connect() as c:
-        sends = c.execute(sa.select(SENDS.c.id, SENDS.c.status, SENDS.c.channel, SENDS.c.sent_at, SENDS.c.kit_id)
-                          .where(SENDS.c.tenant_id == tenant, SENDS.c.sent_at.is_not(None))).all()
-        cov = c.execute(sa.select(COVERAGE).where(COVERAGE.c.tenant_id == tenant, COVERAGE.c.state == "kayitli")).all()
-        pending = c.execute(sa.select(sa.func.count()).select_from(COVERAGE).where(COVERAGE.c.tenant_id == tenant,
-                                                                                   COVERAGE.c.state == "aday")).scalar() or 0
+        sends = c.execute(sq).all()
+        cov = c.execute(cq).all()
+        pending = c.execute(pq).scalar() or 0
     in_range = lambda d: bool(d) and frm <= d <= to  # noqa: E731
     s_rows = [s for s in sends if in_range(local_day(s.sent_at))]
     by_status: dict[str, int] = {}

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Download, Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { isoDay, prApi } from './api';
@@ -72,10 +73,10 @@ export default function PrReport() {
       {r && m && (
         <>
           <KpiRow>
-            <Kpi label="Gönderim" value={r.sends.total.toLocaleString('tr-TR')} help="Dönemde gönderilen (e-posta, kargo, elden, telefon)" />
-            <Kpi label="Dönüş" value={r.sends.answered.toLocaleString('tr-TR')} help={`Cevap ya da haber · oran ${pct(r.sends.answerRate)}`} />
-            <Kpi label="Kayıtlı yansıma" value={r.coverage.total.toLocaleString('tr-TR')} help={r.pendingCandidates ? `${r.pendingCandidates} aday onay bekliyor` : 'Yayın tarihine göre'} />
-            <Kpi label="CRM arşivi" value={r.archive.total === null ? '—' : r.archive.total.toLocaleString('tr-TR')} help={r.archive.note ?? 'Aynı dönemde CRM haber kaydı'} />
+            <Kpi label="Gönderim" value={r.sends.total.toLocaleString('tr-TR')} help="Dönemde gönderilen (e-posta, kargo, elden, telefon)" info={<SqlInfo k={r.kaynaklar} alan="sends" label="Gönderim" />} />
+            <Kpi label="Dönüş" value={r.sends.answered.toLocaleString('tr-TR')} help={`Cevap ya da haber · oran ${pct(r.sends.answerRate)}`} info={<SqlInfo k={r.kaynaklar} alan="sends" label="Dönüş" />} />
+            <Kpi label="Kayıtlı yansıma" value={r.coverage.total.toLocaleString('tr-TR')} help={r.pendingCandidates ? `${r.pendingCandidates} aday onay bekliyor` : 'Yayın tarihine göre'} info={<SqlInfo k={r.kaynaklar} alan="coverage" label="Kayıtlı yansıma" />} />
+            <Kpi label="CRM arşivi" value={r.archive.total === null ? '—' : r.archive.total.toLocaleString('tr-TR')} help={r.archive.note ?? 'Aynı dönemde CRM haber kaydı'} info={<SqlInfo k={r.kaynaklar} alan="archive" label="CRM arşivi" />} />
           </KpiRow>
 
           <Block
@@ -94,13 +95,13 @@ export default function PrReport() {
           </Block>
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
-            <Dist title="Gönderim durumu" rows={r.sends.byStatus} labels={m.sendStatuses as Record<string, string>} />
-            <Dist title="Yansıma tonu" rows={r.coverage.byTone} labels={{ ...m.tones, belirsiz: 'Belirsiz' }} />
-            <Dist title="Mecra türü" rows={r.coverage.byOutletType} labels={{ ...m.outletTypes, belirsiz: 'Belirsiz' }} />
+            <Dist title="Gönderim durumu" rows={r.sends.byStatus} labels={m.sendStatuses as Record<string, string>} info={<SqlInfo k={r.kaynaklar} alan="sends" label="Gönderim durumu" />} />
+            <Dist title="Yansıma tonu" rows={r.coverage.byTone} labels={{ ...m.tones, belirsiz: 'Belirsiz' }} info={<SqlInfo k={r.kaynaklar} alan="coverage" label="Yansıma tonu" />} />
+            <Dist title="Mecra türü" rows={r.coverage.byOutletType} labels={{ ...m.outletTypes, belirsiz: 'Belirsiz' }} info={<SqlInfo k={r.kaynaklar} alan="coverage" label="Mecra türü" />} />
           </div>
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-            <Ranked title="En çok haber alan kitaplar" rows={r.coverage.books.map((b) => ({ name: b.title ?? '—', count: b.count }))} />
-            <Ranked title="Mecralar" rows={r.coverage.outlets} />
+            <Ranked title="En çok haber alan kitaplar" rows={r.coverage.books.map((b) => ({ name: b.title ?? '—', count: b.count }))} info={<SqlInfo k={r.kaynaklar} alan="coverage" label="Kitaplar" />} />
+            <Ranked title="Mecralar" rows={r.coverage.outlets} info={<SqlInfo k={r.kaynaklar} alan="coverage" label="Mecralar" />} />
           </div>
         </>
       )}
@@ -108,11 +109,11 @@ export default function PrReport() {
   );
 }
 
-function Dist({ title, rows, labels }: { title: string; rows: Record<string, number>; labels: Record<string, string> }) {
+function Dist({ title, rows, labels, info }: { title: string; rows: Record<string, number>; labels: Record<string, string>; info?: ReactNode }) {
   const total = Object.values(rows).reduce((a, b) => a + b, 0);
   const items = Object.entries(rows).sort((a, b) => b[1] - a[1]);
   return (
-    <Block title={title}>
+    <Block title={title} info={info}>
       {items.length === 0 && <Empty>Kayıt yok.</Empty>}
       <ul className="flex flex-col gap-1.5">
         {items.map(([k, n]) => (
@@ -131,9 +132,9 @@ function Dist({ title, rows, labels }: { title: string; rows: Record<string, num
   );
 }
 
-function Ranked({ title, rows }: { title: string; rows: Array<{ name: string; count: number }> }) {
+function Ranked({ title, rows, info }: { title: string; rows: Array<{ name: string; count: number }>; info?: ReactNode }) {
   return (
-    <Block title={title}>
+    <Block title={title} info={info}>
       {rows.length === 0 && <Empty>Kayıt yok.</Empty>}
       <ol className="flex flex-col divide-y divide-slate-100">
         {rows.map((x, i) => (

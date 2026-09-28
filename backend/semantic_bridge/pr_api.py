@@ -31,8 +31,10 @@ from fastapi.responses import Response
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import pr as PR
+from semantic_bridge import pr_kaynak as K
 from semantic_bridge import pr_export as X
 from semantic_bridge import pr_sources as S
+from semantic_bridge import provenance as PV
 
 log = logging.getLogger("semantic.pr.api")
 
@@ -202,19 +204,21 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         since = (PR.today() - timedelta(days=30)).isoformat()
         recent = PR.filter_coverage(PR.list_coverage(engine, tenant, state="kayitli"), frm=since)
         cands = len(PR.list_coverage(engine, tenant, state="aday"))
-        return {
+        out = {
             "month": frm.isoformat()[:7], "from": frm.isoformat(), "to": to.isoformat(), "books": rows, "booksError": err,
             "kpi": {"books": len(rows), "noKit": sum(1 for r in rows if not r["kit"]), "pending": len(pending),
                     "overdue": len(overdue), "recent": len(recent), "candidates": cands},
             "pending": pending, "overdue": overdue, "recentCoverage": recent, "webWatch": st()["webWatch"],
         }
+        return PV.bagla(out, lambda: K.for_home(engine, tenant, crm, frm, to, [b["kitapId"] for b in books]))
 
     @app.get(R + "/books")
     async def pr_books(request: Request, q: str = "", page: int = 0) -> dict[str, Any]:
         await run_in_threadpool(ctx, request)
         if len(q.strip()) < 2:
             return {"items": [], "total": 0, "page": 0, "pageSize": S.SEARCH_PAGE}
-        return await run_in_threadpool(call, crm.search_books, q, page)
+        out = await run_in_threadpool(call, crm.search_books, q, page)
+        return PV.bagla(out, lambda: K.for_search(q, page))
 
     @app.get(R + "/books/{bid}")
     async def pr_book(bid: str, request: Request, yenile: bool = False) -> dict[str, Any]:
@@ -229,10 +233,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             except S.SourceError as e:
                 onote = f"Tanıtım gönderimi siparişleri okunamadı: {e}"
         kits = PR.list_kits(engine, tenant, books=[book["kitapId"]])
-        return {"book": book, "kits": kits, "openKit": next((k for k in kits if k["status"] != "kapali"), None),
-                "archive": sorted(news, key=lambda a: a.get("tarih") or "", reverse=True), "archiveNote": note,
-                "promoOrders": orders, "promoTotal": sum(o["adet"] for o in orders), "promoNote": onote,
-                "m15Release": m15_release(engine, tenant, book.get("stokKodu"))}
+        out = {"book": book, "kits": kits, "openKit": next((k for k in kits if k["status"] != "kapali"), None),
+               "archive": sorted(news, key=lambda a: a.get("tarih") or "", reverse=True), "archiveNote": note,
+               "promoOrders": orders, "promoTotal": sum(o["adet"] for o in orders), "promoNote": onote,
+               "m15Release": m15_release(engine, tenant, book.get("stokKodu"))}
+        return PV.bagla(out, lambda: K.for_book(engine, tenant, crm, book))
 
     # ------------------------------------------------------------------ PR dosyası
 
@@ -240,7 +245,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def pr_kits(request: Request, status: str = "") -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         items = PR.list_kits(engine, tenant, status=status)
-        return {"items": items, "total": len(items)}
+        return PV.bagla({"items": items, "total": len(items)}, lambda: K.for_kits(engine, tenant, status))
 
     @app.post(R + "/kits", status_code=201)
     async def pr_kit_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -263,7 +268,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         for s in kit["sends"]:
             s["doNotContact"] = s["contactKey"] in dnc
         kit["me"] = {"isSubmitter": (kit.get("submittedBy") or "").lower() == user.lower()}
-        return kit
+        return PV.bagla(kit, lambda: K.for_kit(engine, tenant, kit))
 
     @app.patch(R + "/kits/{kit_id}")
     def pr_kit_update(kit_id: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -278,7 +283,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     def pr_kit_events(kit_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         call(PR.kit_full, engine, tenant, kit_id)
-        return {"items": PR.events(engine, tenant, kit_id)}
+        return PV.bagla({"items": PR.events(engine, tenant, kit_id)}, lambda: K.for_events(engine, tenant, kit_id))
 
     def run_draft(jid: str, tenant: str, user: str, kit_id: str, parts: list[str]) -> None:
         engine = rt().store.engine
@@ -399,9 +404,10 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if q:
             fq = PR.fold(q)
             ranked = [r for r in ranked if fq in PR.fold(f"{r['name']} {r.get('outlet') or ''} {' '.join(r.get('topics') or [])}")]
-        return {**PR.page_of(ranked, page), "note": note or anote,
-                "rule": "Puan kuraldır: yazarın kitapları hakkında haber ×3, aynı kitaplık ×2, aynı hedef kitle ×1 (CRM haber "
-                        "arşivi), konu etiketi eşleşmesi ×2, portalda yansıma ×1, dönüş ×1, olumsuz −1, son bir yılda temas +1."}
+        out = {**PR.page_of(ranked, page), "note": note or anote,
+               "rule": "Puan kuraldır: yazarın kitapları hakkında haber ×3, aynı kitaplık ×2, aynı hedef kitle ×1 (CRM haber "
+                       "arşivi), konu etiketi eşleşmesi ×2, portalda yansıma ×1, dönüş ×1, olumsuz −1, son bir yılda temas +1."}
+        return PV.bagla(out, lambda: K.for_suggest(engine, tenant, crm, kit))
 
     # ------------------------------------------------------------------ gönderim satırları
 
@@ -569,7 +575,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             rows.append({**c, "history": hist.get(c["key"]) or {}})
         rows.sort(key=lambda c: PR.fold(c["name"]))
         tags = sorted({t for c in contacts for t in c.get("topics") or []}, key=PR.fold)
-        return {**PR.page_of(rows, page), "note": note, "tags": tags, "all": len(contacts)}
+        return PV.bagla({**PR.page_of(rows, page), "note": note, "tags": tags, "all": len(contacts)},
+                        lambda: K.for_contacts(engine, tenant, crm))
 
     @app.post(R + "/contacts", status_code=201)
     async def pr_contact_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -588,10 +595,11 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         guid, _ = PR.split_key(key)
         news = [a for a in archive if guid and guid in (a.get("muhabirId"), a.get("gorusulenId"))]
         cov = [x for x in PR.list_coverage(engine, tenant, state="kayitli") if x["contactKey"] == key]
-        return {"contact": c, "history": PR.history_by_contact(engine, tenant).get(key) or {},
-                "archive": sorted(news, key=lambda a: a.get("tarih") or "", reverse=True), "sends": PR.sends_of_contact(engine, tenant, key),
-                "coverage": sorted(cov, key=lambda x: x["publishedAt"] or "", reverse=True), "events": PR.events(engine, tenant, key),
-                "note": note or anote}
+        out = {"contact": c, "history": PR.history_by_contact(engine, tenant).get(key) or {},
+               "archive": sorted(news, key=lambda a: a.get("tarih") or "", reverse=True), "sends": PR.sends_of_contact(engine, tenant, key),
+               "coverage": sorted(cov, key=lambda x: x["publishedAt"] or "", reverse=True), "events": PR.events(engine, tenant, key),
+               "note": note or anote}
+        return PV.bagla(out, lambda: K.for_contact(engine, tenant, crm, key))
 
     @app.patch(R + "/contacts/{key}")
     async def pr_contact_update(key: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -620,16 +628,19 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def pr_coverage(request: Request, frm: str = "", to: str = "", kitap: str = "", kaynak: str = "", ton: str = "",
                           q: str = "", durum: str = "kayitli", kisi: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = await run_in_threadpool(ctx, request)
-        rows = PR.list_coverage(engine, tenant, state=durum if durum in PR.COVERAGE_STATES else "kayitli")
+        state = durum if durum in PR.COVERAGE_STATES else "kayitli"
+        rows = PR.list_coverage(engine, tenant, state=state)
         note = None
-        if kaynak in ("", "crm-arsiv") and durum in ("", "kayitli"):
+        with_archive = kaynak in ("", "crm-arsiv") and durum in ("", "kayitli")
+        if with_archive:
             archive, note = await run_in_threadpool(archive_or_empty)
             rows += [PR.archive_as_coverage(a) for a in archive]
         out = PR.filter_coverage(rows, frm=frm or None, to=to or None, book=kitap, source=kaynak, tone=ton, q=q, contact=kisi)
         counts = {"kayitli": 0, "aday": 0, "reddedildi": 0}
         for r in PR.list_coverage(engine, tenant, state=""):
             counts[r["state"]] = counts.get(r["state"], 0) + 1
-        return {**PR.page_of(out, page), "note": note, "counts": counts, "webWatch": st()["webWatch"], "archivePath": crm.archive_path}
+        res = {**PR.page_of(out, page), "note": note, "counts": counts, "webWatch": st()["webWatch"], "archivePath": crm.archive_path}
+        return PV.bagla(res, lambda: K.for_coverage(engine, tenant, crm, state, with_archive))
 
     @app.post(R + "/coverage/preview")
     async def pr_coverage_preview(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -739,7 +750,7 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
         if yorum:
             m = llm()
             rep["comment"] = (await run_in_threadpool(PR.report_comment, m, rep, st()["claims"])) if m is not None else None
-        return rep
+        return PV.bagla(rep, lambda: K.for_report(engine, tenant, crm))
 
     @app.get(R + "/report/export.pdf")
     async def pr_report_pdf(request: Request, frm: str = "", to: str = "") -> Response:

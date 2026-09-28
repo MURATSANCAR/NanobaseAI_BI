@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ExternalLink, Loader2, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { AskSheet } from '../budget/parts';
 import { DROP_REASON, EVENT_LABEL, KIT_TONE, SOURCE_LABEL, TONE_TONE, fmtDay, fmtStamp, prApi, type Kit, type Meta, type Part } from './api';
@@ -82,6 +83,7 @@ export default function PrKit() {
           {kit.status === 'onayli' && <Note tone="info">Dosya onaylı. Bülten ya da şablon değişirse dosya taslağa döner ve gönderilmemiş satırların onayı düşer.</Note>}
           <Block
             title="Bülten ve metinler"
+            info={<SqlInfo k={kit.kaynaklar} alan="draft" label="Taslak ve denetimde düşen cümleler" />}
             help="Zeki AI yalnız CRM kitap kartındaki metinlere ve künyeye dayanır; kaynakta birebir geçmeyen alıntı, kaynaksız rakam ve kanıtsız üstünlük iddiası içeren cümle düşer. Yazdığınız metin ezilmez: taslak yanında öneri olarak durur."
             action={
               m.me.canEdit && kit.status !== 'kapali' && kit.status !== 'onayda' ? (
@@ -109,6 +111,7 @@ export default function PrKit() {
 
           <Block
             title="Yansımalar"
+            info={<SqlInfo k={kit.kaynaklar} alan="coverage" label="Dosyanın yansımaları" />}
             help="Bu kitap için kayıtlı haberler. Kişi ve kitap eşleşen gönderim satırı kendiliğinden «haber çıktı» olur."
             action={m.me.canEdit ? <Link to={`/basin-iliskileri/yansimalar?ekle=1&kitap=${encodeURIComponent(kit.crmBookId)}`} className={btnGhost}>Yansıma ekle</Link> : null}
           >
@@ -303,7 +306,7 @@ function History({ id }: { id: string }) {
   const [open, setOpen] = useState(false);
   const q = useQuery({ queryKey: ['pr', 'events', id], queryFn: () => prApi.events(id), enabled: ENGINE_ENABLED && open });
   return (
-    <Block title="Geçmiş" help="Dosyadaki her değişiklik: kim, ne zaman, ne yaptı.">
+    <Block title="Geçmiş" help="Dosyadaki her değişiklik: kim, ne zaman, ne yaptı." info={q.data ? <SqlInfo k={q.data.kaynaklar} alan="items" label="Değişiklik kaydı" /> : undefined}>
       <details onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
         <summary className="inline-flex min-h-8 cursor-pointer items-center text-[12px] font-bold text-canvas-violet">Geçmişi göster</summary>
         {q.isLoading && <Loading />}

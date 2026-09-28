@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ExternalLink } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { AskSheet } from '../budget/parts';
 import { SEND_TONE, TONE_TONE, fmtDay, prApi } from './api';
@@ -58,7 +59,7 @@ export default function PrContact() {
       {c && (
         <>
           {c.doNotContact && <Note tone="err">Haberdar olmak istemiyor{c.dncReason ? `: ${c.dncReason}` : ''}. Öneriye girmez, e-posta gönderilmez.</Note>}
-          <Block title="İletişim">
+          <Block title="İletişim" info={<SqlInfo k={d.kaynaklar} alan="history" label="Kişi geçmişi" />}>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-[12.5px] sm:grid-cols-2 lg:grid-cols-3">
               <Item k="E-posta" v={c.email} />
               <Item k="Telefon" v={c.phone} />
@@ -72,7 +73,7 @@ export default function PrContact() {
           </Block>
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-            <Block title={`Gönderimler (${d.sends.length})`}>
+            <Block title={`Gönderimler (${d.sends.length})`} info={<SqlInfo k={d.kaynaklar} alan="sends" label="Gönderimler" />}>
               {d.sends.length === 0 && <Empty>Portaldan bu kişiye gönderim yok.</Empty>}
               <ul className="flex flex-col divide-y divide-slate-100">
                 {d.sends.map((s) => (
@@ -85,7 +86,7 @@ export default function PrContact() {
                 ))}
               </ul>
             </Block>
-            <Block title={`Yansımalar (${d.coverage.length})`} help="Portalda bu kişiye bağlanmış haberler.">
+            <Block title={`Yansımalar (${d.coverage.length})`} help="Portalda bu kişiye bağlanmış haberler." info={<SqlInfo k={d.kaynaklar} alan="coverage" label="Yansımalar" />}>
               {d.coverage.length === 0 && <Empty>Kayıtlı yansıma yok.</Empty>}
               <ul className="flex flex-col divide-y divide-slate-100">
                 {d.coverage.map((x) => (
@@ -98,7 +99,7 @@ export default function PrContact() {
             </Block>
           </div>
 
-          <Block title={`CRM haber arşivi (${d.archive.length})`} help="Bu kişinin haberi yaptığı ya da basında görüşüldüğü Timaş haberleri (CRM, 2025-06'ya kadar).">
+          <Block title={`CRM haber arşivi (${d.archive.length})`} help="Bu kişinin haberi yaptığı ya da basında görüşüldüğü Timaş haberleri (CRM, 2025-06'ya kadar)." info={<SqlInfo k={d.kaynaklar} alan="archive" label="CRM haber arşivi" />}>
             {d.archive.length === 0 && <Empty>CRM haber arşivinde bu kişiye bağlı kayıt yok.</Empty>}
             <ul className="flex flex-col divide-y divide-slate-100">
               {d.archive.map((a) => (

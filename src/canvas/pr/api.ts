@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M20 Basın, medya ve halkla ilişkiler: köprü uçları /api/v1/pr/*. */
 
@@ -132,6 +133,7 @@ export type Kit = KitHead & {
   coverage: Coverage[];
   job: Job | null;
   me?: { isSubmitter: boolean };
+  kaynaklar?: Kaynaklar;
 };
 
 export type Contact = {
@@ -170,7 +172,7 @@ export type ArchiveNews = {
   books: Array<{ kitapId: string | null; ad: string | null }>;
 };
 
-export type PageOf<T> = { items: T[]; total: number; page: number; pageSize: number };
+export type PageOf<T> = { items: T[]; total: number; page: number; pageSize: number; kaynaklar?: Kaynaklar };
 
 export type Home = {
   month: string;
@@ -181,6 +183,7 @@ export type Home = {
   overdue: Send[];
   recentCoverage: Coverage[];
   webWatch: boolean;
+  kaynaklar?: Kaynaklar;
 };
 
 export type BookDetail = {
@@ -193,6 +196,7 @@ export type BookDetail = {
   promoTotal: number;
   promoNote: string | null;
   m15Release: { id: string; metin: string; onaylayan: string | null } | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Report = {
@@ -212,6 +216,7 @@ export type Report = {
   archive: { total: number | null; note?: string };
   pendingCandidates: number;
   comment?: { metin: string | null; dusenSayisi: number } | null;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Preview = {
@@ -278,7 +283,7 @@ export const prApi = {
   reject: (id: string, note: string) => send<Kit>('POST', `/kits/${enc(id)}/reject`, { note }),
   close: (id: string) => send<Kit>('POST', `/kits/${enc(id)}/close`, {}),
   reopen: (id: string) => send<Kit>('POST', `/kits/${enc(id)}/reopen`, {}),
-  events: (id: string) => send<{ items: Array<{ at: string; who: string; what: string; new: unknown }> }>('GET', `/kits/${enc(id)}/events`),
+  events: (id: string) => send<{ items: Array<{ at: string; who: string; what: string; new: unknown }>; kaynaklar?: Kaynaklar }>('GET', `/kits/${enc(id)}/events`),
   suggest: (id: string, page = 0, q = '') =>
     send<PageOf<Contact> & { note: string | null; rule: string }>('GET', `/kits/${enc(id)}/suggest-contacts${qs({ page, q })}`, undefined, 180_000),
   addSends: (id: string, contactKeys: string[], channel = 'eposta') =>
@@ -292,7 +297,7 @@ export const prApi = {
   contacts: (p: { q?: string; tur?: string; etiket?: string; kaynak?: string; izin?: string; page?: number; yenile?: boolean }) =>
     send<PageOf<Contact> & { note: string | null; tags: string[]; all: number }>('GET', `/contacts${qs(p)}`, undefined, 180_000),
   contact: (key: string) =>
-    send<{ contact: Contact; history: Contact['history']; archive: ArchiveNews[]; sends: Send[]; coverage: Coverage[]; note: string | null }>(
+    send<{ contact: Contact; history: Contact['history']; archive: ArchiveNews[]; sends: Send[]; coverage: Coverage[]; note: string | null; kaynaklar?: Kaynaklar }>(
       'GET', `/contacts/${enc(key)}`, undefined, 180_000),
   createContact: (b: Record<string, unknown>) => send<Contact>('POST', '/contacts', b),
   updateContact: (key: string, b: Record<string, unknown>) => send<Contact>('PATCH', `/contacts/${enc(key)}`, b),

@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ExternalLink, Loader2 } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { KIT_TONE, fmtDay, prApi } from './api';
 import { Block, Empty, PrFrame } from './parts';
@@ -57,7 +58,7 @@ export default function PrBook() {
       {d && (
         <>
           {d.kits.length > 0 && (
-            <Block title="PR dosyaları">
+            <Block title="PR dosyaları" info={<SqlInfo k={d.kaynaklar} alan="kits" label="PR dosyaları: gönderim ve yansıma" />}>
               <ul className="flex flex-col gap-2">
                 {d.kits.map((k) => (
                   <li key={k.id}>
@@ -75,7 +76,7 @@ export default function PrBook() {
           )}
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-            <Block title="CRM haber arşivi" help="CRM «Haber» modülündeki kayıtlar (2025-06'dan beri yeni kayıt girilmiyor; yalnız okunur).">
+            <Block title="CRM haber arşivi" help="CRM «Haber» modülündeki kayıtlar (2025-06'dan beri yeni kayıt girilmiyor; yalnız okunur)." info={<SqlInfo k={d.kaynaklar} alan="archive" label="CRM haber arşivi" />}>
               {d.archiveNote && <Note tone="warn">{d.archiveNote}</Note>}
               {d.archive.length === 0 && !d.archiveNote && <Empty>Bu kitap için CRM'de haber kaydı yok.</Empty>}
               <ul className="flex flex-col divide-y divide-slate-100">
@@ -96,7 +97,7 @@ export default function PrBook() {
                 ))}
               </ul>
             </Block>
-            <Block title="Basına tanıtım gönderimi" help="CRM «Pazarlama (Tanıtım Gönderimi)» siparişleri, bu kitabın stok koduyla. Alıcı sipariş carisidir; gazeteci adı siparişte tutulmuyor.">
+            <Block title="Basına tanıtım gönderimi" help="CRM «Pazarlama (Tanıtım Gönderimi)» siparişleri, bu kitabın stok koduyla. Alıcı sipariş carisidir; gazeteci adı siparişte tutulmuyor." info={<SqlInfo k={d.kaynaklar} alan="promoTotal" label="Tanıtım gönderimi adedi" />}>
               {d.promoNote && <Note tone="warn">{d.promoNote}</Note>}
               {d.promoOrders.length === 0 && !d.promoNote && <Empty>Tanıtım gönderimi siparişi yok.</Empty>}
               {d.promoOrders.length > 0 && (
