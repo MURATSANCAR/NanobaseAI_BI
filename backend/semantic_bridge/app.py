@@ -1672,7 +1672,9 @@ class AskIn(BaseModel):
 
 class FeedbackIn(BaseModel):
     queryId: str
-    validated: bool
+    validated: bool | None = None
+    # M50: cevabın altındaki düğme — dogru | kismen | yanlis (+ not). Eski gövde {queryId, validated} geçerli kalır.
+    verdict: str | None = None
     comment: str | None = None
 
 
@@ -2260,7 +2262,15 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # ne ön yüz ne betikler kullanıyordu (yetki analizi, bölüm 7.8).
 
     @app.post("/api/v1/feedback")
-    def feedback(body: FeedbackIn) -> dict[str, Any]:
+    def feedback(body: FeedbackIn, request: Request) -> dict[str, Any]:
+        # Oturumlu kişi ya da Doğru/Kısmen/Yanlış hükmü: M50 geri bildirim kaydı (kuyruk + validated). Çerezsiz eski
+        # çağrı (yalnız validated) eskisi gibi yalnız sl_query_log.validated'ı günceller.
+        mq = getattr(app.state, "model_quality", None)
+        if mq is not None and (body.verdict or "timas_session" in request.headers.get("cookie", "")):
+            return mq.feedback(request, {"queryId": body.queryId, "validated": body.validated,
+                                         "verdict": body.verdict, "comment": body.comment})
+        if body.validated is None:
+            raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "validated ya da verdict gerekli."})
         ok = rt().store.mark_validated(body.queryId, body.validated)
         return {"ok": ok, "queryId": body.queryId, "validated": body.validated, "note": "validated pairs feed the History Miner on the next pipeline run"}
 
@@ -7156,6 +7166,14 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
         "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
         "llm": lambda priority: rt().llm_for("sistem", priority),
         "run_check": admin_mod.run_check,
+    })
+
+    # M50 Zeki AI kalitesi: kapı koşuları, önce/sonra, sürüm kaydı, geri bildirim, hata sınıfları, karne.
+    # Uçlar /api/v1/model-quality/*; /api/v1/feedback bu servise yazar.
+    from semantic_bridge import model_quality_api
+    app.state.model_quality = model_quality_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf, "rt": rt,
     })
     return app
 

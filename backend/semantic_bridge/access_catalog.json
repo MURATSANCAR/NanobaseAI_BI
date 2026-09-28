@@ -456,6 +456,12 @@
       "key": "sayfa:musteri-destek",
       "area": "altyapi",
       "label": "Müşteri hizmetleri"
+    },
+    {
+      "key": "sayfa:zeki-kalite",
+      "area": "altyapi",
+      "label": "Zeki AI kalitesi",
+      "explicit": true
     }
   ],
   "features": [
@@ -464,6 +470,12 @@
       "area": "ortak",
       "label": "ZEKİ AI'a soru sorma",
       "hint": "Genel bakış, Kampüs soru kutusu, panoya soruyla kart, uyarıda anlık ölçüm"
+    },
+    {
+      "key": "ozellik:zeki.geri-bildirim",
+      "area": "ortak",
+      "label": "ZEKİ AI cevabına geri bildirim",
+      "hint": "Cevabın altındaki Doğru / Kısmen / Yanlış düğmesi ve kısa not; «Yanlış» model ekibinin kuyruğuna düşer"
     },
     {
       "key": "ozellik:kart.sql-goster",
@@ -1302,6 +1314,22 @@
       "page": "sayfa:musteri-destek",
       "label": "Konu sınıfları ve SLA",
       "hint": "Zeki AI'ın seçtiği konu listesini, portal SLA uyarı sürelerini ve yükseltme kişisini düzenleme",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:zeki-kalite.kosu",
+      "area": "altyapi",
+      "page": "sayfa:zeki-kalite",
+      "label": "Kalite koşusu başlatma",
+      "hint": "Okuma ya da cevap kapısını zamanlayıcıyı beklemeden sıraya koyar (cevap kapısı Zeki AI kapasitesi harcar)",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:zeki-kalite.karar",
+      "area": "altyapi",
+      "page": "sayfa:zeki-kalite",
+      "label": "Geri bildirim ve hata sınıfı kararı",
+      "hint": "Kullanıcı bildirimlerini sınıflama, kapatma ve hata sınıfı kurallarını düzenleme",
       "explicit": true
     }
   ]

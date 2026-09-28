@@ -555,6 +555,12 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/it-ops/report-release", SYSTEM),
     ("/api/v1/it-ops/banner", OPEN),
     ("/api/v1/it-ops/", frozenset({page("sistem-durumu")})),
+    # M50 Zeki AI kalitesi. Sayfa açıkça verilir (Herkes'e girmez). Kapı betiklerinin raporu ve zamanlayıcı çerezsiz
+    # jetonla gelir; cevap altındaki geri bildirim düğmesi (ve kişinin kendi hükmü) sayfa istemez, özellik ister.
+    ("/api/v1/model-quality/report", SYSTEM),
+    ("/api/v1/model-quality/run-due", SYSTEM),
+    ("/api/v1/model-quality/feedback", OPEN),
+    ("/api/v1/model-quality/", frozenset({page("zeki-kalite")})),
     # M32 Kurumsal satış ve B2B.
     ("/api/v1/corporate/run-due", SYSTEM),
     ("/api/v1/corporate/", frozenset({page("kurumsal-satis")})),
@@ -601,6 +607,8 @@ _RULES = sorted(RULES, key=lambda r: len(r[0]), reverse=True)
 _S = r"^/api/v1/editorial/studio/jobs"
 FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST"}), r"^/api/v1/ask(/stream)?$", "ozellik:zeki.soru"),
+    # M50: cevabın altındaki Doğru / Kısmen / Yanlış düğmesi (eski uç da aynı yetkiyle).
+    (frozenset({"POST"}), r"^/api/v1/(feedback|model-quality/feedback)$", "ozellik:zeki.geri-bildirim"),
     (frozenset({"GET"}), r"^/api/v1/(board/export\.xlsx|reports/[^/]+/file|financial-audit/runs/[^/]+/export"
                          r"|seo-geo/redirects/export\.csv|editorial/proofing/export\.docx|editorial/documents/[^/]+/export\.docx"
                          r"|editorial/ask/export\.pdf"

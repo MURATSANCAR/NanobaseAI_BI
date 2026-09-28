@@ -572,7 +572,11 @@ class SeoGeo:
                 decided_at=now(), note=note or None,
                 result="Onaylandı: " + ", ".join(change) + ". Gönderim yok; CRM bağlantısı bekleniyor.",
                 score_after=self.rescore(p, change)))
-        self.audit(user, "approve", prop["product_id"], row["name"], {"proposal": prop["id"], "fields": list(change)})
+        # M50 karnesi «değiştirmeden onay» oranını buradan okur: onaylayanın öneride değiştirdiği alanlar.
+        proposed = loads(prop["fields_json"], {})
+        edited = sorted(k for k, v in fields.items() if str(proposed.get(k) or "") != str(v or ""))
+        self.audit(user, "approve", prop["product_id"], row["name"],
+                   {"proposal": prop["id"], "fields": list(change), "duzenlenen": edited})
         return self.proposal(prop["id"])
 
     # ---------------------------------------------------------------- CRM kitap kartı ve haklar (yalnız okuma)

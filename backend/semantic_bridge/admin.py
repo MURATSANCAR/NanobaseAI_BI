@@ -609,6 +609,26 @@ SPEC: list[dict[str, Any]] = [
      "help": "Boşsa bütün etkin cariler aranır; doluysa CRM firma kanalı kodları (virgülle, örn. 100000008 bayi, 100000001 kitapçı)"},
     {"key": "SUPPORT_DRAFT_SIGNATURE", "group": "support", "label": "Taslak imzası", "type": "text",
      "default": "Timaş Yayınları Müşteri Hizmetleri", "help": "Cevap taslağının sonuna eklenen satır"},
+    # M50 Zeki AI kalitesi
+    {"key": "MODEL_QUALITY_RECIPIENTS", "group": "model_quality", "label": "Bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle; yalnız iç adresler (izinli alan adı süzgeci geçerli). Koşuda bozulan soru, aynı soruya tekrarlanan "
+             "«Yanlış» ve günlük geri bildirim özeti buraya gider. Boşsa e-posta gitmez, ekranda görünür"},
+    {"key": "MODEL_QUALITY_WINDOW_DAYS", "group": "model_quality", "label": "Karne penceresi (gün)", "type": "int",
+     "default": "30", "help": "Karne ve hata sınıfı sayımının varsayılan süresi; ekrandan değiştirilebilir"},
+    {"key": "MODEL_QUALITY_REPEAT_WRONG", "group": "model_quality", "label": "Tekrarlanan «Yanlış» eşiği", "type": "int",
+     "default": "3", "help": "Aynı soruya pencere içinde bu kadar «Yanlış» gelirse ekibe anında bir kez yazılır"},
+    {"key": "MODEL_QUALITY_QUEUE_STALE_DAYS", "group": "model_quality", "label": "Bekleyen bildirim uyarısı (gün)",
+     "type": "int", "default": "7", "help": "Bu süreden eski, sınıflanmamış bildirimler günlük özette ayrıca yazılır"},
+    {"key": "MODEL_QUALITY_STALE_HOURS", "group": "model_quality", "label": "Yarıda kalan koşu (saat)", "type": "int",
+     "default": "6", "help": "Rapor getirmeyen koşu bu süreden sonra «hata» olur"},
+    {"key": "MODEL_QUALITY_ENV", "group": "model_quality", "label": "Ortam", "type": "text", "default": "",
+     "help": "test ya da vm; sürüm kaydında ve koşularda ortam adı olarak yazılır"},
+    {"key": "MODEL_QUALITY_CODE_SHA", "group": "model_quality", "label": "Kod sürümü (elle)", "type": "text", "default": "",
+     "help": "Boş bırakın: kurulum betiğinin bildirdiği sürüm kullanılır. Yalnız kurulum bildirim yapamıyorsa doldurun"},
+    {"key": "MODEL_QUALITY_RULES_PATHS", "group": "model_quality", "label": "Kural dosyaları", "type": "text", "default": "",
+     "help": "Sürüm kaydına özeti girecek ek kural klasörleri/dosyaları, virgülle (bilgi paketi zaten sayılır)"},
+    {"key": "MODEL_QUALITY_PROMPT_PATHS", "group": "model_quality", "label": "İstem dosyaları", "type": "text", "default": "",
+     "help": "Sürüm kaydına özeti girecek istem dosyaları, virgülle. Boşsa istem kodla birlikte sürümlenir"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -673,6 +693,8 @@ GROUPS = [
     {"id": "support", "label": "Müşteri hizmetleri",
      "help": "Destek masası yalnız okunur; masaya, CRM'e ve Logo'ya hiçbir şey yazılmaz. Zeki AI taslağı müşteriye gitmez, "
              "temsilci düzeltip masadan kendisi gönderir."},
+    {"id": "model_quality", "label": "Zeki AI kalitesi",
+     "help": "Kapı koşularının bildirimleri, karne penceresi ve sürüm kaydının ek dosyaları. Bildirimler yalnız iç ekibe gider."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},
