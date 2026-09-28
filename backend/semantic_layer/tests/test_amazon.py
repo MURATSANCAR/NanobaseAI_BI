@@ -306,6 +306,8 @@ def test_api_gates(monkeypatch, store, settings):
     monkeypatch.delenv("SEMANTIC_ADMIN_TOKEN", raising=False)
     AC._ready.clear()
     AC.invalidate()
+    S._ready.discard(id(store.engine))   # ortak store fixture'ı: eski bir motorun id'si yeniden kullanılmış olabilir
+    A._ready.discard(id(store.engine))
     client = TestClient(create_app(Runtime(settings, store=store, llm=FakeLlm([""]))))
     a, z = {"cookie": "timas_session=a"}, {"cookie": "timas_session=z"}
     meta = client.get("/api/v1/channels/amazon/meta", headers=a).json()

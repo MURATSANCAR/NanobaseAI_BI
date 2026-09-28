@@ -32,6 +32,8 @@ TABLOLAR: dict[str, tuple[str, str]] = {
     "semantic_seo_products": ("Site ürünleri", "T-soft ürün kaydı (gece eşitlemesi): ad, alanlar, puan, kurallar, satış ve görüntülenme sayaçları."),
     "semantic_seo_proposals": ("Öneriler", "Ürün ve sayfa önerileri: durum, puan önce/sonra, karar."),
     "semantic_seo_runs": ("Eşitleme turları", "T-soft/CRM/Search Console turları: başlangıç, bitiş, okunan kayıt."),
+    "semantic_seo_gsc_sitemaps": ("Site haritası okuması", "Search Console'dan okunan site haritaları ve özet (son okuma)."),
+    "semantic_seo_gsc_sitemaps_hist": ("Site haritası geçmişi", "Her okumada harita başına sayılar (artışı görmek için)."),
     "semantic_seo_gsc": ("Search Console verisi", "Search Console'dan gece okunan günlük/sorgu/sayfa raporu (son 28 gün)."),
     "semantic_seo_questions": ("İzlenen sorular", "Yapay zekâ görünürlüğü ölçümünde izlenen sorular."),
     "semantic_seo_links": ("Site sayfaları", "T-soft yazar/kategori/yayınevi sayfaları (başlık, açıklama)."),
@@ -132,6 +134,7 @@ SPECS: list[tuple[str, str, str]] = [
     (r"entity", "kimlik", "Kimlik: kurum, yazar ve kitapların Wikidata/Wikipedia kaydı; geçti/kaldı sayıları."),
     (r"guides/topics/[^/]+/books", "rehberKitap", f"Rehber konusu kitapları: satış ve görüntülenme {TSOFT}ndan; eşleşme CRM kartından."),
     (r"guides/topics", "rehberKonu", GSC + " Konu = liste/öneri niyetli sorguların kümesi; gösterim toplamı."),
+    (r"guides/[^/]+", "rehberTaslak", "Rehber taslağı: kitap listesi ve kararı; kitap sayısı taslağın kendisinden."),
     (r"guides", "rehber", "Rehber taslakları: durum sayıları; konu gösterimi Search Console'dan."),
     (r"watch/report", "haftalik", "Haftalık rapor: haftanın tıklama/gösterim toplamı ve önceki haftayla fark (Search Console), "
                                   "olay sayıları."),
@@ -176,6 +179,8 @@ SPECS: list[tuple[str, str, str]] = [
                                "Console); tema/yaş bağından gelenlerde kitap sayısı (CRM)."),
     (r"youtube", "youtube", "YouTube videoları (gece okuması): izlenme, beğeni, yorum; denetim sorunu sayıları."),
     (r"shopping", "alisveris", f"Alışveriş hazırlığı: ürün verisi kurallarına göre sorun sayıları; ürünler {TSOFT}ndan."),
+    (r"gsc-sitemaps", "siteHaritasi", "Search Console site haritaları (gece okuması): harita başına gönderilen/dizine "
+                                     "eklenen adres, hata ve uyarı sayısı; artış = son iki okumanın farkı."),
     (r"monthly", "aylik", "Aylık rapor: ayın Search Console tıklama, gösterim, oran, sıra; önceki ay ve geçen yıl aynı ayla "
                           "fark; puanı ≥ 80 olan çok satanların payı; karar, teknik sorun ve anılma sayıları."),
 ]

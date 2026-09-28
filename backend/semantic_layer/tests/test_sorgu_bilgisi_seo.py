@@ -13,6 +13,7 @@ from types import SimpleNamespace
 
 import pytest
 from fastapi import FastAPI
+from sqlalchemy import event
 from fastapi.testclient import TestClient
 
 from semantic_bridge import provenance as P
@@ -23,9 +24,21 @@ from semantic_layer.store.catalog_store import open_store
 T = "t1"
 
 
+def _regexp_replace(s, pattern, repl, flags=""):
+    return None if s is None else re.sub(pattern, repl, s, count=0 if "g" in (flags or "") else 1)
+
+
+def _pg_functions(dbapi_conn, _rec=None):
+    """Canlı veritabanında olan regexp_replace test veritabanında yok: aynı davranışla tanımlanır."""
+    dbapi_conn.create_function("regexp_replace", 4, _regexp_replace)
+
+
 @pytest.fixture
 def client():
     eng = open_store("sqlite://").engine
+    event.listen(eng, "connect", _pg_functions)
+    with eng.connect() as c:                 # bellek içi veritabanının açık bağlantısına da
+        _pg_functions(c.connection.driver_connection)
     rt = SimpleNamespace(store=SimpleNamespace(engine=eng), settings=SimpleNamespace(tenant_id=T, connection_file=""),
                          llm=None, llm_for=lambda *a, **k: None)
     app = FastAPI()
