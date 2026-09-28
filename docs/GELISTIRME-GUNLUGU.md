@@ -94,6 +94,46 @@
 - **Metin PDF'i** (Türkçe teknik şartname, 115 sayfa): (1) her sayfadaki uzun üst bilgi («… Şartnamesi / 2025 23/115») ve belge kimliği şeridi 60 karakterden uzun olduğu için tekrar süzgecine girmiyor, 377 kelimelik anlamsız segment oluşuyordu → sayfaların %30'undan fazlasında geçen satır uzunluğundan bağımsız atılır; (2) sayfa sonunda yarım kalan paragraf sonraki sayfanın numaralı başlığını yutuyordu (1–4, 9, 10, 12, 13. başlıklar kaçıyordu) → başlık satırı yarım paragrafı kapatır; (3) içindekiler satırları nokta dizisiyle (çoğu kez sayfa numarası düşmüş) birbirine bağlanıyordu → içindekiler satırı tek başına kalır, nokta dizisi ve numara atılır, ardından gelen «METİN 66» satırı da içindekiler sayılır; (4) cümle bölücü «1. KISALTMALAR»daki «1.»i cümle sonu sanıyordu (58 tek kelimelik segment) → cümle başındaki liste numarası bölünmez; tek başına satıra düşmüş numara sonraki satırla birleşir; (5) sonu cümle noktalamasıyla biten numaralı madde başlık sayılmaz.
 - **Taranmış PDF** (235 sayfa, metin katmanı yok): artık «Bu PDF'te seçilebilir metin yok (taranmış sayfa görüntüsü)…» — karakter tanıma yok.
 - **Sonuç (aynı PDF):** tek kelimelik segment 58 → 2, üst bilgi/kimlik şeridi 0, içindekiler tek satırlı. Kurallar genel (belgeye özel kural yok); testlere gerçek kalıplar eklendi. Sunucu sahnesinde çeviri testleri 46/46. Gerçek bir Timaş kitabı PDF'iyle henüz denenmedi.
+## 2026-09-28 — DYK Danışma ve yönetim kurulu: panel, toplantı/karar/aksiyon, dondurulan kurul paketi
+
+**DOĞRULANAMADI — testler koordinatörde.** Ajan sunucuya bağlanmadı; yerelde yalnız `py_compile` ve JSON doğrulaması
+yapıldı. Dal `dyk` (`worktree-agent-a1cb5812695096adf` ucunun üstünde: M45/M47/M39/M59/M50/M48 orada), main'e taşınmadı.
+
+- **Ne:** Finans › Kurul (`/timas/kurul`). Panel bölüm kartları (Finans ve bütçe · Satış ve bayi · Yayın ve editörya ·
+  Stok ve üretim · Pazarlama · Risk ve uyum · İK · ZEKİ projesi), kritik şerit, sıradaki toplantı, geciken aksiyon; gösterge
+  ayrıntısı (12 dönem, eşik, kaynak ekran bağlantısı yalnız o sayfanın yetkisi olana, bölüm yorumu); toplantı sayfası
+  (gündem sırala + kural önerisi, karar/aksiyon, sekreter notu → Zeki AI karar önerisi «forma al»), paket sayfası (Zeki AI
+  yönetici özeti → genel müdür düzelt/onayla → dondur → PDF → dağıtım kaydı); gösterge kataloğu ve kurul üyeleri.
+- **Yeniden hesap yok (kullanıcı talimatı):** her gösterge kaynak modülün kendi işlevinden köprü içinde okunur
+  (`kurul_sources.PROVIDERS`: M45 `finance.summary`, M46 `budget.tracking/deviations`, M47 `risk.summary` + onaylı
+  brifing, M59 `dealers.summary`, M6 `editorial.summary`, M50 `model_quality.bi_row`, M48 `it_ops.status`, M39
+  `pazar.approved_brief`). HTTP değil: kurul üyesinin M45/M46/M47 sayfa yetkisi gerekmez; M47'nin «summary/reports
+  satırına DYK sayfa anahtarı» notuna bu yüzden gerek kalmadı (risk RULES satırı değişmedi).
+- **Kararlar (analiz §10 açık soruları; veriye/koda bakılarak):**
+  - Net satış kurulda **M45'in satır tanımıyla** (Σ LINENET, faturalı satır) gösterilir; analizdeki fatura başlığı
+    (NETTOTAL, 848.110.178,82) kabulde bilgi olarak yazılır, fark raporlanır. Gerekçe: kullanıcı «yeniden hesaplama
+    yapma, modülün servisini çağır» dedi ve bellek `net-ciro-line-formula-wrong` satır tanımını düzeltilmiş kabul ediyor.
+  - Eşikler **boş** gelir (M47 gibi): eşik kurulun/gösterge sahibinin kararıdır. Eşik yokken renk kaynak modülün kendi
+    kuralından (bütçe iyi/izle/sapma, gider kalemi aşım/yaklaştı, sistem durumu tonu), o da yoksa «eşik yok».
+  - Kaynağı hazır olmayan gösterge (plan onaylanmamış, bayi turu koşmamış, risk kaydı boş, CRM bağlantısı yok) sıfır
+    değil **gri**: «Risk kaydında canlı risk yok» sıfır kritik risk demek değildir.
+  - Stok, pazarlama, İK göstergelerinin sağlayıcısı bu sürümde yok (gri; `saglayici` bağlanınca dolar).
+  - Dağıtım **yalnız kayıt**: dış gönderim yok kararı ve `no-demo-login` (AD'siz üyeye hesap açılmaz) → AD'siz üyeye PDF'i
+    insan iletir. Her PDF indirmesi dağıtım kaydına «indirildi» diye yazılır (kimin indirdiği bilinir).
+  - «YK onayı» sözleşme adımı (CRM statü 4) göstergesi eklenmedi: yönetim kurulu mu yayın kurulu mu belirsiz (YOL-HARITASI
+    açık notu); karar gelince `kurul_sources`'a tek sağlayıcı.
+  - Tutanak önerisi kaydedilmez: sekreter «forma al» ile karar formuna alır, sahibi (portal hesabı) kendisi atar. Notlarda
+    geçmeyen sayı/tarih/kişi içeren madde atılır.
+- **Değişmezlik:** paket içeriği sha256 ile, PDF dondurmada bir kez üretilip `KURUL_DIR/packages` altında (0700/0600)
+  sha256 ile saklanır; okumada sha tutmazsa dosya verilmez (409). Donmuş paket düzenlenemez; yeniden derleme yeni sürüm.
+- **Ortak dosyalar:** `access.py` (RULES 2 satır, FEATURE_RULES PDF), `access_catalog.json` (`sayfa:kurul` explicit +
+  5 özellik), `admin.py` (Kurul grubu + 5 ayar), `app.py` (en sonda tek `register`), `App.tsx` (3 rota),
+  `navModel.ts` (Finans › Kurul), `ModulesMenu.tsx` (`LIVE.DYK`, `GROUP_HOME`), `data_security_inventory.json` (4 tablo +
+  PDF klasörü), `infra/docker/bi/jobs.py` (günlük çağrı).
+- **Ölçülecekler / sunucuda kalan:** kabul `scripts/acceptance/DYK/check.sh` → `kabul.py` (R1–R6 doğrudan SQL: net satış,
+  geçen yıl aynı dönem, brüt marj, kasa-banka, 60 günde biten sözleşme, Logo veri yaşı; uç↔uç: bütçe, bayi, risk, karne;
+  gri kural; paket değişmezliği; Zeki AI özeti; yetki) → `cleanup.py --actor timasai`; `timas-kurul.service` ilk kez elle,
+  sonra zamanlayıcı. Kurul üyeleri, gösterge sahipleri ve eşikler kullanıcıdan (rol ataması prod öncesi).
 
 ## 2026-09-28 (09:10) — Sesli okuma ikinci dinleme; insan kaydı yükleme GPU + test sunucusunda canlı
 

@@ -70,6 +70,7 @@ export const LIVE: Record<string, string> = {
   M50: '/zeki-kalite',
   M54: '/telif-donem',
   M47: '/risk-uyum',
+  DYK: '/kurul',
   M55: '/ik/ise-alim',
   M57: '/ik/egitim',
   M56: '/ik/performansim',
@@ -100,6 +101,7 @@ export const GROUP_HOME: Record<string, { to: string; hint: string }> = {
   'İnsan Kaynakları': { to: '/ik/performansim', hint: 'Performansım, anketlerim, öneri kutusu, işe alım ve KVKK kayıtları' },
   'Dijital & Topluluk': { to: '/e-ticaret', hint: 'E-ticaret platform durumu, farklar, huni ve pazar yerleri' },
   Lojistik: { to: '/stok', hint: 'Depo ve stok, kargo hattı, tedarik ve baskı yükü, tedarikçiler' },
+  'DYK — Danışma & Yönetim Kurulu': { to: '/kurul', hint: 'Kurul göstergeleri, paket ve kararlar' },
   // M38 müşteri ekranı gelince grubun girişi o olabilir; M39 grubun ikinci bağlantısı olarak kalır.
   // M43 depo ekranı gelince grubun girişi ona dönebilir; bugün çalışan tek lojistik ekranı kargo (M44).
   // M18 aylık plan gelince grubun girişi /pazarlama/aylik-plan olur.
