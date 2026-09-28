@@ -224,6 +224,17 @@ yapıldı. Dal `dyk` (`worktree-agent-a1cb5812695096adf` ucunun üstünde: M45/M
   Düzeltme (tur 3): kayıt anında ön hazırlık yok; yalnız istek içinden — zamanlayıcının hafif (15 dk) ve gece turundan,
   elle yenilemeden sonra — başlar. Kural: modül `register` içinde `deps["engine"]()`/`rt()` çağıran iş parçacığı açılmaz.
 - Test oturumu satırları ve geçici klasör silindi; yazma ucu çağrılmadı.
+- **Durum:** commit dalda; `main`e merge/push bu oturumda izin denetimine takıldı → test sunucusuna **kurulmadı**, kurulum ve
+  doğrulama merge sonrasına kaldı (sıra: main → test sunucusu → VM). Sözdizimi/içe aktarma ve `tsc -b` sunucuda geçici
+  klasörde geçti. Test oturumu satırı (1) ve geçici klasör silindi; yazma ucu çağrılmadı.
+## 2026-09-28 (07:40) — Kapak arşivi: yalnız kitaplar canlıda (GPU stüdyo `4cfdafd9`, test sunucusu köprüsü); yeniden besleme
+
+- **GPU:** `releases/4cfdafd9` (`._*` 0), `editor-py(-studio):0.15.9-4cfdafd9`; editörde `ddd33e68`'den beri yalnız arşivin iki dosyası değişmişti. Koşan iş 0, `app` → `releases/4cfdafd9`, `studio` + `studio-worker` yeniden kuruldu (compose komutunu kullanıcı koştu). `EDITOR_CODE_VERSION=0.15.9-4cfdafd9`, `._*` 0, `retain` ucu kayıtlı (anahtarsız 401).
+- **Test sunucusu:** `editorial_studio_library.py` sunucuda eski main'le aynıydı → yenisi kondu, köprü yeniden başladı (health 200). Besleme elle (gece işiyle aynı kod): 6.267 kitap gönderildi, 514 kitap dışı ürün atıldı ve stüdyoda gizlendi; 6.234 görsel hazır, 21 site 404, 12 görselsiz.
+- **Portal (timasai 15 dk, yalnız GET, oturum silindi):** «en çok satan» başı artık kitap (İyilik Timi, Muhteşem Terzi…); ağaç 23 kök, kategorisiz 0. «hamuru»/«zeka oyunları» aramalarında kalanlar ISBN'li Timaş yayınları (İlk Oyun Hamuru Kitabım, kitap ve oyun setleri) — doğru.
+- **Karar (kullanıcı, 09-28):** arşiv GPU stüdyosunda kalır.
+- **Dal kazası:** worktree dalına 07:33'te çakışma işaretli bir birleştirme (`404cfdcf` «vcvxcvx», eski `3977e6fd` ile) girmişti; main'e gitmedi, kullanıcı dalı `origin/main`'e eşitledi.
+- **Sırada:** müşteri VM'i (GPU nginx `EDITOR-STUDYO-KUTUPHANE` yolları + VM köprü/arayüz; VM T-soft'suz, arşivi GPU'dan okur), sonra istem kütüphanesi.
 
 ## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
 
