@@ -1,5 +1,11 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — Test izi temizliği 2 ve CRM mükerrer yazar kaydı
+
+- **Tarama (salt okuma, bütün `semantic_*` metin alanları):** «silinecek», «ZZ », «ZEKI-TEST», «M4 KABUL», «KABUL excel», «_DENEME», `qa-`, `claude`. M6 «TS-2026-0001» deneme sözleşmesi, M8 test kişisi ve kabul paketi (yazışmasıyla), yetki deneme bağı zaten silinmişti. Bütçe/kurumsal satış tablosundaki «(silinecek)» kitap adları müşterinin kendi Logo kayıtları; SEO/web/tercih tablolarındaki eşleşmeler ürün ve katalog metni — dokunulmadı.
+- **Temizlendi (kullanıcı `--sil` ile çalıştırdı):** `semantic_settings`'te 7 SMTP ayarının «son değiştiren» alanı `claude` → boş (Yönetim → Ayarlar'da görünüyordu); ayar değerleri değişmedi.
+- **CRM mükerrer yazar kaydı:** «Yazar» rolünde eser kaydı olan 2.234 kişiden 33 ad birden çok kayıtla (67 kayıt); örn. Birsen Ekim Özen 301 + 11 eser, Metin Özdamarlar 115 + 13, İsmail Bilgin 116 + 7. Toplu açılmış olanlar var (2014-07-01: 10, 2022-04-11: 8). Çapraz öneri ve ısı haritası iki kaydı ayrı yazar sayıyor; birleştirme CRM ekibinde (CRM'e yazma yetkimiz yok). Liste kullanıcıya CSV olarak verildi.
+
 ## 2026-09-28 (05:45) — Belge incelemesi canlı: test sunucusu ve müşteri VM'i
 
 - **Main:** `8b59b6a6` (ekran + yetki + günlük; dal `claude/document-review` ileri sarmayla).
