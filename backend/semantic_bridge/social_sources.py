@@ -324,6 +324,13 @@ def studio_file(job: str, sid: str) -> tuple[bytes, str]:
     return data, mime
 
 
+def studio_preview(job: str, sid: str, width: int) -> tuple[bytes, str]:
+    from semantic_bridge import editorial_studio_marketing as esm
+
+    data, mime, _ = esm.fetch(job, f"/social/{sid}", {"w": width})
+    return data, mime
+
+
 # ------------------------------------------------------------------ M19 içerik arşivi (bağlantı noktası)
 
 

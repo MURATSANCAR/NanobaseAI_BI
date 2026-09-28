@@ -616,6 +616,69 @@ denetimi yapıldı. pytest (`test_pr.py`, `test_access.py`), vitest, tsc ve ger�
   bağlanması, katalog `kanal_net_ciro` sorusuyla karşılaştırma (kabul 1'in ikinci yarısı).
 - **Doğrulama:** Mac'te yalnız `py_compile` ve JSON; pytest, tsc/vitest ve canlı kabul koordinatörün test sunucusu turunda.
   Durum: **DOĞRULANAMADI**.
+## 2026-09-28 — M22 Sosyal medya yönetimi (ilk sürüm) — DOĞRULANAMADI, testler koordinatörde
+
+**Kod dalda (`worktree-agent-a81033d6003db50cc`); yalnız `py_compile` ve JSON denetimi yapıldı.** pytest, vitest, tsc ve
+gerçek CRM/Logo kabulü test sunucusunda koşulacak (`scripts/acceptance/m22/run.sh`). main'e taşınmadı, kurulmadı.
+
+- **Neden:** analiz `docs/analiz/kullanici-ihtiyaclari/M22-sosyal-medya.md` §14. İmprint hesapları ayrı ayrı yönetiliyor;
+  takvim, onay, performans ve özel gün ↔ kitap bağı sosyal medya işine bağlı değildi. Kitap kartında tek serbest alan
+  (`new_sosyalmedyametni`) vardı.
+- **Köprü:** `social.py` (tablolar `semantic_social_*`, durum makinesi, fırsat kuralları, içe aktarma ayrıştırıcısı,
+  rapor, paket, PDF), `social_sources.py` (CRM okuma, M46 önbelleği, stüdyo görselleri, basın, M19 bağlantı noktası),
+  `social_api.py` (uçlar `/api/v1/social/*`). `app.py`'de iki satır.
+- **Otomatik yayın yok** (kullanıcı kararı): hiçbir platforma istek gitmez. Onaylı gönderi «yayına hazır paket» (metin,
+  etiket, görseller, bilgi, OKUBENI) olarak iner; uzman paylaşır, bağlantıyı girip «yayınlandı» işaretler. Resmî API
+  bağlantısı yok; içgörü platformun dışa aktarım dosyasından ya da elle.
+- **Kararlar (uzmana sorulacak sorular yerine koda/veriye bakılarak):**
+  - *Hesaplar* kullanıcı tanımlıdır (X/TikTok/YouTube/LinkedIn listesi CRM'de yok); CRM marka kartındaki
+    `new_instagramkullaniciadi` öneri olarak gelir, imprint bağı `new_markaBase.new_markaId` (kitabın `new_yayineviid`'i
+    markaya bağlı). Kaç markada dolu olduğu kabul 5'te sayılır.
+  - *Onay:* tek seviye, açıkça verilen `ozellik:sosyal.onay` (analizde onayın kimde olduğu soruluyordu; M15'teki iki
+    göz kuralı alındı: gönderen onaylayamaz). İçerik (metin, etiket, hesap, görsel, kitap) değişince onay düşer; yalnız
+    saat değişince kalır — onaylanan içerik aynı, yayın saati operasyon kararı.
+  - *Özel gün kitap sayısı:* SEO sezon takvimindeki gibi aynı adlı günler birleşik, ama barkod (`new_ean13`) şartı yok —
+    burada kitap sayfası değil kitabın kendisi paylaşılıyor. Gün ve kitap kartı `statecode = 0`. Tarih yöntemi
+    `seo_geo.seasons` saf işlevleri (VM'de SEO tabloları olmasa da çalışır).
+  - *«Takvimde»:* güne bağlanmış (occasion) ya da pencere içinde planlı gönderisi olan kitap. Uyarı: güne
+    `SOCIAL_OCCASION_LEAD_DAYS` (14) gün ya da az kalmış ve bağlı kitaplardan hiçbiri takvimde değil.
+  - *Yeni kitaplar:* M15/M46 tanımı (`statecode 0`, `new_Tip = 1`), pencere ay başından fırsat penceresi sonuna.
+  - *Backlist çok satan:* Logo'ya ikinci kez gidilmez — M46 önbelleği (`semantic_budget_sales_actuals`, faturalı satır,
+    iade eksi), veri sonunun ayı dahil son 12 ay. Backlist = ilk yayını 365 günden eski (bilinmiyorsa sayılmaz); son 90
+    gündür takvimde gönderisi (planlı dahil) olmayan. Stokta olmayanı önermemek için stok bakiyesi yerine CRM statüsü
+    listesi (`SOCIAL_BACKLIST_EXCLUDE_STATUS`, boş) — hangi statünün «tükendi» olduğu **ölçülecek**. Liste tavansız,
+    sayfalı (20).
+  - *Platform sınırları* (Instagram 2200 / 30 etiket, X 280, LinkedIn 3000, Facebook 63206, TikTok 2200, YouTube 5000)
+    yayımlanmış değerler; `SOCIAL_PLATFORM_LIMITS` ile değişir. Sınırı aşan gönderi onaya gönderilemez.
+  - *İçe aktarma:* gerçek dışa aktarım dosyası görülmedi; Türkçe/İngilizce başlık takma adları (Meta, X, YouTube,
+    LinkedIn kolon adları) kodda, tanınmayan kolon özetle döner — gerçek dosyalarla **ölçülecek**. Satır, yayın
+    bağlantısı (şema/www/sorgu atılarak) aynı olan gönderiye bağlanır.
+  - *Rapor:* etkileşim = beğeni + yorum + paylaşım + kaydetme, oran = etkileşim ÷ erişim. Kişi adı yok (KVKK); yorum/DM
+    saklanmıyor (resmî API sonraki sürüm, `ozellik:sosyal.topluluk` şimdiden açık yetki).
+  - *Zeki AI:* taslak üç seçenek (platform ipucu + hesabın dili + CRM metinleri + stüdyo alıntıları), her seçenek
+    `marketing.guard` ile cümle cümle denetlenir (birebir olmayan alıntı, kaynaksız rakam, kanıtsız iddia, teknoloji adı
+    düşer; etiketler tek tek). Tür etiketi gece `choose` ile (eşik 0,70 / marj 0,30), rapor yorumu yalnız rapor sayılarıyla.
+  - *Görsel:* stüdyo pazarlama kitinin sosyal görselleri kitaba bağlı işlerden (`crm_book_id` ya da aynı ad) okunur;
+    önizleme `/api/v1/social/studio/{iş}/{sid}` (stüdyo sayfası yetkisi olmayan sosyal medya uzmanı da görsün). Stüdyo
+    görselinde ve pakette «ticari kullanım lisansı bekleniyor» uyarısı (`SOCIAL_STUDIO_LICENSE_PENDING`).
+- **Bağlantı noktaları:** M19 (dalda) main'e girince `app.state.marketing_creative` `contract_assets(stok=, kanal=,
+  durum="onayli")` ve `asset_file(id)` verirse arşiv görselleri gönderiye bağlanır ve pakete girer. M18 (dalda) için
+  `GET /api/v1/social/contract/posts` (onaylı/yayınlanmış gönderi + ölçü toplamı) ve gönderide `planRef`.
+- **Ekran:** `src/canvas/social/` (Takvim · Fırsatlar · Rapor · Hesaplar sekmeleri + gönderi sayfası), menü Pazarlama ›
+  İletişim › Sosyal medya, Kampüs `LIVE.M22`. Telefon: gün görünümü, 44 px düğmeler, tablolar kendi içinde kayar. Yeni
+  animasyon yok (mevcut 150 ms renk/basma geçişleri ve Sheet).
+- **Ortak dosyalar:** `access.py` (RULES 2, FEATURE_RULES 2), `access_catalog.json` (sayfa + 3 özellik), `admin.py`
+  (grup «Sosyal medya», 10 ayar, KIND_LABEL), `app.py` (2 satır), `App.tsx`, `navModel.ts` (+`Share2`), `navModel.test.ts`,
+  `ModulesMenu.tsx`, `infra/docker/bi/jobs.py`.
+- **Testler:** `backend/semantic_layer/tests/test_social.py` (durum makinesi, iki göz, onay düşmesi, sınırlar, takvim sayımı
+  = GROUP BY, özel gün ve backlist kuralları, içe aktarma, rapor, seçenek ayrıştırma, paket, yetki, köprü uçları).
+  **Koşulmadı.**
+- **Kabul (sunucuda):** `scripts/acceptance/m22/` — `accept.py` (özel gün kitap sayısı, yeni kitap kümesi, backlist ilk 10
+  Logo STLINE, takvim sayımı, marka Instagram kümesi: 5 doğrudan SQL; `--write` içe aktarma toplamı = DB ve gönderen
+  onaylayamaz; `--draft` Zeki AI taslağı; teknoloji adı ve web bayrağı), `cleanup.py`, `run.sh`.
+- **Açık kalanlar:** kitap sayfasına «Sosyal» sekmesi (BookScreen ortak dosya, dokunulmadı); resmî API ile içgörü/yorum
+  ve kriz sınıflaması (sonraki sürüm); M51'e şikâyet aktarımı; Uyarılar rozetine onay bekleyen sayısı; M20 elle haber kaydı
+  (M20 yok); zamanlayıcının ilk kurulumda elle bir kez koşturulması.
 
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 

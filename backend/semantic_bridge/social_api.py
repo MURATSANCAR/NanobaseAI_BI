@@ -221,6 +221,20 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                               "arsiv": src.creative_assets(app.state, stok, platform)},
                 "haklar": rights, "gonderiler": posts}
 
+    @app.get(R + "/studio/{job}/{sid}")
+    def social_studio_image(job: str, sid: str, request: Request, w: int = 320) -> Response:
+        """Stüdyo sosyal görselinin önizlemesi (sosyal medya sayfası stüdyo sayfasına yetkisi olmayan kişiye de gösterir;
+        yalnız okuma, stüdyo vekilinin aynısı)."""
+        ctx(request)
+        if not re.fullmatch(r"s_[0-9a-f]{8}", sid or "") or not re.fullmatch(r"[A-Za-z0-9_\-]{1,80}", job or ""):
+            raise HTTPException(status_code=404, detail={"code": "SOCIAL", "message": "Görsel bulunamadı."})
+        try:
+            data, mime = src.studio_preview(job, sid, max(64, min(int(w), 1600)))
+        except Exception as e:  # noqa: BLE001 — stüdyo kapalı ya da görsel silinmiş
+            log.info("social: stüdyo görseli okunamadı: %s", e)
+            raise HTTPException(status_code=404, detail={"code": "SOCIAL", "message": "Görsel şu an okunamıyor."}) from None
+        return Response(content=data, media_type=mime, headers={"Cache-Control": "private, max-age=3600"})
+
     # ------------------------------------------------------------------ takvim ve fırsatlar
 
     @app.get(R + "/calendar")

@@ -84,6 +84,7 @@ import {
   ShieldCheck,
   LockKeyhole,
   SlidersHorizontal,
+  Share2,
   Sparkles,
   SpellCheck,
   UserCog,
@@ -374,6 +375,8 @@ export const NAV: NavGroup[] = [
       { id: 'pazarlama-backlist', label: 'Backlist', to: '/pazarlama/backlist', icon: History, section: 'Planlama', hint: 'Uyuyan backlist kitapların fırsat sıralaması, özel gün gündemi, aktivasyon planı ve kampanya etkisi', keywords: ['uyuyan', 'eski kitap', 'kampanya', 'özel gün'] },
       { id: 'basin-iliskileri', label: 'Basın ilişkileri', to: '/basin-iliskileri', icon: Megaphone, section: 'İletişim', hint: 'Bülten, medya kişileri ve yansımalar', keywords: ['basın', 'pr', 'halkla ilişkiler', 'gazeteci', 'bülten', 'yansıma', 'medya kiti', 'röportaj'] },
       { id: 'reklam', label: 'Reklam', to: '/reklam', icon: BadgeDollarSign, section: 'Kampanya', hint: 'Harcama, getiri ve bütçe', keywords: ['reklam', 'dijital pazarlama', 'google ads', 'meta', 'instagram', 'tiktok', 'harcama', 'roas', 'tbm', 'kampanya', 'brief'] },
+      // M22: gönderi, fırsat, rapor ve hesap ekranları /sosyal-medya altında; hepsinde «Sosyal medya» etkin görünür.
+      { id: 'sosyal-medya', label: 'Sosyal medya', to: '/sosyal-medya', icon: Share2, section: 'İletişim', hint: 'Takvim, onay ve performans', keywords: ['sosyal medya', 'instagram', 'paylaşım', 'takvim', 'gönderi', 'hashtag', 'özel gün', 'içgörü'] },
       { id: 'seo-geo', label: 'SEO özeti', to: '/seo-geo', icon: Gauge, section: 'İzleme', hint: 'Arama ve yapay zekâ görünürlüğü özeti', keywords: ['seo', 'geo', 'genel bakış'] },
       { id: 'seo-arama', label: 'Arama ve kelimeler', to: '/seo-geo/anahtar-kelimeler', icon: Search, section: 'İzleme', hint: 'Google arama sorguları', keywords: ['anahtar kelime', 'google'] },
       { id: 'seo-firsat', label: 'Fırsatlar ve etki', to: '/seo-geo/firsatlar', icon: TrendingUp, section: 'İzleme', hint: 'Yakın sıradaki sorgular ve onaylanan değişikliğin etkisi', keywords: ['fırsat', 'etki', 'tıklama', 'sıra'] },

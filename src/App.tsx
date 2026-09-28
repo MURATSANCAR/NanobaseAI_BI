@@ -116,6 +116,11 @@ const AdsCampaigns = lazy(() => import('@/canvas/ads/AdsCampaigns'));
 const AdsImport = lazy(() => import('@/canvas/ads/AdsImport'));
 const AdsBudget = lazy(() => import('@/canvas/ads/AdsBudget'));
 const AdsBriefs = lazy(() => import('@/canvas/ads/AdsBriefs'));
+const SocialCalendar = lazy(() => import('@/canvas/social/SocialCalendar'));
+const SocialPost = lazy(() => import('@/canvas/social/SocialPost'));
+const SocialOpportunities = lazy(() => import('@/canvas/social/SocialOpportunities'));
+const SocialReport = lazy(() => import('@/canvas/social/SocialReport'));
+const SocialAccounts = lazy(() => import('@/canvas/social/SocialAccounts'));
 const SeoHome = lazy(() => import('@/canvas/seo-geo/SeoHome'));
 const SeoAudit = lazy(() => import('@/canvas/seo-geo/SeoAudit'));
 const SeoSearch = lazy(() => import('@/canvas/seo-geo/SeoSearch'));
@@ -268,6 +273,12 @@ export default function App() {
             <Route path="reklam/yukle" element={<AdsImport />} />
             <Route path="reklam/butce" element={<AdsBudget />} />
             <Route path="reklam/brief" element={<AdsBriefs />} />
+            {/* Pazarlama › İletişim: M22 sosyal medya takvimi, onay ve yayına hazır paket (/api/v1/social). */}
+            <Route path="sosyal-medya" element={<SocialCalendar />} />
+            <Route path="sosyal-medya/gonderi/:id" element={<SocialPost />} />
+            <Route path="sosyal-medya/firsatlar" element={<SocialOpportunities />} />
+            <Route path="sosyal-medya/rapor" element={<SocialReport />} />
+            <Route path="sosyal-medya/hesaplar" element={<SocialAccounts />} />
             {/* SEO & GEO: kendi rayı ve uçlarıyla (/api/v1/seo-geo); T-soft ürün denetimi, Search Console, AI görünürlük. */}
             {/* M53 Set, hediye ve promosyon (/api/v1/marketing/sets, /gift-offers, /promo-items). */}
             <Route path="pazarlama/set-hediye" element={<SetsScreen />} />

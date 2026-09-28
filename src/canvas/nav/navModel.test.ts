@@ -138,6 +138,7 @@ describe('etkin öğe (alt rotalar)', () => {
     expect(at('/kurumsal-eposta/kurallar')).toBe('kurumsal-eposta');
     expect(at('/pazarlama/lansman')).toBe('pazarlama-lansman');
     expect(at('/pazarlama/lansman/ML-2026-0001')).toBe('pazarlama-lansman'); // lansman ekranı → Lansman
+    expect(at('/sosyal-medya/gonderi/SM-2026-0001')).toBe('sosyal-medya'); // M22 gönderi ekranı → Sosyal medya
   });
 
   it('sorgu parametresi tutan öğe yalın yoldan önce gelir', () => {
