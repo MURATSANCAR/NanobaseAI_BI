@@ -390,6 +390,19 @@ export const NAV: NavGroup[] = [
         icon: Headset,
         hint: 'Talep kuyruğu ve SLA, müşteri bağlamı (sipariş, kargo, fatura), bayi görünümü, konu eğilimi ve SSS açıkları',
         keywords: ['destek', 'talep', 'şikâyet', 'sla', 'kargo takip', 'sipariş durumu', 'müşteri', 'okur', 'bayi', 'sss', 'memnuniyet', 'csat'],
+    // Altyapı ve destek (M48–M51): yönetici alanı değil, sayfa yetkisiyle açılır; model ekibi yönetici olmayabilir.
+    id: 'altyapi',
+    label: 'Altyapı ve destek',
+    hint: 'Zeki AI kalitesi, sistem durumu ve destek',
+    icon: Server,
+    items: [
+      {
+        id: 'zeki-kalite',
+        label: 'Zeki AI kalitesi',
+        to: '/zeki-kalite',
+        icon: BadgeCheck,
+        hint: 'Zeki AI karnesi, kalite koşuları ve bozulan sorular, hata sınıfları, kullanıcı geri bildirimi, sürümler',
+        keywords: ['zeki', 'kalite', 'karne', 'doğruluk', 'geri bildirim', 'yanlış cevap', 'test seti', 'sürüm', 'model'],
       },
     ],
   },

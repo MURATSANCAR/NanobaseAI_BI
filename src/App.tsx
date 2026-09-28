@@ -58,6 +58,7 @@ const ManagementHome = lazy(() => import('@/canvas/management/ManagementHome'));
 const BaskiOneri = lazy(() => import('@/canvas/management/BaskiOneri'));
 const BudgetScreen = lazy(() => import('@/canvas/budget/BudgetScreen'));
 const SystemStatusScreen = lazy(() => import('@/canvas/it-ops/SystemStatusScreen'));
+const ModelQualityScreen = lazy(() => import('@/canvas/model-quality/ModelQualityScreen'));
 const DistributionScreen = lazy(() => import('@/canvas/distribution/DistributionScreen'));
 const DistributionPlan = lazy(() => import('@/canvas/distribution/PlanEditor'));
 const TenderList = lazy(() => import('@/canvas/tenders/TenderList'));
@@ -162,6 +163,8 @@ export default function App() {
             <Route path="yonetim-raporlari/baski-oneri" element={<BaskiOneri />} />
             {/* M46 Bütçe planlama ve kontrolü (/api/v1/budget). */}
             <Route path="butce" element={<BudgetScreen />} />
+            {/* M50 Zeki AI kalitesi: karne, kalite koşuları (önce/sonra), hata sınıfları, geri bildirim, sürümler (/api/v1/model-quality). */}
+            <Route path="zeki-kalite" element={<ModelQualityScreen />} />
             {/* M33 İhale takibi (Satış ve saha): ilanlar, takvim, belge arşivi, sonuçlar, kamu satışları (/api/v1/tenders). */}
             <Route path="ihale" element={<TenderList />} />
             <Route path="ihale/:id" element={<TenderDetail />} />

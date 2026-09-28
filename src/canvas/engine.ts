@@ -101,6 +101,8 @@ export async function engineInfo(): Promise<EngineInfo> {
 
 export type AskAnswer = DbTiming & {
   id?: string;
+  /** Soru kaydının kimliği (sl_query_log): cevabın altındaki «Doğru / Kısmen / Yanlış» bununla yazılır (M50). */
+  queryId?: string;
   type?: string;
   sql?: string;
   summary?: string;

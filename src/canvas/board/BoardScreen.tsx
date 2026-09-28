@@ -37,6 +37,7 @@ import Chart, { CHART_LABEL, allowedCharts, numericCols, setDisplayWords, sugges
 import { download, fileName, toCsv } from './export';
 import { useCan } from '../useAdmin';
 import { useTimasSession } from '../TimasSession';
+import AnswerFeedback from '../components/AnswerFeedback';
 import {
   fromDto,
   loadBoard,
@@ -387,7 +388,7 @@ function CardFrame({
   );
 }
 
-type Pending = { title: string; sql: string; cols: Col[]; rows: Row[]; chart: ChartKind; at: number; timing: DbTiming };
+type Pending = { title: string; sql: string; cols: Col[]; rows: Row[]; chart: ChartKind; at: number; timing: DbTiming; queryId?: string };
 
 const timingOf = (a: DbTiming): DbTiming => ({ dbMs: a.dbMs, cached: a.cached, computedAt: a.computedAt, dbParts: a.dbParts });
 
@@ -412,6 +413,8 @@ export default function BoardScreen() {
   const [pendingSql, setPendingSql] = useState(false);
   const [asking, setAsking] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  /** Soru kutusunun son cevabının kaydı: tablo dönmeyen cevaba da «Doğru / Kısmen / Yanlış» verilebilsin (M50). */
+  const [errQueryId, setErrQueryId] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'failed'>('idle');
   const [comparing, setComparing] = useState<string | null>(null);
   // Kolon başlıkları katalogdaki Türkçe yazımla («Satış tutarı»); harita gelince kartlar yeniden çizilir.
@@ -505,6 +508,7 @@ export default function BoardScreen() {
     if (!q || !ENGINE_ENABLED) return;
     setAsking(true);
     setErr(null);
+    setErrQueryId(null);
     setPending(null);
     setPendingSql(false);
     try {
@@ -513,8 +517,9 @@ export default function BoardScreen() {
       const rows = (a.records ?? []) as Row[];
       if (!a.sql || !rows.length) {
         setErr(a.summary || a.explanation || 'ZEKİ AI bu soruya tablo döndürmedi.');
+        setErrQueryId(a.queryId ?? null);
       } else {
-        setPending({ title: q, sql: a.sql, cols, rows, chart: suggestChart(cols, rows), at: Date.now(), timing: timingOf(a) });
+        setPending({ title: q, sql: a.sql, cols, rows, chart: suggestChart(cols, rows), at: Date.now(), timing: timingOf(a), queryId: a.queryId });
       }
     } catch (e) {
       setErr(e instanceof EngineAuthError ? 'Oturum gerekli.' : 'ZEKİ AI yanıt vermedi.');
@@ -571,6 +576,7 @@ export default function BoardScreen() {
     if (!ENGINE_ENABLED) return;
     setComparing(card.id);
     setErr(null);
+    setErrQueryId(null);
     try {
       const q = `${card.question || card.title} ${suffix}`;
       const a = await askEngine(q);
@@ -604,6 +610,7 @@ export default function BoardScreen() {
     if (!ENGINE_ENABLED) return;
     setComparing(card.id);
     setErr(null);
+    setErrQueryId(null);
     try {
       const a = await askEngine(card.question || card.title);
       const cols = (a.columns ?? []) as Col[];
@@ -634,6 +641,7 @@ export default function BoardScreen() {
     if (!ENGINE_ENABLED || exporting) return;
     setExporting(key);
     setErr(null);
+    setErrQueryId(null);
     try {
       if (saveTimer.current) {
         // Bekleyen düzen kaydı önce gitsin; sunucu kartı bilmeden aktaramaz.
@@ -1041,6 +1049,8 @@ export default function BoardScreen() {
                   <Chart kind={pending.chart} cols={pending.cols} rows={pending.rows} depth={false} />
                 </div>
 
+                <AnswerFeedback key={pending.queryId ?? pending.at} queryId={pending.queryId} className="mt-2" />
+
                 {canSql && (<>
                 <button
                   type="button"
@@ -1082,8 +1092,11 @@ export default function BoardScreen() {
 
           {err && (
             <div className="glass-card mb-3 flex items-start justify-between gap-2 rounded-2xl px-4 py-2.5 text-[12px] font-semibold text-red-700 shadow-canvas-card">
-              <span>{err}</span>
-              <button type="button" onClick={() => setErr(null)} aria-label="Kapat" className="pano-press shrink-0 rounded-lg p-1 hover:bg-red-50">
+              <span className="flex min-w-0 flex-col gap-1.5">
+                <span>{err}</span>
+                <AnswerFeedback key={errQueryId ?? 'yok'} queryId={errQueryId} />
+              </span>
+              <button type="button" onClick={() => { setErr(null); setErrQueryId(null); }} aria-label="Kapat" className="pano-press shrink-0 rounded-lg p-1 hover:bg-red-50">
                 <X className="h-3.5 w-3.5" />
               </button>
             </div>

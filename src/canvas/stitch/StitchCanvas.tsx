@@ -7,6 +7,7 @@ import type { StitchCanvasData } from './data';
 import DbTimingBadge from '../DbTiming';
 import CardSql from './CardSql';
 import { useCan } from '../useAdmin';
+import AnswerFeedback from '../components/AnswerFeedback';
 import { questionParticle } from '../interpret';
 
 /**
@@ -654,6 +655,7 @@ function CanvasBody({
                 </div>
                 {d.main.timing && <DbTimingBadge timing={d.main.timing} className="mt-1.5" />}
                 <CardSql sql={d.main.sql} className="mt-2" />
+                {d.main.feedback && <AnswerFeedback key={d.main.feedback.queryId} queryId={d.main.feedback.queryId} className="mt-3" />}
               </div>
 
               {/* Action Buttons */}

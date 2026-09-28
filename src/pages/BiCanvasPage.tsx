@@ -197,6 +197,8 @@ export default function BiCanvasPage() {
           !asking && !askErr && answer?.dataEnd?.suggestion?.question
             ? { question: answer.dataEnd.suggestion.question, busy: asking, onAsk: rephrase }
             : undefined,
+        // M50: cevabın altında «Doğru / Kısmen / Yanlış»; yalnız soru kaydı olan (motorun cevapladığı) cevapta.
+        feedback: !asking && !askErr && answer?.queryId ? { queryId: answer.queryId } : undefined,
       },
       c5: {
         ...d.c5,

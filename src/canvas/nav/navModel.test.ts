@@ -23,6 +23,11 @@ describe('sayfa yetkisi', () => {
     expect(ids(visibleNav(user, {}, new Set(['sayfa:finansal-denetim'])))).not.toContain('altyapi');
     expect(itemIds(visibleNav(user, {}, new Set(['sayfa:veri-guvenligi'])))).toEqual(['kampus', 'veri-guvenligi']);
     expect(itemIds(visibleNav(user, {}, new Set(['sayfa:musteri-destek'])))).toEqual(['kampus', 'musteri-destek']);
+  it('Zeki AI kalitesi yönetici alanında değil; sayfa yetkisi olan görür, olmayan görmez', () => {
+    const team = visibleNav(user, {}, new Set(['sayfa:zeki-kalite']));
+    expect(ids(team)).toEqual(['kampus', 'altyapi']);
+    expect(itemIds(team)).toEqual(['kampus', 'zeki-kalite']);
+    expect(ids(visibleNav(user, {}, new Set(['sayfa:finansal-denetim'])))).not.toContain('altyapi');
   });
 
   it('yetki henüz bilinmiyorken rol sayfaları gizli, yönetici ekranları yine role bağlı', () => {
