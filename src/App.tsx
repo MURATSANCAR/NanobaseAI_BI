@@ -112,6 +112,8 @@ const DigitalCatalog = lazy(() => import('@/canvas/dijital/DigitalCatalog'));
 const DigitalOpportunities = lazy(() => import('@/canvas/dijital/OpportunitiesScreen'));
 const DigitalSales = lazy(() => import('@/canvas/dijital/DigitalSalesScreen'));
 const CreativeHome = lazy(() => import('@/canvas/marketing/creative/CreativeHome'));
+const CampaignsScreen = lazy(() => import('@/canvas/kampanya/CampaignsScreen'));
+const CampaignDetail = lazy(() => import('@/canvas/kampanya/CampaignDetail'));
 const CreativeRequest = lazy(() => import('@/canvas/marketing/creative/RequestScreen'));
 const MarketingMonth = lazy(() => import('@/canvas/marketing/monthly/MonthScreen'));
 const MarketingFoyList = lazy(() => import('@/canvas/marketing/monthly/FoyList'));
@@ -362,6 +364,11 @@ export default function App() {
             <Route path="e-ticaret/pazar-yerleri" element={<EticaretMarkets />} />
             <Route path="pazarlama/icerik" element={<CreativeHome />} />
             <Route path="pazarlama/icerik/:id" element={<CreativeRequest />} />
+            {/* M35 E-ticaret kampanyaları (/api/v1/kampanya): kayıt defteri, takvim, adaylar, kampanya ayrıntısı ve sonuç. */}
+            <Route path="kampanyalar" element={<CampaignsScreen />} />
+            <Route path="kampanyalar/takvim" element={<CampaignsScreen initial="takvim" />} />
+            <Route path="kampanyalar/adaylar" element={<CampaignsScreen initial="adaylar" />} />
+            <Route path="kampanyalar/:id" element={<CampaignDetail />} />
             <Route path="seo-geo" element={<SeoHome />} />
             <Route path="seo-geo/urun-denetimi" element={<SeoAudit />} />
             <Route path="seo-geo/anahtar-kelimeler" element={<SeoSearch />} />

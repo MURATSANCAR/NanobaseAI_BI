@@ -7188,6 +7188,23 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     })
     # M54 hak haritası main'e girince: dijital_sources.register_rights_provider(<kitap × biçim hak kararı işlevi>).
 
+    # M35 E-ticaret kampanya yönetimi: kayıt defteri, simülasyon ve kontroller, aday, takvim, sonuç ve öğrenim. Uçlar
+    # /api/v1/kampanya/*; tablolar semantic_kampanya_*. Birim maliyet M9 sağlayıcısından; dış kanala gönderim yok.
+    # M34 (e-ticaret platform) hazır olunca: kampanya_sources.register_platform_items(<M34 ürün aktifliği/stok okuyucusu>).
+    from semantic_bridge import kampanya as kampanya_mod
+    from semantic_bridge import kampanya_api
+    from semantic_bridge.budget_api import _send_mail as _kampanya_send_mail
+    kampanya_mod.register_cost_provider(app.state.pricing_costs.unit_costs)
+    app.state.kampanya = kampanya_api.register(app, {
+        "auth": _greetings, "require_caller": _require_caller, "can": _can, "is_admin": admin_mod.is_admin,
+        "audit": admin_mod.audit, "conf": admin_mod.conf,
+        "engine": lambda: rt().store.engine, "tenant": lambda: rt().settings.tenant_id,
+        "logo_file": lambda: rt().settings.connection_file,
+        "crm_file": lambda: os.environ.get("SEMANTIC_CRM_CONNECTION_FILE", "/data/nanobaseai/bi/secrets/crm-mssql-connection.json"),
+        "llm": lambda priority: rt().llm_for("kampanya", priority),
+        "send_mail": _kampanya_send_mail, "directory": _directory,
+    })
+
     from semantic_bridge import editorial_studio_library  # kapak arşivi: T-soft + CRM beslemesi, kategori ağacı
     editorial_studio_library.register(app, {"auth": _books, "audit": admin_mod.audit, "seo": app.state.seo_geo})
 

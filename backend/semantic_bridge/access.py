@@ -524,6 +524,9 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/marketing/sets/", frozenset({page("pazarlama-set-hediye")})),
     ("/api/v1/marketing/gift-offers/", frozenset({page("pazarlama-set-hediye")})),
     ("/api/v1/marketing/promo-items", frozenset({page("pazarlama-set-hediye")})),
+    # M35 E-ticaret kampanya yönetimi (Pazarlama › E-ticaret). Zamanlayıcı yalnız run-due'yu çağırır.
+    ("/api/v1/kampanya/run-due", SYSTEM),
+    ("/api/v1/kampanya/", frozenset({page("kampanya")})),
     ("/api/v1/marketing/run-due", SYSTEM),
     # M18 Aylık plan ve satış föyü. Föy uçları saha temsilcisine de açık (rolünde yalnız föy sayfası olur); meta üç
     # sayfanın ortak ekran bilgisidir.
@@ -882,6 +885,13 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"POST", "PATCH", "DELETE"}), r"^/api/v1/dijital/imports(/[^/]+(/(match|rows|accept-strong|commit))?)?$",
      "ozellik:dijital.rapor-yukle"),
     (frozenset({"GET"}), r"^/api/v1/dijital/(opportunities|sales)/export\.csv$", "ozellik:veri.disa-aktar"),
+    # M35 Kampanya: kampanya, kitap/indirim, toplu hesap, onaya gönderme/geri çekme, iptal, takvim, öğrenim, veri yenileme.
+    # Onay/geri gönderme (decision) açıkça verilen `kampanya.onay` ile ucun içinde; Zeki AI metni ve sonuç özeti `metin-uret`.
+    (frozenset({"POST", "PATCH", "DELETE"}),
+     r"^/api/v1/kampanya/(refresh|calendar(/[^/]+)?|learnings/[^/]+|campaigns(/[^/]+(/(items(/.+)?|simulate|submit|withdraw|cancel"
+     r"|learnings|results/refresh))?)?)$", "ozellik:kampanya.duzenle"),
+    (frozenset({"POST"}), r"^/api/v1/kampanya/campaigns/[^/]+/(copy|summary)$", "ozellik:kampanya.metin-uret"),
+    (frozenset({"GET"}), r"^/api/v1/kampanya/campaigns/[^/]+/export\.xlsx$", "ozellik:veri.disa-aktar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/books/[^/]+/review/decide$", "ozellik:kitap.inceleme-karar"),
     (frozenset({"POST"}), r"^/api/v1/editorial/proofing/decision$", "ozellik:son-okuma.karar"),
     (frozenset({"PUT"}), r"^/api/v1/editorial/documents$", "ozellik:son-okuma.belge"),

@@ -265,6 +265,47 @@
   - **M9 Fiyatlama: doğrulanamadı** — ilk veri hazırlığı (Logo 211 beş yıl) köprü her yeniden başladığında sıfırlanıyor; 05:40–06:37 arasında köprü başka oturumlarca 7 kez yeniden başlatıldı, `books`/`actuals` hep 503 «hazırlanıyor».
   - **Sohbet kapsamı:** hızlı kapı kurulum öncesi ve sonrası birebir (aynı 9 soru 21.09 temel çizgisinden farklı, katalog 70554→70581; satır farkı 0). `run_acceptance.py` iki kez köprü restart'ıyla yarıda kaldı (ilk 40 soruda 37 geçti; kalan 3 şirket dışı soru — tarif, başkent, şiir — için model «şirket dışı» demedi). **Tam kapı (`answer-gate --repeat 3`) koşulmadı**: bu sıklıkta restart altında bitemez.
 - **Test verisi:** her yazma testinin kaydı temizlik betiğiyle silindi (M29 plan, M31 ziyaret, M32 fırsat, M33 iki ihale + 22 kalem, M15 plan + karne, M1 başvuru + rapor); yarım kalan koşuların kayıtları elle bulunup silindi (M33 ihale 1, sohbet sorgu günlüğü 41 + 35 satır, M29 değişiklik kaydı 1). Son taramada timasai adına benim kaydım yok, test oturumu 0. Başka oturumlardan kalan 6 değişiklik kaydı (deneme belgesi, bülten, SEO koşuları) dokunulmadan bırakıldı.
+## 2026-09-28 — M35 E-ticaret kampanya yönetimi (dal; DOĞRULANAMADI — testler koordinatörde)
+
+- **Neden:** kampanya kararı (kitap, yüzde, kanal) Excel'de, sonucu Logo'da, sözleşme sınırı CRM'de duruyordu; CRM'deki 308 kampanya
+  kaydı bayi kampanyası ve planlanan/gerçekleşen ciro alanları boş. Analiz: `docs/analiz/kullanici-ihtiyaclari/M35-eticaret-kampanya.md`.
+- **Ne yapıldı:** köprü `kampanya.py` + `kampanya_sources.py` + `kampanya_api.py` (tablolar `semantic_kampanya_*`, uçlar
+  `/api/v1/kampanya/*`), ekran `src/canvas/kampanya/` (Kampanyalar, Takvim, Aday kitaplar, CRM bayi kampanyaları, Öğrenimler; kampanya
+  ayrıntısı: Kitaplar/simülasyon, Aday iste, Kampanya metni, Sonuç), menü Pazarlama › E-ticaret › Kampanyalar, Kampüs M35, yetki kataloğu
+  (`sayfa:kampanya`, `ozellik:kampanya.duzenle|metin-uret`, açık `kampanya.onay`), yönetim ayarları (`KAMPANYA_*`, grup «E-ticaret
+  kampanyaları»), zamanlayıcı `timas-kampanya` (05:00), pytest `test_kampanya.py`, vitest `kampanya/api.test.ts`, kabul
+  `scripts/acceptance/M35/` (kabul.py, referans.sql, temizlik.py).
+- **Kararlar (veriye/koda bakılarak, sorulmadan):**
+  - *Satış tanımı:* analiz yıllık `V_SatisRaporu_*` görünümünü önerse de bütçe/kokpit/M53 ile aynı olsun diye doğrudan `STLINE`
+    (faturalı satır, iade eksi, `LINETYPE = 0`); yıllar kendi firmalarından ayrı sorgu (kopya birleşiminde kolon kayması yok), kod listesi
+    `JOIN (VALUES …)`. Kabul testi 1–2'nin SQL'i birebir bu tanım.
+  - *Pazar yerinde indirimi kim karşılıyor (soru 2):* varsayım yok — kampanyada «kanal kesintisi %» alanı; girilmezse 0 sayılır ve her
+    kitap satırında «girilmedi» yazar.
+  - *En düşük marj (soru 3):* uydurulmadı — `KAMPANYA_MARJ_MIN_PCT` boş (uyarı yok); zarar her zaman kırmızı; maliyetsiz kitapta marj
+    «hesaplanamaz» (sıfır yazılmaz), onaya gönderilebilir ama kırmızı işaretli gider.
+  - *30 gün kuralı (soru 4):* yönetmelik kuralı site için kendi günlük fiyat kaydımızla (SEO modülünün T-soft ürün tablosundan her gece
+    kopya; T-soft'a istek yok). Kayıt 30 günden kısaysa sarı. Pazar yeri fiyatı bizde yok → bilgi notu. Hukuk birimi teyit etmeli.
+  - *Telif:* M6 terimlerinde `new_HesaplamaTipi` ve asgari fiyat yok → CRM'den doğrudan (yürürlükteki Telif Alış, tip 5). Asgari fiyat
+    metin alan: ayrıştırılıp sözleşmelerin en büyüğü alt sınır. Baskıdan/tek ödemeli telif satış fiyatıyla değişmez.
+  - *Tükenme:* baskı önerisi raporu kitap başına hazır tahmin vermiyor (rapor her istekte kurulur) → basit hız: son 3 ay net adet ÷ gün ×
+    beklenen artış (girilen ya da aynı kanalda en az 3 öğrenimin ortancası, yoksa 1). Veri sonundan kampanya başına normal hızla düşülür.
+  - *Onaydan sonra:* hesap donar (onaycı gördüğünü onaylar); gece yalnız stok, hız, tükenme ve stok kontrolü tazelenir; «gönderildi»
+    durumu yok, «Elle kurdum» notu.
+  - *Kupon (soru 5):* 50.000 CRM kupon kodu ilk sürümde okunmuyor; kampanyaya bağlı sipariş satırı etkisi `new_kampanyaid` ile, kod
+    kırılımı kabulde ölçüm (Ö2).
+- **M34 ile paralel:** M34 dosyalarına dokunulmadı; bağlantı noktası `kampanya_sources.register_platform_items(fn)` (ürün aktifliği ve
+  platform stoğu), menüde aynı «E-ticaret» bölüm adı (merge'de tekilleşir).
+- **Ortak dosyalar (en küçük ekleme):** `access.py` (2 RULES + 3 FEATURE_RULES satırı), `access_catalog.json` (1 sayfa + 3 özellik),
+  `admin.py` (KAMPANYA_* ayarları + grup), `app.py` (register bloğu), `App.tsx` (4 rota), `navModel.ts` (1 öğe + ikon), `ModulesMenu.tsx`
+  (`M35`).
+- **DOĞRULANAMADI — testler koordinatörde:** yerelde yalnız `py_compile` ve JSON doğrulaması; pytest/vitest/tsc koşturulmadı, gerçek
+  DB/API kabulü yapılmadı. Sunucuda sıra: main'e taşıma → kurulum (+ `timas-kampanya.timer`) → `run-due` elle (süre günlüğe) →
+  `kabul.py` (K1–K8, Ö1–Ö3) → `kabul.py --api --yazma` → `temizlik.py` → pytest `test_kampanya.py`, `test_access.py`; vitest; 320/390/768
+  genişlikte görsel kontrol.
+- **Açık:** Zeki AI'ın aday gerekçesini cümleye dökmesi (şimdilik rakamlı kural cümlesi), T-soft sipariş toplama (gün içi izleme),
+  platform raporu yükleme, set/çapraz satış önerisi, müşteri VM'inde zamanlayıcı (jobs döngüsü) kaydı, kanal cari kodlarının ölçülmesi
+  (`KAMPANYA_KANAL_CARI`), Zeki AI sohbetinin `semantic_kampanya_*` tablolarını okuması.
+
 ## 2026-09-28 (06:30) — Efekt sesleri kuruldu: GPU (dokuz editör servisi `68a1d411`) ve test sunucusu
 
 - **GPU:** `releases/68a1d411` (`._*` 0), `editor-py:0.15.9-68a1d411`, stüdyo `editor-py-studio:0.15.9-68a1d411`

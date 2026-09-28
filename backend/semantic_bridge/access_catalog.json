@@ -652,6 +652,11 @@
       "key": "sayfa:eticaret-pazar-yerleri",
       "area": "pazarlama",
       "label": "E-ticaret: pazar yerleri"
+    },
+    {
+      "key": "sayfa:kampanya",
+      "area": "pazarlama",
+      "label": "Kampanyalar"
     }
   ],
   "features": [
@@ -1539,6 +1544,28 @@
       "page": "sayfa:pazarlama-set-hediye",
       "label": "Set maliyeti ve marjı",
       "hint": "Bileşen birim maliyeti, ambalaj maliyeti ve marjı görme; yoksa yalnız fiyat ve indirim görünür"
+    },
+    {
+      "key": "ozellik:kampanya.duzenle",
+      "area": "pazarlama",
+      "page": "sayfa:kampanya",
+      "label": "Kampanya hazırlama",
+      "hint": "Kampanya açma, kitap ve indirim girme, toplu hesap, onaya gönderme ve geri çekme, iptal, takvime platform dönemi ve fuar ekleme, sonuç okuma, öğrenim kaydı, veri yenileme"
+    },
+    {
+      "key": "ozellik:kampanya.onay",
+      "area": "pazarlama",
+      "page": "sayfa:kampanya",
+      "label": "Kampanya onayı",
+      "hint": "Onaya gönderilen kampanyayı (indirim, marj ve kontrollerle) onaylama ya da gerekçeyle geri gönderme; hazırlayan ve onaya gönderen onaylayamaz",
+      "explicit": true
+    },
+    {
+      "key": "ozellik:kampanya.metin-uret",
+      "area": "pazarlama",
+      "page": "sayfa:kampanya",
+      "label": "Kampanya metni ve sonuç özeti (Zeki AI)",
+      "hint": "Zeki AI'dan kampanya başlığı, kısa açıklama ve banner metni ile kampanya sonucu özeti isteme (model harcar)"
     },
     {
       "key": "ozellik:icerik.talep",

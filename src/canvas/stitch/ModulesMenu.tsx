@@ -59,6 +59,7 @@ export const LIVE: Record<string, string> = {
   M38: '/musteri-iliskileri',
   M42: '/kanallar',
   M36: '/dijital-yayin',
+  M35: '/kampanyalar',
   M46: '/butce',
   M59: '/bayi-risk',
   M50: '/zeki-kalite',
