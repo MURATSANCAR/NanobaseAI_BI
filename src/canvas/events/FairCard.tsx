@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { BadgeCheck, FileChartColumn, Pencil, Trash2, CircleX } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field } from '../admin/ui';
 import { Tabs, AskSheet } from '../budget/parts';
 import { STATUS_TONE, evApi, fmtDay, fmtMoney, fmtRange, type FairDetail, type Meta } from './api';
@@ -116,10 +117,10 @@ export default function FairCard() {
             </Note>
           )}
           <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4 lg:gap-4">
-            <Stat label="Başlangıca" value={<DaysLeft days={f.phase === 'suruyor' ? 0 : f.daysLeft} />} help={f.phase === 'bitti' ? 'Fuar bitti' : fmtDay(f.startsOn)} />
-            <Stat label="Hazırlık" value={<PrepBar prep={f.prep} late={late} />} help={`${f.tasksDone}/${f.tasksTotal} görev${late ? ` · ${late} gecikti` : ''}`} />
-            <Stat label="Gider / bütçe" value={<span className="font-mono text-[18px] font-bold tabular-nums">{fmtMoney(f.costTotal)}</span>} help={`Bütçe ${fmtMoney(f.budgetPlanned)}`} />
-            <Stat label="Kitap" value={<span className="font-mono text-[18px] font-bold tabular-nums">{f.bookList.length}</span>} help={short ? `${short} kitapta stok yetersiz` : 'Planlanan liste'} />
+            <Stat label="Başlangıca" info={<SqlInfo k={f.kaynaklar} alan="daysLeft" label="Başlangıca" />} value={<DaysLeft days={f.phase === 'suruyor' ? 0 : f.daysLeft} />} help={f.phase === 'bitti' ? 'Fuar bitti' : fmtDay(f.startsOn)} />
+            <Stat label="Hazırlık" info={<SqlInfo k={f.kaynaklar} alan="tasksDone" label="Hazırlık" />} value={<PrepBar prep={f.prep} late={late} />} help={`${f.tasksDone}/${f.tasksTotal} görev${late ? ` · ${late} gecikti` : ''}`} />
+            <Stat label="Gider / bütçe" info={<SqlInfo k={f.kaynaklar} alan="costTotal" label="Gider / bütçe" />} value={<span className="font-mono text-[18px] font-bold tabular-nums">{fmtMoney(f.costTotal)}</span>} help={`Bütçe ${fmtMoney(f.budgetPlanned)}`} />
+            <Stat label="Kitap" info={<SqlInfo k={f.kaynaklar} alan="bookList" label="Kitap" />} value={<span className="font-mono text-[18px] font-bold tabular-nums">{f.bookList.length}</span>} help={short ? `${short} kitapta stok yetersiz` : 'Planlanan liste'} />
           </div>
 
           <Tabs<Tab>
@@ -165,10 +166,10 @@ export default function FairCard() {
   );
 }
 
-function Stat({ label, value, help }: { label: string; value: ReactNode; help: string }) {
+function Stat({ label, value, help, info }: { label: string; value: ReactNode; help: string; info?: ReactNode }) {
   return (
     <div className="glass-panel min-w-0 rounded-2xl p-3.5 shadow-glass-float sm:rounded-3xl sm:p-4">
-      <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">{label}{info}</div>
       <div className="mt-1.5 flex min-h-7 items-center">{value}</div>
       <div className="mt-1 truncate text-[11.5px] leading-snug text-canvas-muted">{help}</div>
     </div>
@@ -196,7 +197,7 @@ function Summary({ f, m, onSave, busy }: { f: FairDetail; m: Meta; onSave: (b: {
 
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-2 lg:gap-4">
-      <Block title="Kart">
+      <Block title="Kart" info={<SqlInfo k={f.kaynaklar} alan="budgetPlanned" label="Kart ve bütçe" />}>
         <dl className="grid grid-cols-[minmax(0,140px)_minmax(0,1fr)] gap-x-3 gap-y-1.5 text-[12.5px]">
           <dt className="text-canvas-muted">Durum</dt>
           <dd><Pill tone={STATUS_TONE[f.status]}>{f.status === 'onayli' ? `Onaylı · ${f.phaseLabel}` : f.statusLabel}</Pill></dd>

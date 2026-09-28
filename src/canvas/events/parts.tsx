@@ -75,12 +75,12 @@ export function EventsFrame({ crumb, title, lead, source, presence, detail, back
 }
 
 /** Bölüm başlığı + isteğe bağlı sağ düğme. */
-export function Block({ title, help, action, children }: { title: string; help?: ReactNode; action?: ReactNode; children: ReactNode }) {
+export function Block({ title, help, action, info, children }: { title: string; help?: ReactNode; action?: ReactNode; info?: ReactNode; children: ReactNode }) {
   return (
     <section className="glass-panel min-w-0 rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
       <div className="mb-2 flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold tracking-tight">{title}</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">{title}{info}</h2>
           {help && <p className="mt-0.5 max-w-[80ch] text-[11.5px] leading-snug text-canvas-muted">{help}</p>}
         </div>
         {action}
@@ -119,19 +119,5 @@ export function PrepBar({ prep, late }: { prep: number | null; late: number }) {
       </div>
       <span className="w-10 text-right font-mono text-[11px] font-bold tabular-nums">%{Math.round(prep * 100)}</span>
     </div>
-  );
-}
-
-/** Rakamın nereden geldiği: açılır küçük kutu (SQL ya da kaynak cümlesi). */
-export function SourceNote({ text, sql }: { text?: string | null; sql?: string[] | null }) {
-  if (!text && !sql?.length) return null;
-  return (
-    <details className="mt-2 text-[11px] text-canvas-muted">
-      <summary className="inline-flex min-h-8 cursor-pointer items-center font-bold text-canvas-violet">Kaynak</summary>
-      {text && <p className="mt-1 leading-snug">{text}</p>}
-      {(sql ?? []).map((q, i) => (
-        <pre key={i} className="mt-1 max-w-full overflow-x-auto rounded-lg bg-slate-50 p-2 font-mono text-[10.5px] leading-snug">{q}</pre>
-      ))}
-    </details>
   );
 }

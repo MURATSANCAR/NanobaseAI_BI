@@ -24,7 +24,9 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import events as E
+from semantic_bridge import events_kaynak as K
 from semantic_bridge import events_sources as src
+from semantic_bridge import provenance as PV
 from semantic_bridge.events import EventsError
 
 log = logging.getLogger("semantic.events.api")
@@ -141,6 +143,7 @@ class Service:
                              costs=E.fair_costs(engine, fair["id"]), planned=E.planned_books(engine, fair["id"]),
                              data_end=data_end, tail_days=st["resultTailDays"], logo_error=logo_err, crm_error=crm_err)
         r["complete"] = not logo_err and not crm_err
+        r["sqlOnceki"] = (prev_sales or {}).get("sql") or []
         if save and r["complete"]:
             E.save_result(engine, tenant, fair["id"], r)
         return r
@@ -194,6 +197,10 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     auth, can, is_admin, audit, conf, fresh = (deps[k] for k in ("auth", "can", "is_admin", "audit", "conf", "fresh"))
     source = src.Source(deps["crm_connect"], deps["logo_connect"], lambda: conf("CRM_SCHEMA") or "Timas_MSCRM.dbo")
     svc = Service(source, deps.get("llm") or (lambda _p: None))
+
+    def fair_out(engine, tenant: str, fid: str) -> dict[str, Any]:
+        d = fair_out(engine, tenant, fid)
+        return PV.bagla(d, lambda: K.for_fair(engine, tenant, d["id"]))
 
     def ctx(request: Request) -> tuple[Any, str, str, str]:
         engine, tenant, user, display = auth(request)
@@ -254,12 +261,13 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def events_calendar(request: Request, year: Optional[int] = None, classes: str = "", unmapped: int = 0) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         cls = [c for c in classes.split(",") if c in E.CLASSES] if classes else E.settings()["defaultClasses"]
-        return call(svc.calendar, engine, tenant, year_of(year), cls, bool(unmapped), fresh())
+        y = year_of(year)
+        return PV.bagla(call(svc.calendar, engine, tenant, y, cls, bool(unmapped), fresh()), lambda: K.for_calendar(engine, tenant, y))
 
     @app.get(f"{P}/upcoming")
     def events_upcoming(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(E.upcoming, engine, tenant)
+        return PV.bagla(call(E.upcoming, engine, tenant), lambda: K.for_upcoming(engine, tenant))
 
     @app.get(f"{P}/crm-events")
     def events_crm(request: Request, frm: str = "", to: str = "", cls: str = "", q: str = "", page: int = 0) -> dict[str, Any]:
@@ -267,7 +275,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         t = E.today()
         a = call(E.parse_day, frm, "Başlangıç") or date(t.year, 1, 1)
         b = call(E.parse_day, to, "Bitiş") or date(t.year, 12, 31)
-        return call(svc.crm_events, engine, tenant, a, b + timedelta(days=1), cls, q, page, fresh())
+        out = call(svc.crm_events, engine, tenant, a, b + timedelta(days=1), cls, q, page, fresh())
+        return PV.bagla(out, lambda: K.for_crm_events(engine, tenant, a, b + timedelta(days=1)))
 
     @app.get(f"{P}/me/agenda")
     def events_agenda(request: Request) -> dict[str, Any]:
@@ -337,9 +346,10 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant, _, _ = ctx(request)
         types = call(source.types, fresh())
         rows = E.type_rows(types, E.type_map(engine, tenant))
-        return {"items": rows, "classes": E.CLASSES, "job": dict(svc.job),
-                "counts": {"total": len(rows), "decided": sum(1 for r in rows if r["class"]),
-                           "suggested": sum(1 for r in rows if not r["class"] and r["suggested"])}}
+        out = {"items": rows, "classes": E.CLASSES, "job": dict(svc.job),
+               "counts": {"total": len(rows), "decided": sum(1 for r in rows if r["class"]),
+                          "suggested": sum(1 for r in rows if not r["class"] and r["suggested"])}}
+        return PV.bagla(out, lambda: K.for_type_map(engine, tenant))
 
     @app.put(f"{P}/type-map")
     def events_type_map_put(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -362,13 +372,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/fairs")
     def events_fairs(request: Request, year: Optional[int] = None) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return {"items": call(E.list_fairs, engine, tenant, year_of(year) if year else None)}
+        y = year_of(year) if year else None
+        return PV.bagla({"items": call(E.list_fairs, engine, tenant, y)}, lambda: K.for_fairs(engine, tenant, y))
 
     @app.post(f"{P}/fairs", status_code=201)
     def events_fair_create(body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         fid = call(E.create_fair, engine, tenant, user, body)
-        d = E.fair_detail(engine, tenant, fid)
+        d = fair_out(engine, tenant, fid)
         fair_audit(engine, user, "create", fid, d["name"], {"tarih": [d["startsOn"], d["endsOn"]], "tur": d["kind"],
                                                             "butce": d["budgetPlanned"], "gorev": d["tasksTotal"]})
         return d
@@ -376,13 +387,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/fairs/{{fid}}")
     def events_fair(fid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(E.fair_detail, engine, tenant, fid)
+        call(E.fair_row, engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.patch(f"{P}/fairs/{{fid}}")
     def events_fair_patch(fid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(E.update_fair, engine, tenant, user, fid, body)
-        d = E.fair_detail(engine, tenant, fid)
+        d = fair_out(engine, tenant, fid)
         if out["diff"]:
             fair_audit(engine, user, "update", fid, d["name"], {**out["diff"], **({"not": "tarih/bütçe değişti, karar yeniden gerekli"}
                                                                                    if out["reopened"] else {})})
@@ -402,14 +414,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         need(user, "ozellik:etkinlik.onay", "Katılım kararı ve bütçe onayı")
         out = call(E.approve_fair, engine, tenant, user, fid, body.get("note"))
         fair_audit(engine, user, "approve", fid, out["name"], {"butce": out["budget"], "not": body.get("note")})
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.post(f"{P}/fairs/{{fid}}/suggest-books")
     def events_fair_suggest(fid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(svc.suggest, engine, tenant, user, fid, fresh())
         fair_audit(engine, user, "run", fid, out["detail"]["name"], {"oneri": out["counts"], "temel": out["basis"]["label"]})
-        return out
+        return PV.bagla(out, lambda: K.for_suggest(engine, tenant, fid, source, out.get("sql") or []))
 
     @app.put(f"{P}/fairs/{{fid}}/books")
     def events_fair_books(fid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -420,14 +432,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(E.put_books, engine, tenant, user, fid, items, books)
         if out["diff"]:
             audit(engine, user, "update", "events_books", fid, out["fair"], out["diff"])
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.post(f"{P}/fairs/{{fid}}/tasks", status_code=201)
     def events_task_add(fid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(E.add_task, engine, tenant, user, fid, body)
         audit(engine, user, "create", "events_task", out["id"], f"{out['fair']} · {out['title']}", None)
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.patch(f"{P}/fairs/{{fid}}/tasks/{{tid}}")
     def events_task_patch(fid: str, tid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -435,14 +447,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(E.patch_task, engine, tenant, user, fid, tid, body, allowed(user, "ozellik:etkinlik.duzenle"))
         if out["diff"]:
             audit(engine, user, "update", "events_task", tid, f"{out['fair']} · {out['title']}", out["diff"])
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.delete(f"{P}/fairs/{{fid}}/tasks/{{tid}}")
     def events_task_delete(fid: str, tid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(E.delete_task, engine, tenant, fid, tid)
         audit(engine, user, "delete", "events_task", tid, f"{out['fair']} · {out['title']}", None)
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.post(f"{P}/fairs/{{fid}}/costs", status_code=201)
     def events_cost_add(fid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -450,14 +462,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(E.add_cost, engine, tenant, user, fid, body, E.settings()["receiptMaxMb"])
         audit(engine, user, "create", "events_cost", out["id"], out["fair"],
               {"tur": out["kind"], "tutar": out["amount"], "fis": out["receipt"]})
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.delete(f"{P}/fairs/{{fid}}/costs/{{cid}}")
     def events_cost_delete(fid: str, cid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         out = call(E.delete_cost, engine, tenant, fid, cid)
         audit(engine, user, "delete", "events_cost", cid, out["fair"], {"tur": out["kind"], "tutar": out["amount"]})
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.get(f"{P}/fairs/{{fid}}/costs/{{cid}}/receipt")
     def events_cost_receipt(fid: str, cid: str, request: Request) -> Response:
@@ -472,7 +484,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(E.add_author, engine, tenant, user, fid, body)
         audit(engine, user, "create", "events_author", out["id"], f"{out['fair']} · {out['name']}",
               {"cakisma": len(out["conflicts"])})
-        d = E.fair_detail(engine, tenant, fid)
+        d = fair_out(engine, tenant, fid)
         d["newConflicts"] = out["conflicts"]
         return d
 
@@ -481,7 +493,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant, user, _ = ctx(request)
         out = call(E.delete_author, engine, tenant, fid, aid)
         audit(engine, user, "delete", "events_author", aid, f"{out['fair']} · {out['name']}", None)
-        return E.fair_detail(engine, tenant, fid)
+        return fair_out(engine, tenant, fid)
 
     @app.get(f"{P}/fairs/{{fid}}/result")
     def events_result(fid: str, request: Request, yenile: int = 0) -> dict[str, Any]:
@@ -491,9 +503,10 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             r = json.loads(row["result_json"])
             r["complete"] = True
             r["cached"] = True
-            return {"fair": E.fair_detail(engine, tenant, fid), "result": r}
-        r = call(svc.result, engine, tenant, fid, True)
-        return {"fair": E.fair_detail(engine, tenant, fid), "result": r}
+        else:
+            r = call(svc.result, engine, tenant, fid, True)
+        out = {"fair": E.fair_detail(engine, tenant, fid), "result": r}
+        return PV.bagla(out, lambda: K.for_result(engine, tenant, fid, source, r, row))
 
     @app.get(f"{P}/fairs/{{fid}}/result/export.pdf")
     def events_result_pdf(fid: str, request: Request) -> Response:
@@ -518,19 +531,20 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/lookup/books")
     def events_lookup_books(request: Request, q: str = "") -> dict[str, Any]:
         ctx(request)
-        return _search(list(call(source.books).values()), q, ("ad", "stokKodu", "yazar"))
+        return PV.bagla(_search(list(call(source.books).values()), q, ("ad", "stokKodu", "yazar")), K.for_lookup_books)
 
     @app.get(f"{P}/lookup/authors")
     def events_lookup_authors(request: Request, q: str = "") -> dict[str, Any]:
         ctx(request)
-        return _search(call(source.authors), q, ("ad",))
+        return PV.bagla(_search(call(source.authors), q, ("ad",)), K.for_lookup_authors)
 
     @app.get(f"{P}/lookup/clients")
     def events_lookup_clients(request: Request) -> dict[str, Any]:
         ctx(request)
         ch = E.settings()["channel"]
         items = call(source.channel_clients, ch, fresh())
-        return {"items": sorted(items, key=lambda x: (x["pasif"], x["kod"] or "")), "channel": ch}
+        return PV.bagla({"items": sorted(items, key=lambda x: (x["pasif"], x["kod"] or "")), "channel": ch},
+                        lambda: K.for_clients(source, ch))
 
     @app.get(f"{P}/authors/{{cid}}/events")
     def events_author_events(cid: str, request: Request, year: Optional[int] = None) -> dict[str, Any]:
@@ -538,14 +552,15 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         y = year_of(year)
         items = E.classify_events(call(source.author_events, cid, date(y, 1, 1), date(y + 1, 1, 1)), E.type_map(engine, tenant))
         items.sort(key=lambda e: e.get("baslangic") or "")
-        return {"year": y, "items": items, "total": len({e["id"] for e in items})}
+        return PV.bagla({"year": y, "items": items, "total": len({e["id"] for e in items})},
+                        lambda: K.for_author_events(engine, tenant, cid, y))
 
     # ---- ödül defteri
 
     @app.get(f"{P}/awards")
     def events_awards(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return E.list_awards(engine, tenant)
+        return PV.bagla(E.list_awards(engine, tenant), lambda: K.for_awards(engine, tenant))
 
     @app.post(f"{P}/awards", status_code=201)
     def events_award_create(body: dict[str, Any], request: Request) -> dict[str, Any]:

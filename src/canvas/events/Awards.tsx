@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { ExternalLink, Pencil, Plus, Trash2, Trophy } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
@@ -55,6 +56,7 @@ export default function Awards() {
     >
       {list.isLoading && <Loading />}
       {list.error && <Note tone="err">{errText(list.error, 'Ödüller açılamadı.')}</Note>}
+      {list.data && items.length > 0 && <p className="flex items-center gap-1 px-1 text-[11.5px] text-canvas-muted">Kalan gün ve başvurular<SqlInfo k={list.data.kaynaklar} alan="items" label="Ödül defteri" /></p>}
       {list.data && items.length === 0 && <Block title="Ödül yok"><p className="text-[12.5px] text-canvas-muted">Henüz ödül girilmedi.{can ? ' «Yeni ödül» ile ekleyin.' : ''}</p></Block>}
       {m && [...open, ...rest].map((a) => (
         <AwardCard key={a.id} a={a} statuses={m.entryStatuses} can={can} busy={run.isPending}

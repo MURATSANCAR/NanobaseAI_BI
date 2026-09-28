@@ -5,6 +5,8 @@ import { toast } from 'sonner';
 import { Check, Receipt, Trash2, TriangleAlert } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
+import SqlInfo from '../components/SqlInfo';
+import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { evApi, fileToBase64, fmtMoney, fmtShort, fmtSlot, parseNum, type FairDetail, type Meta } from './api';
 import { Block, DaysLeft } from './parts';
@@ -34,7 +36,7 @@ export function FairTasks({ f, m, onChange }: { f: FairDetail; m: Meta; onChange
   const me = m.me.username;
 
   return (
-    <Block title="Görevler" help="Son tarihe göre sıralı. Size atanan görevi yetkiniz olmasa da işaretleyebilirsiniz.">
+    <Block title="Görevler" info={<SqlInfo k={f.kaynaklar} alan="tasks" label="Görevler" />} help="Son tarihe göre sıralı. Size atanan görevi yetkiniz olmasa da işaretleyebilirsiniz.">
       <ul className="flex flex-col divide-y divide-slate-100">
         {f.tasks.map((t) => {
           const canTick = (edit || t.owner === me) && f.status !== 'iptal';
@@ -127,7 +129,7 @@ export function FairCosts({ f, m, onChange }: { f: FairDetail; m: Meta; onChange
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-5 lg:gap-4">
       <div className="lg:col-span-3">
-        <Block title="Giderler" help={`Toplam ${fmtMoney(f.costTotal)} · planlanan bütçe ${fmtMoney(f.budgetPlanned)}. CRM etkinlik kaydındaki gider sonuç raporunda ayrıca eklenir.`}>
+        <Block title="Giderler" info={<SqlInfo k={f.kaynaklar} alan="costs" label="Giderler" />} help={`Toplam ${fmtMoney(f.costTotal)} · planlanan bütçe ${fmtMoney(f.budgetPlanned)}. CRM etkinlik kaydındaki gider sonuç raporunda ayrıca eklenir.`}>
           {f.costs.length === 0 && <p className="py-3 text-[12.5px] text-canvas-muted">Gider girilmedi.</p>}
           <ul className="flex flex-col divide-y divide-slate-100">
             {f.costs.map((c) => (
@@ -219,7 +221,7 @@ export function FairAuthors({ f, m, onChange }: { f: FairDetail; m: Meta; onChan
   return (
     <div className="grid grid-cols-1 gap-3 lg:grid-cols-5 lg:gap-4">
       <div className="lg:col-span-3">
-        <Block title="Yazar programı" help={<>İmza günü ve söyleşi saatleri. Yazarla randevu ve görüşme kaydı <Link className="font-bold text-canvas-violet hover:underline" to="/yazar-iliskileri">Yazar ilişkileri</Link> ekranında.</>}>
+        <Block title="Yazar programı" info={<SqlInfo k={f.kaynaklar} alan="authors" label="Yazar programı" />} help={<>İmza günü ve söyleşi saatleri. Yazarla randevu ve görüşme kaydı <Link className="font-bold text-canvas-violet hover:underline" to="/yazar-iliskileri">Yazar ilişkileri</Link> ekranında.</>}>
           {f.authors.length === 0 && <p className="py-3 text-[12.5px] text-canvas-muted">Program yok.</p>}
           <ul className="flex flex-col divide-y divide-slate-100">
             {f.authors.map((a) => (

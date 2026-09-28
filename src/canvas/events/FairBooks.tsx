@@ -3,10 +3,12 @@ import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Calculator, Plus, Search, Star } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { useDebounced } from '../editorial/kit';
 import { evApi, fmtDay, fmtInt, fmtPct, parseNum, type FairDetail, type Meta } from './api';
-import { Block, SourceNote } from './parts';
+import { Block } from './parts';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Kitaplar ve adetler: kurala göre öneri (model yok; geçmiş fuar satışı × katsayı, yeni çıkanlar, stok) + elle planlanan adet ve
  *  «öne çıkar». Öneri yeniden alınınca elle girilen adet korunur. Rakamlar SQL'den; öneri kuralı gerekçe sütununda. */
@@ -16,7 +18,7 @@ type Row = { stokKodu: string; ad: string | null; qtyPlanned: string; featured: 
 export default function FairBooks({ f, m, onChange }: { f: FairDetail; m: Meta; onChange: (d: FairDetail) => void }) {
   const [rows, setRows] = useState<Row[]>([]);
   const [dirty, setDirty] = useState(false);
-  const [info, setInfo] = useState<{ label: string; from: string; to: string; warnings: string[]; sql: string[] } | null>(null);
+  const [info, setInfo] = useState<{ label: string; from: string; to: string; warnings: string[]; kaynaklar?: Kaynaklar } | null>(null);
   const [q, setQ] = useState('');
   const dq = useDebounced(q, 300);
   const byCode = useMemo(() => new Map(f.bookList.map((b) => [b.stokKodu.toUpperCase(), b])), [f.bookList]);
@@ -30,7 +32,7 @@ export default function FairBooks({ f, m, onChange }: { f: FairDetail; m: Meta; 
     mutationFn: () => evApi.suggest(f.id),
     onSuccess: (r) => {
       onChange(r.detail);
-      setInfo({ label: r.basis.label, from: r.basis.from, to: r.basis.to, warnings: r.warnings, sql: r.sql });
+      setInfo({ label: r.basis.label, from: r.basis.from, to: r.basis.to, warnings: r.warnings, kaynaklar: r.kaynaklar });
       toast.success(`Öneri: ${r.counts.added} yeni, ${r.counts.updated} güncellendi, ${r.counts.removed} kaldırıldı.`);
     },
     onError: (e) => toast.error(errText(e, 'Öneri alınamadı.') ?? ''),
@@ -62,6 +64,7 @@ export default function FairBooks({ f, m, onChange }: { f: FairDetail; m: Meta; 
   return (
     <Block
       title="Kitaplar ve adetler"
+      info={<SqlInfo k={f.kaynaklar} alan="bookList" label="Kitaplar: öneri, planlanan, stok, satılan" />}
       help={`Öneri: geçen yılın aynı fuarında ${m.settings.channel} kanalı net satışı × ${String(m.settings.suggestFactor).replace('.', ',')}; son ${m.settings.newBookMonths} ayın yeni çıkanları (stokta olanlar) temeldeki ortanca satışın ${String(m.settings.newBookFactor).replace('.', ',')} katıyla. Stok önerinin altındaysa işaretlenir.`}
       action={edit ? (
         <div className="flex flex-wrap gap-2">
@@ -75,9 +78,8 @@ export default function FairBooks({ f, m, onChange }: { f: FairDetail; m: Meta; 
     >
       {info && (
         <div className="mb-2 flex flex-col gap-1.5">
-          <p className="text-[12px] text-canvas-muted">Temel: {info.label} ({fmtDay(info.from)} – {fmtDay(info.to)}).</p>
+          <p className="flex items-center gap-1 text-[12px] text-canvas-muted">Temel: {info.label} ({fmtDay(info.from)} – {fmtDay(info.to)}).<SqlInfo k={info.kaynaklar} alan="counts" label="Kurala göre öneri" /></p>
           {info.warnings.map((w) => <Note key={w} tone="warn">{w}</Note>)}
-          <SourceNote sql={info.sql} />
         </div>
       )}
       {edit && (

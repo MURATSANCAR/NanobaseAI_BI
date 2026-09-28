@@ -417,8 +417,12 @@ def days_until(day: Optional[str], now: Optional[date] = None) -> Optional[int]:
 # ------------------------------------------------------------------ fuar kartı
 
 
+def fair_stmt(tenant: str, fair_id: str):
+    return sa.select(FAIRS).where(FAIRS.c.tenant_id == tenant, FAIRS.c.id == str(fair_id))
+
+
 def _get_fair(c, tenant: str, fair_id: str) -> dict[str, Any]:
-    r = c.execute(sa.select(FAIRS).where(FAIRS.c.tenant_id == tenant, FAIRS.c.id == str(fair_id))).mappings().first()
+    r = c.execute(fair_stmt(tenant, fair_id)).mappings().first()
     if not r:
         raise EventsError("Fuar/etkinlik kartı bulunamadı.", 404)
     return dict(r)
@@ -593,23 +597,35 @@ def fair_view(row: dict[str, Any], tasks: list[dict[str, Any]], costs: list[dict
     }
 
 
+def fairs_stmts(tenant: str, year: Optional[int] = None) -> tuple[Any, Any, Any, Any]:
+    """(kartlar, görevleri, giderleri, kart başına kitap sayısı); kart süzgeci alt sorguyla."""
+    cond = [FAIRS.c.tenant_id == tenant]
+    if year:
+        cond += [FAIRS.c.starts_on < f"{year + 1}-01-01", FAIRS.c.ends_on >= f"{year}-01-01"]
+    ids = sa.select(FAIRS.c.id).where(*cond)
+    return (sa.select(FAIRS).where(*cond).order_by(FAIRS.c.starts_on, FAIRS.c.name),
+            sa.select(TASKS).where(TASKS.c.fair_id.in_(ids)),
+            sa.select(COSTS.c.fair_id, COSTS.c.amount).where(COSTS.c.fair_id.in_(ids)),
+            sa.select(BOOKS.c.fair_id, sa.func.count()).where(BOOKS.c.fair_id.in_(ids)).group_by(BOOKS.c.fair_id))
+
+
 def list_fairs(engine: sa.engine.Engine, tenant: str, year: Optional[int] = None, *, active_only: bool = False,
                now: Optional[date] = None) -> list[dict[str, Any]]:
+    fq, tq, cq, bq = fairs_stmts(tenant, year)
     with engine.connect() as c:
-        q = sa.select(FAIRS).where(FAIRS.c.tenant_id == tenant)
-        if year:
-            q = q.where(FAIRS.c.starts_on < f"{year + 1}-01-01", FAIRS.c.ends_on >= f"{year}-01-01")
-        rows = [dict(r) for r in c.execute(q.order_by(FAIRS.c.starts_on, FAIRS.c.name)).mappings()]
+        rows = [dict(r) for r in c.execute(fq).mappings()]
         ids = [r["id"] for r in rows]
         tasks: dict[str, list] = {i: [] for i in ids}
         costs: dict[str, list] = {i: [] for i in ids}
         books: dict[str, int] = {}
         if ids:
-            for t in c.execute(sa.select(TASKS).where(TASKS.c.fair_id.in_(ids))).mappings():
-                tasks[t["fair_id"]].append(dict(t))
-            for x in c.execute(sa.select(COSTS.c.fair_id, COSTS.c.amount).where(COSTS.c.fair_id.in_(ids))).mappings():
-                costs[x["fair_id"]].append(dict(x))
-            for fid, n in c.execute(sa.select(BOOKS.c.fair_id, sa.func.count()).where(BOOKS.c.fair_id.in_(ids)).group_by(BOOKS.c.fair_id)):
+            for t in c.execute(tq).mappings():
+                if t["fair_id"] in tasks:
+                    tasks[t["fair_id"]].append(dict(t))
+            for x in c.execute(cq).mappings():
+                if x["fair_id"] in costs:
+                    costs[x["fair_id"]].append(dict(x))
+            for fid, n in c.execute(bq):
                 books[fid] = int(n)
     out = [fair_view(r, tasks[r["id"]], costs[r["id"]], now, books.get(r["id"], 0)) for r in rows]
     if active_only:
@@ -617,14 +633,24 @@ def list_fairs(engine: sa.engine.Engine, tenant: str, year: Optional[int] = None
     return out
 
 
+def fair_detail_stmts(tenant: str, fair_id: str) -> tuple[Any, Any, Any, Any, Any]:
+    """Kart ekranı: (kart, görevler, giderler, kitaplar, yazar programı)."""
+    fid = str(fair_id)
+    return (fair_stmt(tenant, fid), sa.select(TASKS).where(TASKS.c.fair_id == fid),
+            sa.select(COSTS).where(COSTS.c.fair_id == fid).order_by(COSTS.c.created_at),
+            sa.select(BOOKS).where(BOOKS.c.fair_id == fid),
+            sa.select(AUTHORS).where(AUTHORS.c.fair_id == fid).order_by(AUTHORS.c.slot_start))
+
+
 def fair_detail(engine: sa.engine.Engine, tenant: str, fair_id: str, now: Optional[date] = None) -> dict[str, Any]:
     now = now or today()
     with engine.connect() as c:
         row = _get_fair(c, tenant, fair_id)
-        tasks = [dict(t) for t in c.execute(sa.select(TASKS).where(TASKS.c.fair_id == row["id"])).mappings()]
-        costs = [dict(x) for x in c.execute(sa.select(COSTS).where(COSTS.c.fair_id == row["id"]).order_by(COSTS.c.created_at)).mappings()]
-        books = [dict(b) for b in c.execute(sa.select(BOOKS).where(BOOKS.c.fair_id == row["id"])).mappings()]
-        authors = [dict(a) for a in c.execute(sa.select(AUTHORS).where(AUTHORS.c.fair_id == row["id"]).order_by(AUTHORS.c.slot_start)).mappings()]
+        _fq, tq, cq, bq, aq = fair_detail_stmts(tenant, row["id"])
+        tasks = [dict(t) for t in c.execute(tq).mappings()]
+        costs = [dict(x) for x in c.execute(cq).mappings()]
+        books = [dict(b) for b in c.execute(bq).mappings()]
+        authors = [dict(a) for a in c.execute(aq).mappings()]
         prev = None
         if row["prev_fair_id"]:
             p = c.execute(sa.select(FAIRS.c.id, FAIRS.c.name, FAIRS.c.starts_on, FAIRS.c.ends_on)
@@ -1113,22 +1139,34 @@ def save_result(engine, tenant: str, fair_id: str, result: dict[str, Any]) -> No
                       .values(qty_sold=sold.get(r.upper(), 0.0)))
 
 
+def planned_books_stmt(fair_id: str):
+    return sa.select(BOOKS).where(BOOKS.c.fair_id == fair_id)
+
+
+def fair_costs_stmt(fair_id: str):
+    return sa.select(COSTS).where(COSTS.c.fair_id == fair_id)
+
+
 def planned_books(engine, fair_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        return [dict(r) for r in c.execute(sa.select(BOOKS).where(BOOKS.c.fair_id == fair_id)).mappings()]
+        return [dict(r) for r in c.execute(planned_books_stmt(fair_id)).mappings()]
 
 
 def fair_costs(engine, fair_id: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        return [dict(r) for r in c.execute(sa.select(COSTS).where(COSTS.c.fair_id == fair_id)).mappings()]
+        return [dict(r) for r in c.execute(fair_costs_stmt(fair_id)).mappings()]
 
 
 # ------------------------------------------------------------------ CRM etkinlik tipi eşlemesi
 
 
+def type_map_stmt(tenant: str):
+    return sa.select(TYPE_MAP).where(TYPE_MAP.c.tenant_id == tenant)
+
+
 def type_map(engine, tenant: str) -> dict[str, dict[str, Any]]:
     with engine.connect() as c:
-        return {r["crm_type_id"]: dict(r) for r in c.execute(sa.select(TYPE_MAP).where(TYPE_MAP.c.tenant_id == tenant)).mappings()}
+        return {r["crm_type_id"]: dict(r) for r in c.execute(type_map_stmt(tenant)).mappings()}
 
 
 def type_rows(types: list[dict[str, Any]], tmap: dict[str, dict[str, Any]]) -> list[dict[str, Any]]:
@@ -1263,21 +1301,27 @@ def calendar(fairs: list[dict[str, Any]], events: list[dict[str, Any]], year: in
             "totals": totals, "classes": classes}
 
 
+def upcoming_stmts(tenant: str, now: date) -> tuple[Any, Any, Any, Any]:
+    """Yaklaşanlar: (son tarihi gelmemiş ödüller, ödül başına başvuru, son 14 gün hatırlatmaları, geciken görevler)."""
+    return (sa.select(AWARDS).where(AWARDS.c.tenant_id == tenant, AWARDS.c.deadline >= now.isoformat()).order_by(AWARDS.c.deadline),
+            sa.select(ENTRIES.c.award_id, sa.func.count()).group_by(ENTRIES.c.award_id),
+            sa.select(REMINDERS).where(REMINDERS.c.tenant_id == tenant, REMINDERS.c.created_at >= _now() - timedelta(days=14))
+            .order_by(REMINDERS.c.created_at.desc()),
+            sa.select(TASKS, FAIRS.c.name.label("fair_name")).join(FAIRS, FAIRS.c.id == TASKS.c.fair_id)
+            .where(FAIRS.c.tenant_id == tenant, FAIRS.c.status != "iptal", TASKS.c.done_at.is_(None),
+                   TASKS.c.due_on < now.isoformat()).order_by(TASKS.c.due_on))
+
+
 def upcoming(engine, tenant: str, now: Optional[date] = None) -> dict[str, Any]:
     now = now or today()
     fairs = [f for f in list_fairs(engine, tenant, active_only=True, now=now) if f["endsOn"] >= now.isoformat()]
     fairs.sort(key=lambda f: f["startsOn"])
+    aq, nq, rq, lq = upcoming_stmts(tenant, now)
     with engine.connect() as c:
-        awards = [dict(r) for r in c.execute(sa.select(AWARDS).where(AWARDS.c.tenant_id == tenant, AWARDS.c.deadline >= now.isoformat())
-                                             .order_by(AWARDS.c.deadline)).mappings()]
-        n_entries = dict(c.execute(sa.select(ENTRIES.c.award_id, sa.func.count()).group_by(ENTRIES.c.award_id)).all())
-        rem = [dict(r) for r in c.execute(sa.select(REMINDERS).where(
-            REMINDERS.c.tenant_id == tenant, REMINDERS.c.created_at >= _now() - timedelta(days=14))
-            .order_by(REMINDERS.c.created_at.desc())).mappings()]
-        late = [dict(r) for r in c.execute(
-            sa.select(TASKS, FAIRS.c.name.label("fair_name")).join(FAIRS, FAIRS.c.id == TASKS.c.fair_id)
-            .where(FAIRS.c.tenant_id == tenant, FAIRS.c.status != "iptal", TASKS.c.done_at.is_(None),
-                   TASKS.c.due_on < now.isoformat()).order_by(TASKS.c.due_on)).mappings()]
+        awards = [dict(r) for r in c.execute(aq).mappings()]
+        n_entries = dict(c.execute(nq).all())
+        rem = [dict(r) for r in c.execute(rq).mappings()]
+        late = [dict(r) for r in c.execute(lq).mappings()]
     return {
         "today": now.isoformat(), "fairs": fairs,
         "awards": [{"id": a["id"], "name": a["name"], "category": a["category"], "deadline": a["deadline"],
@@ -1387,15 +1431,24 @@ def _entry_view(e: dict[str, Any]) -> dict[str, Any]:
             "by": e["created_by"], "updatedAt": _iso(e["updated_at"])}
 
 
+def awards_stmts(tenant: str) -> tuple[Any, Any]:
+    """(ödüller, başvuruları)."""
+    return (sa.select(AWARDS).where(AWARDS.c.tenant_id == tenant),
+            sa.select(ENTRIES).where(ENTRIES.c.award_id.in_(sa.select(AWARDS.c.id).where(AWARDS.c.tenant_id == tenant)))
+            .order_by(ENTRIES.c.created_at))
+
+
 def list_awards(engine, tenant: str, now: Optional[date] = None) -> dict[str, Any]:
     now = now or today()
+    aq, eq = awards_stmts(tenant)
     with engine.connect() as c:
-        awards = [dict(r) for r in c.execute(sa.select(AWARDS).where(AWARDS.c.tenant_id == tenant)).mappings()]
+        awards = [dict(r) for r in c.execute(aq).mappings()]
         ids = [a["id"] for a in awards]
         entries: dict[str, list] = {i: [] for i in ids}
         if ids:
-            for e in c.execute(sa.select(ENTRIES).where(ENTRIES.c.award_id.in_(ids)).order_by(ENTRIES.c.created_at)).mappings():
-                entries[e["award_id"]].append(_entry_view(dict(e)))
+            for e in c.execute(eq).mappings():
+                if e["award_id"] in entries:
+                    entries[e["award_id"]].append(_entry_view(dict(e)))
     items = [{"id": a["id"], "name": a["name"], "category": a["category"], "organizer": a["organizer"], "deadline": a["deadline"],
               "daysLeft": days_until(a["deadline"], now), "conditions": a["conditions"], "url": a["url"], "recurring": bool(a["recurring"]),
               "note": a["note"], "by": a["created_by"], "entries": entries[a["id"]]} for a in awards]

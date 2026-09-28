@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Search, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { evApi, fmtDay, fmtInt, fmtPct, type ClassKey, type TypeRow } from './api';
@@ -96,10 +97,10 @@ export default function TypeMap() {
       {d && m && (
         <>
           <KpiRow>
-            <Kpi label="Karar bekleyen" value={fmtInt(d.counts.total - d.counts.decided)} help="Sınıfı belirlenmemiş tip" active={filter === 'karar'} onClick={() => setFilter('karar')} />
-            <Kpi label="Öneri hazır" value={fmtInt(d.counts.suggested)} help="Zeki AI önerisi olan, karar bekleyen" active={filter === 'oneri'} onClick={() => setFilter('oneri')} />
-            <Kpi label="Karar verilen" value={fmtInt(d.counts.decided)} help="Takvimde kullanılan eşleme" active={filter === 'hepsi'} onClick={() => setFilter('hepsi')} />
-            <Kpi label="Toplam tip" value={fmtInt(d.counts.total)} help="CRM etkinlik tipi (etkin ve etkin olmayan)" />
+            <Kpi label="Karar bekleyen" value={fmtInt(d.counts.total - d.counts.decided)} help="Sınıfı belirlenmemiş tip" active={filter === 'karar'} onClick={() => setFilter('karar')} info={<SqlInfo k={d.kaynaklar} alan="counts" label="Karar bekleyen" />} />
+            <Kpi label="Öneri hazır" value={fmtInt(d.counts.suggested)} help="Zeki AI önerisi olan, karar bekleyen" active={filter === 'oneri'} onClick={() => setFilter('oneri')} info={<SqlInfo k={d.kaynaklar} alan="counts" label="Öneri hazır" />} />
+            <Kpi label="Karar verilen" value={fmtInt(d.counts.decided)} help="Takvimde kullanılan eşleme" active={filter === 'hepsi'} onClick={() => setFilter('hepsi')} info={<SqlInfo k={d.kaynaklar} alan="counts" label="Karar verilen" />} />
+            <Kpi label="Toplam tip" value={fmtInt(d.counts.total)} help="CRM etkinlik tipi (etkin ve etkin olmayan)" info={<SqlInfo k={d.kaynaklar} alan="items" label="Toplam tip, kayıt sayısı ve öneri olasılığı" />} />
           </KpiRow>
           <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
             <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center">

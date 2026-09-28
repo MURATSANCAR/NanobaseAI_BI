@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, TableWrap, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Pager, Panel, useDebounced } from '../editorial/kit';
 import { evApi, fmtDay, fmtInt, fmtMoney, type ClassKey } from './api';
@@ -97,6 +98,7 @@ export default function CrmEvents() {
         {frm > to && <Note tone="err">Bitiş başlangıçtan önce olamaz.</Note>}
         {list.error && <Note tone="err">{errText(list.error, 'CRM etkinlikleri okunamadı.')}</Note>}
         {list.isLoading && <Loading />}
+        {list.data && <p className="mb-2 flex items-center gap-1 text-[11.5px] text-canvas-muted">Katılımcı, satılan, gider ve toplam<SqlInfo k={list.data.kaynaklar} alan="items" label="CRM etkinlikleri" /></p>}
         {list.data && list.data.items.length === 0 && <p className="py-6 text-[12.5px] text-canvas-muted">Bu süzgeçle kayıt yok.</p>}
         {list.data && list.data.items.length > 0 && m && (
           <TableWrap>

@@ -438,6 +438,12 @@ class Source:
             self._cache[key] = (time.time(), val)
         return val
 
+    def firms(self) -> dict[int, str]:
+        """Önbellekteki yıl → Logo firma eşlemesi (sorgu bilgisi çalışan metni kurmak için; okuma yapmaz)."""
+        with self._lock:
+            hit = self._cache.get(("firms",))
+        return dict(hit[1]) if hit else {}
+
     def clear(self) -> None:
         with self._lock:
             self._cache.clear()

@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Bell, CalendarPlus, Flag, Trophy } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Kpi, KpiRow } from '../editorial/kit';
 import { CLASS_TONE, MONTHS, STATUS_TONE, evApi, fmtRange, fmtShort, type ClassKey, type CrmEvent, type Fair } from './api';
@@ -107,16 +108,16 @@ export default function EventsCalendar() {
 
       {u && d && (
         <KpiRow>
-          <Kpi label="Yaklaşan kart" value={String(u.fairs.length)} help="Bitmemiş, iptal olmayan fuar/etkinlik kartı" />
-          <Kpi label="Geciken görev" value={String(u.lateTasks.length)} help="Son tarihi geçmiş, yapılmamış hazırlık görevi" />
-          <Kpi label="Ödül son tarihi" value={String(soonAwards.length)} help="Son başvurusuna 30 gün ya da daha az kalan ödül" onClick={() => nav('/etkinlikler/oduller')} />
-          <Kpi label="Sınıflanmamış tip" value={String(d.unmappedTypes)} help={`${year} yılında kaydı olan, eşlemesi yapılmamış CRM etkinlik tipi`} onClick={() => nav('/etkinlikler/tip-eslemesi')} />
+          <Kpi label="Yaklaşan kart" value={String(u.fairs.length)} help="Bitmemiş, iptal olmayan fuar/etkinlik kartı" info={<SqlInfo k={u.kaynaklar} alan="fairs" label="Yaklaşan kart" />} />
+          <Kpi label="Geciken görev" value={String(u.lateTasks.length)} help="Son tarihi geçmiş, yapılmamış hazırlık görevi" info={<SqlInfo k={u.kaynaklar} alan="lateTasks" label="Geciken görev" />} />
+          <Kpi label="Ödül son tarihi" value={String(soonAwards.length)} help="Son başvurusuna 30 gün ya da daha az kalan ödül" onClick={() => nav('/etkinlikler/oduller')} info={<SqlInfo k={u.kaynaklar} alan="awards" label="Ödül son tarihi" />} />
+          <Kpi label="Sınıflanmamış tip" value={String(d.unmappedTypes)} help={`${year} yılında kaydı olan, eşlemesi yapılmamış CRM etkinlik tipi`} onClick={() => nav('/etkinlikler/tip-eslemesi')} info={<SqlInfo k={d.kaynaklar} alan="unmappedTypes" label="Sınıflanmamış tip" />} />
         </KpiRow>
       )}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-3 lg:gap-4">
         <div className="flex min-w-0 flex-col gap-3 lg:col-span-2 lg:gap-4">
-          <Block title="Yaklaşan fuar ve etkinlikler" help="Başlangıca kalan gün, hazırlık (yapılan görev oranı) ve katılım kararı.">
+          <Block title="Yaklaşan fuar ve etkinlikler" info={<SqlInfo k={u?.kaynaklar} alan="fairs" label="Yaklaşan fuar ve etkinlikler" />} help="Başlangıca kalan gün, hazırlık (yapılan görev oranı) ve katılım kararı.">
             {up.isLoading && <Loading />}
             {up.error && <Note tone="err">{errText(up.error, 'Liste açılamadı.')}</Note>}
             {u && u.fairs.length === 0 && (
@@ -149,6 +150,7 @@ export default function EventsCalendar() {
 
           <Block
             title={`${year} takvimi`}
+            info={<SqlInfo k={d?.kaynaklar} alan="months" label={`${year} takvimi`} />}
             help="Ay başına portal kartları ve seçilen sınıftaki CRM etkinlikleri. Gizlenen sınıfların sayısı ayın altında yazar."
             action={
               <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Gösterilen sınıflar">
@@ -229,7 +231,7 @@ export default function EventsCalendar() {
         </div>
 
         <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
-          <Block title="Ödül son tarihleri" help="Yaklaşan son başvurular ve kayıtlı başvuru sayısı." action={<Link to="/etkinlikler/oduller" className={btnGhost}><Trophy aria-hidden className="h-4 w-4" />Ödüller</Link>}>
+          <Block title="Ödül son tarihleri" info={<SqlInfo k={u?.kaynaklar} alan="awards" label="Ödül son tarihleri" />} help="Yaklaşan son başvurular ve kayıtlı başvuru sayısı." action={<Link to="/etkinlikler/oduller" className={btnGhost}><Trophy aria-hidden className="h-4 w-4" />Ödüller</Link>}>
             {u && u.awards.length === 0 && <p className="py-2 text-[12.5px] text-canvas-muted">Yaklaşan son tarih yok.</p>}
             <ul className="flex flex-col gap-1.5">
               {(u?.awards ?? []).map((a) => (
@@ -243,7 +245,7 @@ export default function EventsCalendar() {
               ))}
             </ul>
           </Block>
-          <Block title="Geciken görevler">
+          <Block title="Geciken görevler" info={<SqlInfo k={u?.kaynaklar} alan="lateTasks" label="Geciken görevler" />}>
             {u && u.lateTasks.length === 0 && <p className="py-2 text-[12.5px] text-canvas-muted">Geciken görev yok.</p>}
             <ul className="flex flex-col gap-1.5">
               {(u?.lateTasks ?? []).map((t) => (

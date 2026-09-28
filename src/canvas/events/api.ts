@@ -1,5 +1,6 @@
 import { ENGINE_BASE, ENGINE_ENABLED, EngineAuthError, EngineForbiddenError, freshHeaders } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M27 Fuar, etkinlik ve ödül: köprü uçları /api/v1/events/*. */
 
@@ -99,6 +100,7 @@ export type FairDetail = Fair & {
   result: Result | null;
   reopened?: boolean;
   newConflicts?: AuthorSlot['conflicts'];
+  kaynaklar?: Kaynaklar;
 };
 
 export type CrmEvent = {
@@ -136,6 +138,7 @@ export type Calendar = {
   unmappedTypes: number;
   warnings: string[];
   crmMs: number;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Upcoming = {
@@ -144,6 +147,7 @@ export type Upcoming = {
   awards: Array<{ id: string; name: string; category: string | null; deadline: string; daysLeft: number; entries: number }>;
   lateTasks: Array<{ id: string; fairId: string; fair: string; title: string; dueOn: string; owner: string | null; daysLate: number }>;
   reminders: Array<{ id: string; kind: string; message: string; link: string | null; target: string | null; at: string | null }>;
+  kaynaklar?: Kaynaklar;
 };
 
 export type Result = {
@@ -272,19 +276,19 @@ export const evApi = {
     send<Calendar>('GET', `/calendar${qs({ year, classes: classes.join(',') || 'yok', unmapped: unmapped ? 1 : 0 })}`, undefined, 180_000),
   upcoming: () => send<Upcoming>('GET', '/upcoming'),
   crmEvents: (p: { frm: string; to: string; cls?: string; q?: string; page?: number }) =>
-    send<{ items: CrmEvent[]; total: number; page: number; pageSize: number; from: string; to: string }>('GET', `/crm-events${qs(p)}`, undefined, 180_000),
+    send<{ items: CrmEvent[]; total: number; page: number; pageSize: number; from: string; to: string; kaynaklar?: Kaynaklar }>('GET', `/crm-events${qs(p)}`, undefined, 180_000),
   agenda: () => send<{ today: string; until: string; items: AgendaItem[]; total: number; warnings: string[]; canOpen: boolean }>('GET', '/me/agenda'),
-  typeMap: () => send<{ items: TypeRow[]; classes: Record<ClassKey, string>; job: Job; counts: { total: number; decided: number; suggested: number } }>('GET', '/type-map', undefined, 180_000),
+  typeMap: () => send<{ items: TypeRow[]; classes: Record<ClassKey, string>; job: Job; counts: { total: number; decided: number; suggested: number }; kaynaklar?: Kaynaklar }>('GET', '/type-map', undefined, 180_000),
   setTypes: (items: Array<{ id: string; class: ClassKey | null }>) => send<{ changed: number }>('PUT', '/type-map', { items }),
   suggestTypes: (all = false) => send<Job>('POST', `/type-map/suggest${qs({ hepsi: all ? 1 : 0 })}`),
-  fairs: (year?: number) => send<{ items: Fair[] }>('GET', `/fairs${qs({ year })}`),
+  fairs: (year?: number) => send<{ items: Fair[]; kaynaklar?: Kaynaklar }>('GET', `/fairs${qs({ year })}`),
   create: (b: FairInput) => send<FairDetail>('POST', '/fairs', b),
   fair: (id: string) => send<FairDetail>('GET', `/fairs/${enc(id)}`),
   update: (id: string, b: FairInput) => send<FairDetail>('PATCH', `/fairs/${enc(id)}`, b),
   remove: (id: string) => send<{ ok: boolean }>('DELETE', `/fairs/${enc(id)}`),
   approve: (id: string, note?: string) => send<FairDetail>('POST', `/fairs/${enc(id)}/approve`, { note }),
   suggest: (id: string) =>
-    send<{ counts: { added: number; updated: number; removed: number }; basis: { label: string; from: string; to: string }; warnings: string[]; sql: string[]; detail: FairDetail }>(
+    send<{ counts: { added: number; updated: number; removed: number }; basis: { label: string; from: string; to: string }; warnings: string[]; sql: string[]; detail: FairDetail; kaynaklar?: Kaynaklar }>(
       'POST', `/fairs/${enc(id)}/suggest-books`, undefined, 300_000),
   books: (id: string, items: Array<{ stokKodu: string; qtyPlanned: number | null; featured: boolean; new?: boolean }>) =>
     send<FairDetail>('PUT', `/fairs/${enc(id)}/books`, { items }, 180_000),
@@ -299,12 +303,12 @@ export const evApi = {
   addAuthor: (id: string, b: { name: string; contactId?: string | null; slotStart?: string | null; slotEnd?: string | null; note?: string | null }) =>
     send<FairDetail>('POST', `/fairs/${enc(id)}/authors`, b),
   removeAuthor: (id: string, aid: string) => send<FairDetail>('DELETE', `/fairs/${enc(id)}/authors/${enc(aid)}`),
-  result: (id: string, refresh = false) => send<{ fair: FairDetail; result: Result }>('GET', `/fairs/${enc(id)}/result${qs({ yenile: refresh ? 1 : 0 })}`, undefined, 300_000),
+  result: (id: string, refresh = false) => send<{ fair: FairDetail; result: Result; kaynaklar?: Kaynaklar }>('GET', `/fairs/${enc(id)}/result${qs({ yenile: refresh ? 1 : 0 })}`, undefined, 300_000),
   pdfUrl: (id: string) => `${ENGINE_BASE}${B}/fairs/${enc(id)}/result/export.pdf`,
-  books_: (q: string) => send<{ items: BookHit[]; total: number; shown: number }>('GET', `/lookup/books${qs({ q })}`, undefined, 180_000),
+  books_: (q: string) => send<{ items: BookHit[]; total: number; shown: number; kaynaklar?: Kaynaklar }>('GET', `/lookup/books${qs({ q })}`, undefined, 180_000),
   authors: (q: string) => send<{ items: Array<{ id: string; ad: string }>; total: number; shown: number }>('GET', `/lookup/authors${qs({ q })}`, undefined, 180_000),
   clients: () => send<{ items: Array<{ kod: string; ad: string | null; sehir: string | null; pasif: boolean }>; channel: string }>('GET', '/lookup/clients', undefined, 180_000),
-  awards: () => send<{ items: Award[]; statuses: Record<string, string>; today: string }>('GET', '/awards'),
+  awards: () => send<{ items: Award[]; statuses: Record<string, string>; today: string; kaynaklar?: Kaynaklar }>('GET', '/awards'),
   createAward: (b: Partial<Award>) => send<{ items: Award[] }>('POST', '/awards', b),
   updateAward: (id: string, b: Partial<Award>) => send<{ items: Award[] }>('PATCH', `/awards/${enc(id)}`, b),
   removeAward: (id: string) => send<{ items: Award[] }>('DELETE', `/awards/${enc(id)}`),
