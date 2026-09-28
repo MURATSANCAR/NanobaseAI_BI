@@ -1161,7 +1161,8 @@
       "area": "finans",
       "page": "sayfa:kurul",
       "label": "Kendi kurul aksiyonu",
-      "hint": "Kendisine atanmış kurul aksiyonunun durumunu ve notunu güncelleme"
+      "hint": "Kendisine atanmış kurul aksiyonunun durumunu ve notunu güncelleme",
+      "explicit": true
     },
     {
       "key": "ozellik:dagilim.plan",
