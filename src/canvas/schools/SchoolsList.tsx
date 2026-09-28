@@ -7,6 +7,7 @@ import { Loading, Note, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, useDebounced } from '../editorial/kit';
 import { schoolsApi } from './api';
 import { CalendarNote, ScoreBadge, daysAgo, fmtDay, useSchoolsMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Okul listesi: kapsamdaki okullar öncelik sırasıyla (süzgeç: il, ilçe, kademe, tür, puan). Liste kesilmez, sayfalanır.
  *  Okul adıyla arama (en az 3 harf) bütün listede yapılır ki kapsam dışındaki yeni okul da açılabilsin. */
@@ -98,7 +99,15 @@ export default function SchoolsList({ params, update }: { params: URLSearchParam
             {d.scope === 'benim'
               ? `Kapsamınızdaki okullar (${d.mineCount.toLocaleString('tr-TR')}): CRM'de sahibi, ilin temsilcisi ya da ziyaret sorumlusu olduğunuz ve portalda ziyaret/plan yazdığınız okullar.`
               : 'Bütün okullar.'}{' '}
-            Liste CRM ziyaret yerlerinden, {fmtDay(d.asOf)} okundu; listede son değişiklik {fmtDay(d.listChanged)}.
+            Liste CRM ziyaret yerlerinden, {fmtDay(d.asOf)} okundu; listede son değişiklik {fmtDay(d.listChanged)}.{' '}
+            <span className="inline-flex items-center gap-0.5 align-middle">
+              {d.total.toLocaleString('tr-TR')} okul listede
+              <SqlInfo k={d.kaynaklar} alan="total" label="Listedeki okul" />
+            </span>
+            <span className="ml-1 inline-flex items-center gap-0.5 align-middle">
+              öncelik puanı
+              <SqlInfo k={d.kaynaklar} alan="items[].score" label="Öncelik puanı" />
+            </span>
           </p>
         )}
       </section>
@@ -109,10 +118,10 @@ export default function SchoolsList({ params, update }: { params: URLSearchParam
 
       <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {d?.items.map((s) => (
-          <li key={s.id}>
+          <li key={s.id} className="relative">
             <Link
               to={`/okul-tanitim/${s.id}`}
-              className="flex h-full items-start gap-2.5 rounded-2xl border border-slate-100 bg-white/90 p-3 shadow-sm transition-transform duration-150 ease-out active:scale-[0.99]"
+              className="flex h-full items-start gap-2.5 rounded-2xl border border-slate-100 bg-white/90 p-3 pr-10 shadow-sm transition-transform duration-150 ease-out active:scale-[0.99]"
             >
               <ScoreBadge score={s.score} />
               <div className="min-w-0 flex-1">
@@ -134,6 +143,10 @@ export default function SchoolsList({ params, update }: { params: URLSearchParam
                 )}
               </div>
             </Link>
+            {/* «i» bağlantının dışında: tıklama okul kartını açmasın */}
+            <span className="absolute right-2 top-2">
+              <SqlInfo k={d.kaynaklar} alan="items[]" row={s.id} label={`${s.name}: puan ve öğrenci sayısı`} />
+            </span>
           </li>
         ))}
       </ul>

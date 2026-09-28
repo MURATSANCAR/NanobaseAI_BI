@@ -6,6 +6,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText } from '../admin/ui';
 import { schoolsApi, type DealerCandidate, type DealerLink } from './api';
 import { fmtDay, fmtNum, invalidateSchools } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Okulun bayisi: onaylı bağ (CRM'deki ortak ziyaretten, elle ya da onaylanan öneri), onay bekleyenler ve kuralın
  *  sıraladığı adaylar (gerekçesiyle). Onay açıkça verilen yetkiyle; temsilci yalnız önerir. */
@@ -34,7 +36,10 @@ export default function DealerPanel({ schoolId, canDealer, canVisit }: { schoolI
   const active = (d?.links ?? []).filter((l) => l.state !== 'reddedildi');
   return (
     <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
-      <h2 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Bayi</h2>
+      <h2 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+        Bayi
+        <SqlInfo k={d?.kaynaklar} alan="links" label="Okul–bayi eşleşmeleri" />
+      </h2>
       {q.error && <Note tone="err">{errText(q.error, 'Bayiler okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
       {d && (
@@ -51,12 +56,15 @@ export default function DealerPanel({ schoolId, canDealer, canVisit }: { schoolI
               <summary className="min-h-11 cursor-pointer text-[12px] font-bold text-canvas-violet sm:min-h-0">
                 Zeki AI önerisi: ildeki {d.candidates.length} bayi ve kitapçı
               </summary>
-              <p className="mt-1 text-[11px] leading-snug text-canvas-muted">{d.rule}</p>
+              <p className="mt-1 text-[11px] leading-snug text-canvas-muted">
+                {d.rule} <SqlInfo k={d.kaynaklar} alan="candidates" label="Aday bayi puanı" />
+              </p>
               <ul className="mt-2 space-y-1.5">
                 {d.candidates.map((c) => (
                   <CandidateRow
                     key={c.code}
                     c={c}
+                    k={d.kaynaklar}
                     canDealer={canDealer}
                     canVisit={canVisit}
                     busy={decide.isPending || propose.isPending}
@@ -128,6 +136,7 @@ export function LinkRow({
 
 function CandidateRow({
   c,
+  k,
   canDealer,
   canVisit,
   busy,
@@ -135,6 +144,7 @@ function CandidateRow({
   onPropose,
 }: {
   c: DealerCandidate;
+  k?: Kaynaklar;
   canDealer: boolean;
   canVisit: boolean;
   busy: boolean;
@@ -148,8 +158,11 @@ function CandidateRow({
           <div className="text-[12.5px] font-bold">{c.name ?? c.code}</div>
           <div className="text-[11.5px] text-canvas-muted">{[c.channel, c.ilce ?? c.il, c.phone, `kademe satışı ${fmtNum(c.gradeSales)}`].filter(Boolean).join(' · ')}</div>
         </div>
-        <span className="shrink-0 font-mono text-[12px] font-bold tabular-nums" title="Aday puanı">
-          {Math.round(c.score)}
+        <span className="flex shrink-0 items-center gap-0.5">
+          <SqlInfo k={k} alan="candidates[]" row={c.code} label={`${c.name ?? c.code}: aday puanı ve kademe satışı`} />
+          <span className="font-mono text-[12px] font-bold tabular-nums" title="Aday puanı">
+            {Math.round(c.score)}
+          </span>
         </span>
       </div>
       <p className="mt-1 text-[11.5px] leading-snug">{c.why.join(' · ')}</p>

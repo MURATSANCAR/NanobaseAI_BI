@@ -156,6 +156,44 @@ def ilk_dagilim(heavy: bool) -> None:
                 contract(f"dağılım {path.rsplit('/', 1)[-1]}", out, K.NOT_RAKAM)
 
 
+# ---------------------------------------------------------------- M31 okul tanıtım
+
+@block("okul")
+def okul(heavy: bool) -> None:
+    from semantic_bridge import school_visits_kaynak as K
+
+    st, lst = http("/api/v1/schools?kapsam=&page=0", 900)
+    if not ok_or_skip("okul /", st, lst):
+        return
+    k = contract("okul /", lst, K.NOT_RAKAM)
+    got = run_all("okul /", k, heavy)
+    # R: okul okumasının bugünkü satırı = okumanın kaydettiği satır (arada CRM'e kayıt girdiyse UYARI)
+    src = (k.get("sources") or {}).get("okul.okullar") or {}
+    if "okul.okullar" in got and (src.get("stats") or {}).get("rows") is not None:
+        have, want = len(got["okul.okullar"]), src["stats"]["rows"]
+        check("R okul: ziyaret yeri satırı = son okuma", True if have == want else None, f"son okuma {want} · bugün {have}")
+    st, meta = http("/api/v1/schools/meta", 300)
+    if ok_or_skip("okul /meta", st, meta):
+        contract("okul /meta", meta, K.NOT_RAKAM)
+        if "okul.okullar" in got:
+            check("R okul: okul sayısı ≤ ziyaret yeri satırı (adı/ili boş kayıt düşer)",
+                  num((meta.get("status") or {}).get("schools")) <= len(got["okul.okullar"]),
+                  f"ekran {(meta.get('status') or {}).get('schools')} · sorgu {len(got['okul.okullar'])}")
+    for path in ("/api/v1/schools/plan?hepsi=1", "/api/v1/schools/dealer-queue", "/api/v1/schools/context",
+                 "/api/v1/schools/report/term"):
+        st, out = http(path, 600)
+        if ok_or_skip(f"okul {path}", st, out):
+            k2 = contract(f"okul {path.split('?')[0]}", out, K.NOT_RAKAM)
+            run_all(f"okul {path.split('?')[0]}", {"sources": {sid: v for sid, v in (k2.get("sources") or {}).items()
+                                                               if v["connection"] == "portal"}}, heavy)
+    sid = next((r["id"] for r in lst.get("items") or []), None)
+    if sid:
+        for path in (f"/api/v1/schools/{sid}", f"/api/v1/schools/{sid}/dealers", f"/api/v1/schools/{sid}/visits"):
+            st, out = http(path, 300)
+            if ok_or_skip(f"okul {path.rsplit('/', 1)[-1] if path.count('/') > 4 else '/{id}'}", st, out):
+                contract(f"okul {path}", out, K.NOT_RAKAM)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-heavy", action="store_true")

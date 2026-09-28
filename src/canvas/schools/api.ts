@@ -1,5 +1,6 @@
 import { ENGINE_BASE, EngineAuthError, EngineForbiddenError, send } from '../engine';
 import { httpErrorText } from '../httpError';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** M31 Okul tanıtım ve ziyaret köprü istemcisi (`/api/v1/schools/*`). Okul = CRM ziyaret yeri (GUID); ziyaret raporu
  *  M30 ile ortak `semantic_saha_ziyaret` tablosunda. Puan ve rakamlar kuraldan/SQL'den gelir; Zeki AI yalnız metin yazar. */
@@ -25,6 +26,7 @@ export type SchoolRow = {
 };
 
 export type SchoolList = {
+  kaynaklar?: Kaynaklar;
   items: SchoolRow[];
   total: number;
   page: number;
@@ -51,6 +53,7 @@ export type Me = {
 export type Upload = { kind: string; label: string; rows: number; source: string | null; sourceDay: string | null; by: string; at: string | null };
 
 export type Meta = {
+  kaynaklar?: Kaynaklar;
   weights: Array<{ key: string; label: string; max: number }>;
   roles: Array<{ key: string; label: string }>;
   interest: Array<{ key: string; label: string }>;
@@ -187,6 +190,7 @@ export type PlanItem = {
 export type NextStep = { visitId: string; school: string; schoolName: string | null; step: string | null; day: string; late: boolean; owner: string };
 
 export type WeekPlan = {
+  kaynaklar?: Kaynaklar;
   week: string;
   weekEnd: string;
   term: string;
@@ -226,6 +230,7 @@ export type School = {
 export type CatalogSummary = { id: string; by: string; at: string | null; count: number; total: number | null };
 
 export type SchoolDetail = {
+  kaynaklar?: Kaynaklar;
   school: School;
   score: number;
   parts: ScorePart[];
@@ -261,6 +266,7 @@ export type CatalogItem = {
 };
 
 export type Catalog = {
+  kaynaklar?: Kaynaklar;
   id: string | null;
   grades: number[];
   priceCap: number | null;
@@ -290,6 +296,7 @@ export type VisitInput = {
 };
 
 export type TermReport = {
+  kaynaklar?: Kaynaklar;
   term: string;
   from: string;
   to: string;
@@ -307,6 +314,7 @@ export type TermReport = {
 };
 
 export type ContextState = {
+  kaynaklar?: Kaynaklar;
   uploads: Upload[];
   calendar: Array<{ baslangic: string; bitis: string; tur: string; ad: string; il: string | null }>;
   districts: Array<{ il: string; ilce: string; endeks: number; yil: string | null; crmIlceId: string | null }>;
@@ -339,13 +347,13 @@ export const schoolsApi = {
   approvePlan: (id: string) => send<PlanItem>('POST', `${P}/plan/${enc(id)}/approve`, {}, 30_000),
   addPlan: (id: string, b: { gun: string; not?: string }) => send<PlanItem>('POST', `${P}/${enc(id)}/plan`, b, 30_000),
   dealers: (id: string) =>
-    send<{ links: DealerLink[]; candidates: DealerCandidate[]; logoOk: boolean; months: number; rule: string }>('GET', `${P}/${enc(id)}/dealers`, undefined, 120_000),
+    send<{ links: DealerLink[]; candidates: DealerCandidate[]; logoOk: boolean; months: number; rule: string; kaynaklar?: Kaynaklar }>('GET', `${P}/${enc(id)}/dealers`, undefined, 120_000),
   addDealer: (id: string, code: string, not?: string) => send<DealerLink>('POST', `${P}/${enc(id)}/dealers`, { code, not }, 30_000),
   decideDealer: (id: string, link: string, approve: boolean, not?: string) =>
     send<DealerLink>('POST', `${P}/${enc(id)}/dealers/${enc(link)}/${approve ? 'approve' : 'reject'}`, { not }, 30_000),
-  queue: () => send<{ items: DealerLink[]; total: number }>('GET', `${P}/dealer-queue`, undefined, 120_000),
+  queue: () => send<{ items: DealerLink[]; total: number; kaynaklar?: Kaynaklar }>('GET', `${P}/dealer-queue`, undefined, 120_000),
   catalog: (id: string, b: CatalogInput) => send<Catalog>('POST', `${P}/${enc(id)}/catalog`, b, 120_000),
-  visits: (id: string) => send<{ portal: PortalVisit[]; crm: CrmVisit[] }>('GET', `${P}/${enc(id)}/visits`, undefined, 60_000),
+  visits: (id: string) => send<{ portal: PortalVisit[]; crm: CrmVisit[]; kaynaklar?: Kaynaklar }>('GET', `${P}/${enc(id)}/visits`, undefined, 60_000),
   addVisit: (id: string, b: VisitInput) => send<PortalVisit>('POST', `${P}/${enc(id)}/visits`, b, 30_000),
   suggest: (id: string, note: string) =>
     send<{ fields: Partial<VisitInput>; ai: boolean; message?: string }>('POST', `${P}/${enc(id)}/visits/suggest`, { not: note }, 120_000),

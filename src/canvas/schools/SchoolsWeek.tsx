@@ -8,6 +8,8 @@ import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as lab
 import { schoolsApi, type PlanItem } from './api';
 import { CalendarNote, ScoreBadge, addDays, daysAgo, fmtDay, fmtDayShort, invalidateSchools, mondayOf, useSchoolsMeta } from './parts';
 import VisitReportSheet from './VisitReportSheet';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** «Bu hafta» (telefon öncelikli): haftanın ziyaret planı güne göre, sıradaki adımlar, tatil/sınav uyarısı. Plan önerisi
  *  kuralla kurulur (öncelik puanı, son ziyaret, aynı ilçe aynı güne); temsilci düzeltir, yetkili onaylar. */
@@ -57,8 +59,9 @@ export default function SchoolsWeek({ params, update }: { params: URLSearchParam
             <div className="text-[13px] font-extrabold">
               {fmtDayShort(week)} – {fmtDayShort(addDays(week, 4))}
             </div>
-            <div className="text-[11px] font-semibold text-canvas-muted">
+            <div className="flex items-center justify-center gap-0.5 text-[11px] font-semibold text-canvas-muted">
               {d ? `${d.planned} okul planlı · ${d.done} tanesine gidildi` : 'Plan okunuyor…'}
+              {d && <SqlInfo k={d.kaynaklar} alan="planned" label="Planlı ve gidilen okul" />}
             </div>
           </div>
           <button type="button" className={btnGhost} aria-label="Sonraki hafta" onClick={() => update({ hafta: addDays(week, 7) })}>
@@ -95,7 +98,10 @@ export default function SchoolsWeek({ params, update }: { params: URLSearchParam
 
       {d && d.nextSteps.length > 0 && (
         <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
-          <h2 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Sıradaki adımlar</h2>
+          <h2 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+            Sıradaki adımlar
+            <SqlInfo k={d.kaynaklar} alan="nextSteps" label="Sıradaki adımlar" />
+          </h2>
           <ul className="mt-2 space-y-1.5">
             {d.nextSteps.map((n) => (
               <li key={n.visitId} className={`flex items-start gap-2 rounded-xl border px-3 py-2 ${n.late ? 'border-rose-200 bg-rose-50/60' : 'border-slate-100 bg-white/85'}`}>
@@ -143,6 +149,7 @@ export default function SchoolsWeek({ params, update }: { params: URLSearchParam
                 <PlanCard
                   key={it.id}
                   it={it}
+                  k={d.kaynaklar}
                   days={d.days}
                   today={today}
                   canPlan={!!me?.canPlan}
@@ -176,6 +183,7 @@ export default function SchoolsWeek({ params, update }: { params: URLSearchParam
 
 function PlanCard({
   it,
+  k,
   days,
   today,
   canPlan,
@@ -190,6 +198,7 @@ function PlanCard({
   onReport,
 }: {
   it: PlanItem;
+  k?: Kaynaklar;
   days: Array<{ day: string; label: string }>;
   today: string;
   canPlan: boolean;
@@ -208,6 +217,9 @@ function PlanCard({
     <article className={`rounded-2xl border bg-white/90 p-3 shadow-sm ${cancelled ? 'opacity-60' : ''} ${it.conflicts.length ? 'border-amber-200' : 'border-slate-100'}`}>
       <div className="flex items-start gap-2.5">
         {it.score != null && <ScoreBadge score={it.score} />}
+        <span className="order-last shrink-0">
+          <SqlInfo k={k} alan="items[]" row={it.id} label={`${it.schoolName ?? 'Okul'}: plan satırı`} />
+        </span>
         <div className="min-w-0 flex-1">
           <Link to={`/okul-tanitim/${it.school}`} className="block text-[14px] font-extrabold leading-snug hover:underline">
             {it.schoolName}

@@ -337,6 +337,30 @@ def firms_by_year(period_rows: list[dict[str, Any]]) -> dict[int, str]:
     return {y: f"{f:03d}" for y, f in sorted(out.items())}
 
 
+class _Logged:
+    """Sorgu bilgisi: bağlantının çalıştırdığı her SQL'i (metin, satır, süre, an) kaydeder; okumaya karışmaz."""
+
+    def __init__(self, conn_name: str, conn: Any, sink: list[dict[str, Any]]):
+        self._name, self._conn, self._sink = conn_name, conn, sink
+        cfg = getattr(conn, "cfg", None)
+        # Yalnız veritabanı ADI (sorgu bilgisinde USE satırı); bağlantının öteki değerleri kayda girmez.
+        self._db = cfg.get("database") if isinstance(cfg, dict) and isinstance(cfg.get("database"), str) else None
+
+    def execute(self, sql: str, limit: int, key: str = "") -> Any:
+        t = time.monotonic()
+        res = self._conn.execute(sql, limit)
+        try:
+            n = len(res[1])
+        except Exception:  # noqa: BLE001
+            n = None
+        self._sink.append({"conn": self._name, "db": self._db, "key": key, "sql": sql, "rows": n, "dbMs": int((time.monotonic() - t) * 1000),
+                           "at": datetime.now(TZ).isoformat(timespec="seconds")})
+        return res
+
+    def close(self) -> None:
+        self._conn.close()
+
+
 def _close(conn: Any) -> None:
     try:
         conn.close()
@@ -387,17 +411,18 @@ class Source:
         today = datetime.now(TZ).date()
         since = date.fromisoformat(st["historyFrom"])
         warnings: list[str] = []
+        reads: list[dict[str, Any]] = []
         t0 = time.monotonic()
-        crm = self._crm()
+        crm = _Logged("crm", self._crm(), reads)
         try:
-            schools = rows(crm.execute(schools_sql(schema, tuple(st["kurumTipleri"])), MAX_ROWS))
-            visits = rows(crm.execute(visits_sql(schema), MAX_ROWS))
-            history = rows(crm.execute(dealer_history_sql(schema), MAX_ROWS))
-            orders = rows(crm.execute(orders_sql(schema, since), MAX_ROWS))
-            dealers = rows(crm.execute(dealers_sql(schema), MAX_ROWS))
-            books = rows(crm.execute(books_sql(schema), MAX_ROWS))
-            users = rows(crm.execute(users_sql(schema), MAX_ROWS))
-            districts = rows(crm.execute(districts_sql(schema), MAX_ROWS))
+            schools = rows(crm.execute(schools_sql(schema, tuple(st["kurumTipleri"])), MAX_ROWS, key="okullar"))
+            visits = rows(crm.execute(visits_sql(schema), MAX_ROWS, key="ziyaretler"))
+            history = rows(crm.execute(dealer_history_sql(schema), MAX_ROWS, key="bayi_gecmisi"))
+            orders = rows(crm.execute(orders_sql(schema, since), MAX_ROWS, key="siparisler"))
+            dealers = rows(crm.execute(dealers_sql(schema), MAX_ROWS, key="bayiler"))
+            books = rows(crm.execute(books_sql(schema), MAX_ROWS, key="kitaplar"))
+            users = rows(crm.execute(users_sql(schema), MAX_ROWS, key="kullanicilar"))
+            districts = rows(crm.execute(districts_sql(schema), MAX_ROWS, key="ilceler"))
         finally:
             _close(crm)
         crm_ms = int((time.monotonic() - t0) * 1000)
@@ -409,18 +434,18 @@ class Source:
         dealer_months: list[dict[str, Any]] = []
         firms: dict[int, str] = {}
         try:
-            logo = self._logo()
+            logo = _Logged("logo", self._logo(), reads)
             try:
-                firms = firms_by_year(rows(logo.execute(periods_sql(), 10_000)))
+                firms = firms_by_year(rows(logo.execute(periods_sql(), 10_000, key="donemler")))
                 if not firms:
                     raise SourceError("Logo dönem listesi boş.")
                 cur = firms[max(firms)]
-                for r in rows(logo.execute(stock_sql(cur), MAX_ROWS)):
+                for r in rows(logo.execute(stock_sql(cur), MAX_ROWS, key="stok")):
                     code = s(r.get("stok_kodu"))
                     if code:
                         stock[code.upper()] = float(r.get("bakiye") or 0)
-                prices = rows(logo.execute(price_sql(cur, today), MAX_ROWS))
-                clcards = rows(logo.execute(clcard_sql(cur), MAX_ROWS))
+                prices = rows(logo.execute(price_sql(cur, today), MAX_ROWS, key="fiyat"))
+                clcards = rows(logo.execute(clcard_sql(cur), MAX_ROWS, key="cariler"))
                 lo = date(today.year, today.month, 1) - timedelta(days=int(st["dealerMonths"]) * 31)
                 lo = date(lo.year, lo.month, 1)
                 hi = today + timedelta(days=1)
@@ -430,8 +455,8 @@ class Source:
                         warnings.append(f"Logo'da {y} yılının kopyası yok; bayi satışı o yıl için okunmadı.")
                         continue
                     a, b = max(lo, date(y, 1, 1)), min(hi, date(y + 1, 1, 1))
-                    dealer_items += rows(logo.execute(dealer_sales_sql(firm, a, b), MAX_ROWS))
-                    dealer_months += rows(logo.execute(dealer_months_sql(firm, a, b), MAX_ROWS))
+                    dealer_items += rows(logo.execute(dealer_sales_sql(firm, a, b), MAX_ROWS, key="bayi_satisi"))
+                    dealer_months += rows(logo.execute(dealer_months_sql(firm, a, b), MAX_ROWS, key="bayi_aylik"))
             finally:
                 _close(logo)
         except Exception as e:  # noqa: BLE001 — Logo düşerse CRM ile devam; ekranda söylenir
@@ -442,4 +467,4 @@ class Source:
                 "books": books, "users": users, "districts": districts, "stock": stock, "prices": prices,
                 "clcards": clcards, "dealerItems": dealer_items, "dealerMonths": dealer_months,
                 "firms": firms, "since": since.isoformat(), "at": time.time(), "asOf": today.isoformat(),
-                "crmMs": crm_ms, "logoMs": logo_ms, "warnings": warnings}
+                "crmMs": crm_ms, "logoMs": logo_ms, "warnings": warnings, "sorgular": reads}

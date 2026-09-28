@@ -6,6 +6,7 @@ import { Loading, Note, errText } from '../admin/ui';
 import { schoolsApi } from './api';
 import { LinkRow } from './DealerPanel';
 import { invalidateSchools, useSchoolsMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Onay kuyruğu (saha yöneticisi): Zeki AI'ın plandaki okullara önerdiği ve temsilcilerin ziyaret raporunda yönlendirdiği
  *  bayi eşleşmeleri. Onay açıkça verilen `okul.bayi-onay` yetkisiyle; herkes kuyruğu görür, karar veremez. */
@@ -29,6 +30,12 @@ export default function DealerQueue() {
       {q.error && <Note tone="err">{errText(q.error, 'Kuyruk okunamadı.')}</Note>}
       {q.isLoading && <Loading />}
       {q.data && q.data.items.length === 0 && <Note tone="ok">Onay bekleyen bayi eşleşmesi yok.</Note>}
+      {q.data && q.data.items.length > 0 && (
+        <p className="flex items-center gap-1 px-1 text-[12px] font-semibold text-canvas-muted">
+          Onay bekleyen {q.data.total.toLocaleString('tr-TR')} eşleşme
+          <SqlInfo k={q.data.kaynaklar} alan="total" label="Onay bekleyen eşleşme" />
+        </p>
+      )}
       <ul className="grid grid-cols-1 gap-2 lg:grid-cols-2">
         {q.data?.items.map((l) => (
           <LinkRow

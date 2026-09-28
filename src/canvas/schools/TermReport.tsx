@@ -4,6 +4,7 @@ import { Loading, Note, TableWrap, errText, field, label as labelCls, td, th } f
 import { Kpi, KpiRow } from '../editorial/kit';
 import { schoolsApi } from './api';
 import { fmtDay, fmtMoney, fmtNum, fmtPct, useSchoolsMeta } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Dönem özeti (K3): plan gerçekleşmesi, ziyaretler, il bazında penetrasyon, okul siparişleri, örnek → satış ve
  *  ziyaret edilen okulların bayisinde satış değişimi. Rakamlar SQL/kuraldan; nasıl sayıldığı her bölümde yazılı. */
@@ -81,14 +82,17 @@ export default function TermReport({ params, update }: { params: URLSearchParams
             {fmtDay(d.from)} – {fmtDay(d.to)} · veri {fmtDay(d.asOf)} okundu
           </p>
           <KpiRow>
-            <Kpi label="Plan gerçekleşmesi" value={fmtPct(d.plans.rate)} help={`${d.plans.realized} / ${d.plans.planned} planlı okul (${d.plans.approved} onaylı)`} />
-            <Kpi label="Ziyaret" value={fmtNum(d.visits.portal + d.visits.crm)} help={`Portal ${d.visits.portal} · CRM ${d.visits.crm} (tamamlanan)`} />
-            <Kpi label="Ziyaret edilen okul" value={fmtNum(d.visits.schools)} help="Portal ya da CRM'de dönemde en az bir ziyaret" />
-            <Kpi label="Okul siparişi" value={fmtNum(d.orders.total)} help="Örnek + okul satışı (CRM, dönemde açılan)" />
+            <Kpi label="Plan gerçekleşmesi" info={<SqlInfo k={d.kaynaklar} alan="plans" label="Plan gerçekleşmesi" />} value={fmtPct(d.plans.rate)} help={`${d.plans.realized} / ${d.plans.planned} planlı okul (${d.plans.approved} onaylı)`} />
+            <Kpi label="Ziyaret" info={<SqlInfo k={d.kaynaklar} alan="visits" label="Ziyaret" />} value={fmtNum(d.visits.portal + d.visits.crm)} help={`Portal ${d.visits.portal} · CRM ${d.visits.crm} (tamamlanan)`} />
+            <Kpi label="Ziyaret edilen okul" info={<SqlInfo k={d.kaynaklar} alan="visits" label="Ziyaret edilen okul" />} value={fmtNum(d.visits.schools)} help="Portal ya da CRM'de dönemde en az bir ziyaret" />
+            <Kpi label="Okul siparişi" info={<SqlInfo k={d.kaynaklar} alan="orders" label="Okul siparişi" />} value={fmtNum(d.orders.total)} help="Örnek + okul satışı (CRM, dönemde açılan)" />
           </KpiRow>
 
           <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
-            <h2 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Okul siparişleri</h2>
+            <h2 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+              Okul siparişleri
+              <SqlInfo k={d.kaynaklar} alan="orders" label="Okul siparişleri" />
+            </h2>
             <p className="mt-1 text-[11.5px] leading-snug text-canvas-muted">{d.orders.note}</p>
             <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-3">
               {d.orders.items.map((o) => (
@@ -102,11 +106,15 @@ export default function TermReport({ params, update }: { params: URLSearchParams
             <p className="mt-2 text-[12px] leading-snug">
               Örnek gönderilen {fmtNum(d.samples.schools)} okulun {fmtNum(d.samples.converted)} tanesine sonra okul satışı açıldı.{' '}
               <span className="text-canvas-muted">{d.samples.note}</span>
+              <SqlInfo k={d.kaynaklar} alan="samples" label="Örnekten satışa" />
             </p>
           </section>
 
           <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
-            <h2 className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Ziyaretten sonra bayide satış</h2>
+            <h2 className="flex items-center gap-1 text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
+              Ziyaretten sonra bayide satış
+              <SqlInfo k={d.kaynaklar} alan="conversion" label="Ziyaretten sonra bayide satış" />
+            </h2>
             <p className="mt-1 text-[12.5px] leading-snug">
               {d.conversion.dealers
                 ? `${fmtNum(d.conversion.dealers)} bayinin ${fmtNum(d.conversion.up)} tanesinde satış arttı, ${fmtNum(d.conversion.down)} tanesinde azaldı (${fmtNum(d.conversion.before)} → ${fmtNum(d.conversion.after)} adet).`
@@ -122,9 +130,9 @@ export default function TermReport({ params, update }: { params: URLSearchParams
               <thead>
                 <tr>
                   <th className={th}>İl</th>
-                  <th className={`${th} text-right`}>Okul</th>
-                  <th className={`${th} text-right`}>Ziyaret edilen</th>
-                  <th className={`${th} text-right`}>Oran</th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="byIl" label="İldeki okul">Okul</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="byIl" label="Ziyaret edilen okul">Ziyaret edilen</InfoLabel></th>
+                  <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="byIl" label="Ziyaret oranı">Oran</InfoLabel></th>
                 </tr>
               </thead>
               <tbody>
@@ -147,9 +155,9 @@ export default function TermReport({ params, update }: { params: URLSearchParams
                 <thead>
                   <tr>
                     <th className={th}>Temsilci</th>
-                    <th className={`${th} text-right`}>Planlı</th>
-                    <th className={`${th} text-right`}>Gidilen</th>
-                    <th className={`${th} text-right`}>Portal raporu</th>
+                    <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="byOwner" label="Planlı okul">Planlı</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="byOwner" label="Gidilen plan">Gidilen</InfoLabel></th>
+                    <th className={`${th} text-right`}><InfoLabel k={d.kaynaklar} alan="byOwner" label="Portal raporu">Portal raporu</InfoLabel></th>
                   </tr>
                 </thead>
                 <tbody>

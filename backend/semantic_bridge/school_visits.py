@@ -972,10 +972,15 @@ def save_context(engine: sa.engine.Engine, tenant: str, user: str, tur: str, ite
     return up
 
 
+def context_stmt(tenant: str) -> Any:
+    """Yüklü bağlam (ilçe endeksi, akademik takvim): etkin yüklemenin satırları."""
+    return sa.select(CONTEXT).where(CONTEXT.c.tenant_id == tenant, CONTEXT.c.aktif.is_(True))
+
+
 def load_context(engine: sa.engine.Engine, tenant: str) -> dict[str, Any]:
     out: dict[str, Any] = {"ilce_endeks": {}, "takvim": [], "uploads": {}}
     with engine.connect() as c:
-        for r in c.execute(sa.select(CONTEXT).where(CONTEXT.c.tenant_id == tenant, CONTEXT.c.aktif.is_(True))).mappings():
+        for r in c.execute(context_stmt(tenant)).mappings():
             v = json.loads(r["deger_json"])
             if r["tur"] == "ilce_endeks":
                 out["ilce_endeks"][r["anahtar"]] = v
@@ -1148,8 +1153,9 @@ def add_visit(engine: sa.engine.Engine, tenant: str, user: str, display: str, si
     return vid
 
 
-def load_visits(engine: sa.engine.Engine, tenant: str, *, school: Optional[str] = None, owner: Optional[str] = None,
-                vid: Optional[str] = None, since: Optional[datetime] = None) -> list[dict[str, Any]]:
+def visits_stmt(tenant: str, *, school: Optional[str] = None, owner: Optional[str] = None, vid: Optional[str] = None,
+                since: Optional[datetime] = None) -> Any:
+    """Portal okul ziyaretleri (ortak saha ziyaret tablosu + okul ayrıntısı); uçta çalışan ifade."""
     q = (sa.select(SAHA_ZIYARET, VISIT_DETAILS.c.kisi_rolu, VISIT_DETAILS.c.ilgi, VISIT_DETAILS.c.istenen_kitaplar_json,
                    VISIT_DETAILS.c.bayi_yonlendirildi, VISIT_DETAILS.c.yonlendirilen_bayi, VISIT_DETAILS.c.sahip_ad,
                    VISIT_DETAILS.c.plan_id, VISIT_DETAILS.c.hatirlatildi)
@@ -1165,8 +1171,14 @@ def load_visits(engine: sa.engine.Engine, tenant: str, *, school: Optional[str] 
         # Metin zamanlar aynı biçimde (İstanbul, YYYY-AA-GG[THH:MM]); sözlük sırası zaman sırasıdır.
         edge = _to_shared(since)
         q = q.where(sa.or_(SAHA_ZIYARET.c.gerceklesen >= edge, SAHA_ZIYARET.c.planlanan >= edge))
+    return q.order_by(SAHA_ZIYARET.c.olusturma.desc())
+
+
+def load_visits(engine: sa.engine.Engine, tenant: str, *, school: Optional[str] = None, owner: Optional[str] = None,
+                vid: Optional[str] = None, since: Optional[datetime] = None) -> list[dict[str, Any]]:
+    q = visits_stmt(tenant, school=school, owner=owner, vid=vid, since=since)
     with engine.connect() as c:
-        return [_shared_row(dict(r)) for r in c.execute(q.order_by(SAHA_ZIYARET.c.olusturma.desc())).mappings()]
+        return [_shared_row(dict(r)) for r in c.execute(q).mappings()]
 
 
 def visit_view(r: dict[str, Any], *, viewer: str, can_all: bool) -> dict[str, Any]:
@@ -1190,11 +1202,16 @@ def visit_view(r: dict[str, Any], *, viewer: str, can_all: bool) -> dict[str, An
             "planId": r.get("plan_id"), "created": _iso(r.get("olusturma"))}
 
 
+def last_visits_stmt(tenant: str) -> Any:
+    """Okul başına portalda yapılan son ziyaret."""
+    return (sa.select(SAHA_ZIYARET.c.hedef_kimlik, sa.func.max(SAHA_ZIYARET.c.gerceklesen).label("son_ziyaret"))
+            .where(SAHA_ZIYARET.c.tenant_id == tenant, SAHA_ZIYARET.c.tur == "okul", SAHA_ZIYARET.c.durum == "yapildi")
+            .group_by(SAHA_ZIYARET.c.hedef_kimlik))
+
+
 def last_visits(engine: sa.engine.Engine, tenant: str) -> dict[str, str]:
     """Okul → portalda yapılan son ziyaret günü."""
-    q = (sa.select(SAHA_ZIYARET.c.hedef_kimlik, sa.func.max(SAHA_ZIYARET.c.gerceklesen))
-         .where(SAHA_ZIYARET.c.tenant_id == tenant, SAHA_ZIYARET.c.tur == "okul", SAHA_ZIYARET.c.durum == "yapildi")
-         .group_by(SAHA_ZIYARET.c.hedef_kimlik))
+    q = last_visits_stmt(tenant)
     out = {}
     with engine.connect() as c:
         for sid, at in c.execute(q):
@@ -1229,9 +1246,12 @@ def mark_reminded(engine: sa.engine.Engine, ids: list[str]) -> None:
 PLAN_STATES = {"oneri": "Öneri", "onayli": "Onaylı", "iptal": "İptal"}
 
 
-def load_plans(engine: sa.engine.Engine, tenant: str, *, week: Optional[date] = None, owner: Optional[str] = None,
-               since: Optional[date] = None, until: Optional[date] = None, pid: Optional[str] = None) -> list[dict[str, Any]]:
+def plans_stmt(tenant: str, *, week: Optional[date] = None, owner: Optional[str] = None, since: Optional[date] = None,
+               until: Optional[date] = None, pid: Optional[str] = None, school: Optional[str] = None) -> Any:
+    """Haftalık ziyaret planı satırları; uçta çalışan ifade."""
     q = sa.select(PLANS).where(PLANS.c.tenant_id == tenant)
+    if school:
+        q = q.where(PLANS.c.ziyaret_yeri_id == school)
     if week:
         q = q.where(PLANS.c.hafta == week)
     if owner:
@@ -1242,8 +1262,14 @@ def load_plans(engine: sa.engine.Engine, tenant: str, *, week: Optional[date] = 
         q = q.where(PLANS.c.hafta <= until)
     if pid:
         q = q.where(PLANS.c.id == pid)
+    return q.order_by(PLANS.c.gun, PLANS.c.puan.desc())
+
+
+def load_plans(engine: sa.engine.Engine, tenant: str, *, week: Optional[date] = None, owner: Optional[str] = None,
+               since: Optional[date] = None, until: Optional[date] = None, pid: Optional[str] = None) -> list[dict[str, Any]]:
+    q = plans_stmt(tenant, week=week, owner=owner, since=since, until=until, pid=pid)
     with engine.connect() as c:
-        return [dict(r) for r in c.execute(q.order_by(PLANS.c.gun, PLANS.c.puan.desc())).mappings()]
+        return [dict(r) for r in c.execute(q).mappings()]
 
 
 def insert_plans(engine: sa.engine.Engine, rows: list[dict[str, Any]]) -> None:
@@ -1276,8 +1302,8 @@ LINK_SOURCES = {"gecmis": "CRM'deki ortak ziyaret", "oneri": "Zeki AI önerisi",
 LINK_STATES = {"oneri": "Onay bekliyor", "onayli": "Onaylı", "reddedildi": "Reddedildi"}
 
 
-def load_links(engine: sa.engine.Engine, tenant: str, *, school: Optional[str] = None, state: Optional[str] = None,
-               lid: Optional[str] = None) -> list[dict[str, Any]]:
+def links_stmt(tenant: str, *, school: Optional[str] = None, state: Optional[str] = None, lid: Optional[str] = None) -> Any:
+    """Okul–bayi eşleşmeleri (öneri/onaylı/red); uçta çalışan ifade."""
     q = sa.select(DEALER_LINKS).where(DEALER_LINKS.c.tenant_id == tenant)
     if school:
         q = q.where(DEALER_LINKS.c.ziyaret_yeri_id == school)
@@ -1285,8 +1311,13 @@ def load_links(engine: sa.engine.Engine, tenant: str, *, school: Optional[str] =
         q = q.where(DEALER_LINKS.c.durum == state)
     if lid:
         q = q.where(DEALER_LINKS.c.id == lid)
+    return q.order_by(DEALER_LINKS.c.olusturma.desc())
+
+
+def load_links(engine: sa.engine.Engine, tenant: str, *, school: Optional[str] = None, state: Optional[str] = None,
+               lid: Optional[str] = None) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        return [dict(r) for r in c.execute(q.order_by(DEALER_LINKS.c.olusturma.desc())).mappings()]
+        return [dict(r) for r in c.execute(links_stmt(tenant, school=school, state=state, lid=lid)).mappings()]
 
 
 def approved_links(engine: sa.engine.Engine, tenant: str) -> dict[str, list[dict[str, Any]]]:
@@ -1604,6 +1635,17 @@ def write_priority(engine: sa.engine.Engine, tenant: str, term: str, scored: dic
         for i in range(0, len(rows), 2000):
             c.execute(PRIORITY.insert(), rows[i:i + 2000])
     return len(rows)
+
+
+def catalogs_stmt(tenant: str, sid: str) -> Any:
+    """Okul için hazırlanmış kataloglar (en yeni önce)."""
+    return (sa.select(CATALOGS.c.id, CATALOGS.c.olusturan, CATALOGS.c.olusturma, CATALOGS.c.uygun_toplam, CATALOGS.c.kitaplar_json)
+            .where(CATALOGS.c.tenant_id == tenant, CATALOGS.c.ziyaret_yeri_id == sid).order_by(CATALOGS.c.olusturma.desc()))
+
+
+def matches_stmt(tenant: str) -> Any:
+    """CRM ziyaretindeki serbest okul adı → ziyaret yeri kararları (Zeki AI ya da kişi)."""
+    return sa.select(NAME_MATCHES).where(NAME_MATCHES.c.tenant_id == tenant)
 
 
 def load_matches(engine: sa.engine.Engine, tenant: str) -> dict[str, Optional[str]]:

@@ -10,6 +10,7 @@ import SchoolsList from './SchoolsList';
 import DealerQueue from './DealerQueue';
 import TermReport from './TermReport';
 import ContextUpload from './ContextUpload';
+import SqlInfo from '../components/SqlInfo';
 
 /** M31 Okul tanıtım ve ziyaret. Telefonda ilk açılış «Bu hafta»; sekme ve süzgeçler adres çubuğunda (?sekme=, ?il=…). */
 
@@ -51,6 +52,14 @@ export default function SchoolsScreen() {
       lead="Hangi okula, ne zaman, hangi kitaplarla gidileceği: okul listesi ve profili CRM ziyaret yerlerinden, öncelik kuralla (gerekçesi yazılı), katalog kademeye uygun ve stokta kitaplardan, bayi önerisi il/ilçe ve satış karmasından. Ziyaret raporu ve eşleşmeler portalda tutulur; CRM'e yazılmaz."
       source={source}
       presence={presence}
+      info={
+        st?.schools ? (
+          <>
+            {`${st.schools.toLocaleString('tr-TR')} okul · CRM ziyaret yerleri`}
+            <SqlInfo k={meta.data?.kaynaklar} alan="status" label="Okul sayısı" />
+          </>
+        ) : undefined
+      }
       aside={<Tabs tabs={tabs} value={tab} onChange={(t) => update({ sekme: t === 'hafta' ? null : t })} />}
     >
       {!ENGINE_ENABLED && <Note tone="warn">Zeki AI bağlantısı bu derlemede tanımlı değil.</Note>}

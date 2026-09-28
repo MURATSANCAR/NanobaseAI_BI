@@ -16,6 +16,7 @@ export function SchoolsFrame({
   presence,
   back,
   aside,
+  info,
   children,
 }: {
   title: string;
@@ -24,6 +25,8 @@ export function SchoolsFrame({
   presence: string;
   back?: boolean;
   aside?: ReactNode;
+  /** Başlık altındaki kaynak satırı (sayı + sorgu bilgisi). */
+  info?: ReactNode;
   children: ReactNode;
 }) {
   return (
@@ -43,6 +46,7 @@ export function SchoolsFrame({
                 )}
                 <h1 className="mt-0.5 break-words text-[22px] font-extrabold leading-tight tracking-tight sm:text-[28px]">{title}</h1>
                 {lead && <p className="mt-1 max-w-[72ch] text-[12.5px] leading-snug text-canvas-muted">{lead}</p>}
+                {info && <div className="mt-1 flex flex-wrap items-center gap-1 text-[11.5px] font-semibold text-canvas-muted">{info}</div>}
               </div>
               {aside && <div className="w-full shrink-0 lg:w-[440px]">{aside}</div>}
             </header>

@@ -9,6 +9,7 @@ import { downloadCatalog, schoolsApi, type Catalog, type SchoolDetail } from './
 import { CalendarNote, SchoolsFrame, ScoreBadge, ScoreParts, addDays, daysAgo, fmtDay, fmtMoney, fmtNum, invalidateSchools, useSchoolsMeta } from './parts';
 import VisitReportSheet from './VisitReportSheet';
 import DealerPanel from './DealerPanel';
+import SqlInfo from '../components/SqlInfo';
 
 /** Okul kartı (telefon öncelikli): profil, öncelik ve gerekçesi, Zeki AI ziyaret önerisi, bağlı/önerilen bayi, kademeye
  *  uygun katalog + PDF, geçmiş ziyaretler (portal + CRM), okul siparişleri. Listenin kaynağı ve tarihi görünür. */
@@ -25,10 +26,13 @@ function Block({ title, action, children }: { title: string; action?: ReactNode;
   );
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
+function Fact({ label, value, info }: { label: string; value: string; info?: ReactNode }) {
   return (
     <div className="rounded-xl bg-white/85 px-3 py-2">
-      <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
+      <div className="flex items-center gap-0.5 text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
+        {label}
+        {info}
+      </div>
       <div className="mt-0.5 font-mono text-[15px] font-bold tabular-nums">{value}</div>
     </div>
   );
@@ -64,12 +68,12 @@ export default function SchoolCard() {
           ))}
           <CalendarNote hits={c.calendar} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-            <Fact label="Öğrenci" value={s.students != null ? fmtNum(s.students) : 'bilinmiyor'} />
-            <Fact label="Öğretmen" value={s.teachers != null ? fmtNum(s.teachers) : '—'} />
-            <Fact label="Derslik" value={s.classrooms != null ? fmtNum(s.classrooms) : '—'} />
-            <Fact label="Kütüphane kitabı" value={s.libraryBooks != null ? fmtNum(s.libraryBooks) : '—'} />
-            <Fact label="Son ziyaret" value={daysAgo(c.lastVisit, today)} />
-            <Fact label="Uygun, stokta kitap" value={c.logoOk ? fmtNum(c.fittingBooks) : 'stok okunamadı'} />
+            <Fact label="Öğrenci" value={s.students != null ? fmtNum(s.students) : 'bilinmiyor'} info={<SqlInfo k={c.kaynaklar} alan="school" label="Öğrenci sayısı" />} />
+            <Fact label="Öğretmen" value={s.teachers != null ? fmtNum(s.teachers) : '—'} info={<SqlInfo k={c.kaynaklar} alan="school" label="Öğretmen sayısı" />} />
+            <Fact label="Derslik" value={s.classrooms != null ? fmtNum(s.classrooms) : '—'} info={<SqlInfo k={c.kaynaklar} alan="school" label="Derslik sayısı" />} />
+            <Fact label="Kütüphane kitabı" value={s.libraryBooks != null ? fmtNum(s.libraryBooks) : '—'} info={<SqlInfo k={c.kaynaklar} alan="school" label="Kütüphane kitabı" />} />
+            <Fact label="Son ziyaret" value={daysAgo(c.lastVisit, today)} info={<SqlInfo k={c.kaynaklar} alan="parts" label="Son ziyaret (CRM + portal)" />} />
+            <Fact label="Uygun, stokta kitap" value={c.logoOk ? fmtNum(c.fittingBooks) : 'stok okunamadı'} info={<SqlInfo k={c.kaynaklar} alan="fittingBooks" label="Uygun, stokta kitap" />} />
           </div>
           {s.phone && (
             <a href={`tel:${s.phone.replace(/[^\d+]/g, '')}`} className={`${btnGhost} self-start`}>
@@ -79,7 +83,15 @@ export default function SchoolCard() {
           )}
 
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-            <Block title="Öncelik" action={<ScoreBadge score={c.score} />}>
+            <Block
+              title="Öncelik"
+              action={
+                <span className="flex items-center gap-1">
+                  <SqlInfo k={c.kaynaklar} alan="score" label="Öncelik puanı" />
+                  <ScoreBadge score={c.score} />
+                </span>
+              }
+            >
               <p className="mb-2 text-[12.5px] leading-snug">{c.reason}</p>
               <details>
                 <summary className="min-h-11 cursor-pointer text-[12px] font-bold text-canvas-violet sm:min-h-0">Puan nasıl hesaplandı</summary>
@@ -210,7 +222,7 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
   const toggle = (g: number) => setGrades((cur) => (cur.includes(g) ? cur.filter((x) => x !== g) : [...cur, g].sort((a, b) => a - b)));
   const shown = s.grades.length ? GRADES.filter((g) => s.grades.includes(g) || grades.includes(g)) : GRADES;
   return (
-    <Block title="Katalog (kademeye uygun, stokta)">
+    <Block title="Katalog (kademeye uygun, stokta)" action={<SqlInfo k={detail.kaynaklar} alan="catalogs" label="Hazırlanan kataloglar" />}>
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="Sınıflar">
         {shown.map((g) => (
           <button
@@ -253,8 +265,17 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
       {preview.error && <div className="mt-2"><Note tone="err">{errText(preview.error, 'Liste seçilemedi.')}</Note></div>}
       {result && (
         <div className="mt-3">
-          <p className="text-[12px] font-semibold text-canvas-muted">
+          <p className="flex flex-wrap items-center gap-1 text-[12px] font-semibold text-canvas-muted">
             Uygun ve stokta {fmtNum(result.total)} kitaptan {fmtNum(result.items.length)} tanesi; sıra ildeki bayilerin satışına göre.
+            <SqlInfo k={result.kaynaklar} alan="total" label="Katalog seçimi" />
+            <span className="inline-flex items-center gap-0.5">
+              stok
+              <SqlInfo k={result.kaynaklar} alan="items[].stock" label="Stok bakiyesi" />
+            </span>
+            <span className="inline-flex items-center gap-0.5">
+              fiyat
+              <SqlInfo k={result.kaynaklar} alan="items[].price" label="Fiyat" />
+            </span>
           </p>
           {result.warning && <div className="mt-1"><Note tone="warn">{result.warning}</Note></div>}
           <ol className="mt-2 divide-y divide-slate-100 rounded-xl border border-slate-100 bg-white/85">
@@ -297,11 +318,23 @@ function CatalogPanel({ detail, canVisit, canExport }: { detail: SchoolDetail; c
 
 function Visits({ c }: { c: SchoolDetail }) {
   return (
-    <Block title="Ziyaretler">
+    <Block
+      title="Ziyaretler"
+      action={
+        <span className="flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+          Portal
+          <SqlInfo k={c.kaynaklar} alan="portalVisits" label="Portal ziyaret raporları" />
+          CRM
+          <SqlInfo k={c.kaynaklar} alan="crmVisits" label="CRM okul ziyaretleri" />
+        </span>
+      }
+    >
       <p className="text-[11.5px] leading-snug text-canvas-muted">
         CRM'de tamamlanan okul ziyareti: {c.crmDoneLinked} (ziyaret yeri bağlı)
         {c.crmDoneByName ? ` + ${c.crmDoneByName} (okul adı eşleşmesiyle)` : ''}.
+        <SqlInfo k={c.kaynaklar} alan="crmDoneLinked" label="Tamamlanan CRM ziyareti" />
         {c.hiddenOthers ? ` Başka temsilcilerin ${c.hiddenOthers} portal raporu size görünmez.` : ''}
+        {c.hiddenOthers ? <SqlInfo k={c.kaynaklar} alan="hiddenOthers" label="Görünmeyen portal raporu" /> : null}
       </p>
       <ul className="mt-2 space-y-1.5">
         {c.portalVisits.map((v) => (
@@ -355,7 +388,7 @@ function Visits({ c }: { c: SchoolDetail }) {
 
 function Orders({ c }: { c: SchoolDetail }) {
   return (
-    <Block title="Okul örneği ve okul satışı">
+    <Block title="Okul örneği ve okul satışı" action={<SqlInfo k={c.kaynaklar} alan="orders" label="Okul siparişleri" />}>
       <p className="text-[11.5px] leading-snug text-canvas-muted">{c.ordersNote}</p>
       {c.orders.length ? (
         <ul className="mt-2 space-y-1">

@@ -22,12 +22,13 @@ import uuid
 from datetime import date, datetime, timedelta
 from typing import Any, Callable, Optional
 
-import sqlalchemy as sa
 # Modül düzeyinde: `from __future__ import annotations` ile fonksiyon içindeki `Request` sorgu parametresi sanılır (422).
 from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
+from semantic_bridge import provenance as PV
 from semantic_bridge import school_visits as SV
+from semantic_bridge import school_visits_kaynak as K
 from semantic_bridge import school_visits_sources as src
 from semantic_bridge.school_visits import SchoolError, fold
 
@@ -204,10 +205,7 @@ class Service:
         conf = SV.conflicts(res["ctx"], now, now + timedelta(days=21), sc["il"])
         cats = []
         with engine.connect() as c:
-            for r in c.execute(sa.select(SV.CATALOGS.c.id, SV.CATALOGS.c.olusturan, SV.CATALOGS.c.olusturma,
-                                         SV.CATALOGS.c.uygun_toplam, SV.CATALOGS.c.kitaplar_json)
-                               .where(SV.CATALOGS.c.tenant_id == tenant, SV.CATALOGS.c.ziyaret_yeri_id == sid)
-                               .order_by(SV.CATALOGS.c.olusturma.desc())).mappings():
+            for r in c.execute(SV.catalogs_stmt(tenant, sid)).mappings():
                 cats.append({"id": r["id"], "by": r["olusturan"], "at": SV._iso(r["olusturma"]),
                              "count": len(json.loads(r["kitaplar_json"] or "[]")), "total": r["uygun_toplam"]})
         orders = sorted(m.orders_by_school.get(sid, []), key=lambda o: o["day"] or "", reverse=True)
@@ -926,7 +924,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         except Exception as e:  # noqa: BLE001
             log.info("schools meta: il listesi okunamadı: %s", e)
         uploads = SV.load_context(engine, tenant)["uploads"]
-        return {"weights": [{"key": k, "label": SV.WEIGHT_LABELS[k], "max": v} for k, v in st["weights"].items()],
+        out = {"weights": [{"key": k, "label": SV.WEIGHT_LABELS[k], "max": v} for k, v in st["weights"].items()],
                 "roles": [{"key": k, "label": v} for k, v in SV.ROLES.items()],
                 "interest": [{"key": k, "label": v} for k, v in SV.INTEREST.items()],
                 "kademeler": [{"key": str(k), "label": v} for k, v in src.KADEME.items()],
@@ -941,12 +939,14 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                        "canDealer": allowed(user, "ozellik:okul.bayi-onay"),
                        "canUpload": allowed(user, "ozellik:okul.baglam-yukle"),
                        "canExport": allowed(user, "ozellik:veri.disa-aktar")}}
+        return PV.bagla(out, lambda: K.for_meta(engine, tenant, svc.current(), out))
 
     @app.get(f"{P}/plan")
     def schools_plan(request: Request, hafta: str = "", sahip: str = "", hepsi: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         week = SV.monday(call(SV.parse_day, hafta, "Hafta") or SV.today())
-        return call(svc.plan, engine, tenant, user, can_all(user), week, sahip.strip().lower() or None, bool(hepsi), fresh())
+        out = call(svc.plan, engine, tenant, user, can_all(user), week, sahip.strip().lower() or None, bool(hepsi), fresh())
+        return PV.bagla(out, lambda: K.for_plan(engine, tenant, svc.current(), week, out["owner"], out))
 
     @app.post(f"{P}/plan/generate", status_code=201)
     def schools_plan_generate(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -974,7 +974,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/dealer-queue")
     def schools_dealer_queue(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.queue, engine, tenant)
+        out = call(svc.queue, engine, tenant)
+        return PV.bagla(out, lambda: K.for_queue(engine, tenant, svc.current(), out))
 
     @app.get(f"{P}/catalogs/{{cid}}.pdf")
     def schools_catalog_pdf(cid: str, request: Request) -> Response:
@@ -996,14 +997,17 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def schools_context(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         c = SV.load_context(engine, tenant)
-        return {"uploads": list(c["uploads"].values()), "calendar": c["takvim"],
-                "districts": sorted(c["ilce_endeks"].values(), key=lambda x: (fold(x.get("il")), fold(x.get("ilce")))),
-                "range": c["endeksRange"]}
+        out = {"uploads": list(c["uploads"].values()), "calendar": c["takvim"],
+               "districts": sorted(c["ilce_endeks"].values(), key=lambda x: (fold(x.get("il")), fold(x.get("ilce")))),
+               "range": c["endeksRange"]}
+        return PV.bagla(out, lambda: K.for_context(engine, tenant, svc.current(), out))
 
     @app.get(f"{P}/report/term")
     def schools_term(request: Request, donem: str = "", il: str = "", sahip: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.term_report, engine, tenant, user, can_all(user), donem, il, sahip)
+        out = call(svc.term_report, engine, tenant, user, can_all(user), donem, il, sahip)
+        a, b = SV.term_range(out["term"])
+        return PV.bagla(out, lambda: K.for_term(engine, tenant, svc.current(), out, a, b, out["owner"]))
 
     @app.post(f"{P}/run-due")
     def schools_run_due(request: Request, kind: str = "nightly", budget: Optional[int] = None) -> dict[str, Any]:
@@ -1021,7 +1025,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/visits/{{vid}}")
     def schools_visit(vid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.visit, engine, tenant, user, can_all(user), vid)
+        out = call(svc.visit, engine, tenant, user, can_all(user), vid)
+        return PV.bagla(out, lambda: K.for_visit(engine, tenant, out["id"], out))
 
     @app.post(f"{P}/visits/{{vid}}/next-done")
     def schools_visit_next_done(vid: str, request: Request) -> dict[str, Any]:
@@ -1037,13 +1042,15 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                      q: str = "", kapsam: str = "", sirala: str = "puan", page: int = 0) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         ms = src.num(oncelik) if oncelik else None
-        return call(svc.list, engine, tenant, user, can_all(user), il=il, ilce=ilce, kademe=kademe, tur=tur, min_score=ms,
-                    q=q, kapsam=kapsam, sort=sirala, page=page, fresh=fresh())
+        out = call(svc.list, engine, tenant, user, can_all(user), il=il, ilce=ilce, kademe=kademe, tur=tur, min_score=ms,
+                   q=q, kapsam=kapsam, sort=sirala, page=page, fresh=fresh())
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, svc.current(), out))
 
     @app.get(f"{P}/{{sid}}")
     def schools_card(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.card, engine, tenant, user, can_all(user), sid, fresh())
+        out = call(svc.card, engine, tenant, user, can_all(user), sid, fresh())
+        return PV.bagla(out, lambda: K.for_card(engine, tenant, svc.current(), out["school"]["id"], out))
 
     @app.post(f"{P}/{{sid}}/advice")
     def schools_advice(sid: str, request: Request) -> dict[str, Any]:
@@ -1064,12 +1071,13 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         if out.get("id"):
             audit(engine, user, "create", "school_catalog", out["id"], f"Katalog ({len(out['items'])} kitap)",
                   {"school": sid, "grades": out["grades"], "priceCap": out["priceCap"], "total": out["total"]})
-        return out
+        return PV.bagla(out, lambda: K.for_catalog(engine, tenant, svc.current(), out))
 
     @app.get(f"{P}/{{sid}}/dealers")
     def schools_dealers(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
-        return call(svc.dealers, engine, tenant, sid)
+        out = call(svc.dealers, engine, tenant, sid)
+        return PV.bagla(out, lambda: K.for_dealers(engine, tenant, svc.current(), SV.school_id(sid), out))
 
     @app.post(f"{P}/{{sid}}/dealers", status_code=201)
     def schools_dealer_add(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -1098,7 +1106,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     @app.get(f"{P}/{{sid}}/visits")
     def schools_visits(sid: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
-        return call(svc.visits, engine, tenant, user, can_all(user), sid)
+        out = call(svc.visits, engine, tenant, user, can_all(user), sid)
+        return PV.bagla(out, lambda: K.for_visits(engine, tenant, svc.current(), SV.school_id(sid), out))
 
     @app.post(f"{P}/{{sid}}/visits", status_code=201)
     def schools_visit_add(sid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

@@ -6,6 +6,7 @@ import { Loading, Note, errText, field, label as labelCls } from '../admin/ui';
 import { FileDrop } from '../components/FileDrop';
 import { schoolsApi, type UploadResult } from './api';
 import { fmtDay, fmtNum, invalidateSchools, useSchoolsMeta } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Dış veri elle yüklenir (müşteride web taraması kapalı): ilçe gelişmişlik endeksi ve akademik takvim (tatil, sınav
  *  haftası). Kaynağın adı ve tarihi zorunlu; yeni yükleme öncekinin yerine geçer, eskisi silinmez. */
@@ -56,6 +57,7 @@ export default function ContextUpload() {
                 {up
                   ? `Yüklü: ${fmtNum(up.rows)} satır · kaynak «${up.source ?? '—'}» (${fmtDay(up.sourceDay)}) · ${up.by}, ${fmtDay(up.at?.slice(0, 10))}`
                   : 'Henüz yüklenmedi.'}
+                {up && <SqlInfo k={c?.kaynaklar} alan="uploads" label={`${k.title}: yüklü satır`} />}
               </p>
               {/* Yükleme yetkisizde de görünür: alan kilitli, gereken yetki yazılı. */}
               {meta.data && <UploadForm kind={k.key} example={k.example} can={can} />}
@@ -81,6 +83,7 @@ export default function ContextUpload() {
           İlçe endeksi {fmtNum(c.districts.length)} ilçe için yüklü
           {c.range ? ` (en düşük ${c.range[0].toLocaleString('tr-TR')}, en yüksek ${c.range[1].toLocaleString('tr-TR')})` : ''};{' '}
           {fmtNum(c.districts.filter((x) => !x.crmIlceId).length)} satır CRM ilçe listesinde bulunamadı.
+          <SqlInfo k={c.kaynaklar} alan="range" label="İlçe endeksi" />
         </p>
       )}
     </div>
