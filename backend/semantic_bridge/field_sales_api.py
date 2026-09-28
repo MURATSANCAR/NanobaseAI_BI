@@ -11,6 +11,7 @@ giden hiçbir şey otomatik gönderilmez (takip e-postası taslaktır, temsilci 
 """
 from __future__ import annotations
 
+import json
 import logging
 import threading
 import time
@@ -584,9 +585,13 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         engine, tenant = deps["engine"](), deps["tenant"]()
         F.ensure(engine)
         if tur == "gece":
-            return call(svc.run_night, engine, tenant)
+            out = call(svc.run_night, engine, tenant)
+            warm_today()
+            return out
         if tur == "hafif":
-            return call(svc.run_light, engine, tenant)
+            out = call(svc.run_light, engine, tenant)
+            warm_today()
+            return out
         if tur == "haftalik":
             return call(svc.run_weekly, engine, tenant)
         raise HTTPException(status_code=422, detail={"code": "FIELD", "message": "tur gece, hafif ya da haftalik olmalı."})
@@ -598,46 +603,130 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         if not is_admin(user):
             raise HTTPException(status_code=403, detail={"code": "FORBIDDEN", "message": "Saha verisini yenilemek yönetici işidir."})
         out = call(svc.run_night, engine, tenant)
+        warm_today()
         audit(engine, user, "run", "saha_tur", None, "Saha verisi yenilendi", {k: out.get(k) for k in ("portfolio", "assigned", "ms")})
         return out
 
     # -------------------------------------------------------------- liste ekranları
 
+    # «Bugün» sıralaması. Yönetici kapsamında portföy bütün Logo carisidir (2026-09-28: 248.351); okuma + puan ≈ 15 sn,
+    # bütün liste JSON'da 109 MB ve ≈ 20 sn tutuyordu. İki katman, kapsam başına bellekte:
+    # - temel: gece turu (`run._at`) ve gün değişmedikçe aynı; ziyaret/söz/öncelik/red girdisi olmadan puanlanmış kartlar.
+    # - sıra: girdilerden biri değişince yalnız girdisi olan cariler yeniden puanlanır (satırları DB'den), liste yeniden
+    #   sıralanır. Girdisi olmayan carinin puanı girdisizle aynıdır, sonuç `F.ranked` ile birebir.
+    # Ekran arar ve sayfa sayfa alır. Yönetici kapsamı zamanlayıcı turlarından (hafif 15 dk, gece) ve elle yenilemeden
+    # sonra arka planda hazırlanır. Kayıt anında (modül yüklenirken) hazırlanmaz: `deps["engine"]()` çalışma ortamı henüz
+    # yokken onu ikinci kez kurar (2026-09-28'de açılışı 40 sn'den 110 sn'ye çıkardı).
+    today_cache: dict[tuple[str, Optional[str]], dict[str, Any]] = {}
+    today_locks: dict[tuple[str, Optional[str]], threading.Lock] = {}
+    today_guard = threading.Lock()
+
+    def today_base(engine: Any, tenant: str, owner: Optional[str], run_at: Any, now: date, cycle: int) -> dict[str, Any]:
+        rows = F.portfolio_rows(engine, tenant, owner)
+        rank = F.overdue_ranks(rows)
+        empty: dict[str, Any] = {}
+        cards = [F.customer_card(F.scored(r, rank, promises=empty, rejected=empty, boosts=empty, last_visits=empty,
+                                          cycle=cycle, now=now)) for r in rows]
+        accounts: dict[str, list[str]] = {}
+        for r in rows:
+            if r.get("crm_account_id"):
+                accounts.setdefault(r["crm_account_id"], []).append(r["logo_code"])
+        exp = sum(num(r.get("hedef_beklenen")) for r in rows if r.get("hedef_beklenen"))
+        ytd_t = sum(num(r.get("ytd_net_ciro")) for r in rows if r.get("hedef_beklenen"))
+        return {
+            "key": (run_at, now, cycle), "rank": rank, "accounts": accounts,
+            "cards": {c["code"]: c for c in cards},
+            "keys": {c["code"]: F.fold(f"{c.get('unvan') or ''} {c['code']} {c.get('il') or ''}") for c in cards},
+            "payAfter": {r["logo_code"]: r.get("son_odeme_tarihi") for r in rows},
+            "kpi": {"vadesiGecmis": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2),
+                    "k90": round(sum(num(r.get("k_90p")) for r in rows), 2),
+                    "hedefOrani": round(ytd_t / exp, 4) if exp > 0 else None, "cari": len(rows)},
+            "order": None,
+        }
+
+    def today_ranked(engine: Any, tenant: str, owner: Optional[str], cols: list[dict[str, Any]],
+                     st: dict[str, Any], now: date) -> dict[str, Any]:
+        run_at = F.meta_get(engine, tenant, "run").get("_at")
+        cycle = st["visitCycleDays"]
+        with today_guard:
+            lock = today_locks.setdefault((tenant, owner), threading.Lock())
+        with lock:
+            base = today_cache.get((tenant, owner))
+            if base is None or base["key"] != (run_at, now, cycle):
+                base = today_base(engine, tenant, owner, run_at, now, cycle)
+                today_cache[(tenant, owner)] = base
+            rejected = F.rejected_by_account(cols, now)
+            boosts = F.overrides(engine, tenant, now)
+            last_visits = F.last_visit_days(engine, tenant)
+            promises = F.broken_promises(engine, tenant, base["payAfter"], now)
+            inputs = json.dumps([promises, rejected, boosts, last_visits], sort_keys=True, default=str)
+            if base["order"] is not None and base["order"]["inputs"] == inputs:
+                return {**base, **base["order"]}
+            cards = base["cards"]
+            touched = (set(promises) | set(boosts) | set(last_visits)
+                       | {c for a in rejected for c in base["accounts"].get(a, [])}) & cards.keys()
+            fresh_cards = {r["logo_code"]: F.customer_card(F.scored(
+                r, base["rank"], promises=promises, rejected=rejected, boosts=boosts, last_visits=last_visits,
+                cycle=cycle, now=now)) for r in (F.portfolio_rows(engine, tenant, owner, codes=touched) if touched else [])}
+            ordered = sorted((fresh_cards.get(k, c) for k, c in cards.items()), key=F.card_order)
+            base["order"] = {"inputs": inputs, "list": ordered, "at": {c["code"]: i for i, c in enumerate(ordered)},
+                             "listKeys": [base["keys"][c["code"]] for c in ordered]}
+            return {**base, **base["order"]}
+
+    def warm_today() -> None:
+        """Yönetici kapsamının sırası arka planda hazırlanır (ilk açılış beklemesin). Yalnız istek içinden çağrılır."""
+        def run() -> None:
+            try:
+                engine, tenant = deps["engine"](), deps["tenant"]()
+                F.ensure(engine)
+                st = settings()
+                try:
+                    cols = svc.source.collections(st)
+                except Exception:  # noqa: BLE001 — CRM yoksa red sinyali boş, istek gelince yeniden bakılır
+                    cols = []
+                started = time.monotonic()
+                n = today_ranked(engine, tenant, None, cols, st, F.today())["kpi"]["cari"]
+                log.info("field: bugün sırası hazır (%d cari, %.1f sn)", n, time.monotonic() - started)
+            except Exception as e:  # noqa: BLE001
+                log.info("field: bugün sırası önceden hazırlanamadı: %s", e)
+
+        threading.Thread(target=run, name="field-today-warm", daemon=True).start()
+
     @app.get(f"{P}/today")
-    def field_today(request: Request, temsilci: str = "") -> dict[str, Any]:
+    def field_today(request: Request, temsilci: str = "", q: str = "", offset: int = 0, limit: int = 40) -> dict[str, Any]:
+        """Öncelik listesi sayfa sayfa: `items` sıralı listenin `offset`'ten `limit` kadarı, `total` aramaya uyan hepsi.
+        KPI'lar bütün portföyden."""
         engine, tenant, user, _ = ctx(request)
         owner = owner_of(user, temsilci)
         st = settings()
         now = F.today()
-        rows = F.portfolio_rows(engine, tenant, owner)
         try:
             cols = svc.source.collections(st)
             warn = None
         except Exception as e:  # noqa: BLE001
             log.warning("field: bugün listesinde CRM okunamadı: %s", e)
             cols, warn = [], "CRM'e ulaşılamadı; reddedilen tahsilat sinyali bu listede yok."
-        promises = F.broken_promises(engine, tenant, {r["logo_code"]: r.get("son_odeme_tarihi") for r in rows}, now)
-        ranked = F.ranked(rows, promises=promises, rejected=F.rejected_by_account(cols, now),
-                          boosts=F.overrides(engine, tenant, now), last_visits=F.last_visit_days(engine, tenant),
-                          cycle=st["visitCycleDays"], now=now)
+        rank = today_ranked(engine, tenant, owner, cols, st, now)
+        cards = rank["list"]
+        needle = F.fold(q.strip())
+        if needle:
+            cards = [c for c, k in zip(cards, rank["listKeys"]) if needle in k]
+        offset, limit = max(0, offset), max(1, limit)
         planned = [v for v in F.list_visits(engine, tenant, user, tur="cari", owner=owner, day_=now.isoformat(), admin=is_admin(user))
                    if v["durum"] != "iptal"]
-        by = {r["logo_code"]: r for r in ranked}
         pending = [t for t in cols if int(num(t.get("durum"))) == src.T_PENDING]
         if owner is not None:
             ids = {k for k, v in svc.users_map().items() if v["hesap"] == owner} if cols else set()
             pending = [t for t in pending if guid(t.get("owner_id")) in ids]
-        exp = sum(num(r.get("hedef_beklenen")) for r in rows if r.get("hedef_beklenen"))
-        ytd_t = sum(num(r.get("ytd_net_ciro")) for r in rows if r.get("hedef_beklenen"))
         run = F.meta_get(engine, tenant, "run")
+        at = rank["at"]
         return {
             "asof": run.get("asof"), "dataEnd": run.get("dataEnd"), "warning": warn,
-            "kpi": {"vadesiGecmis": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2),
-                    "k90": round(sum(num(r.get("k_90p")) for r in rows), 2),
-                    "onayBekleyen": len(pending), "onayBekleyenTutar": round(sum(num(t.get("tutar")) for t in pending), 2),
-                    "hedefOrani": round(ytd_t / exp, 4) if exp > 0 else None, "cari": len(rows)},
-            "planned": [{**v, "musteri": F.customer_card(by[v["hedef"]]) if v["hedef"] in by else None} for v in planned],
-            "items": [F.customer_card(r) for r in ranked],
+            "kpi": {**rank["kpi"], "onayBekleyen": len(pending), "onayBekleyenTutar": round(sum(num(t.get("tutar")) for t in pending), 2)},
+            "planned": [{**v, "musteri": rank["list"][at[v["hedef"]]] if v["hedef"] in at else None} for v in planned],
+            "items": cards[offset:offset + limit],
+            "total": len(cards),
+            "offset": offset,
             "events": F.events(engine, tenant, user, days=14),
         }
 

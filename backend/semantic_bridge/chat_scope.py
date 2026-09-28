@@ -204,6 +204,27 @@ class Scope:
                 "topicLabel": self.topic["label"] if self.topic else None, "connected": self.connected}
 
 
+#: Soruda şirket işi olduğuna kanıt sayılan yerleşimler: sertifikalı (ya da açıkça yazılmış) kavram. Kelime içi tahmin
+#: («tarifi» → «renk tarif», INFERRED) ya da veride geçen bir değer («Türkiye», «İstanbul», PROFILE) kanıt değildir;
+#: onlarla yerleşen soru da sınıflandırıcıya gider. Varsayılan filtre (iptal hariç) her soruya kendiliğinden eklenir.
+STRONG_STATUSES = frozenset({"CERTIFIED", "EXPLICIT"})
+
+
+def has_business_evidence(slots: Iterable[Any]) -> bool:
+    """Çözücünün yerleşimleri arasında şirket işini gösteren güçlü kanıt var mı? Yoksa mesaj sınıflandırıcıya sorulur.
+
+    2026-09-28 kabulü: «Mercimek çorbası tarifi ver», «Türkiye'nin başkenti neresi?», «Bana bir aşk şiiri yaz» birer zayıf
+    yerleşimle (INFERRED/PROFILE) sınıflandırıcıyı atlayıp veri hattına gidiyordu; model üçüne de OFFTOPIC diyordu."""
+    for s in slots:
+        if getattr(s, "mapping", None) is None:
+            continue
+        if getattr(s, "semantic_type", None) == "DEFAULT_FILTER":
+            continue
+        if str(getattr(s, "status", "") or "").upper() in STRONG_STATUSES:
+            return True
+    return False
+
+
 def classify(question: str, llm=None, *, has_context: bool = False,
              connected: Optional[Iterable[str]] = None) -> Scope:
     """Mesajın niyeti ve konusu.

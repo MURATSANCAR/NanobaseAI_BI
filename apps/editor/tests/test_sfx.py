@@ -315,3 +315,25 @@ def test_overview_and_kunye(job, pool):
     rows = sfx.kunye_rows(job)
     assert rows[0][0] == "Ses efektleri" and "Kenney" in rows[0][1]
     assert ("Ses efekti kaynağı", "«ordek» — biri, CC BY 3.0") in rows
+
+
+# ------------------------------------------------------------------ 2026-09-28 tam kitap dinlemesi
+def test_sound_hints_quote_diye_and_stretched_words():
+    t = "Top “Pat!” diye yere düştü. Güüüümmmm! Kedi “miyav” dedi."
+    u = [N.Unit("b1", "para", None, "anlatici-kadin", t, N.read(t))]
+    h = sfx.sound_hints(u)
+    assert "Pat" in h and "Güüüümmmm" in h and "miyav" in h
+
+
+@pytest.mark.skipif(not FFMPEG, reason="ffmpeg yok")
+def test_render_keeps_effect_tail_after_narration_ends(tmp_path):
+    nar, fx = tmp_path / "n.wav", tmp_path / "f.wav"
+    _tone(nar, 2.0, 200)
+    _tone(fx, 3.0, 600)
+    subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", str(nar), "-c:a", "libmp3lame", str(tmp_path / "n.mp3")],
+                   check=True)
+    out = tmp_path / "o.mp3"
+    r = sfx.render(tmp_path / "n.mp3", 2.0, [{"file": str(fx), "start": 1.5, "length": 3.0, "gain_db": 0.0}], None, out)
+    got = float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", str(out)],
+                               capture_output=True, text=True, check=True).stdout)
+    assert r["duration"] == 4.5 and got >= 4.4                         # efekt anlatımdan sonra 2,5 sn daha çalar

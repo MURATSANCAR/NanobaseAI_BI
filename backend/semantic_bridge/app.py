@@ -928,7 +928,8 @@ class Runtime:
         # 2026-09-28: kapsam şirketin bütün modülleri. Sınıflandırıcı ret yalnız kimlik ve şirket dışı
         # sohbette verir; şirket sorusunun konusu sohbete verisi bağlanmamış bir alansa tahmin yerine
         # «henüz veri bağlı değil» denir (chat_topics.json, yönetim ayarı CHAT_CONNECTED_TOPICS).
-        if not any(slot.mapping is not None for slot in sq.slots):
+        # Güçlü kanıt = sertifikalı kavram; kelime içi tahmin ya da veride geçen bir değer tek başına iş sorusu saymaz.
+        if not chat_scope.has_business_evidence(sq.slots):
             scope = chat_scope.classify(question, self.llm_for("chat"),
                                         has_context=bool(self.thread_plans.get(thread_id)))
             if scope.is_intro:

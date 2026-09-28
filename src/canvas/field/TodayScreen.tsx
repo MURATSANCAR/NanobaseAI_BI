@@ -1,10 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bell, CalendarPlus, NotebookPen, Search, Sparkles } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, btnGhost, errText, field } from '../admin/ui';
-import { trFold } from '../nav/navModel';
+import { useDebounced } from '../editorial/kit';
 import { fieldApi, fmtDay, fmtMoney, fmtPct, fmtShort, type FieldMeta, type Visit } from './api';
 import { CustomerRow, Empty, Stat } from './parts';
 import VisitNoteSheet from './VisitNoteSheet';
@@ -19,15 +19,19 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
   const [q, setQ] = useState('');
   const [shown, setShown] = useState(STEP);
   const [sheet, setSheet] = useState<null | { code: string; unvan: string | null; mode: 'not' | 'plan'; visit?: Visit | null }>(null);
-  const today = useQuery({ queryKey: ['field', 'today', temsilci], queryFn: () => fieldApi.today(temsilci || undefined), enabled: ENGINE_ENABLED });
+  // Yönetici kapsamında liste bütün Logo carisidir (yüz binlerce): sunucu sıralar, arar ve istenen kadarını gönderir.
+  const dq = useDebounced(q.trim(), 250);
+  const today = useQuery({
+    queryKey: ['field', 'today', temsilci, dq, shown],
+    queryFn: () => fieldApi.today({ temsilci: temsilci || undefined, q: dq || undefined, limit: shown }),
+    enabled: ENGINE_ENABLED,
+    placeholderData: keepPreviousData,
+  });
   const seen = useMutation({ mutationFn: fieldApi.seen, onSuccess: () => void qc.invalidateQueries({ queryKey: ['field', 'today'] }) });
   const t = today.data;
 
-  const items = useMemo(() => {
-    const all = t?.items ?? [];
-    const f = trFold(q.trim());
-    return f ? all.filter((c) => trFold(`${c.unvan ?? ''} ${c.code} ${c.il ?? ''}`).includes(f)) : all;
-  }, [t, q]);
+  const items = t?.items ?? [];
+  const total = t?.total ?? items.length;
   const unseen = (t?.events ?? []).filter((e) => !e.goruldu);
   const canNote = meta.me.canNote;
 
@@ -112,7 +116,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
       <section aria-label="Öncelik listesi" className="flex flex-col gap-2">
         <div className="flex flex-wrap items-end justify-between gap-2 px-1">
           <div>
-            <h2 className="text-[15px] font-extrabold tracking-tight">Öncelik sırası ({items.length})</h2>
+            <h2 className="text-[15px] font-extrabold tracking-tight">Öncelik sırası ({total})</h2>
             <p className="text-[11.5px] text-canvas-muted">
               Veri {fmtDay(t.asof)} sabahı · Logo {fmtDay(t.dataEnd)} tarihine kadar
             </p>
@@ -133,7 +137,7 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
           </Empty>
         ) : (
           <ul className="flex flex-col gap-2">
-            {items.slice(0, shown).map((c) => (
+            {items.map((c) => (
               <CustomerRow
                 key={c.code}
                 c={c}
@@ -155,9 +159,14 @@ export default function TodayTab({ meta, temsilci }: { meta: FieldMeta; temsilci
             ))}
           </ul>
         )}
-        {items.length > shown && (
-          <button type="button" className={`${btnGhost} w-full`} onClick={() => setShown((s) => s + STEP)}>
-            {Math.min(STEP, items.length - shown)} müşteri daha göster (kalan {items.length - shown})
+        {total > items.length && (
+          <button
+            type="button"
+            className={`${btnGhost} w-full`}
+            disabled={today.isFetching}
+            onClick={() => setShown(items.length + STEP)}
+          >
+            {today.isFetching ? 'Yükleniyor…' : `${Math.min(STEP, total - items.length)} müşteri daha göster (kalan ${total - items.length})`}
           </button>
         )}
       </section>

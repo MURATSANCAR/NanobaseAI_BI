@@ -867,15 +867,22 @@ def _row(r: Any) -> dict[str, Any]:
     return dict(r._mapping)
 
 
-def portfolio_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str]) -> list[dict[str, Any]]:
-    """Portföy + sinyaller. `owner` None = herkes (yetkili)."""
+def portfolio_rows(engine: sa.engine.Engine, tenant: str, owner: Optional[str],
+                   codes: Optional[set[str]] = None) -> list[dict[str, Any]]:
+    """Portföy + sinyaller. `owner` None = herkes (yetkili); `codes` verilirse yalnız o cariler."""
     j = PORTFOLIO.join(SIGNALS, sa.and_(SIGNALS.c.tenant_id == PORTFOLIO.c.tenant_id, SIGNALS.c.logo_code == PORTFOLIO.c.logo_code))
     q = sa.select(PORTFOLIO, *[c for c in SIGNALS.c if c.name not in ("tenant_id", "logo_code", "logo_clientref", "asof")]).select_from(j) \
         .where(PORTFOLIO.c.tenant_id == tenant)
     if owner is not None:
         q = q.where(PORTFOLIO.c.ad_hesap == owner)
+    if codes is None:
+        with engine.connect() as c:
+            return [_row(r) for r in c.execute(q)]
+    todo, out = sorted(codes), []
     with engine.connect() as c:
-        return [_row(r) for r in c.execute(q)]
+        for i in range(0, len(todo), 5000):
+            out += [_row(r) for r in c.execute(q.where(PORTFOLIO.c.logo_code.in_(todo[i:i + 5000])))]
+    return out
 
 
 def one(engine: sa.engine.Engine, tenant: str, code: str) -> Optional[dict[str, Any]]:
@@ -1116,25 +1123,41 @@ def rejected_by_account(collections: list[dict[str, Any]], now: date, days: int 
     return out
 
 
-def ranked(rows: list[dict[str, Any]], *, promises: dict[str, dict[str, Any]], rejected: dict[str, int],
-           boosts: dict[str, dict[str, Any]], last_visits: dict[str, str], cycle: int, now: date) -> list[dict[str, Any]]:
-    """Satırlara puan ve gerekçe çipi; gecikme sırası temsilci portföyü içinde. Büyükten küçüğe."""
+def overdue_ranks(rows: list[dict[str, Any]]) -> dict[str, float]:
+    """Cari → gecikme sırası (0–1), temsilci portföyü içinde."""
     by_rep: dict[str, dict[str, float]] = {}
     for r in rows:
         by_rep.setdefault(r.get("ad_hesap") or "", {})[r["logo_code"]] = weighted_overdue(r)
     rank: dict[str, float] = {}
     for vals in by_rep.values():
         rank.update(pct_ranks(vals))
-    out = []
-    for r in rows:
-        code = r["logo_code"]
-        last = max([x for x in (last_visits.get(code), r.get("saha_son_ziyaret")) if x], default=None)
-        pts, chips = score(r, {"gecikmeRank": rank.get(code, 0.0), "soz": promises.get(code),
-                               "red": rejected.get(r.get("crm_account_id") or "", 0),
-                               "mudur": (boosts.get(code) or {}).get("neden"), "sonZiyaret": last,
-                               "today": now, "visitCycleDays": cycle})
-        out.append({**r, "puan": pts, "gerekce": chips, "sonZiyaret": last})
-    out.sort(key=lambda x: (-x["puan"], -num(x.get("vadesi_gecmis")), x.get("unvan") or ""))
+    return rank
+
+
+def scored(r: dict[str, Any], rank: dict[str, float], *, promises: dict[str, dict[str, Any]], rejected: dict[str, int],
+           boosts: dict[str, dict[str, Any]], last_visits: dict[str, str], cycle: int, now: date) -> dict[str, Any]:
+    code = r["logo_code"]
+    last = max([x for x in (last_visits.get(code), r.get("saha_son_ziyaret")) if x], default=None)
+    pts, chips = score(r, {"gecikmeRank": rank.get(code, 0.0), "soz": promises.get(code),
+                           "red": rejected.get(r.get("crm_account_id") or "", 0),
+                           "mudur": (boosts.get(code) or {}).get("neden"), "sonZiyaret": last,
+                           "today": now, "visitCycleDays": cycle})
+    return {**r, "puan": pts, "gerekce": chips, "sonZiyaret": last}
+
+
+def card_order(c: dict[str, Any]) -> tuple:
+    """`customer_card` listesinin sırası; `ranked` ile aynı."""
+    return (-c["puan"], -num(c.get("vadesiGecmis")), c.get("unvan") or "", c["code"])
+
+
+def ranked(rows: list[dict[str, Any]], *, promises: dict[str, dict[str, Any]], rejected: dict[str, int],
+           boosts: dict[str, dict[str, Any]], last_visits: dict[str, str], cycle: int, now: date) -> list[dict[str, Any]]:
+    """Satırlara puan ve gerekçe çipi; gecikme sırası temsilci portföyü içinde. Büyükten küçüğe."""
+    rank = overdue_ranks(rows)
+    out = [scored(r, rank, promises=promises, rejected=rejected, boosts=boosts, last_visits=last_visits, cycle=cycle, now=now)
+           for r in rows]
+    # Son anahtar cari kodu: aynı puan, gecikme ve unvanlı carilerin sırası okumadan okumaya değişmesin.
+    out.sort(key=lambda x: (-x["puan"], -num(x.get("vadesi_gecmis")), x.get("unvan") or "", x["logo_code"]))
     return out
 
 

@@ -1,5 +1,116 @@
 # Geliştirme Günlüğü
 
+## 2026-09-28 — M4 kaynak okuma gerçek PDF/DOCX ile sınandı; PDF'te 5 kusur düzeltildi
+
+- **Neden:** kullanıcı «çeviri için PDF, DOCX yükleyebilecek miyim» diye sordu; gerçek sunucuda yalnız TXT denenmişti. Test sunucusundaki gerçek belgelerle (Timaş kitabı yok; kitap PDF'leri yalnız GPU'daki editör deposunda) okuyucu bellekte koşturuldu, DB'ye yazılmadı.
+- **DOCX** (İngilizce iş analizi, 39 KB): Word başlık stilleri 33 bölüm, 230 segment, sorun yok.
+- **Metin PDF'i** (Türkçe teknik şartname, 115 sayfa): (1) her sayfadaki uzun üst bilgi («… Şartnamesi / 2025 23/115») ve belge kimliği şeridi 60 karakterden uzun olduğu için tekrar süzgecine girmiyor, 377 kelimelik anlamsız segment oluşuyordu → sayfaların %30'undan fazlasında geçen satır uzunluğundan bağımsız atılır; (2) sayfa sonunda yarım kalan paragraf sonraki sayfanın numaralı başlığını yutuyordu (1–4, 9, 10, 12, 13. başlıklar kaçıyordu) → başlık satırı yarım paragrafı kapatır; (3) içindekiler satırları nokta dizisiyle (çoğu kez sayfa numarası düşmüş) birbirine bağlanıyordu → içindekiler satırı tek başına kalır, nokta dizisi ve numara atılır, ardından gelen «METİN 66» satırı da içindekiler sayılır; (4) cümle bölücü «1. KISALTMALAR»daki «1.»i cümle sonu sanıyordu (58 tek kelimelik segment) → cümle başındaki liste numarası bölünmez; tek başına satıra düşmüş numara sonraki satırla birleşir; (5) sonu cümle noktalamasıyla biten numaralı madde başlık sayılmaz.
+- **Taranmış PDF** (235 sayfa, metin katmanı yok): artık «Bu PDF'te seçilebilir metin yok (taranmış sayfa görüntüsü)…» — karakter tanıma yok.
+- **Sonuç (aynı PDF):** tek kelimelik segment 58 → 2, üst bilgi/kimlik şeridi 0, içindekiler tek satırlı. Kurallar genel (belgeye özel kural yok); testlere gerçek kalıplar eklendi. Sunucu sahnesinde çeviri testleri 46/46. Gerçek bir Timaş kitabı PDF'iyle henüz denenmedi.
+
+## 2026-09-28 (08:10) — Sesli okuma: tam kitap dinlemesindeki robotik yerler ve efekt hataları düzeltildi
+
+- **Neden:** «Dünyanın En Korkak Hayvanı» (iş `2026092803385843f032`, 17 sayfa, 1.392 kelime) iki sesle baştan sona
+  okutulup dinlendi; kullanıcı «seslerimiz çok robotik» dedi. Sorunların bir kısmı modelden değil bizim kurallarımızdandı.
+- **Vurgu:** kelimeden önceki işaret «...» → virgül (durak 0,8–1,5 sn'ye uzuyor, 45 yerde takılma gibi duyuluyordu);
+  birleşik fiilin yardımcısı («yardım etmedi») ve BÜYÜK HARF başlık («BİLİM VOMBATI AŞKINA») vurgulanmaz; ZEKİ AI
+  önerisinde cümle başına tek vurgu (editör işareti sınırsız).
+- **Cümle sınırı:** ardından küçük harfle süren kelime cümleyi bitirmez (`narration.sentence_mark`: «“Pat!” diye»,
+  «“Farece…” dedi» kopmuyor); «…fısıldıyordu: “Kaç!”» → anlatıcı girişi ile konuşma ayrı parça (`PAUSE[":"]` 300 ms).
+  İfade işaretleri cümle anahtarına bağlı: bu sınır değişikliği olan birimlerde eski işaret düşer (nötr), öneri yeniden koşar.
+- **İfade:** konuşmalı cümlede ifade yalnız tırnak içine (`expression._quoted`; fısıltı anlatıcıya geçiyordu); 5
+  kelimeden kısa parçada hızlandırma yok («O da ne!» 0,46 sn'de bitiyordu).
+- **Efekt:** kısma anahtarı (anlatım) efekt sonuna kadar sessizlikle uzatılır (`apad`); kükreme/kahkaha ~2,1 sn erken
+  kesiliyordu (karışım sürümü 2 → eski karışımlar yeniden yapılır). İpucu: tırnak + «diye/dedi» ve harf uzatması
+  («Güüüümmmm»); seçim istemi (`sfx.pick` 2) kaynak + eylem birlikte tutmalı (gülen aslana kedi mırlaması seçilmişti).
+- **Ses tahmini:** `guess_voice` karşılaştırma öbeğini atar («larger than the father»), tarifteki cinsiyete uyar;
+  dişi vombat «Annesi» erkek sesi alıyordu.
+- Testler: editör tam set 598 geçti (GPU, stüdyo imajı). main `ae0277a2`; GPU'da dokuz servis `0.15.9-ae0277a2`.
+- **Gerçek insan sesi:** kayıt rehberi + okuma metni `docs/analiz/izinli-ses-kayit-rehberi.md` (izin belgesi, kayıt
+  koşulları, ilk 12 sn'nin tarzı belirlediği).
+## 2026-09-28 (08:10) — Ölçümde düşen üç ekran: /saha 109 MB liste, /uretim 43 sn soğuk okuma, kapak görselleri 429
+
+- **Ölçüm:** 72 menü ekranının Playwright taraması (06:44–06:48) üç ekranda istek düşürdü. Test sunucusunda gerçek `timasai`
+  kısa oturumuyla portal üzerinden yeniden üretildi; nginx erişim günlüğü ve köprü günlüğü okundu.
+- **/saha — `field/today`:** hata değil boyut. Yönetici (herkesinki) kapsamında portföy bütün Logo carisi (248.351); uç hepsini
+  sıralayıp tek JSON'da gönderiyordu: 200, **109,5 MB, 22,7 sn** (ölçüm ~29 sn'de vazgeçti → nginx 499). Süre: DB okuma 5,4 ·
+  puan 5,2 · kart 3,2 · JSON kodlama 17 sn. Ekran zaten 40'ar gösterip tarayıcıda arıyordu. Düzeltme: sıralama kapsam başına
+  bellekte (anahtar: gece turu `_at`, gün, ziyaret/söz/öncelik/red girdilerinin özeti — biri değişirse yeniden hesaplanır,
+  kapsam başına ayrı kilit); `q`/`offset`/`limit` ile arama ve sayfa sunucuda, `total` hepsini sayar, «daha göster» sonrakini
+  getirir (tavan yok). KPI yine bütün portföyden. Önbellek tüm kapsam için ~280 MB.
+- **/uretim — `production/meta|cards|overview`:** üçü de 200 ama **43–45 sn** (meta 1,7 KB). CRM+Logo anlık görüntüsü
+  (CRM 10 sn, Logo 33 sn) 5 dk bellekte tutuluyordu; boşken üç uç aynı kilitte bekliyor, köprü 06:33–07:27 arasında başka
+  oturumlarca 8 kez yeniden başlatıldığı için önbellek sürekli boşalıyordu. Düzeltme: son okuma diskte
+  (`PRODUCTION_CACHE_DIR`, vars. `/data/nanobaseai/bi/var/production/snapshot.pkl`; VM'de `bi_var` biriminde), istek onu
+  hemen alır, 5 dk'dan eskiyse yenisi arka planda tek iş parçacığıyla okunur; kayıt okuma sorgularının özetiyle (`SHAPE`)
+  ve geçmiş penceresiyle eşleşmezse okunmaz. `meta` matbaa listesi için hiç beklemez. Yalnız ilk kurulumda ve «Verileri
+  yenile»de istek kaynağı bekler (ön yüz 180 sn tanıyor).
+- **Kapak arşivi görselleri:** tek açılışta 40 görsel **429** (genel `/timas/api/` sınırı 120/dk, 30 anlık; sayfa 60 kapak
+  istiyor), kalan 19'u ölçüm sayfadan çıkınca 499. Köprü tarafı sağlam (hepsi 200). Düzeltme: `deploy/nanobase-direct/
+  add-cover-image-limit.py` kapak görsel ucunu stüdyo görsel bölgesine (`timas_studio_img`, 600/dk, 120 anlık) alır; VM
+  şablonu `infra/docker/bi/web.default.conf.template` aynı blokla.
+- **Kurulum 1 (main `2207978b`, test sunucusu 07:47):** köprüye 2 dosya (sunucu md5'i eski main'le aynıydı), ön yüze 2 dosya
+  (sunucu `src` ağacı main'in gerisinde — başka oturumların kurulmamış işi — o yüzden yalnız bu dosyalar; kendi çıktı
+  klasörüne derlenip `cockpit/dist`e), nginx betiği uygulandı, köprü yeniden başlatıldı; `._*` 0. Gerçek oturumla portal:
+  üretim soğuk 31 sn → sonra **0,07 sn**, `meta` soğukken 0,4 sn, disk kaydı 7,9 MB, sayılar tutarlı (5.599 / 589 açık /
+  186 geciken). Saha: sayfa 32 KB (109 MB yerine), sıcak **0,05 sn**, arama 0,4 sn, `offset` sayfaları ardışık, KPI eskisiyle
+  birebir; ama soğuk ilk istek hâlâ 22 sn.
+- **Tur 2 (saha soğuk yol):** sıra iki katmana ayrıldı. Temel (gece turu + gün) girdisiz puanlanır; ziyaret/söz/öncelik/red
+  değişince yalnız girdisi olan cariler DB'den okunup yeniden puanlanır (`F.overdue_ranks`, `F.scored`, `F.card_order`,
+  `portfolio_rows(codes=…)`). Yönetici kapsamı köprü açılışında (20 sn sonra) ve gece turu / elle yenilemeden sonra arka
+  planda hazırlanır. Eşdeğerlik gerçek DB'de sınandı (200 + 50 gerçek CRM hesabına red girdisi): eski `F.ranked` ile
+  kartlar ve sıra birebir; girdi değişiminde 15 sn → 1,3 sn. Sınarken bulunan: eşit anahtarlı (puan, gecikme, unvan) 15.473
+  satırın sırası okumadan okumaya değişiyordu (sorguda ORDER BY yok) → son anahtar cari kodu.
+- **Kurulum 2 (main `afd2b99d`, 08:00) ve bulunan hata:** tur 2'nin «açılışta 20 sn sonra ön hazırlık» adımı
+  `deps["engine"]()` → `rt()` çağırıyordu; çalışma ortamı henüz kurulmamışken `rt()` onu **ikinci kez kurdu** (günlükte iki
+  «knowledge pack» uyarısı, 07:58:54 ve 07:59:42; açılış 40 → 110 sn). Aynı anda istek ve ön hazırlık CRM tahsilat okumasını
+  ayrı ayrı yaptı, ilk saha isteği 34,6 sn sürdü; açılıştaki yük yüzünden üretim de disk kaydından 4–11 sn'de döndü.
+  Düzeltme (tur 3): kayıt anında ön hazırlık yok; yalnız istek içinden — zamanlayıcının hafif (15 dk) ve gece turundan,
+  elle yenilemeden sonra — başlar. Kural: modül `register` içinde `deps["engine"]()`/`rt()` çağıran iş parçacığı açılmaz.
+- Test oturumu satırları ve geçici klasör silindi; yazma ucu çağrılmadı.
+
+## 2026-09-28 (08:00) — M29–M32 ve sohbet kapsamı kabulü: M31 okul kartı 502 ve şirket dışı soru kaçağı bulundu, düzeltildi
+
+- **Durum:** VM'de `e543a122` (başka oturumun 05:38 kurulumu) M29–M32'yi ve sohbet kapsamını zaten içeriyordu; test sunucusunda
+  aynı gün başka bir oturum da kabul koştu (06:40 girişi). Bu tur, oradaki açık kalanların nedenini buldu ve düzeltti.
+  Uzun koşular için aday kodla yan köprü (127.0.0.1:8797, çağıran anahtarsız kopya ortam dosyası, iş bitince silindi):
+  canlı köprü 05:40–07:00 arasında başka oturumlarca defalarca yeniden başlatıldı.
+- **M29 İlk dağılım 34/34** (gece işi 59 sn; 1.111 kitap). Test planı, 545 satır, 6 değişiklik kaydı silindi; zamanlayıcı açıldı.
+- **M30 Saha: okuma 6/6.** «Portföy cari sayısı» ilk koşuda kaldı (API 840 > CRM sahibi 749): kabul betiği «BMT İl» carisinde il
+  temsilcisi boşsa sahibine düşme kuralını (kodda yazılı) saymıyordu — 112 cari bu yoldan geliyor, 840 ≤ 749+112. Betik düzeltildi.
+  Yazma uçları geçersiz gövdede 422/404 doğru; 403 beklenen iki madde yönetici olmayan hesap ister (doğrulanamadı).
+- **M31 Okul — hata bulundu ve düzeltildi (`0a405e24`):** okul kartı ve dönem raporu her istekte 502. Neden: M30 ile ortak
+  `semantic_saha_ziyaret` tablosunu M31 kendi kopyasıyla tanımlıyordu (`not`, tarih tipleri, `olusturan` yok); tabloyu M30 açtığı
+  için canlıda kolon `notu`, zamanlar metin. M31 artık `field_sales.VISITS`'i kullanır, sınırda çevirir; regresyon testi
+  (önce M30'un açtığı tabloya M31 ziyareti yazılır, geri okunur). Test sunucusuna kuruldu (md5 önceki main = sunucu). Kabul
+  **5 geçti, 2 doğrulanamadı**: il × kademe 65.478, öğrenci sayısı, dönem raporu 181/116/475, katalog 991 kitap stok+fiyat, bayi
+  eşleşmesi birebir; geçmiş ziyaret — CRM'de okula bağlı ziyaret kaydı hiç yok (new_etkinlikBase 57 bin kayıt, `new_ZiyaretYeri`
+  boş); kapsam 403 — temsilci oturumu yok. Gerçek DB'de tek ziyaret yazıldı → kartta not/tarihle okundu → silindi.
+- **M32 Kurumsal 38/40:** 1 fark (bir bayinin 90 günlük B2B sipariş sayısı 92/91) kayan pencereden — gece okuması anına sabitlenince
+  referans da 92; «teklif için kitap» doğrulanamadı (M9 maliyeti bağlı değil). Test fırsatı ve değişiklik kaydı silindi.
+- **Sohbet kapsamı — hata bulundu ve düzeltildi:** «Mercimek çorbası tarifi ver», «Türkiye'nin başkenti neresi?», «Bana bir aşk şiiri
+  yaz» veri hattına gidiyordu (çorba tarifi SQL'e). Model üçüne de OFFTOPIC diyor (kapıdan doğrudan ölçüldü); sınıflandırıcı hiç
+  çağrılmıyordu çünkü tek bir zayıf yerleşim («tarifi» → «renk tarif» INFERRED, «TÜRKİYE» PROFILE) iş sorusu kanıtı sayılıyordu.
+  Artık kanıt sertifikalı/açık kavram (varsayılan filtre hariç): `chat_scope.has_business_evidence`. Etkisi ölçüldü: set100'de yalnız
+  2 soru yeni olarak sınıflandırıcıya gider, ikisi DATA (reddedilen iş sorusu 0); sınırdaki iş soruları (Aşk romanları, İstanbul
+  bayileri, Nutuk…) DATA/UNKNOWN. Kabul düzeltmeyle yeniden (aday yan köprü): **79/85** (önce 75) — şirket dışı 6/6, kimlik 26/26,
+  teknoloji adı 0, reddedilen iş sorusu 0; 4 «bağlı olmayan konuda SQL» elle incelenecek. Sorgu kaydı 85 + yarım koşudan 36 satır silindi.
+- **Sohbet kabulünde kalan (kapsam dışı, veri hattı):** «2026 toptan satış faturası sayısı» fatura yerine satır sayıyor (1.113.232 /
+  21.009); «2026 net ciro» 837,9 Mn — referans 10 Eylül'ün fatura toplamı (848,1 Mn), bugünkü tanım faturalı satır (M46 ile aynı);
+  referans betiği bayat. Çözücü hızlı kapısı: 9 soru 21.09 temel çizgisinden farklı — sohbet commit'i çözücüye dokunmuyor, fark
+  K1–K5 ve katalog (70554→70581) kaynaklı.
+- **Test sunucusu:** M31 düzeltmesi kuruldu (okul kartı ve dönem raporu canlıda 200). Sohbet düzeltmesi bu girişle birlikte kuruluyor. **VM:** kurulmadı — VM `e543a122`'de; bu iki düzeltmeyi taşıyacak sonraki `main` noktası başka oturumların henüz VM kabulü yapılmamış işlerini de içeriyor.
+
+## 2026-09-28 — M4 çeviri işi → M8 serbest çalışan işi ve hakediş (dalda, sunucuda doğrulanmadı)
+## 2026-09-28 (07:45) — İstek fırtınası: rota ve oturum kapısı hatalı sorgu yeniden sorulurken ekranı söküyordu
+
+- **Belirti:** 72 menü ekranının headless ölçümünde (1440 px, timasai) Gelen bağlantılar açıkken 7.521, Panolar'da 28 sn'de 1.224 API isteği; nginx `timas_api` (120/dk, burst 30) 429'a düştü, köprü yüklendi.
+- **Neden ekranların kendi kodu değil, kapı:** köprü 502 verince `access/me` verisiz hatada kalıyor. TanStack v5'te böyle sorgu yeniden sorulurken `pending`e döner (hata silinir). `PageGate` `usePageAccess() === null` iken `null`, `RequireTimasSession` `isLoading` iken «Yükleniyor» çiziyor → ekran sökülüyor; hata gelince ekran yeniden kuruluyor, kabuğun/`useCan`'ın yeni gözlemcisi hatalı sorguyu yine sorduruyor → döngü. Her turda ekranın kendi hatalı sorguları da (backlinks, board, display-words) yeniden gidiyordu.
+- **Düzeltme:** `usePageAccess` null'u yalnız ilk cevaptan önce verir (`errorUpdateCount`), bir kez hata almışsa `'all'` kalır; `RequireTimasSession` «Yükleniyor»u yalnız ilk cevaptan önce gösterir, «oturum yok» kararını son sonuçtan tutar. Panolar'ın `useUser`'ı aynı `['timas-session']` anahtarına ikinci bir sorgu işleviyle (her hatayı `EngineAuthError` sayan) bağlanıyordu; `useTimasSession`'a çevrildi.
+- **Önce (canlı `index-Cw7D4qZS.js`, test sunucusunda Playwright, timasai 15 dk oturum, 60 sn):** normal — Gelen bağlantılar 19, Panolar 7.221 (aynı IP'den koşan başka bir ölçüm `timas_api` bölgesini doldurmuştu; ilk 502 oradan); köprü düşmüş (tarayıcı içinde her `/timas/api/` 502) — Gelen bağlantılar 6.885, Panolar 7.221. Her turda `access/me` + `admin/me` birlikte tekrarlanıyor (kapı döngüsünün imzası). Oturum satırı silindi (1).
+- **Sonra (aday derleme `index-DwktNFn0.js` = main + düzeltme; sunucuya kurulmadı — test sunucusunda Playwright yalnız statik dosyaları `/tmp/claude-storm/cand/dist`'ten verdi, API/giriş gerçek köprüye, timasai 15 dk oturum, 60 sn):** normal — Gelen bağlantılar 27 (o dakikada aynı IP'den başka oturumun ölçümü 925 istek atıyordu, hepsi 429), Panolar 22; köprü düşmüş — Gelen bağlantılar 27, Panolar 29. Çerezsiz açılışta iki ekranda da giriş formu, 20 sn'de 1 API + 1 giriş isteği. Oturum satırı silindi (1); yazma yapılmadı.
+- **Kalan:** main'e taşıma (merge/push izin sınıflandırıcısına takıldı, kullanıcıda), sonra test sunucusuna kurulum ve aynı ölçümün canlı derlemeyle tekrarı; VM'e test sunucusu doğrulamasından sonra.
+
 ## 2026-09-28 (06:45) — Kapak arşivi kuruldu: GPU stüdyo + test sunucusu (main `ddd33e68`); ilk doldurma; gece beslemesinde ASCII başlık hatası
 
 - **GPU:** `releases/ddd33e68` (`._*` 0), `editor-py:0.15.9-ddd33e68` + `editor-py-studio:0.15.9-ddd33e68`; göç `030_cover_library` uygulandı; Temporal'da koşan iş 0 iken yalnız `studio` ve `studio-worker` bu imajla yeniden kuruldu (compose servis adları `studio`/`studio-worker`; `secrets/cards.env` root'a ait olduğundan compose `sudo env …` ile — komutu kullanıcı koştu, Claude'un denemesi izin denetimine takıldı). Kaplarda `EDITOR_CODE_VERSION=0.15.9-ddd33e68`, `._*` 0; arşiv uçları anahtarsız 401, olmayan uç 404. Öteki servisler `68a1d411`'de (değişiklik yalnız stüdyo kodunda). Bu imaj main'deki M19 pazarlama stüdyo kodunu da canlıya aldı. GPU nginx (`add-studio-routes.py`, VM yolu) henüz koşmadı.
@@ -94,7 +205,11 @@
 - **TMX/TBX** (`editorial_translation_io.py`, `MemoryBank.tsx`, «Çeviri belleği» sekmesi): TMX 1.4b içe/dışa (bölgesel dil kodu temel koda iner, çift yazılmaz, `semantic_translation_tm`), çeviri belleği araması dış belleği «Dış bellek: <dosya>» etiketiyle gösterir; TBX v2/v3 içe/dışa (tercih edilen + kabul edilenler «|», kullanımdan kalkan → yasak). Güvenlik kararı: iç tanımlı DOCTYPE ve her ENTITY reddedilir; iç tanımsız `<!DOCTYPE tmx SYSTEM "tmx14.dtd">` satırı okunmadan atılır (dış DTD açılmaz; tam red OmegaT dosyalarını kullanılamaz yapardı).
 - **ZEKİ kalite tahmini** (`editorial_translation_qe.py`, `qe.tsx`): çevrilmiş segmente 0–100 puan, 85 altıysa kategori + çeviriden birebir alıntılı gerekçe (alıntı çeviride yoksa gerekçe atılır, puan kalır); kaynak+hedef değişince puan «eski». Satırda rozet, «ZEKİ şüpheli» süzgeci, kalite raporunda dağılım; her yerde «Tahmin · MQM değil». Başlatma: inceleyen, işi açan ya da `ceviri.yonet`.
 - **Sunucuda bulunan ve düzeltilen:** TMX/TBX uçlarında `Request` fonksiyon içinde içe aktarılıyordu (`from __future__ import annotations` → `request` sorgu parametresi sanıldı, 6 uç); çevirmen önerisinde ekran etiketi sözlük anahtarı olarak kullanılıyordu (`KeyError`).
-- **Doğrulama (test sunucusu, `/tmp/claude-m4` sahnesi, tek bağlantı):** arka uç 58/58 (çeviri, böl/birleştir, öneri, hakediş, TMX/TBX, kalite tahmini, yetki), `tsc` temiz, vitest 77/77, `vite build` temiz. Gerçek veritabanı ve gerçek modelle ekran kabulü `main`'e girip kurulunca yapılacak.
+- **Doğrulama (test sunucusu, `/tmp/claude-m4` sahnesi, tek bağlantı):** arka uç 58/58 (çeviri, böl/birleştir, öneri, hakediş, TMX/TBX, kalite tahmini, yetki), `tsc` temiz, vitest 77/77, `vite build` temiz. Gerçek veritabanı ve gerçek modelle ekran kabulü aşağıda.
+- **Kurulum (test sunucusu, main `e29b5e3e`):** 21 dosya md5 denetimiyle; ortak 4 dosya (`app.py`, `access.py`, `access_catalog.json`, `engine.ts`) sunucuda son 60 main commit'inin hiçbiriyle eşleşmiyordu (main'e girmemiş başka iş kurulu) → üstüne yazılmadı, M4 farkı üç yollu birleştirmeyle eklendi (çakışma 0). Köprüyü ben yeniden başlatmadım: M2'den pencere alındı ama başka bir oturum 07:40 ve 07:46'da zaten yeniden başlattı, M4 kodu o sırada yüklendi (yeni uçlar 401, olmayan 404). Ön yüz canlı ağaçtan derlendi (`index-DiH9weOx.js`).
+- **Kabul (kullanıcının açtığı AD oturumu `timasai`, gerçek PostgreSQL, gerçek model):** böl/birleştir — bölünmüş diyalog birleşti ve doğru yerden yeniden bölündü, numaralar bitişik (17→15→16), başlık ve paragraf sınırında gerekçeli red. Çevirmen önerisi 200, tek aday (M8'de «Çeviri» rolünde kimse yok), 5 sinyal + sıralama cümlesi. TMX: `en-US`/`tr-TR` → `en`/`tr`, ikinci yükleme 2 çift, iç DOCTYPE/ENTITY 400, çeviri belleği «Dış bellek: m4-kabul.tmx» %100; TBX: tercih edilen karşılık + kullanımdan kalkan → yasak; iki dışa aktarım 200. ZEKİ kalite tahmini 6 segment 3 sn: bilerek alakasız yazılan çeviri 0 / anlam / kritik; ayrıca kabul sırasında numara kayması yüzünden yanlış cümleye düşen 3 çeviriyi de 0 ile yakaladı; doğru 2 çeviri 85–100; alıntılar çeviride birebir. Çeviri masasında «ZEKİ 0» rozeti, böl/birleştir düğmeleri, 390–511 px'te taşma yok. Hakediş: okuma ucu 200, panel çiziliyor.
+- **Hakediş yazma akışı (sonradan, aynı oturumla, gerçek DB):** e-postasız test kişisi (M8, rol «Çeviri», 0,50 TL/kelime) + 5 segmentlik iş (40 kelime). Bağ → iş paketi (40 kelime, M8 görevi) → 3 segment onaylıyken aktarım: 24 kelime = 12 TL, ayrı görev «1–24. kelime» açıldı, teslim tutanağıyla kabul edildi; aynı aktarım tekrar: 0; kalan 2 segment onaylanınca yalnız yeni 16 kelime = 8 TL; aktarılan toplam 40. M8'de doğrudan DB: 2 görev «onaylandı», birim fiyat 0,50, 2 teslim dosyası, 7 sistem mesajı, giden e-posta 0. Temizlik: çeviri işi uçla (bağ ve aktarım kayıtları iş silmeyle gitti); M8'de silme ucu olmadığından kişi, paket, 2 görev, 2 teslim, 7 mesaj kimlikleriyle (ad/bağ denetimli) DB'den, tutanak klasörleri diskten silindi; hepsi 0. Değişiklik kaydı satırları kural gereği kaldı.
+- **Temizlik:** iş, TBX terimi ve TMX kayıtları uygulamanın uçlarıyla silindi; doğrudan DB'de iş, segment, hata, olay, kalite tahmini, bağ, aktarım, dış bellek ve terim 0 (yan tabloları iş silme temizledi). Sunucudaki `/tmp/claude-m4*` klasörleri silindi. `timasai`'nin değişiklik kaydı satırları kural gereği kaldı.
 
 ## 2026-09-28 — M4 ZEKİ taslak kalitesi: ölçüm, üç geçişli hat, ikinci okuma kapalı
 
@@ -905,6 +1020,7 @@ Logo ile kabul aşağıdaki listeyle test sunucusunda koşulacak. Dalda (`worktr
 - **LLM kapısı girişi:** `backend/semantic_bridge/llm_openai.py` (OpenAI uyumlu `/api/v1/llm/openai/v1/{models,chat/completions}`; her çağrı `sl_llm_queue` kiralığı, köprünün modeli ve `LLM_EXTRA_BODY`, akış aynen, kiralık her durumda bırakılır; 6 test + kapı/iş testleri 38/38). nginx `/destek-llm/v1/` (Bearer `/etc/nanobase/destek-llm.key`, çağıran jetonu nginx'te; `snippets/destek-llm.conf`, portal bloğunda gpu-llm'in yanında). **Dikkat:** 03:34'te başka bir oturum main'deki `app.py`'yi (kayıt satırlarıyla) `llm_openai.py` olmadan kurmuştu; köprü o arada yeniden başlasaydı içe aktarma hatasıyla düşerdi. 05:40'ta dosya kondu (md5 main ile eş), içe aktarma denendi, köprü yeniden başlatıldı (health 200). Kabul: gerçek model 1,9 sn (bekleme 183 ms, önde 0), akış 7 parça, panelin ajan sorusu 8,2 sn ve 3 çağrının üçü kapıdan 200; Flow Model artık `https://portal.nanobase.ai/destek-llm/v1`.
 - **Portal oturumuyla otomatik giriş (kullanıcı isteği):** portal çerezi `Path=/timas/`, Destek `:8446` kökünde → çerezi göremez. Akış: Destek giriş sayfası → portal `/timas/auth/destek-sso?next=` (çerez gider; `:8446` ve `:443` aynı site sayılır, SameSite=Strict engel değil) → giriş servisi 60 sn'lik tek kullanımlık HMAC jeton → `nanobase_brand.sso.login` imza/süre/tek kullanım denetimi, kişi yoksa AD'den şifresiz açılır (`provision`) → oturum. Portal oturumu yoksa `/login?sso=0` (AD formu). Giriş servisi `/opt/timas-login/server.py` main ile eş (md5 `877758b9`), yeniden başlatıldı; 12/12 test. Uçtan uca (gerçek portal girişi `timasai`): jeton → `/helpdesk/tickets` 200, kullanıcı `timasai@timas.local`; aynı jeton ikinci kez, portal oturumsuz ve bozuk imza → AD formu. Temizlik: Destek'te kullanıcı/temsilci/kişi silindi (ilk denemede kullanıcı silme arka plandaki kişi işiyle çakıştı, ikinci denemede sırayla silindi), portal oturumum çıkışla kapandı. Tarayıcıda da doğrulandı (bölmede açık portal oturumu vardı → Destek kendiliğinden «Merhaba, timasai»).
 - **Canlı bildirim:** Helpdesk'in `socket.ts`'i standart dışı portta `http://…:9000`'e gidiyordu (karışık içerik, engelleniyordu) → sayfanın kökü (masaüstü gibi). Kurulum rehberi, «Başlarken», «Atla», «Daralt» gibi sabit İngilizce kütüphane metinleri frappe-ui yamasıyla Türkçe; «Recently Assigned Tickets», «My Feedback» görünüm adları çevrildi.
+- **Destek yapay zekâsı (kullanıcı isteği, 5 özellik):** `nanobase_brand/yz/` — sınıflama (yeni kayıtta arka planda; yalnız boş/varsayılan alan ve tanımlı değer), 3 satırlık özet, yanıt taslağı (bilgi bankası + çözülen kayıtlar, yanıt kutusuna hazır yanıt yoluyla; gönderen temsilci), çözülen kayıttan kişisel verisiz makale taslağı, hafta içi SLA riski ve pazartesi haftalık rapor (Not + yönetici e-postası). Temsilci ekranında kenar çubuğuna «NanobaseAI» bölümü. Bilgi bankası gömmesi BI'ın gömme servisi: kapıya `/embeddings` aktarıcısı eklendi (kiralıksız; istemcinin `encoding_format: null`'ı servisi 500'e düşürüyordu → null alanlar atılıyor). Kabul (gerçek model, deneme kaydı): özet 1,5 sn, yanıt taslağı 5,9 sn (bilgi bankası boşken söz vermeden bilgi istedi), makale 1,6 sn (kişisel veri yok), haftalık rapor 2,2 sn (1 SLA riski). Bulunan hatalar: (1) `html2text` v16'da `frappe.core.utils`'te — kanca modülü yüklenemiyor, **yeni kayıt açılamıyordu** (kurulum `ff0313ef`–`54129d14` arası); kanca ayrı ve korumalı modüle alındı, kayıt açılışı sınıflamaya bağlı değil. (2) Sınıflama kaydı kaydederken ekibin atama kuralı boş ekipte Helpdesk'in kendi IndexError'ına düştü → alanlar kancasız yazılıyor. (3) Test sitesinde giden e-posta hesabı yok: kayıt açılışındaki alındı e-postası hata verir (testte susturuldu), rapor Not olarak kalır. İkinci kabulde sınıflama da çalıştı (tür Incident, ekip Billing, duygu Öfkeli, gerekçe + geçmiş notu). (4) Özetin 2. satırı temsilci yanıtı yokken «iletişime geçildi» diye uydurdu → istem temsilci yanıtı sayısını verir, yoksa «Henüz yanıt verilmedi.» der. Deneme verisi silindi (3 kayıt, 2 makale, 2 not, geçmiş satırları; kalan yalnız karşılama kaydı).
 - **Açık:** müşteri VM'ine kurulmadı (VM'de giriş servisi ve Destek adresi farklı: `DESTEK_URL`); kapının yanıtındaki `model` alanı üst uçtaki adı taşıyor (panelde görünmüyor).
 ## 2026-09-28 — H1 Kategori ağacı kodlandı (dalda; DOĞRULANAMADI — sunucu kapalı)
 

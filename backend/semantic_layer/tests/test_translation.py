@@ -37,6 +37,8 @@ def test_sentences_respect_abbreviations_initials_and_decimals():
         "Hz. Muhammed geldi.", "Bkz. s. 12 ve vb. şeyler.", "Sonra gitti."]
     # Küçük harfle süren: bölünmez. Büyük/küçük harfi olmayan yazı: noktalamayla bölünür.
     assert T.split_sentences("He said no. and left.") == ["He said no. and left."]
+    assert T.split_sentences("1. KISALTMALAR VE TANIMLAR") == ["1. KISALTMALAR VE TANIMLAR"]
+    assert T.split_sentences("IV. Bölüm başlar. Sonra biter.") == ["IV. Bölüm başlar.", "Sonra biter."]
     assert len(T.split_sentences("ذهب إلى البيت. ثم نام؟ نعم.")) == 3
 
 
@@ -261,3 +263,32 @@ def test_delete_job_cleans_companion_tables(engine):
     T.delete_job(engine, TENANT, "editor", False, jid)
     with engine.connect() as c:
         assert [r[0] for r in c.execute(_sa.text("SELECT job_id FROM semantic_translation_links"))] == ["baska"]
+
+
+def test_pdf_running_heads_toc_headings_and_numbered_items():
+    """Gerçek şartname PDF'indeki kalıplar (2026-09-28): uzun üst bilgi ve belge kimliği şeridi her sayfada; başlık
+    önceki sayfanın yarım paragrafından sonra gelir; içindekiler nokta dizisiyle; numaralı madde cümle ile biter."""
+    head = "KURUM / BİRİM / Uzun Bir Şartname Başlığı Ve Yıl Bilgisi / 2025 {}/115"
+    strip = "3595163294 - " * 12
+    pages = []
+    words = ["elma", "armut", "kiraz", "incir", "ayva"]
+    for i, w in enumerate(words, 1):
+        pages.append([head.format(i), f"Önceki paragrafın {w} satırı sürüyor", f"{i}. BÖLÜM BAŞLIĞI {w.upper()}",
+                      f"{i}.1. {w.capitalize()} maddesi burada anlatılır ve biter.", strip, str(i)])
+    lines = T.pdf_lines(pages)
+    assert not any("KURUM / BİRİM" in ln or "3595163294" in ln for ln in lines)
+    assert sum("satırı sürüyor" in ln for ln in lines) == 5          # gövde satırı üst bilgi sanılmaz
+    paras = T._join_lines(lines)
+    heads = [p for p, h in paras if h]
+    assert heads == [f"{i}. BÖLÜM BAŞLIĞI {w.upper()}" for i, w in enumerate(words, 1)]
+    toc = T._join_lines(["İÇİNDEKİLER", "3. KAPSAM ........................ 6", "4. GENEL HÜKÜMLER ..........",
+                         "46. DENETİM:..........", "Giriş…… 12"])
+    assert toc == [("İÇİNDEKİLER", True), ("3. KAPSAM", False), ("4. GENEL HÜKÜMLER", False), ("46. DENETİM:", False),
+                   ("Giriş", False)]
+    # Numara ayrı satırda; nokta dizisi olmayan içindekiler satırı başlık sanılmaz.
+    toc2 = T._join_lines(["İçindekiler", "1.", "KISALTMALAR VE TANIMLAR ........ 4", "32. VERİ PRİZİ ÖZELLİKLERİ 66",
+                          "1. KISALTMALAR VE TANIMLAR", "Metin burada başlar."])
+    assert toc2 == [("İçindekiler", False), ("1. KISALTMALAR VE TANIMLAR", False), ("32. VERİ PRİZİ ÖZELLİKLERİ", False),
+                    ("1. KISALTMALAR VE TANIMLAR", True), ("Metin burada başlar.", False)]
+    assert not T._is_heading_line("2. Kablolar test edilecektir.")
+    assert T._is_heading_line("9. FİBER VE UTP PATCH PANEL ÖZELLİKLERİ VE MONTAJI")

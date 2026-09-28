@@ -44,12 +44,15 @@ export function useAccessMe() {
 }
 
 /** Yetki henüz bilinmiyorsa null. Köprü bu ucu tanımıyorsa (eski sürüm) ya da okunamıyorsa 'all': menüyü
- *  boşaltmak yerine eski davranış sürer — kapı zaten köprüde. */
+ *  boşaltmak yerine eski davranış sürer — kapı zaten köprüde.
+ *  null yalnız ilk cevaptan öncedir. Hata almış sorgu yeniden sorulurken tekrar «bekliyor» olur; o an null
+ *  dönülürse rota kapısı ekranı söker, yeniden kurulan ekran hatalı sorguyu yine sordurur ve döngü saniyede
+ *  onlarca istek atar (2026-09-28: köprü 502 verirken Panolar 28 sn'de 1.224, Gelen bağlantılar 7.521 istek). */
 export function usePageAccess(): PageAccess | null {
   const q = useAccessMe();
   const data = q.data;
-  const failed = !!q.error;
-  const loading = q.isLoading;
+  const failed = !!q.error || q.errorUpdateCount > 0;
+  const loading = q.isPending && q.errorUpdateCount === 0;
   // Aynı cevap için aynı küme: menü ve rota kapısı her çizimde yeniden hesaplamasın.
   return useMemo<PageAccess | null>(() => {
     if (!ENGINE_ENABLED) return 'all';

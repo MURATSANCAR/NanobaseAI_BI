@@ -22,7 +22,6 @@ import {
   X,
 } from 'lucide-react';
 import {
-  ENGINE_BASE,
   ENGINE_ENABLED,
   EngineAuthError,
   ask as askEngine,
@@ -37,6 +36,7 @@ import DbTimingBadge, { type DbTiming } from '../DbTiming';
 import Chart, { CHART_LABEL, allowedCharts, numericCols, setDisplayWords, suggestChart, type Col, type Row } from './Chart';
 import { download, fileName, toCsv } from './export';
 import { useCan } from '../useAdmin';
+import { useTimasSession } from '../TimasSession';
 import {
   fromDto,
   loadBoard,
@@ -54,20 +54,10 @@ import {
 } from './store';
 import Shell, { ZoomStage, useShellZoom } from '../stitch/Shell';
 
-/** Giriş yapan kişi; pano ona ait. */
+/** Giriş yapan kişi; pano ona ait. Oturum kapısıyla aynı sorgu: aynı anahtara ikinci bir sorgu işlevi
+ *  (her hatayı «oturum yok» sayan) giriş servisinin 502'sini oturum düşmesi gibi gösteriyordu. */
 function useUser(): string {
-  const q = useQuery({
-    queryKey: ['timas-session'],
-    queryFn: async () => {
-      const res = await fetch(`${ENGINE_BASE}/auth/session`, { credentials: 'include' });
-      if (!res.ok) throw new EngineAuthError();
-      return (await res.json()) as { username: string };
-    },
-    enabled: ENGINE_ENABLED,
-    retry: false,
-    staleTime: 5 * 60_000,
-  });
-  return q.data?.username ?? '';
+  return useTimasSession().data?.username ?? '';
 }
 
 const INTERACTIVE = 'a, button, input, select, textarea, [data-nodrag]';

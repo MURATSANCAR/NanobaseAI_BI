@@ -85,9 +85,16 @@ MIN_STYLE_WORDS = 5       # bundan kısa parçada ton yok (yalnız hız/duraklam
 EXAMPLE_SEEDS = (11, 22, 33)
 EXAMPLE_MAX_CER = 0.06
 EXAMPLE_MAX_SHIFT = 30.0
-# Vurgu: hedef kelimeden önce kısa durak (okunuş metninde «...»); talimatla vurgu ölçümde kelimeyi öne çıkarmadı
-# (enerji +0,8 dB, taban +1,1), duraklama çıkardı (+3,0 dB, perde +1,6 yarım ton, harf hatası %0,3).
-EMPHASIS = {"method": "pause", "mark": "..."}
+# Vurgu: hedef kelimeden önce kısa durak; talimatla vurgu ölçümde kelimeyi öne çıkarmadı (enerji +0,8 dB, taban +1,1),
+# duraklama çıkardı (+3,0 dB, perde +1,6 yarım ton, harf hatası %0,3). İşaret önce «...» idi; tam kitap dinlemesinde
+# (2026-09-28, 1.392 kelime) durak 0,8–1,5 sn'ye uzayıp takılma gibi duyuldu (45 yer): virgülün kısa durağı yeter.
+# Birleşik fiilin yardımcısı («yardım etmedi») ve büyük harfli başlık/bağırış içindeki kelime vurgulanmaz (bölünür);
+# ZEKİ AI önerisinde cümle başına tek vurgu.
+EMPHASIS = {"method": "pause", "mark": ","}
+_AUX = re.compile(r"^(et|ed|eyle|ol|yap|kıl)(me|mi|mı|mek|mak|ti|tı|di|du|dı|ip|up|ıp|er|ar|ur|en|an|ecek|acak|eceğ|"
+                  r"acağ|iyor|ıyor|uyor|ince|unca|ınca|erek|arak|il|ebil|abil|mez|maz|miş|mış|muş|sun|sın|se|sa)")
+EMPH_AI_MAX = 1
+RATE_MIN_WORDS = 5        # bundan kısa parçada hızlandırma yok: «O da ne!» 0,46 sn'de bitiyordu
 
 MIN_PROB = 0.5            # en olası ifade bundan düşükse nötr
 MARGIN = 0.15             # nötrün önünde bundan az farkla öndeyse nötr
@@ -106,10 +113,9 @@ def fp(text: str) -> str:
 def unit_sentences(u) -> list[list[int]]:
     """Birimin cümleleri: kelime sıraları; sınır sesli okumanın parça sınırıyla aynı (okunuşu . ! ? … ile biten)."""
     out, cur = [], []
-    for k, w in enumerate(u.words):
+    for k, _w in enumerate(u.words):
         cur.append(k)
-        sp = w.spoken.rstrip()
-        if sp[-1:] in ".!?…":
+        if N.sentence_mark(u.words, k):
             out.append(cur)
             cur = []
     if cur:
@@ -231,8 +237,25 @@ def _emphasize(text: str, words: list[str]) -> str:
     parçanın ilk kelimesiyse ya da önünde zaten duraklama (noktalama) varsa işaret eklenmez."""
     mark = EMPHASIS["mark"]
     for w in words:
+        c = core(w)
+        if _AUX.match(N.tr_lower(c)) or (len(c) > 1 and c.isupper()):
+            continue
         text = re.sub(rf"(?<=[^\s,;:.!?…])(\s+)({re.escape(w)})(?=[\s,;:.!?…'’]|$)", rf"{mark}\1\2", text, count=1)
     return text
+
+
+def _quoted(u) -> set[int]:
+    """Birimde tırnak içindeki kelimelerin sıraları (konuşma). Düz tırnak (") aç/kapa sırasıyla."""
+    out, inside = set(), False
+    for k, w in enumerate(u.words):
+        pre, _c, post = N._split_punct(w.text)
+        if any(ch in "“«‘\"" for ch in pre):
+            inside = True
+        if inside:
+            out.add(k)
+        if any(ch in "”»’\"" for ch in post):
+            inside = False
+    return out
 
 
 def apply(d: Path, pg: dict, units: list, plist: list) -> tuple[list, list | None]:
@@ -252,6 +275,10 @@ def apply(d: Path, pg: dict, units: list, plist: list) -> tuple[list, list | Non
     def key_of(p):
         return sent_of.get((p.unit, p.words[0]), (None, None)) if p.words else (None, None)
 
+    quoted = [_quoted(u) for u in units]
+    sent_words: dict[str, set[int]] = {}
+    for (_ui, k), (key, _f) in sent_of.items():
+        sent_words.setdefault(key, set()).add(k)
     sig, prev_key = [], None
     for j, p in enumerate(plist):
         key, sfp = key_of(p)
@@ -262,12 +289,16 @@ def apply(d: Path, pg: dict, units: list, plist: list) -> tuple[list, list | Non
             continue
         label = m.get("label") if m.get("label") in TABLE else "notr"
         row = TABLE[label]
+        # Konuşma içeren cümlede ifade konuşmanındır: anlatıcının tırnak dışındaki parçası nötr okunur (fısıltı
+        # «İçinden bir ses fısıldıyordu:» kısmına da geçiyordu). Cümle sonu duraklaması yine uygulanır.
+        q = quoted[p.unit]
+        speech_only = bool(q & sent_words.get(key, set())) and not (q & set(p.words))
         extra: dict = {}
-        if label != "notr":
+        if label != "notr" and not speech_only:
             words = sum(len(units[p.unit].words[k].say) for k in p.words)
             extra["label"] = label
             extra["tone"] = bool(row["method"]) and words >= MIN_STYLE_WORDS
-            if row["rate"] != 1.0:
+            if row["rate"] != 1.0 and (row["rate"] < 1.0 or words >= RATE_MIN_WORDS):
                 extra["rate"] = row["rate"]
             if row["before_ms"] and key != prev_key:
                 extra["pause_before_ms"] = row["before_ms"]
@@ -275,6 +306,8 @@ def apply(d: Path, pg: dict, units: list, plist: list) -> tuple[list, list | Non
         if (nxt is None or key_of(nxt)[0] != key) and row["after"] != 1.0:
             p.pause_ms = int(round(p.pause_ms * row["after"]))
         emph = [w for w in m.get("emphasis", []) if w]
+        if m.get("source") == "ai":
+            emph = emph[:EMPH_AI_MAX]
         if emph:
             p.text = _emphasize(p.text, emph)
         p.extra = extra
