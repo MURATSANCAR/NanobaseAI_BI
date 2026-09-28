@@ -119,6 +119,40 @@
 - **Yakalanan hata:** besleme `X-Editor: zamanlayıcı` gönderiyordu; HTTP başlığı ASCII olmalı → httpx `UnicodeEncodeError`, hiçbir şey gitmedi. Gece işi her gece böyle düşecekti. Düzeltme: `header_name()` (Türkçe harf → ASCII), varsayılan `zamanlayici`, test eklendi (8/8). İlk doldurma ASCII adla yapıldı. Düzeltme main'e alınıp köprüye kurulacak.
 - **Uçtan uca (portal, timasai 15 dk oturum, yalnız GET, oturum silindi):** indirme bitti — 6.742 kapak, 21 hata (sitenin kendisi 404: «(Eski)» ürünlerin `-B.jpg` adresi), 18 görselsiz. Ağaç 24 kök (Çocuk 2.744 → Hikaye 716, Masal ve Öykü 396…; Yetişkin 2.163 → Tarih 525…), alt kategori süzgeci, «sukru» araması (Recep Şükrü Apuhan, 14), kitle + ada göre + sayfa, görsel WebP 360 px 11 KB / 800 px 34 KB, oturumsuz 401, ekran 200.
 - **Kitap dışı ürünler:** «En çok satan»ın başında oyun hamuru çıktı; sitede oyun/oyuncak/kırtasiye de satılıyor ve ~490'ının CRM stok kartı var (CRM eşleşmesi ayırmıyor). Ölçüm: 6.081 ISBN+CRM, 494 ISBN değil+CRM (kutu oyunları…), 204 ISBN değil+CRM yok (setler: barkod «1»+ISBN), 2 ISBN+CRM yok. Kural: barkod 978/979 ile başlayan 13 haneyle bitiyorsa kitap (`is_book`; setler dahil). Besleme yalnız kitapları gönderir; sonunda tam listeyi `POST /v1/studio/library/retain` ile verir, listede olmayan kayıtlar `hidden` olur (görsel diskte kalır, yeniden gelirse görünür; liste görünenin yarısından kısaysa eksik eşitleme sayılıp hiçbir şey gizlenmez). Testler köprü 22/22, stüdyo 8/8. Kurulum: GPU stüdyo imajı + köprü, sonra yeniden besleme.
+## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
+
+- **Dal:** `worktree-agent-ac485f3ca53f8031a` (main `d21da878` üstüne yeniden dizildi). Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON
+  doğrulaması yapıldı. pytest (`test_hr_core.py`, `test_hr_recruit.py`, `test_access.py`), vitest (`navModel.test.ts`), tsc ve
+  gerçek CRM/AD kabulü (`scripts/acceptance/M55/kabul.py`) test sunucusunda koşturulacak.
+- **İK-0 (analiz §14.1):** çalışan ve birim kaydı (CRM ∩ AD önerisi, İK onayıyla; CRM'e yazılmaz), aydınlatma metni sürümleri, açık
+  rıza (yalnız havuz / referans / gereksiz özel nitelikli veri — başvurunun değerlendirilmesi md. 5/2-c), veri sınıfı başına saklama
+  süresi, gece imha işi ve tutanağı, erişim kaydı, arka plan işleri. M56–M58 için `HrContext` (`app.state.hr`), kanca kayıtları ve
+  `src/canvas/hr/hrApi.ts` hazır.
+- **Yetki (ortak dosyalarda en küçük değişiklik):** `access.explicit_keys()` sayfaları da kapsıyor (M49 dalındaki değişiklikle aynı
+  amaç; birleşmede tek sürüm kalmalı). Yeni `sensitive` işareti ve `access.sensitive_keys()`. `access_catalog.json`'a `ik` alanı,
+  4 sayfa, 12 özellik; `RULES`'a İK önekleri. `AccessAdmin.tsx` açıkça verilen sayfayı «ayrıca verilir» gösterir; `engine.ts`
+  katalog türü. `navModel.ts` `ik` grubu (`explicit`), `ModulesMenu.tsx` M55 + `GROUP_HOME`, `KampusPage.tsx` kutu, `App.tsx` 5 rota,
+  `admin.py` «İnsan kaynakları» ayar grubu (6 anahtar), `app.py` iki satır kayıt, `llm_queue.py` `queue_label`/`labelled`.
+- **Karar (analiz «kullanıcıya sorulur» dediği; iş kararları Claude'a bırakıldı kuralıyla):** portal yöneticisi aday kişisel
+  verisini, KVKK yönetimini, İK erişim kaydını ve İK dışa aktarmayı **kendiliğinden görmez**; rolüyle görür (bağ `semantic_audit`'e
+  düşer). Gerekçe: KVKK md. 12 (teknik hesap aday verisini görmemeli) ve analiz önerisi; geri dönüş `HR_ADMIN_SEES_PERSONAL=1`.
+  Sayfalar ve kişisel olmayan işlemler (pozisyon açma/onay, şablon, çalışan eşitleme) yöneticide açık kalır.
+- **§10 açık sorularında verilen kararlar:** (1) İK kişi sayısı/son karar: kod rolden bağımsız — pozisyon onayı ve teklif onayı ayrı
+  anahtarlar, iki göz. (2) Aday adresi: portal adaya yazmaz; mektup taslağı, gönderim İK'nın kendi kutusundan. (3) Bordro/özlük:
+  ölçülmeden bağlanmadı; çalışan kaydı CRM ∩ AD + İK girişi, ücret/T.C./sağlık tutulmaz; Logo `LG_411_EMPLOYEE` ölçümü
+  `referans.sql` sonunda. (4) Saklama süresi: varsayılan yok — girilmeyen sınıfta imha yapılmaz, ekran uyarır (sessiz varsayım
+  yok). (5) Test sunucusunda gerçek aday verisi: kabul yalnız CRM/AD yapısı ve «KABUL TESTİ» adlı uydurma adayla; temizlik betiği
+  hepsini siler.
+- **Tasarım kararları:** kanıtlı özette alıntıyı model yazmaz — satır numarası verir, metin özgeçmişin satırıdır (uydurma
+  alıntı imkânsız); özel nitelikli maske de satır numarasıyla (şüphede gizlenir). Kanıt işi arka planda (`semantic_hr_jobs`).
+  E-postadan başvuru (`/intake`) ileti kimliğinin özetiyle bir kez; konu satırı tam olarak tek açık pozisyonun adını içeriyorsa
+  pozisyona bağlanır, değilse İK atar. İK soru kutusu (analiz §13 son satır) ve yetkinlik haritası sonraki sürüm.
+- **Kabul (`scripts/acceptance/M55/`):** K1 etkin CRM kullanıcı, K1b devre dışı olmayan hesap, K2 etkin birim başına kullanıcı,
+  K3 yöneticili birim (kolon doluluğu **ölçülecek**), K4 ekip üyeliği, K5 pano pozisyon×aşama, K5b eşik üstü (eşik İK ayarı),
+  K6 imha (gerçek `run-due`), K7 model izi, K8 yetki; `--yazma` geçici rol + yapay aday + kanıt + e-posta aktarımı;
+  `temizlik.py` rol, bağ, aday, pozisyon ve bağlı bütün satırları siler.
+- **Sunucuda kalan:** köprü + arayüz kurulumu, `timas-hr-purge.timer` ve `timas-hr-recruit-reminders.timer` (önce elle
+  `systemctl start`), pytest/vitest/tsc, kabul ve temizlik; İK rolü atanana kadar ekranlar yalnız yöneticide görünür.
 
 ## 2026-09-28 (06:40) — Test sunucusuna main `935080d5` (M1, M9, M15, M29–M33); ilk koşular, zamanlayıcılar, gerçek veriyle kabul
 
@@ -821,41 +855,6 @@ kabulü (`scripts/acceptance/m28/kabul.py`) test sunucusunda koşulacak. main'e 
 - **Sabah e-posta özeti** (`author_reminders.py`): kişi başına günde bir kez; bugün/yarınki randevular, notu girilmemiş randevular (yalnız yazana), geciken ve bugün vadesi gelen adımlar. Boşsa gitmez; gizli notun konusu gitmez; alıcı kişi rehberinden, izinli alan adı süzgeci uyarılarla aynı; yalnız yayınevi içi. Ayarlar `AUTHOR_REMINDERS_ENABLED` (varsayılan açık), `AUTHOR_REMINDER_TIME` (08:15); kişi Randevular sekmesinden kapatır. Zamanlayıcı `scripts/server/timas-author-reminders.{service,timer}` (08–19 arası 15 dk; köprü saat eşiğini ve günde bir kez kuralını uygular); müşteri VM'inde `jobs.py` döngüsü.
 - **Doğrulama (test sunucusu, yan port 8798 aday köprü, gerçek CRM .28 + Logo + katalog DB, geçici `timasai` oturumu):** ısı haritası 549 sözleşmeli yazar, hepsinde sadakat, 4–7 sn; iki yazarda gelişim: ilk okuma 117–121 sn, sonra önbellekten 0 sn, «Yenile» 87 sn ve aynı sonuç. **Bağımsız referans:** Adem Güneş'in 55 stok koduyla yıllık görünümden düz toplam 2025 = 19.032, 2026 = 7.451 — uygulamayla birebir (süzgeçsiz toplam 19.050 / 7.462; fark 157 kodları ve bedelsiz satırlar, kural gereği). Sabah özeti kuru koşu 200. nginx `/timas/api/` 600 sn (test ve VM şablonu). Test verisi: iki öneri kaydı + 2 değişiklik kaydı satırı ve oturumlar silindi. tsc temiz, vitest 71/71, köprü testleri 36/36 (yeni `test_author_growth.py` 11).
 - **Açık:** test sunucusunda site yorum özeti yalnız 67 üründe (SEO yorum okuması sürüyor); denenen iki yazarın kitaplarında yorum yoktu — eşleşme kuralı SEO modülünün EAN anahtarıyla aynı. Kurulum ve 4 genişlikte görsel kontrol `main`e girdikten sonra.
-## 2026-09-28 — İK-0 ortak temel ve M55 İşe alım kodlandı (DOĞRULANAMADI — testler koordinatörde)
-
-- **Dal:** `worktree-agent-ac485f3ca53f8031a` (main `c2c8b4fd` üstünde). Sunucuya bağlanılmadı; yalnız `py_compile` ve JSON
-  doğrulaması yapıldı. pytest (`test_hr_core.py`, `test_hr_recruit.py`, `test_access.py`), vitest (`navModel.test.ts`), tsc ve
-  gerçek CRM/AD kabulü (`scripts/acceptance/M55/kabul.py`) test sunucusunda koşturulacak.
-- **İK-0 (analiz §14.1):** çalışan ve birim kaydı (CRM ∩ AD önerisi, İK onayıyla; CRM'e yazılmaz), aydınlatma metni sürümleri, açık
-  rıza (yalnız havuz / referans / gereksiz özel nitelikli veri — başvurunun değerlendirilmesi md. 5/2-c), veri sınıfı başına saklama
-  süresi, gece imha işi ve tutanağı, erişim kaydı, arka plan işleri. M56–M58 için `HrContext` (`app.state.hr`), kanca kayıtları ve
-  `src/canvas/hr/hrApi.ts` hazır.
-- **Yetki (ortak dosyalarda en küçük değişiklik):** `access.explicit_keys()` sayfaları da kapsıyor (M49 dalındaki değişiklikle aynı
-  amaç; birleşmede tek sürüm kalmalı). Yeni `sensitive` işareti ve `access.sensitive_keys()`. `access_catalog.json`'a `ik` alanı,
-  4 sayfa, 12 özellik; `RULES`'a İK önekleri. `AccessAdmin.tsx` açıkça verilen sayfayı «ayrıca verilir» gösterir; `engine.ts`
-  katalog türü. `navModel.ts` `ik` grubu (`explicit`), `ModulesMenu.tsx` M55 + `GROUP_HOME`, `KampusPage.tsx` kutu, `App.tsx` 5 rota,
-  `admin.py` «İnsan kaynakları» ayar grubu (6 anahtar), `app.py` iki satır kayıt, `llm_queue.py` `queue_label`/`labelled`.
-- **Karar (analiz «kullanıcıya sorulur» dediği; iş kararları Claude'a bırakıldı kuralıyla):** portal yöneticisi aday kişisel
-  verisini, KVKK yönetimini, İK erişim kaydını ve İK dışa aktarmayı **kendiliğinden görmez**; rolüyle görür (bağ `semantic_audit`'e
-  düşer). Gerekçe: KVKK md. 12 (teknik hesap aday verisini görmemeli) ve analiz önerisi; geri dönüş `HR_ADMIN_SEES_PERSONAL=1`.
-  Sayfalar ve kişisel olmayan işlemler (pozisyon açma/onay, şablon, çalışan eşitleme) yöneticide açık kalır.
-- **§10 açık sorularında verilen kararlar:** (1) İK kişi sayısı/son karar: kod rolden bağımsız — pozisyon onayı ve teklif onayı ayrı
-  anahtarlar, iki göz. (2) Aday adresi: portal adaya yazmaz; mektup taslağı, gönderim İK'nın kendi kutusundan. (3) Bordro/özlük:
-  ölçülmeden bağlanmadı; çalışan kaydı CRM ∩ AD + İK girişi, ücret/T.C./sağlık tutulmaz; Logo `LG_411_EMPLOYEE` ölçümü
-  `referans.sql` sonunda. (4) Saklama süresi: varsayılan yok — girilmeyen sınıfta imha yapılmaz, ekran uyarır (sessiz varsayım
-  yok). (5) Test sunucusunda gerçek aday verisi: kabul yalnız CRM/AD yapısı ve «KABUL TESTİ» adlı uydurma adayla; temizlik betiği
-  hepsini siler.
-- **Tasarım kararları:** kanıtlı özette alıntıyı model yazmaz — satır numarası verir, metin özgeçmişin satırıdır (uydurma
-  alıntı imkânsız); özel nitelikli maske de satır numarasıyla (şüphede gizlenir). Kanıt işi arka planda (`semantic_hr_jobs`).
-  E-postadan başvuru (`/intake`) ileti kimliğinin özetiyle bir kez; konu satırı tam olarak tek açık pozisyonun adını içeriyorsa
-  pozisyona bağlanır, değilse İK atar. İK soru kutusu (analiz §13 son satır) ve yetkinlik haritası sonraki sürüm.
-- **Kabul (`scripts/acceptance/M55/`):** K1 etkin CRM kullanıcı, K1b devre dışı olmayan hesap, K2 etkin birim başına kullanıcı,
-  K3 yöneticili birim (kolon doluluğu **ölçülecek**), K4 ekip üyeliği, K5 pano pozisyon×aşama, K5b eşik üstü (eşik İK ayarı),
-  K6 imha (gerçek `run-due`), K7 model izi, K8 yetki; `--yazma` geçici rol + yapay aday + kanıt + e-posta aktarımı;
-  `temizlik.py` rol, bağ, aday, pozisyon ve bağlı bütün satırları siler.
-- **Sunucuda kalan:** köprü + arayüz kurulumu, `timas-hr-purge.timer` ve `timas-hr-recruit-reminders.timer` (önce elle
-  `systemctl start`), pytest/vitest/tsc, kabul ve temizlik; İK rolü atanana kadar ekranlar yalnız yöneticide görünür.
-
 ## 2026-09-28 — Belge incelemesi deneme kayıtları silindi, dal kapandı
 
 - **Editör veritabanı (GPU, `ed` şeması):** üç deneme belgesi («Dilek Ağacı (deneme belgesi)», «Portal denemesi», «VM denemesi») 167 bulgu ve 15 denetim koşusuyla silindi; `ed.document_review` boş. GPU `/tmp`'deki ölçüm/deneme betikleri silindi.
