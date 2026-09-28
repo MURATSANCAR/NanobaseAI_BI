@@ -31,7 +31,9 @@ _lock = threading.Lock()
 
 
 def _hook(engine: Any) -> None:
-    target = getattr(engine, "engine", engine)
+    # Sınıf düzeyinde tek dinleyici: bütün SQLAlchemy motorları (portal). Motor verilmese de (uç motoru ancak
+    # yetki denetiminden sonra öğreniyorsa) izleme çalışır. Kayıt yalnız ContextVar açıkken tutulur.
+    target = sa.engine.Engine
     with _lock:
         if id(target) in _hooked:
             return
@@ -185,8 +187,8 @@ def izlenir(prefix: str, title: str, text: str, *, engine: Callable[[], Any], db
             return out
 
         def make() -> P.Kaynaklar:
-            eng = engine()
-            return tam_kaynak(eng, ran, got, out, prefix=prefix, title=title, text=text, logo_db=dbs()[0],
+            eng = engine() if engine is not None else None
+            return tam_kaynak(eng, ran if eng is not None else [], got, out, prefix=prefix, title=title, text=text, logo_db=dbs()[0],
                               crm_db=dbs()[1], skip=skip, dis_adi=dis_adi, onceki=onceki(out) if onceki else None)
         if key == "kaynaklar":
             return P.bagla(out, make)
@@ -201,14 +203,14 @@ def izlenir(prefix: str, title: str, text: str, *, engine: Callable[[], Any], db
         if inspect.iscoroutinefunction(fn):
             @functools.wraps(fn)
             async def awrapper(*a, **kw):
-                with izle_dis() as got, izle(engine()) as ran:
+                with izle_dis() as got, izle(engine() if engine is not None else None) as ran:
                     out = await fn(*a, **kw)
                 return build(out, ran, got)
             return awrapper
 
         @functools.wraps(fn)
         def wrapper(*a, **kw):
-            with izle_dis() as got, izle(engine()) as ran:
+            with izle_dis() as got, izle(engine() if engine is not None else None) as ran:
                 out = fn(*a, **kw)
             return build(out, ran, got)
         return wrapper
