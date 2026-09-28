@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import { Note, Pill, TableWrap, errText, td, th } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
 import { fmtAt, mqApi, shortSha } from './api';
@@ -25,7 +27,7 @@ export default function Versions() {
                 <th className={th}>Kaynak</th>
                 <th className={th}>Değişen</th>
                 <th className={th}>Kod</th>
-                <th className={th}>Katalog</th>
+                <th className={th}><InfoLabel k={kaynakOf(q.data)} alan="items">Katalog</InfoLabel></th>
                 <th className={th}>Bilgi paketi</th>
                 <th className={th}>Kural</th>
                 <th className={th}>Model</th>

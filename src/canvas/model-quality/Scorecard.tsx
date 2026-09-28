@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import { Note, Pill, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { fmtAt, fmtValue, mqApi, shortSha, type Meta, type ScoreRow, type Version } from './api';
@@ -29,10 +31,13 @@ export default function Scorecard({ meta, onOpenRun }: { meta: Meta; onOpenRun: 
       {q.data && (
         <>
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-            {q.data.rows.map((r) => <Row key={r.id} r={r} onOpenRun={onOpenRun} />)}
+            {q.data.rows.map((r) => <Row key={r.id} r={r} onOpenRun={onOpenRun} k={kaynakOf(q.data)} />)}
           </div>
           {q.data.hidden > 0 && (
-            <Note tone="info">Sayfa yetkiniz olmayan {q.data.hidden} modülün satırı gösterilmiyor.</Note>
+            <Note tone="info">
+              Sayfa yetkiniz olmayan {q.data.hidden} modülün satırı gösterilmiyor.
+              <SqlInfo k={kaynakOf(q.data)} alan="hidden" label="Gösterilmeyen satır" className="ml-1" />
+            </Note>
           )}
           <CurrentVersion v={q.data.version} />
         </>
@@ -41,12 +46,15 @@ export default function Scorecard({ meta, onOpenRun }: { meta: Meta; onOpenRun: 
   );
 }
 
-function Row({ r, onOpenRun }: { r: ScoreRow; onOpenRun: (id: string) => void }) {
+function Row({ r, onOpenRun, k }: { r: ScoreRow; onOpenRun: (id: string) => void; k?: ReturnType<typeof kaynakOf> }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div className="min-w-0">
-          <h2 className="text-[15px] font-extrabold tracking-tight">{r.label}</h2>
+          <h2 className="flex items-center gap-1 text-[15px] font-extrabold tracking-tight">
+            {r.label}
+            {r.measured && <SqlInfo k={k} alan="rows" label={r.label} />}
+          </h2>
           <div className="text-[11.5px] text-canvas-muted">
             {r.measured ? `Son ölçüm: ${fmtAt(r.lastMeasured)}` : r.note}
           </div>

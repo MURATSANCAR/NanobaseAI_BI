@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import { Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
 import { VERDICT_TONE, fmtAt, mqApi, type FeedbackItem, type Meta, type TriageState } from './api';
@@ -37,6 +39,12 @@ export default function FeedbackQueue({ meta }: { meta: Meta }) {
       </div>
       {!meta.me.canDecide && <div className="mt-2"><Note tone="info">Sınıflama ve kapatma «Geri bildirim ve hata sınıfı kararı» yetkisiyle yapılır.</Note></div>}
       <div className="mt-3 flex flex-col gap-2">
+        {/* Sekme rozetindeki sayı (yeni Kısmen/Yanlış) da bu okumadır. */}
+        {q.data && (
+          <div className="flex justify-end text-[11px] text-canvas-muted">
+            <InfoLabel k={kaynakOf(q.data)} alan="items" label="Geri bildirim sayıları">Kayıt ve satır sayıları</InfoLabel>
+          </div>
+        )}
         {q.isLoading && <Empty>Yükleniyor…</Empty>}
         {q.error && <Note tone="err">{errText(q.error, 'Kuyruk okunamadı.')}</Note>}
         {q.data && !q.data.items.length && <Empty>Bu süzgeçte bildirim yok.</Empty>}

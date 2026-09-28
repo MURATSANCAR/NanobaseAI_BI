@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { ChevronLeft } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Pager, Panel } from '../editorial/kit';
 import { VERDICT_TONE, fmtAt, mqApi, type Cluster, type Meta, type QualityClass } from './api';
@@ -22,17 +24,17 @@ export default function ClassBoard({ meta, selected, onSelect }: { meta: Meta; s
       {d && (
         <>
           <KpiRow>
-            <Kpi label="İncelenen soru" value={String(d.total)} help={`Son ${d.days} gün: SQL'li cevap almayan, boş dönen ya da Kısmen/Yanlış denen`} />
-            <Kpi label="İsabetsizlik sayılan" value={String(d.errorQuestions)} help="Yetki dışı, bağlantı, netleştirme ve veri yok hariç" />
-            <Kpi label="Sınıflanamadı" value={String(unclassified)} help="Hiçbir kural tutmadı; kuyrukta elle sınıflanır" />
-            <Kpi label="Tanımlı sınıf" value={String(d.classes.filter((k) => k.active).length)} help="Kurallar tabloda; kod değişmeden düzeltilir" />
+            <Kpi label="İncelenen soru" value={String(d.total)} help={`Son ${d.days} gün: SQL'li cevap almayan, boş dönen ya da Kısmen/Yanlış denen`} info={<SqlInfo k={kaynakOf(d)} alan="total" label="İncelenen soru" />} />
+            <Kpi label="İsabetsizlik sayılan" value={String(d.errorQuestions)} help="Yetki dışı, bağlantı, netleştirme ve veri yok hariç" info={<SqlInfo k={kaynakOf(d)} alan="errorQuestions" label="İsabetsizlik sayılan" />} />
+            <Kpi label="Sınıflanamadı" value={String(unclassified)} help="Hiçbir kural tutmadı; kuyrukta elle sınıflanır" info={<SqlInfo k={kaynakOf(d)} alan="items" label="Sınıflanamadı" />} />
+            <Kpi label="Tanımlı sınıf" value={String(d.classes.filter((k) => k.active).length)} help="Kurallar tabloda; kod değişmeden düzeltilir" info={<SqlInfo k={kaynakOf(d)} alan="_hepsi" label="Tanımlı sınıf" />} />
           </KpiRow>
           <Panel>
             <TableWrap>
               <thead>
                 <tr className="border-b border-slate-100">
                   <th className={th}>Sınıf</th>
-                  <th className={`${th} text-right`}>Soru</th>
+                  <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="items">Soru</InfoLabel></th>
                   <th className={`${th} text-right`}>Geri bildirimden</th>
                   <th className={`${th} text-right`}>Son kapı koşusunda</th>
                   <th className={th}>4 hafta</th>
@@ -115,7 +117,10 @@ function ClassQuestions({ meta, klass, onBack }: { meta: Meta; klass: string; on
         <ChevronLeft aria-hidden className="h-3.5 w-3.5" /> Hata sınıfları
       </button>
       <Panel>
-        <h2 className="text-[16px] font-extrabold tracking-tight">{label}</h2>
+        <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">
+          {label}
+          <SqlInfo k={kaynakOf(q.data)} alan="total" label={`${label}: sorular`} />
+        </h2>
         {q.error && <Note tone="err">{errText(q.error, 'Sorular okunamadı.')}</Note>}
         {q.isLoading && <Empty>Yükleniyor…</Empty>}
         {q.data && !q.data.items.length && !q.data.gateCases.length && <Empty>Bu sınıfta soru yok.</Empty>}

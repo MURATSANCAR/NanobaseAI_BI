@@ -28,6 +28,15 @@ from starlette.concurrency import run_in_threadpool
 from semantic_bridge import model_quality as MQ
 from semantic_bridge import model_quality_sources as src
 
+
+from semantic_bridge import sorgu_izi as IZ  # noqa: E402
+
+F_KARNE = 'Karne: soru-cevap satırında cevaplama oranı = cevaplanan ÷ sorulan (soru kayıtları), isabet = Doğru ÷ (Doğru + Kısmen + Yanlış) geri bildirim, bozulan/düzelen = son iki kalite koşusunun vaka karşılaştırması; SEO, çeviri ve redaksiyon satırları kendi öneri kayıtlarından kabul/düzeltme oranları; ms değerleri kayıttaki süre medyanı; 4 haftalık eğilim haftalık aynı hesap. Pencere dışı satırlar sayılmaz; yetkisi olmayan modülün satırı gösterilmez (sayısı ayrıca yazılır).'
+F_KOSU = 'Koşu satırı: sağlam = durumu geçen vakalar ÷ bütün vakalar; bozulan/düzelen = bir önceki koşuda geçip bu koşuda kalan ya da tersi; süre = koşunun başı ile sonu arası.'
+F_SINIF = 'Hata sınıfları: incelenen soru = penceredeki sınıflanmış sorular; isabetsizlik sayılan = hata sayılan sınıflardaki sorular; geri bildirimden = kaynağı kullanıcı geri bildirimi olanlar; kapı vakası = son kalite koşusunda o sınıfa düşen vakalar; eğilim son 4 haftanın haftalık sayısı.'
+F_KUYRUK = 'Geri bildirim kuyruğu: süzgece uyan kayıt sayısı ve her kaydın sorusunun satır sayısı (soru kaydından).'
+F_SURUM = 'Sürümler: katalog sürümü ve onaylı terim sayısı sürüm kaydında; kurulum listesi kurulum kayıtlarından.'
+
 log = logging.getLogger("semantic.model_quality.api")
 
 _EMAIL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -168,6 +177,11 @@ def register(app, deps: dict[str, Any]) -> Service:
         d = window_days(days)
 
         def build() -> dict[str, Any]:
+            # Sorgu bilgisi: karnenin koşan okumaları yakalanır (gösterilen = çalışan).
+            return IZ.izli(engine, build_raw, prefix="portal.kalite.karne", title="Kalite karnesi", text=F_KARNE,
+                           skip=("days",))
+
+        def build_raw() -> dict[str, Any]:
             now, since = src.window(d)
             trend_since = min(since, now - timedelta(days=28))
             runs = src.last_finished(engine, tenant)
@@ -208,12 +222,14 @@ def register(app, deps: dict[str, Any]) -> Service:
     @app.get("/api/v1/model-quality/runs")
     def mq_runs(request: Request, suite: str = "", page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _, _ = ctx(request)
-        return MQ.list_runs(engine, tenant, suite=suite, page=page)
+        return IZ.izli(engine, lambda: MQ.list_runs(engine, tenant, suite=suite, page=page),
+                       prefix="portal.kalite.kosular", title="Kalite koşuları", text=F_KOSU, skip=("page", "size"))
 
     @app.get("/api/v1/model-quality/runs/{run_id}")
     def mq_run(run_id: str, request: Request) -> dict[str, Any]:
         engine, tenant, _, _, _ = ctx(request)
-        return call(MQ.get_run, engine, tenant, run_id)
+        return IZ.izli(engine, lambda: call(MQ.get_run, engine, tenant, run_id),
+                       prefix="portal.kalite.kosu", title="Kalite koşusu", text=F_KOSU)
 
     @app.get("/api/v1/model-quality/runs/{run_id}/cases")
     def mq_run_cases(run_id: str, request: Request, status: str = "", change: str = "", page: int = 0) -> dict[str, Any]:
@@ -222,7 +238,9 @@ def register(app, deps: dict[str, Any]) -> Service:
             raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "change bozulan ya da duzelen olmalı."})
         if status and status not in MQ.CASE_STATUSES:
             raise HTTPException(status_code=422, detail={"code": "INVALID", "message": "Geçersiz durum."})
-        return call(MQ.run_cases, engine, tenant, run_id, status=status, change=change, page=page)
+        return IZ.izli(engine, lambda: call(MQ.run_cases, engine, tenant, run_id, status=status, change=change, page=page),
+                       prefix="portal.kalite.vakalar", title="Koşunun vakaları", skip=("page", "size"),
+                       text="Durum süzgeci sayaçları ve vaka satırları koşunun vaka kayıtlarından (durum başına sayım).")
 
     @app.post("/api/v1/model-quality/runs/start", status_code=201)
     def mq_run_start(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -306,9 +324,13 @@ def register(app, deps: dict[str, Any]) -> Service:
     @app.get("/api/v1/model-quality/versions")
     def mq_versions(request: Request, page: int = 0) -> dict[str, Any]:
         engine, tenant, _, _, _ = ctx(request)
-        out = MQ.list_versions(engine, tenant, page=page)
-        out["installs"] = src.itops_release_list(engine, tenant, limit=100) if page == 0 else []
-        return out
+
+        def read() -> dict[str, Any]:
+            out = MQ.list_versions(engine, tenant, page=page)
+            out["installs"] = src.itops_release_list(engine, tenant, limit=100) if page == 0 else []
+            return out
+        return IZ.izli(engine, read, prefix="portal.kalite.surumler", title="Sürümler", text=F_SURUM,
+                       skip=("page", "size"))
 
     @app.post("/api/v1/model-quality/versions", status_code=201)
     def mq_version_record(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -335,6 +357,10 @@ def register(app, deps: dict[str, Any]) -> Service:
         d = window_days(days)
 
         def build():
+            return IZ.izli(engine, build_raw, prefix="portal.kalite.siniflar", title="Hata sınıfları", text=F_SINIF,
+                           skip=("days",))
+
+        def build_raw():
             now, since = src.window(d)
             classes = MQ.load_classes(engine, active_only=False)
             items = src.classified_items(engine, tenant, ds, min(since, now - timedelta(days=28)))
@@ -361,6 +387,10 @@ def register(app, deps: dict[str, Any]) -> Service:
         d = window_days(days)
 
         def build():
+            return IZ.izli(engine, build_raw, prefix="portal.kalite.sinif", title="Sınıfın soruları", text=F_SINIF,
+                           skip=("page", "size"))
+
+        def build_raw():
             now, since = src.window(d)
             items = [i for i in src.classified_items(engine, tenant, ds, since) if i["klass"] == klass]
             size = 50
@@ -459,7 +489,8 @@ def register(app, deps: dict[str, Any]) -> Service:
         if type != "feedback":
             raise HTTPException(status_code=422, detail={"code": "INVALID",
                                                          "message": "Bu sürümde kuyrukta yalnız kullanıcı geri bildirimi var."})
-        return src.feedback_queue(engine, tenant, ds, verdict=verdict, state=state, page=page)
+        return IZ.izli(engine, lambda: src.feedback_queue(engine, tenant, ds, verdict=verdict, state=state, page=page),
+                       prefix="portal.kalite.kuyruk", title="Geri bildirim kuyruğu", text=F_KUYRUK, skip=("page", "size"))
 
     @app.patch("/api/v1/model-quality/queue/feedback/{fid}")
     def mq_queue_decide(fid: str, body: dict[str, Any], request: Request) -> dict[str, Any]:

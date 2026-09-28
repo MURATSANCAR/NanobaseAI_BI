@@ -13,6 +13,8 @@ import AccessTab from './AccessTab';
 import HygieneTab from './HygieneTab';
 import InventoryTab from './InventoryTab';
 import RetentionTab from './RetentionTab';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** M49 Veri yönetimi ve güvenlik. Sekme adres çubuğunda (?sekme=); bağlantı paylaşılabilir. Yetkiler ve değişiklik
  *  kaydı Yönetim ekranında kalır; bu ekran onlara bağlantı verir, kopyalamaz. */
@@ -101,14 +103,17 @@ function SummaryTab({ meta, go }: { meta?: SecurityMeta; go: (t: Tab) => void })
   return (
     <>
       <KpiRow>
-        <Kpi label="Açık uyarı" value={fmtN(s.openAlerts.kritik + s.openAlerts.uyari)} help={`${fmtN(s.openAlerts.kritik)} kritik`} onClick={() => go('uyarilar')} />
-        <Kpi label="Hatalı giriş · 24 saat" value={fmtN(s.last24h.loginFailed)} help={`${fmtN(s.last24h.loginOk)} başarılı giriş`} onClick={() => go('giris')} />
-        <Kpi label="Yetkisiz deneme · 24 saat" value={fmtN(s.last24h.forbidden)} help="Sayfa ya da işlem reddi" onClick={() => go('erisim')} />
-        <Kpi label="Dışa aktarma · 24 saat" value={fmtN(s.last24h.export)} help="Excel, CSV, PDF, Word" onClick={() => go('erisim')} />
+        <Kpi label="Açık uyarı" value={fmtN(s.openAlerts.kritik + s.openAlerts.uyari)} help={`${fmtN(s.openAlerts.kritik)} kritik`} onClick={() => go('uyarilar')} info={<SqlInfo k={kaynakOf(s)} alan="openAlerts" label="Açık uyarı" />} />
+        <Kpi label="Hatalı giriş · 24 saat" value={fmtN(s.last24h.loginFailed)} help={`${fmtN(s.last24h.loginOk)} başarılı giriş`} onClick={() => go('giris')} info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Hatalı giriş" />} />
+        <Kpi label="Yetkisiz deneme · 24 saat" value={fmtN(s.last24h.forbidden)} help="Sayfa ya da işlem reddi" onClick={() => go('erisim')} info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Yetkisiz deneme" />} />
+        <Kpi label="Dışa aktarma · 24 saat" value={fmtN(s.last24h.export)} help="Excel, CSV, PDF, Word" onClick={() => go('erisim')} info={<SqlInfo k={kaynakOf(s)} alan="last24h" label="Dışa aktarma" />} />
       </KpiRow>
       <div className="grid gap-3 lg:grid-cols-2 lg:gap-4">
         <Panel>
-          <h2 className="text-[16px] font-extrabold tracking-tight">Uyum göstergeleri</h2>
+          <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">
+            Uyum göstergeleri
+            <SqlInfo k={kaynakOf(s)} alan="_hepsi" label="Uyum göstergeleri" />
+          </h2>
           <div className="mt-1">
             <Row
               label="Saklama süresi"

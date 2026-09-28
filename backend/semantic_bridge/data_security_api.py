@@ -17,6 +17,16 @@ from fastapi import HTTPException, Request
 from starlette.concurrency import run_in_threadpool
 
 from semantic_bridge import data_security as D
+from semantic_bridge import provenance as PV
+from semantic_bridge import sorgu_izi as IZ
+
+F_OZET = 'Özet: açık uyarı ve kritik sayısı güvenlik uyarılarından; hatalı/başarılı giriş, yetkisiz deneme ve dışa aktarma son 24 saatin giriş ve erişim kayıtlarından; «Herkes» rolünün kapsamı = rolün sayfaları ÷ bütün sayfalar; veri alanı atanmamış tablo ve kişisel veri kolonu katalog profillerinden.'
+F_UYARI = 'Uyarılar: açık/kapalı sayaçları ve liste güvenlik uyarısı kayıtlarından (kurallar kayıtlar üstünde çalışır).'
+F_HIJYEN = "Hesap hijyeni: AD'deki etkin kişiler, CRM'deki etkin kullanıcılar ve portal izleri (giriş, yetki bağı) karşılaştırılır; bulgu türü sayaçları bu karşılaştırmanın sonuçlarıdır."
+F_ONIZLEME = "«Herkes» önizlemesi: AD'deki etkin kişilerden, önerilen değişiklikle bir sayfayı kaybedecek olanlar (başka rolünden alamayanlar); yetki başına kaybeden kişi sayısı."
+F_ENVANTER = 'Kişisel veri envanteri: maskeli kolon, ad-soyad kolonu, portal kopyası ve saklama süresi sayıları envanter tanımı ile katalog profillerinden; büyüklük tablonun satır sayısı (portal tabloları için sayım).'
+F_SAKLAMA = 'Saklama: süresi dolmuş satır = hedef tablolarda saklama süresinden eski kayıtların sayımı (salt okuma); koşu geçmişi silinen satır sayısını yazar.'
+AD_DIS = "Etki alanı dizini (Active Directory) okuması"
 
 log = logging.getLogger("semantic.data_security.api")
 P = "/api/v1/data-security"
@@ -118,6 +128,20 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/summary")
     def ds_summary(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
+        with IZ.izle(engine) as ran:
+            out = _summary(engine, tenant)
+
+        def extra(k: PV.Kaynaklar) -> list[str]:
+            from semantic_bridge import admin_kaynak as ADK
+
+            st = access_mod.role_stmts(tenant)
+            return [k.portal("portal.guvenlik.roller", "Roller ve izinler", st["roles"], engine),
+                    k.portal("portal.guvenlik.izinler", "Rol izinleri", st["perms"], engine),
+                    ADK._profiles_source(k, engine, rt().settings.datasource_id)]
+        return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.guvenlik.ozet", title="Veri güvenliği özeti",
+                                               text=F_OZET, extra=extra))
+
+    def _summary(engine: Any, tenant: str) -> dict[str, Any]:
         out = D.summary(engine)
         access_mod.ensure(engine, tenant)
         st = access_mod._load(engine, tenant)
@@ -142,7 +166,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/alerts")
     def ds_alerts(request: Request, state: str = "open", before: str = "") -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return D.list_alerts(engine, state=state, before=_int(before))
+        return IZ.izli(engine, lambda: D.list_alerts(engine, state=state, before=_int(before)),
+                       prefix="portal.guvenlik.uyarilar", title="Güvenlik uyarıları", text=F_UYARI, skip=("next",))
 
     @app.patch(P + "/alerts/{alert_id}")
     def ds_alert_close(alert_id: int, body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -213,8 +238,22 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     async def ds_hygiene(request: Request) -> dict[str, Any]:
         engine, tenant, ds, _ = await run_in_threadpool(ctx, request)
         sess = await run_in_threadpool(sessions_or_none)
-        return await run_in_threadpool(D.hygiene, engine, tenant, ds, directory=directory, sessions=sess,
-                                       is_admin=admin_mod.is_admin)
+
+        def run() -> dict[str, Any]:
+            def extra(k: PV.Kaynaklar) -> list[str]:
+                ids = [k.hesap("ad", "AD'deki etkin kişiler.", dis=AD_DIS)]
+                try:
+                    ids.append(k.sorgu("crm.guvenlik.kullanicilar", "CRM etkin kullanıcıları", "crm",
+                                       D.crm_users_sql(directory._crm_prefix()),
+                                       database=PV.connection_database(directory._crm_file)))
+                except Exception:  # noqa: BLE001 — CRM şeması tanımlı değilse karşılaştırma zaten çıkmaz
+                    pass
+                return ids
+            with IZ.izle(engine) as ran:
+                out = D.hygiene(engine, tenant, ds, directory=directory, sessions=sess, is_admin=admin_mod.is_admin)
+            return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.guvenlik.hijyen",
+                                                   title="Hesap hijyeni", text=F_HIJYEN, extra=extra))
+        return await run_in_threadpool(run)
 
     @app.get(P + "/preview-everyone")
     async def ds_preview_everyone(request: Request, remove: str = "", perms: Optional[str] = None,
@@ -226,22 +265,39 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
             perms=[p.strip() for p in perms.split(",")] if perms is not None else None,
             remove=[p.strip() for p in remove.split(",") if p.strip()], all_perms=all)
         out["note"] = note
-        return out
+        return PV.bagla(out, lambda: IZ.kaynak(engine, [], out, prefix="portal.guvenlik.onizleme",
+                                               title="Herkes önizlemesi", text=F_ONIZLEME, extra=lambda k: [
+                                                   k.portal("portal.guvenlik.roller", "Roller",
+                                                            access_mod.role_stmts(tenant)["roles"], engine),
+                                                   k.hesap("ad", "AD'deki etkin kişiler.", dis=AD_DIS)]))
 
     # ------------------------------------------------------------------ envanter ve saklama
 
     @app.get(P + "/inventory")
     async def ds_inventory(request: Request) -> dict[str, Any]:
         engine, _, _, _ = await run_in_threadpool(ctx, request)
-        return await run_in_threadpool(D.inventory, engine, engine, rt().profiles)
+
+        def run() -> dict[str, Any]:
+            from semantic_bridge import admin_kaynak as ADK
+
+            return IZ.izli(engine, lambda: D.inventory(engine, engine, rt().profiles), prefix="portal.guvenlik.envanter",
+                           title="Kişisel veri envanteri", text=F_ENVANTER,
+                           extra=lambda k: [ADK._profiles_source(k, engine, rt().settings.datasource_id)])
+        return await run_in_threadpool(run)
 
     @app.get(P + "/retention")
     async def ds_retention(request: Request) -> dict[str, Any]:
         engine, tenant, ds, _ = await run_in_threadpool(ctx, request)
-        objs = await run_in_threadpool(D.preview, engine, engine, tenant, ds)
-        cfg = D.settings()
-        return {"apply": cfg["apply"], "applyOn": D.state_get(engine, "retention_apply_on"),
-                "lastOk": D._iso(D.last_retention_ok(engine)), "dailyAt": cfg["dailyAt"], "objects": objs}
+
+        def run() -> dict[str, Any]:
+            with IZ.izle(engine) as ran:
+                objs = D.preview(engine, engine, tenant, ds)
+            cfg = D.settings()
+            out = {"apply": cfg["apply"], "applyOn": D.state_get(engine, "retention_apply_on"),
+                   "lastOk": D._iso(D.last_retention_ok(engine)), "dailyAt": cfg["dailyAt"], "objects": objs}
+            return PV.bagla(out, lambda: IZ.kaynak(engine, ran, out, prefix="portal.guvenlik.saklama", title="Saklama",
+                                                   text=F_SAKLAMA))
+        return await run_in_threadpool(run)
 
     @app.post(P + "/retention/preview")
     async def ds_retention_preview(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -253,7 +309,9 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
                 days[str(k)] = max(0, int(v))
             except (TypeError, ValueError):
                 raise HTTPException(422, detail={"code": "SECURITY", "message": "Gün sayısı tam sayı olmalı."}) from None
-        return {"objects": await run_in_threadpool(D.preview, engine, engine, tenant, ds, None, days)}
+        return await run_in_threadpool(lambda: IZ.izli(engine, lambda: {"objects": D.preview(engine, engine, tenant, ds, None, days)},
+                                                       prefix="portal.guvenlik.saklama", title="Saklama önizlemesi",
+                                                       text=F_SAKLAMA))
 
     @app.put(P + "/retention")
     async def ds_retention_put(body: dict[str, Any], request: Request) -> dict[str, Any]:
@@ -273,7 +331,8 @@ def register(app, rt: Callable[[], Any], require_caller: Callable[[Request], Non
     @app.get(P + "/retention/runs")
     def ds_retention_runs(request: Request, before: str = "") -> dict[str, Any]:
         engine, _, _, _ = ctx(request)
-        return D.list_runs(engine, before=_int(before))
+        return IZ.izli(engine, lambda: D.list_runs(engine, before=_int(before)), prefix="portal.guvenlik.kosular",
+                       title="Saklama koşuları", text=F_SAKLAMA, skip=("next",))
 
     # ------------------------------------------------------------------ zamanlayıcı
 

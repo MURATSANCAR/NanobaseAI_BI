@@ -890,6 +890,12 @@ HYGIENE_KIND = {
 }
 
 
+def crm_users_sql(prefix: str) -> str:
+    """Etkin CRM kullanıcıları (hesap hijyeni; sorgu bilgisi aynı metni gösterir)."""
+    return (f"SELECT FullName, DomainName FROM {prefix}SystemUserBase WHERE IsDisabled = 0 AND AccessMode IN (0, 1) "
+            f"AND DomainName IS NOT NULL AND DomainName <> ''")
+
+
 def hygiene(meta: sa.engine.Engine, tenant: str, ds: str, *, directory: Any, sessions: Optional[list[dict[str, Any]]],
             is_admin: Callable[[str], bool], now: Optional[datetime] = None) -> dict[str, Any]:
     """Hesap hijyeni raporu (analiz §4.1): deterministik; AD, CRM ve portal izlerinin kesişimi. Okunamayan kaynak
@@ -907,10 +913,7 @@ def hygiene(meta: sa.engine.Engine, tenant: str, ds: str, *, directory: Any, ses
         notes.append(f"Active Directory okunamadı ({type(e).__name__}); AD'ye dayanan bulgular çıkmadı.")
     crm: Optional[dict[str, str]] = None
     try:
-        p = directory._crm_prefix()
-        rows = directory._crm_rows(
-            f"SELECT FullName, DomainName FROM {p}SystemUserBase WHERE IsDisabled = 0 AND AccessMode IN (0, 1) "
-            f"AND DomainName IS NOT NULL AND DomainName <> ''")
+        rows = directory._crm_rows(crm_users_sql(directory._crm_prefix()))
         crm = {}
         for r in rows:
             acc = A._account(r.get("DomainName"))

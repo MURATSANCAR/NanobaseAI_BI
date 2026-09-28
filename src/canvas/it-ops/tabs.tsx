@@ -3,6 +3,8 @@ import { useInfiniteQuery, useMutation, useQuery, useQueryClient } from '@tansta
 import { toast } from 'sonner';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { Panel } from '../editorial/kit';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import {
   ENV_LABEL, SOURCE, fmtAt, fmtBytes, fmtMinutes, fmtMs, itOpsApi,
   type Incident, type Release, type SettingItem, type Status,
@@ -28,7 +30,10 @@ export function IncidentsTab({ status, onOpen }: { status: Status | undefined; o
     <div className="flex flex-col gap-3">
       {down && (
         <Panel>
-          <h3 className="text-[13px] font-extrabold">Son 30 gün kesinti</h3>
+          <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+            Son 30 gün kesinti
+            <SqlInfo k={kaynakOf(q.data?.pages[0])} alan="downtime30" label="Son 30 gün kesinti" />
+          </h3>
           <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-7">
             {Object.entries(down).map(([ring, v]) => (
               <div key={ring} className="rounded-xl bg-slate-50 px-2.5 py-2">
@@ -92,7 +97,7 @@ export function JobsTab() {
           <thead className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">
             <tr>
               <th className="py-2 pr-3">İş</th>
-              <th className="py-2 pr-3">Sonuç</th>
+              <th className="py-2 pr-3"><InfoLabel k={kaynakOf(q.data)} alan="items">Sonuç</InfoLabel></th>
               <th className="py-2 pr-3">Son koşu</th>
               <th className="py-2 pr-3">Sıradaki</th>
               <th className="py-2">Hata</th>
@@ -153,7 +158,10 @@ export function ReleasesTab() {
   return (
     <div className="flex flex-col gap-3">
       <Panel>
-        <h3 className="text-[13px] font-extrabold">Ortamların son kurulumu</h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Ortamların son kurulumu
+          <SqlInfo k={kaynakOf(first)} alan="_hepsi" label="Kurulumlar ve Mac artığı" />
+        </h3>
         <div className="mt-2 flex flex-col gap-2">
           {(['test', 'vm', 'gpu'] as const).map((env) =>
             first?.latest[env] ? <ReleaseLine key={env} r={first.latest[env] as Release} /> : (
@@ -192,7 +200,10 @@ export function CapacityTab() {
   return (
     <div className="flex flex-col gap-3">
       <Panel>
-        <h3 className="text-[13px] font-extrabold">Disk</h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Disk
+          <SqlInfo k={kaynakOf(c)} alan="disks" label="Disk" />
+        </h3>
         <div className="mt-2 flex flex-col gap-2">
           {c.disks.map((d) => (
             <div key={d.path} className="min-w-0">
@@ -212,7 +223,10 @@ export function CapacityTab() {
         </div>
       </Panel>
       <Panel>
-        <h3 className="text-[13px] font-extrabold">Zeki AI kapasitesi · son {c.days} gün</h3>
+        <h3 className="flex items-center gap-1 text-[13px] font-extrabold">
+          Zeki AI kapasitesi · son {c.days} gün
+          <SqlInfo k={kaynakOf(c)} alan="_hepsi" label="Zeki AI kapasitesi" />
+        </h3>
         <p className="mt-0.5 text-[11.5px] text-canvas-muted">Modül başına tamamlanan model işi; sırada bekleme ve modelin kendi süresi (ortanca).</p>
         <div className="-mx-1 mt-2 overflow-x-auto px-1">
           <table className="w-full min-w-[420px] text-left text-[12.5px]">

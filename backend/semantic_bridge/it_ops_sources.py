@@ -66,8 +66,9 @@ def _num(ctx: Ctx, key: str, default: int) -> int:
         return default
 
 
-def _res(ok: Optional[bool], detail: str, *, ms: Optional[int] = None, data_end: Optional[datetime] = None) -> dict[str, Any]:
-    return {"ok": ok, "detail": detail, "latency_ms": ms, "data_end": data_end}
+def _res(ok: Optional[bool], detail: str, *, ms: Optional[int] = None, data_end: Optional[datetime] = None,
+         sql: Optional[str] = None) -> dict[str, Any]:
+    return {"ok": ok, "detail": detail, "latency_ms": ms, "data_end": data_end, "sql": sql}
 
 
 def _connector(path: str, timeout: int):
@@ -177,7 +178,8 @@ def check_logo(ctx: Ctx) -> dict[str, Any]:
         path = ctx.logo_file()
         timeout = _num(ctx, "ITOPS_QUERY_TIMEOUT_SEC", 60)
         firm = logo_current_firm(lambda sql: _one(path, sql, timeout))
-        rows = _one(path, logo_data_end_sql(firm), timeout)
+        end_sql = logo_data_end_sql(firm)
+        rows = _one(path, end_sql, timeout)
         end = _dt(rows[0].get("son")) if rows else None
     except Exception as e:  # noqa: BLE001
         log.warning("itops: Logo veri sonu okunamadı: %s", e)
@@ -185,7 +187,7 @@ def check_logo(ctx: Ctx) -> dict[str, Any]:
     ms = (r.get("ms") or 0) + int((time.monotonic() - t0) * 1000)
     if end is None:
         return _res(False, "Bağlandı ama faturası olan dönem yok.", ms=ms)
-    return _res(True, f"Bağlandı. Son fatura {end.date().isoformat()}.", ms=ms, data_end=end)
+    return _res(True, f"Bağlandı. Son fatura {end.date().isoformat()}.", ms=ms, data_end=end, sql=end_sql)
 
 
 def check_crm(ctx: Ctx) -> dict[str, Any]:
@@ -205,7 +207,7 @@ def check_crm(ctx: Ctx) -> dict[str, Any]:
     ms = (r.get("ms") or 0) + int((time.monotonic() - t0) * 1000)
     if end is None:
         return _res(False, "Bağlandı ama kitap kaydı okunamadı.", ms=ms)
-    return _res(True, "Bağlandı. Son kitap kaydı değişikliği okundu.", ms=ms, data_end=end)
+    return _res(True, "Bağlandı. Son kitap kaydı değişikliği okundu.", ms=ms, data_end=end, sql=sql)
 
 
 def check_login(ctx: Ctx) -> dict[str, Any]:

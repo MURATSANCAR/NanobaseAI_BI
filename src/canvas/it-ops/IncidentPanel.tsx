@@ -5,6 +5,8 @@ import { Loader2, Sparkles } from 'lucide-react';
 import Sheet from '../editorial/studio/reader/Sheet';
 import { Loading, Note, Pill, btnGhost, btnPrimary, errText, field, label as labelCls } from '../admin/ui';
 import { NOTIFY, fmtAt, fmtMinutes, fmtMs, itOpsApi, type IncidentDetail } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Olay ayrıntısı: tarif, zaman çizelgesi, kök neden notu, Zeki AI değerlendirme taslağı ve yayımı. */
 export default function IncidentPanel({ id, canClose, onClose }: { id: string | null; canClose: boolean; onClose: () => void }) {
@@ -73,7 +75,10 @@ export default function IncidentPanel({ id, canClose, onClose }: { id: string | 
           </section>
 
           <section>
-            <h3 className={labelCls}>Denemeler ({inc.timeline.length})</h3>
+            <h3 className={`${labelCls} flex items-center gap-1`}>
+              Denemeler ({inc.timeline.length})
+              <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Olayın denemeleri ve süresi" />
+            </h3>
             <ol className="mt-1 max-h-64 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-100">
               {inc.timeline.map((c) => (
                 <li key={c.id} className="flex items-start gap-2 px-2.5 py-1.5 text-[12px]">

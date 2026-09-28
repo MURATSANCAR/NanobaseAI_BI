@@ -6,6 +6,8 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, field, td, th } f
 import { Panel } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
 import { fmtAt, fmtDay, fmtN, securityApi, type RetentionObject, type SecurityMeta } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Saklama süreleri: her kayıt türü için süre, «bu süreyle kaç satır etkilenir» önizlemesi, uygulama anahtarı ve gece
  *  işinin kanıt satırları. Kapalıyken hiçbir kayıt silinmez; açmak `guvenlik.saklama` ister ve önizleme gösterilir. */
@@ -56,7 +58,10 @@ export default function RetentionTab({ meta }: { meta?: SecurityMeta }) {
       <Panel>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="text-[16px] font-extrabold tracking-tight">Saklama süreleri</h2>
+            <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">
+              Saklama süreleri
+              <SqlInfo k={kaynakOf(q.data)} alan="objects" label="Süresi dolmuş satır" />
+            </h2>
             <p className="max-w-[80ch] text-[12px] text-canvas-muted">
               Süresi dolan kayıt yalnız «uygula» açıkken ve her gece {d.dailyAt}'ten sonra işlenir; önce kaç satırın etkileneceği
               yazılır, sonra işlenen satır sayısı ve tarih aralığı. Soru kaydında satır silinmez, yalnız sonuç tablosu boşaltılır.

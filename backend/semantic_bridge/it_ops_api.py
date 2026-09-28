@@ -20,6 +20,9 @@ from typing import Any, Callable, Optional
 from fastapi import HTTPException, Request
 
 from semantic_bridge import it_ops as I
+from semantic_bridge import it_ops_kaynak as IK
+from semantic_bridge import provenance as P
+from semantic_bridge import sorgu_izi as IZ
 from semantic_bridge import it_ops_sources as S
 
 log = logging.getLogger("semantic_bridge.it_ops.api")
@@ -71,7 +74,8 @@ def run_tour(ctx: S.Ctx, datasource: str, *, source: str = "timer", rings: Optio
         results = S.run_rings(ctx, rings)
         for r in results:
             I.record_check(ctx.engine, ctx.tenant, r["ring"], r["ok"], latency_ms=r.get("latency_ms"),
-                           data_end=r.get("data_end"), detail=r.get("detail") or "", source=source, at=now)
+                           data_end=r.get("data_end"), detail=r.get("detail") or "", source=source, at=now,
+                           sql_text=r.get("sql"))
         changed = I.evaluate(ctx.engine, ctx.tenant, results, st, now=now)
         jobs = 0
         if collect:
@@ -118,6 +122,10 @@ def register(app, deps: dict[str, Any]):
     audit = deps["audit"]
     conf = deps["conf"]
 
+    def dbs() -> tuple[Optional[str], Optional[str]]:
+        # Sorgu bilgisi: bağlantı dosyasından YALNIZ veritabanı adı (USE satırı için).
+        return P.connection_database(deps["logo_file"]()), P.connection_database(deps["crm_file"]())
+
     def make_ctx() -> S.Ctx:
         engine = deps["engine"]()
         I.ensure(engine)
@@ -158,14 +166,16 @@ def register(app, deps: dict[str, Any]):
         from semantic_bridge.alerts import email_status
 
         st = I.settings(conf)
-        out = I.status(engine, tenant, st)
+        with IZ.izle(engine) as ran:
+            out = I.status(engine, tenant, st)
+            jobs = I.list_jobs(engine, tenant)
+            rel = I.list_releases(engine, tenant, size=1)
         to, rejected = recipients(conf)
-        jobs = I.list_jobs(engine, tenant)
-        rel = I.list_releases(engine, tenant, size=1)
-        return {**out, "me": me(user), "email": {**email_status(), "recipients": to, "rejected": rejected},
-                "env": "vm" if S.in_container(make_ctx()) else "test",
-                "jobs": {"total": len(jobs), "failed": sum(1 for j in jobs if j["lastOk"] is False)},
-                "releases": {"latest": rel["latest"], "parity": rel["parity"]}}
+        res = {**out, "me": me(user), "email": {**email_status(), "recipients": to, "rejected": rejected},
+               "env": "vm" if S.in_container(make_ctx()) else "test",
+               "jobs": {"total": len(jobs), "failed": sum(1 for j in jobs if j["lastOk"] is False)},
+               "releases": {"latest": rel["latest"], "parity": rel["parity"]}}
+        return P.bagla(res, lambda: IK.for_status(engine, tenant, ran, res, *dbs()))
 
     @app.get("/api/v1/it-ops/checks")
     def itops_checks(request: Request, ring: Optional[str] = None, since: Optional[str] = None,
@@ -182,16 +192,20 @@ def register(app, deps: dict[str, Any]):
         engine, tenant, _ = ctx(request)
         if state not in ("open", "closed", "all"):
             raise HTTPException(status_code=422, detail={"code": "ITOPS", "message": "state open, closed ya da all olmalı."})
-        out = I.list_incidents(engine, tenant, state=state, ring=ring or None, before=before, size=size)
-        if state != "open":
-            since = I._now() - timedelta(days=30)
-            out["downtime30"] = I.downtime(engine, tenant, since)
-        return out
+
+        def read() -> dict[str, Any]:
+            out = I.list_incidents(engine, tenant, state=state, ring=ring or None, before=before, size=size)
+            if state != "open":
+                since = I._now() - timedelta(days=30)
+                out["downtime30"] = I.downtime(engine, tenant, since)
+            return out
+        return IZ.izli(engine, read, prefix="portal.itops.olaylar", title="Olaylar", text=IK.F_OLAY, skip=("size",))
 
     @app.get("/api/v1/it-ops/incidents/{iid}")
     def itops_incident(iid: str, request: Request) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        return call(I.get_incident, engine, tenant, iid)
+        return IZ.izli(engine, lambda: call(I.get_incident, engine, tenant, iid), prefix="portal.itops.olay",
+                       title="Olay", text=IK.F_OLAY)
 
     @app.patch("/api/v1/it-ops/incidents/{iid}")
     def itops_incident_update(iid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -228,17 +242,25 @@ def register(app, deps: dict[str, Any]):
     @app.get("/api/v1/it-ops/jobs")
     def itops_jobs(request: Request) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        return {"items": I.list_jobs(engine, tenant)}
+        with IZ.izle(engine) as ran:
+            out = {"items": I.list_jobs(engine, tenant)}
+        return P.bagla(out, lambda: IK.simple(engine, ran, out, prefix="portal.itops.isler", title="Zamanlanmış işler",
+                                              text=IK.F_IS, dis=True))
 
     @app.get("/api/v1/it-ops/releases")
     def itops_releases(request: Request, before: Optional[int] = None, size: int = 50) -> dict[str, Any]:
         engine, tenant, _ = ctx(request)
-        return I.list_releases(engine, tenant, before=before, size=size)
+        return IZ.izli(engine, lambda: I.list_releases(engine, tenant, before=before, size=size),
+                       prefix="portal.itops.surumler", title="Kurulumlar", text=IK.F_SURUM, skip=("size",))
 
     @app.get("/api/v1/it-ops/capacity")
     def itops_capacity(request: Request, days: int = 7) -> dict[str, Any]:
         ctx(request)
-        return S.capacity(make_ctx(), max(1, min(int(days or 7), 366)))
+        c = make_ctx()
+        with IZ.izle(c.engine) as ran:
+            out = S.capacity(c, max(1, min(int(days or 7), 366)))
+        return P.bagla(out, lambda: IK.simple(c.engine, ran, out, prefix="portal.itops.kapasite", title="Kapasite",
+                                              text=IK.F_KAPASITE, skip=("days",), dis=True))
 
     # ------------------------------------------------------------------ ayar (eşik ve alıcılar)
 
@@ -321,6 +343,7 @@ def register(app, deps: dict[str, Any]):
         require_caller(request)
         engine = deps["engine"]()
         I.ensure(engine)
-        return I.banner(engine, deps["tenant"]())
+        return IZ.izli(engine, lambda: I.banner(engine, deps["tenant"]()), prefix="portal.itops.serit",
+                       title="Kesinti şeridi", text=IK.F_BANNER)
 
     return {"run_tour": lambda **kw: run_tour(make_ctx(), deps["datasource"](), **kw)}

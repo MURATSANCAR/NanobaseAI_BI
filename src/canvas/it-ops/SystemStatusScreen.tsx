@@ -9,6 +9,8 @@ import { Loading, Note, Pill, btnPrimary, errText } from '../admin/ui';
 import { Tabs } from '../budget/parts';
 import { fmtAt, fmtMinutes, itOpsApi, type Incident, type RingId, type Status } from './api';
 import RingCard from './RingCard';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import IncidentPanel from './IncidentPanel';
 import { CapacityTab, IncidentsTab, JobsTab, ReleasesTab, SettingsTab } from './tabs';
 
@@ -109,13 +111,16 @@ export default function SystemStatusScreen() {
               <div className="grid min-w-0 gap-3 xl:grid-cols-[minmax(0,1fr)_360px] xl:gap-4">
                 <div className="grid min-w-0 gap-3 [grid-template-columns:repeat(auto-fill,minmax(min(100%,280px),1fr))]">
                   {s.rings.map((r) => (
-                    <RingCard key={r.id} ring={r} canCheck={s.me.canCheck} busy={busy === r.id || busy === 'all'}
+                    <RingCard key={r.id} ring={r} k={kaynakOf(s)} canCheck={s.me.canCheck} busy={busy === r.id || busy === 'all'}
                       onCheck={() => check.mutate(r.id)} onIncident={openIncident} />
                   ))}
                 </div>
                 <aside className="flex min-w-0 flex-col gap-3">
                   <section className="glass-panel rounded-2xl p-3 shadow-glass-float sm:rounded-3xl sm:p-4">
-                    <h2 className="text-[13px] font-extrabold">Açık olaylar</h2>
+                    <h2 className="flex items-center gap-1 text-[13px] font-extrabold">
+                      Açık olaylar
+                      <SqlInfo k={kaynakOf(s)} alan="open" label="Açık olaylar (sekme rozeti dahil)" />
+                    </h2>
                     {!s.open.length && <p className="mt-1 text-[12.5px] text-canvas-muted">Açık olay yok.</p>}
                     <ul className="mt-2 flex flex-col gap-1.5">
                       {s.open.map((i) => (
@@ -139,7 +144,10 @@ export default function SystemStatusScreen() {
                           ? `${s.email.recipients.length} iç alıcıya gider.`
                           : 'Alıcı tanımlı değil: Ayarlar sekmesinden eklenir.'}
                     </p>
-                    <h2 className="mt-3 text-[13px] font-extrabold">Zamanlanmış işler</h2>
+                    <h2 className="mt-3 flex items-center gap-1 text-[13px] font-extrabold">
+                      Zamanlanmış işler
+                      <SqlInfo k={kaynakOf(s)} alan="jobs" label="Zamanlanmış işler (sekme rozeti dahil)" />
+                    </h2>
                     <button type="button" onClick={() => update({ sekme: 'isler' })} className="mt-1 text-left font-semibold text-canvas-violet underline-offset-2 hover:underline">
                       {s.jobs.failed ? `${s.jobs.failed} iş hatalı` : `${s.jobs.total} iş, hatasız`}
                     </button>

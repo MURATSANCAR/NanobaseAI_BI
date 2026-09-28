@@ -4,6 +4,8 @@ import { ENGINE_ENABLED } from '../engine';
 import { Note, Pill, TableWrap, errText, field, label as labelCls, td, th } from '../admin/ui';
 import { Kpi, KpiRow, Panel } from '../editorial/kit';
 import { fmtBytes, fmtN, securityApi } from './api';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Kişisel veri envanteri: kaynakta (Logo, CRM) kişisel veri kolonları — değer gösterilmez — ve portalın kendi
  *  kopyaları (tablo/klasör, amaç, saklama). */
@@ -24,10 +26,10 @@ export default function InventoryTab() {
   return (
     <>
       <KpiRow>
-        <Kpi label="Maskeli kolon" value={fmtN(d.sensitiveCount)} help="TC, e-posta, telefon, IBAN, adres, doğum tarihi, parola" />
-        <Kpi label="Ad-soyad kolonu" value={fmtN(d.nameCount)} help="Kişisel veri; sorgu için maskelenmez" />
-        <Kpi label="Portal kopyası" value={fmtN(d.portal.length)} help="Tablo ve klasör" />
-        <Kpi label="Saklama süresi olan" value={fmtN(d.portal.filter((p) => p.retentionDays).length)} help="Kalanlar iş kaydı" />
+        <Kpi label="Maskeli kolon" value={fmtN(d.sensitiveCount)} help="TC, e-posta, telefon, IBAN, adres, doğum tarihi, parola" info={<SqlInfo k={kaynakOf(d)} alan="sensitiveCount" label="Maskeli kolon" />} />
+        <Kpi label="Ad-soyad kolonu" value={fmtN(d.nameCount)} help="Kişisel veri; sorgu için maskelenmez" info={<SqlInfo k={kaynakOf(d)} alan="nameCount" label="Ad-soyad kolonu" />} />
+        <Kpi label="Portal kopyası" value={fmtN(d.portal.length)} help="Tablo ve klasör" info={<SqlInfo k={kaynakOf(d)} alan="portal" label="Portal kopyası" />} />
+        <Kpi label="Saklama süresi olan" value={fmtN(d.portal.filter((p) => p.retentionDays).length)} help="Kalanlar iş kaydı" info={<SqlInfo k={kaynakOf(d)} alan="portal" label="Saklama süresi olan" />} />
       </KpiRow>
       <Panel>
         <h2 className="text-[16px] font-extrabold tracking-tight">Portal içi kopyalar</h2>
@@ -42,7 +44,7 @@ export default function InventoryTab() {
                 <th className={th}>Hangi veri</th>
                 <th className={th}>Kimin</th>
                 <th className={th}>Amaç</th>
-                <th className={`${th} text-right`}>Büyüklük</th>
+                <th className={`${th} text-right`}><InfoLabel k={kaynakOf(d)} alan="portal">Büyüklük</InfoLabel></th>
                 <th className={th}>Saklama</th>
               </tr>
             </thead>

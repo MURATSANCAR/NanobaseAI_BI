@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, ChevronLeft } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 import { Note, Pill, errText, field, label as labelCls } from '../admin/ui';
 import { Pager, Panel } from '../editorial/kit';
 import {
@@ -33,6 +35,11 @@ function RunList({ meta, onSelect }: { meta: Meta; onSelect: (id: string) => voi
         </label>
       </div>
       <div className="mt-3 flex flex-col gap-2">
+        {q.data && q.data.items.length > 0 && (
+          <div className="flex justify-end text-[11px] text-canvas-muted">
+            <InfoLabel k={kaynakOf(q.data)} alan="items" label="Koşu sayıları">Sağlam, bozulan, düzelen</InfoLabel>
+          </div>
+        )}
         {q.isLoading && <Empty>Yükleniyor…</Empty>}
         {q.error && <Note tone="err">{errText(q.error, 'Koşular okunamadı.')}</Note>}
         {q.data && !q.data.items.length && (
@@ -153,6 +160,8 @@ function RunHeader({ r }: { r: RunDetail }) {
         <Pill tone={RUN_TONE[r.status]}>{r.statusLabel}</Pill>
         <h2 className="text-[16px] font-extrabold tracking-tight">{r.suiteLabel}</h2>
         <span className="font-mono text-[11.5px] text-canvas-muted">{r.label}</span>
+        <SqlInfo k={kaynakOf(run.data)} alan="_hepsi" label="Koşu sayıları" />
+        <SqlInfo k={kaynakOf(cases.data)} alan="_hepsi" label="Vaka sayaçları" />
       </div>
       <div className="mt-1 text-[11.5px] text-canvas-muted">
         {fmtAt(r.startedAt)} → {fmtAt(r.finishedAt)} · {fmtDuration(r.durationSec)}{r.env ? ` · ${r.env === 'vm' ? 'müşteri ortamı' : 'test sunucusu'}` : ''}

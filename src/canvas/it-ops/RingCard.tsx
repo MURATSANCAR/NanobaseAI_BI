@@ -1,10 +1,14 @@
 import { Loader2, RotateCw } from 'lucide-react';
 import { Pill } from '../admin/ui';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 import { STATE, fmtAt, fmtDay, fmtMinutes, fmtMs, type Incident, type Ring } from './api';
 
 /** Tek halka: durum, son deneme, veri sonu, açık olay. Kopukken kart kırmızı kenarlı ve tarif bir tık uzakta. */
-export default function RingCard({ ring, canCheck, busy, onCheck, onIncident }: {
+export default function RingCard({ ring, canCheck, busy, onCheck, onIncident, k }: {
   ring: Ring;
+  /** Sorgu bilgisi (durum cevabı): halkanın sayıları ve veri sonunu okuyan SQL. */
+  k?: Kaynaklar;
   canCheck: boolean;
   busy: boolean;
   onCheck: () => void;
@@ -20,6 +24,7 @@ export default function RingCard({ ring, canCheck, busy, onCheck, onIncident }: 
           <div className="flex items-center gap-2">
             <span aria-hidden className={`h-2.5 w-2.5 shrink-0 rounded-full ${s.dot}`} />
             <h3 className="truncate text-[15px] font-extrabold tracking-tight">{ring.label}</h3>
+            <SqlInfo k={k} alan="rings[]" row={ring.id} label={`${ring.label}: denetim`} />
           </div>
           <p className="mt-0.5 text-[11.5px] leading-snug text-canvas-muted">{ring.hint}</p>
         </div>
@@ -30,6 +35,7 @@ export default function RingCard({ ring, canCheck, busy, onCheck, onIncident }: 
         <div className={`rounded-xl px-2.5 py-1.5 text-[12px] font-semibold ${ring.stale ? 'bg-amber-50 text-amber-900' : 'bg-slate-50 text-canvas-ink'}`}>
           Veri sonu <strong>{ring.id === 'logo' ? fmtDay(ring.dataEnd) : fmtAt(ring.dataEnd)}</strong>
           {ring.dataEndAge && <span className="text-canvas-muted"> · {ring.dataEndAge}</span>}
+          <SqlInfo k={k} alan="rings[]" row={ring.id} label={`${ring.label}: veri sonu`} className="ml-1" />
         </div>
       )}
 

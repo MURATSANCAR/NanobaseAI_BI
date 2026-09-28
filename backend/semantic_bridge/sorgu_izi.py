@@ -17,7 +17,7 @@ from __future__ import annotations
 import contextvars
 import threading
 from contextlib import contextmanager
-from typing import Any, Iterator, Optional
+from typing import Any, Callable, Iterator, Optional
 
 import sqlalchemy as sa
 from sqlalchemy.sql import Select
@@ -59,6 +59,39 @@ def izle(engine: Any) -> Iterator[list]:
         _REC.reset(token)
         if outer is not None:
             outer.extend(ran)
+
+
+def kaynak(engine: Any, ran: list, out: Any, *, prefix: str, title: str, text: str, skip: tuple = (),
+           extra: Optional[Callable[[P.Kaynaklar], list[str]]] = None, description: str = "",
+           fields: Optional[Callable[[P.Kaynaklar, str], dict[str, str]]] = None) -> P.Kaynaklar:
+    """Yakalanan okumalardan kayıt: tek hesap (`text`) bütün okumaları girdi alır; cevabın rakam taşıyan her üst
+    anahtarı (skip hariç) bu hesaba bağlanır. `extra(k)`: Logo/CRM sorguları ya da dış kaynak hesapları ekler
+    (kimlik listesi döndürür). `fields(k, ref)`: daha ince alan eşlemesi (üst anahtarın üstüne yazar)."""
+    k = P.Kaynaklar()
+    ids = kaydet(k, ran, engine, prefix, title, description=description or "Bu ekran açılırken koşan okuma.")
+    if extra is not None:
+        ids += [i for i in extra(k) if i]
+    if not ids:
+        raise P.ProvenanceError("Bu ekranın okuması yakalanamadı.")
+    ref = k.hesap(prefix, text, ids)
+    # Ekranın genel «i»si için anahtar (başlık/sekme yanındaki tek düğme): `<SqlInfo alan="_hepsi">`.
+    k.alan("_hepsi", ref)
+    skipped = set(skip)
+    if isinstance(out, dict):
+        k.alanlar({key: ref for key, v in out.items() if key not in skipped and P.numeric_paths({key: v})})
+    if fields is not None:
+        k.alanlar(fields(k, ref))
+    return k
+
+
+def izli(engine: Any, fn: Callable[[], Any], **kw: Any) -> Any:
+    """`fn()`'i izleyerek koşturur ve cevabına sorgu bilgisini ekler (`kaynak()` anahtarlarıyla). Kayıt kurulamazsa
+    rakamlar yine döner, pencere nedeni yazar (`P.bagla`)."""
+    with izle(engine) as ran:
+        out = fn()
+    if not isinstance(out, dict):
+        return out
+    return P.bagla(out, lambda: kaynak(engine, ran, out, **kw))
 
 
 def kaydet(k: P.Kaynaklar, ran: list, engine: Any, prefix: str, title: str, *, description: str = "",

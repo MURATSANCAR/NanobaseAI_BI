@@ -41,6 +41,8 @@ CHECKS = sa.Table(
     sa.Column("data_end", sa.DateTime(timezone=True)),  # Logo/CRM son kayıt
     sa.Column("detail", sa.Text),                      # ekrana giden, teknoloji adı ayıklanmış cümle
     sa.Column("source", sa.String(16), nullable=False),  # timer | manual | watchdog
+    # Sorgu bilgisi: veri sonunu okuyan SQL (Logo/CRM), değerleri yerinde; ekrandaki «i» bunu gösterir.
+    sa.Column("sql_text", sa.Text),
     sa.Index("ix_itops_checks_ring_at", "tenant_id", "ring", "at"),
 )
 
@@ -229,6 +231,11 @@ def ensure(engine: sa.engine.Engine) -> None:
         if id(engine) in _ready:
             return
         _md.create_all(engine, checkfirst=True)
+        # create_all var olan tabloya kolon eklemez; veri sonu SQL'i sonradan geldi.
+        have = {c["name"] for c in sa.inspect(engine).get_columns(CHECKS.name)}
+        if "sql_text" not in have:
+            with engine.begin() as c:
+                c.execute(sa.text(f"ALTER TABLE {CHECKS.name} ADD COLUMN sql_text TEXT"))
         _ready.add(id(engine))
 
 
@@ -273,7 +280,7 @@ def internal_recipients(raw: str, domains_raw: str) -> tuple[list[str], list[str
 
 def record_check(engine: sa.engine.Engine, tenant: str, ring: str, ok: Optional[bool], *, latency_ms: Optional[int] = None,
                  data_end: Optional[datetime] = None, detail: str = "", source: str = "timer",
-                 at: Optional[datetime] = None) -> int:
+                 at: Optional[datetime] = None, sql_text: Optional[str] = None) -> int:
     if ring not in RING_BY_ID:
         raise ItOpsError(f"Bilinmeyen halka: {ring}")
     if source not in SOURCES:
@@ -281,7 +288,7 @@ def record_check(engine: sa.engine.Engine, tenant: str, ring: str, ok: Optional[
     with engine.begin() as c:
         res = c.execute(CHECKS.insert().values(
             tenant_id=tenant, ring=ring, at=at or _now(), ok=ok, latency_ms=latency_ms, data_end=_aware(data_end),
-            detail=screen_text(detail), source=source))
+            detail=screen_text(detail), source=source, sql_text=sql_text))
         return int(res.inserted_primary_key[0])
 
 

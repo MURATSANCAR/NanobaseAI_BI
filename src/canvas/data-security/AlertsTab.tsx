@@ -6,6 +6,8 @@ import { Note, Pill, btnGhost, errText } from '../admin/ui';
 import { Panel } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
 import { SEVERITY, fmtAt, securityApi, type Alert, type SecurityMeta } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 const STATES = [
   { key: 'open', label: 'Açık' },
@@ -41,7 +43,10 @@ export default function AlertsTab({ meta }: { meta?: SecurityMeta }) {
   return (
     <Panel>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h2 className="text-[16px] font-extrabold tracking-tight">Güvenlik uyarıları</h2>
+        <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">
+          Güvenlik uyarıları
+          <SqlInfo k={kaynakOf(q.data?.pages[0])} alan="counts" label="Açık ve kapalı uyarı sayıları" />
+        </h2>
         <div className="flex gap-1 rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Durum">
           {STATES.map((s) => (
             <button

@@ -6,6 +6,8 @@ import { Note, Pill, TableWrap, btnGhost, btnPrimary, errText, td, th } from '..
 import { Panel } from '../editorial/kit';
 import { AskSheet } from '../budget/parts';
 import { SEVERITY, fmtAt, fmtN, securityApi, type SecurityMeta } from './api';
+import SqlInfo from '../components/SqlInfo';
+import { kaynakOf } from '../components/kaynakOf';
 
 /** Hesap hijyeni (AD, CRM ve portal izlerinin kesişimi) ve «Herkes» daraltma önizlemesi. */
 export default function HygieneTab({ meta }: { meta?: SecurityMeta }) {
@@ -30,7 +32,10 @@ export default function HygieneTab({ meta }: { meta?: SecurityMeta }) {
       <Panel>
         <div className="flex flex-wrap items-end justify-between gap-2">
           <div>
-            <h2 className="text-[16px] font-extrabold tracking-tight">Hesap hijyeni</h2>
+            <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">
+              Hesap hijyeni
+              <SqlInfo k={kaynakOf(q.data)} alan="_hepsi" label="Hesap hijyeni sayıları" />
+            </h2>
             <p className="text-[12px] text-canvas-muted">
               AD'de kapalı ama portalda izi olan, uzun süredir girmeyen, test adı taşıyan ve rolü olmayan hesaplar. Portal AD'ye ve
               CRM'e yazmaz; hesap kapatma BT'nin işidir, burada yalnız portal oturumu kapanır.
@@ -135,7 +140,10 @@ function EveryonePreviewPanel() {
 
   return (
     <Panel>
-      <h2 className="text-[16px] font-extrabold tracking-tight">«Herkes» daraltma önizlemesi</h2>
+      <h2 className="flex items-center gap-1 text-[16px] font-extrabold tracking-tight">
+        «Herkes» daraltma önizlemesi
+        <SqlInfo k={kaynakOf(view)} alan="_hepsi" label="Kaybeden kişi sayıları" />
+      </h2>
       <p className="text-[12px] text-canvas-muted">
         «Herkes» giriş yapan herkese uygulanır. Prod öncesi daraltılacak; bu önizleme, daraltılırsa hangi kişinin hangi sayfayı
         kaybedeceğini bugünkü roller ve AD üyelikleriyle hesaplar. Hiçbir şey değişmez; daraltma Yönetim → Yetkiler'de yapılır.
