@@ -451,7 +451,8 @@ ADVICE_SYSTEM = (
     "Cevabı yalnız şu JSON olarak ver: "
     '{"ozet": "iki cümlelik durum", "oneriler": [{"baslik": "...", "neden": "hangi veriye dayandığı, sayıyla", '
     '"ne_zaman": "bu hafta | bu ay | bu çeyrek"}], "riskler": ["..."]} '
-    "En çok 4 öneri. Teknoloji ya da model adı yazma."
+    "En çok 4 öneri. Puanları (sadakat, ısı) yıl ya da adet gibi okuma; süreyi yalnız «birlikte_gecen_yil»dan al. "
+    "Teknoloji ya da model adı yazma."
 )
 
 
@@ -465,7 +466,8 @@ def advice_input(name: str, growth: dict[str, Any], relation: dict[str, Any]) ->
                   "degisim_yuzde": s.get("changePct"), "yillik": s.get("years"), "veri_sonu": growth.get("dataEnd")},
         "kitaplar": [{"ad": b["title"], "net_adet": b["qty"], "ilk_yayin": b["firstPublished"]} for b in (growth.get("books") or [])],
         "yeni_kitap_yillara_gore": growth.get("newBooksByYear"),
-        "sadakat": growth.get("loyalty"),
+        # Puan dökümü (years=30 gibi) modele gitmez: 2026-09-28 kabulünde model süre puanını «30 yıllık» diye okudu.
+        "sadakat": _loyalty_facts(growth.get("loyalty") or {}),
         "okur": {"site_ortalama": ((growth.get("readers") or {}).get("site") or {}).get("average"),
                  "site_yorum": ((growth.get("readers") or {}).get("site") or {}).get("comments"),
                  "web_ton": (growth.get("readers") or {}).get("web")},
@@ -476,6 +478,13 @@ def advice_input(name: str, growth: dict[str, Any], relation: dict[str, Any]) ->
         "son_notlar": [{"tarih": m.get("date"), "konu": m.get("topic"), "ton": m.get("toneLabel"),
                         "not": (m.get("notes") or "")[:600], "siradaki_adim": m.get("nextStep")} for m in notes[:5]],
     }
+
+
+def _loyalty_facts(l: dict[str, Any]) -> dict[str, Any]:
+    band = {"bagli": "bağlı", "duzenli": "düzenli", "zayif": "zayıf bağ"}.get(l.get("band"), l.get("band"))
+    return {"puan_100_uzerinden": l.get("score"), "bant": band, "birlikte_gecen_yil": l.get("years"),
+            "ilk_iz": l.get("since"), "son_iz": l.get("last"), "yazar_oldugu_kitap": l.get("books"),
+            "toplam_sozlesme": l.get("contracts"), "yururlukte_sozlesme": l.get("activeContracts")}
 
 
 def parse_advice(text: str) -> dict[str, Any]:

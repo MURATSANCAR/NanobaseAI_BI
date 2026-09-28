@@ -86,6 +86,14 @@ def test_advice_is_stored_with_its_input(engine):
     assert got["id"] == a["id"] and got["input"] == inp and got["recommendations"][0]["title"] == "b"
 
 
+def test_advice_input_gives_years_not_score_parts():
+    g = {"loyalty": G.loyalty({"ilk": "2012-01-10", "son": "2026-03-01", "eser": 7, "sozlesme": 3, "aktif": 1}, date(2026, 9, 28)),
+         "sales": {}, "books": [], "readers": {}}
+    inp = G.advice_input("Deniz", g, {"timeline": [{"status": "yapildi", "private": True, "notes": "gizli"}]})
+    assert inp["sadakat"]["birlikte_gecen_yil"] == pytest.approx(14.7, abs=0.1) and "parts" not in inp["sadakat"]
+    assert inp["son_notlar"] == []      # gizli not modele gitmez
+
+
 def test_growth_cache_is_reused_until_refresh(engine):
     calls = []
 

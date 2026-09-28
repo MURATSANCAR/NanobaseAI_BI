@@ -172,7 +172,10 @@ function Books({ g }: { g: AuthorGrowth }) {
           {all ? 'Daha az göster' : `Bütün kitaplar (${g.books.length})`}
         </button>
       )}
-      <p className="mt-1 text-[10.5px] text-canvas-muted">Adet ve tutar Logo'da {g.sales.years[0]?.year ?? '—'} yılından bu yana, iade düşülmüş.</p>
+      <p className="mt-1 text-[10.5px] text-canvas-muted">
+        Adet ve tutar Logo'da {g.sales.years[0]?.year ?? '—'} yılından bu yana, faturalı satır, iade düşülmüş; 157 ile başlayan kodlar ve bedelsiz satırlar
+        Baskı önerisi ve hakediş hesabıyla aynı kuralla sayılmaz.
+      </p>
     </Sub>
   );
 }
@@ -381,7 +384,7 @@ export default function GrowthSection({ contactId }: { contactId: string }) {
           </button>
         )}
       </div>
-      {q.isLoading && <p className="py-4 text-center text-[12px] text-canvas-muted">Logo satışları ve CRM okunuyor; ilk açılış bir dakikayı bulabilir…</p>}
+      {q.isLoading && <p className="py-4 text-center text-[12px] text-canvas-muted">Logo satışları ve CRM okunuyor; ilk açılış 1–2 dakika sürer, sonra 12 saat hazır bekler…</p>}
       {err && <Note tone="err">{err}</Note>}
       {g && (
         <>
