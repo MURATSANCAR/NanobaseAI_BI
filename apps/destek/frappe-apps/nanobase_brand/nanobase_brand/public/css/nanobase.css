@@ -137,3 +137,35 @@ body[data-path="login"] .app-logo {
 
 /* Masaüstündeki yapay zekâ paneli (#flow-root) kendi derlemesinde temalanır:
    flow/frontend/src/styles/nanobase.css. */
+
+/* Masaüstü «Hakkında» penceresi (public/js/nanobase_desk.js) */
+.nb-about {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 6px;
+	padding: 16px 0 8px;
+}
+.nb-about img {
+	border-radius: 12px;
+	margin-bottom: 6px;
+}
+.nb-about-name {
+	font-family: var(--nb-font-display);
+	font-size: 18px;
+	font-weight: 600;
+	color: var(--text-color);
+}
+.nb-about-sub {
+	font-size: 13px;
+	color: var(--text-muted);
+	font-variant-numeric: tabular-nums;
+}
+
+/* Kenar çubuğu başlığı: çalışma alanının baş harfi yerine NanobaseAI simgesi */
+.header-logo .icon-container:has(> .desktop-alphabet) {
+	background: url("/assets/nanobase_brand/images/logo-mark.svg") center / cover no-repeat !important;
+}
+.header-logo .icon-container > .desktop-alphabet {
+	visibility: hidden;
+}

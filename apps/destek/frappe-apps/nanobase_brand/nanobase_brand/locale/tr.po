@@ -2369,3 +2369,93 @@ msgstr "portal üzerinden"
 
 msgid "via Email"
 msgstr "e-posta üzerinden"
+
+# Yapay zekâ panelinde araç adımlarının etiketleri (değişkenle çağrıldığı için metin çıkarıcı görmüyor).
+msgid "Finding relevant DocTypes"
+msgstr "İlgili kayıt türleri bulunuyor"
+
+msgid "Reading DocType Meta"
+msgstr "Kayıt türünün yapısı okunuyor"
+
+msgid "Reading DocType Records"
+msgstr "Kayıtlar okunuyor"
+
+msgid "Searching Knowledge"
+msgstr "Bilgi bankasında aranıyor"
+
+msgid "Executing"
+msgstr "Çalıştırılıyor"
+
+msgid "Creating Records"
+msgstr "Kayıt oluşturuluyor"
+
+msgid "Updating Records"
+msgstr "Kayıtlar güncelleniyor"
+
+msgid "Deleting Records"
+msgstr "Kayıtlar siliniyor"
+
+msgid "Running Document Actions"
+msgstr "Belge işlemleri yürütülüyor"
+
+# Kayıt türleri (bağlantı değeri çeviriyle gösterilir).
+msgid "Incident"
+msgstr "Arıza"
+
+msgid "Question"
+msgstr "Soru"
+
+msgid "Bug"
+msgstr "Hata"
+
+msgid "Unspecified"
+msgstr "Belirtilmemiş"
+
+# Çatının Türkçesinde adı geçen metinler (ekranda NanobaseAI görünür, dış adres yok).
+msgid "&copy; Frappe Technologies Pvt. Ltd. and contributors"
+msgstr "&copy; NanobaseAI"
+
+msgid "Failed to request login to Frappe Cloud"
+msgstr "Bulut hesabına giriş isteği başarısız oldu"
+
+msgid "For help see <a href=\"https://frappeframework.com/docs/user/en/guides/portal-development/web-forms\" target=\"_blank\" rel=\"noopener noreferrer\">Client Script API and Examples</a>"
+msgstr "Yardım için sistem yöneticinize başvurun."
+
+msgid "Frappe Mail"
+msgstr "NanobaseAI Posta"
+
+msgid "Frappe Mail OAuth Error"
+msgstr "NanobaseAI Posta OAuth hatası"
+
+msgid "Frappe Mail Site"
+msgstr "NanobaseAI Posta sitesi"
+
+msgid "Frappe Support"
+msgstr "NanobaseAI Destek"
+
+msgid "Frappe page builder using components"
+msgstr "Bileşenlerle sayfa oluşturucu"
+
+msgid "Please visit https://frappecloud.com/docs/sites/migrate-an-existing-site#encryption-key for more information."
+msgstr "Ayrıntı için sistem yöneticinize başvurun."
+
+msgid "Starting Frappe ..."
+msgstr "NanobaseAI başlatılıyor..."
+
+msgid "Switch to Frappe CRM"
+msgstr "NanobaseAI CRM'ye geç"
+
+msgid "Update from Frappe Cloud"
+msgstr "Buluttan güncelle"
+
+msgid "Validate Frappe Mail Settings"
+msgstr "NanobaseAI Posta ayarlarını doğrula"
+
+msgid "Welcome to Frappe!"
+msgstr "NanobaseAI'ye hoş geldiniz!"
+
+msgid "Search"
+msgstr "Ara"
+
+msgid "A Frappe Framework instance can function as an OAuth Client, Resource, or Authorization server. This DocType contains settings related to all three."
+msgstr "NanobaseAI; OAuth istemcisi, kaynak ya da yetkilendirme sunucusu olarak çalışabilir. Bu ekran üçünün ayarlarını içerir."

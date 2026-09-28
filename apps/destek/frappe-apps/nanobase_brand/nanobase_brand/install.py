@@ -71,8 +71,14 @@ CUSTOM_FIELDS = {
 }
 
 
+# Bağlantı alanında adı görünen sabit listeler: masaüstü ekranı değeri çeviriyle gösterir («Open» → «Açık»).
+TRANSLATED_DOCTYPES = ("HD Ticket Status", "HD Ticket Type", "HD Ticket Priority")
+
+
 def apply():
 	_custom_fields()
+	_translated_doctypes()
+	_help_menu()
 	for doctype, values in SETTINGS:
 		if not frappe.db.exists("DocType", doctype):
 			continue
@@ -108,6 +114,43 @@ def _write_single(doctype, values):
 def _exists_for_link(meta, field, value):
 	target = meta.get_field(field).options
 	return not target or bool(frappe.db.exists(target, value))
+
+
+def _help_menu():
+	"""Yardım menüsünde dışarıya giden standart bağlantılar gizlenir.
+
+	Satır silinmez: her göçte standart öğeler eksikse yeniden eklenir, gizli satır olduğu gibi kalır.
+	"""
+	if not frappe.db.exists("DocType", "Navbar Settings"):
+		return
+	try:
+		doc = frappe.get_single("Navbar Settings")
+		changed = False
+		for row in doc.get("help_dropdown") or []:
+			if (row.route or "").startswith(("http://", "https://")) and not row.hidden:
+				row.hidden = 1
+				changed = True
+		if changed:
+			doc.flags.ignore_permissions = True
+			doc.save()
+			frappe.db.commit()
+	except Exception:
+		frappe.db.rollback()
+		frappe.log_error(title="NanobaseAI yardım menüsü ayarlanamadı")
+
+
+def _translated_doctypes():
+	from frappe.custom.doctype.property_setter.property_setter import make_property_setter
+
+	for doctype in TRANSLATED_DOCTYPES:
+		if not frappe.db.exists("DocType", doctype) or frappe.get_meta(doctype).translated_doctype:
+			continue
+		try:
+			make_property_setter(doctype, None, "translated_doctype", 1, "Check", for_doctype=True)
+			frappe.db.commit()
+		except Exception:
+			frappe.db.rollback()
+			frappe.log_error(title=f"NanobaseAI çeviri ayarı yazılamadı: {doctype}")
 
 
 def _custom_fields():

@@ -12,6 +12,9 @@ app_include_css = ["/assets/nanobase_brand/css/nanobase.css"]
 web_include_css = ["/assets/nanobase_brand/css/nanobase.css"]
 # Giriş sayfası portal oturumunu dener (tek oturum): nanobase_brand/sso.py
 web_include_js = ["/assets/nanobase_brand/js/portal_sso.js"]
+# Masaüstünde «Hakkında» penceresi markalıdır: public/js/nanobase_desk.js
+app_include_js = ["/assets/nanobase_brand/js/nanobase_desk.js"]
+extend_bootinfo = ["nanobase_brand.boot.extend"]
 
 # AD girişi portal girişiyle aynı yöntemle (NTLM): nanobase_brand/ldap_ntlm.py
 override_doctype_class = {"LDAP Settings": "nanobase_brand.ldap_ntlm.NtlmLDAPSettings"}

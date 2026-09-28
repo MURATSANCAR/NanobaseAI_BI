@@ -411,6 +411,11 @@ EDITS: list[tuple[str, list[tuple[str, str]]]] = [
 			 '\t"Everything in this workspace "'),
 			('"create, update, delete, run_action) already cover all standard Frappe work: reading, writing, "',
 			 '"create, update, delete, run_action) already cover all standard work: reading, writing, "'),
+			('"STYLE: before each tool call, write one short sentence on what you\'re doing and why — never call a "',
+			 '"AUDIENCE: the user is a business person, not a developer. In every sentence they see, never "\n'
+			 '\t"write DocType, field or tool names or English system terms; say what you look at in plain "\n'
+			 '\t"words (\'destek kayıtlarına bakıyorum\', not \'HD Ticket DocType\').\\n\\n"\n'
+			 '\t"STYLE: before each tool call, write one short sentence on what you\'re doing and why — never call a "'),
 		],
 	),
 	("flow/frontend/src/store.js", [('a.find((x) => x.name === "Flow")', f'a.find((x) => x.name === "{BRAND}")')]),
