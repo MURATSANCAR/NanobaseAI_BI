@@ -10,7 +10,7 @@ from semantic_bridge import admin as AD
 
 APPROVED = {
     "baglanti": {"database", "crm", "directory", "people", "access"},
-    "zeki": {"llm", "chat", "model_quality", "studio", "zeki_ortak"},
+    "zeki": {"llm", "chat", "model_quality", "studio", "zeki_ortak", "voice"},
     "eposta": {"email", "delivery", "mailbox"},
     "pazarlama": {"marketing", "creative", "ads", "social", "influencer", "catalog", "relations", "sets"},
     "seo": {"seo", "geo"},

@@ -73,6 +73,8 @@ describe('bütün dosya girişleri ortak yükleme alanından geçer', () => {
   it('FileDrop dışında hiçbir ekranda çıplak dosya girişi yok', () => {
     const raw = files
       .filter((p) => !p.endsWith(join('components', 'FileDrop.tsx')))
+      // Sesli not: mikrofon açılamayan telefonda ses kaydedicisinden dosya seçimi (belge değil, kayıt).
+      .filter((p) => !p.endsWith(join('voice', 'VoiceNoteButton.tsx')))
       .filter((p) => /type=["']file["']/.test(readFileSync(p, 'utf-8')))
       .map((p) => relative(SRC, p));
     expect(raw).toEqual([]);
