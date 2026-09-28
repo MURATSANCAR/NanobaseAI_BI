@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, ChevronRight } from 'lucide-react';
 import { fmtDay, fmtPct, fmtShort } from '../field/api';
 import { SEGMENTS, TREND_LABEL, segmentTone, worsened, type Dealer, type Dist, type Segment, type Trend } from './api';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Bayi riski ortak parçaları. Telefon önce: liste satırı kart, dokunma hedefi ≥ 44 px, segment harfi her zaman yazılı
  *  (renk tek başına anlam taşımaz). Hareket yalnız basma geri bildirimi (M30 satırlarıyla aynı: 150 ms, ease-out, 0,98). */
@@ -44,12 +46,12 @@ export function TrendMark({ egilim, prev, now }: { egilim: Trend | null; prev?: 
 }
 
 /** Liste satırı: segment + skor, unvan, vadesi geçmiş, üç baskın bileşen; tamamı bayi kartına götürür (tek dokunuş). */
-export function DealerRow({ d, showBmt }: { d: Dealer; showBmt?: boolean }) {
+export function DealerRow({ d, showBmt, k, alan = 'items[]' }: { d: Dealer; showBmt?: boolean; k?: Kaynaklar; alan?: string }) {
   return (
-    <li>
+    <li className="flex items-stretch gap-2">
       <Link
         to={`/bayi-risk/${encodeURIComponent(d.code)}`}
-        className="flex min-h-14 items-start gap-2.5 rounded-2xl border border-slate-100 bg-white/85 p-3 transition-transform duration-150 ease-out active:scale-[0.98]"
+        className="flex min-h-14 min-w-0 flex-1 items-start gap-2.5 rounded-2xl border border-slate-100 bg-white/85 p-3 transition-transform duration-150 ease-out active:scale-[0.98]"
       >
         <SegmentBadge segment={d.segment} skor={d.skor} />
         <div className="min-w-0 flex-1">
@@ -79,6 +81,11 @@ export function DealerRow({ d, showBmt }: { d: Dealer; showBmt?: boolean }) {
         </div>
         <ChevronRight aria-hidden className="mt-2 h-4 w-4 shrink-0 text-canvas-muted" />
       </Link>
+      {k && (
+        <span className="flex shrink-0 items-start pt-3">
+          <SqlInfo k={k} alan={alan} row={d.code} label={`${d.unvan || d.code}: skor ve alacak`} />
+        </span>
+      )}
     </li>
   );
 }

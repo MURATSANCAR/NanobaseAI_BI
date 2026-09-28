@@ -14,6 +14,7 @@ import BriefSheet from './BriefSheet';
 import NoteSignalCard from '../signals/NoteSignalCard';
 import { ProposalCard } from './LimitsTab';
 import { Meter, SegmentBadge, TrendMark, approxNote } from './parts';
+import SqlInfo, { InfoLabel } from '../components/SqlInfo';
 
 /** Bayi kartı (telefon önce, tek sayfa kaydırmalı): skor ve bileşenleri · alacak · 12 ay seyri · CRM limit ve risk onayı ·
  *  limit önerisi · aksiyonlar · notlar. Alt çubuk: Risk brifi, not bırak, aksiyon aç. */
@@ -51,7 +52,7 @@ export default function DealerCard() {
               ) : (
                 <ul className="flex flex-col gap-2">
                   {c.oneriler.map((p) => (
-                    <ProposalCard key={p.id} p={p} meta={m} compact />
+                    <ProposalCard key={p.id} p={p} meta={m} compact k={c.kaynaklar} alan="oneriler" />
                   ))}
                 </ul>
               )}
@@ -112,6 +113,7 @@ function Header({ c, onBrief }: { c: Card; onBrief: () => void }) {
           <div className="mt-0.5 text-[11.5px] text-canvas-muted">
             {[c.code, c.il, c.kanal, c.bmtAd || c.bmt || 'temsilcisiz'].filter(Boolean).join(' · ')}
             {c.skor30 !== null && c.skor !== null ? ` · 30 gün önce skor ${Math.round(c.skor30)}` : ''}
+            <SqlInfo k={c.kaynaklar} alan="skor" label="Risk skoru ve segment" className="ml-0.5" />
           </div>
           <p className="mt-1.5 text-[11.5px] leading-snug text-canvas-muted">Skor bir sınıflandırmadır, kredi kararı değildir; bayiye söylenmez.</p>
         </div>
@@ -125,7 +127,11 @@ function Header({ c, onBrief }: { c: Card; onBrief: () => void }) {
 
 function Components({ c }: { c: Card }) {
   return (
-    <Block title="Neden bu segment" help="Her bileşen 0–1 arası ölçülür ve kuraldaki ağırlığıyla puana çevrilir; puanların toplamı skordur.">
+    <Block
+      title="Neden bu segment"
+      help="Her bileşen 0–1 arası ölçülür ve kuraldaki ağırlığıyla puana çevrilir; puanların toplamı skordur."
+      action={<SqlInfo k={c.kaynaklar} alan="bilesenler" label="Skor bileşenleri" />}
+    >
       <ul className="flex flex-col gap-1.5">
         {c.bilesenler.map((b) => (
           <li key={b.key} className="rounded-xl bg-slate-50 px-2.5 py-2">
@@ -158,20 +164,20 @@ function Receivables({ c }: { c: Card }) {
     <Block title="Alacak" help={`${approxNote} Yaşlandırma günü ${fmtDay(c.agingAsof)}.`}>
       <div className="grid gap-x-6 sm:grid-cols-2">
         <div>
-          <KV k="Bakiye" v={fmtMoney(c.bakiye)} />
-          <KV k="Vadesi gelmemiş" v={fmtMoney(c.gelmemis)} />
-          <KV k="1–30 gün" v={fmtMoney(c.kovalar.k_1_30)} />
-          <KV k="31–60 gün" v={fmtMoney(c.kovalar.k_31_60)} tone={c.kovalar.k_31_60 ? 'warn' : undefined} />
-          <KV k="61–90 gün" v={fmtMoney(c.kovalar.k_61_90)} tone={c.kovalar.k_61_90 ? 'warn' : undefined} />
-          <KV k="90+ gün" v={fmtMoney(c.kovalar.k_90p)} tone={c.kovalar.k_90p ? 'err' : undefined} />
-          {!!c.plansiz && <KV k="Vade planı dışı (plansız)" v={fmtMoney(c.plansiz)} />}
+          <KV k="Bakiye" info={<SqlInfo k={c.kaynaklar} alan="bakiye" label="Bakiye" />} v={fmtMoney(c.bakiye)} />
+          <KV k="Vadesi gelmemiş" info={<SqlInfo k={c.kaynaklar} alan="gelmemis" label="Vadesi gelmemiş" />} v={fmtMoney(c.gelmemis)} />
+          <KV k="1–30 gün" info={<SqlInfo k={c.kaynaklar} alan="kovalar" label="1–30 gün" />} v={fmtMoney(c.kovalar.k_1_30)} />
+          <KV k="31–60 gün" info={<SqlInfo k={c.kaynaklar} alan="kovalar" label="31–60 gün" />} v={fmtMoney(c.kovalar.k_31_60)} tone={c.kovalar.k_31_60 ? 'warn' : undefined} />
+          <KV k="61–90 gün" info={<SqlInfo k={c.kaynaklar} alan="kovalar" label="61–90 gün" />} v={fmtMoney(c.kovalar.k_61_90)} tone={c.kovalar.k_61_90 ? 'warn' : undefined} />
+          <KV k="90+ gün" info={<SqlInfo k={c.kaynaklar} alan="kovalar" label="90+ gün" />} v={fmtMoney(c.kovalar.k_90p)} tone={c.kovalar.k_90p ? 'err' : undefined} />
+          {!!c.plansiz && <KV k="Vade planı dışı (plansız)" info={<SqlInfo k={c.kaynaklar} alan="plansiz" label="Plansız bakiye" />} v={fmtMoney(c.plansiz)} />}
         </div>
         <div>
           <KV k="Son ödeme" v={c.sonOdeme ? `${fmtDay(c.sonOdeme)}${since !== null ? ` · ${since} gün` : ''}` : 'yok (12 ay)'} tone={!c.sonOdeme ? 'warn' : undefined} />
-          <KV k="12 ay ödeme" v={fmtMoney(c.odeme12)} />
-          <KV k="Tahsilat süresi (yaklaşık)" v={c.dso !== null ? `${Math.round(c.dso)} gün` : '—'} />
-          <KV k="Karşılıksız / protesto (12 ay)" v={`${c.karsiliksiz ?? 0} / ${c.protesto ?? 0}`} tone={c.karsiliksiz ? 'err' : c.protesto ? 'warn' : undefined} />
-          {!!c.cekTutar && <KV k="Olaylı çek/senet tutarı" v={fmtMoney(c.cekTutar)} tone="err" />}
+          <KV k="12 ay ödeme" info={<SqlInfo k={c.kaynaklar} alan="odeme12" label="12 ay ödeme" />} v={fmtMoney(c.odeme12)} />
+          <KV k="Tahsilat süresi (yaklaşık)" info={<SqlInfo k={c.kaynaklar} alan="dso" label="Tahsilat süresi" />} v={c.dso !== null ? `${Math.round(c.dso)} gün` : '—'} />
+          <KV k="Karşılıksız / protesto (12 ay)" info={<SqlInfo k={c.kaynaklar} alan="karsiliksiz" label="Çek/senet olayı" />} v={`${c.karsiliksiz ?? 0} / ${c.protesto ?? 0}`} tone={c.karsiliksiz ? 'err' : c.protesto ? 'warn' : undefined} />
+          {!!c.cekTutar && <KV k="Olaylı çek/senet tutarı" info={<SqlInfo k={c.kaynaklar} alan="cekTutar" label="Olaylı çek/senet tutarı" />} v={fmtMoney(c.cekTutar)} tone="err" />}
         </div>
       </div>
     </Block>
@@ -183,6 +189,7 @@ function Series({ c }: { c: Card }) {
   return (
     <Block
       title="Son 12 ay"
+      action={<SqlInfo k={c.kaynaklar} alan="net12" label="12 ay alım, iade, düzensizlik" />}
       help={`Net alım ${fmtShort(c.net12)} · iade oranı ${fmtPct(c.iadeOrani)} · ${c.aktifAy ?? 0}/12 ay alım${c.buyume6 !== null ? ` · son 6 ay önceki 6 aya ${fmtPct(c.buyume6)}` : ''}`}
     >
       <div className="-mx-1 overflow-x-auto px-1">
@@ -190,10 +197,10 @@ function Series({ c }: { c: Card }) {
           <thead>
             <tr className="text-left text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">
               <th className="py-1 pr-2">Ay</th>
-              <th className="py-1 pr-2">Satış</th>
-              <th className="py-1 pr-2 text-right">İade</th>
-              <th className="py-1 pr-2 text-right">Ödeme</th>
-              <th className="py-1 text-right">Fatura</th>
+              <th className="py-1 pr-2"><InfoLabel k={c.kaynaklar} alan="seri" label="Aylık satış">Satış</InfoLabel></th>
+              <th className="py-1 pr-2 text-right"><InfoLabel k={c.kaynaklar} alan="seri" label="Aylık iade">İade</InfoLabel></th>
+              <th className="py-1 pr-2 text-right"><InfoLabel k={c.kaynaklar} alan="seri" label="Aylık ödeme">Ödeme</InfoLabel></th>
+              <th className="py-1 text-right"><InfoLabel k={c.kaynaklar} alan="seri" label="Aylık fatura sayısı">Fatura</InfoLabel></th>
             </tr>
           </thead>
           <tbody>
@@ -233,7 +240,11 @@ function Crm({ c, code }: { c: Card; code: string }) {
   }
   const none = 'girilmemiş';
   return (
-    <Block title="CRM limit ve risk" help="CRM cari kartından (salt okuma). Boş limit «limiti yok» değil «girilmemiş» demektir.">
+    <Block
+      title="CRM limit ve risk"
+      help="CRM cari kartından (salt okuma). Boş limit «limiti yok» değil «girilmemiş» demektir."
+      action={<SqlInfo k={c.kaynaklar} alan="limit" label="CRM limit ve risk" />}
+    >
       <div className="grid gap-x-6 sm:grid-cols-2">
         <div>
           <KV k="Toplam limit" v={l.limit_toplam ? fmtMoney(l.limit_toplam) : none} tone={!l.limit_toplam ? 'warn' : undefined} />
@@ -262,6 +273,10 @@ function Crm({ c, code }: { c: Card; code: string }) {
           <Empty>Son 12 ayda riske takılan sipariş yok.</Empty>
         ) : (
           <ul className="mt-2 flex flex-col gap-1">
+            <li className="flex items-center gap-1 px-1 text-[11px] font-semibold text-canvas-muted">
+              Risk onay geçmişi (CRM)
+              <SqlInfo k={h.data?.kaynaklar} alan="crmRisk" label="CRM risk onay geçmişi" />
+            </li>
             {h.data!.crmRisk.items.map((o, i) => (
               <li key={`${o.no}-${i}`} className="rounded-xl bg-slate-50 px-2.5 py-1.5 text-[12px]">
                 <div className="flex items-baseline justify-between gap-2">

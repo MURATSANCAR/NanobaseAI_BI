@@ -7,6 +7,7 @@ import { fmtShort } from '../field/api';
 import { Empty } from '../field/parts';
 import { SEGMENTS, TREND_LABEL, dealersApi, type DealersMeta, type ListParams } from './api';
 import { DealerRow } from './parts';
+import SqlInfo from '../components/SqlInfo';
 
 /** Bayiler: süzgeçli liste (segment, grup, kanal, il, temsilci, eğilim, durum), sayfalı; toplam her zaman yazılı. BMT'de
  *  liste yalnız kendi carileri (sunucu süzer). */
@@ -106,6 +107,7 @@ export default function ListTab({ meta, params, update }: { meta: DealersMeta; p
         <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-[12px] text-canvas-muted">
           <span>
             <b className="text-canvas-ink">{data.count}</b> cari · vadesi geçmiş toplam <b className="font-mono text-canvas-ink">{fmtShort(data.vadesiGecmis)}</b> (yaklaşık)
+            <SqlInfo k={data.kaynaklar} alan="count" label="Bayi listesi" className="ml-0.5" />
           </span>
           {meta.me.canExport && (
             <a href={dealersApi.exportUrl(p)} className={`${btnGhost} inline-flex items-center gap-1.5`}>
@@ -126,7 +128,7 @@ export default function ListTab({ meta, params, update }: { meta: DealersMeta; p
         <>
           <ul className="flex flex-col gap-2">
             {data.items.map((d) => (
-              <DealerRow key={d.code} d={d} showBmt={meta.me.canAll} />
+              <DealerRow key={d.code} d={d} showBmt={meta.me.canAll} k={data.kaynaklar} />
             ))}
           </ul>
           {pages > 1 && (

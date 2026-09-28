@@ -227,6 +227,11 @@ tr_money = F._tr_money
 short_money = F.short_money
 
 
+def meta_stmt(tenant: str, key: str) -> Any:
+    """Tur kaydı (günlük tur özeti ve o turda çalışan okuma sorguları)."""
+    return sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)
+
+
 def meta_get(engine: sa.engine.Engine, tenant: str, key: str) -> dict[str, Any]:
     with engine.connect() as c:
         row = c.execute(sa.select(META).where(META.c.tenant_id == tenant, META.c.key == key)).first()
@@ -376,9 +381,17 @@ def rule_body(r: dict[str, Any]) -> dict[str, Any]:
     return {"surum": r["surum"], "agirliklar": r["agirliklar"], "esikler": r["esikler"], "kapsam": r["kapsam"], "limit": r["limit"]}
 
 
+def rules_stmt(tenant: str, durum: Optional[str] = None) -> Any:
+    """Sürümlü risk kuralları (ağırlık, eşik, kapsam, limit kuralı); elle girilir, iki gözle yürürlüğe girer."""
+    q = sa.select(RULES).where(RULES.c.tenant_id == tenant)
+    if durum:
+        q = q.where(RULES.c.durum == durum)
+    return q.order_by(RULES.c.surum.desc())
+
+
 def list_rules(engine: sa.engine.Engine, tenant: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = [_row(r) for r in c.execute(sa.select(RULES).where(RULES.c.tenant_id == tenant).order_by(RULES.c.surum.desc()))]
+        rows = [_row(r) for r in c.execute(rules_stmt(tenant))]
     return [_rule_out(r) for r in rows]
 
 
@@ -759,13 +772,21 @@ def latest_day(engine: sa.engine.Engine, tenant: str) -> Optional[str]:
         return c.execute(sa.select(sa.func.max(SCORES.c.gun)).where(SCORES.c.tenant_id == tenant)).scalar()
 
 
+def scores_stmt(tenant: str, gun: Optional[str], bmt: Optional[str] = None, code: Optional[str] = None) -> Any:
+    """Bir günün skor satırları (ekranların okuduğu ifade). `bmt` None = herkes."""
+    q = sa.select(SCORES).where(SCORES.c.tenant_id == tenant, SCORES.c.gun == gun)
+    if bmt is not None:
+        q = q.where(SCORES.c.bmt == bmt)
+    if code is not None:
+        q = q.where(SCORES.c.logo_code == code)
+    return q
+
+
 def day_rows(engine: sa.engine.Engine, tenant: str, gun: Optional[str], bmt: Optional[str]) -> list[dict[str, Any]]:
     """Bir günün satırları. `bmt` None = herkes (yetkili)."""
     if not gun:
         return []
-    q = sa.select(SCORES).where(SCORES.c.tenant_id == tenant, SCORES.c.gun == gun)
-    if bmt is not None:
-        q = q.where(SCORES.c.bmt == bmt)
+    q = scores_stmt(tenant, gun, bmt)
     with engine.connect() as c:
         return [_row(r) for r in c.execute(q)]
 
@@ -775,7 +796,7 @@ def one(engine: sa.engine.Engine, tenant: str, code: str) -> Optional[dict[str, 
     if not gun:
         return None
     with engine.connect() as c:
-        r = c.execute(sa.select(SCORES).where(SCORES.c.tenant_id == tenant, SCORES.c.gun == gun, SCORES.c.logo_code == code)).first()
+        r = c.execute(scores_stmt(tenant, gun, code=code)).first()
     return _row(r) if r else None
 
 
@@ -876,16 +897,26 @@ def summary(rows: list[dict[str, Any]], month_ago: list[dict[str, Any]], rule: d
     }
 
 
-def score_history(engine: sa.engine.Engine, tenant: str, code: str, since: str) -> list[dict[str, Any]]:
-    q = sa.select(SCORES.c.gun, SCORES.c.skor, SCORES.c.segment, SCORES.c.kural_surum, SCORES.c.vadesi_gecmis, SCORES.c.bakiye) \
+def history_stmt(tenant: str, code: str, since: str) -> Any:
+    """Carinin gün gün skor, segment, vadesi geçmiş ve bakiyesi."""
+    return sa.select(SCORES.c.gun, SCORES.c.skor, SCORES.c.segment, SCORES.c.kural_surum, SCORES.c.vadesi_gecmis, SCORES.c.bakiye) \
         .where(SCORES.c.tenant_id == tenant, SCORES.c.logo_code == code, SCORES.c.gun >= since).order_by(SCORES.c.gun)
+
+
+def series_stmt(tenant: str, code: str) -> Any:
+    """Carinin son 12 ayının aylık satış, iade, ödeme ve fatura serisi (günlük turda yazılır)."""
+    return sa.select(SERIES.c.seri_json).where(SERIES.c.tenant_id == tenant, SERIES.c.logo_code == code)
+
+
+def score_history(engine: sa.engine.Engine, tenant: str, code: str, since: str) -> list[dict[str, Any]]:
+    q = history_stmt(tenant, code, since)
     with engine.connect() as c:
         return [{"gun": g, "skor": s, "segment": seg, "kural": k, "vadesiGecmis": v, "bakiye": b} for g, s, seg, k, v, b in c.execute(q)]
 
 
 def series(engine: sa.engine.Engine, tenant: str, code: str) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        r = c.execute(sa.select(SERIES.c.seri_json).where(SERIES.c.tenant_id == tenant, SERIES.c.logo_code == code)).first()
+        r = c.execute(series_stmt(tenant, code)).first()
     return _j(r[0], []) if r else []
 
 
@@ -988,7 +1019,8 @@ def sync_proposals(engine: sa.engine.Engine, tenant: str, rows: list[dict[str, A
     return {"new": new_ids, "dropped": dropped}
 
 
-def list_proposals(engine: sa.engine.Engine, tenant: str, *, durum: str = "", code: str = "", bmt: Optional[str] = None) -> list[dict[str, Any]]:
+def proposals_stmt(tenant: str, durum: str = "", code: str = "", bmt: Optional[str] = None) -> Any:
+    """Limit önerileri (kuraldan; satış müdürü onaylar, CRM'e insan işler)."""
     q = sa.select(PROPOSALS).where(PROPOSALS.c.tenant_id == tenant)
     if durum:
         q = q.where(PROPOSALS.c.durum.in_([x for x in durum.split(",") if x]))
@@ -996,8 +1028,12 @@ def list_proposals(engine: sa.engine.Engine, tenant: str, *, durum: str = "", co
         q = q.where(PROPOSALS.c.logo_code == code)
     if bmt is not None:
         q = q.where(PROPOSALS.c.bmt == bmt)
+    return q.order_by(PROPOSALS.c.olusturma.desc())
+
+
+def list_proposals(engine: sa.engine.Engine, tenant: str, *, durum: str = "", code: str = "", bmt: Optional[str] = None) -> list[dict[str, Any]]:
     with engine.connect() as c:
-        rows = [_row(r) for r in c.execute(q.order_by(PROPOSALS.c.olusturma.desc()))]
+        rows = [_row(r) for r in c.execute(proposals_stmt(tenant, durum, code, bmt))]
     return [_proposal_out(r) for r in rows]
 
 
@@ -1119,6 +1155,18 @@ def update_action(engine: sa.engine.Engine, tenant: str, user: str, aid: str, bo
 def list_actions(engine: sa.engine.Engine, tenant: str, *, codes: Optional[set[str]], viewer: str, code: str = "",
                  durum: str = "", sahip: str = "") -> list[dict[str, Any]]:
     """Aksiyonlar. `codes` verilirse (kapsamlı kişi) yalnız o cariler ve kişinin kendi aksiyonları."""
+    with engine.connect() as c:
+        rows = [_row(r) for r in c.execute(actions_stmt(tenant, code, durum, sahip))]
+    if codes is not None:
+        rows = [r for r in rows if r["logo_code"] in codes or viewer in (r["sahip"], r["olusturan"])]
+    return [_action_out(r) for r in rows]
+
+
+# ------------------------------------------------------------------ risk brifi (olgular, kural brifi, model denetimi)
+
+
+def actions_stmt(tenant: str, code: str = "", durum: str = "", sahip: str = "") -> Any:
+    """Bayi aksiyonları (elle girilir: ziyaret, arama, limit, diğer)."""
     q = sa.select(ACTIONS).where(ACTIONS.c.tenant_id == tenant)
     if code:
         q = q.where(ACTIONS.c.logo_code == code)
@@ -1126,14 +1174,7 @@ def list_actions(engine: sa.engine.Engine, tenant: str, *, codes: Optional[set[s
         q = q.where(ACTIONS.c.durum == durum)
     if sahip:
         q = q.where(ACTIONS.c.sahip == sahip.lower())
-    with engine.connect() as c:
-        rows = [_row(r) for r in c.execute(q.order_by(ACTIONS.c.durum, ACTIONS.c.termin.is_(None), ACTIONS.c.termin, ACTIONS.c.olusturma.desc()))]
-    if codes is not None:
-        rows = [r for r in rows if r["logo_code"] in codes or viewer in (r["sahip"], r["olusturan"])]
-    return [_action_out(r) for r in rows]
-
-
-# ------------------------------------------------------------------ risk brifi (olgular, kural brifi, model denetimi)
+    return q.order_by(ACTIONS.c.durum, ACTIONS.c.termin.is_(None), ACTIONS.c.termin, ACTIONS.c.olusturma.desc())
 
 
 def facts_of(r: dict[str, Any], visits: list[dict[str, Any]]) -> list[str]:

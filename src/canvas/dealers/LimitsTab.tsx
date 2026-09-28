@@ -9,6 +9,8 @@ import { fmtDay, fmtMoney, fmtPct } from '../field/api';
 import { Empty } from '../field/parts';
 import { dealersApi, type DealersMeta, type Proposal } from './api';
 import { SegmentBadge } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Limit önerileri: kuraldan çıkan öneri → satış müdürü onaylar ya da gerekçeyle reddeder → onaylanan «CRM'e işlenecek»
  *  listesine düşer → CRM'e işleyen kişi «işlendi» der. Portal CRM'e yazmaz. */
@@ -62,7 +64,7 @@ export default function LimitsTab({ meta }: { meta: DealersMeta }) {
       ) : (
         <ul className="flex flex-col gap-2">
           {q.data!.items.map((p) => (
-            <ProposalCard key={p.id} p={p} meta={meta} />
+            <ProposalCard key={p.id} p={p} meta={meta} k={q.data?.kaynaklar} />
           ))}
         </ul>
       )}
@@ -70,7 +72,7 @@ export default function LimitsTab({ meta }: { meta: DealersMeta }) {
   );
 }
 
-export function ProposalCard({ p, meta, compact }: { p: Proposal; meta: DealersMeta; compact?: boolean }) {
+export function ProposalCard({ p, meta, compact, k, alan = 'items' }: { p: Proposal; meta: DealersMeta; compact?: boolean; k?: Kaynaklar; alan?: string }) {
   const qc = useQueryClient();
   const [ask, setAsk] = useState<null | 'approve' | 'reject'>(null);
   const done = (msg: string) => {
@@ -100,7 +102,10 @@ export function ProposalCard({ p, meta, compact }: { p: Proposal; meta: DealersM
           </div>
           <div className="mt-1 grid grid-cols-2 gap-1 text-[12px] sm:grid-cols-3">
             <span className="rounded-lg bg-slate-50 px-2 py-1">
-              <span className="block text-[10.5px] font-bold uppercase text-canvas-muted">CRM limit</span>
+              <span className="flex items-center gap-0.5 text-[10.5px] font-bold uppercase text-canvas-muted">
+                CRM limit
+                {k && <SqlInfo k={k} alan={alan} row={p.id} label="Öneri anındaki CRM limit ve risk" />}
+              </span>
               <span className="font-mono font-bold tabular-nums">{m.limit_toplam ? fmtMoney(m.limit_toplam) : 'girilmemiş'}</span>
             </span>
             <span className="rounded-lg bg-slate-50 px-2 py-1">
@@ -111,7 +116,10 @@ export function ProposalCard({ p, meta, compact }: { p: Proposal; meta: DealersM
               </span>
             </span>
             <span className="rounded-lg bg-violet-50 px-2 py-1">
-              <span className="block text-[10.5px] font-bold uppercase text-canvas-violet">{compact ? 'Önerilen' : p.degisimAd}</span>
+              <span className="flex items-center gap-0.5 text-[10.5px] font-bold uppercase text-canvas-violet">
+                {compact ? 'Önerilen' : p.degisimAd}
+                {k && <SqlInfo k={k} alan={`${alan}[].onerilen`} row={p.id} label="Önerilen limit (kural)" />}
+              </span>
               <span className="font-mono font-bold tabular-nums">{fmtMoney(p.onerilen)}</span>
             </span>
           </div>

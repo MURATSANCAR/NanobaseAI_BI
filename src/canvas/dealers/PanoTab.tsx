@@ -7,6 +7,8 @@ import { fmtDay, fmtMoney, fmtPct, fmtShort } from '../field/api';
 import { Block, Empty, Stat } from '../field/parts';
 import { dealersApi, type Dealer, type DealersMeta } from './api';
 import { DealerRow, DistBar, approxNote } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Pano: ilk açılış. Kötüleşen bayilere bakmak tek dokunuş (kart listesi burada), bayi kartı iki. */
 
@@ -23,14 +25,26 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
   return (
     <div className="flex flex-col gap-3">
       <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
-        <Stat label="Vadesi geçmiş" value={fmtShort(s.vadesiGecmis)} tone={s.vadesiGecmis > 0 ? 'err' : undefined} help={`Yaklaşık · ${fmtDay(s.agingAsof)} itibarıyla`} />
-        <Stat label="90+ gün" value={fmtShort(s.kovalar.k_90p)} tone={s.kovalar.k_90p > 0 ? 'err' : undefined} help={`${s.kovaCari.k_90p} cari`} />
-        <Stat label="Riske takılı sipariş" value={String(s.siparisRiskte)} tone={s.siparisRiskte ? 'warn' : undefined} help="CRM risk limiti onayı bekleyen" />
-        <Stat label="İlk 10 cari payı" value={fmtPct(s.yogunlasma10)} help="Açık bakiyenin yoğunlaşması" />
+        <Stat label="Vadesi geçmiş" info={<SqlInfo k={s.kaynaklar} alan="vadesiGecmis" label="Vadesi geçmiş" />} value={fmtShort(s.vadesiGecmis)} tone={s.vadesiGecmis > 0 ? 'err' : undefined} help={`Yaklaşık · ${fmtDay(s.agingAsof)} itibarıyla`} />
+        <Stat label="90+ gün" info={<SqlInfo k={s.kaynaklar} alan="kovalar" label="90+ gün" />} value={fmtShort(s.kovalar.k_90p)} tone={s.kovalar.k_90p > 0 ? 'err' : undefined} help={`${s.kovaCari.k_90p} cari`} />
+        <Stat label="Riske takılı sipariş" info={<SqlInfo k={s.kaynaklar} alan="siparisRiskte" label="Riske takılı sipariş" />} value={String(s.siparisRiskte)} tone={s.siparisRiskte ? 'warn' : undefined} help="CRM risk limiti onayı bekleyen" />
+        <Stat label="İlk 10 cari payı" info={<SqlInfo k={s.kaynaklar} alan="yogunlasma10" label="İlk 10 cari payı" />} value={fmtPct(s.yogunlasma10)} help="Açık bakiyenin yoğunlaşması" />
       </div>
 
       <Block
         title="Segment dağılımı"
+        action={
+          <span className="flex items-center gap-1 text-[11px] font-semibold text-canvas-muted">
+            Bugün
+            <SqlInfo k={s.kaynaklar} alan="segment" label="Segment dağılımı" />
+            {s.segment30 && (
+              <>
+                30 gün önce
+                <SqlInfo k={s.kaynaklar} alan="segment30" label="30 gün önceki dağılım" />
+              </>
+            )}
+          </span>
+        }
         help={`${s.aktif} etkin cari${s.hareketsiz ? ` · ${s.hareketsiz} hareketsiz (bakiye yok, 12 ayda alım yok)` : ''} · kural sürüm ${s.kural}${
           s.gun30 ? ` · ince çubuk ${fmtDay(s.gun30)} (bugünkü kuralla yeniden puanlandı)` : ''
         }`}
@@ -58,7 +72,7 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
         </div>
       </Block>
 
-      <Block title="Alacak yaşlandırması" help={approxNote}>
+      <Block title="Alacak yaşlandırması" help={approxNote} action={<SqlInfo k={s.kaynaklar} alan="kovalar" label="Alacak yaşlandırması" />}>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <Stat label="Gelmemiş" value={fmtShort(s.gelmemis)} />
           {meta.buckets.map((b) => (
@@ -69,12 +83,12 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
       </Block>
 
       <Block title="Segmenti düşenler" help="Bir önceki tura göre segmenti kötüleşen bayiler (iki gün de bugünkü kuralla puanlanır).">
-        <DealerList items={s.kotulesenler} showBmt={showBmt} empty="Son turda segmenti düşen bayi yok." />
+        <DealerList items={s.kotulesenler} showBmt={showBmt} empty="Son turda segmenti düşen bayi yok." k={s.kaynaklar} alan="kotulesenler[]" />
       </Block>
 
       {s.egilimKotu.length > 0 && (
         <Block title="Kötüleşme eğilimi" help="Skoru 30 gün öncesine göre kural eşiğinden fazla artan bayiler (segment henüz değişmemiş olabilir).">
-          <DealerList items={s.egilimKotu} showBmt={showBmt} empty="" />
+          <DealerList items={s.egilimKotu} showBmt={showBmt} empty="" k={s.kaynaklar} alan="egilimKotu[]" />
         </Block>
       )}
 
@@ -82,9 +96,12 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
         title="Onay bekleyen limit önerileri"
         help="Rakamı kural üretir; satış müdürü onaylar, onaylanan «CRM'e işlenecek» listesine düşer."
         action={
-          <button type="button" className={btnGhost} onClick={() => goList({ sekme: 'limit' })}>
-            Hepsi ({s.limitBekleyen.length})
-          </button>
+          <span className="flex items-center gap-1">
+            <SqlInfo k={s.kaynaklar} alan="limitBekleyen[].onerilen" label="Önerilen limit" />
+            <button type="button" className={btnGhost} onClick={() => goList({ sekme: 'limit' })}>
+              Hepsi ({s.limitBekleyen.length})
+            </button>
+          </span>
         }
       >
         {s.limitBekleyen.length === 0 ? (
@@ -125,7 +142,7 @@ export default function PanoTab({ meta, goList }: { meta: DealersMeta; goList: (
   );
 }
 
-function DealerList({ items, showBmt, empty }: { items: Dealer[]; showBmt: boolean; empty: string }) {
+function DealerList({ items, showBmt, empty, k, alan }: { items: Dealer[]; showBmt: boolean; empty: string; k?: Kaynaklar; alan?: string }) {
   const [all, setAll] = useState(false);
   if (items.length === 0) return empty ? <Empty>{empty}</Empty> : null;
   const rows = all ? items : items.slice(0, 5);
@@ -133,7 +150,7 @@ function DealerList({ items, showBmt, empty }: { items: Dealer[]; showBmt: boole
     <>
       <ul className="flex flex-col gap-2">
         {rows.map((d) => (
-          <DealerRow key={d.code} d={d} showBmt={showBmt} />
+          <DealerRow key={d.code} d={d} showBmt={showBmt} k={k} alan={alan} />
         ))}
       </ul>
       {items.length > 5 && (

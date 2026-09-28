@@ -1,4 +1,5 @@
 import { ENGINE_BASE, send } from '../engine';
+import type { Kaynaklar } from '../components/sqlInfo';
 import type { Visit } from '../field/api';
 
 /** M59 Bayi riski köprü istemcisi (`/api/v1/dealers/*`). Cari = Logo müşteri carisi (cari kodu). Skor kuraldan (model yok),
@@ -75,6 +76,7 @@ export type Rule = RuleBody & {
 };
 
 export type DealersMeta = {
+  kaynaklar?: Kaynaklar;
   me: {
     username: string;
     display: string;
@@ -141,6 +143,7 @@ export type Proposal = {
 };
 
 export type Summary = {
+  kaynaklar?: Kaynaklar;
   gun: string | null;
   gun30: string | null;
   dataEnd: string | null;
@@ -184,6 +187,7 @@ export type Action = {
 export type MonthPoint = { ay: string; satis: number; iade: number; odeme: number; fatura: number };
 
 export type BriefOut = {
+  kaynaklar?: Kaynaklar;
   metin: string;
   maddeler: string[];
   kaynak: 'zeki' | 'kural';
@@ -195,6 +199,7 @@ export type BriefOut = {
 };
 
 export type Card = Dealer & {
+  kaynaklar?: Kaynaklar;
   gun: string;
   dataEnd: string | null;
   agingAsof: string | null;
@@ -253,12 +258,14 @@ export type RiskOrder = {
   redTarihi: string | null;
 };
 export type History = {
+  kaynaklar?: Kaynaklar;
   skor: Array<{ gun: string; skor: number | null; segment: Segment | null; kural: number; vadesiGecmis: number | null; bakiye: number | null }>;
   seri: MonthPoint[];
   crmRisk: { items: RiskOrder[]; error: string | null };
 };
 
 export type Preview = {
+  kaynaklar?: Kaynaklar;
   mevcut: Dist;
   taslak: Dist;
   degisen: Array<{ code: string; unvan: string | null; eski: Segment | null; yeni: Segment; eskiSkor: number | null; yeniSkor: number | null }>;
@@ -292,21 +299,21 @@ export const qs = (o: Record<string, string | number | undefined | null>) => {
 export const dealersApi = {
   meta: () => send<DealersMeta>('GET', `${P}/meta`, undefined, 60_000),
   summary: () => send<Summary>('GET', `${P}/summary`, undefined, 120_000),
-  list: (p: ListParams) => send<{ items: Dealer[]; count: number; page: number; size: number; vadesiGecmis: number }>('GET', `${P}/list${qs(p)}`),
+  list: (p: ListParams) => send<{ items: Dealer[]; count: number; page: number; size: number; vadesiGecmis: number; kaynaklar?: Kaynaklar }>('GET', `${P}/list${qs(p)}`),
   exportUrl: (p: ListParams) => `${ENGINE_BASE}${P}/list/export.csv${qs({ ...p, page: undefined, size: undefined })}`,
   card: (code: string) => send<Card>('GET', `${P}/${enc(code)}`, undefined, 120_000),
   history: (code: string) => send<History>('GET', `${P}/${enc(code)}/history`, undefined, 120_000),
   brief: (code: string, yenile = false) => send<BriefOut>('POST', `${P}/${enc(code)}/brief${yenile ? '?yenile=true' : ''}`, {}, 180_000),
   addNote: (code: string, b: { notu: string; sozOdemeTarihi?: string | null; sozOdemeTutari?: number | null; sonrakiAdim?: string; gizli?: boolean }) =>
     send<Visit>('POST', `${P}/${enc(code)}/notes`, b),
-  actions: (p: { code?: string; durum?: string; sahip?: string }) => send<{ items: Action[]; count: number }>('GET', `${P}/actions${qs(p)}`),
+  actions: (p: { code?: string; durum?: string; sahip?: string }) => send<{ items: Action[]; count: number; kaynaklar?: Kaynaklar }>('GET', `${P}/actions${qs(p)}`),
   addAction: (b: { code: string; tur: string; sahip?: string; termin?: string | null; notu?: string }) => send<Action>('POST', `${P}/actions`, b),
   updateAction: (id: string, b: { durum?: string; termin?: string | null; notu?: string }) => send<Action>('PATCH', `${P}/actions/${enc(id)}`, b),
-  limits: (p: { durum?: string; code?: string }) => send<{ items: Proposal[]; count: number; states: Array<{ key: string; label: string }> }>('GET', `${P}/limits${qs(p)}`),
+  limits: (p: { durum?: string; code?: string }) => send<{ items: Proposal[]; count: number; states: Array<{ key: string; label: string }>; kaynaklar?: Kaynaklar }>('GET', `${P}/limits${qs(p)}`),
   approveLimit: (id: string, note?: string) => send<Proposal>('POST', `${P}/limits/${enc(id)}/approve`, { note }),
   rejectLimit: (id: string, note: string) => send<Proposal>('POST', `${P}/limits/${enc(id)}/reject`, { note }),
   crmDone: (id: string) => send<Proposal>('POST', `${P}/limits/${enc(id)}/crm-done`, {}),
-  rules: () => send<{ items: Rule[] }>('GET', `${P}/rules`),
+  rules: () => send<{ items: Rule[]; kaynaklar?: Kaynaklar }>('GET', `${P}/rules`),
   createRule: (b: Partial<RuleBody> & { gerekce?: string }) => send<Rule>('POST', `${P}/rules`, b),
   editRule: (id: string, b: Partial<RuleBody> & { gerekce?: string }) => send<Rule>('PATCH', `${P}/rules/${enc(id)}`, b),
   previewRule: (id: string) => send<Preview>('POST', `${P}/rules/${enc(id)}/preview`, {}, 120_000),

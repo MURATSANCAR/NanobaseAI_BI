@@ -12,6 +12,7 @@ import ListTab from './ListTab';
 import LimitsTab from './LimitsTab';
 import ActionsTab from './ActionsTab';
 import RulesTab from './RulesTab';
+import SqlInfo from '../components/SqlInfo';
 
 /** M59 Bayi riski. İlk sekme «Pano» (segment dağılımı, vadesi geçmiş, segmenti düşenler, onay bekleyen limit önerileri).
  *  Sekme ve süzgeçler adres çubuğunda; BMT yalnız CRM'de kendisine atanmış carileri görür, bütün bayiler açıkça verilen
@@ -56,6 +57,12 @@ export default function DealersScreen() {
     >
       {!ENGINE_ENABLED && <Note tone="warn">ZEKİ AI bağlantısı bu derlemede tanımlı değil.</Note>}
       {err && <Note tone="err">{err}</Note>}
+      {run?.gun && (
+        <p className="flex flex-wrap items-center gap-1 px-1 text-[11.5px] font-semibold text-canvas-muted">
+          {`${run.scope ?? 0} cari · Logo ${fmtDay(run.dataEnd)} tarihine kadar · kural sürüm ${run.kural ?? '—'}`}
+          <SqlInfo k={m?.kaynaklar} alan="run" label="Günlük tur: kapsamdaki cari ve veri sonu" />
+        </p>
+      )}
       {meta.isLoading && <Loading />}
       {m && (
         <>

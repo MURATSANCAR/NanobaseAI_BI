@@ -38,6 +38,10 @@ TITLES = {
     "logo.satilmis": "Logo önceki yıl satılmış kitaplar",
     "logo.saha_ziyaret": "Saha uygulaması ziyaretleri",
     "logo.saha_tahsilat": "Saha uygulaması tahsilatları",
+    "crm.cari_bayrak": "CRM cari bayrakları (sorunlu müşteri, kredi askıda, vade günü, ek limit)",
+    "crm.risk_gecmisi": "CRM carinin risk onay geçmişi",
+    "logo.aylik_satis": "Logo cari × ay faturalı satış ve iade",
+    "logo.aylik_odeme": "Logo cari × ay ödeme",
 }
 
 F_YASLANDIRMA = ("Bakiye = yıl başından cari hareketi borç − alacak (müşteri carisi, kod 120…). Vadesi geçmiş (yaklaşık, "

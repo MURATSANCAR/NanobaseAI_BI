@@ -21,8 +21,10 @@ from fastapi import HTTPException, Request
 from fastapi.responses import Response
 
 from semantic_bridge import dealers as D
+from semantic_bridge import dealers_kaynak as K
 from semantic_bridge import dealers_sources as dsrc
 from semantic_bridge import field_sales as F
+from semantic_bridge import provenance as PV
 from semantic_bridge.dealers import DealerError
 from semantic_bridge.field_sales_sources import SourceError, guid, num, text
 
@@ -55,7 +57,9 @@ class Service:
             t0 = time.monotonic()
             st = self.settings()
             rule = D.rule_body(D.active_rule(engine, tenant, st))
-            data = D.read_all(self.source, st)
+            # Sorgu bilgisi: turda çalışan CRM/Logo metni tur kaydına yazılır (ekranda köken; cevaplardan ayıklanır).
+            with F.recording() as reads:
+                data = D.read_all(self.source, st)
             raws, info = D.build(data, st, rule)
             now = D.today()
             gun = now.isoformat()
@@ -68,7 +72,7 @@ class Service:
                          "oneriYeni": len(props["new"]), "oneriDusen": props["dropped"]})
             info["bildirim"] = self._segment_events(engine, tenant, rows, gun)
             info["gerekce"] = self._proposal_texts(engine, props["new"])
-            D.meta_set(engine, tenant, "run", info)
+            D.meta_set(engine, tenant, "run", {**info, "sorgular": reads})
             return {"ok": True, **info}
         finally:
             self._run.release()
@@ -248,7 +252,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         run = D.meta_get(engine, tenant, "run")
         rule = call(D.active_rule, engine, tenant, settings())
         rows = D.day_rows(engine, tenant, gun, None) if (gun and all_scope(user)) else []
-        return {
+        out = {
             "me": {"username": user, "display": display, "admin": is_admin(user), "cari": mine, "canAll": all_scope(user),
                    "canNote": flag(user, "ozellik:bayi.not"), "canAction": flag(user, "ozellik:bayi.aksiyon"),
                    "canLimit": flag(user, "ozellik:bayi.limit-onay"), "canRule": flag(user, "ozellik:bayi.kural"),
@@ -265,6 +269,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
             "iller": sorted({r.get("il") for r in rows if r.get("il")}, key=D.fold),
             "zekiQuestions": ZEKI_QUESTIONS,
         }
+        return PV.bagla(out, lambda: K.for_meta(engine, tenant, user, out))
 
     @app.post(f"{P}/run-due")
     def dealers_run_due(request: Request, tur: str = "gunluk") -> dict[str, Any]:
@@ -292,7 +297,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def dealers_status(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         run = D.meta_get(engine, tenant, "run")
-        return {"run": run, "gun": D.latest_day(engine, tenant)}
+        return {"run": {k: v for k, v in run.items() if k != "sorgular"}, "gun": D.latest_day(engine, tenant)}
 
     # -------------------------------------------------------------- pano ve liste
 
@@ -309,8 +314,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         codes = {r["logo_code"] for r in rows}
         pending = [p for p in D.list_proposals(engine, tenant, durum="oneri") if owner is None or p["code"] in codes]
         run = D.meta_get(engine, tenant, "run")
-        return {"gun": gun, "gun30": g30, "dataEnd": run.get("dataEnd"), "agingAsof": run.get("agingAsof"),
-                "kural": rule["surum"], **s, "limitBekleyen": pending}
+        out = {"gun": gun, "gun30": g30, "dataEnd": run.get("dataEnd"), "agingAsof": run.get("agingAsof"),
+               "kural": rule["surum"], **s, "limitBekleyen": pending}
+        return PV.bagla(out, lambda: K.for_summary(engine, tenant, owner, g30, out))
 
     def _list_rows(engine, tenant, user, segment, kanal, il, bmt, q, grup, egilim, durum, order):
         rows = D.day_rows(engine, tenant, D.latest_day(engine, tenant), owner_of(user))
@@ -329,8 +335,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         total = len(rows)
         page = max(1, int(page))
         part = rows if size <= 0 else rows[(page - 1) * size: page * size]
-        return {"items": [D.dealer_row(r) for r in part], "count": total, "page": page, "size": size,
-                "vadesiGecmis": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2)}
+        out = {"items": [D.dealer_row(r) for r in part], "count": total, "page": page, "size": size,
+               "vadesiGecmis": round(sum(num(r.get("vadesi_gecmis")) for r in rows), 2)}
+        return PV.bagla(out, lambda: K.for_list(engine, tenant, owner_of(user), out))
 
     @app.get(f"{P}/list/export.csv")
     def dealers_export(request: Request, segment: str = "", kanal: str = "", il: str = "", bmt: str = "", q: str = "",
@@ -351,7 +358,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         codes = scope_codes(engine, tenant, user)
         if codes is not None and not flag(user, "ozellik:bayi.limit-onay"):
             items = [p for p in items if p["code"] in codes]
-        return {"items": items, "count": len(items), "states": [{"key": k, "label": v} for k, v in D.PROPOSAL_STATES.items()]}
+        out = {"items": items, "count": len(items), "states": [{"key": k, "label": v} for k, v in D.PROPOSAL_STATES.items()]}
+        return PV.bagla(out, lambda: K.for_limits(engine, tenant, out, durum, code))
 
     @app.post(f"{P}/limits/{{pid}}/approve")
     def dealers_limit_approve(pid: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -385,7 +393,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def dealers_rules(request: Request) -> dict[str, Any]:
         engine, tenant, _, _ = ctx(request)
         call(D.active_rule, engine, tenant, settings())
-        return {"items": D.list_rules(engine, tenant), "components": [{"key": k, "label": lab, "help": h} for k, lab, h in D.COMPONENTS]}
+        out = {"items": D.list_rules(engine, tenant), "components": [{"key": k, "label": lab, "help": h} for k, lab, h in D.COMPONENTS]}
+        return PV.bagla(out, lambda: K.for_rules(engine, tenant, out))
 
     @app.post(f"{P}/rules", status_code=201)
     def dealers_rule_create(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -427,8 +436,9 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                 changed.append({"code": r["logo_code"], "unvan": r.get("unvan"), "eski": r.get("segment"), "yeni": ev["segment"],
                                 "eskiSkor": r.get("skor"), "yeniSkor": ev["skor"]})
         changed.sort(key=lambda x: (D.SEGMENTS.index(x["yeni"]) - D.SEGMENTS.index(x["eski"] or "A")), reverse=True)
-        return {"mevcut": cur_dist, "taslak": new_dist, "degisen": changed, "kapsamDisi": out_of_scope,
-                "not": "Kapsama yeni eklenen kanalın carileri bugünkü listede olmadığından önizlemeye girmez; yürürlüğe girince ilk turda puanlanır."}
+        out = {"mevcut": cur_dist, "taslak": new_dist, "degisen": changed, "kapsamDisi": out_of_scope,
+               "not": "Kapsama yeni eklenen kanalın carileri bugünkü listede olmadığından önizlemeye girmez; yürürlüğe girince ilk turda puanlanır."}
+        return PV.bagla(out, lambda: K.for_preview(engine, tenant, rid, owner_of(user), out))
 
     @app.post(f"{P}/rules/{{rid}}/submit")
     def dealers_rule_submit(rid: str, request: Request) -> dict[str, Any]:
@@ -459,7 +469,8 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
     def dealers_actions(request: Request, code: str = "", durum: str = "", sahip: str = "") -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         items = D.list_actions(engine, tenant, codes=scope_codes(engine, tenant, user), viewer=user, code=code, durum=durum, sahip=sahip)
-        return {"items": items, "count": len(items)}
+        out = {"items": items, "count": len(items)}
+        return PV.bagla(out, lambda: K.for_actions(engine, tenant, out, code, durum, sahip))
 
     @app.post(f"{P}/actions", status_code=201)
     def dealers_action_add(request: Request, body: dict[str, Any]) -> dict[str, Any]:
@@ -490,7 +501,7 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         run = D.meta_get(engine, tenant, "run")
         hit = D.cached_brief(engine, tenant, code)
         fresh_hash = D.input_hash(D.facts_of(row, visits))
-        return {
+        out = {
             **D.dealer_row(row), "gun": row["gun"], "dataEnd": row.get("veri_son_gunu"), "agingAsof": row.get("yaslandirma_gunu"),
             "kuralSurum": row["kural_surum"], "fingerprint": row["fingerprint"],
             "bilesenler": D._j(row.get("bilesen_json"), []),
@@ -508,24 +519,28 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
                       "zaman": D._iso(hit["olusturma"]), "guncel": hit["girdi_hash"] == fresh_hash} if hit else None),
             "calendar": {"year": run.get("year"), "firm": run.get("firm")},
         }
+        return PV.bagla(out, lambda: K.for_card(engine, tenant, code, out))
 
     @app.get(f"{P}/{{code}}/aging")
     def dealers_aging(code: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         row = call(D.scoped, engine, tenant, user, code, all_scope(user))
-        return {"code": code, "asof": row.get("yaslandirma_gunu"), "bakiye": row.get("bakiye"), "gelmemis": row.get("gelmemis"),
+        out = {"code": code, "asof": row.get("yaslandirma_gunu"), "bakiye": row.get("bakiye"), "gelmemis": row.get("gelmemis"),
                 "plansiz": row.get("plansiz"), "vadesiGecmis": row.get("vadesi_gecmis"),
                 "kovalar": [{"key": k, "label": lab, "tutar": row.get(k)} for k, lab in F.BUCKETS],
                 "not": "Yaklaşık: Logo'da ödeme kapama kullanılmıyor; bakiye en yeni vadelerden geriye dağıtıldı (FIFO). "
                        "Vade planına dağıtılamayan bakiye «plansız» olarak ayrı yazılır."}
+        return PV.bagla(out, lambda: K.for_aging(engine, tenant, code, out))
 
     @app.get(f"{P}/{{code}}/history")
     def dealers_history(code: str, request: Request, gun: int = 365) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         row = call(D.scoped, engine, tenant, user, code, all_scope(user))
         since = (D.today() - timedelta(days=max(1, int(gun)))).isoformat()
-        return {"skor": D.score_history(engine, tenant, code, since), "seri": D.series(engine, tenant, code),
-                "crmRisk": svc.crm_history(row, fresh())}
+        with F.recording() as reads:
+            crm_risk = svc.crm_history(row, fresh())
+        out = {"skor": D.score_history(engine, tenant, code, since), "seri": D.series(engine, tenant, code), "crmRisk": crm_risk}
+        return PV.bagla(out, lambda: K.for_history(engine, tenant, code, since, out, reads))
 
     @app.post(f"{P}/{{code}}/brief")
     def dealers_brief(code: str, request: Request, yenile: bool = False) -> dict[str, Any]:
@@ -534,14 +549,15 @@ def register(app: Any, deps: dict[str, Any]) -> Service:
         out = call(svc.brief, engine, tenant, user, row, _visits(engine, tenant, user, code), yenile)
         if not out.get("onbellek"):
             audit(engine, user, "run", "bayi_brif", code, "Bayi risk brifi", {"kaynak": out["kaynak"]})
-        return out
+        return PV.bagla(out, lambda: K.for_brief(engine, tenant, code, out))
 
     @app.get(f"{P}/{{code}}/notes")
     def dealers_notes(code: str, request: Request) -> dict[str, Any]:
         engine, tenant, user, _ = ctx(request)
         call(D.scoped, engine, tenant, user, code, all_scope(user))
         items = _visits(engine, tenant, user, code)
-        return {"items": items, "count": len(items)}
+        out = {"items": items, "count": len(items)}
+        return PV.bagla(out, lambda: K.for_notes(engine, tenant, code, out))
 
     @app.post(f"{P}/{{code}}/notes", status_code=201)
     def dealers_note_add(code: str, request: Request, body: dict[str, Any]) -> dict[str, Any]:

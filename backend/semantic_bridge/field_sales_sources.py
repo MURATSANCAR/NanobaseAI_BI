@@ -468,6 +468,15 @@ def query_tag(sql: str) -> str:
     d = since.group(1) if since else ""
     if "L_CAPIPERIOD" in s:
         return "logo.donem"
+    # M59 (bayi riski) okumaları: aynı kaynak dosyasının üreticileriyle birlikte
+    if "CreditOnHold" in s:
+        return "crm.cari_bayrak"
+    if "new_anliklimit" in s:
+        return "crm.risk_gecmisi"
+    if "YEAR(S.DATE_) AS y" in s:
+        return f"logo.aylik_satis.{f}.{d}"
+    if "YEAR(L.DATE_) AS y" in s:
+        return f"logo.aylik_odeme.{f}.{d}"
     if "VW_MMX_" in s:
         return "logo.saha_ziyaret" if "ZIYARET" in s else "logo.saha_tahsilat"
     if "SystemUserBase u WHERE u.IsDisabled" in s:

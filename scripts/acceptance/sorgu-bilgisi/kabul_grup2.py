@@ -226,6 +226,40 @@ def saha(heavy: bool) -> None:
             contract("saha /brief", b, K.NOT_RAKAM)
 
 
+# ---------------------------------------------------------------- M59 bayi riski
+
+@block("bayi")
+def bayi(heavy: bool) -> None:
+    from semantic_bridge import dealers_kaynak as K
+
+    st, s = http("/api/v1/dealers/summary", 600)
+    if not ok_or_skip("bayi /summary", st, s):
+        return
+    k = contract("bayi /summary", s, K.NOT_RAKAM)
+    got = run_all("bayi /summary", k, heavy)
+    rows = got.get("bayi.skorlar")
+    if rows is not None:
+        total = sum(num(r.get("vadesi_gecmis")) for r in rows)
+        check("R bayi: pano vadesi geçmiş = skor satırları toplamı", abs(total - num(s.get("vadesiGecmis"))) < 1,
+              f"tablo {total:,.2f} · pano {s.get('vadesiGecmis')}")
+    for path in ("/api/v1/dealers/meta", "/api/v1/dealers/list", "/api/v1/dealers/limits?durum=", "/api/v1/dealers/rules",
+                 "/api/v1/dealers/actions"):
+        st, out = http(path, 600)
+        if ok_or_skip(f"bayi {path}", st, out):
+            k2 = contract(f"bayi {path.split('?')[0]}", out, K.NOT_RAKAM)
+            run_all(f"bayi {path.split('?')[0]}", {"sources": {sid: v for sid, v in (k2.get("sources") or {}).items()
+                                                               if v["connection"] == "portal"}}, heavy)
+    code = next((d["code"] for d in s.get("kotulesenler") or []), None)
+    if not code:
+        st, lst = http("/api/v1/dealers/list?size=1", 300)
+        code = next((d["code"] for d in (lst.get("items") or [])), None) if st == 200 else None
+    if code:
+        for path in (f"/api/v1/dealers/{code}", f"/api/v1/dealers/{code}/aging", f"/api/v1/dealers/{code}/history"):
+            st, out = http(path, 300)
+            if ok_or_skip(f"bayi {path}", st, out):
+                contract(f"bayi {path}", out, K.NOT_RAKAM)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--skip-heavy", action="store_true")

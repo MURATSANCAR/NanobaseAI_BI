@@ -19,6 +19,8 @@ import {
   type RuleBody,
 } from './api';
 import { DistBar } from './parts';
+import SqlInfo from '../components/SqlInfo';
+import type { Kaynaklar } from '../components/sqlInfo';
 
 /** Kurallar: skor ağırlıkları, segment eşikleri, kapsam kanalları ve limit önerisi kuralı sürümlüdür (taslak → onaya gönder →
  *  onay → yürürlükte; önceki arşive iner). Hazırlayan ya da gönderen onaylayamaz. Önizleme bugünkü satırların ham girdilerini
@@ -38,7 +40,7 @@ export default function RulesTab({ meta }: { meta: DealersMeta }) {
 
   return (
     <div className="flex flex-col gap-3">
-      <RuleView rule={active} meta={meta} />
+      <RuleView rule={active} meta={meta} k={q.data?.kaynaklar} />
       {meta.me.canRule && !edit && (
         <button type="button" className={`${btnPrimary} self-start`} onClick={() => setEdit('new')}>
           Yeni sürüm taslağı
@@ -77,10 +79,10 @@ export default function RulesTab({ meta }: { meta: DealersMeta }) {
   );
 }
 
-function RuleView({ rule, meta }: { rule: Rule; meta: DealersMeta }) {
+function RuleView({ rule, meta, k }: { rule: Rule; meta: DealersMeta; k?: Kaynaklar }) {
   const e = rule.esikler;
   return (
-    <Block title={`Yürürlükteki kural · sürüm ${rule.surum}`} help={rule.gerekce ?? undefined}>
+    <Block title={`Yürürlükteki kural · sürüm ${rule.surum}`} help={rule.gerekce ?? undefined} action={<SqlInfo k={k} alan="items" label="Risk kuralı sürümleri" />}>
       <div className="grid gap-3 lg:grid-cols-2">
         <div>
           <div className={labelCls}>Bileşen ağırlıkları (toplam 100)</div>
@@ -218,7 +220,10 @@ function PreviewView({ p }: { p: Preview }) {
         Anahtar hesap: bugün {SEGMENTS.map((s) => `${s} ${p.mevcut.anahtar[s]}`).join(', ')} → taslak {SEGMENTS.map((s) => `${s} ${p.taslak.anahtar[s]}`).join(', ')}.
         {p.kapsamDisi ? ` Taslakta kapsam dışı kalan: ${p.kapsamDisi} cari.` : ''} {p.not}
       </p>
-      <div className="text-[12px] font-extrabold">Segmenti değişen: {p.degisen.length}</div>
+      <div className="flex items-center gap-1 text-[12px] font-extrabold">
+        Segmenti değişen: {p.degisen.length}
+        <SqlInfo k={p.kaynaklar} alan="degisen" label="Önizleme" />
+      </div>
       {rows.length > 0 && (
         <ul className="flex flex-col gap-1">
           {rows.map((x) => (

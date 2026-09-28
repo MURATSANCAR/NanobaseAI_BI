@@ -7,6 +7,7 @@ import Sheet from '../editorial/studio/reader/Sheet';
 import { fmtDay, fmtMoney, fmtPct } from '../field/api';
 import { KV } from '../field/parts';
 import { dealersApi, type BriefOut, type Card } from './api';
+import SqlInfo from '../components/SqlInfo';
 
 /** Ziyaret öncesi risk brifi (telefonda tek sayfa). Rakamlar karttan — Zeki AI yalnız kısa özeti ve «konuşulacak üç madde»yi
  *  yazar, metindeki her sayı olgularda geçmek zorunda; geçmezse kural brifi gösterilir. Girdi değişmedikçe model yeniden
@@ -41,14 +42,14 @@ export default function BriefSheet({ open, onClose, card }: { open: boolean; onC
     <Sheet open={open} modal onClose={onClose} title={`Risk brifi · ${card.unvan || card.code}`} subtitle={`Logo ${fmtDay(card.dataEnd)} tarihine kadar · vade tutarları yaklaşık`}>
       <div className="flex flex-col gap-3">
         <section className="rounded-2xl bg-slate-50 p-3">
-          <KV k="Bakiye" v={fmtMoney(card.bakiye)} />
-          <KV k="Vadesi geçmiş (yaklaşık)" v={fmtMoney(card.vadesiGecmis)} tone={card.vadesiGecmis ? 'err' : undefined} />
-          <KV k="90+ gün" v={fmtMoney(card.kovalar.k_90p)} tone={card.kovalar.k_90p ? 'err' : undefined} />
+          <KV k="Bakiye" info={<SqlInfo k={card.kaynaklar} alan="bakiye" label="Bakiye" />} v={fmtMoney(card.bakiye)} />
+          <KV k="Vadesi geçmiş (yaklaşık)" info={<SqlInfo k={card.kaynaklar} alan="vadesiGecmis" label="Vadesi geçmiş" />} v={fmtMoney(card.vadesiGecmis)} tone={card.vadesiGecmis ? 'err' : undefined} />
+          <KV k="90+ gün" info={<SqlInfo k={card.kaynaklar} alan="kovalar" label="90+ gün" />} v={fmtMoney(card.kovalar.k_90p)} tone={card.kovalar.k_90p ? 'err' : undefined} />
           <KV k="Son ödeme" v={card.sonOdeme ? fmtDay(card.sonOdeme) : 'yok (12 ay)'} />
-          <KV k="12 ay net alım · iade" v={`${fmtMoney(card.net12)} · ${fmtPct(card.iadeOrani)}`} />
-          {(card.karsiliksiz || card.protesto) ? <KV k="Karşılıksız / protesto" v={`${card.karsiliksiz ?? 0} / ${card.protesto ?? 0}`} tone="err" /> : null}
-          <KV k="CRM limit · doluluk" v={l.limit_toplam ? `${fmtMoney(l.limit_toplam)} · ${fmtPct(l.risk_doluluk ?? null)}` : card.crmEsi ? 'girilmemiş' : 'CRM eşi yok'} />
-          {card.siparisRiskte ? <KV k="Risk onayı bekleyen sipariş" v={String(card.siparisRiskte)} tone="warn" /> : null}
+          <KV k="12 ay net alım · iade" info={<SqlInfo k={card.kaynaklar} alan="net12" label="12 ay net alım ve iade" />} v={`${fmtMoney(card.net12)} · ${fmtPct(card.iadeOrani)}`} />
+          {(card.karsiliksiz || card.protesto) ? <KV k="Karşılıksız / protesto" info={<SqlInfo k={card.kaynaklar} alan="karsiliksiz" label="Çek/senet olayı" />} v={`${card.karsiliksiz ?? 0} / ${card.protesto ?? 0}`} tone="err" /> : null}
+          <KV k="CRM limit · doluluk" info={<SqlInfo k={card.kaynaklar} alan="limit" label="CRM limit ve doluluk" />} v={l.limit_toplam ? `${fmtMoney(l.limit_toplam)} · ${fmtPct(l.risk_doluluk ?? null)}` : card.crmEsi ? 'girilmemiş' : 'CRM eşi yok'} />
+          {card.siparisRiskte ? <KV k="Risk onayı bekleyen sipariş" info={<SqlInfo k={card.kaynaklar} alan="siparisRiskte" label="Riskte sipariş" />} v={String(card.siparisRiskte)} tone="warn" /> : null}
         </section>
 
         {gen.isPending && !b ? (
@@ -65,7 +66,10 @@ export default function BriefSheet({ open, onClose, card }: { open: boolean; onC
                 Yenile
               </button>
             </div>
-            <p className="text-[13.5px] leading-relaxed">{b.metin}</p>
+            <p className="text-[13.5px] leading-relaxed">
+              {b.metin}
+              <SqlInfo k={b.kaynaklar} alan="metin" label="Brifteki sayılar" className="ml-0.5" />
+            </p>
             <div className="text-[11px] font-bold uppercase tracking-wide text-canvas-muted">Bu ziyarette konuşulacaklar</div>
             <ol className="flex list-decimal flex-col gap-1 pl-5 text-[13px] leading-snug">
               {b.maddeler.map((x) => (
