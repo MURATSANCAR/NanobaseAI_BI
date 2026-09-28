@@ -1028,6 +1028,43 @@ SPEC: list[dict[str, Any]] = [
      "help": "Kitabın D2C payı, bütün kitaplardaki D2C payının en az bu katıysa listeye girer"},
     {"key": "CHANNEL_TARGET_YEAR_CODES", "group": "channels", "label": "CRM hedef yılı kodları", "type": "text", "default": "",
      "help": "Boşsa CRM seçim listesinden okunur. Elle: 2025:3,2026:100000000"},
+    # M39 Pazar araştırması ve rekabet
+    {"key": "PAZAR_ALERT_RECIPIENTS", "group": "pazar", "label": "Bildirim alıcıları", "type": "text", "default": "",
+     "help": "Virgülle iç e-posta adresleri (pazarlama müdürü, yönetim): özet taslağı hazır, onay bekliyor, onaylandı ve "
+             "rakip verisi eski uyarısı. Boşsa e-posta gitmez"},
+    {"key": "PAZAR_STALE_DAYS", "group": "pazar", "label": "Rakip verisi eski sayılır (gün)", "type": "int", "default": "180",
+     "help": "CRM rakip kitap kayıtlarının son eklenme/değişme tarihinden bu yana geçen gün bu sayıyı aşınca ekranda "
+             "uyarı ve haftalık e-posta. Ekipçe belirlenecek"},
+    {"key": "PAZAR_NEW_DAYS", "group": "pazar", "label": "«Yeni kayıt» penceresi (gün)", "type": "int", "default": "365",
+     "help": "Matristeki yeni kayıt sayısı: CRM'e bu kadar gün içinde eklenen rakip kitap"},
+    {"key": "PAZAR_CATEGORY_SOURCE", "group": "pazar", "label": "TİMAŞ kategori listesi", "type": "text", "default": "auto",
+     "help": "auto: yürürlükte kategori ağacı varsa ağaç, yoksa CRM Kitaplık; agac; kitaplik. Değişince onaylı eşlemelerin "
+             "karşılığı kalmayanlar yeniden öneriye düşer"},
+    {"key": "PAZAR_CATEGORY_LEVELS", "group": "pazar", "label": "Ağaçtan alınan düzeyler", "type": "text", "default": "ana,alt",
+     "help": "Virgülle: yayinevi, ana, alt, altalt. Rakip kategorisi bu düzeylerdeki düğümlere eşlenir"},
+    {"key": "PAZAR_MAP_MIN_PROB", "group": "pazar", "label": "Eşleme önerisi: en düşük olasılık", "type": "text", "default": "0.70",
+     "help": "Zeki AI bunun altında emin olduğunda öneri «emin değil» olarak gelir; karar her durumda insanda"},
+    {"key": "PAZAR_MAP_MIN_MARGIN", "group": "pazar", "label": "Eşleme önerisi: en düşük fark", "type": "text", "default": "0.30",
+     "help": "Seçilen kategori ile ikinci aday arasındaki olasılık farkı"},
+    {"key": "PAZAR_BATCH_SECONDS", "group": "pazar", "label": "Eşleme önerisi süresi (saniye)", "type": "int", "default": "1800",
+     "help": "Bir turda öneriye ayrılan süre; biten süre sonraki tura kalır (kuyruk kalıcı)"},
+    {"key": "PAZAR_BLURB_CHARS", "group": "pazar", "label": "Tanıtım metninden alınan karakter", "type": "int", "default": "280",
+     "help": "Rakip tanıtım metni ve TİMAŞ arka kapak metninin yalnız başı alınır (emsal benzerliği için); toplu kopyalanmaz"},
+    {"key": "PAZAR_COMP_PAGE_TOL", "group": "pazar", "label": "Emsal: sayfa farkı payı", "type": "text", "default": "0.25",
+     "help": "0.25 = ±%25. Sayfa sayısı girildiyse bu payın dışındaki aday elenir"},
+    {"key": "PAZAR_COMP_PRICE_TOL", "group": "pazar", "label": "Emsal: fiyat farkı payı", "type": "text", "default": "0.30",
+     "help": "0.30 = ±%30. Fiyat girildiyse bu payın dışındaki aday elenir"},
+    {"key": "PAZAR_COMP_MODEL_CANDIDATES", "group": "pazar", "label": "Emsal: Zeki AI'ın okuduğu aday", "type": "int",
+     "default": "20", "help": "Ortak sözcük puanı en yüksek bu kadar aday Zeki AI'ya sorulur; kalanlar puan sırasıyla listelenir "
+                             "ve ekranda yazılır"},
+    {"key": "PAZAR_OWN_YEARS", "group": "pazar", "label": "İç göstergelerde yıl sayısı", "type": "int", "default": "3",
+     "help": "Logo'dan okunan yıl sayısı (veri sonunun yılı dahil)"},
+    {"key": "PAZAR_BRIEF_MAX_SOURCES", "group": "pazar", "label": "Özet taslağı: en çok kaynak", "type": "int", "default": "60",
+     "help": "Taslağa verilen kaynak sayısı; dışarıda kalan sayısı özette yazılır"},
+    {"key": "PAZAR_BRIEF_TWO_EYES", "group": "pazar", "label": "Özeti yazan onaylayamaz", "type": "bool", "default": "1", "help": ""},
+    {"key": "PAZAR_FILE_MAX_MB", "group": "pazar", "label": "Rapor dosyası üst sınırı (MB)", "type": "int", "default": "50", "help": ""},
+    {"key": "PAZAR_EXTRACT_PAGE_CHARS", "group": "pazar", "label": "Rakam çıkarımında parça boyu (karakter)", "type": "int",
+     "default": "12000", "help": "Uzun sayfa bu boyda parçalara bölünür; hiçbir parça atlanmaz"},
     # Yetki
     {"key": "TIMAS_ADMIN_USERS", "group": "access", "label": "Yöneticiler", "type": "users",
      "default": "zekiai,timasai,muratsancar",
@@ -1129,6 +1166,9 @@ GROUPS = [
     {"id": "channels", "label": "Platform ve kanallar",
      "help": "Kanal karnesi, eşleme ve uyarı ayarları. Pazar yerlerine, T-soft'a, CRM'e ve Logo'ya hiçbir şey yazılmaz; "
              "öneriler portalda onaylanır, gönderimi insan yapar."},
+    {"id": "pazar", "label": "Pazar araştırması ve rekabet",
+     "help": "Rakip verisi CRM'den okunur, pazar rakamları yalnız yüklenen ve onaylanan rapordan gelir; dış kaynak taraması "
+             "yok. CRM'e ve Logo'ya hiçbir şey yazılmaz."},
     {"id": "access", "label": "Yetki",
      "help": "Yönetim ekranına kimlerin gireceği: aşağıdaki liste ya da seçilen AD grubunun üyeleri. "
              "Editör grubu yalnız menünün düzenini belirler."},

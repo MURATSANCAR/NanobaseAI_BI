@@ -266,6 +266,51 @@
   - **Sohbet kapsamı:** hızlı kapı kurulum öncesi ve sonrası birebir (aynı 9 soru 21.09 temel çizgisinden farklı, katalog 70554→70581; satır farkı 0). `run_acceptance.py` iki kez köprü restart'ıyla yarıda kaldı (ilk 40 soruda 37 geçti; kalan 3 şirket dışı soru — tarif, başkent, şiir — için model «şirket dışı» demedi). **Tam kapı (`answer-gate --repeat 3`) koşulmadı**: bu sıklıkta restart altında bitemez.
 - **Test verisi:** her yazma testinin kaydı temizlik betiğiyle silindi (M29 plan, M31 ziyaret, M32 fırsat, M33 iki ihale + 22 kalem, M15 plan + karne, M1 başvuru + rapor); yarım kalan koşuların kayıtları elle bulunup silindi (M33 ihale 1, sohbet sorgu günlüğü 41 + 35 satır, M29 değişiklik kaydı 1). Son taramada timasai adına benim kaydım yok, test oturumu 0. Başka oturumlardan kalan 6 değişiklik kaydı (deneme belgesi, bülten, SEO koşuları) dokunulmadan bırakıldı.
 ## 2026-09-28 — M35 E-ticaret kampanya yönetimi (dal; DOĞRULANAMADI — testler koordinatörde)
+## 2026-09-28 — M39 Pazar araştırması ve rekabet analizi (dalda; DOĞRULANAMADI — testler koordinatörde)
+
+- **Ne:** Analiz §14 kodlama planı. Köprü `pazar.py` (depo + kurallar), `pazar_sources.py` (CRM rakip katalog, TİMAŞ
+  kitapları, emsal bağı, kitaplık; Logo stok kodu ve kanal kırılımında aynı dönem satışı; PDF/Excel/CSV sayfaları),
+  `pazar_api.py` (`/api/v1/pazar/*`, `app.py`'de yalnız kayıt). Tablolar `semantic_pazar_*` (competitor_books,
+  own_books, own_sales, links, categories, category_map, reports, report_figures, briefs, watchlist, meta). Ekran
+  `src/canvas/pazar/` (Özet · Rakipler · Emsal bul · Kategori eşlemesi · Sektör raporları · aylık özet), rota
+  `/timas/pazar-arastirma`, menü Analiz › «Pazar ve rakip» (+ «Rakipler ve emsal», «Sektör raporları»), Kampüs M39 ve
+  «Müşteri & Pazar» grup girişi. Zamanlayıcı `timas-pazar.timer` pazartesi 05:30 (`run-due`). Kabul `scripts/acceptance/M39/`.
+- **Yetki:** sayfalar `pazar-arastirma`, `pazar-rakipler`, `pazar-raporlar` (sektör raporu telifli olabilir →
+  `explicit: true`; sayfa düzeyindeki açık yetki M49 main'e girince etkinleşir, bugünkü main yalnız özelliklerde
+  okuyor). Özellikler `pazar.rapor-yukle`, `pazar.rakam-onay`, `pazar.kategori-esleme` (kaynak yenileme dahil),
+  `pazar.ozet-yaz` (analizde yoktu: taslak/düzenleme/onaya gönderme onaydan ayrı bir iş), `pazar.ozet-onay` (explicit,
+  yazan/gönderen onaylayamaz). Emsal ucu M1/M10 sayfalarına, matris M9 fiyatlama sayfasına da açık (sonradan bağlanacak).
+- **Kararlar (analiz §10'daki açık sorular; veriye/koda bakılarak):**
+  - «Satış Adedi / Satış Adedi 2»nin anlamı bilinmiyor → ham kopyalanır, hiçbir hesapta ve ekranda sayı olarak
+    kullanılmaz; kabulde doluluğu ve alma partisi sayısı (`ImportSequenceNumber`) ölçülür (Ö1).
+  - Rakip kategori metni bölünmeden bütün olarak eşlenir (ayırıcı biçimi ölçülmedi; Ö1/Ö2 ölçer). Önce ad eşleşmesi
+    (metnin tamamı ya da «>», «/», «;», «,» sonrası son parça TİMAŞ kategori adıyla aynıysa), sonra Zeki AI
+    `QueuedLlm.choose` (olasılık ≥ 0,70, fark ≥ 0,30 → öneri; altı «emin değil»). Karar her durumda insanda; eşleme kararı
+    ucu analizdeki `{kategori_ham}` yol parametresi yerine gövdede toplu (`POST category-map/decision {items}`), çünkü
+    ham metin «/» içerebiliyor ve ekranda toplu onay var.
+  - TİMAŞ kategori listesi: yürürlükte H1 ağacı varsa ağacın `ana,alt` düzeyleri, yoksa CRM Kitaplık
+    (`PAZAR_CATEGORY_SOURCE=auto`); liste değişince karşılığı kalmayan eşleme notuyla öneriye döner.
+  - İç göstergelerde satır tanımı M46 ile aynı (faturalı, `LINENET`, iade eksi); yayınevi = `ITEMS.SPECODE`, kanal =
+    `CLCARD.SPECODE2`. Kayıtlı SQL'ler (TOTAL / fatura başlığı NETTOTAL) farklı tanım; fark kabulde ölçüm olarak yazılır
+    (Ö3, Ö4). Büyüme hep aynı dönem (1 Ocak – veri sonu) karşılaştırması; «pazar payı» hiçbir yerde hesaplanmaz, yalnız
+    «TİMAŞ içi pay» (analiz §12 «bunu yaparsanız kullanmam» 3).
+  - Emsal: kurallı süzgeç (kategori, sayfa ±%25, fiyat ±%30 — ayar) → ortak sözcük puanı (Türkçe ek için ilk 6 harf) →
+    ilk 20 aday Zeki AI'ya «çok benzer / kısmen / benzemiyor». Gerekçe kurallı; model yalnız sınıf verir. Kaç adayın
+    modele sorulduğu ekranda yazar (sessiz tavan yok). Rakip tanıtım metninin yalnız ilk 280 karakteri okunur (FSEK).
+  - Rapor çıkarımı: sayfa sayfa (uzun sayfa 12.000 karakterlik parçalar, parça atlanmaz); modelin verdiği her rakam
+    sayfa metninde birebir aranır, bulunmayan atılır ve sayısı ekranda. Taranmış sayfa «metin yok» — elle rakam girilir.
+  - Özet: kaynaklar sabit sırayla (TİMAŞ toplam, kategori, kanal; onaylı rapor rakamları; izlenen rakiplerin medyan
+    fiyatı; rakip verisinin yaşı), en çok 60 (ayar; dışarıda kalan sayısı özette). Her madde bir [Kn]'ye bağlı olmalı ve
+    maddedeki her sayı bağlandığı kaynağın değeriyle (yuvarlama ve «milyon/milyar» ölçeğiyle) tutmalı; tutmayan madde
+    taslağa girmez, düzenlemede onaya gönderilemez, onayda yeniden denetlenir (analiz kabul 8). Onaylı rapor rakamı yoksa
+    özette «Pazar büyüklüğü: kaynak yok».
+  - Zeki AI sohbeti: `chat_topics.json` «pazar» konusu `yayin-crm` + `satis` veri alanlarına bağlandı (rakip kitap CRM
+    alanında). Sektör raporu rakamları katalogda değil; o sorular sohbette cevaplanamaz (açık kalan).
+- **Dış tarama yok** (`MARKET_WATCH_ENABLED` eklenmedi — bu sürümde açılacak bir şey yok); CRM'e ve Logo'ya yazma yok.
+- **Testler:** `backend/semantic_layer/tests/test_pazar.py` (anlık görüntü, tazelik, eşleme, matris = PERCENTILE_CONT,
+  emsal, iç göstergeler, rapor ve rakam, özet denetimi ve iki göz, yetki), `src/canvas/pazar/api.test.ts` (biçim, menü
+  yetkisi). **DOĞRULANAMADI** — kurallar gereği yerelde koşturulmadı, test sunucusuna bağlanılmadı; testler ve
+  `scripts/acceptance/M39/kabul.py` (K1–K9 doğrudan SQL, Ö1–Ö4 ölçüm, A1–A3 API) koordinatörde.
 
 - **Neden:** kampanya kararı (kitap, yüzde, kanal) Excel'de, sonucu Logo'da, sözleşme sınırı CRM'de duruyordu; CRM'deki 308 kampanya
   kaydı bayi kampanyası ve planlanan/gerçekleşen ciro alanları boş. Analiz: `docs/analiz/kullanici-ihtiyaclari/M35-eticaret-kampanya.md`.

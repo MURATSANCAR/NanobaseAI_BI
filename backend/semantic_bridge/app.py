@@ -7013,6 +7013,9 @@ def create_app(runtime: Optional[Runtime] = None) -> FastAPI:
     # H2 Okuyucu veri tabanı (Pazarlama › Okur ve müşteri): /api/v1/readers/*.
     from semantic_bridge import readers_api
     app.state.readers = readers_api.register(app, rt, _require_caller, _can)
+    # M39 Pazar araştırması ve rekabet (Analiz): /api/v1/pazar/*.
+    from semantic_bridge import pazar_api
+    app.state.pazar = pazar_api.register(app, rt, _require_caller, _can)
     from semantic_bridge import seo_geo
     app.state.seo_geo = seo_geo.register(app, rt, _require_caller, _board_user)
     from semantic_bridge import editorial_studio_marketing

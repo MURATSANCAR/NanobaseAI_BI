@@ -75,6 +75,22 @@
       "explicit": true
     },
     {
+      "key": "sayfa:pazar-arastirma",
+      "area": "analiz",
+      "label": "Pazar ve rakip"
+    },
+    {
+      "key": "sayfa:pazar-rakipler",
+      "area": "analiz",
+      "label": "Rakipler ve emsal"
+    },
+    {
+      "key": "sayfa:pazar-raporlar",
+      "area": "analiz",
+      "label": "Sektör raporları",
+      "explicit": true
+    },
+    {
       "key": "sayfa:finansal-denetim",
       "area": "finans",
       "label": "Finansal denetim"
@@ -711,6 +727,42 @@
       "page": "sayfa:uyarilar",
       "label": "Uyarı kuralı yazma",
       "hint": "Kural kaydet, duraklat, sil, şimdi kontrol et"
+    },
+    {
+      "key": "ozellik:pazar.rapor-yukle",
+      "area": "analiz",
+      "page": "sayfa:pazar-raporlar",
+      "label": "Sektör raporu yükleme",
+      "hint": "Rapor dosyası (PDF, Excel, CSV) yükleme ve silme; Zeki AI ile sayfa sayfa rakam çıkarımı (model harcar)"
+    },
+    {
+      "key": "ozellik:pazar.rakam-onay",
+      "area": "analiz",
+      "page": "sayfa:pazar-raporlar",
+      "label": "Rapor rakamlarını onaylama",
+      "hint": "Çıkarılan rakamı sayfasına bakarak onaylama, düzeltme, reddetme; elle rakam girme"
+    },
+    {
+      "key": "ozellik:pazar.kategori-esleme",
+      "area": "analiz",
+      "page": "sayfa:pazar-rakipler",
+      "label": "Rakip kategori eşlemesi",
+      "hint": "Rakip kategorisini TİMAŞ kategorisine eşleme kararı, Zeki AI eşleme önerisi, CRM/Logo kaynaklarını yenileme"
+    },
+    {
+      "key": "ozellik:pazar.ozet-yaz",
+      "area": "analiz",
+      "page": "sayfa:pazar-arastirma",
+      "label": "Pazar özeti taslağı",
+      "hint": "Zeki AI ile aylık yönetim özeti taslağı, düzenleme, onaya gönderme"
+    },
+    {
+      "key": "ozellik:pazar.ozet-onay",
+      "area": "analiz",
+      "page": "sayfa:pazar-arastirma",
+      "label": "Pazar özetini onaylama",
+      "hint": "Onaya gönderilen aylık pazar özetini onaylayıp kurul paketine (DYK) gönderme ya da gerekçeyle geri gönderme (yazan onaylayamaz)",
+      "explicit": true
     },
     {
       "key": "ozellik:denetim.detay",

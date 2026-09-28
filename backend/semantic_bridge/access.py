@@ -468,6 +468,7 @@ _CHANNELS = frozenset(page(x) for x in ("kanallar", "kanal-matris", "kanal-d2c",
 
 _CATEGORY_READERS = frozenset({page("kategori-agaci"), page("editor-atama"), page("yayin-kurulu"),
                                page("yazar-giris")}) | _SEO
+_PAZAR = frozenset(page(x) for x in ("pazar-arastirma", "pazar-rakipler", "pazar-raporlar"))
 
 #: En uzun eşleşen önek kazanır. Yeni bir uç eklenince burada bir öneke düşmeli; düşmezse test kırılır
 #: (test_access.py → köprünün bütün yolları). Ortak uçlar geniş tutuldu (bir sayfanın çağırdığı uç
@@ -622,6 +623,23 @@ RULES: list[tuple[str, Any]] = [
     ("/api/v1/dijital/overview", frozenset({page("dijital-yayin"), page("dijital-satis")})),
     ("/api/v1/dijital/platforms", frozenset({page("dijital-yayin"), page("dijital-satis")})),
     ("/api/v1/dijital/", frozenset({page("dijital-yayin")})),
+    # M39 Pazar ve rakip. Meta, tazelik ve kategori listesi her üç sayfada; emsal M1/M10'da, matris M9'da da okunur.
+    ("/api/v1/pazar/run-due", SYSTEM),
+    ("/api/v1/pazar/meta", _PAZAR),
+    ("/api/v1/pazar/freshness", _PAZAR),
+    ("/api/v1/pazar/status", _PAZAR),
+    ("/api/v1/pazar/refresh", _PAZAR),
+    ("/api/v1/pazar/categories", _PAZAR),
+    ("/api/v1/pazar/competitors", frozenset({page("pazar-rakipler")})),
+    ("/api/v1/pazar/publishers", frozenset({page("pazar-rakipler")})),
+    ("/api/v1/pazar/matrix", frozenset({page("pazar-rakipler"), page("fiyatlama")})),
+    ("/api/v1/pazar/category-map", frozenset({page("pazar-rakipler")})),
+    ("/api/v1/pazar/watchlist", frozenset({page("pazar-rakipler")})),
+    ("/api/v1/pazar/comparables", frozenset({page("pazar-rakipler"), page("yayin-kurulu"), page("basvurular"), page("ilk-baski")})),
+    ("/api/v1/pazar/own-books", frozenset({page("pazar-rakipler"), page("yayin-kurulu"), page("basvurular"), page("ilk-baski")})),
+    ("/api/v1/pazar/reports", frozenset({page("pazar-raporlar")})),
+    ("/api/v1/pazar/figures/", frozenset({page("pazar-raporlar")})),
+    ("/api/v1/pazar/", frozenset({page("pazar-arastirma")})),
     ("/api/v1/seo-geo/run-due", SYSTEM),
     ("/api/v1/seo-geo/", _SEO),
     # M34 E-ticaret: ortak uçlar (meta, kitap çekmecesi, öneri) dört ekranda; liste uçları kendi ekranı + platform durumu.
@@ -770,6 +788,14 @@ FEATURE_RULES: list[tuple[frozenset[str], str, str]] = [
     (frozenset({"GET"}), r"^/api/v1/categories/crm-diff/export\.xlsx$", "ozellik:veri.disa-aktar"),
     # Güvenlik uyarısını kapatma/yeniden açma. Oturum kapatma ve saklama politikası açıkça verilir, ucun içinde.
     (frozenset({"PATCH"}), r"^/api/v1/data-security/alerts/[^/]+$", "ozellik:guvenlik.uyari-kapat"),
+    # M39 Pazar ve rakip: rapor yükleme/silme/çıkarım, rakam kararı ve elle rakam, eşleme kararı/önerisi ve kaynak
+    # yenileme, özet taslağı/düzenleme/onaya gönderme. Özet onayı ve geri gönderme açıkça verilen `pazar.ozet-onay` ile
+    # ucun içinde; izlenen rakip listesi ve emsal arama sayfa yetkisiyle gelir.
+    (frozenset({"POST", "DELETE"}), r"^/api/v1/pazar/reports(/[^/]+(/extract)?)?$", "ozellik:pazar.rapor-yukle"),
+    (frozenset({"POST"}), r"^/api/v1/pazar/(figures/[^/]+/decision|reports/[^/]+/figures)$", "ozellik:pazar.rakam-onay"),
+    (frozenset({"POST"}), r"^/api/v1/pazar/(category-map/(decision|suggest)|refresh)$", "ozellik:pazar.kategori-esleme"),
+    (frozenset({"POST", "PATCH"}), r"^/api/v1/pazar/briefs/(draft|(?!draft$)[^/]+(/submit)?)$", "ozellik:pazar.ozet-yaz"),
+    (frozenset({"GET"}), r"^/api/v1/pazar/matrix/export\.csv$", "ozellik:veri.disa-aktar"),
     # İlk baskı kararı kaydı ve geri çekme; onay (satış/üretim) açıkça verilen `ilk-baski.onay` ile ucun içinde.
     (frozenset({"POST"}), r"^/api/v1/management/first-print/decisions(/[^/]+/withdraw)?$", "ozellik:ilk-baski.karar"),
     # Pazarlama planı: taslak, düzenleme, Zeki AI önerisi, materyal taslağı, onaya gönderme, revizyon. Plan onayı, üst

@@ -80,6 +80,7 @@ const ReadersScreen = lazy(() => import('@/canvas/readers/ReadersScreen'));
 const ReaderCard = lazy(() => import('@/canvas/readers/ReaderCard'));
 const CategoryBookProfile = lazy(() => import('@/canvas/categories/BookProfile'));
 const DataSecurityScreen = lazy(() => import('@/canvas/data-security/DataSecurityScreen'));
+const PazarScreen = lazy(() => import('@/canvas/pazar/PazarScreen'));
 const FirstPrintScreen = lazy(() => import('@/canvas/first-print/FirstPrintScreen'));
 const FieldScreen = lazy(() => import('@/canvas/field/FieldScreen'));
 const CustomerBrief = lazy(() => import('@/canvas/field/CustomerBrief'));
@@ -427,6 +428,11 @@ export default function App() {
             <Route path="kategori-agaci" element={<CategoriesScreen />} />
             <Route path="kategori-agaci/kitap/:id" element={<CategoryBookProfile />} />
             <Route path="kategori-agaci/:section" element={<CategoriesScreen />} />
+            {/* M39 Pazar ve rakip: özet, rakipler/emsal/eşleme, sektör raporları, aylık özet (/api/v1/pazar). */}
+            <Route path="pazar-arastirma" element={<PazarScreen />} />
+            <Route path="pazar-arastirma/:section" element={<PazarScreen />} />
+            <Route path="pazar-arastirma/raporlar/:id" element={<PazarScreen />} />
+            <Route path="pazar-arastirma/ozet/:donem" element={<PazarScreen />} />
             <Route path="gorevlerim" element={<MyTasksScreen />} />
             <Route path="kisiler" element={<PeopleScreen />} />
             <Route path="serbest-calisanlar" element={<FreelanceScreen />} />
