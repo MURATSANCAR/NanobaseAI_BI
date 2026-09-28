@@ -24,6 +24,9 @@ SETTINGS = [
 		# Kullanım verisi dışarı gitmez.
 		"enable_telemetry": 0,
 		"disable_standard_email_footer": 1,
+		# Giriş sayfası dışarıya açık ve AD şifresi soruyor: 5 yanlışta 15 dk kilit (nginx'te IP sınırı da var).
+		"allow_consecutive_login_attempts": 5,
+		"allow_login_after_fail": 900,
 		"email_footer_address": BRAND,
 	}),
 	# Ayrı adım: seçenek listesi çalışma anında dolar; tutmazsa öteki ayarları düşürmesin.
