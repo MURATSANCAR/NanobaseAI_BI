@@ -169,7 +169,7 @@ def run_due(engine: sa.engine.Engine, tenant: str, directory: Callable[[], dict[
     except ValueError:
         hh, mm = 8, 15
     if not dry_run and (local.hour, local.minute) < (hh, mm):
-        return {"day": today.isoformat(), "skipped": f"özet {hh:02d}:{mm:02d}'den önce gönderilmez", "sent": 0, "users": {}}
+        return {"day": today.isoformat(), "skipped": f"özet saati ({hh:02d}:{mm:02d}) gelmedi", "sent": 0, "users": {}}
     per_user = digests(engine, tenant, now)
     cfg = alerts.smtp_settings()
     people = directory() if per_user else {}
