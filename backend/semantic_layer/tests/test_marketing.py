@@ -584,3 +584,64 @@ def test_tables_are_created_once(engine):
     names = set(sa.inspect(engine).get_table_names())
     assert {"semantic_mkt_plans", "semantic_mkt_plan_lines", "semantic_mkt_tasks", "semantic_mkt_materials",
             "semantic_mkt_book_cards", "semantic_mkt_events", "semantic_mkt_jobs", "semantic_mkt_meta"} <= names
+
+
+# ------------------------------------------------------------------ PDF: metin olarak gelen alanlar (kabul hatası 2026-09-28)
+
+
+def test_card_cache_keeps_its_data_end_dict(engine):
+    """Karne önbelleği «veriSonu»yu düz tarih metniyle ezmez: PDF ve karne sekmesi {logo, emsalAy} okur."""
+    card = {"kitap": {"ad": "Deneme"}, "veriSonu": {"logo": "2026-08-17", "emsalAy": "2026-07"}, "emsal": {"items": []}}
+    C.card_put(engine, T, "N9", card, "2026-08-17")
+    assert C.card_get(engine, T, "N9")["veriSonu"] == {"logo": "2026-08-17", "emsalAy": "2026-07"}
+    # Eski biçim (sözlüksüz) önbellek: kolondaki tarih Logo veri sonu olur.
+    C.card_put(engine, T, "N8", {"kitap": {"ad": "Eski"}}, "2026-08-10")
+    assert C.card_get(engine, T, "N8")["veriSonu"] == {"logo": "2026-08-10", "emsalAy": None}
+
+
+def test_plan_pdf_survives_text_json_fields(engine):
+    """Gerçekçi plan: hedef/zeki JSON kolonları çift kodlanmış metin, karne alanları metin (eski önbellek), emsal JSON
+    metni, sayılar metin. Eskiden `vs.get('logo')` → «'str' object has no attribute 'get'» ile 500 veriyordu."""
+    pytest.importorskip("fpdf")
+    import json
+
+    pid = _plan(engine)
+    _lines(engine, pid, 4321, 1500)
+    ok = C.add_material(engine, T, "ayse", pid, "foy", "Onaylı föy metni: İstanbul'da ığüşöç", "zeki")
+    C.approve_material(engine, T, "editor", ok["id"], "editoryal")
+    C.approve_material(engine, T, "mudur", ok["id"], "pazarlama")
+    hedef = {"planId": "BP-2026-001", "year": 2026, "adet": "12000", "ciro": "2400000.5"}
+    zeki = {"konumlama": "Genç yetişkin okur", "kanalGerekce": "Emsal kitaplarda basın payı yüksek."}
+    with engine.begin() as c:
+        c.execute(C.PLANS.update().where(C.PLANS.c.id == pid).values(
+            hedef_json=json.dumps(json.dumps(hedef)), zeki_json=json.dumps(json.dumps(zeki, ensure_ascii=False))))
+    plan = C.plan_full(engine, T, pid)
+    assert isinstance(plan["hedef"], str) and isinstance(plan["zeki"], str)   # sorunun kendisi: sözlük değil metin
+
+    emsal = {"items": [{"stokKodu": "E1", "ad": "Emsal kitap", "lansman": "2025-03", "ilk3": "1200", "ilk6": 2400, "ilk12": None},
+                       "bozuk-öğe"]}
+    cards = [
+        None,
+        {"kitap": {"ad": "Deneme", "yazar": "Yazar"}, "emsal": emsal, "veriSonu": {"logo": "2026-08-17", "emsalAy": "2026-07"}},
+        {"kitap": json.dumps({"ad": "Deneme"}), "emsal": json.dumps(emsal), "veriSonu": "2026-08-17"},   # eski card_get çıktısı
+        {"kitap": "Deneme", "emsal": "yok", "veriSonu": None},
+        json.dumps({"kitap": {"ad": "Deneme"}, "veriSonu": "2026-08-17"}),
+    ]
+    for card in cards:
+        for budget in (True, False):
+            body = X.plan_pdf(plan, card, budget, "ayse")
+            assert body[:4] == b"%PDF" and len(body) > 1000
+
+    # Önbellekten okunan karne de PDF'e girer (kabuldeki yol: canlı karne okunamayınca card_get).
+    C.card_put(engine, T, plan["stokKodu"], {"kitap": {"ad": "Deneme"}, "emsal": emsal,
+                                             "veriSonu": {"logo": "2026-08-17", "emsalAy": "2026-07"}}, "2026-08-17")
+    assert X.plan_pdf(plan, C.card_get(engine, T, plan["stokKodu"]), True, "ayse")[:4] == b"%PDF"
+
+
+def test_export_field_helpers():
+    assert X._obj('{"logo": "2026-08-17"}') == {"logo": "2026-08-17"}
+    assert X._obj("2026-08-17", text_key="logo") == {"logo": "2026-08-17"}
+    assert X._obj("2026-08-17") == {} and X._obj(None) == {} and X._obj(["x"]) == {}
+    assert X._items('{"items": [{"a": 1}, 2]}') == [{"a": 1}] and X._items("bozuk") == []
+    assert X._tr_day(date(2026, 8, 17)) == "17.08.2026" and X._tr_day("2026-08-17T10:00:00") == "17.08.2026"
+    assert X._tr_day("bilinmiyor") == "bilinmiyor" and X._tr_money("2400000.5") == "2.400.000 TL" and X._tr_int(None) == "—"

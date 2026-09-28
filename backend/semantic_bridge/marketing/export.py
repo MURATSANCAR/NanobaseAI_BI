@@ -8,8 +8,9 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import zipfile
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Optional
 
 from semantic_bridge.marketing import core as C
@@ -17,17 +18,75 @@ from semantic_bridge.marketing import core as C
 PRODUCT = "Zeki AI"
 
 
+def _num(v: Any) -> Optional[float]:
+    """Sayı ya da JSON'dan metin olarak gelmiş sayı («1200», «1200.5») → float; okunamazsa None."""
+    if v is None or isinstance(v, bool):
+        return None
+    if isinstance(v, (int, float)):
+        return float(v)
+    try:
+        return float(str(v).strip().replace(",", "."))
+    except ValueError:
+        return None
+
+
 def _tr_money(v: Any) -> str:
-    if v is None:
+    n = _num(v)
+    if n is None:
         return "—"
-    return f"{float(v):,.0f}".replace(",", ".") + " TL"
+    return f"{n:,.0f}".replace(",", ".") + " TL"
 
 
-def _tr_day(v: Optional[str]) -> str:
+def _tr_int(v: Any) -> str:
+    n = _num(v)
+    return "—" if n is None else f"{n:,.0f}".replace(",", ".")
+
+
+def _tr_day(v: Any) -> str:
     if not v:
         return "—"
-    d = date.fromisoformat(v[:10])
+    if isinstance(v, datetime):
+        d = v.date()
+    elif isinstance(v, date):
+        d = v
+    else:
+        try:
+            d = date.fromisoformat(str(v)[:10])
+        except ValueError:
+            return str(v)
     return f"{d.day:02d}.{d.month:02d}.{d.year}"
+
+
+def _obj(v: Any, text_key: Optional[str] = None) -> dict[str, Any]:
+    """Sözlük beklenen karne/plan alanı metin gelebilir: JSON kolonunda çift kodlanmış metin ya da eski önbellekte düz tarih
+    («2026-08-17»). JSON metni sözlüğe açılır; düz metin `text_key` verildiyse o anahtara konur; gerisi boş sözlük."""
+    if isinstance(v, dict):
+        return v
+    if isinstance(v, (str, bytes)):
+        raw = v.decode("utf-8", "replace") if isinstance(v, bytes) else v
+        try:
+            parsed = json.loads(raw)
+        except ValueError:
+            parsed = None
+        if isinstance(parsed, dict):
+            return parsed
+        if isinstance(parsed, str) and parsed != raw:
+            return _obj(parsed, text_key)
+        if text_key and raw.strip():
+            return {text_key: raw.strip()}
+    return {}
+
+
+def _items(v: Any) -> list[dict[str, Any]]:
+    """Liste beklenen alan (JSON metni ya da {items: [...]} olabilir); sözlük olmayan öğeler atlanır."""
+    if isinstance(v, (str, bytes)):
+        try:
+            v = json.loads(v)
+        except ValueError:
+            return []
+    if isinstance(v, dict):
+        v = v.get("items")
+    return [x for x in v if isinstance(x, dict)] if isinstance(v, list) else []
 
 
 def plan_csv(plan: dict[str, Any], show_budget: bool) -> str:
@@ -124,20 +183,21 @@ def plan_pdf(plan: dict[str, Any], card: Optional[dict[str, Any]], show_budget: 
             pdf.cell(w, 5.5, t, border="B")
         pdf.ln(5.5)
 
-    k = (card or {}).get("kitap") or {}
+    card = _obj(card)
+    k = _obj(card.get("kitap"))
     para(f"Timaş Yayınları · {C.KINDS.get(plan['kind'], plan['kind'])} pazarlama planı", 8.5)
     para(plan["baslik"], 15, "B", 1)
     para(f"{plan['id']} · sürüm {plan['surum']} · {plan['durumAdi']}"
          + (f" · onaylayan {plan['onaylayan']} ({_tr_day(plan.get('onayZamani'))})" if plan.get("onaylayan") else ""), 9)
     para(f"Kitap: {k.get('ad') or plan.get('stokKodu')} · {k.get('yazar') or '—'} · {k.get('yayinevi') or '—'} · stok kodu {plan.get('stokKodu') or '—'}")
     para(f"Yayın tarihi: {_tr_day(plan.get('yayinTarihi'))} ({plan.get('yayinTarihiKaynakAdi') or 'kaynak yok'})")
-    h = plan.get("hedef") or {}
-    if h.get("planId") and h.get("adet") is not None:
-        para(f"Satış hedefi ({h.get('year')}): {h['adet']:,.0f} adet".replace(",", ".")
+    h = _obj(plan.get("hedef"))
+    if h.get("planId") and _num(h.get("adet")) is not None:
+        para(f"Satış hedefi ({h.get('year')}): {_tr_int(h['adet'])} adet"
              + (f", {_tr_money(h.get('ciro'))} net ciro" if show_budget else ""))
     else:
         para(f"Satış hedefi: {h.get('not') or 'onaylı hedef yok'}")
-    z = plan.get("zeki") or {}
+    z = _obj(plan.get("zeki"))
     if z.get("konumlama"):
         head("Hedef okur ve konumlama")
         para(z["konumlama"])
@@ -147,41 +207,43 @@ def plan_pdf(plan: dict[str, Any], card: Optional[dict[str, Any]], show_budget: 
     if show_budget:
         cols.insert(2, ("Tutar", 30))
     row(cols, "B")
-    for ln in plan["lines"]:
-        cells = [(ln["kanalAdi"], 38), (ln.get("aciklama") or ln.get("altKanal") or "", 62 if show_budget else 92),
+    for ln in _items(plan.get("lines")):
+        cells = [(ln.get("kanalAdi") or ln.get("kanal") or "", 38), (ln.get("aciklama") or ln.get("altKanal") or "", 62 if show_budget else 92),
                  (_tr_day(ln.get("baslangic")), 22), (_tr_day(ln.get("bitis")), 22)]
         if show_budget:
-            cells.insert(2, (_tr_money(ln["tutar"]), 30))
+            cells.insert(2, (_tr_money(ln.get("tutar")), 30))
         row(cells)
     if show_budget:
-        para(f"Toplam: {_tr_money(plan['butceToplam'])}", 9.5, "B")
+        para(f"Toplam: {_tr_money(plan.get('butceToplam'))}", 9.5, "B")
     if z.get("kanalGerekce"):
         para(z["kanalGerekce"], 9)
 
     head("Takvim (yayın gününe göre)")
     row([("Tarih", 24), ("Gün", 14), ("İş", 106), ("Durum", 30)], "B")
-    for t in plan["tasks"]:
-        g = t.get("gunFarki")
-        row([(_tr_day(t.get("tarih")), 24), ("" if g is None else (f"D{g:+d}" if g else "D"), 14), (t["is"], 106),
-             (C.TASK_STATUSES.get(t["durum"], t["durum"]), 30)])
+    for t in _items(plan.get("tasks")):
+        g = _num(t.get("gunFarki"))
+        g = None if g is None else int(g)
+        durum = t.get("durum") or ""
+        row([(_tr_day(t.get("tarih")), 24), ("" if g is None else (f"D{g:+d}" if g else "D"), 14), (t.get("is") or "", 106),
+             (C.TASK_STATUSES.get(durum, durum), 30)])
 
-    approved = [m for m in plan["materials"] if m["durum"] == "onayli"]
+    approved = [m for m in _items(plan.get("materials")) if m.get("durum") == "onayli"]
     head("Onaylı materyaller")
     if not approved:
         para("Henüz onaylı materyal yok.")
     for m in approved:
-        para(f"{m['turAdi']} (sürüm {m['surum']})", 10, "B", 0.5)
-        para(m["metin"], 9)
+        para(f"{m.get('turAdi') or m.get('tur') or ''} (sürüm {m.get('surum') or '—'})", 10, "B", 0.5)
+        para(m.get("metin") or "", 9)
 
-    em = ((card or {}).get("emsal") or {}).get("items") or []
+    em = _items(card.get("emsal"))
     if em:
         head("Emsal kitaplar (ilk 3 / 6 / 12 ay net adet)")
         row([("Kitap", 86), ("Lansman", 22), ("3 ay", 20), ("6 ay", 20), ("12 ay", 22)], "B")
-        f = lambda v: "—" if v is None else f"{v:,.0f}".replace(",", ".")  # noqa: E731
         for e in em:
-            row([(e.get("ad") or e["stokKodu"], 86), (e.get("lansman") or "—", 22), (f(e.get("ilk3")), 20), (f(e.get("ilk6")), 20),
-                 (f(e.get("ilk12")), 22)])
-    vs = (card or {}).get("veriSonu") or {}
+            row([(e.get("ad") or e.get("stokKodu") or "—", 86), (e.get("lansman") or "—", 22), (_tr_int(e.get("ilk3")), 20),
+                 (_tr_int(e.get("ilk6")), 20), (_tr_int(e.get("ilk12")), 22)])
+    # Eski önbellekte veriSonu düz tarih metni olarak gelebilir («2026-08-17»): Logo veri sonu sayılır.
+    vs = _obj(card.get("veriSonu"), text_key="logo")
     pdf.ln(3)
     para(f"Satış rakamları Logo faturalı satıştır (iade düşülmüş). Veri sonu: {_tr_day(vs.get('logo'))}"
          + (f"; emsal verisi {vs['emsalAy']} ayına kadar." if vs.get("emsalAy") else "."), 8)

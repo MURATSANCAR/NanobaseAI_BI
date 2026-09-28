@@ -274,3 +274,41 @@ def test_access_rules_for_m1():
     assert ACC.features_for("PUT", "/api/v1/editorial/board-sessions/s/votes/a") == []
     keys = ACC.all_keys()
     assert {"sayfa:basvurular", "ozellik:basvuru.yaz", "ozellik:basvuru.yonet", "ozellik:yayin-kurulu.yonet"} <= set(keys)
+
+
+# ------------------------------------------------------------------ kabul referans betiği (scripts/acceptance/m1/market_ref.py)
+
+
+def _market_ref():
+    import importlib.util
+    from pathlib import Path
+
+    p = Path(__file__).resolve().parents[3] / "scripts" / "acceptance" / "m1" / "market_ref.py"
+    if not p.is_file():
+        pytest.skip("kabul betiği bu ağaçta yok")
+    spec = importlib.util.spec_from_file_location("m1_market_ref", p)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)   # içe aktarım DB'ye bağlanmaz (bağlantı yalnız main'de)
+    return mod
+
+
+def test_market_ref_reads_dates_as_text_or_date():
+    from datetime import datetime
+
+    R = _market_ref()
+    want = 2023 * 12 + 4
+    for v in (date(2023, 5, 1), datetime(2023, 5, 1, 0, 0), "2023-05-01", "2023-05-01 00:00:00.000", "2023-05-01T00:00:00",
+              b"2023-05-01", "01.05.2023", "1/5/2023"):
+        assert R.month_index(v) == want, v
+    assert R.month_index(None) is None and R.month_index("") is None and R.month_index("bilinmiyor") is None
+    assert R.month_index("2023-13-01") is None
+    idx, bad = R.cohort_index([{"kod": "A", "ilk": "2023-05-01"}, {"kod": "B", "ilk": date(2024, 1, 2)}, {"kod": "C", "ilk": None}])
+    assert idx == {"A": want, "B": 2024 * 12} and bad == ["C"]
+
+
+def test_market_ref_multi_statement_query_sets_nocount():
+    R = _market_ref()
+    sql = R.cohort_sql("Tarih Kitaplığı")
+    assert sql.lstrip().upper().startswith("SET NOCOUNT ON;") and sql.index("DECLARE") > sql.index("NOCOUNT")
+    assert "N'Tarih Kitaplığı'" in sql
+    assert "N'Ali''nin Kitaplığı'" in R.cohort_sql("Ali'nin Kitaplığı")   # tırnak kaçışı

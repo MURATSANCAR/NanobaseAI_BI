@@ -916,7 +916,17 @@ def card_get(engine: sa.engine.Engine, tenant: str, code: str) -> Optional[dict[
         r = c.execute(sa.select(CARDS).where(CARDS.c.tenant_id == tenant, CARDS.c.stok_kodu == code)).first()
     if not r:
         return None
-    return {**loads(r.veri_json, {}), "asof": iso(r.asof), "veriSonu": r.veri_sonu}
+    data = loads(r.veri_json, {})
+    if not isinstance(data, dict):
+        data = {}
+    # Karnenin kendi «veriSonu»su sözlüktür ({logo, emsalAy}); ekran ve PDF onu okur. Eskiden burada düz tarih metniyle
+    # eziliyordu → PDF «'str' object has no attribute 'get'» ile 500, karne sekmesi veri sonunu boş gösteriyordu.
+    # Kolon (veri_sonu) yalnız sözlükte Logo tarihi yoksa yedek olarak kullanılır.
+    vs = data.get("veriSonu")
+    vs = dict(vs) if isinstance(vs, dict) else {"logo": None, "emsalAy": None}
+    if not vs.get("logo"):
+        vs["logo"] = r.veri_sonu
+    return {**data, "asof": iso(r.asof), "veriSonu": vs}
 
 
 def card_put(engine: sa.engine.Engine, tenant: str, code: str, data: dict[str, Any], veri_sonu: Optional[str]) -> None:
