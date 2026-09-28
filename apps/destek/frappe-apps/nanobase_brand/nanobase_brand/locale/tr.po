@@ -2252,3 +2252,6 @@ msgstr "Kurum şifresi burada değil, Active Directory'de değiştirilir."
 
 msgid "Login with LDAP"
 msgstr "Kurum hesabıyla giriş"
+
+msgid "Invalid username or password"
+msgstr "Geçersiz kullanıcı adı veya şifre"
