@@ -15,6 +15,24 @@
 - **Sonuç (bölüm sayısı):** 79 → 35, 28 → 11, 135 → 20; bölüm adları kitaptakiyle aynı (ör. «İKİNCİ SULTAN ABDÜLHAMİD — HAN'IN ZEVCELERİ VE ÇOCUKLARI»).
 - **Bilinen sınır:** sayfa sonunda bölünen kelimenin arasına dipnot/alt bilgi girerse tireleme birleşmez (70 bin kelimelik kitapta 72 yer); dipnotu ayırmak yazı boyutunu okumayı ister, kullanılan PDF okuyucu vermez. Küçük harfli (small caps) içindekiler satırları harf büyüklüğü karışık okunur.
 - **Doğrulama:** sunucu sahnesinde çeviri + yetki testleri 61/61.
+## 2026-09-28 (08:35) — /saha görsel kontrolü ve iki veri sorunu: 1 ₺ yer tutucu limit, ölçeği tutarsız CRM hedefi
+
+- **Görsel kontrol:** test sunucusunda başsız Chromium (`mobile-qa` Playwright) + kısa `timasai` oturumu; 320/390/768/1440 px'de
+  yatay taşma yok, «daha göster» 40 → 80 (0,3–0,9 sn), arama «kitapçıbaşı» 2 sonuç (0,9 sn), sayfa hatası yok. 768/1440'ta
+  ilk `today` 429 aldı, ekran yeniden deneyip 200 aldı (dört pencere art arda aynı sunucu IP'sinden; `66a8b50f` muafiyeti
+  sunucuda kurulu değildi).
+- **Görünüm:** sayılar binlik ayraçsızdı («248351») → `fmtCount` (Bugün başlığı, «daha göster», onay bekleyen, temsilci
+  seçimi, üst şerit, müdür raporu). 320 px'de «Vadesi geçmiş» tutarı «137,4 …» kesiliyordu (kutu içi ~66 px) → `Stat`
+  rakamı büyük, birimi küçük yazar, birim sığmazsa alt satıra iner.
+- **Risk limiti doluluğu «%47.799.611»:** CRM'de 44.322 etkin carinin 6.086'sında toplam limit tam **1 ₺** (yer tutucu;
+  yurt dışı dağıtıcılar dahil, riski milyonlarca ₺), 22'sinde 2–10 ₺, 10–1.000 ₺ arası yalnız 15. Karar: 10 ₺'ye kadar limit
+  «tanımlanmamış», doluluk hesaplanmaz (`field_sales_sources.MIN_REAL_LIMIT`; M59 bayi de aynı `risk_of`'u kullanır).
+  Yüzdeler binlik ayraçlı (`_pct`). Gerçek aşımlar (%570, %411) aynen kalır.
+- **Hedef oranı %675:** CRM `new_CariYilHedef` (CRM'de float; limit/risk money). 512 caride hedef ÷ 2025 cirosu medyan
+  0,18, çeyrekler 0,08–0,40; hedef ÷ 2025 adedi medyan 18 (adet de değil); hedef toplamı 131,7 Mn ₺, aynı carilerin 2025
+  cirosu 760 Mn ₺ — kimi TL, kimi bin TL girilmiş. Karar: hedef toplamı ÷ önceki yıl cirosu 0,5–2 dışındaysa CRM hedefi
+  tutarsız; `auto`da kullanılmaz (oran «—», hedef açığı çipi ve puanı yok, ekranda nedeni yazılı), açıkça `crm` seçildiyse
+  kullanılır ama uyarı yazılır. Onaylı M46 bütçe planı varsa hedef oradan (değişmedi).
 
 ## 2026-09-28 — M4 kaynak okuma gerçek PDF/DOCX ile sınandı; PDF'te 5 kusur düzeltildi
 

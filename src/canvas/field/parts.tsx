@@ -120,10 +120,16 @@ export function CustomerRow({ c, showRep, trailing }: { c: Customer; showRep?: b
 }
 
 export function Stat({ label, value, help, tone }: { label: string; value: string; help?: string; tone?: 'err' | 'warn' }) {
+  // «137,4 Mn ₺»: rakam büyük, birim küçük; dar telefonda (320 px, kutu içi ~66 px) birim alt satıra iner, kesilmez.
+  const m = /^(.*\d)\s+((?:bin|Mn)\s*₺|₺)$/.exec(value);
+  const [num, unit] = m ? [m[1], m[2]] : [value, ''];
   return (
     <div className="min-w-0 rounded-2xl border border-slate-100 bg-white/85 p-3">
       <div className="text-[10.5px] font-bold uppercase tracking-wide text-canvas-muted">{label}</div>
-      <div className={`mt-0.5 truncate font-mono text-[17px] font-extrabold tabular-nums sm:text-[20px] ${tone === 'err' ? 'text-red-700' : tone === 'warn' ? 'text-amber-800' : ''}`}>{value}</div>
+      <div className={`mt-0.5 flex flex-wrap items-baseline gap-x-1 font-mono text-[17px] font-extrabold leading-tight tabular-nums sm:text-[20px] ${tone === 'err' ? 'text-red-700' : tone === 'warn' ? 'text-amber-800' : ''}`}>
+        <span className="min-w-0 break-all">{num}</span>
+        {unit && <span className="whitespace-nowrap font-sans text-[11px] font-bold sm:text-[13px]">{unit}</span>}
+      </div>
       {help && <div className="mt-0.5 text-[11px] leading-snug text-canvas-muted">{help}</div>}
     </div>
   );

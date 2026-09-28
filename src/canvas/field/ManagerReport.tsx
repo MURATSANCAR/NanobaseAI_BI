@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { ENGINE_ENABLED } from '../engine';
 import { Loading, Note, TableWrap, btnGhost, errText, label as labelCls, td, th } from '../admin/ui';
-import { fieldApi, fmtDay, fmtMoney, fmtPct, type FieldMeta, type RepRow } from './api';
+import { fieldApi, fmtCount, fmtDay, fmtMoney, fmtPct, type FieldMeta, type RepRow } from './api';
 import { Empty } from './parts';
 
 /** Haftalık saha raporu: temsilci × hedef–gerçekleşme, vadesi geçmiş, tahsilat, ziyaret. Temsilci karşılaştırması kişisel
@@ -95,7 +95,7 @@ export default function ManagerReport({ meta, temsilci }: { meta: FieldMeta; tem
                 {d.items.map((r) => (
                   <tr key={r.hesap ?? 'yok'} className="border-t border-slate-100">
                     <td className={`${td} font-bold`}>{r.ad}</td>
-                    <td className={`${td} font-mono tabular-nums`}>{r.cari}</td>
+                    <td className={`${td} font-mono tabular-nums`}>{fmtCount(r.cari)}</td>
                     <td className={`${td} font-mono tabular-nums`}>{fmtMoney(r.ytd)}</td>
                     <td className={`${td} font-mono tabular-nums`}>
                       {fmtMoney(r.gecenYil)} <span className="text-canvas-muted">{r.buyume !== null ? `(${r.buyume >= 0 ? '+' : ''}${fmtPct(r.buyume)})` : ''}</span>
@@ -135,7 +135,7 @@ function RepCard({ r }: { r: RepRow }) {
     <li className="rounded-2xl border border-slate-100 bg-white/85 p-3">
       <div className="flex items-baseline justify-between gap-2">
         <div className="min-w-0 truncate text-[13.5px] font-extrabold">{r.ad}</div>
-        <div className="shrink-0 text-[11.5px] text-canvas-muted">{r.cari} cari</div>
+        <div className="shrink-0 text-[11.5px] text-canvas-muted">{fmtCount(r.cari)} cari</div>
       </div>
       <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1">
         {cells.map(([k, v, bad]) => (
